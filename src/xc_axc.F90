@@ -17,6 +17,7 @@
 !!
 !! $Id$
 
+! ---------------------------------------------------------
 subroutine xc_get_vxc_and_axc(gr, xcs, rho, j, ispin, vxc, axc, ex, ec, exc_j, ip, qtot)
   type(grid_type),       intent(inout) :: gr
   type(xc_type), target, intent(in)    :: xcs
@@ -54,7 +55,7 @@ subroutine xc_get_vxc_and_axc(gr, xcs, rho, j, ispin, vxc, axc, ex, ec, exc_j, i
     do id = 1, NDIM
       f(:, id, is) = j(:, id, is)/rho(:, is)
     end do
-    call df_curl(gr%sb, gr%f_der, f(:,:,is), v(:,:,is))
+    call df_curl(gr%f_der, f(:,:,is), v(:,:,is))
   end do
 
   allocate(l_dens(spin_channels), l_v(NDIM, spin_channels))
@@ -69,7 +70,7 @@ subroutine xc_get_vxc_and_axc(gr, xcs, rho, j, ispin, vxc, axc, ex, ec, exc_j, i
     select case(xcs%j_functl%family)
     case(XC_FAMILY_LCA)
       call xc_lca(xcs%j_functl%conf, l_dens(1), l_v(1,1), &
-                  e, l_dedd(1), l_dedv(1,1))
+        e, l_dedd(1), l_dedv(1,1))
     end select
 
     exc_j = exc_j + sum(l_dens(:)) * e * gr%m%vol_pp(i)
@@ -85,7 +86,7 @@ subroutine xc_get_vxc_and_axc(gr, xcs, rho, j, ispin, vxc, axc, ex, ec, exc_j, i
   vxc = vxc + dedd
   allocate(tmp(NP, NDIM))
   do is = 1, spin_channels
-    call df_curl(gr%sb, gr%f_der, dedv(:,:,is), tmp)
+    call df_curl(gr%f_der, dedv(:,:,is), tmp)
 
     do id = 1, NDIM
       axc(:, id, is) = axc(:, id, is) - tmp(:, id)/rho(:, is)

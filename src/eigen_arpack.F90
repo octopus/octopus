@@ -32,116 +32,114 @@ subroutine eigen_solver_arpack(gr, st, h, tol_, niter, ncv, converged, diff)
   logical, allocatable :: select(:)
   FLOAT, allocatable :: ax(:), d(:, :), resid(:), v(:, :), workd(:), workev(:), workl(:)
   integer :: ldv, nev, iparam(11), ipntr(14), ido, n, lworkl, info, ierr, &
-             i, j, ishfts, maxitr, mode1, ik
+    i, j, ishfts, maxitr, mode1, ik
   FLOAT :: tol, sigmar, sigmai
 
-  !!!!WARNING: No support for spinors, yet. No support for complex wavefunctions.
+!!!!WARNING: No support for spinors, yet. No support for complex wavefunctions.
   call push_sub('eigen_arpack.eigen_solver_arpack')
 
-  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
   kpoints: do ik = 1, st%d%nik
-  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 #if defined(HAVE_MPI) && defined(HAVE_METIS)
-  message(1) = 'Error: Arpack-Solver not parallized for domain decomposition.'
-  call write_fatal(1)
-!  FIXME: Need to adjust m%x and m%vol_pp occurences in the code below 
-!         appropriately for domain decomposition. Also parallelization 
-!         of the vectors has to be taken care of.
+    message(1) = 'Error: Arpack-Solver not parallized for domain decomposition.'
+    call write_fatal(1)
+    !  FIXME: Need to adjust m%x and m%vol_pp occurences in the code below
+    !         appropriately for domain decomposition. Also parallelization
+    !         of the vectors has to be taken care of.
 #endif
 
-  ldv = NP
-  n = NP
-  nev = st%nst
-  lworkl  = 3*ncv**2+6*ncv
-  allocate(ax(ldv), d(ncv,3), resid(ldv), v(ldv,ncv), workd(3*ldv), &
-           workev(3*ncv), workl(lworkl),select(ncv))
+    ldv = NP
+    n = NP
+    nev = st%nst
+    lworkl  = 3*ncv**2+6*ncv
+    allocate(ax(ldv), d(ncv,3), resid(ldv), v(ldv,ncv), workd(3*ldv), &
+      workev(3*ncv), workl(lworkl),select(ncv))
 
-  select = .true.
-  tol    = tol_
-  ido    = 0
-  info = 1
+    select = .true.
+    tol    = tol_
+    ido    = 0
+    info = 1
 
-  do i = 1, NP
-    resid(i) = sum(st%X(psi)(i, 1, 1:st%nst, ik))*sqrt(gr%m%vol_pp(i))
-  enddo
+    do i = 1, NP
+      resid(i) = sum(st%X(psi)(i, 1, 1:st%nst, ik))*sqrt(gr%m%vol_pp(i))
+    end do
 
-  ishfts = 1
-  maxitr = niter
-  mode1 = 1
-  iparam(1) = ishfts
-  iparam(3) = maxitr
-  iparam(7) = mode1
+    ishfts = 1
+    maxitr = niter
+    mode1 = 1
+    iparam(1) = ishfts
+    iparam(3) = maxitr
+    iparam(7) = mode1
 
-  do
-    call dnaupd ( ido, 'I', n, 'SR', nev, tol, resid, ncv, &
-                  v, ldv, iparam, ipntr, workd, workl, lworkl, info )
-    if( abs(ido).ne.1) exit
-    call av (n, workd(ipntr(1)), workd(ipntr(2)))
-  enddo
-  ! If info is larger than zero, it may not be an error (i.e., not all eigenvectors
-  ! were converged)
-  if(info .lt. 0) then
-     write(message(1),'(a,i5)') 'Error with ARPACK _naupd, info = ', info
-     write(message(2),'(a)')    'Check the documentation of _naupd.'
-     call write_fatal(2)
-  endif
+    do
+      call dnaupd ( ido, 'I', n, 'SR', nev, tol, resid, ncv, &
+        v, ldv, iparam, ipntr, workd, workl, lworkl, info )
+      if( abs(ido).ne.1) exit
+      call av (n, workd(ipntr(1)), workd(ipntr(2)))
+    end do
+    ! If info is larger than zero, it may not be an error (i.e., not all eigenvectors
+    ! were converged)
+    if(info .lt. 0) then
+      write(message(1),'(a,i5)') 'Error with ARPACK _naupd, info = ', info
+      write(message(2),'(a)')    'Check the documentation of _naupd.'
+      call write_fatal(2)
+    end if
 
-  call dneupd ( .true., 'A', select, d, d(1,2), v, ldv, &
-                sigmar, sigmai, workev, 'I', n, 'SR', nev, tol, &
-                resid, ncv, v, ldv, iparam, ipntr, workd, workl, &
-                lworkl, ierr )
+    call dneupd ( .true., 'A', select, d, d(1,2), v, ldv, &
+      sigmar, sigmai, workev, 'I', n, 'SR', nev, tol, &
+      resid, ncv, v, ldv, iparam, ipntr, workd, workl, &
+      lworkl, ierr )
 
-  if(ierr .ne. 0) then
+    if(ierr .ne. 0) then
       write(message(1),'(a,i5)') 'Error with ARPACK _neupd, info = ', info
       write(message(2),'(a)')    'Check the documentation of _neupd.'
       call write_fatal(2)
-  endif
+    end if
 
-  ! This sets the number of converged eigenvectors.
-  converged =  iparam(5)
-  !call dmout(6, converged, 3, d, ncv, -6, 'Ritz values (Real, Imag) and residual residuals')
-  ! This sets niter to the number of matrix-vector operations.
-  niter = iparam(9)
-  do j = 1, min(st%nst, converged)
-     write(*, *) 'Modifying the wavefunctions...'
-     do i = 1, NP
+    ! This sets the number of converged eigenvectors.
+    converged =  iparam(5)
+    !call dmout(6, converged, 3, d, ncv, -6, 'Ritz values (Real, Imag) and residual residuals')
+    ! This sets niter to the number of matrix-vector operations.
+    niter = iparam(9)
+    do j = 1, min(st%nst, converged)
+      write(*, *) 'Modifying the wavefunctions...'
+      do i = 1, NP
         st%X(psi)(i, 1, j, ik) = v(i, j)/sqrt(gr%m%vol_pp(i))
-     enddo
-     st%eigenval(j, ik) = d(j, 1)
-     if(workl(ipntr(11)+j-1)<CNST(1.0e-99)) then
-       diff(j, ik) = M_ZERO
-     else
-       diff(j, ik) = workl(ipntr(11)+j-1)
-     endif
-  enddo
+      end do
+      st%eigenval(j, ik) = d(j, 1)
+      if(workl(ipntr(11)+j-1)<CNST(1.0e-99)) then
+        diff(j, ik) = M_ZERO
+      else
+        diff(j, ik) = workl(ipntr(11)+j-1)
+      end if
+    end do
 
-  deallocate(ax, d, resid, v, workd, workev, workl, select)
+    deallocate(ax, d, resid, v, workd, workev, workl, select)
 
-  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  enddo kpoints
-  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  end do kpoints
 
   call pop_sub()
-  contains
+contains
 
-      subroutine av (n, v, w)
-        integer :: n
-        FLOAT :: v(n), w(n)
-        integer :: i
-        R_TYPE, allocatable :: psi(:, :), hpsi(:, :)
+  ! ---------------------------------------------------------
+  subroutine av (n, v, w)
+    integer :: n
+    FLOAT :: v(n), w(n)
+    integer :: i
+    R_TYPE, allocatable :: psi(:, :), hpsi(:, :)
 
-        allocate(psi(NP, 1), hpsi(NP, 1))
+    allocate(psi(NP, 1), hpsi(NP, 1))
 
-        do i = 1, NP
-           psi(i, 1) = v(i)/sqrt(gr%m%vol_pp(i))
-        enddo
-        call X(hpsi)(h, gr, psi, hpsi, ik)
-        do i = 1, NP
-           w(i) = hpsi(i, 1)*sqrt(gr%m%vol_pp(i))
-        enddo
+    do i = 1, NP
+      psi(i, 1) = v(i)/sqrt(gr%m%vol_pp(i))
+    end do
+    call X(hpsi)(h, gr, psi, hpsi, ik)
+    do i = 1, NP
+      w(i) = hpsi(i, 1)*sqrt(gr%m%vol_pp(i))
+    end do
 
-        deallocate(psi, hpsi)
-      end subroutine av
+    deallocate(psi, hpsi)
+  end subroutine av
 
 end subroutine eigen_solver_arpack

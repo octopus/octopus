@@ -26,7 +26,12 @@ module lib_adv_alg
   implicit none
 
   private
-  public :: lalg_geneigensolve, lalg_eigensolve, lalg_determinant, lalg_inverter, lalg_linsyssolve
+  public ::             &
+    lalg_geneigensolve, &
+    lalg_eigensolve,    &
+    lalg_determinant,   &
+    lalg_inverter,      &
+    lalg_linsyssolve
 
   interface lalg_geneigensolve
     module procedure dgeneigensolve, zgeneigensolve
@@ -36,7 +41,8 @@ module lib_adv_alg
     module procedure deigensolve, zeigensolve
   end interface
 
-  ! Note that lalg_determinant and lalg_inverter are just wrappers over the same routine.
+  ! Note that lalg_determinant and lalg_inverter are just wrappers
+  ! over the same routine.
   interface lalg_determinant
     module procedure ddeterminant, zdeterminant
   end interface

@@ -40,25 +40,26 @@ module xc_OEP
   implicit none
 
   private
-  public ::                        &
-     xc_oep_type,                  &
-     xc_oep_init,                  &
-     xc_oep_end,                   &
-     xc_oep_write_info,            &
-     dxc_oep_calc, zxc_oep_calc
+  public ::                     &
+    xc_oep_type,                &
+    xc_oep_init,                &
+    xc_oep_end,                 &
+    xc_oep_write_info,          &
+    dxc_oep_calc,               &
+    zxc_oep_calc
 
   ! the OEP levels
   integer, public, parameter :: &
-     XC_OEP_NONE   = 0, &
-     XC_OEP_SLATER = 1, &
-     XC_OEP_KLI    = 2, &
-     XC_OEP_CEDA   = 3, &  ! not yet implemented
-     XC_OEP_FULL   = 4     ! half implemented
+    XC_OEP_NONE   = 0,          &
+    XC_OEP_SLATER = 1,          &
+    XC_OEP_KLI    = 2,          &
+    XC_OEP_CEDA   = 3,          &  ! not yet implemented
+    XC_OEP_FULL   = 4              ! half implemented
 
   type xc_oep_type
-    integer       :: level   ! 0 = no oep, 1 = Slater, 2 = KLI, 3 = CEDA, 4 = full OEP
-    FLOAT         :: mixing  ! how much of the function S(r) to add to vxc in every iteration
-    type(lr_type) :: lr      ! to solve the equation H psi = b
+    integer          :: level      ! 0 = no oep, 1 = Slater, 2 = KLI, 3 = CEDA, 4 = full OEP
+    FLOAT            :: mixing     ! how much of the function S(r) to add to vxc in every iteration
+    type(lr_type)    :: lr         ! to solve the equation H psi = b
 
     integer          :: eigen_n
     integer, pointer :: eigen_type(:), eigen_index(:)
@@ -70,10 +71,10 @@ module xc_OEP
 
   FLOAT, parameter :: small     = CNST(1.0e-5)
 
+
 contains
 
-
-  ! -----------------------------------------------------------
+  ! ---------------------------------------------------------
   subroutine xc_oep_init(oep, family, m, d)
     type(xc_oep_type),     intent(out) :: oep
     integer,               intent(in)  :: family
@@ -89,7 +90,7 @@ contains
     if(oep%level == XC_OEP_FULL) then
       message(1) = "Full OEP is not allowed with the code parallelized on orbitals..."
       call write_fatal(1)
-    endif
+    end if
 #endif
 
     call loct_parse_int(check_inp('OEP_level'), XC_OEP_KLI, oep%level)
@@ -123,7 +124,7 @@ contains
   end subroutine xc_oep_init
 
 
-  ! -----------------------------------------------------------
+  ! ---------------------------------------------------------
   subroutine xc_oep_end(oep)
     type(xc_oep_type), intent(inout) :: oep
 
@@ -136,7 +137,7 @@ contains
   end subroutine xc_oep_end
 
 
-  ! -----------------------------------------------------------
+  ! ---------------------------------------------------------
   subroutine xc_oep_write_info(oep, iunit)
     type(xc_oep_type), intent(in) :: oep
     integer,           intent(in) :: iunit
@@ -154,9 +155,9 @@ contains
   end subroutine xc_oep_write_info
 
 
-  ! -----------------------------------------------------------
+  ! ---------------------------------------------------------
   ! A couple of auxiliary functions for oep
-  ! -----------------------------------------------------------
+  ! ---------------------------------------------------------
   subroutine xc_oep_SpinFactor(oep, nspin)
     type(xc_oep_type), intent(inout) :: oep
     integer,           intent(in)    :: nspin
@@ -175,7 +176,7 @@ contains
   end subroutine xc_oep_SpinFactor
 
 
-  ! -----------------------------------------------------------
+  ! ---------------------------------------------------------
   subroutine xc_oep_AnalizeEigen(oep, st, is)
     type(xc_oep_type), intent(inout) :: oep
     type(states_type), intent(in)    :: st
@@ -192,18 +193,18 @@ contains
     eigenval = M_ZERO; occ = M_ZERO
 
     do i = st%st_start, st%st_end
-       eigenval(i) = st%eigenval(i, is)
-       occ(i) = st%occ(i, is)
-    enddo
+      eigenval(i) = st%eigenval(i, is)
+      occ(i) = st%occ(i, is)
+    end do
 
 #if defined(HAVE_MPI)
     if(st%st_end - st%st_start + 1 .ne. st%nst) then ! This holds only in the td part.
       call mpi_barrier(st%comm, ierr)
       do i = 1, st%nst
-         call mpi_bcast(eigenval(i), 1, R_MPITYPE, st%node(i), st%comm, ierr)
-         call mpi_bcast(occ(i), 1, R_MPITYPE, st%node(i), st%comm, ierr)
-      enddo
-    endif
+        call mpi_bcast(eigenval(i), 1, R_MPITYPE, st%node(i), st%comm, ierr)
+        call mpi_bcast(occ(i), 1, R_MPITYPE, st%node(i), st%comm, ierr)
+      end do
+    end if
 #endif
 
     ! find out the top occupied state, to correct for the assymptotics

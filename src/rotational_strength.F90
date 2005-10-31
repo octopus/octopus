@@ -30,10 +30,8 @@ program rotational_strength
 
   implicit none
 
-  character(len=100) :: txt
   type(spec_type) :: s
-  integer :: i, in_file, out_file
-  integer(POINTER_SIZE) :: blk
+  integer :: in_file, out_file
 
   ! Initialize stuff
   call global_init()
@@ -41,8 +39,8 @@ program rotational_strength
   call io_init()
   call syslabels_init(1)
   if(in_debug_mode) then
-     call io_mkdir('debug')
-  endif
+    call io_mkdir('debug')
+  end if
   call units_init()
 
   call spectrum_init(s)
@@ -50,10 +48,10 @@ program rotational_strength
   in_file = io_open('angular', action='read', status='old', die=.false.)
   if(in_file < 0) in_file = io_open('td.general/angular', action='read', status='old', die=.false.)
   if(in_file < 0) then
-     write(message(1),'(a)') 'No "angular" or "td.general/angular" file found. At least one of those'
-     write(message(2),'(a)') 'should be visible.'
-     call write_fatal(2)
-  endif
+    write(message(1),'(a)') 'No "angular" or "td.general/angular" file found. At least one of those'
+    write(message(2),'(a)') 'should be visible.'
+    call write_fatal(2)
+  end if
   out_file = io_open('rotatory_strength', action='write')
 
   call spectrum_rotatory_strength(in_file, out_file, s)

@@ -11,8 +11,8 @@
 #  define TYPE1 complex(4)
 #  define TYPE2 real(4)
 #elif TYPE == 4
- #  define TYPE1 complex(8)
- #  define TYPE2 real(8)
+#  define TYPE1 complex(8)
+#  define TYPE2 real(8)
 #endif
 
 #define FNAME(x) xFNAME(x, TYPE)

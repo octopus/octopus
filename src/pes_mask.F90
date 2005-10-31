@@ -17,6 +17,7 @@
 !!
 !! $Id$
 
+! ---------------------------------------------------------
 subroutine PES_mask_init(v, m, sb, st)
   type(PES_mask_type),  intent(out)   :: v
   type(mesh_type),      intent(inout) :: m
@@ -31,14 +32,16 @@ subroutine PES_mask_init(v, m, sb, st)
 
   ! setup arrays to be used
   allocate(&
-       v%k(m%l(1), m%l(2), m%l(3), st%d%dim, st%st_start:st%st_end, st%d%nik), &
-       v%r(m%l(1), m%l(2), m%l(3),           st%st_start:st%st_end, st%d%nik))
+    v%k(m%l(1), m%l(2), m%l(3), st%d%dim, st%st_start:st%st_end, st%d%nik), &
+    v%r(m%l(1), m%l(2), m%l(3),           st%st_start:st%st_end, st%d%nik))
 
   v%k = M_z0
   v%r = M_ZERO
 
 end subroutine PES_mask_init
 
+
+! ---------------------------------------------------------
 subroutine PES_mask_end(v)
   type(PES_mask_type), intent(inout) :: v
 
@@ -50,6 +53,8 @@ subroutine PES_mask_end(v)
 
 end subroutine PES_mask_end
 
+
+! ---------------------------------------------------------
 subroutine PES_mask_doit(v, m, st, dt, mask)
   type(PES_mask_type), intent(inout) :: v
   type(mesh_type),     intent(in)    :: m
@@ -72,14 +77,14 @@ subroutine PES_mask_doit(v, m, st, dt, mask)
 
         vec = sum((temp(:) * ixx(:))**2) / M_TWO
         v%k(ix, iy, iz,:,:,:) = v%k(ix, iy, iz,:,:,:)*exp(-M_zI*dt*vec)
-      enddo
-    enddo
-  enddo
+      end do
+    end do
+  end do
 
   ! we now add the contribution from this timestep
   allocate( &
-       wf1(m%l(1), m%l(2), m%l(3)), &
-       wf2(m%l(1), m%l(2), m%l(3)))
+    wf1(m%l(1), m%l(2), m%l(3)), &
+    wf2(m%l(1), m%l(2), m%l(3)))
   do ik = 1, st%d%nik
     do ist = st%st_start, st%st_end
       do idim = 1, st%d%dim
@@ -125,8 +130,8 @@ subroutine PES_mask_output(v, m, st, file)
   FLOAT, parameter :: step = CNST(0.005)
 
   allocate( &
-       spis (n,    st%st_start:st%st_end, st%d%nik), &
-       arpis(ar_n, st%st_start:st%st_end, st%d%nik))
+    spis (n,    st%st_start:st%st_end, st%d%nik), &
+    arpis(ar_n, st%st_start:st%st_end, st%d%nik))
   allocate(npoints(n), ar_npoints(ar_n))
   spis = M_ZERO; arpis = M_ZERO
   npoints = 0;  ar_npoints = 0
@@ -147,7 +152,7 @@ subroutine PES_mask_output(v, m, st, file)
             do ik = 1, st%d%nik
               do p = st%st_start, st%st_end
                 spis(ii, p, ik) = spis(ii, p, ik) + st%occ(p, ik) * &
-                     sum(abs(v%k(ix, iy, iz, :, p, ik))**2)
+                  sum(abs(v%k(ix, iy, iz, :, p, ik))**2)
                 npoints(ii) = npoints(ii) + 1
               end do
             end do
@@ -161,7 +166,7 @@ subroutine PES_mask_output(v, m, st, file)
               do ik = 1, st%d%nik
                 do p = st%st_start, st%st_end
                   arpis(ii, p, ik) = arpis(ii, p, ik) + &
-                       st%occ(p, ik)*sum(abs(v%k(ix, iy, iz, :, p, ik))**2)
+                    st%occ(p, ik)*sum(abs(v%k(ix, iy, iz, :, p, ik))**2)
                   ar_npoints(ii) = ar_npoints(ii) + 1
                 end do
               end do
@@ -207,7 +212,7 @@ subroutine PES_mask_output(v, m, st, file)
       do ix = 1, ar_n
         if(ar_npoints(ix) > 0) then
           write(iunit, *)  (ix-1)*CNST(180.0)/real(ar_n-1, PRECISION), &
-               arpis(ix, p, ik), ar_npoints(ix)
+            arpis(ix, p, ik), ar_npoints(ix)
         end if
       end do
       call io_close(iunit)
@@ -220,7 +225,7 @@ subroutine PES_mask_output(v, m, st, file)
   do ix = 1, ar_n
     if(ar_npoints(ix) > 0) then
       write(iunit, *)  (ix-1)*CNST(180.0)/real(ar_n-1, PRECISION), &
-           sum(arpis(ix, :, :)), ar_npoints(ix)
+        sum(arpis(ix, :, :)), ar_npoints(ix)
     end if
   end do
   call io_close(iunit)
@@ -262,7 +267,7 @@ subroutine PES_mask_output(v, m, st, file)
       do ix = 1, ar_n
         if(ar_npoints(ix) > 0) then
           write(iunit, *)  (ix-1)*CNST(180.0)/real(ar_n-1, PRECISION), &
-               arpis(ix, p, ik), ar_npoints(ix)
+            arpis(ix, p, ik), ar_npoints(ix)
         end if
       end do
       call io_close(iunit)
@@ -274,7 +279,7 @@ subroutine PES_mask_output(v, m, st, file)
   do ix = 1, ar_n
     if(ar_npoints(ix) > 0) then
       write(iunit, *)  (ix-1)*CNST(180.0)/real(ar_n-1, PRECISION), &
-           sum(arpis(ix, :, :)), ar_npoints(ix)
+        sum(arpis(ix, :, :)), ar_npoints(ix)
     end if
   end do
   call io_close(iunit)

@@ -17,6 +17,7 @@
 !!
 !! $Id$
 
+! ---------------------------------------------------------
 subroutine X(xc_KLI_solve) (m, st, is, oep)
   type(mesh_type),   intent(in)    :: m
   type(states_type), intent(in)    :: st
@@ -39,7 +40,7 @@ subroutine X(xc_KLI_solve) (m, st, is, oep)
 
   do i = 1, m%np
     rho_sigma(i) = max(sum(oep%socc*st%occ(st%st_start:st%st_end, is) * &
-       R_ABS(st%X(psi)(i, 1, st%st_start:st%st_end, is))**2), CNST(1e-20))
+      R_ABS(st%X(psi)(i, 1, st%st_start:st%st_end, is))**2), CNST(1e-20))
   end do
 #if defined(HAVE_MPI)
   allocate(d(m%np))
@@ -50,7 +51,7 @@ subroutine X(xc_KLI_solve) (m, st, is, oep)
 
   do i = 1, m%np
     oep%vxc(i)   = oep%socc* sum(st%occ(st%st_start:st%st_end, is) * &
-       R_REAL(oep%X(lxc)(i, st%st_start:st%st_end)*st%X(psi)(i, 1, st%st_start:st%st_end, is)))/rho_sigma(i)
+      R_REAL(oep%X(lxc)(i, st%st_start:st%st_end)*st%X(psi)(i, 1, st%st_start:st%st_end, is)))/rho_sigma(i)
   end do
 #if defined(HAVE_MPI)
   call MPI_Allreduce(oep%vxc(:),   d(:), m%np, MPI_FLOAT, MPI_SUM, st%comm, ierr)
@@ -98,12 +99,12 @@ subroutine X(xc_KLI_solve) (m, st, is, oep)
       if(mpiv%node.ne.0) then
         if(st%node(oep%eigen_index(i)) == mpiv%node) then
           call MPI_Send(st%X(psi)(1, 1, oep%eigen_index(i), is), st%d%dim*m%np, R_MPITYPE, &
-             0, i, st%comm, status, ierr)
+            0, i, st%comm, status, ierr)
         end if
       else ! master node
         if(st%node(oep%eigen_index(i)).ne.0) then
           call MPI_Recv(phi1(1, 1), st%d%dim*m%np, R_MPITYPE, st%node(oep%eigen_index(i)), &
-             i, st%comm, status, ierr)
+            i, st%comm, status, ierr)
         else
           phi1(:,:) = st%X(psi)(:,:, oep%eigen_index(i), is)
         end if
@@ -115,7 +116,7 @@ subroutine X(xc_KLI_solve) (m, st, is, oep)
 
       if(mpiv%node == 0) then
         d(1:m%np) = (R_REAL(phi1(1:m%np, 1))**2 + &
-           R_AIMAG(phi1(1:m%np, 1))**2) / rho_sigma(1:m%np) * m%vol_pp(1:m%np)
+          R_AIMAG(phi1(1:m%np, 1))**2) / rho_sigma(1:m%np) * m%vol_pp(1:m%np)
       end if
 
       do j = i, n
@@ -123,12 +124,12 @@ subroutine X(xc_KLI_solve) (m, st, is, oep)
         if(mpiv%node.ne.0) then
           if(st%node(oep%eigen_index(j)) == mpiv%node) then
             call MPI_Send(st%X(psi)(1, 1, oep%eigen_index(j), is), st%d%dim*m%np, R_MPITYPE, &
-               0, j, st%comm, status, ierr)
+              0, j, st%comm, status, ierr)
           end if
         else
           if(st%node(oep%eigen_index(j)).ne.0) then
             call MPI_Recv(phi2(1, 1), st%d%dim*m%np, R_MPITYPE, st%node(oep%eigen_index(j)), &
-               j, st%comm, status, ierr)
+              j, st%comm, status, ierr)
           else
             phi2(:,:) = st%X(psi)(:,:, oep%eigen_index(j), is)
           end if
@@ -166,12 +167,12 @@ subroutine X(xc_KLI_solve) (m, st, is, oep)
       if(mpiv%node.ne.0) then
         if(st%node(oep%eigen_index(i)) == mpiv%node) then
           call MPI_Send(st%X(psi)(1, 1, oep%eigen_index(i), is), st%d%dim*m%np, R_MPITYPE, &
-             0, i, st%comm, status, ierr)
+            0, i, st%comm, status, ierr)
         end if
       else ! master
         if(st%node(oep%eigen_index(i)).ne.0) then
           call MPI_Recv(phi1(1, 1), st%d%dim*m%np, R_MPITYPE, st%node(oep%eigen_index(i)), &
-             i, st%comm, status, ierr)
+            i, st%comm, status, ierr)
         else
           phi1(:,:) = st%X(psi)(:,:, oep%eigen_index(i), is)
         end if
@@ -184,7 +185,7 @@ subroutine X(xc_KLI_solve) (m, st, is, oep)
 
       if(mpiv%node == 0) then
         oep%vxc(1:m%np) = oep%vxc(1:m%np) + &
-           oep%socc * occ * x(i,1) * R_ABS(phi1(1:m%np, 1))**2 / rho_sigma(1:m%np)
+          oep%socc * occ * x(i,1) * R_ABS(phi1(1:m%np, 1))**2 / rho_sigma(1:m%np)
       end if
     end do
 

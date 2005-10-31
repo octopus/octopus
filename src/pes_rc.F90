@@ -17,6 +17,7 @@
 !!
 !! $Id$
 
+! ---------------------------------------------------------
 subroutine PES_rc_init(v, m, st, save_iter)
   type(mesh_type),   intent(in) :: m
   type(states_type), intent(in) :: st
@@ -59,6 +60,8 @@ subroutine PES_rc_init(v, m, st, save_iter)
   allocate(v%wf(v%npoints, st%d%dim, st%st_start:st%st_end, st%d%nik, save_iter))
 end subroutine PES_rc_init
 
+
+! ---------------------------------------------------------
 subroutine PES_rc_end(v)
   type(PES_rc_type), intent(inout) :: v
 
@@ -68,6 +71,8 @@ subroutine PES_rc_end(v)
   end if
 end subroutine PES_rc_end
 
+
+! ---------------------------------------------------------
 subroutine PES_rc_doit(v, st, ii)
   type(PES_rc_type), intent(inout) :: v
   type(states_type), intent(in) :: st
@@ -87,6 +92,8 @@ subroutine PES_rc_doit(v, st, ii)
 
 end subroutine PES_rc_doit
 
+
+! ---------------------------------------------------------
 subroutine PES_rc_output(v, st, iter, save_iter, dt)
   type(PES_rc_type), intent(in) :: v
   type(states_type), intent(in) :: st
@@ -99,13 +106,13 @@ subroutine PES_rc_output(v, st, iter, save_iter, dt)
     do ix = 1, v%npoints
       iunit = io_open(v%filenames(ix), action='write')
       write(iunit, '(a7,f17.6,3a)') &
-           '# dt = ', dt/units_inp%time%factor, ' [', trim(units_inp%time%abbrev), ']'
+        '# dt = ', dt/units_inp%time%factor, ' [', trim(units_inp%time%abbrev), ']'
       write(iunit, '(a3,14x)', advance='no') '# t'
       do ik = 1, st%d%nik
         do p = st%st_start, st%st_end
           do idim = 1, st%d%dim
             write(iunit, '(3x,a8,i3,a7,i3,a8,i3,3x)', advance='no') &
-                 "ik = ", ik, " ist = ", p, " idim = ", idim
+              "ik = ", ik, " ist = ", p, " idim = ", idim
           end do
         end do
       end do
@@ -124,8 +131,8 @@ subroutine PES_rc_output(v, st, iter, save_iter, dt)
         do p = st%st_start, st%st_end
           do idim = 1, st%d%dim
             write(iunit, '(1x,a1,e17.10,a1,e17.10,a1)', advance='no') &
-                 '(', real(v%wf(ix, idim, p, ik, j))*units_out%length%factor**1.5, &
-                 ',', aimag(v%wf(ix, idim, p, ik, j))*units_out%length%factor**1.5, ')'
+              '(', real(v%wf(ix, idim, p, ik, j))*units_out%length%factor**1.5, &
+              ',', aimag(v%wf(ix, idim, p, ik, j))*units_out%length%factor**1.5, ')'
           end do
         end do
       end do

@@ -21,65 +21,70 @@
 
 module logrid
 
-use global
+  use global
 
-implicit none
+  implicit none
 
-type logrid_type
-  FLOAT :: a,b
-  integer  :: nrval
-  FLOAT, pointer :: rofi(:), drdi(:), s(:)
-end type
+  type logrid_type
+    FLOAT :: a,b
+    integer  :: nrval
+    FLOAT, pointer :: rofi(:), drdi(:), s(:)
+  end type logrid_type
 
 contains
 
-subroutine logrid_init(g, a, b, nrval)
-  type(logrid_type), intent(out) :: g
-  FLOAT, intent(in)           :: a,b
-  integer, intent(in)            :: nrval
+  ! ---------------------------------------------------------
+  subroutine logrid_init(g, a, b, nrval)
+    type(logrid_type), intent(out) :: g
+    FLOAT, intent(in)           :: a,b
+    integer, intent(in)            :: nrval
 
-  FLOAT :: rpb, ea
-  integer  :: ir
+    FLOAT :: rpb, ea
+    integer  :: ir
 
-  g%a = a; g%b = b; g%nrval = nrval
+    g%a = a; g%b = b; g%nrval = nrval
 
-  allocate(g%rofi(nrval), g%drdi(nrval), g%s(nrval))
+    allocate(g%rofi(nrval), g%drdi(nrval), g%s(nrval))
 
-  rpb = b; ea = exp(a)
-  do ir = 1, nrval
-    g%drdi(ir) = a*rpb
-    g%s(ir) = sqrt(a*rpb)
-    rpb = rpb*ea
-    g%rofi(ir) = b * ( exp( a * (ir - 1) ) - M_ONE )
-  end do
+    rpb = b; ea = exp(a)
+    do ir = 1, nrval
+      g%drdi(ir) = a*rpb
+      g%s(ir) = sqrt(a*rpb)
+      rpb = rpb*ea
+      g%rofi(ir) = b * ( exp( a * (ir - 1) ) - M_ONE )
+    end do
 
-end subroutine logrid_init
+  end subroutine logrid_init
 
-subroutine logrid_end(g)
-  type(logrid_type), intent(inout) :: g
-  deallocate(g%rofi, g%drdi, g%s)
-end subroutine logrid_end
 
-subroutine derivate_in_log_grid(g, f, dfdr)
-  type(logrid_type)     :: g
-  FLOAT, intent(in)  :: f(g%nrval)
-  FLOAT, intent(out) :: dfdr(g%nrval)
+  ! ---------------------------------------------------------
+  subroutine logrid_end(g)
+    type(logrid_type), intent(inout) :: g
+    deallocate(g%rofi, g%drdi, g%s)
+  end subroutine logrid_end
 
-  FLOAT :: x, y, a, b
-  integer :: i, nrval
 
-  a = g%a; b = g%b; nrval = g%nrval
+  ! ---------------------------------------------------------
+  subroutine derivate_in_log_grid(g, f, dfdr)
+    type(logrid_type)     :: g
+    FLOAT, intent(in)  :: f(g%nrval)
+    FLOAT, intent(out) :: dfdr(g%nrval)
 
-  x = M_ONE - exp(-2*a)
-  y = M_ONE - exp(-a)
+    FLOAT :: x, y, a, b
+    integer :: i, nrval
 
-  dfdr(1) = (1/(y*b))*exp(-a)*(f(2)-f(1))
-  do i = 2, nrval-1
-    dfdr(i) = (1/(x*b))*exp(-i*a)*(f(i+1)-f(i-1))
-  enddo
-  dfdr(nrval) = (1/(y*b))*exp(-(nrval-1)*a)*(f(nrval)-f(nrval-1))
+    a = g%a; b = g%b; nrval = g%nrval
 
-  return
-end subroutine derivate_in_log_grid
+    x = M_ONE - exp(-2*a)
+    y = M_ONE - exp(-a)
+
+    dfdr(1) = (1/(y*b))*exp(-a)*(f(2)-f(1))
+    do i = 2, nrval-1
+      dfdr(i) = (1/(x*b))*exp(-i*a)*(f(i+1)-f(i-1))
+    end do
+    dfdr(nrval) = (1/(y*b))*exp(-(nrval-1)*a)*(f(nrval)-f(nrval-1))
+
+    return
+  end subroutine derivate_in_log_grid
 
 end module logrid

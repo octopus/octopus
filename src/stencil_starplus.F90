@@ -25,15 +25,17 @@ module stencil_starplus
   use nl_operator
 
   private
-  public :: stencil_starplus_size_lapl, &
-            stencil_starplus_get_lapl, &
-            stencil_starplus_pol_lapl, &
-            stencil_starplus_size_grad, &
-            stencil_starplus_get_grad, &
-            stencil_starplus_pol_grad
+  public ::                     &
+    stencil_starplus_size_lapl, &
+    stencil_starplus_get_lapl,  &
+    stencil_starplus_pol_lapl,  &
+    stencil_starplus_size_grad, &
+    stencil_starplus_get_grad,  &
+    stencil_starplus_pol_grad
 
-  contains
+contains
 
+  ! ---------------------------------------------------------
   integer function stencil_starplus_size_lapl(dim, order) result(n)
     integer, intent(in) :: dim
     integer, intent(in) :: order
@@ -47,6 +49,8 @@ module stencil_starplus
     call pop_sub()
   end function stencil_starplus_size_lapl
 
+
+  ! ---------------------------------------------------------
   integer function stencil_starplus_size_grad(dim, order) result(n)
     integer, intent(in) :: dim
     integer, intent(in) :: order
@@ -61,6 +65,7 @@ module stencil_starplus
   end function stencil_starplus_size_grad
 
 
+  ! ---------------------------------------------------------
   subroutine stencil_starplus_get_lapl(dim, order, stencil)
     integer, intent(in)  :: dim
     integer, intent(in)  :: order
@@ -74,99 +79,100 @@ module stencil_starplus
     n = 1
     select case(dim)
     case(1)
-       stencil(:,:) = 0
-       n = 1
-       do i = 1, dim
-          do j = -order, order
-             if(j == 0) cycle
-             n = n + 1
-             stencil(i, n) = j
-         end do
-       end do
+      stencil(:,:) = 0
+      n = 1
+      do i = 1, dim
+        do j = -order, order
+          if(j == 0) cycle
+          n = n + 1
+          stencil(i, n) = j
+        end do
+      end do
     case(2)
-       stencil(:,:) = 0
-       n = 1
-       do i = 1, dim
-          do j = -order, order
-             if(j == 0) cycle
-             n = n + 1
-             stencil(i, n) = j
-         end do
-       end do
-       n = n + 1; stencil(1:2, n) = (/ -2,  1 /)
-       n = n + 1; stencil(1:2, n) = (/ -2, -1 /)
-       n = n + 1; stencil(1:2, n) = (/ -1,  2 /)
-       n = n + 1; stencil(1:2, n) = (/ -1,  1 /)
-       n = n + 1; stencil(1:2, n) = (/ -1, -1 /)
-       n = n + 1; stencil(1:2, n) = (/ -1, -2 /)
-       n = n + 1; stencil(1:2, n) = (/  1,  2 /)
-       n = n + 1; stencil(1:2, n) = (/  1,  1 /)
-       n = n + 1; stencil(1:2, n) = (/  1, -1 /)
-       n = n + 1; stencil(1:2, n) = (/  1, -2 /)
-       n = n + 1; stencil(1:2, n) = (/  2,  1 /)
-       n = n + 1; stencil(1:2, n) = (/  2, -1 /)
+      stencil(:,:) = 0
+      n = 1
+      do i = 1, dim
+        do j = -order, order
+          if(j == 0) cycle
+          n = n + 1
+          stencil(i, n) = j
+        end do
+      end do
+      n = n + 1; stencil(1:2, n) = (/ -2,  1 /)
+      n = n + 1; stencil(1:2, n) = (/ -2, -1 /)
+      n = n + 1; stencil(1:2, n) = (/ -1,  2 /)
+      n = n + 1; stencil(1:2, n) = (/ -1,  1 /)
+      n = n + 1; stencil(1:2, n) = (/ -1, -1 /)
+      n = n + 1; stencil(1:2, n) = (/ -1, -2 /)
+      n = n + 1; stencil(1:2, n) = (/  1,  2 /)
+      n = n + 1; stencil(1:2, n) = (/  1,  1 /)
+      n = n + 1; stencil(1:2, n) = (/  1, -1 /)
+      n = n + 1; stencil(1:2, n) = (/  1, -2 /)
+      n = n + 1; stencil(1:2, n) = (/  2,  1 /)
+      n = n + 1; stencil(1:2, n) = (/  2, -1 /)
     case(3)
-       stencil(:,:) = 0
-       n = 1
-       do i = 1, dim
-          do j = -order, order
-             if(j == 0) cycle
-             n = n + 1
-             stencil(i, n) = j
-         end do
-       end do
-       n = n + 1; stencil(1:3, n) = (/ -2,  1, 0 /)
-       n = n + 1; stencil(1:3, n) = (/ -2, -1, 0 /)
-       n = n + 1; stencil(1:3, n) = (/ -1,  2, 0 /)
-       n = n + 1; stencil(1:3, n) = (/ -1,  1, 0 /)
-       n = n + 1; stencil(1:3, n) = (/ -1, -1, 0 /)
-       n = n + 1; stencil(1:3, n) = (/ -1, -2, 0 /)
-       n = n + 1; stencil(1:3, n) = (/  1,  2, 0 /)
-       n = n + 1; stencil(1:3, n) = (/  1,  1, 0 /)
-       n = n + 1; stencil(1:3, n) = (/  1, -1, 0 /)
-       n = n + 1; stencil(1:3, n) = (/  1, -2, 0 /)
-       n = n + 1; stencil(1:3, n) = (/  2,  1, 0 /)
-       n = n + 1; stencil(1:3, n) = (/  2, -1, 0 /)
+      stencil(:,:) = 0
+      n = 1
+      do i = 1, dim
+        do j = -order, order
+          if(j == 0) cycle
+          n = n + 1
+          stencil(i, n) = j
+        end do
+      end do
+      n = n + 1; stencil(1:3, n) = (/ -2,  1, 0 /)
+      n = n + 1; stencil(1:3, n) = (/ -2, -1, 0 /)
+      n = n + 1; stencil(1:3, n) = (/ -1,  2, 0 /)
+      n = n + 1; stencil(1:3, n) = (/ -1,  1, 0 /)
+      n = n + 1; stencil(1:3, n) = (/ -1, -1, 0 /)
+      n = n + 1; stencil(1:3, n) = (/ -1, -2, 0 /)
+      n = n + 1; stencil(1:3, n) = (/  1,  2, 0 /)
+      n = n + 1; stencil(1:3, n) = (/  1,  1, 0 /)
+      n = n + 1; stencil(1:3, n) = (/  1, -1, 0 /)
+      n = n + 1; stencil(1:3, n) = (/  1, -2, 0 /)
+      n = n + 1; stencil(1:3, n) = (/  2,  1, 0 /)
+      n = n + 1; stencil(1:3, n) = (/  2, -1, 0 /)
 
-       n = n + 1; stencil(1:3, n) = (/ -2, 0,  1 /)
-       n = n + 1; stencil(1:3, n) = (/ -2, 0, -1 /)
-       n = n + 1; stencil(1:3, n) = (/ -1, 0,  2 /)
-       n = n + 1; stencil(1:3, n) = (/ -1, 0,  1 /)
-       n = n + 1; stencil(1:3, n) = (/ -1, 0, -1 /)
-       n = n + 1; stencil(1:3, n) = (/ -1, 0, -2 /)
-       n = n + 1; stencil(1:3, n) = (/  1, 0,  2 /)
-       n = n + 1; stencil(1:3, n) = (/  1, 0,  1 /)
-       n = n + 1; stencil(1:3, n) = (/  1, 0, -1 /)
-       n = n + 1; stencil(1:3, n) = (/  1, 0, -2 /)
-       n = n + 1; stencil(1:3, n) = (/  2, 0,  1 /)
-       n = n + 1; stencil(1:3, n) = (/  2, 0, -1 /)
+      n = n + 1; stencil(1:3, n) = (/ -2, 0,  1 /)
+      n = n + 1; stencil(1:3, n) = (/ -2, 0, -1 /)
+      n = n + 1; stencil(1:3, n) = (/ -1, 0,  2 /)
+      n = n + 1; stencil(1:3, n) = (/ -1, 0,  1 /)
+      n = n + 1; stencil(1:3, n) = (/ -1, 0, -1 /)
+      n = n + 1; stencil(1:3, n) = (/ -1, 0, -2 /)
+      n = n + 1; stencil(1:3, n) = (/  1, 0,  2 /)
+      n = n + 1; stencil(1:3, n) = (/  1, 0,  1 /)
+      n = n + 1; stencil(1:3, n) = (/  1, 0, -1 /)
+      n = n + 1; stencil(1:3, n) = (/  1, 0, -2 /)
+      n = n + 1; stencil(1:3, n) = (/  2, 0,  1 /)
+      n = n + 1; stencil(1:3, n) = (/  2, 0, -1 /)
 
-       n = n + 1; stencil(1:3, n) = (/ 0, -2,  1 /)
-       n = n + 1; stencil(1:3, n) = (/ 0, -2, -1 /)
-       n = n + 1; stencil(1:3, n) = (/ 0, -1,  2 /)
-       n = n + 1; stencil(1:3, n) = (/ 0, -1,  1 /)
-       n = n + 1; stencil(1:3, n) = (/ 0, -1, -1 /)
-       n = n + 1; stencil(1:3, n) = (/ 0, -1, -2 /)
-       n = n + 1; stencil(1:3, n) = (/ 0,  1,  2 /)
-       n = n + 1; stencil(1:3, n) = (/ 0,  1,  1 /)
-       n = n + 1; stencil(1:3, n) = (/ 0,  1, -1 /)
-       n = n + 1; stencil(1:3, n) = (/ 0,  1, -2 /)
-       n = n + 1; stencil(1:3, n) = (/ 0,  2,  1 /)
-       n = n + 1; stencil(1:3, n) = (/ 0,  2, -1 /)
+      n = n + 1; stencil(1:3, n) = (/ 0, -2,  1 /)
+      n = n + 1; stencil(1:3, n) = (/ 0, -2, -1 /)
+      n = n + 1; stencil(1:3, n) = (/ 0, -1,  2 /)
+      n = n + 1; stencil(1:3, n) = (/ 0, -1,  1 /)
+      n = n + 1; stencil(1:3, n) = (/ 0, -1, -1 /)
+      n = n + 1; stencil(1:3, n) = (/ 0, -1, -2 /)
+      n = n + 1; stencil(1:3, n) = (/ 0,  1,  2 /)
+      n = n + 1; stencil(1:3, n) = (/ 0,  1,  1 /)
+      n = n + 1; stencil(1:3, n) = (/ 0,  1, -1 /)
+      n = n + 1; stencil(1:3, n) = (/ 0,  1, -2 /)
+      n = n + 1; stencil(1:3, n) = (/ 0,  2,  1 /)
+      n = n + 1; stencil(1:3, n) = (/ 0,  2, -1 /)
 
-       n = n + 1; stencil(1:3, n) = (/ -1, -1, -1 /)
-       n = n + 1; stencil(1:3, n) = (/ -1, -1,  1 /)
-       n = n + 1; stencil(1:3, n) = (/ -1,  1, -1 /)
-       n = n + 1; stencil(1:3, n) = (/ -1,  1,  1 /)
-       n = n + 1; stencil(1:3, n) = (/  1, -1, -1 /)
-       n = n + 1; stencil(1:3, n) = (/  1, -1,  1 /)
-       n = n + 1; stencil(1:3, n) = (/  1,  1, -1 /)
-       n = n + 1; stencil(1:3, n) = (/  1,  1,  1 /)
+      n = n + 1; stencil(1:3, n) = (/ -1, -1, -1 /)
+      n = n + 1; stencil(1:3, n) = (/ -1, -1,  1 /)
+      n = n + 1; stencil(1:3, n) = (/ -1,  1, -1 /)
+      n = n + 1; stencil(1:3, n) = (/ -1,  1,  1 /)
+      n = n + 1; stencil(1:3, n) = (/  1, -1, -1 /)
+      n = n + 1; stencil(1:3, n) = (/  1, -1,  1 /)
+      n = n + 1; stencil(1:3, n) = (/  1,  1, -1 /)
+      n = n + 1; stencil(1:3, n) = (/  1,  1,  1 /)
 
     end select
 
     call pop_sub()
   end subroutine stencil_starplus_get_lapl
+
 
   ! ---------------------------------------------------------
   subroutine stencil_starplus_get_grad(dim, dir, order, stencil)
@@ -182,20 +188,22 @@ module stencil_starplus
     stencil(:, :) = 0
     n = 1
     do i = -order, order
-       stencil(dir, n) = i
-       n = n + 1
-    enddo
+      stencil(dir, n) = i
+      n = n + 1
+    end do
     do j = 1, dim
-       if(j==dir) cycle
-       stencil(j, n) = -1
-       n = n + 1
-       stencil(j, n) =  1
-       n = n + 1
-    enddo
+      if(j==dir) cycle
+      stencil(j, n) = -1
+      n = n + 1
+      stencil(j, n) =  1
+      n = n + 1
+    end do
 
     call pop_sub()
   end subroutine stencil_starplus_get_grad
 
+
+  ! ---------------------------------------------------------
   subroutine stencil_starplus_pol_lapl(dim, order, pol)
     integer, intent(in)  :: dim
     integer, intent(in)  :: order
@@ -211,19 +219,19 @@ module stencil_starplus
       n = 1
       pol(:,:) = 0
       do i = 1, dim
-         do j = 1, 2*order
-            n = n + 1
-            pol(i, n) = j
-         end do
+        do j = 1, 2*order
+          n = n + 1
+          pol(i, n) = j
+        end do
       end do
     case(2)
       n = 1
       pol(:,:) = 0
       do i = 1, dim
-         do j = 1, 2*order
-            n = n + 1
-            pol(i, n) = j
-         end do
+        do j = 1, 2*order
+          n = n + 1
+          pol(i, n) = j
+        end do
       end do
       n = n + 1; pol(1:2, n) = (/ 1, 1 /)
       n = n + 1; pol(1:2, n) = (/ 1, 2 /)
@@ -241,10 +249,10 @@ module stencil_starplus
       n = 1
       pol(:,:) = 0
       do i = 1, dim
-         do j = 1, 2*order
-            n = n + 1
-            pol(i, n) = j
-         end do
+        do j = 1, 2*order
+          n = n + 1
+          pol(i, n) = j
+        end do
       end do
 
       n = n + 1; pol(1:3, n) = (/ 1, 1, 0 /)
@@ -300,6 +308,8 @@ module stencil_starplus
     call pop_sub()
   end subroutine stencil_starplus_pol_lapl
 
+
+  ! ---------------------------------------------------------
   subroutine stencil_starplus_pol_grad(dim, dir, order, pol)
     integer, intent(in)  :: dim
     integer, intent(in)  :: dir
@@ -317,33 +327,33 @@ module stencil_starplus
     n = 2*order + 1
 
     select case(dim)
+    case(2)
+      select case(dir)
+      case(1)
+        n = n + 1; pol(1:2, n) = (/ 0, 1 /)
+        n = n + 1; pol(1:2, n) = (/ 0, 2 /)
       case(2)
-        select case(dir)
-           case(1)
-             n = n + 1; pol(1:2, n) = (/ 0, 1 /)
-             n = n + 1; pol(1:2, n) = (/ 0, 2 /)
-           case(2)
-             n = n + 1; pol(1:2, n) = (/ 1, 0 /)
-             n = n + 1; pol(1:2, n) = (/ 2, 0 /)
-        end select
+        n = n + 1; pol(1:2, n) = (/ 1, 0 /)
+        n = n + 1; pol(1:2, n) = (/ 2, 0 /)
+      end select
+    case(3)
+      select case(dir)
+      case(1)
+        n = n + 1; pol(1:3, n) = (/ 0, 1, 0 /)
+        n = n + 1; pol(1:3, n) = (/ 0, 2, 0 /)
+        n = n + 1; pol(1:3, n) = (/ 0, 0, 1 /)
+        n = n + 1; pol(1:3, n) = (/ 0, 0, 2 /)
+      case(2)
+        n = n + 1; pol(1:3, n) = (/ 1, 0, 0 /)
+        n = n + 1; pol(1:3, n) = (/ 2, 0, 0 /)
+        n = n + 1; pol(1:3, n) = (/ 0, 0, 1 /)
+        n = n + 1; pol(1:3, n) = (/ 0, 0, 2 /)
       case(3)
-        select case(dir)
-           case(1)
-             n = n + 1; pol(1:3, n) = (/ 0, 1, 0 /)
-             n = n + 1; pol(1:3, n) = (/ 0, 2, 0 /)
-             n = n + 1; pol(1:3, n) = (/ 0, 0, 1 /)
-             n = n + 1; pol(1:3, n) = (/ 0, 0, 2 /)
-           case(2)
-             n = n + 1; pol(1:3, n) = (/ 1, 0, 0 /)
-             n = n + 1; pol(1:3, n) = (/ 2, 0, 0 /)
-             n = n + 1; pol(1:3, n) = (/ 0, 0, 1 /)
-             n = n + 1; pol(1:3, n) = (/ 0, 0, 2 /)
-           case(3)
-             n = n + 1; pol(1:3, n) = (/ 1, 0, 0 /)
-             n = n + 1; pol(1:3, n) = (/ 2, 0, 0 /)
-             n = n + 1; pol(1:3, n) = (/ 0, 1, 0 /)
-             n = n + 1; pol(1:3, n) = (/ 0, 2, 0 /)
-        end select
+        n = n + 1; pol(1:3, n) = (/ 1, 0, 0 /)
+        n = n + 1; pol(1:3, n) = (/ 2, 0, 0 /)
+        n = n + 1; pol(1:3, n) = (/ 0, 1, 0 /)
+        n = n + 1; pol(1:3, n) = (/ 0, 2, 0 /)
+      end select
     end select
 
     call pop_sub()

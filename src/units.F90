@@ -43,176 +43,182 @@ module units
   use syslabels
   use lib_oct_parser
 
-implicit none
+  implicit none
 
-private
-public :: unit_type,        &
-          unit_system_type, &
-          units_init,       &
-          units_inp,        &
-          units_out
+  private
+  public ::           &
+    unit_type,        &
+    unit_system_type, &
+    units_init,       &
+    units_inp,        &
+    units_out
 
+  type unit_type
+    FLOAT :: factor
+    character(len=12) :: abbrev ! common abbreviation of the unit name
+    character(len=50) :: name   ! common name
+  end type unit_type
 
-type unit_type
-  FLOAT :: factor
-  character(len=12) :: abbrev ! common abbreviation of the unit name
-  character(len=50) :: name   ! common name
-end type unit_type
+  type unit_system_type
+    type(unit_type) :: length
+    type(unit_type) :: energy
+    type(unit_type) :: time
+    type(unit_type) :: velocity
+    type(unit_type) :: mass
+    type(unit_type) :: force
+    type(unit_type) :: acceleration
+  end type unit_system_type
 
-type unit_system_type
-  type(unit_type) :: length
-  type(unit_type) :: energy
-  type(unit_type) :: time
-  type(unit_type) :: velocity
-  type(unit_type) :: mass
-  type(unit_type) :: force
-  type(unit_type) :: acceleration
-end type unit_system_type
+  type(unit_system_type) :: units_inp, units_out
 
-type(unit_system_type) :: units_inp, units_out
 
 contains
 
-subroutine units_init()
-  character(len=10) :: c
-  character(len=3) :: cinp, cout
+  ! ---------------------------------------------------------
+  subroutine units_init()
+    character(len=10) :: c
+    character(len=3) :: cinp, cout
 
-  call push_sub('units.units_init')
+    call push_sub('units.units_init')
 
-  !%Variable Units
-  !%Type string
-  !%Section 1 Generalities
-  !%Description
-  !% Atomic units seem to be the preferred system in the atomic and
-  !% molecular physics community (despite the opinion of some of the authors
-  !% of this program). Internally, the code works in atomic units. However,
-  !% for input or output, some people like using eV for energies and AA for
-  !% lengths. This other system of units can also be used.
-  !%Option "a.u"
-  !% Atomic units
-  !%Option "eVA"
-  !% Electron-volts for energy, Angstrom for length.
-  !%End
+    !%Variable Units
+    !%Type string
+    !%Section 1 Generalities
+    !%Description
+    !% Atomic units seem to be the preferred system in the atomic and
+    !% molecular physics community (despite the opinion of some of the authors
+    !% of this program). Internally, the code works in atomic units. However,
+    !% for input or output, some people like using eV for energies and AA for
+    !% lengths. This other system of units can also be used.
+    !%Option "a.u"
+    !% Atomic units
+    !%Option "eVA"
+    !% Electron-volts for energy, Angstrom for length.
+    !%End
 
-  !%Variable UnitsInput
-  !%Type string
-  !%Section 1 Generalities
-  !%Description
-  !% Same as "Units", but only refers to the values in the input files.  That
-  !% is, if UnitsInput = "eVA", all physical values in the input files
-  !% will be considered to be in eV and Angstroms.
-  !%End
+    !%Variable UnitsInput
+    !%Type string
+    !%Section 1 Generalities
+    !%Description
+    !% Same as "Units", but only refers to the values in the input files.  That
+    !% is, if UnitsInput = "eVA", all physical values in the input files
+    !% will be considered to be in eV and Angstroms.
+    !%End
 
-  !%Variable UnitsOutput
-  !%Type string
-  !%Section 1 Generalities
-  !%Description
-  !% Same as "Units", but only refers to the values in the output files.  That
-  !% is, if UnitsInput = "eVA", all physical values in the output files
-  !% will be considered to be in eV and Angstroms.
-  !%End
+    !%Variable UnitsOutput
+    !%Type string
+    !%Section 1 Generalities
+    !%Description
+    !% Same as "Units", but only refers to the values in the output files.  That
+    !% is, if UnitsInput = "eVA", all physical values in the output files
+    !% will be considered to be in eV and Angstroms.
+    !%End
 
-  if(loct_parse_isdef(check_inp('Units')).ne.0) then
-    call loct_parse_string('Units', "a.u", c)
-    cinp = c(1:3)
-    cout = c(1:3)
-  else
-    call loct_parse_string(check_inp('UnitsInput'), "a.u", c)
-    cinp = c(1:3)
-    call loct_parse_string(check_inp('UnitsOutput'), "a.u", c)
-    cout = c(1:3)
-  end if
+    if(loct_parse_isdef(check_inp('Units')).ne.0) then
+      call loct_parse_string('Units', "a.u", c)
+      cinp = c(1:3)
+      cout = c(1:3)
+    else
+      call loct_parse_string(check_inp('UnitsInput'), "a.u", c)
+      cinp = c(1:3)
+      call loct_parse_string(check_inp('UnitsOutput'), "a.u", c)
+      cout = c(1:3)
+    end if
 
 
-  call get_units(units_inp, cinp)
-  call get_units(units_out, cout)
+    call get_units(units_inp, cinp)
+    call get_units(units_out, cout)
 
-  call pop_sub()
+    call pop_sub()
 
-contains
+  contains
 
-  subroutine get_units(u, c)
+    ! ---------------------------------------------------------
+    subroutine get_units(u, c)
+      type(unit_system_type), intent(out) :: u
+      character(len=3) :: c
+
+      select case(c)
+      case ("a.u")
+        call units_atomic(u)
+      case ("eVA")
+        call units_eV_Ang(u)
+      case default
+        call input_error('Units')
+      end select
+    end subroutine get_units
+
+  end subroutine units_init
+
+  ! these routines output the unit conversions factors, defined by
+  ! [a.u.] = <input>*u.unit
+  ! <output> = [a.u.]/u.unit
+
+  ! ---------------------------------------------------------
+  subroutine units_atomic(u)
     type(unit_system_type), intent(out) :: u
-    character(len=3) :: c
 
-    select case(c)
-    case ("a.u")
-      call units_atomic(u)
-    case ("eVA")
-      call units_eV_Ang(u)
-    case default
-      call input_error('Units')
-    end select
-  end subroutine get_units
+    u%length%abbrev = "b"
+    u%length%name   = "bohr"
+    u%length%factor = M_ONE
 
-end subroutine units_init
+    u%energy%abbrev = "H"
+    u%energy%name   = "Hartree"
+    u%energy%factor = M_ONE
 
-! these routines output the unit conversions factors, defined by
-! [a.u.] = <input>*u.unit
-! <output> = [a.u.]/u.unit
+    u%time%abbrev = "hbar/H"
+    u%time%name   = "hbar/Hartree"
+    u%time%factor = M_ONE/u%energy%factor
 
-subroutine units_atomic(u)
-  type(unit_system_type), intent(out) :: u
+    u%velocity%abbrev = "bH(2pi/h)"
+    u%velocity%name   = "bohr times Hartree over h bar"
+    u%velocity%factor = M_ONE
 
-  u%length%abbrev = "b"
-  u%length%name   = "bohr"
-  u%length%factor = M_ONE
+    u%mass%abbrev   = "u"
+    u%mass%name     = "1/12 of the mass of C^12"
+    u%mass%factor   = M_ONE/CNST(5.485799110e-4)
 
-  u%energy%abbrev = "H"
-  u%energy%name   = "Hartree"
-  u%energy%factor = M_ONE
+    u%force%abbrev  = "H/b"
+    u%force%name    = "Hartree/bohr"
+    u%force%factor  = M_ONE
 
-  u%time%abbrev = "hbar/H"
-  u%time%name   = "hbar/Hartree"
-  u%time%factor = M_ONE/u%energy%factor
+    u%acceleration%abbrev = "bH(2pi/h)^2"
+    u%acceleration%name   = "bohr times (Hartree over h bar) squared"
+    u%acceleration%factor = M_ONE
+  end subroutine units_atomic
 
-  u%velocity%abbrev = "bH(2pi/h)"
-  u%velocity%name   = "bohr times Hartree over h bar"
-  u%velocity%factor = M_ONE
 
-  u%mass%abbrev   = "u"
-  u%mass%name     = "1/12 of the mass of C^12"
-  u%mass%factor   = M_ONE/CNST(5.485799110e-4)
+  ! ---------------------------------------------------------
+  subroutine units_eV_Ang(u)
+    type(unit_system_type), intent(out) :: u
 
-  u%force%abbrev  = "H/b"
-  u%force%name    = "Hartree/bohr"
-  u%force%factor  = M_ONE
+    u%length%abbrev = "A"
+    u%length%name   = "Angstrom"
+    u%length%factor = P_Ang  ! 1 a.u. = 0.529 A
 
-  u%acceleration%abbrev = "bH(2pi/h)^2"
-  u%acceleration%name   = "bohr times (Hartree over h bar) squared"
-  u%acceleration%factor = M_ONE
-end subroutine units_atomic
+    u%energy%abbrev = "eV"
+    u%energy%name   = "electron volt"
+    u%energy%factor = M_ONE/(M_TWO*P_Ry)   ! 1 a.u. = 27.2 eV
 
-subroutine units_eV_Ang(u)
-  type(unit_system_type), intent(out) :: u
+    u%time%abbrev = "hbar/eV"
+    u%time%name   = "hbar/electron volt"
+    u%time%factor = M_ONE/u%energy%factor
 
-  u%length%abbrev = "A"
-  u%length%name   = "Angstrom"
-  u%length%factor = P_Ang  ! 1 a.u. = 0.529 A
+    u%velocity%abbrev = "AeV(2pi/h)"
+    u%velocity%name   = "Angstrom times electron volts over h bar"
+    u%velocity%factor = u%length%factor*u%energy%factor
 
-  u%energy%abbrev = "eV"
-  u%energy%name   = "electron volt"
-  u%energy%factor = M_ONE/(M_TWO*P_Ry)   ! 1 a.u. = 27.2 eV
+    u%mass%abbrev   = "u"
+    u%mass%name     = "1/12 of the mass of C^12"
+    u%mass%factor   = M_ONE/CNST(5.485799110e-4)
 
-  u%time%abbrev = "hbar/eV"
-  u%time%name   = "hbar/electron volt"
-  u%time%factor = M_ONE/u%energy%factor
+    u%force%abbrev  = "eV/A"
+    u%force%name    = "electron volt/amstrong"
+    u%force%factor  = u%energy%factor/u%length%factor
 
-  u%velocity%abbrev = "AeV(2pi/h)"
-  u%velocity%name   = "Angstrom times electron volts over h bar"
-  u%velocity%factor = u%length%factor*u%energy%factor
-
-  u%mass%abbrev   = "u"
-  u%mass%name     = "1/12 of the mass of C^12"
-  u%mass%factor   = M_ONE/CNST(5.485799110e-4)
-
-  u%force%abbrev  = "eV/A"
-  u%force%name    = "electron volt/amstrong"
-  u%force%factor  = u%energy%factor/u%length%factor
-
-  u%acceleration%abbrev = "AeV(2pi/h)^2"
-  u%acceleration%name   = "Angstrom times (electron volt over h bar) squared"
-  u%acceleration%factor = u%length%factor/u%time%factor**2
-end subroutine units_eV_Ang
+    u%acceleration%abbrev = "AeV(2pi/h)^2"
+    u%acceleration%name   = "Angstrom times (electron volt over h bar) squared"
+    u%acceleration%factor = u%length%factor/u%time%factor**2
+  end subroutine units_eV_Ang
 
 end module units

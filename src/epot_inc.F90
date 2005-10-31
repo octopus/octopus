@@ -17,13 +17,13 @@
 !!
 !! $Id$
 
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!------------------------------------------------------------------------------
 ! X(project) calculates the action of the sum of the np projectors p(1:np) on
 ! the psi wavefunction. The result is summed up to ppsi:
 ! |ppsi> = |ppsi> + \sum_{ip=1}^{np} \hat{p}(ip) |psi>
 ! The action of the projector p is defined as:
 ! \hat{p} |psi> = \sum_{ij} p%uvu(i,j) |p%a(:, i)><p%b(:, j)|psi>
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!------------------------------------------------------------------------------
 subroutine X(project)(mesh, p, n_projectors, psi, ppsi, periodic, ik)
   type(mesh_type),      intent(in)    :: mesh
   type(projector_type), intent(in)    :: p(:)
@@ -33,9 +33,13 @@ subroutine X(project)(mesh, p, n_projectors, psi, ppsi, periodic, ik)
   logical,              intent(in)    :: periodic
   integer,              intent(in)    :: ik
 
-  integer :: i, j, n_s, ip, k, mpi_err
+  integer :: i, j, n_s, ip, k
   R_TYPE, allocatable :: lpsi(:), plpsi(:)
-  R_TYPE :: uvpsi, tmp
+  R_TYPE :: uvpsi
+#if defined(HAVE_MPI)
+  R_TYPE :: tmp
+  integer :: mpi_err
+#endif
 
   call push_sub('epot_inc.project')
 
@@ -46,7 +50,7 @@ subroutine X(project)(mesh, p, n_projectors, psi, ppsi, periodic, ik)
     if(p(ip)%index .ne. k) then
       if(ip.ne.1) ppsi(p(ip-1)%jxyz(1:n_s)) = ppsi(p(ip-1)%jxyz(1:n_s)) + plpsi(1:n_s)
       n_s = p(ip)%n_points_in_sphere
-      
+
       deallocate(lpsi, plpsi, stat = j)
       allocate(lpsi(n_s), plpsi(n_s))
 
@@ -55,24 +59,24 @@ subroutine X(project)(mesh, p, n_projectors, psi, ppsi, periodic, ik)
       plpsi(1:n_s) = R_TOTYPE(M_ZERO)
 
       k = p(ip)%index
-    endif
+    end if
 
     do j = 1, p(ip)%n_channels
       uvpsi = sum(lpsi(1:n_s)*p(ip)%bra(1:n_s, j))
 #if defined(HAVE_MPI)
       if(mesh%parallel_in_domains) then
         call TS(MPI_Allreduce)(uvpsi, tmp, 1, R_MPITYPE, &
-           MPI_SUM, mesh%vp%comm, mpi_err)
+          MPI_SUM, mesh%vp%comm, mpi_err)
         uvpsi = tmp
       end if
 #endif
       do i = 1, p(ip)%n_channels
         if(periodic) then
           plpsi(1:n_s) = plpsi(1:n_s) + &
-             p(ip)%uvu(i, j) * uvpsi * p(ip)%ket(1:n_s, i) * p(ip)%phases(1:n_s, ik)
+            p(ip)%uvu(i, j) * uvpsi * p(ip)%ket(1:n_s, i) * p(ip)%phases(1:n_s, ik)
         else
           plpsi(1:n_s) = plpsi(1:n_s) + p(ip)%uvu(i, j) * uvpsi * p(ip)%ket(1:n_s, i)
-        endif
+        end if
       end do
     end do
 
@@ -107,7 +111,7 @@ subroutine X(epot_forces) (gr, ep, st, t)
 
   ! init to 0
   do i = 1, geo%natoms
-     geo%atom(i)%f = M_ZERO
+    geo%atom(i)%f = M_ZERO
   end do
 
   if(.not.geo%only_user_def) then
@@ -120,23 +124,23 @@ subroutine X(epot_forces) (gr, ep, st, t)
         if(ep%p(ivnl)%index .ne. i) cycle
         ik_loop: do ik = 1, st%d%nik
           st_loop: do ist = st%st_start, st%st_end
-            
+
             do j = 1, NDIM
               ppsi = R_TOTYPE(M_ZERO)
               do idim = 1, st%d%dim
                 call X(project)(gr%m, ep%dp(j, ivnl:ivnl), 1, st%X(psi)(:, idim, ist, ik), ppsi(:, idim), &
-                   periodic = .false., ik = ik)
+                  periodic = .false., ik = ik)
               end do
               atm%f(j) = atm%f(j) + M_TWO * st%occ(ist, ik) * &
-                 X(states_dotp)(gr%m, st%d%dim, st%X(psi)(:, :, ist, ik), ppsi)
+                X(states_dotp)(gr%m, st%d%dim, st%X(psi)(:, :, ist, ik), ppsi)
             end do
-            
+
           end do st_loop
         end do ik_loop
-      enddo
+      end do
     end do atm_loop
     deallocate(ppsi)
-  endif
+  end if
 
 #if defined(HAVE_MPI)
   do i = 1, geo%natoms
@@ -147,7 +151,7 @@ subroutine X(epot_forces) (gr, ep, st, t)
       call MPI_ALLREDUCE(atm%f(1), f(1), NDIM, MPI_FLOAT, MPI_SUM, st%comm, mpi_err)
       atm%f = f
     end if
-  enddo
+  end do
 #endif
 
   if(.not.geo%only_user_def) then ! exclude user defined species for the moment
@@ -159,9 +163,9 @@ subroutine X(epot_forces) (gr, ep, st, t)
           zj = geo%atom(j)%spec%Z_val
           r = sqrt(sum((geo%atom(i)%x(1:NDIM) - geo%atom(j)%x(1:NDIM))**2))
           d = zi * zj/r**3
-          
+
           geo%atom(i)%f(1:NDIM) = geo%atom(i)%f(1:NDIM) + &
-             d*(geo%atom(i)%x(1:NDIM) - geo%atom(j)%x(1:NDIM))
+            d*(geo%atom(i)%x(1:NDIM) - geo%atom(j)%x(1:NDIM))
         end if
       end do
     end do
@@ -180,14 +184,14 @@ subroutine X(epot_forces) (gr, ep, st, t)
     call laser_field(gr%sb, ep%no_lasers, ep%lasers, t, x)
     do i = 1, geo%natoms
       geo%atom(i)%f(1:NDIM) = geo%atom(i)%f(1:NDIM) + &
-         geo%atom(i)%spec%Z_val * x(1:NDIM)
+        geo%atom(i)%spec%Z_val * x(1:NDIM)
     end do
   end if
 
   if(associated(ep%E_field)) then
     do i = 1, geo%natoms
       geo%atom(i)%f(1:NDIM) = geo%atom(i)%f(1:NDIM) + &
-         geo%atom(i)%spec%Z_val * ep%E_field(1:NDIM)
+        geo%atom(i)%spec%Z_val * ep%E_field(1:NDIM)
     end do
   end if
 
@@ -199,15 +203,15 @@ contains
   subroutine local_RS()
     FLOAT :: r, x(3), d, gv(3)
     integer  :: ns
-    
+
     ns = min(2, st%d%nspin)
-    
+
     do i = 1, geo%natoms
       atm => geo%atom(i)
       do j = 1, NP
         call mesh_r(gr%m, j, r, x=x, a=atm%x)
         if(r < r_small) cycle
-        
+
         call specie_get_glocal(atm%spec, x, gv)
         ! FIXME: When running with partitions, vol_pp is local
         ! to the node. It is likely, that this code need changes.
@@ -228,20 +232,20 @@ contains
     call dcf_alloc_RS(cf_for)
 
     do i = 1, geo%natoms
-       atm => geo%atom(i)
-       do j = 1, NDIM
-          cf_for%FS = M_z0
-          call cf_phase_factor(gr%sb, gr%m, atm%x, ep%local_cf(atm%spec%index), cf_for)
+      atm => geo%atom(i)
+      do j = 1, NDIM
+        cf_for%FS = M_z0
+        call cf_phase_factor(gr%sb, gr%m, atm%x, ep%local_cf(atm%spec%index), cf_for)
 
-          call dcf_FS_grad(gr%sb, gr%m, cf_for, j)
-          call dcf_FS2RS(cf_for)
-          call dcf2mf(gr%m, cf_for, force)
-          do l = 1, st%d%nspin
-             ! FIXME: When running with partitions, vol_pp is local
-             ! to the node. It is likely, that this code need changes.
-             atm%f(j) = atm%f(j) + sum(force(1:NP)*st%rho(1:NP, l)*gr%m%vol_pp(1:NP))
-          end do
-       end do
+        call dcf_FS_grad(gr%sb, gr%m, cf_for, j)
+        call dcf_FS2RS(cf_for)
+        call dcf2mf(gr%m, cf_for, force)
+        do l = 1, st%d%nspin
+          ! FIXME: When running with partitions, vol_pp is local
+          ! to the node. It is likely, that this code need changes.
+          atm%f(j) = atm%f(j) + sum(force(1:NP)*st%rho(1:NP, l)*gr%m%vol_pp(1:NP))
+        end do
+      end do
     end do
 
     call dcf_free(cf_for)

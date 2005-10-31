@@ -17,6 +17,7 @@
 !!
 !! $Id$
 
+! ---------------------------------------------------------
 subroutine xc_get_fxc(xcs, m, rho, ispin, fxc)
   type(xc_type), target, intent(in)    :: xcs
   type(mesh_type),       intent(in)    :: m
@@ -71,13 +72,15 @@ subroutine xc_get_fxc(xcs, m, rho, ispin, fxc)
 
   call  lda_process()
 
-
   ! clean up allocated memory
   call  lda_end()
 
   call pop_sub()
 
+
 contains
+
+  ! ---------------------------------------------------------
   ! Takes care of the initialization of the LDA part of the functionals
   !   *) allocates dens(ity) and dedd, and their local variants
   !   *) calculates the density taking into account nlcc and non-collinear spin
@@ -109,12 +112,14 @@ contains
   end subroutine lda_init
 
 
+  ! ---------------------------------------------------------
   ! deallocates variables allocated in lda_init
   subroutine lda_end()
     deallocate(dens, dedd, l_dens, l_dedd)
   end subroutine lda_end
 
 
+  ! ---------------------------------------------------------
   ! calculates the LDA part of vxc, taking into account non-collinear spin
   subroutine lda_process()
 

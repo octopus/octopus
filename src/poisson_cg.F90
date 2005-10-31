@@ -31,18 +31,19 @@ module poisson_cg
 
   implicit none
 
-  public ::              &
-       poisson_cg1_init, &
-       poisson_cg1,      &
-       poisson_cg1_end,  &
-       poisson_cg2_init, &
-       poisson_cg2,      &
-       poisson_cg2_end
+  public ::           &
+    poisson_cg1_init, &
+    poisson_cg1,      &
+    poisson_cg1_end,  &
+    poisson_cg2_init, &
+    poisson_cg2,      &
+    poisson_cg2_end
 
   FLOAT :: threshold
 
 contains
 
+  ! ---------------------------------------------------------
   subroutine poisson_cg1_init(m, ml, thr)
     type(mesh_type), intent(in) :: m
     integer, intent(in) :: ml
@@ -54,10 +55,14 @@ contains
     call pop_sub()
   end subroutine poisson_cg1_init
 
+
+  ! ---------------------------------------------------------
   subroutine poisson_cg1_end
     deallocate(aux)
   end subroutine poisson_cg1_end
 
+
+  ! ---------------------------------------------------------
   subroutine poisson_cg2_init(m, ml, thr)
     type(mesh_type), intent(in) :: m
     integer, intent(in) :: ml
@@ -70,10 +75,14 @@ contains
     call pop_sub()
   end subroutine poisson_cg2_init
 
+
+  ! ---------------------------------------------------------
   subroutine poisson_cg2_end
     deallocate(aux, phi)
   end subroutine poisson_cg2_end
 
+
+  ! ---------------------------------------------------------
   subroutine poisson_cg1(m, der, pot, rho)
     type(mesh_type), target, intent(in)         :: m
     type(der_discr_type), target, intent(in)    :: der
@@ -102,11 +111,11 @@ contains
     iter = 400
     call dconjugate_gradients(m%np_part, pk, zk, op, dotp, iter, res, threshold)
     if(res >= threshold) then
-       message(1) = 'Conjugate gradients Poisson solver did not converge.'
-       write(message(2), '(a,i8)')    '  Iter = ',iter
-       write(message(3), '(a,e14.6)') '  Res = ', res
-       call write_warning(3)
-    endif
+      message(1) = 'Conjugate gradients Poisson solver did not converge.'
+      write(message(2), '(a,i8)')    '  Iter = ',iter
+      write(message(3), '(a,e14.6)') '  Res = ', res
+      call write_warning(3)
+    end if
     nullify(der_pointer, mesh_pointer)
     pot(1:m%np) = pot(1:m%np) + pk(1:m%np)
 
@@ -114,6 +123,8 @@ contains
     call pop_sub()
   end subroutine poisson_cg1
 
+
+  ! ---------------------------------------------------------
   subroutine poisson_cg2(m, der, pot, rho)
     implicit none
     type(mesh_type), target, intent(in)    :: m
@@ -139,11 +150,11 @@ contains
     tmp(1:m%np) = pot(1:m%np)
     call dconjugate_gradients(m%np, tmp, rho_corrected, op, dotp, iter, res, threshold)
     if(res >= threshold) then
-       message(1) = 'Conjugate gradients Poisson solver did not converge.'
-       write(message(2), '(a,i8)')    '  Iter = ',iter
-       write(message(3), '(a,e14.6)') '  Res = ', res
-       call write_warning(3)
-    endif
+      message(1) = 'Conjugate gradients Poisson solver did not converge.'
+      write(message(2), '(a,i8)')    '  Iter = ',iter
+      write(message(3), '(a,e14.6)') '  Res = ', res
+      call write_warning(3)
+    end if
     pot(1:m%np) = tmp(1:m%np) + vh_correction(1:m%np)
 
     nullify(der_pointer, mesh_pointer)
@@ -151,6 +162,8 @@ contains
     call pop_sub()
   end subroutine poisson_cg2
 
+
+  ! ---------------------------------------------------------
   subroutine boundary_conditions(m, rho, ml, pot)
     implicit none
     type(mesh_type), intent(in)  :: m
@@ -170,23 +183,23 @@ contains
     pot(m%np+m%vp%np_ghost(m%vp%partno)+1:m%np_part) = M_ZERO
     do i = m%np+m%vp%np_ghost(m%vp%partno)+1, m%np_part ! boundary conditions
 #else
-    pot(m%np+1:m%np_part) = M_ZERO
-    do i = m%np+1, m%np_part
+      pot(m%np+1:m%np_part) = M_ZERO
+      do i = m%np+1, m%np_part
 #endif
 
-       call mesh_r(m, i, r, x=x)
-       add_lm = 1
-       do l = 0, ml
+        call mesh_r(m, i, r, x=x)
+        add_lm = 1
+        do l = 0, ml
           s1 = M_FOUR*M_PI/((M_TWO*l + M_ONE)*r**(l + 1))
           do mm = -l, l
-             sa = loct_ylm(x(1), x(2), x(3), l, mm)
-             pot(i) = pot(i) + sa * mult(add_lm) * s1
+            sa = loct_ylm(x(1), x(2), x(3), l, mm)
+            pot(i) = pot(i) + sa * mult(add_lm) * s1
             add_lm = add_lm+1
           end do
-       end do
-    end do
+        end do
+      end do
 
-    deallocate(mult)
-  end subroutine boundary_conditions
+      deallocate(mult)
+    end subroutine boundary_conditions
 
-end module poisson_cg
+  end module poisson_cg

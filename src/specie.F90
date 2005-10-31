@@ -20,78 +20,80 @@
 #include "global.h"
 
 module specie
-use global
-use messages
-use syslabels
-use lib_oct
-use lib_oct_parser
-use lib_oct_gsl_spline
-use io
-use units
-use atomic
-use ps
-use math
+  use global
+  use messages
+  use syslabels
+  use lib_oct
+  use lib_oct_parser
+  use lib_oct_gsl_spline
+  use io
+  use units
+  use atomic
+  use ps
+  use math
 
-implicit none
+  implicit none
 
-private
-public :: specie_init, &
-          specie_end, &
-          specie_type, &
-          specie_debug, &
-          specie_filter, &
-          specie_read, &
-          specie_get_local, &
-          specie_get_glocal, &
-          specie_get_local_fourier, &
-          specie_get_nl_part, &
-          specie_get_nlcc, &
-          specie_get_iwf
+  private
+  public ::                     &
+    specie_init,                &
+    specie_end,                 &
+    specie_type,                &
+    specie_debug,               &
+    specie_filter,              &
+    specie_read,                &
+    specie_get_local,           &
+    specie_get_glocal,          &
+    specie_get_local_fourier,   &
+    specie_get_nl_part,         &
+    specie_get_nlcc,            &
+    specie_get_iwf
 
 
-integer, public, parameter :: &
-   SPEC_USDEF  = 1, &      ! user defined function
-   SPEC_POINT  = 2, &      ! point charge: jellium sphere of radius 0.5 a.u.
-   SPEC_JELLI  = 3, &      ! jellium sphere.
-   SPEC_PS_TM2 = PS_TM2, & ! Troullier-Martins pseudopotential
-   SPEC_PS_HGH = PS_HGH    ! HGH pseudopotential
+  integer, public, parameter :: &
+    SPEC_USDEF  = 1,            & ! user defined function
+    SPEC_POINT  = 2,            & ! point charge: jellium sphere of radius 0.5 a.u.
+    SPEC_JELLI  = 3,            & ! jellium sphere.
+    SPEC_PS_TM2 = PS_TM2,       & ! Troullier-Martins pseudopotential
+    SPEC_PS_HGH = PS_HGH          ! HGH pseudopotential
 
-type specie_type
-  integer :: index                ! just a counter
+  type specie_type
+    integer :: index              ! just a counter
 
-  character(len=15) :: label      ! Identifier for the species
-  integer :: type       ! what type of species
-  FLOAT   :: z          ! charge of the species
-  FLOAT   :: z_val      ! valence charge of the species -- the total charge
-                        ! minus the core charge in the case of the pseudopotentials
-  FLOAT   :: weight     ! mass, in atomic mass units (!= atomic units of mass)
-  logical :: local      ! true if the potential is local, which in this case means
-                        ! it is *not* a pseudopotential.
+    character(len=15) :: label    ! Identifier for the species
+    integer :: type               ! what type of species
+    FLOAT   :: z                  ! charge of the species
+    FLOAT   :: z_val              ! valence charge of the species -- the total charge
+                                  ! minus the core charge in the case of the pseudopotentials
+    FLOAT   :: weight             ! mass, in atomic mass units (!= atomic units of mass)
+    logical :: local              ! true if the potential is local, which in this case means
+                                  ! it is *not* a pseudopotential.
 
-  ! for the user defined potential
-  character(len=1024) :: user_def
-  FLOAT :: omega
+    ! for the user defined potential
+    character(len=1024) :: user_def
+    FLOAT :: omega
 
-  ! jellium stuff
-  FLOAT :: jradius
+    ! jellium stuff
+    FLOAT :: jradius
 
-  ! For the pseudopotential
-  type(ps_type), pointer :: ps
-  logical                :: nlcc       ! true if we have non-local core corrections
+    ! For the pseudopotential
+    type(ps_type), pointer :: ps
+    logical                :: nlcc       ! true if we have non-local core corrections
 
-  ! the default values for the spacing and atomic radius
-  FLOAT :: def_rsize, def_h
+    ! the default values for the spacing and atomic radius
+    FLOAT :: def_rsize, def_h
 
-  ! The number of initial wave functions
-  integer :: niwfs
-  integer, pointer :: iwf_l(:, :), iwf_m(:, :), iwf_i(:, :)
+    ! The number of initial wave functions
+    integer :: niwfs
+    integer, pointer :: iwf_l(:, :), iwf_m(:, :), iwf_i(:, :)
 
-  ! For the TM pseudos, the lmax and lloc.
-  integer :: lmax, lloc
+    ! For the TM pseudos, the lmax and lloc.
+    integer :: lmax, lloc
 
-  ! The filtering parameters.
-  FLOAT :: alpha, beta, rcut, beta2
-end type specie_type
+    ! The filtering parameters.
+    FLOAT :: alpha, beta, rcut, beta2
+  end type specie_type
+
 
 contains
 
@@ -104,9 +106,9 @@ contains
     integer :: iunit
 
     if(mpiv%node .ne. 0) then
-       call write_debug_newlines(2)
-       return
-    endif
+      call write_debug_newlines(2)
+      return
+    end if
 
     call push_sub('specie.specie_debug')
 
@@ -135,7 +137,7 @@ contains
 
     if(.not.s%local) then
       if(in_debug_mode) call ps_debug(s%ps, trim(dirname))
-    endif
+    end if
 
     call io_close(iunit)
     call pop_sub()
@@ -187,18 +189,18 @@ contains
     ! Find out if the seeked species is in the block
     row = -1
     block: do i = 1, n_spec_block
-       call loct_parse_block_string(blk, i-1, 0, lab)
-       if(trim(lab)==trim(label)) then
-         row = i - 1
-         exit block
-       endif
-    enddo block
+      call loct_parse_block_string(blk, i-1, 0, lab)
+      if(trim(lab)==trim(label)) then
+        row = i - 1
+        exit block
+      end if
+    end do block
 
     ! Read whatever may be read from the block
     if(row>=0) then
-       call read_from_block(blk, row, s, read_data)
-       call loct_parse_block_end(blk)
-    endif
+      call read_from_block(blk, row, s, read_data)
+      call loct_parse_block_end(blk)
+    end if
 
     ! Find out if the species is in the defaults file.
     write(fname, '(2a)') trim(conf%share), "/PP/defaults"
@@ -223,7 +225,7 @@ contains
     if(read_data == 0) then
       message(1) = 'Species '//trim(label)//' not found.'
       call write_fatal(1)
-    endif
+    end if
 
     call pop_sub()
   end subroutine specie_read
@@ -290,65 +292,65 @@ contains
 
     select case(s%type)
     case(SPEC_USDEF) ! user defined
-     call loct_parse_block_float (blk, row, 3, s%Z_val)
-     call loct_parse_block_string(blk, row, 4, s%user_def)
-     ! convert to C string
-     j = len(trim(s%user_def))
-     s%user_def(j+1:j+1) = achar(0)
-     read_data = 5
+      call loct_parse_block_float (blk, row, 3, s%Z_val)
+      call loct_parse_block_string(blk, row, 4, s%user_def)
+      ! convert to C string
+      j = len(trim(s%user_def))
+      s%user_def(j+1:j+1) = achar(0)
+      read_data = 5
 
     case(SPEC_POINT) ! this is treated as a jellium with radius 0.5
-     call loct_parse_block_float(blk, row, 3, s%Z)
-     s%jradius = M_HALF
-     s%Z_val = 0
-     read_data = 4
+      call loct_parse_block_float(blk, row, 3, s%Z)
+      s%jradius = M_HALF
+      s%Z_val = 0
+      read_data = 4
 
     case(SPEC_JELLI)
-     call loct_parse_block_float(blk, row, 3, s%Z)      ! charge of the jellium sphere
-     call loct_parse_block_float(blk, row, 4, s%jradius)! radius of the jellium sphere
-     s%jradius = units_inp%length%factor * s%jradius ! units conversion
-     s%Z_val = s%Z
-     read_data = 5
+      call loct_parse_block_float(blk, row, 3, s%Z)      ! charge of the jellium sphere
+      call loct_parse_block_float(blk, row, 4, s%jradius)! radius of the jellium sphere
+      s%jradius = units_inp%length%factor * s%jradius ! units conversion
+      s%Z_val = s%Z
+      read_data = 5
 
     case(SPEC_PS_TM2,SPEC_PS_HGH) ! a pseudopotential file
-     s%local = .false.
-     n = loct_parse_block_cols(blk, row)
+      s%local = .false.
+      n = loct_parse_block_cols(blk, row)
 
-     call loct_parse_block_float (blk, row, 3, s%Z)
-     lmax = 2 ! default
-     if(n>4) then
+      call loct_parse_block_float (blk, row, 3, s%Z)
+      lmax = 2 ! default
+      if(n>4) then
         call loct_parse_block_int (blk, row, 4, s%lmax)
         read_data = 5
-     endif
-     lloc = 0 ! default
-     if(n>5) then
+      end if
+      lloc = 0 ! default
+      if(n>5) then
         call loct_parse_block_int (blk, row, 5, s%lloc)
         read_data = 6
-     endif
+      end if
 
-     if(n>6) then
-       call loct_parse_block_float (blk, row, 6, s%def_h)
-       s%def_h = s%def_h * units_inp%length%factor
-       read_data = 7
-     end if
+      if(n>6) then
+        call loct_parse_block_float (blk, row, 6, s%def_h)
+        s%def_h = s%def_h * units_inp%length%factor
+        read_data = 7
+      end if
 
-     if(n>7) then
-       call loct_parse_block_float (blk, row, 7, s%def_rsize)
-       s%def_rsize = s%def_rsize * units_inp%length%factor
-       read_data = 8
-     end if
+      if(n>7) then
+        call loct_parse_block_float (blk, row, 7, s%def_rsize)
+        s%def_rsize = s%def_rsize * units_inp%length%factor
+        read_data = 8
+      end if
 
-     if(n>8) then
-       ! For the moment being, let us assume that this is always in atomic units.
-       call loct_parse_block_float (blk, row, 8, s%alpha)
-       call loct_parse_block_float (blk, row, 9, s%beta)
-       call loct_parse_block_float (blk, row, 10, s%rcut)
-       call loct_parse_block_float (blk, row, 11, s%beta2)
-       read_data = 10
-     else
-       ! Reasonable defaults
-       s%alpha = CNST(0.7); s%beta = CNST(18.0); s%rcut = CNST(2.5); s%beta2 = CNST(0.4)
-     endif
+      if(n>8) then
+        ! For the moment being, let us assume that this is always in atomic units.
+        call loct_parse_block_float (blk, row, 8, s%alpha)
+        call loct_parse_block_float (blk, row, 9, s%beta)
+        call loct_parse_block_float (blk, row, 10, s%rcut)
+        call loct_parse_block_float (blk, row, 11, s%beta2)
+        read_data = 10
+      else
+        ! Reasonable defaults
+        s%alpha = CNST(0.7); s%beta = CNST(18.0); s%rcut = CNST(2.5); s%beta2 = CNST(0.4)
+      end if
 
     case default
       write(message(1), '(a,i2,a)') "Unknown pseudopotential type: '", s%type, "'"
@@ -366,8 +368,6 @@ contains
 
     integer :: i, l
 
-    character(len=VALCONF_STRING_LENGTH) :: conf_string
-
     call push_sub('specie.specie_init')
 
     ! masses are always in a.u.m, so convert them to a.u.
@@ -383,17 +383,18 @@ contains
       s%nlcc = (s%ps%icore /= 'nc  ' )
       s%niwfs = 0
       do i = 1, s%ps%conf%p
-         l = s%ps%conf%l(i)
-         !The next commented line assumed that we only want the shells that had some 
-         !occupation. I am not sure of what is best, for the moment I will assume that
-         !we will use all the shells, so that the LCAO basis will be larger.
-         !if(sum(s%ps%conf%occ(i, :)).ne.M_ZERO) s%niwfs = s%niwfs + (2*l+1)
-         s%niwfs = s%niwfs + (2*l+1)
-      enddo
+        l = s%ps%conf%l(i)
+        !The next commented line assumed that we only want the shells that had some 
+        !occupation. I am not sure of what is best, for the moment I will assume that
+        !we will use all the shells, so that the LCAO basis will be larger.
+        !if(sum(s%ps%conf%occ(i, :)).ne.M_ZERO) s%niwfs = s%niwfs + (2*l+1)
+        s%niwfs = s%niwfs + (2*l+1)
+      end do
     else
       s%niwfs = 2*s%z_val
-      s%omega = sqrt( M_TWO * loct_parse_potential(CNST(0.01), M_ZERO, M_ZERO, CNST(0.01), s%user_def) / CNST(1.0e-4) )
-    endif
+      s%omega = sqrt( abs(M_TWO / CNST(1.0e-4) &
+        * loct_parse_potential(CNST(0.01), M_ZERO, M_ZERO, CNST(0.01), s%user_def) ) )
+    end if
 
     allocate(s%iwf_l(s%niwfs, ispin), s%iwf_m(s%niwfs, ispin), s%iwf_i(s%niwfs, ispin))
     call specie_iwf_fix_qn(s, ispin)
@@ -452,7 +453,7 @@ contains
       end if
 
     case(SPEC_PS_TM2, SPEC_PS_HGH)
-        l = loct_splint(s%ps%vl, r)
+      l = loct_splint(s%ps%vl, r)
     end select
 
   end function specie_get_local
@@ -496,8 +497,8 @@ contains
       end if
 
     case(SPEC_PS_TM2, SPEC_PS_HGH)
-        gv(:) = M_ZERO
-        if(r>CNST(0.00001)) gv(:) = -loct_splint(s%ps%dvl, r)*x(:)/r
+      gv(:) = M_ZERO
+      if(r>CNST(0.00001)) gv(:) = -loct_splint(s%ps%dvl, r)*x(:)/r
 
     end select
 
@@ -515,7 +516,7 @@ contains
     FLOAT :: gmod
 
     if(dim /= 3 .or. s%type == SPEC_USDEF &
-       .or. s%type == SPEC_POINT .or. s%type == SPEC_JELLI) then
+      .or. s%type == SPEC_POINT .or. s%type == SPEC_JELLI) then
       message(1) = 'Periodic arrays of usedef, jelli, point,'
       message(2) = '1D and 2D systems not implemented yet.'
       call write_fatal(2)
@@ -560,7 +561,7 @@ contains
     else
       uVr0  = loct_splint(s%ps%kb(l, i), r)
       duvr0 = loct_splint(s%ps%dkb(l, i), r)
-    endif
+    end if
 
     call grylmr(x(1), x(2), x(3), l, lm, ylm, gylm)
     uv = uvr0*ylm
@@ -583,6 +584,8 @@ contains
 
   end subroutine specie_get_nl_part
 
+
+  ! ---------------------------------------------------------
   FLOAT function specie_get_iwf(s, j, dim, is, x) result(phi)
     type(specie_type), intent(in) :: s
     integer,           intent(in) :: j
@@ -606,16 +609,18 @@ contains
         phi = exp(-s%omega*r2/M_TWO) * hermite(i-1, x(1)*sqrt(s%omega) )
       case(2)
         phi = exp(-s%omega*r2/M_TWO) * hermite(i-1, x(1)*sqrt(s%omega) ) * &
-                                       hermite(l-1, x(2)*sqrt(s%omega) )
+          hermite(l-1, x(2)*sqrt(s%omega) )
       case(3)
         phi = exp(-s%omega*r2/M_TWO) * hermite(i-1, x(1)*sqrt(s%omega) ) * &
-                                       hermite(l-1, x(2)*sqrt(s%omega) ) * &
-                                       hermite(m-1, x(3)*sqrt(s%omega) )
+          hermite(l-1, x(2)*sqrt(s%omega) ) * &
+          hermite(m-1, x(3)*sqrt(s%omega) )
       end select
-    endif
+    end if
 
   end function specie_get_iwf
 
+
+  ! ---------------------------------------------------------
   subroutine specie_iwf_fix_qn(s, ispin)
     type(specie_type), intent(inout) :: s
     integer, intent(in) :: ispin
@@ -633,75 +638,75 @@ contains
             s%iwf_l(n, is) = l
             s%iwf_m(n, is) = m
             n = n + 1
-          enddo
-        enddo
-      enddo
+          end do
+        end do
+      end do
     else
       select case(calc_dim)
       case(1)
         do is = 1, ispin
-           do i = 1, s%niwfs
-              s%iwf_i(i, is) = i
-              s%iwf_l(i, is) = 0
-              s%iwf_m(i, is) = 0
-           enddo
-        enddo
+          do i = 1, s%niwfs
+            s%iwf_i(i, is) = i
+            s%iwf_l(i, is) = 0
+            s%iwf_m(i, is) = 0
+          end do
+        end do
       case(2)
         do is = 1, ispin
-           i = 1; n1 = 1; n2 = 1
-           do
-             s%iwf_i(i, is) = n1
-             s%iwf_l(i, is) = n2
-             s%iwf_m(i, is) = 0
-             i = i + 1; if(i>s%niwfs) exit
-             s%iwf_i(i, is) = n1+1
-             s%iwf_l(i, is) = n2
-             s%iwf_m(i, is) = 0
-             i = i + 1; if(i>s%niwfs) exit
-             s%iwf_i(i, is) = n1
-             s%iwf_l(i, is) = n2+1
-             s%iwf_m(i, is) = 0
-             i = i + 1; if(i>s%niwfs) exit
-             n1 = n1 + 1; n2 = n2 + 1
-           enddo
-        enddo
+          i = 1; n1 = 1; n2 = 1
+          do
+            s%iwf_i(i, is) = n1
+            s%iwf_l(i, is) = n2
+            s%iwf_m(i, is) = 0
+            i = i + 1; if(i>s%niwfs) exit
+            s%iwf_i(i, is) = n1+1
+            s%iwf_l(i, is) = n2
+            s%iwf_m(i, is) = 0
+            i = i + 1; if(i>s%niwfs) exit
+            s%iwf_i(i, is) = n1
+            s%iwf_l(i, is) = n2+1
+            s%iwf_m(i, is) = 0
+            i = i + 1; if(i>s%niwfs) exit
+            n1 = n1 + 1; n2 = n2 + 1
+          end do
+        end do
       case(3)
         do is = 1, ispin
-           i = 1; n1 = 1; n2 = 1; n3 = 1
-           do
-             s%iwf_i(i, is) = n1
-             s%iwf_l(i, is) = n2
-             s%iwf_m(i, is) = n3
-             i = i + 1; if(i>s%niwfs) exit
-             s%iwf_i(i, is) = n1+1
-             s%iwf_l(i, is) = n2
-             s%iwf_m(i, is) = n3
-             i = i + 1; if(i>s%niwfs) exit
-             s%iwf_i(i, is) = n1
-             s%iwf_l(i, is) = n2+1
-             s%iwf_m(i, is) = 0
-             i = i + 1; if(i>s%niwfs) exit
-             s%iwf_i(i, is) = n1
-             s%iwf_l(i, is) = n2
-             s%iwf_m(i, is) = n3+1
-             i = i + 1; if(i>s%niwfs) exit
-             s%iwf_i(i, is) = n1+1
-             s%iwf_l(i, is) = n2+1
-             s%iwf_m(i, is) = n3
-             i = i + 1; if(i>s%niwfs) exit
-             s%iwf_i(i, is) = n1+1
-             s%iwf_l(i, is) = n2
-             s%iwf_m(i, is) = n3+1
-             i = i + 1; if(i>s%niwfs) exit
-             s%iwf_i(i, is) = n1
-             s%iwf_l(i, is) = n2+1
-             s%iwf_m(i, is) = n3+1
-             i = i + 1; if(i>s%niwfs) exit
-             n1 = n1 + 1; n2 = n2 + 1; n3 = n3 + 1
-           enddo
-        enddo
+          i = 1; n1 = 1; n2 = 1; n3 = 1
+          do
+            s%iwf_i(i, is) = n1
+            s%iwf_l(i, is) = n2
+            s%iwf_m(i, is) = n3
+            i = i + 1; if(i>s%niwfs) exit
+            s%iwf_i(i, is) = n1+1
+            s%iwf_l(i, is) = n2
+            s%iwf_m(i, is) = n3
+            i = i + 1; if(i>s%niwfs) exit
+            s%iwf_i(i, is) = n1
+            s%iwf_l(i, is) = n2+1
+            s%iwf_m(i, is) = 0
+            i = i + 1; if(i>s%niwfs) exit
+            s%iwf_i(i, is) = n1
+            s%iwf_l(i, is) = n2
+            s%iwf_m(i, is) = n3+1
+            i = i + 1; if(i>s%niwfs) exit
+            s%iwf_i(i, is) = n1+1
+            s%iwf_l(i, is) = n2+1
+            s%iwf_m(i, is) = n3
+            i = i + 1; if(i>s%niwfs) exit
+            s%iwf_i(i, is) = n1+1
+            s%iwf_l(i, is) = n2
+            s%iwf_m(i, is) = n3+1
+            i = i + 1; if(i>s%niwfs) exit
+            s%iwf_i(i, is) = n1
+            s%iwf_l(i, is) = n2+1
+            s%iwf_m(i, is) = n3+1
+            i = i + 1; if(i>s%niwfs) exit
+            n1 = n1 + 1; n2 = n2 + 1; n3 = n3 + 1
+          end do
+        end do
       end select
-    endif
+    end if
 
     call pop_sub()
   end subroutine specie_iwf_fix_qn

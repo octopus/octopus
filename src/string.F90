@@ -23,13 +23,17 @@ module string
   implicit none
 
   private
-  public :: &
-     upcase, lowcase, compact, &
-     str_trim, str_center, &
-     print_C_string
+  public ::        &
+    upcase,        &
+    lowcase,       &
+    compact,       &
+    str_trim,      &
+    str_center,    &
+    print_C_string
 
 contains
 
+  ! ---------------------------------------------------------
   ! Upcases a string
   !  15-OCT-2000: First version, Fernando Nogueira
   subroutine upcase(str)
@@ -45,6 +49,7 @@ contains
 
   end subroutine upcase
 
+  ! ---------------------------------------------------------
   ! Lowcases a string
   !  15-OCT-2000: First version, Fernando Nogueira
   subroutine  lowcase(str)
@@ -60,7 +65,7 @@ contains
 
   end subroutine lowcase
 
-
+  ! ---------------------------------------------------------
   ! Removes all spaces from a string
   !  15-OCT-2000: First version, Fernando Nogueira
   subroutine compact(str)
@@ -79,7 +84,7 @@ contains
 
   end subroutine compact
 
-
+  ! ---------------------------------------------------------
   ! removes leading spaces from string
   subroutine str_trim(str)
     character (len=*), intent(inout) :: str
@@ -101,7 +106,7 @@ contains
 
   end subroutine str_trim
 
-
+  ! ---------------------------------------------------------
   ! puts space around string, so that it is centered
   character(len=80) function str_center(s_in, l) result(s_out)
     character(len=*), intent(in) :: s_in
@@ -128,7 +133,7 @@ contains
 
   end function str_center
 
-
+  ! ---------------------------------------------------------
   ! prints the C string given by the pointer str
   subroutine print_C_string(iunit, str, pre, advance)
     integer,               intent(in) :: iunit

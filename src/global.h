@@ -22,7 +22,8 @@
 #define NP      gr%m%np
 #define NP_PART gr%m%np_part
 
-#define NDIM gr%sb%dim
+#define NDIM    gr%sb%dim
+#define LAP     f_der%der_discr%lapl
 
 #define __STRING(x)     #x
 

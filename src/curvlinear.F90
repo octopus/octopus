@@ -29,23 +29,24 @@ module curvlinear
 
   implicit none
 
+
+  integer, parameter, public :: &
+    CURV_METHOD_UNIFORM = 1,    &
+    CURV_METHOD_GYGI    = 2,    &
+    CURV_METHOD_BRIGGS  = 3,    &
+    CURV_METHOD_MODINE  = 4
+
   type curvlinear_type
     integer :: method
-
     type(curv_gygi_type)   :: gygi
     type(curv_briggs_type) :: briggs
     type(curv_modine_type) :: modine
   end type curvlinear_type
 
-  integer, parameter, public :: &
-     CURV_METHOD_UNIFORM = 1,  &
-     CURV_METHOD_GYGI    = 2,  &
-     CURV_METHOD_BRIGGS  = 3,  &
-     CURV_METHOD_MODINE  = 4
 
 contains
 
-  !-------------------------------------
+  ! ---------------------------------------------------------
   subroutine curvlinear_init(sb, cv)
     type(simul_box_type),  intent(in)  :: sb
     type(curvlinear_type), intent(out) :: cv
@@ -56,7 +57,7 @@ contains
     !%Type integer
     !%Section 4 Mesh
     !%Description
-    !% The relevant functions in octopus are represented on a mesh in real space. 
+    !% The relevant functions in octopus are represented on a mesh in real space.
     !% This mesh may be an evenly spaced regular rectangular grid (standard mode),
     !% or else an *adaptive* or *curvilinear grid*. We have implemented (not still
     !% finished, this is still an experimental feature) three kinds of adative
@@ -89,7 +90,7 @@ contains
   end subroutine curvlinear_init
 
 
-  !-------------------------------------
+  ! ---------------------------------------------------------
   subroutine curvlinear_chi2x(sb, geo, cv, chi, x)
     type(simul_box_type),  intent(in)  :: sb
     type(geometry_type),   intent(in)  :: geo
@@ -111,7 +112,7 @@ contains
   end subroutine curvlinear_chi2x
 
 
-  !-------------------------------------
+  ! ---------------------------------------------------------
   FLOAT function curvlinear_det_Jac(sb, geo, cv, x, chi) result(jdet)
     type(simul_box_type),  intent(in)  :: sb
     type(geometry_type),   intent(in)  :: geo

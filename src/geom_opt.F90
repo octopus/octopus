@@ -53,6 +53,7 @@ module geom_opt
 
 contains
 
+  ! ---------------------------------------------------------
   integer function geom_opt_run(sys, h) result(ierr)
     type(system_type), target, intent(inout) :: sys
     type(hamiltonian_type),    intent(inout) :: h
@@ -123,6 +124,8 @@ contains
     call end_()
 
   contains
+
+    ! ---------------------------------------------------------
     subroutine init_()
       call push_sub('geom_opt.geom_opt_run')
 
@@ -153,16 +156,17 @@ contains
         call write_fatal(1)
       end if
 
+      call pop_sub()
     end subroutine init_
 
 
+    ! ---------------------------------------------------------
     subroutine end_()
       deallocate(sys%st%X(psi))
-
-      call pop_sub()
     end subroutine end_
 
 
+    ! ---------------------------------------------------------
     subroutine geom_calc_point(x, f, df)
       FLOAT, intent(in)  :: x(3*geo%natoms)
       FLOAT, intent(out) :: f, df(3*geo%natoms)
@@ -195,6 +199,8 @@ contains
 
     end subroutine geom_calc_point
 
+
+    ! ---------------------------------------------------------
     integer function steepest_descents(x)
       FLOAT, intent(inout) :: x(:)
 
@@ -238,9 +244,9 @@ contains
 
         write(message(1), '(a,i5,a)') "Info: geom_opt (iter = ", iter, ")"
         write(message(2), '(6x,2(a,f16.10))') "energy = ", f/units_out%energy%factor, &
-             " max force = ", maxval(abs(df))/units_out%force%factor
+          " max force = ", maxval(abs(df))/units_out%force%factor
         write(message(3), '(6x,2(a,f16.10))') "step   = ", g_opt%step, &
-             "       tol = ", g_opt%tol/units_out%force%factor
+          "       tol = ", g_opt%tol/units_out%force%factor
         call write_info(3)
       end do
 

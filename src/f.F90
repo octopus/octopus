@@ -36,23 +36,26 @@ module functions
   implicit none
 
   private
-  public  :: f_der_type, &
-             f_der_init, &
-             f_der_build, &
-             f_der_end, &
-             dmf2cf, zmf2cf, &
-             dcf2mf, zcf2mf, &
-             dcf_FS2mf, zcf_FS2mf, &
-             df_laplacian, zf_laplacian, &
-             df_gradient, zf_gradient, &
-             df_divergence, zf_divergence, &
-             df_curl, zf_curl, &
-             df_angular_momentum, zf_angular_momentum, &
-             df_l2, zf_l2
+  public  ::                    &
+    f_der_type,                 &
+    f_der_init,                 &
+    f_der_build,                &
+    f_der_end,                  &
+    dmf2cf, zmf2cf,             &
+    dcf2mf, zcf2mf,             &
+    dcf_FS2mf, zcf_FS2mf,       &
+    df_laplacian, zf_laplacian, &
+    df_gradient, zf_gradient,   &
+    df_divergence,              &
+    zf_divergence,              &
+    df_curl, zf_curl,           &
+    df_angular_momentum,        &
+    zf_angular_momentum,        &
+    df_l2, zf_l2
 
-  integer, public, parameter ::     &
-       REAL_SPACE = 0,      &
-       FOURIER_SPACE = 1
+  integer, public, parameter :: &
+    REAL_SPACE = 0,             &
+    FOURIER_SPACE = 1
 
   type f_der_type
     type(mesh_type), pointer :: m            ! a pointer to mesh
@@ -84,7 +87,7 @@ contains
     call loct_parse_int(check_inp('DerivativesSpace'), REAL_SPACE, f_der%space)
     if((f_der%space.ne.REAL_SPACE).and.(f_der%space.ne.FOURIER_SPACE)) then
       write(message(1), '(a,i5,a)') "Input: '", f_der%space, &
-         "' is not a valid DerivativesSpace"
+        "' is not a valid DerivativesSpace"
       message(2) = '(DerivativesSpace = real_space | fourier_space)'
       call write_fatal(2)
     end if

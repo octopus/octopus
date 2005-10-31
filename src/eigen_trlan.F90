@@ -40,9 +40,9 @@ subroutine eigen_solver_cg3(m, st, h, tol, niter, converged, diff, reorder)
 #if defined(HAVE_MPI) && defined(HAVE_METIS)
   message(1) = 'Error: Trlan-Solver not parallized for domain decomposition.'
   call write_fatal(1)
-!  FIXME: Need to adjust m%x and m%vol_pp occurences in the code below 
-!         appropriately for domain decomposition. Also parallelization 
-!         of the vectors has to be taken care of.
+  !  FIXME: Need to adjust m%x and m%vol_pp occurences in the code below
+  !         appropriately for domain decomposition. Also parallelization
+  !         of the vectors has to be taken care of.
 #endif
 
   nrow = (m%np+1)*st%d%dim; ned = st%nst; maxlan = (ned + min(6, ned)); mev = st%nst
@@ -52,19 +52,19 @@ subroutine eigen_solver_cg3(m, st, h, tol, niter, converged, diff, reorder)
   call trl_init_info(info, nrow, maxlan, lohi = -1, ned = ned, tol = CNST(1.0e-5), trestart = 3)
 
   if(in_debug_mode) then
-     call io_assign(unit)
-     call trl_set_debug(info, msglvl = 10, iou = unit, file = trim(tmpdir)//'trlan_log_')
-  endif
+    call io_assign(unit)
+    call trl_set_debug(info, msglvl = 10, iou = unit, file = trim(tmpdir)//'trlan_log_')
+  end if
 
   call trl_set_iguess(info, nec = 0, iguess = 1)
   do ik_trlan = 1, st%d%nik
-     st%X(psi)(:, :, ik_trlan, 1) = R_TOTYPE(M_ZERO)
-     do i = 1, st%nst
-        st%X(psi)(:, :, 1, ik_trlan) =            &
-             st%X(psi)(:, :, 1, ik_trlan) +       &
-             st%X(psi)(:, :, i, ik_trlan)/st%nst
-     enddo
-  enddo
+    st%X(psi)(:, :, ik_trlan, 1) = R_TOTYPE(M_ZERO)
+    do i = 1, st%nst
+      st%X(psi)(:, :, 1, ik_trlan) =            &
+        st%X(psi)(:, :, 1, ik_trlan) +       &
+        st%X(psi)(:, :, i, ik_trlan)/st%nst
+    end do
+  end do
 
   h_trlan  => h
   m_trlan  => m
@@ -73,23 +73,23 @@ subroutine eigen_solver_cg3(m, st, h, tol, niter, converged, diff, reorder)
   do ik_trlan = 1, st%d%nik
 !!$     do i = 1, st%nst
 !!$        evec(:, :, i) = st%X(psi)(:, :, i, ik_trlan)
-!!$     enddo
-     call trlan(op, info, nrow, mev, &
-          st%eigenval(:, ik_trlan), st%X(psi)(:, :, :, ik_trlan), nrow)
+!!$     end do
+    call trlan(op, info, nrow, mev, &
+      st%eigenval(:, ik_trlan), st%X(psi)(:, :, :, ik_trlan), nrow)
 !!$     call trlan(op, info, nrow, mev, &
 !!$                st%eigenval(:, ik_trlan), evec(:,:,:), nrow)
-     if(info%stat.ne.0) then
-        write(message(1),'(a,i5)') 'trlan call returned with error flag', info%stat
-        call write_fatal(1)
-     endif
-     converged = info%nec
-     niter     = info%matvec
+    if(info%stat.ne.0) then
+      write(message(1),'(a,i5)') 'trlan call returned with error flag', info%stat
+      call write_fatal(1)
+    end if
+    converged = info%nec
+    niter     = info%matvec
 
 !!$     do i = 1, st%nst
 !!$        st%X(psi)(:, :, i, ik_trlan) = evec(:, :, i)
-!!$     enddo
+!!$     end do
 
-  enddo
+  end do
 
   ! WARNING - problem with vol_pp
   message(1) = 'Error: eigen_trlan: Does not work'
@@ -98,8 +98,8 @@ subroutine eigen_solver_cg3(m, st, h, tol, niter, converged, diff, reorder)
   !     st%X(psi)(:,:,:,:))
 
   if(in_debug_mode) then
-     call io_close(unit)
-  endif
+    call io_close(unit)
+  end if
 
   nullify(h_trlan, m_trlan, st_trlan)
   call pop_sub()
@@ -113,7 +113,7 @@ subroutine op(nrow, ncol, xin, ldx, yout, ldy)
   integer :: i
 
   do i = 1, ncol
-     call X(Hpsi) (h_trlan, m_trlan, xin(1:, i), yout(2:,i), ik_trlan)
-  enddo
+    call X(Hpsi) (h_trlan, m_trlan, xin(1:, i), yout(2:,i), ik_trlan)
+  end do
 
 end subroutine op

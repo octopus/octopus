@@ -17,14 +17,14 @@
 !!
 !! $Id$
 
-
+! ---------------------------------------------------------
 subroutine X(sparskit_solver_init)(n, sk)
   type(sparskit_solver_type), intent(out) :: sk
   integer, intent(in)  :: n
 
   integer :: workspace_size, m
 
-  call push_sub('sparskit_inc.sparskit_solver_init')
+  call push_sub('sparskit_inc.Xsparskit_solver_init')
 
   !%Variable SparskitSolver
   !%Type integer
@@ -54,15 +54,15 @@ subroutine X(sparskit_solver_init)(n, sk)
   !%End
   call loct_parse_int(check_inp('SparskitSolver'),          SK_CG, sk%solver_type)
   if ( sk%solver_type.lt.SK_MINVAL.or.sk%solver_type.gt.SK_MAXVAL ) then
-     call input_error('SparskitSolver')
-  endif
+    call input_error('SparskitSolver')
+  end if
   call loct_parse_int(check_inp('SparskitKrylovSubspaceSize'), 15, sk%krylov_size)
   call loct_parse_int(check_inp('SparskitPreconditioning'),     0, sk%preconditioning)
   call loct_parse_int(check_inp('SparskitMaxIter'),          1000, sk%maxiter)
   if (sk%preconditioning.ne.0) then
-     message(1) = 'Error: Preconditioning not implemented yet ...'
-     call write_fatal(1)
-  endif
+    message(1) = 'Error: Preconditioning not implemented yet ...'
+    call write_fatal(1)
+  end if
   call loct_parse_float(check_inp('SparskitRelTolerance'),    CNST(1e-8), sk%rel_tolerance)
   call loct_parse_float(check_inp('SparskitAbsTolerance'),    CNST(1e-8), sk%abs_tolerance)
 
@@ -79,40 +79,40 @@ subroutine X(sparskit_solver_init)(n, sk)
 
   select case(sk%solver_type)
   case(SK_CG)
-     message(1) = 'Info: Sparskit solver type: Conjugate Gradient Method'
-     workspace_size = 5*sk%size
+    message(1) = 'Info: Sparskit solver type: Conjugate Gradient Method'
+    workspace_size = 5*sk%size
   case(SK_CGNR)
-     message(1) = 'Info: Sparskit solver type: Conjugate Gradient Method (Normal Residual equation)'
-     workspace_size = 5*sk%size
+    message(1) = 'Info: Sparskit solver type: Conjugate Gradient Method (Normal Residual equation)'
+    workspace_size = 5*sk%size
   case(SK_BCG)
-     message(1) = 'Info: Sparskit solver type: Bi-Conjugate Gradient Method'
-     workspace_size = 7*sk%size
+    message(1) = 'Info: Sparskit solver type: Bi-Conjugate Gradient Method'
+    workspace_size = 7*sk%size
   case(SK_DBCG)
-     message(1) = 'Info: Sparskit solver type: BCG with partial pivoting'
-     workspace_size = 11*sk%size
+    message(1) = 'Info: Sparskit solver type: BCG with partial pivoting'
+    workspace_size = 11*sk%size
   case(SK_BCGSTAB)
-     message(1) = 'Info: Sparskit solver type: BCG stabilized'
-     workspace_size = 8*sk%size
+    message(1) = 'Info: Sparskit solver type: BCG stabilized'
+    workspace_size = 8*sk%size
   case(SK_TFQMR)
-     message(1) = 'Info: Sparskit solver type: Transpose-Free Quasi-Minimum Residual method'
-     workspace_size = 11*sk%size
+    message(1) = 'Info: Sparskit solver type: Transpose-Free Quasi-Minimum Residual method'
+    workspace_size = 11*sk%size
   case(SK_FOM)
-     message(1) = 'Info: Sparskit solver type: Full Orthogonalization Method'
-     workspace_size = (sk%size+3)*(m+2) + (m+1)*m/2
+    message(1) = 'Info: Sparskit solver type: Full Orthogonalization Method'
+    workspace_size = (sk%size+3)*(m+2) + (m+1)*m/2
   case(SK_GMRES)
-     message(1) = 'Info: Sparskit solver type: Generalized Minimum Residual method'
-     workspace_size = (sk%size+3)*(m+2) + (m+1)*m/2
+    message(1) = 'Info: Sparskit solver type: Generalized Minimum Residual method'
+    workspace_size = (sk%size+3)*(m+2) + (m+1)*m/2
   case(SK_FGMRES)
-     message(1) = 'Info: Sparskit solver type: Flexible version of Generalized Minimum Residual method'
-     workspace_size =  2*sk%size*(m+1) + (m+1)*m/2 + 3*m + 2
+    message(1) = 'Info: Sparskit solver type: Flexible version of Generalized Minimum Residual method'
+    workspace_size =  2*sk%size*(m+1) + (m+1)*m/2 + 3*m + 2
   case(SK_DQGMRES)
-     message(1) = 'Info: Sparskit solver type: Direct versions of Quasi Generalize Minimum Residual method'
-     workspace_size = sk%size + (m+1) * (2*sk%size+4)
+    message(1) = 'Info: Sparskit solver type: Direct versions of Quasi Generalize Minimum Residual method'
+    workspace_size = sk%size + (m+1) * (2*sk%size+4)
   case default
-     write(message(1), '(a,i4,a)') "Input: '", sk%solver_type, &
-          "' is not a valid Sparskit Solver"
-     message(2) = '( Sparskit Solver =  cg | cgnr | bcg | dbcg | bcgstab | tfqmr | fom | gmres | fgmres | dqgmres )'
-     call write_fatal(2)
+    write(message(1), '(a,i4,a)') "Input: '", sk%solver_type, &
+      "' is not a valid Sparskit Solver"
+    message(2) = '( Sparskit Solver =  cg | cgnr | bcg | dbcg | bcgstab | tfqmr | fom | gmres | fgmres | dqgmres )'
+    call write_fatal(2)
   end select
   call write_info(1)
 
@@ -148,7 +148,6 @@ subroutine X(sparskit_solver_init)(n, sk)
 end subroutine X(sparskit_solver_init)
 
 
-
 ! ---------------------------------------------------------
 subroutine X(sparskit_solver_run)(sk, op, sol, rhs)
   type(sparskit_solver_type), intent(inout) :: sk
@@ -156,60 +155,59 @@ subroutine X(sparskit_solver_run)(sk, op, sol, rhs)
   R_TYPE, intent(out) :: sol(:)
 #ifdef R_TREAL
   interface
-     subroutine op(x, y)
-       FLOAT, intent(in)  :: x(:)
-       FLOAT, intent(out) :: y(:)
-     end subroutine op
+    subroutine op(x, y)
+      FLOAT, intent(in)  :: x(:)
+      FLOAT, intent(out) :: y(:)
+    end subroutine op
   end interface
 #endif
 #ifdef R_TCOMPLEX
   interface
-     subroutine op(xre, xim, yre, yim)
-       FLOAT, intent(in)  :: xre(:), xim(:)
-       FLOAT, intent(out) :: yre(:), yim(:)
-     end subroutine op
+    subroutine op(xre, xim, yre, yim)
+      FLOAT, intent(in)  :: xre(:), xim(:)
+      FLOAT, intent(out) :: yre(:), yim(:)
+    end subroutine op
   end interface
 #endif
 
 
-  call push_sub('sparskit_inc.sparskit_solver_run')
+  call push_sub('sparskit_inc.Xsparskit_solver_run')
 
   select case(sk%solver_type)
   case(SK_CG)
-     call X(sk_driver_cg)     (sk, op, sol, rhs, sk_work)
+    call X(sk_driver_cg)     (sk, op, sol, rhs, sk_work)
   case(SK_CGNR)
-     call X(sk_driver_cgnr)   (sk, op, sol, rhs, sk_work)
+    call X(sk_driver_cgnr)   (sk, op, sol, rhs, sk_work)
   case(SK_BCG)
-     call X(sk_driver_bcg)    (sk, op, sol, rhs, sk_work)
+    call X(sk_driver_bcg)    (sk, op, sol, rhs, sk_work)
   case(SK_DBCG)
-     call X(sk_driver_dbcg)   (sk, op, sol, rhs, sk_work)
+    call X(sk_driver_dbcg)   (sk, op, sol, rhs, sk_work)
   case(SK_BCGSTAB)
-     call X(sk_driver_bcgstab)(sk, op, sol, rhs, sk_work)
+    call X(sk_driver_bcgstab)(sk, op, sol, rhs, sk_work)
   case(SK_TFQMR)
-     call X(sk_driver_tfqmr)  (sk, op, sol, rhs, sk_work)
+    call X(sk_driver_tfqmr)  (sk, op, sol, rhs, sk_work)
   case(SK_FOM)
-     call X(sk_driver_fom)    (sk, op, sol, rhs, sk_work)
+    call X(sk_driver_fom)    (sk, op, sol, rhs, sk_work)
   case(SK_GMRES)
-     call X(sk_driver_gmres)  (sk, op, sol, rhs, sk_work)
+    call X(sk_driver_gmres)  (sk, op, sol, rhs, sk_work)
   case(SK_FGMRES)
-     call X(sk_driver_fgmres) (sk, op, sol, rhs, sk_work)
+    call X(sk_driver_fgmres) (sk, op, sol, rhs, sk_work)
   case(SK_DQGMRES)
-     call X(sk_driver_dqgmres)(sk, op, sol, rhs, sk_work)
+    call X(sk_driver_dqgmres)(sk, op, sol, rhs, sk_work)
   case default
-     write(message(1), '(a,i4,a)') "Input: '", sk%solver_type, &
-          "' is not a valid Sparsekit Solver"
-     message(2) = '( Sparsekit Solver =  cg | cgnr | bcg | dbcg | bcgstab | tfqmr | fom | gmres | fgmres | dqgmres )'
-     call write_fatal(2)
+    write(message(1), '(a,i4,a)') "Input: '", sk%solver_type, &
+      "' is not a valid Sparsekit Solver"
+    message(2) = '( Sparsekit Solver =  cg | cgnr | bcg | dbcg | bcgstab | tfqmr | fom | gmres | fgmres | dqgmres )'
+    call write_fatal(2)
   end select
 
   call pop_sub
 end subroutine X(sparskit_solver_run)
 
 
-
 ! ---------------------------------------------------------
 subroutine X(sparskit_solver_end)()
-  call push_sub('sparskit_inc.sparskit_solver_end')
+  call push_sub('sparskit_inc.Xsparskit_solver_end')
 
   deallocate(sk_b, sk_y, sk_work)
 

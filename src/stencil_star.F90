@@ -28,14 +28,15 @@ module stencil_star
   implicit none
 
   private
-  public :: stencil_star_size_lapl, &
-            stencil_star_get_lapl, &
-            stencil_star_polynomials_lapl, &
-            stencil_star_coeff_lapl, &
-            stencil_star_size_grad, &
-            stencil_star_get_grad, &
-            stencil_star_polynomials_grad, &
-            stencil_star_coeff_grad
+  public ::                        &
+    stencil_star_size_lapl,        &
+    stencil_star_get_lapl,         &
+    stencil_star_polynomials_lapl, &
+    stencil_star_coeff_lapl,       &
+    stencil_star_size_grad,        &
+    stencil_star_get_grad,         &
+    stencil_star_polynomials_grad, &
+    stencil_star_coeff_grad
 
 contains
 
@@ -139,7 +140,6 @@ contains
 
   ! now come the gradient routines
 
-
   ! ---------------------------------------------------------
   integer function stencil_star_size_grad(order)
     integer, intent(in) :: order
@@ -190,6 +190,7 @@ contains
 
     call pop_sub()
   end subroutine stencil_star_polynomials_grad
+
 
   ! ---------------------------------------------------------
   subroutine stencil_star_coeff_grad(order, h, grad)

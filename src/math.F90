@@ -33,23 +33,24 @@ module math
   implicit none
 
   private
-  public :: dconjugate_gradients,  &
-       zconjugate_gradients,       &
-       ddot_product,               &
-       zdot_product,               &
-       quickrnd,                   &
-       stepf,                      &
-       grylmr,                     &
-       weights,                    &
-       cutoff0,                    &
-       cutoff1,                    &
-       cutoff2,                    &
-       besselint,                  &
-       dextrapolate, zextrapolate, &
-       sort,                       &
-       factorial,                  &
-       hermite,                    &
-       math_divisors
+  public ::                     &
+    dconjugate_gradients,       &
+    zconjugate_gradients,       &
+    ddot_product,               &
+    zdot_product,               &
+    quickrnd,                   &
+    stepf,                      &
+    grylmr,                     &
+    weights,                    &
+    cutoff0,                    &
+    cutoff1,                    &
+    cutoff2,                    &
+    besselint,                  &
+    dextrapolate, zextrapolate, &
+    sort,                       &
+    factorial,                  &
+    hermite,                    &
+    math_divisors
 
 
   !------------------------------------------------------------------------------
@@ -75,31 +76,34 @@ module math
   !     ! must have the same size as a.
   !   end subroutine sort
   interface sort
-     module procedure shellsort, dshellsort1, zshellsort1, dshellsort2, zshellsort2
+    module procedure shellsort, dshellsort1, zshellsort1, dshellsort2, zshellsort2
   end interface
   !------------------------------------------------------------------------------
 
 
   ! This common interface applies to the two procedures defined in math_cg_inc.F90
   interface dconjugate_gradients
-     module procedure dsym_conjugate_gradients, dbi_conjugate_gradients
+    module procedure dsym_conjugate_gradients, dbi_conjugate_gradients
   end interface
 
   interface zconjugate_gradients
-     module procedure zsym_conjugate_gradients, zbi_conjugate_gradients
+    module procedure zsym_conjugate_gradients, zbi_conjugate_gradients
   end interface
 
   ! Euler McLaurin Integration constants
   FLOAT, public, parameter :: EMcLCoeff(1:5) =  &
-       (/ CNST( 95.0)/CNST(288.0),              &
-       CNST(   317.0)/CNST(240.0),              &
-       CNST(    23.0)/CNST( 30.0),              &
-       CNST(   793.0)/CNST(720.0),              &
-       CNST(   157.0)/CNST(160.0) /)
+    (/                                          &
+    CNST( 95.0)/CNST(288.0),                    &
+    CNST(   317.0)/CNST(240.0),                 &
+    CNST(    23.0)/CNST( 30.0),                 &
+    CNST(   793.0)/CNST(720.0),                 &
+    CNST(   157.0)/CNST(160.0)                  &
+    /)
 
 
 contains
 
+  ! ---------------------------------------------------------
   recursive function hermite(n, x) result (h)
     integer, intent(in) :: n
     FLOAT,   intent(in) :: x
@@ -112,10 +116,12 @@ contains
       h = M_TWO*x
     else
       h = M_TWO*x*hermite(n-1,x) - M_TWO*(n-1)*hermite(n-2,x)
-    endif
+    end if
 
   end function hermite
 
+
+  ! ---------------------------------------------------------
   recursive function factorial (n) RESULT (fac)
     integer, intent(in) :: n
     integer :: fac
@@ -123,8 +129,9 @@ contains
       fac = 1
     else
       fac = n*factorial(n-1)
-    endif
+    end if
   end function factorial
+
 
   ! ---------------------------------------------------------
   ! a simple congruent random number generator
@@ -147,12 +154,12 @@ contains
     FLOAT :: stepf
 
     if (x.gt.CNST(100.0)) then
-       stepf = M_ZERO
+      stepf = M_ZERO
     elseif (x.lt.CNST(-100.0)) then
-       stepf = M_TWO
+      stepf = M_TWO
     else
-       stepf = M_TWO / ( M_ONE + exp(x) )
-    endif
+      stepf = M_TWO / ( M_ONE + exp(x) )
+    end if
 
   end function stepf
 
@@ -174,44 +181,44 @@ contains
     integer, save :: lmax = -1
 
     FLOAT :: cmi, cosm, cosmm1, cosphi, dphase, dplg, fac, &
-         fourpi, plgndr, phase, pll, pmm, pmmp1, sinm, &
-         sinmm1, sinphi, r2, rsize, Rx, Ry, Rz, xysize
+      fourpi, plgndr, phase, pll, pmm, pmmp1, sinm, &
+      sinmm1, sinphi, r2, rsize, Rx, Ry, Rz, xysize
     FLOAT, save :: c(0:(lmaxd+1)*(lmaxd+1))
 
 
     ! evaluate normalization constants once and for all
     if (li.gt.lmax) then
-       fourpi = M_FOUR*M_PI
-       do l = 0, li
-          ilm0 = l*l + l
-          do m = 0, l
-             fac = (2*l+1)/fourpi
-             do i = l - m + 1, l + m
-                fac = fac/i
-             end do
-             c(ilm0 + m) = sqrt(fac)
-             ! next line because ylm are real combinations of m and -m
-             if(m.ne.0) c(ilm0 + m) = c(ilm0 + m)*sqrt(M_TWO)
-             c(ilm0 - m) = c(ilm0 + m)
+      fourpi = M_FOUR*M_PI
+      do l = 0, li
+        ilm0 = l*l + l
+        do m = 0, l
+          fac = (2*l+1)/fourpi
+          do i = l - m + 1, l + m
+            fac = fac/i
           end do
-       end do
-       lmax = li
+          c(ilm0 + m) = sqrt(fac)
+          ! next line because ylm are real combinations of m and -m
+          if(m.ne.0) c(ilm0 + m) = c(ilm0 + m)*sqrt(M_TWO)
+          c(ilm0 - m) = c(ilm0 + m)
+        end do
+      end do
+      lmax = li
     end if
 
     ! if l=0, no calculations are required
     if (li.eq.0) then
-       ylm = c(0)
-       grylm(:) = M_ZERO
-       return
+      ylm = c(0)
+      grylm(:) = M_ZERO
+      return
     end if
 
     ! if r=0, direction is undefined => make ylm=0 except for l=0
     r2 = x**2 + y**2 + z**2
     if(r2.lt.tiny) then
-       ylm = M_ZERO
-       grylm(:) = M_ZERO
-       return
-    endif
+      ylm = M_ZERO
+      grylm(:) = M_ZERO
+      return
+    end if
     rsize = sqrt(r2)
 
     Rx = x/rsize
@@ -220,55 +227,55 @@ contains
 
     ! explicit formulas for l=1 and l=2
     if(li.eq.1) then
-       select case(mi)
-       case(-1)
-          ylm = (-c(1))*Ry
-          grylm(1) = c(1)*Rx*Ry/rsize
-          grylm(2) = (-c(1))*(M_ONE - Ry*Ry)/rsize
-          grylm(3) = c(1)*Rz*Ry/rsize
-       case(0)
-          ylm = c(2)*Rz
-          grylm(1) = (-c(2))*Rx*Rz/rsize
-          grylm(2) = (-c(2))*Ry*Rz/rsize
-          grylm(3) = c(2)*(M_ONE - Rz*Rz)/rsize
-       case(1)
-          ylm = (-c(3))*Rx
-          grylm(1) = (-c(3))*(M_ONE - Rx*Rx)/rsize
-          grylm(2) = c(3)*Ry*Rx/rsize
-          grylm(3) = c(3)*Rz*Rx/rsize
-       end select
-       return
+      select case(mi)
+      case(-1)
+        ylm = (-c(1))*Ry
+        grylm(1) = c(1)*Rx*Ry/rsize
+        grylm(2) = (-c(1))*(M_ONE - Ry*Ry)/rsize
+        grylm(3) = c(1)*Rz*Ry/rsize
+      case(0)
+        ylm = c(2)*Rz
+        grylm(1) = (-c(2))*Rx*Rz/rsize
+        grylm(2) = (-c(2))*Ry*Rz/rsize
+        grylm(3) = c(2)*(M_ONE - Rz*Rz)/rsize
+      case(1)
+        ylm = (-c(3))*Rx
+        grylm(1) = (-c(3))*(M_ONE - Rx*Rx)/rsize
+        grylm(2) = c(3)*Ry*Rx/rsize
+        grylm(3) = c(3)*Rz*Rx/rsize
+      end select
+      return
     end if
 
     if(li.eq.2) then
-       select case(mi)
-       case(-2)
-          ylm = c(4)*M_SIX*Rx*Ry
-          grylm(1) = (-c(4))*M_SIX*(M_TWO*Rx*Rx*Ry - Ry)/rsize
-          grylm(2) = (-c(4))*M_SIX*(M_TWO*Ry*Rx*Ry - Rx)/rsize
-          grylm(3) = (-c(4))*M_SIX*(M_TWO*Rz*Rx*Ry)/rsize
-       case(-1)
-          ylm = (-c(5))*M_THREE*Ry*Rz
-          grylm(1) = c(5)*M_THREE*(M_TWO*Rx*Ry*Rz)/rsize
-          grylm(2) = c(5)*M_THREE*(M_TWO*Ry*Ry*Rz - Rz)/rsize
-          grylm(3) = c(5)*M_THREE*(M_TWO*Rz*Ry*Rz - Ry)/rsize
-       case(0)
-          ylm = c(6)*M_HALF*(M_THREE*Rz*Rz - M_ONE)
-          grylm(1) = (-c(6))*M_THREE*(Rx*Rz*Rz)/rsize
-          grylm(2) = (-c(6))*M_THREE*(Ry*Rz*Rz)/rsize
-          grylm(3) = (-c(6))*M_THREE*(Rz*Rz - M_ONE)*Rz/rsize
-       case(1)
-          ylm = (-c(7))*M_THREE*Rx*Rz
-          grylm(1) = c(7)*M_THREE*(M_TWO*Rx*Rx*Rz - Rz)/rsize
-          grylm(2) = c(7)*M_THREE*(M_TWO*Ry*Rx*Rz)/rsize
-          grylm(3) = c(7)*M_THREE*(M_TWO*Rz*Rx*Rz - Rx)/rsize
-       case(2)
-          ylm = c(8)*M_THREE*(Rx*Rx - Ry*Ry)
-          grylm(1) = (-c(8))*M_SIX*(Rx*Rx - Ry*Ry - M_ONE)*Rx/rsize
-          grylm(2) = (-c(8))*M_SIX*(Rx*Rx - Ry*Ry + M_ONE)*Ry/rsize
-          grylm(3) = (-c(8))*M_SIX*(Rx*Rx - Ry*Ry)*Rz/rsize
-       end select
-       return
+      select case(mi)
+      case(-2)
+        ylm = c(4)*M_SIX*Rx*Ry
+        grylm(1) = (-c(4))*M_SIX*(M_TWO*Rx*Rx*Ry - Ry)/rsize
+        grylm(2) = (-c(4))*M_SIX*(M_TWO*Ry*Rx*Ry - Rx)/rsize
+        grylm(3) = (-c(4))*M_SIX*(M_TWO*Rz*Rx*Ry)/rsize
+      case(-1)
+        ylm = (-c(5))*M_THREE*Ry*Rz
+        grylm(1) = c(5)*M_THREE*(M_TWO*Rx*Ry*Rz)/rsize
+        grylm(2) = c(5)*M_THREE*(M_TWO*Ry*Ry*Rz - Rz)/rsize
+        grylm(3) = c(5)*M_THREE*(M_TWO*Rz*Ry*Rz - Ry)/rsize
+      case(0)
+        ylm = c(6)*M_HALF*(M_THREE*Rz*Rz - M_ONE)
+        grylm(1) = (-c(6))*M_THREE*(Rx*Rz*Rz)/rsize
+        grylm(2) = (-c(6))*M_THREE*(Ry*Rz*Rz)/rsize
+        grylm(3) = (-c(6))*M_THREE*(Rz*Rz - M_ONE)*Rz/rsize
+      case(1)
+        ylm = (-c(7))*M_THREE*Rx*Rz
+        grylm(1) = c(7)*M_THREE*(M_TWO*Rx*Rx*Rz - Rz)/rsize
+        grylm(2) = c(7)*M_THREE*(M_TWO*Ry*Rx*Rz)/rsize
+        grylm(3) = c(7)*M_THREE*(M_TWO*Rz*Rx*Rz - Rx)/rsize
+      case(2)
+        ylm = c(8)*M_THREE*(Rx*Rx - Ry*Ry)
+        grylm(1) = (-c(8))*M_SIX*(Rx*Rx - Ry*Ry - M_ONE)*Rx/rsize
+        grylm(2) = (-c(8))*M_SIX*(Rx*Rx - Ry*Ry + M_ONE)*Ry/rsize
+        grylm(3) = (-c(8))*M_SIX*(Rx*Rx - Ry*Ry)*Rz/rsize
+      end select
+      return
     end if
 
     ! general algorithm based on routine plgndr of numerical recipes
@@ -279,56 +286,56 @@ contains
     cosm = M_ONE
     sinm = M_ZERO
     do m = 1, mabs
-       cosmm1 = cosm
-       sinmm1 = sinm
-       cosm = cosmm1*cosphi - sinmm1*sinphi
-       sinm = cosmm1*sinphi + sinmm1*cosphi
+      cosmm1 = cosm
+      sinmm1 = sinm
+      cosm = cosmm1*cosphi - sinmm1*sinphi
+      sinm = cosmm1*sinphi + sinmm1*cosphi
     end do
 
     if(mi.lt.0) then
-       phase = sinm
-       dphase = mabs*cosm
+      phase = sinm
+      dphase = mabs*cosm
     else
-       phase = cosm
-       dphase = (-mabs)*sinm
+      phase = cosm
+      dphase = (-mabs)*sinm
     end if
 
     pmm = M_ONE
     fac = M_ONE
 
     if(mabs.gt.M_ZERO) then
-       do i = 1, mabs
-          pmm = (-pmm)*fac*xysize
-          fac = fac + M_TWO
-       end do
+      do i = 1, mabs
+        pmm = (-pmm)*fac*xysize
+        fac = fac + M_TWO
+      end do
     end if
 
     if(li.eq.mabs) then
-       plgndr = pmm
-       dplg = (-li)*Rz*pmm/(xysize**2)
+      plgndr = pmm
+      dplg = (-li)*Rz*pmm/(xysize**2)
     else
-       pmmp1 = Rz*(2*mabs + 1)*pmm
-       if(li.eq.mabs + 1) then
-          plgndr = pmmp1
-          dplg = -((li*Rz*pmmp1 - (mabs + li)*pmm)/(xysize**2))
-       else
-          do l = mabs + 2, li
-             pll = (Rz*(2*l - 1)*pmmp1 - (l + mabs - 1)*pmm)/(l - mabs)
-             pmm = pmmp1
-             pmmp1 = pll
-          end do
-          plgndr = pll
-          dplg = -((li*Rz*pll - (l + mabs - 1)*pmm)/(xysize**2))
-       end if
+      pmmp1 = Rz*(2*mabs + 1)*pmm
+      if(li.eq.mabs + 1) then
+        plgndr = pmmp1
+        dplg = -((li*Rz*pmmp1 - (mabs + li)*pmm)/(xysize**2))
+      else
+        do l = mabs + 2, li
+          pll = (Rz*(2*l - 1)*pmmp1 - (l + mabs - 1)*pmm)/(l - mabs)
+          pmm = pmmp1
+          pmmp1 = pll
+        end do
+        plgndr = pll
+        dplg = -((li*Rz*pll - (l + mabs - 1)*pmm)/(xysize**2))
+      end if
     end if
 
     ilm0 = li*li + li
     cmi = c(ilm0 + mi)
     ylm = cmi*plgndr*phase
     grylm(1) = (-cmi)*dplg*Rx*Rz*phase/rsize     &
-         -cmi*plgndr*dphase*Ry/(rsize*xysize**2)
+      -cmi*plgndr*dphase*Ry/(rsize*xysize**2)
     grylm(2) = (-cmi)*dplg*Ry*Rz*phase/rsize     &
-         +cmi*plgndr*dphase*Rx/(rsize*xysize**2)
+      +cmi*plgndr*dphase*Rx/(rsize*xysize**2)
     grylm(3)= cmi*dplg*(M_ONE - Rz*Rz)*phase/rsize
 
     return
@@ -368,30 +375,30 @@ contains
     c4 = x(0) - xi
 
     do j = 1, M
-       mn = min(j,N)
-       c2 = M_ONE
-       c5 = c4
-       c4 = x(j) - xi
+      mn = min(j,N)
+      c2 = M_ONE
+      c5 = c4
+      c4 = x(j) - xi
 
-       do k = 0, j - 1
-          c3 = x(j) - x(k)
-          c2 = c2*c3
+      do k = 0, j - 1
+        c3 = x(j) - x(k)
+        c2 = c2*c3
 
-          if (j <= N) cc(k, j - 1, j) = M_ZERO
-          cc(k, j, 0) = c4*cc(k, j - 1, 0)/c3
+        if (j <= N) cc(k, j - 1, j) = M_ZERO
+        cc(k, j, 0) = c4*cc(k, j - 1, 0)/c3
 
-          do i = 1, mn
-             cc(k, j, i) = (c4*cc(k, j - 1, i) - i*cc(k, j - 1, i - 1))/c3
-          end do
+        do i = 1, mn
+          cc(k, j, i) = (c4*cc(k, j - 1, i) - i*cc(k, j - 1, i - 1))/c3
+        end do
 
-          cc(j, j, 0) = -c1*c5*cc(j - 1, j - 1, 0) / c2
-       end do
+        cc(j, j, 0) = -c1*c5*cc(j - 1, j - 1, 0) / c2
+      end do
 
-       do i = 1, mn
-          cc(j, j, i) = c1*(i*cc(j - 1, j - 1, i - 1) - c5*cc(j - 1, j - 1, i))/c2
-       end do
+      do i = 1, mn
+        cc(j, j, i) = c1*(i*cc(j - 1, j - 1, i - 1) - c5*cc(j - 1, j - 1, i))/c2
+      end do
 
-       c1 = c2
+      c1 = c2
     end do
 
     deallocate(x)
@@ -418,20 +425,20 @@ contains
     integer :: nr = CNST(1000)
 
     if ( x == M_ZERO ) then
-       ! Simpson rule for the G_x = 0 contribution -log(r)
-       dr = rmax/real(nr)
-       sum = M_ZERO;
-       do j = 1, nr - 1, 2
-          r = j*dr
-          sum = sum - M_FOUR*r*loct_bessel_j0(p*r)*log(r)
-          r = (j+1)*dr
-          sum = sum - M_TWO*r*loct_bessel_j0(p*r)*log(r)
-       end do
-       sum = sum - rmax*loct_bessel_j0(p*rmax)*log(rmax)
-       cutoff1 = (p**2)*M_THIRD*sum*dr
+      ! Simpson rule for the G_x = 0 contribution -log(r)
+      dr = rmax/real(nr)
+      sum = M_ZERO;
+      do j = 1, nr - 1, 2
+        r = j*dr
+        sum = sum - M_FOUR*r*loct_bessel_j0(p*r)*log(r)
+        r = (j+1)*dr
+        sum = sum - M_TWO*r*loct_bessel_j0(p*r)*log(r)
+      end do
+      sum = sum - rmax*loct_bessel_j0(p*rmax)*log(rmax)
+      cutoff1 = (p**2)*M_THIRD*sum*dr
     else
-       cutoff1 = M_ONE + p*rmax*loct_bessel_j1(p*rmax)*loct_bessel_k0(x*rmax) &
-            - x*rmax*loct_bessel_j0(p*rmax)*loct_bessel_k1(x*rmax)
+      cutoff1 = M_ONE + p*rmax*loct_bessel_j1(p*rmax)*loct_bessel_k0(x*rmax) &
+        - x*rmax*loct_bessel_j0(p*rmax)*loct_bessel_k1(x*rmax)
     end if
 
   end function cutoff1
@@ -442,12 +449,13 @@ contains
     FLOAT, intent(in) ::  p, z, r
 
     if ( p == M_ZERO ) then
-       cutoff2 = M_ONE - cos(z*r) - z*r*sin(z*r)
+      cutoff2 = M_ONE - cos(z*r) - z*r*sin(z*r)
     else
-       cutoff2 = M_ONE + exp(-p*r)*(z*sin(z*r)/p-cos(z*r))
+      cutoff2 = M_ONE + exp(-p*r)*(z*sin(z*r)/p-cos(z*r))
     end if
 
   end function cutoff2
+
 
   ! ---------------------------------------------------------
   FLOAT function besselint(x) result(y)
@@ -456,17 +464,17 @@ contains
     integer :: k
     real(8) :: z
     if(x < CNST(0.2)) then
-       y = CNST(2.0)*M_PI - (M_PI/CNST(6.0))*x**2
-       return
-    endif
+      y = CNST(2.0)*M_PI - (M_PI/CNST(6.0))*x**2
+      return
+    end if
     y = CNST(0.0)
     k = 1
     do
-       z = loct_bessel(k, x)/x
-       y = y + z
-       if(abs(z) < CNST(1.0e-9)) exit
-       k = k + 2
-    enddo
+      z = loct_bessel(k, x)/x
+      y = y + z
+      if(abs(z) < CNST(1.0e-9)) exit
+      k = k + 2
+    end do
     y = CNST(4.0)*M_PI*y
   end function besselint
 
@@ -496,35 +504,35 @@ contains
     n = size(a)
 
     if(present(ind)) then
-       do i = 1, n
-          ind(i) = i
-       enddo
-    endif
+      do i = 1, n
+        ind(i) = i
+      end do
+    end if
 
     inc = 1
     do
-       inc=3*inc+1
-       if (inc > n) exit
+      inc=3*inc+1
+      if (inc > n) exit
     end do
 
     do
-       inc=inc/3
-       do i=inc+1,n
-          v=a(i)
-          if(present(ind)) indi = ind(i)
-          j=i
-          do
-             if (a(j-inc) <= v) exit
-             !if (a(j-inc) >= v) exit
-             a(j)=a(j-inc)
-             if(present(ind)) ind(j) = ind(j-inc)
-             j=j-inc
-             if (j <= inc) exit
-          end do
-          a(j)=v
-          if(present(ind)) ind(j) = indi
-       end do
-       if (inc <= 1) exit
+      inc=inc/3
+      do i=inc+1,n
+        v=a(i)
+        if(present(ind)) indi = ind(i)
+        j=i
+        do
+          if (a(j-inc) <= v) exit
+          !if (a(j-inc) >= v) exit
+          a(j)=a(j-inc)
+          if(present(ind)) ind(j) = ind(j-inc)
+          j=j-inc
+          if (j <= inc) exit
+        end do
+        a(j)=v
+        if(present(ind)) ind(j) = indi
+      end do
+      if (inc <= 1) exit
     end do
 
   end subroutine shellsort
@@ -535,23 +543,23 @@ contains
     integer, intent(in)    :: n
     integer, intent(inout) :: n_divisors
     integer, intent(out)   :: divisors(:)
-    
+
     integer :: i, max_d
-    
+
     ASSERT(n_divisors > 1)
     max_d = n_divisors
-    
+
     n_divisors = 1
     divisors(n_divisors) = 1
     do i = 2, n/2
       if(mod(n, i)==0) then
         n_divisors = n_divisors + 1
-        
+
         if(n_divisors > max_d - 1) then
           message(1) = "Internal error in get_divisors. Please increase n_divisors"
           call write_fatal(1)
         end if
-        
+
         divisors(n_divisors) = i        
       end if
     end do

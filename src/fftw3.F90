@@ -35,23 +35,45 @@ module fft
   implicit none
 
   ! global constants
-  integer, parameter :: &
-       fft_real    = 0, &
-       fft_complex = 1
+  integer, parameter ::            &
+    fft_real    = 0,               &
+    fft_complex = 1
 
-  ! fftw constants. this is just a copy from file fftw3.f, distributed with fftw package.
-  integer, parameter :: fftw_r2hc=0, fftw_hc2r=1, fftw_dht=2, fftw_redft00=3,             &
-                        fftw_redft01=4, fftw_redft10=5, fftw_redft11=6, fftw_rodft00=7,   &
-                        fftw_rodft01=8, fftw_rodft10=9, fftw_rodft11=10, fftw_forward=-1, &
-                        fftw_backward=1, fftw_measure=0, fftw_destroy_input=1,            &
-                        fftw_unaligned=2, fftw_conserve_memory=4, fftw_exhaustive=8,      &
-                        fftw_preserve_input=16, fftw_patient=32, fftw_estimate=64,        &
-                        fftw_estimate_patient=128, fftw_believe_pcost=256,                &
-                        fftw_dft_r2hc_icky=512, fftw_nonthreaded_icky=1024,               &
-                        fftw_no_buffering=2048, fftw_no_indirect_op=4096,                 &
-                        fftw_allow_large_generic=8192, fftw_no_rank_splits=16384,         &
-                        fftw_no_vrank_splits=32768, fftw_no_vrecurse=65536,               &
-                        fftw_no_simd=131072
+  ! fftw constants. this is just a copy from file fftw3.f,
+  ! distributed with fftw package.
+  integer, parameter ::            &
+    fftw_r2hc=0,                   &
+    fftw_hc2r=1,                   &
+    fftw_dht=2,                    &
+    fftw_redft00=3,                &
+    fftw_redft01=4,                &
+    fftw_redft10=5,                &
+    fftw_redft11=6,                &
+    fftw_rodft00=7,                &
+    fftw_rodft01=8,                &
+    fftw_rodft10=9,                &
+    fftw_rodft11=10,               &
+    fftw_forward=-1,               &
+    fftw_backward=1,               &
+    fftw_measure=0,                &
+    fftw_destroy_input=1,          &
+    fftw_unaligned=2,              &
+    fftw_conserve_memory=4,        &
+    fftw_exhaustive=8,             &
+    fftw_preserve_input=16,        &
+    fftw_patient=32,               &
+    fftw_estimate=64,              &
+    fftw_estimate_patient=128,     &
+    fftw_believe_pcost=256,        &
+    fftw_dft_r2hc_icky=512,        &
+    fftw_nonthreaded_icky=1024,    &
+    fftw_no_buffering=2048,        &
+    fftw_no_indirect_op=4096,      &
+    fftw_allow_large_generic=8192, &
+    fftw_no_rank_splits=16384,     &
+    fftw_no_vrank_splits=32768,    &
+    fftw_no_vrecurse=65536,        &
+    fftw_no_simd=131072
 
   type fft_type
     integer :: slot                ! in which slot do we have this fft
@@ -68,6 +90,7 @@ module fft
 
 contains
 
+  ! ---------------------------------------------------------
   ! initialize the table
   subroutine fft_all_init()
     integer :: i
@@ -77,6 +100,8 @@ contains
     end do
   end subroutine fft_all_init
 
+
+  ! ---------------------------------------------------------
   ! delete all plans
   subroutine fft_all_end()
     integer :: i
@@ -90,6 +115,8 @@ contains
     end do
   end subroutine fft_all_end
 
+
+  ! ---------------------------------------------------------
   subroutine fft_init(sb, n, is_real, fft)
     type(simul_box_type), intent(in)    :: sb
     integer,              intent(inout) :: n(3)
@@ -110,31 +137,31 @@ contains
     ! NEW
     ! optimize dimensions only for finite sys
     if(.not.simul_box_is_periodic(sb)) then
-       do i = 1, sb%dim
-          if(n(i) /= 1 .and. fft_optimize) &
-               call loct_fft_optimize(n(i), 7, 1) ! always ask for an odd number
-       end do
+      do i = 1, sb%dim
+        if(n(i) /= 1 .and. fft_optimize) &
+          call loct_fft_optimize(n(i), 7, 1) ! always ask for an odd number
+      end do
     end if
 
     ! find out if fft has already been allocated
     j = 0
     do i = FFT_MAX, 1, -1
-       if(fft_refs(i).ne.NULL) then
-          if(n(1) == fft_array(i)%n(1).and.n(2) == fft_array(i)%n(2).and.n(3) == fft_array(i)%n(3).and. &
-               is_real == fft_array(i)%is_real) then
-             fft = fft_array(i)             ! return a copy
-             fft_refs(i) = fft_refs(i) + 1  ! increment the ref count
-             return
-          end if
-       else
-          j = i
-       end if
+      if(fft_refs(i).ne.NULL) then
+        if(n(1) == fft_array(i)%n(1).and.n(2) == fft_array(i)%n(2).and.n(3) == fft_array(i)%n(3).and. &
+          is_real == fft_array(i)%is_real) then
+          fft = fft_array(i)             ! return a copy
+          fft_refs(i) = fft_refs(i) + 1  ! increment the ref count
+          return
+        end if
+      else
+        j = i
+      end if
     end do
 
     if(j == 0) then
-       message(1) = "Not enough slots for FFTs"
-       message(2) = "Please increase FFT_MAX in fft.F90 and recompile"
-       call write_fatal(2)
+      message(1) = "Not enough slots for FFTs"
+      message(2) = "Please increase FFT_MAX in fft.F90 and recompile"
+      call write_fatal(2)
     end if
 
     ! j now contains an empty slot
@@ -143,42 +170,44 @@ contains
     fft_array(j)%n       = n
     fft_array(j)%is_real = is_real
     if(is_real == fft_real) then
-       allocate(rin(n(1), n(2), n(3)), cout(n(1)/2+1, n(2), n(3)))
-       select case(sb%dim)
-       case(3)
-          call DFFTW(plan_dft_r2c_3d) (fft_array(j)%planf, n(1), n(2), n(3), rin, cout, fftw_measure)
-          call DFFTW(plan_dft_c2r_3d) (fft_array(j)%planb, n(1), n(2), n(3), cout, rin, fftw_measure)
-       case(2)
-          call DFFTW(plan_dft_r2c_2d) (fft_array(j)%planf, n(1), n(2), rin, cout, fftw_measure)
-          call DFFTW(plan_dft_c2r_2d) (fft_array(j)%planb, n(1), n(2), cout, rin, fftw_measure)
-       case(1)
-          message(1) = 'fft_init: creation of 1D plan not implemented.'
-          call write_fatal(1)
-       end select
-       deallocate(rin, cout)
+      allocate(rin(n(1), n(2), n(3)), cout(n(1)/2+1, n(2), n(3)))
+      select case(sb%dim)
+      case(3)
+        call DFFTW(plan_dft_r2c_3d) (fft_array(j)%planf, n(1), n(2), n(3), rin, cout, fftw_measure)
+        call DFFTW(plan_dft_c2r_3d) (fft_array(j)%planb, n(1), n(2), n(3), cout, rin, fftw_measure)
+      case(2)
+        call DFFTW(plan_dft_r2c_2d) (fft_array(j)%planf, n(1), n(2), rin, cout, fftw_measure)
+        call DFFTW(plan_dft_c2r_2d) (fft_array(j)%planb, n(1), n(2), cout, rin, fftw_measure)
+      case(1)
+        message(1) = 'fft_init: creation of 1D plan not implemented.'
+        call write_fatal(1)
+      end select
+      deallocate(rin, cout)
     else
-       allocate(cin(n(1), n(2), n(3)), cout(n(1), n(2), n(3)))
-       select case(sb%dim)
-       case(3)
-          call DFFTW(plan_dft_3d) (fft_array(j)%planf, n(1), n(2), n(3), cin, cout, fftw_forward,  fftw_measure)
-          call DFFTW(plan_dft_3d) (fft_array(j)%planb, n(1), n(2), n(3), cin, cout, fftw_backward, fftw_measure)
-       case(2)
-          call DFFTW(plan_dft_2d) (fft_array(j)%planf, n(1), n(2), cin, cout, fftw_forward,  fftw_measure)
-          call DFFTW(plan_dft_2d) (fft_array(j)%planb, n(1), n(2), cin, cout, fftw_backward, fftw_measure)
-       case(1)
-          message(1) = 'fft_init: creation of 1D plan not implemented.'
-          call write_fatal(1)
-       end select
-       deallocate(cin, cout)
+      allocate(cin(n(1), n(2), n(3)), cout(n(1), n(2), n(3)))
+      select case(sb%dim)
+      case(3)
+        call DFFTW(plan_dft_3d) (fft_array(j)%planf, n(1), n(2), n(3), cin, cout, fftw_forward,  fftw_measure)
+        call DFFTW(plan_dft_3d) (fft_array(j)%planb, n(1), n(2), n(3), cin, cout, fftw_backward, fftw_measure)
+      case(2)
+        call DFFTW(plan_dft_2d) (fft_array(j)%planf, n(1), n(2), cin, cout, fftw_forward,  fftw_measure)
+        call DFFTW(plan_dft_2d) (fft_array(j)%planb, n(1), n(2), cin, cout, fftw_backward, fftw_measure)
+      case(1)
+        message(1) = 'fft_init: creation of 1D plan not implemented.'
+        call write_fatal(1)
+      end select
+      deallocate(cin, cout)
     end if
     fft = fft_array(j)
 
     write(message(1), '(a,i4,a,i4,a,i4,a,i2)') "Info: FFT allocated with size (", &
-         n(1), ",", n(2), ",", n(3), ") in slot ", j
+      n(1), ",", n(2), ",", n(3), ") in slot ", j
     call write_info(1)
 
   end subroutine fft_init
 
+
+  ! ---------------------------------------------------------
   subroutine fft_copy(fft_i, fft_o)
     type(fft_type), intent( in) :: fft_i
     type(fft_type), intent(out) :: fft_o
@@ -190,6 +219,8 @@ contains
     fft_refs(fft_i%slot) = fft_refs(fft_i%slot) + 1
   end subroutine fft_copy
 
+
+  ! ---------------------------------------------------------
   subroutine fft_end(fft)
     type(fft_type), intent(inout) :: fft
 
@@ -213,6 +244,8 @@ contains
 
   end subroutine fft_end
 
+
+  ! ---------------------------------------------------------
   subroutine fft_getdim_real(fft, d)
     type(fft_type), intent(in) :: fft
     integer, intent(out) :: d(3)
@@ -220,6 +253,8 @@ contains
     d = fft%n
   end subroutine fft_getdim_real
 
+
+  ! ---------------------------------------------------------
   subroutine fft_getdim_complex(fft, d)
     type(fft_type), intent(in) :: fft
     integer, intent(out) :: d(3)
@@ -228,6 +263,8 @@ contains
     if(fft%is_real == fft_real)  d(1) = d(1)/2 + 1
   end subroutine fft_getdim_complex
 
+
+  ! ---------------------------------------------------------
   ! these routines simply call fftw
   ! first the real to complex versions
   subroutine dfft_forward(fft, r, c)
@@ -237,6 +274,8 @@ contains
     call DFFTW(execute_dft_r2c) (fft%planf, r, c)
   end subroutine dfft_forward
 
+
+  ! ---------------------------------------------------------
   subroutine dfft_backward(fft, c, r)
     type(fft_type), intent(in) :: fft
     CMPLX, intent(in) :: c(fft%n(1), fft%n(2), fft%n(3))
@@ -246,10 +285,12 @@ contains
 
     ! multiply by 1/(N1*N2*N2)
     call lalg_scal(fft%n(1), fft%n(2), fft%n(3), &
-       M_ONE/real(fft%n(1)*fft%n(2)*fft%n(3), PRECISION), r)
+      M_ONE/real(fft%n(1)*fft%n(2)*fft%n(3), PRECISION), r)
 
   end subroutine dfft_backward
 
+
+  ! ---------------------------------------------------------
   ! first the complex versions
   subroutine zfft_forward(fft, in, out)
     type(fft_type), intent(in) :: fft
@@ -259,6 +300,8 @@ contains
     call DFFTW(execute_dft) (fft%planf, in, out)
   end subroutine zfft_forward
 
+
+  ! ---------------------------------------------------------
   subroutine zfft_backward(fft, in, out)
     type(fft_type), intent(in) :: fft
     CMPLX, intent(in)  :: in(fft%n(1), fft%n(2), fft%n(3))
@@ -268,10 +311,12 @@ contains
 
     ! multiply by 1/(N1*N2*N2)
     call lalg_scal(fft%n(1), fft%n(2), fft%n(3), &
-       M_z1/real(fft%n(1)*fft%n(2)*fft%n(3), PRECISION), out)
+      M_z1/real(fft%n(1)*fft%n(2)*fft%n(3), PRECISION), out)
 
   end subroutine zfft_backward
 
+
+  ! ---------------------------------------------------------
   ! convert between array index and G vector
   function pad_feq(i, n, mode)
     integer, intent(in) :: i,n
@@ -283,14 +328,14 @@ contains
         pad_feq = i - 1
       else
         pad_feq = i - n -1
-      endif
+      end if
     else
       if( i >= 0 ) then
         pad_feq = i + 1
       else
         pad_feq = i + n + 1
-      endif
-    endif
+      end if
+    end if
 
     return
   end function pad_feq

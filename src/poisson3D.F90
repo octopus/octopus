@@ -17,6 +17,7 @@
 !!
 !! $Id$
 
+! ---------------------------------------------------------
 subroutine poisson3D_init(gr)
   type(grid_type), intent(inout) :: gr
 
@@ -69,7 +70,7 @@ subroutine poisson3D_init(gr)
      call loct_parse_int(check_inp('PoissonSolverMaxMultipole'), 2, maxl)
      call build_aux(gr%m)
      call build_phi(gr%m)
-  endif
+  end if
 #endif
 
   call pop_sub()
@@ -77,6 +78,7 @@ subroutine poisson3D_init(gr)
 contains
 
 #ifdef HAVE_FFT
+  ! ---------------------------------------------------------
   subroutine init_fft(m)
     type(mesh_type), intent(in) :: m
 
@@ -91,7 +93,7 @@ contains
        if (poisson_solver == FFT_SPH) db(:) = maxval(db)
     else
        db(:) = m%l(:)
-    endif
+    end if
 
     call dcf_new(db, fft_cf)    ! allocate cube function where we will perform
     call dcf_fft_init(fft_cf, gr%sb)   ! the ffts
@@ -152,7 +154,7 @@ contains
                 case (FFT_NOCUT, FFT_CORRECTED)
                    fft_Coulb_FS(ix, iy, iz) = M_ZERO
                 end select
-             endif
+             end if
              fft_Coulb_FS(ix, iy, iz) = M_FOUR*M_PI*fft_Coulb_FS(ix, iy, iz)
           end do
        end do

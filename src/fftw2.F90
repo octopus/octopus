@@ -33,22 +33,22 @@ module fft
   implicit none
 
   ! global constants
-  integer, parameter :: &
-       fft_real    = 0, &
-       fft_complex = 1
+  integer, parameter ::        &
+    fft_real    = 0,           &
+    fft_complex = 1
 
   ! fftw constants WARNING -> they should be private
-  integer, parameter :: &
-       fftw_forward         = -1, &
-       fftw_backward        =  1, &
-       fftw_real_to_complex = -1, &
-       fftw_complex_to_real =  1, &
-       fftw_estimate        =  0, &
-       fftw_measure         =  1, &
-       fftw_in_place        =  8, &
-       fftw_out_of_place    =  0, &
-       fftw_use_wisdom      = 16, &
-       fftw_threadsafe      =128
+  integer, parameter ::        &
+    fftw_forward         = -1, &
+    fftw_backward        =  1, &
+    fftw_real_to_complex = -1, &
+    fftw_complex_to_real =  1, &
+    fftw_estimate        =  0, &
+    fftw_measure         =  1, &
+    fftw_in_place        =  8, &
+    fftw_out_of_place    =  0, &
+    fftw_use_wisdom      = 16, &
+    fftw_threadsafe      =128
 
   type fft_type
     integer :: slot                ! in which slot do we have this fft
@@ -64,6 +64,8 @@ module fft
   logical, private :: fft_optimize
 
 contains
+
+  ! ---------------------------------------------------------
   ! initialize the table
   subroutine fft_all_init()
     integer :: i
@@ -75,6 +77,7 @@ contains
     end do
   end subroutine fft_all_init
 
+  ! ---------------------------------------------------------
   ! delete all plans
   subroutine fft_all_end()
     integer :: i
@@ -88,6 +91,8 @@ contains
     end do
   end subroutine fft_all_end
 
+
+  ! ---------------------------------------------------------
   subroutine fft_init(sb, n, is_real, fft)
     type(simul_box_type), intent(in)    :: sb
     integer,              intent(inout) :: n(3)
@@ -107,16 +112,16 @@ contains
     if(.not.simul_box_is_periodic(sb)) then
       do i = 1, sb%dim
         if(n(i).ne.1 .and. fft_optimize) &
-           call loct_fft_optimize(n(i), 7, 1) ! always ask for an odd number
+          call loct_fft_optimize(n(i), 7, 1) ! always ask for an odd number
       end do
     end if
 
-   ! find out if fft has already been allocated
+    ! find out if fft has already been allocated
     j = 0
     do i = FFT_MAX, 1, -1
       if(fft_refs(i).ne.NULL) then
         if(n(1) == fft_array(i)%n(1).and.n(2) == fft_array(i)%n(2).and.n(3) == fft_array(i)%n(3).and. &
-             is_real == fft_array(i)%is_real) then
+          is_real == fft_array(i)%is_real) then
           fft = fft_array(i)             ! return a copy
           fft_refs(i) = fft_refs(i) + 1  ! increment the ref count
           return
@@ -139,23 +144,25 @@ contains
     fft_array(j)%is_real = is_real
     if(is_real == fft_real) then
       call rfftwnd_f77_create_plan(fft_array(j)%planf, sb%dim, n, &
-           fftw_real_to_complex + fftw_forward,  fftw_measure + fftw_threadsafe)
+        fftw_real_to_complex + fftw_forward,  fftw_measure + fftw_threadsafe)
       call rfftwnd_f77_create_plan(fft_array(j)%planb, sb%dim, n, &
-           fftw_complex_to_real + fftw_backward, fftw_measure + fftw_threadsafe)
+        fftw_complex_to_real + fftw_backward, fftw_measure + fftw_threadsafe)
     else
       call  fftwnd_f77_create_plan(fft_array(j)%planf, sb%dim, n, &
-           fftw_forward,  fftw_measure + fftw_threadsafe)
+        fftw_forward,  fftw_measure + fftw_threadsafe)
       call  fftwnd_f77_create_plan(fft_array(j)%planb, sb%dim, n, &
-           fftw_backward, fftw_measure + fftw_threadsafe)
+        fftw_backward, fftw_measure + fftw_threadsafe)
     end if
     fft = fft_array(j)
 
     write(message(1), '(a,i4,a,i4,a,i4,a,i2)') "Info: FFT allocated with size (", &
-         n(1), ",", n(2), ",", n(3), ") in slot ", j
+      n(1), ",", n(2), ",", n(3), ") in slot ", j
     call write_info(1)
 
   end subroutine fft_init
 
+
+  ! ---------------------------------------------------------
   subroutine fft_copy(fft_i, fft_o)
     type(fft_type), intent( in) :: fft_i
     type(fft_type), intent(out) :: fft_o
@@ -167,6 +174,8 @@ contains
     fft_refs(fft_i%slot) = fft_refs(fft_i%slot) + 1
   end subroutine fft_copy
 
+
+  ! ---------------------------------------------------------
   subroutine fft_end(fft)
     type(fft_type), intent(inout) :: fft
 
@@ -191,6 +200,8 @@ contains
 
   end subroutine fft_end
 
+
+  ! ---------------------------------------------------------
   subroutine fft_getdim_real(fft, d)
     type(fft_type), intent(in) :: fft
     integer, intent(out) :: d(3)
@@ -198,6 +209,8 @@ contains
     d = fft%n
   end subroutine fft_getdim_real
 
+
+  ! ---------------------------------------------------------
   subroutine fft_getdim_complex(fft, d)
     type(fft_type), intent(in) :: fft
     integer, intent(out) :: d(3)
@@ -206,6 +219,8 @@ contains
     if(fft%is_real == fft_real)  d(1) = d(1)/2 + 1
   end subroutine fft_getdim_complex
 
+
+  ! ---------------------------------------------------------
   ! these routines simply call fftw
   ! first the real to complex versions
   subroutine dfft_forward(fft, r, c)
@@ -216,6 +231,8 @@ contains
     call rfftwnd_f77_one_real_to_complex(fft%planf, r, c)
   end subroutine dfft_forward
 
+
+  ! ---------------------------------------------------------
   subroutine dfft_backward(fft, c, r)
     type(fft_type), intent(in) :: fft
     CMPLX, intent(in) :: c(fft%n(1),fft%n(2),fft%n(3))
@@ -225,10 +242,12 @@ contains
 
     ! multiply by 1/(N1*N2*N2)
     call lalg_scal(fft%n(1), fft%n(2), fft%n(3), &
-       M_ONE/real(fft%n(1)*fft%n(2)*fft%n(3), PRECISION), r)
+      M_ONE/real(fft%n(1)*fft%n(2)*fft%n(3), PRECISION), r)
 
   end subroutine dfft_backward
 
+
+  ! ---------------------------------------------------------
   ! first the complex versions
   subroutine zfft_forward(fft, r, c)
     type(fft_type), intent(in) :: fft
@@ -238,6 +257,8 @@ contains
     call fftwnd_f77_one(fft%planf, r, c)
   end subroutine zfft_forward
 
+
+  ! ---------------------------------------------------------
   subroutine zfft_backward(fft, c, r)
     type(fft_type), intent(in) :: fft
     CMPLX, intent(in)  :: c(fft%n(1), fft%n(2), fft%n(3))
@@ -247,10 +268,12 @@ contains
 
     ! multiply by 1/(N1*N2*N2)
     call lalg_scal(fft%n(1), fft%n(2), fft%n(3), &
-       M_z1/real(fft%n(1)*fft%n(2)*fft%n(3), PRECISION), r)
+      M_z1/real(fft%n(1)*fft%n(2)*fft%n(3), PRECISION), r)
 
   end subroutine zfft_backward
 
+
+  ! ---------------------------------------------------------
   ! convert between array index and G vector
   function pad_feq(i, n, mode)
     integer, intent(in) :: i,n
@@ -262,14 +285,14 @@ contains
         pad_feq = i - 1
       else
         pad_feq = i - n -1
-      endif
+      end if
     else
       if( i >= 0 ) then
         pad_feq = i + 1
       else
         pad_feq = i + n + 1
-      endif
-    endif
+      end if
+    end if
 
     return
   end function pad_feq

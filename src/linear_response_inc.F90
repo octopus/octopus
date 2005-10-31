@@ -45,7 +45,7 @@ subroutine X(lr_orth_vector) (m, st, v, ik)
   R_TYPE  :: scalp
   integer :: ist
 
-  call push_sub('linear_response_inc.lr_orth_vector')
+  call push_sub('linear_response_inc.Xlr_orth_vector')
 
   do ist = 1, st%nst
     if(st%occ(ist, ik) > M_ZERO) then
@@ -72,7 +72,7 @@ subroutine X(lr_build_dl_rho) (m, st, lr, type)
   CMPLX   :: c
   R_TYPE  :: d(st%d%nspin)
 
-  call push_sub('linear_response_inc.lr_build_dl_rho')
+  call push_sub('linear_response_inc.Xlr_build_dl_rho')
 
   sp = 1
   if(st%d%ispin == SPIN_POLARIZED) sp = 2
@@ -81,16 +81,16 @@ subroutine X(lr_build_dl_rho) (m, st, lr, type)
     do p  = st%st_start, st%st_end
       do i = 1, m%np
         d(1) = st%d%kweights(ik)*st%occ(p, ik) * &
-           st%X(psi)(i, 1, p, ik)*R_CONJ(lr%X(dl_psi)(i, 1, p, ik))
+          st%X(psi)(i, 1, p, ik)*R_CONJ(lr%X(dl_psi)(i, 1, p, ik))
 
         select case(st%d%ispin)
         case(SPIN_POLARIZED)
           d(2) = st%d%kweights(ik+1)*st%occ(p, ik+1) * &
-             st%X(psi)(i, 1, p, ik+1)*R_CONJ(lr%X(dl_psi)(i, 1, p, ik+1))
+            st%X(psi)(i, 1, p, ik+1)*R_CONJ(lr%X(dl_psi)(i, 1, p, ik+1))
 
         case(SPINORS)
           lr%X(dl_rho)(i, 2) = lr%X(dl_rho)(i, 2) + st%d%kweights(ik)*st%occ(p, ik) * &
-             st%X(psi)(i, 2, p, ik)*R_CONJ(lr%X(dl_psi)(i, 2, p, ik))
+            st%X(psi)(i, 2, p, ik)*R_CONJ(lr%X(dl_psi)(i, 2, p, ik))
 
           c = st%X(psi)(i, 1, p, ik) * R_CONJ(lr%X(dl_psi)(i, 2, p, ik))
 
@@ -128,7 +128,7 @@ subroutine X(lr_solve_HXeY) (lr, h, gr, d, ik, x, y, omega)
   integer :: iter
   logical :: conv_last, conv
 
-  call push_sub('linear_response_inc.lr_solve_HXeY')
+  call push_sub('linear_response_inc.Xlr_solve_HXeY')
 
   allocate(r(NP, d%dim), p(NP, d%dim), Hp(NP, d%dim))
 

@@ -17,6 +17,7 @@
 !!
 !! $Id$
 
+! ---------------------------------------------------------
 subroutine poisson2D_init(gr)
   type(grid_type), intent(inout) :: gr
 
@@ -39,11 +40,11 @@ contains
 
     ! double the box to perform the fourier transforms
     if(poisson_solver.ne.FFT_CORRECTED) then
-       call mesh_double_box(gr%sb, gr%m, db)                 ! get dimensions of the double box
-       if (poisson_solver == FFT_SPH) db(1:2) = maxval(db)
+      call mesh_double_box(gr%sb, gr%m, db)                 ! get dimensions of the double box
+      if (poisson_solver == FFT_SPH) db(1:2) = maxval(db)
     else
-       db(:) = m%l(:)
-    endif
+      db(:) = m%l(:)
+    end if
 
     call dcf_new(db, fft_cf)      ! allocate cube function where we will perform
     call dcf_fft_init(fft_cf, gr%sb) ! the ffts
@@ -51,11 +52,11 @@ contains
 
 
     call loct_parse_float(check_inp('PoissonCutoffRadius'),&
-           maxval(db(:)*m%h(:)/M_TWO)/units_inp%length%factor , r_c)
+      maxval(db(:)*m%h(:)/M_TWO)/units_inp%length%factor , r_c)
     r_c = r_c*units_inp%length%factor
     write(message(1),'(3a,f12.6)')'Info: Poisson Cutoff Radius [',  &
-                        trim(units_out%length%abbrev), '] = ',       &
-                        r_c/units_out%length%factor
+      trim(units_out%length%abbrev), '] = ',       &
+      r_c/units_out%length%factor
     call write_info(1)
     if ( r_c > maxval(db(:)*m%h(:)/M_TWO) + DELTA_R) then
       message(1) = 'Poisson cutoff radius is larger than cell size.'
@@ -70,12 +71,12 @@ contains
     temp(:) = M_TWO*M_PI/(db(:)*m%h(:))
 
     do iy = 1, db(2)
-       ixx(2) = pad_feq(iy, db(2), .true.)
-       do ix = 1, fft_cf%nx
-          ixx(1) = pad_feq(ix, db(1), .true.)
-          vec = sqrt((temp(1)*ixx(1))**2 + (temp(2)*ixx(2))**2)
-          fft_coulb_fs(ix, iy, 1) = r_c*besselint(vec*r_c)
-       end do
+      ixx(2) = pad_feq(iy, db(2), .true.)
+      do ix = 1, fft_cf%nx
+        ixx(1) = pad_feq(ix, db(1), .true.)
+        vec = sqrt((temp(1)*ixx(1))**2 + (temp(2)*ixx(2))**2)
+        fft_coulb_fs(ix, iy, 1) = r_c*besselint(vec*r_c)
+      end do
     end do
 
   end subroutine init_fft
@@ -84,6 +85,7 @@ contains
 end subroutine poisson2D_init
 
 
+! ---------------------------------------------------------
 subroutine poisson2D_solve(m, pot, rho)
   type(mesh_type), intent(in) :: m
   FLOAT, intent(out)          :: pot(m%np)

@@ -30,17 +30,29 @@ module messages
 
   private
 
-  public :: write_fatal, write_warning, write_info
-  public :: write_debug, write_debug_marker, write_debug_newlines
-  public :: print_date, time_diff, time_sum, epoch_time_diff, input_error
-  public :: push_sub, pop_sub
-  public :: messages_print_stress, messages_print_var_info, messages_print_var_option
+  public ::                   &
+    write_fatal,              &
+    write_warning,            &
+    write_info,               &
+    write_debug,              &
+    write_debug_marker,       &
+    write_debug_newlines,     &
+    print_date,               &
+    time_diff,                &
+    time_sum,                 &
+    epoch_time_diff,          &
+    input_error,              &
+    push_sub,                 &
+    pop_sub,                  &
+    messages_print_stress,    &
+    messages_print_var_info,  &
+    messages_print_var_option
 
   character(len=256), dimension(20), public :: message    ! to be output by fatal, warning
   character(len=70),      parameter, public :: stars =  &
-       '**********************************************************************'
+    '**********************************************************************'
   character(len=68),      parameter, public :: hyphens = &
-       '--------------------------------------------------------------------'
+    '--------------------------------------------------------------------'
   character(len=69),      parameter, public :: shyphens = '*'//hyphens
 
   logical,                           public :: flush_messages
@@ -66,9 +78,9 @@ contains
 #endif
 
     if(flush_messages.and.mpiv%node.eq.0) then
-       open(unit=iunit_err, file='messages.stderr', &
-            action='write', position='append')
-    endif
+      open(unit=iunit_err, file='messages.stderr', &
+        action='write', position='append')
+    end if
 
     call flush_msg(stderr, '')
     call flush_msg(stderr, stars)
@@ -83,16 +95,16 @@ contains
 #endif
     call flush_msg(stderr, shyphens)
     do i=1,no_lines
-       write(msg, '(a,1x,a)') '*', trim(message(i))
-       call flush_msg(stderr, msg)
+      write(msg, '(a,1x,a)') '*', trim(message(i))
+      call flush_msg(stderr, msg)
     end do
     call flush_msg(stderr, shyphens)
 
     write(msg, '(a)') '* Stack: '
     call flush_msg(stderr, msg, 'no')
     do i = 1, no_sub_stack
-       write(msg, '(a,a)') ' > ', trim(sub_stack(i))
-       call flush_msg(stderr, msg, 'no')
+      write(msg, '(a,a)') ' > ', trim(sub_stack(i))
+      call flush_msg(stderr, msg, 'no')
     end do
     call flush_msg(stderr, '')
     call flush_msg(stderr, stars)
@@ -102,8 +114,8 @@ contains
     !    call io_status(stderr)
 
     if(flush_messages.and.mpiv%node.eq.0) then
-       close(iunit_err)
-    endif
+      close(iunit_err)
+    end if
 
 #ifdef HAVE_MPI
     call MPI_FINALIZE(ierr)
@@ -119,9 +131,9 @@ contains
     integer :: i
 
     if(flush_messages.and.mpiv%node.eq.0) then
-       open(unit=iunit_err, file='messages.stderr', &
-            action='write', position='append')
-    endif
+      open(unit=iunit_err, file='messages.stderr', &
+        action='write', position='append')
+    end if
 
     ! this always writes from ALL nodes
 
@@ -133,16 +145,16 @@ contains
     call flush_msg(stderr, msg)
 #endif
     do i=1,no_lines
-       write(msg , '(a,3x,a)') '**', trim(message(i))
-       call flush_msg(stderr, msg)
+      write(msg , '(a,3x,a)') '**', trim(message(i))
+      call flush_msg(stderr, msg)
     end do
 #ifdef HAVE_FLUSH
     call flush(stderr)
 #endif
 
     if(flush_messages.and.mpiv%node.eq.0) then
-       close(iunit_err)
-    endif
+      close(iunit_err)
+    end if
 
     return
   end subroutine write_warning
@@ -162,32 +174,32 @@ contains
 #endif
 
     if(flush_messages) then
-       open(unit=iunit_out, file='messages.stdout', &
-            action='write', position='append')
-    endif
+      open(unit=iunit_out, file='messages.stdout', &
+        action='write', position='append')
+    end if
 
     if(present(iunit)) then
-       iu = iunit
+      iu = iunit
     else
-       iu = stdout
+      iu = stdout
     end if
 
     if(present(stress)) then
-       call flush_msg(iu, stars)
-    endif
+      call flush_msg(iu, stars)
+    end if
     do i = 1, no_lines
       if(.not.present(verbose_limit)) then
-          write(msg, '(a)') trim(message(i))
-          call flush_msg(iu, msg)
+        write(msg, '(a)') trim(message(i))
+        call flush_msg(iu, msg)
       else if(in_debug_mode) then
-          write(msg, '(a)') trim(message(i))
-          call flush_msg(iu, msg)
-      endif
-    enddo
+        write(msg, '(a)') trim(message(i))
+        call flush_msg(iu, msg)
+      end if
+    end do
     if(present(stress)) then
       call flush_msg(iu, stars)
       call flush_msg(iu, '')
-    endif
+    end if
 
     if(flush_messages) close(iunit_out)
 
@@ -207,9 +219,9 @@ contains
 
     call open_debug_trace(iunit)
     do i = 1, no_lines
-       write(msg, '(a)') trim(message(i))
-       call flush_msg(iunit, msg)
-    enddo
+      write(msg, '(a)') trim(message(i))
+      call flush_msg(iunit, msg)
+    end do
     close(iunit)
 
   end subroutine write_debug
@@ -226,9 +238,9 @@ contains
     if (mpiv%node .eq. 0) return
     call open_debug_trace(iunit)
     do i = 1, no_lines
-       write(msg, '(a)') '* -'
-       call flush_msg(iunit, msg)
-    enddo
+      write(msg, '(a)') '* -'
+      call flush_msg(iunit, msg)
+    end do
     close(iunit)
 
   end subroutine write_debug_newlines
@@ -255,7 +267,7 @@ contains
     iunit = mpiv%node + unit_offset
     write(filenum, '(i3.3)') iunit - unit_offset
     open(iunit, file=trim(current_label)//'debug/debug_trace.node.'//filenum, &
-         action='write', status='unknown', position='append')
+      action='write', status='unknown', position='append')
 
   end subroutine open_debug_trace
 
@@ -269,15 +281,15 @@ contains
 #endif
 
     if(mpiv%node == 0) then
-       call flush_msg(stderr, '')
-       call flush_msg(stderr, stars)
-       call flush_msg(stderr, '')
-       write(msg, '(a)') '*** Fatal Error in input '
-       call flush_msg(stderr, msg)
-       call flush_msg(stderr, shyphens)
+      call flush_msg(stderr, '')
+      call flush_msg(stderr, stars)
+      call flush_msg(stderr, '')
+      write(msg, '(a)') '*** Fatal Error in input '
+      call flush_msg(stderr, msg)
+      call flush_msg(stderr, shyphens)
 
-       call varinfo_print(stderr, var)
-       call flush_msg(stderr, shyphens)
+      call varinfo_print(stderr, var)
+      call flush_msg(stderr, shyphens)
     end if
 
 #ifdef HAVE_MPI
@@ -334,9 +346,9 @@ contains
 
     write(iunit, '(a)', advance=trim(adv_)) trim(str)
     if(flush_messages.and.mpiv%node.eq.0) then
-       if(iunit.eq.stderr) write(iunit_err, '(a)', advance=trim(adv_)) trim(str)
-       if(iunit.eq.stdout) write(iunit_out, '(a)', advance=trim(adv_)) trim(str)
-    endif
+      if(iunit.eq.stderr) write(iunit_err, '(a)', advance=trim(adv_)) trim(str)
+      if(iunit.eq.stdout) write(iunit_out, '(a)', advance=trim(adv_)) trim(str)
+    end if
 
   end subroutine flush_msg
 
@@ -350,8 +362,8 @@ contains
     call date_and_time(values=val)
     message(1) = ""
     write(message(3),'(a,i4,a1,i2.2,a1,i2.2,a,i2.2,a1,i2.2,a1,i2.2)') &
-         str , val(1), "/", val(2), "/", val(3), &
-         " at ", val(5), ":", val(6), ":", val(7)
+      str , val(1), "/", val(2), "/", val(3), &
+      " at ", val(5), ":", val(6), ":", val(7)
     message(2) = str_center(trim(message(3)), 70)
     message(3) = ""
     call write_info(3)
@@ -407,7 +419,7 @@ contains
       sec2  = sec2+1
       usec2 = usec2-1000000
     end if
-      
+
   end subroutine time_sum
 
 
@@ -425,19 +437,19 @@ contains
 
     no_sub_stack = no_sub_stack + 1
     if(no_sub_stack > 49) then
-       sub_stack(50) = 'push_sub'
-       message(1) = 'Too many recursion levels (max=50)'
-       call write_fatal(1)
+      sub_stack(50) = 'push_sub'
+      message(1) = 'Too many recursion levels (max=50)'
+      call write_fatal(1)
     else
-       sub_stack(no_sub_stack)  = trim(sub_name)
-       time_stack(no_sub_stack) = loct_clock()
+      sub_stack(no_sub_stack)  = trim(sub_name)
+      time_stack(no_sub_stack) = loct_clock()
 
-       call open_debug_trace(iunit)
-       call push_sub_write(iunit)
-       ! also write to stderr if we are node 0
-       if (mpiv%node == 0) call push_sub_write(stderr) 
-       ! close file to ensure flushing
-       close(iunit)
+      call open_debug_trace(iunit)
+      call push_sub_write(iunit)
+      ! also write to stderr if we are node 0
+      if (mpiv%node == 0) call push_sub_write(stderr)
+      ! close file to ensure flushing
+      close(iunit)
 
     end if
 
@@ -450,11 +462,11 @@ contains
       integer,  intent(in) :: iunit_out
 
       write(iunit_out,'(a,i6,a,i6.6,f12.6,i8, a)', advance='no') "* I ", &
-           sec,'.',usec, &
-           loct_clock()/CNST(1e6), &
-           loct_getmem(), " | "
+        sec,'.',usec, &
+        loct_clock()/CNST(1e6), &
+        loct_getmem(), " | "
       do i = no_sub_stack-1, 1, -1
-         write(iunit_out,'(a)', advance='no') "..|"
+        write(iunit_out,'(a)', advance='no') "..|"
       end do
       write(iunit_out,'(a)') trim(sub_name)
 
@@ -473,19 +485,19 @@ contains
     call epoch_time_diff(sec, usec)
 
     if(no_sub_stack > 0) then
-       call open_debug_trace(iunit)
-       call pop_sub_write(iunit)
-       ! also write to stderr if we are node 0
-       if (mpiv%node == 0) call pop_sub_write(stderr) 
-       ! close file to ensure flushing
-       close(iunit)
+      call open_debug_trace(iunit)
+      call pop_sub_write(iunit)
+      ! also write to stderr if we are node 0
+      if (mpiv%node == 0) call pop_sub_write(stderr)
+      ! close file to ensure flushing
+      close(iunit)
 
-       no_sub_stack = no_sub_stack - 1
+      no_sub_stack = no_sub_stack - 1
     else
-       no_sub_stack = 1
-       sub_stack(1) = 'pop_sub'
-       message(1) = 'Too few recursion levels'
-       call write_fatal(1)
+      no_sub_stack = 1
+      sub_stack(1) = 'pop_sub'
+      message(1) = 'Too few recursion levels'
+      call write_fatal(1)
     end if
 
   contains
@@ -494,11 +506,11 @@ contains
       integer, intent(in) :: iunit_out
 
       write(iunit_out,'(a,i6,a,i6.6,f12.6,i8, a)', advance='no') "* O ", &
-           sec,'.',usec, &
-           (loct_clock()-time_stack(no_sub_stack))/CNST(1e6), &
-           loct_getmem(), " | "
+        sec,'.',usec, &
+        (loct_clock()-time_stack(no_sub_stack))/CNST(1e6), &
+        loct_getmem(), " | "
       do i = no_sub_stack-1, 1, -1
-         write(iunit_out,'(a)', advance='no') "..|"
+        write(iunit_out,'(a)', advance='no') "..|"
       end do
       write(iunit_out,'(a)') trim(sub_stack(no_sub_stack))
 

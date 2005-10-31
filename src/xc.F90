@@ -34,39 +34,40 @@ module xc
   use lib_xc
   use xc_functl
 
-implicit none
+  implicit none
 
-private
-public :: xc_type, &
-          xc_init, &
-          xc_end, &
-          xc_write_info, &
-          xc_get_vxc, &
-          xc_get_vxc_and_axc, &
-          xc_get_fxc, &
-          xc_get_kxc
-
-! ---------------------------------------------------------
-
-type xc_type
-  logical :: cdft
-
-  integer :: family                   ! the families present
-  type(xc_functl_type) :: functl(2,2) ! (1,:) => exchange,    (2,:) => correlation
-                                      ! (:,1) => unpolarized, (:,2) => polarized
-  type(xc_functl_type) :: j_functl    ! current-depent part of the functional
-
-  ! the meta-GGA can be implemented in two ways
-  integer :: mGGA_implementation      ! 1 => as a GGA like functional
-                                      ! 2 => using the OEP method
-end type xc_type
+  private
+  public ::             &
+    xc_type,            &
+    xc_init,            &
+    xc_end,             &
+    xc_write_info,      &
+    xc_get_vxc,         &
+    xc_get_vxc_and_axc, &
+    xc_get_fxc,         &
+    xc_get_kxc
 
 
-FLOAT, parameter :: tiny      = CNST(1.0e-12)
-FLOAT, parameter :: denom_eps = CNST(1.0e-20) ! added to denominators to avoid overflows...
+  type xc_type
+    logical :: cdft
+
+    integer :: family                   ! the families present
+    type(xc_functl_type) :: functl(2,2) ! (1,:) => exchange,    (2,:) => correlation
+                                        ! (:,1) => unpolarized, (:,2) => polarized
+    type(xc_functl_type) :: j_functl    ! current-depent part of the functional
+
+    ! the meta-GGA can be implemented in two ways
+    integer :: mGGA_implementation      ! 1 => as a GGA like functional
+    ! 2 => using the OEP method
+  end type xc_type
+
+
+  FLOAT, parameter :: tiny      = CNST(1.0e-12)
+  FLOAT, parameter :: denom_eps = CNST(1.0e-20) ! added to denominators to avoid overflows...
 
 contains
 
+  ! ---------------------------------------------------------
   subroutine xc_write_info(xcs, iunit)
     type(xc_type), intent(in) :: xcs
     integer,       intent(in) :: iunit
@@ -88,6 +89,8 @@ contains
 
   end subroutine xc_write_info
 
+
+  ! ---------------------------------------------------------
   subroutine xc_init(xcs, ndim, spin_channels, cdft)
     type(xc_type), intent(out) :: xcs
     integer,       intent(in)  :: ndim
@@ -115,7 +118,7 @@ contains
       xcs%family = ior(xcs%family, xcs%functl(2,1)%family)
 
       if (iand(xcs%family, XC_FAMILY_LCA).ne.0 .and. &
-         iand(xcs%family, XC_FAMILY_MGGA + XC_FAMILY_OEP).ne.0) then
+        iand(xcs%family, XC_FAMILY_MGGA + XC_FAMILY_OEP).ne.0) then
         message(1) = "LCA functional can only be used along with LDA or GGA functionals"
         call write_fatal(1)
       end if
@@ -137,7 +140,7 @@ contains
   end subroutine xc_init
 
 
-  ! -----------------------------------------------------------
+  ! ---------------------------------------------------------
   subroutine xc_end(xcs)
     type(xc_type), intent(inout) :: xcs
 
@@ -154,7 +157,7 @@ contains
 
   end subroutine xc_end
 
-! -----------------------------------------------------------
+
 #include "xc_vxc.F90"
 #include "xc_axc.F90"
 #include "xc_fxc.F90"

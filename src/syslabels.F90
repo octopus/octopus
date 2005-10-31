@@ -24,9 +24,10 @@ module syslabels
 
   implicit none
 
-  public :: syslabels_init, &
-            syslabels_end, &
-            check_inp
+  public ::         &
+    syslabels_init, &
+    syslabels_end,  &
+    check_inp
 
   ! variables to treat multi subsytems
   character(len=32), allocatable :: subsys_label(:)
@@ -46,7 +47,10 @@ contains
   subroutine syslabels_init(calc_mode, blk)
     integer, intent(in) :: calc_mode
     integer(POINTER_SIZE), optional, intent(in) :: blk
-    integer :: i, mpierr
+    integer :: i
+#ifdef HAVE_MPI
+    integer :: mpi_err
+#endif
 
     if(.not.present(blk)) then
       no_syslabels  = 1
@@ -63,28 +67,28 @@ contains
       current_label = trim(subsys_label(subsys_run_order(1)))
       current_subsystem = subsys_run_order(1)
       return
-    endif
+    end if
 
     no_syslabels = loct_parse_block_cols(blk, 0)
     allocate(subsys_label(no_syslabels))
     do i = 1, no_syslabels
-       call loct_parse_block_string(blk, 0, i-1, subsys_label(i))
-    enddo
+      call loct_parse_block_string(blk, 0, i-1, subsys_label(i))
+    end do
     no_subsys_runmodes = loct_parse_block_cols(blk,1)
     if(no_subsys_runmodes/=no_syslabels) then
-       write(6,'(a)') '*** Fatal Error (description follows)'
-       write(6,'(a)') 'The number of system labels (columns in first line of CalculationMode block)'
-       write(6,'(a)') 'does not coincide with the number of run modes (columns of the second line).'
-       write(6,'(a)') 'Please correct your input file.'
+      write(6,'(a)') '*** Fatal Error (description follows)'
+      write(6,'(a)') 'The number of system labels (columns in first line of CalculationMode block)'
+      write(6,'(a)') 'does not coincide with the number of run modes (columns of the second line).'
+      write(6,'(a)') 'Please correct your input file.'
 #ifdef HAVE_MPI
-       call MPI_FINALIZE(mpierr)
+      call MPI_FINALIZE(mpi_err)
 #endif
-       stop
-    endif
+      stop
+    end if
     allocate(subsys_runmode(no_subsys_runmodes))
     do i = 1, no_subsys_runmodes
-       call loct_parse_block_int(blk, 1, i-1, subsys_runmode(i))
-    enddo
+      call loct_parse_block_int(blk, 1, i-1, subsys_runmode(i))
+    end do
 
     ! ... and in which order
     no_subsystems = loct_parse_block_cols(blk, 2)
@@ -93,17 +97,17 @@ contains
     allocate(no_of_states(no_subsystems))
 
     do i = 1, no_subsystems
-       call loct_parse_block_int(blk, 2, i-1, subsys_run_order(i))
-       if (subsys_run_order(i).gt.no_subsys_runmodes) then
-          write(6,'(a)') '*** Fatal Error (description follows)'
-          write(6,'(a)') 'Subsystem number too large. Please correct the block'
-          write(6,'(a)') 'SystemRunOrder in the input file.'
+      call loct_parse_block_int(blk, 2, i-1, subsys_run_order(i))
+      if (subsys_run_order(i).gt.no_subsys_runmodes) then
+        write(6,'(a)') '*** Fatal Error (description follows)'
+        write(6,'(a)') 'Subsystem number too large. Please correct the block'
+        write(6,'(a)') 'SystemRunOrder in the input file.'
 #ifdef HAVE_MPI
-          call MPI_FINALIZE(mpierr)
+        call MPI_FINALIZE(mpi_err)
 #endif
-          stop
-       endif
-    enddo
+        stop
+      end if
+    end do
     call loct_parse_block_end(blk)
 
   end subroutine syslabels_init
@@ -126,15 +130,14 @@ contains
     composite_name = trim(subsys_label(current_subsystem))//trim(variable)
 
     if(loct_parse_isdef(composite_name).ne.0) then
-       ! composite name has been defined in the input file
-       var_name = composite_name
+      ! composite name has been defined in the input file
+      var_name = composite_name
     else
-       ! could not find composite name in the input;
-       ! will use bare variable name
-       var_name = variable
-    endif
+      ! could not find composite name in the input;
+      ! will use bare variable name
+      var_name = variable
+    end if
 
   end function check_inp
-
 
 end module syslabels

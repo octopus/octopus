@@ -24,7 +24,7 @@
 ! Xvec_scatter_all is Xvec_scatter followd by Xvec_scatter_bndry.
 
 
-! Scatters a vector v to all nodes in vp with respect to 
+! Scatters a vector v to all nodes in vp with respect to
 ! to point -> node mapping in vp.
 ! v_local has at least to be of size vp%np_local(vp%partno).
 subroutine X(vec_scatter)(vp, v, v_local)
@@ -36,7 +36,7 @@ subroutine X(vec_scatter)(vp, v, v_local)
   integer              :: ierr      ! MPI errorcode.
   integer, allocatable :: displs(:) ! Displacements for scatter.
   R_TYPE,  allocatable :: v_tmp(:)  ! Send buffer.
-  
+
   call push_sub('par_vec.Xvec_scatter')
 
   ! Unfortunately, vp%xlocal ist not quite the required
@@ -47,14 +47,14 @@ subroutine X(vec_scatter)(vp, v, v_local)
   ! Fill send buffer.
   if(vp%rank.eq.vp%root) then
     allocate(v_tmp(vp%np))
-  
+
     ! Rearrange copy of v. All points of node r are in
     ! v_tmp(xlocal(r):xlocal(r)+np_local(r)-1).
     do i = 1, vp%np
       v_tmp(i) = v(vp%local(i))
     end do
   end if
-  
+
   ! Careful: MPI rank numbers range from 0 to mpiv%numprocs-1
   ! But partition numbers from 1 to vp%p with usually
   ! vp%p = mpiv%numprocs.
@@ -87,21 +87,21 @@ subroutine X(vec_scatter_bndry)(vp, v, v_local)
   R_TYPE,  allocatable :: v_tmp(:)  ! Send buffer.
 
   call push_sub('par_vec.Xvec_scatter_bndry')
-  
+
   allocate(displs(vp%p))
   displs = vp%xbndry-1
 
   ! Fill send buffer.
   if(vp%rank.eq.vp%root) then
     allocate(v_tmp(vp%np_enl))
-  
+
     ! Rearrange copy of v. All points of node r are in
     ! v_tmp(xlocal(r):xlocal(r)+np_local(r)-1).
     do i = 1, vp%np_enl
       v_tmp(i) = v(vp%bndry(i)+vp%np)
     end do
   end if
-  
+
   ! Careful: MPI rank numbers range from 0 to mpiv%numprocs-1
   ! But partition numbers from 1 to vp%p with usually
   ! vp%p = mpiv%numprocs.
@@ -125,9 +125,9 @@ subroutine X(vec_scatter_all)(vp, v, v_local)
   type(pv_type), intent(in)  :: vp
   R_TYPE,        intent(in)  :: v(:)
   R_TYPE,        intent(out) :: v_local(:)
-  
+
   call push_sub('par_vec.Xvec_scatter_all')
-  
+
   call X(vec_scatter)(vp, v, v_local)
   call X(vec_scatter_bndry)(vp, v, v_local)
 
@@ -148,9 +148,9 @@ subroutine X(vec_gather)(vp, v, v_local)
   integer              :: ierr      ! MPI errorcode.
   integer, allocatable :: displs(:) ! Displacements for scatter.
   R_TYPE,  allocatable :: v_tmp(:)  ! Receive buffer.
-  
+
   call push_sub('par_vec.Xvec_gather')
-  
+
   ! Unfortunately, vp%xlocal ist not quite the required
   ! displacement vector.
   allocate(displs(vp%p))
@@ -169,7 +169,7 @@ subroutine X(vec_gather)(vp, v, v_local)
     do i = 1, vp%np
       v(vp%local(i)) = v_tmp(i)
     end do
-    
+
     deallocate(v_tmp)
   end if
 
@@ -192,9 +192,9 @@ subroutine X(vec_allgather)(vp, v, v_local)
   integer              :: ierr      ! MPI errorcode.
   integer, allocatable :: displs(:) ! Displacements for scatter.
   R_TYPE,  allocatable :: v_tmp(:)  ! Receive buffer.
-  
+
   call push_sub('par_vec.Xvec_allgather')
-  
+
   ! Unfortunately, vp%xlocal ist not quite the required
   ! displacement vector.
   allocate(displs(vp%p))
@@ -204,7 +204,7 @@ subroutine X(vec_allgather)(vp, v, v_local)
 
   call MPI_Debug_IN(vp%comm, C_MPI_ALLGATHERV)
   call MPI_Allgatherv(v_local, vp%np_local(vp%partno), R_MPITYPE, v_tmp, &
-                      vp%np_local, displs, R_MPITYPE,                 &
+                      vp%np_local, displs, R_MPITYPE,                    &
                       vp%comm, ierr)
   call MPI_Debug_OUT(vp%comm, C_MPI_ALLGATHERV)
 
@@ -212,7 +212,7 @@ subroutine X(vec_allgather)(vp, v, v_local)
   do i = 1, vp%np
     v(vp%local(i)) = v_tmp(i)
   end do
-  
+
   deallocate(v_tmp)
   deallocate(displs)
 
@@ -229,7 +229,7 @@ end subroutine X(vec_allgather)
 subroutine X(vec_ghost_update)(vp, v_local)
   type(pv_type), intent(in)    :: vp
   R_TYPE,        intent(inout) :: v_local(:)
-  
+
   integer              :: i, j, k, r             ! Counters.
   integer              :: ierr                   ! MPI errorcode.
   integer              :: total                  ! Total number of ghost
@@ -246,7 +246,7 @@ subroutine X(vec_ghost_update)(vp, v_local)
   ! has to send to neighbours and allocate send buffer.
   total = sum(vp%np_ghost_neigh(:, vp%partno))
   allocate(ghost_send(total))
-  
+
   ! Send and receive displacements.
   ! Send displacement cannot directly be calculated
   ! from vp%xghost_neigh because those are indices for
@@ -260,7 +260,7 @@ subroutine X(vec_ghost_update)(vp, v_local)
   do r = 2, vp%p
     sdispls(r) = sdispls(r-1)+vp%np_ghost_neigh(r-1, vp%partno)
   end do
-  
+
   ! This is like in vec_scatter/gather.
   allocate(rdispls(vp%p))
   rdispls = vp%xghost_neigh(vp%partno, :)-vp%xghost(vp%partno)
@@ -279,7 +279,7 @@ subroutine X(vec_ghost_update)(vp, v_local)
       j             = j + 1
     end do
   end do
-  
+
   ! Bring it on the way.
   ! It has to examined wheather it is better to use several point to
   ! point send operations (thus, non-neighbour sends could explicitly be
@@ -303,11 +303,11 @@ subroutine X(vec_ghost_update)(vp, v_local)
 
   deallocate(sdispls, rdispls)
   deallocate(ghost_send)
-  
+
   call pop_sub()
 
   call profiling_out(C_PROFILING_GHOST_UPDATE)
-  
+
 end subroutine X(vec_ghost_update)
 
 
@@ -325,7 +325,7 @@ R_TYPE function X(vec_integrate)(vp, v_local) result(s)
 
   call profiling_in(C_PROFILING_VEC_INTEGRATE)
   call push_sub('par_vec.Xvec_integrate')
-  
+
   s_local = sum(v_local(:vp%np_local(vp%partno)))
 
   call MPI_Debug_IN(vp%comm, C_MPI_ALLREDUCE)

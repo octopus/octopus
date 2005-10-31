@@ -46,7 +46,7 @@ module par_vec
   ! - v(np_local+1:np_local+np_ghost)                   ghost points.
   ! - v(np_local+np_ghost+1:np_local+np_ghost+np_bndry) boundary points.
   !
-  ! 
+  !
   ! Usage example for par_vec routines.
   !
   ! ! Initialize parallelization with mesh m and operator op
@@ -136,30 +136,30 @@ module par_vec
   end type pv_type
 
 #if defined(HAVE_MPI)
-  public :: &
-            vec_init,           &
-            vec_end,            &
-            dvec_scatter,       &
-            zvec_scatter,       &
-            ivec_scatter,       &
-            dvec_scatter_bndry, &
-            zvec_scatter_bndry, &
-            ivec_scatter_bndry, &
-            dvec_scatter_all,   &
-            zvec_scatter_all,   &
-            ivec_scatter_all,   &
-            dvec_gather,        &
-            zvec_gather,        &
-            ivec_gather,        &
-            dvec_allgather,     &
-            zvec_allgather,     &
-            ivec_allgather,     &
-            dvec_ghost_update,  &
-            zvec_ghost_update,  &
-            ivec_ghost_update,  &
-            dvec_integrate,     &
-            zvec_integrate,     &
-            ivec_integrate
+  public ::             &
+    vec_init,           &
+    vec_end,            &
+    dvec_scatter,       &
+    zvec_scatter,       &
+    ivec_scatter,       &
+    dvec_scatter_bndry, &
+    zvec_scatter_bndry, &
+    ivec_scatter_bndry, &
+    dvec_scatter_all,   &
+    zvec_scatter_all,   &
+    ivec_scatter_all,   &
+    dvec_gather,        &
+    zvec_gather,        &
+    ivec_gather,        &
+    dvec_allgather,     &
+    zvec_allgather,     &
+    ivec_allgather,     &
+    dvec_ghost_update,  &
+    zvec_ghost_update,  &
+    ivec_ghost_update,  &
+    dvec_integrate,     &
+    zvec_integrate,     &
+    ivec_integrate
 
 contains
 
@@ -191,8 +191,8 @@ contains
   ! and also because the vec_init has more a global than a local point
   ! of view on the mesh): See the comments in the parameter list.
   subroutine vec_init(comm, root, part, np, np_part, nr,   &
-                      Lxyz_inv, Lxyz, stencil, np_stencil, &
-                      dim, periodic_dim, vp)
+    Lxyz_inv, Lxyz, stencil, np_stencil, &
+    dim, periodic_dim, vp)
     integer,       intent(in)  :: comm         ! Communicator to use.
     integer,       intent(in)  :: root         ! The master node.
     ! The next seven entries come from the mesh.
@@ -206,12 +206,12 @@ contains
                                                ! m%Lxyz_inv
     integer,       intent(in)  :: Lxyz(:, :)   ! m%Lxyz
     integer,       intent(in)  :: stencil(:,:) ! The stencil for which to
-                                               ! calculate ghost points.
+    ! calculate ghost points.
     integer,       intent(in)  :: np_stencil   ! Num. of points in stencil.
     integer,       intent(in)  :: dim          ! Number of dimensions.
     integer,       intent(in)  :: periodic_dim ! Number of per. dimensions.
     type(pv_type), intent(out) :: vp           ! Description of partition.
-    
+
     ! Careful: MPI counts node ranks from 0 to numproc-1.
     ! Partition numbers from METIS range from 1 to numproc.
     ! For this reason, all ranks are incremented by one.
@@ -237,7 +237,7 @@ contains
     call MPI_Comm_rank(comm, rank, ierr)
     vp%rank   = rank
     vp%partno = rank + 1
-    
+
     allocate(ghost_flag(np+np_enl, p))
     allocate(ir(p), irr(p, p))
     allocate(vp%part(np+np_enl))
@@ -252,7 +252,7 @@ contains
     allocate(vp%np_ghost_neigh(p, p))
     allocate(vp%xghost(p))
     allocate(vp%xghost_neigh(p, p))
-    
+
     ! Count number of points for each node.
     ! Local points.
     vp%np_local = 0
@@ -266,7 +266,7 @@ contains
     end do
 
     ! Set up local to global index table for local points
-    ! (xlocal, local) and for boundary points (xbndry, bndry). 
+    ! (xlocal, local) and for boundary points (xbndry, bndry).
     vp%xlocal(1) = 1
     vp%xbndry(1) = 1
     do r = 2, p
@@ -303,7 +303,7 @@ contains
     !  xghost_neigh(r,1)             xghost_neigh(r,p-1)       xghost_neigh(r,p)
     !  |
     !  xghost(r)
-   
+
     ! Mark and count ghost points and neighbours
     ! (set vp%np_ghost_neigh, vp%np_ghost, ghost_flag).
     vp%total          = 0
@@ -322,7 +322,7 @@ contains
           ! mesh_index takes care of periodic dimensions and
           ! out points that would be out of the box etc.
           k = mesh_index(dim, periodic_dim, nr, &
-                         Lxyz_inv, p1(:) + stencil(:, j))
+            Lxyz_inv, p1(:) + stencil(:, j))
           ! If this index k does not belong to partition of node r,
           ! then k is a ghost point for r with part(k) now being
           ! a neighbour of r.
@@ -354,10 +354,10 @@ contains
       vp%xghost_neigh(r, 1) = vp%xghost(r)
       do j = 2, p
         vp%xghost_neigh(r, j) = vp%xghost_neigh(r, j-1)    &
-                                +vp%np_ghost_neigh(r, j-1)
+          +vp%np_ghost_neigh(r, j-1)
       end do
     end do
-    
+
     ! Get space for ghost point vector.
     allocate(vp%ghost(vp%total))
 
@@ -381,24 +381,24 @@ contains
     call write_info(2)
 
     if(in_debug_mode) then
-       ! Write numbers and coordinates of each nodes ghost points
-       ! to a single file (like in mesh_partition_init) called
-       ! debug/mesh_partition/ghost_points.###.
-       if(mpiv%node.eq.0) then
-          call io_mkdir('debug/mesh_partition')
-          do r = 1, p 
-             write(filenum, '(i3.3)') r
-             iunit = io_open('debug/mesh_partition/ghost_points.'//filenum, &
-                  action='write')
-             do i = 1, vp%np_ghost(r)
-                j = vp%ghost(vp%xghost(r)+i-1)
-                write(iunit, '(4i8)') j, Lxyz(j, :)
-             end do
-             call io_close(iunit)
+      ! Write numbers and coordinates of each nodes ghost points
+      ! to a single file (like in mesh_partition_init) called
+      ! debug/mesh_partition/ghost_points.###.
+      if(mpiv%node.eq.0) then
+        call io_mkdir('debug/mesh_partition')
+        do r = 1, p
+          write(filenum, '(i3.3)') r
+          iunit = io_open('debug/mesh_partition/ghost_points.'//filenum, &
+            action='write')
+          do i = 1, vp%np_ghost(r)
+            j = vp%ghost(vp%xghost(r)+i-1)
+            write(iunit, '(4i8)') j, Lxyz(j, :)
           end do
-       end if
+          call io_close(iunit)
+        end do
+      end if
     end if
-    
+
     ! Create reverse (global to local) lookup.
     ! Given a global point number i and a vector v_local of
     ! length vp%np_local(r)+vp%np_ghost(r)+vp%np_bndry(r) global(i, r) gives
@@ -408,7 +408,7 @@ contains
     ! If global(i, r) is 0 then i is neither local
     ! to r nor a ghost point of r. This indicates a serious error.
     ! Note: The global array may consume too much memory for many
-    ! nodes and points, e. g. about 64MB for 16 nodes and half a 
+    ! nodes and points, e. g. about 64MB for 16 nodes and half a
     ! million points on a 64 bit architecture.
     ! The solution is then to introduce a function global which
     ! does the mapping. This function does a binary search in the
@@ -430,7 +430,7 @@ contains
       ! Boundary points.
       do i = 1, vp%np_bndry(r)
         vp%global(vp%bndry(vp%xbndry(r)+i-1), r) =  vp%np_local(r)   &
-                                                   +vp%np_ghost(r)+i
+          +vp%np_ghost(r)+i
       end do
     end do
 
@@ -443,7 +443,7 @@ contains
     vp%part   = part
 
     call pop_sub()
-    
+
   end subroutine vec_init
 
 
@@ -452,59 +452,59 @@ contains
     type(pv_type), intent(inout) :: vp
 
     call push_sub('par_vec.vec_end')
-    
+
     if(associated(vp%part)) then
       deallocate(vp%part)
       nullify(vp%part)
-    endif
+    end if
     if(associated(vp%np_local)) then
       deallocate(vp%np_local)
       nullify(vp%np_local)
-    endif
+    end if
     if(associated(vp%xlocal)) then
       deallocate(vp%xlocal)
       nullify(vp%xlocal)
-    endif
+    end if
     if(associated(vp%local)) then
       deallocate(vp%local)
       nullify(vp%local)
-    endif
+    end if
     if(associated(vp%np_bndry)) then
       deallocate(vp%np_bndry)
       nullify(vp%np_bndry)
-    endif
+    end if
     if(associated(vp%xbndry)) then
       deallocate(vp%xbndry)
       nullify(vp%xbndry)
-    endif
+    end if
     if(associated(vp%bndry)) then
       deallocate(vp%bndry)
       nullify(vp%bndry)
-    endif
+    end if
     if(associated(vp%global)) then
       deallocate(vp%global)
       nullify(vp%global)
-    endif
+    end if
     if(associated(vp%np_ghost)) then
       deallocate(vp%np_ghost)
       nullify(vp%np_ghost)
-    endif
+    end if
     if(associated(vp%np_ghost_neigh)) then
       deallocate(vp%np_ghost_neigh)
       nullify(vp%np_ghost_neigh)
-    endif
+    end if
     if(associated(vp%xghost)) then
       deallocate(vp%xghost)
       nullify(vp%xghost)
-    endif
+    end if
     if(associated(vp%xghost_neigh)) then
       deallocate(vp%xghost_neigh)
       nullify(vp%xghost_neigh)
-    endif
+    end if
     if(associated(vp%ghost)) then
       deallocate(vp%ghost)
       nullify(vp%ghost)
-    endif
+    end if
 
     call pop_sub()
 

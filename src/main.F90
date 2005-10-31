@@ -77,12 +77,12 @@ program octopus
   !% Prints out a tasty recipe
   !%End
   if(loct_parse_block('CalculationMode', blk) == 0) then
-     call syslabels_init(calc_mode, blk)
+    call syslabels_init(calc_mode, blk)
   else
-     call loct_parse_int('CalculationMode', M_GS, calc_mode)
-     if(.not.varinfo_valid_option('CalculationMode', calc_mode)) call input_error('CalculationMode')
-     call syslabels_init(calc_mode)
-  endif
+    call loct_parse_int('CalculationMode', M_GS, calc_mode)
+    if(.not.varinfo_valid_option('CalculationMode', calc_mode)) call input_error('CalculationMode')
+    call syslabels_init(calc_mode)
+  end if
 
   !%Variable Dimensions
   !%Type integer
@@ -103,64 +103,64 @@ program octopus
   ! loop over all subsystems
   subsystems: do ns = 1, no_subsystems
 
-     ! set system label
-     current_subsystem = subsys_run_order(ns)
-     current_label = trim(subsys_label(current_subsystem))
-     calc_mode = subsys_runmode(current_subsystem)
+    ! set system label
+    current_subsystem = subsys_run_order(ns)
+    current_label = trim(subsys_label(current_subsystem))
+    calc_mode = subsys_runmode(current_subsystem)
 
-     ! syslabels have to be available before calling the _init() functions below
-     call io_init()
-     call profiling_init()
+    ! syslabels have to be available before calling the _init() functions below
+    call io_init()
+    call profiling_init()
 
-     call profiling_in(C_PROFILING_COMPLETE_SUBSYS)
+    call profiling_in(C_PROFILING_COMPLETE_SUBSYS)
 
-     ! Let us print our logo
-     if(mpiv%node == 0) then
-        call io_dump_file(stdout, trim(trim(conf%share) // '/logo'))
-     end if
+    ! Let us print our logo
+    if(mpiv%node == 0) then
+      call io_dump_file(stdout, trim(trim(conf%share) // '/logo'))
+    end if
 
-     ! Let us print the version
-     message(1) = ""
-     message(2) = str_center("Running octopus, version " // trim(conf%version), 70)
-     message(3) = str_center("(build time - " // trim(conf%build_time) // ")", 70)
-     message(4) = str_center("(latest cvs changes: " // trim(conf%latest_cvs) // ")", 70)
-     message(5) = ""
-     call write_info(5)
+    ! Let us print the version
+    message(1) = ""
+    message(2) = str_center("Running octopus, version " // trim(conf%version), 70)
+    message(3) = str_center("(build time - " // trim(conf%build_time) // ")", 70)
+    message(4) = str_center("(latest cvs changes: " // trim(conf%latest_cvs) // ")", 70)
+    message(5) = ""
+    call write_info(5)
 
-     ! Let us print where we are running
-     call loct_sysname(sys_name)
-     write(message(1), '(a)') str_center("The octopus is swimming in " // trim(sys_name), 70)
-     message(2) = ""
-     call write_info(2)
-
-#if defined(HAVE_MPI)
-     call MPI_Barrier(MPI_COMM_WORLD, ierr)
-#endif
-
-     call print_date("Calculation started on ")
-
-     if(no_subsystems > 1) then
-        message(1) = 'Info: Multi-Subsystem Mode'
-        message(2) = 'Info: Running '//current_label
-        call write_info(2, stress = .true.)
-     endif
-
-     ! now we really start
-     call run_init()
-     call run()
-     call run_end()
+    ! Let us print where we are running
+    call loct_sysname(sys_name)
+    write(message(1), '(a)') str_center("The octopus is swimming in " // trim(sys_name), 70)
+    message(2) = ""
+    call write_info(2)
 
 #if defined(HAVE_MPI)
-     ! wait for all processors to finish
-     call MPI_Barrier(MPI_COMM_WORLD, ierr)
+    call MPI_Barrier(MPI_COMM_WORLD, ierr)
 #endif
 
-     call io_end()
-  
-     call profiling_out(C_PROFILING_COMPLETE_SUBSYS)
-     call profiling_output()
+    call print_date("Calculation started on ")
 
-     call print_date("Calculation ended on ")
+    if(no_subsystems > 1) then
+      message(1) = 'Info: Multi-Subsystem Mode'
+      message(2) = 'Info: Running '//current_label
+      call write_info(2, stress = .true.)
+    end if
+
+    ! now we really start
+    call run_init()
+    call run()
+    call run_end()
+
+#if defined(HAVE_MPI)
+    ! wait for all processors to finish
+    call MPI_Barrier(MPI_COMM_WORLD, ierr)
+#endif
+
+    call io_end()
+
+    call profiling_out(C_PROFILING_COMPLETE_SUBSYS)
+    call profiling_output()
+
+    call print_date("Calculation ended on ")
 
   end do subsystems
 

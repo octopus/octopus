@@ -18,8 +18,7 @@
 !! $Id$
 
 #include "global.h"
-
-! ----------------------------------------
+! ---------------------------------------------------------
 ! Implements the variational discretization of the laplacian
 ! as proposed by P. Maragakis, J. Soler, and E. Kaxiras, PRB 64, 193101 (2001)
 !
@@ -40,8 +39,7 @@
 ! allos to get the coefficients to the gradient.
 ! TODO: This module should look like stencil_star, allowing for
 ! coefficients on non-uniform grids.
-! ----------------------------------------
-
+! ---------------------------------------------------------
 module stencil_variational
   use global
   use messages
@@ -50,7 +48,8 @@ module stencil_variational
   implicit none
 
   private
-  public :: stencil_variational_coeff_lapl
+  public :: &
+    stencil_variational_coeff_lapl
 
 contains
 

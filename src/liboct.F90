@@ -24,80 +24,114 @@ module lib_oct
 
   ! Define the which routines can be seen from the outside
   private
-  public :: loct_gamma, loct_incomplete_gamma, loct_hypergeometric, loct_bessel, loct_bessel_In
-  public :: loct_sph_bessel, loct_asinh, loct_erf, loct_erfc, loct_ylm
-  public :: loct_bessel_j0, loct_bessel_j1, loct_bessel_k0, loct_bessel_k1
-  public :: loct_ran_init, loct_ran_end, loct_ran_gaussian
-  public :: loct_clock, loct_gettimeofday, loct_nanosleep, loct_getmem
-  public :: loct_sysname, loct_getcwd, loct_mkdir, loct_rm, loct_number_of_lines
-  public :: loct_fft_optimize, loct_isinstringlist, loct_progress_bar, loct_printRecipe
-  public :: write_iter_init, write_iter_clear, write_iter_flush, write_iter_end
-  public :: write_iter_start, write_iter_string, write_iter_header_start, write_iter_header
-  public :: write_iter_nl, write_iter_double, write_iter_int
+  public ::                  &
+    loct_gamma,              &
+    loct_incomplete_gamma,   &
+    loct_hypergeometric,     &
+    loct_asinh,              &
+    loct_erf,                &
+    loct_erfc,               &
+    loct_ylm,                &
+    loct_bessel,             &
+    loct_bessel_In,          &
+    loct_bessel_j0,          &
+    loct_bessel_j1,          &
+    loct_bessel_k0,          &
+    loct_bessel_k1,          &
+    loct_sph_bessel,         &
+    loct_ran_init,           &
+    loct_ran_end,            &
+    loct_ran_gaussian,       &
+    loct_clock,              &
+    loct_gettimeofday,       &
+    loct_nanosleep,          &
+    loct_getmem,             &
+    loct_getcwd,             &
+    loct_sysname,            &
+    loct_mkdir,              &
+    loct_rm,                 &
+    loct_number_of_lines,    &
+    loct_fft_optimize,       &
+    loct_isinstringlist,     &
+    loct_progress_bar,       &
+    loct_printRecipe
 
-  ! ------------------------------------------------------------
+  public ::                  &
+    write_iter_init,         &
+    write_iter_clear,        &
+    write_iter_flush,        &
+    write_iter_end,          &
+    write_iter_start,        &
+    write_iter_string,       &
+    write_iter_header_start, &
+    write_iter_header,       &
+    write_iter_nl,           &
+    write_iter_double,       &
+    write_iter_int
+
+  ! ---------------------------------------------------------
   ! write_iter functions
   interface
-     subroutine write_iter_init(out,  iter, factor, file)
-       integer(POINTER_SIZE) :: out
-       integer               :: iter
-       FLOAT                 :: factor
-       character(len=*)      :: file
-     end subroutine write_iter_init
-     subroutine write_iter_clear(out)
-       integer(POINTER_SIZE) :: out
-     end subroutine write_iter_clear
-     subroutine write_iter_flush(out)
-       integer(POINTER_SIZE) :: out
-     end subroutine write_iter_flush
-     subroutine write_iter_end(out)
-       integer(POINTER_SIZE) :: out
-     end subroutine write_iter_end
-     subroutine write_iter_start(out)
-       integer(POINTER_SIZE) :: out
-     end subroutine write_iter_start
-     subroutine write_iter_string(out, string)
-       integer(POINTER_SIZE) :: out
-       character(len=*)      :: string
-     end subroutine write_iter_string
-     subroutine write_iter_header_start(out)
-       integer(POINTER_SIZE) :: out
-     end subroutine write_iter_header_start
-     subroutine write_iter_header(out, string)
-       integer(POINTER_SIZE) :: out
-       character(len=*)      :: string
-     end subroutine write_iter_header
-     subroutine write_iter_nl(out)
-       integer(POINTER_SIZE) :: out
-     end subroutine write_iter_nl
+    subroutine write_iter_init(out,  iter, factor, file)
+      integer(POINTER_SIZE) :: out
+      integer               :: iter
+      FLOAT                 :: factor
+      character(len=*)      :: file
+    end subroutine write_iter_init
+    subroutine write_iter_clear(out)
+      integer(POINTER_SIZE) :: out
+    end subroutine write_iter_clear
+    subroutine write_iter_flush(out)
+      integer(POINTER_SIZE) :: out
+    end subroutine write_iter_flush
+    subroutine write_iter_end(out)
+      integer(POINTER_SIZE) :: out
+    end subroutine write_iter_end
+    subroutine write_iter_start(out)
+      integer(POINTER_SIZE) :: out
+    end subroutine write_iter_start
+    subroutine write_iter_string(out, string)
+      integer(POINTER_SIZE) :: out
+      character(len=*)      :: string
+    end subroutine write_iter_string
+    subroutine write_iter_header_start(out)
+      integer(POINTER_SIZE) :: out
+    end subroutine write_iter_header_start
+    subroutine write_iter_header(out, string)
+      integer(POINTER_SIZE) :: out
+      character(len=*)      :: string
+    end subroutine write_iter_header
+    subroutine write_iter_nl(out)
+      integer(POINTER_SIZE) :: out
+    end subroutine write_iter_nl
   end interface
 
   interface write_iter_double
-     subroutine write_iter_double_1(out, d, n)
-       integer(POINTER_SIZE) :: out
-       integer               :: n
-       FLOAT                 :: d
-     end subroutine write_iter_double_1
-     subroutine write_iter_double_n(out, d, n)
-       integer(POINTER_SIZE) :: out
-       integer               :: n
-       FLOAT                 :: d(n)
-     end subroutine write_iter_double_n
+    subroutine write_iter_double_1(out, d, n)
+      integer(POINTER_SIZE) :: out
+      integer               :: n
+      FLOAT                 :: d
+    end subroutine write_iter_double_1
+    subroutine write_iter_double_n(out, d, n)
+      integer(POINTER_SIZE) :: out
+      integer               :: n
+      FLOAT                 :: d(n)
+    end subroutine write_iter_double_n
   end interface
   interface write_iter_int
-     subroutine write_iter_int_1(out, i, n)
-       integer(POINTER_SIZE) :: out
-       integer               :: n
-       integer               :: i
-     end subroutine write_iter_int_1
-     subroutine write_iter_int_n(out, i, n)
-       integer(POINTER_SIZE) :: out
-       integer               :: n
-       integer               :: i(n)
-     end subroutine write_iter_int_n
+    subroutine write_iter_int_1(out, i, n)
+      integer(POINTER_SIZE) :: out
+      integer               :: n
+      integer               :: i
+    end subroutine write_iter_int_1
+    subroutine write_iter_int_n(out, i, n)
+      integer(POINTER_SIZE) :: out
+      integer               :: n
+      integer               :: i(n)
+    end subroutine write_iter_int_n
   end interface
 
-  ! ------------------------------------------------------------
+  ! ---------------------------------------------------------
   ! Special functions
   interface loct_gamma
     function oct_gamma(x)
@@ -121,7 +155,7 @@ module lib_oct
       real(8), intent(in) :: a, b, x
     end function oct_hypergeometric
     module procedure oct_hypergeometric4
-  end interface loct_hypergeometric
+  end interface
 
   interface loct_bessel
     function oct_bessel(n, x)
@@ -174,7 +208,7 @@ module lib_oct
     module procedure oct_bessel_k04
   end interface
 
- interface loct_bessel_k1
+  interface loct_bessel_k1
     function oct_bessel_k1(x)
       real(8) :: oct_bessel_k1
       real(8), intent(in)  :: x
@@ -215,7 +249,7 @@ module lib_oct
     module procedure oct_ylm4
   end interface
 
-  ! ------------------------------------------------------------
+  ! ---------------------------------------------------------
   ! Functions to generate random numbers
   interface loct_ran_init
     subroutine oct_ran_init(r)
@@ -238,7 +272,7 @@ module lib_oct
     module procedure oct_ran_gaussian4
   end interface
 
-  ! ------------------------------------------------------------
+  ! ---------------------------------------------------------
   ! System information (time, memory, sysname)
   interface loct_clock
     function oct_clock()
@@ -276,7 +310,7 @@ module lib_oct
   end interface
 
 
-  ! ------------------------------------------------------------
+  ! ---------------------------------------------------------
   ! File handling
   interface loct_mkdir
     subroutine oct_mkdir(name)
@@ -297,7 +331,7 @@ module lib_oct
   end interface
 
 
-  ! ------------------------------------------------------------
+  ! ---------------------------------------------------------
   ! Varia
   interface loct_fft_optimize
     subroutine oct_fft_optimize(n, p, par)
@@ -351,7 +385,7 @@ contains
     real(4), intent(in) :: a, b, x
 
     oct_hypergeometric4 = real(oct_hypergeometric(real(a, kind = 8), real(b, kind = 8), real(x, kind = 8)), &
-                                        kind = 4)
+      kind = 4)
   end function oct_hypergeometric4
 
   real(4) function oct_bessel4(n, x)

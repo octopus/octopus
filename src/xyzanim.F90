@@ -43,8 +43,8 @@ program xyzanim
   call io_init()
   call syslabels_init(1)
   if(in_debug_mode) then
-     call io_mkdir('debug')
-  endif
+    call io_mkdir('debug')
+  end if
   call units_init()
 
   ! Sets the filenames
@@ -73,12 +73,12 @@ program xyzanim
 
   ierr = 0
   do while(ierr == 0)
-     read(unit = nbo_unit, iostat = ierr, fmt = *) iter, dump, dump, dump, dump, &
-         ((geo%atom(i)%x(j), j = 1, 3), i = 1, geo%natoms)
-     if(mod(iter, sampling) == 0) then
-       call write_xyz()
-     endif
-  enddo
+    read(unit = nbo_unit, iostat = ierr, fmt = *) iter, dump, dump, dump, dump, &
+      ((geo%atom(i)%x(j), j = 1, 3), i = 1, geo%natoms)
+    if(mod(iter, sampling) == 0) then
+      call write_xyz()
+    end if
+  end do
 
   call io_close(nbo_unit); call io_close(xyz_unit)
 
@@ -89,6 +89,7 @@ program xyzanim
 
 contains
 
+  ! ---------------------------------------------------------
   subroutine write_xyz
     integer :: i
     ! xyz format

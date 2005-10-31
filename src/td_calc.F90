@@ -17,52 +17,56 @@
 !!
 !! $Id$
 
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+! ---------------------------------------------------------
 ! Electronic acceleration (to calculate harmonic spectrum...)
 ! It is calculated as:
 !
 ! d2<x>/dt2 = d<p>/dt + i<[H,[V_nl,x]]> =
 !           = i<[V_l,p]> + i<[V_nl,p]> - E(t)N + i<[H,[V_nl,x]]>
 !
-! WARNING: This subroutine only works if ions are not allowed to move
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-subroutine td_calc_tacc(gr, st, h, acc, t, reduce)
+! WARNING: This subroutine only works if ions are not
+!          allowed to move
+! ---------------------------------------------------------
+subroutine td_calc_tacc(gr, st, h, acc, t, reduce_)
   type(grid_type),        intent(inout) :: gr
   type(states_type),      intent(inout) :: st
   type(hamiltonian_type), intent(in)    :: h
   FLOAT,                  intent(in)    :: t
   FLOAT,                  intent(out)   :: acc(3)
-  logical, optional,      intent(in)    :: reduce
+  logical, optional,      intent(in)    :: reduce_
 
   FLOAT :: field(3), x(3)
   CMPLX, allocatable :: hzpsi(:,:), hhzpsi(:,:), xzpsi(:,:,:), vnl_xzpsi(:,:), conj(:)
   integer  :: j, k, i, ik, ist, idim
+  logical :: reduce
 #if defined(HAVE_MPI)
   integer :: ierr
-  FLOAT :: y(3)
+  FLOAT   :: y(3)
 #endif
 
   call push_sub('td_calc.td_calc_tacc')
 
+  if(present(reduce_)) reduce = reduce_
   ! The term i<[V_l,p]> + i<[V_nl,p]> may be considered as equal but opposite to the
   ! force exerted by the electrons on the ions. COMMENT: This has to be thought about.
   ! Maybe we are forgetting something....
   x = M_ZERO
   call zepot_forces(gr, h%ep, st)
   do i = 1, gr%geo%natoms
-     x = x - gr%geo%atom(i)%f
-  enddo
+    x = x - gr%geo%atom(i)%f
+  end do
   acc = x
 
   ! Adds the laser contribution : i<[V_laser, p]>
   if(h%ep%no_lasers > 0) then
-     call epot_laser_field(gr%sb, h%ep, t, field)
-     acc(1:3) = acc(1:3) - st%qtot*field(1:3)
+    call epot_laser_field(gr%sb, h%ep, t, field)
+    acc(1:3) = acc(1:3) - st%qtot*field(1:3)
   end if
 
   if(h%ep%nvnl <= 0) then
-     call pop_sub()
-     return
+    call pop_sub()
+    return
   end if
 
   ! And now, i<[H,[V_nl,x]]>
@@ -70,60 +74,60 @@ subroutine td_calc_tacc(gr, st, h, acc, t, reduce)
   allocate(hzpsi(NP, st%d%dim), hhzpsi(3, NP), conj(NP))
 
   do ik = 1, st%d%nik
-     do ist = st%st_start, st%st_end
+    do ist = st%st_start, st%st_end
 
-        call zhpsi(h, gr, st%zpsi(:, :, ist, ik), hzpsi(:,:), ik)
-        do k = 1, st%d%dim
-           hzpsi(:, k) = hzpsi(:, k) + epot_laser_scalar_pot(gr%m%np, gr, h%ep, t)*st%zpsi(:, k, ist, ik)
-        enddo
+      call zhpsi(h, gr, st%zpsi(:, :, ist, ik), hzpsi(:,:), ik)
+      do k = 1, st%d%dim
+        hzpsi(:, k) = hzpsi(:, k) + epot_laser_scalar_pot(gr%m%np, gr, h%ep, t)*st%zpsi(:, k, ist, ik)
+      end do
 
-        allocate(xzpsi(NP, st%d%dim, 3), vnl_xzpsi(NP, st%d%dim))
-        xzpsi = M_z0
-        do k = 1, NP
-           do j = 1, NDIM
-              xzpsi(k, 1:st%d%dim, j) = gr%m%x(j, k) * st%zpsi(k, 1:st%d%dim, ist, ik)
-           end do
-        end do
-
+      allocate(xzpsi(NP, st%d%dim, 3), vnl_xzpsi(NP, st%d%dim))
+      xzpsi = M_z0
+      do k = 1, NP
         do j = 1, NDIM
-           vnl_xzpsi = M_z0
-           call zvnlpsi(h, gr%m, gr%sb, xzpsi(:,:, j), vnl_xzpsi(:,:), ik)
-
-           do idim = 1, st%d%dim
-              conj = R_CONJ(hzpsi(:, idim))
-              x(j) = x(j) - 2*st%occ(ist, ik)*zmf_dotp(gr%m, conj, vnl_xzpsi(:, idim) )
-           end do
+          xzpsi(k, 1:st%d%dim, j) = gr%m%x(j, k) * st%zpsi(k, 1:st%d%dim, ist, ik)
         end do
+      end do
 
-        xzpsi = M_z0
-        do k = 1, NP
-           do j = 1, NDIM
-              xzpsi(k, 1:st%d%dim, j) = gr%m%x(j, k) * hzpsi(k, 1:st%d%dim)
-           end do
+      do j = 1, NDIM
+        vnl_xzpsi = M_z0
+        call zvnlpsi(h, gr%m, gr%sb, xzpsi(:,:, j), vnl_xzpsi(:,:), ik)
+
+        do idim = 1, st%d%dim
+          conj = R_CONJ(hzpsi(:, idim))
+          x(j) = x(j) - 2*st%occ(ist, ik)*zmf_dotp(gr%m, conj, vnl_xzpsi(:, idim) )
         end do
+      end do
 
+      xzpsi = M_z0
+      do k = 1, NP
         do j = 1, NDIM
-           vnl_xzpsi = M_z0
-           call zvnlpsi(h, gr%m, gr%sb, xzpsi(:,:, j), vnl_xzpsi(:,:), ik)
-           do idim = 1, st%d%dim
-              conj = R_CONJ(st%zpsi(:, idim, ist, ik))
-              x(j) = x(j) + 2*st%occ(ist, ik)* &
-                   zmf_dotp(gr%m, conj, vnl_xzpsi(:, idim) )
-           end do
+          xzpsi(k, 1:st%d%dim, j) = gr%m%x(j, k) * hzpsi(k, 1:st%d%dim)
         end do
-        deallocate(xzpsi, vnl_xzpsi)
+      end do
 
-     end do
+      do j = 1, NDIM
+        vnl_xzpsi = M_z0
+        call zvnlpsi(h, gr%m, gr%sb, xzpsi(:,:, j), vnl_xzpsi(:,:), ik)
+        do idim = 1, st%d%dim
+          conj = R_CONJ(st%zpsi(:, idim, ist, ik))
+          x(j) = x(j) + 2*st%occ(ist, ik)* &
+            zmf_dotp(gr%m, conj, vnl_xzpsi(:, idim) )
+        end do
+      end do
+      deallocate(xzpsi, vnl_xzpsi)
+
+    end do
   end do
   deallocate(hzpsi, hhzpsi, conj)
 
 #if defined(HAVE_MPI)
-  if(present(reduce)) then
-     if(reduce) then
-        call MPI_ALLREDUCE(x(1), y(1), NDIM, &
-             MPI_FLOAT, MPI_SUM, st%comm, ierr)
-        x = y
-     end if
+  if(present(reduce_)) then
+    if(reduce) then
+      call MPI_ALLREDUCE(x(1), y(1), NDIM, &
+        MPI_FLOAT, MPI_SUM, st%comm, ierr)
+      x = y
+    end if
   end if
 #endif
   acc = acc + x

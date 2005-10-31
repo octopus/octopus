@@ -25,11 +25,12 @@ module varinfo
   implicit none
 
   private
-  public :: varinfo_init, &
-            varinfo_end, &
-            varinfo_print, &
-            varinfo_print_option, &
-            varinfo_valid_option
+  public ::               &
+    varinfo_init,         &
+    varinfo_end,          &
+    varinfo_print,        &
+    varinfo_print_option, &
+    varinfo_valid_option
 
   interface
     subroutine varinfo_init(filename)
@@ -39,6 +40,7 @@ module varinfo
     subroutine varinfo_end()
     end subroutine varinfo_end
   end interface
+
 
 contains
 
@@ -80,6 +82,8 @@ contains
 
   end subroutine varinfo_print
 
+
+  ! ---------------------------------------------------------
   logical function varinfo_valid_option(var, option) result(l)
     character(len=*), intent(in) :: var
     integer,          intent(in) :: option
@@ -100,9 +104,10 @@ contains
       if(value == option) then
         l = .true.; return
       end if
-    end do    
+    end do
 
   end function varinfo_valid_option
+
 
   ! ---------------------------------------------------------
   subroutine varinfo_print_option(iunit, var, option, pre)

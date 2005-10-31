@@ -64,14 +64,14 @@ subroutine X(derivatives_lapl)(der, f, lapl, have_ghost_)
   ! If the derivatives are defined with non-constant weights, then we do not
   ! need extra points.
   if( (.not.(have_ghost))   .and.   der%zero_bc    .and.  der%lapl%const_w  ) then
-     allocate(fp(der%m%np_part))
-     fp(1:der%m%np)               = f(1:der%m%np)
-     fp(der%m%np+1:der%m%np_part) = R_TOTYPE(M_ZERO)
-     call X(nl_operator_operate) (der%lapl, fp, lapl)
-     deallocate(fp)
+    allocate(fp(der%m%np_part))
+    fp(1:der%m%np)               = f(1:der%m%np)
+    fp(der%m%np+1:der%m%np_part) = R_TOTYPE(M_ZERO)
+    call X(nl_operator_operate) (der%lapl, fp, lapl)
+    deallocate(fp)
   else
-     call X(nl_operator_operate) (der%lapl, f, lapl)
-  endif
+    call X(nl_operator_operate) (der%lapl, f, lapl)
+  end if
 
   call pop_sub()
 
@@ -141,8 +141,7 @@ end subroutine X(derivatives_div)
 
 
 ! ---------------------------------------------------------
-subroutine X(derivatives_curl)(sb, der, f, curl)
-  type(simul_box_type), intent(in)  :: sb
+subroutine X(derivatives_curl)(der, f, curl)
   type(der_discr_type), intent(in)  :: der
   R_TYPE, target,       intent(in)  :: f(:,:)    ! f(m%np, sb%dim)
   R_TYPE,               intent(out) :: curl(:,:) ! curl(m%np, sb%dim)
@@ -150,7 +149,7 @@ subroutine X(derivatives_curl)(sb, der, f, curl)
   R_TYPE, pointer     :: fp(:)
   R_TYPE, allocatable :: tmp(:)
 
-  ASSERT(sb%dim == 3)
+  ASSERT(calc_dim == 3)
 
   if(der%zero_bc) then
      allocate(fp(der%m%np_part))

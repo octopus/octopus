@@ -55,6 +55,7 @@ module phonons
 
 contains
 
+  ! ---------------------------------------------------------
   integer function phonons_run(sys, h) result(ierr)
     type(system_type),      intent(inout) :: sys
     type(hamiltonian_type), intent(inout) :: h
@@ -115,6 +116,8 @@ contains
     call end_()
 
   contains
+
+    ! ---------------------------------------------------------
     subroutine init_()
       call push_sub('phonons.phonons_run')
 
@@ -122,7 +125,7 @@ contains
       allocate(sys%st%X(psi)(sys%gr%m%np, sys%st%d%dim, sys%st%nst, sys%st%d%nik))
     end subroutine init_
 
-
+    ! ---------------------------------------------------------
     subroutine end_()
       deallocate(sys%st%X(psi))
 
@@ -131,6 +134,8 @@ contains
 
   end function phonons_run
 
+
+  ! ---------------------------------------------------------
   subroutine get_DM(gr, st, ks, h, outp, ph)
     type(grid_type), target, intent(inout) :: gr
     type(states_type),       intent(inout) :: st
@@ -192,8 +197,8 @@ contains
         do j = 1, geo%natoms
           do beta = 1, NDIM
             ph%DM(NDIM*(i-1) + alpha, NDIM*(j-1) + beta) = &
-                 (forces0(j, beta) - forces(j, beta)) / (M_TWO*ph%disp &
-                 * sqrt(geo%atom(i)%spec%weight*geo%atom(j)%spec%weight))
+              (forces0(j, beta) - forces(j, beta)) / (M_TWO*ph%disp &
+              * sqrt(geo%atom(i)%spec%weight*geo%atom(j)%spec%weight))
             write(iunit, '(es14.5)', advance='no') ph%DM(NDIM*(i-1) + alpha, NDIM*(j-1) + beta)
           end do
         end do

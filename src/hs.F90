@@ -33,10 +33,11 @@ program harmonic_spectrum
   character(len=100) :: txt
   integer :: mode
   type(spec_type) :: s
-  type(spec_sh) :: sh
+  type(spec_sh)   :: sh
 
-  integer, parameter :: HS_FROM_MULT = 1, &
-                        HS_FROM_ACC = 2
+  integer, parameter :: &
+    HS_FROM_MULT = 1,   &
+    HS_FROM_ACC  = 2
 
   ! Initialize stuff
   call global_init()
@@ -44,8 +45,8 @@ program harmonic_spectrum
   call io_init()
   call syslabels_init(1)
   if(in_debug_mode) then
-     call io_mkdir('debug')
-  endif
+    call io_mkdir('debug')
+  end if
   call units_init()
 
   call spectrum_init(s)
@@ -54,7 +55,7 @@ program harmonic_spectrum
   !%Type string
   !%Section 13 Spectrum calculations
   !%Description
-  !% The oct-harmonic-spectrum utility program needs to know the direction along 
+  !% The oct-harmonic-spectrum utility program needs to know the direction along
   !% which the emission raidiation is considered to be polarized. It may be
   !% linearly polarized or circularly polarized.
   !%Option "x"
@@ -71,7 +72,7 @@ program harmonic_spectrum
   call loct_parse_string(check_inp('HarmonicSpectrumPolarization'), 'z', txt)
   sh%pol = txt(1:1)
   if(sh%pol.ne.'x' .and. sh%pol.ne.'y' .and. sh%pol.ne.'z' .and. &
-       sh%pol.ne.'+' .and. sh%pol.ne.'-') then
+    sh%pol.ne.'+' .and. sh%pol.ne.'-') then
     call input_error('HarmonicSpectrumPolarization')
   end if
 

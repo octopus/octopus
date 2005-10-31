@@ -19,7 +19,7 @@
 
 
 
-!/*!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!/* -------------------------------------------------------------------
 ! The two following subroutines, sym_conjugate_gradients, and bi_conjugate_gradients,
 ! must be called under a common interface: conjugate_gradients. It provides an
 ! approximate solution to the linear system problem  Ax = b.
@@ -65,20 +65,20 @@
 !
 ! (*) NOTE: The algorithm assumes that the vectors are given in an orthonormal basis.
 !
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!*/!
+! ------------------------------------------------------------------- */!
 subroutine X(sym_conjugate_gradients)(np, x, b, op, dotp, iter, residue, threshold)
   integer, intent(in) :: np
   R_TYPE,                intent(inout) :: x(:)
   R_TYPE,                intent(in)    :: b(:)
   interface
-     subroutine op(x, y)
-       R_TYPE, intent(inout) :: x(:)
-       R_TYPE, intent(out)   :: y(:)
-     end subroutine op
-     R_TYPE function dotp(x, y) result(res)
-       R_TYPE, intent(inout) :: x(:)
-       R_TYPE, intent(in)    :: y(:)
-     end function dotp
+    subroutine op(x, y)
+      R_TYPE, intent(inout) :: x(:)
+      R_TYPE, intent(out)   :: y(:)
+    end subroutine op
+    R_TYPE function dotp(x, y) result(res)
+      R_TYPE, intent(inout) :: x(:)
+      R_TYPE, intent(in)    :: y(:)
+    end function dotp
   end interface
   integer, intent(inout)        :: iter
   FLOAT,  optional, intent(in)  :: threshold
@@ -90,13 +90,13 @@ subroutine X(sym_conjugate_gradients)(np, x, b, op, dotp, iter, residue, thresho
   FLOAT   :: threshold_
   integer :: max_iter
 
-  call push_sub('math_cg_inc.sym_conjugate_gradients')
+  call push_sub('math_cg_inc.Xsym_conjugate_gradients')
 
   if(present(threshold)) then
-     threshold_ = threshold
+    threshold_ = threshold
   else
-     threshold_ = CNST(1.0e-6)
-  endif
+    threshold_ = CNST(1.0e-6)
+  end if
 
   allocate(r(np), ax(np), p(np), ap(np))
 
@@ -110,41 +110,43 @@ subroutine X(sym_conjugate_gradients)(np, x, b, op, dotp, iter, residue, thresho
   max_iter = iter
   iter = 1
   do while(iter < max_iter)
-     gamma = dotp(r, r)
-     if(abs(gamma) < THRESHOLD_) exit
-     call op(p, ap)
-     alpha   = gamma/dotp(p, ap)
-     r(1:np) = r(1:np) - alpha*ap(1:np)
-     x(1:np) = x(1:np) + alpha*p(1:np)
-     beta    = dotp(r, r)/gamma
-     p(1:np) = r(1:np) + beta*p(1:np)
-     iter    = iter + 1
-  enddo
+    gamma = dotp(r, r)
+    if(abs(gamma) < THRESHOLD_) exit
+    call op(p, ap)
+    alpha   = gamma/dotp(p, ap)
+    r(1:np) = r(1:np) - alpha*ap(1:np)
+    x(1:np) = x(1:np) + alpha*p(1:np)
+    beta    = dotp(r, r)/gamma
+    p(1:np) = r(1:np) + beta*p(1:np)
+    iter    = iter + 1
+  end do
   if(present(residue)) residue = gamma
 
   deallocate(r, ax, p, ap)
   call pop_sub(); return
 end subroutine X(sym_conjugate_gradients)
 
+
+! ---------------------------------------------------------
 subroutine X(bi_conjugate_gradients)(np, x, b, op, opt, dotp, iter, residue, threshold)
   integer, intent(in) :: np
   R_TYPE,                intent(inout) :: x(:)
   R_TYPE,                intent(in)    :: b(:)
   interface
-     subroutine op(x, y)
-       R_TYPE, intent(inout) :: x(:)
-       R_TYPE, intent(out)   :: y(:)
-     end subroutine op
+    subroutine op(x, y)
+      R_TYPE, intent(inout) :: x(:)
+      R_TYPE, intent(out)   :: y(:)
+    end subroutine op
   end interface
   interface
-     subroutine opt(x, y)
-       R_TYPE, intent(inout) :: x(:)
-       R_TYPE, intent(out)   :: y(:)
-     end subroutine opt
-     R_TYPE function dotp(x, y) result(res)
-       R_TYPE, intent(in) :: x(:)
-       R_TYPE, intent(in) :: y(:)
-     end function dotp
+    subroutine opt(x, y)
+      R_TYPE, intent(inout) :: x(:)
+      R_TYPE, intent(out)   :: y(:)
+    end subroutine opt
+    R_TYPE function dotp(x, y) result(res)
+      R_TYPE, intent(in) :: x(:)
+      R_TYPE, intent(in) :: y(:)
+    end function dotp
   end interface
   integer, intent(inout) :: iter
   R_TYPE, optional, intent(out) :: residue
@@ -154,13 +156,13 @@ subroutine X(bi_conjugate_gradients)(np, x, b, op, opt, dotp, iter, residue, thr
   FLOAT :: alpha, beta, gamma, err, threshold_
   integer :: max_iter
 
-  call push_sub('math_cg_inc.bi_conjugate_gradients')
+  call push_sub('math_cg_inc.Xbi_conjugate_gradients')
 
   if(present(threshold)) then
-     threshold_ = threshold
+    threshold_ = threshold
   else
-     threshold_ = CNST(1.0e-6)
-  endif
+    threshold_ = CNST(1.0e-6)
+  end if
 
   allocate(r(np), rr(np), ax(np), p(np), pp(np), ap(np), atp(np))
 
@@ -176,20 +178,20 @@ subroutine X(bi_conjugate_gradients)(np, x, b, op, opt, dotp, iter, residue, thr
   max_iter = iter
   iter = 1
   do while(iter < MAX_ITER)
-     gamma = dotp(rr, r)
-     err = dotp(r, r)
-     if(abs(err) < THRESHOLD_) exit
-     call op (p,  ap)
-     call opt(pp, atp)
-     alpha = gamma/dotp(pp, ap)
-     r  = r  - alpha*ap
-     rr = rr - alpha*atp
-     x = x + alpha*p
-     beta = dotp(rr, r)/gamma
-     p  = r  + beta*p
-     pp = rr + beta*pp
-     iter = iter + 1
-  enddo
+    gamma = dotp(rr, r)
+    err = dotp(r, r)
+    if(abs(err) < THRESHOLD_) exit
+    call op (p,  ap)
+    call opt(pp, atp)
+    alpha = gamma/dotp(pp, ap)
+    r  = r  - alpha*ap
+    rr = rr - alpha*atp
+    x = x + alpha*p
+    beta = dotp(rr, r)/gamma
+    p  = r  + beta*p
+    pp = rr + beta*pp
+    iter = iter + 1
+  end do
   if(present(residue)) residue = err
 
   deallocate(r, rr, ax, p, pp, ap, atp)

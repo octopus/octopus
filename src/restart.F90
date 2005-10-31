@@ -34,15 +34,20 @@ module restart
   implicit none
 
   private
-  public ::                            &
-       restart_init, clean_stop,       &
-       drestart_write, zrestart_write, &
-       drestart_read, zrestart_read,   &
-       restart_format, restart_look
+  public ::             &
+    restart_init,       &
+    clean_stop,         &
+    drestart_write,     &
+    zrestart_write,     &
+    drestart_read,      &
+    zrestart_read,      &
+    restart_format,     &
+    restart_look
 
-  integer, parameter ::    &
-       RESTART_PLAIN  = 1, &
-       RESTART_NETCDF = 2
+  integer, parameter :: &
+    RESTART_PLAIN  = 1, &
+    RESTART_NETCDF = 2
+
   integer :: restart_format
 
 
@@ -55,83 +60,86 @@ contains
     clean_stop = .false.
     inquire(file='stop', exist=file_exists)
     if(file_exists) then
-       message(1) = 'Clean STOP'
-       message(2) = "(don't forget to remove the file 'stop' ;)"
-       call write_warning(2)
-       clean_stop = .true.
+      message(1) = 'Clean STOP'
+      message(2) = "(don't forget to remove the file 'stop' ;)"
+      call write_warning(2)
+      clean_stop = .true.
     end if
 
     return
   end function clean_stop
 
 
+  ! ---------------------------------------------------------
   subroutine restart_init
     integer :: i
 
     ! read restart format information
     call loct_parse_int(check_inp('RestartFileFormat'), RESTART_PLAIN, i)
     if (i<RESTART_PLAIN .or. i>RESTART_NETCDF) then
-       write(message(1),'(a,i4,a)') "Input: '", i,"' is not a valid RestartFileFormat"
-       message(2) = '(RestartFileFormat = plain | netcdf)'
-       call write_fatal(2)
+      write(message(1),'(a,i4,a)') "Input: '", i,"' is not a valid RestartFileFormat"
+      message(2) = '(RestartFileFormat = plain | netcdf)'
+      call write_fatal(2)
     end if
 
     ! Fix the restart format...
     restart_format = output_fill_how("Plain")
 #if defined(HAVE_NETCDF)
     if(i == RESTART_NETCDF) then
-       restart_format = output_fill_how("NETCDF")
+      restart_format = output_fill_how("NETCDF")
     end if
 #endif
 
   end subroutine restart_init
 
-subroutine restart_look (dir, m, kpoints, dim, nst, ierr)
-  character(len=*),  intent(in)    :: dir
-  type(mesh_type),   intent(in)    :: m
-  integer, intent(out) :: kpoints, dim, nst, ierr
 
-  character(len=256)   :: line
-  character(len=12)    :: filename
-  character(len=1)     :: char
-  integer :: iunit, iunit2, err, i, ist, idim, ik
-  FLOAT :: occ, eigenval
+  ! ---------------------------------------------------------
+  subroutine restart_look (dir, m, kpoints, dim, nst, ierr)
+    character(len=*),  intent(in)    :: dir
+    type(mesh_type),   intent(in)    :: m
+    integer, intent(out) :: kpoints, dim, nst, ierr
 
-  ierr = 0
-  iunit  = iopar_open(m, trim(dir)//'/wfns', action='read', status='old', die=.false.)
-  if(iunit < 0) then
+    character(len=256)   :: line
+    character(len=12)    :: filename
+    character(len=1)     :: char
+    integer :: iunit, iunit2, err, i, ist, idim, ik
+    FLOAT :: occ, eigenval
+
+    ierr = 0
+    iunit  = iopar_open(m, trim(dir)//'/wfns', action='read', status='old', die=.false.)
+    if(iunit < 0) then
       ierr = -1
       return
-  end if
-  iunit2 = iopar_open(m, trim(dir)//'/occs', action='read', status='old', die=.false.)
-  if(iunit2 < 0) then
-     call iopar_close(m, iunit)
-     ierr = -1
-     return
-  end if
+    end if
+    iunit2 = iopar_open(m, trim(dir)//'/occs', action='read', status='old', die=.false.)
+    if(iunit2 < 0) then
+      call iopar_close(m, iunit)
+      ierr = -1
+      return
+    end if
 
-  ! Skip two lines.
-  call iopar_read(m, iunit, line, err); call iopar_read(m, iunit, line, err)
-  call iopar_read(m, iunit2, line, err); call iopar_read(m, iunit2, line, err)
+    ! Skip two lines.
+    call iopar_read(m, iunit, line, err); call iopar_read(m, iunit, line, err)
+    call iopar_read(m, iunit2, line, err); call iopar_read(m, iunit2, line, err)
 
-  kpoints = 1
-  dim = 1
-  nst = 1
-  do
-    call iopar_read(m, iunit, line, i)
-    read(line, '(a)') char
-    if(i.ne.0.or.char=='%') exit
-    read(line, *) ik, char, ist, char, idim, char, filename
-    if(ik > kpoints) kpoints = ik
-    if(idim == 2)    dim     = 2
-    if(ist>nst)      nst     = ist
-    call iopar_read(m, iunit2, line, err)
-    read(line, *) occ, char, eigenval
-  end do
+    kpoints = 1
+    dim = 1
+    nst = 1
+    do
+      call iopar_read(m, iunit, line, i)
+      read(line, '(a)') char
+      if(i.ne.0.or.char=='%') exit
+      read(line, *) ik, char, ist, char, idim, char, filename
+      if(ik > kpoints) kpoints = ik
+      if(idim == 2)    dim     = 2
+      if(ist>nst)      nst     = ist
+      call iopar_read(m, iunit2, line, err)
+      read(line, *) occ, char, eigenval
+    end do
 
-  call iopar_close(m, iunit)
-  call iopar_close(m, iunit2)
-end subroutine restart_look
+    call iopar_close(m, iunit)
+    call iopar_close(m, iunit2)
+  end subroutine restart_look
 
 
 

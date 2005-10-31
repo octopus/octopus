@@ -26,7 +26,7 @@ subroutine X(v_ks_calc)(gr, ks, h, st, calc_eigenval)
 
   FLOAT :: amaldi_factor
 
-  call push_sub('v_ks_inc.v_ks_calc')
+  call push_sub('v_ks_inc.Xv_ks_calc')
 
   h%epot = M_ZERO
   h%vhxc = M_ZERO
@@ -48,6 +48,8 @@ subroutine X(v_ks_calc)(gr, ks, h, st, calc_eigenval)
   call pop_sub()
 
 contains
+
+  ! ---------------------------------------------------------
   ! Hartree contribution to the xc potential
   subroutine v_hartree()
     FLOAT, allocatable :: rho(:)
@@ -84,6 +86,7 @@ contains
   end subroutine v_hartree
 
 
+  ! ---------------------------------------------------------
   ! Hartree contribution from the current to Axc
   subroutine a_hartree()
     FLOAT, allocatable :: j(:,:), ahartree(:,:)
@@ -119,6 +122,7 @@ contains
   end subroutine a_hartree
 
 
+  ! ---------------------------------------------------------
   subroutine v_a_xc()
     FLOAT, allocatable :: rho(:, :)
     CMPLX, allocatable :: ztmp1(:), ztmp2(:)

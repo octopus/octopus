@@ -23,7 +23,7 @@ module mesh_lib
   use global
 
   implicit none
-  
+
   private
   public :: mesh_index
 
@@ -37,12 +37,14 @@ contains
     integer, intent(in) :: periodic_dim      ! Number of periodic dimensions.
     integer, intent(in) :: nr(:, :)          ! Dimensions of the box.
                                              ! (x, y, z) to point-no.
-    integer, intent(in) :: Lxyz_inv(nr(1,1):nr(2,1), &
-                                    nr(1,2):nr(2,2), &
-                                    nr(1,3):nr(2,3))
+    integer, intent(in) :: &
+      Lxyz_inv(            &
+      nr(1,1):nr(2,1),     &
+      nr(1,2):nr(2,2),     &
+      nr(1,3):nr(2,3))
     integer, intent(in) :: ix_(:)            ! Coodinates of requested point.
 
-    integer :: i, ix(3)  ! ix has to go until 3, not sb%dim
+    integer :: i, ix(3)    ! ix has to go until 3, not sb%dim
 
     ix = 0
     ix(1:dim) = ix_(1:dim) ! make a local copy that we can change

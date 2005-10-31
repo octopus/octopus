@@ -97,7 +97,7 @@
         message(1) = 'Note: The lattice vectors as given do not form a direct triad'
         call write_warning(1)
         volume_check = - volume_check
-      endif
+      end if
 
       celvol = volume_check
 
@@ -608,7 +608,7 @@
  9010       format(i5,3(3x,3i3),4x,3f9.5,1x,a5)
 
             write(6,*) ' skipping symmetry check!'
-         endif
+         end if
 !      call crystal_symchk(ipr,ierr,ntrans,rmtrx,tnp,1)
 !      call crystal_symchk(ipr,ierr,ntrans,gmtrx,tnp,0)
 
@@ -673,7 +673,7 @@
 !                 ' symmetry operations',j,' and',i,' are equal'
 !            call write_info(1)
                write(6,9000) j, i
-            endif
+            end if
  9000       format(/' symmetry operations',i3,' and',i3,' are equal')
             ierr = i
             write(message(1),'(a)')not_a_grp
@@ -721,7 +721,7 @@
          if(ipr == 1) then
          message(1) = 'Checking in g-space'
          call write_info(1)
-         endif
+         end if
       do i = 1, ntrans
          do 150 j = 1, ntrans
             k = mult(i,j)
@@ -749,7 +749,7 @@
          if(ipr == 1) then
            message(1) = 'Checking in r-space'
            call write_info(1)
-         endif
+         end if
       do i = 1, ntrans
          do 550 j = 1, ntrans
             k = mult(i,j)
@@ -771,7 +771,7 @@
   550    continue
       end do
 
-      endif
+      end if
 !
 !      check multiplication table
 !
@@ -799,7 +799,7 @@
       do i = 1, ntrans
          write(6,'(1x,48i2)') (mult(i,j),j=1,ntrans)
       end do
-      endif
+      end if
       write(message(1),'(a)')not_a_grp
       call write_fatal(1)
 !
@@ -856,7 +856,7 @@
 !           R = IS , where S is proper
             call blas_scal(9,-M_ONE,a(1,1),1)
             id(oper) = 'I' // axes(nint(-trace - 1))
-        endif
+        end if
 !
 !       Find eigenvector of a with eigenvalue = +1 (vector
 !       parallel to the axis.
@@ -882,15 +882,15 @@
 !            nonsym(oper) = .true.
 !            call scopy(3,e,1,canon_t,1)
 !            call sscal(3,te,canon_t,1)
-!          endif
+!          end if
 !        else
 !          tt = rdot(t,t)
 !          if (abs(te) - sqrt(tt) > CNST(1.e-8)) then
 !             nonsym(oper) = .true.
 !             call scopy(3,t,1,canon_t,1)
 !             call saxpy(3,-te,e,1,canon_t,1)
-!          endif
-!        endif
+!          end if
+!        end if
 !        if (nonsym(oper)) id(oper) = id(oper) // '*'
 
   100 continue
@@ -1080,7 +1080,7 @@
          if (l == ni) then
             li = l
             invers_no = nca
-         endif
+         end if
   130 continue
 
       deallocate(rdiff)
@@ -1096,8 +1096,8 @@
             write(6,9000) cst(ihg), (ic(i),i=1,nc)
  9000       format(/' The crystal system is ',a12       &
                  ,' with operations: ',/5x,24i3,/5x,24i3,/)
-         endif
-      endif
+         end if
+      end if
 
 
       vs = M_ZERO
@@ -1126,7 +1126,7 @@
       end if
          isy = 1
          is = 1
-      endif
+      end if
 
 !
 !    !construct the multiplication table
@@ -1166,7 +1166,7 @@
          write(6,9040) (ib(i),i=il,iu)
 !        write(message(1),'(a19,24i3)')' Operation number  ',(ib(i),i=il,iu)
 !        call write_info(1)
-      endif
+      end if
  9040 format(' Operation number  ',24i3)
       do 300 i = 1, na
          do j = 1, nc
@@ -1174,11 +1174,15 @@
             ia(j) = if0(l,i)
          end do
   300 continue
-      if (nc-iu) 320, 320, 310
+      if (nc.le.iu) then
+         go to 320
+      else
+         go to 310
+      endif
   310 continue
       if(ipr == 1) then
          write(6,9050)
-      endif
+      end if
  9050 format(//)
       il = 25
       iu = nc
@@ -1192,7 +1196,11 @@
       il = 1
       iu = nc
       if (nc > 24) iu = 24
-      if (is) 330, 330, 340
+      if (is.le.0) then
+         goto 330
+      else
+         goto 340
+      endif
   330 continue
       if(ipr == 1) then
 
@@ -1206,7 +1214,7 @@
  9070    format('0',4x,24i4)
          write(6,9080)
  9080    format('+',107x,'v(1)      v(2)      v(3)')
-      endif
+      end if
 !
       go to 360
 !
@@ -1215,14 +1223,14 @@
         write(message(1),'(a1,57x,a)')'0','Multiplication table'
         call write_info(1)
          write(6,9090)
-      endif
+      end if
  9090 format('0',57x,'Multiplication table')
   350 continue
       if(ipr == 1) then
         write(message(1),'(a1,4x,24i4)')'0',(ib(i),i=il,iu)
         call write_info(1)
          write(6,9100) (ib(i),i=il,iu)
-      endif
+      end if
  9100 format('0',4x,24i4)
   360 continue
       do 400 j = 1, nc
@@ -1231,7 +1239,11 @@
             n = ib(i)
             ia(i) = mt(l,n)
   370    continue
-         if (is) 380, 380, 390
+         if (is.le.0) then
+            goto 380
+         else
+            goto 390
+         endif
   380    continue
          if(ipr == 1) then
            write(message(1),'(i5,24i4)')ib(j), (ia(i),i=il,iu)
@@ -1241,7 +1253,7 @@
             write(6,9120) ib(j), (ia(i),i=il,iu)
             write(6,9110) (v(i,l),i=1,3)
  9110       format('+',102x,3f10.4)
-         endif
+         end if
 !
          go to 400
 !
@@ -1250,7 +1262,7 @@
            write(message(1),'(i5,24i4)')ib(j), (ia(i),i=il,iu)
            call write_info(1)
             write(6,9120) ib(j), (ia(i),i=il,iu)
-         endif
+         end if
   400 continue
  9120 format(i5,24i4)
       if (iu == nc) go to 410

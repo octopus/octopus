@@ -30,14 +30,18 @@ module simul_box
   implicit none
 
   private
-  public :: simul_box_type, simul_box_init, &
-     simul_box_write_info, simul_box_is_periodic, simul_box_in_box
+  public ::                     &
+    simul_box_type,             &
+    simul_box_init,             &
+    simul_box_write_info,       &
+    simul_box_is_periodic,      &
+    simul_box_in_box
 
   integer, parameter, public :: &
-     SPHERE   = 1,    &
-     CYLINDER = 2,    &
-     MINIMUM  = 3,    &
-     PARALLELEPIPED = 4
+    SPHERE         = 1,         &
+    CYLINDER       = 2,         &
+    MINIMUM        = 3,         &
+    PARALLELEPIPED = 4
 
   type simul_box_type
     integer  :: box_shape   ! 1->sphere, 2->cylinder, 3->sphere around each atom,
@@ -46,20 +50,21 @@ module simul_box
     FLOAT :: h(3)           ! the (canonical) spacing between the points
     FLOAT :: box_offset(3)  ! shifts of the origin in the respective direction
 
-    FLOAT :: rsize       ! the radius of the sphere or of the cylinder
-    FLOAT :: xsize       ! the length of the cylinder in the x direction
-    FLOAT :: lsize(3)    ! half of the length of the parallelepiped in each direction.
+    FLOAT :: rsize          ! the radius of the sphere or of the cylinder
+    FLOAT :: xsize          ! the length of the cylinder in the x direction
+    FLOAT :: lsize(3)       ! half of the length of the parallelepiped in each direction.
 
-    FLOAT :: rlat(3,3)   ! lattice primitive vectors
-    FLOAT :: klat(3,3)   ! reciprocal lattice primitive vectors
-    FLOAT :: shift(27,3) ! shift to equivalent positions in nearest neighbour primitive cells
+    FLOAT :: rlat(3,3)      ! lattice primitive vectors
+    FLOAT :: klat(3,3)      ! reciprocal lattice primitive vectors
+    FLOAT :: shift(27,3)    ! shift to equivalent positions in nearest neighbour primitive cells
 
-    FLOAT :: fft_alpha ! enlargement factor for double box
+    FLOAT :: fft_alpha      ! enlargement factor for double box
 
     integer :: dim
     integer :: periodic_dim
 
   end type simul_box_type
+
 
 contains
 
@@ -92,7 +97,7 @@ contains
       call loct_parse_float(check_inp('DoubleFFTParameter'), M_TWO, sb%fft_alpha)
       if (sb%fft_alpha < M_ONE .or. sb%fft_alpha > M_THREE ) then
         write(message(1), '(a,f12.5,a)') "Input: '", sb%fft_alpha, &
-           "' is not a valid DoubleFFTParameter"
+          "' is not a valid DoubleFFTParameter"
         message(2) = '1.0 <= DoubleFFTParameter <= 3.0'
         call write_fatal(2)
       end if
@@ -146,7 +151,7 @@ contains
         end if
       case(CYLINDER)
         if (sb%dim>2 .and. &
-           ((sb%dim - sb%periodic_dim == 0) .or. (sb%dim - sb%periodic_dim == 1))) then
+          ((sb%dim - sb%periodic_dim == 0) .or. (sb%dim - sb%periodic_dim == 1))) then
           message(1) = 'Cylindrical mesh is not allowed for systems'
           message(2) = 'that are periodic in more than one dimension'
           call write_fatal(2)
@@ -186,11 +191,11 @@ contains
           if(loct_parse_block_cols(blk,0) < sb%dim) then
             message(1) = 'Size of Block "lsize" does not match number of dimensions'
             call write_fatal(1)
-          endif
+          end if
         else
           message(1) = 'Block "lsize" not found in input file.'
           call write_fatal(1)
-        endif
+        end if
 
         do i = 1, sb%dim
           call loct_parse_block_float(blk, 0, i-1, sb%lsize(i))
@@ -237,7 +242,7 @@ contains
         else
           message(1) = '"Spacing" is a block if BoxShape == parallelepiped.'
           call write_fatal(1)
-        endif
+        end if
       end select
 
       do i = 1, sb%dim
@@ -246,8 +251,8 @@ contains
           if(def_h > M_ZERO) then
             sb%h(i) = def_h
             write(message(1), '(a,i1,3a,f6.3)') "Info: Using default spacing(", i, &
-               ") [", trim(units_out%length%abbrev), "] = ",                 &
-               sb%h(i)/units_out%length%factor
+              ") [", trim(units_out%length%abbrev), "] = ",                 &
+              sb%h(i)/units_out%length%factor
             call write_info(1)
           else
             message(1) = 'Either:'
@@ -276,7 +281,7 @@ contains
             call loct_parse_block_float(blk, 0, i-1, sb%box_offset(i))
           end do
           call loct_parse_block_end(blk)
-        endif
+        end if
       end select
 
     end subroutine read_box_offset
@@ -326,8 +331,7 @@ contains
 
 
   !--------------------------------------------------------------
-  subroutine simul_box_end(sb)
-    type(simul_box_type), intent(inout) :: sb
+  subroutine simul_box_end()
 
   end subroutine simul_box_end
 
@@ -338,10 +342,10 @@ contains
     integer,              intent(in) :: iunit
 
     character(len=15), parameter :: bs(4) = (/ &
-       'sphere        ', &
-       'cylinder      ', &
-       'around nuclei ', &
-       'parallelepiped'/)
+      'sphere        ', &
+      'cylinder      ', &
+      'around nuclei ', &
+      'parallelepiped'/)
 
     call push_sub('simul_box.simul_box_write_info')
 
@@ -350,23 +354,23 @@ contains
 
     if(sb%box_shape == SPHERE.or.sb%box_shape == CYLINDER.or.sb%box_shape == MINIMUM) then
       write(iunit, '(3a,f7.3)')   '  Radius  [', trim(units_out%length%abbrev), '] = ', &
-         sb%rsize/units_out%length%factor
+        sb%rsize/units_out%length%factor
     end if
     if(sb%box_shape == CYLINDER) then
       write(iunit, '(3a,f7.3)')   '  Xlength [', trim(units_out%length%abbrev), '] = ', &
-         sb%xsize/units_out%length%factor
+        sb%xsize/units_out%length%factor
     end if
 
     write(iunit,'(3a, a, f6.3, a, f6.3, a, f6.3, a)')                   &
-       '  Lengths [', trim(units_out%length%abbrev), '] = ',           &
-       '(', sb%lsize(1)/units_out%length%factor, ',',                   &
-            sb%lsize(2)/units_out%length%factor, ',',                   &
-            sb%lsize(3)/units_out%length%factor, ')'
+      '  Lengths [', trim(units_out%length%abbrev), '] = ',           &
+      '(', sb%lsize(1)/units_out%length%factor, ',',                   &
+      sb%lsize(2)/units_out%length%factor, ',',                   &
+      sb%lsize(3)/units_out%length%factor, ')'
 
 
     write(iunit, '(a,i1,a)') 'The octopus will run in ', sb%dim, ' dimension(s).'
     write(iunit, '(a,i1,a)') 'The octopus will treat the system as periodic in ', &
-       sb%periodic_dim, ' dimension(s)'
+      sb%periodic_dim, ' dimension(s)'
 
     if(sb%periodic_dim > 0) then
       write(iunit,'(1x)')
@@ -403,9 +407,9 @@ contains
       in_box = in_minimum()
     case(PARALLELEPIPED)
       in_box =  &
-         (x(1) >= -sb%lsize(1) + sb%box_offset(1).and.x(1) <= sb%lsize(1) + sb%box_offset(1)).and. &
-         (x(2) >= -sb%lsize(2) + sb%box_offset(2).and.x(2) <= sb%lsize(2) + sb%box_offset(2)).and. &
-         (x(3) >= -sb%lsize(3) + sb%box_offset(3).and.x(3) <= sb%lsize(2) + sb%box_offset(3))
+        (x(1) >= -sb%lsize(1) + sb%box_offset(1).and.x(1) <= sb%lsize(1) + sb%box_offset(1)).and. &
+        (x(2) >= -sb%lsize(2) + sb%box_offset(2).and.x(2) <= sb%lsize(2) + sb%box_offset(2)).and. &
+        (x(3) >= -sb%lsize(3) + sb%box_offset(3).and.x(3) <= sb%lsize(2) + sb%box_offset(3))
     end select
 
   contains

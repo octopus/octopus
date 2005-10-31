@@ -31,39 +31,41 @@ module xyz_file
   implicit none
 
   private
-  public :: xyz_file_atom, &
-            xyz_file_info, &
-            xyz_file_init, &
-            xyz_file_end,  &
-            xyz_file_read
+  public ::                     &
+    xyz_file_atom,              &
+    xyz_file_info,              &
+    xyz_file_init,              &
+    xyz_file_end,               &
+    xyz_file_read
 
   integer, public, parameter :: &
-       XYZ_FILE_ERR = 0, &
-       XYZ_FILE_PDB = 1, &
-       XYZ_FILE_XYZ = 2, &
-       XYZ_FILE_INP = 3
+    XYZ_FILE_ERR      = 0,      &
+    XYZ_FILE_PDB      = 1,      &
+    XYZ_FILE_XYZ      = 2,      &
+    XYZ_FILE_INP      = 3
 
   integer, public, parameter :: &
-       XYZ_FLAGS_RESIDUE = 1, &
-       XYZ_FLAGS_CHARGE  = 2, &
-       XYZ_FLAGS_MOVE    = 4
+    XYZ_FLAGS_RESIDUE = 1,      &
+    XYZ_FLAGS_CHARGE  = 2,      &
+    XYZ_FLAGS_MOVE    = 4
 
   type xyz_file_atom
-    character(len=15) :: label    ! stuff that is always known
-    FLOAT            :: x(3)
+    character(len=15) :: label  ! stuff that is always known
+    FLOAT             :: x(3)
 
-    FLOAT            :: charge   ! stuff specific to PDB files
-    character(len=3) :: residue
-    logical          :: move     ! stuff specific to the inp file
+    FLOAT             :: charge ! stuff specific to PDB files
+    character(len=3)  :: residue
+    logical           :: move   ! stuff specific to the inp file
   end type xyz_file_atom
 
   type xyz_file_info
     integer :: file_type
     integer :: flags
 
-    integer :: n          ! number of atoms in file
+    integer :: n                ! number of atoms in file
     type(xyz_file_atom), pointer :: atom(:)
   end type xyz_file_info
+
 
 contains
 

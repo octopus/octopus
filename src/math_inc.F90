@@ -17,17 +17,16 @@
 !!
 !! $Id$
 
-
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-! This subroutine performs polynomial extrapolation (interpolation) of orders
-! (1-4). It assumes:
+! ----------------------------------------------------------------------
+! This subroutine performs polynomial extrapolation (interpolation) of
+! orders (1-4). It assumes:
 !                      f(t) = sum_{j=0}^{order} a_j * t^k,
 ! and the inputs are f(0), f(-dt), f(-2*dt), ..., f(-order*dt).
 !
 ! (I know there is a smarter and more general way to set the coefficients,
-! but for the moment this works. If someday higuer orders are needed, or I am
-! bored, I will put a more general formula)
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+! but for the moment this works. If someday higher orders are needed, or
+! I am bored, I will put a more general formula)
+! ----------------------------------------------------------------------
 subroutine X(extrapolate)(order, n1, n2, v, vex, dt, t)
   integer, intent(in)  :: order, n1, n2
   R_TYPE,  intent(in)  :: v(:,:,:)  ! (n1, n2, order)
@@ -40,7 +39,7 @@ subroutine X(extrapolate)(order, n1, n2, v, vex, dt, t)
 
   x = (t/dt)
   allocate(c(0:order))
-  ! I got this coefficients from mathematica...
+  ! I got these coefficients from mathematica...
   select case(order)
   case(1)
     c(0) = 1.0 + x
@@ -68,11 +67,13 @@ subroutine X(extrapolate)(order, n1, n2, v, vex, dt, t)
   vex(:,:) = R_TOTYPE(M_ZERO)
   do j = 0, order
     call lalg_axpy(n1, n2, c(j), v(:,:, j+1), vex(:,:))
-  enddo
+  end do
 
   deallocate(c)
 end subroutine X(extrapolate)
 
+
+! ---------------------------------------------------------
 subroutine X(shellsort1)(a, x)
   FLOAT, intent(inout) :: a(:)
   R_TYPE, intent(inout) :: x(:, :)
@@ -87,32 +88,34 @@ subroutine X(shellsort1)(a, x)
 
   inc = 1
   do
-     inc=3*inc+1
-     if (inc > n) exit
+    inc=3*inc+1
+    if (inc > n) exit
   end do
 
   do
-     inc=inc/3
-     do i=inc+1,n
-         v=a(i)
-         b(:) = x(:, i)
-         j=i
-         do
-            if (a(j-inc) <= v) exit
-            !if (a(j-inc) >= v) exit
-            a(j)=a(j-inc)
-            x(:, j) = x(:, j-inc)
-            j=j-inc
-            if (j <= inc) exit
-         end do
-         a(j)=v
-         x(:, j) = b(:)
-     end do
-     if (inc <= 1) exit
+    inc=inc/3
+    do i=inc+1,n
+      v=a(i)
+      b(:) = x(:, i)
+      j=i
+      do
+        if (a(j-inc) <= v) exit
+        !if (a(j-inc) >= v) exit
+        a(j)=a(j-inc)
+        x(:, j) = x(:, j-inc)
+        j=j-inc
+        if (j <= inc) exit
+      end do
+      a(j)=v
+      x(:, j) = b(:)
+    end do
+    if (inc <= 1) exit
   end do
 
 end subroutine X(shellsort1)
 
+
+! ---------------------------------------------------------
 subroutine X(shellsort2)(a, x)
   FLOAT, intent(inout) :: a(:)
   R_TYPE, intent(inout) :: x(:, :, :)
@@ -128,28 +131,28 @@ subroutine X(shellsort2)(a, x)
 
   inc = 1
   do
-     inc=3*inc+1
-     if (inc > n) exit
+    inc=3*inc+1
+    if (inc > n) exit
   end do
 
   do
-     inc=inc/3
-     do i=inc+1,n
-         v=a(i)
-         b(:, :) = x(:, :, i)
-         j=i
-         do
-            if (a(j-inc) <= v) exit
-            !if (a(j-inc) >= v) exit
-            a(j)=a(j-inc)
-            x(:, :, j) = x(:, :, j-inc)
-            j=j-inc
-            if (j <= inc) exit
-         end do
-         a(j)=v
-         x(:, :, j) = b(:, :)
-     end do
-     if (inc <= 1) exit
+    inc=inc/3
+    do i=inc+1,n
+      v=a(i)
+      b(:, :) = x(:, :, i)
+      j=i
+      do
+        if (a(j-inc) <= v) exit
+        !if (a(j-inc) >= v) exit
+        a(j)=a(j-inc)
+        x(:, :, j) = x(:, :, j-inc)
+        j=j-inc
+        if (j <= inc) exit
+      end do
+      a(j)=v
+      x(:, :, j) = b(:, :)
+    end do
+    if (inc <= 1) exit
   end do
 
 end subroutine X(shellsort2)

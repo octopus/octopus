@@ -29,18 +29,19 @@ module xc_functl
   implicit none
 
   private
-  public :: xc_functl_type,             &
-            xc_j_functl_init,           &
-            xc_functl_init_exchange,    &
-            xc_functl_init_correlation, &
-            xc_functl_end,              &
-            xc_functl_write_info
+  public ::                     &
+    xc_functl_type,             &
+    xc_j_functl_init,           &
+    xc_functl_init_exchange,    &
+    xc_functl_init_correlation, &
+    xc_functl_end,              &
+    xc_functl_write_info
 
 
   ! This adds to the constants defined in lib_xc. But since in that module
   ! the OEP functionals are not included, it is better to put it here.
   integer, public, parameter :: &
-     XC_OEP_X             = 401     ! Exact exchange
+    XC_OEP_X             = 401     ! Exact exchange
 
   type xc_functl_type
     integer :: family              ! LDA, GGA, etc.
@@ -54,7 +55,7 @@ module xc_functl
 
 contains
 
-  ! -----------------------------------------------------------
+  ! ---------------------------------------------------------
   subroutine xc_functl_init(functl, spin_channels)
     type(xc_functl_type), intent(out) :: functl
     integer,              intent(in)  :: spin_channels
@@ -65,7 +66,8 @@ contains
 
   end subroutine xc_functl_init
 
-  ! -----------------------------------------------------------
+
+  ! ---------------------------------------------------------
   subroutine xc_j_functl_init(functl, cdft, spin_channels)
     type(xc_functl_type), intent(out) :: functl
     logical,              intent(in)  :: cdft
@@ -86,11 +88,11 @@ contains
     case(XC_LCA_OMC, XC_LCA_LCH)
       functl%family = XC_FAMILY_LCA
       call xc_lca_init(functl%conf, functl%info, functl%id, &
-         spin_channels)
+        spin_channels)
 
     case default
       write(message(1), '(a,i3,a)') "'", functl%id, &
-         "' is not a known current functional!"
+        "' is not a known current functional!"
       message(2) = "Please check the manual for a list of possible values."
       call write_fatal(2)
     end select
@@ -98,7 +100,7 @@ contains
   end subroutine xc_j_functl_init
 
 
-  ! -----------------------------------------------------------
+  ! ---------------------------------------------------------
   subroutine xc_functl_init_exchange(functl, ndim, spin_channels)
     type(xc_functl_type), intent(out) :: functl
     integer,              intent(in)  :: ndim
@@ -120,7 +122,7 @@ contains
     case(XC_LDA_X)
       functl%family = XC_FAMILY_LDA
       call xc_lda_init(functl%conf, functl%info, XC_LDA_X, &
-         spin_channels, ndim)
+        spin_channels, ndim)
 
     case(XC_GGA_X_PBE, XC_GGA_XC_LB)
       functl%family = XC_FAMILY_GGA
@@ -129,7 +131,7 @@ contains
         call loct_parse_int  (check_inp('LB94_modified'), 0, j)
         call loct_parse_float(check_inp('LB94_threshold'), CNST(1.0e-6), alpha)
         call xc_gga_init(functl%conf, functl%info, functl%id, &
-           spin_channels, j, alpha)
+          spin_channels, j, alpha)
       else
         call xc_gga_init(functl%conf, functl%info, functl%id, spin_channels)
       end if
@@ -143,7 +145,7 @@ contains
 
     case default
       write(message(1), '(a,i3,a)') "'", functl%id, &
-         "' is not a known exchange functional!"
+        "' is not a known exchange functional!"
       message(2) = "Please check the manual for a list of possible values."
       call write_fatal(2)
     end select
@@ -151,7 +153,7 @@ contains
   end subroutine xc_functl_init_exchange
 
 
-  ! -----------------------------------------------------------
+  ! ---------------------------------------------------------
   subroutine xc_functl_init_correlation(functl, ndim, spin_channels)
     type(xc_functl_type), intent(out) :: functl
     integer,              intent(in)  :: ndim
@@ -170,8 +172,8 @@ contains
     case(0)
 
     case(XC_LDA_C_WIGNER, XC_LDA_C_RPA, XC_LDA_C_HL, XC_LDA_C_GL, XC_LDA_C_XALPHA, &
-       XC_LDA_C_VWN, XC_LDA_C_PZ, XC_LDA_C_OB_PZ, XC_LDA_C_PW, XC_LDA_C_OB_PW,     &
-       XC_LDA_C_LYP, XC_LDA_C_AMGB)
+      XC_LDA_C_VWN, XC_LDA_C_PZ, XC_LDA_C_OB_PZ, XC_LDA_C_PW, XC_LDA_C_OB_PW,     &
+      XC_LDA_C_LYP, XC_LDA_C_AMGB)
 
       if(functl%id==XC_LDA_C_AMGB.and.ndim.ne.2) then
         message(1) = 'Functional AMGB only allowed in 2D'
@@ -185,7 +187,7 @@ contains
       else
         call loct_parse_float(check_inp('Xalpha'), M_ONE, alpha)
         call xc_lda_init(functl%conf, functl%info, XC_LDA_C_XALPHA, &
-           spin_channels, ndim, alpha)
+          spin_channels, ndim, alpha)
       end if
 
     case(XC_GGA_C_PBE)
@@ -198,7 +200,7 @@ contains
 
     case default
       write(message(1), '(a,i3,a)') "'", functl%id, &
-         "' is not a known correlation functional!"
+        "' is not a known correlation functional!"
       message(2) = "Please check the manual for a list of possible values."
       call write_fatal(2)
     end select
@@ -206,7 +208,7 @@ contains
   end subroutine xc_functl_init_correlation
 
 
-  ! -----------------------------------------------------------
+  ! ---------------------------------------------------------
   subroutine xc_functl_end(functl)
     type(xc_functl_type), intent(inout) :: functl
 
@@ -220,7 +222,7 @@ contains
   end subroutine xc_functl_end
 
 
-  ! -----------------------------------------------------------
+  ! ---------------------------------------------------------
   subroutine xc_functl_write_info(functl, iunit)
     type(xc_functl_type), intent(in) :: functl
     integer,              intent(in) :: iunit
@@ -270,6 +272,5 @@ contains
     end select
 
   end subroutine xc_functl_write_info
-
 
 end module xc_functl

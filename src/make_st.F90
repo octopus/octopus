@@ -44,8 +44,8 @@ program make_st
   call io_init()
   call syslabels_init(1)
   if(in_debug_mode) then
-     call io_mkdir('debug')
-  endif
+    call io_mkdir('debug')
+  end if
   call units_init()
   call system_init(sys)
 
@@ -54,13 +54,13 @@ program make_st
 #endif
 
   allocate(sys%st%zpsi (sys%gr%m%np, sys%st%d%dim, sys%st%nst, sys%st%d%nik), &
-     sys%st%eigenval(sys%st%nst, sys%st%d%nik))
+    sys%st%eigenval(sys%st%nst, sys%st%d%nik))
 
   call X(restart_read)(trim(tmpdir)//'restart_gs', sys%st, sys%gr%m, err)
   if(err < 0) then
     message(1) = "Error opening 'restart.static' file"
     call write_fatal(1)
-  endif
+  end if
 
   if(loct_parse_block(check_inp('MakeStates'), blk).ne.0) then
     message(1) = "Block '%MakeStates' must be defined"
@@ -88,7 +88,7 @@ program make_st
   if(err.ne.0) then
     message(1) = 'Unsuccesfull write of "'//trim(tmpdir)//'restart_gs_new"'
     call write_fatal(1)
-  endif
+  end if
 
   call system_end(sys)
   call syslabels_end()
@@ -97,6 +97,8 @@ program make_st
   call global_end()
 
 contains
+
+  ! ---------------------------------------------------------
   subroutine wf_gaussian(gr, st, line)
     type(grid_type),   intent(in)    :: gr
     type(states_type), intent(inout) :: st
@@ -127,11 +129,13 @@ contains
     do i = 1, NP
       x = gr%m%x(i,:)
       st%zpsi(i, idim, ist, ik) = exp(-sum((x(1:NDIM)-x1(1:NDIM))**2)/(2*s*s) + &
-           M_zI*sum(k(1:NDIM)*(x(1:NDIM)-x1(1:NDIM))))
+        M_zI*sum(k(1:NDIM)*(x(1:NDIM)-x1(1:NDIM))))
     end do
 
   end subroutine wf_gaussian
 
+
+  ! ---------------------------------------------------------
   subroutine wf_renormalize(m, st)
     type(mesh_type),   intent(in)    :: m
     type(states_type), intent(inout) :: st

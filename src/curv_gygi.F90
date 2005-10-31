@@ -35,14 +35,14 @@ module curv_gygi
   implicit none
 
   type curv_gygi_type
-    FLOAT :: A       ! local reduction in grid spacing is 1/(1+A)
-    FLOAT :: alpha   ! range of enhacement of the resolution
-    FLOAT :: beta    ! distance over which Euclidian coordinates are recovered
+    FLOAT :: A             ! local reduction in grid spacing is 1/(1+A)
+    FLOAT :: alpha         ! range of enhacement of the resolution
+    FLOAT :: beta          ! distance over which Euclidian coordinates are recovered
   end type curv_gygi_type
 
 contains
 
-  !-------------------------------------
+  ! ---------------------------------------------------------
   subroutine curv_gygi_init(cv)
     type(curv_gygi_type), intent(out) :: cv
 
@@ -64,9 +64,9 @@ contains
     !%Description
     !% This number determines the region over which the grid is enhanced (range of
     !% enhancement of the resolution). That is, the grid is enhanced on a sphere
-    !% around each atom, whose radius is given by this variable. [This is the a_{\alpha} 
+    !% around each atom, whose radius is given by this variable. [This is the a_{\alpha}
     !% variable in Eq. 2 of F. Gygi and G. Galli, Phys. Rev. B 52, R2229 (1995)].
-    !% The default is two atomic units. 
+    !% The default is two atomic units.
     !% It must be larger than zero.
     !%End
     call loct_parse_float(check_inp('CurvGygiAlpha'), M_TWO/units_inp%length%factor, cv%alpha)
@@ -75,7 +75,7 @@ contains
     !%Section 4 Mesh
     !%Description
     !% This number determines the distance over which Euclidean coordinates are
-    !% recovered. [This is the b_{\alpha} variable in Eq. 2 of F. Gygi and G. Galli, 
+    !% recovered. [This is the b_{\alpha} variable in Eq. 2 of F. Gygi and G. Galli,
     !% Phys. Rev. B 52, R2229 (1995)]. The default is four atomic units.
     !% It must be larger than zero.
     !%End
@@ -91,7 +91,7 @@ contains
   end subroutine curv_gygi_init
 
 
-  !-------------------------------------
+  ! ---------------------------------------------------------
   subroutine curv_gygi_chi2x(sb, geo, cv, chi, x)
     type(simul_box_type), intent(in)  :: sb
     type(geometry_type),  intent(in)  :: geo
@@ -115,36 +115,36 @@ contains
 
     conv          = .false.
     do iter = 1, max_iter
-       call curv_gygi_jacobian(sb, geo, cv, x, chi2, J)
-       f(:,1) = chi(1:sb%dim) - chi2(:)
-       if(sum(f(:,1)**2) < x_conv) then
-           conv = .true.
-           exit
-       end if
+      call curv_gygi_jacobian(sb, geo, cv, x, chi2, J)
+      f(:,1) = chi(1:sb%dim) - chi2(:)
+      if(sum(f(:,1)**2) < x_conv) then
+        conv = .true.
+        exit
+      end if
 
-       call lalg_linsyssolve(sb%dim, 1, J, f, delta)
-       x(1:sb%dim) = x(1:sb%dim) + delta(1:sb%dim, 1)
+      call lalg_linsyssolve(sb%dim, 1, J, f, delta)
+      x(1:sb%dim) = x(1:sb%dim) + delta(1:sb%dim, 1)
     end do
 
     if(.not.conv) then
       x(1:sb%dim) = chi(1:sb%dim)
       do i = 1, geo%natoms
 
-       conv          = .false.
-       do iter = 1, max_iter
+        conv          = .false.
+        do iter = 1, max_iter
           call curv_gygi_jacobian(sb, geo, cv, x, chi2, J, i)
           f(:,1) = chi(1:sb%dim) - chi2(:)
           if(sum(f(:,1)**2) < x_conv) then
-             conv = .true.
-             exit
+            conv = .true.
+            exit
           end if
 
           call lalg_linsyssolve(sb%dim, 1, J, f, delta)
           x(1:sb%dim) = x(1:sb%dim) + delta(1:sb%dim, 1)
-       end do
+        end do
 
-      enddo
-    endif
+      end do
+    end if
 
     if(.not.conv) then
       message(1) = "During the construction of the adaptive grid, the Newton-Raphson"
@@ -153,7 +153,7 @@ contains
       message(4) = "Try varying the Gygi parameters -- usually reducing CurvGygiA or"
       message(5) = "CurvGygiAlpha (or both) solves the problem."
       call write_fatal(5)
-    endif
+    end if
 
     ! clean up
     deallocate(f, delta, J, chi2)
@@ -161,7 +161,7 @@ contains
   end subroutine curv_gygi_chi2x
 
 
-  !-------------------------------------
+  ! ---------------------------------------------------------
   subroutine curv_gygi_jacobian(sb, geo, cv, x, chi, J, natoms)
     type(simul_box_type), intent(in)  :: sb
     type(geometry_type),  intent(in)  :: geo

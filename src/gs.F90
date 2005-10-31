@@ -39,8 +39,10 @@ module ground_state
   implicit none
 
   private
-  public :: ground_state_run, &
-       ground_state_init
+  public ::           &
+    ground_state_run, &
+    ground_state_init
+
 
 contains
 
@@ -63,26 +65,26 @@ contains
 
     call X(restart_read) (trim(tmpdir)//'restart_gs', sys%st, sys%gr%m, ierr)
     if(ierr.ne.0) then
-       message(1) = "Could not load wave-functions: Starting from scratch"
-       call write_warning(1)
-       ierr = 1
+      message(1) = "Could not load wave-functions: Starting from scratch"
+      call write_warning(1)
+      ierr = 1
     else
-       ! setup Hamiltonian
-       message(1) = 'Info: Setting up Hamiltonian.'
-       call write_info(1)
-       call X(system_h_setup) (sys, h)
+      ! setup Hamiltonian
+      message(1) = 'Info: Setting up Hamiltonian.'
+      call write_info(1)
+      call X(system_h_setup) (sys, h)
 
-       ! run self consistency
+      ! run self consistency
 #ifdef COMPLEX_WFNS
-       message(1) = 'Info: SCF using complex wavefunctions.'
+      message(1) = 'Info: SCF using complex wavefunctions.'
 #else
-       message(1) = 'Info: SCF using real wavefunctions.'
+      message(1) = 'Info: SCF using real wavefunctions.'
 #endif
-       call write_info(1)
+      call write_info(1)
 
-       call scf_init(sys%gr, scfv, sys%st, h)
-       call scf_run(scfv, sys%gr, sys%st, sys%ks, h, sys%outp)
-       call scf_end(scfv)
+      call scf_init(sys%gr, scfv, sys%st, h)
+      call scf_run(scfv, sys%gr, sys%st, sys%ks, h, sys%outp)
+      call scf_end(scfv)
     end if
 
     ! clean up
@@ -98,9 +100,12 @@ contains
     type(v_ks_type),        intent(inout) :: ks
     type(hamiltonian_type), intent(inout) :: h
 
-    integer :: err, ierr
+    integer :: err
     logical :: lcao_start, lcao_start_default = .true.
     type(lcao_type) :: lcao_data
+#if defined(HAVE_MPI)
+    integer :: mpi_err
+#endif
 
     call push_sub('gs.ground_state_init')
 
@@ -110,7 +115,7 @@ contains
     ! set barrier before the first communication takes place
     ! this ensures proper debug timing of MPI calls
 #if defined(HAVE_MPI)
-    call TS(MPI_Barrier)(MPI_COMM_WORLD, ierr)
+    call TS(MPI_Barrier)(MPI_COMM_WORLD, mpi_err)
 #endif
 
     message(1) = 'Info: Random generating starting wavefunctions.'
@@ -121,35 +126,35 @@ contains
 
     ! this is certainly a better density
     call system_guess_density(gr%m, gr%sb, gr%geo, st%qtot, st%d%nspin, &
-         st%d%spin_channels, st%rho)
+      st%d%spin_channels, st%rho)
 
     ! The initial LCAO calculation is done by default if we have pseudopotentials.
     ! Otherwise, it is not the default value and has to be enforced in the input file.
     if(gr%geo%only_user_def) lcao_start_default = .false.
     call loct_parse_logical(check_inp('LCAOStart'), lcao_start_default, lcao_start)
     if(lcao_start) then
-       call X(v_ks_calc)(gr, ks, h, st, calc_eigenval=.true.)
+      call X(v_ks_calc)(gr, ks, h, st, calc_eigenval=.true.)
 
-       lcao_data%state = 0 ! Uninitialized here.
-       call lcao_init(gr, lcao_data, st, h)
-       if(lcao_data%state == 1) then
-          write(message(1),'(a,i4,a)') 'Info: Performing initial LCAO calculation with ', &
-                                       lcao_data%st%nst,' orbitals.'
-          call write_info(1)
+      lcao_data%state = 0 ! Uninitialized here.
+      call lcao_init(gr, lcao_data, st, h)
+      if(lcao_data%state == 1) then
+        write(message(1),'(a,i4,a)') 'Info: Performing initial LCAO calculation with ', &
+          lcao_data%st%nst,' orbitals.'
+        call write_info(1)
 
-          call lcao_wf(lcao_data, gr%m, gr%sb, st, h)
-          call lcao_end(lcao_data)
+        call lcao_wf(lcao_data, gr%m, gr%sb, st, h)
+        call lcao_end(lcao_data)
 
-          call states_fermi(st, gr%m)                         ! occupations
-          call states_write_eigenvalues(stdout, st%nst, st, gr%sb)
-       end if
+        call states_fermi(st, gr%m)                         ! occupations
+        call states_write_eigenvalues(stdout, st%nst, st, gr%sb)
+      end if
     end if
 
     ! write wave-functions to disk
     call X(restart_write)(trim(tmpdir)//'restart_gs', st, gr, err)
     if(err.ne.0) then
-       message(1) = 'Unsuccesfull write of "'//trim(tmpdir)//'restart_gs"'
-       call write_fatal(1)
+      message(1) = 'Unsuccesfull write of "'//trim(tmpdir)//'restart_gs"'
+      call write_fatal(1)
     end if
 
     ! clean up

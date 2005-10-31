@@ -29,16 +29,17 @@ module wave_matching
 
   implicit none
 
-
   private
-  public :: wave_matching_run
+  public :: &
+    wave_matching_run
 
 
 contains
 
-  integer function wave_matching_run(sys, h) result(ierr)
-    type(system_type)       :: sys
-    type(hamiltonian_type)  :: h
+  ! ---------------------------------------------------------
+  integer function wave_matching_run() result(ierr)
+!!$    type(system_type)       :: sys
+!!$    type(hamiltonian_type)  :: h
 
     call push_sub('wave_matching.wave_matching_run')
 
@@ -46,38 +47,37 @@ contains
 
     call check_params()
 
-
-
     call pop_sub()
 
 
   contains
 
+    ! ---------------------------------------------------------
     subroutine check_params()
 
       if( current_subsystem-1 .lt. 1 ) then
-         message(1) = 'Error: Missing left neighbor'
-         message(2) = 'Please correct your input file'
-         call write_fatal(2)
-      endif
+        message(1) = 'Error: Missing left neighbor'
+        message(2) = 'Please correct your input file'
+        call write_fatal(2)
+      end if
 
       if( current_subsystem+1 .gt. no_syslabels ) then
-         message(1) = 'Error: Missing right neighbor'
-         message(2) = 'Please correct your input file'
-         call write_fatal(2)
-      endif
+        message(1) = 'Error: Missing right neighbor'
+        message(2) = 'Please correct your input file'
+        call write_fatal(2)
+      end if
 
       if( subsys_runmode(current_subsystem-1) .eq. 10 ) then
-         message(1) = 'Error: Left neighbor cannot be in runmode wave_matching'
-         message(2) = 'Please correct your input file'
-         call write_fatal(2)
-      endif
+        message(1) = 'Error: Left neighbor cannot be in runmode wave_matching'
+        message(2) = 'Please correct your input file'
+        call write_fatal(2)
+      end if
 
       if( subsys_runmode(current_subsystem+1) .eq. 10 ) then
-         message(1) = 'Error: Right neighbor cannot be in runmode wave_matching'
-         message(2) = 'Please correct your input file'
-         call write_fatal(2)
-      endif
+        message(1) = 'Error: Right neighbor cannot be in runmode wave_matching'
+        message(2) = 'Please correct your input file'
+        call write_fatal(2)
+      end if
 
       message(1) = 'Info: Starting Wave-Matching'
       message(2) = 'Info: We are                    : '//subsys_label(current_subsystem)
@@ -86,7 +86,6 @@ contains
       call write_info(4, stress=.true.)
 
     end subroutine check_params
-
 
   end function wave_matching_run
 

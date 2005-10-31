@@ -27,12 +27,13 @@ module stencil_cube
   implicit none
 
   private
-  public :: stencil_cube_size_lapl, &
-            stencil_cube_get_lapl, &
-            stencil_cube_polynomials_lapl, &
-            stencil_cube_size_grad, &
-            stencil_cube_get_grad, &
-            stencil_cube_polynomials_grad
+  public ::                        &
+    stencil_cube_size_lapl,        &
+    stencil_cube_get_lapl,         &
+    stencil_cube_polynomials_lapl, &
+    stencil_cube_size_grad,        &
+    stencil_cube_get_grad,         &
+    stencil_cube_polynomials_grad
 
 
 contains

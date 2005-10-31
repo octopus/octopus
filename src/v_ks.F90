@@ -40,19 +40,18 @@ module v_ks
   implicit none
 
   private
-  public ::              &
-     v_ks_type,          &
-     v_ks_init,          &
-     v_ks_end,           &
-     v_ks_write_info,    &
-     dv_ks_calc,         &
-     zv_ks_calc
+  public ::             &
+    v_ks_type,          &
+    v_ks_init,          &
+    v_ks_end,           &
+    v_ks_write_info,    &
+    dv_ks_calc,         &
+    zv_ks_calc
 
-  integer, parameter ::  &
-     sic_none   = 1, &    ! no self interaction correction
-     sic_pz     = 2, &    ! SIC a la Perdew Zunger (OEP way)
-     sic_amaldi = 3       ! Amaldi correction term
-
+  integer, parameter :: &
+    sic_none   = 1,     &  ! no self interaction correction
+    sic_pz     = 2,     &  ! SIC a la Perdew Zunger (OEP way)
+    sic_amaldi = 3         ! Amaldi correction term
 
   type v_ks_type
     logical :: ip_app
@@ -62,6 +61,7 @@ module v_ks
     type(xc_type)     :: xc
     type(xc_OEP_type) :: oep
   end type v_ks_type
+
 
 contains
 
@@ -121,7 +121,7 @@ contains
 
         call loct_parse_int(check_inp('SICorrection'), sic_none, ks%sic_type)
         if((ks%sic_type.ne.sic_none).and.(ks%sic_type.ne.sic_pz).and.(ks%sic_type.ne.sic_amaldi)) &
-            call input_error('SICorrection')
+          call input_error('SICorrection')
 
         ! Perdew Zunger corrections
         if(ks%sic_type == sic_pz) ks%xc_family = ior(ks%xc_family, XC_FAMILY_OEP)

@@ -163,10 +163,10 @@ contains
     if(associated(st%rho_core)) then
       do is = 1, st%d%spin_channels
         rho(:, is) = st%rho(:, is) + st%rho_core(:)/st%d%spin_channels
-      enddo
+      end do
     else
       rho = st%rho
-    endif
+    end if
     fxc = M_ZERO
     call xc_get_fxc(xcs, m, rho, st%d%ispin, fxc)
 
@@ -190,7 +190,7 @@ contains
       do ist = 1, st%nst
         if(st%occ(ist, ik) > M_ZERO) then
           call X(lr_orth_vector) (m, st, lr%X(dl_psi)(:,:, ist, ik), ik)
-        endif
+        end if
       end do
     end do
 

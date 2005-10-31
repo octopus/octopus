@@ -27,15 +27,15 @@ subroutine X(hamiltonian_eigenval)(h, gr, st)
   R_TYPE :: e
   integer :: ik, ist
 
-  call push_sub('h_inc.hamiltonian_eigenval')
+  call push_sub('h_inc.Xhamiltonian_eigenval')
   allocate(Hpsi(NP, st%d%dim))
 
   do ik = 1, st%d%nik
-     do ist = st%st_start, st%st_end
-        call X(hpsi) (h, gr, st%X(psi)(:, :, ist, ik), hpsi, ik)
-        e = X(states_dotp)(gr%m, st%d%dim, st%X(psi)(:, :, ist, ik), Hpsi)
-        st%eigenval(ist, ik) = R_REAL(e)
-     end do
+    do ist = st%st_start, st%st_end
+      call X(hpsi) (h, gr, st%X(psi)(:, :, ist, ik), hpsi, ik)
+      e = X(states_dotp)(gr%m, st%d%dim, st%X(psi)(:, :, ist, ik), Hpsi)
+      st%eigenval(ist, ik) = R_REAL(e)
+    end do
   end do
 
   deallocate(Hpsi)
@@ -52,7 +52,7 @@ subroutine X(Hpsi) (h, gr, psi, hpsi, ik, t)
   R_TYPE,                 intent(out)   :: Hpsi(:,:) !  Hpsi(m%np_part, h%d%dim)
   FLOAT, optional,        intent(in)    :: t
 
-  call push_sub('h_inc.Hpsi')
+  call push_sub('h_inc.XHpsi')
 
   call X(kinetic) (h, gr, psi, hpsi, ik)
   call X(vlpsi)   (h, gr%m, psi, hpsi, ik)
@@ -63,22 +63,22 @@ subroutine X(Hpsi) (h, gr, psi, hpsi, ik, t)
   case(NOREL)
 #if defined(COMPLEX_WFNS) && defined(R_TCOMPLEX)
   case(SPIN_ORBIT)
-     call zso (h, gr, psi, hpsi, ik)
+    call zso (h, gr, psi, hpsi, ik)
 #endif
   case default
-     message(1) = 'Error: Internal.'
-     call write_fatal(1)
+    message(1) = 'Error: Internal.'
+    call write_fatal(1)
   end select
 
   if(present(t)) then
-     if (h%d%cdft) then
-        message(1) = "TDCDFT not yet implemented"
-        call write_fatal(1)
-     end if
-     call X(vlasers)  (gr, h, psi, hpsi, t)
-     call X(vborders) (h, psi, hpsi)
+    if (h%d%cdft) then
+      message(1) = "TDCDFT not yet implemented"
+      call write_fatal(1)
+    end if
+    call X(vlasers)  (gr, h, psi, hpsi, t)
+    call X(vborders) (h, psi, hpsi)
   elseif (h%d%cdft) then
-     call X(current_extra_terms) (gr, h, psi, hpsi, ik)
+    call X(current_extra_terms) (gr, h, psi, hpsi, ik)
   end if
 
   call pop_sub()
@@ -97,7 +97,7 @@ subroutine X(magnus) (h, gr, psi, hpsi, ik, vmagnus)
   integer :: idim
   ! We will assume, for the moment, no spinors.
 
-  call push_sub('h_inc.magnus')
+  call push_sub('h_inc.Xmagnus')
 
   allocate(auxpsi(NP, h%d%dim), aux2psi(NP, h%d%dim))
 
@@ -107,42 +107,42 @@ subroutine X(magnus) (h, gr, psi, hpsi, ik, vmagnus)
   if (h%ep%nvnl > 0) call X(vnlpsi)  (h, gr%m, gr%sb, psi, auxpsi, ik)
   select case(h%d%ispin)
   case(UNPOLARIZED)
-     hpsi(:, 1) = hpsi(:, 1) -  M_zI*vmagnus(:, 1, 1)*auxpsi(:, 1)
+    hpsi(:, 1) = hpsi(:, 1) -  M_zI*vmagnus(:, 1, 1)*auxpsi(:, 1)
   case(SPIN_POLARIZED)
-     if(modulo(ik+1, 2) == 0) then
-        hpsi(:, 1) = hpsi(:, 1) - M_zI*vmagnus(:, 1, 1)*auxpsi(:, 1)
-     else
-        hpsi(:, 1) = hpsi(:, 1) - M_zI*vmagnus(:, 2, 1)*auxpsi(:, 1)
-     end if
+    if(modulo(ik+1, 2) == 0) then
+      hpsi(:, 1) = hpsi(:, 1) - M_zI*vmagnus(:, 1, 1)*auxpsi(:, 1)
+    else
+      hpsi(:, 1) = hpsi(:, 1) - M_zI*vmagnus(:, 2, 1)*auxpsi(:, 1)
+    end if
   end select
 
   select case(h%d%ispin)
   case(UNPOLARIZED)
-     auxpsi(:, 1) = vmagnus(:, 1, 1)*psi(:, 1)
+    auxpsi(:, 1) = vmagnus(:, 1, 1)*psi(:, 1)
   case(SPIN_POLARIZED)
-     if(modulo(ik+1, 2) == 0) then
-        auxpsi(:, 1) = vmagnus(:, 1, 1)*psi(:, 1)
-     else
-        auxpsi(:, 1) = vmagnus(:, 2, 1) *psi(:, 1)
-     end if
+    if(modulo(ik+1, 2) == 0) then
+      auxpsi(:, 1) = vmagnus(:, 1, 1)*psi(:, 1)
+    else
+      auxpsi(:, 1) = vmagnus(:, 2, 1) *psi(:, 1)
+    end if
   end select
   call X(kinetic) (h, gr, auxpsi, aux2psi, ik)
   if (h%ep%nvnl > 0) call X(vnlpsi)  (h, gr%m, gr%sb, auxpsi, aux2psi, ik)
   hpsi(:, 1) = hpsi(:, 1) + M_zI*aux2psi(:, 1)
 
   do idim = 1, h%d%dim
-     hpsi(:, idim) = hpsi(:, idim) + h%ep%Vpsl(:)*psi(:,idim)
+    hpsi(:, idim) = hpsi(:, idim) + h%ep%Vpsl(:)*psi(:,idim)
   end do
 
   select case(h%d%ispin)
   case(UNPOLARIZED)
-     hpsi(:, 1) = hpsi(:, 1) + vmagnus(:, 1, 2)*psi(:, 1)
+    hpsi(:, 1) = hpsi(:, 1) + vmagnus(:, 1, 2)*psi(:, 1)
   case(SPIN_POLARIZED)
-     if(modulo(ik+1, 2) == 0) then
-        hpsi(:, 1) = hpsi(:, 1) + vmagnus(:, 1, 2)*psi(1:, 1)
-     else
-        hpsi(:, 1) = hpsi(:, 1) + vmagnus(:, 2, 2)*psi(1:, 1)
-     end if
+    if(modulo(ik+1, 2) == 0) then
+      hpsi(:, 1) = hpsi(:, 1) + vmagnus(:, 1, 2)*psi(1:, 1)
+    else
+      hpsi(:, 1) = hpsi(:, 1) + vmagnus(:, 2, 2)*psi(1:, 1)
+    end if
   end select
   if (h%ep%nvnl > 0) call X(vnlpsi)  (h, gr%m, gr%sb, psi, Hpsi, ik)
   call X(vborders) (h, psi, hpsi)
@@ -167,39 +167,41 @@ subroutine X(kinetic) (h, gr, psi, hpsi, ik)
   FLOAT :: k2
 #endif
 
-  call push_sub('h_inc.kinetic')
+  call push_sub('h_inc.Xkinetic')
 
   if(simul_box_is_periodic(gr%sb)) then
 #if defined(COMPLEX_WFNS)
-     allocate(grad(NP, NDIM))
-     k2 = sum(h%d%kpoints(:, ik)**2)
-     do idim = 1, h%d%dim
-        call X(f_laplacian) (gr%sb, gr%f_der, psi(:, idim), Hpsi(:, idim), cutoff_ = M_TWO*h%cutoff)
-        call X(f_gradient)  (gr%sb, gr%f_der, psi(:, idim), grad(:, :))
-        do i = 1, NP
-           Hpsi(i, idim) = -M_HALF*(Hpsi(i, idim) &
-                + M_TWO*M_zI*sum(h%d%kpoints(1:NDIM, ik)*grad(i, 1:NDIM)) &
-                - k2*psi(i, idim))
-        end do
-     end do
-     deallocate(grad)
+    allocate(grad(NP, NDIM))
+    k2 = sum(h%d%kpoints(:, ik)**2)
+    do idim = 1, h%d%dim
+      call X(f_laplacian) (gr%sb, gr%f_der, psi(:, idim), Hpsi(:, idim), cutoff_ = M_TWO*h%cutoff)
+      call X(f_gradient)  (gr%sb, gr%f_der, psi(:, idim), grad(:, :))
+      do i = 1, NP
+        Hpsi(i, idim) = -M_HALF*(Hpsi(i, idim) &
+          + M_TWO*M_zI*sum(h%d%kpoints(1:NDIM, ik)*grad(i, 1:NDIM)) &
+          - k2*psi(i, idim))
+      end do
+    end do
+    deallocate(grad)
 #else
-     message(1) = "Real wavefunction for ground state not yet implemented for polymers:"
-     message(2) = "Reconfigure with --enable-complex, and remake"
-     call write_fatal(2)
+    message(1) = "Real wavefunction for ground state not yet implemented for polymers:"
+    message(2) = "Reconfigure with --enable-complex, and remake"
+    call write_fatal(2)
 #endif
 
   else
-     do idim = 1, h%d%dim
-        call X(f_laplacian) (gr%sb, gr%f_der, psi(:, idim), Hpsi(:, idim), cutoff_ = M_TWO*h%cutoff)
-        call lalg_scal(NP, R_TOTYPE(-M_HALF), Hpsi(:,idim) )
-     end do
+    ! only one kpoint
+    ik = 1
+    do idim = 1, h%d%dim
+      call X(f_laplacian) (gr%sb, gr%f_der, psi(:, idim), Hpsi(:, idim), cutoff_ = M_TWO*h%cutoff)
+      call lalg_scal(NP, R_TOTYPE(-M_HALF), Hpsi(:,idim) )
+    end do
   end if
 
   if (h%em_app) then
-     do idim = 1, h%d%dim
-        call lalg_scal(NP, R_TOTYPE(M_ONE/h%m_ratio), Hpsi(:,idim))
-     end do
+    do idim = 1, h%d%dim
+      call lalg_scal(NP, R_TOTYPE(M_ONE/h%m_ratio), Hpsi(:,idim))
+    end do
   end if
 
 
@@ -214,26 +216,26 @@ subroutine X(current_extra_terms) (gr, h, psi, hpsi, ik)
   R_TYPE,                 intent(out)   :: Hpsi(:,:) !  Hpsi(m%np, h%d%dim)
   integer,                intent(in)    :: ik
 
-  integer :: idim, k
+  integer :: k
   FLOAT, allocatable :: div(:)
   R_TYPE, allocatable :: grad(:,:)
 
-  call push_sub('h_inc.current_extra_terms')
+  call push_sub('h_inc.Xcurrent_extra_terms')
 
   allocate(div(NP))
   select case (h%d%ispin)
   case(UNPOLARIZED)
-     call df_divergence(gr%sb, gr%f_der, h%ahxc(:, :, 1), div)
-     hpsi(1:NP, 1) = hpsi(1:NP, 1) - M_HALF*M_zI*div*psi(:, 1)
+    call df_divergence(gr%sb, gr%f_der, h%ahxc(:, :, 1), div)
+    hpsi(1:NP, 1) = hpsi(1:NP, 1) - M_HALF*M_zI*div*psi(:, 1)
   case(SPIN_POLARIZED)
-     if(modulo(ik+1, 2) == 0) then ! we have a spin down
-        call df_divergence(gr%sb, gr%f_der, h%ahxc(:, :, 1), div)
-     else
-        call df_divergence(gr%sb, gr%f_der, h%ahxc(:, :, 2), div)
-     end if
-     hpsi(:, 1) = hpsi(:, 1) - M_HALF*M_zI*div*psi(:, 1)
+    if(modulo(ik+1, 2) == 0) then ! we have a spin down
+      call df_divergence(gr%sb, gr%f_der, h%ahxc(:, :, 1), div)
+    else
+      call df_divergence(gr%sb, gr%f_der, h%ahxc(:, :, 2), div)
+    end if
+    hpsi(:, 1) = hpsi(:, 1) - M_HALF*M_zI*div*psi(:, 1)
   case(SPINORS)
-     ! not implemented yet
+    ! not implemented yet
   end select
   deallocate(div)
 
@@ -285,12 +287,12 @@ subroutine X(vnlpsi) (h, m, sb, psi, hpsi, ik)
   integer,                intent(in)    :: ik
 
   integer :: idim
-  call push_sub('h_inc.vnlpsi')
+  call push_sub('h_inc.Xvnlpsi')
 
   do idim = 1, h%d%dim
-     call X(project)(m, h%ep%p(1:h%ep%nvnl), h%ep%nvnl, psi(:, idim), hpsi(:, idim), &
-          periodic = simul_box_is_periodic(sb), ik = ik)
-  enddo
+    call X(project)(m, h%ep%p(1:h%ep%nvnl), h%ep%nvnl, psi(:, idim), hpsi(:, idim), &
+      periodic = simul_box_is_periodic(sb), ik = ik)
+  end do
 
   call pop_sub()
 end subroutine X(vnlpsi)
@@ -307,7 +309,7 @@ subroutine X(vlpsi) (h, m, psi, hpsi, ik)
   integer :: idim
   R_TYPE, allocatable :: lhpsi(:,:)
 
-  call push_sub('h_inc.vlpsi')
+  call push_sub('h_inc.Xvlpsi')
 
   select case(h%d%ispin)
   case(UNPOLARIZED)
@@ -320,11 +322,11 @@ subroutine X(vlpsi) (h, m, psi, hpsi, ik)
     end if
   case(SPINORS)
     hpsi(1:m%np, 1) = hpsi(1:m%np, 1) + (h%vhxc(1:m%np, 1) + h%ep%vpsl(1:m%np))*psi(1:m%np, 1) + &
-       (h%vhxc(1:m%np, 3) + M_zI*h%vhxc(1:m%np, 4))*psi(1:m%np, 2)
+      (h%vhxc(1:m%np, 3) + M_zI*h%vhxc(1:m%np, 4))*psi(1:m%np, 2)
     hpsi(1:m%np, 2) = hpsi(1:m%np, 2) + (h%vhxc(1:m%np, 2) + h%ep%vpsl(1:m%np))*psi(1:m%np, 2) + &
-       (h%vhxc(1:m%np, 3) - M_zI*h%vhxc(1:m%np, 4))*psi(1:m%np, 1)
+      (h%vhxc(1:m%np, 3) - M_zI*h%vhxc(1:m%np, 4))*psi(1:m%np, 1)
   end select
-  
+
   if (associated(h%ep%E_field)) then
     do idim = 1, h%d%dim
       hpsi(1:m%np, idim) = hpsi(1:m%np, idim) + h%ep%v_static*psi(1:m%np, idim)
@@ -338,7 +340,7 @@ subroutine X(vlpsi) (h, m, psi, hpsi, ik)
     case (SPIN_POLARIZED)
       if(modulo(ik+1, 2) == 0) then ! we have a spin down
         lhpsi(1:m%np, 1) = - M_HALF/P_C*sqrt(dot_product(h%ep%B_field, h%ep%B_field))*psi(1:m%np, 1)
-        
+
         hpsi(:, 1) = hpsi(:, 1)
       else
         lhpsi(1:m%np, 1) = + M_HALF/P_C*sqrt(dot_product(h%ep%B_field, h%ep%B_field))*psi(1:m%np, 1)
@@ -347,17 +349,17 @@ subroutine X(vlpsi) (h, m, psi, hpsi, ik)
       end if
     case (SPINORS)
       lhpsi(1:m%np, 1) = M_HALF/P_C*( h%ep%B_field(3)*psi(1:m%np, 1) &
-         + (h%ep%B_field(1) - M_zI*h%ep%B_field(2))*psi(1:m%np, 2))
+        + (h%ep%B_field(1) - M_zI*h%ep%B_field(2))*psi(1:m%np, 2))
       lhpsi(1:m%np, 2) = M_HALF/P_C*(-h%ep%B_field(3)*psi(1:m%np, 2) &
-         + (h%ep%B_field(1) + M_zI*h%ep%B_field(2))*psi(1:m%np, 1))
-     end select
-     if (h%em_app) then
-       do idim = 1, h%d%dim
-         call lalg_scal(m%np, R_TOTYPE(h%g_ratio/h%m_ratio), lhpsi(:,idim))
-       enddo
-     end if
-     hpsi(1:m%np, :) = hpsi(1:m%np, :) + lhpsi(1:m%np, :)
-     deallocate(lhpsi)
+        + (h%ep%B_field(1) + M_zI*h%ep%B_field(2))*psi(1:m%np, 1))
+    end select
+    if (h%em_app) then
+      do idim = 1, h%d%dim
+        call lalg_scal(m%np, R_TOTYPE(h%g_ratio/h%m_ratio), lhpsi(:,idim))
+      end do
+    end if
+    hpsi(1:m%np, :) = hpsi(1:m%np, :) + lhpsi(1:m%np, :)
+    deallocate(lhpsi)
   end if
 
   call pop_sub()
@@ -377,29 +379,29 @@ subroutine X(vlasers) (gr, h, psi, hpsi, t)
   FLOAT :: a(NDIM)
   R_TYPE, allocatable :: grad(:,:)
 
-  call push_sub('h_inc.vlasers')
+  call push_sub('h_inc.Xvlasers')
 
   if(h%ep%no_lasers > 0) then
-     select case(h%gauge)
-     case(1) ! length gauge
+    select case(h%gauge)
+    case(1) ! length gauge
 
-        do k = 1, h%d%dim
-           hpsi(:, k)= hpsi(:, k) + epot_laser_scalar_pot(gr%m%np, gr, h%ep, t)*psi(:, k)
-        enddo
+      do k = 1, h%d%dim
+        hpsi(:, k)= hpsi(:, k) + epot_laser_scalar_pot(gr%m%np, gr, h%ep, t)*psi(:, k)
+      end do
 
-     case(2) ! velocity gauge
+    case(2) ! velocity gauge
 
-        call epot_laser_vector_pot(gr%sb, h%ep, t, a)
-        allocate(grad(NP, NDIM))
-        do idim = 1, h%d%dim
-           call X(f_gradient)(gr%sb, gr%f_der, psi(:, idim), grad)
-           do k = 1, NP
-              hpsi(k, idim) = hpsi(k, idim) - M_zI * sum(a(:)*grad(k,:)) + &
-                   sum(a**2)/M_TWO * psi(k, idim)
-           end do
+      call epot_laser_vector_pot(gr%sb, h%ep, t, a)
+      allocate(grad(NP, NDIM))
+      do idim = 1, h%d%dim
+        call X(f_gradient)(gr%sb, gr%f_der, psi(:, idim), grad)
+        do k = 1, NP
+          hpsi(k, idim) = hpsi(k, idim) - M_zI * sum(a(:)*grad(k,:)) + &
+            sum(a**2)/M_TWO * psi(k, idim)
         end do
-        deallocate(grad)
-     end select
+      end do
+      deallocate(grad)
+    end select
   end if
 
   call pop_sub()
@@ -414,12 +416,12 @@ subroutine X(vborders) (h, psi, hpsi)
 
   integer :: idim
 
-  call push_sub('h_inc.vborders')
+  call push_sub('h_inc.Xvborders')
 
   if(h%ab .eq. IMAGINARY_ABSORBING) then
-     do idim = 1, h%d%dim
-        hpsi(:, idim) = hpsi(:, idim) + M_zI*h%ab_pot(:)*psi(1:, idim)
-     end do
+    do idim = 1, h%d%dim
+      hpsi(:, idim) = hpsi(:, idim) + M_zI*h%ab_pot(:)*psi(1:, idim)
+    end do
   end if
 
   call pop_sub()

@@ -15,12 +15,12 @@
 !! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
 !! 02111-1307, USA.
 !!
-!!
+!! $Id$
 
 
-!!! this is for the third derivative of Exc, for the moment is a copy
-!!! of the function above
-
+! ---------------------------------------------------------
+! this is for the third derivative of Exc, for the moment is a copy
+! of the function above
 subroutine xc_get_kxc(xcs, m, rho, ispin, kxc)
   type(xc_type), target, intent(in)    :: xcs
   type(mesh_type),       intent(in)    :: m
@@ -82,6 +82,8 @@ subroutine xc_get_kxc(xcs, m, rho, ispin, kxc)
   call pop_sub()
 
 contains
+
+  ! ---------------------------------------------------------
   ! Takes care of the initialization of the LDA part of the functionals
   !   *) allocates dens(ity) and dedd, and their local variants
   !   *) calculates the density taking into account nlcc and non-collinear spin
@@ -113,12 +115,14 @@ contains
   end subroutine lda_init
 
 
+  ! ---------------------------------------------------------
   ! deallocates variables allocated in lda_init
   subroutine lda_end()
     deallocate(dens, dedd, l_dens, l_dedd)
   end subroutine lda_end
 
 
+  ! ---------------------------------------------------------
   ! calculates the LDA part of vxc, taking into account non-collinear spin
   subroutine lda_process()
 

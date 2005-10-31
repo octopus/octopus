@@ -17,14 +17,16 @@
 !!
 !! $Id$
 
-!!! This file handles the evaluation of the OEP potential, in the KLI or full OEP
-!!! as described in S. Kuemmel and J. Perdew, PRL 90, 043004 (2003)
+! ---------------------------------------------------------
+! This file handles the evaluation of the OEP potential, in the KLI or full OEP
+! as described in S. Kuemmel and J. Perdew, PRL 90, 043004 (2003)
 
-!!! This file has to be outside the module xc, for it requires the Hpsi
-!!! This is why it needs the xc_functl module. I prefer to put it here since
-!!! the rest of the hamiltonian module does not know about the gory details
-!!! of how xc is defined and calculated.
+! This file has to be outside the module xc, for it requires the Hpsi
+! This is why it needs the xc_functl module. I prefer to put it here since
+! the rest of the hamiltonian module does not know about the gory details
+! of how xc is defined and calculated.
 
+! ---------------------------------------------------------
 subroutine X(xc_oep_calc)(oep, xcs, apply_sic_pz, gr, h, st, vxc, ex, ec)
   use xc_functl
 
@@ -87,9 +89,9 @@ subroutine X(xc_oep_calc)(oep, xcs, apply_sic_pz, gr, h, st, vxc, ex, ec)
     if(st%st_end - st%st_start + 1 .ne. st%nst) then ! This holds only in the td part.
       call mpi_barrier(st%comm, ierr)
       do ist = 1, st%nst
-         call mpi_bcast(oep%uxc_bar(ist), 1, MPI_FLOAT, st%node(ist), st%comm, ierr)
-      enddo
-    endif
+        call mpi_bcast(oep%uxc_bar(ist), 1, MPI_FLOAT, st%node(ist), st%comm, ierr)
+      end do
+    end if
 #endif
 
     ! solve the KLI equation
@@ -114,6 +116,7 @@ subroutine X(xc_oep_calc)(oep, xcs, apply_sic_pz, gr, h, st, vxc, ex, ec)
 end subroutine X(xc_OEP_calc)
 
 
+! ---------------------------------------------------------
 subroutine X(xc_oep_solve) (gr, h, st, is, vxc, oep)
   type(grid_type),        intent(inout) :: gr
   type(hamiltonian_type), intent(inout) :: h
@@ -146,13 +149,13 @@ subroutine X(xc_oep_solve) (gr, h, st, is, vxc, oep)
       ! evaluate right-hand side
       vxc_bar    = sum(R_ABS(st%X(psi)(1:NP, 1, ist, is))**2 * oep%vxc(1:NP) * gr%m%vol_pp(1:NP))
       b(1:NP, 1) =  -(oep%vxc(1:NP) - (vxc_bar - oep%uxc_bar(ist)))*R_CONJ(st%X(psi)(1:NP, 1, ist, is)) &
-         + oep%X(lxc)(1:NP, ist)
+        + oep%X(lxc)(1:NP, ist)
 
       call X(lr_orth_vector) (gr%m, st, b, is)
 
       ! and we now solve the equation [h-eps_i] psi_i = b_i
       call X(lr_solve_HXeY) (oep%lr, h, gr, st%d, is, oep%lr%X(dl_psi)(:,:, ist, is), b, &
-         R_TOTYPE(-st%eigenval(ist, is)))
+        R_TOTYPE(-st%eigenval(ist, is)))
 
       call X(lr_orth_vector) (gr%m, st, oep%lr%X(dl_psi)(:,:, ist, is), is)
 

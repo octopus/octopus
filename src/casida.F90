@@ -43,32 +43,32 @@ module casida
 
   implicit none
 
-  integer, parameter ::       &
-       CASIDA_EPS_DIFF   = 1, &
-       CASIDA_PETERSILKA = 2, &
-       CASIDA_CASIDA     = 3
+  integer, parameter ::    &
+    CASIDA_EPS_DIFF   = 1, &
+    CASIDA_PETERSILKA = 2, &
+    CASIDA_CASIDA     = 3
 
   type casida_type
-     integer :: type          ! CASIDA_EPS_DIFF | CASIDA_PETERSILKA | CASIDA_CASIDA
+    integer :: type          ! CASIDA_EPS_DIFF | CASIDA_PETERSILKA | CASIDA_CASIDA
 
-     integer, pointer :: n_occ(:)         ! number of occupied states
-     integer, pointer :: n_unocc(:)       ! number of unoccupied states
-     character(len=80) :: wfn_list
+    integer, pointer  :: n_occ(:)       ! number of occupied states
+    integer, pointer  :: n_unocc(:)     ! number of unoccupied states
+    character(len=80) :: wfn_list
 
-     integer          :: n_pairs         ! number of pairs to take into acount
-     integer, pointer :: pair_i(:)       ! holds the separated indices of compund index ia
-     integer, pointer :: pair_a(:)
-     integer, pointer :: pair_sigma(:)
-     FLOAT,   pointer :: mat(:,:)        ! general purpose matrix
-     FLOAT,   pointer :: w(:)    ! The excitation energies.
-     FLOAT,   pointer :: tm(:, :)! The transition matrix elements (between the many-particle states)
-     FLOAT,   pointer :: f(:)    ! The (dipole) strengths
-     FLOAT,   pointer :: s(:)    ! The diagonal part of the S-matrix
+    integer          :: n_pairs         ! number of pairs to take into acount
+    integer, pointer :: pair_i(:)       ! holds the separated indices of compund index ia
+    integer, pointer :: pair_a(:)
+    integer, pointer :: pair_sigma(:)
+    FLOAT,   pointer :: mat(:,:)        ! general purpose matrix
+    FLOAT,   pointer :: w(:)            ! The excitation energies.
+    FLOAT,   pointer :: tm(:, :)        ! The transition matrix elements (between the many-particle states)
+    FLOAT,   pointer :: f(:)            ! The (dipole) strengths
+    FLOAT,   pointer :: s(:)            ! The diagonal part of the S-matrix
 
     logical       :: parallel_in_eh_pairs
-    integer       :: mpi_comm ! my communicator in eh_pairs
-    integer       :: mpi_size ! size of mpi_comm (defined also in serial mode)
-    integer       :: mpi_rank ! rank of mpi_comm (defined also in serial mode)
+    integer       :: mpi_comm           ! my communicator in eh_pairs
+    integer       :: mpi_size           ! size of mpi_comm (defined also in serial mode)
+    integer       :: mpi_rank           ! rank of mpi_comm (defined also in serial mode)
   end type casida_type
 
 contains
@@ -90,41 +90,41 @@ contains
 
     call restart_look (trim(tmpdir)//'restart_gs', sys%gr%m, kpoints, dim, nst, err)
     if(err.ne.0) then
-       message(1) = 'Could not properly read wave-functions from "'//trim(tmpdir)//'restart_gs".'
-       call write_fatal(1)
+      message(1) = 'Could not properly read wave-functions from "'//trim(tmpdir)//'restart_gs".'
+      call write_fatal(1)
     end if
 
     if(sys%st%d%ispin == SPINORS) then
-       message(1) = 'Linear response TDDFT ("Casida" mode) is not implemented for spinors-DFT.'
-       call write_fatal(1)
-    endif
+      message(1) = 'Linear response TDDFT ("Casida" mode) is not implemented for spinors-DFT.'
+      call write_fatal(1)
+    end if
 
-    sys%st%nst    = nst  
+    sys%st%nst    = nst
     sys%st%st_end = nst
     deallocate(sys%st%eigenval, sys%st%occ)
     allocate(sys%st%X(psi) (sys%gr%m%np, sys%st%d%dim, sys%st%nst, sys%st%d%nik))
     allocate(sys%st%eigenval(sys%st%nst, sys%st%d%nik), sys%st%occ(sys%st%nst, sys%st%d%nik))
     if(sys%st%d%ispin == SPINORS) then
-       allocate(sys%st%mag(sys%st%nst, sys%st%d%nik, 2))
-       sys%st%mag = M_ZERO
+      allocate(sys%st%mag(sys%st%nst, sys%st%d%nik, 2))
+      sys%st%mag = M_ZERO
     end if
     sys%st%eigenval = huge(PRECISION)
     sys%st%occ      = M_ZERO
 
     call X(restart_read) (trim(tmpdir)//'restart_gs', sys%st, sys%gr%m, err)
     if(err.ne.0) then
-       message(1) = 'Could not properly read wave-functions from "'//trim(tmpdir)//'restart_gs".'
-       call write_fatal(1)
+      message(1) = 'Could not properly read wave-functions from "'//trim(tmpdir)//'restart_gs".'
+      call write_fatal(1)
     end if
 
     allocate(cas%n_occ(sys%st%d%nspin), cas%n_unocc(sys%st%d%nspin))
     cas%n_occ(:) = 0
     do i = 1, sys%st%d%nspin
-       do ist = 1, sys%st%nst
-          if(sys%st%occ(ist, i) > M_ZERO) cas%n_occ(i) = cas%n_occ(i) + 1
-       enddo
-       cas%n_unocc(i) = sys%st%nst - cas%n_occ(i)
-    enddo
+      do ist = 1, sys%st%nst
+        if(sys%st%occ(ist, i) > M_ZERO) cas%n_occ(i) = cas%n_occ(i) + 1
+      end do
+      cas%n_unocc(i) = sys%st%nst - cas%n_occ(i)
+    end do
 
     select case(sys%st%d%ispin)
     case(UNPOLARIZED)
@@ -221,20 +221,20 @@ contains
     ! count pairs
     cas%n_pairs = 0
     do k = 1, nspin
-       do a = cas%n_occ(k)+1, cas%n_occ(k) + cas%n_unocc(k)
-          if(loct_isinstringlist(a, cas%wfn_list)) then
-             do i = 1, cas%n_occ(k)
-                if(loct_isinstringlist(i, cas%wfn_list)) then
-                  cas%n_pairs = cas%n_pairs + 1
-                end if
-             end do
-          end if
-       end do
-    enddo
+      do a = cas%n_occ(k)+1, cas%n_occ(k) + cas%n_unocc(k)
+        if(loct_isinstringlist(a, cas%wfn_list)) then
+          do i = 1, cas%n_occ(k)
+            if(loct_isinstringlist(i, cas%wfn_list)) then
+              cas%n_pairs = cas%n_pairs + 1
+            end if
+          end do
+        end if
+      end do
+    end do
 
     if(cas%n_pairs < 1) then
-       message(1) = "Error: Maybe there are no unoccupied states?"
-       call write_fatal(1)
+      message(1) = "Error: Maybe there are no unoccupied states?"
+      call write_fatal(1)
     end if
 
     ! allocate stuff
@@ -245,19 +245,19 @@ contains
     ! create pairs
     j = 1
     do k = 1, nspin
-       do a = cas%n_occ(k)+1, cas%n_occ(k) + cas%n_unocc(k)
-          if(loct_isinstringlist(a, cas%wfn_list)) then
-             do i = 1, cas%n_occ(k)
-                if(loct_isinstringlist(i, cas%wfn_list)) then
-                   cas%pair_i(j) = i
-                   cas%pair_a(j) = a
-                   cas%pair_sigma(j) = k
-                   j = j + 1
-                end if
-             end do
-          end if
-       end do
-    enddo
+      do a = cas%n_occ(k)+1, cas%n_occ(k) + cas%n_unocc(k)
+        if(loct_isinstringlist(a, cas%wfn_list)) then
+          do i = 1, cas%n_occ(k)
+            if(loct_isinstringlist(i, cas%wfn_list)) then
+              cas%pair_i(j) = i
+              cas%pair_a(j) = a
+              cas%pair_sigma(j) = k
+              j = j + 1
+            end if
+          end do
+        end if
+      end do
+    end do
 
     ! now let us take care of initializing the parallel stuff
     cas%mpi_size = 1  ! alone in the world (default)
@@ -331,12 +331,12 @@ contains
     allocate(rho(m%np, st%d%nspin), fxc(m%np, st%d%nspin, st%d%nspin))
     rho = M_ZERO; fxc = M_ZERO
     if(associated(st%rho_core)) then
-       do is = 1, st%d%spin_channels
-          rho(:, is) = st%rho(:, is) + st%rho_core(:)/st%d%spin_channels
-       enddo
+      do is = 1, st%d%spin_channels
+        rho(:, is) = st%rho(:, is) + st%rho_core(:)/st%d%spin_channels
+      end do
     else
-       rho = st%rho
-    endif
+      rho = st%rho
+    end if
     call xc_get_fxc(sys%ks%xc, m, rho, st%d%ispin, fxc)
 
     select case(cas%type)
@@ -347,7 +347,7 @@ contains
     case(CASIDA_CASIDA)
       call solve_casida()
     end select
-    
+
     ! clean up
     deallocate(rho, fxc, pot, saved_K)
 
@@ -369,29 +369,29 @@ contains
       iunit = io_open(trim(tmpdir)//'restart_casida', action='write', position='append')
 
       do ia = 1, cas%n_pairs
-         a = cas%pair_a(ia)
-         i = cas%pair_i(ia)
-         sigma = cas%pair_sigma(ia)
-         cas%w(ia) = st%eigenval(a, sigma) - st%eigenval(i, sigma)
+        a = cas%pair_a(ia)
+        i = cas%pair_i(ia)
+        sigma = cas%pair_sigma(ia)
+        cas%w(ia) = st%eigenval(a, sigma) - st%eigenval(i, sigma)
 
-         if(cas%type == CASIDA_PETERSILKA) then
-            if(saved_K(ia, ia)) then
-               f = cas%mat(ia, ia)
-            else
-               f = K_term(i, a, sigma, i, a, sigma)
-               write(iunit, *) ia, ia, f
-            end if
-            cas%w(ia) = cas%w(ia) + M_TWO*f
-         end if
+        if(cas%type == CASIDA_PETERSILKA) then
+          if(saved_K(ia, ia)) then
+            f = cas%mat(ia, ia)
+          else
+            f = K_term(i, a, sigma, i, a, sigma)
+            write(iunit, *) ia, ia, f
+          end if
+          cas%w(ia) = cas%w(ia) + M_TWO*f
+        end if
 
-         if(mpiv%node == 0) call loct_progress_bar(ia-1, cas%n_pairs-1)
+        if(mpiv%node == 0) call loct_progress_bar(ia-1, cas%n_pairs-1)
       end do
 
       allocate(x(cas%n_pairs), deltav(m%np))
       do k = 1, m%sb%dim
-         x = ks_matrix_elements(cas, st, m, deltav)
-         !FIXME: Calculate the oscillator strengths and matrix elements a la Petersilka
-      enddo
+        x = ks_matrix_elements(cas, st, m, deltav)
+        !FIXME: Calculate the oscillator strengths and matrix elements a la Petersilka
+      end do
       deallocate(x, deltav)
 
       ! complete progress bar
@@ -426,26 +426,26 @@ contains
 
       ! calculate the matrix elements of (v + fxc)
       do jb = 1, cas%n_pairs
-         actual = actual + 1
-         if(mod(actual, cas%mpi_size) .ne. cas%mpi_rank) cycle
+        actual = actual + 1
+        if(mod(actual, cas%mpi_size) .ne. cas%mpi_rank) cycle
 
-         do ia = jb, cas%n_pairs
-            counter = counter + 1
-            i = cas%pair_i(ia)
-            a = cas%pair_a(ia)
-            sigma = cas%pair_sigma(ia)
+        do ia = jb, cas%n_pairs
+          counter = counter + 1
+          i = cas%pair_i(ia)
+          a = cas%pair_a(ia)
+          sigma = cas%pair_sigma(ia)
 
-            ! if not loaded, then calculate matrix element
-            if(.not.saved_K(ia, jb)) then
-               j = cas%pair_i(jb)
-               b = cas%pair_a(jb)
-               mu = cas%pair_sigma(jb)
-               cas%mat(ia, jb) = K_term(i, a, sigma, j, b, mu)
-            endif
-            if(jb /= ia) cas%mat(jb, ia) = cas%mat(ia, jb) ! the matrix is symmetric
+          ! if not loaded, then calculate matrix element
+          if(.not.saved_K(ia, jb)) then
+            j = cas%pair_i(jb)
+            b = cas%pair_a(jb)
+            mu = cas%pair_sigma(jb)
+            cas%mat(ia, jb) = K_term(i, a, sigma, j, b, mu)
+          end if
+          if(jb /= ia) cas%mat(jb, ia) = cas%mat(ia, jb) ! the matrix is symmetric
 
-         end do
-         if(mpiv%node == 0) call loct_progress_bar(counter-1, max)
+        end do
+        if(mpiv%node == 0) call loct_progress_bar(counter-1, max)
       end do
 
       ! sum all matrix elements
@@ -453,7 +453,7 @@ contains
       if(cas%parallel_in_eh_pairs) then
         allocate(mpi_mat(cas%n_pairs, cas%n_pairs))
         call MPI_ALLREDUCE(cas%mat(1,1), mpi_mat(1,1), cas%n_pairs**2, &
-           MPI_FLOAT, MPI_SUM, cas%mpi_comm, mpi_err)
+          MPI_FLOAT, MPI_SUM, cas%mpi_comm, mpi_err)
         cas%mat = mpi_mat
         deallocate(mpi_mat)
       end if
@@ -473,22 +473,22 @@ contains
           a = cas%pair_a(ia)
           sigma = cas%pair_sigma(ia)
           temp = st%eigenval(a, sigma) - st%eigenval(i, sigma)
-          
+
           do jb = ia, cas%n_pairs
             j = cas%pair_i(jb)
             b = cas%pair_a(jb)
             mu = cas%pair_sigma(jb)
-            
+
             if(.not.saved_K(ia, jb)) write(iunit, *) ia, jb, cas%mat(ia, jb)
-            
+
             if(sys%st%d%ispin == UNPOLARIZED) then
               cas%mat(ia, jb)  = M_FOUR * sqrt(temp) * cas%mat(ia, jb) * &
-                 sqrt(st%eigenval(b, 1) - st%eigenval(j, 1))
+                sqrt(st%eigenval(b, 1) - st%eigenval(j, 1))
             else if(sys%st%d%ispin == SPIN_POLARIZED) then
               cas%mat(ia, jb)  = M_TWO * sqrt(temp) * cas%mat(ia, jb) * &
-                 sqrt(st%eigenval(b, mu) - st%eigenval(j, mu))
+                sqrt(st%eigenval(b, mu) - st%eigenval(j, mu))
             end if
-            
+
             if(jb /= ia) cas%mat(jb, ia) = cas%mat(ia, jb) ! the matrix is symmetric
           end do
           cas%mat(ia, ia) = temp**2 + cas%mat(ia, ia)
@@ -505,7 +505,7 @@ contains
             cas%w(ia) = M_ZERO
           else
             cas%w(ia) = sqrt(cas%w(ia))
-          endif
+          end if
         end do
 
         ! And let us now get the S matrix...
@@ -514,12 +514,12 @@ contains
           a = cas%pair_a(ia)
           sigma = cas%pair_sigma(ia)
           if(sys%st%d%ispin == UNPOLARIZED) then
-            cas%s(ia) = M_HALF / ( st%eigenval(cas%pair_a(ia), 1) - st%eigenval(cas%pair_i(ia), 1) ) 
+            cas%s(ia) = M_HALF / ( st%eigenval(cas%pair_a(ia), 1) - st%eigenval(cas%pair_i(ia), 1) )
           elseif(sys%st%d%ispin == SPIN_POLARIZED) then
-            cas%s(ia) = M_ONE / ( st%eigenval(cas%pair_a(ia), sigma) - st%eigenval(cas%pair_i(ia), sigma) ) 
-          endif
-        enddo
-        
+            cas%s(ia) = M_ONE / ( st%eigenval(cas%pair_a(ia), sigma) - st%eigenval(cas%pair_i(ia), sigma) )
+          end if
+        end do
+
         allocate(deltav(m%np), x(cas%n_pairs))
         do k = 1, m%sb%dim
           deltav(1:m%np) = m%x(1:m%np, k)
@@ -538,7 +538,7 @@ contains
         end do
 
       end if ! cas%mpi_rank == 0
-      
+
 #if defined(HAVE_MPI)
       if(cas%parallel_in_eh_pairs) then
         call MPI_Barrier(cas%mpi_comm, mpi_err)
@@ -563,9 +563,9 @@ contains
 
       !  first the Hartree part (only works for real wfs...)
       if( j.ne.j_old  .or.   b.ne.b_old   .or.  mu.ne.mu_old) then
-         pot = M_ZERO
-         call dpoisson_solve(sys%gr, pot, rho_j)
-      endif
+        pot = M_ZERO
+        call dpoisson_solve(sys%gr, pot, rho_j)
+      end if
 
       K_term = dmf_dotp(m, rho_i(:), pot(:))
       rho(1:m%np, 1) = rho_i(1:m%np) * rho_j(1:m%np) * fxc(1:m%np, sigma, mu)
@@ -589,13 +589,13 @@ contains
       err = min(iunit, 0)
 
       do while(err .eq. 0)
-         read(iunit, fmt=*, iostat=err) ia, jb, val
-         if(err.eq.0 .and. (ia > 0.and.ia <= cas%n_pairs) .and. (jb > 0.and.jb <= cas%n_pairs)) then
-            cas%mat(ia, jb) = val
-            saved_K(ia, jb) = .true.
-            cas%mat(jb, ia) = val
-            saved_K(jb, ia) = .true.
-         end if
+        read(iunit, fmt=*, iostat=err) ia, jb, val
+        if(err.eq.0 .and. (ia > 0.and.ia <= cas%n_pairs) .and. (jb > 0.and.jb <= cas%n_pairs)) then
+          cas%mat(ia, jb) = val
+          saved_K(ia, jb) = .true.
+          cas%mat(jb, ia) = val
+          saved_K(jb, ia) = .true.
+        end if
       end do
 
       if(iunit > 0) call io_close(iunit)
@@ -604,6 +604,8 @@ contains
 
   end subroutine casida_work
 
+
+  ! ---------------------------------------------------------
   function ks_matrix_elements(cas, st, m, dv) result(x)
     type(casida_type), intent(in) :: cas
     type(states_type), intent(in) :: st
@@ -616,19 +618,20 @@ contains
 
     allocate(f(m%np))
     do ia = 1, cas%n_pairs
-       i     = cas%pair_i(ia)
-       a     = cas%pair_a(ia)
-       sigma = cas%pair_sigma(ia)
-       do k = 1, m%np
-          f(k) = dv(k) * R_CONJ(st%X(psi) (k, 1, i, sigma)) * st%X(psi) (k, 1, a, sigma)
-       enddo
-       x(ia) = X(mf_integrate)(m, f)
-    enddo
+      i     = cas%pair_i(ia)
+      a     = cas%pair_a(ia)
+      sigma = cas%pair_sigma(ia)
+      do k = 1, m%np
+        f(k) = dv(k) * R_CONJ(st%X(psi) (k, 1, i, sigma)) * st%X(psi) (k, 1, a, sigma)
+      end do
+      x(ia) = X(mf_integrate)(m, f)
+    end do
 
     deallocate(f)
   end function ks_matrix_elements
 
 
+  ! ---------------------------------------------------------
   R_TYPE function transition_matrix_element(cas, ia, x) result(z)
     type(casida_type), intent(in) :: cas
     integer,           intent(in) :: ia
@@ -638,11 +641,11 @@ contains
 
     z = R_TOTYPE(M_ZERO)
     if(cas%w(ia) > M_ZERO) then
-       do jb = 1, cas%n_pairs
-          z = z + x(jb) * (M_ONE/sqrt(cas%s(jb))) * cas%mat(jb, ia)
-       enddo
-       z = (M_ONE/sqrt(cas%w(ia))) * z
-    endif
+      do jb = 1, cas%n_pairs
+        z = z + x(jb) * (M_ONE/sqrt(cas%s(jb))) * cas%mat(jb, ia)
+      end do
+      z = (M_ONE/sqrt(cas%w(ia))) * z
+    end if
 
   end function transition_matrix_element
 
@@ -663,8 +666,8 @@ contains
     call sort(cas%w(1:cas%n_pairs), ind)
     dim = size(cas%tm, 2)
     do i = 1, dim
-       xtmp(:) = cas%tm(:, i); cas%tm(:, i) = xtmp(ind(:))
-    enddo
+      xtmp(:) = cas%tm(:, i); cas%tm(:, i) = xtmp(ind(:))
+    end do
     tmp(:) = cas%f(:); cas%f(:) = tmp(ind(:))
     itmp(:) = cas%pair_i(:) ; cas%pair_i(:) = itmp(ind(:))
     itmp(:) = cas%pair_a(:) ; cas%pair_a(:) = itmp(ind(:))
@@ -711,16 +714,16 @@ contains
     if(casp%type == CASIDA_EPS_DIFF) write(iunit, '(2a4)', advance='no') 'From', ' To '
 
     select case(dim)
-     case(1); write(iunit, '(3(a15,1x))') 'E' , '<x>', '<f>'
-     case(2); write(iunit, '(4(a15,1x))') 'E' , '<x>', '<y>', '<f>'
-     case(3); write(iunit, '(5(a15,1x))') 'E' , '<x>', '<y>', '<z>', '<f>'
+    case(1); write(iunit, '(3(a15,1x))') 'E' , '<x>', '<f>'
+    case(2); write(iunit, '(4(a15,1x))') 'E' , '<x>', '<y>', '<f>'
+    case(3); write(iunit, '(5(a15,1x))') 'E' , '<x>', '<y>', '<z>', '<f>'
     end select
     do ia = 1, casp%n_pairs
-       if((casp%type==CASIDA_EPS_DIFF).or.(casp%type==CASIDA_PETERSILKA)) then
-          write(iunit, '(2i4)', advance='no') casp%pair_i(ia), casp%pair_a(ia)
-       end if
-       write(iunit, '(5(es15.8,1x))') casp%w(ia) / units_out%energy%factor, &
-            casp%w(ia)*abs(casp%tm(ia, 1:dim))**2, casp%f(ia)
+      if((casp%type==CASIDA_EPS_DIFF).or.(casp%type==CASIDA_PETERSILKA)) then
+        write(iunit, '(2i4)', advance='no') casp%pair_i(ia), casp%pair_a(ia)
+      end if
+      write(iunit, '(5(es15.8,1x))') casp%w(ia) / units_out%energy%factor, &
+        casp%w(ia)*abs(casp%tm(ia, 1:dim))**2, casp%f(ia)
     end do
     call io_close(iunit)
 
@@ -730,18 +733,18 @@ contains
     iunit = io_open('linear/'//trim(filename)//'.vec', action='write')
     write(iunit, '(a14)', advance = 'no') ' value '
     do ia = 1, casp%n_pairs
-       write(iunit, '(3x,i4,a1,i4,2x)', advance='no') casp%pair_i(ia), ' - ', casp%pair_a(ia)
+      write(iunit, '(3x,i4,a1,i4,2x)', advance='no') casp%pair_i(ia), ' - ', casp%pair_a(ia)
     end do
     write(iunit, '(1x)')
 
     do ia = 1, casp%n_pairs
-       write(iunit, '(es14.6)', advance='no') casp%w(ia) / units_out%energy%factor
-       temp = M_ONE
-       if(maxval(casp%mat(:, ia)) < abs(minval(casp%mat(:, ia)))) temp = -temp
-       do jb = 1, casp%n_pairs
-          write(iunit, '(es14.6)', advance='no') temp*casp%mat(jb, ia)
-       end do
-       write(iunit, '(1x)')
+      write(iunit, '(es14.6)', advance='no') casp%w(ia) / units_out%energy%factor
+      temp = M_ONE
+      if(maxval(casp%mat(:, ia)) < abs(minval(casp%mat(:, ia)))) temp = -temp
+      do jb = 1, casp%n_pairs
+        write(iunit, '(es14.6)', advance='no') temp*casp%mat(jb, ia)
+      end do
+      write(iunit, '(1x)')
     end do
 
     call io_close(iunit)

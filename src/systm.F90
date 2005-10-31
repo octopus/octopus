@@ -45,23 +45,23 @@ module system
   implicit none
 
   private
-  public ::                  &
-       system_type,          &
-       system_init,          &
-       system_end,           &
-       atom_density,         &
-       system_guess_density, &
-       dsystem_h_setup,      &
-       zsystem_h_setup
-
+  public ::               &
+    system_type,          &
+    system_init,          &
+    system_end,           &
+    atom_density,         &
+    system_guess_density, &
+    dsystem_h_setup,      &
+    zsystem_h_setup
 
   type system_type
-     type(grid_type),     pointer :: gr         ! the mesh
-     type(states_type),   pointer :: st         ! the states
-     type(v_ks_type)              :: ks         ! the Kohn-Sham potentials
-     type(output_type)            :: outp       ! the output
-     type(multicomm_type)         :: mc         ! index and domain communicators
+    type(grid_type),     pointer :: gr    ! the mesh
+    type(states_type),   pointer :: st    ! the states
+    type(v_ks_type)              :: ks    ! the Kohn-Sham potentials
+    type(output_type)            :: outp  ! the output
+    type(multicomm_type)         :: mc    ! index and domain communicators
   end type system_type
+
 
 contains
 
@@ -77,11 +77,11 @@ contains
     call geometry_init(sys%gr%geo)
     call simul_box_init(sys%gr%sb, sys%gr%geo)
     call states_init(sys%st, sys%gr)
-    call grid_init_1(sys%gr)
+    call grid_init_stage_1(sys%gr)
 
     call parallel_init()
 
-    call grid_init_2(sys%gr, sys%mc)
+    call grid_init_stage_2(sys%gr, sys%mc)
     call states_densities_init(sys%st, sys%gr)
     call output_init(sys%gr%sb, sys%outp)
     call v_ks_init(sys%gr, sys%ks, sys%st%d)
@@ -89,6 +89,8 @@ contains
     call pop_sub()
 
   contains
+
+    ! ---------------------------------------------------------
     subroutine parallel_init()
       integer :: parallel_mask_
       integer :: index_dim, index_range(4)
@@ -97,7 +99,7 @@ contains
       ! index-dimensions: states, kpoints, and others
       index_dim = 4
 
-      ! store the ranges for these two indices (serves as initial guess 
+      ! store the ranges for these two indices (serves as initial guess
       ! for parallelization strategy)
       index_range(1) = sys%gr%m%np_global     ! Number of points in mesh
       index_range(2) = sys%st%nst             ! Number of states
@@ -106,11 +108,11 @@ contains
 
       parallel_mask_ = 0 ! default: no paralellization
       if(present(parallel_mask)) parallel_mask_ = parallel_mask
-      
+
       ! create index and domain communicators
       call multicomm_init(sys%mc, parallel_mask, mpiv%numprocs, index_dim, &
-         index_range, (/ 15000, 5, 1, 1 /))
-      
+        index_range, (/ 15000, 5, 1, 1 /))
+
     end subroutine parallel_init
 
   end subroutine system_init
@@ -129,8 +131,8 @@ contains
     call v_ks_end(s%ks)
 
     if(associated(s%st)) then
-       call states_end(s%st)
-       deallocate(s%st); nullify(s%st)
+      call states_end(s%st)
+      deallocate(s%st); nullify(s%st)
     end if
 
     call grid_end(s%gr)
@@ -139,12 +141,12 @@ contains
     call pop_sub()
   end subroutine system_end
 
-
-  !---------------------------------------------------------------------------
-  ! The reason why the next subroutines are in system is that they need to use
-  ! both mesh and atom. Previously they were inside atom, but this leads to
-  ! circular dependencies of the modules
-  !---------------------------------------------------------------------------
+  ! ---------------------------------------------------------
+  ! The reason why the next subroutines are in system is
+  ! that they need to use both mesh and atom. Previously
+  ! they were inside atom, but this leads to circular
+  ! dependencies of the modules
+  ! ---------------------------------------------------------
   subroutine atom_density(m, sb, atom, spin_channels, rho)
     type(mesh_type),      intent(in)    :: m
     type(simul_box_type), intent(in)    :: sb
@@ -168,63 +170,64 @@ contains
     ! build density ...
     select case (s%type)
     case (SPEC_USDEF) ! ... from userdef
-       do i = 1, spin_channels
-          rho(1:m%np, i) = M_ONE
-          x = (real(s%z_val, PRECISION)/real(spin_channels, PRECISION)) / dmf_integrate(m, rho(:, i))
-          rho(1:m%np, i) = x * rho(1:m%np, i) 
-       end do
+      do i = 1, spin_channels
+        rho(1:m%np, i) = M_ONE
+        x = (real(s%z_val, PRECISION)/real(spin_channels, PRECISION)) / dmf_integrate(m, rho(:, i))
+        rho(1:m%np, i) = x * rho(1:m%np, i)
+      end do
 
     case (SPEC_POINT, SPEC_JELLI) ! ... from jellium
-       in_points = 0
-       do i = 1, m%np
-          call mesh_r(m, i, r, a=atom%x)
-          if(r <= s%jradius) then
-             in_points = in_points + 1
-          end if
-       end do
+      in_points = 0
+      do i = 1, m%np
+        call mesh_r(m, i, r, a=atom%x)
+        if(r <= s%jradius) then
+          in_points = in_points + 1
+        end if
+      end do
 
 #if defined(HAVE_MPI)
-       if(m%parallel_in_domains) then
-         call MPI_Allreduce(in_points, in_points_red, 1, MPI_INTEGER, MPI_SUM, m%vp%comm, mpi_err)
-         in_points = in_points_red
-       end if
+      if(m%parallel_in_domains) then
+        call MPI_Allreduce(in_points, in_points_red, 1, MPI_INTEGER, MPI_SUM, m%vp%comm, mpi_err)
+        in_points = in_points_red
+      end if
 #endif
 
-       if(in_points > 0) then
-         do i = 1, m%np
-           call mesh_r(m, i, r, a=atom%x)
-           if(r <= s%jradius) then
-             rho(i, 1:spin_channels) = real(s%z_val, PRECISION) /   &
-                (m%vol_pp(i)*real(in_points*spin_channels, PRECISION))
-           end if
-         end do
-       end if
+      if(in_points > 0) then
+        do i = 1, m%np
+          call mesh_r(m, i, r, a=atom%x)
+          if(r <= s%jradius) then
+            rho(i, 1:spin_channels) = real(s%z_val, PRECISION) /   &
+              (m%vol_pp(i)*real(in_points*spin_channels, PRECISION))
+          end if
+        end do
+      end if
 
     case (SPEC_PS_TM2,SPEC_PS_HGH) ! ...from pseudopotential
-       ! the outer loop sums densities over atoms in neighbour cells
-       do k = 1, 3**sb%periodic_dim
-          do i = 1, m%np
-             call mesh_r(m, i, r, a=atom%x + sb%shift(k,:))
-             r = max(r, r_small)
-             do n = 1, s%ps%conf%p
-                select case(spin_channels)
-                case(1)
-                   psi1 = loct_splint(s%ps%Ur(n, 1), r)
-                   rho(i, 1) = rho(i, 1) + s%ps%conf%occ(n, 1)*psi1*psi1 /(M_FOUR*M_PI)
-                case(2)
-                   psi1 = loct_splint(s%ps%Ur(n, 1), r)
-                   psi2 = loct_splint(s%ps%Ur(n, 2), r)
-                   rho(i, 1) = rho(i, 1) + s%ps%conf%occ(n, 1)*psi1*psi1 /(M_FOUR*M_PI)
-                   rho(i, 2) = rho(i, 2) + s%ps%conf%occ(n, 2)*psi2*psi2 /(M_FOUR*M_PI)
-                end select
-             end do
+      ! the outer loop sums densities over atoms in neighbour cells
+      do k = 1, 3**sb%periodic_dim
+        do i = 1, m%np
+          call mesh_r(m, i, r, a=atom%x + sb%shift(k,:))
+          r = max(r, r_small)
+          do n = 1, s%ps%conf%p
+            select case(spin_channels)
+            case(1)
+              psi1 = loct_splint(s%ps%Ur(n, 1), r)
+              rho(i, 1) = rho(i, 1) + s%ps%conf%occ(n, 1)*psi1*psi1 /(M_FOUR*M_PI)
+            case(2)
+              psi1 = loct_splint(s%ps%Ur(n, 1), r)
+              psi2 = loct_splint(s%ps%Ur(n, 2), r)
+              rho(i, 1) = rho(i, 1) + s%ps%conf%occ(n, 1)*psi1*psi1 /(M_FOUR*M_PI)
+              rho(i, 2) = rho(i, 2) + s%ps%conf%occ(n, 2)*psi2*psi2 /(M_FOUR*M_PI)
+            end select
           end do
-       end do
+        end do
+      end do
     end select
 
   end subroutine atom_density
 
 
+  ! ---------------------------------------------------------
   ! builds a density which is the sum of the atomic densities
   subroutine system_guess_density(m, sb, geo, qtot, nspin, spin_channels, rho)
     type(mesh_type),      intent(in)  :: m
@@ -243,133 +246,133 @@ contains
     call push_sub('systm.guess_density')
 
     if (spin_channels == 1) then
-       gmd_opt = 1
+      gmd_opt = 1
     else
-       call loct_parse_int(check_inp('GuessMagnetDensity'), 2, gmd_opt)
-       if (gmd_opt < 1 .or. gmd_opt > 4) then
-          write(message(1),'(a,i1,a)') "Input: '",gmd_opt ,"' is not a valid GuessMagnetDensity"
-          message(2) = '(GuessMagnetDensity = 1 | 2 | 3 | 4)'
-          call write_fatal(2)
-       end if
+      call loct_parse_int(check_inp('GuessMagnetDensity'), 2, gmd_opt)
+      if (gmd_opt < 1 .or. gmd_opt > 4) then
+        write(message(1),'(a,i1,a)') "Input: '",gmd_opt ,"' is not a valid GuessMagnetDensity"
+        message(2) = '(GuessMagnetDensity = 1 | 2 | 3 | 4)'
+        call write_fatal(2)
+      end if
     end if
 
     rho = M_ZERO
     select case (gmd_opt)
     case (1) ! Paramagnetic
-       allocate(atom_rho(m%np, 1))
-       do ia = 1, geo%natoms
-          call atom_density(m, sb, geo%atom(ia), 1, atom_rho(1:m%np, 1:1))
-          rho(1:m%np, 1:1) = rho(1:m%np, 1:1) + atom_rho(1:m%np, 1:1)
-       end do
-       if (spin_channels == 2) then
-          rho(1:m%np, 1) = M_HALF*rho(1:m%np, 1)
-          rho(1:m%np, 2) = rho(1:m%np, 1)
-       end if
+      allocate(atom_rho(m%np, 1))
+      do ia = 1, geo%natoms
+        call atom_density(m, sb, geo%atom(ia), 1, atom_rho(1:m%np, 1:1))
+        rho(1:m%np, 1:1) = rho(1:m%np, 1:1) + atom_rho(1:m%np, 1:1)
+      end do
+      if (spin_channels == 2) then
+        rho(1:m%np, 1) = M_HALF*rho(1:m%np, 1)
+        rho(1:m%np, 2) = rho(1:m%np, 1)
+      end if
 
     case (2) ! Ferromagnetic
-       allocate(atom_rho(m%np, 2))
-       do ia = 1, geo%natoms
-          call atom_density(m, sb, geo%atom(ia), 2, atom_rho(1:m%np, 1:2))
-          call lalg_axpy(m%np, 2, M_ONE, atom_rho, rho)
-       end do
+      allocate(atom_rho(m%np, 2))
+      do ia = 1, geo%natoms
+        call atom_density(m, sb, geo%atom(ia), 2, atom_rho(1:m%np, 1:2))
+        call lalg_axpy(m%np, 2, M_ONE, atom_rho, rho)
+      end do
 
     case (3) ! Random oriented spins
-       allocate(atom_rho(m%np, 2))
-       do ia = 1, geo%natoms
-          call atom_density(m, sb, geo%atom(ia), 2, atom_rho)
+      allocate(atom_rho(m%np, 2))
+      do ia = 1, geo%natoms
+        call atom_density(m, sb, geo%atom(ia), 2, atom_rho)
 
-          if (nspin == 2) then
-             call quickrnd(iseed, rnd)
-             rnd = rnd - M_HALF
-             if (rnd > M_ZERO) then
-                rho(1:m%np, 1:2) = rho(1:m%np, 1:2) + atom_rho(1:m%np, 1:2)
-             else
-                rho(1:m%np, 1) = rho(1:m%np, 1) + atom_rho(1:m%np, 2)
-                rho(1:m%np, 2) = rho(1:m%np, 2) + atom_rho(1:m%np, 1)
-             end if
-          elseif (nspin == 4) then
-             call quickrnd(iseed, phi)
-             call quickrnd(iseed, theta)
-             phi = phi*M_TWO*M_PI
-             theta = theta*M_PI
-             rho(1:m%np, 1) = rho(1:m%np, 1) + cos(theta/M_TWO)**2*atom_rho(1:m%np, 1) &
-                  + sin(theta/M_TWO)**2*atom_rho(1:m%np, 2)
-             rho(1:m%np, 2) = rho(1:m%np, 2) + sin(theta/M_TWO)**2*atom_rho(1:m%np, 1) &
-                  + cos(theta/M_TWO)**2*atom_rho(1:m%np, 2)
-             rho(1:m%np, 3) = rho(1:m%np, 3) + cos(theta/M_TWO)*sin(theta/M_TWO)*cos(phi)* &
-                  (atom_rho(1:m%np, 1) - atom_rho(1:m%np, 2))
-             rho(1:m%np, 4) = rho(1:m%np, 4) - cos(theta/M_TWO)*sin(theta/M_TWO)*sin(phi)* &
-                  (atom_rho(1:m%np, 1) - atom_rho(1:m%np, 2))
+        if (nspin == 2) then
+          call quickrnd(iseed, rnd)
+          rnd = rnd - M_HALF
+          if (rnd > M_ZERO) then
+            rho(1:m%np, 1:2) = rho(1:m%np, 1:2) + atom_rho(1:m%np, 1:2)
+          else
+            rho(1:m%np, 1) = rho(1:m%np, 1) + atom_rho(1:m%np, 2)
+            rho(1:m%np, 2) = rho(1:m%np, 2) + atom_rho(1:m%np, 1)
           end if
-       end do
+        elseif (nspin == 4) then
+          call quickrnd(iseed, phi)
+          call quickrnd(iseed, theta)
+          phi = phi*M_TWO*M_PI
+          theta = theta*M_PI
+          rho(1:m%np, 1) = rho(1:m%np, 1) + cos(theta/M_TWO)**2*atom_rho(1:m%np, 1) &
+            + sin(theta/M_TWO)**2*atom_rho(1:m%np, 2)
+          rho(1:m%np, 2) = rho(1:m%np, 2) + sin(theta/M_TWO)**2*atom_rho(1:m%np, 1) &
+            + cos(theta/M_TWO)**2*atom_rho(1:m%np, 2)
+          rho(1:m%np, 3) = rho(1:m%np, 3) + cos(theta/M_TWO)*sin(theta/M_TWO)*cos(phi)* &
+            (atom_rho(1:m%np, 1) - atom_rho(1:m%np, 2))
+          rho(1:m%np, 4) = rho(1:m%np, 4) - cos(theta/M_TWO)*sin(theta/M_TWO)*sin(phi)* &
+            (atom_rho(1:m%np, 1) - atom_rho(1:m%np, 2))
+        end if
+      end do
 
     case (4) ! User-defined
 
-       if(loct_parse_block(check_inp('AtomsMagnetDirection'), blk) < 0) then
-          message(1) = "AtomsMagnetDirection block is not defined "
-          call write_fatal(1)
-       end if
+      if(loct_parse_block(check_inp('AtomsMagnetDirection'), blk) < 0) then
+        message(1) = "AtomsMagnetDirection block is not defined "
+        call write_fatal(1)
+      end if
 
-       if (loct_parse_block_n(blk) /= geo%natoms) then
-          message(1) = "AtomsMagnetDirection block has the wrong number of rows"
-          call write_fatal(1)
-       end if
+      if (loct_parse_block_n(blk) /= geo%natoms) then
+        message(1) = "AtomsMagnetDirection block has the wrong number of rows"
+        call write_fatal(1)
+      end if
 
-       allocate(atom_rho(m%np, 2))
-       do ia = 1, geo%natoms
-          call atom_density(m, sb, geo%atom(ia), 2, atom_rho)
+      allocate(atom_rho(m%np, 2))
+      do ia = 1, geo%natoms
+        call atom_density(m, sb, geo%atom(ia), 2, atom_rho)
 
-          if (nspin == 2) then
-             call loct_parse_block_float(blk, ia-1, 0, mag(1))
-             if (mag(1) > M_ZERO) then
-                rho(1:m%np, 1:2) = rho(1:m%np, 1:2) + atom_rho(1:m%np, 1:2)
-             else
-                rho(1:m%np, 1) = rho(1:m%np, 1) + atom_rho(1:m%np, 2)
-                rho(1:m%np, 2) = rho(1:m%np, 2) + atom_rho(1:m%np, 1)
-             end if
-
-          elseif (nspin == 4) then
-             do i = 1, 3
-                call loct_parse_block_float(blk, ia-1, i-1, mag(i))
-                if (abs(mag(i)) < CNST(1.0e-20)) mag(i) = M_ZERO
-             end do
-
-             theta = acos(mag(3)/sqrt(dot_product(mag, mag)))
-             if (mag(1) == M_ZERO) then
-                if (mag(2) == M_ZERO) then
-                   phi = M_ZERO
-                elseif (mag(2) < M_ZERO) then
-                   phi = M_PI*M_TWOTHIRD
-                elseif (mag(2) > M_ZERO) then
-                   phi = M_PI*M_HALF
-                end if
-             else
-                if (mag(2) < M_ZERO) then
-                   phi = M_TWO*M_PI - acos(mag(1)/sin(theta)/sqrt(dot_product(mag, mag)))
-                elseif (mag(2) >= M_ZERO) then
-                   phi = acos(mag(1)/sin(theta)/sqrt(dot_product(mag, mag)))
-                end if
-             end if
-
-             rho(1:m%np, 1) = rho(1:m%np, 1) + cos(theta/M_TWO)**2*atom_rho(1:m%np, 1) &
-                  + sin(theta/M_TWO)**2*atom_rho(1:m%np, 2)
-             rho(1:m%np, 2) = rho(1:m%np, 2) + sin(theta/M_TWO)**2*atom_rho(1:m%np, 1) &
-                  + cos(theta/M_TWO)**2*atom_rho(1:m%np, 2)
-             rho(1:m%np, 3) = rho(1:m%np, 3) + cos(theta/M_TWO)*sin(theta/M_TWO)*cos(phi)* &
-                  (atom_rho(1:m%np, 1) - atom_rho(1:m%np, 2))
-             rho(1:m%np, 4) = rho(1:m%np, 4) - cos(theta/M_TWO)*sin(theta/M_TWO)*sin(phi)* &
-                  (atom_rho(1:m%np, 1) - atom_rho(1:m%np, 2))
+        if (nspin == 2) then
+          call loct_parse_block_float(blk, ia-1, 0, mag(1))
+          if (mag(1) > M_ZERO) then
+            rho(1:m%np, 1:2) = rho(1:m%np, 1:2) + atom_rho(1:m%np, 1:2)
+          else
+            rho(1:m%np, 1) = rho(1:m%np, 1) + atom_rho(1:m%np, 2)
+            rho(1:m%np, 2) = rho(1:m%np, 2) + atom_rho(1:m%np, 1)
           end if
-       end do
 
-       call loct_parse_block_end(blk)
+        elseif (nspin == 4) then
+          do i = 1, 3
+            call loct_parse_block_float(blk, ia-1, i-1, mag(i))
+            if (abs(mag(i)) < CNST(1.0e-20)) mag(i) = M_ZERO
+          end do
+
+          theta = acos(mag(3)/sqrt(dot_product(mag, mag)))
+          if (mag(1) == M_ZERO) then
+            if (mag(2) == M_ZERO) then
+              phi = M_ZERO
+            elseif (mag(2) < M_ZERO) then
+              phi = M_PI*M_TWOTHIRD
+            elseif (mag(2) > M_ZERO) then
+              phi = M_PI*M_HALF
+            end if
+          else
+            if (mag(2) < M_ZERO) then
+              phi = M_TWO*M_PI - acos(mag(1)/sin(theta)/sqrt(dot_product(mag, mag)))
+            elseif (mag(2) >= M_ZERO) then
+              phi = acos(mag(1)/sin(theta)/sqrt(dot_product(mag, mag)))
+            end if
+          end if
+
+          rho(1:m%np, 1) = rho(1:m%np, 1) + cos(theta/M_TWO)**2*atom_rho(1:m%np, 1) &
+            + sin(theta/M_TWO)**2*atom_rho(1:m%np, 2)
+          rho(1:m%np, 2) = rho(1:m%np, 2) + sin(theta/M_TWO)**2*atom_rho(1:m%np, 1) &
+            + cos(theta/M_TWO)**2*atom_rho(1:m%np, 2)
+          rho(1:m%np, 3) = rho(1:m%np, 3) + cos(theta/M_TWO)*sin(theta/M_TWO)*cos(phi)* &
+            (atom_rho(1:m%np, 1) - atom_rho(1:m%np, 2))
+          rho(1:m%np, 4) = rho(1:m%np, 4) - cos(theta/M_TWO)*sin(theta/M_TWO)*sin(phi)* &
+            (atom_rho(1:m%np, 1) - atom_rho(1:m%np, 2))
+        end if
+      end do
+
+      call loct_parse_block_end(blk)
 
     end select
 
     ! we now renormalize the density (necessary if we have a charged system)
     r = M_ZERO
     do is = 1, spin_channels
-       r = r + dmf_integrate(m, rho(:, is))
+      r = r + dmf_integrate(m, rho(:, is))
     end do
 
     write(message(1),'(a,f13.6)')'Info: Unnormalized total charge = ', r
@@ -379,7 +382,7 @@ contains
     rho = r*rho
     r = M_ZERO
     do is = 1, spin_channels
-       r = r + dmf_integrate(m, rho(:, is))
+      r = r + dmf_integrate(m, rho(:, is))
     end do
 
     write(message(1),'(a,f13.6)')'Info: Renormalized total charge = ', r

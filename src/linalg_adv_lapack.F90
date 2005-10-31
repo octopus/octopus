@@ -182,27 +182,27 @@ FLOAT function ddeterminant(n, a, invert) result(d)
 
   call DLAPACK(getrf)(n, n, a(1, 1), n, ipiv(1), info)
   if(info /= 0) then
-     write(message(1), '(a, i3)') 'In dinvert, LAPACK dgetrf returned info = ', info
-     call write_fatal(1)
+    write(message(1), '(a, i3)') 'In dinvert, LAPACK dgetrf returned info = ', info
+    call write_fatal(1)
   end if
 
   d = M_ONE
   do i = 1, n
-     if(ipiv(i).ne.i) then
-       d = - d*a(i, i)
-     else
-       d = d*a(i, i)
-     endif
+    if(ipiv(i).ne.i) then
+      d = - d*a(i, i)
+    else
+      d = d*a(i, i)
+    end if
   end do
 
   invert_ = .true.; if(present(invert)) invert_ = invert
   if(invert_) then
     call DLAPACK(getri)(n, a(1, 1), n, ipiv(1), work(1), n, info)
-      if(info /= 0) then
-        write(message(1), '(a, i3)') 'In dinvert, LAPACK dgetri returned info = ', info
-        call write_fatal(1)
-      end if
-  endif
+    if(info /= 0) then
+      write(message(1), '(a, i3)') 'In dinvert, LAPACK dgetri returned info = ', info
+      call write_fatal(1)
+    end if
+  end if
 
   deallocate(work, ipiv)
 end function ddeterminant
@@ -246,11 +246,11 @@ CMPLX function zdeterminant(n, a, invert) result(d)
 
   d = M_ONE
   do i = 1, n
-     if(ipiv(i).ne.i) then
-       d = - d*a(i, i)
-     else
-       d = d*a(i, i)
-     endif
+    if(ipiv(i).ne.i) then
+      d = - d*a(i, i)
+    else
+      d = d*a(i, i)
+    end if
   end do
 
   invert_ = .true.; if(present(invert)) invert_ = invert
@@ -260,7 +260,7 @@ CMPLX function zdeterminant(n, a, invert) result(d)
       write(message(1), '(a, i3)') 'In dinvert, LAPACK dgetri returned info = ', info
       call write_fatal(1)
     end if
-  endif
+  end if
 
   Deallocate(work, ipiv)
 end function zdeterminant
@@ -275,7 +275,7 @@ subroutine dlinsyssolve(n, nhrs, a, b, x)
 
   interface
     subroutine DLAPACK(gesvx) (fact, trans, n, nhrs, a, lda, af, ldaf, ipiv, equed, r, &
-                               c, b, ldb, x, ldx, rcond, ferr, berr, work, iwork, info)
+      c, b, ldb, x, ldx, rcond, ferr, berr, work, iwork, info)
       character(1), intent(in)    :: fact, trans
       integer,      intent(in)    :: n, nhrs, lda, ldaf, ldb, ldx
       FLOAT,        intent(inout) :: a, af, r, c, b      ! a(lda,n), af(ldaf,n), r(n), c(n), b(ldb,nhrs)
@@ -296,7 +296,7 @@ subroutine dlinsyssolve(n, nhrs, a, b, x)
 
   allocate(ipiv(n), iwork(n), ferr(nhrs), berr(nhrs), work(4*n), r(n), c(n), af(n, n))
   call DLAPACK(gesvx) ("N", "N", n, nhrs, a(1, 1), n, af(1, 1), n, ipiv(1), equed, r(1), c(1), b(1, 1), n, x(1, 1), n, &
-                       rcond, ferr(1), berr(1), work(1), iwork(1), info)
+    rcond, ferr(1), berr(1), work(1), iwork(1), info)
   if(info /= 0) then
     write(message(1), '(a, i3)') 'In dlinsyssolve, LAPACK dgesvx returned info = ', info
     call write_fatal(1)

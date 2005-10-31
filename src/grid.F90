@@ -33,29 +33,28 @@ module grid
   implicit none
 
   private
-  public ::              &
-       grid_type,        &
-       grid_init_1,      &
-       grid_init_2,      &
-       grid_end,         &
-       grid_write_info,  &
-       grid_create_multigrid
+  public ::                &
+    grid_type,             &
+    grid_init_stage_1,     &
+    grid_init_stage_2,     &
+    grid_end,              &
+    grid_write_info,       &
+    grid_create_multigrid
 
   type grid_type
-     type(simul_box_type)           :: sb
-     type(geometry_type)            :: geo
-     type(mesh_type)                :: m
-     type(f_der_type)               :: f_der
-
-     type(curvlinear_type)          :: cv
-     type(multigrid_type), pointer  :: mgrid
+    type(simul_box_type)           :: sb
+    type(geometry_type)            :: geo
+    type(mesh_type)                :: m
+    type(f_der_type)               :: f_der
+    type(curvlinear_type)          :: cv
+    type(multigrid_type), pointer  :: mgrid
   end type grid_type
 
 
 contains
 
   !-------------------------------------------------------------------
-  subroutine grid_init_1(gr)
+  subroutine grid_init_stage_1(gr)
     type(grid_type),      intent(inout) :: gr
 
     call push_sub('grid.grid_init')
@@ -67,23 +66,23 @@ contains
     call f_der_init(gr%f_der, gr%sb, gr%cv%method.ne.CURV_METHOD_UNIFORM)
 
     ! now we generate create the mesh and the derivatives
-    call mesh_init_1(gr%sb, gr%m, gr%geo, gr%cv, gr%f_der%n_ghost)
-    call mesh_init_2(gr%sb, gr%m, gr%geo, gr%cv)
+    call mesh_init_stage_1(gr%sb, gr%m, gr%geo, gr%cv, gr%f_der%n_ghost)
+    call mesh_init_stage_2(gr%sb, gr%m, gr%geo, gr%cv)
 
     call pop_sub()
-  end subroutine grid_init_1
+  end subroutine grid_init_stage_1
 
 
   !-------------------------------------------------------------------
-  subroutine grid_init_2(gr, mc)
+  subroutine grid_init_stage_2(gr, mc)
     type(grid_type),      intent(inout) :: gr
     type(multicomm_type), intent(in)    :: mc
 
     logical :: filter
 
-    call mesh_init_3(gr%m, gr%geo, gr%cv,  &
-       gr%f_der%der_discr%lapl%stencil,    &
-       gr%f_der%der_discr%lapl%n, mc)
+    call mesh_init_stage_3(gr%m, gr%geo, gr%cv,  &
+      gr%f_der%der_discr%lapl%stencil,        &
+      gr%f_der%der_discr%lapl%n, mc)
 
     call f_der_build(gr%sb, gr%m, gr%f_der)
 
@@ -100,7 +99,7 @@ contains
     ! print info concerning the grid
     call grid_write_info(gr, stdout)
 
-  end subroutine grid_init_2
+  end subroutine grid_init_stage_2
 
 
   !-------------------------------------------------------------------
@@ -113,8 +112,8 @@ contains
     call mesh_end(gr%m)
 
     if(associated(gr%mgrid)) then
-       call multigrid_end(gr%mgrid)
-       deallocate(gr%mgrid); nullify(gr%mgrid)
+      call multigrid_end(gr%mgrid)
+      deallocate(gr%mgrid); nullify(gr%mgrid)
     end if
 
     call geometry_end(gr%geo)
@@ -129,9 +128,9 @@ contains
     integer,         intent(in) :: iunit
 
     if(mpiv%node .ne. 0) then
-       if(in_debug_mode) call write_debug_newlines(4)
-       return
-    endif
+      if(in_debug_mode) call write_debug_newlines(4)
+      return
+    end if
 
     write(iunit,'(/,a)') stars
     call simul_box_write_info(gr%sb, iunit)
@@ -141,6 +140,7 @@ contains
   end subroutine grid_write_info
 
 
+  !-------------------------------------------------------------------
   subroutine grid_create_multigrid(gr)
     type(grid_type), intent(inout) :: gr
 

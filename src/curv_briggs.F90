@@ -22,7 +22,7 @@
 ! This module implements the curvilinear coordinates given in
 ! E.L. Briggs, D.J. Sullivan, and J. Bernholc, PRB 54 14362 (1996)
 !
-! It assumes that the Oxiggen atom is located at x0=0 (see Eq. (12))
+! It assumes that the Oxygen atom is located at x0=0 (see Eq. (12))
 
 module curv_briggs
   use lib_oct_parser
@@ -43,7 +43,7 @@ module curv_briggs
 
 contains
 
-  !-------------------------------------
+  ! ---------------------------------------------------------
   subroutine curv_briggs_init(sb, cv)
     type(simul_box_type),   intent(in)  :: sb
     type(curv_briggs_type), intent(out) :: cv
@@ -61,7 +61,7 @@ contains
   end subroutine curv_briggs_init
 
 
-  !-------------------------------------
+  ! ---------------------------------------------------------
   subroutine curv_briggs_chi2x(sb, cv, chi, x)
     type(simul_box_type),   intent(in)  :: sb
     type(curv_briggs_type), intent(in)  :: cv
@@ -72,13 +72,13 @@ contains
 
     do i = 1, sb%dim
       x(i) = chi(i) - cv%L(i)*cv%beta/(M_TWO*M_PI)*   &
-         sin(M_TWO*M_PI*chi(i)/cv%L(i))
+        sin(M_TWO*M_PI*chi(i)/cv%L(i))
     end do
 
   end subroutine curv_briggs_chi2x
 
 
-  !-------------------------------------
+  ! ---------------------------------------------------------
   subroutine curv_briggs_jacobian_inv(sb, cv, chi, J)
     type(simul_box_type),   intent(in)  :: sb
     type(curv_briggs_type), intent(in)  :: cv

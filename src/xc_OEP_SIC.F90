@@ -17,7 +17,8 @@
 !!
 !! $Id$
 
-!!! This routine calculates the SIC exchange functional.
+! ---------------------------------------------------------
+! This routine calculates the SIC exchange functional.
 subroutine X(oep_sic) (xcs, gr, st, is, oep, ex, ec)
   type(xc_type),     intent(in)    :: xcs
   type(grid_type),   intent(inout) :: gr
@@ -60,7 +61,7 @@ subroutine X(oep_sic) (xcs, gr, st, is, oep, ex, ec)
       ec_ = ec_ - oep%sfact*ec2
 
       oep%X(lxc)(1:NP, i) = oep%X(lxc)(1:NP, i) - &
-         vxc(1:NP, 1)*R_CONJ(st%X(psi) (1:NP, 1, i, is))
+        vxc(1:NP, 1)*R_CONJ(st%X(psi) (1:NP, 1, i, is))
 
       ! calculate the Hartree contribution using poissons equation
       vxc(1:NP, 1) = M_ZERO
@@ -68,7 +69,7 @@ subroutine X(oep_sic) (xcs, gr, st, is, oep, ex, ec)
 
       ! FIXME will not work with multiparallelization
       ex_ = ex_ - M_HALF*oep%sfact*oep%socc*st%occ(i, is)* &
-         sum(vxc(1:NP, 1) * R_ABS(st%X(psi)(1:NP, 1, i, is))**2 * gr%m%vol_pp(1:NP))
+        sum(vxc(1:NP, 1) * R_ABS(st%X(psi)(1:NP, 1, i, is))**2 * gr%m%vol_pp(1:NP))
 
       oep%X(lxc)(1:NP, i) = oep%X(lxc)(1:NP, i) - vxc(1:NP, 1)*R_CONJ(st%X(psi) (1:NP, 1, i, is))
     end if
@@ -78,7 +79,7 @@ subroutine X(oep_sic) (xcs, gr, st, is, oep, ex, ec)
   if(st%st_end - st%st_start + 1 .ne. st%nst) then ! This holds only in the td part.
     call MPI_ALLREDUCE(ec_, edummy, 1, MPI_FLOAT, MPI_SUM, st%comm, ierr); ec_ = edummy
     call MPI_ALLREDUCE(ex_, edummy, 1, MPI_FLOAT, MPI_SUM, st%comm, ierr); ex_ = edummy
-  endif
+  end if
 #endif
 
   ec = ec + ec_

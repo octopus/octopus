@@ -39,7 +39,7 @@ program centergeom
   call syslabels_init(1)
   if(in_debug_mode) then
      call io_mkdir('debug')
-  endif
+  end if
   call units_init()
 
   call geometry_init_xyz(geo)              ! we need the geometry

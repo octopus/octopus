@@ -37,9 +37,9 @@ subroutine eigen_solver_plan(gr, st, hamilt, tol, niter, converged, diff)
   integer,                        intent(out)   :: converged
   FLOAT,                optional, intent(out)   :: diff(1:st%nst,1:st%d%nik)
 
-  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
   ! Local stuff
-!  integer :: n          ! Dimension of the problem.
+  !  integer :: n          ! Dimension of the problem.
   integer :: ned        ! Number of smallest eigenpairs desired
   integer :: nec        ! number of eigen-pairs converged, if initially
                         ! nec > 0, the first nec elements of eigenval, res and
@@ -65,26 +65,28 @@ subroutine eigen_solver_plan(gr, st, hamilt, tol, niter, converged, diff)
   integer, parameter  :: winsiz = 5  ! window size, number of eigenvalues computed simultaneously
   integer, parameter  :: krylov = 15 ! The Krylov subspace size.
   FLOAT,   parameter  :: eps    = CNST(1e-15)
-  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
 
   call push_sub('eigen_plan.eigen_solver_plan')
 
-!  n          = m%np*st%d%dim
+  !  n          = m%np*st%d%dim
   dim        = st%d%dim
   ned        = st%nst
   nec        = 0
   maxmatvecs = niter*st%d%nik*st%nst
   me         = ned + winsiz - 1
 
-  !Allocate memory
-  allocate(eigenval(me),        eigenvec(NP, dim, me), &
-           res(me),             v(NP, dim, krylov),    &
-           av(NP, dim, krylov), tmp(krylov),           &
-           h(krylov, krylov),   hevec(krylov, krylov), &
-           aux(NP_PART, dim))   ! Careful: aux has to range from 1 to NP_PART
-                                ! because it is input to hpsi. In parallel
-                                ! the space NP+1:NP_PART is needed for ghost
-                                ! points in the non local operator.
+  ! Allocate memory
+  ! Careful: aux has to range from 1 to NP_PART because it is input to
+  ! hpsi. In parallel the space NP+1:NP_PART is needed for ghost points
+  ! in the non local operator.
+  allocate(                                     &
+    eigenval(me),        eigenvec(NP, dim, me), &
+    res(me),             v(NP, dim, krylov),    &
+    av(NP, dim, krylov), tmp(krylov),           &
+    h(krylov, krylov),   hevec(krylov, krylov), &
+    aux(NP_PART, dim))
+
   eigenval = M_ZERO;           eigenvec = R_TOTYPE(M_ZERO)
   res      = M_ZERO;           v        = R_TOTYPE(M_ZERO)
   av       = R_TOTYPE(M_ZERO); tmp      = M_ZERO
@@ -122,7 +124,7 @@ subroutine eigen_solver_plan(gr, st, hamilt, tol, niter, converged, diff)
         blk = winsiz
       else                    !restart to work on another set of eigen-pairs
         blk = min(krylov/2, d1)
-      endif
+      end if
 
       !copy next set of Ritz vector/initial guesses to V
       do i = 1, winsiz
@@ -143,26 +145,26 @@ subroutine eigen_solver_plan(gr, st, hamilt, tol, niter, converged, diff)
           do ii = 1, nec
             av(ii, 1, d1 + 1) = X(states_dotp)(gr%m, dim, eigenvec(:,:,ii), v(:,:,i))
             call lalg_axpy(NP, dim, -av(ii, 1, d1 + 1), eigenvec(:, :, ii), v(:, :, i))
-          enddo
+          end do
           do ii = 1, i - 1
             av(ii, 1, d1 + 1) = X(states_dotp)(gr%m, dim, v(:, :, ii), v(:, :, i))
             call lalg_axpy(NP, dim, -av(ii, 1, d1 + 1), v(:, :, ii), v(:, :, i))
-          enddo
+          end do
           x = X(states_nrm2)(gr%m, dim, v(:, :, i))
           if(x .le. eps) then
             call X(mf_random)(gr%m, v(1:NP, 1, i))
           else
             call lalg_scal(NP, dim, R_TOTYPE(M_ONE/x), v(:, :, i))
             i = i + 1
-          endif
-        enddo ortho
+          end if
+        end do ortho
 
         ! matrix-vector multiplication
         do i = 1, blk
           call lalg_copy(NP, dim, v(:, :, d1 + i), aux)
           av(:, :, d1 + i) = R_TOTYPE(M_ZERO)
           call X(Hpsi)(hamilt, gr, aux, av(:, :, d1 + i), ik)
-        enddo
+        end do
         matvec = matvec + blk
 
         ! Here we calculate the last blk columns of H = V^T A V. We do not need the lower
@@ -170,8 +172,8 @@ subroutine eigen_solver_plan(gr, st, hamilt, tol, niter, converged, diff)
         do i = d1 + 1, d2
           do ii = 1, i
             h(ii, i) = X(states_dotp)(gr%m, dim, v(:, :, ii), av(:, :, i))
-          enddo
-        enddo
+          end do
+        end do
 
         ! Diagonalization in the subspace, by using LAPACK.
         call lalg_eigensolve(d2, h(1:d2, 1:d2), hevec(1:d2, 1:d2), tmp(1:d2))
@@ -182,9 +184,9 @@ subroutine eigen_solver_plan(gr, st, hamilt, tol, niter, converged, diff)
         if ( d2+1.le.krylov .and. matvec.lt.maxmatvecs) then
           ! In this case, compute only the lowest Ritz eigenpair.
           call lalg_gemv(NP, dim, d2, R_TOTYPE(M_ONE), v(:, :, 1:d2), hevec(1:d2, 1), &
-                         R_TOTYPE(M_ZERO), eigenvec(:, :, nec + 1))
+            R_TOTYPE(M_ZERO), eigenvec(:, :, nec + 1))
           call lalg_gemv(NP, dim, d2, R_TOTYPE(M_ONE), av(:, :, 1:d2), hevec(1:d2, 1), &
-                         R_TOTYPE(M_ZERO), av(:, :, d2 + 1))
+            R_TOTYPE(M_ZERO), av(:, :, d2 + 1))
           call residual(dim, av(:, :, d2+1), eigenvec(:, :, nec+1), tmp(1), av(:, :, d2+1), res(nec+1))
 
           ! If the first Ritz eigen-pair converged, compute all
@@ -192,40 +194,40 @@ subroutine eigen_solver_plan(gr, st, hamilt, tol, niter, converged, diff)
           if(res(nec+1)<tol) then
             do i = 2, winsiz
               call lalg_gemv(NP, dim, d2, R_TOTYPE(M_ONE), v(:, :, 1:d2), hevec(1:d2, i), &
-                             R_TOTYPE(M_ZERO), eigenvec(:, :, nec+i))
+                R_TOTYPE(M_ZERO), eigenvec(:, :, nec+i))
             end do
             do i = 2, winsiz
               call lalg_gemv(NP, dim, d2, R_TOTYPE(M_ONE), av(:, :, 1:d2), hevec(1:d2, i), &
-                             R_TOTYPE(M_ZERO), v  (:, :, i))
-            enddo
+                R_TOTYPE(M_ZERO), v  (:, :, i))
+            end do
             do i = 2, winsiz
               call residual(dim, v(:, :, i), eigenvec(:, :, nec+i), tmp(i), av(:, :, i), res(nec+i))
-            enddo
-          endif
+            end do
+          end if
           d1 = d2
         else
           do i = 1, winsiz
             call lalg_gemv(NP, dim, d2, R_TOTYPE(M_ONE), v(:, :, 1:d2), hevec(1:d2, i), &
-                           R_TOTYPE(M_ZERO), eigenvec(:, :, nec+i))
-          enddo
+              R_TOTYPE(M_ZERO), eigenvec(:, :, nec+i))
+          end do
           do i = 1, winsiz
             call lalg_gemv(NP, dim, d2, R_TOTYPE(M_ONE), av(:, :, 1:d2), hevec(1:d2, i), &
-                           R_TOTYPE(M_ZERO), v(:, :, i))
-          enddo
+              R_TOTYPE(M_ZERO), v(:, :, i))
+          end do
           do i = 1, winsiz
             call lalg_copy(NP, dim, v(:, :, i), av(:, :, i))
             call lalg_copy(NP, dim, eigenvec(:, :, nec + i), v(:, :, i))
             call residual(dim, av(:, :, i), v(:, :, i), tmp(i), av(:, :, winsiz+i), res(nec+i))
-          enddo
+          end do
 
           ! Forms the first winsiz rows of H = V^T A V
           do i = 1, winsiz
             do ii = 1, i
               h(ii, i) = X(states_dotp)(gr%m, dim, v(:, :, ii), av(:, :, i))
-            enddo
-          enddo
+            end do
+          end do
           d1 = winsiz
-        endif
+        end if
         blk = 1
 
         ! Convergence test, and reordering of the eigenpairs. Starts checking
@@ -242,8 +244,8 @@ subroutine eigen_solver_plan(gr, st, hamilt, tol, niter, converged, diff)
             x = eigenval(j-1); eigenval(j-1) = eigenval(j); eigenval(j) = x
             x = res(j-1); res(j-1) = res(j); res(j) = x
             call lalg_swap(NP, dim, eigenvec(:, :, j), eigenvec(:, :, j-1))
-          enddo
-        enddo ordering
+          end do
+        end do ordering
 
         ! If the maximum mat-vecs is surpassed, get out of here.
         if(matvec > maxmatvecs) exit outer_loop
@@ -253,27 +255,27 @@ subroutine eigen_solver_plan(gr, st, hamilt, tol, niter, converged, diff)
           nec = nec + nconv
           if (d2+1 > krylov) d1 = d2
           cycle outer_loop
-        endif
+        end if
 
         ! Preconditioning
         do idim = 1, dim
           call lalg_copy(NP, av(1:NP, idim, d1 + 1), aux(1:NP, idim))
           call apply_filter(aux(:, idim), v(:, idim, d1+1))
-        enddo
+        end do
 
-      enddo inner_loop
-    enddo outer_loop
+      end do inner_loop
+    end do outer_loop
 
     do i = 1, st%nst
       call lalg_copy(NP, dim, eigenvec(:, :, i), st%X(psi)(:, :, i, ik))
       st%eigenval(i, ik) = eigenval(i)
       diff(i, ik) = res(i)
-    enddo
+    end do
 
     knec = knec + nec
     niter = niter + matvec
 
-  enddo k_points
+  end do k_points
 
   converged = knec
   deallocate(eigenval, eigenvec, res,  v, av, tmp, h, hevec, aux)
@@ -281,6 +283,7 @@ subroutine eigen_solver_plan(gr, st, hamilt, tol, niter, converged, diff)
 
 contains
 
+  ! ---------------------------------------------------------
   subroutine residual(dim, hv, v, e, res, r)
     integer, intent(in)    :: dim
     R_TYPE,  intent(inout) :: hv(:,:)
@@ -297,6 +300,8 @@ contains
     call pop_sub()
   end subroutine residual
 
+
+  ! ---------------------------------------------------------
   subroutine apply_filter(fi, fo)
     R_TYPE, intent(in), target  :: fi(:)
     R_TYPE, intent(out) :: fo(:)

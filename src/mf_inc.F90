@@ -18,7 +18,8 @@
 !! $Id$
 
 
-!!!  integrates a function
+! ---------------------------------------------------------
+! integrates a function
 R_TYPE function X(mf_integrate) (mesh, f) result(d)
   type(mesh_type), intent(in) :: mesh
   R_TYPE,          intent(in) :: f(:)  ! f(mesh%np)
@@ -39,11 +40,11 @@ R_TYPE function X(mf_integrate) (mesh, f) result(d)
 
 end function X(mf_integrate)
 
-
-!!! this function returns the dot product between two vectors
+! ---------------------------------------------------------
+! this function returns the dot product between two vectors
 R_TYPE function X(mf_dotp)(mesh, f1, f2) result(dotp)
   type(mesh_type), intent(in) :: mesh
-  R_TYPE,          intent(in) :: f1(:), f2(:) 
+  R_TYPE,          intent(in) :: f1(:), f2(:)
 
   R_TYPE, allocatable :: l(:)
   R_TYPE              :: dotp_tmp
@@ -70,7 +71,7 @@ R_TYPE function X(mf_dotp)(mesh, f1, f2) result(dotp)
 #if defined(HAVE_MPI)
     call profiling_in(C_PROFILING_MF_DOTP_ALLREDUCE)
     call TS(MPI_Allreduce)(dotp_tmp, dotp, 1, R_MPITYPE, &
-       MPI_SUM, mesh%vp%comm, ierr)
+      MPI_SUM, mesh%vp%comm, ierr)
     call profiling_out(C_PROFILING_MF_DOTP_ALLREDUCE)
 #endif
   else
@@ -82,8 +83,8 @@ R_TYPE function X(mf_dotp)(mesh, f1, f2) result(dotp)
 
 end function X(mf_dotp)
 
-
-!!! this function returns the norm of a vector
+! ---------------------------------------------------------
+! this function returns the norm of a vector
 FLOAT function X(mf_nrm2)(m, f) result(nrm2)
   type(mesh_type), intent(in) :: m
   R_TYPE,          intent(in) :: f(:)
@@ -91,17 +92,17 @@ FLOAT function X(mf_nrm2)(m, f) result(nrm2)
   call profiling_in(C_PROFILING_MF_NRM2)
 
   call push_sub('mf_inc.Xmf_dotp')
-  
+
   nrm2 = sqrt(X(mf_dotp) (m, f, f))
-  
+
   call pop_sub()
 
   call profiling_out(C_PROFILING_MF_NRM2)
 
 end function X(mf_nrm2)
 
-
-!!! This function calculates the x_i moment of the function f
+! ---------------------------------------------------------
+! This function calculates the x_i moment of the function f
 function X(mf_moment) (m, f, i, n) result(r)
   type(mesh_type), intent(in) :: m
   R_TYPE,          intent(in) :: f(1:m%np)  ! f(m%np)
@@ -115,14 +116,14 @@ function X(mf_moment) (m, f, i, n) result(r)
 #else
   r = sum(f(1:m%np)*m%x(1:m%np,i)**n * m%vol_pp(1:m%np))
 #endif
-  
+
   call pop_sub()
 
 end function X(mf_moment)
 
-
-!!! This subroutine generates a gaussian wave-function in a random
-!!! position in space
+! ---------------------------------------------------------
+! This subroutine generates a gaussian wave-function in a
+! random position in space
 subroutine X(mf_random)(m, f)
   type(mesh_type),      intent(in)  :: m
   R_TYPE,               intent(out) :: f(1:m%np)
@@ -131,7 +132,7 @@ subroutine X(mf_random)(m, f)
   integer :: i
   FLOAT :: a(3), rnd, r
 
-  call push_sub('mf_inc.states_random')
+  call push_sub('mf_inc.Xstates_random')
 
   call quickrnd(iseed, rnd)
   a(1) = M_TWO*(2*rnd - 1)
@@ -141,8 +142,8 @@ subroutine X(mf_random)(m, f)
   a(3) = M_TWO*(2*rnd - 1)
 
   do i = 1, m%np
-     call mesh_r(m, i, r, a=a)
-     f(i) = exp(-M_HALF*r*r)
+    call mesh_r(m, i, r, a=a)
+    f(i) = exp(-M_HALF*r*r)
   end do
 
   r = X(mf_nrm2)(m, f)

@@ -20,229 +20,239 @@
 #include "global.h"
 
 module lasers
-use global
-use messages
-use syslabels
-use io
-use lib_oct_parser
-use lib_oct_gsl_spline
-use units
-use mesh
-use simul_box
-use output
+  use global
+  use messages
+  use syslabels
+  use io
+  use lib_oct_parser
+  use lib_oct_gsl_spline
+  use units
+  use mesh
+  use simul_box
+  use output
 
-implicit none
+  implicit none
 
-private
-public :: laser_type,         &
-          laser_init,         &
-          laser_end,          &
-          laser_write_info,   &
-          laser_field,        &
-          laser_vector_field, &
-          laser_potential
+  private
+  public ::                      &
+    laser_type,                  &
+    laser_init,                  &
+    laser_end,                   &
+    laser_write_info,            &
+    laser_field,                 &
+    laser_vector_field,          &
+    laser_potential
 
-integer, parameter :: ENVELOPE_GAUSSIAN    = 1, &
-                      ENVELOPE_COSINOIDAL  = 2, &
-                      ENVELOPE_TRAPEZOIDAL = 3, &
-                      ENVELOPE_FROM_FILE   = 10, &
-                      ENVELOPE_NUMERICAL   = 99
+  integer, parameter ::          &
+    ENVELOPE_GAUSSIAN      =  1, &
+    ENVELOPE_COSINOIDAL    =  2, &
+    ENVELOPE_TRAPEZOIDAL   =  3, &
+    ENVELOPE_FROM_FILE     = 10, &
+    ENVELOPE_NUMERICAL     = 99
+ 
+  integer, parameter ::          &
+    SPATIAL_PART_DIPOLE    =  1, &
+    SPATIAL_PART_FROM_FILE =  2
 
-integer, parameter :: SPATIAL_PART_DIPOLE    = 1, &
-                      SPATIAL_PART_FROM_FILE = 2
+  type laser_type
+    CMPLX :: pol(3) ! the polarization of the laser
+    FLOAT :: A0     ! the initial amplitude of the laser
+    FLOAT :: omega0 ! the average frequency of the laser
 
-type laser_type
-  CMPLX :: pol(3) ! the polarization of the laser
-  FLOAT :: A0     ! the initial amplitude of the laser
-  FLOAT :: omega0 ! the average frequency of the laser
+    integer  :: envelope
+    integer  :: spatial_part
 
-  integer  :: envelope
-  integer  :: spatial_part
+    FLOAT :: t0     ! the maximum of the pulse
+    FLOAT :: tau0   ! the width of the pulse
+    FLOAT :: tau1   ! for the ramped shape, the length of the "ramping" intervals
+                    ! (tau0 will be the length of the constant interval)
 
-  FLOAT :: t0     ! the maximum of the pulse
-  FLOAT :: tau0   ! the width of the pulse
-  FLOAT :: tau1   ! for the ramped shape, the length of the "ramping" intervals
-                     ! (tau0 will be the length of the constant interval)
+    FLOAT, pointer :: numerical(:,:)    ! when the laser is numerical
+    FLOAT :: dt
 
-  FLOAT, pointer :: numerical(:,:) ! when the laser is numerical
-  FLOAT :: dt
+    type(loct_spline_type) :: phase     ! when reading a laser from a file
+    type(loct_spline_type) :: amplitude
 
-  type(loct_spline_type) :: phase      ! when reading a laser from a file
-  type(loct_spline_type) :: amplitude
+    FLOAT, pointer :: v(:)              ! the spatial part.
 
-  FLOAT, pointer :: v(:) ! the spatial part.
-
-  ! For the velocity gauge
-  ! cosine envelope
-  CMPLX :: field_1
-  FLOAT :: w1, a1, r1
-end type laser_type
+    ! For the velocity gauge
+    ! cosine envelope
+    CMPLX :: field_1
+    FLOAT :: w1, a1, r1
+  end type laser_type
 
 contains
 
-subroutine laser_init(no_l, l, m)
-  integer, intent(out) :: no_l
-  type(laser_type), pointer :: l(:)
-  type(mesh_type), intent(in) :: m
 
-  integer :: i, no_c
-  integer(POINTER_SIZE) :: blk
-  character(len=50) :: filename1, filename2
+  ! ---------------------------------------------------------
+  subroutine laser_init(no_l, l, m)
+    integer, intent(out) :: no_l
+    type(laser_type), pointer :: l(:)
+    type(mesh_type), intent(in) :: m
 
-  call push_sub('lasers.laser_init')
+    integer :: i, no_c
+    integer(POINTER_SIZE) :: blk
+    character(len=50) :: filename1, filename2
+
+    call push_sub('lasers.laser_init')
+
+    !%Variable TDLasers
+    !%Type block
+    !%Section 10 Time-dependent
+    !%Description
+    !% The block TDLasers describe the type and shape of time-dependent external perturbations
+    !% that are applied to the system.
+    !% Each line of the block describes a laser field; this way you can actually have more
+    !% than one laser (e.g. a "pump" and a "probe").
+    !% The syntax of each line is, then:
+    !%
+    !% %TDLasers
+    !% nx | ny | nz | amplitude | omega | envelope | tau0 | t0 | tau1 | filename1 | filename2
+    !% %
+    !%
+    !% The first three (possibly complex) numbers mark the polarization direction of the
+    !% field. The "amplitude" is obviously the amplitude of the field. The "omega" is the
+    !% frequency. The "envelope" decides the shape of the enveloping function -- see the
+    !% manual for details. "tau0", "t0" and "tau1" are three paramenters that decide on the
+    !% temporal shape of the pulse -- the exact details depend on the particular envelope.
+    !% If the envelope is given in a file, this will be "filename1". If the spatial part
+    !% of the field is given in a file, this will be "filename2".
+    !%
+    !% The last three columns ("tau1", "filename1" and "filename2") are optional; they will
+    !% only be searched if needed.
+    !%
+    !% In order to give the spatial shape of the field in a file, the component "filename2"
+    !% has to be present. If it is not present, then the laser field will be a dipolar field
+    !% (which is the usual case).
+    !%End
+    no_l = 0
+    if(loct_parse_block(check_inp('TDLasers'), blk) == 0) then
+      no_l = loct_parse_block_n(blk)
+      allocate(l(no_l))
+
+      ! The structure of the block is:
+      ! nx | ny | nz | amplitude | omega | envelope | tau0 | t0 | tau1 | filename1 | filename2
+      do i = 1, no_l
+        no_c = loct_parse_block_cols(blk, i-1)
+        call loct_parse_block_cmplx(blk, i-1, 0, l(i)%pol(1))
+        call loct_parse_block_cmplx(blk, i-1, 1, l(i)%pol(2))
+        call loct_parse_block_cmplx(blk, i-1, 2, l(i)%pol(3))
+        call loct_parse_block_float(blk, i-1, 3, l(i)%A0)
+        call loct_parse_block_float(blk, i-1, 4, l(i)%omega0)
+        call loct_parse_block_int  (blk, i-1, 5, l(i)%envelope)
+        call loct_parse_block_float(blk, i-1, 6, l(i)%tau0)
+        call loct_parse_block_float(blk, i-1, 7, l(i)%t0)
+        if(no_c>8)  call loct_parse_block_float(blk, i-1, 8, l(i)%tau1)
+        if(no_c>9) call loct_parse_block_string(blk, i-1, 9, filename1)
+        if(no_c>10) call loct_parse_block_string(blk, i-1, 10, filename2)
+
+        l(i)%A0     = l(i)%A0 * units_inp%energy%factor / units_inp%length%factor
+        l(i)%omega0 = l(i)%omega0 * units_inp%energy%factor
+        l(i)%tau0 = l(i)%tau0 * units_inp%time%factor
+        l(i)%t0   = l(i)%t0   * units_inp%time%factor
+        l(i)%tau1 = l(i)%tau1 * units_inp%time%factor
+
+        if(l(i)%envelope == ENVELOPE_TRAPEZOIDAL .and. no_c < 9)  call input_error('TDLasers')
+        if(l(i)%envelope == ENVELOPE_FROM_FILE   .and. no_c < 10) call input_error('TDLasers')
+        if(no_c>10) l(i)%spatial_part = SPATIAL_PART_FROM_FILE
+
+        if(l(i)%envelope == ENVELOPE_FROM_FILE)         call get_envelope_from_file(l(i), trim(filename1))
+        if(l(i)%spatial_part == SPATIAL_PART_FROM_FILE) call get_spatial_part_from_file(l(i), trim(filename2))
+
+        ! normalize polarization
+        l(i)%pol(:) = l(i)%pol(:)/sqrt(sum(abs(l(i)%pol(:))**2))
+
+        ! velocity gauge
+        if(l(i)%envelope == ENVELOPE_COSINOIDAL) then
+          ! setup some constants
+          l(i)%w1 = M_PI/ (M_TWO*l(i)%tau0)
+          l(i)%a1 = -M_PI/M_TWO * (M_TWO + l(i)%t0/l(i)%tau0)
+          l(i)%r1 = 1/((l(i)%w1 - l(i)%omega0)*(l(i)%w1 + l(i)%omega0))
+          l(i)%field_1 = -M_zI * l(i)%omega0 * cos(l(i)%a1) &
+            - l(i)%w1 * sin(l(i)%a1)
+        end if
+
+      end do
+
+      call loct_parse_block_end(blk)
+    end if
+
+    call pop_sub()
+
+  contains
 
 
-  !%Variable TDLasers
-  !%Type block
-  !%Section 10 Time-dependent
-  !%Description
-  !% The block TDLasers describe the type and shape of time-dependent external perturbations
-  !% that are applied to the system.
-  !% Each line of the block describes a laser field; this way you can actually have more
-  !% than one laser (e.g. a "pump" and a "probe").
-  !% The syntax of each line is, then:
-  !%
-  !% %TDLasers
-  !% nx | ny | nz | amplitude | omega | envelope | tau0 | t0 | tau1 | filename1 | filename2
-  !% %
-  !%
-  !% The first three (possibly complex) numbers mark the polarization direction of the
-  !% field. The "amplitude" is obviously the amplitude of the field. The "omega" is the
-  !% frequency. The "envelope" decides the shape of the enveloping function -- see the
-  !% manual for details. "tau0", "t0" and "tau1" are three paramenters that decide on the
-  !% temporal shape of the pulse -- the exact details depend on the particular envelope.
-  !% If the envelope is given in a file, this will be "filename1". If the spatial part
-  !% of the field is given in a file, this will be "filename2".
-  !%
-  !% The last three columns ("tau1", "filename1" and "filename2") are optional; they will
-  !% only be searched if needed.
-  !%
-  !% In order to give the spatial shape of the field in a file, the component "filename2"
-  !% has to be present. If it is not present, then the laser field will be a dipolar field
-  !% (which is the usual case).
-  !%End
-  no_l = 0
-  if(loct_parse_block(check_inp('TDLasers'), blk) == 0) then
-    no_l = loct_parse_block_n(blk)
-    allocate(l(no_l))
+    ! ---------------------------------------------------------
+    subroutine get_spatial_part_from_file(l, filename)
+      type(laser_type), intent(inout) :: l
+      character(len=*), intent(in) :: filename
 
-    ! The structure of the block is:
-    ! nx | ny | nz | amplitude | omega | envelope | tau0 | t0 | tau1 | filename1 | filename2
-    do i = 1, no_l
-      no_c = loct_parse_block_cols(blk, i-1)
-      call loct_parse_block_cmplx(blk, i-1, 0, l(i)%pol(1))
-      call loct_parse_block_cmplx(blk, i-1, 1, l(i)%pol(2))
-      call loct_parse_block_cmplx(blk, i-1, 2, l(i)%pol(3))
-      call loct_parse_block_float(blk, i-1, 3, l(i)%A0)
-      call loct_parse_block_float(blk, i-1, 4, l(i)%omega0)
-      call loct_parse_block_int  (blk, i-1, 5, l(i)%envelope)
-      call loct_parse_block_float(blk, i-1, 6, l(i)%tau0)
-      call loct_parse_block_float(blk, i-1, 7, l(i)%t0)
-      if(no_c>8)  call loct_parse_block_float(blk, i-1, 8, l(i)%tau1)
-      if(no_c>9) call loct_parse_block_string(blk, i-1, 9, filename1)
-      if(no_c>10) call loct_parse_block_string(blk, i-1, 10, filename2)
+      integer :: ierr
 
-      l(i)%A0     = l(i)%A0 * units_inp%energy%factor / units_inp%length%factor
-      l(i)%omega0 = l(i)%omega0 * units_inp%energy%factor
-      l(i)%tau0 = l(i)%tau0 * units_inp%time%factor
-      l(i)%t0   = l(i)%t0   * units_inp%time%factor
-      l(i)%tau1 = l(i)%tau1 * units_inp%time%factor
-
-      if(l(i)%envelope == ENVELOPE_TRAPEZOIDAL .and. no_c < 9)  call input_error('TDLasers')
-      if(l(i)%envelope == ENVELOPE_FROM_FILE   .and. no_c < 10) call input_error('TDLasers')
-      if(no_c>10) l(i)%spatial_part = SPATIAL_PART_FROM_FILE
-
-      if(l(i)%envelope == ENVELOPE_FROM_FILE)         call get_envelope_from_file(l(i), trim(filename1))
-      if(l(i)%spatial_part == SPATIAL_PART_FROM_FILE) call get_spatial_part_from_file(l(i), trim(filename2))
-
-      ! normalize polarization
-      l(i)%pol(:) = l(i)%pol(:)/sqrt(sum(abs(l(i)%pol(:))**2))
-
-      ! velocity gauge
-      if(l(i)%envelope == ENVELOPE_COSINOIDAL) then
-        ! setup some constants
-        l(i)%w1 = M_PI/ (M_TWO*l(i)%tau0)
-        l(i)%a1 = -M_PI/M_TWO * (M_TWO + l(i)%t0/l(i)%tau0)
-        l(i)%r1 = 1/((l(i)%w1 - l(i)%omega0)*(l(i)%w1 + l(i)%omega0))
-        l(i)%field_1 = -M_zI * l(i)%omega0 * cos(l(i)%a1) &
-             - l(i)%w1 * sin(l(i)%a1)
+      allocate(l%v(m%np))
+      call dinput_function(filename, m, l%v(:), ierr)
+      if(ierr < 0) then
+        write(message(1),'(a)') "Could not read the external field spatial part."
+        write(message(2),'(a)') "Expected in file '"//trim(filename)//"'"
+        call write_fatal(2)
       end if
 
-    end do
+    end subroutine get_spatial_part_from_file
 
-    call loct_parse_block_end(blk)
-  end if
 
-  call pop_sub()
+    ! ---------------------------------------------------------
+    subroutine get_envelope_from_file(l, filename)
+      type(laser_type), intent(inout) :: l
+      character(len=*), intent(in) :: filename
 
-contains
+      integer :: iunit, lines, j
+      FLOAT :: dummy
+      FLOAT, allocatable :: t(:), am(:), ph(:)
 
-  subroutine get_spatial_part_from_file(l, filename)
-    type(laser_type), intent(inout) :: l
-    character(len=*), intent(in) :: filename
+      iunit = io_open(filename, action='read', status='old')
 
-    integer :: ierr
+      ! count lines in file
+      lines = 0
+      do
+        read(iunit, *, err=100, end=100) dummy, dummy, dummy
+        lines = lines + 1
+      end do
+100   continue
+      rewind(iunit)
 
-    allocate(l%v(m%np))
-    call dinput_function(filename, m, l%v(:), ierr)
-    if(ierr < 0) then
-       write(message(1),'(a)') "Could not read the external field spatial part."
-       write(message(2),'(a)') "Expected in file '"//trim(filename)//"'"
-       call write_fatal(2)
-    endif
+      ! allocate and read info
+      allocate(t(lines), am(lines), ph(lines))
+      do j = 1, lines
+        read(iunit, *, err=100, end=100) t(j), am(j), ph(j)
+      end do
+      call io_close(iunit)
 
-  end subroutine get_spatial_part_from_file
+      ! build splines
+      t = t*l%tau0
+      call loct_spline_init(l%amplitude)
+      call loct_spline_fit(lines, t, am, l%amplitude)
 
-  subroutine get_envelope_from_file(l, filename)
-    type(laser_type), intent(inout) :: l
-    character(len=*), intent(in) :: filename
+      call loct_spline_init(l%phase)
+      call loct_spline_fit(lines, t, ph, l%phase)
 
-    integer :: iunit, lines, j
-    FLOAT :: dummy
-    FLOAT, allocatable :: t(:), am(:), ph(:)
+      ! clean
+      deallocate(t, am, ph)
 
-    iunit = io_open(filename, action='read', status='old')
+    end subroutine get_envelope_from_file
+  end subroutine laser_init
 
-    ! count lines in file
-    lines = 0
-    do
-      read(iunit, *, err=100, end=100) dummy, dummy, dummy
-      lines = lines + 1
-    end do
-100 continue
-    rewind(iunit)
 
-    ! allocate and read info
-    allocate(t(lines), am(lines), ph(lines))
-    do j = 1, lines
-      read(iunit, *, err=100, end=100) t(j), am(j), ph(j)
-    end do
-    call io_close(iunit)
+  ! ---------------------------------------------------------
+  subroutine laser_end(no_l, l)
+    integer, intent(in) :: no_l
+    type(laser_type), pointer :: l(:)
 
-    ! build splines
-    t = t*l%tau0
-    call loct_spline_init(l%amplitude)
-    call loct_spline_fit(lines, t, am, l%amplitude)
+    integer :: i
 
-    call loct_spline_init(l%phase)
-    call loct_spline_fit(lines, t, ph, l%phase)
+    if(no_l <= 0) return
 
-    ! clean
-    deallocate(t, am, ph)
-
-  end subroutine get_envelope_from_file
-end subroutine laser_init
-
-subroutine laser_end(no_l, l)
-  integer, intent(in) :: no_l
-  type(laser_type), pointer :: l(:)
-
-  integer :: i
-
-  if(no_l <= 0) return
-
-  do i = 1, no_l
-    select case(l(i)%envelope)
+    do i = 1, no_l
+      select case(l(i)%envelope)
       case(ENVELOPE_FROM_FILE)
         call loct_spline_end(l(i)%amplitude)
         call loct_spline_end(l(i)%phase)
@@ -250,149 +260,158 @@ subroutine laser_end(no_l, l)
         if(associated(l(i)%numerical)) then
           deallocate(l(i)%numerical); nullify(l(i)%numerical)
         end if
-    end select
-    if(l(i)%spatial_part == SPATIAL_PART_FROM_FILE) then
-      deallocate(l(i)%v); nullify(l(i)%v)
-    endif
-  end do
-
-  deallocate(l); nullify(l)
-
-end subroutine laser_end
-
-subroutine laser_write_info(no_l, l, iunit)
-  integer, intent(in) :: no_l, iunit
-  type(laser_type), intent(in) :: l(no_l)
-
-  integer :: i
-
-  do i = 1, no_l
-    write(iunit,'(i2,a)') i,':'
-    write(iunit,'(3x,a,3(a1,f7.4,a1,f7.4,a1))') 'Polarization: ', &
-         '(', real(l(i)%pol(1)), ',', aimag(l(i)%pol(1)), '), ', &
-         '(', real(l(i)%pol(2)), ',', aimag(l(i)%pol(2)), '), ', &
-         '(', real(l(i)%pol(3)), ',', aimag(l(i)%pol(3)), ')'
-    write(iunit,'(3x,a,i2)')    'Envelope:     ', l(i)%envelope
-    write(iunit,'(3x,a,f10.4,3a)') 'Frequency: ', l(i)%omega0/units_inp%energy%factor, &
-         ' [', trim(units_inp%energy%abbrev), ']'
-    write(iunit,'(3x,a,f10.4,5a)') 'Amplitude: ', &
-         l(i)%A0/units_inp%energy%factor*units_inp%length%factor, &
-         ' [', trim(units_inp%energy%abbrev), '/', trim(units_inp%length%abbrev), ']'
-    write(iunit, '(3x,a,es14.4,a)') 'Intensity: ', &
-         (l(i)%A0*CNST(5.14225e9))**2*CNST(1.3272e-3), " [W/cm^2]"
-    if(l(i)%envelope == ENVELOPE_FROM_FILE) then
-      write(iunit, '(3x,a)') 'Amplitude and phase information read from file.'
-    else
-      write(iunit,'(3x,a,f10.4,3a)') 'Width:     ', l(i)%tau0/units_inp%time%factor, &
-         ' [', trim(units_inp%time%abbrev), ']'
-      write(iunit,'(3x,a,f10.4,3a)') 'Middle t:  ', l(i)%t0/units_inp%time%factor, &
-           ' [', trim(units_inp%time%abbrev), ']'
-      if(l(i)%envelope == ENVELOPE_TRAPEZOIDAL) then
-        write(iunit,'(3x,a,f10.4,3a)') 'Ramp time: ', l(i)%tau1/units_inp%time%factor, &
-             ' [', trim(units_inp%time%abbrev), ']'
+      end select
+      if(l(i)%spatial_part == SPATIAL_PART_FROM_FILE) then
+        deallocate(l(i)%v); nullify(l(i)%v)
       end if
-    endif
-    if(l(i)%spatial_part == SPATIAL_PART_FROM_FILE) then
-      write(iunit,'(3x,a)') 'The spatial part of the field is read from a file.'
-    endif
-  end do
+    end do
 
-end subroutine laser_write_info
+    deallocate(l); nullify(l)
 
-subroutine laser_potential(sb, no_l, l, t, m, pot)
-  type(simul_box_type), intent(in) :: sb
-  integer,          intent(in)  :: no_l
-  type(laser_type), intent(in)  :: l(no_l)
-  FLOAT,            intent(in)  :: t
-  type(mesh_type),  intent(in)  :: m
-  FLOAT,            intent(out) :: pot(m%np)
+  end subroutine laser_end
 
-  CMPLX :: amp
-  integer :: i, j
-  FLOAT :: field(sb%dim)
 
-  if(no_l == 0) then
-    pot(1:m%np) = M_ZERO
-    return
-  end if
+  ! ---------------------------------------------------------
+  subroutine laser_write_info(no_l, l, iunit)
+    integer, intent(in) :: no_l, iunit
+    type(laser_type), intent(in) :: l(no_l)
 
-  pot = M_ZERO
-  do i = 1, no_l
-     call laser_amplitude(l(i), t, amp)
-     if(l(i)%spatial_part == SPATIAL_PART_FROM_FILE) then
-       do j = 1, m%np
-          pot(j) = pot(j) + real(amp*l(i)%v(j))
-       enddo
-     else
-       field(1:sb%dim) = real(amp*l(i)%pol(1:sb%dim))
-       do j = 1, m%np
-          pot(j) = pot(j) + sum(field(:)*m%x(j,:))
-       enddo
-     endif
-  enddo
+    integer :: i
 
-end subroutine laser_potential
+    do i = 1, no_l
+      write(iunit,'(i2,a)') i,':'
+      write(iunit,'(3x,a,3(a1,f7.4,a1,f7.4,a1))') 'Polarization: ', &
+        '(', real(l(i)%pol(1)), ',', aimag(l(i)%pol(1)), '), ', &
+        '(', real(l(i)%pol(2)), ',', aimag(l(i)%pol(2)), '), ', &
+        '(', real(l(i)%pol(3)), ',', aimag(l(i)%pol(3)), ')'
+      write(iunit,'(3x,a,i2)')    'Envelope:     ', l(i)%envelope
+      write(iunit,'(3x,a,f10.4,3a)') 'Frequency: ', l(i)%omega0/units_inp%energy%factor, &
+        ' [', trim(units_inp%energy%abbrev), ']'
+      write(iunit,'(3x,a,f10.4,5a)') 'Amplitude: ', &
+        l(i)%A0/units_inp%energy%factor*units_inp%length%factor, &
+        ' [', trim(units_inp%energy%abbrev), '/', trim(units_inp%length%abbrev), ']'
+      write(iunit, '(3x,a,es14.4,a)') 'Intensity: ', &
+        (l(i)%A0*CNST(5.14225e9))**2*CNST(1.3272e-3), " [W/cm^2]"
+      if(l(i)%envelope == ENVELOPE_FROM_FILE) then
+        write(iunit, '(3x,a)') 'Amplitude and phase information read from file.'
+      else
+        write(iunit,'(3x,a,f10.4,3a)') 'Width:     ', l(i)%tau0/units_inp%time%factor, &
+          ' [', trim(units_inp%time%abbrev), ']'
+        write(iunit,'(3x,a,f10.4,3a)') 'Middle t:  ', l(i)%t0/units_inp%time%factor, &
+          ' [', trim(units_inp%time%abbrev), ']'
+        if(l(i)%envelope == ENVELOPE_TRAPEZOIDAL) then
+          write(iunit,'(3x,a,f10.4,3a)') 'Ramp time: ', l(i)%tau1/units_inp%time%factor, &
+            ' [', trim(units_inp%time%abbrev), ']'
+        end if
+      end if
+      if(l(i)%spatial_part == SPATIAL_PART_FROM_FILE) then
+        write(iunit,'(3x,a)') 'The spatial part of the field is read from a file.'
+      end if
+    end do
 
-subroutine laser_field(sb, no_l, l, t, field)
-  type(simul_box_type), intent(in) :: sb
-  integer,          intent(in)  :: no_l
-  type(laser_type), intent(in)  :: l(no_l)
-  FLOAT,            intent(in)  :: t
-  FLOAT,            intent(out) :: field(sb%dim)
+  end subroutine laser_write_info
 
-  CMPLX :: amp
-  integer :: i
 
-  if(no_l == 0) then
-    field(1:sb%dim) = M_ZERO
-    return
-  end if
+  ! ---------------------------------------------------------
+  subroutine laser_potential(sb, no_l, l, t, m, pot)
+    type(simul_box_type), intent(in) :: sb
+    integer,          intent(in)  :: no_l
+    type(laser_type), intent(in)  :: l(no_l)
+    FLOAT,            intent(in)  :: t
+    type(mesh_type),  intent(in)  :: m
+    FLOAT,            intent(out) :: pot(m%np)
 
-  if(no_l == 1 .and. l(1)%envelope == ENVELOPE_NUMERICAL) then
-    i = int(abs(M_TWO*t/l(1)%dt) + M_HALF) ! steps of dt/2
-    field(1:sb%dim) = l(1)%numerical(1:sb%dim, i)
-  else
-    field = M_ZERO
+    CMPLX :: amp
+    integer :: i, j
+    FLOAT :: field(sb%dim)
+
+    if(no_l == 0) then
+      pot(1:m%np) = M_ZERO
+      return
+    end if
+
+    pot = M_ZERO
     do i = 1, no_l
       call laser_amplitude(l(i), t, amp)
+      if(l(i)%spatial_part == SPATIAL_PART_FROM_FILE) then
+        do j = 1, m%np
+          pot(j) = pot(j) + real(amp*l(i)%v(j))
+        end do
+      else
+        field(1:sb%dim) = real(amp*l(i)%pol(1:sb%dim))
+        do j = 1, m%np
+          pot(j) = pot(j) + sum(field(:)*m%x(j,:))
+        end do
+      end if
+    end do
+
+  end subroutine laser_potential
+
+
+  ! ---------------------------------------------------------
+  subroutine laser_field(sb, no_l, l, t, field)
+    type(simul_box_type), intent(in) :: sb
+    integer,          intent(in)  :: no_l
+    type(laser_type), intent(in)  :: l(no_l)
+    FLOAT,            intent(in)  :: t
+    FLOAT,            intent(out) :: field(sb%dim)
+
+    CMPLX :: amp
+    integer :: i
+
+    if(no_l == 0) then
+      field(1:sb%dim) = M_ZERO
+      return
+    end if
+
+    if(no_l == 1 .and. l(1)%envelope == ENVELOPE_NUMERICAL) then
+      i = int(abs(M_TWO*t/l(1)%dt) + M_HALF) ! steps of dt/2
+      field(1:sb%dim) = l(1)%numerical(1:sb%dim, i)
+    else
+      field = M_ZERO
+      do i = 1, no_l
+        call laser_amplitude(l(i), t, amp)
+        field(1:sb%dim) = field(1:sb%dim) + real(amp*l(i)%pol(1:sb%dim))
+      end do
+    end if
+
+  end subroutine laser_field
+
+
+  ! ---------------------------------------------------------
+  !returns the laser vector field A
+  subroutine laser_vector_field(sb, no_l, l, t, field)
+    type(simul_box_type), intent(in) :: sb
+    integer,          intent(in)  :: no_l
+    type(laser_type), intent(in)  :: l(no_l)
+    FLOAT,            intent(in)  :: t
+    FLOAT,            intent(out) :: field(sb%dim)
+
+    CMPLX :: amp
+    integer :: i
+
+    field = M_ZERO
+    do i = 1, no_l
+      call laser_vector_amplitude(l(i), t, amp)
       field(1:sb%dim) = field(1:sb%dim) + real(amp*l(i)%pol(1:sb%dim))
     end do
-  end if
 
-end subroutine laser_field
+  end subroutine laser_vector_field
 
-!returns the laser vector field A
-subroutine laser_vector_field(sb, no_l, l, t, field)
-  type(simul_box_type), intent(in) :: sb
-  integer,          intent(in)  :: no_l
-  type(laser_type), intent(in)  :: l(no_l)
-  FLOAT,            intent(in)  :: t
-  FLOAT,            intent(out) :: field(sb%dim)
+  ! The following routines have to be changed in order to add more
+  ! laser envelopes
 
-  CMPLX :: amp
-  integer :: i
+  ! ---------------------------------------------------------
+  ! returns the amplitude of the electric field
+  subroutine laser_amplitude(l, t, amp)
+    type(laser_type), intent(in) :: l
+    FLOAT, intent(in) :: t
+    CMPLX, intent(out) :: amp
 
-  field = M_ZERO
-  do i = 1, no_l
-    call laser_vector_amplitude(l(i), t, amp)
-    field(1:sb%dim) = field(1:sb%dim) + real(amp*l(i)%pol(1:sb%dim))
-  end do
+    FLOAT :: r, ph
 
-end subroutine laser_vector_field
-
-! The following routines have to be changed in order to add more
-! laser envelopes
-
-! returns the amplitude of the electric field
-subroutine laser_amplitude(l, t, amp)
-  type(laser_type), intent(in) :: l
-  FLOAT, intent(in) :: t
-  CMPLX, intent(out) :: amp
-
-  FLOAT :: r, ph
-
-  ph = M_ZERO; r = M_ZERO
-  select case (l%envelope)
+    ph = M_ZERO; r = M_ZERO
+    select case (l%envelope)
     case(ENVELOPE_GAUSSIAN)
       r = exp(-(t - l%t0)**2 / (M_TWO*l%tau0**2))
     case(ENVELOPE_COSINOIDAL)
@@ -406,26 +425,27 @@ subroutine laser_amplitude(l, t, amp)
         r = M_ONE
       elseif(t>l%t0+l%tau0/M_TWO .and. t <=l%t0+l%tau0/M_TWO+l%tau1) then
         r = (l%t0 + l%tau0/M_TWO + l%tau1 - t)/l%tau1
-      endif
+      end if
     case(ENVELOPE_FROM_FILE)
       r  = loct_splint(l%amplitude, t)
       ph = loct_splint(l%phase, t)
-  end select
+    end select
 
-  amp = l%A0 * r * exp(M_zI * (l%omega0*t + ph))
+    amp = l%A0 * r * exp(M_zI * (l%omega0*t + ph))
 
-  return
-end subroutine laser_amplitude
+    return
+  end subroutine laser_amplitude
 
-! returns the amplitude of the vector field A
-subroutine laser_vector_amplitude(l, t, amp)
-  type(laser_type), intent(in) :: l
-  FLOAT, intent(in) :: t
-  CMPLX, intent(out) :: amp
+  ! ---------------------------------------------------------
+  ! returns the amplitude of the vector field A
+  subroutine laser_vector_amplitude(l, t, amp)
+    type(laser_type), intent(in) :: l
+    FLOAT, intent(in) :: t
+    CMPLX, intent(out) :: amp
 
-  CMPLX :: r, tt
+    CMPLX :: r, tt
 
-  select case (l%envelope)
+    select case (l%envelope)
     case(ENVELOPE_GAUSSIAN) ! Gaussian
       ! not yet implemented
       r = M_ZERO
@@ -439,16 +459,16 @@ subroutine laser_vector_amplitude(l, t, amp)
       end if
 
       r = - l%r1 * (l%field_1 + exp(M_zI * l%omega0*tt) * &
-           (M_zI*l%omega0*cos(l%a1 + l%w1*tt) + l%w1*sin(l%a1 + l%w1*tt)))
+        (M_zI*l%omega0*cos(l%a1 + l%w1*tt) + l%w1*sin(l%a1 + l%w1*tt)))
     case(ENVELOPE_TRAPEZOIDAL) ! ramp
       ! not yet implemented
       r = M_ZERO
     case default
       r = M_ZERO
-  end select
-  amp = l%A0 * r
+    end select
+    amp = l%A0 * r
 
-  return
-end subroutine laser_vector_amplitude
+    return
+  end subroutine laser_vector_amplitude
 
 end module lasers

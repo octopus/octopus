@@ -39,16 +39,16 @@ module curv_modine
   implicit none
 
   type curv_modine_type
-    FLOAT :: L(3)      ! size of the box
-    FLOAT :: xbar      ! size of central flat region (in units of L)
-    FLOAT :: Jbar      ! increase in density of points is 1/J
-    FLOAT :: Jlocal    ! local (around the atoms) refinement
-    FLOAT :: Jrange    ! local refinement range
+    FLOAT :: L(3)          ! size of the box
+    FLOAT :: xbar          ! size of central flat region (in units of L)
+    FLOAT :: Jbar          ! increase in density of points is 1/J
+    FLOAT :: Jlocal        ! local (around the atoms) refinement
+    FLOAT :: Jrange        ! local refinement range
   end type curv_modine_type
 
 contains
 
-  !-------------------------------------
+  ! ---------------------------------------------------------
   subroutine curv_modine_init(sb, cv)
     type(simul_box_type),   intent(in)  :: sb
     type(curv_modine_type), intent(out) :: cv
@@ -75,7 +75,7 @@ contains
   end subroutine curv_modine_init
 
 
-  !-------------------------------------
+  ! ---------------------------------------------------------
   subroutine curv_modine_chi2x(sb, geo, cv, chi_, x)
     type(simul_box_type),   intent(in)  :: sb
     type(geometry_type),    intent(in)  :: geo
@@ -113,7 +113,7 @@ contains
   end subroutine curv_modine_chi2x
 
 
-  !-------------------------------------
+  ! ---------------------------------------------------------
   subroutine curv_modine_jacobian_inv(sb, geo, cv, chi_, J)
     type(simul_box_type),   intent(in)  :: sb
     type(geometry_type),    intent(in)  :: geo

@@ -94,9 +94,12 @@ subroutine X(input_function_global)(filename, m, f, ierr)
   integer,              intent(out) :: ierr
 
   integer :: iunit, i, function_kind, file_kind
+
+#if defined(HAVE_NETCDF)
   type(X(cf)) :: c
 #if defined(R_TCOMPLEX)
   type(dcf) :: re, im
+#endif
 #endif
 
   call push_sub('out_inc.Xinput_function_global')
@@ -222,58 +225,58 @@ contains
     if(status == NF90_NOERR) then
        status = nf90_inq_dimid (ncid, "dim_1", dim_data_id(1))
        call ncdf_error('nf90_inq_dimid', status, file, ierr)
-    endif
+    end if
 
     if(status == NF90_NOERR) then
        status = nf90_inq_dimid (ncid, "dim_2", dim_data_id(2))
        call ncdf_error('nf90_inq_dimid', status, file, ierr)
-    endif
+    end if
 
     if(status == NF90_NOERR) then
        status = nf90_inq_dimid (ncid, "dim_3", dim_data_id(3))
        call ncdf_error('nf90_inq_dimid', status, file, ierr)
-    endif
+    end if
 
     if(status == NF90_NOERR) then
        status = nf90_inquire_dimension (ncid, dim_data_id(1), len = ndim(1))
        call ncdf_error('nf90_inquire_dimension', status, file, ierr)
-    endif
+    end if
     if(status == NF90_NOERR) then
        status = nf90_inquire_dimension (ncid, dim_data_id(2), len = ndim(2))
        call ncdf_error('nf90_inquire_dimension', status, file, ierr)
-    endif
+    end if
     if(status == NF90_NOERR) then
        status = nf90_inquire_dimension (ncid, dim_data_id(3), len = ndim(3))
        call ncdf_error('nf90_inquire_dimension', status, file, ierr)
-    endif
+    end if
     if((ndim(1) .ne. c%n(1)) .or. &
          (ndim(2) .ne. c%n(2)) .or. &
          (ndim(3) .ne. c%n(3))) then
        ierr = 12; return
-    endif
+    end if
 
     if(status == NF90_NOERR) then
        status = nf90_inq_varid (ncid, "rdata", data_id)
        call ncdf_error('nf90_inq_varid', status, file, ierr)
-    endif
+    end if
     status = nf90_inq_varid(ncid, "idata", data_im_id)
     if(status == 0) then
        file_kind = -1
     else
        file_kind = 1
-    endif
+    end if
     status = 0
 
     if(status == NF90_NOERR) then
        status = nf90_inquire_variable (ncid, data_id, xtype = xtype)
        call ncdf_error('nf90_inquire_variable', status, file, ierr)
-    endif
+    end if
 
     if(xtype == NF90_FLOAT) then
        file_kind = file_kind*4
     else
        file_kind = file_kind*8
-    endif
+    end if
     if(file_kind .ne. function_kind) then
        select case(file_kind)
        case(4);  ierr = -1
@@ -281,24 +284,24 @@ contains
        case(8);  ierr = -3
        case(-8); ierr = -4
        end select
-    endif
+    end if
 
 #if defined(R_TCOMPLEX)
     if(status == NF90_NOERR) then
        status = nf90_get_var (ncid, data_id, re%RS, map = (/c%n(3)*c%n(2), c%n(2), 1 /))
        call ncdf_error('nf90_get_var', status, file, ierr)
-    endif
+    end if
     if(file_kind<0) then
        if(status == NF90_NOERR) then
           status = nf90_get_var (ncid, data_im_id, im%RS, map = (/c%n(3)*c%n(2), c%n(2), 1 /))
           call ncdf_error('nf90_get_var', status, file, ierr)
-       endif
-    endif
+       end if
+    end if
 #else
     if(status == NF90_NOERR) then
        status = nf90_get_var (ncid, data_id, c%RS, map = (/c%n(3)*c%n(2), c%n(2), 1 /))
        call ncdf_error('nf90_get_var', status, file, ierr)
-    endif
+    end if
 #endif
 
     status = nf90_close(ncid)
@@ -319,8 +322,10 @@ subroutine X(output_function) (how, dir, fname, mesh, sb, f, u, ierr)
   FLOAT,            intent(in)  :: u
   integer,          intent(out) :: ierr
 
+#if defined(HAVE_MPI)
   R_TYPE, allocatable :: f_global(:)
   integer             :: mpi_err
+#endif
 
   call push_sub('out_inc.Xoutput_function')
 
@@ -329,10 +334,10 @@ subroutine X(output_function) (how, dir, fname, mesh, sb, f, u, ierr)
     allocate(f_global(1:mesh%np_global))
 
     call X(vec_gather)(mesh%vp, f_global, f)
-    
+
     if(mesh%vp%rank.eq.mesh%vp%root) then
       call X(output_function_global)(how, dir, fname, mesh, sb, f_global, u, ierr)
-    endif
+    end if
 
     ! I have to broadcast the error code
     call MPI_Bcast(ierr, 1, MPI_INTEGER, mesh%vp%root, mesh%vp%comm, mpi_err)
@@ -556,10 +561,10 @@ contains
        if (ierr == 0.and.gnuplot_mode.and.x0 /= m%x_global(i, 1)) then
           write(iunit, mformat, iostat=ierr)      ! write extra lines for gnuplot grid mode
           x0 = m%x_global(i, 1)
-       endif
+       end if
        if(ierr==0) write(iunit, mformat2, iostat=ierr) i, m%x_global(i,1),  &
             m%x_global(i,2), m%x_global(i,3), R_REAL(f(i))/u, R_AIMAG(f(i))/u
-    enddo
+    end do
 
     if(ierr == 0.and.gnuplot_mode) write(iunit, mformat, iostat=ierr)
     call io_close(iunit)
@@ -650,76 +655,76 @@ contains
     if(status == NF90_NOERR) then
       status = nf90_def_dim (ncid, "dim_1", c%n(1), dim_data_id(1))
       call ncdf_error('nf90_def_dim', status, filename, ierr)
-    endif
+    end if
 
     if(status == NF90_NOERR) then
       status = nf90_def_dim (ncid, "dim_2", c%n(2), dim_data_id(2))
       call ncdf_error('nf90_def_dim', status, filename, ierr)
-    endif
+    end if
 
     if(status == NF90_NOERR) then
       status = nf90_def_dim (ncid, "dim_3", c%n(3), dim_data_id(3))
       call ncdf_error('nf90_der_dim', status, filename, ierr)
-    endif
+    end if
 
     if(status == NF90_NOERR) then
       status = nf90_def_dim (ncid, "pos_1", 2, dim_pos_id(1))
       call ncdf_error('nf90_def_dim', status, filename, ierr)
-    endif
+    end if
 
     if(status == NF90_NOERR) then
       status = nf90_def_dim (ncid, "pos_2", 3, dim_pos_id(2))
       call ncdf_error('nf90_def_dim', status, filename, ierr)
-    endif
+    end if
 
 #if defined(SINGLE_PRECISION)
     if(status == NF90_NOERR) then
       status = nf90_def_var (ncid, "rdata", NF90_FLOAT, dim_data_id, data_id)
       call ncdf_error('nf90_def_var', status, filename, ierr)
-    endif
+    end if
 #else
     if(status == NF90_NOERR) then
       status = nf90_def_var (ncid, "rdata", NF90_DOUBLE, dim_data_id, data_id)
       call ncdf_error('nf90_def_var', status, filename, ierr)
-    endif
+    end if
 #endif
 #if defined(R_TCOMPLEX)
 #if defined(SINGLE_PRECISION)
     if(status == NF90_NOERR) then
       status = nf90_def_var (ncid, "idata", NF90_FLOAT, dim_data_id, data_im_id)
       call ncdf_error('nf90_def_var', status, filename, ierr)
-    endif
+    end if
 
 #else
     if(status == NF90_NOERR) then
       status = nf90_def_var (ncid, "idata", NF90_DOUBLE, dim_data_id, data_im_id)
       call ncdf_error('nf90_def_var', status, filename, ierr)
-    endif
+    end if
 #endif
 #endif
     if(status == NF90_NOERR) then
       status = nf90_def_var (ncid, "pos", NF90_FLOAT,  dim_pos_id,  pos_id)
       call ncdf_error('nf90_def_var', status, filename, ierr)
-    endif
+    end if
 
     ! attributes
     if(status == NF90_NOERR) then
       status = nf90_put_att (ncid, data_id, "field", "rdata, scalar")
       call ncdf_error('nf90_put_att', status, filename, ierr)
-    endif
+    end if
     if(status == NF90_NOERR) then
       status = nf90_put_att (ncid, data_id, "positions", "pos, regular")
       call ncdf_error('nf90_put_att', status, filename, ierr)
-    endif
+    end if
 #if defined(R_TCOMPLEX)
     if(status == NF90_NOERR) then
       status = nf90_put_att (ncid, data_im_id, "field", "idata, scalar")
       call ncdf_error('nf90_put_att', status, filename, ierr)
-    endif
+    end if
     if(status == NF90_NOERR) then
       status = nf90_put_att (ncid, data_im_id, "positions", "pos, regular")
       call ncdf_error('nf90_put_att', status, filename, ierr)
-    endif
+    end if
 #endif
 
     ! end definitions
@@ -732,22 +737,22 @@ contains
     if(status == NF90_NOERR) then
       status = nf90_put_var (ncid, pos_id, pos(:,:))
       call ncdf_error('nf90_put_var', status, filename, ierr)
-    endif
+    end if
 
 #if defined(R_TCOMPLEX)
     if(status == NF90_NOERR) then
       status = nf90_put_var (ncid, data_id, real(c%RS, PRECISION), map = (/c%n(3)*c%n(2), c%n(2), 1 /))
       call ncdf_error('nf90_put_var', status, filename, ierr)
-    endif
+    end if
     if(status == NF90_NOERR) then
       status = nf90_put_var (ncid, data_im_id, aimag(c%RS), map = (/c%n(3)*c%n(2), c%n(2), 1 /))
       call ncdf_error('nf90_put_var', status, filename, ierr)
-    endif
+    end if
 #else
     if(status == NF90_NOERR) then
       status = nf90_put_var (ncid, data_id, c%RS, map = (/c%n(3)*c%n(2), c%n(2), 1 /))
       call ncdf_error('nf90_put_var', status, filename, ierr)
-    endif
+    end if
 #endif
 
     ! close

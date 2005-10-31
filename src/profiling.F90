@@ -47,27 +47,27 @@ module profiling_mod
   implicit none
   private
 
-  public ::          &
-    profiling_init,  &
-    profiling_in,    &
-    profiling_out,   &
+  public ::                            &
+    profiling_init,                    &
+    profiling_in,                      &
+    profiling_out,                     &
     profiling_output
 
-  integer, parameter :: &
-    C_TAG_LENGTH = 17,  & ! Max. number of characters of tag label.
-    C_NUM_TAGS   = 9      ! Number of tags.
+  integer, parameter ::                &
+    C_TAG_LENGTH = 17,                 & ! Max. number of characters of tag label.
+    C_NUM_TAGS   = 9                     ! Number of tags.
 
-  integer ::                      &
-    pass_in(C_NUM_TAGS)      = 0, &
-    pass_out(C_NUM_TAGS)     = 0, &
-    time_in_sec(C_NUM_TAGS)  = 0, &
-    time_in_usec(C_NUM_TAGS) = 0, &
-    time_sec(C_NUM_TAGS)     = 0, &
-    time_usec(C_NUM_TAGS)    = 0
+  integer ::                           &
+    pass_in(C_NUM_TAGS)           = 0, &
+    pass_out(C_NUM_TAGS)          = 0, &
+    time_in_sec(C_NUM_TAGS)       = 0, &
+    time_in_usec(C_NUM_TAGS)      = 0, &
+    time_sec(C_NUM_TAGS)          = 0, &
+    time_usec(C_NUM_TAGS)         = 0
 
   integer, parameter, public ::        &
     C_PROFILING_COMPLETE_SUBSYS   = 1, &
-    C_PROFILING_MF_INTEGRATE      = 2, &  
+    C_PROFILING_MF_INTEGRATE      = 2, &
     C_PROFILING_MF_DOTP           = 3, &
     C_PROFILING_MF_NRM2           = 4, &
     C_PROFILING_NL_OPERATOR       = 5, &
@@ -77,23 +77,25 @@ module profiling_mod
     C_PROFILING_MF_DOTP_ALLREDUCE = 9
 
   character(len=C_TAG_LENGTH), dimension(C_NUM_TAGS) :: tag_label = &
-    (/                                                              &
-    'COMPLETE_SUBSYS  ',                                            &
-    'MF_INTEGRATE     ',                                            &
-    'MF_DOTP          ',                                            &
-    'MF_NRM2          ',                                            &
-    'NL_OPERATOR      ',                                            &
-    'GHOST_UPDATE     ',                                            &
-    'VEC_INTEGRATE    ',                                            &
-    'SCF_CYCLE        ',                                            &
-    'MF_DOTP_ALLREDUCE'                                             &
+    (/                                 &
+    'COMPLETE_SUBSYS  ',               &
+    'MF_INTEGRATE     ',               &
+    'MF_DOTP          ',               &
+    'MF_NRM2          ',               &
+    'NL_OPERATOR      ',               &
+    'GHOST_UPDATE     ',               &
+    'VEC_INTEGRATE    ',               &
+    'SCF_CYCLE        ',               &
+    'MF_DOTP_ALLREDUCE'                &
     /)
 
 contains
 
   ! Create profiling subdirectory.
   subroutine profiling_init
+#if defined(HAVE_MPI)
     character(len=3) :: dirnum
+#endif
 
     if(.not.in_profiling_mode) return
 
@@ -114,13 +116,13 @@ contains
     time_in_sec  = 0
     time_in_usec = 0
     time_sec     = 0
-    time_usec    = 0    
+    time_usec    = 0
 
     call pop_sub()
 
   end subroutine profiling_init
 
-  
+
   ! Increment in counter and save entry time.
   subroutine profiling_in(tag)
     integer :: tag
@@ -193,7 +195,7 @@ contains
     do i = 1, C_NUM_TAGS
       if(pass_in(i).eq.pass_out(i).and.pass_in(i).ne.0) then
         time_per_pass = (real(time_sec(i))+1e-6*real(time_usec(i)))/ &
-                        real(pass_in(i))
+          real(pass_in(i))
       else
         time_per_pass = 0
       end if

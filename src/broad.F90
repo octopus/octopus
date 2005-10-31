@@ -43,7 +43,7 @@ program broad
   call syslabels_init(1)
   if(in_debug_mode) then
      call io_mkdir('debug')
-  endif
+  end if
   call units_init()
 
   ! broadening to use

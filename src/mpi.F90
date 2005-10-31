@@ -43,38 +43,53 @@ module mpi_mod
 # include "mpif.h"
 #endif
 
-  public ::                              &
-       MPI_Debug_Statistics,             &
-       MPI_Debug_IN, MPI_Debug_OUT
+  public ::                      &
+    MPI_Debug_Statistics,        &
+    MPI_Debug_IN, MPI_Debug_OUT
 
-  public ::                                                        &
-       TSD_MPI_Barrier,    TSZ_MPI_Barrier,    TSI_MPI_Barrier,    &
-       TSD_MPI_Scatterv,   TSZ_MPI_Scatterv,   TSI_MPI_Scatterv,   &
-       TSD_MPI_Gatherv,    TSZ_MPI_Gatherv,    TSI_MPI_Gatherv,    &
-       TSD_MPI_Alltoallv,  TSZ_MPI_Alltoallv,  TSI_MPI_Alltoallv,  &
-       TSD_MPI_Allgatherv, TSZ_MPI_Allgatherv, TSI_MPI_Allgatherv, &
-       TSD_MPI_Bcast,      TSZ_MPI_Bcast,      TSI_MPI_Bcast,      &
-       TSD_MPI_Allreduce,  TSZ_MPI_Allreduce,  TSI_MPI_Allreduce
+  public ::                      &
+    TSD_MPI_Barrier,             &
+    TSZ_MPI_Barrier,             &
+    TSI_MPI_Barrier,             &
+    TSD_MPI_Scatterv,            &
+    TSZ_MPI_Scatterv,            &
+    TSI_MPI_Scatterv,            &
+    TSD_MPI_Gatherv,             &
+    TSZ_MPI_Gatherv,             &
+    TSI_MPI_Gatherv,             &
+    TSD_MPI_Alltoallv,           &
+    TSZ_MPI_Alltoallv,           &
+    TSI_MPI_Alltoallv,           &
+    TSD_MPI_Allgatherv,          &
+    TSZ_MPI_Allgatherv,          &
+    TSD_MPI_Bcast,               &
+    TSZ_MPI_Bcast,               &
+    TSI_MPI_Bcast,               &
+    TSD_MPI_Allreduce,           &
+    TSZ_MPI_Allreduce,           &
+    TSI_MPI_Allgatherv,          &
+    TSI_MPI_Allreduce
+
 
   integer, public, parameter ::  &
-       C_MPI_BARRIER    = 1,     &
-       C_MPI_SCATTERV   = 2,     &
-       C_MPI_GATHERV    = 3,     &
-       C_MPI_ALLTOALLV  = 4,     &
-       C_MPI_ALLGATHERV = 5,     &
-       C_MPI_BCAST      = 6,     &
-       C_MPI_ALLREDUCE  = 7
+    C_MPI_BARRIER    = 1,        &
+    C_MPI_SCATTERV   = 2,        &
+    C_MPI_GATHERV    = 3,        &
+    C_MPI_ALLTOALLV  = 4,        &
+    C_MPI_ALLGATHERV = 5,        &
+    C_MPI_BCAST      = 6,        &
+    C_MPI_ALLREDUCE  = 7
 
   character(len=15), dimension(C_MPI_ALLREDUCE), public :: mpi_rlabel = &
-       (/                &
-       'MPI_BARRIER   ', &
-       'MPI_SCATTERV  ', &
-       'MPI_GATHERV   ', & 
-       'MPI_ALLTOALLV ', &
-       'MPI_ALLGATHERV', &
-       'MPI_BCAST     ', &
-       'MPI_ALLREDUCE '  &
-       /)       
+    (/                           &
+    'MPI_BARRIER   ',            &
+    'MPI_SCATTERV  ',            &
+    'MPI_GATHERV   ',            &
+    'MPI_ALLTOALLV ',            &
+    'MPI_ALLGATHERV',            &
+    'MPI_BCAST     ',            &
+    'MPI_ALLREDUCE '             &
+    /)
 
   integer, public :: call_counter(C_MPI_BARRIER:C_MPI_ALLREDUCE) = 0
   integer, public :: sec_accum(C_MPI_BARRIER:C_MPI_ALLREDUCE)    = 0
@@ -85,11 +100,11 @@ module mpi_mod
 
 contains
 
-  ! =========================================================
+  ! ---------------------------------------------------------
   ! Routines to support MPI debugging.
-  ! =========================================================
+  ! ---------------------------------------------------------
 
-  !-----------------------------------------------------------
+  ! ---------------------------------------------------------
   subroutine MPI_Debug_Statistics()
 
     integer :: j
@@ -102,19 +117,19 @@ contains
     message(3) = ''
     write(message(4), '(23x,a,4x,a,8x,a)') 'total time', 'calls', 'usec/call'
     do j = 1, C_MPI_ALLREDUCE
-       if (sec_accum(j).eq.0.and.usec_accum(j).eq.0) then
-          usec_call(j) = 0
-       else
-          usec_call(j) = (sec_accum(j)*1000000+usec_accum(j))/call_counter(j)
-       endif
+      if (sec_accum(j).eq.0.and.usec_accum(j).eq.0) then
+        usec_call(j) = 0
+      else
+        usec_call(j) = (sec_accum(j)*1000000+usec_accum(j))/call_counter(j)
+      end if
 
-       write(message(j+4),'(a,i6,a,i6.6,6x,i4,6x,i10)')          &
-            mpi_rlabel(j)//' : ',                                &
-            sec_accum(j), '.', usec_accum(j), call_counter(j),   &
-            usec_call(j)
-    enddo
-    message(C_MPI_ALLREDUCE+5) = ''    
-    message(C_MPI_ALLREDUCE+6) = hyphens    
+      write(message(j+4),'(a,i6,a,i6.6,6x,i4,6x,i10)')       &
+        mpi_rlabel(j)//' : ',                                &
+        sec_accum(j), '.', usec_accum(j), call_counter(j),   &
+        usec_call(j)
+    end do
+    message(C_MPI_ALLREDUCE+5) = ''
+    message(C_MPI_ALLREDUCE+6) = hyphens
     call write_debug(C_MPI_ALLREDUCE+6)
 
   end subroutine MPI_Debug_Statistics
@@ -129,9 +144,9 @@ contains
     call_counter(index) = call_counter(index) + 1
     call loct_gettimeofday(sec_in, usec_in)
     call epoch_time_diff(sec_in, usec_in)
-    write(message(1),'(a,i6,a,i6.6,a,i3.3,a,i6.6,a,i4.4,a,i6.6)') '* I ',       &
-         sec_in, '.', usec_in, ' '//trim(mpi_rlabel(index))//' - ', comm,':',   &
-         call_counter(index), ' - ', sec_accum(index), '.', usec_accum(index)
+    write(message(1),'(a,i6,a,i6.6,a,i3.3,a,i6.6,a,i4.4,a,i6.6)') '* I ',    &
+      sec_in, '.', usec_in, ' '//trim(mpi_rlabel(index))//' - ', comm,':',   &
+      call_counter(index), ' - ', sec_accum(index), '.', usec_accum(index)
     call write_debug(1)
 
   end subroutine MPI_Debug_IN
@@ -149,10 +164,10 @@ contains
     call epoch_time_diff(sec, usec)
     call mpi_time_accum(index, sec, usec, sec_diff, usec_diff)
     write(message(1),'(a,i6,a,i6.6,a,i3.3,a,i6.6,a,i4.4,a,i6.6,a,i4.4,a,i6.6)') &
-         '* O ',                                                                &
-         sec, '.', usec, ' '//trim(mpi_rlabel(index))//' - ', comm, ':',        &
-         call_counter(index), ' - ', sec_accum(index), '.', usec_accum(index),  &
-         ' - ', sec_diff, '.', usec_diff
+      '* O ',                                                                   &
+      sec, '.', usec, ' '//trim(mpi_rlabel(index))//' - ', comm, ':',           &
+      call_counter(index), ' - ', sec_accum(index), '.', usec_accum(index),     &
+      ' - ', sec_diff, '.', usec_diff
     call write_debug(1)
 
   end subroutine MPI_Debug_Out
@@ -160,7 +175,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine mpi_time_accum(index, sec, usec, sec_diff, usec_diff)
-    integer, intent(in)  :: index, sec, usec  
+    integer, intent(in)  :: index, sec, usec
     integer, intent(out) :: sec_diff, usec_diff
 
     integer :: sec_tmp, usec_tmp
@@ -169,20 +184,20 @@ contains
     usec_tmp = usec
 
     if (usec_tmp-usec_in .lt. 0) then
-       usec_tmp = usec_tmp + 1000000
-       sec_tmp  = sec_tmp  - 1
-    endif
+      usec_tmp = usec_tmp + 1000000
+      sec_tmp  = sec_tmp  - 1
+    end if
     usec_tmp = usec_tmp - usec_in
-    sec_tmp  = sec_tmp  - sec_in    
+    sec_tmp  = sec_tmp  - sec_in
 
     usec_diff = usec_tmp
     sec_diff  = sec_tmp
 
     ! accumulate values
     if (usec_tmp+usec_accum(index) .gt. 1000000) then
-       usec_tmp = usec_tmp - 1000000 
-       sec_tmp  = sec_tmp  + 1
-    endif
+      usec_tmp = usec_tmp - 1000000
+      sec_tmp  = sec_tmp  + 1
+    end if
     sec_accum(index)  = sec_accum(index)  + sec_tmp
     usec_accum(index) = usec_accum(index) + usec_tmp
 

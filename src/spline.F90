@@ -19,7 +19,7 @@
 
 #include "global.h"
 
-!/*!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!/*----------------------------------------------------------------------------
 ! This module contains a data type (loct_spline_type) to contain 1D functions,
 ! along with a series of procedures to manage them (to define them, to obtain
 ! its values, to operate on them, etc). The internal representation of the
@@ -216,28 +216,29 @@
 !
 ! [14] DERIVATE A FUNCTION:
 !
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!*/!
+!----------------------------------------------------------------------------*/!
 module lib_oct_gsl_spline
   use lib_oct
   implicit none
 
   ! Define the which routines can be seen from the outside
   private
-  public :: loct_spline_type,     & ! [*]
-            loct_spline_init,     & ! [1]
-            loct_spline_end,      & ! [2]
-            loct_spline_fit,      & ! [3]
-            loct_splint,          & ! [4]
-            loct_spline_sum,      & ! [5]
-            loct_spline_times,    & ! [6]
-            loct_spline_integral, & ! [7]
-            loct_spline_dotp,     & ! [8]
-            loct_spline_3dft,     & ! [9]
-            loct_spline_besselft, & ! [10]
-            loct_spline_cut,      & ! [11]
-            loct_spline_filter,   & ! [12]
-            loct_spline_print,    & ! [13]
-            loct_spline_der
+  public ::               &
+    loct_spline_type,     & ! [*]
+    loct_spline_init,     & ! [1]
+    loct_spline_end,      & ! [2]
+    loct_spline_fit,      & ! [3]
+    loct_splint,          & ! [4]
+    loct_spline_sum,      & ! [5]
+    loct_spline_times,    & ! [6]
+    loct_spline_integral, & ! [7]
+    loct_spline_dotp,     & ! [8]
+    loct_spline_3dft,     & ! [9]
+    loct_spline_besselft, & ! [10]
+    loct_spline_cut,      & ! [11]
+    loct_spline_filter,   & ! [12]
+    loct_spline_print,    & ! [13]
+    loct_spline_der
 
   ! the basic spline datatype
   type loct_spline_type
@@ -340,18 +341,18 @@ contains
     type(loct_spline_type), intent(out) :: spl(:)
     integer :: i
     do i = 1, size(spl)
-       call loct_spline_init_0(spl(i))
-    enddo
+      call loct_spline_init_0(spl(i))
+    end do
   end subroutine loct_spline_init_1
 
   subroutine loct_spline_init_2(spl)
     type(loct_spline_type), intent(out) :: spl(:, :)
     integer :: i, j
     do i = 1, size(spl, 1)
-       do j = 1, size(spl, 2)
-          call loct_spline_init_0(spl(i, j))
-       enddo
-    enddo
+      do j = 1, size(spl, 2)
+        call loct_spline_init_0(spl(i, j))
+      end do
+    end do
   end subroutine loct_spline_init_2
 
   subroutine loct_spline_end_0(spl)
@@ -366,18 +367,18 @@ contains
     type(loct_spline_type), intent(inout) :: spl(:)
     integer :: i
     do i = 1, size(spl)
-       call loct_spline_end_0(spl(i))
-    enddo
+      call loct_spline_end_0(spl(i))
+    end do
   end subroutine loct_spline_end_1
 
   subroutine loct_spline_end_2(spl)
     type(loct_spline_type), intent(inout) :: spl(:, :)
     integer :: i, j
     do i = 1, size(spl, 1)
-       do j = 1, size(spl, 2)
-          call loct_spline_end_0(spl(i, j))
-       enddo
-    enddo
+      do j = 1, size(spl, 2)
+        call loct_spline_end_0(spl(i, j))
+      end do
+    end do
   end subroutine loct_spline_end_2
 
   subroutine spline_fit8(nrc, rofi, ffit, spl)
@@ -430,8 +431,8 @@ contains
     call oct_spline_y(spl1%spl, y(1))
 
     do i = 1, npoints
-       y2(i) = splint8(spl2, x(i))
-    enddo
+      y2(i) = splint8(spl2, x(i))
+    end do
 
     y2 = y2 + y
     call oct_spline_fit(npoints, x(1), y2(1), splsum%spl, splsum%acc)
@@ -452,8 +453,8 @@ contains
     call oct_spline_y(spl%spl, y(1))
     call oct_spline_end(spl%spl, spl%acc)
     do i = 1, npoints
-       y(i) = a*y(i)
-    enddo
+      y(i) = a*y(i)
+    end do
     call oct_spline_fit(npoints, x(1), y(1), spl%spl, spl%acc)
 
     deallocate(x, y)
@@ -488,8 +489,8 @@ contains
     call oct_spline_x(spl1%spl, x(1))
     call oct_spline_y(spl1%spl, y(1))
     do i = 1, npoints
-       y(i) = y(i)*oct_spline_eval(x(i), spl2%spl, spl2%acc)
-    enddo
+      y(i) = y(i)*oct_spline_eval(x(i), spl2%spl, spl2%acc)
+    end do
     call loct_spline_init(aux)
     call loct_spline_fit(npoints, x, y, aux)
     res = oct_spline_eval_integ(aux%spl, x(1), x(npoints), aux%acc)
@@ -524,28 +525,28 @@ contains
       dg = gmax/(np-1)
       allocate(xw(np), yw(np))
       do i = 1, np
-         g = (i-1)*dg
-         xw(i) = g
-      enddo
-    endif
+        g = (i-1)*dg
+        xw(i) = g
+      end do
+    end if
 
-        ! The first point, xw(1) = 0.0 and it has to be treated separately.
-        do j = 1, npoints
-           y2(j) = CNST(4.0)*M_PI*y(j)*x(j)**2
-        enddo
-        call loct_spline_init(aux)
-        call oct_spline_fit(npoints, x(1), y2(1), aux%spl, aux%acc)
-        yw(1) = oct_spline_eval_integ(aux%spl, x(1), x(npoints), aux%acc)
-        call loct_spline_end(aux)
+    ! The first point, xw(1) = 0.0 and it has to be treated separately.
+    do j = 1, npoints
+      y2(j) = CNST(4.0)*M_PI*y(j)*x(j)**2
+    end do
+    call loct_spline_init(aux)
+    call oct_spline_fit(npoints, x(1), y2(1), aux%spl, aux%acc)
+    yw(1) = oct_spline_eval_integ(aux%spl, x(1), x(npoints), aux%acc)
+    call loct_spline_end(aux)
     do i = 2, np
-        do j = 1, npoints
-           y2(j) = (CNST(4.0)*M_PI/xw(i))*y(j)*x(j)*sin(xw(i)*x(j))
-        enddo
-        call loct_spline_init(aux)
-        call oct_spline_fit(npoints, x(1), y2(1), aux%spl, aux%acc)
-        yw(i) = oct_spline_eval_integ(aux%spl, x(1), x(npoints), aux%acc)
-        call loct_spline_end(aux)
-    enddo
+      do j = 1, npoints
+        y2(j) = (CNST(4.0)*M_PI/xw(i))*y(j)*x(j)*sin(xw(i)*x(j))
+      end do
+      call loct_spline_init(aux)
+      call oct_spline_fit(npoints, x(1), y2(1), aux%spl, aux%acc)
+      yw(i) = oct_spline_eval_integ(aux%spl, x(1), x(npoints), aux%acc)
+      call loct_spline_end(aux)
+    end do
 
     call loct_spline_init(splw)
     call oct_spline_fit(np, xw(1), yw(1), splw%spl, splw%acc)
@@ -582,20 +583,20 @@ contains
       dg = gmax/(np-1)
       allocate(xw(np), yw(np))
       do i = 1, np
-         g = (i-1)*dg
-         xw(i) = g
-      enddo
-    endif
+        g = (i-1)*dg
+        xw(i) = g
+      end do
+    end if
 
     do i = 1, np
-        do j = 1, npoints
-           y2(j) = y(j)*x(j)**2*loct_sph_bessel(l, x(j)*xw(i))
-        enddo
-        call loct_spline_init(aux)
-        call oct_spline_fit(npoints, x(1), y2(1), aux%spl, aux%acc)
-        yw(i) = sqrt(CNST(2.0)/M_PI)*oct_spline_eval_integ(aux%spl, x(1), x(npoints), aux%acc)
-        call loct_spline_end(aux)
-    enddo
+      do j = 1, npoints
+        y2(j) = y(j)*x(j)**2*loct_sph_bessel(l, x(j)*xw(i))
+      end do
+      call loct_spline_init(aux)
+      call oct_spline_fit(npoints, x(1), y2(1), aux%spl, aux%acc)
+      yw(i) = sqrt(CNST(2.0)/M_PI)*oct_spline_eval_integ(aux%spl, x(1), x(npoints), aux%acc)
+      call loct_spline_end(aux)
+    end do
 
     call loct_spline_init(splw)
     call oct_spline_fit(np, xw(1), yw(1), splw%spl, splw%acc)
@@ -616,9 +617,9 @@ contains
     call oct_spline_y(spl%spl, y(1))
     call oct_spline_end(spl%spl, spl%acc)
     do i = npoints, 1, -1
-       if(x(i)<cutoff) exit
-       y(i) = y(i) * exp(-beta*(x(i)/cutoff - CNST(1.0))**2)
-    enddo
+      if(x(i)<cutoff) exit
+      y(i) = y(i) * exp(-beta*(x(i)/cutoff - CNST(1.0))**2)
+    end do
     call oct_spline_fit(npoints, x(1), y(1), spl%spl, spl%acc)
 
     deallocate(x, y)
@@ -638,10 +639,10 @@ contains
       call loct_spline_3dft(splw, spl)
       call loct_spline_times(CNST(1.0)/(CNST(2.0)*M_PI)**3, spl)
       call loct_spline_end(splw)
-    endif
+    end if
     if(present(rs)) then
       call loct_spline_cut(spl, rs(1), rs(2))
-    endif
+    end if
 
   end subroutine loct_spline_filter_ft
 
@@ -659,10 +660,10 @@ contains
       call loct_spline_cut(splw, fs(1), fs(2))
       call loct_spline_besselft(splw, spl, l)
       call loct_spline_end(splw)
-    endif
+    end if
     if(present(rs)) then
       call loct_spline_cut(spl, rs(1), rs(2))
-    endif
+    end if
 
   end subroutine loct_spline_filter_bessel
 
@@ -683,10 +684,10 @@ contains
       npoints = oct_spline_npoints(dspl%spl)
       allocate(x(npoints), y(npoints))
       call oct_spline_x(dspl%spl, x(1))
-    endif
+    end if
     do i = 1, npoints
-       y(i) = oct_spline_eval_der(x(i), spl%spl, spl%acc)
-    enddo
+      y(i) = oct_spline_eval_der(x(i), spl%spl, spl%acc)
+    end do
     call oct_spline_fit(npoints, x(1), y(1), dspl%spl, dspl%acc)
 
   end subroutine loct_spline_der
@@ -703,8 +704,8 @@ contains
     call oct_spline_x(spl%spl, x(1))
     call oct_spline_y(spl%spl, y(1))
     do i = 1, np
-       write(iunit, '(2f16.8)') x(i), y(i)
-    enddo
+      write(iunit, '(2f16.8)') x(i), y(i)
+    end do
     deallocate(x, y)
   end subroutine loct_spline_print_0
 
@@ -724,8 +725,8 @@ contains
     call oct_spline_x(spl(1)%spl, x(1))
     call oct_spline_y(spl(1)%spl, y(1))
     do i = 1, np
-       write(iunit, '('//trim(fm)//'f16.8)') x(i), (loct_splint(spl(j), x(i)), j = 1, size(spl))
-    enddo
+      write(iunit, '('//trim(fm)//'f16.8)') x(i), (loct_splint(spl(j), x(i)), j = 1, size(spl))
+    end do
     deallocate(x, y)
 
   end subroutine loct_spline_print_1
@@ -746,9 +747,9 @@ contains
     call oct_spline_x(spl(1, 1)%spl, x(1))
     call oct_spline_y(spl(1, 1)%spl, y(1))
     do i = 1, np
-       write(iunit, '('//trim(fm)//'f16.8)') x(i), &
-            ((loct_splint(spl(j, k), x(i)), j = 1, n1), k = 1, n2)
-    enddo
+      write(iunit, '('//trim(fm)//'f16.8)') x(i), &
+        ((loct_splint(spl(j, k), x(i)), j = 1, n1), k = 1, n2)
+    end do
     deallocate(x, y)
   end subroutine loct_spline_print_2
 

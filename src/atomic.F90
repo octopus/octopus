@@ -28,17 +28,20 @@ module atomic
   implicit none
 
   private
-  public :: atomxc, atomhxc, vhrtre, egofv
+  public ::        &
+    atomxc,        &
+    atomhxc,       &
+    vhrtre, egofv
 
-
-  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   ! Next stuff is for the "valence_conf" data type, made to handle atomic configurations.
-  public :: valconf, &
-            valconf_copy, &
-            write_valconf, &
-            read_valconf, &
-            valconf_null, &
-            VALCONF_STRING_LENGTH
+  public ::        &
+    valconf,       &
+    valconf_copy,  &
+    write_valconf, &
+    read_valconf,  &
+    valconf_null,  &
+    VALCONF_STRING_LENGTH
+
   character(len=1), parameter :: spec_notation(0:3) = (/ 's', 'p', 'd', 'f' /)
   integer, parameter :: VALCONF_STRING_LENGTH = 80
 
@@ -51,13 +54,11 @@ module atomic
     integer           :: l(6)     ! l quantum number
     FLOAT          :: occ(6,2) ! occupations of each level
   end type
-  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 
 contains
 
-
-  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  ! ---------------------------------------------------------
   ! Subroutines to write and read valence configurations.
   subroutine valconf_null(c)
     type(valconf) :: c
@@ -101,9 +102,11 @@ contains
           message(1) = 'Error: read_valconf.'
           call write_fatal(1)
        end select
-    enddo
+    end do
   end subroutine read_valconf
 
+
+  ! ---------------------------------------------------------
   subroutine atomhxc(functl, g, nspin, dens, v, extra)
     character(len=*),  intent(in)  :: functl
     integer,           intent(in)  :: nspin
@@ -125,11 +128,11 @@ contains
     ! To calculate the Hartree term, we put all the density in one variable.
     do is = 1, nspin
        rho(:, 1) = rho(:, 1) + dens(:, is)
-    enddo
+    end do
     ve = M_ZERO
     do is = 1, nspin
        call vhrtre(rho(:, 1), ve(:, is), g%rofi, g%drdi, g%s, g%nrval, g%a)
-    enddo
+    end do
     ve(1, 1:nspin) = ve(2, 1:nspin)
 
     select case(functl)
@@ -146,15 +149,15 @@ contains
     do is = 1, nspin
        if(present(extra)) rho(:, is) = rho(:, is) + extra(:)/nspin
        rho(2:g%nrval, is) = rho(2:g%nrval, is)/(M_FOUR*M_PI*g%rofi(2:g%nrval)**2)
-    enddo
+    end do
     r2 = g%rofi(2)/(g%rofi(3)-g%rofi(2))
     rho(1, 1:nspin) = rho(2, 1:nspin) - (rho(3, 1:nspin)-rho(2, 1:nspin))*r2
 
     do is = 1, nspin
        do ir = 1, g%nrval
           if(rho(ir, is) < CNST(1.0e-15)) rho(ir, is) = M_ZERO
-       enddo
-    enddo
+       end do
+    end do
 
     call atomxc(xcfunc, xcauth, g%nrval, g%nrval, g%rofi, &
                 nspin, rho, ex, ec, dx, dc, xc)
@@ -596,7 +599,10 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
   subroutine egofv(h,s,n,e,g,y,l,z,a,b,rmax,nprin,nnode,dr)
 
   implicit DOUBLE (a-h,o-z)
+
+  DOUBLE :: a, b, e, z, rmax, dr
   integer :: i,n,l,nprin,nnode,ncor,n1,n2,niter,nt
+
 
   DOUBLE, dimension(*) :: h, s, g, y
   DOUBLE               :: e1, e2, del, de, et, t
@@ -750,6 +756,7 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
   implicit DOUBLE (a-h,o-z)
+  DOUBLE :: e, de, dr, rmax, z, a, b, y2, g, gsg, x, gin, gsgin, xin
   DOUBLE :: h(*), s(*), y(*), zdr, yn, ratio, t
   integer :: nmax,l,ncor,nnode,n,knk,nndin,i
 
@@ -888,7 +895,8 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
   subroutine bcorgn(e,h,s,l,zdr,y2)
 
   implicit DOUBLE (a-h,o-z)
-  DOUBLE h(*), s(*), t2, t3, d2, c0, c1, c2
+  DOUBLE :: e, zdr, y2
+  DOUBLE :: h(*), s(*), t2, t3, d2, c0, c1, c2
   integer :: l
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -965,6 +973,7 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
   subroutine numin(e,h,s,y,n,nnode,yn,g,gsg,x,knk)
 
   implicit DOUBLE (a-h,o-z)
+  DOUBLE :: e, yn, g, gsg, x
   integer :: i,n,nnode,knk
   DOUBLE :: h(n),s(n),y(n),t
 
@@ -1018,6 +1027,7 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
   subroutine numout(e,h,s,y,ncor,knk,nnode,y2,g,gsg,x)
 
   implicit DOUBLE (a-h,o-z)
+  DOUBLE :: e, y2, g, gsg, x
   integer :: ncor,nnode,knk,i,nm4
   DOUBLE :: h(knk),s(knk),y(knk),t,xl
 
@@ -1064,4 +1074,4 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
   return
   end subroutine numout
 
-  end module atomic
+end module atomic

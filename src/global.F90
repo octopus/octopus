@@ -35,27 +35,28 @@ module global
 # include "mpif.h"
 #endif
 
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-! Public types, variables and procedures.
-  public :: &
-     conf_type,   &
-     mpi_type,    &
-     global_init, &
-     global_end,  &
-     assert_die
+
+  ! ---------------------------------------------------------
+  ! Public types, variables and procedures.
+  public ::      &
+    conf_type,   &
+    mpi_type,    &
+    global_init, &
+    global_end,  &
+    assert_die
 
   type conf_type
-     integer :: debug_level ! How much debug should print
-     character(len=256) :: share       ! Name of the share dir
-     character(len=256) :: latest_cvs  ! rcs info of latest cvs commit
-     character(len=50)  :: build_time  ! time octopus was compiled
-     character(len=10)  :: version     ! version number
+    integer :: debug_level ! How much debug should print
+    character(len=256) :: share       ! Name of the share dir
+    character(len=256) :: latest_cvs  ! rcs info of latest cvs commit
+    character(len=50)  :: build_time  ! time octopus was compiled
+    character(len=10)  :: version     ! version number
   end type conf_type
 
   ! This is defined even when running serial
   type mpi_type
-     integer :: numprocs ! how many are we
-     integer :: node ! who am I
+    integer :: numprocs ! how many are we
+    integer :: node ! who am I
   end type mpi_type
 
   type(mpi_type), public  :: mpiv
@@ -122,8 +123,8 @@ module global
   ! Same for profiling mode.
   logical, public :: in_profiling_mode = .false.
 
-! End of declaration of public objects.
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  ! End of declaration of public objects.
+  ! ---------------------------------------------------------
 
 contains
 

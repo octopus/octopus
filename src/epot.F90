@@ -47,17 +47,18 @@ module external_pot
   implicit none
 
   private
-  public :: epot_type,              &
-            epot_init,              &
-            epot_end,               &
-            epot_generate,          &
-            epot_laser_scalar_pot,  &
-            epot_laser_field,       &
-            epot_laser_vector_pot,  &
-            depot_forces,           &
-            zepot_forces,           &
-            dproject, zproject,     &
-            projector_type
+  public ::                 &
+    epot_type,              &
+    epot_init,              &
+    epot_end,               &
+    epot_generate,          &
+    epot_laser_scalar_pot,  &
+    epot_laser_field,       &
+    epot_laser_vector_pot,  &
+    depot_forces,           &
+    zepot_forces,           &
+    dproject, zproject,     &
+    projector_type
 
   ! /* The projector data type is intended to hold the non-local part of the
   ! pseudopotentials. The definition of the action of a projector (which is
@@ -79,23 +80,23 @@ module external_pot
   end type projector_type
 
   type epot_type
-    !Classic charges:
+    ! Classic charges:
     integer :: classic_pot        ! How to include the classic charges
     FLOAT, pointer :: vclassic(:) ! We use it to store the potential of the classic charges
 
-    !Ions
-    FLOAT,     pointer :: vpsl(:)        ! the local part of the pseudopotentials
+    ! Ions
+    FLOAT,     pointer :: vpsl(:)          ! the local part of the pseudopotentials
 #ifdef HAVE_FFT
-    type(dcf), pointer :: local_cf(:)    ! for the local pseudopotential in Fourier space
-    type(dcf), pointer :: rhocore_cf(:)  ! and for the core density
+    type(dcf), pointer :: local_cf(:)      ! for the local pseudopotential in Fourier space
+    type(dcf), pointer :: rhocore_cf(:)    ! and for the core density
 #endif
 
-    integer :: nvnl                      ! number of nonlocal operators
+    integer :: nvnl                        ! number of nonlocal operators
     type(projector_type), pointer :: p(:)
     type(projector_type), pointer :: dp(:, :)
     type(projector_type), pointer :: lso(:, :)
 
-    !External e-m fields
+    ! External e-m fields
     integer :: no_lasers                   ! number of laser pulses used
     type(laser_type), pointer :: lasers(:) ! lasers stuff
     FLOAT, pointer :: E_field(:)           ! static electric field
@@ -107,6 +108,7 @@ module external_pot
 
 contains
 
+  ! ---------------------------------------------------------
   subroutine epot_init(ep, gr)
     type(epot_type),     intent(out) :: ep
     type(grid_type),     intent(in)  :: gr
@@ -117,7 +119,7 @@ contains
 
     call push_sub('epot.epot_init')
 
-    !Local part of the pseudopotentials
+    ! Local part of the pseudopotentials
     allocate(ep%vpsl(NP))
     ep%vpsl = M_ZERO
 
@@ -161,7 +163,7 @@ contains
       end select
       call loct_parse_block_end(blk)
 
-      !Compute the scalar potential
+      ! Compute the scalar potential
       allocate(ep%v_static(NP))
       do i = 1, NP
         ep%v_static(i) = sum(gr%m%x(i,:)*ep%E_field(:))
@@ -193,7 +195,7 @@ contains
       end select
       call loct_parse_block_end(blk)
 
-      !Compute the vector potential
+      ! Compute the vector potential
       allocate(ep%A_static(NP, NDIM), x(NDIM))
       do i = 1, NP
         x = gr%m%x(i, :)
@@ -202,7 +204,7 @@ contains
           ep%A_static(i, :) = (/x(2), -x(1)/)*ep%B_field(1)
         case (3)
           ep%A_static(i, :) = (/x(2)*ep%B_field(3) - x(3)*ep%B_field(2), &
-             x(3)*ep%B_field(1) - x(1)*ep%B_field(3), x(1)*ep%B_field(2) - x(2)*ep%B_field(1)/)
+            x(3)*ep%B_field(1) - x(1)*ep%B_field(3), x(1)*ep%B_field(2) - x(2)*ep%B_field(1)/)
         end select
       end do
       deallocate(x)
@@ -230,11 +232,12 @@ contains
           nullify(ep%lso(j, i)%jxyz, ep%lso(j, i)%bra, ep%lso(j, i)%ket, ep%lso(j, i)%uvu, ep%lso(j, i)%phases)
         end do
       end do
-    endif
+    end if
 
     call pop_sub()
   end subroutine epot_init
 
+  ! ---------------------------------------------------------
   subroutine epot_end(ep, sb, geo)
     type(epot_type),      intent(inout) :: ep
     type(simul_box_type), intent(in)    :: sb
@@ -250,7 +253,7 @@ contains
       end do
       deallocate(ep%local_cf)
       if(geo%nlcc) deallocate(ep%rhocore_cf)
-    endif
+    end if
 
 #endif
 
@@ -281,13 +284,14 @@ contains
 
       ASSERT(associated(ep%dp))
       deallocate(ep%dp); nullify(ep%dp)
-      
+
       ! Here the spin-orbit should be finalized, but only if they have been built...
     end if
 
   end subroutine epot_end
 
 #ifdef HAVE_FFT
+  ! ---------------------------------------------------------
   subroutine epot_local_fourier_init(ep, m, sb, geo)
     type(epot_type),     intent(inout) :: ep
     type(mesh_type),     intent(in)    :: m
@@ -312,24 +316,24 @@ contains
       call write_warning(2)
     end if
     select case(vlocal_cutoff)
-      case(0)
-        message(1) = 'Info: Vlocal Cutoff = sphere'
-        call write_info(1)
-      case(1)
-        message(1) = 'Info: Vlocal Cutoff = cylinder'
-        call write_info(1)
-      case(2)
-        message(1) = 'Info: Vlocal Cutoff = slab'
-        call write_info(1)
-      case(3)
-        message(1) = 'Info: Vlocal Cutoff = no cutoff'
-        call write_info(1)
-      case default
-        write(message(1), '(a,i2,a)') 'Input: ', vlocal_cutoff, &
-           ' is not a valid VlocalCutoff'
-        message(2) = 'VlocalCutoff = 0(spherical) | 1(cylindrical) | 2(planar)'
-        message(3) = '               3(no cutoff)'
-        call write_fatal(3)
+    case(0)
+      message(1) = 'Info: Vlocal Cutoff = sphere'
+      call write_info(1)
+    case(1)
+      message(1) = 'Info: Vlocal Cutoff = cylinder'
+      call write_info(1)
+    case(2)
+      message(1) = 'Info: Vlocal Cutoff = slab'
+      call write_info(1)
+    case(3)
+      message(1) = 'Info: Vlocal Cutoff = no cutoff'
+      call write_info(1)
+    case default
+      write(message(1), '(a,i2,a)') 'Input: ', vlocal_cutoff, &
+        ' is not a valid VlocalCutoff'
+      message(2) = 'VlocalCutoff = 0(spherical) | 1(cylindrical) | 2(planar)'
+      message(3) = '               3(no cutoff)'
+      call write_fatal(3)
     end select
 
     allocate(ep%local_cf(geo%nspecies))
@@ -349,11 +353,11 @@ contains
           r_0 = M_ZERO
         else
           call loct_parse_float(check_inp('VlocalCutoffRadius'),&
-               maxval(db(:)*m%h(:)/M_TWO)/units_inp%length%factor , r_0)
+            maxval(db(:)*m%h(:)/M_TWO)/units_inp%length%factor , r_0)
           r_0 = r_0*units_inp%length%factor
           write(message(1),'(3a,f12.6)')'Info: Vlocal Cutoff Radius [',  &
-                            trim(units_out%length%abbrev), '] = ',       &
-                            r_0/units_out%length%factor
+            trim(units_out%length%abbrev), '] = ',       &
+            r_0/units_out%length%factor
           call write_info(1)
         end if
       else
@@ -364,52 +368,52 @@ contains
 
       call dcf_alloc_FS(cf)      ! allocate the tube in Fourier space
 
-        norm = M_FOUR*M_PI/m%vol_pp(1)
-        temp(:) = M_TWO*M_PI/(db(:)*m%h(:))
-        cf%FS = M_Z0
-        do ix = 1, cf%nx
-          ixx(1) = pad_feq(ix, db(1), .true.)
-          do iy = 1, db(2)
-            ixx(2) = pad_feq(iy, db(2), .true.)
-            do iz = 1, db(3)
-              ixx(3) = pad_feq(iz, db(3), .true.)
+      norm = M_FOUR*M_PI/m%vol_pp(1)
+      temp(:) = M_TWO*M_PI/(db(:)*m%h(:))
+      cf%FS = M_Z0
+      do ix = 1, cf%nx
+        ixx(1) = pad_feq(ix, db(1), .true.)
+        do iy = 1, db(2)
+          ixx(2) = pad_feq(iy, db(2), .true.)
+          do iz = 1, db(3)
+            ixx(3) = pad_feq(iz, db(3), .true.)
 
-              x = temp(:)*ixx(:)
-              modg = sqrt(sum((temp(:)*ixx(:))**2))
+            x = temp(:)*ixx(:)
+            modg = sqrt(sum((temp(:)*ixx(:))**2))
 
-              tmp = specie_get_local_fourier(sb%dim, s, x)
-              if(modg /= M_ZERO) then
-                tmp = tmp - s%z_val*exp(-(modg/(2*s%ps%a_erf))**2)/modg**2
-                select case(vlocal_cutoff)
-                case(0)
-                  cf%FS(ix, iy, iz) = tmp*cutoff0(modg,r_0)
-                case(1)
-                  gx = abs(temp(1)*ixx(1))
-                  gperp = sqrt((temp(2)*ixx(2))**2+(temp(3)*ixx(3))**2)
-                  cf%FS(ix, iy, iz) = tmp*cutoff1(gx, gperp,r_0)
-                case(2)
-                  gz = abs(temp(3)*ixx(3))
-                  gpar = sqrt((temp(1)*ixx(1))**2+(temp(2)*ixx(2))**2)
-                  cf%FS(ix, iy, iz) = tmp*cutoff2(gpar, gz,r_0)
-                case(3)
-                  cf%FS(ix, iy, iz) = tmp
-                end select
-              else
-                select case(vlocal_cutoff)
-                case(0)  ; cf%FS(ix, iy, iz) = -r_0**2/M_TWO
-                case(1,2); cf%FS(ix, iy, iz) = M_ZERO
-                case(3)  ; cf%FS(ix, iy, iz) = tmp
-                end select
-              end if
+            tmp = specie_get_local_fourier(sb%dim, s, x)
+            if(modg /= M_ZERO) then
+              tmp = tmp - s%z_val*exp(-(modg/(2*s%ps%a_erf))**2)/modg**2
+              select case(vlocal_cutoff)
+              case(0)
+                cf%FS(ix, iy, iz) = tmp*cutoff0(modg,r_0)
+              case(1)
+                gx = abs(temp(1)*ixx(1))
+                gperp = sqrt((temp(2)*ixx(2))**2+(temp(3)*ixx(3))**2)
+                cf%FS(ix, iy, iz) = tmp*cutoff1(gx, gperp,r_0)
+              case(2)
+                gz = abs(temp(3)*ixx(3))
+                gpar = sqrt((temp(1)*ixx(1))**2+(temp(2)*ixx(2))**2)
+                cf%FS(ix, iy, iz) = tmp*cutoff2(gpar, gz,r_0)
+              case(3)
+                cf%FS(ix, iy, iz) = tmp
+              end select
+            else
+              select case(vlocal_cutoff)
+              case(0)  ; cf%FS(ix, iy, iz) = -r_0**2/M_TWO
+              case(1,2); cf%FS(ix, iy, iz) = M_ZERO
+              case(3)  ; cf%FS(ix, iy, iz) = tmp
+              end select
+            end if
 
- ! multiply by normalization factor and a phase shift to get the center of the box
-              cf%FS(ix, iy, iz) = norm*                         &
-                                  exp(M_PI*M_ZI*sum(ixx(:)))*   &
-                                  cf%FS(ix, iy, iz)
+            ! multiply by normalization factor and a phase shift to get the center of the box
+            cf%FS(ix, iy, iz) = norm*                         &
+              exp(M_PI*M_ZI*sum(ixx(:)))*   &
+              cf%FS(ix, iy, iz)
 
-            end do
           end do
         end do
+      end do
 
       ! now we built the non-local core corrections in momentum space
       nlcc: if(s%nlcc) then
@@ -438,6 +442,8 @@ contains
   end subroutine epot_local_fourier_init
 #endif
 
+
+  ! ---------------------------------------------------------
   subroutine epot_generate(ep, m, sb, geo, st, reltype, fast_generation)
     type(epot_type),      intent(inout) :: ep
     type(mesh_type),      intent(in)    :: m
@@ -483,7 +489,7 @@ contains
       a => geo%atom(ia) ! shortcuts
       s => a%spec
       call build_local_part()
-    enddo
+    end do
 
     ! Nonlocal part.
     i = 1
@@ -507,10 +513,10 @@ contains
               deallocate(ep%p(i)%jxyz, stat = ierr)
               do j = 1, sb%dim
                 deallocate(ep%dp(j, i)%jxyz, stat = ierr)
-              enddo
+              end do
               do j = 1, sb%dim
                 deallocate(ep%lso(j, i)%jxyz, stat = ierr)
-              enddo
+              end do
               call build_kb_sphere(i)
             else
               ep%p(i)%n_points_in_sphere = ep%p(k)%n_points_in_sphere
@@ -520,24 +526,24 @@ contains
                 ep%dp(j, i)%n_points_in_sphere = ep%dp(j, k)%n_points_in_sphere
                 ep%dp(j, i)%n_channels = ep%dp(j, k)%n_channels
                 ep%dp(j, i)%jxyz => ep%dp(j, k)%jxyz
-              enddo
+              end do
               do j = 1, sb%dim
                 ep%lso(j, i)%n_points_in_sphere = ep%lso(j, k)%n_points_in_sphere
                 ep%lso(j, i)%n_channels = ep%lso(j, k)%n_channels
                 ep%lso(j, i)%jxyz => ep%lso(j, k)%jxyz
-              enddo
-            endif
+              end do
+            end if
             call allocate_nl_part(i)
-          endif
+          end if
           call build_nl_part(i, l, lm)
-          
+
           ep%p(i)%index             = ia
           ep%dp(1:sb%dim, i)%index  = ia
           ep%lso(1:sb%dim, i)%index = ia
-          
+
           i = i + 1
-        enddo
-      enddo
+        end do
+      end do
     end do
 
 #ifdef HAVE_FFT
@@ -565,6 +571,8 @@ contains
     call pop_sub()
 
   contains
+
+    ! ---------------------------------------------------------
     subroutine build_local_part()
       integer :: i
       FLOAT :: x(3)
@@ -592,6 +600,7 @@ contains
     end subroutine build_local_part
 
 
+    ! ---------------------------------------------------------
     subroutine build_kb_sphere(ivnl)
       integer, intent(in) :: ivnl
       integer :: i, j, k, d
@@ -646,11 +655,11 @@ contains
           j = j + 1
           ep%p(ivnl)%jxyz(j) = k
           do d = 1, sb%dim
-             ep%dp(d, ivnl)%jxyz(j) = k
-          enddo
+            ep%dp(d, ivnl)%jxyz(j) = k
+          end do
           do d = 1, sb%dim
-             ep%lso(d, ivnl)%jxyz(j) = k
-          enddo
+            ep%lso(d, ivnl)%jxyz(j) = k
+          end do
           exit
         end do
       end do
@@ -659,6 +668,7 @@ contains
     end subroutine build_kb_sphere
 
 
+    ! ---------------------------------------------------------
     subroutine allocate_nl_part(ivnl)
       integer, intent(in) :: ivnl
       integer :: n_s, n_c, d
@@ -668,14 +678,14 @@ contains
       n_c = ep%p(ivnl)%n_channels
 
       allocate(ep%p(ivnl)%ket(n_s, n_c), &
-               ep%p(ivnl)%uvu(n_c, n_c))
+        ep%p(ivnl)%uvu(n_c, n_c))
       ep%p(ivnl)%ket(:,:) =  M_ZERO
       ep%p(ivnl)%bra      => ep%p(ivnl)%ket
       ep%p(ivnl)%uvu(:,:) =  M_ZERO
 
       do d = 1, sb%dim
         allocate(ep%dp(d, ivnl)%ket(n_s, n_c), ep%dp(d, ivnl)%bra(n_s, n_c), &
-           ep%dp(d, ivnl)%uvu(n_c, n_c))
+          ep%dp(d, ivnl)%uvu(n_c, n_c))
         ep%dp(d, ivnl)%ket(:,:) = M_ZERO
         ep%dp(d, ivnl)%bra(:,:) = M_ZERO
         ep%dp(d, ivnl)%uvu(:,:) = M_ZERO
@@ -683,7 +693,7 @@ contains
 
       do d = 1, sb%dim
         allocate(ep%lso(d, ivnl)%ket(n_s, n_c), ep%lso(d, ivnl)%bra(n_s, n_c), &
-           ep%lso(d, ivnl)%uvu(n_c, n_c))
+          ep%lso(d, ivnl)%uvu(n_c, n_c))
         ep%lso(d, ivnl)%ket(:,:) = M_ZERO
         ep%lso(d, ivnl)%bra(:,:) = M_ZERO
         ep%lso(d, ivnl)%uvu(:,:) = M_ZERO
@@ -692,17 +702,18 @@ contains
       if(sb%periodic_dim/=0) then
         allocate(ep%p(ivnl)%phases(n_s, st%d%nik))
         do d = 1, sb%dim
-           allocate(ep%dp(d,ivnl)%phases(n_s, st%d%nik))
+          allocate(ep%dp(d,ivnl)%phases(n_s, st%d%nik))
         end do
         do d = 1, sb%dim
-           allocate(ep%lso(d,ivnl)%phases(n_s, st%d%nik))
+          allocate(ep%lso(d,ivnl)%phases(n_s, st%d%nik))
         end do
-      endif
+      end if
 
       call pop_sub()
     end subroutine allocate_nl_part
 
 
+    ! ---------------------------------------------------------
     subroutine build_nl_part(ivnl, l, lm)
       integer, intent(in) :: ivnl, l, lm
 
@@ -726,7 +737,7 @@ contains
           x(:) = x_in(:) - sb%shift(k,:) - a%x
           r = sqrt(sum(x*x))
           if (r > s%ps%rc_max + m%h(1)) cycle
-          
+
           i_loop : do i = 1, n_c
             if(l .ne. s%ps%L_loc) then
               call specie_get_nl_part(s, x, l, lm, i, v, dv(1:3))
@@ -743,7 +754,7 @@ contains
               do d = 1, sb%dim
                 ep%lso(d, ivnl)%ket(j, i) = so_uv
               end do
-            endif
+            end if
           end do i_loop
 
         end do k_loop
@@ -760,7 +771,7 @@ contains
           ep%lso(2, ivnl)%bra(j, 1:n_c) = (x(3)*grad_so(j, 1, 1:n_c) - x(1)*grad_so(j, 3, 1:n_c))
           ep%lso(3, ivnl)%bra(j, 1:n_c) = (x(1)*grad_so(j, 2, 1:n_c) - x(2)*grad_so(j, 1, 1:n_c))
         end do
-      endif
+      end if
 
       ! and here we calculate the uVu
       if(s%ps%flavour == PS_TM2) then
@@ -800,6 +811,8 @@ contains
 
   end subroutine epot_generate
 
+
+  ! ---------------------------------------------------------
   subroutine epot_generate_classic(ep, m, geo)
     type(epot_type),     intent(inout) :: ep
     type(mesh_type),     intent(in)    :: m
@@ -837,6 +850,7 @@ contains
   end subroutine epot_generate_classic
 
 
+  ! ---------------------------------------------------------
   function epot_laser_scalar_pot(np, gr, ep, t) result(v)
     integer, intent(in) :: np
     type(grid_type), intent(in) :: gr
@@ -849,6 +863,7 @@ contains
   end function epot_laser_scalar_pot
 
 
+  ! ---------------------------------------------------------
   subroutine epot_laser_vector_pot(sb, ep, t, a)
     type(simul_box_type), intent(in) :: sb
     type(epot_type), intent(in)  :: ep
@@ -860,6 +875,7 @@ contains
   end subroutine epot_laser_vector_pot
 
 
+  ! ---------------------------------------------------------
   subroutine epot_laser_field(sb, ep, t, e)
     type(simul_box_type), intent(in) :: sb
     type(epot_type), intent(in)  :: ep

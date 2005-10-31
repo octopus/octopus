@@ -32,8 +32,7 @@ program cross_section
   implicit none
 
   integer :: in_file(3), out_file(3), eq_axis, i, j, nspin, lmax, time_steps
-  FLOAT :: dt
-  integer(POINTER_SIZE) :: blk
+  FLOAT   :: dt
   logical :: calculate_tensor
   type(spec_type) :: s
   type(kick_type) :: kick
@@ -46,7 +45,7 @@ program cross_section
   call syslabels_init(1)
   if(in_debug_mode) then
      call io_mkdir('debug')
-  endif
+  end if
   call units_init()
 
 
@@ -74,17 +73,17 @@ program cross_section
          call spectrum_cross_section(in_file(i), out_file(i), s)
          call io_close(in_file(i)); call io_close(out_file(i))
          in_file(i)  = io_open(trim(filename(i)), action='read', status='old')
-      enddo
+      end do
 
       out_file(1) = io_open('cross_section_tensor', action='write')
       call spectrum_cross_section_tensor(s, out_file(1), in_file(1:j))
       do i = 1, j
          call io_close(in_file(i))
          call loct_rm(trim(filename(i)))
-      enddo
+      end do
       call io_close(out_file(1))
 
-  endif
+  end if
 
   call io_end()
   call syslabels_end()
@@ -93,14 +92,14 @@ program cross_section
 
   contains
 
-!/*!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-! Here we start the search for the file(s) that we must process. In future 
-! version of octopus, I would like this to be controlled by a command line 
+!/*----------------------------------------------------------------------------
+! Here we start the search for the file(s) that we must process. In future
+! version of octopus, I would like this to be controlled by a command line
 ! option. The routine sets the eq_axis and calculate_tensor variables, as well
 ! as the in_file unit numbers.
 !
 ! The options are:
-! (i)  A file called "multipoles" is found. In this case, no other file is 
+! (i)  A file called "multipoles" is found. In this case, no other file is
 !      considered.
 !      (i.1) If this file signals three equivalent axis, the full tensor is
 !            calculated, and placed in "cross_section_tensor".
@@ -117,7 +116,7 @@ program cross_section
 !             program ends if it is not found.
 !      (ii.3) No equivalent axis. Files "multipoles.2" and "multipoles.3" are
 !             searched for; the program ends if they are not found.
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!*/!
+!---------------------------------------------------------------------------*/!
 subroutine read_files()
 
   in_file(1) = io_open('multipoles', action='read', status='old', die=.false.)
@@ -149,7 +148,7 @@ subroutine read_files()
        write(message(3),'(a)') 'A file "cross_section_vector" will be generated instead.'
        call write_warning(3)
        calculate_tensor = .false.
-    endif
+    end if
 
   else  ! We will try to load more multipoles.1 files...
 
@@ -162,7 +161,7 @@ subroutine read_files()
            write(message(1),'(a)') 'No "multipoles" or "multipoles.1" file found. At least one of those'
            write(message(2),'(a)') 'should be visible.'
            call write_fatal(2)
-       endif
+       end if
 
        call spectrum_mult_info(in_file(1), nspin, lmax, kick, time_steps, dt)
        eq_axis = kick%pol_equiv_axis
@@ -178,7 +177,7 @@ subroutine read_files()
              write(message(1),'(a)') 'The file "multipoles.1" tells me that the system has two equivalent axis,'
              write(message(2),'(a)') 'but I cannot find a "multipoles.2".'
              call write_fatal(2)
-          endif
+          end if
           write(message(1),'(a)') 'Found two files, "multipoles.1" and "multipoles.2".'
           write(message(2),'(a)') 'Two polarization axis are equivalent. I will generate the full tensor.'
           call write_info(2)
@@ -189,20 +188,20 @@ subroutine read_files()
              write(message(1),'(a)') 'The file "multipoles.1" tells me that the system has three equivalent axis,'
              write(message(2),'(a)') 'but I cannot find a "multipoles.2".'
              call write_fatal(2)
-          endif
+          end if
           in_file(3) = io_open('multipoles.3', action='read', status='old', die=.false.)
           if(in_file(3) < 0) in_file(3) = io_open('td.general/multipoles.3', action='read', status='old', die=.false.)
           if(in_file(3) < 0) then
              write(message(1),'(a)') 'The file "multipoles.1" tells me that the system has two equivalent axis,'
              write(message(2),'(a)') 'but I cannot find a "multipoles.3".'
              call write_fatal(2)
-          endif
+          end if
           write(message(1),'(a)') 'Found three files, "multipoles.1", "multipoles.2" and "multipoles.3".'
           write(message(2),'(a)') 'No symmetry information will be used.'
           call write_info(2)
-       endif
+       end if
 
-  endif
+  end if
 
   end subroutine read_files
 

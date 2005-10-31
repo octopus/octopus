@@ -40,8 +40,8 @@ subroutine X(ode_solver_init)(os)
   !%End
   call loct_parse_int(check_inp('ODESolver'),       ODE_RK4, os%solver_type)
   if( os%solver_type.lt.ODE_MINVAL.or.os%solver_type.gt.ODE_MAXVAL ) then
-     call input_error(check_inp('ODESolver'))
-  endif
+    call input_error(check_inp('ODESolver'))
+  end if
   call loct_parse_int(check_inp('ODESolverNSteps'),     100, os%nsteps)
 
   call X(ode_solver_create)(os)
@@ -54,25 +54,25 @@ end subroutine X(ode_solver_init)
 subroutine X(ode_solver_create)(os)
   type(ode_solver_type), intent(inout) :: os
 
-  call push_sub('ode_solver_inc.ode_solver_create')
+  call push_sub('ode_solver_inc.Xode_solver_create')
 
   select case(os%solver_type)
   case(ODE_RK4)
-     os%vsize = 4
-     message(1) = 'Info: ode_solver: Using Runge-Kutta 4th order.'
-     call write_info(1)
+    os%vsize = 4
+    message(1) = 'Info: ode_solver: Using Runge-Kutta 4th order.'
+    call write_info(1)
   case(ODE_FB78)
-     os%vsize = 13
-     message(1) = 'Info: ode_solver: Using Fehlberg 7th/8th order.'
-     call write_info(1)
+    os%vsize = 13
+    message(1) = 'Info: ode_solver: Using Fehlberg 7th/8th order.'
+    call write_info(1)
   case(ODE_VR89)
-     os%vsize = 16
-     message(1) = 'Info: ode_solver: Using Verner 8th/9th order.'
-     call write_info(1)
+    os%vsize = 16
+    message(1) = 'Info: ode_solver: Using Verner 8th/9th order.'
+    call write_info(1)
   case(ODE_PD89)
-     os%vsize = 13
-     message(1) = 'Info: ode_solver: Using Prince-Dormand 8th/9th order.'
-     call write_info(1)
+    os%vsize = 13
+    message(1) = 'Info: ode_solver: Using Prince-Dormand 8th/9th order.'
+    call write_info(1)
   end select
 
   allocate(os%a(os%vsize, os%vsize), os%b(os%vsize), os%c(os%vsize), os%e(os%vsize))
@@ -93,23 +93,23 @@ subroutine X(ode_solver_run)(os, func, startval, solutionp, solutionvec, filenam
   character(len=128) :: filename_
 
   interface
-     subroutine func(size, t, z, res)
-       integer, intent(in)  :: size
-       FLOAT,   intent(in)  :: t
-       R_TYPE,  intent(in)  :: z(:)
-       R_TYPE,  intent(out) :: res(:)
+    subroutine func(size, t, z, res)
+      integer, intent(in)  :: size
+      FLOAT,   intent(in)  :: t
+      R_TYPE,  intent(in)  :: z(:)
+      R_TYPE,  intent(out) :: res(:)
 
-     end subroutine func
+    end subroutine func
   end interface
 
 
-  call push_sub('ode_solver_inc.ode_solver_run')
+  call push_sub('ode_solver_inc.Xode_solver_run')
 
   if (present(filename)) then
-     filename_ = trim(filename)
+    filename_ = trim(filename)
   else
-     filename_ = ''
-  endif
+    filename_ = ''
+  end if
 
   ! initialize array
   solutionp = M_ZERO
@@ -117,26 +117,26 @@ subroutine X(ode_solver_run)(os, func, startval, solutionp, solutionvec, filenam
   ! setup coefficients
   select case(os%solver_type)
   case(ODE_RK4)
-     call ode_rk4_coeff(os)
+    call ode_rk4_coeff(os)
   case(ODE_FB78)
-     call ode_fb78_coeff(os)
+    call ode_fb78_coeff(os)
   case(ODE_VR89)
-     call ode_vr89_coeff(os)
+    call ode_vr89_coeff(os)
   case(ODE_PD89)
-     call ode_pd89_coeff(os)
+    call ode_pd89_coeff(os)
   case default
-     write(message(1), '(a,i4,a)') "Input: '", os%solver_type, &
-          "' is not a valid ODE solver"
-     message(2) = '( ODE solver =  ode_rk4 | ode_fb7 | ode_vr8 | ode_pd8 )'
-     call write_fatal(2)
+    write(message(1), '(a,i4,a)') "Input: '", os%solver_type, &
+      "' is not a valid ODE solver"
+    message(2) = '( ODE solver =  ode_rk4 | ode_fb7 | ode_vr8 | ode_pd8 )'
+    call write_fatal(2)
   end select
 
   ! start stepping
   if(present(solutionvec)) then
-     call X(ode_step)(os, func, startval, solutionp, solutionvec)
+    call X(ode_step)(os, func, startval, solutionp, solutionvec)
   else
-     call X(ode_step)(os, func, startval, solutionp)
-  endif
+    call X(ode_step)(os, func, startval, solutionp)
+  end if
 
 
   call pop_sub()
@@ -153,13 +153,13 @@ subroutine X(ode_step)(os, func, startval, solutionp, solutionvec)
   R_TYPE, optional,      intent(out) :: solutionvec(:,:) ! full solution for all t
 
   interface
-     subroutine func(size, t, z, res)
-       integer, intent(in)  :: size
-       FLOAT,   intent(in)  :: t
-       R_TYPE,  intent(in)  :: z(:)
-       R_TYPE,  intent(out) :: res(:)
+    subroutine func(size, t, z, res)
+      integer, intent(in)  :: size
+      FLOAT,   intent(in)  :: t
+      R_TYPE,  intent(in)  :: z(:)
+      R_TYPE,  intent(out) :: res(:)
 
-     end subroutine func
+    end subroutine func
   end interface
 
   R_TYPE, allocatable :: yn(:), kv(:,:), y0(:)
@@ -167,7 +167,7 @@ subroutine X(ode_step)(os, func, startval, solutionp, solutionvec)
   integer, parameter :: order = 4
   integer :: i, j, k
 
-  call push_sub('ode_solver_inc.ode_step')
+  call push_sub('ode_solver_inc.Xode_step')
 
   allocate(kv(os%nsize, os%vsize), yn(os%nsize), y0(os%nsize))
 
@@ -177,25 +177,25 @@ subroutine X(ode_step)(os, func, startval, solutionp, solutionvec)
 
   ! actual ODE stepping
   do i = 1, os%nsteps
-     if (os%full_solution) then
-        solutionvec(i, :) = yn
-     endif
+    if (os%full_solution) then
+      solutionvec(i, :) = yn
+    end if
 
-     ! calculate auxilary vectors
-     do j = 1, os%vsize
-        y0 = yn
-        do k = 1, j-1
-           y0 = y0 + dh*os%a(j,k)*kv(:,k)
-        enddo
-        call func(os%nsize, tn + os%c(j)*dh, y0, kv(:,j))
-     enddo
-     ! step forward
-     tn = tn + dh
-     do j = 1, os%vsize
-        yn = yn + dh*os%b(j)*kv(:,j)
-     enddo
+    ! calculate auxilary vectors
+    do j = 1, os%vsize
+      y0 = yn
+      do k = 1, j-1
+        y0 = y0 + dh*os%a(j,k)*kv(:,k)
+      end do
+      call func(os%nsize, tn + os%c(j)*dh, y0, kv(:,j))
+    end do
+    ! step forward
+    tn = tn + dh
+    do j = 1, os%vsize
+      yn = yn + dh*os%b(j)*kv(:,j)
+    end do
 
-  enddo
+  end do
 
   solutionp = yn
 
@@ -209,7 +209,7 @@ end subroutine X(ode_step)
 subroutine X(ode_solver_end)(os)
   type(ode_solver_type), intent(out) :: os
 
-  call push_sub('ode_solver_inc.ode_solver_end')
+  call push_sub('ode_solver_inc.Xode_solver_end')
 
   ! cleanup
   deallocate(os%a, os%b, os%c, os%e)

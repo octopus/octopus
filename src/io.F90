@@ -1,4 +1,4 @@
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+! --------------------------------------------------------------------------- !
 !                                                                             !
 ! This module implements an interface to the FORTRAN logical unit             !
 ! system. Based on code by Richard Maine.                                     !
@@ -14,7 +14,7 @@
 !                                                                             !
 ! Logical units min_lun to min_max are managed by this module.                !
 !                                                                             !
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+! --------------------------------------------------------------------------- !
 !
 ! $Id$
 
@@ -31,9 +31,18 @@ module io
   implicit none
 
   private
-  public :: io_workpath, io_open, io_mkdir
-  public :: io_init, io_end, io_status, io_dump_file, io_free, io_close, io_assign
-  public :: get_extension
+  public ::       &
+    io_workpath,  &
+    io_open,      &
+    io_mkdir,     &
+    io_init,      &
+    io_end,       &
+    io_status,    &
+    io_dump_file, &
+    io_free,      &
+    io_close,     &
+    io_assign,    &
+    get_extension
 
   integer, parameter :: min_lun=10, max_lun=99
   logical            :: lun_is_free(min_lun:max_lun)
@@ -64,8 +73,8 @@ contains
     call loct_parse_string('stdout', '-', filename)
     stdout = 6
     if(trim(filename).ne.'-') then
-       close(stdout)
-       open(stdout, file=filename, status='unknown')
+      close(stdout)
+      open(stdout, file=filename, status='unknown')
     end if
 
     !%Variable stdout
@@ -79,8 +88,8 @@ contains
     call loct_parse_string('stderr', '-', filename)
     stderr = 0
     if(trim(filename).ne.'-') then
-       close(stderr)
-       open(stderr, file=filename, status='unknown')
+      close(stderr)
+      open(stderr, file=filename, status='unknown')
     end if
 
     !%Variable WorkDir
@@ -100,17 +109,17 @@ contains
     !%Type logical
     !%Section 1 Generalities
     !%Description
-    !% In addition to writing to stdout and stderr, the code messages may also be 
-    !% flushed to "messages.stdout" and "messages.stderr", if this variable is 
+    !% In addition to writing to stdout and stderr, the code messages may also be
+    !% flushed to "messages.stdout" and "messages.stderr", if this variable is
     !% set to yes.
     !%End
     call loct_parse_logical('FlushMessages', .false., flush_messages)
 
     ! delete files so that we start writing to empty ones
     if(flush_messages) then
-       call loct_rm('messages.stdout')
-       call loct_rm('messages.stderr')
-    endif
+      call loct_rm('messages.stdout')
+      call loct_rm('messages.stderr')
+    end if
 
     !%Variable DebugLevel
     !%Type integer
@@ -123,46 +132,46 @@ contains
     !% to send a bug report to the developers and being considered.
     !% You have two options: (i) setting it to zero -- or less than zero, in which
     !% case you do not run in debugging mode (this is the default), or (ii) setting
-    !% it to a positive number. In this case the entries and exits to nested subroutines 
+    !% it to a positive number. In this case the entries and exits to nested subroutines
     !% are only printed down to the level that is given in this variable.
     !%End
     call loct_parse_int('DebugLevel',0,conf%debug_level)
     if(conf%debug_level>0) then
-       in_debug_mode = .true.
+      in_debug_mode = .true.
     else
-       in_debug_mode = .false.
-    endif
+      in_debug_mode = .false.
+    end if
 
 
     if(in_debug_mode) then
-       call loct_parse_logical('MPIDebugHook', .false., mpi_debug_hook)
-       if (mpi_debug_hook) then
-          call loct_gettimeofday(sec, usec)
-          call epoch_time_diff(sec,usec)
-          write(message(1),'(a,i6,a,i6.6,20x,a)') '* I ',sec,'.',usec,' | MPI debug hook'
-          call write_debug(1)
+      call loct_parse_logical('MPIDebugHook', .false., mpi_debug_hook)
+      if (mpi_debug_hook) then
+        call loct_gettimeofday(sec, usec)
+        call epoch_time_diff(sec,usec)
+        write(message(1),'(a,i6,a,i6.6,20x,a)') '* I ',sec,'.',usec,' | MPI debug hook'
+        call write_debug(1)
 
-          write(stdout,'(a,i3,a)') 'node:', mpiv%node, ' In debug hook'
-          write(node_hook,'(i3.3)') mpiv%node
-          file_exists = .false.
+        write(stdout,'(a,i3,a)') 'node:', mpiv%node, ' In debug hook'
+        write(node_hook,'(i3.3)') mpiv%node
+        file_exists = .false.
 
-          do while (.not.file_exists)
-             inquire(file='node_hook.'//node_hook, exist=file_exists)
-             call loct_nanosleep(1,0)
-             write(stdout,'(a,i3,a)') 'node:', mpiv%node, &
-                  ' - still sleeping. To release me touch: node_hook.'//trim(node_hook)
-          end do
+        do while (.not.file_exists)
+          inquire(file='node_hook.'//node_hook, exist=file_exists)
+          call loct_nanosleep(1,0)
+          write(stdout,'(a,i3,a)') 'node:', mpiv%node, &
+            ' - still sleeping. To release me touch: node_hook.'//trim(node_hook)
+        end do
 
-          write(stdout,'(a,i3,a)') 'node:', mpiv%node, ' Leaving debug hook'
-          ! remove possible debug hooks
-          call loct_rm( 'node_hook.'//trim(node_hook) )
+        write(stdout,'(a,i3,a)') 'node:', mpiv%node, ' Leaving debug hook'
+        ! remove possible debug hooks
+        call loct_rm( 'node_hook.'//trim(node_hook) )
 
-          call loct_gettimeofday(sec, usec)
-          call epoch_time_diff(sec,usec)
-          write(message(1),'(a,i6,a,i6.6,20x,a)') '* O ',sec,'.',usec,' | MPI debug hook'
-          call write_debug(1)
-       endif
-    endif
+        call loct_gettimeofday(sec, usec)
+        call epoch_time_diff(sec,usec)
+        write(message(1),'(a,i6,a,i6.6,20x,a)') '* O ',sec,'.',usec,' | MPI debug hook'
+        call write_debug(1)
+      end if
+    end if
 
     ! create temporary dir (we will need it)
     tmpdir = 'tmp/'
@@ -170,8 +179,8 @@ contains
 
     ! create debug directory if in debugging mode
     if(in_debug_mode) then
-       call io_mkdir('debug')
-    endif
+      call io_mkdir('debug')
+    end if
 
     !%Variable ProfilingMode
     !%Type logical
@@ -183,7 +192,7 @@ contains
     !% are written in './profiling.NNN/profiling.nnn' with nnn being the
     !% node number (000 in serial) and NNN the number of processors.
     !% This is mainly for development purposes. Note, however, that
-    !% octopus should be compiled with --disable-debug to do proper 
+    !% octopus should be compiled with --disable-debug to do proper
     !% profiling.
     !%End
     call loct_parse_logical('ProfilingMode', .false., in_profiling_mode)
@@ -210,12 +219,12 @@ contains
 
     ! Looks for a free unit and assigns it to lun
     do lun = min_lun, max_lun
-       if (lun_is_free(lun)) then
-          inquire(unit=lun, opened=used, iostat=iostat)
-          if (iostat .ne. 0) used = .true.
-          lun_is_free(lun) = .false.
-          if (.not. used) return
-       end if
+      if (lun_is_free(lun)) then
+        inquire(unit=lun, opened=used, iostat=iostat)
+        if (iostat .ne. 0) used = .true.
+        lun_is_free(lun) = .false.
+        if (.not. used) return
+      end if
     end do
 
   end subroutine io_assign
@@ -226,7 +235,7 @@ contains
     integer, intent(in) :: lun
 
     if (lun .ge. min_lun .and. lun .le. max_lun) &
-         lun_is_free(lun) = .true.
+      lun_is_free(lun) = .true.
   end subroutine io_free
 
 
@@ -269,32 +278,32 @@ contains
 
     call io_assign(iunit)
     if(iunit<0) then
-       if(die_) then
-          write(stderr, '(a)') '*** IO Error: Too many files open'
-          message(1) = 'Error: io_open.'
-          call write_fatal(1)
-       end if
-       return
+      if(die_) then
+        write(stderr, '(a)') '*** IO Error: Too many files open'
+        message(1) = 'Error: io_open.'
+        call write_fatal(1)
+      end if
+      return
     end if
 
     if(file(1:1) .ne. '/') then
-       file_ = io_workpath(file)
+      file_ = io_workpath(file)
     else
-       file_ = file
+      file_ = file
     end if
 
     open(unit=iunit, file=trim(file_), status=trim(status_), form=trim(form_), &
-         action=trim(action), position=trim(position_), iostat=iostat)
+      action=trim(action), position=trim(position_), iostat=iostat)
 
     if(iostat.ne.0) then
-       call io_free(iunit)
-       iunit = -1
-       if(die_) then
-          write(*, '(5a)') '*** IO Error: Could not open file "', trim(file_), &
-               '" for action="', trim(action), '"'
-          message(1) = 'Error: io_open.'
-          call write_fatal(1)
-       end if
+      call io_free(iunit)
+      iunit = -1
+      if(die_) then
+        write(*, '(5a)') '*** IO Error: Could not open file "', trim(file_), &
+          '" for action="', trim(action), '"'
+        message(1) = 'Error: io_open.'
+        call write_fatal(1)
+      end if
     end if
 
   end function io_open
@@ -325,16 +334,16 @@ contains
 
     write(iunit, '(a)') '******** io_status ********'
     do i = 0, max_lun
-       inquire(i, opened=opened, named=named, name=filename, form=form, iostat=iostat)
-       if (iostat .eq. 0) then
-          if (opened) then
-             if(.not.named) filename = 'No name available'
-             write(iunit, '(i4,5x,a,5x,a)') i, form, filename
-          end if
-       else
-          write(iunit, '(i4,5x,a)') i, 'Iostat error'
-       end if
-    enddo
+      inquire(i, opened=opened, named=named, name=filename, form=form, iostat=iostat)
+      if (iostat .eq. 0) then
+        if (opened) then
+          if(.not.named) filename = 'No name available'
+          write(iunit, '(i4,5x,a,5x,a)') i, form, filename
+        end if
+      else
+        write(iunit, '(i4,5x,a)') i, 'Iostat error'
+      end if
+    end do
     write(iunit,'(a)') '********           ********'
 
   end subroutine io_status
@@ -351,8 +360,8 @@ contains
     call io_assign(iunit)
     open(unit=iunit, file=filename, iostat=err, action='read', status='old')
     do while(err == 0)
-       read(iunit, fmt='(a80)', iostat=err) s
-       if(err==0) write(ounit, '(a)') s
+      read(iunit, fmt='(a80)', iostat=err) s
+      if(err==0) write(ounit, '(a)') s
     end do
     call io_close(iunit)
 
@@ -371,10 +380,10 @@ contains
     i = index(path, ".", back = .true.)
     j = index(path(i+1:), "/")
     if(i.eq.0 .or. j.ne.0) then
-       ext = ""
+      ext = ""
     else
-       ext = path(i+1:)
-    endif
+      ext = path(i+1:)
+    end if
   end function get_extension
 
 end module io

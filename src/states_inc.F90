@@ -17,8 +17,9 @@
 !!
 !! $Id$
 
-
-! Calculates the new density out the wavefunctions and occupations...
+! ---------------------------------------------------------
+! Calculates the new density out the wavefunctions and
+! occupations...
 subroutine X(states_calc_dens)(st, np, rho)
   type(states_type), intent(in)  :: st
   integer,           intent(in)  :: np
@@ -52,7 +53,7 @@ subroutine X(states_calc_dens)(st, np, rho)
           rho(i, 2) = rho(i, 2) + st%d%kweights(ik)  *st%occ(p, ik)  *R_ABS(st%X(psi)(i, 2, p, ik))**2
 
           c = st%d%kweights(ik)*st%occ(p, ik) * &
-             st%X(psi)(i, 1, p, ik) * R_CONJ(st%X(psi)(i, 2, p, ik))
+            st%X(psi)(i, 1, p, ik) * R_CONJ(st%X(psi)(i, 2, p, ik))
           rho(i, 3) = rho(i, 3) + R_REAL(c)
           rho(i, 4) = rho(i, 4) + R_AIMAG(c)
         end select
@@ -65,7 +66,7 @@ subroutine X(states_calc_dens)(st, np, rho)
   if(st%parallel_in_states) then
     allocate(reduce_rho(1:np, st%d%nspin))
     call MPI_ALLREDUCE(rho(1, 1), reduce_rho(1, 1), np*st%d%nspin, &
-       MPI_FLOAT, MPI_SUM, st%comm, ierr)
+      MPI_FLOAT, MPI_SUM, st%comm, ierr)
     rho = reduce_rho
     deallocate(reduce_rho)
   end if
@@ -76,6 +77,7 @@ subroutine X(states_calc_dens)(st, np, rho)
 end subroutine X(states_calc_dens)
 
 
+! ---------------------------------------------------------
 ! Orthonormalizes nst orbital in mesh m
 subroutine X(states_gram_schmidt)(nst, m, dim, psi, start)
   integer,           intent(in)    :: nst, dim
@@ -104,13 +106,15 @@ subroutine X(states_gram_schmidt)(nst, m, dim, psi, start)
     nrm2 = X(states_nrm2)(m, dim, psi(:,:, p))
     ss = R_TOTYPE(M_ONE/nrm2)
     do idim = 1, dim
-       call lalg_scal(m%np, ss, psi(:, idim, p))
+      call lalg_scal(m%np, ss, psi(:, idim, p))
     end do
   end do
 
   call pop_sub()
 end subroutine X(states_gram_schmidt)
 
+
+! ---------------------------------------------------------
 R_TYPE function X(states_dotp)(m, dim, f1, f2) result(dotp)
   type(mesh_type), intent(in) :: m
   integer,         intent(in) :: dim
@@ -129,6 +133,8 @@ R_TYPE function X(states_dotp)(m, dim, f1, f2) result(dotp)
 
 end function X(states_dotp)
 
+
+! ---------------------------------------------------------
 FLOAT function X(states_nrm2)(m, dim, f) result(nrm2)
   type(mesh_type), intent(in) :: m
   integer,         intent(in) :: dim
@@ -148,6 +154,8 @@ FLOAT function X(states_nrm2)(m, dim, f) result(nrm2)
 
 end function X(states_nrm2)
 
+
+! ---------------------------------------------------------
 FLOAT function X(states_residue)(m, dim, hf, e, f) result(r)
   type(mesh_type),   intent(in)  :: m
   integer,           intent(in)  :: dim
@@ -167,6 +175,8 @@ FLOAT function X(states_residue)(m, dim, hf, e, f) result(r)
 
 end function X(states_residue)
 
+
+! ---------------------------------------------------------
 subroutine X(states_output) (st, gr, dir, outp)
   type(states_type),   intent(in)    :: st
   type(grid_type),     intent(inout) :: gr
@@ -183,51 +193,52 @@ subroutine X(states_output) (st, gr, dir, outp)
   u = M_ONE/units_out%length%factor**NDIM
 
   if(outp%what(output_density)) then
-     do is = 1, st%d%nspin
-        write(fname, '(a,i1)') 'density-', is
-        call doutput_function(outp%how, dir, fname, gr%m, gr%sb, st%rho(:, is), u, ierr)
-     end do
+    do is = 1, st%d%nspin
+      write(fname, '(a,i1)') 'density-', is
+      call doutput_function(outp%how, dir, fname, gr%m, gr%sb, st%rho(:, is), u, ierr)
+    end do
   end if
 
   if(outp%what(output_wfs)) then
-     do ist = st%st_start, st%st_end
-        if(loct_isinstringlist(ist, outp%wfs_list)) then
-           do ik = 1, st%d%nik
-              do idim = 1, st%d%dim
-                 write(fname, '(a,i3.3,a,i3.3,a,i1)') 'wf-', ik, '-', ist, '-', idim
-                 call X(output_function) (outp%how, dir, fname, gr%m, gr%sb, &
-                      st%X(psi) (1:, idim, ist, ik), sqrt(u), ierr)
-              end do
-           end do
-        end if
-     end do
+    do ist = st%st_start, st%st_end
+      if(loct_isinstringlist(ist, outp%wfs_list)) then
+        do ik = 1, st%d%nik
+          do idim = 1, st%d%dim
+            write(fname, '(a,i3.3,a,i3.3,a,i1)') 'wf-', ik, '-', ist, '-', idim
+            call X(output_function) (outp%how, dir, fname, gr%m, gr%sb, &
+              st%X(psi) (1:, idim, ist, ik), sqrt(u), ierr)
+          end do
+        end do
+      end if
+    end do
   end if
 
 
   if(outp%what(output_wfs_sqmod)) then
-     allocate(dtmp(NP))
-     do ist = 1, st%nst
-        if(loct_isinstringlist(ist, outp%wfs_list)) then
-           do ik = 1, st%d%nik
-              do idim = 1, st%d%dim
-                 write(fname, '(a,i3.3,a,i3.3,a,i1)') 'sqm-wf-', ik, '-', ist, '-', idim
-                 dtmp = abs(st%X(psi) (:, idim, ist, ik))**2
-                 call doutput_function (outp%how, dir, fname, gr%m, gr%sb, dtmp, u, ierr)
-              end do
-           end do
-        end if
-     end do
-     deallocate(dtmp)
+    allocate(dtmp(NP))
+    do ist = 1, st%nst
+      if(loct_isinstringlist(ist, outp%wfs_list)) then
+        do ik = 1, st%d%nik
+          do idim = 1, st%d%dim
+            write(fname, '(a,i3.3,a,i3.3,a,i1)') 'sqm-wf-', ik, '-', ist, '-', idim
+            dtmp = abs(st%X(psi) (:, idim, ist, ik))**2
+            call doutput_function (outp%how, dir, fname, gr%m, gr%sb, dtmp, u, ierr)
+          end do
+        end do
+      end if
+    end do
+    deallocate(dtmp)
   end if
 
   if(NDIM==3) then
-     if(outp%what(output_elf))    call elf(.true.,  'elf_rs')
-     if(outp%what(output_elf_FS)) call elf(.false., 'elf_fs')
+    if(outp%what(output_elf))    call elf(.true.,  'elf_rs')
+    if(outp%what(output_elf_FS)) call elf(.false., 'elf_fs')
   end if
 
   call pop_sub()
 contains
 
+  ! ---------------------------------------------------------
   subroutine mf2mf_RS2FS(m, fin, fout, c)
     type(mesh_type), intent(in)    :: m
     R_TYPE,          intent(in)    :: fin(NP)
@@ -244,6 +255,7 @@ contains
   end subroutine mf2mf_RS2FS
 
 
+  ! ---------------------------------------------------------
   subroutine elf(rs, filename)
     logical, intent(in) :: rs
     character(len=*), intent(in) :: filename
@@ -258,80 +270,80 @@ contains
 
     ! single or double occupancy
     if(st%d%nspin == 1) then
-       s = M_TWO
+      s = M_TWO
     else
-       s = M_ONE
+      s = M_ONE
     end if
 
     if(.not.rs) then
-       call X(cf_new)(gr%m%l, cf_tmp)
-       call X(cf_fft_init)(cf_tmp, gr%sb)
+      call X(cf_new)(gr%m%l, cf_tmp)
+      call X(cf_fft_init)(cf_tmp, gr%sb)
     end if
 
     allocate(c(NP))
 
     do_is: do is = 1, st%d%nspin
-       allocate(r(NP), gradr(NP, NDIM), j(NP, NDIM))
-       r = M_ZERO; gradr = M_ZERO; j  = M_ZERO
-       c = M_ZERO
+      allocate(r(NP), gradr(NP, NDIM), j(NP, NDIM))
+      r = M_ZERO; gradr = M_ZERO; j  = M_ZERO
+      c = M_ZERO
 
-       allocate(psi_fs(NP), gpsi(NP, NDIM))
-       do ik = is, st%d%nik, st%d%nspin
-          do ist = 1, st%nst
-             do idim = 1, st%d%dim
+      allocate(psi_fs(NP), gpsi(NP, NDIM))
+      do ik = is, st%d%nik, st%d%nspin
+        do ist = 1, st%nst
+          do idim = 1, st%d%dim
 
-                if(rs) then
-                   psi_fs(:) = cmplx(st%X(psi)(:, idim, ist, ik), KIND=PRECISION)
-                else
-                   call mf2mf_RS2FS(gr%m, st%X(psi)(:, idim, ist, ik), psi_fs(:), cf_tmp)
-                end if
-                call zf_gradient(gr%sb, gr%f_der, psi_fs(:), gpsi)
+            if(rs) then
+              psi_fs(:) = cmplx(st%X(psi)(:, idim, ist, ik), KIND=PRECISION)
+            else
+              call mf2mf_RS2FS(gr%m, st%X(psi)(:, idim, ist, ik), psi_fs(:), cf_tmp)
+            end if
+            call zf_gradient(gr%sb, gr%f_der, psi_fs(:), gpsi)
 
-                if(.not.rs) then
-                   do i = 1, NDIM
-                      gpsi(:,i) = gpsi(:,i) * gr%m%h(i)**2 * real(cf_tmp%n(i), PRECISION) / (M_TWO*M_PI)
-                   end do
-                end if
+            if(.not.rs) then
+              do i = 1, NDIM
+                gpsi(:,i) = gpsi(:,i) * gr%m%h(i)**2 * real(cf_tmp%n(i), PRECISION) / (M_TWO*M_PI)
+              end do
+            end if
 
-                r(:) = r(:) + st%d%kweights(ik)*st%occ(ist, ik) * abs(psi_fs(:))**2
-                do i = 1, NDIM
-                   gradr(:,i) = gradr(:,i) + st%d%kweights(ik)*st%occ(ist, ik) *  &
-                        M_TWO * real(conjg(psi_fs(:))*gpsi(:,i))
-                   j (:,i) =  j(:,i) + st%d%kweights(ik)*st%occ(ist, ik) *  &
-                        aimag(conjg(psi_fs(:))*gpsi(:,i))
-                end do
+            r(:) = r(:) + st%d%kweights(ik)*st%occ(ist, ik) * abs(psi_fs(:))**2
+            do i = 1, NDIM
+              gradr(:,i) = gradr(:,i) + st%d%kweights(ik)*st%occ(ist, ik) *  &
+                M_TWO * real(conjg(psi_fs(:))*gpsi(:,i))
+              j (:,i) =  j(:,i) + st%d%kweights(ik)*st%occ(ist, ik) *  &
+                aimag(conjg(psi_fs(:))*gpsi(:,i))
+            end do
 
-                do i = 1, NP
-                   if(r(i) >= dmin) then
-                      c(i) = c(i) + st%d%kweights(ik)*st%occ(ist, ik)/s * &
-                           sum(abs(gpsi(i, 1:NDIM))**2)
-                   end if
-                end do
-             end do
+            do i = 1, NP
+              if(r(i) >= dmin) then
+                c(i) = c(i) + st%d%kweights(ik)*st%occ(ist, ik)/s * &
+                  sum(abs(gpsi(i, 1:NDIM))**2)
+              end if
+            end do
           end do
-       end do
-       deallocate(psi_fs, gpsi)
+        end do
+      end do
+      deallocate(psi_fs, gpsi)
 
-       do i = 1, NP
-          if(r(i) >= dmin) then
-             c(i) = c(i) - (M_FOURTH*sum(gradr(i, 1:NDIM)**2) + sum(j(i, 1:NDIM)**2))/(s*r(i))
-          end if
-       end do
+      do i = 1, NP
+        if(r(i) >= dmin) then
+          c(i) = c(i) - (M_FOURTH*sum(gradr(i, 1:NDIM)**2) + sum(j(i, 1:NDIM)**2))/(s*r(i))
+        end if
+      end do
 
-       ! normalization
-       f = M_THREE/M_FIVE*(M_SIX*M_PI**2)**M_TWOTHIRD
-       do i = 1, NP
-          if(abs(r(i)) >= dmin) then
-             d    = f*(r(i)/s)**(M_FIVE/M_THREE)
-             c(i) = M_ONE/(M_ONE + (c(i)/d)**2)
-          else
-             c(i) = M_ZERO
-          end if
-       end do
+      ! normalization
+      f = M_THREE/M_FIVE*(M_SIX*M_PI**2)**M_TWOTHIRD
+      do i = 1, NP
+        if(abs(r(i)) >= dmin) then
+          d    = f*(r(i)/s)**(M_FIVE/M_THREE)
+          c(i) = M_ONE/(M_ONE + (c(i)/d)**2)
+        else
+          c(i) = M_ZERO
+        end if
+      end do
 
-       deallocate(r, gradr, j)
-       write(fname, '(a,a,i1)') trim(filename), '-', is
-       call doutput_function(outp%how, dir, trim(fname), gr%m, gr%sb, c, M_ONE, ierr)
+      deallocate(r, gradr, j)
+      write(fname, '(a,a,i1)') trim(filename), '-', is
+      call doutput_function(outp%how, dir, trim(fname), gr%m, gr%sb, c, M_ONE, ierr)
 
     end do do_is
 
@@ -342,16 +354,19 @@ contains
 
 end subroutine X(states_output)
 
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-! Returns the dot product of two many-body states st1 and st2, for a given
-! irreducible subspace (k-point) ik.
-! Warning: it does not do any check on the "conformance" of the two states.
-!  (maybe a subroutine should be written for that purpose...)
-! Warning: it disregards completely the occupation number problem.
-!  This is not important, unless the occupations are different in the
-!  two states (this is not the case for the moment), or if any of the
-!  occupation is null (this can be problem, and will have to be cared about.
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+! -------------------------------------------------------------
+! Returns the dot product of two many-body states st1 and
+! st2, for a given irreducible subspace (k-point) ik.
+! Warning: it does not do any check on the "conformance" of
+!  the two states. (maybe a subroutine should be written
+!  for that purpose...)
+! Warning: it disregards completely the occupation number
+!  problem. This is not important, unless the occupations
+!  are different in the two states (this is not the case
+!  for the moment), or if any of the occupation is null
+!  (this can be problem, and will have to be cared about.
+! -------------------------------------------------------------
 R_TYPE function X(states_mpdotp)(m, ik, st1, st2) result(dotp)
   type(mesh_type),   intent(in) :: m
   integer,           intent(in) :: ik
@@ -367,13 +382,13 @@ R_TYPE function X(states_mpdotp)(m, ik, st1, st2) result(dotp)
   dotp = lalg_determinant(st1%nst, a, invert = .false.)
 
   select case(st1%d%ispin)
-   case(UNPOLARIZED)
-     dotp = dotp**2
-   case(SPIN_POLARIZED)
-     ! We assume that ik is an odd number (maybe this should be checked. So one
-     ! spin component is ik and another spin component is ik + 1.
-     call X(calculate_matrix)(m, ik+1, st1, st2, st1%nst, a)
-     dotp = dotp*lalg_determinant(st1%nst, a, invert = .false.)
+  case(UNPOLARIZED)
+    dotp = dotp**2
+  case(SPIN_POLARIZED)
+    ! We assume that ik is an odd number (maybe this should be checked. So one
+    ! spin component is ik and another spin component is ik + 1.
+    call X(calculate_matrix)(m, ik+1, st1, st2, st1%nst, a)
+    dotp = dotp*lalg_determinant(st1%nst, a, invert = .false.)
   end select
 
   deallocate(a)
@@ -381,6 +396,7 @@ R_TYPE function X(states_mpdotp)(m, ik, st1, st2) result(dotp)
 
 contains
 
+  ! ---------------------------------------------------------
   subroutine X(calculate_matrix)(m, ik, st1, st2, n, a)
     type(mesh_type),   intent(in)  :: m
     integer,           intent(in)  :: ik
@@ -404,7 +420,7 @@ contains
       do j = 0, st1%numprocs-1
         if(st1%rank.ne.j) then
           call mpi_isend(st2%X(psi)(1, 1, i, ik), st1%d%dim*m%np, R_MPITYPE, &
-             j, i, st1%comm, request, ierr)
+            j, i, st1%comm, request, ierr)
         end if
       end do
     end do
@@ -414,8 +430,8 @@ contains
     do j = 1, n
       l = st1%node(j)
       if(l.ne.st1%rank) then
-           call mpi_irecv(phi2(1, 1), st1%d%dim*m%np, R_MPITYPE, l, j, st1%comm, request, ierr)
-           call mpi_wait(request, status, ierr)
+        call mpi_irecv(phi2(1, 1), st1%d%dim*m%np, R_MPITYPE, l, j, st1%comm, request, ierr)
+        call mpi_wait(request, status, ierr)
       else
         phi2(:, :) = st2%X(psi)(:, :, j, ik)
       end if
@@ -432,13 +448,13 @@ contains
       k = st1%node(i)
       do j = 1, n
         call MPI_BCAST(a(i, j), 1, R_MPITYPE, k, st1%comm, ierr)
-      enddo
-    enddo
+      end do
+    end do
 #else
     do i = 1, n
       do j = 1, n
         a(i, j) = X(states_dotp)(m, dim, st1%X(psi)(1:, :, i, ik), &
-           st2%X(psi)(1:, :, j, ik))
+          st2%X(psi)(1:, :, j, ik))
       end do
     end do
 #endif
@@ -447,7 +463,8 @@ contains
 
 end function X(states_mpdotp)
 
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+! ---------------------------------------------------------
 subroutine X(states_calc_angular)(gr, st, angular, l2)
   type(grid_type),   intent(inout) :: gr
   type(states_type), intent(in)    :: st
@@ -486,9 +503,9 @@ subroutine X(states_calc_angular)(gr, st, angular, l2)
 
 #if defined(HAVE_MPI)
   call MPI_ALLREDUCE(temp, angular, 3, &
-     MPI_FLOAT, MPI_SUM, st%comm, ierr)
+    MPI_FLOAT, MPI_SUM, st%comm, ierr)
   if(present(l2)) call MPI_ALLREDUCE(ltemp, l2, 1, &
-     MPI_FLOAT, MPI_SUM, st%comm, ierr)
+    MPI_FLOAT, MPI_SUM, st%comm, ierr)
 #else
   angular = temp
   if(present(l2)) l2 = ltemp

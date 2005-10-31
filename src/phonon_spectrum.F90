@@ -37,8 +37,8 @@ program phonon_spectrum
   call io_init()
   call syslabels_init(1)
   if(in_debug_mode) then
-     call io_mkdir('debug')
-  endif
+    call io_mkdir('debug')
+  end if
   call units_init()
 
   ! Opens the coordinates files.
@@ -52,4 +52,4 @@ program phonon_spectrum
   call parser_end()
   call global_end()
 
-end program
+end program phonon_spectrum

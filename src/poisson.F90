@@ -41,28 +41,32 @@ module poisson
   implicit none
 
   private
-  public :: poisson_init,  &
-            dpoisson_solve, zpoisson_solve, &
-            poisson_end
+  public ::             &
+    poisson_init,       &
+    dpoisson_solve,     &
+    zpoisson_solve,     &
+    poisson_end
 
-  integer :: poisson_solver = -99
+  integer, parameter :: &
+    CG            =  5, &
+    CG_CORRECTED  =  6, &
+    MULTIGRILLA   =  7
 
 #ifdef HAVE_FFT
+  integer, parameter :: &
+    DIRECT_SUM_1D = -1, &
+    DIRECT_SUM_2D = -2, &
+    FFT_SPH       =  0, &
+    FFT_CYL       =  1, &
+    FFT_PLA       =  2, &
+    FFT_NOCUT     =  3, &
+    FFT_CORRECTED =  4
+
   type(dcf) :: fft_cf
   FLOAT, pointer :: fft_coulb_FS(:,:,:)
-
-  integer, parameter :: DIRECT_SUM_1D = -1,&
-                        DIRECT_SUM_2D = -2,&
-                        FFT_SPH       = 0, &
-                        FFT_CYL       = 1, &
-                        FFT_PLA       = 2, &
-                        FFT_NOCUT     = 3, &
-                        FFT_CORRECTED = 4
 #endif
-  integer, parameter :: CG            = 5, &
-                        CG_CORRECTED  = 6, &
-                        MULTIGRILLA   = 7
 
+  integer :: poisson_solver = -99
 
 
 contains
@@ -125,7 +129,7 @@ contains
       call loct_parse_int(check_inp('PoissonSolver'), gr%sb%periodic_dim, poisson_solver)
       if( (poisson_solver .ne. FFT_SPH) .and. (poisson_solver .ne. DIRECT_SUM_2D) ) then
         call input_error('PoissonSolver')
-      endif
+      end if
 
 #else
       poisson_solver = -NDIM ! internal type
@@ -135,7 +139,7 @@ contains
         message(1) = 'If curvilinear coordinates are used in 2D, then the only working'
         message(2) = 'Poisson solver is -2 ("direct summation in two dimensions")'
         call write_fatal(2)
-      endif
+      end if
 
       call messages_print_var_option(stdout, "PoissonSolver", poisson_solver, "Poisson solver:")
       call poisson2D_init(gr)
@@ -151,8 +155,8 @@ contains
       end if
 
       if(poisson_solver /= gr%sb%periodic_dim .and. &
-         poisson_solver < CG .and. &
-         poisson_solver /= FFT_CORRECTED) then
+        poisson_solver < CG .and. &
+        poisson_solver /= FFT_CORRECTED) then
         write(message(1), '(a,i1,a)')'The System is periodic in ', gr%sb%periodic_dim ,' dimension(s),'
         write(message(2), '(a,i1,a)')'but Poisson Solver is set for ',poisson_solver,' dimensions.'
         message(3) =                 'You know what you are doing, right?'
@@ -168,7 +172,7 @@ contains
       if(gr%m%use_curvlinear .and. (poisson_solver.ne.CG_CORRECTED) .and. (poisson_solver.ne.MULTIGRILLA) ) then
         message(1) = 'If curvilinear coordinates are used, then the only working'
         message(2) = 'Poisson solvers are cg_corrected ("corrected conjugate gradients") and'
-        message(3) = 'multigrid.' 
+        message(3) = 'multigrid.'
         call write_fatal(3)
       end if
 
@@ -192,7 +196,7 @@ contains
     case(CG_CORRECTED)
       call poisson_cg2_end()
     case(MULTIGRILLA)
-       call poisson_multigrid_end()
+      call poisson_multigrid_end()
     end select
     poisson_solver = -99
 

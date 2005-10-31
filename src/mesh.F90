@@ -36,16 +36,16 @@ module mesh
   implicit none
 
   private
-  public ::          &
-    mesh_type,       &
-    mesh_init_1,     &
-    mesh_init_2,     &
-    mesh_init_3,     &
-    mesh_end,        &
-    mesh_double_box, &
-    mesh_inborder,   &
-    mesh_r,          &
-    mesh_gcutoff,    &
+  public ::            &
+    mesh_type,         &
+    mesh_init_stage_1, &
+    mesh_init_stage_2, &
+    mesh_init_stage_3, &
+    mesh_end,          &
+    mesh_double_box,   &
+    mesh_inborder,     &
+    mesh_r,            &
+    mesh_gcutoff,      &
     mesh_write_info
 
 
@@ -81,24 +81,24 @@ module mesh
     integer, pointer :: Lxyz_tmp(:,:,:) ! init_1 and init_2
 
     logical       :: parallel_in_domains
-    integer       :: mpi_comm ! my communicator in domains
-    integer       :: mpi_size ! size of mpi_comm (defined also in serial mode)
-    integer       :: mpi_rank ! rank of mpi_comm (defined also in serial mode)
-    type(pv_type) :: vp ! Describes parallel vectors defined on the mesh.
+    integer       :: mpi_comm           ! my communicator in domains
+    integer       :: mpi_size           ! size of mpi_comm (defined also in serial mode)
+    integer       :: mpi_rank           ! rank of mpi_comm (defined also in serial mode)
+    type(pv_type) :: vp                 ! Describes parallel vectors defined on the mesh.
 
     ! some other vars
-    integer :: nr(2,3)  ! dimensions of the box where the points are contained
-    integer :: l(3)     ! literally n(2,:) - n(1,:) + 1
+    integer :: nr(2,3)                  ! dimensions of the box where the points are contained
+    integer :: l(3)                     ! literally n(2,:) - n(1,:) + 1
 
-    FLOAT, pointer :: x(:,:)        ! The (local) points,
-    FLOAT, pointer :: x_global(:,:) ! The global points, needed for i/o on
-                                    ! the root node and for the poisson solver
-                                    ! on all nodes.
-                                    ! There is a redundancy in these two
-                                    ! entries.
-                                    ! In serial: x_global => x.
-    FLOAT, pointer :: vol_pp(:)     ! Element of volume for integrations
-                                    ! for local points.
+    FLOAT, pointer :: x(:,:)            ! The (local) points,
+    FLOAT, pointer :: x_global(:,:)     ! The global points, needed for i/o on
+                                        ! the root node and for the poisson solver
+                                        ! on all nodes.
+                                        ! There is a redundancy in these two
+                                        ! entries.
+                                        ! In serial: x_global => x.
+    FLOAT, pointer :: vol_pp(:)         ! Element of volume for integrations
+                                        ! for local points.
 
   end type mesh_type
 
@@ -126,7 +126,7 @@ contains
   end subroutine mesh_double_box
 
 
-  !---------------------------------------------------------------------------------*/
+  ! ---------------------------------------------------------
   subroutine mesh_write_info(m, unit)
     type(mesh_type), intent(in) :: m
     integer,         intent(in) :: unit
@@ -155,7 +155,7 @@ contains
   end subroutine mesh_write_info
 
 
-  !---------------------------------------------------------------------------------
+  ! ---------------------------------------------------------
   subroutine mesh_r(m, i, r, a, x)
     type(mesh_type),      intent(in)  :: m
     integer,              intent(in)  :: i
@@ -173,21 +173,23 @@ contains
   end subroutine mesh_r
 
 
-  !/*---------------------------------------------------------------------------------
-  ! Finds out if a given point of a mesh belongs to the "border" of the mesh.
-  ! A point belongs to the border of the mesh if it is too close to any of the
-  ! walls of the mesh. The criterium is set by input parameter "width".
+  !/*---------------------------------------------------------------------
+  ! Finds out if a given point of a mesh belongs to the "border" of the
+  ! mesh. A point belongs to the border of the mesh if it is too close
+  ! to any of the walls of the mesh. The criterium is set by input
+  ! parameter "width".
   !
   ! m     : the mesh.
   ! i     : the point in the mesh.
-  ! n     : on output, the number (0<=n<=3) of "walls" of the mesh that the point is
-  !         too close to, in order to consider it belonging to a mesh.
-  ! d     : the distances of the point to the walls, for each of the walls that the
-  !         point is too close to.
+  ! n     : on output, the number (0<=n<=3) of "walls" of the mesh that
+  !         the point is too close to, in order to consider it belonging
+  !         to a mesh.
+  ! d     : the distances of the point to the walls, for each of the walls
+  !         that the point is too close to.
   ! width : the width of the border.
   !
   ! So, if n>0, the point is in the border.
-  !---------------------------------------------------------------------------------*/
+  ! ----------------------------------------------------------------------*/
   subroutine mesh_inborder(m, i, n, d, width)
     type(mesh_type),      intent(in)  :: m
     integer,              intent(in)  :: i
@@ -210,11 +212,11 @@ contains
       dd = sqrt(x(2)**2 + x(3)**2) - (m%sb%rsize - width)
       if(dd.gt.M_ZERO) then
         n = 1; d(1) = dd
-      endif
+      end if
       dd = abs(x(1)) - (m%sb%xsize - width)
       if(dd.gt.M_ZERO) then
         n = n + 1; d(n) = dd
-      endif
+      end if
     case(MINIMUM)
       message(1) = "Absorbing boundaries are not yet implemented for the 'minimum' box"
       call write_fatal(1)
@@ -230,10 +232,11 @@ contains
    end subroutine mesh_inborder
 
 
-   !/*---------------------------------------------------------------------------------
-   ! mesgh_gcutoff returns the "natural" band limitation of the grid m, in terms
-   ! of the maximum G vector. For a cubic regular grid of spacing h is M_PI/h.
-   !---------------------------------------------------------------------------------*/
+   !/*-------------------------------------------------------------
+   ! mesgh_gcutoff returns the "natural" band limitation of the
+   ! grid m, in terms of the maximum G vector. For a cubic regular
+   ! grid of spacing h is M_PI/h.
+   ! --------------------------------------------------------------*/
    FLOAT function mesh_gcutoff(m) result(gmax)
      type(mesh_type), intent(in) :: m
      gmax = M_PI/(maxval(m%h))
@@ -249,7 +252,7 @@ contains
        deallocate(m%Lxyz, m%Lxyz_inv, m%x, m%vol_pp)
        nullify(m%Lxyz, m%Lxyz_inv, m%x, m%vol_pp)
      end if
-    
+
      if(m%parallel_in_domains) then
        if(associated(m%x_global).and.m%vp%rank.eq.m%vp%root) then
          deallocate(m%x_global)

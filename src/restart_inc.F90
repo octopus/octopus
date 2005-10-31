@@ -27,10 +27,10 @@ subroutine X(restart_write_function)(dir, filename, gr, f, ierr, size)
   integer,          intent(in)  :: size
   R_TYPE,           intent(in)  :: f(size)
 
-  call push_sub('restart_inc.restart_write_function')
+  call push_sub('restart_inc.Xrestart_write_function')
 
   call X(output_function) (restart_format, trim(dir), trim(filename), &
-     gr%m, gr%sb, f(:), M_ONE, ierr)
+    gr%m, gr%sb, f(:), M_ONE, ierr)
 
   call pop_sub()
 end subroutine X(restart_write_function)
@@ -44,7 +44,7 @@ subroutine X(restart_read_function)(dir, filename, m, f, ierr)
   R_TYPE,           intent(out) :: f(1:m%np)
   integer,          intent(out) :: ierr
 
-  call push_sub('restart_inc.restart_read_function')
+  call push_sub('restart_inc.Xrestart_read_function')
 
   ! try first to load plain binary files
   call X(input_function) (trim(dir)//'/'//trim(filename), m, f(:), ierr)
@@ -67,7 +67,7 @@ subroutine X(restart_write) (dir, st, gr, ierr, iter)
   integer :: iunit, iunit2, err, ik, ist, idim, i
   character(len=40) :: filename, mformat
 
-  call push_sub('restart_inc.restart_write')
+  call push_sub('restart_inc.Xrestart_write')
 
   ASSERT(associated(st%X(psi)))
 
@@ -79,7 +79,7 @@ subroutine X(restart_write) (dir, st, gr, ierr, iter)
     iunit = io_open(trim(dir)//'/wfns', action='write')
     write(iunit,'(a)') '#     #kpoint            #st            #dim    filename'
     write(iunit,'(a)') '%Wavefunctions'
-    
+
     iunit2 = io_open(trim(dir)//'/occs', action='write')
     write(iunit2,'(a)') '# occupations           eigenvalue[a.u.]        K-Points'
     write(iunit2,'(a)') '%Occupations_Eigenvalues_K-Points'
@@ -94,7 +94,7 @@ subroutine X(restart_write) (dir, st, gr, ierr, iter)
         if(mpiv%node==0) then
           write(unit=iunit,  fmt=*) ik, ' | ', ist, ' | ', idim, ' | "', trim(filename), '"'
           write(unit=iunit2, fmt=mformat) st%occ(ist,ik), ' | ', st%eigenval(ist, ik), ' | ', &
-             st%d%kpoints(1,ik), ' | ', st%d%kpoints(2,ik), ' | ', st%d%kpoints(3,ik)
+            st%d%kpoints(1,ik), ' | ', st%d%kpoints(2,ik), ' | ', st%d%kpoints(3,ik)
         end if
 
         if(st%st_start <= ist .and. st%st_end >= ist) then
@@ -128,6 +128,7 @@ subroutine X(restart_write) (dir, st, gr, ierr, iter)
 end subroutine X(restart_write)
 
 
+! ---------------------------------------------------------
 ! returns
 ! <0 => Fatal error
 ! =0 => read all wave-functions
@@ -145,7 +146,7 @@ subroutine X(restart_read) (dir, st, m, ierr, iter)
   logical, allocatable :: filled(:, :, :)
   character(len=256)   :: line
 
-  call push_sub('restart_inc.restart_read')
+  call push_sub('restart_inc.Xrestart_read')
 
   ! sanity check
   ASSERT(associated(st%X(psi)))
@@ -195,14 +196,14 @@ subroutine X(restart_read) (dir, st, m, ierr, iter)
   if(present(iter)) then
     call iopar_read(m, iunit, line, err)
     read(line, *) filename, filename, iter
-  endif
+  end if
 
   if(any(.not.filled)) call fill()
   if(ierr == 0) then
     ierr = -1 ! no files read
   else
     ! Everything o. k.
-    if(ierr == (st%st_end - st%st_start + 1)*st%d%nik*st%d%dim) ierr = 0 
+    if(ierr == (st%st_end - st%st_start + 1)*st%d%nik*st%d%dim) ierr = 0
   end if
 
   deallocate(filled)
@@ -213,6 +214,7 @@ subroutine X(restart_read) (dir, st, m, ierr, iter)
 
 contains
 
+  ! ---------------------------------------------------------
   subroutine open_files
     iunit  = iopar_open(m, trim(dir)//'/wfns', action='read', status='old', die=.false.)
     if(iunit < 0) then
@@ -227,7 +229,7 @@ contains
     end if
   end subroutine open_files
 
-
+  ! ---------------------------------------------------------
   subroutine fill() ! Put random function in orbitals that could not be read.
     do ik = 1, st%d%nik
       do ist = st%st_start, st%st_end
@@ -243,15 +245,15 @@ contains
     end do
   end subroutine fill
 
-
+  ! ---------------------------------------------------------
   logical function index_is_wrong() ! .true. if the index (idim, ist, ik) is not present in st structure...
     if(idim > st%d%dim .or. idim < 1 .or.   &
-       ist  > st%nst   .or. ist  < 1 .or.   &
-       ik   > st%d%nik .or. ik   < 1) then
+      ist   > st%nst   .or. ist  < 1 .or.   &
+      ik    > st%d%nik .or. ik   < 1) then
       index_is_wrong = .true.
     else
       index_is_wrong = .false.
-    endif
+    end if
   end function index_is_wrong
 
 end subroutine X(restart_read)

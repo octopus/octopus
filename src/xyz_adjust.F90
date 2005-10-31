@@ -29,10 +29,12 @@ module xyz_adjust
   implicit none
 
   private
-  public :: xyz_adjust_it
+  public :: &
+    xyz_adjust_it
 
 contains
 
+  ! ---------------------------------------------------------
   subroutine xyz_adjust_it(geo)
     type(geometry_type), intent(inout) :: geo
 
@@ -95,6 +97,8 @@ contains
     call translate(geo, -center)
   end subroutine xyz_adjust_it
 
+
+  ! ---------------------------------------------------------
   subroutine find_center(geo, x)
     type(geometry_type), intent(in) :: geo
     FLOAT, intent(out) :: x(3)
@@ -114,6 +118,8 @@ contains
     x = (xmax + xmin)/M_TWO
   end subroutine find_center
 
+
+  ! ---------------------------------------------------------
   subroutine find_center_of_mass(geo, x, pseudo)
     type(geometry_type), intent(in) :: geo
     FLOAT, intent(out) :: x(3)
@@ -133,6 +139,8 @@ contains
     x = x / sm
   end subroutine find_center_of_mass
 
+
+  ! ---------------------------------------------------------
   subroutine axis_large(geo, x, x2)
     type(geometry_type), intent(in) :: geo
     FLOAT, intent(out) :: x(3), x2(3)
@@ -165,6 +173,8 @@ contains
     end do
   end subroutine axis_large
 
+
+  ! ---------------------------------------------------------
   ! This subroutine assumes that the origin of the coordinates is the
   ! center of mass of the system
   subroutine axis_inertia(geo, x, x2, pseudo)
@@ -194,6 +204,8 @@ contains
     x2 = vec(:,2) / sqrt(sum(vec(:,2)**2))
   end subroutine axis_inertia
 
+
+  ! ---------------------------------------------------------
   subroutine translate(geo, x)
     type(geometry_type), intent(inout) :: geo
     FLOAT, intent(in) :: x(3)
@@ -208,6 +220,8 @@ contains
     end do
   end subroutine translate
 
+
+  ! ---------------------------------------------------------
   subroutine rotate(geo, from, from2, to)
     type(geometry_type), intent(inout) :: geo
     FLOAT, intent(in) :: from(3), from2(3), to(3) ! assumed to be normalize
@@ -274,6 +288,8 @@ contains
 
   end subroutine rotate
 
+
+  ! ---------------------------------------------------------
   subroutine rotate_x(m, angle)
     FLOAT, intent(inout) :: m(3,3)
     FLOAT, intent(in)    :: angle
@@ -293,6 +309,8 @@ contains
     m = matmul(aux, m)
   end subroutine rotate_x
 
+
+  ! ---------------------------------------------------------
   subroutine rotate_y(m, angle)
     FLOAT, intent(inout) :: m(3,3)
     FLOAT, intent(in)    :: angle
@@ -312,6 +330,8 @@ contains
     m = matmul(aux, m)
   end subroutine rotate_y
 
+
+  ! ---------------------------------------------------------
   subroutine rotate_z(m, angle)
     FLOAT, intent(inout) :: m(3,3)
     FLOAT, intent(in) :: angle
