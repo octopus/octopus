@@ -34,6 +34,7 @@ module unocc
   use eigen_solver
   use io
   use simul_box
+  use lcao
 
   implicit none
 
@@ -50,9 +51,10 @@ contains
     type(hamiltonian_type), intent(inout) :: h
 
     type(eigen_solver_type) :: eigens
-    integer :: iunit, err, ik, p, occupied_states
+    integer :: iunit, err, ik, p, occupied_states, j
     R_TYPE, allocatable :: h_psi(:,:)
     logical :: converged, l
+    type(lcao_type) :: lcao_data
 
     ierr = 0
     occupied_states = sys%st%nst
@@ -60,15 +62,14 @@ contains
 
     call X(restart_read) (trim(tmpdir)//'restart_gs', sys%st, sys%gr%m, err)
     if( (err .ne. 0)  .and.  (err < occupied_states) ) then
-      message(1) = "Not all the occupied states could be read from '"//trim(tmpdir)//"restart_gs'"
-      message(2) = "I will start a gs calculation."
+      message(1) = "Info: not all the occupied KS orbitals could be read from '"//trim(tmpdir)//"restart_gs'"
+      message(2) = "      I will start a gs calculation."
+      ! FIXME Before giving back the control to run, the states should be reallocated to the
+      ! occupied number of orbitals.
       call write_warning(2)
       ierr = 1
       call end_()
       return
-    else
-      message(1) = "Loaded wave-functions from '"//trim(tmpdir)//"restart_gs'"
-      call write_info(1)
     end if
 
     ! Setup Hamiltonian
@@ -78,6 +79,21 @@ contains
     call X(states_calc_dens)(sys%st, sys%gr%m%np, sys%st%rho)
     call X(v_ks_calc)(sys%gr, sys%ks, h, sys%st, calc_eigenval=.true.) ! get potentials
     call hamiltonian_energy(h, sys%st, sys%gr%geo%eii, -1)         ! total energy
+
+    if( (err.ne.0) .and. (err >= occupied_states)) then
+      message(1) = "Info: not all the unoccupied KS orbitals could be read from '"//trim(tmpdir)//"restart_gs'"
+      message(2) = "      I will perform a LCAO calculation to get reasonable starting points."
+      call write_info(2)
+      lcao_data%state = 0
+      call lcao_init(sys%gr, lcao_data, sys%st, h)
+      if(lcao_data%state .eq. 1) then
+        call lcao_wf(lcao_data, sys%gr%m, sys%gr%sb, sys%st, h, start = err+1)
+      end if
+      call lcao_end(lcao_data)
+    else
+      message(1) = "Info: Loaded all KS orbitals from '"//trim(tmpdir)//"restart_gs'"
+      call write_info(1)
+    end if
 
     message(1) = "Info: Starting calculation of unoccupied states"
     call write_info(1)

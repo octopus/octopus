@@ -41,10 +41,11 @@ module lcao
   implicit none
 
   private
-  public ::    &
-    lcao_type, &
-    lcao_init, &
-    lcao_wf,   &
+  public ::          &
+    lcao_type,       &
+    lcao_init,       &
+    lcao_wf,         &
+    lcao_initial_wf, &
     lcao_end
 
   type lcao_type
@@ -61,6 +62,59 @@ module lcao
 contains
 
   ! ---------------------------------------------------------
+  subroutine lcao_initial_wf(n, gr, psi, ispin, ik, err)
+    integer,         intent(in)  :: n
+    type(grid_type), intent(in)  :: gr
+    R_TYPE,          intent(out) :: psi(:, :)
+    integer,         intent(in)  :: ispin
+    integer,         intent(in)  :: ik
+    integer,         intent(out) :: err
+
+    integer :: norbs, ia, i, j, idim, k, wf_dim
+    type(specie_type), pointer :: s
+    FLOAT :: x(calc_dim), r
+
+    err = 0
+    psi = R_TOTYPE(M_ZERO)
+
+    norbs = 0
+    do ia = 1, gr%geo%natoms
+      norbs = norbs + gr%geo%atom(ia)%spec%niwfs
+    end do
+
+    wf_dim = 1
+    if( ispin.eq.SPINORS ) then
+      wf_dim = 2
+      norbs = norbs * 2
+    end if
+
+    if( (n>norbs) .or. (n<1) ) then
+      err = 1; return
+    end if
+
+    i = 1
+    do ia = 1, gr%geo%natoms
+      s => gr%geo%atom(ia)%spec
+      do idim = 1, wf_dim
+        do j = 1, s%niwfs
+          if(n == i) then
+            do k = 1, gr%m%np
+              x(:) = gr%m%x(k, :) - gr%geo%atom(ia)%x(:)
+              psi(k, idim) =  specie_get_iwf(s, j, calc_dim, states_spin_channel(ispin, ik, idim), x)
+            end do
+            r = X(states_nrm2)(gr%m, wf_dim, psi)
+            psi = psi/r
+            return
+          end if
+          i = i + 1
+        end do
+      end do
+    end do
+
+  end subroutine lcao_initial_wf
+
+
+  ! ---------------------------------------------------------
   subroutine lcao_init(gr, lcao_data, st, h)
     type(lcao_type),         intent(out)   :: lcao_data
     type(grid_type), target, intent(inout) :: gr
@@ -69,7 +123,7 @@ contains
 
     type(geometry_type), pointer :: geo
     type(specie_type), pointer :: s
-    integer :: norbs, ik, n1, n2, j, ia, n, idim, k
+    integer :: norbs, ik, n1, n2, j, ia, n, idim, k, ierr
     FLOAT :: x(gr%sb%dim), r
     R_TYPE, allocatable :: hpsi(:,:)
 
@@ -100,27 +154,12 @@ contains
     lcao_data%st%X(psi) = R_TOTYPE(M_ZERO)
 
     do ik = 1, st%d%nik
-      n = 1
-      do ia = 1, geo%natoms
-        s => geo%atom(ia)%spec
-        do idim = 1, st%d%dim
-          do j = 1, s%niwfs
-            do k = 1, gr%m%np
-              x(:) = gr%m%x(k, :) - geo%atom(ia)%x(:)
-              lcao_data%st%X(psi)(k, idim, n, ik) = specie_get_iwf(s, j, gr%sb%dim, &
-                states_spin_channel(st%d%ispin, ik, idim), x)
-            end do
-            n = n + 1
-          end do
-        end do
-      end do
-    end do
-
-    !Normalize.
-    do ik = 1, st%d%nik
       do n = 1, lcao_data%st%nst
-        r = X(states_nrm2)(gr%m, st%d%dim, lcao_data%st%X(psi)(:, :, n, ik))
-        lcao_data%st%X(psi)(:, :, n, ik) = lcao_data%st%X(psi)(:, :, n, ik)/r
+        call lcao_initial_wf(n, gr, lcao_data%st%X(psi)(:, :, n, ik), st%d%ispin, ik, ierr)
+        if(ierr.ne.0) then
+          write(message(1),'(a)') 'Internal error in lcao_wf.'
+          call write_fatal(1)
+        end if
       end do
     end do
 
@@ -178,14 +217,15 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine lcao_wf(lcao_data, m, sb, st, h)
+  subroutine lcao_wf(lcao_data, m, sb, st, h, start)
     type(lcao_type),        intent(inout) :: lcao_data
     type(mesh_type),        intent(in)    :: m
     type(simul_box_type),   intent(in)    :: sb
     type(states_type),      intent(inout) :: st
     type(hamiltonian_type), intent(in)    :: h
+    integer, optional,      intent(in)    :: start
 
-    integer :: np, dim, nst, ik, n1, n2, idim, norbs
+    integer :: np, dim, nst, ik, n1, n2, idim, norbs, start_
     R_TYPE, allocatable :: hpsi(:,:)
     FLOAT, allocatable :: ev(:)
 
@@ -218,13 +258,17 @@ contains
       call lalg_geneigensolve(norbs, lcao_data%hamilt(1:norbs, 1:norbs, ik), &
         lcao_data%s(1:norbs, 1:norbs, ik), ev)
 
-      st%eigenval(1:nst, ik) = ev(1:nst)
+      start_ = 1
+      if(present(start)) start_ = start
+
+      do n1 = start_, nst
+        st%eigenval(n1, ik) = ev(n1)
+        st%X(psi)(:, :, n1, ik) = R_TOTYPE(M_ZERO)
+      end do
       deallocate(ev)
 
-      st%X(psi)(:,:,:, ik) = R_TOTYPE(M_ZERO)
-
       ! Change of base
-      do n1 = 1, nst
+      do n1 = start_, nst
         do idim = 1, dim
           do n2 = 1, norbs
             call lalg_axpy(np, lcao_data%hamilt(n2, n1, ik), lcao_data%st%X(psi)(:, idim, n2, ik), &
