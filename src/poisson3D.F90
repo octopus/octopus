@@ -27,7 +27,7 @@ subroutine poisson3D_init(gr)
 
   !%Variable PoissonSolverMaxMultipole
   !%Type integer
-  !%Section 14 Varia
+  !%Section Hamiltonian::Poisson
   !%Description
   !% Order of the multipolar expansion for boundary
   !% corrections. Default is 4 for cg_corrected and multigrid and 2
@@ -37,7 +37,7 @@ subroutine poisson3D_init(gr)
 
   !%Variable PoissonSolverThreshold
   !%Type integer
-  !%Section 14 Varia
+  !%Section Hamiltonian::Poisson
   !%Description
   !% The tolerance for the poisson solution, used by the cg and
   !% multigrid solvers. Default is $10^{-5}$.

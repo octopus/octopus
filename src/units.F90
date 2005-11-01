@@ -83,7 +83,8 @@ contains
 
     !%Variable Units
     !%Type string
-    !%Section 1 Generalities
+    !%Default "a.u"
+    !%Section Generalities::Units
     !%Description
     !% Atomic units seem to be the preferred system in the atomic and
     !% molecular physics community (despite the opinion of some of the authors
@@ -98,7 +99,8 @@ contains
 
     !%Variable UnitsInput
     !%Type string
-    !%Section 1 Generalities
+    !%Default "a.u"
+    !%Section Generalities::Units
     !%Description
     !% Same as "Units", but only refers to the values in the input files.  That
     !% is, if UnitsInput = "eVA", all physical values in the input files
@@ -107,7 +109,8 @@ contains
 
     !%Variable UnitsOutput
     !%Type string
-    !%Section 1 Generalities
+    !%Default "a.u"
+    !%Section Generalities::Units
     !%Description
     !% Same as "Units", but only refers to the values in the output files.  That
     !% is, if UnitsInput = "eVA", all physical values in the output files

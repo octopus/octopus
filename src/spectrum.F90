@@ -94,7 +94,8 @@ contains
 
     !%Variable SpecDampMode
     !%Type integer
-    !%Section 13 SpectrumCalculations
+    !%Default polynomial
+    !%Section Spectrum Calculations
     !%Description
     !% Decides which damping/filtering is to be applied in order to calculate
     !% spectra by calculating a Fourier transform
@@ -151,7 +152,8 @@ contains
 
     !%Variable TDDeltaStrengthMode
     !%Type integer
-    !%Section 10 Time Dependent
+    !%Default kick_density
+    !%Section Time Dependent
     !%Description
     !% When calculating the linear response of the density via the propagation
     !% in real time, one needs to perfrom an initical kick on the KS system, at

@@ -26,7 +26,8 @@ subroutine X(ode_solver_init)(os)
 
   !%Variable ODESolver
   !%Type integer
-  !%Section 1 Generalities
+  !%Default ode_rk4
+  !%Section Math::General
   !%Description
   !% Specifies what kind of root solver will be used
   !%Option ode_rk4 1

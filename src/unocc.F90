@@ -141,11 +141,15 @@ contains
 
     !%Variable WriteMatrixElements
     !%Type logical
-    !%Section 9 Unoccupied States
+    !%Default no
+    !%Section Unoccupied States
     !%Description
     !% If true outputs the following matrix elements:
+    !%
     !%   <i|T + V_ext|j>
+    !%
     !%   <ij| 1/|r1-r2| |kl>
+    !%
     !% in the directory ME
     !%End
     call loct_parse_logical(check_inp('WriteMatrixElements'), .false., l)

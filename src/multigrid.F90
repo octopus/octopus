@@ -72,12 +72,10 @@ contains
 
     integer :: i, n_levels, np
 
-    ! number of levels. estimated from the number of points
-    call loct_parse_int(check_inp('MultigridLevels'), 0, n_levels)
-
     !%Variable MultigridLevels
     !%Type integer
-    !%Section 14 Varia
+    !%Default 0 
+    !%Section Hamiltonian
     !%Description
     !% Number of levels in the grid hierachy used for multigrid.
     !%Option max_levels
@@ -88,6 +86,7 @@ contains
     !% relaxation operator in the finest grid. Default is the maximun
     !% number of levels.
     !%End
+    call loct_parse_int(check_inp('MultigridLevels'), 0, n_levels)
 
     if ( n_levels <= 0 )then
       n_levels=n_levels-2

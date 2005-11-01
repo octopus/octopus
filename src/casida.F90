@@ -148,7 +148,7 @@ contains
     ! which states to take into account
     !%Variable LinearResponseKohnShamStates
     !%Type string
-    !%Section 5 External Utilities
+    !%Section Linear Response::Casida
     !%Description
     !% The calculation of the excitation spectrum of a system in the frequency-domain
     !% formulation of linear-response time-dependent density functional theory (TDDFT)
@@ -163,10 +163,6 @@ contains
     !% This variable is a string in list form, i.e. expressions such as "1,2-5,8-15" are
     !% valid. You should include a non-null number of unoccupied states and a non-null number
     !% of occupied states.
-    !%
-    !% FIXME: This variable should go into another section, since it is no longer an
-    !% external utility. But it does not go into any other section, so it will wait
-    !% until we redo the manual.
     !%End
     call loct_parse_string(check_inp('LinearResponseKohnShamStates'), "1-1024", cas%wfn_list)
     write(message(1),'(a,a)') "Info: States that form the basis: ",trim(cas%wfn_list)

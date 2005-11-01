@@ -89,7 +89,8 @@ contains
 
     !%Variable PoissonSolver
     !%Type integer
-    !%Section 14 Varia
+    !%Default fft
+    !%Section Hamiltonian::Poisson
     !%Description
     !% Defines which method to use in order to solve the Poisson equation.
     !% The default for 1D and 2D is the direct evaluation of the Hartree potential.

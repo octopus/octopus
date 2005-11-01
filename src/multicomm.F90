@@ -153,7 +153,7 @@ contains
 
       !%Variable ParallelizationGroupRanks
       !%Type block
-      !%Section 1 Generalities
+      !%Section Generalities::Parallel
       !%Description
       !% Specifies the size of the groups used for the parellization. For example
       !% (n_d, n_s, n_k) means we have n_p*n_s*n_k processors and that the k-points
@@ -192,7 +192,8 @@ contains
 
       !%Variable ParallelizationStrategy
       !%Type integer
-      !%Section 1 Generalities
+      !%Default par_domains + par_states + par_kpoints
+      !%Section Generalities::Parallel
       !%Description
       !% Specifies what kind of parallelization strategy octopus should use.
       !% The values can be combined, for example "par_domains + par_states"

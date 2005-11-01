@@ -48,26 +48,27 @@ program octopus
   ! periodic dimensions) can be different for the subsystems
   !%Variable CalculationMode
   !%Type integer
-  !%Section 1 Generalities
+  !%Default gs
+  !%Section Generalities
   !%Description
   !% Decides what kind of calculation is to be performed
-  !%Option gs 1
+  !%Option gs 01
   !% Calculation of the ground state
-  !%Option unocc 2
+  !%Option unocc 02
   !% Calculation of unoccupied/virtual KS states
-  !%Option td 3
+  !%Option td 03
   !% Time-dependent calculation
-  !%Option pol 4
+  !%Option pol 04
   !% Calculation of the static polarizability
-  !%Option geom 5
+  !%Option geom 05
   !% Optimization of the geometry
-  !%Option phonons 6
+  !%Option phonons 06
   !% Calculation of the vibrational modes
-  !%Option opt_control 7
+  !%Option opt_control 07
   !% Optimal control.
-  !%Option pol_lr 8
+  !%Option pol_lr 08
   !% Linear-response calculation of the polarizability
-  !%Option casida 9
+  !%Option casida 09
   !% Excitations via linear-response TDDFT
   !%Option wave_matching 10
   !% Wave-matching a la Heiko
@@ -86,7 +87,8 @@ program octopus
 
   !%Variable Dimensions
   !%Type integer
-  !%Section 1 Generalities
+  !%Section Generalities
+  !%Default 3
   !%Description
   !% octopus can run in 1, 2 or 3 dimensions, depending on the value of this
   !% variable. Note that not all input variables may be available in all cases.
@@ -95,7 +97,7 @@ program octopus
   !%Option 2
   !% The system is 2-dimensional
   !%Option 3
-  !% The system is 3-dimensional (default)
+  !% The system is 3-dimensional
   !%End
   call loct_parse_int(check_inp('Dimensions'), 3, calc_dim)
   if( calc_dim > 3 .or. calc_dim < 1) call input_error('Dimensions')

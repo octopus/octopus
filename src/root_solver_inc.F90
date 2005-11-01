@@ -25,7 +25,8 @@ subroutine X(root_solver_init)(rs)
 
   !%Variable RootSolver
   !%Type integer
-  !%Section 1 Generalities
+  !%Default root_newton
+  !%Section Math::General
   !%Description
   !% Specifies what kind of root solver will be used
   !%Option root_bisection 1

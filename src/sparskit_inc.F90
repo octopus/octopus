@@ -28,7 +28,8 @@ subroutine X(sparskit_solver_init)(n, sk)
 
   !%Variable SparskitSolver
   !%Type integer
-  !%Section 1 Generalities
+  !%Default sk_cg
+  !%Section Math::General
   !%Description
   !% Specifies what kind of linear solver will be used
   !%Option sk_cg 1

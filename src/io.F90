@@ -64,7 +64,8 @@ contains
 
     !%Variable stdout
     !%Type string
-    !%Section 1 Generalities
+    !%Default "-"
+    !%Section Generalities::IO
     !%Description
     !% The standard output by default goes to, well, to standard output. This can
     !% be changed by setting this variable: if you give it a name (other than "-")
@@ -77,9 +78,10 @@ contains
       open(stdout, file=filename, status='unknown')
     end if
 
-    !%Variable stdout
+    !%Variable stderr
     !%Type string
-    !%Section 1 Generalities
+    !%Default "-"
+    !%Section Generalities::IO
     !%Description
     !% The standard error by default goes to, well, to standard error. This can
     !% be changed by setting this variable: if you give it a name (other than "-")
@@ -94,7 +96,8 @@ contains
 
     !%Variable WorkDir
     !%Type string
-    !%Section 1 Generalities
+    !%Default "."
+    !%Section Generalities::IO
     !%Description
     !% By default, all files are written and read from the working directory,
     !% i.e. the directory from which the executable was launched. This behavior can
@@ -105,9 +108,10 @@ contains
     ! ... and if necessary create workdir (will not harm if work_dir is already there)
     if (work_dir.ne.'.') call loct_mkdir(trim(work_dir))
 
-    !%Variable WorkDir
+    !%Variable FlushMessages
     !%Type logical
-    !%Section 1 Generalities
+    !%default no
+    !%Section Generalities::IO
     !%Description
     !% In addition to writing to stdout and stderr, the code messages may also be
     !% flushed to "messages.stdout" and "messages.stderr", if this variable is
@@ -123,7 +127,8 @@ contains
 
     !%Variable DebugLevel
     !%Type integer
-    !%Section 1 Generalities
+    !%Default 1
+    !%Section Generalities
     !%Description
     !% This variable decides wether or not to enter debug-mode. In debugging mode,
     !% the program prints to standard error when it enters and exits the subroutines,
@@ -183,8 +188,9 @@ contains
     end if
 
     !%Variable ProfilingMode
+    !%Default no
     !%Type logical
-    !%Section 1 Generalities
+    !%Section Generalities
     !%Description
     !% Use this variable to run octopus in profiling mode. In this mode
     !% octopus records time spent in certain areas of the code and

@@ -122,10 +122,11 @@ contains
 
     !%Variable SystemName
     !%Type string
-    !%Section 1 Generalities
+    !%Default "system"
+    !%Section Coordinates
     !%Description
-    !% Any arbitrary string. It is largely irrelevant, but it does not harm
-    !% to give it a significant values (e.g. "fullerene", "NaCl", etc).
+    !% A string that identifies the current run. This parameter is seldomly used, but
+    !% it is sometimes useful to have in the input file.
     !%End
     call loct_parse_string(check_inp('SystemName'), 'system', geo%sysname)
 
@@ -134,7 +135,7 @@ contains
 
     !%Variable PDBCoordinates
     !%Type string
-    !%Section 4 Coordinates Description
+    !%Section Coordinates
     !%Description
     !% If this variable is present, the program tries to read the atomic  coordinates
     !% from the file specified by its value. The PDB (Protein Data Bank
@@ -160,7 +161,7 @@ contains
 
     !%Variable XYZCoordinates
     !%Type string
-    !%Section 4 Coordinates Description
+    !%Section Coordinates
     !%Description
     !% If "PDBCoordinates" is not present, the program reads the atomic coordinates from
     !% the XYZ file specified by the variable "XYZCoordinates" -- in case this variable
@@ -172,7 +173,7 @@ contains
 
     !%Variable Coordinates
     !%Type block
-    !%Section 4 Coordinates Description
+    !%Section Coordinates
     !%Description
     !% If neither a "XYZCoordinates" nor a "PDBCoordinates" was found, octopus
     !% tries to read the coordinates for the atoms from the block "Coordinates". The

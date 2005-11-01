@@ -106,7 +106,8 @@ contains
 
       !%Variable PeriodicDimensions
       !%Type integer
-      !%Section 1 Generalities
+      !%Default 0
+      !%Section Generalities::Simulation Box
       !%Description
       !% Define which directions are to be considered periodic
       !%Option 0

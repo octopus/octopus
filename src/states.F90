@@ -170,7 +170,8 @@ contains
 
     !%Variable SpinComponents
     !%Type integer
-    !%Section 5 States
+    !%Default unpolarized
+    !%Section States
     !%Description
     !% The calculations may be done in three different ways: spin-restricted (TD)DFT (i.e., doubly
     !% occupied "closed shells"), spin-unsrestricted or "spin-polarized" (TD)DFT (i.e. we have two

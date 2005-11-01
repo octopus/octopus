@@ -75,7 +75,8 @@ contains
 
     !%Variable NonInteractingElectrons
     !%Type logical
-    !%Section 6 Hamiltonian
+    !%Default no
+    !%Section Hamiltonian
     !%Description
     !% Sometimes it may be helpful to treat the electrons as non-interacting particles,
     !% i.e., not to take into account Hartree and exchange-correlation effects between
@@ -106,7 +107,8 @@ contains
       if(iand(ks%xc_family, XC_FAMILY_LDA + XC_FAMILY_GGA).ne.0) then
         !%Variable SICorrection
         !%Type integer
-        !%Section 6 Hamiltonian
+        !%default sic_none
+        !%Section Hamiltonian
         !%Description
         !% This variable controls which Self Interaction Correction to use. Note that
         !% this correction will be applyed to the functional chosen by 'XFunctional' and

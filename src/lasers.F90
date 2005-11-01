@@ -98,7 +98,7 @@ contains
 
     !%Variable TDLasers
     !%Type block
-    !%Section 10 Time-dependent
+    !%Section Time Dependent
     !%Description
     !% The block TDLasers describe the type and shape of time-dependent external perturbations
     !% that are applied to the system.
@@ -107,7 +107,9 @@ contains
     !% The syntax of each line is, then:
     !%
     !% %TDLasers
-    !% nx | ny | nz | amplitude | omega | envelope | tau0 | t0 | tau1 | filename1 | filename2
+    !%
+    !%   nx | ny | nz | amplitude | omega | envelope | tau0 | t0 | tau1 | filename1 | filename2
+    !%
     !% %
     !%
     !% The first three (possibly complex) numbers mark the polarization direction of the

@@ -101,7 +101,8 @@ contains
 
     !%Variable DerivativesStencil
     !%Type integer
-    !%Section 4 Mesh
+    !%Default stencil_star
+    !%Section Mesh::Derivatives
     !%Description
     !% Decides what kind of stencil is used, i.e. what points, around
     !% each point in the mesh, are the neighboring points used in the

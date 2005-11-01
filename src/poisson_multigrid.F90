@@ -81,36 +81,40 @@ contains
 
     !%Variable PoissonSolverMGPresmoothingSteps
     !%Type integer
-    !%Section 14 Varia
+    !%Default 3
+    !%Section Hamiltonian::Poisson::Multigrid
     !%Description
     !% Number of gauss-seidel smoothing steps before coarse level
-    !% correction in multigrid Poisson solver. Default is 3.
+    !% correction in multigrid Poisson solver.
     !%End
     call loct_parse_int(check_inp('PoissonSolverMGPresmoothingSteps'), 2, presteps)
 
     !%Variable PoissonSolverMGPostsmoothingSteps
     !%Type integer
-    !%Section 14 Varia
+    !%Default 3
+    !%Section Hamiltonian::Poisson::Multigrid
     !%Description
     !% Number of gauss-seidel smoothing steps after coarse level
-    !% correction in multigrid Poisson solver. Default is 3.
+    !% correction in multigrid Poisson solver
     !%End
     call loct_parse_int(check_inp('PoissonSolverMGPostsmoothingSteps'), 3, poststeps)
 
     !%Variable PoissonSolverMGMaxCycles
     !%Type integer
-    !%Section 14 Varia
+    !%Default 20
+    !%Section Hamiltonian::Poisson::Multigrid
     !%Description
     !% Maximum number of multigrid cycles that are performed if
-    !% convergence is not achieved. Default is 20.
+    !% convergence is not achieved
     !%End
     call loct_parse_int(check_inp('PoissonSolverMGMaxCycles'), 40, maxcycles)
 
     !%Variable PoissonSolverMGRestrictionMethod
     !%Type integer
-    !%Section 14 Varia
+    !%Default fullweight
+    !%Section Hamiltonian::Poisson::Multigrid
     !%Description
-    !% Method used from fine to coarse grid transfer. Default is fullweight restriction.
+    !% Method used from fine to coarse grid transfer
     !%Option injection 1
     !% Injection
     !%Option fullweight 2
@@ -120,12 +124,12 @@ contains
 
     !%Variable PoissonSolverMGRelaxationMethod
     !%Type integer
-    !%Section 14 Varia
+    !%Default Gauss-Seidel
+    !%Section Hamiltonian::Poisson::Multigrid
     !%Description
     !% Method used from fine to relax, i.e. to solve the linear system approximately, in
     !% the multigrid procedure that solve Poisson equation. For the moment, the option
-    !% conjugate gradients is experimental. Default is Gauss-Seidel,
-    !% except for curvilinear coordinates where Gauss-Jacobi is used.
+    !% conjugate gradients is experimental. For curvilinear coordinates the default is Gauss-Jacobi
     !%Option gauss-seidel 1
     !% Gauss-Seidel
     !%Option gauss-jacobi 2

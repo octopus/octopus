@@ -48,7 +48,7 @@ contains
 
     !%Variable CurvGygiA
     !%Type float
-    !%Section 4 Mesh
+    !%Section Mesh::Curvilinear::Gygi
     !%Description
     !% The grid spacing is reduced locally around each atom, and the reduction is
     !% given by 1/(1+A), where A is specified by this variable, CurvGygiA. So, if
@@ -60,7 +60,7 @@ contains
     call loct_parse_float(check_inp('CurvGygiA'), M_HALF, cv%A)
     !%Variable CurvGygiAlpha
     !%Type float
-    !%Section 4 Mesh
+    !%Section Mesh::Curvilinear::Gygi
     !%Description
     !% This number determines the region over which the grid is enhanced (range of
     !% enhancement of the resolution). That is, the grid is enhanced on a sphere
@@ -72,7 +72,7 @@ contains
     call loct_parse_float(check_inp('CurvGygiAlpha'), M_TWO/units_inp%length%factor, cv%alpha)
     !%Variable CurvGygiBeta
     !%Type float
-    !%Section 4 Mesh
+    !%Section Mesh::Curvilinear::Gygi
     !%Description
     !% This number determines the distance over which Euclidean coordinates are
     !% recovered. [This is the b_{\alpha} variable in Eq. 2 of F. Gygi and G. Galli,

@@ -70,7 +70,8 @@ contains
     call push_sub('scalar_mesh.scalar_mesh_init')
     !%Variable ScalarMeshType
     !%Type integer
-    !%Section 1 Generalities
+    !%Default mesh_sinh
+    !%Section Math::General
     !%Description
     !% Specifies what kind of scalar mesh will be used
     !%Option mesh_linear 1

@@ -80,7 +80,8 @@ contains
 
     !%Variable TypeOfMixing
     !%Type integer
-    !%Section 8 SCF
+    !%Deafult broyden
+    !%Section SCF::Mixing
     !%Description
     !% The scheme scheme used to produce, at each iteration in the self consistent cycle
     !% that attempts to solve the Kohn-Sham equations, the input density from the value
@@ -97,7 +98,8 @@ contains
 
     !%Variable Mixing
     !%Type float
-    !%Section 8 SCF
+    !%Default 0.3
+    !%Section SCF::Mixing
     !%Description
     !% Both the linear and the Broyden scheme depend on a "mixing parameter", set by this variable.
     !%End
@@ -108,7 +110,8 @@ contains
 
     !%Variable MixNumberSteps
     !%Type integer
-    !%Section 8 SCF
+    !%Default 3
+    !%Section SCF::Mixing
     !%Description
     !% In the Broyden and in the GR-Pulay scheme, the new input density or potential is constructed
     !% from the values of densities/potentials of previous a given number of previous iterations.

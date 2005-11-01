@@ -55,7 +55,8 @@ contains
 
     !%Variable CurvMethod
     !%Type integer
-    !%Section 4 Mesh
+    !%Default curv_uniform
+    !%Section Mesh::Curvilinear
     !%Description
     !% The relevant functions in octopus are represented on a mesh in real space.
     !% This mesh may be an evenly spaced regular rectangular grid (standard mode),

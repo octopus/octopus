@@ -105,7 +105,8 @@ contains
 
     !%Variable EigenSolver
     !%Type integer
-    !%Section 8 SCF
+    !%Default cg
+    !%Section SCF::EigenSolver
     !%Description
     !% Decides the eigensolver that obtains the lowest eigenvalues
     !% and eigenfunctions of the Kohn-Sham Hamiltonian.
@@ -139,15 +140,17 @@ contains
 #if defined(HAVE_ARPACK)
     case(ARPACK)
       message(1) = 'Info: Eigensolver type: ARPACK Arnoldi method'
-      call loct_parse_int(check_inp('EigenSolverArnoldiVectors'), 20, eigens%arnoldi_vectors)
+
       !%Variable EigenSolverArnoldiVectors
       !%Type integer
-      !%Section 8 SCF
+      !%Default 20
+      !%Section SCF::EigenSolver
       !%Description
       !% This indicates how many Arnoldi vectors are generated
       !% It must satisfy EigenSolverArnoldiVectors - Number Of Eigenvectors >= 2.
       !% See the ARPACK documentation for more details.
       !%End
+      call loct_parse_int(check_inp('EigenSolverArnoldiVectors'), 20, eigens%arnoldi_vectors)
       if(eigens%arnoldi_vectors-st%nst < 2) call input_error('EigenSolverArnoldiVectors')
 #endif
 #if defined(HAVE_JDQZ)
@@ -156,15 +159,17 @@ contains
 #endif
     case(EVOLUTION)
       message(1) = 'Info: Eigensolver type: Imaginary time evolution'
-      call loct_parse_float(check_inp('EigenSolverImaginaryTime'), CNST(1.0), eigens%imag_time)
+
       !%Variable EigenSolverImaginaryTime
       !%Type float
-      !%Section 8 SCF
+      !%Default 1.0
+      !%Section SCF::EigenSolver
       !%Description
       !% The imaginary-time step that is used in the imaginary-time evolution
       !% method to obtain the lowest eigenvalues/eigenvectors.
       !% It must satisfy EigenSolverImaginaryTime > 0.
       !%End
+      call loct_parse_float(check_inp('EigenSolverImaginaryTime'), M_ONE, eigens%imag_time)
       if(eigens%imag_time <= M_ZERO) call input_error('EigenSolverImaginaryTime')
     case default
       write(message(1), '(a,i4,a)') "Input: '", eigens%es_type, &
