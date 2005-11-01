@@ -1,7 +1,3 @@
-sphere           = 1 # BoxShape
-cylinder         = 2
-minimum          = 3
-parallelepiped   = 4
 real_space       = 0 # DerivativesSpace, LocalPotentialSpace
 fourier_space    = 1
 spin_orbit       = 1 # RelativisticCorrection

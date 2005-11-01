@@ -22,6 +22,7 @@
 module simul_box
   use global
   use messages
+  use varinfo
   use units
   use syslabels
   use lib_oct_parser
@@ -109,7 +110,8 @@ contains
       !%Default 0
       !%Section Generalities::Simulation Box
       !%Description
-      !% Define which directions are to be considered periodic
+      !% Define which directions are to be considered periodic. Of course, it has to be a number
+      !% from 0 to three, and it cannot be larger than Dimensions.
       !%Option 0
       !% No direction is periodic (molecule)
       !%Option 1
@@ -120,14 +122,8 @@ contains
       !% The x, y, and z directions are periodic (bulk)
       !%End
       call loct_parse_int(check_inp('PeriodicDimensions'), 0, sb%periodic_dim)
-      if ((sb%periodic_dim < 0) .or. (sb%periodic_dim > 3)) then
+      if ((sb%periodic_dim < 0) .or. (sb%periodic_dim > 3) .or. (sb%periodic_dim > sb%dim)) &
         call input_error('PeriodicDimensions')
-      end if
-
-      if(sb%periodic_dim > sb%dim) then
-        message(1) = 'PeriodicDimensions must be <= Dimensions'
-        call write_fatal(1)
-      end if
 
     end subroutine read_misc
 
@@ -137,26 +133,40 @@ contains
       integer(POINTER_SIZE) :: blk
 
       ! Read box shape.
-      call loct_parse_int(check_inp('BoxShape'), MINIMUM, sb%box_shape)
-      if(sb%box_shape<1 .or. sb%box_shape>4) then
-        write(message(1), '(a,i2,a)') "Input: '", sb%box_shape, "' is not a valid BoxShape"
-        message(2) = '(1 <= Box_Shape <= 4)'
-        call write_fatal(2)
-      end if
+      ! need to find out calc_mode already here since some of the variables here (e.g.
+      ! periodic dimensions) can be different for the subsystems
 
+      !%Variable BoxShape
+      !%Type integer
+      !%Default minimum
+      !%Section 4 Mesh
+      !%Description
+      !% This variable decides the shape of the simulation box.
+      !% Note that some incompatibilities apply:
+      !%
+      !% - Spherical or minimum mesh is not allowed for periodic systems.
+      !%
+      !% - Cylindrical mesh is not allowed for systems that are periodic in more than one dimension.
+      !%Option sphere 1
+      !% The simulation box will be a sphere of radius Radius
+      !%Option cylinder 2
+      !% The simulation box will be a cylinder with radius Radius and height two times
+      !% Xlength
+      !%Option minimum 3
+      !% The simulation box will be constructed by adding spheres created around each
+      !% atom (or user defined potential), of radius Radius.
+      !%Option parallelepiped 4
+      !% The simulation box will be a parallelpiped whose dimensions are taken from
+      !% the variable lsize.
+      !%End
+      call loct_parse_int(check_inp('BoxShape'), MINIMUM, sb%box_shape)
+      if(.not.varinfo_valid_option('BoxShape', sb%box_shape)) call input_error('BoxShape')
       select case(sb%box_shape)
       case(SPHERE,MINIMUM)
-        if(sb%dim>1 .and. simul_box_is_periodic(sb)) then
-          message(1) = 'Spherical or minimum mesh is not allowed for periodic systems'
-          call write_fatal(1)
-        end if
+        if(sb%dim>1 .and. simul_box_is_periodic(sb)) call input_error('BoxShape')
       case(CYLINDER)
         if (sb%dim>2 .and. &
-          ((sb%dim - sb%periodic_dim == 0) .or. (sb%dim - sb%periodic_dim == 1))) then
-          message(1) = 'Cylindrical mesh is not allowed for systems'
-          message(2) = 'that are periodic in more than one dimension'
-          call write_fatal(2)
-        end if
+          ((sb%dim - sb%periodic_dim == 0) .or. (sb%dim - sb%periodic_dim == 1))) call input_error('BoxShape')
       end select
 
       ! ignore box_shape in 1D
@@ -166,19 +176,28 @@ contains
       if(sb%box_shape == MINIMUM.and.def_rsize>M_ZERO) sb%rsize = def_rsize/units_inp%length%factor
 
       if(sb%box_shape == SPHERE.or.sb%box_shape == CYLINDER.or.sb%box_shape == MINIMUM) then
+        !%Variable Radius
+        !%Type float
+        !%Section 4 Mesh
+        !%Description
+        !% If BoxShape is not "parallelepiped" defines the radius of the spheres or of the cylinder.
+        !% It has to be a positive number. If it is not defined in the input file, then the program
+        !% will attempt to fine a suitable default, but this is not always possible, in which case
+        !% the code will stop issuing this error message.
+        !%End
         call loct_parse_float(check_inp('radius'), sb%rsize, sb%rsize)
-        if(sb%rsize < 0) then
-          message(1) = "Either:"
-          message(2) = "   *) variable 'radius' is not defined"
-          message(3) = "   *) your input for 'radius' is negative"
-          message(4) = "   *) I can't find a suitable default"
-          call write_fatal(4)
-        end if
+        if(sb%rsize < CNST(0.0)) call input_error('radius')
         sb%rsize = sb%rsize * units_inp%length%factor
         if(def_rsize>M_ZERO) call check_def(def_rsize, sb%rsize, 'radius')
       end if
 
       if(sb%box_shape == CYLINDER) then
+        !%Variable Xlength
+        !%Type float
+        !%Section 4 Mesh
+        !%Description
+        !% If BoxShape is "cylinder", it is half the total length of the cylinder.
+        !%End
         call loct_parse_float(check_inp('xlength'), M_ONE/units_inp%length%factor, sb%xsize)
         sb%xsize = sb%xsize * units_inp%length%factor
         sb%lsize(1) = sb%xsize
@@ -188,14 +207,24 @@ contains
       sb%lsize = M_ZERO
       if(sb%box_shape == PARALLELEPIPED) then
 
+        !%Variable Lsize
+        !%Type block
+        !%Section 4 Mesh
+        !%Description
+        !% In case BoxShape is "parallelepiped", this is assumed to be a block of the form:
+        !%
+        !%  %Lsize
+        !%  sizex | sizey | sizez
+        !%  %
+        !% where the "`size*" are half of the lengths of the box in each direction.
+        !%
+        !% If BoxShape is "parallelpiped", this block has to be defined in the input file. The
+        !% number of columns must match the dimensionality of the calculation.
+        !%End
         if(loct_parse_block(check_inp('lsize'), blk) == 0) then
-          if(loct_parse_block_cols(blk,0) < sb%dim) then
-            message(1) = 'Size of Block "lsize" does not match number of dimensions'
-            call write_fatal(1)
-          end if
+          if(loct_parse_block_cols(blk,0) < sb%dim) call input_error('lsize')
         else
-          message(1) = 'Block "lsize" not found in input file.'
-          call write_fatal(1)
+          call input_error('lsize')
         end if
 
         do i = 1, sb%dim
