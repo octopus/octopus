@@ -50,7 +50,7 @@ subroutine X(input_function)(filename, m, f, ierr)
   call push_sub('out_inc.Xinput_function')
 
   if(m%parallel_in_domains) then
-#if defined(HAVE_MPI)
+#if defined(HAVE_MPI) && defined(HAVE_METIS)
     ! Only root reads. Therefore, only root needs a buffer
     ! f_global for the whole function.
     if(m%mpi_rank == 0) then
@@ -330,7 +330,7 @@ subroutine X(output_function) (how, dir, fname, mesh, sb, f, u, ierr)
   call push_sub('out_inc.Xoutput_function')
 
   if(mesh%parallel_in_domains) then
-#if defined(HAVE_MPI)
+#if defined(HAVE_MPI) && defined(HAVE_METIS)
     allocate(f_global(1:mesh%np_global))
 
     call X(vec_gather)(mesh%vp, f_global, f)
