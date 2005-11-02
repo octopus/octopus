@@ -1,0 +1,106 @@
+#!/bin/bash
+#
+# Simple script to run octopus for all atoms in the 
+# periodic table for which pseudopoentials are available.
+#
+# $Id$
+
+
+# the defaults file
+defaults=/usr/share/octopus/PP/defaults
+
+# the octopus executable
+octopus=/usr/bin/octopus
+
+ECHO=""
+
+
+# usage
+function usage() {
+    cat <<EOF
+
+ Copyright (C) 2005 by Heiko Appel
+
+Usage: oct-run_periodic_table [options]
+    
+     -h            this message
+     -n            dry run mode (show what would be executed)
+     -r            run octopus for all atoms            
+     -x            octopus executable
+     -d            defaults file for pseudopotentials
+
+Report bugs to <appel@physik.fu-berlin.de>.
+EOF
+ exit 0;
+}
+
+
+# show usage info if no args at all
+[ "$#" -eq 0 ] && usage;
+
+# process command line options
+while getopts "hnrx:d:" opt ; do
+    case "$opt" in
+        h) usage ;;
+        n) ECHO="echo" ;; 
+        r) ECHO="" ;;
+        x) octopus="$OPTARG" ;;
+        d) defaults="$OPTARG";;
+        ?) echo "Error parsing arguments"; exit 1 ;;
+    esac
+done
+shift $(( OPTIND - 1 ))
+
+# do we have all required files?
+if [ ! -x $octopus  ]; then 
+  echo "Error: could not find octopus executable: $octopus"
+  exit 1
+fi
+if [ ! -f $defaults ]; then 
+  echo "Error: could not find defaults file: $defaults"
+  exit 1
+fi
+
+
+# for which atoms are pseudopotentials available?
+pseudos=$(awk '{ print $1 }' $defaults | grep -v "#")
+
+# loop over all pseudopotentials
+for x in $pseudos; do
+
+  # TM2(100) or HGH(101)?
+  flavour=$(grep -E "${x}[[:space:]]" $defaults | grep -v "#" | awk '{ print $3 }'); 
+  # Extract atomic number
+  atomic_no=$(grep -E "${x}[[:space:]]" $defaults | grep -v "#" | awk '{ print $4 }'); 
+
+  # generate working directory
+  workdir=$(printf "%02d_%s\n" ${atomic_no} ${x})
+  $ECHO mkdir $workdir
+
+  # setup input file
+  if [ -d $workdir ]; then
+    {
+cat <<-EOF
+
+CalculationMode = gs
+fromScratch = yes
+
+%Coordinates
+  "$x" | 0 | 0 | 0
+%
+
+EOF
+    } > $workdir/inp 2>/dev/null
+  fi
+
+  # change to working directory
+  $ECHO pushd $workdir
+
+  # run octopus
+  echo "running $workdir ..."
+  $ECHO nice -n 19 $octopus
+
+  # change to previous directory
+  $ECHO popd
+
+done
