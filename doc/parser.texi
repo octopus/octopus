@@ -1,0 +1,75 @@
+@c **********************************************************************
+@node The parser, Input Variables, Installation, Top
+@chapter The parser
+
+All input options should be in a file called ``@code{inp}'', in the
+directory @code{octopus} is run from. Alternatively, if this file is not
+found, standard input is read. For a fairly comprehensive
+example, just look at the file @code{OCTOPUS_HOME/share/samples/Na2} --- 
+if you installed the code (you did the @code{make install}), this file will also be in
+@code{PREFIX/share/octopus/samples/Na2}.
+
+At the beginning of the program @code{liboct} reads the input
+file, parses it, and generates a list of variables that will be
+read by @code{octopus} (note that the input is case independent). 
+There are two kind of variables, scalar
+values (strings or numbers), and blocks (that you may view as
+matrices). A scalar variable @code{var} can be defined by:
+@example
+var = exp
+@end example
+@code{var} can contain any alphanumeric character plus ``_'', and 
+@code{exp} can be a quote delimited string, a number (integer,
+real, or complex), a variable name, or a mathematical expression. 
+In the expressions all arithmetic operators are supported 
+(``a+b'', ``a-b'', ``a*b'', ``a/b''; for exponentiation the C syntax
+``a^b'' is used), and the following functions can be used:
+@itemize @bullet
+@item @code{sqrt(x)}: The square root of @code{x}.
+@item @code{exp(x)}: The exponential of @code{x}.
+@item @code{log(x)} or @code{ln(x)}: The natural logarithm of @code{x}.
+@item @code{log10(x)}: Base 10 logarithm of @code{x}.
+@item @code{sin(x)}, @code{cos(x)}, @code{tan(x)}, @code{cot(x)},
+  @code{sec(x)}, @code{csc(x)}: The sinus, co-sinus, tangent, co-tangent,
+  secant and co-secant of @code{x}.
+@item @code{asin(x)}, @code{acos(x)}, @code{atan(x)}, @code{acot(x)},
+  @code{asec(x)}, @code{acsc(x)}: The inverse (arc-) sinus, co-sinus, tangent, co-tangent,
+  secant and co-secant of @code{x}.
+@item @code{sinh(x)}, @code{cosh(x)}, @code{tanh(x)}, @code{coth(x)},
+  @code{sech(x)}, @code{csch(x)}: The hyperbolic sinus, co-sinus, tangent, co-tangent,
+  secant and co-secant of @code{x}.
+@item @code{asinh(x)}, @code{acosh(x)}, @code{atanh(x)}, @code{acoth(x)},
+  @code{asech(x)}, @code{acsch(x)}: The inverse hyperbolic sinus, co-sinus, tangent, co-tangent,
+  secant and co-secant of @code{x}.
+@end itemize
+You can also use any of the predefined variables:
+@itemize @bullet
+@item @code{pi}: 3.141592653589793, what else is there to say?
+@item @code{e}: The base of the natural logarithms.
+@item @code{false} or @code{f} or @code{no}: False in all its flavors. For the
+  curious, @code{false} is defined as 0.
+@item @code{true} or @code{t} or @code{yes}: The truthful companion of @code{false}. For the
+  curious, @code{true} is defined as 1.
+@end itemize
+
+Blocks are defined as a collection of values, organised in row and column format.
+The syntax is the following:
+@example
+%var
+  exp | exp | exp | ...
+  exp | exp | exp | ...
+  ...
+%
+@end example
+Rows in a block are separated by a newline, while columns are
+separated by the character ``|'' or by a tab. There may be any number of lines and any
+number of columns in a block. Note also that each line can have a different
+number of columns.
+
+If @code{octopus} tries to read a variable that is not defined in the
+input file, it automatically assigns to it a default value. All
+variables read are output to the file ``@code{out.oct}''. If you are
+not sure of what the program is reading, just take a look at it.
+Everything following the character ``#'' until the end of the line
+is considered a comment and is simply cast into oblivion.
+

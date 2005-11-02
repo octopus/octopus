@@ -1,0 +1,33 @@
+@node Copying, Installation, Authors, Top
+@chapter Copying
+@cartouche
+@unnumbered The @octopus{} Copying Conditions
+
+This program is ``free''; this means that everyone is free to use it and free to
+redistribute it on a free basis.
+What is not allowed is to try to prevent others from further sharing
+any version of this program that they might get from you.
+
+Specifically, we want to make sure that you have the right to give
+away copies of the program, that you receive
+source code or else can get it if you want it, that you can change this
+program or use pieces of them in new free programs, and that you know
+you can do these things.
+
+To make sure that everyone has such rights, we have to forbid you to
+deprive anyone else of these rights.  For example, if you distribute
+copies of the program, you must give the recipients all
+the rights that you have.  You must make sure that they, too, receive or
+can get the source code.  And you must tell them their rights.
+
+Also, for our own protection, we must make certain that everyone finds
+out that there is no warranty for this program.
+If these programs are modified by someone else and passed on, we want
+their recipients to know that what they have is not what we distributed,
+so that any problems introduced by others will not reflect on our
+reputation.
+
+The precise conditions of the license 
+are found in the General Public
+Licenses that accompany it.
+@end cartouche

@@ -26,7 +26,10 @@ foreach $F90file (@F90){
 	  put_opt($1, $2);
 	}
 
-	if(/^ /){ # get whole description
+	if(/^ </){ # lines that start with a html command
+	  print_desc($desc) if($desc ne "");
+	  $desc = $_;
+	}elsif(/^ /){ # get whole description
 	  $desc .= " ".$_;
 	}else{
 	  if($desc ne "") {
@@ -115,12 +118,18 @@ sub print_desc(){
     }
 
     for($i=$ml; $i>0 && substr($desc, $i, 1) ne ' '; $i--){};
+    if($i == 0){
+      for($i=0; $i<length($desc) && substr($desc, $i, 1) ne ' '; $i++){};
+    }
+
     $line = substr($desc, 0, $i);
     $desc = substr($desc, $i+1);
 
     $spaces = $ml - length($line);
-    for($i=0; $i<$spaces; $i++){
-      $line =~ s/([^ ]) ([^ ])/$1  $2/;
+    if($spaces > 0){
+      for($i=0; $i<$spaces; $i++){
+	$line =~ s/([^ ]) ([^ ])/$1  $2/;
+      }
     }
     print OUT " ", $line, "\n";
   }

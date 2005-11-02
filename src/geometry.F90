@@ -123,7 +123,7 @@ contains
     !%Variable SystemName
     !%Type string
     !%Default "system"
-    !%Section Coordinates
+    !%Section System
     !%Description
     !% A string that identifies the current run. This parameter is seldomly used, but
     !% it is sometimes useful to have in the input file.
@@ -135,33 +135,35 @@ contains
 
     !%Variable PDBCoordinates
     !%Type string
-    !%Section Coordinates
+    !%Section System::Coordinates
     !%Description
-    !% If this variable is present, the program tries to read the atomic  coordinates
+    !% If this variable is present, the program tries to read the atomic coordinates
     !% from the file specified by its value. The PDB (Protein Data Bank
-    !% (http://www.rcsb.org/pdb/)) format is quite complicated. You can find a comprehensive
-    !% description in "http://www.rcsb.org/pdb/docs/format/pdbguide2.2/guide2.2_frame.html".
+    !% (http://www.rcsb.org/pdb/)) format is quite complicated, and it goes 
+    !% well beyond the scope of this manual. You can find a comprehensive
+    !% description in <a href='http://www.rcsb.org/pdb/docs/format/pdbguide2.2/guide2.2_frame.html'>here</a>.
     !% From the plethora of instructions defined in the PDB standard, octopus
     !% only reads two, "ATOM" and "HETATOM". From these fields, it reads:
-    !%
-    !% - columns 13-16 : The specie; in fact "octopus" only cares about the
+    !% <ul>
+    !% <li> columns 13-16 : The specie; in fact "octopus" only cares about the
     !% first letter - "CA" and "CB" will both refer to Carbon - so elements whose
     !% chemical symbol has more than one letter can not be represented in this way.
     !% So, if you want to run mercury ("Hg") please use one of the other two methods
     !% to input the atomic coordinates, "XYZCoordinates" or "Coordinates".
-    !%
-    !% - columns 18-21 : The residue. If residue is "QM", the atom is treated in Quantum
+    !% </li>
+    !% <li> columns 18-21 : The residue. If residue is "QM", the atom is treated in Quantum
     !% Mechanics, otherwise it is simply treated as an external classical point charge.
     !% Its charge will be given by columns 61-65.
-    !%
-    !% - columns 31-54 : The Cartesian coordinates. The Fortran format is "(3f8.3)".
-    !%
-    !% - columns 61-65 : Classical charge of the atom. The Fortran format is "(f6.2)".
+    !% </li>
+    !% <li> columns 31-54 : The Cartesian coordinates. The Fortran format is "(3f8.3)".
+    !% </li>
+    !% <li> columns 61-65 : Classical charge of the atom. The Fortran format is "(f6.2)".
+    !% </ul>
     !%End
 
     !%Variable XYZCoordinates
     !%Type string
-    !%Section Coordinates
+    !%Section System::Coordinates
     !%Description
     !% If "PDBCoordinates" is not present, the program reads the atomic coordinates from
     !% the XYZ file specified by the variable "XYZCoordinates" -- in case this variable
@@ -173,19 +175,16 @@ contains
 
     !%Variable Coordinates
     !%Type block
-    !%Section Coordinates
+    !%Section System::Coordinates
     !%Description
     !% If neither a "XYZCoordinates" nor a "PDBCoordinates" was found, octopus
     !% tries to read the coordinates for the atoms from the block "Coordinates". The
     !% format is quite straightforward:
     !%
-    !%     %Coordinates
-    !%
-    !%       'C' | -0.56415 | 0.0 | 0.0 | no
-    !%
-    !%       'O' |  0.56415 | 0.0 | 0.0 | no
-    !%
-    !%     %
+    !% <tt>%Coordinates<br>
+    !% &nbsp;%nbsp; 'C' | -0.56415 | 0.0 | 0.0 | no<br>
+    !% &nbsp;&nbsp; 'O' |  0.56415 | 0.0 | 0.0 | no<br>
+    !% %</tt>
     !%
     !% The first line defines a Carbon atom at coordinates ("-0.56415", "0.0", "0.0"),
     !% that is _not_ allowed to move during dynamical simulations. The second line has
@@ -251,6 +250,14 @@ contains
 
     call push_sub('geometry.geometry_init_vel')
 
+    !%Variable RandomVelocityTemp
+    !%Type string
+    !%Section System::Velocities
+    !%Description
+    !% If this variable is present, octopus will assign random velocities to the atoms 
+    !% following a Bolzmann distribution with temperature given by RandomVelocityTemp.
+    !%End
+
     ! we now load the velocities, either from the temperature, from the input, or from a file
     if(loct_parse_isdef(check_inp('RandomVelocityTemp')).ne.0) then
       call loct_ran_init(random_gen_pointer)
@@ -284,6 +291,38 @@ contains
       call write_info(3)
 
     else
+      !%Variable XYZVelocities
+      !%Type string
+      !%Section System::Velocities
+      !%Description
+      !% octopus will try to read the starting velocities of the atoms from the XYZ file 
+      !% specified by the variable XYZVelocities ('velocities.xyz' by default).
+      !% Note that you do not need to specify initial velocities if you are not going
+      !% to perform ion dynamics; if you are going to allow the ions to move but the velocities
+      !% are not specified, they are considered to be null.
+      !%End
+
+      !%Variable Velocities
+      !%Type block
+      !%Section System::Velocities
+      !%Description
+      !% If XYZVelocities is not present, octopus will try to fetch the initial 
+      !% atomic velocities from this block. If this block is not present, octopus
+      !% will reset the initial velocities to zero. The format of this block can be
+      !% illustrated by this example:
+      !%
+      !% <tt>%Velocities<br>
+      !% &nbsp;&nbsp;'C'  | -1.7 | 0.0 | 0.0<br>
+      !% &nbsp;&nbsp;'O'  |  1.7 | 0.0 | 0.0<br>
+      !% %</tt>
+      !%
+      !% It describes one Carbon and one Oxygen moving at the relative
+      !% velocity of 3.4, velocity units.
+      !%
+      !% Note: It is important for the velocities to maintain the ordering 
+      !% in which the species were defined in the coordinates specifications.
+      !%End
+
       call xyz_file_init(xyz)
       call xyz_file_read('Velocities', xyz)
       if(xyz%file_type.ne.XYZ_FILE_ERR) then

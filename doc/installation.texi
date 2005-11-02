@@ -1,0 +1,330 @@
+@c *************************INSTALLATION*********************************
+@node Installation, The parser, Copying, Top
+@chapter Installation
+
+Maybe somebody else installed the @octopus for you. In that case, the files
+should be under some directory that we can call @code{PREFIX}: the executables
+in @code{PREFIX/bin} (e.g. if @code{PREFIX=/usr/local}, the main @code{octopus}
+executable is then @code{/usr/local/bin/octopus}); the documentation in @code{info} format
+in @code{PREFIX/info} (so that you may see it by typing @code{info -f PREFIX/info/octopus.info}
+if the @code{info} program is installed in your system); some sample files
+in @code{PREFIX/share/octopus/samples}; the pseudopotential files that @octopus will
+need in @code{PREFIX/share/octopus/PP}, etc.
+
+However, you may be unlucky and that is not the case. In the following we will try
+to help you with the, still rather unfriendly, task of compiling and installing the @octopus .
+
+@menu
+* Quick instructions::          
+* Long instructions::           
+* Different octopus executables::  
+* Troubleshooting::             
+@end menu
+
+@node Quick instructions, Long instructions, Installation, Installation
+@section Quick instructions
+
+For the inpatients, here goes the quick-start: 
+@example
+prompt> gzip -cd octopus<-version>.tar.gz | tar xvf -
+prompt> cd octopus-<version>
+prompt> ./configure
+prompt> make
+prompt> make install
+@end example
+
+This will probably @strong{not} work, so before giving up, just read
+the following paragraphs.
+
+Also, rpm and deb binaries for linux are supplied on the web-page.
+
+@node Long instructions, Different octopus executables, Quick instructions, Installation
+@section Long instructions
+
+The code is written in standard Fortran 90, with some routines written
+in C (and in bison, if we count the input parser). To build it
+you will need both a C compiler (@code{gcc} works just fine), and a
+Fortran 90 compiler. No free-software Fortran 90 compiler is available yet,
+so, if you want to chew the @code{octopus}, you will have either
+to help the @uref{http://g95.sourceforge.net, g95} or @uref{http://gcc.gnu.org/fortran, gfortran}
+projects,
+or use any of the available comercial compilers.
+
+Besides the compiler, you will also need:
+@enumerate
+@item @code{make}:  most computers have it installed, otherwise just
+grab and install the GNU @code{make}.
+
+@item @code{cpp}: The C preprocessor is heavily used in @code{octopus}.
+GNU @code{cpp} is just fine, but any @code{cpp} that accepts
+the @code{-C} flag (preserve comments) should work just as well.
+
+@item @sc{fftw}: We have relied on this great library to perform the Fast
+Fourier Transforms (FFTs). You may grab it from @uref{http://www.fftw.org/, here}.
+You may use @sc{fftw} version 2 as well as @sc{fftw} version 3. @code{octopus} will try
+first to use the latter one, since it is significantly faster in some
+architectures.
+
+@item @sc{lapack/blas}: Required. Our politics is to rely on these two libraries
+as much as possible on these libraries for the linear algebra operations. 
+If you are running Linux,
+there is a fair chance they are already installed in your system. The same
+goes to the more heavyweight machines (alphas, IBMs, SGIs, etc.). Otherwise,
+just grab the source from @uref{http://www.netlib.org, here}.
+
+@item @sc{gsl}: Finally that someone had the nice idea of making a public scientific
+library! @sc{gsl} still needs to grow, but it is already quite useful and impressive.
+@code{octopus} uses splines, complex numbers, special functions, etc. from @sc{gsl},
+so it is a must! If you don't have it already installed in your system, you can
+obtain @sc{gsl} from @uref{http://sources.redhat.com/gsl/, here}. You will need version 1.0 
+or higher.
+
+@item @sc{mpi}: If you want to run @code{octopus} in multi-tentacle (parallel) mode,
+you will need an implementation of MPI. 
+@uref{http://www-unix.mcs.anl.gov/mpi/mpich/, @sc{mpich}} works just fine in our
+Linux boxes.
+
+@end enumerate
+
+First you should obtain the code file, @code{octopus<-version>.tar.gz},
+(this you probably have already done). The code is freely available, and
+can be downloaded from @uref{http://www.tddft.org/programs/octopus}. There exists
+a @code{cvs} server, which you can browse at 
+@uref{http://nautilus.fis.uc.pt/cgi-bin/cvsweb.cgi/marques/octopus/}. 
+The sources of the cvs version (in general more unstable the the @emph{official}
+distribution) may be downloaded by anonymous cvs access:
+
+@example
+prompt> cvs -d :pserver:anonymous@@nautilus.fis.uc.pt:/server/cvsroot 
+        login
+
+prompt> cvs -d :pserver:anonymous@@nautilus.fis.uc.pt:/server/cvsroot 
+        co marques/octopus
+@end example
+
+
+Uncompress
+and untar it (@code{gzip -cd octopus<-version>.tar.gz | tar -xvf -}).
+In the following, @code{OCTOPUS-HOME} denotes the home directory of
+octopus, created by the @code{tar} command.
+
+The @code{OCTOPUS-HOME} contains the following subdirectories:
+@itemize @bullet
+@item @code{autom4te.cache, build, CVS, debian}: contains files related 
+to the building system or the CVS repository. May actually not be there. 
+Not of real interest for the plain user.
+@item @code{doc}: The documentation of @code{octopus} in @emph{texinfo} format.
+@item @code{liboct}: Small C library that handles the interface to
+@sc{gsl} and the parsing of the input file. It also contains some assorted
+routines that we didn't want to write in boring Fortran.
+@item @code{share/PP}: Pseudopotentials.
+In practice now it contains the Troullier-Martins and Hartwigsen-Goedecker-Hutter
+pseudopotential files.
+@item @code{share/util}: Currently, the @emph{utilities} include a couple of IBM
+OpenDX networks (@code{wf.net}), to visualize wavefunctions, densities, etc.
+@item @code{share/samples}: A couple of sample input files.
+@item @code{src}: Fortran 90 source files. Note that these have to be preprocessed
+before being fed to the Fortran compiler, so do not be scared by
+all the # directives.
+@end itemize
+
+Before configuring you can (should) setup a couple of options. Although
+the configure script tries to guess your system settings for you, we recommend 
+that you set explicitly the default Fortran compiler and the compiler options. 
+For example, in @code{bash} you would typically do:
+@example
+export FC=abf90
+export FCFLAGS="-O -YEXT_NAMES=LCS -YEXT_SFX=_"
+@end example
+if you are using the Absoft Fortran 90 compiler on a linux machine.
+Also, if you have some of the required libraries in some unusual directories,
+these directories may be placed in the variable @code{LDFLAGS} (e.g.,
+@code{export LDFLAGS=$LDFLAGS:/opt/lib/}).
+
+The configuration script will try to find out which compiler you are using.
+Unfortunately, and due to the nature of the primitive language that @code{octopus}
+is programmed in, the automatic test fails very often. Often it is better to set
+the variable @code{FCFLAGS} by hand. These are some of the options reported to work:
+@table @samp
+  @item intel ifc (PIV)
+  @code{-u -zero -fpp1 -nbs -i_dynamic -pc80 -pad -align  -unroll -O3 -r8 -ip -tpp7 -xW}
+  @item absoft (i386)
+  @code{-O3 -YEXT_NAMES=LCS -YEXT_SFX=_}
+  @item absoft (opteron)
+  @code{-O3 -mcmodel=medium -m64 -cpu:host -YEXT_NAMES=LCS -YEXT_SFX=_}
+  @item NAG (opteron)
+  @code{-colour -kind=byte -mismatch_all -abi=64 -ieee=full -O4 -Ounroll=4}
+  @item pgi (opteron)
+  @code{-fast -mcmodel=medium -O4}
+  @item alpha
+  @code{-align dcommons -fast -tune host -arch host -noautomatic}
+  @item xlf (IBM)
+  @code{-bmaxdata:0x80000000 -qmaxmem=-1 -qsuffix=f=f90 -Q -O5 -qstrict -qtune=auto -qarch=auto -qhot -qipa}
+  @item sgi
+  @code{-O3 -INLINE -n32 -LANG:recursive=on}
+@end table
+
+You can now run the configure script (@code{./configure}). 
+@footnote{
+If you downloaded the cvs version, you will not find the @code{configure} script. 
+In order to compile the development version you will first have to run the GNU autotools.
+This may be done by executing the @code{autoreconf} perl script (a part of the @code{autoconf} distribution). 
+Note that you need to have working versions of the @code{automake} (1.8.5), 
+@code{autoconf} (2.59) and @code{libtool} (1.5.6) programs (the versions we 
+currently use are between parentheses). Note that the @code{autoreconf} script will likely fail if
+you have (much) older versions of the autotools.
+}
+You can use
+a fair amount of options to spice @code{octopus} to your own taste.
+To obtain a full list just type @code{./configure --help}. Some 
+commonly used options include:
+@itemize @bullet
+@item
+@code{--prefix=PREFIX}: Change the base installation dir of @code{octopus}
+to @code{PREFIX}. The executable will be installed in @code{PREFIX/bin},
+the libraries in @code{PREFIX/lib} and the documentation in @code{PREFIX/info}.
+@code{PREFIX} defaults to the home directory of the user who runs @code{configure}.
+@footnote{You may fine-tune further the instalation by making use of a set of standard
+options (@code{--exec-prefix, --bindir, --datadir, --program-prefix}, etc) that
+are described in the output of @code{./configure --help}
+}
+@item
+@code{--with-fft=fftw2}: Instruct the @code{configure} script to use the @sc{fftw}
+library, and specifically to use the @sc{fftw} version 2. You may also
+set @code{--with-fft=fftw3} or even @code{--disable-fft}, although this last option
+is dis-encouraged.
+@item
+@code{--with-fft-lib=<lib>}: Instruct the @code{configure} script to look for the
+@sc{fftw} library exactly in the way that it is specified in the @code{<lib>} argument,
+i.e @code{--with-fft-lib='-L/opt/lib -lfftw3'}.
+@item
+@code{--with-blas=<lib>}: Instruct the @code{configure} script to look for 
+the @sc{blas} library in the way that it is specified in the @code{<lib>} argument.
+@item
+@code{--with-lapack=<lib>}: Instruct the @code{configure} script to look for 
+the @sc{blas} library in the way that it is specified in the @code{<lib>} argument.
+@item
+@code{--with-gsl-prefix=DIR}: Installation directory of the @sc{gsl} library. The
+libraries are expected to be in @code{DIR/lib} and the include
+files in @code{DIR/include}. The value of @code{DIR} is usually found by
+issuing the command @code{gsl-config --prefix}. (If the @sc{gsl} library is
+installed, the program @code{gsl-config} should be somewhere.)
+@item
+@code{--with-netcdf=<lib>}: @sc{netcdf} library. This is a recommended library, although
+not necessary.
+@end itemize
+
+In addition to these options, several other options have to be passed to build
+different executables of octopus (parallel, debugging version, etc) 
+-- @xref{Different octopus executables}.
+
+Run @code{make}, and then @code{make install}. If everything went fine, you
+should now be able to taste @code{octopus}. Depending on the options passed to
+the configure script, some suffixes could be added to the generic
+name @code{octopus} --- i.e. @code{octopus_cmplx} for the code compiled for
+complex wave-functions, @code{octopus_cmplx_mpi} for a parallel version of the code compiled for
+complex wave-function, and so on. 
+
+Depending on the value given to the @code{--prefix=PREFIX} given,
+the executables will reside in @code{PREFIX/bin}, the info file with the
+documentation in @code{PREFIX/info} (so that it may be viewed running
+@code{info -f PREFIX/info/octopus.info}), and the auxiliary files will be copied
+to @code{PREFIX/share/octopus}. The sample input files will be copied
+to @code{PREFIX/share/octopus/samples}.
+
+The program has been tested in the following platforms:
+@itemize @bullet
+@item @code{i686*-linux-gnu}: with the @uref{http://www.absoft.com, Absoft},
+  and the @uref{http://www.intel.com/software/products/compilers/, Intel} compiler.
+@item @code{alphae*}: both in Linux and in OSF/1 with Compaq's @code{fort} compiler.
+@item @code{powerpc-ibm-aix4.3.3.0}: with native @code{xlf90} compiler.
+@item @code{cray}: with native f90 compiler.
+@item @code{opteron}: with NAG, PGI, and ABSOFT compilers.
+@item @code{SGI}: with native compiler.
+@end itemize
+If you manage to compile/run @code{octopus} on a different platform
+or with a different compiler, please let us know so we can update the
+list. Patches to solve compiler issues are also welcomed.
+
+Build the documentation in the format you prefer. Since you are reading
+this, you already have it in some format (but maybe not the correct version). 
+Due to the power of @code{texinfo},
+a series of formats are available, namely @code{dvi}, @code{html},
+@code{pdf} and @code{info}. The @code{octopus.texi} source code of this
+document is in the @code{OCTOPUS-HOME/doc} directory.
+
+
+@node Different octopus executables, Troubleshooting, Long instructions, Installation
+@section Different octopus executables
+
+By performing the standard install, you will get an executable called @code{octopus},
+and a set of utility programs called @code{oct-}@emph{something}. However, the code
+may be compiled differently in order to profit from special feautures (e.g
+parallel executables, etc). The following is a list of the options that have to be
+passed to the @code{configure} script in order to obtain these different executables.
+
+@itemize @bullet
+@item
+@code{--enable-complex}: Builds a version with complex wave-functions
+for the ground-state calculations (wave-functions are always complex for
+the evolution). This is needed when spinors are needed --- e.g. noncollinear
+magnetism is going to be considered, or the spin-orbit coupling term will
+be used. The suffix @code{_cmplx} is appended to the @code{octopus} executable name.
+@item
+@code{--enable-debug}: Builds a version that is able to emit some
+debugging information. Useful for developers, or to report bugs. If @code{octopus}
+has been built with this option enabled, you may set the variable
+@code{Verbose} to ``debug'' level, and set @code{DebugLevel} 
+The suffix @code{_debug} is appended to the @code{octopus} executable name.
+@item
+@code{--enable-single}: Builds a version that works in single precision
+mode, rather than in the standard double precision. It will work faster.
+Unfortunately we are not yet fully sure of the proper functioning
+of the code in this manner.
+The suffix @code{_single} is appended to the @code{octopus} executable name.
+@item
+@code{--enable-mpi}: Builds the parallel version (MPI) of @code{octopus}.
+The suffix @code{_mpi} is appended to the @code{octopus} executable name.
+
+
+@end itemize
+
+
+@node Troubleshooting,  , Different octopus executables, Installation
+@section Troubleshooting
+
+If you are reading this it is because something went wrong. Let us see
+if we can fix it ;)
+
+@strong{Could not find library...}:
+This is probably the most common error you can get. @code{octopus} uses
+three different libraries, @sc{gsl}, @sc{fftw}, and 
+@sc{blas}/@sc{lapack}. We assume that you have already
+installed these libraries but, for some reason, you were not able to
+compile the code. So, what went wrong?
+@itemize @bullet
+
+@item Did you pass the correct @code{--with-XXXX} (where XXXX is gsl, fftw or
+lapack in lowercase) to the configure script? If your libraries are
+installed in a non-standard directory (like @code{/opt/lapack}), you will
+have to pass the script the location of the library (in this example,
+you could try @code{./configure --with-lapack='-L/opt/lapack -llapack'}.
+
+@item If you are working on an alpha station, do not forget that the @code{CXML}
+library includes @code{BLAS} and @code{LAPACK}, so it can be used by
+@code{octopus}. If needed, just set the correct path with @code{--with-lapack}.
+
+@item If the configuration script can not find @code{FFTW}, it is probable that
+you did not compile @code{FFTW} with the same Fortran compiler or with the
+same compiler options. The basic problem is that Fortran sometimes converts
+the function names to uppercase, at other times to lowercase, and it can
+add an ``_'' to them, or even two. Obviously all libraries and the program
+have to use the same convention, so the best is to compile everything with
+the same Fortran compiler/options. If you are a power user, you can check the
+convention used by your compiler using the command @code{nm <library>}.
+
+@end itemize
+
+@strong{Whatever went wrong...}:
+Up to now, we cannot really make a list of commonly found problems. So if something
+else went wrong, please subscribe to @code{octopus-users} mailing list, and ask.

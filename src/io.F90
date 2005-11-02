@@ -128,7 +128,7 @@ contains
     !%Variable DebugLevel
     !%Type integer
     !%Default 1
-    !%Section Generalities
+    !%Section Generalities::Debug
     !%Description
     !% This variable decides wether or not to enter debug-mode. In debugging mode,
     !% the program prints to standard error when it enters and exits the subroutines,
@@ -190,7 +190,7 @@ contains
     !%Variable ProfilingMode
     !%Default no
     !%Type logical
-    !%Section Generalities
+    !%Section Generalities::Debug
     !%Description
     !% Use this variable to run octopus in profiling mode. In this mode
     !% octopus records time spent in certain areas of the code and

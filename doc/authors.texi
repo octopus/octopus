@@ -1,0 +1,74 @@
+@node Authors, Copying, Top, Top
+@chapter Authors
+@cartouche
+@unnumbered
+
+The main developing team of this program is composed of:
+         
+@itemize @bullet
+@item Miguel A. L. Marques 
+(Donostia International Physics Center, San Sebasti@'{a}n, Espa@~na)
+@item Angel Rubio, 
+(Donostia International Physics Center and Department of Materials Science
+UPV/EHU, San Sebasti@'{a}n, Espa@~na), and 
+@item Alberto Castro, 
+(alberto.castro@@tddft.org, Theoretische Physik, Freie Universit@"at Berlin,
+Berlin 14195, Deutschland).
+@end itemize
+
+Other contributors are:
+@itemize @bullet
+@item Micael Oliveira: mixing, and a lot of stuff.
+@item Carlo Andrea Rozzi - infinite systems (almost done!)
+@item Sebastien Hamel    - paralel version of oct-excite.
+@end itemize
+
+@code{octopus} is based on a fixed-nucleus code written by
+George F. Bertsch and K. Yabana to perform real-time dynamics in
+clusters (Phys Rev B @strong{54}, 4484 (1996))
+and on a condensed matter real-space plane-wave based code written 
+by A. Rubio, X. Blase and S.G. Louie 
+(Phys. Rev. Lett. @strong{77}, 247 (1996)). 
+The code was afterwards extended to handle periodic systems by  
+G.F. Bertsch, J.I. Iwata, A. Rubio, and K. Yabana
+(Phys. Rev. B, @strong{62}, 7998 (2000)). Contemporaneously there was
+a major rewrite of the original cluster code to handle a vast majority 
+of finite systems. At this point the cluster code was
+named ``tddft''.
+
+This version was consequently enhanced and beautified by A. Castro 
+(at the time Ph.D. student of A. Rubio), originating a fairly verbose 15,000 
+lines of Fortran 90/77. In the year 2000, M. Marques (aka Hyllios, 
+aka Ant@'onio de Faria, cors@'ario portugu@^es), joined the A. Rubio group 
+in Valladolid as a postdoc. Having to use ``tddft'' for his work, and being 
+petulant enough to think he could structure the code better than his 
+predecessors, he started a major rewrite of the code together with A. Castro, 
+finishing version 0.2 of ``tddft.'' But things were still not perfect: due to 
+their limited experience in Fortran 90, and due to the inadequacy of this 
+language for anything beyond a HELLO WORLD program, several parts of the code 
+were still clumsy. Also the idea of GPLing the almost 20,000 lines arose 
+during an alcoholic evening. So after several weeks of fantic coding and 
+after getting rid of the Numerical Recipes code that still lingered around, 
+@code{octopus} was born.
+
+The present released version has been completely rewritten and keeps
+very little relation to the old version (even input and output files) and has
+been enhanced with major new flags to perform various excited-state
+dynamics in finite and extended systems (one-dimensional periodic
+chains). The code will be updated frequently and new versions can 
+be found @uref{http://www.tddft.org/programs/octopus, here}.
+
+The main features of the present version are described in detail in
+@emph{octopus: a first principles tool for excited states electron-ion
+dynamics}, Comp. Phys. Comm. @strong{151}, 60 (2003).
+Updated references as well
+as results obtained with octopus will be posted regularly to the @code{octopus}
+web page. If you find the code useful for you research we would appreciate
+if you give reference to this work and previous ones.
+
+If you have some free time, and if you feel like taking a joy ride with
+Fortran 90, just drop us an @email{octopus@@tddft.org, email}. You can
+also send us patches, comments, ideas, wishes, etc. They will be included
+in new releases of octopus.     
+
+@end cartouche

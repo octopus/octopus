@@ -108,7 +108,7 @@ contains
       !%Variable PeriodicDimensions
       !%Type integer
       !%Default 0
-      !%Section Generalities::Simulation Box
+      !%Section Mesh::Simulation Box
       !%Description
       !% Define which directions are to be considered periodic. Of course, it has to be a number
       !% from 0 to three, and it cannot be larger than Dimensions.
@@ -139,7 +139,7 @@ contains
       !%Variable BoxShape
       !%Type integer
       !%Default minimum
-      !%Section 4 Mesh
+      !%Section Mesh::Simulation Box
       !%Description
       !% This variable decides the shape of the simulation box.
       !% Note that some incompatibilities apply:
@@ -178,7 +178,7 @@ contains
       if(sb%box_shape == SPHERE.or.sb%box_shape == CYLINDER.or.sb%box_shape == MINIMUM) then
         !%Variable Radius
         !%Type float
-        !%Section 4 Mesh
+        !%Section Mesh::Simulation Box
         !%Description
         !% If BoxShape is not "parallelepiped" defines the radius of the spheres or of the cylinder.
         !% It has to be a positive number. If it is not defined in the input file, then the program
@@ -194,7 +194,7 @@ contains
       if(sb%box_shape == CYLINDER) then
         !%Variable Xlength
         !%Type float
-        !%Section 4 Mesh
+        !%Section Mesh::Simulation Box
         !%Description
         !% If BoxShape is "cylinder", it is half the total length of the cylinder.
         !%End
@@ -209,14 +209,15 @@ contains
 
         !%Variable Lsize
         !%Type block
-        !%Section 4 Mesh
+        !%Section Mesh::Simulation Box
         !%Description
         !% In case BoxShape is "parallelepiped", this is assumed to be a block of the form:
         !%
-        !%  %Lsize
-        !%  sizex | sizey | sizez
-        !%  %
-        !% where the "`size*" are half of the lengths of the box in each direction.
+        !% <tt>%Lsize<br>
+        !% &nbsp;&nbsp;sizex | sizey | sizez<br>
+        !% %</tt>
+        !%
+        !% where the "size*" are half the lengths of the box in each direction.
         !%
         !% If BoxShape is "parallelpiped", this block has to be defined in the input file. The
         !% number of columns must match the dimensionality of the calculation.

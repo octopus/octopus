@@ -194,7 +194,7 @@ contains
     !% &nbsp;&nbsp;'H'  | 1.0079 | 1 | "-1/sqrt(x^2 + 1)" <br>
     !% %</tt>
     !%
-    !% This defines a species labelled '<it>H</it>' of weight <it>1.0079</it>,
+    !% This defines a species labelled '<i>H</i>' of weight <i>1.0079</i>,
     !% and valence charge 1. This "valence charge" is used to calculate
     !% the number of electrons present in the calculation: as many
     !% as indicated by the valence charges of the species, plus any extra charge
