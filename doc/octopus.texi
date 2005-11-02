@@ -88,10 +88,24 @@ any later version published by the Free Software Foundation.
 * Copying::                     The licence.
 * Installation::                How to install the program.
 * The parser::                  The input file syntax.
+* Description::                 How the code works in general terms.
 * Input Variables::             The options to put in the input file.
 * Undocumented Variables::      The variables that we did not have time to document.
+* External utilities::          External Utilities
 * Examples::                    Some examples.
 * Options Index::               An index with all the options.
+
+
+
+
+
+
+
+
+
+
+
+
 
 @detailmenu
  --- The Detailed Node Listing ---
@@ -103,10 +117,20 @@ Installation
 * Different octopus executables::  
 * Troubleshooting::             
 
+Description
+
+* Mesh::                        
+* Run Mode SCF::                
+* Run Mode Unoccupied States::  
+* Run Mode Time Dependent::     
+* Function output for visualization::  
+* Spectrum calculations::       
+
 Input Variables
 
 * Generalities::                
 * Hamiltonian::                 
+* SCF::                         
 * Spectrum Calculations::       
 * States::                      
 * System::                      
@@ -123,13 +147,13 @@ Generalities
 Hamiltonian
 
 * Poisson::                     
+* XC::                          
 * Casida::                      
 * General::                     
 * Curvilinear::                 
 * Derivatives::                 
+* FFTs::                        
 * Simulation Box::              
-* EigenSolver::                 
-* Mixing::                      
 
 Poisson
 
@@ -139,11 +163,30 @@ Curvilinear
 
 * Gygi::                        
 
+SCF
+
+* Convergence::                 
+* EigenSolver::                 
+* Mixing::                      
+
 System
 
 * Coordinates::                 
 * Species::                     
 * Velocities::                  
+
+External utilities
+
+* oct-sf::                      
+* oct-rsf::                     
+* oct-hs-mult::                 
+* oct-hs-acc::                  
+* oct-xyz-anim::                
+* oct-excite::                  
+* oct-broad::                   
+* oct-make-st::                 
+* oct-center-geom::             
+* wf.net::                      
 
 Examples
 
@@ -157,8 +200,10 @@ Examples
 @include copying.texi
 @include installation.texi
 @include parser.texi
+@include description.texi
 @include variables.texi
 @include undocumented.texi
+@include external.texi
 @include examples.texi
 @include index.texi
 

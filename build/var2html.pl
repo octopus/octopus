@@ -3,7 +3,7 @@
 # configuration
 $out_dir = "doc/html/vars";
 
-if(! -f 'share/varinfo'){
+if(! -f 'share/varinfo_orig'){
   print stderr "Please run this script from the octopus main directory\n";
   exit;
 }
@@ -24,7 +24,7 @@ sub read_varinfo(){
   my $key, $arg;
 
   # let us parse the varinfo file
-  open(IN, '<share/varinfo');
+  open(IN, '<share/varinfo_orig');
   $thisvar = "";
   $thisfield = "";
   while($l = <IN>){
@@ -124,11 +124,11 @@ foldersTree = aux0
 
       for($k=$j; $new[$k]; $k++){
 	$new_sect =~ /^([^:]*)/;
-	$link     = "vars/$1.html#".$vars{$key}{"section"};
+	$link     = "$1.html#".$vars{$key}{"section"};
 	$link     =~ s/\s/_/g;
 
 	print OUT_index "<li>", $new[$k], "</li>\n<ul>\n";
-	print OUT_tree  "aux", $k+1, " = insFld(aux$k, gFld(\"", $new[$k], "\", \"$link\"))\n";
+	print OUT_tree  "aux", $k+1, " = insFld(aux$k, gFld(\"", $new[$k], "\", \"vars/$link\"))\n";
       }
 
       $sect = $new_sect;
@@ -136,11 +136,11 @@ foldersTree = aux0
     }
 
     $sect =~ /^([^:]*)/;
-    $link = "vars/$1.html#".$vars{$key}{"variable"};
+    $link = "$1.html#".$vars{$key}{"variable"};
     $link =~ s/\s/_/g;
 
     print OUT_index "<li><a href='$link'>", $vars{$key}{"variable"}, " </a></li>\n";
-    print OUT_tree  "insDoc(aux$level, gLnk(\"R\", \"", $vars{$key}{"variable"}, "\", \"$link\"))\n";
+    print OUT_tree  "insDoc(aux$level, gLnk(\"R\", \"", $vars{$key}{"variable"}, "\", \"vars/$link\"))\n";
   }
 
   #print last <\ul>
@@ -338,8 +338,8 @@ are given in parenthesis.
 sub to_texi(){
   my ($t) = @_;
 
-  $t =~ s#{#(#g;
-  $t =~ s#}#)#g;
+  $t =~ s#\{#\@\{#g;
+  $t =~ s#\}#\@\}#g;
 
   $t =~ s#<br/*>#@*#g;
   $t =~ s#<hr/*>#------------------------------------------@*#g;

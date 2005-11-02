@@ -94,6 +94,19 @@ contains
   ! initialize the table
   subroutine fft_all_init()
     integer :: i
+
+    !%Variable FFTOptimize
+    !%Type logical
+    !%Default yes
+    !%Section Mesh::FFTs
+    !%Description
+    !% Should <tt>octopus</tt> optimize the FFT dimensions? 
+    !% This means that the cubic mesh to which FFTs are applied is not taken to be as small
+    !% as possible: some points may be added to each direction in order to get a "good number"
+    !% for the performance of the FFT algorithm.
+    !% In some cases, namely when using
+    !% the split-operator, or Suzuki-Trotter propagators, this option should be turned off.
+    !%End
     call loct_parse_logical(check_inp('FFTOptimize'), .true., fft_optimize)
     do i = 1, FFT_MAX
       fft_refs(i) = NULL

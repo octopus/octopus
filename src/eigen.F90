@@ -179,6 +179,13 @@ contains
     end select
     call write_info(1)
 
+    !%Variable EigenSolverInitTolerance
+    !%Type float
+    !%Default 1.0e-6
+    !%Section SCF::EigenSolver
+    !%Description
+    !% This is the initial tolerance for the eigenvectors.
+    !%End
     call loct_parse_float(check_inp('EigenSolverInitTolerance'), CNST(1.0e-6), eigens%init_tol)
     if(eigens%init_tol < 0) then
       write(message(1), '(a,e14.4,a)') "Input: '", eigens%init_tol, &
@@ -187,6 +194,13 @@ contains
       call write_fatal(2)
     end if
 
+    !%Variable EigenSolverFinalTolerance
+    !%Type float
+    !%Default 1.0e-6
+    !%Section SCF::EigenSolver
+    !%Description
+    !% This is the final tolerance for the eigenvectors.
+    !%End
     call loct_parse_float(check_inp('EigenSolverFinalTolerance'), CNST(1.0e-6), eigens%final_tol)
     if(eigens%final_tol < 0 .or. eigens%final_tol > eigens%init_tol) then
       write(message(1),'(a,e14.4,a)') "Input: '", eigens%init_tol, &
@@ -196,6 +210,14 @@ contains
       call write_fatal(3)
     end if
 
+    !%Variable EigenSolverFinalToleranceIteration
+    !%Type integer
+    !%Default 7
+    !%Section SCF::EigenSolver
+    !%Description
+    !% Determines how many interactions are needed 
+    !% to go from <tt>EigenSolverInitTolerance</tt> to <tt>EigenSolverFinalTolerance</tt>.
+    !%End
     call loct_parse_int(check_inp('EigenSolverFinalToleranceIteration'), 7, eigens%final_tol_iter)
     if(eigens%final_tol_iter <= 1) then
       write(message(1),'(a,i5,a)') "Input: '", eigens%final_tol_iter, &
@@ -204,6 +226,15 @@ contains
       call write_fatal(2)
     end if
 
+    !%Variable EigenSolverMaxIter
+    !%Type integer
+    !%Default 25
+    !%Section SCF::EigenSolver
+    !%Description
+    !% Determines the maximum number of iterations 
+    !% for the eigensolver (per state) -- that is, if this number is reached, the diagonalization
+    !% is stopped even if the desired tolerance was not achieved.
+    !%End
     call loct_parse_int(check_inp('EigenSolverMaxIter'), max_iter_default, eigens%es_maxiter)
     if(eigens%es_maxiter < 1) then
       write(message(1),'(a,i5,a)') "Input: '", eigens%es_maxiter, &

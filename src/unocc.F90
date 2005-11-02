@@ -145,10 +145,9 @@ contains
     !%Section Unoccupied States
     !%Description
     !% If true outputs the following matrix elements:
-    !%
-    !%   <i|T + V_ext|j>
-    !%
-    !%   <ij| 1/|r1-r2| |kl>
+    !% <ul>
+    !% <li><i|T + V_ext|j></li>
+    !% <li><ij| 1/|r1-r2| |kl></li></ul>
     !%
     !% in the directory ME
     !%End
@@ -172,6 +171,13 @@ contains
 
       call push_sub('unocc.unocc_run')
 
+      !%Variable NumberUnoccStates
+      !%Type integer
+      !%Default 5
+      !%Section Unoccupied States
+      !%Description
+      !% How many unoccupied states to compute.
+      !%End
       call loct_parse_int(check_inp('NumberUnoccStates'), 5, nus)
       if(nus <= 0) then
         message(1) = "Input: NumberUnoccStates must be > 0"

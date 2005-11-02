@@ -248,6 +248,30 @@ contains
     if (spin_channels == 1) then
       gmd_opt = 1
     else
+      !%Variable GuessMagnetDensity
+      !%Type integer
+      !%default ferromagnetic
+      !%Section Hamiltonian
+      !%Description
+      !% The guess density for the SCF cycle is just the sum of all the atomic densities.
+      !% When performing spin-polarized or non-collinear spin calculations this option sets 
+      !% the guess magnetization density.
+      !%
+      !% For anti-ferromagnetic configurations the <tt>user_defined</tt> option should be used.
+      !%
+      !% Note that if the <tt>paramagnetic</tt> option is used the final ground-state will also be
+      !% paramagnetic, but the same is not true for the other options.
+      !%Option paramagnetic 1
+      !% Magnetization density is zero.
+      !%Option ferromagnetic 2
+      !% Magnetization density is the sum of the atomic magnetization densities.
+      !%Option random
+      !% Each atomic magnetization density is randomly rotated.
+      !%Option user_defined
+      !% The atomic magnetization densities are rotated so that the magnetization 
+      !% vector has the same direction as a vector provided by the user. In this case,
+      !% the <tt>AtomsMagnetDirection</tt> block has to be set.
+      !%End
       call loct_parse_int(check_inp('GuessMagnetDensity'), 2, gmd_opt)
       if (gmd_opt < 1 .or. gmd_opt > 4) then
         write(message(1),'(a,i1,a)') "Input: '",gmd_opt ,"' is not a valid GuessMagnetDensity"
@@ -307,7 +331,21 @@ contains
       end do
 
     case (4) ! User-defined
-
+      
+      !%Variable AtomsMagnetDirection
+      !%Type block
+      !%Section Hamiltonian
+      !%Description
+      !% This option is only used when <tt>GuessMagnetDensity</tt> is set to 
+      !% <tt>user_defined</tt>. It provides a direction for each atoms magnetization 
+      !% vector when building the guess density. In order to do that the user should
+      !% specify the coordinates of a vector that has the desired direction. The norm 
+      !% of the vector is ignored. Note that it is necessaty to maintain the 
+      !% ordering in which the species were defined in the coordinates specifications.
+      !%
+      !% For spin-polarized calculations the vectors should have only one component and
+      !% for non-collinear spin calculations they should have three components.
+      !%End
       if(loct_parse_block(check_inp('AtomsMagnetDirection'), blk) < 0) then
         message(1) = "AtomsMagnetDirection block is not defined "
         call write_fatal(1)

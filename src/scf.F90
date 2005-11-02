@@ -88,12 +88,61 @@ contains
     FLOAT :: rmin
 
     call push_sub('scf.scf_init')
+    
+    !%Variable MaximumIter
+    !%Type integer
+    !%default 200
+    !%Section SCF::Convergence
+    !%Description
+    !% Maximum number of SCF iterations. The code will stop even if convergence
+    !% has not been achieved. <tt>0</tt> means unlimited.
+    !%End
+    call loct_parse_int  (check_inp('MaximumIter'), 200, scf%max_iter)
 
-    call loct_parse_int  (check_inp('MaximumIter'),        200, scf%max_iter)
+    !%Variable ConvAbsDens
+    !%Type float
+    !%default 1e-5
+    !%Section SCF::Convergence
+    !%Description
+    !% Absolute convergence of the density: 
+    !% <math>\epsilon = \int {\rm d}^3r (\rho^{out}(\bf r) -\rho^{inp}(\bf r))^2</math>.
+    !% A zero value means do not use this criterion.
+    !%End
     call loct_parse_float(check_inp('ConvAbsDens'), CNST(1e-5), scf%conv_abs_dens)
-    call loct_parse_float(check_inp('ConvRelDens'),     M_ZERO, scf%conv_rel_dens)
-    call loct_parse_float(check_inp('ConvAbsEv'),       M_ZERO, scf%conv_abs_ev)
-    call loct_parse_float(check_inp('ConvRelEv'),       M_ZERO, scf%conv_rel_ev)
+
+    !%Variable ConvRelDens
+    !%Type float
+    !%default 0.0
+    !%Section SCF::Convergence
+    !%Description
+    !% Relative convergence of the density:
+    !% <math>\epsilon = {1\over N} \int {\rm d}^3r (\rho^{out}(\bf r) -\rho^{inp}(\bf r))^2</math>.
+    !% <i>N</i> is the total number of electrons in the problem.
+    !% A zero value means do not use this criterion.
+    !%End
+    call loct_parse_float(check_inp('ConvRelDens'), M_ZERO, scf%conv_rel_dens)
+
+    !%Variable ConvAbsEv
+    !%Type float
+    !%default 0.0
+    !%Section SCF::Convergence
+    !%Description
+    !% Absolute convergence of the eigenvalues:
+    !% <math>\epsilon = \sum_{j=1}^{N_{occ}} \vert \epsilon_j^{out}-\epsilon_j^{inp}\vert</math>.
+    !% A zero value means do not use this criterion.
+    !%End
+    call loct_parse_float(check_inp('ConvAbsEv'), M_ZERO, scf%conv_abs_ev)
+
+    !%Variable ConvRelEv
+    !%Type float
+    !%default 0.0
+    !%Section SCF::Convergence
+    !%Description
+    !% Relative convergence of the eigenvalues:
+    !% <math>\epsilon = {1 \over N} \sum_{j=1}^{N_{occ}} \vert \epsilon_j^{out}-\epsilon_j^{inp}\vert</math>.
+    !% <i>N</i> is the total number of electrons. A zero value means do not use this criterion.
+    !%End
+    call loct_parse_float(check_inp('ConvRelEv'), M_ZERO, scf%conv_rel_ev)
 
     if(scf%max_iter <= 0 .and. &
       scf%conv_abs_dens <= M_ZERO .and. scf%conv_rel_dens <= M_ZERO .and. &
@@ -106,6 +155,17 @@ contains
 
     if(scf%max_iter <= 0) scf%max_iter = huge(scf%max_iter)
 
+    !%Variable What2Mix
+    !%Type integer
+    !%Default density
+    !%Section SCF::Mixing
+    !%Description
+    !% Selects what should be mixed during the SCF cycle.
+    !%Option density 0
+    !% The density
+    !%Option potential 1
+    !% The Kohn-Sham potential
+    !%End
     call loct_parse_int(check_inp('What2Mix'), 0, scf%what2mix)
     select case (scf%what2mix)
     case (MIXDENS)
@@ -133,7 +193,16 @@ contains
     ! now the eigen solver stuff
     call eigen_solver_init(gr, scf%eigens, st, 25)
 
-    ! Should the calculation be restricted to LCAO subspace?
+    !%Variable SCFinLCAO
+    !%Type logical
+    !%Default no
+    !%Section SCF
+    !%Description
+    !% Performs all the SCF cycle restricting the calculation to the LCAO subspace.
+    !% This may be useful for systems with convergence problems (first do a 
+    !% calculation within the LCAO subspace, then restart from that point for
+    !% an unrestricted calculation).
+    !%End
     call loct_parse_logical(check_inp('SCFinLCAO'), .false., scf%lcao_restricted)
     if(scf%lcao_restricted) then
       message(1) = 'Info: SCF restricted to LCAO subspace'

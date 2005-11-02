@@ -199,9 +199,35 @@ contains
     end if
 #endif
 
-
+    !%Variable ExcessCharge
+    !%Type float
+    !%Default 0.0
+    !%Section States
+    !%Description
+    !% The net charge of the system. A negative value means that we are adding 
+    !% electrons, while a positive value means we are taking electrons
+    !% from the system.
+    !%End
     call loct_parse_float(check_inp('ExcessCharge'), M_ZERO, excess_charge)
 
+
+    !%Variable ExtraStates
+    !%Type integer
+    !%Default 0
+    !%Section States
+    !%Description
+    !% The number of states is in principle calculated considering the minimum
+    !% numbers of states necessary to hold the electrons present in the system.
+    !% The number of electrons is
+    !% in turn calculated considering the nature of the species supplied in the
+    !% <tt>Species</tt> block, and the value of the <tt>ExcessCharge</tt> variable.
+    !% However, one may command <tt>octopus</tt> to put more states, which is necessary if one wants to
+    !% use fractional occupational numbers, either fixed from the origin through
+    !% the <tt>Occupations</tt> block or by prescribing
+    !% an electronic temperature with <tt>ElectronicTemperature</tt>.
+    !%
+    !% Note that this number is unrelated to <tt>CalculationMode == unocc</tt>.
+    !%End
     call loct_parse_int(check_inp('ExtraStates'), 0, nempty)
     if (nempty < 0) then
       write(message(1), '(a,i5,a)') "Input: '", nempty, "' is not a valid ExtraStates"
@@ -265,6 +291,31 @@ contains
       allocate(st%mag(st%nst, st%d%nik, 2))
     end if
 
+    !%Variable Occupations
+    !%Type block
+    !%Section States
+    !%Description
+    !% The occupation numbers of the orbitals can be fixed through the use of this
+    !% variable. For example:
+    !%
+    !% <tt>%Occupations
+    !% <br>&nbsp;&nbsp;2.0 | 2.0 | 2.0 | 2.0 | 2.0
+    !% <br>%</tt>
+    !%
+    !% would fix the occupations of the five states to <i>2.0</i>. There must be
+    !% as many columns as states in the calculation. If <tt>SpinComponents == polarized</tt>
+    !% this block should contain two lines, one for each spin channel.
+    !% This variable is very useful when dealing with highly symmetric small systems
+    !% (like an open shell atom), for it allows us to fix the occupation numbers
+    !% of degenerate states in order to help <tt>octopus</tt> to converge. This is to
+    !% be used in conjuction with <tt>ExtraStates</tt>. For example, to calculate the
+    !% carbon atom, one would do:
+    !%
+    !% <tt>ExtraStates = 2
+    !% <br>%Occupations
+    !% <br>&nbsp;&nbsp;2 | 2/3 | 2/3 | 2/3
+    !% <br>%</tt>
+    !%End
     occ_fix: if(loct_parse_block(check_inp('Occupations'), blk)==0) then
       ! read in occupations
       st%fixed_occ = .true.
@@ -295,7 +346,15 @@ contains
         end do
       end do
 
-      ! read in fermi distribution temperature
+      !%Variable ElectronicTemperature
+      !%Type float
+      !%Default 0.0
+      !%Section States
+      !%Description
+      !% If <tt>Occupations</tt> is not set, <tt>ElectronicTemperature</tt> is the
+      !% temperature in the Fermi-Dirac function used to distribute the electrons
+      !% among the existing states.
+      !%End
       call loct_parse_float(check_inp('ElectronicTemperature'), M_ZERO, st%el_temp)
       st%el_temp = st%el_temp * units_inp%energy%factor
     end if occ_fix

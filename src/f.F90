@@ -84,6 +84,19 @@ contains
     call push_sub('f.f_der_init')
 
 #ifdef HAVE_FFT
+    !%Variable DerivativesSpace
+    !%Type integer
+    !%Default real_space
+    !%Section Mesh::Derivatives
+    !%Description
+    !% Defines in which space the gradients and the Laplacian are calculated.
+    !%Option real_space 0
+    !% Derivatives are calculated in real-space using finite differences.
+    !%Option fourier_space 1
+    !% Derivatives are calculated in
+    !% reciprocal space. Obviously this case implies cyclic boundary conditions,
+    !% so be careful.
+    !%End
     call loct_parse_int(check_inp('DerivativesSpace'), REAL_SPACE, f_der%space)
     if((f_der%space.ne.REAL_SPACE).and.(f_der%space.ne.FOURIER_SPACE)) then
       write(message(1), '(a,i5,a)') "Input: '", f_der%space, &

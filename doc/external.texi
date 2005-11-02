@@ -1,0 +1,183 @@
+@c **********************************************************************
+@node External utilities, Examples, Undocumented Variables, Top
+@chapter External utilities
+
+A few small programs are generated along with @code{octopus}, for the
+purpose of post-processing the generated information. These utilities
+should all be run from the directory where @code{octopus} was run, so that
+it may see the input file, and the directories created by it.
+
+@menu
+* oct-sf::                      
+* oct-rsf::                     
+* oct-hs-mult::                 
+* oct-hs-acc::                  
+* oct-xyz-anim::                
+* oct-excite::                  
+* oct-broad::                   
+* oct-make-st::                 
+* oct-center-geom::             
+* wf.net::                      
+@end menu
+
+@node oct-sf, oct-rsf, External utilities, External utilities
+@section @code{oct-sf}
+
+This utility generates the dipole strength function of the given system.
+Its main input is the @code{td.general/multipoles} file. Output is written
+to a file called @code{spectrum}. This file is made of two
+columns: energy (in eV or a.u., depending on the units specified in the input file),
+and dipole strength function (in 1/eV, or 1/a.u., idem).
+
+In the input file, the user may set the @code{SpecTransformMode} -- this
+should be set to ``sin'' for proper use --, the @code{SpecDampMode} -- recommended
+value is ``pol'', which ensures fulfilling of the N-sum rule, 
+the @code{SpecStartTime}, the @code{SpecEndTime}, the @code{SpecEnergyStep}, 
+the @code{SpecMinEnergy} and the @code{SpecMaxEnergy}.
+
+@node oct-rsf, oct-hs-mult, oct-sf, External utilities
+@section @code{oct-rsf}
+
+@node oct-hs-mult, oct-hs-acc, oct-rsf, External utilities
+@section @code{oct-hs-mult}
+
+Calculates the harmonic spectrum, out of the multipoles file. To do.
+
+@node oct-hs-acc, oct-xyz-anim, oct-hs-mult, External utilities
+@section @code{oct-hs-acc}
+
+Calculates the harmonic spectrum, out of the acceleration file. To do.
+
+@node oct-xyz-anim, oct-excite, oct-hs-acc, External utilities
+@section @code{oct-xyz-anim}
+
+Reads out the @code{td.general/coordinates} file, and makes
+a movie in XYZ format. To do.
+
+@node  oct-excite, oct-broad, oct-xyz-anim, External utilities
+@section @code{oct-excite}
+
+Calculates the excitation spectrum within linear response. This utility can
+output just the difference of eigenvalues by setting @code{LinEigenvalues},
+the excitations using M. Petersilka formula (@code{LinPetersilka}), or
+M. Casida (@code{LinCasida}). This utility requires that a calculation
+of unoccupied states (@code{CalculationMode} = unocc) has been done before,
+and it outputs the results to the sub-directory "linear". The states entering
+the calculation can be chosen with the variable @code{ExciteStates}.
+
+@node  oct-broad, oct-make-st, oct-excite, External utilities
+@section @code{oct-broad}
+
+Generates a spectrum by broadening the excitations obtained by the @code{oct-excite} 
+utility. The parameters of the spectrum can be set using the variables
+@code{LinBroadening}, @code{LinMinEnergy}, @code{LinMaxEnergy}, and @code{LinEnergyStep}.
+
+@node  oct-make-st, oct-center-geom, oct-broad, External utilities
+@section @code{oct-make-st}
+
+@code{make_st} reads @code{tmp/restart.static} and replaces some of the
+Kohn-Sham states by Gaussians wave packets. The states which should be replaced are 
+given in the @code{%MakeStates} section in the input file and written to 
+@code{tmp/restart.static.new}. (You probably want to copy that file to 
+@code{tmp/restart.static} and use then @code{CalculationMode=5} or
+@code{6}.)
+
+@vindex MakeStates
+@example
+%MakeStates
+  ik | ist | idim | type | sigma | x0 | k
+%
+@end example
+
+The first values stand for
+
+@itemize @bullet
+@item @math{ik}: The @math{k} point (or the spin, if @code{spin-components=2}) of the state
+@item @math{ist}: The state to be replaced
+@item @math{idim}: The component of the state (if the wave functions have more than one component, i.e. when @code{spin-components=3} is used).
+@item The @math{type} of the wave packet; currently only @code{1} (Gaussian) is available
+@end itemize
+
+The next items depend on the type chosen.
+For a Gaussian wave packet, defined as
+
+@ifnottex
+ psi(x) = 1/sigma sqrt(1/2pi) exp(ik(x-x0)) exp(-(x-x0)^2/(2 sigma^2)),
+@end ifnottex
+@tex
+$$
+ \psi_0(x) = {1\over \sqrt{2\pi}\sigma} {\rm e}^{{\rm i} k (x-x_0)}{\rm e}^{-{(x-x_0)^2\over 2\sigma^2}},
+$$
+@end tex
+
+they are:
+
+@itemize @bullet
+@item @math{\sigma} the width of the Gaussian
+@item @math{k}: the @strong{k} vector. In 3D use @code{k1|k2|k3}.
+@item @math{x_0}: the coordinate where the Gaussian is initially centred. In 3D use @code{x01|x02|x03}.
+@end itemize
+
+
+@node oct-center-geom, wf.net, oct-make-st, External utilities
+@section @code{oct-center-geom}
+
+This utility centers and aligns the coordinates of the molecule. It reads the
+file specified in the input file (either by the @code{Coordinates} block, or
+by the @code{XYZCoordinates} or @code{PDBCoordinates} variables), and outputs
+the adjusted coordinates to the file @code{adjusted.xyz}. The following
+parameters are read from the @code{inp}ut file:
+
+@itemize @bullet
+
+@item @vindex @code{MainAxis} 
+@code{MainAxis} (block data):
+A vector of three reals defining the axis to which the molecule should be align. If not
+present, the default value will be
+@example
+    %MainAxis
+      1 | 0 | 1
+    %
+@end example
+
+@item @vindex @code{AxisType} 
+@code{AxisType} (int, inertia):
+This variable describes how to calculate the "main" axis of the molecule. Possible values are:
+  @itemize @minus
+    @item @code{inertia} or @code{1}: Axis of inertia;
+    @item @code{pseudo}  or @code{2}: Axis of inertia calculated as if all atoms had mass 1;
+    @item @code{large}   or @code{2}: The longest axis of the molecule.
+  @end itemize
+
+
+@end itemize
+
+
+@node wf.net,  , oct-center-geom, External utilities
+@section @code{wf.net}
+
+This is an OpenDX network, aimed at the visualization of wave-functions.
+To be able to use it, you need to have properly installed the OpenDX
+program (get it at opendx.org), as well as the Chemistry extensions
+obtainable at the Cornell Theory Center
+(http://www.tc.cornell.edu/Services/Vis/dx/index.asp).
+Once these are working, you may follow a small tutorial on @code{wf.net}
+by following next steps:
+
+@itemize o
+
+@item Place in a directory the program wf.net, the (needed) auxiliary file
+wf.cfg, and the sample inp file that can all be found in @code{OCTOPUS-HOME}/util.
+
+@item Run @code{octopus}. The inp file used prescribes the calculation of the
+C atom in its ground state, in spin-polarized mode. It also prescribes that the
+wave-functions should be written in ``dx'' format. At the end, these should be written
+in subdirectory ``static'': wf-00x-00y-1.dx, where x runs from 1 to 2 (spin
+quantum number) and y runs from 1 to 4 (wave-function index).
+
+@item Run the OpenDX program. Click on ``Run Visual Programs'' on the DX main menu,
+and select the program @code{wf.net}. The program will be executed, and several windows
+should open. One of them should be called ``Application Comment''. It contains
+a small tutorial. Follow it from now on.
+
+@end itemize

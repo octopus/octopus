@@ -106,11 +106,9 @@ contains
     !% than one laser (e.g. a "pump" and a "probe").
     !% The syntax of each line is, then:
     !%
-    !% %TDLasers
-    !%
-    !%   nx | ny | nz | amplitude | omega | envelope | tau0 | t0 | tau1 | filename1 | filename2
-    !%
-    !% %
+    !% <tt>%TDLasers
+    !% <br>&nbsp;&nbsp;nx | ny | nz | amplitude | omega | envelope | tau0 | t0 | tau1 | filename1 | filename2
+    !% <br>%</tt>
     !%
     !% The first three (possibly complex) numbers mark the polarization direction of the
     !% field. The "amplitude" is obviously the amplitude of the field. The "omega" is the

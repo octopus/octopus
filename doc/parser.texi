@@ -1,5 +1,5 @@
 @c **********************************************************************
-@node The parser, Input Variables, Installation, Top
+@node The parser, Description, Installation, Top
 @chapter The parser
 
 All input options should be in a file called ``@code{inp}'', in the

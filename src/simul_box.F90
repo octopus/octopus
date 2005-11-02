@@ -95,6 +95,17 @@ contains
     !--------------------------------------------------------------
     subroutine read_misc()
 
+      !%Variable DoubleFFTParameter
+      !%Type float
+      !%Default 2.0
+      !%Section Mesh::FFTs
+      !%Description
+      !% For solving Poisson equation in Fourier space, and for applying the local potential
+      !% in Fourier space, an auxiliary cubic mesh is built. This mesh will be larger than
+      !% the circumscribed cube to the usual mesh by a factor <tt>DoubleFFTParameter</tt>. See
+      !% the section that refers to Poisson equation, and to the local potential for details
+      !% [The default value of two is typically good].
+      !%End
       call loct_parse_float(check_inp('DoubleFFTParameter'), M_TWO, sb%fft_alpha)
       if (sb%fft_alpha < M_ONE .or. sb%fft_alpha > M_THREE ) then
         write(message(1), '(a,f12.5,a)') "Input: '", sb%fft_alpha, &
@@ -143,10 +154,10 @@ contains
       !%Description
       !% This variable decides the shape of the simulation box.
       !% Note that some incompatibilities apply:
-      !%
-      !% - Spherical or minimum mesh is not allowed for periodic systems.
-      !%
-      !% - Cylindrical mesh is not allowed for systems that are periodic in more than one dimension.
+      !% <ul>
+      !% <li>Spherical or minimum mesh is not allowed for periodic systems.</li>
+      !% <li>Cylindrical mesh is not allowed for systems that are periodic in more than one dimension.</li>
+      !% </ul>
       !%Option sphere 1
       !% The simulation box will be a sphere of radius Radius
       !%Option cylinder 2
@@ -213,9 +224,9 @@ contains
         !%Description
         !% In case BoxShape is "parallelepiped", this is assumed to be a block of the form:
         !%
-        !% <tt>%Lsize<br>
-        !% &nbsp;&nbsp;sizex | sizey | sizez<br>
-        !% %</tt>
+        !% <tt>%Lsize
+        !% <br>&nbsp;&nbsp;sizex | sizey | sizez
+        !% <br>%</tt>
         !%
         !% where the "size*" are half the lengths of the box in each direction.
         !%

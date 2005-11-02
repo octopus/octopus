@@ -30,6 +30,14 @@ subroutine td_init(gr, td, st, outp)
 
   td%iter = 0
 
+  !%Variable TDTimeStep
+  !%Type float
+  !%Default 0.07 a.u.
+  !%Section Time Dependent
+  !%Description
+  !% Time-step for the propagation;
+  !% in previous notation, <math>\delta t</math>.
+  !%End
   call loct_parse_float(check_inp('TDTimeStep'), CNST(0.07)/units_inp%time%factor, td%dt)
   td%dt = td%dt * units_inp%time%factor
   if (td%dt <= M_ZERO) then
@@ -38,6 +46,14 @@ subroutine td_init(gr, td, st, outp)
     call write_fatal(2)
   end if
 
+  !%Variable TDMaximumIter
+  !%Type integer
+  !%Default 1500
+  !%Section Time Dependent
+  !%Description
+  !% Number of time steps in which the total integration time is divided;
+  !% in previous notation, <i>N</i>.
+  !%End
   call loct_parse_int(check_inp('TDMaximumIter'), 1500, td%max_iter)
   if(td%max_iter < 1) then
     write(message(1), '(a,i6,a)') "Input: '", td%max_iter, "' is not a valid TDMaximumIter"

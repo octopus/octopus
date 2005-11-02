@@ -1,4 +1,4 @@
-@node Undocumented Variables, Examples, Input Variables, Top
+@node Undocumented Variables, External utilities, Input Variables, Top
 @chapter Undocumented Variables
 
 If you want to use these variables you will have to go to the code to find out what they 

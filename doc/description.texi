@@ -1,0 +1,211 @@
+@node Description, Input Variables, The parser, Top
+@chapter Description
+
+@c **********************************************************************
+@menu
+* Mesh::                        
+* Run Mode SCF::                
+* Run Mode Unoccupied States::  
+* Run Mode Time Dependent::     
+* Function output for visualization::  
+* Spectrum calculations::       
+@end menu
+
+@node Mesh, Run Mode SCF, Description, Description
+@section Mesh
+
+@code{octopus} uses a grid in real space to solve the Kohn-Sham equations.
+The grid is equally-spaced, but the spacings can be different for each 
+Cartesian direction. The shape of the simulation region may also
+be tuned to suit the geometric configuration of the system.
+
+
+@c **********************************************************************
+@node Run Mode SCF, Run Mode Unoccupied States, Mesh, Description
+@section Run Mode SCF
+
+The ground-state electronic density in a Kohn-Sham (KS) based
+electronic structure code such as @octopus is obtained after a
+self-consistent process that attempts to solve the KS equations.
+In essence, the problem is the following: at a given iteration step,
+one departs from an approximated solution -- some KS eigenfunctions
+@math{\psi^{inp}_j}, eigenvalues @math{\epsilon^{inp}_j} and 
+density @math{\rho^{inp}}, which
+determines a KS ``input'' Hamiltonian. By diagonalizing this Hamiltonian, one obtains
+the corresponding ``output'' eigenfunctions, eigenvalues, and density.
+This cycle is considered to be closed, and the solution achieved, when some
+convergence criterion is fulfilled.
+In our case, we have allowed for four
+different criteria, to be defined below.
+The self consistent procedure will stop when the first of the convergence
+criteria is fulfilled, or either when a a maximum number of iterations
+has been performed.
+
+@c **********************************************************************
+@node Run Mode Unoccupied States, Run Mode Time Dependent, Run Mode SCF, Description
+@section Run Mode Unoccupied States
+
+These variables are only used in 
+@code{CalculationMode == unocc, unocc_start}. The purpose of these run modes
+is to calculate higher lying Kohn-Sham orbitals. For that purpose, it reads
+the restart information from a converged previous ground-state calculation,
+and builds the corresponding Hamiltonian. Then, it calculates the eigenvalues
+and eigenfunctions that are requested by the user.
+
+Note: These variables are also used in @code{CalculationMode = td} or @code{td_start}
+if @code{TDOccupationalAnalysis == 1}).
+
+@c **********************************************************************
+@node Run Mode Time Dependent, Function output for visualization, Run Mode Unoccupied States, Description
+@section Run Mode Time Dependent
+
+
+When @code{CalculationMode = (td | td_start)}, the code performs the time propagation
+of the electronic orbitals and -- if required -- of the ionic positions. This latter
+task does not pose major algorithmical problems (the usual Verlet algorithms deal
+with that task); however the best way to propagate a Schr@"odinger-like equation
+is still unclear. Due to this fact, we provide with a rather excessive selection
+of possibilities for that purpose. Before describing the set of variables necessary
+to specify the way in which the time evolution is to be performed, it is worth making
+a brief introduction to the problem.
+
+We are concerned with a set of Schr@"odinger-like equations for the electronic orbitals:
+@tex
+$$
+  i{\partial \psi_i \over \partial t} = H(t)\psi_i(t)\,,
+$$
+$$
+  \psi_i(t=0) = \psi_i^0\,.
+$$
+@end tex
+@ifnottex
+
+  i@{\partial psi_i \over \partial t@} = H(t)\psi_i(t)\,,
+
+  \psi_i(t=0) = \psi_i^0\,.
+
+@end ifnottex
+Being the equation linear, one may formally define a linear ``evolution'' operator, which
+trasforms the initial vector into the solution at time @math{T}:
+@tex
+$$
+\psi_i(T) = U(T, 0)\psi_i^0
+$$
+@end tex
+@ifnottex
+
+\psi_i(T) = U(T, 0)\psi_i^0
+
+@end ifnottex
+Moreover, there is a formal exact expression for the evolution operator:
+@tex
+$$
+\psi_i(T) = T\exp\lbrace -i\!\!\int_0^{T}d\tau H(\tau)\rbrace \psi_i^0\,.
+$$
+@end tex
+@ifnottex
+
+\psi_i(T) = T\exp\lbrace -i\!\!\int_0^@{T@}d\tau H(\tau)\rbrace \psi_i^0\,.
+
+@end ifnottex
+where @math{T\exp} is the time-ordered exponential. If the Hamiltonian conmutes with itself at
+different times, we can drop the time-ordering product, and leave a simple exponential.
+If the Hamiltonian is time-independent -- which makes it trivially self commuting, 
+the solution is then simply written as:
+@tex
+$$
+\psi_i(T) = \exp\lbrace -iTH\rbrace \psi_i^0\,.
+$$
+@end tex
+@ifnottex
+
+\psi_i(T) = \exp\lbrace -iTH\rbrace \psi_i^0\,.
+
+@end ifnottex
+Unfortunately, this is not the case in general. We have to find an algorithm
+able to cope with time-dependent Hamiltonians, such as the self-consistent
+time-dependent Kohn-Sham operator, which is built ``self consistently'' from
+the varying electronic density.
+
+The first step is to perform a time-discretization: the full propagation between
+@math{0} and @math{T} is decomposed as:
+@tex
+$$
+U(T,0) = \prod_{i=0}^{N-1}U(t_i+\delta t,t_i)\,,
+$$
+@end tex
+@ifnottex
+
+U(T,0) = \prod_@{i=0@}^@{N-1@}U(t_i+\delta t,t_i)\,,
+
+@end ifnottex
+where @math{t_0=0}, @math{t_N=T}, @math{\delta t = T/N}. So at each time
+step we are dealing with the problem of performing the short-time propagation:
+@tex
+$$
+\psi_i(t+\delta t) = U(t+\delta t, t)\psi_i(t) = 
+T\exp\lbrace -i\!\!\int_{t}^{t+\delta t}\!\!\!\!\!\!\!\!\!d\tau\,H(\tau)\rbrace \psi(t)\,.
+$$
+@end tex
+@ifnottex
+
+\psi_i(t+\delta t) = U(t+\delta t, t)\psi_i(t) = 
+T\exp\lbrace -i\!\!\int_@{t@}^@{t+\delta t@}\!\!\!\!\!\!\!\!\!d\tau\,H(\tau)\rbrace \psi(t)\,.
+
+@end ifnottex
+In this way, one can monitor the evolution in the interior of @math{[0,t]}. 
+In fact, the possibility of monitoring the evolution is generally
+a requirement; this requirement
+imposes a natural restriction on the maximum size of @math{\delta t}: if 
+@math{\omega_{\rm max}} is the
+maximum frequency that we want to discern, @math{\delta t} should be no larger than 
+@math{\approx 1/\omega_{\rm max}}.
+Below this @math{\delta t_{\rm max}}, we are free to choose @math{\delta t} considering performance reasons:
+Technically, the reason for the discretization is twofold: the time-dependence of 
+@math{H} is alleviated,
+and the norm of the exponential argument is reduced 
+(the norm increases linearly with @math{\delta t}).
+
+Since we cannot drop the time-ordering product, the
+desired algorithm
+cannot be reduced, in principle, to the calculation of the action of the exponential of an operator
+over the initial vector.
+Some algorithms tailored to approximate the evolution operator, 
+in fact, do not even require to peform such operator exponentials. 
+Most of them, however, do rely on the calculation of one or more exponentials, such as the ones
+used by @code{octopus}. This is why in principle we need to specify two different 
+issues: the ``evolution
+method'', and the ``exponential method''. In other words: we need an algorithm
+to approximate the evolution operator @math{U(t+\delta t, t)} -- which will be
+specified by variable @code{TDEvolutionMethod} -- 
+and, if this algorithm requires it,
+we will also need an algorithm to approximate the exponential of a matrix
+operator @math{\exp\lbrace A\rbrace} -- which will be specified by variable
+@code{TDExponentialMethod}.
+
+@c **********************************************************************
+@node Function output for visualization, Spectrum calculations, Run Mode Time Dependent, Description
+@section Function output for visualization
+
+Every given number of time iterations, or after ground-state calculations, some
+of the functions that characterise the system may be written to disk
+so that they may be analized. Files are written within ``static'' output directory
+after the self-consistent field, or within ``td.x'' directories, during evolution,
+where ``x'' stands for the iteration number at which each write is done.
+Note that if you wish to plot any function (@code{OutputKSPotential = yes}, etc.),
+at least one of the output formats should be enabled (@code{OutputPlaneX = yes},
+@code{OutputDX = yes}, @code{OutputNETCDF = yes}, etc.). [This is not necessary
+if you wish to plot the geometry (@code{OutputGeometry = yes})]. Note further
+that the data written by @code{OutputAxisX}, @code{OutputPlaneX} etc. has
+always the (side) length of the longest axis; this is independent from the
+ chosen geometry. Data points which are inexistent in the actual geometry
+have the value zero in those files.
+
+@c **********************************************************************
+@node Spectrum calculations,  , Function output for visualization, Description
+@section Spectrum calculations
+Once @code{octopus} has been run, results must be analyzed somehow. The most common
+thing is to Fourier-transform something to calculate spectra. This may be done through
+some utilities (@code{strength-function}, @code{hs-from-mult}, @code{hs-from-acc} which
+are described in section ``External utilities.'' Common options read by these utilities are:
+

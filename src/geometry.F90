@@ -145,19 +145,16 @@ contains
     !% From the plethora of instructions defined in the PDB standard, octopus
     !% only reads two, "ATOM" and "HETATOM". From these fields, it reads:
     !% <ul>
-    !% <li> columns 13-16 : The specie; in fact "octopus" only cares about the
+    !% <li> columns 13-16: The specie; in fact "octopus" only cares about the
     !% first letter - "CA" and "CB" will both refer to Carbon - so elements whose
     !% chemical symbol has more than one letter can not be represented in this way.
     !% So, if you want to run mercury ("Hg") please use one of the other two methods
-    !% to input the atomic coordinates, "XYZCoordinates" or "Coordinates".
-    !% </li>
-    !% <li> columns 18-21 : The residue. If residue is "QM", the atom is treated in Quantum
+    !% to input the coordinates, "XYZCoordinates" or "Coordinates".</li>
+    !% <li> columns 18-21: The residue. If residue is "QM", the atom is treated in Quantum
     !% Mechanics, otherwise it is simply treated as an external classical point charge.
-    !% Its charge will be given by columns 61-65.
-    !% </li>
-    !% <li> columns 31-54 : The Cartesian coordinates. The Fortran format is "(3f8.3)".
-    !% </li>
-    !% <li> columns 61-65 : Classical charge of the atom. The Fortran format is "(f6.2)".
+    !% Its charge will be given by columns 61-65.</li>
+    !% <li> columns 31-54: The Cartesian coordinates. The Fortran format is "(3f8.3)".</li>
+    !% <li> columns 61-65: Classical charge of the atom. The Fortran format is "(f6.2)".</li>
     !% </ul>
     !%End
 
@@ -181,10 +178,10 @@ contains
     !% tries to read the coordinates for the atoms from the block "Coordinates". The
     !% format is quite straightforward:
     !%
-    !% <tt>%Coordinates<br>
-    !% &nbsp;%nbsp; 'C' | -0.56415 | 0.0 | 0.0 | no<br>
-    !% &nbsp;&nbsp; 'O' |  0.56415 | 0.0 | 0.0 | no<br>
-    !% %</tt>
+    !% <tt>%Coordinates
+    !% <br>&nbsp;&nbsp;'C' |      -0.56415 | 0.0 | 0.0 | no
+    !% <br>&nbsp;&nbsp;'O' | &nbsp;0.56415 | 0.0 | 0.0 | no
+    !% <br>%</tt>
     !%
     !% The first line defines a Carbon atom at coordinates ("-0.56415", "0.0", "0.0"),
     !% that is _not_ allowed to move during dynamical simulations. The second line has
@@ -296,7 +293,7 @@ contains
       !%Section System::Velocities
       !%Description
       !% octopus will try to read the starting velocities of the atoms from the XYZ file 
-      !% specified by the variable XYZVelocities ('velocities.xyz' by default).
+      !% specified by the variable XYZVelocities.
       !% Note that you do not need to specify initial velocities if you are not going
       !% to perform ion dynamics; if you are going to allow the ions to move but the velocities
       !% are not specified, they are considered to be null.
@@ -311,10 +308,10 @@ contains
       !% will reset the initial velocities to zero. The format of this block can be
       !% illustrated by this example:
       !%
-      !% <tt>%Velocities<br>
-      !% &nbsp;&nbsp;'C'  | -1.7 | 0.0 | 0.0<br>
-      !% &nbsp;&nbsp;'O'  |  1.7 | 0.0 | 0.0<br>
-      !% %</tt>
+      !% <tt>%Velocities
+      !% <br>&nbsp;&nbsp;'C'  |      -1.7 | 0.0 | 0.0
+      !% <br>&nbsp;&nbsp;'O'  | &nbsp;1.7 | 0.0 | 0.0
+      !% <br>%</tt>
       !%
       !% It describes one Carbon and one Oxygen moving at the relative
       !% velocity of 3.4, velocity units.

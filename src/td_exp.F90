@@ -64,6 +64,90 @@ contains
     type(grid_type),   intent(in)  :: gr
     type(td_exp_type), intent(out) :: te
 
+    !%Variable TDExponentialMethod
+    !%Type integer
+    !%Default standard
+    !%Section Time Dependent
+    !%Description
+    !% Method used to numerically calculate the exponential of the Hamiltonian,
+    !% a core part of the full algorithm used to approximate the evolution
+    !% operator, specified through the variable <tt>TDEvolutionMethod</tt>.
+    !% In the case of using the Magnus method, described below, the action of the exponential
+    !% of the Magnus operator is also calculated through the algorithm specified
+    !% by this variable.
+    !%Option split 0
+    !% It is important to distinguish between applying the split operator method
+    !% to calculate the exponential of the Hamiltonian at a given time -- which
+    !% is what this variable is referring to -- from the split operator method
+    !% as an algorithm to approximate the full evolution operator <math>U(t+\delta t, t)</math>,
+    !% and which will be described below as one of the possibilities
+    !% of the variable <tt>TDEvolutionMethod</tt>.
+    !% The equation that describes the split operator scheme is well known:
+    !%
+    !% <math>\exp_{\rm SO} (-i \delta t H) = \exp (-i \delta t/2 V) \exp (-i \delta t T) \exp (-i \delta t/2 V)</math>.
+    !%
+    !% Note that this is a "kinetic referenced SO", since the kinetic term is sandwiched in the
+    !% middle. This is so because in <tt>octopus</tt>, the states spend most of its time in real-space; doing
+    !% it "potential referenced" would imply 4 FFTs instead of 2.
+    !% This split-operator technique may be used in combination with, for example,
+    !% the exponential midpoint rule as a means to approximate the evolution operator.
+    !% In that case, the potential operator <i>V</i> that appears in the equation would be
+    !% calculated at time <math>t+\delta t/2</math>, that is, in the middle of the time-step.
+    !% However, note that if the split-operator method is invoked as a means to approximate
+    !% the evolution operator (<tt>TDEvolutionMethod = 0</tt>), a different procedure is taken -- it
+    !% will be described below --, and in fact the variable <tt>TDExponentialMethod</tt> has no
+    !% effect at all.
+    !%Option suzuki-trotter 1
+    !% This is a higher-order SO based algorithm. See O. Sugino and Y. Miyamoto,
+    !% Phys. Rev. B <b>59</b>, 2579 (1999). Allows for larger time-steps,
+    !% but requires five times more time than the normal SO.
+    !%
+    !% The considerations made above for the SO algorithm about the distinction
+    !% between using the method as a means to approximate <math>U(t+\delta t)</math> or as a
+    !% means to approximate the exponential also apply here. Setting <tt>TDEvolutionMethod = 1</tt>
+    !% enforces the use of the ST as an algorithm to approximate the full evolution operator,
+    !% which is slightly different (see below).
+    !%Option lanczos 2
+    !% Allows for larger time-steps.
+    !% However, the larger the time-step, the longer the computational time per time-step. 
+    !% In certain cases, if the time-step is too large, the code will emit a warning
+    !% whenever it considers that the evolution may not be properly proceeding --
+    !% the Lanczos process did not converge. The method consists in a Krylov
+    !% subspace approximation of the action of the exponential
+    !% (see M. Hochbruck and C. Lubich, SIAM J. Numer. Anal. <b>34</b>, 1911 (1997) for details). 
+    !% Two more variables control the performance of the method: the maximum dimension
+    !% of this subspace (controlled by variable <tt>TDExpOrder</tt>), and
+    !% the stopping criterium (controlled by variable <tt>TDLanczosTol</tt>).
+    !% The smaller the stopping criterium, the more precisely the exponential
+    !% is calculated, but also the larger the dimension of the Arnoldi
+    !% subspace. If the maximum dimension allowed by <tt>TDExpOrder</tt> is not
+    !% enough to meet the criterium, the above-mentioned warning is emitted.
+    !%Option standard 3
+    !% This method amounts to a straightforward application of the definition of
+    !% the exponential of an operator, in terms of it Taylor expansion.
+    !%
+    !% <math>\exp_{\rm STD} (-i\delta t H) = \sum_{i=0}^{k} {(-i\delta t)^i\over{i!}} H^i</math>.
+    !%
+    !% The order <i>k</i> is determined by variable <i>TDExpOder</i>.
+    !% Some numerical considerations (by Jeff Giansiracusa and George F. Bertsch;
+    !% see http://www.phys.washington.edu/~bertsch/num3.ps)
+    !% suggest the 4th order as especially suitable and stable.
+    !%Option chebyshev 4
+    !% In principle, the Chebyshev expansion
+    !% of the exponential represents it more accurately than the canonical or standard expansion. 
+    !% As in the latter case, <tt>TDExpOrder</tt> determines the order of the expansion.
+    !%
+    !% There exists a closed analytical form for the coefficients of the exponential in terms
+    !% of Chebyshev polynomials:
+    !%
+    !% <math>\exp_{\rm CHEB} \left( -i\delta t H \right) = \sum_{k=0}^{\infty} (2-\delta_{k0})(-i)^{k}J_k(\delta t) T_k(H)</math>,
+    !%
+    !% where <math>J_k</math> are the Bessel functions of the first kind, and H has te be previously
+    !% scaled to <math>[-1,1]</math>.
+    !% See H. Tal-Ezer and R. Kosloff, J. Chem. Phys. <b>81</b>,
+    !% 3967 (1984); R. Kosloff, Annu. Rev. Phys. Chem. <b>45</b>, 145 (1994);
+    !% C. W. Clenshaw, MTAC <b>9</b>, 118 (1955).
+    !%End
     call loct_parse_int(check_inp('TDExponentialMethod'), FOURTH_ORDER, te%exp_method)
     select case(te%exp_method)
     case(FOURTH_ORDER)

@@ -1,4 +1,4 @@
-@node Examples, Options Index, Undocumented Variables, Top
+@node Examples, Options Index, External utilities, Top
 @chapter Examples
 
 @menu

@@ -131,6 +131,17 @@ contains
     ! The initial LCAO calculation is done by default if we have pseudopotentials.
     ! Otherwise, it is not the default value and has to be enforced in the input file.
     if(gr%geo%only_user_def) lcao_start_default = .false.
+
+    !%Variable LCAOStart
+    !%Type logical
+    !%Default yes
+    !%Section SCF
+    !%Description
+    !% Before starting a SCF calculation, performs
+    !% a LCAO calculation. These should provide <tt>octopus</tt> with a good set
+    !% of initial wave-functions, and help the convergence of the SCF cycle.
+    !% (Up to current version, only a minimal basis set used.)
+    !%End
     call loct_parse_logical(check_inp('LCAOStart'), lcao_start_default, lcao_start)
     if(lcao_start) then
       call X(v_ks_calc)(gr, ks, h, st, calc_eigenval=.true.)

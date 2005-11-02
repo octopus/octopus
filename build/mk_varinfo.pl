@@ -9,7 +9,8 @@ opendir(DIR, 'src');
 @F90 = grep { /\.F90$/ && -f "src/$_" } readdir(DIR);
 closedir DIR;
 
-open(OUT, ">share/varinfo");
+open(OUT_text, ">share/varinfo");
+open(OUT_orig, ">share/varinfo_orig");
 
 %opt = ();
 foreach $F90file (@F90){
@@ -28,16 +29,17 @@ foreach $F90file (@F90){
 
 	if(/^ </){ # lines that start with a html command
 	  print_desc($desc) if($desc ne "");
-	  $desc = $_;
+	  $desc = $_."\n";
 	}elsif(/^ /){ # get whole description
-	  $desc .= " ".$_;
+	  $desc .= $_."\n";
 	}else{
 	  if($desc ne "") {
 	    print_desc($desc);
 	    $desc = "";
 	  }
 
-	  printf OUT "%s\n", $_;
+	  printf OUT_text "%s\n", $_;
+	  printf OUT_orig "%s\n", $_;
 	}
 
 	$_ = <IN>;
@@ -51,14 +53,16 @@ foreach $F90file (@F90){
 	print stderr "In info block of variable $var (file src/$F90file), block is incomplete\n";
 	exit;
       }else{
-	printf OUT "END\n\n";
+	printf OUT_text "END\n\n";
+	printf OUT_orig "END\n\n";
       }
     }
   }
   close(IN);
 }
 
-close(OUT);
+close(OUT_text);
+close(OUT_orig);
 
 print_opt();
 
@@ -108,12 +112,29 @@ sub print_desc(){
 
   my $i, $line;
 
+  print OUT_orig $desc;
+
+  $desc =~ s/\n/ /gm;
   $desc =~ s/^\s*//;
   $desc =~ s/\s\s+/ /g;
 
+  # convert html to text
+  $desc =~ s#<br/*>##g;
+  $desc =~ s#<hr/*>#------------------------------------------\n#g;
+  $desc =~ s#&nbsp;# #g;
+
+  $desc =~ s#</*i>#_#g;
+  $desc =~ s#</*b>#*#g;
+  $desc =~ s#</*math>##g;
+  $desc =~ s#</*tt>##g;
+
+  $desc =~ s#</*ul>##g;
+  $desc =~ s#<li># *) #g;
+  $desc =~ s#</li>##g;
+
   while(){
     if(length($desc) <= $ml){
-      print OUT " ", $desc, "\n";
+      print OUT_text " ", $desc, "\n";
       last;
     }
 
@@ -131,6 +152,6 @@ sub print_desc(){
 	$line =~ s/([^ ]) ([^ ])/$1  $2/;
       }
     }
-    print OUT " ", $line, "\n";
+    print OUT_text " ", $line, "\n";
   }
 }

@@ -112,7 +112,23 @@ contains
     ! initialize structure
     call xc_functl_init(functl, spin_channels)
 
-    ! read input
+    !%Variable XFunctional
+    !%Type integer
+    !%Default lda_x
+    !%Section Hamiltonian::XC
+    !%Description
+    !% Defines the exchange functional
+    !%Option lda_x 1
+    !% LDA
+    !%Option gga_x_pbe
+    !% GGA: Perdew, Burke & Ernzerhof (GGA)
+    !%Option gga_xc_lb
+    !% GGA: van Leeuwen & Baerends (GGA)
+    !%Option mgga_x_tpss
+    !% MGGA (not working)
+    !%Option oep_x
+    !% OEP: Exact exchange
+    !%End
     call loct_parse_int(check_inp('XFunctional'), XC_LDA_X, functl%id)
 
     ! initialize
@@ -164,7 +180,41 @@ contains
     ! initialize structure
     call xc_functl_init(functl, spin_channels)
 
-    ! read input
+    !%Variable CFunctional
+    !%Type integer
+    !%Default lda_c_pz
+    !%Section Hamiltonian::XC
+    !%Description
+    !% Defines the correlation functional
+    !%Option lda_c_wigner 2
+    !% LDA: Wigner parametrization
+    !%Option lda_c_rpa 3
+    !% LDA: Random Phase Approximation
+    !%Option lda_c_hl 4
+    !% LDA: Hedin & Lundqvist
+    !%Option lda_c_gl 5
+    !% LDA: Gunnarson & Lundqvist
+    !%Option lda_c_xalpha 6
+    !% LDA: Slater's Xalpha
+    !%Option lda_c_vwn 7
+    !% LDA: Vosko, Wilk, & Nussair
+    !%Option lda_c_pz 8
+    !% LDA: Perdew & Zunger
+    !%Option lda_c_ob_pz 9
+    !% LDA: Ortiz & Ballone (PZ-type parametrization)
+    !%Option lda_c_pw 10
+    !% LDA: Perdew & Wang
+    !%Option lda_c_ob_pw 11
+    !% LDA: Ortiz & Ballone (PW-type parametrization)
+    !%Option lda_c_lyp 12
+    !% LDA: Lee, Yang, & Parr LDA
+    !%Option lda_c_amgb 13
+    !% LDA Attacalite et al functional for the 2D electron gas
+    !%Option gga_c_pbe 102
+    !% Perdew, Burke & Ernzerhof correlation
+    !%Option mgga_c_tpss 202
+    !% MGGA (not working)
+    !%End
     call loct_parse_int(check_inp('CFunctional'), XC_LDA_C_PZ, functl%id)
 
     ! initialize

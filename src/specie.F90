@@ -188,11 +188,11 @@ contains
     !% The format of this block is different for 1, 2 or 3 dimensions, and
     !% can be best understood through examples. 
     !%
-    !% <br>In 1D, or 2D, e.g.
+    !% In 1D, or 2D, e.g.
     !%
-    !% <tt>%Species <br>
-    !% &nbsp;&nbsp;'H'  | 1.0079 | 1 | "-1/sqrt(x^2 + 1)" <br>
-    !% %</tt>
+    !% <tt>%Species
+    !% <br>&nbsp;&nbsp;'H'  | 1.0079 | 1 | "-1/sqrt(x^2 + 1)"
+    !% <br>%</tt>
     !%
     !% This defines a species labelled '<i>H</i>' of weight <i>1.0079</i>,
     !% and valence charge 1. This "valence charge" is used to calculate
@@ -205,21 +205,20 @@ contains
     !% the soft-Coulomb potential <math>-Z/\sqrt{x^2 + 1}</math>. The previous example would then
     !% be an appropriate description of a Hydrogen nucleus for one-dimensional calculations.
     !%
-    !% <br>In 3D, e.g.
+    !% In 3D, e.g.
     !%
-    !% <tt>%Species<br>
-    !% &nbsp;&nbsp;'O'       | 15.9994 | 8   | "tm2"  | 1 | 1<br>
-    !% &nbsp;&nbsp;'H'       |  1.0079 | 1   | "hgh"  | 0 | 0<br>
-    !% &nbsp;&nbsp;'jelli01' | 23.2    | 8.0 |  5.0<br>
-    !% &nbsp;&nbsp;'point01' | 32.3    | 2.0<br>
-    !% &nbsp;&nbsp;'usdef'   | 1       | 8   | "1/2*r^2"<br>
-    !% %</tt>
+    !% <tt>%Species
+    !% <br>&nbsp;&nbsp;'O'       | 15.9994 | 8   | "tm2"  | 1 | 1
+    !% <br>&nbsp;&nbsp;'H'       |  1.0079 | 1   | "hgh"  | 0 | 0
+    !% <br>&nbsp;&nbsp;'jelli01' | 23.2    | 8.0 |  5.0
+    !% <br>&nbsp;&nbsp;'point01' | 32.3    | 2.0
+    !% <br>&nbsp;&nbsp;'usdef'   | 1       | 8   | "1/2*r^2"
+    !% <br>%</tt>
     !%
     !% In this case, we have 5 ``species'' present, which exemplify the five kinds that
     !% may be present:
-    !%
     !% <ul>
-    !% <li> Oxygen labelled '<it>O</it>'. Next number is the atomic mass (in atomic 
+    !% <li> Oxygen labelled '<i>O</i>'. Next number is the atomic mass (in atomic 
     !% mass units), and third field, the atomic number (8, in this case).
     !% Afterwards, "tm2" is the flavour of the pseudopotential: "tm2" stands
     !% for Troullier-Martins. This means the pseudopotential will be 
@@ -227,28 +226,23 @@ contains
     !% directory or in the <i>OCTOPUS-HOME/share/PP/TM2</i> directory.
     !% Next two numbers are the maximum 
     !% <i>l</i>-component of the pseudo-potential to consider in the
-    !% calculation, and the <i>l</i>-component to consider as local.
-    !% </li>
+    !% calculation, and the <i>l</i>-component to consider as local.</li>
     !% <li> Hydrogen defined in the same way as Oxygen. In this case, however, the
     !% flavour is "hgh" standing for Hartwigsen-Goedecker-Hutter. Last two numbers
-    !% are irrelevant, since they do are not necessary to define the HGH pseudopotentials.
-    !% </li>
+    !% are irrelevant, since they do are not necessary to define the HGH pseudopotentials.</li>
     !% <li> All species whose label starts by 'jelli' are jellium spheres.
     !% The other parameters are the weight, the nuclear charge, and the
-    !% valence charge of the sphere.
-    !% </li>
+    !% valence charge of the sphere.</li>
     !% <li> All species whose label starts by 'point' are point charges.
     !% The other parameters are the weight and the nuclear charge. In
     !% fact, point charges are implemented as <i>rather small</i> jellium
-    !% spheres, with zero valence charge.
-    !% </li>
+    !% spheres, with zero valence charge.</li>
     !% <li> All species whose label starts by 'usdef' are user defined
     !% potentials. The second parameter is the mass, whereas the third parameter
     !% is the 'valence charge', used to calculate the number of electrons.
     !% Finally, the potential itself is defined by the fourth argument.
     !% Use any of the <i>x</i>, <i>y</i>, <i>z</i> or <i>r</i> variables
-    !% to define the potential.
-    !% </li></ul>
+    !% to define the potential.</li></ul>
     !%
     !% Note that some common pseudopotentials are distributed with the code in the
     !% directory <i>OCTOPUS-HOME/share/PP/</i>. To use these pseudopotentials you are

@@ -163,11 +163,30 @@ contains
 
     call epot_init(h%ep, gr)
 
+    !%Variable RelativisticCorrection
+    !%Type integer
+    !%Default non_relativistic
+    !%Section Hamiltonian
+    !%Description
+    !% The default value means that <i>no</i> relativistic correction is used. To
+    !% include spin-orbit coupling turn <tt>RelativisticCorrection</tt> to <tt>spin_orbit</tt> 
+    !% (this will only work when using an executable compiled for complex wave-functions,
+    !% and if <tt>SpinComponents</tt> has been set to <tt>non_collinear</tt>, which ensures
+    !% the use of spinors).
+    !%Option non_relativistic 0
+    !% No relativistic corrections.
+    !%Option spin_orbit 1
+    !% Spin-Orbit.
+    !%Option app_zora 2
+    !% Approximated ZORA (Not implemented)
+    !%Option zora 3
+    !% ZORA (Not implemented)
+    !%End
     call loct_parse_int(check_inp('RelativisticCorrection'), NOREL, h%reltype)
 #ifdef COMPLEX_WFNS
     select case(h%reltype)
     case(NOREL);      message(1) = 'Info: Rel. correction: No relativistic corrections.'
-    case(SPIN_ORBIT); message(1) = 'Info: Rel. corrections: Spin-Orbit.'
+    case(SPIN_ORBIT); message(1) = 'Info: Rel. correction: Spin-Orbit.'
     case(APP_ZORA);   message(1) = 'Info: Rel. correction: Approximated ZORA.'
     case(ZORA);       message(1) = 'Info: Rel. correction: ZORA.'
     case default

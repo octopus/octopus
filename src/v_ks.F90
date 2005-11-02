@@ -105,10 +105,11 @@ contains
 
       ! check for SIC
       if(iand(ks%xc_family, XC_FAMILY_LDA + XC_FAMILY_GGA).ne.0) then
+
         !%Variable SICorrection
         !%Type integer
         !%default sic_none
-        !%Section Hamiltonian
+        !%Section Hamiltonian::XC
         !%Description
         !% This variable controls which Self Interaction Correction to use. Note that
         !% this correction will be applyed to the functional chosen by 'XFunctional' and
@@ -120,7 +121,6 @@ contains
         !%Option sic_amaldi 3
         !% Amaldi correction term (NOT WORKING)
         !%End
-
         call loct_parse_int(check_inp('SICorrection'), sic_none, ks%sic_type)
         if((ks%sic_type.ne.sic_none).and.(ks%sic_type.ne.sic_pz).and.(ks%sic_type.ne.sic_amaldi)) &
           call input_error('SICorrection')
