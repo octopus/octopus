@@ -24,7 +24,7 @@ variables.texi: ../share/varinfo
 	(cd ../share; $(MAKE) varinfo)
 
 update:
-	xemacs -batch -l update.el
+	emacs -batch -l update.el
 
 octopus.info: variables.texi
 octopus.ps: variables.texi

@@ -1,4 +1,4 @@
-This is octopus.info, produced by makeinfo version 4.8 from
+This is octopus.info, produced by makeinfo version 4.7 from
 octopus.texi.
 
    This manual is for octopus 1.99devel, a first principles, electronic
@@ -38,14 +38,23 @@ and Angel Rubio
 
 * Menu:
 
-* Authors::
-* Copying::
-* Installation::
-* The parser::
-* Input Variables::
-* Undocumented Variables::
-* Examples::
-* Options Index::
+* Authors::                     The authors of the thing, and the collaborators.
+* Copying::                     The licence.
+* Installation::                How to install the program.
+* The parser::                  The input file syntax.
+* Input Variables::             The options to put in the input file.
+* Undocumented Variables::      The variables that we did not have time to document.
+* Examples::                    Some examples.
+* Options Index::               An index with all the options.
+
+
+
+
+
+
+
+
+
 
  --- The Detailed Node Listing ---
 
@@ -677,30 +686,30 @@ File: octopus.info,  Node: Generalities,  Next: Hamiltonian,  Prev: Input Variab
      Decides what kind of calculation is to be performed
 
      _Options_:
-        * *gs* (01):  Calculation of the ground state
+        - *gs* (01):  Calculation of the ground state
 
-        * *unocc* (02):  Calculation of unoccupied/virtual KS states
+        - *unocc* (02):  Calculation of unoccupied/virtual KS states
 
-        * *td* (03):  Time-dependent calculation
+        - *td* (03):  Time-dependent calculation
 
-        * *pol* (04):  Calculation of the static polarizability
+        - *pol* (04):  Calculation of the static polarizability
 
-        * *geom* (05):  Optimization of the geometry
+        - *geom* (05):  Optimization of the geometry
 
-        * *phonons* (06):  Calculation of the vibrational modes
+        - *phonons* (06):  Calculation of the vibrational modes
 
-        * *opt_control* (07):  Optimal control.
+        - *opt_control* (07):  Optimal control.
 
-        * *pol_lr* (08):  Linear-response calculation of the
+        - *pol_lr* (08):  Linear-response calculation of the
           polarizability
 
-        * *casida* (09):  Excitations via linear-response TDDFT
+        - *casida* (09):  Excitations via linear-response TDDFT
 
-        * *wave_matching* (10):  Wave-matching a la Heiko
+        - *wave_matching* (10):  Wave-matching a la Heiko
 
-        * *bo* (98):  Born-Oppenheimer-like Molecular Dynamics
+        - *bo* (98):  Born-Oppenheimer-like Molecular Dynamics
 
-        * *recipe* (99):  Prints out a tasty recipe
+        - *recipe* (99):  Prints out a tasty recipe
 
    * *Dimensions*
      _Section_: Generalities
@@ -710,11 +719,11 @@ File: octopus.info,  Node: Generalities,  Next: Hamiltonian,  Prev: Input Variab
      available in all cases.
 
      _Options_:
-        * *1*:  The system is 1-dimensional
+        - *1*:  The system is 1-dimensional
 
-        * *2*:  The system is 2-dimensional
+        - *2*:  The system is 2-dimensional
 
-        * *3*:  The system is 3-dimensional
+        - *3*:  The system is 3-dimensional
 
 
 * Menu:
@@ -818,13 +827,13 @@ File: octopus.info,  Node: Parallel,  Next: Units,  Prev: IO,  Up: Generalities
      par_states" means a  combined paralellization in domains and states
 
      _Options_:
-        * *serial*:  Octopus will run in serial.
+        - *serial*:  Octopus will run in serial.
 
-        * *par_domains* (1):  Octopus will run parallel in domains.
+        - *par_domains* (1):  Octopus will run parallel in domains.
 
-        * *par_states* (2):  Octopus will run parallel in states.
+        - *par_states* (2):  Octopus will run parallel in states.
 
-        * *par_kpoints* (4):  Octopus will run parallel in
+        - *par_kpoints* (4):  Octopus will run parallel in
           k-points/spin.
 
 
@@ -845,9 +854,9 @@ File: octopus.info,  Node: Units,  Prev: Parallel,  Up: Generalities
      units can also be used.
 
      _Options_:
-        * *"a.u"*:  Atomic units
+        - *"a.u"*:  Atomic units
 
-        * *"eVA"*:  Electron-volts for energy, Angstrom for length.
+        - *"eVA"*:  Electron-volts for energy, Angstrom for length.
 
    * *UnitsInput*
      _Section_: Generalities::Units
@@ -875,7 +884,7 @@ File: octopus.info,  Node: Hamiltonian,  Next: Spectrum Calculations,  Prev: Gen
      Number of levels in the grid hierachy used for multigrid.
 
      _Options_:
-        * *max_levels*:  Calculate  the  optimous  number  of  levels
+        - *max_levels*:  Calculate  the  optimous  number  of  levels
           for the grid. Positive numbers  indicate an absolute numbers
           of levels, negative numbers are substracted to  maximum
           number of levels posible for the grid been used. A value of 1
@@ -892,9 +901,9 @@ File: octopus.info,  Node: Hamiltonian,  Next: Spectrum Calculations,  Prev: Gen
      and off
 
      _Options_:
-        * *no*:  Electrons are treated as *interacting* particles
+        - *no*:  Electrons are treated as *interacting* particles
 
-        * *yes* (1):  Electrons are handled as *non-interacting*
+        - *yes* (1):  Electrons are handled as *non-interacting*
           paticles
 
    * *SICorrection*
@@ -905,12 +914,12 @@ File: octopus.info,  Node: Hamiltonian,  Next: Spectrum Calculations,  Prev: Gen
      chosen by 'XFunctional'  and 'CFunctional'
 
      _Options_:
-        * *sic_none* (1):  No Self Interaction Correction
+        - *sic_none* (1):  No Self Interaction Correction
 
-        * *sic_pz* (2):  SIC a Perdew Zunger, hadled by the OEP
+        - *sic_pz* (2):  SIC a Perdew Zunger, hadled by the OEP
           technique
 
-        * *sic_amaldi* (3):  Amaldi correction term (NOT WORKING)
+        - *sic_amaldi* (3):  Amaldi correction term (NOT WORKING)
 
 
 * Menu:
@@ -938,29 +947,29 @@ File: octopus.info,  Node: Poisson,  Next: Casida,  Prev: Hamiltonian,  Up: Hami
      the Hartree potential.
 
      _Options_:
-        * *direct1D* (-1):  Direct evaluation of the Hartree potential
+        - *direct1D* (-1):  Direct evaluation of the Hartree potential
           (in 1D)
 
-        * *direct2D* (-2):  Direct evaluation of the Hartree potential
+        - *direct2D* (-2):  Direct evaluation of the Hartree potential
           (in 2D)
 
-        * *fft*:  FFTs using spherical cutoff (in 2D or 3D; uses FFTW)
+        - *fft*:  FFTs using spherical cutoff (in 2D or 3D; uses FFTW)
 
-        * *fft_cyl* (1):  FFTs using cylindrical cutoff (in 3D; uses
+        - *fft_cyl* (1):  FFTs using cylindrical cutoff (in 3D; uses
           FFTW)
 
-        * *fft_pla* (2):  FFTs using planar cutoff (in 3D; uses FFTW)
+        - *fft_pla* (2):  FFTs using planar cutoff (in 3D; uses FFTW)
 
-        * *fft_nocut* (3):  FFTs without using a cutoff (in 3D; uses
+        - *fft_nocut* (3):  FFTs without using a cutoff (in 3D; uses
           FFTW)
 
-        * *fft_corrected* (4):  FFTs + corrections
+        - *fft_corrected* (4):  FFTs + corrections
 
-        * *cg* (5):  Conjugated gradients
+        - *cg* (5):  Conjugated gradients
 
-        * *cg_corrected* (6):  Corrected conjugated gradients
+        - *cg_corrected* (6):  Corrected conjugated gradients
 
-        * *multigrid* (7):  Multigrid method
+        - *multigrid* (7):  Multigrid method
 
    * *PoissonSolverMaxMultipole*
      _Section_: Hamiltonian::Poisson
@@ -1012,11 +1021,11 @@ File: octopus.info,  Node: Multigrid,  Prev: Poisson,  Up: Poisson
      Gauss-Jacobi
 
      _Options_:
-        * *gauss-seidel* (1):  Gauss-Seidel
+        - *gauss-seidel* (1):  Gauss-Seidel
 
-        * *gauss-jacobi* (2):  Gauss-Jacobi
+        - *gauss-jacobi* (2):  Gauss-Jacobi
 
-        * *cg* (5):  Conjugate-gradients
+        - *cg* (5):  Conjugate-gradients
 
    * *PoissonSolverMGRestrictionMethod*
      _Section_: Hamiltonian::Poisson::Multigrid
@@ -1024,9 +1033,9 @@ File: octopus.info,  Node: Multigrid,  Prev: Poisson,  Up: Poisson
      Method used from fine to coarse grid transfer
 
      _Options_:
-        * *injection* (1):  Injection
+        - *injection* (1):  Injection
 
-        * *fullweight* (2):  Fullweight restriction
+        - *fullweight* (2):  Fullweight restriction
 
 
 
@@ -1069,13 +1078,13 @@ File: octopus.info,  Node: General,  Next: Curvilinear,  Prev: Casida,  Up: Hami
      Specifies what kind of root solver will be used
 
      _Options_:
-        * *ode_rk4* (1):  Standard Runge-Kutta 4th order
+        - *ode_rk4* (1):  Standard Runge-Kutta 4th order
 
-        * *ode_fb78* (2):  Fehlberg solver
+        - *ode_fb78* (2):  Fehlberg solver
 
-        * *ode_vr89* (3):  Verner solver
+        - *ode_vr89* (3):  Verner solver
 
-        * *ode_pd89* (4):  Prince-Dormand solver
+        - *ode_pd89* (4):  Prince-Dormand solver
 
    * *RootSolver*
      _Section_: Math::General
@@ -1083,15 +1092,15 @@ File: octopus.info,  Node: General,  Next: Curvilinear,  Prev: Casida,  Up: Hami
      Specifies what kind of root solver will be used
 
      _Options_:
-        * *root_bisection* (1):  Bisection method
+        - *root_bisection* (1):  Bisection method
 
-        * *root_brent* (2):  Brent method
+        - *root_brent* (2):  Brent method
 
-        * *root_newton* (3):  Newton method
+        - *root_newton* (3):  Newton method
 
-        * *root_laguerre* (4):  Laguerre method
+        - *root_laguerre* (4):  Laguerre method
 
-        * *root_watterstrom* (5):  Watterstrom method
+        - *root_watterstrom* (5):  Watterstrom method
 
    * *ScalarMeshType*
      _Section_: Math::General
@@ -1099,15 +1108,15 @@ File: octopus.info,  Node: General,  Next: Curvilinear,  Prev: Casida,  Up: Hami
      Specifies what kind of scalar mesh will be used
 
      _Options_:
-        * *mesh_linear* (1):  Linear mesh
+        - *mesh_linear* (1):  Linear mesh
 
-        * *mesh_double_log* (2):  Logarithmic mesh
+        - *mesh_double_log* (2):  Logarithmic mesh
 
-        * *mesh_log* (3):  Double logarithmic mesh
+        - *mesh_log* (3):  Double logarithmic mesh
 
-        * *mesh_sinh* (4):  Sinh mesh
+        - *mesh_sinh* (4):  Sinh mesh
 
-        * *gauss_legendre* (5):  Gauss-Legendre mesh
+        - *gauss_legendre* (5):  Gauss-Legendre mesh
 
    * *SparskitSolver*
      _Section_: Math::General
@@ -1115,27 +1124,27 @@ File: octopus.info,  Node: General,  Next: Curvilinear,  Prev: Casida,  Up: Hami
      Specifies what kind of linear solver will be used
 
      _Options_:
-        * *sk_dqgmres* (10):  Direct versions of Quasi Generalize
+        - *sk_dqgmres* (10):  Direct versions of Quasi Generalize
           Minimum Residual method
 
-        * *sk_cg* (1):  Conjugate Gradient Method
+        - *sk_cg* (1):  Conjugate Gradient Method
 
-        * *sk_cgnr* (2):  Conjugate Gradient Method (Normal Residual
+        - *sk_cgnr* (2):  Conjugate Gradient Method (Normal Residual
           equation)
 
-        * *sk_bcg* (3):  Bi-Conjugate Gradient Method
+        - *sk_bcg* (3):  Bi-Conjugate Gradient Method
 
-        * *sk_dbcg* (4):  BCG with partial pivoting
+        - *sk_dbcg* (4):  BCG with partial pivoting
 
-        * *sk_bcgstab* (5):  BCG stabilized
+        - *sk_bcgstab* (5):  BCG stabilized
 
-        * *sk_tfqmr* (6):  Transpose-Free Quasi-Minimum Residual method
+        - *sk_tfqmr* (6):  Transpose-Free Quasi-Minimum Residual method
 
-        * *sk_fom* (7):  Full Orthogonalization Method
+        - *sk_fom* (7):  Full Orthogonalization Method
 
-        * *sk_gmres* (8):  Generalized Minimum Residual method
+        - *sk_gmres* (8):  Generalized Minimum Residual method
 
-        * *sk_fgmres* (9):  Flexible version of Generalized Minimum
+        - *sk_fgmres* (9):  Flexible version of Generalized Minimum
           Residual method
 
 
@@ -1156,18 +1165,18 @@ File: octopus.info,  Node: Curvilinear,  Next: Derivatives,  Prev: General,  Up:
      meshes.
 
      _Options_:
-        * *curv_uniform* (1):  Regular, uniform rectangular grid. The
+        - *curv_uniform* (1):  Regular, uniform rectangular grid. The
           default.
 
-        * *curv_gygi* (2):  The deformation of the grid is done
+        - *curv_gygi* (2):  The deformation of the grid is done
           according to the scheme described by F.   Gygi [F. Gygi and
           G. Galli, Phys. Rev. B 52, R2229 (1995)]
 
-        * *curv_briggs* (3):  The  deformation  of  the grid is done
+        - *curv_briggs* (3):  The  deformation  of  the grid is done
           according to the scheme described by  Briggs  [E.L. Briggs,
           D.J. Sullivan, and J. Bernholc, Phys. Rev. B 54 14362  (1996)]
 
-        * *curv_modine* (4):  The  deformation  of  the grid is done
+        - *curv_modine* (4):  The  deformation  of  the grid is done
           according to the scheme described by  Modine  [N.A.  Modine,
           G.  Zumbach  and E. Kaxiras, Phys. Rev. B 55, 10289  (1997)]
 
@@ -1223,15 +1232,15 @@ File: octopus.info,  Node: Derivatives,  Next: Simulation Box,  Prev: Curvilinea
      the expression of the  differential operator.
 
      _Options_:
-        * *stencil_star* (1):  A star around each point (i.e., only
+        - *stencil_star* (1):  A star around each point (i.e., only
           points in the axis).
 
-        * *stencil_variational* (2):  Same as the star, but with
+        - *stencil_variational* (2):  Same as the star, but with
           coefficients built in a different way.
 
-        * *stencil_cube* (3):  A cube of points around each point.
+        - *stencil_cube* (3):  A cube of points around each point.
 
-        * *stencil_starplus* (4):  The star, plus a number of off-axis
+        - *stencil_starplus* (4):  The star, plus a number of off-axis
           points.
 
 
@@ -1253,17 +1262,17 @@ File: octopus.info,  Node: Simulation Box,  Next: EigenSolver,  Prev: Derivative
      periodic in more  than one dimension.
 
      _Options_:
-        * *sphere* (1):  The simulation box will be a sphere of radius
+        - *sphere* (1):  The simulation box will be a sphere of radius
           Radius
 
-        * *cylinder* (2):  The  simulation  box  will  be a cylinder
+        - *cylinder* (2):  The  simulation  box  will  be a cylinder
           with radius Radius and height two  times Xlength
 
-        * *minimum* (3):  The  simulation  box  will  be constructed by
+        - *minimum* (3):  The  simulation  box  will  be constructed by
           adding spheres created around  each atom (or user defined
           potential), of radius Radius.
 
-        * *parallelepiped* (4):  The  simulation box will be a
+        - *parallelepiped* (4):  The  simulation box will be a
           parallelpiped whose dimensions are taken from  the variable
           lsize.
 
@@ -1290,13 +1299,13 @@ File: octopus.info,  Node: Simulation Box,  Next: EigenSolver,  Prev: Derivative
      than Dimensions.
 
      _Options_:
-        * *0*:  No direction is periodic (molecule)
+        - *0*:  No direction is periodic (molecule)
 
-        * *1*:  The x direction is periodic (wire)
+        - *1*:  The x direction is periodic (wire)
 
-        * *2*:  The x and y directions are periodic (slab)
+        - *2*:  The x and y directions are periodic (slab)
 
-        * *3*:  The x, y, and z directions are periodic (bulk)
+        - *3*:  The x, y, and z directions are periodic (bulk)
 
    * *Radius*
      _Section_: Mesh::Simulation Box
@@ -1326,23 +1335,23 @@ File: octopus.info,  Node: EigenSolver,  Next: Mixing,  Prev: Simulation Box,  U
      and  eigenfunctions of the Kohn-Sham Hamiltonian.
 
      _Options_:
-        * *trlan* (1):  Lanczos scheme, as implemented in the TRLan
+        - *trlan* (1):  Lanczos scheme, as implemented in the TRLan
           package.
 
-        * *plan* (2):  Preconditioned Lanczos scheme.
+        - *plan* (2):  Preconditioned Lanczos scheme.
 
-        * *arpack* (3):  Implicitly Restarted Arnoldi Method, as
+        - *arpack* (3):  Implicitly Restarted Arnoldi Method, as
           implemented in the ARPACK package
 
-        * *cg* (5):  Conjugate-gradients algorithm
+        - *cg* (5):  Conjugate-gradients algorithm
 
-        * *jdqz* (5):  Jacobi-Davidson scheme as implemented in the
+        - *jdqz* (5):  Jacobi-Davidson scheme as implemented in the
           JDQZ package
 
-        * *cg_new* (6):  A rewritting of the cg option, that will
+        - *cg_new* (6):  A rewritting of the cg option, that will
           eventually substitute it.
 
-        * *evolution* (7):  Propagation in imaginary time
+        - *evolution* (7):  Propagation in imaginary time
 
    * *EigenSolverArnoldiVectors*
      _Section_: SCF::EigenSolver
@@ -1388,12 +1397,12 @@ File: octopus.info,  Node: Mixing,  Prev: EigenSolver,  Up: Hamiltonian
      output densities of previous iterations.
 
      _Options_:
-        * *linear*:  Simple linear mixing.
+        - *linear*:  Simple linear mixing.
 
-        * *gr_pulay* (1):  "Guaranteed-reduction" Pulay scheme (FIXME:
+        - *gr_pulay* (1):  "Guaranteed-reduction" Pulay scheme (FIXME:
           Add reference).
 
-        * *broyden* (2):  Broyden scheme (FIXME: Add reference).
+        - *broyden* (2):  Broyden scheme (FIXME: Add reference).
 
 
 
@@ -1414,10 +1423,10 @@ File: octopus.info,  Node: Spectrum Calculations,  Next: States,  Prev: Hamilton
      octopus.
 
      _Options_:
-        * *hs_from_dipole* (1):  Calculate  the  harmonic  spectrum  by
+        - *hs_from_dipole* (1):  Calculate  the  harmonic  spectrum  by
           numerically  differentiating  the  multipoles file.
 
-        * *hs_from_acceleration* (2):  Calculate the harmonic spectrum
+        - *hs_from_acceleration* (2):  Calculate the harmonic spectrum
           by reading the acceleration file.
 
    * *HarmonicSpectrumPolarization*
@@ -1429,15 +1438,15 @@ File: octopus.info,  Node: Spectrum Calculations,  Next: States,  Prev: Hamilton
      polarized.
 
      _Options_:
-        * *"+"*:  Circularly polarized field, counter clock-wise.
+        - *"+"*:  Circularly polarized field, counter clock-wise.
 
-        * *"-"*:  Circularly polarized field, clock-wise.
+        - *"-"*:  Circularly polarized field, clock-wise.
 
-        * *"x"*:  Linearly polarized field in the x direction.
+        - *"x"*:  Linearly polarized field in the x direction.
 
-        * *"y"*:  Linearly polarized field in the y direction.
+        - *"y"*:  Linearly polarized field in the y direction.
 
-        * *"z"*:  Linearly polarized field in the z direction.
+        - *"z"*:  Linearly polarized field in the z direction.
 
    * *SpecDampMode*
      _Section_: Spectrum Calculations
@@ -1446,14 +1455,14 @@ File: octopus.info,  Node: Spectrum Calculations,  Next: States,  Prev: Hamilton
      calculate  spectra by calculating a Fourier transform
 
      _Options_:
-        * *no*:  No filtering at all.
+        - *no*:  No filtering at all.
 
-        * *exponential* (1):  Exponential filtering, corresponding with
+        - *exponential* (1):  Exponential filtering, corresponding with
           a Lorentzian-shaped spectrum
 
-        * *polynomial* (2):  Third-order polynomial damping.
+        - *polynomial* (2):  Third-order polynomial damping.
 
-        * *gaussian* (3):  Gaussian damping
+        - *gaussian* (3):  Gaussian damping
 
 
 
@@ -1472,14 +1481,14 @@ File: octopus.info,  Node: States,  Next: System,  Prev: Spectrum Calculations, 
      down), or making use of two-component spinors.
 
      _Options_:
-        * *unpolarized* (1):  Spin-restricted calculations.
+        - *unpolarized* (1):  Spin-restricted calculations.
 
-        * *spin_polarized* (2):  Spin  unrestricted,  also know as
+        - *spin_polarized* (2):  Spin  unrestricted,  also know as
           spin-DFT, SDFT. This mode will double the  number of wave
           functions will double the number of wave-functions necessary
           for a spin-unpolarised calculation.
 
-        * *spinors* (3):  The  spin-orbitals  are  two-component
+        - *spinors* (3):  The  spin-orbitals  are  two-component
           spinors. This effectively allows the  spin-density  to
           arrange non-collinearly - i.e. the magnetization vector is
           allowed to take different directions in different points.
@@ -1543,20 +1552,24 @@ File: octopus.info,  Node: Coordinates,  Next: Species,  Prev: System,  Up: Syst
      From the plethora of instructions defined in the PDB standard,
      octopus only  reads two, "ATOM" and "HETATOM". From these fields,
      it reads:
+        *   columns  13-16  :  The specie; in fact "octopus" only cares
+          about the  first  letter - "CA" and "CB" will both refer to
+          Carbon - so elements whose  chemical  symbol  has  more  than
+          one letter can not be represented in this  way.  So, if you
+          want to run mercury ("Hg") please use one of the other two
+          methods to input the atomic coordinates, "XYZCoordinates" or
+          "Coordinates".
 
-     <ul>  <li>  columns  13-16 : The specie; in fact "octopus" only
-     cares about  the  first  letter  - "CA" and "CB" will both refer
-     to Carbon - so elements  whose  chemical  symbol  has more than
-     one letter can not be represented in  this way. So, if you want to
-     run mercury ("Hg") please use one of the other  two  methods  to
-     input  the  atomic  coordinates,  "XYZCoordinates"  or
-     "Coordinates".  </li> <li> columns 18-21 : The residue. If residue
-     is "QM",  the atom is treated in Quantum Mechanics, otherwise it
-     is simply treated as  an  external  classical  point  charge. Its
-     charge will be given by columns  61-65.  </li>  <li>  columns
-     31-54 : The Cartesian coordinates. The Fortran  format  is
-     "(3f8.3)".  </li>  <li>columns  61-65 : Classical charge of the
-     atom. The Fortran format is "(f6.2)". </ul>
+        *   columns  18-21 : The residue. If residue is "QM", the atom
+          is treated  in  Quantum  Mechanics,  otherwise  it  is
+          simply  treated  as an external  classical point charge. Its
+          charge will be given by columns 61-65.
+
+        *   columns  31-54  :  The  Cartesian  coordinates. The Fortran
+          format is  "(3f8.3)".
+
+        *   columns  61-65  : Classical charge of the atom. The Fortran
+          format is  "(f6.2)".
 
    * *XYZCoordinates*
      _Section_: System::Coordinates
@@ -1615,39 +1628,45 @@ File: octopus.info,  Node: Species,  Next: Velocities,  Prev: Coordinates,  Up: 
      In this case, we have 5 "species" present, which exemplify the
      five kinds  that may be present:
 
-     <ul>  <li> Oxygen labelled '<it>O</it>'. Next number is the atomic
-     mass (in  atomic  mass  units), and third field, the atomic number
-     (8, in this case).   Afterwards,  "tm2"  is the flavour of the
-     pseudopotential: "tm2" stands for  Troullier-Martins.  This  means
-     the  pseudopotential  will be read from an  _O.ascii_  or _O.vps_
-     file, either in the working directory or in  the
-     _OCTOPUS-HOME/share/PP/TM2_  directory.  Next two numbers are the
-     maximum  _l_-component  of  the  pseudo-potential  to  consider in
-     the  calculation,  and  the  _l_-component to consider as local.
-     </li> <li>  Hydrogen  defined  in  the  same  way as Oxygen. In
-     this case, however, the  flavour is "hgh" standing for
-     Hartwigsen-Goedecker-Hutter. Last two numbers  are  irrelevant,
-     since  they  do  are  not  necessary  to  define  the HGH
-     pseudopotentials.  </li> <li> All species whose label starts by
-     'jelli' are  jellium  spheres.  The other parameters are the
-     weight, the nuclear charge,  and  the  valence  charge of the
-     sphere. </li> <li> All species whose label  starts  by  'point'
-     are point charges. The other parameters are the weight  and the
-     nuclear charge. In fact, point charges are implemented as _rather
-     small_ jellium spheres, with zero valence charge. </li> <li> All
-     species  whose  label  starts  by  'usdef'  are  user defined
-     potentials. The second  parameter is the mass, whereas the third
-     parameter is the 'valence charge',  used to calculate the number
-     of electrons. Finally, the potential itself is  defined by the
-     fourth argument. Use any of the _x_, _y_, _z_  or _r_ variables to
-     define the potential. </li></ul>
+        *   Oxygen  labelled  '<it>O</it>'.  Next  number  is the
+          atomic mass (in  atomic  mass  units), and third field, the
+          atomic number (8, in this case).   Afterwards,  "tm2"  is the
+          flavour of the pseudopotential: "tm2" stands for
+          Troullier-Martins.  This  means  the  pseudopotential  will
+          be read from an  _O.ascii_  or _O.vps_ file, either in the
+          working directory or in  the  _OCTOPUS-HOME/share/PP/TM2_
+          directory.  Next two numbers are the  maximum  _l_-component
+          of the pseudo-potential to consider in the calculation,  and
+          the _l_-component to consider as local.
+
+        *  Hydrogen defined in the same way as Oxygen. In this case,
+          however, the  flavour is "hgh" standing for
+          Hartwigsen-Goedecker-Hutter. Last two numbers  are
+          irrelevant,  since  they  do  are  not  necessary  to  define
+          the HGH  pseudopotentials.
+
+        *   All  species  whose  label starts by 'jelli' are jellium
+          spheres. The  other parameters are the weight, the nuclear
+          charge, and the valence charge  of the sphere.
+
+        *  All species whose label starts by 'point' are point charges.
+          The other  parameters  are  the  weight and the nuclear
+          charge. In fact, point charges  are  implemented  as _rather
+          small_ jellium spheres, with zero valence  charge.
+
+        *  All species whose label starts by 'usdef' are user defined
+          potentials.   The  second  parameter  is  the  mass,  whereas
+          the third parameter is the  'valence  charge',  used to
+          calculate the number of electrons. Finally, the  potential
+          itself  is  defined  by  the  fourth  argument.  Use  any of
+          the  _x_, _y_, _z_ or _r_ variables to define the potential.
 
      Note that some common pseudopotentials are distributed with the
      code in the  directory  _OCTOPUS-HOME/share/PP/_. To use these
      pseudopotentials you  are  not  required  to  define  them
      explicitly  in  the Species block, as  defaults  are  provided  by
-     the program (you can override these defaults in  any  case).
-     Additional  pseudopotentials  can  be  downloaded  from the <a
+     the program (you can override these defaults in  any case).
+     Additional pseudopotentials can be downloaded from the  <a
      href='http://www.tddft.org/programs/octopus/pseudo.php'>octopus
      homepage<a>.
 
@@ -1709,14 +1728,14 @@ File: octopus.info,  Node: Time Dependent,  Next: Unoccupied States,  Prev: Syst
      several modes.
 
      _Options_:
-        * *kick_density*:  The total density of the system is perturbed.
+        - *kick_density*:  The total density of the system is perturbed.
 
-        * *kick_spin* (1):  The  individual  spin  densities  are
+        - *kick_spin* (1):  The  individual  spin  densities  are
           perturbed differently. Note that this  mode  is  only
           possible if the run is done in spin polarized mode, or with
           spinors.
 
-        * *kick_spin_and_density* (2):  A combination of the two above.
+        - *kick_spin_and_density* (2):  A combination of the two above.
           Note that this mode is only possible if the  run is done in
           spin polarized mode, or with spinors.
 
@@ -2154,7 +2173,7 @@ Options Index
 * Xlength
 :                              Simulation Box.                 (line 73)
 * XYZCoordinates
-:                       Coordinates.                           (line 54)
+:                       Coordinates.                           (line 58)
 * XYZVelocities
 :                        Velocities.                           (line 32)
 
@@ -2162,46 +2181,46 @@ Options Index
 
 Tag Table:
 Node: Top667
-Node: Authors1971
-Node: Copying5352
-Node: Installation6832
-Node: Quick instructions7821
-Node: Long instructions8356
-Ref: Long instructions-Footnote-117989
-Ref: Long instructions-Footnote-218547
-Node: Different octopus executables18759
-Node: Troubleshooting20561
-Node: The parser22507
-Node: Input Variables25778
-Node: Generalities26235
-Node: Debug27695
-Node: IO29231
-Node: Parallel30548
-Node: Units31632
-Node: Hamiltonian32867
-Node: Poisson34690
-Node: Multigrid36199
-Node: Casida37777
-Node: General39037
-Node: Curvilinear41099
-Node: Gygi42396
-Node: Derivatives43765
-Node: Simulation Box44577
-Node: EigenSolver47122
-Node: Mixing48600
-Node: Spectrum Calculations49720
-Node: States51815
-Node: System52938
-Node: Coordinates53325
-Node: Species56512
-Node: Velocities60382
-Node: Time Dependent61879
-Node: Unoccupied States64375
-Node: Undocumented Variables64721
-Node: Examples65816
-Node: Hello world65979
-Ref: Hello world-Footnote-172602
-Node: Benzene72686
-Node: Options Index73503
+Node: Authors2352
+Node: Copying5733
+Node: Installation7213
+Node: Quick instructions8202
+Node: Long instructions8737
+Ref: Long instructions-Footnote-118370
+Ref: Long instructions-Footnote-218928
+Node: Different octopus executables19140
+Node: Troubleshooting20942
+Node: The parser22888
+Node: Input Variables26159
+Node: Generalities26616
+Node: Debug28076
+Node: IO29612
+Node: Parallel30929
+Node: Units32013
+Node: Hamiltonian33248
+Node: Poisson35071
+Node: Multigrid36580
+Node: Casida38158
+Node: General39418
+Node: Curvilinear41480
+Node: Gygi42777
+Node: Derivatives44146
+Node: Simulation Box44958
+Node: EigenSolver47503
+Node: Mixing48981
+Node: Spectrum Calculations50101
+Node: States52196
+Node: System53319
+Node: Coordinates53706
+Node: Species56935
+Node: Velocities60898
+Node: Time Dependent62395
+Node: Unoccupied States64891
+Node: Undocumented Variables65237
+Node: Examples66332
+Node: Hello world66495
+Ref: Hello world-Footnote-173118
+Node: Benzene73202
+Node: Options Index74019
 
 End Tag Table
