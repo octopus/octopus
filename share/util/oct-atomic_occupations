@@ -1,0 +1,297 @@
+#!/usr/bin/perl
+#
+# script to generate the atomic occupations block for
+# octopus input files.
+#
+# $Id$
+
+use Getopt::Std;
+use POSIX qw(ceil);
+#use strict;
+
+sub usage {
+
+  print <<EndOfUsage;
+
+ Copyright (C) 2005 by Heiko Appel
+
+Usage: oct-atomic_occupations [options]
+
+    -s        specie
+    -h        this usage
+
+Examples:
+
+ ./oct-atomic_occupations -s Na
+ ./oct-atomic_occupations -s Ti_sc
+ for x in \$(cat /usr/share/octopus/PP/defaults | awk '{print \$1}'); do oct-atomic_occupations -s \$x; done
+
+Report bugs to <appel\@physik.fu-berlin.de>.
+EndOfUsage
+  exit 0;
+}
+
+# Handle options
+if (not @ARGV) { usage; }
+
+getopts("hs:");
+$opt_h && usage;
+$specie = $opt_s;
+
+
+# hash for shells
+my %state_label = ( 's' => '2',
+	            'p' => '6',
+    	            'd' => '10',
+	            'f' => '14' );
+
+
+# check if we need configurations for semicore PP
+if ($specie =~ /(.*)sc/) {
+  $cfg = semicore_PP();
+} else {
+  $cfg = default_PP();
+}
+
+# split configurations in separate lines
+@cfg_lines = split(/\n/,$cfg);
+my $lines = $#cfg_lines+1;
+
+# loop over all configurations
+for ($i=0; $i<$lines; $i++) {
+  my $cfg_line = @cfg_lines[$i];
+
+  # skip comments
+  next if $cfg_line =~ /^#/;
+
+  # does the line match the specie we are interested in?
+  if ( $cfg_line =~ /$specie\s/ ) {
+
+    printf "# =============================================================\n";
+    printf "# configurations for specie: $specie \n";
+    $cfg_line =~ /\s*(\d*)\s*$specie\s*(.*)$/;
+
+    # atomic charge
+    my $total_charge = $1;
+    $2 =~ /^(.*?);\s(.*?)$/;
+    # the core configuration
+    my $core = $1;
+    # ... and the valence
+    my $valence = $2;
+
+    # split core and valence configurations in levels
+    @core_orbitals = split(/\s/,$core);
+    @valence_orbitals = split(/\s/,$valence);
+    printf "#  core orbitals     : @core_orbitals\n";
+    printf "#  valence orbitals  : @valence_orbitals\n";
+    chomp(@valence_orbitals);
+
+    my $core_charge    = 0;
+    my $valence_charge = 0;
+
+    foreach my $orbital (@core_orbitals) {
+      $orbital =~ /(.*)\^(\d*)/;
+      $core_charge += $2;
+    }
+
+    $valence_charge = $total_charge - $core_charge;
+    printf "#  core electrons    : $core_charge\n";
+    printf "#  valence electrons : $valence_charge\n";
+
+    print "%Occupations\n";
+    $count = 0;
+    $filled_orbitals = 0;
+
+    foreach my $orbital (@valence_orbitals) {
+      $count   += 1;
+      $orbital =~ /(\d)(\D)\^(\d*)/;
+      $valence_orbitals += $state_label{$2};
+
+      if ( $3 eq $state_label{$2} ) {
+	print " $3 ";
+	$filled_orbitals += $state_label{$2};
+      } else {
+	$orbitals = $state_label{$2}/2;
+	for ($j = 1; $j<$orbitals; $j++) {
+	  print " $3/$orbitals |";
+	}
+	print " $3/$orbitals ";
+	
+	# accumulate partially filled or empty orbitals
+	$partial_charge += 2*ceil($3/2);
+	$partial_filled_orbitals += $state_label{$2};
+      }
+      if ($count lt $#valence_orbitals+1) { print "|"; }
+    }
+    print "\n%\n";
+
+    $extra_states = ($valence_orbitals - $filled_orbitals - $partial_charge)/2;
+    print "ExtraStates = $extra_states\n";
+
+  } # if ( $cfg_line =~ /$specie\s/ )
+}
+
+
+
+sub default_PP() {
+
+  $configurations = <<'EOF';
+ 1      H       ; 1s^1
+ 2      He      ; 1s^2
+ 3      Li      1s^2 ; 2s^1
+ 4      Be      1s^2 ; 2s^2
+ 5      B       1s^2 ; 2s^2 2p^1
+ 6      C       1s^2 ; 2s^2 2p^2
+ 7      N       1s^2 ; 2s^2 2p^3
+ 8      O       1s^2 ; 2s^2 2p^4
+ 9      F       1s^2 ; 2s^2 2p^5
+10      Ne      1s^2 ; 2s^2 2p^6
+11      Na      1s^2 2s^2 2p^6 ; 3s^1
+12      Mg      1s^2 2s^2 2p^6 ; 3s^2
+13      Al      1s^2 2s^2 2p^6 ; 3s^2 3p^1
+14      Si      1s^2 2s^2 2p^6 ; 3s^2 3p^2
+15      P       1s^2 2s^2 2p^6 ; 3s^2 3p^3
+16      S       1s^2 2s^2 2p^6 ; 3s^2 3p^4
+17      Cl      1s^2 2s^2 2p^6 ; 3s^2 3p^5
+18      Ar      1s^2 2s^2 2p^6 ; 3s^2 3p^6
+19      K       1s^2 2s^2 2p^6 3s^2 3p^6 ; 4s^1
+20      Ca      1s^2 2s^2 2p^6 3s^2 3p^6 ; 4s^2
+21      Sc      1s^2 2s^2 2p^6 3s^2 3p^6 ; 3d^1 4s^2
+22      Ti      1s^2 2s^2 2p^6 3s^2 3p^6 ; 3d^2 4s^2
+23      V       1s^2 2s^2 2p^6 3s^2 3p^6 ; 3d^3 4s^2
+24      Cr      1s^2 2s^2 2p^6 3s^2 3p^6 ; 3d^5 4s^1
+25      Mn      1s^2 2s^2 2p^6 3s^2 3p^6 ; 3d^5 4s^2
+26      Fe      1s^2 2s^2 2p^6 3s^2 3p^6 ; 3d^6 4s^2
+27      Co      1s^2 2s^2 2p^6 3s^2 3p^6 ; 3d^7 4s^2
+28      Ni      1s^2 2s^2 2p^6 3s^2 3p^6 ; 3d^8 4s^2
+29      Cu      1s^2 2s^2 2p^6 3s^2 3p^6 3d^10 ; 4s^1
+30      Zn      1s^2 2s^2 2p^6 3s^2 3p^6 3d^10 ; 4s^2
+31      Ga      1s^2 2s^2 2p^6 3s^2 3p^6 3d^10 ; 4s^2 4p^1
+32      Ge      1s^2 2s^2 2p^6 3s^2 3p^6 3d^10 ; 4s^2 4p^2
+33      As      1s^2 2s^2 2p^6 3s^2 3p^6 3d^10 ; 4s^2 4p^3
+34      Se      1s^2 2s^2 2p^6 3s^2 3p^6 3d^10 ; 4s^2 4p^4
+35      Br      1s^2 2s^2 2p^6 3s^2 3p^6 3d^10 ; 4s^2 4p^5
+36      Kr      1s^2 2s^2 2p^6 3s^2 3p^6 3d^10 ; 4s^2 4p^6
+37      Rb      1s^2 2s^2 2p^6 3s^2 3p^6 3d^10 4s^2 4p^6 ; 5s^1
+38      Sr      1s^2 2s^2 2p^6 3s^2 3p^6 3d^10 4s^2 4p^6 ; 5s^2
+39      Y       1s^2 2s^2 2p^6 3s^2 3p^6 3d^10 4s^2 4p^6 ; 4d^1 5s^2
+40      Zr      1s^2 2s^2 2p^6 3s^2 3p^6 3d^10 4s^2 4p^6 ; 4d^2 5s^2
+41      Nb      1s^2 2s^2 2p^6 3s^2 3p^6 3d^10 4s^2 4p^6 ; 4d^4 5s^1
+42      Mo      1s^2 2s^2 2p^6 3s^2 3p^6 3d^10 4s^2 4p^6 ; 4d^5 5s^1
+43      Tc      1s^2 2s^2 2p^6 3s^2 3p^6 3d^10 4s^2 4p^6 ; 4d^5 5s^2
+44      Ru      1s^2 2s^2 2p^6 3s^2 3p^6 3d^10 4s^2 4p^6 ; 4d^7 5s^1
+45      Rh      1s^2 2s^2 2p^6 3s^2 3p^6 3d^10 4s^2 4p^6 ; 4d^8 5s^1
+46      Pd      1s^2 2s^2 2p^6 3s^2 3p^6 3d^10 4s^2 4p^6 ; 4d^10
+47      Ag      1s^2 2s^2 2p^6 3s^2 3p^6 3d^10 4s^2 4p^6 4d^10 ; 5s^1
+48      Cd      1s^2 2s^2 2p^6 3s^2 3p^6 3d^10 4s^2 4p^6 4d^10 ; 5s^2
+49      In      1s^2 2s^2 2p^6 3s^2 3p^6 3d^10 4s^2 4p^6 4d^10 ; 5s^2 5p^1
+50      Sn      1s^2 2s^2 2p^6 3s^2 3p^6 3d^10 4s^2 4p^6 4d^10 ; 5s^2 5p^2
+51      Sb      1s^2 2s^2 2p^6 3s^2 3p^6 3d^10 4s^2 4p^6 4d^10 ; 5s^2 5p^3
+52      Te      1s^2 2s^2 2p^6 3s^2 3p^6 3d^10 4s^2 4p^6 4d^10 ; 5s^2 5p^4
+53      I       1s^2 2s^2 2p^6 3s^2 3p^6 3d^10 4s^2 4p^6 4d^10 ; 5s^2 5p^5
+54      Xe      1s^2 2s^2 2p^6 3s^2 3p^6 3d^10 4s^2 4p^6 4d^10 ; 5s^2 5p^6
+55      Cs      1s^2 2s^2 2p^6 3s^2 3p^6 3d^10 4s^2 4p^6 4d^10 5s^2 5p^6 ; 6s^1
+56      Ba      1s^2 2s^2 2p^6 3s^2 3p^6 3d^10 4s^2 4p^6 4d^10 5s^2 5p^6 ; 6s^2
+57      La      1s^2 2s^2 2p^6 3s^2 3p^6 3d^10 4s^2 4p^6 4d^10 5s^2 5p^6 ; 5d^1 6s^2
+58      Ce      1s^2 2s^2 2p^6 3s^2 3p^6 3d^10 4s^2 4p^6 4d^10 5s^2 5p^6 ; 4f^1 5d^1 6s^2
+59      Pr      1s^2 2s^2 2p^6 3s^2 3p^6 3d^10 4s^2 4p^6 4d^10 5s^2 5p^6 ; 4f^3 6s^2
+60      Nd      1s^2 2s^2 2p^6 3s^2 3p^6 3d^10 4s^2 4p^6 4d^10 5s^2 5p^6 ; 4f^4 6s^2
+61      Pm      1s^2 2s^2 2p^6 3s^2 3p^6 3d^10 4s^2 4p^6 4d^10 5s^2 5p^6 ; 4f^5 6s^2
+62      Sm      1s^2 2s^2 2p^6 3s^2 3p^6 3d^10 4s^2 4p^6 4d^10 5s^2 5p^6 ; 4f^6 6s^2
+63      Eu      1s^2 2s^2 2p^6 3s^2 3p^6 3d^10 4s^2 4p^6 4d^10 5s^2 5p^6 ; 4f^7 6s^2
+64      Gd      1s^2 2s^2 2p^6 3s^2 3p^6 3d^10 4s^2 4p^6 4d^10 5s^2 5p^6 ; 4f^7 5d^1 6s^2
+65      Tb      1s^2 2s^2 2p^6 3s^2 3p^6 3d^10 4s^2 4p^6 4d^10 5s^2 5p^6 ; 4f^9 6s^2
+66      Dy      1s^2 2s^2 2p^6 3s^2 3p^6 3d^10 4s^2 4p^6 4d^10 5s^2 5p^6 ; 4f^10 6s^2
+67      Ho      1s^2 2s^2 2p^6 3s^2 3p^6 3d^10 4s^2 4p^6 4d^10 5s^2 5p^6 ; 4f^11 6s^2
+68      Er      1s^2 2s^2 2p^6 3s^2 3p^6 3d^10 4s^2 4p^6 4d^10 5s^2 5p^6 ; 4f^12 6s^2
+69      Tm      1s^2 2s^2 2p^6 3s^2 3p^6 3d^10 4s^2 4p^6 4d^10 5s^2 5p^6 ; 4f^13 6s^2
+70      Yb      1s^2 2s^2 2p^6 3s^2 3p^6 3d^10 4s^2 4p^6 4d^10 5s^2 5p^6 ; 4f^14 6s^2
+71      Lu      1s^2 2s^2 2p^6 3s^2 3p^6 3d^10 4s^2 4p^6 4d^10 5s^2 5p^6 4f^14 ; 5d^1 6s^2
+72      Hf      1s^2 2s^2 2p^6 3s^2 3p^6 3d^10 4s^2 4p^6 4d^10 5s^2 5p^6 4f^14 ; 5d^2 6s^2
+73      Ta      1s^2 2s^2 2p^6 3s^2 3p^6 3d^10 4s^2 4p^6 4d^10 5s^2 5p^6 4f^14 ; 5d^3 6s^2
+74      W       1s^2 2s^2 2p^6 3s^2 3p^6 3d^10 4s^2 4p^6 4d^10 5s^2 5p^6 4f^14 ; 5d^4 6s^2
+75      Re      1s^2 2s^2 2p^6 3s^2 3p^6 3d^10 4s^2 4p^6 4d^10 5s^2 5p^6 4f^14 ; 5d^5 6s^2
+76      Os      1s^2 2s^2 2p^6 3s^2 3p^6 3d^10 4s^2 4p^6 4d^10 5s^2 5p^6 4f^14 ; 5d^6 6s^2
+77      Ir      1s^2 2s^2 2p^6 3s^2 3p^6 3d^10 4s^2 4p^6 4d^10 5s^2 5p^6 4f^14 ; 5d^7 6s^2
+78      Pt      1s^2 2s^2 2p^6 3s^2 3p^6 3d^10 4s^2 4p^6 4d^10 5s^2 5p^6 4f^14 ; 5d^9 6s^1
+79      Au      1s^2 2s^2 2p^6 3s^2 3p^6 3d^10 4s^2 4p^6 4d^10 5s^2 5p^6 4f^14 5d^10 ; 6s^1
+80      Hg      1s^2 2s^2 2p^6 3s^2 3p^6 3d^10 4s^2 4p^6 4d^10 5s^2 5p^6 4f^14 5d^10 ; 6s^2
+81      Tl      1s^2 2s^2 2p^6 3s^2 3p^6 3d^10 4s^2 4p^6 4d^10 5s^2 5p^6 4f^14 5d^10 ; 6s^2 6p^1
+82      Pb      1s^2 2s^2 2p^6 3s^2 3p^6 3d^10 4s^2 4p^6 4d^10 5s^2 5p^6 4f^14 5d^10 ; 6s^2 6p^2
+83      Bi      1s^2 2s^2 2p^6 3s^2 3p^6 3d^10 4s^2 4p^6 4d^10 5s^2 5p^6 4f^14 5d^10 ; 6s^2 6p^3
+84      Po      1s^2 2s^2 2p^6 3s^2 3p^6 3d^10 4s^2 4p^6 4d^10 5s^2 5p^6 4f^14 5d^10 ; 6s^2 6p^4
+85      At      1s^2 2s^2 2p^6 3s^2 3p^6 3d^10 4s^2 4p^6 4d^10 5s^2 5p^6 4f^14 5d^10 ; 6s^2 6p^5
+86      Rn      1s^2 2s^2 2p^6 3s^2 3p^6 3d^10 4s^2 4p^6 4d^10 5s^2 5p^6 4f^14 5d^10 ; 6s^2 6p^6
+EOF
+
+return $configurations;
+}
+
+
+
+
+
+sub semicore_PP() {
+
+  $configurations = <<'EOF';
+ 3     Li_sc       ; 1s^2 2s^1
+ 4     Be_sc       ; 1s^2 2s^2
+11     Na_sc       1s^2 ; 2s^2 2p^6 3s^1
+12     Mg_sc       1s^2 ; 2s^2 2p^6 3s^2
+19     K_sc        1s^2 2s^2 2p^6 ; 3s^2 3p^6 4s^1
+20     Ca_sc       1s^2 2s^2 2p^6 ; 3s^2 3p^6 4s^2
+21     Sc_sc       1s^2 2s^2 2p^6 ; 3s^2 3p^6 3d^1 4s^2
+22     Ti_sc       1s^2 2s^2 2p^6 ; 3s^2 3p^6 3d^2 4s^2
+23     V_sc        1s^2 2s^2 2p^6 ; 3s^2 3p^6 3d^3 4s^2
+24     Cr_sc       1s^2 2s^2 2p^6 ; 3s^2 3p^6 3d^5 4s^1
+25     Mn_sc       1s^2 2s^2 2p^6 ; 3s^2 3p^6 3d^5 4s^2
+26     Fe_sc       1s^2 2s^2 2p^6 ; 3s^2 3p^6 3d^6 4s^2
+27     Co_sc       1s^2 2s^2 2p^6 ; 3s^2 3p^6 3d^7 4s^2
+28     Ni_sc       1s^2 2s^2 2p^6 ; 3s^2 3p^6 3d^8 4s^2
+29     Cu_sc       1s^2 2s^2 2p^6 3s^2 3p^6 ; 3d^10 4s^1
+30     Zn_sc       1s^2 2s^2 2p^6 3s^2 3p^6 ; 3d^10 4s^2
+31     Ga_sc       1s^2 2s^2 2p^6 3s^2 3p^6 ; 3d^10 4s^2 4p^1
+37     Rb_sc       1s^2 2s^2 2p^6 3s^2 3p^6 3d^10 ; 4s^2 4p^6 5s^1
+38     Sr_sc       1s^2 2s^2 2p^6 3s^2 3p^6 3d^10 ; 4s^2 4p^6 5s^2
+39     Y_sc        1s^2 2s^2 2p^6 3s^2 3p^6 3d^10 ; 4s^2 4p^6 4d^1 5s^2
+40     Zr_sc       1s^2 2s^2 2p^6 3s^2 3p^6 3d^10 ; 4s^2 4p^6 4d^2 5s^2
+41     Nb_sc       1s^2 2s^2 2p^6 3s^2 3p^6 3d^10 ; 4s^2 4p^6 4d^4 5s^1
+42     Mo_sc       1s^2 2s^2 2p^6 3s^2 3p^6 3d^10 ; 4s^2 4p^6 4d^5 5s^1
+43     Tc_sc       1s^2 2s^2 2p^6 3s^2 3p^6 3d^10 ; 4s^2 4p^6 4d^5 5s^2
+44     Ru_sc       1s^2 2s^2 2p^6 3s^2 3p^6 3d^10 ; 4s^2 4p^6 4d^7 5s^1
+45     Rh_sc       1s^2 2s^2 2p^6 3s^2 3p^6 3d^10 ; 4s^2 4p^6 4d^8 5s^1
+46     Pd_sc       1s^2 2s^2 2p^6 3s^2 3p^6 3d^10 ; 4s^2 4p^6 4d^10
+47     Ag_sc       1s^2 2s^2 2p^6 3s^2 3p^6 3d^10 4s^2 4p^6 ; 4d^10 5s^1
+48     Cd_sc       1s^2 2s^2 2p^6 3s^2 3p^6 3d^10 4s^2 4p^6 ; 4d^10 5s^2
+49     In_sc       1s^2 2s^2 2p^6 3s^2 3p^6 3d^10 4s^2 4p^6 ; 4d^10 5s^2 5p^1
+55     Cs_sc       1s^2 2s^2 2p^6 3s^2 3p^6 3d^10 4s^2 4p^6 4d^10 ; 5s^2 5p^6 6s^1
+56     Ba_sc       1s^2 2s^2 2p^6 3s^2 3p^6 3d^10 4s^2 4p^6 4d^10 ; 5s^2 5p^6 6s^2
+57     La_sc       1s^2 2s^2 2p^6 3s^2 3p^6 3d^10 4s^2 4p^6 4d^10 ; 5s^2 5p^6 5d^1 6s^2
+58     Ce_sc       1s^2 2s^2 2p^6 3s^2 3p^6 3d^10 4s^2 4p^6 4d^10 ; 5s^2 5p^6 4f^1 5d^1 6s^2
+59     Pr_sc       1s^2 2s^2 2p^6 3s^2 3p^6 3d^10 4s^2 4p^6 4d^10 ; 5s^2 5p^6 4f^3 6s^2
+60     Nd_sc       1s^2 2s^2 2p^6 3s^2 3p^6 3d^10 4s^2 4p^6 4d^10 ; 5s^2 5p^6 4f^4 6s^2
+61     Pm_sc       1s^2 2s^2 2p^6 3s^2 3p^6 3d^10 4s^2 4p^6 4d^10 ; 5s^2 5p^6 4f^5 6s^2
+62     Sm_sc       1s^2 2s^2 2p^6 3s^2 3p^6 3d^10 4s^2 4p^6 4d^10 ; 5s^2 5p^6 4f^6 6s^2
+63     Eu_sc       1s^2 2s^2 2p^6 3s^2 3p^6 3d^10 4s^2 4p^6 4d^10 ; 5s^2 5p^6 4f^7 6s^2
+64     Gd_sc       1s^2 2s^2 2p^6 3s^2 3p^6 3d^10 4s^2 4p^6 4d^10 ; 5s^2 5p^6 4f^7 5d^1 6s^2
+65     Tb_sc       1s^2 2s^2 2p^6 3s^2 3p^6 3d^10 4s^2 4p^6 4d^10 ; 5s^2 5p^6 4f^9 6s^2
+66     Dy_sc       1s^2 2s^2 2p^6 3s^2 3p^6 3d^10 4s^2 4p^6 4d^10 ; 5s^2 5p^6 4f^10 6s^2
+67     Ho_sc       1s^2 2s^2 2p^6 3s^2 3p^6 3d^10 4s^2 4p^6 4d^10 ; 5s^2 5p^6 4f^11 6s^2
+68     Er_sc       1s^2 2s^2 2p^6 3s^2 3p^6 3d^10 4s^2 4p^6 4d^10 ; 5s^2 5p^6 4f^12 6s^2
+69     Tm_sc       1s^2 2s^2 2p^6 3s^2 3p^6 3d^10 4s^2 4p^6 4d^10 ; 5s^2 5p^6 4f^13 6s^2
+70     Yb_sc       1s^2 2s^2 2p^6 3s^2 3p^6 3d^10 4s^2 4p^6 4d^10 ; 5s^2 5p^6 4f^14 6s^2
+71     Lu_sc       1s^2 2s^2 2p^6 3s^2 3p^6 3d^10 4s^2 4p^6 4d^10 ; 5s^2 5p^6 4f^14 5d^1 6s^2
+72     Hf_sc       1s^2 2s^2 2p^6 3s^2 3p^6 3d^10 4s^2 4p^6 4d^10 4f^14 ; 5s^2 5p^6 5d^2 6s^2
+73     Ta_sc       1s^2 2s^2 2p^6 3s^2 3p^6 3d^10 4s^2 4p^6 4d^10 4f^14 ; 5s^2 5p^6 5d^3 6s^2
+74     W_sc        1s^2 2s^2 2p^6 3s^2 3p^6 3d^10 4s^2 4p^6 4d^10 4f^14 ; 5s^2 5p^6 5d^4 6s^2
+75     Re_sc       1s^2 2s^2 2p^6 3s^2 3p^6 3d^10 4s^2 4p^6 4d^10 4f^14 ; 5s^2 5p^6 5d^5 6s^2
+76     Os_sc       1s^2 2s^2 2p^6 3s^2 3p^6 3d^10 4s^2 4p^6 4d^10 4f^14 ; 5s^2 5p^6 5d^6 6s^2
+77     Ir_sc       1s^2 2s^2 2p^6 3s^2 3p^6 3d^10 4s^2 4p^6 4d^10 4f^14 ; 5s^2 5p^6 5d^7 6s^2
+78     Pt_sc       1s^2 2s^2 2p^6 3s^2 3p^6 3d^10 4s^2 4p^6 4d^10 4f^14 ; 5s^2 5p^6 5d^9 6s^1
+79     Au_sc       1s^2 2s^2 2p^6 3s^2 3p^6 3d^10 4s^2 4p^6 4d^10 5s^2 5p^6 4f^14 ; 5d^10 6s^1
+80     Hg_sc       1s^2 2s^2 2p^6 3s^2 3p^6 3d^10 4s^2 4p^6 4d^10 5s^2 5p^6 4f^14 ; 5d^10 6s^2
+81     Tl_sc       1s^2 2s^2 2p^6 3s^2 3p^6 3d^10 4s^2 4p^6 4d^10 5s^2 5p^6 4f^14 ; 5d^10 6s^2 6p^1
+EOF
+
+return $configurations;
+}

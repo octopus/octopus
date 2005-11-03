@@ -25,7 +25,8 @@ Usage: oct-run_periodic_table [options]
     
      -h            this message
      -n            dry run mode (show what would be executed)
-     -r            run octopus for all atoms            
+     -s specie     run octopus for given specie
+     -a            run octopus for all atoms            
      -x            octopus executable
      -d            defaults file for pseudopotentials
 
@@ -39,11 +40,12 @@ EOF
 [ "$#" -eq 0 ] && usage;
 
 # process command line options
-while getopts "hnrx:d:" opt ; do
+while getopts "hns:ax:d:" opt ; do
     case "$opt" in
         h) usage ;;
         n) ECHO="echo" ;; 
-        r) ECHO="" ;;
+        s) specie="$OPTARG" ;;
+        a) ECHO="" ;;
         x) octopus="$OPTARG" ;;
         d) defaults="$OPTARG";;
         ?) echo "Error parsing arguments"; exit 1 ;;
@@ -61,9 +63,12 @@ if [ ! -f $defaults ]; then
   exit 1
 fi
 
-
-# for which atoms are pseudopotentials available?
-pseudos=$(awk '{ print $1 }' $defaults | grep -v "#")
+if [ "$specie" = "" ]; then
+  # for which atoms are pseudopotentials available?
+  pseudos=$(awk '{ print $1 }' $defaults | grep -v "#")
+else
+  pseudos="$specie"
+fi
 
 # loop over all pseudopotentials
 for x in $pseudos; do
@@ -91,6 +96,10 @@ fromScratch = yes
 
 EOF
     } > $workdir/inp 2>/dev/null
+  
+  # append atomic configuration
+  /usr/bin/oct-atomic_occupations -s $x >> $workdir/inp
+
   fi
 
   # change to working directory
