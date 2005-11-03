@@ -64,6 +64,15 @@ contains
     type(states_type), intent(in)    :: st
     integer,           intent(in)    :: ab, save_iter
 
+    !%%Variable CalcPES_rc
+    !%%Type logical
+    !%%Default no
+    !%%Section Time Dependent::PES
+    !%%Description
+    !%%  If <tt>true</tt>, store the wave functions in specific points in order to 
+    !%% calculate the photo-electron spectrum in a point far in the box as proposed in 
+    !%% A. Pohl, P.-G. Reinhard, and E. Suraud Phys. Rev. Lett. <b>84</b>, 5090 (2000).
+    !%%End
     call loct_parse_logical(check_inp('CalcPES_rc'), .false., p%calc_rc)
     if(p%calc_rc) then
       p%calc_rc = .true.
@@ -73,6 +82,16 @@ contains
     p%calc_mask = .false.
     ! have the mask, and we are working in the velocity gauge
     if(ab == 2) then
+      !%%Variable CalcPES_mask
+      !%%Type logical
+      !%%Default no
+      !%%Section Time Dependent::PES
+      !%%Description
+      !%% If <tt>true</tt>, calculate the photo-electron spectrum using the mask method
+      !%% (M. Marques, D. Varsano, H. Appel, E.K.U. Gross and A. Rubio to be submitted). 
+      !%% In order for this to work, masking boundaries are necessary 
+      !%% (<tt>AbsorbingBoundaries == 2</tt>).
+      !%%End
       call loct_parse_logical(check_inp('CalcPES_Mask'), .false., p%calc_mask)
       if(p%calc_mask) then
         call PES_mask_init(p%mask, m, sb, st)

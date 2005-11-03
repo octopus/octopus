@@ -41,6 +41,7 @@ module system
   use output
   use multicomm_mod
   use mpi_mod
+  use varinfo
 
   implicit none
 
@@ -250,8 +251,8 @@ contains
     else
       !%Variable GuessMagnetDensity
       !%Type integer
-      !%default ferromagnetic
-      !%Section Hamiltonian
+      !%Default ferromagnetic
+      !%Section SCF
       !%Description
       !% The guess density for the SCF cycle is just the sum of all the atomic densities.
       !% When performing spin-polarized or non-collinear spin calculations this option sets 
@@ -265,19 +266,15 @@ contains
       !% Magnetization density is zero.
       !%Option ferromagnetic 2
       !% Magnetization density is the sum of the atomic magnetization densities.
-      !%Option random
+      !%Option random 3
       !% Each atomic magnetization density is randomly rotated.
-      !%Option user_defined
+      !%Option user_defined 4
       !% The atomic magnetization densities are rotated so that the magnetization 
       !% vector has the same direction as a vector provided by the user. In this case,
       !% the <tt>AtomsMagnetDirection</tt> block has to be set.
       !%End
       call loct_parse_int(check_inp('GuessMagnetDensity'), 2, gmd_opt)
-      if (gmd_opt < 1 .or. gmd_opt > 4) then
-        write(message(1),'(a,i1,a)') "Input: '",gmd_opt ,"' is not a valid GuessMagnetDensity"
-        message(2) = '(GuessMagnetDensity = 1 | 2 | 3 | 4)'
-        call write_fatal(2)
-      end if
+      if(.not.varinfo_valid_option('GuessMagnetDensity', gmd_opt)) call input_error('GuessMagnetDensity')
     end if
 
     rho = M_ZERO

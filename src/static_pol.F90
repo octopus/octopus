@@ -181,8 +181,16 @@ contains
       ! allocate wfs
       allocate(sys%st%X(psi)(NP, st%d%dim, st%nst, st%d%nik))
 
-      ! read in e_field value
-      call loct_parse_float(check_inp('POLStaticField'), CNST(0.01)/units_inp%energy%factor*units_inp%length%factor, e_field)
+      !%Variable POLStaticField
+      !%Type float
+      !%Default 0.01 a.u.
+      !%Section Linear Response::Static Polarization
+      !%Description
+      !% Magnitude of the static field used to calculate the static polarizability
+      !% (<tt>CalculationMode = pol</tt>)
+      !%End
+      call loct_parse_float(check_inp('POLStaticField'), &
+         CNST(0.01)/units_inp%energy%factor*units_inp%length%factor, e_field)
       e_field = e_field * units_inp%energy%factor / units_inp%length%factor
       if (e_field <= M_ZERO) then
         write(message(1), '(a,e14.6,a)') "Input: '", e_field, "' is not a valid POLStaticField"

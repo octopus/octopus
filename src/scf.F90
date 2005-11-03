@@ -91,7 +91,7 @@ contains
     
     !%Variable MaximumIter
     !%Type integer
-    !%default 200
+    !%Default 200
     !%Section SCF::Convergence
     !%Description
     !% Maximum number of SCF iterations. The code will stop even if convergence
@@ -101,7 +101,7 @@ contains
 
     !%Variable ConvAbsDens
     !%Type float
-    !%default 1e-5
+    !%Default 1e-5
     !%Section SCF::Convergence
     !%Description
     !% Absolute convergence of the density: 
@@ -112,7 +112,7 @@ contains
 
     !%Variable ConvRelDens
     !%Type float
-    !%default 0.0
+    !%Default 0.0
     !%Section SCF::Convergence
     !%Description
     !% Relative convergence of the density:
@@ -124,7 +124,7 @@ contains
 
     !%Variable ConvAbsEv
     !%Type float
-    !%default 0.0
+    !%Default 0.0
     !%Section SCF::Convergence
     !%Description
     !% Absolute convergence of the eigenvalues:
@@ -135,7 +135,7 @@ contains
 
     !%Variable ConvRelEv
     !%Type float
-    !%default 0.0
+    !%Default 0.0
     !%Section SCF::Convergence
     !%Description
     !% Relative convergence of the eigenvalues:

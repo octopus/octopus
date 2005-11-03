@@ -110,7 +110,7 @@ contains
 
     !%Variable FlushMessages
     !%Type logical
-    !%default no
+    !%Default no
     !%Section Generalities::IO
     !%Description
     !% In addition to writing to stdout and stderr, the code messages may also be

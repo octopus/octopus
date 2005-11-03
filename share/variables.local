@@ -1,15 +1,4 @@
 lanczos          = 2
-etrs             = 2 # TDEvolutionMethod
-aetrs            = 3
-exp_mid          = 4
-magnus           = 5
-length           = 1 # TDGauge
-velocity         = 2
-verlet           = 3 # MoveIons
-vel_verlet       = 4
-sin2             = 1 # AbsorbingBoundaries
-mask             = 2
-steep            = 1 # GOMethod
 unformatted      = 1 # RestartFileFormat
 formatted        = 2
 plain            = 1

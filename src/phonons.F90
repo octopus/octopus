@@ -88,6 +88,15 @@ contains
     ph%dim = sys%gr%geo%natoms*sys%gr%sb%dim
     allocate(ph%DM(ph%dim, ph%dim), ph%freq(ph%dim))
 
+    !%Variable Displacement
+    !%Type float
+    !%Default 0.01 a.u.
+    !%Section Linear Response::Vibrational Modes
+    !%Description
+    !% When calculating phonon properties by finite differences (<tt>CalculationMode = phonons</tt>)
+    !% <tt>Displacement</tt> controls how much the atoms are to be moved in order to calculate the 
+    !% dynamical matrix.
+    !%End
     call loct_parse_float(check_inp('Displacement'), CNST(0.01)/units_inp%length%factor, ph%disp)
     ph%disp = ph%disp*units_inp%length%factor
 

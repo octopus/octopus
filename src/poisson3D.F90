@@ -40,7 +40,7 @@ subroutine poisson3D_init(gr)
   !%Section Hamiltonian::Poisson
   !%Description
   !% The tolerance for the poisson solution, used by the cg and
-  !% multigrid solvers. Default is $10^{-5}$.
+  !% multigrid solvers. Default is <math>10^{-5}</math>.
   !%End
 
   select case(poisson_solver)

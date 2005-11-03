@@ -70,17 +70,22 @@ subroutine td_init(gr, td, st, outp)
   call PES_init(td%PESv, gr%m, gr%sb, st, dummy, outp%iter)
 #endif
 
-  ! should we move the ions during the simulation?
-  call loct_parse_int(check_inp('MoveIons'), 0, td%move_ions)
-  if( (td%move_ions .ne. STATIC_IONS) .and.   &
-    (td%move_ions .ne. NORMAL_VERLET) .and. &
-    (td%move_ions .ne. VELOCITY_VERLET) ) then
-    write(message(1),'(a,i4,a)') "Input: '", td%move_ions, "' is not a valid MoveIons"
-    message(2) = '  MoveIons = 0 <= do not move'
-    message(3) = '  MoveIons = 3 <= verlet'
-    message(4) = '  MoveIons = 4 <= velocity verlet'
-    call write_fatal(4)
-  end if
+  !%Variable MoveIons
+  !%Type logical
+  !%Default static_ions
+  !%Section Time Dependent
+  !%Description
+  !% What kind of simulation to perform.
+  !%Option static_ions 0
+  !% Do not move the ions.
+  !%Option verlet 3
+  !% Newtonian dynamics using Verlet.
+  !%Option vel_verlet 4
+  !% Newtonian dynamics using velocity Verlet.
+  !%End
+  call loct_parse_int(check_inp('MoveIons'), STATIC_IONS, td%move_ions)
+  if(.not.varinfo_valid_option('MoveIons', td%move_ions)) call input_error('MoveIons')
+
   if( td%move_ions .eq. NORMAL_VERLET) then
     write(message(1),'(a)') "Normal Verlet algorithm temporarily disabled."
     write(message(2),'(a)') "Using Velocity Verlet (MoveIons = 4) instead."

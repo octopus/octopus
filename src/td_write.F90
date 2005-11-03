@@ -91,28 +91,105 @@ contains
 
     call push_sub('td_write.td_write_handler')
 
+    !%Variable TDOutputMultipoles
+    !%Type logical
+    !%Default yes
+    !%Section Time Dependent::TD Output
+    !%Description
+    !% If true, outputs the multipole moments of the density to the file <tt>td.general/multipoles</tt>.
+    !% This is required to, e.g., calculate optical absorption spectra of finite systems.
+    !%End
     call loct_parse_logical(check_inp('TDOutputMultipoles'), .true., log)
     w%out_multip = 0; if(log) w%out_multip = 1
+
+    !%Variable TDOutputCoordinates
+    !%Type logical
+    !%Default yes
+    !%Section Time Dependent::TD Output
+    !%Description
+    !% If true (and if the atoms are allowed to move), outputs the coordinates, velocities,
+    !% and forces of the atoms to the the file <tt>td.general/coordinates</tt>.
+    !%End
     call loct_parse_logical(check_inp('TDOutputCoordinates'), .true., log)
     if(.not.(ions_move))  log = .false.
     w%out_coords = 0; if(log) w%out_coords = 1
+
     call loct_parse_logical(check_inp('TDOutputAngularMomentum'), .false., log)
     w%out_angular = 0; if(log) w%out_angular = 1
+
     call loct_parse_logical(check_inp('TDOutputSpin'), .false., log)
     w%out_spin = 0; if(log) w%out_spin = 1
+
+    !%Variable TDOutputGSProjection
+    !%Type logical
+    !%Default no
+    !%Section Time Dependent::TD Output
+    !%Description
+    !% If true, outputs the projection of the time-dependent Kohn-Sham Slater determinant
+    !% onto the ground-state to the file <tt>td.general/gs_projection</tt>. As the calculation
+    !% of the projection is fairly heavy, this is only done every <tt>OutputEvery</tt> 
+    !% iterations.
+    !%End
     call loct_parse_logical(check_inp('TDOutputGSProjection'), .false., log)
     w%out_gsp = 0; if(log) w%out_gsp = 1
+
+    !%Variable TDOutputAcceleration
+    !%Type logical
+    !%Default no
+    !%Section Time Dependent::TD Output
+    !%Description
+    !% When <tt>true</tt> outputs the acceleration, calculated from Ehrenfest theorem,
+    !% in the file <tt>td.general/acceleration</tt>. This file can then be
+    !% processed by the utility "hs-from-acc" in order to obtain the harmonic spectrum.
+    !%End
     call loct_parse_logical(check_inp('TDOutputAcceleration'), .false., log)
     w%out_acc = 0; if(log) w%out_acc = 1
+
+    !%Variable TDOutputLaser
+    !%Type logical
+    !%Default yes
+    !%Section Time Dependent::TD Output
+    !%Description
+    !% If <tt>true</tt>, and if there are lasers defined in <tt>TDLasers</tt>,
+    !% <tt>octopus</tt> outputs the laser field to the file <tt>td.general/laser</tt>.
+    !%End
     call loct_parse_logical(check_inp('TDOutputLaser'), there_are_lasers, log)
     w%out_laser = 0; if(log) w%out_laser = 1
+
+    !%Variable TDOutputElEnergy
+    !%Type logical
+    !%Default no
+    !%Section Time Dependent::TD Output
+    !%Description
+    !% If <tt>true</tt>, <tt>octopus</tt> outputs the different components of the electronic energy
+    !% to the file <tt>td.general/el_energy</tt>.
+    !%End
     call loct_parse_logical(check_inp('TDOutputElEnergy'), .false., log)
     w%out_energy = 0; if(log) w%out_energy = 1
+
+    !%Variable TDOutputOccAnalysis
+    !%Type logical
+    !%Default no
+    !%Section Time Dependent::TD Output
+    !%Description
+    !% If true, outputs the projections of the time-dependent Kohn-Sham
+    !% wave-functions onto the static (zero time) wave-functions to the
+    !% file <tt>td.general/projections.XXX</tt>.
+    !%End
     call loct_parse_logical(check_inp('TDOutputOccAnalysis'), .false., log)
     w%out_proj = 0; if(log) w%out_proj = 1
+
     call loct_parse_logical(check_inp('TDOutputLocalMagneticMoments'), .false., log)
     w%out_magnets = 0; if(log) w%out_magnets = 1
 
+    !%Variable TDDipoleLmax
+    !%Type integer
+    !%Default 1
+    !%Section Time Dependent::TD Output
+    !%Description
+    !% Maximum multi-pole of the density output to the file @code{td.general/multipoles} 
+    !% during a time-dependent simulation. Must be 0 &lt; <tt>TDDipoleLmax &lt; 5</tt>.
+    !%End
     call loct_parse_int(check_inp('TDDipoleLmax'), 1, w%lmax)
     if (w%lmax < 0 .or. w%lmax > 4) then
       write(message(1), '(a,i6,a)') "Input: '", w%lmax, "' is not a valid TDDipoleLmax"

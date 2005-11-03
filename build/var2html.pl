@@ -30,7 +30,7 @@ sub read_varinfo(){
   while($l = <IN>){
     if($thisvar && $thisfield && $l !~ /^\w/){
       if($l =~ /^\s*$/){
-	$vars{$thisvar}{$thisfield} .= "\n<br>\n";
+	$vars{$thisvar}{$thisfield} .= "<br><br>\n";
       }else{
 	$vars{$thisvar}{$thisfield} .= $l if($thisfield);
       }
@@ -58,6 +58,7 @@ sub read_varinfo(){
       $vars{$thisvar}{"default"} = $arg;
     }elsif($key eq "description"){
       $thisfield = "description";
+      $vars{$thisvar}{$thisfield} = "<br>";
     }elsif($key eq "option"){
       $arg =~ /^(\S*)\s*(.*?)\s*$/;
       $thisfield = "option_$2_$1";
@@ -307,7 +308,8 @@ are given in parenthesis.
     # print the information about the variable
     print OUT "\@item \@strong{", to_texi($vars{$key}{variable}), "}@*\n",
       "\@vindex \@code{", to_texi($vars{$key}{variable}), "}@*\n",
-      "\@emph{Section}: ", to_texi($vars{$key}{section}), "@*\n";
+      "\@emph{Section}: ", to_texi($vars{$key}{section}), "@*\n",
+      "\@emph{Type}: ", to_texi($vars{$key}{type}), "@*\n";
     print OUT "\@emph{Default}: ", to_texi($vars{$key}{default}), "@*\n" if($vars{$key}{default});
     print OUT to_texi($vars{$key}{description}), "\n\n";
 
@@ -338,27 +340,41 @@ are given in parenthesis.
 sub to_texi(){
   my ($t) = @_;
 
-  $t =~ s#\{#\@\{#g;
-  $t =~ s#\}#\@\}#g;
+  #$t =~ s#\{#\@\{#g;
+  #$t =~ s#\}#\@\}#g;
 
-  $t =~ s#<br/*>#@*#g;
-  $t =~ s#<hr/*>#------------------------------------------@*#g;
-  $t =~ s#&nbsp;#@ #g;
+  $t =~ s#<br/*><br/*>##gi;
+  $t =~ s#<br/*>#@*#gi;
+  $t =~ s#<hr/*>#------------------------------------------@*#gi;
+  $t =~ s#&nbsp;#@ #gi;
 
-  $t =~ s#<i>#\@emph\{#g;
-  $t =~ s#<b>#\@strong\{#g;
-  $t =~ s#</[bi]>#\}#g;
+  $t =~ s#<i>#\@emph\{#gi;
+  $t =~ s#<b>#\@strong\{#gi;
+  $t =~ s#</[bi]>#\}#gi;
 
-  $t =~ s#<math>#\@math\{#g;
-  $t =~ s#</math>#\}#g;
+  while($t =~ m#<MATH>(.*?)</MATH>#s){
+    $tex      = $1;
+    $tex      =~ s#\n# #gs;
 
-  $t =~ s#<tt>#\@t\{#g;
-  $t =~ s#</tt>#\}#g;
+    $verbatim = $1;
+    $verbatim =~ s#\{#\@\{#g;
+    $verbatim =~ s#\}#\@\}#g;
+    $verbatim =~ s#\n# #gs;
 
-  $t =~ s#<ul>#\@itemize\n#g;
-  $t =~ s#</ul>#\@end itemize\n#g;
-  $t =~ s#<li>#\@item\n#g;
-  $t =~ s#</li>##g;
+    $t =~ s#<MATH>(.*?)</MATH>#\@ifnottex\n\@verbatim\n$verbatim\n\@end verbatim\n\@end ifnottex\n\@tex\n\$\$\n$tex\n\$\$\n\@end tex\n#s;
+  }
+  $t =~ s#<math>(.*?)</math>#\@math\{$1\}#gs;
+
+  $t =~ s#<tt>#\@t\{#gi;
+  $t =~ s#</tt>#\}#gi;
+
+  $t =~ s#<ul>#\@itemize\n#gi;
+  $t =~ s#</ul>#\@end itemize\n#gi;
+  $t =~ s#<li>#\@item\n#gi;
+  $t =~ s#</li>##gi;
+
+  $t =~ s#&gt;#>#gi;
+  $t =~ s#&lt;#<#gi;
 
   return $t;
 }

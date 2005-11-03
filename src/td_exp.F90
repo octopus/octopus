@@ -32,6 +32,7 @@ module td_exp
   use cube_function
 #endif
   use td_exp_split
+  use varinfo
 
   implicit none
 
@@ -84,7 +85,7 @@ contains
     !% of the variable <tt>TDEvolutionMethod</tt>.
     !% The equation that describes the split operator scheme is well known:
     !%
-    !% <math>\exp_{\rm SO} (-i \delta t H) = \exp (-i \delta t/2 V) \exp (-i \delta t T) \exp (-i \delta t/2 V)</math>.
+    !% <MATH>\exp_{\rm SO} (-i \delta t H) = \exp (-i \delta t/2 V) \exp (-i \delta t T) \exp (-i \delta t/2 V).</MATH>
     !%
     !% Note that this is a "kinetic referenced SO", since the kinetic term is sandwiched in the
     !% middle. This is so because in <tt>octopus</tt>, the states spend most of its time in real-space; doing
@@ -126,7 +127,7 @@ contains
     !% This method amounts to a straightforward application of the definition of
     !% the exponential of an operator, in terms of it Taylor expansion.
     !%
-    !% <math>\exp_{\rm STD} (-i\delta t H) = \sum_{i=0}^{k} {(-i\delta t)^i\over{i!}} H^i</math>.
+    !% <MATH>\exp_{\rm STD} (-i\delta t H) = \sum_{i=0}^{k} {(-i\delta t)^i\over{i!}} H^i.</MATH>
     !%
     !% The order <i>k</i> is determined by variable <i>TDExpOder</i>.
     !% Some numerical considerations (by Jeff Giansiracusa and George F. Bertsch;
@@ -140,7 +141,7 @@ contains
     !% There exists a closed analytical form for the coefficients of the exponential in terms
     !% of Chebyshev polynomials:
     !%
-    !% <math>\exp_{\rm CHEB} \left( -i\delta t H \right) = \sum_{k=0}^{\infty} (2-\delta_{k0})(-i)^{k}J_k(\delta t) T_k(H)</math>,
+    !% <MATH>\exp_{\rm CHEB} \left( -i\delta t H \right) = \sum_{k=0}^{\infty} (2-\delta_{k0})(-i)^{k}J_k(\delta t) T_k(H),</MATH>
     !%
     !% where <math>J_k</math> are the Bessel functions of the first kind, and H has te be previously
     !% scaled to <math>[-1,1]</math>.
@@ -149,6 +150,8 @@ contains
     !% C. W. Clenshaw, MTAC <b>9</b>, 118 (1955).
     !%End
     call loct_parse_int(check_inp('TDExponentialMethod'), FOURTH_ORDER, te%exp_method)
+    if(.not.varinfo_valid_option('TDExponentialMethod', te%exp_method)) call input_error('TDExponentialMethod')
+
     select case(te%exp_method)
     case(FOURTH_ORDER)
       message(1) = 'Info: Exponential method: 4th order expansion.'
@@ -157,12 +160,19 @@ contains
       message(1) = 'Info: Exponential method: Chebyshev.'
 
     case(LANCZOS_EXPANSION)
+      !%Variable TDLanczosTol
+      !%Type float
+      !%Default 1e-5
+      !%Section Time Dependent
+      !%Description
+      !% An internal tolerance variable for the Lanczos method. The smaller, the more
+      !% precisely the exponential is calculated, and also the bigger the dimension
+      !% of the Krylov subspace needed to perform the algorithm. One should carefully
+      !% make sure that this value is not too big, or else the evolution will be
+      !% wrong.
+      !%End
       call loct_parse_float(check_inp('TDLanczosTol'), CNST(1e-5), te%lanczos_tol)
-      if (te%lanczos_tol <= M_ZERO) then
-        write(message(1),'(a,f14.6,a)') "Input: '", te%lanczos_tol, "' is not a valid TDLanczosTol"
-        message(2) = '(0 < TDLanczosTol)'
-        call write_fatal(2)
-      end if
+      if (te%lanczos_tol <= M_ZERO) call input_error('TDLanczosTol')
 
       message(1) = 'Info: Exponential method: Lanczos subspace approximation.'
 
@@ -173,20 +183,22 @@ contains
       message(1) = 'Info: Exponential method: Suzuki-Trotter.'
 #endif
 
-    case default
-      write(message(1), '(a,i6,a)') "Input: '", te%exp_method, "' is not a valid TDEvolutionMethod"
-      message(2) = '(1 <= TDExponentialMethod <= 4)'
-      call write_fatal(2)
     end select
     call write_info(1)
 
     if(te%exp_method==FOURTH_ORDER.or.te%exp_method==CHEBYSHEV.or.te%exp_method==LANCZOS_EXPANSION) then
+      !%Variable TDExpOrder
+      !%Type integer
+      !%Default 4
+      !%Section Time Dependent
+      !%Description
+      !% For <tt>TDExponentialMethod</tt> equal <tt>standard</tt> or <tt>chebyshev</tt>, the order to which
+      !% the exponential is expanded. For the Lanczos approximation, it is the maximum
+      !% Lanczos-subspace dimension.
+      !%End
       call loct_parse_int(check_inp('TDExpOrder'), 4, te%exp_order)
-      if (te%exp_order < 2) then
-        write(message(1), '(a,i6,a)') "Input: '", te%exp_order, "' is not a valid TDExpOrder"
-        message(2) = '(2 <= TDExpOrder)'
-        call write_fatal(2)
-      end if
+      if (te%exp_order < 2) call input_error('TDExpOrder')
+
 #if defined(HAVE_FFT)
     else if(te%exp_method==SPLIT_OPERATOR.or.te%exp_method==SUZUKI_TROTTER) then
       call zcf_new(gr%m%l, te%cf)

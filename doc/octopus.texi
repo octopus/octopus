@@ -107,6 +107,40 @@ any later version published by the Free Software Foundation.
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 @detailmenu
  --- The Detailed Node Listing ---
 
@@ -129,9 +163,10 @@ Description
 Input Variables
 
 * Generalities::                
+* Geometry Optimization::       
 * Hamiltonian::                 
+* Output::                      
 * SCF::                         
-* Spectrum Calculations::       
 * States::                      
 * System::                      
 * Time Dependent::              
@@ -149,6 +184,8 @@ Hamiltonian
 * Poisson::                     
 * XC::                          
 * Casida::                      
+* Static Polarization::         
+* Vibrational Modes::           
 * General::                     
 * Curvilinear::                 
 * Derivatives::                 
@@ -174,6 +211,12 @@ System
 * Coordinates::                 
 * Species::                     
 * Velocities::                  
+
+Time Dependent
+
+* Absorbing Boundaries::        
+* Spectrum Calculations::       
+* TD Output::                   
 
 External utilities
 

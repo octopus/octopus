@@ -37,6 +37,7 @@ module hamiltonian
   use external_pot
   use output
   use mpi_mod
+  use varinfo
 
   implicit none
 
@@ -221,24 +222,58 @@ contains
       h%m_ratio = M_ZERO; h%g_ratio = M_ZERO; h%e_ratio = M_ZERO
     end if
 
-    ! gauge
+    !%Variable TDGauge
+    !%Type integer
+    !%Default length
+    !%Section Time Dependent
+    !%Description
+    !% In which gauge to treat the laser field.
+    !%Option length 1
+    !% Length gauge.
+    !%Option velocity 2
+    !% Velocity gauge.
+    !%End
     call loct_parse_int(check_inp('TDGauge'), LENGTH, h%gauge)
-    if (h%gauge < 1 .or. h%gauge > 2) then
-      write(message(1), '(a,i6,a)') "Input: '", h%gauge, "' is not a valid TDGauge"
-      message(2) = 'Accepted values are:'
-      message(3) = '   1 = length gauge'
-      message(4) = '   2 = velocity gauge'
-      call write_fatal(4)
-    end if
+    if(.not.varinfo_valid_option('TDGauge', h%gauge)) call input_error('TDGauge')
 
-    ! absorbing boundaries
+    !%Variable AbsorbingBoundaries
+    !%Type integer
+    !%Default no_absorbing
+    !%Section Time Dependent::Absorbing Boundaries
+    !%Description
+    !% To improve the quality of the spectra by avoiding the formation of 
+    !% standing density waves, one can make the boundaries of the simulation 
+    !% box absorbing.
+    !%Option no_absorbing 0
+    !% No absorbing boundaries.
+    !%Option sin2 1
+    !% A <math>\sin^2</math> imaginary potential is added at the boundaries.
+    !%Option mask 2
+    !% A mask is applied to the wave-functions at the boundaries.
+    !%End
     call loct_parse_int(check_inp('AbsorbingBoundaries'), NO_ABSORBING, h%ab)
+    if(.not.varinfo_valid_option('AbsorbingBoundaries', h%ab)) call input_error('AbsorbingBoundaries')
+
     nullify(h%ab_pot)
 
     absorbing_boundaries: if(h%ab.ne.NO_ABSORBING) then
+      !%Variable ABWidth
+      !%Type float
+      !%Default 0.4 a.u.
+      !%Section Time Dependent::Absorbing Boundaries
+      !%Description
+      !% Width of the region used to apply the absorbing boundaries.
+      !%End
       call loct_parse_float(check_inp('ABWidth'), CNST(0.4)/units_inp%length%factor, h%ab_width)
       h%ab_width  = h%ab_width * units_inp%length%factor
       if(h%ab == 1) then
+        !%Variable ABHeight
+        !%Type float
+        !%Default -0.2 a.u.
+        !%Section Time Dependent::Absorbing Boundaries
+        !%Description 
+        !% When <tt>AbsorbingBoundaries == sin2</tt>, is the height of the imaginary potential.
+        !%End
         call loct_parse_float(check_inp('ABHeight'), -CNST(0.2)/units_inp%energy%factor, h%ab_height)
         h%ab_height = h%ab_height * units_inp%energy%factor
       else

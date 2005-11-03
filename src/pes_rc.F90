@@ -31,6 +31,17 @@ subroutine PES_rc_init(v, m, st, save_iter)
   message(1) = 'Info: Calculating PES using rc technique'
   call write_info(1)
 
+  !%%Variable PES_rc_points
+  !%%Type block
+  !%%Section Time Dependent::PES
+  !%%Description
+  !%% List of points where to calculate the photo-electron spectrum a la Suraud.
+  !%% The exact syntax is:
+  !%%
+  !%% <tt>%TDPES_rc_points
+  !%% <br>&nbsp;&nbsp;x1 | y1 | z1
+  !%% <br>%
+  !%%End
   if (loct_parse_block(check_inp('PES_rc_points'), blk) < 0) then
     message(1) = "Input: PES_rc_points block not specified"
     message(2) = '%PES_rc_points'

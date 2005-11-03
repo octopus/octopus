@@ -27,6 +27,7 @@ program harmonic_spectrum
   use units
   use lib_oct_parser
   use spectrum
+  use varinfo
 
   implicit none
 
@@ -54,7 +55,7 @@ program harmonic_spectrum
   !%Variable HarmonicSpectrumPolarization
   !%Type string
   !%Default "z"
-  !%Section Spectrum Calculations
+  !%Section Time Dependent::Spectrum Calculations
   !%Description
   !% The oct-harmonic-spectrum utility program needs to know the direction along
   !% which the emission raidiation is considered to be polarized. It may be
@@ -80,7 +81,7 @@ program harmonic_spectrum
   !%Variable HarmonicSpectrumMode
   !%Type integer
   !%Default hs_from_dipole
-  !%Section Spectrum Calculations
+  !%Section Time Dependent::Spectrum Calculations
   !%Description
   !% The oct-harmonic-spectrum may calculate the spectrum in two alternative ways,
   !% mathematically equivalent but numerically diferent: by reading the dipole
@@ -93,6 +94,7 @@ program harmonic_spectrum
   !% Calculate the harmonic spectrum by reading the acceleration file.
   !%End
   call loct_parse_int(check_inp('HarmonicSpectrumMode'), HS_FROM_MULT, mode)
+  if(.not.varinfo_valid_option('HarmonicSpectrumMode', mode)) call input_error('HarmonicSpectrumMode')
 
   select case(mode)
   case(HS_FROM_MULT)

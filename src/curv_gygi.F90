@@ -53,7 +53,7 @@ contains
     !% The grid spacing is reduced locally around each atom, and the reduction is
     !% given by 1/(1+A), where A is specified by this variable, CurvGygiA. So, if
     !% A=1 (the default), the grid spacing is reduced to one half = 1/(1+1).
-    !% [This is the A_{\alpha} variable in Eq. 2 of F. Gygi and G. Galli, Phys.
+    !% [This is the <math>A_{\alpha}</math> variable in Eq. 2 of F. Gygi and G. Galli, Phys.
     !% Rev. B 52, R2229 (1995)]
     !% It must be larger than zero.
     !%End
@@ -64,7 +64,7 @@ contains
     !%Description
     !% This number determines the region over which the grid is enhanced (range of
     !% enhancement of the resolution). That is, the grid is enhanced on a sphere
-    !% around each atom, whose radius is given by this variable. [This is the a_{\alpha}
+    !% around each atom, whose radius is given by this variable. [This is the <math>a_{\alpha}</math>
     !% variable in Eq. 2 of F. Gygi and G. Galli, Phys. Rev. B 52, R2229 (1995)].
     !% The default is two atomic units.
     !% It must be larger than zero.
@@ -75,7 +75,7 @@ contains
     !%Section Mesh::Curvilinear::Gygi
     !%Description
     !% This number determines the distance over which Euclidean coordinates are
-    !% recovered. [This is the b_{\alpha} variable in Eq. 2 of F. Gygi and G. Galli,
+    !% recovered. [This is the <math>b_{\alpha}</math> variable in Eq. 2 of F. Gygi and G. Galli,
     !% Phys. Rev. B 52, R2229 (1995)]. The default is four atomic units.
     !% It must be larger than zero.
     !%End

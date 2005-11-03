@@ -36,7 +36,7 @@ module v_ks
   use xc
   use xc_OEP
   use hamiltonian
-
+  use varinfo
   implicit none
 
   private
@@ -108,7 +108,7 @@ contains
 
         !%Variable SICorrection
         !%Type integer
-        !%default sic_none
+        !%Default sic_none
         !%Section Hamiltonian::XC
         !%Description
         !% This variable controls which Self Interaction Correction to use. Note that
@@ -122,8 +122,7 @@ contains
         !% Amaldi correction term (NOT WORKING)
         !%End
         call loct_parse_int(check_inp('SICorrection'), sic_none, ks%sic_type)
-        if((ks%sic_type.ne.sic_none).and.(ks%sic_type.ne.sic_pz).and.(ks%sic_type.ne.sic_amaldi)) &
-          call input_error('SICorrection')
+        if(.not.varinfo_valid_option('SICorrection', ks%sic_type)) call input_error('SICorrection')
 
         ! Perdew Zunger corrections
         if(ks%sic_type == sic_pz) ks%xc_family = ior(ks%xc_family, XC_FAMILY_OEP)

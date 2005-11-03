@@ -29,6 +29,7 @@ module spectrum
   use io
   use units
   use lib_adv_alg
+  use varinfo
 
   implicit none
 
@@ -95,7 +96,7 @@ contains
     !%Variable SpecDampMode
     !%Type integer
     !%Default polynomial
-    !%Section Spectrum Calculations
+    !%Section Time Dependent::Spectrum Calculations
     !%Description
     !% Decides which damping/filtering is to be applied in order to calculate
     !% spectra by calculating a Fourier transform
@@ -108,13 +109,57 @@ contains
     !%Option gaussian 3
     !% Gaussian damping
     !%End
-
-    call loct_parse_float(check_inp('SpecStartTime'),  M_ZERO,      s%start_time)
-    call loct_parse_float(check_inp('SpecEndTime'),   -M_ONE,       s%end_time)
-    call loct_parse_float(check_inp('SpecEnergyStep'), CNST(0.01),  s%energy_step)
-    call loct_parse_float(check_inp('SpecMaxEnergy'),  CNST(20.0),  s%max_energy)
     call loct_parse_int  (check_inp('SpecDampMode'), SPECTRUM_DAMP_POLYNOMIAL, s%damp)
+    if(.not.varinfo_valid_option('SpecDampMode', s%damp)) call input_error('SpecDampMode')
+
+    !%Variable SpecStartTime
+    !%Type integer
+    !%Default polynomial
+    !%Section Time Dependent::Spectrum Calculations
+    !%Description
+    !% Processing is done for the given function in a time-window that starts at the
+    !% value of this variable.
+    !%End
+    call loct_parse_float(check_inp('SpecStartTime'),  M_ZERO,      s%start_time)
+
+    !%Variable SpecEndTime
+    !%Type integer
+    !%Default polynomial
+    !%Section Time Dependent::Spectrum Calculations
+    !%Description
+    !% Processing is done for the given function in a time-window that ends at the
+    !% value of this variable.
+    !%End
+    call loct_parse_float(check_inp('SpecEndTime'),   -M_ONE,       s%end_time)
+
+    !%Variable SpecEnergyStep
+    !%Type integer
+    !%Default polynomial
+    !%Section Time Dependent::Spectrum Calculations
+    !%Description
+    !% Sampling rate for the spectrum.
+    !%End
+    call loct_parse_float(check_inp('SpecEnergyStep'), CNST(0.01),  s%energy_step)
+
+    !%Variable SpecMaxEnergy
+    !%Type integer
+    !%Default polynomial
+    !%Section Time Dependent::Spectrum Calculations
+    !%Description
+    !% The Fourier transform is calculated for energies smaller than this value.
+    !%End
+    call loct_parse_float(check_inp('SpecMaxEnergy'),  CNST(20.0),  s%max_energy)
+
+    !%Variable SpecDampFactor
+    !%Type integer
+    !%Default polynomial
+    !%Section Time Dependent::Spectrum Calculations
+    !%Description
+    !% If <tt>SpecDampMode</tt> is set to "exp", the damping parameter of the exponential
+    !% is fixed through this variable.
+    !%End
     call loct_parse_float(check_inp('SpecDampFactor'),  CNST(0.15), s%damp_factor)
+
     s%start_time      = s%start_time      * units_inp%time%factor
     s%end_time        = s%end_time        * units_inp%time%factor
     s%energy_step     = s%energy_step     * units_inp%energy%factor
@@ -134,6 +179,15 @@ contains
 
     call push_sub('spectrum.kick_init')
 
+    !%Variable TDDeltaStrength
+    !%Type float
+    !%Default 0.0
+    !%Section Time Dependent
+    !%Description
+    !% When no laser is applied, a delta (in time) electric field with
+    !% strength <tt>TDDeltaStrength</tt> is applied. This is used to calculate
+    !% the linear optical spectra.
+    !%End
     call loct_parse_float(check_inp('TDDeltaStrength'), M_ZERO, k%delta_strength)
     ! units are 1/length
     k%delta_strength = k%delta_strength / units_inp%length%factor
@@ -182,6 +236,17 @@ contains
     call loct_parse_int(check_inp('TDPolarizationEquivAxis'), 0, k%pol_equiv_axis)
     call loct_parse_int(check_inp('TDPolarizationDirection'), 1, k%pol_dir)
 
+    !%Variable TDPolarization
+    !%Type block
+    !%Section Time Dependent
+    !%Description
+    !% The (real) polarization of the delta electric field. The format of the
+    !% block is:
+    !%
+    !% <tt>%TDPolarization
+    !% <br>&nbsp;&nbsp;polx | poly | polz
+    !% <br>%</tt>
+    !%End
     k%pol(:, :) = M_ZERO
     if(loct_parse_block(check_inp('TDPolarization'), blk)==0) then
       n = loct_parse_block_n(blk)

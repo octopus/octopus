@@ -34,6 +34,7 @@ module geom_opt
   use system
   use scf
   use restart
+  use varinfo
 
   implicit none
 
@@ -137,19 +138,46 @@ contains
       geo => sys%gr%geo
       st  => sys%st
 
+      !%Variable GOMethod
+      !%Type integer
+      !%Default steep
+      !%Section Geometry Optimization
+      !%Description
+      !% Method by which the minimization is performed.
+      !%Option steep 1
+      !% simple steepest descent.
+      !%End
       call loct_parse_int(check_inp('GOMethod'), 1, g_opt%method)
-      if(g_opt%method < 1 .or. g_opt%method >1) then
-        message(1) = "'GOMethod' can only take the values:"
-        message(2) = "   1 = Steepest descent"
-        call write_fatal(2)
-      end if
+      if(.not.varinfo_valid_option('GOMethod', g_opt%method)) call input_error('GOMethod')
 
+      !%Variable GOTolerance
+      !%Type float
+      !%Default 0.0001 a.u.
+      !%Section Geometry Optimization
+      !%Description
+      !% Convergence criterium to stop the minimization. In units of force; minimization
+      !% is stopped when all forces on ions are smaller.
+      !%End
       call loct_parse_float(check_inp('GOTolerance'), CNST(0.0001)/units_inp%force%factor, g_opt%tol)
       g_opt%tol = g_opt%tol*units_inp%force%factor
+      
+      !%Variable GOStep
+      !%Type float
+      !%Default 0.5
+      !%Section Geometry Optimization
+      !%Description
+      !% Initial step for the geometry optimizer.
+      !%End
+      call loct_parse_float(check_inp('GOStep'), M_HALF, g_opt%step) ! WARNING: in some weird units
 
-      ! WARNING: in some weird units
-      call loct_parse_float(check_inp('GOStep'), M_HALF, g_opt%step)
-
+      !%Variable GOMaxIter
+      !%Type integer
+      !%Default 200
+      !%Section Geometry Optimization
+      !%Description
+      !% Even if previous convergence criterium is not satisfied, minimization will stop
+      !% after this number of iterations.
+      !%End
       call loct_parse_int(check_inp('GOMaxIter'), 200, g_opt%max_iter)
       if(g_opt%max_iter <= 0) then
         message(1) = "GoMaxIter has to be larger than 0"

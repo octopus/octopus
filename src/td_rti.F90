@@ -36,6 +36,7 @@ module td_rti
   use td_exp
   use td_exp_split
   use grid
+  use varinfo
 
   implicit none
 
@@ -76,7 +77,123 @@ contains
     type(states_type), intent(in)    :: st
     type(td_rti_type), intent(inout) :: tr
 
+    !%Variable TDEvolutionMethod
+    !%Type integer
+    !%Default etrs
+    !%Section Time Dependent
+    !%Description
+    !% This variable determines which algorithm will be used to approximate
+    !% the evolution operator <math>U(t+\delta t, t)</math>. That is, known
+    !% <math>\psi(\tau)</math> and <math>H(\tau)</math> for <math>tau \le t</math>,
+    !% calculate <math>t+\delta t</math>. Note that in general the Hamiltonian
+    !% is not known at times in the interior of the interval <math>[t,t+\delta t]</math>.
+    !% This is due to the self-consistent nature of the time-dependent Kohn-Sham problem:
+    !% the Hamiltonian at a given time <math>\tau</math> is built from the
+    !% "solution" wavefunctions at that time.
+    !%
+    !% Some methods, however, do require the knowledge of the Hamiltonian at some
+    !% point of the interval <math>[t,t+\delta t]</math>. This problem is solved by making
+    !% use of extrapolation: given a number <math>l</math> of time steps previous to time
+    !% <math>t</math>, this information is used to build the Hamiltonian at arbitrary times
+    !% within <math>[t,t+\delta t]</math>. To be fully precise, one should then proceed
+    !% <i>self-consistently</i>: the obtained Hamiltonian at time <math>t+\delta t</math>
+    !% may then be used to interpolate the Hamiltonian, and repeat the evolution
+    !% algorithm with this new information. Whenever iterating the procedure does
+    !% not change the solution wave-functions, the cycle is stopped. In practice,
+    !% in <tt>octopus</tt> we perform a second-order extrapolation without
+    !% self-consistente check, except for the first two iterations, where obviously
+    !% the extrapolation is not reliable.
+    !%
+    !% The proliferation of methods is certainly excessive; The reason for it is that 
+    !% the propagation algorithm is currently a topic of active development. We
+    !% hope that in the future the optimal schemes are clearly identified. In the
+    !% mean time, if you don't feel like testing, use the default choices and
+    !% make sure the time step is small enough.
+    !%Option split 0
+    !% Split Operator (SO).
+    !% This is one of the most traditional methods. It splits the full Hamiltonian
+    !% into a kinetic and a potential part, performing the first in Fourier-space,
+    !% and the latter in real space. The necessary transformations are performed
+    !% with the FFT algorithm.
+    !%
+    !% <MATH>
+    !%    U_{\rm SO}(t+\delta t, t) = \exp \lbrace - {i \over 2}\delta t T \rbrace
+    !%       \exp \lbrace -i\delta t V^* \rbrace
+    !%       \exp \lbrace - {i \over 2}\delta t T \rbrace
+    !% </MATH>
+    !%
+    !% Since those three exponentials may be calculated exactly, one does not
+    !% need to use any of the methods specified by variable <tt>TDExponentialMethod</tt>
+    !% to perform them. 
+    !%
+    !% The key point is the specification of <math>V^*</math>. Let <math>V(t)</math> be divided into
+    !% <math>V_{\rm int}(t)</math>, the "internal" potential which depends self-consistently
+    !% on the density, and <math>V_{\rm ext}(t)</math>, the external potential that we know
+    !% at all times since it is imposed to the system by us (e.g. a laser field):
+    !% <math>V(t)=V_{\rm int}(t)+V_{\rm ext}(t)</math>. Then we define to be <math>V^*</math> to
+    !% be the sum of <math>V_{\rm ext}(t+\delta t/2)</math> and the internal potential built
+    !% from the wavefunctions <i>after</i> applying the right-most kinetic term
+    !% of the equation, <math>\exp \lbrace -i\delta t/2 T \rbrace</math>.
+    !%
+    !% It may the be demonstrated that the order of the error of the algorithm is the
+    !% same that the one that we would have by making use of the Exponential Midpoint Rule
+    !% (EM, described below), the SO algorithm to calculate the action of the 
+    !% exponential of the Hamiltonian, and a full self-consistent procedure.
+    !%Option suzuki-trotter 1
+    !% This is the generalization of the Suzuki-Trotter algorithm, described
+    !% as one of the choices of the <tt>TDExponentialMethod</tt>,
+    !% to time-dependent problem. Consult the paper by O. Sugino and M. Miyamoto,
+    !% Phys. Rev. B <b>59</b>, 2579 (1999), for details.
+    !%
+    !% It requires of Hamiltonian extrapolations.
+    !%Option etrs 2
+    !% The idea is to make use of the time-reversal symmetry from the beginning:
+    !%
+    !% <MATH>
+    !%   \exp \left(-i\delta t/2 H_{n}\right)\psi_n = exp \left(i\delta t/2 H_{n+1}\right)\psi_{n+1},
+    !% </MATH>
+    !%
+    !% and then invert to obtain:
+    !%
+    !% <MATH>
+    !%   \psi_{n+1} = \exp \left(-i\delta t/2 H_{n+1}\right) exp \left(-i\delta t/2 H_{n}\right)\psi_{n}.
+    !% </MATH>
+    !%
+    !% But we need to know <math>H_{n+1}</math>, which can only be known exactly through the solution
+    !% <math>\psi_{n+1}</math>. What we do is to estimate it by performing a single exponential:
+    !% <math>\psi^{*}_{n+1}=\exp \left( -i\delta t H_{n} \right) \psi_n</math>, and then
+    !% <math>H_{n+1} = H[\psi^{*}_{n+1}]</math>. Thus no extrapolation is performed in this case.
+    !%Option aetrs 3
+    !% Approximated Enforced Time-Reversal Symmetry (AETRS).
+    !% A modification of previous method to make it faster.
+    !% It is based on extrapolation of the time-dependent potentials. It is faster
+    !% by about 40%.
+    !%
+    !% The only difference is the procedure to estimate @math{H_{n+1}}: in this case
+    !% it is extrapolated trough a second-order polynomial by making use of the
+    !% Hamiltonian at time @math{t-2\delta t}, @math{t-\delta t} and @math{t}.
+    !%Option exp_mid 4
+    !% Exponential Midpoint Rule (EM).
+    !% This is maybe the simplest method, but is is very well grounded theretically:
+    !% it is unitary (if the exponential is performed correctly) and preserves
+    !% time symmetry (if the self-consistency problem is dealt with correctly).
+    !% It is defined as:
+    !%
+    !% <MATH>
+    !%   U_{\rm EM}(t+\delta t, t) = \exp \left( -i\delta t H_{t+\delta t/2}\right)\,.
+    !% </MATH>
+    !%Option magnus 5
+    !% Magnus Expansion (M4).
+    !% This is the most sophisticated approach. It is a fourth order scheme (feature
+    !% that shares with the ST scheme; the other schemes are in principle second order).
+    !% It is tailored for making use of very large time steps, or equivalently,
+    !% dealing with problem with very high-frequency time dependence.
+    !% It is still in a experimental state; we are not yet sure of when it is
+    !% advantageous.
+    !%End
     call loct_parse_int(check_inp('TDEvolutionMethod'), REVERSAL, tr%method)
+    if(.not.varinfo_valid_option('TDEvolutionMethod', tr%method)) call input_error('TDEvolutionMethod')
+
     select case(tr%method)
     case(SPLIT_OPERATOR)
       call zcf_new(gr%m%l, tr%cf)
@@ -91,10 +208,6 @@ contains
     case(EXPONENTIAL_MIDPOINT); message(1) = 'Info: Evolution method:  Exponential Midpoint Rule.'
     case(MAGNUS);               message(1) = 'Info: Evolution method:  Magnus expansion.'
       allocate(tr%vmagnus(NP, st%d%nspin, 2))
-    case default
-      write(message(1), '(a,i6,a)') "Input: '", tr%method, "' is not a valid TDEvolutionMethod"
-      message(2) = '(0 <= TDEvolutionMethod <= 5)'
-      call write_fatal(2)
     end select
     call write_info(1)
 

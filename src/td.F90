@@ -45,6 +45,7 @@ module timedep
   use grid
   use spectrum
   use mpi_mod
+  use varinfo
 
   implicit none
 

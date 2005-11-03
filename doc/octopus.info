@@ -60,6 +60,41 @@ and Angel Rubio
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
  --- The Detailed Node Listing ---
 
 Installation
@@ -81,9 +116,10 @@ Description
 Input Variables
 
 * Generalities::
+* Geometry Optimization::
 * Hamiltonian::
+* Output::
 * SCF::
-* Spectrum Calculations::
 * States::
 * System::
 * Time Dependent::
@@ -101,6 +137,8 @@ Hamiltonian
 * Poisson::
 * XC::
 * Casida::
+* Static Polarization::
+* Vibrational Modes::
 * General::
 * Curvilinear::
 * Derivatives::
@@ -126,6 +164,12 @@ System
 * Coordinates::
 * Species::
 * Velocities::
+
+Time Dependent
+
+* Absorbing Boundaries::
+* Spectrum Calculations::
+* TD Output::
 
 External utilities
 
@@ -882,22 +926,24 @@ applicable) are given in parenthesis.
 * Menu:
 
 * Generalities::
+* Geometry Optimization::
 * Hamiltonian::
+* Output::
 * SCF::
-* Spectrum Calculations::
 * States::
 * System::
 * Time Dependent::
 * Unoccupied States::
 
 
-File: octopus.info,  Node: Generalities,  Next: Hamiltonian,  Prev: Input Variables,  Up: Input Variables
+File: octopus.info,  Node: Generalities,  Next: Geometry Optimization,  Prev: Input Variables,  Up: Input Variables
 
 6.1 Generalities
 ================
 
    * *CalculationMode*
      _Section_: Generalities
+     _Type_: integer
      _Default_: gs
      Decides what kind of calculation is to be performed
 
@@ -929,6 +975,7 @@ File: octopus.info,  Node: Generalities,  Next: Hamiltonian,  Prev: Input Variab
 
    * *Dimensions*
      _Section_: Generalities
+     _Type_: integer
      _Default_: 3
      octopus can run in 1, 2 or 3 dimensions, depending on the value of
      this  variable. Note that not all input variables may be available
@@ -957,6 +1004,7 @@ File: octopus.info,  Node: Debug,  Next: IO,  Prev: Generalities,  Up: Generalit
 
    * *DebugLevel*
      _Section_: Generalities::Debug
+     _Type_: integer
      _Default_: 1
      This variable decides wether or not to enter debug-mode. In
      debugging mode,  the program prints to standard error when it
@@ -972,6 +1020,7 @@ File: octopus.info,  Node: Debug,  Next: IO,  Prev: Generalities,  Up: Generalit
 
    * *ProfilingMode*
      _Section_: Generalities::Debug
+     _Type_: logical
      _Default_: no
      Use this variable to run octopus in profiling mode. In this mode
      octopus records time spent in certain areas of the code and  the
@@ -990,6 +1039,7 @@ File: octopus.info,  Node: IO,  Next: Parallel,  Prev: Debug,  Up: Generalities
 
    * *FlushMessages*
      _Section_: Generalities::IO
+     _Type_: logical
      _Default_: no
      In addition to writing to stdout and stderr, the code messages may
      also be  flushed to "messages.stdout" and "messages.stderr", if
@@ -997,6 +1047,7 @@ File: octopus.info,  Node: IO,  Next: Parallel,  Prev: Debug,  Up: Generalities
 
    * *WorkDir*
      _Section_: Generalities::IO
+     _Type_: string
      _Default_: "."
      By default, all files are written and read from the working
      directory,  i.e. the directory from which the executable was
@@ -1006,6 +1057,7 @@ File: octopus.info,  Node: IO,  Next: Parallel,  Prev: Debug,  Up: Generalities
 
    * *stderr*
      _Section_: Generalities::IO
+     _Type_: string
      _Default_: "-"
      The standard error by default goes to, well, to standard error.
      This can  be changed by setting this variable: if you give it a
@@ -1014,6 +1066,7 @@ File: octopus.info,  Node: IO,  Next: Parallel,  Prev: Debug,  Up: Generalities
 
    * *stdout*
      _Section_: Generalities::IO
+     _Type_: string
      _Default_: "-"
      The standard output by default goes to, well, to standard output.
      This can  be changed by setting this variable: if you give it a
@@ -1029,6 +1082,7 @@ File: octopus.info,  Node: Parallel,  Next: Units,  Prev: IO,  Up: Generalities
 
    * *ParallelizationGroupRanks*
      _Section_: Generalities::Parallel
+     _Type_: block
      Specifies the size of the groups used for the parellization. For
      example  (n_d, n_s, n_k) means we have n_p*n_s*n_k processors and
      that the k-points  should be divided in n_k groups, the states in
@@ -1036,6 +1090,7 @@ File: octopus.info,  Node: Parallel,  Next: Units,  Prev: IO,  Up: Generalities
 
    * *ParallelizationStrategy*
      _Section_: Generalities::Parallel
+     _Type_: integer
      _Default_: par_domains + par_states + par_kpoints
      Specifies what kind of parallelization strategy octopus should use.
      The values can be combined, for example "par_domains + par_states"
@@ -1060,6 +1115,7 @@ File: octopus.info,  Node: Units,  Prev: Parallel,  Up: Generalities
 
    * *Units*
      _Section_: Generalities::Units
+     _Type_: string
      _Default_: "a.u"
      Atomic units seem to be the preferred system in the atomic and
      molecular physics community (despite the opinion of some of the
@@ -1075,6 +1131,7 @@ File: octopus.info,  Node: Units,  Prev: Parallel,  Up: Generalities
 
    * *UnitsInput*
      _Section_: Generalities::Units
+     _Type_: string
      _Default_: "a.u"
      Same as "Units", but only refers to the values in the input files.
      That  is, if UnitsInput = "eVA", all physical values in the input
@@ -1082,6 +1139,7 @@ File: octopus.info,  Node: Units,  Prev: Parallel,  Up: Generalities
 
    * *UnitsOutput*
      _Section_: Generalities::Units
+     _Type_: string
      _Default_: "a.u"
      Same as "Units", but only refers to the values in the output
      files.  That  is, if UnitsInput = "eVA", all physical values in
@@ -1089,13 +1147,50 @@ File: octopus.info,  Node: Units,  Prev: Parallel,  Up: Generalities
 
 
 
-File: octopus.info,  Node: Hamiltonian,  Next: SCF,  Prev: Generalities,  Up: Input Variables
+File: octopus.info,  Node: Geometry Optimization,  Next: Hamiltonian,  Prev: Generalities,  Up: Input Variables
 
-6.2 Hamiltonian
+6.2 Geometry Optimization
+=========================
+
+   * *GOMaxIter*
+     _Section_: Geometry Optimization
+     _Type_: integer
+     _Default_: 200
+     Even if previous convergence criterium is not satisfied,
+     minimization will stop  after this number of iterations.
+
+   * *GOMethod*
+     _Section_: Geometry Optimization
+     _Type_: integer
+     _Default_: steep
+     Method by which the minimization is performed.
+
+     _Options_:
+        - *steep* (1):  simple steepest descent.
+
+   * *GOStep*
+     _Section_: Geometry Optimization
+     _Type_: float
+     _Default_: 0.5
+     Initial step for the geometry optimizer.
+
+   * *GOTolerance*
+     _Section_: Geometry Optimization
+     _Type_: float
+     _Default_: 0.0001 a.u.
+     Convergence criterium to stop the minimization. In units of force;
+     minimization  is stopped when all forces on ions are smaller.
+
+
+
+File: octopus.info,  Node: Hamiltonian,  Next: Output,  Prev: Geometry Optimization,  Up: Input Variables
+
+6.3 Hamiltonian
 ===============
 
    * *AtomsMagnetDirection*
      _Section_: Hamiltonian
+     _Type_: block
      This option is only used when GuessMagnetDensity is set to
      user_defined. It provides a direction for each atoms magnetization
      vector when building the guess density. In order to do that the
@@ -1110,40 +1205,13 @@ File: octopus.info,  Node: Hamiltonian,  Next: SCF,  Prev: Generalities,  Up: In
 
    * *ClassicPotential*
      _Section_: Hamiltonian
+     _Type_: integer
      If true, add to the external potential the potential generated by
      the point charges read from the PDB input (see PBDCoordinates).
 
-   * *GuessMagnetDensity*
-     _Section_: Hamiltonian
-     _Default_: ferromagnetic
-     The guess density for the SCF cycle is just the sum of all the
-     atomic densities.   When performing spin-polarized or
-     non-collinear spin calculations this option sets  the guess
-     magnetization density.
-
-     For anti-ferromagnetic configurations the user_defined option
-     should be used.
-
-     Note that if the paramagnetic option is used the final
-     ground-state will also be  paramagnetic, but the same is not true
-     for the other options.
-
-     _Options_:
-        - *paramagnetic* (1):  Magnetization density is zero.
-
-        - *ferromagnetic* (2):  Magnetization density is the sum of the
-          atomic magnetization densities.
-
-        - *random*:  Each atomic magnetization density is randomly
-          rotated.
-
-        - *user_defined*:  The atomic magnetization densities are
-          rotated so that the magnetization  vector has the same
-          direction as a vector provided by the user. In this case,
-          the AtomsMagnetDirection block has to be set.
-
    * *MultigridLevels*
      _Section_: Hamiltonian
+     _Type_: integer
      Number of levels in the grid hierachy used for multigrid.
 
      _Options_:
@@ -1156,6 +1224,7 @@ File: octopus.info,  Node: Hamiltonian,  Next: SCF,  Prev: Generalities,  Up: In
 
    * *NonInteractingElectrons*
      _Section_: Hamiltonian
+     _Type_: logical
      _Default_: no
      Sometimes it may be helpful to treat the electrons as
      non-interacting particles,  i.e., not to take into account Hartree
@@ -1170,6 +1239,7 @@ File: octopus.info,  Node: Hamiltonian,  Next: SCF,  Prev: Generalities,  Up: In
 
    * *RelativisticCorrection*
      _Section_: Hamiltonian
+     _Type_: integer
      _Default_: non_relativistic
      The default value means that _no_ relativistic correction is used.
      To  include spin-orbit coupling turn RelativisticCorrection to
@@ -1192,6 +1262,8 @@ File: octopus.info,  Node: Hamiltonian,  Next: SCF,  Prev: Generalities,  Up: In
 * Poisson::
 * XC::
 * Casida::
+* Static Polarization::
+* Vibrational Modes::
 * General::
 * Curvilinear::
 * Derivatives::
@@ -1201,11 +1273,12 @@ File: octopus.info,  Node: Hamiltonian,  Next: SCF,  Prev: Generalities,  Up: In
 
 File: octopus.info,  Node: Poisson,  Next: XC,  Prev: Hamiltonian,  Up: Hamiltonian
 
-6.2.1 Poisson
+6.3.1 Poisson
 -------------
 
    * *PoissonSolver*
      _Section_: Hamiltonian::Poisson
+     _Type_: integer
      _Default_: fft
      Defines which method to use in order to solve the Poisson equation.
      The default for 1D and 2D is the direct evaluation of the Hartree
@@ -1238,14 +1311,16 @@ File: octopus.info,  Node: Poisson,  Next: XC,  Prev: Hamiltonian,  Up: Hamilton
 
    * *PoissonSolverMaxMultipole*
      _Section_: Hamiltonian::Poisson
+     _Type_: integer
      Order of the multipolar expansion for boundary  corrections.
      Default is 4 for cg_corrected and multigrid and 2  for
      fft_corrected.
 
    * *PoissonSolverThreshold*
      _Section_: Hamiltonian::Poisson
+     _Type_: integer
      The tolerance for the poisson solution, used by the cg and
-     multigrid solvers. Default is $10^{-5}$.
+     multigrid solvers. Default is 10^-5.
 
 
 * Menu:
@@ -1255,29 +1330,33 @@ File: octopus.info,  Node: Poisson,  Next: XC,  Prev: Hamiltonian,  Up: Hamilton
 
 File: octopus.info,  Node: Multigrid,  Prev: Poisson,  Up: Poisson
 
-6.2.1.1 Multigrid
+6.3.1.1 Multigrid
 .................
 
    * *PoissonSolverMGMaxCycles*
      _Section_: Hamiltonian::Poisson::Multigrid
+     _Type_: integer
      _Default_: 20
      Maximum number of multigrid cycles that are performed if
      convergence is not achieved
 
    * *PoissonSolverMGPostsmoothingSteps*
      _Section_: Hamiltonian::Poisson::Multigrid
+     _Type_: integer
      _Default_: 3
      Number of gauss-seidel smoothing steps after coarse level
      correction in multigrid Poisson solver
 
    * *PoissonSolverMGPresmoothingSteps*
      _Section_: Hamiltonian::Poisson::Multigrid
+     _Type_: integer
      _Default_: 3
      Number of gauss-seidel smoothing steps before coarse level
      correction in multigrid Poisson solver.
 
    * *PoissonSolverMGRelaxationMethod*
      _Section_: Hamiltonian::Poisson::Multigrid
+     _Type_: integer
      _Default_: Gauss-Seidel
      Method used from fine to relax, i.e. to solve the linear system
      approximately, in  the multigrid procedure that solve Poisson
@@ -1294,6 +1373,7 @@ File: octopus.info,  Node: Multigrid,  Prev: Poisson,  Up: Poisson
 
    * *PoissonSolverMGRestrictionMethod*
      _Section_: Hamiltonian::Poisson::Multigrid
+     _Type_: integer
      _Default_: fullweight
      Method used from fine to coarse grid transfer
 
@@ -1306,11 +1386,12 @@ File: octopus.info,  Node: Multigrid,  Prev: Poisson,  Up: Poisson
 
 File: octopus.info,  Node: XC,  Next: Casida,  Prev: Poisson,  Up: Hamiltonian
 
-6.2.2 XC
+6.3.2 XC
 --------
 
    * *CFunctional*
      _Section_: Hamiltonian::XC
+     _Type_: integer
      _Default_: lda_c_pz
      Defines the correlation functional
 
@@ -1337,7 +1418,7 @@ File: octopus.info,  Node: XC,  Next: Casida,  Prev: Poisson,  Up: Hamiltonian
 
         - *lda_c_gl* (5):  LDA: Gunnarson & Lundqvist
 
-        - *lda_c_xalpha* (6):  LDA: Slater's Xalpha
+        - *lda_c_xalpha* (6):  LDA: Slater s Xalpha
 
         - *lda_c_vwn* (7):  LDA: Vosko, Wilk, & Nussair
 
@@ -1348,6 +1429,7 @@ File: octopus.info,  Node: XC,  Next: Casida,  Prev: Poisson,  Up: Hamiltonian
 
    * *SICorrection*
      _Section_: Hamiltonian::XC
+     _Type_: integer
      _Default_: sic_none
      This variable controls which Self Interaction Correction to use.
      Note that  this correction will be applyed to the functional
@@ -1363,6 +1445,7 @@ File: octopus.info,  Node: XC,  Next: Casida,  Prev: Poisson,  Up: Hamiltonian
 
    * *XFunctional*
      _Section_: Hamiltonian::XC
+     _Type_: integer
      _Default_: lda_x
      Defines the exchange functional
 
@@ -1379,13 +1462,14 @@ File: octopus.info,  Node: XC,  Next: Casida,  Prev: Poisson,  Up: Hamiltonian
 
 
 
-File: octopus.info,  Node: Casida,  Next: General,  Prev: XC,  Up: Hamiltonian
+File: octopus.info,  Node: Casida,  Next: Static Polarization,  Prev: XC,  Up: Hamiltonian
 
-6.2.3 Casida
+6.3.3 Casida
 ------------
 
    * *LinearResponseKohnShamStates*
      _Section_: Linear Response::Casida
+     _Type_: string
      The calculation of the excitation spectrum of a system in the
      frequency-domain  formulation of linear-response time-dependent
      density functional theory (TDDFT)  implies the use of a basis set
@@ -1405,13 +1489,43 @@ File: octopus.info,  Node: Casida,  Next: General,  Prev: XC,  Up: Hamiltonian
 
 
 
-File: octopus.info,  Node: General,  Next: Curvilinear,  Prev: Casida,  Up: Hamiltonian
+File: octopus.info,  Node: Static Polarization,  Next: Vibrational Modes,  Prev: Casida,  Up: Hamiltonian
 
-6.2.4 General
+6.3.4 Static Polarization
+-------------------------
+
+   * *POLStaticField*
+     _Section_: Linear Response::Static Polarization
+     _Type_: float
+     _Default_: 0.01 a.u.
+     Magnitude of the static field used to calculate the static
+     polarizability  (CalculationMode = pol)
+
+
+
+File: octopus.info,  Node: Vibrational Modes,  Next: General,  Prev: Static Polarization,  Up: Hamiltonian
+
+6.3.5 Vibrational Modes
+-----------------------
+
+   * *Displacement*
+     _Section_: Linear Response::Vibrational Modes
+     _Type_: float
+     _Default_: 0.01 a.u.
+     When calculating phonon properties by finite differences
+     (CalculationMode = phonons)  Displacement controls how much the
+     atoms are to be moved in order to calculate the  dynamical matrix.
+
+
+
+File: octopus.info,  Node: General,  Next: Curvilinear,  Prev: Vibrational Modes,  Up: Hamiltonian
+
+6.3.6 General
 -------------
 
    * *ODESolver*
      _Section_: Math::General
+     _Type_: integer
      _Default_: ode_rk4
      Specifies what kind of root solver will be used
 
@@ -1426,6 +1540,7 @@ File: octopus.info,  Node: General,  Next: Curvilinear,  Prev: Casida,  Up: Hami
 
    * *RootSolver*
      _Section_: Math::General
+     _Type_: integer
      _Default_: root_newton
      Specifies what kind of root solver will be used
 
@@ -1442,6 +1557,7 @@ File: octopus.info,  Node: General,  Next: Curvilinear,  Prev: Casida,  Up: Hami
 
    * *ScalarMeshType*
      _Section_: Math::General
+     _Type_: integer
      _Default_: mesh_sinh
      Specifies what kind of scalar mesh will be used
 
@@ -1458,6 +1574,7 @@ File: octopus.info,  Node: General,  Next: Curvilinear,  Prev: Casida,  Up: Hami
 
    * *SparskitSolver*
      _Section_: Math::General
+     _Type_: integer
      _Default_: sk_cg
      Specifies what kind of linear solver will be used
 
@@ -1489,11 +1606,12 @@ File: octopus.info,  Node: General,  Next: Curvilinear,  Prev: Casida,  Up: Hami
 
 File: octopus.info,  Node: Curvilinear,  Next: Derivatives,  Prev: General,  Up: Hamiltonian
 
-6.2.5 Curvilinear
+6.3.7 Curvilinear
 -----------------
 
    * *CurvMethod*
      _Section_: Mesh::Curvilinear
+     _Type_: integer
      _Default_: curv_uniform
      The relevant functions in octopus are represented on a mesh in
      real space.   This mesh may be an evenly spaced regular
@@ -1525,43 +1643,47 @@ File: octopus.info,  Node: Curvilinear,  Next: Derivatives,  Prev: General,  Up:
 
 File: octopus.info,  Node: Gygi,  Prev: Curvilinear,  Up: Curvilinear
 
-6.2.5.1 Gygi
+6.3.7.1 Gygi
 ............
 
    * *CurvGygiA*
      _Section_: Mesh::Curvilinear::Gygi
+     _Type_: float
      The grid spacing is reduced locally around each atom, and the
      reduction is  given by 1/(1+A), where A is specified by this
      variable, CurvGygiA. So, if  A=1 (the default), the grid spacing
-     is reduced to one half = 1/(1+1).   [This is the A_{\alpha}
-     variable in Eq. 2 of F. Gygi and G. Galli, Phys.   Rev. B 52,
-     R2229 (1995)]  It must be larger than zero.
+     is reduced to one half = 1/(1+1).   [This is the A_\alpha variable
+     in Eq. 2 of F. Gygi and G. Galli, Phys.   Rev. B 52, R2229 (1995)]
+     It must be larger than zero.
 
    * *CurvGygiAlpha*
      _Section_: Mesh::Curvilinear::Gygi
+     _Type_: float
      This number determines the region over which the grid is enhanced
      (range of  enhancement of the resolution). That is, the grid is
      enhanced on a sphere  around each atom, whose radius is given by
-     this variable. [This is the a_{\alpha}  variable in Eq. 2 of F.
-     Gygi and G. Galli, Phys. Rev. B 52, R2229 (1995)].   The default
-     is two atomic units.   It must be larger than zero.
+     this variable. [This is the a_\alpha  variable in Eq. 2 of F. Gygi
+     and G. Galli, Phys. Rev. B 52, R2229 (1995)].   The default is two
+     atomic units.   It must be larger than zero.
 
    * *CurvGygiBeta*
      _Section_: Mesh::Curvilinear::Gygi
+     _Type_: float
      This number determines the distance over which Euclidean
-     coordinates are  recovered. [This is the b_{\alpha} variable in
-     Eq. 2 of F. Gygi and G. Galli,  Phys. Rev. B 52, R2229 (1995)].
-     The default is four atomic units.   It must be larger than zero.
+     coordinates are  recovered. [This is the b_\alpha variable in Eq.
+     2 of F. Gygi and G. Galli,  Phys. Rev. B 52, R2229 (1995)]. The
+     default is four atomic units.   It must be larger than zero.
 
 
 
 File: octopus.info,  Node: Derivatives,  Next: FFTs,  Prev: Curvilinear,  Up: Hamiltonian
 
-6.2.6 Derivatives
+6.3.8 Derivatives
 -----------------
 
    * *DerivativesSpace*
      _Section_: Mesh::Derivatives
+     _Type_: integer
      _Default_: real_space
      Defines in which space the gradients and the Laplacian are
      calculated.
@@ -1576,6 +1698,7 @@ File: octopus.info,  Node: Derivatives,  Next: FFTs,  Prev: Curvilinear,  Up: Ha
 
    * *DerivativesStencil*
      _Section_: Mesh::Derivatives
+     _Type_: integer
      _Default_: stencil_star
      Decides what kind of stencil is used, i.e. what points, around
      each point in the mesh, are the neighboring points used in the
@@ -1597,11 +1720,12 @@ File: octopus.info,  Node: Derivatives,  Next: FFTs,  Prev: Curvilinear,  Up: Ha
 
 File: octopus.info,  Node: FFTs,  Next: Simulation Box,  Prev: Derivatives,  Up: Hamiltonian
 
-6.2.7 FFTs
+6.3.9 FFTs
 ----------
 
    * *DoubleFFTParameter*
      _Section_: Mesh::FFTs
+     _Type_: float
      _Default_: 2.0
      For solving Poisson equation in Fourier space, and for applying
      the local potential  in Fourier space, an auxiliary cubic mesh is
@@ -1612,6 +1736,7 @@ File: octopus.info,  Node: FFTs,  Next: Simulation Box,  Prev: Derivatives,  Up:
 
    * *FFTOptimize*
      _Section_: Mesh::FFTs
+     _Type_: logical
      _Default_: yes
      Should octopus optimize the FFT dimensions?   This means that the
      cubic mesh to which FFTs are applied is not taken to be as small
@@ -1624,11 +1749,12 @@ File: octopus.info,  Node: FFTs,  Next: Simulation Box,  Prev: Derivatives,  Up:
 
 File: octopus.info,  Node: Simulation Box,  Prev: FFTs,  Up: Hamiltonian
 
-6.2.8 Simulation Box
---------------------
+6.3.10 Simulation Box
+---------------------
 
    * *BoxShape*
      _Section_: Mesh::Simulation Box
+     _Type_: integer
      _Default_: minimum
      This variable decides the shape of the simulation box.   Note that
      some incompatibilities apply:
@@ -1654,6 +1780,7 @@ File: octopus.info,  Node: Simulation Box,  Prev: FFTs,  Up: Hamiltonian
 
    * *Lsize*
      _Section_: Mesh::Simulation Box
+     _Type_: block
      In case BoxShape is "parallelepiped", this is assumed to be a
      block of the form:
 
@@ -1670,6 +1797,7 @@ File: octopus.info,  Node: Simulation Box,  Prev: FFTs,  Up: Hamiltonian
 
    * *PeriodicDimensions*
      _Section_: Mesh::Simulation Box
+     _Type_: integer
      Define which directions are to be considered periodic. Of course,
      it has to be a number  from 0 to three, and it cannot be larger
      than Dimensions.
@@ -1685,6 +1813,7 @@ File: octopus.info,  Node: Simulation Box,  Prev: FFTs,  Up: Hamiltonian
 
    * *Radius*
      _Section_: Mesh::Simulation Box
+     _Type_: float
      If BoxShape is not "parallelepiped" defines the radius of the
      spheres or of the cylinder.   It has to be a positive number. If
      it is not defined in the input file, then the program  will
@@ -1694,18 +1823,177 @@ File: octopus.info,  Node: Simulation Box,  Prev: FFTs,  Up: Hamiltonian
 
    * *Xlength*
      _Section_: Mesh::Simulation Box
+     _Type_: float
      If BoxShape is "cylinder", it is half the total length of the
      cylinder.
 
 
 
-File: octopus.info,  Node: SCF,  Next: Spectrum Calculations,  Prev: Hamiltonian,  Up: Input Variables
+File: octopus.info,  Node: Output,  Next: SCF,  Prev: Hamiltonian,  Up: Input Variables
 
-6.3 SCF
+6.4 Output
+==========
+
+   * *OutputAxisX*
+     _Section_: Output
+     _Type_: logical
+     _Default_: no
+     The values of the function on the x axis are printed. The string
+     ".y=0,z=0" is appended  to previous file names.
+
+   * *OutputAxisY*
+     _Section_: Output
+     _Type_: logical
+     _Default_: no
+     The values of the function on the y axis are printed. The string
+     ".x=0,z=0" is appended  to previous file names.
+
+   * *OutputAxisZ*
+     _Section_: Output
+     _Type_: logical
+     _Default_: no
+     The values of the function on the z axis are printed. The string
+     ".x=0,y=0" is appended  to previous file names.
+
+   * *OutputDX*
+     _Section_: Output
+     _Type_: logical
+     _Default_: no
+     For printing all the three dimensional information, the open
+     source program  visualization tool OpenDX (http://www.opendx.org/)
+     is used. The string  ".dx" is appended to previous file names.
+
+   * *OutputDensity*
+     _Section_: Output
+     _Type_: logical
+     _Default_: no
+     Prints out the density. The output file is called "density-i",
+     where "i" stands for  the spin channel.
+
+   * *OutputELF*
+     _Section_: Output
+     _Type_: logical
+     _Default_: no
+     Prints out the electron localization function, ELF. The output
+     file is called  "elf-i", where i stands for the spin channel.
+
+   * *OutputGeometry*
+     _Section_: Output
+     _Type_: logical
+     _Default_: no
+     If true `octopus' outputs a XYZ file called  "geometry.xyz"
+     containing the coordinates of the atoms  treated within Quantum
+     Mechanics. If point charges were defined  in the PDB file (see
+     PDBCoordinates), they will be output  in the file
+     "geometry_classical.xyz".
+
+   * *OutputKSPotential*
+     _Section_: Output
+     _Type_: logical
+     _Default_: no
+     Prints out Kohn-Sham potential, separated by parts. File names
+     would be "v0" for  the local part, "vc" for the classical
+     potential (if it exists), "vh" for the  Hartree potential, and
+     "vxc-x" for each of the exchange and correlation potentials  of a
+     give spin channel, where "x" stands for the spin channel.
+
+   * *OutputMeshIndex*
+     _Section_: Output
+     _Type_: logical
+     _Default_: no
+     Generates output files of a given quantity (Density, Wfs, ...)
+     which include  the internal numbering of mesh points. Since this
+     mode produces large datafiles this is only  useful for small
+     meshes and debugging purposes.   The output can also be used to
+     display the mesh directly. A gnuplot script for mesh vizualization
+     can be found under PREFIX/share/octopus/util/display_mesh_index.gp
+
+   * *OutputNETCDF*
+     _Section_: Output
+     _Type_: logical
+     _Default_: no
+     Outputs in NetCDF (http://www.unidata.ucar.edu/packages/netcdf/)
+     format. This file  can then be read, for example, by OpenDX. The
+     string ".ncdf" is appended to previous file names.
+
+   * *OutputPlaneX*
+     _Section_: Output
+     _Type_: logical
+     _Default_: no
+     A plane slice at x=0 is printed. The string ".x=0" is appended  to
+     previous file names.
+
+   * *OutputPlaneY*
+     _Section_: Output
+     _Type_: logical
+     _Default_: no
+     A plane slice at y=0 is printed. The string ".y=0" is appended  to
+     previous file names.
+
+   * *OutputPlaneZ*
+     _Section_: Output
+     _Type_: logical
+     _Default_: no
+     A plane slice at y=0 is printed. The string ".z=0" is appended to
+     previous file names.
+
+   * *OutputWfs*
+     _Section_: Output
+     _Type_: logical
+     _Default_: no
+     Prints out wave-functions. Which wavefunctions are to be printed
+     is specified  by the variable OutputWfsNumber - see below. The
+     output file is called  "wf-k-p-i", where k stands for the _k_
+     number, p for the state, and  i for the spin channel.
+
+   * *OutputWfsNumber*
+     _Section_: Output
+     _Type_: string
+     _Default_: "1-1024"
+     Which wavefunctions to print, in list form, i.e., "1-5" to print
+     the first  five states, "2,3" to print the second and the third
+     state, etc.
+
+
+
+File: octopus.info,  Node: SCF,  Next: States,  Prev: Output,  Up: Input Variables
+
+6.5 SCF
 =======
+
+   * *GuessMagnetDensity*
+     _Section_: SCF
+     _Type_: integer
+     _Default_: ferromagnetic
+     The guess density for the SCF cycle is just the sum of all the
+     atomic densities.   When performing spin-polarized or
+     non-collinear spin calculations this option sets  the guess
+     magnetization density.
+
+     For anti-ferromagnetic configurations the user_defined option
+     should be used.
+
+     Note that if the paramagnetic option is used the final
+     ground-state will also be  paramagnetic, but the same is not true
+     for the other options.
+
+     _Options_:
+        - *paramagnetic* (1):  Magnetization density is zero.
+
+        - *ferromagnetic* (2):  Magnetization density is the sum of the
+          atomic magnetization densities.
+
+        - *random* (3):  Each atomic magnetization density is randomly
+          rotated.
+
+        - *user_defined* (4):  The atomic magnetization densities are
+          rotated so that the magnetization  vector has the same
+          direction as a vector provided by the user. In this case,
+          the AtomsMagnetDirection block has to be set.
 
    * *LCAOStart*
      _Section_: SCF
+     _Type_: logical
      _Default_: yes
      Before starting a SCF calculation, performs  a LCAO calculation.
      These should provide octopus with a good set  of initial
@@ -1714,6 +2002,7 @@ File: octopus.info,  Node: SCF,  Next: Spectrum Calculations,  Prev: Hamiltonian
 
    * *SCFinLCAO*
      _Section_: SCF
+     _Type_: logical
      _Default_: no
      Performs all the SCF cycle restricting the calculation to the LCAO
      subspace.   This may be useful for systems with convergence
@@ -1730,41 +2019,46 @@ File: octopus.info,  Node: SCF,  Next: Spectrum Calculations,  Prev: Hamiltonian
 
 File: octopus.info,  Node: Convergence,  Next: EigenSolver,  Prev: SCF,  Up: SCF
 
-6.3.1 Convergence
+6.5.1 Convergence
 -----------------
 
    * *ConvAbsDens*
      _Section_: SCF::Convergence
+     _Type_: float
      _Default_: 1e-5
-     Absolute convergence of the density:  \epsilon = \int {\rm d}^3r
-     (\rho^{out}(\bf r) -\rho^{inp}(\bf r))^2.   A zero value means do
-     not use this criterion.
+     Absolute convergence of the density:  \epsilon = \int \rm d^3r
+     (\rho^out(\bf r) -\rho^inp(\bf r))^2.   A zero value means do not
+     use this criterion.
 
    * *ConvAbsEv*
      _Section_: SCF::Convergence
+     _Type_: float
      _Default_: 0.0
      Absolute convergence of the eigenvalues:  \epsilon =
-     \sum_{j=1}^{N_{occ}} \vert \epsilon_j^{out}-\epsilon_j^{inp}\vert.
-     A zero value means do not use this criterion.
+     \sum_j=1^N_occ \vert \epsilon_j^out-\epsilon_j^inp\vert.   A zero
+     value means do not use this criterion.
 
    * *ConvRelDens*
      _Section_: SCF::Convergence
+     _Type_: float
      _Default_: 0.0
-     Relative convergence of the density:  \epsilon = {1\over N} \int
-     {\rm d}^3r (\rho^{out}(\bf r) -\rho^{inp}(\bf r))^2.   _N_ is the
-     total number of electrons in the problem.   A zero value means do
-     not use this criterion.
+     Relative convergence of the density:  \epsilon = 1\over N \int \rm
+     d^3r (\rho^out(\bf r) -\rho^inp(\bf r))^2.   _N_ is the total
+     number of electrons in the problem.   A zero value means do not
+     use this criterion.
 
    * *ConvRelEv*
      _Section_: SCF::Convergence
+     _Type_: float
      _Default_: 0.0
-     Relative convergence of the eigenvalues:  \epsilon = {1 \over N}
-     \sum_{j=1}^{N_{occ}} \vert \epsilon_j^{out}-\epsilon_j^{inp}\vert.
-     _N_ is the total number of electrons. A zero value means do not
-     use this criterion.
+     Relative convergence of the eigenvalues:  \epsilon = 1 \over N
+     \sum_j=1^N_occ \vert \epsilon_j^out-\epsilon_j^inp\vert.   _N_ is
+     the total number of electrons. A zero value means do not use this
+     criterion.
 
    * *MaximumIter*
      _Section_: SCF::Convergence
+     _Type_: integer
      _Default_: 200
      Maximum number of SCF iterations. The code will stop even if
      convergence  has not been achieved. 0 means unlimited.
@@ -1773,11 +2067,12 @@ File: octopus.info,  Node: Convergence,  Next: EigenSolver,  Prev: SCF,  Up: SCF
 
 File: octopus.info,  Node: EigenSolver,  Next: Mixing,  Prev: Convergence,  Up: SCF
 
-6.3.2 EigenSolver
+6.5.2 EigenSolver
 -----------------
 
    * *EigenSolver*
      _Section_: SCF::EigenSolver
+     _Type_: integer
      _Default_: cg
      Decides the eigensolver that obtains the lowest eigenvalues  and
      eigenfunctions of the Kohn-Sham Hamiltonian.
@@ -1803,6 +2098,7 @@ File: octopus.info,  Node: EigenSolver,  Next: Mixing,  Prev: Convergence,  Up: 
 
    * *EigenSolverArnoldiVectors*
      _Section_: SCF::EigenSolver
+     _Type_: integer
      _Default_: 20
      This indicates how many Arnoldi vectors are generated  It must
      satisfy EigenSolverArnoldiVectors - Number Of Eigenvectors >= 2.
@@ -1810,17 +2106,20 @@ File: octopus.info,  Node: EigenSolver,  Next: Mixing,  Prev: Convergence,  Up: 
 
    * *EigenSolverFinalTolerance*
      _Section_: SCF::EigenSolver
+     _Type_: float
      _Default_: 1.0e-6
      This is the final tolerance for the eigenvectors.
 
    * *EigenSolverFinalToleranceIteration*
      _Section_: SCF::EigenSolver
+     _Type_: integer
      _Default_: 7
      Determines how many interactions are needed  to go from
      EigenSolverInitTolerance to EigenSolverFinalTolerance.
 
    * *EigenSolverImaginaryTime*
      _Section_: SCF::EigenSolver
+     _Type_: float
      _Default_: 1.0
      The imaginary-time step that is used in the imaginary-time
      evolution  method to obtain the lowest eigenvalues/eigenvectors.
@@ -1828,11 +2127,13 @@ File: octopus.info,  Node: EigenSolver,  Next: Mixing,  Prev: Convergence,  Up: 
 
    * *EigenSolverInitTolerance*
      _Section_: SCF::EigenSolver
+     _Type_: float
      _Default_: 1.0e-6
      This is the initial tolerance for the eigenvectors.
 
    * *EigenSolverMaxIter*
      _Section_: SCF::EigenSolver
+     _Type_: integer
      _Default_: 25
      Determines the maximum number of iterations  for the eigensolver
      (per state) - that is, if this number is reached, the
@@ -1843,11 +2144,12 @@ File: octopus.info,  Node: EigenSolver,  Next: Mixing,  Prev: Convergence,  Up: 
 
 File: octopus.info,  Node: Mixing,  Prev: EigenSolver,  Up: SCF
 
-6.3.3 Mixing
+6.5.3 Mixing
 ------------
 
    * *MixNumberSteps*
      _Section_: SCF::Mixing
+     _Type_: integer
      _Default_: 3
      In the Broyden and in the GR-Pulay scheme, the new input density
      or potential is constructed  from the values of
@@ -1856,12 +2158,14 @@ File: octopus.info,  Node: Mixing,  Prev: EigenSolver,  Up: SCF
 
    * *Mixing*
      _Section_: SCF::Mixing
+     _Type_: float
      _Default_: 0.3
      Both the linear and the Broyden scheme depend on a "mixing
      parameter", set by this variable.
 
    * *TypeOfMixing*
      _Section_: SCF::Mixing
+     _Type_: integer
      The scheme scheme used to produce, at each iteration in the self
      consistent cycle  that attempts to solve the Kohn-Sham equations,
      the input density from the value  of the input and output
@@ -1877,6 +2181,7 @@ File: octopus.info,  Node: Mixing,  Prev: EigenSolver,  Up: SCF
 
    * *What2Mix*
      _Section_: SCF::Mixing
+     _Type_: integer
      _Default_: density
      Selects what should be mixed during the SCF cycle.
 
@@ -1887,71 +2192,14 @@ File: octopus.info,  Node: Mixing,  Prev: EigenSolver,  Up: SCF
 
 
 
-File: octopus.info,  Node: Spectrum Calculations,  Next: States,  Prev: SCF,  Up: Input Variables
+File: octopus.info,  Node: States,  Next: System,  Prev: SCF,  Up: Input Variables
 
-6.4 Spectrum Calculations
-=========================
-
-   * *HarmonicSpectrumMode*
-     _Section_: Spectrum Calculations
-     _Default_: hs_from_dipole
-     The oct-harmonic-spectrum may calculate the spectrum in two
-     alternative ways,  mathematically equivalent but numerically
-     diferent: by reading the dipole  moment (from the multipoles file)
-     and calculating the accelaratio numerically  from it, or by
-     reading directly the acceleration from the acceleration file,
-     which may also be generated during a time-dependent run of octopus.
-
-     _Options_:
-        - *hs_from_dipole* (1):  Calculate the harmonic spectrum by
-          numerically differentiating the multipoles file.
-
-        - *hs_from_acceleration* (2):  Calculate the harmonic spectrum
-          by reading the acceleration file.
-
-   * *HarmonicSpectrumPolarization*
-     _Section_: Spectrum Calculations
-     _Default_: "z"
-     The oct-harmonic-spectrum utility program needs to know the
-     direction along  which the emission raidiation is considered to be
-     polarized. It may be  linearly polarized or circularly polarized.
-
-     _Options_:
-        - *"+"*:  Circularly polarized field, counter clock-wise.
-
-        - *"-"*:  Circularly polarized field, clock-wise.
-
-        - *"x"*:  Linearly polarized field in the x direction.
-
-        - *"y"*:  Linearly polarized field in the y direction.
-
-        - *"z"*:  Linearly polarized field in the z direction.
-
-   * *SpecDampMode*
-     _Section_: Spectrum Calculations
-     _Default_: polynomial
-     Decides which damping/filtering is to be applied in order to
-     calculate  spectra by calculating a Fourier transform
-
-     _Options_:
-        - *no*:  No filtering at all.
-
-        - *exponential* (1):  Exponential filtering, corresponding with
-          a Lorentzian-shaped spectrum
-
-        - *polynomial* (2):  Third-order polynomial damping.
-
-        - *gaussian* (3):  Gaussian damping
-
-
-
-File: octopus.info,  Node: States,  Next: System,  Prev: Spectrum Calculations,  Up: Input Variables
-
-6.5 States
+6.6 States
 ==========
 
    * *ElectronicTemperature*
      _Section_: States
+     _Type_: float
      _Default_: 0.0
      If Occupations is not set, ElectronicTemperature is the
      temperature in the Fermi-Dirac function used to distribute the
@@ -1959,6 +2207,7 @@ File: octopus.info,  Node: States,  Next: System,  Prev: Spectrum Calculations, 
 
    * *ExcessCharge*
      _Section_: States
+     _Type_: float
      _Default_: 0.0
      The net charge of the system. A negative value means that we are
      adding  electrons, while a positive value means we are taking
@@ -1966,6 +2215,7 @@ File: octopus.info,  Node: States,  Next: System,  Prev: Spectrum Calculations, 
 
    * *ExtraStates*
      _Section_: States
+     _Type_: integer
      The number of states is in principle calculated considering the
      minimum  numbers of states necessary to hold the electrons present
      in the system.   The number of electrons is  in turn calculated
@@ -1980,6 +2230,7 @@ File: octopus.info,  Node: States,  Next: System,  Prev: Spectrum Calculations, 
 
    * *Occupations*
      _Section_: States
+     _Type_: block
      The occupation numbers of the orbitals can be fixed through the
      use of this  variable. For example:
 
@@ -2004,6 +2255,7 @@ File: octopus.info,  Node: States,  Next: System,  Prev: Spectrum Calculations, 
 
    * *SpinComponents*
      _Section_: States
+     _Type_: integer
      _Default_: unpolarized
      The calculations may be done in three different ways:
      spin-restricted (TD)DFT (i.e., doubly  occupied "closed shells"),
@@ -2028,11 +2280,12 @@ File: octopus.info,  Node: States,  Next: System,  Prev: Spectrum Calculations, 
 
 File: octopus.info,  Node: System,  Next: Time Dependent,  Prev: States,  Up: Input Variables
 
-6.6 System
+6.7 System
 ==========
 
    * *SystemName*
      _Section_: System
+     _Type_: string
      _Default_: "system"
      A string that identifies the current run. This parameter is
      seldomly used, but  it is sometimes useful to have in the input
@@ -2048,11 +2301,12 @@ File: octopus.info,  Node: System,  Next: Time Dependent,  Prev: States,  Up: In
 
 File: octopus.info,  Node: Coordinates,  Next: Species,  Prev: System,  Up: System
 
-6.6.1 Coordinates
+6.7.1 Coordinates
 -----------------
 
    * *Coordinates*
      _Section_: System::Coordinates
+     _Type_: block
      If neither a "XYZCoordinates" nor a "PDBCoordinates" was found,
      octopus  tries to read the coordinates for the atoms from the
      block "Coordinates". The  format is quite straightforward:
@@ -2073,6 +2327,7 @@ File: octopus.info,  Node: Coordinates,  Next: Species,  Prev: System,  Up: Syst
 
    * *PDBCoordinates*
      _Section_: System::Coordinates
+     _Type_: string
      If this variable is present, the program tries to read the atomic
      coordinates  from the file specified by its value. The PDB
      (Protein Data Bank  (http://www.rcsb.org/pdb/)) format is quite
@@ -2102,6 +2357,7 @@ File: octopus.info,  Node: Coordinates,  Next: Species,  Prev: System,  Up: Syst
 
    * *XYZCoordinates*
      _Section_: System::Coordinates
+     _Type_: string
      If "PDBCoordinates" is not present, the program reads the atomic
      coordinates from  the XYZ file specified by the variable
      "XYZCoordinates" - in case this variable  is present. The XYZ
@@ -2115,11 +2371,12 @@ File: octopus.info,  Node: Coordinates,  Next: Species,  Prev: System,  Up: Syst
 
 File: octopus.info,  Node: Species,  Next: Velocities,  Prev: Coordinates,  Up: System
 
-6.6.2 Species
+6.7.2 Species
 -------------
 
    * *Species*
      _Section_: System::Species
+     _Type_: block
      A specie is by definition either an "ion" (nucleus + core
      electrons) described  through a pseudo-potential, or an
      user-defined, model potential.   The format of this block is
@@ -2140,9 +2397,9 @@ File: octopus.info,  Node: Species,  Next: Velocities,  Prev: Coordinates,  Up: 
      defined potetial - use _x_, _r_ (and _y_ in the 2D case) for the
      position of the electron relative to the species center.   For
      example, the potential often used in 1D calculation is  the
-     soft-Coulomb potential -Z/\sqrt{x^2 + 1}. The previous example
-     would then  be an appropriate description of a Hydrogen nucleus
-     for one-dimensional calculations.
+     soft-Coulomb potential -Z/\sqrtx^2 + 1. The previous example would
+     then  be an appropriate description of a Hydrogen nucleus for
+     one-dimensional calculations.
 
      In 3D, e.g.
 
@@ -2202,17 +2459,19 @@ File: octopus.info,  Node: Species,  Next: Velocities,  Prev: Coordinates,  Up: 
 
 File: octopus.info,  Node: Velocities,  Prev: Species,  Up: System
 
-6.6.3 Velocities
+6.7.3 Velocities
 ----------------
 
    * *RandomVelocityTemp*
      _Section_: System::Velocities
+     _Type_: string
      If this variable is present, octopus will assign random velocities
      to the atoms  following a Bolzmann distribution with temperature
      given by RandomVelocityTemp.
 
    * *Velocities*
      _Section_: System::Velocities
+     _Type_: block
      If XYZVelocities is not present, octopus will try to fetch the
      initial  atomic velocities from this block. If this block is not
      present, octopus  will reset the initial velocities to zero. The
@@ -2232,6 +2491,7 @@ File: octopus.info,  Node: Velocities,  Prev: Species,  Up: System
 
    * *XYZVelocities*
      _Section_: System::Velocities
+     _Type_: string
      octopus will try to read the starting velocities of the atoms from
      the XYZ file  specified by the variable XYZVelocities.   Note that
      you do not need to specify initial velocities if you are not going
@@ -2243,11 +2503,33 @@ File: octopus.info,  Node: Velocities,  Prev: Species,  Up: System
 
 File: octopus.info,  Node: Time Dependent,  Next: Unoccupied States,  Prev: System,  Up: Input Variables
 
-6.7 Time Dependent
+6.8 Time Dependent
 ==================
+
+   * *MoveIons*
+     _Section_: Time Dependent
+     _Type_: logical
+     _Default_: static_ions
+     What kind of simulation to perform.
+
+     _Options_:
+        - *static_ions*:  Do not move the ions.
+
+        - *verlet* (3):  Newtonian dynamics using Verlet.
+
+        - *vel_verlet* (4):  Newtonian dynamics using velocity Verlet.
+
+   * *TDDeltaStrength*
+     _Section_: Time Dependent
+     _Type_: float
+     _Default_: 0.0
+     When no laser is applied, a delta (in time) electric field with
+     strength TDDeltaStrength is applied. This is used to calculate
+     the linear optical spectra.
 
    * *TDDeltaStrengthMode*
      _Section_: Time Dependent
+     _Type_: integer
      _Default_: kick_density
      When calculating the linear response of the density via the
      propagation  in real time, one needs to perfrom an initical kick
@@ -2266,8 +2548,134 @@ File: octopus.info,  Node: Time Dependent,  Next: Unoccupied States,  Prev: Syst
           Note that this mode  is only possible if the run is done in
           spin polarized mode, or with spinors.
 
+   * *TDEvolutionMethod*
+     _Section_: Time Dependent
+     _Type_: integer
+     _Default_: etrs
+     This variable determines which algorithm will be used to
+     approximate  the evolution operator U(t+\delta t, t). That is,
+     known  \psi(\tau) and H(\tau) for tau \le t,  calculate t+\delta
+     t. Note that in general the Hamiltonian  is not known at times in
+     the interior of the interval [t,t+\delta t].   This is due to the
+     self-consistent nature of the time-dependent Kohn-Sham problem:
+     the Hamiltonian at a given time \tau is built from the  "solution"
+     wavefunctions at that time.
+
+     Some methods, however, do require the knowledge of the Hamiltonian
+     at some  point of the interval [t,t+\delta t]. This problem is
+     solved by making  use of extrapolation: given a number l of time
+     steps previous to time  t, this information is used to build the
+     Hamiltonian at arbitrary times  within [t,t+\delta t]. To be fully
+     precise, one should then proceed  _self-consistently_: the
+     obtained Hamiltonian at time t+\delta t  may then be used to
+     interpolate the Hamiltonian, and repeat the evolution  algorithm
+     with this new information. Whenever iterating the procedure does
+     not change the solution wave-functions, the cycle is stopped. In
+     practice,  in octopus we perform a second-order extrapolation
+     without  self-consistente check, except for the first two
+     iterations, where obviously  the extrapolation is not reliable.
+
+     The proliferation of methods is certainly excessive; The reason
+     for it is that  the propagation algorithm is currently a topic of
+     active development. We  hope that in the future the optimal
+     schemes are clearly identified. In the  mean time, if you don't
+     feel like testing, use the default choices and  make sure the time
+     step is small enough.
+
+     _Options_:
+        - *split*:  Split Operator (SO).   This is one of the most
+          traditional methods. It splits the full Hamiltonian  into a
+          kinetic and a potential part, performing the first in
+          Fourier-space,  and the latter in real space. The necessary
+          transformations are performed  with the FFT algorithm.
+
+
+
+          Since those three exponentials may be calculated exactly, one
+          does not  need to use any of the methods specified by
+          variable TDExponentialMethod  to perform them.
+
+          The key point is the specification of V^*. Let V(t) be
+          divided into  V_\rm int(t), the "internal" potential which
+          depends self-consistently  on the density, and V_\rm ext(t),
+          the external potential that we know  at all times since it is
+          imposed to the system by us (e.g. a laser field):  V(t)=V_\rm
+          int(t)+V_\rm ext(t). Then we define to be V^* to  be the sum
+          of V_\rm ext(t+\delta t/2) and the internal potential built
+          from the wavefunctions _after_ applying the right-most
+          kinetic term  of the equation, \exp \lbrace -i\delta t/2 T
+          \rbrace.
+
+          It may the be demonstrated that the order of the error of the
+          algorithm is the  same that the one that we would have by
+          making use of the Exponential Midpoint Rule  (EM, described
+          below), the SO algorithm to calculate the action of the
+          exponential of the Hamiltonian, and a full self-consistent
+          procedure.
+
+        - *suzuki-trotter* (1):  This is the generalization of the
+          Suzuki-Trotter algorithm, described  as one of the choices of
+          the TDExponentialMethod,  to time-dependent problem. Consult
+          the paper by O. Sugino and M. Miyamoto,  Phys. Rev. B *59*,
+          2579 (1999), for details.
+
+          It requires of Hamiltonian extrapolations.
+
+        - *etrs* (2):  The idea is to make use of the time-reversal
+          symmetry from the beginning:
+
+
+
+          and then invert to obtain:
+
+
+
+          But we need to know H_n+1, which can only be known exactly
+          through the solution  \psi_n+1. What we do is to estimate it
+          by performing a single exponential:  \psi^*_n+1=\exp \left(
+          -i\delta t H_n \right) \psi_n, and then  H_n+1 =
+          H[\psi^*_n+1]. Thus no extrapolation is performed in this
+          case.
+
+        - *aetrs* (3):  Approximated Enforced Time-Reversal Symmetry
+          (AETRS).   A modification of previous method to make it
+          faster.   It is based on extrapolation of the time-dependent
+          potentials. It is faster  by about 40%.
+
+          The only difference is the procedure to estimate H_n+1: in
+          this case  it is extrapolated trough a second-order
+          polynomial by making use of the  Hamiltonian at time
+          t-2\delta t, t-\delta t and t.
+
+        - *exp_mid* (4):  Exponential Midpoint Rule (EM).   This is
+          maybe the simplest method, but is is very well grounded
+          theretically:  it is unitary (if the exponential is performed
+          correctly) and preserves  time symmetry (if the
+          self-consistency problem is dealt with correctly).   It is
+          defined as:
+
+
+
+        - *magnus* (5):  Magnus Expansion (M4).   This is the most
+          sophisticated approach. It is a fourth order scheme (feature
+          that shares with the ST scheme; the other schemes are in
+          principle second order).   It is tailored for making use of
+          very large time steps, or equivalently,  dealing with problem
+          with very high-frequency time dependence.   It is still in a
+          experimental state; we are not yet sure of when it is
+          advantageous.
+
+   * *TDExpOrder*
+     _Section_: Time Dependent
+     _Type_: integer
+     _Default_: 4
+     For TDExponentialMethod equal standard or chebyshev, the order to
+     which  the exponential is expanded. For the Lanczos approximation,
+     it is the maximum  Lanczos-subspace dimension.
+
    * *TDExponentialMethod*
      _Section_: Time Dependent
+     _Type_: integer
      _Default_: standard
      Method used to numerically calculate the exponential of the
      Hamiltonian,  a core part of the full algorithm used to
@@ -2288,8 +2696,8 @@ File: octopus.info,  Node: Time Dependent,  Next: Unoccupied States,  Prev: Syst
           The equation that describes the split operator scheme is well
           known:
 
-          \exp_{\rm SO} (-i \delta t H) = \exp (-i \delta t/2 V) \exp
-          (-i \delta t T) \exp (-i \delta t/2 V).
+
+          \exp_@{\rm SO@} (-i \delta t H) = \exp (-i \delta t/2 V) \exp (-i \delta t T) \exp (-i \delta t/2 V).
 
           Note that this is a "kinetic referenced SO", since the
           kinetic term is sandwiched in the  middle. This is so because
@@ -2341,8 +2749,8 @@ File: octopus.info,  Node: Time Dependent,  Next: Unoccupied States,  Prev: Syst
           application of the definition of  the exponential of an
           operator, in terms of it Taylor expansion.
 
-          \exp_{\rm STD} (-i\delta t H) = \sum_{i=0}^{k} {(-i\delta
-          t)^i\over{i!}} H^i.
+
+          \exp_@{\rm STD@} (-i\delta t H) = \sum_@{i=0@}^@{k@} @{(-i\delta t)^i\over@{i!@}@} H^i.
 
           The order _k_ is determined by variable _TDExpOder_.   Some
           numerical considerations (by Jeff Giansiracusa and George F.
@@ -2357,9 +2765,8 @@ File: octopus.info,  Node: Time Dependent,  Next: Unoccupied States,  Prev: Syst
           There exists a closed analytical form for the coefficients of
           the exponential in terms  of Chebyshev polynomials:
 
-          \exp_{\rm CHEB} \left( -i\delta t H \right) =
-          \sum_{k=0}^{\infty} (2-\delta_{k0})(-i)^{k}J_k(\delta t)
-          T_k(H),
+
+          \exp_@{\rm CHEB@} \left( -i\delta t H \right) = \sum_@{k=0@}^@{\infty@} (2-\delta_@{k0@})(-i)^@{k@}J_k(\delta t) T_k(H),
 
           where J_k are the Bessel functions of the first kind, and H
           has te be previously  scaled to [-1,1].   See H. Tal-Ezer and
@@ -2367,8 +2774,30 @@ File: octopus.info,  Node: Time Dependent,  Next: Unoccupied States,  Prev: Syst
           Annu. Rev. Phys. Chem. *45*, 145 (1994);  C. W. Clenshaw,
           MTAC *9*, 118 (1955).
 
+   * *TDGauge*
+     _Section_: Time Dependent
+     _Type_: integer
+     _Default_: length
+     In which gauge to treat the laser field.
+
+     _Options_:
+        - *length* (1):  Length gauge.
+
+        - *velocity* (2):  Velocity gauge.
+
+   * *TDLanczosTol*
+     _Section_: Time Dependent
+     _Type_: float
+     _Default_: 1e-5
+     An internal tolerance variable for the Lanczos method. The
+     smaller, the more  precisely the exponential is calculated, and
+     also the bigger the dimension  of the Krylov subspace needed to
+     perform the algorithm. One should carefully  make sure that this
+     value is not too big, or else the evolution will be  wrong.
+
    * *TDLasers*
      _Section_: Time Dependent
+     _Type_: block
      The block TDLasers describe the type and shape of time-dependent
      external perturbations  that are applied to the system.   Each
      line of the block describes a laser field; this way you can
@@ -2400,34 +2829,264 @@ File: octopus.info,  Node: Time Dependent,  Next: Unoccupied States,  Prev: Syst
 
    * *TDMaximumIter*
      _Section_: Time Dependent
+     _Type_: integer
      _Default_: 1500
      Number of time steps in which the total integration time is
      divided;  in previous notation, _N_.
 
+   * *TDPolarization*
+     _Section_: Time Dependent
+     _Type_: block
+     The (real) polarization of the delta electric field. The format of
+     the  block is:
+
+     %TDPolarization
+     polx | poly | polz
+     %
+
    * *TDTimeStep*
      _Section_: Time Dependent
+     _Type_: float
      _Default_: 0.07 a.u.
      Time-step for the propagation;  in previous notation, \delta t.
+
+
+* Menu:
+
+* Absorbing Boundaries::
+* Spectrum Calculations::
+* TD Output::
+
+
+File: octopus.info,  Node: Absorbing Boundaries,  Next: Spectrum Calculations,  Prev: Time Dependent,  Up: Time Dependent
+
+6.8.1 Absorbing Boundaries
+--------------------------
+
+   * *ABHeight*
+     _Section_: Time Dependent::Absorbing Boundaries
+     _Type_: float
+     _Default_: -0.2 a.u.
+     When AbsorbingBoundaries == sin2, is the height of the imaginary
+     potential.
+
+   * *ABWidth*
+     _Section_: Time Dependent::Absorbing Boundaries
+     _Type_: float
+     _Default_: 0.4 a.u.
+     Width of the region used to apply the absorbing boundaries.
+
+   * *AbsorbingBoundaries*
+     _Section_: Time Dependent::Absorbing Boundaries
+     _Type_: integer
+     _Default_: no_absorbing
+     To improve the quality of the spectra by avoiding the formation of
+     standing density waves, one can make the boundaries of the
+     simulation  box absorbing.
+
+     _Options_:
+        - *no_absorbing*:  No absorbing boundaries.
+
+        - *sin2* (1):  A \sin^2 imaginary potential is added at the
+          boundaries.
+
+        - *mask* (2):  A mask is applied to the wave-functions at the
+          boundaries.
+
+
+
+File: octopus.info,  Node: Spectrum Calculations,  Next: TD Output,  Prev: Absorbing Boundaries,  Up: Time Dependent
+
+6.8.2 Spectrum Calculations
+---------------------------
+
+   * *HarmonicSpectrumMode*
+     _Section_: Time Dependent::Spectrum Calculations
+     _Type_: integer
+     _Default_: hs_from_dipole
+     The oct-harmonic-spectrum may calculate the spectrum in two
+     alternative ways,  mathematically equivalent but numerically
+     diferent: by reading the dipole  moment (from the multipoles file)
+     and calculating the accelaratio numerically  from it, or by
+     reading directly the acceleration from the acceleration file,
+     which may also be generated during a time-dependent run of octopus.
+
+     _Options_:
+        - *hs_from_dipole* (1):  Calculate the harmonic spectrum by
+          numerically differentiating the multipoles file.
+
+        - *hs_from_acceleration* (2):  Calculate the harmonic spectrum
+          by reading the acceleration file.
+
+   * *HarmonicSpectrumPolarization*
+     _Section_: Time Dependent::Spectrum Calculations
+     _Type_: string
+     _Default_: "z"
+     The oct-harmonic-spectrum utility program needs to know the
+     direction along  which the emission raidiation is considered to be
+     polarized. It may be  linearly polarized or circularly polarized.
+
+     _Options_:
+        - *"+"*:  Circularly polarized field, counter clock-wise.
+
+        - *"-"*:  Circularly polarized field, clock-wise.
+
+        - *"x"*:  Linearly polarized field in the x direction.
+
+        - *"y"*:  Linearly polarized field in the y direction.
+
+        - *"z"*:  Linearly polarized field in the z direction.
+
+   * *SpecDampFactor*
+     _Section_: Time Dependent::Spectrum Calculations
+     _Type_: integer
+     _Default_: polynomial
+     If SpecDampMode is set to "exp", the damping parameter of the
+     exponential  is fixed through this variable.
+
+   * *SpecDampMode*
+     _Section_: Time Dependent::Spectrum Calculations
+     _Type_: integer
+     _Default_: polynomial
+     Decides which damping/filtering is to be applied in order to
+     calculate  spectra by calculating a Fourier transform
+
+     _Options_:
+        - *no*:  No filtering at all.
+
+        - *exponential* (1):  Exponential filtering, corresponding with
+          a Lorentzian-shaped spectrum
+
+        - *polynomial* (2):  Third-order polynomial damping.
+
+        - *gaussian* (3):  Gaussian damping
+
+   * *SpecEndTime*
+     _Section_: Time Dependent::Spectrum Calculations
+     _Type_: integer
+     _Default_: polynomial
+     Processing is done for the given function in a time-window that
+     ends at the  value of this variable.
+
+   * *SpecEnergyStep*
+     _Section_: Time Dependent::Spectrum Calculations
+     _Type_: integer
+     _Default_: polynomial
+     Sampling rate for the spectrum.
+
+   * *SpecMaxEnergy*
+     _Section_: Time Dependent::Spectrum Calculations
+     _Type_: integer
+     _Default_: polynomial
+     The Fourier transform is calculated for energies smaller than this
+     value.
+
+   * *SpecStartTime*
+     _Section_: Time Dependent::Spectrum Calculations
+     _Type_: integer
+     _Default_: polynomial
+     Processing is done for the given function in a time-window that
+     starts at the  value of this variable.
+
+
+
+File: octopus.info,  Node: TD Output,  Prev: Spectrum Calculations,  Up: Time Dependent
+
+6.8.3 TD Output
+---------------
+
+   * *OutputEvery*
+     _Section_: Time Dependent::TD Output
+     _Type_: integer
+     _Default_: 1000
+     The output is saved when the iteration number is a multiple of the
+     OutputEvery variable.
+
+   * *TDDipoleLmax*
+     _Section_: Time Dependent::TD Output
+     _Type_: integer
+     _Default_: 1
+     Maximum multi-pole of the density output to the file
+     `td.general/multipoles'  during a time-dependent simulation. Must
+     be 0 < TDDipoleLmax < 5.
+
+   * *TDOutputAcceleration*
+     _Section_: Time Dependent::TD Output
+     _Type_: logical
+     _Default_: no
+     When true outputs the acceleration, calculated from Ehrenfest
+     theorem,  in the file td.general/acceleration. This file can then
+     be  processed by the utility "hs-from-acc" in order to obtain the
+     harmonic spectrum.
+
+   * *TDOutputCoordinates*
+     _Section_: Time Dependent::TD Output
+     _Type_: logical
+     _Default_: yes
+     If true (and if the atoms are allowed to move), outputs the
+     coordinates, velocities,  and forces of the atoms to the the file
+     td.general/coordinates.
+
+   * *TDOutputElEnergy*
+     _Section_: Time Dependent::TD Output
+     _Type_: logical
+     _Default_: no
+     If true, octopus outputs the different components of the
+     electronic energy  to the file td.general/el_energy.
+
+   * *TDOutputGSProjection*
+     _Section_: Time Dependent::TD Output
+     _Type_: logical
+     _Default_: no
+     If true, outputs the projection of the time-dependent Kohn-Sham
+     Slater determinant  onto the ground-state to the file
+     td.general/gs_projection. As the calculation  of the projection is
+     fairly heavy, this is only done every OutputEvery  iterations.
+
+   * *TDOutputLaser*
+     _Section_: Time Dependent::TD Output
+     _Type_: logical
+     _Default_: yes
+     If true, and if there are lasers defined in TDLasers,  octopus
+     outputs the laser field to the file td.general/laser.
+
+   * *TDOutputMultipoles*
+     _Section_: Time Dependent::TD Output
+     _Type_: logical
+     _Default_: yes
+     If true, outputs the multipole moments of the density to the file
+     td.general/multipoles.   This is required to, e.g., calculate
+     optical absorption spectra of finite systems.
+
+   * *TDOutputOccAnalysis*
+     _Section_: Time Dependent::TD Output
+     _Type_: logical
+     _Default_: no
+     If true, outputs the projections of the time-dependent Kohn-Sham
+     wave-functions onto the static (zero time) wave-functions to the
+     file td.general/projections.XXX.
 
 
 
 File: octopus.info,  Node: Unoccupied States,  Prev: Time Dependent,  Up: Input Variables
 
-6.8 Unoccupied States
+6.9 Unoccupied States
 =====================
 
    * *NumberUnoccStates*
      _Section_: Unoccupied States
+     _Type_: integer
      _Default_: 5
      How many unoccupied states to compute.
 
    * *WriteMatrixElements*
      _Section_: Unoccupied States
+     _Type_: logical
      _Default_: no
      If true outputs the following matrix elements:
         * <i|T + V_ext|j>
 
-        * <ij| 1/|r1-r2| |kl>
+        * <ij| 1/|r_1-r_2| |kl>
 
      in the directory ME
 
@@ -2900,6 +3559,12 @@ Options Index
  [index ]
 * Menu:
 
+* ABHeight
+:                             Absorbing Boundaries.           (line   7)
+* AbsorbingBoundaries
+:                  Absorbing Boundaries.                      (line  20)
+* ABWidth
+:                              Absorbing Boundaries.          (line  14)
 * AtomsMagnetDirection
 :                 Hamiltonian.                                (line   7)
 * AxisType:                              oct-center-geom.     (line  19)
@@ -2910,23 +3575,23 @@ Options Index
 * CFunctional
 :                          XC.                                (line   7)
 * ClassicPotential
-:                     Hamiltonian.                            (line  21)
+:                     Hamiltonian.                            (line  22)
 * ConvAbsDens
 :                          Convergence.                       (line   7)
 * ConvAbsEv
-:                            Convergence.                     (line  14)
+:                            Convergence.                     (line  15)
 * ConvRelDens
-:                          Convergence.                       (line  21)
+:                          Convergence.                       (line  23)
 * ConvRelEv
-:                            Convergence.                     (line  29)
+:                            Convergence.                     (line  32)
 * Coordinates
 :                          Coordinates.                       (line   7)
 * CurvGygiA
 :                            Gygi.                            (line   7)
 * CurvGygiAlpha
-:                        Gygi.                                (line  16)
+:                        Gygi.                                (line  17)
 * CurvGygiBeta
-:                         Gygi.                               (line  25)
+:                         Gygi.                               (line  27)
 * CurvMethod
 :                           Curvilinear.                      (line   7)
 * DebugLevel
@@ -2934,220 +3599,310 @@ Options Index
 * DerivativesSpace
 :                     Derivatives.                            (line   7)
 * DerivativesStencil
-:                   Derivatives.                              (line  21)
+:                   Derivatives.                              (line  22)
 * Dimensions
-:                           Generalities.                     (line  38)
+:                           Generalities.                     (line  39)
+* Displacement
+:                         Vibrational Modes.                  (line   7)
 * DoubleFFTParameter
 :                   FFTs.                                     (line   7)
 * EigenSolver
 :                          EigenSolver.                       (line   7)
 * EigenSolverArnoldiVectors
-:            EigenSolver.                                     (line  32)
+:            EigenSolver.                                     (line  33)
 * EigenSolverFinalTolerance
-:            EigenSolver.                                     (line  39)
+:            EigenSolver.                                     (line  41)
 * EigenSolverFinalToleranceIteration
-:   EigenSolver.                                              (line  44)
+:   EigenSolver.                                              (line  47)
 * EigenSolverImaginaryTime
-:             EigenSolver.                                    (line  50)
+:             EigenSolver.                                    (line  54)
 * EigenSolverInitTolerance
-:             EigenSolver.                                    (line  57)
+:             EigenSolver.                                    (line  62)
 * EigenSolverMaxIter
-:                   EigenSolver.                              (line  62)
+:                   EigenSolver.                              (line  68)
 * ElectronicTemperature
 :                States.                                      (line   7)
 * ExcessCharge
-:                         States.                             (line  14)
+:                         States.                             (line  15)
 * ExtraStates
-:                          States.                            (line  21)
+:                          States.                            (line  23)
 * FFTOptimize
-:                          FFTs.                              (line  17)
+:                          FFTs.                              (line  18)
 * FlushMessages
 :                        IO.                                  (line   7)
+* GOMaxIter
+:                            Geometry Optimization.           (line   7)
+* GOMethod
+:                             Geometry Optimization.          (line  14)
+* GOStep
+:                               Geometry Optimization.        (line  23)
+* GOTolerance
+:                          Geometry Optimization.             (line  29)
 * GuessMagnetDensity
-:                   Hamiltonian.                              (line  26)
+:                   SCF.                                      (line   7)
 * HarmonicSpectrumMode
 :                 Spectrum Calculations.                      (line   7)
 * HarmonicSpectrumPolarization
-:         Spectrum Calculations.                              (line  24)
+:         Spectrum Calculations.                              (line  25)
 * LCAOStart
-:                            SCF.                             (line   7)
+:                            SCF.                             (line  37)
 * LinearResponseKohnShamStates
 :         Casida.                                             (line   7)
 * Lsize
-:                                Simulation Box.              (line  32)
+:                                Simulation Box.              (line  33)
 * MainAxis:                              oct-center-geom.     (line  12)
 * MakeStates:                            oct-make-st.         (line  12)
 * MaximumIter
-:                          Convergence.                       (line  37)
+:                          Convergence.                       (line  41)
 * Mixing
-:                               Mixing.                       (line  15)
+:                               Mixing.                       (line  16)
 * MixNumberSteps
 :                       Mixing.                               (line   7)
+* MoveIons
+:                             Time Dependent.                 (line   7)
 * MultigridLevels
-:                      Hamiltonian.                           (line  55)
+:                      Hamiltonian.                           (line  28)
 * NonInteractingElectrons
-:              Hamiltonian.                                   (line  67)
+:              Hamiltonian.                                   (line  41)
 * NumberUnoccStates
 :                    Unoccupied States.                       (line   7)
 * Occupations
-:                          States.                            (line  35)
+:                          States.                            (line  38)
 * ODESolver
 :                            General.                         (line   7)
+* OutputAxisX
+:                          Output.                            (line   7)
+* OutputAxisY
+:                          Output.                            (line  14)
+* OutputAxisZ
+:                          Output.                            (line  21)
+* OutputDensity
+:                        Output.                              (line  36)
+* OutputDX
+:                             Output.                         (line  28)
+* OutputELF
+:                            Output.                          (line  43)
+* OutputEvery
+:                          TD Output.                         (line   7)
+* OutputGeometry
+:                       Output.                               (line  50)
+* OutputKSPotential
+:                    Output.                                  (line  60)
+* OutputMeshIndex
+:                      Output.                                (line  70)
+* OutputNETCDF
+:                         Output.                             (line  81)
+* OutputPlaneX
+:                         Output.                             (line  89)
+* OutputPlaneY
+:                         Output.                             (line  96)
+* OutputPlaneZ
+:                         Output.                             (line 103)
+* OutputWfs
+:                            Output.                          (line 110)
+* OutputWfsNumber
+:                      Output.                                (line 119)
 * ParallelizationGroupRanks
 :            Parallel.                                        (line   7)
 * ParallelizationStrategy
-:              Parallel.                                      (line  14)
+:              Parallel.                                      (line  15)
 * PDBCoordinates
-:                       Coordinates.                          (line  27)
+:                       Coordinates.                          (line  28)
 * PeriodicDimensions
-:                   Simulation Box.                           (line  48)
+:                   Simulation Box.                           (line  50)
 * PoissonSolver
 :                        Poisson.                             (line   7)
 * PoissonSolverMaxMultipole
-:            Poisson.                                         (line  39)
+:            Poisson.                                         (line  40)
 * PoissonSolverMGMaxCycles
 :             Multigrid.                                      (line   7)
 * PoissonSolverMGPostsmoothingSteps
-:    Multigrid.                                               (line  13)
+:    Multigrid.                                               (line  14)
 * PoissonSolverMGPresmoothingSteps
-:     Multigrid.                                              (line  19)
+:     Multigrid.                                              (line  21)
 * PoissonSolverMGRelaxationMethod
-:      Multigrid.                                             (line  25)
+:      Multigrid.                                             (line  28)
 * PoissonSolverMGRestrictionMethod
-:     Multigrid.                                              (line  41)
+:     Multigrid.                                              (line  45)
 * PoissonSolverThreshold
-:               Poisson.                                      (line  45)
+:               Poisson.                                      (line  47)
+* POLStaticField
+:                       Static Polarization.                  (line   7)
 * ProfilingMode
-:                        Debug.                               (line  22)
+:                        Debug.                               (line  23)
 * Radius
-:                               Simulation Box.               (line  63)
+:                               Simulation Box.               (line  66)
 * RandomVelocityTemp
 :                   Velocities.                               (line   7)
 * RelativisticCorrection
-:               Hamiltonian.                                  (line  81)
+:               Hamiltonian.                                  (line  56)
 * RootSolver
-:                           General.                          (line  21)
+:                           General.                          (line  22)
 * ScalarMeshType
-:                       General.                              (line  37)
+:                       General.                              (line  39)
 * SCFinLCAO
-:                            SCF.                             (line  15)
+:                            SCF.                             (line  46)
 * SICorrection
-:                         XC.                                 (line  44)
+:                         XC.                                 (line  45)
 * SparskitSolver
-:                       General.                              (line  53)
+:                       General.                              (line  56)
+* SpecDampFactor
+:                       Spectrum Calculations.                (line  44)
 * SpecDampMode
-:                         Spectrum Calculations.              (line  42)
+:                         Spectrum Calculations.              (line  51)
+* SpecEndTime
+:                          Spectrum Calculations.             (line  68)
+* SpecEnergyStep
+:                       Spectrum Calculations.                (line  75)
 * Species
 :                              Species.                       (line   7)
+* SpecMaxEnergy
+:                        Spectrum Calculations.               (line  81)
+* SpecStartTime
+:                        Spectrum Calculations.               (line  88)
 * SpinComponents
-:                       States.                               (line  59)
+:                       States.                               (line  63)
 * stderr
-:                               IO.                           (line  23)
+:                               IO.                           (line  25)
 * stdout
-:                               IO.                           (line  31)
+:                               IO.                           (line  34)
 * SystemName
 :                           System.                           (line   7)
+* TDDeltaStrength
+:                      Time Dependent.                        (line  20)
 * TDDeltaStrengthMode
-:                  Time Dependent.                            (line   7)
+:                  Time Dependent.                            (line  28)
+* TDDipoleLmax
+:                         TD Output.                          (line  14)
+* TDEvolutionMethod
+:                    Time Dependent.                          (line  49)
 * TDExponentialMethod
-:                  Time Dependent.                            (line  27)
+:                  Time Dependent.                            (line 174)
+* TDExpOrder
+:                           Time Dependent.                   (line 166)
+* TDGauge
+:                              Time Dependent.                (line 275)
+* TDLanczosTol
+:                         Time Dependent.                     (line 286)
 * TDLasers
-:                             Time Dependent.                 (line 128)
+:                             Time Dependent.                 (line 296)
 * TDMaximumIter
-:                        Time Dependent.                      (line 159)
+:                        Time Dependent.                      (line 328)
+* TDOutputAcceleration
+:                 TD Output.                                  (line  22)
+* TDOutputCoordinates
+:                  TD Output.                                 (line  31)
+* TDOutputElEnergy
+:                     TD Output.                              (line  39)
+* TDOutputGSProjection
+:                 TD Output.                                  (line  46)
+* TDOutputLaser
+:                        TD Output.                           (line  55)
+* TDOutputMultipoles
+:                   TD Output.                                (line  62)
+* TDOutputOccAnalysis
+:                  TD Output.                                 (line  70)
+* TDPolarization
+:                       Time Dependent.                       (line 335)
 * TDTimeStep
-:                           Time Dependent.                   (line 165)
+:                           Time Dependent.                   (line 345)
 * TypeOfMixing
-:                         Mixing.                             (line  21)
+:                         Mixing.                             (line  23)
 * Units
 :                                Units.                       (line   7)
 * UnitsInput
-:                           Units.                            (line  22)
+:                           Units.                            (line  23)
 * UnitsOutput
-:                          Units.                             (line  29)
+:                          Units.                             (line  31)
 * Velocities
-:                           Velocities.                       (line  13)
+:                           Velocities.                       (line  14)
 * What2Mix
-:                             Mixing.                         (line  36)
+:                             Mixing.                         (line  39)
 * WorkDir
-:                              IO.                            (line  14)
+:                              IO.                            (line  15)
 * WriteMatrixElements
-:                  Unoccupied States.                         (line  12)
+:                  Unoccupied States.                         (line  13)
 * XFunctional
-:                          XC.                                (line  59)
+:                          XC.                                (line  61)
 * Xlength
-:                              Simulation Box.                (line  72)
+:                              Simulation Box.                (line  76)
 * XYZCoordinates
-:                       Coordinates.                          (line  56)
+:                       Coordinates.                          (line  58)
 * XYZVelocities
-:                        Velocities.                          (line  32)
+:                        Velocities.                          (line  34)
 
 
 
 Tag Table:
 Node: Top667
-Node: Authors2851
-Node: Copying6232
-Node: Installation7712
-Node: Quick instructions8701
-Node: Long instructions9236
-Ref: Long instructions-Footnote-118869
-Ref: Long instructions-Footnote-219427
-Node: Different octopus executables19639
-Node: Troubleshooting21441
-Node: The parser23387
-Node: Description26654
-Node: Mesh26937
-Node: Run Mode SCF27317
-Node: Run Mode Unoccupied States28370
-Node: Run Mode Time Dependent29063
-Node: Function output for visualization33034
-Node: Spectrum calculations34185
-Node: Input Variables34681
-Node: Generalities35147
-Node: Debug36603
-Node: IO38087
-Node: Parallel39394
-Node: Units40461
-Node: Hamiltonian41674
-Node: Poisson45587
-Node: Multigrid47077
-Node: XC48633
-Node: Casida50607
-Node: General51797
-Node: Curvilinear53859
-Node: Gygi55134
-Node: Derivatives56476
-Node: FFTs57727
-Node: Simulation Box58806
-Node: SCF61296
-Node: Convergence62118
-Node: EigenSolver63556
-Node: Mixing65795
-Node: Spectrum Calculations67114
-Node: States69157
-Node: System72337
-Node: Coordinates72723
-Node: Species75826
-Node: Velocities79714
-Node: Time Dependent81155
-Node: Unoccupied States89354
-Node: Undocumented Variables89831
-Node: External utilities90936
-Node: oct-sf91511
-Node: oct-rsf92295
-Node: oct-hs-mult92422
-Node: oct-hs-acc92631
-Node: oct-xyz-anim92845
-Node: oct-excite93076
-Node: oct-broad93709
-Node: oct-make-st94068
-Node: oct-center-geom95348
-Node: wf.net96394
-Node: Examples97775
-Node: Hello world97934
-Ref: Hello world-Footnote-1104557
-Node: Benzene104641
-Node: Options Index105458
+Node: Authors3025
+Node: Copying6406
+Node: Installation7886
+Node: Quick instructions8875
+Node: Long instructions9410
+Ref: Long instructions-Footnote-119043
+Ref: Long instructions-Footnote-219601
+Node: Different octopus executables19813
+Node: Troubleshooting21615
+Node: The parser23561
+Node: Description26828
+Node: Mesh27111
+Node: Run Mode SCF27491
+Node: Run Mode Unoccupied States28544
+Node: Run Mode Time Dependent29237
+Node: Function output for visualization33208
+Node: Spectrum calculations34359
+Node: Input Variables34855
+Node: Generalities35332
+Node: Debug36840
+Node: IO38366
+Node: Parallel39754
+Node: Units40861
+Node: Geometry Optimization42134
+Node: Hamiltonian43122
+Node: Poisson46105
+Node: Multigrid47654
+Node: XC49315
+Node: Casida51352
+Node: Static Polarization52574
+Node: Vibrational Modes52967
+Node: General53447
+Node: Curvilinear55604
+Node: Gygi56900
+Node: Derivatives58292
+Node: FFTs59585
+Node: Simulation Box60704
+Node: Output63295
+Node: SCF67446
+Node: Convergence69402
+Node: EigenSolver70905
+Node: Mixing73285
+Node: States74686
+Node: System77947
+Node: Coordinates78353
+Node: Species81515
+Node: Velocities85420
+Node: Time Dependent86920
+Node: Absorbing Boundaries102720
+Node: Spectrum Calculations103832
+Node: TD Output107090
+Node: Unoccupied States109724
+Node: Undocumented Variables110245
+Node: External utilities111350
+Node: oct-sf111925
+Node: oct-rsf112709
+Node: oct-hs-mult112836
+Node: oct-hs-acc113045
+Node: oct-xyz-anim113259
+Node: oct-excite113490
+Node: oct-broad114123
+Node: oct-make-st114482
+Node: oct-center-geom115762
+Node: wf.net116808
+Node: Examples118189
+Node: Hello world118348
+Ref: Hello world-Footnote-1124971
+Node: Benzene125055
+Node: Options Index125872
 
 End Tag Table
