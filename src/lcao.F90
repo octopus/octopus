@@ -122,9 +122,7 @@ contains
     type(hamiltonian_type),  intent(in)    :: h
 
     type(geometry_type), pointer :: geo
-    type(specie_type), pointer :: s
-    integer :: norbs, ik, n1, n2, j, ia, n, idim, k, ierr
-    FLOAT :: x(gr%sb%dim), r
+    integer :: norbs, ik, n1, n2, ia, n, ierr
     R_TYPE, allocatable :: hpsi(:,:)
 
     if(lcao_data%state == 1) return

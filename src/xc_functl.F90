@@ -195,7 +195,7 @@ contains
     !%Option lda_c_gl 5
     !% LDA: Gunnarson & Lundqvist
     !%Option lda_c_xalpha 6
-    !% LDA: Slater's Xalpha
+    !% LDA: Slater s Xalpha
     !%Option lda_c_vwn 7
     !% LDA: Vosko, Wilk, & Nussair
     !%Option lda_c_pz 8

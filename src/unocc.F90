@@ -51,7 +51,7 @@ contains
     type(hamiltonian_type), intent(inout) :: h
 
     type(eigen_solver_type) :: eigens
-    integer :: iunit, err, ik, p, occupied_states, j
+    integer :: iunit, err, ik, p, occupied_states
     R_TYPE, allocatable :: h_psi(:,:)
     logical :: converged, l
     type(lcao_type) :: lcao_data
