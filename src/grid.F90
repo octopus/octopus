@@ -127,7 +127,7 @@ contains
     type(grid_type), intent(in) :: gr
     integer,         intent(in) :: iunit
 
-    if(mpiv%node .ne. 0) then
+    if(mpi_world%rank .ne. 0) then
       if(in_debug_mode) call write_debug_newlines(4)
       return
     end if

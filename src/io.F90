@@ -156,24 +156,24 @@ contains
         write(message(1),'(a,i6,a,i6.6,20x,a)') '* I ',sec,'.',usec,' | MPI debug hook'
         call write_debug(1)
 
-        write(stdout,'(a,i3,a)') 'node:', mpiv%node, ' In debug hook'
-        write(node_hook,'(i3.3)') mpiv%node
+        write(stdout,'(a,i3,a)') 'node:', mpi_world%rank, ' In debug hook'
+        write(node_hook,'(i3.3)') mpi_world%rank
         file_exists = .false.
 
         do while (.not.file_exists)
           inquire(file='node_hook.'//node_hook, exist=file_exists)
           call loct_nanosleep(1,0)
-          write(stdout,'(a,i3,a)') 'node:', mpiv%node, &
+          write(stdout,'(a,i3,a)') 'node:', mpi_world%rank, &
             ' - still sleeping. To release me touch: node_hook.'//trim(node_hook)
         end do
 
-        write(stdout,'(a,i3,a)') 'node:', mpiv%node, ' Leaving debug hook'
+        write(stdout,'(a,i3,a)') 'node:', mpi_world%rank, ' Leaving debug hook'
         ! remove possible debug hooks
         call loct_rm( 'node_hook.'//trim(node_hook) )
 
         call loct_gettimeofday(sec, usec)
         call epoch_time_diff(sec,usec)
-        write(message(1),'(a,i6,a,i6.6,20x,a)') '* O ',sec,'.',usec,' | MPI debug hook'
+        write(message(1),'(a,i6,a,i6.6,20x,a)') '* O ', sec, '.', usec,' | MPI debug hook'
         call write_debug(1)
       end if
     end if

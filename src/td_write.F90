@@ -238,7 +238,7 @@ contains
       first = iter + 1
     end if
 
-    if(mpiv%node==0) then
+    if(mpi_world%rank==0) then
       if(w%out_multip.ne.0)  call write_iter_init(w%out_multip,  first, dt/units_out%time%factor, &
         trim(io_workpath("td.general/multipoles")))
       if(w%out_angular.ne.0) call write_iter_init(w%out_angular, first, dt/units_out%time%factor, &
@@ -270,7 +270,7 @@ contains
     type(td_write_type)       :: w
     call push_sub('td_write.td_write_end')
 
-    if(mpiv%node==0) then
+    if(mpi_world%rank==0) then
       if(w%out_multip.ne.0)  call write_iter_end(w%out_multip)
       if(w%out_angular.ne.0) call write_iter_end(w%out_angular)
       if(w%out_spin.ne.0)    call write_iter_end(w%out_spin)
@@ -334,7 +334,7 @@ contains
 
     call push_sub('td.td_write_data')
 
-    if(mpiv%node==0) then
+    if(mpi_world%rank==0) then
       if(w%out_multip.ne.0)  call write_iter_flush(w%out_multip)
       if(w%out_angular.ne.0) call write_iter_flush(w%out_angular)
       if(w%out_spin.ne.0)    call write_iter_flush(w%out_spin)
@@ -376,7 +376,7 @@ contains
 
     call push_sub('td_write.td_write_spin')
 
-    if(mpiv%node == 0) then ! only first node outputs
+    if(mpi_world%rank == 0) then ! only first node outputs
 
       ! The expectation value of the spin operator is half the total magnetic moment
       call states_magnetic_moment(m, st, st%rho, spin)
@@ -430,7 +430,7 @@ contains
 
     call push_sub('td_write.td_write_local_magnetic_moments')
 
-    if(mpiv%node == 0) then ! only first node outputs
+    if(mpi_world%rank == 0) then ! only first node outputs
 
       !get the atoms magnetization
       allocate(lmm(3, geo%natoms))
@@ -489,7 +489,7 @@ contains
     ! The angular momentum has to be calculated by all nodes...
     call zstates_calc_angular(gr, st, angular)
 
-    if(mpiv%node == 0) then ! Only first node outputs
+    if(mpi_world%rank == 0) then ! Only first node outputs
 
       if(iter ==0) then
         call td_write_print_header_init(out_angular)
@@ -573,7 +573,7 @@ contains
 
     call push_sub('td_write.td_write_multipole')
 
-    if(mpiv%node == 0.and.iter == 0) then
+    if(mpi_world%rank == 0.and.iter == 0) then
       call td_write_print_header_init(out_multip)
 
       write(aux, '(a15,i2)')      '# nspin        ', st%d%nspin
@@ -665,7 +665,7 @@ contains
       multipole(2:4, is) = nuclear_dipole(1:3) - multipole(2:4, is)
     end do
 
-    if(mpiv%node.eq.0) then
+    if(mpi_world%rank.eq.0) then
       call write_iter_start(out_multip)
       do is = 1, st%d%nspin
         add_lm = 1
@@ -694,7 +694,7 @@ contains
     integer :: i, j
     character(len=50) :: aux
 
-    if(mpiv%node.ne.0) return ! only first node outputs
+    if(mpi_world%rank.ne.0) return ! only first node outputs
 
     if(iter == 0) then
       call td_write_print_header_init(out_coords)
@@ -773,7 +773,7 @@ contains
     ! all processors calculate the projection
     gsp = zstates_mpdotp(m, 1, st, gs_st)
 
-    if(mpiv%node .eq. 0) then
+    if(mpi_world%rank .eq. 0) then
       if(iter == 0) then
         call td_write_print_header_init(out_gsp)
 
@@ -816,7 +816,7 @@ contains
     character(len=7) :: aux
     FLOAT :: acc(3)
 
-    if(mpiv%node.ne.0) return ! only first node outputs
+    if(mpi_world%rank.ne.0) return ! only first node outputs
 
     if(iter == 0) then
       call td_write_print_header_init(out_acc)
@@ -860,7 +860,7 @@ contains
     FLOAT :: field(3)
     character(len=80) :: aux
 
-    if(mpiv%node.ne.0) return ! only first node outputs
+    if(mpi_world%rank.ne.0) return ! only first node outputs
 
     ! TODO -> confirm these stupid units, especially for the vector field
     if(iter == 0) then
@@ -926,7 +926,7 @@ contains
 
     integer :: i
 
-    if(mpiv%node.ne.0) return ! only first node outputs
+    if(mpi_world%rank.ne.0) return ! only first node outputs
 
     if(iter == 0) then
       call td_write_print_header_init(out_energy)
@@ -979,7 +979,7 @@ contains
 
     call push_sub('td_write.td_write_proj')
 
-    if(mpiv%node == 0) then
+    if(mpi_world%rank == 0) then
       if(iter == 0) then
         call td_write_print_header_init(out_proj)
 
@@ -1013,21 +1013,18 @@ contains
     end do
 #endif
 
-    if(mpiv%node.ne.0) then
-      call pop_sub()
-      return
-    end if
-
-    call write_iter_start(out_proj)
-    do ik = 1, st%d%nik
-      do ist = 1, st%nst
-        do uist = 1, gs_st%nst
-          call write_iter_double(out_proj,  real(projections(ist, uist, ik)), 1)
-          call write_iter_double(out_proj, aimag(projections(ist, uist, ik)), 1)
+    if(mpi_world%rank == 0) then
+      call write_iter_start(out_proj)
+      do ik = 1, st%d%nik
+        do ist = 1, st%nst
+          do uist = 1, gs_st%nst
+            call write_iter_double(out_proj,  real(projections(ist, uist, ik)), 1)
+            call write_iter_double(out_proj, aimag(projections(ist, uist, ik)), 1)
+          end do
         end do
       end do
-    end do
-    call write_iter_nl(out_proj)
+      call write_iter_nl(out_proj)
+    end if
 
     deallocate(projections)
     call pop_sub()

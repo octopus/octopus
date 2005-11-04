@@ -359,7 +359,7 @@ contains
       call push_sub('casida.solve_petersilka')
 
       ! initialize progress bar
-      if(mpiv%node == 0) call loct_progress_bar(-1, cas%n_pairs-1)
+      if(mpi_world%rank == 0) call loct_progress_bar(-1, cas%n_pairs-1)
 
       ! file to save matrix elements
       iunit = io_open(trim(tmpdir)//'restart_casida', action='write', position='append')
@@ -380,7 +380,7 @@ contains
           cas%w(ia) = cas%w(ia) + M_TWO*f
         end if
 
-        if(mpiv%node == 0) call loct_progress_bar(ia-1, cas%n_pairs-1)
+        if(mpi_world%rank == 0) call loct_progress_bar(ia-1, cas%n_pairs-1)
       end do
 
       allocate(x(cas%n_pairs), deltav(m%np))
@@ -391,7 +391,7 @@ contains
       deallocate(x, deltav)
 
       ! complete progress bar
-      if(mpiv%node == 0) write(*, "(1x)")
+      if(mpi_world%rank == 0) write(*, "(1x)")
 
       ! close restart file
       call io_close(iunit)
@@ -416,9 +416,9 @@ contains
       max = (cas%n_pairs*(1 + cas%n_pairs)/2)/cas%mpi_size
       counter = 0
       actual = 0
-      if(mpiv%node == 0) call loct_progress_bar(-1, max)
+      if(mpi_world%rank == 0) call loct_progress_bar(-1, max)
 
-      if(mpiv%node .ne. 0) cas%mat = M_ZERO
+      if(mpi_world%rank .ne. 0) cas%mat = M_ZERO
 
       ! calculate the matrix elements of (v + fxc)
       do jb = 1, cas%n_pairs
@@ -441,7 +441,7 @@ contains
           if(jb /= ia) cas%mat(jb, ia) = cas%mat(ia, jb) ! the matrix is symmetric
 
         end do
-        if(mpiv%node == 0) call loct_progress_bar(counter-1, max)
+        if(mpi_world%rank == 0) call loct_progress_bar(counter-1, max)
       end do
 
       ! sum all matrix elements
@@ -460,7 +460,7 @@ contains
       if (cas%mpi_rank == 0) then
 
         ! complete progress bar
-        if(mpiv%node == 0) write(stdout, '(1x)')
+        if(mpi_world%rank == 0) write(stdout, '(1x)')
 
         ! complete the matrix and output the restart file
         iunit = io_open(trim(tmpdir)//'restart_casida', action='write', position='append')

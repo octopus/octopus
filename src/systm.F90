@@ -111,7 +111,7 @@ contains
       if(present(parallel_mask)) parallel_mask_ = parallel_mask
 
       ! create index and domain communicators
-      call multicomm_init(sys%mc, parallel_mask, mpiv%numprocs, index_dim, &
+      call multicomm_init(sys%mc, parallel_mask, mpi_world%size, index_dim, &
         index_range, (/ 15000, 5, 1, 1 /))
 
     end subroutine parallel_init

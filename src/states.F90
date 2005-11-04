@@ -666,16 +666,17 @@ contains
 
     call push_sub('states.states_calculate_multipoles')
 
-    allocate(f(gr%m%np)); f = M_ZERO
+    allocate(f(NP))
+    f = M_ZERO
 
     do is = 1, st%d%nspin
 
-      f(:) = st%rho(:, is)
+      f(1:NP) = st%rho(1:NP, is)
       multipole(1, is) = dmf_integrate(gr%m, f)
 
       if(lmax>0) then
         do i = 1, 3
-          f(:) = st%rho(1:gr%m%np, is)*gr%m%x(1:gr%m%np, i)
+          f(1:NP) = st%rho(1:NP, is)*gr%m%x(1:NP, i)
           multipole(i+1, is) = dmf_integrate(gr%m, f)
         end do
       end if
@@ -739,73 +740,67 @@ contains
       call write_info(1, iunit)
     end if
 
-#ifdef HAVE_MPI
-    if(mpiv%node == 0) then
-#endif
+    if(mpi_world%rank.ne.0) return
 
-      do ik = 1, st%d%nik, ns
-        if(st%d%nik > ns) then
-          write(iunit, '(a,i4,3(a,f12.6),a)') '#k =',ik,', k = (',  &
-            st%d%kpoints(1, ik)*units_out%length%factor, ',',           &
-            st%d%kpoints(2, ik)*units_out%length%factor, ',',           &
-            st%d%kpoints(3, ik)*units_out%length%factor, ')'
+    do ik = 1, st%d%nik, ns
+      if(st%d%nik > ns) then
+        write(iunit, '(a,i4,3(a,f12.6),a)') '#k =',ik,', k = (',  &
+           st%d%kpoints(1, ik)*units_out%length%factor, ',',           &
+           st%d%kpoints(2, ik)*units_out%length%factor, ',',           &
+           st%d%kpoints(3, ik)*units_out%length%factor, ')'
+      end if
+
+      do is = 1, ns
+        write(iunit, '(a4)', advance='no') '#st'
+        if(present(error)) then
+          write(iunit, '(1x,a12,3x,a12,2x,a10,i3,a1)', advance='no') &
+             ' Eigenvalue', 'Occupation ', 'Error (', is, ')'
+        else
+          write(iunit, '(1x,a12,3x,a12,2x)', advance='no') &
+             ' Eigenvalue', 'Occupation '
         end if
+      end do
+      write(iunit, '(1x)', advance='yes')
 
-        do is = 1, ns
-          write(iunit, '(a4)', advance='no') '#st'
-          if(present(error)) then
-            write(iunit, '(1x,a12,3x,a12,2x,a10,i3,a1)', advance='no') &
-              ' Eigenvalue', 'Occupation ', 'Error (', is, ')'
+      do j = 1, nst
+        do is = 0, ns-1
+          if(j > st%nst) then
+            o = M_ZERO
+            if(st%d%ispin == SPINORS) oplus = M_ZERO; ominus = M_ZERO
           else
-            write(iunit, '(1x,a12,3x,a12,2x)', advance='no') &
-              ' Eigenvalue', 'Occupation '
+            o = st%occ(j, ik+is)
+            if(st%d%ispin == SPINORS) then
+              oplus  = st%mag(j, ik+is, 1)
+              ominus = st%mag(j, ik+is, 2)
+            end if
+          end if
+
+          write(iunit, '(i4)', advance='no') j
+          if(simul_box_is_periodic(sb)) then
+            if(st%d%ispin == SPINORS) then
+              write(iunit, '(1x,f12.6,3x,f5.2,a1,f5.2)', advance='no') &
+                 (st%eigenval(j, ik)-st%ef)/units_out%energy%factor, oplus, '/', ominus
+              if(present(error)) write(iunit, '(a7,es7.1,a1)', advance='no')'      (', error(j, ik+is), ')'
+            else
+              write(iunit, '(1x,f12.6,3x,f12.6)', advance='no') &
+                 (st%eigenval(j, ik+is))/units_out%energy%factor, o
+              if(present(error)) write(iunit, '(a7,es7.1,a1)', advance='no')'      (', error(j, ik), ')'
+            end if
+          else
+            if(st%d%ispin == SPINORS) then
+              write(iunit, '(1x,f12.6,3x,f5.2,a1,f5.2)', advance='no') &
+                 st%eigenval(j, ik)/units_out%energy%factor, oplus, '/', ominus
+              if(present(error)) write(iunit, '(a7,es7.1,a1)', advance='no')'      (', error(j, ik+is), ')'
+            else
+              write(iunit, '(1x,f12.6,3x,f12.6)', advance='no') &
+                 st%eigenval(j, ik+is)/units_out%energy%factor, o
+              if(present(error)) write(iunit, '(a7,es7.1,a1)', advance='no')'      (', error(j, ik), ')'
+            end if
           end if
         end do
         write(iunit, '(1x)', advance='yes')
-
-        do j = 1, nst
-          do is = 0, ns-1
-            if(j > st%nst) then
-              o = M_ZERO
-              if(st%d%ispin == SPINORS) oplus = M_ZERO; ominus = M_ZERO
-            else
-              o = st%occ(j, ik+is)
-              if(st%d%ispin == SPINORS) then
-                oplus  = st%mag(j, ik+is, 1)
-                ominus = st%mag(j, ik+is, 2)
-              end if
-            end if
-
-            write(iunit, '(i4)', advance='no') j
-            if(simul_box_is_periodic(sb)) then
-              if(st%d%ispin == SPINORS) then
-                write(iunit, '(1x,f12.6,3x,f5.2,a1,f5.2)', advance='no') &
-                  (st%eigenval(j, ik)-st%ef)/units_out%energy%factor, oplus, '/', ominus
-                if(present(error)) write(iunit, '(a7,es7.1,a1)', advance='no')'      (', error(j, ik+is), ')'
-              else
-                write(iunit, '(1x,f12.6,3x,f12.6)', advance='no') &
-                  (st%eigenval(j, ik+is))/units_out%energy%factor, o
-                if(present(error)) write(iunit, '(a7,es7.1,a1)', advance='no')'      (', error(j, ik), ')'
-              end if
-            else
-              if(st%d%ispin == SPINORS) then
-                write(iunit, '(1x,f12.6,3x,f5.2,a1,f5.2)', advance='no') &
-                  st%eigenval(j, ik)/units_out%energy%factor, oplus, '/', ominus
-                if(present(error)) write(iunit, '(a7,es7.1,a1)', advance='no')'      (', error(j, ik+is), ')'
-              else
-                write(iunit, '(1x,f12.6,3x,f12.6)', advance='no') &
-                  st%eigenval(j, ik+is)/units_out%energy%factor, o
-                if(present(error)) write(iunit, '(a7,es7.1,a1)', advance='no')'      (', error(j, ik), ')'
-              end if
-            end if
-          end do
-          write(iunit, '(1x)', advance='yes')
-        end do
       end do
-
-#ifdef HAVE_MPI
-    end if
-#endif
+    end do
 
   end subroutine states_write_eigenvalues
 
@@ -822,6 +817,8 @@ contains
     integer, parameter :: GNUPLOT = 1, &
       XMGRACE = 2
 
+    if(mpi_world%rank.ne.0) return
+
     !%Variable OutputBandsMode
     !%Type integer
     !%Default 1
@@ -833,7 +830,6 @@ contains
     !%Option 2
     !% xmgrace format
     !%End
-    
     call loct_parse_int(check_inp('OutputBandsMode'), GNUPLOT, mode)
     if(mode /= GNUPLOT .and. mode /= XMGRACE) then
       message(1) = "Input: BandsOutputMode must be 1 (gnuplot) or 2 (xmgrace)"
@@ -844,40 +840,32 @@ contains
     ns = 1
     if(st%d%nspin == 2) ns = 2
 
-#ifdef HAVE_MPI
-    if(mpiv%node == 0) then
-#endif
+    ! define the scaling factor to output k_i/G_i, instead of k_i
+    do i =1,3
+      factor(i) = M_ONE
+      if (sb%klat(i,i) /= M_ZERO) factor(i) = sb%klat(i,i)
+    end do
 
-      ! define the scaling factor to output k_i/G_i, instead of k_i
-      do i =1,3
-        factor(i) = M_ONE
-        if (sb%klat(i,i) /= M_ZERO) factor(i) = sb%klat(i,i)
-      end do
-
-      select case(mode)
-      case(1)
-        ! output bands in gnuplot format
-        do j = 1, nst
-          do ik = 1, st%d%nik, ns
-            write(iunit, '(1x,3(f10.4))', advance='no') &
-              st%d%kpoints(:,ik)/factor(:)
-            write(iunit, '(3x,f12.6))', advance='yes') st%eigenval(j, ik)/units_out%energy%factor
-          end do
-          write(iunit, '(a)')' '
-        end do
-      case(2)
-        ! output bands in xmgrace format, i.e.:
-        ! k_x, k_y, k_z, e_1, e_2, ..., e_n
+    select case(mode)
+    case(1)
+      ! output bands in gnuplot format
+      do j = 1, nst
         do ik = 1, st%d%nik, ns
           write(iunit, '(1x,3(f10.4))', advance='no') &
-            st%d%kpoints(:,ik)/factor(:)
-          write(iunit, '(3x,20f12.6))', advance='yes') (st%eigenval(j, ik)/units_out%energy%factor, j=1,nst)
+             st%d%kpoints(:,ik)/factor(:)
+          write(iunit, '(3x,f12.6))', advance='yes') st%eigenval(j, ik)/units_out%energy%factor
         end do
-      end select
-
-#ifdef HAVE_MPI
-    end if
-#endif
+        write(iunit, '(a)')' '
+      end do
+    case(2)
+      ! output bands in xmgrace format, i.e.:
+      ! k_x, k_y, k_z, e_1, e_2, ..., e_n
+      do ik = 1, st%d%nik, ns
+        write(iunit, '(1x,3(f10.4))', advance='no') &
+           st%d%kpoints(:,ik)/factor(:)
+        write(iunit, '(3x,20f12.6))', advance='yes') (st%eigenval(j, ik)/units_out%energy%factor, j=1,nst)
+      end do
+    end select
 
   end subroutine states_write_bands
 

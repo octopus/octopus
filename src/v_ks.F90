@@ -162,7 +162,7 @@ contains
     call push_sub('v_ks.v_ks_write_info');
 
 #ifdef HAVE_MPI
-    if(mpiv%node == 0) then
+    if(mpi_world%rank == 0) then
 #endif
       write(iunit,'(/,a)') stars
       call xc_write_info(ks%xc, iunit)

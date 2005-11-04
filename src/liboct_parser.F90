@@ -198,7 +198,7 @@ contains
 #endif
 
     ! initialize the parser
-    ierr = loct_parse_init('out.oct', mpiv%node)
+    ierr = loct_parse_init('out.oct', mpi_world%rank)
     if(ierr .ne. 0) then
       write(6,'(a)') '*** Fatal Error (description follows)'
       write(6,'(a)') 'Error initializing liboct'

@@ -131,7 +131,7 @@ contains
     type(mesh_type), intent(in) :: m
     integer,         intent(in) :: unit
 
-    if(mpiv%node .ne. 0) return
+    if(mpi_world%rank .ne. 0) return
 
     call push_sub('mesh.mesh_write_info')
 

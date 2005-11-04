@@ -26,12 +26,12 @@ subroutine xc_get_vxc(gr, xcs, rho, ispin, vxc, ex, ec, ip, qtot)
   FLOAT,                 intent(inout) :: vxc(:,:), ex, ec
   FLOAT,                 intent(in)    :: ip, qtot
 
-  FLOAT, allocatable :: dens(:,:), dedd(:,:), l_dens(:), l_dedd(:)
+  FLOAT, allocatable :: dens(:,:), dedd(:,:), l_dens(:), l_dedd(:), ex_per_vol(:), ec_per_vol(:)
   FLOAT, allocatable :: gdens(:,:,:), dedgd(:,:,:), l_gdens(:,:), l_dedgd(:,:)
   FLOAT, allocatable :: tau(:,:), dedtau(:,:), l_tau(:), l_dedtau(:)
 
-  integer :: i, ixc, spin_channels, ierr
-  FLOAT   :: e, r, ex_tmp, ec_tmp
+  integer :: i, ixc, spin_channels
+  FLOAT   :: e, r
   logical :: gga, mgga
 
   type(xc_functl_type), pointer :: functl(:)
@@ -96,9 +96,9 @@ subroutine xc_get_vxc(gr, xcs, rho, ispin, vxc, ex, ec, ip, qtot)
 
       if(functl(ixc)%id==XC_LDA_X.or.functl(ixc)%id==XC_GGA_X_PBE.or.&
         functl(ixc)%id==XC_MGGA_X_TPSS) then
-        ex = ex + sum(l_dens(:)) * e * gr%m%vol_pp(i)
+        ex_per_vol(i) = ex_per_vol(i) + sum(l_dens(:)) * e
       else
-        ec = ec + sum(l_dens(:)) * e * gr%m%vol_pp(i)
+        ec_per_vol(i) = ec_per_vol(i) + sum(l_dens(:)) * e
       end if
 
       ! store results
@@ -116,28 +116,14 @@ subroutine xc_get_vxc(gr, xcs, rho, ispin, vxc, ex, ec, ip, qtot)
     end do functl_loop
   end do space_loop
 
-#if defined(HAVE_MPI) && defined(HAVE_METIS)
-  if(gr%m%parallel_in_domains) then
-    do ixc = 1, 2
-      ex_tmp = ex
-      ec_tmp = ec
-      if(functl(ixc)%id==XC_LDA_X.or.functl(ixc)%id==XC_GGA_X_PBE.or.&
-        functl(ixc)%id==XC_MGGA_X_TPSS) then
-        call TS(MPI_Allreduce)(ex_tmp, ex, 1, R_MPITYPE, &
-                               MPI_SUM, gr%m%vp%comm, ierr)
-      else
-        call TS(MPI_Allreduce)(ec_tmp, ec, 1, R_MPITYPE, &
-                               MPI_SUM, gr%m%vp%comm, ierr)
-      end if
-    end do
-  end if
-#endif
-
   ! this has to be done in inverse order
   if(       mgga) call mgga_process()
   if(gga.or.mgga) call  gga_process()
   call  lda_process()
 
+  ! integrate eneries per unit volume
+  ex = dmf_integrate(gr%m, ex_per_vol)
+  ec = dmf_integrate(gr%m, ec_per_vol)
 
   ! clean up allocated memory
   call  lda_end()
@@ -157,9 +143,11 @@ contains
     FLOAT   :: d(spin_channels), f, dtot, dpol
 
     ! allocate some general arrays
-    allocate(dens(NP, spin_channels), dedd(NP, spin_channels))
+    allocate(dens(NP, spin_channels), dedd(NP, spin_channels), ex_per_vol(NP), ec_per_vol(NP))
     allocate(l_dens(spin_channels), l_dedd(spin_channels))
-    dedd = M_ZERO
+    dedd       = M_ZERO
+    ex_per_vol = M_ZERO
+    ec_per_vol = M_ZERO
 
     ! get the density
     f = M_ONE/real(spin_channels, PRECISION)
@@ -187,7 +175,7 @@ contains
   ! ---------------------------------------------------------
   ! deallocates variables allocated in lda_init
   subroutine lda_end()
-    deallocate(dens, dedd, l_dens, l_dedd)
+    deallocate(dens, dedd, ex_per_vol, ec_per_vol, l_dens, l_dedd)
   end subroutine lda_end
 
 
@@ -268,7 +256,7 @@ contains
       do is = 1, spin_channels
         call df_gradient(gr%sb, gr%f_der, dedd(:, is), gf(:,:))
         do i = 1, NP
-          ex = ex - dens(i, is) * sum(gr%m%x(i,:)*gf(i,:)) * gr%m%vol_pp(i)
+          ex_per_vol(i) = ex_per_vol(i) - dens(i, is) * sum(gr%m%x(i,:)*gf(i,:))
         end do
       end do
 

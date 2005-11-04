@@ -38,11 +38,11 @@ module global
 
   ! ---------------------------------------------------------
   ! Public types, variables and procedures.
-  public ::      &
-    conf_type,   &
-    mpi_type,    &
-    global_init, &
-    global_end,  &
+  public ::         &
+    conf_type,      &
+    mpi_group_type, &
+    global_init,    &
+    global_end,     &
     assert_die
 
   type conf_type
@@ -54,13 +54,14 @@ module global
   end type conf_type
 
   ! This is defined even when running serial
-  type mpi_type
-    integer :: numprocs ! how many are we
-    integer :: node ! who am I
-  end type mpi_type
+  type mpi_group_type
+    integer :: comm ! in this case, MPI_COMM_WORLD
+    integer :: size ! how many are we
+    integer :: rank ! who am I
+  end type mpi_group_type
 
-  type(mpi_type), public  :: mpiv
-  type(conf_type), public :: conf
+  type(mpi_group_type), public :: mpi_world
+  type(conf_type),      public :: conf
 
   ! the kinds used in the program
   integer, public, parameter  ::  r8 = selected_real_kind(12,256)
@@ -128,21 +129,42 @@ module global
 
 contains
 
+  ! ---------------------------------------------------------
+  subroutine mpi_group_init(grp, comm)
+    type(mpi_group_type), intent(out) :: grp   ! information about this MPI group
+    integer                           :: comm  ! the communicator that defined the group
+
+#if defined(HAVE_MPI)
+    integer :: mpi_err
+
+    if(comm .ne. -1) then
+      grp%comm = comm
+      call MPI_COMM_RANK(grp%comm, grp%rank, mpi_err)
+      call MPI_COMM_SIZE(grp%comm, grp%size, mpi_err)
+    else
+#else
+      grp%comm = -1
+      grp%rank = 0
+      grp%size = 1
+#endif
+#if defined(HAVE_MPI)
+    end if
+#endif
+  end subroutine mpi_group_init
+
 
   ! ---------------------------------------------------------
   subroutine global_init()
 #if defined(HAVE_MPI)
-    integer :: ierr
+    integer :: mpi_err
 
     ! initialize MPI
-    call MPI_INIT(ierr)
-    call MPI_COMM_RANK(MPI_COMM_WORLD, mpiv%node, ierr)
-    call MPI_COMM_SIZE(MPI_COMM_WORLD, mpiv%numprocs, ierr)
-    write(stdout,'(a,i4,a,i4,a)') 'Process ', mpiv%node, ' of ', mpiv%numprocs, ' is alive'
-    call MPI_BARRIER(MPI_COMM_WORLD, ierr)
+    call MPI_INIT(mpi_err)
+    call mpi_group_init(mpi_world, MPI_COMM_WORLD)
+    call MPI_BARRIER(mpi_world%comm, mpi_err)
+    write(stdout,'(a,i4,a,i4,a)') 'Process ', mpi_world%rank, ' of ', mpi_world%size, ' is alive'
 #else
-    mpiv%node = 0
-    mpiv%numprocs = 1
+    call mpi_group_init(mpi_world, -1)
 #endif
 
     ! Get epoch time at node startup, just after the barrier to synchronize nodes first.

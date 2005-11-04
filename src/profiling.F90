@@ -101,9 +101,9 @@ contains
 
     call push_sub('profiling.profiling_init')
 
-#if defined(HAVE_MPI) && defined(HAVE_METIS)
-    if(mpiv%node.eq.0) then
-      write(dirnum, '(i3.3)') mpiv%numprocs
+#if defined(HAVE_MPI)
+    if(mpi_world%rank.eq.0) then
+      write(dirnum, '(i3.3)') mpi_world%size
       call io_mkdir(trim('profiling.'//dirnum))
     end if
 #else
@@ -177,9 +177,9 @@ contains
 
     call push_sub('profiling.profiling_output')
 
-#if defined(HAVE_MPI) && defined(HAVE_METIS)
-    write(filenum, '(i3.3)') mpiv%node
-    write(dirnum, '(i3.3)') mpiv%numprocs
+#if defined(HAVE_MPI)
+    write(filenum, '(i3.3)') mpi_world%rank
+    write(dirnum, '(i3.3)') mpi_world%size
 #else
     filenum = '000'
     dirnum  = '001'

@@ -208,7 +208,7 @@ contains
       !% Octopus will run parallel in k-points/spin.
       !%End
 
-      if(mpiv%numprocs > 1) then
+      if(mpi_world%size > 1) then
         par_all = 0
         do i = 1, n_par_types
           par_all = par_all + 2**(i-1)
@@ -329,9 +329,9 @@ contains
       call write_info(i)
 
       ! do we have the correct number of processors
-      if(product(mc%group_sizes(1:mc%n_index)).ne.mpiv%numprocs) then
+      if(product(mc%group_sizes(1:mc%n_index)).ne.mpi_world%size) then
         write(message(1),'(a,i4,a,i4,a)') "Inconsistent number of processors (", &
-          product(mc%group_sizes(1:mc%n_index)), ".ne.", mpiv%numprocs, ")"
+          product(mc%group_sizes(1:mc%n_index)), ".ne.", mpi_world%size, ")"
         message(2) = "You probably have an problem in the block 'ParallelizationGroupRanks'"
         call write_fatal(2)
       end if
@@ -386,7 +386,7 @@ contains
         me(i) = 1
         call multicomm_proc(mc, me, mc%group_root(i))
 
-        call MPI_Comm_split(MPI_COMM_WORLD, mc%group_root(i), mpiv%node, &
+        call MPI_Comm_split(MPI_COMM_WORLD, mc%group_root(i), mpi_world%rank, &
           mc%group_comm(i), mpi_err)
       end do
       deallocate(me)
@@ -455,7 +455,7 @@ contains
     call group_create(mc%group_tree)
 
     ! print nodes
-    if(in_debug_mode.and.mpiv%node == 0) then
+    if(in_debug_mode.and.mpi_world%rank == 0) then
       iunit = io_open('debug/parallel_tree.dot', action='write')
       write(iunit, '(a)') "digraph G {"
       write(iunit, '(a)') 'node [shape=box,style=filled];'
@@ -495,7 +495,7 @@ contains
         allocate(this%group(1))
         this%group(1) = nodes_used
 
-        if(nodes_used == mpiv%node) mc%who_am_i = index_run
+        if(nodes_used == mpi_world%rank) mc%who_am_i = index_run
 
         nodes_used = nodes_used + 1
 

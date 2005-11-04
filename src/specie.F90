@@ -105,7 +105,7 @@ contains
     character(len=256) :: dirname
     integer :: iunit
 
-    if(mpiv%node .ne. 0) then
+    if(mpi_world%rank .ne. 0) then
       call write_debug_newlines(2)
       return
     end if

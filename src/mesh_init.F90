@@ -504,7 +504,7 @@ subroutine mesh_partition(m, Lxyz_tmp, comm, part)
     message(4) = 'Info: First line contains number of vertices and edges.'
     message(5) = 'Info: Edges are not directed and appear twice in the lists.'
     call write_info(5)
-    if(mpiv%node.eq.0) then
+    if(mpi_world%rank.eq.0) then
       call io_mkdir('debug/mesh_partition')
       iunit = io_open('debug/mesh_partition/mesh_graph.txt', action='write')
       write(iunit, *) nv, ne/2
@@ -553,7 +553,7 @@ subroutine mesh_partition(m, Lxyz_tmp, comm, part)
 
   if(in_debug_mode) then
     ! Debug output. Write points of each partition in a different file.
-    if(mpiv%node.eq.0) then
+    if(mpi_world%rank.eq.0) then
       do i = 1, p
         write(filenum, '(i3.3)') i
         iunit = io_open('debug/mesh_partition/mesh_partition.'//filenum, &

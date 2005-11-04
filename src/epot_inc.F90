@@ -202,23 +202,29 @@ subroutine X(epot_forces) (gr, ep, st, t)
 contains
   subroutine local_RS()
     FLOAT :: r, x(3), d, gv(3)
-    integer  :: ns
+    FLOAT, allocatable :: force(:,:)
+    integer  :: i, j, k, ns
 
     ns = min(2, st%d%nspin)
 
+    allocate(force(NP, NDIM))
     do i = 1, geo%natoms
       atm => geo%atom(i)
+
       do j = 1, NP
         call mesh_r(gr%m, j, r, x=x, a=atm%x)
         if(r < r_small) cycle
 
         call specie_get_glocal(atm%spec, x, gv)
-        ! FIXME: When running with partitions, vol_pp is local
-        ! to the node. It is likely, that this code need changes.
-        d = sum(st%rho(j, 1:ns))*gr%m%vol_pp(j)
-        atm%f(1:NDIM) = atm%f(1:NDIM) - d*gv(1:NDIM)
+        force(j,1:NDIM) = sum(st%rho(j, 1:ns))*gv(1:NDIM)
+      end do
+
+      do k = 1, NDIM
+        atm%f(k) = atm%f(k) - dmf_integrate(gr%m, force(:, k))
       end do
     end do
+
+    deallocate(force)
   end subroutine local_RS
 
 #ifdef HAVE_FFT

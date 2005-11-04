@@ -77,7 +77,7 @@ contains
     integer :: ierr
 #endif
 
-    if(flush_messages.and.mpiv%node.eq.0) then
+    if(flush_messages.and.mpi_world%rank.eq.0) then
       open(unit=iunit_err, file='messages.stderr', &
         action='write', position='append')
     end if
@@ -90,7 +90,7 @@ contains
 
 #ifdef HAVE_MPI
     call flush_msg(stderr, shyphens)
-    write(msg, '(a,i4)') "* From node = ", mpiv%node
+    write(msg, '(a,i4)') "* From node = ", mpi_world%rank
     call flush_msg(stderr, msg)
 #endif
     call flush_msg(stderr, shyphens)
@@ -113,7 +113,7 @@ contains
     ! to messages.F90
     !    call io_status(stderr)
 
-    if(flush_messages.and.mpiv%node.eq.0) then
+    if(flush_messages.and.mpi_world%rank.eq.0) then
       close(iunit_err)
     end if
 
@@ -130,7 +130,7 @@ contains
     integer, intent(in) :: no_lines
     integer :: i
 
-    if(flush_messages.and.mpiv%node.eq.0) then
+    if(flush_messages.and.mpi_world%rank.eq.0) then
       open(unit=iunit_err, file='messages.stderr', &
         action='write', position='append')
     end if
@@ -141,7 +141,7 @@ contains
     write(msg, '(a)') '** Warning:'
     call flush_msg(stderr, msg)
 #ifdef HAVE_MPI
-    write(msg , '(a,i4)') '** From node = ', mpiv%node
+    write(msg , '(a,i4)') '** From node = ', mpi_world%rank
     call flush_msg(stderr, msg)
 #endif
     do i=1,no_lines
@@ -152,7 +152,7 @@ contains
     call flush(stderr)
 #endif
 
-    if(flush_messages.and.mpiv%node.eq.0) then
+    if(flush_messages.and.mpi_world%rank.eq.0) then
       close(iunit_err)
     end if
 
@@ -169,9 +169,7 @@ contains
 
     integer :: i, iu
 
-#ifdef HAVE_MPI
-    if(mpiv%node .ne. 0) return
-#endif
+    if(mpi_world%rank .ne. 0) return
 
     if(flush_messages) then
       open(unit=iunit_out, file='messages.stdout', &
@@ -234,8 +232,8 @@ contains
     integer             :: i, iunit
 
     if(.not.in_debug_mode) return
+    if(mpi_world%rank .eq. 0) return
 
-    if (mpiv%node .eq. 0) return
     call open_debug_trace(iunit)
     do i = 1, no_lines
       write(msg, '(a)') '* -'
@@ -264,7 +262,7 @@ contains
 
     character(len=4) :: filenum
 
-    iunit = mpiv%node + unit_offset
+    iunit = mpi_world%rank + unit_offset
     write(filenum, '(i3.3)') iunit - unit_offset
     open(iunit, file=trim(current_label)//'debug/debug_trace.node.'//filenum, &
       action='write', status='unknown', position='append')
@@ -277,10 +275,10 @@ contains
     character(len=*), intent(in) :: var
 
 #ifdef HAVE_MPI
-    integer :: ierr
+    integer :: mpi_err
 #endif
 
-    if(mpiv%node == 0) then
+    if(mpi_world%rank == 0) then
       call flush_msg(stderr, '')
       call flush_msg(stderr, stars)
       call flush_msg(stderr, '')
@@ -293,7 +291,7 @@ contains
     end if
 
 #ifdef HAVE_MPI
-    call MPI_FINALIZE(ierr)
+    call MPI_FINALIZE(mpi_err)
 #endif
     stop
   end subroutine input_error
@@ -304,7 +302,7 @@ contains
     integer,          intent(in) :: iunit
     character(len=*), intent(in) :: var
 
-    if(mpiv%node.ne.0) return
+    if(mpi_world%rank.ne.0) return
 
     call varinfo_print(iunit, var)
   end subroutine messages_print_var_info
@@ -317,7 +315,7 @@ contains
     integer,          intent(in) :: option
     character(len=*), intent(in) :: pre
 
-    if(mpiv%node.ne.0) return
+    if(mpi_world%rank.ne.0) return
 
     call varinfo_print_option(iunit, var, option, pre)
   end subroutine messages_print_var_option
@@ -327,7 +325,7 @@ contains
   subroutine messages_print_stress(iunit)
     integer, intent(in) :: iunit
 
-    if(mpiv%node.ne.0) return
+    if(mpi_world%rank.ne.0) return
 
     call flush_msg(iunit, stars)
   end subroutine messages_print_stress
@@ -345,7 +343,7 @@ contains
     if(present(adv)) adv_ = adv
 
     write(iunit, '(a)', advance=trim(adv_)) trim(str)
-    if(flush_messages.and.mpiv%node.eq.0) then
+    if(flush_messages.and.mpi_world%rank.eq.0) then
       if(iunit.eq.stderr) write(iunit_err, '(a)', advance=trim(adv_)) trim(str)
       if(iunit.eq.stdout) write(iunit_out, '(a)', advance=trim(adv_)) trim(str)
     end if
@@ -446,8 +444,10 @@ contains
 
       call open_debug_trace(iunit)
       call push_sub_write(iunit)
+
       ! also write to stderr if we are node 0
-      if (mpiv%node == 0) call push_sub_write(stderr)
+      if (mpi_world%rank == 0) call push_sub_write(stderr)
+
       ! close file to ensure flushing
       close(iunit)
 
@@ -487,8 +487,10 @@ contains
     if(no_sub_stack > 0) then
       call open_debug_trace(iunit)
       call pop_sub_write(iunit)
+
       ! also write to stderr if we are node 0
-      if (mpiv%node == 0) call pop_sub_write(stderr)
+      if (mpi_world%rank == 0) call pop_sub_write(stderr)
+
       ! close file to ensure flushing
       close(iunit)
 

@@ -29,6 +29,7 @@ module external_pot
   use fft
   use math
   use mesh
+  use mesh_function
   use grid
   use simul_box
   use functions
@@ -155,7 +156,7 @@ contains
     if(ep%no_lasers>0 ) then
       message(1) = 'Info: Lasers'
       call write_info(1)
-      if(mpiv%node == 0) then
+      if(mpi_world%rank == 0) then
         call laser_write_info(ep%no_lasers, ep%lasers, stdout)
       end if
     end if

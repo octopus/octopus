@@ -117,7 +117,7 @@ program octopus
     call profiling_in(C_PROFILING_COMPLETE_SUBSYS)
 
     ! Let us print our logo
-    if(mpiv%node == 0) then
+    if(mpi_world%rank == 0) then
       call io_dump_file(stdout, trim(trim(conf%share) // '/logo'))
     end if
 

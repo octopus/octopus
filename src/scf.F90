@@ -461,48 +461,48 @@ contains
 
       call push_sub('scf.scf_write_static')
 
-      call io_mkdir(dir)
-      iunit = io_open(trim(dir) // "/" // trim(fname), action='write')
+      if(mpi_world%rank == 0) then ! this the absolute master writes
+        call io_mkdir(dir)
+        iunit = io_open(trim(dir) // "/" // trim(fname), action='write')
 
-      ! mesh
-      write(iunit, '(a,a)') 'System name: ', gr%geo%sysname
-      write(iunit, '(1x)')
+        write(iunit, '(a,a)') 'System name: ', gr%geo%sysname
 
-      write(iunit, '(a)') 'Mesh:'
-      !call grid_write_info(gr, iunit)
-      write(iunit,'(1x)')
+        call grid_write_info(gr, iunit)
 
-      if(simul_box_is_periodic(gr%sb)) then
-        call kpoints_write_info(st%d, iunit)
-        write(iunit,'(1x)')
-      end if
+        if(simul_box_is_periodic(gr%sb)) then
+          call kpoints_write_info(st%d, iunit)
+          write(iunit,'(1x)')
+        end if
 
-      if(.not. h%ip_app) then
-        write(iunit, '(a)') 'Exchange and correlation functionals:'
-        call v_ks_write_info(ks, iunit)
-      else
-        write(iunit, '(a)') 'Independent Particles'
-      end if
-      write(iunit,'(1x)')
+        if(.not. h%ip_app) then
+          call v_ks_write_info(ks, iunit)
+        else
+          write(iunit, '(a)') 'Independent Particles'
+        end if
 
-      ! scf information
-      if(finish) then
-        write(iunit, '(a, i4, a)')'SCF converged in ', iter, ' iterations'
-      else
-        write(iunit, '(a)') 'SCF *not* converged!'
-      end if
-      write(iunit, '(1x)')
-
-      call states_write_eigenvalues(iunit, st%nst, st, gr%sb)
-      write(iunit, '(1x)')
-
-      write(iunit, '(a)') 'Energy:'
-      call hamiltonian_energy(h, st, gr%geo%eii, iunit)
-      write(iunit, '(1x)')
-
-      if(st%d%ispin > UNPOLARIZED) then
-        call write_magnetic_moments(iunit, gr%m, st)
+        ! scf information
+        if(finish) then
+          write(iunit, '(a, i4, a)')'SCF converged in ', iter, ' iterations'
+        else
+          write(iunit, '(a)') 'SCF *not* converged!'
+        end if
         write(iunit, '(1x)')
+
+        call states_write_eigenvalues(iunit, st%nst, st, gr%sb)
+        write(iunit, '(1x)')
+
+        write(iunit, '(a)') 'Energy:'
+      end if
+
+      call hamiltonian_energy(h, st, gr%geo%eii, iunit)
+
+      if(mpi_world%rank == 0) then
+        write(iunit, '(1x)')
+
+        if(st%d%ispin > UNPOLARIZED) then
+          call write_magnetic_moments(iunit, gr%m, st)
+          write(iunit, '(1x)')
+        end if
       end if
 
       ! Next lines of code calculate the dipole of the molecule, summing the electronic and
@@ -513,45 +513,54 @@ contains
       end do
       call geometry_dipole(gr%geo, n_dip)
       n_dip(1:NDIM) = n_dip(1:NDIM) - e_dip(2:NDIM+1, 1)
-      write(iunit, '(3a)') 'Dipole [', trim(units_out%length%abbrev), ']:                    [Debye]'
-      do j = 1, NDIM
-        write(iunit, '(6x,a,i1,a,es14.5,3x,2es14.5)') '<x', j, '> = ', n_dip(j) / units_out%length%factor, &
-          n_dip(j)*ATOMIC_TO_DEBYE
-      end do
-      write(iunit,'(a)')
 
-      if(NDIM==3) then
-        call X(states_calc_angular)(gr, st, angular, l2 = l2)
-        write(iunit,'(3a)') 'Angular Momentum L [adimensional]'
+      if(mpi_world%rank == 0) then
+        write(iunit, '(3a)') 'Dipole [', trim(units_out%length%abbrev), ']:                    [Debye]'
         do j = 1, NDIM
-          write(iunit,'(6x,a1,i1,a3,es14.5)') 'L',j,' = ',angular(j)
+          write(iunit, '(6x,a,i1,a,es14.5,3x,2es14.5)') '<x', j, '> = ', n_dip(j) / units_out%length%factor, &
+             n_dip(j)*ATOMIC_TO_DEBYE
         end do
-        write(iunit,'(a)')
-
-        write(iunit,'(6x,a,es14.5)') 'L^2 = ', l2
         write(iunit,'(a)')
       end if
 
-      write(iunit, '(a)') 'Convergence:'
-      write(iunit, '(6x, a, es14.8,a,es14.8,a)') 'abs_dens = ', scf%abs_dens, &
-        ' (', scf%conv_abs_dens, ')'
-      write(iunit, '(6x, a, es14.8,a,es14.8,a)') 'rel_dens = ', scf%rel_dens, &
-        ' (', scf%conv_rel_dens, ')'
-      write(iunit, '(6x, a, es14.8,a,es14.8,4a)') 'abs_ev = ', scf%abs_ev, &
-        ' (', scf%conv_abs_ev / units_out%energy%factor, ')', &
-        ' [',  trim(units_out%energy%abbrev), ']'
-      write(iunit, '(6x, a, es14.8,a,es14.8,a)') 'rel_ev = ', scf%rel_ev, &
-        ' (', scf%conv_rel_ev, ')'
-      write(iunit,'(1x)')
+      if(NDIM==3) then
+        call X(states_calc_angular)(gr, st, angular, l2 = l2)
 
-      write(iunit,'(3a)') 'Forces on the ions [', trim(units_out%force%abbrev), "]"
-      write(iunit,'(a,10x,14x,a,14x,a,14x,a)') ' Ion','x','y','z'
-      do i = 1, gr%geo%natoms
-        write(iunit,'(i4,a10,3f15.6)') i, trim(gr%geo%atom(i)%spec%label), &
-          gr%geo%atom(i)%f(:) / units_out%force%factor
-      end do
+        if(mpi_world%rank == 0) then
+          write(iunit,'(3a)') 'Angular Momentum L [adimensional]'
+          do j = 1, NDIM
+            write(iunit,'(6x,a1,i1,a3,es14.5)') 'L',j,' = ',angular(j)
+          end do
+          write(iunit,'(a)')
+          
+          write(iunit,'(6x,a,es14.5)') 'L^2 = ', l2
+          write(iunit,'(a)')
+        end if
+      end if
 
-      call io_close(iunit)
+      if(mpi_world%rank == 0) then
+        write(iunit, '(a)') 'Convergence:'
+        write(iunit, '(6x, a, es14.8,a,es14.8,a)') 'abs_dens = ', scf%abs_dens, &
+           ' (', scf%conv_abs_dens, ')'
+        write(iunit, '(6x, a, es14.8,a,es14.8,a)') 'rel_dens = ', scf%rel_dens, &
+           ' (', scf%conv_rel_dens, ')'
+        write(iunit, '(6x, a, es14.8,a,es14.8,4a)') 'abs_ev = ', scf%abs_ev, &
+           ' (', scf%conv_abs_ev / units_out%energy%factor, ')', &
+           ' [',  trim(units_out%energy%abbrev), ']'
+        write(iunit, '(6x, a, es14.8,a,es14.8,a)') 'rel_ev = ', scf%rel_ev, &
+           ' (', scf%conv_rel_ev, ')'
+        write(iunit,'(1x)')
+        
+        write(iunit,'(3a)') 'Forces on the ions [', trim(units_out%force%abbrev), "]"
+        write(iunit,'(a,10x,14x,a,14x,a,14x,a)') ' Ion','x','y','z'
+        do i = 1, gr%geo%natoms
+          write(iunit,'(i4,a10,3f15.6)') i, trim(gr%geo%atom(i)%spec%label), &
+             gr%geo%atom(i)%f(:) / units_out%force%factor
+        end do
+
+        call io_close(iunit)
+      end if
+
       call pop_sub()
     end subroutine scf_write_static
 

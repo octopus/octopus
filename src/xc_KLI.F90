@@ -96,8 +96,8 @@ subroutine X(xc_KLI_solve) (m, st, is, oep)
     do i = 1, n
 
 #if defined(HAVE_MPI)
-      if(mpiv%node.ne.0) then
-        if(st%node(oep%eigen_index(i)) == mpiv%node) then
+      if(st%rank.ne.0) then
+        if(st%node(oep%eigen_index(i)) == st%rank) then
           call MPI_Send(st%X(psi)(1, 1, oep%eigen_index(i), is), st%d%dim*m%np, R_MPITYPE, &
             0, i, st%comm, status, ierr)
         end if
@@ -114,15 +114,15 @@ subroutine X(xc_KLI_solve) (m, st, is, oep)
       phi1(:,:) = st%X(psi)(:,:, oep%eigen_index(i), is)
 #endif
 
-      if(mpiv%node == 0) then
+      if(st%rank == 0) then
         d(1:m%np) = (R_REAL(phi1(1:m%np, 1))**2 + &
           R_AIMAG(phi1(1:m%np, 1))**2) / rho_sigma(1:m%np) * m%vol_pp(1:m%np)
       end if
 
       do j = i, n
 #if defined(HAVE_MPI)
-        if(mpiv%node.ne.0) then
-          if(st%node(oep%eigen_index(j)) == mpiv%node) then
+        if(st%rank.ne.0) then
+          if(st%node(oep%eigen_index(j)) == st%rank) then
             call MPI_Send(st%X(psi)(1, 1, oep%eigen_index(j), is), st%d%dim*m%np, R_MPITYPE, &
               0, j, st%comm, status, ierr)
           end if
@@ -139,19 +139,19 @@ subroutine X(xc_KLI_solve) (m, st, is, oep)
         phi2(:,:) = st%X(psi)(:,:, oep%eigen_index(j), is)
 #endif
 
-        if(mpiv%node == 0) then
+        if(st%rank == 0) then
           Ma(i, j) = - sum(d(1:m%np) * (R_REAL(phi2(1:m%np, 1))**2 + R_AIMAG(phi2(1:m%np, 1))**2) )
           Ma(j,i) = Ma(i,j)
         end if
       end do
 
-      if(mpiv%node == 0) then
+      if(st%rank == 0) then
         Ma(i,i) = M_ONE + Ma(i,i)
         y(i, 1) = v_bar_S(oep%eigen_index(i)) - oep%uxc_bar(oep%eigen_index(i))
       end if
     end do
 
-    if(mpiv%node == 0) then
+    if(st%rank == 0) then
       call lalg_linsyssolve(n, 1, Ma, y, x)
     end if
     deallocate(Ma, y)
@@ -164,8 +164,8 @@ subroutine X(xc_KLI_solve) (m, st, is, oep)
       ! add contribution of low lying states. Once again, we have to send every state
       ! that is not in node zero to node 0
 #if defined(HAVE_MPI)
-      if(mpiv%node.ne.0) then
-        if(st%node(oep%eigen_index(i)) == mpiv%node) then
+      if(st%rank.ne.0) then
+        if(st%node(oep%eigen_index(i)) == st%rank) then
           call MPI_Send(st%X(psi)(1, 1, oep%eigen_index(i), is), st%d%dim*m%np, R_MPITYPE, &
             0, i, st%comm, status, ierr)
         end if
@@ -183,7 +183,7 @@ subroutine X(xc_KLI_solve) (m, st, is, oep)
 #endif
       occ = st%occ(oep%eigen_index(i), is)
 
-      if(mpiv%node == 0) then
+      if(st%rank == 0) then
         oep%vxc(1:m%np) = oep%vxc(1:m%np) + &
           oep%socc * occ * x(i,1) * R_ABS(phi1(1:m%np, 1))**2 / rho_sigma(1:m%np)
       end if

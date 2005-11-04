@@ -654,35 +654,29 @@ contains
 
     integer i, iunit
 
-#ifdef HAVE_MPI
-    if(mpiv%node == 0) then
-#endif
+    if(mpi_world%rank.ne.0) return
 
-      call io_mkdir(dir)
-      iunit = io_open(trim(dir)//'/'//trim(fname)//'.xyz', action='write')
+    call io_mkdir(dir)
+    iunit = io_open(trim(dir)//'/'//trim(fname)//'.xyz', action='write')
 
-      write(iunit, '(i4)') geo%natoms
+    write(iunit, '(i4)') geo%natoms
+    write(iunit, '(1x)')
+    do i = 1, geo%natoms
+      write(iunit, '(6x,a,2x,3f12.6)') geo%atom(i)%label, geo%atom(i)%x(:)/units_out%length%factor
+    end do
+    call io_close(iunit)
+
+    if(geo%ncatoms > 0) then
+      iunit = io_open(trim(dir)//'/'//trim(fname), action='write')
+      write(iunit, '(i4)') geo%ncatoms
       write(iunit, '(1x)')
-      do i = 1, geo%natoms
-        write(iunit, '(6x,a,2x,3f12.6)') geo%atom(i)%label, geo%atom(i)%x(:)/units_out%length%factor
+      do i = 1, geo%ncatoms
+        write(iunit, '(6x,a1,2x,3f12.6,a,f12.6)') &
+           geo%catom(i)%label(1:1), geo%catom(i)%x(:)/units_out%length%factor, &
+           " # ", geo%catom(i)%charge
       end do
       call io_close(iunit)
-
-      if(geo%ncatoms > 0) then
-        iunit = io_open(trim(dir)//'/'//trim(fname), action='write')
-        write(iunit, '(i4)') geo%ncatoms
-        write(iunit, '(1x)')
-        do i = 1, geo%ncatoms
-          write(iunit, '(6x,a1,2x,3f12.6,a,f12.6)') &
-            geo%catom(i)%label(1:1), geo%catom(i)%x(:)/units_out%length%factor, &
-            " # ", geo%catom(i)%charge
-        end do
-        call io_close(iunit)
-      end if
-
-#ifdef HAVE_MPI
     end if
-#endif
 
   end subroutine atom_write_xyz
 
