@@ -30,8 +30,8 @@ subroutine xc_get_vxc(gr, xcs, rho, ispin, vxc, ex, ec, ip, qtot)
   FLOAT, allocatable :: gdens(:,:,:), dedgd(:,:,:), l_gdens(:,:), l_dedgd(:,:)
   FLOAT, allocatable :: tau(:,:), dedtau(:,:), l_tau(:), l_dedtau(:)
 
-  integer :: i, ixc, spin_channels
-  FLOAT   :: e, r
+  integer :: i, ixc, spin_channels, ierr
+  FLOAT   :: e, r, ex_tmp, ec_tmp
   logical :: gga, mgga
 
   type(xc_functl_type), pointer :: functl(:)
@@ -115,6 +115,23 @@ subroutine xc_get_vxc(gr, xcs, rho, ispin, vxc, ex, ec, ip, qtot)
 
     end do functl_loop
   end do space_loop
+
+#if defined(HAVE_MPI) && defined(HAVE_METIS)
+  if(gr%m%parallel_in_domains) then
+    do ixc = 1, 2
+      ex_tmp = ex
+      ec_tmp = ec
+      if(functl(ixc)%id==XC_LDA_X.or.functl(ixc)%id==XC_GGA_X_PBE.or.&
+        functl(ixc)%id==XC_MGGA_X_TPSS) then
+        call TS(MPI_Allreduce)(ex_tmp, ex, 1, R_MPITYPE, &
+                               MPI_SUM, gr%m%vp%comm, ierr)
+      else
+        call TS(MPI_Allreduce)(ec_tmp, ec, 1, R_MPITYPE, &
+                               MPI_SUM, gr%m%vp%comm, ierr)
+      end if
+    end do
+  end if
+#endif
 
   ! this has to be done in inverse order
   if(       mgga) call mgga_process()

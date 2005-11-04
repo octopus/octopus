@@ -33,6 +33,7 @@ module xc
   use states
   use lib_xc
   use xc_functl
+  use mpi_mod
 
   implicit none
 
