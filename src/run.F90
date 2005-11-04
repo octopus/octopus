@@ -276,7 +276,9 @@ contains
       integer, intent(out) :: mode
 
       mode = 0
+#if defined(HAVE_METIS)
       mode = ibset(mode, P_STRATEGY_DOMAINS - 1) ! all modes are parallel in domains
+#endif
       select case(calc_mode)
       case(M_TD)
         mode = ibset(mode, P_STRATEGY_STATES - 1)
