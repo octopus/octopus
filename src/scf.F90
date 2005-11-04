@@ -264,14 +264,16 @@ contains
 
     allocate(rhoout(NP, dim, nspin), rhoin(NP, dim, nspin))
 
-    rhoin(:, 1, :) = st%rho; rhoout = M_ZERO
+    rhoin(1:NP, 1, 1:nspin) = st%rho(1:NP, 1:nspin)
+    rhoout = M_ZERO
     if (st%d%cdft) then
-      rhoin(:, 2:dim, :) = st%j
+      rhoin(1:NP, 2:dim, 1:nspin) = st%j(1:NP, 1:NDIM, 1:nspin)
     end if
 
     if (scf%what2mix == MIXPOT) then
       allocate(vout(NP, dim, nspin), vin(NP, dim, nspin), vnew(NP, dim, nspin))
-      vin(:, 1, :) = h%vhxc; vout = M_ZERO
+      vin(:, 1, :) = h%vhxc
+      vout = M_ZERO
       if (st%d%cdft) vin(:, 2:dim, :) = h%ahxc(:,:,:)
     else
       allocate(rhonew(NP, dim, nspin))

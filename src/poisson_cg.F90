@@ -48,10 +48,13 @@ contains
     type(mesh_type), intent(in) :: m
     integer, intent(in) :: ml
     FLOAT, intent(in)   :: thr
+
     call push_sub('poisson_cg.poisson_cg1_init')
+
     maxl = ml
     threshold = thr
     call build_aux(m)
+
     call pop_sub()
   end subroutine poisson_cg1_init
 
@@ -67,11 +70,14 @@ contains
     type(mesh_type), intent(in) :: m
     integer, intent(in) :: ml
     FLOAT, intent(in) :: thr
+
     call push_sub('poisson_cg.poisson_cg2_init')
+
     maxl = ml
     threshold = thr
     call build_aux(m)
     call build_phi(m)
+
     call pop_sub()
   end subroutine poisson_cg2_init
 
@@ -84,10 +90,10 @@ contains
 
   ! ---------------------------------------------------------
   subroutine poisson_cg1(m, der, pot, rho)
-    type(mesh_type), target, intent(in)         :: m
+    type(mesh_type),      target, intent(in)    :: m
     type(der_discr_type), target, intent(in)    :: der
-    FLOAT,                intent(inout) :: pot(:) ! pot(m%np)
-    FLOAT,                intent(in)    :: rho(:) ! rho(m%np)
+    FLOAT,                        intent(inout) :: pot(:) ! pot(m%np)
+    FLOAT,                        intent(in)    :: rho(:) ! rho(m%np)
 
     integer :: iter
     FLOAT :: res
@@ -171,35 +177,31 @@ contains
     integer,         intent(in)  :: ml
     FLOAT,           intent(inout) :: pot(:)  ! pot(m%np_part)
 
-    integer :: i, add_lm, l, mm
+    integer :: i, add_lm, l, mm, bp_lower
     FLOAT   :: x(3), r, s1, sa
     FLOAT, allocatable :: mult(:)
     allocate(mult((ml+1)**2))
 
     call get_multipoles(m, rho, ml, mult)
-#if defined(HAVE_MPI) && defined(HAVE_METIS)
-    ! The boundary points are at different locations when
-    ! running parallel and serial.
-    pot(m%np+m%vp%np_ghost(m%vp%partno)+1:m%np_part) = M_ZERO
-    do i = m%np+m%vp%np_ghost(m%vp%partno)+1, m%np_part ! boundary conditions
-#else
-      pot(m%np+1:m%np_part) = M_ZERO
-      do i = m%np+1, m%np_part
-#endif
 
-        call mesh_r(m, i, r, x=x)
-        add_lm = 1
-        do l = 0, ml
-          s1 = M_FOUR*M_PI/((M_TWO*l + M_ONE)*r**(l + 1))
-          do mm = -l, l
-            sa = loct_ylm(x(1), x(2), x(3), l, mm)
-            pot(i) = pot(i) + sa * mult(add_lm) * s1
-            add_lm = add_lm+1
-          end do
+    bp_lower = m%np + 1
+    if(m%parallel_in_domains) bp_lower = bp_lower + m%vp%np_ghost(m%vp%partno)
+
+    pot(bp_lower:m%np_part) = M_ZERO
+    do i = bp_lower, m%np_part ! boundary conditions
+      call mesh_r(m, i, r, x=x)
+      add_lm = 1
+      do l = 0, ml
+        s1 = M_FOUR*M_PI/((M_TWO*l + M_ONE)*r**(l + 1))
+        do mm = -l, l
+          sa = loct_ylm(x(1), x(2), x(3), l, mm)
+          pot(i) = pot(i) + sa * mult(add_lm) * s1
+          add_lm = add_lm+1
         end do
       end do
+    end do
 
-      deallocate(mult)
-    end subroutine boundary_conditions
+    deallocate(mult)
+  end subroutine boundary_conditions
 
-  end module poisson_cg
+end module poisson_cg
