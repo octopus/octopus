@@ -503,12 +503,10 @@ subroutine X(states_calc_angular)(gr, st, angular, l2)
 
   if(st%parallel_in_states) then
 #if defined(HAVE_MPI)
-  if(st%parallel_in_states) then
     call MPI_ALLREDUCE(temp, angular, 3, &
        MPI_FLOAT, MPI_SUM, st%comm, ierr)
     if(present(l2)) call MPI_ALLREDUCE(ltemp, l2, 1, &
        MPI_FLOAT, MPI_SUM, st%comm, ierr)
-  end if
 #endif
   else
     angular = temp
