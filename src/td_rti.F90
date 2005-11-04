@@ -107,7 +107,7 @@ contains
     !% The proliferation of methods is certainly excessive; The reason for it is that 
     !% the propagation algorithm is currently a topic of active development. We
     !% hope that in the future the optimal schemes are clearly identified. In the
-    !% mean time, if you don't feel like testing, use the default choices and
+    !% mean time, if you do not feel like testing, use the default choices and
     !% make sure the time step is small enough.
     !%Option split 0
     !% Split Operator (SO).
