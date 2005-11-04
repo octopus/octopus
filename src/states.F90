@@ -822,7 +822,19 @@ contains
     integer, parameter :: GNUPLOT = 1, &
       XMGRACE = 2
 
-    call loct_parse_int(check_inp('BandsOutputMode'), GNUPLOT, mode)
+    !%Variable OutputBandsMode
+    !%Type integer
+    !%Default 1
+    !%Section Output
+    !%Description
+    !% Chose if the band file is to be written in gnuplot or xmgrace firendly format
+    !%Option 1 
+    !% gnuplot format
+    !%Option 2
+    !% xmgrace format
+    !%End
+    
+    call loct_parse_int(check_inp('OutputBandsMode'), GNUPLOT, mode)
     if(mode /= GNUPLOT .and. mode /= XMGRACE) then
       message(1) = "Input: BandsOutputMode must be 1 (gnuplot) or 2 (xmgrace)"
       call write_fatal(1)

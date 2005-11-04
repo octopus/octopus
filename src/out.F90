@@ -162,6 +162,17 @@ contains
     !%End
     call loct_parse_logical(check_inp('OutputGeometry'),    .false., outp%what(output_geometry))
 
+    !%Variable OutputWfSqMod
+    !%Type logical
+    !%Default no
+    !%Section Output
+    !%Description
+    !% Prints out squared module of wave-functions. 
+    !% The output file is called "sqm-wf-k-p-i",
+    !% where k stands for the <i>k</i> number, p for the state,
+    !% and i for the spin channel.
+    !%End
+
     call loct_parse_logical(check_inp('OutputWfsSqMod'),    .false., outp%what(output_wfs_sqmod))
 
     outp%what(output_something) = .false.

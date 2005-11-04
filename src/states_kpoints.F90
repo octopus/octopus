@@ -57,6 +57,24 @@ subroutine states_choose_kpoints(d, sb, geo)
     return
   end if
 
+  !%Variable NumberKPoints
+  !%Type block
+  !%Default 1,1,1
+  !%Section States
+  !%Description
+  !% A triplet of integers defining the number of kpoints to be used
+  !% along each direction in the reciprocal space.
+  !% The numbers refer to the whole BZ, and the actual number of kpoints
+  !% is usually reduced exploiting the symmetries of the system
+  !% For example, the following input samples the BZ with 100 points in the 
+  !% xy plane of the reciprocal space
+  !%
+  !% <tt>%NumberKPoints
+  !% <br>&nbsp;&nbsp;10 | 10 | 1
+  !% <br>%</tt>
+  !%
+  !%End
+
   if(loct_parse_block(check_inp('NumberKPoints'), blk) .ne. 0) then
     message(1) = 'Block "NumberKPoints" not found in input file.'
     call write_fatal(1)
@@ -74,6 +92,14 @@ subroutine states_choose_kpoints(d, sb, geo)
   end if
   nkmax = PRODUCT(d%nik_axis)
 
+  !%Variable ShiftKpoints
+  !%Type block
+  !%Default 0.0,0.0,0.0
+  !%Section States
+  !%Description
+  !% A triplet of real numbers to shift the Monkhorst-Pack k-points grid from its default position
+  !%End
+
   if(loct_parse_block(check_inp('ShiftKPoints'), blk) .ne. 0) then
     kshifts = M_ZERO
   else
@@ -82,6 +108,18 @@ subroutine states_choose_kpoints(d, sb, geo)
     end do
     call loct_parse_block_end(blk)
   end if
+
+  !%Variable CenterOfInversion
+  !%Type integer
+  !%Default no
+  !%Section States
+  !%Description
+  !% Only used in 1D periodic calculation to enforce the correspondig symmetry in the Brillouin Zone
+  !%Option 0
+  !% The system has no center of inversion: use the whole BZ
+  !%Option 1
+  !% The system has a center of inversion: use half BZ
+  !%End
 
   if(sb%periodic_dim == 1) then
     call loct_parse_int(check_inp('CenterOfInversion'), 0, coi)

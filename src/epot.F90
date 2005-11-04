@@ -318,6 +318,24 @@ contains
 
     call push_sub('epot.epot_local_fourier_init')
 
+    !%Variable VlocalCutoff
+    !%Type integer
+    !%Default value of PeriodicDimensions
+    !%Section Hamiltonian
+    !%Description
+    !% Define which cutoff type is to be applied to the long range part of the local potential
+    !% A cutoff is used when one wants to avoid the long range interactions
+    !% among the system enclosed in the simulation box and (some of) its periodic images
+    !%Option 0
+    !% Cut off the interaction out of a sphere
+    !%Option 1
+    !% Cut off the interaction out of a cylinder with axis parallel to the x direction
+    !%Option 2
+    !% Cut off the interaction out of a slab in the xy plane
+    !%Option 3
+    !% Do not apply cutoff: all the periodic images interact
+    !%End
+
     call loct_parse_int(check_inp('VlocalCutoff'), sb%periodic_dim , vlocal_cutoff)
     if (vlocal_cutoff /= sb%periodic_dim) then
       write(message(1), '(a,i1,a)')'The System is periodic in ', sb%periodic_dim, ' dimension(s),'
@@ -351,6 +369,17 @@ contains
     specie: do i = 1, geo%nspecies
       s  => geo%specie(i)
       cf => ep%local_cf(i)
+
+      !%Variable VlocalCutoffRadius
+      !%Type float
+      !%Default value of the largest nonperiodic box length
+      !%Section Hamiltonian
+      !%Description
+      !% The maximum length out of which the long range part of the interaction
+      !% is cut off. 
+      !% It refers to the radius of the cylinder if VlocalCutoff = 1,
+      !% to the thickness od the slab if VlocalCutoff = 2.
+      !%End
 
       if(i == 1) then
         call mesh_double_box(sb, m, db)
