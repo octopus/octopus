@@ -109,7 +109,7 @@ contains
 #endif
 
     if(f_der%space == REAL_SPACE) then
-      call derivatives_init(sb, f_der%der_discr, f_der%n_ghost)
+      call derivatives_init(sb, f_der%der_discr, f_der%n_ghost, use_curvlinear)
       message(1) = 'Info: Derivatives calculated in real-space'
 #if defined(HAVE_FFT)
     else

@@ -23,6 +23,7 @@ module derivatives
   use global
   use messages
   use syslabels
+  use varinfo
   use lib_oct_parser
   use mesh
   use nl_operator
@@ -87,10 +88,11 @@ module derivatives
 contains
 
   ! ---------------------------------------------------------
-  subroutine derivatives_init(sb, der, n_ghost)
+  subroutine derivatives_init(sb, der, n_ghost, use_curvilinear)
     type(simul_box_type), intent(in)  :: sb
     type(der_discr_type), intent(out) :: der
     integer,              intent(out) :: n_ghost(:)
+    logical,              intent(in)  :: use_curvilinear
 
     integer :: i
 
@@ -107,6 +109,10 @@ contains
     !% Decides what kind of stencil is used, i.e. what points, around
     !% each point in the mesh, are the neighboring points used in the
     !% expression of the differential operator.
+    !%
+    !% If curvilinear coordinates are to be used, then only the "stencil_starplus"
+    !% or the "stencil_cube" may be used. We only recommend the "stencil_starplus",
+    !% the cube typically needing way too much memory resources.
     !%Option stencil_star 1
     !% A star around each point (i.e., only points in the axis).
     !%Option stencil_variational 2
@@ -116,11 +122,13 @@ contains
     !%Option stencil_starplus 4
     !% The star, plus a number of off-axis points.
     !%End
-    call loct_parse_int(check_inp('DerivativesStencil'), DER_STAR, der%stencil_type)
-    if(der%stencil_type<DER_STAR.or.der%stencil_type>DER_STARPLUS) then
-      write(message(1), '(a,i2,a)') 'DerivativesStencil = "', der%stencil_type, '" is unknown to octopus'
-      call write_fatal(1)
-    end if
+    if(use_curvilinear) then
+      call loct_parse_int(check_inp('DerivativesStencil'), DER_STARPLUS, der%stencil_type)
+    else
+      call loct_parse_int(check_inp('DerivativesStencil'), DER_STAR, der%stencil_type)
+    endif
+    if(.not.varinfo_valid_option('DerivativesStencil', der%stencil_type)) call input_error('DerivativesStencil')
+    if(use_curvilinear  .and.  der%stencil_type < DER_CUBE) call input_error('DerivativesStencil')
     if(der%stencil_type == DER_VARIATIONAL) then
       call loct_parse_float(check_inp('DerivativesLaplacianFilter'), M_ONE, der%lapl_cutoff)
     end if
