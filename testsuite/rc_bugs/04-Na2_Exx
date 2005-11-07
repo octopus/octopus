@@ -1,0 +1,52 @@
+# $Id$
+
+Test     : 04-Na2_Exx
+Author   : Appel
+Date     : 06.11.05
+Arch     : Linux miraculix 2.6.13-acpi-up #1 Wed Aug 31 09:53:21 CEST 2005 i686 GNU/Linux
+Release  : 1.99devel
+Programs : octopus; octopus_cmplx
+Enabled  : Yes
+
+
+# Bug description:
+#
+# The code crashes with floating point exception. 
+#
+# ...
+# Info: Renormalized total charge =      2.000000
+#
+#
+# ** FPE signal **
+#
+#
+# End of diagnostics
+
+
+
+INP
+CalculationMode = gs
+
+%Coordinates
+  "Na"	0.0	0.0	 1.7	yes
+  "Na"	0.0	0.0	-1.7	yes
+%
+
+XFunctional = 401  # symbol oep_x is not in variables
+OEP_level   = oep_kli
+#OEP_level   = oep_ceda
+#OEP_level   = oep_slater
+#OEP_level   = oep_full
+CFunctional = no
+EOF
+
+RUN
+
+
+# no matches yet, since this example does not run properly
+#
+# add your own matches
+#
+# Examples (of course you have to uncomment the lines :)
+# Match ; TotalEnergy ; grep -A 6 '^Energy:' static/info ; \s*Total\s*=\s*-0.33802679
+# Match ; Eigenvalues ; grep -A 2 'Eigenvalues \[' static/info | tail -1 ; \s*-0.13735\d*\s*2.0000\d*

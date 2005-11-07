@@ -1,0 +1,48 @@
+# $Id$
+
+Test     :
+Author   : Appel
+Date     : 06.11.05
+Arch     : Linux miraculix 2.6.13-acpi-up #1 Wed Aug 31 09:53:21 CEST 2005 i686 GNU/Linux
+Release  :
+Programs : octopus; octopus_cmplx
+Enabled  : Yes
+
+
+# Bug description:
+# 
+# Code stops.
+#
+# ...
+#  egofv: too many iterations; execution stopping
+#  z=18.  l= 3  nnode= 1  e=************  de=************
+# FORTRAN STOP  8
+
+
+INP
+CalculationMode = gs
+fromScratch = yes
+
+%Coordinates
+  "Gd" | 0 | 0 | 0
+%
+
+# =============================================================
+# configurations for specie: Gd
+#  core orbitals     : 1s^2 2s^2 2p^6 3s^2 3p^6 3d^10 4s^2 4p^6 4d^10 5s^2 5p^6
+#  valence orbitals  : 4f^7 5d^1 6s^2
+#  core electrons    : 54
+#  valence electrons : 10
+%Occupations
+ 7/7 | 7/7 | 7/7 | 7/7 | 7/7 | 7/7 | 7/7 | 1/5 | 1/5 | 1/5 | 1/5 | 1/5 | 2
+%
+ExtraStates = 7
+EOF
+
+RUN
+
+# add your own matches
+#
+# Examples (of course you have to uncomment the lines :)
+# Match ; TotalEnergy ; grep -A 6 '^Energy:' static/info ; \s*Total\s*=\s*-0.33802679
+# Match ; Eigenvalues ; grep -A 2 'Eigenvalues \[' static/info | tail -1 ; \s*-0.13735\d*\s*2.0000\d*

@@ -1,0 +1,58 @@
+# $Id$
+
+Test     : 05-Na2_LB94_Casida
+Author   : Appel
+Date     : 06.11.05
+Arch     : Linux miraculix 2.6.13-acpi-up #1 Wed Aug 31 09:53:21 CEST 2005 i686 GNU/Linux
+Release  : 1.99devel
+Programs : octopus; octopus_cmplx
+Enabled  : Yes
+
+# Bug description:
+# 
+# Eigenvalues are scrambled, total energy is huge.
+#
+# ... 
+# **********************************************************************
+# SCF CYCLE ITER #    1
+#  etot = -3.33718017E+25 abs_ev   =  3.34E+25 rel_ev   =  1.00E+00
+#                         abs_dens =  8.57E+01 rel_dens =  4.29E+01
+# Matrix vector products:    135
+# Converged eigenvectors:      0
+# Eigenvalues [H]
+#  #st   Eigenvalue    Occupation      Error (  1)
+#    1 ************       2.000000      (1.7E+24)
+#    2 ************       0.000000      (1.1E+24)
+#    3 ************       0.000000      (4.4E+24)
+#    4 ************       0.000000      (3.4E+25)
+#    5 ************       0.000000      (6.9E+25)
+
+
+INP
+%CalculationMode 
+"Na2" | "Na2" 
+gs    | casida
+1     | 2
+%
+
+
+%Coordinates
+  "Na"	0.0	0.0	 1.7	yes
+  "Na"	0.0	0.0	-1.7	yes
+%
+
+XFunctional = 103   ! gga_xc_lb
+CFunctional = no
+
+ExtraStates = 4
+EOF
+
+RUN
+
+# no matches yet, since this example does not run properly
+#
+# add your own matches
+#
+# Examples (of course you have to uncomment the lines :)
+# Match ; TotalEnergy ; grep -A 6 '^Energy:' static/info ; \s*Total\s*=\s*-0.33802679
+# Match ; Eigenvalues ; grep -A 2 'Eigenvalues \[' static/info | tail -1 ; \s*-0.13735\d*\s*2.0000\d*

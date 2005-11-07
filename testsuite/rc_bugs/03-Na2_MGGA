@@ -1,0 +1,59 @@
+# $Id$
+
+Test     : 03-Na2_MGGA
+Author   : Appel
+Date     : 06.11.05
+Arch     : Linux miraculix 2.6.13-acpi-up #1 Wed Aug 31 09:53:21 CEST 2005 i686 GNU/Linux
+Release  : 1.99devel
+Programs : octopus; octopus_cmplx
+Enabled  : Yes
+
+# Bug description:
+# 
+# ...
+# Info: Performing initial LCAO calculation with    2 orbitals.
+# Eigenvalues [H]
+#  #st   Eigenvalue    Occupation 
+#    1 ????????????       2.000000
+# Info: Loading wave-functions
+#
+#
+# Input/Output Error 137: Value not recognized
+#
+#    In Procedure: restart..drestart_read
+#         At Line: 185
+#
+#       Statement: List-Directed READ
+#            Unit: Internal File
+#   Record Number: 1
+#
+# Current I/O Buffer:
+#
+#      2.00000000 | ??????????????? |      0.00000000 |      0.00000000 |   <.....
+#                  !
+#
+#
+# End of diagnostics
+
+
+INP
+CalculationMode = gs
+
+%Coordinates
+  "Na"	0.0	0.0	 1.7	yes
+  "Na"	0.0	0.0	-1.7	yes
+%
+
+XFunctional = 201
+CFunctional = 202
+EOF
+
+RUN
+
+# no matches yet, since this example does not run properly
+#
+# add your own matches
+#
+# Examples (of course you have to uncomment the lines :)
+# Match ; TotalEnergy ; grep -A 6 '^Energy:' static/info ; \s*Total\s*=\s*-0.33802679
+# Match ; Eigenvalues ; grep -A 2 'Eigenvalues \[' static/info | tail -1 ; \s*-0.13735\d*\s*2.0000\d*
