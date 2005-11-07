@@ -80,6 +80,10 @@ void get_text(FILE *in, char **dest)
     if(!isspace(c)) return;
 
     fgets(line, 256, in);
+    if(c == '\n'){
+      line[0] = ' '; line[1] = '\n'; line[2] = '\0';
+    }
+
     if(!*dest)
       *dest = strdup(line+1);
     else{
