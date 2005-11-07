@@ -45,6 +45,8 @@ my %state_label = ( 's' => '2',
     	            'd' => '10',
 	            'f' => '14' );
 
+@mkeys = sort { $state_label{$b} <=> $state_label{$a} } keys %state_label;
+print "@mkeys\n";
 
 # check if we need configurations for semicore PP
 if ($specie =~ /(.*)sc/) {
@@ -156,14 +158,14 @@ sub default_PP() {
 18      Ar      1s^2 2s^2 2p^6 ; 3s^2 3p^6
 19      K       1s^2 2s^2 2p^6 3s^2 3p^6 ; 4s^1
 20      Ca      1s^2 2s^2 2p^6 3s^2 3p^6 ; 4s^2
-21      Sc      1s^2 2s^2 2p^6 3s^2 3p^6 ; 3d^1 4s^2
-22      Ti      1s^2 2s^2 2p^6 3s^2 3p^6 ; 3d^2 4s^2
-23      V       1s^2 2s^2 2p^6 3s^2 3p^6 ; 3d^3 4s^2
-24      Cr      1s^2 2s^2 2p^6 3s^2 3p^6 ; 3d^5 4s^1
-25      Mn      1s^2 2s^2 2p^6 3s^2 3p^6 ; 3d^5 4s^2
-26      Fe      1s^2 2s^2 2p^6 3s^2 3p^6 ; 3d^6 4s^2
-27      Co      1s^2 2s^2 2p^6 3s^2 3p^6 ; 3d^7 4s^2
-28      Ni      1s^2 2s^2 2p^6 3s^2 3p^6 ; 3d^8 4s^2
+21      Sc      1s^2 2s^2 2p^6 3s^2 3p^6 ; 4s^2 3d^1
+22      Ti      1s^2 2s^2 2p^6 3s^2 3p^6 ; 4s^2 3d^2
+23      V       1s^2 2s^2 2p^6 3s^2 3p^6 ; 4s^2 3d^3
+24      Cr      1s^2 2s^2 2p^6 3s^2 3p^6 ; 4s^1 3d^5
+25      Mn      1s^2 2s^2 2p^6 3s^2 3p^6 ; 4s^2 3d^5
+26      Fe      1s^2 2s^2 2p^6 3s^2 3p^6 ; 4s^2 3d^6
+27      Co      1s^2 2s^2 2p^6 3s^2 3p^6 ; 4s^2 3d^7
+28      Ni      1s^2 2s^2 2p^6 3s^2 3p^6 ; 4s^2 3d^8
 29      Cu      1s^2 2s^2 2p^6 3s^2 3p^6 3d^10 ; 4s^1
 30      Zn      1s^2 2s^2 2p^6 3s^2 3p^6 3d^10 ; 4s^2
 31      Ga      1s^2 2s^2 2p^6 3s^2 3p^6 3d^10 ; 4s^2 4p^1
@@ -240,14 +242,14 @@ sub semicore_PP() {
 12     Mg_sc       1s^2 ; 2s^2 2p^6 3s^2
 19     K_sc        1s^2 2s^2 2p^6 ; 3s^2 3p^6 4s^1
 20     Ca_sc       1s^2 2s^2 2p^6 ; 3s^2 3p^6 4s^2
-21     Sc_sc       1s^2 2s^2 2p^6 ; 3s^2 3p^6 3d^1 4s^2
-22     Ti_sc       1s^2 2s^2 2p^6 ; 3s^2 3p^6 3d^2 4s^2
-23     V_sc        1s^2 2s^2 2p^6 ; 3s^2 3p^6 3d^3 4s^2
-24     Cr_sc       1s^2 2s^2 2p^6 ; 3s^2 3p^6 3d^5 4s^1
-25     Mn_sc       1s^2 2s^2 2p^6 ; 3s^2 3p^6 3d^5 4s^2
-26     Fe_sc       1s^2 2s^2 2p^6 ; 3s^2 3p^6 3d^6 4s^2
-27     Co_sc       1s^2 2s^2 2p^6 ; 3s^2 3p^6 3d^7 4s^2
-28     Ni_sc       1s^2 2s^2 2p^6 ; 3s^2 3p^6 3d^8 4s^2
+21     Sc_sc       1s^2 2s^2 2p^6 ; 3s^2 3p^6 4s^2 3d^1
+22     Ti_sc       1s^2 2s^2 2p^6 ; 3s^2 3p^6 4s^2 3d^2
+23     V_sc        1s^2 2s^2 2p^6 ; 3s^2 3p^6 4s^2 3d^3
+24     Cr_sc       1s^2 2s^2 2p^6 ; 3s^2 3p^6 4s^1 3d^5
+25     Mn_sc       1s^2 2s^2 2p^6 ; 3s^2 3p^6 4s^2 3d^5
+26     Fe_sc       1s^2 2s^2 2p^6 ; 3s^2 3p^6 4s^2 3d^6
+27     Co_sc       1s^2 2s^2 2p^6 ; 3s^2 3p^6 4s^2 3d^7
+28     Ni_sc       1s^2 2s^2 2p^6 ; 3s^2 3p^6 4s^2 3d^8
 29     Cu_sc       1s^2 2s^2 2p^6 3s^2 3p^6 ; 3d^10 4s^1
 30     Zn_sc       1s^2 2s^2 2p^6 3s^2 3p^6 ; 3d^10 4s^2
 31     Ga_sc       1s^2 2s^2 2p^6 3s^2 3p^6 ; 3d^10 4s^2 4p^1

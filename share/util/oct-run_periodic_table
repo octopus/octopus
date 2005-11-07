@@ -13,7 +13,7 @@ defaults=/usr/share/octopus/PP/defaults
 octopus=/usr/bin/octopus
 
 ECHO=""
-
+fromScratch="yes"
 
 # usage
 function usage() {
@@ -23,12 +23,15 @@ function usage() {
 
 Usage: oct-run_periodic_table [options]
     
-     -h            this message
-     -n            dry run mode (show what would be executed)
-     -s specie     run octopus for given specie
-     -a            run octopus for all atoms            
-     -x            octopus executable
-     -d            defaults file for pseudopotentials
+     -h              this message
+     -n              dry run mode (show what would be executed)
+     -s specie       run octopus for given specie
+     -a              run octopus for all atoms            
+     -r              do a restart, i.e. do not use fromScratch=yes
+     -t temperature  run with electronic temperature
+     -e no_states    use extra states
+     -x              octopus executable
+     -d              defaults file for pseudopotentials
 
 Report bugs to <appel@physik.fu-berlin.de>.
 EOF
@@ -40,14 +43,17 @@ EOF
 [ "$#" -eq 0 ] && usage;
 
 # process command line options
-while getopts "hns:ax:d:" opt ; do
+while getopts "hns:art:e:x:d:" opt ; do
     case "$opt" in
         h) usage ;;
         n) ECHO="echo" ;; 
         s) specie="$OPTARG" ;;
         a) ECHO="" ;;
+        r) fromScratch="no" ;;
+        t) electronic_temp="$OPTARG" ;;
+        e) no_states="$OPTARG" ;;
         x) octopus="$OPTARG" ;;
-        d) defaults="$OPTARG";;
+        d) defaults="$OPTARG" ;;
         ?) echo "Error parsing arguments"; exit 1 ;;
     esac
 done
@@ -88,7 +94,7 @@ for x in $pseudos; do
 cat <<-EOF
 
 CalculationMode = gs
-fromScratch = yes
+fromScratch = $fromScratch
 
 %Coordinates
   "$x" | 0 | 0 | 0
@@ -96,9 +102,22 @@ fromScratch = yes
 
 EOF
     } > $workdir/inp 2>/dev/null
-  
-  # append atomic configuration
-  /usr/bin/oct-atomic_occupations -s $x >> $workdir/inp
+
+    if [ "$electronic_temp" = "" ]; then
+	# append atomic configuration
+	/usr/bin/oct-atomic_occupations -s $x >> $workdir/inp
+    else
+
+    {
+cat <<-EOF
+
+ElectronicTemperature = $electronic_temp
+ExtraStates = $no_states
+
+EOF
+    } >> $workdir/inp 2>/dev/null
+    
+    fi
 
   fi
 
