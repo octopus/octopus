@@ -28,7 +28,7 @@ subroutine X(root_solver_init)(rs)
   !%Default root_newton
   !%Section Math::General
   !%Description
-  !% Specifies what kind of root solver will be used
+  !% Specifies what kind of root solver will be used.
   !%Option root_bisection 1
   !% Bisection method
   !%Option root_brent 2
@@ -44,10 +44,53 @@ subroutine X(root_solver_init)(rs)
   if( rs%solver_type.lt.ROOT_MINVAL.or.rs%solver_type.gt.ROOT_MAXVAL ) then
     call input_error(check_inp('RootSolver'))
   end if
+
+  !%Variable RootSolverMaxIter
+  !%Type integer
+  !%Default 100
+  !%Section Math::General
+  !%Description
+  !% In case of an interative root solver this variable determines the maximal number
+  !% of iteration steps.
+  !%End
   call loct_parse_int    (check_inp('RootSolverMaxIter'),               100, rs%maxiter)
+
+  !%Variable RootSolverRelTolerance
+  !%Type float
+  !%Default 1e-8
+  !%Section Math::General
+  !%Description
+  !% Relative tolerance for the root finding process.
+  !%End
   call loct_parse_float  (check_inp('RootSolverRelTolerance'),   CNST(1e-8), rs%rel_tolerance)
+
+  !%Variable RootSolverAbsTolerance
+  !%Type float
+  !%Default 1e-8
+  !%Section Math::General
+  !%Description
+  !% Relative tolerance for the root finding process.
+  !%End
   call loct_parse_float  (check_inp('RootSolverAbsTolerance'),   CNST(1e-8), rs%abs_tolerance)
+
+  !%Variable RootSolverHavePolynomial
+  !%Type logical
+  !%Default no
+  !%Section Math::General
+  !%Description
+  !%  If set to yes, the coefficients of the polynomial have to be passed to
+  !%  the root solver.
+  !%End
   call loct_parse_logical(check_inp('RootSolverHavePolynomial'),    .false., rs%have_polynomial)
+
+  !%Variable RootSolverWSRadius
+  !%Type float
+  !%Default 1.0
+  !%Section Math::General
+  !%Description
+  !% Radius of circle in the complex plane. If RootSolverWSRadius = 1.0
+  !% the unit roots of a n-th order polynomial are taken as initial values.
+  !%End
   call loct_parse_float  (check_inp('RootSolverWSRadius'),       CNST( 1.0), rs%ws_radius)
 
   call pop_sub()

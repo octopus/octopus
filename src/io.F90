@@ -149,6 +149,22 @@ contains
 
 
     if(in_debug_mode) then
+      !%Variable MPIDebugHook
+      !%Type logical
+      !%Default no
+      !%Section Generalities::Debug
+      !%Description
+      !% When debugging the code in parallel it is usually difficult to find the origin
+      !% of race conditions that appear in MPI communications. This variable introduces 
+      !% a facility to control separate MPI processes. If set to yes, all nodes will 
+      !% start up, but will get trapped in an endless loop. In every cycle of the loop 
+      !% each node is sleeping for one second and is then checking if a file with the 
+      !% name node_hook.xxx (where xxx denotes the node number) exists. A given node can 
+      !% only be released from the loop if the corresponding file is created. This allows 
+      !% to selectively run eg. a compute node first followed by the master node. Or, by
+      !% reversing the file creation of the node hooks, to run the master first followed
+      !% by a compute node.
+      !%End
       call loct_parse_logical('MPIDebugHook', .false., mpi_debug_hook)
       if (mpi_debug_hook) then
         call loct_gettimeofday(sec, usec)

@@ -130,9 +130,38 @@ contains
       base_roots(j) = exp(M_zI*theta)*(rs%ws_radius)
     end do
 
-    ! setup ode solver
+    !%Variable WatterstromODESolver
+    !%Type integer
+    !%Default ode_pd89
+    !%Section Math::General
+    !%Description
+    !% The Watterstrom method (cf. J. Comp. Phys., 8, (1971), p. 304-308) transforms
+    !% the root finding for n-th order polynomials into the solution of n uncoupled 
+    !% ODEs. This variable specifies the ODESolver that should be used for the ODE 
+    !% stepping. Valid solver types are the ones that are allowed for ODESolver (cf. 
+    !% variable ODESolver).
+    !%Option ode_rk4 1
+    !% Standard Runge-Kutta 4th order
+    !%Option ode_fb78 2
+    !% Fehlberg solver
+    !%Option ode_vr89 3
+    !% Verner solver
+    !%Option ode_pd89 4
+    !% Prince-Dormand solver
+    !%End
     call loct_parse_int(check_inp('WatterstromODESolver'),       ODE_PD89, os%solver_type)
+
+    !%Variable WatterstromODESolverNSteps
+    !%Type integer
+    !%Default 400
+    !%Section Math::General
+    !%Description
+    !% Number of steps which the chosen ODE solver should perform
+    !% in the integration interval [a,b] of the Watterstrom ODE.
+    !%End
     call loct_parse_int(check_inp('WatterstromODESolverNSteps'),      400, os%nsteps)
+
+    ! setup ode solver
     os%nsize       = order
     os%tmin        = M_ZERO
     os%tmax        = M_ONE

@@ -29,7 +29,7 @@ subroutine X(ode_solver_init)(os)
   !%Default ode_rk4
   !%Section Math::General
   !%Description
-  !% Specifies what kind of root solver will be used
+  !% Specifies what kind of ODE solver will be used.
   !%Option ode_rk4 1
   !% Standard Runge-Kutta 4th order
   !%Option ode_fb78 2
@@ -43,6 +43,15 @@ subroutine X(ode_solver_init)(os)
   if( os%solver_type.lt.ODE_MINVAL.or.os%solver_type.gt.ODE_MAXVAL ) then
     call input_error(check_inp('ODESolver'))
   end if
+
+  !%Variable ODESolverNSteps
+  !%Type integer
+  !%Default 100
+  !%Section Math::General
+  !%Description
+  !% Number of steps which the chosen ODE solver should perform
+  !% in the integration interval [a,b] of the ODE.
+  !%End
   call loct_parse_int(check_inp('ODESolverNSteps'),     100, os%nsteps)
 
   call X(ode_solver_create)(os)
