@@ -179,70 +179,13 @@ contains
     s%user_def  = ""
     read_data   = 0
 
+#if 0
     !%Variable Species
     !%Type block
     !%Section System::Species
     !%Description
     !% A specie is by definition either an "ion" (nucleus + core electrons) described
     !% through a pseudo-potential, or an user-defined, model potential.
-    !% The format of this block is different for 1, 2 or 3 dimensions, and
-    !% can be best understood through examples. 
-    !%
-    !% In 1D, or 2D, e.g.
-    !%
-    !% <tt>%Species
-    !% <br>&nbsp;&nbsp;'H'  | 1.0079 | 1 | "-1/sqrt(x^2 + 1)"
-    !% <br>%</tt>
-    !%
-    !% This defines a species labelled '<i>H</i>' of weight <i>1.0079</i>,
-    !% and valence charge 1. This "valence charge" is used to calculate
-    !% the number of electrons present in the calculation: as many
-    !% as indicated by the valence charges of the species, plus any extra charge
-    !% specified by the user. The last field may be
-    !% any user defined potetial -- use <i>x</i>, <i>r</i> (and <i>y</i> in the 2D case) for the 
-    !% position of the electron relative to the species center.
-    !% For example, the potential often used in 1D calculation is
-    !% the soft-Coulomb potential <math>-Z/\sqrt{x^2 + 1}</math>. The previous example would then
-    !% be an appropriate description of a Hydrogen nucleus for one-dimensional calculations.
-    !%
-    !% In 3D, e.g.
-    !%
-    !% <tt>%Species
-    !% <br>&nbsp;&nbsp;'O'       | 15.9994 | 8   | "tm2"  | 1 | 1
-    !% <br>&nbsp;&nbsp;'H'       |  1.0079 | 1   | "hgh"  | 0 | 0
-    !% <br>&nbsp;&nbsp;'jelli01' | 23.2    | 8.0 |  5.0
-    !% <br>&nbsp;&nbsp;'point01' | 32.3    | 2.0
-    !% <br>&nbsp;&nbsp;'usdef'   | 1       | 8   | "1/2*r^2"
-    !% <br>%</tt>
-    !%
-    !% In this case, we have 5 ``species'' present, which exemplify the five kinds that
-    !% may be present:
-    !% <ul>
-    !% <li> Oxygen labelled '<i>O</i>'. Next number is the atomic mass (in atomic 
-    !% mass units), and third field, the atomic number (8, in this case).
-    !% Afterwards, "tm2" is the flavour of the pseudopotential: "tm2" stands
-    !% for Troullier-Martins. This means the pseudopotential will be 
-    !% read from an <i>O.ascii</i> or <i>O.vps</i> file, either in the working
-    !% directory or in the <i>OCTOPUS-HOME/share/PP/TM2</i> directory.
-    !% Next two numbers are the maximum 
-    !% <i>l</i>-component of the pseudo-potential to consider in the
-    !% calculation, and the <i>l</i>-component to consider as local.</li>
-    !% <li> Hydrogen defined in the same way as Oxygen. In this case, however, the
-    !% flavour is "hgh" standing for Hartwigsen-Goedecker-Hutter. Last two numbers
-    !% are irrelevant, since they do are not necessary to define the HGH pseudopotentials.</li>
-    !% <li> All species whose label starts by 'jelli' are jellium spheres.
-    !% The other parameters are the weight, the nuclear charge, and the
-    !% valence charge of the sphere.</li>
-    !% <li> All species whose label starts by 'point' are point charges.
-    !% The other parameters are the weight and the nuclear charge. In
-    !% fact, point charges are implemented as <i>rather small</i> jellium
-    !% spheres, with zero valence charge.</li>
-    !% <li> All species whose label starts by 'usdef' are user defined
-    !% potentials. The second parameter is the mass, whereas the third parameter
-    !% is the 'valence charge', used to calculate the number of electrons.
-    !% Finally, the potential itself is defined by the fourth argument.
-    !% Use any of the <i>x</i>, <i>y</i>, <i>z</i> or <i>r</i> variables
-    !% to define the potential.</li></ul>
     !%
     !% Note that some common pseudopotentials are distributed with the code in the
     !% directory <i>OCTOPUS-HOME/share/PP/</i>. To use these pseudopotentials you are
@@ -250,7 +193,49 @@ contains
     !% are provided by the program (you can override these defaults in any case). 
     !% Additional pseudopotentials can be downloaded from the 
     !% <a href='http://www.tddft.org/programs/octopus/pseudo.php'>octopus homepage<a>.
+    !%
+    !% The format of this block is the following: The first field is
+    !% the name of the specie, followed by the atomic mass (in atomic mass
+    !% units). The third field defines the type of specie (the valid options
+    !% are detailed below), each type needs some extra parameters given in
+    !% the following fields of the row.
+    !%
+    !% In 3D, e.g.
+    !%
+    !% <tt>%Species
+    !% <br>&nbsp;&nbsp;'O'       | 15.9994 | spec_ps_tm2  | 8   | 1 | 1
+    !% <br>&nbsp;&nbsp;'H'       |  1.0079 | spec_ps_hgh  | 1   | 0 | 0
+    !% <br>&nbsp;&nbsp;'jlm'     | 23.2    | spec_jelli   | 8   | 5.0
+    !% <br>&nbsp;&nbsp;'pnt'     | 32.3    | spec_point   | 2.0
+    !% <br>&nbsp;&nbsp;'udf'     |  0.0    | spec_usdef   | 8   | "1/2*r^2"
+    !% <br>%</tt>
+    !%
+    !%
+    !%Option spec_usdef  1
+    !% Specie with user defined potential. In this case, the fourth
+    !% field is the valence charge and the fifth
+    !% field is a string with a mathematical expresion that defines the
+    !% potential (you can use any of the <i>x</i>, <i>y</i>, <i>z</i>
+    !% or <i>r</i> variables).
+    !%Option spec_point  2
+    !% Point charge, the fourth field is the value of the charge.
+    !%Option spec_jelli  3
+    !% Jellium sphere, the extra parameters are the charge of the jellium
+    !% sphere (an equal value of valence charge is assumed) and the radius of
+    !% the sphere.
+    !%Option spec_ps_tm2  100
+    !% Troullier Martins pseudopotential, the pseudopotential will be
+    !% read from an <i>.ascii</i> or <i>.vps</i> file, either in the working
+    !% directory or in the <i>OCTOPUS-HOME/share/PP/TM2</i> directory.
+    !% The following three numbers are the atomic number, the maximum
+    !% <i>l</i>-component of the pseudo-potential to consider in the
+    !% calculation, and the <i>l</i>-component to consider as local.</li>
+    !%Option spec_ps_hgh  101
+    !% Hartwigsen-Goedecker-Hutter pseudopotentials, the next field is
+    !% the atomic number an the last two numbers are irrelevant, since they
+    !% do are not necessary to define the HGH pseudopotentials.
     !%End
+#endif 
 
     ! First, find out if there is a Species block.
     n_spec_block = 0
