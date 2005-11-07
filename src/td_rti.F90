@@ -192,7 +192,6 @@ contains
     !% advantageous.
     !%End
     call loct_parse_int(check_inp('TDEvolutionMethod'), REVERSAL, tr%method)
-    if(.not.varinfo_valid_option('TDEvolutionMethod', tr%method)) call input_error('TDEvolutionMethod')
 
     select case(tr%method)
     case(SPLIT_OPERATOR)
@@ -208,11 +207,13 @@ contains
     case(EXPONENTIAL_MIDPOINT); message(1) = 'Info: Evolution method:  Exponential Midpoint Rule.'
     case(MAGNUS);               message(1) = 'Info: Evolution method:  Magnus expansion.'
       allocate(tr%vmagnus(NP, st%d%nspin, 2))
+    case default
+      call input_error('TDEvolutionMethod')
     end select
-    call write_info(1)
+    call messages_print_var_option(stdout, 'TDEvolutionMethod', tr%method)
 
     allocate(tr%v_old(NP, st%d%nspin, 0:3)) ! allocate memory to store the old KS potentials
-    call td_exp_init(gr, tr%te)            ! initialize propagator
+    call td_exp_init(gr, tr%te)             ! initialize propagator
 
   end subroutine td_rti_init
 

@@ -29,6 +29,7 @@ module functions
   use mesh_function
   use cube_function
   use derivatives
+  use varinfo
 #if defined(HAVE_FFT)
   use fft
 #endif
@@ -98,19 +99,14 @@ contains
     !% so be careful.
     !%End
     call loct_parse_int(check_inp('DerivativesSpace'), REAL_SPACE, f_der%space)
-    if((f_der%space.ne.REAL_SPACE).and.(f_der%space.ne.FOURIER_SPACE)) then
-      write(message(1), '(a,i5,a)') "Input: '", f_der%space, &
-        "' is not a valid DerivativesSpace"
-      message(2) = '(DerivativesSpace = real_space | fourier_space)'
-      call write_fatal(2)
-    end if
+    if(.not.varinfo_valid_option('DerivativesSpace', f_der%space)) call input_error('DerivativesSpace')
 #else
     f_der%space = REAL_SPACE
 #endif
+    call messages_print_var_option(stdout, "DerivativesSpace", f_der%space)
 
     if(f_der%space == REAL_SPACE) then
       call derivatives_init(sb, f_der%der_discr, f_der%n_ghost, use_curvlinear)
-      message(1) = 'Info: Derivatives calculated in real-space'
 #if defined(HAVE_FFT)
     else
       if(use_curvlinear) then
@@ -118,12 +114,8 @@ contains
         message(2) = "DerivativesSpace = real_space"
         call write_fatal(2)
       end if
-
-      message(1) = 'Info: Derivatives calculated in reciprocal-space'
 #endif
     end if
-
-    call write_info(1)
 
     call pop_sub()
   end subroutine f_der_init

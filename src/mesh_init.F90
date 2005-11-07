@@ -171,9 +171,6 @@ subroutine mesh_init_stage_3(mesh, geo, cv, stencil, np_stencil, mc)
   type(multicomm_type), optional, intent(in) :: mc
 
   integer :: np_stencil_, stencil_size
-#if defined(HAVE_METIS) && defined(HAVE_MPI)
-  integer, allocatable :: part(:)
-#endif
 
   call push_sub('mesh_init.mesh_init_stage_3')
 
@@ -280,6 +277,7 @@ contains
   subroutine do_partition()
 #if defined(HAVE_METIS) && defined(HAVE_MPI)
     integer :: i, j, mpi_err
+    integer, allocatable :: part(:)
 
     ! group_comm(1) is
     mesh%mpi_comm = mc%group_comm(P_STRATEGY_DOMAINS)
@@ -328,20 +326,15 @@ contains
     type(simul_box_type), intent(in) :: sb
 
     integer :: i
-    FLOAT   :: f, chi(sb%dim)
+    FLOAT   :: chi(sb%dim)
 #if defined(HAVE_MPI)
     integer :: k
 #endif
 
     call push_sub('mesh_init.mesh_get_vol_pp')
 
-    f = M_ONE
-    do i = 1, sb%dim
-      f = f*mesh%h(i)
-    end do
-
     allocate(mesh%vol_pp(mesh%np_part))
-    mesh%vol_pp(:) = f
+    mesh%vol_pp(:) = product(mesh%h(1:sb%dim))
 
     if(mesh%parallel_in_domains) then
 #if defined(HAVE_MPI) && defined(HAVE_METIS)

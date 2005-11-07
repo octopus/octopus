@@ -111,6 +111,7 @@ contains
     !%End
     call loct_parse_int  (check_inp('SpecDampMode'), SPECTRUM_DAMP_POLYNOMIAL, s%damp)
     if(.not.varinfo_valid_option('SpecDampMode', s%damp)) call input_error('SpecDampMode')
+    call messages_print_var_option(stdout, 'SpecDampMode', s%damp)
 
     !%Variable SpecStartTime
     !%Type integer
@@ -230,6 +231,7 @@ contains
     case default
       call input_error('TDDeltaStrengthMode')
     end select
+    call messages_print_var_option(stdout, 'TDDeltaStrengthMode', k%delta_strength_mode)
 
     ! Find out how many equivalent axis we have...
     ! WARNING: TODO: document this variable.

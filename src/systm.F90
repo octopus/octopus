@@ -275,6 +275,7 @@ contains
       !%End
       call loct_parse_int(check_inp('GuessMagnetDensity'), 2, gmd_opt)
       if(.not.varinfo_valid_option('GuessMagnetDensity', gmd_opt)) call input_error('GuessMagnetDensity')
+      call messages_print_var_option(stdout, 'GuessMagnetDensity', gmd_opt)
     end if
 
     rho = M_ZERO

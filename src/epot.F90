@@ -44,6 +44,7 @@ module external_pot
   use lasers
   use profiling_mod
   use mpi_mod
+  use varinfo
 
   implicit none
 
@@ -327,42 +328,24 @@ contains
     !% Define which cutoff type is to be applied to the long range part of the local potential
     !% A cutoff is used when one wants to avoid the long range interactions
     !% among the system enclosed in the simulation box and (some of) its periodic images
-    !%Option 0
+    !%Option cutoff_sphere 0
     !% Cut off the interaction out of a sphere
-    !%Option 1
+    !%Option cutoff_cylinder 1
     !% Cut off the interaction out of a cylinder with axis parallel to the x direction
-    !%Option 2
+    !%Option cutoff_slab 2
     !% Cut off the interaction out of a slab in the xy plane
-    !%Option 3
-    !% Do not apply cutoff: all the periodic images interact
+    !%Option cutoff_none 3
+    !% Do not apply any cutoff: all the periodic images interact
     !%End
-
     call loct_parse_int(check_inp('VlocalCutoff'), sb%periodic_dim , vlocal_cutoff)
+    if(.not.varinfo_valid_option('VlocalCutoff', vlocal_cutoff)) call input_error('VlocalCutoff')
+    call messages_print_var_option(stdout, "VlocalCutoff", vlocal_cutoff)
+
     if (vlocal_cutoff /= sb%periodic_dim) then
       write(message(1), '(a,i1,a)')'The System is periodic in ', sb%periodic_dim, ' dimension(s),'
       write(message(2), '(a,i1,a)')'but VlocalCutoff is set for ', vlocal_cutoff, ' dimensions.'
       call write_warning(2)
     end if
-    select case(vlocal_cutoff)
-    case(0)
-      message(1) = 'Info: Vlocal Cutoff = sphere'
-      call write_info(1)
-    case(1)
-      message(1) = 'Info: Vlocal Cutoff = cylinder'
-      call write_info(1)
-    case(2)
-      message(1) = 'Info: Vlocal Cutoff = slab'
-      call write_info(1)
-    case(3)
-      message(1) = 'Info: Vlocal Cutoff = no cutoff'
-      call write_info(1)
-    case default
-      write(message(1), '(a,i2,a)') 'Input: ', vlocal_cutoff, &
-        ' is not a valid VlocalCutoff'
-      message(2) = 'VlocalCutoff = 0(spherical) | 1(cylindrical) | 2(planar)'
-      message(3) = '               3(no cutoff)'
-      call write_fatal(3)
-    end select
 
     allocate(ep%local_cf(geo%nspecies))
     if(geo%nlcc) allocate(ep%rhocore_cf(geo%nspecies))

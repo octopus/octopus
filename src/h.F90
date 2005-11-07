@@ -184,20 +184,11 @@ contains
     !% ZORA (Not implemented)
     !%End
     call loct_parse_int(check_inp('RelativisticCorrection'), NOREL, h%reltype)
+    if(.not.varinfo_valid_option('RelativisticCorrection', h%reltype)) call input_error('RelativisticCorrection')
+
 #ifdef COMPLEX_WFNS
-    select case(h%reltype)
-    case(NOREL);      message(1) = 'Info: Rel. correction: No relativistic corrections.'
-    case(SPIN_ORBIT); message(1) = 'Info: Rel. correction: Spin-Orbit.'
-    case(APP_ZORA);   message(1) = 'Info: Rel. correction: Approximated ZORA.'
-    case(ZORA);       message(1) = 'Info: Rel. correction: ZORA.'
-    case default
-      message(1) = "Relativistic corrections must be: 0 (none),"
-      message(2) = "                                  1 (spin-orbit coupling)"
-      message(3) = "                                  2 (approximated ZORA)"
-      message(4) = "                                  3 (ZORA)"
-      call write_fatal(4)
-    end select
-    call write_info(1)
+    call messages_print_var_option(stdout, "RelativisticCorrection", h%reltype)
+
     ! This is temporary...
     if(h%reltype > SPIN_ORBIT) then
       message(1) = 'Error: ZORA corrections not working yet. Visit us soon.'
@@ -235,6 +226,7 @@ contains
     !%End
     call loct_parse_int(check_inp('TDGauge'), LENGTH, h%gauge)
     if(.not.varinfo_valid_option('TDGauge', h%gauge)) call input_error('TDGauge')
+    call messages_print_var_option(stdout, "TDGauge", h%gauge)
 
     !%Variable AbsorbingBoundaries
     !%Type integer
@@ -253,7 +245,8 @@ contains
     !%End
     call loct_parse_int(check_inp('AbsorbingBoundaries'), NO_ABSORBING, h%ab)
     if(.not.varinfo_valid_option('AbsorbingBoundaries', h%ab)) call input_error('AbsorbingBoundaries')
-
+    call messages_print_var_option(stdout, "AbsorbingBoundaries", h%ab)
+    
     nullify(h%ab_pot)
 
     absorbing_boundaries: if(h%ab.ne.NO_ABSORBING) then

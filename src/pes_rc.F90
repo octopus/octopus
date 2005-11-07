@@ -42,13 +42,7 @@ subroutine PES_rc_init(v, m, st, save_iter)
   !%% <br>&nbsp;&nbsp;x1 | y1 | z1
   !%% <br>%
   !%%End
-  if (loct_parse_block(check_inp('PES_rc_points'), blk) < 0) then
-    message(1) = "Input: PES_rc_points block not specified"
-    message(2) = '%PES_rc_points'
-    message(3) = '   x | y | z'
-    message(4) = '%'
-    call write_fatal(4)
-  end if
+  if (loct_parse_block(check_inp('PES_rc_points'), blk) < 0) call input_error('PES_rc_points')
 
   v%npoints = loct_parse_block_n(blk)
 

@@ -110,7 +110,9 @@ contains
     mgrid%level(0)%n_fine = m%np
     allocate(mgrid%level(0)%fine_i(m%np))
 
-    print*, "Multigrid levels:", n_levels+1
+    write(message(1), '(a,i3)') "Multigrid levels:", n_levels+1
+    call write_info(1)
+
     do i = 1, mgrid%n_levels
       allocate(mgrid%level(i)%m, mgrid%level(i)%f_der)
       call multigrid_mesh_half(geo, cv, mgrid%level(i-1)%m, mgrid%level(i)%m)
@@ -143,7 +145,6 @@ contains
       mesh_out%l(:)    = mesh_out%nr(2, :) - mesh_out%nr(1, :) + 1
 
       mesh_out%enlarge = mesh_in%enlarge
-
 
       call mesh_init_stage_2(mesh_out%sb, mesh_out, geo, cv)
       call mesh_init_stage_3(mesh_out, geo, cv)
@@ -308,9 +309,9 @@ contains
 
     select case(method)
     case(FULLWEIGHT)
-      call multigrid_restriction(mgrid,ilevel,f_fine,f_coarse)
+      call multigrid_restriction(mgrid, ilevel, f_fine, f_coarse)
     case(INJECTION)
-      call multigrid_injection(mgrid,ilevel,f_fine,f_coarse)
+      call multigrid_injection(mgrid, ilevel, f_fine, f_coarse)
     case default
       write(message(1), '(a,i2,a)') 'Multigrid: Restriction method  = ', method, ' is not valid.'
       call write_fatal(1)
@@ -355,11 +356,11 @@ contains
 
     ASSERT(ilevel>0.and.ilevel<=mgrid%n_levels)
 
-    do di=-1,1
-      do dj=-1,1
-        do dk=-1,1
-          d=abs(di)+abs(dj)+abs(dk)
-          weight(di,dj,dk)=CNST(0.5)**d
+    do di = -1, 1
+      do dj = -1, 1
+        do dk = -1, 1
+          d = abs(di) + abs(dj) + abs(dk)
+          weight(di, dj, dk) = CNST(0.5)**d
         end do
       end do
     end do
@@ -370,23 +371,23 @@ contains
     coarse_mesh => mgrid%level(ilevel)%m
 
     do n = 1, level%n_coarse
-      fn=level%to_coarse(n);
-      fi(:)=fine_mesh%Lxyz(fn,:)
+      fn   = level%to_coarse(n)
+      fi(:)= fine_mesh%Lxyz(fn,:)
 
       f_coarse(n) = M_ZERO
 
-      do di=-1,1
-        do dj=-1,1
-          do dk=-1,1
-            fn=fine_mesh%Lxyz_inv(fi(1)+di,fi(2)+dj,fi(3)+dk)
+      do di = -1, 1
+        do dj = -1, 1
+          do dk = -1, 1
+            fn = fine_mesh%Lxyz_inv(fi(1)+di,fi(2)+dj,fi(3)+dk)
             if(fn <= fine_mesh%np ) then
-              f_coarse(n)=f_coarse(n)+weight(di,dj,dk)*f_fine(fn)*fine_mesh%vol_pp(fn)
+              f_coarse(n) = f_coarse(n)+weight(di,dj,dk)*f_fine(fn)*fine_mesh%vol_pp(fn)
             end if
           end do
         end do
       end do
 
-      f_coarse(n)=f_coarse(n)/coarse_mesh%vol_pp(n)
+      f_coarse(n) = f_coarse(n)/coarse_mesh%vol_pp(n)
     end do
 
   end subroutine multigrid_restriction

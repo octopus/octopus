@@ -149,6 +149,7 @@ contains
       !%End
       call loct_parse_int(check_inp('GOMethod'), 1, g_opt%method)
       if(.not.varinfo_valid_option('GOMethod', g_opt%method)) call input_error('GOMethod')
+      call messages_print_var_option(stdout, "GOMethod", g_opt%method)
 
       !%Variable GOTolerance
       !%Type float

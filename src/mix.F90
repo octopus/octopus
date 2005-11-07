@@ -77,7 +77,6 @@ contains
     def = MIX_BROYDEN
     if(present(def_)) def = def_
 
-
     !%Variable TypeOfMixing
     !%Type integer
     !%Deafult broyden
@@ -95,6 +94,7 @@ contains
     !%End
     call loct_parse_int(check_inp('TypeOfMixing'), def, smix%type_of_mixing)
     if(.not.varinfo_valid_option('TypeOfMixing', smix%type_of_mixing)) call input_error('TypeOfMixing')
+    call messages_print_var_option(stdout, "TypeOfMixing", smix%type_of_mixing)
 
     !%Variable Mixing
     !%Type float
@@ -122,24 +122,13 @@ contains
       if(smix%ns <= 1) call input_error('MixNumberSteps')
     end if
 
-
     select case (smix%type_of_mixing)
     case (MIX_GRPULAY)
-      write(message(1), '(a)') 'Info: GR-Pulay mixing used. It can (i) boost your convergence, '
-      write(message(2), '(a)') '      (ii) do nothing special, or (iii) totally screw up the run.'
-      write(message(3), '(a)') '      Good luck!'
-      call write_info(3)
-
       allocate(smix%df(m%np, d2, d3, smix%ns + 1), smix%vin_old(m%np, d2, d3), &
         smix%dv(m%np, d2, d3, smix%ns + 1), smix%f_old  (m%np, d2, d3)   )
       smix%df = M_ZERO; smix%dv = M_ZERO; smix%vin_old = M_ZERO; smix%f_old = M_ZERO
 
     case (MIX_BROYDEN)
-      write(message(1), '(a)') 'Info: Broyden mixing used. It can (i) boost your convergence, '
-      write(message(2), '(a)') '      (ii) do nothing special, or (iii) totally screw up the run.'
-      write(message(3), '(a)') '      Good luck!'
-      call write_info(3)
-
       allocate(smix%df(m%np, d2, d3, smix%ns), smix%vin_old(m%np, d2, d3), &
         smix%dv(m%np, d2, d3, smix%ns), smix%f_old  (m%np, d2, d3)   )
       smix%df = M_ZERO; smix%dv = M_ZERO; smix%vin_old = M_ZERO; smix%f_old = M_ZERO
@@ -176,10 +165,7 @@ contains
 
     call push_sub('mix.mixing')
 
-    if (iter.lt.1) then
-      message(1) = 'Wrong number of iterations in suboutine mixing.'
-      call write_fatal(1)
-    end if
+    ASSERT(iter >= 1)
 
     select case (smix%type_of_mixing)
     case (MIX_LINEAR)

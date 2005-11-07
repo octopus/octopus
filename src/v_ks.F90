@@ -123,6 +123,7 @@ contains
         !%End
         call loct_parse_int(check_inp('SICorrection'), sic_none, ks%sic_type)
         if(.not.varinfo_valid_option('SICorrection', ks%sic_type)) call input_error('SICorrection')
+        call messages_print_var_option(stdout, 'SICorrection', ks%sic_type)
 
         ! Perdew Zunger corrections
         if(ks%sic_type == sic_pz) ks%xc_family = ior(ks%xc_family, XC_FAMILY_OEP)

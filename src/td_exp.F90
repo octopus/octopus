@@ -150,15 +150,10 @@ contains
     !% C. W. Clenshaw, MTAC <b>9</b>, 118 (1955).
     !%End
     call loct_parse_int(check_inp('TDExponentialMethod'), FOURTH_ORDER, te%exp_method)
-    if(.not.varinfo_valid_option('TDExponentialMethod', te%exp_method)) call input_error('TDExponentialMethod')
 
     select case(te%exp_method)
     case(FOURTH_ORDER)
-      message(1) = 'Info: Exponential method: 4th order expansion.'
-
     case(CHEBYSHEV)
-      message(1) = 'Info: Exponential method: Chebyshev.'
-
     case(LANCZOS_EXPANSION)
       !%Variable TDLanczosTol
       !%Type float
@@ -174,17 +169,15 @@ contains
       call loct_parse_float(check_inp('TDLanczosTol'), CNST(1e-5), te%lanczos_tol)
       if (te%lanczos_tol <= M_ZERO) call input_error('TDLanczosTol')
 
-      message(1) = 'Info: Exponential method: Lanczos subspace approximation.'
-
 #if defined(HAVE_FFT)
     case(SPLIT_OPERATOR)
-      message(1) = 'Info: Exponential method: Split-Operator.'
     case(SUZUKI_TROTTER)
-      message(1) = 'Info: Exponential method: Suzuki-Trotter.'
 #endif
 
+    case default
+      call input_error('TDExponentialMethod')
     end select
-    call write_info(1)
+    call messages_print_var_option(stdout, 'TDExponentialMethod', te%exp_method)
 
     if(te%exp_method==FOURTH_ORDER.or.te%exp_method==CHEBYSHEV.or.te%exp_method==LANCZOS_EXPANSION) then
       !%Variable TDExpOrder
@@ -257,7 +250,7 @@ contains
     call pop_sub()
   contains
 
-	  ! ---------------------------------------------------------
+    ! ---------------------------------------------------------
     subroutine operate(psi, oppsi)
       CMPLX, intent(inout) :: psi(:, :)
       CMPLX, intent(inout) :: oppsi(:, :)

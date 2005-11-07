@@ -313,11 +313,15 @@ contains
     integer,          intent(in) :: iunit
     character(len=*), intent(in) :: var
     integer,          intent(in) :: option
-    character(len=*), intent(in) :: pre
+    character(len=*), intent(in), optional :: pre
 
     if(mpi_world%rank.ne.0) return
 
-    call varinfo_print_option(iunit, var, option, pre)
+    if(present(pre)) then
+      call varinfo_print_option(iunit, var, option, pre)
+    else
+      call varinfo_print_option(iunit, var, option)
+    end if
   end subroutine messages_print_var_option
 
 

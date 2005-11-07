@@ -30,6 +30,7 @@ module restart
   use grid
   use output
   use mpi_mod
+  use varinfo
 
   implicit none
 
@@ -71,16 +72,24 @@ contains
 
 
   ! ---------------------------------------------------------
+  ! read restart format information
   subroutine restart_init
     integer :: i
 
-    ! read restart format information
+    !%Variable RestartFileFormat
+    !%Type integer
+    !%Default restart_plain
+    !%Section Generalities::IO
+    !%Description
+    !% Determines in which format the restart file should be written
+    !%Option restart_plain 1
+    !% Binary (platform dependent) format
+    !%Option restart_netcdf 2
+    !% NetCDF (platform independent) format. This requires the NETCDF library.
+    !%End
     call loct_parse_int(check_inp('RestartFileFormat'), RESTART_PLAIN, i)
-    if (i<RESTART_PLAIN .or. i>RESTART_NETCDF) then
-      write(message(1),'(a,i4,a)') "Input: '", i,"' is not a valid RestartFileFormat"
-      message(2) = '(RestartFileFormat = plain | netcdf)'
-      call write_fatal(2)
-    end if
+    if(.not.varinfo_valid_option('RestartFileFormat', i)) call input_error('RestartFileFormat')
+    call messages_print_var_option(stdout, "RestartFileFormat", i)
 
     ! Fix the restart format...
     restart_format = output_fill_how("Plain")

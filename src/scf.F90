@@ -43,6 +43,7 @@ module scf
   use io
   use grid
   use profiling_mod
+  use varinfo
 
   implicit none
 
@@ -167,23 +168,13 @@ contains
     !% The Kohn-Sham potential
     !%End
     call loct_parse_int(check_inp('What2Mix'), 0, scf%what2mix)
-    select case (scf%what2mix)
-    case (MIXDENS)
-      message(1) = 'Info: SCF mixing the density.'
-    case (MIXPOT)
-      if (h%ip_app) then
-        message(1) = "Input: Cannot mix the potential whit non-interacting electrons."
-        call write_fatal(1)
-      else
-        message(1) = 'Info: SCF mixing the potential.'
-      end if
-    case default
-      write(message(1), '(a,i5,a)') "Input: '", scf%what2mix, &
-        "' is not a valid option for What2Mix"
-      message(2) = '(What2Mix = 0 | 1)'
-      call write_fatal(2)
-    end select
-    call write_info(1)
+    if(.not.varinfo_valid_option('What2Mix', scf%what2mix)) call input_error('What2Mix')
+    call messages_print_var_option(stdout, "What2Mix", scf%what2mix, "what to mix during SCF cycles")
+
+    if (scf%what2mix == MIXPOT.and.h%ip_app) then
+      message(1) = "Input: Cannot mix the potential with non-interacting electrons."
+      call write_fatal(1)
+    end if
 
     ! Handle mixing now...
     dim = 1

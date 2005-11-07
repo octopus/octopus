@@ -128,6 +128,8 @@ contains
       call loct_parse_int(check_inp('DerivativesStencil'), DER_STAR, der%stencil_type)
     endif
     if(.not.varinfo_valid_option('DerivativesStencil', der%stencil_type)) call input_error('DerivativesStencil')
+    call messages_print_var_option(stdout, "DerivativesStencil", der%stencil_type)
+
     if(use_curvilinear  .and.  der%stencil_type < DER_CUBE) call input_error('DerivativesStencil')
     if(der%stencil_type == DER_VARIATIONAL) then
       call loct_parse_float(check_inp('DerivativesLaplacianFilter'), M_ONE, der%lapl_cutoff)

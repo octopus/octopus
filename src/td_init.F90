@@ -85,6 +85,7 @@ subroutine td_init(gr, td, st, outp)
   !%End
   call loct_parse_int(check_inp('MoveIons'), STATIC_IONS, td%move_ions)
   if(.not.varinfo_valid_option('MoveIons', td%move_ions)) call input_error('MoveIons')
+  call messages_print_var_option(stdout, 'MoveIons', td%move_ions)
 
   if( td%move_ions .eq. NORMAL_VERLET) then
     write(message(1),'(a)') "Normal Verlet algorithm temporarily disabled."

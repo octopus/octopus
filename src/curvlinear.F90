@@ -81,6 +81,9 @@ contains
     !%End
     call loct_parse_int(check_inp('CurvMethod'), CURV_METHOD_UNIFORM, cv%method)
     if(.not.varinfo_valid_option('CurvMethod', cv%method)) call input_error('CurvMethod')
+    call messages_print_var_option(stdout, "CurvMethod", cv%method)
+
+    ! FIXME: The other two methods are apparently not working
     if(cv%method > CURV_METHOD_GYGI) call input_error('CurvMethod')
 
     select case(cv%method)

@@ -198,6 +198,7 @@ contains
       call write_fatal(1)
     end if
 #endif
+    call messages_print_var_option(stdout, 'SpinComponents', st%d%ispin)
 
     !%Variable ExcessCharge
     !%Type float
@@ -825,16 +826,14 @@ contains
     !%Section Output
     !%Description
     !% Chose if the band file is to be written in gnuplot or xmgrace firendly format
-    !%Option 1 
+    !%Option gnuplot 1 
     !% gnuplot format
-    !%Option 2
+    !%Option xmgrace 2
     !% xmgrace format
     !%End
     call loct_parse_int(check_inp('OutputBandsMode'), GNUPLOT, mode)
-    if(mode /= GNUPLOT .and. mode /= XMGRACE) then
-      message(1) = "Input: BandsOutputMode must be 1 (gnuplot) or 2 (xmgrace)"
-      call write_fatal(1)
-    end if
+    if(.not.varinfo_valid_option('OutputBandsMode', mode)) call input_error('OutputBandsMode')
+    call messages_print_var_option(stdout, "OutputBandsMode", mode)
 
     ! shortcuts
     ns = 1

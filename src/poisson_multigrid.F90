@@ -30,6 +30,7 @@ module poisson_multigrid
   use multigrid
   use poisson_corrections
   use math, only : dconjugate_gradients
+  use varinfo
 
   implicit none
 
@@ -121,6 +122,9 @@ contains
     !% Fullweight restriction
     !%End
     call loct_parse_int(check_inp('PoissonSolverMGRestrictionMethod'), 2, restriction_method)
+    if(.not.varinfo_valid_option('PoissonSolverMGRestrictionMethod', restriction_method)) &
+       call input_error('PoissonSolverMGRestrictionMethod')
+    call messages_print_var_option(stdout, "PoissonSolverMGRestrictionMethod", restriction_method)
 
     !%Variable PoissonSolverMGRelaxationMethod
     !%Type integer
@@ -143,11 +147,9 @@ contains
       call loct_parse_int(check_inp('PoissonSolverMGRelaxationMethod'), GAUSS_SEIDEL, relaxation_method)
     end if
 
-    if(        relaxation_method.ne.GAUSS_SEIDEL &
-      .and. relaxation_method.ne.GAUSS_JACOBI &
-      .and. relaxation_method.ne.CONJUGATE_GRADIENTS) then
+    if(.not.varinfo_valid_option('PoissonSolverMGRelaxationMethod', relaxation_method)) &
       call input_error('PoissonSolverMGRelaxationMethod')
-    end if
+    call messages_print_var_option(stdout, "PoissonSolverMGRelaxationMethod", relaxation_method)
 
     if ( relaxation_method == GAUSS_JACOBI) then
       call loct_parse_float(check_inp('PoissonSolverMGRelaxationFactor'), CNST(0.5), relax_factor )
@@ -193,10 +195,7 @@ contains
 
     call push_sub('poisson_multigrid.poisson_multigrid_solver');
 
-    if(.not. initialized) then
-      message(1) = 'Multigrid Poisson not initialized.'
-      call write_fatal(1)
-    end if
+    ASSERT(initialized)
 
     ! correction for treating boundaries
     allocate(rho_corrected(gr%m%np), vh_correction(gr%m%np))
@@ -225,9 +224,9 @@ contains
 
       res = residue(curr_l,phi(curr_l)%p,tau(curr_l)%p,err(curr_l)%p)
 
-      if ( gr%m%use_curvlinear ) then
-        print*, "base level", curr_l, "iter", t, " res ", res
-      end if
+      !if ( gr%m%use_curvlinear ) then
+      !  print *, "base level", curr_l, "iter", t, " res ", res
+      !end if
 
       if(res < threshold) then
         if(curr_l > 0 ) then

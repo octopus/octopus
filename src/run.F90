@@ -252,7 +252,7 @@ contains
     integer :: mode
 
     call messages_print_stress(stdout)
-    call messages_print_var_option(stdout, "CalculationMode", calc_mode, "Calculation Mode:")
+    call messages_print_var_option(stdout, "CalculationMode", calc_mode)
     call messages_print_stress(stdout)
 
     ! initialize ffts

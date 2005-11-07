@@ -113,33 +113,29 @@ contains
     !%Option cg 5
     !% Conjugate-gradients algorithm
     !%Option trlan 1
-    !% Lanczos scheme, as implemented in the TRLan package.
+    !% Lanczos scheme. Requiers the TRLan package.
     !%Option plan 2
     !% Preconditioned Lanczos scheme.
     !%Option arpack 3
-    !% Implicitly Restarted Arnoldi Method, as implemented in the ARPACK package
+    !% Implicitly Restarted Arnoldi Method. Requires the ARPACK package
     !%Option jdqz 5
-    !% Jacobi-Davidson scheme as implemented in the JDQZ package
+    !% Jacobi-Davidson scheme. Requires the JDQZ package
     !%Option cg_new 6
     !% A rewritting of the cg option, that will eventually substitute it.
     !%Option evolution 7
     !% Propagation in imaginary time
     !%End
     call loct_parse_int(check_inp('EigenSolver'), RS_CG, eigens%es_type)
+
     select case(eigens%es_type)
     case(RS_CG_NEW)
-      message(1) = 'Info: Eigensolver type: Real-space conjugate gradients (new)'
     case(RS_CG)
-      message(1) = 'Info: Eigensolver type: Real-space conjugate gradients'
 #ifdef HAVE_TRLAN
     case(RS_LANCZOS)
-      message(1) = 'Info: Eigensolver type: Lanczos algorithm (TRLan package)'
 #endif
     case(RS_PLAN)
-      message(1) = 'Info: Eigensolver type: Preconditioned Lanczos'
 #if defined(HAVE_ARPACK)
     case(ARPACK)
-      message(1) = 'Info: Eigensolver type: ARPACK Arnoldi method'
 
       !%Variable EigenSolverArnoldiVectors
       !%Type integer
@@ -155,11 +151,8 @@ contains
 #endif
 #if defined(HAVE_JDQZ)
     case(JDQZ)
-      message(1) = 'Info: Eigensolver type: Jacobi-Davidson through the JDQZ package'
 #endif
     case(EVOLUTION)
-      message(1) = 'Info: Eigensolver type: Imaginary time evolution'
-
       !%Variable EigenSolverImaginaryTime
       !%Type float
       !%Default 1.0
@@ -172,12 +165,9 @@ contains
       call loct_parse_float(check_inp('EigenSolverImaginaryTime'), M_ONE, eigens%imag_time)
       if(eigens%imag_time <= M_ZERO) call input_error('EigenSolverImaginaryTime')
     case default
-      write(message(1), '(a,i4,a)') "Input: '", eigens%es_type, &
-        "' is not a valid EigenSolver"
-      message(2) = '( EigenSolver =  cg | trlan | plan | arpack | cg_new )'
-      call write_fatal(2)
+      call input_error('EigenSolver')
     end select
-    call write_info(1)
+    call messages_print_var_option(stdout, "EigenSolver", eigens%es_type)
 
     !%Variable EigenSolverInitTolerance
     !%Type float
@@ -187,28 +177,17 @@ contains
     !% This is the initial tolerance for the eigenvectors.
     !%End
     call loct_parse_float(check_inp('EigenSolverInitTolerance'), CNST(1.0e-6), eigens%init_tol)
-    if(eigens%init_tol < 0) then
-      write(message(1), '(a,e14.4,a)') "Input: '", eigens%init_tol, &
-        "' is not a valid EigenSolverInitTolerance"
-      message(2) = '(EigenSolverInitTolerance > 0)'
-      call write_fatal(2)
-    end if
+    if(eigens%init_tol < 0) call input_error('EigenSolverInitTolerance')
 
     !%Variable EigenSolverFinalTolerance
     !%Type float
     !%Default 1.0e-6
     !%Section SCF::EigenSolver
     !%Description
-    !% This is the final tolerance for the eigenvectors.
+    !% This is the final tolerance for the eigenvectors. Must be smaller than <tt>EigenSolverInitTolerance</tt>.
     !%End
     call loct_parse_float(check_inp('EigenSolverFinalTolerance'), CNST(1.0e-6), eigens%final_tol)
-    if(eigens%final_tol < 0 .or. eigens%final_tol > eigens%init_tol) then
-      write(message(1),'(a,e14.4,a)') "Input: '", eigens%init_tol, &
-        "' is not a valid EigenSolverInitTolerance"
-      message(2) = '(EigenSolverFinalTolerance > 0 and '
-      message(3) = ' EigenSolverFinalTolerance < EigenSolverInitTolerance)'
-      call write_fatal(3)
-    end if
+    if(eigens%final_tol < 0 .or. eigens%final_tol > eigens%init_tol) call input_error('EigenSolverFinalTolerance')
 
     !%Variable EigenSolverFinalToleranceIteration
     !%Type integer
@@ -217,14 +196,10 @@ contains
     !%Description
     !% Determines how many interactions are needed 
     !% to go from <tt>EigenSolverInitTolerance</tt> to <tt>EigenSolverFinalTolerance</tt>.
+    !% Must be larger than 1.
     !%End
     call loct_parse_int(check_inp('EigenSolverFinalToleranceIteration'), 7, eigens%final_tol_iter)
-    if(eigens%final_tol_iter <= 1) then
-      write(message(1),'(a,i5,a)') "Input: '", eigens%final_tol_iter, &
-        "' is not a valid EigenSolverFinalToleranceIter"
-      message(2) = '(EigenSolverFinalToleranceIter > 1)'
-      call write_fatal(2)
-    end if
+    if(eigens%final_tol_iter <= 1) call input_error('EigenSolverFinalToleranceIteration')
 
     !%Variable EigenSolverMaxIter
     !%Type integer
@@ -233,15 +208,10 @@ contains
     !%Description
     !% Determines the maximum number of iterations 
     !% for the eigensolver (per state) -- that is, if this number is reached, the diagonalization
-    !% is stopped even if the desired tolerance was not achieved.
+    !% is stopped even if the desired tolerance was not achieved. Must be larger or equal than 1.
     !%End
     call loct_parse_int(check_inp('EigenSolverMaxIter'), max_iter_default, eigens%es_maxiter)
-    if(eigens%es_maxiter < 1) then
-      write(message(1),'(a,i5,a)') "Input: '", eigens%es_maxiter, &
-        "' is not a valid EigenSolverMaxIter"
-      message(3) = '(EigenSolverMaxIter >=1 )'
-      call write_fatal(2)
-    end if
+    if(eigens%es_maxiter < 1) call input_error('EigenSolverMaxIter')
 
     select case(eigens%es_type)
     case(RS_PLAN)

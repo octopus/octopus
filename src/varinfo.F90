@@ -114,7 +114,7 @@ contains
     integer,          intent(in) :: iunit
     character(len=*), intent(in) :: var
     integer,          intent(in) :: option
-    character(len=*), intent(in) :: pre
+    character(len=*), intent(in), optional :: pre
 
     integer(POINTER_SIZE) :: handle, opt, name, desc
     integer :: value
@@ -130,9 +130,17 @@ contains
       call varinfo_opt_getinfo(opt, name, value, desc)
 
       if(value == option) then
-        write(iunit, '(a,a)', advance='no') pre, ' ['
+        write(iunit, '(4a)', advance='no') "Input:", ' [', var, ' = '
         call print_C_string(iunit, name, advance='no')
-        call print_C_string(iunit, desc, pre='] ')
+        write(iunit, '(a)', advance='no') ']'
+        if(present(pre)) then
+          write(iunit, '(3a)') ' (', pre, ')'
+        else
+          write(iunit, '(1x)')
+        end if
+        call print_C_string(iunit, desc, pre='  => ')
+        write(iunit, '(1x)') ! empty line
+
         return
       end if
     end do

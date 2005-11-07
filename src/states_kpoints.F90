@@ -115,9 +115,9 @@ subroutine states_choose_kpoints(d, sb, geo)
   !%Section States
   !%Description
   !% Only used in 1D periodic calculation to enforce the correspondig symmetry in the Brillouin Zone
-  !%Option 0
+  !%Option no 0
   !% The system has no center of inversion: use the whole BZ
-  !%Option 1
+  !%Option yes 1
   !% The system has a center of inversion: use half BZ
   !%End
 

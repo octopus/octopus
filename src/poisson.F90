@@ -120,7 +120,7 @@ contains
     subroutine init_1D()
       poisson_solver = -NDIM ! internal type
 
-      call messages_print_var_option(stdout, "PoissonSolver", poisson_solver, "Poisson solver:")
+      call messages_print_var_option(stdout, "PoissonSolver", poisson_solver)
     end subroutine init_1D
 
 
@@ -142,7 +142,7 @@ contains
         call write_fatal(2)
       end if
 
-      call messages_print_var_option(stdout, "PoissonSolver", poisson_solver, "Poisson solver:")
+      call messages_print_var_option(stdout, "PoissonSolver", poisson_solver)
       call poisson2D_init(gr)
     end subroutine init_2D
 
@@ -177,7 +177,7 @@ contains
         call write_fatal(3)
       end if
 
-      call messages_print_var_option(stdout, "PoissonSolver", poisson_solver, "Poisson solver:")
+      call messages_print_var_option(stdout, "PoissonSolver", poisson_solver)
       call poisson3D_init(gr)
     end subroutine init_3D
 
