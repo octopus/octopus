@@ -201,7 +201,7 @@ subroutine X(epot_forces) (gr, ep, st, t)
 
 contains
   subroutine local_RS()
-    FLOAT :: r, x(3), d, gv(3)
+    FLOAT :: r, x(3), gv(3)
     FLOAT, allocatable :: force(:,:)
     integer  :: i, j, k, ns
 
