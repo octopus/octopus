@@ -78,7 +78,7 @@ contains
 
     call X(states_calc_dens)(sys%st, sys%gr%m%np, sys%st%rho)
     call X(v_ks_calc)(sys%gr, sys%ks, h, sys%st, calc_eigenval=.true.) ! get potentials
-    call hamiltonian_energy(h, sys%st, sys%gr%geo%eii, -1)         ! total energy
+    call hamiltonian_energy(h, sys%st, sys%gr%geo%eii, -1)             ! total energy
 
     if( (err.ne.0) .and. (err >= occupied_states)) then
       message(1) = "Info: not all the unoccupied KS orbitals could be read from '"//trim(tmpdir)//"restart_gs'"
@@ -89,7 +89,7 @@ contains
       if(lcao_data%state .eq. 1) then
         call lcao_wf(lcao_data, sys%gr%m, sys%gr%sb, sys%st, h, start = err+1)
       end if
-      call lcao_end(lcao_data)
+      call lcao_end(lcao_data, sys%st%nst)
     else
       message(1) = "Info: Loaded all KS orbitals from '"//trim(tmpdir)//"restart_gs'"
       call write_info(1)

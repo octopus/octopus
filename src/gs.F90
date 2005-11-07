@@ -154,7 +154,7 @@ contains
         call write_info(1)
 
         call lcao_wf(lcao_data, gr%m, gr%sb, st, h)
-        call lcao_end(lcao_data)
+        call lcao_end(lcao_data, st%nst)
 
         call states_fermi(st, gr%m)                         ! occupations
         call states_write_eigenvalues(stdout, st%nst, st, gr%sb)

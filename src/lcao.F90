@@ -197,15 +197,20 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine lcao_end(lcao_data)
+  subroutine lcao_end(lcao_data, nst)
     type(lcao_type), intent(inout) :: lcao_data
+    integer,            intent(in) :: nst
+
     call push_sub('lcao.lcao_end')
 
     ASSERT(lcao_data%state == 1)
 
-    if(associated(lcao_data%hamilt)) then
-      deallocate(lcao_data%hamilt, lcao_data%s, lcao_data%k, lcao_data%v)
-    end if
+    if(lcao_data%st%nst >= nst) then
+      if(associated(lcao_data%hamilt)) deallocate(lcao_data%hamilt)
+      if(associated(lcao_data%s     )) deallocate(lcao_data%s)
+      if(associated(lcao_data%k     )) deallocate(lcao_data%k)
+      if(associated(lcao_data%v     )) deallocate(lcao_data%v)
+    endif
 
     call states_end(lcao_data%st)
 

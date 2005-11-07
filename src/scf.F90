@@ -57,7 +57,7 @@ module scf
     MIXDENS = 0,        &
     MIXPOT  = 1
 
-  type scf_type  ! some variables used for the scf cycle
+  type scf_type         ! some variables used for the scf cycle
     integer :: max_iter ! maximum number of scf iterations
 
     ! several convergence criteria
@@ -88,7 +88,7 @@ contains
     FLOAT :: rmin
 
     call push_sub('scf.scf_init')
-    
+
     !%Variable MaximumIter
     !%Type integer
     !%Default 200
@@ -331,7 +331,7 @@ contains
       finish = &
         (scf%conv_abs_dens > M_ZERO .and. scf%abs_dens <= scf%conv_abs_dens) .or. &
         (scf%conv_rel_dens > M_ZERO .and. scf%rel_dens <= scf%conv_rel_dens) .or. &
-        (scf%conv_abs_ev   > M_ZERO .and. scf%abs_ev   <= scf%conv_abs_ev) .or. &
+        (scf%conv_abs_ev   > M_ZERO .and. scf%abs_ev   <= scf%conv_abs_ev)   .or. &
         (scf%conv_rel_ev   > M_ZERO .and. scf%rel_ev   <= scf%conv_rel_ev)
 
       call scf_write_iter
@@ -363,7 +363,7 @@ contains
       if(finish) then
         write(message(1), '(a, i4, a)')'Info: SCF converged in ', iter, ' iterations'
         call write_info(1)
-        if(scf%lcao_restricted) call lcao_end(lcao_data)
+        if(scf%lcao_restricted) call lcao_end(lcao_data, st%nst)
         call profiling_out(C_PROFILING_SCF_CYCLE)
         exit
       end if
@@ -520,7 +520,7 @@ contains
         write(iunit, '(3a)') 'Dipole [', trim(units_out%length%abbrev), ']:                    [Debye]'
         do j = 1, NDIM
           write(iunit, '(6x,a,i1,a,es14.5,3x,2es14.5)') '<x', j, '> = ', n_dip(j) / units_out%length%factor, &
-             n_dip(j)*ATOMIC_TO_DEBYE
+            n_dip(j)*ATOMIC_TO_DEBYE
         end do
         write(iunit,'(a)')
       end if
@@ -534,7 +534,7 @@ contains
             write(iunit,'(6x,a1,i1,a3,es14.5)') 'L',j,' = ',angular(j)
           end do
           write(iunit,'(a)')
-          
+
           write(iunit,'(6x,a,es14.5)') 'L^2 = ', l2
           write(iunit,'(a)')
         end if
@@ -543,21 +543,21 @@ contains
       if(mpi_world%rank == 0) then
         write(iunit, '(a)') 'Convergence:'
         write(iunit, '(6x, a, es14.8,a,es14.8,a)') 'abs_dens = ', scf%abs_dens, &
-           ' (', scf%conv_abs_dens, ')'
+          ' (', scf%conv_abs_dens, ')'
         write(iunit, '(6x, a, es14.8,a,es14.8,a)') 'rel_dens = ', scf%rel_dens, &
-           ' (', scf%conv_rel_dens, ')'
+          ' (', scf%conv_rel_dens, ')'
         write(iunit, '(6x, a, es14.8,a,es14.8,4a)') 'abs_ev = ', scf%abs_ev, &
-           ' (', scf%conv_abs_ev / units_out%energy%factor, ')', &
-           ' [',  trim(units_out%energy%abbrev), ']'
+          ' (', scf%conv_abs_ev / units_out%energy%factor, ')', &
+          ' [',  trim(units_out%energy%abbrev), ']'
         write(iunit, '(6x, a, es14.8,a,es14.8,a)') 'rel_ev = ', scf%rel_ev, &
-           ' (', scf%conv_rel_ev, ')'
+          ' (', scf%conv_rel_ev, ')'
         write(iunit,'(1x)')
-        
+
         write(iunit,'(3a)') 'Forces on the ions [', trim(units_out%force%abbrev), "]"
         write(iunit,'(a,10x,14x,a,14x,a,14x,a)') ' Ion','x','y','z'
         do i = 1, gr%geo%natoms
           write(iunit,'(i4,a10,3f15.6)') i, trim(gr%geo%atom(i)%spec%label), &
-             gr%geo%atom(i)%f(:) / units_out%force%factor
+            gr%geo%atom(i)%f(:) / units_out%force%factor
         end do
 
         call io_close(iunit)
