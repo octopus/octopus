@@ -51,6 +51,8 @@ module global
     character(len=256) :: latest_cvs  ! rcs info of latest cvs commit
     character(len=50)  :: build_time  ! time octopus was compiled
     character(len=10)  :: version     ! version number
+    character(len=256) :: compiler
+    character(len=256) :: fcflags
   end type conf_type
 
   ! This is defined even when running serial
@@ -174,6 +176,8 @@ contains
     conf%latest_cvs = LATEST_CVS
     conf%build_time = BUILD_TIME
     conf%version    = OCTOPUS_VERSION
+    conf%compiler   = FC
+    conf%fcflags    = FCFLAGS
 
     ! initialize info for the input variables
     call varinfo_init(trim(conf%share)//'/varinfo');

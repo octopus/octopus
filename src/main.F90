@@ -127,7 +127,10 @@ program octopus
     message(3) = str_center("(build time - " // trim(conf%build_time) // ")", 70)
     message(4) = str_center("(latest cvs changes: " // trim(conf%latest_cvs) // ")", 70)
     message(5) = ""
-    call write_info(5)
+    message(6) = str_center("Compiler: "//trim(conf%compiler),70)
+    message(7) = str_center("Compiler flags: "//trim(conf%fcflags),max(70, len(trim(conf%fcflags))+17))
+    message(8) = ""
+    call write_info(8)
 
     ! Let us print where we are running
     call loct_sysname(sys_name)
