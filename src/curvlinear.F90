@@ -26,6 +26,7 @@ module curvlinear
   use curv_gygi
   use curv_briggs
   use curv_modine
+  use varinfo
 
   implicit none
 
@@ -60,9 +61,10 @@ contains
     !%Description
     !% The relevant functions in octopus are represented on a mesh in real space.
     !% This mesh may be an evenly spaced regular rectangular grid (standard mode),
-    !% or else an *adaptive* or *curvilinear grid*. We have implemented (not still
-    !% finished, this is still an experimental feature) three kinds of adative
-    !% meshes.
+    !% or else an *adaptive* or *curvilinear grid*. We have implemented
+    !% three kinds of adative meshes, although only one is currently working,
+    !% the one invented by F. Gygi ("curv_gygi"). The code will stop if any of
+    !% the other two is invoked.
     !%Option curv_uniform 1
     !% Regular, uniform rectangular grid. The default.
     !%Option curv_gygi 2
@@ -71,12 +73,15 @@ contains
     !%Option curv_briggs 3
     !% The deformation of the grid is done according to the scheme described by
     !% Briggs [E.L. Briggs, D.J. Sullivan, and J. Bernholc, Phys. Rev. B 54 14362 (1996)]
+    !% (NOT WORKING)
     !%Option curv_modine 4
     !% The deformation of the grid is done according to the scheme described by
     !% Modine [N.A. Modine, G. Zumbach and E. Kaxiras, Phys. Rev. B 55, 10289 (1997)]
+    !% (NOT WORKING)
     !%End
     call loct_parse_int(check_inp('CurvMethod'), CURV_METHOD_UNIFORM, cv%method)
-    if(cv%method<CURV_METHOD_UNIFORM.or.cv%method>CURV_METHOD_MODINE) call input_error('CurvMethod')
+    if(.not.varinfo_valid_option('CurvMethod', cv%method)) call input_error('CurvMethod')
+    if(cv%method > CURV_METHOD_GYGI) call input_error('CurvMethod')
 
     select case(cv%method)
     case(CURV_METHOD_GYGI)
