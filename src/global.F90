@@ -177,7 +177,9 @@ contains
     conf%build_time = BUILD_TIME
     conf%version    = OCTOPUS_VERSION
     conf%compiler   = FC
+#if defined (LONG_LINES)
     conf%fcflags    = FCFLAGS
+#endif
 
     ! initialize info for the input variables
     call varinfo_init(trim(conf%share)//'/varinfo');
