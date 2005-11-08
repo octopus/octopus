@@ -88,9 +88,11 @@ contains
     !%Option linear 0
     !% Simple linear mixing.
     !%Option gr_pulay 1
-    !% "Guaranteed-reduction" Pulay scheme (FIXME: Add reference).
+    !% "Guaranteed-reduction" Pulay scheme [D. R. Bowler and M. J. Gillan, Chem. Phys. 
+    !% Lett. 325, 473 (2000)].
     !%Option broyden 2
-    !% Broyden scheme (FIXME: Add reference).
+    !% Broyden scheme [C. G Broyden, Math. Comp. 19, 577 (1965); 
+    !% D. D. Johnson, Phys. Rev. B 38, 12807 (1988)].
     !%End
     call loct_parse_int(check_inp('TypeOfMixing'), def, smix%type_of_mixing)
     if(.not.varinfo_valid_option('TypeOfMixing', smix%type_of_mixing)) call input_error('TypeOfMixing')
