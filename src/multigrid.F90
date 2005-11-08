@@ -77,15 +77,15 @@ contains
     !%Default 0 
     !%Section Hamiltonian
     !%Description
-    !% Number of levels in the grid hierachy used for multigrid.
-    !%Option max_levels
-    !% Calculate the optimous number of levels for the grid. Positive
+    !% Number of levels in the grid hierachy used for multigrid. Positive
     !% numbers indicate an absolute numbers of levels, negative
     !% numbers are substracted to maximum number of levels posible for
-    !% the grid been used. A value of 1 means using only the
-    !% relaxation operator in the finest grid. Default is the maximun
-    !% number of levels.
+    !% the grid been used. Default is the maximum number of levels for
+    !% the grid.
+    !%Option max_levels 0
+    !% Calculate the optimous number of levels for the grid.
     !%End
+
     call loct_parse_int(check_inp('MultigridLevels'), 0, n_levels)
 
     if ( n_levels <= 0 )then

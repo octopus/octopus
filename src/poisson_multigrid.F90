@@ -115,7 +115,7 @@ contains
     !%Default fullweight
     !%Section Hamiltonian::Poisson::Multigrid
     !%Description
-    !% Method used from fine to coarse grid transfer
+    !% Method used from fine to coarse grid transfer.
     !%Option injection 1
     !% Injection
     !%Option fullweight 2
@@ -131,9 +131,9 @@ contains
     !%Default Gauss-Seidel
     !%Section Hamiltonian::Poisson::Multigrid
     !%Description
-    !% Method used from fine to relax, i.e. to solve the linear system approximately, in
-    !% the multigrid procedure that solve Poisson equation. For the moment, the option
-    !% conjugate gradients is experimental. For curvilinear coordinates the default is Gauss-Jacobi
+    !% Method used to solve the linear system approximately in each grid for the
+    !% multigrid procedure that solve Poisson equation. For the moment, the option
+    !% conjugate gradients is experimental. 
     !%Option gauss-seidel 1
     !% Gauss-Seidel
     !%Option gauss-jacobi 2
@@ -151,6 +151,15 @@ contains
       call input_error('PoissonSolverMGRelaxationMethod')
     call messages_print_var_option(stdout, "PoissonSolverMGRelaxationMethod", relaxation_method)
 
+    !%Variable PoissonSolverMGRelaxationFactor
+    !%Type float
+    !%Default 1.0
+    !%Section Hamiltonian::Poisson::Multigrid
+    !%Description
+    !% Relaxation factor of the relaxation operator used for the
+    !% multigrid method, default is 1.0. This is mainly for debugging,
+    !% overrelaxation does nos help in a multigrid scheme.
+    !%End
     if ( relaxation_method == GAUSS_JACOBI) then
       call loct_parse_float(check_inp('PoissonSolverMGRelaxationFactor'), CNST(0.5), relax_factor )
     else
