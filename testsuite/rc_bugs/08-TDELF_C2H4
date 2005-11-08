@@ -1,0 +1,113 @@
+# $Id$
+
+Test     : 08-TDELF_C2H4
+Author   : Appel
+Date     : 08.11.05
+Arch     : Linux g35 2.6.13.2-smp-1 #1 SMP Wed Sep 28 17:13:12 CEST 2005 i686 GNU/Linux
+Release  : 1.99devel
+Programs : octopus; octopus_cmplx
+Enabled  : Yes
+
+
+# Bug description:
+#
+# The code crashes with address error.
+#
+# ...
+# **********************************************************************
+# SCF CYCLE ITER #  200
+#  etot = -3.82641451E+02 abs_ev   =  5.20E+00 rel_ev   =  2.68E-02
+#                         abs_dens =  5.15E-01 rel_dens =  4.29E-02
+# Matrix vector products:    162
+# Converged eigenvectors:      0
+# Eigenvalues [eV]
+#  #st   Eigenvalue    Occupation      Error (  1)
+#    1   -22.407957       2.000000      (1.7E-04)
+#    2   -17.811364       2.000000      (2.8E-04)
+#    3   -16.429181       2.000000      (5.3E-02)
+#    4   -15.363417       2.000000      (8.9E-03)
+#    5   -12.870921       2.000000      (3.7E-03)
+#    6   -12.224596       2.000000      (3.3E-01)
+# **********************************************************************
+#
+#
+# ** Warning:
+# **   SCF *not* converged!
+#
+#
+# ** Address Error **
+#
+#
+# End of diagnostics
+
+
+
+INP
+
+DebugLevel = 0
+
+Units = "eVA"
+CalculationMode = td
+
+BoxShape = sphere
+Radius   = 7
+Spacing  = 0.14
+
+%Species
+ "H"  |  1.0079   |  tm2 | 1 | 0 | 0
+ "C"  | 12.011    |  tm2 | 6 | 1 | 0
+%
+
+LocalPotentialSpace = 0
+ConvAbsDens = 1e-7
+
+ExcessCharge = 1
+
+CC = 1.339
+CH = 1.085
+a = (180-121.1)*pi/180
+%Coordinates
+  "C" | -CC/2            +0.075 |            0.075 |  0.075 | yes
+  "C" |  CC/2            +0.075 |            0.075 |  0.075 | yes
+  "H" | -CC/2 - CH*cos(a)+0.075 |  CH*sin(a)+0.075 |  0.075 | yes
+  "H" | -CC/2 - CH*cos(a)+0.075 | -CH*sin(a)+0.075 |  0.075 | yes
+  "H" |  CC/2 + CH*cos(a)+0.075 |  CH*sin(a)+0.075 |  0.075 | yes
+  "H" |  CC/2 + CH*cos(a)+0.075 | -CH*sin(a)+0.075 |  0.075 | yes
+  "H" |                   0.075 |           -4.075 |  0.075 | yes
+%
+
+%Velocities
+  "C" | 0 | 0 |  0
+  "C" | 0 | 0 |  0
+  "H" | 0 | 0 |  0
+  "H" | 0 | 0 |  0
+  "H" | 0 | 0 |  0
+  "H" | 0 | 0 |  0
+  "H" | -CC/2 | 4 |  0
+%
+
+OutputDensity = true
+OutputELF = true
+OutputGeometry = true
+OutputNETCDF = yes
+OutputEvery = 15
+
+TDEvolutionMethod = 4
+TDTimeStep = 0.0005
+TDMaximumIter = 15/TDTimeStep
+AbsorbingBoundaries = 2
+ABWidth = 0.5
+MoveIons = 3
+
+
+EOF
+
+RUN
+
+
+
+# add your own matches
+#
+# Examples (of course you have to uncomment the lines :)
+# Match ; TotalEnergy ; grep -A 6 '^Energy:' static/info ; \s*Total\s*=\s*-0.33802679
+# Match ; Eigenvalues ; grep -A 2 'Eigenvalues \[' static/info | tail -1 ; \s*-0.13735\d*\s*2.0000\d*
