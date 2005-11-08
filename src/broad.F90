@@ -56,30 +56,9 @@ program broad
   b%min_energy  = b%min_energy  * units_inp%energy%factor
   b%max_energy  = b%max_energy  * units_inp%energy%factor
 
-  ! calculate resonances
-  message(1) = "Info: Broadening spectra"
-  call write_info(1)
-
-  call loct_parse_logical(check_inp('LinEigenvalues'), .true., l)
-  if(l) then
-    message(1) = "      Eigenvalues"
-    call write_info(1)
-    call calc_broad(b, 'linear', 'eps-diff', .true.)
-  end if
-
-  call loct_parse_logical(check_inp('LinPetersilka'), .true., l)
-  if(l) then
-    message(1) = "      Petersilka"
-    call write_info(1)
-    call calc_broad(b, 'linear', 'petersilka', .true.)
-  end if
-
-  call loct_parse_logical(check_inp('LinCasida'), .true., l)
-  if(l) then
-    message(1) = "      Casida"
-    call write_info(1)
-    call calc_broad(b, 'linear', 'casida', .false.)
-  end if
+  call calc_broad(b, 'linear', 'eps-diff', .true.)
+  call calc_broad(b, 'linear', 'petersilka', .true.)
+  call calc_broad(b, 'linear', 'casida', .false.)
 
   call io_end()
   call syslabels_end()
@@ -101,7 +80,8 @@ contains
     allocate(s(4,n))
     s = M_ZERO
 
-    iunit = io_open(trim(dir)//"/"// fname, action='read', status='old')
+    iunit = io_open(trim(dir)//"/"// fname, action='read', status='old', die = .false.)
+    if(iunit < 0) return
 
     read(iunit, *) ! skip header
     do

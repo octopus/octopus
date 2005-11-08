@@ -454,7 +454,7 @@ contains
         deallocate(mpi_mat)
       end if
 #endif
-      if(cas%mpi_rank == 0) print *, "mat =", cas%mat
+      !if(cas%mpi_rank == 0) print *, "mat =", cas%mat
 
       ! all processors with the exception of the first are done
       if (cas%mpi_rank == 0) then
