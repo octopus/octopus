@@ -452,6 +452,7 @@ contains
       s%niwfs = 2*s%z_val
       s%omega = sqrt( abs(M_TWO / CNST(1.0e-4) &
         * loct_parse_potential(CNST(0.01), M_ZERO, M_ZERO, CNST(0.01), s%user_def) ) )
+      if(s%omega <= M_ZERO) s%omega = CNST(0.1) ! To avoid problems with constant potentials.
     end if
 
     allocate(s%iwf_l(s%niwfs, ispin), s%iwf_m(s%niwfs, ispin), s%iwf_i(s%niwfs, ispin))
