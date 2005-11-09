@@ -143,8 +143,7 @@ contains
     mc%n_node  = n_node
     mc%n_index = n_index  ! size(index_range)
 
-    message(1) = stars
-    call write_info(1)
+    call messages_print_stress(stdout, "Paralellization")
 
     call strategy()
     if(mc%par_strategy.ne.P_STRATEGY_SERIAL) then
@@ -178,8 +177,7 @@ contains
       call group_comm_create()
     end if
 
-    message(1) = stars
-    call write_info(1)
+    call messages_print_stress(stdout)
 
     call pop_sub()
 

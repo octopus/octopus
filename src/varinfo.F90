@@ -138,8 +138,7 @@ contains
         else
           write(iunit, '(1x)')
         end if
-        call print_C_string(iunit, desc, pre='  => ')
-        write(iunit, '(1x)') ! empty line
+        call print_C_string(iunit, desc, pre='  > ')
 
         return
       end if

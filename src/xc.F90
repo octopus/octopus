@@ -76,12 +76,13 @@ contains
     integer :: i
 
     if (xcs%cdft .and. iand(xcs%family, XC_FAMILY_LCA) /= 0) then
-      write(iunit,'(a)') " Current-dependent exchange and correlation:"
+      write(iunit, '(a)') "Current-dependent exchange and correlation:"
       call xc_functl_write_info(xcs%j_functl, iunit)
 
-      write(iunit,'(a)') " Auxiliary exchange and correlation functionals:"
+      write(iunit, '(1x)')
+      write(iunit, '(a)') "Auxiliary exchange and correlation functionals:"
     else
-      write(iunit,'(a)') " Exchange and correlation:"
+      write(iunit, '(a)') "Exchange and correlation:"
     end if
 
     do i = 1, 2

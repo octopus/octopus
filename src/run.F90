@@ -251,7 +251,7 @@ contains
   subroutine run_init()
     integer :: mode
 
-    call messages_print_stress(stdout)
+    call messages_print_stress(stdout, "Calculation Mode")
     call messages_print_var_option(stdout, "CalculationMode", calc_mode)
     call messages_print_stress(stdout)
 

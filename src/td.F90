@@ -155,6 +155,7 @@ contains
     !call td_check_trotter(td, sys, h)
     td%iter = td%iter + 1
 
+    call messages_print_stress(stdout, "Time-Dependent Simulation")
     write(message(1), '(a7,1x,a14,a14,a17)') 'Iter ', 'Time ', 'Energy ', 'Elapsed Time '
     call write_info(1)
 

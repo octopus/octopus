@@ -132,10 +132,10 @@ contains
       return
     end if
 
-    write(iunit,'(/,a)') stars
+    call messages_print_stress(iunit, "Grid")
     call simul_box_write_info(gr%sb, iunit)
     call mesh_write_info(gr%m, iunit)
-    write(iunit,'(a,/)') stars
+    call messages_print_stress(iunit)
 
   end subroutine grid_write_info
 

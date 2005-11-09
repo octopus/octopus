@@ -94,12 +94,10 @@ contains
 
     else
       ! initilize hartree and xc modules
-      message(1) = "Info: Init Hartree"
-      call write_info(1)
+      call messages_print_stress(stdout, "Hartree")
       call poisson_init(gr)
+      call messages_print_stress(stdout)
 
-      message(1) = "Info: Init Exchange-Correlation"
-      call write_info(1)
       call xc_init(ks%xc, NDIM, d%spin_channels, d%cdft)
       ks%xc_family = ks%xc%family
 
@@ -123,7 +121,6 @@ contains
         !%End
         call loct_parse_int(check_inp('SICorrection'), sic_none, ks%sic_type)
         if(.not.varinfo_valid_option('SICorrection', ks%sic_type)) call input_error('SICorrection')
-        call messages_print_var_option(stdout, 'SICorrection', ks%sic_type)
 
         ! Perdew Zunger corrections
         if(ks%sic_type == sic_pz) ks%xc_family = ior(ks%xc_family, XC_FAMILY_OEP)
@@ -162,28 +159,19 @@ contains
 
     call push_sub('v_ks.v_ks_write_info');
 
-#ifdef HAVE_MPI
     if(mpi_world%rank == 0) then
-#endif
-      write(iunit,'(/,a)') stars
+      call messages_print_stress(iunit, "Exchange-Correlation")
       call xc_write_info(ks%xc, iunit)
 
-      select case(ks%sic_type)
-      case(sic_pz)
-        write(iunit, '(/,2x,a)') 'using Perdew-Zunger SI corrections'
-      case(sic_amaldi)
-        write(iunit, '(/,2x,a)') 'using Amaldi correction term'
-      end select
+      write(iunit, '(1x)')
+      call messages_print_var_option(iunit, 'SICorrection', ks%sic_type)
 
       if(iand(ks%xc_family, XC_FAMILY_OEP).ne.0) then
         write(iunit, '(1x)')
         call xc_oep_write_info(ks%oep, iunit)
       end if
-      write(iunit,'(a,/)') stars
-
-#ifdef HAVE_MPI
+      call messages_print_stress(iunit)
     end if
-#endif
 
     call pop_sub()
   end subroutine v_ks_write_info

@@ -98,7 +98,7 @@ contains
       end if
     end if
 
-    message(1) = "Info: Reading pseudopotential from file:"
+    message(1) = "Reading pseudopotential from file:"
     write(message(2), '(6x,3a)') "'", trim(filename2), "'"
     call write_info(2)
 

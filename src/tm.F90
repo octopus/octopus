@@ -83,7 +83,7 @@ contains
     ! Find out where the hell the file is.
     filename2 = trim(filename) // '.vps'
     inquire(file=filename2, exist=found)
-    message(1) = "Info: Reading pseudopotential from file:"
+    message(1) = "Reading pseudopotential from file:"
     if(found) then
       write(message(2), '(6x,3a)') "'", trim(filename2), "'"
       call write_info(2)

@@ -49,8 +49,6 @@ module messages
     messages_print_var_option
 
   character(len=256), dimension(20), public :: message    ! to be output by fatal, warning
-  character(len=70),      parameter, public :: stars =  &
-    '**********************************************************************'
   character(len=68),      parameter, public :: hyphens = &
     '--------------------------------------------------------------------'
   character(len=69),      parameter, public :: shyphens = '*'//hyphens
@@ -82,9 +80,7 @@ contains
         action='write', position='append')
     end if
 
-    call flush_msg(stderr, '')
-    call flush_msg(stderr, stars)
-    call flush_msg(stderr, '')
+    call messages_print_stress(stderr, "FATAL ERROR")
     write(msg, '(a)') '*** Fatal Error (description follows)'
     call flush_msg(stderr, msg)
 
@@ -106,12 +102,7 @@ contains
       write(msg, '(a,a)') ' > ', trim(sub_stack(i))
       call flush_msg(stderr, msg, 'no')
     end do
-    call flush_msg(stderr, '')
-    call flush_msg(stderr, stars)
-    call flush_msg(stderr, '')
-    ! cannot call this anymore since the move from this routine from global.F90
-    ! to messages.F90
-    !    call io_status(stderr)
+    call messages_print_stress(stderr)
 
     if(flush_messages.and.mpi_world%rank.eq.0) then
       close(iunit_err)
@@ -144,10 +135,11 @@ contains
     write(msg , '(a,i4)') '** From node = ', mpi_world%rank
     call flush_msg(stderr, msg)
 #endif
-    do i=1,no_lines
+    do i = 1, no_lines
       write(msg , '(a,3x,a)') '**', trim(message(i))
       call flush_msg(stderr, msg)
     end do
+    call flush_msg(stderr, '')
 #ifdef HAVE_FLUSH
     call flush(stderr)
 #endif
@@ -183,7 +175,7 @@ contains
     end if
 
     if(present(stress)) then
-      call flush_msg(iu, stars)
+      call messages_print_stress(iu)
     end if
     do i = 1, no_lines
       if(.not.present(verbose_limit)) then
@@ -195,8 +187,7 @@ contains
       end if
     end do
     if(present(stress)) then
-      call flush_msg(iu, stars)
-      call flush_msg(iu, '')
+      call messages_print_stress(iu)
     end if
 
     if(flush_messages) close(iunit_out)
@@ -279,15 +270,13 @@ contains
 #endif
 
     if(mpi_world%rank == 0) then
-      call flush_msg(stderr, '')
-      call flush_msg(stderr, stars)
-      call flush_msg(stderr, '')
+      call messages_print_stress(stderr, "INPUT ERROR")
       write(msg, '(a)') '*** Fatal Error in input '
       call flush_msg(stderr, msg)
       call flush_msg(stderr, shyphens)
 
       call varinfo_print(stderr, var)
-      call flush_msg(stderr, shyphens)
+      call messages_print_stress(stderr)
     end if
 
 #ifdef HAVE_MPI
@@ -326,12 +315,49 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine messages_print_stress(iunit)
+  subroutine messages_print_stress(iunit, msg)
     integer, intent(in) :: iunit
+    character(len=*), intent(in), optional :: msg
+
+    integer, parameter :: max_len = 78
+
+    integer :: i, j, l
+    character(len=120) :: str
 
     if(mpi_world%rank.ne.0) return
 
-    call flush_msg(iunit, stars)
+    if(present(msg)) then
+      l   = len(msg)
+
+      str = ''; j = 1
+
+      do i = 1, (max_len - (l + 2))/2
+        str(j:j) = '*'; j = j + 1
+      end do
+ 
+      str(j:j) = ' '; j = j + 1
+     
+      do i = 1, l
+        str(j:j) = msg(i:i); j = j + 1
+      end do
+
+      str(j:j) = ' '; j = j + 1
+
+      do i = j, max_len
+        str(j:j) = '*'; j = j + 1
+      end do
+
+      call flush_msg(iunit, '')   ! empty line
+      call flush_msg(iunit, str)  ! out nice line with the header
+    else
+      do i = 1, max_len
+        str(i:i) = '*'
+      end do
+
+      call flush_msg(iunit, str)  ! out nice line with the heade
+      call flush_msg(iunit, '')   ! empty line
+    end if
+
   end subroutine messages_print_stress
 
 

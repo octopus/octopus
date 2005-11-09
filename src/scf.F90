@@ -414,15 +414,19 @@ contains
 
     ! ---------------------------------------------------------
     subroutine scf_write_iter
+      character(len=50) :: str
+
       call push_sub('scf.scf_write_iter')
 
-      write(message(1),'(a)') stars
-      write(message(2),'(a,i5)') 'SCF CYCLE ITER #',iter
-      write(message(3),'(a,es15.8,2(a,es9.2))') ' etot = ', h%etot/units_out%energy%factor, &
+      write(str, '(a,i5)') 'SCF CYCLE ITER #' ,iter
+      call messages_print_stress(stdout, trim(str))
+
+      write(message(1),'(a,es15.8,2(a,es9.2))') ' etot = ', h%etot/units_out%energy%factor, &
         ' abs_ev   = ', scf%abs_ev/units_out%energy%factor, ' rel_ev   = ', scf%rel_ev
-      write(message(4),'(23x,2(a,es9.2))') &
+      write(message(2),'(23x,2(a,es9.2))') &
         ' abs_dens = ', scf%abs_dens, ' rel_dens = ', scf%rel_dens
-      call write_info(4)
+      call write_info(2)
+
       if(.not.scf%lcao_restricted) then
         write(message(1),'(a,i6)') 'Matrix vector products: ', scf%eigens%matvec
         write(message(2),'(a,i6)') 'Converged eigenvectors: ', scf%eigens%converged
@@ -436,9 +440,7 @@ contains
         call write_magnetic_moments(stdout, gr%m, st)
       end if
 
-      write(message(1),'(a)') stars
-      write(message(2),'(a)')
-      call write_info(2)
+      call messages_print_stress(stdout)
 
       call pop_sub()
     end subroutine scf_write_iter

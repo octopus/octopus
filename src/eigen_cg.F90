@@ -41,13 +41,12 @@ subroutine eigen_solver_cg2(gr, st, h, tol, niter, converged, diff, reorder, ver
 
   verbose_ = .false.; if(present(verbose)) verbose_ = verbose
   if(verbose_) then
-    message(1) = " "
-    message(2) = stars
-    message(3) = "Diagonalization with the conjugate gradients algorithm."
-    write(message(4),'(a,e8.2)') '  Tolerance: ',tol
-    write(message(5),'(a,i6)')   '  Maximum number of iterations per eigenstate:', niter
-    message(6) = ""
-    call write_info(6)
+    call messages_print_stress(stdout, "CG Info")
+    message(1) = "Diagonalization with the conjugate gradients algorithm."
+    write(message(2),'(a,e8.2)') '  Tolerance: ',tol
+    write(message(3),'(a,i6)')   '  Maximum number of iterations per eigenstate:', niter
+    message(4) = ''
+    call write_info(4)
   end if
 
   if(present(reorder)) reord = reorder
@@ -197,11 +196,7 @@ subroutine eigen_solver_cg2(gr, st, h, tol, niter, converged, diff, reorder, ver
   ! Deallocation of variables
   deallocate(h_psi, g, g0, cg, ppsi)
 
-  if(verbose_) then
-    message(1) = stars
-    message(2) = " "
-    call write_info(2)
-  end if
+  if(verbose_) call messages_print_stress(stdout)
 
   call pop_sub()
 end subroutine eigen_solver_cg2
@@ -230,13 +225,12 @@ subroutine eigen_solver_cg2_new(gr, st, h, tol, niter, converged, diff, reorder,
   verbose_ = .false.; if(present(verbose)) verbose_ = verbose
   reorder_ = .true. ; if(present(reorder)) reorder_ = reorder
   if(verbose_) then
-    message(1) = " "
-    message(2) = stars
-    message(3) = "Diagonalization with the conjugate gradients algorithm [new]."
-    write(message(4),'(a,e8.2)') '  Tolerance: ',tol
-    write(message(5),'(a,i6)')   '  Maximum number of iterations per eigenstate:', niter
-    message(6) = ""
-    call write_info(6)
+    call messages_print_stress(stdout, "CG Info")
+    message(1) = "Diagonalization with the conjugate gradients algorithm [new]."
+    write(message(2),'(a,e8.2)') '  Tolerance: ',tol
+    write(message(3),'(a,i6)')   '  Maximum number of iterations per eigenstate:', niter
+    message(4) = ""
+    call write_info(4)
   end if
 
   dim = st%d%dim; nik = st%d%nik; nst = st%nst
@@ -353,5 +347,7 @@ subroutine eigen_solver_cg2_new(gr, st, h, tol, niter, converged, diff, reorder,
   converged = conv_
 
   deallocate(phi, psi, hpsi, cg, hcgp, sd, cgp)
+  if(verbose_) call messages_print_stress(stdout)
+
   call pop_sub()
 end subroutine eigen_solver_cg2_new

@@ -400,9 +400,11 @@ contains
     if(.not.varinfo_valid_option('SpinComponents', ispin)) call input_error('SpinComponents')
     ispin = min(2, ispin)
 
+    call messages_print_stress(stdout, "Species")
     do i = 1, geo%nspecies
       call specie_init(geo%specie(i), ispin)
     end do
+    call messages_print_stress(stdout)
 
     !  assign species
     do i = 1, geo%natoms
