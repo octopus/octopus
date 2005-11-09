@@ -1,0 +1,58 @@
+# $Id$
+
+Test     : 2dbox
+Author   : Alberto Castro
+Date     : 09.11.05
+Arch     : Linux g38 2.6.13.2-smp-1 #1 SMP Wed Sep 28 17:13:12 CEST 2005 i686 GNU/Linux
+Release  : 1.99devel
+Programs : octopus
+Enabled  : Yes
+
+INP
+SystemName = "qd"
+CalculationMode = gs
+FromScratch = yes
+Dimensions = 2
+
+%Species
+"qd" | 1.0 | usdef | 1 | "0"
+%
+
+%Coordinates
+"qd" | 0 | 0 | 0 | no
+%
+
+BoxShape = parallelepiped
+npoints = 101
+delta = pi/(npoints + 1)
+l = pi - 2*delta
+%Lsize
+l/2 | l/2 | 0
+%
+%Spacing
+delta | delta | delta
+%
+
+DerivativesOrder = 1
+
+NonInteractingElectrons = yes
+
+MaximumIter = 200
+ConvAbsDens = 1e-8
+LCAOStart = yes
+
+EigenSolver = cg
+EigenSolverInitTolerance = 1e-6
+EigenSolverFinalTolerance = 1e-6
+EigenSolverMaxIter = 250
+TypeOfMixing = linear
+Mixing = 1.0
+EOF
+
+RUN
+
+# add your own matches
+#
+# Examples (of course you have to uncomment the lines :)
+# Match ; TotalEnergy ; grep -A 6 '^Energy:' static/info ; \s*Total\s*=\s*-0.33802679
+Match ; Eigenvalues ; grep -A 2 'Eigenvalues \[' static/info | tail -1 ; \s*0.9999\d*\s*1.0000\d*
