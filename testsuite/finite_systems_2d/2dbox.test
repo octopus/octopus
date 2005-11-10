@@ -51,8 +51,53 @@ EOF
 
 RUN
 
-# add your own matches
-#
-# Examples (of course you have to uncomment the lines :)
-# Match ; TotalEnergy ; grep -A 6 '^Energy:' static/info ; \s*Total\s*=\s*-0.33802679
-Match ; Eigenvalues ; grep -A 2 'Eigenvalues \[' static/info | tail -1 ; \s*0.9999\d*\s*1.0000\d*
+Match ; Eigenvalue ; grep -A 2 'Eigenvalues \[' static/info | tail -1 ; \s*0.9999\d*\s*1.0000\d*
+
+INP
+SystemName = "qd"
+CalculationMode = gs
+FromScratch = yes
+Dimensions = 2
+
+%Species
+"qd" | 1.0 | usdef | 2 | "0"
+%
+
+%Coordinates
+"qd" | 0 | 0 | 0 | no
+%
+
+BoxShape = parallelepiped
+npoints = 51
+delta = pi/(npoints + 1)
+l = pi - 2*delta
+%Lsize
+l/2 | l/2 | 0
+%
+%Spacing
+delta | delta | delta
+%
+
+DerivativesOrder = 1
+
+NonInteractingElectrons = no
+XFunctional = no
+CFunctional = no
+
+MaximumIter = 200
+ConvAbsDens = 1e-8
+LCAOStart = yes
+
+EigenSolver = cg
+EigenSolverInitTolerance = 1e-6
+EigenSolverFinalTolerance = 1e-6
+EigenSolverMaxIter = 50
+TypeOfMixing = broyden
+Mixing = 0.5
+
+PoissonSolver = fft
+EOF
+
+RUN
+
+Match ; Eigenvalue with Hartree interaction ; grep -A 2 'Eigenvalues \[' static/info | tail -1 ; \s*3.7689\d*\s*2.0000\d*
