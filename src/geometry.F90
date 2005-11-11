@@ -21,6 +21,7 @@
 
 module geometry
   use global
+  use mpi_mod
   use varinfo
   use messages
   use syslabels
@@ -656,7 +657,7 @@ contains
 
     integer i, iunit
 
-    if(mpi_world%rank.ne.0) return
+    if(mpi_grp_is_root(mpi_world)) return
 
     call io_mkdir(dir)
     iunit = io_open(trim(dir)//'/'//trim(fname)//'.xyz', action='write')

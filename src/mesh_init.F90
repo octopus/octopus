@@ -192,9 +192,7 @@ subroutine mesh_init_stage_3(mesh, geo, cv, stencil, np_stencil, mc)
 
     call do_partition()
   else
-    ! we just reset these variables
-    mesh%mpi_size = 1  ! alone in the world
-    mesh%mpi_rank = 0  ! I am root
+    call mpi_grp_init(mesh%mpi_grp, -1)
 
     ! When running serially those two are the same.
     mesh%np      = mesh%np_global
@@ -276,17 +274,14 @@ contains
   ! ---------------------------------------------------------
   subroutine do_partition()
 #if defined(HAVE_METIS) && defined(HAVE_MPI)
-    integer :: i, j, mpi_err
+    integer :: i, j
     integer, allocatable :: part(:)
 
-    ! group_comm(1) is
-    mesh%mpi_comm = mc%group_comm(P_STRATEGY_DOMAINS)
-    call MPI_Comm_size(mesh%mpi_comm, mesh%mpi_size, mpi_err)
-    call MPI_Comm_rank(mesh%mpi_comm, mesh%mpi_rank, mpi_err)
+    call mpi_grp_init(mesh%mpi_grp, mc%group_comm(P_STRATEGY_DOMAINS))
 
     allocate(part(mesh%np_part_global))
-    call mesh_partition(mesh, mesh%Lxyz_tmp, mesh%mpi_comm, part)
-    call vec_init(mesh%mpi_comm, 0, part, mesh%np_global, mesh%np_part_global,  &
+    call mesh_partition(mesh, mesh%Lxyz_tmp, mesh%mpi_grp%comm, part)
+    call vec_init(mesh%mpi_grp%comm, 0, part, mesh%np_global, mesh%np_part_global,  &
       mesh%nr, mesh%Lxyz_inv, mesh%Lxyz, stencil, np_stencil, &
       mesh%sb%dim, mesh%sb%periodic_dim, mesh%vp)
     deallocate(part)
@@ -497,7 +492,7 @@ subroutine mesh_partition(m, Lxyz_tmp, comm, part)
     message(4) = 'Info: First line contains number of vertices and edges.'
     message(5) = 'Info: Edges are not directed and appear twice in the lists.'
     call write_info(5)
-    if(mpi_world%rank.eq.0) then
+    if(mpi_grp_is_root(mpi_world)) then
       call io_mkdir('debug/mesh_partition')
       iunit = io_open('debug/mesh_partition/mesh_graph.txt', action='write')
       write(iunit, *) nv, ne/2
@@ -544,27 +539,25 @@ subroutine mesh_partition(m, Lxyz_tmp, comm, part)
   call write_info(2)
   deallocate(ppp)
 
-  if(in_debug_mode) then
+  if(in_debug_mode.and.mpi_grp_is_root(mpi_world)) then
     ! Debug output. Write points of each partition in a different file.
-    if(mpi_world%rank.eq.0) then
-      do i = 1, p
-        write(filenum, '(i3.3)') i
-        iunit = io_open('debug/mesh_partition/mesh_partition.'//filenum, &
-          action='write')
-        do j = 1, m%np_global
-          if(part(j).eq.i) write(iunit, '(i8,3f18.8)') j, m%x_global(j, :)
-        end do
-        call io_close(iunit)
-      end do
-      ! Write points from enlargement to file with number p+1.
-      write(filenum, '(i3.3)') p+1
+    do i = 1, p
+      write(filenum, '(i3.3)') i
       iunit = io_open('debug/mesh_partition/mesh_partition.'//filenum, &
-        action='write')
-      do i = m%np_global+1, m%np_part_global
-        write(iunit, '(i8,3f18.8)') i, m%x_global(i, :)
+         action='write')
+      do j = 1, m%np_global
+        if(part(j).eq.i) write(iunit, '(i8,3f18.8)') j, m%x_global(j, :)
       end do
       call io_close(iunit)
-    end if
+    end do
+    ! Write points from enlargement to file with number p+1.
+    write(filenum, '(i3.3)') p+1
+    iunit = io_open('debug/mesh_partition/mesh_partition.'//filenum, &
+       action='write')
+    do i = m%np_global+1, m%np_part_global
+      write(iunit, '(i8,3f18.8)') i, m%x_global(i, :)
+    end do
+    call io_close(iunit)
   end if
 
   call pop_sub()

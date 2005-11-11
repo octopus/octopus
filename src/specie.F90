@@ -21,6 +21,7 @@
 
 module specie
   use global
+  use mpi_mod
   use messages
   use syslabels
   use lib_oct
@@ -105,7 +106,7 @@ contains
     character(len=256) :: dirname
     integer :: iunit
 
-    if(mpi_world%rank .ne. 0) then
+    if(.not.mpi_grp_is_root(mpi_world)) then
       call write_debug_newlines(2)
       return
     end if

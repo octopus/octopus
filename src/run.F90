@@ -44,6 +44,7 @@ module run_prog
   use pulpo
   use io
   use multicomm_mod
+  use mpi_debug_mod
 
   implicit none
 

@@ -28,26 +28,24 @@
 ! WARNING: This subroutine only works if ions are not
 !          allowed to move
 ! ---------------------------------------------------------
-subroutine td_calc_tacc(gr, st, h, acc, t, reduce_)
+subroutine td_calc_tacc(gr, st, h, acc, t)
   type(grid_type),        intent(inout) :: gr
   type(states_type),      intent(inout) :: st
   type(hamiltonian_type), intent(in)    :: h
   FLOAT,                  intent(in)    :: t
   FLOAT,                  intent(out)   :: acc(3)
-  logical, optional,      intent(in)    :: reduce_
 
   FLOAT :: field(3), x(3)
   CMPLX, allocatable :: hzpsi(:,:), hhzpsi(:,:), xzpsi(:,:,:), vnl_xzpsi(:,:), conj(:)
   integer  :: j, k, i, ik, ist, idim
-  logical :: reduce
+
 #if defined(HAVE_MPI)
-  integer :: ierr
+  integer :: mpi_err
   FLOAT   :: y(3)
 #endif
 
   call push_sub('td_calc.td_calc_tacc')
 
-  if(present(reduce_)) reduce = reduce_
   ! The term i<[V_l,p]> + i<[V_nl,p]> may be considered as equal but opposite to the
   ! force exerted by the electrons on the ions. COMMENT: This has to be thought about.
   ! Maybe we are forgetting something....
@@ -122,12 +120,9 @@ subroutine td_calc_tacc(gr, st, h, acc, t, reduce_)
   deallocate(hzpsi, hhzpsi, conj)
 
 #if defined(HAVE_MPI)
-  if(present(reduce_)) then
-    if(reduce) then
-      call MPI_ALLREDUCE(x(1), y(1), NDIM, &
-        MPI_FLOAT, MPI_SUM, st%comm, ierr)
-      x = y
-    end if
+  if(st%parallel_in_states) then
+    call MPI_ALLREDUCE(x(1), y(1), NDIM, MPI_FLOAT, MPI_SUM, st%mpi_grp%comm, mpi_err)
+    x = y
   end if
 #endif
   acc = acc + x

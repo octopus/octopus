@@ -453,7 +453,7 @@ contains
     call group_create(mc%group_tree)
 
     ! print nodes
-    if(in_debug_mode.and.mpi_world%rank == 0) then
+    if(in_debug_mode.and.mpi_grp_is_root(mpi_world)) then
       iunit = io_open('debug/parallel_tree.dot', action='write')
       write(iunit, '(a)') "digraph G {"
       write(iunit, '(a)') 'node [shape=box,style=filled];'

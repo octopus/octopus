@@ -148,7 +148,7 @@ subroutine X(epot_forces) (gr, ep, st, t)
     if(atm%spec%local) cycle
 
     if(st%parallel_in_states) then
-      call MPI_ALLREDUCE(atm%f(1), f(1), NDIM, MPI_FLOAT, MPI_SUM, st%comm, mpi_err)
+      call MPI_ALLREDUCE(atm%f(1), f(1), NDIM, MPI_FLOAT, MPI_SUM, st%mpi_grp%comm, mpi_err)
       atm%f = f
     end if
   end do

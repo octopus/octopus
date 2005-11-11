@@ -21,6 +21,7 @@
 
 module v_ks
   use global
+  use mpi_mod
   use messages
   use syslabels
   use states
@@ -159,7 +160,7 @@ contains
 
     call push_sub('v_ks.v_ks_write_info');
 
-    if(mpi_world%rank == 0) then
+    if(mpi_grp_is_root(mpi_world)) then
       call messages_print_stress(iunit, "Exchange-Correlation")
       call xc_write_info(ks%xc, iunit)
 

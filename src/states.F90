@@ -112,9 +112,7 @@ module states
 
     ! This is stuff needed for the parallelization in states
     logical :: parallel_in_states   ! am I parallel in states?
-    integer :: numprocs             ! how many nodes are in this group
-    integer :: rank                 ! who am I in this group?
-    integer :: comm                 ! my communicator
+    type(mpi_grp_type) :: mpi_grp   ! the MPI group related to the parallelization in states
 
     integer :: st_start, st_end     ! needed for some parallel parts
     integer, pointer :: node(:)     ! To which node belongs each state.
@@ -741,7 +739,7 @@ contains
       call write_info(1, iunit)
     end if
 
-    if(mpi_world%rank.ne.0) return
+    if(.not.mpi_grp_is_root(mpi_world)) return
 
     do ik = 1, st%d%nik, ns
       if(st%d%nik > ns) then
@@ -818,7 +816,7 @@ contains
     integer, parameter :: GNUPLOT = 1, &
       XMGRACE = 2
 
-    if(mpi_world%rank.ne.0) return
+    if(.not.mpi_grp_is_root(mpi_world)) return
 
     !%Variable OutputBandsMode
     !%Type integer
@@ -1053,7 +1051,7 @@ contains
 #if defined(HAVE_MPI)
     allocate(red(NP, NDIM, st%d%nspin))
     call MPI_ALLREDUCE(jp(1, 1, 1), red(1, 1, 1), NP*NDIM*st%d%nspin, &
-      MPI_FLOAT, MPI_SUM, st%comm, ierr)
+      MPI_FLOAT, MPI_SUM, st%mpi_grp%comm, ierr)
     jp = red
     deallocate(red)
 #endif
@@ -1091,50 +1089,47 @@ contains
 
     ! defaults
     st%node(:)  = 0
-    st%numprocs = mc%n_node ! 1 
-    st%rank     = 0
     st%st_start = 1
     st%st_end   = st%nst
     st%parallel_in_states = .false.
+    call mpi_grp_init(st%mpi_grp, -1)
 
 #if defined(HAVE_MPI)
     if(multicomm_strategy_is_parallel(mc, P_STRATEGY_STATES)) then
 
       st%parallel_in_states = .true.
-      st%comm = mc%group_comm(P_STRATEGY_STATES)
-      call MPI_Comm_size(st%comm, st%numprocs, ierr)
-      call MPI_Comm_rank(st%comm, st%rank, ierr)
+      call mpi_grp_init(st%mpi_grp, mc%group_comm(P_STRATEGY_STATES))
 
-      if(st%nst < st%numprocs) then
+      if(st%nst < st%mpi_grp%size) then
         message(1) = "Have more processors than necessary"
-        write(message(2),'(i4,a,i4,a)') st%numprocs, " processors and ", st%nst, " states."
+        write(message(2),'(i4,a,i4,a)') st%mpi_grp%size, " processors and ", st%nst, " states."
         call write_fatal(2)
       end if
 
-      i = st%nst / st%numprocs
-      ii = st%nst - i*st%numprocs
-      if(ii > 0 .and. st%rank < ii) then
+      i = st%nst / st%mpi_grp%size
+      ii = st%nst - i*st%mpi_grp%size
+      if(ii > 0 .and. st%mpi_grp%rank < ii) then
         i = i + 1
-        st%st_start = st%rank*i + 1
+        st%st_start = st%mpi_grp%rank*i + 1
         st%st_end = st%st_start + i - 1
       else
-        st%st_end = st%nst - (st%numprocs - st%rank - 1)*i
+        st%st_end = st%nst - (st%mpi_grp%size - st%mpi_grp%rank - 1)*i
         st%st_start = st%st_end - i + 1
       end if
-      call MPI_Barrier(st%comm, i)
-      write(stdout, '(a,i4,a,i4,a,i4)') "Info: Node ", st%rank, " will propagate state ", &
+      call MPI_Barrier(st%mpi_grp%comm, i)
+      write(stdout, '(a,i4,a,i4,a,i4)') "Info: Node ", st%mpi_grp%rank, " will propagate state ", &
         st%st_start, " - ", st%st_end
-      call MPI_Barrier(st%comm, i)
+      call MPI_Barrier(st%mpi_grp%comm, i)
 
-      sn  = st%nst/st%numprocs
+      sn  = st%nst/st%mpi_grp%size
       sn1 = sn + 1
-      r  = mod(st%nst, st%numprocs)
+      r  = mod(st%nst, st%mpi_grp%size)
       do j = 1, r
         st%node((j-1)*sn1+1:j*sn1) = j - 1
       end do
       k = sn1*r
-      call MPI_BARRIER(st%comm, ierr)
-      do j = 1, st%numprocs - r
+      call MPI_BARRIER(st%mpi_grp%comm, ierr)
+      do j = 1, st%mpi_grp%size - r
         st%node(k+(j-1)*sn+1:k+j*sn) = r + j - 1
       end do
     end if

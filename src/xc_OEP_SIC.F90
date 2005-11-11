@@ -77,8 +77,8 @@ subroutine X(oep_sic) (xcs, gr, st, is, oep, ex, ec)
 
 #if defined(HAVE_MPI)
   if(st%st_end - st%st_start + 1 .ne. st%nst) then ! This holds only in the td part.
-    call MPI_ALLREDUCE(ec_, edummy, 1, MPI_FLOAT, MPI_SUM, st%comm, ierr); ec_ = edummy
-    call MPI_ALLREDUCE(ex_, edummy, 1, MPI_FLOAT, MPI_SUM, st%comm, ierr); ex_ = edummy
+    call MPI_ALLREDUCE(ec_, edummy, 1, MPI_FLOAT, MPI_SUM, st%mpi_grp%comm, ierr); ec_ = edummy
+    call MPI_ALLREDUCE(ex_, edummy, 1, MPI_FLOAT, MPI_SUM, st%mpi_grp%comm, ierr); ex_ = edummy
   end if
 #endif
 

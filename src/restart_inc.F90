@@ -73,7 +73,7 @@ subroutine X(restart_write) (dir, st, gr, ierr, iter)
 
   mformat = '(f15.8,a,f15.8,a,f15.8,a,f15.8,a,f15.8)'
   ierr = 0
-  if(mpi_world%rank == 0) then
+  if(mpi_grp_is_root(mpi_world)) then
     call io_mkdir(dir)
 
     iunit = io_open(trim(dir)//'/wfns', action='write')
@@ -91,7 +91,7 @@ subroutine X(restart_write) (dir, st, gr, ierr, iter)
       do idim = 1, st%d%dim
         write(filename,'(i10.10)') i
 
-        if(mpi_world%rank == 0) then
+        if(mpi_grp_is_root(mpi_world)) then
           write(unit=iunit,  fmt=*) ik, ' | ', ist, ' | ', idim, ' | "', trim(filename), '"'
           write(unit=iunit2, fmt=mformat) st%occ(ist,ik), ' | ', st%eigenval(ist, ik), ' | ', &
             st%d%kpoints(1,ik), ' | ', st%d%kpoints(2,ik), ' | ', st%d%kpoints(3,ik)
@@ -111,7 +111,7 @@ subroutine X(restart_write) (dir, st, gr, ierr, iter)
 
   if(ierr == st%d%nik*(st%st_end - st%st_start + 1)*st%d%dim) ierr = 0 ! Alles OK
 
-  if(mpi_world%rank == 0) then
+  if(mpi_grp_is_root(mpi_world)) then
     write(iunit,'(a)') '%'
     if(present(iter)) write(iunit,'(a,i5)') 'Iter = ', iter
     write(iunit2, '(a)') '%'

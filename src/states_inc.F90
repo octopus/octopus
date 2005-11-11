@@ -66,7 +66,7 @@ subroutine X(states_calc_dens)(st, np, rho)
   if(st%parallel_in_states) then
     allocate(reduce_rho(1:np, st%d%nspin))
     call MPI_ALLREDUCE(rho(1, 1), reduce_rho(1, 1), np*st%d%nspin, &
-      MPI_FLOAT, MPI_SUM, st%comm, ierr)
+      MPI_FLOAT, MPI_SUM, st%mpi_grp%comm, ierr)
     rho = reduce_rho
     deallocate(reduce_rho)
   end if
@@ -414,13 +414,13 @@ contains
 
     dim = st1%d%dim
 #if defined(HAVE_MPI)
-    call mpi_barrier(st1%comm, ierr)
+    call mpi_barrier(st1%mpi_grp%comm, ierr)
     ! Each process sends the states in st2 to the rest of the processes.
     do i = st1%st_start, st1%st_end
-      do j = 0, st1%numprocs-1
-        if(st1%rank.ne.j) then
+      do j = 0, st1%mpi_grp%size - 1
+        if(st1%mpi_grp%rank.ne.j) then
           call mpi_isend(st2%X(psi)(1, 1, i, ik), st1%d%dim*m%np, R_MPITYPE, &
-            j, i, st1%comm, request, ierr)
+            j, i, st1%mpi_grp%comm, request, ierr)
         end if
       end do
     end do
@@ -429,8 +429,8 @@ contains
     allocate(phi2(m%np, st1%d%dim))
     do j = 1, n
       l = st1%node(j)
-      if(l.ne.st1%rank) then
-        call mpi_irecv(phi2(1, 1), st1%d%dim*m%np, R_MPITYPE, l, j, st1%comm, request, ierr)
+      if(l.ne.st1%mpi_grp%rank) then
+        call mpi_irecv(phi2(1, 1), st1%d%dim*m%np, R_MPITYPE, l, j, st1%mpi_grp%comm, request, ierr)
         call mpi_wait(request, status, ierr)
       else
         phi2(:, :) = st2%X(psi)(:, :, j, ik)
@@ -443,11 +443,11 @@ contains
 
     ! Each process holds some lines of the matrix. So it is broadcasted (All processes
     ! should get the whole matrix)
-    call MPI_BARRIER(st1%comm, ierr)
+    call MPI_BARRIER(st1%mpi_grp%comm, ierr)
     do i = 1, n
       k = st1%node(i)
       do j = 1, n
-        call MPI_BCAST(a(i, j), 1, R_MPITYPE, k, st1%comm, ierr)
+        call MPI_BCAST(a(i, j), 1, R_MPITYPE, k, st1%mpi_grp%comm, ierr)
       end do
     end do
 #else
@@ -503,8 +503,8 @@ subroutine X(states_calc_angular)(gr, st, angular, l2)
 
   if(st%parallel_in_states) then
 #if defined(HAVE_MPI)
-    call MPI_ALLREDUCE(temp, angular, 3, MPI_FLOAT, MPI_SUM, st%comm, mpi_err)
-    if(present(l2)) call MPI_ALLREDUCE(ltemp, l2, 1, MPI_FLOAT, MPI_SUM, st%comm, mpi_err)
+    call MPI_ALLREDUCE(temp, angular, 3, MPI_FLOAT, MPI_SUM, st%mpi_grp%comm, mpi_err)
+    if(present(l2)) call MPI_ALLREDUCE(ltemp, l2, 1, MPI_FLOAT, MPI_SUM, st%mpi_grp%comm, mpi_err)
 #endif
   else
     angular = temp

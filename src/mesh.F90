@@ -21,6 +21,7 @@
 
 module mesh
   use global
+  use mpi_mod
   use messages
   use lib_oct_parser
   use units
@@ -80,11 +81,9 @@ module mesh
     FLOAT,   pointer :: x_tmp(:,:,:,:)  ! temporary arrays that we have to keep between calls to
     integer, pointer :: Lxyz_tmp(:,:,:) ! init_1 and init_2
 
-    logical       :: parallel_in_domains
-    integer       :: mpi_comm           ! my communicator in domains
-    integer       :: mpi_size           ! size of mpi_comm (defined also in serial mode)
-    integer       :: mpi_rank           ! rank of mpi_comm (defined also in serial mode)
-    type(pv_type) :: vp                 ! Describes parallel vectors defined on the mesh.
+    logical            :: parallel_in_domains ! will I run parallel in domains?
+    type(mpi_grp_type) :: mpi_grp             ! the mpi group describing parallelization in domains
+    type(pv_type)      :: vp                  ! describes parallel vectors defined on the mesh.
 
     ! some other vars
     integer :: nr(2,3)                  ! dimensions of the box where the points are contained
@@ -131,7 +130,7 @@ contains
     type(mesh_type), intent(in) :: m
     integer,         intent(in) :: unit
 
-    if(mpi_world%rank .ne. 0) return
+    if(.not.mpi_grp_is_root(mpi_world)) return
 
     call push_sub('mesh.mesh_write_info')
 

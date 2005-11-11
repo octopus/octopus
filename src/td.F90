@@ -320,7 +320,7 @@ contains
         x = minval(st%eigenval(st%st_start, :))
 #ifdef HAVE_MPI
         if(st%parallel_in_states) then
-          call MPI_BCAST(x, 1, MPI_FLOAT, 0, st%comm, i)
+          call MPI_BCAST(x, 1, MPI_FLOAT, 0, st%mpi_grp%comm, i)
         end if
 #endif
         call hamiltonian_span(h, minval(gr%m%h(1:NDIM)), x)
@@ -473,7 +473,7 @@ contains
       end if
 
       ! write potential from previous interactions
-      if(st%rank == 0) then
+      if(mpi_grp_is_root(st%mpi_grp)) then
         do i = 1, 2
           do is = 1, st%d%nspin
             write(filename,'(a6,i2.2,i3.3)') 'vprev_', i, is

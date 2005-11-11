@@ -21,6 +21,7 @@
 
 module scf
   use global
+  use mpi_mod
   use messages
   use syslabels
   use lib_oct_parser
@@ -456,7 +457,7 @@ contains
 
       call push_sub('scf.scf_write_static')
 
-      if(mpi_world%rank == 0) then ! this the absolute master writes
+      if(mpi_grp_is_root(mpi_world)) then ! this the absolute master writes
         call io_mkdir(dir)
         iunit = io_open(trim(dir) // "/" // trim(fname), action='write')
 
@@ -491,7 +492,7 @@ contains
 
       call hamiltonian_energy(h, st, gr%geo%eii, iunit)
 
-      if(mpi_world%rank == 0) then
+      if(mpi_grp_is_root(mpi_world)) then
         write(iunit, '(1x)')
 
         if(st%d%ispin > UNPOLARIZED) then
@@ -509,7 +510,7 @@ contains
       call geometry_dipole(gr%geo, n_dip)
       n_dip(1:NDIM) = n_dip(1:NDIM) - e_dip(2:NDIM+1, 1)
 
-      if(mpi_world%rank == 0) then
+      if(mpi_grp_is_root(mpi_world)) then
         write(iunit, '(3a)') 'Dipole [', trim(units_out%length%abbrev), ']:                    [Debye]'
         do j = 1, NDIM
           write(iunit, '(6x,a,i1,a,es14.5,3x,2es14.5)') '<x', j, '> = ', n_dip(j) / units_out%length%factor, &
@@ -521,7 +522,7 @@ contains
       if(NDIM==3) then
         call X(states_calc_angular)(gr, st, angular, l2 = l2)
 
-        if(mpi_world%rank == 0) then
+        if(mpi_grp_is_root(mpi_world)) then
           write(iunit,'(3a)') 'Angular Momentum L [adimensional]'
           do j = 1, NDIM
             write(iunit,'(6x,a1,i1,a3,es14.5)') 'L',j,' = ',angular(j)
@@ -533,7 +534,7 @@ contains
         end if
       end if
 
-      if(mpi_world%rank == 0) then
+      if(mpi_grp_is_root(mpi_world)) then
         write(iunit, '(a)') 'Convergence:'
         write(iunit, '(6x, a, es14.8,a,es14.8,a)') 'abs_dens = ', scf%abs_dens, &
           ' (', scf%conv_abs_dens, ')'

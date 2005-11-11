@@ -127,7 +127,7 @@ contains
     type(grid_type), intent(in) :: gr
     integer,         intent(in) :: iunit
 
-    if(mpi_world%rank .ne. 0) then
+    if(.not.mpi_grp_is_root(mpi_world)) then
       if(in_debug_mode) call write_debug_newlines(4)
       return
     end if

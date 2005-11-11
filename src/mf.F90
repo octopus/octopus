@@ -29,6 +29,7 @@ module mesh_function
   use par_vec
   use profiling_mod
   use mpi_mod
+  use mpi_debug_mod
 
   implicit none
 

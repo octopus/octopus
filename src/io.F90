@@ -23,6 +23,7 @@
 module io
   use syslabels
   use global
+  use mpi_mod
   use messages
   use lib_oct
   use lib_oct_parser

@@ -92,6 +92,7 @@ module par_vec
   use io
   use profiling_mod
   use mpi_mod
+  use mpi_debug_mod
 
   implicit none
 
@@ -384,7 +385,7 @@ contains
       ! Write numbers and coordinates of each nodes ghost points
       ! to a single file (like in mesh_partition_init) called
       ! debug/mesh_partition/ghost_points.###.
-      if(mpi_world%rank.eq.0) then
+      if(mpi_grp_is_root(mpi_world)) then
         call io_mkdir('debug/mesh_partition')
         do r = 1, p
           write(filenum, '(i3.3)') r

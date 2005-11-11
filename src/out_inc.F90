@@ -42,7 +42,7 @@ subroutine X(input_function)(filename, m, f, ierr)
   R_TYPE,               intent(out) :: f(:)
   integer,              intent(out) :: ierr
 
-#if defined(HAVE_MPI) && defined(HAVE_METIS)
+#if defined(HAVE_MPI)
   integer             :: mpi_err
   R_TYPE, allocatable :: f_global(:)
 #endif
@@ -50,10 +50,10 @@ subroutine X(input_function)(filename, m, f, ierr)
   call push_sub('out_inc.Xinput_function')
 
   if(m%parallel_in_domains) then
-#if defined(HAVE_MPI) && defined(HAVE_METIS)
+#if defined(HAVE_MPI)
     ! Only root reads. Therefore, only root needs a buffer
     ! f_global for the whole function.
-    if(m%mpi_rank == 0) then
+    if(mpi_grp_is_root(m%mpi_grp)) then
       allocate(f_global(1:m%np_global))
       call X(input_function_global)(filename, m, f_global, ierr)
     end if
@@ -70,12 +70,11 @@ subroutine X(input_function)(filename, m, f, ierr)
       call X(vec_scatter)(m%vp, f_global, f)
     end if
 
-    if(m%mpi_rank == 0) then
+    if(mpi_grp_is_root(m%mpi_grp)) then
       deallocate(f_global)
     end if
 #else
-    ! internal error
-    ASSERT(0)
+    ASSERT(0) ! internal error
 #endif
   else
     call X(input_function_global)(filename, m, f, ierr)

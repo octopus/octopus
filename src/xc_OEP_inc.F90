@@ -87,9 +87,9 @@ subroutine X(xc_oep_calc)(oep, xcs, apply_sic_pz, gr, h, st, vxc, ex, ec)
 
 #if defined(HAVE_MPI)
     if(st%st_end - st%st_start + 1 .ne. st%nst) then ! This holds only in the td part.
-      call mpi_barrier(st%comm, ierr)
+      call mpi_barrier(st%mpi_grp%comm, ierr)
       do ist = 1, st%nst
-        call mpi_bcast(oep%uxc_bar(ist), 1, MPI_FLOAT, st%node(ist), st%comm, ierr)
+        call mpi_bcast(oep%uxc_bar(ist), 1, MPI_FLOAT, st%node(ist), st%mpi_grp%comm, ierr)
       end do
     end if
 #endif

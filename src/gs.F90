@@ -35,6 +35,7 @@ module ground_state
   use simul_box
   use mesh
   use mpi_mod
+  use mpi_debug_mod
 
   implicit none
 

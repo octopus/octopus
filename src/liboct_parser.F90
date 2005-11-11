@@ -21,6 +21,7 @@
 
 module lib_oct_parser
   use global
+  use mpi_mod
 
   implicit none
 

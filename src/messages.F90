@@ -23,6 +23,7 @@ module messages
   use string
   use varinfo
   use global
+  use mpi_mod
   use syslabels
   use lib_oct
 
@@ -75,7 +76,7 @@ contains
     integer :: ierr
 #endif
 
-    if(flush_messages.and.mpi_world%rank.eq.0) then
+    if(flush_messages.and.mpi_grp_is_root(mpi_world)) then
       open(unit=iunit_err, file='messages.stderr', &
         action='write', position='append')
     end if
@@ -104,7 +105,7 @@ contains
     end do
     call messages_print_stress(stderr)
 
-    if(flush_messages.and.mpi_world%rank.eq.0) then
+    if(flush_messages.and.mpi_grp_is_root(mpi_world)) then
       close(iunit_err)
     end if
 
@@ -121,7 +122,7 @@ contains
     integer, intent(in) :: no_lines
     integer :: i
 
-    if(flush_messages.and.mpi_world%rank.eq.0) then
+    if(flush_messages.and.mpi_grp_is_root(mpi_world)) then
       open(unit=iunit_err, file='messages.stderr', &
         action='write', position='append')
     end if
@@ -144,7 +145,7 @@ contains
     call flush(stderr)
 #endif
 
-    if(flush_messages.and.mpi_world%rank.eq.0) then
+    if(flush_messages.and.mpi_grp_is_root(mpi_world)) then
       close(iunit_err)
     end if
 
@@ -161,7 +162,7 @@ contains
 
     integer :: i, iu
 
-    if(mpi_world%rank .ne. 0) return
+    if(.not.mpi_grp_is_root(mpi_world)) return
 
     if(flush_messages) then
       open(unit=iunit_out, file='messages.stdout', &
@@ -223,7 +224,7 @@ contains
     integer             :: i, iunit
 
     if(.not.in_debug_mode) return
-    if(mpi_world%rank .eq. 0) return
+    if(mpi_grp_is_root(mpi_world)) return
 
     call open_debug_trace(iunit)
     do i = 1, no_lines
@@ -269,7 +270,7 @@ contains
     integer :: mpi_err
 #endif
 
-    if(mpi_world%rank == 0) then
+    if(mpi_grp_is_root(mpi_world)) then
       call messages_print_stress(stderr, "INPUT ERROR")
       write(msg, '(a)') '*** Fatal Error in input '
       call flush_msg(stderr, msg)
@@ -291,7 +292,7 @@ contains
     integer,          intent(in) :: iunit
     character(len=*), intent(in) :: var
 
-    if(mpi_world%rank.ne.0) return
+    if(.not.mpi_grp_is_root(mpi_world)) return
 
     call varinfo_print(iunit, var)
   end subroutine messages_print_var_info
@@ -304,7 +305,7 @@ contains
     integer,          intent(in) :: option
     character(len=*), intent(in), optional :: pre
 
-    if(mpi_world%rank.ne.0) return
+    if(.not.mpi_grp_is_root(mpi_world)) return
 
     if(present(pre)) then
       call varinfo_print_option(iunit, var, option, pre)
@@ -324,7 +325,7 @@ contains
     integer :: i, j, l
     character(len=120) :: str
 
-    if(mpi_world%rank.ne.0) return
+    if(.not.mpi_grp_is_root(mpi_world)) return
 
     if(present(msg)) then
       l   = len(msg)
@@ -373,7 +374,7 @@ contains
     if(present(adv)) adv_ = adv
 
     write(iunit, '(a)', advance=trim(adv_)) trim(str)
-    if(flush_messages.and.mpi_world%rank.eq.0) then
+    if(flush_messages.and.mpi_grp_is_root(mpi_world)) then
       if(iunit.eq.stderr) write(iunit_err, '(a)', advance=trim(adv_)) trim(str)
       if(iunit.eq.stdout) write(iunit_out, '(a)', advance=trim(adv_)) trim(str)
     end if
@@ -476,7 +477,7 @@ contains
       call push_sub_write(iunit)
 
       ! also write to stderr if we are node 0
-      if (mpi_world%rank == 0) call push_sub_write(stderr)
+      if (mpi_grp_is_root(mpi_world)) call push_sub_write(stderr)
 
       ! close file to ensure flushing
       close(iunit)
@@ -519,7 +520,7 @@ contains
       call pop_sub_write(iunit)
 
       ! also write to stderr if we are node 0
-      if (mpi_world%rank == 0) call pop_sub_write(stderr)
+      if (mpi_grp_is_root(mpi_world)) call pop_sub_write(stderr)
 
       ! close file to ensure flushing
       close(iunit)

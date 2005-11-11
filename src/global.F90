@@ -23,24 +23,16 @@ module global
   use varinfo
   use string
   use lib_oct
-#if defined(HAVE_MPI) && !defined(MPI_H)
-  use mpi
-#endif
+  use mpi_mod
 
   implicit none
 
   private
 
-#if defined(HAVE_MPI) && defined(MPI_H)
-# include "mpif.h"
-#endif
-
-
   ! ---------------------------------------------------------
   ! Public types, variables and procedures.
   public ::         &
     conf_type,      &
-    mpi_group_type, &
     global_init,    &
     global_end,     &
     assert_die
@@ -55,14 +47,6 @@ module global
     character(len=256) :: fcflags
   end type conf_type
 
-  ! This is defined even when running serial
-  type mpi_group_type
-    integer :: comm ! in this case, MPI_COMM_WORLD
-    integer :: size ! how many are we
-    integer :: rank ! who am I
-  end type mpi_group_type
-
-  type(mpi_group_type), public :: mpi_world
   type(conf_type),      public :: conf
 
   ! the kinds used in the program
@@ -132,42 +116,10 @@ module global
 contains
 
   ! ---------------------------------------------------------
-  subroutine mpi_group_init(grp, comm)
-    type(mpi_group_type), intent(out) :: grp   ! information about this MPI group
-    integer                           :: comm  ! the communicator that defined the group
-
-#if defined(HAVE_MPI)
-    integer :: mpi_err
-
-    if(comm .ne. -1) then
-      grp%comm = comm
-      call MPI_COMM_RANK(grp%comm, grp%rank, mpi_err)
-      call MPI_COMM_SIZE(grp%comm, grp%size, mpi_err)
-    else
-#else
-      grp%comm = -1
-      grp%rank = 0
-      grp%size = 1
-#endif
-#if defined(HAVE_MPI)
-    end if
-#endif
-  end subroutine mpi_group_init
-
-
-  ! ---------------------------------------------------------
   subroutine global_init()
-#if defined(HAVE_MPI)
-    integer :: mpi_err
 
-    ! initialize MPI
-    call MPI_INIT(mpi_err)
-    call mpi_group_init(mpi_world, MPI_COMM_WORLD)
-    call MPI_BARRIER(mpi_world%comm, mpi_err)
-    write(stdout,'(a,i4,a,i4,a)') 'Process ', mpi_world%rank, ' of ', mpi_world%size, ' is alive'
-#else
-    call mpi_group_init(mpi_world, -1)
-#endif
+    ! initialize mpi
+    call mpi_mod_init()
 
     ! Get epoch time at node startup, just after the barrier to synchronize nodes first.
     call loct_gettimeofday(s_epoch_sec, s_epoch_usec)
@@ -189,13 +141,8 @@ contains
 
   ! ---------------------------------------------------------
   subroutine global_end()
-#if defined(HAVE_MPI)
-    integer :: ierr
 
-    ! end MPI
-    call MPI_FINALIZE(ierr)
-#endif
-
+    call mpi_mod_end()
     call varinfo_end()
 
   end subroutine global_end

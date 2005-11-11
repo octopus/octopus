@@ -42,6 +42,7 @@ module profiling_mod
   use io
   use messages
   use global
+  use mpi_mod
   use lib_oct
 
   implicit none
@@ -102,7 +103,7 @@ contains
     call push_sub('profiling.profiling_init')
 
 #if defined(HAVE_MPI)
-    if(mpi_world%rank.eq.0) then
+    if(mpi_grp_is_root(mpi_world)) then
       write(dirnum, '(i3.3)') mpi_world%size
       call io_mkdir(trim('profiling.'//dirnum))
     end if

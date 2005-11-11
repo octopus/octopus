@@ -355,7 +355,7 @@ contains
 
 #ifdef HAVE_MPI
     if(st%parallel_in_states) then
-      call MPI_ALLREDUCE(e, s, 1, MPI_FLOAT, MPI_SUM, st%comm, err)
+      call MPI_ALLREDUCE(e, s, 1, MPI_FLOAT, MPI_SUM, st%mpi_grp%comm, err)
       e = s
     end if
 #endif

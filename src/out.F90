@@ -37,6 +37,7 @@ module output
 #endif
   use par_vec
   use mpi_mod
+  use mpi_debug_mod
 
   implicit none
 
@@ -377,10 +378,11 @@ contains
 
     call push_sub('out.iopar_open')
 
-    if(m%mpi_rank == 0) then
+    if(mpi_grp_is_root(m%mpi_grp)) then
       iunit = io_open(file, action, status, form, position, die)
     end if
-#if defined(HAVE_MPI) && defined(HAVE_METIS)
+
+#if defined(HAVE_MPI)
     if(m%parallel_in_domains) then
       call MPI_Bcast(iunit, 1, MPI_INTEGER, m%vp%root, m%vp%comm, mpi_err)
     end if
@@ -401,9 +403,10 @@ contains
 
     call push_sub('out.iopar_close')
 
-    if(m%mpi_rank == 0) then
+    if(mpi_grp_is_root(m%mpi_grp)) then
       call io_close(iunit)
     end if
+
 #if defined(HAVE_MPI)
     if(m%parallel_in_domains) then
       call MPI_Bcast(iunit, 1, MPI_INTEGER, m%vp%root, m%vp%comm, mpi_err)
@@ -427,9 +430,10 @@ contains
 
     call push_sub('out.iopar_read')
 
-    if(m%mpi_rank == 0) then
+    if(mpi_grp_is_root(m%mpi_grp)) then
       read(iunit, '(a)', iostat=ierr) line
     end if
+
 #if defined(HAVE_MPI)
     if(m%parallel_in_domains) then
       call MPI_Bcast(ierr, 1, MPI_INTEGER, m%vp%root, m%vp%comm, mpi_err)
@@ -448,7 +452,7 @@ contains
 
     call push_sub('out.iopar_read')
 
-    if(m%mpi_rank == 0) then
+    if(mpi_grp_is_root(m%mpi_grp)) then
       backspace(iunit)
     end if
 

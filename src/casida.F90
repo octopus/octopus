@@ -65,10 +65,8 @@ module casida
     FLOAT,   pointer :: f(:)            ! The (dipole) strengths
     FLOAT,   pointer :: s(:)            ! The diagonal part of the S-matrix
 
-    logical       :: parallel_in_eh_pairs
-    integer       :: mpi_comm           ! my communicator in eh_pairs
-    integer       :: mpi_size           ! size of mpi_comm (defined also in serial mode)
-    integer       :: mpi_rank           ! rank of mpi_comm (defined also in serial mode)
+    logical            :: parallel_in_eh_pairs
+    type(mpi_grp_type) :: mpi_grp
   end type casida_type
 
 contains
@@ -256,17 +254,12 @@ contains
     end do
 
     ! now let us take care of initializing the parallel stuff
-    cas%mpi_size = 1  ! alone in the world (default)
-    cas%mpi_rank = 0  ! I am root
     cas%parallel_in_eh_pairs = multicomm_strategy_is_parallel(mc, P_STRATEGY_OTHER)
-
-#if defined(HAVE_MPI)
     if(cas%parallel_in_eh_pairs) then
-      cas%mpi_comm = mc%group_comm(P_STRATEGY_OTHER)
-      call MPI_Comm_size(cas%mpi_comm, cas%mpi_size, mpi_err)
-      call MPI_Comm_rank(cas%mpi_comm, cas%mpi_rank, mpi_err)
+      call mpi_grp_init(cas%mpi_grp, mc%group_comm(P_STRATEGY_OTHER))
+    else
+      call mpi_grp_init(cas%mpi_grp, -1)
     end if
-#endif
 
     call pop_sub()
   end subroutine casida_type_init
@@ -359,7 +352,7 @@ contains
       call push_sub('casida.solve_petersilka')
 
       ! initialize progress bar
-      if(mpi_world%rank == 0) call loct_progress_bar(-1, cas%n_pairs-1)
+      if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(-1, cas%n_pairs-1)
 
       ! file to save matrix elements
       iunit = io_open(trim(tmpdir)//'restart_casida', action='write', position='append')
@@ -380,7 +373,7 @@ contains
           cas%w(ia) = cas%w(ia) + M_TWO*f
         end if
 
-        if(mpi_world%rank == 0) call loct_progress_bar(ia-1, cas%n_pairs-1)
+        if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(ia-1, cas%n_pairs-1)
       end do
 
       allocate(x(cas%n_pairs), deltav(m%np))
@@ -391,7 +384,7 @@ contains
       deallocate(x, deltav)
 
       ! complete progress bar
-      if(mpi_world%rank == 0) write(*, "(1x)")
+      if(mpi_grp_is_root(mpi_world)) write(*, "(1x)")
 
       ! close restart file
       call io_close(iunit)
@@ -413,17 +406,17 @@ contains
 
       call push_sub('casida.solve_casida')
 
-      max = (cas%n_pairs*(1 + cas%n_pairs)/2)/cas%mpi_size
+      max = (cas%n_pairs*(1 + cas%n_pairs)/2)/cas%mpi_grp%size
       counter = 0
       actual = 0
-      if(mpi_world%rank == 0) call loct_progress_bar(-1, max)
+      if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(-1, max)
 
-      if(mpi_world%rank .ne. 0) cas%mat = M_ZERO
+      if(.not.mpi_grp_is_root(mpi_world)) cas%mat = M_ZERO
 
       ! calculate the matrix elements of (v + fxc)
       do jb = 1, cas%n_pairs
         actual = actual + 1
-        if(mod(actual, cas%mpi_size) .ne. cas%mpi_rank) cycle
+        if(mod(actual, cas%mpi_grp%size) .ne. cas%mpi_grp%rank) cycle
 
         do ia = jb, cas%n_pairs
           counter = counter + 1
@@ -441,7 +434,7 @@ contains
           if(jb /= ia) cas%mat(jb, ia) = cas%mat(ia, jb) ! the matrix is symmetric
 
         end do
-        if(mpi_world%rank == 0) call loct_progress_bar(counter-1, max)
+        if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(counter-1, max)
       end do
 
       ! sum all matrix elements
@@ -449,18 +442,18 @@ contains
       if(cas%parallel_in_eh_pairs) then
         allocate(mpi_mat(cas%n_pairs, cas%n_pairs))
         call MPI_ALLREDUCE(cas%mat(1,1), mpi_mat(1,1), cas%n_pairs**2, &
-          MPI_FLOAT, MPI_SUM, cas%mpi_comm, mpi_err)
+          MPI_FLOAT, MPI_SUM, cas%mpi_grp%comm, mpi_err)
         cas%mat = mpi_mat
         deallocate(mpi_mat)
       end if
 #endif
-      !if(cas%mpi_rank == 0) print *, "mat =", cas%mat
+      !if(mpi_grp_is_root(cas%mpi_grp)) print *, "mat =", cas%mat
 
       ! all processors with the exception of the first are done
-      if (cas%mpi_rank == 0) then
+      if (mpi_grp_is_root(cas%mpi_grp)) then
 
         ! complete progress bar
-        if(mpi_world%rank == 0) write(stdout, '(1x)')
+        if(mpi_grp_is_root(mpi_world)) write(stdout, '(1x)')
 
         ! complete the matrix and output the restart file
         iunit = io_open(trim(tmpdir)//'restart_casida', action='write', position='append')
@@ -533,11 +526,11 @@ contains
           cas%f(ia) = (M_TWO/m%sb%dim) * cas%w(ia) * sum( (abs(cas%tm(ia, :)))**2 )
         end do
 
-      end if ! cas%mpi_rank == 0
+      end if
 
 #if defined(HAVE_MPI)
       if(cas%parallel_in_eh_pairs) then
-        call MPI_Barrier(cas%mpi_comm, mpi_err)
+        call MPI_Barrier(cas%mpi_grp%comm, mpi_err)
       end if
 #endif
 
@@ -682,7 +675,7 @@ contains
 
     type(casida_type) :: casp
 
-    if(cas%mpi_rank.ne.0) return
+    if(.not.mpi_grp_is_root(cas%mpi_grp)) return
 
     call push_sub('casida.casida_write')
 

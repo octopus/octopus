@@ -30,6 +30,7 @@ module restart
   use grid
   use output
   use mpi_mod
+  use mpi_debug_mod
   use varinfo
 
   implicit none
