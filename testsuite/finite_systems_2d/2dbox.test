@@ -8,7 +8,11 @@ Release  : 1.99devel
 Programs : octopus
 Enabled  : Yes
 
+# The following tests reproduced some basic results from:
+# E. Rasanen et al., Phys. Rev. B 67, 235307 (2003).
+
 INP
+# This input file is just the particle in a box in 2D calculation.
 SystemName = "qd"
 CalculationMode = gs
 FromScratch = yes
@@ -54,6 +58,8 @@ RUN
 Match ; Eigenvalue ; grep -A 2 'Eigenvalues \[' static/info | tail -1 ; \s*0.9999\d*\s*1.0000\d*
 
 INP
+# This adds the Hartree interaction in 2D to the previous particle in a box example.
+# To make it more meaninful, it uses two electrons.
 SystemName = "qd"
 CalculationMode = gs
 FromScratch = yes
@@ -101,3 +107,116 @@ EOF
 RUN
 
 Match ; Eigenvalue with Hartree interaction ; grep -A 2 'Eigenvalues \[' static/info | tail -1 ; \s*3.7689\d*\s*2.0000\d*
+
+INP
+# Finally, the full calculation, i.e. with exchange and correlation. This calculations permits
+# to obtain one point in Fig. 3 of [E. Rasanen et al., Phys. Rev. B 67, 235307 (2003).]: that
+# corresponding to the chemical potential for the two electron dot, with beta = 1.
+SystemName = "qd"
+CalculationMode = gs
+FromScratch = yes
+Dimensions = 2
+
+%Species
+"qd" | 1.0 | usdef | 2 | "0"
+%
+
+%Coordinates
+"qd" | 0 | 0 | 0 | no
+%
+
+BoxShape = parallelepiped
+npoints = 51
+delta = pi/(npoints + 1)
+l = pi - 2*delta
+%Lsize
+l/2 | l/2 | 0
+%
+%Spacing
+delta | delta | delta
+%
+
+DerivativesOrder = 1
+
+NonInteractingElectrons = no
+XFunctional = lda_x
+CFunctional = lda_c_amgb
+
+MaximumIter = 200
+ConvAbsDens = 1e-8
+LCAOStart = yes
+
+EigenSolver = cg
+EigenSolverInitTolerance = 1e-6
+EigenSolverFinalTolerance = 1e-6
+EigenSolverMaxIter = 50
+TypeOfMixing = broyden
+Mixing = 0.5
+
+PoissonSolver = fft
+EOF
+
+RUN
+
+
+Match ; Eigenvalue with Hartree, exchange, and correlation ; grep -A 2 'Eigenvalues \[' static/info | tail -1 ; \s*2.7394\d*\s*2.0000\d*
+Match ; Total energy ; grep -A 6 '^Energy:' static/info ; \s*Total\s*=\s*3.35400 
+
+
+INP
+# This calculation adds one electron to the previous test, and performs a spin-polarized calculation.
+# This calculations permits to obtain one point in Fig. 3 of [E. Rasanen et al., Phys. Rev. B 67, 235307 (2003).]: 
+# that point corresponding to the chemical potential for the three electron dot, with beta = 1.
+SystemName = "qd"
+CalculationMode = gs
+FromScratch = yes
+Dimensions = 2
+
+%Species
+"qd" | 1.0 | usdef | 3 | "0"
+%
+
+%Coordinates
+"qd" | 0 | 0 | 0 | no
+%
+
+BoxShape = parallelepiped
+npoints = 51
+delta = pi/(npoints + 1)
+l = pi - 2*delta
+%Lsize
+l/2 | l/2 | 0
+%
+%Spacing
+delta | delta | delta
+%
+
+DerivativesOrder = 1
+
+SpinComponents = polarized
+ExtraStates = 1
+%Occupations
+1 | 0.5 | 0.5
+1 | 0 | 0
+%
+
+NonInteractingElectrons = no
+XFunctional = lda_x
+CFunctional = lda_c_amgb
+
+MaximumIter = 200
+ConvAbsDens = 1e-8
+LCAOStart = yes
+
+EigenSolver = cg
+EigenSolverInitTolerance = 1e-6
+EigenSolverFinalTolerance = 1e-6
+EigenSolverMaxIter = 50
+TypeOfMixing = broyden
+Mixing = 0.5
+
+PoissonSolver = fft
+EOF
+
+RUN
+Match ; Total energy, spin-polarized ; grep -A 6 '^Energy:' static/info ; \s*Total\s*=\s*7.7592

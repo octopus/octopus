@@ -215,7 +215,11 @@ contains
     !%Option mgga_c_tpss 202
     !% MGGA (not working)
     !%End
-    call loct_parse_int(check_inp('CFunctional'), XC_LDA_C_PZ, functl%id)
+    select case(calc_dim)
+      case(3); call loct_parse_int(check_inp('CFunctional'), XC_LDA_C_PZ, functl%id)
+      case(2); call loct_parse_int(check_inp('CFunctional'), XC_LDA_C_AMGB, functl%id)
+      case(1); call loct_parse_int(check_inp('CFunctional'), 0, functl%id)
+    end select
 
     ! initialize
     select case(functl%id)
