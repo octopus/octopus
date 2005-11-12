@@ -320,10 +320,10 @@ contains
     integer, intent(in) :: iunit
     character(len=*), intent(in), optional :: msg
 
-    integer, parameter :: max_len = 78
+    integer, parameter :: max_len = 70
 
     integer :: i, j, l
-    character(len=120) :: str
+    character(len=70) :: str
 
     if(.not.mpi_grp_is_root(mpi_world)) return
 
