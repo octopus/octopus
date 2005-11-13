@@ -5,8 +5,6 @@ EXTRA_PROGRAMS = oct-cross-section oct-rsf oct-harmonic-spectrum \
 
 bin_PROGRAMS = octopus @UTILITY_PROGRAMS@
 
-check_PROGRAMS = oct-test
-
 basic_SRCS = liboct.F90 string.F90 varinfo.F90 mpi.F90 global.F90 liboct_parser.F90 \
 	     messages.F90 syslabels.F90 io.F90 units.F90 mpi_debug.F90 profiling.F90 \
              blas.F90 linalg_basic.F90 linalg_adv.F90 math.F90 multicomm.F90 
@@ -80,16 +78,6 @@ oct_make_st_LDADD = $(octopus_LDADD)
 
 oct_center_geom_SOURCES = $(core_SRCS) xyz_adjust.F90 centergeom.F90
 oct_center_geom_LDADD = $(octopus_LDADD)
-
-oct_test_SOURCES = $(core_SRCS) lasers.F90 epot.F90 h.F90 linear_response.F90 xc_OEP.F90 v_ks.F90 systm.F90 \
-	eigen.F90 lcao.F90 pes.F90 \
-	scf.F90 gs.F90 unocc.F90 \
-	static_pol.F90 geom_opt.F90 phonons.F90 \
-	td_exp_split.F90 td_exp.F90 td_rti.F90 td_write.F90 td.F90 opt_control.F90 \
-	casida.F90 wave_matching.F90 static_pol_lr.F90 pulpo.F90 \
-	run.F90 oct_test.F90
-
-oct_test_LDADD = $(octopus_LDADD)
 
 # cleaning
 CLEANFILES = *~ *.bak *.mod *.il *.d *.pc* ifc* config_F90.h
@@ -183,7 +171,6 @@ mix.o: global.h
 mpi_debug.o: global.h mpi_debug_inc.F90
 profiling.o: global.h
 nl_operator.o: global.h
-oct_test.o: global.h
 ode_solver.o: global.h ode_solver_inc.F90
 opt_control.o: global.h
 out.o: global.h out_inc.F90
