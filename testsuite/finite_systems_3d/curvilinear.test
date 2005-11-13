@@ -1,0 +1,44 @@
+# $Id: oct-run_regression_test.pl,v 1.7 2005/11/07 08:59:53 appel Exp      :
+
+Test     : curvilinear coordinates
+Author   : Alberto
+Date     : 13.11.05
+Arch     : Linux rhodas 2.4.26-1-386 #1 Thu Jul 22 12:46:23 JST 2004 i686 GNU/Linux
+Release  : 1.99devel
+Programs : octopus
+Enabled  : Yes
+
+INP
+CalculationMode = gs
+
+%Coordinates
+"He" | 0 | 0 | 0 | no
+%
+
+BoxShape = sphere
+Radius  = 7.0
+Spacing = 0.48
+CurvMethod = curv_gygi
+CurvGygiA = 0.80
+DerivativesSpace = real_space
+DerivativesStencil = stencil_starplus
+DerivativesOrder = 3
+
+ConvAbsDens = 1e-5
+
+EigenSolver = cg
+EigenSolverInitTolerance = 1e-2
+EigenSolverFinalTolerance = 1e-6
+EigenSolverFinalToleranceIteration = 3
+EigenSolverMaxIter = 25
+
+TypeOfMixing = broyden
+Mixing = 0.5
+
+PoissonSolver = cg_corrected
+EOF
+
+RUN
+
+Match ; TotalEnergy ; grep -A 6 '^Energy:' static/info ; \s*Total\s*=\s*-2.8750
+Match ; Eigenvalues ; grep -A 2 'Eigenvalues \[' static/info | tail -1 ; \s*-0.5773\d*\s*2.0000\d*

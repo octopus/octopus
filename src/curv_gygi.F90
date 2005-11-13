@@ -52,7 +52,7 @@ contains
     !%Description
     !% The grid spacing is reduced locally around each atom, and the reduction is
     !% given by 1/(1+A), where A is specified by this variable, CurvGygiA. So, if
-    !% A=1 (the default), the grid spacing is reduced to one half = 1/(1+1).
+    !% A=1/2 (the default), the grid spacing is reduced to two thirds = 1/(1+1/2).
     !% [This is the <math>A_{\alpha}</math> variable in Eq. 2 of F. Gygi and G. Galli, Phys.
     !% Rev. B 52, R2229 (1995)]
     !% It must be larger than zero.
