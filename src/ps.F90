@@ -481,7 +481,7 @@ contains
 
     ! now we fit the splines
     call get_splines_hgh(psp, ps)
-    ps%so_dknrm = ps%dknrm
+    if(ps%so_l_max >= 0) ps%so_dknrm = ps%dknrm
 
     call pop_sub()
   end subroutine hgh_load
