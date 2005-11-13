@@ -83,11 +83,10 @@ contains
       call MPI_COMM_RANK(grp%comm, grp%rank, mpi_err)
       call MPI_COMM_SIZE(grp%comm, grp%size, mpi_err)
     else
-#else
+#endif
       grp%comm = -1
       grp%rank = 0
       grp%size = 1
-#endif
 #if defined(HAVE_MPI)
     end if
 #endif
