@@ -39,7 +39,7 @@ subroutine X(v_ks_calc)(gr, ks, h, st, calc_eigenval)
   ! No Hartree or xc if independent electrons
   if((.not.ks%ip_app).and.(amaldi_factor>M_ZERO)) then
     call v_hartree()
-    if(h%d%cdft) call a_hartree()
+!    if(h%d%cdft) call a_hartree()
     call v_a_xc()
   end if
 
@@ -68,11 +68,6 @@ contains
 
     ! solve the poisson equation
     call dpoisson_solve(gr, h%vhartree, rho)
-
-!    FIXME: is this still needed?
-!    if (h%em_app) then
-!      call lalg_scal(NP, M_ONE/h%e_ratio, h%vhartree)
-!    end if
 
     h%vhxc(:, 1) = h%vhxc(:, 1) + h%vhartree(:)
     if(h%d%ispin > UNPOLARIZED) h%vhxc(:, 2) = h%vhxc(:, 2) + h%vhartree(:)
