@@ -139,11 +139,10 @@ contains
   ! ---------------------------------------------------------
   subroutine hgh_end(psp)
     type(hgh_type), intent(inout) :: psp
-
     call push_sub('hgh.hgh_end')
 
     deallocate(psp%vlocal, psp%rphi, psp%eigen)
-    if(associated(psp%kb)) deallocate(psp%kb, psp%kbr)
+    nullify(psp%kb, psp%kbr)
     call logrid_end(psp%g)
 
     call pop_sub()

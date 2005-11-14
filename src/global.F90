@@ -131,6 +131,8 @@ contains
     conf%compiler   = FC
 #if defined (LONG_LINES)
     conf%fcflags    = FCFLAGS
+#else
+    conf%fcflags = "No flags information available."
 #endif
 
     ! initialize info for the input variables
