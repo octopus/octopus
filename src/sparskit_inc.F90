@@ -57,15 +57,64 @@ subroutine X(sparskit_solver_init)(n, sk)
   if ( sk%solver_type.lt.SK_MINVAL.or.sk%solver_type.gt.SK_MAXVAL ) then
     call input_error('SparskitSolver')
   end if
+
+  !%Variable SparskitKrylovSubspaceSize
+  !%Type integer
+  !%Default 15
+  !%Section Math::General
+  !%Description
+  !% Some of the Sparskit solver are Krylov subspace methods.
+  !% This variable determines which size the solver will use 
+  !% for the subspace.
+  !%End
   call loct_parse_int(check_inp('SparskitKrylovSubspaceSize'), 15, sk%krylov_size)
+
+  !%Variable SparskitPreconditioning
+  !%Type integer
+  !%Default 0
+  !%Section Math::General
+  !%Description
+  !% This variable determines what kind of preconditioning the
+  !% chosen Sparskit solver will use.
+  !% However, currently there is none implemented.
+  !%End
   call loct_parse_int(check_inp('SparskitPreconditioning'),     0, sk%preconditioning)
-  call loct_parse_int(check_inp('SparskitMaxIter'),          1000, sk%maxiter)
   if (sk%preconditioning.ne.0) then
     message(1) = 'Error: Preconditioning not implemented yet ...'
     call write_fatal(1)
   end if
-  call loct_parse_float(check_inp('SparskitRelTolerance'),    CNST(1e-8), sk%rel_tolerance)
-  call loct_parse_float(check_inp('SparskitAbsTolerance'),    CNST(1e-8), sk%abs_tolerance)
+
+  !%Variable SparskitMaxIter
+  !%Type integer
+  !%Default 0
+  !%Section Math::General
+  !%Description
+  !% This variable controls the maximum number of iteration steps that
+  !% will be performed by the (iterative) linear solver.
+  !%End
+  call loct_parse_int(check_inp('SparskitMaxIter'),          1000, sk%maxiter)
+
+  !%Variable SparskitRelTolerance
+  !%Type float
+  !%Default 1e-8
+  !%Section Math::General
+  !%Description
+  !% Some Sparskit solver use a relative tolerance as stopping criteria 
+  !% for the iteratve solution process. This variable can be used to 
+  !% specify the tolerance.
+  !%End
+  call loct_parse_float(check_inp('SparskitRelTolerance'), CNST(1e-8), sk%rel_tolerance)
+
+  !%Variable SparskitAbsTolerance
+  !%Type float
+  !%Default 1e-8
+  !%Section Math::General
+  !%Description
+  !% Some Sparskit solver use an absolute tolerance as stopping criteria 
+  !% for the iteratve solution process. This variable can be used to 
+  !% specify the tolerance.
+  !%End
+  call loct_parse_float(check_inp('SparskitAbsTolerance'), CNST(1e-8), sk%abs_tolerance)
 
   ! size of the problem
   sk%size = n
