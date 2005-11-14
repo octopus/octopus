@@ -202,6 +202,7 @@ contains
     end if
 
     call geometry_min_distance(gr%geo, rmin)
+    if(gr%geo%natoms .eq. 1) rmin = CNST(5.0)
     call loct_parse_float(check_inp('LocalMagneticMomentsSphereRadius'), rmin*M_HALF/units_inp%length%factor, scf%lmm_r)
     scf%lmm_r = scf%lmm_r * units_inp%length%factor
 

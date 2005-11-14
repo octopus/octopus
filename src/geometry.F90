@@ -555,21 +555,10 @@ contains
   ! This function returns .true. if two atoms are too close.
   logical function geometry_atoms_are_too_close(geo) result(l)
     type(geometry_type), intent(in) :: geo
-
-    FLOAT, parameter :: threshold = CNST(1e-5)
     FLOAT :: r
-    integer :: ia, ib
-
-    do ia = 1, geo%natoms
-      do ib = 1, ia - 1
-         r = sqrt(dot_product(geo%atom(ia)%x(:)-geo%atom(ib)%x(:), geo%atom(ia)%x(:)-geo%atom(ib)%x(:)))
-         if(r<threshold) then
-           l = .true.
-           return
-         end if
-      end do
-    end do
-
+    l = .false.
+    call geometry_min_distance(geo, r)
+    if( r < CNST(1.0e-5) .and. geo%natoms > 1) l = .true.
   end function geometry_atoms_are_too_close
 
 
