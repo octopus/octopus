@@ -21,10 +21,11 @@ GuessMagnetDensity = user_defined
 %AtomsMagnetDirection
  1 | 1 | 0
 %
+Eigensolver = lanczos
 EOF
 
 RUN
 
-Match ; TotalEnergy ; grep -A 6 '^Energy:' static/info ; \s*Total\s*=\s*-0.187718\d*
-Match ; Eigenvalues ; grep -A 2 'Eigenvalues \[' static/info | tail -1 ; \s*-0.08534\d*\s*0.92/ 0.08
-Match ; Local Magnetic Moments ; grep -A 2 'Local Magnetic Moments' static/info | tail -1 ; \s*0.3891\d*\s*0.3891\d*\s*0.8349\d* 
+Match ; TotalEnergy ; grep -A 6 '^Energy:' static/info ; \s*Total\s*=\s*-0.187516\d*
+Match ; Eigenvalues ; grep -A 2 'Eigenvalues \[' static/info | tail -1 ; \s*-0.08533\d*\s*0.92/ 0.08
+Match ; Local Magnetic Moments ; grep -A 2 'Local Magnetic Moments' static/info | tail -1 ; \s*0.3855\d*\s*0.3855\d*\s*0.8382\d* 
