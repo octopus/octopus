@@ -113,7 +113,7 @@ subroutine X(restart_write) (dir, st, gr, ierr, iter)
 
   if(mpi_grp_is_root(mpi_world)) then
     write(iunit,'(a)') '%'
-    if(present(iter)) write(iunit,'(a,i5)') 'Iter = ', iter
+    if(present(iter)) write(iunit,'(a,i7)') 'Iter = ', iter
     write(iunit2, '(a)') '%'
 
     call io_close(iunit)
