@@ -103,6 +103,7 @@ contains
       write(msg, '(a,a)') ' > ', trim(sub_stack(i))
       call flush_msg(stderr, msg, 'no')
     end do
+    call flush_msg(stderr, " ")
     call messages_print_stress(stderr)
 
     if(flush_messages.and.mpi_grp_is_root(mpi_world)) then

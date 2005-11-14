@@ -232,6 +232,12 @@ contains
       call xyz_file_end(xyz)
     end if
 
+    if(geometry_atoms_are_too_close(geo)) then
+      write(message(1), '(a)') "Some of the atoms seem to sit too close to each other."
+      write(message(2), '(a)') "Please review your input files."
+      call write_fatal(2)
+    end if
+
     call pop_sub()
   end subroutine geometry_init_xyz
 
@@ -544,6 +550,27 @@ contains
 
     call pop_sub()
   end function geometry_nvnl
+
+  ! ---------------------------------------------------------
+  ! This function returns .true. if two atoms are too close.
+  logical function geometry_atoms_are_too_close(geo) result(l)
+    type(geometry_type), intent(in) :: geo
+
+    FLOAT, parameter :: threshold = CNST(1e-5)
+    FLOAT :: r
+    integer :: ia, ib
+
+    do ia = 1, geo%natoms
+      do ib = 1, ia - 1
+         r = sqrt(dot_product(geo%atom(ia)%x(:)-geo%atom(ib)%x(:), geo%atom(ia)%x(:)-geo%atom(ib)%x(:)))
+         if(r<threshold) then
+           l = .true.
+           return
+         end if
+      end do
+    end do
+
+  end function geometry_atoms_are_too_close
 
 
   ! ---------------------------------------------------------
