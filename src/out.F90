@@ -101,8 +101,6 @@ contains
     type(simul_box_type), intent(in)  :: sb
     type(output_type),    intent(out) :: outp
 
-    integer :: i
-    logical :: l
 
     !%Variable Output
     !%Type flag
