@@ -205,7 +205,11 @@ while ($_ = <TESTSUITE>) {
    }
 
    if ( $_ =~ /^Match/ && !$opt_n) {
-     ($match, $name, $pre_command, $regexp) = split(/\;/,$_);
+     $- = s/\\;/_COLUMN_/g;
+     ($match, $name, $pre_command, $regexp) = split(/;/, $_);
+     $name        =~ s/_COLUMN_/;/g;
+     $pre_command =~ s/_COLUMN_/;/g;
+     $regexp      =~ s/_COLUMN_/;/g;
 
      die "have to run before matching" if !$test{"run"};
 
