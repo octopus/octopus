@@ -69,9 +69,10 @@ contains
     ! solve the poisson equation
     call dpoisson_solve(gr, h%vhartree, rho)
 
-    if (h%em_app) then
-      call lalg_scal(NP, M_ONE/h%e_ratio, h%vhartree)
-    end if
+!    FIXME: is this still needed?
+!    if (h%em_app) then
+!      call lalg_scal(NP, M_ONE/h%e_ratio, h%vhartree)
+!    end if
 
     h%vhxc(:, 1) = h%vhxc(:, 1) + h%vhartree(:)
     if(h%d%ispin > UNPOLARIZED) h%vhxc(:, 2) = h%vhxc(:, 2) + h%vhartree(:)
