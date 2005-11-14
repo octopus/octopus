@@ -1,87 +1,27 @@
 # Sample data file.
 # This is a simple data file. It would generate the ground-state calculation
-# of the sodium dimer. Most of the options accepted by octopus are written
-# here. Consult the manual for a brief explanation of them. Of course most
-# of the options written here are ignored for this particular run, they
-# are just written for informative purposes.
+# of the sodium dimer.
+# Consult the manual for a brief explanation of the variables.
  
-###############################################################################
-# 1. Generalities.
-###############################################################################
-DebugLevel = 0
 SystemName = "Na2"
 CalculationMode = gs
 Units = "eVA"
-#UnitsInput  = a.u
-#UnitsOutput = a.u
+FromScratch = yes
 
-###############################################################################
-# 2. Species.
-###############################################################################
-%Species
-"Na" | 23.0 | tm2 | 11 | 0 | 0
-%
-
-###############################################################################
-# 3. Coordinates.
-###############################################################################
-#PDBCoordinates = coords.pdb
-#XYZCoordinates = coords.xyz
 %Coordinates
-  "Na"	0.0	0.0	 1.7	yes
-  "Na"	0.0	0.0	-1.7	yes
+"Na" | 0.0 | 0.0 |  1.7	| yes
+"Na" | 0.0 | 0.0 | -1.7 | yes
 %
 
-###############################################################################
-# 4. Velocities.
-###############################################################################
-#XYZVelocities = vel.xyz
-%Velocities
-  "Na" | 0.0 | 0.0 | 0.0
-  "Na" | 0.0 | 0.0 | 0.0
-%
-
-###############################################################################
-# 5. Mesh description.
-###############################################################################
 BoxShape = sphere
 Radius  = 8.0
 Spacing = 0.3
-DerivativesSpace = real_space
-DerivativesStencil = stencil_star
-DerivativesOrder = 4
-DoubleFFTParameter = 2.0
 
-###############################################################################
-# 6. States.
-###############################################################################
-
-SpinComponents = unpolarized
-NumberkPoints  = 1 
-ExcessCharge   = 0
-ExtraStates    = 0
-ElectronicTemperature = 0.0
-
-###############################################################################
-# 7. Hamiltonian.
-###############################################################################
-NonInteractingElectrons = no
-ClassicPotential = no
-
-###############################################################################
-# 8. Exchange and Correlation.
-###############################################################################
 XFunctional = lda_x
 CFunctional = lda_c_pz
 
-###############################################################################
-# 9. SCF
-###############################################################################
 MaximumIter = 200
-ConvAbsDens = 1e-5
-ConvRelDens = 0
-ConvAbsEv = 0
-ConvRelEv = 0
+ConvAbsDens = 1e-6
 
 LCAOStart = yes
 
@@ -91,109 +31,6 @@ EigenSolverFinalTolerance = 1e-6
 EigenSolverFinalToleranceIteration = 6
 EigenSolverMaxIter = 25
 
-What2Mix = density
 TypeOfMixing = broyden
-Mixing = 0.3
-MixNumberSteps = 3
-
-###############################################################################
-# 10. Unoccupied states.
-###############################################################################
-NumberUnoccStates = 0
-
-###############################################################################
-# 11. Time Dependent.
-###############################################################################
-T = 10
-dt = 0.001
-TDMaximumIter = T/dt
-TDEvolutionMethod = aetrs
-TDExponentialMethod = standard
-TDExpOrder = 4
-TDLanczosTol = 1e-5
-TDTimeStep = dt
-
-intensity = 0.1
-omega = 1.57
-shape = 2
-tau = 30
-t0 = 30
-#%TDLasers
-#1 | 0 | 0 | intensity | omega | shape | tau | t0
-#%
-#TDGauge = 1 # length gauge assumed.
-
-TDDeltaStrength = 0.01
-%TDPolarization
-0 | 0 | 1
-%
-
-AbsorbingBoundaries = no
-ABWidth = 3.0
-ABHeight = -4.0
-
-TDOutputMultipoles = yes
-TDDipoleLMax = 1
-TDOutputLaser = no
-TDOutputCoordinates = yes
-TDOutputAngularMomentum = no
-TDOutputGSProjection = no
-TDOutputAcceleration = no
-TDOutputElEnergy = no
-TDOutputOccAnalysis = no
-
-TDDipoleLMax = 1
-
-MoveIons = no
-
-TDOccupationalAnalysis = no
-
-###############################################################################
-# 12. Geometry optimization.
-###############################################################################
-GOMethod = steep
-GOTolerance = 0.01
-GOMaximumIter = 100
-
-###############################################################################
-# 13. Function output for visualization.
-###############################################################################
-OutputKSPotential = no
-OutputDensity     = no
-OutputWfs         = no
-OutputELF         = no
-OutputGeometry    = no
-
-OutputAxisX = no
-OutputAxisY = no
-OutputAxisZ = no
-OutputPlaneX = no
-OutputPlaneY = no
-OutputPlaneZ = no
-OutputMeshIndex = no
-OutputGnuplotMode = no
-OutputDX = no
-OutputEvery = 10
-
-###############################################################################
-# 14. Spectrum calculations.
-###############################################################################
-SpecTransMode = "sin"
-SpecDampMode  = "exp"
-SpecDampFactor = 0.1
-SpecStartTime = 0.0
-SpecEndTime   = -1.0
-SpecEnergyStep = 0.01
-SpecMinEnergy = 0.0
-SpecMaxEnergy = 20.0
-HSPolarization = 'z'
-
-
-###############################################################################
-# 15. Varia.
-###############################################################################
-PoissonSolver = fft
-PolStaticField = 0.001
-RecipeLang = "en"
 
 

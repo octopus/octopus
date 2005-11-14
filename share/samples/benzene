@@ -1,0 +1,45 @@
+# Sample data file.
+# This is a simple data file. It would generate the ground-state calculation
+# of the benzene molecule.
+# Consult the manual for a brief explanation of the variables.
+
+SystemName = "C6H6"
+CalculationMode = gs
+Units = "eVA"
+FromScratch = yes
+
+%Coordinates
+ "C" |  0.000 |  1.396 | 0.000 | no
+ "C" |  1.209 |  0.698 | 0.000 | no
+ "C" |  1.209 | -0.698 | 0.000 | no
+ "C" |  0.000 | -1.396 | 0.000 | no
+ "C" | -1.209 |  0.698 | 0.000 | no
+ "C" | -1.209 | -0.698 | 0.000 | no
+ "H" |  0.000 |  2.479 | 0.000 | no
+ "H" |  2.147 |  1.240 | 0.000 | no
+ "H" |  2.147 | -1.240 | 0.000 | no
+ "H" |  0.000 | -2.479 | 0.000 | no
+ "H" | -2.147 |  1.240 | 0.000 | no
+ "H" | -2.147 | -1.240 | 0.000 | no
+%
+
+BoxShape = sphere
+radius   = 6
+spacing  =  0.22
+
+XFunctional = lda_x
+CFunctional = lda_c_pz
+
+MaximumIter = 200
+ConvAbsDens = 1e-5
+
+LCAOStart = yes
+
+EigenSolver = cg
+EigenSolverInitTolerance = 1e-2
+EigenSolverFinalTolerance = 1e-6
+EigenSolverFinalToleranceIteration = 6
+EigenSolverMaxIter = 25
+
+TypeOfMixing = broyden
+
