@@ -25,11 +25,10 @@ OnlyUserDef = yes
 NonInteractingElectrons = yes
 
 %Species
-"Zero" | 22.1 | 1 | 1 | "0"
+"Zero" | 22.1 | spec_usdef | 2 | "0"
 %
 
 %Coordinates
- "Zero" | 0 | 0 | 0 | yes
  "Zero" | 0 | 0 | 0 | yes
 %
 
@@ -49,7 +48,7 @@ BoxShape = parallelepiped
 %
 
 %NumberKPoints
-10 | 1 | 1 | 0
+ 10 | 1 | 1 | 0
 %
 
 CenterOfInversion = yes
