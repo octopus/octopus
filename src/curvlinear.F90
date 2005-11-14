@@ -84,7 +84,7 @@ contains
     call messages_print_var_option(stdout, "CurvMethod", cv%method)
 
     ! FIXME: The other two methods are apparently not working
-    if(cv%method > CURV_METHOD_GYGI) call input_error('CurvMethod')
+    if(cv%method > CURV_METHOD_GYGI.and.(.not.conf%devel_version)) call input_error('CurvMethod')
 
     select case(cv%method)
     case(CURV_METHOD_GYGI)

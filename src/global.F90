@@ -38,7 +38,8 @@ module global
     assert_die
 
   type conf_type
-    integer :: debug_level ! How much debug should print
+    integer :: debug_level   ! How much debug should print
+    logical :: devel_version ! If true then allow unstable parts of the code
     character(len=256) :: share       ! Name of the share dir
     character(len=256) :: latest_cvs  ! rcs info of latest cvs commit
     character(len=50)  :: build_time  ! time octopus was compiled

@@ -44,6 +44,38 @@ program octopus
   call global_init()
   call parser_init()
 
+  !%Variable DevelVersion
+  !%Type logical
+  !%Default no
+  !%Section Generalities::Debug
+  !%Description
+  !% If true, allows the use of certains parts of the code that are
+  !% still under development. This should not be used for production runs.
+  !%End
+  call loct_parse_logical('DevelVersion', .false., conf%devel_version)
+
+  !%Variable DebugLevel
+  !%Type integer
+  !%Default 1
+  !%Section Generalities::Debug
+  !%Description
+  !% This variable decides wether or not to enter debug-mode. In debugging mode,
+  !% the program prints to standard error when it enters and exits the subroutines,
+  !% what is the memory it is using (only, for the moment being, in Linux systems),
+  !% and some other information. Useful for developers, and mandatory if you want
+  !% to send a bug report to the developers and being considered.
+  !% You have two options: (i) setting it to zero -- or less than zero, in which
+  !% case you do not run in debugging mode (this is the default), or (ii) setting
+  !% it to a positive number. In this case the entries and exits to nested subroutines
+  !% are only printed down to the level that is given in this variable.
+  !%End
+  call loct_parse_int('DebugLevel', 0, conf%debug_level)
+  if(conf%debug_level>0) then
+    in_debug_mode = .true.
+  else
+    in_debug_mode = .false.
+  end if
+
   ! need to find out calc_mode already here since some of the variables here (e.g.
   ! periodic dimensions) can be different for the subsystems
   !%Variable CalculationMode

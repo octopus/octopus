@@ -126,29 +126,6 @@ contains
       call loct_rm('messages.stderr')
     end if
 
-    !%Variable DebugLevel
-    !%Type integer
-    !%Default 1
-    !%Section Generalities::Debug
-    !%Description
-    !% This variable decides wether or not to enter debug-mode. In debugging mode,
-    !% the program prints to standard error when it enters and exits the subroutines,
-    !% what is the memory it is using (only, for the moment being, in Linux systems),
-    !% and some other information. Useful for developers, and mandatory if you want
-    !% to send a bug report to the developers and being considered.
-    !% You have two options: (i) setting it to zero -- or less than zero, in which
-    !% case you do not run in debugging mode (this is the default), or (ii) setting
-    !% it to a positive number. In this case the entries and exits to nested subroutines
-    !% are only printed down to the level that is given in this variable.
-    !%End
-    call loct_parse_int('DebugLevel',0,conf%debug_level)
-    if(conf%debug_level>0) then
-      in_debug_mode = .true.
-    else
-      in_debug_mode = .false.
-    end if
-
-
     if(in_debug_mode) then
       !%Variable MPIDebugHook
       !%Type logical
