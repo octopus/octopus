@@ -102,12 +102,6 @@ module hamiltonian
     ! Kinetic Cutoff
     FLOAT :: cutoff
 
-    !Effective-mass approximation
-    logical :: em_app
-    FLOAT :: m_ratio              ! (electron effective-mass)/(electron mass)
-    FLOAT :: g_ratio              ! (effective gyromagnetic ratio)/(gyromagnetic ratio)
-    FLOAT :: e_ratio              ! (effective dielectric constant)/(dielectric constant)
-
   end type hamiltonian_type
 
   integer, public, parameter :: &
@@ -201,17 +195,6 @@ contains
       call write_fatal(2)
     end if
 #endif
-
-    !Are we going to use the effective-mass model?
-    call loct_parse_logical(check_inp('EffectiveMassModel'), .false., h%em_app)
-    if (h%em_app) then
-      !Get the ratios
-      call loct_parse_float(check_inp('ElectronMassRatio'),    CNST(0.067), h%m_ratio)
-      call loct_parse_float(check_inp('GyromagneticRatio'),    CNST(0.44),  h%g_ratio)
-      call loct_parse_float(check_inp('DielectricConstRatio'), CNST(12.4),  h%e_ratio)
-    else
-      h%m_ratio = M_ZERO; h%g_ratio = M_ZERO; h%e_ratio = M_ZERO
-    end if
 
     !%Variable TDGauge
     !%Type integer

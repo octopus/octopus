@@ -196,12 +196,6 @@ subroutine X(kinetic) (h, gr, psi, hpsi, ik)
     end do
   end if
 
-  if (h%em_app) then
-    do idim = 1, h%d%dim
-      call lalg_scal(NP, R_TOTYPE(M_ONE/h%m_ratio), Hpsi(:,idim))
-    end do
-  end if
-
   call pop_sub()
 end subroutine X(kinetic)
 
@@ -333,7 +327,6 @@ subroutine X(vlpsi) (h, m, psi, hpsi, ik)
   if (associated(h%ep%B_field) .and. h%d%ispin /= UNPOLARIZED) then
     allocate(lhpsi(m%np, h%d%dim))
     select case (h%d%ispin)
-    case (UNPOLARIZED)
     case (SPIN_POLARIZED)
       if(modulo(ik+1, 2) == 0) then ! we have a spin down
         lhpsi(1:m%np, 1) = - M_HALF/P_C*sqrt(dot_product(h%ep%B_field, h%ep%B_field))*psi(1:m%np, 1)
@@ -350,11 +343,6 @@ subroutine X(vlpsi) (h, m, psi, hpsi, ik)
       lhpsi(1:m%np, 2) = M_HALF/P_C*(-h%ep%B_field(3)*psi(1:m%np, 2) &
         + (h%ep%B_field(1) + M_zI*h%ep%B_field(2))*psi(1:m%np, 1))
     end select
-    if (h%em_app) then
-      do idim = 1, h%d%dim
-        call lalg_scal(m%np, R_TOTYPE(h%g_ratio/h%m_ratio), lhpsi(:,idim))
-      end do
-    end if
     hpsi(1:m%np, :) = hpsi(1:m%np, :) + lhpsi(1:m%np, :)
     deallocate(lhpsi)
   end if
