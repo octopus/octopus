@@ -109,7 +109,7 @@ contains
 
     call states_distribute_nodes(st, sys%mc)
     ! allocate memory
-    allocate(st%zpsi(NP, st%d%dim, st%st_start:st%st_end, st%d%nik))
+    allocate(st%zpsi(NP_PART, st%d%dim, st%st_start:st%st_end, st%d%nik))
 
     ierr = init_wfs()
     if(ierr.ne.0) then

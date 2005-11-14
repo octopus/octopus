@@ -202,7 +202,7 @@ contains
     end if
 
     call geometry_min_distance(gr%geo, rmin)
-    if(gr%geo%natoms .eq. 1) rmin = CNST(5.0)
+    if(gr%geo%natoms == 1) rmin = CNST(100.0)
     call loct_parse_float(check_inp('LocalMagneticMomentsSphereRadius'), rmin*M_HALF/units_inp%length%factor, scf%lmm_r)
     scf%lmm_r = scf%lmm_r * units_inp%length%factor
 
@@ -586,7 +586,7 @@ contains
       allocate(lmm(3, gr%geo%natoms))
       call states_local_magnetic_moments(m, st, gr%geo, st%rho, scf%lmm_r, lmm)
       write(iunit, '(a,a,a,f7.3,a)') 'Local Magnetic Moments (sphere radius [', &
-        trim(units_out%length%abbrev),'] = ',scf%lmm_r/units_out%length%factor,'):'
+        trim(units_out%length%abbrev),'] = ', scf%lmm_r/units_out%length%factor, '):'
       if(st%d%ispin == SPIN_POLARIZED) then ! collinear spin
         write(iunit,'(a,6x,14x,a)') ' Ion','mz'
         do i = 1, gr%geo%natoms

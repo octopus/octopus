@@ -262,7 +262,7 @@ contains
     type(td_write_type),    intent(in) :: w
     type(grid_type),        intent(inout) :: gr
     type(states_type),      intent(inout) :: st
-    type(hamiltonian_type), intent(in)    :: h
+    type(hamiltonian_type), intent(inout) :: h
     type(geometry_type),    intent(in)    :: geo
     type(kick_type),        intent(in) :: kick
     FLOAT,                  intent(in) :: dt
@@ -444,7 +444,7 @@ contains
   subroutine td_write_angular(out_angular, gr, st, kick, iter)
     integer(POINTER_SIZE), intent(in)    :: out_angular
     type(grid_type),       intent(inout) :: gr
-    type(states_type),     intent(in)    :: st
+    type(states_type),     intent(inout) :: st
     type(kick_type),       intent(in)    :: kick
     integer,               intent(in)    :: iter
 
@@ -775,7 +775,7 @@ contains
     integer(POINTER_SIZE),  intent(in)    :: out_acc
     type(grid_type),        intent(inout) :: gr
     type(states_type),      intent(inout) :: st
-    type(hamiltonian_type), intent(in)    :: h
+    type(hamiltonian_type), intent(inout) :: h
     FLOAT,                  intent(in)    :: dt
     integer,                intent(in)    :: iter
 

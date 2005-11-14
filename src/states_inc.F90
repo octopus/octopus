@@ -287,7 +287,7 @@ contains
       r = M_ZERO; gradr = M_ZERO; j  = M_ZERO
       c = M_ZERO
 
-      allocate(psi_fs(NP), gpsi(NP, NDIM))
+      allocate(psi_fs(NP_PART), gpsi(NP, NDIM))
       do ik = is, st%d%nik, st%d%nspin
         do ist = 1, st%nst
           do idim = 1, st%d%dim
@@ -467,7 +467,7 @@ end function X(states_mpdotp)
 ! ---------------------------------------------------------
 subroutine X(states_calc_angular)(gr, st, angular, l2)
   type(grid_type),   intent(inout) :: gr
-  type(states_type), intent(in)    :: st
+  type(states_type), intent(inout) :: st
   FLOAT,             intent(out)   :: angular(3)
   FLOAT, optional,   intent(out)   :: l2
 
@@ -482,6 +482,7 @@ subroutine X(states_calc_angular)(gr, st, angular, l2)
 
   temp = M_ZERO; ltemp = M_ZERO
   allocate(lpsi(NP, NDIM))
+
   do ik = 1, st%d%nik
     do j  = st%st_start, st%st_end
       do idim = 1, st%d%dim
@@ -489,6 +490,7 @@ subroutine X(states_calc_angular)(gr, st, angular, l2)
         temp = M_ZERO ! The expectation value of L of *any* real function is null
 #else
         call X(f_angular_momentum)(gr%sb, gr%f_der, st%X(psi)(:, idim, j, ik), lpsi)
+
         temp(1) = temp(1) + st%occ(j, ik)*X(mf_dotp)(gr%m, st%X(psi)(:, idim, j, ik), lpsi(:, 1))
         temp(2) = temp(2) + st%occ(j, ik)*X(mf_dotp)(gr%m, st%X(psi)(:, idim, j, ik), lpsi(:, 2))
         temp(3) = temp(3) + st%occ(j, ik)*X(mf_dotp)(gr%m, st%X(psi)(:, idim, j, ik), lpsi(:, 3))

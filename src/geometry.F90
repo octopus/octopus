@@ -556,9 +556,10 @@ contains
   logical function geometry_atoms_are_too_close(geo) result(l)
     type(geometry_type), intent(in) :: geo
     FLOAT :: r
-    l = .false.
+
     call geometry_min_distance(geo, r)
-    if( r < CNST(1.0e-5) .and. geo%natoms > 1) l = .true.
+    l = (r < CNST(1.0e-5) .and. geo%natoms > 1)
+
   end function geometry_atoms_are_too_close
 
 

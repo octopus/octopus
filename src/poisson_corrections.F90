@@ -117,7 +117,7 @@ contains
     add_lm = 1
     do l = 0, ml
       do mm = -l, l
-        tmp = rho(:)*aux(add_lm, :)
+        tmp(1:m%np) = rho(1:m%np)*aux(add_lm, 1:m%np)
         ! Use Xmf_integrate, so things work parallel too.
         mult(add_lm) = dmf_integrate(m, tmp)
         add_lm = add_lm + 1
@@ -160,7 +160,8 @@ contains
     ! ---------------------------------------------------------
     FLOAT function isubl(l, x)
       integer, intent(in) :: l
-      FLOAT, intent(in) :: x
+      FLOAT,   intent(in) :: x
+
       isubl = M_HALF*loct_gamma(l + M_HALF)*(M_ONE - loct_incomplete_gamma(l+M_HALF, x**2) )
     end function isubl
 
@@ -216,16 +217,15 @@ contains
   FLOAT function dotp(x, y) result(res)
     FLOAT, intent(inout) :: x(:)
     FLOAT, intent(in)    :: y(:)
-    integer :: np_part
-    np_part = mesh_pointer%np_part
-    res = dmf_dotp(mesh_pointer, x, y)
+
+    res     = dmf_dotp(mesh_pointer, x, y)
   end function dotp
 
 
   ! ---------------------------------------------------------
   subroutine opt(x, y)
-    FLOAT, intent(in)  :: x(:)
-    FLOAT, intent(out) :: y(:)
+    FLOAT, intent(inout) :: x(:)
+    FLOAT, intent(out)   :: y(:)
 
     call dderivatives_laplt(der_pointer, x, y)
   end subroutine opt

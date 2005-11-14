@@ -148,7 +148,7 @@ contains
       return
     end if
 
-    allocate(lcao_data%st%X(psi)(gr%m%np, st%d%dim, norbs, st%d%nik))
+    allocate(lcao_data%st%X(psi)(gr%m%np_part, st%d%dim, norbs, st%d%nik))
     lcao_data%st%X(psi) = R_TOTYPE(M_ZERO)
 
     do ik = 1, st%d%nik
@@ -202,8 +202,6 @@ contains
     integer,            intent(in) :: nst
 
     call push_sub('lcao.lcao_end')
-
-    ASSERT(lcao_data%state == 1)
 
     if(lcao_data%st%nst >= nst) then
       if(associated(lcao_data%hamilt)) deallocate(lcao_data%hamilt)

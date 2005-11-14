@@ -216,7 +216,7 @@ contains
   subroutine td_exp_dt(te, gr, h, zpsi, ik, timestep, t, order, vmagnus)
     type(td_exp_type),      intent(inout)   :: te
     type(grid_type),        intent(inout)   :: gr
-    type(hamiltonian_type), intent(in)      :: h
+    type(hamiltonian_type), intent(inout)   :: h
     integer,                intent(in)      :: ik
     CMPLX,                  intent(inout)   :: zpsi(:, :)
     FLOAT,                  intent(in)      :: timestep, t
@@ -272,7 +272,7 @@ contains
 
       call push_sub('td_exp.fourth')
 
-      allocate(zpsi1(NP, h%d%dim), hzpsi1(NP, h%d%dim))
+      allocate(zpsi1(NP_PART, h%d%dim), hzpsi1(NP, h%d%dim))
       zfact = M_z1
       call lalg_copy(NP, h%d%dim, zpsi(:,:), zpsi1(:,:))
       do i = 1, te%exp_order
@@ -309,7 +309,7 @@ contains
 
       call push_sub('td_exp.cheby')
 
-      allocate(zpsi1(NP, h%d%dim, 0:2))
+      allocate(zpsi1(NP_PART, h%d%dim, 0:2))
       zpsi1 = M_z0
       do j = te%exp_order-1, 0, -1
         call lalg_copy(NP, h%d%dim, zpsi1(:,:, 1), zpsi1(:,:, 2))
@@ -344,17 +344,17 @@ contains
       call push_sub('td_exp.lanczos')
 
       tol    = te%lanczos_tol
-      allocate(v(NP, h%d%dim, te%exp_order+1), &
+      allocate(v(NP_PART, h%d%dim, te%exp_order+1), &
         hm(te%exp_order+1, te%exp_order+1), &
         expo(te%exp_order+1, te%exp_order+1))
-      hm = M_z0; expo = M_z0
+      v = M_z0; hm = M_z0; expo = M_z0
 
       lwsp = 4*(te%exp_order+1)**2+7
       allocate(wsp(lwsp), ipiv(te%exp_order+1))
 
       ! Normalize input vector, and put it into v(:, :, 1)
       beta = zstates_nrm2(gr%m, h%d%dim, zpsi)
-      v(:, :, 1) = zpsi(:, :)/beta
+      v(1:NP, :, 1) = zpsi(1:NP, :)/beta
 
       ! This is the Lanczos loop...
       do n = 1, te%exp_order
@@ -363,10 +363,10 @@ contains
 
         do k = max(1, n-1), n
           hm(k, n) = zstates_dotp(gr%m, h%d%dim, v(:, :, k), v(:, :, n+1))
-          call lalg_axpy(NP, h%d%dim, -hm(k, n), v(:, :, k), v(:, :, n+1))
+          call lalg_axpy(NP_PART, h%d%dim, -hm(k, n), v(:, :, k), v(:, :, n+1))
         end do
         hm(n+1, n) = zstates_nrm2(gr%m, h%d%dim, v(:, :, n+1))
-        call lalg_scal(NP, h%d%dim, M_z1/hm(n+1, n), v(:, :, n+1))
+        call lalg_scal(NP_PART, h%d%dim, M_z1/hm(n+1, n), v(:, :, n+1))
         call zgpadm(6, n, timestep, -M_zI*hm(1:n, 1:n), n, wsp, lwsp, ipiv(1:n), iexph, ns, iflag)
         k = 0
         do i = 1, n
@@ -394,7 +394,7 @@ contains
         end do
       end do
       ! zpsi = nrm * V * expo(1:korder, 1) = nrm * V * expo * V^(T) * zpsi
-      call lalg_gemv(NP, h%d%dim, korder+1, M_z1*beta, v, expo(1:korder+1, 1), M_z0, zpsi)
+      call lalg_gemv(NP_PART, h%d%dim, korder+1, M_z1*beta, v, expo(1:korder+1, 1), M_z0, zpsi)
 
       if(present(order)) order = korder
       deallocate(v, hm, expo, ipiv, wsp)

@@ -143,8 +143,9 @@ contains
     FLOAT   :: d(spin_channels), f, dtot, dpol
 
     ! allocate some general arrays
-    allocate(dens(NP, spin_channels), dedd(NP, spin_channels), ex_per_vol(NP), ec_per_vol(NP))
+    allocate(dens(NP_PART, spin_channels), dedd(NP_PART, spin_channels), ex_per_vol(NP), ec_per_vol(NP))
     allocate(l_dens(spin_channels), l_dedd(spin_channels))
+    dens       = M_ZERO
     dedd       = M_ZERO
     ex_per_vol = M_ZERO
     ec_per_vol = M_ZERO
@@ -214,7 +215,7 @@ contains
   !   *) calculates the gradient of the density
   subroutine gga_init()
     ! allocate variables
-    allocate(gdens(NP, 3, spin_channels), dedgd(NP, 3, spin_channels))
+    allocate(gdens(NP, 3, spin_channels), dedgd(NP_PART, 3, spin_channels))
     allocate(l_gdens(3, spin_channels), l_dedgd(3, spin_channels))
     gdens = M_ZERO
     dedgd = M_ZERO
@@ -275,7 +276,7 @@ contains
     FLOAT   :: f, d
     FLOAT, allocatable :: n2dens(:)
 
-    allocate(tau(NP, spin_channels), dedtau(NP, spin_channels))
+    allocate(tau(NP, spin_channels), dedtau(NP_PART, spin_channels))
     allocate(l_tau(spin_channels), l_dedtau(spin_channels))
     tau    = M_ZERO
     dedtau = M_ZERO

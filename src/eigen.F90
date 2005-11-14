@@ -261,7 +261,7 @@ contains
     type(eigen_solver_type), intent(inout) :: eigens
     type(grid_type),         intent(inout) :: gr
     type(states_type),       intent(inout) :: st
-    type(hamiltonian_type),  intent(IN)    :: h
+    type(hamiltonian_type),  intent(inout) :: h
     integer,                 intent(in)    :: iter
     logical,       optional, intent(inout) :: conv
     logical,       optional, intent(in)    :: verbose
@@ -321,7 +321,7 @@ contains
   subroutine eigen_diagon_subspace(gr, st, h)
     type(grid_type),        intent(inout) :: gr
     type(states_type),      intent(inout) :: st
-    type(hamiltonian_type), intent(IN)    :: h
+    type(hamiltonian_type), intent(inout) :: h
 
     R_TYPE, allocatable :: h_subspace(:,:), vec(:,:), f(:,:,:)
     integer :: ik, i, j

@@ -231,7 +231,7 @@ contains
         call vcycle_fas(curr_l)
       end if
 
-      res = residue(curr_l,phi(curr_l)%p,tau(curr_l)%p,err(curr_l)%p)
+      res = residue(curr_l, phi(curr_l)%p, tau(curr_l)%p, err(curr_l)%p)
 
       !if ( gr%m%use_curvlinear ) then
       !  print *, "base level", curr_l, "iter", t, " res ", res

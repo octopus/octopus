@@ -994,7 +994,7 @@ contains
   ! This routine (obviously) assumes complex wave-functions
   subroutine calc_paramagnetic_current(gr, st, jp)
     type(grid_type),   intent(inout) :: gr
-    type(states_type), intent(in)    :: st
+    type(states_type), intent(inout) :: st
     FLOAT,             intent(out)   :: jp(:,:,:)  ! (NP, NDIM, st%d%nspin)
 
     integer :: ik, p, sp, k
@@ -1063,7 +1063,7 @@ contains
   ! ---------------------------------------------------------
   subroutine states_calc_physical_current(gr, st, j)
     type(grid_type),     intent(inout) :: gr
-    type(states_type),   intent(in)    :: st
+    type(states_type),   intent(inout) :: st
     FLOAT,               intent(out)   :: j(:,:,:)   ! j(NP, NDIM, st%d%nspin)
 
     call push_sub('states.states_calc_physical_current')

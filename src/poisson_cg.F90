@@ -147,14 +147,16 @@ contains
     der_pointer  => der
     mesh_pointer => m
 
-    allocate(rho_corrected(m%np), vh_correction(m%np), tmp(m%np_part))
+    allocate(rho_corrected(m%np_part), vh_correction(m%np), tmp(m%np_part))
+    rho_corrected = M_ZERO
+    tmp = M_ZERO
     call correct_rho(m, maxl, rho, rho_corrected, vh_correction)
     rho_corrected = - M_FOUR*M_PI*rho_corrected
     pot = pot - vh_correction
     iter = 400
     ! This assumes that the Laplacian is self-adjoint.
     tmp(1:m%np) = pot(1:m%np)
-    call dconjugate_gradients(m%np, tmp, rho_corrected, op, dotp, iter, res, threshold)
+    call dconjugate_gradients(m%np_part, tmp, rho_corrected, op, dotp, iter, res, threshold)
     if(res >= threshold) then
       message(1) = 'Conjugate gradients Poisson solver did not converge.'
       write(message(2), '(a,i8)')    '  Iter = ',iter

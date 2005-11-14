@@ -19,7 +19,7 @@
 
 ! calculates the eigenvalues of the real orbitals
 subroutine X(hamiltonian_eigenval)(h, gr, st)
-  type(hamiltonian_type), intent(in)    :: h
+  type(hamiltonian_type), intent(inout) :: h
   type(grid_type) ,       intent(inout) :: gr
   type(states_type),      intent(inout) :: st
 
@@ -45,7 +45,7 @@ end subroutine X(hamiltonian_eigenval)
 
 ! ---------------------------------------------------------
 subroutine X(Hpsi) (h, gr, psi, hpsi, ik, t)
-  type(hamiltonian_type), intent(in)    :: h
+  type(hamiltonian_type), intent(inout) :: h
   type(grid_type),        intent(inout) :: gr
   integer,                intent(in)    :: ik
   R_TYPE,                 intent(inout) :: psi(:,:)  !  psi(m%np_part, h%d%dim)
@@ -202,15 +202,14 @@ subroutine X(kinetic) (h, gr, psi, hpsi, ik)
     end do
   end if
 
-
   call pop_sub()
 end subroutine X(kinetic)
 
 ! ---------------------------------------------------------
 subroutine X(current_extra_terms) (gr, h, psi, hpsi, ik)
   type(grid_type),        intent(inout) :: gr
-  type(hamiltonian_type), intent(in)    :: h
-  R_TYPE,                 intent(in)    :: psi(:,:)  !  psi(m%np, h%d%dim)
+  type(hamiltonian_type), intent(inout) :: h
+  R_TYPE,                 intent(inout) :: psi(:,:)  !  psi(m%np_part, h%d%dim)
   R_TYPE,                 intent(out)   :: Hpsi(:,:) !  Hpsi(m%np, h%d%dim)
   integer,                intent(in)    :: ik
 
@@ -224,14 +223,14 @@ subroutine X(current_extra_terms) (gr, h, psi, hpsi, ik)
   select case (h%d%ispin)
   case(UNPOLARIZED)
     call df_divergence(gr%sb, gr%f_der, h%ahxc(:, :, 1), div)
-    hpsi(1:NP, 1) = hpsi(1:NP, 1) - M_HALF*M_zI*div*psi(:, 1)
+    hpsi(1:NP, 1) = hpsi(1:NP, 1) - M_HALF*M_zI*div*psi(1:NP, 1)
   case(SPIN_POLARIZED)
     if(modulo(ik+1, 2) == 0) then ! we have a spin down
       call df_divergence(gr%sb, gr%f_der, h%ahxc(:, :, 1), div)
     else
       call df_divergence(gr%sb, gr%f_der, h%ahxc(:, :, 2), div)
     end if
-    hpsi(:, 1) = hpsi(:, 1) - M_HALF*M_zI*div*psi(:, 1)
+    hpsi(1:NP, 1) = hpsi(1:NP, 1) - M_HALF*M_zI*div*psi(1:NP, 1)
   case(SPINORS)
     ! not implemented yet
   end select
@@ -368,7 +367,7 @@ end subroutine X(vlpsi)
 subroutine X(vlasers) (gr, h, psi, hpsi, t)
   type(grid_type),        intent(inout) :: gr
   type(hamiltonian_type), intent(in)    :: h
-  R_TYPE,                 intent(in)    :: psi(:,:)  !  psi(m%np_part, h%d%dim)
+  R_TYPE,                 intent(inout) :: psi(:,:)  !  psi(m%np_part, h%d%dim)
   R_TYPE,                 intent(inout) :: Hpsi(:,:) !  Hpsi(m%np_part, h%d%dim)
 
   FLOAT, intent(in) :: t

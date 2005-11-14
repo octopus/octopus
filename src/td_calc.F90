@@ -31,7 +31,7 @@
 subroutine td_calc_tacc(gr, st, h, acc, t)
   type(grid_type),        intent(inout) :: gr
   type(states_type),      intent(inout) :: st
-  type(hamiltonian_type), intent(in)    :: h
+  type(hamiltonian_type), intent(inout) :: h
   FLOAT,                  intent(in)    :: t
   FLOAT,                  intent(out)   :: acc(3)
 
