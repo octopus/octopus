@@ -117,7 +117,7 @@ subroutine X(derivatives_div)(der, f, div)
   if(der%zero_bc) then
     f(der%m%np+1:der%m%np_part,:) = R_TOTYPE(M_ZERO)
   end if
-  allocate(tmp(der%m%np))
+  ALLOCATE(tmp(der%m%np), der%m%np)
 
   div(:) = R_TOTYPE(M_ZERO)
   do i = 1, calc_dim
@@ -145,7 +145,7 @@ subroutine X(derivatives_curl)(der, f, curl)
   if(der%zero_bc) then
     f(der%m%np+1:der%m%np_part,:) = R_TOTYPE(M_ZERO)
   end if
-  allocate(tmp(der%m%np))
+  ALLOCATE(tmp(der%m%np), der%m%np)
 
   curl(:,:) = R_TOTYPE(M_ZERO)
 

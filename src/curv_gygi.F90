@@ -108,7 +108,10 @@ contains
     FLOAT, allocatable :: f(:,:), delta(:,:), J(:,:), chi2(:)
     logical :: conv
 
-    allocate(f(sb%dim, 1), delta(sb%dim, 1), J(sb%dim, sb%dim), chi2(sb%dim))
+    ALLOCATE(f(sb%dim, 1), sb%dim*1)
+    ALLOCATE(delta(sb%dim, 1), sb%dim*1)
+    ALLOCATE(J(sb%dim, sb%dim), sb%dim*sb%dim)
+    ALLOCATE(chi2(sb%dim), sb%dim)
 
     x(1:sb%dim) = chi(1:sb%dim)
 

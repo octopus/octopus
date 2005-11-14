@@ -55,8 +55,11 @@ subroutine eigen_solver_cg2(gr, st, h, tol, niter, converged, diff, reorder, ver
   niter = 0
   moved = 0
 
-  allocate(h_psi(1:NP_PART, st%d%dim), ppsi(1:NP_PART, st%d%dim), &
-    g(1:NP_PART, st%d%dim), g0(1:NP_PART, st%d%dim), cg(1:NP_PART, st%d%dim))
+  ALLOCATE(h_psi(NP_PART, st%d%dim), NP_PART*st%d%dim)
+  ALLOCATE( ppsi(NP_PART, st%d%dim), NP_PART*st%d%dim)
+  ALLOCATE(    g(NP_PART, st%d%dim), NP_PART*st%d%dim)
+  ALLOCATE(   g0(NP_PART, st%d%dim), NP_PART*st%d%dim)
+  ALLOCATE(   cg(NP_PART, st%d%dim), NP_PART*st%d%dim)
 
   ! Start of main loop, which runs over all the eigenvectors searched
   ik_loop: do ik = 1, st%d%nik
@@ -227,7 +230,7 @@ subroutine eigen_solver_cg2_new(gr, st, h, tol, niter, converged, diff, reorder,
   if(verbose_) then
     call messages_print_stress(stdout, "CG Info")
     message(1) = "Diagonalization with the conjugate gradients algorithm [new]."
-    write(message(2),'(a,e8.2)') '  Tolerance: ',tol
+    write(message(2),'(a,e8.2)') '  Tolerance: ', tol
     write(message(3),'(a,i6)')   '  Maximum number of iterations per eigenstate:', niter
     message(4) = ""
     call write_info(4)
@@ -239,8 +242,13 @@ subroutine eigen_solver_cg2_new(gr, st, h, tol, niter, converged, diff, reorder,
   maxter = niter
   niter = 0
 
-  allocate(phi(NP_PART, dim), psi(NP_PART, dim), hpsi(NP_PART, dim), &
-     cg(NP_PART, dim), hcgp(NP_PART, dim), sd(NP_PART, dim), cgp(NP_PART, dim))
+  ALLOCATE (phi(NP_PART, dim), NP_PART*dim)
+  ALLOCATE( psi(NP_PART, dim), NP_PART*dim)
+  ALLOCATE(hpsi(NP_PART, dim), NP_PART*dim)
+  ALLOCATE(  cg(NP_PART, dim), NP_PART*dim)
+  ALLOCATE(hcgp(NP_PART, dim), NP_PART*dim)
+  ALLOCATE(  sd(NP_PART, dim), NP_PART*dim)
+  ALLOCATE( cgp(NP_PART, dim), NP_PART*dim)
 
   kpoints: do ik = 1, nik
     conv = converged
@@ -281,8 +289,8 @@ subroutine eigen_solver_cg2_new(gr, st, h, tol, niter, converged, diff, reorder,
          ! Get steepest descent vector
          sd(1:NP, :) = lambda*psi(1:NP, :) - phi(1:NP, :)
          do k = 1, ist - 1
-            dump = X(states_dotp)(gr%m, dim, st%X(psi)(:, :, k, ik), sd(:, :))
-            sd(1:NP, :) = sd(1:NP, :) - dump*st%X(psi)(1:NP, :, k, ik)
+           dump = X(states_dotp)(gr%m, dim, st%X(psi)(:, :, k, ik), sd(:, :))
+           sd(1:NP, :) = sd(1:NP, :) - dump*st%X(psi)(1:NP, :, k, ik)
          end do
 
          ! Get conjugate-gradient vector

@@ -32,7 +32,13 @@
   if(.not.(expr)) call assert_die (__STRING(expr), __FILE__, __LINE__)
 #else
 #  define ASSERT(expr)
-!!#  define IN inout
+#endif
+
+#if defined(LONG_LINES)
+#  define ALLOCATE(x, size) \
+  allocate(x, stat=global_alloc_err); if(global_alloc_err.ne.0) call alloc_error((size), __FILE__, __LINE__)
+#else
+#  define ALLOCATE(x)
 #endif
 
 #define DOUBLE real(8)

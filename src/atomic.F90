@@ -122,8 +122,10 @@ contains
 
     call push_sub('atomic.atomhxc')
 
-    allocate(ve(g%nrval, nspin), xc(g%nrval, nspin), rho(g%nrval, nspin))
-             ve = M_ZERO; xc = M_ZERO; rho = M_ZERO
+    ALLOCATE( ve(g%nrval, nspin), g%nrval*nspin)
+    ALLOCATE( xc(g%nrval, nspin), g%nrval*nspin)
+    ALLOCATE(rho(g%nrval, nspin), g%nrval*nspin)
+    ve = M_ZERO; xc = M_ZERO; rho = M_ZERO
 
     ! To calculate the Hartree term, we put all the density in one variable.
     do is = 1, nspin

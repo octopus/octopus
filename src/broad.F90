@@ -76,7 +76,7 @@ contains
     integer :: n, iunit, j1, j2
 
     n = (b%max_energy - b%min_energy) / b%energy_step
-    allocate(s(4,n))
+    ALLOCATE(s(4,n), 4*n)
     s = M_ZERO
 
     iunit = io_open(trim(dir)//"/"// fname, action='read', status='old', die = .false.)

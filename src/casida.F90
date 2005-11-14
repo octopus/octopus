@@ -100,10 +100,13 @@ contains
     sys%st%nst    = nst
     sys%st%st_end = nst
     deallocate(sys%st%eigenval, sys%st%occ)
-    allocate(sys%st%X(psi) (sys%gr%m%np, sys%st%d%dim, sys%st%nst, sys%st%d%nik))
-    allocate(sys%st%eigenval(sys%st%nst, sys%st%d%nik), sys%st%occ(sys%st%nst, sys%st%d%nik))
+
+    ALLOCATE(sys%st%X(psi) (sys%gr%m%np, sys%st%d%dim, sys%st%nst, sys%st%d%nik), sys%gr%m%np*sys%st%d%dim*sys%st%nst*sys%st%d%nik)
+    ALLOCATE(sys%st%eigenval(sys%st%nst, sys%st%d%nik), sys%st%nst*sys%st%d%nik)
+    ALLOCATE(sys%st%occ(sys%st%nst, sys%st%d%nik), sys%st%nst*sys%st%d%nik)
+
     if(sys%st%d%ispin == SPINORS) then
-      allocate(sys%st%mag(sys%st%nst, sys%st%d%nik, 2))
+      ALLOCATE(sys%st%mag(sys%st%nst, sys%st%d%nik, 2), sys%st%nst*sys%st%d%nik*2)
       sys%st%mag = M_ZERO
     end if
     sys%st%eigenval = huge(PRECISION)
@@ -115,7 +118,9 @@ contains
       call write_fatal(1)
     end if
 
-    allocate(cas%n_occ(sys%st%d%nspin), cas%n_unocc(sys%st%d%nspin))
+    ALLOCATE(cas%n_occ(sys%st%d%nspin), sys%st%d%nspin)
+    ALLOCATE(cas%n_unocc(sys%st%d%nspin), sys%st%d%nspin)
+
     cas%n_occ(:) = 0
     do i = 1, sys%st%d%nspin
       do ist = 1, sys%st%nst
@@ -232,9 +237,14 @@ contains
     end if
 
     ! allocate stuff
-    allocate(cas%pair_i(cas%n_pairs), cas%pair_a(cas%n_pairs), cas%pair_sigma(cas%n_pairs))
-    allocate(cas%mat(cas%n_pairs, cas%n_pairs))
-    allocate(cas%tm(cas%n_pairs, dim), cas%f(cas%n_pairs), cas%s(cas%n_pairs), cas%w(cas%n_pairs))
+    ALLOCATE(cas%pair_i(cas%n_pairs), cas%n_pairs)
+    ALLOCATE(cas%pair_a(cas%n_pairs), cas%n_pairs)
+    ALLOCATE(cas%pair_sigma(cas%n_pairs), cas%n_pairs)
+    ALLOCATE(cas%mat(cas%n_pairs, cas%n_pairs), cas%n_pairs*cas%n_pairs)
+    ALLOCATE(cas%tm(cas%n_pairs, dim), cas%n_pairs*dim)
+    ALLOCATE(cas%f(cas%n_pairs), cas%n_pairs)
+    ALLOCATE(cas%s(cas%n_pairs), cas%n_pairs)
+    ALLOCATE(cas%w(cas%n_pairs), cas%n_pairs)
 
     ! create pairs
     j = 1
@@ -302,7 +312,7 @@ contains
     m  => sys%gr%m
 
     ! initialize stuff
-    allocate(saved_K(cas%n_pairs, cas%n_pairs))
+    ALLOCATE(saved_K(cas%n_pairs, cas%n_pairs), cas%n_pairs*cas%n_pairs)
     cas%mat = M_ZERO
     saved_K = .false.
     cas%tm  = R_TOTYPE(M_ZERO)
@@ -314,11 +324,14 @@ contains
     call load_saved()
 
     ! This is to be allocated here, and is used inside K_term.
-    allocate(pot(m%np)); j_old = -1; b_old = -1; mu_old = -1
+    ALLOCATE(pot(m%np), m%np)
+    j_old = -1; b_old = -1; mu_old = -1
 
     ! We calculate here the kernel, since it will be needed later.
-    allocate(rho(m%np, st%d%nspin), fxc(m%np, st%d%nspin, st%d%nspin))
+    ALLOCATE(rho(m%np, st%d%nspin), m%np*st%d%nspin)
+    ALLOCATE(fxc(m%np, st%d%nspin, st%d%nspin), m%np*st%d%nspin*st%d%nspin)
     rho = M_ZERO; fxc = M_ZERO
+
     if(associated(st%rho_core)) then
       do is = 1, st%d%spin_channels
         rho(:, is) = st%rho(:, is) + st%rho_core(:)/st%d%spin_channels
@@ -376,7 +389,8 @@ contains
         if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(ia-1, cas%n_pairs-1)
       end do
 
-      allocate(x(cas%n_pairs), deltav(m%np))
+      ALLOCATE(x(cas%n_pairs), cas%n_pairs)
+      ALLOCATE(deltav(m%np), m%np)
       do k = 1, m%sb%dim
         x = ks_matrix_elements(cas, st, m, deltav)
         !FIXME: Calculate the oscillator strengths and matrix elements a la Petersilka
@@ -440,7 +454,7 @@ contains
       ! sum all matrix elements
 #ifdef HAVE_MPI
       if(cas%parallel_in_eh_pairs) then
-        allocate(mpi_mat(cas%n_pairs, cas%n_pairs))
+        ALLOCATE(mpi_mat(cas%n_pairs, cas%n_pairs), cas%n_pairs*cas%n_pairs)
         call MPI_ALLREDUCE(cas%mat(1,1), mpi_mat(1,1), cas%n_pairs**2, &
           MPI_FLOAT, MPI_SUM, cas%mpi_grp%comm, mpi_err)
         cas%mat = mpi_mat
@@ -509,7 +523,8 @@ contains
           end if
         end do
 
-        allocate(deltav(m%np), x(cas%n_pairs))
+        ALLOCATE(deltav(m%np), m%np)
+        ALLOCATE(x(cas%n_pairs), cas%n_pairs)
         do k = 1, m%sb%dim
           deltav(1:m%np) = m%x(1:m%np, k)
           ! let us get now the x vector.
@@ -545,7 +560,8 @@ contains
 
       FLOAT, allocatable :: rho_i(:), rho_j(:)
 
-      allocate(rho_i(m%np), rho_j(m%np))
+      ALLOCATE(rho_i(m%np), m%np)
+      ALLOCATE(rho_j(m%np), m%np)
 
       rho_i(:) =  st%X(psi) (1:m%np, 1, i, sigma) * R_CONJ(st%X(psi) (1:m%np, 1, a, sigma))
       rho_j(:) =  R_CONJ(st%X(psi) (1:m%np, 1, j, mu)) * st%X(psi) (1:m%np, 1, b, mu)
@@ -605,7 +621,7 @@ contains
     R_TYPE, allocatable :: f(:)
     integer :: k, ia, i, a, sigma
 
-    allocate(f(m%np))
+    ALLOCATE(f(m%np), m%np)
     do ia = 1, cas%n_pairs
       i     = cas%pair_i(ia)
       a     = cas%pair_a(ia)
@@ -648,7 +664,11 @@ contains
     FLOAT, allocatable :: tmp(:)
     R_TYPE, allocatable :: xtmp(:)
     integer :: dim
-    allocate(ind(cas%n_pairs), itmp(cas%n_pairs), tmp(cas%n_pairs), xtmp(cas%n_pairs))
+
+    ALLOCATE( ind(cas%n_pairs), cas%n_pairs)
+    ALLOCATE(itmp(cas%n_pairs), cas%n_pairs)
+    ALLOCATE( tmp(cas%n_pairs), cas%n_pairs)
+    ALLOCATE(xtmp(cas%n_pairs), cas%n_pairs)
 
     call push_sub('casida.sort_energies')
 
@@ -684,9 +704,16 @@ contains
     casp%n_unocc   = cas%n_unocc
     casp%wfn_list  = cas%wfn_list
     casp%n_pairs   = cas%n_pairs
-    allocate(casp%pair_i(casp%n_pairs), casp%pair_a(casp%n_pairs), casp%mat(casp%n_pairs, casp%n_pairs))
+    ALLOCATE(casp%pair_i(casp%n_pairs), casp%n_pairs)
+    ALLOCATE(casp%pair_a(casp%n_pairs), casp%n_pairs)
+    ALLOCATE(casp%mat(casp%n_pairs, casp%n_pairs), casp%n_pairs*casp%n_pairs)
+
     dim = size(cas%tm, 2)
-    allocate(casp%tm(casp%n_pairs, dim), casp%s(casp%n_pairs), casp%f(casp%n_pairs), casp%w(casp%n_pairs))
+    ALLOCATE(casp%tm(casp%n_pairs, dim), casp%n_pairs*dim)
+    ALLOCATE(casp%s(casp%n_pairs), casp%n_pairs)
+    ALLOCATE(casp%f(casp%n_pairs), casp%n_pairs)
+    ALLOCATE(casp%w(casp%n_pairs), casp%n_pairs)
+
     casp%tm        = cas%tm
     casp%s         = cas%s
     casp%f         = cas%f

@@ -138,7 +138,7 @@ contains
     call loct_parse_int(check_inp('DerivativesOrder'), 4, der%order)
 
     ! construct lapl and grad structures
-    allocate(der%op(der%dim + 1))
+    ALLOCATE(der%op(der%dim + 1), der%dim + 1)
     der%grad => der%op
     der%lapl => der%op(der%dim + 1)
 
@@ -296,7 +296,8 @@ contains
       select case(der%stencil_type)
       case(DER_STAR) ! laplacian and gradient have different stencils
         do i = 1, der%dim + 1
-          allocate(polynomials(der%dim, der%op(i)%n), rhs(der%op(i)%n,1))
+          ALLOCATE(polynomials(der%dim, der%op(i)%n), der%dim*der%op(i)%n)
+          ALLOCATE(rhs(der%op(i)%n, 1), der%op(i)%n*1)
 
           if(i <= der%dim) then  ! gradient
             call stencil_star_polynomials_grad(i, der%order, polynomials)
@@ -311,7 +312,8 @@ contains
         end do
 
       case(DER_CUBE) ! laplacian and gradient have similar stencils
-        allocate(polynomials(der%dim, der%op(1)%n), rhs(der%op(1)%n, der%dim+1))
+        ALLOCATE(polynomials(der%dim, der%op(1)%n), der%dim*der%op(1)%n)
+        ALLOCATE(rhs(der%op(1)%n, der%dim+1), der%op(1)%n*(der%dim+1))
         call stencil_cube_polynomials_lapl(der%dim, der%order, polynomials)
 
         do i = 1, der%dim
@@ -324,13 +326,15 @@ contains
         deallocate(polynomials, rhs)
       case(DER_STARPLUS)
         do i = 1, der%dim
-          allocate(polynomials(der%dim, der%op(i)%n), rhs(der%op(i)%n, 1))
+          ALLOCATE(polynomials(der%dim, der%op(i)%n), der%dim*der%op(i)%n)
+          ALLOCATE(rhs(der%op(i)%n, 1), der%op(i)%n*1)
           call stencil_starplus_pol_grad(der%dim, i, der%order, polynomials)
           call get_rhs_grad(i, rhs(:, 1))
           call make_discretization(der%dim, der%m, polynomials, rhs, 1, der%op(i:i))
           deallocate(polynomials, rhs)
         end do
-        allocate(polynomials(der%dim, der%op(der%dim+1)%n), rhs(der%op(i)%n, 1))
+        ALLOCATE(polynomials(der%dim, der%op(der%dim+1)%n), der%dim*der%op(der%dim+1)%n)
+        ALLOCATE(rhs(der%op(i)%n, 1), der%op(i)%n*1)
         call stencil_starplus_pol_lapl(der%dim, der%order, polynomials)
         call get_rhs_lapl(rhs(:, 1))
         call make_discretization(der%dim, der%m, polynomials, rhs, 1, der%op(der%dim+1:der%dim+1))
@@ -458,14 +462,15 @@ contains
 
     call push_sub('derivatives.make_discretization')
 
-    allocate(mat(op(1)%n, op(1)%n), sol(op(1)%n, n))
+    ALLOCATE(mat(op(1)%n, op(1)%n), op(1)%n*op(1)%n)
+    ALLOCATE(sol(op(1)%n, n), op(1)%n*n)
 
     message(1) = 'Info: Generating weights for finite-difference discretization.'
     call write_info(1)
 
     ! use to generate power lookup table
     pow_max = maxval(pol)
-    allocate(powers(dim, 0:pow_max))
+    ALLOCATE(powers(dim, 0:pow_max), dim*(pow_max+1))
     powers(:,:) = M_ZERO
     powers(:,0) = M_ONE
 

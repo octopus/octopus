@@ -42,6 +42,7 @@ module messages
     time_diff,                &
     time_sum,                 &
     epoch_time_diff,          &
+    alloc_error,              &
     input_error,              &
     push_sub,                 &
     pop_sub,                  &
@@ -65,6 +66,7 @@ module messages
   integer, parameter, private :: unit_offset = 1000
   character(len=512), private :: msg
 
+  integer, public :: global_alloc_err
 contains
 
   ! ---------------------------------------------------------
@@ -261,6 +263,18 @@ contains
       action='write', status='unknown', position='append')
 
   end subroutine open_debug_trace
+
+
+  ! ---------------------------------------------------------
+  subroutine alloc_error(size, file, line)
+    integer,          intent(in) :: size
+    character(len=*), intent(in) :: file
+    integer,          intent(in) :: line
+
+    write(message(1), '(a,i10,3a,i5)') "Failed to allocate ", size/1024, " Kb in file '", trim(file), "' line ", line
+    call write_fatal(1)
+
+  end subroutine alloc_error
 
 
   ! ---------------------------------------------------------

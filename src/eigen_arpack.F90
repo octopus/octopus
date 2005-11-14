@@ -54,8 +54,14 @@ subroutine eigen_solver_arpack(gr, st, h, tol_, niter, ncv, converged, diff)
     n = NP
     nev = st%nst
     lworkl  = 3*ncv**2+6*ncv
-    allocate(ax(ldv), d(ncv,3), resid(ldv), v(ldv,ncv), workd(3*ldv), &
-      workev(3*ncv), workl(lworkl),select(ncv))
+    ALLOCATE(ax(ldv),       ldv)
+    ALLOCATE(d(ncv, 3),     ncv*3)
+    ALLOCATE(resid(ldv),    ldv)
+    ALLOCATE(v(ldv, ncv),   ldv*ncv)
+    ALLOCATE(workd(3*ldv),  3*ldv)
+    ALLOCATE(workev(3*ncv), 3*ncv)
+    ALLOCATE(workl(lworkl), lworkl)
+    ALLOCATE(select(ncv),   ncv)
 
     select = .true.
     tol    = tol_
@@ -130,7 +136,8 @@ contains
     integer :: i
     R_TYPE, allocatable :: psi(:, :), hpsi(:, :)
 
-    allocate(psi(NP, 1), hpsi(NP, 1))
+    ALLOCATE(psi(NP, 1),  NP*1)
+    ALLOCATE(hpsi(NP, 1), NP*1)
 
     do i = 1, NP
       psi(i, 1) = v(i)/sqrt(gr%m%vol_pp(i))

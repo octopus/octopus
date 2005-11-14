@@ -66,7 +66,7 @@ program cross_section
          case(3);    j = 1
       end select
 
-      allocate(filename(j))
+      ALLOCATE(filename(j), 150)
       do i = 1, j
          write(filename(i),'(a,i1)') 'cross_section_vector.',i
          out_file(i) = io_open(trim(filename(i)),action='write')

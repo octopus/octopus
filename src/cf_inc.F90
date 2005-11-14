@@ -49,7 +49,7 @@ subroutine X(cf_new_from)(cf, cf_i)
 
 #if defined(HAVE_FFT)
   if(associated(cf_i%fft)) then
-    allocate(cf%fft)
+    ALLOCATE(cf%fft, 1)
     call fft_copy(cf_i%fft, cf%fft)
     cf%nx = cf_i%nx
   else
@@ -65,7 +65,7 @@ subroutine X(cf_alloc_RS)(cf)
   call push_sub('cf_inc.Xcf_alloc_RS')
 
   ASSERT(.not.associated(cf%RS))
-  allocate(cf%RS(cf%n(1), cf%n(2), cf%n(3)))
+  ALLOCATE(cf%RS(cf%n(1), cf%n(2), cf%n(3)), cf%n(1)*cf%n(2)*cf%n(3))
 
   call pop_sub()
 end subroutine X(cf_alloc_RS)
@@ -90,7 +90,7 @@ subroutine X(cf_alloc_FS)(cf)
   ASSERT(.not.associated(cf%FS))
   ASSERT(associated(cf%fft))
 
-  allocate(cf%FS(cf%nx, cf%n(2), cf%n(3)))
+  ALLOCATE(cf%FS(cf%nx, cf%n(2), cf%n(3)), cf%nx*cf%n(2)*cf%n(3))
 
   call pop_sub()
 end subroutine X(cf_alloc_FS)
@@ -144,7 +144,7 @@ subroutine X(cf_fft_init)(cf, sb)
   ASSERT(.not.associated(cf%RS))
   ASSERT(.not.associated(cf%FS))
 
-  allocate(cf%fft)
+  ALLOCATE(cf%fft, 1)
 #ifdef R_TREAL
   call fft_init(sb, cf%n, fft_real, cf%fft)
   cf%nx = cf%n(1)/2 + 1
