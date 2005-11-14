@@ -1,8 +1,6 @@
 lanczos          = 2
 unformatted      = 1 # RestartFileFormat
 formatted        = 2
-plain            = 1
-netcdf           = 2
 usdef            = 1 # Species block (type)
 point            = 2
 jelli            = 3
