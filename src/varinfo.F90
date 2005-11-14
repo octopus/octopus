@@ -84,12 +84,18 @@ contains
 
 
   ! ---------------------------------------------------------
-  logical function varinfo_valid_option(var, option) result(l)
-    character(len=*), intent(in) :: var
-    integer,          intent(in) :: option
+  logical function varinfo_valid_option(var, option, is_flag) result(l)
+    character(len=*),  intent(in) :: var
+    integer,           intent(in) :: option
+    logical, optional, intent(in) :: is_flag
 
     integer(POINTER_SIZE) :: handle, opt, name, desc
-    integer :: value
+    integer :: value, option_
+    logical :: is_flag_
+
+    is_flag_ = .false.
+    if(present(is_flag)) is_flag_ = is_flag
+    option_ = option ! copy that we can change
 
     l = .false.
 
@@ -101,10 +107,19 @@ contains
       call varinfo_getopt(handle, opt)
       if(opt == 0) exit
       call varinfo_opt_getinfo(opt, name, value, desc)
-      if(value == option) then
-        l = .true.; return
+
+      if(is_flag_) then
+        option_ = iand(option_, not(value))
+      else
+        if(value == option_) then
+          l = .true.
+          return
+        end if
       end if
+
     end do
+
+    if(is_flag_ .and. (option_ == 0)) l = .true.
 
   end function varinfo_valid_option
 
@@ -138,7 +153,8 @@ contains
         else
           write(iunit, '(1x)')
         end if
-        call print_C_string(iunit, desc, pre='  > ')
+        ! uncoment to print the description of the options
+        !call print_C_string(iunit, desc, pre='  > ')
 
         return
       end if

@@ -813,7 +813,7 @@ contains
     integer :: i, ik, j, mode, ns
     FLOAT :: factor(3)
 
-    integer, parameter :: GNUPLOT = 1, &
+    integer, parameter :: GNUPLOT = 1024, &
       XMGRACE = 2
 
     if(.not.mpi_grp_is_root(mpi_world)) return
@@ -824,10 +824,10 @@ contains
     !%Section Output
     !%Description
     !% Chose if the band file is to be written in gnuplot or xmgrace firendly format
-    !%Option gnuplot 1 
-    !% gnuplot format
     !%Option xmgrace 2
     !% xmgrace format
+    !%Option gnuplot 1024
+    !% gnuplot format
     !%End
     call loct_parse_int(check_inp('OutputBandsMode'), GNUPLOT, mode)
     if(.not.varinfo_valid_option('OutputBandsMode', mode)) call input_error('OutputBandsMode')

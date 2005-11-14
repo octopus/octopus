@@ -38,6 +38,7 @@ module output
   use par_vec
   use mpi_mod
   use mpi_debug_mod
+  use varinfo
 
   implicit none
 
@@ -58,12 +59,11 @@ module output
   integer, parameter, public  :: &
     output_potential  =    1,    &
     output_density    =    2,    &
-    output_wfs        =    3,    &
-    output_ELF        =    4,    &
-    output_ELF_FS     =    5,    &
-    output_geometry   =    6,    &
-    output_wfs_sqmod  =    7,    &
-    output_something  =    8     ! this one should be the last
+    output_wfs        =    4,    &
+    output_wfs_sqmod  =    8,    &
+    output_geometry   =   16,    &
+    output_ELF        =   32,    &
+    output_ELF_FS     =   64
 
   integer, parameter, private :: &
     output_axis_x     =    1,    &
@@ -84,7 +84,7 @@ module output
     zoutput_kind      =   -1
 
   type output_type
-    logical :: what(8)
+    integer :: what
     integer :: how               ! how to output
 
     integer :: iter              ! output every iter
@@ -104,84 +104,51 @@ contains
     integer :: i
     logical :: l
 
-    !%Variable OutputKSPotential
-    !%Type logical
+    !%Variable Output
+    !%Type flag
     !%Default no
     !%Section Output
     !%Description
+    !% Specifies what to print. The output files go into the "static" directory, except when
+    !% running a time-dependent simulation, when the directory "td.XXXXXXX" is used.
+    !% Example: "density + potential"
+    !%Option potential 1
     !% Prints out Kohn-Sham potential, separated by parts. File names would be "v0" for 
     !% the local part, "vc" for the classical potential (if it exists), "vh" for the
     !% Hartree potential, and "vxc-x" for each of the exchange and correlation potentials
     !% of a give spin channel, where "x" stands for the spin channel.
-    !%End
-    call loct_parse_logical(check_inp('OutputKSPotential'), .false., outp%what(output_potential))
-
-    !%Variable OutputDensity
-    !%Type logical
-    !%Default no
-    !%Section Output
-    !%Description
+    !%Option density 2
     !% Prints out the density. The output file is called "density-i", where "i" stands for 
     !% the spin channel.
-    !%End
-    call loct_parse_logical(check_inp('OutputDensity'),     .false., outp%what(output_density))
-
-    !%Variable OutputWfs
-    !%Type logical
-    !%Default no
-    !%Section Output
-    !%Description
+    !%Option wfs 4
     !% Prints out wave-functions. Which wavefunctions are to be printed is specified
     !% by the variable <tt>OutputWfsNumber</tt> -- see below. The output file is called
     !% "wf-k-p-i", where k stands for the <i>k</i> number, p for the state, and
     !% i for the spin channel.
-    !%End
-    call loct_parse_logical(check_inp('OutputWfs'),         .false., outp%what(output_wfs))
-
-    !%Variable OutputELF
-    !%Type logical
-    !%Default no
-    !%Section Output
-    !%Description
-    !% Prints out the electron localization function, ELF. The output file is called
-    !% "elf-i", where i stands for the spin channel.
-    !%End
-    call loct_parse_logical(check_inp('OutputELF'),         .false., outp%what(output_elf))
-
-    call loct_parse_logical(check_inp('OutputELF_FS'),      .false., outp%what(output_elf_FS))
-
-    !%Variable OutputGeometry
-    !%Type logical
-    !%Default no
-    !%Section Output
-    !%Description    
-    !% If true @code{octopus} outputs a XYZ file called 
-    !% "geometry.xyz" containing the coordinates of the atoms
-    !% treated within Quantum Mechanics. If point charges were defined
-    !% in the PDB file (see <tt>PDBCoordinates</tt>), they will be output
-    !% in the file "geometry_classical.xyz".
-    !%End
-    call loct_parse_logical(check_inp('OutputGeometry'),    .false., outp%what(output_geometry))
-
-    !%Variable OutputWfSqMod
-    !%Type logical
-    !%Default no
-    !%Section Output
-    !%Description
+    !%Option wfs_sqmod 8
     !% Prints out squared module of wave-functions. 
     !% The output file is called "sqm-wf-k-p-i",
     !% where k stands for the <i>k</i> number, p for the state,
     !% and i for the spin channel.
+    !%Option geometry 16
+    !% Outputs a XYZ file called "geometry.xyz" containing the coordinates of the atoms
+    !% treated within Quantum Mechanics. If point charges were defined
+    !% in the PDB file (see <tt>PDBCoordinates</tt>), they will be output
+    !% in the file "geometry_classical.xyz".
+    !%Option ELF 32
+    !% Prints out the electron localization function, ELF. The output file is called
+    !% "elf-i", where i stands for the spin channel.
+    !%Option ELF_FS 64
+    !% Prints the electron localization function in Fourier space. The output file is called
+    !% "elf_FS-i", where i stands for the spin channel. (EXPERIMENTAL)
+    !%Option
     !%End
+    call loct_parse_int(check_inp('Output'), 0, outp%what)
+    if(.not.varinfo_valid_option('Output', outp%what, is_flag=.true.)) then
+      call input_error('Output')
+    end if
 
-    call loct_parse_logical(check_inp('OutputWfsSqMod'),    .false., outp%what(output_wfs_sqmod))
-
-    outp%what(output_something) = .false.
-    do i = 1, output_something - 1
-      outp%what(output_something) = outp%what(output_something).or.outp%what(i)
-    end do
-
-    if(outp%what(output_wfs)) then
+    if(iand(outp%what, output_wfs).ne.0) then
       !%Variable OutputWfsNumber
       !%Type string
       !%Default "1-1024"
@@ -193,121 +160,64 @@ contains
       call loct_parse_string(check_inp('OutputWfsNumber'), "1-1024", outp%wfs_list)
     end if
 
-    if(outp%what(output_something)) then
-      outp%how = 0
-      !%Variable OutputMeshIndex
-      !%Type logical
-      !%Default no
+    outp%how = 0
+    if(outp%what.ne.0) then
+      !%Variable OutputHow
+      !%Type flag
+      !%Default 0
       !%Section Output
       !%Description
+      !% Describes the format of the output files (see <tt>Output</tt>).
+      !% Example: "axis_x + plane_x + dx"
+      !%Option axis_x 1
+      !% The values of the function on the <math>x</math> axis are printed. The string ".y=0,z=0" is appended
+      !% to previous file names.
+      !%Option axis_y 2
+      !% The values of the function on the <math>y</math> axis are printed. The string ".x=0,z=0" is appended
+      !% to previous file names.
+      !%Option axis_z 4
+      !% The values of the function on the <math>z</math> axis are printed. The string ".x=0,y=0" is appended
+      !% to previous file names.
+      !%Option plane_x 8
+      !% A plane slice at @math{x=0} is printed. The string ``.x=0'' is appended
+      !% to previous file names.
+      !%Option plane_y 16
+      !% A plane slice at <math>y=0</math> is printed. The string ".y=0" is appended
+      !% to previous file names.
+      !%Option plane_z 32
+      !% A plane slice at <math>y=0</math> is printed. The string ".z=0" is appended to
+      !% previous file names.
+      !%Option dx 64
+      !% For printing all the three dimensional information, the open source program
+      !% visualization tool OpenDX (http://www.opendx.org/) is used. The string
+      !% ".dx" is appended to previous file names.
+      !%Option dx_cdf 128
+      !% Outputs in NetCDF (http://www.unidata.ucar.edu/packages/netcdf/) format. This file
+      !% can then be read, for example, by OpenDX. The string ".ncdf" is appended to previous file names.
+      !% Requires the NetCDF library.
+      !%Option plain 256
+      !% Restart files are output in plain binary.
+      !%Option mesh_index 512
       !% Generates output files of a given quantity (Density, Wfs, ...) which include
       !% the internal numbering of mesh points. Since this mode produces large datafiles this is only 
       !% useful for small meshes and debugging purposes.
       !% The output can also be used to display the mesh directly. A gnuplot script for mesh vizualization
       !% can be found under <tt>PREFIX/share/octopus/util/display_mesh_index.gp</tt>
+      !%Option gnuplot 1024
+      !% Adds newlines to the plane cuts, so that gnuplot can print then in 3D
       !%End
-      call loct_parse_logical(check_inp('OutputMeshIndex'), .false., l)
-      if(l) outp%how = ior(outp%how, output_mesh_index)
-
-      !%Variable OutputAxisX
-      !%Type logical
-      !%Default no
-      !%Section Output
-      !%Description
-      !% The values of the function on the <math>x</math> axis are printed. The string ".y=0,z=0" is appended
-      !% to previous file names.
-      !%End
-
-      call loct_parse_logical(check_inp('OutputAxisX'), .false., l)
-      if(l) outp%how = ior(outp%how, output_axis_x)
-      if(sb%dim > 1) then
-        !%Variable OutputAxisY
-        !%Type logical
-        !%Default no
-        !%Section Output
-        !%Description
-        !% The values of the function on the <math>y</math> axis are printed. The string ".x=0,z=0" is appended
-        !% to previous file names.
-        !%End
-        call loct_parse_logical(check_inp('OutputAxisY'), .false., l)
-        if(l) outp%how = ior(outp%how, output_axis_y)
-
-        !%Variable OutputPlaneZ
-        !%Type logical
-        !%Default no
-        !%Section Output
-        !%Description
-        !% A plane slice at <math>y=0</math> is printed. The string ".z=0" is appended to
-        !% previous file names.
-        !%End
-        call loct_parse_logical(check_inp('OutputPlaneZ'), .false., l)
-        if(l) outp%how = ior(outp%how, output_plane_z)
-        call loct_parse_logical(check_inp('OutputGnuplotMode'), .false., l)
-        if(l) outp%how = ior(outp%how, output_gnuplot)
-        if(sb%dim > 2) then
-
-          !%Variable OutputAxisZ
-          !%Type logical
-          !%Default no
-          !%Section Output
-          !%Description
-          !% The values of the function on the <math>z</math> axis are printed. The string ".x=0,y=0" is appended
-          !% to previous file names.
-          !%End
-          call loct_parse_logical(check_inp('OutputAxisZ'), .false., l)
-          if(l) outp%how = ior(outp%how, output_axis_z)
-
-          !%Variable OutputPlaneX
-          !%Type logical
-          !%Default no
-          !%Section Output
-          !%Description
-          !% A plane slice at @math{x=0} is printed. The string ``.x=0'' is appended
-          !% to previous file names.
-          !%End
-          call loct_parse_logical(check_inp('OutputPlaneX'), .false., l)
-          if(l) outp%how = ior(outp%how, output_plane_x)
-
-          !%Variable OutputPlaneY
-          !%Type logical
-          !%Default no
-          !%Section Output
-          !%Description
-          !% A plane slice at <math>y=0</math> is printed. The string ".y=0" is appended
-          !% to previous file names.
-          !%End
-          call loct_parse_logical(check_inp('OutputPlaneY'), .false., l)
-          if(l) outp%how = ior(outp%how, output_plane_y)
-
-          !%Variable OutputDX
-          !%Type logical
-          !%Default no
-          !%Section Output
-          !%Description
-          !% For printing all the three dimensional information, the open source program
-          !% visualization tool OpenDX (http://www.opendx.org/) is used. The string
-          !% ".dx" is appended to previous file names.
-          !%End
-          call loct_parse_logical(check_inp('OutputDX'), .false., l)
-          if(l) outp%how = ior(outp%how, output_dx)
-
-#if defined(HAVE_NETCDF)
-          !%Variable OutputNETCDF
-          !%Type logical
-          !%Default no
-          !%Section Output
-          !%Description
-          !% Outputs in NetCDF (http://www.unidata.ucar.edu/packages/netcdf/) format. This file
-          !% can then be read, for example, by OpenDX. The string ".ncdf" is appended to previous file names. 
-          !%End
-          call loct_parse_logical(check_inp('OutputNETCDF'), .false., l)
-          if(l) then
-            outp%how = ior(outp%how, output_dx_cdf)
-          end if
-#endif
-        end if
+      call loct_parse_int(check_inp('OutputHow'), 0, outp%how)
+      if(.not.varinfo_valid_option('OutputHow', outp%how, is_flag=.true.)) then
+        call input_error('OutputHow')
       end if
 
+      ! some modes are not available in some circunstances, so we reset outp%how
+      if(sb%dim == 1) outp%how = iand(outp%how, not(output_axis_y + output_plane_z + output_gnuplot))
+      if(sb%dim <= 2) outp%how = iand(outp%how, not(output_axis_z + output_plane_x + output_plane_y + &
+         output_dx + output_dx_cdf))
+#if !defined(HAVE_NETCDF)
+      outp%how = iand(outp%how, not(output_dx_cdf))
+#endif
     end if
 
     !%Variable OutputEvery

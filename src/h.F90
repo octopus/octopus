@@ -406,7 +406,7 @@ contains
     call push_sub('h.hamiltonian_output')
 
     u = units_out%energy%factor
-    if(outp%what(output_potential)) then
+    if(iand(outp%what, output_potential).ne.0) then
       call doutput_function(outp%how, dir, "v0", m, sb, h%ep%vpsl, u, err)
 
       if(h%ep%classic_pot > 0) then

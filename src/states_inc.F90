@@ -192,14 +192,14 @@ subroutine X(states_output) (st, gr, dir, outp)
 
   u = M_ONE/units_out%length%factor**NDIM
 
-  if(outp%what(output_density)) then
+  if(iand(outp%what, output_density).ne.0) then
     do is = 1, st%d%nspin
       write(fname, '(a,i1)') 'density-', is
       call doutput_function(outp%how, dir, fname, gr%m, gr%sb, st%rho(:, is), u, ierr)
     end do
   end if
 
-  if(outp%what(output_wfs)) then
+  if(iand(outp%what, output_wfs).ne.0) then
     do ist = st%st_start, st%st_end
       if(loct_isinstringlist(ist, outp%wfs_list)) then
         do ik = 1, st%d%nik
@@ -214,7 +214,7 @@ subroutine X(states_output) (st, gr, dir, outp)
   end if
 
 
-  if(outp%what(output_wfs_sqmod)) then
+  if(iand(outp%what, output_wfs_sqmod).ne.0) then
     allocate(dtmp(NP))
     do ist = 1, st%nst
       if(loct_isinstringlist(ist, outp%wfs_list)) then
@@ -231,8 +231,8 @@ subroutine X(states_output) (st, gr, dir, outp)
   end if
 
   if(NDIM==3) then
-    if(outp%what(output_elf))    call elf(.true.,  'elf_rs')
-    if(outp%what(output_elf_FS)) call elf(.false., 'elf_fs')
+    if(iand(outp%what, output_elf).ne.0)    call elf(.true.,  'elf_rs')
+    if(iand(outp%what, output_elf_FS).ne.0) call elf(.false., 'elf_fs')
   end if
 
   call pop_sub()

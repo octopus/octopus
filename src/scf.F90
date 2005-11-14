@@ -56,8 +56,8 @@ module scf
     scf_end
 
   integer, parameter :: &
-    MIXDENS = 0,        &
-    MIXPOT  = 1
+    MIXPOT  = 1,        &
+    MIXDENS = 2
 
   type scf_type         ! some variables used for the scf cycle
     integer :: max_iter ! maximum number of scf iterations
@@ -163,12 +163,12 @@ contains
     !%Section SCF::Mixing
     !%Description
     !% Selects what should be mixed during the SCF cycle.
-    !%Option density 0
-    !% The density
     !%Option potential 1
     !% The Kohn-Sham potential
+    !%Option density 2
+    !% The density
     !%End
-    call loct_parse_int(check_inp('What2Mix'), 0, scf%what2mix)
+    call loct_parse_int(check_inp('What2Mix'), MIXDENS, scf%what2mix)
     if(.not.varinfo_valid_option('What2Mix', scf%what2mix)) call input_error('What2Mix')
     call messages_print_var_option(stdout, "What2Mix", scf%what2mix, "what to mix during SCF cycles")
 
@@ -398,7 +398,7 @@ contains
     ! output final information
     call scf_write_static("static", "info")
     call X(states_output) (st, gr, "static", outp)
-    if(outp%what(output_geometry)) &
+    if(iand(outp%what, output_geometry).ne.0) &
       call atom_write_xyz("static", "geometry", gr%geo)
     call hamiltonian_output(h, gr%m, gr%sb, "static", outp)
 

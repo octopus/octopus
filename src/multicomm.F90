@@ -189,7 +189,7 @@ contains
       integer :: i, j, par_all
 
       !%Variable ParallelizationStrategy
-      !%Type integer
+      !%Type flag
       !%Default par_domains + par_states + par_kpoints
       !%Section Generalities::Parallel
       !%Description
@@ -215,7 +215,7 @@ contains
         call loct_parse_int(check_inp('ParallelizationStrategy'),  &
           par_all, mc%par_strategy)
 
-        if(mc%par_strategy<P_STRATEGY_SERIAL.or.mc%par_strategy>par_all) then
+        if(.not.varinfo_valid_option('ParallelizationStrategy', mc%par_strategy, is_flag=.true.)) then
           call input_error('ParallelizationStrategy')
         end if
 

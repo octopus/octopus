@@ -40,6 +40,7 @@ module td_write
   use grid
   use spectrum
   use mpi_mod
+  use varinfo
 
   implicit none
 
@@ -71,7 +72,6 @@ module td_write
                                   ! calculate the projections(s) onto it.
   end type td_write_type
 
-
 contains
 
   ! ---------------------------------------------------------
@@ -86,101 +86,68 @@ contains
 
 
     FLOAT :: rmin
-    integer :: ierr, first, i
-    logical :: log
+    integer :: ierr, first, i, flags
 
     call push_sub('td_write.td_write_handler')
 
-    !%Variable TDOutputMultipoles
-    !%Type logical
-    !%Default yes
+
+    !%Variable TDOutput
+    !%Type flag
+    !%Default multipoles + geometry
     !%Section Time Dependent::TD Output
     !%Description
-    !% If true, outputs the multipole moments of the density to the file <tt>td.general/multipoles</tt>.
-    !% This is required to, e.g., calculate optical absorption spectra of finite systems.
-    !%End
-    call loct_parse_logical(check_inp('TDOutputMultipoles'), .true., log)
-    w%out_multip = 0; if(log) w%out_multip = 1
-
-    !%Variable TDOutputCoordinates
-    !%Type logical
-    !%Default yes
-    !%Section Time Dependent::TD Output
-    !%Description
-    !% If true (and if the atoms are allowed to move), outputs the coordinates, velocities,
-    !% and forces of the atoms to the the file <tt>td.general/coordinates</tt>.
-    !%End
-    call loct_parse_logical(check_inp('TDOutputCoordinates'), .true., log)
-    if(.not.(ions_move))  log = .false.
-    w%out_coords = 0; if(log) w%out_coords = 1
-
-    call loct_parse_logical(check_inp('TDOutputAngularMomentum'), .false., log)
-    w%out_angular = 0; if(log) w%out_angular = 1
-
-    call loct_parse_logical(check_inp('TDOutputSpin'), .false., log)
-    w%out_spin = 0; if(log) w%out_spin = 1
-
-    !%Variable TDOutputGSProjection
-    !%Type logical
-    !%Default no
-    !%Section Time Dependent::TD Output
-    !%Description
-    !% If true, outputs the projection of the time-dependent Kohn-Sham Slater determinant
+    !% Defines what should be output during the time-dependent simulation.
+    !%Option multipoles 1
+    !% Outputs the multipole moments of the density to the file <tt>td.general/multipoles</tt>.
+    !% This is required to, e.g., calculate optical absorption spectra of finite systems. The
+    !% maximum value of <math>l</math> can be set with the variable <tt>TDDipoleLmax</tt>.
+    !%Option angular 2
+    !% Outputs the angular momentum of the system that can be used to calculate circular
+    !% dichroism (EXPERIMENTAL)
+    !%Option spin 4
+    !% Outputs the expectation value of the spin, that can be used to calculate magnetic
+    !% cicular dichroism (EXPERIMENTAL)
+    !%Option gs_proj 8
+    !% Outputs the projection of the time-dependent Kohn-Sham Slater determinant
     !% onto the ground-state to the file <tt>td.general/gs_projection</tt>. As the calculation
     !% of the projection is fairly heavy, this is only done every <tt>OutputEvery</tt> 
     !% iterations.
-    !%End
-    call loct_parse_logical(check_inp('TDOutputGSProjection'), .false., log)
-    w%out_gsp = 0; if(log) w%out_gsp = 1
-
-    !%Variable TDOutputAcceleration
-    !%Type logical
-    !%Default no
-    !%Section Time Dependent::TD Output
-    !%Description
-    !% When <tt>true</tt> outputs the acceleration, calculated from Ehrenfest theorem,
+    !%Option geometry 16
+    !% If set (and if the atoms are allowed to move), outputs the coordinates, velocities,
+    !% and forces of the atoms to the the file <tt>td.general/coordinates</tt>.
+    !%Option acceleration 32
+    !% When set outputs the acceleration, calculated from Ehrenfest theorem,
     !% in the file <tt>td.general/acceleration</tt>. This file can then be
     !% processed by the utility "hs-from-acc" in order to obtain the harmonic spectrum.
-    !%End
-    call loct_parse_logical(check_inp('TDOutputAcceleration'), .false., log)
-    w%out_acc = 0; if(log) w%out_acc = 1
-
-    !%Variable TDOutputLaser
-    !%Type logical
-    !%Default yes
-    !%Section Time Dependent::TD Output
-    !%Description
-    !% If <tt>true</tt>, and if there are lasers defined in <tt>TDLasers</tt>,
+    !%Option laser 64
+    !% If set, and if there are lasers defined in <tt>TDLasers</tt>,
     !% <tt>octopus</tt> outputs the laser field to the file <tt>td.general/laser</tt>.
-    !%End
-    call loct_parse_logical(check_inp('TDOutputLaser'), there_are_lasers, log)
-    w%out_laser = 0; if(log) w%out_laser = 1
-
-    !%Variable TDOutputElEnergy
-    !%Type logical
-    !%Default no
-    !%Section Time Dependent::TD Output
-    !%Description
-    !% If <tt>true</tt>, <tt>octopus</tt> outputs the different components of the electronic energy
+    !%Option el_energy 128
+    !% If <tt>set</tt>, <tt>octopus</tt> outputs the different components of the electronic energy
     !% to the file <tt>td.general/el_energy</tt>.
-    !%End
-    call loct_parse_logical(check_inp('TDOutputElEnergy'), .false., log)
-    w%out_energy = 0; if(log) w%out_energy = 1
-
-    !%Variable TDOutputOccAnalysis
-    !%Type logical
-    !%Default no
-    !%Section Time Dependent::TD Output
-    !%Description
-    !% If true, outputs the projections of the time-dependent Kohn-Sham
+    !%Option td_occup 256
+    !% If set, outputs the projections of the time-dependent Kohn-Sham
     !% wave-functions onto the static (zero time) wave-functions to the
     !% file <tt>td.general/projections.XXX</tt>.
+    !%Option local_mag_moments 512
+    !% If set, outputs the local magnetic moments, integrated in sphere centered around each atom.
+    !% The radius of the sphere can be ser with <tt>LocalMagneticMomentsSphereRadius</tt>
     !%End
-    call loct_parse_logical(check_inp('TDOutputOccAnalysis'), .false., log)
-    w%out_proj = 0; if(log) w%out_proj = 1
+    call loct_parse_int(check_inp('TDOutput'), 1+16, flags)
+    if(.not.varinfo_valid_option('TDOutput', flags, is_flag=.true.)) then
+      call input_error('TDOutput')
+    end if
 
-    call loct_parse_logical(check_inp('TDOutputLocalMagneticMoments'), .false., log)
-    w%out_magnets = 0; if(log) w%out_magnets = 1
+    w%out_multip  = 0; if(iand(flags,   1).ne.0) w%out_multip  = 1
+    w%out_angular = 0; if(iand(flags,   2).ne.0) w%out_angular = 1
+    w%out_spin    = 0; if(iand(flags,   4).ne.0) w%out_spin    = 1
+    w%out_gsp     = 0; if(iand(flags,   8).ne.0) w%out_gsp     = 1
+    w%out_coords  = 0; if(iand(flags,  16).ne.0.and.ions_move) w%out_coords = 1
+    w%out_acc     = 0; if(iand(flags,  32).ne.0) w%out_acc     = 1
+    w%out_laser   = 0; if(iand(flags,  64).ne.0) w%out_laser   = 1
+    w%out_energy  = 0; if(iand(flags, 128).ne.0) w%out_energy  = 1
+    w%out_proj    = 0; if(iand(flags, 256).ne.0) w%out_proj    = 1
+    w%out_magnets = 0; if(iand(flags, 512).ne.0) w%out_magnets = 1
 
     !%Variable TDDipoleLmax
     !%Type integer
@@ -351,7 +318,7 @@ contains
     write(filename, '(a,i7.7)') "td.", iter  ! name of directory
 
     call zstates_output(st, gr, filename, outp)
-    if(outp%what(output_geometry)) &
+    if(iand(outp%what, output_geometry).ne.0) &
       call atom_write_xyz(filename, "geometry", geo)
     call hamiltonian_output(h, gr%m, gr%sb, filename, outp)
 
