@@ -38,7 +38,7 @@
 #  define ALLOCATE(x, size) \
   allocate(x, stat=global_alloc_err); if(global_alloc_err.ne.0) call alloc_error((size), __FILE__, __LINE__)
 #else
-#  define ALLOCATE(x)
+#  define ALLOCATE(x, size) allocate(x)
 #endif
 
 #define DOUBLE real(8)
