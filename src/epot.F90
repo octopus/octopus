@@ -162,57 +162,66 @@ contains
       call laser_write_info(ep%no_lasers, ep%lasers, stdout)
     end if
 
-    ! static electric field
+    !%Variable StaticElectricField
+    !%Type block
+    !%Section Hamiltonian
+    !%Description
+    !% A static constant electrical field may be added to the usual Hamiltonian,
+    !% by setting the block StaticElectricField. Atomic units will be assumed
+    !% always for its magnitude, regardless of the unit system specified.
+    !% The three possible components of the block (which should only have one
+    !% line) are the three components of the electrical field vector.
+    !%End
     nullify(ep%E_field, ep%v_static)
     if(loct_parse_block(check_inp('StaticElectricField'), blk)==0) then
-      allocate(ep%E_field(NDIM))
-      select case(loct_parse_block_n(blk))
-      case (1)
-        do i = 1, NDIM
-          call loct_parse_block_float(blk, 0, i-1, ep%E_field(i))
-        end do
-      end select
+      ALLOCATE(ep%E_field(NDIM), NDIM)
+      do i = 1, NDIM
+        call loct_parse_block_float(blk, 0, i-1, ep%E_field(i))
+      end do
       call loct_parse_block_end(blk)
 
       ! Compute the scalar potential
-      allocate(ep%v_static(NP))
+      ALLOCATE(ep%v_static(NP), NP)
       do i = 1, NP
         ep%v_static(i) = sum(gr%m%x(i,:)*ep%E_field(:))
       end do
     end if
 
-    ! static magnetic field
+    !%Variable StaticMagneticField
+    !%Type block
+    !%Section Hamiltonian
+    !%Description
+    !% A static constant magnetic field may be added to the usual Hamiltonian,
+    !% by setting the block StaticMagneticField. Atomic units will be assumed
+    !% always for its magnitude, regardless of the unit system specified.
+    !% The three possible components of the block (which should only have one
+    !% line) are the three components of the magnetic field vector. Note that
+    !% if you are running the code in 1D mode this will not work, and if you
+    !% are running the code in 2D mode the magnetic field will have to be in
+    !% the z-direction, so that the first two columns should be zero.
+    !%End
     nullify(ep%B_field, ep%A_static)
     if(loct_parse_block(check_inp('StaticMagneticField'), blk)==0) then
-      select case(loct_parse_block_n(blk))
-      case (1)
-        select case (NDIM)
-        case (1)
-        case (2)
-          if (loct_parse_block_cols(blk, 0) /= 1) then
-            message(1) = "When performing 2D calculations, the external magnetic field can only have one component,"
-            message(2) = "corresponding to the direction perpendicular to the plane."
-            call write_fatal(2)
-          else
-            allocate(ep%B_field(1))
-            call loct_parse_block_float(blk, 0, 0, ep%B_field(1))
-          end if
-        case (3)
-          allocate(ep%B_field(3))
-          do i = 1, 3
-            call loct_parse_block_float(blk, 0, i-1, ep%B_field(i))
-          end do
-        end select
+      ALLOCATE(ep%B_field(3), 3)
+      do i = 1, 3
+        call loct_parse_block_float(blk, 0, i-1, ep%B_field(i))
+      end do
+      select case(calc_dim)
+      case(1)
+        call input_error('StaticMagneticField')
+      case(2)
+        if(ep%B_field(1)**2+ep%B_field(2)**2 > M_ZERO) call input_error('StaticMagneticField')
       end select
       call loct_parse_block_end(blk)
 
       ! Compute the vector potential
-      allocate(ep%A_static(NP, NDIM), x(NDIM))
+      ALLOCATE(ep%A_static(NP, NDIM), NP*NDIM)
+      ALLOCATE(x(NDIM), NDIM)
       do i = 1, NP
         x = gr%m%x(i, :)
         select case (NDIM)
         case (2)
-          ep%A_static(i, :) = (/x(2), -x(1)/)*ep%B_field(1)
+          ep%A_static(i, :) = (/x(2), -x(1)/)*ep%B_field(3)
         case (3)
           ep%A_static(i, :) = (/x(2)*ep%B_field(3) - x(3)*ep%B_field(2), &
             x(3)*ep%B_field(1) - x(1)*ep%B_field(3), x(1)*ep%B_field(2) - x(2)*ep%B_field(1)/)

@@ -57,6 +57,7 @@ subroutine X(Hpsi) (h, gr, psi, hpsi, ik, t)
   call X(kinetic) (h, gr, psi, hpsi, ik)
   call X(vlpsi)   (h, gr%m, psi, hpsi, ik)
   if(h%ep%nvnl > 0) call X(vnlpsi)  (h, gr%m, gr%sb, psi, hpsi, ik)
+  call X(magnetic_terms) (gr, h, psi, hpsi, ik)
 
   ! Relativistic corrections...
   select case(h%reltype)
@@ -77,8 +78,6 @@ subroutine X(Hpsi) (h, gr, psi, hpsi, ik, t)
     end if
     call X(vlasers)  (gr, h, psi, hpsi, t)
     call X(vborders) (h, psi, hpsi)
-  elseif (h%d%cdft) then
-    call X(current_extra_terms) (gr, h, psi, hpsi, ik)
   end if
 
   call pop_sub()
@@ -200,7 +199,9 @@ subroutine X(kinetic) (h, gr, psi, hpsi, ik)
 end subroutine X(kinetic)
 
 ! ---------------------------------------------------------
-subroutine X(current_extra_terms) (gr, h, psi, hpsi, ik)
+! Here we the terms arising from the presence of a possible static external
+! magnetic field, and the terms that come from CDFT.
+subroutine X(magnetic_terms) (gr, h, psi, hpsi, ik)
   type(grid_type),        intent(inout) :: gr
   type(hamiltonian_type), intent(inout) :: h
   R_TYPE,                 intent(inout) :: psi(:,:)  !  psi(m%np_part, h%d%dim)
@@ -211,43 +212,53 @@ subroutine X(current_extra_terms) (gr, h, psi, hpsi, ik)
   FLOAT, allocatable :: div(:)
   R_TYPE, allocatable :: grad(:,:)
 
-  call push_sub('h_inc.Xcurrent_extra_terms')
+  call push_sub('h_inc.Xmagnetic_terms')
 
-  allocate(div(NP))
-  select case (h%d%ispin)
-  case(UNPOLARIZED)
-    call df_divergence(gr%sb, gr%f_der, h%ahxc(:, :, 1), div)
-    hpsi(1:NP, 1) = hpsi(1:NP, 1) - M_HALF*M_zI*div*psi(1:NP, 1)
-  case(SPIN_POLARIZED)
-    if(modulo(ik+1, 2) == 0) then ! we have a spin down
+  if(h%d%cdft .or. associated(h%ep%A_static)) then
+    ALLOCATE(grad(NP, NDIM), NP*NDIM)
+    call X(f_gradient)(gr%sb, gr%f_der, psi(:, 1), grad)
+  else
+    return
+  endif
+
+  ! If we are using CDFT:
+  if(h%d%cdft) then
+
+    allocate(div(NP))
+    select case (h%d%ispin)
+    case(UNPOLARIZED)
       call df_divergence(gr%sb, gr%f_der, h%ahxc(:, :, 1), div)
-    else
-      call df_divergence(gr%sb, gr%f_der, h%ahxc(:, :, 2), div)
-    end if
-    hpsi(1:NP, 1) = hpsi(1:NP, 1) - M_HALF*M_zI*div*psi(1:NP, 1)
-  case(SPINORS)
-    ! not implemented yet
-  end select
-  deallocate(div)
-
-  allocate(grad(NP, NDIM))
-  call X(f_gradient)(gr%sb, gr%f_der, psi(:, 1), grad)
-  select case (h%d%ispin)
-  case(UNPOLARIZED)
-    do k = 1, NP
-      hpsi(k, 1) = hpsi(k, 1) - M_HALF*M_zI*dot_product(h%ahxc(k, :, 1), grad(k, :))
-    end do
-  case(SPIN_POLARIZED)
-    do k = 1, NP
+      hpsi(1:NP, 1) = hpsi(1:NP, 1) - M_HALF*M_zI*div*psi(1:NP, 1)
+    case(SPIN_POLARIZED)
       if(modulo(ik+1, 2) == 0) then ! we have a spin down
-        hpsi(k, 1) = hpsi(k, 1) -  M_HALF*M_zI*dot_product(h%ahxc(k, :, 1), grad(k, :))
+        call df_divergence(gr%sb, gr%f_der, h%ahxc(:, :, 1), div)
       else
-        hpsi(k, 1) = hpsi(k, 1) -  M_HALF*M_zI*dot_product(h%ahxc(k, :, 2), grad(k, :))
+        call df_divergence(gr%sb, gr%f_der, h%ahxc(:, :, 2), div)
       end if
-    end do
-  case(SPINORS)
-    ! not implemented yet
-  end select
+      hpsi(1:NP, 1) = hpsi(1:NP, 1) - M_HALF*M_zI*div*psi(1:NP, 1)
+    case(SPINORS)
+      ! not implemented yet
+    end select
+    deallocate(div)
+
+    select case (h%d%ispin)
+    case(UNPOLARIZED)
+      do k = 1, NP
+        hpsi(k, 1) = hpsi(k, 1) - M_HALF*M_zI*dot_product(h%ahxc(k, :, 1), grad(k, :))
+      end do
+    case(SPIN_POLARIZED)
+      do k = 1, NP
+        if(modulo(ik+1, 2) == 0) then ! we have a spin down
+          hpsi(k, 1) = hpsi(k, 1) -  M_HALF*M_zI*dot_product(h%ahxc(k, :, 1), grad(k, :))
+        else
+          hpsi(k, 1) = hpsi(k, 1) -  M_HALF*M_zI*dot_product(h%ahxc(k, :, 2), grad(k, :))
+        end if
+      end do
+    case(SPINORS)
+      ! not implemented yet
+    end select
+
+  endif
 
   if (associated(h%ep%A_static)) then
     do k = 1, NP
@@ -255,17 +266,17 @@ subroutine X(current_extra_terms) (gr, h, psi, hpsi, ik)
 
       select case(h%d%ispin)
       case(UNPOLARIZED, SPIN_POLARIZED)
-        hpsi(k, 1) = hpsi(k, 1) - M_HALF*M_zI*dot_product(h%ep%A_static(k, :), grad(k, :))
+        hpsi(k, 1) = hpsi(k, 1) - M_zI*dot_product(h%ep%A_static(k, :), grad(k, :))
       case (SPINORS)
         ! not implemented yet
       end select
 
     end do
   end if
-  deallocate(grad)
 
+  deallocate(grad)
   call pop_sub()
-end subroutine X(current_extra_terms)
+end subroutine X(magnetic_terms)
 
 
 ! ---------------------------------------------------------
