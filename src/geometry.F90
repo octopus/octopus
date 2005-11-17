@@ -674,7 +674,7 @@ contains
 
     integer i, iunit
 
-    if(mpi_grp_is_root(mpi_world)) return
+    if( .not. mpi_grp_is_root(mpi_world)) return
 
     call io_mkdir(dir)
     iunit = io_open(trim(dir)//'/'//trim(fname)//'.xyz', action='write')
