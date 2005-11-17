@@ -398,16 +398,22 @@ contains
   end subroutine static
   ! ---------------------------------------------------------
 
-  subroutine dynamic(sys, h, lr, pol, w)
+  subroutine dynamic(sys, h, lr, pol, inw)
     type(system_type),      intent(inout) :: sys
     type(hamiltonian_type), intent(inout) :: h
     type(lr_type),          intent(inout) :: lr
     FLOAT,                  intent(out)   :: pol(:,:)
-    R_TYPE,                 intent(inout)    :: w 
+    FLOAT,                  intent(in)    :: inw 
+
     integer :: i, j, s
 
     FLOAT :: rhov
+
+    R_TYPE :: w
+
     call push_sub('static_pol_lr.dynamic')
+
+    w=R_TOTYPE(inw)
 
     pol = M_ZERO
 
@@ -441,7 +447,7 @@ contains
     integer,                   intent(in)    :: alpha
     R_TYPE,                    intent(in)    :: omega
 
-    integer :: iter, iter_max, sigma, ik, ik2, ist, i
+    integer :: iter,  sigma, ik, ik2, ist, i
     FLOAT, allocatable :: tmp(:), dl_rhoin(:,:,:), dl_rhonew(:,:,:), dl_rhotmp(:,:,:)
     R_TYPE, allocatable :: Y(:, :)
     logical :: finish
