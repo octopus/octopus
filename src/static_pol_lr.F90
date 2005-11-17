@@ -355,12 +355,12 @@ contains
               do ispin2 = 1, sys%st%d%nspin
                 do ist2 = 1, sys%st%nst
 
-                  prod=sum(R_CONJ(dphide(1:np,ist,ispin,i))*dphide(1:np,ist2,ispin2,j)*sys%gr%m%vol_pp(1:np))
+                  prod=sum(R_CONJ(dphide(1:np,ist,ispin,i))*dphide(1:np,ist2,ispin2,k)*sys%gr%m%vol_pp(1:np))
 
 
                   prod=prod*sum(&
                        R_CONJ(sys%st%X(psi)(1:np,1,ist2,ispin2))*&
-                       dVde(1:np,ispin,k) * sys%st%X(psi)(1:np,1,ist,ispin)*&
+                       dVde(1:np,ispin,j) * sys%st%X(psi)(1:np,1,ist,ispin)*&
                        sys%gr%m%vol_pp(1:np))
 
                   hpol(i,j,k)=hpol(i,j,k)-M_TWO*prod
@@ -379,11 +379,17 @@ contains
       end do
     end do
 
+
     vol=sum(sys%gr%m%vol_pp(1:np))
 
     !    print*, hpol
 
     hpol=-M_SIX*hpol
+
+    !    print*, hpol(1,1,2), hpol(1,2,1), hpol(2,1,1)
+    !    print*, hpol(1,1,3), hpol(1,3,1), hpol(3,1,1)
+    !    print*, hpol(2,2,1), hpol(2,1,2), hpol(1,2,2)
+    !    print*, hpol(3,3,1), hpol(3,1,3), hpol(1,3,3)
 
     !    print*, "POL", pol(1:dim,1:dim)
     !    print*, "HPOL", hpol(1:dim,1:dim,1:dim)
