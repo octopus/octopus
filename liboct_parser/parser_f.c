@@ -186,7 +186,10 @@ int FC_FUNC_(oct_parse_block, OCT_PARSE_BLOCK)
 {
 	int r;
 
-  assert(block_name == NULL);
+  if(block_name != NULL){
+          free(block_name);
+          block_name = NULL;
+  }
 
   block_name = TO_C_STR1(name);
   r = parse_block(block_name, blk);
