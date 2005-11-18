@@ -56,7 +56,7 @@ module profiling_mod
 
   integer, parameter ::                &
     C_TAG_LENGTH = 17,                 & ! Max. number of characters of tag label.
-    C_NUM_TAGS   = 9                     ! Number of tags.
+    C_NUM_TAGS   = 15                    ! Number of tags.
 
   integer ::                           &
     pass_in(C_NUM_TAGS)           = 0, &
@@ -75,7 +75,13 @@ module profiling_mod
     C_PROFILING_GHOST_UPDATE      = 6, &
     C_PROFILING_VEC_INTEGRATE     = 7, &
     C_PROFILING_SCF_CYCLE         = 8, &
-    C_PROFILING_MF_DOTP_ALLREDUCE = 9
+    C_PROFILING_MF_DOTP_ALLREDUCE = 9, &
+    C_PROFILING_HPSI              = 10, &
+    C_PROFILING_KINETIC           = 11, &
+    C_PROFILING_VLPSI             = 12, &
+    C_PROFILING_VNLPSI            = 13, &
+    C_PROFILING_POISSON_SOLVE     = 14, &
+    C_PROFILING_XC                = 15
 
   character(len=C_TAG_LENGTH), dimension(C_NUM_TAGS) :: tag_label = &
     (/                                 &
@@ -87,7 +93,13 @@ module profiling_mod
     'GHOST_UPDATE     ',               &
     'VEC_INTEGRATE    ',               &
     'SCF_CYCLE        ',               &
-    'MF_DOTP_ALLREDUCE'                &
+    'MF_DOTP_ALLREDUCE',               &
+    'HPSI             ',               &
+    'KINETIC          ',               &
+    'VLPSI            ',               &
+    'VNLPSI           ',               &
+    'POISSON_SOLVE    ',               &
+    'XC               '                &
     /)
 
 contains
@@ -195,12 +207,12 @@ contains
     end if
     write(iunit,'(a71)') &
       'TAG                   NUMBER OF CALLS       TOTAL TIME    TIME PER CALL'
-    write(iunit,'(a71)') &
+    write(iunit,'(a71 )') &
       '======================================================================='
     do i = 1, C_NUM_TAGS
-      if(pass_in(i).eq.pass_out(i).and.pass_in(i).ne.0) then
+      if(pass_in(i).eq.pass_out(i)) then
         time_per_pass = (real(time_sec(i))+1e-6*real(time_usec(i)))/ &
-          real(pass_in(i))
+          real(max(pass_in(i), 1))
       else
         write(iunit,'(3a,i10,a,i10)') '*** WARNING: Entries and exits for ',trim(tag_label(i)), ' do not coincide:', &
                           pass_in(i), ' .ne.', pass_out(i)

@@ -23,6 +23,7 @@ module hamiltonian
   use global
   use messages
   use syslabels
+  use profiling_mod
   use units
   use lib_oct_parser
   use lib_basic_alg

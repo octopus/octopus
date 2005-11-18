@@ -24,6 +24,7 @@ module v_ks
   use mpi_mod
   use messages
   use syslabels
+  use profiling_mod
   use states
   use lib_oct_parser
   use io

@@ -22,6 +22,7 @@
 module poisson
   use global
   use messages
+  use profiling_mod
   use lib_oct_parser
   use units
   use geometry
@@ -243,6 +244,7 @@ contains
 
     FLOAT, allocatable :: rho_corrected(:), vh_correction(:)
 
+    call profiling_in(C_PROFILING_POISSON_SOLVE)
     call push_sub('poisson.dpoisson_solve')
 
     ASSERT(poisson_solver.ne.-99)
@@ -277,6 +279,7 @@ contains
     end select
 
     call pop_sub()
+    call profiling_out(C_PROFILING_POISSON_SOLVE)
   end subroutine dpoisson_solve
 
 #if defined(HAVE_FFT)

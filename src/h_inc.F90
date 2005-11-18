@@ -52,6 +52,7 @@ subroutine X(Hpsi) (h, gr, psi, hpsi, ik, t)
   R_TYPE,                 intent(out)   :: Hpsi(:,:) !  Hpsi(m%np_part, h%d%dim)
   FLOAT, optional,        intent(in)    :: t
 
+  call profiling_in(C_PROFILING_HPSI)
   call push_sub('h_inc.XHpsi')
 
   call X(kinetic) (h, gr, psi, hpsi, ik)
@@ -81,6 +82,7 @@ subroutine X(Hpsi) (h, gr, psi, hpsi, ik, t)
   end if
 
   call pop_sub()
+  call profiling_out(C_PROFILING_HPSI)
 end subroutine X(Hpsi)
 
 ! ---------------------------------------------------------
@@ -166,6 +168,7 @@ subroutine X(kinetic) (h, gr, psi, hpsi, ik)
   FLOAT :: k2
 #endif
 
+  call profiling_in(C_PROFILING_KINETIC)
   call push_sub('h_inc.Xkinetic')
 
   if(simul_box_is_periodic(gr%sb)) then
@@ -196,6 +199,7 @@ subroutine X(kinetic) (h, gr, psi, hpsi, ik)
   end if
 
   call pop_sub()
+  call profiling_out(C_PROFILING_KINETIC)
 end subroutine X(kinetic)
 
 ! ---------------------------------------------------------
@@ -289,6 +293,7 @@ subroutine X(vnlpsi) (h, m, sb, psi, hpsi, ik)
   integer,                intent(in)    :: ik
 
   integer :: idim
+  call profiling_in(C_PROFILING_VNLPSI)
   call push_sub('h_inc.Xvnlpsi')
 
   do idim = 1, h%d%dim
@@ -297,6 +302,7 @@ subroutine X(vnlpsi) (h, m, sb, psi, hpsi, ik)
   end do
 
   call pop_sub()
+  call profiling_out(C_PROFILING_VNLPSI)
 end subroutine X(vnlpsi)
 
 
@@ -311,6 +317,7 @@ subroutine X(vlpsi) (h, m, psi, hpsi, ik)
   integer :: idim
   R_TYPE, allocatable :: lhpsi(:,:)
 
+  call profiling_in(C_PROFILING_VLPSI)
   call push_sub('h_inc.Xvlpsi')
 
   select case(h%d%ispin)
@@ -359,6 +366,7 @@ subroutine X(vlpsi) (h, m, psi, hpsi, ik)
   end if
 
   call pop_sub()
+  call profiling_out(C_PROFILING_VLPSI)
 end subroutine X(vlpsi)
 
 

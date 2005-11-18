@@ -133,6 +133,8 @@ contains
     !  allocate(RPA_Vhxc(NP, h%d%nspin))
     !  RPA_Vhxc = h%vhxc
 
+    call profiling_in(C_PROFILING_XC)
+
     h%ex = M_ZERO
     h%ec = M_ZERO
     h%exc_j = M_ZERO
@@ -188,5 +190,6 @@ contains
       deallocate(ztmp1, ztmp2)
     end select
 
+    call profiling_out(C_PROFILING_XC)
   end subroutine v_a_xc
 end subroutine X(v_ks_calc)
