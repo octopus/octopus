@@ -193,21 +193,25 @@ contains
       call pop_sub()
       return
     end if
+    write(iunit,'(a71)') &
+      'TAG                   NUMBER OF CALLS       TOTAL TIME    TIME PER CALL'
+    write(iunit,'(a71)') &
+      '======================================================================='
     do i = 1, C_NUM_TAGS
       if(pass_in(i).eq.pass_out(i).and.pass_in(i).ne.0) then
         time_per_pass = (real(time_sec(i))+1e-6*real(time_usec(i)))/ &
           real(pass_in(i))
       else
-        time_per_pass = 0
+        write(iunit,'(3a,i10,a,i10)') '*** WARNING: Entries and exits for ',trim(tag_label(i)), ' do not coincide:', &
+                          pass_in(i), ' .ne.', pass_out(i)
+        cycle
       end if
-      write(iunit, '(a,2i20,i20,a,i6.6,f20.10)') tag_label(i), pass_in(i), &
-        pass_out(i), time_sec(i), '.', time_usec(i), time_per_pass
+      write(iunit, '(a,i20,i10,a1,i6.6,f17.7)') tag_label(i), pass_in(i), &
+        time_sec(i), '.', time_usec(i), time_per_pass
     end do
 
     call io_close(iunit)
-
     call pop_sub()
-
   end subroutine profiling_output
 
 end module profiling_mod

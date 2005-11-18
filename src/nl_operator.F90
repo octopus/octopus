@@ -857,7 +857,7 @@ contains
 
     call pop_sub()
 
-    call profiling_in(C_PROFILING_NL_OPERATOR)
+    call profiling_out(C_PROFILING_NL_OPERATOR)
 
   end subroutine dnl_operator_operate
 
