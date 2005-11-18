@@ -142,12 +142,8 @@ contains
 
     if(.not.in_profiling_mode) return
 
-    call push_sub('profiling.profiling_in')
-
     pass_in(tag) = pass_in(tag)+1
     call loct_gettimeofday(time_in_sec(tag), time_in_usec(tag))
-
-    call pop_sub()
 
   end subroutine profiling_in
 
@@ -161,14 +157,10 @@ contains
 
     if(.not.in_profiling_mode) return
 
-    call push_sub('profiling.profiling_out')
-
     pass_out(tag) = pass_out(tag)+1
     call loct_gettimeofday(sec, usec)
     call time_diff(time_in_sec(tag), time_in_usec(tag), sec, usec)
     call time_sum(sec, usec, time_sec(tag), time_usec(tag))
-
-    call pop_sub()
 
   end subroutine profiling_out
 
