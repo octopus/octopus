@@ -74,7 +74,7 @@ subroutine X(input_function)(filename, m, f, ierr)
       deallocate(f_global)
     end if
 #else
-    ASSERT(0) ! internal error
+    ASSERT(.false.) ! internal error
 #endif
   else
     call X(input_function_global)(filename, m, f, ierr)
@@ -345,7 +345,7 @@ subroutine X(output_function) (how, dir, fname, mesh, sb, f, u, ierr)
 
     deallocate(f_global)
 #else
-    ASSERT(0)
+    ASSERT(.false.)
 #endif
   else
     call X(output_function_global)(how, dir, fname, mesh, sb, f, u, ierr)
