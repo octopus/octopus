@@ -83,7 +83,7 @@ contains
       end do
     end do
 
-    rho_corrected = rho
+    rho_corrected(1:m%np) = rho(1:m%np)
     vh_correction = M_ZERO
     do i = 1, m%np
       r2 = dot_product(m%x(i, 1:3), m%x(i, 1:3)) ! mesh_r could be used, but it wastes time.
