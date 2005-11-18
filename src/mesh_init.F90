@@ -280,7 +280,7 @@ contains
     call mpi_grp_init(mesh%mpi_grp, mc%group_comm(P_STRATEGY_DOMAINS))
 
     allocate(part(mesh%np_part_global))
-    call mesh_partition(mesh, mesh%Lxyz_tmp, mesh%mpi_grp%comm, part)
+    call mesh_partition(mesh, part)
     call vec_init(mesh%mpi_grp%comm, 0, part, mesh%np_global, mesh%np_part_global,  &
       mesh%nr, mesh%Lxyz_inv, mesh%Lxyz, stencil, np_stencil, &
       mesh%sb%dim, mesh%sb%periodic_dim, mesh%vp)
@@ -382,12 +382,8 @@ end subroutine mesh_init_stage_3
 ! inner mesh and the enlargement. All other entries have to
 ! be zero. comm is used to get the number of partitions.
 ! ---------------------------------------------------------------
-subroutine mesh_partition(m, Lxyz_tmp, comm, part)
+subroutine mesh_partition(m, part)
   type(mesh_type), intent(in)  :: m
-  integer,         intent(in)  :: Lxyz_tmp(m%nr(1,1):m%nr(2,1), &
-                                           m%nr(1,2):m%nr(2,2), &
-                                           m%nr(1,3):m%nr(2,3))
-  integer,         intent(in)  :: comm
   integer,         intent(out) :: part(:)
 
   integer              :: i, j           ! Counter.
@@ -404,11 +400,8 @@ subroutine mesh_partition(m, Lxyz_tmp, comm, part)
                                          ! xadj has nv+1 entries because last entry contains the total
                                          ! number of edges.
   integer              :: p              ! Number of partitions.
-  integer              :: xadj(m%np_part_global+1)
-                                         ! Indices of adjacency list
-                                         ! in adjncy.
-  integer              :: adjncy(2*m%sb%dim*m%np_part_global)
-                                         ! Adjacency lists.
+  integer, allocatable :: xadj(:)        ! Indices of adjacency list in adjncy.
+  integer, allocatable :: adjncy(:)      ! Adjacency lists.
   integer              :: options(5)     ! Options to METIS.
   integer              :: ierr           ! MPI error code.
   integer, allocatable :: ppp(:)         ! Points per partition.
@@ -425,8 +418,11 @@ subroutine mesh_partition(m, Lxyz_tmp, comm, part)
   ! Get space for partitioning.
   part = 1
 
+  ALLOCATE(xadj(m%np_part_global+1), m%np_part_global+1)
+  ALLOCATE(adjncy(2*m%sb%dim*m%np_part_global), 2*m%sb%dim*m%np_part_global)
+
   ! Get number of partitions.
-  call MPI_Comm_size(comm, p, ierr)
+  call MPI_Comm_size(m%mpi_grp%comm, p, ierr)
 
   ! Set directions of possible neighbours.
   ! With this ordering of the directions it is possible
@@ -467,7 +463,7 @@ subroutine mesh_partition(m, Lxyz_tmp, comm, part)
         jz.ge.m%nr(1, 3).and.jz.le.m%nr(2, 3)) then
         ! Only points inside the mesh or its enlargement
         ! are included in the graph.
-        if(Lxyz_tmp(jx, jy, jz).ne.0) then
+        if(m%Lxyz_tmp(jx, jy, jz).ne.0) then
           ! Store a new edge and increment edge counter.
           adjncy(ne) = m%Lxyz_inv(jx, jy, jz)
           ne         = ne+1
@@ -560,6 +556,7 @@ subroutine mesh_partition(m, Lxyz_tmp, comm, part)
     call io_close(iunit)
   end if
 
+  deallocate(xadj, adjncy)
   call pop_sub()
 
 end subroutine mesh_partition
