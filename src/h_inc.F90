@@ -222,6 +222,7 @@ subroutine X(magnetic_terms) (gr, h, psi, hpsi, ik)
     ALLOCATE(grad(NP, NDIM), NP*NDIM)
     call X(f_gradient)(gr%sb, gr%f_der, psi(:, 1), grad)
   else
+    call pop_sub()
     return
   endif
 
