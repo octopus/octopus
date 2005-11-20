@@ -130,7 +130,7 @@ subroutine X(lr_solve_HXeY) (lr, h, gr, d, ik, x, y, omega)
 
   call push_sub('linear_response_inc.Xlr_solve_HXeY')
 
-  allocate(r(NP, d%dim), p(NP, d%dim), Hp(NP, d%dim))
+  allocate(r(NP, d%dim), p(NP_PART, d%dim), Hp(NP, d%dim))
 
   ! Initial residue
   call X(Hpsi)(h, gr, x, Hp, ik)

@@ -179,7 +179,7 @@ contains
       st => sys%st
 
       ! allocate wfs
-      allocate(sys%st%X(psi)(NP, st%d%dim, st%nst, st%d%nik))
+      allocate(sys%st%X(psi)(NP_PART, st%d%dim, st%nst, st%d%nik))
 
       !%Variable POLStaticField
       !%Type float

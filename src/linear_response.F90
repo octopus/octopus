@@ -81,7 +81,7 @@ contains
     r =  1
     if(associated(lr%ddl_psi)) return ! do nothing
 
-    allocate(lr%ddl_psi(m%np, st%d%dim, st%nst, st%d%nspin))
+    allocate(lr%ddl_psi(m%np_part, st%d%dim, st%nst, st%d%nspin))
 
     if(associated(lr%zdl_psi)) then
       r = 2
@@ -105,7 +105,7 @@ contains
     r =  1
     if(associated(lr%zdl_psi)) return ! do nothing
 
-    allocate(lr%zdl_psi(m%np, st%d%dim, st%nst, st%d%nspin))
+    allocate(lr%zdl_psi(m%np_part, st%d%dim, st%nst, st%d%nspin))
 
     if(associated(lr%ddl_psi)) then
       r = 2

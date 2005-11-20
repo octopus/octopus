@@ -131,7 +131,7 @@ contains
       call push_sub('phonons.phonons_run')
 
       ! allocate wfs
-      allocate(sys%st%X(psi)(sys%gr%m%np, sys%st%d%dim, sys%st%nst, sys%st%d%nik))
+      allocate(sys%st%X(psi)(sys%gr%m%np_part, sys%st%d%dim, sys%st%nst, sys%st%d%nik))
     end subroutine init_
 
     ! ---------------------------------------------------------

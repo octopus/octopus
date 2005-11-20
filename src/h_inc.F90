@@ -55,6 +55,8 @@ subroutine X(Hpsi) (h, gr, psi, hpsi, ik, t)
   call profiling_in(C_PROFILING_HPSI)
   call push_sub('h_inc.XHpsi')
 
+  ASSERT(ubound(psi, DIM=1) == gr%m%np_part)
+
   call X(kinetic) (h, gr, psi, hpsi, ik)
   call X(vlpsi)   (h, gr%m, psi, hpsi, ik)
   if(h%ep%nvnl > 0) call X(vnlpsi)  (h, gr%m, gr%sb, psi, hpsi, ik)
@@ -90,7 +92,7 @@ subroutine X(magnus) (h, gr, psi, hpsi, ik, vmagnus)
   type(hamiltonian_type), intent(in)    :: h
   type(grid_type),        intent(inout) :: gr
   integer,                intent(in)    :: ik
-  R_TYPE,                 intent(inout) :: psi(:,:)  !  psi(NP, h%d%dim)
+  R_TYPE,                 intent(inout) :: psi(:,:)  !  psi(NP_PART, h%d%dim)
   R_TYPE,                 intent(out)   :: Hpsi(:,:) !  Hpsi(NP, h%d%dim)
   FLOAT,                  intent(in)    :: vmagnus(NP, h%d%nspin, 2)
 
@@ -100,7 +102,7 @@ subroutine X(magnus) (h, gr, psi, hpsi, ik, vmagnus)
 
   call push_sub('h_inc.Xmagnus')
 
-  allocate(auxpsi(NP, h%d%dim), aux2psi(NP, h%d%dim))
+  allocate(auxpsi(NP_PART, h%d%dim), aux2psi(NP, h%d%dim))
 
   call X(kinetic) (h, gr, psi, hpsi, ik)
 
@@ -108,41 +110,41 @@ subroutine X(magnus) (h, gr, psi, hpsi, ik, vmagnus)
   if (h%ep%nvnl > 0) call X(vnlpsi)  (h, gr%m, gr%sb, psi, auxpsi, ik)
   select case(h%d%ispin)
   case(UNPOLARIZED)
-    hpsi(:, 1) = hpsi(:, 1) -  M_zI*vmagnus(:, 1, 1)*auxpsi(:, 1)
+    hpsi(1:NP, 1) = hpsi(1:NP, 1) -  M_zI*vmagnus(1:NP, 1, 1)*auxpsi(1:NP, 1)
   case(SPIN_POLARIZED)
     if(modulo(ik+1, 2) == 0) then
-      hpsi(:, 1) = hpsi(:, 1) - M_zI*vmagnus(:, 1, 1)*auxpsi(:, 1)
+      hpsi(1:NP, 1) = hpsi(1:NP, 1) - M_zI*vmagnus(1:NP, 1, 1)*auxpsi(1:NP, 1)
     else
-      hpsi(:, 1) = hpsi(:, 1) - M_zI*vmagnus(:, 2, 1)*auxpsi(:, 1)
+      hpsi(1:NP, 1) = hpsi(1:NP, 1) - M_zI*vmagnus(1:NP, 2, 1)*auxpsi(1:NP, 1)
     end if
   end select
 
   select case(h%d%ispin)
   case(UNPOLARIZED)
-    auxpsi(:, 1) = vmagnus(:, 1, 1)*psi(:, 1)
+    auxpsi(1:NP, 1) = vmagnus(1:NP, 1, 1)*psi(1:NP, 1)
   case(SPIN_POLARIZED)
     if(modulo(ik+1, 2) == 0) then
-      auxpsi(:, 1) = vmagnus(:, 1, 1)*psi(:, 1)
+      auxpsi(1:NP, 1) = vmagnus(1:NP, 1, 1)*psi(1:NP, 1)
     else
-      auxpsi(:, 1) = vmagnus(:, 2, 1) *psi(:, 1)
+      auxpsi(1:NP, 1) = vmagnus(1:NP, 2, 1) *psi(1:NP, 1)
     end if
   end select
   call X(kinetic) (h, gr, auxpsi, aux2psi, ik)
   if (h%ep%nvnl > 0) call X(vnlpsi)  (h, gr%m, gr%sb, auxpsi, aux2psi, ik)
-  hpsi(:, 1) = hpsi(:, 1) + M_zI*aux2psi(:, 1)
+  hpsi(1:NP, 1) = hpsi(1:NP, 1) + M_zI*aux2psi(1:NP, 1)
 
   do idim = 1, h%d%dim
-    hpsi(:, idim) = hpsi(:, idim) + h%ep%Vpsl(:)*psi(:,idim)
+    hpsi(1:NP, idim) = hpsi(1:NP, idim) + h%ep%Vpsl(1:NP)*psi(1:NP,idim)
   end do
 
   select case(h%d%ispin)
   case(UNPOLARIZED)
-    hpsi(:, 1) = hpsi(:, 1) + vmagnus(:, 1, 2)*psi(:, 1)
+    hpsi(1:NP, 1) = hpsi(1:NP, 1) + vmagnus(1:NP, 1, 2)*psi(1:NP, 1)
   case(SPIN_POLARIZED)
     if(modulo(ik+1, 2) == 0) then
-      hpsi(:, 1) = hpsi(:, 1) + vmagnus(:, 1, 2)*psi(1:, 1)
+      hpsi(1:NP, 1) = hpsi(1:NP, 1) + vmagnus(1:NP, 1, 2)*psi(1:NP, 1)
     else
-      hpsi(:, 1) = hpsi(:, 1) + vmagnus(:, 2, 2)*psi(1:, 1)
+      hpsi(1:NP, 1) = hpsi(1:NP, 1) + vmagnus(1:NP, 2, 2)*psi(1:NP, 1)
     end if
   end select
   if (h%ep%nvnl > 0) call X(vnlpsi)  (h, gr%m, gr%sb, psi, Hpsi, ik)

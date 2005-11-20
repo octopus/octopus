@@ -113,7 +113,7 @@ contains
       gr => sys%gr
 
       ! allocate wfs
-      allocate(sys%st%X(psi)(NP, sys%st%d%dim, sys%st%nst, sys%st%d%nik))
+      allocate(sys%st%X(psi)(gr%m%np_part, sys%st%d%dim, sys%st%nst, sys%st%d%nik))
 
     end subroutine init_
 

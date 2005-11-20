@@ -141,7 +141,7 @@ subroutine mv(x, y)
   R_TYPE, intent(out) :: y(*)
   integer :: idim
   R_TYPE, allocatable :: psi(:, :), hpsi(:, :)
-  allocate(psi(gr_%m%np, h_%d%dim), hpsi(gr_%m%np, h_%d%dim))
+  allocate(psi(gr_%m%np_part, h_%d%dim), hpsi(gr_%m%np, h_%d%dim))
   do idim = 1, h_%d%dim
      psi(1:gr_%m%np, idim) = x((idim-1)*gr_%m%np+1:idim*gr_%m%np)
   end do

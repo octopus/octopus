@@ -190,7 +190,7 @@ contains
       if(w%gs_st%d%ispin == SPINORS) then
         allocate(w%gs_st%mag(w%gs_st%nst, w%gs_st%d%nik, 2))
       end if
-      allocate(w%gs_st%zpsi(NP, w%gs_st%d%dim, w%gs_st%st_start:w%gs_st%st_end, w%gs_st%d%nik))
+      allocate(w%gs_st%zpsi(NP_PART, w%gs_st%d%dim, w%gs_st%st_start:w%gs_st%st_end, w%gs_st%d%nik))
       w%gs_st%node(:)  = 0
       call zrestart_read(trim(tmpdir)//'restart_gs', w%gs_st, gr%m, ierr)
       if(ierr.ne.0) then

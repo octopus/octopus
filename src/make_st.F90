@@ -53,7 +53,7 @@ program make_st
   deallocate(sys%st%dpsi)
 #endif
 
-  allocate(sys%st%zpsi (sys%gr%m%np, sys%st%d%dim, sys%st%nst, sys%st%d%nik), &
+  allocate(sys%st%zpsi (sys%gr%m%np_part, sys%st%d%dim, sys%st%nst, sys%st%d%nik), &
     sys%st%eigenval(sys%st%nst, sys%st%d%nik))
 
   call X(restart_read)(trim(tmpdir)//'restart_gs', sys%st, sys%gr%m, err)
