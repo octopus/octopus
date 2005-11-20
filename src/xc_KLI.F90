@@ -34,19 +34,24 @@ subroutine X(xc_KLI_solve) (m, st, is, oep)
   R_TYPE, allocatable :: phi1(:,:), phi2(:,:)
   R_TYPE :: occ
 
+!!$  write(0, *) mpi_world%rank, 'step KKK.1'
+  call push_sub('xc_KLI.xc_KLI_solve')
+
   ! some intermediate quantities
   ! vxc contains the Slater part!
   allocate(rho_sigma(m%np))
+!!$  write(0, *) mpi_world%rank, 'step KKK.2'
 
   do i = 1, m%np
     rho_sigma(i) = max(sum(oep%socc*st%occ(st%st_start:st%st_end, is) * &
       R_ABS(st%X(psi)(i, 1, st%st_start:st%st_end, is))**2), CNST(1e-20))
   end do
 #if defined(HAVE_MPI)
-  allocate(d(m%np))
-
-  call MPI_Allreduce(rho_sigma(:), d(:), m%np, MPI_FLOAT, MPI_SUM, st%mpi_grp%comm, ierr)
-  rho_sigma(1:m%np) = d(1:m%np)
+  if(st%parallel_in_states) then
+    allocate(d(m%np))
+    call MPI_Allreduce(rho_sigma(:), d(:), m%np, MPI_FLOAT, MPI_SUM, st%mpi_grp%comm, ierr)
+    rho_sigma(1:m%np) = d(1:m%np)
+  end if
 #endif
 
   do i = 1, m%np
@@ -54,10 +59,11 @@ subroutine X(xc_KLI_solve) (m, st, is, oep)
       R_REAL(oep%X(lxc)(i, st%st_start:st%st_end)*st%X(psi)(i, 1, st%st_start:st%st_end, is)))/rho_sigma(i)
   end do
 #if defined(HAVE_MPI)
-  call MPI_Allreduce(oep%vxc(:),   d(:), m%np, MPI_FLOAT, MPI_SUM, st%mpi_grp%comm, ierr)
-  oep%vxc(1:m%np)   = d(1:m%np)
-
-  deallocate(d)
+  if(st%parallel_in_states) then
+    call MPI_Allreduce(oep%vxc(:),   d(:), m%np, MPI_FLOAT, MPI_SUM, st%mpi_grp%comm, ierr)
+    oep%vxc(1:m%np)   = d(1:m%np)
+    deallocate(d)
+  end if
 #endif
 
   if(oep%level == XC_OEP_SLATER) then
@@ -75,11 +81,13 @@ subroutine X(xc_KLI_solve) (m, st, is, oep)
   end do
 
 #if defined(HAVE_MPI)
-  ! Broadcast the vector v_bar_S to all processors
-  if(st%st_end - st%st_start + 1 .ne. st%nst) then ! This holds only in the td part.
-    do i = 1, st%nst
-      call MPI_Bcast(v_bar_S(i), 1, MPI_FLOAT, st%node(i), st%mpi_grp%comm, ierr)
-    end do
+  if(st%parallel_in_states) then
+    ! Broadcast the vector v_bar_S to all processors
+    if(st%st_end - st%st_start + 1 .ne. st%nst) then ! This holds only in the td part.
+      do i = 1, st%nst
+        call MPI_Bcast(v_bar_S(i), 1, MPI_FLOAT, st%node(i), st%mpi_grp%comm, ierr)
+      end do
+    end if
   end if
 #endif
 
@@ -96,6 +104,7 @@ subroutine X(xc_KLI_solve) (m, st, is, oep)
     do i = 1, n
 
 #if defined(HAVE_MPI)
+    if(st%parallel_in_states) then
       if(.not.mpi_grp_is_root(st%mpi_grp)) then
         if(st%node(oep%eigen_index(i)) == st%mpi_grp%rank) then
           call MPI_Send(st%X(psi)(1, 1, oep%eigen_index(i), is), st%d%dim*m%np, R_MPITYPE, &
@@ -110,6 +119,7 @@ subroutine X(xc_KLI_solve) (m, st, is, oep)
         end if
       end if
       call MPI_Barrier(st%mpi_grp%comm, ierr)
+    end if
 #else
       phi1(:,:) = st%X(psi)(:,:, oep%eigen_index(i), is)
 #endif
@@ -121,20 +131,22 @@ subroutine X(xc_KLI_solve) (m, st, is, oep)
 
       do j = i, n
 #if defined(HAVE_MPI)
-        if(.not.mpi_grp_is_root(st%mpi_grp)) then
-          if(st%node(oep%eigen_index(j)) == st%mpi_grp%rank) then
-            call MPI_Send(st%X(psi)(1, 1, oep%eigen_index(j), is), st%d%dim*m%np, R_MPITYPE, &
-              0, j, st%mpi_grp%comm, status, ierr)
-          end if
-        else
-          if(st%node(oep%eigen_index(j)).ne.0) then
-            call MPI_Recv(phi2(1, 1), st%d%dim*m%np, R_MPITYPE, st%node(oep%eigen_index(j)), &
-              j, st%mpi_grp%comm, status, ierr)
+        if(st%parallel_in_states) then
+          if(.not.mpi_grp_is_root(st%mpi_grp)) then
+            if(st%node(oep%eigen_index(j)) == st%mpi_grp%rank) then
+              call MPI_Send(st%X(psi)(1, 1, oep%eigen_index(j), is), st%d%dim*m%np, R_MPITYPE, &
+                0, j, st%mpi_grp%comm, status, ierr)
+            end if
           else
-            phi2(:,:) = st%X(psi)(:,:, oep%eigen_index(j), is)
+            if(st%node(oep%eigen_index(j)).ne.0) then
+              call MPI_Recv(phi2(1, 1), st%d%dim*m%np, R_MPITYPE, st%node(oep%eigen_index(j)), &
+                j, st%mpi_grp%comm, status, ierr)
+            else
+              phi2(:,:) = st%X(psi)(:,:, oep%eigen_index(j), is)
+            end if
           end if
+          call MPI_Barrier(st%mpi_grp%comm, ierr)
         end if
-        call MPI_Barrier(st%mpi_grp%comm, ierr)
 #else
         phi2(:,:) = st%X(psi)(:,:, oep%eigen_index(j), is)
 #endif
@@ -157,27 +169,29 @@ subroutine X(xc_KLI_solve) (m, st, is, oep)
     deallocate(Ma, y)
 
 #if defined(HAVE_MPI)
-    call MPI_Barrier(st%mpi_grp%comm, ierr)
+    if(st%parallel_in_states)  call MPI_Barrier(st%mpi_grp%comm, ierr)
 #endif
 
     do i = 1, n
       ! add contribution of low lying states. Once again, we have to send every state
       ! that is not in node zero to node 0
 #if defined(HAVE_MPI)
-      if(.not.mpi_grp_is_root(st%mpi_grp)) then
-        if(st%node(oep%eigen_index(i)) == st%mpi_grp%rank) then
-          call MPI_Send(st%X(psi)(1, 1, oep%eigen_index(i), is), st%d%dim*m%np, R_MPITYPE, &
-            0, i, st%mpi_grp%comm, status, ierr)
+      if(st%parallel_in_states) then
+        if(.not.mpi_grp_is_root(st%mpi_grp)) then
+          if(st%node(oep%eigen_index(i)) == st%mpi_grp%rank) then
+            call MPI_Send(st%X(psi)(1, 1, oep%eigen_index(i), is), st%d%dim*m%np, R_MPITYPE, &
+              0, i, st%mpi_grp%comm, status, ierr)
+          end if
+        else ! master
+          if(st%node(oep%eigen_index(i)).ne.0) then
+            call MPI_Recv(phi1(1, 1), st%d%dim*m%np, R_MPITYPE, st%node(oep%eigen_index(i)), &
+              i, st%mpi_grp%comm, status, ierr)
+          else
+            phi1(:,:) = st%X(psi)(:,:, oep%eigen_index(i), is)
+          end if
         end if
-      else ! master
-        if(st%node(oep%eigen_index(i)).ne.0) then
-          call MPI_Recv(phi1(1, 1), st%d%dim*m%np, R_MPITYPE, st%node(oep%eigen_index(i)), &
-            i, st%mpi_grp%comm, status, ierr)
-        else
-          phi1(:,:) = st%X(psi)(:,:, oep%eigen_index(i), is)
-        end if
+        call MPI_Barrier(st%mpi_grp%comm, ierr)
       end if
-      call MPI_Barrier(st%mpi_grp%comm, ierr)
 #else
       phi1(:,:) = st%X(psi)(:,:, oep%eigen_index(i), is)
 #endif
@@ -194,9 +208,12 @@ subroutine X(xc_KLI_solve) (m, st, is, oep)
   ! The previous stuff is only needed if n>0.
 
 #if defined(HAVE_MPI)
-  ! Since only node 0 holds the true vxc, broadcast it to all processors.
-  call MPI_Bcast(oep%vxc(:), m%np, MPI_FLOAT, 0, st%mpi_grp%comm, ierr)
+  if(st%parallel_in_states) then
+    ! Since only node 0 holds the true vxc, broadcast it to all processors.
+    call MPI_Bcast(oep%vxc(:), m%np, MPI_FLOAT, 0, st%mpi_grp%comm, ierr)
+  end if
 #endif
 
   deallocate(v_bar_S, rho_sigma)
+  call pop_sub()
 end subroutine X(xc_KLI_solve)

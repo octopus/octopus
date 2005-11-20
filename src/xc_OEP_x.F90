@@ -56,11 +56,14 @@ subroutine X(oep_x) (gr, st, is, oep, ex)
 
   call push_sub('xc_OEP_x.oep_x')
 
-  allocate(F_ij(NP), rho_ij(NP), send_buffer(NP))
-  allocate(recv_stack(st%nst+1), send_stack(st%nst+1))
+  ALLOCATE(F_ij(NP), NP)
+  ALLOCATE(rho_ij(NP), NP)
+  ALLOCATE(send_buffer(NP), NP)
+  ALLOCATE(recv_stack(st%nst+1), st%nst+1)
+  ALLOCATE(send_stack(st%nst+1), st%nst+1)
 
 #if defined(HAVE_MPI)
-  allocate(recv_buffer(NP))
+  ALLOCATE(recv_buffer(NP), NP)
 #endif
 
   ! This is the maximum number of blocks for each processor
@@ -105,11 +108,13 @@ subroutine X(oep_x) (gr, st, is, oep, ex)
       if(ist_s <= st%nst) ist_s = ist_s  + 1
 
 #if defined(HAVE_MPI)
-      ! send wave-function
-      send_req = 0
-      if((send_stack(ist_s) > 0).and.(node_to.ne.st%mpi_grp%rank)) then
-        call MPI_Isend(st%X(psi)(:, 1, send_stack(ist_s), is), NP, R_MPITYPE, &
-          node_to, send_stack(ist_s), st%mpi_grp%comm, send_req, ierr)
+      if(st%parallel_in_states) then
+        ! send wave-function
+        send_req = 0
+        if((send_stack(ist_s) > 0).and.(node_to.ne.st%mpi_grp%rank)) then
+          call MPI_Isend(st%X(psi)(:, 1, send_stack(ist_s), is), NP, R_MPITYPE, &
+            node_to, send_stack(ist_s), st%mpi_grp%comm, send_req, ierr)
+        end if
       end if
 #endif
 
@@ -122,16 +127,20 @@ subroutine X(oep_x) (gr, st, is, oep, ex)
           wf_ist => st%X(psi)(1:NP, 1, recv_stack(ist_r), is)
 #if defined(HAVE_MPI)
         else
-          call MPI_Recv(recv_buffer, NP, R_MPITYPE, &
-            node_fr, recv_stack(ist_r), st%mpi_grp%comm, status, ierr)
-          wf_ist => recv_buffer(1:NP)
+          if(st%parallel_in_states) then
+            call MPI_Recv(recv_buffer, NP, R_MPITYPE, &
+              node_fr, recv_stack(ist_r), st%mpi_grp%comm, status, ierr)
+            wf_ist => recv_buffer(1:NP)
+          end if
 #endif
         end if
       end if
 
 #if defined(HAVE_MPI)
-      if(send_req.ne.0) call MPI_Wait(send_req, status, ierr)
-      send_req = 0
+      if(st%parallel_in_states) then
+        if(send_req.ne.0) call MPI_Wait(send_req, status, ierr)
+        send_req = 0
+      end if
 #endif
 
       if(recv_stack(ist_r) > 0) then
@@ -139,6 +148,7 @@ subroutine X(oep_x) (gr, st, is, oep, ex)
         ist = recv_stack(ist_r)
         send_buffer(1:NP) = R_TOTYPE(M_ZERO)
         do jst = st%st_start, st%st_end
+
           if((st%node(ist) == st%mpi_grp%rank).and.(jst < ist)) cycle
           if((st%occ(ist, is).le.small).or.(st%occ(jst, is).le.small)) cycle
 
@@ -171,9 +181,11 @@ subroutine X(oep_x) (gr, st, is, oep, ex)
 
 #if defined(HAVE_MPI)
         else
-          ! or send it to the node that has wf ist
-          call MPI_Isend(send_buffer(:), NP, R_MPITYPE, &
-            node_fr, ist, st%mpi_grp%comm, send_req, ierr)
+          if(st%parallel_in_states) then
+            ! or send it to the node that has wf ist
+            call MPI_Isend(send_buffer(:), NP, R_MPITYPE, &
+              node_fr, ist, st%mpi_grp%comm, send_req, ierr)
+          end if
 #endif
         end if
 
@@ -182,15 +194,17 @@ subroutine X(oep_x) (gr, st, is, oep, ex)
 #if defined(HAVE_MPI)
       ! now we have to receive the contribution to lxc from the node to
       ! which we sent the wave-function ist
-      if((node_to >= 0).and.(send_stack(ist_s) > 0).and.(node_to.ne.st%mpi_grp%rank)) then
-        call MPI_Recv(recv_buffer(:), NP, R_MPITYPE, &
-          node_to, send_stack(ist_s), st%mpi_grp%comm, status, ierr)
+      if(st%parallel_in_states) then
+        if((node_to >= 0).and.(send_stack(ist_s) > 0).and.(node_to.ne.st%mpi_grp%rank)) then
+          call MPI_Recv(recv_buffer(:), NP, R_MPITYPE, &
+            node_to, send_stack(ist_s), st%mpi_grp%comm, status, ierr)
 
-        oep%X(lxc)(1:NP, send_stack(ist_s)) = oep%X(lxc)(1:NP, send_stack(ist_s)) - &
-          recv_buffer(1:NP)
+          oep%X(lxc)(1:NP, send_stack(ist_s)) = oep%X(lxc)(1:NP, send_stack(ist_s)) - &
+            recv_buffer(1:NP)
+        end if
+
+        if(send_req.ne.0) call MPI_Wait(send_req, status, ierr)
       end if
-
-      if(send_req.ne.0) call MPI_Wait(send_req, status, ierr)
 #endif
 
       ! all done?
@@ -199,9 +213,11 @@ subroutine X(oep_x) (gr, st, is, oep, ex)
   end do
 
 #if defined(HAVE_MPI)
-  ! sum all contributions to the exchange energy
-  call MPI_Allreduce(ex, r, 1, MPI_FLOAT, MPI_SUM, st%mpi_grp%comm, ierr)
-  ex = r
+  if(st%parallel_in_states) then
+    ! sum all contributions to the exchange energy
+    call MPI_Allreduce(ex, r, 1, MPI_FLOAT, MPI_SUM, st%mpi_grp%comm, ierr)
+    ex = r
+  end if
 
   deallocate(recv_buffer)
 #endif
@@ -210,5 +226,4 @@ subroutine X(oep_x) (gr, st, is, oep, ex)
   deallocate(F_ij, rho_ij, send_buffer)
 
   call pop_sub()
-
 end subroutine X(oep_x)

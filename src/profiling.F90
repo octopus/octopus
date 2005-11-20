@@ -120,7 +120,7 @@ contains
       call io_mkdir(trim('profiling.'//dirnum))
     end if
 #else
-    call io_mkdir('profiling.001')
+    call io_mkdir('profiling.serial')
 #endif
 
     ! initialize counter

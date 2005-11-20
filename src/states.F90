@@ -362,6 +362,9 @@ contains
     allocate(st%node(st%nst))
     st%node(:) = 0
 
+    call mpi_grp_init(st%mpi_grp, -1)
+    st%parallel_in_states = .false.
+
     nullify(st%dpsi, st%zpsi)
 
     call pop_sub()
