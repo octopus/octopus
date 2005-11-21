@@ -22,6 +22,7 @@
 module logrid
 
   use global
+  use messages
 
   implicit none
 
@@ -44,7 +45,9 @@ contains
 
     g%a = a; g%b = b; g%nrval = nrval
 
-    allocate(g%rofi(nrval), g%drdi(nrval), g%s(nrval))
+    ALLOCATE(g%rofi(nrval), nrval)
+    ALLOCATE(g%drdi(nrval), nrval)
+    ALLOCATE(g%s(nrval),    nrval)
 
     rpb = b; ea = exp(a)
     do ir = 1, nrval

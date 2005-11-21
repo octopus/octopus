@@ -148,7 +148,7 @@ contains
       return
     end if
 
-    allocate(lcao_data%st%X(psi)(gr%m%np_part, st%d%dim, norbs, st%d%nik))
+    ALLOCATE(lcao_data%st%X(psi)(NP_PART, st%d%dim, norbs, st%d%nik), NP_PART*st%d%dim*norbs*st%d%nik)
     lcao_data%st%X(psi) = R_TOTYPE(M_ZERO)
 
     do ik = 1, st%d%nik
@@ -162,13 +162,13 @@ contains
     end do
 
     ! Allocation of variables
-    allocate(lcao_data%hamilt (norbs, norbs, st%d%nik), &
-      lcao_data%s      (norbs, norbs, st%d%nik), &
-      lcao_data%k      (norbs, norbs, st%d%nik), &
-      lcao_data%v      (norbs, norbs, st%d%nik))
+    ALLOCATE(lcao_data%hamilt(norbs, norbs, st%d%nik), norbs*norbs*st%d%nik)
+    ALLOCATE(lcao_data%s     (norbs, norbs, st%d%nik), norbs*norbs*st%d%nik)
+    ALLOCATE(lcao_data%k     (norbs, norbs, st%d%nik), norbs*norbs*st%d%nik)
+    ALLOCATE(lcao_data%v     (norbs, norbs, st%d%nik), norbs*norbs*st%d%nik)
 
     ! Overlap and kinetic+so matrices.
-    allocate(hpsi(gr%m%np, st%d%dim))
+    ALLOCATE(hpsi(NP, st%d%dim), NP*st%d%dim)
     do ik = 1, st%d%nik
       do n1 = 1, lcao_data%st%nst
         call X(kinetic) (h, gr, lcao_data%st%X(psi)(:, :, n1, ik), hpsi(:, :), ik)
@@ -240,7 +240,7 @@ contains
     nst = st%nst
 
     ! Hamiltonian and overlap matrices.
-    allocate(hpsi(np, dim))
+    ALLOCATE(hpsi(np, dim), np*dim)
     do ik = 1, st%d%nik
       do n1 = 1, lcao_data%st%nst
         hpsi = M_ZERO
@@ -255,7 +255,7 @@ contains
     end do
 
     do ik = 1, st%d%nik
-      allocate(ev(norbs))
+      ALLOCATE(ev(norbs), norbs)
       call lalg_geneigensolve(norbs, lcao_data%hamilt(1:norbs, 1:norbs, ik), &
         lcao_data%s(1:norbs, 1:norbs, ik), ev)
 

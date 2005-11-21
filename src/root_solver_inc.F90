@@ -254,7 +254,9 @@ subroutine X(root_laguerre)(rs, root, startval, coeff)
 
   order = rs%poly_order
 
-  allocate(b(order), c(order-1), d(order-2))
+  ALLOCATE(b(order),   order)
+  ALLOCATE(c(order-1), order-1)
+  ALLOCATE(d(order-2), order-2)
 
   z = startval
 

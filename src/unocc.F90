@@ -100,7 +100,7 @@ contains
 
     ! First, get the residues of the occupied states.
     ! These are assumed to be converged; otherwise one should do a SCF calculation.
-    allocate(h_psi(sys%gr%m%np, h%d%dim))
+    ALLOCATE(h_psi(sys%gr%m%np, h%d%dim), sys%gr%m%np*h%d%dim)
     do ik = 1, sys%st%d%nik
       do p = 1, eigens%converged
         call X(Hpsi)(h, sys%gr, sys%st%X(psi)(:,:, p, ik) , h_psi, ik)
@@ -189,11 +189,11 @@ contains
       st%st_end = st%nst
 
       deallocate(st%eigenval, st%occ)
-      ALLOCATE(sys%st%X(psi)(m%np_part, st%d%dim, st%nst, st%d%nik), m%np_part *st%d%dim * st%nst * st%d%nik)
+      ALLOCATE(sys%st%X(psi)(m%np_part, st%d%dim, st%nst, st%d%nik), m%np_part*st%d%dim*st%nst*st%d%nik)
       ALLOCATE(st%eigenval(st%nst, st%d%nik), st%nst*st%d%nik)
       ALLOCATE(st%occ(st%nst, st%d%nik), st%nst*st%d%nik)
       if(st%d%ispin == SPINORS) then
-        allocate(st%mag(st%nst, st%d%nik, 2))
+        ALLOCATE(st%mag(st%nst, st%d%nik, 2), st%nst*st%d%nik*2)
         st%mag = M_ZERO
       end if
       st%eigenval = huge(PRECISION)
@@ -284,7 +284,8 @@ contains
       call io_assign(iunit)
       iunit = io_open('ME/2-body', action='write')
 
-      allocate(n(1:m%np), v(1:m%np))
+      ALLOCATE(n(1:m%np), m%np)
+      ALLOCATE(v(1:m%np), m%np)
 
       do i = 1, st%nst
         do j = 1, st%nst

@@ -238,7 +238,7 @@ subroutine X(f_divergence) (sb, f_der, f, divf)
 
 #if defined(HAVE_FFT)
   case(FOURIER_SPACE)
-    allocate(aux(f_der%m%np))
+    ALLOCATE(aux(f_der%m%np), f_der%m%np)
     call X(cf_alloc_RS)(f_der%X(cf_der))     ! allocate cube in real space
     call X(cf_alloc_FS)(f_der%X(cf_der))     ! allocate cube in real space
 
@@ -308,7 +308,7 @@ subroutine X(f_angular_momentum)(sb, f_der, f, lf)
 
   call push_sub('f_inc.Xf_angular_momentum')
 
-  allocate(gf(f_der%m%np, 3))
+  ALLOCATE(gf(f_der%m%np, 3), f_der%m%np*3)
   call X(f_gradient)(sb, f_der, f, gf)
 
   do i = 1, f_der%m%np
@@ -342,7 +342,8 @@ subroutine X(f_l2)(sb, f_der, f, l2f)
 
   m => f_der%m
 
-  allocate(gf(m%np_part, sb%dim), ggf(m%np, sb%dim, sb%dim))
+  ALLOCATE(gf(m%np_part, sb%dim), m%np_part*sb%dim)
+  ALLOCATE(ggf(m%np, sb%dim, sb%dim), m%np*sb%dim*sb%dim)
 
   call X(f_angular_momentum)(sb, f_der, f, gf)
   do j = 1, 3
@@ -359,5 +360,6 @@ subroutine X(f_l2)(sb, f_der, f, l2f)
 #if defined(R_TREAL)
   l2f = - l2f
 #endif
+
   deallocate(gf, ggf)
 end subroutine X(f_l2)

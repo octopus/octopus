@@ -64,7 +64,7 @@ subroutine X(states_calc_dens)(st, np, rho)
 #if defined(HAVE_MPI)
   ! reduce density (assumes memory is contiguous)
   if(st%parallel_in_states) then
-    allocate(reduce_rho(1:np, st%d%nspin))
+    ALLOCATE(reduce_rho(1:np, st%d%nspin), np*st%d%nspin)
     call MPI_ALLREDUCE(rho(1, 1), reduce_rho(1, 1), np*st%d%nspin, &
       MPI_FLOAT, MPI_SUM, st%mpi_grp%comm, ierr)
     rho = reduce_rho
@@ -166,7 +166,7 @@ FLOAT function X(states_residue)(m, dim, hf, e, f) result(r)
 
   call push_sub('states_inc.Xstates_nrm2')
 
-  allocate(res(m%np_part, dim))
+  ALLOCATE(res(m%np_part, dim), m%np_part*dim)
   res(1:m%np, :) = hf(1:m%np, :) - e*f(1:m%np, :)
   r = X(states_nrm2)(m, dim, res)
   deallocate(res)
@@ -215,7 +215,7 @@ subroutine X(states_output) (st, gr, dir, outp)
 
 
   if(iand(outp%what, output_wfs_sqmod).ne.0) then
-    allocate(dtmp(NP))
+    ALLOCATE(dtmp(NP), NP)
     do ist = 1, st%nst
       if(loct_isinstringlist(ist, outp%wfs_list)) then
         do ik = 1, st%d%nik
@@ -280,14 +280,17 @@ contains
       call X(cf_fft_init)(cf_tmp, gr%sb)
     end if
 
-    allocate(c(NP))
+    ALLOCATE(c(NP), NP)
 
     do_is: do is = 1, st%d%nspin
-      allocate(r(NP), gradr(NP, NDIM), j(NP, NDIM))
+      ALLOCATE(    r(NP),       NP)
+      ALLOCATE(gradr(NP, NDIM), NP*NDIM)
+      ALLOCATE(    j(NP, NDIM), NP*NDIM)
       r = M_ZERO; gradr = M_ZERO; j  = M_ZERO
       c = M_ZERO
 
-      allocate(psi_fs(NP_PART), gpsi(NP, NDIM))
+      ALLOCATE(psi_fs(NP_PART),  NP_PART)
+      ALLOCATE(gpsi  (NP, NDIM), NP*NDIM)
       do ik = is, st%d%nik, st%d%nspin
         do ist = 1, st%nst
           do idim = 1, st%d%dim
@@ -376,7 +379,7 @@ R_TYPE function X(states_mpdotp)(m, ik, st1, st2) result(dotp)
 
   call push_sub('states_inc.states_mpdotp')
 
-  allocate(a(st1%nst, st1%nst))
+  ALLOCATE(a(st1%nst, st1%nst), st1%nst*st1%nst)
 
   call X(calculate_matrix)(m, ik, st1, st2, st1%nst, a)
   dotp = lalg_determinant(st1%nst, a, invert = .false.)
@@ -426,7 +429,7 @@ contains
     end do
 
     ! Processes are received, and then the matrix elements are calculated.
-    allocate(phi2(m%np, st1%d%dim))
+    ALLOCATE(phi2(m%np, st1%d%dim), m%np*st1%d%dim)
     do j = 1, n
       l = st1%node(j)
       if(l.ne.st1%mpi_grp%rank) then
@@ -481,7 +484,7 @@ subroutine X(states_calc_angular)(gr, st, angular, l2)
   call push_sub('states_inc.states_calc_angular')
 
   temp = M_ZERO; ltemp = M_ZERO
-  allocate(lpsi(NP, NDIM))
+  ALLOCATE(lpsi(NP, NDIM), NP*NDIM)
 
   do ik = 1, st%d%nik
     do j  = st%st_start, st%st_end

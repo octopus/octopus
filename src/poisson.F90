@@ -216,7 +216,8 @@ contains
 
     call push_sub('poisson.zpoisson_solve')
 
-    allocate(aux1(gr%m%np), aux2(gr%m%np))
+    ALLOCATE(aux1(gr%m%np), gr%m%np)
+    ALLOCATE(aux2(gr%m%np), gr%m%np)
 
     ! first the real part
     aux1(:) = real(rho(:))
@@ -270,9 +271,12 @@ contains
       call poisson_fft(gr%m, pot, rho)
 
     case(FFT_CORRECTED)
-      allocate(rho_corrected(gr%m%np), vh_correction(gr%m%np))
+      ALLOCATE(rho_corrected(gr%m%np), gr%m%np)
+      ALLOCATE(vh_correction(gr%m%np), gr%m%np)
+
       call correct_rho(gr%m, maxl, rho, rho_corrected, vh_correction)
       call poisson_fft(gr%m, pot, rho_corrected, average_to_zero = .true.)
+
       pot = pot + vh_correction
       deallocate(rho_corrected, vh_correction)
 #endif
@@ -344,7 +348,9 @@ contains
 !!$      return
 !!$    endif
 !!$
-!!$    allocate(rho(NP), vh(NP), vh_exact(NP))
+!!$    ALLOCATE(     rho(NP), NP)
+!!$    ALLOCATE(      vh(NP), NP)
+!!$    ALLOCATE(vh_exact(NP), NP)
 !!$    rho = M_ZERO; vh = M_ZERO; vh_exact = M_ZERO
 !!$
 !!$    ! This builds a normalized Gaussian charge

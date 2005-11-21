@@ -272,7 +272,8 @@ contains
 
       call push_sub('td_exp.fourth')
 
-      allocate(zpsi1(NP_PART, h%d%dim), hzpsi1(NP, h%d%dim))
+      ALLOCATE(zpsi1 (NP_PART, h%d%dim), NP_PART*h%d%dim)
+      ALLOCATE(hzpsi1(NP,      h%d%dim), NP     *h%d%dim)
       zfact = M_z1
       call lalg_copy(NP, h%d%dim, zpsi(:,:), zpsi1(:,:))
       do i = 1, te%exp_order
@@ -309,7 +310,7 @@ contains
 
       call push_sub('td_exp.cheby')
 
-      allocate(zpsi1(NP_PART, h%d%dim, 0:2))
+      ALLOCATE(zpsi1(NP_PART, h%d%dim, 0:2), NP_PART*h%d%dim*3)
       zpsi1 = M_z0
       do j = te%exp_order-1, 0, -1
         call lalg_copy(NP, h%d%dim, zpsi1(:,:, 1), zpsi1(:,:, 2))
@@ -344,13 +345,14 @@ contains
       call push_sub('td_exp.lanczos')
 
       tol    = te%lanczos_tol
-      allocate(v(NP_PART, h%d%dim, te%exp_order+1), &
-        hm(te%exp_order+1, te%exp_order+1), &
-        expo(te%exp_order+1, te%exp_order+1))
+      ALLOCATE( v(NP_PART, h%d%dim, te%exp_order+1), NP_PART*h%d%dim*(te%exp_order+1))
+      ALLOCATE(  hm(te%exp_order+1, te%exp_order+1), (te%exp_order+1)*(te%exp_order+1))
+      ALLOCATE(expo(te%exp_order+1, te%exp_order+1), (te%exp_order+1)*(te%exp_order+1))
       v = M_z0; hm = M_z0; expo = M_z0
 
       lwsp = 4*(te%exp_order+1)**2+7
-      allocate(wsp(lwsp), ipiv(te%exp_order+1))
+      ALLOCATE(wsp(lwsp), lwsp)
+      ALLOCATE(ipiv(te%exp_order+1), (te%exp_order+1))
 
       ! Normalize input vector, and put it into v(:, :, 1)
       beta = zstates_nrm2(gr%m, h%d%dim, zpsi)

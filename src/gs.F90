@@ -58,7 +58,7 @@ contains
     ierr = 0
 
     ! allocate wfs
-    allocate(sys%st%X(psi)(sys%NP_PART, sys%st%d%dim, sys%st%nst, sys%st%d%nik))
+    ALLOCATE(sys%st%X(psi)(sys%NP_PART, sys%st%d%dim, sys%st%nst, sys%st%d%nik), sys%NP_PART*sys%st%d%dim*sys%st%nst*sys%st%d%nik)
 
     ! load wave-functions
     message(1) = 'Info: Loading wave-functions'
@@ -111,7 +111,7 @@ contains
     call push_sub('gs.ground_state_init')
 
     ! allocate wfs
-    allocate(st%X(psi)(NP_PART, st%d%dim, st%nst, st%d%nik))
+    ALLOCATE(st%X(psi)(NP_PART, st%d%dim, st%nst, st%d%nik), NP_PART*st%d%dim*st%nst*st%d%nik)
 
     ! set barrier before the first communication takes place
     ! this ensures proper debug timing of MPI calls

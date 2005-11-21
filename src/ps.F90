@@ -133,7 +133,8 @@ contains
       ps%g%a = pstm%g%a
       ps%g%b = pstm%g%b
       ps%g%nrval = pstm%g%nrval
-      allocate(ps%g%rofi(ps%g%nrval),ps%g%drdi(ps%g%nrval))
+      ALLOCATE(ps%g%rofi(ps%g%nrval), ps%g%nrval)
+      ALLOCATE(ps%g%drdi(ps%g%nrval), ps%g%nrval)
       ps%g%rofi = pstm%g%rofi
       ps%g%drdi = pstm%g%drdi
 
@@ -149,30 +150,29 @@ contains
       ps%g%a = psp%g%a
       ps%g%b = psp%g%b
       ps%g%nrval = psp%g%nrval
-      allocate(ps%g%rofi(ps%g%nrval),ps%g%drdi(ps%g%nrval))
+      ALLOCATE(ps%g%rofi(ps%g%nrval), ps%g%nrval)
+      ALLOCATE(ps%g%drdi(ps%g%nrval), ps%g%nrval)
       ps%g%rofi = psp%g%rofi
       ps%g%drdi = psp%g%drdi
 
     end select
 
     ! We allocate all the stuff
-    allocate(                                      &
-      ps%kb      (0:ps%l_max, ps%kbc),             &
-      ps%dkb     (0:ps%l_max, ps%kbc),             &
-      ps%ur      (ps%conf%p, ps%ispin),            &
-      ps%dknrm   (0:ps%L_max),                     &
-      ps%h       (0:ps%l_max, 1:ps%kbc, 1:ps%kbc), &
-      ps%k       (0:ps%l_max, 1:ps%kbc, 1:ps%kbc))!, &
+    ALLOCATE(ps%kb   (0:ps%l_max, ps%kbc),             (ps%l_max+1)*ps%kbc)
+    ALLOCATE(ps%dkb  (0:ps%l_max, ps%kbc),             (ps%l_max+1)*ps%kbc)
+    ALLOCATE(ps%ur   (ps%conf%p, ps%ispin),            ps%conf%p*ps%ispin)
+    ALLOCATE(ps%dknrm(0:ps%l_max),                     ps%l_max+1)
+    ALLOCATE(ps%h    (0:ps%l_max, 1:ps%kbc, 1:ps%kbc), (ps%l_max+1)*ps%kbc*ps%kbc)
+    ALLOCATE(ps%k    (0:ps%l_max, 1:ps%kbc, 1:ps%kbc), (ps%l_max+1)*ps%kbc*ps%kbc)
 
     ps%dknrm   (0:ps%L_max) = M_ZERO
     ps%h       (0:ps%l_max, 1:ps%kbc, 1:ps%kbc) = M_ZERO
     ps%k       (0:ps%l_max, 1:ps%kbc, 1:ps%kbc) = M_ZERO
 
     if(ps%so_l_max >= 0) then
-      allocate(                        &
-        ps%so_kb (0:ps%l_max, ps%kbc), &
-        ps%so_dkb(0:ps%l_max, ps%kbc), &
-        ps%so_dknrm(0:ps%l_max))
+      ALLOCATE(ps%so_kb   (0:ps%l_max, ps%kbc), (ps%l_max+1)*ps%kbc)
+      ALLOCATE(ps%so_dkb  (0:ps%l_max, ps%kbc), (ps%l_max+1)*ps%kbc)
+      ALLOCATE(ps%so_dknrm(0:ps%l_max),         (ps%l_max+1))
       ps%so_dknrm(0:ps%l_max) = M_ZERO
     end if
 
@@ -198,7 +198,7 @@ contains
 
     ! Get the localized part of the pseudopotential.
     ps%a_erf = CNST(2.0) ! This is hard-coded to a reasonable value.
-    allocate(y(ps%g%nrval))
+    ALLOCATE(y(ps%g%nrval), ps%g%nrval)
     y(1) = loct_splint(ps%vl, CNST(0.0)) + ps%z_val*(M_TWO/sqrt(M_PI))*ps%a_erf
     do i = 2, ps%g%nrval
       r = ps%g%rofi(i)
@@ -287,7 +287,7 @@ contains
 
     call loct_spline_filter(ps%vlocalized, fs = (/ alpha*gmax, CNST(100.0) /) )
     call loct_spline_end(ps%vl)
-    allocate(y(ps%g%nrval))
+    ALLOCATE(y(ps%g%nrval), ps%g%nrval)
     y(1) = loct_splint(ps%vlocalized, CNST(0.0)) - ps%z_val*(M_TWO/sqrt(M_PI))*ps%a_erf
     do i = 2, ps%g%nrval
       r = ps%g%rofi(i)
@@ -371,7 +371,7 @@ contains
     ! Local part.
     call loct_spline_print(ps%vl, local_unit)
     call loct_spline_print(ps%dvl, dlocal_unit)
-    allocate(fw(1, 1))
+    ALLOCATE(fw(1, 1), 1*1)
     call loct_spline_init(fw(1, 1))
     call loct_spline_3dft(ps%vlocalized, fw(1, 1), gmax = gmax)
     call loct_spline_print(fw(1, 1), localw_unit)
@@ -381,7 +381,7 @@ contains
     ! Kleinman-Bylander projectors
     call loct_spline_print(ps%kb, nl_unit)
     call loct_spline_print(ps%dkb, dnl_unit)
-    allocate(fw(0:ps%l_max, 1:ps%kbc))
+    ALLOCATE(fw(0:ps%l_max, 1:ps%kbc), (ps%l_max+1)*ps%kbc)
     call loct_spline_init(fw)
     do k = 0, ps%l_max
       do j = 1, ps%kbc
@@ -396,7 +396,7 @@ contains
     if(ps%so_l_max >= 0) then
       call loct_spline_print(ps%so_kb, so_unit)
       call loct_spline_print(ps%so_dkb, dso_unit)
-      allocate(fw(0:ps%so_l_max, 1:ps%kbc))
+      ALLOCATE(fw(0:ps%so_l_max, 1:ps%kbc), (ps%so_l_max+1)*ps%kbc)
       call loct_spline_init(fw)
       do k = 0, ps%so_l_max
         do j = 1, ps%kbc
@@ -536,7 +536,8 @@ contains
 
     call push_sub('ps.get_splines_tm')
 
-    allocate(hato(psf%nrval), derhato(psf%nrval))
+    ALLOCATE(hato   (psf%nrval), psf%nrval)
+    ALLOCATE(derhato(psf%nrval), psf%nrval)
 
     ! Define the table for the pseudo-wavefunction components (using splines)
     ! with a correct normalization function.
@@ -645,7 +646,8 @@ contains
 
     call push_sub('ps.get_splines_hgh')
 
-    allocate(hato(psp%g%nrval), derhato(psp%g%nrval))
+    ALLOCATE(   hato(psp%g%nrval), psp%g%nrval)
+    ALLOCATE(derhato(psp%g%nrval), psp%g%nrval)
 
     ! Interpolate the KB-projection functions
     do l = 0, psp%l_max

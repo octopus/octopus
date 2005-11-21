@@ -126,13 +126,17 @@ contains
 
     select case (smix%type_of_mixing)
     case (MIX_GRPULAY)
-      allocate(smix%df(m%np, d2, d3, smix%ns + 1), smix%vin_old(m%np, d2, d3), &
-        smix%dv(m%np, d2, d3, smix%ns + 1), smix%f_old  (m%np, d2, d3)   )
+      ALLOCATE(smix%df(m%np, d2, d3, smix%ns + 1), m%np*d2*d3*(smix%ns + 1))
+      ALLOCATE(smix%vin_old(m%np, d2, d3),         m%np*d2*d3)
+      ALLOCATE(smix%dv(m%np, d2, d3, smix%ns + 1), m%np*d2*d3*(smix%ns + 1))
+      ALLOCATE(smix%f_old(m%np, d2, d3),           m%np*d2*d3)
       smix%df = M_ZERO; smix%dv = M_ZERO; smix%vin_old = M_ZERO; smix%f_old = M_ZERO
 
     case (MIX_BROYDEN)
-      allocate(smix%df(m%np, d2, d3, smix%ns), smix%vin_old(m%np, d2, d3), &
-        smix%dv(m%np, d2, d3, smix%ns), smix%f_old  (m%np, d2, d3)   )
+      ALLOCATE(smix%df(m%np, d2, d3, smix%ns), m%np*d2*d3*smix%ns)
+      ALLOCATE(smix%vin_old(m%np, d2, d3),     m%np*d2*d3)
+      ALLOCATE(smix%dv(m%np, d2, d3, smix%ns), m%np*d2*d3*smix%ns)
+      ALLOCATE(smix%f_old(m%np, d2, d3),       m%np*d2*d3)
       smix%df = M_ZERO; smix%dv = M_ZERO; smix%vin_old = M_ZERO; smix%f_old = M_ZERO
 
     end select
@@ -209,7 +213,7 @@ contains
     FLOAT :: gamma
     FLOAT, allocatable :: f(:, :, :)
 
-    allocate(f(m%np, d2, d3))
+    ALLOCATE(f(m%np, d2, d3), m%np*d2*d3)
 
     f(1:m%np, 1:d2, 1:d3) = vout(1:m%np, 1:d2, 1:d3) - vin(1:m%np, 1:d2, 1:d3)
     if(iter > 1) then
@@ -336,7 +340,7 @@ contains
     integer :: ipos, iter_used
     FLOAT, allocatable :: f(:, :, :)
 
-    allocate(f(m%np, d2, d3))
+    ALLOCATE(f(m%np, d2, d3), m%np*d2*d3)
     f = vout - vin
 
     ! we only extrapolate a new vector every two iterations

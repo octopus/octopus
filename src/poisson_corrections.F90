@@ -68,12 +68,12 @@ contains
     FLOAT, allocatable :: betal(:)
 
 
-    allocate(mult((ml+1)**2))
+    ALLOCATE(mult((ml+1)**2), (ml+1)**2)
     call get_multipoles(m, rho, ml, mult)
 
     alpha = alpha_*m%h(1)
 
-    allocate(betal((ml+1)**2))
+    ALLOCATE(betal((ml+1)**2), (ml+1)**2)
     add_lm = 1
     do l = 0, ml
       do mm = -l, l
@@ -134,7 +134,8 @@ contains
     FLOAT :: alpha, beta, gamma, ylm, r, x(3)
     integer :: i, l, add_lm, lldfac, j, mm
 
-    allocate(phi((maxl+1)**2, m%np))
+    ALLOCATE(phi((maxl+1)**2, m%np), (maxl+1)**2*m%np)
+
     alpha = alpha_*m%h(1)
     do i = 1, m%np
       call mesh_r(m, i, r, x = x)
@@ -175,7 +176,8 @@ contains
     FLOAT :: ylm, r, x(3)
     integer :: i, l, add_lm, mm
 
-    allocate(aux((maxl+1)**2, m%np))
+    ALLOCATE(aux((maxl+1)**2, m%np), (maxl+1)**2*m%np)
+
     do i = 1, m%np
       call mesh_r(m, i, r, x = x)
       add_lm = 1

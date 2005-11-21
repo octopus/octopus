@@ -219,6 +219,7 @@
 !----------------------------------------------------------------------------*/!
 module lib_oct_gsl_spline
   use lib_oct
+  use messages
   implicit none
 
   ! Define the which routines can be seen from the outside
@@ -395,7 +396,8 @@ contains
 
     real(8), allocatable :: rofi8(:), ffit8(:)
 
-    allocate(rofi8(nrc), ffit8(nrc))
+    ALLOCATE(rofi8(nrc), nrc)
+    ALLOCATE(ffit8(nrc), nrc)
     rofi8 = real(rofi, kind=8)
     ffit8 = real(ffit, kind=8)
     call oct_spline_fit(nrc, rofi8(1), ffit8(1), spl%spl, spl%acc)
@@ -425,7 +427,9 @@ contains
 
     npoints = oct_spline_npoints(spl1%spl)
 
-    allocate(x(npoints), y(npoints), y2(npoints))
+    ALLOCATE( x(npoints), npoints)
+    ALLOCATE( y(npoints), npoints)
+    ALLOCATE(y2(npoints), npoints)
 
     call oct_spline_x(spl1%spl, x(1))
     call oct_spline_y(spl1%spl, y(1))
@@ -448,7 +452,8 @@ contains
     real(8), allocatable :: x(:), y(:)
 
     npoints = oct_spline_npoints(spl%spl)
-    allocate(x(npoints), y(npoints))
+    ALLOCATE(x(npoints), npoints)
+    ALLOCATE(y(npoints), npoints)
     call oct_spline_x(spl%spl, x(1))
     call oct_spline_y(spl%spl, y(1))
     call oct_spline_end(spl%spl, spl%acc)
@@ -464,11 +469,13 @@ contains
     type(loct_spline_type), intent(in) :: spl
     integer :: npoints
     real(8), allocatable :: x(:)
+
     npoints = oct_spline_npoints(spl%spl)
-    allocate(x(npoints))
+    ALLOCATE(x(npoints), npoints)
     call oct_spline_x(spl%spl, x(1))
     res = oct_spline_eval_integ(spl%spl, x(1), x(npoints), spl%acc)
     deallocate(x)
+
   end function loct_spline_integral_full
 
   real(8) function loct_spline_integral_limits(spl, a, b) result(res)
@@ -485,7 +492,8 @@ contains
     real(8), allocatable :: x(:), y(:)
 
     npoints = oct_spline_npoints(spl1%spl)
-    allocate(x(npoints), y(npoints))
+    ALLOCATE(x(npoints), npoints)
+    ALLOCATE(y(npoints), npoints)
     call oct_spline_x(spl1%spl, x(1))
     call oct_spline_y(spl1%spl, y(1))
     do i = 1, npoints
@@ -509,21 +517,25 @@ contains
     real(8), allocatable :: x(:), y(:), y2(:), xw(:), yw(:)
 
     npoints = oct_spline_npoints(spl%spl)
-    allocate(x(npoints), y(npoints),y2(npoints))
+    ALLOCATE( x(npoints), npoints)
+    ALLOCATE( y(npoints), npoints)
+    ALLOCATE(y2(npoints), npoints)
     call oct_spline_x(spl%spl, x(1))
     call oct_spline_y(spl%spl, y(1))
 
     ! Check wether splw comes with a defined grid, or else build it.
     if(splw%spl.ne.0) then
       np = oct_spline_npoints(splw%spl)
-      allocate(xw(np), yw(np))
+      ALLOCATE(xw(np), np)
+      ALLOCATE(yw(np), np)
       call oct_spline_x(splw%spl, xw(1))
       ! But now we need to kill the input:
       call loct_spline_end(splw)
     else
       np = 200 ! hard coded value
       dg = gmax/(np-1)
-      allocate(xw(np), yw(np))
+      ALLOCATE(xw(np), np)
+      ALLOCATE(yw(np), np)
       do i = 1, np
         g = (i-1)*dg
         xw(i) = g
@@ -567,21 +579,25 @@ contains
     real(8), allocatable :: x(:), y(:), y2(:), xw(:), yw(:)
 
     npoints = oct_spline_npoints(spl%spl)
-    allocate(x(npoints), y(npoints),y2(npoints))
+    ALLOCATE( x(npoints), npoints)
+    ALLOCATE( y(npoints), npoints)
+    ALLOCATE(y2(npoints), npoints)
     call oct_spline_x(spl%spl, x(1))
     call oct_spline_y(spl%spl, y(1))
 
     ! Check wether splw comes with a defined grid, or else build it.
     if(splw%spl.ne.0) then
       np = oct_spline_npoints(splw%spl)
-      allocate(xw(np), yw(np))
+      ALLOCATE(xw(np), np)
+      ALLOCATE(yw(np), np)
       call oct_spline_x(splw%spl, xw(1))
       ! But now we need to kill the input:
       call loct_spline_end(splw)
     else
       np = 1000 ! hard coded value
       dg = gmax/(np-1)
-      allocate(xw(np), yw(np))
+      ALLOCATE(xw(np), np)
+      ALLOCATE(yw(np), np)
       do i = 1, np
         g = (i-1)*dg
         xw(i) = g
@@ -612,7 +628,8 @@ contains
     real(8), allocatable :: x(:), y(:)
 
     npoints = oct_spline_npoints(spl%spl)
-    allocate(x(npoints), y(npoints))
+    ALLOCATE(x(npoints), npoints)
+    ALLOCATE(y(npoints), npoints)
     call oct_spline_x(spl%spl, x(1))
     call oct_spline_y(spl%spl, y(1))
     call oct_spline_end(spl%spl, spl%acc)
@@ -678,11 +695,13 @@ contains
     ! Use the grid of dspl if it is present, otherwise use the same one of spl.
     if(dspl%spl == 0) then ! use the grid of spl
       npoints = oct_spline_npoints(spl%spl)
-      allocate(x(npoints), y(npoints))
+      ALLOCATE(x(npoints), npoints)
+      ALLOCATE(y(npoints), npoints)
       call oct_spline_x(spl%spl, x(1))
     else ! use the grid of dspl
       npoints = oct_spline_npoints(dspl%spl)
-      allocate(x(npoints), y(npoints))
+      ALLOCATE(x(npoints), npoints)
+      ALLOCATE(y(npoints), npoints)
       call oct_spline_x(dspl%spl, x(1))
     end if
     do i = 1, npoints
@@ -700,7 +719,8 @@ contains
     real(8), allocatable :: x(:), y(:)
 
     np = oct_spline_npoints(spl%spl)
-    allocate(x(np), y(np))
+    ALLOCATE(x(np), np)
+    ALLOCATE(y(np), np)
     call oct_spline_x(spl%spl, x(1))
     call oct_spline_y(spl%spl, y(1))
     do i = 1, np
@@ -721,7 +741,8 @@ contains
     if(n<=0) return
     write(fm,'(i4)') n + 1; fm = adjustl(fm)
     np = oct_spline_npoints(spl(1)%spl)
-    allocate(x(np), y(np))
+    ALLOCATE(x(np), np)
+    ALLOCATE(y(np), np)
     call oct_spline_x(spl(1)%spl, x(1))
     call oct_spline_y(spl(1)%spl, y(1))
     do i = 1, np
@@ -743,7 +764,8 @@ contains
     if(n1*n2<=0) return
     write(fm,'(i4)') n1*n2 + 1; fm = adjustl(fm)
     np = oct_spline_npoints(spl(1, 1)%spl)
-    allocate(x(np), y(np))
+    ALLOCATE(x(np), np)
+    ALLOCATE(y(np), np)
     call oct_spline_x(spl(1, 1)%spl, x(1))
     call oct_spline_y(spl(1, 1)%spl, y(1))
     do i = 1, np

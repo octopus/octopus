@@ -80,11 +80,15 @@ subroutine eigen_solver_plan(gr, st, hamilt, tol, niter, converged, diff)
   ! Careful: aux has to range from 1 to NP_PART because it is input to
   ! hpsi. In parallel the space NP+1:NP_PART is needed for ghost points
   ! in the non local operator.
-  allocate(                                      &
-    eigenvec(NP_PART, dim, me), aux(NP_PART, dim),     tmp(krylov), &
-    v(NP_PART, dim, krylov),    h(krylov, krylov),     eigenval(me),&
-    av(NP_PART, dim, krylov),   hevec(krylov, krylov), res(me)       )
-
+  ALLOCATE(eigenvec(NP_PART, dim, me), NP_PART*dim*me)
+  ALLOCATE(aux(NP_PART, dim),          NP_PART*dim)
+  ALLOCATE(tmp(krylov),                krylov)
+  ALLOCATE(v(NP_PART, dim, krylov),    NP_PART*dim*krylov)
+  ALLOCATE(h(krylov, krylov),          krylov*krylov)
+  ALLOCATE(eigenval(me),               me)
+  ALLOCATE(av(NP_PART, dim, krylov),   NP_PART*dim*krylov)
+  ALLOCATE(hevec(krylov, krylov),      krylov*krylov)
+  ALLOCATE(res(me),                    me)
 
   eigenval = M_ZERO
   eigenvec = R_TOTYPE(M_ZERO)
@@ -263,7 +267,7 @@ subroutine eigen_solver_plan(gr, st, hamilt, tol, niter, converged, diff)
         ! Preconditioning
         do idim = 1, dim
           call lalg_copy(NP, av(:, idim, d1 + 1), aux(:, idim))
-          call apply_filter(aux(:, idim), v(:, idim, d1+1))
+          call X(nl_operator_operate) (filter, aux(:, idim), v(:, idim, d1+1))
         end do
 
       end do inner_loop
@@ -302,31 +306,5 @@ contains
 
     call pop_sub()
   end subroutine residual
-
-
-  ! ---------------------------------------------------------
-  subroutine apply_filter(fi, fo)
-    R_TYPE, intent(in), target  :: fi(:)
-    R_TYPE, intent(out) :: fo(:)
-
-    R_TYPE, pointer :: fip(:)
-
-    call push_sub('eigen_plan.apply_filter')
-
-    if(gr%f_der%der_discr%zero_bc) then
-      allocate(fip(gr%m%np_part))
-      fip(1:NP)             = fi(1:NP)
-      fip(NP+1:gr%m%np_part) = R_TOTYPE(M_ZERO)
-    else
-      fip => fi
-    end if
-
-    call X(nl_operator_operate) (filter, fip, fo)
-
-    if(gr%f_der%der_discr%zero_bc) deallocate(fip)
-
-    call pop_sub()
-
-  end subroutine apply_filter
 
 end subroutine eigen_solver_plan

@@ -128,7 +128,7 @@ contains
     no_l = 0
     if(loct_parse_block(check_inp('TDLasers'), blk) == 0) then
       no_l = loct_parse_block_n(blk)
-      allocate(l(no_l))
+      ALLOCATE(l(no_l), no_l)
 
       ! The structure of the block is:
       ! nx | ny | nz | amplitude | omega | envelope | tau0 | t0 | tau1 | filename1 | filename2
@@ -189,7 +189,7 @@ contains
 
       integer :: ierr
 
-      allocate(l%v(m%np))
+      ALLOCATE(l%v(m%np), m%np)
       call dinput_function(filename, m, l%v(:), ierr)
       if(ierr < 0) then
         write(message(1),'(a)') "Could not read the external field spatial part."
@@ -221,7 +221,9 @@ contains
       rewind(iunit)
 
       ! allocate and read info
-      allocate(t(lines), am(lines), ph(lines))
+      ALLOCATE( t(lines), lines)
+      ALLOCATE(am(lines), lines)
+      ALLOCATE(ph(lines), lines)
       do j = 1, lines
         read(iunit, *, err=100, end=100) t(j), am(j), ph(j)
       end do

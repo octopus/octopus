@@ -115,7 +115,7 @@ contains
     end if
 
     ! store the fourier transform of the Coulomb interaction
-    allocate(fft_Coulb_FS(fft_cf%nx, fft_cf%n(2), fft_cf%n(3)))
+    ALLOCATE(fft_Coulb_FS(fft_cf%nx, fft_cf%n(2), fft_cf%n(3)), fft_cf%nx*fft_cf%n(2)*fft_cf%n(3))
     fft_Coulb_FS = M_ZERO
 
     temp(:) = M_TWO*M_PI/(db(:)*m%h(:))

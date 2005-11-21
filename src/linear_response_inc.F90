@@ -28,9 +28,9 @@ subroutine X(lr_alloc_fHxc) (st, m, lr)
   lr%iter     = 0
 
   ! allocate variables
-  allocate(lr%X(dl_rho)(m%np, st%d%nspin))
-  allocate(lr%X(dl_Vhar)(m%np))
-  allocate(lr%dl_Vxc(m%np, st%d%nspin, st%d%nspin))
+  ALLOCATE(lr%X(dl_rho) (m%np, st%d%nspin), m%np*st%d%nspin)
+  ALLOCATE(lr%X(dl_Vhar)(m%np), m%np)
+  ALLOCATE(lr%dl_Vxc(m%np, st%d%nspin, st%d%nspin), m%np*st%d%nspin*st%d%nspin)
 
 end subroutine X(lr_alloc_fHxc)
 
@@ -130,7 +130,9 @@ subroutine X(lr_solve_HXeY) (lr, h, gr, d, ik, x, y, omega)
 
   call push_sub('linear_response_inc.Xlr_solve_HXeY')
 
-  allocate(r(NP, d%dim), p(NP_PART, d%dim), Hp(NP, d%dim))
+  ALLOCATE( r(NP, d%dim),      NP     *d%dim)
+  ALLOCATE( p(NP_PART, d%dim), NP_PART*d%dim)
+  ALLOCATE(Hp(NP, d%dim),      NP     *d%dim)
 
   ! Initial residue
   call X(Hpsi)(h, gr, x, Hp, ik)

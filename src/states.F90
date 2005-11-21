@@ -147,7 +147,8 @@ contains
     type(states_type), intent(out) :: st
 
     nullify(st%dpsi, st%zpsi, st%rho, st%j, st%rho_core, st%eigenval, st%occ, st%mag)
-    nullify(st%d); allocate(st%d)
+    nullify(st%d)
+    ALLOCATE(st%d, 1)
     nullify(st%d%kpoints, st%d%kweights)
   end subroutine states_null
 
@@ -284,10 +285,10 @@ contains
     call states_choose_kpoints(st%d, gr%sb, gr%geo)
 
     ! we now allocate some arrays
-    allocate(st%occ     (st%nst, st%d%nik))
-    allocate(st%eigenval(st%nst, st%d%nik))
+    ALLOCATE(st%occ     (st%nst, st%d%nik), st%nst*st%d%nik)
+    ALLOCATE(st%eigenval(st%nst, st%d%nik), st%nst*st%d%nik)
     if(st%d%ispin == SPINORS) then
-      allocate(st%mag(st%nst, st%d%nik, 2))
+      ALLOCATE(st%mag(st%nst, st%d%nik, 2), st%nst*st%d%nik*2)
     end if
 
     !%Variable Occupations
@@ -359,7 +360,7 @@ contains
     end if occ_fix
 
     st%st_start = 1; st%st_end = st%nst
-    allocate(st%node(st%nst))
+    ALLOCATE(st%node(st%nst), st%nst)
     st%node(:) = 0
 
     call mpi_grp_init(st%mpi_grp, -1)
@@ -377,12 +378,12 @@ contains
     type(grid_type),      intent(in)    :: gr
 
     ! allocate arrays for charge and current densities
-    allocate(st%rho(gr%m%np, st%d%nspin))
+    ALLOCATE(st%rho(gr%m%np, st%d%nspin), gr%m%np*st%d%nspin)
     if (st%d%cdft) then
-      allocate(st%j(NP, NDIM, st%d%nspin))
+      ALLOCATE(st%j(NP, NDIM, st%d%nspin), NP*NDIM*st%d%nspin)
       st%j = M_ZERO
     end if
-    if(gr%geo%nlcc) allocate(st%rho_core(gr%m%np))
+    if(gr%geo%nlcc) ALLOCATE(st%rho_core(gr%m%np), gr%m%np)
 
   end subroutine states_densities_init
 
@@ -391,6 +392,8 @@ contains
   subroutine states_copy(stout, stin)
     type(states_type), intent(in)  :: stin
     type(states_type), intent(out) :: stout
+
+    integer :: i
 
     call states_null(stout)
 
@@ -408,48 +411,59 @@ contains
     stout%st_start = stin%st_start
     stout%st_end = stin%st_end
     if(associated(stin%dpsi)) then
-      allocate(stout%dpsi(size(stin%dpsi, 1), stin%d%dim, stin%st_start:stin%st_end, stin%d%nik))
+      i = size(stin%dpsi, 1)*stin%d%dim*(stin%st_end-stin%st_start+1)*stin%d%nik
+      ALLOCATE(stout%dpsi(size(stin%dpsi, 1), stin%d%dim, stin%st_start:stin%st_end, stin%d%nik), i)
       stout%dpsi = stin%dpsi
     end if
     if(associated(stin%zpsi)) then
-      allocate(stout%zpsi(size(stin%zpsi, 1), stin%d%dim, stin%st_start:stin%st_end, stin%d%nik))
+      i = size(stin%zpsi, 1)*stin%d%dim*(stin%st_end-stin%st_start+1)*stin%d%nik
+      ALLOCATE(stout%zpsi(size(stin%zpsi, 1), stin%d%dim, stin%st_start:stin%st_end, stin%d%nik), i)
       stout%zpsi = stin%zpsi
     end if
     if(associated(stin%rho)) then
-      allocate(stout%rho(size(stin%rho, 1), size(stin%rho, 2)))
+      i = size(stin%rho, 1)*size(stin%rho, 2)
+      ALLOCATE(stout%rho(size(stin%rho, 1), size(stin%rho, 2)), i)
       stout%rho = stin%rho
     end if
     if(associated(stin%j)) then
-      allocate(stout%j(size(stin%j, 1), size(stin%j, 2), size(stin%j, 3)))
+      i = size(stin%j, 1)*size(stin%j, 2)*size(stin%j, 3)
+      ALLOCATE(stout%j(size(stin%j, 1), size(stin%j, 2), size(stin%j, 3)), i)
       stout%j = stin%j
     end if
     if(associated(stin%rho_core)) then
-      allocate(stout%rho_core(size(stin%rho_core, 1)))
+      i = size(stin%rho_core, 1)
+      ALLOCATE(stout%rho_core(size(stin%rho_core, 1)), i)
       stout%rho_core = stin%rho_core
     end if
     if(associated(stin%eigenval)) then
-      allocate(stout%eigenval(stin%st_start:stin%st_end, stin%d%nik))
+      i = (stin%st_end-stin%st_start)*stin%d%nik
+      ALLOCATE(stout%eigenval(stin%st_start:stin%st_end, stin%d%nik), i)
       stout%eigenval = stin%eigenval
     end if
     stout%fixed_occ = stin%fixed_occ
     if(associated(stin%occ)) then
-      allocate(stout%occ(size(stin%occ, 1), size(stin%occ, 2)))
+      i = size(stin%occ, 1)*size(stin%occ, 2)
+      ALLOCATE(stout%occ(size(stin%occ, 1), size(stin%occ, 2)), i)
       stout%occ = stin%occ
     end if
     if(associated(stin%mag)) then
-      allocate(stout%mag(size(stin%mag, 1), size(stin%mag, 2), size(stin%mag, 3)))
+      i = size(stin%mag, 1)*size(stin%mag, 2)*size(stin%mag, 3)
+      ALLOCATE(stout%mag(size(stin%mag, 1), size(stin%mag, 2), size(stin%mag, 3)), i)
       stout%mag = stin%mag
     end if
     if(associated(stin%d%kpoints)) then
-      allocate(stout%d%kpoints(size(stin%d%kpoints, 1), size(stin%d%kpoints, 2)))
+      i = size(stin%d%kpoints, 1)*size(stin%d%kpoints, 2)
+      ALLOCATE(stout%d%kpoints(size(stin%d%kpoints, 1), size(stin%d%kpoints, 2)), i)
       stout%d%kpoints = stin%d%kpoints
     end if
     if(associated(stin%d%kweights)) then
-      allocate(stout%d%kweights(size(stin%d%kpoints, 1)))
+      i = size(stin%d%kpoints, 1)
+      ALLOCATE(stout%d%kweights(size(stin%d%kpoints, 1)), i)
       stout%d%kweights = stin%d%kweights
     end if
     if(associated(stin%node)) then
-      allocate(stout%node(size(stin%node)))
+      i = size(stin%node)
+      ALLOCATE(stout%node(size(stin%node)), i)
       stout%node = stin%node
     end if
   end subroutine states_copy
@@ -668,7 +682,7 @@ contains
 
     call push_sub('states.states_calculate_multipoles')
 
-    allocate(f(NP))
+    ALLOCATE(f(NP), NP)
     f = M_ZERO
 
     do is = 1, st%d%nspin
@@ -951,7 +965,7 @@ contains
 
     call push_sub('states.states_magnetic_moment')
 
-    allocate(md(m%np, 3))
+    ALLOCATE(md(m%np, 3), m%np*3)
     call states_magnetization_dens(st, m%np, rho, md)
     mm(1) = dmf_integrate(m, md(:, 1))
     mm(2) = dmf_integrate(m, md(:, 2))
@@ -977,7 +991,7 @@ contains
 
     call push_sub('states.states_local_magnetic_moments')
 
-    allocate(md(m%np, 3))
+    ALLOCATE(md(m%np, 3), m%np*3)
     call states_magnetization_dens(st, m%np, rho, md)
     lmm = M_ZERO
     do ia = 1, geo%natoms
@@ -1016,7 +1030,7 @@ contains
     end if
 
     jp = M_ZERO
-    allocate(grad(NP, NDIM))
+    ALLOCATE(grad(NP, NDIM), NP*NDIM)
 
     do ik = 1, st%d%nik, sp
       do p  = st%st_start, st%st_end
@@ -1052,7 +1066,7 @@ contains
     deallocate(grad)
 
 #if defined(HAVE_MPI)
-    allocate(red(NP, NDIM, st%d%nspin))
+    ALLOCATE(red(NP, NDIM, st%d%nspin), NP*NDIM*st%d%nspin)
     call MPI_ALLREDUCE(jp(1, 1, 1), red(1, 1, 1), NP*NDIM*st%d%nspin, &
       MPI_FLOAT, MPI_SUM, st%mpi_grp%comm, ierr)
     jp = red

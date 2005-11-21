@@ -51,10 +51,10 @@ subroutine X(xc_oep_calc)(oep, xcs, apply_sic_pz, gr, h, st, vxc, ex, ec)
   call push_sub('xc_OEP_inc.h_xc_oep')
 
   ! initialize oep structure
-  allocate(oep%eigen_type(st%nst))
-  allocate(oep%eigen_index(st%nst))
-  allocate(oep%X(lxc)(NP, st%st_start:st%st_end))
-  allocate(oep%uxc_bar(st%nst))
+  ALLOCATE(oep%eigen_type (st%nst), st%nst)
+  ALLOCATE(oep%eigen_index(st%nst), st%nst)
+  ALLOCATE(oep%X(lxc)(NP, st%st_start:st%st_end), NP*(st%st_end-st%st_start+1))
+  ALLOCATE(oep%uxc_bar    (st%nst), st%nst)
 
   ! this part handles the (pure) orbital functionals
   spin: do is = 1, min(st%d%nspin, 2)
@@ -130,7 +130,9 @@ subroutine X(xc_oep_solve) (gr, h, st, is, vxc, oep)
   FLOAT, allocatable :: s(:), vxc_old(:)
   R_TYPE, allocatable :: b(:,:)
 
-  allocate(b(NP, 1), s(NP), vxc_old(NP))
+  ALLOCATE(b(NP, 1),    NP*1)
+  ALLOCATE(s(NP),       NP)
+  ALLOCATE(vxc_old(NP), NP)
 
   vxc_old(1:NP) = vxc(1:NP)
 

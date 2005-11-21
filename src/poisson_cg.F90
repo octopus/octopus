@@ -101,7 +101,10 @@ contains
 
     call push_sub('poisson_cg.poisson_cg1')
 
-    allocate(wk(m%np_part), lwk(m%np_part), zk(m%np_part), pk(m%np_part))
+    ALLOCATE( wk(m%np_part), m%np_part)
+    ALLOCATE(lwk(m%np_part), m%np_part)
+    ALLOCATE( zk(m%np_part), m%np_part)
+    ALLOCATE( pk(m%np_part), m%np_part)
 
     ! build initial guess for the potential
     wk(1:m%np) = pot(1:m%np)
@@ -147,7 +150,10 @@ contains
     der_pointer  => der
     mesh_pointer => m
 
-    allocate(rho_corrected(m%np_part), vh_correction(m%np), tmp(m%np_part))
+    ALLOCATE(rho_corrected(m%np_part), m%np_part)
+    ALLOCATE(vh_correction(m%np),      m%np)
+    ALLOCATE(          tmp(m%np_part), m%np_part)
+
     rho_corrected = M_ZERO
     tmp = M_ZERO
     call correct_rho(m, maxl, rho, rho_corrected, vh_correction)
@@ -182,7 +188,8 @@ contains
     integer :: i, add_lm, l, mm, bp_lower
     FLOAT   :: x(3), r, s1, sa
     FLOAT, allocatable :: mult(:)
-    allocate(mult((ml+1)**2))
+
+    ALLOCATE(mult((ml+1)**2), (ml+1)**2)
 
     call get_multipoles(m, rho, ml, mult)
 

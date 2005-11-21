@@ -206,13 +206,14 @@ contains
     case(APP_REVERSAL);         message(1) = 'Info: Evolution method:  Approx.Enforced Time-Reversal Symmetry'
     case(EXPONENTIAL_MIDPOINT); message(1) = 'Info: Evolution method:  Exponential Midpoint Rule.'
     case(MAGNUS);               message(1) = 'Info: Evolution method:  Magnus expansion.'
-      allocate(tr%vmagnus(NP, st%d%nspin, 2))
+      ALLOCATE(tr%vmagnus(NP, st%d%nspin, 2), NP*st%d%nspin*2)
     case default
       call input_error('TDEvolutionMethod')
     end select
     call messages_print_var_option(stdout, 'TDEvolutionMethod', tr%method)
 
-    allocate(tr%v_old(NP, st%d%nspin, 0:3)) ! allocate memory to store the old KS potentials
+    ! allocate memory to store the old KS potentials
+    ALLOCATE(tr%v_old(NP, st%d%nspin, 0:3), NP*st%d%nspin*(3+1))
     call td_exp_init(gr, tr%te)             ! initialize propagator
 
   end subroutine td_rti_init
@@ -269,7 +270,7 @@ contains
     self_consistent = .false.
     if(t<3*dt .and. (.not.h%ip_app)) then
       self_consistent = .true.
-      allocate(zpsi1(NP, st%d%dim, st%st_start:st%st_end, st%d%nik))
+      ALLOCATE(zpsi1(NP, st%d%dim, st%st_start:st%st_end, st%d%nik), NP*st%d%dim*(st%st_end-st%st_start+1)*st%d%nik)
       zpsi1 = st%zpsi
     end if
 
@@ -297,7 +298,7 @@ contains
         h%vhxc = tr%v_old(:, :, 1)
 
         d_max = M_ZERO
-        allocate(dtmp(NP))
+        ALLOCATE(dtmp(NP), NP)
         do is = 1, st%d%nspin
           dtmp = tr%v_old(:, is, 3) - tr%v_old(:, is, 0)
           d    = dmf_nrm2(gr%m, dtmp)
@@ -398,10 +399,11 @@ contains
       call push_sub('td_rti.td_rti2')
 
       if(.not.h%ip_app) then
-        allocate(zpsi1(NP, st%d%dim, st%st_start:st%st_end, st%d%nik))
+        ALLOCATE(zpsi1(NP, st%d%dim, st%st_start:st%st_end, st%d%nik), NP*(st%st_end-st%st_start+1)*st%d%nik)
         zpsi1 = st%zpsi ! store zpsi
 
-        allocate(vhxc_t1(NP, st%d%nspin), vhxc_t2(NP, st%d%nspin))
+        ALLOCATE(vhxc_t1(NP, st%d%nspin), NP*st%d%nspin)
+        ALLOCATE(vhxc_t2(NP, st%d%nspin), NP*st%d%nspin)
         vhxc_t1 = h%vhxc
 
         ! propagate dt with H(t-dt)
@@ -491,7 +493,7 @@ contains
 
       call push_sub('td_rti.td_rti5')
 
-      allocate(vaux(NP, st%d%nspin, 2))
+      ALLOCATE(vaux(NP, st%d%nspin, 2), NP*st%d%nspin*2)
 
       time(1) = (M_HALF-sqrt(M_THREE)/M_SIX)*dt
       time(2) = (M_HALF+sqrt(M_THREE)/M_SIX)*dt

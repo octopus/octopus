@@ -32,7 +32,8 @@ subroutine FNAME(swap_1)(n1, dx, dy)
   TYPE1,   intent(inout) :: dx(:), dy(:)
 
   TYPE1, allocatable :: dz(:)
-  allocate(dz(n1))
+
+  ALLOCATE(dz(n1), n1)
   dz = dx; dx = dy; dy = dz
   deallocate(dz)
 
@@ -43,7 +44,8 @@ subroutine FNAME(swap_2)(n1, n2, dx, dy)
   TYPE1,   intent(inout) :: dx(:,:), dy(:,:)
 
   TYPE1, allocatable :: dz(:,:)
-  allocate(dz(n1,n2))
+
+  ALLOCATE(dz(n1, n2), n1*n2)
   dz = dx; dx = dy; dy = dz
   deallocate(dz)
 
@@ -54,7 +56,8 @@ subroutine FNAME(swap_3)(n1, n2, n3, dx, dy)
   TYPE1,   intent(inout) :: dx(:,:,:), dy(:,:,:)
 
   TYPE1, allocatable :: dz(:,:,:)
-  allocate(dz(n1,n2,n3))
+
+  ALLOCATE(dz(n1, n2, n3), n1*n2*n3)
   dz = dx; dx = dy; dy = dz
   deallocate(dz)
 
@@ -65,7 +68,8 @@ subroutine FNAME(swap_4)(n1, n2, n3, n4, dx, dy)
   TYPE1,   intent(inout) :: dx(:,:,:,:), dy(:,:,:,:)
 
   TYPE1, allocatable :: dz(:,:,:,:)
-  allocate(dz(n1,n2,n3,n4))
+
+  ALLOCATE(dz(n1, n2, n3, n4), n1*n2*n3*n4)
   dz = dx; dx = dy; dy = dz
   deallocate(dz)
 

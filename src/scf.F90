@@ -255,7 +255,8 @@ contains
     dim = 1
     if (h%d%cdft) dim = 1 + NDIM
 
-    allocate(rhoout(NP, dim, nspin), rhoin(NP, dim, nspin))
+    ALLOCATE(rhoout(NP, dim, nspin), NP*dim*nspin)
+    ALLOCATE(rhoin (NP, dim, nspin), NP*dim*nspin)
 
     rhoin(1:NP, 1, 1:nspin) = st%rho(1:NP, 1:nspin)
     rhoout = M_ZERO
@@ -264,12 +265,15 @@ contains
     end if
 
     if (scf%what2mix == MIXPOT) then
-      allocate(vout(NP, dim, nspin), vin(NP, dim, nspin), vnew(NP, dim, nspin))
+      ALLOCATE(vout(NP, dim, nspin), NP*dim*nspin)
+      ALLOCATE( vin(NP, dim, nspin), NP*dim*nspin)
+      ALLOCATE(vnew(NP, dim, nspin), NP*dim*nspin)
+
       vin(:, 1, :) = h%vhxc
       vout = M_ZERO
       if (st%d%cdft) vin(:, 2:dim, :) = h%ahxc(:,:,:)
     else
-      allocate(rhonew(NP, dim, nspin))
+      ALLOCATE(rhonew(NP, dim, nspin), NP*dim*nspin)
     end if
     evsum_in = states_eigenvalues_sum(st)
 
@@ -306,7 +310,7 @@ contains
 
       ! compute convergence criteria
       scf%abs_dens = M_ZERO
-      allocate(tmp(NP))
+      ALLOCATE(tmp(NP), NP)
       do is = 1, nspin
         do idim = 1, dim
           tmp = (rhoin(:, idim, is) - rhoout(:, idim, is))**2
@@ -583,7 +587,7 @@ contains
         write(iunit, '(1x,3(a,f10.6,3x))') 'mx = ',mm(1),'my = ',mm(2),'mz = ',mm(3)
       end if
 
-      allocate(lmm(3, gr%geo%natoms))
+      ALLOCATE(lmm(3, gr%geo%natoms), 3*gr%geo%natoms)
       call states_local_magnetic_moments(m, st, gr%geo, st%rho, scf%lmm_r, lmm)
       write(iunit, '(a,a,a,f7.3,a)') 'Local Magnetic Moments (sphere radius [', &
         trim(units_out%length%abbrev),'] = ', scf%lmm_r/units_out%length%factor, '):'

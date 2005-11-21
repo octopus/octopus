@@ -28,7 +28,7 @@ subroutine X(hamiltonian_eigenval)(h, gr, st)
   integer :: ik, ist
 
   call push_sub('h_inc.Xhamiltonian_eigenval')
-  allocate(Hpsi(NP, st%d%dim))
+  ALLOCATE(Hpsi(NP, st%d%dim), NP*st%d%dim)
 
   do ik = 1, st%d%nik
     do ist = st%st_start, st%st_end
@@ -102,7 +102,8 @@ subroutine X(magnus) (h, gr, psi, hpsi, ik, vmagnus)
 
   call push_sub('h_inc.Xmagnus')
 
-  allocate(auxpsi(NP_PART, h%d%dim), aux2psi(NP, h%d%dim))
+  ALLOCATE( auxpsi(NP_PART, h%d%dim), NP_PART*h%d%dim)
+  ALLOCATE(aux2psi(NP,      h%d%dim), NP*h%d%dim)
 
   call X(kinetic) (h, gr, psi, hpsi, ik)
 
@@ -175,7 +176,7 @@ subroutine X(kinetic) (h, gr, psi, hpsi, ik)
 
   if(simul_box_is_periodic(gr%sb)) then
 #if defined(COMPLEX_WFNS)
-    allocate(grad(NP, NDIM))
+    ALLOCATE(grad(NP, NDIM), NP*NDIM)
     k2 = sum(h%d%kpoints(:, ik)**2)
     do idim = 1, h%d%dim
       call X(f_laplacian) (gr%sb, gr%f_der, psi(:, idim), Hpsi(:, idim), cutoff_ = M_TWO*h%cutoff)
@@ -231,7 +232,7 @@ subroutine X(magnetic_terms) (gr, h, psi, hpsi, ik)
   ! If we are using CDFT:
   if(h%d%cdft) then
 
-    allocate(div(NP))
+    ALLOCATE(div(NP), NP)
     select case (h%d%ispin)
     case(UNPOLARIZED)
       call df_divergence(gr%sb, gr%f_der, h%ahxc(:, :, 1), div)
@@ -346,7 +347,7 @@ subroutine X(vlpsi) (h, m, psi, hpsi, ik)
   end if
 
   if (associated(h%ep%B_field) .and. h%d%ispin /= UNPOLARIZED) then
-    allocate(lhpsi(m%np, h%d%dim))
+    ALLOCATE(lhpsi(m%np, h%d%dim), m%np*h%d%dim)
     select case (h%d%ispin)
     case (SPIN_POLARIZED)
       if(modulo(ik+1, 2) == 0) then ! we have a spin down
@@ -399,7 +400,7 @@ subroutine X(vlasers) (gr, h, psi, hpsi, t)
     case(2) ! velocity gauge
 
       call epot_laser_vector_pot(gr%sb, h%ep, t, a)
-      allocate(grad(NP, NDIM))
+      ALLOCATE(grad(NP, NDIM), NP*NDIM)
       do idim = 1, h%d%dim
         call X(f_gradient)(gr%sb, gr%f_der, psi(:, idim), grad)
         do k = 1, NP

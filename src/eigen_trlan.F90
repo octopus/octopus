@@ -47,7 +47,7 @@ subroutine eigen_solver_cg3(m, st, h, tol, niter, converged, diff, reorder)
 
   nrow = (m%np+1)*st%d%dim; ned = st%nst; maxlan = (ned + min(6, ned)); mev = st%nst
 
-!!$  allocate(evec(sys%m%np, st%d%dim, mev))
+!!$  ALLOCATE(evec(sys%m%np, st%d%dim, mev), sys%m%np*st%d%dim*mev)
 
   call trl_init_info(info, nrow, maxlan, lohi = -1, ned = ned, tol = CNST(1.0e-5), trestart = 3)
 
@@ -104,6 +104,7 @@ subroutine eigen_solver_cg3(m, st, h, tol, niter, converged, diff, reorder)
   nullify(h_trlan, m_trlan, st_trlan)
   call pop_sub()
 end subroutine eigen_solver_cg3
+
 
 subroutine op(nrow, ncol, xin, ldx, yout, ldy)
   integer, intent(in) :: nrow, ncol, ldx, ldy

@@ -144,7 +144,7 @@ contains
   subroutine grid_create_multigrid(gr)
     type(grid_type), intent(inout) :: gr
 
-    allocate(gr%mgrid)
+    ALLOCATE(gr%mgrid, 1)
     call multigrid_init(gr%geo, gr%cv, gr%m, gr%f_der, gr%mgrid)
 
   end subroutine grid_create_multigrid

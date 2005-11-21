@@ -31,7 +31,7 @@ subroutine poisson1D_solve(m, pot, rho)
   call push_sub('poisson1D.poisson1D_solve')
 
   if(m%parallel_in_domains) then
-    allocate(pvec(1:m%np))
+    ALLOCATE(pvec(m%np), m%np)
 
     pot = M_ZERO
     do i = 1, m%np_global

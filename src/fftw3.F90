@@ -183,7 +183,9 @@ contains
     fft_array(j)%n       = n
     fft_array(j)%is_real = is_real
     if(is_real == fft_real) then
-      allocate(rin(n(1), n(2), n(3)), cout(n(1)/2+1, n(2), n(3)))
+      ALLOCATE(rin(n(1), n(2), n(3)), n(1)*n(2)*n(3))
+      ALLOCATE(cout(n(1)/2+1, n(2), n(3)), (n(1)/2+1)*n(2)*n(3))
+
       select case(sb%dim)
       case(3)
         call DFFTW(plan_dft_r2c_3d) (fft_array(j)%planf, n(1), n(2), n(3), rin, cout, fftw_measure)
@@ -197,7 +199,8 @@ contains
       end select
       deallocate(rin, cout)
     else
-      allocate(cin(n(1), n(2), n(3)), cout(n(1), n(2), n(3)))
+      ALLOCATE( cin(n(1), n(2), n(3)), n(1)*n(2)*n(3))
+      ALLOCATE(cout(n(1), n(2), n(3)), n(1)*n(2)*n(3))
       select case(sb%dim)
       case(3)
         call DFFTW(plan_dft_3d) (fft_array(j)%planf, n(1), n(2), n(3), cin, cout, fftw_forward,  fftw_measure)

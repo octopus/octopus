@@ -73,7 +73,8 @@ contains
 
     call push_sub('systm.system_init')
 
-    allocate(sys%gr, sys%st)
+    ALLOCATE(sys%gr, 1)
+    ALLOCATE(sys%st, 1)
 
     call geometry_init(sys%gr%geo)
     call simul_box_init(sys%gr%sb, sys%gr%geo)
@@ -281,7 +282,7 @@ contains
     rho = M_ZERO
     select case (gmd_opt)
     case (1) ! Paramagnetic
-      allocate(atom_rho(m%np, 1))
+      ALLOCATE(atom_rho(m%np, 1), m%np*1)
       do ia = 1, geo%natoms
         call atom_density(m, sb, geo%atom(ia), 1, atom_rho(1:m%np, 1:1))
         rho(1:m%np, 1:1) = rho(1:m%np, 1:1) + atom_rho(1:m%np, 1:1)
@@ -292,14 +293,14 @@ contains
       end if
 
     case (2) ! Ferromagnetic
-      allocate(atom_rho(m%np, 2))
+      ALLOCATE(atom_rho(m%np, 2), m%np*2)
       do ia = 1, geo%natoms
         call atom_density(m, sb, geo%atom(ia), 2, atom_rho(1:m%np, 1:2))
         call lalg_axpy(m%np, 2, M_ONE, atom_rho, rho)
       end do
 
     case (3) ! Random oriented spins
-      allocate(atom_rho(m%np, 2))
+      ALLOCATE(atom_rho(m%np, 2), m%np*2)
       do ia = 1, geo%natoms
         call atom_density(m, sb, geo%atom(ia), 2, atom_rho)
 
@@ -354,7 +355,7 @@ contains
         call write_fatal(1)
       end if
 
-      allocate(atom_rho(m%np, 2))
+      ALLOCATE(atom_rho(m%np, 2), m%np*2)
       do ia = 1, geo%natoms
         call atom_density(m, sb, geo%atom(ia), 2, atom_rho)
 

@@ -143,8 +143,12 @@ contains
     FLOAT   :: d(spin_channels), f, dtot, dpol
 
     ! allocate some general arrays
-    allocate(dens(NP_PART, spin_channels), dedd(NP_PART, spin_channels), ex_per_vol(NP), ec_per_vol(NP))
-    allocate(l_dens(spin_channels), l_dedd(spin_channels))
+    ALLOCATE(dens(NP_PART, spin_channels), NP_PART*spin_channels)
+    ALLOCATE(dedd(NP_PART, spin_channels), NP_PART*spin_channels)
+    ALLOCATE(ex_per_vol(NP), NP)
+    ALLOCATE(ec_per_vol(NP), NP)
+    ALLOCATE(l_dens(spin_channels), spin_channels)
+    ALLOCATE(l_dedd(spin_channels), spin_channels)
     dens       = M_ZERO
     dedd       = M_ZERO
     ex_per_vol = M_ZERO
@@ -215,8 +219,10 @@ contains
   !   *) calculates the gradient of the density
   subroutine gga_init()
     ! allocate variables
-    allocate(gdens(NP, 3, spin_channels), dedgd(NP_PART, 3, spin_channels))
-    allocate(l_gdens(3, spin_channels), l_dedgd(3, spin_channels))
+    ALLOCATE(gdens(NP,      3, spin_channels), NP     *3*spin_channels)
+    ALLOCATE(dedgd(NP_PART, 3, spin_channels), NP_PART*3*spin_channels)
+    ALLOCATE(l_gdens(3, spin_channels), 3*spin_channels)
+    ALLOCATE(l_dedgd(3, spin_channels), 3*spin_channels)
     gdens = M_ZERO
     dedgd = M_ZERO
 
@@ -242,7 +248,7 @@ contains
 
     ! subtract the divergence of the functional derivative of Exc with respect to
     ! the gradient of the density.
-    allocate(gf(NP, 1))
+    ALLOCATE(gf(NP, 1), NP*1)
     do is = 1, spin_channels
       call df_divergence(gr%sb, gr%f_der, dedgd(:,:,is), gf(:,1))
       call lalg_axpy(NP, -M_ONE, gf(:,1), dedd(:, is))
@@ -252,7 +258,7 @@ contains
     ! If LB94, we can calculate an approximation to the energy from
     ! Levy-Perdew relation PRA 32, 2010 (1985)
     if(functl(1)%id == XC_GGA_XC_LB) then
-      allocate(gf(NP, 3))
+      ALLOCATE(gf(NP, 3), NP*3)
 
       do is = 1, spin_channels
         call df_gradient(gr%sb, gr%f_der, dedd(:, is), gf(:,:))
@@ -276,8 +282,10 @@ contains
     FLOAT   :: f, d
     FLOAT, allocatable :: n2dens(:)
 
-    allocate(tau(NP, spin_channels), dedtau(NP_PART, spin_channels))
-    allocate(l_tau(spin_channels), l_dedtau(spin_channels))
+    ALLOCATE(tau   (NP,      spin_channels), NP     *spin_channels)
+    ALLOCATE(dedtau(NP_PART, spin_channels), NP_PART*spin_channels)
+    ALLOCATE(l_tau   (spin_channels), spin_channels)
+    ALLOCATE(l_dedtau(spin_channels), spin_channels)
     tau    = M_ZERO
     dedtau = M_ZERO
 
@@ -286,7 +294,7 @@ contains
     ! calculate tau
     select case(xcs%mGGA_implementation)
     case (1)  ! GEA implementation
-      allocate(n2dens(NP))
+      ALLOCATE(n2dens(NP), NP)
       f = CNST(3.0)/CNST(10.0) * (M_SIX*M_PI*M_PI)**M_TWOTHIRD
 
       do is = 1, spin_channels
@@ -330,7 +338,7 @@ contains
     select case(xcs%mGGA_implementation)
     case (1) ! GEA implementation
       f = CNST(3.0)/CNST(10.0) * (M_SIX*M_PI*M_PI)**M_TWOTHIRD
-      allocate(gf(NP))
+      ALLOCATE(gf(NP), NP)
 
       do is = 1, spin_channels
         call df_laplacian(gr%sb, gr%f_der, dedtau(:,is), gf(:))

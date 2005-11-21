@@ -207,7 +207,9 @@ contains
     ASSERT(initialized)
 
     ! correction for treating boundaries
-    allocate(rho_corrected(gr%m%np), vh_correction(gr%m%np))
+    ALLOCATE(rho_corrected(gr%m%np), gr%m%np)
+    ALLOCATE(vh_correction(gr%m%np), gr%m%np)
+
     call correct_rho(gr%m, maxmulti, rho, rho_corrected, vh_correction)
     rho_corrected = - M_FOUR*M_PI*rho_corrected
     pot = pot - vh_correction
@@ -417,7 +419,7 @@ contains
 
       n=LAP%n
 
-      allocate(w(1:n))
+      ALLOCATE(w(1:n), n)
 
       if(LAP%const_w) then
         w(1:n) = LAP%w_re(1:n,1)
@@ -443,8 +445,8 @@ contains
 
       n=LAP%n
 
-      allocate(w(1:n))
-      allocate(tmp(1:m%np))
+      ALLOCATE(w(1:n), n)
+      ALLOCATE(tmp(1:m%np), m%np)
 
       if(LAP%const_w) then
         w(1:n) = LAP%w_re(1:n,1)
@@ -507,13 +509,13 @@ contains
 
     cl = mgrid%n_levels
 
-    allocate(a(0:cl))
+    ALLOCATE(a(0:cl), cl+1)
 
     do l = 0, cl
       if(add_points_for_boundaries) then
-        allocate(a(l)%p(1:mgrid%level(l)%m%np_part))
+        ALLOCATE(a(l)%p(1:mgrid%level(l)%m%np_part), mgrid%level(l)%m%np_part)
       else
-        allocate(a(l)%p(1:mgrid%level(l)%m%np))
+        ALLOCATE(a(l)%p(1:mgrid%level(l)%m%np), mgrid%level(l)%m%np)
       end if
     end do
 

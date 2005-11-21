@@ -54,7 +54,7 @@ subroutine X(input_function)(filename, m, f, ierr)
     ! Only root reads. Therefore, only root needs a buffer
     ! f_global for the whole function.
     if(mpi_grp_is_root(m%mpi_grp)) then
-      allocate(f_global(1:m%np_global))
+      ALLOCATE(f_global(m%np_global), m%np_global)
       call X(input_function_global)(filename, m, f_global, ierr)
     end if
     if(in_debug_mode) call write_debug_newlines(2)
@@ -148,53 +148,53 @@ contains
     iunit = io_open(filename, action='read', status='old', form='unformatted', die=.false.)
 
     if(iunit< 0) then
-       ierr = 2
-       return
+      ierr = 2
+      return
     end if
 
     read(unit = iunit, iostat = i) file_kind, file_np
     if(i.ne.0) then
-       ierr = 3
+      ierr = 3
     else if (file_np .ne. m%np_global) then
-       ierr = 4
+      ierr = 4
     end if
-
+    
     if(ierr==0) then
-       if(file_kind == function_kind) then
-          read(unit = iunit) f(1:m%np_global)
+      if(file_kind == function_kind) then
+        read(unit = iunit) f(1:m%np_global)
+        
+      else ! Adequate conversions....
+        select case(file_kind)
+        case(doutput_kind*4) ! Real, single precision
+          ALLOCATE(rs(m%np_global), m%np_global)
+          read(unit = iunit) rs(1:m%np_global)
+          f = rs
+          deallocate(rs)
+          ierr = -1
 
-       else ! Adequate conversions....
-          select case(file_kind)
-          case(doutput_kind*4) ! Real, single precision
-             allocate(rs(m%np_global))
-             read(unit = iunit) rs(1:m%np_global)
-             f = rs
-             deallocate(rs)
-             ierr = -1
+        case(zoutput_kind*4) ! Complex, single precision
+          ALLOCATE(cs(m%np_global), m%np_global)
+          read(unit = iunit) cs(1:m%np_global)
+          f = cs
+          deallocate(cs)
+          ierr = -2
 
-          case(zoutput_kind*4) ! Complex, single precision
-             allocate(cs(m%np_global))
-             read(unit = iunit) cs(1:m%np_global)
-             f = cs
-             deallocate(cs)
-             ierr = -2
+        case(doutput_kind*8) ! Real, double precision
+          ALLOCATE(rd(m%np_global), m%np_global)
+          read(unit = iunit) rd(1:m%np_global)
+          f = rd
+          deallocate(rd)
+          ierr = -3
 
-          case(doutput_kind*8) ! Real, double precision
-             allocate(rd(m%np_global))
-             read(unit = iunit) rd(1:m%np_global)
-             f = rd
-             deallocate(rd)
-             ierr = -3
-
-          case(zoutput_kind*8) ! Complex, double precision
-             allocate(cd(m%np_global))
-             read(unit = iunit) cd(1:m%np_global)
-             f = cd
-             deallocate(cd)
-             ierr = -4
-
-          end select
-       end if
+        case(zoutput_kind*8) ! Complex, double precision
+          ALLOCATE(cd(m%np_global), m%np_global)
+          read(unit = iunit) cd(1:m%np_global)
+          f = cd
+          deallocate(cd)
+          ierr = -4
+          
+        end select
+      end if
     end if
 
     call io_close(iunit)
@@ -330,7 +330,7 @@ subroutine X(output_function) (how, dir, fname, mesh, sb, f, u, ierr)
 
   if(mesh%parallel_in_domains) then
 #if defined(HAVE_MPI) && defined(HAVE_METIS)
-    allocate(f_global(1:mesh%np_global))
+    ALLOCATE(f_global(mesh%np_global), mesh%np_global)
 
     call X(vec_gather)(mesh%vp, f_global, f)
 

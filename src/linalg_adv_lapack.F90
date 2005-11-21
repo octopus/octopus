@@ -33,7 +33,8 @@ subroutine dgeneigensolve(n, a, b, e)
   FLOAT, allocatable :: bp(:,:), work(:)
 
   lwork = 5*n
-  allocate(bp(n, n), work(lwork))
+  ALLOCATE(bp(n, n), n*n)
+  ALLOCATE(work(lwork), lwork)
   bp = b
   call DLAPACK(sygv) (1, 'V', 'U', n, a(1, 1), n, bp(1, 1), n, e(1), work(1), lwork, info)
   deallocate(bp, work)
@@ -71,7 +72,9 @@ subroutine zgeneigensolve(n, a, b, e)
   CMPLX, allocatable :: bp(:,:), work(:)
 
   lwork = 5*n
-  allocate(bp(n, n), work(lwork), rwork(max(1, 3*n-2)))
+  ALLOCATE(bp(n, n),    n*n)
+  ALLOCATE(work(lwork), lwork)
+  ALLOCATE(rwork(max(1, 3*n-2)), max(1, 3*n-2))
   bp = b
   call ZLAPACK(hegv) (1, 'V', 'U', n, a(1, 1), n, bp(1, 1), n, e(1), work(1), lwork, rwork(1), info)
   deallocate(bp, work)
@@ -104,7 +107,7 @@ subroutine deigensolve(n, a, b, e)
   FLOAT, allocatable :: work(:)
 
   lwork = 6*n
-  allocate(work(lwork))
+  ALLOCATE(work(lwork), lwork)
   b = a
   call DLAPACK(syev) ('V', 'U', n, b(1,1), n, e(1), work(1), lwork, info)
   if(info.ne.0) then
@@ -138,7 +141,8 @@ subroutine zeigensolve(n, a, b, e)
   FLOAT, allocatable :: rwork(:)
 
   lwork = 6*n
-  allocate(work(lwork), rwork(max(1,3*n-2)))
+  ALLOCATE(work(lwork), lwork)
+  ALLOCATE(rwork(max(1, 3*n-2)), max(1, 3*n-2))
   b = a
   call ZLAPACK(heev) ('V','U', n, b(1,1), n, e(1), work(1), lwork, rwork(1), info)
   if(info.ne.0) then
@@ -178,7 +182,8 @@ FLOAT function ddeterminant(n, a, invert) result(d)
   FLOAT, allocatable :: work(:)
   logical :: invert_
 
-  allocate(work(n), ipiv(n))
+  ALLOCATE(work(n), n)
+  ALLOCATE(ipiv(n), n)
 
   call DLAPACK(getrf)(n, n, a(1, 1), n, ipiv(1), info)
   if(info /= 0) then
@@ -236,7 +241,8 @@ CMPLX function zdeterminant(n, a, invert) result(d)
   CMPLX, allocatable :: work(:)
   logical :: invert_
 
-  allocate(work(n), ipiv(n))
+  ALLOCATE(work(n), n)
+  ALLOCATE(ipiv(n), n)
 
   call ZLAPACK(getrf)(n, n, a(1, 1), n, ipiv(1), info)
   if(info /= 0) then
@@ -262,7 +268,7 @@ CMPLX function zdeterminant(n, a, invert) result(d)
     end if
   end if
 
-  Deallocate(work, ipiv)
+  deallocate(work, ipiv)
 end function zdeterminant
 
 
@@ -294,14 +300,23 @@ subroutine dlinsyssolve(n, nhrs, a, b, x)
   FLOAT, allocatable :: ferr(:), berr(:), work(:), r(:), c(:), af(:,:)
   character(1) :: equed
 
-  allocate(ipiv(n), iwork(n), ferr(nhrs), berr(nhrs), work(4*n), r(n), c(n), af(n, n))
+  ALLOCATE(ipiv(n),    n)
+  ALLOCATE(iwork(n),   n)
+  ALLOCATE(ferr(nhrs), nhrs)
+  ALLOCATE(berr(nhrs), nhrs)
+  ALLOCATE(work(4*n),  4*n)
+  ALLOCATE(r(n),       n)
+  ALLOCATE(c(n),       n)
+  ALLOCATE(af(n, n),   n*n)
+
   call DLAPACK(gesvx) ("N", "N", n, nhrs, a(1, 1), n, af(1, 1), n, ipiv(1), equed, r(1), c(1), b(1, 1), n, x(1, 1), n, &
     rcond, ferr(1), berr(1), work(1), iwork(1), info)
+
   if(info /= 0) then
     write(message(1), '(a, i3)') 'In dlinsyssolve, LAPACK dgesvx returned info = ', info
     call write_fatal(1)
   end if
-  deallocate(ipiv, iwork, ferr, berr, work, r, c, af)
 
+  deallocate(ipiv, iwork, ferr, berr, work, r, c, af)
 
 end subroutine dlinsyssolve

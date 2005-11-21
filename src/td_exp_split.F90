@@ -164,14 +164,14 @@ contains
 
     call push_sub('td_exp_split.vnlpsi')
 
-    allocate(initzpsi(m%np, 1:h%d%dim))
+    message(1) = 'Error: zexp_vnlpsi is currently broken.'
+    call write_fatal(1)
+
+    ALLOCATE(initzpsi(m%np, 1:h%d%dim), m%np*h%d%dim)
 !   just to avoid compiler warnings due to unused variables
     factor   = factor_
     order    = order_
     initzpsi = psi
-
-    message(1) = 'Error: zexp_vnlpsi is currently broken.'
-    call write_fatal(1)
 
 !!$
 !!$    dimension_loop: do idim = 1, h%d%dim
@@ -183,7 +183,8 @@ contains
 !!$    end if
 !!$
 !!$    do ivnl = ivnl_start, ivnl_end, step
-!!$       allocate(lpsi(h%ep%vnl(ivnl)%n), lhpsi(h%ep%vnl(ivnl)%n))
+!!$       ALLOCATE( lpsi(h%ep%vnl(ivnl)%n), h%ep%vnl(ivnl)%n)
+!!$       ALLOCATE(lhpsi(h%ep%vnl(ivnl)%n), h%ep%vnl(ivnl)%n)
 !!$       lpsi(:) = initzpsi(h%ep%vnl(ivnl)%jxyz(:), idim)
 !!$       lhpsi(:) = M_z0
 !!$

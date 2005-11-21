@@ -90,7 +90,7 @@ contains
 
     call scf_init(sys%gr, scfv, sys%st, h)
 
-    allocate(x(3*geo%natoms))
+    ALLOCATE(x(3*geo%natoms), 3*geo%natoms)
     do i = 0, geo%natoms - 1
       x(3*i + 1) = geo%atom(i + 1)%x(1)
       x(3*i + 2) = geo%atom(i + 1)%x(2)
@@ -131,7 +131,7 @@ contains
       call push_sub('geom_opt.geom_opt_run')
 
       ! allocate wfs
-      allocate(sys%st%X(psi)(sys%gr%m%np_part, sys%st%d%dim, sys%st%nst, sys%st%d%nik))
+      ALLOCATE(sys%st%X(psi)(sys%gr%m%np_part, sys%st%d%dim, sys%st%nst, sys%st%d%nik), sys%gr%m%np_part*sys%st%d%dim*sys%st%nst*sys%st%d%nik)
 
       ! shortcuts
       m   => sys%gr%m
@@ -237,7 +237,9 @@ contains
       FLOAT :: f, f1
       integer :: iter, count
 
-      allocate(x1(3*geo%natoms), df(3*geo%natoms), df1(3*geo%natoms))
+      ALLOCATE( x1(3*geo%natoms), 3*geo%natoms)
+      ALLOCATE( df(3*geo%natoms), 3*geo%natoms)
+      ALLOCATE(df1(3*geo%natoms), 3*geo%natoms)
 
       count = 0
       steepest_descents = 1

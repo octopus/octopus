@@ -343,7 +343,7 @@ contains
       call td_init(gr, td, sys%st, sys%outp)
 
       ! allocate memory
-      allocate(st%zpsi(NP, st%d%dim, st%st_start:st%st_end, st%d%nik))
+      ALLOCATE(st%zpsi(NP, st%d%dim, st%st_start:st%st_end, st%d%nik), NP*st%d%dim*(st%st_end-st%st_start+1)*st%d%nik)
 
       ! psi_i is initialized in system_init
       psi_i => st
@@ -352,13 +352,13 @@ contains
       ! now we initialize psi_f. This will repeat some stuff
       call states_init(psi_f, gr)
       if(h%ep%nvnl > 0) then
-        allocate(psi_f%rho_core(NP))
+        ALLOCATE(psi_f%rho_core(NP), NP)
         psi_f%rho_core(NP) = psi_i%rho_core(NP)
       end if
       psi_f%st_start = psi_i%st_start
       psi_f%st_end = psi_i%st_end
-      allocate(psi_f%zpsi(NP, psi_f%d%dim, psi_f%st_start:psi_f%st_end, psi_f%d%nik))
-      allocate(v_old_f(NP, psi_f%d%nspin, 3))
+      ALLOCATE(psi_f%zpsi(NP, psi_f%d%dim, psi_f%st_start:psi_f%st_end, psi_f%d%nik), NP*psi_f%d%dim*(psi_f%st_end-psi_f%st_start+1)*psi_f%d%nik)
+      ALLOCATE(v_old_f(NP, psi_f%d%nspin, 3), NP*psi_f%d%nspin*3)
 
       ! prepare the initial laser
       if(h%ep%no_lasers.ne.0) then
@@ -366,10 +366,11 @@ contains
         call write_fatal(1)
       end if
       h%ep%no_lasers = 1
-      allocate(h%ep%lasers(1))
+      ALLOCATE(h%ep%lasers(1), 1)
       h%ep%lasers(1)%envelope = 99 ! internal type
       h%ep%lasers(1)%dt = td%dt
-      allocate(laser_i(NDIM, 0:2*td%max_iter), laser_f(NDIM, 0:2*td%max_iter))
+      ALLOCATE(laser_i(NDIM, 0:2*td%max_iter), NDIM*(2*td%max_iter+1))
+      ALLOCATE(laser_f(NDIM, 0:2*td%max_iter), NDIM*(2*td%max_iter+1))
 
       ! read parameters from input
       ! we assume atomic units

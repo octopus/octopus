@@ -79,7 +79,7 @@ contains
     call push_sub('nl_operator.nl_operator_init')
 
     op%n  = n
-    allocate(op%stencil(3, n))
+    ALLOCATE(op%stencil(3, n), 3*n)
 
     call pop_sub()
   end subroutine nl_operator_init
@@ -98,16 +98,17 @@ contains
     opo%m        => opi%m
     opo%cmplx_op =  opi%cmplx_op
     opo%stencil(1:3, 1:opo%n) = opi%stencil(1:3, 1:opi%n)
-    allocate(opo%i(opi%n, opi%np))
+    ALLOCATE(opo%i(opi%n, opi%np), opi%n*opi%np)
+
     if(opi%const_w) then
-      allocate(opo%w_re(opi%n, 1))
+      ALLOCATE(opo%w_re(opi%n, 1), opi%n*1)
       if (opi%cmplx_op) then
-        allocate(opo%w_im(opi%n, 1))
+        ALLOCATE(opo%w_im(opi%n, 1), opi%n*1)
       end if
     else
-      allocate(opo%w_re(opi%n, opi%np))
+      ALLOCATE(opo%w_re(opi%n, opi%np), opi%n*opi%np)
       if (opi%cmplx_op) then
-        allocate(opo%w_im(opi%n, opi%np))
+        ALLOCATE(opo%w_im(opi%n, opi%np), opi%n*opi%np)
       end if
     end if
 
@@ -146,16 +147,16 @@ contains
 
     ! allocate weights op%w
     if(op%const_w) then
-      allocate(op%w_re(op%n, 1))
+      ALLOCATE(op%w_re(op%n, 1), op%n*1)
       if (op%cmplx_op) then
-        allocate(op%w_im(op%n, 1))
+        ALLOCATE(op%w_im(op%n, 1), op%n*1)
       end if
       message(1) = 'Info: nl_operator_build: working with constant weights.'
       if(in_debug_mode) call write_info(1)
     else
-      allocate(op%w_re(op%n, op%np))
+      ALLOCATE(op%w_re(op%n, op%np), op%n*op%np)
       if (op%cmplx_op) then
-        allocate(op%w_im(op%n, op%np))
+        ALLOCATE(op%w_im(op%n, op%np), op%n*op%np)
       end if
       message(1) = 'Info: nl_operator_build: working with non-constant weights.'
       if(in_debug_mode) call write_info(1)
@@ -166,7 +167,7 @@ contains
     if (op%cmplx_op) op%w_im = M_ZERO
 
     ! Build lookup table op%i from stencil.
-    allocate(op%i(op%n, np))
+    ALLOCATE(op%i(op%n, np), op%n*np)
 
     do i = 1, np
       if(m%parallel_in_domains) then
@@ -260,7 +261,7 @@ contains
     call nl_operator_allgather(op, opg)
     call nl_operator_init(opgt, op%n)
     call nl_operator_equal(opgt, opg)
-    allocate(vol_pp(m%np_global))
+    ALLOCATE(vol_pp(m%np_global), m%np_global)
     call dvec_allgather(m%vp, vol_pp, m%vol_pp)
 
     op_i   => opg%i
@@ -347,7 +348,7 @@ contains
     call nl_operator_allgather(op, opg)
     call nl_operator_init(opgt, op%n)
     opgt = opg
-    allocate(vol_pp(m%np_global))
+    ALLOCATE(vol_pp(m%np_global), m%np_global)
     call dvec_allgather(m%vp, vol_pp, m%vol_pp)
 
     op_i   => opg%i
@@ -391,6 +392,7 @@ contains
         end if
       end do
     end do
+
 #if defined(HAVE_MPI) && defined(HAVE_METIS)
     deallocate(vol_pp)
     do i = 1, m%vp%np_local(m%vp%partno)
@@ -402,7 +404,6 @@ contains
     call nl_operator_end(opg)
     call nl_operator_end(opgt)
 #endif
-
 
     call pop_sub()
   end subroutine nl_operator_selfadjoint
@@ -537,16 +538,16 @@ contains
     call push_sub('nl_operator.nl_operator_common_copy')
 
     call nl_operator_init(opg, op%n)
-    allocate(opg%i(op%n, op%m%np_global))
+    ALLOCATE(opg%i(op%n, op%m%np_global), op%n*op%m%np_global)
     if(op%const_w) then
-      allocate(opg%w_re(op%n, 1))
+      ALLOCATE(opg%w_re(op%n, 1), op%n*1)
       if(op%cmplx_op) then
-        allocate(opg%w_im(op%n, 1))
+        ALLOCATE(opg%w_im(op%n, 1), op%n*1)
       end if
     else
-      allocate(opg%w_re(op%n, op%m%np_global))
+      ALLOCATE(opg%w_re(op%n, op%m%np_global), op%n*op%m%np_global)
       if(op%cmplx_op) then
-        allocate(opg%w_im(op%n, op%m%np_global))
+        ALLOCATE(opg%w_im(op%n, op%m%np_global), op%n*op%m%np_global)
       end if
     end if
     opg%m        => op%m
@@ -717,7 +718,7 @@ contains
 #if defined(HAVE_MPI) && defined(HAVE_METIS)
     if(op%m%vp%rank.eq.op%m%vp%root) then
 #endif
-      allocate(a(op%m%np_global, op%m%np_global))
+      ALLOCATE(a(op%m%np_global, op%m%np_global), op%m%np_global*op%m%np_global)
       a = M_ZERO
 #if defined(HAVE_MPI) && defined(HAVE_METIS)
     end if
@@ -766,7 +767,7 @@ contains
 #if defined(HAVE_MPI) && defined(HAVE_METIS)
     if(op%m%vp%rank.eq.op%m%vp%root) then
 #endif
-      allocate(a(op%m%np_global, op%m%np_global))
+      ALLOCATE(a(op%m%np_global, op%m%np_global), op%m%np_global*op%m%np_global)
       a = M_ZERO
 #if defined(HAVE_MPI) && defined(HAVE_METIS)
     end if
@@ -843,7 +844,7 @@ contains
 
     n = op%n
     if(op%const_w) then
-      allocate(w_re(n))
+      ALLOCATE(w_re(n), n)
       w_re(1:n) = op%w_re(1:n, 1)
       do i = 1, op%np
         fo(i) = sum(w_re(1:n)*fi(op%i(1:n,i)))
@@ -883,8 +884,10 @@ contains
 
     n = op%n
     if(op%const_w) then
-      allocate(w_re(n))
+      ALLOCATE(w_re(n), n)
+
       w_re(1:n) = op%w_re(1:n, 1)
+
       do i = 1, op%np
         fo(i) = sum(  cmplx(  w_re(1:n)*real(fi(op%i(1:n,i))),  w_re(1:n)*aimag(fi(op%i(1:n, i))), PRECISION  )   )
       end do
@@ -925,18 +928,21 @@ contains
 
     n = op%n
     if(op%const_w) then
-      allocate(w_re(n),w_im(n))
+      ALLOCATE(w_re(n), n)
+      ALLOCATE(w_im(n), n)
+
       w_re(1:n) = op%w_re(1:n, 1)
       w_im(1:n) = op%w_im(1:n, 1)
+
       do i = 1, op%np
         fo(i) = sum(  cmplx(  w_re(1:n)* real(fi(op%i(1:n,i))),  w_re(1:n)*aimag(fi(op%i(1:n, i))), PRECISION  )  ) &
-          + sum(   cmplx( -w_im(1:n)*aimag(fi(op%i(1:n,i))),  w_im(1:n)* real(fi(op%i(1:n, i))), PRECISION  )  )
+              + sum(  cmplx( -w_im(1:n)*aimag(fi(op%i(1:n,i))),  w_im(1:n)* real(fi(op%i(1:n, i))), PRECISION  )  )
       end do
       deallocate(w_re, w_im)
     else
       do i = 1, op%np
         fo(i) = sum(  cmplx(  op%w_re(1:n, i)* real(fi(op%i(1:n,i))),  op%w_re(1:n, i)*aimag(fi(op%i(1:n, i))), PRECISION  )  )  &
-          + sum(   cmplx( -op%w_im(1:n, i)*aimag(fi(op%i(1:n,i))),  op%w_im(1:n, i)* real(fi(op%i(1:n, i))), PRECISION  )  )
+              + sum(  cmplx( -op%w_im(1:n, i)*aimag(fi(op%i(1:n,i))),  op%w_im(1:n, i)* real(fi(op%i(1:n, i))), PRECISION  )  )
       end do
     end if
 

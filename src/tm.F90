@@ -115,13 +115,13 @@ contains
     call logrid_init(pstm%g, pstm%a, pstm%b, pstm%nrval)
 
     ! Allocates some stuff
-    allocate(pstm%rphi(pstm%nrval, 0:pstm%npotd-1, 3), &
-      pstm%eigen(0:pstm%npotd-1, 3),                   &
-      pstm%dkbcos(0:pstm%npotd-1),                     &
-      pstm%dknrm(0:pstm%npotd-1),                      &
-      pstm%so_dkbcos(1:pstm%npotu),                    &
-      pstm%so_dknrm(1:pstm%npotu),                     &
-      pstm%kbr(0:pstm%npotd))
+    ALLOCATE(pstm%rphi     (pstm%nrval, 0:pstm%npotd-1, 3), pstm%nrval*pstm%npotd*3)
+    ALLOCATE(pstm%eigen    (0:pstm%npotd-1, 3),             pstm%npotd*3)
+    ALLOCATE(pstm%dkbcos   (0:pstm%npotd-1),                pstm%npotd)
+    ALLOCATE(pstm%dknrm    (0:pstm%npotd-1),                pstm%npotd)
+    ALLOCATE(pstm%so_dkbcos(1:pstm%npotu),                  pstm%npotu)
+    ALLOCATE(pstm%so_dknrm (1:pstm%npotu),                  pstm%npotu)
+    ALLOCATE(pstm%kbr      (0:pstm%npotd),                  pstm%npotd+1)
 
     ! Fills the valence configuration data.
     call build_valconf(pstm)
@@ -244,13 +244,13 @@ contains
     call write_info(1)
 
     ! Allocation.
-    allocate(s   (psf%g%nrval),            &
-      hato(psf%g%nrval),            &
-      g   (psf%g%nrval),            &
-      y   (psf%g%nrval),            &
-      ve  (psf%g%nrval, psf%ispin), &
-      rho (psf%g%nrval, psf%ispin), &
-      prev(psf%g%nrval, psf%ispin))
+    ALLOCATE(s   (psf%g%nrval),            psf%g%nrval)
+    ALLOCATE(hato(psf%g%nrval),            psf%g%nrval)
+    ALLOCATE(g   (psf%g%nrval),            psf%g%nrval)
+    ALLOCATE(y   (psf%g%nrval),            psf%g%nrval)
+    ALLOCATE(ve  (psf%g%nrval, psf%ispin), psf%g%nrval*psf%ispin)
+    ALLOCATE(rho (psf%g%nrval, psf%ispin), psf%g%nrval*psf%ispin)
+    ALLOCATE(prev(psf%g%nrval, psf%ispin), psf%g%nrval*psf%ispin)
     s = M_ZERO; hato = M_ZERO; g = M_ZERO; y = M_ZERO;
     ve = M_ZERO; rho = M_ZERO; prev = M_ZERO
 
@@ -392,11 +392,14 @@ contains
 
     ! fixes psf%nrval, to obtain an odd number.
     psf%nrval = psf%nr + mod((psf%nr + 1), 2)
-    allocate(aux(psf%nr))
+    ALLOCATE(aux(psf%nr), psf%nr)
 
     ! Allocates the varibales to psf%nrval:
-    allocate(psf%rofi(psf%nrval), psf%vps(psf%nrval, 0:psf%npotd-1), &
-      psf%chcore(1:psf%nrval), psf%rho_val(1:psf%nrval), psf%vso(psf%nrval, psf%npotu))
+    ALLOCATE(psf%rofi   (psf%nrval),                psf%nrval)
+    ALLOCATE(psf%vps    (psf%nrval, 0:psf%npotd-1), psf%nrval*psf%npotd)
+    ALLOCATE(psf%chcore (psf%nrval),                psf%nrval)
+    ALLOCATE(psf%rho_val(psf%nrval),                psf%nrval)
+    ALLOCATE(psf%vso    (psf%nrval, psf%npotu),     psf%nrval*psf%npotu)
 
     ! Reads the radial values, in bohrs
     !   rofi(1:nrval) : radial values ( rofi(i) = b*( exp(a*(i-1)) - 1 ) ) [bohr]
@@ -490,12 +493,15 @@ contains
 
     ! fixes psf%nrval, to obtain an odd number.
     psf%nrval = psf%nr + mod((psf%nr + 1), 2)
-    allocate(aux(psf%nr))
+    ALLOCATE(aux(psf%nr), psf%nr)
 
-    ! Allocates the varibales to psf%nrval:  ! Reads the pseudo-valence charge density, in bohr^(-3)
+    ! Allocates the variables to psf%nrval:  ! Reads the pseudo-valence charge density, in bohr^(-3)
     !   rho_val(1:nrval) : pseudo-valence charge distribution
-    allocate(psf%rofi(psf%nrval), psf%vps(psf%nrval, 0:psf%npotd-1), &
-      psf%chcore(1:psf%nrval), psf%rho_val(1:psf%nrval), psf%vso(psf%nrval, psf%npotu) )
+    ALLOCATE(psf%rofi   (psf%nrval),                psf%nrval)
+    ALLOCATE(psf%vps    (psf%nrval, 0:psf%npotd-1), psf%nrval*psf%npotd)
+    ALLOCATE(psf%chcore (psf%nrval),                psf%nrval)
+    ALLOCATE(psf%rho_val(psf%nrval),                psf%nrval)
+    ALLOCATE(psf%vso    (psf%nrval, psf%npotu),     psf%nrval*psf%npotu)
 
     ! Reads the radial values, in bohrs
     !   rofi(1:nrval) : radial values ( rofi(i) = b*( exp(a*(i-1)) - 1 ) ) [bohr]
@@ -640,7 +646,12 @@ contains
 
     call push_sub('tm.ghost_analysis')
 
-    allocate(ve(pstm%nrval), s(pstm%nrval), hato(pstm%nrval), g(pstm%nrval), y(pstm%nrval), elocal(2, 0:lmax))
+    ALLOCATE(ve    (pstm%nrval), pstm%nrval)
+    ALLOCATE(s     (pstm%nrval), pstm%nrval)
+    ALLOCATE(hato  (pstm%nrval), pstm%nrval)
+    ALLOCATE(g     (pstm%nrval), pstm%nrval)
+    ALLOCATE(y     (pstm%nrval), pstm%nrval)
+    ALLOCATE(elocal(2, 0:lmax),  2*(lmax+1))
 
     select case(pstm%icorr)
     case('pb');   functl = 'GGA'
@@ -748,7 +759,7 @@ contains
 
     call push_sub('tm.get_local')
 
-    allocate(psf%vlocal(psf%nrval))
+    ALLOCATE(psf%vlocal(psf%nrval), psf%nrval)
     if(l_loc >= 0) then
       write(message(1), '(a,i2,a)') "Info: l = ", l_loc, " component used as local potential"
       call write_info(1)
@@ -760,7 +771,7 @@ contains
 
       a = CNST(1.82) / rcore
       b = M_ONE
-      allocate(rho(psf%nrval))
+      ALLOCATE(rho(psf%nrval), psf%nrval)
 
       do ir = 1, psf%nrval
         rho(ir) = exp( -( sinh(a*b*psf%rofi(ir)) / sinh(b) )**2 )

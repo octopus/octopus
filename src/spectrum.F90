@@ -326,12 +326,13 @@ contains
     call spectrum_cross_section_info(in_file(1), nspin, kick, energy_steps, dw)
     call spectrum_skip_header(in_file(1))
 
-    allocate(sigma (3, 3, 0:energy_steps, nspin), &
-      sigmap(3, 3, 0:energy_steps, nspin), &
-      sigmau(3, 0:energy_steps, nspin), &
-      sigmav(3, 0:energy_steps, nspin), &
-      sigmaw(3, 0:energy_steps, nspin), &
-      p(3, 3), ip(3, 3))
+    ALLOCATE(sigma (3, 3, 0:energy_steps, nspin), 3*3*(energy_steps+1)*nspin)
+    ALLOCATE(sigmap(3, 3, 0:energy_steps, nspin), 3*3*(energy_steps+1)*nspin)
+    ALLOCATE(sigmau(3,    0:energy_steps, nspin),   3*(energy_steps+1)*nspin)
+    ALLOCATE(sigmav(3,    0:energy_steps, nspin),   3*(energy_steps+1)*nspin)
+    ALLOCATE(sigmaw(3,    0:energy_steps, nspin),   3*(energy_steps+1)*nspin)
+    ALLOCATE(     p(3, 3),                          3*3)
+    ALLOCATE(    ip(3, 3),                          3*3)
 
     select case(equiv_axis)
 
@@ -533,7 +534,7 @@ contains
 
     ! Read the dipole.
     call spectrum_skip_header(in_file)
-    allocate(dipole(3, 0:time_steps, nspin))
+    ALLOCATE(dipole(3, 0:time_steps, nspin), 3*(time_steps+1)*nspin)
     do i = 0, time_steps
       select case(nspin)
       case(1)
@@ -554,11 +555,13 @@ contains
 
     ! Get the number of energy steps.
     no_e = s%max_energy / s%energy_step
-    allocate(sigma(3, 0:no_e, nspin)); sigma = M_ZERO
-    allocate(sf(0:no_e, nspin)); sf = M_ZERO
+    ALLOCATE(sigma(3, 0:no_e, nspin), 3*(no_e+1)*nspin)
+    ALLOCATE(   sf(   0:no_e, nspin),   (no_e+1)*nspin)
+    sigma = M_ZERO
+    sf    = M_ZERO
 
     ! Gets the damping function (here because otherwise it is awfully slow in "pol" mode...)
-    allocate(dumpa(is:ie))
+    ALLOCATE(dumpa(is:ie), (ie-is+1))
     do j = is, ie
       jj = j - is
       select case(s%damp)
@@ -685,7 +688,7 @@ contains
     call spectrum_fix_time_limits(time_steps, dt, s%start_time, s%end_time, is, ie, ntiter)
 
     ! load dipole from file
-    allocate(angular(0:time_steps, 3))
+    ALLOCATE(angular(0:time_steps, 3), (time_steps+1)*3)
     call spectrum_skip_header(in_file)
     do i = 0, time_steps
       read(in_file, *) j, dump, angular(i, 1:3)
@@ -698,11 +701,11 @@ contains
     end do
 
     no_e = s%max_energy / s%energy_step
-    allocate(sp(0:no_e))
+    ALLOCATE(sp(0:no_e), no_e+1)
     sp = M_z0
 
     ! Gets the damping function (here because otherwise it is awfully slow in "pol" mode...)
-    allocate(dumpa(is:ie))
+    ALLOCATE(dumpa(is:ie), ie-is+1)
     do j = is, ie
       jj = j - is
       select case(s%damp)
@@ -775,9 +778,11 @@ contains
     call spectrum_fix_time_limits(time_steps, dt, s%start_time, s%end_time, is, ie, ntiter)
 
     call spectrum_skip_header(iunit)
+
     ! load dipole from file
-    allocate(dipole(0:time_steps))
-    allocate(d(3, nspin))
+    ALLOCATE(dipole(0:time_steps), time_steps+1)
+    ALLOCATE(d(3, nspin), 3*nspin)
+
     do i = 1, time_steps
       read(iunit, *) j, dump, dump, dump, d
       select case(sh%pol)
@@ -797,7 +802,7 @@ contains
     deallocate(d)
 
     ! we now calculate the first time derivative
-    allocate(ddipole(0:time_steps))
+    ALLOCATE(ddipole(0:time_steps), time_steps+1)
     ddipole(0) = (dipole(1) - dipole(0))/dt
     do i = 1, time_steps - 1
       ddipole(i) = (dipole(i + 1) - dipole(i - 1))/(M_TWO*dt)
@@ -814,7 +819,7 @@ contains
 
     ! now we Fourier transform
     sh%no_e = s%max_energy / s%energy_step
-    allocate(sh%sp(0:sh%no_e))
+    ALLOCATE(sh%sp(0:sh%no_e), sh%no_e+1)
     sh%sp = M_ZERO
 
     do i = 0, sh%no_e
@@ -856,7 +861,7 @@ contains
     call spectrum_fix_time_limits(time_steps, dt, s%start_time, s%end_time, is, ie, ntiter)
 
     ! load dipole from file
-    allocate(acc(0:time_steps))
+    ALLOCATE(acc(0:time_steps), time_steps+1)
     acc = M_ZERO
     call spectrum_skip_header(iunit)
     do i = 1, time_steps
@@ -878,7 +883,7 @@ contains
 
     ! now we Fourier transform
     sh%no_e = s%max_energy / s%energy_step
-    allocate(sh%sp(0:sh%no_e))
+    ALLOCATE(sh%sp(0:sh%no_e), sh%no_e+1)
     sh%sp = M_ZERO
 
     do i = 0, sh%no_e

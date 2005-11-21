@@ -180,17 +180,20 @@ contains
       ! WARNING: should be first deallocate, then nullify?
       nullify(w%gs_st%zpsi, w%gs_st%node, w%gs_st%occ, w%gs_st%eigenval, w%gs_st%mag)
       call restart_look (trim(tmpdir)//'restart_gs', gr%m, i, i, w%gs_st%nst, ierr)
+
       ! We will store the ground-state Kohn-Sham system by all processors.
       w%gs_st%st_start = 1
       w%gs_st%st_end   = w%gs_st%nst
+
       ! allocate memory
-      allocate(w%gs_st%node(w%gs_st%nst))
-      allocate(w%gs_st%eigenval(w%gs_st%nst, w%gs_st%d%nik))
-      allocate(w%gs_st%occ(w%gs_st%nst, w%gs_st%d%nik))
+      ALLOCATE(w%gs_st%node(w%gs_st%nst), w%gs_st%nst)
+      ALLOCATE(w%gs_st%eigenval(w%gs_st%nst, w%gs_st%d%nik), w%gs_st%nst*w%gs_st%d%nik)
+      ALLOCATE(w%gs_st%occ(w%gs_st%nst, w%gs_st%d%nik), w%gs_st%nst*w%gs_st%d%nik)
       if(w%gs_st%d%ispin == SPINORS) then
-        allocate(w%gs_st%mag(w%gs_st%nst, w%gs_st%d%nik, 2))
+        ALLOCATE(w%gs_st%mag(w%gs_st%nst, w%gs_st%d%nik, 2), w%gs_st%nst*w%gs_st%d%nik*2)
       end if
-      allocate(w%gs_st%zpsi(NP_PART, w%gs_st%d%dim, w%gs_st%st_start:w%gs_st%st_end, w%gs_st%d%nik))
+      i = NP_PART*w%gs_st%d%dim*(w%gs_st%st_end-w%gs_st%st_start+1)*w%gs_st%d%nik
+      ALLOCATE(w%gs_st%zpsi(NP_PART, w%gs_st%d%dim, w%gs_st%st_start:w%gs_st%st_end, w%gs_st%d%nik), i)
       w%gs_st%node(:)  = 0
       call zrestart_read(trim(tmpdir)//'restart_gs', w%gs_st, gr%m, ierr)
       if(ierr.ne.0) then
@@ -400,7 +403,7 @@ contains
     if(mpi_grp_is_root(mpi_world)) then ! only first node outputs
 
       !get the atoms magnetization
-      allocate(lmm(3, geo%natoms))
+      ALLOCATE(lmm(3, geo%natoms), 3*geo%natoms)
       call states_local_magnetic_moments(m, st, geo, st%rho, lmm_r, lmm)
 
       if(iter ==0) then
@@ -625,7 +628,8 @@ contains
       call td_write_print_header_end(out_multip)
     end if
 
-    allocate(nuclear_dipole(1:3), multipole((lmax + 1)**2, st%d%nspin))
+    ALLOCATE(nuclear_dipole(1:3), 3)
+    ALLOCATE(multipole((lmax + 1)**2, st%d%nspin), (lmax + 1)**2*st%d%nspin)
     call states_calculate_multipoles(gr, st, lmax, multipole)
     call geometry_dipole(gr%geo, nuclear_dipole)
     do is = 1, st%d%nspin
@@ -967,7 +971,7 @@ contains
       end if
     end if
 
-    allocate(projections(st%nst, gs_st%nst, st%d%nik))
+    ALLOCATE(projections(st%nst, gs_st%nst, st%d%nik), st%nst*gs_st%nst*st%d%nik)
     call states_calc_projection(gr%m, st, gs_st, projections)
 #if defined(HAVE_MPI)
     do ik = 1, st%d%nik

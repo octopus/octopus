@@ -98,7 +98,10 @@ subroutine X(sym_conjugate_gradients)(np, x, b, op, dotp, iter, residue, thresho
     threshold_ = CNST(1.0e-6)
   end if
 
-  allocate(r(np), ax(np), p(np), ap(np))
+  ALLOCATE( r(np), np)
+  ALLOCATE(ax(np), np)
+  ALLOCATE( p(np), np)
+  ALLOCATE(ap(np), np)
 
   ! Initial residue
   call op(x, ax)
@@ -123,7 +126,8 @@ subroutine X(sym_conjugate_gradients)(np, x, b, op, dotp, iter, residue, thresho
   if(present(residue)) residue = gamma
 
   deallocate(r, ax, p, ap)
-  call pop_sub(); return
+
+  call pop_sub()
 end subroutine X(sym_conjugate_gradients)
 
 
@@ -164,7 +168,13 @@ subroutine X(bi_conjugate_gradients)(np, x, b, op, opt, dotp, iter, residue, thr
     threshold_ = CNST(1.0e-6)
   end if
 
-  allocate(r(np), rr(np), ax(np), p(np), pp(np), ap(np), atp(np))
+  ALLOCATE(  r(np), np)
+  ALLOCATE( rr(np), np)
+  ALLOCATE( ax(np), np)
+  ALLOCATE(  p(np), np)
+  ALLOCATE( pp(np), np)
+  ALLOCATE( ap(np), np)
+  ALLOCATE(atp(np), np)
 
   ! Initial residue
   call op(x, ax)
@@ -195,5 +205,6 @@ subroutine X(bi_conjugate_gradients)(np, x, b, op, opt, dotp, iter, residue, thr
   if(present(residue)) residue = err
 
   deallocate(r, rr, ax, p, pp, ap, atp)
-  call pop_sub(); return
+
+  call pop_sub()
 end subroutine X(bi_conjugate_gradients)

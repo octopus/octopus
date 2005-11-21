@@ -358,7 +358,7 @@ contains
     FLOAT :: c1, c2, c3, c4, c5, xi
     FLOAT, allocatable :: x(:)
 
-    allocate(x(0:M))
+    ALLOCATE(x(0:M), M+1)
     ! grid-points for one-side finite-difference formulas on an equi.spaced grid
     ! x(:) = (/(i,i=0,M)/)
 

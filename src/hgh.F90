@@ -121,15 +121,15 @@ contains
     call logrid_init(psp%g, CNST(3.0e-2), CNST(4.0e-4), 431)
 
     ! Allocation of stuff.
-    allocate(psp%vlocal(1:psp%g%nrval))
+    ALLOCATE(psp%vlocal(psp%g%nrval), psp%g%nrval)
     psp%vlocal = M_ZERO
     if(psp%l_max >= 0) then
-      allocate(psp%kbr(0:psp%l_max), &
-        psp%kb(1:psp%g%nrval, 0:psp%l_max, 1:3))
+      ALLOCATE(psp%kbr(0:psp%l_max), 1+psp%l_max)
+      ALLOCATE(psp%kb(psp%g%nrval, 0:psp%l_max, 3), psp%g%nrval*(psp%l_max+1)*3)
       psp%kbr = M_ZERO; psp%kb = M_ZERO
     end if
-    allocate(psp%rphi (psp%g%nrval, psp%conf%p), &
-      psp%eigen(psp%conf%p))
+    ALLOCATE(psp%rphi(psp%g%nrval, psp%conf%p), psp%g%nrval*psp%conf%p)
+    ALLOCATE(psp%eigen(psp%conf%p), psp%conf%p)
     psp%rphi = M_ZERO; psp%eigen = M_ZERO
 
     call pop_sub()
@@ -338,7 +338,7 @@ contains
 
     integer :: i
 
-    allocate(vlocalr_vector(size(r)))
+    ALLOCATE(vlocalr_vector(size(r)), size(r))
     do i = 1, size(r)
       vlocalr_vector(i) = vlocalr_scalar(r(i), p)
     end do
@@ -396,7 +396,7 @@ contains
 
     integer :: j
 
-    allocate(projectorr_vector(size(r)))
+    ALLOCATE(projectorr_vector(size(r)), size(r))
     do j=1, size(r)
       projectorr_vector(j) = projectorr_scalar(r(j), p, i, l)
     end do
@@ -476,8 +476,13 @@ contains
     call push_sub('hgh.solve_schroedinger')
 
     ! Allocations...
-    allocate(s(psp%g%nrval), hato(psp%g%nrval), g(psp%g%nrval), y(psp%g%nrval), prev(psp%g%nrval, 1), &
-      rho(psp%g%nrval, 1), ve(psp%g%nrval, 1))
+    ALLOCATE(   s(psp%g%nrval), psp%g%nrval)
+    ALLOCATE(hato(psp%g%nrval), psp%g%nrval)
+    ALLOCATE(   g(psp%g%nrval), psp%g%nrval)
+    ALLOCATE(   y(psp%g%nrval), psp%g%nrval)
+    ALLOCATE(prev(psp%g%nrval, 1), psp%g%nrval)
+    ALLOCATE( rho(psp%g%nrval, 1), psp%g%nrval)
+    ALLOCATE(  ve(psp%g%nrval, 1), psp%g%nrval)
     hato = M_ZERO; g = M_ZERO;  y = M_ZERO; rho = M_ZERO; ve = M_ZERO
 
     ! These numerical parameters have to be fixed for egofv to work.

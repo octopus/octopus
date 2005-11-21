@@ -46,8 +46,10 @@ subroutine xc_get_vxc_and_axc(gr, xcs, rho, j, ispin, vxc, axc, ex, ec, exc_j, i
   spin_channels = xcs%j_functl%spin_channels
 
   !allocate memory
-  allocate(v(NP, NDIM, spin_channels), f(NP, NDIM, spin_channels))
-  allocate(dedd(NP, spin_channels), dedv(NP, NDIM, spin_channels))
+  ALLOCATE(v   (NP, NDIM, spin_channels), NP*NDIM*spin_channels)
+  ALLOCATE(f   (NP, NDIM, spin_channels), NP*NDIM*spin_channels)
+  ALLOCATE(dedd(NP, spin_channels),       NP*spin_channels)
+  ALLOCATE(dedv(NP, NDIM, spin_channels), NP*NDIM*spin_channels)
   dedd = M_ZERO; dedv = M_ZERO
 
   !Compute j/rho and the vorticity
@@ -58,8 +60,10 @@ subroutine xc_get_vxc_and_axc(gr, xcs, rho, j, ispin, vxc, axc, ex, ec, exc_j, i
     call df_curl(gr%f_der, f(:,:,is), v(:,:,is))
   end do
 
-  allocate(l_dens(spin_channels), l_v(NDIM, spin_channels))
-  allocate(l_dedd(spin_channels), l_dedv(NDIM, spin_channels))
+  ALLOCATE(l_dens(spin_channels),       spin_channels)
+  ALLOCATE(l_v   (NDIM, spin_channels), NDIM*spin_channels)
+  ALLOCATE(l_dedd(spin_channels),       spin_channels)
+  ALLOCATE(l_dedv(NDIM, spin_channels), NDIM*spin_channels)
   l_dedd = M_ZERO; l_dedv = M_ZERO
   space_loop: do i = 1, NP
     ! make a local copy with the correct memory order
@@ -84,7 +88,7 @@ subroutine xc_get_vxc_and_axc(gr, xcs, rho, j, ispin, vxc, axc, ex, ec, exc_j, i
 
   ! add contributions to vxc and axc
   vxc = vxc + dedd
-  allocate(tmp(NP, NDIM))
+  ALLOCATE(tmp(NP, NDIM), NP*NDIM)
   do is = 1, spin_channels
     call df_curl(gr%f_der, dedv(:,:,is), tmp)
 

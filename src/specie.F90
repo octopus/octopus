@@ -434,7 +434,7 @@ contains
 
     ! if we are using non-local pseudopotentials, allocate structure
     if(.not.s%local) then
-      allocate(s%ps) ! allocate structure
+      ALLOCATE(s%ps, 1) ! allocate structure
       call ps_init(s%ps, s%label, s%type, s%Z, s%lmax, s%lloc, ispin)
       call ps_getradius(s%ps)
       call ps_derivatives(s%ps)
@@ -456,7 +456,9 @@ contains
       if(s%omega <= M_ZERO) s%omega = CNST(0.1) ! To avoid problems with constant potentials.
     end if
 
-    allocate(s%iwf_l(s%niwfs, ispin), s%iwf_m(s%niwfs, ispin), s%iwf_i(s%niwfs, ispin))
+    ALLOCATE(s%iwf_l(s%niwfs, ispin), s%niwfs*ispin)
+    ALLOCATE(s%iwf_m(s%niwfs, ispin), s%niwfs*ispin)
+    ALLOCATE(s%iwf_i(s%niwfs, ispin), s%niwfs*ispin)
     call specie_iwf_fix_qn(s, ispin)
 
     call pop_sub()

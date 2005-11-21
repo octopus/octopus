@@ -41,12 +41,12 @@ subroutine X(vec_scatter)(vp, v, v_local)
 
   ! Unfortunately, vp%xlocal ist not quite the required
   ! displacement vector.
-  allocate(displs(vp%p))
+  ALLOCATE(displs(vp%p), vp%p)
   displs = vp%xlocal-1
 
   ! Fill send buffer.
   if(vp%rank.eq.vp%root) then
-    allocate(v_tmp(vp%np))
+    ALLOCATE(v_tmp(vp%np), vp%np)
 
     ! Rearrange copy of v. All points of node r are in
     ! v_tmp(xlocal(r):xlocal(r)+np_local(r)-1).
@@ -65,7 +65,6 @@ subroutine X(vec_scatter)(vp, v, v_local)
   call MPI_Debug_OUT(vp%comm, C_MPI_SCATTERV)
 
   if(vp%rank.eq.vp%root) deallocate(v_tmp)
-
   deallocate(displs)
 
   call pop_sub()
@@ -88,12 +87,12 @@ subroutine X(vec_scatter_bndry)(vp, v, v_local)
 
   call push_sub('par_vec.Xvec_scatter_bndry')
 
-  allocate(displs(vp%p))
+  ALLOCATE(displs(vp%p), vp%p)
   displs = vp%xbndry-1
 
   ! Fill send buffer.
   if(vp%rank.eq.vp%root) then
-    allocate(v_tmp(vp%np_enl))
+    ALLOCATE(v_tmp(vp%np_enl), vp%np_enl)
 
     ! Rearrange copy of v. All points of node r are in
     ! v_tmp(xlocal(r):xlocal(r)+np_local(r)-1).
@@ -112,7 +111,6 @@ subroutine X(vec_scatter_bndry)(vp, v, v_local)
   call MPI_Debug_OUT(vp%comm, C_MPI_SCATTERV)
 
   if(vp%rank.eq.vp%root) deallocate(v_tmp)
-
   deallocate(displs)
 
   call pop_sub()
@@ -153,10 +151,10 @@ subroutine X(vec_gather)(vp, v, v_local)
 
   ! Unfortunately, vp%xlocal ist not quite the required
   ! displacement vector.
-  allocate(displs(vp%p))
+  ALLOCATE(displs(vp%p), vp%p)
   displs = vp%xlocal-1
 
-  if(vp%rank.eq.vp%root) allocate(v_tmp(vp%np))
+  if(vp%rank.eq.vp%root) ALLOCATE(v_tmp(vp%np), vp%np)
 
   call MPI_Debug_IN(vp%comm, C_MPI_GATHERV)
   call MPI_Gatherv(v_local, vp%np_local(vp%partno), R_MPITYPE, v_tmp, &
@@ -197,10 +195,10 @@ subroutine X(vec_allgather)(vp, v, v_local)
 
   ! Unfortunately, vp%xlocal ist not quite the required
   ! displacement vector.
-  allocate(displs(vp%p))
+  ALLOCATE(displs(vp%p), vp%p)
   displs = vp%xlocal-1
 
-  allocate(v_tmp(vp%np))
+  ALLOCATE(v_tmp(vp%np), vp%np)
 
   call MPI_Debug_IN(vp%comm, C_MPI_ALLGATHERV)
   call MPI_Allgatherv(v_local, vp%np_local(vp%partno), R_MPITYPE, v_tmp, &
@@ -245,7 +243,7 @@ subroutine X(vec_ghost_update)(vp, v_local)
   ! Calculate number of ghost points current node
   ! has to send to neighbours and allocate send buffer.
   total = sum(vp%np_ghost_neigh(:, vp%partno))
-  allocate(ghost_send(total))
+  ALLOCATE(ghost_send(total), total)
 
   ! Send and receive displacements.
   ! Send displacement cannot directly be calculated
@@ -255,14 +253,14 @@ subroutine X(vec_ghost_update)(vp, v_local)
   ! So what gets done is to pick out the number of ghost points
   ! each partition r wants to have from the current partiton
   ! vp%partno.
-  allocate(sdispls(vp%p))
+  ALLOCATE(sdispls(vp%p), vp%p)
   sdispls(1) = 0
   do r = 2, vp%p
     sdispls(r) = sdispls(r-1)+vp%np_ghost_neigh(r-1, vp%partno)
   end do
 
   ! This is like in vec_scatter/gather.
-  allocate(rdispls(vp%p))
+  ALLOCATE(rdispls(vp%p), vp%p)
   rdispls = vp%xghost_neigh(vp%partno, :)-vp%xghost(vp%partno)
 
   ! Collect all local points that have to be sent to neighbours.

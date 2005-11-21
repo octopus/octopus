@@ -55,22 +55,22 @@ contains
     FLOAT, allocatable :: rho(:)
     integer :: is
 
-    allocate(rho(NP))
+    ALLOCATE(rho(NP), NP)
 
     ! calculate the total density
-    rho(:) = st%rho(:, 1)
+    rho(1:NP) = st%rho(1:NP, 1)
     do is = 2, h%d%spin_channels
-      rho(:) = rho(:) + st%rho(:, is)
+      rho(1:NP) = rho(1:NP) + st%rho(1:NP, is)
     end do
 
     ! Amaldi correction
-    if(ks%sic_type == sic_amaldi) rho(:) = amaldi_factor*rho(:)
+    if(ks%sic_type == sic_amaldi) rho(1:NP) = amaldi_factor*rho(1:NP)
 
     ! solve the poisson equation
     call dpoisson_solve(gr, h%vhartree, rho)
 
-    h%vhxc(:, 1) = h%vhxc(:, 1) + h%vhartree(:)
-    if(h%d%ispin > UNPOLARIZED) h%vhxc(:, 2) = h%vhxc(:, 2) + h%vhartree(:)
+    h%vhxc(1:NP, 1) = h%vhxc(1:NP, 1) + h%vhartree(1:NP)
+    if(h%d%ispin > UNPOLARIZED) h%vhxc(1:NP, 2) = h%vhxc(1:NP, 2) + h%vhartree(1:NP)
 
     ! We first add 1/2 int n vH, to then subtract int n (vxc + vH)
     ! this yields the correct formula epot = - int n (vxc + vH/2)
@@ -88,13 +88,14 @@ contains
     FLOAT, allocatable :: j(:,:), ahartree(:,:)
     integer :: is, idim
 
-    allocate(j(NP, NDIM), ahartree(NP, NDIM))
+    ALLOCATE(       j(NP, NDIM), NP*NDIM)
+    ALLOCATE(ahartree(NP, NDIM), NP*NDIM)
     ahartree = M_ZERO
 
     ! calculate the total current
-    j(:,:) = st%j(:,:, 1)
+    j(1:NP, 1:NDIM) = st%j(1:NP, 1:NDIM, 1)
     do is = 2, h%d%spin_channels
-      j(:,:) = j(:,:) + st%j(:, :, is)
+      j(1:NP, 1:NDIM) = j(1:NP, 1:NDIM) + st%j(1:NP, 1:NDIM, is)
     end do
 
     ! solve poisson equation
@@ -102,8 +103,8 @@ contains
       call dpoisson_solve(gr, ahartree(:,idim), j(:, idim)) ! solve the poisson equation
     end do
 
-    h%ahxc(:,:, 1) = h%ahxc(:,:, 1) + ahartree(:,:)
-    if(h%d%ispin > UNPOLARIZED) h%ahxc(:,:, 2) = h%ahxc(:,:, 2) + ahartree(:,:)
+    h%ahxc(1:NP, 1:NDIM, 1) = h%ahxc(1:NP, 1:NDIM, 1) + ahartree(1:NP, 1:NDIM)
+    if(h%d%ispin > UNPOLARIZED) h%ahxc(1:NP, 1:NDIM, 2) = h%ahxc(1:NP, 1:NDIM, 2) + ahartree(1:NP, 1:NDIM)
 
     ! We first add 1/2 int j.aH, to then subtract int j.(axc + aH)
     ! this yields the correct formula epot = - int j.(axc + aH/2)
@@ -130,7 +131,7 @@ contains
     !logical, save :: RPA_first = .true.
     !
     !if(RPA_first) then
-    !  allocate(RPA_Vhxc(NP, h%d%nspin))
+    !  ALLOCATE(RPA_Vhxc(NP, h%d%nspin), NP*h%d%nspin)
     !  RPA_Vhxc = h%vhxc
 
     call profiling_in(C_PROFILING_XC)
@@ -140,7 +141,7 @@ contains
     h%exc_j = M_ZERO
 
     ! get density taking into account non-linear core corrections, and the Amaldi SIC correction
-    allocate(rho(NP, st%d%nspin))
+    ALLOCATE(rho(NP, st%d%nspin), NP*st%d%nspin)
     if(associated(st%rho_core)) then
       do is = 1, st%d%spin_channels
         rho(:, is) = st%rho(:, is) + st%rho_core(:)/st%d%spin_channels
@@ -182,7 +183,8 @@ contains
       h%epot = h%epot - dmf_dotp(gr%m, st%rho(:, 1), h%vhxc(:, 1)) &
          - dmf_dotp(gr%m, st%rho(:, 2), h%vhxc(:, 2))
 
-      allocate(ztmp1(NP), ztmp2(NP))
+      ALLOCATE(ztmp1(NP), NP)
+      ALLOCATE(ztmp2(NP), NP)
       ztmp1 = st%rho(:, 3) + M_zI*st%rho(:, 4)
       ztmp2 = h%vhxc(:, 3) - M_zI*h%vhxc(:, 4)
       ! WARNING missing real() ???

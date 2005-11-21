@@ -123,7 +123,7 @@ contains
     call push_sub('epot.epot_init')
 
     ! Local part of the pseudopotentials
-    allocate(ep%vpsl(NP))
+    ALLOCATE(ep%vpsl(NP), NP)
     ep%vpsl = M_ZERO
 
     ! should we calculate the local pseudopotentials in Fourier space?
@@ -148,7 +148,7 @@ contains
         message(1) = 'Info: generating classic external potential'
         call write_info(1)
 
-        allocate(ep%Vclassic(NP))
+        ALLOCATE(ep%Vclassic(NP), NP)
         call epot_generate_classic(ep, gr%m, gr%geo)
       end if
     end if
@@ -236,17 +236,17 @@ contains
     ep%nvnl = geometry_nvnl(gr%geo)
     nullify(ep%p)
     if(ep%nvnl > 0) then
-      allocate(ep%p(ep%nvnl))
+      ALLOCATE(ep%p(ep%nvnl), ep%nvnl)
       do i = 1, ep%nvnl
         nullify(ep%p(i)%jxyz, ep%p(i)%bra, ep%p(i)%ket, ep%p(i)%uvu, ep%p(i)%phases)
       end do
-      allocate(ep%dp(NDIM, ep%nvnl))
+      ALLOCATE(ep%dp(NDIM, ep%nvnl), NDIM*ep%nvnl)
       do i = 1, ep%nvnl
         do j = 1, NDIM
           nullify(ep%dp(j, i)%jxyz, ep%dp(j, i)%bra, ep%dp(j, i)%ket, ep%dp(j, i)%uvu, ep%dp(j, i)%phases)
         end do
       end do
-      allocate(ep%lso(NDIM, ep%nvnl))
+      ALLOCATE(ep%lso(NDIM, ep%nvnl), NDIM*ep%nvnl)
       do i = 1, ep%nvnl
         do j = 1, NDIM
           nullify(ep%lso(j, i)%jxyz, ep%lso(j, i)%bra, ep%lso(j, i)%ket, ep%lso(j, i)%uvu, ep%lso(j, i)%phases)
@@ -356,8 +356,8 @@ contains
       call write_warning(2)
     end if
 
-    allocate(ep%local_cf(geo%nspecies))
-    if(geo%nlcc) allocate(ep%rhocore_cf(geo%nspecies))
+    ALLOCATE(ep%local_cf(geo%nspecies), geo%nspecies)
+    if(geo%nlcc) ALLOCATE(ep%rhocore_cf(geo%nspecies), geo%nspecies)
 
     specie: do i = 1, geo%nspecies
       s  => geo%specie(i)
@@ -669,12 +669,12 @@ contains
         ep%lso(d, ivnl)%n_channels         = s%ps%kbc
       end do
 
-      allocate(ep%p(ivnl)%jxyz(j))
+      ALLOCATE(ep%p(ivnl)%jxyz(j), j)
       do d = 1, sb%dim
-        allocate(ep%dp(d, ivnl)%jxyz(j))
+        ALLOCATE(ep%dp(d, ivnl)%jxyz(j), j)
       end do
       do d = 1, sb%dim
-        allocate(ep%lso(d, ivnl)%jxyz(j))
+        ALLOCATE(ep%lso(d, ivnl)%jxyz(j), j)
       end do
 
       j = 0
@@ -708,35 +708,40 @@ contains
       n_s = ep%p(ivnl)%n_points_in_sphere
       n_c = ep%p(ivnl)%n_channels
 
-      allocate(ep%p(ivnl)%ket(n_s, n_c), &
-        ep%p(ivnl)%uvu(n_c, n_c))
+      ALLOCATE(ep%p(ivnl)%ket(n_s, n_c), n_s*n_c)
+      ALLOCATE(ep%p(ivnl)%uvu(n_c, n_c), n_c*n_c)
+
       ep%p(ivnl)%ket(:,:) =  M_ZERO
       ep%p(ivnl)%bra      => ep%p(ivnl)%ket
       ep%p(ivnl)%uvu(:,:) =  M_ZERO
 
       do d = 1, sb%dim
-        allocate(ep%dp(d, ivnl)%ket(n_s, n_c), ep%dp(d, ivnl)%bra(n_s, n_c), &
-          ep%dp(d, ivnl)%uvu(n_c, n_c))
+        ALLOCATE(ep%dp(d, ivnl)%ket(n_s, n_c), n_s*n_c)
+        ALLOCATE(ep%dp(d, ivnl)%bra(n_s, n_c), n_s*n_c)
+        ALLOCATE(ep%dp(d, ivnl)%uvu(n_c, n_c), n_c*n_c)
+
         ep%dp(d, ivnl)%ket(:,:) = M_ZERO
         ep%dp(d, ivnl)%bra(:,:) = M_ZERO
         ep%dp(d, ivnl)%uvu(:,:) = M_ZERO
       end do
 
       do d = 1, sb%dim
-        allocate(ep%lso(d, ivnl)%ket(n_s, n_c), ep%lso(d, ivnl)%bra(n_s, n_c), &
-          ep%lso(d, ivnl)%uvu(n_c, n_c))
+        ALLOCATE(ep%lso(d, ivnl)%ket(n_s, n_c), n_s*n_c)
+        ALLOCATE(ep%lso(d, ivnl)%bra(n_s, n_c), n_s*n_c)
+        ALLOCATE(ep%lso(d, ivnl)%uvu(n_c, n_c), n_c*n_c)
+
         ep%lso(d, ivnl)%ket(:,:) = M_ZERO
         ep%lso(d, ivnl)%bra(:,:) = M_ZERO
         ep%lso(d, ivnl)%uvu(:,:) = M_ZERO
       end do
 
       if(sb%periodic_dim/=0) then
-        allocate(ep%p(ivnl)%phases(n_s, st%d%nik))
+        ALLOCATE(ep%p(ivnl)%phases(n_s, st%d%nik), n_s*st%d%nik)
         do d = 1, sb%dim
-          allocate(ep%dp(d,ivnl)%phases(n_s, st%d%nik))
+          ALLOCATE( ep%dp(d,ivnl)%phases(n_s, st%d%nik), n_s*st%d%nik)
         end do
         do d = 1, sb%dim
-          allocate(ep%lso(d,ivnl)%phases(n_s, st%d%nik))
+          ALLOCATE(ep%lso(d,ivnl)%phases(n_s, st%d%nik), n_s*st%d%nik)
         end do
       end if
 
@@ -760,7 +765,7 @@ contains
 
       n_s = ep%p(ivnl)%n_points_in_sphere
       n_c = ep%p(ivnl)%n_channels
-      allocate(grad_so(n_s, 3, n_c))
+      ALLOCATE(grad_so(n_s, 3, n_c), n_s*3*n_c)
 
       j_loop: do j = 1, n_s
         x_in(:) = m%x(ep%p(ivnl)%jxyz(j), :)

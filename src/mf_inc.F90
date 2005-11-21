@@ -59,7 +59,7 @@ R_TYPE function X(mf_dotp)(mesh, f1, f2) result(dotp)
   ! This is not implemented via vec_integrate
   ! because BLAS is much faster.
   if(mesh%use_curvlinear) then
-    allocate(l(mesh%np))
+    ALLOCATE(l(mesh%np), mesh%np)
     l(1:mesh%np) = f1(1:mesh%np) * mesh%vol_pp(1:mesh%np)
     dotp_tmp  = lalg_dot(mesh%np, l(:),  f2(:))
     deallocate(l)

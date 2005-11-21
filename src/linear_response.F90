@@ -81,7 +81,7 @@ contains
     r =  1
     if(associated(lr%ddl_psi)) return ! do nothing
 
-    allocate(lr%ddl_psi(m%np_part, st%d%dim, st%nst, st%d%nspin))
+    ALLOCATE(lr%ddl_psi(m%np_part, st%d%dim, st%nst, st%d%nspin), m%np_part*st%d%dim*st%nst*st%d%nspin)
 
     if(associated(lr%zdl_psi)) then
       r = 2
@@ -105,7 +105,7 @@ contains
     r =  1
     if(associated(lr%zdl_psi)) return ! do nothing
 
-    allocate(lr%zdl_psi(m%np_part, st%d%dim, st%nst, st%d%nspin))
+    ALLOCATE(lr%zdl_psi(m%np_part, st%d%dim, st%nst, st%d%nspin), m%np_part*st%d%dim*st%nst*st%d%nspin)
 
     if(associated(lr%ddl_psi)) then
       r = 2
@@ -159,7 +159,7 @@ contains
 
     call push_sub('linear_response.lr_build_fxc')
 
-    allocate(rho(m%np, st%d%nspin))
+    ALLOCATE(rho(m%np, st%d%nspin), m%np*st%d%nspin)
     if(associated(st%rho_core)) then
       do is = 1, st%d%spin_channels
         rho(:, is) = st%rho(:, is) + st%rho_core(:)/st%d%spin_channels

@@ -161,10 +161,11 @@ subroutine X(restart_read) (dir, st, m, ierr, iter)
   end if
 
   ! now we really start
-  allocate(filled(st%d%dim, st%st_start:st%st_end, st%d%nik)); filled = .false.
+  ALLOCATE(filled(st%d%dim, st%st_start:st%st_end, st%d%nik), st%d%dim*(st%st_end-st%st_start+1)*st%d%nik)
+  filled = .false.
 
   ! Skip two lines.
-  call iopar_read(m, iunit, line, err); call iopar_read(m, iunit, line, err)
+  call iopar_read(m, iunit,  line, err); call iopar_read(m, iunit,  line, err)
   call iopar_read(m, iunit2, line, err); call iopar_read(m, iunit2, line, err)
 
   do

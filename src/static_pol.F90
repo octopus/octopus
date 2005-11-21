@@ -81,7 +81,7 @@ contains
     call X(system_h_setup) (sys, h)
 
     ! Allocate the dipole...
-    allocate(dipole(NDIM, NDIM, 2))
+    ALLOCATE(dipole(NDIM, NDIM, 2), NDIM*NDIM*2)
     dipole = M_ZERO
 
     if(.not.fromScratch) then
@@ -108,11 +108,11 @@ contains
     end if
 
     ! Save local pseudopotential
-    allocate(Vpsl_save(NP))
+    ALLOCATE(Vpsl_save(NP), NP)
     Vpsl_save = h%ep%Vpsl
 
     ! Allocate the trrho to the contain the trace of the density.
-    allocate(trrho(NP))
+    ALLOCATE(trrho(NP), NP)
     trrho = M_ZERO
 
     call scf_init(gr, scfv, st, h)
@@ -179,7 +179,7 @@ contains
       st => sys%st
 
       ! allocate wfs
-      allocate(sys%st%X(psi)(NP_PART, st%d%dim, st%nst, st%d%nik))
+      ALLOCATE(sys%st%X(psi)(NP_PART, st%d%dim, st%nst, st%d%nik), NP_PART*st%d%dim*st%nst*st%d%nik)
 
       !%Variable POLStaticField
       !%Type float

@@ -65,7 +65,7 @@ contains
     end if
 
     ! store the fourier transform of the Coulomb interaction
-    allocate(fft_Coulb_FS(fft_cf%nx, fft_cf%n(2), fft_cf%n(3)))
+    ALLOCATE(fft_Coulb_FS(fft_cf%nx, fft_cf%n(2), fft_cf%n(3)), fft_cf%nx*fft_cf%n(2)*fft_cf%n(3))
     fft_Coulb_FS = M_ZERO
 
     temp(:) = M_TWO*M_PI/(db(:)*m%h(:))
@@ -100,7 +100,7 @@ subroutine poisson2D_solve(m, pot, rho)
   call push_sub('poisson2D.poisson2D_solve')
 
   if(m%parallel_in_domains) then
-    allocate(pvec(1:m%np))
+    ALLOCATE(pvec(m%np), m%np)
 
     pot = M_ZERO
     do i = 1, m%np_global

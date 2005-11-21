@@ -37,7 +37,8 @@ subroutine X(oep_sic) (xcs, gr, st, is, oep, ex, ec)
 
   call push_sub('xc_OEP_SIC.oep_sic')
 
-  allocate(rho(NP, 2), Vxc(NP, 2))
+  ALLOCATE(rho(NP, 2), NP*2)
+  ALLOCATE(Vxc(NP, 2), NP*2)
   rho(1:NP, 2) = M_ZERO
 
   ! loop over states

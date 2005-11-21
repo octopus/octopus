@@ -147,11 +147,11 @@ contains
     ! allocate potentials and density of the cores
     ! In the case of spinors, vxc_11 = h%vxc(:, 1), vxc_22 = h%vxc(:, 2), Re(vxc_12) = h%vxc(:. 3);
     ! Im(vxc_12) = h%vxc(:, 4)
-    allocate(h%vhartree(NP))
-    allocate(h%Vhxc(NP, h%d%nspin))
+    ALLOCATE(h%vhartree(NP),        NP)
+    ALLOCATE(h%Vhxc(NP, h%d%nspin), NP*h%d%nspin)
     h%Vhxc = M_ZERO
     if (h%d%cdft) then
-      allocate(h%ahxc(NP, NDIM, h%d%nspin))
+      ALLOCATE(h%ahxc(NP, NDIM, h%d%nspin), NP*NDIM*h%d%nspin)
       h%ahxc = M_ZERO
     else
       nullify(h%ahxc)
@@ -258,7 +258,7 @@ contains
       end if
 
       ! generate boundary potential...
-      allocate(h%ab_pot(NP))
+      ALLOCATE(h%ab_pot(NP), NP)
       h%ab_pot = M_ZERO
       do i = 1, NP
         call mesh_inborder(gr%m, i, n, d, h%ab_width)

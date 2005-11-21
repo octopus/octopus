@@ -86,7 +86,8 @@ contains
     call io_mkdir('phonons')
 
     ph%dim = sys%gr%geo%natoms*sys%gr%sb%dim
-    allocate(ph%DM(ph%dim, ph%dim), ph%freq(ph%dim))
+    ALLOCATE(ph%DM(ph%dim, ph%dim), ph%dim*ph%dim)
+    ALLOCATE(ph%freq(ph%dim), ph%dim)
 
     !%Variable Displacement
     !%Type float
@@ -128,10 +129,13 @@ contains
 
     ! ---------------------------------------------------------
     subroutine init_()
+      integer :: i
+
       call push_sub('phonons.phonons_run')
 
       ! allocate wfs
-      allocate(sys%st%X(psi)(sys%gr%m%np_part, sys%st%d%dim, sys%st%nst, sys%st%d%nik))
+      i = sys%gr%m%np_part*sys%st%d%dim*sys%st%nst*sys%st%d%nik
+      ALLOCATE(sys%st%X(psi)(sys%gr%m%np_part, sys%st%d%dim, sys%st%nst, sys%st%d%nik), i)
     end subroutine init_
 
     ! ---------------------------------------------------------
@@ -164,7 +168,8 @@ contains
     geo => gr%geo
 
     call scf_init(gr, scf, st, h)
-    allocate(forces0(geo%natoms, 3), forces(geo%natoms, 3))
+    ALLOCATE(forces0(geo%natoms, 3), geo%natoms*3)
+    ALLOCATE(forces (geo%natoms, 3), geo%natoms*3)
     forces = M_ZERO; forces0 = M_ZERO
     n = geo%natoms*NDIM
 

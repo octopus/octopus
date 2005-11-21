@@ -64,9 +64,9 @@ module par_vec
   ! ! ...
   !
   ! ! Allocate space for local vectors.
-  ! allocate(ul(np_part))
-  ! allocate(vl(np_part))
-  ! allocate(wl(np_part))
+  ! ALLOCATE(ul(np_part), np_part)
+  ! ALLOCATE(vl(np_part), np_part)
+  ! ALLOCATE(wl(np_part), np_part)
   !
   ! ! Distribute vectors.
   ! call X(vec_scatter)(vp, u, ul)
@@ -239,20 +239,21 @@ contains
     vp%rank   = rank
     vp%partno = rank + 1
 
-    allocate(ghost_flag(np+np_enl, p))
-    allocate(ir(p), irr(p, p))
-    allocate(vp%part(np+np_enl))
-    allocate(vp%np_local(p))
-    allocate(vp%xlocal(p))
-    allocate(vp%local(np))
-    allocate(vp%np_bndry(p))
-    allocate(vp%xbndry(p))
-    allocate(vp%bndry(np_enl))
-    allocate(vp%global(np+np_enl, p))
-    allocate(vp%np_ghost(p))
-    allocate(vp%np_ghost_neigh(p, p))
-    allocate(vp%xghost(p))
-    allocate(vp%xghost_neigh(p, p))
+    ALLOCATE(ghost_flag(np+np_enl, p), (np+np_enl)*p)
+    ALLOCATE(ir(p),                    p)
+    ALLOCATE(irr(p, p),                p*p)
+    ALLOCATE(vp%part(np+np_enl),       np+np_enl)
+    ALLOCATE(vp%np_local(p),           p)
+    ALLOCATE(vp%xlocal(p),             p)
+    ALLOCATE(vp%local(np),             np)
+    ALLOCATE(vp%np_bndry(p),           p)
+    ALLOCATE(vp%xbndry(p),             p)
+    ALLOCATE(vp%bndry(np_enl),         np_enl)
+    ALLOCATE(vp%global(np+np_enl, p),  (np+np_enl)*p)
+    ALLOCATE(vp%np_ghost(p),           p)
+    ALLOCATE(vp%np_ghost_neigh(p, p),  p*p)
+    ALLOCATE(vp%xghost(p),             p)
+    ALLOCATE(vp%xghost_neigh(p, p),    p*p)
 
     ! Count number of points for each node.
     ! Local points.
@@ -360,7 +361,7 @@ contains
     end do
 
     ! Get space for ghost point vector.
-    allocate(vp%ghost(vp%total))
+    ALLOCATE(vp%ghost(vp%total), vp%total)
 
     ! Fill ghost as described above.
     irr = 0

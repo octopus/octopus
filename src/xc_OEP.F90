@@ -113,7 +113,7 @@ contains
     call xc_oep_SpinFactor(oep, d%nspin)
 
     ! This variable will keep vxc across iterations
-    allocate(oep%vxc(m%np))
+    ALLOCATE(oep%vxc(m%np), m%np)
 
     ! when performing full OEP, we need to solve a linear equation
     if(oep%level == XC_OEP_FULL) call lr_init(oep%lr, "OEP")
@@ -189,7 +189,8 @@ contains
     integer  :: ierr
 #endif
 
-    allocate(eigenval(st%nst), occ(st%nst))
+    ALLOCATE(eigenval(st%nst), st%nst)
+    ALLOCATE     (occ(st%nst), st%nst)
     eigenval = M_ZERO; occ = M_ZERO
 
     do i = st%st_start, st%st_end

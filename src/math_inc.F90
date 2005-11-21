@@ -38,7 +38,8 @@ subroutine X(extrapolate)(order, n1, n2, v, vex, dt, t)
   R_TYPE, allocatable :: c(:)
 
   x = (t/dt)
-  allocate(c(0:order))
+  ALLOCATE(c(0:order), order+1)
+
   ! I got these coefficients from mathematica...
   select case(order)
   case(1)
@@ -84,7 +85,7 @@ subroutine X(shellsort1)(a, x)
 
   n = size(a)
   m = size(x, 1)
-  allocate(b(m))
+  ALLOCATE(b(m), m)
 
   inc = 1
   do
@@ -127,7 +128,7 @@ subroutine X(shellsort2)(a, x)
   n = size(a)
   p = size(x, 1)
   q = size(x, 2)
-  allocate(b(p, q))
+  ALLOCATE(b(p, q), p*q)
 
   inc = 1
   do

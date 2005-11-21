@@ -85,7 +85,10 @@ subroutine X(ode_solver_create)(os)
     call write_info(1)
   end select
 
-  allocate(os%a(os%vsize, os%vsize), os%b(os%vsize), os%c(os%vsize), os%e(os%vsize))
+  ALLOCATE(os%a(os%vsize, os%vsize), os%vsize*os%vsize)
+  ALLOCATE(os%b(os%vsize),           os%vsize)
+  ALLOCATE(os%c(os%vsize),           os%vsize)
+  ALLOCATE(os%e(os%vsize),           os%vsize)
 
   call pop_sub()
 end subroutine X(ode_solver_create)
@@ -179,7 +182,9 @@ subroutine X(ode_step)(os, func, startval, solutionp, solutionvec)
 
   call push_sub('ode_solver_inc.Xode_step')
 
-  allocate(kv(os%nsize, os%vsize), yn(os%nsize), y0(os%nsize))
+  ALLOCATE(kv(os%nsize, os%vsize), os%nsize*os%vsize)
+  ALLOCATE(yn(os%nsize),           os%nsize)
+  ALLOCATE(y0(os%nsize),           os%nsize)
 
   dh = (os%tmax-os%tmin)/real(os%nsteps, PRECISION)
   tn = os%tmin

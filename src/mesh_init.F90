@@ -83,22 +83,10 @@ subroutine mesh_init_stage_2(sb, mesh, geo, cv)
   mesh%nr(2,:) = mesh%nr(2,:) + mesh%enlarge(:)
 
   ! allocate the xyz arrays
-  allocate(                    &
-    mesh%Lxyz_inv(             &
-    mesh%nr(1,1):mesh%nr(2,1), &
-    mesh%nr(1,2):mesh%nr(2,2), &
-    mesh%nr(1,3):mesh%nr(2,3)))
-  allocate(                    &
-    mesh%Lxyz_tmp(             &
-    mesh%nr(1,1):mesh%nr(2,1), &
-    mesh%nr(1,2):mesh%nr(2,2), &
-    mesh%nr(1,3):mesh%nr(2,3)))
-  allocate(                    &
-    mesh%x_tmp(                &
-    3,                         &
-    mesh%nr(1,1):mesh%nr(2,1), &
-    mesh%nr(1,2):mesh%nr(2,2), &
-    mesh%nr(1,3):mesh%nr(2,3)))
+  i = (mesh%nr(2,1)-mesh%nr(1,1)+1) * (mesh%nr(2,2)-mesh%nr(1,2)+1) * (mesh%nr(2,3)-mesh%nr(1,3)+1)
+  ALLOCATE(mesh%Lxyz_inv(mesh%nr(1,1):mesh%nr(2,1), mesh%nr(1,2):mesh%nr(2,2), mesh%nr(1,3):mesh%nr(2,3)),   i)
+  ALLOCATE(mesh%Lxyz_tmp(mesh%nr(1,1):mesh%nr(2,1), mesh%nr(1,2):mesh%nr(2,2), mesh%nr(1,3):mesh%nr(2,3)),   i)
+  ALLOCATE(mesh%x_tmp(3, mesh%nr(1,1):mesh%nr(2,1), mesh%nr(1,2):mesh%nr(2,2), mesh%nr(1,3):mesh%nr(2,3)), 3*i)
 
   mesh%Lxyz_inv(:,:,:) = 0
   mesh%Lxyz_tmp(:,:,:) = 0
@@ -212,14 +200,14 @@ contains
   subroutine create_x_Lxyz()
     integer :: il, ix, iy, iz
 
-    allocate(mesh%Lxyz(mesh%np_part_global, 3))
+    ALLOCATE(mesh%Lxyz(mesh%np_part_global, 3), mesh%np_part_global*3)
     if(mesh%parallel_in_domains) then
       ! Node 0 has to store all entries from x (in x_global)
       ! as well as the local set in x (see below).
-      allocate(mesh%x_global(mesh%np_part_global, 3))
+      ALLOCATE(mesh%x_global(mesh%np_part_global, 3), mesh%np_part_global*3)
     else
       ! When running parallel, x is computed later.
-      allocate(mesh%x(mesh%np_part_global, 3))
+      ALLOCATE(mesh%x(mesh%np_part_global, 3), mesh%np_part_global*3)
       ! This is a bit ugly: x_global is needed in out_in
       ! but in the serial case it is the same as x
       mesh%x_global => mesh%x
@@ -279,7 +267,7 @@ contains
 
     call mpi_grp_init(mesh%mpi_grp, mc%group_comm(P_STRATEGY_DOMAINS))
 
-    allocate(part(mesh%np_part_global))
+    ALLOCATE(part(mesh%np_part_global), mesh%np_part_global)
     call mesh_partition(mesh, part)
     call vec_init(mesh%mpi_grp%comm, 0, part, mesh%np_global, mesh%np_part_global,  &
       mesh%nr, mesh%Lxyz_inv, mesh%Lxyz, stencil, np_stencil, &
@@ -294,7 +282,7 @@ contains
     ! x consists of three parts: the local points, the
     ! ghost points, and the boundary points; in this order
     ! (just as for any other vector, which is distributed).
-    allocate(mesh%x(mesh%np_part, 3))
+    ALLOCATE(mesh%x(mesh%np_part, 3), mesh%np_part*3)
     ! Do the inner points
     do i = 1, mesh%np
       j  = mesh%vp%local(mesh%vp%xlocal(mesh%vp%partno)+i-1)
@@ -328,7 +316,7 @@ contains
 
     call push_sub('mesh_init.mesh_get_vol_pp')
 
-    allocate(mesh%vol_pp(mesh%np_part))
+    ALLOCATE(mesh%vol_pp(mesh%np_part), mesh%np_part)
     mesh%vol_pp(:) = product(mesh%h(1:sb%dim))
 
     if(mesh%parallel_in_domains) then
@@ -525,7 +513,7 @@ subroutine mesh_partition(m, part)
 
   ! Write information about partitions.
   ! Count points in each partition.
-  allocate(ppp(p))
+  ALLOCATE(ppp(p), p)
   ppp = 0
   do i = 1, nv
     ppp(part(i)) = ppp(part(i))+1

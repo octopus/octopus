@@ -92,8 +92,10 @@ contains
     FLOAT   :: d(spin_channels)
 
     ! allocate some general arrays
-    allocate(dens(m%np, spin_channels), dedd(m%np, spin_channels, spin_channels,spin_channels))
-    allocate(l_dens(spin_channels), l_dedd(spin_channels, spin_channels, spin_channels))
+    ALLOCATE(  dens(m%np, spin_channels),                               m%np*spin_channels)
+    ALLOCATE(  dedd(m%np, spin_channels, spin_channels, spin_channels), m%np*spin_channels**3)
+    ALLOCATE(l_dens(spin_channels),                                          spin_channels)
+    ALLOCATE(l_dedd(spin_channels, spin_channels, spin_channels),            spin_channels**3)
     dedd = M_ZERO
 
     ! get the density

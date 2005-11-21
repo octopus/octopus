@@ -37,8 +37,11 @@ subroutine eigen_solver_evolution(gr, st, h, tol, niter, converged, diff, tau)
   conv_ = 0
   matvec = 0
 
-  allocate(hpsi(gr%m%np, st%d%dim), m(st%nst, st%nst), c(st%nst, st%nst), &
-    eig(st%nst), phi(gr%m%np, st%d%dim, st%nst))
+  ALLOCATE(hpsi(gr%m%np, st%d%dim), gr%m%np*st%d%dim)
+  ALLOCATE(m(st%nst, st%nst), st%nst*st%nst)
+  ALLOCATE(c(st%nst, st%nst), st%nst*st%nst)
+  ALLOCATE(eig(st%nst), st%nst)
+  ALLOCATE(phi(gr%m%np, st%d%dim, st%nst), gr%m%np*st%d%dim*st%nst)
 
   ! Warning: it seems that the algorithm is improved if some extra states are added -- states
   ! whose convergence should not be checked.
@@ -115,10 +118,12 @@ contains
     itrace = 0
     lwsp = n*(m+1)+n+(m+2)**2+4*(m+2)**2+6+1
     liwsp = m + 2
-    allocate(wsp(lwsp), iwsp(lwsp))
     iflag = 0
 
-    allocate(w(gr%m%np, st%d%dim))
+    ALLOCATE(wsp(lwsp), lwsp)
+    ALLOCATE(iwsp(lwsp), lwsp)
+    ALLOCATE(w(gr%m%np, st%d%dim), gr%m%np*st%d%dim)
+
     h_  => h
     gr_ => gr
     ik_ =  ik
@@ -141,14 +146,19 @@ subroutine mv(x, y)
   R_TYPE, intent(out) :: y(*)
   integer :: idim
   R_TYPE, allocatable :: psi(:, :), hpsi(:, :)
-  allocate(psi(gr_%m%np_part, h_%d%dim), hpsi(gr_%m%np, h_%d%dim))
+
+  ALLOCATE(psi(gr_%m%np_part, h_%d%dim), gr_%m%np_part*h_%d%dim)
+  ALLOCATE(hpsi(gr_%m%np, h_%d%dim), gr_%m%np*h_%d%dim)
+
   do idim = 1, h_%d%dim
-     psi(1:gr_%m%np, idim) = x((idim-1)*gr_%m%np+1:idim*gr_%m%np)
+    psi(1:gr_%m%np, idim) = x((idim-1)*gr_%m%np+1:idim*gr_%m%np)
   end do
   call X(hpsi)(h_, gr_, psi, hpsi, ik_)
   do idim = 1, h_%d%dim
-     y((idim-1)*gr_%m%np+1:idim*gr_%m%np) = hpsi(1:gr_%m%np, idim)
+    y((idim-1)*gr_%m%np+1:idim*gr_%m%np) = hpsi(1:gr_%m%np, idim)
   end do
+
   deallocate(psi, hpsi)
+
 end subroutine mv
 

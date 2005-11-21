@@ -34,13 +34,11 @@ subroutine X(xc_KLI_solve) (m, st, is, oep)
   R_TYPE, allocatable :: phi1(:,:), phi2(:,:)
   R_TYPE :: occ
 
-!!$  write(0, *) mpi_world%rank, 'step KKK.1'
   call push_sub('xc_KLI.xc_KLI_solve')
 
   ! some intermediate quantities
   ! vxc contains the Slater part!
-  allocate(rho_sigma(m%np))
-!!$  write(0, *) mpi_world%rank, 'step KKK.2'
+  ALLOCATE(rho_sigma(m%np), m%np)
 
   do i = 1, m%np
     rho_sigma(i) = max(sum(oep%socc*st%occ(st%st_start:st%st_end, is) * &
@@ -48,7 +46,7 @@ subroutine X(xc_KLI_solve) (m, st, is, oep)
   end do
 #if defined(HAVE_MPI)
   if(st%parallel_in_states) then
-    allocate(d(m%np))
+    ALLOCATE(d(m%np), m%np)
     call MPI_Allreduce(rho_sigma(:), d(:), m%np, MPI_FLOAT, MPI_SUM, st%mpi_grp%comm, ierr)
     rho_sigma(1:m%np) = d(1:m%np)
   end if
@@ -73,7 +71,7 @@ subroutine X(xc_KLI_solve) (m, st, is, oep)
 
   n = oep%eigen_n
 
-  allocate(v_bar_S(st%nst))
+  ALLOCATE(v_bar_S(st%nst), st%nst)
   do i = st%st_start, st%st_end
     if(st%occ(i, is) .gt. small) then
       v_bar_S(i) = sum(R_ABS(st%X(psi)(1:m%np, 1, i, is))**2 * oep%vxc(1:m%np) * m%vol_pp(1:m%np))
@@ -93,13 +91,16 @@ subroutine X(xc_KLI_solve) (m, st, is, oep)
 
   ! If there is more than one state, so solve linear equation.
   linear_equation: if(n > 0) then
-    allocate(phi1(m%np, st%d%dim), phi2(m%np, st%d%dim))
+    ALLOCATE(phi1(m%np, st%d%dim), m%np*st%d%dim)
+    ALLOCATE(phi2(m%np, st%d%dim), m%np*st%d%dim)
     phi1 = M_ZERO; phi2 = M_ZERO
 
-    allocate(d(m%np), x(n, 1))
+    ALLOCATE(d(m%np), m%np)
+    ALLOCATE(x(n, 1), n*1)
     x = M_ZERO
 
-    allocate(Ma(n, n), y(n, 1))
+    ALLOCATE(Ma(n, n), n*n)
+    ALLOCATE(y(n, 1), n*1)
 
     do i = 1, n
 

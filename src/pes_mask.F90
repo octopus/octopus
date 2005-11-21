@@ -24,6 +24,8 @@ subroutine PES_mask_init(v, m, sb, st)
   type(simul_box_type), intent(in)    :: sb
   type(states_type),    intent(in)    :: st
 
+  integer :: i
+
   message(1) = 'Info: Calculating PES using mask technique'
   call write_info(1)
 
@@ -31,9 +33,9 @@ subroutine PES_mask_init(v, m, sb, st)
   call fft_init(sb, m%l, fft_complex, v%fft)
 
   ! setup arrays to be used
-  allocate(&
-    v%k(m%l(1), m%l(2), m%l(3), st%d%dim, st%st_start:st%st_end, st%d%nik), &
-    v%r(m%l(1), m%l(2), m%l(3),           st%st_start:st%st_end, st%d%nik))
+  i = m%l(1)*m%l(2)*m%l(3)*(st%st_end-st%st_start+1)*st%d%nik
+  ALLOCATE(v%k(m%l(1), m%l(2), m%l(3), st%d%dim, st%st_start:st%st_end, st%d%nik), i*st%d%dim)
+  ALLOCATE(v%r(m%l(1), m%l(2), m%l(3),           st%st_start:st%st_end, st%d%nik), i)
 
   v%k = M_z0
   v%r = M_ZERO
@@ -82,9 +84,8 @@ subroutine PES_mask_doit(v, m, st, dt, mask)
   end do
 
   ! we now add the contribution from this timestep
-  allocate( &
-    wf1(m%l(1), m%l(2), m%l(3)), &
-    wf2(m%l(1), m%l(2), m%l(3)))
+  ALLOCATE(wf1(m%l(1), m%l(2), m%l(3)), m%l(1)*m%l(2)*m%l(3))
+  ALLOCATE(wf2(m%l(1), m%l(2), m%l(3)), m%l(1)*m%l(2)*m%l(3))
   do ik = 1, st%d%nik
     do ist = st%st_start, st%st_end
       do idim = 1, st%d%dim
@@ -129,10 +130,10 @@ subroutine PES_mask_output(v, m, st, file)
   integer,  parameter :: n = 600, ar_n = 90
   FLOAT, parameter :: step = CNST(0.005)
 
-  allocate( &
-    spis (n,    st%st_start:st%st_end, st%d%nik), &
-    arpis(ar_n, st%st_start:st%st_end, st%d%nik))
-  allocate(npoints(n), ar_npoints(ar_n))
+  ALLOCATE( spis(n,    st%st_start:st%st_end, st%d%nik),    n*(st%st_end-st%st_start+1)*st%d%nik)
+  ALLOCATE(arpis(ar_n, st%st_start:st%st_end, st%d%nik), ar_n*(st%st_end-st%st_start+1)*st%d%nik)
+  ALLOCATE(npoints(n),       n)
+  ALLOCATE(ar_npoints(ar_n), ar_n)
   spis = M_ZERO; arpis = M_ZERO
   npoints = 0;  ar_npoints = 0
 

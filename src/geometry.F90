@@ -195,7 +195,7 @@ contains
 
     ! copy information from xyz to geo
     geo%natoms = xyz%n
-    allocate(geo%atom(geo%natoms))
+    ALLOCATE(geo%atom(geo%natoms), geo%natoms)
     do i = 1, geo%natoms
       geo%atom(i)%label = xyz%atom(i)%label
       geo%atom(i)%x     = xyz%atom(i)%x
@@ -221,7 +221,7 @@ contains
       call write_info(1)
 
       geo%ncatoms = xyz%n
-      allocate(geo%catom(geo%ncatoms))
+      ALLOCATE(geo%catom(geo%ncatoms), geo%ncatoms)
       do i = 1, geo%ncatoms
         geo%catom(i)%label  = xyz%atom(i)%label
         geo%catom(i)%x      = xyz%atom(i)%x
@@ -385,7 +385,7 @@ contains
     end do atoms1
 
     ! Allocate the species structure.
-    allocate(geo%specie(geo%nspecies))
+    ALLOCATE(geo%specie(geo%nspecies), geo%nspecies)
 
     ! Now, read the data.
     k = 0
@@ -484,7 +484,8 @@ contains
     end do
 990 continue
 
-    allocate(geo%atom(geo%natoms), geo%catom(geo%ncatoms))
+    ALLOCATE(geo%atom(geo%natoms), geo%natoms)
+    ALLOCATE(geo%catom(geo%ncatoms), geo%ncatoms)
 
     ! read in the data
     rewind(iunit)

@@ -114,7 +114,9 @@ contains
     order  = rs%poly_order
     gorder = order
 
-    allocate(gbase_coeff(order+1), gcoeff(order+1), base_roots(order))
+    ALLOCATE(gbase_coeff(order+1), order+1)
+    ALLOCATE(gcoeff     (order+1), order+1)
+    ALLOCATE(base_roots (order),   order)
 
     ! normalize polynomial
     do j = 1, order+1
@@ -185,7 +187,8 @@ contains
     CMPLX, allocatable   :: numerator(:), denominator(:)
     integer :: j
 
-    allocate(numerator(size), denominator(size))
+    ALLOCATE(  numerator(size), size)
+    ALLOCATE(denominator(size), size)
     numerator   = M_ZERO
     denominator = M_ZERO
 

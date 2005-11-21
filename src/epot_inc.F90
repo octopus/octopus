@@ -52,7 +52,8 @@ subroutine X(project)(mesh, p, n_projectors, psi, ppsi, periodic, ik)
       n_s = p(ip)%n_points_in_sphere
 
       deallocate(lpsi, plpsi, stat = j)
-      allocate(lpsi(n_s), plpsi(n_s))
+      ALLOCATE( lpsi(n_s), n_s)
+      ALLOCATE(plpsi(n_s), n_s)
 
       lpsi(1:n_s)  = psi(p(ip)%jxyz(1:n_s))*mesh%vol_pp(p(ip)%jxyz(1:n_s))
       if(periodic) lpsi(1:n_s)  = lpsi(1:n_s) * p(ip)%phases(1:n_s, ik)
@@ -116,7 +117,7 @@ subroutine X(epot_forces) (gr, ep, st, t)
 
   if(.not.geo%only_user_def) then
     ! non-local component of the potential.
-    allocate(ppsi(gr%m%np, st%d%dim))
+    ALLOCATE(ppsi(gr%m%np, st%d%dim), gr%m%np*st%d%dim)
     atm_loop: do i = 1, geo%natoms
       atm => geo%atom(i)
       if(atm%spec%local) cycle
@@ -207,7 +208,7 @@ contains
 
     ns = min(2, st%d%nspin)
 
-    allocate(force(NP, NDIM))
+    ALLOCATE(force(NP, NDIM), NP*NDIM)
     do i = 1, geo%natoms
       atm => geo%atom(i)
 
@@ -232,7 +233,7 @@ contains
     type(dcf) :: cf_for
     FLOAT, allocatable :: force(:)
 
-    allocate(force(NP))
+    ALLOCATE(force(NP), NP)
     call dcf_new_from(cf_for, ep%local_cf(1)) ! at least one specie must exist
     call dcf_alloc_FS(cf_for)
     call dcf_alloc_RS(cf_for)

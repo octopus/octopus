@@ -147,7 +147,7 @@ contains
 
     call strategy()
     if(mc%par_strategy.ne.P_STRATEGY_SERIAL) then
-      allocate(mc%group_sizes(mc%n_index))
+      ALLOCATE(mc%group_sizes(mc%n_index), mc%n_index)
       mc%group_sizes(:) = 1
 
       !%Variable ParallelizationGroupRanks
@@ -270,7 +270,7 @@ contains
       integer, allocatable :: n_group_max(:)
       FLOAT   :: f
 
-      allocate(n_group_max(mc%n_index))
+      ALLOCATE(n_group_max(mc%n_index), mc%n_index)
       n = mc%n_node
 
       ! this is the maximum number of processors in each group
@@ -373,10 +373,11 @@ contains
       integer :: i, mpi_err
       integer, allocatable :: me(:)
 
-      allocate(mc%group_comm(mc%n_index), mc%group_root(mc%n_index))
+      ALLOCATE(mc%group_comm(mc%n_index), mc%n_index)
+      ALLOCATE(mc%group_root(mc%n_index), mc%n_index)
       mc%group_comm = -1
 
-      allocate(me(mc%n_index))
+      ALLOCATE(me(mc%n_index), mc%n_index)
       do i = 1, mc%n_index
         if(.not.multicomm_strategy_is_parallel(mc, i)) cycle
 
@@ -424,12 +425,12 @@ contains
     integer, allocatable :: index_run(:)
 #endif
 
-    allocate(mc%who_am_i(mc%n_index))
+    ALLOCATE(mc%who_am_i(mc%n_index), mc%n_index)
     mc%who_am_i = 0
 
 #if defined(HAVE_MPI)
     ! allocate master node
-    allocate(mc%group_tree)
+    ALLOCATE(mc%group_tree, 1)
     nullify(mc%group_tree%up)
 
     nodes_used = 0
@@ -444,7 +445,7 @@ contains
 
     label = 0 ! will label each node of the tree
 
-    allocate(index_run(mc%n_index))
+    ALLOCATE(index_run(mc%n_index), mc%n_index)
     index_run = 0
     call nodes_create(mc%group_tree, mc%n_index+1)
     deallocate(index_run)
@@ -490,7 +491,7 @@ contains
 
       if(level == last_level) then ! last level, let us populate
         this%n_group = 1
-        allocate(this%group(1))
+        ALLOCATE(this%group(1), 1)
         this%group(1) = nodes_used
 
         if(nodes_used == mpi_world%rank) mc%who_am_i = index_run
@@ -500,15 +501,15 @@ contains
       else if(next_level .ne. 0) then
 
         this%n_down = mc%group_sizes(next_level)
-        allocate(this%down(this%n_down))
+        ALLOCATE(this%down(this%n_down), this%n_down)
         do i = 1, this%n_down
           index_run(next_level) = i
 
-          allocate(this%down(i)%p)
+          ALLOCATE(this%down(i)%p, 1)
           p => this%down(i)%p
 
           ! initialize parent of structure
-          allocate(p%up)
+          ALLOCATE(p%up, 1)
           p%up%p => this ! point up to the parent
           call nodes_create(p, next_level)
         end do
@@ -532,7 +533,7 @@ contains
 
       ! now create group
       this%n_group = this%n_down
-      allocate(this%group(this%n_group))
+      ALLOCATE(this%group(this%n_group), this%n_group)
       do i = 1, this%n_down
         this%group(i) = this%down(i)%p%group(1) ! group with root nodes
       end do

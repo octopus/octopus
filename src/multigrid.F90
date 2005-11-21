@@ -102,19 +102,20 @@ contains
 
     mgrid%n_levels = n_levels
 
-    allocate(mgrid%level(0:n_levels))
+    ALLOCATE(mgrid%level(0:n_levels), n_levels+1)
 
     mgrid%level(0)%m     => m
     mgrid%level(0)%f_der => f_der
 
     mgrid%level(0)%n_fine = m%np
-    allocate(mgrid%level(0)%fine_i(m%np))
+    ALLOCATE(mgrid%level(0)%fine_i(m%np), m%np)
 
     write(message(1), '(a,i3)') "Multigrid levels:", n_levels+1
     call write_info(1)
 
     do i = 1, mgrid%n_levels
-      allocate(mgrid%level(i)%m, mgrid%level(i)%f_der)
+      ALLOCATE(mgrid%level(i)%m, 1)
+      ALLOCATE(mgrid%level(i)%f_der, 1)
       call multigrid_mesh_half(geo, cv, mgrid%level(i-1)%m, mgrid%level(i)%m)
       call get_transfer_tables(mgrid%level(i), mgrid%level(i-1)%m, mgrid%level(i)%m)
 
@@ -161,7 +162,7 @@ contains
       integer :: x(3), mod2(3)
 
       tt%n_coarse = coarse%np
-      allocate(tt%to_coarse(tt%n_coarse))
+      ALLOCATE(tt%to_coarse(tt%n_coarse), tt%n_coarse)
 
       do i = 1, tt%n_coarse
         tt%to_coarse(i) = fine%Lxyz_inv(2*coarse%Lxyz(i, 1), 2*coarse%Lxyz(i, 2), 2*coarse%Lxyz(i, 3))
@@ -169,7 +170,7 @@ contains
 
       ! count
       tt%n_fine = fine%np
-      allocate(tt%fine_i(tt%n_fine))
+      ALLOCATE(tt%fine_i(tt%n_fine), tt%n_fine)
 
       tt%n_fine1 = 0
       tt%n_fine2 = 0
@@ -200,8 +201,10 @@ contains
 
       ASSERT(tt%n_fine1+tt%n_fine2+tt%n_fine4+tt%n_fine8 == tt%n_fine)
 
-      allocate(tt%to_fine1(1, tt%n_fine1), tt%to_fine2(2, tt%n_fine2), &
-        tt%to_fine4(4, tt%n_fine4), tt%to_fine8(8, tt%n_fine8))
+      ALLOCATE(tt%to_fine1(1, tt%n_fine1), 1*tt%n_fine1)
+      ALLOCATE(tt%to_fine2(2, tt%n_fine2), 2*tt%n_fine2)
+      ALLOCATE(tt%to_fine4(4, tt%n_fine4), 4*tt%n_fine4)
+      ALLOCATE(tt%to_fine8(8, tt%n_fine8), 8*tt%n_fine8)
 
       ! and now build the tables
       i1 = 0;  i2 = 0;  i4 = 0;  i8 = 0

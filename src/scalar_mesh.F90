@@ -134,7 +134,8 @@ contains
 
     call push_sub('scalar_mesh.scalar_mesh_create')
 
-    allocate(sm%mesh(2*sm%np+1),sm%w(2*sm%np+1))
+    ALLOCATE(sm%mesh(2*sm%np+1), 2*sm%np+1)
+    ALLOCATE(sm%w   (2*sm%np+1), 2*sm%np+1)
 
     xmin1  = M_ZERO
     xmax1  = sm%center - sm%min
@@ -244,7 +245,8 @@ contains
       message(1) = 'Info: scalar_mesh: Using Gauss-Legendre scalar mesh for '//trim(sm%label)
       call write_info(1)
 
-      allocate(gl(2*sm%np+1), gw(2*sm%np+1))
+      ALLOCATE(gl(2*sm%np+1), 2*sm%np+1)
+      ALLOCATE(gw(2*sm%np+1), 2*sm%np+1)
 
       ! TODO: need to compute roots of Legendre Polynomials and weights for integration
       ! a call of the corresponding routine in math.F90 should be placed here

@@ -219,7 +219,7 @@ contains
     end select
 
     nullify(eigens%diff)
-    allocate(eigens%diff(st%nst, st%d%nik))
+    ALLOCATE(eigens%diff(st%nst, st%d%nik), st%nst*st%d%nik)
 
     eigens%converged = 0
     eigens%matvec    = 0
@@ -251,7 +251,8 @@ contains
       call nl_operator_end(filter)
     end select
 
-    deallocate(eigens%diff); nullify(eigens%diff)
+    deallocate(eigens%diff)
+    nullify(eigens%diff)
 
   end subroutine eigen_solver_end
 
@@ -326,8 +327,9 @@ contains
     R_TYPE, allocatable :: h_subspace(:,:), vec(:,:), f(:,:,:)
     integer :: ik, i, j
 
-    allocate(h_subspace(st%nst, st%nst), vec(st%nst, st%nst))
-    allocate(f(NP, st%d%dim, st%nst))
+    ALLOCATE(h_subspace(st%nst, st%nst), st%nst*st%nst)
+    ALLOCATE(vec(st%nst, st%nst), st%nst*st%nst)
+    ALLOCATE(f(NP, st%d%dim, st%nst), NP*st%d%dim*st%nst)
 
     ik_loop: do ik = 1, st%d%nik
       f = st%X(psi)(:,:,:, ik)

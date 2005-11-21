@@ -113,7 +113,7 @@ contains
       gr => sys%gr
 
       ! allocate wfs
-      allocate(sys%st%X(psi)(gr%m%np_part, sys%st%d%dim, sys%st%nst, sys%st%d%nik))
+      ALLOCATE(sys%st%X(psi)(gr%m%np_part, sys%st%d%dim, sys%st%nst, sys%st%d%nik), gr%m%np_part*sys%st%d%dim*sys%st%nst*sys%st%d%nik)
 
     end subroutine init_
 
@@ -243,24 +243,25 @@ contains
     FLOAT, allocatable :: kxc(:,:,:,:)
     FLOAT :: vol
 
-    np=sys%gr%m%np
-    dim=sys%gr%sb%dim
+    np  = sys%gr%m%np
+    dim = sys%gr%sb%dim
 
     call push_sub('static_pol_lr.static')
 
-    print*, "Calculating static properties"
+    message(1) = "Calculating static properties"
+    call write_info(1)
 
-    allocate(tmp(1:np,1))
+    ALLOCATE(tmp(1:np, 1), np*1)
 
     ! here we store the derivatives of the orbitals in each direction
-    allocate(dphide(1:np,1:sys%st%nst,1:sys%st%d%nspin,1:dim))
+    ALLOCATE(dphide(1:np, 1:sys%st%nst, 1:sys%st%d%nspin, 1:dim), np*sys%st%nst*sys%st%d%nspin*dim)
 
     ! the derivative of the xc potential
-    allocate(dVde(1:np,1:sys%st%d%nspin,1:dim))
+    ALLOCATE(dVde(1:np, 1:sys%st%d%nspin, 1:dim), np*sys%st%d%nspin*dim)
 
-    allocate(drhode(1:np,1:dim))
+    ALLOCATE(drhode(1:np, 1:dim), np*dim)
 
-    allocate(kxc(1:np, 1:sys%st%d%nspin, 1:sys%st%d%nspin, 1:sys%st%d%nspin ))
+    ALLOCATE(kxc(1:np, 1:sys%st%d%nspin, 1:sys%st%d%nspin, 1:sys%st%d%nspin), np*sys%st%d%nspin*sys%st%d%nspin*sys%st%d%nspin)
 
     call xc_get_kxc(sys%ks%xc, sys%gr%m, sys%st%rho, sys%st%d%ispin, kxc)
 
@@ -466,8 +467,11 @@ contains
     m => sys%gr%m
     st => sys%st
 
-    allocate(tmp(m%np), Y(m%np,1))
-    allocate(dl_rhoin(1,m%np,st%d%nspin), dl_rhonew(1,m%np,st%d%nspin), dl_rhotmp(1,m%np,st%d%nspin))
+    ALLOCATE(tmp(m%np),    m%np)
+    ALLOCATE(  Y(m%np, 1), m%np*1)
+    ALLOCATE(dl_rhoin (1, m%np, st%d%nspin), 1*m%np*st%d%nspin)
+    ALLOCATE(dl_rhonew(1, m%np, st%d%nspin), 1*m%np*st%d%nspin)
+    ALLOCATE(dl_rhotmp(1, m%np, st%d%nspin), 1*m%np*st%d%nspin)
 
     call init_response_e()
 
@@ -546,6 +550,7 @@ contains
     call pop_sub()
 
   contains
+
     subroutine init_response_e()
       integer :: ik, ist, i
       FLOAT :: rd

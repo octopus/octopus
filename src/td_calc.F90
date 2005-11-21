@@ -69,7 +69,9 @@ subroutine td_calc_tacc(gr, st, h, acc, t)
 
   ! And now, i<[H,[V_nl,x]]>
   x = M_ZERO
-  allocate(hzpsi(NP, st%d%dim), hhzpsi(3, NP), conj(NP))
+  ALLOCATE(hzpsi (NP, st%d%dim), NP*st%d%dim)
+  ALLOCATE(hhzpsi(3, NP),        3*NP)
+  ALLOCATE(conj  (NP),           NP)
 
   do ik = 1, st%d%nik
     do ist = st%st_start, st%st_end
@@ -79,7 +81,8 @@ subroutine td_calc_tacc(gr, st, h, acc, t)
         hzpsi(:, k) = hzpsi(:, k) + epot_laser_scalar_pot(gr%m%np, gr, h%ep, t)*st%zpsi(:, k, ist, ik)
       end do
 
-      allocate(xzpsi(NP, st%d%dim, 3), vnl_xzpsi(NP, st%d%dim))
+      ALLOCATE(xzpsi    (NP, st%d%dim, 3), NP*st%d%dim*3)
+      ALLOCATE(vnl_xzpsi(NP, st%d%dim),    NP*st%d%dim)
       xzpsi = M_z0
       do k = 1, NP
         do j = 1, NDIM
