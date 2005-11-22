@@ -348,9 +348,11 @@ contains
 !!$      return
 !!$    endif
 !!$
+!!$!   /* 
 !!$    ALLOCATE(     rho(NP), NP)
 !!$    ALLOCATE(      vh(NP), NP)
 !!$    ALLOCATE(vh_exact(NP), NP)
+!!$!   */
 !!$    rho = M_ZERO; vh = M_ZERO; vh_exact = M_ZERO
 !!$
 !!$    ! This builds a normalized Gaussian charge
@@ -374,8 +376,8 @@ contains
 !!$        end if
 !!$      case(2)
 !!$        vh_exact(i) = beta * (M_PI)**(M_THREE*M_HALF) * alpha * exp(-r**2/(M_TWO*alpha**2)) * &
-!!$                      loct_bessel_in(0, r**2/(M_TWO*alpha**2))
-!!$      end select         
+!!$          loct_bessel_in(0, r**2/(M_TWO*alpha**2))
+!!$      end select
 !!$    end do
 !!$
 !!$    ! This calculates the numerical potential
@@ -383,7 +385,7 @@ contains
 !!$
 !!$    ! And this compares.
 !!$    write(message(2), '(a,f14.6)') 'Difference between exact and numerical result:', &
-!!$                                       dmf_integrate(gr%m, vh-vh_exact)
+!!$      dmf_integrate(gr%m, vh-vh_exact)
 !!$    ! Output
 !!$    call write_info(2)
 !!$    call doutput_function (output_fill_how('AxisX'), ".", "poisson_test_rho", gr%m, gr%sb, rho, M_ONE, ierr)

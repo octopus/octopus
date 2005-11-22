@@ -63,10 +63,12 @@ module par_vec
   ! ! Fill u, v with sensible values.
   ! ! ...
   !
+  ! /*
   ! ! Allocate space for local vectors.
   ! ALLOCATE(ul(np_part), np_part)
   ! ALLOCATE(vl(np_part), np_part)
   ! ALLOCATE(wl(np_part), np_part)
+  ! */
   !
   ! ! Distribute vectors.
   ! call X(vec_scatter)(vp, u, ul)

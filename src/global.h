@@ -27,19 +27,22 @@
 
 #define __STRING(x)     #x
 
-#if !defined(NDEBUG) && defined(LONG_LINES)
+#if !defined(NDEBUG) 
 #  define ASSERT(expr) \
-  if(.not.(expr)) call assert_die (__STRING(expr), __FILE__, __LINE__)
+     if(.not.(expr)) then                    \newline \
+       call assert_die (__STRING(expr), &    \newline \
+                        __FILE__, __LINE__)  \newline \
+     end if
 #else
 #  define ASSERT(expr)
 #endif
 
-#if defined(LONG_LINES)
-#  define ALLOCATE(x, size) \
-  allocate(x, stat=global_alloc_err); if(global_alloc_err.ne.0) call alloc_error((size), __FILE__, __LINE__)
-#else
-#  define ALLOCATE(x, size) allocate(x)
-#endif
+
+# define ALLOCATE(x, size) \
+    allocate(x, stat=global_alloc_err)                 \newline \
+     if(global_alloc_err.ne.0) then                    \newline \
+       call alloc_error((size), __FILE__, __LINE__)    \newline \
+     end if
 
 #define DOUBLE real(8)
 #define SINGLE real(4)
