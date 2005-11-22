@@ -104,7 +104,9 @@ contains
     end do
 
     h%ahxc(1:NP, 1:NDIM, 1) = h%ahxc(1:NP, 1:NDIM, 1) + ahartree(1:NP, 1:NDIM)
-    if(h%d%ispin > UNPOLARIZED) h%ahxc(1:NP, 1:NDIM, 2) = h%ahxc(1:NP, 1:NDIM, 2) + ahartree(1:NP, 1:NDIM)
+    if(h%d%ispin > UNPOLARIZED) then
+      h%ahxc(1:NP, 1:NDIM, 2) = h%ahxc(1:NP, 1:NDIM, 2) + ahartree(1:NP, 1:NDIM)
+    end if
 
     ! We first add 1/2 int j.aH, to then subtract int j.(axc + aH)
     ! this yields the correct formula epot = - int j.(axc + aH/2)
