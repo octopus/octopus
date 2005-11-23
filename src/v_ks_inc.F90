@@ -30,7 +30,7 @@ subroutine X(v_ks_calc)(gr, ks, h, st, calc_eigenval)
 
   h%epot = M_ZERO
   h%vhxc = M_ZERO
-  if(h%d%cdft) h%ahxc = M_ZERO
+  if(h%d%cdft) h%axc = M_ZERO
 
   ! check if we should introduce the amaldi SIC correction
   amaldi_factor = M_ONE
@@ -39,7 +39,6 @@ subroutine X(v_ks_calc)(gr, ks, h, st, calc_eigenval)
   ! No Hartree or xc if independent electrons
   if((.not.ks%ip_app).and.(amaldi_factor>M_ZERO)) then
     call v_hartree()
-!    if(h%d%cdft) call a_hartree()
     call v_a_xc()
   end if
 
@@ -81,46 +80,6 @@ contains
     deallocate(rho)
   end subroutine v_hartree
 
-
-  ! ---------------------------------------------------------
-  ! Hartree contribution from the current to Axc
-  subroutine a_hartree()
-    FLOAT, allocatable :: j(:,:), ahartree(:,:)
-    integer :: is, idim
-
-    ALLOCATE(       j(NP, NDIM), NP*NDIM)
-    ALLOCATE(ahartree(NP, NDIM), NP*NDIM)
-    ahartree = M_ZERO
-
-    ! calculate the total current
-    j(1:NP, 1:NDIM) = st%j(1:NP, 1:NDIM, 1)
-    do is = 2, h%d%spin_channels
-      j(1:NP, 1:NDIM) = j(1:NP, 1:NDIM) + st%j(1:NP, 1:NDIM, is)
-    end do
-
-    ! solve poisson equation
-    do idim = 1, NDIM
-      call dpoisson_solve(gr, ahartree(:,idim), j(:, idim)) ! solve the poisson equation
-    end do
-
-    h%ahxc(1:NP, 1:NDIM, 1) = h%ahxc(1:NP, 1:NDIM, 1) + ahartree(1:NP, 1:NDIM)
-    if(h%d%ispin > UNPOLARIZED) then
-      h%ahxc(1:NP, 1:NDIM, 2) = h%ahxc(1:NP, 1:NDIM, 2) + ahartree(1:NP, 1:NDIM)
-    end if
-
-    ! We first add 1/2 int j.aH, to then subtract int j.(axc + aH)
-    ! this yields the correct formula epot = - int j.(axc + aH/2)
-    ! WARNING 1: the axc we store is in fact axc/c. So, to get the energy rigth, we have to multiply by c.
-    do is = 1, h%d%spin_channels
-      do idim = 1, NDIM
-        h%epot = h%epot + M_HALF*P_c*dmf_dotp(gr%m, st%j(idim, :, is), ahartree(:, idim))
-      end do
-    end do
-
-    deallocate(j, ahartree)
-  end subroutine a_hartree
-
-
   ! ---------------------------------------------------------
   subroutine v_a_xc()
     FLOAT, allocatable :: rho(:, :)
@@ -156,7 +115,7 @@ contains
     if(ks%sic_type == sic_amaldi) rho(:,:) = amaldi_factor*rho(:,:)
 
     if(h%d%cdft) then
-      call xc_get_vxc_and_axc(gr, ks%xc, rho, st%j, st%d%ispin, h%vhxc, h%ahxc, &
+      call xc_get_vxc_and_axc(gr, ks%xc, rho, st%j, st%d%ispin, h%vhxc, h%axc, &
          h%ex, h%ec, h%exc_j, -minval(st%eigenval(st%nst, :)), st%qtot)
     else
       call xc_get_vxc(gr, ks%xc, rho, st%d%ispin, h%vhxc, h%ex, h%ec, &

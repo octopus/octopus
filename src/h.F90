@@ -77,7 +77,7 @@ module hamiltonian
 
     FLOAT, pointer :: vhartree(:)
     FLOAT, pointer :: Vhxc(:,:)   ! xc potential + hartree potential
-    FLOAT, pointer :: ahxc(:,:,:) ! xc vector-potential + hartree vector-potential divided by c
+    FLOAT, pointer :: axc(:,:,:)  ! xc vector-potential divided by c
 
     ! the energies (total, ion-ion, exchange, correlation)
     FLOAT :: etot, eii, ex, ec, exc_j, epot
@@ -151,10 +151,10 @@ contains
     ALLOCATE(h%Vhxc(NP, h%d%nspin), NP*h%d%nspin)
     h%Vhxc = M_ZERO
     if (h%d%cdft) then
-      ALLOCATE(h%ahxc(NP, NDIM, h%d%nspin), NP*NDIM*h%d%nspin)
-      h%ahxc = M_ZERO
+      ALLOCATE(h%axc(NP, NDIM, h%d%nspin), NP*NDIM*h%d%nspin)
+      h%axc = M_ZERO
     else
-      nullify(h%ahxc)
+      nullify(h%axc)
     end if
 
     call epot_init(h%ep, gr)
@@ -301,6 +301,10 @@ contains
     if(associated(h%vhxc)) then
       deallocate(h%vhxc)
       nullify(h%vhxc)
+    end if
+    if(associated(h%axc)) then
+      deallocate(h%axc)
+      nullify(h%axc)
     end if
 
     call epot_end(h%ep, gr%sb, gr%geo)

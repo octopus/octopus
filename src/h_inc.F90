@@ -236,12 +236,12 @@ subroutine X(magnetic_terms) (gr, h, psi, hpsi, ik)
     ALLOCATE(tmp(NP_PART, NDIM), NP_PART*NDIM)
     select case (h%d%ispin)
     case(UNPOLARIZED)
-      tmp(1:NP, :) = h%ahxc(:, :, 1)
+      tmp(1:NP, :) = h%axc(:, :, 1)
     case(SPIN_POLARIZED)
       if(modulo(ik+1, 2) == 0) then ! we have a spin down
-        tmp(1:NP, :) = h%ahxc(:, :, 1)
+        tmp(1:NP, :) = h%axc(:, :, 1)
       else
-        tmp(1:NP, :) = h%ahxc(:, :, 2)
+        tmp(1:NP, :) = h%axc(:, :, 2)
       end if
     case(SPINORS)
       ! not implemented yet
@@ -253,14 +253,14 @@ subroutine X(magnetic_terms) (gr, h, psi, hpsi, ik)
     select case (h%d%ispin)
     case(UNPOLARIZED)
       do k = 1, NP
-        hpsi(k, 1) = hpsi(k, 1) - M_zI*dot_product(h%ahxc(k, :, 1), grad(k, :))
+        hpsi(k, 1) = hpsi(k, 1) - M_zI*dot_product(h%axc(k, :, 1), grad(k, :))
       end do
     case(SPIN_POLARIZED)
       do k = 1, NP
         if(modulo(ik+1, 2) == 0) then ! we have a spin down
-          hpsi(k, 1) = hpsi(k, 1) -  M_zI*dot_product(h%ahxc(k, :, 1), grad(k, :))
+          hpsi(k, 1) = hpsi(k, 1) -  M_zI*dot_product(h%axc(k, :, 1), grad(k, :))
         else
-          hpsi(k, 1) = hpsi(k, 1) -  M_zI*dot_product(h%ahxc(k, :, 2), grad(k, :))
+          hpsi(k, 1) = hpsi(k, 1) -  M_zI*dot_product(h%axc(k, :, 2), grad(k, :))
         end if
       end do
     case(SPINORS)

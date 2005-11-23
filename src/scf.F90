@@ -271,7 +271,7 @@ contains
 
       vin(:, 1, :) = h%vhxc
       vout = M_ZERO
-      if (st%d%cdft) vin(:, 2:dim, :) = h%ahxc(:,:,:)
+      if (st%d%cdft) vin(:, 2:dim, :) = h%axc(:,:,:)
     else
       ALLOCATE(rhonew(NP, dim, nspin), NP*dim*nspin)
     end if
@@ -301,7 +301,7 @@ contains
       if (scf%what2mix == MIXPOT) then
         call X(v_ks_calc) (gr, ks, h, st)
         vout(:, 1, :) = h%vhxc
-        if (h%d%cdft) vout(:, 2:dim, :) = h%ahxc(:,:,:)
+        if (h%d%cdft) vout(:, 2:dim, :) = h%axc(:,:,:)
       end if
       evsum_out = states_eigenvalues_sum(st)
 
@@ -345,7 +345,7 @@ contains
         ! mix input and output potentials
         call mixing(scf%smix, gr%m, iter, dim, nspin, vin, vout, vnew)
         h%vhxc = vnew(:, 1, :)
-        if (h%d%cdft) h%ahxc(:,:,:) = vnew(:,2:dim,:)
+        if (h%d%cdft) h%axc(:,:,:) = vnew(:,2:dim,:)
       end select
 
       ! save restart information
@@ -375,7 +375,7 @@ contains
       if (h%d%cdft) rhoin(:, 2:dim, :) = st%j
       if (scf%what2mix == MIXPOT) then
         vin(:, 1, :) = h%vhxc
-        if (h%d%cdft) vin(:,2:dim,:) = h%ahxc(:,:,:)
+        if (h%d%cdft) vin(:,2:dim,:) = h%axc(:,:,:)
       end if
       evsum_in = evsum_out
 
