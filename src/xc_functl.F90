@@ -78,7 +78,17 @@ contains
 
     if (.not.cdft) return
 
-    ! read input
+    !%Variable JFunctional
+    !%Type integer
+    !%Default lca_omc
+    !%Section Hamiltonian::XC
+    !%Description
+    !% Defines the current functional
+    !%Option lca_omc 301
+    !% Orestes, Marcasso & Capelle 
+    !%Option lca_lch 302
+    !% Lee, Colwell & Handy
+    !%End
     call loct_parse_int(check_inp('JFunctional'), XC_LCA_OMC, functl%id)
 
     ! initialize
