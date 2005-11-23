@@ -830,21 +830,22 @@ contains
     integer :: i, ik, j, mode, ns
     FLOAT :: factor(3)
 
-    integer, parameter :: GNUPLOT = 1024, &
-      XMGRACE = 2
+    integer, parameter :: &
+      GNUPLOT = 1024,     &
+      XMGRACE = 2048
 
     if(.not.mpi_grp_is_root(mpi_world)) return
 
     !%Variable OutputBandsMode
     !%Type integer
-    !%Default 1
+    !%Default 1024
     !%Section Output
     !%Description
-    !% Chose if the band file is to be written in gnuplot or xmgrace firendly format
-    !%Option xmgrace 2
-    !% xmgrace format
+    !% Chose if the band file is to be written in gnuplot or xmgrace friendly format
     !%Option gnuplot 1024
     !% gnuplot format
+    !%Option xmgrace 2048
+    !% xmgrace format
     !%End
     call loct_parse_int(check_inp('OutputBandsMode'), GNUPLOT, mode)
     if(.not.varinfo_valid_option('OutputBandsMode', mode)) call input_error('OutputBandsMode')
@@ -861,22 +862,20 @@ contains
     end do
 
     select case(mode)
-    case(1)
+    case(GNUPLOT)
       ! output bands in gnuplot format
       do j = 1, nst
         do ik = 1, st%d%nik, ns
-          write(iunit, '(1x,3(f10.4))', advance='no') &
-             st%d%kpoints(:,ik)/factor(:)
-          write(iunit, '(3x,f12.6))', advance='yes') st%eigenval(j, ik)/units_out%energy%factor
+          write(iunit, '(1x,3(f10.4))', advance='no')  st%d%kpoints(:,ik)/factor(:)
+          write(iunit, '(3x,f12.6))',   advance='yes') st%eigenval(j, ik)/units_out%energy%factor
         end do
         write(iunit, '(a)')' '
       end do
-    case(2)
+    case(XMGRACE)
       ! output bands in xmgrace format, i.e.:
       ! k_x, k_y, k_z, e_1, e_2, ..., e_n
       do ik = 1, st%d%nik, ns
-        write(iunit, '(1x,3(f10.4))', advance='no') &
-           st%d%kpoints(:,ik)/factor(:)
+        write(iunit, '(1x,3(f10.4))', advance='no')   st%d%kpoints(:,ik)/factor(:)
         write(iunit, '(3x,20f12.6))', advance='yes') (st%eigenval(j, ik)/units_out%energy%factor, j=1,nst)
       end do
     end select
