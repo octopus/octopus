@@ -47,15 +47,15 @@ subroutine xc_get_vxc_and_axc(gr, xcs, rho, j, ispin, vxc, axc, ex, ec, exc_j, i
 
   !allocate memory
   ALLOCATE(v   (NP, NDIM, spin_channels), NP*NDIM*spin_channels)
-  ALLOCATE(f   (NP, NDIM, spin_channels), NP*NDIM*spin_channels)
+  ALLOCATE(f   (NP_PART, NDIM, spin_channels), NP_PART*NDIM*spin_channels)
   ALLOCATE(dedd(NP, spin_channels),       NP*spin_channels)
-  ALLOCATE(dedv(NP, NDIM, spin_channels), NP*NDIM*spin_channels)
+  ALLOCATE(dedv(NP_PART, NDIM, spin_channels), NP_PART*NDIM*spin_channels)
   dedd = M_ZERO; dedv = M_ZERO
 
   !Compute j/rho and the vorticity
   do is = 1, spin_channels
     do id = 1, NDIM
-      f(:, id, is) = j(:, id, is)/rho(:, is)
+      f(1:NP, id, is) = j(1:NP, id, is)/rho(1:NP, is)
     end do
     call df_curl(gr%f_der, f(:,:,is), v(:,:,is))
   end do
@@ -93,8 +93,8 @@ subroutine xc_get_vxc_and_axc(gr, xcs, rho, j, ispin, vxc, axc, ex, ec, exc_j, i
     call df_curl(gr%f_der, dedv(:,:,is), tmp)
 
     do id = 1, NDIM
-      axc(:, id, is) = axc(:, id, is) - tmp(:, id)/rho(:, is)
-      vxc(:, is) = vxc(:, is) - axc(:, id, is)*f(:, id, is)
+      axc(1:NP, id, is) = axc(1:NP, id, is) - tmp(1:NP, id)/rho(1:NP, is)
+      vxc(1:NP, is) = vxc(1:NP, is) - axc(1:NP, id, is)*f(1:NP, id, is)
     end do
   end do
   deallocate(tmp)
