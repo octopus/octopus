@@ -217,7 +217,7 @@ subroutine X(magnetic_terms) (gr, h, psi, hpsi, ik)
 
   integer :: k
   FLOAT, allocatable :: div(:), tmp(:,:)
-  R_TYPE, allocatable :: grad(:,:)
+  R_TYPE, allocatable :: grad(:,:), lhpsi(:,:)
 
   call push_sub('h_inc.Xmagnetic_terms')
 
@@ -269,6 +269,7 @@ subroutine X(magnetic_terms) (gr, h, psi, hpsi, ik)
 
   endif
 
+  !If we have an external magnetic field
   if (associated(h%ep%A_static)) then
     do k = 1, NP
       hpsi(k, :) = hpsi(k, :) + M_HALF*dot_product(h%ep%A_static(k, :), h%ep%A_static(k, :))*psi(k, :)
@@ -281,6 +282,28 @@ subroutine X(magnetic_terms) (gr, h, psi, hpsi, ik)
       end select
 
     end do
+  end if
+
+  !Zeeman term
+  if (associated(h%ep%B_field) .and. h%d%ispin /= UNPOLARIZED) then
+    ALLOCATE(lhpsi(NP, h%d%dim), NP*h%d%dim)
+    select case (h%d%ispin)
+    case (SPIN_POLARIZED)
+      if(modulo(ik+1, 2) == 0) then ! we have a spin down
+        lhpsi(1:NP, 1) = - M_HALF/P_C*sqrt(dot_product(h%ep%B_field, h%ep%B_field))*psi(1:NP, 1)
+        hpsi(:, 1) = hpsi(:, 1)
+      else
+        lhpsi(1:NP, 1) = + M_HALF/P_C*sqrt(dot_product(h%ep%B_field, h%ep%B_field))*psi(1:NP, 1)
+        hpsi(:, 1) = hpsi(:, 1)
+      end if
+    case (SPINORS)
+      lhpsi(1:NP, 1) = M_HALF/P_C*( h%ep%B_field(3)*psi(1:NP, 1) &
+                                 + (h%ep%B_field(1) - M_zI*h%ep%B_field(2))*psi(1:NP, 2))
+      lhpsi(1:NP, 2) = M_HALF/P_C*(-h%ep%B_field(3)*psi(1:NP, 2) &
+                                 + (h%ep%B_field(1) + M_zI*h%ep%B_field(2))*psi(1:NP, 1))
+    end select
+    hpsi(1:NP, :) = hpsi(1:NP, :) + lhpsi(1:NP, :)
+    deallocate(lhpsi)
   end if
 
   deallocate(grad)
@@ -320,7 +343,6 @@ subroutine X(vlpsi) (h, m, psi, hpsi, ik)
   R_TYPE,                 intent(inout) :: Hpsi(:,:) !  Hpsi(m%np_part, h%d%dim)
 
   integer :: idim
-  R_TYPE, allocatable :: lhpsi(:,:)
 
   call profiling_in(C_PROFILING_VLPSI)
   call push_sub('h_inc.Xvlpsi')
@@ -345,29 +367,6 @@ subroutine X(vlpsi) (h, m, psi, hpsi, ik)
     do idim = 1, h%d%dim
       hpsi(1:m%np, idim) = hpsi(1:m%np, idim) + h%ep%v_static*psi(1:m%np, idim)
     end do
-  end if
-
-  if (associated(h%ep%B_field) .and. h%d%ispin /= UNPOLARIZED) then
-    ALLOCATE(lhpsi(m%np, h%d%dim), m%np*h%d%dim)
-    select case (h%d%ispin)
-    case (SPIN_POLARIZED)
-      if(modulo(ik+1, 2) == 0) then ! we have a spin down
-        lhpsi(1:m%np, 1) = - M_HALF/P_C*sqrt(dot_product(h%ep%B_field, h%ep%B_field))*psi(1:m%np, 1)
-
-        hpsi(:, 1) = hpsi(:, 1)
-      else
-        lhpsi(1:m%np, 1) = + M_HALF/P_C*sqrt(dot_product(h%ep%B_field, h%ep%B_field))*psi(1:m%np, 1)
-
-        hpsi(:, 1) = hpsi(:, 1)
-      end if
-    case (SPINORS)
-      lhpsi(1:m%np, 1) = M_HALF/P_C*( h%ep%B_field(3)*psi(1:m%np, 1) &
-        + (h%ep%B_field(1) - M_zI*h%ep%B_field(2))*psi(1:m%np, 2))
-      lhpsi(1:m%np, 2) = M_HALF/P_C*(-h%ep%B_field(3)*psi(1:m%np, 2) &
-        + (h%ep%B_field(1) + M_zI*h%ep%B_field(2))*psi(1:m%np, 1))
-    end select
-    hpsi(1:m%np, :) = hpsi(1:m%np, :) + lhpsi(1:m%np, :)
-    deallocate(lhpsi)
   end if
 
   call pop_sub()
