@@ -216,7 +216,7 @@ subroutine X(magnetic_terms) (gr, h, psi, hpsi, ik)
   integer,                intent(in)    :: ik
 
   integer :: k
-  FLOAT, allocatable :: div(:)
+  FLOAT, allocatable :: div(:), tmp(:,:)
   R_TYPE, allocatable :: grad(:,:)
 
   call push_sub('h_inc.Xmagnetic_terms')
@@ -233,33 +233,34 @@ subroutine X(magnetic_terms) (gr, h, psi, hpsi, ik)
   if(h%d%cdft) then
 
     ALLOCATE(div(NP), NP)
+    ALLOCATE(tmp(NP_PART, NDIM), NP_PART*NDIM)
     select case (h%d%ispin)
     case(UNPOLARIZED)
-      call df_divergence(gr%sb, gr%f_der, h%ahxc(:, :, 1), div)
-      hpsi(1:NP, 1) = hpsi(1:NP, 1) - M_HALF*M_zI*div*psi(1:NP, 1)
+      tmp(1:NP, :) = h%ahxc(:, :, 1)
     case(SPIN_POLARIZED)
       if(modulo(ik+1, 2) == 0) then ! we have a spin down
-        call df_divergence(gr%sb, gr%f_der, h%ahxc(:, :, 1), div)
+        tmp(1:NP, :) = h%ahxc(:, :, 1)
       else
-        call df_divergence(gr%sb, gr%f_der, h%ahxc(:, :, 2), div)
+        tmp(1:NP, :) = h%ahxc(:, :, 2)
       end if
-      hpsi(1:NP, 1) = hpsi(1:NP, 1) - M_HALF*M_zI*div*psi(1:NP, 1)
     case(SPINORS)
       ! not implemented yet
     end select
-    deallocate(div)
+    call df_divergence(gr%sb, gr%f_der, tmp, div)
+    hpsi(1:NP, 1) = hpsi(1:NP, 1) - M_HALF*M_zI*div*psi(1:NP, 1)
+    deallocate(div, tmp)
 
     select case (h%d%ispin)
     case(UNPOLARIZED)
       do k = 1, NP
-        hpsi(k, 1) = hpsi(k, 1) - M_HALF*M_zI*dot_product(h%ahxc(k, :, 1), grad(k, :))
+        hpsi(k, 1) = hpsi(k, 1) - M_zI*dot_product(h%ahxc(k, :, 1), grad(k, :))
       end do
     case(SPIN_POLARIZED)
       do k = 1, NP
         if(modulo(ik+1, 2) == 0) then ! we have a spin down
-          hpsi(k, 1) = hpsi(k, 1) -  M_HALF*M_zI*dot_product(h%ahxc(k, :, 1), grad(k, :))
+          hpsi(k, 1) = hpsi(k, 1) -  M_zI*dot_product(h%ahxc(k, :, 1), grad(k, :))
         else
-          hpsi(k, 1) = hpsi(k, 1) -  M_HALF*M_zI*dot_product(h%ahxc(k, :, 2), grad(k, :))
+          hpsi(k, 1) = hpsi(k, 1) -  M_zI*dot_product(h%ahxc(k, :, 2), grad(k, :))
         end if
       end do
     case(SPINORS)
