@@ -62,6 +62,7 @@ end subroutine X(lr_orth_vector)
 ! calculates
 !    lr%dl_rho += sum_{i occ} psi_i^0 (r) * psi_i^1*(r)   <=   type=1
 !    lr%dl_rho += sum_{i occ} psi_i^0*(r) * psi_i^1 (r)   <=   type=2
+!    type 3 => type 1 + type 2
 subroutine X(lr_build_dl_rho) (m, st, lr, type)
   type(mesh_type),   intent(in)    :: m
   type(states_type), intent(in)    :: st
@@ -99,6 +100,7 @@ subroutine X(lr_build_dl_rho) (m, st, lr, type)
         end select
 
         if(type == 2) d(:) = R_CONJ(d(:))
+        if(type == 3) d(:) = R_CONJ(d(:))+d(:)
         lr%X(dl_rho)(i, :) = lr%X(dl_rho)(i, :) + d(:)
       end do
     end do

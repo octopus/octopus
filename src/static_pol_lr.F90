@@ -90,8 +90,12 @@ contains
     call static(sys, h, lr, pol, hpol)
     call output()
 
-    !! Read frequency
-    call loct_parse_float(check_inp('Omega'), M_ZERO , w)
+    if ( conf%devel_version ) then 
+      !! Read frequency
+      call loct_parse_float(check_inp('Omega'), M_ZERO , w)
+    else
+      w=M_ZERO
+    endif
 
     if( w /= M_ZERO ) then 
       print*, "CALCULATING DYNAMIC POLARIZABILITIES :-D"
@@ -486,7 +490,6 @@ contains
         call dpoisson_solve(sys%gr, lr%ddl_Vhar, tmp)
       end if
 
-      lr%X(dl_rho) = M_ZERO
       do sigma = -1, 1, 2
         if(omega==M_ZERO .and. sigma==1) cycle
 
@@ -510,8 +513,8 @@ contains
         end do
 
         !call lr_orth_response(m, st, lr)
-        call X(lr_build_dl_rho)(m, st, lr, 1)
-        lr%X(dl_rho) = M_TWO*lr%X(dl_rho)
+        lr%X(dl_rho) = M_ZERO
+        call X(lr_build_dl_rho)(m, st, lr, 3)
       end do
 
       ! if static perturbation, then psi^+ and psi^- are the same
@@ -568,8 +571,7 @@ contains
       lr%ddl_Vhar(:) = M_ZERO
 
       call lr_orth_response(m, st, lr)
-      call X(lr_build_dl_rho)(m, st, lr, 1)
-      lr%X(dl_rho) = M_TWO*lr%X(dl_rho)
+      call X(lr_build_dl_rho)(m, st, lr, 3)
 
     end subroutine init_response_e
 
