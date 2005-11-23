@@ -7,9 +7,6 @@ jelli            = 3
 tm2              = 100
 hgh              = 101
 
-lca_omc      = 300
-lca_lch      = 302
-
 oep_none     = 0
 oep_slater   = 1
 oep_kli      = 2
