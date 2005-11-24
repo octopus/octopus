@@ -186,7 +186,7 @@ contains
 
     ! ---------------------------------------------------------
     subroutine strategy()
-      integer :: i, j, par_all
+      integer :: i, j, par_all, par_mask
 
       !%Variable ParallelizationStrategy
       !%Type flag
@@ -204,6 +204,8 @@ contains
       !% Octopus will run parallel in states.
       !%Option par_kpoints 4
       !% Octopus will run parallel in k-points/spin.
+      !%Option par_other   8
+      !% Run-mode dependent. For example, in casida it means parallelization in e-h pairs
       !%End
 
       if(mpi_world%size > 1) then
@@ -212,6 +214,12 @@ contains
           par_all = par_all + 2**(i-1)
         end do
 
+        par_mask = parallel_mask
+#if !defined(HAVE_METIS)
+        ! parallelization in domains is not allowed
+        par_mask = ibclr(par_mask, P_STRATEGY_DOMAINS - 1)
+#endif
+
         call loct_parse_int(check_inp('ParallelizationStrategy'),  &
           par_all, mc%par_strategy)
 
@@ -219,14 +227,14 @@ contains
           call input_error('ParallelizationStrategy')
         end if
 
-        mc%par_strategy = iand(mc%par_strategy, parallel_mask)
+        mc%par_strategy = iand(mc%par_strategy, par_mask)
 
         if(mc%par_strategy == P_STRATEGY_SERIAL) then
           message(1) = "More than one node is available, but the this run mode can not run in parallel"
           message(2) = "Please select a ParallelizationStrategy compatible with"
           j = 2
           do i = 1, n_par_types
-            if(iand(parallel_mask, 2**(i-1)).ne.0) then
+            if(iand(par_mask, 2**(i-1)).ne.0) then
               j = j + 1
               write(message(j), '(2a)') "  - ", par_types(i)
             end if

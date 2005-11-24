@@ -30,6 +30,8 @@ R_TYPE function X(mf_integrate) (mesh, f) result(d)
   if(mesh%parallel_in_domains) then
 #if defined(HAVE_MPI)
     d = X(vec_integrate)(mesh%vp, f(1:mesh%np)*mesh%vol_pp(1:mesh%np))
+#else
+    ASSERT(.false.)
 #endif
   else
     d = sum(f(1:mesh%np)*mesh%vol_pp(1:mesh%np))
@@ -39,6 +41,7 @@ R_TYPE function X(mf_integrate) (mesh, f) result(d)
   call profiling_out(C_PROFILING_MF_INTEGRATE)
 
 end function X(mf_integrate)
+
 
 ! ---------------------------------------------------------
 ! this function returns the dot product between two vectors
@@ -73,6 +76,8 @@ R_TYPE function X(mf_dotp)(mesh, f1, f2) result(dotp)
     call TS(MPI_Allreduce)(dotp_tmp, dotp, 1, R_MPITYPE, &
       MPI_SUM, mesh%vp%comm, ierr)
     call profiling_out(C_PROFILING_MF_DOTP_ALLREDUCE)
+#else
+    ASSERT(.false.)
 #endif
   else
     dotp = dotp_tmp
@@ -83,6 +88,7 @@ R_TYPE function X(mf_dotp)(mesh, f1, f2) result(dotp)
 
 end function X(mf_dotp)
 
+
 ! ---------------------------------------------------------
 ! this function returns the norm of a vector
 FLOAT function X(mf_nrm2)(m, f) result(nrm2)
@@ -90,16 +96,15 @@ FLOAT function X(mf_nrm2)(m, f) result(nrm2)
   R_TYPE,          intent(in) :: f(:)
 
   call profiling_in(C_PROFILING_MF_NRM2)
-
   call push_sub('mf_inc.Xmf_dotp')
 
   nrm2 = sqrt(X(mf_dotp) (m, f, f))
 
   call pop_sub()
-
   call profiling_out(C_PROFILING_MF_NRM2)
 
 end function X(mf_nrm2)
+
 
 ! ---------------------------------------------------------
 ! This function calculates the x_i moment of the function f
@@ -111,15 +116,20 @@ function X(mf_moment) (m, f, i, n) result(r)
 
   call push_sub('mf_inc.Xmf_dotp')
 
-#if defined(HAVE_MPI) && defined(HAVE_METIS)
-  r = X(vec_integrate)(m%vp, f(1:m%np)*m%x(1:m%np,i)**n * m%vol_pp(1:m%np))
+  if(m%parallel_in_domains) then
+#if defined(HAVE_MPI)
+    r = X(vec_integrate)(m%vp, f(1:m%np)*m%x(1:m%np,i)**n * m%vol_pp(1:m%np))
 #else
-  r = sum(f(1:m%np)*m%x(1:m%np,i)**n * m%vol_pp(1:m%np))
+    ASSERT(.false.)
 #endif
+  else
+    r = sum(f(1:m%np) * m%x(1:m%np,i)**n * m%vol_pp(1:m%np))
+  end if
 
   call pop_sub()
 
 end function X(mf_moment)
+
 
 ! ---------------------------------------------------------
 ! This subroutine generates a gaussian wave-function in a

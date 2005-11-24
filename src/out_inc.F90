@@ -329,7 +329,7 @@ subroutine X(output_function) (how, dir, fname, mesh, sb, f, u, ierr)
   call push_sub('out_inc.Xoutput_function')
 
   if(mesh%parallel_in_domains) then
-#if defined(HAVE_MPI) && defined(HAVE_METIS)
+#if defined(HAVE_MPI)
     ALLOCATE(f_global(mesh%np_global), mesh%np_global)
 
     call X(vec_gather)(mesh%vp, f_global, f)

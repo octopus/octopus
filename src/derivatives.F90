@@ -274,7 +274,7 @@ contains
 
     integer, allocatable :: polynomials(:,:)
     FLOAT,   allocatable :: rhs(:,:)
-    integer :: i, j, k
+    integer :: i, j, k, up
 
     type(nl_operator_type) :: auxop
 
@@ -364,14 +364,17 @@ contains
       ! WARNING: Same thing should be done for the gradients. The subroutines in
       ! derivatives_inc.F90 should then be changed accordingly.
       if(m%use_curvlinear) then
+        if(m%parallel_in_domains) then
+          up = m%vp%np_local(m%vp%partno) + m%vp%np_ghost(m%vp%partno)
+        else
+          up = m%np_global
+        end if
+
         do i = 1, m%np
           do j = 1, der%lapl%n
-            k = der%lapl%i(j, i)
-#if defined(HAVE_MPI) && defined(HAVE_METIS)
-            if(k>m%vp%np_local(m%vp%partno) + m%vp%np_ghost(m%vp%partno)) then
-#else
-            if(k>m%np_global) then
-#endif
+            k  = der%lapl%i(j, i)
+
+            if(k>up) then
               der%lapl%w_re(j, i) = M_ZERO
               der%lapl%i(j, i) = i
             end if

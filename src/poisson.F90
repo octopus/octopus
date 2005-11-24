@@ -178,6 +178,12 @@ contains
         call write_fatal(3)
       end if
 
+      if(gr%m%parallel_in_domains .and. (poisson_solver.ne.CG).and.(poisson_solver.ne.CG_CORRECTED)) then
+        message(1) = 'When running in parallel in domains, you can only use'
+        message(2) = 'PoissonSolver = cg | cg_corrected'
+        call write_fatal(2)
+      end if
+
       call messages_print_var_option(stdout, "PoissonSolver", poisson_solver)
       call poisson3D_init(gr)
     end subroutine init_3D

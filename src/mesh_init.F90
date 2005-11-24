@@ -320,7 +320,7 @@ contains
     mesh%vol_pp(:) = product(mesh%h(1:sb%dim))
 
     if(mesh%parallel_in_domains) then
-#if defined(HAVE_MPI) && defined(HAVE_METIS)
+#if defined(HAVE_MPI)
       ! Do the inner points.
       do i = 1, mesh%np
         k = mesh%vp%local(mesh%vp%xlocal(mesh%vp%partno)+i-1)
