@@ -329,7 +329,7 @@ contains
     else
       st%fixed_occ = .false.
 
-      ! first guest for occupation...paramagnetic configuration
+      ! first guess for occupation...paramagnetic configuration
       if(st%d%ispin == UNPOLARIZED) then
         r = M_TWO
       else
@@ -745,7 +745,7 @@ contains
 
     integer ik, j, ns, is
     FLOAT :: o, oplus, ominus
-    character(len=80) tmp_str1, tmp_str2, tmp_str3
+    character(len=80) tmp_str(3), cspin
 
     ns = 1
     if(st%d%nspin == 2) ns = 2
@@ -762,23 +762,20 @@ contains
     do ik = 1, st%d%nik, ns
       if(st%d%nik > ns) then
         write(message(1), '(a,i4,3(a,f12.6),a)') '#k =',ik,', k = (',  &
-           st%d%kpoints(1, ik)*units_out%length%factor, ',',           &
-           st%d%kpoints(2, ik)*units_out%length%factor, ',',           &
-           st%d%kpoints(3, ik)*units_out%length%factor, ')'
+          st%d%kpoints(1, ik)*units_out%length%factor, ',',            &
+          st%d%kpoints(2, ik)*units_out%length%factor, ',',            &
+          st%d%kpoints(3, ik)*units_out%length%factor, ')'
         call write_info(1, iunit)
       end if
 
-      do is = 1, ns
-        write(message(1), '(a4)') '#st'
-        if(present(error)) then
-          write(message(2), '(1x,a12,3x,a12,2x,a10,i3,a1)') &
-             ' Eigenvalue', 'Occupation ', 'Error (', is, ')'
-        else
-          write(message(2), '(1x,a12,3x,a12,2x)') &
-             ' Eigenvalue', 'Occupation '
-        end if
-        call write_info(2, iunit)
-      end do
+      if(present(error)) then
+        write(message(1), '(a4,1x,a5,1x,a12,4x,a12,1x,a10)')   &
+          '#st',' Spin',' Eigenvalue', 'Occupation ', 'Error'
+      else
+        write(message(1), '(a4,1x,a5,1x,a12,4x,a12,1x)')       &
+          '#st',' Spin',' Eigenvalue', 'Occupation '
+      end if
+      call write_info(1, iunit)
 
       do j = 1, nst
         do is = 0, ns-1
@@ -793,32 +790,36 @@ contains
             end if
           end if
 
-          write(tmp_str1, '(i4)') j
+          if(is.eq.0) cspin = 'up'
+          if(is.eq.1) cspin = 'dn'
+          if(st%d%nspin.ne.2) cspin = '--'
+
+          write(tmp_str(1), '(i4,3x,a2)') j, trim(cspin)
           if(simul_box_is_periodic(sb)) then
             if(st%d%ispin == SPINORS) then
-              write(tmp_str2, '(1x,f12.6,3x,f5.2,a1,f5.2)') &
-                 (st%eigenval(j, ik)-st%ef)/units_out%energy%factor, oplus, '/', ominus
-              if(present(error)) write(tmp_str3, '(a7,es7.1,a1)')'      (', error(j, ik+is), ')'
+              write(tmp_str(2), '(1x,f12.6,3x,f5.2,a1,f5.2)') &
+                (st%eigenval(j, ik)-st%ef)/units_out%energy%factor, oplus, '/', ominus
+              if(present(error)) write(tmp_str(3), '(a7,es7.1,a1)')'      (', error(j, ik+is), ')'
             else
-              write(tmp_str2, '(1x,f12.6,3x,f12.6)') &
-                 (st%eigenval(j, ik+is))/units_out%energy%factor, o
-              if(present(error)) write(tmp_str3, '(a7,es7.1,a1)')'      (', error(j, ik), ')'
+              write(tmp_str(2), '(1x,f12.6,3x,f12.6)') &
+                (st%eigenval(j, ik+is))/units_out%energy%factor, o
+              if(present(error)) write(tmp_str(3), '(a7,es7.1,a1)')'      (', error(j, ik), ')'
             end if
           else
             if(st%d%ispin == SPINORS) then
-              write(tmp_str2, '(1x,f12.6,3x,f5.2,a1,f5.2)') &
-                 st%eigenval(j, ik)/units_out%energy%factor, oplus, '/', ominus
-              if(present(error)) write(tmp_str3, '(a7,es7.1,a1)')'      (', error(j, ik+is), ')'
+              write(tmp_str(2), '(1x,f12.6,3x,f5.2,a1,f5.2)') &
+                st%eigenval(j, ik)/units_out%energy%factor, oplus, '/', ominus
+              if(present(error)) write(tmp_str(3), '(a7,es7.1,a1)')'      (', error(j, ik+is), ')'
             else
-              write(tmp_str2, '(1x,f12.6,3x,f12.6)') &
-                 st%eigenval(j, ik+is)/units_out%energy%factor, o
-              if(present(error)) write(tmp_str3, '(a7,es7.1,a1)')'      (', error(j, ik), ')'
+              write(tmp_str(2), '(1x,f12.6,3x,f12.6)') &
+                st%eigenval(j, ik+is)/units_out%energy%factor, o
+              if(present(error)) write(tmp_str(3), '(a7,es7.1,a1)')'      (', error(j, ik), ')'
             end if
           end if
           if(present(error)) then
-            message(1) = trim(tmp_str1)//trim(tmp_str2)//trim(tmp_str3)
+            message(1) = trim(tmp_str(1))//trim(tmp_str(2))//trim(tmp_str(3))
           else
-            message(1) = trim(tmp_str1)//trim(tmp_str2)
+            message(1) = trim(tmp_str(1))//trim(tmp_str(2))
           end if
           call write_info(1, iunit)
         end do
@@ -1044,7 +1045,7 @@ contains
 
         ! spin-up density
         do k = 1, NDIM
-          jp(:, k, 1) = jp(:, k, 1) + st%d%kweights(ik)*st%occ(p, ik)  &
+          jp(:, k, 1) = jp(:, k, 1) + st%d%kweights(ik)*st%occ(p, ik)       &
             * aimag(conjg(st%zpsi(:, 1, p, ik)) * grad(:, k))
         end do
 
@@ -1062,7 +1063,7 @@ contains
           call zf_gradient(gr%sb, gr%f_der, st%zpsi(:, 2, p, ik), grad)
 
           do k = 1, NDIM
-            jp(:, k, 2) = jp(:, k, 2) + st%d%kweights(ik)*st%occ(p, ik) &
+            jp(:, k, 2) = jp(:, k, 2) + st%d%kweights(ik)*st%occ(p, ik)     &
               * aimag(conjg(st%zpsi(:, 2, p, ik)) * grad(:, k))
           end do
         end if
@@ -1073,7 +1074,7 @@ contains
 
 #if defined(HAVE_MPI)
     ALLOCATE(red(NP, NDIM, st%d%nspin), NP*NDIM*st%d%nspin)
-    call MPI_ALLREDUCE(jp(1, 1, 1), red(1, 1, 1), NP*NDIM*st%d%nspin, &
+    call MPI_ALLREDUCE(jp(1, 1, 1), red(1, 1, 1), NP*NDIM*st%d%nspin,       &
       MPI_FLOAT, MPI_SUM, st%mpi_grp%comm, ierr)
     jp = red
     deallocate(red)
