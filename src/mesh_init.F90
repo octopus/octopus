@@ -58,9 +58,12 @@ subroutine mesh_init_stage_1(sb, mesh, geo, cv, enlarge)
   do i = 1, sb%periodic_dim
     mesh%h(i)     = sb%lsize(i)/real(mesh%nr(2, i))
     mesh%nr(2, i) = mesh%nr(2, i) - 1
+    mesh%l(:) = mesh%nr(2, :) - mesh%nr(1, :) + 1
   end do
 
-  mesh%l(:) = mesh%nr(2, :) - mesh%nr(1, :) + 1
+  do i = sb%periodic_dim+1, sb%dim
+    mesh%l(i) = mesh%nr(2, i) - mesh%nr(1, i) 
+  end do
 
   call pop_sub()
 end subroutine mesh_init_stage_1

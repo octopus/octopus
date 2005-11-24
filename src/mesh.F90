@@ -119,7 +119,7 @@ contains
       db(i) = m%l(i)
     end do
     do i = sb%periodic_dim + 1, sb%dim
-      db(i) = nint(sb%fft_alpha*(m%l(i)-1)) + 1
+      db(i) = nint(sb%fft_alpha*m%l(i)) ! nint(sb%fft_alpha*(m%l(i)-1)) + 1
     end do
 
   end subroutine mesh_double_box
