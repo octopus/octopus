@@ -241,6 +241,10 @@ contains
     vp%rank   = rank
     vp%partno = rank + 1
 
+    call MPI_Barrier(comm, ierr)
+
+    write(2222+vp%rank,*) 'vp%rank', vp%rank, 'here'
+
     ALLOCATE(ghost_flag(np+np_enl, p), (np+np_enl)*p)
     ALLOCATE(ir(p),                    p)
     ALLOCATE(irr(p, p),                p*p)
@@ -314,6 +318,11 @@ contains
     ghost_flag        = 0
     vp%np_ghost_neigh = 0
     vp%np_ghost       = 0
+
+    call MPI_Barrier(comm, ierr)
+
+    write(3133+vp%rank,*) 'vp%rank', vp%rank, 'here'
+
     ! Check all nodes.
     do r = 1, p
       ! Check all points of this node.
@@ -327,6 +336,9 @@ contains
           ! out points that would be out of the box etc.
           k = mesh_index(dim, periodic_dim, nr, &
             Lxyz_inv, p1(:) + stencil(:, j))
+
+          write(3133+vp%rank,*) r, i, j, k, part(k), r
+          if (k.ne.0) then
           ! If this index k does not belong to partition of node r,
           ! then k is a ghost point for r with part(k) now being
           ! a neighbour of r.
@@ -345,9 +357,17 @@ contains
               vp%total                        = vp%total+1
             end if
           end if
+          else
+           write(7777+vp%rank,*) r, i, j, k, part(k), r
+          end if
         end do
       end do
     end do
+
+    call MPI_Barrier(comm, ierr)
+
+    write(3333+vp%rank,*) 'vp%rank', vp%rank, 'here'
+
 
     ! Set index tables xghost and xghost_neigh.
     vp%xghost(1) = 1
@@ -379,6 +399,7 @@ contains
       end do
     end do
 
+
     ! Write information about amount of ghost points.
     message(1) = 'Info: Total number of ghostpoints of each node:'
     write(message(2), '(a,100i7)') 'Info:', vp%np_ghost
@@ -402,6 +423,10 @@ contains
         end do
       end if
     end if
+
+    call MPI_Barrier(comm, ierr)
+
+    write(4444+vp%rank,*) 'vp%rank', vp%rank, 'here'
 
     ! Create reverse (global to local) lookup.
     ! Given a global point number i and a vector v_local of

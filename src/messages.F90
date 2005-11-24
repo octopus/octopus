@@ -60,8 +60,8 @@ module messages
 
   ! min_lun in io.F90 is equal to 10. We hardwire this here since we
   ! cannot write "use io" above. Unit 8 and 9 should always be available.
-  integer, parameter, private :: iunit_out = 8
-  integer, parameter, private :: iunit_err = 9
+  integer, parameter, public :: iunit_out = 8
+  integer, parameter, public :: iunit_err = 9
   ! max_lun is currently 99, i.e. we can hardwire unit_offset above 1000
   integer, parameter, private :: unit_offset = 1000
   character(len=512), private :: msg
@@ -91,6 +91,9 @@ contains
     call flush_msg(stderr, shyphens)
     write(msg, '(a,i4)') "* From node = ", mpi_world%rank
     call flush_msg(stderr, msg)
+    ! only the root node flushes above. since all nodes should
+    ! output we write again
+    if(.not.mpi_grp_is_root(mpi_world)) write(stderr, '(a)') msg
 #endif
     call flush_msg(stderr, shyphens)
     do i=1,no_lines
@@ -138,6 +141,9 @@ contains
 #ifdef HAVE_MPI
     write(msg , '(a,i4)') '** From node = ', mpi_world%rank
     call flush_msg(stderr, msg)
+    ! only the root node flushes above. since all nodes should
+    ! output we write again
+    if(.not.mpi_grp_is_root(mpi_world)) write(stderr, '(a)') msg
 #endif
     do i = 1, no_lines
       write(msg , '(a,3x,a)') '**', trim(message(i))
@@ -210,12 +216,21 @@ contains
 
     if(.not.in_debug_mode) return
 
+    if(flush_messages.and.mpi_grp_is_root(mpi_world)) then
+      open(unit=iunit_out, file='messages.stdout', &
+        action='write', position='append')
+    end if
+
     call open_debug_trace(iunit)
     do i = 1, no_lines
       write(msg, '(a)') trim(message(i))
       call flush_msg(iunit, msg)
     end do
     close(iunit)
+
+    if(flush_messages.and.mpi_grp_is_root(mpi_world)) then
+      close(iunit_out)
+    end if
 
   end subroutine write_debug
 
@@ -229,12 +244,19 @@ contains
     if(.not.in_debug_mode) return
     if(mpi_grp_is_root(mpi_world)) return
 
+    if(flush_messages) then
+      open(unit=iunit_out, file='messages.stdout', &
+        action='write', position='append')
+    end if
+
     call open_debug_trace(iunit)
     do i = 1, no_lines
       write(msg, '(a)') '* -'
       call flush_msg(iunit, msg)
     end do
     close(iunit)
+
+    if(flush_messages) close(iunit_out)
 
   end subroutine write_debug_newlines
 
@@ -285,6 +307,11 @@ contains
     integer :: mpi_err
 #endif
 
+    if(flush_messages.and.mpi_grp_is_root(mpi_world)) then
+      open(unit=iunit_out, file='messages.stdout', &
+        action='write', position='append')
+    end if
+
     if(mpi_grp_is_root(mpi_world)) then
       call messages_print_stress(stderr, "INPUT ERROR")
       write(msg, '(a)') '*** Fatal Error in input '
@@ -293,6 +320,10 @@ contains
 
       call varinfo_print(stderr, var)
       call messages_print_stress(stderr)
+    end if
+
+    if(flush_messages.and.mpi_grp_is_root(mpi_world)) then
+      close(iunit_out)
     end if
 
 #ifdef HAVE_MPI
@@ -342,6 +373,11 @@ contains
 
     if(.not.mpi_grp_is_root(mpi_world)) return
 
+    if(flush_messages) then
+      open(unit=iunit_out, file='messages.stdout', &
+        action='write', position='append')
+    end if
+
     if(present(msg)) then
       l   = len(msg)
 
@@ -374,6 +410,8 @@ contains
       call flush_msg(iunit, '')   ! empty line
     end if
 
+    if(flush_messages) close(iunit_out)
+
   end subroutine messages_print_stress
 
 
@@ -388,10 +426,12 @@ contains
     adv_ = 'yes'
     if(present(adv)) adv_ = adv
 
-    write(iunit, '(a)', advance=trim(adv_)) trim(str)
-    if(flush_messages.and.mpi_grp_is_root(mpi_world)) then
-      if(iunit.eq.stderr) write(iunit_err, '(a)', advance=trim(adv_)) trim(str)
-      if(iunit.eq.stdout) write(iunit_out, '(a)', advance=trim(adv_)) trim(str)
+    if(mpi_grp_is_root(mpi_world)) then
+      write(iunit, '(a)', advance=trim(adv_)) trim(str)
+      if(flush_messages) then
+        if(iunit.eq.stderr) write(iunit_err, '(a)', advance=trim(adv_)) trim(str)
+        if(iunit.eq.stdout) write(iunit_out, '(a)', advance=trim(adv_)) trim(str)
+      end if
     end if
 
   end subroutine flush_msg

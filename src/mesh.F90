@@ -134,21 +134,22 @@ contains
 
     call push_sub('mesh.mesh_write_info')
 
-    write(unit,'(a)') 'Main mesh:'
+    write(message(1),'(a)') 'Main mesh:'
 
-    write(unit,'(3a, a, f6.3, a, f6.3, a, f6.3, a, 1x, 3a, f8.5)')     &
-       '  Spacing [', trim(units_out%length%abbrev), '] = ',           &
-       '(', m%h(1)/units_out%length%factor, ',',                       &
-            m%h(2)/units_out%length%factor, ',',                       &
-            m%h(3)/units_out%length%factor, ')',                       &
-       '   volume/point [', trim(units_out%length%abbrev), '^3] = ',   &
+    write(message(2),'(3a, a, f6.3, a, f6.3, a, f6.3, a, 1x, 3a, f8.5)')  &
+       '  Spacing [', trim(units_out%length%abbrev), '] = ',              &
+       '(', m%h(1)/units_out%length%factor, ',',                          &
+            m%h(2)/units_out%length%factor, ',',                          &
+            m%h(3)/units_out%length%factor, ')',                          &
+       '   volume/point [', trim(units_out%length%abbrev), '^3] = ',      &
        m%vol_pp(1)/units_out%length%factor**calc_dim
 
-    write(unit,'(a, i8)') '  # inner mesh = ', m%np_global
-    write(unit,'(a, i8)') '  # total mesh = ', m%np_part_global
+    write(message(3),'(a, i8)') '  # inner mesh = ', m%np_global
+    write(message(4),'(a, i8)') '  # total mesh = ', m%np_part_global
 
-    write(unit,'(3a,f9.3,a)') '  Grid Cutoff [',trim(units_out%energy%abbrev),'] = ', &
+    write(message(5),'(3a,f9.3,a)') '  Grid Cutoff [',trim(units_out%energy%abbrev),'] = ', &
        (M_PI**2/(M_TWO*maxval(m%h)**2))/units_out%energy%factor
+    call write_info(5, unit)
 
     call pop_sub()
   end subroutine mesh_write_info

@@ -391,39 +391,44 @@ contains
 
     call push_sub('simul_box.simul_box_write_info')
 
-    write(iunit,'(a)') 'Simulation Box:'
-    write(iunit, '(a,a,1x)') '  Type = ', bs(sb%box_shape)
+    write(message(1),'(a)') 'Simulation Box:'
+    write(message(2), '(a,a,1x)') '  Type = ', bs(sb%box_shape)
+    call write_info(2, iunit)
 
     if(sb%box_shape == SPHERE.or.sb%box_shape == CYLINDER.or.sb%box_shape == MINIMUM) then
-      write(iunit, '(3a,f7.3)')   '  Radius  [', trim(units_out%length%abbrev), '] = ', &
+      write(message(1), '(3a,f7.3)') '  Radius  [', trim(units_out%length%abbrev), '] = ', &
         sb%rsize/units_out%length%factor
+      call write_info(1, iunit)
     end if
     if(sb%box_shape == CYLINDER) then
-      write(iunit, '(3a,f7.3)')   '  Xlength [', trim(units_out%length%abbrev), '] = ', &
+      write(message(1), '(3a,f7.3)') '  Xlength [', trim(units_out%length%abbrev), '] = ', &
         sb%xsize/units_out%length%factor
+      call write_info(1, iunit)
     end if
 
-    write(iunit,'(3a, a, f6.3, a, f6.3, a, f6.3, a)')                   &
-      '  Lengths [', trim(units_out%length%abbrev), '] = ',           &
-      '(', sb%lsize(1)/units_out%length%factor, ',',                   &
-      sb%lsize(2)/units_out%length%factor, ',',                   &
+    write(message(1),'(3a, a, f6.3, a, f6.3, a, f6.3, a)')     &
+      '  Lengths [', trim(units_out%length%abbrev), '] = ',    &
+      '(', sb%lsize(1)/units_out%length%factor, ',',           &
+      sb%lsize(2)/units_out%length%factor, ',',                &
       sb%lsize(3)/units_out%length%factor, ')'
 
 
-    write(iunit, '(a,i1,a)') 'The octopus will run in ', sb%dim, ' dimension(s).'
-    write(iunit, '(a,i1,a)') 'The octopus will treat the system as periodic in ', &
-      sb%periodic_dim, ' dimension(s)'
+    write(message(1), '(a,i1,a)') 'The octopus will run in ', sb%dim, ' dimension(s).'
+    write(message(2), '(a,i1,a)') 'The octopus will treat the system as periodic in ', &
+      sb%periodic_dim, ' dimension(s).'
+    call write_info(2, iunit)
 
     if(sb%periodic_dim > 0) then
-      write(iunit,'(1x)')
-      write(iunit,'(a,3a,a)')'Lattice Primitive Vectors [', trim(units_out%length%abbrev), ']'
-      write(iunit,'(a,f8.3)')'    x axis ', sb%rlat(1,1)/units_out%length%factor
-      write(iunit,'(a,f8.3)')'    y axis ', sb%rlat(2,2)/units_out%length%factor
-      write(iunit,'(a,f8.3)')'    z axis ', sb%rlat(3,3) /units_out%length%factor
-      write(iunit,'(a,3a,a)') 'Reciprocal Lattice Primitive Vectors [', trim(units_out%length%abbrev), '^-1]'
-      write(iunit,'(a,f8.3)')'  k_x axis ', sb%klat(1,1)*units_out%length%factor
-      write(iunit,'(a,f8.3)')'  k_y axis ', sb%klat(2,2)*units_out%length%factor
-      write(iunit,'(a,f8.3)')'  k_z axis ', sb%klat(3,3)*units_out%length%factor
+      write(message(1),'(1x)')
+      write(message(2),'(a,3a,a)') 'Lattice Primitive Vectors [', trim(units_out%length%abbrev), ']'
+      write(message(3),'(a,f8.3)') '    x axis ', sb%rlat(1,1)/units_out%length%factor
+      write(message(4),'(a,f8.3)') '    y axis ', sb%rlat(2,2)/units_out%length%factor
+      write(message(5),'(a,f8.3)') '    z axis ', sb%rlat(3,3) /units_out%length%factor
+      write(message(6),'(a,3a,a)') 'Reciprocal Lattice Primitive Vectors [', trim(units_out%length%abbrev), '^-1]'
+      write(message(7),'(a,f8.3)') '  k_x axis ', sb%klat(1,1)*units_out%length%factor
+      write(message(8),'(a,f8.3)') '  k_y axis ', sb%klat(2,2)*units_out%length%factor
+      write(message(9),'(a,f8.3)') '  k_z axis ', sb%klat(3,3)*units_out%length%factor
+      call write_info(9, iunit)
     end if
 
     call pop_sub()

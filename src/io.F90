@@ -359,10 +359,26 @@ contains
 
     call io_assign(iunit)
     open(unit=iunit, file=filename, iostat=err, action='read', status='old')
+
+    if(flush_messages.and.mpi_grp_is_root(mpi_world)) then
+      open(unit=iunit_out, file='messages.stdout', &
+        action='write', position='append')
+    end if
+
     do while(err == 0)
       read(iunit, fmt='(a80)', iostat=err) s
-      if(err==0) write(ounit, '(a)') s
+      if(err==0) then
+        write(ounit, '(a)') s
+        if(flush_messages.and.mpi_grp_is_root(mpi_world)) then
+          write(iunit_out, '(a)') s        
+        endif
+      end if
     end do
+    
+    if(flush_messages.and.mpi_grp_is_root(mpi_world)) then
+      close(iunit_out)
+    end if
+
     call io_close(iunit)
 
   end subroutine io_dump_file

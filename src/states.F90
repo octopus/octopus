@@ -745,6 +745,7 @@ contains
 
     integer ik, j, ns, is
     FLOAT :: o, oplus, ominus
+    character(len=80) tmp_str1, tmp_str2, tmp_str3
 
     ns = 1
     if(st%d%nspin == 2) ns = 2
@@ -760,23 +761,24 @@ contains
 
     do ik = 1, st%d%nik, ns
       if(st%d%nik > ns) then
-        write(iunit, '(a,i4,3(a,f12.6),a)') '#k =',ik,', k = (',  &
+        write(message(1), '(a,i4,3(a,f12.6),a)') '#k =',ik,', k = (',  &
            st%d%kpoints(1, ik)*units_out%length%factor, ',',           &
            st%d%kpoints(2, ik)*units_out%length%factor, ',',           &
            st%d%kpoints(3, ik)*units_out%length%factor, ')'
+        call write_info(1, iunit)
       end if
 
       do is = 1, ns
-        write(iunit, '(a4)', advance='no') '#st'
+        write(message(1), '(a4)') '#st'
         if(present(error)) then
-          write(iunit, '(1x,a12,3x,a12,2x,a10,i3,a1)', advance='no') &
+          write(message(2), '(1x,a12,3x,a12,2x,a10,i3,a1)') &
              ' Eigenvalue', 'Occupation ', 'Error (', is, ')'
         else
-          write(iunit, '(1x,a12,3x,a12,2x)', advance='no') &
+          write(message(2), '(1x,a12,3x,a12,2x)') &
              ' Eigenvalue', 'Occupation '
         end if
+        call write_info(2, iunit)
       end do
-      write(iunit, '(1x)', advance='yes')
 
       do j = 1, nst
         do is = 0, ns-1
@@ -791,30 +793,35 @@ contains
             end if
           end if
 
-          write(iunit, '(i4)', advance='no') j
+          write(tmp_str1, '(i4)') j
           if(simul_box_is_periodic(sb)) then
             if(st%d%ispin == SPINORS) then
-              write(iunit, '(1x,f12.6,3x,f5.2,a1,f5.2)', advance='no') &
+              write(tmp_str2, '(1x,f12.6,3x,f5.2,a1,f5.2)') &
                  (st%eigenval(j, ik)-st%ef)/units_out%energy%factor, oplus, '/', ominus
-              if(present(error)) write(iunit, '(a7,es7.1,a1)', advance='no')'      (', error(j, ik+is), ')'
+              if(present(error)) write(tmp_str3, '(a7,es7.1,a1)')'      (', error(j, ik+is), ')'
             else
-              write(iunit, '(1x,f12.6,3x,f12.6)', advance='no') &
+              write(tmp_str2, '(1x,f12.6,3x,f12.6)') &
                  (st%eigenval(j, ik+is))/units_out%energy%factor, o
-              if(present(error)) write(iunit, '(a7,es7.1,a1)', advance='no')'      (', error(j, ik), ')'
+              if(present(error)) write(tmp_str3, '(a7,es7.1,a1)')'      (', error(j, ik), ')'
             end if
           else
             if(st%d%ispin == SPINORS) then
-              write(iunit, '(1x,f12.6,3x,f5.2,a1,f5.2)', advance='no') &
+              write(tmp_str2, '(1x,f12.6,3x,f5.2,a1,f5.2)') &
                  st%eigenval(j, ik)/units_out%energy%factor, oplus, '/', ominus
-              if(present(error)) write(iunit, '(a7,es7.1,a1)', advance='no')'      (', error(j, ik+is), ')'
+              if(present(error)) write(tmp_str3, '(a7,es7.1,a1)')'      (', error(j, ik+is), ')'
             else
-              write(iunit, '(1x,f12.6,3x,f12.6)', advance='no') &
+              write(tmp_str2, '(1x,f12.6,3x,f12.6)') &
                  st%eigenval(j, ik+is)/units_out%energy%factor, o
-              if(present(error)) write(iunit, '(a7,es7.1,a1)', advance='no')'      (', error(j, ik), ')'
+              if(present(error)) write(tmp_str3, '(a7,es7.1,a1)')'      (', error(j, ik), ')'
             end if
           end if
+          if(present(error)) then
+            message(1) = trim(tmp_str1)//trim(tmp_str2)//trim(tmp_str3)
+          else
+            message(1) = trim(tmp_str1)//trim(tmp_str2)
+          end if
+          call write_info(1, iunit)
         end do
-        write(iunit, '(1x)', advance='yes')
       end do
     end do
 

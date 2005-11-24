@@ -547,6 +547,8 @@ subroutine mesh_partition(m, part)
     call io_close(iunit)
   end if
 
+  call MPI_Barrier(m%mpi_grp%comm, ierr)
+
   deallocate(xadj, adjncy)
   call pop_sub()
 

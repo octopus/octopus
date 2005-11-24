@@ -301,21 +301,23 @@ contains
       i = xc_info_kind(functl%info)
       select case(i)
       case(int(XC_EXCHANGE, POINTER_SIZE))
-        write(iunit, '(2x,a)') 'Exchange'
+        write(message(1), '(2x,a)') 'Exchange'
       case(int(XC_CORRELATION, POINTER_SIZE))
-        write(iunit, '(2x,a)') 'Correlation'
+        write(message(1), '(2x,a)') 'Correlation'
       case(int(XC_EXCHANGE_CORRELATION, POINTER_SIZE))
-        write(iunit, '(2x,a)') 'Exchange-correlation'
+        write(message(1), '(2x,a)') 'Exchange-correlation'
       end select
 
       call xc_info_name  (functl%info, s1)
       call xc_info_family(functl%info, s2)
-      write(iunit, '(4x,4a)') trim(s1), ' (', trim(s2), ')'
-
+      write(message(2), '(4x,4a)') trim(s1), ' (', trim(s2), ')'
+      call write_info(2, iunit)
+      
       i = 0; j = 1
       call xc_info_ref(functl%info, i, s1)
       do while(i>=0)
-        write(iunit, '(4x,a,i1,2a)') '[', j, '] ', trim(s1)
+        write(message(1), '(4x,a,i1,2a)') '[', j, '] ', trim(s1)
+        call write_info(1, iunit)
         call xc_info_ref(functl%info, i, s1)
         j = j + 1
       end do
@@ -325,14 +327,11 @@ contains
 
       select case(functl%id)
       case(XC_OEP_X)
-        write(iunit, '(2x,a)') 'Exchange'
+        write(message(1), '(2x,a)') 'Exchange'
+        write(message(2), '(4x,a)') 'Exact exchange (OEP)'
+        call write_info(2, iunit)
       end select
 
-      select case(functl%id)
-      case(XC_OEP_X)
-        s1 = 'Exact exchange'
-      end select
-      write(iunit, '(4x,2a)') trim(s1), ' (OEP)'
     end select
 
   end subroutine xc_functl_write_info
