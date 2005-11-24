@@ -270,7 +270,7 @@ contains
     self_consistent = .false.
     if(t<3*dt .and. (.not.h%ip_app)) then
       self_consistent = .true.
-      ALLOCATE(zpsi1(NP, st%d%dim, st%st_start:st%st_end, st%d%nik), NP*st%d%dim*(st%st_end-st%st_start+1)*st%d%nik)
+      ALLOCATE(zpsi1(NP_PART, st%d%dim, st%st_start:st%st_end, st%d%nik), NP_PART*st%d%dim*(st%st_end-st%st_start+1)*st%d%nik)
       zpsi1 = st%zpsi
     end if
 
@@ -294,14 +294,14 @@ contains
 
         call zstates_calc_dens(st, NP, st%rho)
         call zv_ks_calc(gr, ks, h, st)
-        tr%v_old(:, :, 0) = h%vhxc
-        h%vhxc = tr%v_old(:, :, 1)
+        tr%v_old(1:NP, :, 0) = h%vhxc  (1:NP, :)
+        h%vhxc  (1:NP, :)    = tr%v_old(1:NP, :, 1)
 
         d_max = M_ZERO
         ALLOCATE(dtmp(NP), NP)
         do is = 1, st%d%nspin
-          dtmp = tr%v_old(:, is, 3) - tr%v_old(:, is, 0)
-          d    = dmf_nrm2(gr%m, dtmp)
+          dtmp(1:NP) = tr%v_old(1:NP, is, 3) - tr%v_old(1:NP, is, 0)
+          d          = dmf_nrm2(gr%m, dtmp)
           if(d > d_max) d_max = d
         end do
         deallocate(dtmp)
@@ -318,6 +318,7 @@ contains
         case(MAGNUS);               call td_rti5
         end select
       end do
+
       deallocate(zpsi1)
     end if
 
