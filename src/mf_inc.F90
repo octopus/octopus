@@ -96,7 +96,7 @@ FLOAT function X(mf_nrm2)(m, f) result(nrm2)
   R_TYPE,          intent(in) :: f(:)
 
   call profiling_in(C_PROFILING_MF_NRM2)
-  call push_sub('mf_inc.Xmf_dotp')
+  call push_sub('mf_inc.Xmf_nrm2')
 
   nrm2 = sqrt(X(mf_dotp) (m, f, f))
 
@@ -114,7 +114,7 @@ function X(mf_moment) (m, f, i, n) result(r)
   integer,         intent(in) :: i, n
   R_TYPE                      :: r
 
-  call push_sub('mf_inc.Xmf_dotp')
+  call push_sub('mf_inc.Xmf_moment')
 
   if(m%parallel_in_domains) then
 #if defined(HAVE_MPI)
@@ -142,7 +142,7 @@ subroutine X(mf_random)(m, f)
   integer :: i
   FLOAT :: a(3), rnd, r
 
-  call push_sub('mf_inc.Xstates_random')
+  call push_sub('mf_inc.Xmf_random')
 
   call quickrnd(iseed, rnd)
   a(1) = M_TWO*(2*rnd - 1)
