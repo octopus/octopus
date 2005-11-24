@@ -299,7 +299,7 @@ contains
               if(.not.op%const_w) then
                 w_re_t(j, i) = M_HALF*w_re(j, i) - M_HALF*(vol_pp(index)/vol_pp(i))*w_re(l, index)
                 if (op%cmplx_op) &
-                  w_im_t(j, i) = M_HALF*w_im(j, i) - M_HALF*(vol_pp(index)/vol_pp(i))*w_im(l, index)
+                   w_im_t(j, i) = M_HALF*w_im(j, i) - M_HALF*(vol_pp(index)/vol_pp(i))*w_im(l, index)
               else
                 w_re_t(j, 1) = w_re(l, 1)
                 if (op%cmplx_op) w_im_t(j, 1) = w_im(l, 1)
@@ -820,35 +820,29 @@ contains
     type(nl_operator_type), intent(in)    :: op
     FLOAT,                  intent(out)   :: fo(:)  ! fo(op%np_part)
 
-    integer :: i, n
-    FLOAT, allocatable :: w_re(:)
+    integer :: ii, nn
 
     call profiling_in(C_PROFILING_NL_OPERATOR)
-
     call push_sub('nl_operator.dnl_operator_operate')
 
 #if defined(HAVE_MPI)
     if(op%m%parallel_in_domains) then
-      if(op%m%vp%p.ne.1) call dvec_ghost_update(op%m%vp, fi)
+      call dvec_ghost_update(op%m%vp, fi)
     end if
 #endif
 
-    n = op%n
+    nn = op%n
     if(op%const_w) then
-      ALLOCATE(w_re(n), n)
-      w_re(1:n) = op%w_re(1:n, 1)
-      do i = 1, op%np
-        fo(i) = sum(w_re(1:n)*fi(op%i(1:n,i)))
+      do ii = 1, op%np
+        fo(ii) = sum(op%w_re(1:nn, 1)  * fi(op%i(1:nn, ii)))
       end do
-      deallocate(w_re)
     else
-      do i = 1, op%np
-        fo(i) = sum(op%w_re(1:n,i)*fi(op%i(1:n,i)))
+      do ii = 1, op%np
+        fo(ii) = sum(op%w_re(1:nn, ii) * fi(op%i(1:nn, ii)))
       end do
     end if
 
     call pop_sub()
-
     call profiling_out(C_PROFILING_NL_OPERATOR)
 
   end subroutine dnl_operator_operate
@@ -860,37 +854,29 @@ contains
     type(nl_operator_type), intent(in)    :: op
     CMPLX,                  intent(out)   :: fo(:)  ! fo(op%np)
 
-    integer :: i, n
-    FLOAT, allocatable :: w_re(:)
+    integer :: ii, nn
 
     call profiling_in(C_PROFILING_NL_OPERATOR)
-
     call push_sub('nl_operator.znl_operator_operate')
 
 #if defined(HAVE_MPI)
     if(op%m%parallel_in_domains) then
-      if(op%m%vp%p.ne.1) call zvec_ghost_update(op%m%vp, fi)
+      call zvec_ghost_update(op%m%vp, fi)
     end if
 #endif
 
-    n = op%n
+    nn = op%n
     if(op%const_w) then
-      ALLOCATE(w_re(n), n)
-
-      w_re(1:n) = op%w_re(1:n, 1)
-
-      do i = 1, op%np
-        fo(i) = sum(  cmplx(  w_re(1:n)*real(fi(op%i(1:n,i))),  w_re(1:n)*aimag(fi(op%i(1:n, i))), PRECISION  )   )
+      do ii = 1, op%np
+        fo(ii) = sum(op%w_re(1:nn, 1)  * fi(op%i(1:nn, ii)))
       end do
-      deallocate(w_re)
     else
-      do i = 1, op%np
-        fo(i) = sum(  cmplx(  op%w_re(1:n, i)*real(fi(op%i(1:n,i))),  op%w_re(1:n, i)*aimag(fi(op%i(1:n, i))), PRECISION  )   )
+      do ii = 1, op%np
+        fo(ii) = sum(op%w_re(1:nn, ii) * fi(op%i(1:nn, ii)))
       end do
     end if
 
     call pop_sub()
-
     call profiling_out(C_PROFILING_NL_OPERATOR)
 
   end subroutine znl_operator_operate
@@ -904,11 +890,9 @@ contains
     type(nl_operator_type), intent(in)    :: op
     CMPLX,                  intent(out)   :: fo(:)  ! fo(op%np)
 
-    integer :: i, n
-    FLOAT, allocatable :: w_re(:), w_im(:)
+    integer :: ii, nn
 
     call profiling_in(C_PROFILING_NL_OPERATOR)
-
     call push_sub('nl_operator.znl_operator_operate_complex')
 
 #if defined(HAVE_MPI)
@@ -917,28 +901,18 @@ contains
     end if
 #endif
 
-    n = op%n
+    nn = op%n
     if(op%const_w) then
-      ALLOCATE(w_re(n), n)
-      ALLOCATE(w_im(n), n)
-
-      w_re(1:n) = op%w_re(1:n, 1)
-      w_im(1:n) = op%w_im(1:n, 1)
-
-      do i = 1, op%np
-        fo(i) = sum(  cmplx(  w_re(1:n)* real(fi(op%i(1:n,i))),  w_re(1:n)*aimag(fi(op%i(1:n, i))), PRECISION  )  ) &
-              + sum(  cmplx( -w_im(1:n)*aimag(fi(op%i(1:n,i))),  w_im(1:n)* real(fi(op%i(1:n, i))), PRECISION  )  )
+      do ii = 1, op%np
+        fo(ii) = sum(cmplx(op%w_re(1:nn, 1),  op%w_im(1:nn, 1))  * fi(op%i(1:nn, ii)))
       end do
-      deallocate(w_re, w_im)
     else
-      do i = 1, op%np
-        fo(i) = sum(  cmplx(  op%w_re(1:n, i)* real(fi(op%i(1:n,i))),  op%w_re(1:n, i)*aimag(fi(op%i(1:n, i))), PRECISION  )  )  &
-              + sum(  cmplx( -op%w_im(1:n, i)*aimag(fi(op%i(1:n,i))),  op%w_im(1:n, i)* real(fi(op%i(1:n, i))), PRECISION  )  )
+      do ii = 1, op%np
+        fo(ii) = sum(cmplx(op%w_re(1:nn, ii), op%w_im(1:nn, ii)) * fi(op%i(1:nn, ii)))
       end do
     end if
 
     call pop_sub()
-
     call profiling_out(C_PROFILING_NL_OPERATOR)
 
   end subroutine znl_operator_operate_cmplx
