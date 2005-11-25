@@ -107,7 +107,7 @@ subroutine X(input_function_global)(filename, m, f, ierr)
   function_kind = X(output_kind)*kind(f(1)) ! +4 for real, single; +8 for real, double;
   ! -4 for complex, single, -8 for real, double
 
-  select case(trim(get_extension(filename)))
+  select case(trim(io_get_extension(filename)))
   case("")
      call plain()
 #if defined(HAVE_NETCDF)

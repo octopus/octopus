@@ -32,18 +32,20 @@ module io
   implicit none
 
   private
-  public ::       &
-    io_workpath,  &
-    io_open,      &
-    io_mkdir,     &
-    io_init,      &
-    io_end,       &
-    io_status,    &
-    io_dump_file, &
-    io_free,      &
-    io_close,     &
-    io_assign,    &
-    get_extension
+  public ::              &
+    io_workpath,         &
+    io_open,             &
+    io_mkdir,            &
+    io_init,             &
+    io_end,              &
+    io_status,           &
+    io_dump_file,        &
+    io_free,             &
+    io_close,            &
+    io_assign,           &
+    io_get_extension,    &
+    io_debug_on_the_fly
+
 
   integer, parameter :: min_lun=10, max_lun=99
   logical            :: lun_is_free(min_lun:max_lun)
@@ -389,7 +391,7 @@ contains
   ! (that is, the part of the name that comes after its last point)
   ! If the filename does not have an extension, it returns the empty string.
   ! ---------------------------------------------------------
-  character(len=8) function get_extension(path) result(ext)
+  character(len=8) function io_get_extension(path) result(ext)
     character(len = * ), intent(in)  :: path
     integer :: i, j
 
@@ -400,6 +402,49 @@ contains
     else
       ext = path(i+1:)
     end if
-  end function get_extension
+  end function io_get_extension
+
+
+  ! check if debug mode should be enabled or disabled on the fly
+  subroutine io_debug_on_the_fly()
+
+    ! only root node performs the check
+    if(.not.mpi_grp_is_root(mpi_world)) return
+
+    if(io_file_exists('enable_debug_mode', 'Enabling DebugMode')) then
+      conf%debug_level = 100
+      in_debug_mode = .true.
+      ! this call does not hurt if the directory is already there
+      ! but is otherwise required
+      call io_mkdir('debug')
+      ! we have been notified by the user, so we can cleanup the file
+      call loct_rm( 'enable_debug_mode')
+      ! artificially increase sub stack to avoid underflow
+      no_sub_stack = no_sub_stack + 8
+    endif
+    if(io_file_exists('disable_debug_mode', 'Disabling DebugMode')) then
+      conf%debug_level = 0
+      in_debug_mode = .false.
+      ! we have been notified by the user, so we can cleanup the file
+      call loct_rm( 'disable_debug_mode')
+    endif
+
+  end subroutine io_debug_on_the_fly
+
+  
+  ! Returns true if a file with name 'filename' exists
+  ! and issues a reminder
+  logical function io_file_exists(filename, msg) result(file_exists)
+    character(len=*), intent(in)  :: filename, msg
+
+    file_exists = .false.
+    inquire(file=trim(filename), exist=file_exists)
+    if(file_exists) then
+      message(1) = trim(msg)
+      call write_warning(1)
+    end if
+
+    return
+  end function io_file_exists
 
 end module io

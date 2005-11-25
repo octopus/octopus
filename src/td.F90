@@ -261,6 +261,9 @@ contains
         call td_write_data(write_handler, gr, st, h, sys%outp, geo, td%dt, i)
       end if
 
+      ! check if debug mode should be enabled or disabled on the fly
+      call io_debug_on_the_fly()
+
       if (stopping) exit
     end do
 

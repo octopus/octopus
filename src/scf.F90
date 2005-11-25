@@ -381,6 +381,10 @@ contains
 
       if(clean_stop()) exit
 
+      ! check if debug mode should be enabled or disabled on the fly
+      call io_debug_on_the_fly()
+
+
       call profiling_out(C_PROFILING_SCF_CYCLE)
     end do
 
