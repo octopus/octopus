@@ -42,7 +42,9 @@ EOF
 RUN
 
 # Check if the ground state restart is OK
-Match ; Ground state restart ; grep -A 2 'Eigenvalues \[' static/info | tail -1 ; \s*-0.01407\d*\s*0.0000\d*\s*1\s*-0.08534\d*\s*1.0000\d*
+# Match ; Ground state restart ; grep -A 2 'Eigenvalues \[' static/info | tail -1 ; \s*-0.01407\d*\s*0.0000\d*\s*1\s*-0.08534\d*\s*1.0000\d*
+Match ; Ground state restart ; grep ' up' static/info ; \s*1\s*up\s*-0.01407\d*\s*0.0000\d*
+Match ; Ground state restart ; grep ' dn' static/info ; \s*1\s*dn\s*-0.08534\d*\s*1.0000\d* 
 
 
 # Start a time-dependent calculation

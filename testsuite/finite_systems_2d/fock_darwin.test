@@ -67,13 +67,13 @@ RUN
 
 # Match ; Eigenvalues ; grep -A 2 'Eigenvalues \[' static/info | tail -1 ; \s*-0.13735\d*\s*2.0000\d*
 
-Match ; Eigenvalue 1 ; grep -A 10 '^ #st   Eigenvalue' static/info | grep '^   1' ; \s*0.2502\d*\s*2.0000\d*
-Match ; Eigenvalue 1 ; grep -A 10 '^ #st   Eigenvalue' static/info | grep '^   2' ; \s*0.4904\d*\s*2.0000\d*
-Match ; Eigenvalue 1 ; grep -A 10 '^ #st   Eigenvalue' static/info | grep '^   3' ; \s*0.5104\d*\s*2.0000\d*
-Match ; Eigenvalue 1 ; grep -A 10 '^ #st   Eigenvalue' static/info | grep '^   4' ; \s*0.7305\d*\s*2.0000\d*
-Match ; Eigenvalue 1 ; grep -A 10 '^ #st   Eigenvalue' static/info | grep '^   5' ; \s*0.7505\d*\s*2.0000\d*
-Match ; Eigenvalue 1 ; grep -A 10 '^ #st   Eigenvalue' static/info | grep '^   6' ; \s*0.7705\d*\s*2.0000\d*
-Match ; Eigenvalue 1 ; grep -A 10 '^ #st   Eigenvalue' static/info | grep '^   7' ; \s*0.9707\d*\s*2.0000\d*
-Match ; Eigenvalue 1 ; grep -A 10 '^ #st   Eigenvalue' static/info | grep '^   8' ; \s*0.9907\d*\s*2.0000\d*
-Match ; Eigenvalue 1 ; grep -A 10 '^ #st   Eigenvalue' static/info | grep '^   9' ; \s*1.0107\d*\s*2.0000\d*
-Match ; Eigenvalue 1 ; grep -A 10 '^ #st   Eigenvalue' static/info | grep '^  10' ; \s*1.0307\d*\s*2.0000\d*
+Match ; Eigenvalue 1 ; grep -A 10 '^ #st  Spin   Eigenvalue' static/info | grep '^   1' ; \s*0.2502\d*\s*2.0000\d*
+Match ; Eigenvalue 1 ; grep -A 10 '^ #st  Spin   Eigenvalue' static/info | grep '^   2' ; \s*0.4904\d*\s*2.0000\d*
+Match ; Eigenvalue 1 ; grep -A 10 '^ #st  Spin   Eigenvalue' static/info | grep '^   3' ; \s*0.5104\d*\s*2.0000\d*
+Match ; Eigenvalue 1 ; grep -A 10 '^ #st  Spin   Eigenvalue' static/info | grep '^   4' ; \s*0.7305\d*\s*2.0000\d*
+Match ; Eigenvalue 1 ; grep -A 10 '^ #st  Spin   Eigenvalue' static/info | grep '^   5' ; \s*0.7505\d*\s*2.0000\d*
+Match ; Eigenvalue 1 ; grep -A 10 '^ #st  Spin   Eigenvalue' static/info | grep '^   6' ; \s*0.7705\d*\s*2.0000\d*
+Match ; Eigenvalue 1 ; grep -A 10 '^ #st  Spin   Eigenvalue' static/info | grep '^   7' ; \s*0.9707\d*\s*2.0000\d*
+Match ; Eigenvalue 1 ; grep -A 10 '^ #st  Spin   Eigenvalue' static/info | grep '^   8' ; \s*0.9907\d*\s*2.0000\d*
+Match ; Eigenvalue 1 ; grep -A 10 '^ #st  Spin   Eigenvalue' static/info | grep '^   9' ; \s*1.0107\d*\s*2.0000\d*
+Match ; Eigenvalue 1 ; grep -A 10 '^ #st  Spin   Eigenvalue' static/info | grep '^  10' ; \s*1.0307\d*\s*2.0000\d*

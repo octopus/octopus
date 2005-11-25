@@ -792,7 +792,7 @@ contains
 
           if(is.eq.0) cspin = 'up'
           if(is.eq.1) cspin = 'dn'
-          if(st%d%nspin.ne.2) cspin = '--'
+          if(st%d%ispin.eq.UNPOLARIZED.or.st%d%ispin.eq.SPINORS) cspin = '--'
 
           write(tmp_str(1), '(i4,3x,a2)') j, trim(cspin)
           if(simul_box_is_periodic(sb)) then
