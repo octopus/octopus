@@ -1108,7 +1108,7 @@ contains
     type(multicomm_type), intent(in)    :: mc
 
 #if defined(HAVE_MPI)
-    integer :: sn, sn1, r, j, k, ierr, i, ii
+    integer :: sn, sn1, r, j, k, ierr, i, ii, st_start, st_end
 #endif
 
     ! defaults
@@ -1130,20 +1130,25 @@ contains
         call write_fatal(2)
       end if
 
-      i = st%nst / st%mpi_grp%size
-      ii = st%nst - i*st%mpi_grp%size
-      if(ii > 0 .and. st%mpi_grp%rank < ii) then
-        i = i + 1
-        st%st_start = st%mpi_grp%rank*i + 1
-        st%st_end = st%st_start + i - 1
-      else
-        st%st_end = st%nst - (st%mpi_grp%size - st%mpi_grp%rank - 1)*i
-        st%st_start = st%st_end - i + 1
-      end if
-      call MPI_Barrier(st%mpi_grp%comm, i)
-      write(stdout, '(a,i4,a,i4,a,i4)') "Info: Node ", st%mpi_grp%rank, " will propagate state ", &
-        st%st_start, " - ", st%st_end
-      call MPI_Barrier(st%mpi_grp%comm, i)
+      do k = 0, st%mpi_grp%size-1
+        i = st%nst / st%mpi_grp%size
+        ii = st%nst - i*st%mpi_grp%size
+        if(ii > 0 .and. k < ii) then
+          i = i + 1
+          st_start = k*i + 1
+          st_end = st_start + i - 1
+        else
+          st_end = st%nst - (st%mpi_grp%size - k - 1)*i
+          st_start = st_end - i + 1
+        end if
+        write(message(1),'(a,i4,a,i4,a,i4)') 'Info: Nodes in states-group ', k,&
+                                             ' will manage states', st_start, " - ", st_end
+        call write_info(1)
+        if(st%mpi_grp%rank .eq. k) then
+          st%st_start = st_start
+          st%st_end = st_end
+        endif
+      end do
 
       sn  = st%nst/st%mpi_grp%size
       sn1 = sn + 1
