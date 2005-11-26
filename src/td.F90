@@ -22,6 +22,7 @@
 module timedep
   use global
   use messages
+  use profiling_mod
   use lib_oct
   use lib_oct_parser
   use geometry
@@ -164,6 +165,7 @@ contains
     etime = loct_clock()
     do i = td%iter, td%max_iter
       if(clean_stop()) stopping = .true.
+      call profiling_in(C_PROFILING_TIME_STEP)
       ! Move the ions.
       if( td%move_ions > 0 ) then
         select case(td%move_ions)
@@ -264,6 +266,7 @@ contains
       ! check if debug mode should be enabled or disabled on the fly
       call io_debug_on_the_fly()
 
+      call profiling_out(C_PROFILING_TIME_STEP)
       if (stopping) exit
     end do
 

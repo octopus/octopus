@@ -20,6 +20,7 @@
 #include "global.h"
 
 module restart
+  use lib_oct
   use lib_oct_parser
   use global
   use messages
@@ -58,14 +59,18 @@ contains
   ! returns true if a file named stop exists
   function clean_stop()
     logical clean_stop, file_exists
+    integer :: mpi_err
 
     clean_stop = .false.
     inquire(file='stop', exist=file_exists)
     if(file_exists) then
       message(1) = 'Clean STOP'
-      message(2) = "(don't forget to remove the file 'stop' ;)"
-      call write_warning(2)
+      call write_warning(1)
       clean_stop = .true.
+#if defined(HAVE_MPI)
+      call mpi_barrier(mpi_world%comm, mpi_err)
+#endif
+      call loct_rm('stop')
     end if
 
     return

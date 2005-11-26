@@ -56,7 +56,7 @@ module profiling_mod
 
   integer, parameter ::                &
     C_TAG_LENGTH = 17,                 & ! Max. number of characters of tag label.
-    C_NUM_TAGS   = 15                    ! Number of tags.
+    C_NUM_TAGS   = 16                    ! Number of tags.
 
   integer ::                           &
     pass_in(C_NUM_TAGS)           = 0, &
@@ -81,7 +81,8 @@ module profiling_mod
     C_PROFILING_VLPSI             = 12, &
     C_PROFILING_VNLPSI            = 13, &
     C_PROFILING_POISSON_SOLVE     = 14, &
-    C_PROFILING_XC                = 15
+    C_PROFILING_XC                = 15, &
+    C_PROFILING_TIME_STEP         = 16
 
   character(len=C_TAG_LENGTH), dimension(C_NUM_TAGS) :: tag_label = &
     (/                                 &
@@ -99,7 +100,8 @@ module profiling_mod
     'VLPSI            ',               &
     'VNLPSI           ',               &
     'POISSON_SOLVE    ',               &
-    'XC               '                &
+    'XC               ',               &
+    'TIME_STEP        '                &
     /)
 
 contains
@@ -120,7 +122,7 @@ contains
       call io_mkdir(trim('profiling.'//dirnum))
     end if
 #else
-    call io_mkdir('profiling.serial')
+    call io_mkdir('profiling.ser')
 #endif
 
     ! initialize counter
@@ -187,7 +189,7 @@ contains
     write(dirnum, '(i3.3)') mpi_world%size
 #else
     filenum = '000'
-    dirnum  = '001'
+    dirnum  = 'ser'
 #endif
 
     iunit = io_open('profiling.'//dirnum//'/profiling.'//filenum, action='write')
