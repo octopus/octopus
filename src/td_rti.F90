@@ -197,15 +197,13 @@ contains
     case(SPLIT_OPERATOR)
       call zcf_new(gr%m%l, tr%cf)
       call zcf_fft_init(tr%cf, gr%sb)
-      message(1) = 'Info: Evolution method:  Split-Operator'
     case(SUZUKI_TROTTER)
       call zcf_new(gr%m%l, tr%cf)
       call zcf_fft_init(tr%cf, gr%sb)
-      message(1) = 'Info: Evolution method:  Suzuki-Trotter'
-    case(REVERSAL);             message(1) = 'Info: Evolution method:  Enforced Time-Reversal Symmetry'
-    case(APP_REVERSAL);         message(1) = 'Info: Evolution method:  Approx.Enforced Time-Reversal Symmetry'
-    case(EXPONENTIAL_MIDPOINT); message(1) = 'Info: Evolution method:  Exponential Midpoint Rule.'
-    case(MAGNUS);               message(1) = 'Info: Evolution method:  Magnus expansion.'
+    case(REVERSAL)
+    case(APP_REVERSAL)
+    case(EXPONENTIAL_MIDPOINT)
+    case(MAGNUS)
       ALLOCATE(tr%vmagnus(NP, st%d%nspin, 2), NP*st%d%nspin*2)
     case default
       call input_error('TDEvolutionMethod')
