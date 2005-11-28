@@ -790,7 +790,7 @@ contains
     ALLOCATE(d(3, nspin), 3*nspin)
 
     do i = 1, time_steps
-      read(iunit, *) j, dump, dump, dump, d
+      read(iunit, *) j, dump, dump, d
       select case(sh%pol)
       case('x')
         dipole(i) = -sum(d(3, :))
