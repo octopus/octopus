@@ -236,18 +236,41 @@ contains
     ! Find out how many equivalent axis we have...
     ! WARNING: TODO: document this variable.
     call loct_parse_int(check_inp('TDPolarizationEquivAxis'), 0, k%pol_equiv_axis)
+
+    
+    !%Variable TDPolarizationDirection
+    !%Type integer
+    !%Default 1
+    !%Section Time Dependent
+    !%Description
+    !% Defines which one of the lines of <tt>TDPolarization</tt> to use for
+    !% the run. In a typical run (without using the symmetry), TDPolarization
+    !% would contain the three Cartesian unit vectors, and one would make 3 runs
+    !% varying <tt>TDPolarization</tt> from 1 to 3.
+    !%End
     call loct_parse_int(check_inp('TDPolarizationDirection'), 1, k%pol_dir)
 
     !%Variable TDPolarization
     !%Type block
     !%Section Time Dependent
     !%Description
-    !% The (real) polarization of the delta electric field. The format of the
-    !% block is:
+    !% The (real) polarization of the delta electric field. Normally
+    !% one needs three perpendicular polarization directions to calculate a
+    !% spectrum (unless symmetry is used).
+    !% The format of the block is:
     !%
     !% <tt>%TDPolarization
-    !% <br>&nbsp;&nbsp;polx | poly | polz
+    !% <br>&nbsp;&nbsp;pol1x | pol1y | pol1z
+    !% <br>&nbsp;&nbsp;pol2x | pol2y | pol2z
+    !% <br>&nbsp;&nbsp;pol3x | pol3y | pol3z
     !% <br>%</tt>
+    !%
+    !% Octopus uses both this block and the variable <tt>TDPolarizationDirection</tt>
+    !% to determine the polarization vevtor for the run. For example, if <tt>TDPolarizationDirection=2</tt>
+    !% the polarization <tt>(pol2x, pol2y, pol2z)</tt> would be used.
+    !%
+    !% The default value for <tt>TDPolarization</tt> are the three Cartesian unit vectors
+    !% (1,0,0), (0,1,0), and (0,0,1).
     !%End
     k%pol(:, :) = M_ZERO
     if(loct_parse_block(check_inp('TDPolarization'), blk)==0) then
@@ -263,12 +286,12 @@ contains
     else
       ! Here the symmetry of the system should be analized, and the polarization
       ! basis, built accordingly.
-      k%pol_dir = 1
       k%pol(1:3, 1) = (/ M_ONE, M_ZERO, M_ZERO /)
       k%pol(1:3, 2) = (/ M_ZERO, M_ONE, M_ZERO /)
       k%pol(1:3, 3) = (/ M_ZERO, M_ZERO, M_ONE /)
     end if
-    ! Normalize:
+
+    ! Normalize
     do i = 1, 3
       k%pol(1:3, i) = k%pol(1:3, i)/sqrt(sum(k%pol(1:3, i)**2))
     end do
@@ -317,11 +340,7 @@ contains
     call push_sub('spectrum.spectrum_cross_section_tensor')
 
     n_files = size(in_file)
-    select case(n_files)
-    case(1); equiv_axis = 3
-    case(2); equiv_axis = 2
-    case(3); equiv_axis = 1
-    end select
+    equiv_axis = 3 - n_files + 1
 
     call spectrum_cross_section_info(in_file(1), nspin, kick, energy_steps, dw)
     call spectrum_skip_header(in_file(1))
@@ -453,32 +472,25 @@ contains
     write(out_file, '(a15,3f18.12)') '# pol(1)       ', kick%pol(1:3, 1)
     write(out_file, '(a15,3f18.12)') '# pol(2)       ', kick%pol(1:3, 2)
     write(out_file, '(a15,3f18.12)') '# pol(3)       ', kick%pol(1:3, 3)
-    write(out_file, '(a15,i1)')      '# direction    ', kick%pol_dir
     write(out_file, '(a15,i1)')      '# kick mode    ', kick%delta_strength_mode
     write(out_file, '(a15,f18.12)')  '# kick strength', kick%delta_strength
     write(out_file, '(a15,i1)')      '# Equiv. axis  ', kick%pol_equiv_axis
     write(out_file, '(a15,3f18.12)') '# wprime       ', kick%wprime(1:3)
-    header_string = str_center("Energy", 20)
-    write(out_file, '(a20)', advance = 'no') header_string
-    header_string = str_center("(1/3)*Tr[sigma]", 20)
-    write(out_file, '(a20)', advance = 'no') header_string
-    header_string = str_center("Anisotropy[sigma]", 20)
-    write(out_file, '(a20)', advance = 'no') header_string
+    write(out_file, '(a1, a20)', advance = 'no') '#', str_center("Energy", 20)
+    write(out_file, '(a20)', advance = 'no') str_center("(1/3)*Tr[sigma]", 20)
+    write(out_file, '(a20)', advance = 'no') str_center("Anisotropy[sigma]", 20)
     do j = 1, nspin
       do i = 1, 3
         do k = 1, 3
           write(header_string,'(a6,i1,a1,i1,a1,i1,a1)') 'sigma(',i,',',k,',',j,')'
-          header_string = str_center(trim(header_string),20)
-          write(out_file, '(a20)', advance = 'no') header_string
+          write(out_file, '(a20)', advance = 'no') str_center(trim(header_string), 20)
         end do
       end do
     end do
     write(out_file, *)
-    header_string = str_center('['//trim(units_out%energy%abbrev) // ']',20)
-    write(out_file, '(a20)', advance = 'no') header_string
+    write(out_file, '(a1,a20)', advance = 'no') '#', str_center('['//trim(units_out%energy%abbrev) // ']', 20)
     do i = 1, 2+nspin*9
-      header_string = str_center('['//trim(units_out%length%abbrev) //'^2]',20)
-      write(out_file, '(a20)', advance = 'no') header_string
+      write(out_file, '(a20)', advance = 'no')  str_center('['//trim(units_out%length%abbrev) //'^2]', 20)
     end do
     write(out_file,*)
 
@@ -625,30 +637,24 @@ contains
     write(out_file, '(a15,f18.12)')  '# kick strength', kick%delta_strength
     write(out_file, '(a15,i1)')      '# Equiv. axis  ', kick%pol_equiv_axis
     write(out_file, '(a15,3f18.12)') '# wprime       ', kick%wprime(1:3)
-    header_string = str_center("Energy", 20)
-    write(out_file, '(a20)', advance = 'no') header_string
+    write(out_file, '(a1,a20)', advance = 'no') '#', str_center("Energy", 20)
     do j = 1, nspin
       do i = 1, 3
         write(header_string,'(a6,i1,a8,i1,a1)') 'sigma(',i,', nspin=',j,')'
-        header_string = str_center(trim(header_string),20)
-        write(out_file, '(a20)', advance = 'no') header_string
+        write(out_file, '(a20)', advance = 'no') str_center(trim(header_string), 20)
       end do
     end do
     do j = 1, nspin
-      write(header_string,'(a18,i1,a1)') 'StrengthFunction(',j,')'
-      header_string = str_center(trim(header_string),20)
-      write(out_file, '(a20)', advance = 'no') header_string
+      write(header_string,'(a18,i1,a1)') 'StrengthFunction(', j, ')'
+      write(out_file, '(a20)', advance = 'no') str_center(trim(header_string), 20)
     end do
     write(out_file, *)
-    header_string = str_center('['//trim(units_out%energy%abbrev) // ']',20)
-    write(out_file, '(a20)', advance = 'no') header_string
+    write(out_file, '(a1,a20)', advance = 'no') '#', str_center('['//trim(units_out%energy%abbrev) // ']', 20)
     do i = 1, nspin*3
-      header_string = str_center('['//trim(units_out%length%abbrev) //'^2]',20)
-      write(out_file, '(a20)', advance = 'no') header_string
+      write(out_file, '(a20)', advance = 'no') str_center('['//trim(units_out%length%abbrev) //'^2]', 20)
     end do
     do i = 1, nspin
-      header_string = str_center('[1/'//trim(units_out%energy%abbrev) //']',20)
-      write(out_file, '(a20)', advance = 'no') header_string
+      write(out_file, '(a20)', advance = 'no') str_center('[1/'//trim(units_out%energy%abbrev) //']',20)
     end do
     write(out_file,*)
 
