@@ -98,7 +98,7 @@ contains
     !% the evolution operator (<tt>TDEvolutionMethod = 0</tt>), a different procedure is taken -- it
     !% will be described below --, and in fact the variable <tt>TDExponentialMethod</tt> has no
     !% effect at all.
-    !%Option suzuki-trotter 1
+    !%Option suzuki_trotter 1
     !% This is a higher-order SO based algorithm. See O. Sugino and Y. Miyamoto,
     !% Phys. Rev. B <b>59</b>, 2579 (1999). Allows for larger time-steps,
     !% but requires five times more time than the normal SO.

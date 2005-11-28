@@ -24,9 +24,9 @@
 %}
 
 %union {
-	gsl_complex val;  /* For returning numbers.               */
-	char *str;        /* For strings                          */
-	symrec  *tptr;    /* For returning symbol-table pointers  */
+  gsl_complex val;  /* For returning numbers.               */
+  char *str;        /* For strings                          */
+  symrec  *tptr;    /* For returning symbol-table pointers  */
 }
 
 %token <val>  NUM        /* Simple complex number   */
@@ -50,15 +50,15 @@ input:   /* empty */
 ;
      
 line:
-	'\n'
-	| exp '\n'   { par_res.value.c = $1; par_res.type = PR_CMPLX; YYACCEPT;}
+  '\n'
+  | exp '\n'   { par_res.value.c = $1; par_res.type = PR_CMPLX; YYACCEPT;}
   | string '\n'{ par_res.value.s = $1; par_res.type = PR_STR;   YYACCEPT;}
   | error '\n' { yyerrok; YYABORT;}
 ;
      
 exp: NUM               { $$ = $1;                         }
-  | VAR                { $$ = $1->value.c;                }
-  | VAR '=' exp        { $$ = $3; $1->value.c = $3; $1->type = S_CMPLX;}
+  | VAR                { if(!$1->def) sym_notdef($1); $$ = $1->value.c; }
+  | VAR '=' exp        { $$ = $3; $1->value.c = $3; $1->def = 1; $1->type = S_CMPLX;}
   | FNCT '(' exp ')'   { $$ = (*($1->value.fnctptr))($3); }
   | exp '+' exp        { $$ = gsl_complex_add($1, $3);    }
   | exp '-' exp        { $$ = gsl_complex_sub($1, $3);    }
@@ -70,6 +70,6 @@ exp: NUM               { $$ = $1;                         }
   | '(' exp ')'        { $$ = $2;                         }
 
 string: STR            { $$ = $1; }
-  | VAR '=' STR        { $$ = $3; $1->value.str = $3; $1->type = S_STR; }
+  | VAR '=' STR        { $$ = $3; $1->value.str = $3; $1->def = 1; $1->type = S_STR; }
 ;
 %%

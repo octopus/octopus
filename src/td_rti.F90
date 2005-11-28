@@ -139,7 +139,7 @@ contains
     !% same that the one that we would have by making use of the Exponential Midpoint Rule
     !% (EM, described below), the SO algorithm to calculate the action of the 
     !% exponential of the Hamiltonian, and a full self-consistent procedure.
-    !%Option suzuki-trotter 1
+    !%Option suzuki_trotter 1
     !% This is the generalization of the Suzuki-Trotter algorithm, described
     !% as one of the choices of the <tt>TDExponentialMethod</tt>,
     !% to time-dependent problem. Consult the paper by O. Sugino and M. Miyamoto,

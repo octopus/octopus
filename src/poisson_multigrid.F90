@@ -134,9 +134,9 @@ contains
     !% Method used to solve the linear system approximately in each grid for the
     !% multigrid procedure that solve Poisson equation. For the moment, the option
     !% conjugate gradients is experimental. 
-    !%Option gauss-seidel 1
+    !%Option gauss_seidel 1
     !% Gauss-Seidel
-    !%Option gauss-jacobi 2
+    !%Option gauss_jacobi 2
     !% Gauss-Jacobi
     !%Option cg 5
     !% Conjugate-gradients
