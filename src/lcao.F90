@@ -210,7 +210,9 @@ contains
       if(associated(lcao_data%v     )) deallocate(lcao_data%v)
     endif
 
-    call states_end(lcao_data%st)
+    if(associated(lcao_data%st%X(psi))) then
+      deallocate(lcao_data%st%X(psi)); nullify(lcao_data%st%X(psi))
+    end if
 
     lcao_data%state = 0
     call pop_sub()
