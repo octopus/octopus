@@ -1,7 +1,7 @@
 # $Id$
 
 EXTRA_PROGRAMS = oct-cross-section oct-rsf oct-harmonic-spectrum \
-                 oct-broad oct-ph oct-xyz-anim oct-make-st oct-center-geom
+                 oct-broad oct-ph oct-xyz-anim oct-center-geom
 
 bin_PROGRAMS = octopus @UTILITY_PROGRAMS@
 
