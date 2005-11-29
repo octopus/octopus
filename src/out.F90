@@ -202,7 +202,7 @@ contains
       !% The output can also be used to display the mesh directly. A gnuplot script for mesh vizualization
       !% can be found under <tt>PREFIX/share/octopus/util/display_mesh_index.gp</tt>
       !%Option gnuplot 1024
-      !% Adds newlines to the plane cuts, so that gnuplot can print then in 3D
+      !% Adds newlines to the plane cuts, so that gnuplot can print them in 3D
       !%End
       call loct_parse_int(check_inp('OutputHow'), 0, outp%how)
       if(.not.varinfo_valid_option('OutputHow', outp%how, is_flag=.true.)) then
@@ -210,7 +210,7 @@ contains
       end if
 
       ! some modes are not available in some circunstances, so we reset outp%how
-      if(sb%dim == 1) outp%how = iand(outp%how, not(output_axis_y + output_plane_z + output_gnuplot))
+      if(sb%dim == 1) outp%how = iand(outp%how, not(output_axis_y + output_plane_z))
       if(sb%dim <= 2) outp%how = iand(outp%how, not(output_axis_z + output_plane_x + output_plane_y + &
          output_dx + output_dx_cdf))
 #if !defined(HAVE_NETCDF)

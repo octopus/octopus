@@ -381,12 +381,15 @@ subroutine X(output_function_global) (how, dir, fname, m, sb, f, u, ierr)
     mfmtheader = '(a,a7,5a15)'
 #else
     mformat    = '(4es23.14)'
-!    mformat2   = '(i4,5es23.14)'
     mformat2   = '(i4,5es34.24)'
     mfmtheader = '(a,a10,5a23)'
 #endif
 
-  if(iand(how, output_gnuplot)   .ne.0) gnuplot_mode = .true.
+  if(iand(how, output_gnuplot)   .ne.0) then
+    gnuplot_mode = .true.
+    mformat    = '(4f23.14)'
+    mformat2   = '(i4,5f34.24)'
+  end if
   if(iand(how, output_plain)     .ne.0) call plain()
   if(iand(how, output_axis_x)    .ne.0) call axis_x()
   if(iand(how, output_axis_y)    .ne.0) call axis_y()
