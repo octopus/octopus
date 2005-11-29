@@ -23,13 +23,14 @@ module string
   implicit none
 
   private
-  public ::        &
-    upcase,        &
-    lowcase,       &
-    compact,       &
-    str_trim,      &
-    str_center,    &
-    print_C_string
+  public ::          &
+    upcase,          &
+    lowcase,         &
+    compact,         &
+    str_trim,        &
+    str_center,      &
+    print_C_string,  &
+    conv_to_C_string 
 
 contains
 
@@ -167,5 +168,17 @@ contains
       end if
     end do
   end subroutine print_C_string
+
+  ! ---------------------------------------------------------
+  ! converts to c string
+  subroutine conv_to_C_string(str)
+    character(len=*), intent(out) :: str
+    
+    integer :: j
+
+    j = len(trim(str))
+    str(j+1:j+1) = achar(0) 
+  end subroutine conv_to_C_string
+
 
 end module string
