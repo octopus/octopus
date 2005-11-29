@@ -72,10 +72,6 @@ oct_broad_LDADD = $(core_LIBS)
 oct_ph_SOURCES = $(basic_SRCS) phonon_spectrum.F90
 oct_ph_LDADD = $(core_LIBS)
 
-oct_make_st_SOURCES = $(core_SRCS) lasers.F90 epot.F90 h.F90 linear_response.F90 \
-	xc_OEP.F90 v_ks.F90 systm.F90 make_st.F90
-oct_make_st_LDADD = $(octopus_LDADD)
-
 oct_center_geom_SOURCES = $(core_SRCS) xyz_adjust.F90 centergeom.F90
 oct_center_geom_LDADD = $(octopus_LDADD)
 
@@ -163,7 +159,6 @@ linalg_basic.o: global.h linalg_basic_blas.F90 linalg_basic_int.F90
 linear_response.o: global.h linear_response_inc.F90
 logrid.o: global.h
 main.o: global.h
-make_st.o: global.h
 math.o: global.h math_cg_inc.F90 math_inc.F90
 mesh.o: global.h mesh_init.F90
 mesh_lib.o: global.h
