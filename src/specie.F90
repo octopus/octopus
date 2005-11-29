@@ -21,6 +21,7 @@
 
 module specie
   use global
+  use string
   use mpi_mod
   use messages
   use syslabels
@@ -340,7 +341,7 @@ contains
     integer, intent(in) :: row
     type(specie_type),     intent(inout) :: s
     integer, intent(out) :: read_data
-    integer :: j, n, lmax, lloc
+    integer :: n, lmax, lloc
 
     call push_sub('specie.read_from_block')
 
@@ -353,9 +354,7 @@ contains
     case(SPEC_USDEF) ! user defined
       call loct_parse_block_float (blk, row, 3, s%Z_val)
       call loct_parse_block_string(blk, row, 4, s%user_def)
-      ! convert to C string
-      j = len(trim(s%user_def))
-      s%user_def(j+1:j+1) = achar(0)
+      call conv_to_C_string(s%user_def)
       read_data = 5
 
     case(SPEC_POINT) ! this is treated as a jellium with radius 0.5
@@ -367,7 +366,7 @@ contains
     case(SPEC_JELLI)
       call loct_parse_block_float(blk, row, 3, s%Z)      ! charge of the jellium sphere
       call loct_parse_block_float(blk, row, 4, s%jradius)! radius of the jellium sphere
-      s%jradius = units_inp%length%factor * s%jradius ! units conversion
+      s%jradius = units_inp%length%factor * s%jradius    ! units conversion
       s%Z_val = s%Z
       read_data = 5
 
@@ -426,6 +425,7 @@ contains
     integer,           intent(in)    :: ispin
 
     integer :: i, l
+    FLOAT   :: pot_re, pot_im
 
     call push_sub('specie.specie_init')
 
@@ -443,17 +443,20 @@ contains
       s%niwfs = 0
       do i = 1, s%ps%conf%p
         l = s%ps%conf%l(i)
-        !The next commented line assumed that we only want the shells that had some 
-        !occupation. I am not sure of what is best, for the moment I will assume that
-        !we will use all the shells, so that the LCAO basis will be larger.
-        !if(sum(s%ps%conf%occ(i, :)).ne.M_ZERO) s%niwfs = s%niwfs + (2*l+1)
+        ! The next commented line assumed that we only want the shells 
+        ! that had some occupation. I am not sure of what is best, for 
+        ! the moment I will assume that we will use all the shells, so 
+        ! that the LCAO basis will be larger. 
+        ! if(sum(s%ps%conf%occ(i, :)).ne.M_ZERO) s%niwfs = s%niwfs + (2*l+1)
         s%niwfs = s%niwfs + (2*l+1)
       end do
     else
       s%niwfs = 2*s%z_val
-      s%omega = sqrt( abs(M_TWO / CNST(1.0e-4) &
-        * loct_parse_potential(CNST(0.01), M_ZERO, M_ZERO, CNST(0.01), s%user_def) ) )
-      if(s%omega <= M_ZERO) s%omega = CNST(0.1) ! To avoid problems with constant potentials.
+      call loct_parse_expression(pot_re, pot_im, CNST(0.01), M_ZERO,   &
+        M_ZERO, CNST(0.01), s%user_def)
+      s%omega = sqrt( abs(M_TWO / CNST(1.0e-4) * pot_re ))
+      ! To avoid problems with constant potentials.
+      if(s%omega <= M_ZERO) s%omega = CNST(0.1) 
     end if
 
     ALLOCATE(s%iwf_l(s%niwfs, ispin), s%niwfs*ispin)
@@ -494,14 +497,16 @@ contains
     FLOAT,             intent(in) :: x(3)
 
     FLOAT :: a1, a2, Rb2 ! for jellium
-    FLOAT :: xx(3), r
+    FLOAT :: xx(3), r, pot_re, pot_im
 
     xx(:) = x(:)
     r = sqrt(sum(xx(:)**2))
 
     select case(s%type)
     case(SPEC_USDEF)
-      l = loct_parse_potential(xx(1), xx(2), xx(3), r, s%user_def)
+      call loct_parse_expression(                            &
+        pot_re, pot_im, xx(1), xx(2), xx(3), r, s%user_def)
+      l = pot_re 
 
     case(SPEC_POINT, SPEC_JELLI)
       a1 = s%Z/(M_TWO*s%jradius**3)
@@ -530,7 +535,7 @@ contains
     FLOAT, intent(out) :: gv(:)
 
     FLOAT, parameter :: Delta = CNST(1e-4)
-    FLOAT :: xx(3), r, l1, l2
+    FLOAT :: xx(3), r, l1, l2, pot_re, pot_im
     integer :: i
 
     gv = M_ZERO
@@ -543,9 +548,13 @@ contains
       do i = 1, 3
         xx(:) = x(:)
         xx(i) = xx(i) - Delta
-        l1 = loct_parse_potential(xx(1), xx(2), xx(3), sqrt(sum(xx(:)**2)), s%user_def)
+        call loct_parse_expression(pot_re, pot_im,           &
+          xx(1), xx(2), xx(3), sqrt(sum(xx(:)**2)), s%user_def)
+        l1 = pot_re 
         xx(i) = xx(i) + M_TWO*Delta
-        l2 = loct_parse_potential(xx(1), xx(2), xx(3), sqrt(sum(xx(:)**2)), s%user_def)
+        call loct_parse_expression(pot_re, pot_im,           &
+          xx(1), xx(2), xx(3), sqrt(sum(xx(:)**2)), s%user_def)
+        l2 = pot_re 
         gv(i) = (l2 - l1)/(M_TWO*Delta)
       end do
 

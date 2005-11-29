@@ -49,7 +49,7 @@ module lib_oct_parser
     loct_parse_block_cmplx,   &
     loct_parse_block_string,  &
     loct_parse_block_logical, &
-    loct_parse_potential
+    loct_parse_expression
 
   interface loct_parse_init
     integer function oct_parse_init(file_out, mpiv_node)
@@ -180,13 +180,13 @@ module lib_oct_parser
     end subroutine oct_parse_block_string
   end interface
 
-  interface loct_parse_potential
-    function oct_parse_potential(x, y, z, r, pot)
-      real(8) :: oct_parse_potential
-      real(8), intent(in) :: x, y, z, r
+  interface loct_parse_expression
+    subroutine oct_parse_expression(re, im, x, y, z, r, pot)
+      real(8), intent(in)  :: x, y, z, r
+      real(8), intent(out) :: re, im
       character(len=*), intent(in) :: pot
-    end function oct_parse_potential
-    module procedure oct_parse_potential4
+    end subroutine oct_parse_expression
+    module procedure oct_parse_expression4
   end interface
 
 contains
@@ -332,13 +332,13 @@ contains
 
 
   ! ---------------------------------------------------------
-  real(4) function oct_parse_potential4(x4, y4, z4, r4, pot)
-    real(4), intent(in) :: x4, y4, z4, r4
+  subroutine oct_parse_expression4(re, im, x4, y4, z4, r4, pot)
+    real(4), intent(in)  :: x4, y4, z4, r4
+    real(8), intent(out) :: re, im
     character(len=*), intent(in) :: pot
 
-    real(8) :: res
-    res = oct_parse_potential(real(x4, 8), real(y4, 8), real(z4, 8), real(r4, 8), pot)
-    oct_parse_potential4 = real(res, 4)
-  end function oct_parse_potential4
+    call oct_parse_expression(re, im, real(x4, 8), real(y4, 8), &
+      real(z4, 8), real(r4, 8), pot)
+  end subroutine oct_parse_expression4
 
 end module lib_oct_parser

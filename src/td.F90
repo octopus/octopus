@@ -318,6 +318,13 @@ contains
 
           ierr = 1
         end if
+
+        ! check if we should deploy user defined wavefunctions. 
+        ! according to the settings in the input file the routine 
+        ! overwrites orbitals that were read from restart_gs 
+        if(loct_parse_isdef(check_inp('UserDefinedStates')).ne.0) then
+          call states_read_user_def_orbitals(gr%m, st)
+        end if
       end if
 
       if(ierr==0) then

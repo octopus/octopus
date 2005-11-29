@@ -22,6 +22,7 @@
 module states
   use global
   use varinfo
+  use string
   use messages
   use syslabels
   use lib_oct
@@ -49,6 +50,7 @@ module states
     states_type,                    &
     states_dim_type,                &
     states_init,                    &
+    states_read_user_def_orbitals,  &
     states_densities_init,          &
     states_null,                    &
     states_end,                     &
@@ -65,7 +67,9 @@ module states
     states_magnetic_moment,         &
     states_local_magnetic_moments,  &
     states_calc_physical_current,   &
-    kpoints_write_info,             &
+    kpoints_write_info
+
+  public ::                         &
     dstates_calc_dens,              &
     zstates_calc_dens,              &
     dstates_gram_schmidt,           &
@@ -74,6 +78,8 @@ module states
     zstates_dotp,                   &
     dstates_nrm2,                   &
     zstates_nrm2,                   &
+    dstates_normalize_orbital,      &
+    zstates_normalize_orbital,      &
     dstates_residue,                &
     zstates_residue,                &
     dstates_output,                 &
@@ -89,9 +95,12 @@ module states
     type(states_dim_type), pointer :: d
     integer :: nst                  ! Number of states in each irreducible subspace
 
-    ! pointers to the wavefunctions
-    FLOAT, pointer :: dpsi(:,:,:,:)
-    CMPLX, pointer :: zpsi(:,:,:,:)
+    ! pointers to the wavefunctions 
+    FLOAT, pointer :: dpsi(:,:,:,:) ! dpsi(sys%NP_PART, st%d%dim, st%nst, st%d%nik)
+    CMPLX, pointer :: zpsi(:,:,:,:) ! zpsi(sys%NP_PART, st%d%dim, st%nst, st%d%nik)
+
+    ! used for the user defined wavefunctions (they are stored as formula strings)
+    character(len=1024), pointer :: user_def_states(:,:,:) ! (st%d%dim, st%nst, st%d%nik)
 
     ! the densities and currents (after all we are doing DFT :)
     FLOAT, pointer :: rho(:,:)
@@ -100,7 +109,7 @@ module states
     FLOAT, pointer :: rho_core(:)   ! core charge for nl core corrections
 
     FLOAT, pointer :: eigenval(:,:) ! obviously the eigenvalues
-    logical           :: fixed_occ  ! should the occupation numbers be fixed?
+    logical        :: fixed_occ     ! should the occupation numbers be fixed?
     FLOAT, pointer :: occ(:,:)      ! the occupation numbers
     FLOAT, pointer :: mag(:, :, :)
 
@@ -287,9 +296,14 @@ contains
     ! we now allocate some arrays
     ALLOCATE(st%occ     (st%nst, st%d%nik), st%nst*st%d%nik)
     ALLOCATE(st%eigenval(st%nst, st%d%nik), st%nst*st%d%nik)
+    ! allocate space for formula strings that define user defined states
+    ALLOCATE(st%user_def_states(st%d%dim, st%nst, st%d%nik), st%d%dim*st%nst*st%d%nik)
     if(st%d%ispin == SPINORS) then
       ALLOCATE(st%mag(st%nst, st%d%nik, 2), st%nst*st%d%nik*2)
     end if
+
+    ! initially we mark all 'formulas' as undefined
+    st%user_def_states(:, :, :) = 'undefined'
 
     !%Variable Occupations
     !%Type block
@@ -370,6 +384,105 @@ contains
 
     call pop_sub()
   end subroutine states_init
+
+
+  ! ---------------------------------------------------------
+  ! the routine reads formulas for user defined wavefunctions 
+  ! from the input file and fills the respective orbitals
+  subroutine states_read_user_def_orbitals(mesh, st)
+    type(mesh_type),      intent(in) :: mesh
+    type(states_type), intent(inout) :: st    
+
+    
+    integer(POINTER_SIZE) :: blk
+    integer :: ip, id, is, ik, nstates
+    integer :: ib, idim, inst, inik
+    FLOAT   :: x(3), r, psi_re, psi_im
+
+    call push_sub('td.read_user_def_states')
+
+    !%Variable UserDefinedStates
+    !%Type block
+    !%Section States
+    !%Description
+    !% Instead of using the ground state as initial state for
+    !% time propagations it might be interesting in some cases 
+    !% to specify alternative states. Similar to user defined
+    !% potentials this block allows to specify formulas for
+    !% the orbitals at t=0.
+    !%
+    !% Example:
+    !%
+    !% <tt>%UserDefinedStates
+    !% <br>&nbsp;&nbsp; 1 | 1 | 1 |  "exp(-r^2)*exp(-i*0.2*x)"
+    !% <br>%</tt>
+    !%
+    !% The first column specifies the component of the spinor, 
+    !% the second column the number of the state and the third 
+    !% contains kpoint and spin quantum numbers. Finally column 
+    !% four contains a formula for the correspondig orbital.
+    !% 
+    !% Octopus reads first the ground state orbitals from
+    !% the restart_gs directory. Only the states that are
+    !% specified in the above block will be overwritten with
+    !% the given analytical expression for the orbital.
+    !%
+    !%End
+    if(loct_parse_block(check_inp('UserDefinedStates'), blk) == 0) then
+
+      ! find out how many lines (i.e. states) the block has
+      nstates = loct_parse_block_n(blk)
+
+      ! read all lines
+      do ib = 1, nstates
+        call loct_parse_block_int(blk, ib-1, 0, idim)
+        call loct_parse_block_int(blk, ib-1, 1, inst)
+        call loct_parse_block_int(blk, ib-1, 2, inik)
+
+        ! read formula strings and convert to C strings
+        do id = 1, st%d%dim
+          do is = 1, st%nst
+            do ik = 1, st%d%nik   
+
+              ! does the block entry match and is this node responsible?
+              if(.not.(id.eq.idim .and. is.eq.inst .and. ik.eq.inik    &
+                .and. st%st_start.le.is .and. st%st_end.ge.is) ) cycle
+
+              ! parse formula string
+              call loct_parse_block_string(                            &
+                blk, ib-1, 3, st%user_def_states(id, is, ik))
+              ! convert to C string
+              call conv_to_C_string(st%user_def_states(id, is, ik))
+
+              ! fill states with user defined formulas
+              do ip = 1, mesh%np
+                x = mesh%x(ip, :)
+                r = sqrt(sum(x(:)**2))
+
+                ! parse user defined expressions
+                call loct_parse_expression(psi_re, psi_im,             &
+                  x(1), x(2), x(3), r, st%user_def_states(id, is, ik))
+                ! fill state
+                st%zpsi(ip, id, is, ik) = psi_re + M_zI*psi_im
+              end do
+
+              ! normalize orbital
+              call zstates_normalize_orbital(mesh, st%d%dim, st%zpsi(:,:, is, ik))
+
+            end do
+          end do
+        end do
+
+      end do
+      call loct_parse_block_end(blk)
+
+    else
+      message(1) = '"UserDefinesStates" has to be specified as block.'
+      call write_fatal(1)
+    end if
+
+    call pop_sub()
+  end subroutine states_read_user_def_orbitals
 
 
   ! ---------------------------------------------------------
@@ -508,6 +621,10 @@ contains
 
     if(associated(st%d%kweights)) then
       deallocate(st%d%kweights); nullify(st%d%kweights)
+    end if
+
+    if(associated(st%user_def_states)) then
+      deallocate(st%user_def_states); nullify(st%user_def_states)
     end if
 
     call pop_sub()

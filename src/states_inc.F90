@@ -135,6 +135,18 @@ end function X(states_dotp)
 
 
 ! ---------------------------------------------------------
+subroutine X(states_normalize_orbital)(m, dim, psi)
+  type(mesh_type), intent(in) :: m
+  integer,         intent(in) :: dim
+  R_TYPE,  intent(out) :: psi(:,:)
+  FLOAT :: norm
+
+  norm = X(states_nrm2) (m, dim, psi)
+  psi = psi/sqrt(norm)
+end subroutine X(states_normalize_orbital)
+
+
+! ---------------------------------------------------------
 FLOAT function X(states_nrm2)(m, dim, f) result(nrm2)
   type(mesh_type), intent(in) :: m
   integer,         intent(in) :: dim

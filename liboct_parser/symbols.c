@@ -143,15 +143,22 @@ static struct init_fntc arith_fncts[] = {
 };
 
 struct init_cnst{
-  char *fname;
-  double c;
+	char *fname;
+	double re;
+	double im;
 };
 
 static struct init_cnst arith_cnts[] = {
-  {"pi",    M_PI}, {"e",     M_E},
-  {"true",  1}, {"t", 1}, {"yes", 1},
-  {"false", 0}, {"f", 0}, {"no",  0},
-  {0, 0}
+	{"pi",    M_PI, 0}, 
+	{"e",      M_E, 0},
+	{"i",        0, 1},
+	{"true",     1, 0}, 
+	{"t",        1, 0}, 
+	{"yes",      1, 0},
+	{"false",    0, 0}, 
+	{"f",        0, 0}, 
+	{"no",       0, 0},
+	{0,          0, 0}
 };
 
 static char *reserved_symbols[] = {
@@ -172,7 +179,7 @@ void sym_init_table ()  /* puts arithmetic functions in table. */
   for (i = 0; arith_cnts[i].fname != 0; i++){
     ptr = putsym(arith_cnts[i].fname, S_CMPLX);
     ptr->def = 1;
-    GSL_SET_COMPLEX(&ptr->value.c, arith_cnts[i].c, 0);
+    GSL_SET_COMPLEX(&ptr->value.c, arith_cnts[i].re, arith_cnts[i].im);
   }
 }
 
