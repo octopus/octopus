@@ -528,15 +528,16 @@ contains
       sub_stack(no_sub_stack)  = trim(sub_name)
       time_stack(no_sub_stack) = loct_clock()
 
-      call open_debug_trace(iunit)
-      call push_sub_write(iunit)
+      if(conf%debug_level.ge.100) then
+        call open_debug_trace(iunit)
+        call push_sub_write(iunit)
+        ! close file to ensure flushing
+        close(iunit)
+      end if
 
       ! also write to stderr if we are node 0
       if (mpi_grp_is_root(mpi_world)) call push_sub_write(stderr)
-
-      ! close file to ensure flushing
-      close(iunit)
-
+      
     end if
 
     return
@@ -571,14 +572,16 @@ contains
     call epoch_time_diff(sec, usec)
 
     if(no_sub_stack > 0) then
-      call open_debug_trace(iunit)
-      call pop_sub_write(iunit)
 
+      if(conf%debug_level.ge.100) then
+        call open_debug_trace(iunit)
+        call pop_sub_write(iunit)
+        ! close file to ensure flushing
+        close(iunit)
+      end if
+      
       ! also write to stderr if we are node 0
       if (mpi_grp_is_root(mpi_world)) call pop_sub_write(stderr)
-
-      ! close file to ensure flushing
-      close(iunit)
 
       no_sub_stack = no_sub_stack - 1
     else
