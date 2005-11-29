@@ -343,7 +343,7 @@ contains
       if( i <= n/2 + 1 ) then
         pad_feq = i - 1
       else
-        pad_feq = i - n -1
+        pad_feq = i - n - 1
       end if
     else
       if( i >= 0 ) then

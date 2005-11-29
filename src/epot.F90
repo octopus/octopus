@@ -399,9 +399,9 @@ contains
 
       call dcf_alloc_FS(cf)      ! allocate the tube in Fourier space
 
-      norm = M_FOUR*M_PI/m%vol_pp(1)
+      norm    = M_FOUR*M_PI/m%vol_pp(1)
       temp(:) = M_TWO*M_PI/(db(:)*m%h(:))
-      cf%FS = M_Z0
+      cf%FS   = M_Z0
       do ix = 1, cf%nx
         ixx(1) = pad_feq(ix, db(1), .true.)
         do iy = 1, db(2)
@@ -417,15 +417,15 @@ contains
               tmp = tmp - s%z_val*exp(-(modg/(2*s%ps%a_erf))**2)/modg**2
               select case(vlocal_cutoff)
               case(0)
-                cf%FS(ix, iy, iz) = tmp*cutoff0(modg,r_0)
+                cf%FS(ix, iy, iz) = tmp*cutoff0(modg, r_0)
               case(1)
                 gx = abs(temp(1)*ixx(1))
-                gperp = sqrt((temp(2)*ixx(2))**2+(temp(3)*ixx(3))**2)
-                cf%FS(ix, iy, iz) = tmp*cutoff1(gx, gperp,r_0)
+                gperp = sqrt((temp(2)*ixx(2))**2 + (temp(3)*ixx(3))**2)
+                cf%FS(ix, iy, iz) = tmp*cutoff1(gx, gperp, r_0)
               case(2)
                 gz = abs(temp(3)*ixx(3))
-                gpar = sqrt((temp(1)*ixx(1))**2+(temp(2)*ixx(2))**2)
-                cf%FS(ix, iy, iz) = tmp*cutoff2(gpar, gz,r_0)
+                gpar = sqrt((temp(1)*ixx(1))**2 + (temp(2)*ixx(2))**2)
+                cf%FS(ix, iy, iz) = tmp*cutoff2(gpar, gz, r_0)
               case(3)
                 cf%FS(ix, iy, iz) = tmp
               end select
@@ -438,10 +438,11 @@ contains
             end if
 
             ! multiply by normalization factor and a phase shift to get the center of the box
-            cf%FS(ix, iy, iz) = norm*                         &
-              exp(M_PI*M_ZI*sum(ixx(:)))*   &
-              cf%FS(ix, iy, iz)
-
+            ! the phase is exp(-i kR), where R denotes the center of the box
+            ! note that c is a fortran index that starts at 1
+            cf%FS(ix, iy, iz) = norm*        &
+               exp(-M_ZI*sum(x(:)*(c(:)-1)*m%h(:)))*   &
+               cf%FS(ix, iy, iz)
           end do
         end do
       end do
