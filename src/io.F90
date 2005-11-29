@@ -405,7 +405,8 @@ contains
   end function io_get_extension
 
 
-  ! check if debug mode should be enabled or disabled on the fly
+  ! check if debug mode or message flushing should be enabled or 
+  ! disabled on the fly
   subroutine io_debug_on_the_fly()
 
     ! only root node performs the check
@@ -413,20 +414,31 @@ contains
 
     if(io_file_exists('enable_debug_mode', 'Enabling DebugMode')) then
       conf%debug_level = 100
-      in_debug_mode = .true.
+      in_debug_mode    = .true.
       ! this call does not hurt if the directory is already there
       ! but is otherwise required
       call io_mkdir('debug')
       ! we have been notified by the user, so we can cleanup the file
-      call loct_rm( 'enable_debug_mode')
+      call loct_rm('enable_debug_mode')
       ! artificially increase sub stack to avoid underflow
       no_sub_stack = no_sub_stack + 8
     endif
+    if(io_file_exists('enable_flush_messages', 'Enabling flushing of messages')) then
+      flush_messages   = .true.
+      ! we have been notified by the user, so we can cleanup the file
+      call loct_rm('enable_flush_messages')
+    endif
+
     if(io_file_exists('disable_debug_mode', 'Disabling DebugMode')) then
       conf%debug_level = 0
-      in_debug_mode = .false.
+      in_debug_mode    = .false.
       ! we have been notified by the user, so we can cleanup the file
-      call loct_rm( 'disable_debug_mode')
+      call loct_rm('disable_debug_mode')
+    endif
+    if(io_file_exists('disable_flush_messages', 'Disabling flushing of messages')) then
+      flush_messages   = .false.
+      ! we have been notified by the user, so we can cleanup the file
+      call loct_rm('disable_flush_messages')
     endif
 
   end subroutine io_debug_on_the_fly
