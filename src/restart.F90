@@ -59,7 +59,9 @@ contains
   ! returns true if a file named stop exists
   function clean_stop()
     logical clean_stop, file_exists
+#if defined(HAVE_MPI)
     integer :: mpi_err
+#endif
 
     clean_stop = .false.
     inquire(file='stop', exist=file_exists)
@@ -70,7 +72,7 @@ contains
 #if defined(HAVE_MPI)
       call mpi_barrier(mpi_world%comm, mpi_err)
 #endif
-      call loct_rm('stop')
+      if(mpi_grp_is_root(mpi_world)) call loct_rm('stop')
     end if
 
     return
