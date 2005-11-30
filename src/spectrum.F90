@@ -681,9 +681,9 @@ contains
     type(spec_type), intent(inout) :: s
 
     integer :: i, is, ie, ntiter, j, jj, k, time_steps, no_e, nspin
-    FLOAT :: dump, dt
+    FLOAT :: dump, dt, w
     type(kick_type) :: kick
-    CMPLX :: z
+    CMPLX :: z, sum1, sum2
     CMPLX, pointer :: sp(:)
     FLOAT, allocatable :: dumpa(:)
     FLOAT, allocatable :: angular(:, :)
@@ -698,7 +698,6 @@ contains
     call spectrum_skip_header(in_file)
     do i = 0, time_steps
       read(in_file, *) j, dump, angular(i, 1:3)
-      !dipole(i,:) = dipole(i,:) * units_out%length%factor
     end do
 
     ! subtract static dipole
@@ -709,6 +708,8 @@ contains
     no_e = s%max_energy / s%energy_step
     ALLOCATE(sp(0:no_e), no_e+1)
     sp = M_z0
+    sum1 = M_z0
+    sum2 = M_z0
 
     ! Gets the damping function (here because otherwise it is awfully slow in "pol" mode...)
     ALLOCATE(dumpa(is:ie), ie-is+1)
@@ -728,15 +729,19 @@ contains
     end do
 
     do k = 0, no_e
+      w = k*s%energy_step
       do j = is, ie
 
         jj = j - is
 
-        z = exp(M_zI * k * s%energy_step * jj *dt)
+        z = exp(M_zI * w * jj *dt)
         sp(k) = sp(k) + z*dumpa(j)*sum(angular(j, :)*kick%pol(1:3, kick%pol_dir))
 
       end do
-      sp(k) = sp(k)*dt
+      sp(k) = M_zI/(M_TWO*P_c*kick%delta_strength)*sp(k)*dt
+
+      sum1 = sum1 + sp(k)*s%energy_step
+      sum2 = sum2 + (sp(k)*w**2)*s%energy_step
 
     end do
 
@@ -756,7 +761,10 @@ contains
     write(message(5), '(a,f10.4)') 'SpecEndTime          = ', s%end_time     / units_out%time%factor
     write(message(6), '(a,f10.4)') 'SpecMaxEnergy        = ', s%max_energy   / units_inp%energy%factor
     write(message(7),'(a,f10.4)')  'SpecEnergyStep       = ', s%energy_step  / units_inp%energy%factor
-    call write_info(7)
+    message(8) = ""
+    write(message(9), '(a,5e15.6,5e15.6)') 'R(0) sum rule = ', sum1
+    write(message(10),'(a,5e15.6,5e15.6)') 'R(2) sum rule = ', sum2
+    call write_info(10)
 
     call pop_sub()
   end subroutine spectrum_rotatory_strength
