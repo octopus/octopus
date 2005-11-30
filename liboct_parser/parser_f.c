@@ -280,17 +280,27 @@ void FC_FUNC_(oct_parse_expression, OCT_PARSE_EXPRESSION)
   
   rec = putsym("x", S_CMPLX);
   GSL_SET_COMPLEX(&rec->value.c, *x, 0);
+  rec->def = 1;
+
   rec = putsym("y", S_CMPLX);
   GSL_SET_COMPLEX(&rec->value.c, *y, 0);
+  rec->def = 1;
+
   rec = putsym("z", S_CMPLX);
   GSL_SET_COMPLEX(&rec->value.c, *z, 0);
+  rec->def = 1;
+
   rec = putsym("r", S_CMPLX);
   GSL_SET_COMPLEX(&rec->value.c, *r, 0);
+  rec->def = 1;
   
   parse_exp(pot, &c);
   
   /* clean up */
-  rmsym("x"); rmsym("y");	rmsym("z");	rmsym("r");
+  rmsym("x");
+  rmsym("y");
+  rmsym("z");
+  rmsym("r");
   
   *re = GSL_REAL(c.value.c);
   *im = GSL_IMAG(c.value.c);

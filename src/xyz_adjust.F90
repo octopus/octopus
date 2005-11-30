@@ -61,6 +61,20 @@ contains
     end if
     to = to / sqrt(sum(to**2))
 
+    !%Variable AxisType
+    !%Type integer
+    !%Default inertia
+    !%Section Utilities::oct-center-geometry
+    !%Description
+    !% Besides centering the structure, this is align to a set of orthogonal axis.
+    !% This variable decides which set of axis to use.
+    !%Option inertia 1
+    !% The axis of inertia
+    !%Option pseudo_inertia 2
+    !% Pseudo-axis of inertia, calculated considering that all species have mass one
+    !%Option large_axis 3
+    !% The larger axis of the molecule
+    !%End
     call loct_parse_int(check_inp('AxisType'), INERTIA, axis_type)
 
     select case(axis_type)

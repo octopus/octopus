@@ -1,19 +1,5 @@
-lanczos          = 2
-unformatted      = 1 # RestartFileFormat
-formatted        = 2
 usdef            = 1 # Species block (type)
 point            = 2
 jelli            = 3
 tm2              = 100
 hgh              = 101
-
-oep_none     = 0
-oep_slater   = 1
-oep_kli      = 2
-oep_ceda     = 3
-oep_full     = 4
-
-# symbols for oct-center-geom
-inertia          = 1  
-pseudo           = 2  
-large            = 3

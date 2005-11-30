@@ -36,6 +36,7 @@ module xc_OEP
   use linear_response
   use grid
   use mpi_mod
+  use varinfo
 
   implicit none
 
@@ -50,11 +51,11 @@ module xc_OEP
 
   ! the OEP levels
   integer, public, parameter :: &
-    XC_OEP_NONE   = 0,          &
-    XC_OEP_SLATER = 1,          &
-    XC_OEP_KLI    = 2,          &
-    XC_OEP_CEDA   = 3,          &  ! not yet implemented
-    XC_OEP_FULL   = 4              ! half implemented
+    XC_OEP_NONE   = 1,          &
+    XC_OEP_SLATER = 2,          &
+    XC_OEP_KLI    = 3,          &
+    XC_OEP_CEDA   = 4,          &  ! not yet implemented
+    XC_OEP_FULL   = 5              ! half implemented
 
   type xc_oep_type
     integer          :: level      ! 0 = no oep, 1 = Slater, 2 = KLI, 3 = CEDA, 4 = full OEP
@@ -93,12 +94,26 @@ contains
     end if
 #endif
 
+    !%Variable OEP_level
+    !%Type integer
+    !%Default oep_none
+    !%Section Hamiltonian::XC
+    !%Description
+    !% At what level shall octopus handle the OEP equation
+    !%Option oep_none 1
+    !% Do not solve OEP equation
+    !%Option oep_slater 2
+    !% Slater approximation
+    !%Option oep_kli 3
+    !% KLI approximation
+    !%Option oep_ceda 4
+    !% CEDA (common energy denominator) approximation (not implemented)
+    !%Option oep_full 5
+    !% Full solution of OEP equation using the approach of S. Kuemmel (half implemented)
+    !%End
     call loct_parse_int(check_inp('OEP_level'), XC_OEP_KLI, oep%level)
-    if(oep%level<0.or.oep%level>XC_OEP_FULL) then
-      message(1) = "OEP_level can only take the values:"
-      message(2) = "1 (Slater), 2 (KLI), 3 (CEDA), or 4 (full OEP)"
-      call write_fatal(2)
-    end if
+    if(.not.varinfo_valid_option('OEP_level', oep%level)) call input_error('OEP_level')
+
     if(oep%level == XC_OEP_FULL) then
       call loct_parse_float(check_inp('OEP_mixing'), M_ONE, oep%mixing)
     end if
@@ -144,13 +159,7 @@ contains
 
     if(oep%level.eq.XC_OEP_NONE) return
 
-    write(iunit, '(2x,a)') 'The OEP equation will be handled at the level of:'
-    select case(oep%level)
-    case (XC_OEP_SLATER); write(iunit, '(a)') '    Slater approximation'
-    case (XC_OEP_KLI);    write(iunit, '(a)') '    KLI approximation'
-    case (XC_OEP_CEDA);   write(iunit, '(a)') '    CEDA approximation'
-    case (XC_OEP_FULL);   write(iunit, '(a)') '    Full OEP'
-    end select
+    call messages_print_var_option(iunit, 'OEP_level', oep%level)
 
   end subroutine xc_oep_write_info
 
@@ -169,8 +178,8 @@ contains
     case(2, 4)
       oep%socc  = M_ONE
       oep%sfact = M_ONE
-    case default
-      write(6,'(a,I2)') 'OEP: error cannot handle nspin=', nspin
+    case default ! can not handle any other case
+      ASSERT(.false.)
     end select
 
   end subroutine xc_oep_SpinFactor

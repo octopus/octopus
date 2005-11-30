@@ -59,7 +59,7 @@ module xc
 
     ! the meta-GGA can be implemented in two ways
     integer :: mGGA_implementation      ! 1 => as a GGA like functional
-    ! 2 => using the OEP method
+                                        ! 2 => using the OEP method
   end type xc_type
 
 
