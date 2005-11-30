@@ -593,19 +593,26 @@ contains
 
       ALLOCATE(lmm(3, gr%geo%natoms), 3*gr%geo%natoms)
       call states_local_magnetic_moments(m, st, gr%geo, st%rho, scf%lmm_r, lmm)
+
       write(iunit, '(a,a,a,f7.3,a)') 'Local Magnetic Moments (sphere radius [', &
         trim(units_out%length%abbrev),'] = ', scf%lmm_r/units_out%length%factor, '):'
-      if(st%d%ispin == SPIN_POLARIZED) then ! collinear spin
-        write(iunit,'(a,6x,14x,a)') ' Ion','mz'
-        do i = 1, gr%geo%natoms
-          write(iunit,'(i4,a10,f15.6)') i, trim(gr%geo%atom(i)%spec%label), lmm(3, i)
-        end do
-      else if(st%d%ispin == SPINORS) then ! non-collinear
-        write(iunit,'(a,8x,13x,a,13x,a,13x,a)') ' Ion','mx','my','mz'
-        do i = 1, gr%geo%natoms
-          write(iunit,'(i4,a10,3f15.6)') i, trim(gr%geo%atom(i)%spec%label), lmm(1, i), lmm(2, i), lmm(3, i)
-        end do
+
+      if(mpi_grp_is_root(mpi_world)) then
+
+        if(st%d%ispin == SPIN_POLARIZED) then ! collinear spin
+          write(iunit,'(a,6x,14x,a)') ' Ion','mz'
+          do i = 1, gr%geo%natoms
+            write(iunit,'(i4,a10,f15.6)') i, trim(gr%geo%atom(i)%spec%label), lmm(3, i)
+          end do
+        else if(st%d%ispin == SPINORS) then ! non-collinear
+          write(iunit,'(a,8x,13x,a,13x,a,13x,a)') ' Ion','mx','my','mz'
+          do i = 1, gr%geo%natoms
+            write(iunit,'(i4,a10,3f15.6)') i, trim(gr%geo%atom(i)%spec%label), lmm(1, i), lmm(2, i), lmm(3, i)
+          end do
+        end if
+
       end if
+      
       deallocate(lmm)
 
       call pop_sub()
