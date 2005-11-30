@@ -55,7 +55,7 @@ program harmonic_spectrum
   !%Variable HarmonicSpectrumPolarization
   !%Type string
   !%Default "z"
-  !%Section Time Dependent::Spectrum Calculations
+  !%Section Utilities::oct-harmonic-spectrum
   !%Description
   !% The oct-harmonic-spectrum utility program needs to know the direction along
   !% which the emission raidiation is considered to be polarized. It may be
@@ -81,7 +81,7 @@ program harmonic_spectrum
   !%Variable HarmonicSpectrumMode
   !%Type integer
   !%Default hs_from_dipole
-  !%Section Time Dependent::Spectrum Calculations
+  !%Section Utilities::oct-harmonic-spectrum
   !%Description
   !% The oct-harmonic-spectrum may calculate the spectrum in two alternative ways,
   !% mathematically equivalent but numerically diferent: by reading the dipole

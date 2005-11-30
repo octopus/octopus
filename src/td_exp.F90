@@ -68,7 +68,7 @@ contains
     !%Variable TDExponentialMethod
     !%Type integer
     !%Default standard
-    !%Section Time Dependent
+    !%Section Time Dependent::Propagation
     !%Description
     !% Method used to numerically calculate the exponential of the Hamiltonian,
     !% a core part of the full algorithm used to approximate the evolution
@@ -158,7 +158,7 @@ contains
       !%Variable TDLanczosTol
       !%Type float
       !%Default 1e-5
-      !%Section Time Dependent
+      !%Section Time Dependent::Propagation
       !%Description
       !% An internal tolerance variable for the Lanczos method. The smaller, the more
       !% precisely the exponential is calculated, and also the bigger the dimension
@@ -183,7 +183,7 @@ contains
       !%Variable TDExpOrder
       !%Type integer
       !%Default 4
-      !%Section Time Dependent
+      !%Section Time Dependent::Propagation
       !%Description
       !% For <tt>TDExponentialMethod</tt> equal <tt>standard</tt> or <tt>chebyshev</tt>, the order to which
       !% the exponential is expanded. For the Lanczos approximation, it is the maximum

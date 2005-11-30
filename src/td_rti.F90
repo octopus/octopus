@@ -80,7 +80,7 @@ contains
     !%Variable TDEvolutionMethod
     !%Type integer
     !%Default etrs
-    !%Section Time Dependent
+    !%Section Time Dependent::Propagation
     !%Description
     !% This variable determines which algorithm will be used to approximate
     !% the evolution operator <math>U(t+\delta t, t)</math>. That is, known

@@ -96,7 +96,7 @@ contains
     !%Variable SpecDampMode
     !%Type integer
     !%Default polynomial
-    !%Section Time Dependent::Spectrum Calculations
+    !%Section Utilities::Optical Spectra
     !%Description
     !% Decides which damping/filtering is to be applied in order to calculate
     !% spectra by calculating a Fourier transform
@@ -116,7 +116,7 @@ contains
     !%Variable SpecStartTime
     !%Type integer
     !%Default polynomial
-    !%Section Time Dependent::Spectrum Calculations
+    !%Section Utilities::Optical Spectra
     !%Description
     !% Processing is done for the given function in a time-window that starts at the
     !% value of this variable.
@@ -126,7 +126,7 @@ contains
     !%Variable SpecEndTime
     !%Type integer
     !%Default polynomial
-    !%Section Time Dependent::Spectrum Calculations
+    !%Section Utilities::Optical Spectra
     !%Description
     !% Processing is done for the given function in a time-window that ends at the
     !% value of this variable.
@@ -136,7 +136,7 @@ contains
     !%Variable SpecEnergyStep
     !%Type integer
     !%Default polynomial
-    !%Section Time Dependent::Spectrum Calculations
+    !%Section Utilities::Optical Spectra
     !%Description
     !% Sampling rate for the spectrum.
     !%End
@@ -145,7 +145,7 @@ contains
     !%Variable SpecMaxEnergy
     !%Type integer
     !%Default polynomial
-    !%Section Time Dependent::Spectrum Calculations
+    !%Section Utilities::Optical Spectra
     !%Description
     !% The Fourier transform is calculated for energies smaller than this value.
     !%End
@@ -154,7 +154,7 @@ contains
     !%Variable SpecDampFactor
     !%Type integer
     !%Default polynomial
-    !%Section Time Dependent::Spectrum Calculations
+    !%Section Utilities::Optical Spectra
     !%Description
     !% If <tt>SpecDampMode</tt> is set to "exp", the damping parameter of the exponential
     !% is fixed through this variable.
@@ -183,7 +183,7 @@ contains
     !%Variable TDDeltaStrength
     !%Type float
     !%Default 0.0
-    !%Section Time Dependent
+    !%Section Time Dependent::Linear Response
     !%Description
     !% When no laser is applied, a delta (in time) electric field with
     !% strength <tt>TDDeltaStrength</tt> is applied. This is used to calculate
@@ -208,7 +208,7 @@ contains
     !%Variable TDDeltaStrengthMode
     !%Type integer
     !%Default kick_density
-    !%Section Time Dependent
+    !%Section Time Dependent::Linear Response
     !%Description
     !% When calculating the linear response of the density via the propagation
     !% in real time, one needs to perfrom an initical kick on the KS system, at
@@ -241,7 +241,7 @@ contains
     !%Variable TDPolarizationDirection
     !%Type integer
     !%Default 1
-    !%Section Time Dependent
+    !%Section Time Dependent::Linear Response
     !%Description
     !% Defines which one of the lines of <tt>TDPolarization</tt> to use for
     !% the run. In a typical run (without using the symmetry), TDPolarization
@@ -252,7 +252,7 @@ contains
 
     !%Variable TDPolarization
     !%Type block
-    !%Section Time Dependent
+    !%Section Time Dependent::Linear Response
     !%Description
     !% The (real) polarization of the delta electric field. Normally
     !% one needs three perpendicular polarization directions to calculate a

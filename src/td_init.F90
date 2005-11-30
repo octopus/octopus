@@ -33,7 +33,7 @@ subroutine td_init(gr, td, st, outp)
   !%Variable TDTimeStep
   !%Type float
   !%Default 0.07 a.u.
-  !%Section Time Dependent
+  !%Section Time Dependent::Propagation
   !%Description
   !% Time-step for the propagation;
   !% in previous notation, <math>\delta t</math>.
@@ -49,7 +49,7 @@ subroutine td_init(gr, td, st, outp)
   !%Variable TDMaximumIter
   !%Type integer
   !%Default 1500
-  !%Section Time Dependent
+  !%Section Time Dependent::Propagation
   !%Description
   !% Number of time steps in which the total integration time is divided;
   !% in previous notation, <i>N</i>.
@@ -73,7 +73,7 @@ subroutine td_init(gr, td, st, outp)
   !%Variable MoveIons
   !%Type logical
   !%Default static_ions
-  !%Section Time Dependent
+  !%Section Time Dependent::Propagation
   !%Description
   !% What kind of simulation to perform.
   !%Option static_ions 0

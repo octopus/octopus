@@ -108,7 +108,7 @@ program cross_section
 !            will be generated.
 ! (ii) A file called "multipoles.1" is found. In this case, the program will
 !      always try to generate the full tensor (calculate_tensor = .true.).
-!      The file "cross_esection_tensor" should be generated at the end.
+!      The file "cross_section_tensor" should be generated at the end.
 !      Other files are searched for, depending on the equivalent axis that
 !      are written in the "multipoles.1" file.
 !      (ii.1) Three equivalent axis. No other file is searched for.
