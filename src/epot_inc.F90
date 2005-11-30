@@ -43,6 +43,7 @@ subroutine X(project)(mesh, p, n_projectors, psi, ppsi, periodic, ik)
 
   call push_sub('epot_inc.project')
 
+  ! index labels the atom
   k = p(1)%index - 1 ! This way I make sure that k is not equal to p(1)%index
 
   do ip = 1, n_projectors
@@ -74,7 +75,7 @@ subroutine X(project)(mesh, p, n_projectors, psi, ppsi, periodic, ik)
       do i = 1, p(ip)%n_channels
         if(periodic) then
           plpsi(1:n_s) = plpsi(1:n_s) + &
-            p(ip)%uvu(i, j) * uvpsi * p(ip)%ket(1:n_s, i) * p(ip)%phases(1:n_s, ik)
+            p(ip)%uvu(i, j) * uvpsi * p(ip)%ket(1:n_s, i) * R_CONJ(p(ip)%phases(1:n_s, ik))
         else
           plpsi(1:n_s) = plpsi(1:n_s) + p(ip)%uvu(i, j) * uvpsi * p(ip)%ket(1:n_s, i)
         end if

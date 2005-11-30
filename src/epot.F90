@@ -831,7 +831,7 @@ contains
       if(sb%periodic_dim/=0) then
         do j = 1, n_s
           x(:) = m%x(ep%p(ivnl)%jxyz(j), :)
-          do k=1, st%d%nik
+          do k = 1, st%d%nik
             ep%p(ivnl)%phases(j, k) = exp(M_zI*sum(st%d%kpoints(:, k)*x(:)))
             do d = 1, sb%dim
               ep%dp(d, ivnl)%phases(j, k) = exp(M_zI*sum(st%d%kpoints(:, k)*x(:)))
