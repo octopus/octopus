@@ -48,15 +48,18 @@ contains
     type(hamiltonian_type),    intent(inout) :: h
     logical,                   intent(inout) :: fromScratch
 
-    type(lr_type) :: lr
+    type(lr_type),allocatable :: lr(:,:,:) ! lr(NDIM,NS,NFREQ)
     type(grid_type), pointer :: gr
     FLOAT :: pol(1:sys%gr%sb%dim, 1:sys%gr%sb%dim)
     FLOAT :: hpol(1:sys%gr%sb%dim, 1:sys%gr%sb%dim, 1:sys%gr%sb%dim)
+    integer :: nfreq, nsigma, ndim, i, j, sigma
     integer :: err
     FLOAT :: w 
+    logical :: dynamic_pol
+
+    call init_()
 
     ierr = 0
-    call init_()
 
     ! load wave-functions
     call X(restart_read) (trim(tmpdir)//'restart_gs', sys%st, gr%m, err)
@@ -79,34 +82,63 @@ contains
     !  if(X(restart_read) (trim(tmpdir)//'restart_lr_static_pol', sys%st, m).ne.0) then
     fromScratch = .true.
 
-    call lr_init(lr, "SP")
-
-
-    call X(lr_alloc_fHxc) (sys%st, gr%m, lr)
-    err = X(lr_alloc_psi) (sys%st, gr%m, lr)
-
-    call lr_build_fxc(gr%m, sys%st, sys%ks%xc, lr%dl_Vxc)
-
-    call static(sys, h, lr, pol, hpol)
-    call output()
+    ndim=sys%gr%sb%dim
 
     if ( conf%devel_version ) then 
       !! Read frequency
-      call loct_parse_float(check_inp('Omega'), M_ZERO , w)
+      call loct_parse_float(check_inp('PolBaseFrequency'), M_ZERO , w)
     else
       w=M_ZERO
     endif
 
-    if( w /= M_ZERO ) then 
-      print*, "CALCULATING DYNAMIC POLARIZABILITIES :-D"
-      print*, "WARNING, NOT WORKING"
-      call dynamic(sys, h, lr, pol, w)
-      call output()
+    if( w == M_ZERO ) then
+      dynamic_pol=.false.
+      nfreq=1
+      nsigma=1
+    else 
+      dynamic_pol=.true.
+      nfreq=1  !for now only polarizability, so only one frequency
+      nsigma=2 !but positive and negative values of the frequency must be considered
     end if
 
-    call lr_dealloc(lr)
+    ALLOCATE(lr(1:ndim,1:nsigma,1:nfreq),ndim*nfreq*nsigma)
+
+    do i=1,ndim
+      do sigma=1,nsigma
+        do j=1,nfreq
+
+          call lr_init(lr(i,sigma,j), "SP")
+
+          call X(lr_alloc_fHxc) (sys%st, gr%m, lr(i,sigma,j))
+          err = X(lr_alloc_psi) (sys%st, gr%m, lr(i,sigma,j))
+      
+          call lr_build_fxc(gr%m, sys%st, sys%ks%xc, lr(i,sigma,j)%dl_Vxc)
+
+        end do
+      end do
+    enddo
+
+    if( dynamic_pol ) then 
+      print*, "CALCULATING DYNAMIC POLARIZABILITIES :-D"
+      print*, "WARNING, NOT TESTED"
+      call dynamic(sys, h, lr, pol, w)
+    else 
+      call static(sys, h, lr(:,:,1), pol, hpol)
+    end if
+
+    call output()
+
+    do i=1,ndim
+      do sigma=1,nsigma
+        do j=1,nfreq
+          call lr_dealloc(lr(i,sigma,j))
+        end do
+      end do
+    end do
 
     call end_()
+    
+    deallocate(lr)
 
   contains
 
@@ -117,7 +149,7 @@ contains
       gr => sys%gr
 
       ! allocate wfs
-      ALLOCATE(sys%st%X(psi)(gr%m%np_part, sys%st%d%dim, sys%st%nst, sys%st%d%nik), gr%m%np_part*sys%st%d%dim*sys%st%nst*sys%st%d%nik)
+      allocate(sys%st%X(psi)(gr%m%np_part, sys%st%d%dim, sys%st%nst, sys%st%d%nik))
 
     end subroutine init_
 
@@ -171,7 +203,7 @@ contains
       do i=1,NDIM
         do j=1,NDIM
           do k=1,NDIM
-            write(iunit,'(3i2,f12.6)') i, j, k, hpol(i,j,k)/units_out%length%factor**(NDIM+2)
+            write(iunit,'(3i2,f12.6)') i, j, k, hpol(i,j,k)/units_out%length%factor**(5)
           end do
         end do
       end do
@@ -187,8 +219,18 @@ contains
 
         bpar=bpar/(M_FIVE * units_out%length%factor**(NDIM+2))
         write(iunit, '(a, 3f12.6,a)') 'B||', bpar(1:NDIM),&
-             '  ( B||_i = 1/5 \sum_j(B_ijj+B_jij+B_jji) ) '
+               '  ( B||_i = 1/5 \sum_j(B_ijj+B_jij+B_jji) ) '
+
+        write(iunit,'(a)') 'Symmetry'
+        write(iunit,'(a,f12.6)') 'B_112-B_121', hpol(1,1,2) - hpol(1,2,1)
+        write(iunit,'(a,f12.6)') 'B_113-B_131', hpol(1,1,3) - hpol(1,3,1)
+        write(iunit,'(a,f12.6)') 'B_221-B_212', hpol(2,2,1) - hpol(2,1,2)
+        write(iunit,'(a,f12.6)') 'B_223-B_232', hpol(2,2,3) - hpol(2,3,2)
+        write(iunit,'(a,f12.6)') 'B_331-B_313', hpol(3,3,1) - hpol(3,1,3)
+        write(iunit,'(a,f12.6)') 'B_332-B_323', hpol(3,3,2) - hpol(3,2,3)
+
       endif
+
 
       call io_close(iunit)
 
@@ -202,7 +244,7 @@ contains
   subroutine pol_tensor(sys, h, lr, pol)
     type(system_type),      intent(inout) :: sys
     type(hamiltonian_type), intent(inout) :: h
-    type(lr_type),          intent(inout) :: lr
+    type(lr_type),          intent(inout) :: lr(:)
     FLOAT,                  intent(out)   :: pol(:,:)
 
     integer :: i, j
@@ -215,7 +257,7 @@ contains
       call write_info(1)
 
       call mix_init(lr%mixer, sys%gr%m, 1, sys%st%d%nspin)
-      call get_response_e(sys, h, lr, i, R_TOTYPE(M_ZERO))
+      call get_response_e(sys, h, lr, i, R_TOTYPE(M_ZERO),.false.)
       call mix_end(lr%mixer)
 
       do j = 1, sys%gr%m%np
@@ -233,7 +275,7 @@ contains
   subroutine static(sys, h, lr, pol, hpol)
     type(system_type),      intent(inout) :: sys
     type(hamiltonian_type), intent(inout) :: h
-    type(lr_type),          intent(inout) :: lr
+    type(lr_type),          intent(inout) :: lr(:,:) ! lr(NDIM,1,1)
     FLOAT,                  intent(out)   :: pol(:,:)
     FLOAT,                  intent(out)   :: hpol(:,:,:)
 
@@ -242,30 +284,26 @@ contains
 
     R_TYPE ::prod
 
-    R_TYPE, allocatable :: tmp(:,:), dphide(:,:,:,:), dVde(:,:,:), drhode(:,:)
+    R_TYPE, allocatable :: tmp(:,:), dVde(:,:,:), drhode(:,:)
 
     FLOAT, allocatable :: kxc(:,:,:,:)
-    FLOAT :: vol
+    FLOAT :: spinfactor
 
-    np  = sys%gr%m%np
-    dim = sys%gr%sb%dim
+    np=sys%gr%m%np
+    dim=sys%gr%sb%dim
 
     call push_sub('static_pol_lr.static')
 
-    message(1) = "Calculating static properties"
-    call write_info(1)
+    print*, "Calculating static properties"
 
-    ALLOCATE(tmp(1:np, 1), np*1)
-
-    ! here we store the derivatives of the orbitals in each direction
-    ALLOCATE(dphide(1:np, 1:sys%st%nst, 1:sys%st%d%nspin, 1:dim), np*sys%st%nst*sys%st%d%nspin*dim)
+    allocate(tmp(1:np,1))
 
     ! the derivative of the xc potential
-    ALLOCATE(dVde(1:np, 1:sys%st%d%nspin, 1:dim), np*sys%st%d%nspin*dim)
+    allocate(dVde(1:np,1:sys%st%d%nspin,1:dim))
 
-    ALLOCATE(drhode(1:np, 1:dim), np*dim)
+    allocate(drhode(1:np,1:dim))
 
-    ALLOCATE(kxc(1:np, 1:sys%st%d%nspin, 1:sys%st%d%nspin, 1:sys%st%d%nspin), np*sys%st%d%nspin*sys%st%d%nspin*sys%st%d%nspin)
+    allocate(kxc(1:np, 1:sys%st%d%nspin, 1:sys%st%d%nspin, 1:sys%st%d%nspin ))
 
     call xc_get_kxc(sys%ks%xc, sys%gr%m, sys%st%rho, sys%st%d%ispin, kxc)
 
@@ -277,10 +315,10 @@ contains
       write(message(1), '(a,i1)') 'Info: Derivative direction: ', i
       call write_info(1)
 
-      call mix_init(lr%mixer, sys%gr%m, 1, sys%st%d%nspin)
+      call mix_init(lr(i,1)%mixer, sys%gr%m, 1, sys%st%d%nspin)
 
-      call get_response_e(sys, h, lr, i, R_TOTYPE(M_ZERO))
-      call mix_end(lr%mixer)
+      call get_response_e(sys, h, lr(:,:), i, nsigma=1, omega=R_TOTYPE(M_ZERO))
+      call mix_end(lr(i,1)%mixer)
 
 
       do ispin = 1, sys%st%d%nspin
@@ -290,24 +328,19 @@ contains
         ! Hartree and the potential and the derivative of the
         !  potential associated at the electric field
 
-        dVde(1:np,ispin,i)=lr%X(dl_Vhar)(1:np) + sys%gr%m%x(1:np,i)
+        dVde(1:np,ispin,i)=lr(i,1)%X(dl_Vhar)(1:np) + sys%gr%m%x(1:np,i)
 
         ! XC
         do ispin2 = 1, sys%st%d%nspin
-          dVde(1:np,ispin,i)=dVde(1:np,ispin,i)+lr%dl_Vxc(1:np, ispin, ispin2)*lr%X(dl_rho)(1:np,ispin2)
-        end do
-
-
-        ! the derivatives of the orbitals
-        do ist = 1, sys%st%nst
-          dphide(1:np,ist,ispin,i)=lr%X(dl_psi)(1:np,1,ist,ispin)
+          dVde(1:np,ispin,i)=dVde(1:np,ispin,i)+&
+               lr(i,1)%dl_Vxc(1:np, ispin, ispin2)*lr(i,1)%X(dl_rho)(1:np,ispin2)
         end do
 
       end do
 
       ! the density
       do n=1,np
-        drhode(n,i)=sum(lr%X(dl_rho)(n,1:sys%st%d%nspin))
+        drhode(n,i)=sum(lr(i,1)%X(dl_rho)(n,1:sys%st%d%nspin))
       end do
 
     end do
@@ -331,9 +364,13 @@ contains
     write(message(1), '(a)') 'Info: Calculating hyperpolarizability tensor'
     call write_info(1)
 
+    
     if (sys%st%d%nspin /= UNPOLARIZED ) then 
       write(message(1), '(a)') 'WARNING: Hyperpolarizability has not been tested for spin polarized systems'
       call write_warning(1)
+      spinfactor = M_ONE
+    else 
+      spinfactor = M_TWO
     end if
 
     hpol = M_ZERO
@@ -349,18 +386,17 @@ contains
 
               ! <D\psi_n | P_c DV_scf P_c | D\psi_n >
 
+              tmp(1:np,1)=(dVde(1:np, ispin, j)*lr(k,1)%X(dl_psi)(1:np,1,ist,ispin))
+              hpol(i,j,k)=hpol(i,j,k)+spinfactor*sum(R_CONJ(lr(i,1)%X(dl_psi)(1:np,1,ist,ispin))&
+                   *tmp(1:np,1)*sys%gr%m%vol_pp(1:np))
 
-              tmp(1:np,1)=(dVde(1:np, ispin, j)*dphide(1:np,ist,ispin,k))
 
-              hpol(i,j,k)=hpol(i,j,k)+M_TWO*sum(R_CONJ(dphide(1:np,ist,ispin,i))*tmp(1:np,1)*sys%gr%m%vol_pp(1:np))
-
-
-              ! -<D\psi_n| P_c | D\psi_m > < \psi_m| DV_scf | \psi_n >
 
               do ispin2 = 1, sys%st%d%nspin
                 do ist2 = 1, sys%st%nst
 
-                  prod=sum(R_CONJ(dphide(1:np,ist,ispin,i))*dphide(1:np,ist2,ispin2,k)*sys%gr%m%vol_pp(1:np))
+                  prod=sum(R_CONJ(lr(i,1)%X(dl_psi)(1:np,1,ist,ispin))*&
+                       lr(k,1)%X(dl_psi)(1:np,1,ist2,ispin2)*sys%gr%m%vol_pp(1:np))
 
 
                   prod=prod*sum(&
@@ -368,7 +404,7 @@ contains
                        dVde(1:np,ispin,j) * sys%st%X(psi)(1:np,1,ist,ispin)*&
                        sys%gr%m%vol_pp(1:np))
 
-                  hpol(i,j,k)=hpol(i,j,k)-M_TWO*prod
+                  hpol(i,j,k)=hpol(i,j,k)-spinfactor*prod
 
                 end do
               end do
@@ -384,23 +420,9 @@ contains
       end do
     end do
 
-
-    vol=sum(sys%gr%m%vol_pp(1:np))
-
-    !    print*, hpol
-
     hpol=-M_SIX*hpol
 
-    !    print*, hpol(1,1,2), hpol(1,2,1), hpol(2,1,1)
-    !    print*, hpol(1,1,3), hpol(1,3,1), hpol(3,1,1)
-    !    print*, hpol(2,2,1), hpol(2,1,2), hpol(1,2,2)
-    !    print*, hpol(3,3,1), hpol(3,1,3), hpol(1,3,3)
-
-    !    print*, "POL", pol(1:dim,1:dim)
-    !    print*, "HPOL", hpol(1:dim,1:dim,1:dim)
-
     deallocate(tmp)
-    deallocate(dphide)
     deallocate(dVde)
     deallocate(drhode)
     deallocate(kxc)
@@ -412,169 +434,264 @@ contains
   subroutine dynamic(sys, h, lr, pol, inw)
     type(system_type),      intent(inout) :: sys
     type(hamiltonian_type), intent(inout) :: h
-    type(lr_type),          intent(inout) :: lr
+    type(lr_type),          intent(inout) :: lr(:,:,:) !dim,nsigma(=2),nfreq(=1)
     FLOAT,                  intent(out)   :: pol(:,:)
     FLOAT,                  intent(in)    :: inw 
 
-    integer :: i, j, s
+    integer :: i, j, freq, sigma
 
     FLOAT :: rhov
 
     R_TYPE :: w
 
+
     call push_sub('static_pol_lr.dynamic')
 
+    freq=1
     w=R_TOTYPE(inw)
 
     pol = M_ZERO
 
     do i = 1, sys%gr%sb%dim
-      do s=1,2 ! +w and -w
-        write(message(1), '(a,i1)') 'Info: Calculating polarizability for direction ', i
-        call write_info(1)
+      write(message(1), '(a,i1,a,f12.6)') 'Info: Calculating polarizability for direction ', i,&
+           ' frequency ', w
+      call write_info(1)
 
-        call mix_init(lr%mixer, sys%gr%m, 1, sys%st%d%nspin)
-        call get_response_e(sys, h, lr, i, w)
-        call mix_end(lr%mixer)
 
+      call mix_init(lr(i,1,freq)%mixer, sys%gr%m, 1, sys%st%d%nspin)
+      call get_response_e(sys, h, lr(:,:,freq), i, nsigma=2 , omega=w)
+      call mix_end(lr(i,1,freq)%mixer)
+      
+      do sigma=1,2
         do j = 1, sys%gr%m%np
-          rhov = sum(lr%X(dl_rho)(j,1:sys%st%d%nspin))*sys%gr%m%vol_pp(j)
+          rhov = sum(lr(i,sigma,freq)%X(dl_rho)(j,1:sys%st%d%nspin))*sys%gr%m%vol_pp(j)
           pol(i, :) = pol(i, :) - sys%gr%m%x(j,:)*rhov
         end do
-
-        w=-w
       end do
+
     end do
+    pol = pol*M_HALF
+    
+    print*, pol
 
     call pop_sub()
 
   end  subroutine dynamic
 
   ! ---------------------------------------------------------
-  subroutine get_response_e(sys, h, lr, alpha, omega)
+  subroutine get_response_e(sys, h, lr, dir, nsigma, omega)
     type(system_type), target, intent(inout) :: sys
     type(hamiltonian_type),    intent(inout) :: h
-    type(lr_type),             intent(inout) :: lr
-    integer,                   intent(in)    :: alpha
+    type(lr_type),             intent(inout) :: lr(:,:) !ndim,nsigma
+    integer,                   intent(in)    :: dir 
+    integer,                   intent(in)    :: nsigma 
     R_TYPE,                    intent(in)    :: omega
-
-    integer :: iter,  sigma, ik, ik2, ist, i
-    FLOAT, allocatable :: tmp(:), dl_rhoin(:,:,:), dl_rhonew(:,:,:), dl_rhotmp(:,:,:)
-    R_TYPE, allocatable :: Y(:, :)
-    logical :: finish
+    FLOAT, allocatable :: diff(:,:,:)
+    FLOAT :: dpsimod,freq_sign
+    integer :: iter, sigma, ik, ik2, ist, i, ist2
+    FLOAT, allocatable :: tmp(:), dl_rhoin(:,:,:,:), dl_rhonew(:,:,:,:), dl_rhotmp(:,:,:,:)
+    R_TYPE, allocatable :: Y(:, :),dV(:,:)
+    R_TYPE, allocatable :: a(:,:)
+    logical :: finish(2)
 
     type(mesh_type), pointer :: m
     type(states_type), pointer :: st
 
     call push_sub('static_pol_lr.get_response_e')
 
+    ASSERT( nsigma==1 .or. nsigma ==2 )
+
     m => sys%gr%m
     st => sys%st
 
-    ALLOCATE(tmp(m%np),    m%np)
-    ALLOCATE(  Y(m%np, 1), m%np*1)
-    ALLOCATE(dl_rhoin (1, m%np, st%d%nspin), 1*m%np*st%d%nspin)
-    ALLOCATE(dl_rhonew(1, m%np, st%d%nspin), 1*m%np*st%d%nspin)
-    ALLOCATE(dl_rhotmp(1, m%np, st%d%nspin), 1*m%np*st%d%nspin)
+    ALLOCATE(tmp(m%np),m%np)
+    ALLOCATE(Y(m%np,1),m%np*1)
+    ALLOCATE(dV(m%np,st%d%nspin),m%np*st%d%nspin)
+    ALLOCATE(dl_rhoin(1,m%np,st%d%nspin,nsigma),1*m%np*st%d%nspin*nsigma)
+    ALLOCATE(dl_rhonew(1,m%np,st%d%nspin,nsigma),1*m%np*st%d%nspin*nsigma)
+    ALLOCATE(dl_rhotmp(1,m%np,st%d%nspin,nsigma),1*m%np*st%d%nspin*nsigma)
+    ALLOCATE(diff(st%nst,st%d%nspin,nsigma),st%nst*st%d%nspin*nsigma)
+    ALLOCATE(a(st%nst,st%d%nspin),st%nst*st%d%nspin)
+
+    diff=M_ZERO
 
     call init_response_e()
-
-    iter_loop: do iter=1, lr%max_iter
-
-      dl_rhoin(1,:,:) = lr%X(dl_rho)(:,:)
+    finish = .false.
+    iter_loop: do iter=1, lr(dir,1)%max_iter
+      
+      do sigma=1,nsigma
+        dl_rhoin(1,:,:,sigma) = lr(dir,sigma)%X(dl_rho)(:,:)
+      end do
 
       if(.not.h%ip_app) then
-        do i = 1, m%np
-          tmp(i) = sum(lr%X(dl_rho)(i,:))
+        do sigma=1,nsigma
+          do i = 1, m%np
+            tmp(i) = sum(lr(dir,sigma)%X(dl_rho)(i,:))
+          end do
+          call dpoisson_solve(sys%gr, lr(dir,sigma)%ddl_Vhar, tmp)
         end do
-        call dpoisson_solve(sys%gr, lr%ddl_Vhar, tmp)
       end if
 
-      do sigma = -1, 1, 2
-        if(omega==M_ZERO .and. sigma==1) cycle
 
-        do ik = 1, st%d%nspin
+      do ik = 1, st%d%nspin
+
+        do sigma = 1, nsigma
+          
+          if(finish(sigma)) cycle !if we are ready with this sign, do nothing
+
+          if(sigma==1) then 
+            freq_sign = M_ONE
+          else
+            freq_sign = -M_ONE
+          end if
+
+          dV(1:m%np,ik) = (lr(dir,sigma)%ddl_Vhar(1:m%np) + m%x(1:m%np,dir))
+          
+          do ik2 = 1, st%d%nspin
+            dV(1:m%np,ik) = dV(1:m%np,ik) +&
+                 lr(dir,sigma)%dl_Vxc(1:m%np, ik, ik2)*lr(dir,sigma)%X(dl_rho)(1:m%np,ik2)
+          end do
+          
           do ist = 1, st%nst
             if(st%occ(ist, ik) <= M_ZERO) cycle
-
-            Y(:,1) = (lr%ddl_Vhar(:) + m%x(:,alpha))
-            do ik2 = 1, st%d%nspin
-              Y(1:m%np,1) = Y(1:m%np,1) + lr%dl_Vxc(1:m%np, ik, ik2)*lr%X(dl_rho)(1:m%np,ik2)
-            end do
-            Y(1:m%np,1) = -Y(1:m%np,1)*st%X(psi)(1:m%np, 1, ist, ik)
-
+            
+            Y(1:m%np,1) = -dV(1:m%np,ik)*st%X(psi)(1:m%np, 1, ist, ik)
+            
             call X(lr_orth_vector)(m, st, Y, ik)
 
-            call X(lr_solve_HXeY) (lr, h, sys%gr, sys%st%d, ik, lr%X(dl_psi)(:,:, ist, ik), Y, &
-                 -sys%st%eigenval(ist, ik) + real(sigma, PRECISION)*omega)
+            call X(lr_solve_HXeY) (lr(dir,1), h, sys%gr, sys%st%d, ik, lr(dir,sigma)%X(dl_psi)(:,:, ist, ik), Y, &
+                 -sys%st%eigenval(ist, ik) + freq_sign*omega)
 
-            print *, iter, ik, ist, sum(lr%X(dl_psi)(1:m%np,1, ist, ik)**2*sys%gr%m%vol_pp(1:m%np))
+            !altough dl_psi should be orthogonal to psi's
+            !a re-orthogonalization is necessary sometimes
+            call X(lr_orth_vector)(m, st, lr(dir,sigma)%X(dl_psi)(:,:, ist, ik), ik)
+
+            dpsimod=sum(lr(dir,sigma)%X(dl_psi)(1:m%np,1, ist, ik)**2*sys%gr%m%vol_pp(1:m%np))
+
+            print*, iter, ist, dpsimod, (dpsimod-diff(ist,ik,sigma))
+
+            diff(ist,ik,sigma)=dpsimod
+
           end do
         end do
-
-        !call lr_orth_response(m, st, lr)
-        lr%X(dl_rho) = M_ZERO
-        call X(lr_build_dl_rho)(m, st, lr, 3)
       end do
 
-      ! if static perturbation, then psi^+ and psi^- are the same
-      !if(omega==M_ZERO) lr%X(dl_rho) = M_TWO*lr%X(dl_rho)
+      !!calculate dl_rho
 
+      if(nsigma == 2 ) then
+
+        call build_rho_dynamic()
+
+      else
+
+        !!static case
+        lr(dir,1)%X(dl_rho)=M_ZERO
+        call X(lr_build_dl_rho)(m, st, lr(dir,1), type=3)
+        
+      end if
+      
+      
       ! mix to get new density
-      dl_rhonew(1,:,:) = M_ZERO
-      dl_rhotmp(1,:,:) = lr%X(dl_rho)(:,:)
-      call mixing(lr%mixer, m, iter, 1, st%d%nspin, &
-           dl_rhoin, dl_rhotmp, dl_rhonew)
+      dl_rhonew(1,:,:,:) = M_ZERO
 
-      ! check for convergence
-      lr%abs_dens = M_ZERO
-      do ik = 1, st%d%nspin
-        tmp(:) = (dl_rhoin(1,:,ik) - lr%X(dl_rho)(:,ik))**2
-        lr%abs_dens = lr%abs_dens + dmf_integrate(m, tmp)
+      finish=.true.
+
+      do sigma=1,nsigma
+        dl_rhotmp(1,:,:,sigma) = lr(dir,sigma)%X(dl_rho)(:,:)
+
+        call mixing(lr(dir,1)%mixer, m, iter, 1, st%d%nspin, &
+             dl_rhoin(:,:,:,sigma), dl_rhotmp(:,:,:,sigma), dl_rhonew(:,:,:,sigma))
+
+        ! check for convergence
+        lr(dir,sigma)%abs_dens = M_ZERO
+      
+        do ik = 1, st%d%nspin
+          tmp(:) = (dl_rhoin(1,:,ik,sigma) - lr(dir,sigma)%X(dl_rho)(:,ik))**2
+          lr(dir,sigma)%abs_dens = lr(dir,sigma)%abs_dens + dmf_integrate(m, tmp)
+        end do
+        lr(dir,sigma)%abs_dens = sqrt(lr(dir,sigma)%abs_dens)
+
+        ! are we finished?
+        finish(sigma) = (lr(dir,sigma)%abs_dens <= lr(dir,sigma)%conv_abs_dens)
       end do
-      lr%abs_dens = sqrt(lr%abs_dens)
 
-      ! are we finished?
-      finish = (lr%abs_dens <= lr%conv_abs_dens)
-      if(finish) then
+      print*, lr(dir,:)%abs_dens
+
+      if( finish(1) .and. finish(2) ) then
         write(message(1), '(a, i4, a)')        &
              'Info: SCF for response converged in ', &
              iter, ' iterations'
         call write_info(1)
         exit
       else
-        lr%X(dl_rho)(:,:) = dl_rhonew(1,:,:)
+        do sigma=1,nsigma
+          lr(dir,sigma)%X(dl_rho)(:,:) = dl_rhonew(1,:,:,sigma)
+        end do
       end if
-
+        
     end do iter_loop
 
     deallocate(dl_rhoin, dl_rhonew, dl_rhotmp)
-    deallocate(tmp, Y)
+    deallocate(tmp, Y,dV)
+    deallocate(diff,a)
     call pop_sub()
 
   contains
-
     subroutine init_response_e()
       integer :: ik, ist, i
       FLOAT :: rd
+
+      call push_sub('static_pol_lr.init_response_e')
 
       do ik = 1, st%d%nspin
         do ist = 1, st%nst
           if (st%occ(ist, ik) > M_ZERO) then
             do i = 1, m%np
               call mesh_r(m, i, rd)
-              lr%X(dl_psi)(i, 1, ist, ik) = st%X(psi)(i, 1, ist, ik)*rd*exp(-rd)
+              do sigma=1,nsigma
+                lr(dir,sigma)%X(dl_psi)(i, 1, ist, ik) = st%X(psi)(i, 1, ist, ik)*rd*exp(-rd)
+              end do
             end do
           end if
         end do
       end do
-      lr%ddl_Vhar(:) = M_ZERO
 
-      call lr_orth_response(m, st, lr)
-      call X(lr_build_dl_rho)(m, st, lr, 3)
+      do sigma=1,nsigma
+        lr(dir,sigma)%ddl_Vhar(:) = M_ZERO
+        call lr_orth_response(m, st, lr(dir,sigma))
+      end do
 
+      if(nsigma == 2 ) then 
+        call build_rho_dynamic() 
+      else
+        call X(lr_build_dl_rho)(m, st, lr(dir,1), 3)
+      end if
+
+      call pop_sub()
     end subroutine init_response_e
 
-  end subroutine get_response_e
+    subroutine build_rho_dynamic()
+      integer :: msigma
 
+      !!the dinamic case
+      do sigma=1,nsigma 
+        lr(dir,sigma)%X(dl_rho)=M_ZERO
+        
+        !!the oposite sign
+        if (sigma==1) msigma=2
+        if (sigma==2) msigma=1
+        
+        do ik = 1, st%d%nspin
+          do ist = 1, st%nst
+            lr(dir,sigma)%X(dl_rho)(1:m%np,ik)=lr(dir,sigma)%X(dl_rho)(1:m%np,ik)+&
+                 R_CONJ(st%X(psi)(1:m%np, 1, ist, ik))*lr(dir,sigma)%X(dl_psi)(1:m%np,1,ist,ik)+&
+                 R_CONJ(lr(dir,msigma)%X(dl_psi)(1:m%np,1,ist,ik))*st%X(psi)(1:m%np, 1, ist, ik)
+          end do
+        end do
+      end do
+        
+    end  subroutine build_rho_dynamic
+    
+  end subroutine get_response_e
+  
 end module static_pol_lr
