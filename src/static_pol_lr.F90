@@ -562,7 +562,7 @@ contains
             call X(lr_solve_HXeY) (lr(dir,1), h, sys%gr, sys%st%d, ik, lr(dir,sigma)%X(dl_psi)(:,:, ist, ik), Y, &
                  -sys%st%eigenval(ist, ik) + freq_sign*omega)
 
-            !altough dl_psi should be orthogonal to psi's
+            !altough dl_psi should be orthogonal to psi
             !a re-orthogonalization is necessary sometimes
             call X(lr_orth_vector)(m, st, lr(dir,sigma)%X(dl_psi)(:,:, ist, ik), ik)
 
