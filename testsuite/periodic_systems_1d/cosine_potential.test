@@ -9,9 +9,6 @@ Programs : octopus_cmplx
 Enabled  : Yes
 
 INP
-UnitsInput  = a.u
-UnitsOutput = a.u
-
 CalculationMode = unocc
 fromScratch = yes
 
