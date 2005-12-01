@@ -238,38 +238,6 @@ contains
 
   end function static_pol_lr_run
 
-#if 0
-  ! ---------------------------------------------------------
-  ! This is not used anymore, pol is calculated at the same time that hpol
-  subroutine pol_tensor(sys, h, lr, pol)
-    type(system_type),      intent(inout) :: sys
-    type(hamiltonian_type), intent(inout) :: h
-    type(lr_type),          intent(inout) :: lr(:)
-    FLOAT,                  intent(out)   :: pol(:,:)
-
-    integer :: i, j
-    FLOAT :: rhov
-    call push_sub('static_pol_lr.pol_tensor')
-
-    pol = M_ZERO
-    do i = 1, sys%gr%sb%dim
-      write(message(1), '(a,i1)') 'Info: Calculating polarizability for direction ', i
-      call write_info(1)
-
-      call mix_init(lr%mixer, sys%gr%m, 1, sys%st%d%nspin)
-      call get_response_e(sys, h, lr, i, R_TOTYPE(M_ZERO),.false.)
-      call mix_end(lr%mixer)
-
-      do j = 1, sys%gr%m%np
-        rhov = sum(lr%X(dl_rho)(j,1:sys%st%d%nspin))*sys%gr%m%vol_pp(j)
-        pol(i, :) = pol(i, :) - sys%gr%m%x(j,:)*rhov
-      end do
-
-    end do
-
-    call pop_sub()
-  end subroutine pol_tensor
-#endif
 
   ! ---------------------------------------------------------
   subroutine static(sys, h, lr, pol, hpol)
@@ -351,8 +319,6 @@ contains
 
     pol = M_ZERO
     do i = 1, dim
-      !      write(message(1), '(a,i1)') 'Info: Calculating polarizability for direction ', i
-      !      call write_info(1)
 
       do j = 1,np
         pol(i,1:dim)=pol(i,1:dim)-sys%gr%m%x(j,1:dim)*drhode(j,i)*sys%gr%m%vol_pp(j)
@@ -438,7 +404,7 @@ contains
     FLOAT,                  intent(out)   :: pol(:,:)
     FLOAT,                  intent(in)    :: inw 
 
-    integer :: i, j, freq, sigma
+    integer :: dir, j, freq, sigma
 
     FLOAT :: rhov
 
@@ -452,25 +418,29 @@ contains
 
     pol = M_ZERO
 
-    do i = 1, sys%gr%sb%dim
-      write(message(1), '(a,i1,a,f12.6)') 'Info: Calculating polarizability for direction ', i,&
+    do dir = 1, sys%gr%sb%dim
+      write(message(1), '(a,i1,a,f12.6)') 'Info: Calculating polarizability for direction ', dir,&
            ' frequency ', w
       call write_info(1)
-
-
-      call mix_init(lr(i,1,freq)%mixer, sys%gr%m, 1, sys%st%d%nspin)
-      call get_response_e(sys, h, lr(:,:,freq), i, nsigma=2 , omega=w)
-      call mix_end(lr(i,1,freq)%mixer)
+      
+      do sigma=1,2
+        call mix_init(lr(dir,sigma,freq)%mixer, sys%gr%m, 1, sys%st%d%nspin)
+      end do
+      
+      call get_response_e(sys, h, lr(:,:,freq), dir, nsigma=2 , omega=w)
+      
+      do sigma=1,2
+        call mix_end(lr(dir,sigma,freq)%mixer)
+      end do
       
       do sigma=1,2
         do j = 1, sys%gr%m%np
-          rhov = sum(lr(i,sigma,freq)%X(dl_rho)(j,1:sys%st%d%nspin))*sys%gr%m%vol_pp(j)
-          pol(i, :) = pol(i, :) - sys%gr%m%x(j,:)*rhov
+          rhov = sum(lr(dir,sigma,freq)%X(dl_rho)(j,1:sys%st%d%nspin))*sys%gr%m%vol_pp(j)
+          pol(dir, :) = pol(dir, :) - M_HALF*sys%gr%m%x(j,:)*rhov
         end do
       end do
 
     end do
-    pol = pol*M_HALF
     
     print*, pol
 
@@ -488,7 +458,7 @@ contains
     R_TYPE,                    intent(in)    :: omega
     FLOAT, allocatable :: diff(:,:,:)
     FLOAT :: dpsimod,freq_sign
-    integer :: iter, sigma, ik, ik2, ist, i, ist2
+    integer :: iter, sigma, ik, ik2, ist, i
     FLOAT, allocatable :: tmp(:), dl_rhoin(:,:,:,:), dl_rhonew(:,:,:,:), dl_rhotmp(:,:,:,:)
     R_TYPE, allocatable :: Y(:, :),dV(:,:)
     R_TYPE, allocatable :: a(:,:)
@@ -556,6 +526,7 @@ contains
             if(st%occ(ist, ik) <= M_ZERO) cycle
             
             Y(1:m%np,1) = -dV(1:m%np,ik)*st%X(psi)(1:m%np, 1, ist, ik)
+
             
             call X(lr_orth_vector)(m, st, Y, ik)
 
@@ -563,12 +534,12 @@ contains
                  -sys%st%eigenval(ist, ik) + freq_sign*omega)
 
             !altough dl_psi should be orthogonal to psi
-            !a re-orthogonalization is necessary sometimes
+            !a re-orthogonalization is sometimes necessary 
             call X(lr_orth_vector)(m, st, lr(dir,sigma)%X(dl_psi)(:,:, ist, ik), ik)
 
             dpsimod=sum(lr(dir,sigma)%X(dl_psi)(1:m%np,1, ist, ik)**2*sys%gr%m%vol_pp(1:m%np))
 
-            print*, iter, ist, dpsimod, (dpsimod-diff(ist,ik,sigma))
+            print*, iter, (3-2*sigma)*ist, dpsimod, (dpsimod-diff(ist,ik,sigma))
 
             diff(ist,ik,sigma)=dpsimod
 
@@ -578,14 +549,15 @@ contains
 
       !!calculate dl_rho
 
+
       if(nsigma == 2 ) then
 
         call build_rho_dynamic()
 
       else
 
-        !!static case
         lr(dir,1)%X(dl_rho)=M_ZERO
+        !!static case
         call X(lr_build_dl_rho)(m, st, lr(dir,1), type=3)
         
       end if
@@ -599,7 +571,7 @@ contains
       do sigma=1,nsigma
         dl_rhotmp(1,:,:,sigma) = lr(dir,sigma)%X(dl_rho)(:,:)
 
-        call mixing(lr(dir,1)%mixer, m, iter, 1, st%d%nspin, &
+        call mixing(lr(dir,sigma)%mixer, m, iter, 1, st%d%nspin, &
              dl_rhoin(:,:,:,sigma), dl_rhotmp(:,:,:,sigma), dl_rhonew(:,:,:,sigma))
 
         ! check for convergence
@@ -610,12 +582,11 @@ contains
           lr(dir,sigma)%abs_dens = lr(dir,sigma)%abs_dens + dmf_integrate(m, tmp)
         end do
         lr(dir,sigma)%abs_dens = sqrt(lr(dir,sigma)%abs_dens)
-
+        print*, lr(dir,sigma)%abs_dens
         ! are we finished?
         finish(sigma) = (lr(dir,sigma)%abs_dens <= lr(dir,sigma)%conv_abs_dens)
+        lr(dir,sigma)%abs_dens=M_ZERO
       end do
-
-      print*, lr(dir,:)%abs_dens
 
       if( finish(1) .and. finish(2) ) then
         write(message(1), '(a, i4, a)')        &
@@ -680,14 +651,17 @@ contains
         !!the oposite sign
         if (sigma==1) msigma=2
         if (sigma==2) msigma=1
-        
+
         do ik = 1, st%d%nspin
           do ist = 1, st%nst
             lr(dir,sigma)%X(dl_rho)(1:m%np,ik)=lr(dir,sigma)%X(dl_rho)(1:m%np,ik)+&
-                 R_CONJ(st%X(psi)(1:m%np, 1, ist, ik))*lr(dir,sigma)%X(dl_psi)(1:m%np,1,ist,ik)+&
-                 R_CONJ(lr(dir,msigma)%X(dl_psi)(1:m%np,1,ist,ik))*st%X(psi)(1:m%np, 1, ist, ik)
+                 st%d%kweights(ik)*st%occ(ist, ik) * (&
+                 R_CONJ(st%X(psi)(1:m%np, 1, ist, ik))*lr(dir,sigma)%X(dl_psi)(1:m%np,1,ist,ik) +&
+                 R_CONJ(lr(dir,msigma)%X(dl_psi)(1:m%np,1,ist,ik))*st%X(psi)(1:m%np, 1, ist, ik)&
+                 )
           end do
         end do
+
       end do
         
     end  subroutine build_rho_dynamic
