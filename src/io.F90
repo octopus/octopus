@@ -21,7 +21,7 @@
 #include "global.h"
 
 module io
-  use syslabels
+  use datasets_mod
   use global
   use mpi_mod
   use messages
@@ -175,8 +175,16 @@ contains
     end if
 
     ! create temporary dir (we will need it)
-    tmpdir = 'tmp/'
-    call io_mkdir(tmpdir)
+    !%Variable TmpDir
+    !%Default "tmp/"
+    !%Type string
+    !%Section Generalities
+    !%Description
+    !% The name of the directory where octopus stores binary information
+    !% like the wave-functions.
+    !%End
+    call loct_parse_string('TmpDir', 'tmp/', tmpdir)
+    call io_mkdir(tmpdir, is_tmp=.true.)
 
     ! create debug directory if in debugging mode
     if(in_debug_mode) then
@@ -242,31 +250,53 @@ contains
 
 
   ! ---------------------------------------------------------
-  character(len=512) function io_workpath(path) result(wpath)
-    character(len=*), intent(in) :: path
+  character(len=512) function io_workpath(path, is_tmp) result(wpath)
+    character(len=*),  intent(in) :: path
+    logical, optional, intent(in) :: is_tmp
 
-    write(wpath, '(4a)') trim(work_dir), "/", trim(current_label), trim(path)
+    logical :: is_tmp_
+
+    is_tmp_ = .false.
+    if(present(is_tmp)) is_tmp_ = is_tmp
+
+    if(path(1:1) .eq. '/') then
+      ! we do not change absolute path names
+      wpath = trim(path)
+    else
+      if(is_tmp_) then
+        ! the current label is not added to the path for tmp files
+        write(wpath, '(3a)') trim(work_dir), "/", trim(path)
+      else
+        write(wpath, '(4a)') trim(work_dir), "/", trim(current_label), trim(path)
+      end if
+    end if
 
   end function io_workpath
 
 
   ! ---------------------------------------------------------
-  subroutine io_mkdir(fname)
-    character(len=*), intent(in) :: fname
+  subroutine io_mkdir(fname, is_tmp)
+    character(len=*),  intent(in) :: fname
+    logical, optional, intent(in) :: is_tmp
 
-    call loct_mkdir(trim(io_workpath(fname)))
+    logical :: is_tmp_
+
+    is_tmp_ = .false.
+    if(present(is_tmp)) is_tmp_ = is_tmp
+
+    call loct_mkdir(trim(io_workpath(fname, is_tmp_)))
   end subroutine io_mkdir
 
 
   ! ---------------------------------------------------------
-  integer function io_open(file, action, status, form, position, die) result(iunit)
+  integer function io_open(file, action, status, form, position, die, is_tmp) result(iunit)
     character(len=*), intent(in) :: file, action
     character(len=*), intent(in), optional :: status, form, position
-    logical,          intent(in), optional :: die
+    logical,          intent(in), optional :: die, is_tmp
 
     character(len=20)  :: status_, form_, position_
     character(len=512) :: file_
-    logical            :: die_
+    logical            :: die_, is_tmp_
     integer            :: iostat
 
     status_ = 'unknown'
@@ -288,11 +318,9 @@ contains
       return
     end if
 
-    if(file(1:1) .ne. '/') then
-      file_ = io_workpath(file)
-    else
-      file_ = file
-    end if
+    is_tmp_ = .false.
+    if(present(is_tmp)) is_tmp_ = is_tmp
+    file_ = io_workpath(file, is_tmp_)
 
     open(unit=iunit, file=trim(file_), status=trim(status_), form=trim(form_), &
       action=trim(action), position=trim(position_), iostat=iostat)

@@ -22,7 +22,7 @@
 program phonon_spectrum
   use global
   use messages
-  use syslabels
+  use datasets_mod
   use io
   use lib_oct_parser
   use units
@@ -34,8 +34,8 @@ program phonon_spectrum
   ! Initialize stuff
   call global_init()
   call parser_init()
+  call datasets_init(1)
   call io_init()
-  call syslabels_init(1)
   if(in_debug_mode) then
     call io_mkdir('debug')
   end if
@@ -47,8 +47,8 @@ program phonon_spectrum
   ! Closes file and exits
   call io_close(iunit)
 
-  call syslabels_end()
   call io_end()
+  call datasets_end()
   call parser_end()
   call global_end()
 

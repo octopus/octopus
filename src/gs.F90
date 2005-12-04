@@ -22,7 +22,7 @@
 module ground_state
   use global
   use messages
-  use syslabels
+  use datasets_mod
   use lib_oct_parser
   use system
   use hamiltonian
@@ -48,50 +48,58 @@ module ground_state
 contains
 
   ! ---------------------------------------------------------
-  integer function ground_state_run(sys, h) result(ierr)
+  subroutine ground_state_run(sys, h, fromScratch)
     type(system_type),      intent(inout) :: sys
     type(hamiltonian_type), intent(inout) :: h
+    logical,                intent(inout) :: fromScratch
 
     type(scf_type) :: scfv
+    integer        :: ierr
 
     call push_sub('gs.ground_state_run')
-    ierr = 0
 
     ! allocate wfs
     ALLOCATE(sys%st%X(psi)(sys%NP_PART, sys%st%d%dim, sys%st%nst, sys%st%d%nik), sys%NP_PART*sys%st%d%dim*sys%st%nst*sys%st%d%nik)
 
-    ! load wave-functions
-    message(1) = 'Info: Loading wave-functions'
+    if(.not.fromScratch) then
+      ! load wave-functions
+      message(1) = 'Info: Loading wave-functions'
+      call write_info(1)
+
+      call X(restart_read) (trim(tmpdir)//'restart_gs', sys%st, sys%gr%m, ierr)
+      if(ierr.ne.0) then
+        message(1) = "Could not load wave-functions from '"//trim(tmpdir)//"restart_gs'"
+        message(2) = "Starting from scratch!"
+        call write_warning(1)
+        fromScratch = .true.
+      end if
+    end if
+
+    if(fromScratch) then
+      call ground_state_init(sys%gr, sys%st, sys%ks, h)
+    end if
+
+    ! setup Hamiltonian
+    message(1) = 'Info: Setting up Hamiltonian.'
+    call write_info(1)
+    call X(system_h_setup) (sys, h)
+
+    ! run self consistency
+#ifdef COMPLEX_WFNS
+    message(1) = 'Info: SCF using complex wavefunctions.'
+#else
+    message(1) = 'Info: SCF using real wavefunctions.'
+#endif
     call write_info(1)
 
-    call X(restart_read) (trim(tmpdir)//'restart_gs', sys%st, sys%gr%m, ierr)
-    if(ierr.ne.0) then
-      message(1) = "Could not load wave-functions: Starting from scratch"
-      call write_warning(1)
-      ierr = 1
-    else
-      ! setup Hamiltonian
-      message(1) = 'Info: Setting up Hamiltonian.'
-      call write_info(1)
-      call X(system_h_setup) (sys, h)
-
-      ! run self consistency
-#ifdef COMPLEX_WFNS
-      message(1) = 'Info: SCF using complex wavefunctions.'
-#else
-      message(1) = 'Info: SCF using real wavefunctions.'
-#endif
-      call write_info(1)
-
-      call scf_init(sys%gr, scfv, sys%st, h)
-      call scf_run(scfv, sys%gr, sys%st, sys%ks, h, sys%outp)
-      call scf_end(scfv)
-    end if
+    call scf_init(sys%gr, scfv, sys%st, h)
+    call scf_run(scfv, sys%gr, sys%st, sys%ks, h, sys%outp)
+    call scf_end(scfv)
 
     ! clean up
     deallocate(sys%st%X(psi)); nullify(sys%st%X(psi))
     call pop_sub()
-  end function ground_state_run
+  end subroutine ground_state_run
 
 
   ! ---------------------------------------------------------
@@ -109,9 +117,6 @@ contains
 #endif
 
     call push_sub('gs.ground_state_init')
-
-    ! allocate wfs
-    ALLOCATE(st%X(psi)(NP_PART, st%d%dim, st%nst, st%d%nik), NP_PART*st%d%dim*st%nst*st%d%nik)
 
     ! set barrier before the first communication takes place
     ! this ensures proper debug timing of MPI calls
@@ -168,10 +173,6 @@ contains
       message(1) = 'Unsuccesfull write of "'//trim(tmpdir)//'restart_gs"'
       call write_fatal(1)
     end if
-
-    ! clean up
-    deallocate(st%X(psi))
-    nullify(st%X(psi))
 
     call pop_sub()
   end subroutine ground_state_init

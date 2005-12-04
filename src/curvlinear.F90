@@ -27,6 +27,7 @@ module curvlinear
   use curv_briggs
   use curv_modine
   use varinfo
+  use datasets_mod
 
   implicit none
 

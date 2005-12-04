@@ -22,7 +22,8 @@
 module root_solver
   use global
   use messages
-  use syslabels
+  use datasets_mod
+  use lib_oct_parser
   use ode_solver
 
   implicit none

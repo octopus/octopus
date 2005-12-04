@@ -54,8 +54,6 @@ module run_prog
     run,                         &
     run_end
 
-  ! run stack
-  integer, private :: i_stack(100), instr
   integer, public, parameter ::  &
     M_GS                 =   1,  &
     M_UNOCC              =   2,  &
@@ -70,20 +68,6 @@ module run_prog
     M_BO_MD              =  98,  &
     M_PULPO_A_FEIRA      =  99
 
-  integer, private, parameter :: &
-    I_GS_INIT            = 100,  &
-    I_GS                 = 101,  &
-    I_UNOCC              = 102,  &
-    I_TD                 = 103,  &
-    I_STATIC_POL         = 104,  &
-    I_GEOM_OPT           = 105,  &
-    I_PHONONS            = 106,  &
-    I_OPT_CONTROL        = 107,  &
-    I_LR_STATIC_POL      = 108,  &
-    I_CASIDA             = 109,  &
-    I_WAVE_MATCHING      = 110,  &
-    I_PULPO              = 999
-
   type(system_type)      :: sys
   type(hamiltonian_type) :: h
 
@@ -94,156 +78,38 @@ contains
   subroutine run()
     integer :: ierr
 
-    logical :: fromScratch(M_GS:M_WAVE_MATCHING)
+    logical :: fromScratch
 
     call push_sub('run.run')
 
-    instr = 0
-    call define_run_modes()
+    call loct_parse_logical(check_inp('fromScratch'), .false., fromScratch)
 
-    program: do
-      if(instr <= 0) exit program
-
-      select case(i_stack(instr))
-      case(I_GS_INIT)
-        call ground_state_init(sys%gr, sys%st, sys%ks, h)
-
-      case(I_GS)
-        if(ground_state_run(sys, h).ne.0) then ! could not load wfs
-          i_stack(instr) = I_GS;      instr = instr + 1
-          i_stack(instr) = I_GS_INIT
-          cycle program
-        end if
-
-      case(I_UNOCC)
-        if(unocc_run(sys, h).ne.0) then
-          i_stack(instr) = I_UNOCC;    instr = instr + 1
-          i_stack(instr) = I_GS
-          cycle program
-        end if
-
-      case(I_TD)
-        if(td_run(sys, h, fromScratch(M_TD)).ne.0) then
-          i_stack(instr) = I_TD;    instr = instr + 1
-          i_stack(instr) = I_GS
-          cycle program
-        end if
-
-      case(I_STATIC_POL)
-        if(static_pol_run(sys, h, fromScratch(M_STATIC_POL)).ne.0) then ! could not load wfs
-          i_stack(instr) = I_STATIC_POL;      instr = instr + 1
-          i_stack(instr) = I_GS_INIT
-          cycle program
-        end if
-
-      case(I_GEOM_OPT)
-        if(geom_opt_run(sys, h).ne.0) then ! could not load wfs
-          i_stack(instr) = I_GEOM_OPT;      instr = instr + 1
-          i_stack(instr) = I_GS_INIT
-          cycle program
-        end if
-
-      case(I_PHONONS)
-        if(phonons_run(sys, h).ne.0) then ! could not load wfs
-          i_stack(instr) = I_PHONONS;      instr = instr + 1
-          i_stack(instr) = I_GS_INIT
-          cycle program
-        end if
-
-      case(I_OPT_CONTROL)
-        message(1) = 'Info: Optimum control.'
-        call write_info(1)
-
-        ierr = opt_control_run(sys, h)
-
-      case(I_LR_STATIC_POL)
-        if(static_pol_lr_run(sys, h, fromScratch(M_LR_STATIC_POL)).ne.0) then ! could not load wfs
-          i_stack(instr) = I_LR_STATIC_POL;      instr = instr + 1
-          i_stack(instr) = I_GS
-          cycle program
-        end if
-
-      case(I_CASIDA)
-        if(casida_run(sys, h, fromScratch(M_CASIDA)).ne.0) then ! could not load wfs
-          i_stack(instr) = I_CASIDA;      instr = instr + 1
-          i_stack(instr) = I_UNOCC
-          cycle program
-        end if
-
-      case(I_WAVE_MATCHING)
-        ierr = wave_matching_run()
-
-      case(I_PULPO)
-        call pulpo_print()
-
-      case default
-        write(message(1), '(a,i3,a)') "Instruction ", i_stack(instr), " not defined!"
-        call write_warning(1)
-      end select
-
-      instr = instr - 1
-    end do program
+    select case(calc_mode)
+    case(M_GS)
+      call ground_state_run(sys, h, fromScratch)
+    case(M_UNOCC)
+      call unocc_run(sys, h, fromScratch)
+    case(M_TD)
+      call td_run(sys, h, fromScratch)
+    case(M_STATIC_POL)
+      call static_pol_run(sys, h, fromScratch)
+    case(M_LR_STATIC_POL)
+      call static_pol_lr_run(sys, h, fromScratch)
+    case(M_GEOM_OPT)
+      call geom_opt_run(sys, h)
+    case(M_PHONONS)
+      call phonons_run(sys, h)
+    case(M_OPT_CONTROL)
+      call opt_control_run(sys, h)
+    case(M_CASIDA)
+      call casida_run(sys, h, fromScratch)
+    case(M_WAVE_MATCHING)
+      call wave_matching_run()
+    case(M_PULPO_A_FEIRA)
+      call pulpo_print()
+    end select
 
     call pop_sub()
-
-  contains
-
-    ! ---------------------------------------------------------
-    subroutine define_run_modes()
-      logical :: fS
-
-      call loct_parse_logical(check_inp('fromScratch'), .false., fS)
-      fromScratch(:) = .false.
-
-      select case(calc_mode)
-      case(M_GS)
-        fromScratch(M_GS) = fS
-        instr = instr + 1; i_stack(instr) = I_GS
-        if(fS) then
-          instr = instr + 1; i_stack(instr) = I_GS_INIT
-        end if
-
-      case(M_UNOCC)
-        fromScratch(M_UNOCC) = fS
-        instr = instr + 1; i_stack(instr) = I_UNOCC
-
-      case(M_TD)
-        fromScratch(M_TD) = fS
-        instr = instr + 1; i_stack(instr) = I_TD
-
-      case(M_STATIC_POL)
-        fromScratch(M_STATIC_POL) = fS
-        instr = instr + 1; i_stack(instr) = I_STATIC_POL
-
-      case(M_LR_STATIC_POL)
-        fromScratch(M_LR_STATIC_POL) = fS
-        instr = instr + 1; i_stack(instr) = I_LR_STATIC_POL
-
-      case(M_GEOM_OPT)
-        fromScratch(M_GEOM_OPT) = fS
-        instr = instr + 1; i_stack(instr) = I_GEOM_OPT
-
-      case(M_PHONONS)
-        fromScratch(M_PHONONS) = fS
-        instr = instr + 1; i_stack(instr) = I_PHONONS
-
-      case(M_OPT_CONTROL)
-        fromScratch(M_OPT_CONTROL) = fS
-        instr = instr + 1; i_stack(instr) = I_OPT_CONTROL
-
-      case(M_CASIDA)
-        fromScratch(M_CASIDA) = fS
-        instr = instr + 1; i_stack(instr) = I_CASIDA
-
-      case(M_WAVE_MATCHING)
-        fromScratch(M_WAVE_MATCHING) = fS
-        instr = instr + 1; i_stack(instr) = I_WAVE_MATCHING
-
-      case(M_PULPO_A_FEIRA)
-        instr = instr + 1; i_stack(instr) = I_PULPO
-      end select
-
-    end subroutine define_run_modes
 
   end subroutine run
 
@@ -264,12 +130,14 @@ contains
     if(calc_mode .ne. M_PULPO_A_FEIRA) then
       call units_init()
       call get_mode_parallelized(mode)
+
       call system_init(sys, mode)
       call hamiltonian_init(h, sys%gr, sys%st%d, sys%ks%ip_app)
       call epot_generate(h%ep, sys%gr%m, sys%gr%sb, sys%gr%geo, sys%st, h%reltype)
+
+      call restart_init()
     end if
 
-    call restart_init()
 
   contains
 

@@ -36,11 +36,14 @@
 !             -4 : function in file is complex, dp.
 ! ---------------------------------------------------------
 
-subroutine X(input_function)(filename, m, f, ierr)
+subroutine X(input_function)(filename, m, f, ierr, is_tmp)
   character(len=*),     intent(in)  :: filename
   type(mesh_type),      intent(in)  :: m
   R_TYPE,               intent(out) :: f(:)
   integer,              intent(out) :: ierr
+  logical, optional,    intent(in)  :: is_tmp
+
+  logical :: is_tmp_ = .false.
 
 #if defined(HAVE_MPI)
   integer             :: mpi_err
@@ -49,13 +52,15 @@ subroutine X(input_function)(filename, m, f, ierr)
 
   call push_sub('out_inc.Xinput_function')
 
+  if(present(is_tmp)) is_tmp_ = is_tmp
+
   if(m%parallel_in_domains) then
 #if defined(HAVE_MPI)
     ! Only root reads. Therefore, only root needs a buffer
     ! f_global for the whole function.
     if(mpi_grp_is_root(m%mpi_grp)) then
       ALLOCATE(f_global(m%np_global), m%np_global)
-      call X(input_function_global)(filename, m, f_global, ierr)
+      call X(input_function_global)(filename, m, f_global, ierr, is_tmp_)
     end if
     if(in_debug_mode) call write_debug_newlines(2)
 
@@ -77,7 +82,7 @@ subroutine X(input_function)(filename, m, f, ierr)
     ASSERT(.false.) ! internal error
 #endif
   else
-    call X(input_function_global)(filename, m, f, ierr)
+    call X(input_function_global)(filename, m, f, ierr, is_tmp_)
   end if
 
   call pop_sub()
@@ -86,11 +91,12 @@ end subroutine X(input_function)
 
 
 ! ---------------------------------------------------------
-subroutine X(input_function_global)(filename, m, f, ierr)
+subroutine X(input_function_global)(filename, m, f, ierr, is_tmp)
   character(len=*),     intent(in)  :: filename
   type(mesh_type),      intent(in)  :: m
   R_TYPE,               intent(out) :: f(:)
   integer,              intent(out) :: ierr
+  logical,              intent(in)  :: is_tmp
 
   integer :: iunit, i, function_kind, file_kind
 
@@ -145,7 +151,7 @@ contains
     complex(4), allocatable :: cs(:)
     complex(8), allocatable :: cd(:)
 
-    iunit = io_open(filename, action='read', status='old', form='unformatted', die=.false.)
+    iunit = io_open(filename, action='read', status='old', form='unformatted', die=.false., is_tmp=is_tmp)
 
     if(iunit< 0) then
       ierr = 2
@@ -212,7 +218,7 @@ contains
     logical            :: function_is_complex = .false.
     character(len=512) :: file
 
-    file = io_workpath(filename)
+    file = io_workpath(filename, is_tmp=is_tmp)
 
     status = nf90_open(trim(file), NF90_WRITE, ncid)
     if(status.ne.NF90_NOERR) then
@@ -312,14 +318,17 @@ end subroutine X(input_function_global)
 
 
 ! ---------------------------------------------------------
-subroutine X(output_function) (how, dir, fname, mesh, sb, f, u, ierr)
-  integer,          intent(in)  :: how
-  character(len=*), intent(in)  :: dir, fname
-  type(mesh_type),  intent(in)  :: mesh
+subroutine X(output_function) (how, dir, fname, mesh, sb, f, u, ierr, is_tmp)
+  integer,              intent(in)  :: how
+  character(len=*),     intent(in)  :: dir, fname
+  type(mesh_type),      intent(in)  :: mesh
   type(simul_box_type), intent(in)  :: sb
-  R_TYPE,           intent(in)  :: f(:)  ! f(mesh%np)
-  FLOAT,            intent(in)  :: u
-  integer,          intent(out) :: ierr
+  R_TYPE,               intent(in)  :: f(:)  ! f(mesh%np)
+  FLOAT,                intent(in)  :: u
+  integer,              intent(out) :: ierr
+  logical, optional,    intent(in)  :: is_tmp
+
+  logical :: is_tmp_ = .false.
 
 #if defined(HAVE_MPI)
   R_TYPE, allocatable :: f_global(:)
@@ -328,6 +337,8 @@ subroutine X(output_function) (how, dir, fname, mesh, sb, f, u, ierr)
 
   call push_sub('out_inc.Xoutput_function')
 
+  if(present(is_tmp)) is_tmp_ = is_tmp
+
   if(mesh%parallel_in_domains) then
 #if defined(HAVE_MPI)
     ALLOCATE(f_global(mesh%np_global), mesh%np_global)
@@ -335,7 +346,7 @@ subroutine X(output_function) (how, dir, fname, mesh, sb, f, u, ierr)
     call X(vec_gather)(mesh%vp, f_global, f)
 
     if(mesh%vp%rank.eq.mesh%vp%root) then
-      call X(output_function_global)(how, dir, fname, mesh, sb, f_global, u, ierr)
+      call X(output_function_global)(how, dir, fname, mesh, sb, f_global, u, ierr, is_tmp)
     end if
 
     ! I have to broadcast the error code
@@ -348,7 +359,7 @@ subroutine X(output_function) (how, dir, fname, mesh, sb, f, u, ierr)
     ASSERT(.false.)
 #endif
   else
-    call X(output_function_global)(how, dir, fname, mesh, sb, f, u, ierr)
+    call X(output_function_global)(how, dir, fname, mesh, sb, f, u, ierr, is_tmp)
   end if
 
   call pop_sub()
@@ -356,14 +367,16 @@ end subroutine X(output_function)
 
 
 ! ---------------------------------------------------------
-subroutine X(output_function_global) (how, dir, fname, m, sb, f, u, ierr)
-  integer,          intent(in)  :: how
-  character(len=*), intent(in)  :: dir, fname
-  type(mesh_type),  intent(in)  :: m
+subroutine X(output_function_global) (how, dir, fname, m, sb, f, u, ierr, is_tmp)
+  integer,              intent(in)  :: how
+  character(len=*),     intent(in)  :: dir, fname
+  type(mesh_type),      intent(in)  :: m
   type(simul_box_type), intent(in)  :: sb
-  R_TYPE,           intent(in)  :: f(1:m%np_global)  ! f(m%np_global)
-  FLOAT,            intent(in)  :: u
-  integer,          intent(out) :: ierr
+  R_TYPE,               intent(in)  :: f(:)  ! f(m%np_global)
+  FLOAT,                intent(in)  :: u
+  integer,              intent(out) :: ierr
+  logical,              intent(in)  :: is_tmp
+
 
   integer :: i
   FLOAT   :: x0
@@ -410,7 +423,7 @@ contains
   subroutine plain()
     integer :: iunit
 
-    iunit = io_open(trim(dir)//'/'//trim(fname), action='write', form='unformatted')
+    iunit = io_open(trim(dir)//'/'//trim(fname), action='write', form='unformatted', is_tmp=is_tmp)
 
     write(unit=iunit, iostat=ierr) X(output_kind)*kind(f(1)), m%np_global
     write(unit=iunit, iostat=ierr) f(1:m%np_global)
@@ -423,7 +436,7 @@ contains
   subroutine axis_x()
     integer :: iunit, i
 
-    iunit = io_open(trim(dir)//'/'//trim(fname)//".y=0,z=0", action='write')
+    iunit = io_open(trim(dir)//'/'//trim(fname)//".y=0,z=0", action='write', is_tmp=is_tmp)
 
     write(iunit, mfmtheader, iostat=ierr) '#', 'x', 'Re', 'Im'
     do i = 1, m%np_global
@@ -440,7 +453,7 @@ contains
   subroutine axis_y()
     integer :: iunit, i
 
-    iunit = io_open(trim(dir)//'/'//trim(fname)//".x=0,z=0", action='write')
+    iunit = io_open(trim(dir)//'/'//trim(fname)//".x=0,z=0", action='write', is_tmp=is_tmp)
 
     write(iunit, mfmtheader, iostat=ierr) '#', 'y', 'Re', 'Im'
     do i = 1, m%np_global
@@ -457,7 +470,7 @@ contains
   subroutine axis_z()
     integer :: iunit, i
 
-    iunit = io_open(trim(dir)//'/'//trim(fname)//".x=0,y=0", action='write')
+    iunit = io_open(trim(dir)//'/'//trim(fname)//".x=0,y=0", action='write', is_tmp=is_tmp)
 
     write(iunit, mfmtheader, iostat=ierr) '#', 'z', 'Re', 'Im'
     do i = 1, m%np_global
@@ -474,7 +487,7 @@ contains
   subroutine plane_x()
     integer  :: iunit, i
 
-    iunit = io_open(trim(dir)//'/'//trim(fname)//".x=0", action='write')
+    iunit = io_open(trim(dir)//'/'//trim(fname)//".x=0", action='write', is_tmp=is_tmp)
 
     write(iunit, mfmtheader, iostat=ierr) '#', 'x', 'y', 'Re', 'Im'
     x0 = m%x_global(1,2)
@@ -500,7 +513,7 @@ contains
    subroutine plane_y()
     integer  :: iunit, i
 
-    iunit = io_open(trim(dir)//'/'//trim(fname)//".y=0", action='write')
+    iunit = io_open(trim(dir)//'/'//trim(fname)//".y=0", action='write', is_tmp=is_tmp)
 
     write(iunit, MFMTHEADER, iostat=ierr) '#', 'x', 'z', 'Re', 'Im'
     x0 = m%x_global(1,1)
@@ -526,7 +539,7 @@ contains
   subroutine plane_z()
     integer  :: iunit, i
 
-    iunit = io_open(trim(dir)//'/'//trim(fname)//".z=0", action='write')
+    iunit = io_open(trim(dir)//'/'//trim(fname)//".z=0", action='write', is_tmp=is_tmp)
 
     write(iunit, MFMTHEADER, iostat=ierr) '#', 'x', 'y', 'Re', 'Im'
     x0 = m%x_global(1,1)
@@ -553,7 +566,7 @@ contains
   subroutine out_mesh_index()
     integer  :: iunit, i
 
-    iunit = io_open(trim(dir)//'/'//trim(fname)//".mesh_index", action='write')
+    iunit = io_open(trim(dir)//'/'//trim(fname)//".mesh_index", action='write', is_tmp=is_tmp)
 
     write(iunit, mfmtheader, iostat=ierr) '#', 'Index', 'x', 'y', 'z', 'Re', 'Im'
     x0 = m%x_global(1,1)
@@ -597,7 +610,7 @@ contains
     write(nitems,*)c%n(1)*c%n(2)*c%n(3)
     nitems=trim(adjustl(nitems))
 
-    iunit = io_open(trim(dir)//'/'//trim(fname)//".dx", action='write')
+    iunit = io_open(trim(dir)//'/'//trim(fname)//".dx", action='write', is_tmp=is_tmp)
 
     write(iunit, '(a,3i7)') 'object 1 class gridpositions counts', c%n(:)
     write(iunit, '(a,3f12.6)') ' origin', offset(:)
@@ -645,7 +658,7 @@ contains
     call X(cf_alloc_RS) (c)
     call X(mf2cf) (m, f, c)
 
-    filename = io_workpath(trim(dir)//'/'//trim(fname)//".ncdf");
+    filename = io_workpath(trim(dir)//'/'//trim(fname)//".ncdf", is_tmp=is_tmp);
 
     status = nf90_create(trim(filename), NF90_CLOBBER, ncid)
     if(status.ne.NF90_NOERR) then

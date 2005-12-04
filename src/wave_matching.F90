@@ -22,7 +22,7 @@
 module wave_matching
   use global
   use messages
-  use syslabels
+  use datasets_mod
   use system
   use hamiltonian
   use io
@@ -37,13 +37,11 @@ module wave_matching
 contains
 
   ! ---------------------------------------------------------
-  integer function wave_matching_run() result(ierr)
+  subroutine wave_matching_run()
 !!$    type(system_type)       :: sys
 !!$    type(hamiltonian_type)  :: h
 
     call push_sub('wave_matching.wave_matching_run')
-
-    ierr = 0
 
     call check_params()
 
@@ -55,39 +53,39 @@ contains
     ! ---------------------------------------------------------
     subroutine check_params()
 
-      if( current_subsystem-1 .lt. 1 ) then
+      if( current_dataset-1 .lt. 1 ) then
         message(1) = 'Error: Missing left neighbor'
         message(2) = 'Please correct your input file'
         call write_fatal(2)
       end if
 
-      if( current_subsystem+1 .gt. no_syslabels ) then
+      if( current_dataset+1 .gt. no_datasets ) then
         message(1) = 'Error: Missing right neighbor'
         message(2) = 'Please correct your input file'
         call write_fatal(2)
       end if
 
-      if( subsys_runmode(current_subsystem-1) .eq. 10 ) then
+      if( dataset_runmode(current_dataset-1) .eq. 10 ) then
         message(1) = 'Error: Left neighbor cannot be in runmode wave_matching'
         message(2) = 'Please correct your input file'
         call write_fatal(2)
       end if
 
-      if( subsys_runmode(current_subsystem+1) .eq. 10 ) then
+      if( dataset_runmode(current_dataset+1) .eq. 10 ) then
         message(1) = 'Error: Right neighbor cannot be in runmode wave_matching'
         message(2) = 'Please correct your input file'
         call write_fatal(2)
       end if
 
       message(1) = 'Info: Starting Wave-Matching'
-      message(2) = 'Info: We are                    : '//subsys_label(current_subsystem)
-      message(3) = 'Info: Our left neighbor is      : '//subsys_label(current_subsystem-1)
-      message(4) = 'Info: And our right neighbor is : '//subsys_label(current_subsystem+1)
+      message(2) = 'Info: We are                    : '//dataset_label(current_dataset)
+      message(3) = 'Info: Our left neighbor is      : '//dataset_label(current_dataset-1)
+      message(4) = 'Info: And our right neighbor is : '//dataset_label(current_dataset+1)
       call write_info(4, stress=.true.)
 
     end subroutine check_params
 
-  end function wave_matching_run
+  end subroutine wave_matching_run
 
 
 end module wave_matching

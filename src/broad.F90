@@ -22,7 +22,7 @@
 program broad
   use global
   use messages
-  use syslabels
+  use datasets_mod
   use io
   use units
   use lib_oct_parser
@@ -38,8 +38,8 @@ program broad
   ! Initialize stuff
   call global_init()
   call parser_init()
+  call datasets_init(1)
   call io_init()
-  call syslabels_init(1)
   if(in_debug_mode) then
      call io_mkdir('debug')
   end if
@@ -60,7 +60,7 @@ program broad
   call calc_broad(b, 'linear', 'casida', .false.)
 
   call io_end()
-  call syslabels_end()
+  call datasets_end()
   call parser_end()
   call global_end()
 

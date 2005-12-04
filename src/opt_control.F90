@@ -22,7 +22,7 @@
 module opt_control
   use global
   use messages
-  use syslabels
+  use datasets_mod
   use lib_oct
   use lib_oct_parser
   use io
@@ -44,7 +44,7 @@ module opt_control
 contains
 
   ! ---------------------------------------------------------
-  integer function opt_control_run(sys, h) result(ierr)
+  subroutine opt_control_run(sys, h)
     type(system_type), target, intent(inout) :: sys
     type(hamiltonian_type),    intent(inout) :: h
 
@@ -61,7 +61,6 @@ contains
     FLOAT :: eps, alpha, overlap, functional, old_functional, laser_init
     character(len=80) :: filename
 
-    ierr = 0
     call init_()
 
     ! first propagate psi_f to ti
@@ -295,6 +294,8 @@ contains
       type(states_type), intent(out) :: st
       character(len=*),  intent(in)  :: filename
 
+      integer :: ierr
+
       call zrestart_read('opt-control/'//trim(filename), st, gr%m, ierr)
       if(ierr.ne.0) then
         message(1) = "Unsuccesfull read of states in 'opt-control/" // trim(filename) // "'"
@@ -395,6 +396,6 @@ contains
       call td_end(td)
     end subroutine end_
 
-  end function opt_control_run
+  end subroutine opt_control_run
 
 end module opt_control

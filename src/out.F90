@@ -22,7 +22,7 @@
 module output
   use global
   use messages
-  use syslabels
+  use datasets_mod
   use lib_oct
   use lib_oct_parser
   use io
@@ -287,7 +287,7 @@ contains
     call push_sub('out.iopar_open')
 
     if(mpi_grp_is_root(m%mpi_grp)) then
-      iunit = io_open(file, action, status, form, position, die)
+      iunit = io_open(file, action, status, form, position, die, is_tmp=.true.)
     end if
 
 #if defined(HAVE_MPI)

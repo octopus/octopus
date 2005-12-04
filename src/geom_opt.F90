@@ -22,7 +22,7 @@
 module geom_opt
   use global
   use messages
-  use syslabels
+  use datasets_mod
   use lib_oct_parser
   use units
   use mesh
@@ -55,32 +55,27 @@ module geom_opt
 contains
 
   ! ---------------------------------------------------------
-  integer function geom_opt_run(sys, h) result(ierr)
+  subroutine geom_opt_run(sys, h)
     type(system_type), target, intent(inout) :: sys
     type(hamiltonian_type),    intent(inout) :: h
 
-    type(scf_type)             :: scfv
+    type(scf_type)               :: scfv
     type(mesh_type),     pointer :: m    ! shortcuts
     type(states_type),   pointer :: st
     type(geometry_type), pointer :: geo
 
     type(geom_opt_type) :: g_opt
 
-    integer :: i, err
+    integer :: i, ierr
     FLOAT, allocatable :: x(:)
 
-    ierr = 0
     call init_()
 
     ! load wave-functions
-    call X(restart_read) (trim(tmpdir)//'restart_gs', sys%st, sys%gr%m, err)
-    if(err.ne.0) then
+    call X(restart_read) (trim(tmpdir)//'restart_gs', sys%st, sys%gr%m, ierr)
+    if(ierr.ne.0) then
       message(1) = "Could not load wave-functions: Starting from scratch"
       call write_warning(1)
-
-      ierr = 1
-      call end_()
-      return
     end if
 
     ! setup Hamiltonian
@@ -284,5 +279,5 @@ contains
       deallocate(x1, df, df1)
     end function steepest_descents
 
-  end function geom_opt_run
+  end subroutine geom_opt_run
 end module geom_opt

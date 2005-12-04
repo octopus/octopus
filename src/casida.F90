@@ -22,7 +22,7 @@
 module casida
   use global
   use messages
-  use syslabels
+  use datasets_mod
   use lib_oct_parser
   use units
   use lib_oct
@@ -72,22 +72,21 @@ module casida
 contains
 
   ! ---------------------------------------------------------
-  integer function casida_run(sys, h, fromScratch) result(ierr)
+  subroutine casida_run(sys, h, fromScratch)
     type(system_type),      intent(inout) :: sys
     type(hamiltonian_type), intent(inout) :: h
     logical,                intent(inout) :: fromScratch
 
     type(casida_type) ::  cas
-    integer :: i, err, kpoints, dim, nst, ist
+    integer :: i, ierr, kpoints, dim, nst, ist
 
     call push_sub('casida.casida_run')
 
-    ierr = 0
     message(1) = 'Info: Starting linear response calculation.'
     call write_info(1)
 
-    call restart_look (trim(tmpdir)//'restart_gs', sys%gr%m, kpoints, dim, nst, err)
-    if(err.ne.0) then
+    call restart_look(trim(tmpdir)//'restart_gs', sys%gr%m, kpoints, dim, nst, ierr)
+    if(ierr.ne.0) then
       message(1) = 'Could not properly read wave-functions from "'//trim(tmpdir)//'restart_gs".'
       call write_fatal(1)
     end if
@@ -112,8 +111,8 @@ contains
     sys%st%eigenval = huge(PRECISION)
     sys%st%occ      = M_ZERO
 
-    call X(restart_read) (trim(tmpdir)//'restart_gs', sys%st, sys%gr%m, err)
-    if(err.ne.0) then
+    call X(restart_read) (trim(tmpdir)//'restart_gs', sys%st, sys%gr%m, ierr)
+    if(ierr.ne.0) then
       message(1) = 'Could not properly read wave-functions from "'//trim(tmpdir)//'restart_gs".'
       call write_fatal(1)
     end if
@@ -201,7 +200,7 @@ contains
     call casida_type_end(cas)
 
     call pop_sub()
-  end function casida_run
+  end subroutine casida_run
 
 
   ! allocates stuff, and constructs the arrays pair_i and pair_j
@@ -368,7 +367,7 @@ contains
       if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(-1, cas%n_pairs-1)
 
       ! file to save matrix elements
-      iunit = io_open(trim(tmpdir)//'restart_casida', action='write', position='append')
+      iunit = io_open(trim(tmpdir)//'restart_casida', action='write', position='append', is_tmp=.true.)
 
       do ia = 1, cas%n_pairs
         a = cas%pair_a(ia)
@@ -470,7 +469,7 @@ contains
         if(mpi_grp_is_root(mpi_world)) write(stdout, '(1x)')
 
         ! complete the matrix and output the restart file
-        iunit = io_open(trim(tmpdir)//'restart_casida', action='write', position='append')
+        iunit = io_open(trim(tmpdir)//'restart_casida', action='write', position='append', is_tmp=.true.)
         do ia = 1, cas%n_pairs
           i = cas%pair_i(ia)
           a = cas%pair_a(ia)
@@ -590,7 +589,7 @@ contains
 
       call push_sub('casida.load_saved')
 
-      iunit = io_open(trim(tmpdir)//'restart_casida', action='read', status='old', die=.false.)
+      iunit = io_open(trim(tmpdir)//'restart_casida', action='read', status='old', die=.false., is_tmp=.true.)
       err = min(iunit, 0)
 
       do while(err .eq. 0)

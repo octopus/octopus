@@ -22,7 +22,7 @@
 module phonons
   use global
   use messages
-  use syslabels
+  use datasets_mod
   use units
   use lib_oct
   use lib_oct_parser
@@ -56,25 +56,20 @@ module phonons
 contains
 
   ! ---------------------------------------------------------
-  integer function phonons_run(sys, h) result(ierr)
+  subroutine phonons_run(sys, h)
     type(system_type),      intent(inout) :: sys
     type(hamiltonian_type), intent(inout) :: h
 
     type(phonons_type) :: ph
-    integer :: i, j, iunit, err
+    integer :: i, j, iunit, ierr
 
-    ierr = 0
     call init_()
 
     ! load wave-functions
-    call X(restart_read) (trim(tmpdir)//'restart_gs', sys%st, sys%gr%m, err)
-    if(err.ne.0) then
+    call X(restart_read) (trim(tmpdir)//'restart_gs', sys%st, sys%gr%m, ierr)
+    if(ierr.ne.0) then
       message(1) = "Could not load wave-functions: Starting from scratch"
       call write_warning(1)
-
-      ierr = 1
-      call end_()
-      return
     end if
 
     ! setup Hamiltonian
@@ -145,7 +140,7 @@ contains
       call pop_sub()
     end subroutine end_
 
-  end function phonons_run
+  end subroutine phonons_run
 
 
   ! ---------------------------------------------------------

@@ -22,9 +22,10 @@
 module xyz_adjust
   use global
   use messages
-  use syslabels
+  use datasets_mod
   use geometry
   use lib_adv_alg
+  use lib_oct_parser
 
   implicit none
 

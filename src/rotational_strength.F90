@@ -22,7 +22,7 @@
 program rotational_strength
   use global
   use messages
-  use syslabels
+  use datasets_mod
   use lib_oct_parser
   use io
   use units
@@ -36,8 +36,8 @@ program rotational_strength
   ! Initialize stuff
   call global_init()
   call parser_init()
+  call datasets_init(1)
   call io_init()
-  call syslabels_init(1)
   if(in_debug_mode) then
     call io_mkdir('debug')
   end if
@@ -57,8 +57,8 @@ program rotational_strength
   call spectrum_rotatory_strength(in_file, out_file, s)
   call io_close(in_file); call io_close(out_file)
 
-  call syslabels_end()
   call io_end()
+  call datasets_end()
   call parser_end()
   call global_end()
 end program rotational_strength

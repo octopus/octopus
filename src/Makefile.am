@@ -6,7 +6,7 @@ EXTRA_PROGRAMS = oct-cross-section oct-rsf oct-harmonic-spectrum \
 bin_PROGRAMS = octopus @UTILITY_PROGRAMS@
 
 basic_SRCS = liboct.F90 string.F90 varinfo.F90 mpi.F90 global.F90 liboct_parser.F90 \
-	     messages.F90 syslabels.F90 io.F90 units.F90 mpi_debug.F90 profiling.F90 \
+	     messages.F90 datasets.F90 io.F90 units.F90 mpi_debug.F90 profiling.F90 \
              blas.F90 linalg_basic.F90 linalg_adv.F90 math.F90 multicomm.F90 
 
 core_SRCS = $(basic_SRCS) \
@@ -216,9 +216,9 @@ xyz_file.o: global.h
 varinfo.o: string.o
 global.o: global.h varinfo.o string.o
 liboct_parser.o: global.o
-syslabels: liboct_parser.o
-messages.o: liboct.o syslabels.o
-io.o: global.o liboct_parser.o syslabels.o
+datasets.o: liboct_parser.o
+messages.o: liboct.o datasets.o
+io.o: global.o liboct_parser.o datasets.o
 
 
 

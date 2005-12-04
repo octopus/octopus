@@ -24,7 +24,7 @@ module simul_box
   use messages
   use varinfo
   use units
-  use syslabels
+  use datasets_mod
   use lib_oct_parser
   use geometry
 

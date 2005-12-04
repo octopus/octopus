@@ -22,7 +22,7 @@
 module lasers
   use global
   use messages
-  use syslabels
+  use datasets_mod
   use io
   use lib_oct_parser
   use lib_oct_gsl_spline

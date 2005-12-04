@@ -23,7 +23,7 @@ program octopus
   use string
   use global
   use messages
-  use syslabels
+  use datasets_mod
   use lib_oct
   use lib_oct_parser
   use run_prog
@@ -110,11 +110,11 @@ program octopus
   !% Prints out a tasty recipe
   !%End
   if(loct_parse_block('CalculationMode', blk) == 0) then
-    call syslabels_init(calc_mode, blk)
+    call datasets_init(calc_mode, blk)
   else
     call loct_parse_int('CalculationMode', M_GS, calc_mode)
     if(.not.varinfo_valid_option('CalculationMode', calc_mode)) call input_error('CalculationMode')
-    call syslabels_init(calc_mode)
+    call datasets_init(calc_mode)
   end if
 
   !%Variable Dimensions
@@ -134,19 +134,19 @@ program octopus
   call loct_parse_int(check_inp('Dimensions'), 3, calc_dim)
   if( calc_dim > 3 .or. calc_dim < 1) call input_error('Dimensions')
 
-  ! loop over all subsystems
-  subsystems: do ns = 1, no_subsystems
+  ! loop over all datasets
+  datasets: do ns = 1, no_datasets
 
     ! set system label
-    current_subsystem = subsys_run_order(ns)
-    current_label = trim(subsys_label(current_subsystem))
-    calc_mode = subsys_runmode(current_subsystem)
+    current_dataset = dataset_run_order(ns)
+    current_label = trim(dataset_label(current_dataset))
+    calc_mode = dataset_runmode(current_dataset)
 
-    ! syslabels have to be available before calling the _init() functions below
+    ! datasets have to be available before calling the _init() functions below
     call io_init()
     call profiling_init()
 
-    call profiling_in(C_PROFILING_COMPLETE_SUBSYS)
+    call profiling_in(C_PROFILING_COMPLETE_DATASET)
 
     ! Let us print our logo
     if(mpi_grp_is_root(mpi_world)) then
@@ -176,9 +176,9 @@ program octopus
 
     call print_date("Calculation started on ")
 
-    if(no_subsystems > 1) then
-      message(1) = 'Info: Multi-Subsystem Mode'
-      message(2) = 'Info: Running '//current_label
+    if(no_datasets > 1) then
+      message(1) = 'Info: Multi-Dataset Mode'
+      message(2) = 'Info: Running dataset "'//current_label//'"'
       call write_info(2, stress = .true.)
     end if
 
@@ -194,14 +194,14 @@ program octopus
 
     call io_end()
 
-    call profiling_out(C_PROFILING_COMPLETE_SUBSYS)
+    call profiling_out(C_PROFILING_COMPLETE_DATASET)
     call profiling_output()
 
     call print_date("Calculation ended on ")
 
-  end do subsystems
+  end do datasets
 
-  call syslabels_end()
+  call datasets_end()
   call parser_end()
   call global_end()
 

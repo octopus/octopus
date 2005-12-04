@@ -84,7 +84,7 @@ module timedep
 contains
 
   ! ---------------------------------------------------------
-  integer function td_run(sys, h, fromScratch) result(ierr)
+  subroutine td_run(sys, h, fromScratch)
     type(system_type), target, intent(inout) :: sys
     type(hamiltonian_type),    intent(inout) :: h
     logical,                   intent(inout) :: fromScratch
@@ -112,11 +112,7 @@ contains
     ! allocate memory
     allocate(st%zpsi(NP_PART, st%d%dim, st%st_start:st%st_end, st%d%nik))
 
-    ierr = init_wfs()
-    if(ierr.ne.0) then
-      call end_()
-      return
-    end if
+    call init_wfs()
 
     call td_write_init(write_handler, gr, st, geo, (td%move_ions>0), (h%ep%no_lasers>0), td%iter, td%dt )
 
@@ -285,15 +281,14 @@ contains
 
 
     ! ---------------------------------------------------------
-    integer function init_wfs() result(ierr)
-      integer :: i, is, err
+    subroutine init_wfs()
+      integer :: i, is, ierr
       character(len=50) :: filename
       FLOAT :: x
 
-      ierr = 0
       if(.not.fromScratch) then
-        call zrestart_read(trim(tmpdir)//'restart_td', st, gr%m, err, td%iter)
-        if(err.ne.0) then
+        call zrestart_read(trim(tmpdir)//'restart_td', st, gr%m, ierr, td%iter)
+        if(ierr.ne.0) then
           message(1) = "Could not load "//trim(tmpdir)//"restart_td: Starting from scratch"
           call write_warning(1)
 
@@ -313,10 +308,9 @@ contains
       if(fromScratch) then
         call zrestart_read(trim(tmpdir)//'restart_gs', st, gr%m, ierr)
         if(ierr.ne.0) then
-          message(1) = "Could not load '"//trim(tmpdir)//"restart_gs': Starting from scratch"
-          call write_warning(1)
-
-          ierr = 1
+          message(1) = "Could not read KS orbitals from '"//trim(tmpdir)//"restart_gs'"
+          message(2) = "Please run a ground-state calculation first!"
+          call write_fatal(2)
         end if
 
         ! check if we should deploy user defined wavefunctions. 
@@ -327,20 +321,18 @@ contains
         end if
       end if
 
-      if(ierr==0) then
-        call zstates_calc_dens(st, NP, st%rho)
-        call zv_ks_calc(gr, sys%ks, h, st, calc_eigenval=.true.)
-        x = minval(st%eigenval(st%st_start, :))
+      call zstates_calc_dens(st, NP, st%rho)
+      call zv_ks_calc(gr, sys%ks, h, st, calc_eigenval=.true.)
+      x = minval(st%eigenval(st%st_start, :))
 #ifdef HAVE_MPI
-        if(st%parallel_in_states) then
-          call MPI_BCAST(x, 1, MPI_FLOAT, 0, st%mpi_grp%comm, i)
-        end if
-#endif
-        call hamiltonian_span(h, minval(gr%m%h(1:NDIM)), x)
-        call hamiltonian_energy(h, st, geo%eii, -1)
+      if(st%parallel_in_states) then
+        call MPI_BCAST(x, 1, MPI_FLOAT, 0, st%mpi_grp%comm, i)
       end if
+#endif
+      call hamiltonian_span(h, minval(gr%m%h(1:NDIM)), x)
+      call hamiltonian_energy(h, st, geo%eii, -1)
 
-    end function init_wfs
+    end subroutine init_wfs
 
 
     ! ---------------------------------------------------------
@@ -505,7 +497,7 @@ contains
       call pop_sub()
     end subroutine td_save_restart
 
-  end function td_run
+  end subroutine td_run
 
 #include "td_init.F90"
 

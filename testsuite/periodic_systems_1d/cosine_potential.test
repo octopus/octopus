@@ -9,7 +9,9 @@ Programs : octopus_cmplx
 Enabled  : Yes
 
 INP
-CalculationMode = unocc
+%CalculationMode 
+  gs | unocc
+%
 fromScratch = yes
 
 Dimensions = 1
@@ -59,17 +61,17 @@ RUN
 # Match ; TotalEnergy ; grep -A 6 '^Energy:' static/info ; \s*Total\s*=\s*-0.33802679
 
 # 1st Band
-Match ; Bands ; grep '^   1' static/eigenvalues | tac | head -n 6 | tail -n 1 ; \s*-0.133002\d*\s*2.0000\d*
-Match ; Bands ; grep '^   1' static/eigenvalues | tac | head -n 5 | tail -n 1 ; \s*-0.133000\d*\s*2.0000\d*
-Match ; Bands ; grep '^   1' static/eigenvalues | tac | head -n 4 | tail -n 1 ; \s*-0.132996\d*\s*2.0000\d*
-Match ; Bands ; grep '^   1' static/eigenvalues | tac | head -n 3 | tail -n 1 ; \s*-0.132992\d*\s*2.0000\d*
-Match ; Bands ; grep '^   1' static/eigenvalues | tac | head -n 2 | tail -n 1 ; \s*-0.132988\d*\s*2.0000\d*
-Match ; Bands ; grep '^   1' static/eigenvalues | tac | head -n 1 | tail -n 1 ; \s*-0.132986\d*\s*2.0000\d*
+Match ; Bands ; grep '^   1' ds02_static/eigenvalues | tac | head -n 6 | tail -n 1 ; \s*-0.133002\d*\s*2.0000\d*
+Match ; Bands ; grep '^   1' ds02_static/eigenvalues | tac | head -n 5 | tail -n 1 ; \s*-0.133000\d*\s*2.0000\d*
+Match ; Bands ; grep '^   1' ds02_static/eigenvalues | tac | head -n 4 | tail -n 1 ; \s*-0.132996\d*\s*2.0000\d*
+Match ; Bands ; grep '^   1' ds02_static/eigenvalues | tac | head -n 3 | tail -n 1 ; \s*-0.132992\d*\s*2.0000\d*
+Match ; Bands ; grep '^   1' ds02_static/eigenvalues | tac | head -n 2 | tail -n 1 ; \s*-0.132988\d*\s*2.0000\d*
+Match ; Bands ; grep '^   1' ds02_static/eigenvalues | tac | head -n 1 | tail -n 1 ; \s*-0.132986\d*\s*2.0000\d*
 
 # 2nd Band
-Match ; Bands ; grep '^   2' static/eigenvalues | tac | head -n 6 | tail -n 1 ; \s*-0.006033\d*\s*0.0000\d*
-Match ; Bands ; grep '^   2' static/eigenvalues | tac | head -n 5 | tail -n 1 ; \s*-0.006086\d*\s*0.0000\d*
-Match ; Bands ; grep '^   2' static/eigenvalues | tac | head -n 4 | tail -n 1 ; \s*-0.006223\d*\s*0.0000\d*
-Match ; Bands ; grep '^   2' static/eigenvalues | tac | head -n 3 | tail -n 1 ; \s*-0.006391\d*\s*0.0000\d*
-Match ; Bands ; grep '^   2' static/eigenvalues | tac | head -n 2 | tail -n 1 ; \s*-0.006526\d*\s*0.0000\d*
-Match ; Bands ; grep '^   2' static/eigenvalues | tac | head -n 1 | tail -n 1 ; \s*-0.006577\d*\s*0.0000\d*
+Match ; Bands ; grep '^   2' ds02_static/eigenvalues | tac | head -n 6 | tail -n 1 ; \s*-0.006033\d*\s*0.0000\d*
+Match ; Bands ; grep '^   2' ds02_static/eigenvalues | tac | head -n 5 | tail -n 1 ; \s*-0.006082\d*\s*0.0000\d*
+Match ; Bands ; grep '^   2' ds02_static/eigenvalues | tac | head -n 4 | tail -n 1 ; \s*-0.006223\d*\s*0.0000\d*
+Match ; Bands ; grep '^   2' ds02_static/eigenvalues | tac | head -n 3 | tail -n 1 ; \s*-0.006391\d*\s*0.0000\d*
+Match ; Bands ; grep '^   2' ds02_static/eigenvalues | tac | head -n 2 | tail -n 1 ; \s*-0.006526\d*\s*0.0000\d*
+Match ; Bands ; grep '^   2' ds02_static/eigenvalues | tac | head -n 1 | tail -n 1 ; \s*-0.006577\d*\s*0.0000\d*

@@ -24,7 +24,7 @@ module geometry
   use mpi_mod
   use varinfo
   use messages
-  use syslabels
+  use datasets_mod
   use string
   use units
   use lib_oct_parser

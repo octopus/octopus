@@ -22,7 +22,7 @@
 module xyz_file
   use global
   use messages
-  use syslabels
+  use datasets_mod
   use string
   use units
   use lib_oct_parser

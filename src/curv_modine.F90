@@ -30,7 +30,7 @@ module curv_modine
   use lib_oct_parser
   use global
   use messages
-  use syslabels
+  use datasets_mod
   use units
   use simul_box
   use geometry

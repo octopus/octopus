@@ -24,7 +24,7 @@ module messages
   use varinfo
   use global
   use mpi_mod
-  use syslabels
+  use datasets_mod
   use lib_oct
 
   implicit none

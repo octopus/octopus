@@ -67,7 +67,7 @@ module profiling_mod
     time_usec(C_NUM_TAGS)         = 0
 
   integer, parameter, public ::        &
-    C_PROFILING_COMPLETE_SUBSYS   = 1, &
+    C_PROFILING_COMPLETE_DATASET  = 1, &
     C_PROFILING_MF_INTEGRATE      = 2, &
     C_PROFILING_MF_DOTP           = 3, &
     C_PROFILING_MF_NRM2           = 4, &
@@ -86,7 +86,7 @@ module profiling_mod
 
   character(len=C_TAG_LENGTH), dimension(C_NUM_TAGS) :: tag_label = &
     (/                                 &
-    'COMPLETE_SUBSYS  ',               &
+    'COMPLETE_DATASET ',               &
     'MF_INTEGRATE     ',               &
     'MF_DOTP          ',               &
     'MF_NRM2          ',               &

@@ -22,7 +22,7 @@
 module unocc
   use global
   use messages
-  use syslabels
+  use datasets_mod
   use lib_oct_parser
   use lib_oct
   use mesh
@@ -46,56 +46,57 @@ module unocc
 contains
 
   ! ---------------------------------------------------------
-  integer function unocc_run(sys, h) result(ierr)
+  subroutine unocc_run(sys, h, fromScratch)
     type(system_type),      intent(inout) :: sys
     type(hamiltonian_type), intent(inout) :: h
+    logical,                intent(inout) :: fromScratch
 
     type(eigen_solver_type) :: eigens
-    integer :: iunit, err, ik, p, occupied_states
+    integer :: iunit, ierr, ik, p, occupied_states
     R_TYPE, allocatable :: h_psi(:,:)
     logical :: converged, l
     type(lcao_type) :: lcao_data
 
-    ierr = 0
     occupied_states = sys%st%nst
     call init_(sys%gr%m, sys%st)
 
-    call X(restart_read) (trim(tmpdir)//'restart_gs', sys%st, sys%gr%m, err)
-    if( (err .ne. 0)  .and.  (err < occupied_states) ) then
-      message(1) = "Info: not all the occupied KS orbitals could be read from '"//trim(tmpdir)//"restart_gs'"
-      message(2) = "      I will start a gs calculation."
-      ! FIXME Before giving back the control to run, the states should be reallocated to the
-      ! occupied number of orbitals.
-      call write_warning(2)
-      ierr = 1
-      call end_()
-      return
+    call X(restart_read) (trim(tmpdir)//'restart_gs', sys%st, sys%gr%m, ierr)
+    if( (ierr .ne. 0)  .and.  (ierr < occupied_states) ) then
+      message(1) = "Not all the occupied KS orbitals could be read from '"//trim(tmpdir)//"restart_gs'"
+      message(2) = "Please run a ground-state calculation first!"
+      call write_fatal(2)
+    end if
+
+    if(ierr.ne.0) then
+      message(1) = "Info:  Could not load all wave-functions from '"//trim(tmpdir)//"restart_gs'"
+      call write_info(1)
+    end if
+
+    if(fromScratch) then ! reset unoccupied states
+      ierr = occupied_states
     end if
 
     ! Setup Hamiltonian
-    message(1) = 'Info: Setting up Hamiltonian.'
+    message(1) = 'Info:  Setting up Hamiltonian.'
     call write_info(1)
 
     call X(states_calc_dens)(sys%st, sys%gr%m%np, sys%st%rho)
     call X(v_ks_calc)(sys%gr, sys%ks, h, sys%st, calc_eigenval=.true.) ! get potentials
     call hamiltonian_energy(h, sys%st, sys%gr%geo%eii, -1)             ! total energy
 
-    if( (err.ne.0) .and. (err >= occupied_states)) then
-      message(1) = "Info: not all the unoccupied KS orbitals could be read from '"//trim(tmpdir)//"restart_gs'"
-      message(2) = "      I will perform a LCAO calculation to get reasonable starting points."
-      call write_info(2)
+    if( (ierr.ne.0) .and. (ierr >= occupied_states)) then
+      message(1) = "Info:  I will perform a LCAO calculation to get reasonable starting points."
+      call write_info(1)
+
       lcao_data%state = 0
       call lcao_init(sys%gr, lcao_data, sys%st, h)
       if(lcao_data%state .eq. 1) then
-        call lcao_wf(lcao_data, sys%gr%m, sys%gr%sb, sys%st, h, start = err+1)
+        call lcao_wf(lcao_data, sys%gr%m, sys%gr%sb, sys%st, h, start = ierr+1)
       end if
       call lcao_end(lcao_data, sys%st%nst)
-    else
-      message(1) = "Info: Loaded all KS orbitals from '"//trim(tmpdir)//"restart_gs'"
-      call write_info(1)
     end if
 
-    message(1) = "Info: Starting calculation of unoccupied states"
+    message(1) = "Info:  Starting calculation of unoccupied states"
     call write_info(1)
 
     ! First, get the residues of the occupied states.
@@ -113,8 +114,8 @@ contains
     call eigen_solver_run(eigens, sys%gr, sys%st, h, 1, converged, verbose = .true.)
 
     ! write restart information.
-    call X(restart_write) (trim(tmpdir)//'restart_gs', sys%st, sys%gr, err)
-    if(err.ne.0) then
+    call X(restart_write) (trim(tmpdir)//'restart_gs', sys%st, sys%gr, ierr)
+    if(ierr.ne.0) then
       message(1) = 'Unsuccesfull write of "'//trim(tmpdir)//'restart_gs"'
       call write_fatal(1)
     end if
@@ -218,7 +219,7 @@ contains
       call pop_sub()
     end subroutine end_
 
-  end function unocc_run
+  end subroutine unocc_run
 
 
   ! ---------------------------------------------------------

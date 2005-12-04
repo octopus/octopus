@@ -30,7 +30,7 @@ subroutine X(restart_write_function)(dir, filename, gr, f, ierr, size)
   call push_sub('restart_inc.Xrestart_write_function')
 
   call X(output_function) (restart_format, trim(dir), trim(filename), &
-    gr%m, gr%sb, f(:), M_ONE, ierr)
+    gr%m, gr%sb, f(:), M_ONE, ierr, is_tmp=.true.)
 
   call pop_sub()
 end subroutine X(restart_write_function)
@@ -47,10 +47,10 @@ subroutine X(restart_read_function)(dir, filename, m, f, ierr)
   call push_sub('restart_inc.Xrestart_read_function')
 
   ! try first to load plain binary files
-  call X(input_function) (trim(dir)//'/'//trim(filename), m, f(:), ierr)
+  call X(input_function) (trim(dir)//'/'//trim(filename), m, f(:), ierr, is_tmp=.true.)
 
   ! if we do not succeed try NetCDF
-  if(ierr>0) call X(input_function) (trim(dir)//'/'//trim(filename)//'.ncdf', m, f(:), ierr)
+  if(ierr>0) call X(input_function) (trim(dir)//'/'//trim(filename)//'.ncdf', m, f(:), ierr, is_tmp=.true.)
 
   call pop_sub()
 end subroutine X(restart_read_function)
@@ -74,13 +74,13 @@ subroutine X(restart_write) (dir, st, gr, ierr, iter)
   mformat = '(f15.8,a,f15.8,a,f15.8,a,f15.8,a,f15.8)'
   ierr = 0
   if(mpi_grp_is_root(mpi_world)) then
-    call io_mkdir(dir)
+    call io_mkdir(dir, is_tmp=.true.)
 
-    iunit = io_open(trim(dir)//'/wfns', action='write')
+    iunit = io_open(trim(dir)//'/wfns', action='write', is_tmp=.true.)
     write(iunit,'(a)') '#     #kpoint            #st            #dim    filename'
     write(iunit,'(a)') '%Wavefunctions'
 
-    iunit2 = io_open(trim(dir)//'/occs', action='write')
+    iunit2 = io_open(trim(dir)//'/occs', action='write', is_tmp=.true.)
     write(iunit2,'(a)') '# occupations           eigenvalue[a.u.]        K-Points'
     write(iunit2,'(a)') '%Occupations_Eigenvalues_K-Points'
   end if

@@ -56,7 +56,7 @@ module multicomm_mod
   use global
   use lib_oct
   use lib_oct_parser
-  use syslabels
+  use datasets_mod
   use messages
   use mpi_mod
   use math

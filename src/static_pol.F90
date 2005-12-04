@@ -22,7 +22,7 @@
 module static_pol
   use global
   use messages
-  use syslabels
+  use datasets_mod
   use units
   use lib_oct_parser
   use lib_oct
@@ -47,7 +47,7 @@ module static_pol
 contains
 
   ! ---------------------------------------------------------
-  integer function static_pol_run(sys, h, fromScratch) result(ierr)
+  subroutine static_pol_run(sys, h, fromScratch)
     type(system_type), target, intent(inout) :: sys
     type(hamiltonian_type),    intent(inout) :: h
     logical,                   intent(inout) :: fromScratch
@@ -56,23 +56,19 @@ contains
     type(grid_type),   pointer :: gr    ! shortcuts
     type(states_type), pointer :: st
 
-    integer :: iunit, ios, i_start, i, j, is, k, err
+    integer :: iunit, ios, i_start, i, j, is, k, ierr
     FLOAT :: e_field
     FLOAT, allocatable :: Vpsl_save(:), trrho(:), dipole(:, :, :)
     logical :: out_pol
 
-    ierr = 0
     call init_()
 
     ! load wave-functions
-    call X(restart_read) (trim(tmpdir)//'restart_gs', sys%st, gr%m, err)
-    if(err.ne.0) then
-      message(1) = "Could not load wave-functions: Starting from scratch"
-      call write_warning(1)
-
-      ierr = 1
-      call end_()
-      return
+    call X(restart_read) (trim(tmpdir)//'restart_gs', sys%st, gr%m, ierr)
+    if(ierr.ne.0) then
+      message(1) = "Could not read KS orbitals from '"//trim(tmpdir)//"restart_gs'"
+      message(2) = "Please run a ground-state calculation first!"
+      call write_fatal(2)
     end if
 
     ! setup Hamiltonian
@@ -207,6 +203,6 @@ contains
       call pop_sub()
     end subroutine end_
 
-  end function static_pol_run
+  end subroutine static_pol_run
 
 end module static_pol
