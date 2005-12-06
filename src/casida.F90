@@ -180,21 +180,21 @@ contains
     message(1) = "Info: Approximating resonance energies through KS eigenvalue differences"
     call write_info(1)
     cas%type = CASIDA_EPS_DIFF
-    call casida_work(sys, cas)
+    call casida_work(sys, h, cas)
     call casida_write(cas, 'eps-diff')
 
     ! Then, calculate the excitation energies by making use of the Petersilka approximation
     message(1) = "Info: Calculating resonance energies a la Petersilka"
     call write_info(1)
     cas%type = CASIDA_PETERSILKA
-    call casida_work(sys, cas)
+    call casida_work(sys, h, cas)
     call casida_write(cas, 'petersilka')
 
     ! And finally, solve the full Casida problem.
     message(1) = "Info: Calculating resonance energies a la Casida"
     call write_info(1)
     cas%type = CASIDA_CASIDA
-    call casida_work(sys, cas)
+    call casida_work(sys, h, cas)
     call casida_write(cas, 'casida')
 
     call casida_type_end(cas)
@@ -290,8 +290,9 @@ contains
 
   ! this subroutine calculates electronic excitation energies using
   ! the matrix formulation of M. Petersilka, or of M. Casida
-  subroutine casida_work(sys, cas)
+  subroutine casida_work(sys, h, cas)
     type(system_type), target, intent(inout) :: sys
+    type(hamiltonian_type),    intent(in)    :: h
     type(casida_type),         intent(inout) :: cas
 
     logical, allocatable :: saved_K(:, :)         ! which matrix elements have been loaded
@@ -568,7 +569,7 @@ contains
       !  first the Hartree part (only works for real wfs...)
       if( j.ne.j_old  .or.   b.ne.b_old   .or.  mu.ne.mu_old) then
         pot = M_ZERO
-        call dpoisson_solve(sys%gr, pot, rho_j)
+        if( (.not.h%ip_app) ) call dpoisson_solve(sys%gr, pot, rho_j)
       end if
 
       K_term = dmf_dotp(m, rho_i(:), pot(:))
