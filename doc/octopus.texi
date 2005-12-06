@@ -158,6 +158,63 @@ any later version published by the Free Software Foundation.
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 @detailmenu
  --- The Detailed Node Listing ---
 
@@ -166,7 +223,6 @@ Installation
 * Quick instructions::          
 * Long instructions::           
 * Different octopus executables::  
-* Troubleshooting::             
 
 Description
 
@@ -232,8 +288,15 @@ System
 Time Dependent
 
 * Absorbing Boundaries::        
-* Spectrum Calculations::       
+* Linear Response::             
+* Propagation::                 
 * TD Output::                   
+
+Unoccupied States
+
+* Optical Spectra::             
+* oct-center-geometry::         
+* oct-harmonic-spectrum::       
 
 External utilities
 

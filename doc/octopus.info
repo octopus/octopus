@@ -112,6 +112,63 @@ and Angel Rubio
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
  --- The Detailed Node Listing ---
 
 Installation
@@ -119,7 +176,6 @@ Installation
 * Quick instructions::
 * Long instructions::
 * Different octopus executables::
-* Troubleshooting::
 
 Description
 
@@ -185,8 +241,15 @@ System
 Time Dependent
 
 * Absorbing Boundaries::
-* Spectrum Calculations::
+* Linear Response::
+* Propagation::
 * TD Output::
+
+Unoccupied States
+
+* Optical Spectra::
+* oct-center-geometry::
+* oct-harmonic-spectrum::
 
 External utilities
 
@@ -338,7 +401,6 @@ task of compiling and installing the `octopus'  .
 * Quick instructions::
 * Long instructions::
 * Different octopus executables::
-* Troubleshooting::
 
 
 File: octopus.info,  Node: Quick instructions,  Next: Long instructions,  Prev: Installation,  Up: Installation
@@ -593,7 +655,7 @@ of standard options (`--exec-prefix, --bindir, --datadir,
 `./configure --help'
 
 
-File: octopus.info,  Node: Different octopus executables,  Next: Troubleshooting,  Prev: Long instructions,  Up: Installation
+File: octopus.info,  Node: Different octopus executables,  Prev: Long instructions,  Up: Installation
 
 3.3 Different octopus executables
 =================================
@@ -612,63 +674,16 @@ order to obtain these different executables.
      spin-orbit coupling term will be used. The suffix `_cmplx' is
      appended to the `octopus' executable name.
 
-   * `--enable-debug': Builds a version that is able to emit some
-     debugging information. Useful for developers, or to report bugs.
-     If `octopus' has been built with this option enabled, you may set
-     the variable `Verbose' to "debug" level, and set `DebugLevel' The
-     suffix `_debug' is appended to the `octopus' executable name.
-
    * `--enable-single': Builds a version that works in single precision
      mode, rather than in the standard double precision. It will work
      faster.  Unfortunately we are not yet fully sure of the proper
      functioning of the code in this manner.  The suffix `_single' is
-     appended to the `octopus' executable name.
+     appended to the `octopus' executable name.  (This is currently
+     broken).
 
    * `--enable-mpi': Builds the parallel version (MPI) of `octopus'.
      The suffix `_mpi' is appended to the `octopus' executable name.
 
-
-
-File: octopus.info,  Node: Troubleshooting,  Prev: Different octopus executables,  Up: Installation
-
-3.4 Troubleshooting
-===================
-
-If you are reading this it is because something went wrong. Let us see
-if we can fix it ;)
-
-   *Could not find library...*: This is probably the most common error
-you can get. `octopus' uses three different libraries, GSL, FFTW, and
-BLAS/LAPACK. We assume that you have already installed these libraries
-but, for some reason, you were not able to compile the code. So, what
-went wrong?
-   * Did you pass the correct `--with-XXXX' (where XXXX is gsl, fftw or
-     lapack in lowercase) to the configure script? If your libraries are
-     installed in a non-standard directory (like `/opt/lapack'), you
-     will have to pass the script the location of the library (in this
-     example, you could try `./configure --with-lapack='-L/opt/lapack
-     -llapack''.
-
-   * If you are working on an alpha station, do not forget that the
-     `CXML' library includes `BLAS' and `LAPACK', so it can be used by
-     `octopus'. If needed, just set the correct path with
-     `--with-lapack'.
-
-   * If the configuration script can not find `FFTW', it is probable
-     that you did not compile `FFTW' with the same Fortran compiler or
-     with the same compiler options. The basic problem is that Fortran
-     sometimes converts the function names to uppercase, at other times
-     to lowercase, and it can add an "_" to them, or even two.
-     Obviously all libraries and the program have to use the same
-     convention, so the best is to compile everything with the same
-     Fortran compiler/options. If you are a power user, you can check
-     the convention used by your compiler using the command `nm
-     <library>'.
-
-
-   *Whatever went wrong...*: Up to now, we cannot really make a list of
-commonly found problems. So if something else went wrong, please
-subscribe to `octopus-users' mailing list, and ask.
 
 
 File: octopus.info,  Node: The parser,  Next: Description,  Prev: Installation,  Up: Top
@@ -1005,6 +1020,13 @@ File: octopus.info,  Node: Generalities,  Next: Geometry Optimization,  Prev: In
 
         - *3*:  The system is 3-dimensional
 
+   * *TmpDir*
+     _Section_: Generalities
+     _Type_: string
+     _Default_: "tmp/"
+     The name of the directory where octopus stores binary information
+     like the wave-functions.
+
 
 * Menu:
 
@@ -1159,6 +1181,9 @@ File: octopus.info,  Node: Parallel,  Next: Units,  Prev: IO,  Up: Generalities
 
         - *par_kpoints* (4):  Octopus will run parallel in
           k-points/spin.
+
+        - *par_other* (8):  Run-mode dependent. For example, in casida
+          it means parallelization in e-h pairs
 
 
 
@@ -1477,9 +1502,9 @@ File: octopus.info,  Node: Multigrid,  Prev: Poisson,  Up: Poisson
      moment, the option  conjugate gradients is experimental.
 
      _Options_:
-        - *gauss-seidel* (1):  Gauss-Seidel
+        - *gauss_seidel* (1):  Gauss-Seidel
 
-        - *gauss-jacobi* (2):  Gauss-Jacobi
+        - *gauss_jacobi* (2):  Gauss-Jacobi
 
         - *cg* (5):  Conjugate-gradients
 
@@ -1538,6 +1563,36 @@ File: octopus.info,  Node: XC,  Next: Casida,  Prev: Poisson,  Up: Hamiltonian
 
         - *lda_c_ob_pz* (9):  LDA: Ortiz & Ballone (PZ-type
           parametrization)
+
+   * *JFunctional*
+     _Section_: Hamiltonian::XC
+     _Type_: integer
+     _Default_: lca_omc
+     Defines the current functional
+
+     _Options_:
+        - *lca_omc* (301):  Orestes, Marcasso & Capelle
+
+        - *lca_lch* (302):  Lee, Colwell & Handy
+
+   * *OEP_level*
+     _Section_: Hamiltonian::XC
+     _Type_: integer
+     _Default_: oep_none
+     At what level shall octopus handle the OEP equation
+
+     _Options_:
+        - *oep_none* (1):  Do not solve OEP equation
+
+        - *oep_slater* (2):  Slater approximation
+
+        - *oep_kli* (3):  KLI approximation
+
+        - *oep_ceda* (4):  CEDA (common energy denominator)
+          approximation (not implemented)
+
+        - *oep_full* (5):  Full solution of OEP equation using the
+          approach of S. Kuemmel (half implemented)
 
    * *SICorrection*
      _Section_: Hamiltonian::XC
@@ -2108,14 +2163,14 @@ File: octopus.info,  Node: Output,  Next: SCF,  Prev: Hamiltonian,  Up: Input Va
    * *OutputBandsMode*
      _Section_: Output
      _Type_: integer
-     _Default_: 1
+     _Default_: 1024
      Chose if the band file is to be written in gnuplot or xmgrace
-     firendly format
+     friendly format
 
      _Options_:
         - *gnuplot* (1024):  gnuplot format
 
-        - *xmgrace* (2):  xmgrace format
+        - *xmgrace* (2048):  xmgrace format
 
    * *OutputHow*
      _Section_: Output
@@ -2125,7 +2180,7 @@ File: octopus.info,  Node: Output,  Next: SCF,  Prev: Hamiltonian,  Up: Input Va
 
      _Options_:
         - *gnuplot* (1024):  Adds newlines to the plane cuts, so that
-          gnuplot can print then in 3D
+          gnuplot can print them in 3D
 
         - *dx_cdf* (128):  Outputs in NetCDF
           (http://www.unidata.ucar.edu/packages/netcdf/) format. This
@@ -2534,6 +2589,30 @@ File: octopus.info,  Node: States,  Next: System,  Prev: SCF,  Up: Input Variabl
           non-collinearly - i.e. the magnetization vector is allowed to
           take different  directions in different points.
 
+   * *UserDefinedStates*
+     _Section_: States
+     _Type_: block
+     Instead of using the ground state as initial state for  time
+     propagations it might be interesting in some cases  to specify
+     alternative states. Similar to user defined  potentials this block
+     allows to specify formulas for  the orbitals at t=0.
+
+     Example:
+
+     %UserDefinedStates
+     1 | 1 | 1 |  "exp(-r^2)*exp(-i*0.2*x)"
+     %
+
+     The first column specifies the component of the spinor,  the
+     second column the number of the state and the third  contains
+     kpoint and spin quantum numbers. Finally column  four contains a
+     formula for the correspondig orbital.
+
+     Octopus reads first the ground state orbitals from  the restart_gs
+     directory. Only the states that are  specified in the above block
+     will be overwritten with  the given analytical expression for the
+     orbital.
+
 
 
 File: octopus.info,  Node: System,  Next: Time Dependent,  Prev: States,  Up: Input Variables
@@ -2742,21 +2821,102 @@ File: octopus.info,  Node: Time Dependent,  Next: Unoccupied States,  Prev: Syst
 6.8 Time Dependent
 ==================
 
-   * *MoveIons*
+   * *TDGauge*
      _Section_: Time Dependent
-     _Type_: logical
-     _Default_: static_ions
-     What kind of simulation to perform.
+     _Type_: integer
+     _Default_: length
+     In which gauge to treat the laser field.
 
      _Options_:
-        - *static_ions*:  Do not move the ions.
+        - *length* (1):  Length gauge.
 
-        - *verlet* (3):  Newtonian dynamics using Verlet.
+        - *velocity* (2):  Velocity gauge.
 
-        - *vel_verlet* (4):  Newtonian dynamics using velocity Verlet.
+   * *TDLasers*
+     _Section_: Time Dependent
+     _Type_: block
+     The block TDLasers describe the type and shape of time-dependent
+     external perturbations  that are applied to the system.   Each
+     line of the block describes a laser field; this way you can
+     actually have more  than one laser (e.g. a "pump" and a "probe").
+     The syntax of each line is, then:
+
+     %TDLasers
+     nx | ny | nz | amplitude | omega | envelope | tau0 | t0 | tau1 |
+     filename1 | filename2
+     %
+
+     The first three (possibly complex) numbers mark the polarization
+     direction of the  field. The "amplitude" is obviously the
+     amplitude of the field. The "omega" is the  frequency. The
+     "envelope" decides the shape of the enveloping function - see the
+     manual for details. "tau0", "t0" and "tau1" are three paramenters
+     that decide on the  temporal shape of the pulse - the exact
+     details depend on the particular envelope.   If the envelope is
+     given in a file, this will be "filename1". If the spatial part  of
+     the field is given in a file, this will be "filename2".
+
+     The last three columns ("tau1", "filename1" and "filename2") are
+     optional; they will  only be searched if needed.
+
+     In order to give the spatial shape of the field in a file, the
+     component "filename2"  has to be present. If it is not present,
+     then the laser field will be a dipolar field  (which is the usual
+     case).
+
+
+* Menu:
+
+* Absorbing Boundaries::
+* Linear Response::
+* Propagation::
+* TD Output::
+
+
+File: octopus.info,  Node: Absorbing Boundaries,  Next: Linear Response,  Prev: Time Dependent,  Up: Time Dependent
+
+6.8.1 Absorbing Boundaries
+--------------------------
+
+   * *ABHeight*
+     _Section_: Time Dependent::Absorbing Boundaries
+     _Type_: float
+     _Default_: -0.2 a.u.
+     When AbsorbingBoundaries == sin2, is the height of the imaginary
+     potential.
+
+   * *ABWidth*
+     _Section_: Time Dependent::Absorbing Boundaries
+     _Type_: float
+     _Default_: 0.4 a.u.
+     Width of the region used to apply the absorbing boundaries.
+
+   * *AbsorbingBoundaries*
+     _Section_: Time Dependent::Absorbing Boundaries
+     _Type_: integer
+     _Default_: no_absorbing
+     To improve the quality of the spectra by avoiding the formation of
+     standing density waves, one can make the boundaries of the
+     simulation  box absorbing.
+
+     _Options_:
+        - *no_absorbing*:  No absorbing boundaries.
+
+        - *sin2* (1):  A \sin^2 imaginary potential is added at the
+          boundaries.
+
+        - *mask* (2):  A mask is applied to the wave-functions at the
+          boundaries.
+
+
+
+File: octopus.info,  Node: Linear Response,  Next: Propagation,  Prev: Absorbing Boundaries,  Up: Time Dependent
+
+6.8.2 Linear Response
+---------------------
 
    * *TDDeltaStrength*
-     _Section_: Time Dependent
+     _Section_: Time Dependent::Linear Response
      _Type_: float
      _Default_: 0.0
      When no laser is applied, a delta (in time) electric field with
@@ -2764,7 +2924,7 @@ File: octopus.info,  Node: Time Dependent,  Next: Unoccupied States,  Prev: Syst
      the linear optical spectra.
 
    * *TDDeltaStrengthMode*
-     _Section_: Time Dependent
+     _Section_: Time Dependent::Linear Response
      _Type_: integer
      _Default_: kick_density
      When calculating the linear response of the density via the
@@ -2784,8 +2944,58 @@ File: octopus.info,  Node: Time Dependent,  Next: Unoccupied States,  Prev: Syst
           Note that this mode  is only possible if the run is done in
           spin polarized mode, or with spinors.
 
+   * *TDPolarization*
+     _Section_: Time Dependent::Linear Response
+     _Type_: block
+     The (real) polarization of the delta electric field. Normally  one
+     needs three perpendicular polarization directions to calculate a
+     spectrum (unless symmetry is used).   The format of the block is:
+
+     %TDPolarization
+     pol1x | pol1y | pol1z
+     pol2x | pol2y | pol2z
+     pol3x | pol3y | pol3z
+     %
+
+     Octopus uses both this block and the variable
+     TDPolarizationDirection  to determine the polarization vevtor for
+     the run. For example, if TDPolarizationDirection=2  the
+     polarization (pol2x, pol2y, pol2z) would be used.
+
+     The default value for TDPolarization are the three Cartesian unit
+     vectors  (1,0,0), (0,1,0), and (0,0,1).
+
+   * *TDPolarizationDirection*
+     _Section_: Time Dependent::Linear Response
+     _Type_: integer
+     _Default_: 1
+     Defines which one of the lines of TDPolarization to use for  the
+     run. In a typical run (without using the symmetry), TDPolarization
+     would contain the three Cartesian unit vectors, and one would
+     make 3 runs  varying TDPolarization from 1 to 3.
+
+
+
+File: octopus.info,  Node: Propagation,  Next: TD Output,  Prev: Linear Response,  Up: Time Dependent
+
+6.8.3 Propagation
+-----------------
+
+   * *MoveIons*
+     _Section_: Time Dependent::Propagation
+     _Type_: logical
+     _Default_: static_ions
+     What kind of simulation to perform.
+
+     _Options_:
+        - *static_ions*:  Do not move the ions.
+
+        - *verlet* (3):  Newtonian dynamics using Verlet.
+
+        - *vel_verlet* (4):  Newtonian dynamics using velocity Verlet.
+
    * *TDEvolutionMethod*
-     _Section_: Time Dependent
+     _Section_: Time Dependent::Propagation
      _Type_: integer
      _Default_: etrs
      This variable determines which algorithm will be used to
@@ -2849,7 +3059,7 @@ File: octopus.info,  Node: Time Dependent,  Next: Unoccupied States,  Prev: Syst
           exponential of the Hamiltonian, and a full self-consistent
           procedure.
 
-        - *suzuki-trotter* (1):  This is the generalization of the
+        - *suzuki_trotter* (1):  This is the generalization of the
           Suzuki-Trotter algorithm, described  as one of the choices of
           the TDExponentialMethod,  to time-dependent problem. Consult
           the paper by O. Sugino and M. Miyamoto,  Phys. Rev. B *59*,
@@ -2902,7 +3112,7 @@ File: octopus.info,  Node: Time Dependent,  Next: Unoccupied States,  Prev: Syst
           advantageous.
 
    * *TDExpOrder*
-     _Section_: Time Dependent
+     _Section_: Time Dependent::Propagation
      _Type_: integer
      _Default_: 4
      For TDExponentialMethod equal standard or chebyshev, the order to
@@ -2910,7 +3120,7 @@ File: octopus.info,  Node: Time Dependent,  Next: Unoccupied States,  Prev: Syst
      it is the maximum  Lanczos-subspace dimension.
 
    * *TDExponentialMethod*
-     _Section_: Time Dependent
+     _Section_: Time Dependent::Propagation
      _Type_: integer
      _Default_: standard
      Method used to numerically calculate the exponential of the
@@ -2950,7 +3160,7 @@ File: octopus.info,  Node: Time Dependent,  Next: Unoccupied States,  Prev: Syst
           procedure is taken - it  will be described below -, and in
           fact the variable TDExponentialMethod has no  effect at all.
 
-        - *suzuki-trotter* (1):  This is a higher-order SO based
+        - *suzuki_trotter* (1):  This is a higher-order SO based
           algorithm. See O. Sugino and Y. Miyamoto,  Phys. Rev. B *59*,
           2579 (1999). Allows for larger time-steps,  but requires five
           times more time than the normal SO.
@@ -3010,19 +3220,8 @@ File: octopus.info,  Node: Time Dependent,  Next: Unoccupied States,  Prev: Syst
           Annu. Rev. Phys. Chem. *45*, 145 (1994);  C. W. Clenshaw,
           MTAC *9*, 118 (1955).
 
-   * *TDGauge*
-     _Section_: Time Dependent
-     _Type_: integer
-     _Default_: length
-     In which gauge to treat the laser field.
-
-     _Options_:
-        - *length* (1):  Length gauge.
-
-        - *velocity* (2):  Velocity gauge.
-
    * *TDLanczosTol*
-     _Section_: Time Dependent
+     _Section_: Time Dependent::Propagation
      _Type_: float
      _Default_: 1e-5
      An internal tolerance variable for the Lanczos method. The
@@ -3031,204 +3230,24 @@ File: octopus.info,  Node: Time Dependent,  Next: Unoccupied States,  Prev: Syst
      perform the algorithm. One should carefully  make sure that this
      value is not too big, or else the evolution will be  wrong.
 
-   * *TDLasers*
-     _Section_: Time Dependent
-     _Type_: block
-     The block TDLasers describe the type and shape of time-dependent
-     external perturbations  that are applied to the system.   Each
-     line of the block describes a laser field; this way you can
-     actually have more  than one laser (e.g. a "pump" and a "probe").
-     The syntax of each line is, then:
-
-     %TDLasers
-     nx | ny | nz | amplitude | omega | envelope | tau0 | t0 | tau1 |
-     filename1 | filename2
-     %
-
-     The first three (possibly complex) numbers mark the polarization
-     direction of the  field. The "amplitude" is obviously the
-     amplitude of the field. The "omega" is the  frequency. The
-     "envelope" decides the shape of the enveloping function - see the
-     manual for details. "tau0", "t0" and "tau1" are three paramenters
-     that decide on the  temporal shape of the pulse - the exact
-     details depend on the particular envelope.   If the envelope is
-     given in a file, this will be "filename1". If the spatial part  of
-     the field is given in a file, this will be "filename2".
-
-     The last three columns ("tau1", "filename1" and "filename2") are
-     optional; they will  only be searched if needed.
-
-     In order to give the spatial shape of the field in a file, the
-     component "filename2"  has to be present. If it is not present,
-     then the laser field will be a dipolar field  (which is the usual
-     case).
-
    * *TDMaximumIter*
-     _Section_: Time Dependent
+     _Section_: Time Dependent::Propagation
      _Type_: integer
      _Default_: 1500
      Number of time steps in which the total integration time is
      divided;  in previous notation, _N_.
 
-   * *TDPolarization*
-     _Section_: Time Dependent
-     _Type_: block
-     The (real) polarization of the delta electric field. The format of
-     the  block is:
-
-     %TDPolarization
-     polx | poly | polz
-     %
-
    * *TDTimeStep*
-     _Section_: Time Dependent
+     _Section_: Time Dependent::Propagation
      _Type_: float
      _Default_: 0.07 a.u.
      Time-step for the propagation;  in previous notation, \delta t.
 
 
-* Menu:
-
-* Absorbing Boundaries::
-* Spectrum Calculations::
-* TD Output::
-
 
-File: octopus.info,  Node: Absorbing Boundaries,  Next: Spectrum Calculations,  Prev: Time Dependent,  Up: Time Dependent
+File: octopus.info,  Node: TD Output,  Prev: Propagation,  Up: Time Dependent
 
-6.8.1 Absorbing Boundaries
---------------------------
-
-   * *ABHeight*
-     _Section_: Time Dependent::Absorbing Boundaries
-     _Type_: float
-     _Default_: -0.2 a.u.
-     When AbsorbingBoundaries == sin2, is the height of the imaginary
-     potential.
-
-   * *ABWidth*
-     _Section_: Time Dependent::Absorbing Boundaries
-     _Type_: float
-     _Default_: 0.4 a.u.
-     Width of the region used to apply the absorbing boundaries.
-
-   * *AbsorbingBoundaries*
-     _Section_: Time Dependent::Absorbing Boundaries
-     _Type_: integer
-     _Default_: no_absorbing
-     To improve the quality of the spectra by avoiding the formation of
-     standing density waves, one can make the boundaries of the
-     simulation  box absorbing.
-
-     _Options_:
-        - *no_absorbing*:  No absorbing boundaries.
-
-        - *sin2* (1):  A \sin^2 imaginary potential is added at the
-          boundaries.
-
-        - *mask* (2):  A mask is applied to the wave-functions at the
-          boundaries.
-
-
-
-File: octopus.info,  Node: Spectrum Calculations,  Next: TD Output,  Prev: Absorbing Boundaries,  Up: Time Dependent
-
-6.8.2 Spectrum Calculations
----------------------------
-
-   * *HarmonicSpectrumMode*
-     _Section_: Time Dependent::Spectrum Calculations
-     _Type_: integer
-     _Default_: hs_from_dipole
-     The oct-harmonic-spectrum may calculate the spectrum in two
-     alternative ways,  mathematically equivalent but numerically
-     diferent: by reading the dipole  moment (from the multipoles file)
-     and calculating the accelaratio numerically  from it, or by
-     reading directly the acceleration from the acceleration file,
-     which may also be generated during a time-dependent run of octopus.
-
-     _Options_:
-        - *hs_from_dipole* (1):  Calculate the harmonic spectrum by
-          numerically differentiating the multipoles file.
-
-        - *hs_from_acceleration* (2):  Calculate the harmonic spectrum
-          by reading the acceleration file.
-
-   * *HarmonicSpectrumPolarization*
-     _Section_: Time Dependent::Spectrum Calculations
-     _Type_: string
-     _Default_: "z"
-     The oct-harmonic-spectrum utility program needs to know the
-     direction along  which the emission raidiation is considered to be
-     polarized. It may be  linearly polarized or circularly polarized.
-
-     _Options_:
-        - *"+"*:  Circularly polarized field, counter clock-wise.
-
-        - *"-"*:  Circularly polarized field, clock-wise.
-
-        - *"x"*:  Linearly polarized field in the x direction.
-
-        - *"y"*:  Linearly polarized field in the y direction.
-
-        - *"z"*:  Linearly polarized field in the z direction.
-
-   * *SpecDampFactor*
-     _Section_: Time Dependent::Spectrum Calculations
-     _Type_: integer
-     _Default_: polynomial
-     If SpecDampMode is set to "exp", the damping parameter of the
-     exponential  is fixed through this variable.
-
-   * *SpecDampMode*
-     _Section_: Time Dependent::Spectrum Calculations
-     _Type_: integer
-     _Default_: polynomial
-     Decides which damping/filtering is to be applied in order to
-     calculate  spectra by calculating a Fourier transform
-
-     _Options_:
-        - *no*:  No filtering at all.
-
-        - *exponential* (1):  Exponential filtering, corresponding with
-          a Lorentzian-shaped spectrum
-
-        - *polynomial* (2):  Third-order polynomial damping.
-
-        - *gaussian* (3):  Gaussian damping
-
-   * *SpecEndTime*
-     _Section_: Time Dependent::Spectrum Calculations
-     _Type_: integer
-     _Default_: polynomial
-     Processing is done for the given function in a time-window that
-     ends at the  value of this variable.
-
-   * *SpecEnergyStep*
-     _Section_: Time Dependent::Spectrum Calculations
-     _Type_: integer
-     _Default_: polynomial
-     Sampling rate for the spectrum.
-
-   * *SpecMaxEnergy*
-     _Section_: Time Dependent::Spectrum Calculations
-     _Type_: integer
-     _Default_: polynomial
-     The Fourier transform is calculated for energies smaller than this
-     value.
-
-   * *SpecStartTime*
-     _Section_: Time Dependent::Spectrum Calculations
-     _Type_: integer
-     _Default_: polynomial
-     Processing is done for the given function in a time-window that
-     starts at the  value of this variable.
-
-
-
-File: octopus.info,  Node: TD Output,  Prev: Spectrum Calculations,  Up: Time Dependent
-
-6.8.3 TD Output
+6.8.4 TD Output
 ---------------
 
    * *OutputEvery*
@@ -3324,6 +3343,136 @@ File: octopus.info,  Node: Unoccupied States,  Prev: Time Dependent,  Up: Input 
         * <ij| 1/|r_1-r_2| |kl>
 
      in the directory ME
+
+
+* Menu:
+
+* Optical Spectra::
+* oct-center-geometry::
+* oct-harmonic-spectrum::
+
+
+File: octopus.info,  Node: Optical Spectra,  Next: oct-center-geometry,  Prev: Unoccupied States,  Up: Unoccupied States
+
+6.9.1 Optical Spectra
+---------------------
+
+   * *SpecDampFactor*
+     _Section_: Utilities::Optical Spectra
+     _Type_: integer
+     _Default_: polynomial
+     If SpecDampMode is set to "exp", the damping parameter of the
+     exponential  is fixed through this variable.
+
+   * *SpecDampMode*
+     _Section_: Utilities::Optical Spectra
+     _Type_: integer
+     _Default_: polynomial
+     Decides which damping/filtering is to be applied in order to
+     calculate  spectra by calculating a Fourier transform
+
+     _Options_:
+        - *no*:  No filtering at all.
+
+        - *exponential* (1):  Exponential filtering, corresponding with
+          a Lorentzian-shaped spectrum
+
+        - *polynomial* (2):  Third-order polynomial damping.
+
+        - *gaussian* (3):  Gaussian damping
+
+   * *SpecEndTime*
+     _Section_: Utilities::Optical Spectra
+     _Type_: integer
+     _Default_: polynomial
+     Processing is done for the given function in a time-window that
+     ends at the  value of this variable.
+
+   * *SpecEnergyStep*
+     _Section_: Utilities::Optical Spectra
+     _Type_: integer
+     _Default_: polynomial
+     Sampling rate for the spectrum.
+
+   * *SpecMaxEnergy*
+     _Section_: Utilities::Optical Spectra
+     _Type_: integer
+     _Default_: polynomial
+     The Fourier transform is calculated for energies smaller than this
+     value.
+
+   * *SpecStartTime*
+     _Section_: Utilities::Optical Spectra
+     _Type_: integer
+     _Default_: polynomial
+     Processing is done for the given function in a time-window that
+     starts at the  value of this variable.
+
+
+
+File: octopus.info,  Node: oct-center-geometry,  Next: oct-harmonic-spectrum,  Prev: Optical Spectra,  Up: Unoccupied States
+
+6.9.2 oct-center-geometry
+-------------------------
+
+   * *AxisType*
+     _Section_: Utilities::oct-center-geometry
+     _Type_: integer
+     _Default_: inertia
+     Besides centering the structure, this is align to a set of
+     orthogonal axis.   This variable decides which set of axis to use.
+
+     _Options_:
+        - *inertia* (1):  The axis of inertia
+
+        - *pseudo_inertia* (2):  Pseudo-axis of inertia, calculated
+          considering that all species have mass one
+
+        - *large_axis* (3):  The larger axis of the molecule
+
+
+
+File: octopus.info,  Node: oct-harmonic-spectrum,  Prev: oct-center-geometry,  Up: Unoccupied States
+
+6.9.3 oct-harmonic-spectrum
+---------------------------
+
+   * *HarmonicSpectrumMode*
+     _Section_: Utilities::oct-harmonic-spectrum
+     _Type_: integer
+     _Default_: hs_from_dipole
+     The oct-harmonic-spectrum may calculate the spectrum in two
+     alternative ways,  mathematically equivalent but numerically
+     diferent: by reading the dipole  moment (from the multipoles file)
+     and calculating the accelaratio numerically  from it, or by
+     reading directly the acceleration from the acceleration file,
+     which may also be generated during a time-dependent run of octopus.
+
+     _Options_:
+        - *hs_from_dipole* (1):  Calculate the harmonic spectrum by
+          numerically differentiating the multipoles file.
+
+        - *hs_from_acceleration* (2):  Calculate the harmonic spectrum
+          by reading the acceleration file.
+
+   * *HarmonicSpectrumPolarization*
+     _Section_: Utilities::oct-harmonic-spectrum
+     _Type_: string
+     _Default_: "z"
+     The oct-harmonic-spectrum utility program needs to know the
+     direction along  which the emission raidiation is considered to be
+     polarized. It may be  linearly polarized or circularly polarized.
+
+     _Options_:
+        - *"+"*:  Circularly polarized field, counter clock-wise.
+
+        - *"-"*:  Circularly polarized field, clock-wise.
+
+        - *"x"*:  Linearly polarized field in the x direction.
+
+        - *"y"*:  Linearly polarized field in the y direction.
+
+        - *"z"*:  Linearly polarized field in the z direction.
 
 
 
@@ -3803,6 +3952,8 @@ Options Index
 * AtomsMagnetDirection
 :                 Hamiltonian.                                (line   7)
 * AxisType:                              oct-center-geom.     (line  19)
+* AxisType
+:                             oct-center-geometry.            (line   7)
 * BoxShape
 :                             Simulation Box.                 (line   7)
 * CalculationMode
@@ -3880,9 +4031,11 @@ Options Index
 * GuessMagnetDensity
 :                   SCF.                                      (line   7)
 * HarmonicSpectrumMode
-:                 Spectrum Calculations.                      (line   7)
+:                 oct-harmonic-spectrum.                      (line   7)
 * HarmonicSpectrumPolarization
-:         Spectrum Calculations.                              (line  25)
+:         oct-harmonic-spectrum.                              (line  25)
+* JFunctional
+:                          XC.                                (line  45)
 * LCAOStart
 :                            SCF.                             (line  37)
 * LinearResponseKohnShamStates
@@ -3898,7 +4051,7 @@ Options Index
 * MixNumberSteps
 :                       Mixing.                               (line   7)
 * MoveIons
-:                             Time Dependent.                 (line   7)
+:                             Propagation.                    (line   7)
 * MPIDebugHook
 :                         Debug.                              (line  31)
 * MultigridLevels
@@ -3915,6 +4068,8 @@ Options Index
 :                            General.                         (line   7)
 * ODESolverNSteps
 :                      General.                               (line  22)
+* OEP_level
+:                            XC.                              (line  56)
 * Output
 :                               Output.                       (line   7)
 * OutputBandsMode
@@ -3982,7 +4137,7 @@ Options Index
 * ShiftKpoints
 :                         States.                             (line  90)
 * SICorrection
-:                         XC.                                 (line  45)
+:                         XC.                                 (line  75)
 * SparskitAbsTolerance
 :                 General.                                    (line  97)
 * SparskitKrylovSubspaceSize
@@ -3996,19 +4151,19 @@ Options Index
 * SparskitSolver
 :                       General.                              (line 134)
 * SpecDampFactor
-:                       Spectrum Calculations.                (line  44)
+:                       Optical Spectra.                      (line   7)
 * SpecDampMode
-:                         Spectrum Calculations.              (line  51)
+:                         Optical Spectra.                    (line  14)
 * SpecEndTime
-:                          Spectrum Calculations.             (line  68)
+:                          Optical Spectra.                   (line  31)
 * SpecEnergyStep
-:                       Spectrum Calculations.                (line  75)
+:                       Optical Spectra.                      (line  38)
 * Species
 :                              Species.                       (line   7)
 * SpecMaxEnergy
-:                        Spectrum Calculations.               (line  81)
+:                        Optical Spectra.                     (line  44)
 * SpecStartTime
-:                        Spectrum Calculations.               (line  88)
+:                        Optical Spectra.                     (line  51)
 * SpinComponents
 :                       States.                               (line  97)
 * StaticElectricField
@@ -4022,31 +4177,35 @@ Options Index
 * SystemName
 :                           System.                           (line   7)
 * TDDeltaStrength
-:                      Time Dependent.                        (line  20)
+:                      Linear Response.                       (line   7)
 * TDDeltaStrengthMode
-:                  Time Dependent.                            (line  28)
+:                  Linear Response.                           (line  15)
 * TDDipoleLmax
 :                         TD Output.                          (line  14)
 * TDEvolutionMethod
-:                    Time Dependent.                          (line  49)
+:                    Propagation.                             (line  20)
 * TDExponentialMethod
-:                  Time Dependent.                            (line 174)
+:                  Propagation.                               (line 145)
 * TDExpOrder
-:                           Time Dependent.                   (line 166)
+:                           Propagation.                      (line 137)
 * TDGauge
-:                              Time Dependent.                (line 275)
+:                              Time Dependent.                (line   7)
 * TDLanczosTol
-:                         Time Dependent.                     (line 286)
+:                         Propagation.                        (line 246)
 * TDLasers
-:                             Time Dependent.                 (line 296)
+:                             Time Dependent.                 (line  18)
 * TDMaximumIter
-:                        Time Dependent.                      (line 328)
+:                        Propagation.                         (line 256)
 * TDOutput
 :                             TD Output.                      (line  22)
 * TDPolarization
-:                       Time Dependent.                       (line 335)
+:                       Linear Response.                      (line  36)
+* TDPolarizationDirection
+:              Linear Response.                               (line  57)
 * TDTimeStep
-:                           Time Dependent.                   (line 345)
+:                           Propagation.                      (line 263)
+* TmpDir
+:                               Generalities.                 (line  54)
 * TypeOfMixing
 :                         Mixing.                             (line  23)
 * Units
@@ -4055,6 +4214,8 @@ Options Index
 :                           Units.                            (line  23)
 * UnitsOutput
 :                          Units.                             (line  31)
+* UserDefinedStates
+:                    States.                                  (line 120)
 * Velocities
 :                           Velocities.                       (line  14)
 * VlocalCutoff
@@ -4072,7 +4233,7 @@ Options Index
 * WriteMatrixElements
 :                  Unoccupied States.                         (line  13)
 * XFunctional
-:                          XC.                                (line  61)
+:                          XC.                                (line  91)
 * Xlength
 :                              Simulation Box.                (line  76)
 * XYZCoordinates
@@ -4084,74 +4245,77 @@ Options Index
 
 Tag Table:
 Node: Top667
-Node: Authors3042
-Node: Copying6423
-Node: Installation7903
-Node: Quick instructions8892
-Node: Long instructions9427
-Ref: Long instructions-Footnote-119060
-Ref: Long instructions-Footnote-219618
-Node: Different octopus executables19830
-Node: Troubleshooting21632
-Node: The parser23578
-Node: Description26845
-Node: Mesh27128
-Node: Run Mode SCF27508
-Node: Run Mode Unoccupied States28561
-Node: Run Mode Time Dependent29254
-Node: Function output for visualization33225
-Node: Spectrum calculations34376
-Node: Input Variables34872
-Node: Generalities35349
-Node: Debug36857
-Node: IO39521
-Node: Parallel41286
-Node: Units42390
-Node: Geometry Optimization43663
-Node: Hamiltonian44651
-Node: Poisson49816
-Node: Multigrid51365
-Node: XC53265
-Node: Casida55302
-Node: Static Polarization56524
-Node: Vibrational Modes56917
-Node: General57397
-Node: Curvilinear62883
-Node: Gygi64317
-Node: Derivatives65716
-Node: FFTs67243
-Node: Simulation Box68362
-Node: Output70953
-Node: SCF75854
-Node: Convergence77810
-Node: EigenSolver79313
-Node: Mixing81761
-Node: States83289
-Node: System87610
-Node: Coordinates88016
-Node: Species91178
-Node: Velocities93977
-Node: Time Dependent95477
-Node: Absorbing Boundaries111278
-Node: Spectrum Calculations112390
-Node: TD Output115648
-Node: Unoccupied States118630
-Node: Undocumented Variables119151
-Node: External utilities120256
-Node: oct-sf120831
-Node: oct-rsf121615
-Node: oct-hs-mult121742
-Node: oct-hs-acc121951
-Node: oct-xyz-anim122165
-Node: oct-excite122396
-Node: oct-broad123029
-Node: oct-make-st123388
-Node: oct-center-geom124668
-Node: wf.net125714
-Node: Examples127095
-Node: Hello world127254
-Ref: Hello world-Footnote-1133877
-Node: Benzene133961
-Node: Options Index134778
+Node: Authors3179
+Node: Copying6560
+Node: Installation8040
+Node: Quick instructions9009
+Node: Long instructions9544
+Ref: Long instructions-Footnote-119177
+Ref: Long instructions-Footnote-219735
+Node: Different octopus executables19947
+Node: The parser21413
+Node: Description24680
+Node: Mesh24963
+Node: Run Mode SCF25343
+Node: Run Mode Unoccupied States26396
+Node: Run Mode Time Dependent27089
+Node: Function output for visualization31060
+Node: Spectrum calculations32211
+Node: Input Variables32707
+Node: Generalities33184
+Node: Debug34880
+Node: IO37544
+Node: Parallel39309
+Node: Units40533
+Node: Geometry Optimization41806
+Node: Hamiltonian42794
+Node: Poisson47959
+Node: Multigrid49508
+Node: XC51408
+Node: Casida54243
+Node: Static Polarization55465
+Node: Vibrational Modes55858
+Node: General56338
+Node: Curvilinear61824
+Node: Gygi63258
+Node: Derivatives64657
+Node: FFTs66184
+Node: Simulation Box67303
+Node: Output69894
+Node: SCF74801
+Node: Convergence76757
+Node: EigenSolver78260
+Node: Mixing80708
+Node: States82236
+Node: System87456
+Node: Coordinates87862
+Node: Species91024
+Node: Velocities93823
+Node: Time Dependent95323
+Node: Absorbing Boundaries97246
+Node: Linear Response98352
+Node: Propagation100843
+Node: TD Output113603
+Node: Unoccupied States116575
+Node: Optical Spectra117176
+Node: oct-center-geometry118884
+Node: oct-harmonic-spectrum119558
+Node: Undocumented Variables121186
+Node: External utilities122291
+Node: oct-sf122866
+Node: oct-rsf123650
+Node: oct-hs-mult123777
+Node: oct-hs-acc123986
+Node: oct-xyz-anim124200
+Node: oct-excite124431
+Node: oct-broad125064
+Node: oct-make-st125423
+Node: oct-center-geom126703
+Node: wf.net127749
+Node: Examples129130
+Node: Hello world129289
+Ref: Hello world-Footnote-1135912
+Node: Benzene135996
+Node: Options Index136813
 
 End Tag Table

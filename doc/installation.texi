@@ -18,7 +18,6 @@ to help you with the, still rather unfriendly, task of compiling and installing 
 * Quick instructions::          
 * Long instructions::           
 * Different octopus executables::  
-* Troubleshooting::             
 @end menu
 
 @node Quick instructions, Long instructions, Installation, Installation
@@ -254,7 +253,7 @@ a series of formats are available, namely @code{dvi}, @code{html},
 document is in the @code{OCTOPUS-HOME/doc} directory.
 
 
-@node Different octopus executables, Troubleshooting, Long instructions, Installation
+@node Different octopus executables,  , Long instructions, Installation
 @section Different octopus executables
 
 By performing the standard install, you will get an executable called @code{octopus},
@@ -271,17 +270,12 @@ the evolution). This is needed when spinors are needed --- e.g. noncollinear
 magnetism is going to be considered, or the spin-orbit coupling term will
 be used. The suffix @code{_cmplx} is appended to the @code{octopus} executable name.
 @item
-@code{--enable-debug}: Builds a version that is able to emit some
-debugging information. Useful for developers, or to report bugs. If @code{octopus}
-has been built with this option enabled, you may set the variable
-@code{Verbose} to ``debug'' level, and set @code{DebugLevel} 
-The suffix @code{_debug} is appended to the @code{octopus} executable name.
-@item
 @code{--enable-single}: Builds a version that works in single precision
 mode, rather than in the standard double precision. It will work faster.
 Unfortunately we are not yet fully sure of the proper functioning
 of the code in this manner.
 The suffix @code{_single} is appended to the @code{octopus} executable name.
+(This is currently broken).
 @item
 @code{--enable-mpi}: Builds the parallel version (MPI) of @code{octopus}.
 The suffix @code{_mpi} is appended to the @code{octopus} executable name.
@@ -289,42 +283,3 @@ The suffix @code{_mpi} is appended to the @code{octopus} executable name.
 
 @end itemize
 
-
-@node Troubleshooting,  , Different octopus executables, Installation
-@section Troubleshooting
-
-If you are reading this it is because something went wrong. Let us see
-if we can fix it ;)
-
-@strong{Could not find library...}:
-This is probably the most common error you can get. @code{octopus} uses
-three different libraries, @sc{gsl}, @sc{fftw}, and 
-@sc{blas}/@sc{lapack}. We assume that you have already
-installed these libraries but, for some reason, you were not able to
-compile the code. So, what went wrong?
-@itemize @bullet
-
-@item Did you pass the correct @code{--with-XXXX} (where XXXX is gsl, fftw or
-lapack in lowercase) to the configure script? If your libraries are
-installed in a non-standard directory (like @code{/opt/lapack}), you will
-have to pass the script the location of the library (in this example,
-you could try @code{./configure --with-lapack='-L/opt/lapack -llapack'}.
-
-@item If you are working on an alpha station, do not forget that the @code{CXML}
-library includes @code{BLAS} and @code{LAPACK}, so it can be used by
-@code{octopus}. If needed, just set the correct path with @code{--with-lapack}.
-
-@item If the configuration script can not find @code{FFTW}, it is probable that
-you did not compile @code{FFTW} with the same Fortran compiler or with the
-same compiler options. The basic problem is that Fortran sometimes converts
-the function names to uppercase, at other times to lowercase, and it can
-add an ``_'' to them, or even two. Obviously all libraries and the program
-have to use the same convention, so the best is to compile everything with
-the same Fortran compiler/options. If you are a power user, you can check the
-convention used by your compiler using the command @code{nm <library>}.
-
-@end itemize
-
-@strong{Whatever went wrong...}:
-Up to now, we cannot really make a list of commonly found problems. So if something
-else went wrong, please subscribe to @code{octopus-users} mailing list, and ask.
