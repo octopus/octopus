@@ -467,7 +467,6 @@ contains
       call push_sub('scf.scf_write_static')
 
       if(mpi_grp_is_root(mpi_world)) then ! this the absolute master writes
-        print *, dir
         call io_mkdir(dir)
         iunit = io_open(trim(dir) // "/" // trim(fname), action='write')
 
