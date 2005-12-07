@@ -194,7 +194,7 @@ while ($_ = <TESTSUITE>) {
      close(INP);
    }
 
-   if ( $_ =~ /^RUN/ && !opt_m ) {
+   if ( $_ =~ /^RUN/ && !$opt_m ) {
      die "inp not defined" if !$test{"inp"};
      if (!$opt_n) {
        print "\nStarting test run ...\n";
