@@ -23,6 +23,7 @@ Usage: oct-run_regression_test.pl [options]
     -i        print inputfile
     -p        preserve working directories
     -l        copy output log to current directory
+    -m        run matches only (assumes there are work directories)
 
 Report bugs to <appel\@physik.fu-berlin.de>.
 EndOfUsage
@@ -80,7 +81,7 @@ EndOfTemplate
 
 if (not @ARGV) { usage; }
 
-getopts("nlvhe:c:f:d:ip");
+getopts("nlvhe:c:f:d:ipm");
 
 # Default values
 $workdir = `mktemp -d`;
@@ -111,8 +112,10 @@ chomp($octopus_exe);
 $octopus_base = `basename $octopus_exe`;
 chomp($octopus_base);
 
-system ("rm -rf $workdir");
-mkdir $workdir;
+if (!$opt_m) {
+  system ("rm -rf $workdir");
+  mkdir $workdir;
+}
 
 open(TESTSUITE, "<".$opt_f ) or die "cannot open testsuite file \n";
 
@@ -191,7 +194,7 @@ while ($_ = <TESTSUITE>) {
      close(INP);
    }
 
-   if ( $_ =~ /^RUN/) {
+   if ( $_ =~ /^RUN/ && !opt_m ) {
      die "inp not defined" if !$test{"inp"};
      if (!$opt_n) {
        print "\nStarting test run ...\n";
@@ -211,7 +214,9 @@ while ($_ = <TESTSUITE>) {
      $pre_command =~ s/_COLUMN_/;/g;
      $regexp      =~ s/_COLUMN_/;/g;
 
-     die "have to run before matching" if !$test{"run"};
+     if(!opt_m) {
+       die "have to run before matching" if !$test{"run"};
+     }
 
      if ($opt_v) { print "$pre_command \n"; }
      if ($opt_v) { print "$regexp \n"; }
@@ -237,4 +242,4 @@ while ($_ = <TESTSUITE>) {
 
 if (!$opt_i) { print "\n\n\n"; }
 if ($opt_l)  { system ("cp $workdir/out out.log"); }
-if (!$opt_p && $test_succeded) { system ("rm -rf $workdir"); }
+if (!$opt_p && !$opt_m && $test_succeded) { system ("rm -rf $workdir"); }
