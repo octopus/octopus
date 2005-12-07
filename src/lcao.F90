@@ -220,11 +220,11 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine lcao_wf(lcao_data, m, sb, st, h, start)
+  subroutine lcao_wf(lcao_data, st, m, sb, h, start)
     type(lcao_type),        intent(inout) :: lcao_data
+    type(states_type),      intent(inout) :: st
     type(mesh_type),        intent(in)    :: m
     type(simul_box_type),   intent(in)    :: sb
-    type(states_type),      intent(inout) :: st
     type(hamiltonian_type), intent(in)    :: h
     integer, optional,      intent(in)    :: start
 

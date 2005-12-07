@@ -159,7 +159,7 @@ contains
           lcao_data%st%nst,' orbitals.'
         call write_info(1)
 
-        call lcao_wf(lcao_data, gr%m, gr%sb, st, h)
+        call lcao_wf(lcao_data, st, gr%m, gr%sb, h)
         call lcao_end(lcao_data, st%nst)
 
         call states_fermi(st, gr%m)                         ! occupations

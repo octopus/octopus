@@ -282,7 +282,7 @@ contains
       call profiling_in(C_PROFILING_SCF_CYCLE)
 
       if(scf%lcao_restricted) then
-        call lcao_wf(lcao_data, gr%m, gr%sb, st, h)
+        call lcao_wf(lcao_data, st, gr%m, gr%sb, h)
       else
         scf%eigens%converged = 0
         call eigen_solver_run(scf%eigens, gr, st, h, iter)
