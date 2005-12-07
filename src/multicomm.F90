@@ -289,6 +289,10 @@ contains
 
       ! for each index
       do k = 1, mc%n_index
+        if(n_group_max(k) == 1) then ! not parallel in this group
+          mc%group_sizes(k) = 1
+          cycle
+        end if
 
         ! distibute the nodes so that domains is the last
         f = real(n, PRECISION)
