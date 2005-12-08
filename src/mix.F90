@@ -52,11 +52,10 @@ module mix
 
     integer :: ns               ! number of steps used to extrapolate the new vector
 
-    FLOAT, pointer ::           &
-      df(:, :, :, :),           &
-      dv(:, :, :, :),           &
-      f_old(:, :, :),           &
-      vin_old(:, :, :)
+    FLOAT, pointer :: df(:, :, :, :)
+    FLOAT, pointer :: dv(:, :, :, :)
+    FLOAT, pointer :: f_old(:, :, :)
+    FLOAT, pointer :: vin_old(:, :, :)
 
     integer :: last_ipos
   end type mix_type
@@ -175,7 +174,7 @@ contains
 
     select case (smix%type_of_mixing)
     case (MIX_LINEAR)
-      call mixing_linear(smix%alpha, vin, vout, vnew)
+      call mixing_linear(smix%alpha, m, vin, vout, vnew)
 
     case (MIX_BROYDEN)
       call mixing_broyden(smix, m, d2, d3, vin, vout, vnew, iter)
@@ -190,12 +189,13 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine mixing_linear(alpha, vin, vout, vnew)
+  subroutine mixing_linear(alpha, m, vin, vout, vnew)
     FLOAT,   intent(in)  :: alpha
+    type(mesh_type), intent(in) :: m
     FLOAT,   intent(in)  :: vin(:, :, :), vout(:, :, :)
     FLOAT,   intent(out) :: vnew(:, :, :)
 
-    vnew = vin*(M_ONE - alpha) + alpha*vout
+    vnew(1:m%np,:,:) = vin(1:m%np,:,:)*(M_ONE - alpha) + alpha*vout(1:m%np,:,:)
 
   end subroutine mixing_linear
 
@@ -245,8 +245,8 @@ contains
     end if
 
     ! Store residual and vin for next iteration
-    smix%vin_old = vin
-    smix%f_old   = f
+    smix%vin_old(1:m%np, 1:d2, 1:d3) = vin(1:m%np, 1:d2, 1:d3)
+    smix%f_old  (1:m%np, 1:d2, 1:d3) = f  (1:m%np, 1:d2, 1:d3)
 
     ! extrapolate new vector
     iter_used = min(iter - 1, smix%ns)

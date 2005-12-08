@@ -55,17 +55,16 @@ module td_write
 
 
   type td_write_type
-    integer(POINTER_SIZE) :: &
-      out_multip,   &
-      out_coords,   &
-      out_gsp,      &
-      out_acc,      &
-      out_laser,    &
-      out_energy,   &
-      out_proj,     &
-      out_angular,  &
-      out_spin,     &
-      out_magnets
+    integer(POINTER_SIZE) :: out_multip
+    integer(POINTER_SIZE) :: out_coords
+    integer(POINTER_SIZE) :: out_gsp
+    integer(POINTER_SIZE) :: out_acc
+    integer(POINTER_SIZE) :: out_laser
+    integer(POINTER_SIZE) :: out_energy
+    integer(POINTER_SIZE) :: out_proj
+    integer(POINTER_SIZE) :: out_angular
+    integer(POINTER_SIZE) :: out_spin
+    integer(POINTER_SIZE) :: out_magnets
 
     integer           :: lmax     ! maximum multipole moment to output
     FLOAT             :: lmm_r    ! radius of the sphere used to compute the local magnetic moments
