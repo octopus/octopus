@@ -1025,7 +1025,6 @@ contains
     integer, intent(out) :: energy_steps
     FLOAT,   intent(out) :: dw
 
-    integer :: j
     FLOAT :: dummy, e1, e2
 
     call push_sub('spectrum.spectrum_cross_section_info')
@@ -1045,7 +1044,7 @@ contains
     ! count number of time_steps
     energy_steps = 0
     do
-      read(iunit, *, end=100) j, dummy
+      read(iunit, *, end=100) dummy
       energy_steps = energy_steps + 1
       if(energy_steps == 1) e1 = dummy
       if(energy_steps == 2) e2 = dummy
