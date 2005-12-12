@@ -34,10 +34,11 @@ noinst_HEADERS = \
 	global.h \
 	real.F90 complex.F90 undef.F90 \
 	mpi_debug_inc.F90 \
+	ode_solver_inc.F90 root_solver_inc.F90 sparskit_inc.F90 sparskit_driver.F90 \
 	fftw2.F90 fftw3.F90 \
-	mesh_init.F90 derivatives_inc.F90 cf_inc.F90 mf_inc.F90 f_inc.F90 \
+	mesh_init.F90 par_vec_inc.F90 derivatives_inc.F90 cf_inc.F90 mf_inc.F90 f_inc.F90 \
 	poisson1D.F90 poisson2D.F90 poisson3D.F90 \
-	xc_vxc.F90 xc_axc.F90 xc_fxc.F90 xc_KLI.F90 xc_OEP_x.F90 xc_OEP_SIC.F90 \
+	xc_vxc.F90 xc_axc.F90 xc_fxc.F90 xc_kxc.F90 xc_KLI.F90 xc_OEP_x.F90 xc_OEP_SIC.F90 \
 	epot_inc.F90 \
 	v_ks_inc.F90 xc_OEP_inc.F90 h_inc.F90 h_so.F90 \
 	eigen_cg.F90 eigen_trlan.F90 eigen_plan.F90 eigen_arpack.F90 eigen_evolution.F90 \

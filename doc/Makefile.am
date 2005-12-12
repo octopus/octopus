@@ -1,16 +1,18 @@
 # $Id$
 
-SUBDIRS = pdf
+SUBDIRS = pdf html
 
 info_TEXINFOS = octopus.texi octopus-devel.texi
 
-octopus_TEXINFO = authors.texi copying.texi examples.texi index.texi     \
+octopus_TEXINFOS = authors.texi copying.texi examples.texi index.texi    \
 	installation.texi introduction.texi parser.texi description.texi \
-	undocumented.texi external.texi
+	undocumented.texi external.texi variables.texi
 
 man_MANS = octopus.1
 
-CLEANFILES = *~ *.bak variables.texi nodes_updated 
+EXTRA_DIST = update.el octopus.pod img/*.eps img/*.jpg
+
+CLEANFILES = *~ *.bak variables.texi
 
 octopus.1: octopus.pod
 	pod2man -c "Octopus Documentation" -s 1 octopus.pod > octopus.1

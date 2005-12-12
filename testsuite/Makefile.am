@@ -19,10 +19,14 @@
 ##
 ## $Id$
 
-man_MANS = oct-run_regression_test.pl.1
 bin_SCRIPTS = oct-run_regression_test.pl oct-run_testsuite
+
+man_MANS = oct-run_regression_test.pl.1
+
 sharedir = $(pkgdatadir)/testsuite
 dist_share_DATA = finite_systems_*/*.test periodic_systems_*/*.test
+
+EXTRA_DIST = oct-run_regression_test.pl oct-run_testsuite oct-run_regression_test.pl.pod
 
 rlog=oct-regression_test.out
 

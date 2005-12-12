@@ -9,11 +9,7 @@
 # modified for future releases, if the list of installed files
 # or build commands change.
 #
-# The icon associated with this package can be downloaded from:
-#     http://www.fftw.org/fftw-logo-thumb.gif
-# and will need to be placed in /usr/src/redhat/SOURCES, along with
-# the @PACKAGE@-@VERSION@.tar.gz file, to build the RPM.  To build, use
-# the command: rpm --clean -ba @PACKAGE@.spec
+# RPM.  To build, use the command: rpm --clean -ba @PACKAGE@.spec
 #
 # Alternatively, you can just use 'make rpm' (as root).
 #
@@ -21,7 +17,7 @@ Name: @PACKAGE@
 Summary: real-space, real-time, TDDFT code
 Version: @VERSION@
 Release: 1
-Copyright: GPL 2.0
+License: GPL 2.0
 Group: Programs
 BuildRoot: %{_tmppath}/%{name}-buildroot
 Source: http://www.tddft.org/programs/octopus/download/@PACKAGE@-@VERSION@.tar.gz
@@ -49,7 +45,8 @@ rm -rf $RPM_BUILD_ROOT
 %configure \
   FC="@FC@" FCFLAGS="@FCFLAGS@" CFLAGS="@CFLAGS@" \
   LDFLAGS="@LDFLAGS@" LDFCFLAGS="@LDFCFLAGS@" \
-  LIBS_BLAS="@LIBS_BLAS@" LIBS_LAPACK="@LIBS_LAPACK@"
+  LIBS_BLAS="@LIBS_BLAS@" LIBS_LAPACK="@LIBS_LAPACK@" \
+  --with-netcdf
 
 make
 (cd doc; make octopus.ps; gzip octopus.ps)
@@ -63,7 +60,8 @@ rm -rf ${RPM_BUILD_ROOT}
 
 %files
 %defattr(-,root,root,0755)
-%doc README NEWS COPYING AUTHORS doc/octopus.ps.*
+%doc README NEWS COPYING AUTHORS doc/octopus.ps.* doc/pdf/*.pdf
 %doc %{_infodir}/octopus*
 %{_bindir}/*
 %{_datadir}/octopus/*
+%{_mandir}/man1/*
