@@ -80,7 +80,7 @@ subroutine X(Hpsi) (h, gr, psi, hpsi, ik, t)
       call write_fatal(1)
     end if
     call X(vlasers)  (gr, h, psi, hpsi, t)
-    call X(vborders) (h, psi, hpsi)
+    call X(vborders) (gr, h, psi, hpsi)
   end if
 
   call pop_sub()
@@ -149,7 +149,7 @@ subroutine X(magnus) (h, gr, psi, hpsi, ik, vmagnus)
     end if
   end select
   if (h%ep%nvnl > 0) call X(vnlpsi)  (h, gr%m, gr%sb, psi, Hpsi, ik)
-  call X(vborders) (h, psi, hpsi)
+  call X(vborders) (gr, h, psi, hpsi)
 
   deallocate(auxpsi, aux2psi)
   call pop_sub()
@@ -216,7 +216,7 @@ subroutine X(magnetic_terms) (gr, h, psi, hpsi, ik)
   integer,                intent(in)    :: ik
 
   integer :: k
-  FLOAT, allocatable :: div(:), tmp(:,:)
+  FLOAT,  allocatable :: div(:), tmp(:,:)
   R_TYPE, allocatable :: grad(:,:), lhpsi(:,:)
 
   call push_sub('h_inc.Xmagnetic_terms')
@@ -236,12 +236,12 @@ subroutine X(magnetic_terms) (gr, h, psi, hpsi, ik)
     ALLOCATE(tmp(NP_PART, NDIM), NP_PART*NDIM)
     select case (h%d%ispin)
     case(UNPOLARIZED)
-      tmp(1:NP, :) = h%axc(:, :, 1)
+      tmp(1:NP, :) = h%axc(1:NP, :, 1)
     case(SPIN_POLARIZED)
       if(modulo(ik+1, 2) == 0) then ! we have a spin down
-        tmp(1:NP, :) = h%axc(:, :, 1)
+        tmp(1:NP, :) = h%axc(1:NP, :, 1)
       else
-        tmp(1:NP, :) = h%axc(:, :, 2)
+        tmp(1:NP, :) = h%axc(1:NP, :, 2)
       end if
     case(SPINORS)
       ! not implemented yet
@@ -394,7 +394,7 @@ subroutine X(vlasers) (gr, h, psi, hpsi, t)
     case(1) ! length gauge
 
       do k = 1, h%d%dim
-        hpsi(:, k)= hpsi(:, k) + epot_laser_scalar_pot(gr%m%np, gr, h%ep, t)*psi(:, k)
+        hpsi(1:NP, k)= hpsi(1:NP, k) + epot_laser_scalar_pot(gr%m%np, gr, h%ep, t)*psi(1:NP, k)
       end do
 
     case(2) ! velocity gauge
@@ -417,7 +417,8 @@ end subroutine X(vlasers)
 
 
 ! ---------------------------------------------------------
-subroutine X(vborders) (h, psi, hpsi)
+subroutine X(vborders) (gr, h, psi, hpsi)
+  type(grid_type),        intent(inout) :: gr
   type(hamiltonian_type), intent(in)    :: h
   R_TYPE,                 intent(in)    :: psi(:,:)  !  psi(m%np_part, h%d%dim)
   R_TYPE,                 intent(inout) :: Hpsi(:,:) !  Hpsi(m%np_part, h%d%dim)
@@ -428,7 +429,7 @@ subroutine X(vborders) (h, psi, hpsi)
 
   if(h%ab .eq. IMAGINARY_ABSORBING) then
     do idim = 1, h%d%dim
-      hpsi(:, idim) = hpsi(:, idim) + M_zI*h%ab_pot(:)*psi(1:, idim)
+      hpsi(1:NP, idim) = hpsi(1:NP, idim) + M_zI*h%ab_pot(1:NP)*psi(1:NP, idim)
     end do
   end if
 

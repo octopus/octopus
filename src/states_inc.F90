@@ -23,13 +23,13 @@
 subroutine X(states_calc_dens)(st, np, rho)
   type(states_type), intent(in)  :: st
   integer,           intent(in)  :: np
-  FLOAT,             intent(out) :: rho(np, st%d%nspin)
+  FLOAT,             intent(out) :: rho(:,:)
 
   integer :: i, ik, p, sp
   CMPLX   :: c
 
 #ifdef HAVE_MPI
-  FLOAT,  allocatable :: reduce_rho(:,:)
+  FLOAT,  allocatable :: reduce_rho(:)
   integer :: ierr
 #endif
 
@@ -62,12 +62,14 @@ subroutine X(states_calc_dens)(st, np, rho)
   end do
 
 #if defined(HAVE_MPI)
-  ! reduce density (assumes memory is contiguous)
+  ! reduce density
   if(st%parallel_in_states) then
-    ALLOCATE(reduce_rho(1:np, st%d%nspin), np*st%d%nspin)
-    call MPI_ALLREDUCE(rho(1, 1), reduce_rho(1, 1), np*st%d%nspin, &
-      MPI_FLOAT, MPI_SUM, st%mpi_grp%comm, ierr)
-    rho = reduce_rho
+    ALLOCATE(reduce_rho(1:np), np)
+    do i = 1, st%d%nspin
+      call MPI_ALLREDUCE(rho(1, i), reduce_rho(1), np, &
+         MPI_FLOAT, MPI_SUM, st%mpi_grp%comm, ierr)
+      rho(1:np, i) = reduce_rho(1:np)
+    end do
     deallocate(reduce_rho)
   end if
 #endif
@@ -86,8 +88,8 @@ subroutine X(states_gram_schmidt)(nst, m, dim, psi, start)
   integer, optional, intent(in)    :: start
 
   integer :: p, q, stst, idim
-  FLOAT :: nrm2
-  R_TYPE :: ss
+  FLOAT   :: nrm2
+  R_TYPE  :: ss
 
   call push_sub('states_inc.states_gram_schmidt')
 
@@ -100,7 +102,9 @@ subroutine X(states_gram_schmidt)(nst, m, dim, psi, start)
   do p = stst, nst
     do q = 1, p - 1
       ss = X(states_dotp)(m, dim, psi(:,:, q), psi(:,:, p))
-      call lalg_axpy(m%np, dim, -ss, psi(:,:, q), psi(:,:, p))
+      do idim = 1, dim
+        call lalg_axpy(m%np, -ss, psi(:, idim, q), psi(:, idim, p))
+      end do
     end do
 
     nrm2 = X(states_nrm2)(m, dim, psi(:,:, p))
@@ -120,13 +124,13 @@ R_TYPE function X(states_dotp)(m, dim, f1, f2) result(dotp)
   integer,         intent(in) :: dim
   R_TYPE,          intent(in) :: f1(:,:), f2(:,:)
 
-  integer :: i
+  integer :: idim
 
   call push_sub('states_inc.Xstates_dotp')
 
   dotp = R_TOTYPE(M_ZERO)
-  do i = 1, dim
-    dotp = dotp + X(mf_dotp)(m, f1(:,i), f2(:,i))
+  do idim = 1, dim
+    dotp = dotp + X(mf_dotp)(m, f1(:, idim), f2(:, idim))
   end do
 
   call pop_sub()
@@ -136,13 +140,20 @@ end function X(states_dotp)
 
 ! ---------------------------------------------------------
 subroutine X(states_normalize_orbital)(m, dim, psi)
-  type(mesh_type), intent(in) :: m
-  integer,         intent(in) :: dim
-  R_TYPE,  intent(out) :: psi(:,:)
-  FLOAT :: norm
+  type(mesh_type), intent(in)  :: m
+  integer,         intent(in)  :: dim
+  R_TYPE,          intent(out) :: psi(:,:)
+
+  FLOAT   :: norm
+  integer :: idim
 
   norm = X(states_nrm2) (m, dim, psi)
-  psi = psi/sqrt(norm)
+  norm = sqrt(norm)
+
+  do idim = 1, dim
+    psi(1:m%np, idim) = psi(1:m%np, idim)/norm
+  end do
+
 end subroutine X(states_normalize_orbital)
 
 
@@ -152,13 +163,13 @@ FLOAT function X(states_nrm2)(m, dim, f) result(nrm2)
   integer,         intent(in) :: dim
   R_TYPE,          intent(in) :: f(:,:)
 
-  integer :: i
+  integer :: idim
 
   call push_sub('states_inc.Xstates_nrm2')
 
   nrm2 = M_ZERO
-  do i = 1, dim
-    nrm2 = nrm2 + X(mf_nrm2)(m, f(:,i))**2
+  do idim = 1, dim
+    nrm2 = nrm2 + X(mf_nrm2)(m, f(:, idim))**2
   end do
   nrm2 = sqrt(nrm2)
 
@@ -179,7 +190,9 @@ FLOAT function X(states_residue)(m, dim, hf, e, f) result(r)
   call push_sub('states_inc.Xstates_nrm2')
 
   ALLOCATE(res(m%np_part, dim), m%np_part*dim)
+
   res(1:m%np, :) = hf(1:m%np, :) - e*f(1:m%np, :)
+
   r = X(states_nrm2)(m, dim, res)
   deallocate(res)
 
@@ -253,8 +266,8 @@ contains
   ! ---------------------------------------------------------
   subroutine mf2mf_RS2FS(m, fin, fout, c)
     type(mesh_type), intent(in)    :: m
-    R_TYPE,          intent(in)    :: fin(NP)
-    CMPLX,           intent(out)   :: fout(NP)
+    R_TYPE,          intent(in)    :: fin(:)
+    CMPLX,           intent(out)   :: fout(:)
     type(X(cf)),     intent(inout) :: c
 
     call X(cf_alloc_RS) (c)

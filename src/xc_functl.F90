@@ -130,13 +130,13 @@ contains
     !% Defines the exchange functional
     !%Option lda_x 1
     !% LDA
-    !%Option gga_x_pbe
+    !%Option gga_x_pbe 101
     !% GGA: Perdew, Burke & Ernzerhof (GGA)
-    !%Option gga_xc_lb
+    !%Option gga_xc_lb 103
     !% GGA: van Leeuwen & Baerends (GGA)
-    !%Option mgga_x_tpss
+    !%Option mgga_x_tpss 201
     !% MGGA (not working)
-    !%Option oep_x
+    !%Option oep_x 401
     !% OEP: Exact exchange
     !%End
     call loct_parse_int(check_inp('XFunctional'), XC_LDA_X, functl%id)

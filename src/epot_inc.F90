@@ -44,11 +44,11 @@ subroutine X(project)(mesh, p, n_projectors, psi, ppsi, periodic, ik)
   call push_sub('epot_inc.project')
 
   ! index labels the atom
-  k = p(1)%index - 1 ! This way I make sure that k is not equal to p(1)%index
+  k = p(1)%iatom - 1 ! This way I make sure that k is not equal to p(1)%iatom
 
   do ip = 1, n_projectors
 
-    if(p(ip)%index .ne. k) then
+    if(p(ip)%iatom .ne. k) then
       if(ip.ne.1) ppsi(p(ip-1)%jxyz(1:n_s)) = ppsi(p(ip-1)%jxyz(1:n_s)) + plpsi(1:n_s)
       n_s = p(ip)%n_points_in_sphere
 
@@ -60,7 +60,7 @@ subroutine X(project)(mesh, p, n_projectors, psi, ppsi, periodic, ik)
       if(periodic) lpsi(1:n_s)  = lpsi(1:n_s) * p(ip)%phases(1:n_s, ik)
       plpsi(1:n_s) = R_TOTYPE(M_ZERO)
 
-      k = p(ip)%index
+      k = p(ip)%iatom
     end if
 
     do j = 1, p(ip)%n_channels
@@ -123,7 +123,7 @@ subroutine X(epot_forces) (gr, ep, st, t)
       atm => geo%atom(i)
       if(atm%spec%local) cycle
       do ivnl = 1, ep%nvnl
-        if(ep%p(ivnl)%index .ne. i) cycle
+        if(ep%p(ivnl)%iatom .ne. i) cycle
         ik_loop: do ik = 1, st%d%nik
           st_loop: do ist = st%st_start, st%st_end
 

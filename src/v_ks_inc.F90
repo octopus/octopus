@@ -105,14 +105,14 @@ contains
     ALLOCATE(rho(NP, st%d%nspin), NP*st%d%nspin)
     if(associated(st%rho_core)) then
       do is = 1, st%d%spin_channels
-        rho(:, is) = st%rho(:, is) + st%rho_core(:)/st%d%spin_channels
+        rho(1:NP, is) = st%rho(1:NP, is) + st%rho_core(1:NP)/st%d%spin_channels
       end do
     else
       rho = st%rho
     end if
 
     ! Amaldi correction
-    if(ks%sic_type == sic_amaldi) rho(:,:) = amaldi_factor*rho(:,:)
+    if(ks%sic_type == sic_amaldi) rho(1:NP,:) = amaldi_factor*rho(1:NP,:)
 
     if(h%d%cdft) then
       call xc_get_vxc_and_axc(gr, ks%xc, rho, st%j, st%d%ispin, h%vhxc, h%axc, &

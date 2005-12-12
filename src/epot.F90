@@ -79,7 +79,7 @@ module external_pot
     FLOAT,   pointer :: uvu(:, :)
     FLOAT,   pointer :: ket(:, :), bra(:, :)
     CMPLX,   pointer :: phases(:, :)
-    integer          :: index
+    integer          :: iatom
   end type projector_type
 
   type epot_type
@@ -569,9 +569,9 @@ contains
           end if
           call build_nl_part(i, l, lm)
 
-          ep%p(i)%index             = ia
-          ep%dp(1:sb%dim, i)%index  = ia
-          ep%lso(1:sb%dim, i)%index = ia
+          ep%p(i)%iatom             = ia
+          ep%dp(1:sb%dim, i)%iatom  = ia
+          ep%lso(1:sb%dim, i)%iatom = ia
 
           i = i + 1
         end do
