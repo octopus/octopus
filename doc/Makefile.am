@@ -2,7 +2,7 @@
 
 SUBDIRS = pdf html
 
-info_TEXINFOS = octopus.texi octopus-devel.texi
+info_TEXINFOS = octopus.texi
 
 octopus_TEXINFOS = authors.texi copying.texi examples.texi index.texi    \
 	installation.texi introduction.texi parser.texi description.texi \
