@@ -1,6 +1,6 @@
 # $Id$
 
 docdir = $(pkgdatadir)/doc
-dist_doc_DATA = octopus.pdf tutorial.pdf
+dist_doc_DATA = octopus.pdf
 
 DISTCLEANFILES = Makefile.in
