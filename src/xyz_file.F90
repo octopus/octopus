@@ -110,7 +110,7 @@ contains
       call loct_parse_string(check_inp('PDB'//trim(what)), 'coords.pdb', str)
 
       iunit = io_open(str, action='read')
-      call xyz_file_read_PDB(iunit, gf)
+      call xyz_file_read_PDB(what, iunit, gf)
       call io_close(iunit)
 
     else if(loct_parse_isdef(check_inp('XYZ'//trim(what))).ne.0) then ! read a xyz file
@@ -167,7 +167,8 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine xyz_file_read_PDB(iunit, gf)
+  subroutine xyz_file_read_PDB(what, iunit, gf)
+    character(len=*),    intent(in)    :: what
     integer,             intent(in)    :: iunit
     type(xyz_file_info), intent(inout) :: gf
 
@@ -200,7 +201,12 @@ contains
         gf%atom(na)%label = gf%atom(na)%label(1:1)
         call str_trim(gf%atom(na)%residue)
 
-        read(record, '(30x,3f8.3)') gf%atom(na)%x
+        if(trim(what) == 'Classical') then
+          read(record, '(30x,3f8.3,6x,f5.2)') gf%atom(na)%x, gf%atom(na)%charge
+        else
+          read(record, '(30x,3f8.3)') gf%atom(na)%x
+        endif
+
         na = na + 1
       end if
     end do

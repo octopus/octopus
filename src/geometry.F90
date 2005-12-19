@@ -217,10 +217,10 @@ contains
         message(2) = "Please use a .pdb"
         call write_fatal(2)
       end if
+      geo%ncatoms = xyz%n
       write(message(1), '(a,i8)') 'Info: Number of classical atoms = ', geo%ncatoms
       call write_info(1)
 
-      geo%ncatoms = xyz%n
       ALLOCATE(geo%catom(geo%ncatoms), geo%ncatoms)
       do i = 1, geo%ncatoms
         geo%catom(i)%label  = xyz%atom(i)%label
