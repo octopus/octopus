@@ -32,7 +32,7 @@ octopus_SOURCES = $(core_SRCS) \
 
 noinst_HEADERS = \
 	global.h \
-	real.F90 complex.F90 undef.F90 \
+	integer.F90 real.F90 complex.F90 undef.F90 \
 	mpi_debug_inc.F90 \
 	ode_solver_inc.F90 root_solver_inc.F90 sparskit_inc.F90 sparskit_driver.F90 \
 	fftw2.F90 fftw3.F90 \
