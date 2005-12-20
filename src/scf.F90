@@ -239,7 +239,7 @@ contains
     FLOAT, allocatable :: rhoout(:,:,:), rhoin(:,:,:), rhonew(:,:,:)
     FLOAT, allocatable :: vout(:,:,:), vin(:,:,:), vnew(:,:,:)
     FLOAT, allocatable :: tmp(:)
-    logical :: finish
+    logical :: finish, forced_finish
 
     call push_sub('scf.scf_run')
 
@@ -348,8 +348,11 @@ contains
         if (h%d%cdft) h%axc(:,:,:) = vnew(:,2:dim,:)
       end select
 
+      ! Are we asked to stop? (Whenever Fortran is ready for signals, this should go away)
+      forced_finish = clean_stop()
+ 
       ! save restart information
-      if(finish.or.(modulo(iter, 3) == 0).or.iter==scf%max_iter.or.clean_stop()) then
+      if(finish.or.(modulo(iter, 3) == 0).or.iter==scf%max_iter.or.forced_finish) then
         call X(restart_write) (trim(tmpdir)//'restart_gs', st, gr, err, iter=iter)
         if(err.ne.0) then
           message(1) = 'Unsuccesfull write of "'//trim(tmpdir)//'restart_gs"'
@@ -379,7 +382,7 @@ contains
       end if
       evsum_in = evsum_out
 
-      if(clean_stop()) exit
+      if(forced_finish) exit
 
       ! check if debug mode should be enabled or disabled on the fly
       call io_debug_on_the_fly()
