@@ -64,7 +64,7 @@ contains
     call X(restart_read) (trim(tmpdir)//'restart_gs', sys%st, gr%m, ierr)
     if(ierr.ne.0) then
       message(1) = "Could not read KS orbitals from '"//trim(tmpdir)//"restart_gs'"
-      message(2) = "Please run a calculation of the unoccupied states first!"
+      message(2) = "Please run a calculation of the ground state first!"
       call write_fatal(2)
     end if
 
