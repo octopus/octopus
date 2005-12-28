@@ -184,6 +184,14 @@ contains
         call write_fatal(2)
       end if
 
+      if( (gr%sb%box_shape .eq. MINIMUM) .and. (poisson_solver .eq. CG_CORRECTED) ) then
+        message(1) = 'When using the "minimum" box shape and the "cg_corrected"'
+        message(2) = 'Poisson solver, we have observed "sometimes" some non-'
+        message(3) = 'negligible error. You may want to check that the "fft" or "cg"'
+        message(4) = 'solver are providing, in your case, the same results.'
+        call write_warning(4)
+      end if
+
       call messages_print_var_option(stdout, "PoissonSolver", poisson_solver)
       call poisson3D_init(gr)
     end subroutine init_3D
