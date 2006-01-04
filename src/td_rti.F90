@@ -398,7 +398,7 @@ contains
       call push_sub('td_rti.td_rti2')
 
       if(.not.h%ip_app) then
-        ALLOCATE(zpsi1(NP, st%d%dim, st%st_start:st%st_end, st%d%nik), NP*(st%st_end-st%st_start+1)*st%d%nik)
+        ALLOCATE(zpsi1(NP_PART, st%d%dim, st%st_start:st%st_end, st%d%nik), NP_PART*(st%st_end-st%st_start+1)*st%d%nik)
         zpsi1 = st%zpsi ! store zpsi
 
         ALLOCATE(vhxc_t1(NP, st%d%nspin), NP*st%d%nspin)
