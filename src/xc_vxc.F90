@@ -206,8 +206,10 @@ contains
         vxc(i, 3) = vxc(i, 3) + (dedd(i, 1) - dedd(i, 2))*rho(i, 3)/(dpol + tiny)
         vxc(i, 4) = vxc(i, 4) + (dedd(i, 1) - dedd(i, 2))*rho(i, 4)/(dpol + tiny)
       end do
+    elseif(ispin == SPIN_POLARIZED) then
+      vxc(1:NP, 1:2) = vxc(1:NP, 1:2) + dedd(1:NP, 1:2)
     else
-      vxc = vxc + dedd
+      vxc(1:NP, 1) = vxc(1:NP, 1) + dedd(1:NP, 1)
     end if
 
   end subroutine lda_process

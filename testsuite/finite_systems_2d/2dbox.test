@@ -6,7 +6,7 @@ Date     : 09.11.05
 Arch     : Linux g38 2.6.13.2-smp-1 #1 SMP Wed Sep 28 17:13:12 CEST 2005 i686 GNU/Linux
 Release  : 1.99devel
 Programs : octopus
-Enabled  : No
+Enabled  : Yes
 
 # The following tests reproduced some basic results from:
 # E. Rasanen et al., Phys. Rev. B 67, 235307 (2003).

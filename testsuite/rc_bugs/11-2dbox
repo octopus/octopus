@@ -8,6 +8,12 @@ Release  : 1.99devel
 Programs : octopus
 Enabled  : No
 
+# This test fails only with some configurations: 
+# Linux g38 2.6.14-desktop-2 #1 SMP PREEMPT Sun Nov 20 20:45:48 CET 2005 i686 GNU/Linux
+# Intel(R) Fortran Compiler for 32-bit applications, Version 9.0    Build 20050722Z Package ID: l_fc_c_9.0.025
+# It fails when calculating FFTs. I am not sure if it is an error of the FFTW
+# (2.1.3-16), or of the compiler, or of the code.
+
 # The following tests reproduced some basic results from:
 # E. Rasanen et al., Phys. Rev. B 67, 235307 (2003).
 
