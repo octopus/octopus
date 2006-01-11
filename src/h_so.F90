@@ -36,13 +36,13 @@ subroutine zso (h, gr, psi, hpsi, ik)
   call zproject(gr%m, h%ep%lso(3, :), h%ep%nvnl, psi(:, 1), tpsi(:, 1), simul_box_is_periodic(gr%sb), ik)
   call zproject(gr%m, h%ep%lso(1, :), h%ep%nvnl, psi(:, 2), tpsi(:, 2), simul_box_is_periodic(gr%sb), ik)
   call zproject(gr%m, h%ep%lso(2, :), h%ep%nvnl, psi(:, 2), tpsi(:, 3), simul_box_is_periodic(gr%sb), ik)
-  hpsi(:, 1) = hpsi(:, 1) - M_zI * M_HALF * (tpsi(:, 1) + tpsi(:, 2) + M_zI * tpsi(:, 3))
+  hpsi(1:NP, 1) = hpsi(1:NP, 1) - M_zI * M_HALF * (tpsi(:, 1) + tpsi(:, 2) + M_zI * tpsi(:, 3))
 
   tpsi = M_z0
   call zproject(gr%m, h%ep%lso(3, :), h%ep%nvnl, psi(:, 2), tpsi(:, 1), simul_box_is_periodic(gr%sb), ik)
   call zproject(gr%m, h%ep%lso(1, :), h%ep%nvnl, psi(:, 1), tpsi(:, 2), simul_box_is_periodic(gr%sb), ik)
   call zproject(gr%m, h%ep%lso(2, :), h%ep%nvnl, psi(:, 1), tpsi(:, 3), simul_box_is_periodic(gr%sb), ik)
-  hpsi(:, 2) = hpsi(:, 2) - M_zI * M_HALF * (-tpsi(:, 1) + tpsi(:, 2) - M_zI * tpsi(:, 3))
+  hpsi(1:NP, 2) = hpsi(1:NP, 2) - M_zI * M_HALF * (-tpsi(:, 1) + tpsi(:, 2) - M_zI * tpsi(:, 3))
 
   deallocate(tpsi)
 

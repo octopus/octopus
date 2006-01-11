@@ -28,8 +28,8 @@ subroutine X(project)(mesh, p, n_projectors, psi, ppsi, periodic, ik)
   type(mesh_type),      intent(in)    :: mesh
   type(projector_type), intent(in)    :: p(:)
   integer,              intent(in)    :: n_projectors
-  R_TYPE,               intent(in)    :: psi(1:mesh%np)
-  R_TYPE,               intent(inout) :: ppsi(1:mesh%np)
+  R_TYPE,               intent(in)    :: psi(:)  !psi(1:mesh%np)
+  R_TYPE,               intent(inout) :: ppsi(:) !ppsi(1:mesh%np)
   logical,              intent(in)    :: periodic
   integer,              intent(in)    :: ik
 
