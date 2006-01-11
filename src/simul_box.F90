@@ -456,7 +456,7 @@ contains
       in_box =  &
         (x(1) >= -sb%lsize(1) + sb%box_offset(1).and.x(1) <= sb%lsize(1) + sb%box_offset(1)).and. &
         (x(2) >= -sb%lsize(2) + sb%box_offset(2).and.x(2) <= sb%lsize(2) + sb%box_offset(2)).and. &
-        (x(3) >= -sb%lsize(3) + sb%box_offset(3).and.x(3) <= sb%lsize(2) + sb%box_offset(3))
+        (x(3) >= -sb%lsize(3) + sb%box_offset(3).and.x(3) <= sb%lsize(3) + sb%box_offset(3))
     end select
 
   contains
