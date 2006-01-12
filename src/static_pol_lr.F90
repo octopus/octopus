@@ -196,9 +196,9 @@ contains
         write(iunit, '(a)') 'WARNING: Hyperpolarizability has not been tested for spin polarized systems'
       end if
 
-      do i=1,NDIM
-        do j=1,NDIM
-          do k=1,NDIM
+      do k=1,NDIM
+        do j=1,k
+          do i=1,j
             write(iunit,'(3i2,f12.6)') i, j, k, hpol(i,j,k)/units_out%length%factor**(5)
           end do
         end do
@@ -209,21 +209,18 @@ contains
         bpar=M_ZERO
         do i=1,NDIM
           do j=1,NDIM
-            bpar(i)=bpar(i)+(hpol(i,j,j)+hpol(j,i,j)+hpol(j,j,i))
+            if( i < j ) then 
+              bpar(i)=bpar(i)+M_THREE*hpol(i,j,j)
+            else 
+              bpar(i)=bpar(i)+M_THREE*hpol(j,j,i)
+            endif
+!              bpar(i)=bpar(i)+(hpol(i,j,j)+hpol(j,i,j)+hpol(j,j,i))
           end do
         end do
 
         bpar=bpar/(M_FIVE * units_out%length%factor**(NDIM+2))
         write(iunit, '(a, 3f12.6,a)') 'B||', bpar(1:NDIM),&
                '  ( B||_i = 1/5 \sum_j(B_ijj+B_jij+B_jji) ) '
-
-        write(iunit,'(a)') 'Symmetry'
-        write(iunit,'(a,f12.6)') 'B_112-B_121', hpol(1,1,2) - hpol(1,2,1)
-        write(iunit,'(a,f12.6)') 'B_113-B_131', hpol(1,1,3) - hpol(1,3,1)
-        write(iunit,'(a,f12.6)') 'B_221-B_212', hpol(2,2,1) - hpol(2,1,2)
-        write(iunit,'(a,f12.6)') 'B_223-B_232', hpol(2,2,3) - hpol(2,3,2)
-        write(iunit,'(a,f12.6)') 'B_331-B_313', hpol(3,3,1) - hpol(3,1,3)
-        write(iunit,'(a,f12.6)') 'B_332-B_323', hpol(3,3,2) - hpol(3,2,3)
 
       endif
 
@@ -365,6 +362,15 @@ contains
     end do ! i
 
     hpol = -M_SIX*hpol
+
+    do k = 1, dim
+      do j = 1, k
+        do i = 1, j
+!          print*,i,j,k
+          hpol(i,j,k)=(hpol(i,j,k)+hpol(j,k,i)+hpol(k,i,j)+hpol(k,j,i)+hpol(j,i,k)+hpol(i,k,j))/M_SIX
+        end do ! k
+      end do ! j
+    end do ! i
 
     deallocate(tmp)
     deallocate(dVde)
