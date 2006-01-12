@@ -107,6 +107,10 @@ module external_pot
     FLOAT, pointer :: B_field(:)           ! static magnetic field
     FLOAT, pointer :: A_static(:,:)        ! static vector potential
 
+    ! The gyromagnetic ratio (-2.0 for the electron, but different if we treat
+    ! *effective* electrons in a quantum dot. It affects the spin Zeeman term.
+    FLOAT :: gyromagnetic_ratio
+
   end type epot_type
 
 contains
@@ -231,6 +235,24 @@ contains
       ep%A_static = -M_HALF/P_c*ep%A_static
 
     end if
+
+    !%Variable GyromagneticRatio
+    !%Type float
+    !%Default 2.0023193043768
+    !%Section Hamiltonian
+    !%Description
+    !% The gyromagnetic ratio of the electron. This is of course a physical 
+    !% constant, and the default value is the exact one that you should not 
+    !% touch, unless : 
+    !% 
+    !% (i)  You want to disconnect the anomalous Zeeman term in the Hamiltonian 
+    !% (then set it to zero, this number only affects this term);
+    !% 
+    !% (ii) You are using an effective Hamiltonian, as it is the case when
+    !% you calculate a 2D electron gas, in which case you have an effective
+    !% gyromagnetic factor that dependes on the material.
+    !%End
+    call loct_parse_float(check_inp('GyromagneticRatio'), P_g, ep%gyromagnetic_ratio)
 
     ! The projectors
     ep%nvnl = geometry_nvnl(gr%geo)

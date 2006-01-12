@@ -291,10 +291,8 @@ subroutine X(magnetic_terms) (gr, h, psi, hpsi, ik)
     case (SPIN_POLARIZED)
       if(modulo(ik+1, 2) == 0) then ! we have a spin down
         lhpsi(1:NP, 1) = - M_HALF/P_C*sqrt(dot_product(h%ep%B_field, h%ep%B_field))*psi(1:NP, 1)
-        hpsi(:, 1) = hpsi(:, 1)
       else
         lhpsi(1:NP, 1) = + M_HALF/P_C*sqrt(dot_product(h%ep%B_field, h%ep%B_field))*psi(1:NP, 1)
-        hpsi(:, 1) = hpsi(:, 1)
       end if
     case (SPINORS)
       lhpsi(1:NP, 1) = M_HALF/P_C*( h%ep%B_field(3)*psi(1:NP, 1) &
@@ -302,7 +300,7 @@ subroutine X(magnetic_terms) (gr, h, psi, hpsi, ik)
       lhpsi(1:NP, 2) = M_HALF/P_C*(-h%ep%B_field(3)*psi(1:NP, 2) &
                                  + (h%ep%B_field(1) + M_zI*h%ep%B_field(2))*psi(1:NP, 1))
     end select
-    hpsi(1:NP, :) = hpsi(1:NP, :) + lhpsi(1:NP, :)
+    hpsi(1:NP, :) = hpsi(1:NP, :) + (h%ep%gyromagnetic_ratio * M_HALF) * lhpsi(1:NP, :)
     deallocate(lhpsi)
   end if
 
