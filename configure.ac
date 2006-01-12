@@ -134,6 +134,7 @@ dnl debug mode
 if test x"${DEBUG}" = x"no" ; then
   AC_DEFINE(NDEBUG, yes, [octopus compiled without debug mode])
 fi
+AC_SUBST(DEBUG)
 
 dnl set the default extension for the programs
 EXEEXT="${MYEXT}${EXEEXT}"

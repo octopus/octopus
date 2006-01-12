@@ -89,7 +89,7 @@ CTAGS=ctags-exuberant -e
 # how to compile a F90 file :)
 .F90.o:
 	@@FCCPP@ @CPPFLAGS@ $< > $*_oct.f90
-	@if [ "@NDEBUG@" = "yes" ]; then \
+	@if [ "@DEBUG@" = "no" ]; then \
 		cat $*_oct.f90 | grep -v pop_sub | grep -v push_sub >$*_oct.f91; \
 		mv -f $*_oct.f91 $*_oct.f90; \
 	fi
