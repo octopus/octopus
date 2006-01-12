@@ -83,7 +83,6 @@ contains
   ! ---------------------------------------------------------
   subroutine v_a_xc()
     FLOAT, allocatable :: rho(:, :)
-    CMPLX, allocatable :: ztmp1(:), ztmp2(:)
     integer :: is
 
     ! next 5 lines are for an RPA calculation
@@ -142,15 +141,10 @@ contains
          - dmf_dotp(gr%m, st%rho(:, 2), h%vhxc(:, 2))
     case(SPINORS)
       h%epot = h%epot - dmf_dotp(gr%m, st%rho(:, 1), h%vhxc(:, 1)) &
-         - dmf_dotp(gr%m, st%rho(:, 2), h%vhxc(:, 2))
+         - dmf_dotp(gr%m, st%rho(:, 2), h%vhxc(:, 2)) &
+         - M_TWO*dmf_dotp(gr%m, st%rho(:, 3), h%vhxc(:, 3)) &
+         - M_TWO*dmf_dotp(gr%m, st%rho(:, 4), h%vhxc(:, 4))
 
-      ALLOCATE(ztmp1(NP), NP)
-      ALLOCATE(ztmp2(NP), NP)
-      ztmp1 = st%rho(:, 3) + M_zI*st%rho(:, 4)
-      ztmp2 = h%vhxc(:, 3) - M_zI*h%vhxc(:, 4)
-      ! WARNING missing real() ???
-      h%epot = h%epot - M_TWO*zmf_dotp(gr%m, ztmp1, ztmp2)
-      deallocate(ztmp1, ztmp2)
     end select
 
     call profiling_out(C_PROFILING_XC)
