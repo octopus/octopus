@@ -361,13 +361,10 @@ contains
       end do ! j
     end do ! i
 
-    hpol = -M_SIX*hpol
-
     do k = 1, dim
       do j = 1, k
         do i = 1, j
-!          print*,i,j,k
-          hpol(i,j,k)=(hpol(i,j,k)+hpol(j,k,i)+hpol(k,i,j)+hpol(k,j,i)+hpol(j,i,k)+hpol(i,k,j))/M_SIX
+          hpol(i,j,k)=-(hpol(i,j,k)+hpol(j,k,i)+hpol(k,i,j)+hpol(k,j,i)+hpol(j,i,k)+hpol(i,k,j))
         end do ! k
       end do ! j
     end do ! i
