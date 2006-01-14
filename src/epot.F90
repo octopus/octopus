@@ -203,9 +203,20 @@ contains
     !% if you are running the code in 1D mode this will not work, and if you
     !% are running the code in 2D mode the magnetic field will have to be in
     !% the z-direction, so that the first two columns should be zero.
+    !%
+    !% Important note: The static magnetic field may only be applied if you 
+    !% are using the executable compiled for real-only wavefunctions. If you
+    !% get this as an error message, please remove the 'StaticMagneticField' 
+    !% block from you input file, or else try running with a complex executable 
+    !% (octopus_cmplx) instead.
     !%End
     nullify(ep%B_field, ep%A_static)
     if(loct_parse_block(check_inp('StaticMagneticField'), blk)==0) then
+
+#if !defined(COMPLEX_WFNS)
+      call input_error('StaticMagneticField')
+#endif
+
       ALLOCATE(ep%B_field(3), 3)
       do i = 1, 3
         call loct_parse_block_float(blk, 0, i-1, ep%B_field(i))
