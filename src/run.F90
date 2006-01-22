@@ -76,8 +76,6 @@ contains
 
   ! ---------------------------------------------------------
   subroutine run()
-    integer :: ierr
-
     logical :: fromScratch
 
     call push_sub('run.run')

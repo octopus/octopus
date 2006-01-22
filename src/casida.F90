@@ -210,9 +210,6 @@ contains
     type(multicomm_type), intent(in) :: mc
 
     integer :: i, a, j, k
-#if defined(HAVE_MPI)
-    integer :: mpi_err
-#endif
 
     call push_sub('casida.casida_type_init')
 
