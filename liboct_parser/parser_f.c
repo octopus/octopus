@@ -84,7 +84,7 @@ void FC_FUNC_(oct_parse_putsym_complex, OCT_PARSE_PUTSYM_COMPLEX)
 
 
 /* --------------------------------------------------------- */
-int FC_FUNC_(oct_parse_input, OCT_PARSE_INIT)
+int FC_FUNC_(oct_parse_input, OCT_PARSE_INPUT)
 	(STR_F_TYPE s STR_ARG1)
 {
   int r;
