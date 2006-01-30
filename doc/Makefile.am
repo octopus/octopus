@@ -26,8 +26,17 @@ variables.texi: ../share/varinfo
 ../share/varinfo:
 	(cd ../share; $(MAKE) varinfo)
 
+
+# Checks wether or not the emacs program exiss before attempting to launch it.
 update:
-	emacs -batch -l update.el
+	@(which emacs >/dev/null && emacs -batch -l update.el >/dev/null 2>/dev/null) \
+	|| echo "WARNING: variables.texi not properly built because emacs is needed."
+
+# If emacs was not launched in the update step, the variables.texi will be illegal,
+# and so the makeinfo would crash.
+octopus.info:
+	@(which emacs >/dev/null && makeinfo octopus.texi) \
+	|| echo "WARNING: octopus.info was not regenerated because emacs is needed."
 
 octopus.info: variables.texi
 octopus.ps: variables.texi
