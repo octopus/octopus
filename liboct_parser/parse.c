@@ -404,7 +404,7 @@ int parse_block_string(sym_block *blk, int l, int col, char **r)
     }
     return 0;
   }else
-    return o;
+    return 1;
 }
 
 

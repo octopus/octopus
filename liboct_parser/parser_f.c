@@ -175,7 +175,7 @@ void FC_FUNC_(oct_parse_string, OCT_PARSE_STRING)
 static void parse_block_error(char *type, char *name, int l, int c){
   fprintf(stderr, "Error: block \"%s\" does not contain a %s in line %d and col %d\n",
 					name, type, l, c);
-  /* exit(1); */
+  exit(1);
 }
 static char *block_name = NULL;
 
