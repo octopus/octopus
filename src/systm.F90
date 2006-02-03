@@ -69,7 +69,7 @@ contains
   !----------------------------------------------------------
   subroutine system_init(sys, parallel_mask)
     type(system_type), intent(out) :: sys
-    integer, optional, intent(in)  :: parallel_mask
+    integer, intent(in)            :: parallel_mask
 
     call push_sub('systm.system_init')
 
@@ -94,7 +94,6 @@ contains
 
     ! ---------------------------------------------------------
     subroutine parallel_init()
-      integer :: parallel_mask_
       integer :: index_dim, index_range(4)
 
       ! for the moment we need communicators for domains plus three
@@ -107,9 +106,6 @@ contains
       index_range(2) = sys%st%nst             ! Number of states
       index_range(3) = sys%st%d%nik           ! Number of kpoints
       index_range(4) = 100000                 ! Some large number
-
-      parallel_mask_ = 0 ! default: no paralellization
-      if(present(parallel_mask)) parallel_mask_ = parallel_mask
 
       ! create index and domain communicators
       call multicomm_init(sys%mc, parallel_mask, mpi_world%size, index_dim, &
