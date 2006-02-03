@@ -114,7 +114,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine run_init()
-    integer :: mode
+    integer :: parallel_mask
 
     call messages_print_stress(stdout, "Calculation Mode")
     call messages_print_var_option(stdout, "CalculationMode", calc_mode)
@@ -127,9 +127,9 @@ contains
 
     if(calc_mode .ne. M_PULPO_A_FEIRA) then
       call units_init()
-      call get_mode_parallelized(mode)
+      call get_parallel_mask()
 
-      call system_init(sys, mode)
+      call system_init(sys, parallel_mask)
       call hamiltonian_init(h, sys%gr, sys%st%d, sys%ks%ip_app)
       call epot_generate(h%ep, sys%gr%m, sys%gr%sb, sys%gr%geo, sys%st, h%reltype)
 
@@ -139,18 +139,18 @@ contains
 
   contains
 
-    subroutine get_mode_parallelized(mode)
-      integer, intent(out) :: mode
+    subroutine get_parallel_mask()
 
-      mode = ibset(mode, P_STRATEGY_DOMAINS - 1) ! all modes are parallel in domains
+      parallel_mask = 0
+      parallel_mask = ibset(parallel_mask, P_STRATEGY_DOMAINS - 1) ! all modes are parallel in domains
       select case(calc_mode)
       case(M_TD)
-        mode = ibset(mode, P_STRATEGY_STATES - 1)
+        parallel_mask = ibset(parallel_mask, P_STRATEGY_STATES - 1)
       case(M_CASIDA)
-        mode = ibset(mode, P_STRATEGY_OTHER - 1)
+        parallel_mask = ibset(parallel_mask, P_STRATEGY_OTHER - 1)
       end select
 
-    end subroutine get_mode_parallelized
+    end subroutine get_parallel_mask
 
   end subroutine run_init
 
