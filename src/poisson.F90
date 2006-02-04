@@ -327,12 +327,12 @@ contains
 
     call dcf_FS2RS(fft_cf)             ! Fourier transform back
     if(present(average_to_zero)) then
-      if(average_to_zero) then
-        average = cf_surface_average(fft_cf)
-        fft_cf%RS = fft_cf%RS - average
-      end if
+      if(average_to_zero) average = cf_surface_average(fft_cf)
     end if
     call dcf2mf(m, fft_cf, pot)        ! put the density in a cube
+    if(present(average_to_zero)) then
+      if(average_to_zero) pot = pot - average
+    end if
 
     call dcf_free_RS(fft_cf)           ! memory is no longer needed
     call dcf_free_FS(fft_cf)
