@@ -346,7 +346,7 @@ subroutine X(output_function) (how, dir, fname, mesh, sb, f, u, ierr, is_tmp)
     call X(vec_gather)(mesh%vp, f_global, f)
 
     if(mesh%vp%rank.eq.mesh%vp%root) then
-      call X(output_function_global)(how, dir, fname, mesh, sb, f_global, u, ierr, is_tmp)
+      call X(output_function_global)(how, dir, fname, mesh, sb, f_global, u, ierr, is_tmp_)
     end if
 
     ! I have to broadcast the error code
@@ -359,7 +359,7 @@ subroutine X(output_function) (how, dir, fname, mesh, sb, f, u, ierr, is_tmp)
     ASSERT(.false.)
 #endif
   else
-    call X(output_function_global)(how, dir, fname, mesh, sb, f, u, ierr, is_tmp)
+    call X(output_function_global)(how, dir, fname, mesh, sb, f, u, ierr, is_tmp_)
   end if
 
   call pop_sub()
