@@ -46,7 +46,7 @@ subroutine mesh_init_stage_1(sb, mesh, geo, cv, enlarge)
       j      = j + 1
       chi(i) = j*mesh%h(i)
       call curvlinear_chi2x(sb, geo, cv, chi(:), x(:))
-      out = (x(i) > sb%lsize(i))
+      out = (x(i) > sb%lsize(i)+CNST(1.0e-10))
     end do
     mesh%nr(2, i) = j - 1
   end do
