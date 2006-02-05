@@ -598,12 +598,13 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
 !  the individual energies are resolved by performing a fixed number          !
 !  of bisections after a given eigenvalue has been isolated                   !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  subroutine egofv(h,s,n,e,g,y,l,z,a,b,rmax,nprin,nnode,dr)
+  subroutine egofv(h,s,n,e,g,y,l,z,a,b,rmax,nprin,nnode,dr,ierr)
 
   implicit DOUBLE (a-h,o-z)
 
   DOUBLE :: a, b, e, z, rmax, dr
   integer :: i,n,l,nprin,nnode,ncor,n1,n2,niter,nt
+  integer :: ierr
 
 
   DOUBLE, dimension(*) :: h, s, g, y
@@ -615,7 +616,7 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
   n2=nnode-1
   e1=e
   e2=e
-
+  ierr = 0
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !                                                                             !
@@ -726,12 +727,8 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
 7 continue
   call nrmlzg(g,s,n)
   return
-3 write(6,4) z,l,nnode,e,de
-4 format(' egofv: too many iterations; execution stopping'/                   &
-            ' z=',f3.0,'  l=',i2,'  nnode=',i2,'  e=',f12.5,                  &
-            '  de=',f12.5)
-  stop 8
-
+3 ierr = 1
+  return
 
   end subroutine egofv
 

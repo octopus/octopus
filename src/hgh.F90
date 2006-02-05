@@ -153,7 +153,7 @@ contains
   subroutine hgh_process(psp)
     type(hgh_type), intent(inout) :: psp
 
-    integer :: l, i
+    integer :: l, i, ierr
 
     call push_sub('hgh.hgh_process')
 
@@ -169,7 +169,14 @@ contains
 
     ! get the pseudoatomic eigenfunctions (WARNING: This is not correctly done yet: "some" wavefunctions
     ! are obtained, but not the real ones!!!
-    call solve_schroedinger(psp)
+    call solve_schroedinger(psp, ierr)
+    if(ierr.ne.0) then ! If the wavefunctions could not be found, we set its number to zero.
+      write(message(1),'(a)') 'The algorithm that calculates atomic wave functions could not'
+      write(message(2),'(a)') 'do its job. The program will continue, but expect poor'
+      write(message(3),'(a)') 'convergence properties.'
+      call write_warning(3)
+      psp%conf%p = 0
+    end if
 
     ! Define the KB-projector cut-off radii
     call get_cutoff_radii(psp)
@@ -463,8 +470,9 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine solve_schroedinger(psp)
-    type(hgh_type), intent(inout)     :: psp
+  subroutine solve_schroedinger(psp, ierr)
+    type(hgh_type), intent(inout) :: psp
+    integer,        intent(out)   :: ierr
 
     integer :: iter, ir, l, nnode, nprin, i, j, irr, n, k
     FLOAT :: vtot, a2b4, diff, nonl
@@ -474,6 +482,8 @@ contains
     DOUBLE, allocatable :: s(:), hato(:), g(:), y(:)
 
     call push_sub('hgh.solve_schroedinger')
+
+    ierr = 0
 
     ! Allocations...
     ALLOCATE(   s(psp%g%nrval), psp%g%nrval)
@@ -534,7 +544,12 @@ contains
         end if
         dr = -CNST(1.0e5); rmax = psp%g%rofi(psp%g%nrval)
         call egofv(hato, s, psp%g%nrval, e, g, y, l, z, &
-          real(psp%g%a, 8), real(psp%g%b, 8), rmax, nprin, nnode, dr)
+          real(psp%g%a, 8), real(psp%g%b, 8), rmax, nprin, nnode, dr, ierr)
+        if(ierr.ne.0) then
+          deallocate(s, hato, g, y, rho, prev)
+          call pop_sub()
+          return
+        endif
         psp%eigen(n) = e
 
         psp%rphi(2:psp%g%nrval, n) = g(2:psp%g%nrval) * sqrt(psp%g%drdi(2:psp%g%nrval))

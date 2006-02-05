@@ -227,7 +227,7 @@ contains
     type(tm_type), intent(inout) :: psf
 
     character(len=3) :: functl
-    integer :: iter, ir, is, l, nnode, nprin !, irel
+    integer :: iter, ir, is, l, nnode, nprin, ierr !, irel
     FLOAT :: vtot, diff, a2b4
     FLOAT, allocatable :: ve(:, :), rho(:, :), prev(:, :)
     FLOAT, parameter :: tol = CNST(1.0e-10)
@@ -293,7 +293,13 @@ contains
       nnode = 1; nprin = l + 1
       e = -((psf%zval/dble(nprin))**2); z = psf%zval
       dr = CNST(-1.0e5); rmax = psf%rofi(psf%nrval)
-      call egofv(hato, s, psf%nrval, e, g, y, l, z, real(psf%a, 8), real(psf%b, 8), rmax, nprin, nnode, dr)
+      call egofv(hato, s, psf%nrval, e, g, y, l, z, real(psf%a, 8), real(psf%b, 8), rmax, nprin, nnode, dr, ierr)
+      if(ierr.ne.0) then
+        write(message(1),'(a)') 'The algorithm that calculates atomic wave functions could not'
+        write(message(2),'(a)') 'do its job. The program will terminate, since the wavefunctions'
+        write(message(3),'(a)') 'are needed. Change the pseudopotential or improve the code.'
+        call write_fatal(3)
+      end if
       psf%eigen(l, 1) = e
 
       psf%rphi(2:psf%nrval, l, 1) = g(2:psf%nrval) * sqrt(psf%g%drdi(2:psf%nrval))
@@ -335,7 +341,13 @@ contains
             nnode = 1; nprin = l + 1
             e = -((psf%zval/dble(nprin))**2); z = psf%zval
             dr = -CNST(1.0e5); rmax = psf%rofi(psf%nrval)
-            call egofv(hato, s, psf%nrval, e, g, y, l, z, real(psf%a, 8), real(psf%b, 8), rmax, nprin, nnode, dr)
+            call egofv(hato, s, psf%nrval, e, g, y, l, z, real(psf%a, 8), real(psf%b, 8), rmax, nprin, nnode, dr, ierr)
+            if(ierr.ne.0) then
+              write(message(1),'(a)') 'The algorithm that calculates atomic wave functions could not'
+              write(message(2),'(a)') 'do its job. The program will terminate, since the wavefunctions'
+              write(message(3),'(a)') 'are needed. Change the pseudopotential or improve the code.'
+              call write_fatal(3)
+            end if
             psf%eigen(l, 1 + is) = e
 
             psf%rphi(2:psf%nrval, l, 1 + is) = g(2:psf%nrval) * sqrt(psf%g%drdi(2:psf%nrval))
@@ -637,7 +649,7 @@ contains
     integer,       intent(in) :: lmax
 
     character(len=3) :: functl
-    integer :: ir, l, nnode, nprin, ighost, irel
+    integer :: ir, l, nnode, nprin, ighost, irel, ierr
     FLOAT :: vtot, a2b4
     FLOAT, allocatable :: ve(:), elocal(:,:)
 
@@ -677,7 +689,8 @@ contains
         z = pstm%zval
         dr = CNST(-1.0e5)
         rmax = pstm%rofi(pstm%nrval)
-        call egofv(hato, s, pstm%nrval, e, g, y, l, z, real(pstm%a, 8), real(pstm%b, 8), rmax, nprin, nnode, dr)
+        call egofv(hato, s, pstm%nrval, e, g, y, l, z, real(pstm%a, 8), real(pstm%b, 8), &
+                   rmax, nprin, nnode, dr, ierr)
         elocal(nnode,l) = e
       end do
     end do
