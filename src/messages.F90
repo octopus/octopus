@@ -91,9 +91,6 @@ contains
     call flush_msg(stderr, shyphens)
     write(msg, '(a,i4)') "* From node = ", mpi_world%rank
     call flush_msg(stderr, msg)
-    ! only the root node flushes above. since all nodes should
-    ! output we write again
-    if(.not.mpi_grp_is_root(mpi_world)) write(stderr, '(a)') msg
 #endif
     call flush_msg(stderr, shyphens)
     do i=1,no_lines
@@ -141,9 +138,6 @@ contains
 #ifdef HAVE_MPI
     write(msg , '(a,i4)') '** From node = ', mpi_world%rank
     call flush_msg(stderr, msg)
-    ! only the root node flushes above. since all nodes should
-    ! output we write again
-    if(.not.mpi_grp_is_root(mpi_world)) write(stderr, '(a)') msg
 #endif
     do i = 1, no_lines
       write(msg , '(a,3x,a)') '**', trim(message(i))
