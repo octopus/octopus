@@ -21,19 +21,19 @@
 
 ! This module contains routines necessary to the split operator
 ! methods defined in td_exp
-module td_exp_split
-  use global
-  use messages
-  use fft
-  use lib_basic_alg
-  use cube_function
-  use mesh_function
-  use functions
-  use mesh
-  use grid
-  use states
-  use hamiltonian
-  use external_pot
+module td_exp_split_m
+  use global_m
+  use messages_m
+  use fft_m
+  use lib_basic_alg_m
+  use cube_function_m
+  use mesh_function_m
+  use functions_m
+  use mesh_m
+  use grid_m
+  use states_m
+  use hamiltonian_m
+  use external_pot_m
 
   implicit none
 
@@ -43,8 +43,8 @@ contains
   ! Calculates psi = exp{factor*T} psi
   ! where T is the kinetic energy operator
   subroutine zexp_kinetic (gr, h, psi, cf, factor)
-    type(grid_type),        intent(in) :: gr
-    type(hamiltonian_type), intent(in) :: h
+    type(grid_t),        intent(in) :: gr
+    type(hamiltonian_t), intent(in) :: h
     CMPLX,                  intent(inout) :: psi(NP, h%d%dim)
     type(zcf),              intent(inout) :: cf
     CMPLX,                  intent(in) :: factor
@@ -103,8 +103,8 @@ contains
   ! Calculates psi = exp{factor*V_KS(t)} psi
   ! where V_KS is the Kohn-Sham potential
   subroutine zexp_vlpsi(gr, h, psi, ik, t, factor)
-    type(grid_type),        intent(in)    :: gr
-    type(hamiltonian_type), intent(in)    :: h
+    type(grid_t),        intent(in)    :: gr
+    type(hamiltonian_t), intent(in)    :: h
     CMPLX,                  intent(inout) :: psi(NP, h%d%dim)
     integer,                intent(in)    :: ik
     FLOAT,                  intent(in)    :: t
@@ -148,8 +148,8 @@ contains
   ! calculates psi = exp{factor V_nlpp} psi
   ! where V_nlpp is the non-local part of the pseudpotential
   subroutine zexp_vnlpsi (m, h, psi, factor_, order_)
-    type(mesh_type),        intent(in) :: m
-    type(hamiltonian_type), intent(in) :: h
+    type(mesh_t),        intent(in) :: m
+    type(hamiltonian_t), intent(in) :: h
     CMPLX,                  intent(inout) :: psi(m%np, h%d%dim)
     CMPLX,                  intent(in) :: factor_
     logical,                intent(in) :: order_
@@ -216,4 +216,4 @@ contains
     call pop_sub()
   end subroutine zexp_vnlpsi
 
-end module td_exp_split
+end module td_exp_split_m

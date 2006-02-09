@@ -19,7 +19,7 @@
 
 #include "global.h"
 
-module par_vec
+module par_vec_m
 
   ! Some general things and nomenclature:
   !
@@ -58,7 +58,7 @@ module par_vec
   ! FLOAT              :: s
   ! FLOAT              :: u(np_global), v(np_global)
   ! FLOAT, allocatable :: ul(:), vl(:), wl(:)
-  ! type(mesh_type)    :: m
+  ! type(mesh_t)    :: m
   !
   ! ! Fill u, v with sensible values.
   ! ! ...
@@ -88,20 +88,20 @@ module par_vec
   ! ! Clean up.
   ! deallocate(ul, vl, wl)
 
-  use global
-  use messages
-  use mesh_lib
-  use io
-  use profiling_mod
-  use mpi_mod
-  use mpi_debug_mod
+  use global_m
+  use messages_m
+  use mesh_lib_m
+  use io_m
+  use profiling_m
+  use mpi_m
+  use mpi_debug_m
 
   implicit none
 
   private
-  public :: pv_type
+  public :: pv_t
 
-  type pv_type
+  type pv_t
     ! The content of these members is node dependent.
     integer          :: rank                 ! Our rank in the communicator.
     integer          :: partno               ! Partition number of the
@@ -136,7 +136,7 @@ module par_vec
     integer, pointer :: xghost_neigh(:, :)   ! Like xghost for neighbours.
     integer, pointer :: ghost(:)             ! Global indices of all local
                                              ! ghost points.
-  end type pv_type
+  end type pv_t
 
 #if defined(HAVE_MPI)
   public ::             &
@@ -170,7 +170,7 @@ contains
   ! It computes the local to global and global to local index tables
   ! and the ghost point exchange.
   ! The format for the stencil is: stencil(3, i) for i=1, ..., np_stencil
-  ! (as for type(nl_operator_type)).
+  ! (as for type(nl_operator_t)).
   ! For example a stencil like (in x-y-plane)
   !          .
   !        .....
@@ -184,7 +184,7 @@ contains
   !   stencil(:, 6) = (/ 2,  0,  0/)
   !   stencil(:, 7) = (/ 0, -1,  0/)
   ! The points are relative to the "application point" of the stencil.
-  ! (This is the same format as used in type(nl_operator_type), so
+  ! (This is the same format as used in type(nl_operator_t), so
   ! just passing op%stencil is possible.)
   ! Note: we can not pass in the i(:, :) array from the stencil
   ! because it is not yet computed (it is local to a node and
@@ -213,7 +213,7 @@ contains
     integer,       intent(in)  :: np_stencil   ! Num. of points in stencil.
     integer,       intent(in)  :: dim          ! Number of dimensions.
     integer,       intent(in)  :: periodic_dim ! Number of per. dimensions.
-    type(pv_type), intent(out) :: vp           ! Description of partition.
+    type(pv_t), intent(out) :: vp           ! Description of partition.
 
     ! Careful: MPI counts node ranks from 0 to numproc-1.
     ! Partition numbers from METIS range from 1 to numproc.
@@ -453,7 +453,7 @@ contains
 
   ! Deallocate memory used by vp.
   subroutine vec_end(vp)
-    type(pv_type), intent(inout) :: vp
+    type(pv_t), intent(inout) :: vp
 
     call push_sub('par_vec.vec_end')
 
@@ -528,4 +528,4 @@ contains
 #include "par_vec_inc.F90"
 
 #endif
-end module par_vec
+end module par_vec_m

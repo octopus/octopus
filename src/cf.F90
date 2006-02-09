@@ -19,11 +19,11 @@
 
 #include "global.h"
 
-module cube_function
-  use global
-  use mesh
+module cube_function_m
+  use global_m
+  use mesh_m
 #if defined(HAVE_FFT)
-  use fft
+  use fft_m
 #endif
 
   implicit none
@@ -54,7 +54,7 @@ module cube_function
 
 #if defined(HAVE_FFT)
     integer :: nx ! = n(1)/2 + 1, first dimension of the FS array
-    type(fft_type), pointer :: fft
+    type(fft_t), pointer :: fft
 #endif
   end type dcf
 
@@ -66,7 +66,7 @@ module cube_function
 
 #if defined(HAVE_FFT)
     integer :: nx ! = n(1),  first dimension of the FS array
-    type(fft_type), pointer :: fft
+    type(fft_t), pointer :: fft
 #endif
   end type zcf
 
@@ -130,8 +130,8 @@ contains
   ! this routine computes
   ! cf_o = cf_o + exp(-k vec) cf_i
   subroutine cf_phase_factor(sb, m, vec, cf_i, cf_o)
-    type(simul_box_type), intent(in)    :: sb
-    type(mesh_type),      intent(in)    :: m
+    type(simul_box_t), intent(in)    :: sb
+    type(mesh_t),      intent(in)    :: m
     FLOAT,                intent(in)    :: vec(3)
     type(dcf),            intent(in)    :: cf_i
     type(dcf),            intent(inout) :: cf_o
@@ -170,5 +170,5 @@ contains
 #include "complex.F90"
 #include "cf_inc.F90"
 
-end module cube_function
+end module cube_function_m
 

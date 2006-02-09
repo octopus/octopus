@@ -21,7 +21,7 @@
 ! ---------------------------------------------------------
 ! integrates a function
 R_TYPE function X(mf_integrate) (mesh, f) result(d)
-  type(mesh_type), intent(in) :: mesh
+  type(mesh_t), intent(in) :: mesh
   R_TYPE,          intent(in) :: f(:)  ! f(mesh%np)
 
   call profiling_in(C_PROFILING_MF_INTEGRATE)
@@ -46,7 +46,7 @@ end function X(mf_integrate)
 ! ---------------------------------------------------------
 ! this function returns the dot product between two vectors
 R_TYPE function X(mf_dotp)(mesh, f1, f2) result(dotp)
-  type(mesh_type), intent(in) :: mesh
+  type(mesh_t), intent(in) :: mesh
   R_TYPE,          intent(in) :: f1(:), f2(:)
 
   R_TYPE, allocatable :: l(:)
@@ -92,7 +92,7 @@ end function X(mf_dotp)
 ! ---------------------------------------------------------
 ! this function returns the norm of a vector
 FLOAT function X(mf_nrm2)(m, f) result(nrm2)
-  type(mesh_type), intent(in) :: m
+  type(mesh_t), intent(in) :: m
   R_TYPE,          intent(in) :: f(:)
 
   call profiling_in(C_PROFILING_MF_NRM2)
@@ -109,7 +109,7 @@ end function X(mf_nrm2)
 ! ---------------------------------------------------------
 ! This function calculates the x_i moment of the function f
 function X(mf_moment) (m, f, i, n) result(r)
-  type(mesh_type), intent(in) :: m
+  type(mesh_t), intent(in) :: m
   R_TYPE,          intent(in) :: f(1:m%np)  ! f(m%np)
   integer,         intent(in) :: i, n
   R_TYPE                      :: r
@@ -135,7 +135,7 @@ end function X(mf_moment)
 ! This subroutine generates a gaussian wave-function in a
 ! random position in space
 subroutine X(mf_random)(m, f)
-  type(mesh_type),      intent(in)  :: m
+  type(mesh_t),      intent(in)  :: m
   R_TYPE,               intent(out) :: f(1:m%np)
 
   integer, save :: iseed = 123

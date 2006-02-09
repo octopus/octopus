@@ -19,24 +19,24 @@
 
 #include "global.h"
 
-module tm
-  use global
-  use messages
-  use atomic
-  use io
-  use logrid
+module tm_m
+  use global_m
+  use messages_m
+  use atomic_m
+  use io_m
+  use logrid_m
 
   implicit none
 
   private
   public ::     &
-    tm_type,    &
+    tm_t,       &
     tm_init,    &
     tm_end,     &
     tm_process, &
     tm_debug
 
-  type tm_type
+  type tm_t
     ! First, the contents of the file.
     character(len=2)  :: namatm, icorr
     character(len=3)  :: irel
@@ -54,11 +54,11 @@ module tm
 
     ! Other stuff
     integer :: nrval
-    type(logrid_type) :: g
+    type(logrid_t) :: g
     FLOAT, pointer :: dkbcos(:), dknrm(:), so_dkbcos(:), so_dknrm(:)
 
     integer :: ispin
-  end type tm_type
+  end type tm_t
 
   FLOAT, parameter :: eps = CNST(1.0e-8)
 
@@ -66,7 +66,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine tm_init(pstm, filename, ispin)
-    type(tm_type),    intent(inout) :: pstm
+    type(tm_t),    intent(inout) :: pstm
     character(len=*), intent(in)    :: filename
     integer,          intent(in)    :: ispin
 
@@ -140,7 +140,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine build_valconf(pstm)
-    type(tm_type) :: pstm
+    type(tm_t) :: pstm
 
     character(len=1)  :: char1(6), char2
     integer :: l
@@ -184,7 +184,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine tm_end(pstm)
-    type(tm_type), intent(inout) :: pstm
+    type(tm_t), intent(inout) :: pstm
 
     call push_sub('tm.tm_end')
 
@@ -198,7 +198,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine tm_process(pstm, lmax, lloc)
-    type(tm_type), intent(inout) :: pstm
+    type(tm_t), intent(inout) :: pstm
     integer,       intent(in)    :: lmax, lloc
 
     call push_sub('tm.tm_process')
@@ -224,7 +224,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine solve_schroedinger(psf)
-    type(tm_type), intent(inout) :: psf
+    type(tm_t), intent(inout) :: psf
 
     character(len=3) :: functl
     integer :: iter, ir, is, l, nnode, nprin, ierr !, irel
@@ -389,7 +389,7 @@ contains
   ! ---------------------------------------------------------
   subroutine read_file_data_bin(unit, psf)
     integer,       intent(in)    :: unit
-    type(tm_type), intent(inout) :: psf
+    type(tm_t), intent(inout) :: psf
 
     integer  :: ndown, nup, l, i
     FLOAT :: r2
@@ -485,7 +485,7 @@ contains
   ! ---------------------------------------------------------
   subroutine read_file_data_ascii(unit, psf)
     integer,       intent(in)    :: unit
-    type(tm_type), intent(inout) :: psf
+    type(tm_t), intent(inout) :: psf
 
     integer  :: ndown, nup, i, l
     FLOAT :: r2
@@ -598,7 +598,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine calculate_kb_cosines(pstm, lloc)
-    type(tm_type), intent(inout) :: pstm
+    type(tm_t), intent(inout) :: pstm
     integer,       intent(in)    :: lloc
 
     integer :: ir, l
@@ -645,7 +645,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine ghost_analysis(pstm, lmax)
-    type(tm_type), intent(in) :: pstm
+    type(tm_t), intent(in) :: pstm
     integer,       intent(in) :: lmax
 
     character(len=3) :: functl
@@ -721,7 +721,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine get_cutoff_radii(pstm, lloc)
-    type(tm_type), intent(inout) :: pstm
+    type(tm_t), intent(inout) :: pstm
     integer,       intent(in)    :: lloc
 
     integer             :: l, ir
@@ -762,7 +762,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine get_local(psf, l_loc, rcore)
-    type(tm_type), intent(inout) :: psf
+    type(tm_t), intent(inout) :: psf
     integer,       intent(in)    :: l_loc
     FLOAT,         intent(in)    :: rcore
 
@@ -805,7 +805,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine tm_debug(pstm, dir)
-    type(tm_type), intent(in) :: pstm
+    type(tm_t), intent(in) :: pstm
     character(len=*), intent(in) :: dir
 
     integer :: loc_unit, kbp_unit, dat_unit, wav_unit, so_unit, i, l, is
@@ -885,4 +885,4 @@ contains
     call pop_sub()
   end subroutine tm_debug
 
-end module tm
+end module tm_m

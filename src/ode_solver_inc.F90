@@ -20,7 +20,7 @@
 
 ! ---------------------------------------------------------
 subroutine X(ode_solver_init)(os)
-  type(ode_solver_type), intent(out) :: os
+  type(ode_solver_t), intent(out) :: os
 
   call push_sub('ode_solver_inc.ode_solver_init')
 
@@ -62,7 +62,7 @@ end subroutine X(ode_solver_init)
 
 ! ---------------------------------------------------------
 subroutine X(ode_solver_create)(os)
-  type(ode_solver_type), intent(inout) :: os
+  type(ode_solver_t), intent(inout) :: os
 
   call push_sub('ode_solver_inc.Xode_solver_create')
 
@@ -96,7 +96,7 @@ end subroutine X(ode_solver_create)
 
 ! ---------------------------------------------------------
 subroutine X(ode_solver_run)(os, func, startval, solutionp, solutionvec, filename)
-  type(ode_solver_type),      intent(inout) :: os
+  type(ode_solver_t),      intent(inout) :: os
   R_TYPE,                     intent(in)    :: startval(:)
   ! values of the solution only at the endpoint of the interval
   R_TYPE,                     intent(out)   :: solutionp(:)
@@ -160,7 +160,7 @@ end subroutine X(ode_solver_run)
 ! ODE stepping for equally spaced steps
 !
 subroutine X(ode_step)(os, func, startval, solutionp, solutionvec)
-  type(ode_solver_type), intent(in)  :: os
+  type(ode_solver_t), intent(in)  :: os
   R_TYPE,                intent(in)  :: startval(:)
   R_TYPE,                intent(out) :: solutionp(:)
   R_TYPE, optional,      intent(out) :: solutionvec(:,:) ! full solution for all t
@@ -222,7 +222,7 @@ end subroutine X(ode_step)
 
 ! ---------------------------------------------------------
 subroutine X(ode_solver_end)(os)
-  type(ode_solver_type), intent(out) :: os
+  type(ode_solver_t), intent(out) :: os
 
   call push_sub('ode_solver_inc.Xode_solver_end')
 

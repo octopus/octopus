@@ -19,32 +19,32 @@
 
 #include "global.h"
 
-module output
-  use global
-  use messages
-  use datasets_mod
-  use lib_oct
-  use lib_oct_parser
-  use io
-  use units
-  use mesh
-  use simul_box
-  use mesh_function
-  use cube_function
-  use functions
+module output_m
+  use global_m
+  use messages_m
+  use datasets_m
+  use lib_oct_m
+  use lib_oct_parser_m
+  use io_m
+  use units_m
+  use mesh_m
+  use simul_box_m
+  use mesh_function_m
+  use cube_function_m
+  use functions_m
 #if defined(HAVE_NETCDF)
-  use netcdf
+  use netcdf_m
 #endif
-  use par_vec
-  use mpi_mod
-  use mpi_debug_mod
-  use varinfo
+  use par_vec_m
+  use mpi_m
+  use mpi_debug_m
+  use varinfo_m
 
   implicit none
 
   private
   public ::                      &
-    output_type,                 &
+    output_t,                    &
     output_init,                 &
     output_fill_how,             &
     dinput_function,             &
@@ -83,7 +83,7 @@ module output
     doutput_kind      =    1,    &
     zoutput_kind      =   -1
 
-  type output_type
+  type output_t
     integer :: what
     integer :: how               ! how to output
 
@@ -91,15 +91,15 @@ module output
     logical :: duringscf
 
     character(len=80) :: wfs_list
-  end type output_type
+  end type output_t
 
 
 contains
 
   ! ---------------------------------------------------------
   subroutine output_init(sb, outp)
-    type(simul_box_type), intent(in)  :: sb
-    type(output_type),    intent(out) :: outp
+    type(simul_box_t), intent(in)  :: sb
+    type(output_t),    intent(out) :: outp
 
 
     !%Variable Output
@@ -275,7 +275,7 @@ contains
   ! ---------------------------------------------------------
   integer function iopar_open(m, file, action, status, form, position, die) &
     result(iunit)
-    type(mesh_type),  intent(in)           :: m
+    type(mesh_t),  intent(in)           :: m
     character(len=*), intent(in)           :: file, action
     character(len=*), intent(in), optional :: status, form, position
     logical,          intent(in), optional :: die
@@ -302,7 +302,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine iopar_close(m, iunit)
-    type(mesh_type), intent(in)    :: m
+    type(mesh_t), intent(in)    :: m
     integer,         intent(inout) :: iunit
 
 #if defined(HAVE_MPI)
@@ -327,7 +327,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine iopar_read(m, iunit, line, ierr)
-    type(mesh_type),  intent(in)  :: m
+    type(mesh_t),  intent(in)  :: m
     integer,          intent(in)  :: iunit
     character(len=*), intent(out) :: line
     integer,          intent(out) :: ierr
@@ -355,7 +355,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine iopar_backspace(m, iunit)
-    type(mesh_type),  intent(in)  :: m
+    type(mesh_t),  intent(in)  :: m
     integer,          intent(in)  :: iunit
 
     call push_sub('out.iopar_read')
@@ -378,4 +378,4 @@ contains
 #include "out_inc.F90"
 #include "undef.F90"
 
-end module output
+end module output_m

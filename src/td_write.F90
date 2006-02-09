@@ -19,42 +19,42 @@
 
 #include "global.h"
 
-module td_write
-  use global
-  use datasets_mod
-  use units
-  use messages
-  use io
-  use lib_oct
-  use lib_oct_parser
-  use geometry
-  use mesh
-  use grid
-  use mesh_function
-  use functions
-  use states
-  use output
-  use restart
-  use lasers
-  use hamiltonian
-  use external_pot
-  use grid
-  use spectrum
-  use mpi_mod
-  use varinfo
+module td_write_m
+  use global_m
+  use datasets_m
+  use units_m
+  use messages_m
+  use io_m
+  use lib_oct_m
+  use lib_oct_parser_m
+  use geometry_m
+  use mesh_m
+  use grid_m
+  use mesh_function_m
+  use functions_m
+  use states_m
+  use output_m
+  use restart_m
+  use lasers_m
+  use hamiltonian_m
+  use external_pot_m
+  use grid_m
+  use spectrum_m
+  use mpi_m
+  use varinfo_m
 
   implicit none
 
   private
   public ::         &
-    td_write_type,  &
+    td_write_t,     &
     td_write_init,  &
     td_write_end,   &
     td_write_iter,  &
     td_write_data
 
 
-  type td_write_type
+  type td_write_t
     integer(POINTER_SIZE) :: out_multip
     integer(POINTER_SIZE) :: out_coords
     integer(POINTER_SIZE) :: out_gsp
@@ -68,18 +68,18 @@ module td_write
 
     integer           :: lmax     ! maximum multipole moment to output
     FLOAT             :: lmm_r    ! radius of the sphere used to compute the local magnetic moments
-    type(states_type) :: gs_st    ! The states_type where the ground state is stored, in order to
+    type(states_t) :: gs_st    ! The states_type where the ground state is stored, in order to
                                   ! calculate the projections(s) onto it.
-  end type td_write_type
+  end type td_write_t
 
 contains
 
   ! ---------------------------------------------------------
   subroutine td_write_init(w, gr, st, geo, ions_move, there_are_lasers, iter, dt)
-    type(td_write_type)             :: w
-    type(grid_type),     intent(in) :: gr
-    type(states_type),   intent(in) :: st
-    type(geometry_type), intent(in) :: geo
+    type(td_write_t)             :: w
+    type(grid_t),     intent(in) :: gr
+    type(states_t),   intent(in) :: st
+    type(geometry_t), intent(in) :: geo
     logical,             intent(in) :: ions_move, there_are_lasers
     integer,             intent(in) :: iter
     FLOAT,               intent(in) :: dt
@@ -237,7 +237,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine td_write_end(w)
-    type(td_write_type)       :: w
+    type(td_write_t)       :: w
     call push_sub('td_write.td_write_end')
 
     if(mpi_grp_is_root(mpi_world)) then
@@ -262,12 +262,12 @@ contains
 
   ! ---------------------------------------------------------
   subroutine td_write_iter(w, gr, st, h, geo, kick, dt, i)
-    type(td_write_type),    intent(in) :: w
-    type(grid_type),        intent(inout) :: gr
-    type(states_type),      intent(inout) :: st
-    type(hamiltonian_type), intent(inout) :: h
-    type(geometry_type),    intent(in)    :: geo
-    type(kick_type),        intent(in) :: kick
+    type(td_write_t),    intent(in) :: w
+    type(grid_t),        intent(inout) :: gr
+    type(states_t),      intent(inout) :: st
+    type(hamiltonian_t), intent(inout) :: h
+    type(geometry_t),    intent(in)    :: geo
+    type(kick_t),        intent(in) :: kick
     FLOAT,                  intent(in) :: dt
     integer,                intent(in) :: i
 
@@ -290,12 +290,12 @@ contains
 
   ! ---------------------------------------------------------
   subroutine td_write_data(w, gr, st, h, outp, geo, dt_, iter)
-    type(td_write_type),    intent(in)    :: w
-    type(grid_type),        intent(inout) :: gr
-    type(states_type),      intent(in)    :: st
-    type(hamiltonian_type), intent(in)    :: h
-    type(output_type),      intent(in)    :: outp
-    type(geometry_type),    intent(in)    :: geo
+    type(td_write_t),    intent(in)    :: w
+    type(grid_t),        intent(inout) :: gr
+    type(states_t),      intent(in)    :: st
+    type(hamiltonian_t), intent(in)    :: h
+    type(output_t),      intent(in)    :: outp
+    type(geometry_t),    intent(in)    :: geo
     FLOAT, intent(in) :: dt_
     integer, intent(in) :: iter
 
@@ -337,8 +337,8 @@ contains
   ! ---------------------------------------------------------
   subroutine td_write_spin(out_spin, m, st, iter)
     integer(POINTER_SIZE), intent(in) :: out_spin
-    type(mesh_type),       intent(in) :: m
-    type(states_type),     intent(in) :: st
+    type(mesh_t),       intent(in) :: m
+    type(states_t),     intent(in) :: st
     integer,               intent(in) :: iter
 
     character(len=130) :: aux
@@ -388,9 +388,9 @@ contains
   ! ---------------------------------------------------------
   subroutine td_write_local_magnetic_moments(out_magnets, m, st, geo, lmm_r, iter)
     integer(POINTER_SIZE), intent(in) :: out_magnets
-    type(mesh_type),       intent(in) :: m
-    type(states_type),     intent(in) :: st
-    type(geometry_type),   intent(in) :: geo
+    type(mesh_t),       intent(in) :: m
+    type(states_t),     intent(in) :: st
+    type(geometry_t),   intent(in) :: geo
     FLOAT,                 intent(in) :: lmm_r
     integer,               intent(in) :: iter
 
@@ -446,9 +446,9 @@ contains
   ! ---------------------------------------------------------
   subroutine td_write_angular(out_angular, gr, st, kick, iter)
     integer(POINTER_SIZE), intent(in)    :: out_angular
-    type(grid_type),       intent(inout) :: gr
-    type(states_type),     intent(inout) :: st
-    type(kick_type),       intent(in)    :: kick
+    type(grid_t),       intent(inout) :: gr
+    type(states_t),     intent(inout) :: st
+    type(kick_t),       intent(in)    :: kick
     integer,               intent(in)    :: iter
 
     character(len=130) :: aux
@@ -531,10 +531,10 @@ contains
   ! ---------------------------------------------------------
   subroutine td_write_multipole(out_multip, gr, st, lmax, kick, iter)
     integer(POINTER_SIZE), intent(in) :: out_multip
-    type(grid_type),       intent(in) :: gr
-    type(states_type),     intent(in) :: st
+    type(grid_t),       intent(in) :: gr
+    type(states_t),     intent(in) :: st
     integer,               intent(in) :: lmax
-    type(kick_type),       intent(in) :: kick
+    type(kick_t),       intent(in) :: kick
     integer,               intent(in) :: iter
 
     integer :: is, l, m, add_lm
@@ -658,7 +658,7 @@ contains
   ! ---------------------------------------------------------
   subroutine td_write_nbo(out_coords, gr, iter, ke, pe)
     integer(POINTER_SIZE), intent(in) :: out_coords
-    type(grid_type),       intent(in) :: gr
+    type(grid_t),       intent(in) :: gr
     integer,               intent(in) :: iter
     FLOAT,                 intent(in) :: ke, pe
 
@@ -731,9 +731,9 @@ contains
   ! ---------------------------------------------------------
   subroutine td_write_gsp(out_gsp, m, st, gs_st, dt, iter)
     integer(POINTER_SIZE), intent(in) :: out_gsp
-    type(mesh_type),       intent(in) :: m
-    type(states_type),     intent(in) :: st
-    type(states_type),     intent(in) :: gs_st
+    type(mesh_t),       intent(in) :: m
+    type(states_t),     intent(in) :: st
+    type(states_t),     intent(in) :: gs_st
     FLOAT,                 intent(in) :: dt
     integer,               intent(in) :: iter
 
@@ -777,9 +777,9 @@ contains
   ! ---------------------------------------------------------
   subroutine td_write_acc(out_acc, gr, st, h, dt, iter)
     integer(POINTER_SIZE),  intent(in)    :: out_acc
-    type(grid_type),        intent(inout) :: gr
-    type(states_type),      intent(inout) :: st
-    type(hamiltonian_type), intent(inout) :: h
+    type(grid_t),        intent(inout) :: gr
+    type(states_t),      intent(inout) :: st
+    type(hamiltonian_t), intent(inout) :: h
     FLOAT,                  intent(in)    :: dt
     integer,                intent(in)    :: iter
 
@@ -822,8 +822,8 @@ contains
   ! ---------------------------------------------------------
   subroutine td_write_laser(out_laser, gr, h, dt, iter)
     integer(POINTER_SIZE),  intent(in) :: out_laser
-    type(grid_type),        intent(in) :: gr
-    type(hamiltonian_type), intent(in) :: h
+    type(grid_t),        intent(in) :: gr
+    type(hamiltonian_t), intent(in) :: h
     FLOAT,                  intent(in) :: dt
     integer,                intent(in) :: iter
 
@@ -892,7 +892,7 @@ contains
   ! ---------------------------------------------------------
   subroutine td_write_el_energy(out_energy, h, iter)
     integer(POINTER_SIZE),  intent(in) :: out_energy
-    type(hamiltonian_type), intent(in) :: h
+    type(hamiltonian_t), intent(in) :: h
     integer,                intent(in) :: iter
 
     integer :: i
@@ -936,9 +936,9 @@ contains
   ! ---------------------------------------------------------
   subroutine td_write_proj(out_proj, gr, st, gs_st, iter)
     integer(POINTER_SIZE), intent(in) :: out_proj
-    type(grid_type),       intent(in) :: gr
-    type(states_type),     intent(in) :: st
-    type(states_type),     intent(in) :: gs_st
+    type(grid_t),       intent(in) :: gr
+    type(states_t),     intent(in) :: st
+    type(states_t),     intent(in) :: gs_st
     integer,               intent(in) :: iter
 
     CMPLX, allocatable :: projections(:,:,:)
@@ -1027,4 +1027,4 @@ contains
 
 #include "td_calc.F90"
 
-end module td_write
+end module td_write_m

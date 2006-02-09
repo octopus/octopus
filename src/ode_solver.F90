@@ -19,17 +19,17 @@
 
 #include "global.h"
 
-module ode_solver
-  use global
-  use messages
-  use datasets_mod
-  use lib_oct_parser
+module ode_solver_m
+  use global_m
+  use messages_m
+  use datasets_m
+  use lib_oct_parser_m
 
   implicit none
 
   private
   public ::                     &
-    ode_solver_type,            &
+    ode_solver_t,               &
     dode_solver_init,           &
     dode_solver_create,         &
     dode_solver_run,            &
@@ -47,8 +47,8 @@ module ode_solver
     ODE_MINVAL =  ODE_RK4,      &
     ODE_MAXVAL =  ODE_PD89
 
-  type ode_solver_type
-    integer :: solver_type     ! what solver to use (see ODE_* variables above)
+  type ode_solver_t
+    integer :: solver_type     ! what solver to use (see ODE_* variables above)_m
     integer :: nsteps          ! how many steps to use
     integer :: nsize           ! how many odes to solve simultaneously
     integer :: vsize           ! vector size of ode method (used internally)
@@ -56,7 +56,7 @@ module ode_solver
     logical :: adaptive_steps  ! should we use adaptive steps?
     logical :: full_solution   ! if true the solution will be returned for all t, otherwise only at the endpoint t=tmax.
     FLOAT, pointer :: a(:,:), b(:), c(:), e(:) ! coefficients dor the ode solver
-  end type ode_solver_type
+  end type ode_solver_t
 
 
 contains
@@ -64,7 +64,7 @@ contains
   ! ---------------------------------------------------------
   ! coefficients for standard Runge-Kutta 4.th order
   subroutine ode_rk4_coeff(os)
-    type(ode_solver_type), intent(inout)  :: os
+    type(ode_solver_t), intent(inout)  :: os
 
     call push_sub('ode_solver.ode_rk4_coeff')
 
@@ -93,7 +93,7 @@ contains
   ! ---------------------------------------------------------
   ! coefficients for Fehlberg 7/8.th order
   subroutine ode_fb78_coeff(os)
-    type(ode_solver_type), intent(inout)  :: os
+    type(ode_solver_t), intent(inout)  :: os
 
     call push_sub('ode_solver.ode_fb78_coeff')
 
@@ -240,7 +240,7 @@ contains
   ! coefficients for Verner 8/9.th order
   !
   subroutine ode_vr89_coeff(os)
-    type(ode_solver_type), intent(inout)  :: os
+    type(ode_solver_t), intent(inout)  :: os
 
     FLOAT :: SQRT6
 
@@ -449,7 +449,7 @@ contains
   ! coefficients for Prince-Dormand 8/9.th order
   !
   subroutine ode_pd89_coeff(os)
-    type(ode_solver_type), intent(inout)  :: os
+    type(ode_solver_t), intent(inout)  :: os
 
     call push_sub('ode_solver.ode_pd89_coeff')
 
@@ -602,4 +602,4 @@ contains
 #include "real.F90"
 #include "ode_solver_inc.F90"
 
-end module ode_solver
+end module ode_solver_m

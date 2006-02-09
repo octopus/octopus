@@ -19,8 +19,8 @@
 
 #include "global.h"
 
-module lib_basic_alg
-  use blas
+module lib_basic_alg_m
+  use blas_m
 
   implicit none
 
@@ -183,4 +183,4 @@ contains
 
 #endif
 
-end module lib_basic_alg
+end module lib_basic_alg_m

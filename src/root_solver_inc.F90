@@ -19,7 +19,7 @@
 
 ! ---------------------------------------------------------
 subroutine X(root_solver_init)(rs)
-  type(root_solver_type), intent(out) :: rs
+  type(root_solver_t), intent(out) :: rs
 
   call push_sub('root_solver_inc.Xroot_solver_init')
 
@@ -99,7 +99,7 @@ end subroutine X(root_solver_init)
 
 !!$! ---------------------------------------------------------
 !!$subroutine X(root_solver_run)(rs, func, roots, startval, interval_, coeff)
-!!$  type(root_solver_type), intent(inout) :: rs
+!!$  type(root_solver_t), intent(inout) :: rs
 !!$  R_TYPE,                 intent(out)   :: roots(:)    ! roots we are searchin
 !!$  R_TYPE, optional,       intent(in)    :: startval    ! start value for the search
 !!$  FLOAT,  optional,       intent(in)    :: interval_(2) ! lower and upper boundary of search region
@@ -187,7 +187,7 @@ end subroutine X(root_solver_init)
 !!$#endif
 !!$
 !!$  case default
-!!$    write(message(1), '(a,i4,a)') "Input: '", rs%solver_type, &
+!!$    write(message(1), '(a,i4,a)') "Input: '", rs%solver_t, &
 !!$      "' is not a valid root solver"
 !!$    message(2) = '( root solver =  root_bisection | root_brent | root_newton | root_laguerre | root_watterstrom )'
 !!$    call write_fatal(2)
@@ -200,7 +200,7 @@ end subroutine X(root_solver_init)
 
 ! ---------------------------------------------------------
 subroutine X(root_solver_create)()
-!!$  type(root_solver_type), intent(in) :: rs
+!!$  type(root_solver_t), intent(in) :: rs
 
   call push_sub('root_solver_inc.Xroot_solver_create')
   ! do allocation stuff
@@ -220,7 +220,7 @@ end subroutine X(root_solver_end)
 
 ! ---------------------------------------------------------
 !!$subroutine X(root_newton)(rs, func, root, startval)
-!!$  type(root_solver_type), intent(in)  :: rs
+!!$  type(root_solver_t), intent(in)  :: rs
 !!$  R_TYPE,                 intent(out) :: root        ! root we are searching
 !!$  R_TYPE,                 intent(in)  :: startval    ! start value for the search
 !!$
@@ -241,7 +241,7 @@ end subroutine X(root_solver_end)
 
 ! ---------------------------------------------------------
 subroutine X(root_laguerre)(rs, root, startval, coeff)
-  type(root_solver_type), intent(inout) :: rs
+  type(root_solver_t), intent(inout) :: rs
   R_TYPE,                 intent(out)   :: root        ! root we are searching
   R_TYPE,                 intent(in)    :: startval    ! start value for the search
   R_TYPE,                 intent(in)    :: coeff(:)    ! polynomial coefficients

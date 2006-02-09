@@ -19,19 +19,19 @@
 
 #include "global.h"
 
-module scalar_mesh
-  use global
-  use messages
-  use datasets_mod
-  use math
-  use io
-  use lib_oct_parser
+module scalar_mesh_m
+  use global_m
+  use messages_m
+  use datasets_m
+  use math_m
+  use io_m
+  use lib_oct_parser_m
 
   implicit none
 
   private
   public ::                                   &
-    scalar_mesh_type,                         &
+    scalar_mesh_t,                            &
     scalar_mesh_init,                         &
     scalar_mesh_create,                       &
     scalar_mesh_end,                          &
@@ -47,7 +47,7 @@ module scalar_mesh
     MESH_MINVAL         = MESH_LINEAR,        &
     MESH_MAXVAL         = MESH_GAUSS_LEGENDRE
 
-  type scalar_mesh_type
+  type scalar_mesh_t
     integer :: mtype             ! mesh type (see MESH_* variables above)
     integer :: np                ! number of points in the mesh
     FLOAT   :: min, max          ! lower and upper boundary for scalar grid
@@ -57,13 +57,13 @@ module scalar_mesh
     FLOAT, pointer    :: mesh(:) ! the mesh points
     FLOAT, pointer    :: w(:)    ! weights for integrations
     character(len=32) :: label   ! label for namespacing
-  end type scalar_mesh_type
+  end type scalar_mesh_t
 
 contains
 
   ! ---------------------------------------------------------
   subroutine scalar_mesh_init(sm, label)
-    type(scalar_mesh_type), intent(inout) :: sm
+    type(scalar_mesh_t), intent(inout) :: sm
     character(len=*),       intent(in)    :: label
 
     FLOAT :: etmp
@@ -126,7 +126,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine scalar_mesh_create(sm)
-    type(scalar_mesh_type), intent(out) :: sm
+    type(scalar_mesh_t), intent(out) :: sm
 
     FLOAT :: xmin1, xmax1, xmin2, xmax2, offset
     FLOAT, allocatable :: gl(:), gw(:)
@@ -275,7 +275,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine scalar_mesh_write(sm, filename)
-    type(scalar_mesh_type), intent(in) :: sm
+    type(scalar_mesh_t), intent(in) :: sm
     character(len=*)                   :: filename
 
     integer :: i, iunit
@@ -293,7 +293,7 @@ contains
 
   ! ---------------------------------------------------------
   FLOAT function scalar_mesh_integrate(sm, func) result(res)
-    type(scalar_mesh_type), intent(in) :: sm
+    type(scalar_mesh_t), intent(in) :: sm
     FLOAT, intent(in) :: func(:)
 
     call push_sub('scalar_mesh.scalar_mesh_end')
@@ -306,7 +306,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine scalar_mesh_end(sm)
-    type(scalar_mesh_type), intent(inout) :: sm
+    type(scalar_mesh_t), intent(inout) :: sm
 
     call push_sub('scalar_mesh.scalar_mesh_end')
 
@@ -315,4 +315,4 @@ contains
     call pop_sub()
   end subroutine scalar_mesh_end
 
-end module scalar_mesh
+end module scalar_mesh_m

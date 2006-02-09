@@ -18,8 +18,8 @@
 !! $Id$
 
 subroutine zso (h, gr, psi, hpsi, ik)
-  type(hamiltonian_type), intent(in) :: h
-  type(grid_type) :: gr
+  type(hamiltonian_t), intent(in) :: h
+  type(grid_t) :: gr
   R_TYPE, intent(in) :: psi(:, :)
   R_TYPE, intent(inout) :: Hpsi(:, :)
   integer, intent(in) :: ik

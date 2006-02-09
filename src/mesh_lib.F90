@@ -19,8 +19,8 @@
 
 #include "global.h"
 
-module mesh_lib
-  use global
+module mesh_lib_m
+  use global_m
 
   implicit none
 
@@ -72,4 +72,4 @@ contains
 
   end function mesh_index
 
-end module mesh_lib
+end module mesh_lib_m

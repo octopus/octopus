@@ -24,29 +24,29 @@
 !
 ! It assumes that the Oxygen atom is located at x0=0 (see Eq. (12))
 
-module curv_briggs
-  use lib_oct_parser
-  use global
-  use messages
-  use datasets_mod
-  use units
-  use geometry
-  use simul_box
-  use lib_adv_alg
+module curv_briggs_m
+  use lib_oct_parser_m
+  use global_m
+  use messages_m
+  use datasets_m
+  use units_m
+  use geometry_m
+  use simul_box_m
+  use lib_adv_alg_m
 
   implicit none
 
-  type curv_briggs_type
+  type curv_briggs_t
     FLOAT :: L(3)   ! size of the box
     FLOAT :: beta   ! adjustable parameter between 0 and 1 that controls the degree of scaling
-  end type curv_briggs_type
+  end type curv_briggs_t
 
 contains
 
   ! ---------------------------------------------------------
   subroutine curv_briggs_init(sb, cv)
-    type(simul_box_type),   intent(in)  :: sb
-    type(curv_briggs_type), intent(out) :: cv
+    type(simul_box_t),   intent(in)  :: sb
+    type(curv_briggs_t), intent(out) :: cv
 
     cv%L = M_ZERO
     cv%L(1:sb%dim) = sb%lsize(1:sb%dim)
@@ -63,8 +63,8 @@ contains
 
   ! ---------------------------------------------------------
   subroutine curv_briggs_chi2x(sb, cv, chi, x)
-    type(simul_box_type),   intent(in)  :: sb
-    type(curv_briggs_type), intent(in)  :: cv
+    type(simul_box_t),   intent(in)  :: sb
+    type(curv_briggs_t), intent(in)  :: cv
     FLOAT,                  intent(in)  :: chi(:)  ! chi(sb%dim)
     FLOAT,                  intent(out) :: x(:)    ! x(sb%dim)
 
@@ -80,8 +80,8 @@ contains
 
   ! ---------------------------------------------------------
   subroutine curv_briggs_jacobian_inv(sb, cv, chi, J)
-    type(simul_box_type),   intent(in)  :: sb
-    type(curv_briggs_type), intent(in)  :: cv
+    type(simul_box_t),   intent(in)  :: sb
+    type(curv_briggs_t), intent(in)  :: cv
     FLOAT,                  intent(in)  :: chi(:)  ! chi(sb%dim)
     FLOAT,                  intent(out) :: J(:,:)  ! J(sb%dim,sb%dim), the Jacobian
 
@@ -94,4 +94,4 @@ contains
 
   end subroutine curv_briggs_jacobian_inv
 
-end module curv_briggs
+end module curv_briggs_m

@@ -19,7 +19,7 @@
 
 #include "global.h"
 
-module lib_xc
+module lib_xc_m
   implicit none
 
   private
@@ -270,4 +270,4 @@ module lib_xc
     end subroutine xc_lca
   end interface
 
-end module lib_xc
+end module lib_xc_m

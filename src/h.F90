@@ -19,32 +19,32 @@
 
 #include "global.h"
 
-module hamiltonian
-  use global
-  use messages
-  use datasets_mod
-  use profiling_mod
-  use units
-  use lib_oct_parser
-  use lib_basic_alg
-  use functions
-  use mesh
-  use grid
-  use simul_box
-  use mesh_function
-  use geometry
-  use specie
-  use states
-  use external_pot
-  use output
-  use mpi_mod
-  use varinfo
+module hamiltonian_m
+  use global_m
+  use messages_m
+  use datasets_m
+  use profiling_m
+  use units_m
+  use lib_oct_parser_m
+  use lib_basic_alg_m
+  use functions_m
+  use mesh_m
+  use grid_m
+  use simul_box_m
+  use mesh_function_m
+  use geometry_m
+  use specie_m
+  use states_m
+  use external_pot_m
+  use output_m
+  use mpi_m
+  use varinfo_m
 
   implicit none
 
   private
   public ::                &
-    hamiltonian_type,      &
+    hamiltonian_t,         &
     hamiltonian_init,      &
     hamiltonian_end,       &
     hamiltonian_energy,    &
@@ -68,10 +68,10 @@ module hamiltonian
 #endif
 
 
-  type hamiltonian_type
+  type hamiltonian_t
     ! The Hamiltonian must know what are the "dimensions" of the spaces,
     ! in order to be able to operate on the states.
-    type(states_dim_type), pointer :: d
+    type(states_dim_t), pointer :: d
 
     integer :: reltype            ! type of relativistic correction to use
 
@@ -85,7 +85,7 @@ module hamiltonian
     logical :: ip_app             ! independent particle approximation, or not.
     ! copied from sys%ks
 
-    type(epot_type) :: ep         ! handles the external potential
+    type(epot_t) :: ep         ! handles the external potential
 
     ! gauge
     integer :: gauge              ! in which gauge shall we work in
@@ -103,7 +103,7 @@ module hamiltonian
     ! Kinetic Cutoff
     FLOAT :: cutoff
 
-  end type hamiltonian_type
+  end type hamiltonian_t
 
   integer, public, parameter :: &
     NOREL      = 0,             &
@@ -125,9 +125,9 @@ contains
 
   ! ---------------------------------------------------------
   subroutine hamiltonian_init(h, gr, states_dim, ip_app)
-    type(hamiltonian_type), intent(out)   :: h
-    type(grid_type),        intent(inout) :: gr
-    type(states_dim_type),  pointer       :: states_dim
+    type(hamiltonian_t), intent(out)   :: h
+    type(grid_t),        intent(inout) :: gr
+    type(states_dim_t),  pointer       :: states_dim
     logical,                intent(in)    :: ip_app
 
     integer :: i, j, n
@@ -289,8 +289,8 @@ contains
 
   ! ---------------------------------------------------------
   subroutine hamiltonian_end(h, gr)
-    type(hamiltonian_type), intent(inout) :: h
-    type(grid_type),        intent(in)    :: gr
+    type(hamiltonian_t), intent(inout) :: h
+    type(grid_t),        intent(in)    :: gr
 
     call push_sub('h.hamiltonian_end')
 
@@ -326,8 +326,8 @@ contains
   ! adds up the KS eigenvalues, and then it substracts the whatever double
   ! counts exist (see TDDFT theory for details).
   subroutine hamiltonian_energy(h, st, eii, iunit)
-    type(hamiltonian_type), intent(inout) :: h
-    type(states_type),      intent(in)    :: st
+    type(hamiltonian_t), intent(inout) :: h
+    type(states_t),      intent(in)    :: st
     FLOAT,                  intent(in)    :: eii
     integer,                intent(in)    :: iunit
 
@@ -367,7 +367,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine hamiltonian_span(h, delta, emin)
-    type(hamiltonian_type), intent(inout) :: h
+    type(hamiltonian_t), intent(inout) :: h
     FLOAT,                  intent(in)    :: delta, emin
 
     call push_sub('h.hamiltonian_span')
@@ -381,11 +381,11 @@ contains
 
   ! ---------------------------------------------------------
   subroutine hamiltonian_output(h, m, sb, dir, outp)
-    type(hamiltonian_type), intent(in) :: h
-    type(mesh_type),        intent(in) :: m
-    type(simul_box_type),   intent(in) :: sb
+    type(hamiltonian_t), intent(in) :: h
+    type(mesh_t),        intent(in) :: m
+    type(simul_box_t),   intent(in) :: sb
     character(len=*),       intent(in) :: dir
-    type(output_type),      intent(in) :: outp
+    type(output_t),      intent(in) :: outp
 
     integer :: is, err
     character(len=80) :: fname
@@ -424,4 +424,4 @@ contains
 #include "h_so.F90"
 #endif
 
-end module hamiltonian
+end module hamiltonian_m

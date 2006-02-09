@@ -19,10 +19,10 @@
 
 ! ---------------------------------------------------------
 subroutine td_init(gr, td, st, outp)
-  type(td_type),          intent(out)   :: td
-  type(grid_type),        intent(inout) :: gr
-  type(states_type),      intent(inout) :: st
-  type(output_type),      intent(in)    :: outp
+  type(td_t),          intent(out)   :: td
+  type(grid_t),        intent(inout) :: gr
+  type(states_t),      intent(inout) :: st
+  type(output_t),      intent(in)    :: outp
 
   integer :: dummy
 
@@ -105,7 +105,7 @@ end subroutine td_init
 
 ! ---------------------------------------------------------
 subroutine td_end(td)
-  type(td_type), intent(inout) :: td
+  type(td_t), intent(inout) :: td
 
   call push_sub('td_init.td_end')
 

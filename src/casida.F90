@@ -19,27 +19,27 @@
 
 #include "global.h"
 
-module casida
-  use global
-  use messages
-  use datasets_mod
-  use lib_oct_parser
-  use units
-  use lib_oct
-  use io
-  use lib_adv_alg
-  use math, only : sort
-  use mesh
-  use functions
-  use mesh_function
-  use poisson
-  use states
-  use xc
-  use system
-  use hamiltonian
-  use restart
-  use mpi_mod
-  use multicomm_mod
+module casida_m
+  use global_m
+  use messages_m
+  use datasets_m
+  use lib_oct_parser_m
+  use units_m
+  use lib_oct_m
+  use io_m
+  use lib_adv_alg_m
+  use math_m, only : sort
+  use mesh_m
+  use functions_m
+  use mesh_function_m
+  use poisson_m
+  use states_m
+  use xc_m
+  use system_m
+  use hamiltonian_m
+  use restart_m
+  use mpi_m
+  use multicomm_m
 
   implicit none
 
@@ -48,7 +48,7 @@ module casida
     CASIDA_PETERSILKA = 2, &
     CASIDA_CASIDA     = 3
 
-  type casida_type
+  type casida_t
     integer :: type          ! CASIDA_EPS_DIFF | CASIDA_PETERSILKA | CASIDA_CASIDA
 
     integer, pointer  :: n_occ(:)       ! number of occupied states
@@ -66,18 +66,18 @@ module casida
     FLOAT,   pointer :: s(:)            ! The diagonal part of the S-matrix
 
     logical            :: parallel_in_eh_pairs
-    type(mpi_grp_type) :: mpi_grp
-  end type casida_type
+    type(mpi_grp_t) :: mpi_grp
+  end type casida_t
 
 contains
 
   ! ---------------------------------------------------------
   subroutine casida_run(sys, h, fromScratch)
-    type(system_type),      intent(inout) :: sys
-    type(hamiltonian_type), intent(inout) :: h
+    type(system_t),      intent(inout) :: sys
+    type(hamiltonian_t), intent(inout) :: h
     logical,                intent(inout) :: fromScratch
 
-    type(casida_type) ::  cas
+    type(casida_t) ::  cas
     integer :: i, ierr, kpoints, dim, nst, ist
 
     call push_sub('casida.casida_run')
@@ -205,9 +205,9 @@ contains
 
   ! allocates stuff, and constructs the arrays pair_i and pair_j
   subroutine casida_type_init(cas, dim, nspin, mc)
-    type(casida_type), intent(inout) :: cas
+    type(casida_t), intent(inout) :: cas
     integer, intent(in) :: dim, nspin
-    type(multicomm_type), intent(in) :: mc
+    type(multicomm_t), intent(in) :: mc
 
     integer :: i, a, j, k
 
@@ -273,7 +273,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine casida_type_end(cas)
-    type(casida_type), intent(inout) :: cas
+    type(casida_t), intent(inout) :: cas
     call push_sub('casida.casida_type_end')
 
     ASSERT(associated(cas%pair_i))
@@ -288,13 +288,13 @@ contains
   ! this subroutine calculates electronic excitation energies using
   ! the matrix formulation of M. Petersilka, or of M. Casida
   subroutine casida_work(sys, h, cas)
-    type(system_type), target, intent(inout) :: sys
-    type(hamiltonian_type),    intent(in)    :: h
-    type(casida_type),         intent(inout) :: cas
+    type(system_t), target, intent(inout) :: sys
+    type(hamiltonian_t),    intent(in)    :: h
+    type(casida_t),         intent(inout) :: cas
 
     logical, allocatable :: saved_K(:, :)         ! which matrix elements have been loaded
-    type(states_type), pointer :: st
-    type(mesh_type),   pointer :: m
+    type(states_t), pointer :: st
+    type(mesh_t),   pointer :: m
 
     FLOAT, allocatable :: rho(:, :), fxc(:,:,:), pot(:)
     integer :: is, j_old, b_old, mu_old
@@ -609,9 +609,9 @@ contains
 
   ! ---------------------------------------------------------
   function ks_matrix_elements(cas, st, m, dv) result(x)
-    type(casida_type), intent(in) :: cas
-    type(states_type), intent(in) :: st
-    type(mesh_type),   intent(in) :: m
+    type(casida_t), intent(in) :: cas
+    type(states_t), intent(in) :: st
+    type(mesh_t),   intent(in) :: m
     FLOAT, intent(in)   :: dv(:)
     FLOAT :: x(cas%n_pairs)
 
@@ -635,7 +635,7 @@ contains
 
   ! ---------------------------------------------------------
   R_TYPE function transition_matrix_element(cas, ia, x) result(z)
-    type(casida_type), intent(in) :: cas
+    type(casida_t), intent(in) :: cas
     integer,           intent(in) :: ia
     R_TYPE,            intent(in) :: x(:)
 
@@ -655,7 +655,7 @@ contains
   ! ---------------------------------------------------------
   ! FIXME It needs to re-order also the oscillator strengths, and the transition matrix elements.
   subroutine sort_energies(cas)
-    type(casida_type), intent(inout) :: cas
+    type(casida_t), intent(inout) :: cas
     integer :: i
     integer, allocatable :: ind(:), itmp(:)
     FLOAT, allocatable :: tmp(:)
@@ -684,13 +684,13 @@ contains
 
   ! ---------------------------------------------------------
   subroutine casida_write(cas, filename)
-    type(casida_type), intent(in) :: cas
+    type(casida_t), intent(in) :: cas
     character(len=*),  intent(in) :: filename
 
     integer :: iunit, ia, jb, dim
     FLOAT   :: temp
 
-    type(casida_type) :: casp
+    type(casida_t) :: casp
 
     if(.not.mpi_grp_is_root(cas%mpi_grp)) return
 
@@ -765,4 +765,4 @@ contains
     call pop_sub()
   end subroutine casida_write
 
-end module casida
+end module casida_m

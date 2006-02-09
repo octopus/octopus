@@ -19,26 +19,26 @@
 
 #include "global.h"
 
-module derivatives
-  use global
-  use messages
-  use datasets_mod
-  use varinfo
-  use lib_oct_parser
-  use mesh
-  use nl_operator
-  use lib_adv_alg
-  use stencil_star
-  use stencil_variational
-  use stencil_cube
-  use stencil_starplus
-  use simul_box
+module derivatives_m
+  use global_m
+  use messages_m
+  use datasets_m
+  use varinfo_m
+  use lib_oct_parser_m
+  use mesh_m
+  use nl_operator_m
+  use lib_adv_alg_m
+  use stencil_star_m
+  use stencil_variational_m
+  use stencil_cube_m
+  use stencil_starplus_m
+  use simul_box_m
 
   implicit none
 
   private
   public ::              &
-    der_discr_type,      &
+    der_discr_t,         &
     derivatives_init,    &
     derivatives_end,     &
     derivatives_build,   &
@@ -64,8 +64,8 @@ module derivatives
     DER_CUBE        = 3, &
     DER_STARPLUS    = 4
 
-  type der_discr_type
-    type(mesh_type), pointer :: m             ! pointer to the underlying mesh
+  type der_discr_t
+    type(mesh_t), pointer :: m             ! pointer to the underlying mesh
     integer                  :: dim           ! dimensionality of the space (sb%dim)
     integer                  :: order         ! order of the discretization (value depends on stencil)
     integer                  :: stencil_type  ! type of discretization
@@ -76,21 +76,21 @@ module derivatives
     FLOAT :: lapl_cutoff ! If the so-called variational discretization is used, this controls a
     ! possible filter on the Laplacian.
 
-    type(nl_operator_type), pointer :: op(:)  ! op(1:conf%dim) => gradient
+    type(nl_operator_t), pointer :: op(:)  ! op(1:conf%dim) => gradient
     ! op(conf%dim+1) => laplacian
-    type(nl_operator_type), pointer :: lapl   ! these are just shortcuts for op
-    type(nl_operator_type), pointer :: grad(:)
+    type(nl_operator_t), pointer :: lapl   ! these are just shortcuts for op
+    type(nl_operator_t), pointer :: grad(:)
 
-    type(nl_operator_type) :: laplt ! The transponse of the Laplacian.
-  end type der_discr_type
+    type(nl_operator_t) :: laplt ! The transponse of the Laplacian.
+  end type der_discr_t
 
 
 contains
 
   ! ---------------------------------------------------------
   subroutine derivatives_init(sb, der, n_ghost, use_curvilinear)
-    type(simul_box_type), intent(in)  :: sb
-    type(der_discr_type), intent(out) :: der
+    type(simul_box_t), intent(in)  :: sb
+    type(der_discr_t), intent(out) :: der
     integer,              intent(out) :: n_ghost(:)
     logical,              intent(in)  :: use_curvilinear
 
@@ -170,7 +170,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine derivatives_end(der)
-    type(der_discr_type), intent(inout) :: der
+    type(der_discr_t), intent(inout) :: der
 
     integer :: i
 
@@ -191,7 +191,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine derivatives_get_stencil_lapl(der)
-    type(der_discr_type), intent(inout) :: der
+    type(der_discr_t), intent(inout) :: der
 
     integer :: n
 
@@ -229,7 +229,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine derivatives_get_stencil_grad(der)
-    type(der_discr_type), intent(inout) :: der
+    type(der_discr_t), intent(inout) :: der
 
     integer :: i, n
 
@@ -269,14 +269,14 @@ contains
 
   ! ---------------------------------------------------------
   subroutine derivatives_build(m, der)
-    type(mesh_type), target, intent(in)    :: m
-    type(der_discr_type),    intent(inout) :: der
+    type(mesh_t), target, intent(in)    :: m
+    type(der_discr_t),    intent(inout) :: der
 
     integer, allocatable :: polynomials(:,:)
     FLOAT,   allocatable :: rhs(:,:)
     integer :: i, j, k, up
 
-    type(nl_operator_type) :: auxop
+    type(nl_operator_t) :: auxop
 
     call push_sub('derivatives.derivatives_build')
 
@@ -453,11 +453,11 @@ contains
   ! ---------------------------------------------------------
   subroutine make_discretization(dim, m, pol, rhs, n, op)
     integer,                intent(in)    :: dim
-    type(mesh_type),        intent(in)    :: m
+    type(mesh_t),        intent(in)    :: m
     integer,                intent(in)    :: pol(:,:)  ! pol(dim, op%n)
     integer,                intent(in)    :: n
     FLOAT,                  intent(inout) :: rhs(:,:)   ! rhs_(op%n, n)
-    type(nl_operator_type), intent(inout) :: op(:)
+    type(nl_operator_t), intent(inout) :: op(:)
 
     integer :: p, p_max, i, j, k, pow_max
     FLOAT   :: x(dim)
@@ -522,4 +522,4 @@ contains
 #include "complex.F90"
 #include "derivatives_inc.F90"
 
-end module derivatives
+end module derivatives_m

@@ -37,39 +37,39 @@
 
 #include "global.h"
 
-module units
-  use global
-  use messages
-  use datasets_mod
-  use lib_oct_parser
+module units_m
+  use global_m
+  use messages_m
+  use datasets_m
+  use lib_oct_parser_m
 
   implicit none
 
   private
   public ::           &
-    unit_type,        &
-    unit_system_type, &
+    unit_t,           &
+    unit_system_t,    &
     units_init,       &
     units_inp,        &
     units_out
 
-  type unit_type
+  type unit_t
     FLOAT :: factor
     character(len=12) :: abbrev ! common abbreviation of the unit name
     character(len=50) :: name   ! common name
-  end type unit_type
+  end type unit_t
 
-  type unit_system_type
-    type(unit_type) :: length
-    type(unit_type) :: energy
-    type(unit_type) :: time
-    type(unit_type) :: velocity
-    type(unit_type) :: mass
-    type(unit_type) :: force
-    type(unit_type) :: acceleration
-  end type unit_system_type
+  type unit_system_t
+    type(unit_t) :: length
+    type(unit_t) :: energy
+    type(unit_t) :: time
+    type(unit_t) :: velocity
+    type(unit_t) :: mass
+    type(unit_t) :: force
+    type(unit_t) :: acceleration
+  end type unit_system_t
 
-  type(unit_system_type) :: units_inp, units_out
+  type(unit_system_t) :: units_inp, units_out
 
 
 contains
@@ -138,7 +138,7 @@ contains
 
     ! ---------------------------------------------------------
     subroutine get_units(u, c)
-      type(unit_system_type), intent(out) :: u
+      type(unit_system_t), intent(out) :: u
       character(len=3) :: c
 
       select case(c)
@@ -159,7 +159,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine units_atomic(u)
-    type(unit_system_type), intent(out) :: u
+    type(unit_system_t), intent(out) :: u
 
     u%length%abbrev = "b"
     u%length%name   = "bohr"
@@ -193,7 +193,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine units_eV_Ang(u)
-    type(unit_system_type), intent(out) :: u
+    type(unit_system_t), intent(out) :: u
 
     u%length%abbrev = "A"
     u%length%name   = "Angstrom"
@@ -224,4 +224,4 @@ contains
     u%acceleration%factor = u%length%factor/u%time%factor**2
   end subroutine units_eV_Ang
 
-end module units
+end module units_m

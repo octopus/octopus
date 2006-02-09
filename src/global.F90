@@ -19,11 +19,11 @@
 
 #include "global.h"
 
-module global
-  use varinfo
-  use string
-  use lib_oct
-  use mpi_mod
+module global_m
+  use varinfo_m
+  use string_m
+  use lib_oct_m
+  use mpi_m
 
   implicit none
 
@@ -32,12 +32,12 @@ module global
   ! ---------------------------------------------------------
   ! Public types, variables and procedures.
   public ::         &
-    conf_type,      &
+    conf_t,         &
     global_init,    &
     global_end,     &
     assert_die
 
-  type conf_type
+  type conf_t
     integer :: debug_level   ! How much debug should print
     logical :: devel_version ! If true then allow unstable parts of the code
     character(len=256) :: share       ! Name of the share dir
@@ -46,9 +46,9 @@ module global
     character(len=10)  :: version     ! version number
     character(len=256) :: compiler
     character(len=256) :: fcflags
-  end type conf_type
+  end type conf_t
 
-  type(conf_type),      public :: conf
+  type(conf_t),      public :: conf
 
   ! the kinds used in the program
   integer, public, parameter  ::  r8 = selected_real_kind(12,256)
@@ -163,4 +163,4 @@ contains
     stop
   end subroutine assert_die
 
-end module global
+end module global_m

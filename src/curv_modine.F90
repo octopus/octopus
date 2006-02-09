@@ -26,32 +26,32 @@
 ! I believe that the recipe given by the authors is too complicated
 ! for me to sort it out.
 
-module curv_modine
-  use lib_oct_parser
-  use global
-  use messages
-  use datasets_mod
-  use units
-  use simul_box
-  use geometry
-  use lib_adv_alg
+module curv_modine_m
+  use lib_oct_parser_m
+  use global_m
+  use messages_m
+  use datasets_m
+  use units_m
+  use simul_box_m
+  use geometry_m
+  use lib_adv_alg_m
 
   implicit none
 
-  type curv_modine_type
+  type curv_modine_t
     FLOAT :: L(3)          ! size of the box
     FLOAT :: xbar          ! size of central flat region (in units of L)
     FLOAT :: Jbar          ! increase in density of points is 1/J
     FLOAT :: Jlocal        ! local (around the atoms) refinement
     FLOAT :: Jrange        ! local refinement range
-  end type curv_modine_type
+  end type curv_modine_t
 
 contains
 
   ! ---------------------------------------------------------
   subroutine curv_modine_init(sb, cv)
-    type(simul_box_type),   intent(in)  :: sb
-    type(curv_modine_type), intent(out) :: cv
+    type(simul_box_t),   intent(in)  :: sb
+    type(curv_modine_t), intent(out) :: cv
 
     call loct_parse_float(check_inp('CurvModineXBar'), M_ONE/M_THREE, cv%xbar)
     call loct_parse_float(check_inp('CurvModineJBar'), M_HALF, cv%Jbar)
@@ -77,9 +77,9 @@ contains
 
   ! ---------------------------------------------------------
   subroutine curv_modine_chi2x(sb, geo, cv, chi_, x)
-    type(simul_box_type),   intent(in)  :: sb
-    type(geometry_type),    intent(in)  :: geo
-    type(curv_modine_type), intent(in)  :: cv
+    type(simul_box_t),   intent(in)  :: sb
+    type(geometry_t),    intent(in)  :: geo
+    type(curv_modine_t), intent(in)  :: cv
     FLOAT,                  intent(in)  :: chi_(:)  ! chi_(sb%dim)
     FLOAT,                  intent(out) :: x(:)     !   x (sb%dim)
 
@@ -115,9 +115,9 @@ contains
 
   ! ---------------------------------------------------------
   subroutine curv_modine_jacobian_inv(sb, geo, cv, chi_, J)
-    type(simul_box_type),   intent(in)  :: sb
-    type(geometry_type),    intent(in)  :: geo
-    type(curv_modine_type), intent(in)  :: cv
+    type(simul_box_t),   intent(in)  :: sb
+    type(geometry_t),    intent(in)  :: geo
+    type(curv_modine_t), intent(in)  :: cv
     FLOAT,                  intent(in)  :: chi_(:)  ! chi(sb%dim)
     FLOAT,                  intent(out) :: J(:,:)   ! J(sb%dim,sb%dim), the Jacobian
 
@@ -170,4 +170,4 @@ contains
 
   end subroutine curv_modine_jacobian_inv
 
-end module curv_modine
+end module curv_modine_m

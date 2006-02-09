@@ -20,11 +20,11 @@
 ! ---------------------------------------------------------
 ! This routine calculates the SIC exchange functional.
 subroutine X(oep_sic) (xcs, gr, st, is, oep, ex, ec)
-  type(xc_type),     intent(in)    :: xcs
-  type(grid_type),   intent(inout) :: gr
-  type(states_type), intent(inout) :: st
+  type(xc_t),     intent(in)    :: xcs
+  type(grid_t),   intent(inout) :: gr
+  type(states_t), intent(inout) :: st
   integer,           intent(in)    :: is
-  type(xc_oep_type), intent(inout) :: oep
+  type(xc_oep_t), intent(inout) :: oep
   FLOAT,             intent(inout) :: ex, ec
 
   integer  :: i

@@ -21,7 +21,7 @@
 ! Calculates the new density out the wavefunctions and
 ! occupations...
 subroutine X(states_calc_dens)(st, np, rho)
-  type(states_type), intent(in)  :: st
+  type(states_t), intent(in)  :: st
   integer,           intent(in)  :: np
   FLOAT,             intent(out) :: rho(:,:)
 
@@ -83,7 +83,7 @@ end subroutine X(states_calc_dens)
 ! Orthonormalizes nst orbital in mesh m
 subroutine X(states_gram_schmidt)(nst, m, dim, psi, start)
   integer,           intent(in)    :: nst, dim
-  type(mesh_type),   intent(in)    :: m
+  type(mesh_t),   intent(in)    :: m
   R_TYPE,            intent(inout) :: psi(:,:,:)   ! psi(m%np_part, dim, nst)
   integer, optional, intent(in)    :: start
 
@@ -120,7 +120,7 @@ end subroutine X(states_gram_schmidt)
 
 ! ---------------------------------------------------------
 R_TYPE function X(states_dotp)(m, dim, f1, f2) result(dotp)
-  type(mesh_type), intent(in) :: m
+  type(mesh_t), intent(in) :: m
   integer,         intent(in) :: dim
   R_TYPE,          intent(in) :: f1(:,:), f2(:,:)
 
@@ -140,7 +140,7 @@ end function X(states_dotp)
 
 ! ---------------------------------------------------------
 subroutine X(states_normalize_orbital)(m, dim, psi)
-  type(mesh_type), intent(in)  :: m
+  type(mesh_t), intent(in)  :: m
   integer,         intent(in)  :: dim
   R_TYPE,          intent(out) :: psi(:,:)
 
@@ -159,7 +159,7 @@ end subroutine X(states_normalize_orbital)
 
 ! ---------------------------------------------------------
 FLOAT function X(states_nrm2)(m, dim, f) result(nrm2)
-  type(mesh_type), intent(in) :: m
+  type(mesh_t), intent(in) :: m
   integer,         intent(in) :: dim
   R_TYPE,          intent(in) :: f(:,:)
 
@@ -180,7 +180,7 @@ end function X(states_nrm2)
 
 ! ---------------------------------------------------------
 FLOAT function X(states_residue)(m, dim, hf, e, f) result(r)
-  type(mesh_type),   intent(in)  :: m
+  type(mesh_t),   intent(in)  :: m
   integer,           intent(in)  :: dim
   R_TYPE,            intent(in)  :: hf(:,:), f(:,:)
   FLOAT,             intent(in)  :: e
@@ -203,10 +203,10 @@ end function X(states_residue)
 
 ! ---------------------------------------------------------
 subroutine X(states_output) (st, gr, dir, outp)
-  type(states_type),   intent(in)    :: st
-  type(grid_type),     intent(inout) :: gr
+  type(states_t),   intent(in)    :: st
+  type(grid_t),     intent(inout) :: gr
   character(len=*),    intent(in)    :: dir
-  type(output_type),   intent(in)    :: outp
+  type(output_t),   intent(in)    :: outp
 
   integer :: ik, ist, idim, is, ierr
   character(len=80) :: fname
@@ -265,7 +265,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine mf2mf_RS2FS(m, fin, fout, c)
-    type(mesh_type), intent(in)    :: m
+    type(mesh_t), intent(in)    :: m
     R_TYPE,          intent(in)    :: fin(:)
     CMPLX,           intent(out)   :: fout(:)
     type(X(cf)),     intent(inout) :: c
@@ -396,9 +396,9 @@ end subroutine X(states_output)
 !  (this can be problem, and will have to be cared about.
 ! -------------------------------------------------------------
 R_TYPE function X(states_mpdotp)(m, ik, st1, st2) result(dotp)
-  type(mesh_type),   intent(in) :: m
+  type(mesh_t),   intent(in) :: m
   integer,           intent(in) :: ik
-  type(states_type), intent(in) :: st1, st2
+  type(states_t), intent(in) :: st1, st2
 
   R_TYPE, allocatable :: a(:, :)
 
@@ -426,9 +426,9 @@ contains
 
   ! ---------------------------------------------------------
   subroutine X(calculate_matrix)(m, ik, st1, st2, n, a)
-    type(mesh_type),   intent(in)  :: m
+    type(mesh_t),   intent(in)  :: m
     integer,           intent(in)  :: ik
-    type(states_type), intent(in)  :: st1, st2
+    type(states_t), intent(in)  :: st1, st2
     integer,           intent(in)  :: n
     R_TYPE,            intent(out) :: a(n, n)
 
@@ -494,8 +494,8 @@ end function X(states_mpdotp)
 
 ! ---------------------------------------------------------
 subroutine X(states_calc_angular)(gr, st, angular, l2)
-  type(grid_type),   intent(inout) :: gr
-  type(states_type), intent(inout) :: st
+  type(grid_t),   intent(inout) :: gr
+  type(states_t), intent(inout) :: st
   FLOAT,             intent(out)   :: angular(3)
   FLOAT, optional,   intent(out)   :: l2
 

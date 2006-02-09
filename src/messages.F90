@@ -19,13 +19,13 @@
 
 #include "global.h"
 
-module messages
-  use string
-  use varinfo
-  use global
-  use mpi_mod
-  use datasets_mod
-  use lib_oct
+module messages_m
+  use string_m
+  use varinfo_m
+  use global_m
+  use mpi_m
+  use datasets_m
+  use lib_oct_m
 
   implicit none
 
@@ -604,4 +604,4 @@ contains
   end subroutine pop_sub
 #endif
 
-end module messages
+end module messages_m

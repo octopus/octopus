@@ -22,13 +22,13 @@
 ! This module is intended to contain "only mathematical" functions
 ! and procedures.
 
-module math
-  use global
-  use messages
-  use datasets_mod
-  use lib_oct
-  use lib_basic_alg
-  use lib_adv_alg
+module math_m
+  use global_m
+  use messages_m
+  use datasets_m
+  use lib_oct_m
+  use lib_basic_alg_m
+  use lib_adv_alg_m
 
   implicit none
 
@@ -584,4 +584,4 @@ contains
 #include "real.F90"
 #include "math_inc.F90"
 
-end module math
+end module math_m

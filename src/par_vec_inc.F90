@@ -28,7 +28,7 @@
 ! to point -> node mapping in vp.
 ! v_local has at least to be of size vp%np_local(vp%partno).
 subroutine X(vec_scatter)(vp, v, v_local)
-  type(pv_type), intent(in)  :: vp
+  type(pv_t), intent(in)  :: vp
   R_TYPE,        intent(in)  :: v(:)
   R_TYPE,        intent(out) :: v_local(:)
 
@@ -76,7 +76,7 @@ end subroutine X(vec_scatter)
 ! for this to work.
 ! And v has to be of length np_part.
 subroutine X(vec_scatter_bndry)(vp, v, v_local)
-  type(pv_type), intent(in)  :: vp
+  type(pv_t), intent(in)  :: vp
   R_TYPE,        intent(in)  :: v(:)
   R_TYPE,        intent(out) :: v_local(:)
 
@@ -120,7 +120,7 @@ end subroutine X(vec_scatter_bndry)
 
 ! Xvec_scatter followed by Xvec_scatter_bndry.
 subroutine X(vec_scatter_all)(vp, v, v_local)
-  type(pv_type), intent(in)  :: vp
+  type(pv_t), intent(in)  :: vp
   R_TYPE,        intent(in)  :: v(:)
   R_TYPE,        intent(out) :: v_local(:)
 
@@ -138,7 +138,7 @@ end subroutine X(vec_scatter_all)
 ! All v_locals from the nodes are packed together
 ! into v on node vp%root in correct order.
 subroutine X(vec_gather)(vp, v, v_local)
-  type(pv_type), intent(in)  :: vp
+  type(pv_t), intent(in)  :: vp
   R_TYPE,        intent(out) :: v(:)
   R_TYPE,        intent(in)  :: v_local(:)
 
@@ -182,7 +182,7 @@ end subroutine X(vec_gather)
 ! on all nodes, i. e. v has to be a properly
 ! allocated aray on all nodes.
 subroutine X(vec_allgather)(vp, v, v_local)
-  type(pv_type), intent(in)  :: vp
+  type(pv_t), intent(in)  :: vp
   R_TYPE,        intent(out) :: v(:)
   R_TYPE,        intent(in)  :: v_local(:)
 
@@ -225,7 +225,7 @@ end subroutine X(vec_allgather)
 ! Length of v_local must be
 ! vp%np_local(vp%partno)+vp%np_ghost(vp%partno)
 subroutine X(vec_ghost_update)(vp, v_local)
-  type(pv_type), intent(in)    :: vp
+  type(pv_t), intent(in)    :: vp
   R_TYPE,        intent(inout) :: v_local(:)
 
   integer              :: i, j, k, r             ! Counters.
@@ -279,7 +279,7 @@ subroutine X(vec_ghost_update)(vp, v_local)
   end do
 
   ! Bring it on the way.
-  ! It has to examined wheather it is better to use several point to
+  ! It has to examined whether it is better to use several point to
   ! point send operations (thus, non-neighbour sends could explicitly be
   ! skipped) or to use Alltoallv. In my opinion, Alltoallv just skips
   ! any I/O if some sendcount is 0. This means, there is actually
@@ -315,7 +315,7 @@ end subroutine X(vec_ghost_update)
 ! ghost points or not, because only the first
 ! vp%np_local(vp%partno) elements are considered.
 R_TYPE function X(vec_integrate)(vp, v_local) result(s)
-  type(pv_type), intent(in) :: vp
+  type(pv_t), intent(in) :: vp
   R_TYPE,        intent(in) :: v_local(:)
 
   integer :: ierr

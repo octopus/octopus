@@ -19,29 +19,29 @@
 
 #include "global.h"
 
-module geom_opt
-  use global
-  use messages
-  use datasets_mod
-  use lib_oct_parser
-  use units
-  use mesh
-  use external_pot
-  use v_ks
-  use hamiltonian
-  use geometry
-  use states
-  use system
-  use scf
-  use restart
-  use varinfo
+module geom_opt_m
+  use global_m
+  use messages_m
+  use datasets_m
+  use lib_oct_parser_m
+  use units_m
+  use mesh_m
+  use external_pot_m
+  use v_ks_m
+  use hamiltonian_m
+  use geometry_m
+  use states_m
+  use system_m
+  use scf_m
+  use restart_m
+  use varinfo_m
 
   implicit none
 
   private
   public :: geom_opt_run
 
-  type geom_opt_type
+  type geom_opt_t
     integer  :: method
     FLOAT :: step
     FLOAT :: tol
@@ -50,21 +50,21 @@ module geom_opt
     FLOAT :: f
     FLOAT, pointer :: x(:), df(:)
 
-  end type geom_opt_type
+  end type geom_opt_t
 
 contains
 
   ! ---------------------------------------------------------
   subroutine geom_opt_run(sys, h)
-    type(system_type), target, intent(inout) :: sys
-    type(hamiltonian_type),    intent(inout) :: h
+    type(system_t), target, intent(inout) :: sys
+    type(hamiltonian_t),    intent(inout) :: h
 
-    type(scf_type)               :: scfv
-    type(mesh_type),     pointer :: m    ! shortcuts
-    type(states_type),   pointer :: st
-    type(geometry_type), pointer :: geo
+    type(scf_t)               :: scfv
+    type(mesh_t),     pointer :: m    ! shortcuts
+    type(states_t),   pointer :: st
+    type(geometry_t), pointer :: geo
 
-    type(geom_opt_type) :: g_opt
+    type(geom_opt_t) :: g_opt
 
     integer :: i, ierr
     FLOAT, allocatable :: x(:)
@@ -280,4 +280,4 @@ contains
     end function steepest_descents
 
   end subroutine geom_opt_run
-end module geom_opt
+end module geom_opt_m

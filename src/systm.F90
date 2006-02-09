@@ -19,35 +19,35 @@
 
 #include "global.h"
 
-module system
-  use global
-  use messages
-  use datasets_mod
-  use lib_oct
-  use lib_oct_parser
-  use lib_oct_gsl_spline
-  use lib_basic_alg
-  use math
-  use mesh
-  use simul_box
-  use mesh_function
-  use functions
-  use grid
-  use specie
-  use geometry
-  use states
-  use v_ks
-  use hamiltonian
-  use output
-  use multicomm_mod
-  use mpi_mod
-  use varinfo
+module system_m
+  use global_m
+  use messages_m
+  use datasets_m
+  use lib_oct_m
+  use lib_oct_parser_m
+  use lib_oct_gsl_spline_m
+  use lib_basic_alg_m
+  use math_m
+  use mesh_m
+  use simul_box_m
+  use mesh_function_m
+  use functions_m
+  use grid_m
+  use specie_m
+  use geometry_m
+  use states_m
+  use v_ks_m
+  use hamiltonian_m
+  use output_m
+  use multicomm_m
+  use mpi_m
+  use varinfo_m
 
   implicit none
 
   private
   public ::               &
-    system_type,          &
+    system_t,             &
     system_init,          &
     system_end,           &
     atom_density,         &
@@ -55,20 +55,20 @@ module system
     dsystem_h_setup,      &
     zsystem_h_setup
 
-  type system_type
-    type(grid_type),     pointer :: gr    ! the mesh
-    type(states_type),   pointer :: st    ! the states
-    type(v_ks_type)              :: ks    ! the Kohn-Sham potentials
-    type(output_type)            :: outp  ! the output
-    type(multicomm_type)         :: mc    ! index and domain communicators
-  end type system_type
+  type system_t
+    type(grid_t),     pointer :: gr    ! the mesh
+    type(states_t),   pointer :: st    ! the states
+    type(v_ks_t)              :: ks    ! the Kohn-Sham potentials
+    type(output_t)            :: outp  ! the output
+    type(multicomm_t)         :: mc    ! index and domain communicators
+  end type system_t
 
 
 contains
 
   !----------------------------------------------------------
   subroutine system_init(sys, parallel_mask)
-    type(system_type), intent(out) :: sys
+    type(system_t), intent(out) :: sys
     integer, intent(in)            :: parallel_mask
 
     call push_sub('systm.system_init')
@@ -118,7 +118,7 @@ contains
 
   !----------------------------------------------------------
   subroutine system_end(s)
-    type(system_type), intent(inout) :: s
+    type(system_t), intent(inout) :: s
 
     call push_sub('systm.system_end')
 
@@ -146,16 +146,16 @@ contains
   ! dependencies of the modules
   ! ---------------------------------------------------------
   subroutine atom_density(m, sb, atom, spin_channels, rho)
-    type(mesh_type),      intent(in)    :: m
-    type(simul_box_type), intent(in)    :: sb
-    type(atom_type),      intent(in)    :: atom
+    type(mesh_t),      intent(in)    :: m
+    type(simul_box_t), intent(in)    :: sb
+    type(atom_t),      intent(in)    :: atom
     integer,              intent(in)    :: spin_channels
     FLOAT,                intent(inout) :: rho(:, :) ! (m%np, spin_channels)
 
     integer :: i, in_points, k, n
     FLOAT :: r, x
     R_TYPE :: psi1, psi2
-    type(specie_type), pointer :: s
+    type(specie_t), pointer :: s
 #if defined(HAVE_MPI)
     integer :: in_points_red, mpi_err
 #endif
@@ -228,9 +228,9 @@ contains
   ! ---------------------------------------------------------
   ! builds a density which is the sum of the atomic densities
   subroutine system_guess_density(m, sb, geo, qtot, nspin, spin_channels, rho)
-    type(mesh_type),      intent(in)  :: m
-    type(simul_box_type), intent(in)  :: sb
-    type(geometry_type),  intent(in)  :: geo
+    type(mesh_t),      intent(in)  :: m
+    type(simul_box_t), intent(in)  :: sb
+    type(geometry_t),  intent(in)  :: geo
     FLOAT,                intent(in)  :: qtot  ! the total charge of the system
     integer,              intent(in)  :: nspin, spin_channels
     FLOAT,                intent(out) :: rho(:, :)
@@ -428,8 +428,8 @@ contains
 
   !----------------------------------------------------------
   subroutine dsystem_h_setup(sys, h)
-    type(system_type),      intent(inout) :: sys
-    type(hamiltonian_type), intent(inout) :: h
+    type(system_t),      intent(inout) :: sys
+    type(hamiltonian_t), intent(inout) :: h
 
     call push_sub('systm.hamiltonian_setup')
 
@@ -446,8 +446,8 @@ contains
 
   !----------------------------------------------------------
   subroutine zsystem_h_setup(sys, h)
-    type(system_type),      intent(inout) :: sys
-    type(hamiltonian_type), intent(inout) :: h
+    type(system_t),      intent(inout) :: sys
+    type(hamiltonian_t), intent(inout) :: h
 
     call push_sub('systm.hamiltonian_setup')
 
@@ -455,10 +455,10 @@ contains
     call zstates_calc_dens(sys%st, sys%gr%m%np, sys%st%rho)
 
     call zv_ks_calc(sys%gr, sys%ks, h, sys%st, calc_eigenval=.true.) ! get potentials
-    call states_fermi(sys%st, sys%gr%m)                            ! occupations
-    call hamiltonian_energy(h, sys%st, sys%gr%geo%eii, -1)            ! total energy
+    call states_fermi(sys%st, sys%gr%m)                              ! occupations
+    call hamiltonian_energy(h, sys%st, sys%gr%geo%eii, -1)           ! total energy
 
     call pop_sub()
   end subroutine zsystem_h_setup
 
-end module system
+end module system_m

@@ -19,9 +19,9 @@
 
 ! calculates the eigenvalues of the real orbitals
 subroutine X(hamiltonian_eigenval)(h, gr, st)
-  type(hamiltonian_type), intent(inout) :: h
-  type(grid_type) ,       intent(inout) :: gr
-  type(states_type),      intent(inout) :: st
+  type(hamiltonian_t), intent(inout) :: h
+  type(grid_t) ,       intent(inout) :: gr
+  type(states_t),      intent(inout) :: st
 
   R_TYPE, allocatable :: Hpsi(:,:)
   R_TYPE :: e
@@ -45,8 +45,8 @@ end subroutine X(hamiltonian_eigenval)
 
 ! ---------------------------------------------------------
 subroutine X(Hpsi) (h, gr, psi, hpsi, ik, t)
-  type(hamiltonian_type), intent(inout) :: h
-  type(grid_type),        intent(inout) :: gr
+  type(hamiltonian_t), intent(inout) :: h
+  type(grid_t),        intent(inout) :: gr
   integer,                intent(in)    :: ik
   R_TYPE,                 intent(inout) :: psi(:,:)  !  psi(m%np_part, h%d%dim)
   R_TYPE,                 intent(out)   :: Hpsi(:,:) !  Hpsi(m%np_part, h%d%dim)
@@ -89,8 +89,8 @@ end subroutine X(Hpsi)
 
 ! ---------------------------------------------------------
 subroutine X(magnus) (h, gr, psi, hpsi, ik, vmagnus)
-  type(hamiltonian_type), intent(in)    :: h
-  type(grid_type),        intent(inout) :: gr
+  type(hamiltonian_t), intent(in)    :: h
+  type(grid_t),        intent(inout) :: gr
   integer,                intent(in)    :: ik
   R_TYPE,                 intent(inout) :: psi(:,:)  !  psi(NP_PART, h%d%dim)
   R_TYPE,                 intent(out)   :: Hpsi(:,:) !  Hpsi(NP, h%d%dim)
@@ -158,8 +158,8 @@ end subroutine X(magnus)
 
 ! ---------------------------------------------------------
 subroutine X(kinetic) (h, gr, psi, hpsi, ik)
-  type(hamiltonian_type), intent(in)    :: h
-  type(grid_type),        intent(inout) :: gr
+  type(hamiltonian_t), intent(in)    :: h
+  type(grid_t),        intent(inout) :: gr
   R_TYPE,                 intent(inout) :: psi(:,:)  !  psi(m%np_part, h%d%dim)
   R_TYPE,                 intent(out)   :: Hpsi(:,:) !  Hpsi(m%np_part, h%d%dim)
   integer,                intent(in)    :: ik
@@ -209,8 +209,8 @@ end subroutine X(kinetic)
 ! Here we the terms arising from the presence of a possible static external
 ! magnetic field, and the terms that come from CDFT.
 subroutine X(magnetic_terms) (gr, h, psi, hpsi, ik)
-  type(grid_type),        intent(inout) :: gr
-  type(hamiltonian_type), intent(inout) :: h
+  type(grid_t),        intent(inout) :: gr
+  type(hamiltonian_t), intent(inout) :: h
   R_TYPE,                 intent(inout) :: psi(:,:)  !  psi(m%np_part, h%d%dim)
   R_TYPE,                 intent(out)   :: Hpsi(:,:) !  Hpsi(m%np, h%d%dim)
   integer,                intent(in)    :: ik
@@ -311,9 +311,9 @@ end subroutine X(magnetic_terms)
 
 ! ---------------------------------------------------------
 subroutine X(vnlpsi) (h, m, sb, psi, hpsi, ik)
-  type(hamiltonian_type), intent(in)    :: h
-  type(mesh_type),        intent(in)    :: m
-  type(simul_box_type),   intent(in)    :: sb
+  type(hamiltonian_t), intent(in)    :: h
+  type(mesh_t),        intent(in)    :: m
+  type(simul_box_t),   intent(in)    :: sb
   R_TYPE,                 intent(in)    :: psi(:,:)  !  psi(m%np_part, h%d%dim)
   R_TYPE,                 intent(inout) :: Hpsi(:,:) !  Hpsi(m%np_part, h%d%dim)
   integer,                intent(in)    :: ik
@@ -334,8 +334,8 @@ end subroutine X(vnlpsi)
 
 ! ---------------------------------------------------------
 subroutine X(vlpsi) (h, m, psi, hpsi, ik)
-  type(hamiltonian_type), intent(in)    :: h
-  type(mesh_type),        intent(in)    :: m
+  type(hamiltonian_t), intent(in)    :: h
+  type(mesh_t),        intent(in)    :: m
   integer,                intent(in)    :: ik
   R_TYPE,                 intent(in)    :: psi(:,:)  !  psi(m%np_part, h%d%dim)
   R_TYPE,                 intent(inout) :: Hpsi(:,:) !  Hpsi(m%np_part, h%d%dim)
@@ -374,8 +374,8 @@ end subroutine X(vlpsi)
 
 ! ---------------------------------------------------------
 subroutine X(vlasers) (gr, h, psi, hpsi, t)
-  type(grid_type),        intent(inout) :: gr
-  type(hamiltonian_type), intent(in)    :: h
+  type(grid_t),        intent(inout) :: gr
+  type(hamiltonian_t), intent(in)    :: h
   R_TYPE,                 intent(inout) :: psi(:,:)  !  psi(m%np_part, h%d%dim)
   R_TYPE,                 intent(inout) :: Hpsi(:,:) !  Hpsi(m%np_part, h%d%dim)
 
@@ -416,8 +416,8 @@ end subroutine X(vlasers)
 
 ! ---------------------------------------------------------
 subroutine X(vborders) (gr, h, psi, hpsi)
-  type(grid_type),        intent(inout) :: gr
-  type(hamiltonian_type), intent(in)    :: h
+  type(grid_t),        intent(inout) :: gr
+  type(hamiltonian_t), intent(in)    :: h
   R_TYPE,                 intent(in)    :: psi(:,:)  !  psi(m%np_part, h%d%dim)
   R_TYPE,                 intent(inout) :: Hpsi(:,:) !  Hpsi(m%np_part, h%d%dim)
 

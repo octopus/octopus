@@ -19,24 +19,24 @@
 
 #include "global.h"
 
-module logrid
+module logrid_m
 
-  use global
-  use messages
+  use global_m
+  use messages_m
 
   implicit none
 
-  type logrid_type
+  type logrid_t
     FLOAT :: a,b
     integer  :: nrval
     FLOAT, pointer :: rofi(:), drdi(:), s(:)
-  end type logrid_type
+  end type logrid_t
 
 contains
 
   ! ---------------------------------------------------------
   subroutine logrid_init(g, a, b, nrval)
-    type(logrid_type), intent(out) :: g
+    type(logrid_t), intent(out) :: g
     FLOAT, intent(in)           :: a,b
     integer, intent(in)            :: nrval
 
@@ -62,14 +62,14 @@ contains
 
   ! ---------------------------------------------------------
   subroutine logrid_end(g)
-    type(logrid_type), intent(inout) :: g
+    type(logrid_t), intent(inout) :: g
     deallocate(g%rofi, g%drdi, g%s)
   end subroutine logrid_end
 
 
   ! ---------------------------------------------------------
   subroutine derivate_in_log_grid(g, f, dfdr)
-    type(logrid_type)     :: g
+    type(logrid_t)     :: g
     FLOAT, intent(in)  :: f(g%nrval)
     FLOAT, intent(out) :: dfdr(g%nrval)
 
@@ -90,4 +90,4 @@ contains
     return
   end subroutine derivate_in_log_grid
 
-end module logrid
+end module logrid_m

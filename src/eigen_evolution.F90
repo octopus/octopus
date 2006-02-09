@@ -18,9 +18,9 @@
 !! $Id$
 
 subroutine eigen_solver_evolution(gr, st, h, tol, niter, converged, diff, tau)
-  type(grid_type), target,intent(inout) :: gr
-  type(states_type),      intent(inout) :: st
-  type(hamiltonian_type), target, intent(inout)    :: h
+  type(grid_t), target,intent(inout) :: gr
+  type(states_t),      intent(inout) :: st
+  type(hamiltonian_t), target, intent(inout)    :: h
   FLOAT,                  intent(in)    :: tol
   integer,                intent(inout) :: niter
   integer,                intent(inout) :: converged

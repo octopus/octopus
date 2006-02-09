@@ -20,20 +20,20 @@
 #include "global.h"
 
 program broad
-  use global
-  use messages
-  use datasets_mod
-  use io
-  use units
-  use lib_oct_parser
+  use global_m
+  use messages_m
+  use datasets_m
+  use io_m
+  use units_m
+  use lib_oct_parser_m
 
   implicit none
 
-  type broad_type
+  type broad_t
     FLOAT :: b, energy_step, min_energy, max_energy
-  end type broad_type
+  end type broad_t
 
-  type(broad_type) :: b
+  type(broad_t) :: b
 
   ! Initialize stuff
   call global_init()
@@ -66,7 +66,7 @@ program broad
 
 contains
   subroutine calc_broad(b, dir, fname, extracols)
-    type(broad_type), intent(in) :: b
+    type(broad_t), intent(in) :: b
     character(len=*), intent(in) :: dir
     character(len=*), intent(in) :: fname
     logical, intent(in) :: extracols

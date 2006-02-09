@@ -19,26 +19,26 @@
 
 #include "global.h"
 
-module td_exp
-  use global
-  use messages
-  use lib_oct
-  use lib_oct_parser
-  use blas
-  use lib_basic_alg
-  use math
-  use mesh
+module td_exp_m
+  use global_m
+  use messages_m
+  use lib_oct_m
+  use lib_oct_parser_m
+  use blas_m
+  use lib_basic_alg_m
+  use math_m
+  use mesh_m
 #ifdef HAVE_FFT
-  use cube_function
+  use cube_function_m
 #endif
-  use td_exp_split
-  use varinfo
+  use td_exp_split_m
+  use varinfo_m
 
   implicit none
 
   private
   public ::                 &
-    td_exp_type,            &
+    td_exp_t,               &
     td_exp_init,            &
     td_exp_end,             &
     td_exp_dt
@@ -50,20 +50,20 @@ module td_exp
     FOURTH_ORDER       = 3, &
     CHEBYSHEV          = 4
 
-  type td_exp_type
+  type td_exp_t
     integer  :: exp_method  ! which method is used to apply the exponential
     FLOAT :: lanczos_tol    ! tolerance for the lanczos method
     integer  :: exp_order   ! order to which the propagator is expanded
     type(zcf) :: cf         ! auxiliary cube for split operator methods
-  end type td_exp_type
+  end type td_exp_t
 
 
 contains
 
   ! ---------------------------------------------------------
   subroutine td_exp_init(gr, te)
-    type(grid_type),   intent(in)  :: gr
-    type(td_exp_type), intent(out) :: te
+    type(grid_t),   intent(in)  :: gr
+    type(td_exp_t), intent(out) :: te
 
     !%Variable TDExponentialMethod
     !%Type integer
@@ -204,7 +204,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine td_exp_end(te)
-    type(td_exp_type), intent(inout) :: te
+    type(td_exp_t), intent(inout) :: te
 
     if(te%exp_method==SPLIT_OPERATOR.or.te%exp_method==SUZUKI_TROTTER) then
       call zcf_free(te%cf)
@@ -214,9 +214,9 @@ contains
 
   ! ---------------------------------------------------------
   subroutine td_exp_dt(te, gr, h, zpsi, ik, timestep, t, order, vmagnus)
-    type(td_exp_type),      intent(inout)   :: te
-    type(grid_type),        intent(inout)   :: gr
-    type(hamiltonian_type), intent(inout)   :: h
+    type(td_exp_t),      intent(inout)   :: te
+    type(grid_t),        intent(inout)   :: gr
+    type(hamiltonian_t), intent(inout)   :: h
     integer,                intent(in)      :: ik
     CMPLX,                  intent(inout)   :: zpsi(:, :)
     FLOAT,                  intent(in)      :: timestep, t
@@ -455,4 +455,4 @@ contains
 #endif
   end subroutine td_exp_dt
 
-end module td_exp
+end module td_exp_m

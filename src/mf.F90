@@ -19,17 +19,17 @@
 
 #include "global.h"
 
-module mesh_function
-  use global
-  use messages
-  use lib_basic_alg
-  use math
-  use mesh
-  use cube_function
-  use par_vec
-  use profiling_mod
-  use mpi_mod
-  use mpi_debug_mod
+module mesh_function_m
+  use global_m
+  use messages_m
+  use lib_basic_alg_m
+  use math_m
+  use mesh_m
+  use cube_function_m
+  use par_vec_m
+  use profiling_m
+  use mpi_m
+  use mpi_debug_m
 
   implicit none
 
@@ -57,4 +57,4 @@ contains
 #include "complex.F90"
 #include "mf_inc.F90"
 
-end module mesh_function
+end module mesh_function_m

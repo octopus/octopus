@@ -22,7 +22,7 @@
 ! mesh and the cube
 ! ---------------------------------------------------------
 subroutine X(mf2cf) (m, mf, cf)
-  type(mesh_type), intent(in)    :: m
+  type(mesh_t), intent(in)    :: m
   R_TYPE,          intent(in)    :: mf(:)  ! mf(f_der%m%np)
   type(X(cf)),     intent(inout) :: cf
 
@@ -46,7 +46,7 @@ end subroutine X(mf2cf)
 
 ! ---------------------------------------------------------
 subroutine X(cf2mf) (m, cf, mf)
-  type(mesh_type), intent(in)  :: m
+  type(mesh_t), intent(in)  :: m
   type(X(cf)),     intent(in)  :: cf
   R_TYPE,          intent(out) :: mf(:)  ! mf(f_der%m%np)
 
@@ -70,7 +70,7 @@ end subroutine X(cf2mf)
 ! between the normal mesh and the cube
 ! ---------------------------------------------------------
 subroutine X(mf2cf_FS) (m, mf, cf)
-  type(mesh_type), intent(in)    :: m
+  type(mesh_t), intent(in)    :: m
   CMPLX,               intent(in)    :: mf(:)   ! mf(f_der%m%np)
   type(X(cf)),         intent(inout) :: cf
 
@@ -93,7 +93,7 @@ end subroutine X(mf2cf_FS)
 
 ! ---------------------------------------------------------
 subroutine X(cf_FS2mf) (m, cf, mf)
-  type(mesh_type), intent(in)  :: m
+  type(mesh_t), intent(in)  :: m
   type(X(cf)),     intent(in)  :: cf
   CMPLX,           intent(out) :: mf(:) ! mf(f_der%m%np)
 
@@ -125,8 +125,8 @@ end subroutine X(cf_FS2mf)
 ! Calculation of derivatives
 ! ---------------------------------------------------------
 subroutine X(f_laplacian) (sb, f_der, f, lapl, cutoff_)
-  type(simul_box_type), intent(in) :: sb
-  type(f_der_type), intent(inout)  :: f_der
+  type(simul_box_t), intent(in) :: sb
+  type(f_der_t), intent(inout)  :: f_der
   R_TYPE,           intent(inout)  :: f(:)     ! f(m%np_part)
   R_TYPE,           intent(out)    :: lapl(:)  ! lapl(m%np_part)
   FLOAT, optional,  intent(in)     :: cutoff_
@@ -169,8 +169,8 @@ end subroutine X(f_laplacian)
 
 ! ---------------------------------------------------------
 subroutine X(f_gradient) (sb, f_der, f, grad)
-  type(simul_box_type), intent(in)    :: sb
-  type(f_der_type),     intent(inout) :: f_der
+  type(simul_box_t), intent(in)    :: sb
+  type(f_der_t),     intent(inout) :: f_der
   R_TYPE, target,       intent(inout) :: f(:)         ! f(m%np_part)
   R_TYPE,               intent(out)   :: grad(:,:)    ! grad(m%np, m%sb%dim)
 
@@ -220,8 +220,8 @@ end subroutine X(f_gradient)
 
 ! ---------------------------------------------------------
 subroutine X(f_divergence) (sb, f_der, f, divf)
-  type(simul_box_type), intent(in)    :: sb
-  type(f_der_type),     intent(inout) :: f_der
+  type(simul_box_t), intent(in)    :: sb
+  type(f_der_t),     intent(inout) :: f_der
   R_TYPE,               intent(inout) :: f(:,:)    ! f(m%np_part, sb%dim)
   R_TYPE,               intent(out)   :: divf(:)   ! divf(m%np)
 
@@ -268,7 +268,7 @@ end subroutine X(f_divergence)
 
 ! ---------------------------------------------------------
 subroutine X(f_curl) (f_der, f, curlf)
-  type(f_der_type), intent(inout) :: f_der
+  type(f_der_t), intent(inout) :: f_der
   R_TYPE,           intent(inout) :: f(:,:)     ! f(m%np_part, conf%dim)
   R_TYPE,           intent(out)   :: curlf(:,:) ! curlf(m%np, conf%dim))
 
@@ -297,8 +297,8 @@ end subroutine X(f_curl)
 ! (L = -i r ^ nabla).
 ! ---------------------------------------------------------
 subroutine X(f_angular_momentum)(sb, f_der, f, lf)
-  type(simul_box_type), intent(in)    :: sb
-  type(f_der_type),     intent(inout) :: f_der
+  type(simul_box_t), intent(in)    :: sb
+  type(f_der_t),     intent(inout) :: f_der
   R_TYPE,               intent(inout) :: f(:)     ! f(m%np_part)
   R_TYPE,               intent(out)   :: lf(:,:)  ! lf(m%np, 3)
 
@@ -331,13 +331,13 @@ end subroutine X(f_angular_momentum)
 ! accuracy is needed.
 ! ---------------------------------------------------------
 subroutine X(f_l2)(sb, f_der, f, l2f)
-  type(simul_box_type), intent(in)    :: sb
-  type(f_der_type),     intent(inout) :: f_der
+  type(simul_box_t), intent(in)    :: sb
+  type(f_der_t),     intent(inout) :: f_der
   R_TYPE,               intent(inout) :: f(:)   ! f(1:m%np_part)
   R_TYPE,               intent(out)   :: l2f(:)
 
   R_TYPE, allocatable :: gf(:, :), ggf(:, :, :)
-  type(mesh_type), pointer :: m
+  type(mesh_t), pointer :: m
   integer :: j
 
   m => f_der%m

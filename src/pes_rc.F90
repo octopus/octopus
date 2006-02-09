@@ -19,10 +19,10 @@
 
 ! ---------------------------------------------------------
 subroutine PES_rc_init(v, m, st, save_iter)
-  type(mesh_type),   intent(in) :: m
-  type(states_type), intent(in) :: st
+  type(mesh_t),   intent(in) :: m
+  type(states_t), intent(in) :: st
   integer,           intent(in) :: save_iter
-  type(PES_rc_type), intent(out) :: v
+  type(PES_rc_t), intent(out) :: v
 
   integer(POINTER_SIZE) :: blk
   integer  :: i
@@ -71,7 +71,7 @@ end subroutine PES_rc_init
 
 ! ---------------------------------------------------------
 subroutine PES_rc_end(v)
-  type(PES_rc_type), intent(inout) :: v
+  type(PES_rc_t), intent(inout) :: v
 
   if(associated(v%filenames)) then
     deallocate(v%filenames, v%points, v%wf)
@@ -82,8 +82,8 @@ end subroutine PES_rc_end
 
 ! ---------------------------------------------------------
 subroutine PES_rc_doit(v, st, ii)
-  type(PES_rc_type), intent(inout) :: v
-  type(states_type), intent(in) :: st
+  type(PES_rc_t), intent(inout) :: v
+  type(states_t), intent(in) :: st
   integer,           intent(in) :: ii
 
   integer :: ix, ik, p, idim
@@ -103,8 +103,8 @@ end subroutine PES_rc_doit
 
 ! ---------------------------------------------------------
 subroutine PES_rc_output(v, st, iter, save_iter, dt)
-  type(PES_rc_type), intent(in) :: v
-  type(states_type), intent(in) :: st
+  type(PES_rc_t), intent(in) :: v
+  type(states_t), intent(in) :: st
   integer,           intent(in) :: iter, save_iter
   FLOAT,             intent(in) :: dt
 

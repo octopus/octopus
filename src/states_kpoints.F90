@@ -19,9 +19,9 @@
 
 ! ---------------------------------------------------------
 subroutine states_choose_kpoints(d, sb, geo)
-  type(states_dim_type), intent(inout) :: d
-  type(simul_box_type),  intent(in)    :: sb
-  type(geometry_type),   intent(in)    :: geo
+  type(states_dim_t), intent(inout) :: d
+  type(simul_box_t),  intent(in)    :: sb
+  type(geometry_t),   intent(in)    :: geo
 
   integer  :: coi, i, nkmax
   integer(POINTER_SIZE) :: blk
@@ -200,7 +200,7 @@ end subroutine states_choose_kpoints
 
 ! ---------------------------------------------------------
 subroutine kpoints_write_info(d,iunit)
-  type(states_dim_type), intent(in) :: d
+  type(states_dim_t), intent(in) :: d
   integer, intent(in) :: iunit
 
   integer :: ik

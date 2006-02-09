@@ -19,26 +19,26 @@
 
 #include "global.h"
 
-module mesh
-  use global
-  use mpi_mod
-  use messages
-  use lib_oct_parser
-  use units
-  use math
-  use geometry
-  use curvlinear
-  use simul_box
-  use lib_adv_alg
-  use io
-  use par_vec
-  use multicomm_mod
+module mesh_m
+  use global_m
+  use mpi_m
+  use messages_m
+  use lib_oct_parser_m
+  use units_m
+  use math_m
+  use geometry_m
+  use curvlinear_m
+  use simul_box_m
+  use lib_adv_alg_m
+  use io_m
+  use par_vec_m
+  use multicomm_m
 
   implicit none
 
   private
   public ::            &
-    mesh_type,         &
+    mesh_t,            &
     mesh_init_stage_1, &
     mesh_init_stage_2, &
     mesh_init_stage_3, &
@@ -53,13 +53,13 @@ module mesh
   ! Describes mesh distribution to nodes.
 
   ! Some general thing:
-  ! All members of type(mesh_type) are equal on all
+  ! All members of type(mesh_t) are equal on all
   ! nodes when running parallel except
   ! - np, np_part
   ! - x, vol_pp
   ! These four are defined for all the points the node is responsible for.
-  type mesh_type
-    type(simul_box_type), pointer :: sb
+  type mesh_t
+    type(simul_box_t), pointer :: sb
     logical :: use_curvlinear
 
     FLOAT :: h(3)              ! the (constant) spacing between the points
@@ -82,8 +82,8 @@ module mesh
     integer, pointer :: Lxyz_tmp(:,:,:) ! init_1 and init_2
 
     logical            :: parallel_in_domains ! will I run parallel in domains?
-    type(mpi_grp_type) :: mpi_grp             ! the mpi group describing parallelization in domains
-    type(pv_type)      :: vp                  ! describes parallel vectors defined on the mesh.
+    type(mpi_grp_t) :: mpi_grp             ! the mpi group describing parallelization in domains
+    type(pv_t)      :: vp                  ! describes parallel vectors defined on the mesh.
 
     ! some other vars
     integer :: nr(2,3)                  ! dimensions of the box where the points are contained
@@ -99,15 +99,15 @@ module mesh
     FLOAT, pointer :: vol_pp(:)         ! Element of volume for integrations
                                         ! for local points.
 
-  end type mesh_type
+  end type mesh_t
 
 contains
 
 
   ! finds the dimension of a box doubled in the non-periodic dimensions
   subroutine mesh_double_box(sb, m, db)
-    type(simul_box_type), intent(in)  :: sb
-    type(mesh_type),      intent(in)  :: m
+    type(simul_box_t), intent(in)  :: sb
+    type(mesh_t),      intent(in)  :: m
     integer,              intent(out) :: db(3)
 
     integer :: i
@@ -127,7 +127,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine mesh_write_info(m, unit)
-    type(mesh_type), intent(in) :: m
+    type(mesh_t), intent(in) :: m
     integer,         intent(in) :: unit
 
     if(.not.mpi_grp_is_root(mpi_world)) return
@@ -157,7 +157,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine mesh_r(m, i, r, a, x)
-    type(mesh_type),      intent(in)  :: m
+    type(mesh_t),      intent(in)  :: m
     integer,              intent(in)  :: i
     FLOAT,                intent(out) :: r
     FLOAT,                intent(in),  optional :: a(:) ! a(sb%dim)
@@ -191,7 +191,7 @@ contains
   ! So, if n>0, the point is in the border.
   ! ----------------------------------------------------------------------*/
   subroutine mesh_inborder(m, i, n, d, width)
-    type(mesh_type),      intent(in)  :: m
+    type(mesh_t),      intent(in)  :: m
     integer,              intent(in)  :: i
     FLOAT,                intent(in)  :: width
     integer,              intent(out) :: n
@@ -238,13 +238,13 @@ contains
    ! grid of spacing h is M_PI/h.
    ! --------------------------------------------------------------*/
    FLOAT function mesh_gcutoff(m) result(gmax)
-     type(mesh_type), intent(in) :: m
+     type(mesh_t), intent(in) :: m
      gmax = M_PI/(maxval(m%h))
    end function mesh_gcutoff
 
 
    subroutine mesh_end(m)
-     type(mesh_type), intent(inout) :: m
+     type(mesh_t), intent(inout) :: m
 
      call push_sub('mesh.mesh_end')
 
@@ -268,4 +268,4 @@ contains
 
 #include "mesh_init.F90"
 
-end module mesh
+end module mesh_m

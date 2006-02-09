@@ -19,22 +19,22 @@
 
 #include "global.h"
 
-module opt_control
-  use global
-  use messages
-  use datasets_mod
-  use lib_oct
-  use lib_oct_parser
-  use io
-  use mesh
-  use grid
-  use states
-  use system
-  use restart
-  use v_ks
-  use hamiltonian
-  use timedep
-  use td_rti
+module opt_control_m
+  use global_m
+  use messages_m
+  use datasets_m
+  use lib_oct_m
+  use lib_oct_parser_m
+  use io_m
+  use mesh_m
+  use grid_m
+  use states_m
+  use system_m
+  use restart_m
+  use v_ks_m
+  use hamiltonian_m
+  use timedep_m
+  use td_rti_m
 
   implicit none
 
@@ -45,15 +45,15 @@ contains
 
   ! ---------------------------------------------------------
   subroutine opt_control_run(sys, h)
-    type(system_type), target, intent(inout) :: sys
-    type(hamiltonian_type),    intent(inout) :: h
+    type(system_t), target, intent(inout) :: sys
+    type(hamiltonian_t),    intent(inout) :: h
 
-    type(td_type)                :: td
-    type(grid_type),     pointer :: gr   ! some shortcuts
-    type(states_type),   pointer :: st
+    type(td_t)                :: td
+    type(grid_t),     pointer :: gr   ! some shortcuts
+    type(states_t),   pointer :: st
 
-    type(states_type), pointer :: psi_i
-    type(states_type)          :: psi_f
+    type(states_t), pointer :: psi_i
+    type(states_t)          :: psi_f
     FLOAT, pointer :: v_old_i(:,:,:), v_old_f(:,:,:)
     FLOAT, pointer :: laser_i(:,:), laser_f(:,:)
 
@@ -291,7 +291,7 @@ contains
 
     ! ---------------------------------------------------------
     subroutine read_state(st, filename)
-      type(states_type), intent(out) :: st
+      type(states_t), intent(out) :: st
       character(len=*),  intent(in)  :: filename
 
       integer :: ierr
@@ -398,4 +398,4 @@ contains
 
   end subroutine opt_control_run
 
-end module opt_control
+end module opt_control_m

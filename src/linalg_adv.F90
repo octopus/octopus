@@ -19,9 +19,9 @@
 
 #include "global.h"
 
-module lib_adv_alg
-  use global
-  use messages
+module lib_adv_alg_m
+  use global_m
+  use messages_m
 
   implicit none
 
@@ -61,4 +61,4 @@ contains
 #include "linalg_adv_lapack.F90"
 #endif
 
-end module lib_adv_alg
+end module lib_adv_alg_m

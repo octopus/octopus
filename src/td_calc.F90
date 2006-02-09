@@ -29,9 +29,9 @@
 !          allowed to move
 ! ---------------------------------------------------------
 subroutine td_calc_tacc(gr, st, h, acc, t)
-  type(grid_type),        intent(inout) :: gr
-  type(states_type),      intent(inout) :: st
-  type(hamiltonian_type), intent(inout) :: h
+  type(grid_t),        intent(inout) :: gr
+  type(states_t),      intent(inout) :: st
+  type(hamiltonian_t), intent(inout) :: h
   FLOAT,                  intent(in)    :: t
   FLOAT,                  intent(out)   :: acc(3)
 

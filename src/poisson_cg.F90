@@ -19,15 +19,15 @@
 
 #include "global.h"
 
-module poisson_cg
-  use global
-  use messages
-  use math
-  use mesh
-  use derivatives
-  use lib_oct
-  use functions
-  use poisson_corrections
+module poisson_cg_m
+  use global_m
+  use messages_m
+  use math_m
+  use mesh_m
+  use derivatives_m
+  use lib_oct_m
+  use functions_m
+  use poisson_corrections_m
 
   implicit none
 
@@ -45,7 +45,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine poisson_cg1_init(m, ml, thr)
-    type(mesh_type), intent(in) :: m
+    type(mesh_t), intent(in) :: m
     integer, intent(in) :: ml
     FLOAT, intent(in)   :: thr
 
@@ -67,7 +67,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine poisson_cg2_init(m, ml, thr)
-    type(mesh_type), intent(in) :: m
+    type(mesh_t), intent(in) :: m
     integer, intent(in) :: ml
     FLOAT, intent(in) :: thr
 
@@ -90,8 +90,8 @@ contains
 
   ! ---------------------------------------------------------
   subroutine poisson_cg1(m, der, pot, rho)
-    type(mesh_type),      target, intent(in)    :: m
-    type(der_discr_type), target, intent(in)    :: der
+    type(mesh_t),      target, intent(in)    :: m
+    type(der_discr_t), target, intent(in)    :: der
     FLOAT,                        intent(inout) :: pot(:) ! pot(m%np)
     FLOAT,                        intent(in)    :: rho(:) ! rho(m%np)
 
@@ -136,8 +136,8 @@ contains
   ! ---------------------------------------------------------
   subroutine poisson_cg2(m, der, pot, rho)
     implicit none
-    type(mesh_type), target, intent(in)    :: m
-    type(der_discr_type), target, intent(in)    :: der
+    type(mesh_t), target, intent(in)    :: m
+    type(der_discr_t), target, intent(in)    :: der
     FLOAT,                intent(inout) :: pot(:) ! pot(m%np)
     FLOAT,                intent(in)    :: rho(:) ! rho(m%np)
 
@@ -180,7 +180,7 @@ contains
   ! ---------------------------------------------------------
   subroutine boundary_conditions(m, rho, ml, pot)
     implicit none
-    type(mesh_type), intent(in)  :: m
+    type(mesh_t), intent(in)  :: m
     FLOAT,           intent(in)  :: rho(:)  ! rho(m%np)
     integer,         intent(in)  :: ml
     FLOAT,           intent(inout) :: pot(:)  ! pot(m%np_part)
@@ -213,4 +213,4 @@ contains
     deallocate(mult)
   end subroutine boundary_conditions
 
-end module poisson_cg
+end module poisson_cg_m

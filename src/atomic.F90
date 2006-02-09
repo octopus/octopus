@@ -19,11 +19,11 @@
 
 #include "global.h"
 
-module atomic
-  use global
-  use messages
-  use lib_xc
-  use logrid
+module atomic_m
+  use global_m
+  use messages_m
+  use lib_xc_m
+  use logrid_m
 
   implicit none
 
@@ -110,7 +110,7 @@ contains
   subroutine atomhxc(functl, g, nspin, dens, v, extra)
     character(len=*),  intent(in)  :: functl
     integer,           intent(in)  :: nspin
-    type(logrid_type), intent(in)  :: g
+    type(logrid_t), intent(in)  :: g
     FLOAT,             intent(in)  :: dens(g%nrval, nspin)
     FLOAT,             intent(out) :: v(g%nrval, nspin)
     FLOAT,             intent(in), optional :: extra(g%nrval)
@@ -213,8 +213,8 @@ contains
   subroutine atomxc( FUNCTL, AUTHOR,                                          &
                      NR, MAXR, RMESH, NSPIN, DENS,                            &
                      EX, EC, DX, DC, V_XC )
-  use global
-  use messages
+  use global_m
+  use messages_m
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ! Argument types and dimensions                                               !
@@ -482,7 +482,7 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
 !  DENSITY.  THE TOTAL CHARGE QT IS USED TO FIX THE POTENTIAL AT R=R(NR)      !
 !  AND V0 (THE INTEGRAL OF THE ELECTRON DENSITY DIVIDED BY R) FIXES           !
 !  THE ELECTROSTATIC POTENTIAL AT THE ORIGIN                                  !
-!  Modified to be consistent with pseudopotential generation (use the         !
+!  Modified to be consistent with pseudopotential generation (use the         !_m
 !  trapeziodal rule for integration). A. Rubio. Jan. 2000                     !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
@@ -650,7 +650,7 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
 !                                                                             !
 !     leaving e set to its bisection value, and transfering to                !
 !     the call to yofe means that we are performing bisection,                !
-!     whereas setting e to et is use of the variational estimate.             !
+!     whereas setting e to et is use of the variational estimate.             !_m
 !                                                                             !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
@@ -783,7 +783,7 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
 !  the outward integration is now complete                                    !
 !                                                                             !
 !     we first decide if the kinetic energy is sufficiently non               !
-!     negative to permit use of the numerov eq at rmax.  if                   !
+!     negative to permit use of the numerov eq at rmax.  if                   !_m
 !     it is not, then zero-value boundary condition is used                   !
 !                                                                             !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -848,7 +848,7 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
 !             is defined                                                      !
 !       n2 is the number of radial mesh points corresponding to               !
 !             the portion of the radial mesh on which the wave                !
-!             function is defined.  for the intended use of this              !
+!             function is defined.  for the intended use of this              !_m
 !             routine, n1 = nrval and n2 = nrcor                              !
 !       a and b are the radial mesh parameters                                !
 !             r(i) = ( exp(a*(i-1)) - 1 ) * b                                 !
@@ -1073,4 +1073,4 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
   return
   end subroutine numout
 
-end module atomic
+end module atomic_m

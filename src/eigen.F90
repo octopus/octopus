@@ -19,34 +19,34 @@
 
 #include "global.h"
 
-module eigen_solver
-  use global
-  use messages
-  use datasets_mod
-  use lib_oct_parser
-  use lib_basic_alg
-  use lib_adv_alg
-  use math, only : sort
-  use io
-  use nl_operator
-  use stencil_star
-  use mesh_function
-  use mesh
-  use grid
-  use functions
-  use states
-  use hamiltonian
+module eigen_solver_m
+  use global_m
+  use messages_m
+  use datasets_m
+  use lib_oct_parser_m
+  use lib_basic_alg_m
+  use lib_adv_alg_m
+  use math_m, only : sort
+  use io_m
+  use nl_operator_m
+  use stencil_star_m
+  use mesh_function_m
+  use mesh_m
+  use grid_m
+  use functions_m
+  use states_m
+  use hamiltonian_m
 
   implicit none
 
   private
   public ::             &
-    eigen_solver_type,  &
+    eigen_solver_t,     &
     eigen_solver_init,  &
     eigen_solver_end,   &
     eigen_solver_run
 
-  type eigen_solver_type
+  type eigen_solver_t
     integer :: es_type    ! which eigen solver to use
 
     FLOAT :: init_tol
@@ -61,7 +61,7 @@ module eigen_solver
     FLOAT, pointer :: diff(:, :)
     integer           :: matvec
     integer           :: converged
-  end type eigen_solver_type
+  end type eigen_solver_t
 
 
 #ifdef HAVE_TRLAN
@@ -81,24 +81,24 @@ module eigen_solver
   ! For the TRLan package
 #ifdef HAVE_TRLAN
   integer                         :: ik_trlan
-  type(hamiltonian_type), pointer :: h_trlan
-  type(mesh_type),        pointer :: m_trlan
-  type(states_type),      pointer :: st_trlan
+  type(hamiltonian_t), pointer :: h_trlan
+  type(mesh_t),        pointer :: m_trlan
+  type(states_t),      pointer :: st_trlan
 #endif
 
-  type(hamiltonian_type), pointer :: h_
-  type(grid_type),        pointer :: gr_
+  type(hamiltonian_t), pointer :: h_
+  type(grid_t),        pointer :: gr_
   integer                         :: ik_
 
-  type(nl_operator_type) :: filter
+  type(nl_operator_t) :: filter
 
 contains
 
   ! ---------------------------------------------------------
   subroutine eigen_solver_init(gr, eigens, st, max_iter_default)
-    type(grid_type),         intent(in)  :: gr
-    type(eigen_solver_type), intent(out) :: eigens
-    type(states_type),       intent(in)  :: st
+    type(grid_t),         intent(in)  :: gr
+    type(eigen_solver_t), intent(out) :: eigens
+    type(states_t),       intent(in)  :: st
     integer,                 intent(in)  :: max_iter_default
 
     call push_sub('eigen.eigen_solver_init')
@@ -244,7 +244,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine eigen_solver_end(eigens)
-    type(eigen_solver_type), intent(inout) :: eigens
+    type(eigen_solver_t), intent(inout) :: eigens
 
     select case(eigens%es_type)
     case(RS_PLAN)
@@ -259,10 +259,10 @@ contains
 
   ! ---------------------------------------------------------
   subroutine eigen_solver_run(eigens, gr, st, h, iter, conv, verbose)
-    type(eigen_solver_type), intent(inout) :: eigens
-    type(grid_type),         intent(inout) :: gr
-    type(states_type),       intent(inout) :: st
-    type(hamiltonian_type),  intent(inout) :: h
+    type(eigen_solver_t), intent(inout) :: eigens
+    type(grid_t),         intent(inout) :: gr
+    type(states_t),       intent(inout) :: st
+    type(hamiltonian_t),  intent(inout) :: h
     integer,                 intent(in)    :: iter
     logical,       optional, intent(inout) :: conv
     logical,       optional, intent(in)    :: verbose
@@ -320,9 +320,9 @@ contains
 !!! This routine in principle diagonalises the hamiltonian in the
 !!! basis defined by st. It has not been tested, and it is not used now
   subroutine eigen_diagon_subspace(gr, st, h)
-    type(grid_type),        intent(inout) :: gr
-    type(states_type),      intent(inout) :: st
-    type(hamiltonian_type), intent(inout) :: h
+    type(grid_t),        intent(inout) :: gr
+    type(states_t),      intent(inout) :: st
+    type(hamiltonian_t), intent(inout) :: h
 
     R_TYPE, allocatable :: h_subspace(:,:), vec(:,:), f(:,:,:)
     integer :: ik, i, j
@@ -372,4 +372,4 @@ contains
 #endif
 #include "eigen_evolution.F90"
 
-end module eigen_solver
+end module eigen_solver_m

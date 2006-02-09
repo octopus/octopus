@@ -23,14 +23,14 @@
 #  define DFFTW(x) dfftw_ ## x
 #endif
 
-module fft
-  use global
-  use messages
-  use datasets_mod
-  use lib_oct
-  use lib_oct_parser
-  use lib_basic_alg
-  use simul_box
+module fft_m
+  use global_m
+  use messages_m
+  use datasets_m
+  use lib_oct_m
+  use lib_oct_parser_m
+  use lib_basic_alg_m
+  use simul_box_m
 
   implicit none
 
@@ -75,17 +75,17 @@ module fft
     fftw_no_vrecurse=65536,        &
     fftw_no_simd=131072
 
-  type fft_type
+  type fft_t
     integer :: slot                ! in which slot do we have this fft
 
     integer :: n(3)                ! size of the fft
     integer :: is_real             ! is the fft real or complex
     integer(POINTER_SIZE) :: planf ! the plan for forward transforms
     integer(POINTER_SIZE) :: planb ! the plan for backward transforms
-  end type fft_type
+  end type fft_t
 
   integer, private :: fft_refs(FFT_MAX)
-  type(fft_type), private :: fft_array(FFT_MAX)
+  type(fft_t), private :: fft_array(FFT_MAX)
   logical, private :: fft_optimize
 
 contains
@@ -131,10 +131,10 @@ contains
 
   ! ---------------------------------------------------------
   subroutine fft_init(sb, n, is_real, fft)
-    type(simul_box_type), intent(in)    :: sb
+    type(simul_box_t), intent(in)    :: sb
     integer,              intent(inout) :: n(3)
     integer,              intent(in)    :: is_real
-    type(fft_type),       intent(out)   :: fft
+    type(fft_t),       intent(out)   :: fft
 
     FLOAT, allocatable :: rin(:, :, :)
     CMPLX, allocatable :: cin(:, :, :), cout(:, :, :)
@@ -225,8 +225,8 @@ contains
 
   ! ---------------------------------------------------------
   subroutine fft_copy(fft_i, fft_o)
-    type(fft_type), intent( in) :: fft_i
-    type(fft_type), intent(out) :: fft_o
+    type(fft_t), intent( in) :: fft_i
+    type(fft_t), intent(out) :: fft_o
 
     ASSERT(fft_i%slot>=1.and.fft_i%slot<=FFT_MAX)
     ASSERT(fft_refs(fft_i%slot) > 0)
@@ -238,7 +238,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine fft_end(fft)
-    type(fft_type), intent(inout) :: fft
+    type(fft_t), intent(inout) :: fft
 
     integer :: i
 
@@ -263,7 +263,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine fft_getdim_real(fft, d)
-    type(fft_type), intent(in) :: fft
+    type(fft_t), intent(in) :: fft
     integer, intent(out) :: d(3)
 
     d = fft%n
@@ -272,7 +272,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine fft_getdim_complex(fft, d)
-    type(fft_type), intent(in) :: fft
+    type(fft_t), intent(in) :: fft
     integer, intent(out) :: d(3)
 
     d = fft%n
@@ -284,7 +284,7 @@ contains
   ! these routines simply call fftw
   ! first the real to complex versions
   subroutine dfft_forward(fft, r, c)
-    type(fft_type), intent(in) :: fft
+    type(fft_t), intent(in) :: fft
     FLOAT, intent(in)     :: r(:,:,:)
     CMPLX, intent(out) :: c(:,:,:)
     call DFFTW(execute_dft_r2c) (fft%planf, r, c)
@@ -293,7 +293,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine dfft_backward(fft, c, r)
-    type(fft_type), intent(in) :: fft
+    type(fft_t), intent(in) :: fft
     CMPLX, intent(in) :: c(fft%n(1), fft%n(2), fft%n(3))
     FLOAT, intent(out)   :: r(fft%n(1), fft%n(2), fft%n(3))
 
@@ -309,7 +309,7 @@ contains
   ! ---------------------------------------------------------
   ! first the complex versions
   subroutine zfft_forward(fft, in, out)
-    type(fft_type), intent(in) :: fft
+    type(fft_t), intent(in) :: fft
     CMPLX, intent(in)  :: in(:,:,:)
     CMPLX, intent(out) :: out(:,:,:)
 
@@ -319,7 +319,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine zfft_backward(fft, in, out)
-    type(fft_type), intent(in) :: fft
+    type(fft_t), intent(in) :: fft
     CMPLX, intent(in)  :: in(fft%n(1), fft%n(2), fft%n(3))
     CMPLX, intent(out) :: out(fft%n(1), fft%n(2), fft%n(3))
 
@@ -356,4 +356,4 @@ contains
     return
   end function pad_feq
 
-end module fft
+end module fft_m

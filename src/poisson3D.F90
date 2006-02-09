@@ -19,7 +19,7 @@
 
 ! ---------------------------------------------------------
 subroutine poisson3D_init(gr)
-  type(grid_type), intent(inout) :: gr
+  type(grid_t), intent(inout) :: gr
 
   call push_sub('poisson3D.poisson3D_init')
 
@@ -80,7 +80,7 @@ contains
 #ifdef HAVE_FFT
   ! ---------------------------------------------------------
   subroutine init_fft(m)
-    type(mesh_type), intent(in) :: m
+    type(mesh_t), intent(in) :: m
 
     integer :: ix, iy, iz, ixx(3), db(3)
     FLOAT :: temp(3), modg2

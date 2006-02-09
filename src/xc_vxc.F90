@@ -19,8 +19,8 @@
 
 ! ---------------------------------------------------------
 subroutine xc_get_vxc(gr, xcs, rho, ispin, vxc, ex, ec, ip, qtot)
-  type(grid_type),       intent(inout) :: gr
-  type(xc_type), target, intent(in)    :: xcs
+  type(grid_t),       intent(inout) :: gr
+  type(xc_t), target, intent(in)    :: xcs
   FLOAT,                 intent(in)    :: rho(:, :)
   integer,               intent(in)    :: ispin
   FLOAT,                 intent(inout) :: vxc(:,:), ex, ec
@@ -34,7 +34,7 @@ subroutine xc_get_vxc(gr, xcs, rho, ispin, vxc, ex, ec, ip, qtot)
   FLOAT   :: e, r
   logical :: gga, mgga
 
-  type(xc_functl_type), pointer :: functl(:)
+  type(xc_functl_t), pointer :: functl(:)
 
   if(ispin == UNPOLARIZED) then
     functl => xcs%functl(:, 1)

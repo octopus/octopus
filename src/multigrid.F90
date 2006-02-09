@@ -19,18 +19,18 @@
 
 #include "global.h"
 
-module multigrid
-  use curvlinear
-  use geometry
-  use mesh
-  use functions
+module multigrid_m
+  use curvlinear_m
+  use geometry_m
+  use mesh_m
+  use functions_m
 
   implicit none
 
   private
   public ::                     &
-    multigrid_level_type,       &
-    multigrid_type,             &
+    multigrid_level_t,          &
+    multigrid_t,                &
     multigrid_init,             &
     multigrid_end,              &
     multigrid_fine2coarse,      &
@@ -40,9 +40,9 @@ module multigrid
     INJECTION  = 1,             &
     FULLWEIGHT = 2
 
-  type multigrid_level_type
-    type(mesh_type),  pointer  :: m
-    type(f_der_type), pointer  :: f_der
+  type multigrid_level_t
+    type(mesh_t),  pointer  :: m
+    type(f_der_t), pointer  :: f_der
 
     integer          ::  n_coarse
     integer, pointer :: to_coarse(:)
@@ -51,12 +51,12 @@ module multigrid
     integer          ::  n_fine1,       n_fine2,       n_fine4,       n_fine8
     integer, pointer :: to_fine1(:,:), to_fine2(:,:), to_fine4(:,:), to_fine8(:,:)
     integer, pointer :: fine_i(:)
-  end type multigrid_level_type
+  end type multigrid_level_t
 
-  type multigrid_type
+  type multigrid_t
     integer                             :: n_levels
-    type(multigrid_level_type), pointer :: level(:)
-  end type multigrid_type
+    type(multigrid_level_t), pointer :: level(:)
+  end type multigrid_t
 
 
 contains
@@ -64,11 +64,11 @@ contains
 
   ! ---------------------------------------------------------
   subroutine multigrid_init(geo, cv, m, f_der, mgrid)
-    type(geometry_type),      intent(in)  :: geo
-    type(curvlinear_type),    intent(in)  :: cv
-    type(mesh_type),  target, intent(in)  :: m
-    type(f_der_type), target, intent(in)  :: f_der
-    type(multigrid_type),     intent(out) :: mgrid
+    type(geometry_t),      intent(in)  :: geo
+    type(curvlinear_t),    intent(in)  :: cv
+    type(mesh_t),  target, intent(in)  :: m
+    type(f_der_t), target, intent(in)  :: f_der
+    type(multigrid_t),     intent(out) :: mgrid
 
     integer :: i, n_levels, np
 
@@ -133,10 +133,10 @@ contains
     ! This is used in the multi-grid routines
     !---------------------------------------------------------------------------------*/
     subroutine multigrid_mesh_half(geo, cv, mesh_in, mesh_out)
-      type(geometry_type),   intent(in)  :: geo
-      type(curvlinear_type), intent(in)  :: cv
-      type(mesh_type),       intent(in)  :: mesh_in
-      type(mesh_type),       intent(inout) :: mesh_out
+      type(geometry_t),   intent(in)  :: geo
+      type(curvlinear_t), intent(in)  :: cv
+      type(mesh_t),       intent(in)  :: mesh_in
+      type(mesh_t),       intent(inout) :: mesh_out
 
       mesh_out%sb             => mesh_in%sb
       mesh_out%use_curvlinear =  mesh_in%use_curvlinear
@@ -155,8 +155,8 @@ contains
 
     ! creates the lookup tables to go between the coarse and fine meshes
     subroutine get_transfer_tables(tt, fine, coarse)
-      type(multigrid_level_type), intent(inout) :: tt
-      type(mesh_type),            intent(in)  :: fine, coarse
+      type(multigrid_level_t), intent(inout) :: tt
+      type(mesh_t),            intent(in)  :: fine, coarse
 
       integer :: i, i1, i2, i4, i8
       integer :: x(3), mod2(3)
@@ -271,10 +271,10 @@ contains
 
   ! ---------------------------------------------------------
   subroutine multigrid_end(mgrid)
-    type(multigrid_type), intent(inout) :: mgrid
+    type(multigrid_t), intent(inout) :: mgrid
 
     integer :: i
-    type(multigrid_level_type), pointer :: level
+    type(multigrid_level_t), pointer :: level
 
     do i = 1, mgrid%n_levels
       level => mgrid%level(i)
@@ -297,7 +297,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine multigrid_fine2coarse(mgrid, ilevel, f_fine, f_coarse, method_p)
-    type(multigrid_type), intent(in)  :: mgrid
+    type(multigrid_t), intent(in)  :: mgrid
     integer,              intent(in)  :: ilevel
     FLOAT,                intent(in)  :: f_fine(:)
     FLOAT,                intent(out) :: f_coarse(:)
@@ -325,13 +325,13 @@ contains
 
   ! ---------------------------------------------------------
   subroutine multigrid_injection(mgrid, ilevel, f_fine, f_coarse)
-    type(multigrid_type), intent(in)  :: mgrid
+    type(multigrid_t), intent(in)  :: mgrid
     integer,              intent(in)  :: ilevel
     FLOAT,                intent(in)  :: f_fine(:)
     FLOAT,                intent(out) :: f_coarse(:)
 
     integer :: i
-    type(multigrid_level_type), pointer :: level
+    type(multigrid_level_t), pointer :: level
 
     ASSERT(ilevel>0.and.ilevel<=mgrid%n_levels)
 
@@ -345,7 +345,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine multigrid_restriction(mgrid, ilevel, f_fine, f_coarse)
-    type(multigrid_type), intent(in)  :: mgrid
+    type(multigrid_t), intent(in)  :: mgrid
     integer,              intent(in)  :: ilevel
     FLOAT,                intent(in)  :: f_fine(:)
     FLOAT,                intent(out) :: f_coarse(:)
@@ -353,8 +353,8 @@ contains
     FLOAT :: weight(-1:1,-1:1,-1:1)
 
     integer :: n,fn,di,dj,dk,d,fi(3)
-    type(multigrid_level_type), pointer :: level
-    type(mesh_type), pointer :: fine_mesh,coarse_mesh
+    type(multigrid_level_t), pointer :: level
+    type(mesh_t), pointer :: fine_mesh,coarse_mesh
 
 
     ASSERT(ilevel>0.and.ilevel<=mgrid%n_levels)
@@ -398,12 +398,12 @@ contains
 
   ! ---------------------------------------------------------
   subroutine multigrid_coarse2fine(mgrid, ilevel, f_coarse, f_fine)
-    type(multigrid_type), intent(in)  :: mgrid
+    type(multigrid_t), intent(in)  :: mgrid
     integer,              intent(in)  :: ilevel
     FLOAT,                intent(in)  :: f_coarse(:)
     FLOAT,                intent(out) :: f_fine(:)
 
-    type(multigrid_level_type), pointer :: level
+    type(multigrid_level_t), pointer :: level
     FLOAT, pointer :: vol_pp(:)
 
     integer :: i, i1, i2, i4, i8
@@ -443,4 +443,4 @@ contains
     end do
   end subroutine multigrid_coarse2fine
 
-end module multigrid
+end module multigrid_m

@@ -20,18 +20,18 @@
 #include "global.h"
 
 program centergeom
-  use global
-  use messages
-  use datasets_mod
-  use lib_oct_parser
-  use io
-  use units
-  use geometry
-  use xyz_adjust
+  use global_m
+  use messages_m
+  use datasets_m
+  use lib_oct_parser_m
+  use io_m
+  use units_m
+  use geometry_m
+  use xyz_adjust_m
 
   implicit none
 
-  type(geometry_type) :: geo
+  type(geometry_t) :: geo
 
   call global_init()                       ! initialize
   call parser_init()

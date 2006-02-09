@@ -19,43 +19,43 @@
 
 #include "global.h"
 
-module grid
-  use mesh
-  use simul_box
-  use geometry
-  use functions
-  use curvlinear
-  use multigrid
-  use par_vec
-  use mpi_mod
-  use multicomm_mod
+module grid_m
+  use mesh_m
+  use simul_box_m
+  use geometry_m
+  use functions_m
+  use curvlinear_m
+  use multigrid_m
+  use par_vec_m
+  use mpi_m
+  use multicomm_m
 
   implicit none
 
   private
   public ::                &
-    grid_type,             &
+    grid_t,                &
     grid_init_stage_1,     &
     grid_init_stage_2,     &
     grid_end,              &
     grid_write_info,       &
     grid_create_multigrid
 
-  type grid_type
-    type(simul_box_type)           :: sb
-    type(geometry_type)            :: geo
-    type(mesh_type)                :: m
-    type(f_der_type)               :: f_der
-    type(curvlinear_type)          :: cv
-    type(multigrid_type), pointer  :: mgrid
-  end type grid_type
+  type grid_t
+    type(simul_box_t)           :: sb
+    type(geometry_t)            :: geo
+    type(mesh_t)                :: m
+    type(f_der_t)               :: f_der
+    type(curvlinear_t)          :: cv
+    type(multigrid_t), pointer  :: mgrid
+  end type grid_t
 
 
 contains
 
   !-------------------------------------------------------------------
   subroutine grid_init_stage_1(gr)
-    type(grid_type),      intent(inout) :: gr
+    type(grid_t),      intent(inout) :: gr
 
     call push_sub('grid.grid_init')
 
@@ -75,8 +75,8 @@ contains
 
   !-------------------------------------------------------------------
   subroutine grid_init_stage_2(gr, mc)
-    type(grid_type),      intent(inout) :: gr
-    type(multicomm_type), intent(in)    :: mc
+    type(grid_t),      intent(inout) :: gr
+    type(multicomm_t), intent(in)    :: mc
 
     logical :: filter
 
@@ -104,7 +104,7 @@ contains
 
   !-------------------------------------------------------------------
   subroutine grid_end(gr)
-    type(grid_type), intent(inout) :: gr
+    type(grid_t), intent(inout) :: gr
 
     call push_sub('grid.grid_end')
 
@@ -124,7 +124,7 @@ contains
 
   !-------------------------------------------------------------------
   subroutine grid_write_info(gr, iunit)
-    type(grid_type), intent(in) :: gr
+    type(grid_t), intent(in) :: gr
     integer,         intent(in) :: iunit
 
     if(.not.mpi_grp_is_root(mpi_world)) then
@@ -142,11 +142,11 @@ contains
 
   !-------------------------------------------------------------------
   subroutine grid_create_multigrid(gr)
-    type(grid_type), intent(inout) :: gr
+    type(grid_t), intent(inout) :: gr
 
     ALLOCATE(gr%mgrid, 1)
     call multigrid_init(gr%geo, gr%cv, gr%m, gr%f_der, gr%mgrid)
 
   end subroutine grid_create_multigrid
 
-end module grid
+end module grid_m

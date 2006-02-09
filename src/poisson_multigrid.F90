@@ -19,19 +19,19 @@
 
 #include "global.h"
 
-module poisson_multigrid
-  use global
-  use datasets_mod
-  use lib_oct_parser
-  use messages
-  use mesh
-  use functions
-  use grid
-  use output
-  use multigrid
-  use poisson_corrections
-  use math, only : dconjugate_gradients
-  use varinfo
+module poisson_multigrid_m
+  use global_m
+  use datasets_m
+  use lib_oct_parser_m
+  use messages_m
+  use mesh_m
+  use functions_m
+  use grid_m
+  use output_m
+  use multigrid_m
+  use poisson_corrections_m
+  use math_m, only : dconjugate_gradients
+  use varinfo_m
 
   implicit none
 
@@ -73,7 +73,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine poisson_multigrid_init(m, ml, thr)
-    type(mesh_type), intent(in) :: m
+    type(mesh_t), intent(in) :: m
     integer, intent(in) :: ml
     FLOAT, intent(in)   :: thr
 
@@ -189,7 +189,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine poisson_multigrid_solver(gr, pot, rho)
-    type(grid_type), intent(inout) :: gr
+    type(grid_t), intent(inout) :: gr
     FLOAT, intent(inout) :: pot(:)
     FLOAT, intent(in)  :: rho(:)
 
@@ -285,7 +285,7 @@ contains
       FLOAT, pointer  :: phi(:)
       FLOAT, pointer  :: rho(:)
       FLOAT, pointer  :: tmp(:)
-      type(mesh_type), pointer :: m
+      type(mesh_t), pointer :: m
 
       m => gr%mgrid%level(l)%m
       call df_laplacian(gr%sb, gr%mgrid%level(l)%f_der, phi, tmp)
@@ -400,8 +400,8 @@ contains
 
   ! ---------------------------------------------------------
   subroutine multigrid_relax(m,f_der,pot,rho,steps)
-    type(mesh_type),  target, intent(in)    :: m
-    type(f_der_type), target, intent(in)    :: f_der
+    type(mesh_t),  target, intent(in)    :: m
+    type(f_der_t), target, intent(in)    :: f_der
     FLOAT,            intent(inout) :: pot(:)  ! pot(m%np)
     FLOAT,            intent(in)    :: rho(:)  ! rho(m%np)
     integer,          intent(in)    :: steps
@@ -503,7 +503,7 @@ contains
   ! ---------------------------------------------------------
   subroutine gridhier_init(a, mgrid, add_points_for_boundaries)
     type(mg_float_pointer),pointer :: a(:)
-    type(multigrid_type), pointer :: mgrid
+    type(multigrid_t), pointer :: mgrid
     logical, intent(in) :: add_points_for_boundaries
 
     integer :: cl,l
@@ -526,7 +526,7 @@ contains
   ! ---------------------------------------------------------
   subroutine gridhier_end(a, mgrid)
     type(mg_float_pointer),pointer :: a(:)
-    type(multigrid_type), pointer :: mgrid
+    type(multigrid_t), pointer :: mgrid
 
     integer :: cl,l
 
@@ -539,4 +539,4 @@ contains
 
   end subroutine gridhier_end
 
-end module poisson_multigrid
+end module poisson_multigrid_m

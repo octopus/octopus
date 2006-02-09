@@ -19,13 +19,13 @@
 
 #include "global.h"
 
-module xyz_adjust
-  use global
-  use messages
-  use datasets_mod
-  use geometry
-  use lib_adv_alg
-  use lib_oct_parser
+module xyz_adjust_m
+  use global_m
+  use messages_m
+  use datasets_m
+  use geometry_m
+  use lib_adv_alg_m
+  use lib_oct_parser_m
 
   implicit none
 
@@ -37,11 +37,11 @@ contains
 
   ! ---------------------------------------------------------
   subroutine xyz_adjust_it(geo)
-    type(geometry_type), intent(inout) :: geo
+    type(geometry_t), intent(inout) :: geo
 
     integer, parameter :: &
-         INERTIA = 1, &
-         PSEUDO  = 2, &
+         INERTIA = 1,     &
+         PSEUDO  = 2,     &
          LARGE   = 3
 
     FLOAT :: center(3), x1(3), x2(3), to(3)
@@ -115,7 +115,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine find_center(geo, x)
-    type(geometry_type), intent(in) :: geo
+    type(geometry_t), intent(in) :: geo
     FLOAT, intent(out) :: x(3)
 
     FLOAT :: xmin(3), xmax(3)
@@ -136,7 +136,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine find_center_of_mass(geo, x, pseudo)
-    type(geometry_type), intent(in) :: geo
+    type(geometry_t), intent(in) :: geo
     FLOAT, intent(out) :: x(3)
     logical, intent(in) :: pseudo
 
@@ -157,7 +157,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine axis_large(geo, x, x2)
-    type(geometry_type), intent(in) :: geo
+    type(geometry_t), intent(in) :: geo
     FLOAT, intent(out) :: x(3), x2(3)
 
     integer  :: i, j
@@ -193,7 +193,7 @@ contains
   ! This subroutine assumes that the origin of the coordinates is the
   ! center of mass of the system
   subroutine axis_inertia(geo, x, x2, pseudo)
-    type(geometry_type), intent(in) :: geo
+    type(geometry_t), intent(in) :: geo
     FLOAT, intent(out) :: x(3), x2(3)
     logical, intent(in) :: pseudo
 
@@ -222,7 +222,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine translate(geo, x)
-    type(geometry_type), intent(inout) :: geo
+    type(geometry_t), intent(inout) :: geo
     FLOAT, intent(in) :: x(3)
 
     integer  :: i
@@ -238,7 +238,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine rotate(geo, from, from2, to)
-    type(geometry_type), intent(inout) :: geo
+    type(geometry_t), intent(inout) :: geo
     FLOAT, intent(in) :: from(3), from2(3), to(3) ! assumed to be normalize
 
     integer :: i
@@ -366,4 +366,4 @@ contains
     m = matmul(aux, m)
   end subroutine rotate_z
 
-end module xyz_adjust
+end module xyz_adjust_m

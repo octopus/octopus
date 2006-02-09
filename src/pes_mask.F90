@@ -19,10 +19,10 @@
 
 ! ---------------------------------------------------------
 subroutine PES_mask_init(v, m, sb, st)
-  type(PES_mask_type),  intent(out)   :: v
-  type(mesh_type),      intent(inout) :: m
-  type(simul_box_type), intent(in)    :: sb
-  type(states_type),    intent(in)    :: st
+  type(PES_mask_t),  intent(out)   :: v
+  type(mesh_t),      intent(inout) :: m
+  type(simul_box_t), intent(in)    :: sb
+  type(states_t),    intent(in)    :: st
 
   integer :: i
 
@@ -45,7 +45,7 @@ end subroutine PES_mask_init
 
 ! ---------------------------------------------------------
 subroutine PES_mask_end(v)
-  type(PES_mask_type), intent(inout) :: v
+  type(PES_mask_t), intent(inout) :: v
 
   if(associated(v%k)) then
     call fft_end(v%fft)
@@ -58,9 +58,9 @@ end subroutine PES_mask_end
 
 ! ---------------------------------------------------------
 subroutine PES_mask_doit(v, m, st, dt, mask)
-  type(PES_mask_type), intent(inout) :: v
-  type(mesh_type),     intent(in)    :: m
-  type(states_type),   intent(in)    :: st
+  type(PES_mask_t), intent(inout) :: v
+  type(mesh_t),     intent(in)    :: m
+  type(states_t),   intent(in)    :: st
   FLOAT,               intent(in)    :: dt
   FLOAT,               pointer       :: mask(:)
 
@@ -116,9 +116,9 @@ subroutine PES_mask_doit(v, m, st, dt, mask)
 end subroutine PES_mask_doit
 
 subroutine PES_mask_output(v, m, st, file)
-  type(PES_mask_type), intent(in) :: v
-  type(mesh_type),     intent(in) :: m
-  type(states_type),   intent(in) :: st
+  type(PES_mask_t), intent(in) :: v
+  type(mesh_t),     intent(in) :: m
+  type(states_t),   intent(in) :: st
   character(len=*),    intent(in) :: file
 
   FLOAT, allocatable :: spis(:,:,:), arpis(:,:,:)

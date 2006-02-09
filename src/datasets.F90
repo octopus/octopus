@@ -19,13 +19,13 @@
 
 #include "global.h"
 
-module datasets_mod
-  use lib_oct_parser
+module datasets_m
+  use lib_oct_parser_m
 
   implicit none
   private
 
-  public ::         &
+  public ::        &
     datasets_init, &
     datasets_end,  &
     check_inp
@@ -157,4 +157,4 @@ contains
 
   end function check_inp
 
-end module datasets_mod
+end module datasets_m

@@ -19,8 +19,8 @@
 
 ! ---------------------------------------------------------
 subroutine xc_get_vxc_and_axc(gr, xcs, rho, j, ispin, vxc, axc, ex, ec, exc_j, ip, qtot)
-  type(grid_type),       intent(inout) :: gr
-  type(xc_type), target, intent(in)    :: xcs
+  type(grid_t),       intent(inout) :: gr
+  type(xc_t), target, intent(in)    :: xcs
   FLOAT,                 intent(in)    :: rho(:, :), j(:,:,:)
   integer,               intent(in)    :: ispin
   FLOAT,                 intent(inout) :: vxc(:,:), axc(:,:,:)

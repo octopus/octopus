@@ -22,8 +22,8 @@
 ! this is for the third derivative of Exc, for the moment is a copy
 ! of the function above
 subroutine xc_get_kxc(xcs, m, rho, ispin, kxc)
-  type(xc_type), target, intent(in)    :: xcs
-  type(mesh_type),       intent(in)    :: m
+  type(xc_t), target, intent(in)    :: xcs
+  type(mesh_t),       intent(in)    :: m
   FLOAT, intent(in)                    :: rho(:, :)
   integer, intent(in)                  :: ispin
   FLOAT,                 intent(inout) :: kxc(:,:,:,:)
@@ -32,7 +32,7 @@ subroutine xc_get_kxc(xcs, m, rho, ispin, kxc)
 
   integer :: i, ixc, spin_channels
 
-  type(xc_functl_type), pointer :: functl(:)
+  type(xc_functl_t), pointer :: functl(:)
 
   if(ispin == UNPOLARIZED) then
     functl => xcs%functl(:, 1)

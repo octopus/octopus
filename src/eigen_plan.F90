@@ -29,9 +29,9 @@
 !! WARNING: This is not working!!!!
 
 subroutine eigen_solver_plan(gr, st, hamilt, tol, niter, converged, diff)
-  type(grid_type),        target, intent(inout) :: gr
-  type(states_type),      target, intent(inout) :: st
-  type(hamiltonian_type), target, intent(inout) :: hamilt
+  type(grid_t),        target, intent(inout) :: gr
+  type(states_t),      target, intent(inout) :: st
+  type(hamiltonian_t), target, intent(inout) :: hamilt
   FLOAT,                          intent(in)    :: tol
   integer,                        intent(inout) :: niter
   integer,                        intent(out)   :: converged

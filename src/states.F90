@@ -19,36 +19,36 @@
 
 #include "global.h"
 
-module states
-  use global
-  use varinfo
-  use string
-  use messages
-  use datasets_mod
-  use lib_oct
-  use lib_oct_parser
-  use io
-  use lib_basic_alg
-  use lib_adv_alg
-  use math
-  use mesh
-  use grid
-  use simul_box
-  use functions
-  use mesh_function
-  use cube_function
-  use output
-  use geometry
-  use crystal
-  use mpi_mod
-  use multicomm_mod
+module states_m
+  use global_m
+  use varinfo_m
+  use string_m
+  use messages_m
+  use datasets_m
+  use lib_oct_m
+  use lib_oct_parser_m
+  use io_m
+  use lib_basic_alg_m
+  use lib_adv_alg_m
+  use math_m
+  use mesh_m
+  use grid_m
+  use simul_box_m
+  use functions_m
+  use mesh_function_m
+  use cube_function_m
+  use output_m
+  use geometry_m
+  use crystal_m
+  use mpi_m
+  use multicomm_m
 
   implicit none
 
   private
   public ::                         &
-    states_type,                    &
-    states_dim_type,                &
+    states_t,                       &
+    states_dim_t,                   &
     states_init,                    &
     states_read_user_def_orbitals,  &
     states_densities_init,          &
@@ -90,9 +90,9 @@ module states
     zstates_calc_angular,           &
     states_distribute_nodes
 
-  type states_type
+  type states_t
 
-    type(states_dim_type), pointer :: d
+    type(states_dim_t), pointer :: d
     integer :: nst                  ! Number of states in each irreducible subspace
 
     ! pointers to the wavefunctions 
@@ -121,13 +121,13 @@ module states
 
     ! This is stuff needed for the parallelization in states
     logical :: parallel_in_states   ! am I parallel in states?
-    type(mpi_grp_type) :: mpi_grp   ! the MPI group related to the parallelization in states
+    type(mpi_grp_t) :: mpi_grp   ! the MPI group related to the parallelization in states
 
     integer :: st_start, st_end     ! needed for some parallel parts
     integer, pointer :: node(:)     ! To which node belongs each state.
-  end type states_type
+  end type states_t
 
-  type states_dim_type
+  type states_dim_t
     integer :: dim                  ! Dimension of the state (one or two for spinors)
     integer :: nik                  ! Number of irreducible subspaces
     integer :: nik_axis(3)          ! Number of kpoints per axis
@@ -137,7 +137,7 @@ module states
     logical :: cdft                 ! Are we using Current-DFT or not?
     FLOAT, pointer :: kpoints(:,:)  ! obviously the kpoints
     FLOAT, pointer :: kweights(:)   ! weights for the kpoint integrations
-  end type states_dim_type
+  end type states_dim_t
 
   ! Parameters...
   integer, public, parameter ::     &
@@ -153,7 +153,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine states_null(st)
-    type(states_type), intent(out) :: st
+    type(states_t), intent(out) :: st
 
     nullify(st%dpsi, st%zpsi, st%rho, st%j, st%rho_core, st%eigenval, st%occ, st%mag)
     nullify(st%d)
@@ -164,8 +164,8 @@ contains
 
   ! ---------------------------------------------------------
   subroutine states_init(st, gr)
-    type(states_type),    intent(inout) :: st
-    type(grid_type),      intent(in)    :: gr
+    type(states_t),    intent(inout) :: st
+    type(grid_t),      intent(in)    :: gr
 
     FLOAT :: excess_charge, r
     integer :: nempty, i, j
@@ -390,8 +390,8 @@ contains
   ! the routine reads formulas for user defined wavefunctions 
   ! from the input file and fills the respective orbitals
   subroutine states_read_user_def_orbitals(mesh, st)
-    type(mesh_type),      intent(in) :: mesh
-    type(states_type), intent(inout) :: st    
+    type(mesh_t),      intent(in) :: mesh
+    type(states_t), intent(inout) :: st    
 
     
     integer(POINTER_SIZE) :: blk
@@ -487,8 +487,8 @@ contains
 
   ! ---------------------------------------------------------
   subroutine states_densities_init(st, gr)
-    type(states_type),    intent(inout) :: st
-    type(grid_type),      intent(in)    :: gr
+    type(states_t),    intent(inout) :: st
+    type(grid_t),      intent(in)    :: gr
 
     ! allocate arrays for charge and current densities
     ALLOCATE(st%rho(gr%m%np, st%d%nspin), gr%m%np*st%d%nspin)
@@ -503,8 +503,8 @@ contains
 
   ! ---------------------------------------------------------
   subroutine states_copy(stout, stin)
-    type(states_type), intent(in)  :: stin
-    type(states_type), intent(out) :: stout
+    type(states_t), intent(in)  :: stin
+    type(states_t), intent(out) :: stout
 
     integer :: i
 
@@ -584,7 +584,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine states_end(st)
-    type(states_type), intent(inout) :: st
+    type(states_t), intent(inout) :: st
 
     call push_sub('states.states_end')
 
@@ -634,8 +634,8 @@ contains
   ! ---------------------------------------------------------
   ! generate a hydrogen s-wavefunction around a random point
   subroutine states_generate_random(st, m, ist_start_, ist_end_)
-    type(states_type), intent(inout) :: st
-    type(mesh_type),   intent(in)    :: m
+    type(states_t), intent(inout) :: st
+    type(mesh_t),   intent(in)    :: m
     integer, optional, intent(in)    :: ist_start_, ist_end_
 
     integer :: ist, ik, id, ist_start, ist_end
@@ -663,8 +663,8 @@ contains
 
   ! ---------------------------------------------------------
   subroutine states_fermi(st, m)
-    type(states_type), intent(inout) :: st
-    type(mesh_type),   intent(in)    :: m
+    type(states_t), intent(inout) :: st
+    type(mesh_t),   intent(in)    :: m
 
     ! Local variables
     integer :: ie, ik, iter
@@ -788,8 +788,8 @@ contains
   ! And so on.
   ! -----------------------------------------------------------------------------
   subroutine states_calculate_multipoles(gr, st, lmax, multipole)
-    type(grid_type),   intent(in)  :: gr
-    type(states_type), intent(in)  :: st
+    type(grid_t),   intent(in)  :: gr
+    type(states_t), intent(in)  :: st
     integer,           intent(in)  :: lmax
     FLOAT,             intent(out) :: multipole(:, :) ! multipole((lmax + 1)**2, st%d%nspin)
 
@@ -839,7 +839,7 @@ contains
   ! ---------------------------------------------------------
   ! function to calculate the eigenvalues sum using occupations as weights
   function states_eigenvalues_sum(st) result(e)
-    type(states_type), intent(in) :: st
+    type(states_t), intent(in) :: st
     FLOAT                         :: e
 
     integer :: ik
@@ -856,8 +856,8 @@ contains
   ! ---------------------------------------------------------
   subroutine states_write_eigenvalues(iunit, nst, st, sb, error)
     integer,           intent(in) :: iunit, nst
-    type(states_type), intent(in) :: st
-    type(simul_box_type), intent(in) :: sb
+    type(states_t), intent(in) :: st
+    type(simul_box_t), intent(in) :: sb
     FLOAT,             intent(in), optional :: error(nst, st%d%nik)
 
     integer ik, j, ns, is
@@ -949,8 +949,8 @@ contains
   ! ---------------------------------------------------------
   subroutine states_write_bands(iunit, nst, st, sb)
     integer,           intent(in) :: iunit, nst
-    type(states_type), intent(in) :: st
-    type(simul_box_type), intent(in) :: sb
+    type(states_t), intent(in) :: st
+    type(simul_box_t), intent(in) :: sb
 
     integer :: i, ik, j, mode, ns
     FLOAT :: factor(3)
@@ -1032,9 +1032,9 @@ contains
   ! p(uist, ist, ik) = < phi0(uist, k) | phi(ist, ik) (t) >
   ! ---------------------------------------------------------
   subroutine states_calc_projection(m, st, gs_st, p)
-    type(mesh_type),   intent(in)  :: m
-    type(states_type), intent(in)  :: st
-    type(states_type), intent(in)  :: gs_st
+    type(mesh_t),   intent(in)  :: m
+    type(states_t), intent(in)  :: st
+    type(states_t), intent(in)  :: gs_st
     CMPLX,             intent(out) :: p(st%nst, gs_st%nst, st%d%nik)
 
     integer :: uist, ist, ik
@@ -1055,7 +1055,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine states_magnetization_dens(st, np, rho, m)
-    type(states_type), intent(in)  :: st
+    type(states_t), intent(in)  :: st
     integer,           intent(in)  :: np
     FLOAT,             intent(in)  :: rho(np, st%d%nspin)
     FLOAT,             intent(out) :: m(np, 3)
@@ -1080,8 +1080,8 @@ contains
 
   ! ---------------------------------------------------------
   subroutine states_magnetic_moment(m, st, rho, mm)
-    type(mesh_type),   intent(in)  :: m
-    type(states_type), intent(in)  :: st
+    type(mesh_t),   intent(in)  :: m
+    type(states_t), intent(in)  :: st
     FLOAT,             intent(in)  :: rho(m%np, st%d%nspin)
     FLOAT,             intent(out) :: mm(3)
 
@@ -1102,9 +1102,9 @@ contains
 
   ! ---------------------------------------------------------
   subroutine states_local_magnetic_moments(m, st, geo, rho, r, lmm)
-    type(mesh_type),     intent(in)  :: m
-    type(states_type),   intent(in)  :: st
-    type(geometry_type), intent(in)  :: geo
+    type(mesh_t),     intent(in)  :: m
+    type(states_t),   intent(in)  :: st
+    type(geometry_t), intent(in)  :: geo
     FLOAT,               intent(in)  :: rho(m%np, st%d%nspin)
     FLOAT,               intent(in)  :: r
     FLOAT,               intent(out) :: lmm(3, geo%natoms)
@@ -1134,8 +1134,8 @@ contains
   ! ---------------------------------------------------------
   ! This routine (obviously) assumes complex wave-functions
   subroutine calc_paramagnetic_current(gr, st, jp)
-    type(grid_type),   intent(inout) :: gr
-    type(states_type), intent(inout) :: st
+    type(grid_t),   intent(inout) :: gr
+    type(states_t), intent(inout) :: st
     FLOAT,             intent(out)   :: jp(:,:,:)  ! (NP, NDIM, st%d%nspin)
 
     integer :: ik, p, sp, k
@@ -1203,8 +1203,8 @@ contains
 
   ! ---------------------------------------------------------
   subroutine states_calc_physical_current(gr, st, j)
-    type(grid_type),     intent(inout) :: gr
-    type(states_type),   intent(inout) :: st
+    type(grid_t),     intent(inout) :: gr
+    type(states_t),   intent(inout) :: st
     FLOAT,               intent(out)   :: j(:,:,:)   ! j(NP, NDIM, st%d%nspin)
 
     call push_sub('states.states_calc_physical_current')
@@ -1221,8 +1221,8 @@ contains
 
   ! ---------------------------------------------------------
   subroutine states_distribute_nodes(st, mc)
-    type(states_type),    intent(inout) :: st
-    type(multicomm_type), intent(in)    :: mc
+    type(states_t),    intent(inout) :: st
+    type(multicomm_t), intent(in)    :: mc
 
 #if defined(HAVE_MPI)
     integer :: sn, sn1, r, j, k, ierr, i, ii, st_start, st_end
@@ -1294,4 +1294,4 @@ contains
 #include "states_inc.F90"
 #include "undef.F90"
 
-end module states
+end module states_m

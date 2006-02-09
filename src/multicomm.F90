@@ -44,32 +44,32 @@
 !                /     |    \       /     |    \   <- Division in states   (5 states per node)
 !              /  \  /  \  /  \   /  \  /  \  /  \ <- Division in domains  (50000 points per node)
 !
-! To perform collective operations (like a reduce), you can use the communicators
+! To perform collective operations (like a reduce), you can use the communicators_m
 ! provided in mc%group_comm(:). For example, to sum over states, the communicator
 ! to use is mc%group_comm(P_STRATEGY_STATES)
 !
-! You can use the routine multicomm_strategy_is_parallel to know is a certain
+! You can use the routine multicomm_strategy_is_parallel to know is a certain_m
 ! strategy is parallel.
 
-module multicomm_mod
-  use varinfo
-  use global
-  use lib_oct
-  use lib_oct_parser
-  use datasets_mod
-  use messages
-  use mpi_mod
-  use math
-  use io
+module multicomm_m
+  use varinfo_m
+  use global_m
+  use lib_oct_m
+  use lib_oct_parser_m
+  use datasets_m
+  use messages_m
+  use mpi_m
+  use math_m
+  use io_m
 
   implicit none
 
   private
 
   public ::                          &
-    multicomm_type,                  &
-    multicomm_tree_type,             &
-    multicomm_tree_type_pointer,     &
+    multicomm_t,                     &
+    multicomm_tree_t,                &
+    multicomm_tree_t_pointer,        &
     multicomm_init, multicomm_end,   &
     multicomm_strategy_is_parallel
 
@@ -91,44 +91,44 @@ module multicomm_mod
     "par_other  "                    &
     /)
 
-  type multicomm_tree_type_pointer
-    type(multicomm_tree_type), pointer :: p
-  end type multicomm_tree_type_pointer
+  type multicomm_tree_t_pointer
+    type(multicomm_tree_t), pointer :: p
+  end type multicomm_tree_t_pointer
 
-  type multicomm_tree_type
-    type(multicomm_tree_type_pointer), pointer :: up
+  type multicomm_tree_t
+    type(multicomm_tree_t_pointer), pointer :: up
 
     integer          :: n_down
-    type(multicomm_tree_type_pointer), pointer :: down(:)
+    type(multicomm_tree_t_pointer), pointer :: down(:)
 
     integer          :: label        ! labels this node
     integer          :: level
 
     integer          :: n_group
     integer, pointer :: group(:)
-  end type multicomm_tree_type
+  end type multicomm_tree_t
 
   ! Stores all communicators and groups
-  type multicomm_type
+  type multicomm_t
     integer          :: n_node       ! Total number of nodes.
     integer          :: n_index      ! Number of parallel indices.
 
     integer          :: par_strategy ! What kind of parallelization strategy should we use?
 
     integer, pointer :: group_sizes(:) ! Number of processors in each group
-    type(multicomm_tree_type), pointer :: group_tree
+    type(multicomm_tree_t), pointer :: group_tree
 
     integer, pointer :: who_am_i(:)    ! the path to get to my processor in the tree
     integer, pointer :: group_comm(:)  ! communicators I belong to
     integer, pointer :: group_root(:)  ! root node for each communicator
-  end type multicomm_type
+  end type multicomm_t
 
 
 contains
 
   ! create index and domain communicators
   subroutine multicomm_init(mc, parallel_mask, n_node, n_index, index_range, min_range)
-    type(multicomm_type), intent(out)  :: mc
+    type(multicomm_t), intent(out)  :: mc
     integer,              intent(in)   :: parallel_mask, n_node, n_index
     integer,              intent(inout):: index_range(:)
     integer,              intent(in)   :: min_range(:)
@@ -409,11 +409,11 @@ contains
 
   ! ---------------------------------------------------------
   subroutine multicomm_proc(mc, index, proc)
-    type(multicomm_type), intent(in)  :: mc
+    type(multicomm_t), intent(in)  :: mc
     integer,              intent(in)  :: index(:) ! (mc%n_index)
     integer,              intent(out) :: proc     ! the processor corresponding to that index
 
-    type(multicomm_tree_type), pointer :: p
+    type(multicomm_tree_t), pointer :: p
     integer :: i
 
     p => mc%group_tree
@@ -430,7 +430,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine create_group_tree(mc)
-    type(multicomm_type), intent(inout) :: mc
+    type(multicomm_t), intent(inout) :: mc
 
 #if defined(HAVE_MPI)
     integer :: nodes_used, last_level, iunit, label
@@ -479,11 +479,11 @@ contains
 
     ! ---------------------------------------------------------
     recursive subroutine nodes_create(this, level)
-      type(multicomm_tree_type), pointer :: this
+      type(multicomm_tree_t), pointer :: this
       integer, intent(in)                :: level
 
       integer :: i, next_level
-      type(multicomm_tree_type), pointer :: p
+      type(multicomm_tree_t), pointer :: p
 
       ! get next parallel level
       next_level = level - 1
@@ -532,7 +532,7 @@ contains
 
     ! ---------------------------------------------------------
     recursive subroutine group_create(this)
-      type(multicomm_tree_type), pointer :: this
+      type(multicomm_tree_t), pointer :: this
 
       integer :: i
 
@@ -554,7 +554,7 @@ contains
 
     ! ---------------------------------------------------------
     recursive subroutine print_dot(this)
-      type(multicomm_tree_type), pointer :: this
+      type(multicomm_tree_t), pointer :: this
 
       integer :: i
 
@@ -580,7 +580,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine multicomm_end(mc)
-    type(multicomm_type) :: mc
+    type(multicomm_t) :: mc
 
 #if defined(HAVE_MPI)
     integer :: i, mpi_err
@@ -611,7 +611,7 @@ contains
 
     ! ---------------------------------------------------------
     recursive subroutine delete_tree(this)
-      type(multicomm_tree_type), pointer :: this
+      type(multicomm_tree_t), pointer :: this
 
       integer :: i
 
@@ -636,10 +636,10 @@ contains
 
   ! ---------------------------------------------------------
   logical function multicomm_strategy_is_parallel(mc, level) result(r)
-    type(multicomm_type), intent(in) :: mc
+    type(multicomm_t), intent(in) :: mc
     integer,              intent(in) :: level
 
     r = iand(mc%par_strategy, 2**(level-1)).ne.0
   end function multicomm_strategy_is_parallel
 
-end module multicomm_mod
+end module multicomm_m

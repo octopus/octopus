@@ -20,10 +20,10 @@
 
 ! ---------------------------------------------------------
 subroutine mesh_init_stage_1(sb, mesh, geo, cv, enlarge)
-  type(simul_box_type), target, intent(in)    :: sb
-  type(mesh_type),              intent(inout) :: mesh
-  type(geometry_type),          intent(in)    :: geo
-  type(curvlinear_type),        intent(in)    :: cv
+  type(simul_box_t), target, intent(in)    :: sb
+  type(mesh_t),              intent(inout) :: mesh
+  type(geometry_t),          intent(in)    :: geo
+  type(curvlinear_t),        intent(in)    :: cv
   integer,                      intent(in)    :: enlarge(3)
 
   integer :: i, j
@@ -68,10 +68,10 @@ end subroutine mesh_init_stage_1
 
 ! ---------------------------------------------------------
 subroutine mesh_init_stage_2(sb, mesh, geo, cv)
-  type(simul_box_type),  intent(in)    :: sb
-  type(mesh_type),       intent(inout) :: mesh
-  type(geometry_type),   intent(in)    :: geo
-  type(curvlinear_type), intent(in)    :: cv
+  type(simul_box_t),  intent(in)    :: sb
+  type(mesh_t),       intent(inout) :: mesh
+  type(geometry_t),   intent(in)    :: geo
+  type(curvlinear_t), intent(in)    :: cv
 
   integer :: i, j, k, il, ik, ix, iy, iz
   FLOAT   :: chi(3)
@@ -151,12 +151,12 @@ end subroutine mesh_init_stage_2
 ! in and is used to determine the number of partitions.
 ! ---------------------------------------------------------
 subroutine mesh_init_stage_3(mesh, geo, cv, stencil, np_stencil, mc)
-  type(mesh_type),       intent(inout) :: mesh
-  type(geometry_type),   intent(in)    :: geo
-  type(curvlinear_type), intent(in)    :: cv
+  type(mesh_t),       intent(inout) :: mesh
+  type(geometry_t),   intent(in)    :: geo
+  type(curvlinear_t), intent(in)    :: cv
   integer, optional,     intent(in)    :: stencil(:, :)
   integer, optional,     intent(in)    :: np_stencil
-  type(multicomm_type), optional, intent(in) :: mc
+  type(multicomm_t), optional, intent(in) :: mc
 
   integer :: np_stencil_, stencil_size
 
@@ -306,7 +306,7 @@ contains
   ! ---------------------------------------------------------
   ! calculate the volume of integration
   subroutine mesh_get_vol_pp(sb)
-    type(simul_box_type), intent(in) :: sb
+    type(simul_box_t), intent(in) :: sb
 
     integer :: i
     FLOAT   :: chi(sb%dim)
@@ -371,7 +371,7 @@ end subroutine mesh_init_stage_3
 ! be zero. comm is used to get the number of partitions.
 ! ---------------------------------------------------------------
 subroutine mesh_partition(m, part)
-  type(mesh_type), intent(in)  :: m
+  type(mesh_t), intent(in)  :: m
   integer,         intent(out) :: part(:)
 
   integer              :: i, j           ! Counter.

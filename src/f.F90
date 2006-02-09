@@ -20,25 +20,25 @@
 
 #include "global.h"
 
-module functions
-  use global
-  use messages
-  use lib_oct_parser
-  use lib_basic_alg
-  use mesh
-  use mesh_function
-  use cube_function
-  use derivatives
-  use varinfo
+module functions_m
+  use global_m
+  use messages_m
+  use lib_oct_parser_m
+  use lib_basic_alg_m
+  use mesh_m
+  use mesh_function_m
+  use cube_function_m
+  use derivatives_m
+  use varinfo_m
 #if defined(HAVE_FFT)
-  use fft
+  use fft_m
 #endif
 
   implicit none
 
   private
   public  ::                    &
-    f_der_type,                 &
+    f_der_t,                    &
     f_der_init,                 &
     f_der_build,                &
     f_der_end,                  &
@@ -58,28 +58,28 @@ module functions
     REAL_SPACE = 0,             &
     FOURIER_SPACE = 1
 
-  type f_der_type
-    type(mesh_type), pointer :: m            ! a pointer to mesh
+  type f_der_t
+    type(mesh_t), pointer :: m            ! a pointer to mesh
 
     integer                  :: space        ! derivatives calculated in real or fourier space
 
     ! derivatives in real space
     integer                  :: n_ghost(3)   ! ghost points to add in each dimension
-    type(der_discr_type)     :: der_discr    ! discretization of the derivatives
+    type(der_discr_t)     :: der_discr    ! discretization of the derivatives
 
     ! derivatives in fourier space
 #if defined(HAVE_FFT)
     type(dcf) :: dcf_der, dcf_aux            ! auxiliary variables
     type(zcf) :: zcf_der, zcf_aux            ! derivatives in fourier space
 #endif
-  end type f_der_type
+  end type f_der_t
 
 contains
 
   ! ---------------------------------------------------------
   subroutine f_der_init(f_der, sb, use_curvlinear)
-    type(f_der_type),     intent(out) :: f_der
-    type(simul_box_type), intent(in)  :: sb
+    type(f_der_t),     intent(out) :: f_der
+    type(simul_box_t), intent(in)  :: sb
     logical,              intent(in)  :: use_curvlinear
 
     call push_sub('f.f_der_init')
@@ -123,9 +123,9 @@ contains
 
   ! ---------------------------------------------------------
   subroutine f_der_build(sb, m, f_der)
-    type(simul_box_type),    intent(in)    :: sb
-    type(mesh_type), target, intent(in)    :: m
-    type(f_der_type),        intent(inout) :: f_der
+    type(simul_box_t),    intent(in)    :: sb
+    type(mesh_t), target, intent(in)    :: m
+    type(f_der_t),        intent(inout) :: f_der
 
     call push_sub('f.f_der_build')
 
@@ -151,7 +151,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine f_der_end(f_der)
-    type(f_der_type), intent(inout) :: f_der
+    type(f_der_t), intent(inout) :: f_der
 
     call push_sub('f.f_der_end')
 
@@ -182,4 +182,4 @@ contains
 #include "complex.F90"
 #include "f_inc.F90"
 
-end module functions
+end module functions_m

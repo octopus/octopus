@@ -19,30 +19,30 @@
 
 #include "global.h"
 
-module xc_OEP
-  use global
-  use messages
-  use states
-  use lib_oct_parser
-  use lib_basic_alg
-  use lib_adv_alg
-  use lib_xc
-  use xc
-  use mesh
-  use functions
-  use mesh_function
-  use poisson
-  use hamiltonian
-  use linear_response
-  use grid
-  use mpi_mod
-  use varinfo
+module xc_OEP_m
+  use global_m
+  use messages_m
+  use states_m
+  use lib_oct_parser_m
+  use lib_basic_alg_m
+  use lib_adv_alg_m
+  use lib_xc_m
+  use xc_m
+  use mesh_m
+  use functions_m
+  use mesh_function_m
+  use poisson_m
+  use hamiltonian_m
+  use linear_response_m
+  use grid_m
+  use mpi_m
+  use varinfo_m
 
   implicit none
 
   private
   public ::                     &
-    xc_oep_type,                &
+    xc_oep_t,                   &
     xc_oep_init,                &
     xc_oep_end,                 &
     xc_oep_write_info,          &
@@ -57,10 +57,10 @@ module xc_OEP
     XC_OEP_CEDA   = 4,          &  ! not yet implemented
     XC_OEP_FULL   = 5              ! half implemented
 
-  type xc_oep_type
+  type xc_oep_t
     integer          :: level      ! 0 = no oep, 1 = Slater, 2 = KLI, 3 = CEDA, 4 = full OEP
     FLOAT            :: mixing     ! how much of the function S(r) to add to vxc in every iteration
-    type(lr_type)    :: lr         ! to solve the equation H psi = b
+    type(lr_t)    :: lr         ! to solve the equation H psi = b
 
     integer          :: eigen_n
     integer, pointer :: eigen_type(:), eigen_index(:)
@@ -68,7 +68,7 @@ module xc_OEP
     FLOAT,   pointer :: vxc(:), uxc_bar(:)
     FLOAT,   pointer :: dlxc(:, :)
     CMPLX,   pointer :: zlxc(:, :)
-  end type xc_oep_type
+  end type xc_oep_t
 
   FLOAT, parameter :: small     = CNST(1.0e-5)
 
@@ -77,10 +77,10 @@ contains
 
   ! ---------------------------------------------------------
   subroutine xc_oep_init(oep, family, m, d)
-    type(xc_oep_type),     intent(out) :: oep
+    type(xc_oep_t),     intent(out) :: oep
     integer,               intent(in)  :: family
-    type(mesh_type),       intent(in)  :: m
-    type(states_dim_type), intent(in)  :: d
+    type(mesh_t),       intent(in)  :: m
+    type(states_dim_t), intent(in)  :: d
 
     if(iand(family, XC_FAMILY_OEP).eq.0) then
       oep%level = XC_OEP_NONE
@@ -141,7 +141,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine xc_oep_end(oep)
-    type(xc_oep_type), intent(inout) :: oep
+    type(xc_oep_t), intent(inout) :: oep
 
     if(oep%level.ne.XC_OEP_NONE) then
       deallocate(oep%vxc); nullify(oep%vxc)
@@ -154,7 +154,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine xc_oep_write_info(oep, iunit)
-    type(xc_oep_type), intent(in) :: oep
+    type(xc_oep_t), intent(in) :: oep
     integer,           intent(in) :: iunit
 
     if(oep%level.eq.XC_OEP_NONE) return
@@ -168,7 +168,7 @@ contains
   ! A couple of auxiliary functions for oep
   ! ---------------------------------------------------------
   subroutine xc_oep_SpinFactor(oep, nspin)
-    type(xc_oep_type), intent(inout) :: oep
+    type(xc_oep_t), intent(inout) :: oep
     integer,           intent(in)    :: nspin
 
     select case(nspin)
@@ -187,8 +187,8 @@ contains
 
   ! ---------------------------------------------------------
   subroutine xc_oep_AnalizeEigen(oep, st, is)
-    type(xc_oep_type), intent(inout) :: oep
-    type(states_type), intent(in)    :: st
+    type(xc_oep_t), intent(inout) :: oep
+    type(states_t), intent(in)    :: st
     integer,           intent(in)    :: is
 
     integer  :: i
@@ -263,4 +263,4 @@ contains
 
 #include "undef.F90"
 
-end module xc_OEP
+end module xc_OEP_m

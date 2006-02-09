@@ -19,27 +19,27 @@
 
 #include "global.h"
 
-module geometry
-  use global
-  use mpi_mod
-  use varinfo
-  use messages
-  use datasets_mod
-  use string
-  use units
-  use lib_oct_parser
-  use lib_oct
-  use io
-  use specie
-  use xyz_file
+module geometry_m
+  use global_m
+  use mpi_m
+  use varinfo_m
+  use messages_m
+  use datasets_m
+  use string_m
+  use units_m
+  use lib_oct_parser_m
+  use lib_oct_m
+  use io_m
+  use specie_m
+  use xyz_file_m
 
   implicit none
 
   private
   public ::                &
-    atom_type,             &
-    atom_classical_type,   &
-    geometry_type,         &
+    atom_t,                &
+    atom_classical_t,      &
+    geometry_t,            &
     geometry_init,         &
     geometry_init_xyz,     &
     geometry_init_vel,     &
@@ -59,31 +59,31 @@ module geometry
     geometry_val_charge,   &
     geometry_grid_defaults
 
-  type atom_type
+  type atom_t
     character(len=15) :: label
-    type(specie_type), pointer :: spec   ! pointer to specie
+    type(specie_t), pointer :: spec   ! pointer to specie
     FLOAT :: x(3), v(3), f(3)            ! position/velocity/force of atom in real space
     logical :: move                      ! should I move this atom in the optimization mode
-  end type atom_type
+  end type atom_t
 
-  type atom_classical_type
+  type atom_classical_t
     character(len=15) :: label
 
     FLOAT :: x(3), v(3), f(3)
     FLOAT :: charge
-  end type atom_classical_type
+  end type atom_classical_t
 
-  type geometry_type
+  type geometry_t
     character(len=20) :: sysname    ! the name of the system we are running
 
     integer :: natoms
-    type(atom_type), pointer :: atom(:)
+    type(atom_t), pointer :: atom(:)
 
     integer :: ncatoms              ! For QM+MM calculations
-    type(atom_classical_type), pointer :: catom(:)
+    type(atom_classical_t), pointer :: catom(:)
 
     integer :: nspecies
-    type(specie_type), pointer :: specie(:)
+    type(specie_t), pointer :: specie(:)
 
     logical :: only_user_def        ! Do we want to treat only user defined species?
 
@@ -92,13 +92,13 @@ module geometry
     logical :: nlpp                 ! is any species having non-local pp
     logical :: nlcc                 ! is any species having non-local core corrections?
 
-  end type geometry_type
+  end type geometry_t
 
 contains
 
   ! ---------------------------------------------------------
   subroutine geometry_init(geo)
-    type(geometry_type), intent(inout) :: geo
+    type(geometry_t), intent(inout) :: geo
 
     call push_sub('geometry.geometry_init')
 
@@ -114,7 +114,7 @@ contains
   ! ---------------------------------------------------------------
   ! initializes the xyz positions of the atoms in the structure geo
   subroutine geometry_init_xyz(geo)
-    type(geometry_type), intent(inout) :: geo
+    type(geometry_t), intent(inout) :: geo
 
     integer :: i
     type(xyz_file_info) :: xyz
@@ -149,7 +149,7 @@ contains
     !% <li> columns 13-16: The specie; in fact "octopus" only cares about the
     !% first letter - "CA" and "CB" will both refer to Carbon - so elements whose
     !% chemical symbol has more than one letter can not be represented in this way.
-    !% So, if you want to run mercury ("Hg") please use one of the other two methods
+    !% So, if you want to run mercury ("Hg") please use one of the other two methods_m
     !% to input the coordinates, "XYZCoordinates" or "Coordinates".</li>
     !% <li> columns 18-21: The residue. If residue is "QM", the atom is treated in Quantum
     !% Mechanics, otherwise it is simply treated as an external classical point charge.
@@ -245,7 +245,7 @@ contains
   !-----------------------------------------------------------------
   ! initializes the velocities of the atoms in the structure geo
   subroutine geometry_init_vel(geo)
-    type(geometry_type), intent(inout) :: geo
+    type(geometry_t), intent(inout) :: geo
 
     integer :: i, j
     FLOAT :: x(3), temperature, sigma, kin1, kin2
@@ -354,7 +354,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine geometry_filter(geo, gmax)
-    type(geometry_type), intent(inout) :: geo
+    type(geometry_t), intent(inout) :: geo
     FLOAT, intent(in) :: gmax
     integer :: i
 
@@ -369,7 +369,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine geometry_init_species(geo)
-    type(geometry_type), intent(inout) :: geo
+    type(geometry_t), intent(inout) :: geo
 
     integer :: i, j, k, ispin
 
@@ -437,7 +437,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine geometry_debug(geo, dir)
-    type(geometry_type), intent(in) :: geo
+    type(geometry_t), intent(in) :: geo
     character(len=*), intent(in) :: dir
 
     character(len=256) :: dirname
@@ -458,7 +458,7 @@ contains
   ! ---------------------------------------------------------
   subroutine loadPDB(iunit, geo)
     integer,             intent(in)    :: iunit
-    type(geometry_type), intent(inout) :: geo
+    type(geometry_t), intent(inout) :: geo
 
     character(len=80) :: record
     character(len=6) :: record_name
@@ -514,7 +514,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine geometry_end(geo)
-    type(geometry_type), intent(inout) :: geo
+    type(geometry_t), intent(inout) :: geo
 
     if(associated(geo%atom)) then ! sanity check
       deallocate(geo%atom); nullify(geo%atom)
@@ -532,10 +532,10 @@ contains
   ! ---------------------------------------------------------
   ! Returns the number of non-local operator that should be defined.
   function geometry_nvnl(geo) result(res)
-    type(geometry_type), intent(in) :: geo
+    type(geometry_t), intent(in) :: geo
     integer                         :: res
 
-    type(specie_type), pointer :: s
+    type(specie_t), pointer :: s
     integer :: ia, l
 
     call push_sub('geometry.atom_nvnl')
@@ -555,7 +555,7 @@ contains
   ! ---------------------------------------------------------
   ! This function returns .true. if two atoms are too close.
   logical function geometry_atoms_are_too_close(geo) result(l)
-    type(geometry_type), intent(in) :: geo
+    type(geometry_t), intent(in) :: geo
     FLOAT :: r
 
     call geometry_min_distance(geo, r)
@@ -566,7 +566,7 @@ contains
 
   ! ---------------------------------------------------------
   FLOAT function ion_ion_energy(geo)
-    type(geometry_type), intent(in) :: geo
+    type(geometry_t), intent(in) :: geo
 
     FLOAT :: r
     integer :: i, j
@@ -585,7 +585,7 @@ contains
 
   ! ---------------------------------------------------------
   FLOAT function kinetic_energy(geo)
-    type(geometry_type), intent(in) :: geo
+    type(geometry_t), intent(in) :: geo
 
     integer :: i
 
@@ -600,7 +600,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine geometry_dipole(geo, dipole)
-    type(geometry_type), intent(in)  :: geo
+    type(geometry_t), intent(in)  :: geo
     FLOAT,               intent(out) :: dipole(3)
 
     integer :: i
@@ -615,7 +615,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine geometry_min_distance(geo, rmin)
-    type(geometry_type), intent(in)  :: geo
+    type(geometry_t), intent(in)  :: geo
     FLOAT,               intent(out) :: rmin
 
     integer :: i, j
@@ -636,7 +636,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine cm_pos(geo, pos)
-    type(geometry_type), intent(in)  :: geo
+    type(geometry_t), intent(in)  :: geo
     FLOAT,               intent(out) :: pos(3)
 
     FLOAT :: m
@@ -653,7 +653,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine cm_vel(geo, vel)
-    type(geometry_type), intent(in)  :: geo
+    type(geometry_t), intent(in)  :: geo
     FLOAT,               intent(out) :: vel(3)
 
     FLOAT :: m
@@ -671,7 +671,7 @@ contains
   ! ---------------------------------------------------------
   subroutine atom_write_xyz(dir, fname, geo)
     character(len=*),    intent(in) :: dir, fname
-    type(geometry_type), intent(in) :: geo
+    type(geometry_t), intent(in) :: geo
 
     integer i, iunit
 
@@ -704,7 +704,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine geometry_val_charge(geo, val_charge)
-    type(geometry_type), intent(in) :: geo
+    type(geometry_t), intent(in) :: geo
     FLOAT, intent(out) :: val_charge
     integer :: i
     call push_sub('geometry.geometry_val_charge')
@@ -720,7 +720,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine geometry_grid_defaults(geo, def_h, def_rsize)
-    type(geometry_type), intent(in) :: geo
+    type(geometry_t), intent(in) :: geo
     FLOAT, intent(out) :: def_h, def_rsize
     integer :: i
     call push_sub('geometry.geometry_grid_defaults')
@@ -735,4 +735,4 @@ contains
     call pop_sub()
   end subroutine geometry_grid_defaults
 
-end module geometry
+end module geometry_m

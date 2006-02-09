@@ -19,39 +19,39 @@
 
 #include "global.h"
 
-module external_pot
-  use global
-  use messages
-  use units
-  use lib_oct
-  use lib_oct_parser
-  use lib_oct_gsl_spline
-  use fft
-  use math
-  use mesh
-  use mesh_function
-  use grid
-  use simul_box
-  use functions
+module external_pot_m
+  use global_m
+  use messages_m
+  use units_m
+  use lib_oct_m
+  use lib_oct_parser_m
+  use lib_oct_gsl_spline_m
+  use fft_m
+  use math_m
+  use mesh_m
+  use mesh_function_m
+  use grid_m
+  use simul_box_m
+  use functions_m
 #ifdef HAVE_FFT
-  use cube_function
+  use cube_function_m
 #endif
-  use logrid
-  use ps
-  use specie
-  use geometry
-  use states
-  use lasers
-  use profiling_mod
-  use mpi_mod
-  use mpi_debug_mod
-  use varinfo
+  use logrid_m
+  use ps_m
+  use specie_m
+  use geometry_m
+  use states_m
+  use lasers_m
+  use profiling_m
+  use mpi_m
+  use mpi_debug_m
+  use varinfo_m
 
   implicit none
 
   private
   public ::                 &
-    epot_type,              &
+    epot_t,                 &
     epot_init,              &
     epot_end,               &
     epot_generate,          &
@@ -61,7 +61,7 @@ module external_pot
     depot_forces,           &
     zepot_forces,           &
     dproject, zproject,     &
-    projector_type
+    projector_t
 
   ! /* The projector data type is intended to hold the non-local part of the
   ! pseudopotentials. The definition of the action of a projector (which is
@@ -72,7 +72,7 @@ module external_pot
   ! For the pseudopotentials themselves, a = b. But to calculate the forces,
   ! one needs to put in b the gradient of a. And in the case of the spin-orbit
   ! coupling term, I have put in b the angular momentum of a. */
-  type projector_type
+  type projector_t
     integer          :: n_points_in_sphere
     integer          :: n_channels
     integer, pointer :: jxyz(:)
@@ -80,9 +80,9 @@ module external_pot
     FLOAT,   pointer :: ket(:, :), bra(:, :)
     CMPLX,   pointer :: phases(:, :)
     integer          :: iatom
-  end type projector_type
+  end type projector_t
 
-  type epot_type
+  type epot_t
     ! Classic charges:
     integer :: classic_pot        ! How to include the classic charges
     FLOAT, pointer :: vclassic(:) ! We use it to store the potential of the classic charges
@@ -95,13 +95,13 @@ module external_pot
 #endif
 
     integer :: nvnl                        ! number of nonlocal operators
-    type(projector_type), pointer :: p(:)
-    type(projector_type), pointer :: dp(:, :)
-    type(projector_type), pointer :: lso(:, :)
+    type(projector_t), pointer :: p(:)
+    type(projector_t), pointer :: dp(:, :)
+    type(projector_t), pointer :: lso(:, :)
 
     ! External e-m fields
     integer :: no_lasers                   ! number of laser pulses used
-    type(laser_type), pointer :: lasers(:) ! lasers stuff
+    type(laser_t), pointer :: lasers(:) ! lasers stuff
     FLOAT, pointer :: E_field(:)           ! static electric field
     FLOAT, pointer :: v_static(:)          ! static scalar potential
     FLOAT, pointer :: B_field(:)           ! static magnetic field
@@ -111,14 +111,14 @@ module external_pot
     ! *effective* electrons in a quantum dot. It affects the spin Zeeman term.
     FLOAT :: gyromagnetic_ratio
 
-  end type epot_type
+  end type epot_t
 
 contains
 
   ! ---------------------------------------------------------
   subroutine epot_init(ep, gr)
-    type(epot_type),     intent(out) :: ep
-    type(grid_type),     intent(in)  :: gr
+    type(epot_t),     intent(out) :: ep
+    type(grid_t),     intent(in)  :: gr
 
     integer :: i, j
     integer(POINTER_SIZE) :: blk
@@ -292,9 +292,9 @@ contains
 
   ! ---------------------------------------------------------
   subroutine epot_end(ep, sb, geo)
-    type(epot_type),      intent(inout) :: ep
-    type(simul_box_type), intent(in)    :: sb
-    type(geometry_type),  intent(in)    :: geo
+    type(epot_t),      intent(inout) :: ep
+    type(simul_box_t), intent(in)    :: sb
+    type(geometry_t),  intent(in)    :: geo
 
 #ifdef HAVE_FFT
     integer :: i
@@ -346,10 +346,10 @@ contains
 #ifdef HAVE_FFT
   ! ---------------------------------------------------------
   subroutine epot_local_fourier_init(ep, m, sb, geo)
-    type(epot_type),     intent(inout) :: ep
-    type(mesh_type),     intent(in)    :: m
-    type(simul_box_type), intent(in)   :: sb
-    type(geometry_type), intent(in)    :: geo
+    type(epot_t),     intent(inout) :: ep
+    type(mesh_t),     intent(in)    :: m
+    type(simul_box_t), intent(in)   :: sb
+    type(geometry_t), intent(in)    :: geo
 
     integer :: vlocal_cutoff
     integer :: i, ix, iy, iz, ixx(3), db(3), c(3)
@@ -357,7 +357,7 @@ contains
     FLOAT :: gpar, gperp, gx, gz, modg
     FLOAT :: r_0, temp(3), tmp, norm
 
-    type(specie_type), pointer :: s ! shortcuts
+    type(specie_t), pointer :: s ! shortcuts
     type(dcf), pointer :: cf
 
     call push_sub('epot.epot_local_fourier_init')
@@ -510,18 +510,18 @@ contains
 
   ! ---------------------------------------------------------
   subroutine epot_generate(ep, m, sb, geo, st, reltype, fast_generation)
-    type(epot_type),      intent(inout) :: ep
-    type(mesh_type),      intent(in)    :: m
-    type(simul_box_type), intent(in)    :: sb
-    type(geometry_type),  intent(inout) :: geo
-    type(states_type),    intent(inout) :: st
+    type(epot_t),      intent(inout) :: ep
+    type(mesh_t),      intent(in)    :: m
+    type(simul_box_t), intent(in)    :: sb
+    type(geometry_t),  intent(inout) :: geo
+    type(states_t),    intent(inout) :: st
     integer,              intent(in)    :: reltype
     logical, optional,    intent(in)    :: fast_generation
 
     logical :: fast_generation_
     integer :: ia, i, l, lm, k, ierr, p
-    type(specie_type), pointer :: s
-    type(atom_type),   pointer :: a
+    type(specie_t), pointer :: s
+    type(atom_t),   pointer :: a
     type(dcf) :: cf_loc, cf_nlcc
 
     integer :: j
@@ -884,9 +884,9 @@ contains
 
   ! ---------------------------------------------------------
   subroutine epot_generate_classic(ep, m, geo)
-    type(epot_type),     intent(inout) :: ep
-    type(mesh_type),     intent(in)    :: m
-    type(geometry_type), intent(in)    :: geo
+    type(epot_t),     intent(inout) :: ep
+    type(mesh_t),     intent(in)    :: m
+    type(geometry_t), intent(in)    :: geo
 
     integer i, ia
     FLOAT :: r, rc
@@ -923,8 +923,8 @@ contains
   ! ---------------------------------------------------------
   function epot_laser_scalar_pot(np, gr, ep, t) result(v)
     integer, intent(in) :: np
-    type(grid_type), intent(in) :: gr
-    type(epot_type), intent(in)  :: ep
+    type(grid_t), intent(in) :: gr
+    type(epot_t), intent(in)  :: ep
     FLOAT, intent(in)  :: t
     FLOAT :: v(np)
 
@@ -935,8 +935,8 @@ contains
 
   ! ---------------------------------------------------------
   subroutine epot_laser_vector_pot(sb, ep, t, a)
-    type(simul_box_type), intent(in) :: sb
-    type(epot_type), intent(in)  :: ep
+    type(simul_box_t), intent(in) :: sb
+    type(epot_t), intent(in)  :: ep
     FLOAT,           intent(in)  :: t
     FLOAT,           intent(out) :: a(sb%dim)
 
@@ -947,8 +947,8 @@ contains
 
   ! ---------------------------------------------------------
   subroutine epot_laser_field(sb, ep, t, e)
-    type(simul_box_type), intent(in) :: sb
-    type(epot_type), intent(in)  :: ep
+    type(simul_box_t), intent(in) :: sb
+    type(epot_t), intent(in)  :: ep
     FLOAT,           intent(in)  :: t
     FLOAT,           intent(out) :: e(sb%dim)
 
@@ -964,6 +964,6 @@ contains
 #include "complex.F90"
 #include "epot_inc.F90"
 
-end module external_pot
+end module external_pot_m
 
 

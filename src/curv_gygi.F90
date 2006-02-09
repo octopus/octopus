@@ -22,29 +22,29 @@
 ! This module implements the curvilinear coordinates given in
 ! F. Gygi and G. Galli, PRB 52 R2229 (1996).
 
-module curv_gygi
-  use lib_oct_parser
-  use global
-  use messages
-  use datasets_mod
-  use units
-  use geometry
-  use simul_box
-  use lib_adv_alg
+module curv_gygi_m
+  use lib_oct_parser_m
+  use global_m
+  use messages_m
+  use datasets_m
+  use units_m
+  use geometry_m
+  use simul_box_m
+  use lib_adv_alg_m
 
   implicit none
 
-  type curv_gygi_type
+  type curv_gygi_t
     FLOAT :: A             ! local reduction in grid spacing is 1/(1+A)
     FLOAT :: alpha         ! range of enhacement of the resolution
     FLOAT :: beta          ! distance over which Euclidian coordinates are recovered
-  end type curv_gygi_type
+  end type curv_gygi_t
 
 contains
 
   ! ---------------------------------------------------------
   subroutine curv_gygi_init(cv)
-    type(curv_gygi_type), intent(out) :: cv
+    type(curv_gygi_t), intent(out) :: cv
 
     !%Variable CurvGygiA
     !%Type float
@@ -93,9 +93,9 @@ contains
 
   ! ---------------------------------------------------------
   subroutine curv_gygi_chi2x(sb, geo, cv, chi, x)
-    type(simul_box_type), intent(in)  :: sb
-    type(geometry_type),  intent(in)  :: geo
-    type(curv_gygi_type), intent(in)  :: cv
+    type(simul_box_t), intent(in)  :: sb
+    type(geometry_t),  intent(in)  :: geo
+    type(curv_gygi_t), intent(in)  :: cv
     FLOAT,                intent(in)  :: chi(:)  ! chi(sb%dim)
     FLOAT,                intent(out) :: x(:)    ! x(sb%dim)
 
@@ -166,9 +166,9 @@ contains
 
   ! ---------------------------------------------------------
   subroutine curv_gygi_jacobian(sb, geo, cv, x, chi, J, natoms)
-    type(simul_box_type), intent(in)  :: sb
-    type(geometry_type),  intent(in)  :: geo
-    type(curv_gygi_type), intent(in)  :: cv
+    type(simul_box_t), intent(in)  :: sb
+    type(geometry_t),  intent(in)  :: geo
+    type(curv_gygi_t), intent(in)  :: cv
     FLOAT,                intent(in)  :: x(:)    ! x(sb%dim)
     FLOAT,                intent(out) :: chi(:)  ! chi(sb%dim)
     FLOAT,                intent(out) :: J(:,:)  ! J(sb%dim,sb%dim), the Jacobian
@@ -208,4 +208,4 @@ contains
 
   end subroutine curv_gygi_jacobian
 
-end module curv_gygi
+end module curv_gygi_m

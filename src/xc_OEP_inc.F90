@@ -28,14 +28,14 @@
 
 ! ---------------------------------------------------------
 subroutine X(xc_oep_calc)(oep, xcs, apply_sic_pz, gr, h, st, vxc, ex, ec)
-  use xc_functl
+  use xc_functl_m
 
-  type(xc_oep_type),      intent(inout) :: oep
-  type(xc_type),          intent(in)    :: xcs
+  type(xc_oep_t),      intent(inout) :: oep
+  type(xc_t),          intent(in)    :: xcs
   logical,                intent(in)    :: apply_sic_pz
-  type(grid_type),        intent(inout) :: gr
-  type(hamiltonian_type), intent(inout) :: h
-  type(states_type),      intent(inout) :: st
+  type(grid_t),        intent(inout) :: gr
+  type(hamiltonian_t), intent(inout) :: h
+  type(states_t),      intent(inout) :: st
   FLOAT,                  intent(inout) :: vxc(:,:) !vxc(NP, st%d%nspin)
   FLOAT,                  intent(inout) :: ex, ec
 
@@ -118,12 +118,12 @@ end subroutine X(xc_OEP_calc)
 
 ! ---------------------------------------------------------
 subroutine X(xc_oep_solve) (gr, h, st, is, vxc, oep)
-  type(grid_type),        intent(inout) :: gr
-  type(hamiltonian_type), intent(inout) :: h
-  type(states_type),      intent(in)    :: st
+  type(grid_t),        intent(inout) :: gr
+  type(hamiltonian_t), intent(inout) :: h
+  type(states_t),      intent(in)    :: st
   integer,                intent(in)    :: is
   FLOAT,                  intent(inout) :: vxc(:) ! vxc(NP)
-  type(xc_oep_type),      intent(inout) :: oep
+  type(xc_oep_t),      intent(inout) :: oep
 
   integer :: iter, ist, ierr
   FLOAT :: vxc_bar, f

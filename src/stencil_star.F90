@@ -19,11 +19,11 @@
 
 #include "global.h"
 
-module stencil_star
-  use global
-  use messages
-  use math, only: weights
-  use nl_operator
+module stencil_star_m
+  use global_m
+  use messages_m
+  use math_m, only: weights
+  use nl_operator_m
 
   implicit none
 
@@ -105,7 +105,7 @@ contains
     integer,                intent(in)    :: dim
     integer,                intent(in)    :: order
     FLOAT,                  intent(in)    :: h(:)   ! h(dim)
-    type(nl_operator_type), intent(inout) :: lapl
+    type(nl_operator_t), intent(inout) :: lapl
 
     integer :: k, i, j, morder
     FLOAT, allocatable :: cc(:,:,:)
@@ -196,7 +196,7 @@ contains
   subroutine stencil_star_coeff_grad(order, h, grad)
     integer,                intent(in)    :: order
     FLOAT,                  intent(in)    :: h
-    type(nl_operator_type), intent(inout) :: grad
+    type(nl_operator_t), intent(inout) :: grad
 
     integer :: j, k, morder
     FLOAT, allocatable :: cc(:,:,:)
@@ -227,4 +227,4 @@ contains
     call pop_sub()
   end subroutine stencil_star_coeff_grad
 
-end module stencil_star
+end module stencil_star_m

@@ -19,59 +19,59 @@
 
 #include "global.h"
 
-module lcao
-  use global
-  use messages
-  use lib_oct
-  use lib_oct_gsl_spline
-  use lib_basic_alg
-  use lib_adv_alg
-  use functions
-  use mesh
-  use simul_box
-  use specie
-  use geometry
-  use states
-  use system
-  use hamiltonian
-  use grid
+module lcao_m
+  use global_m
+  use messages_m
+  use lib_oct_m
+  use lib_oct_gsl_spline_m
+  use lib_basic_alg_m
+  use lib_adv_alg_m
+  use functions_m
+  use mesh_m
+  use simul_box_m
+  use specie_m
+  use geometry_m
+  use states_m
+  use system_m
+  use hamiltonian_m
+  use grid_m
 
-  use output
+  use output_m
 
   implicit none
 
   private
   public ::          &
-    lcao_type,       &
+    lcao_t,          &
     lcao_init,       &
     lcao_wf,         &
     lcao_initial_wf, &
     lcao_end
 
-  type lcao_type
+  type lcao_t
     integer           :: state ! 0 => non-initialized;
                                ! 1 => initialized (k, s and v1 matrices filled)
-    type(states_type) :: st
+    type(states_t) :: st
 
     R_TYPE,  pointer  :: hamilt(:, :, :) ! hamilt stores the Hamiltonian in the LCAO subspace;
     R_TYPE,  pointer  :: s     (:, :, :) ! s is the overlap matrix;
     R_TYPE,  pointer  :: k     (:, :, :) ! k is the kinetic + spin orbit operator matrix;
     R_TYPE,  pointer  :: v     (:, :, :) ! v is the potential.
-  end type lcao_type
+  end type lcao_t
 
 contains
 
   ! ---------------------------------------------------------
   subroutine lcao_initial_wf(n, gr, psi, ispin, ik, err)
     integer,         intent(in)  :: n
-    type(grid_type), intent(in)  :: gr
+    type(grid_t), intent(in)  :: gr
     R_TYPE,          intent(out) :: psi(:, :)
     integer,         intent(in)  :: ispin
     integer,         intent(in)  :: ik
     integer,         intent(out) :: err
 
     integer :: norbs, ia, i, j, idim, k, wf_dim
-    type(specie_type), pointer :: s
+    type(specie_t), pointer :: s
     FLOAT :: x(calc_dim), r
 
     err = 0
@@ -116,12 +116,12 @@ contains
 
   ! ---------------------------------------------------------
   subroutine lcao_init(gr, lcao_data, st, h)
-    type(lcao_type),         intent(out)   :: lcao_data
-    type(grid_type), target, intent(inout) :: gr
-    type(states_type),       intent(in)    :: st
-    type(hamiltonian_type),  intent(in)    :: h
+    type(lcao_t),         intent(out)   :: lcao_data
+    type(grid_t), target, intent(inout) :: gr
+    type(states_t),       intent(in)    :: st
+    type(hamiltonian_t),  intent(in)    :: h
 
-    type(geometry_type), pointer :: geo
+    type(geometry_t), pointer :: geo
     integer :: norbs, ik, n1, n2, ia, n, ierr
     R_TYPE, allocatable :: hpsi(:,:)
 
@@ -198,7 +198,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine lcao_end(lcao_data, nst)
-    type(lcao_type), intent(inout) :: lcao_data
+    type(lcao_t), intent(inout) :: lcao_data
     integer,            intent(in) :: nst
 
     call push_sub('lcao.lcao_end')
@@ -221,11 +221,11 @@ contains
 
   ! ---------------------------------------------------------
   subroutine lcao_wf(lcao_data, st, m, sb, h, start)
-    type(lcao_type),        intent(inout) :: lcao_data
-    type(states_type),      intent(inout) :: st
-    type(mesh_type),        intent(in)    :: m
-    type(simul_box_type),   intent(in)    :: sb
-    type(hamiltonian_type), intent(in)    :: h
+    type(lcao_t),        intent(inout) :: lcao_data
+    type(states_t),      intent(inout) :: st
+    type(mesh_t),        intent(in)    :: m
+    type(simul_box_t),   intent(in)    :: sb
+    type(hamiltonian_t), intent(in)    :: h
     integer, optional,      intent(in)    :: start
 
     integer :: np, dim, nst, ik, n1, n2, idim, norbs, start_
@@ -286,4 +286,4 @@ contains
     call pop_sub()
   end subroutine lcao_wf
 
-end module lcao
+end module lcao_m

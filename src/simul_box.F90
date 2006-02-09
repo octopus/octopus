@@ -19,20 +19,20 @@
 
 #include "global.h"
 
-module simul_box
-  use global
-  use messages
-  use varinfo
-  use units
-  use datasets_mod
-  use lib_oct_parser
-  use geometry
+module simul_box_m
+  use global_m
+  use messages_m
+  use varinfo_m
+  use units_m
+  use datasets_m
+  use lib_oct_parser_m
+  use geometry_m
 
   implicit none
 
   private
   public ::                     &
-    simul_box_type,             &
+    simul_box_t,                &
     simul_box_init,             &
     simul_box_write_info,       &
     simul_box_is_periodic,      &
@@ -44,7 +44,7 @@ module simul_box
     MINIMUM        = 3,         &
     PARALLELEPIPED = 4
 
-  type simul_box_type
+  type simul_box_t
     integer  :: box_shape   ! 1->sphere, 2->cylinder, 3->sphere around each atom,
                             ! 4->parallelpiped (orthonormal, up to now).
 
@@ -64,15 +64,15 @@ module simul_box
     integer :: dim
     integer :: periodic_dim
 
-  end type simul_box_type
+  end type simul_box_t
 
 
 contains
 
   !--------------------------------------------------------------
   subroutine simul_box_init(sb, geo)
-    type(simul_box_type), intent(inout) :: sb
-    type(geometry_type),  intent(in)    :: geo
+    type(simul_box_t), intent(inout) :: sb
+    type(geometry_t),  intent(in)    :: geo
 
     ! some local stuff
     FLOAT :: def_h, def_rsize
@@ -380,7 +380,7 @@ contains
 
   !--------------------------------------------------------------
   subroutine simul_box_write_info(sb, iunit)
-    type(simul_box_type), intent(in) :: sb
+    type(simul_box_t), intent(in) :: sb
     integer,              intent(in) :: iunit
 
     character(len=15), parameter :: bs(4) = (/ &
@@ -437,8 +437,8 @@ contains
 
   !--------------------------------------------------------------
   logical function simul_box_in_box(sb, geo, x) result(in_box)
-    type(simul_box_type),  intent(in) :: sb
-    type(geometry_type),   intent(in) :: geo
+    type(simul_box_t),  intent(in) :: sb
+    type(geometry_t),   intent(in) :: geo
     FLOAT,                 intent(in) :: x(3) ! x(3)
 
     FLOAT, parameter :: DELTA_R = CNST(1e-12)
@@ -481,9 +481,9 @@ contains
 
   !--------------------------------------------------------------
   logical function simul_box_is_periodic(sb)
-    type(simul_box_type), intent(in) :: sb
+    type(simul_box_t), intent(in) :: sb
 
     simul_box_is_periodic = sb%periodic_dim > 0
   end function simul_box_is_periodic
 
-end module simul_box
+end module simul_box_m

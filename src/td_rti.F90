@@ -19,30 +19,30 @@
 
 #include "global.h"
 
-module td_rti
-  use global
-  use messages
-  use lib_oct_parser
-  use lib_basic_alg
-  use math
-  use mesh
-  use cube_function
-  use functions
-  use mesh_function
-  use states
-  use v_ks
-  use hamiltonian
-  use external_pot
-  use td_exp
-  use td_exp_split
-  use grid
-  use varinfo
+module td_rti_m
+  use global_m
+  use messages_m
+  use lib_oct_parser_m
+  use lib_basic_alg_m
+  use math_m
+  use mesh_m
+  use cube_function_m
+  use functions_m
+  use mesh_function_m
+  use states_m
+  use v_ks_m
+  use hamiltonian_m
+  use external_pot_m
+  use td_exp_m
+  use td_exp_split_m
+  use grid_m
+  use varinfo_m
 
   implicit none
 
   private
   public ::                   &
-    td_rti_type,              &
+    td_rti_t,                 &
     td_rti_init,              &
     td_rti_end,               &
     td_rti_run_zero_iter,     &
@@ -58,24 +58,24 @@ module td_rti
 
   FLOAT, parameter :: scf_threshold = CNST(1.0e-3)
 
-  type td_rti_type
+  type td_rti_t
     integer           :: method  ! which evolution method to use
-    type(td_exp_type) :: te      ! how to apply the propagator (e^{-i H \Delta t})
+    type(td_exp_t) :: te      ! how to apply the propagator (e^{-i H \Delta t})
 
     FLOAT, pointer :: v_old(:, :, :) ! storage of the KS potential of previous iterations
     FLOAT, pointer :: vmagnus(:, :, :) ! auxiliary function to store the Magnus potentials.
 
     type(zcf) :: cf              ! auxiliary cube for split operator methods
-  end type td_rti_type
+  end type td_rti_t
 
 
 contains
 
   ! ---------------------------------------------------------
   subroutine td_rti_init(gr, st, tr)
-    type(grid_type),   intent(in)    :: gr
-    type(states_type), intent(in)    :: st
-    type(td_rti_type), intent(inout) :: tr
+    type(grid_t),   intent(in)    :: gr
+    type(states_t), intent(in)    :: st
+    type(td_rti_t), intent(inout) :: tr
 
     !%Variable TDEvolutionMethod
     !%Type integer
@@ -219,7 +219,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine td_rti_end(tr)
-    type(td_rti_type), intent(inout) :: tr
+    type(td_rti_t), intent(inout) :: tr
 
     ASSERT(associated(tr%v_old)) ! sanity check
     deallocate(tr%v_old)         ! clean ols KS potentials
@@ -240,8 +240,8 @@ contains
 
   ! ---------------------------------------------------------
   subroutine td_rti_run_zero_iter(h, tr)
-    type(hamiltonian_type), intent(in)    :: h
-    type(td_rti_type),      intent(inout) :: tr
+    type(hamiltonian_t), intent(in)    :: h
+    type(td_rti_t),      intent(inout) :: tr
     tr%v_old(:, :, 2) = h%vhxc(:, :)
     tr%v_old(:, :, 3) = h%vhxc(:, :)
     tr%v_old(:, :, 1) = h%vhxc(:, :)
@@ -250,11 +250,11 @@ contains
 
   ! ---------------------------------------------------------
   subroutine td_rti_dt(ks, h, gr, st, tr, t, dt)
-    type(v_ks_type),        intent(inout) :: ks
-    type(hamiltonian_type), intent(inout) :: h
-    type(grid_type),        intent(inout) :: gr
-    type(states_type),      intent(inout) :: st
-    type(td_rti_type),      intent(inout) :: tr
+    type(v_ks_t),        intent(inout) :: ks
+    type(hamiltonian_t), intent(inout) :: h
+    type(grid_t),        intent(inout) :: gr
+    type(states_t),      intent(inout) :: st
+    type(td_rti_t),      intent(inout) :: tr
     FLOAT,                  intent(in)    :: t, dt
 
     integer :: is, iter
@@ -535,4 +535,4 @@ contains
 
   end subroutine td_rti_dt
 
-end module td_rti
+end module td_rti_m

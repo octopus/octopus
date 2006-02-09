@@ -19,20 +19,20 @@
 
 #include "global.h"
 
-module static_pol_lr
-  use global
-  use messages
-  use units
-  use mesh
-  use mesh_function
-  use system
-  use restart
-  use hamiltonian
-  use mix
-  use poisson
-  use linear_response
-  use io
-  use lib_oct_parser
+module static_pol_lr_m
+  use global_m
+  use messages_m
+  use units_m
+  use mesh_m
+  use mesh_function_m
+  use system_m
+  use restart_m
+  use hamiltonian_m
+  use mix_m
+  use poisson_m
+  use linear_response_m
+  use io_m
+  use lib_oct_parser_m
 
   implicit none
 
@@ -44,12 +44,12 @@ contains
 
   ! ---------------------------------------------------------
   subroutine static_pol_lr_run(sys, h, fromScratch)
-    type(system_type), target, intent(inout) :: sys
-    type(hamiltonian_type),    intent(inout) :: h
+    type(system_t), target, intent(inout) :: sys
+    type(hamiltonian_t),    intent(inout) :: h
     logical,                   intent(inout) :: fromScratch
 
-    type(lr_type), allocatable :: lr(:,:,:) ! lr(NDIM,NS,NFREQ)
-    type(grid_type),   pointer :: gr
+    type(lr_t), allocatable :: lr(:,:,:) ! lr(NDIM,NS,NFREQ)
+    type(grid_t),   pointer :: gr
 
     FLOAT :: pol(1:sys%gr%sb%dim, 1:sys%gr%sb%dim)
     FLOAT :: hpol(1:sys%gr%sb%dim, 1:sys%gr%sb%dim, 1:sys%gr%sb%dim)
@@ -233,9 +233,9 @@ contains
 
   ! ---------------------------------------------------------
   subroutine static(sys, h, lr, pol, hpol)
-    type(system_type),      intent(inout) :: sys
-    type(hamiltonian_type), intent(inout) :: h
-    type(lr_type),          intent(inout) :: lr(:,:) ! lr(NDIM,1,1)
+    type(system_t),      intent(inout) :: sys
+    type(hamiltonian_t), intent(inout) :: h
+    type(lr_t),          intent(inout) :: lr(:,:) ! lr(NDIM,1,1)
     FLOAT,                  intent(out)   :: pol(:,:)
     FLOAT,                  intent(out)   :: hpol(:,:,:)
 
@@ -380,9 +380,9 @@ contains
 
   ! ---------------------------------------------------------
   subroutine dynamic(sys, h, lr, pol, inw)
-    type(system_type),      intent(inout) :: sys
-    type(hamiltonian_type), intent(inout) :: h
-    type(lr_type),          intent(inout) :: lr(:,:,:) ! dim, nsigma(=2), nfreq(=1)
+    type(system_t),      intent(inout) :: sys
+    type(hamiltonian_t), intent(inout) :: h
+    type(lr_t),          intent(inout) :: lr(:,:,:) ! dim, nsigma(=2), nfreq(=1)
     FLOAT,                  intent(out)   :: pol(:,:)
     FLOAT,                  intent(in)    :: inw 
 
@@ -431,9 +431,9 @@ contains
 
   ! ---------------------------------------------------------
   subroutine get_response_e(sys, h, lr, dir, nsigma, omega)
-    type(system_type), target, intent(inout) :: sys
-    type(hamiltonian_type),    intent(inout) :: h
-    type(lr_type),             intent(inout) :: lr(:,:) !ndim,nsigma
+    type(system_t), target, intent(inout) :: sys
+    type(hamiltonian_t),    intent(inout) :: h
+    type(lr_t),             intent(inout) :: lr(:,:) !ndim,nsigma
     integer,                   intent(in)    :: dir 
     integer,                   intent(in)    :: nsigma 
     R_TYPE,                    intent(in)    :: omega
@@ -445,8 +445,8 @@ contains
     R_TYPE, allocatable :: a(:,:)
     logical :: finish(2)
 
-    type(mesh_type), pointer :: m
-    type(states_type), pointer :: st
+    type(mesh_t), pointer :: m
+    type(states_t), pointer :: st
 
     call push_sub('static_pol_lr.get_response_e')
 
@@ -644,4 +644,4 @@ contains
     
   end subroutine get_response_e
   
-end module static_pol_lr
+end module static_pol_lr_m

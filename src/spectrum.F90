@@ -20,23 +20,23 @@
 
 #include "global.h"
 
-module spectrum
-  use string
-  use global
-  use messages
-  use lib_oct_parser
-  use datasets_mod
-  use io
-  use units
-  use lib_adv_alg
-  use varinfo
+module spectrum_m
+  use string_m
+  use global_m
+  use messages_m
+  use lib_oct_parser_m
+  use datasets_m
+  use io_m
+  use units_m
+  use lib_adv_alg_m
+  use varinfo_m
 
   implicit none
 
   private
   public ::                        &
-    spec_type,                     &
-    kick_type,                     &
+    spec_t,                        &
+    kick_t,                        &
     spec_sh,                       &
     spectrum_init,                 &
     spectrum_cross_section,        &
@@ -58,23 +58,23 @@ module spectrum
     KICK_SPIN_MODE           = 1,  &
     KICK_SPIN_DENSITY_MODE   = 2
 
-  type spec_type
+  type spec_t
     FLOAT   :: start_time          ! start time for the transform
     FLOAT   :: end_time            ! when to stop the transform
     FLOAT   :: energy_step         ! step in energy mesh
     FLOAT   :: max_energy          ! maximum of energy mesh
     integer :: damp                ! Damp type (none, exp or pol)
     FLOAT   :: damp_factor         ! factor used in damping
-  end type spec_type
+  end type spec_t
 
-  type kick_type
+  type kick_t
     FLOAT             :: pol(3, 3)
     integer           :: pol_dir
     integer           :: delta_strength_mode
     FLOAT             :: delta_strength
     integer           :: pol_equiv_axis
     FLOAT             :: wprime(3)
-  end type kick_type
+  end type kick_t
 
   type spec_sh
     ! input
@@ -89,7 +89,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine spectrum_init(s)
-    type(spec_type), intent(inout) :: s
+    type(spec_t), intent(inout) :: s
 
     call push_sub('spectrum.spectrum_init')
 
@@ -173,7 +173,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine kick_init(k, nspin)
-    type(kick_type), intent(out) :: k
+    type(kick_t), intent(out) :: k
     integer,         intent(in)  :: nspin
     integer(POINTER_SIZE) :: blk
     integer :: n, i, j
@@ -326,7 +326,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine spectrum_cross_section_tensor(s, out_file, in_file)
-    type(spec_type),  intent(inout) :: s
+    type(spec_t),  intent(inout) :: s
     integer, intent(in)    :: out_file
     integer, intent(in)    :: in_file(:)
 
@@ -335,7 +335,7 @@ contains
     FLOAT, allocatable :: sigma(:, :, :, :), sigmap(:, :, :, :), sigmau(:, :, :),  &
       sigmav(:, :, :), sigmaw(:, :, :), p(:, :), ip(:, :)
     FLOAT :: dw, dump, average, anisotropy
-    type(kick_type) :: kick
+    type(kick_t) :: kick
 
     call push_sub('spectrum.spectrum_cross_section_tensor')
 
@@ -521,12 +521,12 @@ contains
   subroutine spectrum_cross_section(in_file, out_file, s)
     integer, intent(in)    :: in_file
     integer, intent(in)    :: out_file
-    type(spec_type),  intent(inout) :: s
+    type(spec_t),  intent(inout) :: s
 
     character(len=20) :: header_string
     integer :: nspin, lmax, time_steps, is, ie, ntiter, i, j, jj, isp, no_e, k
     FLOAT   :: dt, dump, x, w, ewsum, polsum
-    type(kick_type) :: kick
+    type(kick_t) :: kick
     FLOAT, allocatable :: dipole(:, :, :), sigma(:, :, :), dumpa(:), sf(:, :)
 
     call push_sub('spectrum.spectrum_cross_section')
@@ -572,7 +572,7 @@ contains
     sigma = M_ZERO
     sf    = M_ZERO
 
-    ! Gets the damping function (here because otherwise it is awfully slow in "pol" mode...)
+    ! Gets the damping function (here because otherwise it is awfully slow in "pol" mode...)_m
     ALLOCATE(dumpa(is:ie), (ie-is+1))
     do j = is, ie
       jj = j - is
@@ -678,11 +678,11 @@ contains
   subroutine spectrum_rotatory_strength(in_file, out_file, s)
     integer, intent(in) :: in_file
     integer, intent(in) :: out_file
-    type(spec_type), intent(inout) :: s
+    type(spec_t), intent(inout) :: s
 
     integer :: i, is, ie, ntiter, j, jj, k, time_steps, no_e, nspin
     FLOAT :: dump, dt, w
-    type(kick_type) :: kick
+    type(kick_t) :: kick
     CMPLX :: z, sum1, sum2
     CMPLX, pointer :: sp(:)
     FLOAT, allocatable :: dumpa(:)
@@ -773,12 +773,12 @@ contains
   ! ---------------------------------------------------------
   subroutine spectrum_hs_from_mult(out_file, s, sh)
     character(len=*), intent(in) :: out_file
-    type(spec_type), intent(inout) :: s
+    type(spec_t), intent(inout) :: s
     type(spec_sh), intent(inout) :: sh
 
     integer :: i, j, iunit, nspin, time_steps, is, ie, ntiter, lmax
     FLOAT :: dt, dump
-    type(kick_type) :: kick
+    type(kick_t) :: kick
     FLOAT, allocatable :: d(:,:)
     CMPLX :: c
     CMPLX, allocatable :: dipole(:), ddipole(:)
@@ -863,7 +863,7 @@ contains
   ! ---------------------------------------------------------
   subroutine spectrum_hs_from_acc(out_file, s, sh)
     character(len=*), intent(in) :: out_file
-    type(spec_type), intent(inout) :: s
+    type(spec_t), intent(inout) :: s
     type(spec_sh), intent(inout) :: sh
 
     integer :: i, j, iunit, time_steps, is, ie, ntiter
@@ -928,7 +928,7 @@ contains
   subroutine spectrum_angular_info(iunit, nspin, kick, time_steps, dt)
     integer, intent(in)          :: iunit
     integer, intent(out)         :: nspin, time_steps
-    type(kick_type), intent(out) :: kick
+    type(kick_t), intent(out) :: kick
     FLOAT, intent(out)           :: dt
 
     integer :: j
@@ -974,7 +974,7 @@ contains
     integer, intent(in)  :: iunit
     integer, intent(out) :: nspin
     integer, intent(out) :: lmax
-    type(kick_type), intent(out) :: kick
+    type(kick_t), intent(out) :: kick
     integer, intent(out) :: time_steps
     FLOAT,   intent(out) :: dt
 
@@ -1021,7 +1021,7 @@ contains
   subroutine spectrum_cross_section_info(iunit, nspin, kick, energy_steps, dw)
     integer, intent(in)  :: iunit
     integer, intent(out) :: nspin
-    type(kick_type), intent(out) :: kick
+    type(kick_t), intent(out) :: kick
     integer, intent(out) :: energy_steps
     FLOAT,   intent(out) :: dw
 
@@ -1129,4 +1129,4 @@ contains
     call pop_sub()
   end subroutine spectrum_fix_time_limits
 
-end module spectrum
+end module spectrum_m

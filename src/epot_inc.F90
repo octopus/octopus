@@ -25,8 +25,8 @@
 ! \hat{p} |psi> = \sum_{ij} p%uvu(i,j) |p%a(:, i)><p%b(:, j)|psi>
 !------------------------------------------------------------------------------
 subroutine X(project)(mesh, p, n_projectors, psi, ppsi, periodic, ik)
-  type(mesh_type),      intent(in)    :: mesh
-  type(projector_type), intent(in)    :: p(:)
+  type(mesh_t),      intent(in)    :: mesh
+  type(projector_t), intent(in)    :: p(:)
   integer,              intent(in)    :: n_projectors
   R_TYPE,               intent(in)    :: psi(:)  !psi(1:mesh%np)
   R_TYPE,               intent(inout) :: ppsi(:) !ppsi(1:mesh%np)
@@ -91,15 +91,15 @@ subroutine X(project)(mesh, p, n_projectors, psi, ppsi, periodic, ik)
 end subroutine X(project)
 
 subroutine X(epot_forces) (gr, ep, st, t)
-  type(grid_type), target, intent(in)    :: gr
-  type(epot_type),     intent(in)    :: ep
-  type(states_type),   intent(in)    :: st
+  type(grid_t), target, intent(in) :: gr
+  type(epot_t),     intent(in)     :: ep
+  type(states_t),   intent(in)     :: st
   FLOAT,     optional, intent(in)    :: t
 
-  type(geometry_type), pointer :: geo
+  type(geometry_t), pointer :: geo
   integer :: i, j, l, idim, ist, ik, ivnl
   FLOAT :: d, r, zi, zj, x(3)
-  type(atom_type), pointer :: atm
+  type(atom_t), pointer :: atm
   R_TYPE, allocatable :: ppsi(:, :)
 
 #if defined(HAVE_MPI)

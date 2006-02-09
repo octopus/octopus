@@ -19,31 +19,31 @@
 
 #include "global.h"
 
-module v_ks
-  use global
-  use mpi_mod
-  use messages
-  use datasets_mod
-  use profiling_mod
-  use states
-  use lib_oct_parser
-  use io
-  use lib_basic_alg
-  use functions
-  use mesh
-  use grid
-  use mesh_function
-  use poisson
-  use lib_xc
-  use xc
-  use xc_OEP
-  use hamiltonian
-  use varinfo
+module v_ks_m
+  use global_m
+  use mpi_m
+  use messages_m
+  use datasets_m
+  use profiling_m
+  use states_m
+  use lib_oct_parser_m
+  use io_m
+  use lib_basic_alg_m
+  use functions_m
+  use mesh_m
+  use grid_m
+  use mesh_function_m
+  use poisson_m
+  use lib_xc_m
+  use xc_m
+  use xc_OEP_m
+  use hamiltonian_m
+  use varinfo_m
   implicit none
 
   private
   public ::             &
-    v_ks_type,          &
+    v_ks_t,             &
     v_ks_init,          &
     v_ks_end,           &
     v_ks_write_info,    &
@@ -55,23 +55,23 @@ module v_ks
     sic_pz     = 2,     &  ! SIC a la Perdew Zunger (OEP way)
     sic_amaldi = 3         ! Amaldi correction term
 
-  type v_ks_type
+  type v_ks_t
     logical :: ip_app
 
     integer           :: xc_family  ! the xc stuff
     integer           :: sic_type   ! what kind of Self Interaction Correction to apply
-    type(xc_type)     :: xc
-    type(xc_OEP_type) :: oep
-  end type v_ks_type
+    type(xc_t)     :: xc
+    type(xc_OEP_t) :: oep
+  end type v_ks_t
 
 
 contains
 
   ! ---------------------------------------------------------
   subroutine v_ks_init(gr, ks, d)
-    type(v_ks_type),        intent(out)   :: ks
-    type(grid_type),        intent(inout) :: gr
-    type(states_dim_type),  pointer       :: d
+    type(v_ks_t),        intent(out)   :: ks
+    type(grid_t),        intent(inout) :: gr
+    type(states_dim_t),  pointer       :: d
 
     call push_sub('v_ks.v_ks_init');
 
@@ -139,7 +139,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine v_ks_end(ks)
-    type(v_ks_type), intent(inout) :: ks
+    type(v_ks_t), intent(inout) :: ks
 
     call push_sub('v_ks.v_ks_end');
 
@@ -156,7 +156,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine v_ks_write_info(ks, iunit)
-    type(v_ks_type), intent(in) :: ks
+    type(v_ks_t), intent(in) :: ks
     integer,         intent(in) :: iunit
 
     call push_sub('v_ks.v_ks_write_info');
@@ -186,4 +186,4 @@ contains
 #include "complex.F90"
 #include "v_ks_inc.F90"
 
-end module v_ks
+end module v_ks_m

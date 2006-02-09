@@ -18,7 +18,7 @@
 !! $Id$
 
 subroutine poisson1D_solve(m, pot, rho)
-  type(mesh_type), intent(in) :: m
+  type(mesh_t), intent(in) :: m
   FLOAT, intent(out) :: pot(m%np)
   FLOAT, intent(in)  :: rho(m%np)
 

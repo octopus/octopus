@@ -19,13 +19,13 @@
 
 #include "global.h"
 
-module poisson_corrections
-  use global
-  use lib_oct
-  use derivatives
-  use mesh
-  use mesh_function
-  use messages
+module poisson_corrections_m
+  use global_m
+  use lib_oct_m
+  use derivatives_m
+  use mesh_m
+  use mesh_function_m
+  use messages_m
 
   implicit none
 
@@ -42,8 +42,8 @@ module poisson_corrections
     get_multipoles, &
     op, opt, dotp
 
-  type(der_discr_type), pointer :: der_pointer
-  type(mesh_type),      pointer :: mesh_pointer
+  type(der_discr_t), pointer :: der_pointer
+  type(mesh_t),      pointer :: mesh_pointer
 
   integer :: maxl
   FLOAT, allocatable :: phi(:, :)
@@ -56,7 +56,7 @@ contains
   ! ---------------------------------------------------------
   subroutine correct_rho(m, ml, rho, rho_corrected, vh_correction)
     implicit none
-    type(mesh_type), intent(in)  :: m
+    type(mesh_t), intent(in)  :: m
     integer,         intent(in)  :: ml
     FLOAT,           intent(in)  :: rho(:)
     FLOAT,           intent(out) :: rho_corrected(:)
@@ -105,7 +105,7 @@ contains
   ! ---------------------------------------------------------
   subroutine get_multipoles(m, rho, ml, mult)
     implicit none
-    type(mesh_type), intent(in)  :: m
+    type(mesh_t), intent(in)  :: m
     FLOAT,           intent(in)  :: rho(:)  ! rho(m%np)
     integer,         intent(in)  :: ml
     FLOAT,           intent(out) :: mult((ml+1)**2)
@@ -129,7 +129,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine build_phi(m)
-    type(mesh_type), intent(in) :: m
+    type(mesh_t), intent(in) :: m
 
     FLOAT :: alpha, beta, gamma, ylm, r, x(3)
     integer :: i, l, add_lm, lldfac, j, mm
@@ -171,7 +171,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine build_aux(m)
-    type(mesh_type), intent(in) :: m
+    type(mesh_t), intent(in) :: m
 
     FLOAT :: ylm, r, x(3)
     integer :: i, l, add_lm, mm
@@ -233,4 +233,4 @@ contains
   end subroutine opt
 
 
-end module poisson_corrections
+end module poisson_corrections_m

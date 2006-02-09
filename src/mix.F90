@@ -19,22 +19,22 @@
 
 #include "global.h"
 
-module mix
-  use global
-  use messages
-  use datasets_mod
-  use mesh
-  use mesh_function
-  use lib_oct_parser
-  use lib_basic_alg
-  use lib_adv_alg
-  use varinfo
+module mix_m
+  use global_m
+  use messages_m
+  use datasets_m
+  use mesh_m
+  use mesh_function_m
+  use lib_oct_parser_m
+  use lib_basic_alg_m
+  use lib_adv_alg_m
+  use varinfo_m
 
   implicit none
 
   private
   public ::                     &
-    mix_type,                   &
+    mix_t,                      &
     mix_init,                   &
     mix_end,                    &
     mixing
@@ -44,7 +44,7 @@ module mix
     MIX_GRPULAY = 1,            &
     MIX_BROYDEN = 2
 
-  type mix_type
+  type mix_t
     private
     integer  :: type_of_mixing
 
@@ -58,14 +58,14 @@ module mix
     FLOAT, pointer :: vin_old(:, :, :)
 
     integer :: last_ipos
-  end type mix_type
+  end type mix_t
 
 contains
 
   ! ---------------------------------------------------------
   subroutine mix_init(smix, m, d2, d3, def_)
-    type(mix_type),    intent(out) :: smix
-    type(mesh_type),   intent(in)  :: m
+    type(mix_t),    intent(out) :: smix
+    type(mesh_t),   intent(in)  :: m
     integer,           intent(in)  :: d2, d3
     integer, optional, intent(in)  :: def_
 
@@ -148,7 +148,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine mix_end(smix)
-    type(mix_type), intent(inout) :: smix
+    type(mix_t), intent(inout) :: smix
     call push_sub('mix.mix_end')
 
     if (associated(smix%df))      deallocate(smix%df)
@@ -162,8 +162,8 @@ contains
 
   ! ---------------------------------------------------------
   subroutine mixing(smix, m, iter, d2, d3, vin, vout, vnew)
-    type(mix_type), intent(inout) :: smix
-    type(mesh_type), intent(in)   :: m
+    type(mix_t), intent(inout) :: smix
+    type(mesh_t), intent(in)   :: m
     integer,        intent(in)    :: iter, d2, d3
     FLOAT,          intent(in)    :: vin(:, :, :), vout(:, :, :)
     FLOAT,          intent(out)   :: vnew(:, :, :)
@@ -191,7 +191,7 @@ contains
   ! ---------------------------------------------------------
   subroutine mixing_linear(alpha, m, vin, vout, vnew)
     FLOAT,   intent(in)  :: alpha
-    type(mesh_type), intent(in) :: m
+    type(mesh_t), intent(in) :: m
     FLOAT,   intent(in)  :: vin(:, :, :), vout(:, :, :)
     FLOAT,   intent(out) :: vnew(:, :, :)
 
@@ -202,8 +202,8 @@ contains
 
   ! ---------------------------------------------------------
   subroutine mixing_broyden(smix, m, d2, d3, vin, vout, vnew, iter)
-    type(mix_type), intent(inout) :: smix
-    type(mesh_type), intent(in)   :: m
+    type(mix_t), intent(inout) :: smix
+    type(mesh_t), intent(in)   :: m
     integer,        intent(in)    :: d2, d3, iter
     FLOAT,          intent(in)    :: vin(:, :, :), vout(:, :, :)
     FLOAT,          intent(out)   :: vnew(:, :, :)
@@ -262,7 +262,7 @@ contains
   ! ---------------------------------------------------------
   subroutine broyden_extrapolation(alpha, m, d2, d3, vin, vnew, iter_used, f, df, dv)
     FLOAT,   intent(in)         :: alpha
-    type(mesh_type), intent(in) :: m
+    type(mesh_t), intent(in) :: m
     integer, intent(in)         :: d2, d3, iter_used
     FLOAT,   intent(in)         :: vin(:, :, :), f(:, :, :)
     FLOAT,   intent(in)         :: df(:, :, :, :), dv(:, :, :, :)
@@ -330,8 +330,8 @@ contains
   ! Guaranteed-reduction Pulay
   ! ---------------------------------------------------------
   subroutine mixing_grpulay(smix, m, d2, d3, vin, vout, vnew, iter)
-    type(mix_type), intent(inout) :: smix
-    type(mesh_type), intent(in)   :: m
+    type(mix_t), intent(inout) :: smix
+    type(mesh_t), intent(in)   :: m
     integer,        intent(in)    :: d2, d3
     integer,        intent(in)    :: iter
     FLOAT,          intent(in)    :: vin(:, :, :), vout(:, :, :)
@@ -362,7 +362,7 @@ contains
       ! we need the output vector for vout. So lets do vnew = vout to get that information
       vnew = vout
     case (0)
-      ! Store df and dv from current iteration in arrays df and dv so that we can use them
+      ! Store df and dv from current iteration in arrays df and dv so that we can use them_m
       ! for the extrapolation. Next iterations they will be lost.
       ipos = mod(smix%last_ipos, smix%ns + 1) + 1
       call lalg_copy(m%np, d2, d3, f(:, :, :), smix%df(:, :, :, ipos))
@@ -385,7 +385,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine pulay_extrapolation(m, d2, d3, vin, vout, vnew, iter_used, f, df, dv)
-    type(mesh_type), intent(in) :: m
+    type(mesh_t), intent(in) :: m
     integer, intent(in) :: d2, d3
     integer, intent(in)   :: iter_used
     FLOAT, intent(in)  :: vin(:, :, :), vout(:, :, :), f(:, :, :), df(:, :, :, :), dv(:, :, :, :)
@@ -437,4 +437,4 @@ contains
 
   end subroutine pulay_extrapolation
 
-end module mix
+end module mix_m

@@ -19,10 +19,10 @@
 
 #include "global.h"
 
-module stencil_starplus
-  use global
-  use messages
-  use nl_operator
+module stencil_starplus_m
+  use global_m
+  use messages_m
+  use nl_operator_m
 
   private
   public ::                     &
@@ -359,4 +359,4 @@ contains
     call pop_sub()
   end subroutine stencil_starplus_pol_grad
 
-end module stencil_starplus
+end module stencil_starplus_m

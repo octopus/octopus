@@ -17,11 +17,11 @@
 !!
 !! $Id$
 
-module pulpo
-  use io
-  use global
-  use messages
-  use lib_oct
+module pulpo_m
+  use io_m
+  use global_m
+  use messages_m
+  use lib_oct_m
 
   private
   public :: pulpo_print
@@ -41,4 +41,4 @@ contains
     call write_info(2)
 
   end subroutine pulpo_print
-end module pulpo
+end module pulpo_m

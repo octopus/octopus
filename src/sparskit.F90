@@ -19,17 +19,17 @@
 
 #include "global.h"
 
-module sparskit
-  use global
-  use messages
-  use datasets_mod
-  use lib_oct_parser
+module sparskit_m
+  use global_m
+  use messages_m
+  use datasets_m
+  use lib_oct_parser_m
 
   implicit none
 
   private
   public ::                      &
-    sparskit_solver_type,        &
+    sparskit_solver_t,           &
     dsparskit_solver_init,       &
     dsparskit_solver_run,        &
     dsparskit_solver_end,        &
@@ -76,7 +76,7 @@ module sparskit
 
   FLOAT, allocatable   :: sk_work(:), sk_b(:), sk_y(:)
 
-  type sparskit_solver_type
+  type sparskit_solver_t
     integer :: size                 ! size of the linear system
     integer :: solver_type          ! which solver to use
     integer :: krylov_size          ! size of the Krylov subspace (used for some solvers)
@@ -88,7 +88,7 @@ module sparskit
 
     integer :: ipar(16)             ! integer parameter array for the reverse communication protocol
     FLOAT   :: fpar(16)             ! floating-point parameter array for the reverse communication protocol
-  end type sparskit_solver_type
+  end type sparskit_solver_t
 
 
 contains
@@ -103,13 +103,13 @@ contains
 #include "sparskit_inc.F90"
 
 
-end module sparskit
+end module sparskit_m
 
 
 ! ---------------------------------------------------------
 FLOAT function distdot(n,x,ix,y,iy)
-  use blas
-  !  use lib_basic_alg
+  use blas_m
+  !  use lib_basic_alg_m
 
   integer, intent(in) :: n, ix, iy
   FLOAT, intent(in)   :: x, y

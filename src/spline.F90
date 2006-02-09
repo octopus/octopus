@@ -20,7 +20,7 @@
 #include "global.h"
 
 !/*----------------------------------------------------------------------------
-! This module contains a data type (loct_spline_type) to contain 1D functions,
+! This module contains a data type (loct_spline_t) to contain 1D functions,
 ! along with a series of procedures to manage them (to define them, to obtain
 ! its values, to operate on them, etc). The internal representation of the
 ! functions is done through cubic splines, handled by the GSL library. For
@@ -36,14 +36,14 @@
 !
 ! [*] DATA TYPE:
 !     To define a spline function:
-!     type(loct_spline_type) :: f
+!     type(loct_spline_t) :: f
 !
 ! [1] INITIALIZATION:
 !     Before using any function, one should initialize it:
 !
 !     Interface:
 !     subroutine loct_spline_init(spl)
-!        type(loct_spline_type), intent(out) :: spl [or spl(:) or spl(:, :)]
+!        type(loct_spline_t), intent(out) :: spl [or spl(:) or spl(:, :)]
 !     end subroutine loct_spline_init
 !
 !     Usage:
@@ -54,11 +54,11 @@
 !
 !     Interface:
 !     subroutine loct_spline_end(spl)
-!        type(loct_spline_type), intent(inout) :: spl [or spl(:) or spl(:, :)]
+!        type(loct_spline_t), intent(inout) :: spl [or spl(:) or spl(:, :)]
 !     end subroutine loct_spline_end
 !
 !     Usage
-!     type(loct_spline_type) :: f
+!     type(loct_spline_t) :: f
 !     call loct_spline_end(f)
 !
 ! [3] TO DEFINE A FUNCTION:
@@ -68,7 +68,7 @@
 !     subroutine loct_spline_fit(n, x, y, spl)
 !        integer, intent(in) :: nrc
 !        real(X), intent(in) :: x(n), y(n)
-!        type(loct_spline_type), intent(out) :: spl
+!        type(loct_spline_t), intent(out) :: spl
 !     end subroutine spline_fit8
 !
 !     (X may be 4 or eight, for single or double precision)
@@ -84,7 +84,7 @@
 !     Interface:
 !
 !     real(8) function loct_splint(spl, x)
-!       type(loct_spline_type), intent(in) :: spl
+!       type(loct_spline_t), intent(in) :: spl
 !       real(8), intent(in) :: x
 !     end function loct_splint
 !
@@ -101,8 +101,8 @@
 !
 !     Interface:
 !     subroutine loct_spline_sum(spl1, spl2, splsum)
-!       type(loct_spline_type), intent(in)  :: spl1, spl2
-!       type(loct_spline_type), intent(out) :: splsum
+!       type(loct_spline_t), intent(in)  :: spl1, spl2
+!       type(loct_spline_t), intent(out) :: splsum
 !     end subroutine loct_spline_sum
 !
 !     Usage:
@@ -118,7 +118,7 @@
 !
 !     Interface:
 !     subroutine loct_spline_times(a, spl)
-!       type(loct_spline_type), intent(inout)  :: spl
+!       type(loct_spline_t), intent(inout)  :: spl
 !       real(8), intent(in) :: a
 !     end subroutine loct_spline_times
 !
@@ -145,7 +145,7 @@
 !
 !     Interface:
 !     real(8) function loct_spline_dotp(spl1, spl2)
-!       type(loct_spline_type), intent(in) :: spl1, spl2
+!       type(loct_spline_t), intent(in) :: spl1, spl2
 !     end function loct_spline_dotp
 !
 ! Note: The following routines, loct_spline_3dft, loct_spline_cut and loct_spline_filter,
@@ -169,8 +169,8 @@
 !
 !     Interface:
 !     subroutine loct_spline_3dft(spl, splw, gmax)
-!       type(loct_spline_type), intent(in)    :: spl
-!       type(loct_spline_type), intent(inout) :: splw
+!       type(loct_spline_t), intent(in)    :: spl
+!       type(loct_spline_t), intent(inout) :: splw
 !       real(8), intent(in), optional :: gmax
 !     end subroutine loct_spline_3dft
 !
@@ -183,7 +183,7 @@
 !
 !     Interface:
 !     subroutine loct_spline_cut(spl, cutoff, beta)
-!       type(loct_spline_type), intent(in) :: spl
+!       type(loct_spline_t), intent(in) :: spl
 !       real(8), intent(in) :: cutoff, beta
 !     end subroutine loct_spline_cut
 !
@@ -199,7 +199,7 @@
 !
 !     Interface:
 !     subroutine loct_spline_filter(spl, fs, rs)
-!       type(loct_spline_type), intent(inout) :: spl
+!       type(loct_spline_t), intent(inout) :: spl
 !       real(8), intent(in), optional :: fs(2)
 !       real(8), intent(in), optional :: rs(2)
 !     end subroutine loct_spline_filter
@@ -210,22 +210,22 @@
 !
 !     Interface:
 !     subroutine loct_spline_print(spl, iunit)
-!       type(loct_spline_type), intent(in) :: spl [ or spl(:) or spl(:, :)]
+!       type(loct_spline_t), intent(in) :: spl [ or spl(:) or spl(:, :)]
 !       integer, intent(in) :: iunit
 !     end subroutine loct_spline_print
 !
 ! [14] DERIVATE A FUNCTION:
 !
 !----------------------------------------------------------------------------*/!
-module lib_oct_gsl_spline
-  use lib_oct
-  use messages
+module lib_oct_gsl_spline_m
+  use lib_oct_m
+  use messages_m
   implicit none
 
   ! Define the which routines can be seen from the outside
   private
   public ::               &
-    loct_spline_type,     & ! [*]
+    loct_spline_t,        & ! [*]
     loct_spline_init,     & ! [1]
     loct_spline_end,      & ! [2]
     loct_spline_fit,      & ! [3]
@@ -242,9 +242,9 @@ module lib_oct_gsl_spline
     loct_spline_der
 
   ! the basic spline datatype
-  type loct_spline_type
+  type loct_spline_t
     integer(POINTER_SIZE) :: spl, acc
-  end type loct_spline_type
+  end type loct_spline_t
 
   ! Both the filling of the fuction, and the retrieval of the values
   ! may be done using single or double precision values.
@@ -334,12 +334,12 @@ module lib_oct_gsl_spline
 contains
 
   subroutine loct_spline_init_0(spl)
-    type(loct_spline_type), intent(out) :: spl
+    type(loct_spline_t), intent(out) :: spl
     spl%spl = 0; spl%acc = 0
   end subroutine loct_spline_init_0
 
   subroutine loct_spline_init_1(spl)
-    type(loct_spline_type), intent(out) :: spl(:)
+    type(loct_spline_t), intent(out) :: spl(:)
     integer :: i
     do i = 1, size(spl)
       call loct_spline_init_0(spl(i))
@@ -347,7 +347,7 @@ contains
   end subroutine loct_spline_init_1
 
   subroutine loct_spline_init_2(spl)
-    type(loct_spline_type), intent(out) :: spl(:, :)
+    type(loct_spline_t), intent(out) :: spl(:, :)
     integer :: i, j
     do i = 1, size(spl, 1)
       do j = 1, size(spl, 2)
@@ -357,7 +357,7 @@ contains
   end subroutine loct_spline_init_2
 
   subroutine loct_spline_end_0(spl)
-    type(loct_spline_type), intent(inout) :: spl
+    type(loct_spline_t), intent(inout) :: spl
     if(spl%spl.ne.0 .and. spl%acc.ne.0) then
       call oct_spline_end(spl%spl, spl%acc)
     end if
@@ -365,7 +365,7 @@ contains
   end subroutine loct_spline_end_0
 
   subroutine loct_spline_end_1(spl)
-    type(loct_spline_type), intent(inout) :: spl(:)
+    type(loct_spline_t), intent(inout) :: spl(:)
     integer :: i
     do i = 1, size(spl)
       call loct_spline_end_0(spl(i))
@@ -373,7 +373,7 @@ contains
   end subroutine loct_spline_end_1
 
   subroutine loct_spline_end_2(spl)
-    type(loct_spline_type), intent(inout) :: spl(:, :)
+    type(loct_spline_t), intent(inout) :: spl(:, :)
     integer :: i, j
     do i = 1, size(spl, 1)
       do j = 1, size(spl, 2)
@@ -385,14 +385,14 @@ contains
   subroutine spline_fit8(nrc, rofi, ffit, spl)
     integer, intent(in) :: nrc
     real(8), intent(in) :: ffit(nrc), rofi(nrc)
-    type(loct_spline_type), intent(out) :: spl
+    type(loct_spline_t), intent(out) :: spl
     call oct_spline_fit(nrc, rofi(1), ffit(1), spl%spl, spl%acc)
   end subroutine spline_fit8
 
   subroutine spline_fit4(nrc, rofi, ffit, spl)
     integer, intent(in) :: nrc
     real(4), intent(in) :: rofi(nrc), ffit(nrc)
-    type(loct_spline_type), intent(out) :: spl
+    type(loct_spline_t), intent(out) :: spl
 
     real(8), allocatable :: rofi8(:), ffit8(:)
 
@@ -405,22 +405,22 @@ contains
   end subroutine spline_fit4
 
   real(8) function splint8(spl, x)
-    type(loct_spline_type), intent(in) :: spl
+    type(loct_spline_t), intent(in) :: spl
     real(8), intent(in) :: x
 
     splint8 = oct_spline_eval(x, spl%spl, spl%acc)
   end function splint8
 
   real(4) function splint4(spl, x)
-    type(loct_spline_type), intent(in) :: spl
+    type(loct_spline_t), intent(in) :: spl
     real(4), intent(in) :: x
 
     splint4 = real(oct_spline_eval(real(x, kind=8), spl%spl, spl%acc), kind=4)
   end function splint4
 
   subroutine loct_spline_sum(spl1, spl2, splsum)
-    type(loct_spline_type), intent(in)  :: spl1, spl2
-    type(loct_spline_type), intent(out) :: splsum
+    type(loct_spline_t), intent(in)  :: spl1, spl2
+    type(loct_spline_t), intent(out) :: splsum
     integer :: npoints, i
 
     real(8), allocatable :: x(:), y(:), y2(:)
@@ -446,7 +446,7 @@ contains
 
   subroutine loct_spline_times(a, spl)
     real(8), intent(in) :: a
-    type(loct_spline_type), intent(inout)  :: spl
+    type(loct_spline_t), intent(inout)  :: spl
 
     integer :: npoints, i
     real(8), allocatable :: x(:), y(:)
@@ -466,7 +466,7 @@ contains
   end subroutine loct_spline_times
 
   real(8) function loct_spline_integral_full(spl) result(res)
-    type(loct_spline_type), intent(in) :: spl
+    type(loct_spline_t), intent(in) :: spl
     integer :: npoints
     real(8), allocatable :: x(:)
 
@@ -479,15 +479,15 @@ contains
   end function loct_spline_integral_full
 
   real(8) function loct_spline_integral_limits(spl, a, b) result(res)
-    type(loct_spline_type), intent(in) :: spl
+    type(loct_spline_t), intent(in) :: spl
     real(8), intent(in) :: a, b
     res = oct_spline_eval_integ(spl%spl, a, b, spl%acc)
   end function loct_spline_integral_limits
 
   real(8) function loct_spline_dotp(spl1, spl2) result (res)
-    type(loct_spline_type), intent(in) :: spl1, spl2
+    type(loct_spline_t), intent(in) :: spl1, spl2
 
-    type(loct_spline_type) :: aux
+    type(loct_spline_t) :: aux
     integer :: npoints, i
     real(8), allocatable :: x(:), y(:)
 
@@ -506,11 +506,11 @@ contains
   end function loct_spline_dotp
 
   subroutine loct_spline_3dft(spl, splw, gmax)
-    type(loct_spline_type), intent(in)    :: spl
-    type(loct_spline_type), intent(inout) :: splw
+    type(loct_spline_t), intent(in)    :: spl
+    type(loct_spline_t), intent(inout) :: splw
     real(8), intent(in), optional :: gmax
 
-    type(loct_spline_type) :: aux
+    type(loct_spline_t) :: aux
     real(8) :: g, dg
     integer :: np
     integer :: npoints, i, j
@@ -567,12 +567,12 @@ contains
   end subroutine loct_spline_3dft
 
   subroutine loct_spline_besselft(spl, splw, l, gmax)
-    type(loct_spline_type), intent(in)    :: spl
-    type(loct_spline_type), intent(inout) :: splw
+    type(loct_spline_t), intent(in)    :: spl
+    type(loct_spline_t), intent(inout) :: splw
     integer, intent(in) :: l
     real(8), intent(in), optional :: gmax
 
-    type(loct_spline_type) :: aux
+    type(loct_spline_t) :: aux
     real(8) :: g, dg
     integer :: np
     integer :: npoints, i, j
@@ -621,7 +621,7 @@ contains
   end subroutine loct_spline_besselft
 
   subroutine loct_spline_cut(spl, cutoff, beta)
-    type(loct_spline_type), intent(inout) :: spl
+    type(loct_spline_t), intent(inout) :: spl
     real(8), intent(in) :: cutoff, beta
 
     integer :: npoints, i
@@ -643,11 +643,11 @@ contains
   end subroutine loct_spline_cut
 
   subroutine loct_spline_filter_ft(spl, fs, rs)
-    type(loct_spline_type), intent(inout) :: spl
+    type(loct_spline_t), intent(inout) :: spl
     real(8), intent(in), optional :: fs(2)
     real(8), intent(in), optional :: rs(2)
 
-    type(loct_spline_type) :: splw
+    type(loct_spline_t) :: splw
 
     if(present(fs)) then
       call loct_spline_init(splw)
@@ -664,12 +664,12 @@ contains
   end subroutine loct_spline_filter_ft
 
   subroutine loct_spline_filter_bessel(spl, l, fs, rs)
-    type(loct_spline_type), intent(inout) :: spl
+    type(loct_spline_t), intent(inout) :: spl
     integer, intent(in) :: l
     real(8), intent(in), optional :: fs(2)
     real(8), intent(in), optional :: rs(2)
 
-    type(loct_spline_type) :: splw
+    type(loct_spline_t) :: splw
 
     if(present(fs)) then
       call loct_spline_init(splw)
@@ -685,8 +685,8 @@ contains
   end subroutine loct_spline_filter_bessel
 
   subroutine loct_spline_der(spl, dspl)
-    type(loct_spline_type), intent(in)    :: spl
-    type(loct_spline_type), intent(inout) :: dspl
+    type(loct_spline_t), intent(in)    :: spl
+    type(loct_spline_t), intent(inout) :: dspl
 
 
     integer :: npoints, i
@@ -712,7 +712,7 @@ contains
   end subroutine loct_spline_der
 
   subroutine loct_spline_print_0(spl, iunit)
-    type(loct_spline_type), intent(in) :: spl
+    type(loct_spline_t), intent(in) :: spl
     integer, intent(in) :: iunit
 
     integer :: np, i
@@ -730,7 +730,7 @@ contains
   end subroutine loct_spline_print_0
 
   subroutine loct_spline_print_1(spl, iunit)
-    type(loct_spline_type), intent(in) :: spl(:)
+    type(loct_spline_t), intent(in) :: spl(:)
     integer, intent(in) :: iunit
 
     character(len=4)  :: fm
@@ -753,7 +753,7 @@ contains
   end subroutine loct_spline_print_1
 
   subroutine loct_spline_print_2(spl, iunit)
-    type(loct_spline_type), intent(in) :: spl(:, :)
+    type(loct_spline_t), intent(in) :: spl(:, :)
     integer, intent(in) :: iunit
 
     character(len=4)  :: fm
@@ -775,4 +775,4 @@ contains
     deallocate(x, y)
   end subroutine loct_spline_print_2
 
-end module lib_oct_gsl_spline
+end module lib_oct_gsl_spline_m

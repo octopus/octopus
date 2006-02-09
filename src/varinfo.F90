@@ -19,8 +19,8 @@
 
 #include "global.h"
 
-module varinfo
-  use string
+module varinfo_m
+  use string_m
 
   implicit none
 
@@ -162,4 +162,4 @@ contains
 
   end subroutine varinfo_print_option
 
-end module varinfo
+end module varinfo_m

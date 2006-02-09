@@ -19,22 +19,22 @@
 
 #include "global.h"
 
-module nl_operator
-  use global
-  use messages
-  use mesh
-  use mesh_lib
-  use simul_box
-  use io
-  use profiling_mod
-  use par_vec
-  use mpi_mod
+module nl_operator_m
+  use global_m
+  use messages_m
+  use mesh_m
+  use mesh_lib_m
+  use simul_box_m
+  use io_m
+  use profiling_m
+  use par_vec_m
+  use mpi_m
 
   implicit none
 
   private
   public ::                     &
-    nl_operator_type,           &
+    nl_operator_t,              &
     nl_operator_init,           &
     nl_operator_equal,          &
     nl_operator_build,          &
@@ -47,8 +47,8 @@ module nl_operator
     nl_operator_selfadjoint,    &
     nl_operator_write
 
-  type nl_operator_type
-    type(mesh_type), pointer :: m         ! pointer to the underlying mesh
+  type nl_operator_t
+    type(mesh_t), pointer :: m         ! pointer to the underlying mesh
     integer                  :: n         ! number of points in discrete operator
     integer                  :: np        ! number of points in mesh
     integer, pointer         :: stencil(:,:)
@@ -61,7 +61,7 @@ module nl_operator
 
     logical                  :: const_w   ! are the weights independent of i
     logical                  :: cmplx_op  ! .true. if we have also imaginary weights
-  end type nl_operator_type
+  end type nl_operator_t
 
   interface assignment (=)
     module procedure nl_operator_equal
@@ -72,7 +72,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine nl_operator_init(op, n)
-    type(nl_operator_type), intent(out) :: op
+    type(nl_operator_t), intent(out) :: op
     integer,                intent(in)  :: n
 
     ASSERT(n  > 0)
@@ -88,8 +88,8 @@ contains
 
   ! ---------------------------------------------------------
   subroutine nl_operator_equal(opo, opi)
-    type(nl_operator_type), intent(out) :: opo
-    type(nl_operator_type), intent(in)  :: opi
+    type(nl_operator_t), intent(out) :: opo
+    type(nl_operator_t), intent(in)  :: opi
 
     call push_sub('nl_operator.nl_operator_equal')
 
@@ -126,8 +126,8 @@ contains
 
   ! ---------------------------------------------------------
   subroutine nl_operator_build(m, op, np, const_w, cmplx_op)
-    type(mesh_type), target, intent(in)    :: m
-    type(nl_operator_type),  intent(inout) :: op
+    type(mesh_t), target, intent(in)    :: m
+    type(nl_operator_t),  intent(inout) :: op
     integer,                 intent(in)    :: np       ! Number of (local) points.
     logical, optional,      intent(in)     :: const_w  ! are the weights constant (independent of the point)
     logical, optional,      intent(in)     :: cmplx_op ! do we have complex weights?
@@ -201,8 +201,8 @@ contains
 
   ! ---------------------------------------------------------
   subroutine nl_operator_transpose(op, opt)
-    type(nl_operator_type), intent(in)  :: op
-    type(nl_operator_type), intent(out) :: opt
+    type(nl_operator_t), intent(in)  :: op
+    type(nl_operator_t), intent(out) :: opt
 
     integer :: np, i, j, index, l, k
 
@@ -239,9 +239,9 @@ contains
   ! ---------------------------------------------------------
   ! opt has to be initialised and built.
   subroutine nl_operator_skewadjoint(op, opt, m)
-    type(nl_operator_type), intent(in)  :: op
-    type(nl_operator_type), intent(out) :: opt
-    type(mesh_type),        intent(in)  :: m
+    type(nl_operator_t), intent(in)  :: op
+    type(nl_operator_t), intent(out) :: opt
+    type(mesh_t),        intent(in)  :: m
 
     integer          :: np, i, j, index, l, k
     integer, pointer :: op_i(:, :)
@@ -250,7 +250,7 @@ contains
     FLOAT, pointer   :: w_im(:, :), w_im_t(:, :)
 
 #if defined(HAVE_MPI)
-    type(nl_operator_type) :: opg, opgt
+    type(nl_operator_t) :: opg, opgt
 #endif
 
     call push_sub('nl_operator.nl_operator_skewadjoint')
@@ -330,9 +330,9 @@ contains
 
   ! ---------------------------------------------------------
   subroutine nl_operator_selfadjoint(op, opt, m)
-    type(nl_operator_type), intent(in)  :: op
-    type(nl_operator_type), intent(out) :: opt
-    type(mesh_type),        intent(in)  :: m
+    type(nl_operator_t), intent(in)  :: op
+    type(nl_operator_t), intent(out) :: opt
+    type(mesh_t),        intent(in)  :: m
 
     integer          :: np, i, j, index, l, k
     integer, pointer :: op_i(:, :)
@@ -341,7 +341,7 @@ contains
     FLOAT, pointer   :: w_im(:, :), w_im_t(:, :)
 
 #if defined(HAVE_MPI)
-    type(nl_operator_type) :: opg, opgt
+    type(nl_operator_t) :: opg, opgt
 #endif
 
     call push_sub('nl_operator.nl_operator_selfadjoint')
@@ -426,8 +426,8 @@ contains
   ! on the root node. nl_operator_end has to be called
   ! on opg when no longer needed.
   subroutine nl_operator_gather(op, opg)
-    type(nl_operator_type), intent(in)  :: op  ! Local operator.
-    type(nl_operator_type), intent(out) :: opg ! Global operator.
+    type(nl_operator_t), intent(in)  :: op  ! Local operator.
+    type(nl_operator_t), intent(out) :: opg ! Global operator.
 
     integer :: i
 
@@ -471,8 +471,8 @@ contains
   ! Reverse of nl_operator_gather. op is allocated, so
   ! it is necessary to call nl_operator_end on it some time.
   subroutine nl_operator_scatter(op, opg)
-    type(nl_operator_type), intent(out) :: op
-    type(nl_operator_type), intent(in)  :: opg
+    type(nl_operator_t), intent(out) :: op
+    type(nl_operator_t), intent(in)  :: opg
 
     integer :: i
 
@@ -498,8 +498,8 @@ contains
   ! (so do not forget to call nl_operator_end on all nodes
   ! afterwards).
   subroutine nl_operator_allgather(op, opg)
-    type(nl_operator_type), intent(in)  :: op
-    type(nl_operator_type), intent(out) :: opg
+    type(nl_operator_t), intent(in)  :: op
+    type(nl_operator_t), intent(out) :: opg
 
     integer :: i
 
@@ -543,8 +543,8 @@ contains
   ! This can be considered as nl_operator_equal and
   ! reallocating w_re, w_im and i.
   subroutine nl_operator_common_copy(op, opg)
-    type(nl_operator_type), intent(in)  :: op
-    type(nl_operator_type), intent(out) :: opg
+    type(nl_operator_t), intent(in)  :: op
+    type(nl_operator_t), intent(out) :: opg
 
     call push_sub('nl_operator.nl_operator_common_copy')
 
@@ -582,7 +582,7 @@ contains
   ! Translates indices in i from local point numbers to
   ! global point numbers after gathering them.
   subroutine nl_operator_translate_indices(opg)
-    type(nl_operator_type), intent(inout) :: opg
+    type(nl_operator_t), intent(inout) :: opg
 
     integer :: i, j
     integer :: il, ig
@@ -630,14 +630,14 @@ contains
   ! call this routine because the distributed operator has
   ! to be collected.
   subroutine nl_operator_op_to_matrix(op, a, b)
-    type(nl_operator_type), intent(in) :: op
+    type(nl_operator_t), intent(in) :: op
     FLOAT, intent(out)                 :: a(:, :)
     FLOAT, optional, intent(out)       :: b(:, :)
 
     integer          :: i, j, k, index
     integer, pointer :: op_i(:, :)
     FLOAT, pointer   :: w_re(:, :), w_im(:, :)
-    type(nl_operator_type) :: opg
+    type(nl_operator_t) :: opg
 
     call push_sub('nl_operator.nl_operator_op_to_matrix')
 
@@ -684,8 +684,8 @@ contains
   subroutine nl_operator_matrix_to_op(op_ref, op, a, b)
     FLOAT, intent(in)                   :: a(:, :)
     FLOAT, optional, intent(in)         :: b(:, :)
-    type(nl_operator_type), intent(in)  :: op_ref
-    type(nl_operator_type), intent(out) :: op
+    type(nl_operator_t), intent(in)  :: op_ref
+    type(nl_operator_t), intent(out) :: op
 
     integer :: i, j, index
 
@@ -714,7 +714,7 @@ contains
   ! to be collected.
   subroutine nl_operator_write(op, filename)
     character(len=*),       intent(in) :: filename
-    type(nl_operator_type), intent(in) :: op
+    type(nl_operator_t), intent(in) :: op
 
     integer            :: i, j
     integer            :: unit
@@ -755,7 +755,7 @@ contains
   ! Same as nl_operator_write but transposed matrix.
   subroutine nl_operatorT_write(op, unit)
 
-    type(nl_operator_type), intent(in) :: op
+    type(nl_operator_t), intent(in) :: op
     integer, intent(in)                :: unit
 
     integer :: i, j
@@ -788,7 +788,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine nl_operator_end(op)
-    type(nl_operator_type), intent(inout) :: op
+    type(nl_operator_t), intent(inout) :: op
 
     call push_sub('nl_operator.nl_operator_end')
 
@@ -817,7 +817,7 @@ contains
   ! ---------------------------------------------------------
   subroutine dnl_operator_operate(op, fi, fo)
     FLOAT,                  intent(inout) :: fi(:)  ! fi(op%np_part)
-    type(nl_operator_type), intent(in)    :: op
+    type(nl_operator_t), intent(in)    :: op
     FLOAT,                  intent(out)   :: fo(:)  ! fo(op%np_part)
 
     integer :: ii, nn
@@ -851,7 +851,7 @@ contains
   ! ---------------------------------------------------------
   subroutine znl_operator_operate(op, fi, fo)
     CMPLX,                  intent(inout) :: fi(:)  ! fi(op%np)
-    type(nl_operator_type), intent(in)    :: op
+    type(nl_operator_t), intent(in)    :: op
     CMPLX,                  intent(out)   :: fo(:)  ! fo(op%np)
 
     integer :: ii, nn
@@ -887,7 +887,7 @@ contains
   ! ---------------------------------------------------------
   subroutine znl_operator_operate_cmplx(op, fi, fo)
     CMPLX,                  intent(inout) :: fi(:)  ! fi(op%np)
-    type(nl_operator_type), intent(in)    :: op
+    type(nl_operator_t), intent(in)    :: op
     CMPLX,                  intent(out)   :: fo(:)  ! fo(op%np)
 
     integer :: ii, nn
@@ -917,4 +917,4 @@ contains
 
   end subroutine znl_operator_operate_cmplx
 
-end module nl_operator
+end module nl_operator_m

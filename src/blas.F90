@@ -23,7 +23,7 @@
 ! This module contains interfaces for BLAS routines
 ! You should not use these routines directly. Please use the lalg_XXXX
 ! -----------------------------------------------------------------------
-module blas
+module blas_m
   implicit none
 
   ! ---------------------------------------------------------------------
@@ -262,4 +262,4 @@ module blas
     end subroutine zgemv
   end interface
 
-end module blas
+end module blas_m

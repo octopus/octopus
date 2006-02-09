@@ -19,20 +19,20 @@
 
 #include "global.h"
 
-module specie
-  use global
-  use string
-  use mpi_mod
-  use messages
-  use datasets_mod
-  use lib_oct
-  use lib_oct_parser
-  use lib_oct_gsl_spline
-  use io
-  use units
-  use atomic
-  use ps
-  use math
+module specie_m
+  use global_m
+  use string_m
+  use mpi_m
+  use messages_m
+  use datasets_m
+  use lib_oct_m
+  use lib_oct_parser_m
+  use lib_oct_gsl_spline_m
+  use io_m
+  use units_m
+  use atomic_m
+  use ps_m
+  use math_m
 
   implicit none
 
@@ -40,7 +40,7 @@ module specie
   public ::                     &
     specie_init,                &
     specie_end,                 &
-    specie_type,                &
+    specie_t,                   &
     specie_debug,               &
     specie_filter,              &
     specie_read,                &
@@ -59,7 +59,7 @@ module specie
     SPEC_PS_TM2 = PS_TM2,       & ! Troullier-Martins pseudopotential
     SPEC_PS_HGH = PS_HGH          ! HGH pseudopotential
 
-  type specie_type
+  type specie_t
     integer :: index              ! just a counter
 
     character(len=15) :: label    ! Identifier for the species
@@ -79,7 +79,7 @@ module specie
     FLOAT :: jradius
 
     ! For the pseudopotential
-    type(ps_type), pointer :: ps
+    type(ps_t), pointer :: ps
     logical                :: nlcc       ! true if we have non-local core corrections
 
     ! the default values for the spacing and atomic radius
@@ -94,7 +94,7 @@ module specie
 
     ! The filtering parameters.
     FLOAT :: alpha, beta, rcut, beta2
-  end type specie_type
+  end type specie_t
 
 
 contains
@@ -102,7 +102,7 @@ contains
   ! ---------------------------------------------------------
   subroutine specie_debug(dir, s)
     character(len=*), intent(in)  :: dir
-    type(specie_type), intent(in) :: s
+    type(specie_t), intent(in) :: s
 
     character(len=256) :: dirname
     integer :: iunit
@@ -148,7 +148,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine specie_filter(s, gmax)
-    type(specie_type),     intent(inout) :: s
+    type(specie_t),     intent(inout) :: s
     FLOAT, intent(in) :: gmax
 
     call push_sub('specie.specie_filter')
@@ -164,7 +164,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine specie_read(s, label)
-    type(specie_type),     intent(inout) :: s
+    type(specie_t),     intent(inout) :: s
     character(len=*), intent(in) :: label
 
     character(len=256) :: fname
@@ -295,7 +295,7 @@ contains
   subroutine read_from_default_file(iunit, read_data, s)
     integer,           intent(in)    :: iunit
     integer,           intent(inout) :: read_data
-    type(specie_type), intent(inout) :: s
+    type(specie_t), intent(inout) :: s
 
     character(len=10) :: label
     FLOAT :: weight, z, def_h, def_rsize, alpha, beta, rcut, beta2
@@ -339,7 +339,7 @@ contains
   subroutine read_from_block(blk, row, s, read_data)
     integer(POINTER_SIZE), intent(in) :: blk
     integer, intent(in) :: row
-    type(specie_type),     intent(inout) :: s
+    type(specie_t),     intent(inout) :: s
     integer, intent(out) :: read_data
     integer :: n, lmax, lloc
 
@@ -421,7 +421,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine specie_init(s, ispin)
-    type(specie_type), intent(inout) :: s
+    type(specie_t), intent(inout) :: s
     integer,           intent(in)    :: ispin
 
     integer :: i, l
@@ -471,7 +471,7 @@ contains
   ! ---------------------------------------------------------
   subroutine specie_end(ns, s)
     integer,           intent(in) :: ns
-    type(specie_type), pointer    :: s(:)
+    type(specie_t), pointer    :: s(:)
 
     integer :: i
 
@@ -493,7 +493,7 @@ contains
 
   ! ---------------------------------------------------------
   FLOAT function specie_get_local(s, x) result(l)
-    type(specie_type), intent(in) :: s
+    type(specie_t), intent(in) :: s
     FLOAT,             intent(in) :: x(3)
 
     FLOAT :: a1, a2, Rb2 ! for jellium
@@ -530,7 +530,7 @@ contains
   ! returns the gradient of the external potential
   ! ---------------------------------------------------------
   subroutine specie_get_glocal(s, x, gv)
-    type(specie_type), intent(in) :: s
+    type(specie_t), intent(in) :: s
     FLOAT, intent(in) :: x(:)
     FLOAT, intent(out) :: gv(:)
 
@@ -581,7 +581,7 @@ contains
   ! ---------------------------------------------------------
   FLOAT function specie_get_local_fourier(dim, s, x) result(l)
     integer,           intent(in) :: dim
-    type(specie_type), intent(in) :: s
+    type(specie_t), intent(in) :: s
     FLOAT,             intent(in) :: x(3)
 
     FLOAT :: gmod
@@ -601,7 +601,7 @@ contains
 
   ! ---------------------------------------------------------
   FLOAT function specie_get_nlcc(s, x) result(l)
-    type(specie_type), intent(in) :: s
+    type(specie_t), intent(in) :: s
     FLOAT, intent(in) :: x(3)
 
     ! only for 3D pseudopotentials, please
@@ -614,7 +614,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine specie_get_nl_part(s, x, l, lm, i, uV, duV, so)
-    type(specie_type), intent(in)  :: s
+    type(specie_t), intent(in)  :: s
     FLOAT,             intent(in)  :: x(:)        ! (3)
     integer,           intent(in)  :: l, lm, i
     FLOAT,             intent(out) :: uV, duV(:)  ! (3)
@@ -658,7 +658,7 @@ contains
 
   ! ---------------------------------------------------------
   FLOAT function specie_get_iwf(s, j, dim, is, x) result(phi)
-    type(specie_type), intent(in) :: s
+    type(specie_t), intent(in) :: s
     integer,           intent(in) :: j
     integer,           intent(in) :: dim
     integer,           intent(in) :: is
@@ -693,7 +693,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine specie_iwf_fix_qn(s, ispin)
-    type(specie_type), intent(inout) :: s
+    type(specie_t), intent(inout) :: s
     integer, intent(in) :: ispin
 
     integer :: is, n, i, l, m, n1, n2, n3
@@ -782,4 +782,4 @@ contains
     call pop_sub()
   end subroutine specie_iwf_fix_qn
 
-end module specie
+end module specie_m

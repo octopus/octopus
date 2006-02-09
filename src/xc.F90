@@ -19,27 +19,27 @@
 
 #include "global.h"
 
-module xc
-  use global
-  use messages
-  use datasets_mod
-  use lib_oct_parser
-  use lib_basic_alg
-  use lib_adv_alg
-  use mesh
-  use grid
-  use functions
-  use poisson
-  use states
-  use lib_xc
-  use xc_functl
-  use mesh_function
+module xc_m
+  use global_m
+  use messages_m
+  use datasets_m
+  use lib_oct_parser_m
+  use lib_basic_alg_m
+  use lib_adv_alg_m
+  use mesh_m
+  use grid_m
+  use functions_m
+  use poisson_m
+  use states_m
+  use lib_xc_m
+  use xc_functl_m
+  use mesh_function_m
 
   implicit none
 
   private
   public ::             &
-    xc_type,            &
+    xc_t,               &
     xc_init,            &
     xc_end,             &
     xc_write_info,      &
@@ -49,18 +49,18 @@ module xc
     xc_get_kxc
 
 
-  type xc_type
+  type xc_t
     logical :: cdft
 
     integer :: family                   ! the families present
-    type(xc_functl_type) :: functl(2,2) ! (1,:) => exchange,    (2,:) => correlation
+    type(xc_functl_t) :: functl(2,2) ! (1,:) => exchange,    (2,:) => correlation
                                         ! (:,1) => unpolarized, (:,2) => polarized
-    type(xc_functl_type) :: j_functl    ! current-depent part of the functional
+    type(xc_functl_t) :: j_functl    ! current-depent part of the functional
 
     ! the meta-GGA can be implemented in two ways
     integer :: mGGA_implementation      ! 1 => as a GGA like functional
                                         ! 2 => using the OEP method
-  end type xc_type
+  end type xc_t
 
 
   FLOAT, parameter :: tiny      = CNST(1.0e-12)
@@ -70,7 +70,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine xc_write_info(xcs, iunit)
-    type(xc_type), intent(in) :: xcs
+    type(xc_t), intent(in) :: xcs
     integer,       intent(in) :: iunit
 
     integer :: i
@@ -97,7 +97,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine xc_init(xcs, ndim, spin_channels, cdft)
-    type(xc_type), intent(out) :: xcs
+    type(xc_t), intent(out) :: xcs
     integer,       intent(in)  :: ndim
     integer,       intent(in)  :: spin_channels
     logical,       intent(in)  :: cdft
@@ -106,7 +106,7 @@ contains
 
     call push_sub('xc.xc_init')
 
-    xcs%cdft   = cdft  ! make a copy of flag indicating the use of current-dft
+    xcs%cdft   = cdft  ! make a copy of flag indicating the use of current-dft_m
 
     ! get current-dependent functional
     call xc_j_functl_init (xcs%j_functl, cdft, spin_channels)
@@ -147,7 +147,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine xc_end(xcs)
-    type(xc_type), intent(inout) :: xcs
+    type(xc_t), intent(inout) :: xcs
 
     integer :: i
 
@@ -168,4 +168,4 @@ contains
 #include "xc_fxc.F90"
 #include "xc_kxc.F90"
 
-end module xc
+end module xc_m

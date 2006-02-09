@@ -19,22 +19,22 @@
 
 #include "global.h"
 
-module ps
-  use global
-  use messages
-  use lib_oct
-  use io
-  use lib_oct_gsl_spline
-  use logrid
-  use atomic
-  use tm
-  use hgh
+module ps_m
+  use global_m
+  use messages_m
+  use lib_oct_m
+  use io_m
+  use lib_oct_gsl_spline_m
+  use logrid_m
+  use atomic_m
+  use tm_m
+  use hgh_m
 
   implicit none
 
   private
   public ::                     &
-    ps_type,                    &
+    ps_t,                       &
     ps_init,                    &
     ps_filter,                  &
     ps_getradius,               &
@@ -48,22 +48,22 @@ module ps
 
   character(len=3), parameter  :: ps_name(PS_TM2:PS_HGH) = (/"tm2", "hgh"/)
 
-  type ps_type
+  type ps_t
     character(len=10) :: label
     integer           :: flavour
 
-    type(loct_spline_type), pointer :: kb(:, :)     ! Kleynman-Bylander projectors
-    type(loct_spline_type), pointer :: so_kb(:, :)
-    type(loct_spline_type), pointer :: dkb(:, :)    ! derivatives of KB projectors
-    type(loct_spline_type), pointer :: so_dkb(:, :)
-    type(loct_spline_type), pointer :: Ur(:, :)     ! atomic wavefunctions
-    type(loct_spline_type) :: vl                    ! local part
-    type(loct_spline_type) :: vlocalized            ! The localized part of the local part :)
-    type(loct_spline_type) :: vlocal_f              ! localized part of local potential
+    type(loct_spline_t), pointer :: kb(:, :)     ! Kleynman-Bylander projectors
+    type(loct_spline_t), pointer :: so_kb(:, :)
+    type(loct_spline_t), pointer :: dkb(:, :)    ! derivatives of KB projectors
+    type(loct_spline_t), pointer :: so_dkb(:, :)
+    type(loct_spline_t), pointer :: Ur(:, :)     ! atomic wavefunctions
+    type(loct_spline_t) :: vl                    ! local part
+    type(loct_spline_t) :: vlocalized            ! The localized part of the local part :)
+    type(loct_spline_t) :: vlocal_f              ! localized part of local potential
     ! in Fourier space (for periodic)
-    type(loct_spline_type) :: dvl                   ! derivative of the local part
-    type(loct_spline_type) :: core                  ! core charge
-    type(logrid_type) :: g
+    type(loct_spline_t) :: dvl                   ! derivative of the local part
+    type(loct_spline_t) :: core                  ! core charge
+    type(logrid_t) :: g
 
     integer  :: ispin    ! Consider spin (ispin = 2) or not (ispin = 1)
     integer  :: kbc      ! Number of KB components (1 for TM ps, 3 for HGH)
@@ -81,7 +81,7 @@ module ps
     FLOAT, pointer :: dknrm(:) ! KB norm
     FLOAT, pointer :: so_dknrm(:)
     FLOAT, pointer :: h(:,:,:), k(:, :, :)
-  end type ps_type
+  end type ps_t
 
   FLOAT, parameter :: eps = CNST(1.0e-8)
 
@@ -90,14 +90,14 @@ contains
 
   ! ---------------------------------------------------------
   subroutine ps_init(ps, label, flavour, z, lmax, lloc, ispin)
-    type(ps_type),     intent(out) :: ps
+    type(ps_t),     intent(out) :: ps
     character(len=10), intent(in)  :: label
     integer,           intent(in)  :: flavour
     integer,           intent(in)  :: lmax, lloc, ispin
     FLOAT,             intent(in)  :: z
 
-    type(tm_type)      :: pstm ! In case Troullier-Martins ps are used.
-    type(hgh_type)     :: psp  ! In case Hartwigsen-Goedecker-Hutter ps are used.
+    type(tm_t)      :: pstm ! In case Troullier-Martins ps are used.
+    type(hgh_t)     :: psp  ! In case Hartwigsen-Goedecker-Hutter ps are used.
 
     FLOAT :: r
     FLOAT, allocatable :: y(:)
@@ -217,7 +217,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine ps_getradius(ps)
-    type(ps_type), intent(inout) :: ps
+    type(ps_t), intent(inout) :: ps
 
     integer :: l, j, i
     FLOAT   :: r, dx, y
@@ -255,7 +255,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine ps_derivatives(ps)
-    type(ps_type), intent(inout) :: ps
+    type(ps_t), intent(inout) :: ps
     integer :: l, j
     call push_sub('ps.ps_derivatives')
 
@@ -276,7 +276,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine ps_filter(ps, gmax, alpha, beta, rcut, beta2)
-    type(ps_type), intent(inout) :: ps
+    type(ps_t), intent(inout) :: ps
     FLOAT, intent(in) :: gmax
     FLOAT, intent(in) :: alpha, beta, rcut, beta2
     integer :: i, l, k
@@ -311,11 +311,11 @@ contains
 
   ! ---------------------------------------------------------
   subroutine ps_debug(ps, dir)
-    type(ps_type), intent(in) :: ps
+    type(ps_t), intent(in) :: ps
     character(len=*), intent(in) :: dir
 
     ! We will plot also some Fourier transforms.
-    type(loct_spline_type), allocatable :: fw(:, :)
+    type(loct_spline_t), allocatable :: fw(:, :)
     FLOAT, parameter :: gmax = CNST(40.0)
 
     character(len=30) :: dirname
@@ -422,7 +422,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine ps_end(ps)
-    type(ps_type), intent(inout) :: ps
+    type(ps_t), intent(inout) :: ps
 
     call push_sub('ps.ps_end')
 
@@ -450,8 +450,8 @@ contains
 
   ! ---------------------------------------------------------
   subroutine hgh_load(ps, psp)
-    type(ps_type),  intent(inout) :: ps
-    type(hgh_type), intent(inout) :: psp
+    type(ps_t),  intent(inout) :: ps
+    type(hgh_t), intent(inout) :: psp
 
     integer :: l, ll
     FLOAT :: x
@@ -489,8 +489,8 @@ contains
 
   ! ---------------------------------------------------------
   subroutine tm_load(ps, pstm)
-    type(ps_type), intent(inout) :: ps
-    type(tm_type), intent(inout) :: pstm
+    type(ps_t), intent(inout) :: ps
+    type(tm_t), intent(inout) :: pstm
 
     call push_sub('ps.tm_load')
 
@@ -526,8 +526,8 @@ contains
 
   ! ---------------------------------------------------------
   subroutine get_splines_tm(psf, ps)
-    type(tm_type), intent(in)    :: psf
-    type(ps_type), intent(inout) :: ps
+    type(tm_t), intent(in)    :: psf
+    type(ps_t), intent(inout) :: ps
 
     integer :: is, l, ll, nrc, ir, nrcore, k
     logical :: threshold
@@ -638,8 +638,8 @@ contains
 
   ! ---------------------------------------------------------
   subroutine get_splines_hgh(psp, ps)
-    type(hgh_type), intent(in)    :: psp
-    type(ps_type),  intent(inout) :: ps
+    type(hgh_t), intent(in)    :: psp
+    type(ps_t),  intent(inout) :: ps
 
     integer :: l, is, nrc, j
     FLOAT, allocatable :: hato(:), derhato(:)
@@ -677,4 +677,4 @@ contains
     call pop_sub()
   end subroutine get_splines_hgh
 
-end module ps
+end module ps_m

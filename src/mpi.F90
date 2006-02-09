@@ -19,7 +19,7 @@
 
 #include "global.h"
 
-module mpi_mod
+module mpi_m
 #if defined(MPI_MOD)
   use mpi
 #endif
@@ -35,13 +35,13 @@ module mpi_mod
 #endif
 
   ! This is defined even when running serial
-  type mpi_grp_type
+  type mpi_grp_t
     integer :: comm ! copy of the mpi communicator
     integer :: size ! size of comm (defined also in serial mode)
     integer :: rank ! rank of comm (defined also in serial mode)
-  end type mpi_grp_type
+  end type mpi_grp_t
 
-  type(mpi_grp_type), public :: mpi_world
+  type(mpi_grp_t), public :: mpi_world
 
 contains
   ! ---------------------------------------------------------
@@ -72,7 +72,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine mpi_grp_init(grp, comm)
-    type(mpi_grp_type), intent(out) :: grp   ! information about this MPI group
+    type(mpi_grp_t), intent(out) :: grp   ! information about this MPI group
     integer                         :: comm  ! the communicator that defined the group
 
 #if defined(HAVE_MPI)
@@ -95,9 +95,9 @@ contains
 
   ! ---------------------------------------------------------
   logical function mpi_grp_is_root(grp)
-    type(mpi_grp_type), intent(in) :: grp
+    type(mpi_grp_t), intent(in) :: grp
     
     mpi_grp_is_root = (grp%rank == 0)
   end function mpi_grp_is_root
 
-end module mpi_mod
+end module mpi_m

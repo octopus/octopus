@@ -40,10 +40,10 @@
 ! TODO: This module should look like stencil_star, allowing for
 ! coefficients on non-uniform grids.
 ! ---------------------------------------------------------
-module stencil_variational
-  use global
-  use messages
-  use nl_operator
+module stencil_variational_m
+  use global_m
+  use messages_m
+  use nl_operator_m
 
   implicit none
 
@@ -58,7 +58,7 @@ contains
     integer,                intent(in)    :: dim
     integer,                intent(in)    :: order
     FLOAT,                  intent(in)    :: h(:)   ! h(dim)
-    type(nl_operator_type), intent(inout) :: lapl
+    type(nl_operator_t), intent(inout) :: lapl
     FLOAT, optional,        intent(in)    :: alpha
 
     integer :: i, j, k
@@ -129,4 +129,4 @@ contains
     call pop_sub()
   end subroutine stencil_variational_coeff_lapl
 
-end module stencil_variational
+end module stencil_variational_m

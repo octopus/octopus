@@ -19,26 +19,26 @@
 
 #include "global.h"
 
-module poisson
-  use global
-  use messages
-  use profiling_mod
-  use lib_oct_parser
-  use units
-  use geometry
-  use mesh
+module poisson_m
+  use global_m
+  use messages_m
+  use profiling_m
+  use lib_oct_parser_m
+  use units_m
+  use geometry_m
+  use mesh_m
 #ifdef HAVE_FFT
-  use fft
-  use cube_function
+  use fft_m
+  use cube_function_m
 #endif
-  use functions
-  use math
-  use poisson_corrections
-  use poisson_cg
-  use grid
-  use output
-  use poisson_multigrid
-  use mesh_function
+  use functions_m
+  use math_m
+  use poisson_corrections_m
+  use poisson_cg_m
+  use grid_m
+  use output_m
+  use poisson_multigrid_m
+  use mesh_function_m
   implicit none
 
   private
@@ -74,7 +74,7 @@ contains
 
   !-----------------------------------------------------------------
   subroutine poisson_init(gr)
-    type(grid_type), intent(inout) :: gr
+    type(grid_t), intent(inout) :: gr
 
     if(poisson_solver.ne.-99) return ! already initialized
 
@@ -222,7 +222,7 @@ contains
 
   !-----------------------------------------------------------------
   subroutine zpoisson_solve(gr, pot, rho)
-    type(grid_type),  target, intent(inout) :: gr
+    type(grid_t),  target, intent(inout) :: gr
     CMPLX,                    intent(inout) :: pot(:)  ! pot(m%np)
     CMPLX,                    intent(in)    :: rho(:)  ! rho(m%np)
 
@@ -253,7 +253,7 @@ contains
 
   !-----------------------------------------------------------------
   subroutine dpoisson_solve(gr, pot, rho)
-    type(grid_type), target, intent(inout) :: gr
+    type(grid_t), target, intent(inout) :: gr
     FLOAT,                   intent(inout) :: pot(:)  ! pot(m%np)
     FLOAT,                   intent(in)    :: rho(:)  ! rho(m%np)
 
@@ -303,7 +303,7 @@ contains
 #if defined(HAVE_FFT)
   !-----------------------------------------------------------------
   subroutine poisson_fft(m, pot, rho, average_to_zero)
-    type(mesh_type), intent(in) :: m
+    type(mesh_t), intent(in) :: m
     FLOAT, intent(out) :: pot(:) ! pot(m%np)
     FLOAT, intent(in)  :: rho(:) ! rho(m%np)
     logical, intent(in), optional :: average_to_zero
@@ -347,7 +347,7 @@ contains
 !!$  ! potential originated by a Gaussian distribution of charge.
 !!$  ! This only makes sense for finite systems.
 !!$  subroutine poisson_test(gr)
-!!$    type(grid_type), intent(inout) :: gr
+!!$    type(grid_t), intent(inout) :: gr
 !!$
 !!$    FLOAT, allocatable :: rho(:), vh(:), vh_exact(:)
 !!$    FLOAT :: alpha, beta, r
@@ -415,4 +415,4 @@ contains
 #include "poisson2D.F90"
 #include "poisson3D.F90"
 
-end module poisson
+end module poisson_m

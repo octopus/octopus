@@ -20,17 +20,17 @@
 #include "global.h"
 
 program rotational_strength
-  use global
-  use messages
-  use datasets_mod
-  use lib_oct_parser
-  use io
-  use units
-  use spectrum
+  use global_m
+  use messages_m
+  use datasets_m
+  use lib_oct_parser_m
+  use io_m
+  use units_m
+  use spectrum_m
 
   implicit none
 
-  type(spec_type) :: s
+  type(spec_t) :: s
   integer :: in_file, out_file
 
   ! Initialize stuff

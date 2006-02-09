@@ -19,18 +19,18 @@
 
 #include "global.h"
 
-module root_solver
-  use global
-  use messages
-  use datasets_mod
-  use lib_oct_parser
-  use ode_solver
+module root_solver_m
+  use global_m
+  use messages_m
+  use datasets_m
+  use lib_oct_parser_m
+  use ode_solver_m
 
   implicit none
 
   private
   public ::                               &
-    root_solver_type,                     &
+    root_solver_t,                        &
     droot_solver_init,                    &
 !    droot_solver_run,                     &
     droot_solver_end,                     &
@@ -48,8 +48,8 @@ module root_solver
     ROOT_MINVAL      =  ROOT_BISECTION,   &
     ROOT_MAXVAL      =  ROOT_WATTERSTROM
 
-  type root_solver_type
-    integer :: solver_type    ! what solver to use (see ROOT_* variables above)
+  type root_solver_t
+    integer :: solver_type    ! what solver to use (see ROOT_* variables above)_m
     integer :: maxiter        ! maximal number of iterations
     integer :: usediter       ! number of actually performed iterations
     FLOAT   :: abs_tolerance
@@ -57,7 +57,7 @@ module root_solver
     FLOAT   :: ws_radius      ! radius of circle in complex plane; used for initial values
     logical :: have_polynomial
    integer :: poly_order
-  end type root_solver_type
+  end type root_solver_t
 
   ! a few variables which we have to define global
   ! for this module
@@ -79,7 +79,7 @@ contains
 
   ! ---------------------------------------------------------
 !!$subroutine droot_brent(rs, func, root, interval)
-!!$  type(root_solver_type), intent(in)  :: rs
+!!$  type(root_solver_t), intent(in)  :: rs
 !!$  FLOAT,                  intent(out) :: root
 !!$  FLOAT,  optional,       intent(in)  :: interval(2)     ! lower and upper boundary of search region
 !!$
@@ -101,11 +101,11 @@ contains
   ! ---------------------------------------------------------
   ! Implementation of J. Comp. Phys., 8, (1971), p. 304-308
   subroutine zroot_watterstrom(rs, roots, coeff)
-    type(root_solver_type), intent(in)  :: rs
+    type(root_solver_t), intent(in)  :: rs
     CMPLX,                  intent(out) :: roots(:)    ! roots we are searching
     CMPLX,                  intent(in)  :: coeff(:)    ! polynomial coefficients
 
-    type(ode_solver_type) :: os
+    type(ode_solver_t) :: os
     CMPLX, allocatable    :: base_roots(:)
     FLOAT   :: theta
     integer :: order, j
@@ -217,4 +217,4 @@ contains
 #include "root_solver_inc.F90"
 
 
-end module root_solver
+end module root_solver_m

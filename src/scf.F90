@@ -19,38 +19,38 @@
 
 #include "global.h"
 
-module scf
-  use global
-  use mpi_mod
-  use messages
-  use datasets_mod
-  use lib_oct_parser
-  use units
-  use geometry
-  use simul_box
-  use mesh
-  use mesh_function
-  use functions
-  use states
-  use output
-  use restart
-  use v_ks
-  use hamiltonian
-  use external_pot
-  use xc
-  use eigen_solver
-  use mix
-  use lcao
-  use io
-  use grid
-  use profiling_mod
-  use varinfo
+module scf_m
+  use global_m
+  use mpi_m
+  use messages_m
+  use datasets_m
+  use lib_oct_parser_m
+  use units_m
+  use geometry_m
+  use simul_box_m
+  use mesh_m
+  use mesh_function_m
+  use functions_m
+  use states_m
+  use output_m
+  use restart_m
+  use v_ks_m
+  use hamiltonian_m
+  use external_pot_m
+  use xc_m
+  use eigen_solver_m
+  use mix_m
+  use lcao_m
+  use io_m
+  use grid_m
+  use profiling_m
+  use varinfo_m
 
   implicit none
 
   private
   public ::             &
-    scf_type,           &
+    scf_t,              &
     scf_init,           &
     scf_run,            &
     scf_end
@@ -59,7 +59,7 @@ module scf
     MIXPOT  = 1,        &
     MIXDENS = 2
 
-  type scf_type         ! some variables used for the scf cycle
+  type scf_t         ! some variables used for the scf cycle
     integer :: max_iter ! maximum number of scf iterations
 
     ! several convergence criteria
@@ -71,20 +71,20 @@ module scf
 
     logical :: lcao_restricted
 
-    type(mix_type) :: smix
-    type(eigen_solver_type) :: eigens
+    type(mix_t) :: smix
+    type(eigen_solver_t) :: eigens
 
     FLOAT :: lmm_r
-  end type scf_type
+  end type scf_t
 
 contains
 
   ! ---------------------------------------------------------
   subroutine scf_init(gr, scf, st, h)
-    type(grid_type),        intent(in)    :: gr
-    type(scf_type),         intent(inout) :: scf
-    type(states_type),      intent(in)    :: st
-    type(hamiltonian_type), intent(in)    :: h
+    type(grid_t),        intent(in)    :: gr
+    type(scf_t),         intent(inout) :: scf
+    type(states_t),      intent(in)    :: st
+    type(hamiltonian_t), intent(in)    :: h
 
     integer :: dim
     FLOAT :: rmin
@@ -142,7 +142,7 @@ contains
     !%Description
     !% Relative convergence of the eigenvalues:
     !% <math>\epsilon = {1 \over N} \sum_{j=1}^{N_{occ}} \vert \epsilon_j^{out}-\epsilon_j^{inp}\vert</math>.
-    !% <i>N</i> is the total number of electrons. A zero value means do not use this criterion.
+    !% <i>N</i> is the total number of electrons. A zero value means do not use this criterion._m
     !%End
     call loct_parse_float(check_inp('ConvRelEv'), M_ZERO, scf%conv_rel_ev)
 
@@ -212,7 +212,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine scf_end(scf)
-    type(scf_type), intent(inout) :: scf
+    type(scf_t), intent(inout) :: scf
 
     call push_sub('scf.scf_end')
 
@@ -225,14 +225,14 @@ contains
 
   ! ---------------------------------------------------------
   subroutine scf_run(scf, gr, st, ks, h, outp)
-    type(scf_type),         intent(inout) :: scf
-    type(grid_type),        intent(inout) :: gr
-    type(states_type),      intent(inout) :: st
-    type(v_ks_type),        intent(inout) :: ks
-    type(hamiltonian_type), intent(inout) :: h
-    type(output_type),      intent(in)    :: outp
+    type(scf_t),         intent(inout) :: scf
+    type(grid_t),        intent(inout) :: gr
+    type(states_t),      intent(inout) :: st
+    type(v_ks_t),        intent(inout) :: ks
+    type(hamiltonian_t), intent(inout) :: h
+    type(output_t),      intent(in)    :: outp
 
-    type(lcao_type) :: lcao_data
+    type(lcao_t) :: lcao_data
 
     integer :: iter, iunit, is, idim, nspin, dim, err
     FLOAT :: evsum_out, evsum_in
@@ -576,8 +576,8 @@ contains
     ! ---------------------------------------------------------
     subroutine write_magnetic_moments(iunit, m, st)
       integer,           intent(in) :: iunit
-      type(mesh_type),   intent(in) :: m
-      type(states_type), intent(in) :: st
+      type(mesh_t),   intent(in) :: m
+      type(states_t), intent(in) :: st
 
       integer :: i
       FLOAT :: mm(3)
@@ -623,4 +623,4 @@ contains
 
   end subroutine scf_run
 
-end module scf
+end module scf_m

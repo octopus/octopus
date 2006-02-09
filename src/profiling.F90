@@ -37,13 +37,13 @@
 ! for every node with nnn being the node number and NNN the
 ! total number of nodes.
 
-module profiling_mod
+module profiling_m
 
-  use io
-  use messages
-  use global
-  use mpi_mod
-  use lib_oct
+  use io_m
+  use messages_m
+  use global_m
+  use mpi_m
+  use lib_oct_m
 
   implicit none
   private
@@ -220,4 +220,4 @@ contains
     call pop_sub()
   end subroutine profiling_output
 
-end module profiling_mod
+end module profiling_m

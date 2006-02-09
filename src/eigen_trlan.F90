@@ -18,12 +18,12 @@
 !! $Id$
 
 subroutine eigen_solver_cg3(m, st, h, tol, niter, converged, diff, reorder)
-  use trl_info
-  use trl_interface
+  use trl_info_m
+  use trl_interface_m
 
-  type(mesh_type),        target, intent(in)    :: m
-  type(states_type),      target, intent(inout) :: st
-  type(hamiltonian_type), target, intent(in) :: h
+  type(mesh_t),        target, intent(in)    :: m
+  type(states_t),      target, intent(inout) :: st
+  type(hamiltonian_t), target, intent(in) :: h
   FLOAT, intent(in)               :: tol
   integer, intent(inout)          :: niter
   integer, intent(out)            :: converged

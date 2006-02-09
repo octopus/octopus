@@ -19,9 +19,9 @@
 
 #include "global.h"
 
-module lib_oct_parser
-  use global
-  use mpi_mod
+module lib_oct_parser_m
+  use global_m
+  use mpi_m
 
   implicit none
 
@@ -362,4 +362,4 @@ contains
       real(z4, 8), real(r4, 8), pot)
   end subroutine oct_parse_expression4
 
-end module lib_oct_parser
+end module lib_oct_parser_m

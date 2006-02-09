@@ -19,13 +19,13 @@
 
 #include "global.h"
 
-module wave_matching
-  use global
-  use messages
-  use datasets_mod
-  use system
-  use hamiltonian
-  use io
+module wave_matching_m
+  use global_m
+  use messages_m
+  use datasets_m
+  use system_m
+  use hamiltonian_m
+  use io_m
 
   implicit none
 
@@ -38,8 +38,8 @@ contains
 
   ! ---------------------------------------------------------
   subroutine wave_matching_run()
-!!$    type(system_type)       :: sys
-!!$    type(hamiltonian_type)  :: h
+!!$    type(system_t)       :: sys
+!!$    type(hamiltonian_t)  :: h
 
     call push_sub('wave_matching.wave_matching_run')
 
@@ -88,4 +88,4 @@ contains
   end subroutine wave_matching_run
 
 
-end module wave_matching
+end module wave_matching_m

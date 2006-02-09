@@ -3,15 +3,15 @@
 
 #include "global.h"
 
-      module crystal
+      module crystal_m
 
-      use global
-      use messages
-      use io
-      use units
-      use lib_adv_alg
-      use math
-      use blas
+      use global_m
+      use messages_m
+      use io_m
+      use units_m
+      use lib_adv_alg_m
+      use math_m
+      use blas_m
 
       implicit none
 
@@ -1529,5 +1529,4 @@
       return
       end subroutine rlv
 
-      end module crystal
-
+      end module crystal_m

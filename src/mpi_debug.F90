@@ -20,16 +20,16 @@
 
 #include "global.h"
 
-module mpi_debug_mod
+module mpi_debug_m
 #if defined(HAVE_MPI)
-  use varinfo
-  use global
-  use messages
-  use lib_oct
-  use lib_oct_parser
-  use datasets_mod
-  use messages
-  use mpi_mod
+  use varinfo_m
+  use global_m
+  use messages_m
+  use lib_oct_m
+  use lib_oct_parser_m
+  use datasets_m
+  use messages_m
+  use mpi_m
 
   implicit none
 
@@ -210,4 +210,4 @@ contains
 
 #endif
 
-end module mpi_debug_mod
+end module mpi_debug_m

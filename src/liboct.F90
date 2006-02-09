@@ -19,7 +19,7 @@
 
 #include "global.h"
 
-module lib_oct
+module lib_oct_m
   implicit none
 
   ! Define the which routines can be seen from the outside
@@ -465,4 +465,4 @@ contains
     oct_ran_gaussian4 = real(oct_ran_gaussian(r, real(sigma, kind=8)), kind=4)
   end function oct_ran_gaussian4
 
-end module lib_oct
+end module lib_oct_m

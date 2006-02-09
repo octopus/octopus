@@ -20,14 +20,14 @@
 #include "global.h"
 
 program xyzanim
-  use global
-  use messages
-  use datasets_mod
-  use lib_oct
-  use lib_oct_parser
-  use io
-  use units
-  use geometry
+  use global_m
+  use messages_m
+  use datasets_m
+  use lib_oct_m
+  use lib_oct_parser_m
+  use io_m
+  use units_m
+  use geometry_m
 
   implicit none
 
@@ -35,7 +35,7 @@ program xyzanim
   integer :: ierr, sampling, i, nbo_unit, xyz_unit, iter, j
   FLOAT :: dump
 
-  type(geometry_type) :: geo
+  type(geometry_t) :: geo
 
   ! Initialize stuff
   call global_init()

@@ -20,22 +20,22 @@
 #include "global.h"
 
 program cross_section
-  use global
-  use messages
-  use datasets_mod
-  use lib_oct
-  use lib_oct_parser
-  use io
-  use units
-  use spectrum
+  use global_m
+  use messages_m
+  use datasets_m
+  use lib_oct_m
+  use lib_oct_parser_m
+  use io_m
+  use units_m
+  use spectrum_m
 
   implicit none
 
   integer :: in_file(3), out_file(3), eq_axis, i, j, nspin, lmax, time_steps
   FLOAT   :: dt
   logical :: calculate_tensor
-  type(spec_type) :: s
-  type(kick_type) :: kick
+  type(spec_t) :: s
+  type(kick_t) :: kick
   character(len=150), allocatable :: filename(:)
 
   ! Initialize stuff

@@ -19,10 +19,10 @@
 
 #include "global.h"
 
-module stencil_cube
-  use global
-  use messages
-  use nl_operator
+module stencil_cube_m
+  use global_m
+  use messages_m
+  use nl_operator_m
 
   implicit none
 
@@ -168,4 +168,4 @@ contains
     call stencil_cube_polynomials_lapl(dim, order, pol)
   end subroutine stencil_cube_polynomials_grad
 
-end module stencil_cube
+end module stencil_cube_m

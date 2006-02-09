@@ -10,7 +10,7 @@
 ! Converted into f90-module, A. Rubio 1999.                                   !
 !                                                                             !
 ! Logical unit management. Units 0 to min_lun-1 are "reserved",               !
-! since most of the "typical" files (output, etc) use them.                   !
+! since most of the "typical" files (output, etc) use them.                   !_m
 !                                                                             !
 ! Logical units min_lun to min_max are managed by this module.                !
 !                                                                             !
@@ -20,13 +20,13 @@
 
 #include "global.h"
 
-module io
-  use datasets_mod
-  use global
-  use mpi_mod
-  use messages
-  use lib_oct
-  use lib_oct_parser
+module io_m
+  use datasets_m
+  use global_m
+  use mpi_m
+  use messages_m
+  use lib_oct_m
+  use lib_oct_parser_m
 
 
   implicit none
@@ -487,4 +487,4 @@ contains
     return
   end function io_file_exists
 
-end module io
+end module io_m

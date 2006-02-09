@@ -19,23 +19,23 @@
 
 #include "global.h"
 
-module static_pol
-  use global
-  use messages
-  use datasets_mod
-  use units
-  use lib_oct_parser
-  use lib_oct
-  use io
-  use mesh_function
-  use mesh
-  use grid
-  use system
-  use hamiltonian
-  use states
-  use geometry
-  use restart
-  use scf
+module static_pol_m
+  use global_m
+  use messages_m
+  use datasets_m
+  use units_m
+  use lib_oct_parser_m
+  use lib_oct_m
+  use io_m
+  use mesh_function_m
+  use mesh_m
+  use grid_m
+  use system_m
+  use hamiltonian_m
+  use states_m
+  use geometry_m
+  use restart_m
+  use scf_m
 
   implicit none
 
@@ -48,13 +48,13 @@ contains
 
   ! ---------------------------------------------------------
   subroutine static_pol_run(sys, h, fromScratch)
-    type(system_type), target, intent(inout) :: sys
-    type(hamiltonian_type),    intent(inout) :: h
+    type(system_t), target, intent(inout) :: sys
+    type(hamiltonian_t),    intent(inout) :: h
     logical,                   intent(inout) :: fromScratch
 
-    type(scf_type)             :: scfv
-    type(grid_type),   pointer :: gr    ! shortcuts
-    type(states_type), pointer :: st
+    type(scf_t)             :: scfv
+    type(grid_t),   pointer :: gr    ! shortcuts
+    type(states_t), pointer :: st
 
     integer :: iunit, ios, i_start, i, j, is, k, ierr
     FLOAT :: e_field
@@ -205,4 +205,4 @@ contains
 
   end subroutine static_pol_run
 
-end module static_pol
+end module static_pol_m

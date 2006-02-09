@@ -19,7 +19,7 @@
 
 ! ---------------------------------------------------------
 subroutine X(sparskit_solver_init)(n, sk)
-  type(sparskit_solver_type), intent(out) :: sk
+  type(sparskit_solver_t), intent(out) :: sk
   integer, intent(in)  :: n
 
   integer :: workspace_size, m
@@ -201,7 +201,7 @@ end subroutine X(sparskit_solver_init)
 
 ! ---------------------------------------------------------
 subroutine X(sparskit_solver_run)(sk, op, sol, rhs)
-  type(sparskit_solver_type), intent(inout) :: sk
+  type(sparskit_solver_t), intent(inout) :: sk
   R_TYPE, intent(in)  :: rhs(:)
   R_TYPE, intent(out) :: sol(:)
 #ifdef R_TREAL

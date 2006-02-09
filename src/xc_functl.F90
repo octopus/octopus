@@ -19,18 +19,18 @@
 
 #include "global.h"
 
-module xc_functl
-  use global
-  use messages
-  use datasets_mod
-  use lib_oct_parser
-  use lib_xc
+module xc_functl_m
+  use global_m
+  use messages_m
+  use datasets_m
+  use lib_oct_parser_m
+  use lib_xc_m
 
   implicit none
 
   private
   public ::                     &
-    xc_functl_type,             &
+    xc_functl_t,                &
     xc_j_functl_init,           &
     xc_functl_init_exchange,    &
     xc_functl_init_correlation, &
@@ -43,7 +43,7 @@ module xc_functl
   integer, public, parameter :: &
     XC_OEP_X             = 401     ! Exact exchange
 
-  type xc_functl_type
+  type xc_functl_t
     integer :: family              ! LDA, GGA, etc.
     integer :: id                  ! identifier
 
@@ -51,13 +51,13 @@ module xc_functl
 
     integer(POINTER_SIZE) :: conf  ! the pointer used to call the library
     integer(POINTER_SIZE) :: info  ! information about the functional
-  end type xc_functl_type
+  end type xc_functl_t
 
 contains
 
   ! ---------------------------------------------------------
   subroutine xc_functl_init(functl, spin_channels)
-    type(xc_functl_type), intent(out) :: functl
+    type(xc_functl_t), intent(out) :: functl
     integer,              intent(in)  :: spin_channels
 
     functl%family = 0
@@ -69,7 +69,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine xc_j_functl_init(functl, cdft, spin_channels)
-    type(xc_functl_type), intent(out) :: functl
+    type(xc_functl_t), intent(out) :: functl
     logical,              intent(in)  :: cdft
     integer,              intent(in)  :: spin_channels
 
@@ -112,7 +112,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine xc_functl_init_exchange(functl, ndim, spin_channels)
-    type(xc_functl_type), intent(out) :: functl
+    type(xc_functl_t), intent(out) :: functl
     integer,              intent(in)  :: ndim
     integer,              intent(in)  :: spin_channels
 
@@ -181,7 +181,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine xc_functl_init_correlation(functl, ndim, spin_channels)
-    type(xc_functl_type), intent(out) :: functl
+    type(xc_functl_t), intent(out) :: functl
     integer,              intent(in)  :: ndim
     integer,              intent(in)  :: spin_channels
 
@@ -274,7 +274,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine xc_functl_end(functl)
-    type(xc_functl_type), intent(inout) :: functl
+    type(xc_functl_t), intent(inout) :: functl
 
     select case(functl%family)
     case(XC_FAMILY_LDA);  call xc_lda_end (functl%conf)
@@ -288,7 +288,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine xc_functl_write_info(functl, iunit)
-    type(xc_functl_type), intent(in) :: functl
+    type(xc_functl_t), intent(in) :: functl
     integer,              intent(in) :: iunit
 
     character(len=120) :: s1, s2
@@ -336,4 +336,4 @@ contains
 
   end subroutine xc_functl_write_info
 
-end module xc_functl
+end module xc_functl_m

@@ -19,14 +19,14 @@
 
 #include "global.h"
 
-module xyz_file
-  use global
-  use messages
-  use datasets_mod
-  use string
-  use units
-  use lib_oct_parser
-  use io
+module xyz_file_m
+  use global_m
+  use messages_m
+  use datasets_m
+  use string_m
+  use units_m
+  use lib_oct_parser_m
+  use io_m
 
   implicit none
 
@@ -214,4 +214,4 @@ contains
 
   end subroutine xyz_file_read_PDB
 
-end module xyz_file
+end module xyz_file_m

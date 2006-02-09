@@ -18,10 +18,10 @@
 !! $Id$
 
 subroutine X(v_ks_calc)(gr, ks, h, st, calc_eigenval)
-  type(grid_type),        intent(inout) :: gr
-  type(v_ks_type),        intent(inout) :: ks
-  type(hamiltonian_type), intent(inout) :: h
-  type(states_type),      intent(inout) :: st
+  type(grid_t),        intent(inout) :: gr
+  type(v_ks_t),        intent(inout) :: ks
+  type(hamiltonian_t), intent(inout) :: h
+  type(states_t),      intent(inout) :: st
   logical,      optional, intent(in)    :: calc_eigenval
 
   FLOAT :: amaldi_factor

@@ -19,49 +19,49 @@
 
 #include "global.h"
 
-module PES
+module PES_m
 #if !defined(DISABLE_PES) && defined(HAVE_FFT)
-  use global
-  use lib_oct_parser
-  use io
-  use units
-  use fft
-  use mesh
-  use states
-  use simul_box
+  use global_m
+  use lib_oct_parser_m
+  use io_m
+  use units_m
+  use fft_m
+  use mesh_m
+  use states_m
+  use simul_box_m
 
   implicit none
 
-  type PES_rc_type
+  type PES_rc_t
     integer          :: npoints   ! how many points we store the wf
     integer, pointer :: points(:) ! which points to use
     character(len=30), pointer :: filenames(:) ! filenames
     complex(r4), pointer :: wf(:,:,:,:,:)
-  end type PES_rc_type
+  end type PES_rc_t
 
-  type PES_mask_type
+  type PES_mask_t
     CMPLX, pointer :: k(:,:,:,:,:,:) ! masked wf in momentum space
     FLOAT, pointer :: r(:,:,:,:,:)   ! summed masked density in real space
 
-    type(fft_type) :: fft
-  end type PES_mask_type
+    type(fft_t) :: fft
+  end type PES_mask_t
 
-  type PES_type
+  type PES_t
     logical :: calc_rc
-    type(PES_rc_type)   :: rc
+    type(PES_rc_t)   :: rc
 
     logical :: calc_mask
-    type(PES_mask_type) :: mask
-  end type PES_type
+    type(PES_mask_t) :: mask
+  end type PES_t
 
 contains
 
   ! ---------------------------------------------------------
   subroutine PES_init(p, m, sb, st, ab, save_iter)
-    type(PES_TYPE),    intent(out)   :: p
-    type(mesh_type),   intent(inout) :: m
-    type(simul_box_type), intent(in) :: sb
-    type(states_type), intent(in)    :: st
+    type(pes_t),    intent(out)   :: p
+    type(mesh_t),   intent(inout) :: m
+    type(simul_box_t), intent(in) :: sb
+    type(states_t), intent(in)    :: st
     integer,           intent(in)    :: ab, save_iter
 
     !%%Variable CalcPES_rc
@@ -103,7 +103,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine PES_end(p)
-    type(PES_type), intent(inout) :: p
+    type(PES_t), intent(inout) :: p
 
     if(p%calc_rc)   call PES_rc_end  (p%rc)
     if(p%calc_mask) call PES_mask_end(p%mask)
@@ -113,9 +113,9 @@ contains
 
   ! ---------------------------------------------------------
   subroutine PES_doit(p, m, st, ii, dt, mask)
-    type(PES_type),    intent(inout) :: p
-    type(mesh_type),   intent(in)    :: m
-    type(states_type), intent(in)    :: st
+    type(PES_t),    intent(inout) :: p
+    type(mesh_t),   intent(in)    :: m
+    type(states_t), intent(in)    :: st
     FLOAT,             intent(in)    :: dt
     FLOAT,             pointer       :: mask(:)
     integer,           intent(in)    :: ii
@@ -128,9 +128,9 @@ contains
 
   ! ---------------------------------------------------------
   subroutine PES_output(p, m, st, iter, save_iter, dt)
-    type(PES_type),    intent(in) :: p
-    type(mesh_type),   intent(in) :: m
-    type(states_type), intent(in) :: st
+    type(PES_t),    intent(in) :: p
+    type(mesh_t),   intent(in) :: m
+    type(states_t), intent(in) :: st
     integer,           intent(in) :: iter, save_iter
     FLOAT,             intent(in) :: dt
 
@@ -143,5 +143,5 @@ contains
 #include "pes_mask.F90"
 
 #endif
-end module PES
+end module PES_m
 

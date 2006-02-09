@@ -19,15 +19,15 @@
 
 #include "global.h"
 
-module curvlinear
-  use lib_oct_parser
-  use simul_box
-  use geometry
-  use curv_gygi
-  use curv_briggs
-  use curv_modine
-  use varinfo
-  use datasets_mod
+module curvlinear_m
+  use lib_oct_parser_m
+  use simul_box_m
+  use geometry_m
+  use curv_gygi_m
+  use curv_briggs_m
+  use curv_modine_m
+  use varinfo_m
+  use datasets_m
 
   implicit none
 
@@ -38,20 +38,20 @@ module curvlinear
     CURV_METHOD_BRIGGS  = 3,    &
     CURV_METHOD_MODINE  = 4
 
-  type curvlinear_type
+  type curvlinear_t
     integer :: method
-    type(curv_gygi_type)   :: gygi
-    type(curv_briggs_type) :: briggs
-    type(curv_modine_type) :: modine
-  end type curvlinear_type
+    type(curv_gygi_t)   :: gygi
+    type(curv_briggs_t) :: briggs
+    type(curv_modine_t) :: modine
+  end type curvlinear_t
 
 
 contains
 
   ! ---------------------------------------------------------
   subroutine curvlinear_init(sb, cv)
-    type(simul_box_type),  intent(in)  :: sb
-    type(curvlinear_type), intent(out) :: cv
+    type(simul_box_t),  intent(in)  :: sb
+    type(curvlinear_t), intent(out) :: cv
 
     call push_sub('curvlinear.curvlinear_init')
 
@@ -102,9 +102,9 @@ contains
 
   ! ---------------------------------------------------------
   subroutine curvlinear_chi2x(sb, geo, cv, chi, x)
-    type(simul_box_type),  intent(in)  :: sb
-    type(geometry_type),   intent(in)  :: geo
-    type(curvlinear_type), intent(in)  :: cv
+    type(simul_box_t),  intent(in)  :: sb
+    type(geometry_t),   intent(in)  :: geo
+    type(curvlinear_t), intent(in)  :: cv
     FLOAT,                 intent(in)  :: chi(3)  ! chi(conf%dim)
     FLOAT,                 intent(out) :: x(3)    ! x(conf%dim)
 
@@ -124,9 +124,9 @@ contains
 
   ! ---------------------------------------------------------
   FLOAT function curvlinear_det_Jac(sb, geo, cv, x, chi) result(jdet)
-    type(simul_box_type),  intent(in)  :: sb
-    type(geometry_type),   intent(in)  :: geo
-    type(curvlinear_type), intent(in)  :: cv
+    type(simul_box_t),  intent(in)  :: sb
+    type(geometry_t),   intent(in)  :: geo
+    type(curvlinear_t), intent(in)  :: cv
     FLOAT,                 intent(in)  :: x(:)    !   x(sb%dim)
     FLOAT,                 intent(in)  :: chi(:)  ! chi(sb%dim)
 
@@ -152,4 +152,4 @@ contains
 
   end function curvlinear_det_Jac
 
-end module curvlinear
+end module curvlinear_m

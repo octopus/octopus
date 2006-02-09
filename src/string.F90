@@ -19,7 +19,7 @@
 
 #include "global.h"
 
-module string
+module string_m
   implicit none
 
   private
@@ -181,4 +181,4 @@ contains
   end subroutine conv_to_C_string
 
 
-end module string
+end module string_m

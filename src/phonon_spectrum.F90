@@ -20,12 +20,12 @@
 #include "global.h"
 
 program phonon_spectrum
-  use global
-  use messages
-  use datasets_mod
-  use io
-  use lib_oct_parser
-  use units
+  use global_m
+  use messages_m
+  use datasets_m
+  use io_m
+  use lib_oct_parser_m
+  use units_m
 
   implicit none
 

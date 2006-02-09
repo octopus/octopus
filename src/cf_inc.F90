@@ -137,7 +137,7 @@ end subroutine X(cf_free)
 !!! routine has to be called before allocating anything
 subroutine X(cf_fft_init)(cf, sb)
   type(X(cf)),          intent(inout) :: cf
-  type(simul_box_type), intent(in)    :: sb
+  type(simul_box_t), intent(in)    :: sb
 
   call push_sub('cf_inc.Xcf_fft_init')
   ASSERT(.not.associated(cf%fft))
@@ -158,7 +158,7 @@ end subroutine X(cf_fft_init)
 
 !!! The next routines convert the function between real space and fourier space
 !!! Note that the dimensions of the function in FS are different wether f
-!!! is real or complex, because the FFT representation is different (FFTW scheme).
+!!! is real or complex, because the FFT representation is different (FFTW scheme)._m
 subroutine X(cf_RS2FS)(cf)
   type(X(cf)), intent(inout)  :: cf
 
@@ -184,8 +184,8 @@ end subroutine X(cf_FS2RS)
 ! optionally, one can apply a cutoff
 ! i.e. \nabla^2 f = min(cutoff, G^2) * f
 subroutine X(cf_FS_lapl)(sb, m, cf, cutoff_)
-  type(simul_box_type), intent(in)    :: sb
-  type(mesh_type),      intent(in)    :: m
+  type(simul_box_t), intent(in)    :: sb
+  type(mesh_t),      intent(in)    :: m
   type(X(cf)),          intent(inout) :: cf
   FLOAT, optional,      intent(in)    :: cutoff_
 
@@ -218,8 +218,8 @@ end subroutine X(cf_FS_lapl)
 
 
 subroutine X(cf_FS_grad)(sb, m, cf, j)
-  type(simul_box_type), intent(in)    :: sb
-  type(mesh_type),      intent(in)    :: m
+  type(simul_box_t), intent(in)    :: sb
+  type(mesh_t),      intent(in)    :: m
   type(X(cf)),          intent(inout) :: cf
   integer,              intent(in)    :: j
 

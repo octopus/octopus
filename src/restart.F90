@@ -19,20 +19,20 @@
 
 #include "global.h"
 
-module restart
-  use lib_oct
-  use lib_oct_parser
-  use global
-  use messages
-  use datasets_mod
-  use io
-  use states
-  use mesh
-  use grid
-  use output
-  use mpi_mod
-  use mpi_debug_mod
-  use varinfo
+module restart_m
+  use lib_oct_m
+  use lib_oct_parser_m
+  use global_m
+  use messages_m
+  use datasets_m
+  use io_m
+  use states_m
+  use mesh_m
+  use grid_m
+  use output_m
+  use mpi_m
+  use mpi_debug_m
+  use varinfo_m
 
   implicit none
 
@@ -113,7 +113,7 @@ contains
   ! ---------------------------------------------------------
   subroutine restart_look (dir, m, kpoints, dim, nst, ierr)
     character(len=*),  intent(in)    :: dir
-    type(mesh_type),   intent(in)    :: m
+    type(mesh_t),   intent(in)    :: m
     integer, intent(out) :: kpoints, dim, nst, ierr
 
     character(len=256)   :: line
@@ -168,4 +168,4 @@ contains
 #include "complex.F90"
 #include "restart_inc.F90"
 
-end module restart
+end module restart_m

@@ -19,40 +19,40 @@
 
 #include "global.h"
 
-module timedep
-  use global
-  use messages
-  use profiling_mod
-  use lib_oct
-  use lib_oct_parser
-  use geometry
-  use mesh
-  use grid
-  use mesh_function
-  use functions
-  use states
-  use output
-  use restart
-  use lasers
-  use v_ks
-  use hamiltonian
-  use external_pot
-  use system
-  use td_rti
-  use td_write
+module timedep_m
+  use global_m
+  use messages_m
+  use profiling_m
+  use lib_oct_m
+  use lib_oct_parser_m
+  use geometry_m
+  use mesh_m
+  use grid_m
+  use mesh_function_m
+  use functions_m
+  use states_m
+  use output_m
+  use restart_m
+  use lasers_m
+  use v_ks_m
+  use hamiltonian_m
+  use external_pot_m
+  use system_m
+  use td_rti_m
+  use td_write_m
 #if !defined(DISABLE_PES) && defined(HAVE_FFT)
-  use PES
+  use PES_m
 #endif
-  use grid
-  use spectrum
-  use mpi_mod
-  use varinfo
+  use grid_m
+  use spectrum_m
+  use mpi_m
+  use varinfo_m
 
   implicit none
 
   private
   public ::               &
-    td_type,              &
+    td_t,                 &
     td_run,               &
     td_init,              &
     td_end
@@ -63,8 +63,8 @@ module timedep
     NORMAL_VERLET   = 3,  &
     VELOCITY_VERLET = 4
 
-  type td_type
-    type(td_rti_type) :: tr             ! contains the details of the time evolution
+  type td_t
+    type(td_rti_t) :: tr             ! contains the details of the time evolution
     FLOAT             :: dt             ! time step
     integer           :: max_iter       ! maximum number of iterations to perform
     integer           :: iter           ! the actual iteration
@@ -73,27 +73,27 @@ module timedep
     integer           :: move_ions      ! how do we move the ions?
 
     ! The *kick* used in "linear response in the time domain" calculations.
-    type(kick_type)   :: kick
+    type(kick_t)   :: kick
 
 #if !defined(DISABLE_PES) && defined(HAVE_FFT)
-    type(PES_type) :: PESv
+    type(PES_t) :: PESv
 #endif
-  end type td_type
+  end type td_t
 
 
 contains
 
   ! ---------------------------------------------------------
   subroutine td_run(sys, h, fromScratch)
-    type(system_type), target, intent(inout) :: sys
-    type(hamiltonian_type),    intent(inout) :: h
+    type(system_t), target, intent(inout) :: sys
+    type(hamiltonian_t),    intent(inout) :: h
     logical,                   intent(inout) :: fromScratch
 
-    type(td_type)                :: td
-    type(td_write_type) :: write_handler
-    type(grid_type),     pointer :: gr   ! some shortcuts
-    type(states_type),   pointer :: st
-    type(geometry_type), pointer :: geo
+    type(td_t)                :: td
+    type(td_write_t) :: write_handler
+    type(grid_t),     pointer :: gr   ! some shortcuts
+    type(states_t),   pointer :: st
+    type(geometry_t), pointer :: geo
     logical :: stopping
     integer :: i, ii, j, idim, ist, ik
     FLOAT, allocatable ::  x1(:,:), x2(:,:), f1(:,:) ! stuff for verlet
@@ -353,7 +353,7 @@ contains
     ! Applies the delta function electric field E(t) = E_0 delta(t)
     ! where E_0 = - k \hbar / e
     subroutine apply_delta_field(k)
-      type(kick_type), intent(in) :: k
+      type(kick_t), intent(in) :: k
       integer :: i
       CMPLX   :: c(2), kick
 
@@ -501,4 +501,4 @@ contains
 
 #include "td_init.F90"
 
-end module timedep
+end module timedep_m

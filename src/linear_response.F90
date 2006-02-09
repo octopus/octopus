@@ -19,28 +19,28 @@
 
 #include "global.h"
 
-module linear_response
-  use global
-  use messages
-  use datasets_mod
-  use lib_oct_parser
-  use mesh
-  use grid
-  use states
-  use mix
-  use hamiltonian
-  use xc
-  use functions
+module linear_response_m
+  use global_m
+  use messages_m
+  use datasets_m
+  use lib_oct_parser_m
+  use mesh_m
+  use grid_m
+  use states_m
+  use mix_m
+  use hamiltonian_m
+  use xc_m
+  use functions_m
 
   implicit none
 
-  type lr_type
+  type lr_t
     FLOAT   :: conv_abs_dens  ! convergence required
     FLOAT   :: abs_dens       ! convergence reached
     integer :: max_iter       ! maximum number of iterations
     integer :: iter           ! number of iterations used
 
-    type(mix_type) :: mixer   ! can not live without it
+    type(mix_t) :: mixer   ! can not live without it
 
     ! the real quantities
     FLOAT, pointer :: ddl_rho(:,:)     ! response of the density
@@ -53,13 +53,13 @@ module linear_response
     CMPLX, pointer :: zdl_Vhar(:)      ! linear change of the complex KS orbitals
 
     FLOAT, pointer :: dl_Vxc(:,:,:)    ! linear change of the xc potential (fxc)
-  end type lr_type
+  end type lr_t
 
 contains
 
   ! ---------------------------------------------------------
   subroutine lr_init(lr, prefix)
-    type(lr_type),    intent(out) :: lr
+    type(lr_t),    intent(out) :: lr
     character(len=*), intent(in)  :: prefix
 
     ! read some parameters from the input file
@@ -74,9 +74,9 @@ contains
 
   ! ---------------------------------------------------------
   integer function dlr_alloc_psi(st, m, lr) result(r)
-    type(states_type), intent(in)  :: st
-    type(mesh_type),   intent(in)  :: m
-    type(lr_type),     intent(out) :: lr
+    type(states_t), intent(in)  :: st
+    type(mesh_t),   intent(in)  :: m
+    type(lr_t),     intent(out) :: lr
 
     r =  1
     if(associated(lr%ddl_psi)) return ! do nothing
@@ -98,9 +98,9 @@ contains
 
   ! ---------------------------------------------------------
   integer function zlr_alloc_psi(st, m, lr) result(r)
-    type(states_type), intent(in)  :: st
-    type(mesh_type),   intent(in)  :: m
-    type(lr_type),     intent(out) :: lr
+    type(states_t), intent(in)  :: st
+    type(mesh_t),   intent(in)  :: m
+    type(lr_t),     intent(out) :: lr
 
     r =  1
     if(associated(lr%zdl_psi)) return ! do nothing
@@ -122,7 +122,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine lr_dealloc(lr)
-    type(lr_type), intent(inout) :: lr
+    type(lr_t), intent(inout) :: lr
 
     if(associated(lr%ddl_rho)) then
       deallocate(lr%ddl_rho, lr%ddl_Vhar, lr%dl_Vxc)
@@ -149,9 +149,9 @@ contains
 
   ! ---------------------------------------------------------
   subroutine lr_build_fxc(m, st, xcs, fxc)
-    type(mesh_type),   intent(in)  :: m
-    type(states_type), intent(in)  :: st
-    type(xc_type),     intent(in)  :: xcs
+    type(mesh_t),   intent(in)  :: m
+    type(states_t), intent(in)  :: st
+    type(xc_t),     intent(in)  :: xcs
     FLOAT,             intent(out) :: fxc(:,:,:)
 
     FLOAT, allocatable :: rho(:, :)
@@ -179,9 +179,9 @@ contains
   ! \alpha KS orbitals
   ! ---------------------------------------------------------
   subroutine lr_orth_response(m, st, lr)
-    type(mesh_type),   intent(in)    :: m
-    type(states_type), intent(in)    :: st
-    type(lr_type),     intent(inout) :: lr
+    type(mesh_t),   intent(in)    :: m
+    type(states_t), intent(in)    :: st
+    type(lr_t),     intent(inout) :: lr
 
     integer :: ist, ik
     call push_sub('linear_response.lr_orth_response')
@@ -207,4 +207,4 @@ contains
 #include "linear_response_inc.F90"
 
 
-end module linear_response
+end module linear_response_m

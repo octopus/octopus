@@ -19,7 +19,7 @@
 
 ! ---------------------------------------------------------
 subroutine DRIVER (sk, op, sol, rhs, sk_work)
-  type(sparskit_solver_type), intent(inout) :: sk
+  type(sparskit_solver_t), intent(inout) :: sk
   R_TYPE, intent(in)    :: rhs(:)
   R_TYPE, intent(out)   :: sol(:)
   FLOAT,  intent(inout) :: sk_work(:)

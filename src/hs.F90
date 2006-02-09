@@ -20,20 +20,20 @@
 #include "global.h"
 
 program harmonic_spectrum
-  use global
-  use messages
-  use datasets_mod
-  use io
-  use units
-  use lib_oct_parser
-  use spectrum
-  use varinfo
+  use global_m
+  use messages_m
+  use datasets_m
+  use io_m
+  use units_m
+  use lib_oct_parser_m
+  use spectrum_m
+  use varinfo_m
 
   implicit none
 
   character(len=100) :: txt
   integer :: mode
-  type(spec_type) :: s
+  type(spec_t) :: s
   type(spec_sh)   :: sh
 
   integer, parameter :: &

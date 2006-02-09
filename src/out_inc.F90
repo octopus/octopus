@@ -38,7 +38,7 @@
 
 subroutine X(input_function)(filename, m, f, ierr, is_tmp)
   character(len=*),     intent(in)  :: filename
-  type(mesh_type),      intent(in)  :: m
+  type(mesh_t),      intent(in)  :: m
   R_TYPE,               intent(out) :: f(:)
   integer,              intent(out) :: ierr
   logical, optional,    intent(in)  :: is_tmp
@@ -93,7 +93,7 @@ end subroutine X(input_function)
 ! ---------------------------------------------------------
 subroutine X(input_function_global)(filename, m, f, ierr, is_tmp)
   character(len=*),     intent(in)  :: filename
-  type(mesh_type),      intent(in)  :: m
+  type(mesh_t),      intent(in)  :: m
   R_TYPE,               intent(out) :: f(:)
   integer,              intent(out) :: ierr
   logical,              intent(in)  :: is_tmp
@@ -321,8 +321,8 @@ end subroutine X(input_function_global)
 subroutine X(output_function) (how, dir, fname, mesh, sb, f, u, ierr, is_tmp)
   integer,              intent(in)  :: how
   character(len=*),     intent(in)  :: dir, fname
-  type(mesh_type),      intent(in)  :: mesh
-  type(simul_box_type), intent(in)  :: sb
+  type(mesh_t),      intent(in)  :: mesh
+  type(simul_box_t), intent(in)  :: sb
   R_TYPE,               intent(in)  :: f(:)  ! f(mesh%np)
   FLOAT,                intent(in)  :: u
   integer,              intent(out) :: ierr
@@ -370,8 +370,8 @@ end subroutine X(output_function)
 subroutine X(output_function_global) (how, dir, fname, m, sb, f, u, ierr, is_tmp)
   integer,              intent(in)  :: how
   character(len=*),     intent(in)  :: dir, fname
-  type(mesh_type),      intent(in)  :: m
-  type(simul_box_type), intent(in)  :: sb
+  type(mesh_t),      intent(in)  :: m
+  type(simul_box_t), intent(in)  :: sb
   R_TYPE,               intent(in)  :: f(:)  ! f(m%np_global)
   FLOAT,                intent(in)  :: u
   integer,              intent(out) :: ierr

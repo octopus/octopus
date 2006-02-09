@@ -20,9 +20,9 @@
 
 ! ---------------------------------------------------------
 subroutine X(lr_alloc_fHxc) (st, m, lr)
-  type(states_type), intent(in)  :: st
-  type(mesh_type),   intent(in)  :: m
-  type(lr_type),     intent(out) :: lr
+  type(states_t), intent(in)  :: st
+  type(mesh_t),   intent(in)  :: m
+  type(lr_t),     intent(out) :: lr
 
   lr%abs_dens = M_ZERO
   lr%iter     = 0
@@ -37,8 +37,8 @@ end subroutine X(lr_alloc_fHxc)
 
 ! ---------------------------------------------------------
 subroutine X(lr_orth_vector) (m, st, v, ik)
-  type(mesh_type),        intent(in)    :: m
-  type(states_type),      intent(in)    :: st
+  type(mesh_t),        intent(in)    :: m
+  type(states_t),      intent(in)    :: st
   R_TYPE,                 intent(inout) :: v(:,:)
   integer,                intent(in)    :: ik
 
@@ -64,9 +64,9 @@ end subroutine X(lr_orth_vector)
 !    lr%dl_rho += sum_{i occ} psi_i^0*(r) * psi_i^1 (r)   <=   type=2
 !    type 3 => type 1 + type 2
 subroutine X(lr_build_dl_rho) (m, st, lr, type)
-  type(mesh_type),   intent(in)    :: m
-  type(states_type), intent(in)    :: st
-  type(lr_type),     intent(inout) :: lr
+  type(mesh_t),   intent(in)    :: m
+  type(states_t), intent(in)    :: st
+  type(lr_t),     intent(inout) :: lr
   integer,           intent(in)    :: type
 
   integer :: i, p, ik, sp
@@ -115,10 +115,10 @@ end subroutine X(lr_build_dl_rho)
 !    (H - eps_{ist,ik} + omega) psi^1_{ist,ik} = y
 ! ---------------------------------------------------------
 subroutine X(lr_solve_HXeY) (lr, h, gr, d, ik, x, y, omega)
-  type(lr_type),          intent(inout) :: lr
-  type(hamiltonian_type), intent(inout) :: h
-  type(grid_type),        intent(inout) :: gr
-  type(states_dim_type),  intent(in)    :: d
+  type(lr_t),          intent(inout) :: lr
+  type(hamiltonian_t), intent(inout) :: h
+  type(grid_t),        intent(inout) :: gr
+  type(states_dim_t),  intent(in)    :: d
 
   integer,                intent(in)    :: ik
   R_TYPE,                 intent(inout) :: x(:,:)   ! x(NP, d%dim)

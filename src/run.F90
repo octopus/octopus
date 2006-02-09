@@ -20,31 +20,31 @@
 
 #include "global.h"
 
-module run_prog
-  use global
-  use messages
-  use lib_oct_parser
-  use units
-  use fft
-  use restart
-  use external_pot
-  use hamiltonian
-  use system
-  use scf
-  use timedep
-  use unocc
-  use static_pol
-  use static_pol_lr
-  use casida
-  use wave_matching
-  use geom_opt
-  use phonons
-  use opt_control
-  use ground_state
-  use pulpo
-  use io
-  use multicomm_mod
-  use mpi_debug_mod
+module run_prog_m
+  use global_m
+  use messages_m
+  use lib_oct_parser_m
+  use units_m
+  use fft_m
+  use restart_m
+  use external_pot_m
+  use hamiltonian_m
+  use system_m
+  use scf_m
+  use timedep_m
+  use unocc_m
+  use static_pol_m
+  use static_pol_lr_m
+  use casida_m
+  use wave_matching_m
+  use geom_opt_m
+  use phonons_m
+  use opt_control_m
+  use ground_state_m
+  use pulpo_m
+  use io_m
+  use multicomm_m
+  use mpi_debug_m
 
   implicit none
 
@@ -68,8 +68,8 @@ module run_prog
     M_BO_MD              =  98,  &
     M_PULPO_A_FEIRA      =  99
 
-  type(system_type)      :: sys
-  type(hamiltonian_type) :: h
+  type(system_t)      :: sys
+  type(hamiltonian_t) :: h
 
 
 contains
@@ -172,4 +172,4 @@ contains
 
   end subroutine run_end
 
-end module run_prog
+end module run_prog_m

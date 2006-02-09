@@ -19,23 +19,23 @@
 
 #include "global.h"
 
-module ground_state
-  use global
-  use messages
-  use datasets_mod
-  use lib_oct_parser
-  use system
-  use hamiltonian
-  use v_ks
-  use lcao
-  use states
-  use restart
-  use scf
-  use grid
-  use simul_box
-  use mesh
-  use mpi_mod
-  use mpi_debug_mod
+module ground_state_m
+  use global_m
+  use messages_m
+  use datasets_m
+  use lib_oct_parser_m
+  use system_m
+  use hamiltonian_m
+  use v_ks_m
+  use lcao_m
+  use states_m
+  use restart_m
+  use scf_m
+  use grid_m
+  use simul_box_m
+  use mesh_m
+  use mpi_m
+  use mpi_debug_m
 
   implicit none
 
@@ -49,11 +49,11 @@ contains
 
   ! ---------------------------------------------------------
   subroutine ground_state_run(sys, h, fromScratch)
-    type(system_type),      intent(inout) :: sys
-    type(hamiltonian_type), intent(inout) :: h
+    type(system_t),      intent(inout) :: sys
+    type(hamiltonian_t), intent(inout) :: h
     logical,                intent(inout) :: fromScratch
 
-    type(scf_type) :: scfv
+    type(scf_t) :: scfv
     integer        :: ierr
 
     call push_sub('gs.ground_state_run')
@@ -104,14 +104,14 @@ contains
 
   ! ---------------------------------------------------------
   subroutine ground_state_init(gr, st, ks,  h)
-    type(grid_type),        intent(inout) :: gr
-    type(states_type),      intent(inout) :: st
-    type(v_ks_type),        intent(inout) :: ks
-    type(hamiltonian_type), intent(inout) :: h
+    type(grid_t),        intent(inout) :: gr
+    type(states_t),      intent(inout) :: st
+    type(v_ks_t),        intent(inout) :: ks
+    type(hamiltonian_t), intent(inout) :: h
 
     integer :: err
     logical :: lcao_start, lcao_start_default = .true.
-    type(lcao_type) :: lcao_data
+    type(lcao_t) :: lcao_data
 #if defined(HAVE_MPI)
     integer :: mpi_err
 #endif
@@ -177,4 +177,4 @@ contains
     call pop_sub()
   end subroutine ground_state_init
 
-end module ground_state
+end module ground_state_m

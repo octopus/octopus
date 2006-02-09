@@ -19,48 +19,48 @@
 
 #include "global.h"
 
-module phonons
-  use global
-  use messages
-  use datasets_mod
-  use units
-  use lib_oct
-  use lib_oct_parser
-  use io
-  use lib_adv_alg
-  use mesh
-  use functions
-  use output
-  use external_pot
-  use geometry
-  use v_ks
-  use hamiltonian
-  use states
-  use system
-  use restart
-  use scf
-  use grid
+module phonons_m
+  use global_m
+  use messages_m
+  use datasets_m
+  use units_m
+  use lib_oct_m
+  use lib_oct_parser_m
+  use io_m
+  use lib_adv_alg_m
+  use mesh_m
+  use functions_m
+  use output_m
+  use external_pot_m
+  use geometry_m
+  use v_ks_m
+  use hamiltonian_m
+  use states_m
+  use system_m
+  use restart_m
+  use scf_m
+  use grid_m
 
   implicit none
 
   private
   public :: phonons_run
 
-  type phonons_type
+  type phonons_t
     integer :: dim
     FLOAT, pointer :: DM(:,:), freq(:)
 
     FLOAT :: disp
-  end type phonons_type
+  end type phonons_t
 
 contains
 
   ! ---------------------------------------------------------
   subroutine phonons_run(sys, h)
-    type(system_type),      intent(inout) :: sys
-    type(hamiltonian_type), intent(inout) :: h
+    type(system_t),      intent(inout) :: sys
+    type(hamiltonian_t), intent(inout) :: h
 
-    type(phonons_type) :: ph
+    type(phonons_t) :: ph
     integer :: i, j, iunit, ierr
 
     call init_()
@@ -145,16 +145,16 @@ contains
 
   ! ---------------------------------------------------------
   subroutine get_DM(gr, st, ks, h, outp, ph)
-    type(grid_type), target, intent(inout) :: gr
-    type(states_type),       intent(inout) :: st
-    type(v_ks_type),         intent(inout) :: ks
-    type(hamiltonian_type),  intent(inout) :: h
-    type(output_type),       intent(in)    :: outp
-    type(phonons_type),      intent(inout) :: ph
+    type(grid_t), target, intent(inout) :: gr
+    type(states_t),       intent(inout) :: st
+    type(v_ks_t),         intent(inout) :: ks
+    type(hamiltonian_t),  intent(inout) :: h
+    type(output_t),       intent(in)    :: outp
+    type(phonons_t),      intent(inout) :: ph
 
-    type(scf_type)               :: scf
-    type(mesh_type),     pointer :: m
-    type(geometry_type), pointer :: geo
+    type(scf_t)               :: scf
+    type(mesh_t),     pointer :: m
+    type(geometry_t), pointer :: geo
 
     integer :: i, j, alpha, beta, n, iunit
     FLOAT, allocatable :: forces(:,:), forces0(:,:)
@@ -224,4 +224,4 @@ contains
 
   end subroutine get_DM
 
-end module phonons
+end module phonons_m

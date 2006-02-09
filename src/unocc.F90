@@ -19,22 +19,22 @@
 
 #include "global.h"
 
-module unocc
-  use global
-  use messages
-  use datasets_mod
-  use lib_oct_parser
-  use lib_oct
-  use mesh
-  use states
-  use system
-  use restart
-  use v_ks
-  use hamiltonian
-  use eigen_solver
-  use io
-  use simul_box
-  use lcao
+module unocc_m
+  use global_m
+  use messages_m
+  use datasets_m
+  use lib_oct_parser_m
+  use lib_oct_m
+  use mesh_m
+  use states_m
+  use system_m
+  use restart_m
+  use v_ks_m
+  use hamiltonian_m
+  use eigen_solver_m
+  use io_m
+  use simul_box_m
+  use lcao_m
 
   implicit none
 
@@ -47,15 +47,15 @@ contains
 
   ! ---------------------------------------------------------
   subroutine unocc_run(sys, h, fromScratch)
-    type(system_type),      intent(inout) :: sys
-    type(hamiltonian_type), intent(inout) :: h
+    type(system_t),      intent(inout) :: sys
+    type(hamiltonian_t), intent(inout) :: h
     logical,                intent(inout) :: fromScratch
 
-    type(eigen_solver_type) :: eigens
+    type(eigen_solver_t) :: eigens
     integer :: iunit, ierr, ik, p, occupied_states
     R_TYPE, allocatable :: h_psi(:,:)
     logical :: converged, l
-    type(lcao_type) :: lcao_data
+    type(lcao_t) :: lcao_data
 
     occupied_states = sys%st%nst
     call init_(sys%gr%m, sys%st)
@@ -165,8 +165,8 @@ contains
 
     ! ---------------------------------------------------------
     subroutine init_(m, st)
-      type(mesh_type),   intent(in)    :: m
-      type(states_type), intent(inout) :: st
+      type(mesh_t),   intent(in)    :: m
+      type(states_t), intent(inout) :: st
 
       integer :: nus
 
@@ -225,14 +225,14 @@ contains
   ! ---------------------------------------------------------
   ! warning: only works for spin-unpolarized and 1 k-point
   subroutine write_matrix_elements(sys, h)
-    use mesh_function
-    use poisson
+    use mesh_function_m
+    use poisson_m
 
-    type(system_type), target, intent(inout) :: sys
-    type(hamiltonian_type),    intent(in)    :: h
+    type(system_t), target, intent(inout) :: sys
+    type(hamiltonian_t),    intent(in)    :: h
 
-    type(states_type), pointer :: st
-    type(mesh_type),   pointer :: m
+    type(states_t), pointer :: st
+    type(mesh_t),   pointer :: m
 
     call io_mkdir("ME")
 
@@ -317,4 +317,4 @@ contains
   end subroutine write_matrix_elements
 
 
-end module unocc
+end module unocc_m

@@ -22,7 +22,7 @@
 subroutine X(restart_write_function)(dir, filename, gr, f, ierr, size)
   character(len=*), intent(in)  :: dir
   character(len=*), intent(in)  :: filename
-  type(grid_type),  intent(in)  :: gr
+  type(grid_t),  intent(in)  :: gr
   integer,          intent(out) :: ierr
   integer,          intent(in)  :: size
   R_TYPE,           intent(in)  :: f(size)
@@ -40,7 +40,7 @@ end subroutine X(restart_write_function)
 subroutine X(restart_read_function)(dir, filename, m, f, ierr)
   character(len=*), intent(in)  :: dir
   character(len=*), intent(in)  :: filename
-  type(mesh_type),  intent(in)  :: m
+  type(mesh_t),  intent(in)  :: m
   R_TYPE,           intent(out) :: f(1:m%np)
   integer,          intent(out) :: ierr
 
@@ -59,8 +59,8 @@ end subroutine X(restart_read_function)
 ! ---------------------------------------------------------
 subroutine X(restart_write) (dir, st, gr, ierr, iter)
   character(len=*),  intent(in)  :: dir
-  type(states_type), intent(in)  :: st
-  type(grid_type),   intent(in)  :: gr
+  type(states_t), intent(in)  :: st
+  type(grid_t),   intent(in)  :: gr
   integer,           intent(out) :: ierr
   integer, optional, intent(in)  :: iter
 
@@ -135,8 +135,8 @@ end subroutine X(restart_write)
 ! >0 => could only read x wavefunctions
 subroutine X(restart_read) (dir, st, m, ierr, iter)
   character(len=*),  intent(in)    :: dir
-  type(states_type), intent(inout) :: st
-  type(mesh_type),   intent(in)    :: m
+  type(states_t), intent(inout) :: st
+  type(mesh_t),   intent(in)    :: m
   integer,           intent(out)   :: ierr
   integer, optional, intent(out)   :: iter
 
