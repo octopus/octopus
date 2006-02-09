@@ -1,3 +1,95 @@
+        Octopus: A real-space TDDFT code. License Agreement
+
+                Email: octopus-devel@tddft.org
+                WWW: http://www.tddft.org
+
+
+INTRODUCTION
+
+The real-space TDDFT code octopus ("octopus") is provided under the 
+GNU General Public License ("GPL"), Version 2, with exceptions for 
+external libraries that are contained soley for convenience in this 
+distribution. A copy of the exceptions and licenses follow this 
+introduction.
+
+LICENSE EXCEPTIONS
+
+Octopus provides several external libraries, which are located in the 
+"external_libs" subdirectory of the octopus source distribution. The 
+GNU General Public License does not apply to these libraries. Separate 
+copyright notices can be found for each library in the respective 
+subdirectories of "external_libs". Copyright notices are also contained 
+in this document.
+
+ Currently the following external libraries are provided:
+
+  1. Expokit
+
+      Roger B. Sidje
+      Department of Mathematics, University of Queensland 
+      Brisbane, QLD-4072, Australia
+      Email: rbs@maths.uq.edu.au
+      WWW: http://www.maths.uq.edu.au/expokit/ 
+
+
+  2. Metis 4.0
+
+      George Karypis 
+      Department of Computer Science & Engineering
+      Twin Cities Campus
+      University of Minnesota, Minneapolis, MN, USA
+      Email: karypis@cs.umn.edu
+      WWW: http://www-users.cs.umn.edu/~karypis/metis/index.html
+
+
+
+
+                       EXPOKIT COPYRIGHT NOTICE
+
+Permission to use, copy, modify, and distribute EXPOKIT and its       
+supporting documentation for non-commercial purposes, is hereby       
+granted without fee, provided that this permission message and        
+copyright notice appear in all copies. Approval must be sought for    
+commercial purposes.                                                  
+                                                                      
+Neither the Institution (University of Queensland) nor the Authors    
+make any representations about the suitability of this software for   
+any purpose.  This software is provided ``as is'' without express or  
+implied warranty.                                                     
+                                                                      
+The work resulting from EXPOKIT has been published in ACM-Transactions
+on Mathematical Software, 24(1):130-156, 1998.                        
+                                                                      
+Certain elements of the current software may include inadequacies     
+that may be corrected at any time, as they are discovered. The Web    
+always contains the latest updates.                                   
+                                                                      
+                             Roger B. Sidje                           
+           Department of Mathematics, University of Queensland        
+     Brisbane, QLD-4072, Australia, (c) 1996-1999 All Rights Reserved 
+
+
+
+                     METIS COPYRIGHT NOTICE
+
+The ParMETIS/METIS package is copyrighted by the Regents of the
+University of Minnesota. It can be freely used for educational and
+research purposes by non-profit institutions and US government agencies
+only.  Other organizations are allowed to use ParMETIS/METIS only for
+evaluation purposes, and any further uses will require prior approval.
+The software may not be sold or redistributed without prior approval.
+One may make copies of the software for their use provided that the
+copies, are not sold or distributed, are used under the same terms
+and conditions.
+
+As unestablished research software, this code is provided on an
+``as is'' basis without warranty of any kind, either expressed or
+implied. The downloading, or executing any part of this software
+constitutes an implicit agreement to these terms. These terms and
+conditions are subject to change at any time without prior notice.
+
+
+
 		    GNU GENERAL PUBLIC LICENSE
 		       Version 2, June 1991
 
