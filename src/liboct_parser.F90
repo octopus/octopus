@@ -212,21 +212,42 @@ contains
 
     ! read in default variables
     ierr = loct_parse_input(trim(conf%share)//'/variables')
+    if(ierr .ne. 0) then
+      write(6,'(a)') '*** Fatal Error (description follows)'
+      write(6,'(a)') 'Can not open variables file!' 
+#ifdef HAVE_MPI
+      call MPI_FINALIZE(mpi_err)
+#endif
+      stop
+    end if
+
+    ! check if the user provides input data on stdin and stop the code in that case
+    ! (some MPI implementations do not forward stdin to all compute nodes)
+    ierr = loct_parse_input("-")
+    if(ierr .eq. 0) then
+      write(6,'(a)') '*** Fatal Error (description follows)'
+      write(6,'(a)') 'Error initializing liboct'
+      write(6,'(a)') 'Reading input from stdin (e.g via octopus < Na2) is deprecated'
+      write(6,'(a)') 'Please provide a input file with name inp in the current workdir'
+#ifdef HAVE_MPI
+      call MPI_FINALIZE(mpi_err)
+#endif
+      stop
+    end if
 
     ! setup standard input
     ierr = loct_parse_input('inp')
-    if(ierr .ne. 0) then
-      ierr = loct_parse_input("-")
-      if(ierr .ne. 0) then
-        write(6,'(a)') '*** Fatal Error (description follows)'
-        write(6,'(a)') 'Error initializing liboct'
-        write(6,'(a)') 'Can not open input file or standard input!'
+    if(ierr .ne. 0) then 
+      write(6,'(a)') '*** Fatal Error (description follows)' 
+      write(6,'(a)') 'Error initializing liboct' 
+      write(6,'(a)') 'Can not open input file!' 
+      write(6,'(a)') 'Please provide a input file with name inp in the current workdir'
 #ifdef HAVE_MPI
-        call MPI_FINALIZE(mpi_err)
+      call MPI_FINALIZE(mpi_err)
 #endif
-        stop
-      end if
+      stop
     end if
+
 
   end subroutine parser_init
 
