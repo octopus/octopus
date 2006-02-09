@@ -20,7 +20,7 @@
 ## $Id$
 
 SUBDIRS =        \
-	external_libs liboct_parser liboct libxc src doc 
+	external_libs liboct_parser liboct libxc src doc \
 	share testsuite
 
 EXTRA_DIST =     \
