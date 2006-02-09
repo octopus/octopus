@@ -33,7 +33,7 @@ module output_m
   use cube_function_m
   use functions_m
 #if defined(HAVE_NETCDF)
-  use netcdf_m
+  use netcdf
 #endif
   use par_vec_m
   use mpi_m
