@@ -257,7 +257,7 @@ contains
         sb%lsize(2:sb%dim) = sb%rsize
       case(MINIMUM)
         do i = 1, sb%dim
-          sb%lsize(i)      = maxval(geo%atom(:)%x(i)) + sb%rsize
+          sb%lsize(i)      = maxval(abs(geo%atom(:)%x(i))) + sb%rsize
         end do
       end select
 
