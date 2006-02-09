@@ -50,28 +50,30 @@ noinst_HEADERS = \
 	linalg_basic_blas.F90 linalg_basic_int.F90 linalg_adv_lapack.F90
 
 core_LIBS = @LIBS_LAPACK@ @LIBS_BLAS@ ../liboct/liboct.a ../liboct_parser/liboct_parser.a \
-  ../libxc/libxc.a ../expokit/libexpokit.a @GSL_LIBS@ @FCEXTRALIBS@
+  ../libxc/libxc.a @GSL_LIBS@ @FCEXTRALIBS@
+external_LIBS = ../external_libs/expokit/libexpokit.a ../external_libs/metis-4.0/libmetis.a
+
 octopus_LDADD = @LIBS_FFT@ @LIBS_TRLAN@ @LIBS_ARPACK@ @LIBS_SPARSKIT@ \
-  @LIBS_NETCDF@ @LIBS_MPI@ $(core_LIBS) @LIBS_LAPACK@ @LIBS_BLAS@ @LIBS_METIS@
+  @LIBS_NETCDF@ @LIBS_MPI@ $(core_LIBS) $(external_LIBS) @LIBS_LAPACK@ @LIBS_BLAS@
 
 # now the utility programs
 oct_cross_section_SOURCES = $(basic_SRCS) spectrum.F90 cross_section.F90
-oct_cross_section_LDADD   = @LIBS_LAPACK@ @LIBS_BLAS@ $(core_LIBS)
+oct_cross_section_LDADD   = @LIBS_LAPACK@ @LIBS_BLAS@ $(core_LIBS) $(external_LIBS)
 
 oct_rsf_SOURCES = $(basic_SRCS) spectrum.F90 rotational_strength.F90
-oct_rsf_LDADD   = @LIBS_LAPACK@ @LIBS_BLAS@ $(core_LIBS)
+oct_rsf_LDADD   = @LIBS_LAPACK@ @LIBS_BLAS@ $(core_LIBS) $(external_LIBS)
 
 oct_harmonic_spectrum_SOURCES = $(basic_SRCS) spectrum.F90 hs.F90
-oct_harmonic_spectrum_LDADD   = @LIBS_LAPACK@ @LIBS_BLAS@ $(core_LIBS)
+oct_harmonic_spectrum_LDADD   = @LIBS_LAPACK@ @LIBS_BLAS@ $(core_LIBS) $(external_LIBS)
 
 oct_xyz_anim_SOURCES = $(core_SRCS) xyzanim.F90
 oct_xyz_anim_LDADD   = $(octopus_LDADD)
 
 oct_broad_SOURCES = $(basic_SRCS) broad.F90
-oct_broad_LDADD = $(core_LIBS)
+oct_broad_LDADD = $(core_LIBS) $(external_LIBS)
 
 oct_ph_SOURCES = $(basic_SRCS) phonon_spectrum.F90
-oct_ph_LDADD = $(core_LIBS)
+oct_ph_LDADD = $(core_LIBS) $(external_LIBS)
 
 oct_center_geom_SOURCES = $(core_SRCS) xyz_adjust.F90 centergeom.F90
 oct_center_geom_LDADD = $(octopus_LDADD)

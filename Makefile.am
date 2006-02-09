@@ -19,12 +19,19 @@
 ##
 ## $Id$
 
-SUBDIRS = liboct_parser liboct libxc expokit src doc share testsuite
+SUBDIRS =        \
+	external_libs liboct_parser liboct libxc src doc 
+	share testsuite
 
-EXTRA_DIST = TODO build/*.pl build/*.m4 build/*.in debian/*
+EXTRA_DIST =     \
+	TODO build/*.pl build/*.m4 build/*.in debian/*
 
-CLEANFILES = *~ *.bak *.pc*
-DISTCLEANFILES = config.log config.status Makefile.in build/octopus.spec
+CLEANFILES =     \
+	*~ *.bak *.pc*
+
+DISTCLEANFILES = \
+	config.log config.status Makefile.in build/octopus.spec
+
 
 RPM_DIR = $(HOME)/software/rpm
 DEB_DIR = deb-work

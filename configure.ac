@@ -194,9 +194,9 @@ dnl check for MPI
 if test x"$enable_mpi" != x"no"; then
   ACX_MPI([], AC_MSG_WARN([could not compile an mpi test program]))
 
-	AC_LANG_PUSH(C)
-  ACX_METIS([], AC_MSG_WARN([octopus will not be able to use mesh partitioning]))
-	AC_LANG_POP(C)
+dnl	AC_LANG_PUSH(C)
+dnl  ACX_METIS([], AC_MSG_WARN([octopus will not be able to use mesh partitioning]))
+dnl	AC_LANG_POP(C)
 fi
 
 # This is certainly wrong, but I don't know
@@ -206,7 +206,8 @@ AC_SUBST(LINK)
 AC_SUBST(FCEXTRALIBS)
 
 AC_CONFIG_FILES([Makefile 
-	liboct_parser/Makefile liboct/Makefile libxc/Makefile expokit/Makefile src/Makefile doc/Makefile
+  external_libs/Makefile external_libs/expokit/Makefile external_libs/metis-4.0/Makefile 
+	liboct_parser/Makefile liboct/Makefile libxc/Makefile src/Makefile doc/Makefile
 	doc/pdf/Makefile doc/html/Makefile share/Makefile share/PP/Makefile share/PP/TM2/Makefile share/PP/HGH/Makefile
 	share/recipes/Makefile share/recipes/en/Makefile share/recipes/es/Makefile 
 	share/recipes/it/Makefile share/util/Makefile share/samples/Makefile
