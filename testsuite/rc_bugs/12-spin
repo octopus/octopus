@@ -1,0 +1,74 @@
+# $Id: oct-run_regression_test.pl,v 1.8 2005/11/14 09:18:25 marques Exp      :
+Author   : Alberto
+Date     : 12.02.06
+Arch     : Linux g38 2.6.14-desktop-2 #1 SMP PREEMPT Sun Nov 20 20:45:48 CET 2005 i686 GNU/Linux
+Release  :
+Programs : octopus; octopus_cmplx
+Enabled  : Yes
+
+# Bug description:
+#
+# The program gives rather different results, when running in
+# spin-restricted and in spin-unrestricted modes, for closed
+# shell systems, such as this N2 molecule. This has to do with
+# the fact that the pseudopotential -- the Kleinman-Bylander
+# projectors, are built differently.
+#
+# What I mean by different is the following: the eigenvalues,
+# in the spin-restricted case, are:
+#
+#    1   --   -28.403114       2.000000
+#    2   --   -13.385092       2.000000
+#    3   --   -11.932206       2.000000
+#    4   --   -11.932206       2.000000
+#    5   --   -10.438693       2.000000
+#
+# whereas in the spin unrestricted case, are:
+#
+#    1   up   -27.905089       1.000000
+#    1   dn   -27.905769       1.000000
+#    2   up   -12.821167       1.000000
+#    2   dn   -12.820260       1.000000
+#    3   up   -12.522952       1.000000
+#    3   dn   -12.522950       1.000000
+#    4   up   -12.522952       1.000000
+#    4   dn   -12.522950       1.000000
+#    5   up   -10.908811       1.000000
+#    5   dn   -10.907816       1.000000
+#
+# I think that the differences are too large.
+
+INP
+SystemName = "N2"
+CalculationMode = gs
+Units = "eVA"
+FromScratch = yes
+
+%Coordinates
+ "N" | -0.55 | 0.000 | 0.000 | no
+ "N" |  0.55 | 0.000 | 0.000 | no
+%
+
+BoxShape = sphere
+radius   = 5.1
+spacing  =  0.18
+
+SpinComponents = polarized
+
+MaximumIter = 200
+ConvRelDens = 1e-4
+
+LCAOStart = yes
+
+EigenSolver = cg
+EigenSolverInitTolerance = 1e-6
+EigenSolverFinalTolerance = 1e-6
+EigenSolverFinalToleranceIteration = 6
+EigenSolverMaxIter = 250
+
+TypeOfMixing = broyden
+Mixing = 0.5
+EOF
+
+RUN
+
