@@ -504,10 +504,12 @@ contains
           M_THIRD * ( M_THREE * (sigmap(1, 1, i, 1) + sigmap(2, 2, i, 1) + sigmap(3, 3, i, 1)) - &
           (sigma(1, 1, i, 1) + sigma(2, 2, i, 1) + sigma(3, 3, i, 1))**2 )
       end do
+      ! Note that the cross section elements do not have to be transformed to the proper units, since
+      ! they have been read from the "cross_section_vector.x", that are already in the proper units.
       write(out_file,'(3e20.8)', advance = 'no') (i*s%energy_step) / units_out%energy%factor, &
-        average / (units_out%length%factor**2), sqrt(anisotropy) / (units_out%length%factor**2)
+        average , sqrt(anisotropy) 
       do j = 1, nspin
-        write(out_file,'(9e20.8)', advance = 'no') sigma(1:3, 1:3, i, j) / (units_out%length%factor**2)
+        write(out_file,'(9e20.8)', advance = 'no') sigma(1:3, 1:3, i, j)
       end do
       write(out_file,'(a)', advance = 'yes')
     end do
