@@ -62,6 +62,7 @@ AC_ARG_ENABLE(complex, AC_HELP_STRING([--enable-complex], [Ground-state complex 
 AC_ARG_ENABLE(single, AC_HELP_STRING([--enable-single], [octopus in single precision]), [SINGLE_PRECISION=1])
 AC_ARG_ENABLE(debug, AC_HELP_STRING([--disable-debug], [debug mode]), [DEBUG=${enableval}])
 
+
 dnl the MPI has a special treatment
 AC_ARG_ENABLE(mpi, AC_HELP_STRING([--enable-mpi(=PATH)], [Paralel version]))
 case $enable_mpi in
@@ -190,13 +191,12 @@ ACX_ARPACK([], AC_MSG_WARN([ARPACK library not found. Will not use it]))
 dnl check for SPARSKIT
 ACX_SPARSKIT([], AC_MSG_WARN([SPARSKIT library not found. Will not use it]))
 
+dnl check for METIS
+ACX_METIS
+
 dnl check for MPI
 if test x"$enable_mpi" != x"no"; then
   ACX_MPI([], AC_MSG_WARN([could not compile an mpi test program]))
-
-dnl	AC_LANG_PUSH(C)
-dnl  ACX_METIS([], AC_MSG_WARN([octopus will not be able to use mesh partitioning]))
-dnl	AC_LANG_POP(C)
 fi
 
 # This is certainly wrong, but I don't know
