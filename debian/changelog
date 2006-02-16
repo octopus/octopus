@@ -1,3 +1,9 @@
+octopus (2.0-1) stable; urgency=low
+
+  * Release of octopus 2.0.
+
+ -- Heiko Appel <appel@physik.fu-berlin.de>  Thu, 16 Feb 2006 12:08:04 +0100
+
 octopus (1.99devel-3) unstable; urgency=low
 
   * Changing libraries for the build of the x86_64 Debian package. I'm now not
