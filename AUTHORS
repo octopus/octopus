@@ -1,10 +1,14 @@
-The main developing team of this program is composed by: 
+The main developing team of this program is composed by (alphabetical
+order):
 
- * Miguel A. L. Marques (marques@tddft.org)
- * Alberto Castro (Alberto.Castro@tddft.org, University of Valladolid, 
-   Departamento de Fisica Teorica, Spain)
- * Angel Rubio (Donostia International Physics Center and Department of 
-   Materials Science UPV/EHU, San Sebastián, Spain)
+ * Alberto Castro (Alberto_dot_Castro_at_tddft_dot_org)
+ * Angel Rubio
+ * Carlo Andrea Rozzi
+ * Florian Lorenzen
+ * Heiko Appel
+ * Micael Oliveira (micael_at_teor_dot_fis_dot_uc_dot_pt)
+ * Miguel A. L. Marques (marques_at_tddft_dot_org)
+ * Xavier Andrade
 
 octopus is based on a fixed-nucleus code written by:
 
@@ -13,8 +17,6 @@ octopus is based on a fixed-nucleus code written by:
 
 Other contributors are:
 
-  * Micael Oliveira    - mixing, etc.
-  * Carlo Andrea Rozzi - infinite systems
   * Sebastien Hamel    - paralel version of oct-excite
   * Eugene S. Kadantsev (ekadants@mjs1.phy.queensu.ca)
                        - linear response code
