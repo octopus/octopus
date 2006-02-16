@@ -17,7 +17,7 @@
 ##
 ## $Id$
 
-AC_INIT(Octopus, 2.0rc1, marques@nautilus.fis.uc.pt, octopus)
+AC_INIT(Octopus, 2.0, marques@nautilus.fis.uc.pt, octopus)
 AC_CONFIG_SRCDIR([src/global.F90])
 AM_INIT_AUTOMAKE
 
@@ -192,7 +192,10 @@ dnl check for SPARSKIT
 ACX_SPARSKIT([], AC_MSG_WARN([SPARSKIT library not found. Will not use it]))
 
 dnl check for METIS
-ACX_METIS
+if test x"$enable_mpi" != x"no"; then
+  ACX_METIS
+fi
+AM_CONDITIONAL(COMPILE_METIS, test x${HAVE_METIS} = x1)
 
 dnl check for MPI
 if test x"$enable_mpi" != x"no"; then

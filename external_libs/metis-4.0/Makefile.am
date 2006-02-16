@@ -1,6 +1,9 @@
 # $Id$
 
-noinst_LIBRARIES = libmetis.a
+if COMPILE_METIS
+  noinst_LIBRARIES = libmetis.a
+endif
+
 
 libmetis_a_SOURCES = \
 	balance.c bucketsort.c ccgraph.c coarsen.c compress.c debug.c  \

@@ -134,7 +134,7 @@ void FC_FUNC_(oct_progress_bar, OCT_PROGRESS_BAR)
 
 /* -------------------------- interface to METIS ----------------------------- */
 #if defined(HAVE_METIS)
-#include "metis.h"
+#include <metis.h>
 
 void FC_FUNC_(oct_metis_part_mesh_nodal, OCT_METIS_PART_MESH_NODAL)
   (int *ne, int *nn, idxtype *elmnts, int *etype, int *numflag, int *nparts, 

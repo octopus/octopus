@@ -3,9 +3,7 @@
 noinst_LIBRARIES = liboct.a
 
 liboct_a_SOURCES = recipes.c ylm.c varia.c oct_f.c oct_gsl_f.c write_iter.c varinfo.c
-
-AM_CFLAGS = -I../external_libs/metis-4.0
-AM_CPPFLAGS = -I../liboct_parser
+AM_CPPFLAGS = -I../liboct_parser -I../external_libs/metis-4.0/
 
 noinst_HEADERS = varia.h
 

@@ -51,7 +51,11 @@ noinst_HEADERS = \
 
 core_LIBS = @LIBS_LAPACK@ @LIBS_BLAS@ ../liboct/liboct.a ../liboct_parser/liboct_parser.a \
   ../libxc/libxc.a @GSL_LIBS@ @FCEXTRALIBS@
-external_LIBS = ../external_libs/expokit/libexpokit.a ../external_libs/metis-4.0/libmetis.a
+
+external_LIBS = ../external_libs/expokit/libexpokit.a
+if COMPILE_METIS
+  external_LIBS += ../external_libs/metis-4.0/libmetis.a
+endif
 
 octopus_LDADD = @LIBS_FFT@ @LIBS_TRLAN@ @LIBS_ARPACK@ @LIBS_SPARSKIT@ \
   @LIBS_NETCDF@ @LIBS_MPI@ $(core_LIBS) $(external_LIBS) @LIBS_LAPACK@ @LIBS_BLAS@
