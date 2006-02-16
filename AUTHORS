@@ -1,14 +1,14 @@
-The main developing team of this program is composed by (alphabetical
+The main developing team of this program consists of (alphabetical
 order):
 
- * Alberto Castro (Alberto_dot_Castro_at_tddft_dot_org)
- * Angel Rubio
- * Carlo Andrea Rozzi
- * Florian Lorenzen
- * Heiko Appel
- * Micael Oliveira (micael_at_teor_dot_fis_dot_uc_dot_pt)
- * Miguel A. L. Marques (marques_at_tddft_dot_org)
- * Xavier Andrade
+ * Alberto Castro       (alberto.castro@tddft.org)
+ * Angel Rubio          (arubio@sc.ehu.es)
+ * Carlo Andrea Rozzi   (rozzi@unimo.it)
+ * Florian Lorenzen     (lorenzen@physik.fu-berlin.de)
+ * Heiko Appel          (appel@physik.fu-berlin.de)
+ * Micael Oliveira      (micael@teor.fis.uc.pt)
+ * Miguel A. L. Marques (marques@tddft.org)
+ * Xavier Andrade       (andrade@mirto.polytechnique.fr)
 
 octopus is based on a fixed-nucleus code written by:
 
