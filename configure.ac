@@ -17,7 +17,7 @@
 ##
 ## $Id$
 
-AC_INIT(Octopus, 2.0, marques@nautilus.fis.uc.pt, octopus)
+AC_INIT(Octopus, 2.0.1devel, marques@nautilus.fis.uc.pt, octopus)
 AC_CONFIG_SRCDIR([src/global.F90])
 AM_INIT_AUTOMAKE
 

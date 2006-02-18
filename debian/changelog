@@ -1,3 +1,9 @@
+octopus (2.0.1devel-1) unstable; urgency=low
+
+  * Development for octopus 2.1 begins. Tagging package again as unstable.
+
+ -- Heiko Appel <appel@physik.fu-berlin.de>  Sat, 18 Feb 2006 22:39:53 +0100
+
 octopus (2.0-1) stable; urgency=low
 
   * Release of octopus 2.0.
