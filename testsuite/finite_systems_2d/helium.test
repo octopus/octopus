@@ -1,0 +1,86 @@
+# $Id$
+
+Test     : 1D-Helium
+Author   : Heiko Appel
+Date     : 19.02.06
+Arch     : Linux rhodas 2.6.8-2-386 #1 Tue Aug 16 12:46:35 UTC 2005 i686 GNU/Linux
+Release  : 2.0.1devel
+Programs : octopus
+Enabled  : Yes
+
+# The following tests do not describe the calculation of a two-dimensional
+# model, but of a one-dimensional model of a system of two electrons. It is
+# run, however, in two-dimensional mode -- mathematically it is equivalent.
+#
+# It is an exact calculation of a one-dimensional system of two electrons
+# that interact through a soft-Coulomb potential. The external potential is
+# also a soft-Coulomb interaction.
+
+
+# This first example reproduces the ground-state calculation present in
+# [M. S. Pindzola, D. C Griffin and C. Bottcher, Phys. Rev. Lett. 66, 2305 (1991)].
+# In this case, the electron-electron interaction is not exactly a soft-Coulomb
+# interaction. The total energy reproduces the -77.3eV quoted in the paper.
+INP
+CalculationMode = gs
+Dimensions = 2
+fromScratch = yes
+
+a = 0.5
+corr = -1
+%Species
+  "Helium1D" | 2 | 1 | 1 | "-2/sqrt(a+(x)^2) -2/sqrt(a+(y)^2)+1/sqrt(a+x^2+y^2+2*corr*sqrt(x^2)*sqrt(y^2))" 
+%
+%Coordinates
+  "Helium1D" | 0.00 | 0.00 | 0.00
+%
+
+Radius  = 7.0
+Spacing = 0.14
+
+NonInteractingElectrons = yes
+
+EigenSolverInitTolerance = 1.0e-4
+EigenSolverFinalTolerance = 1.0e-4
+EigenSolverMaxIter = 500
+Mixing = 1.0
+TypeOfMixing = linear
+EOF
+
+RUN
+
+Match ; Total Energy #1 ; grep -A 6 '^Energy:' static/info ; \s*Total\s*=\s*-2.84045
+
+
+# This second example reproduces the ground-state calculation present in
+# [W.-C. Liu et al, Phys. Rev. Lett. 83, 520 (1999)]
+# The total energy reproduces the -2.238Ha quoted in the paper.
+INP
+CalculationMode = gs
+Dimensions = 2
+fromScratch = yes
+
+a = 1
+%Species
+  "Helium1D" | 2 | 1 | 1 | "-2/sqrt(a+(x)^2) -2/sqrt(a+(y)^2)+1/sqrt(a+(x-y)^2)" 
+%
+
+%Coordinates
+  "Helium1D" | 0.00 | 0.00 | 0.00
+%
+
+Radius  = 7.0
+Spacing = 0.14
+
+NonInteractingElectrons = yes
+
+EigenSolverInitTolerance = 1.0e-4
+EigenSolverFinalTolerance = 1.0e-4
+EigenSolverMaxIter = 500
+Mixing = 1.0
+TypeOfMixing = linear
+EOF
+
+RUN
+
+Match ; Total Energy #2 ; grep -A 6 '^Energy:' static/info ; \s*Total\s*=\s*-2.238
