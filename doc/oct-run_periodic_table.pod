@@ -1,0 +1,88 @@
+=head1 NAME
+
+oct-run_periodic_table - run octopus for atoms
+
+=head1 SYNOPSIS
+
+=over
+
+=item B<oct-run_periodic_table> [ option ]...
+
+=back
+
+=head1 DESCRIPTION
+
+This script is one of the B<octopus> utilities. 
+
+Simple script to run octopus for all atoms in the periodic table for
+which pseudopoentials are available.
+
+=over
+
+=item B<-h> 
+
+Show this message
+
+=item B<-n>
+
+Run in dry run mode (show what would be executed)
+
+=item B<-s> specie
+
+Run octopus for given specie.
+
+=item B<-a>
+
+Run octopus for all atoms            
+
+=item B<-r>
+
+Do a restart, i.e. do not use fromScratch=yes.
+
+=item B<-t> temperature
+
+Run with electronic temperature.
+
+=item B<-e> no_states
+
+Use extra states
+
+=item B<-x> octopus_executable
+
+=item B<-d> defaults_file_for_pseudopotentials
+
+=back
+
+The man pages of octopus and of the auxiliary octopus
+sub-programs (oct-something) are not intended to contain the
+documentation of the programs, but only their basic
+description. For where to find more documentation, see the
+L<SEE ALSO> section below.
+
+=head1 EXAMPLES
+
+The following command would run the octopus_cmplx executable to
+calculate the He atom.
+
+prompt> B<oct-run_periodic_table> -s He -x octopus_cmplx
+
+
+=head1 AUTHOR
+
+Written by H. Appel.
+
+=head1 REPORTING BUGS
+
+Report bugs to <appel@physik.fu-berlin.de>.
+
+=head1 COPYRIGHT
+
+Copyright (C) 2005 H. Appel.
+
+This  is free software; see the source for copying conditions.  There is NO warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+
+=head1 SEE ALSO
+
+The largest source of documentation is expected to be at the octopus wiki: S<http://www.tddft.org/programs/octopus/wiki/>.
+
+

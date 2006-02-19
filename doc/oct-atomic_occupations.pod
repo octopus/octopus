@@ -1,0 +1,66 @@
+=head1 NAME
+
+oct-atomic_occupations - prints atomic electronic configurations.
+
+=head1 SYNOPSIS
+
+=over
+
+=item B<oct-atomic_occupations> [ option ]...
+
+=back
+
+=head1 DESCRIPTION
+
+This script is one of the B<octopus> utilities. 
+
+It prints out to standard output the atomic electronic configuration
+of a given atom, and the way in which this electronic configuration
+should reflect in the %Occupations block of a corresponding B<octopus>
+input file.
+
+The man pages of octopus and of the auxiliary octopus
+sub-programs (oct-something) are not intended to contain the
+documentation of the programs, but only their basic
+description. For where to find more documentation, see the
+L<SEE ALSO> section below.
+
+=over
+
+=item B<-s> specie
+
+specie should be the atomic symbol (e.g. Na, Au, etc).
+
+=item B<-h>
+
+Show a brief summary of command line options.
+
+=back 
+
+=head1 EXAMPLES
+
+oct-atomic_occupations -s Na
+
+oct-atomic_occupations -s Ti_sc
+
+for x in \$(cat /usr/share/octopus/PP/defaults | awk '{print \$1}'); do oct-atomic_occupations -s $x; done
+
+=head1 AUTHOR
+
+Written by H. Appel.
+
+=head1 REPORTING BUGS
+
+Report bugs to <appel@physik.fu-berlin.de>.
+
+=head1 COPYRIGHT
+
+Copyright (C) 2005 H. Appel.
+
+This  is free software; see the source for copying conditions.  There is NO warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+
+=head1 SEE ALSO
+
+The largest source of documentation is expected to be at the octopus wiki: S<http://www.tddft.org/programs/octopus/wiki/>.
+
+

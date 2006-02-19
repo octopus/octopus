@@ -1,30 +1,27 @@
 =head1 NAME
 
-octopus - Ab-initio Time-dependent Electronic Structure.
+oct-rsf - Calculates the rotational spectrum
 
 =head1 SYNOPSIS
 
 =over
 
-=item B<octopus>
+=item B<oct-rsf>
 
 =back
 
-[octopus no longer reads the standard input (this causes
-troubles to many MPI implementations). All standard input
-will be simply ignored. An input file named F<inp> must be present
-in the running directory.
-Also, octopus accepts no command line arguments, since there is
-not a standard way to do this with Fortran 90.]
+[oct-rsf does not read the standard input: all standard
+input will be simply ignored. An input file named F<inp> must be
+present in the running directory.  Also, oct-rsf accepts
+no command line arguments, since there is not a standard way to do
+this with Fortran 90.]
 
 
 =head1 DESCRIPTION
 
-octopus is a program aimed at the ab initio virtual
-experimentation on electron/ion dynamics in external
-electromagnetic fields of arbitrary intensity, shape
-and frequency in a hopefully ever increasing range of
-systems types.
+This program is one of the B<octopus> utilities.
+
+(WARNING: MISSING SHORT DESCRIPTION OF THE PROGRAM)
 
 The man pages of octopus and of the auxiliary octopus
 sub-programs (oct-something) are not intended to contain the

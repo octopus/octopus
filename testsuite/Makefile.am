@@ -21,8 +21,6 @@
 
 bin_SCRIPTS = oct-run_regression_test.pl oct-run_testsuite
 
-man_MANS = oct-run_regression_test.pl.1
-
 sharedir = $(pkgdatadir)/testsuite
 dist_share_DATA = finite_systems_*/*.test periodic_systems_*/*.test
 
@@ -40,9 +38,5 @@ regression_test:
 
 clean:
 	-rm -rf /tmp/tmp.* $(rlog)
-
-oct-run_regression_test.pl.1: oct-run_regression_test.pl.pod
-	pod2man -c "Octopus Documentation" -s 1 oct-run_regression_test.pl.pod > oct-run_regression_test.pl.1
-
 
 .PHONY: regression_test check clean 

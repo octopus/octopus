@@ -1,0 +1,61 @@
+=head1 NAME
+
+oct-display_partitions - Graphical representation of the mesh partitions.
+
+=head1 SYNOPSIS
+
+=over
+
+=item B<oct-display_partitions>
+
+=back
+
+[oct-display_partitions does not read the standard input: all standard input will be simply ignored. Also, oct-display_partitions accepts no command line arguments.]
+
+
+=head1 DESCRIPTION
+
+This program is one of the B<octopus> utilities. 
+
+It is a script to use gnuplot to plot the partitioning of the
+mesh. The files mesh_partition.??? as produced in debug/mesh_partition
+by the octopus debug mode have to be present in the current working
+directory when this script is invoked. The plot can be found in the
+file mesh_partitions.png. This script generates a gnuplot-script
+called mesh_partitions_index.gp which is stored in the current working
+directory and can be loaded into gnuplot manually. With:
+
+gnuplot> load mesh_partitions_index.gp
+
+gnuplot> set term x11
+
+gnuplot> replot
+
+the plot can be reproduced and shown on the screen so that
+rotating and zooming is possible.
+
+The man pages of octopus and of the auxiliary octopus
+sub-programs (oct-something) are not intended to contain the
+documentation of the programs, but only their basic
+description. For where to find more documentation, see the
+L<SEE ALSO> section below.
+
+
+=head1 AUTHOR
+
+Written by H. Appel.
+
+=head1 REPORTING BUGS
+
+Report bugs through the <octopus-users@tddft.org> mailing list.
+
+=head1 COPYRIGHT
+
+Copyright (C) 2005 H. Appel.
+
+This  is free software; see the source for copying conditions.  There is NO warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+
+=head1 SEE ALSO
+
+The largest source of documentation is expected to be at the octopus wiki: S<http://www.tddft.org/programs/octopus/wiki/>.
+

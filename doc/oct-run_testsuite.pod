@@ -1,0 +1,72 @@
+=head1 NAME
+
+oct-run_testsuite - Script to run the octopus testsuite.
+
+=head1 SYNOPSIS
+
+=over
+
+=item B<oct-run_testsuite> [ option ]... 
+
+=back
+
+=head1 DESCRIPTION
+
+This script is one of the B<octopus> utilities. 
+
+This script runs the octopus testsuite.
+
+The man pages of octopus and of the auxiliary octopus
+sub-programs (oct-something) are not intended to contain the
+documentation of the programs, but only their basic
+description. For where to find more documentation, see the
+L<SEE ALSO> section below.
+
+=over
+
+=item B<-h> 
+
+Prints out a short help message.
+
+=item B<-n>
+
+Run in dry mode (show what would be executed).
+
+=item B<-f>
+
+Run full testsuite.
+
+=item B<-l> 
+
+Local run.
+
+=item B<-p> prefix
+
+Installation prefix [default: /usr]
+
+=item B<-m> address
+
+Mail report to address
+
+=back 
+
+=head1 EXAMPLES
+
+=head1 AUTHOR
+
+Written by H. Appel.
+
+=head1 REPORTING BUGS
+
+Report bugs to <appel@physik.fu-berlin.de>.
+
+=head1 COPYRIGHT
+
+Copyright (C) 2005 H. Appel.
+
+This  is free software; see the source for copying conditions.  There is NO warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+
+=head1 SEE ALSO
+
+The largest source of documentation is expected to be at the octopus wiki: S<http://www.tddft.org/programs/octopus/wiki/>.
+
