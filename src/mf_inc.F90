@@ -162,3 +162,45 @@ subroutine X(mf_random)(m, f)
   call pop_sub()
 
 end subroutine X(mf_random)
+
+! ---------------------------------------------------------
+! Does a partial integration of a function, i.e. in N
+! dimensions, it integrates over N-1 dimensions. The
+! argument j is the dimension which is not integrated.
+! The input function f is a normal function defined on
+! the mesh, whereas the output function is a 1D array
+! of mesh%l(j) + 2*mesh%enlarge(j) elements.
+!
+! In order to retrieve the coordinate v of u(n), one needs
+! to do:
+!  k = gr%m%nr(1, j) + n - 1
+!  i = gr%m%lxyz_inv(k, 0, 0) ! Assuming j = 1
+!  if(i>0) v = gr%m%x(i, j)   ! I do not understand why
+!                             ! we need i>0...
+!
+! WARNING: It will stop if one is using curvilinear
+! coordinates, or real-space domain parallelization.
+subroutine X(mf_partial_integrate)(mesh, j, f, u)
+  type(mesh_t), intent(in)  :: mesh
+  integer,      intent(in)  :: j
+  R_TYPE,       intent(in)  :: f(:)
+  R_TYPE,       intent(out) :: u(:)
+
+  integer :: i, k, m
+  call push_sub('mf_inc.mf_partial_integrate')
+
+  ASSERT(.not.(mesh%parallel_in_domains))
+  ASSERT(.not.(mesh%use_curvlinear))
+
+  k = mesh%l(j)+2*mesh%enlarge(j)
+
+  u(1:k) = M_ZERO
+  do i = 1, mesh%np
+     m = mesh%lxyz(i, j) - mesh%nr(1, j) + 1
+     u(m) = u(m) + f(i)
+  end do
+
+  u(1:k) = u(1:k) * mesh%vol_pp(1)/mesh%h(j)
+
+  call pop_sub()
+end subroutine X(mf_partial_integrate)

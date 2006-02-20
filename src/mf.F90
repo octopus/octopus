@@ -34,17 +34,19 @@ module mesh_function_m
   implicit none
 
   private
-  public ::        &
-    dmf_integrate, &
-    zmf_integrate, &
-    dmf_dotp,      &
-    zmf_dotp,      &
-    dmf_nrm2,      &
-    zmf_nrm2,      &
-    dmf_moment,    &
-    zmf_moment,    &
-    dmf_random,    &
-    zmf_random
+  public ::                &
+    dmf_integrate,         &
+    zmf_integrate,         &
+    dmf_dotp,              &
+    zmf_dotp,              &
+    dmf_nrm2,              &
+    zmf_nrm2,              &
+    dmf_moment,            &
+    zmf_moment,            &
+    dmf_random,            &
+    zmf_random,            &
+    dmf_partial_integrate, &
+    zmf_partial_integrate
 
 
 contains
