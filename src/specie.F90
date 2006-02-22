@@ -432,8 +432,8 @@ contains
     ! masses are always in a.u.m, so convert them to a.u.
     s%weight =  units_inp%mass%factor * s%weight
 
-    ! if we are using non-local pseudopotentials, allocate structure
-    if(.not.s%local) then
+    select case(s%type)
+    case(SPEC_PS_TM2, SPEC_PS_HGH)
       ALLOCATE(s%ps, 1) ! allocate structure
       call ps_init(s%ps, s%label, s%type, s%Z, s%lmax, s%lloc, ispin)
       call ps_getradius(s%ps)
@@ -450,14 +450,26 @@ contains
         ! if(sum(s%ps%conf%occ(i, :)).ne.M_ZERO) s%niwfs = s%niwfs + (2*l+1)
         s%niwfs = s%niwfs + (2*l+1)
       end do
-    else
+    case(SPEC_USDEF)
+      write(message(1),'(a,a,a)')    'Specie "',trim(s%label),'" is an user-defined potential.'
+      write(message(2),'(a,a)')      '   Potential = ', trim(s%user_def)
+      call write_info(2)
       s%niwfs = 2*s%z_val
       call loct_parse_expression(pot_re, pot_im, CNST(0.01), M_ZERO,   &
         M_ZERO, CNST(0.01), s%user_def)
       s%omega = sqrt( abs(M_TWO / CNST(1.0e-4) * pot_re ))
       ! To avoid problems with constant potentials.
       if(s%omega <= M_ZERO) s%omega = CNST(0.1) 
-    end if
+    case(SPEC_JELLI, SPEC_POINT)
+      write(message(1),'(a,a,a)')    'Specie "',trim(s%label),'" is a jellium sphere / approximated point particle.'
+      write(message(2),'(a,f11.6)')  '   Valence charge = ', s%z_val
+      write(message(3),'(a,f11.6)')  '   Radius [a.u]   = ', s%jradius
+      write(message(4),'(a,f11.6)')  '   Rs [a.u]       = ', s%jradius * s%z_val ** (-M_ONE/M_THREE)
+      call write_info(4)
+      s%niwfs = 2*s%z_val
+      s%omega = sqrt( abs(M_TWO / CNST(1.0e-4) * pot_re ))
+      if(s%omega <= M_ZERO) s%omega = CNST(0.1) 
+    end select
 
     ALLOCATE(s%iwf_l(s%niwfs, ispin), s%niwfs*ispin)
     ALLOCATE(s%iwf_m(s%niwfs, ispin), s%niwfs*ispin)
