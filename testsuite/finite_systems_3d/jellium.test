@@ -1,0 +1,66 @@
+# $Id: oct-run_regression_test.pl,v 1.11 2005/12/07 22:26:41 appel Exp      :
+
+Test     : Jellium
+Author   : Alberto
+Date     : 22.02.06
+Arch     : Linux g38 2.6.14-desktop-2 #1 SMP PREEMPT Sun Nov 20 20:45:48 CET 2005 i686 GNU/Linux
+Release  : 2.0.1devel
+Programs : octopus; octopus_cmplx
+Enabled  : No
+
+# This test calculates the ground-state of a Na8 cluster, described by
+# the spherical-jellium model. The calculation reproduces one of the 
+# first calculation of this kind; namely the plot of the density and of
+# the total self-consisten potential reproduces Fig. 1 of
+# [W. Ekardt, Phys. Rev. B 29, 1558 (1984)].
+# 
+# The test is disabled, since it takes a few minutes to calculate. To 
+# run it, just switch "Enabled" to "Yes".
+
+INP
+SystemName = "jellium"
+CalculationMode = gs
+Units = "a.u"
+FromScratch = yes
+
+r_s = 4.0
+N_electrons = 8
+jellium_radius = r_s * (N_electrons)^(1.0/3.0)
+
+%Species
+"jellium" | 1.0 | spec_jelli | N_electrons | jellium_radius
+%
+
+%Coordinates
+"jellium" | 0 | 0 | 0
+%
+
+BoxShape = sphere
+Radius  = 18.0
+Spacing = 0.5
+
+XFunctional = lda_x
+CFunctional = lda_c_gl
+
+MaximumIter = 200
+ConvRelDens = 1e-5
+
+LCAOStart = no
+
+EigenSolver = cg
+EigenSolverInitTolerance = 1e-2
+EigenSolverFinalTolerance = 1e-5
+EigenSolverFinalToleranceIteration = 6
+EigenSolverMaxIter = 25
+
+TypeOfMixing = broyden
+
+#Output = density + potential
+#OutputHow = axis_x
+EOF
+
+RUN
+
+Match ; TotalEnergy ; grep -A 6 '^Energy:' static/info ; \s*Total\s*=\s*-5.376517
+Match ; Eigenvalue [s] ; grep -A 2 'Eigenvalues \[' static/info | tail -1 ; \s*-0.1676\d*\s*2.0000\d*
+Match ; Eigenvalue [p] ; grep -A 3 'Eigenvalues \[' static/info | tail -1 ; \s*-0.1226\d*\s*2.0000\d*
