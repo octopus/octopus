@@ -50,7 +50,8 @@ Author   : $author
 Date     : $date
 Arch     : $arch
 Release  :
-Programs : octopus; octopus_cmplx
+Programs : octopus
+Runtime  : short-run
 Enabled  : Yes
 
 INP

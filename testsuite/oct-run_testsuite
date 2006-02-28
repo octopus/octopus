@@ -23,6 +23,7 @@ Usage: oct-run_testsuite [options]
     
      -h            this message
      -n            dry run mode (show what would be executed)
+     -s            run short testsuite
      -f            run full testsuite
      -l            local run
      -p            installation prefix [default: /usr]
@@ -44,12 +45,12 @@ function CMD {
 
 # Run all tests
 
-function run_full_suite() {
+function run_testsuite() {
 
 [ "$local_run" == "yes" ] && testsuite=$(pwd)
 
 for x in $octopus_exe; do
-    for y in $(find $testsuite -name "*.test"); do
+    for y in $(find $testsuite -name "*.test" | xargs grep $match | awk -F: '{print $1}' | sort -u); do
 	ybase=`basename $y`
 	xybase=${x}-${ybase%.test}
 	if [ "$local_run" == "yes" ]; then
@@ -80,7 +81,7 @@ echo >> stamp
 
 
 for x in $octopus_exe; do
-    for y in $(find $testsuite -name "*.test"); do
+    for y in $(find $testsuite -name "*.test" | xargs grep $match | awk -F: '{print $1}' | sort -u); do
 	ybase=`basename $y`
 	xybase=${x}-${ybase%.test}
 	failed_tests=$(grep FAIL ${xybase}.log | wc -l) 
@@ -100,24 +101,31 @@ done
 [ "$#" -eq 0 ] && usage;
 
 # some defaults
-full=0
+match="short-run"
 send_mail="no"
 
-while getopts "hnlfp:m:" opt ; do
+while getopts "hnlsfp:m:" opt ; do
     case "$opt" in
         h) usage ;;
         n) echo="echo"; dry_run="yes";; 
         p) prefix="$OPTARG"; testsuite=$prefix/share/octopus/testsuite ;;
         l) local_run="yes";;
-        f) full="yes" ;;
+        s) match="short-run" ;;
+        f) match="long-run" ;;
         m) mailaddr="$OPTARG"; send_mail="yes" ;;
         ?) echo "Error parsing arguments"; exit 1 ;;
     esac
 done
 shift $(( OPTIND - 1 ))
 
-[ "${full}"      == "yes" ] && run_full_suite
-[ "${send_mail}" == "yes" ] && mail_report $mailaddr
+# for now the long-run matches everything
+[ "${match}" == "long-run" ] && match=.
+
+# run testsuite
+run_testsuite $match
+
+# should we send a mail report?
+[ "${send_mail}" == "yes" ] && mail_report $match $mailaddr
 
 
 # clean up
