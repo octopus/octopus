@@ -468,7 +468,7 @@ contains
       in_minimum = .false.
       do i = 1, geo%natoms
         r = sqrt(sum((x(:) - geo%atom(i)%x(:))**2))
-        if(r <= sb%rsize+DELTA_R) then
+        if(r <= geo%atom(i)%spec%def_rsize+DELTA_R) then
           in_minimum = .true.
           exit
         end if
