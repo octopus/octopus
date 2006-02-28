@@ -4,8 +4,9 @@ Test     : 2dbox
 Author   : Alberto Castro
 Date     : 09.11.05
 Arch     : Linux g38 2.6.13.2-smp-1 #1 SMP Wed Sep 28 17:13:12 CEST 2005 i686 GNU/Linux
-Release  : 1.99devel
+Release  : 2.0.1devel
 Programs : octopus
+Runtime  : short-run
 Enabled  : Yes
 
 # The following tests reproduced some basic results from:

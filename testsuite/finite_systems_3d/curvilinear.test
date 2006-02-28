@@ -1,11 +1,12 @@
-# $Id: oct-run_regression_test.pl,v 1.7 2005/11/07 08:59:53 appel Exp      :
+# $Id$
 
 Test     : curvilinear coordinates
 Author   : Alberto
 Date     : 13.11.05
 Arch     : Linux rhodas 2.4.26-1-386 #1 Thu Jul 22 12:46:23 JST 2004 i686 GNU/Linux
-Release  : 1.99devel
+Release  : 2.0.1devel
 Programs : octopus
+Runtime  : short-run
 Enabled  : Yes
 
 INP

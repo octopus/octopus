@@ -1,11 +1,12 @@
-# $Id: oct-run_regression_test.pl,v 1.11 2005/12/07 22:26:41 appel Exp      :
+# $Id$
 
 Test     : Jellium
 Author   : Alberto
 Date     : 22.02.06
 Arch     : Linux g38 2.6.14-desktop-2 #1 SMP PREEMPT Sun Nov 20 20:45:48 CET 2005 i686 GNU/Linux
 Release  : 2.0.1devel
-Programs : octopus; octopus_cmplx
+Programs : octopus
+Runtime  : short-run
 Enabled  : No
 
 # This test calculates the ground-state of a Na8 cluster, described by

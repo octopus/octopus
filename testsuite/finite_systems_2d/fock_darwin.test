@@ -1,10 +1,12 @@
-# $Id: oct-run_regression_test.pl,v 1.8 2005/11/14 09:18:25 marques Exp      :
+# $Id$
+
 Test     : Fock-Darwin spectrum
 Author   : Alberto
 Date     : 17.11.05
 Arch     : Linux g38 2.6.13.2-smp-1 #1 SMP Wed Sep 28 17:13:12 CEST 2005 i686 GNU/Linux
-Release  : 1.99devel
+Release  : 2.0.1devel
 Programs : octopus_cmplx
+Runtime  : short-run
 Enabled  : Yes
 
 INP
