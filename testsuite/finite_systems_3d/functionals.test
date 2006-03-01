@@ -1,0 +1,188 @@
+# $Id: oct-run_regression_test.pl,v 1.11 2005/12/07 22:26:41 appel Exp      :
+
+Test     : Functionals
+Author   : Alberto
+Date     : 28.02.06
+Arch     : Linux g38 2.6.14-desktop-2 #1 SMP PREEMPT Sun Nov 20 20:45:48 CET 2005 i686 GNU/Linux
+Release  : 2.0.1devel
+Programs : octopus; octopus_cmplx
+Runtime  : long-run
+Enabled  : No
+
+# This input files reproduces results from:
+# [M. Payami and T. Mahmoodi, J. Phys.: Condens. Matter 18, 75 (2006)].
+# All numbers from Table I may be obtained by properly choosing
+# r_s and N_electrons.
+#
+# However, they are not reproduced exactly, probably due to differences
+# in the numerical representation. This is a bit of a problem, since the
+# differences between KLI and full EXX are smaller than this (hopefully
+# only) numerical error.
+#
+# Figure 4 can also be obtained, although for some reason only if 
+# the density is divided by 2. I think that in the paper they slipped
+# some factor of 2.
+
+
+# First, we reproduce the LSDA results for Li, 8 electrons.
+INP
+SystemName = "jellium"
+CalculationMode = gs
+Units = "a.u"
+FromScratch = yes
+
+DebugLevel = 0
+
+r_s = 3.28
+N_electrons = 8
+jellium_radius = r_s * (N_electrons)^(1.0/3.0)
+
+%Species
+"jellium" | 1.0 | spec_jelli | N_electrons | jellium_radius
+%
+
+%Coordinates
+"jellium" | 0 | 0 | 0
+%
+
+BoxShape = sphere
+Radius  = 13.0
+Spacing = 0.35
+
+XFunctional = lda_x
+#XFunctional = oep_x
+OEP_Level = oep_full
+CFunctional = lda_c_pw
+#CFunctional = no
+
+MaximumIter = 200
+ConvRelDens = 1e-5
+
+LCAOStart = no
+
+EigenSolver = cg
+EigenSolverInitTolerance = 1e-2
+EigenSolverFinalTolerance = 1e-5
+EigenSolverFinalToleranceIteration = 6
+EigenSolverMaxIter = 25
+
+TypeOfMixing = broyden
+What2Mix = potential
+
+EOF
+
+RUN
+
+Match ; TotalEnergy ; grep -A 6 '^Energy:' static/info ; \s*Total\s*=\s*-0.5043
+Match ; Eigenvalues ; grep -A 2 'Eigenvalues \[' static/info | tail -1 ; \s*-0.201067\d*\s*2.0000\d*
+Match ; Exchange    ; grep -A 4 '^Energy:' static/info ; \s*Exchange\s*=\s*-0.95506
+
+
+# Now, EXX/KLI for Li, 8 electrons (restarting from the previous run)
+INP
+SystemName = "jellium"
+CalculationMode = gs
+Units = "a.u"
+FromScratch = no
+
+DebugLevel = 0
+
+r_s = 3.28
+N_electrons = 8
+jellium_radius = r_s * (N_electrons)^(1.0/3.0)
+
+%Species
+"jellium" | 1.0 | spec_jelli | N_electrons | jellium_radius
+%
+
+%Coordinates
+"jellium" | 0 | 0 | 0
+%
+
+BoxShape = sphere
+Radius  = 13.0
+Spacing = 0.35
+
+#XFunctional = lda_x
+XFunctional = oep_x
+#OEP_Level = oep_full
+OEP_Level = oep_kli
+#CFunctional = lda_c_pw
+CFunctional = no
+
+MaximumIter = 200
+ConvRelDens = 1e-5
+
+LCAOStart = no
+
+EigenSolver = cg
+EigenSolverInitTolerance = 1e-2
+EigenSolverFinalTolerance = 1e-5
+EigenSolverFinalToleranceIteration = 6
+EigenSolverMaxIter = 25
+
+TypeOfMixing = broyden
+What2Mix = potential
+
+EOF
+
+RUN
+
+Match ; TotalEnergy ; grep -A 6 '^Energy:' static/info ; \s*Total\s*=\s*-0.33289
+Match ; Eigenvalues ; grep -A 2 'Eigenvalues \[' static/info | tail -1 ; \s*-0.251975\d*\s*2.0000\d*
+Match ; Exchange    ; grep -A 4 '^Energy:' static/info ; \s*Exchange\s*=\s*-1.03289
+
+
+# And finally, full EXX for Li, 8 electrons (restarting from the previous run)
+INP
+SystemName = "jellium"
+CalculationMode = gs
+Units = "a.u"
+FromScratch = no
+
+DebugLevel = 0
+
+r_s = 3.28
+N_electrons = 8
+jellium_radius = r_s * (N_electrons)^(1.0/3.0)
+
+%Species
+"jellium" | 1.0 | spec_jelli | N_electrons | jellium_radius
+%
+
+%Coordinates
+"jellium" | 0 | 0 | 0
+%
+
+BoxShape = sphere
+Radius  = 13.0
+Spacing = 0.35
+
+#XFunctional = lda_x
+XFunctional = oep_x
+OEP_Level = oep_full
+#OEP_Level = oep_kli
+#CFunctional = lda_c_pw
+CFunctional = no
+
+MaximumIter = 200
+ConvRelDens = 1e-5
+
+LCAOStart = no
+
+EigenSolver = cg
+EigenSolverInitTolerance = 1e-2
+EigenSolverFinalTolerance = 1e-5
+EigenSolverFinalToleranceIteration = 6
+EigenSolverMaxIter = 25
+
+TypeOfMixing = broyden
+What2Mix = potential
+
+EOF
+
+RUN
+
+Match ; TotalEnergy ; grep -A 6 '^Energy:' static/info ; \s*Total\s*=\s*-0.33299
+Match ; Eigenvalues ; grep -A 2 'Eigenvalues \[' static/info | tail -1 ; \s*-0.2517\d*\s*2.0000\d*
+Match ; Exchange    ; grep -A 4 '^Energy:' static/info ; \s*Exchange\s*=\s*-1.0329
