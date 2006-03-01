@@ -142,7 +142,8 @@ subroutine X(lr_solve_HXeY) (lr, h, gr, d, ik, x, y, omega)
   if(present(omega)) r(:,:) = r(:,:) - omega*x(:,:)
 
   ! Initial search direction
-  p(:,:) = r(:,:)
+  p = R_TOTYPE(M_ZERO)
+  p(1:NP,:) = r(1:NP,:)
 
   conv_last = .false.
   do iter = 1, lr%max_iter
@@ -161,7 +162,7 @@ subroutine X(lr_solve_HXeY) (lr, h, gr, d, ik, x, y, omega)
     x(:,:) = x(:,:) + alpha* p(:,:)
 
     beta = X(states_dotp) (gr%m, d%dim, r, r)/gamma
-    p(:,:) = r(:,:) + beta*p(:,:)
+    p(1:NP,:) = r(1:NP,:) + beta*p(1:NP,:)
   end do
 
   lr%iter     = iter

@@ -48,7 +48,7 @@ subroutine X(xc_oep_calc)(oep, xcs, apply_sic_pz, gr, h, st, vxc, ex, ec)
 
   if(oep%level == XC_OEP_NONE) return
 
-  call push_sub('xc_OEP_inc.h_xc_oep')
+  call push_sub('xc_OEP_inc.xc_oep_calc')
 
   ! initialize oep structure
   ALLOCATE(oep%eigen_type (st%nst), st%nst)
@@ -130,6 +130,8 @@ subroutine X(xc_oep_solve) (gr, h, st, is, vxc, oep)
   FLOAT, allocatable :: s(:), vxc_old(:)
   R_TYPE, allocatable :: b(:,:)
 
+  call push_sub('xc_OEP_inc.xc_oep_solve')
+
   ALLOCATE(b(NP, 1),    NP*1)
   ALLOCATE(s(NP),       NP)
   ALLOCATE(vxc_old(NP), NP)
@@ -185,4 +187,5 @@ subroutine X(xc_oep_solve) (gr, h, st, is, vxc, oep)
   vxc(1:NP) = vxc_old(1:NP)
   deallocate(b, s, vxc_old)
 
+  call pop_sub()
 end subroutine X(xc_oep_solve)
