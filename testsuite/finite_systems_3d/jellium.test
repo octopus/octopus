@@ -7,7 +7,7 @@ Arch     : Linux g38 2.6.14-desktop-2 #1 SMP PREEMPT Sun Nov 20 20:45:48 CET 200
 Release  : 2.0.1devel
 Programs : octopus
 Runtime  : short-run
-Enabled  : No
+Enabled  : Yes
 
 # This test calculates the ground-state of a Na8 cluster, described by
 # the spherical-jellium model. The calculation reproduces one of the 
