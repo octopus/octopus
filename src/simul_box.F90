@@ -464,11 +464,14 @@ contains
     !--------------------------------------------------------------
     logical function in_minimum()
       integer :: i
+      FLOAT :: radius
 
       in_minimum = .false.
       do i = 1, geo%natoms
         r = sqrt(sum((x(:) - geo%atom(i)%x(:))**2))
-        if(r <= geo%atom(i)%spec%def_rsize+DELTA_R) then
+        radius = sb%rsize
+        if(geo%atom(i)%spec%def_rsize > M_ZERO) radius = geo%atom(i)%spec%def_rsize 
+        if(r <= radius+DELTA_R) then
           in_minimum = .true.
           exit
         end if
