@@ -566,17 +566,27 @@ contains
 
   ! ---------------------------------------------------------
   FLOAT function ion_ion_energy(geo)
-    type(geometry_t), intent(in) :: geo
+    type(geometry_t), target, intent(in) :: geo
 
+    type(specie_t), pointer :: s
     FLOAT :: r
     integer :: i, j
 
-    ! calculate the ion-ion energy
+    ! Note that a possible jellium-jellium interaction (the case where more
+    ! than one jellium species is present) is not properly calculated.
+    ! But if only one jellium sphere is present, it correctly calculates its
+    ! electrostatic energy. I do not know right now if there is a closed
+    ! analytical expression for the electrostatic energy of a system of two
+    ! uniformly charged spheres.
     ion_ion_energy = M_ZERO
-    do i = 2, geo%natoms
+    do i = 1, geo%natoms
+      s => geo%atom(i)%spec
+      if(s%type .eq. SPEC_JELLI) then
+        ion_ion_energy = ion_ion_energy + (M_THREE/M_FIVE)*s%z_val**2/s%jradius
+      end if
       do j = 1, i - 1
         r = sqrt(sum((geo%atom(i)%x - geo%atom(j)%x)**2))
-        ion_ion_energy = ion_ion_energy + geo%atom(i)%spec%Z_val*geo%atom(j)%spec%Z_val/r
+        ion_ion_energy = ion_ion_energy + s%z_val*geo%atom(j)%spec%z_val/r
       end do
     end do
 
