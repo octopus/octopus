@@ -184,23 +184,26 @@ contains
       if(sb%dim==1.and.sb%box_shape /= PARALLELEPIPED) sb%box_shape=SPHERE
 
       sb%rsize = -M_ONE
-      if(sb%box_shape == MINIMUM.and.def_rsize>M_ZERO) sb%rsize = def_rsize/units_inp%length%factor
-
-      if(sb%box_shape == SPHERE.or.sb%box_shape == CYLINDER.or.sb%box_shape == MINIMUM) then
-        !%Variable Radius
-        !%Type float
-        !%Section Mesh::Simulation Box
-        !%Description
-        !% If BoxShape is not "parallelepiped" defines the radius of the spheres or of the cylinder.
-        !% It has to be a positive number. If it is not defined in the input file, then the program
-        !% will attempt to fine a suitable default, but this is not always possible, in which case
-        !% the code will stop issuing this error message.
-        !%End
-        call loct_parse_float(check_inp('radius'), sb%rsize, sb%rsize)
+      !%Variable Radius
+      !%Type float
+      !%Section Mesh::Simulation Box
+      !%Description
+      !% If BoxShape is not "parallelepiped" defines the radius of the spheres or of the cylinder.
+      !% It has to be a positive number. If it is not defined in the input file, then the program
+      !% will attempt to fine a suitable default, but this is not always possible, in which case
+      !% the code will stop issuing this error message.
+      !%End
+      select case(sb%box_shape)
+      case(SPHERE, CYLINDER)
+        call loct_parse_float(check_inp('radius'), def_rsize/units_inp%length%factor, sb%rsize)
         if(sb%rsize < CNST(0.0)) call input_error('radius')
         sb%rsize = sb%rsize * units_inp%length%factor
         if(def_rsize>M_ZERO) call check_def(def_rsize, sb%rsize, 'radius')
-      end if
+      case(MINIMUM)
+        call loct_parse_float(check_inp('radius'), sb%rsize, sb%rsize)
+        sb%rsize = sb%rsize * units_inp%length%factor
+        if(sb%rsize < M_ZERO .and. def_rsize < M_ZERO) call input_error('Radius')
+      end select
 
       if(sb%box_shape == CYLINDER) then
         !%Variable Xlength
@@ -257,7 +260,11 @@ contains
         sb%lsize(2:sb%dim) = sb%rsize
       case(MINIMUM)
         do i = 1, sb%dim
-          sb%lsize(i)      = maxval(abs(geo%atom(:)%x(i))) + sb%rsize
+          if(sb%rsize > M_ZERO) then
+            sb%lsize(i) = maxval(abs(geo%atom(:)%x(i))) + sb%rsize
+          else
+            sb%lsize(i) = maxval(abs(geo%atom(:)%x(i))) + def_rsize
+          end if
         end do
       end select
 
@@ -469,9 +476,12 @@ contains
       in_minimum = .false.
       do i = 1, geo%natoms
         r = sqrt(sum((x(:) - geo%atom(i)%x(:))**2))
-        radius = sb%rsize
-        if(geo%atom(i)%spec%def_rsize > M_ZERO) radius = geo%atom(i)%spec%def_rsize 
-        if(r <= radius+DELTA_R) then
+        if(sb%rsize > M_ZERO) then
+          radius = sb%rsize
+        else
+          radius = geo%atom(i)%spec%def_rsize
+        endif
+        if(r <= radius + DELTA_R) then
           in_minimum = .true.
           exit
         end if
