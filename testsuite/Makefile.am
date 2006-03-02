@@ -29,12 +29,9 @@ EXTRA_DIST = oct-run_regression_test.pl oct-run_testsuite oct-run_regression_tes
 rlog=oct-regression_test.out
 
 check: regression_test
+
 regression_test:
-	@echo; find . -name *.test -print -exec ./oct-run_regression_test.pl -e $(PWD)/../src/octopus$(EXEEXT) -f \{\}  \; | tee $(rlog)
-	@echo -e "\033[32;1mPassed: `grep OK $(rlog) | wc -l` / `grep '\[ ' $(rlog) | wc -l` \033[0m"
-	@if [ `grep FAIL $(rlog) | wc -l` != "0"  ] ; \
-	then echo -e "\033[31;1mFailed: `grep FAIL $(rlog) | wc -l` / `grep '\[ ' $(rlog) | wc -l` \033[0m" ; \
-	else echo -e "\033[32;1m\nEverything seems to be OK \n\033[0m" ; fi
+	@./oct-run_testsuite -l -s
 
 clean:
 	-rm -rf /tmp/tmp.* $(rlog)
