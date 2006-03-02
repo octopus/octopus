@@ -1,0 +1,65 @@
+# $Id: oct-run_regression_test.pl,v 1.12 2006/02/28 22:15:26 appel Exp      :
+Test     : Carbon
+Author   : Alberto
+Date     : 02.03.06
+Arch     : Linux g38 2.6.14-desktop-2 #1 SMP PREEMPT Sun Nov 20 20:45:48 CET 2005 i686 GNU/Linux
+Release  : 2.0.1devel
+Programs : octopus
+Runtime  : long-run
+Enabled  : Yes
+
+# The purpose of this test is making sure that spin-polarized
+# calculations work.
+# It is the calculation of one atom of Carbon, within the LSDA
+# calculation.
+#
+# The result *almost* compares (to within 0.1eV) with the results
+# given at the NIST webpage:
+# http://physics.nist.gov/PhysRefData/DFTdata/contents.html
+# The reasons for the discrepancy may be two:
+# o The NIST calculation is all-electron.
+# o The NIST calculation uses the VWN correlation. Here I have put
+#   put PZ, because otherwise the results are even worse (probably
+#   our VWN has some bug?)
+# It would be nice to investigate the reason for the small
+# discrepancy...
+
+INP
+CalculationMode = gs
+fromScratch = yes
+units = "eVA"
+
+%Coordinates
+"C" | 0 | 0 | 0
+%
+
+spacing = 0.19
+radius = 5.0
+
+SpinComponents = polarized
+
+ExtraStates = 2
+%Occupations
+1 | 2/3 | 2/3 | 2/3
+1 | 0 | 0 | 0
+%
+
+XFunctional = lda_x
+CFunctional = lda_c_pz
+
+EigenSolver = cg
+EigenSolverInitTolerance = 1e-2
+EigenSolverFinalTolerance = 1e-5
+EigenSolverFinalToleranceIteration = 6
+EigenSolverMaxIter = 25
+
+TypeOfMixing = broyden
+
+PoissonSolver = fft_corrected
+EOF
+
+RUN
+
+Match ; Total Energy       ; grep -A 6 '^Energy:' static/info ; \s*Total\s*=\s*-146.742
+Match ; Eigenvalue   [1up] ; grep -A 2 'Eigenvalues \[' static/info | tail -1 ; \s*-14.462\d*\s*1.0000\d*
+Match ; Eigenvalue [4down] ; grep -A 9 'Eigenvalues \[' static/info | tail -1 ; \s*-3.682\d*\s*0.000000\d*
