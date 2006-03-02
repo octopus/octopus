@@ -82,6 +82,8 @@ contains
     type(mesh_t),       intent(in)  :: m
     type(states_dim_t), intent(in)  :: d
 
+    call push_sub('xc_OEP.xc_oep_init')
+
     if(iand(family, XC_FAMILY_OEP).eq.0) then
       oep%level = XC_OEP_NONE
       return
@@ -136,12 +138,14 @@ contains
     ! the linear equation has to be more converged if we are to attain the required precision
     !oep%lr%conv_abs_dens = oep%lr%conv_abs_dens / (oep%mixing)
 
+    call pop_sub()
   end subroutine xc_oep_init
 
 
   ! ---------------------------------------------------------
   subroutine xc_oep_end(oep)
     type(xc_oep_t), intent(inout) :: oep
+    call push_sub('xc_OEP.xc_oep_end')
 
     if(oep%level.ne.XC_OEP_NONE) then
       deallocate(oep%vxc); nullify(oep%vxc)
@@ -149,6 +153,7 @@ contains
       if(oep%level == XC_OEP_FULL) call lr_dealloc(oep%lr)
     end if
 
+    call pop_sub()
   end subroutine xc_oep_end
 
 
