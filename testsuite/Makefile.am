@@ -30,6 +30,9 @@ rlog=oct-regression_test.out
 
 check: regression_test
 
+check-full:
+	@./oct-run_testsuite -l -f
+
 regression_test:
 	@./oct-run_testsuite -l -s
 

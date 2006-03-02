@@ -36,6 +36,9 @@ DISTCLEANFILES = \
 RPM_DIR = $(HOME)/software/rpm
 DEB_DIR = deb-work
 
+check-full:
+	@cd testsuite && make check-full
+
 rpm: dist
 	mv -f $(PACKAGE)-$(VERSION).tar.gz $(RPM_DIR)/SOURCES/
 	rpmbuild --clean -ba build/$(PACKAGE).spec
