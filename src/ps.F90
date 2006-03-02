@@ -574,9 +574,16 @@ contains
     do l = 0, ps%l_max
       hato = M_ZERO
       nrc = nint(log(psf%kbr(l)/psf%b + M_ONE)/psf%a) + 1
-      do ir = 1, nrc
-        hato(ir) = (psf%vps(ir, l) - psf%vlocal(ir)) * ps%dknrm(l) * loct_splint(ps%ur(l+1, 1), psf%rofi(ir))
-      end do
+      ! This is the interpolation making use of ps%ur. However, it leads to an error for spin-polarized
+      ! systems, because ur(l+1,1) is then the wavefunctions for up-spin, which is different to the 
+      ! wavefunctions in spin-restricted form. But it would be the best way to interpolate, so I leave
+      ! it for the record.
+      !do ir = 1, nrc
+      !  hato(ir) = (psf%vps(ir, l) - psf%vlocal(ir)) * ps%dknrm(l) * loct_splint(ps%ur(l+1, 1), psf%rofi(ir))
+      !end do
+      hato(2:nrc) = (psf%vps(2:nrc, l) - psf%vlocal(2:nrc))*psf%rphi(2:nrc, l, 1) * &
+                    ps%dknrm(l) / psf%rofi(2:nrc)
+      hato(1) = hato(2) - ((hato(3)-hato(2))/(psf%rofi(3)-psf%rofi(2)))*psf%rofi(2)
       call loct_spline_fit(psf%nrval, psf%rofi, hato, ps%kb(l, 1))
     end do
 
