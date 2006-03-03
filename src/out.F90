@@ -66,22 +66,31 @@ module output_m
     output_ELF_FS     =   64
 
   integer, parameter, private :: &
-    output_axis_x     =    1,    &
-    output_axis_y     =    2,    &
-    output_axis_z     =    4,    &
-    output_plane_x    =    8,    &
-    output_plane_y    =   16,    &
-    output_plane_z    =   32,    &
-    output_dx         =   64,    &
-    output_dx_cdf     =  128,    &
-    output_plain      =  256,    &
-    output_mesh_index =  512,    &
-    output_gnuplot    = 1024
+    output_axis_x     =     1,   &
+    output_axis_y     =     2,   &
+    output_axis_z     =     4,   &
+    output_plane_x    =     8,   &
+    output_plane_y    =    16,   &
+    output_plane_z    =    32,   &
+    output_dx         =    64,   &
+    output_dx_cdf     =   128,   &
+    output_plain      =   256,   &
+    output_mesh_index =   512,   &
+    output_gnuplot    =  1024,   &
+    output_matlab     =  2048
 
   ! doutput_kind => real variables; zoutput_kind => complex variables.
   integer, parameter, private :: &
     doutput_kind      =    1,    &
     zoutput_kind      =   -1
+
+  ! index to axis mapping
+  character, parameter        :: &
+    index2axis(3) = (/ 'x', 'y', 'z' /)
+
+  ! index to label mapping
+  character(len=3), parameter :: &
+    index2label(3) = (/ 're', 'im', 'abs' /)
 
   type output_t
     integer :: what
@@ -203,6 +212,13 @@ contains
       !% can be found under <tt>PREFIX/share/octopus/util/display_mesh_index.gp</tt>
       !%Option gnuplot 1024
       !% Adds newlines to the plane cuts, so that gnuplot can print them in 3D
+      !%Option matlab 2048
+      !% In combination with plane_{x,y,z} this option produces output files which are suitable
+      !% for 2D Matlab functions like mesh(). To load these files into Matlab you can use, e.g.
+      !%
+      !%   >> density = load('static/density-1.x=0.matlab.abs');
+      !%   >> mesh(density);
+      !%
       !%End
       call loct_parse_int(check_inp('OutputHow'), 0, outp%how)
       if(.not.varinfo_valid_option('OutputHow', outp%how, is_flag=.true.)) then

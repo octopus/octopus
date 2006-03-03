@@ -370,17 +370,18 @@ end subroutine X(output_function)
 subroutine X(output_function_global) (how, dir, fname, m, sb, f, u, ierr, is_tmp)
   integer,              intent(in)  :: how
   character(len=*),     intent(in)  :: dir, fname
-  type(mesh_t),      intent(in)  :: m
-  type(simul_box_t), intent(in)  :: sb
+  type(mesh_t),         intent(in)  :: m
+  type(simul_box_t),    intent(in)  :: sb
   R_TYPE,               intent(in)  :: f(:)  ! f(m%np_global)
   FLOAT,                intent(in)  :: u
   integer,              intent(out) :: ierr
   logical,              intent(in)  :: is_tmp
 
 
-  integer :: i
-  FLOAT   :: x0
+  character(len=256) :: filename
   character(len=20)  :: mformat, mformat2, mfmtheader
+  integer            :: iunit, i
+  FLOAT              :: x0
   logical            :: gnuplot_mode = .false.
 
   call push_sub('out_inc.Xoutput_function_global')
@@ -390,28 +391,48 @@ subroutine X(output_function_global) (how, dir, fname, m, sb, f, u, ierr, is_tmp
 ! Define the format; check if code is single precision or double precision
 #if defined(SINGLE_PRECISION)
     mformat    = '(4es15.6)'
-    mformat2   = '(i4,5es15.6)'
+    mformat2   = '(i6,5es15.6)'
     mfmtheader = '(a,a7,5a15)'
 #else
     mformat    = '(4es23.14)'
-    mformat2   = '(i4,5es34.24)'
+    mformat2   = '(i6,5es34.24)'
     mfmtheader = '(a,a10,5a23)'
 #endif
 
   if(iand(how, output_gnuplot)   .ne.0) then
     gnuplot_mode = .true.
     mformat    = '(4f23.14)'
-    mformat2   = '(i4,5f34.24)'
+    mformat2   = '(i6,5f34.24)'
   end if
+
   if(iand(how, output_plain)     .ne.0) call plain()
-  if(iand(how, output_axis_x)    .ne.0) call axis_x()
-  if(iand(how, output_axis_y)    .ne.0) call axis_y()
-  if(iand(how, output_axis_z)    .ne.0) call axis_z()
-  if(iand(how, output_plane_x)   .ne.0) call plane_x()
-  if(iand(how, output_plane_y)   .ne.0) call plane_y()
-  if(iand(how, output_plane_z)   .ne.0) call plane_z()
+  if(iand(how, output_axis_x)    .ne.0) call out_axis (1, 2, 3) ! x ; y=0,z=0
+  if(iand(how, output_axis_y)    .ne.0) call out_axis (2, 1, 3) ! y ; x=0,z=0
+  if(iand(how, output_axis_z)    .ne.0) call out_axis (3, 1, 2) ! z ; x=0,y=0
+  if(iand(how, output_plane_x)   .ne.0) call out_plane(1, 2, 3) ! x=0; y; z;
+  if(iand(how, output_plane_y)   .ne.0) call out_plane(2, 1, 3) ! y=0; x; z;
+  if(iand(how, output_plane_z)   .ne.0) call out_plane(3, 1, 2) ! z=0; x; y;
   if(iand(how, output_mesh_index).ne.0) call out_mesh_index()
   if(iand(how, output_dx)        .ne.0) call dx()
+
+  if (iand(how, output_matlab).ne.0) then
+    if(iand(how, output_plane_x).ne.0) then
+      call out_matlab(1, 2, 3, 1) ! x=0; y; z; re
+      call out_matlab(1, 2, 3, 2) ! x=0; y; z; im
+      call out_matlab(1, 2, 3, 3) ! x=0; y; z; abs
+    end if
+    if(iand(how, output_plane_y).ne.0) then
+      call out_matlab(2, 1, 3, 1) ! y=0; x; z; re
+      call out_matlab(2, 1, 3, 2) ! y=0; x; z; im
+      call out_matlab(2, 1, 3, 3) ! y=0; x; z; abs
+    end if
+    if(iand(how, output_plane_z).ne.0) then
+      call out_matlab(3, 1, 2, 1) ! z=0; x; y; re
+      call out_matlab(3, 1, 2, 2) ! z=0; x; y; im
+      call out_matlab(3, 1, 2, 3) ! z=0; x; y; abs
+    end if
+  end if
+
 #if defined(HAVE_NETCDF)
   if(iand(how, output_dx_cdf)    .ne.0) call dx_cdf()
 #endif
@@ -419,9 +440,9 @@ subroutine X(output_function_global) (how, dir, fname, m, sb, f, u, ierr, is_tmp
   call pop_sub()
 
 contains
+
   ! ---------------------------------------------------------
   subroutine plain()
-    integer :: iunit
 
     iunit = io_open(trim(dir)//'/'//trim(fname), action='write', form='unformatted', is_tmp=is_tmp)
 
@@ -433,138 +454,99 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine axis_x()
-    integer :: iunit, i
+  subroutine out_axis(d1, d2, d3)
+    integer, intent(in) :: d1, d2, d3
 
-    iunit = io_open(trim(dir)//'/'//trim(fname)//".y=0,z=0", action='write', is_tmp=is_tmp)
+    filename = trim(dir)//'/'//trim(fname)//"."//index2axis(d2)//"=0,"//index2axis(d3)//"=0"
+    iunit = io_open(filename, action='write', is_tmp=is_tmp)
 
-    write(iunit, mfmtheader, iostat=ierr) '#', 'x', 'Re', 'Im'
+    write(iunit, mfmtheader, iostat=ierr) '#', index2axis(d1), 'Re', 'Im'
     do i = 1, m%np_global
-      if(m%Lxyz(i, 2)==0.and.m%Lxyz(i, 3)==0) then
-        write(iunit, mformat, iostat=ierr) m%x_global(i,1), R_REAL(f(i))/u, R_AIMAG(f(i))/u
+      if(m%Lxyz(i, d2)==0.and.m%Lxyz(i, d3)==0) then     
+        write(iunit, mformat, iostat=ierr) m%x_global(i, d1), R_REAL(f(i))/u, R_AIMAG(f(i))/u
       end if
     end do
+
     call io_close(iunit)
 
-  end subroutine axis_x
+  end subroutine out_axis
 
 
   ! ---------------------------------------------------------
-  subroutine axis_y()
-    integer :: iunit, i
+  subroutine out_plane(d1, d2, d3)
+    integer, intent(in) :: d1, d2, d3
 
-    iunit = io_open(trim(dir)//'/'//trim(fname)//".x=0,z=0", action='write', is_tmp=is_tmp)
+    filename = trim(dir)//'/'//trim(fname)//"."//index2axis(d1)//"=0"
+    iunit = io_open(filename, action='write', is_tmp=is_tmp)
 
-    write(iunit, mfmtheader, iostat=ierr) '#', 'y', 'Re', 'Im'
-    do i = 1, m%np_global
-      if(m%Lxyz(i, 1)==0.and.m%Lxyz(i, 3)==0) then
-        write(iunit, mformat, iostat=ierr) m%x_global(i,2), R_REAL(f(i))/u, R_AIMAG(f(i))/u
-      end if
-    end do
-    call io_close(iunit)
-
-  end subroutine axis_y
-
-
-  ! ---------------------------------------------------------
-  subroutine axis_z()
-    integer :: iunit, i
-
-    iunit = io_open(trim(dir)//'/'//trim(fname)//".x=0,y=0", action='write', is_tmp=is_tmp)
-
-    write(iunit, mfmtheader, iostat=ierr) '#', 'z', 'Re', 'Im'
-    do i = 1, m%np_global
-      if(m%Lxyz(i, 1)==0.and.m%Lxyz(i, 2)==0) then
-        write(iunit, mformat, iostat=ierr) m%x_global(i,3), R_REAL(f(i))/u, R_AIMAG(f(i))/u
-      end if
-    end do
-    call io_close(iunit)
-
-  end subroutine axis_z
-
-
-  ! ---------------------------------------------------------
-  subroutine plane_x()
-    integer  :: iunit, i
-
-    iunit = io_open(trim(dir)//'/'//trim(fname)//".x=0", action='write', is_tmp=is_tmp)
-
-    write(iunit, mfmtheader, iostat=ierr) '#', 'x', 'y', 'Re', 'Im'
-    x0 = m%x_global(1,2)
+    write(iunit, mfmtheader, iostat=ierr) '#', index2axis(d2), index2axis(d3), 'Re', 'Im'
+    x0 = m%x_global(1, d2)
     if(gnuplot_mode) write(iunit, mformat)
 
-    do i = 1, m%np_global
-      if(gnuplot_mode.and.x0 /= m%x_global(i, 2)) then
-        write(iunit, mformat, iostat=ierr)      ! write extra lines for gnuplot grid mode
-        x0 = m%x_global(i, 2)
+    do i = 1, m%np_global                      
+      if(gnuplot_mode.and.x0 /= m%x_global(i, d2)) then
+        write(iunit, mformat, iostat=ierr)  ! write extra lines for gnuplot grid mode
+        x0 = m%x_global(i, d2)
       end if
-      if(m%Lxyz(i,1)==0) then
-        write(iunit, mformat, iostat=ierr) m%x_global(i,2), m%x_global(i,3), R_REAL(f(i))/u, R_AIMAG(f(i))/u
+      if(m%Lxyz(i, d1) == 0) then  ! are we in the plane?
+          write(iunit, mformat, iostat=ierr)  &
+            m%x_global(i, d2), m%x_global(i, d3), R_REAL(f(i))/u, R_AIMAG(f(i))/u
       end if
     end do
 
     if(gnuplot_mode) write(iunit, mformat, iostat=ierr)
     call io_close(iunit)
 
-  end subroutine plane_x
+  end subroutine out_plane
 
 
   ! ---------------------------------------------------------
-   subroutine plane_y()
-    integer  :: iunit, i
+  subroutine out_matlab(d1, d2, d3, out_what)
+    integer, intent(in) :: d1, d2, d3, out_what
 
-    iunit = io_open(trim(dir)//'/'//trim(fname)//".y=0", action='write', is_tmp=is_tmp)
+    integer :: ix, iy
+    FLOAT, allocatable :: out_vec(:)
+    
+    ALLOCATE(out_vec(m%nr(1, d3):m%nr(2, d3)), m%nr(2, d3)-m%nr(1, d3)+1)
 
-    write(iunit, MFMTHEADER, iostat=ierr) '#', 'x', 'z', 'Re', 'Im'
-    x0 = m%x_global(1,1)
-    if(gnuplot_mode) write(iunit, mformat, iostat=ierr)
+    filename = trim(dir)//'/'//trim(fname)//"."//index2axis(d1)//"=0.matlab."//trim(index2label(out_what))
+    iunit = io_open(filename, action='write', is_tmp=is_tmp)
+    
+    do ix = m%nr(1, d2), m%nr(2, d2)
+      do iy = m%nr(1, d3), m%nr(2, d3)
 
-    do i = 1, m%np_global
-      if(gnuplot_mode.and.x0 /= m%x_global(i, 1)) then
-        write(iunit, mformat, iostat=ierr)      ! write extra lines for gnuplot grid mode
-        x0 = m%x_global(i, 1)
-      end if
-      if(m%Lxyz(i,2)==0) then
-        write(iunit, mformat, iostat=ierr) m%x_global(i,1), m%x_global(i,3), R_REAL(f(i))/u, R_AIMAG(f(i))/u
-      end if
+        select case(d1)
+        case(1); i = m%Lxyz_inv( 0, ix, iy) ! plane_x
+        case(2); i = m%Lxyz_inv(ix,  0, iy) ! plane_y
+        case(3); i = m%Lxyz_inv(ix, iy,  0) ! plane_z
+        end select
+        
+        if (i <= 0 .or. i > m%np_global) then
+          out_vec(iy) = M_ZERO
+          cycle
+        end if
+
+        select case(out_what)
+        case(1); out_vec(iy) = R_REAL(f(i))/u  ! real part
+        case(2); out_vec(iy) = R_AIMAG(f(i))/u ! imaginary part
+        case(3); out_vec(iy) = R_ABS(f(i))/u   ! absolute value
+        end select
+
+      end do
+
+      ! now we write to the disk
+      write(iunit,'(100000f23.14)') (out_vec(iy), iy = m%nr(1, d3), m%nr(2, d3))
+
     end do
 
-    if(gnuplot_mode) write(iunit, mformat, iostat=ierr)
+    deallocate(out_vec)
     call io_close(iunit)
 
-  end subroutine plane_y
-
-
-  ! ---------------------------------------------------------
-  subroutine plane_z()
-    integer  :: iunit, i
-
-    iunit = io_open(trim(dir)//'/'//trim(fname)//".z=0", action='write', is_tmp=is_tmp)
-
-    write(iunit, MFMTHEADER, iostat=ierr) '#', 'x', 'y', 'Re', 'Im'
-    x0 = m%x_global(1,1)
-    if(gnuplot_mode) write(iunit, mformat, iostat=ierr)
-
-    do i = 1, m%np_global
-      if(gnuplot_mode.and.x0 /= m%x_global(i, 1)) then
-        write(iunit, mformat, iostat=ierr)      ! write extra lines for gnuplot grid mode
-        x0 = m%x_global(i, 1)
-      end if
-
-      if(m%Lxyz(i,3) == 0) then
-        write(iunit, mformat, iostat=ierr) m%x_global(i,1), m%x_global(i,2), R_REAL(f(i))/u, R_AIMAG(f(i))/u
-      end if
-    end do
-
-    if(gnuplot_mode) write(iunit, mformat, iostat=ierr)
-    call io_close(iunit)
-
-  end subroutine plane_z
+  end subroutine out_matlab
 
 
   ! ---------------------------------------------------------
   subroutine out_mesh_index()
-    integer  :: iunit, i
 
     iunit = io_open(trim(dir)//'/'//trim(fname)//".mesh_index", action='write', is_tmp=is_tmp)
 
@@ -588,7 +570,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine dx()
-    integer :: iunit, ix, iy, iz
+    integer :: ix, iy, iz
     FLOAT   :: offset(3)
     character(len=40) :: nitems
     type(X(cf)) :: c
@@ -646,7 +628,6 @@ contains
 #if defined(HAVE_NETCDF)
   ! ---------------------------------------------------------
   subroutine dx_cdf()
-    character(len=512) :: filename
     integer :: ncid, status, data_id, data_im_id, pos_id, dim_data_id(3), dim_pos_id(2)
     real(r4) :: pos(2, 3)
     type(X(cf)) :: c
