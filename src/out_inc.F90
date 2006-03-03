@@ -535,7 +535,7 @@ contains
       end do
 
       ! now we write to the disk
-      write(iunit,'(100000f23.14)') (out_vec(iy), iy = m%nr(1, d3), m%nr(2, d3))
+      write(iunit,'(32767f23.14)') (out_vec(iy), iy = m%nr(1, d3), m%nr(2, d3))
 
     end do
 
