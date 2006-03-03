@@ -213,8 +213,9 @@ contains
       !%Option gnuplot 1024
       !% Adds newlines to the plane cuts, so that gnuplot can print them in 3D
       !%Option matlab 2048
-      !% In combination with plane_{x,y,z} this option produces output files which are suitable
-      !% for 2D Matlab functions like mesh(). To load these files into Matlab you can use, e.g.
+      !% In combination with plane_x, plane_y and plane_z this option produces output files 
+      !% which are suitable for 2D Matlab functions like mesh(), surf() or waterfall(). To load 
+      !% these files into Matlab you can use, e.g.
       !%
       !%   >> density = load('static/density-1.x=0.matlab.abs');
       !%   >> mesh(density);
