@@ -217,7 +217,7 @@ contains
       if(dd.gt.M_ZERO) then
         n = n + 1; d(n) = dd
       end if
-    case(MINIMUM)
+    case(MINIMUM,BOX_USDEF)
       message(1) = "Absorbing boundaries are not yet implemented for the 'minimum' box"
       call write_fatal(1)
     case(PARALLELEPIPED)

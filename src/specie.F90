@@ -53,7 +53,7 @@ module specie_m
 
 
   integer, public, parameter :: &
-    SPEC_USDEF  = 1,            & ! user defined function
+    SPEC_USDEF  = 123,          & ! user defined function
     SPEC_POINT  = 2,            & ! point charge: jellium sphere of radius 0.5 a.u.
     SPEC_JELLI  = 3,            & ! jellium sphere.
     SPEC_PS_TM2 = PS_TM2,       & ! Troullier-Martins pseudopotential
@@ -209,11 +209,11 @@ contains
     !% <br>&nbsp;&nbsp;'H'       |  1.0079 | spec_ps_hgh  | 1   | 0 | 0
     !% <br>&nbsp;&nbsp;'jlm'     | 23.2    | spec_jelli   | 8   | 5.0
     !% <br>&nbsp;&nbsp;'pnt'     | 32.3    | spec_point   | 2.0
-    !% <br>&nbsp;&nbsp;'udf'     |  0.0    | spec_usdef   | 8   | "1/2*r^2"
+    !% <br>&nbsp;&nbsp;'udf'     |  0.0    | user_defined | 8   | "1/2*r^2"
     !% <br>%</tt>
     !%
     !%
-    !%Option spec_usdef  1
+    !%Option user_defined  123
     !% Specie with user defined potential. In this case, the fourth
     !% field is the valence charge and the fifth
     !% field is a string with a mathematical expresion that defines the

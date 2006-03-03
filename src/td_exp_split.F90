@@ -43,11 +43,11 @@ contains
   ! Calculates psi = exp{factor*T} psi
   ! where T is the kinetic energy operator
   subroutine zexp_kinetic (gr, h, psi, cf, factor)
-    type(grid_t),        intent(in) :: gr
-    type(hamiltonian_t), intent(in) :: h
-    CMPLX,                  intent(inout) :: psi(NP, h%d%dim)
-    type(zcf),              intent(inout) :: cf
-    CMPLX,                  intent(in) :: factor
+    type(grid_t),        intent(in)    :: gr
+    type(hamiltonian_t), intent(in)    :: h
+    CMPLX,               intent(inout) :: psi(:,:) ! (NP_PART, dim)
+    type(zcf),           intent(inout) :: cf
+    CMPLX,               intent(in)    :: factor
 
     integer :: ix, iy, iz, k(3), idim
     FLOAT :: cutoff, temp(3), g2
@@ -105,10 +105,10 @@ contains
   subroutine zexp_vlpsi(gr, h, psi, ik, t, factor)
     type(grid_t),        intent(in)    :: gr
     type(hamiltonian_t), intent(in)    :: h
-    CMPLX,                  intent(inout) :: psi(NP, h%d%dim)
-    integer,                intent(in)    :: ik
-    FLOAT,                  intent(in)    :: t
-    CMPLX,                  intent(in)    :: factor
+    CMPLX,               intent(inout) :: psi(:,:) ! (NP_PART, NDIM)
+    integer,             intent(in)    :: ik
+    FLOAT,               intent(in)    :: t
+    CMPLX,               intent(in)    :: factor
 
     integer :: k
 
@@ -117,12 +117,12 @@ contains
     ! WARNING: spinors not yet supported.
     select case(h%d%ispin)
     case(UNPOLARIZED)
-      psi(:, 1) = exp(factor*(h%ep%vpsl(:)+h%vhxc(:, 1)))*psi(:, 1)
+      psi(1:NP, 1) = exp(factor*(h%ep%vpsl(1:NP)+h%vhxc(1:NP, 1)))*psi(1:NP, 1)
     case(SPIN_POLARIZED)
       if(modulo(ik+1, 2) == 0) then ! we have a spin down
-        psi(:, 1) = exp(factor*(h%ep%vpsl(:)+h%vhxc(:, 1)))*psi(:, 1)
+        psi(1:NP, 1) = exp(factor*(h%ep%vpsl(1:NP)+h%vhxc(1:NP, 1)))*psi(1:NP, 1)
       else
-        psi(:, 1) = exp(factor*(h%ep%vpsl(:)+h%vhxc(:, 2)))*psi(:, 1)
+        psi(1:NP, 1) = exp(factor*(h%ep%vpsl(1:NP)+h%vhxc(1:NP, 2)))*psi(1:NP, 1)
       end if
     case(SPINORS)
       message(1) = 'Internal error in exp_vlpsi'
@@ -136,7 +136,7 @@ contains
       end if
 
       do k = 1, h%d%dim
-        psi(:, k) = exp( factor*epot_laser_scalar_pot(gr%m%np, gr, h%ep, t) ) * psi(:, k)
+        psi(1:NP, k) = exp( factor*epot_laser_scalar_pot(gr%m%np, gr, h%ep, t) ) * psi(1:NP, k)
       end do
     end if
 

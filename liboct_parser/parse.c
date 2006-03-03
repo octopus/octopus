@@ -178,9 +178,9 @@ int parse_input(char *file_in)
     char **env = environ;    
     while(*env) {
       /* Only consider variables that begin with OCT_ */
-      if( strncmp(OCT_ENV_HEADER,*env,strlen(OCT_ENV_HEADER)) == 0 ){	
+      if( strncmp(OCT_ENV_HEADER, *env, strlen(OCT_ENV_HEADER)) == 0 ){	
 	parse_result c;
-	parse_exp( (*env)+strlen(OCT_ENV_HEADER), &c);
+	parse_exp( (*env) + strlen(OCT_ENV_HEADER), &c);
       }
       
       env++;

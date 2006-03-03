@@ -90,6 +90,32 @@ int yylex (){
     par_pos += get_real(&par_string[par_pos], &GSL_REAL(yylval.val));
     return NUM;
   }
+
+  /* get the logical operators */
+  if (c == '<' && par_string[par_pos] == '='){
+    par_pos++;
+    return LE;
+  }
+
+  if (c == '>' && par_string[par_pos] == '='){
+    par_pos++;
+    return GE;
+  }
+
+  if (c == '=' && par_string[par_pos] == '='){
+    par_pos++;
+    return EQUAL;
+  }
+
+  if (c == '&' && par_string[par_pos] == '&'){
+    par_pos++;
+    return LAND;
+  }
+
+  if (c == '|' && par_string[par_pos] == '|'){
+    par_pos++;
+    return LOR;
+  }
      
   /* Char starts an identifier => read the name.       */
   if (isalpha (c) || c == '\'' || c == '\"'){

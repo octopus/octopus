@@ -323,7 +323,7 @@ subroutine X(vnlpsi) (h, m, sb, psi, hpsi, ik)
   call push_sub('h_inc.Xvnlpsi')
 
   do idim = 1, h%d%dim
-    call X(project)(m, h%ep%p(1:h%ep%nvnl), h%ep%nvnl, psi(:, idim), hpsi(:, idim), &
+    call X(project)(m, h%ep%p(:), h%ep%nvnl, psi(:, idim), hpsi(:, idim), &
       periodic = simul_box_is_periodic(sb), ik = ik)
   end do
 

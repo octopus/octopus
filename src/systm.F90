@@ -265,7 +265,7 @@ contains
       !% Magnetization density is the sum of the atomic magnetization densities.
       !%Option random 3
       !% Each atomic magnetization density is randomly rotated.
-      !%Option user_defined 4
+      !%Option user_defined 123
       !% The atomic magnetization densities are rotated so that the magnetization 
       !% vector has the same direction as a vector provided by the user. In this case,
       !% the <tt>AtomsMagnetDirection</tt> block has to be set.

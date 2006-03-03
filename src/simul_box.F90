@@ -22,6 +22,7 @@
 module simul_box_m
   use global_m
   use messages_m
+  use string_m
   use varinfo_m
   use units_m
   use datasets_m
@@ -42,7 +43,8 @@ module simul_box_m
     SPHERE         = 1,         &
     CYLINDER       = 2,         &
     MINIMUM        = 3,         &
-    PARALLELEPIPED = 4
+    PARALLELEPIPED = 4,         &
+    BOX_USDEF      = 123
 
   type simul_box_t
     integer  :: box_shape   ! 1->sphere, 2->cylinder, 3->sphere around each atom,
@@ -54,6 +56,8 @@ module simul_box_m
     FLOAT :: rsize          ! the radius of the sphere or of the cylinder
     FLOAT :: xsize          ! the length of the cylinder in the x direction
     FLOAT :: lsize(3)       ! half of the length of the parallelepiped in each direction.
+
+    character(len=1024) :: user_def ! for the user defined box
 
     FLOAT :: rlat(3,3)      ! lattice primitive vectors
     FLOAT :: klat(3,3)      ! reciprocal lattice primitive vectors
@@ -169,11 +173,13 @@ contains
       !%Option parallelepiped 4
       !% The simulation box will be a parallelpiped whose dimensions are taken from
       !% the variable lsize.
+      !%Option user_defined 123
+      !% The shape of the simulation box will be read from the variable <tt>BoxShapeUsDef</tt>
       !%End
       call loct_parse_int(check_inp('BoxShape'), MINIMUM, sb%box_shape)
       if(.not.varinfo_valid_option('BoxShape', sb%box_shape)) call input_error('BoxShape')
       select case(sb%box_shape)
-      case(SPHERE,MINIMUM)
+      case(SPHERE,MINIMUM,BOX_USDEF)
         if(sb%dim>1 .and. simul_box_is_periodic(sb)) call input_error('BoxShape')
       case(CYLINDER)
         if (sb%dim>2 .and. &
@@ -219,7 +225,7 @@ contains
       end if
 
       sb%lsize = M_ZERO
-      if(sb%box_shape == PARALLELEPIPED) then
+      if(sb%box_shape == PARALLELEPIPED .or. sb%box_shape == BOX_USDEF) then
 
         !%Variable Lsize
         !%Type block
@@ -251,6 +257,21 @@ contains
         call loct_parse_block_end(blk)
       end if
 
+      ! read in box shape for user defined boxes
+      if(sb%box_shape == BOX_USDEF) then
+        !%Variable BoxShapeUsDef
+        !%Type string
+        !%Section Mesh::Simulation Box
+        !%Description
+        !% Boolean expression that defines the interior of the simulation box. For example,
+        !% <tt>BoxShapeUsDef = "(sqrt(x^2+y^2) <= 4) && z>-2 && z<2"</tt> defines a cylinder
+        !% with axis parallel to the z axis
+        !%End
+        
+        call loct_parse_string("BoxShapeUsDef", "x^2+y^2+z^2 < 4", sb%user_def)
+        call conv_to_C_string(sb%user_def)
+      end if
+
       ! fill in lsize structure
       select case(sb%box_shape)
       case(SPHERE)
@@ -278,7 +299,7 @@ contains
 
       sb%h = -M_ONE
       select case(sb%box_shape)
-      case(SPHERE,CYLINDER,MINIMUM)
+      case(SPHERE,CYLINDER,MINIMUM,BOX_USDEF)
         call loct_parse_float(check_inp('spacing'), sb%h(1), sb%h(1))
         sb%h(1:sb%dim) = sb%h(1)
 
@@ -324,7 +345,7 @@ contains
 
       sb%box_offset = M_ZERO
       select case(sb%box_shape)
-      case(PARALLELEPIPED)
+      case(PARALLELEPIPED,BOX_USDEF)
         if(loct_parse_block(check_inp('BoxOffset'), blk) == 0) then
           do i = 1, sb%dim
             call loct_parse_block_float(blk, 0, i-1, sb%box_offset(i))
@@ -399,7 +420,11 @@ contains
     call push_sub('simul_box.simul_box_write_info')
 
     write(message(1),'(a)') 'Simulation Box:'
-    write(message(2), '(a,a,1x)') '  Type = ', bs(sb%box_shape)
+    if(sb%box_shape.eq.BOX_USDEF) then
+      write(message(2), '(a)') '  Type = user defined'
+    else
+      write(message(2), '(a,a,1x)') '  Type = ', bs(sb%box_shape)
+    end if
     call write_info(2, iunit)
 
     if(sb%box_shape == SPHERE.or.sb%box_shape == CYLINDER.or.sb%box_shape == MINIMUM) then
@@ -418,7 +443,6 @@ contains
       '(', sb%lsize(1)/units_out%length%factor, ',',           &
       sb%lsize(2)/units_out%length%factor, ',',                &
       sb%lsize(3)/units_out%length%factor, ')'
-
 
     write(message(1), '(a,i1,a)') 'The octopus will run in ', sb%dim, ' dimension(s).'
     write(message(2), '(a,i1,a)') 'The octopus will treat the system as periodic in ', &
@@ -446,24 +470,39 @@ contains
   logical function simul_box_in_box(sb, geo, x) result(in_box)
     type(simul_box_t),  intent(in) :: sb
     type(geometry_t),   intent(in) :: geo
-    FLOAT,                 intent(in) :: x(3) ! x(3)
+    FLOAT,              intent(in) :: x(:) ! x(3)
 
     FLOAT, parameter :: DELTA_R = CNST(1e-12)
-    FLOAT :: r
+    FLOAT :: r, re, im
 
     select case(sb%box_shape)
     case(SPHERE)
       in_box = (sqrt(sum(x**2)) <= sb%rsize+DELTA_R)
+
     case(CYLINDER)
       r = sqrt(x(2)**2 + x(3)**2)
       in_box = (r<=sb%rsize+DELTA_R .and. abs(x(1))<=sb%xsize+DELTA_R)
+
     case(MINIMUM)
       in_box = in_minimum()
+
     case(PARALLELEPIPED)
       in_box =  &
         (x(1) >= -sb%lsize(1) + sb%box_offset(1).and.x(1) <= sb%lsize(1) + sb%box_offset(1)).and. &
         (x(2) >= -sb%lsize(2) + sb%box_offset(2).and.x(2) <= sb%lsize(2) + sb%box_offset(2)).and. &
         (x(3) >= -sb%lsize(3) + sb%box_offset(3).and.x(3) <= sb%lsize(3) + sb%box_offset(3))
+
+    case(BOX_USDEF)
+      ! is it inside the user given boundaries
+      in_box =  &
+        (x(1) >= -sb%lsize(1) + sb%box_offset(1).and.x(1) <= sb%lsize(1) + sb%box_offset(1)).and. &
+        (x(2) >= -sb%lsize(2) + sb%box_offset(2).and.x(2) <= sb%lsize(2) + sb%box_offset(2)).and. &
+        (x(3) >= -sb%lsize(3) + sb%box_offset(3).and.x(3) <= sb%lsize(3) + sb%box_offset(3))
+
+      ! and inside the simulation box
+      r = sqrt(sum(x(:)**2))
+      call loct_parse_expression(re, im, x(1), x(2), x(3), r, sb%user_def)
+      in_box = in_box .and. (re .ne. M_ZERO)
     end select
 
   contains

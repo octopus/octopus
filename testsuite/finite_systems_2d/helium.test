@@ -30,7 +30,7 @@ fromScratch = yes
 a = 0.5
 corr = -1
 %Species
-  "Helium1D" | 2 | 1 | 1 | "-2/sqrt(a+(x)^2) -2/sqrt(a+(y)^2)+1/sqrt(a+x^2+y^2+2*corr*sqrt(x^2)*sqrt(y^2))" 
+  "Helium1D" | 2 | user_defined | 1 | "-2/sqrt(a+(x)^2) -2/sqrt(a+(y)^2)+1/sqrt(a+x^2+y^2+2*corr*sqrt(x^2)*sqrt(y^2))" 
 %
 %Coordinates
   "Helium1D" | 0.00 | 0.00 | 0.00
@@ -63,7 +63,7 @@ fromScratch = yes
 
 a = 1
 %Species
-  "Helium1D" | 2 | 1 | 1 | "-2/sqrt(a+(x)^2) -2/sqrt(a+(y)^2)+1/sqrt(a+(x-y)^2)" 
+  "Helium1D" | 2 | user_defined | 1 | "-2/sqrt(a+(x)^2) -2/sqrt(a+(y)^2)+1/sqrt(a+(x-y)^2)" 
 %
 
 %Coordinates

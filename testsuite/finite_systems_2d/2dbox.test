@@ -20,7 +20,7 @@ FromScratch = yes
 Dimensions = 2
 
 %Species
-"qd" | 1.0 | usdef | 1 | "0"
+"qd" | 1.0 | user_defined | 1 | "0"
 %
 
 %Coordinates
@@ -67,7 +67,7 @@ FromScratch = yes
 Dimensions = 2
 
 %Species
-"qd" | 1.0 | usdef | 2 | "0"
+"qd" | 1.0 | user_defined | 2 | "0"
 %
 
 %Coordinates
@@ -119,7 +119,7 @@ FromScratch = yes
 Dimensions = 2
 
 %Species
-"qd" | 1.0 | usdef | 2 | "0"
+"qd" | 1.0 | user_defined | 2 | "0"
 %
 
 %Coordinates
@@ -174,7 +174,7 @@ FromScratch = yes
 Dimensions = 2
 
 %Species
-"qd" | 1.0 | usdef | 3 | "0"
+"qd" | 1.0 | user_defined | 3 | "0"
 %
 
 %Coordinates
