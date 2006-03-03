@@ -90,7 +90,7 @@ module output_m
 
   ! index to label mapping
   character(len=3), parameter :: &
-    index2label(3) = (/ 're', 'im', 'abs' /)
+    index2label(3) = (/ 're ', 'im ', 'abs' /)
 
   type output_t
     integer :: what
