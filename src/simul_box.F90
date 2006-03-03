@@ -231,7 +231,7 @@ contains
         !%Type block
         !%Section Mesh::Simulation Box
         !%Description
-        !% In case BoxShape is "parallelepiped", this is assumed to be a block of the form:
+        !% In case BoxShape is "parallelepiped" or "user_defined", this is assumed to be a block of the form:
         !%
         !% <tt>%Lsize
         !% <br>&nbsp;&nbsp;sizex | sizey | sizez
@@ -244,21 +244,25 @@ contains
         !%End
         if(loct_parse_block(check_inp('lsize'), blk) == 0) then
           if(loct_parse_block_cols(blk,0) < sb%dim) call input_error('lsize')
+          do i = 1, sb%dim
+            call loct_parse_block_float(blk, 0, i-1, sb%lsize(i))
+          end do
         else
-          call input_error('lsize')
+          call loct_parse_float(check_inp('lsize'), -M_ONE, sb%lsize(1))
+          sb%lsize(1:sb%dim) = sb%lsize(1)
         end if
+        sb%lsize = sb%lsize*units_inp%length%factor
 
         do i = 1, sb%dim
-          call loct_parse_block_float(blk, 0, i-1, sb%lsize(i))
           if(def_rsize>M_ZERO.and.sb%periodic_dim<i) call check_def(def_rsize, sb%lsize(i), 'lsize')
         end do
-        sb%lsize = sb%lsize*units_inp%length%factor
 
         call loct_parse_block_end(blk)
       end if
 
       ! read in box shape for user defined boxes
       if(sb%box_shape == BOX_USDEF) then
+
         !%Variable BoxShapeUsDef
         !%Type string
         !%Section Mesh::Simulation Box
@@ -268,7 +272,7 @@ contains
         !% with axis parallel to the z axis
         !%End
         
-        call loct_parse_string("BoxShapeUsDef", "x^2+y^2+z^2 < 4", sb%user_def)
+        call loct_parse_string(check_inp("BoxShapeUsDef"), "x^2+y^2+z^2 < 4", sb%user_def)
         call conv_to_C_string(sb%user_def)
       end if
 
@@ -297,23 +301,33 @@ contains
       integer :: i
       integer(POINTER_SIZE) :: blk
 
-      sb%h = -M_ONE
-      select case(sb%box_shape)
-      case(SPHERE,CYLINDER,MINIMUM,BOX_USDEF)
-        call loct_parse_float(check_inp('spacing'), sb%h(1), sb%h(1))
-        sb%h(1:sb%dim) = sb%h(1)
+      !%Variable Spacing
+      !%Type float
+      !%Section Mesh::Simulation Box
+      !%Description
+      !% The spacing between the points in the mesh. In case of using curvilinear
+      !% coordinates, this is a canonical spacing that will be changed locally by the
+      !% transformation.
+      !%
+      !% It is possible to have a different spacing in each one of the cartesian directions
+      !% if we define <tt>Spacing</tt> as block of the form
+      !%
+      !% <tt>%Spacing
+      !% <br>&nbsp;&nbsp;spacing_x | spacing_y | spacing_z
+      !% <br>%</tt>
+      !%End
 
-      case(PARALLELEPIPED)
-        if(loct_parse_block(check_inp('spacing'), blk) == 0) then
-          do i = 1, sb%dim
-            call loct_parse_block_float(blk, 0, i-1, sb%h(i))
-          end do
-          call loct_parse_block_end(blk)
-        else
-          message(1) = '"Spacing" is a block if BoxShape == parallelepiped.'
-          call write_fatal(1)
-        end if
-      end select
+      sb%h = -M_ONE
+      if(loct_parse_block(check_inp('Spacing'), blk) == 0) then
+        if(loct_parse_block_cols(blk,0) < sb%dim) call input_error('Spacing')
+        do i = 1, sb%dim
+          call loct_parse_block_float(blk, 0, i-1, sb%h(i))
+        end do
+        call loct_parse_block_end(blk)
+      else
+        call loct_parse_float(check_inp('Spacing'), sb%h(1), sb%h(1))
+        sb%h(1:sb%dim) = sb%h(1)
+      end if
 
       do i = 1, sb%dim
         sb%h(i) = sb%h(i)*units_inp%length%factor
@@ -326,13 +340,13 @@ contains
             call write_info(1)
           else
             message(1) = 'Either:'
-            message(2) = "   *) variable 'spacing' is not defined"
-            message(3) = "   *) your input for 'spacing' is negative"
+            message(2) = "   *) variable 'Spacing' is not defined"
+            message(3) = "   *) your input for 'Spacing' is negative"
             message(4) = "   *) I can't find a suitable default"
             call write_fatal(4)
           end if
         end if
-        if(def_rsize>M_ZERO) call check_def(sb%h(i), def_rsize, 'spacing')
+        if(def_rsize>M_ZERO) call check_def(sb%h(i), def_rsize, 'Spacing')
       end do
 
     end subroutine read_spacing
@@ -343,16 +357,24 @@ contains
       integer :: i
       integer(POINTER_SIZE) :: blk
 
+      !%Variable BoxOffset
+      !%Type float
+      !%Section Mesh::Simulation Box
+      !%Description
+      !% The zero of the simulation box. It can be either a float, or a block containing
+      !% the (x,y,z) value of the zero.
+      !%End
       sb%box_offset = M_ZERO
-      select case(sb%box_shape)
-      case(PARALLELEPIPED,BOX_USDEF)
-        if(loct_parse_block(check_inp('BoxOffset'), blk) == 0) then
-          do i = 1, sb%dim
-            call loct_parse_block_float(blk, 0, i-1, sb%box_offset(i))
-          end do
-          call loct_parse_block_end(blk)
-        end if
-      end select
+      if(loct_parse_block(check_inp('BoxOffset'), blk) == 0) then
+        do i = 1, sb%dim
+          call loct_parse_block_float(blk, 0, i-1, sb%box_offset(i))
+        end do
+        call loct_parse_block_end(blk)
+      else
+        call loct_parse_float(check_inp('BoxOffset'), M_ZERO, sb%box_offset(1))
+        sb%box_offset(1:sb%dim) = sb%box_offset(1)
+      end if
+      sb%box_offset(:) = sb%box_offset(:)*units_inp%length%factor
 
     end subroutine read_box_offset
 
@@ -473,35 +495,38 @@ contains
     FLOAT,              intent(in) :: x(:) ! x(3)
 
     FLOAT, parameter :: DELTA_R = CNST(1e-12)
-    FLOAT :: r, re, im
+    FLOAT :: r, re, im, xx(3)
+
+    xx(:) = x(:) - sb%box_offset(:)
 
     select case(sb%box_shape)
     case(SPHERE)
-      in_box = (sqrt(sum(x**2)) <= sb%rsize+DELTA_R)
+      in_box = (sqrt(sum(xx(:)**2)) <= sb%rsize+DELTA_R)
 
     case(CYLINDER)
-      r = sqrt(x(2)**2 + x(3)**2)
-      in_box = (r<=sb%rsize+DELTA_R .and. abs(x(1))<=sb%xsize+DELTA_R)
+      r = sqrt(xx(2)**2 + xx(3)**2)
+      in_box = (r<=sb%rsize+DELTA_R .and. abs(xx(1))<=sb%xsize+DELTA_R)
 
     case(MINIMUM)
       in_box = in_minimum()
 
     case(PARALLELEPIPED)
       in_box =  &
-        (x(1) >= -sb%lsize(1) + sb%box_offset(1).and.x(1) <= sb%lsize(1) + sb%box_offset(1)).and. &
-        (x(2) >= -sb%lsize(2) + sb%box_offset(2).and.x(2) <= sb%lsize(2) + sb%box_offset(2)).and. &
-        (x(3) >= -sb%lsize(3) + sb%box_offset(3).and.x(3) <= sb%lsize(3) + sb%box_offset(3))
+        (xx(1) >= -sb%lsize(1).and.xx(1) <= sb%lsize(1)).and. &
+        (xx(2) >= -sb%lsize(2).and.xx(2) <= sb%lsize(2)).and. &
+        (xx(3) >= -sb%lsize(3).and.xx(3) <= sb%lsize(3))
 
     case(BOX_USDEF)
       ! is it inside the user given boundaries
       in_box =  &
-        (x(1) >= -sb%lsize(1) + sb%box_offset(1).and.x(1) <= sb%lsize(1) + sb%box_offset(1)).and. &
-        (x(2) >= -sb%lsize(2) + sb%box_offset(2).and.x(2) <= sb%lsize(2) + sb%box_offset(2)).and. &
-        (x(3) >= -sb%lsize(3) + sb%box_offset(3).and.x(3) <= sb%lsize(3) + sb%box_offset(3))
+        (xx(1) >= -sb%lsize(1).and.xx(1) <= sb%lsize(1)).and. &
+        (xx(2) >= -sb%lsize(2).and.xx(2) <= sb%lsize(2)).and. &
+        (xx(3) >= -sb%lsize(3).and.xx(3) <= sb%lsize(3))
 
       ! and inside the simulation box
-      r = sqrt(sum(x(:)**2))
-      call loct_parse_expression(re, im, x(1), x(2), x(3), r, sb%user_def)
+      xx(:) = xx(:)/units_inp%length%factor ! convert from a.u. to input units
+      r = sqrt(sum(xx(:)**2))
+      call loct_parse_expression(re, im, xx(1), xx(2), xx(3), r, sb%user_def)
       in_box = in_box .and. (re .ne. M_ZERO)
     end select
 
@@ -514,7 +539,7 @@ contains
 
       in_minimum = .false.
       do i = 1, geo%natoms
-        r = sqrt(sum((x(:) - geo%atom(i)%x(:))**2))
+        r = sqrt(sum((xx(:) - geo%atom(i)%x(:))**2))
         if(sb%rsize > M_ZERO) then
           radius = sb%rsize
         else

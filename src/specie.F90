@@ -516,9 +516,13 @@ contains
 
     select case(s%type)
     case(SPEC_USDEF)
+      ! Note that as the s%user_def is in input units, we have to convert
+      ! the units back and forth
+      xx(:) = xx(:)/units_inp%length%factor ! convert from a.u. to input units
+      r = r/units_inp%length%factor
       call loct_parse_expression(                            &
         pot_re, pot_im, xx(1), xx(2), xx(3), r, s%user_def)
-      l = pot_re 
+      l = pot_re * units_inp%energy%factor  ! convert from input units to a.u.
 
     case(SPEC_POINT, SPEC_JELLI)
       a1 = s%Z/(M_TWO*s%jradius**3)
@@ -557,16 +561,21 @@ contains
 
     select case(s%type)
     case(SPEC_USDEF)
+      ! Note that as the s%user_def is in input units, we have to convert
+      ! the units back and forth
       do i = 1, 3
-        xx(:) = x(:)
-        xx(i) = xx(i) - Delta
+        xx(:) = x(:)/units_inp%length%factor      ! convert from a.u. to input units
+
+        xx(i) = xx(i) - Delta/units_inp%length%factor
         call loct_parse_expression(pot_re, pot_im,           &
           xx(1), xx(2), xx(3), sqrt(sum(xx(:)**2)), s%user_def)
-        l1 = pot_re 
-        xx(i) = xx(i) + M_TWO*Delta
+        l1 = pot_re * units_inp%energy%factor     ! convert from input units to a.u.
+
+        xx(i) = xx(i) + M_TWO*Delta/units_inp%length%factor
         call loct_parse_expression(pot_re, pot_im,           &
           xx(1), xx(2), xx(3), sqrt(sum(xx(:)**2)), s%user_def)
-        l2 = pot_re 
+        l2 = pot_re * units_inp%energy%factor     ! convert from input units to a.u.
+
         gv(i) = (l2 - l1)/(M_TWO*Delta)
       end do
 
