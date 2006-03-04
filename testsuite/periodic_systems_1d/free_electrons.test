@@ -25,7 +25,7 @@ OnlyUserDef = yes
 NonInteractingElectrons = yes
 
 %Species
-"Zero" | 22.1 | spec_usdef | 2 | "0"
+"Zero" | 22.1 | user_defined | 2 | "0"
 %
 
 %Coordinates

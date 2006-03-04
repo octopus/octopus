@@ -25,7 +25,7 @@ OnlyUserDef = yes
 NonInteractingElectrons = yes
 
 %Species
- "Cosine"  | 1 | spec_usdef | 2 | "-0.2*cos(pi*x/10.0)"
+ "Cosine"  | 1 | user_defined | 2 | "-0.2*cos(pi*x/10.0)"
 %
 
 %Coordinates

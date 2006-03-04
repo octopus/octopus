@@ -32,7 +32,7 @@ Dimensions = 2
 omega = 0.25
 
 %Species
-"qd" | 1.0 | usdef | 20 | "0.5*omega^2*r^2"
+"qd" | 1.0 | user_defined | 20 | "0.5*omega^2*r^2"
 %
 
 %Coordinates
