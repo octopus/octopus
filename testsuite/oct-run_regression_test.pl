@@ -55,6 +55,7 @@ Runtime  : short-run
 Enabled  : Yes
 
 INP
+DebugLevel = 0
 CalculationMode = gs
 fromScratch = yes
 %Coordinates
