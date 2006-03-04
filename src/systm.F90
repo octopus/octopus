@@ -325,7 +325,7 @@ contains
         end if
       end do
 
-    case (4) ! User-defined
+    case (123) ! User-defined
       
       !%Variable AtomsMagnetDirection
       !%Type block
