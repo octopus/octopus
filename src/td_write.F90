@@ -112,7 +112,7 @@ contains
     !% onto the ground-state to the file <tt>td.general/gs_projection</tt>. As the calculation
     !% of the projection is fairly heavy, this is only done every <tt>OutputEvery</tt> 
     !% iterations.
-    !%Option td_geometry 16
+    !%Option geometry 16
     !% If set (and if the atoms are allowed to move), outputs the coordinates, velocities,
     !% and forces of the atoms to the the file <tt>td.general/coordinates</tt>.
     !%Option acceleration 32
