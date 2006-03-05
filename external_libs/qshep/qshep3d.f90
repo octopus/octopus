@@ -118,7 +118,7 @@ subroutine qshep3 ( n, x, y, z, f, nq, nw, nr, lcell, lnext, xyzmin, &
 ! b =         transpose of the augmented regression matrix
 ! c =         first component of the plane rotation used to
 !     zero the lower triangle of b**t -- computed
-!     by subroutine givens
+!     by subroutine qshep_givens
 ! dmin =       minimum of the magnitudes of the diagonal
 !     elements of the regression matrix after
 !     zeros are introduced below the diagonal
@@ -399,7 +399,7 @@ subroutine qshep3 ( n, x, y, z, f, nq, nw, nr, lcell, lnext, xyzmin, &
 
     do j = 1, irow-1
       jp1 = j + 1
-      call givens ( b(j,j), b(j,irow), c, s )
+      call qshep_givens ( b(j,j), b(j,irow), c, s )
       call rotate ( 10-j, c, s, b(jp1,j), b(jp1,irow) )
     end do
 
@@ -474,7 +474,7 @@ subroutine qshep3 ( n, x, y, z, f, nq, nw, nr, lcell, lnext, xyzmin, &
 
       do j = i, 9
         jp1 = j + 1
-        call givens (b(j,j),b(j,10),c,s)
+        call qshep_givens (b(j,j),b(j,10),c,s)
         call rotate ( 10-j, c, s, b(jp1,j), b(jp1,10) )
       end do
 
@@ -1409,11 +1409,11 @@ subroutine getnp3 ( px, py, pz, x, y, z, nr, lcell, lnext, xyzmin, &
 
   return
 end
-!!$subroutine givens ( a, b, c, s )
+!!$subroutine qshep_givens ( a, b, c, s )
 !!$
 !!$!***********************************************************************
 !!$!
-!!$!! GIVENS constructs a Givens plane rotation.
+!!$!! QSHEP_GIVENS constructs a Givens plane rotation.
 !!$!
 !!$!  Discussion:
 !!$!
@@ -1424,7 +1424,7 @@ end
 !!$!          (-s  c)
 !!$!
 !!$!    where c*c + s*s = 1, which zeros the second entry of the 2-vector 
-!!$!    (a b)-transpose.  A call to GIVENS is normally followed by a call 
+!!$!    (a b)-transpose.  A call to QSHEP_GIVENS is normally followed by a call 
 !!$!    to ROTATE which applies the transformation to a 2 by N matrix.  
 !!$!    This routine was taken from LINPACK.
 !!$!
@@ -1539,7 +1539,7 @@ end
 !!$!    Input, integer N, the number of columns to be rotated.
 !!$!
 !!$!    Input, real ( kind = 8 ) C, S, the elements of the Givens rotation.
-!!$!    These may be determined by subroutine GIVENS.
+!!$!    These may be determined by subroutine QSHEP_GIVENS.
 !!$!
 !!$!    Input/output, real ( kind = 8 ) X(N), Y(N), the vectors to be rotated.
 !!$!

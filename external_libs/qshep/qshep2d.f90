@@ -271,11 +271,11 @@ subroutine getnp2 ( px, py, x, y, nr, lcell, lnext, xmin, ymin, &
 
   return
 end
-subroutine givens ( a, b, c, s )
+subroutine qshep_givens ( a, b, c, s )
 
 !***********************************************************************
 !
-!! GIVENS constructs a Givens plane rotation.
+!! QSHEP_GIVENS constructs a Givens plane rotation.
 !
 !  Discussion:
 !
@@ -286,7 +286,7 @@ subroutine givens ( a, b, c, s )
 !
 !    where C*C + S*S = 1, which zeroes the second entry of the
 !    the column vector ( A, B ) when C and S are properly chosen.
-!    A call to GIVENS is normally followed by a call to ROTATE
+!    A call to QSHEP_GIVENS is normally followed by a call to ROTATE
 !    which computes the product of G(C,S) with a 2 by N matrix.
 !
 !  Modified:
@@ -768,7 +768,7 @@ subroutine qshep2 ( n, x, y, f, nq, nw, nr, lcell, lnext, xmin, &
 ! b =         transpose of the augmented regression matrix
 ! c =         first component of the plane rotation used to
 !             zero the lower triangle of b**t -- computed
-!             by subroutine givens
+!             by subroutine qshep_givens
 ! ddx,ddy =   local variables for dx and dy
 ! dmin =      minimum of the magnitudes of the diagonal
 !             elements of the regression matrix after
@@ -1030,7 +1030,7 @@ subroutine qshep2 ( n, x, y, f, nq, nw, nr, lcell, lnext, xmin, &
 
     do j = 1, irow-1
       jp1 = j + 1
-      call givens ( b(j,j), b(j,irow), c, s )
+      call qshep_givens ( b(j,j), b(j,irow), c, s )
       call rotate ( 6-j, c, s, b(jp1,j), b(jp1,irow) )
     end do
 
@@ -1114,7 +1114,7 @@ subroutine qshep2 ( n, x, y, f, nq, nw, nr, lcell, lnext, xmin, &
 
       do j = i, 5
         jp1 = j + 1
-        call givens ( b(j,j), b(j,6), c, s )
+        call qshep_givens ( b(j,j), b(j,6), c, s )
         call rotate ( 6-j, c, s, b(jp1,j), b(jp1,6) )
       end do
 
@@ -1416,7 +1416,7 @@ subroutine rotate ( n, c, s, x, y )
 !    Input, integer N, the dimension of the vectors.
 !
 !    Input, real ( kind = 8 ) C, S, the cosine and sine entries of the Givens
-!    rotation matrix.  These may be determined by subroutine GIVENS.
+!    rotation matrix.  These may be determined by subroutine QSHEP_GIVENS.
 !
 !    Input/output, real ( kind = 8 ) X(N), Y(N), the rotated vectors. 
 !
