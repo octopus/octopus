@@ -287,7 +287,7 @@ contains
       FLOAT :: x
 
       if(.not.fromScratch) then
-        call zrestart_read(trim(tmpdir)//'restart_td', st, gr%m, ierr, td%iter)
+        call zrestart_read(trim(tmpdir)//'restart_td', st, gr, ierr, td%iter)
         if(ierr.ne.0) then
           message(1) = "Could not load "//trim(tmpdir)//"restart_td: Starting from scratch"
           call write_warning(1)
@@ -306,7 +306,7 @@ contains
       end if
 
       if(fromScratch) then
-        call zrestart_read(trim(tmpdir)//'restart_gs', st, gr%m, ierr)
+        call zrestart_read(trim(tmpdir)//'restart_gs', st, gr, ierr)
         if(ierr.ne.0) then
           message(1) = "Could not read KS orbitals from '"//trim(tmpdir)//"restart_gs'"
           message(2) = "Please run a ground-state calculation first!"

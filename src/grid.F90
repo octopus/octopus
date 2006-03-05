@@ -20,6 +20,10 @@
 #include "global.h"
 
 module grid_m
+  use global_m
+  use lib_oct_parser_m
+  use messages_m
+  use datasets_m
   use mesh_m
   use simul_box_m
   use geometry_m

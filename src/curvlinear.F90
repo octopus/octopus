@@ -31,6 +31,12 @@ module curvlinear_m
 
   implicit none
 
+  private
+  public :: curvlinear_t,      &
+            curvlinear_init,   &
+            curvlinear_chi2x,  &
+            curvlinear_det_Jac 
+
 
   integer, parameter, public :: &
     CURV_METHOD_UNIFORM = 1,    &

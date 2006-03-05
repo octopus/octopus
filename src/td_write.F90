@@ -195,7 +195,7 @@ contains
       i = NP_PART*w%gs_st%d%dim*(w%gs_st%st_end-w%gs_st%st_start+1)*w%gs_st%d%nik
       ALLOCATE(w%gs_st%zpsi(NP_PART, w%gs_st%d%dim, w%gs_st%st_start:w%gs_st%st_end, w%gs_st%d%nik), i)
       w%gs_st%node(:)  = 0
-      call zrestart_read(trim(tmpdir)//'restart_gs', w%gs_st, gr%m, ierr)
+      call zrestart_read(trim(tmpdir)//'restart_gs', w%gs_st, gr, ierr)
       if(ierr.ne.0) then
         message(1) = "Could not load "//trim(tmpdir)//"restart_gs"
         call write_fatal(1)

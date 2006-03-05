@@ -133,10 +133,10 @@ end subroutine X(restart_write)
 ! <0 => Fatal error
 ! =0 => read all wave-functions
 ! >0 => could only read x wavefunctions
-subroutine X(restart_read) (dir, st, m, ierr, iter)
+subroutine X(restart_read) (dir, st, gr, ierr, iter)
   character(len=*),  intent(in)    :: dir
   type(states_t), intent(inout) :: st
-  type(mesh_t),   intent(in)    :: m
+  type(grid_t),   intent(in)    :: gr
   integer,           intent(out)   :: ierr
   integer, optional, intent(out)   :: iter
 
@@ -165,28 +165,28 @@ subroutine X(restart_read) (dir, st, m, ierr, iter)
   filled = .false.
 
   ! Skip two lines.
-  call iopar_read(m, iunit,  line, err); call iopar_read(m, iunit,  line, err)
-  call iopar_read(m, iunit2, line, err); call iopar_read(m, iunit2, line, err)
+  call iopar_read(gr%m, iunit,  line, err); call iopar_read(gr%m, iunit,  line, err)
+  call iopar_read(gr%m, iunit2, line, err); call iopar_read(gr%m, iunit2, line, err)
 
   do
-    call iopar_read(m, iunit, line, i)
+    call iopar_read(gr%m, iunit, line, i)
     read(line, '(a)') char
     if(i.ne.0.or.char=='%') exit
 
-    call iopar_backspace(m, iunit)
+    call iopar_backspace(gr%m, iunit)
 
-    call iopar_read(m, iunit, line, err)
+    call iopar_read(gr%m, iunit, line, err)
     read(line, *) ik, char, ist, char, idim, char, filename
     if(index_is_wrong()) then
-      call iopar_read(m, iunit2, line, err)
+      call iopar_read(gr%m, iunit2, line, err)
       cycle
     end if
 
-    call iopar_read(m, iunit2, line, err)
+    call iopar_read(gr%m, iunit2, line, err)
     read(line, *) st%occ(ist, ik), char, st%eigenval(ist, ik)
 
     if(ist >= st%st_start .and. ist <= st%st_end) then
-      call X(restart_read_function) (dir, filename, m, st%X(psi) (:, idim, ist, ik), err)
+      call X(restart_read_function) (dir, filename, gr%m, st%X(psi) (:, idim, ist, ik), err)
       if(err <= 0) then
         filled(idim, ist, ik) = .true.
         ierr = ierr + 1
@@ -195,7 +195,7 @@ subroutine X(restart_read) (dir, st, m, ierr, iter)
   end do
 
   if(present(iter)) then
-    call iopar_read(m, iunit, line, err)
+    call iopar_read(gr%m, iunit, line, err)
     read(line, *) filename, filename, iter
   end if
 
@@ -208,8 +208,8 @@ subroutine X(restart_read) (dir, st, m, ierr, iter)
   end if
 
   deallocate(filled)
-  call iopar_close(m, iunit)
-  call iopar_close(m, iunit2)
+  call iopar_close(gr%m, iunit)
+  call iopar_close(gr%m, iunit2)
 
   call pop_sub()
 
@@ -217,15 +217,15 @@ contains
 
   ! ---------------------------------------------------------
   subroutine open_files
-    iunit  = iopar_open(m, trim(dir)//'/wfns', action='read', status='old', die=.false.)
+    iunit  = iopar_open(gr%m, trim(dir)//'/wfns', action='read', status='old', die=.false.)
     if(iunit < 0) then
       ierr = -1
       return
     end if
 
-    iunit2 = iopar_open(m, trim(dir)//'/occs', action='read', status='old', die=.false.)
+    iunit2 = iopar_open(gr%m, trim(dir)//'/occs', action='read', status='old', die=.false.)
     if(iunit2 < 0) then
-      call iopar_close(m, iunit)
+      call iopar_close(gr%m, iunit)
       ierr = -1
     end if
   end subroutine open_files
@@ -239,7 +239,7 @@ contains
           write(message(1),'(a,3i4)') 'Randomizing wavefunction: #dim, #ist, #ik = ', idim, ist, ik
           call write_warning(1)
 
-          call states_generate_random(st, m, ist, ist)
+          call states_generate_random(st, gr%m, ist, ist)
           st%occ(ist, ik) = M_ZERO
         end do
       end do

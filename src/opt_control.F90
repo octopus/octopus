@@ -296,7 +296,7 @@ contains
 
       integer :: ierr
 
-      call zrestart_read('opt-control/'//trim(filename), st, gr%m, ierr)
+      call zrestart_read('opt-control/'//trim(filename), st, gr, ierr)
       if(ierr.ne.0) then
         message(1) = "Unsuccesfull read of states in 'opt-control/" // trim(filename) // "'"
         call write_fatal(1)

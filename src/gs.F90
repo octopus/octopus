@@ -66,7 +66,7 @@ contains
       message(1) = 'Info: Loading wave-functions'
       call write_info(1)
 
-      call X(restart_read) (trim(tmpdir)//'restart_gs', sys%st, sys%gr%m, ierr)
+      call X(restart_read) (trim(tmpdir)//'restart_gs', sys%st, sys%gr, ierr)
       if(ierr.ne.0) then
         message(1) = "Could not load wave-functions from '"//trim(tmpdir)//"restart_gs'"
         message(2) = "Starting from scratch!"

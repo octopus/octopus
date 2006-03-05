@@ -60,7 +60,7 @@ contains
     occupied_states = sys%st%nst
     call init_(sys%gr%m, sys%st)
 
-    call X(restart_read) (trim(tmpdir)//'restart_gs', sys%st, sys%gr%m, ierr)
+    call X(restart_read) (trim(tmpdir)//'restart_gs', sys%st, sys%gr, ierr)
     if( (ierr .ne. 0)  .and.  (ierr < occupied_states) ) then
       message(1) = "Not all the occupied KS orbitals could be read from '"//trim(tmpdir)//"restart_gs'"
       message(2) = "Please run a ground-state calculation first!"

@@ -66,7 +66,7 @@ contains
     call init_()
 
     ! load wave-functions
-    call X(restart_read) (trim(tmpdir)//'restart_gs', sys%st, sys%gr%m, ierr)
+    call X(restart_read) (trim(tmpdir)//'restart_gs', sys%st, sys%gr, ierr)
     if(ierr.ne.0) then
       message(1) = "Could not load wave-functions: Starting from scratch"
       call write_warning(1)
