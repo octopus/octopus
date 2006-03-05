@@ -62,10 +62,8 @@ contains
     ALLOCATE(sys%st%X(psi)(sys%NP_PART, sys%st%d%dim, sys%st%nst, sys%st%d%nik), sys%NP_PART*sys%st%d%dim*sys%st%nst*sys%st%d%nik)
 
     if(.not.fromScratch) then
-      ! load wave-functions
-      message(1) = 'Info: Loading wave-functions'
-      call write_info(1)
 
+      ! load wave-functions
       call X(restart_read) (trim(tmpdir)//'restart_gs', sys%st, sys%gr, ierr)
       if(ierr.ne.0) then
         message(1) = "Could not load wave-functions from '"//trim(tmpdir)//"restart_gs'"

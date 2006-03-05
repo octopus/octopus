@@ -46,7 +46,9 @@ module mesh_function_m
     dmf_random,            &
     zmf_random,            &
     dmf_partial_integrate, &
-    zmf_partial_integrate
+    zmf_partial_integrate, &
+    dmf_interpolate,       &
+    zmf_interpolate
 
 
 contains

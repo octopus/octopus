@@ -28,15 +28,18 @@ module curvlinear_m
   use curv_modine_m
   use varinfo_m
   use datasets_m
+  use math_m
 
   implicit none
 
   private
-  public :: curvlinear_t,      &
-            curvlinear_init,   &
-            curvlinear_chi2x,  &
-            curvlinear_det_Jac 
-
+  public :: curvlinear_t,              &
+            curvlinear_init,           &
+            curvlinear_chi2x,          &
+            curvlinear_det_Jac,        &
+            curvlinear_dump,           &
+            curvlinear_init_from_file, &
+            operator(.eq.)
 
   integer, parameter, public :: &
     CURV_METHOD_UNIFORM = 1,    &
@@ -50,6 +53,10 @@ module curvlinear_m
     type(curv_briggs_t) :: briggs
     type(curv_modine_t) :: modine
   end type curvlinear_t
+
+  interface operator(.eq.)
+    module procedure curv_is_equal
+  end interface
 
 
 contains
@@ -157,5 +164,72 @@ contains
     end select
 
   end function curvlinear_det_Jac
+
+  ! ---------------------------------------------------------
+  subroutine curvlinear_dump(cv, iunit)
+    type(curvlinear_t), intent(in) :: cv
+    integer,            intent(in) :: iunit
+    write(iunit, '(a20,i4)')        'method=              ', cv%method
+    select case(cv%method)
+    case(CURV_METHOD_GYGI)
+      write(iunit, '(a20,e22.14)')  'a=                   ', cv%gygi%a
+      write(iunit, '(a20,e22.14)')  'alpha=               ', cv%gygi%alpha
+      write(iunit, '(a20,e22.14)')  'beta=                ', cv%gygi%beta
+    case(CURV_METHOD_BRIGGS)
+      write(iunit, '(a20,3e22.14)') 'l=                   ', cv%briggs%l(1:3)
+      write(iunit, '(a20,e22.14)')  'beta=                ', cv%briggs%beta
+    case(CURV_METHOD_MODINE)
+      write(iunit, '(a20,3e22.14)') 'l=                   ', cv%modine%l(1:3)
+      write(iunit, '(a20,e22.14)')  'xbar=                ', cv%modine%xbar
+      write(iunit, '(a20,e22.14)')  'jbar=                ', cv%modine%jbar
+      write(iunit, '(a20,e22.14)')  'jlocal=              ', cv%modine%jlocal
+      write(iunit, '(a20,e22.14)')  'jrange=              ', cv%modine%jrange
+    end select
+  end subroutine curvlinear_dump
+
+  ! ---------------------------------------------------------
+  subroutine curvlinear_init_from_file(cv, iunit)
+    type(curvlinear_t), intent(out) :: cv
+    integer,            intent(in)  :: iunit
+    character(len=20) :: str
+    read(iunit, *) str, cv%method
+    select case(cv%method)
+    case(CURV_METHOD_GYGI)
+      read(iunit, *) str, cv%gygi%a
+      read(iunit, *) str, cv%gygi%alpha
+      read(iunit, *) str, cv%gygi%beta
+    case(CURV_METHOD_BRIGGS)
+      read(iunit, *) str, cv%briggs%l(1:3)
+      read(iunit, *) str, cv%briggs%beta
+    case(CURV_METHOD_MODINE)
+      read(iunit, *) str, cv%modine%l(1:3)
+      read(iunit, *) str, cv%modine%xbar
+      read(iunit, *) str, cv%modine%jbar
+      read(iunit, *) str, cv%modine%jlocal
+      read(iunit, *) str, cv%modine%jrange
+    end select
+  end subroutine curvlinear_init_from_file
+
+  logical function curv_is_equal(cv1, cv2) result(res)
+    type(curvlinear_t), intent(in) :: cv1, cv2
+    res = .false.
+    if(cv1%method .ne. cv2%method)                           return
+    select case(cv1%method)
+    case(CURV_METHOD_GYGI)
+      if(.not. (cv1%gygi%a .app.cv2%gygi%a) )                return
+      if(.not. (cv1%gygi%alpha .app.cv2%gygi%alpha) )        return
+      if(.not. (cv1%gygi%beta .app.cv2%gygi%beta) )          return
+    case(CURV_METHOD_BRIGGS)
+      if(.not. (cv1%briggs%l .app.cv2%briggs%l) )            return
+      if(.not. (cv1%briggs%beta .app.cv2%briggs%beta) )      return
+    case(CURV_METHOD_MODINE)
+      if(.not. (cv1%modine%l .app. cv2%modine%l) )           return
+      if(.not. (cv1%modine%xbar .app. cv2%modine%xbar) )     return
+      if(.not. (cv1%modine%jbar .app. cv2%modine%jbar) )     return
+      if(.not. (cv1%modine%jlocal .app. cv2%modine%jlocal) ) return
+      if(.not. (cv1%modine%jrange .app. cv2%modine%jrange) ) return
+    end select
+    res = .true.
+  end function curv_is_equal
 
 end module curvlinear_m

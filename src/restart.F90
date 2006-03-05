@@ -27,7 +27,10 @@ module restart_m
   use datasets_m
   use io_m
   use states_m
+  use curvlinear_m
+  use simul_box_m
   use mesh_m
+  use mesh_function_m
   use grid_m
   use output_m
   use mpi_m

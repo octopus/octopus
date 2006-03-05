@@ -205,77 +205,94 @@ subroutine X(mf_partial_integrate)(mesh, j, f, u)
   call pop_sub()
 end subroutine X(mf_partial_integrate)
 
-!!$subroutine X(mf_interpolate) (mesh, f, filename)
-!!$  type(mesh_t), intent(in)     :: mesh
-!!$  R_TYPE,       intent(out)    :: f(:) ! f(mesh%np)
-!!$  character(len=*), intent(in) :: filename
-subroutine X(mf_interpolate) (mesh, npoints, x, u, f)
-  type(mesh_t), intent(in)  :: mesh
-  integer,      intent(in)  :: npoints
-  FLOAT,        intent(in)  :: u(npoints)
-  FLOAT,        intent(in)  :: x(npoints, 3)
+subroutine X(mf_interpolate) (mesh_in, mesh_out, full_interpolation, u, f)
+  type(mesh_t), intent(in)  :: mesh_in, mesh_out
+  logical,      intent(in)  :: full_interpolation
+  R_TYPE,       intent(in)  :: u(:)    ! u(mesh_in%np_global)
   R_TYPE,       intent(out) :: f(:)    ! f(mesh%np)
-
 
   FLOAT :: xmin, ymin, dx, dy, rmax, px, py, pz, dump, xyzmin(3), xyzdel(3)
   FLOAT, allocatable :: rsq(:), a(:, :)
   integer, allocatable :: lcell(:, :, :), lnext(:)
-  integer :: i, nq, nw, nr, ier
+  integer :: i, j, nq, nw, nr, ier, npoints, ix, iy, iz
 
   FLOAT, external :: qs2val, qs3val
 
   call push_sub('mf_inc.Xmf_interpolate2d')
 
-  select case(mesh%sb%dim)
-  case(2)
-    nq = 13
-    nw = 19
-    nr = nint(sqrt(npoints/CNST(3.0)))
-    ALLOCATE(lcell(nr, nr, 1), nr*nr)
-    ALLOCATE(lnext(npoints), npoints)
-    ALLOCATE(rsq(npoints), npoints)
-    ALLOCATE(a(5, npoints), 5*npoints)
-  case(3)
-    nq = 17 ! This is the recommended value in qshep3d.f90
-    nw = 16 ! The recommended value in qshep3d.f90 is 32, but this speeds up things.
-    nr = nint((npoints/CNST(3.0))**(M_ONE/M_THREE))
-    ALLOCATE(lcell(nr, nr, nr), nr*nr*nr)
-    ALLOCATE(lnext(npoints), npoints)
-    ALLOCATE(rsq(npoints), npoints)
-    ALLOCATE(a(9, npoints), 9*npoints)
-  case(1)
-    stop 'Error'
-  end select
+  if(full_interpolation) then
 
-  f = M_ZERO
+    npoints = mesh_in%np_global
+
+    select case(mesh_in%sb%dim)
+    case(2)
+      nq = 13
+      nw = 19
+      nr = nint(sqrt(npoints/CNST(3.0)))
+      ALLOCATE(lcell(nr, nr, 1), nr*nr)
+      ALLOCATE(lnext(npoints), npoints)
+      ALLOCATE(rsq(npoints), npoints)
+      ALLOCATE(a(5, npoints), 5*npoints)
+    case(3)
+      nq = 17 ! This is the recommended value in qshep3d.f90
+      nw = 16 ! The recommended value in qshep3d.f90 is 32, but this speeds up things.
+      nr = nint((npoints/CNST(3.0))**(M_ONE/M_THREE))
+      ALLOCATE(lcell(nr, nr, nr), nr*nr*nr)
+      ALLOCATE(lnext(npoints), npoints)
+      ALLOCATE(rsq(npoints), npoints)
+      ALLOCATE(a(9, npoints), 9*npoints)
+    case(1)
+      stop 'Error'
+    end select
+
+    f = M_ZERO
 
 #if defined(R_TREAL)
-  select case(mesh%sb%dim)
-  case(2)
-    call qshep2 ( npoints, x(1:npoints, 1), x(1:npoints, 2), u, nq, nw, nr, lcell(:, :, 1), lnext, xmin, ymin, &
-      dx, dy, rmax, rsq, a, ier )
-    do i = 1, mesh%np
-      px = mesh%x(i, 1)
-      py = mesh%x(i, 2)
-      f(i) = qs2val ( px, py, npoints, x(1:npoints, 1), x(1:npoints, 2), u, nr, lcell(:, :, 1), lnext, xmin, &
-         ymin, dx, dy, rmax, rsq, a )
-    end do
-  case(3)
-    call qshep3 ( npoints, x(1:npoints, 1), x(1:npoints, 2), x(1:npoints, 3), u, nq, nw, nr, lcell, lnext, xyzmin, &
-      xyzdel, rmax, rsq, a, ier )
-    do i = 1, mesh%np
-      px = mesh%x(i, 1)
-      py = mesh%x(i, 2)
-      pz = mesh%x(i, 3)
-      f(i) = qs3val ( px, py, pz, npoints, x(1:npoints, 1), x(1:npoints, 2), x(1:npoints, 3), &
-                      u, nr, lcell, lnext, xyzmin, xyzdel, rmax, rsq, a )
-    end do
-  case(1)
-    stop 'Error'
-  end select
-
+    select case(mesh_in%sb%dim)
+    case(2)
+      call qshep2 ( npoints, mesh_in%x(1:npoints, 1), mesh_in%x(1:npoints, 2), &
+                    u, nq, nw, nr, lcell(:, :, 1), lnext, xmin, ymin, &
+                    dx, dy, rmax, rsq, a, ier )
+      do i = 1, mesh_out%np
+        px = mesh_out%x(i, 1)
+        py = mesh_out%x(i, 2)
+        f(i) = qs2val ( px, py, npoints, mesh_in%x(1:npoints, 1), mesh_in%x(1:npoints, 2), &
+                        u, nr, lcell(:, :, 1), lnext, xmin, &
+                        ymin, dx, dy, rmax, rsq, a )
+      end do
+    case(3)
+      call qshep3 ( npoints, mesh_in%x(1:npoints, 1), mesh_in%x(1:npoints, 2), mesh_in%x(1:npoints, 3), &
+                    u, nq, nw, nr, lcell, lnext, xyzmin, &
+                    xyzdel, rmax, rsq, a, ier )
+      do i = 1, mesh_out%np
+        px = mesh_out%x(i, 1)
+        py = mesh_out%x(i, 2)
+        pz = mesh_out%x(i, 3)
+        f(i) = qs3val ( px, py, pz, npoints, &
+                        mesh_in%x(1:npoints, 1), mesh_in%x(1:npoints, 2), mesh_in%x(1:npoints, 3), &
+                        u, nr, lcell, lnext, xyzmin, xyzdel, rmax, rsq, a )
+      end do
+    case(1)
+      stop 'Error'
+    end select
 #endif
   
-  deallocate(rsq, a, lnext, lcell)
+    deallocate(rsq, a, lnext, lcell)
+
+  else
+
+    f = M_ZERO
+    do i = 1, mesh_out%np
+      ix = mesh_out%lxyz(i, 1)
+      iy = mesh_out%lxyz(i, 2)
+      iz = mesh_out%lxyz(i, 3)
+      j = mesh_in%lxyz_inv(ix, iy, iz)
+      if(j>0 .and. j<=mesh_in%np_global) then
+        f(i) = u(j)
+      end if
+    end do
+
+  end if
+
   call pop_sub()
 end subroutine X(mf_interpolate)

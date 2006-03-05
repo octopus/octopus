@@ -28,6 +28,7 @@ module simul_box_m
   use datasets_m
   use lib_oct_parser_m
   use geometry_m
+  use math_m
 
   implicit none
 
@@ -37,7 +38,10 @@ module simul_box_m
     simul_box_init,             &
     simul_box_write_info,       &
     simul_box_is_periodic,      &
-    simul_box_in_box
+    simul_box_in_box,           &
+    simul_box_dump,             &
+    simul_box_init_from_file,   &
+    operator(.eq.)
 
   integer, parameter, public :: &
     SPHERE         = 1,         &
@@ -70,6 +74,9 @@ module simul_box_m
 
   end type simul_box_t
 
+  interface operator(.eq.)
+    module procedure simul_box_is_eq
+  end interface
 
 contains
 
@@ -562,5 +569,85 @@ contains
 
     simul_box_is_periodic = sb%periodic_dim > 0
   end function simul_box_is_periodic
+
+  !--------------------------------------------------------------
+  subroutine simul_box_dump(sb, iunit)
+    type(simul_box_t), intent(in) :: sb
+    integer,           intent(in) :: iunit
+    write(iunit, '(a20,i4)')        'box_shape=          ',sb%box_shape
+    write(iunit, '(a20,i4)')        'dim=                ',sb%dim
+    write(iunit, '(a20,i4)')        'periodic_dim=       ',sb%periodic_dim
+    select case(sb%box_shape)
+    case(SPHERE, MINIMUM)
+      write(iunit, '(a20,e22.14)')  'rsize=              ', sb%rsize
+      write(iunit, '(a20,3e22.14)') 'lsize=              ', sb%lsize(1:3)
+    case(CYLINDER)
+      write(iunit, '(a20,e22.14)')  'rsize=              ', sb%rsize
+      write(iunit, '(a20,e22.14)')  'xlength=            ', sb%xsize
+      write(iunit, '(a20,3e22.14)') 'lsize=              ', sb%lsize(1:3)
+    case(PARALLELEPIPED)
+      write(iunit, '(a20,3e22.14)') 'lsize=              ', sb%lsize(1:3)
+    case(BOX_USDEF)
+      write(iunit, '(a20,3e22.14)') 'lsize=              ', sb%lsize(1:3)
+      write(iunit, '(a20,a1024)')   'user_def=           ', sb%user_def
+    end select
+    write(iunit, '(a20,e22.14)')    'fft_alpha=          ', sb%fft_alpha
+    write(iunit, '(a20,3e22.14)')   'h=                  ', sb%h(1:3)
+    write(iunit, '(a20,3e22.14)')   'box_offset=         ', sb%box_offset(1:3)
+  end subroutine simul_box_dump
+
+  !--------------------------------------------------------------
+  subroutine simul_box_init_from_file(sb, geo, iunit)
+    type(simul_box_t), intent(inout) :: sb
+    type(geometry_t),  intent(in)    :: geo
+    integer,           intent(in)    :: iunit
+    character(len=20) :: str
+    read(iunit, *) str, sb%box_shape
+    read(iunit, *) str, sb%dim
+    read(iunit, *) str, sb%periodic_dim
+    select case(sb%box_shape)
+    case(SPHERE, MINIMUM)
+      read(iunit, *) str, sb%rsize
+      read(iunit, *) str, sb%lsize(1:3)
+    case(CYLINDER)
+      read(iunit, *) str, sb%rsize
+      read(iunit, *) str, sb%xsize
+      read(iunit, *) str, sb%lsize(1:3)
+    case(PARALLELEPIPED)
+      read(iunit, *) str, sb%lsize(1:3)
+    case(BOX_USDEF)
+      read(iunit, *) str, sb%lsize(1:3)
+      read(iunit, *) str, sb%user_def
+    end select
+    read(iunit, *) str, sb%fft_alpha
+    read(iunit, *) str, sb%h(1:3)
+    read(iunit, *) str, sb%box_offset(1:3)
+  end subroutine simul_box_init_from_file
+
+  logical function simul_box_is_eq(sb1, sb2) result(res)
+    type(simul_box_t), intent(in) :: sb1, sb2
+    res = .false.
+    if(sb1%box_shape .ne. sb2%box_shape)             return
+    if(sb1%dim .ne. sb2%dim)                         return
+    if(sb1%periodic_dim .ne. sb2%periodic_dim)       return
+    select case(sb1%box_shape)
+    case(SPHERE, MINIMUM)
+      if(.not.(sb1%rsize .app. sb2%rsize))           return
+      if(.not.(sb1%lsize .app. sb2%lsize))           return
+    case(CYLINDER)
+      if(.not.(sb1%rsize .app. sb2%rsize))           return
+      if(.not.(sb1%xsize .app. sb2%xsize))           return
+      if(.not.(sb1%lsize .app. sb2%lsize))           return
+    case(PARALLELEPIPED)
+      if(.not.(sb1%lsize .app. sb2%lsize))           return
+    case(BOX_USDEF)
+      if(.not.(sb1%lsize .app. sb2%lsize))           return
+      if(trim(sb1%user_def) .ne. trim(sb2%user_def)) return
+    end select
+    if(.not.(sb1%fft_alpha .app. sb2%fft_alpha))     return
+    if(.not.(sb1%h .app. sb2%h))                     return
+    if(.not.(sb1%box_offset .app. sb2%box_offset))   return
+    res = .true.
+  end function simul_box_is_eq
 
 end module simul_box_m

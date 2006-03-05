@@ -157,3 +157,51 @@ subroutine X(shellsort2)(a, x)
   end do
 
 end subroutine X(shellsort2)
+
+
+  ! ---------------------------------------------------------
+  ! These routines compare numbers or arrays of numbers to
+  ! within a certain threshold (to avoid considering differences
+  ! due to rounding as significant). They are not to be
+  ! accessed directly, but throught the .app. operator.
+  ! ---------------------------------------------------------
+  logical function X(approximate_equal)(a, b) result(app)
+    R_TYPE, intent(in) :: a, b
+#if defined(R_TREAL)
+    app = abs(a-b) < APP_THRESHOLD
+#else
+    app = (abs(R_REAL(a)-R_REAL(b))   < APP_THRESHOLD) .and. &
+          (abs(R_AIMAG(a)-R_AIMAG(b)) < APP_THRESHOLD)
+#endif
+  end function X(approximate_equal)
+  logical function X(approximate_equal_1)(a, b) result(app)
+    R_TYPE, intent(in) :: a(:), b(:)
+    integer :: i
+    app = .false.
+    if(size(a).ne.size(b)) return
+    do i = 1, size(a)
+      app = X(approximate_equal)(a(i), b(i))
+      if(.not.app) return
+    end do
+  end function X(approximate_equal_1)
+  logical function X(approximate_equal_2)(a, b) result(app)
+    R_TYPE, intent(in) :: a(:, :), b(:, :)
+    integer :: i
+    app = .false.
+    if(any(shape(a).ne.shape(b))) return
+    do i = 1, size(a, 1)
+      app = X(approximate_equal_1)(a(i, :), b(i, :))
+      if(.not.app) return
+    end do
+  end function X(approximate_equal_2)
+  logical function X(approximate_equal_3)(a, b) result(app)
+    R_TYPE, intent(in) :: a(:, :, :), b(:, :, :)
+    integer :: i
+    app = .false.
+    if(any(shape(a).ne.shape(b))) return
+    do i = 1, size(a, 1)
+      app = X(approximate_equal_2)(a(i, :, :), b(i, :, :))
+      if(.not.app) return
+    end do
+  end function X(approximate_equal_3)
+

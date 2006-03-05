@@ -50,7 +50,9 @@ module math_m
     sort,                       &
     factorial,                  &
     hermite,                    &
-    math_divisors
+    math_divisors,              &
+    set_app_threshold,          &
+    operator(.app.)
 
 
   !------------------------------------------------------------------------------
@@ -100,6 +102,22 @@ module math_m
     CNST(   157.0)/CNST(160.0)                  &
     /)
 
+
+  ! This operator is .true. if the two operands are approximately
+  ! equal (i.e. equal to within APP_THRESHOLD). For arrays, all
+  ! elements have to be approximately equal.
+  ! The subroutine set_app_threshold changes APP_THRESHOLD.
+  FLOAT :: APP_THRESHOLD = CNST(1.0e-10)
+  interface operator(.app.)
+    module procedure dapproximate_equal
+    module procedure dapproximate_equal_1
+    module procedure dapproximate_equal_2
+    module procedure dapproximate_equal_3
+    module procedure zapproximate_equal
+    module procedure zapproximate_equal_1
+    module procedure zapproximate_equal_2
+    module procedure zapproximate_equal_3
+  end interface
 
 contains
 
@@ -566,6 +584,11 @@ contains
     n_divisors = n_divisors + 1
     divisors(n_divisors) = n
   end subroutine math_divisors
+
+  subroutine set_app_threshold(thr)
+    FLOAT, intent(in) :: thr
+    APP_THRESHOLD = thr
+  end subroutine set_app_threshold
 
 
 #include "undef.F90"
