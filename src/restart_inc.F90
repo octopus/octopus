@@ -176,6 +176,7 @@ subroutine X(restart_read) (dir, st, gr, ierr, iter)
   if(ierr.ne.0) then
     write(message(1),'(a)') 'Could not load any previous restart information.'
     call write_info(1)
+    call messages_print_stress(stdout)
     call pop_sub()
     return
   end if
@@ -286,9 +287,6 @@ contains
 
 #if defined(HAVE_MPI)
     return ! For the moment, avoid the complications of parallel stuff.
-#endif
-#if defined(R_TCOMPLEX)
-    return ! For the moment, this will work only for real wave functions.
 #endif
     if(present(iter)) return ! No intepolation, in case we are in the td part.
 

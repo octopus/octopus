@@ -211,8 +211,8 @@ subroutine X(mf_interpolate) (mesh_in, mesh_out, full_interpolation, u, f)
   R_TYPE,       intent(in)  :: u(:)    ! u(mesh_in%np_global)
   R_TYPE,       intent(out) :: f(:)    ! f(mesh%np)
 
-  FLOAT :: xmin, ymin, dx, dy, rmax, px, py, pz, dump, xyzmin(3), xyzdel(3)
-  FLOAT, allocatable :: rsq(:), a(:, :)
+  FLOAT :: xmin, ymin, dx, dy, rmax, px, py, pz, dump, xyzmin(3), xyzdel(3), rp, ip
+  FLOAT, allocatable :: rsq(:), a(:, :), aux_u(:)
   integer, allocatable :: lcell(:, :, :), lnext(:)
   integer :: i, j, nq, nw, nr, ier, npoints, ix, iy, iz
 
@@ -230,20 +230,19 @@ subroutine X(mf_interpolate) (mesh_in, mesh_out, full_interpolation, u, f)
       nw = 19
       nr = nint(sqrt(npoints/CNST(3.0)))
       ALLOCATE(lcell(nr, nr, 1), nr*nr)
-      ALLOCATE(lnext(npoints), npoints)
-      ALLOCATE(rsq(npoints), npoints)
       ALLOCATE(a(5, npoints), 5*npoints)
     case(3)
       nq = 17 ! This is the recommended value in qshep3d.f90
       nw = 16 ! The recommended value in qshep3d.f90 is 32, but this speeds up things.
       nr = nint((npoints/CNST(3.0))**(M_ONE/M_THREE))
       ALLOCATE(lcell(nr, nr, nr), nr*nr*nr)
-      ALLOCATE(lnext(npoints), npoints)
-      ALLOCATE(rsq(npoints), npoints)
       ALLOCATE(a(9, npoints), 9*npoints)
     case(1)
-      stop 'Error'
+      stop 'Believe it or not, cannot do 1D interpolation, only 2D or 3D.'
     end select
+    ALLOCATE(lnext(npoints), npoints)
+    ALLOCATE(rsq(npoints), npoints)
+
 
     f = M_ZERO
 
@@ -273,8 +272,67 @@ subroutine X(mf_interpolate) (mesh_in, mesh_out, full_interpolation, u, f)
                         u, nr, lcell, lnext, xyzmin, xyzdel, rmax, rsq, a )
       end do
     case(1)
-      stop 'Error'
+      stop 'Believe it or not, cannot do 1D interpolation, only 2D or 3D.'
     end select
+#else
+    ALLOCATE(aux_u(npoints), npoints)
+    select case(mesh_in%sb%dim)
+    case(2)
+      aux_u = R_REAL(u)
+      call qshep2 ( npoints, mesh_in%x(1:npoints, 1), mesh_in%x(1:npoints, 2), &
+                    aux_u, nq, nw, nr, lcell(:, :, 1), lnext, xmin, ymin, &
+                    dx, dy, rmax, rsq, a, ier )
+      do i = 1, mesh_out%np
+        px = mesh_out%x(i, 1)
+        py = mesh_out%x(i, 2)
+        f(i) = qs2val ( px, py, npoints, mesh_in%x(1:npoints, 1), mesh_in%x(1:npoints, 2), &
+                        u, nr, lcell(:, :, 1), lnext, xmin, &
+                        ymin, dx, dy, rmax, rsq, a )
+      end do
+      aux_u = R_AIMAG(u)
+      call qshep2 ( npoints, mesh_in%x(1:npoints, 1), mesh_in%x(1:npoints, 2), &
+                    aux_u, nq, nw, nr, lcell(:, :, 1), lnext, xmin, ymin, &
+                    dx, dy, rmax, rsq, a, ier )
+      do i = 1, mesh_out%np
+        px = mesh_out%x(i, 1)
+        py = mesh_out%x(i, 2)
+        ip = qs2val ( px, py, npoints, mesh_in%x(1:npoints, 1), mesh_in%x(1:npoints, 2), &
+                      u, nr, lcell(:, :, 1), lnext, xmin, &
+                      ymin, dx, dy, rmax, rsq, a )
+        f(i) = f(i) + M_zI*ip
+      end do
+
+    case(3)
+      aux_u = R_REAL(u)
+      call qshep3 ( npoints, mesh_in%x(1:npoints, 1), mesh_in%x(1:npoints, 2), mesh_in%x(1:npoints, 3), &
+                    aux_u, nq, nw, nr, lcell, lnext, xyzmin, &
+                    xyzdel, rmax, rsq, a, ier )
+      do i = 1, mesh_out%np
+        px = mesh_out%x(i, 1)
+        py = mesh_out%x(i, 2)
+        pz = mesh_out%x(i, 3)
+        f(i) = qs3val ( px, py, pz, npoints, &
+                        mesh_in%x(1:npoints, 1), mesh_in%x(1:npoints, 2), mesh_in%x(1:npoints, 3), &
+                        aux_u, nr, lcell, lnext, xyzmin, xyzdel, rmax, rsq, a )
+      end do
+      aux_u = R_AIMAG(u)
+      call qshep3 ( npoints, mesh_in%x(1:npoints, 1), mesh_in%x(1:npoints, 2), mesh_in%x(1:npoints, 3), &
+                    aux_u, nq, nw, nr, lcell, lnext, xyzmin, &
+                    xyzdel, rmax, rsq, a, ier )
+      do i = 1, mesh_out%np
+        px = mesh_out%x(i, 1)
+        py = mesh_out%x(i, 2)
+        pz = mesh_out%x(i, 3)
+        ip = qs3val ( px, py, pz, npoints, &
+                      mesh_in%x(1:npoints, 1), mesh_in%x(1:npoints, 2), mesh_in%x(1:npoints, 3), &
+                      aux_u, nr, lcell, lnext, xyzmin, xyzdel, rmax, rsq, a )
+        f(i) = f(i) + M_zI*ip
+      end do
+
+    case(1)
+      stop 'Believe it or not, cannot do 1D interpolation, only 2D or 3D.'
+    end select
+    deallocate(aux_u)
 #endif
   
     deallocate(rsq, a, lnext, lcell)
