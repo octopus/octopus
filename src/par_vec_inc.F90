@@ -92,7 +92,7 @@ subroutine X(vec_scatter_bndry)(vp, v, v_local)
   displs = vp%xbndry-1
 
   ! Fill send buffer.
-  allocate(v_tmp(1), 1)
+  ALLOCATE(v_tmp(1), 1)
   if(vp%rank.eq.vp%root) then
     deallocate(v_tmp); ALLOCATE(v_tmp(vp%np_enl), vp%np_enl)
 

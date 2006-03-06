@@ -39,6 +39,8 @@ module poisson_m
   use output_m
   use poisson_multigrid_m
   use mesh_function_m
+  use par_vec_m
+
   implicit none
 
   private
@@ -178,9 +180,9 @@ contains
         call write_fatal(3)
       end if
 
-      if(gr%m%parallel_in_domains .and. (poisson_solver.ne.CG).and.(poisson_solver.ne.CG_CORRECTED)) then
-        message(1) = 'When running in parallel in domains, you can only use'
-        message(2) = 'PoissonSolver = cg | cg_corrected'
+      if(gr%m%parallel_in_domains .and. poisson_solver.eq.MULTIGRILLA) then
+        message(1) = 'When running in parallel in domains, you cannot use: '
+        message(2) = 'PoissonSolver = multigrid'
         call write_fatal(2)
       end if
 
@@ -308,16 +310,29 @@ contains
     FLOAT, intent(in)  :: rho(:) ! rho(m%np)
     logical, intent(in), optional :: average_to_zero
 
+    FLOAT, allocatable :: rho_global(:), pot_global(:)
+
     integer :: k
     FLOAT :: average
 
     call push_sub('poisson.poisson_fft')
 
+    if(m%parallel_in_domains) then
+      ALLOCATE(rho_global(m%np_global), m%np_global)
+      ALLOCATE(pot_global(m%np_global), m%np_global)
+    end if
+
     call dcf_alloc_RS(fft_cf)          ! allocate the cube in real space
     call dcf_alloc_FS(fft_cf)          ! allocate the cube in Fourier space
 
-    call dmf2cf(m, rho, fft_cf)        ! put the density in a cube
+    if(m%parallel_in_domains) then
+      call dvec_gather(m%vp, rho_global, rho)
+      call dmf2cf(m, rho_global, fft_cf)        ! put the density in a cube
+    else
+      call dmf2cf(m, rho, fft_cf)        ! put the density in a cube
+    end if
     call dcf_RS2FS(fft_cf)             ! Fourier transform
+
 
     ! multiply by the FS of the Coulomb interaction
     ! this works around a bug in Intel ifort 8
@@ -329,13 +344,24 @@ contains
     if(present(average_to_zero)) then
       if(average_to_zero) average = cf_surface_average(fft_cf)
     end if
-    call dcf2mf(m, fft_cf, pot)        ! put the density in a cube
+
+    if(m%parallel_in_domains) then
+      call dcf2mf(m, fft_cf, pot_global)        ! put the density in a cube
+      call dvec_scatter(m%vp, pot_global, pot)
+    else
+      call dcf2mf(m, fft_cf, pot)        ! put the density in a cube
+    end if
+
     if(present(average_to_zero)) then
       if(average_to_zero) pot = pot - average
     end if
 
     call dcf_free_RS(fft_cf)           ! memory is no longer needed
     call dcf_free_FS(fft_cf)
+
+    if(m%parallel_in_domains) then
+      deallocate(rho_global, pot_global)
+    end if
 
     call pop_sub()
   end subroutine poisson_fft
