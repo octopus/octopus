@@ -19,11 +19,14 @@
 
 ! ---------------------------------------------------------
 ! The next two subroutines convert a function between the normal
-! mesh and the cube
+! mesh and the cube.
+! Note that the function in the mesh should be defined
+! globally, not just in a partition (when running in
+! parallel in real-space domains).
 ! ---------------------------------------------------------
 subroutine X(mf2cf) (m, mf, cf)
   type(mesh_t), intent(in)    :: m
-  R_TYPE,          intent(in)    :: mf(:)  ! mf(f_der%m%np)
+  R_TYPE,          intent(in)    :: mf(:)  ! mf(m%np_global)
   type(X(cf)),     intent(inout) :: cf
 
   integer :: i, ix, iy, iz, c(3)
@@ -33,7 +36,7 @@ subroutine X(mf2cf) (m, mf, cf)
   c(:)  =  cf%n(:)/2 + 1
   cf%RS =  M_ZERO
 
-  do i = 1, m%np
+  do i = 1, m%np_global
     ix = m%Lxyz(i, 1) + c(1)
     iy = m%Lxyz(i, 2) + c(2)
     iz = m%Lxyz(i, 3) + c(3)
@@ -48,7 +51,7 @@ end subroutine X(mf2cf)
 subroutine X(cf2mf) (m, cf, mf)
   type(mesh_t), intent(in)  :: m
   type(X(cf)),     intent(in)  :: cf
-  R_TYPE,          intent(out) :: mf(:)  ! mf(f_der%m%np)
+  R_TYPE,          intent(out) :: mf(:)  ! mf(m%np_global)
 
   integer :: i, ix, iy, iz, c(3)
 
@@ -56,7 +59,7 @@ subroutine X(cf2mf) (m, cf, mf)
 
   c(:) =  cf%n(:)/2 + 1
 
-  do i = 1, m%np
+  do i = 1, m%np_global
     ix = m%Lxyz(i, 1) + c(1)
     iy = m%Lxyz(i, 2) + c(2)
     iz = m%Lxyz(i, 3) + c(3)
@@ -68,10 +71,13 @@ end subroutine X(cf2mf)
 ! ---------------------------------------------------------
 ! The next two subroutines convert a function in Fourier space
 ! between the normal mesh and the cube
+! Note that the function in the mesh should be defined
+! globally, not just in a partition (when running in
+! parallel in real-space domains).
 ! ---------------------------------------------------------
 subroutine X(mf2cf_FS) (m, mf, cf)
   type(mesh_t), intent(in)    :: m
-  CMPLX,               intent(in)    :: mf(:)   ! mf(f_der%m%np)
+  CMPLX,               intent(in)    :: mf(:)   ! mf(m%np_global)
   type(X(cf)),         intent(inout) :: cf
 
   integer :: i, ix, iy, iz
@@ -80,7 +86,7 @@ subroutine X(mf2cf_FS) (m, mf, cf)
 
   cf%FS = M_z0
 
-  do i = 1, m%np
+  do i = 1, m%np_global
     ix = pad_feq(m%Lxyz(i, 1), cf%n(1), .false.)
     if(ix > cf%nx) cycle ! negative frequencies are redundant
     iy = pad_feq(m%Lxyz(i, 2), cf%n(2), .false.)
@@ -95,13 +101,13 @@ end subroutine X(mf2cf_FS)
 subroutine X(cf_FS2mf) (m, cf, mf)
   type(mesh_t), intent(in)  :: m
   type(X(cf)),     intent(in)  :: cf
-  CMPLX,           intent(out) :: mf(:) ! mf(f_der%m%np)
+  CMPLX,           intent(out) :: mf(:) ! mf(m%np_global)
 
   integer :: i, ix, iy, iz
 
   ASSERT(associated(cf%FS))
 
-  do i = 1, m%np
+  do i = 1, m%np_global
     ix = pad_feq(m%Lxyz(i, 1), cf%n(1), .false.)
     iy = pad_feq(m%Lxyz(i, 2), cf%n(2), .false.)
     iz = pad_feq(m%Lxyz(i, 3), cf%n(3), .false.)
