@@ -286,7 +286,7 @@ subroutine X(mf_interpolate) (mesh_in, mesh_out, full_interpolation, u, f)
         px = mesh_out%x(i, 1)
         py = mesh_out%x(i, 2)
         f(i) = qs2val ( px, py, npoints, mesh_in%x(1:npoints, 1), mesh_in%x(1:npoints, 2), &
-                        u, nr, lcell(:, :, 1), lnext, xmin, &
+                        aux_u, nr, lcell(:, :, 1), lnext, xmin, &
                         ymin, dx, dy, rmax, rsq, a )
       end do
       aux_u = R_AIMAG(u)
@@ -297,7 +297,7 @@ subroutine X(mf_interpolate) (mesh_in, mesh_out, full_interpolation, u, f)
         px = mesh_out%x(i, 1)
         py = mesh_out%x(i, 2)
         ip = qs2val ( px, py, npoints, mesh_in%x(1:npoints, 1), mesh_in%x(1:npoints, 2), &
-                      u, nr, lcell(:, :, 1), lnext, xmin, &
+                      aux_u, nr, lcell(:, :, 1), lnext, xmin, &
                       ymin, dx, dy, rmax, rsq, a )
         f(i) = f(i) + M_zI*ip
       end do

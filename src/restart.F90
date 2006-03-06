@@ -36,6 +36,7 @@ module restart_m
   use mpi_m
   use mpi_debug_m
   use varinfo_m
+  use math_m
 
   implicit none
 
