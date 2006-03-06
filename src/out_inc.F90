@@ -58,8 +58,9 @@ subroutine X(input_function)(filename, m, f, ierr, is_tmp)
 #if defined(HAVE_MPI)
     ! Only root reads. Therefore, only root needs a buffer
     ! f_global for the whole function.
+    ALLOCATE(f_global(1), 1)
     if(mpi_grp_is_root(m%mpi_grp)) then
-      ALLOCATE(f_global(m%np_global), m%np_global)
+      deallocate(f_global); ALLOCATE(f_global(m%np_global), m%np_global)
       call X(input_function_global)(filename, m, f_global, ierr, is_tmp_)
     end if
     if(in_debug_mode) call write_debug_newlines(2)
@@ -75,9 +76,7 @@ subroutine X(input_function)(filename, m, f, ierr, is_tmp)
       call X(vec_scatter)(m%vp, f_global, f)
     end if
 
-    if(mpi_grp_is_root(m%mpi_grp)) then
-      deallocate(f_global)
-    end if
+    deallocate(f_global)
 #else
     ASSERT(.false.) ! internal error
 #endif
