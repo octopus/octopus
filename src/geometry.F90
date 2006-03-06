@@ -195,6 +195,7 @@ contains
 
     ! copy information from xyz to geo
     geo%natoms = xyz%n
+    nullify(geo%atom)
     ALLOCATE(geo%atom(geo%natoms), geo%natoms)
     do i = 1, geo%natoms
       geo%atom(i)%label = xyz%atom(i)%label
@@ -210,6 +211,7 @@ contains
 
     ! load positions of the classical atoms, if any
     call xyz_file_init(xyz)
+    nullify(geo%catom)
     call xyz_file_read('Classical', xyz)
     if(xyz%file_type.ne.XYZ_FILE_ERR) then ! found classical atoms
       if(.not.iand(xyz%flags, XYZ_FLAGS_CHARGE).ne.0) then
