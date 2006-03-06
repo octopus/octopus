@@ -326,8 +326,10 @@ contains
     call dcf_alloc_FS(fft_cf)          ! allocate the cube in Fourier space
 
     if(m%parallel_in_domains) then
+#if defined HAVE_MPI
       call dvec_gather(m%vp, rho_global, rho)
       call dmf2cf(m, rho_global, fft_cf)        ! put the density in a cube
+#endif
     else
       call dmf2cf(m, rho, fft_cf)        ! put the density in a cube
     end if
@@ -346,8 +348,10 @@ contains
     end if
 
     if(m%parallel_in_domains) then
+#if defined(HAVE_MPI)
       call dcf2mf(m, fft_cf, pot_global)        ! put the density in a cube
       call dvec_scatter(m%vp, pot_global, pot)
+#endif
     else
       call dcf2mf(m, fft_cf, pot)        ! put the density in a cube
     end if
