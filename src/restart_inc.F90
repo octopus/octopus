@@ -172,7 +172,17 @@ subroutine X(restart_read) (dir, st, gr, ierr, iter)
   call messages_print_stress(stdout, trim(str))
 
   ! open files to read
-  call open_files()
+  iunit  = iopar_open(gr%m, trim(dir)//'/wfns', action='read', status='old', die=.false.)
+  if(iunit < 0) then
+    ierr = -1
+    return
+  end if
+  iunit2 = iopar_open(gr%m, trim(dir)//'/occs', action='read', status='old', die=.false.)
+  if(iunit2 < 0) then
+    call iopar_close(gr%m, iunit)
+    ierr = -1
+  end if
+
   if(ierr.ne.0) then
     write(message(1),'(a)') 'Could not load any previous restart information.'
     call write_info(1)
@@ -324,21 +334,6 @@ contains
     endif
     
   end subroutine read_previous_mesh
-
-  ! ---------------------------------------------------------
-  subroutine open_files
-    iunit  = iopar_open(gr%m, trim(dir)//'/wfns', action='read', status='old', die=.false.)
-    if(iunit < 0) then
-      ierr = -1
-      return
-    end if
-
-    iunit2 = iopar_open(gr%m, trim(dir)//'/occs', action='read', status='old', die=.false.)
-    if(iunit2 < 0) then
-      call iopar_close(gr%m, iunit)
-      ierr = -1
-    end if
-  end subroutine open_files
 
   ! ---------------------------------------------------------
   subroutine fill() ! Put random function in orbitals that could not be read.
