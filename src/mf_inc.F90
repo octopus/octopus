@@ -341,9 +341,9 @@ subroutine X(mf_interpolate) (mesh_in, mesh_out, full_interpolation, u, f)
 
     f = M_ZERO
     do i = 1, mesh_out%np
-      ix = mesh_out%lxyz(i, 1)
-      iy = mesh_out%lxyz(i, 2)
-      iz = mesh_out%lxyz(i, 3)
+      ix = mesh_out%lxyz(i, 1); if ( ix < mesh_in%nr(1, 1) .or. ix > mesh_in%nr(2, 1) ) cycle
+      iy = mesh_out%lxyz(i, 2); if ( iy < mesh_in%nr(1, 2) .or. iy > mesh_in%nr(2, 2) ) cycle
+      iz = mesh_out%lxyz(i, 3); if ( iz < mesh_in%nr(1, 3) .or. iz > mesh_in%nr(2, 3) ) cycle
       j = mesh_in%lxyz_inv(ix, iy, iz)
       if(j>0 .and. j<=mesh_in%np_global) then
         f(i) = u(j)
