@@ -109,7 +109,7 @@ contains
 
       ! create index and domain communicators
       call multicomm_init(sys%mc, parallel_mask, mpi_world%size, index_dim, &
-         index_range, (/ 15000, 5, 1, 1 /))
+         index_range, (/ 5000, 1, 1, 1 /))
 
     end subroutine parallel_init
 

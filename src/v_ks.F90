@@ -106,7 +106,7 @@ contains
       ! check for SIC
       if(iand(ks%xc_family, XC_FAMILY_LDA + XC_FAMILY_GGA).ne.0) then
 
-        !%Variable SICorrection
+        !%Variable SICCorrection
         !%Type integer
         !%Default sic_none
         !%Section Hamiltonian::XC
@@ -121,8 +121,8 @@ contains
         !%Option sic_amaldi 3
         !% Amaldi correction term (NOT WORKING)
         !%End
-        call loct_parse_int(check_inp('SICorrection'), sic_none, ks%sic_type)
-        if(.not.varinfo_valid_option('SICorrection', ks%sic_type)) call input_error('SICorrection')
+        call loct_parse_int(check_inp('SICCorrection'), sic_none, ks%sic_type)
+        if(.not.varinfo_valid_option('SICCorrection', ks%sic_type)) call input_error('SICCorrection')
 
         ! Perdew Zunger corrections
         if(ks%sic_type == sic_pz) ks%xc_family = ior(ks%xc_family, XC_FAMILY_OEP)
@@ -166,7 +166,7 @@ contains
       call xc_write_info(ks%xc, iunit)
 
       write(iunit, '(1x)')
-      call messages_print_var_option(iunit, 'SICorrection', ks%sic_type)
+      call messages_print_var_option(iunit, 'SICCorrection', ks%sic_type)
 
       if(iand(ks%xc_family, XC_FAMILY_OEP).ne.0) then
         write(iunit, '(1x)')
