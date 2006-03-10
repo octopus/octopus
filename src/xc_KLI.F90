@@ -105,22 +105,24 @@ subroutine X(xc_KLI_solve) (m, st, is, oep)
     do i = 1, n
 
 #if defined(HAVE_MPI)
-    if(st%parallel_in_states) then
-      if(.not.mpi_grp_is_root(st%mpi_grp)) then
-        if(st%node(oep%eigen_index(i)) == st%mpi_grp%rank) then
-          call MPI_Send(st%X(psi)(1, 1, oep%eigen_index(i), is), st%d%dim*m%np, R_MPITYPE, &
-            0, i, st%mpi_grp%comm, status, ierr)
+      if(st%parallel_in_states) then
+        if(.not.mpi_grp_is_root(st%mpi_grp)) then
+          if(st%node(oep%eigen_index(i)) == st%mpi_grp%rank) then
+            call MPI_Send(st%X(psi)(1, 1, oep%eigen_index(i), is), st%d%dim*m%np, R_MPITYPE, &
+              0, i, st%mpi_grp%comm, ierr)
+          end if
+        else ! master node
+          if(st%node(oep%eigen_index(i)).ne.0) then
+            call MPI_Recv(phi1(1, 1), st%d%dim*m%np, R_MPITYPE, st%node(oep%eigen_index(i)), &
+              i, st%mpi_grp%comm, status, ierr)
+          else
+            phi1(:,:) = st%X(psi)(:,:, oep%eigen_index(i), is)
+          end if
         end if
-      else ! master node
-        if(st%node(oep%eigen_index(i)).ne.0) then
-          call MPI_Recv(phi1(1, 1), st%d%dim*m%np, R_MPITYPE, st%node(oep%eigen_index(i)), &
-            i, st%mpi_grp%comm, status, ierr)
-        else
-          phi1(:,:) = st%X(psi)(:,:, oep%eigen_index(i), is)
-        end if
-      end if
-      call MPI_Barrier(st%mpi_grp%comm, ierr)
-    end if
+        call MPI_Barrier(st%mpi_grp%comm, ierr)
+      else
+        phi1(:,:) = st%X(psi)(:,:, oep%eigen_index(i), is)
+      endif
 #else
       phi1(:,:) = st%X(psi)(:,:, oep%eigen_index(i), is)
 #endif
@@ -136,7 +138,7 @@ subroutine X(xc_KLI_solve) (m, st, is, oep)
           if(.not.mpi_grp_is_root(st%mpi_grp)) then
             if(st%node(oep%eigen_index(j)) == st%mpi_grp%rank) then
               call MPI_Send(st%X(psi)(1, 1, oep%eigen_index(j), is), st%d%dim*m%np, R_MPITYPE, &
-                0, j, st%mpi_grp%comm, status, ierr)
+                0, j, st%mpi_grp%comm, ierr)
             end if
           else
             if(st%node(oep%eigen_index(j)).ne.0) then
@@ -147,6 +149,8 @@ subroutine X(xc_KLI_solve) (m, st, is, oep)
             end if
           end if
           call MPI_Barrier(st%mpi_grp%comm, ierr)
+        else
+          phi2(:,:) = st%X(psi)(:,:, oep%eigen_index(j), is)
         end if
 #else
         phi2(:,:) = st%X(psi)(:,:, oep%eigen_index(j), is)
@@ -181,7 +185,7 @@ subroutine X(xc_KLI_solve) (m, st, is, oep)
         if(.not.mpi_grp_is_root(st%mpi_grp)) then
           if(st%node(oep%eigen_index(i)) == st%mpi_grp%rank) then
             call MPI_Send(st%X(psi)(1, 1, oep%eigen_index(i), is), st%d%dim*m%np, R_MPITYPE, &
-              0, i, st%mpi_grp%comm, status, ierr)
+              0, i, st%mpi_grp%comm, ierr)
           end if
         else ! master
           if(st%node(oep%eigen_index(i)).ne.0) then
@@ -192,6 +196,8 @@ subroutine X(xc_KLI_solve) (m, st, is, oep)
           end if
         end if
         call MPI_Barrier(st%mpi_grp%comm, ierr)
+      else
+        phi1(:,:) = st%X(psi)(:,:, oep%eigen_index(i), is)
       end if
 #else
       phi1(:,:) = st%X(psi)(:,:, oep%eigen_index(i), is)

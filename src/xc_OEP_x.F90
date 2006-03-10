@@ -112,7 +112,7 @@ subroutine X(oep_x) (gr, st, is, oep, ex)
         ! send wave-function
         send_req = 0
         if((send_stack(ist_s) > 0).and.(node_to.ne.st%mpi_grp%rank)) then
-          call MPI_Isend(st%X(psi)(:, 1, send_stack(ist_s), is), NP, R_MPITYPE, &
+          call MPI_Isend(st%X(psi)(1, 1, send_stack(ist_s), is), NP, R_MPITYPE, &
             node_to, send_stack(ist_s), st%mpi_grp%comm, send_req, ierr)
         end if
       end if
@@ -183,8 +183,8 @@ subroutine X(oep_x) (gr, st, is, oep, ex)
         else
           if(st%parallel_in_states) then
             ! or send it to the node that has wf ist
-            call MPI_Isend(send_buffer(:), NP, R_MPITYPE, &
-              node_fr, ist, st%mpi_grp%comm, send_req, ierr)
+            call MPI_Isend(send_buffer(1), NP, R_MPITYPE, &
+             node_fr, ist, st%mpi_grp%comm, send_req, ierr)
           end if
 #endif
         end if

@@ -148,7 +148,7 @@ subroutine X(restart_read) (dir, st, gr, ierr, iter)
   integer,           intent(out) :: ierr
   integer, optional, intent(out) :: iter
 
-  integer              :: iunit, iunit2, iunit_mesh, err, ik, ist, idim, i
+  integer              :: iunit, iunit2, iunit_mesh, err, ik, ist, idim, i, mpi_err
   character(len=12)    :: filename
   character(len=1)     :: char
   logical, allocatable :: filled(:, :, :)
@@ -243,27 +243,27 @@ subroutine X(restart_read) (dir, st, gr, ierr, iter)
     read(line, *) filename, filename, iter
   end if
 
-  if(any(.not.filled)) call fill()
+#if defined(HAVE_MPI)
+  if(st%parallel_in_states) then
+    call mpi_allreduce(ierr, err, 1, MPI_INTEGER, MPI_SUM, st%mpi_grp%comm, mpi_err)
+    ierr = err
+  end if
+#endif
+
   if(ierr == 0) then
     ierr = -1 ! no files read
-#if !defined(HAVE_MPI)
     write(message(1),'(a)') 'No files could be read. No restart information can be used.'
     call write_info(1)
-#endif
   else
     ! Everything o. k.
-    if(ierr == (st%st_end - st%st_start + 1)*st%d%nik*st%d%dim) then
+    if(ierr == st%nst*st%d%nik*st%d%dim) then
       ierr = 0
-#if !defined(HAVE_MPI)
       write(message(1),'(a)') 'All the needed files were succesfully read.'
       call write_info(1)
-#endif
     else
-#if !defined(HAVE_MPI)
       write(message(1),'(a,i4,a,i4,a)') 'Only ', ierr,' files out of ', &
-        (st%st_end - st%st_start + 1)*st%d%nik*st%d%dim, 'could be read.'
+        st%nst*st%d%nik*st%d%dim, ' could be read.'
       call write_info(1)
-#endif
     endif
   end if
 
@@ -349,6 +349,7 @@ contains
         end do
       end do
     end do
+    call mpi_barrier(mpi_world%comm, mpi_err)
   end subroutine fill
 
   ! ---------------------------------------------------------

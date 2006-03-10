@@ -654,7 +654,9 @@ contains
         end do
         st%eigenval(ist, ik) = M_ZERO
       end do
-      call X(states_gram_schmidt)(ist_end, m, st%d%dim, st%X(psi)(:,:,1:ist_end,ik), start = ist_start)
+      ! Do not orthonormalize if we have parallelization in states.
+      if(.not.st%parallel_in_states) &
+        call X(states_gram_schmidt)(ist_end, m, st%d%dim, st%X(psi)(:,:,1:ist_end,ik), start = ist_start)
     end do
 
     call pop_sub()
