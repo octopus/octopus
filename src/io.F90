@@ -289,10 +289,11 @@ contains
 
 
   ! ---------------------------------------------------------
-  integer function io_open(file, action, status, form, position, die, is_tmp) result(iunit)
+  integer function io_open(file, action, status, form, position, die, is_tmp, recl) result(iunit)
     character(len=*), intent(in) :: file, action
     character(len=*), intent(in), optional :: status, form, position
     logical,          intent(in), optional :: die, is_tmp
+    integer,          intent(in), optional :: recl
 
     character(len=20)  :: status_, form_, position_
     character(len=512) :: file_
@@ -322,8 +323,14 @@ contains
     if(present(is_tmp)) is_tmp_ = is_tmp
     file_ = io_workpath(file, is_tmp_)
 
-    open(unit=iunit, file=trim(file_), status=trim(status_), form=trim(form_), &
-      action=trim(action), position=trim(position_), iostat=iostat)
+    if(present(recl)) then
+      open(unit=iunit, file=trim(file_), status=trim(status_), form=trim(form_), &
+        recl=recl, action=trim(action), position=trim(position_), iostat=iostat)
+    else
+      open(unit=iunit, file=trim(file_), status=trim(status_), form=trim(form_), &
+        action=trim(action), position=trim(position_), iostat=iostat)
+    endif
+      
 
     if(iostat.ne.0) then
       call io_free(iunit)

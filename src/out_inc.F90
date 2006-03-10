@@ -503,13 +503,14 @@ contains
   subroutine out_matlab(d1, d2, d3, out_what)
     integer, intent(in) :: d1, d2, d3, out_what
 
-    integer :: ix, iy
+    integer :: ix, iy, record_length
     FLOAT, allocatable :: out_vec(:)
     
     ALLOCATE(out_vec(m%nr(1, d3):m%nr(2, d3)), m%nr(2, d3)-m%nr(1, d3)+1)
 
     filename = trim(dir)//'/'//trim(fname)//"."//index2axis(d1)//"=0.matlab."//trim(index2label(out_what))
-    iunit = io_open(filename, action='write', is_tmp=is_tmp)
+    record_length = (m%nr(2, d3) - m%nr(1, d3) + 1)*23  ! 23 because of F23.14 below
+    iunit = io_open(filename, action='write', is_tmp=is_tmp, recl=record_length)
     
     do ix = m%nr(1, d2), m%nr(2, d2)
       do iy = m%nr(1, d3), m%nr(2, d3)
