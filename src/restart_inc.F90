@@ -250,6 +250,7 @@ subroutine X(restart_read) (dir, st, gr, ierr, iter)
   end if
 #endif
 
+  call fill()
   if(ierr == 0) then
     ierr = -1 ! no files read
     write(message(1),'(a)') 'No files could be read. No restart information can be used.'
@@ -349,8 +350,7 @@ contains
         end do
       end do
     end do
-    call mpi_barrier(mpi_world%comm, mpi_err)
-  end subroutine fill
+ end subroutine fill
 
   ! ---------------------------------------------------------
   logical function index_is_wrong() ! .true. if the index (idim, ist, ik) is not present in st structure...
