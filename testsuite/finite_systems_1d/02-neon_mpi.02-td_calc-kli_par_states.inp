@@ -1,0 +1,39 @@
+# $Id$
+#
+
+DebugLevel = 0
+
+CalculationMode = td
+
+ParallelizationStrategy = par_states
+
+Dimensions = 1
+fromScratch = yes
+
+BoxShape = sphere
+Spacing = 0.2
+Radius = 50.0
+
+NonInteractingElectrons = no
+XFunctional = oep_x
+OEP_Level = oep_kli
+CFunctional = no
+
+%Species
+"Neon1D" | 1 | user_defined | 10 | "-10/sqrt(1+(x)^2)"
+%
+
+%Coordinates
+"Neon1D" | 0 | 0 | 0
+%
+
+EigenSolverInitTolerance = 1.0e-6
+EigenSolverFinalTolerance = 1.0e-6
+EigenSolverMaxIter = 1000
+
+Mixing = 0.1
+TypeOfMixing = broyden
+What2Mix = potential
+
+
+TDMaximumIter = 10

@@ -1,0 +1,29 @@
+# $Id$
+
+Test     : 1D-Neon - MPI
+Author   : Heiko
+Date     : 11.03.06
+Arch     : Linux n10 2.6.11.11-smp-1 #1 SMP Sun May 29 13:49:31 CEST 2005 x86_64 GNU/Linux
+Release  : 2.0.1devel
+Programs : octopus_mpi
+Runtime  : short-run
+Enabled  : Yes
+
+# This test calculates a one-dimensional model of the Neon atom (soft Coulomb 
+# interaction) in KLI approximation.
+
+
+# specify on how many processors we should run this test
+Processors : 3
+Input      : 02-neon_mpi.01-ground_state-kli_par_domains.inp
+
+Match ; TotalEnergy ; grep -A 6 '^Energy:' static/info ; \s*Total\s*=\s*-28.1938
+
+
+# now we start a td calculation parallel in states on 5 processors
+
+Processors : 5
+Input      : 02-neon_mpi.02-td_calc-kli_par_states.inp
+
+# no matches yet
+#Match ; TotalEnergy ; grep -A 6 '^Energy:' static/info ; \s*Total\s*=\s*-0.6697
