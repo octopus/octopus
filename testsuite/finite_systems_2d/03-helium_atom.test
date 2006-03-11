@@ -22,33 +22,8 @@ Enabled  : Yes
 # [M. S. Pindzola, D. C Griffin and C. Bottcher, Phys. Rev. Lett. 66, 2305 (1991)].
 # In this case, the electron-electron interaction is not exactly a soft-Coulomb
 # interaction. The total energy reproduces the -77.3eV quoted in the paper.
-INP
-CalculationMode = gs
-Dimensions = 2
-fromScratch = yes
 
-a = 0.5
-corr = -1
-%Species
-  "Helium1D" | 2 | user_defined | 1 | "-2/sqrt(a+(x)^2) -2/sqrt(a+(y)^2)+1/sqrt(a+x^2+y^2+2*corr*sqrt(x^2)*sqrt(y^2))" 
-%
-%Coordinates
-  "Helium1D" | 0.00 | 0.00 | 0.00
-%
-
-Radius  = 7.0
-Spacing = 0.14
-
-NonInteractingElectrons = yes
-
-EigenSolverInitTolerance = 1.0e-4
-EigenSolverFinalTolerance = 1.0e-4
-EigenSolverMaxIter = 500
-Mixing = 1.0
-TypeOfMixing = linear
-EOF
-
-RUN
+Input: 03-helium_atom.01-ground_state.inp
 
 Match ; Total Energy #1 ; grep -A 6 '^Energy:' static/info ; \s*Total\s*=\s*-2.84045
 
@@ -56,32 +31,7 @@ Match ; Total Energy #1 ; grep -A 6 '^Energy:' static/info ; \s*Total\s*=\s*-2.8
 # This second example reproduces the ground-state calculation present in
 # [W.-C. Liu et al, Phys. Rev. Lett. 83, 520 (1999)]
 # The total energy reproduces the -2.238Ha quoted in the paper.
-INP
-CalculationMode = gs
-Dimensions = 2
-fromScratch = yes
 
-a = 1
-%Species
-  "Helium1D" | 2 | user_defined | 1 | "-2/sqrt(a+(x)^2) -2/sqrt(a+(y)^2)+1/sqrt(a+(x-y)^2)" 
-%
-
-%Coordinates
-  "Helium1D" | 0.00 | 0.00 | 0.00
-%
-
-Radius  = 7.0
-Spacing = 0.14
-
-NonInteractingElectrons = yes
-
-EigenSolverInitTolerance = 1.0e-4
-EigenSolverFinalTolerance = 1.0e-4
-EigenSolverMaxIter = 500
-Mixing = 1.0
-TypeOfMixing = linear
-EOF
-
-RUN
+Input: 03-helium_atom.02-ground_state.inp
 
 Match ; Total Energy #2 ; grep -A 6 '^Energy:' static/info ; \s*Total\s*=\s*-2.238

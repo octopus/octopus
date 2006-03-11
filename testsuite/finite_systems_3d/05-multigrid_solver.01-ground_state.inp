@@ -1,0 +1,13 @@
+# $Id$
+
+DebugLevel = 0
+
+CalculationMode = gs
+fromScratch = yes
+
+%Coordinates
+  "Na" | 0 | 0 | -1.54
+  "Na" | 0 | 0 |  1.54
+%
+PoissonSolver = multigrid
+

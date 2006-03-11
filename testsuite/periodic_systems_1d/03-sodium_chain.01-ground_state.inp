@@ -1,0 +1,41 @@
+# $Id$
+
+DebugLevel = 0
+
+SystemName = "Na chain 1D periodic"
+Units = "eVA"
+
+Dimensions = 3
+PeriodicDimensions = 1
+
+%CalculationMode
+  gs | unocc                     
+%
+
+%Species
+  "Na"  | 23.0 | tm2 | 11 | 2 | 2
+%
+
+%Coordinates
+  "Na" |   0.0 | 0.0 | 0.0 | no
+%
+
+BoxShape = parallelepiped
+
+%Lsize
+ 1.99932905 | 5.29 | 5.29
+%
+
+%Spacing
+ 0.3 | 0.3 | 0.3
+%
+
+%NumberKPoints
+ 10 | 1 | 1
+%
+
+MaximumIter = 1
+
+CenterOfInversion = yes
+
+NumberUnoccStates = 1

@@ -1,0 +1,48 @@
+# $Id$
+#
+# The following tests reproduced some basic results from:
+# E. Rasanen et al., Phys. Rev. B 67, 235307 (2003).
+
+# This input file is just the particle in a box in 2D calculation.
+
+DebugLevel = 0
+
+SystemName = "qd"
+CalculationMode = gs
+FromScratch = yes
+Dimensions = 2
+
+%Species
+"qd" | 1.0 | user_defined | 1 | "0"
+%
+
+%Coordinates
+"qd" | 0 | 0 | 0 | no
+%
+
+BoxShape = parallelepiped
+npoints = 101
+delta = pi/(npoints + 1)
+l = pi - 2*delta
+%Lsize
+l/2 | l/2 | 0
+%
+%Spacing
+delta | delta | delta
+%
+
+DerivativesOrder = 1
+
+NonInteractingElectrons = yes
+
+MaximumIter = 200
+ConvAbsDens = 1e-8
+LCAOStart = yes
+
+EigenSolver = cg
+EigenSolverInitTolerance = 1e-6
+EigenSolverFinalTolerance = 1e-6
+EigenSolverMaxIter = 250
+TypeOfMixing = linear
+Mixing = 1.0
+

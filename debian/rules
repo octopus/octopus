@@ -276,7 +276,7 @@ endif
 
   # Add here commands to install the package into debian/octopus.
 	ls -l src/octopus*
-	install -m 755 src/octopus_mpi_cmplx $(CURDIR)/debian/octopus/usr/bin/octopus_cmplx_mpi
+	install -m 755 src/octopus_cmplx_mpi $(CURDIR)/debian/octopus/usr/bin/octopus_cmplx_mpi
 
 
 	touch build-stamp

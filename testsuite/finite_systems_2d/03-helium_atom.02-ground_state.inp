@@ -1,0 +1,31 @@
+# $Id$
+#
+# This second example reproduces the ground-state calculation present in
+# [W.-C. Liu et al, Phys. Rev. Lett. 83, 520 (1999)]
+# The total energy reproduces the -2.238Ha quoted in the paper.
+
+DebugLevel = 0
+
+CalculationMode = gs
+Dimensions = 2
+fromScratch = yes
+
+a = 1
+%Species
+  "Helium1D" | 2 | user_defined | 1 | "-2/sqrt(a+(x)^2) -2/sqrt(a+(y)^2)+1/sqrt(a+(x-y)^2)" 
+%
+
+%Coordinates
+  "Helium1D" | 0.00 | 0.00 | 0.00
+%
+
+Radius  = 7.0
+Spacing = 0.14
+
+NonInteractingElectrons = yes
+
+EigenSolverInitTolerance = 1.0e-4
+EigenSolverFinalTolerance = 1.0e-4
+EigenSolverMaxIter = 500
+Mixing = 1.0
+TypeOfMixing = linear

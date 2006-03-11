@@ -19,23 +19,8 @@
 ##
 ## $Id$
 
-SUBDIRS = \
-	finite_systems_1d finite_systems_2d finite_systems_3d \
-	periodic_systems_1d 
+sharedir = $(pkgdatadir)/testsuite/finite_systems_1d
 
-bin_SCRIPTS = oct-run_regression_test.pl oct-run_testsuite
+dist_share_DATA = *.test *.inp
 
-sharedir = $(pkgdatadir)/testsuite
-
-EXTRA_DIST = oct-run_regression_test.pl oct-run_testsuite oct-run_regression_test.pl.pod
-
-check: 
-	@./oct-run_testsuite -l -s
-
-check-full:
-	@./oct-run_testsuite -l -f
-
-clean:
-	-rm -rf /tmp/tmp.* 
-
-.PHONY: regression_test check clean 
+CLEANFILES = *~

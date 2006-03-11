@@ -9,22 +9,7 @@ Programs : octopus
 Runtime  : short-run
 Enabled  : Yes
 
+Input: 05-multigrid_solver.01-ground_state.inp
 
-INP
-CalculationMode = gs
-fromScratch = yes
-
-%Coordinates
-  "Na" | 0 | 0 | -1.54
-  "Na" | 0 | 0 |  1.54
-%
-PoissonSolver = multigrid
-EOF
-
-RUN
-
-# add your own matches 
-#
-# Examples (of course you have to uncomment the lines :)
 Match ; TotalEnergy ; grep -A 6 '^Energy:' static/info ; \s*Total\s*=\s*-0.3380
 Match ; Eigenvalues ; grep -A 2 'Eigenvalues \[' static/info | tail -1 ; \s*-0.13735\d*\s*2.0000\d* 

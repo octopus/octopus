@@ -1,0 +1,46 @@
+# $Id$
+
+DebugLevel = 0
+
+%CalculationMode 
+  gs | unocc
+%
+fromScratch = yes
+
+Dimensions = 1
+PeriodicDimensions = 1
+
+NumberUnoccStates = 4
+ConvAbsDens = 1e-6
+
+OnlyUserDef = yes
+NonInteractingElectrons = yes
+
+%Species
+ "Cosine"  | 1 | user_defined | 2 | "-0.2*cos(pi*x/10.0)"
+%
+
+%Coordinates
+ "Cosine" | 0 | 0 | 0 | yes
+%
+
+
+BoxShape = parallelepiped
+
+%Lsize
+ 10.0 | 10.0 | 10.0
+%
+
+%Spacing
+ 0.5 | 0.5 | 0.5
+%
+
+%BoxOffset
+ 0.0 | 0.0 | 0.0
+%
+
+%NumberKPoints
+ 10 | 1 | 1 | 0
+%
+
+CenterOfInversion = yes

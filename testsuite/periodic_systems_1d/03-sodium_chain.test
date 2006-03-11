@@ -9,52 +9,9 @@ Programs : octopus_cmplx
 Runtime  : short-run
 Enabled  : Yes
 
-INP
-SystemName = "Na chain 1D periodic"
-Units = "eVA"
 
-Dimensions = 3
-PeriodicDimensions = 1
+Input: 03-sodium_chain.01-ground_state.inp
 
-%CalculationMode
-  gs | unocc                     
-%
-
-%Species
-  "Na"  | 23.0 | tm2 | 11 | 2 | 2
-%
-
-%Coordinates
-  "Na" |   0.0 | 0.0 | 0.0 | no
-%
-
-BoxShape = parallelepiped
-
-%Lsize
- 1.99932905 | 5.29 | 5.29
-%
-
-%Spacing
- 0.3 | 0.3 | 0.3
-%
-
-%NumberKPoints
- 10 | 1 | 1
-%
-
-MaximumIter = 1
-
-CenterOfInversion = yes
-
-NumberUnoccStates = 1
-
-EOF
-
-RUN
-
-# add your own matches
-#
-# Examples (of course you have to uncomment the lines :)
 Match ; Bands ; grep '^   1' ds02_static/eigenvalues | tac | head -n 6 | tail -n 1 ; \s*-17.6430\d*\s*2.0000\d*
 Match ; Bands ; grep '^   1' ds02_static/eigenvalues | tac | head -n 5 | tail -n 1 ; \s*-17.5470\d*\s*2.0000\d*
 Match ; Bands ; grep '^   1' ds02_static/eigenvalues | tac | head -n 4 | tail -n 1 ; \s*-17.2596\d*\s*2.0000\d*

@@ -1,0 +1,57 @@
+# $Id$
+#
+# This is a 2D system of 20 non-interacting electrons in 2D, confined
+# by a harmonic potential. To this field we add a static magnetic
+# field, perpendicular to the plane. The resulting list of eigenvalues
+# should be the Fock-Darwin spectrum:
+#  E(n, l) = (2*n + 1 + abs(l)) * Omega + 0.5 * l * w_c
+# where w_c = (e*B)/(m*c) is the cyclotron frequency (e and m are the
+# charge and mass of the electron, respectively, and c is the speed of
+# light), and Omega = sqrt(omega^2 + (w_c/2)^2) -- omega is the frequency
+# that defines the Harmonic well. n = 0, 1, 2, ...; 
+# l = 0, 1, -1, 2, -2, ....
+# [V. Fock, Z. Phys. 47, 446 (1928); C. G. Darwin, Proc. Cambridge Philos.
+# Soc. 27, 86 (1930)]
+# 
+
+DebugLevel = 0
+
+SystemName = "qd"
+CalculationMode = gs
+FromScratch = yes
+Dimensions = 2
+
+omega = 0.25
+
+%Species
+"qd" | 1.0 | user_defined | 20 | "0.5*omega^2*r^2"
+%
+
+%Coordinates
+"qd" | 0 | 0 | 0 | no
+%
+
+BoxShape = sphere
+Radius = 25.0
+Spacing = 0.5
+
+DerivativesOrder = 4
+
+NonInteractingElectrons = yes
+
+MaximumIter = 200
+ConvAbsDens = 1e-5
+LCAOStart = yes
+
+EigenSolver = cg
+EigenSolverInitTolerance = 1e-6
+EigenSolverFinalTolerance = 1e-6
+EigenSolverMaxIter = 250
+TypeOfMixing = linear
+Mixing = 1.0
+
+# P_c is the speed of light in atomic units.
+P_c = 137.036
+%StaticMagneticField
+0 | 0 | 0.02*P_c 
+%

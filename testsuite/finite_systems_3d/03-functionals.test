@@ -1,0 +1,51 @@
+# $Id$
+
+Test     : Functionals
+Author   : Alberto
+Date     : 28.02.06
+Arch     : Linux g38 2.6.14-desktop-2 #1 SMP PREEMPT Sun Nov 20 20:45:48 CET 2005 i686 GNU/Linux
+Release  : 2.0.1devel
+Programs : octopus; octopus_cmplx
+Runtime  : long-run
+Enabled  : Yes
+
+# This input files reproduces results from:
+# [M. Payami and T. Mahmoodi, J. Phys.: Condens. Matter 18, 75 (2006)].
+# All numbers from Table I may be obtained by properly choosing
+# r_s and N_electrons.
+#
+# However, they are not reproduced exactly, probably due to differences
+# in the numerical representation. This is a bit of a problem, since the
+# differences between KLI and full EXX are smaller than this (hopefully
+# only) numerical error.
+#
+# Figure 4 can also be obtained, although for some reason only if 
+# the density is divided by 2. I think that in the paper they slipped
+# some factor of 2.
+
+
+# First, we reproduce the LSDA results for Li, 8 electrons.
+
+Input: 03-functionals.01-jellium-lsda.inp
+
+Match ; TotalEnergy ; grep -A 6 '^Energy:' static/info ; \s*Total\s*=\s*-0.5043
+Match ; Eigenvalues ; grep -A 2 'Eigenvalues \[' static/info | tail -1 ; \s*-0.201067\d*\s*2.0000\d*
+Match ; Exchange    ; grep -A 4 '^Energy:' static/info ; \s*Exchange\s*=\s*-0.95506
+
+
+# Now, EXX/KLI for Li, 8 electrons (restarting from the previous run)
+
+Input: 03-functionals.02-jellium-exx_kli.inp
+
+Match ; TotalEnergy ; grep -A 6 '^Energy:' static/info ; \s*Total\s*=\s*-0.33289
+Match ; Eigenvalues ; grep -A 2 'Eigenvalues \[' static/info | tail -1 ; \s*-0.251975\d*\s*2.0000\d*
+Match ; Exchange    ; grep -A 4 '^Energy:' static/info ; \s*Exchange\s*=\s*-1.03289
+
+
+# And finally, full EXX for Li, 8 electrons (restarting from the previous run)
+
+Input: 03-functionals.03-jellium-full_exx.inp
+
+Match ; TotalEnergy ; grep -A 6 '^Energy:' static/info ; \s*Total\s*=\s*-0.33299
+Match ; Eigenvalues ; grep -A 2 'Eigenvalues \[' static/info | tail -1 ; \s*-0.2517\d*\s*2.0000\d*
+Match ; Exchange    ; grep -A 4 '^Energy:' static/info ; \s*Exchange\s*=\s*-1.0329

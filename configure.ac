@@ -113,7 +113,6 @@ ACX_LONG_FORTRAN_LINES
 dnl ============================================================================
 dnl find what is the extension of the programs supposed to be
 MYEXT=""
-AS_IF([test x"$enable_mpi" != x"no"], [MYEXT="${MYEXT}_mpi"])
 
 dnl complex wavefunctions for the ground-state
 if test "${COMPLEX_WFNS}"; then
@@ -123,6 +122,9 @@ if test "${COMPLEX_WFNS}"; then
 else
   msg="real wave functions"
 fi
+
+dnl mpi
+AS_IF([test x"$enable_mpi" != x"no"], [MYEXT="${MYEXT}_mpi"])
 
 dnl debug mode
 if test "${SINGLE_PRECISION}"; then
@@ -214,7 +216,9 @@ AC_CONFIG_FILES([Makefile
 	doc/pdf/Makefile doc/html/Makefile share/Makefile share/PP/Makefile share/PP/TM2/Makefile share/PP/HGH/Makefile
 	share/recipes/Makefile share/recipes/en/Makefile share/recipes/es/Makefile 
 	share/recipes/it/Makefile share/util/Makefile share/samples/Makefile
-	build/octopus.spec testsuite/Makefile
+	build/octopus.spec testsuite/Makefile testsuite/finite_systems_1d/Makefile 
+	testsuite/finite_systems_2d/Makefile testsuite/finite_systems_3d/Makefile 
+	testsuite/periodic_systems_1d/Makefile
 ])
 
 AC_OUTPUT

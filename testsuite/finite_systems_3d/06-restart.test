@@ -11,76 +11,30 @@ Enabled  : Yes
 
 
 # First start a ground state calculation
-INP
-CalculationMode = gs
-fromScratch = yes
-Radius = 7.0
-Spacing = 0.5
-%Coordinates
-  "Na" | 0 | 0 | 0
-%
-SpinComponents = spin_polarized
-%Occupations
-0.0
-1.0
-%
-ConvAbsDens = 1e-03
-EOF
+Input: 06-restart.01-ground_state.inp
 
-RUN
+# no matches here ...
+
+
 
 # Now restart the previous calculation
-INP
-CalculationMode = gs
-fromScratch = no
-Radius = 7.0
-Spacing = 0.5
-%Coordinates
-  "Na" | 0 | 0 | 0
-%
-SpinComponents = spin_polarized
-EOF
-
-RUN
+Input: 06-restart.02-restart_ground_state.inp
 
 # Check if the ground state restart is OK
-# Match ; Ground state restart ; grep -A 2 'Eigenvalues \[' static/info | tail -1 ; \s*-0.01407\d*\s*0.0000\d*\s*1\s*-0.08534\d*\s*1.0000\d*
 Match ; Ground state restart ; grep ' up' static/info ; \s*1\s*up\s*-0.01407\d*\s*0.0000\d*
 Match ; Ground state restart ; grep ' dn' static/info ; \s*1\s*dn\s*-0.08534\d*\s*1.0000\d* 
 
 
-# Start a time-dependent calculation
-INP
-CalculationMode = td
-fromScratch = yes
-Radius = 7.0
-Spacing = 0.5
-%Coordinates
-  "Na" | 0 | 0 | 0
-%
-SpinComponents = spin_polarized
-TDMaximumIter = 5
-TDDeltaStrength = 0.01
-EOF
 
-RUN
+# Start a time-dependent calculation
+Input: 06-restart.03-td_calc.inp
 
 Match ; Time-dependent start ; tail -1 td.general/multipoles; \s*3.5000000000\d*e\-01\s*0.0000000000\d*e\+00\s*0.0000000000\d*e\+00\s*0.0000000000\d*e\+00\s*0.0000000000\d*e\+00\s*9.9999999999\d*e\-01\s*-3.4954670794\d*e\-03
 
-# Finally restart the td calculation
-INP
-CalculationMode = td
-fromScratch = no
-Radius = 7.0
-Spacing = 0.5
-%Coordinates
-  "Na" | 0 | 0 | 0
-%
-SpinComponents = spin_polarized
-TDMaximumIter = 10
-EOF
 
-RUN
+
+# Finally restart the td calculation
+Input: 06-restart.04-restart_td_calc.inp
 
 # Check if the td restart is OK
 Match ; Time-dependent restart ; tail -1 td.general/multipoles; \s*7.0000000000\d*e\-01\s*0.0000000000\d*e\+00\s*0.0000000000\d*e\+00\s*0.0000000000\d*e\+00\s*0.0000000000\d*e\+00\s*9.9999999999\d*e\-01\s*-6.9697200503\d*e\-03

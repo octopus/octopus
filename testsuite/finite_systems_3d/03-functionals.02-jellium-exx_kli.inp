@@ -1,0 +1,47 @@
+# $Id$
+
+# Now, EXX/KLI for Li, 8 electrons (restarting from the previous run)
+
+DebugLevel = 0
+
+SystemName = "jellium"
+CalculationMode = gs
+Units = "a.u"
+FromScratch = no
+
+r_s = 3.28
+N_electrons = 8
+jellium_radius = r_s * (N_electrons)^(1.0/3.0)
+
+%Species
+"jellium" | 1.0 | spec_jelli | N_electrons | jellium_radius
+%
+
+%Coordinates
+"jellium" | 0 | 0 | 0
+%
+
+BoxShape = sphere
+Radius  = 13.0
+Spacing = 0.35
+
+#XFunctional = lda_x
+XFunctional = oep_x
+#OEP_Level = oep_full
+OEP_Level = oep_kli
+#CFunctional = lda_c_pw
+CFunctional = no
+
+MaximumIter = 200
+ConvRelDens = 1e-5
+
+LCAOStart = no
+
+EigenSolver = cg
+EigenSolverInitTolerance = 1e-2
+EigenSolverFinalTolerance = 1e-5
+EigenSolverFinalToleranceIteration = 6
+EigenSolverMaxIter = 25
+
+TypeOfMixing = broyden
+What2Mix = potential

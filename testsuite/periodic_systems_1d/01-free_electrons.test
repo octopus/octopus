@@ -9,57 +9,7 @@ Programs : octopus_cmplx
 Runtime  : short-run
 Enabled  : Yes
 
-INP
-%CalculationMode
-  gs | unocc
-%
-fromScratch = yes
-
-Dimensions = 1
-PeriodicDimensions = 1
-
-NumberUnoccStates = 4
-ConvAbsDens = 1e-6
-
-OnlyUserDef = yes
-NonInteractingElectrons = yes
-
-%Species
-"Zero" | 22.1 | user_defined | 2 | "0"
-%
-
-%Coordinates
- "Zero" | 0 | 0 | 0 | yes
-%
-
-
-BoxShape = parallelepiped
-
-%Lsize
- 10.0 | 10.0 | 10.0
-%
-
-%Spacing
- 0.5 | 0.5 | 0.5
-%
-
-%BoxOffset
- 0.0 | 0.0 | 0.0
-%
-
-%NumberKPoints
- 10 | 1 | 1 | 0
-%
-
-CenterOfInversion = yes
-EOF
-
-RUN
-
-# add your own matches
-#
-# Examples (of course you have to uncomment the lines :)
-# Match ; TotalEnergy ; grep -A 6 '^Energy:' static/info ; \s*Total\s*=\s*-0.33802679
+Input: 01-free_electrons.01-ground_state.inp
 
 # 1st Band
 Match ; Bands ; grep '^   1' ds02_static/eigenvalues | tac | head -n 6 | tail -n 1 ; \s*0.000000\d*\s*2.0000\d*

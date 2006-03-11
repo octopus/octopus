@@ -1,13 +1,5 @@
-# $Id: oct-run_regression_test.pl,v 1.12 2006/02/28 22:15:26 appel Exp      :
-Test     : Carbon
-Author   : Alberto
-Date     : 02.03.06
-Arch     : Linux g38 2.6.14-desktop-2 #1 SMP PREEMPT Sun Nov 20 20:45:48 CET 2005 i686 GNU/Linux
-Release  : 2.0.1devel
-Programs : octopus
-Runtime  : long-run
-Enabled  : Yes
-
+# $Id$
+#
 # The purpose of this test is making sure that spin-polarized
 # calculations work.
 # It is the calculation of one atom of Carbon, within the LSDA
@@ -24,7 +16,8 @@ Enabled  : Yes
 # It would be nice to investigate the reason for the small
 # discrepancy...
 
-INP
+DebugLevel = 0
+
 CalculationMode = gs
 fromScratch = yes
 units = "eVA"
@@ -56,10 +49,3 @@ EigenSolverMaxIter = 25
 TypeOfMixing = broyden
 
 PoissonSolver = fft_corrected
-EOF
-
-RUN
-
-Match ; Total Energy       ; grep -A 6 '^Energy:' static/info ; \s*Total\s*=\s*-146.742
-Match ; Eigenvalue   [1up] ; grep -A 2 'Eigenvalues \[' static/info | tail -1 ; \s*-14.462\d*\s*1.0000\d*
-Match ; Eigenvalue [4down] ; grep -A 9 'Eigenvalues \[' static/info | tail -1 ; \s*-3.682\d*\s*0.000000\d*

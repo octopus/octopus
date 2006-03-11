@@ -4,7 +4,7 @@
 
 
 # Define octopus executables
-octopus_exe="octopus octopus_cmplx"
+octopus_exe="octopus octopus_mpi octopus_cmplx octopus_cmplx_mpi"
 
 # Paths
 prefix=/usr
@@ -55,11 +55,9 @@ for x in $octopus_exe; do
 	xybase=${x}-${ybase%.test}
 	if [ "$local_run" == "yes" ]; then
 	    octopus_local=`pwd`/../src/$x
-	    octopus_local_debug=`pwd`/../src/${x}_debug
 	    [ -x $octopus_local ] && CMD ./oct-run_regression_test.pl -l -p -e $octopus_local -f $y | tee ${xybase}.log
-	    [ -x $octopus_local_debug ] && CMD ./oct-run_regression_test.pl -l -p -e $octopus_local_debug -f $y | tee ${xybase}.log
 	else
-	    CMD $prefix/bin/oct-run_regression_test.pl -l -p -e $prefix/bin/$x -f $y | tee ${xybase}.log
+	    [ -x $prefix/bin/$x ] && CMD $prefix/bin/oct-run_regression_test.pl -l -p -e $prefix/bin/$x -f $y | tee ${xybase}.log
 	fi
 	[ -e out.log ] && mv out.log ${xybase}.out.log
     done

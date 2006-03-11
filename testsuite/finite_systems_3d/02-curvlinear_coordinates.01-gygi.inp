@@ -1,15 +1,7 @@
 # $Id$
 
-Test     : curvilinear coordinates
-Author   : Alberto
-Date     : 13.11.05
-Arch     : Linux rhodas 2.4.26-1-386 #1 Thu Jul 22 12:46:23 JST 2004 i686 GNU/Linux
-Release  : 2.0.1devel
-Programs : octopus
-Runtime  : short-run
-Enabled  : Yes
+DebugLevel = 0
 
-INP
 CalculationMode = gs
 
 %Coordinates
@@ -37,9 +29,3 @@ TypeOfMixing = broyden
 Mixing = 0.5
 
 PoissonSolver = cg_corrected
-EOF
-
-RUN
-
-Match ; TotalEnergy ; grep -A 6 '^Energy:' static/info ; \s*Total\s*=\s*-2.8750
-Match ; Eigenvalues ; grep -A 2 'Eigenvalues \[' static/info | tail -1 ; \s*-0.5773\d*\s*2.0000\d*

@@ -10,17 +10,7 @@ Runtime  : short-run
 Enabled  : Yes
 
 
-INP
-CalculationMode = gs
-fromScratch = yes
-
-%Coordinates
-  "Na" | 0 | 0 | -1.54
-  "Na" | 0 | 0 |  1.54
-%
-EOF
-
-RUN
+Input: 08-sodium_dimer.01-ground_state.inp
 
 # add your own matches 
 #

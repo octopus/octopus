@@ -9,7 +9,7 @@ Programs : octopus_cmplx
 Runtime  : short-run
 Enabled  : Yes
 
-INP
+
 # This is a 2D system of 20 non-interacting electrons in 2D, confined
 # by a harmonic potential. To this field we add a static magnetic
 # field, perpendicular to the plane. The resulting list of eigenvalues
@@ -24,50 +24,7 @@ INP
 # Soc. 27, 86 (1930)]
 # 
 
-SystemName = "qd"
-CalculationMode = gs
-FromScratch = yes
-Dimensions = 2
-
-omega = 0.25
-
-%Species
-"qd" | 1.0 | user_defined | 20 | "0.5*omega^2*r^2"
-%
-
-%Coordinates
-"qd" | 0 | 0 | 0 | no
-%
-
-BoxShape = sphere
-Radius = 25.0
-Spacing = 0.5
-
-DerivativesOrder = 4
-
-NonInteractingElectrons = yes
-
-MaximumIter = 200
-ConvAbsDens = 1e-5
-LCAOStart = yes
-
-EigenSolver = cg
-EigenSolverInitTolerance = 1e-6
-EigenSolverFinalTolerance = 1e-6
-EigenSolverMaxIter = 250
-TypeOfMixing = linear
-Mixing = 1.0
-
-# P_c is the speed of light in atomic units.
-P_c = 137.036
-%StaticMagneticField
-0 | 0 | 0.02*P_c 
-%
-EOF
-
-RUN
-
-# Match ; Eigenvalues ; grep -A 2 'Eigenvalues \[' static/info | tail -1 ; \s*-0.13735\d*\s*2.0000\d*
+Input : 02-fock-darwin.01-ground_state.inp
 
 Match ; Eigenvalue 1 ; grep -A 10 '^ #st  Spin   Eigenvalue' static/info | grep '^   1' ; \s*0.2502\d*\s*2.0000\d*
 Match ; Eigenvalue 1 ; grep -A 10 '^ #st  Spin   Eigenvalue' static/info | grep '^   2' ; \s*0.4904\d*\s*2.0000\d*

@@ -1,0 +1,50 @@
+# $Id$
+#
+# This test calculates the ground-state of a Na8 cluster, described by
+# the spherical-jellium model. The calculation reproduces one of the 
+# first calculation of this kind; namely the plot of the density and of
+# the total self-consisten potential reproduces Fig. 1 of
+# [W. Ekardt, Phys. Rev. B 29, 1558 (1984)].
+# 
+
+DebugLevel = 0
+
+SystemName = "jellium"
+CalculationMode = gs
+Units = "a.u"
+FromScratch = yes
+
+r_s = 4.0
+N_electrons = 8
+jellium_radius = r_s * (N_electrons)^(1.0/3.0)
+
+%Species
+"jellium" | 1.0 | spec_jelli | N_electrons | jellium_radius
+%
+
+%Coordinates
+"jellium" | 0 | 0 | 0
+%
+
+BoxShape = sphere
+Radius  = 18.0
+Spacing = 0.5
+
+XFunctional = lda_x
+CFunctional = lda_c_gl
+
+MaximumIter = 200
+ConvRelDens = 1e-5
+
+LCAOStart = no
+
+EigenSolver = cg
+EigenSolverInitTolerance = 1e-2
+EigenSolverFinalTolerance = 1e-5
+EigenSolverFinalToleranceIteration = 6
+EigenSolverMaxIter = 25
+
+TypeOfMixing = broyden
+
+#Output = density + potential
+#OutputHow = axis_x

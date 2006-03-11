@@ -1,0 +1,16 @@
+# $Id$
+
+# Start a time-dependent calculation
+
+DebugLevel = 0
+
+CalculationMode = td
+fromScratch = yes
+Radius = 7.0
+Spacing = 0.5
+%Coordinates
+  "Na" | 0 | 0 | 0
+%
+SpinComponents = spin_polarized
+TDMaximumIter = 5
+TDDeltaStrength = 0.01

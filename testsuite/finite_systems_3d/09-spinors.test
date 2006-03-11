@@ -9,23 +9,7 @@ Programs : octopus_cmplx
 Runtime  : short-run
 Enabled  : Yes
 
-INP
-CalculationMode = gs
-fromScratch = yes
-Radius = 7.0
-Spacing = 0.5
-%Coordinates
-  "Na" | 0 | 0 | 0.0
-%
-SpinComponents = non_collinear
-GuessMagnetDensity = user_defined
-%AtomsMagnetDirection
- 1 | 1 | 0
-%
-Eigensolver = lanczos
-EOF
-
-RUN
+Input: 09-spinors.01-ground_state.inp
 
 Match ; TotalEnergy ; grep -A 6 '^Energy:' static/info | tail -1; \s*Total\s*=\s*-0.176710\d*
 Match ; Eigenvalues ; grep -A 2 'Eigenvalues \[' static/info | tail -1 ; \s*-0.08533\d*\s*0.92/ 0.08

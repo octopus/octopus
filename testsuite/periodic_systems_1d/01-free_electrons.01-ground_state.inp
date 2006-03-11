@@ -1,0 +1,47 @@
+# $Id$
+
+DebugLevel = 0
+
+%CalculationMode
+  gs | unocc
+%
+fromScratch = yes
+
+Dimensions = 1
+PeriodicDimensions = 1
+
+NumberUnoccStates = 4
+ConvAbsDens = 1e-6
+
+OnlyUserDef = yes
+NonInteractingElectrons = yes
+
+%Species
+"Zero" | 22.1 | user_defined | 2 | "0"
+%
+
+%Coordinates
+ "Zero" | 0 | 0 | 0 | yes
+%
+
+
+BoxShape = parallelepiped
+
+%Lsize
+ 10.0 | 10.0 | 10.0
+%
+
+%Spacing
+ 0.5 | 0.5 | 0.5
+%
+
+%BoxOffset
+ 0.0 | 0.0 | 0.0
+%
+
+%NumberKPoints
+ 10 | 1 | 1 | 0
+%
+
+CenterOfInversion = yes
+

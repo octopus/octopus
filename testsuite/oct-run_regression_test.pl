@@ -3,6 +3,7 @@
 # $Id$
 
 use Getopt::Std;
+use File::Basename;
 
 
 sub usage {
@@ -54,15 +55,7 @@ Programs : octopus
 Runtime  : short-run
 Enabled  : Yes
 
-INP
-DebugLevel = 0
-CalculationMode = gs
-fromScratch = yes
-%Coordinates
-  "Na" | 0 | 0 | -1.54
-  "Na" | 0 | 0 |  1.54
-%
-EOF
+Input: 01-template.01-ground_state.inp
 
 RUN
 
@@ -86,7 +79,7 @@ if (not @ARGV) { usage; }
 getopts("nlvhe:c:f:d:ipm");
 
 # Default values
-$workdir = `mktemp -d`;
+$workdir = `mktemp -d /tmp/octopus.XXXXXX`;
 chomp($workdir);
 
 # Handle options
@@ -98,9 +91,9 @@ if($opt_e)  { $octopus_exe = $opt_e; }
 else{
   $octopus_exe =        "octopus";
   $octopus_exe = "../src/octopus"             if( -x "../src/octopus");
-  $octopus_exe = "../src/octopus_debug"       if( -x "../src/octopus_debug");
+  $octopus_exe = "../src/octopus_mpi"         if( -x "../src/octopus_mpi");
   $octopus_exe = "../src/octopus_cmplx"       if( -x "../src/octopus_cmplx");
-  $octopus_exe = "../src/octopus_cmplx_debug" if( -x "../src/octopus_cmplx_debug");
+  $octopus_exe = "../src/octopus_cmplx_mpi"   if( -x "../src/octopus_cmplx_mpi");
 }
 if($octopus_exe !~ /^\//){
   $octopus_exe = $ENV{PWD}."/$octopus_exe";
@@ -111,8 +104,16 @@ die "could not find executable: $octopus_exe \n" if (`which $octopus_exe` eq "")
 
 chomp($octopus_exe);
 
-$octopus_base = `basename $octopus_exe`;
+$octopus_base = basename($octopus_exe);
 chomp($octopus_base);
+
+# MPI stuff
+$mpirun = $ENV{MPIRUN};
+if ("$mpirun" eq "") { $mpirun = `which mpirun`; }
+chomp($mpirun);
+# default number of processors for MPI runs is 2
+$np = 2;
+
 
 if (!$opt_m) {
   system ("rm -rf $workdir");
@@ -128,7 +129,6 @@ while ($_ = <TESTSUITE>) {
  next if /^#/;
 
  if ( $_ =~ /Test\s*:\s*(.*)\s*$/) {
-  %test = ();
   $test{"name"} = $1;
   if(!$opt_i) {
     print "\033[34m ***** $test{\"name\"} ***** \033[0m \n\n";
@@ -138,20 +138,6 @@ while ($_ = <TESTSUITE>) {
   }
  }
 
- if ( $_ =~ /Author\s*:\s*(.*)\s*$/) {
-  %test = ();
-  $test{"author"} = $1;
- }
-
- if ( $_ =~ /Date\s*:\s*(.*)\s*$/) {
-  %test = ();
-  $test{"date"} = $1;
- }
-
- if ( $_ =~ /Release\s*:\s*(.*)\s*$/) {
-  %test = ();
-  $test{"release"} = $1;
- }
 
  if ( $_ =~ /Programs\s*:\s*(.*)\s*$/) {
   $valid=1;
@@ -171,7 +157,7 @@ while ($_ = <TESTSUITE>) {
   }
  }
 
- if ( $_ =~ /Enabled\s*:\s*(.*)\s*$/) {
+ if ( $_ =~ /^Enabled\s*:\s*(.*)\s*$/) {
   %test = ();
   $enabled = $1;
   $enabled =~ s/^\s*//;
@@ -183,30 +169,44 @@ while ($_ = <TESTSUITE>) {
  # Running this regression test if it is enabled
  if ( $enabled eq "Yes" ) {
 
-   # generating input file for test run
-   if ( $_ =~ /^INP/) {
-     $test{"inp"} = 1;
-     open(INP,">$workdir/inp");
-     while ( ($_ = <TESTSUITE>) ) {
-       last if ( $_ =~ /^EOF/ );
-       print INP $_;
-       if ($opt_i) { print STDOUT $_; }
-
-     }
-     close(INP);
+   if ( $_ =~ /^Processors\s*:\s*(.*)\s*$/) {
+     $np = $1;
    }
 
-   if ( $_ =~ /^RUN/ && !$opt_m ) {
-     die "inp not defined" if !$test{"inp"};
-     if (!$opt_n) {
-       print "\nStarting test run ...\n";
-       system("cd $workdir; $octopus_exe < inp &> out");
-       system("grep -B2 -A5 'Running octopus' $workdir/out > build-stamp");
-       print "Finished test run.\n\n"; }
-     else {
-       if(!$opt_i) { print "cd $workdir; $octopus_exe < inp &> out \n"; }
+   if ( $_ =~ /^Input\s*:\s*(.*)\s*$/) {
+     $input_file = dirname($opt_f) . "/" . $1;
+     if( -f $input_file ) {
+       print "\n\nUsing input file : $input_file \n";
+       system("cp $input_file $workdir/inp");
+     } else {
+       die "could not find input file: $input_file\n";
      }
-     $test{"run"} = 1;
+
+     if ( !$opt_m ) {
+       if ( !$opt_n ) {
+	 print "\nStarting test run ...\n";
+
+	 # serial or MPI run?
+	 if ( $octopus_exe =~ /mpi/) {
+	   if( -x "$mpirun") {
+	     print "Executing: cd $workdir; $mpirun -np $np $octopus_exe &> out \n";
+	     system("cd $workdir; $mpirun -np $np $octopus_exe &> out");
+	   } else {
+	     print "No mpirun found: Skipping parallel test \n";
+	     exit 1;
+	   }
+	 } else {
+	   print "Executing: cd $workdir; $octopus_exe &> out \n";
+	   system("cd $workdir; $octopus_exe &> out");
+	 }
+	 system("grep -B2 -A5 'Running octopus' $workdir/out > build-stamp");
+	 print "Finished test run.\n\n"; }
+       else {
+	 if(!$opt_i) { print "cd $workdir; $octopus_exe < inp &> out \n"; }
+       }
+       $test{"run"} = 1;
+     }
+
    }
 
    if ( $_ =~ /^Match/ && !$opt_n) {
@@ -243,5 +243,5 @@ while ($_ = <TESTSUITE>) {
 
 
 if (!$opt_i) { print "\n\n\n"; }
-if ($opt_l)  { system ("cp $workdir/out out.log"); }
+if ($opt_l && $valid)  { system ("cp $workdir/out out.log"); }
 if (!$opt_p && !$opt_m && $test_succeded) { system ("rm -rf $workdir"); }

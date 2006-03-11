@@ -1,0 +1,15 @@
+# $Id$
+
+# Finally restart the td calculation
+
+DebugLevel = 0
+
+CalculationMode = td
+fromScratch = no
+Radius = 7.0
+Spacing = 0.5
+%Coordinates
+  "Na" | 0 | 0 | 0
+%
+SpinComponents = spin_polarized
+TDMaximumIter = 10
