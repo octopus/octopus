@@ -146,7 +146,7 @@ contains
     !% in the PDB file (see <tt>PDBCoordinates</tt>), they will be output
     !% in the file "geometry_classical.xyz".
     !%Option current 32
-    !% Prints out the paramagnetic current density. The output file is called "current-i-{x,y,z}", 
+    !% Prints out the paramagnetic current density. The output file is called "current-i-(x,y,z)", 
     !% where "i" stands for the spin channel and x, y, z indicates the vector component
     !% of the current.
     !%Option ELF 64
