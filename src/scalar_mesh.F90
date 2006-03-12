@@ -48,23 +48,25 @@ module scalar_mesh_m
     MESH_MAXVAL         = MESH_GAUSS_LEGENDRE
 
   type scalar_mesh_t
-    integer :: mtype             ! mesh type (see MESH_* variables above)
-    integer :: np                ! number of points in the mesh
-    FLOAT   :: min, max          ! lower and upper boundary for scalar grid
-    FLOAT   :: center            ! highest density of gridpoints is around center
-    FLOAT   :: alpha1, alpha2    ! parameters for logarithmic grid below(1) and above(2) center
-    FLOAT   :: dx                ! grid spacing for linear grid
-    FLOAT, pointer    :: mesh(:) ! the mesh points
-    FLOAT, pointer    :: w(:)    ! weights for integrations
-    character(len=32) :: label   ! label for namespacing
+    integer :: mtype                ! mesh type (see MESH_* variables above)
+    integer :: np                   ! number of points in the mesh
+    FLOAT   :: min, max             ! lower and upper boundary for scalar grid
+    FLOAT   :: center               ! highest density of gridpoints is around center
+    FLOAT   :: alpha1 = CNST(0.3)   ! parameters for logarithmic grid below(1) and above(2) center
+    FLOAT   :: alpha2 = CNST(0.3)
+    FLOAT   :: dx                   ! grid spacing for linear grid
+    FLOAT, pointer    :: mesh(:)    ! the mesh points
+    FLOAT, pointer    :: weights(:) ! weights for integrations
+    character(len=32) :: label      ! label for namespacing
   end type scalar_mesh_t
 
 contains
 
+
   ! ---------------------------------------------------------
   subroutine scalar_mesh_init(sm, label)
     type(scalar_mesh_t), intent(inout) :: sm
-    character(len=*),       intent(in)    :: label
+    character(len=*),    intent(in)    :: label
 
     FLOAT :: etmp
 
@@ -118,32 +120,52 @@ contains
 
     sm%label = label
 
-    call scalar_mesh_create(sm)
+    call scalar_mesh_create(sm, label)
 
     call pop_sub()
   end subroutine scalar_mesh_init
 
 
   ! ---------------------------------------------------------
-  subroutine scalar_mesh_create(sm)
-    type(scalar_mesh_t), intent(out) :: sm
+  subroutine scalar_mesh_create(sm, label)
+    type(scalar_mesh_t), intent(inout) :: sm
+    character(len=*),    intent(in)    :: label
 
-    FLOAT :: xmin1, xmax1, xmin2, xmax2, offset
+    FLOAT :: xmin1, xmax1, xmin2, xmax2
     FLOAT, allocatable :: gl(:), gw(:)
     character(len=128) :: filename
     integer :: i
 
     call push_sub('scalar_mesh.scalar_mesh_create')
 
-    ALLOCATE(sm%mesh(2*sm%np+1), 2*sm%np+1)
-    ALLOCATE(sm%w   (2*sm%np+1), 2*sm%np+1)
+    xmin1    = M_ZERO
+    xmax1    = sm%center - sm%min
+    xmin2    = M_ZERO
+    xmax2    = sm%max - sm%center
+    sm%label = label
+    sm%dx    = (sm%max-sm%min)/sm%np
 
-    xmin1  = M_ZERO
-    xmax1  = sm%center - sm%min
-    xmin2  = M_ZERO
-    xmax2  = sm%max - sm%center
-    offset = sm%center
-    sm%dx  = (sm%max-sm%min)/(2*sm%np)
+    ! all meshes, except the linear one, need an odd number of mesh 
+    ! points. Stop the code, if the user is giving wrong input.
+    if(sm%mtype.ne.MESH_LINEAR) then
+      if(modulo(sm%np, 2) .eq. 0) then
+        message(1) = 'scalar_mesh: Need an odd number of points for "'//trim(sm%label)//'" mesh'
+        message(2) = 'Please correct your input file.'
+        call write_fatal(2)
+      end if
+    end if
+
+    ALLOCATE(sm%mesh   (sm%np), sm%np)
+    ALLOCATE(sm%weights(sm%np), sm%np)
+
+    ! if we have less that 11 points we change the requested mesh type
+    ! to a linear mesh and issue a warning
+    if (sm%np.le.10.and.sm%mtype.ne.MESH_LINEAR) then
+      sm%mtype = MESH_LINEAR
+      message(1) = 'Less than 11 points in scalar mesh "'//trim(sm%label)//'".'
+      message(2) = 'Switching to linear scalar mesh.'
+      call write_warning(2)
+    end if
 
     select case(sm%mtype)
     case(MESH_LINEAR)
@@ -151,21 +173,23 @@ contains
       call write_info(1)
 
       ! setup linear mesh
-      if (sm%np.eq.0) then
-        sm%mesh = sm%center
+      if (sm%np.eq.1) then
+        sm%mesh = M_HALF*(sm%max+sm%min)
       else
-        do i = 1, 2*sm%np+1
-          sm%mesh(i) = sm%min + (sm%max-sm%min)/(2*sm%np)*(i-1)
+        do i = 1, sm%np
+          sm%mesh(i) = sm%min + (sm%max-sm%min)/(sm%np-1)*(i-1)
         end do
       end if
       ! setup integration weights
-      sm%w = sm%dx
-      if (2*sm%np+1.lt.10) then
-        sm%w = sm%dx
+      if (sm%np.lt.10) then
+        ! manual integration
+        sm%weights = sm%dx
       else
+        ! Euler MacLaurin integration
+        sm%weights = (sm%max-sm%min)/(sm%np-1)
         do i = 1, 5
-          sm%w(i)             = EMcLCoeff(i)*sm%dx
-          sm%w(2*sm%np+2 - i) = EMcLCoeff(i)*sm%dx
+          sm%weights(i)           = EMcLCoeff(i)*(sm%max-sm%min)/(sm%np-1)
+          sm%weights(sm%np+1 - i) = EMcLCoeff(i)*(sm%max-sm%min)/(sm%np-1)
         end do
       end if
 
@@ -174,16 +198,16 @@ contains
       message(1) = 'Info: scalar_mesh: Using logarithmic scalar mesh for '//trim(sm%label)
       call write_info(1)
 
-      do i = 1, 2*sm%np+1
-        sm%mesh(i) =   sm%min   + (sm%max - sm%min)* &
-          ( exp(-sm%alpha1*(i-1)) - M_ONE )/(exp(-sm%alpha1*(2*sm%np))-M_ONE)
+      do i = 1, sm%np
+        sm%mesh(i)      =   sm%min   + (sm%max - sm%min)*                       &
+          ( exp(-sm%alpha1*(i-1)) - M_ONE )/( exp(-sm%alpha1*(sm%np-1))-M_ONE )
 
-        sm%w(i)   = - sm%alpha1 * (sm%max - sm%min)* &
-          ( exp(-sm%alpha1*(i-1))         )/(exp(-sm%alpha1*(2*sm%np))-M_ONE)
+        sm%weights(i)   = - sm%alpha1 * (sm%max - sm%min)*                      &
+          ( exp(-sm%alpha1*(i-1))         )/( exp(-sm%alpha1*(sm%np-1))-M_ONE )
       end do
       do i = 1, 5
-        sm%w(i)             = EMcLCoeff(i)*sm%w(i)
-        sm%w(2*sm%np+2 - i) = EMcLCoeff(i)*sm%w(2*sm%np+2 - i)
+        sm%weights(i)           = EMcLCoeff(i)*sm%weights(i)
+        sm%weights(sm%np+1 - i) = EMcLCoeff(i)*sm%weights(sm%np+1 - i)
       end do
 
 
@@ -192,35 +216,35 @@ contains
       call write_info(1)
 
       ! setup double logarithmic mesh
-      sm%mesh = offset
-      do i = 1, sm%np
-        sm%mesh(sm%np-i+1) = - ( offset + xmin1 + (xmax1-xmin1) * &
-          ( exp(sm%alpha1*(i))     - M_ONE ) /                 &
-          ( exp(sm%alpha1*(sm%np)) - M_ONE ) ) + 2*offset
+      sm%mesh = sm%center
+      do i = 1, (sm%np-1)/2
+        sm%mesh((sm%np-1)/2-i+1) = - ( sm%center + xmin1 + (xmax1-xmin1) * &
+          ( exp(sm%alpha1*(i)) - M_ONE ) /                                 &
+          ( exp(sm%alpha1*((sm%np-1)/2)) - M_ONE ) ) + 2*sm%center
 
-        sm%mesh(sm%np+i+1) =     offset + xmin2 + (xmax2-xmin2) * &
-          ( exp(sm%alpha2*(i))     - M_ONE ) /                 &
-          ( exp(sm%alpha2*(sm%np)) - M_ONE )
+        sm%mesh((sm%np-1)/2+i+1) =     sm%center + xmin2 + (xmax2-xmin2) * &
+          ( exp(sm%alpha2*(i)) - M_ONE ) /                                 &
+          ( exp(sm%alpha2*((sm%np-1)/2)) - M_ONE )
       end do
       ! setup integration weights
-      do i = 1, sm%np
-        sm%w(i)             = sm%alpha1 * (xmax1-xmin1) /        &
-          ( exp(sm%alpha1*(sm%np))     - M_ONE ) *             &
-          ( exp(sm%alpha1*(sm%np-i+1))         )
-        sm%w(2*sm%np+2 - i) = sm%alpha2 * (xmax2-xmin2) /        &
-          ( exp(sm%alpha2*(sm%np))     - M_ONE ) *             &
-          ( exp(sm%alpha2*(sm%np-i+1))         )
+      do i = 1, (sm%np-1)/2
+        sm%weights(i)             = sm%alpha1 * (xmax1-xmin1) /            &
+          ( exp(sm%alpha1*((sm%np-1)/2))     - M_ONE ) *                   &
+          ( exp(sm%alpha1*((sm%np-1)/2-i+1))         )
+        sm%weights(sm%np+1 - i)   = sm%alpha2 * (xmax2-xmin2) /            &
+          ( exp(sm%alpha2*((sm%np-1)/2))     - M_ONE ) *                   &
+          ( exp(sm%alpha2*((sm%np-1)/2-i+1))         )
       end do
-      sm%w(sm%np+1)   = EMcLCoeff(1)*                                           &
-        ( sm%alpha1 * (xmax1-xmin1) / ( exp(sm%alpha1*(sm%np)) - M_ONE ) &
-        + sm%alpha2 * (xmax2-xmin2) / ( exp(sm%alpha2*(sm%np)) - M_ONE ) )
-      sm%w(1)         = EMcLCoeff(1)*sm%w(1)
-      sm%w(2*sm%np+1) = EMcLCoeff(1)*sm%w(2*sm%np+1)
+      sm%weights((sm%np-1)/2+1)        = EMcLCoeff(1)*                           &
+        ( sm%alpha1 * (xmax1-xmin1) / ( exp(sm%alpha1*((sm%np-1)/2)) - M_ONE )   &
+        + sm%alpha2 * (xmax2-xmin2) / ( exp(sm%alpha2*((sm%np-1)/2)) - M_ONE ) )
+      sm%weights(1)                    = EMcLCoeff(1)*sm%weights(1)
+      sm%weights(sm%np)                = EMcLCoeff(1)*sm%weights(sm%np)
       do i = 2, 5
-        sm%w(i)             = EMcLCoeff(i)*sm%w(i)
-        sm%w(sm%np+2 - i)   = EMcLCoeff(i)*sm%w(sm%np+2 - i)
-        sm%w(sm%np+i)       = EMcLCoeff(i)*sm%w(sm%np+i)
-        sm%w(2*sm%np+2 - i) = EMcLCoeff(i)*sm%w(2*sm%np+2 - i)
+        sm%weights(i)                  = EMcLCoeff(i)*sm%weights(i)
+        sm%weights((sm%np-1)/2+2 - i)  = EMcLCoeff(i)*sm%weights((sm%np-1)/2+2 - i)
+        sm%weights((sm%np-1)/2+i)      = EMcLCoeff(i)*sm%weights((sm%np-1)/2+i)
+        sm%weights(sm%np+1 - i)        = EMcLCoeff(i)*sm%weights(sm%np+1 - i)
       end do
 
 
@@ -229,35 +253,39 @@ contains
       call write_info(1)
 
       ! setup sinh mesh
-      do i = 1, 2*sm%np+1
-        sm%mesh(i) = sm%center + M_HALF*(sm%max-sm%min) *        &
-          sinh(sm%alpha1*(i-sm%np-1))/sinh(sm%alpha1*(sm%np))
+      do i = 1, sm%np
+        sm%mesh(i) = M_HALF*(sm%max-sm%min) + M_HALF*(sm%max-sm%min) *         &
+          sinh(sm%alpha1*(i-(sm%np-1)/2-1))/sinh(sm%alpha1*((sm%np-1)/2))
       end do
-      do i = 1, 2*sm%np+1
-        sm%w(i)   =  sm%alpha1 * M_HALF*(sm%max-sm%min) /        &
-          sinh(sm%alpha1*(sm%np)) * cosh(sm%alpha1*(sm%np-i+1))
+      do i = 1, sm%np
+        sm%weights(i)   =  sm%alpha1 * M_HALF*(sm%max-sm%min) /   &
+          sinh(sm%alpha1*((sm%np-1)/2)) * cosh(sm%alpha1*((sm%np-1)/2-i+1))
       end do
       do i = 1, 5
-        sm%w(i)             = EMcLCoeff(i)*sm%w(i)
-        sm%w(2*sm%np+2 - i) = EMcLCoeff(i)*sm%w(2*sm%np+2 - i)
+        sm%weights(i)           = EMcLCoeff(i)*sm%weights(i)
+        sm%weights(sm%np+1 - i) = EMcLCoeff(i)*sm%weights(sm%np+1 - i)
       end do
+
 
     case(MESH_GAUSS_LEGENDRE)
       message(1) = 'Info: scalar_mesh: Using Gauss-Legendre scalar mesh for '//trim(sm%label)
       call write_info(1)
 
-      ALLOCATE(gl(2*sm%np+1), 2*sm%np+1)
-      ALLOCATE(gw(2*sm%np+1), 2*sm%np+1)
+      ALLOCATE(gl(sm%np), sm%np)
+      ALLOCATE(gw(sm%np), sm%np)
 
       ! TODO: need to compute roots of Legendre Polynomials and weights for integration
       ! a call of the corresponding routine in math.F90 should be placed here
 
       !do i=1, 2*sm%np+1
-      !   sm%mesh(i) = M_HALF*(sm%max-sm%min) * gl(i) + M_HALF*(sm%max+sm%min)
-      !   sm%w(i)   = gw(i)*M_HALF*(sm%max-sm%min)
+      !   sm%mesh(i)    = M_HALF*(sm%max-sm%min) * gl(i) + M_HALF*(sm%max+sm%min)
+      !   sm%weights(i) = gw(i)*M_HALF*(sm%max-sm%min)
       !end do
-
       deallocate(gl, gw)
+
+      message(1) = 'scalar_mesh: Gauss-Legendre scalar mesh not fully implemented'
+      call write_fatal(1)
+
 
     case default
       write(message(1), '(a,i4,a)') "Input: '", sm%mtype, &
@@ -276,17 +304,19 @@ contains
   ! ---------------------------------------------------------
   subroutine scalar_mesh_write(sm, filename)
     type(scalar_mesh_t), intent(in) :: sm
-    character(len=*)                   :: filename
+    character(len=*)                :: filename
 
     integer :: i, iunit
 
     call push_sub('scalar_mesh.scalar_mesh_write')
     ! output scalar mesh
     iunit = io_open('static/'//trim(filename), action='write')
-    do i = 1, 2*sm%np+1
-      write(iunit,'(1x,i2,2x,2F22.16)') i,sm%mesh(i),sm%w(i)
+    write(iunit,'(a)') '# index    gridpoint             integration weight'
+    do i = 1, sm%np
+      write(iunit,'(1x,i4,2x,2F22.16)') i, sm%mesh(i), sm%weights(i)
     end do
     call io_close(iunit)
+
     call pop_sub()
   end subroutine scalar_mesh_write
 
@@ -296,9 +326,9 @@ contains
     type(scalar_mesh_t), intent(in) :: sm
     FLOAT, intent(in) :: func(:)
 
-    call push_sub('scalar_mesh.scalar_mesh_end')
+    call push_sub('scalar_mesh.scalar_mesh_integrate')
 
-    res = sum(sm%w(:)*func(:))
+    res = sum(sm%weights(:)*func(:))
 
     call pop_sub()
   end function scalar_mesh_integrate
@@ -310,7 +340,7 @@ contains
 
     call push_sub('scalar_mesh.scalar_mesh_end')
 
-    deallocate(sm%mesh, sm%w)
+    deallocate(sm%mesh, sm%weights)
 
     call pop_sub()
   end subroutine scalar_mesh_end
