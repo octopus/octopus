@@ -48,34 +48,34 @@ module profiling_m
   implicit none
   private
 
-  public ::                            &
-    profiling_init,                    &
-    profiling_in,                      &
-    profiling_out,                     &
+  public ::                             &
+    profiling_init,                     &
+    profiling_in,                       &
+    profiling_out,                      &
     profiling_output
 
-  integer, parameter ::                &
-    C_TAG_LENGTH = 17,                 & ! Max. number of characters of tag label.
-    C_NUM_TAGS   = 16                    ! Number of tags.
+  integer, parameter ::                 & 
+    C_TAG_LENGTH = 17,                  &  ! Max. number of characters of tag label.
+    C_NUM_TAGS   = 16                      ! Number of tags.
 
-  integer ::                           &
-    pass_in(C_NUM_TAGS)           = 0, &
-    pass_out(C_NUM_TAGS)          = 0, &
-    time_in_sec(C_NUM_TAGS)       = 0, &
-    time_in_usec(C_NUM_TAGS)      = 0, &
-    time_sec(C_NUM_TAGS)          = 0, &
-    time_usec(C_NUM_TAGS)         = 0
+  integer ::                            &
+    pass_in(C_NUM_TAGS)           =  0, &
+    pass_out(C_NUM_TAGS)          =  0, &
+    time_in_sec(C_NUM_TAGS)       =  0, &
+    time_in_usec(C_NUM_TAGS)      =  0, &
+    time_sec(C_NUM_TAGS)          =  0, &
+    time_usec(C_NUM_TAGS)         =  0
 
-  integer, parameter, public ::        &
-    C_PROFILING_COMPLETE_DATASET  = 1, &
-    C_PROFILING_MF_INTEGRATE      = 2, &
-    C_PROFILING_MF_DOTP           = 3, &
-    C_PROFILING_MF_NRM2           = 4, &
-    C_PROFILING_NL_OPERATOR       = 5, &
-    C_PROFILING_GHOST_UPDATE      = 6, &
-    C_PROFILING_VEC_INTEGRATE     = 7, &
-    C_PROFILING_SCF_CYCLE         = 8, &
-    C_PROFILING_MF_DOTP_ALLREDUCE = 9, &
+  integer, parameter, public ::         &
+    C_PROFILING_COMPLETE_DATASET  =  1, &
+    C_PROFILING_MF_INTEGRATE      =  2, &
+    C_PROFILING_MF_DOTP           =  3, &
+    C_PROFILING_MF_NRM2           =  4, &
+    C_PROFILING_NL_OPERATOR       =  5, &
+    C_PROFILING_GHOST_UPDATE      =  6, &
+    C_PROFILING_VEC_INTEGRATE     =  7, &
+    C_PROFILING_SCF_CYCLE         =  8, &
+    C_PROFILING_MF_DOTP_ALLREDUCE =  9, &
     C_PROFILING_HPSI              = 10, &
     C_PROFILING_KINETIC           = 11, &
     C_PROFILING_VLPSI             = 12, &
@@ -85,27 +85,29 @@ module profiling_m
     C_PROFILING_TIME_STEP         = 16
 
   character(len=C_TAG_LENGTH), dimension(C_NUM_TAGS) :: tag_label = &
-    (/                                 &
-    'COMPLETE_DATASET ',               &
-    'MF_INTEGRATE     ',               &
-    'MF_DOTP          ',               &
-    'MF_NRM2          ',               &
-    'NL_OPERATOR      ',               &
-    'GHOST_UPDATE     ',               &
-    'VEC_INTEGRATE    ',               &
-    'SCF_CYCLE        ',               &
-    'MF_DOTP_ALLREDUCE',               &
-    'HPSI             ',               &
-    'KINETIC          ',               &
-    'VLPSI            ',               &
-    'VNLPSI           ',               &
-    'POISSON_SOLVE    ',               &
-    'XC               ',               &
-    'TIME_STEP        '                &
+    (/                                  &
+    'COMPLETE_DATASET ',                &
+    'MF_INTEGRATE     ',                &
+    'MF_DOTP          ',                &
+    'MF_NRM2          ',                &
+    'NL_OPERATOR      ',                &
+    'GHOST_UPDATE     ',                &
+    'VEC_INTEGRATE    ',                &
+    'SCF_CYCLE        ',                &
+    'MF_DOTP_ALLREDUCE',                &
+    'HPSI             ',                &
+    'KINETIC          ',                &
+    'VLPSI            ',                &
+    'VNLPSI           ',                &
+    'POISSON_SOLVE    ',                &
+    'XC               ',                &
+    'TIME_STEP        '                 &
     /)
 
 contains
 
+
+  ! ---------------------------------------------------------
   ! Create profiling subdirectory.
   subroutine profiling_init
 #if defined(HAVE_MPI)
@@ -134,10 +136,10 @@ contains
     time_usec    = 0
 
     call pop_sub()
-
   end subroutine profiling_init
 
 
+  ! ---------------------------------------------------------
   ! Increment in counter and save entry time.
   subroutine profiling_in(tag)
     integer :: tag
@@ -150,6 +152,7 @@ contains
   end subroutine profiling_in
 
 
+  ! ---------------------------------------------------------
   ! Increment out counter and sum up difference between entry
   ! and exit time.
   subroutine profiling_out(tag)
@@ -167,6 +170,7 @@ contains
   end subroutine profiling_out
 
 
+  ! ---------------------------------------------------------
   ! Write profiling results of each node to profiling.NNN/profifling.nnn
   ! The format of each line is
   ! tag-label    pass_in    pass_out    time   time/pass_in

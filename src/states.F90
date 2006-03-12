@@ -103,8 +103,8 @@ module states_m
     character(len=1024), pointer :: user_def_states(:,:,:) ! (st%d%dim, st%nst, st%d%nik)
 
     ! the densities and currents (after all we are doing DFT :)
-    FLOAT, pointer :: rho(:,:)
-    FLOAT, pointer :: j(:,:,:)
+    FLOAT, pointer :: rho(:,:)      ! rho(gr%m%np_part, st%d%nspin)
+    FLOAT, pointer :: j(:,:,:)      !   j(gr%m%np_part, gr%sb%dim, st%d%nspin)
 
     FLOAT, pointer :: rho_core(:)   ! core charge for nl core corrections
 
@@ -491,11 +491,10 @@ contains
     type(grid_t),      intent(in)    :: gr
 
     ! allocate arrays for charge and current densities
-    ALLOCATE(st%rho(gr%m%np, st%d%nspin), gr%m%np*st%d%nspin)
-    if (st%d%cdft) then
-      ALLOCATE(st%j(NP, NDIM, st%d%nspin), NP*NDIM*st%d%nspin)
-      st%j = M_ZERO
-    end if
+    ALLOCATE(st%rho(NP_PART, st%d%nspin), NP_PART*st%d%nspin)
+    ALLOCATE(st%j(NP_PART, NDIM, st%d%nspin), NP_PART*NDIM*st%d%nspin)
+    st%rho = M_ZERO
+    st%j   = M_ZERO
     if(gr%geo%nlcc) ALLOCATE(st%rho_core(gr%m%np), gr%m%np)
 
   end subroutine states_densities_init
@@ -1138,7 +1137,7 @@ contains
   subroutine calc_paramagnetic_current(gr, st, jp)
     type(grid_t),   intent(inout) :: gr
     type(states_t), intent(inout) :: st
-    FLOAT,             intent(out)   :: jp(:,:,:)  ! (NP, NDIM, st%d%nspin)
+    FLOAT,          intent(out)   :: jp(:,:,:)  ! (NP, NDIM, st%d%nspin)
 
     integer :: ik, p, sp, k
     CMPLX, allocatable :: grad(:,:)
@@ -1156,7 +1155,7 @@ contains
     end if
 
     jp = M_ZERO
-    ALLOCATE(grad(NP, NDIM), NP*NDIM)
+    ALLOCATE(grad(NP_PART, NDIM), NP_PART*NDIM)
 
     do ik = 1, st%d%nik, sp
       do p  = st%st_start, st%st_end
@@ -1192,7 +1191,7 @@ contains
     deallocate(grad)
 
 #if defined(HAVE_MPI)
-    ALLOCATE(red(NP, NDIM, st%d%nspin), NP*NDIM*st%d%nspin)
+    ALLOCATE(red(NP_PART, NDIM, st%d%nspin), NP_PART*NDIM*st%d%nspin)
     call MPI_ALLREDUCE(jp(1, 1, 1), red(1, 1, 1), NP*NDIM*st%d%nspin,       &
       MPI_FLOAT, MPI_SUM, st%mpi_grp%comm, ierr)
     jp = red
@@ -1207,7 +1206,7 @@ contains
   subroutine states_calc_physical_current(gr, st, j)
     type(grid_t),     intent(inout) :: gr
     type(states_t),   intent(inout) :: st
-    FLOAT,               intent(out)   :: j(:,:,:)   ! j(NP, NDIM, st%d%nspin)
+    FLOAT,            intent(out)   :: j(:,:,:)   ! j(NP, NDIM, st%d%nspin)
 
     call push_sub('states.states_calc_physical_current')
 

@@ -292,7 +292,7 @@ contains
   subroutine td_write_data(w, gr, st, h, outp, geo, dt_, iter)
     type(td_write_t),    intent(in)    :: w
     type(grid_t),        intent(inout) :: gr
-    type(states_t),      intent(in)    :: st
+    type(states_t),      intent(inout) :: st
     type(hamiltonian_t), intent(in)    :: h
     type(output_t),      intent(in)    :: outp
     type(geometry_t),    intent(in)    :: geo

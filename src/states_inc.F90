@@ -180,7 +180,7 @@ end function X(states_nrm2)
 
 ! ---------------------------------------------------------
 FLOAT function X(states_residue)(m, dim, hf, e, f) result(r)
-  type(mesh_t),   intent(in)  :: m
+  type(mesh_t),      intent(in)  :: m
   integer,           intent(in)  :: dim
   R_TYPE,            intent(in)  :: hf(:,:), f(:,:)
   FLOAT,             intent(in)  :: e
@@ -203,12 +203,12 @@ end function X(states_residue)
 
 ! ---------------------------------------------------------
 subroutine X(states_output) (st, gr, dir, outp)
-  type(states_t),   intent(in)    :: st
+  type(states_t),   intent(inout) :: st
   type(grid_t),     intent(inout) :: gr
-  character(len=*),    intent(in)    :: dir
+  character(len=*), intent(in)    :: dir
   type(output_t),   intent(in)    :: outp
 
-  integer :: ik, ist, idim, is, ierr
+  integer :: ik, ist, idim, is, id, ierr
   character(len=80) :: fname
   FLOAT :: u
   FLOAT, allocatable :: dtmp(:)
@@ -224,6 +224,19 @@ subroutine X(states_output) (st, gr, dir, outp)
     end do
   end if
 
+#ifdef COMPLEX_WFNS
+  if(iand(outp%what, output_current).ne.0) then
+    ! calculate current first
+    call calc_paramagnetic_current(gr, st, st%j)
+    do is = 1, st%d%nspin
+      do id = 1, NDIM
+        write(fname, '(a,i1,a,a)') 'current-', is, '-', index2axis(id)
+        call doutput_function(outp%how, dir, fname, gr%m, gr%sb, st%j(:, id, is), u, ierr)
+      end do
+    end do
+  end if
+#endif
+
   if(iand(outp%what, output_wfs).ne.0) then
     do ist = st%st_start, st%st_end
       if(loct_isinstringlist(ist, outp%wfs_list)) then
@@ -238,9 +251,8 @@ subroutine X(states_output) (st, gr, dir, outp)
     end do
   end if
 
-
   if(iand(outp%what, output_wfs_sqmod).ne.0) then
-    ALLOCATE(dtmp(NP), NP)
+    ALLOCATE(dtmp(NP_PART), NP_PART)
     do ist = 1, st%nst
       if(loct_isinstringlist(ist, outp%wfs_list)) then
         do ik = 1, st%d%nik

@@ -273,7 +273,7 @@ contains
       vout = M_ZERO
       if (st%d%cdft) vin(:, 2:dim, :) = h%axc(:,:,:)
     else
-      ALLOCATE(rhonew(NP, dim, nspin), NP*dim*nspin)
+      ALLOCATE(rhonew(NP_PART, dim, nspin), NP_PART*dim*nspin)
     end if
     evsum_in = states_eigenvalues_sum(st)
 
@@ -595,7 +595,7 @@ contains
       end if
 
       ALLOCATE(lmm(3, gr%geo%natoms), 3*gr%geo%natoms)
-      call states_local_magnetic_moments(m, st, gr%geo, st%rho, scf%lmm_r, lmm)
+      call states_local_magnetic_moments(m, st, gr%geo, st%rho(1:NP,:), scf%lmm_r, lmm)
 
       write(iunit, '(a,a,a,f7.3,a)') 'Local Magnetic Moments (sphere radius [', &
         trim(units_out%length%abbrev),'] = ', scf%lmm_r/units_out%length%factor, '):'

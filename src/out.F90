@@ -43,53 +43,56 @@ module output_m
   implicit none
 
   private
-  public ::                      &
-    output_t,                    &
-    output_init,                 &
-    output_fill_how,             &
-    dinput_function,             &
-    zinput_function,             &
-    doutput_function,            &
-    zoutput_function,            &
-    iopar_open,                  &
-    iopar_close,                 &
-    iopar_read,                  &
+  public ::                       &
+    output_t,                     &
+    output_init,                  &
+    output_fill_how,              &
+    dinput_function,              &
+    zinput_function,              &
+    doutput_function,             &
+    zoutput_function,             &
+    iopar_open,                   &
+    iopar_close,                  &
+    iopar_read,                   &
     iopar_backspace
 
-  integer, parameter, public  :: &
-    output_potential  =    1,    &
-    output_density    =    2,    &
-    output_wfs        =    4,    &
-    output_wfs_sqmod  =    8,    &
-    output_geometry   =   16,    &
-    output_ELF        =   32,    &
-    output_ELF_FS     =   64
+  integer, parameter, public  ::  &
+    output_potential  =     1,    &
+    output_density    =     2,    &
+    output_wfs        =     4,    &
+    output_wfs_sqmod  =     8,    &
+    output_geometry   =    16,    &
+    output_current    =    32,    &
+    output_ELF        =    64,    &
+    output_ELF_FS     =   128
 
-  integer, parameter, private :: &
-    output_axis_x     =     1,   &
-    output_axis_y     =     2,   &
-    output_axis_z     =     4,   &
-    output_plane_x    =     8,   &
-    output_plane_y    =    16,   &
-    output_plane_z    =    32,   &
-    output_dx         =    64,   &
-    output_dx_cdf     =   128,   &
-    output_plain      =   256,   &
-    output_mesh_index =   512,   &
-    output_gnuplot    =  1024,   &
-    output_matlab     =  2048
+  integer, parameter, private ::  &
+    output_axis_x     =     1,    &
+    output_axis_y     =     2,    &
+    output_axis_z     =     4,    &
+    output_plane_x    =     8,    &
+    output_plane_y    =    16,    &
+    output_plane_z    =    32,    &
+    output_dx         =    64,    &
+    output_dx_cdf     =   128,    &
+    output_plain      =   256,    &
+    output_mesh_index =   512,    &
+    output_gnuplot    =  1024,    &
+    output_matlab     =  2048,    &
+    output_meshgrid   =  4096,    &
+    boundary_points   =  8192
 
   ! doutput_kind => real variables; zoutput_kind => complex variables.
-  integer, parameter, private :: &
-    doutput_kind      =    1,    &
+  integer, parameter, private ::  &
+    doutput_kind      =    1,     &
     zoutput_kind      =   -1
 
   ! index to axis mapping
-  character, parameter        :: &
+  character, parameter, public :: &
     index2axis(3) = (/ 'x', 'y', 'z' /)
 
   ! index to label mapping
-  character(len=3), parameter :: &
+  character(len=3), parameter ::  &
     index2label(3) = (/ 're ', 'im ', 'abs' /)
 
   type output_t
@@ -142,13 +145,16 @@ contains
     !% treated within Quantum Mechanics. If point charges were defined
     !% in the PDB file (see <tt>PDBCoordinates</tt>), they will be output
     !% in the file "geometry_classical.xyz".
-    !%Option ELF 32
+    !%Option current 32
+    !% Prints out the paramagnetic current density. The output file is called "current-i-{x,y,z}", 
+    !% where "i" stands for the spin channel and x, y, z indicates the vector component
+    !% of the current.
+    !%Option ELF 64
     !% Prints out the electron localization function, ELF. The output file is called
     !% "elf-i", where i stands for the spin channel.
-    !%Option ELF_FS 64
+    !%Option ELF_FS 128
     !% Prints the electron localization function in Fourier space. The output file is called
     !% "elf_FS-i", where i stands for the spin channel. (EXPERIMENTAL)
-    !%Option
     !%End
     call loct_parse_int(check_inp('Output'), 0, outp%what)
     if(.not.varinfo_valid_option('Output', outp%what, is_flag=.true.)) then
@@ -220,6 +226,15 @@ contains
       !%   >> density = load('static/density-1.x=0.matlab.abs');
       !%   >> mesh(density);
       !%
+      !%Option meshgrid 4096
+      !% Outputs in Matlab mode the internal mesh in a format similar to e.g.
+      !%
+      !%   >> [x,y] = meshgrid(-2:.2:2,-1:.15:1)
+      !%
+      !% The x meshgrid is contained in a file *.meshgrid.x and the y-grid can be found in
+      !% *.meshgrid.y
+      !%Option boundary_points 8192
+      !% This option includes the output of the mesh enlargement. Default is without.
       !%End
       call loct_parse_int(check_inp('OutputHow'), 0, outp%how)
       if(.not.varinfo_valid_option('OutputHow', outp%how, is_flag=.true.)) then

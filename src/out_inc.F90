@@ -379,7 +379,7 @@ subroutine X(output_function_global) (how, dir, fname, m, sb, f, u, ierr, is_tmp
 
   character(len=256) :: filename
   character(len=20)  :: mformat, mformat2, mfmtheader
-  integer            :: iunit, i
+  integer            :: iunit, i, j, np_max
   FLOAT              :: x0
   logical            :: gnuplot_mode = .false.
 
@@ -404,6 +404,10 @@ subroutine X(output_function_global) (how, dir, fname, m, sb, f, u, ierr, is_tmp
     mformat2   = '(i6,5f34.24)'
   end if
 
+  np_max = m%np_global
+  ! should we output boundary points?
+  if(iand(how, boundary_points)  .ne.0) np_max = m%np_part_global
+
   if(iand(how, output_plain)     .ne.0) call plain()
   if(iand(how, output_axis_x)    .ne.0) call out_axis (1, 2, 3) ! x ; y=0,z=0
   if(iand(how, output_axis_y)    .ne.0) call out_axis (2, 1, 3) ! y ; x=0,z=0
@@ -414,21 +418,18 @@ subroutine X(output_function_global) (how, dir, fname, m, sb, f, u, ierr, is_tmp
   if(iand(how, output_mesh_index).ne.0) call out_mesh_index()
   if(iand(how, output_dx)        .ne.0) call dx()
 
-  if (iand(how, output_matlab).ne.0) then
-    if(iand(how, output_plane_x).ne.0) then
-      call out_matlab(1, 2, 3, 1) ! x=0; y; z; re
-      call out_matlab(1, 2, 3, 2) ! x=0; y; z; im
-      call out_matlab(1, 2, 3, 3) ! x=0; y; z; abs
-    end if
-    if(iand(how, output_plane_y).ne.0) then
-      call out_matlab(2, 1, 3, 1) ! y=0; x; z; re
-      call out_matlab(2, 1, 3, 2) ! y=0; x; z; im
-      call out_matlab(2, 1, 3, 3) ! y=0; x; z; abs
-    end if
-    if(iand(how, output_plane_z).ne.0) then
-      call out_matlab(3, 1, 2, 1) ! z=0; x; y; re
-      call out_matlab(3, 1, 2, 2) ! z=0; x; y; im
-      call out_matlab(3, 1, 2, 3) ! z=0; x; y; abs
+  if(iand(how, output_matlab).ne.0) then
+    do j = 1, 3 ! re, im, abs
+      if(iand(how, output_plane_x).ne.0) call out_matlab(how, 1, 2, 3, j) ! x=0; y; z; 
+      if(iand(how, output_plane_y).ne.0) call out_matlab(how, 2, 1, 3, j) ! y=0; x; z;
+      if(iand(how, output_plane_z).ne.0) call out_matlab(how, 3, 1, 2, j) ! z=0; x; y;
+    end do
+    if(iand(how, output_meshgrid).ne.0) then
+      do j = 4, 5 ! meshgrid
+        if(iand(how, output_plane_x).ne.0) call out_matlab(how, 1, 2, 3, j) ! x=0; y; z; 
+        if(iand(how, output_plane_y).ne.0) call out_matlab(how, 2, 1, 3, j) ! y=0; x; z;
+        if(iand(how, output_plane_z).ne.0) call out_matlab(how, 3, 1, 2, j) ! z=0; x; y;
+      end do
     end if
   end if
 
@@ -439,6 +440,7 @@ subroutine X(output_function_global) (how, dir, fname, m, sb, f, u, ierr, is_tmp
   call pop_sub()
 
 contains
+
 
   ! ---------------------------------------------------------
   subroutine plain()
@@ -460,7 +462,7 @@ contains
     iunit = io_open(filename, action='write', is_tmp=is_tmp)
 
     write(iunit, mfmtheader, iostat=ierr) '#', index2axis(d1), 'Re', 'Im'
-    do i = 1, m%np_global
+    do i = 1, np_max
       if(m%Lxyz(i, d2)==0.and.m%Lxyz(i, d3)==0) then     
         write(iunit, mformat, iostat=ierr) m%x_global(i, d1), R_REAL(f(i))/u, R_AIMAG(f(i))/u
       end if
@@ -482,7 +484,7 @@ contains
     x0 = m%x_global(1, d2)
     if(gnuplot_mode) write(iunit, mformat)
 
-    do i = 1, m%np_global                      
+    do i = 1, np_max
       if(gnuplot_mode.and.x0 /= m%x_global(i, d2)) then
         write(iunit, mformat, iostat=ierr)  ! write extra lines for gnuplot grid mode
         x0 = m%x_global(i, d2)
@@ -500,42 +502,67 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine out_matlab(d1, d2, d3, out_what)
-    integer, intent(in) :: d1, d2, d3, out_what
+  subroutine out_matlab(how, d1, d2, d3, out_what)
+    integer, intent(in) :: how, d1, d2, d3, out_what
 
     integer :: ix, iy, record_length
+    integer :: min_d2, min_d3, max_d2, max_d3
     FLOAT, allocatable :: out_vec(:)
     
-    ALLOCATE(out_vec(m%nr(1, d3):m%nr(2, d3)), m%nr(2, d3)-m%nr(1, d3)+1)
-
-    filename = trim(dir)//'/'//trim(fname)//"."//index2axis(d1)//"=0.matlab."//trim(index2label(out_what))
-    record_length = (m%nr(2, d3) - m%nr(1, d3) + 1)*23  ! 23 because of F23.14 below
-    iunit = io_open(filename, action='write', is_tmp=is_tmp, recl=record_length)
+    min_d2 = m%nr(1, d2) + m%enlarge(d2)
+    max_d2 = m%nr(2, d2) - m%enlarge(d2)
+    min_d3 = m%nr(1, d3) + m%enlarge(d3)
+    max_d3 = m%nr(2, d3) - m%enlarge(d3)    
     
-    do ix = m%nr(1, d2), m%nr(2, d2)
-      do iy = m%nr(1, d3), m%nr(2, d3)
+    if(iand(how, boundary_points).ne.0) then
+      min_d2 = m%nr(1, d2); max_d2 = m%nr(2, d2); 
+      min_d3 = m%nr(1, d3); max_d3 = m%nr(2, d3); 
+    end if
 
-        select case(d1)
-        case(1); i = m%Lxyz_inv( 0, ix, iy) ! plane_x
-        case(2); i = m%Lxyz_inv(ix,  0, iy) ! plane_y
-        case(3); i = m%Lxyz_inv(ix, iy,  0) ! plane_z
-        end select
+    select case(out_what)      
+    case(1:3);  filename = &
+      trim(dir)//'/'//trim(fname)//"."//index2axis(d1)//"=0.matlab."//trim(index2label(out_what))
+    case(4);    filename = &
+      trim(dir)//'/meshgrid.'//index2axis(d1)//"=0."//trim(index2axis(d3))      ! meshgrid d3
+    case(5);    filename = &
+      trim(dir)//'/meshgrid.'//index2axis(d1)//"=0."//trim(index2axis(d2))      ! meshgrid d2
+    end select
+
+    record_length = (max_d3 - min_d3 + 1)*23  ! 23 because of F23.14 below
+    iunit = io_open(filename, action='write', is_tmp=is_tmp, recl=record_length)
+
+
+    ALLOCATE(out_vec(min_d3:max_d3), max_d3-min_d3 + 1)
+    
+    do ix = min_d2, max_d2
+
+      out_vec = M_ZERO
+
+      do iy = min_d3, max_d3
         
-        if (i <= 0 .or. i > m%np_global) then
-          out_vec(iy) = M_ZERO
-          cycle
-        end if
+        select case(d1)
+        case(1); i = m%Lxyz_inv( 0, ix, iy)    ! plane_x
+        case(2); i = m%Lxyz_inv(ix,  0, iy)    ! plane_y
+        case(3); i = m%Lxyz_inv(ix, iy,  0)    ! plane_z
+        end select
 
+        select case(out_what)
+        case(4); out_vec(iy) = m%x(i, d2)      ! meshgrid d2 (this is swapped wrt. 
+        case(5); out_vec(iy) = m%x(i, d3)      ! meshgrid d3  to the filenames)
+        end select
+
+        if (i < 1 .or. i > np_max) cycle
+        
         select case(out_what)
         case(1); out_vec(iy) = R_REAL(f(i))/u  ! real part
         case(2); out_vec(iy) = R_AIMAG(f(i))/u ! imaginary part
         case(3); out_vec(iy) = R_ABS(f(i))/u   ! absolute value
         end select
-
+        
       end do
 
       ! now we write to the disk
-      write(iunit,'(32767f23.14)') (out_vec(iy), iy = m%nr(1, d3), m%nr(2, d3))
+      write(iunit,'(32767f23.14)') (out_vec(iy), iy = min_d3, max_d3)
 
     end do
 
@@ -554,7 +581,7 @@ contains
     x0 = m%x_global(1,1)
     if(ierr == 0.and.gnuplot_mode) write(iunit, mformat, iostat=ierr)
 
-    do i= 1, m%np_global
+    do i= 1, np_max
        if (ierr == 0.and.gnuplot_mode.and.x0 /= m%x_global(i, 1)) then
           write(iunit, mformat, iostat=ierr)      ! write extra lines for gnuplot grid mode
           x0 = m%x_global(i, 1)
