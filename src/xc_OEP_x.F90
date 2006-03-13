@@ -172,7 +172,7 @@ subroutine X(oep_x) (gr, st, is, oep, ex)
           if(ist.ne.jst) r = M_TWO
 
           ex = ex - M_HALF * r * oep%sfact * oep%socc*st%occ(ist, is) * oep%socc*st%occ(jst, is) * &
-            sum(R_REAL(wf_ist(1:NP) * F_ij(1:NP) * R_CONJ(st%X(psi)(1:NP, 1, jst, is))) * gr%m%vol_pp(1:NP))
+            R_REAL(X(mf_dotp)(gr%m, st%X(psi)(1:NP, 1, jst, is), wf_ist(:)*F_ij(:)))
         end do
 
         if(st%node(ist) == st%mpi_grp%rank) then

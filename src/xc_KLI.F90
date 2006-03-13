@@ -74,7 +74,7 @@ subroutine X(xc_KLI_solve) (m, st, is, oep)
   ALLOCATE(v_bar_S(st%nst), st%nst)
   do i = st%st_start, st%st_end
     if(st%occ(i, is) .gt. small) then
-      v_bar_S(i) = sum(R_ABS(st%X(psi)(1:m%np, 1, i, is))**2 * oep%vxc(1:m%np) * m%vol_pp(1:m%np))
+      v_bar_S(i) = dmf_dotp(m, (R_ABS(st%X(psi)(1:m%np, 1, i, is)))**2 , oep%vxc)
     end if
   end do
 
@@ -129,7 +129,7 @@ subroutine X(xc_KLI_solve) (m, st, is, oep)
 
       if(mpi_grp_is_root(st%mpi_grp)) then
         d(1:m%np) = (R_REAL(phi1(1:m%np, 1))**2 + &
-          R_AIMAG(phi1(1:m%np, 1))**2) / rho_sigma(1:m%np) * m%vol_pp(1:m%np)
+          R_AIMAG(phi1(1:m%np, 1))**2) / rho_sigma(1:m%np)
       end if
 
       do j = i, n
@@ -157,7 +157,7 @@ subroutine X(xc_KLI_solve) (m, st, is, oep)
 #endif
 
         if(mpi_grp_is_root(st%mpi_grp)) then
-          Ma(i, j) = - sum(d(1:m%np) * (R_REAL(phi2(1:m%np, 1))**2 + R_AIMAG(phi2(1:m%np, 1))**2) )
+          Ma(i, j) = - dmf_dotp(m, d, (R_REAL(phi2(1:m%np, 1))**2 + R_AIMAG(phi2(1:m%np, 1))**2) )
           Ma(j,i) = Ma(i,j)
         end if
       end do

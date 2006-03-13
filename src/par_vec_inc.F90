@@ -238,6 +238,7 @@ subroutine X(vec_ghost_update)(vp, v_local)
   integer, allocatable :: sdispls(:), rdispls(:) ! Displacements for
                                                  ! MPI_Alltoallv.
   R_TYPE,  allocatable :: ghost_send(:)          ! Send buffer.
+  integer, allocatable :: recvcounts(:)
 
   call profiling_in(C_PROFILING_GHOST_UPDATE)
 
@@ -295,14 +296,17 @@ subroutine X(vec_ghost_update)(vp, v_local)
   ! implementation: A performant implementation might already work this
   ! way. So only touch this code if profiling with many processors
   ! shows this spot is a serious bottleneck.
+
+  ALLOCATE(recvcounts(1:vp%p), vp%p)
   call MPI_Debug_IN(vp%comm, C_MPI_ALLTOALLV)
-  call MPI_Alltoallv(ghost_send, vp%np_ghost_neigh(:, vp%partno), sdispls, &
-                     R_MPITYPE, v_local(vp%np_local(vp%partno)+1:),        &
-                     vp%np_ghost_neigh(vp%partno, :), rdispls, R_MPITYPE,  &
+  recvcounts(1:vp%p) = vp%np_ghost_neigh(vp%partno, 1:vp%p)
+  call MPI_Alltoallv(ghost_send, vp%np_ghost_neigh(1, vp%partno), sdispls(1), &
+                     R_MPITYPE, v_local(vp%np_local(vp%partno)+1),        &
+                     recvcounts(1), rdispls(1), R_MPITYPE,  &
                      vp%comm, ierr)
   call MPI_Debug_OUT(vp%comm, C_MPI_ALLTOALLV)
 
-  deallocate(sdispls, rdispls)
+  deallocate(recvcounts, sdispls, rdispls)
   deallocate(ghost_send)
 
   call pop_sub()
