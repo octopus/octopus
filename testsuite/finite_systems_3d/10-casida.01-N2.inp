@@ -1,0 +1,47 @@
+SystemName = "N2"
+%CalculationMode
+gs | unocc | casida
+"ground_state_" |  "unocc_states_" | "lrtddft_"
+1 | 2 | 3
+%
+FromScratch = yes
+
+bond_length = 2.0744
+
+%Coordinates
+"N" |  -bond_length/2 |  0.0 |  0.0 | no
+"N" |   bond_length/2 |  0.0 |  0.0 | no
+%
+
+%Species
+"N" | 14.0067000 | tm2 | 7 | 2 | 0 
+%
+
+BoxShape = sphere
+
+Radius = 12.0
+Spacing = 0.36
+
+SpinComponents = unpolarized
+
+XFunctional = lda_x
+CFunctional = lda_c_vwn
+
+MaximumIter = 200
+ConvRelDens = 1e-5
+
+LCAOStart = yes
+
+EigenSolver = cg_new
+EigenSolverInitTolerance = 1e-2
+EigenSolverFinalTolerance = 1e-5
+EigenSolverFinalToleranceIteration = 6
+EigenSolverMaxIter = 20
+unocc_states_EigenSolverMaxIter = 1000
+
+TypeOfMixing = broyden
+
+NumberUnoccStates = 9
+
+PoissonSolver = fft_corrected
+

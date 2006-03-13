@@ -1,0 +1,51 @@
+# $Id: oct-run_regression_test.pl,v 1.15 2006/03/13 09:56:40 acastro Exp      :
+
+Test     : LR-TDDFT, Nitrogen molecule
+Author   : Alberto
+Date     : 13.03.06
+Arch     : Linux g38 2.6.14-desktop-2 #1 SMP PREEMPT Sun Nov 20 20:45:48 CET 2005 i686 GNU/Linux
+Release  : 2.0.1devel
+Programs : octopus
+Runtime  : long-run
+Enabled  : Yes
+
+# Calculation of the excitations of the Nitrogen molecule within the
+# linear-response TDDFT formalism -- linear response in the frequency
+# domain via the so-called "Casida equations".
+#
+# The calculation attempt to reproduce the numbers given in:
+# [T. Grabo, M. Petersilka and E.K.U. Gross, J. Mol. Structure THEOCHEM
+#  501-502, 353 (2000)]
+# The ground-state KS eigenvalues coincide fairly well with the
+# given in Table I (column labeled "xcLDA"), whereas the excitations
+# coincide also (to within some error) with the numbers given in
+# Table II.
+# (Note that since the calculation is spin-restricted, it misses all
+# the spin-triplet excitations. So the first excitations reported
+# in the lrtddft_linear/casida file correspond with the [a^1 \Pi_g],
+# [a'^1\Sigma_u^-] and [w^1\Delta_u] states.)
+#
+# The differences may be due to the pseudopotential, or to differences
+# in the Casida-matrix truncation.
+# Also note that, to speed-up the calculation, it is not fully
+# converged, specially with respect to the size of the simulation box.
+#
+# The numbers given in this paper are also very similar to the ones
+# presented in the "seminal" work:
+# [C. Jamorski, M. E. Casida and D. R. Salahub, J. Chem. Phys. 104,
+#  5134 (1996)].
+# The calculations reported in this paper, however, are affected by
+# the basis-set truncation error, and because of this are difficult
+# to compare.
+
+Input: 10-casida.01-N2.inp
+
+RUN
+
+Match ; TotalEnergy    ; grep -A 6 '^Energy:' ground_state_static/info ; \s*Total\s*=\s*-19.9297\d*
+Match ; HOMO           ; grep -A 6  'Eigenvalues \[' ground_state_static/info | tail -1 ; \s*-0.3845\d*\s*2.0000\d*
+Match ; LUMO           ; grep -A 7  'Eigenvalues \[' unocc_states_static/eigenvalues | tail -1 ; \s*-0.0851\d*
+Match ; LUMO+8         ; grep -A 15 'Eigenvalues \[' unocc_states_static/eigenvalues | tail -1 ; \s*0.1531\d*
+Match ; 1st excitation ; head -n 2 lrtddft_linear/casida | tail -1 ; \s*3.3739\d*
+Match ; 2nd excitation ; head -n 4 lrtddft_linear/casida | tail -1 ; \s*3.5537\d* 
+Match ; 3rd excitation ; head -n 5 lrtddft_linear/casida | tail -1 ; \s*3.7538\d* 
