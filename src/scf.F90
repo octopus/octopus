@@ -273,7 +273,7 @@ contains
       vout = M_ZERO
       if (st%d%cdft) vin(:, 2:dim, :) = h%axc(:,:,:)
     else
-      ALLOCATE(rhonew(NP_PART, dim, nspin), NP_PART*dim*nspin)
+      ALLOCATE(rhonew(NP, dim, nspin), NP*dim*nspin)
     end if
     evsum_in = states_eigenvalues_sum(st)
 
@@ -338,8 +338,8 @@ contains
       case (MIXDENS)
         ! mix input and output densities and compute new potential
         call mixing(scf%smix, gr%m, iter, dim, nspin, rhoin, rhoout, rhonew)
-        st%rho = rhonew(:, 1, :)
-        if (h%d%cdft) st%j = rhonew(:, 2:dim, :)
+        st%rho(1:NP,:) = rhonew(:, 1, :)
+        if (h%d%cdft) st%j(1:NP,:,:) = rhonew(:, 2:dim, :)
         call X(v_ks_calc) (gr, ks, h, st)
       case (MIXPOT)
         ! mix input and output potentials
