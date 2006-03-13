@@ -40,11 +40,12 @@ sub create_template {
   $author = `whoami`;
   chomp($author);
   $author =~ s/^(\w)(.*)/\u$1$2/;
+  $cvs_id = qw($Id$);
 
   open(TEMPLATE, ">".$opt_c );
 
   print TEMPLATE <<EndOfTemplate;
-# \$Id$
+# $cvs_id
 
 Test     :
 Author   : $author
@@ -56,8 +57,6 @@ Runtime  : short-run
 Enabled  : Yes
 
 Input: 01-template.01-ground_state.inp
-
-RUN
 
 # add your own matches
 #

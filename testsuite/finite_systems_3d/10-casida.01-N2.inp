@@ -1,9 +1,15 @@
+# $Id$
+
+DebugLevel = 0
+
 SystemName = "N2"
+
 %CalculationMode
 gs | unocc | casida
 "ground_state_" |  "unocc_states_" | "lrtddft_"
 1 | 2 | 3
 %
+
 FromScratch = yes
 
 bond_length = 2.0744

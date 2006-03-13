@@ -1,4 +1,4 @@
-# $Id: oct-run_regression_test.pl,v 1.15 2006/03/13 09:56:40 acastro Exp      :
+# $Id$
 
 Test     : LR-TDDFT, Nitrogen molecule
 Author   : Alberto
@@ -39,8 +39,6 @@ Enabled  : Yes
 # to compare.
 
 Input: 10-casida.01-N2.inp
-
-RUN
 
 Match ; TotalEnergy    ; grep -A 6 '^Energy:' ground_state_static/info ; \s*Total\s*=\s*-19.9297\d*
 Match ; HOMO           ; grep -A 6  'Eigenvalues \[' ground_state_static/info | tail -1 ; \s*-0.3845\d*\s*2.0000\d*
