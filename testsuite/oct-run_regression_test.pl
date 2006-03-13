@@ -187,7 +187,7 @@ while ($_ = <TESTSUITE>) {
 	 print "\nStarting test run ...\n";
 
 	 # serial or MPI run?
-	 if ( $octopus_exe =~ /mpi/) {
+	 if ( $octopus_exe =~ /mpi$/) {
 	   if( -x "$mpirun") {
 	     print "Executing: cd $workdir; $mpirun -np $np $octopus_exe &> out \n";
 	     system("cd $workdir; $mpirun -np $np $octopus_exe &> out");
