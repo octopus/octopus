@@ -37,7 +37,9 @@ module poisson_corrections_m
     der_pointer,    &
     mesh_pointer,   &
     build_phi,      &
+    kill_phi,       &
     build_aux,      &
+    kill_aux,       &
     correct_rho,    &
     get_multipoles, &
     op, opt, dotp
@@ -170,6 +172,12 @@ contains
 
 
   ! ---------------------------------------------------------
+  subroutine kill_phi
+    if(allocated(phi)) deallocate(phi)
+  end subroutine kill_phi
+
+
+  ! ---------------------------------------------------------
   subroutine build_aux(m)
     type(mesh_t), intent(in) :: m
 
@@ -199,6 +207,12 @@ contains
     end do
 
   end subroutine build_aux
+
+
+  ! ---------------------------------------------------------
+  subroutine kill_aux
+   if(allocated(aux)) deallocate(aux)
+  end subroutine kill_aux
 
 
   ! ---------------------------------------------------------

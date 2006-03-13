@@ -211,9 +211,17 @@ contains
     case(FFT_SPH,FFT_CYL,FFT_PLA,FFT_NOCUT)
       call dcf_free(fft_cf)
       deallocate(fft_coulb_FS); nullify(fft_coulb_FS)
+    case(FFT_CORRECTED)
+      call dcf_free(fft_cf)
+      deallocate(fft_coulb_FS); nullify(fft_coulb_FS)
+      call kill_phi()
+      call kill_aux()
+
 #endif
     case(CG_CORRECTED)
       call poisson_cg2_end()
+      call kill_phi()
+      call kill_aux()
     case(MULTIGRILLA)
       call poisson_multigrid_end()
     end select
