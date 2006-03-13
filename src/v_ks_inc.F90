@@ -107,7 +107,7 @@ contains
         rho(1:NP, is) = st%rho(1:NP, is) + st%rho_core(1:NP)/st%d%spin_channels
       end do
     else
-      rho = st%rho
+      rho(1:NP, :) = st%rho(1:NP, :)
     end if
 
     ! Amaldi correction

@@ -252,6 +252,7 @@ contains
     end if
 
     nspin = st%d%nspin
+
     dim = 1
     if (h%d%cdft) dim = 1 + NDIM
 
@@ -292,8 +293,8 @@ contains
       call states_fermi(st, gr%m)
 
       ! compute output density, potential (if needed) and eigenvalues sum
-      call X(states_calc_dens)(st, NP, st%rho)
-      rhoout(:, 1, :) = st%rho
+      call X(states_calc_dens)(st, NP, st%rho(1:NP, :))
+      rhoout(:, 1, :) = st%rho(1:NP, :)
       if (h%d%cdft) then
         call states_calc_physical_current(gr, st, st%j)
         rhoout(:, 2:dim, :) = st%j
@@ -374,7 +375,7 @@ contains
       end if
 
       ! save information for the next iteration
-      rhoin(:, 1, :) = st%rho
+      rhoin(:, 1, :) = st%rho(1:NP, :)
       if (h%d%cdft) rhoin(:, 2:dim, :) = st%j
       if (scf%what2mix == MIXPOT) then
         vin(:, 1, :) = h%vhxc
