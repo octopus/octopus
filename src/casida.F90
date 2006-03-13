@@ -697,6 +697,9 @@ contains
     call push_sub('casida.casida_write')
 
     casp%type      = cas%type
+
+    ALLOCATE(casp%n_occ(size(cas%n_occ)), size(cas%n_occ))
+    ALLOCATE(casp%n_unocc(size(cas%n_unocc)), size(cas%n_unocc))
     casp%n_occ     = cas%n_occ
     casp%n_unocc   = cas%n_unocc
     casp%wfn_list  = cas%wfn_list
