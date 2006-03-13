@@ -67,11 +67,8 @@ RUN
 EndOfTemplate
 
   close(TEMPLATE);
-
   print "Template written to: $opt_c \n";
-
   exit 0;
-
 }
 
 if (not @ARGV) { usage; }
@@ -114,21 +111,28 @@ chomp($mpirun);
 # default number of processors for MPI runs is 2
 $np = 2;
 
-
 if (!$opt_m) {
   system ("rm -rf $workdir");
   mkdir $workdir;
 }
 
-open(TESTSUITE, "<".$opt_f ) or die "cannot open testsuite file \n";
+# create script for cleanups in the current workdir
+$mscript = "$workdir/clean.sh";
+open(SCRIPT, ">$mscript") or die "could not create script file\n";
+print SCRIPT "#\!/bin/bash\n\n";
+print SCRIPT "rm -rf tmp static *_tmp *_static out.oct out ds* td.* \n";
+close(SCRIPT);
+chmod 0755, $mscript;
 
+# testsuite
+open(TESTSUITE, "<".$opt_f ) or die "cannot open testsuite file\n";
 
 while ($_ = <TESTSUITE>) {
 
  # skip comments
  next if /^#/;
 
- if ( $_ =~ /Test\s*:\s*(.*)\s*$/) {
+ if ( $_ =~ /^Test\s*:\s*(.*)\s*$/) {
   $test{"name"} = $1;
   if(!$opt_i) {
     print "\033[34m ***** $test{\"name\"} ***** \033[0m \n\n";
@@ -139,7 +143,7 @@ while ($_ = <TESTSUITE>) {
  }
 
 
- if ( $_ =~ /Programs\s*:\s*(.*)\s*$/) {
+ if ( $_ =~ /^Programs\s*:\s*(.*)\s*$/) {
   $valid=1;
   foreach my $program (split(/;/,$1)) {
     $program =~ s/^\s*//;
@@ -174,7 +178,8 @@ while ($_ = <TESTSUITE>) {
    }
 
    if ( $_ =~ /^Input\s*:\s*(.*)\s*$/) {
-     $input_file = dirname($opt_f) . "/" . $1;
+     $input_base = $1;
+     $input_file = dirname($opt_f) . "/" . $input_base;
      if( -f $input_file ) {
        print "\n\nUsing input file : $input_file \n";
        system("cp $input_file $workdir/inp");
@@ -206,7 +211,21 @@ while ($_ = <TESTSUITE>) {
        }
        $test{"run"} = 1;
      }
+     # copy all files of this run to archive directory with the name of the
+     # current input file
+     mkdir "$workdir/$input_base";
+     @wfiles = `ls -d $workdir/* | grep -v inp`;
+     $workfiles = join("",@wfiles);
+     $workfiles =~ s/\n/ /g;
+     system("cp -a $workfiles $workdir/inp $workdir/$input_base");
 
+     # file for shell script with matches
+     $mscript = "$workdir/$input_base/matches.sh";
+     open(SCRIPT, ">$mscript") or die "could not create script file\n";
+     # write skeleton for script
+     print SCRIPT "#\!/bin/bash\n\n";
+     close(SCRIPT);
+     chmod 0755, $mscript;
    }
 
    if ( $_ =~ /^Match/ && !$opt_n) {
@@ -226,9 +245,18 @@ while ($_ = <TESTSUITE>) {
      $regexp =~ s/\s*$//;
      $lineout = `cd $workdir; $pre_command`;
 
+     # append the command and the regexp also to the shell script matches.sh in the
+     # current archive directory
+     open(SCRIPT, ">>$mscript");
+     print SCRIPT "echo ", "="x60, "[ $name - pre command ] \n";
+     print SCRIPT "$pre_command\n";
+     print SCRIPT "echo ", "-"x60, "[ $name - regular expression ] \n";
+     print SCRIPT "echo $regexp\n";
+     print SCRIPT "echo;echo\n";
+     close(SCRIPT);
 
      if ( $lineout =~ /$regexp/ ) {
-	 print "$name: \t [ \033[32m  OK  \033[0m ] \n"; 
+	 print "$name: \t [ \033[32m  OK  \033[0m ] \n";
          $test_succeded = 1;
      } else {
 	 print "$name: \t [ \033[31m FAIL \033[0m ] \n";
@@ -240,7 +268,6 @@ while ($_ = <TESTSUITE>) {
    if ( $_ =~ /^RUN/) { print " skipping test\n"; }
  }
 }
-
 
 if (!$opt_i) { print "\n\n\n"; }
 if ($opt_l && $valid)  { system ("cp $workdir/out out.log"); }
