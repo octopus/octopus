@@ -402,9 +402,10 @@ contains
       end if
 
       if(.not.h%ip_app) then
+        call doutput_function(outp%how, dir, 'vh', m, sb, h%vhartree, u, err)
         do is = 1, min(h%d%ispin, 2)
-          write(fname, '(a,i1)') 'vhxc-', is
-          call doutput_function(outp%how, dir, fname, m, sb, h%Vhxc(:, is), u, err)
+          write(fname, '(a,i1)') 'vxc-', is
+          call doutput_function(outp%how, dir, fname, m, sb, h%vhxc(:, is) - h%vhartree(:), u, err)
         end do
       end if
     end if
