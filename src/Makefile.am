@@ -52,7 +52,9 @@ noinst_HEADERS = \
 core_LIBS = @LIBS_LAPACK@ @LIBS_BLAS@ ../liboct/liboct.a ../liboct_parser/liboct_parser.a \
   ../libxc/libxc.a @GSL_LIBS@ @FCEXTRALIBS@
 
-external_LIBS = ../external_libs/expokit/libexpokit.a
+external_LIBS = ../external_libs/expokit/libexpokit.a \
+  ../external_libs/qshep/libqshep.a
+
 if COMPILE_METIS
   external_LIBS += ../external_libs/metis-4.0/libmetis.a
 endif
