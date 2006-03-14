@@ -59,7 +59,7 @@ contains
     logical :: dynamic_pol, complex_response
 
 
-    call push_sub('static_pol_lr.static_pol_lr_run')
+    call push_sub('em_resp.static_pol_lr_run')
     
     gr => sys%gr
 
@@ -93,10 +93,10 @@ contains
       ! allocate wfs
       allocate(sys%st%zpsi(gr%m%np_part, sys%st%d%dim, sys%st%nst, sys%st%d%nik))
       ! load wave-functions
-      call zrestart_read(trim(tmpdir)//'restart_gs', sys%st, gr%m, ierr)
+      call zrestart_read(trim(tmpdir)//'restart_gs', sys%st, sys%gr, ierr)
     else
       allocate(sys%st%X(psi)(gr%m%np_part, sys%st%d%dim, sys%st%nst, sys%st%d%nik))
-      call X(restart_read) (trim(tmpdir)//'restart_gs', sys%st, gr%m, ierr)
+      call X(restart_read) (trim(tmpdir)//'restart_gs', sys%st, sys%gr, ierr)
     endif
 
     if(ierr.ne.0) then
@@ -272,7 +272,7 @@ contains
     np  = sys%gr%m%np
     dim = sys%gr%sb%dim
 
-    call push_sub('static_pol_lr.static')
+    call push_sub('em_resp.static')
 
     message(1) = "Info:  Calculating static properties"
     call write_info(1)
