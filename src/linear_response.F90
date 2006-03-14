@@ -76,7 +76,7 @@ contains
   integer function dlr_alloc_psi(st, m, lr) result(r)
     type(states_t), intent(in)  :: st
     type(mesh_t),   intent(in)  :: m
-    type(lr_t),     intent(inout) :: lr
+    type(lr_t),     intent(out) :: lr
 
     r =  1
     if(associated(lr%ddl_psi)) return ! do nothing
@@ -100,7 +100,7 @@ contains
   integer function zlr_alloc_psi(st, m, lr) result(r)
     type(states_t), intent(in)  :: st
     type(mesh_t),   intent(in)  :: m
-    type(lr_t),     intent(inout) :: lr
+    type(lr_t),     intent(out) :: lr
 
     r =  1
     if(associated(lr%zdl_psi)) return ! do nothing
@@ -173,29 +173,6 @@ contains
     call pop_sub()
   end subroutine lr_build_fxc
 
-
-  ! ---------------------------------------------------------
-  ! orthogonalizes response of \alpha KS orbital to all occupied
-  ! \alpha KS orbitals
-  ! ---------------------------------------------------------
-  subroutine lr_orth_response(m, st, lr)
-    type(mesh_t),   intent(in)    :: m
-    type(states_t), intent(in)    :: st
-    type(lr_t),     intent(inout) :: lr
-
-    integer :: ist, ik
-    call push_sub('linear_response.lr_orth_response')
-
-    do ik = 1, st%d%nspin
-      do ist = 1, st%nst
-        if(st%occ(ist, ik) > M_ZERO) then
-          call X(lr_orth_vector) (m, st, lr%X(dl_psi)(:,:, ist, ik), ik)
-        end if
-      end do
-    end do
-
-    call pop_sub()
-  end subroutine lr_orth_response
 
 
 #include "undef.F90"

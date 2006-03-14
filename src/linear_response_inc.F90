@@ -125,7 +125,7 @@ subroutine X(lr_solve_HXeY) (lr, h, gr, d, ik, x, y, omega)
   R_TYPE,                 intent(in)    :: y(:,:)   ! y(NP, d%dim)
   R_TYPE, optional,       intent(in)    :: omega
 
-  R_TYPE, allocatable :: r(:,:), p(:,:), Hp(:,:)
+  R_TYPE, allocatable :: r(:,:), p(:,:), conj(:,:), Hp(:,:)
   R_TYPE  :: alpha, beta, gamma
   integer :: iter
   logical :: conv_last, conv
@@ -134,20 +134,24 @@ subroutine X(lr_solve_HXeY) (lr, h, gr, d, ik, x, y, omega)
 
   ALLOCATE( r(NP, d%dim),      NP     *d%dim)
   ALLOCATE( p(NP_PART, d%dim), NP_PART*d%dim)
+  ALLOCATE( conj(NP_PART, d%dim), NP_PART*d%dim)
   ALLOCATE(Hp(NP, d%dim),      NP     *d%dim)
 
   ! Initial residue
   call X(Hpsi)(h, gr, x, Hp, ik)
-  r(:,:) = y(:,:) - Hp(:,:)
-  if(present(omega)) r(:,:) = r(:,:) - omega*x(:,:)
+  r(1:NP,1:d%dim) = y(1:NP,1:d%dim) - Hp(1:NP,1:d%dim)
+  if(present(omega)) r(1:NP,1:d%dim) = r(1:NP,1:d%dim) - omega*x(1:NP,1:d%dim)
 
   ! Initial search direction
-  p = R_TOTYPE(M_ZERO)
-  p(1:NP,:) = r(1:NP,:)
+  p(1:NP,1:d%dim) = r(1:NP,1:d%dim)
+  p((NP+1):NP_PART,1:d%dim)=M_ZERO
 
   conv_last = .false.
   do iter = 1, lr%max_iter
-    gamma = X(states_dotp) (gr%m, d%dim, r, r)
+    conj(1:NP,1:d%dim) = R_CONJ(r(1:NP,1:d%dim))
+    gamma = X(states_dotp) (gr%m, d%dim, conj, r)
+
+!    print*, "GAMMA", gamma
 
     ! we require more precision here than for the density
     conv = (sqrt(abs(gamma)) < lr%conv_abs_dens)
@@ -155,19 +159,49 @@ subroutine X(lr_solve_HXeY) (lr, h, gr, d, ik, x, y, omega)
     conv_last = conv
 
     call X(Hpsi)(h, gr, p, Hp, ik)
-    if(present(omega)) Hp(:,:) = Hp(:,:) + omega*p(:,:)
+    if(present(omega)) Hp(1:NP,1:d%dim) = Hp(1:NP,1:d%dim) + omega*p(1:NP,1:d%dim)
 
-    alpha = gamma/ X(states_dotp) (gr%m, d%dim, p, Hp)
-    r(:,:) = r(:,:) - alpha*Hp(:,:)
-    x(:,:) = x(:,:) + alpha* p(:,:)
+!    print*,"NORM", sum(R_CONJ(Hp(1:NP,1:d%dim))*Hp(1:NP,1:d%dim))
 
-    beta = X(states_dotp) (gr%m, d%dim, r, r)/gamma
-    p(1:NP,:) = r(1:NP,:) + beta*p(1:NP,:)
+    conj(1:NP_PART,1:d%dim)=R_CONJ(p(1:NP_PART,1:d%dim))
+    alpha = gamma/ X(states_dotp) (gr%m, d%dim, conj, Hp)
+
+    r(1:NP,1:d%dim) = r(1:NP,1:d%dim) - alpha*Hp(1:NP,1:d%dim)
+    x(1:NP_PART,1:d%dim) = x(1:NP_PART,1:d%dim) + alpha* p(1:NP_PART,1:d%dim)
+
+    conj(1:NP,1:d%dim)=R_CONJ(r(1:NP,1:d%dim))
+    beta = X(states_dotp) (gr%m, d%dim, conj, r)/gamma
+    p(1:NP,1:d%dim) = r(1:NP,1:d%dim) + beta*p(1:NP,1:d%dim)
+
   end do
 
   lr%iter     = iter
   lr%abs_dens = gamma
-  deallocate(r, p, Hp)
+  deallocate(r, p, Hp, conj)
 
   call pop_sub()
 end subroutine X(lr_solve_HXeY)
+
+! ---------------------------------------------------------
+! orthogonalizes response of \alpha KS orbital to all occupied
+! \alpha KS orbitals
+! ---------------------------------------------------------
+subroutine X(lr_orth_response)(m, st, lr)
+  type(mesh_t),   intent(in)    :: m
+  type(states_t), intent(in)    :: st
+  type(lr_t),     intent(inout) :: lr
+  
+  integer :: ist, ik
+  call push_sub('linear_response_inc.Xlr_orth_response')
+  
+  do ik = 1, st%d%nspin
+    do ist = 1, st%nst
+      if(st%occ(ist, ik) > M_ZERO) then
+        call X(lr_orth_vector) (m, st, lr%X(dl_psi)(:,:, ist, ik), ik)
+      end if
+    end do
+  end do
+  
+  call pop_sub()
+end subroutine X(lr_orth_response)
+
