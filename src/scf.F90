@@ -239,6 +239,7 @@ contains
     FLOAT, allocatable :: rhoout(:,:,:), rhoin(:,:,:), rhonew(:,:,:)
     FLOAT, allocatable :: vout(:,:,:), vin(:,:,:), vnew(:,:,:)
     FLOAT, allocatable :: tmp(:)
+    character(len=8) :: dirname
     logical :: finish, forced_finish
 
     call push_sub('scf.scf_run')
@@ -370,8 +371,9 @@ contains
       end if
 
       if(outp%duringscf) then
-        call X(states_output) (st, gr, "static", outp)
-        call hamiltonian_output(h, gr%m, gr%sb, "static", outp)
+        write(dirname,'(a,i4.4)') "scf.",iter
+        call X(states_output) (st, gr, dirname, outp)
+        call hamiltonian_output(h, gr%m, gr%sb, dirname, outp)
       end if
 
       ! save information for the next iteration
