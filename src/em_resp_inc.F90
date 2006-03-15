@@ -23,8 +23,8 @@ subroutine X(dynamic)(sys, h, lr, pol, w)
   type(system_t),      intent(inout) :: sys
   type(hamiltonian_t), intent(inout) :: h
   type(lr_t),          intent(inout) :: lr(:,:,:) ! dim, nsigma(=2), nfreq(=1)
-  FLOAT,                  intent(out)   :: pol(:,:)
-  R_TYPE,                  intent(in)   :: w 
+  FLOAT,               intent(inout) :: pol(:,:)
+  R_TYPE,              intent(in)    :: w 
 
   
   integer :: dir, j, freq, sigma
@@ -321,7 +321,6 @@ contains
 
   !------------------------------------------------------------
   subroutine build_rho_dynamic()
-    integer :: msigma
     R_TYPE  :: a
 
 

@@ -153,7 +153,7 @@ contains
       if( complex_response ) then 
         call zdynamic(sys, h, lr, pol, cmplx(w,delta,PRECISION))
       else 
-        call X(dynamic)(sys, h, lr, pol, w)
+        call X(dynamic)(sys, h, lr, pol, R_TOTYPE(w))
       end if
     else 
       call static(sys, h, lr(:,:,1), pol, hpol)
