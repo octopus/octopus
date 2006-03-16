@@ -312,14 +312,12 @@ subroutine eigen_solver_cg2_new(gr, st, h, tol, niter, converged, diff, reorder,
          ctheta = cos(theta)
          stheta = sin(theta)
 
-         ! I am not sure wether this is necessary or not.
+         ! This checks wether we are picking the maximum, or the minimum.
          theta2 = theta + M_PI/M_TWO
          ctheta2 = cos(theta2)
          stheta2 = sin(theta2)
-         sol(1) = ctheta**2*lambda + stheta**2*X(states_dotp)(gr%m, dim, cgp, hcgp) + &
-                                     M_TWO*stheta*ctheta*X(states_dotp)(gr%m, dim, cgp, phi)
-         sol(2) = ctheta**2*lambda + stheta2**2*X(states_dotp)(gr%m, dim, cgp, hcgp) + &
-                                     M_TWO*stheta2*ctheta2*X(states_dotp)(gr%m, dim, cgp, phi)
+         sol(1) = lambda + stheta**2*alpha + beta*stheta*ctheta
+         sol(2) = lambda + stheta2**2*alpha + beta*stheta2*ctheta2
 
          if(sol(2) < sol(1)) then
             theta = theta2
