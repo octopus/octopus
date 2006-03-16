@@ -68,16 +68,16 @@ subroutine X(oep_sic) (xcs, gr, st, is, oep, ex, ec)
       vxc(1:NP, 1) = M_ZERO
       call dpoisson_solve(gr, vxc(:, 1), rho(:, 1))
 
-      ! FIXME will not work with multiparallelization
+      ! The exchange energy.
       ex_ = ex_ - M_HALF*oep%sfact*oep%socc*st%occ(i, is)* &
-        sum(vxc(1:NP, 1) * R_ABS(st%X(psi)(1:NP, 1, i, is))**2 * gr%m%vol_pp(1:NP))
+        dmf_dotp(gr%m, vxc(1:NP, 1), R_ABS(st%X(psi)(1:NP, 1, i, is))**2)
 
       oep%X(lxc)(1:NP, i) = oep%X(lxc)(1:NP, i) - vxc(1:NP, 1)*R_CONJ(st%X(psi) (1:NP, 1, i, is))
     end if
   end do
 
 #if defined(HAVE_MPI)
-  if(st%st_end - st%st_start + 1 .ne. st%nst) then ! This holds only in the td part.
+  if(st%parallel_in_states) then
     call MPI_ALLREDUCE(ec_, edummy, 1, MPI_FLOAT, MPI_SUM, st%mpi_grp%comm, ierr); ec_ = edummy
     call MPI_ALLREDUCE(ex_, edummy, 1, MPI_FLOAT, MPI_SUM, st%mpi_grp%comm, ierr); ex_ = edummy
   end if
