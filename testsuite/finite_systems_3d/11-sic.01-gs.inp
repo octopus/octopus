@@ -1,0 +1,29 @@
+DebugLevel = 0
+
+CalculationMode = gs
+fromScratch = yes
+
+%Coordinates
+"Ar" | 0 | 0 | 0
+%
+
+spacing = 0.32
+radius = 12.0
+
+XFunctional = lda_x
+CFunctional = lda_c_xalpha
+XAlpha = 2/3
+SICCorrection = sic_pz
+OEP_Level = oep_kli
+
+EigenSolver = cg_new
+EigenSolverInitTolerance = 1e-2
+EigenSolverFinalTolerance = 1e-5
+EigenSolverFinalToleranceIteration = 6
+EigenSolverMaxIter = 25
+
+ConvRelDens = 5.0e-6
+
+TypeOfMixing = broyden
+
+PoissonSolver = fft_corrected
