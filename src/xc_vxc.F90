@@ -140,7 +140,7 @@ contains
   !   *) calculates the density taking into account nlcc and non-collinear spin
   subroutine lda_init()
     integer :: i
-    FLOAT   :: d(spin_channels), f, dtot, dpol
+    FLOAT   :: d(2), f, dtot, dpol
 
     ! allocate some general arrays
     ALLOCATE(dens(NP_PART, spin_channels), NP_PART*spin_channels)
@@ -157,7 +157,7 @@ contains
     ! get the density
     f = M_ONE/real(spin_channels, PRECISION)
     do i = 1, NP
-      d(:) = rho(i, :)
+      d(1:spin_channels) = rho(i, 1:spin_channels)
 
       select case(ispin)
       case(UNPOLARIZED)
@@ -188,13 +188,13 @@ contains
   ! calculates the LDA part of vxc, taking into account non-collinear spin
   subroutine lda_process()
     integer :: i
-    FLOAT :: d(spin_channels), f, dtot, dpol, vpol
+    FLOAT :: d(2), f, dtot, dpol, vpol
 
     f = M_ONE/real(spin_channels, PRECISION)
     if(ispin == SPINORS) then
       ! rotate back (do not need the rotation matrix for this).
       do i = 1, NP
-        d(:) = rho(i, :)
+        d(1:spin_channels) = rho(i, 1:spin_channels)
 
         dtot = d(1) + d(2)
         dpol = sqrt((d(1) - d(2))**2 + &
