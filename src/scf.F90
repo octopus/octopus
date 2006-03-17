@@ -588,7 +588,7 @@ contains
 
       call push_sub('scf.write_magnetic_moments')
 
-      call states_magnetic_moment(m, st, st%rho, mm)
+      call states_magnetic_moment(m, st, st%rho(1:NP,:), mm)
       write(iunit, '(a)') 'Total Magnetic Moment:'
       if(st%d%ispin == SPIN_POLARIZED) then ! collinear spin
         write(iunit, '(a,f10.6)') ' mz = ', mm(3)
