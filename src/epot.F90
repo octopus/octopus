@@ -233,7 +233,7 @@ contains
       ALLOCATE(ep%A_static(NP, NDIM), NP*NDIM)
       ALLOCATE(x(NDIM), NDIM)
       do i = 1, NP
-        x = gr%m%x(i, :)
+        x(1:NDIM) = gr%m%x(i, 1:NDIM)
         select case (NDIM)
         case (2)
           ep%A_static(i, :) = (/x(2), -x(1)/)*ep%B_field(3)
