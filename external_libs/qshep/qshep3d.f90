@@ -652,17 +652,17 @@ function qs3val ( px, py, pz, n, x, y, z, f, nr, lcell, lnext, xyzmin, &
   real ( kind = 8 ) swq
   real ( kind = 8 ) w
   real ( kind = 8 ) x(n)
-  real ( kind = 8 ) xmax
+!  real ( kind = 8 ) xmax
   real ( kind = 8 ) xmin
   real ( kind = 8 ) xp
   real ( kind = 8 ) xyzdel(3)
   real ( kind = 8 ) xyzmin(3)
   real ( kind = 8 ) y(n)
-  real ( kind = 8 ) ymax
+!  real ( kind = 8 ) ymax
   real ( kind = 8 ) ymin
   real ( kind = 8 ) yp
   real ( kind = 8 ) z(n)
-  real ( kind = 8 ) zmax
+!  real ( kind = 8 ) zmax
   real ( kind = 8 ) zmin
   real ( kind = 8 ) zp
 !
@@ -924,17 +924,17 @@ subroutine qs3grd ( px, py, pz, n, x, y, z, f, nr, lcell, lnext, xyzmin, &
   real ( kind = 8 ) wy
   real ( kind = 8 ) wz
   real ( kind = 8 ) x(n)
-  real ( kind = 8 ) xmax
+!  real ( kind = 8 ) xmax
   real ( kind = 8 ) xmin
   real ( kind = 8 ) xp
   real ( kind = 8 ) xyzdel(3)
   real ( kind = 8 ) xyzmin(3)
   real ( kind = 8 ) y(n)
-  real ( kind = 8 ) ymax
+!  real ( kind = 8 ) ymax
   real ( kind = 8 ) ymin
   real ( kind = 8 ) yp
   real ( kind = 8 ) z(n)
-  real ( kind = 8 ) zmax
+!  real ( kind = 8 ) zmax
   real ( kind = 8 ) zmin
   real ( kind = 8 ) zp
 !
@@ -1618,14 +1618,14 @@ subroutine setup3 ( xk, yk, zk, fk, xi, yi, zi, fi, s1, s2, r, row )
 !
   real ( kind = 8 ) d
   real ( kind = 8 ) dx
-  real ( kind = 8 ) dxsq
+!  real ( kind = 8 ) dxsq
   real ( kind = 8 ) dy
-  real ( kind = 8 ) dysq
+!  real ( kind = 8 ) dysq
   real ( kind = 8 ) dz
-  real ( kind = 8 ) dzsq
+!  real ( kind = 8 ) dzsq
   real ( kind = 8 ) fi
   real ( kind = 8 ) fk
-  integer i
+!  integer i
   real ( kind = 8 ) r
   real ( kind = 8 ) row(10)
   real ( kind = 8 ) s1

@@ -148,7 +148,7 @@ subroutine X(restart_read) (dir, st, gr, ierr, iter)
   integer,           intent(out) :: ierr
   integer, optional, intent(out) :: iter
 
-  integer              :: iunit, iunit2, iunit_mesh, err, ik, ist, idim, i, mpi_err
+  integer              :: iunit, iunit2, iunit_mesh, err, ik, ist, idim, i
   character(len=12)    :: filename
   character(len=1)     :: char
   logical, allocatable :: filled(:, :, :)
@@ -160,6 +160,9 @@ subroutine X(restart_read) (dir, st, gr, ierr, iter)
   type(curvlinear_t)   :: old_cv
   type(simul_box_t)    :: old_sb
   logical              :: mesh_change, full_interpolation
+#if defined(HAVE_MPI)
+  integer              :: mpi_err
+#endif
 
   call push_sub('restart_inc.Xrestart_read')
 

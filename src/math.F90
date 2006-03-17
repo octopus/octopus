@@ -483,8 +483,7 @@ contains
     FLOAT, intent(in) :: x
     real(8), external :: bessel
     integer :: k, nmax
-    real(8) :: z, j0x, j1x, s
-    logical :: converged
+    real(8) :: z, s
     real(8), allocatable :: bess(:)
 
     real(8), parameter :: large = CNST(1.0e10)

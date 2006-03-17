@@ -1500,7 +1500,7 @@ subroutine setup2 ( xk, yk, fk, xi, yi, fi, s1, s2, r, row )
   real ( kind = 8 ) dy
   real ( kind = 8 ) fi
   real ( kind = 8 ) fk
-  integer i
+!  integer i
   real ( kind = 8 ) r
   real ( kind = 8 ) row(6)
   real ( kind = 8 ) s1
