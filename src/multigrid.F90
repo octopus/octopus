@@ -76,6 +76,8 @@ contains
 
     integer :: i, n_levels, np
 
+    call push_sub('multigrid.multigrid_init')
+
     !%Variable MultigridLevels
     !%Type integer
     !%Default 0 
@@ -130,6 +132,8 @@ contains
       call f_der_build(m%sb, mgrid%level(i)%m, mgrid%level(i)%f_der)
     end do
 
+    call pop_sub()
+
   contains
 
     !/*---------------------------------------------------------------------------------
@@ -141,6 +145,8 @@ contains
       type(curvlinear_t), intent(in)  :: cv
       type(mesh_t),       intent(in)  :: mesh_in
       type(mesh_t),       intent(inout) :: mesh_out
+
+      call push_sub('multigrid.multigrid_mesh_half')
 
       mesh_out%sb             => mesh_in%sb
       mesh_out%use_curvlinear =  mesh_in%use_curvlinear
@@ -154,6 +160,7 @@ contains
       call mesh_init_stage_2(mesh_out%sb, mesh_out, geo, cv)
       call mesh_init_stage_3(mesh_out, geo, cv)
 
+      call pop_sub()
     end subroutine multigrid_mesh_half
 
 
@@ -164,6 +171,8 @@ contains
 
       integer :: i, i1, i2, i4, i8
       integer :: x(3), mod2(3)
+
+      call push_sub('multigrid.get_transfer_tables')
 
       tt%n_coarse = coarse%np
       ALLOCATE(tt%to_coarse(tt%n_coarse), tt%n_coarse)
@@ -268,6 +277,7 @@ contains
 
       ASSERT(i1==tt%n_fine1.and.i2==tt%n_fine2.and.i4==tt%n_fine4.and.i8==tt%n_fine8)
 
+      call pop_sub()
     end subroutine get_transfer_tables
 
   end subroutine multigrid_init
@@ -279,6 +289,8 @@ contains
 
     integer :: i
     type(multigrid_level_t), pointer :: level
+
+    call push_sub('multigrid.multigrid_end')
 
     do i = 1, mgrid%n_levels
       level => mgrid%level(i)
@@ -296,6 +308,7 @@ contains
 
     deallocate(mgrid%level)
 
+    call pop_sub()
   end subroutine multigrid_end
 
 
@@ -307,6 +320,8 @@ contains
     FLOAT,                intent(out) :: f_coarse(:)
     integer, optional,    intent(in)  :: method_p
     integer :: method
+
+    call push_sub('multigrid.multigrid_fine2coarse')
 
     if(present(method_p)) then
       method=method_p
@@ -324,6 +339,7 @@ contains
       call write_fatal(1)
     end select
 
+    call pop_sub()
   end subroutine multigrid_fine2coarse
 
 
@@ -337,6 +353,8 @@ contains
     integer :: i
     type(multigrid_level_t), pointer :: level
 
+    call push_sub('multigrid.multigrid_injection')
+
     ASSERT(ilevel>0.and.ilevel<=mgrid%n_levels)
 
     level => mgrid%level(ilevel)
@@ -344,6 +362,7 @@ contains
       f_coarse(i) = f_fine(level%to_coarse(i))
     end do
 
+    call pop_sub()
   end subroutine multigrid_injection
 
 
@@ -360,6 +379,7 @@ contains
     type(multigrid_level_t), pointer :: level
     type(mesh_t), pointer :: fine_mesh,coarse_mesh
 
+    call push_sub('multigrid.multigrid_restriction')
 
     ASSERT(ilevel>0.and.ilevel<=mgrid%n_levels)
 
@@ -397,6 +417,7 @@ contains
       f_coarse(n) = f_coarse(n)/coarse_mesh%vol_pp(n)
     end do
 
+    call pop_sub()
   end subroutine multigrid_restriction
 
 
@@ -413,6 +434,8 @@ contains
     integer :: i, i1, i2, i4, i8
     integer :: jj, j(8)
     FLOAT   :: vol_total
+
+    call push_sub('multigrid.multigrid_coarse2fine')
 
     ASSERT(ilevel>0.and.ilevel<=mgrid%n_levels)
 
@@ -445,6 +468,8 @@ contains
       f_fine(i) = f_fine(i)/vol_total
 
     end do
+
+    call pop_sub()
   end subroutine multigrid_coarse2fine
 
 end module multigrid_m
