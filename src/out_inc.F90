@@ -37,11 +37,11 @@
 ! ---------------------------------------------------------
 
 subroutine X(input_function)(filename, m, f, ierr, is_tmp)
-  character(len=*),     intent(in)  :: filename
+  character(len=*),  intent(in)  :: filename
   type(mesh_t),      intent(in)  :: m
-  R_TYPE,               intent(out) :: f(:)
-  integer,              intent(out) :: ierr
-  logical, optional,    intent(in)  :: is_tmp
+  R_TYPE,            intent(out) :: f(:)
+  integer,           intent(out) :: ierr
+  logical, optional, intent(in)  :: is_tmp
 
   logical :: is_tmp_ = .false.
 
@@ -91,18 +91,18 @@ end subroutine X(input_function)
 
 ! ---------------------------------------------------------
 subroutine X(input_function_global)(filename, m, f, ierr, is_tmp)
-  character(len=*),     intent(in)  :: filename
+  character(len=*),  intent(in)  :: filename
   type(mesh_t),      intent(in)  :: m
-  R_TYPE,               intent(out) :: f(:)
-  integer,              intent(out) :: ierr
-  logical,              intent(in)  :: is_tmp
+  R_TYPE,            intent(out) :: f(:)
+  integer,           intent(out) :: ierr
+  logical,           intent(in)  :: is_tmp
 
   integer :: iunit, i, function_kind, file_kind
 
 #if defined(HAVE_NETCDF)
-  type(X(cf)) :: c
+  type(X(cf_t)) :: c
 #if defined(R_TCOMPLEX)
-  type(dcf) :: re, im
+  type(dcf_t) :: re, im
 #endif
 #endif
 
@@ -212,7 +212,7 @@ contains
   ! ---------------------------------------------------------
   subroutine dx_cdf()
     integer :: ncid, ndims, nvars, natts, status, data_id, data_im_id, pos_id, &
-         dim_data_id(3), dim_pos_id(2), ndim(3), xtype
+         dim_data_id(MAX_DIM), dim_pos_id(2), ndim(MAX_DIM), xtype
     real(r4)           :: pos(2, 3)
     logical            :: function_is_complex = .false.
     character(len=512) :: file
@@ -318,14 +318,14 @@ end subroutine X(input_function_global)
 
 ! ---------------------------------------------------------
 subroutine X(output_function) (how, dir, fname, mesh, sb, f, u, ierr, is_tmp)
-  integer,              intent(in)  :: how
-  character(len=*),     intent(in)  :: dir, fname
+  integer,           intent(in)  :: how
+  character(len=*),  intent(in)  :: dir, fname
   type(mesh_t),      intent(in)  :: mesh
   type(simul_box_t), intent(in)  :: sb
-  R_TYPE,               intent(in)  :: f(:)  ! f(mesh%np)
-  FLOAT,                intent(in)  :: u
-  integer,              intent(out) :: ierr
-  logical, optional,    intent(in)  :: is_tmp
+  R_TYPE,            intent(in)  :: f(:)  ! f(mesh%np)
+  FLOAT,             intent(in)  :: u
+  integer,           intent(out) :: ierr
+  logical, optional, intent(in)  :: is_tmp
 
   logical :: is_tmp_ = .false.
 
@@ -598,9 +598,9 @@ contains
   ! ---------------------------------------------------------
   subroutine dx()
     integer :: ix, iy, iz
-    FLOAT   :: offset(3)
+    FLOAT   :: offset(MAX_DIM)
     character(len=40) :: nitems
-    type(X(cf)) :: c
+    type(X(cf_t)) :: c
 
     ! put values in a nice cube
     call X(cf_new) (m%l, c)
@@ -657,7 +657,7 @@ contains
   subroutine dx_cdf()
     integer :: ncid, status, data_id, data_im_id, pos_id, dim_data_id(3), dim_pos_id(2)
     real(r4) :: pos(2, 3)
-    type(X(cf)) :: c
+    type(X(cf_t)) :: c
 
     ierr = 0
 

@@ -39,8 +39,8 @@ end subroutine X(lr_alloc_fHxc)
 subroutine X(lr_orth_vector) (m, st, v, ik)
   type(mesh_t),        intent(in)    :: m
   type(states_t),      intent(in)    :: st
-  R_TYPE,                 intent(inout) :: v(:,:)
-  integer,                intent(in)    :: ik
+  R_TYPE,              intent(inout) :: v(:,:)
+  integer,             intent(in)    :: ik
 
   R_TYPE  :: scalp
   integer :: ist
@@ -67,11 +67,11 @@ subroutine X(lr_build_dl_rho) (m, st, lr, type)
   type(mesh_t),   intent(in)    :: m
   type(states_t), intent(in)    :: st
   type(lr_t),     intent(inout) :: lr
-  integer,           intent(in)    :: type
+  integer,        intent(in)    :: type
 
   integer :: i, p, ik, sp
   CMPLX   :: c
-  R_TYPE  :: d(st%d%nspin)
+  R_TYPE  :: d(4)
 
   call push_sub('linear_response_inc.Xlr_build_dl_rho')
 
@@ -99,9 +99,9 @@ subroutine X(lr_build_dl_rho) (m, st, lr, type)
           d(4) = st%d%kweights(ik)*st%occ(p, ik) * R_AIMAG(c)
         end select
 
-        if(type == 2) d(:) = R_CONJ(d(:))
-        if(type == 3) d(:) = R_CONJ(d(:))+d(:)
-        lr%X(dl_rho)(i, :) = lr%X(dl_rho)(i, :) + d(:)
+        if(type == 2) d(1:st%d%nspin) = R_CONJ(d(1:st%d%nspin))
+        if(type == 3) d(1:st%d%nspin) = R_CONJ(d(1:st%d%nspin)) + d(1:st%d%nspin)
+        lr%X(dl_rho)(i, 1:st%d%nspin) = lr%X(dl_rho)(i, 1:st%d%nspin) + d(1:st%d%nspin)
       end do
     end do
   end do

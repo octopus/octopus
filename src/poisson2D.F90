@@ -31,12 +31,13 @@ subroutine poisson2D_init(gr)
 contains
 
 #ifdef HAVE_FFT
+  ! ---------------------------------------------------------
   subroutine init_fft(m)
     type(mesh_t), intent(in) :: m
 
     type(loct_spline_t) :: besselintf
-    integer :: i, ix, iy, ixx(3), db(3), npoints
-    FLOAT :: temp(3), vec, r_c, maxf, dk
+    integer :: i, ix, iy, ixx(MAX_DIM), db(MAX_DIM), npoints
+    FLOAT :: temp(MAX_DIM), vec, r_c, maxf, dk
     FLOAT :: DELTA_R = CNST(1.0e-12)
     FLOAT, allocatable :: x(:), y(:)
 
@@ -105,8 +106,8 @@ end subroutine poisson2D_init
 ! ---------------------------------------------------------
 subroutine poisson2D_solve(m, pot, rho)
   type(mesh_t), intent(in) :: m
-  FLOAT, intent(out)          :: pot(m%np)
-  FLOAT, intent(in)           :: rho(m%np)
+  FLOAT, intent(out)       :: pot(m%np)
+  FLOAT, intent(in)        :: rho(m%np)
 
   integer  :: i, j
   FLOAT    :: x(2), y(2), tmp

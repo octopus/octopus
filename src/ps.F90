@@ -90,14 +90,14 @@ contains
 
   ! ---------------------------------------------------------
   subroutine ps_init(ps, label, flavour, z, lmax, lloc, ispin)
-    type(ps_t),     intent(out) :: ps
+    type(ps_t),        intent(out) :: ps
     character(len=10), intent(in)  :: label
     integer,           intent(in)  :: flavour
     integer,           intent(in)  :: lmax, lloc, ispin
     FLOAT,             intent(in)  :: z
 
-    type(tm_t)      :: pstm ! In case Troullier-Martins ps are used.
-    type(hgh_t)     :: psp  ! In case Hartwigsen-Goedecker-Hutter ps are used.
+    type(tm_t)  :: pstm ! In case Troullier-Martins ps are used.
+    type(hgh_t) :: psp  ! In case Hartwigsen-Goedecker-Hutter ps are used.
 
     FLOAT :: r
     FLOAT, allocatable :: y(:)
@@ -257,6 +257,7 @@ contains
   subroutine ps_derivatives(ps)
     type(ps_t), intent(inout) :: ps
     integer :: l, j
+
     call push_sub('ps.ps_derivatives')
 
     do l = 0, ps%l_max

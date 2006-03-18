@@ -35,50 +35,50 @@ module fft_m
   implicit none
 
   ! global constants
-  integer, parameter ::            &
-    fft_real    = 0,               &
+  integer, parameter ::                &
+    fft_real    = 0,                   &
     fft_complex = 1
 
   ! fftw constants. this is just a copy from file fftw3.f,
   ! distributed with fftw package.
-  integer, parameter ::            &
-    fftw_r2hc=0,                   &
-    fftw_hc2r=1,                   &
-    fftw_dht=2,                    &
-    fftw_redft00=3,                &
-    fftw_redft01=4,                &
-    fftw_redft10=5,                &
-    fftw_redft11=6,                &
-    fftw_rodft00=7,                &
-    fftw_rodft01=8,                &
-    fftw_rodft10=9,                &
-    fftw_rodft11=10,               &
-    fftw_forward=-1,               &
-    fftw_backward=1,               &
-    fftw_measure=0,                &
-    fftw_destroy_input=1,          &
-    fftw_unaligned=2,              &
-    fftw_conserve_memory=4,        &
-    fftw_exhaustive=8,             &
-    fftw_preserve_input=16,        &
-    fftw_patient=32,               &
-    fftw_estimate=64,              &
-    fftw_estimate_patient=128,     &
-    fftw_believe_pcost=256,        &
-    fftw_dft_r2hc_icky=512,        &
-    fftw_nonthreaded_icky=1024,    &
-    fftw_no_buffering=2048,        &
-    fftw_no_indirect_op=4096,      &
-    fftw_allow_large_generic=8192, &
-    fftw_no_rank_splits=16384,     &
-    fftw_no_vrank_splits=32768,    &
-    fftw_no_vrecurse=65536,        &
-    fftw_no_simd=131072
+  integer, parameter ::                &
+    fftw_r2hc                =      0, &
+    fftw_hc2r                =      1, &
+    fftw_dht                 =      2, &
+    fftw_redft00             =      3, &
+    fftw_redft01             =      4, &
+    fftw_redft10             =      5, &
+    fftw_redft11             =      6, &
+    fftw_rodft00             =      7, &
+    fftw_rodft01             =      8, &
+    fftw_rodft10             =      9, &
+    fftw_rodft11             =     10, &
+    fftw_forward             =     -1, &
+    fftw_backward            =      1, &
+    fftw_measure             =      0, &
+    fftw_destroy_input       =      1, &
+    fftw_unaligned           =      2, &
+    fftw_conserve_memory     =      4, &
+    fftw_exhaustive          =      8, &
+    fftw_preserve_input      =     16, &
+    fftw_patient             =     32, &
+    fftw_estimate            =     64, &
+    fftw_estimate_patient    =    128, &
+    fftw_believe_pcost       =    256, &
+    fftw_dft_r2hc_icky       =    512, &
+    fftw_nonthreaded_icky    =   1024, &
+    fftw_no_buffering        =   2048, &
+    fftw_no_indirect_op      =   4096, &
+    fftw_allow_large_generic =   8192, &
+    fftw_no_rank_splits      =  16384, &
+    fftw_no_vrank_splits     =  32768, &
+    fftw_no_vrecurse         =  65536, &
+    fftw_no_simd             = 131072
 
   type fft_t
     integer :: slot                ! in which slot do we have this fft
 
-    integer :: n(3)                ! size of the fft
+    integer :: n(MAX_DIM)          ! size of the fft
     integer :: is_real             ! is the fft real or complex
     integer(POINTER_SIZE) :: planf ! the plan for forward transforms
     integer(POINTER_SIZE) :: planb ! the plan for backward transforms
@@ -132,8 +132,8 @@ contains
   ! ---------------------------------------------------------
   subroutine fft_init(sb, n, is_real, fft)
     type(simul_box_t), intent(in)    :: sb
-    integer,              intent(inout) :: n(3)
-    integer,              intent(in)    :: is_real
+    integer,           intent(inout) :: n(MAX_DIM)
+    integer,           intent(in)    :: is_real
     type(fft_t),       intent(out)   :: fft
 
     FLOAT, allocatable :: rin(:, :, :)
@@ -264,7 +264,7 @@ contains
   ! ---------------------------------------------------------
   subroutine fft_getdim_real(fft, d)
     type(fft_t), intent(in) :: fft
-    integer, intent(out) :: d(3)
+    integer,    intent(out) :: d(MAX_DIM)
 
     d = fft%n
   end subroutine fft_getdim_real
@@ -273,7 +273,7 @@ contains
   ! ---------------------------------------------------------
   subroutine fft_getdim_complex(fft, d)
     type(fft_t), intent(in) :: fft
-    integer, intent(out) :: d(3)
+    integer,    intent(out) :: d(MAX_DIM)
 
     d = fft%n
     if(fft%is_real == fft_real)  d(1) = d(1)/2 + 1
@@ -284,9 +284,10 @@ contains
   ! these routines simply call fftw
   ! first the real to complex versions
   subroutine dfft_forward(fft, r, c)
-    type(fft_t), intent(in) :: fft
-    FLOAT, intent(in)     :: r(:,:,:)
-    CMPLX, intent(out) :: c(:,:,:)
+    type(fft_t), intent(in)  :: fft
+    FLOAT,       intent(in)  :: r(:,:,:)
+    CMPLX,       intent(out) :: c(:,:,:)
+
     call DFFTW(execute_dft_r2c) (fft%planf, r, c)
   end subroutine dfft_forward
 
@@ -294,8 +295,8 @@ contains
   ! ---------------------------------------------------------
   subroutine dfft_backward(fft, c, r)
     type(fft_t), intent(in) :: fft
-    CMPLX, intent(in) :: c(fft%n(1), fft%n(2), fft%n(3))
-    FLOAT, intent(out)   :: r(fft%n(1), fft%n(2), fft%n(3))
+    CMPLX, intent(in)  :: c(fft%n(1), fft%n(2), fft%n(3))
+    FLOAT, intent(out) :: r(fft%n(1), fft%n(2), fft%n(3))
 
     call DFFTW(execute_dft_c2r) (fft%planb, c, r)
 
@@ -320,7 +321,7 @@ contains
   ! ---------------------------------------------------------
   subroutine zfft_backward(fft, in, out)
     type(fft_t), intent(in) :: fft
-    CMPLX, intent(in)  :: in(fft%n(1), fft%n(2), fft%n(3))
+    CMPLX, intent(in)  ::  in(fft%n(1), fft%n(2), fft%n(3))
     CMPLX, intent(out) :: out(fft%n(1), fft%n(2), fft%n(3))
 
     call DFFTW(execute_dft) (fft%planb, in, out)

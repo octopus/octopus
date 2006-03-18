@@ -128,10 +128,10 @@ contains
     type(hamiltonian_t), intent(out)   :: h
     type(grid_t),        intent(inout) :: gr
     type(states_dim_t),  pointer       :: states_dim
-    logical,                intent(in)    :: ip_app
+    logical,             intent(in)    :: ip_app
 
     integer :: i, j, n
-    FLOAT :: d(3)
+    FLOAT :: d(MAX_DIM)
 
     call push_sub('h.hamiltonian_init')
 
@@ -328,8 +328,8 @@ contains
   subroutine hamiltonian_energy(h, st, eii, iunit)
     type(hamiltonian_t), intent(inout) :: h
     type(states_t),      intent(in)    :: st
-    FLOAT,                  intent(in)    :: eii
-    integer,                intent(in)    :: iunit
+    FLOAT,               intent(in)    :: eii
+    integer,             intent(in)    :: iunit
 
     FLOAT :: e
 #ifdef HAVE_MPI
@@ -368,7 +368,7 @@ contains
   ! ---------------------------------------------------------
   subroutine hamiltonian_span(h, delta, emin)
     type(hamiltonian_t), intent(inout) :: h
-    FLOAT,                  intent(in)    :: delta, emin
+    FLOAT,               intent(in)    :: delta, emin
 
     call push_sub('h.hamiltonian_span')
 
@@ -384,7 +384,7 @@ contains
     type(hamiltonian_t), intent(in) :: h
     type(mesh_t),        intent(in) :: m
     type(simul_box_t),   intent(in) :: sb
-    character(len=*),       intent(in) :: dir
+    character(len=*),    intent(in) :: dir
     type(output_t),      intent(in) :: outp
 
     integer :: is, err

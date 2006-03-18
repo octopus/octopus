@@ -164,13 +164,14 @@ contains
     end subroutine multigrid_mesh_half
 
 
+    ! ---------------------------------------------------------
     ! creates the lookup tables to go between the coarse and fine meshes
     subroutine get_transfer_tables(tt, fine, coarse)
       type(multigrid_level_t), intent(inout) :: tt
-      type(mesh_t),            intent(in)  :: fine, coarse
+      type(mesh_t),            intent(in)    :: fine, coarse
 
       integer :: i, i1, i2, i4, i8
-      integer :: x(3), mod2(3)
+      integer :: x(MAX_DIM), mod2(MAX_DIM)
 
       call push_sub('multigrid.get_transfer_tables')
 
@@ -315,10 +316,11 @@ contains
   ! ---------------------------------------------------------
   subroutine multigrid_fine2coarse(mgrid, ilevel, f_fine, f_coarse, method_p)
     type(multigrid_t), intent(in)  :: mgrid
-    integer,              intent(in)  :: ilevel
-    FLOAT,                intent(in)  :: f_fine(:)
-    FLOAT,                intent(out) :: f_coarse(:)
-    integer, optional,    intent(in)  :: method_p
+    integer,           intent(in)  :: ilevel
+    FLOAT,             intent(in)  :: f_fine(:)
+    FLOAT,             intent(out) :: f_coarse(:)
+    integer, optional, intent(in)  :: method_p
+
     integer :: method
 
     call push_sub('multigrid.multigrid_fine2coarse')
@@ -346,9 +348,9 @@ contains
   ! ---------------------------------------------------------
   subroutine multigrid_injection(mgrid, ilevel, f_fine, f_coarse)
     type(multigrid_t), intent(in)  :: mgrid
-    integer,              intent(in)  :: ilevel
-    FLOAT,                intent(in)  :: f_fine(:)
-    FLOAT,                intent(out) :: f_coarse(:)
+    integer,           intent(in)  :: ilevel
+    FLOAT,             intent(in)  :: f_fine(:)
+    FLOAT,             intent(out) :: f_coarse(:)
 
     integer :: i
     type(multigrid_level_t), pointer :: level
@@ -369,15 +371,15 @@ contains
   ! ---------------------------------------------------------
   subroutine multigrid_restriction(mgrid, ilevel, f_fine, f_coarse)
     type(multigrid_t), intent(in)  :: mgrid
-    integer,              intent(in)  :: ilevel
-    FLOAT,                intent(in)  :: f_fine(:)
-    FLOAT,                intent(out) :: f_coarse(:)
+    integer,           intent(in)  :: ilevel
+    FLOAT,             intent(in)  :: f_fine(:)
+    FLOAT,             intent(out) :: f_coarse(:)
 
     FLOAT :: weight(-1:1,-1:1,-1:1)
 
-    integer :: n,fn,di,dj,dk,d,fi(3)
+    integer :: n, fn, di, dj, dk, d, fi(MAX_DIM)
     type(multigrid_level_t), pointer :: level
-    type(mesh_t), pointer :: fine_mesh,coarse_mesh
+    type(mesh_t), pointer :: fine_mesh, coarse_mesh
 
     call push_sub('multigrid.multigrid_restriction')
 
@@ -424,9 +426,9 @@ contains
   ! ---------------------------------------------------------
   subroutine multigrid_coarse2fine(mgrid, ilevel, f_coarse, f_fine)
     type(multigrid_t), intent(in)  :: mgrid
-    integer,              intent(in)  :: ilevel
-    FLOAT,                intent(in)  :: f_coarse(:)
-    FLOAT,                intent(out) :: f_fine(:)
+    integer,           intent(in)  :: ilevel
+    FLOAT,             intent(in)  :: f_coarse(:)
+    FLOAT,             intent(out) :: f_fine(:)
 
     type(multigrid_level_t), pointer :: level
     FLOAT, pointer :: vol_pp(:)

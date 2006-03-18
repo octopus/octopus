@@ -32,16 +32,16 @@ subroutine td_calc_tacc(gr, st, h, acc, t)
   type(grid_t),        intent(inout) :: gr
   type(states_t),      intent(inout) :: st
   type(hamiltonian_t), intent(inout) :: h
-  FLOAT,                  intent(in)    :: t
-  FLOAT,                  intent(out)   :: acc(3)
+  FLOAT,               intent(in)    :: t
+  FLOAT,               intent(out)   :: acc(MAX_DIM)
 
-  FLOAT :: field(3), x(3)
+  FLOAT :: field(MAX_DIM), x(MAX_DIM)
   CMPLX, allocatable :: hzpsi(:,:), hhzpsi(:,:), xzpsi(:,:,:), vnl_xzpsi(:,:), conj(:)
   integer  :: j, k, i, ik, ist, idim
 
 #if defined(HAVE_MPI)
   integer :: mpi_err
-  FLOAT   :: y(3)
+  FLOAT   :: y(MAX_DIM)
 #endif
 
   call push_sub('td_calc.td_calc_tacc')

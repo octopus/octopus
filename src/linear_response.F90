@@ -59,7 +59,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine lr_init(lr, prefix)
-    type(lr_t),    intent(out) :: lr
+    type(lr_t),       intent(out) :: lr
     character(len=*), intent(in)  :: prefix
 
     ! read some parameters from the input file
@@ -74,9 +74,9 @@ contains
 
   ! ---------------------------------------------------------
   integer function dlr_alloc_psi(st, m, lr) result(r)
-    type(states_t), intent(in)  :: st
-    type(mesh_t),   intent(in)  :: m
-    type(lr_t),     intent(inout) :: lr
+    type(states_t), intent(in) :: st
+    type(mesh_t),   intent(in) :: m
+    type(lr_t),  intent(inout) :: lr
 
     r =  1
     if(associated(lr%ddl_psi)) return ! do nothing
@@ -98,9 +98,9 @@ contains
 
   ! ---------------------------------------------------------
   integer function zlr_alloc_psi(st, m, lr) result(r)
-    type(states_t), intent(in)  :: st
-    type(mesh_t),   intent(in)  :: m
-    type(lr_t),     intent(inout) :: lr
+    type(states_t), intent(in) :: st
+    type(mesh_t),   intent(in) :: m
+    type(lr_t),  intent(inout) :: lr
 
     r =  1
     if(associated(lr%zdl_psi)) return ! do nothing
@@ -152,7 +152,7 @@ contains
     type(mesh_t),   intent(in)  :: m
     type(states_t), intent(in)  :: st
     type(xc_t),     intent(in)  :: xcs
-    FLOAT,             intent(out) :: fxc(:,:,:)
+    FLOAT,          intent(out) :: fxc(:,:,:)
 
     FLOAT, allocatable :: rho(:, :)
     integer :: is

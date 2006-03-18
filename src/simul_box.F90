@@ -87,7 +87,7 @@ contains
 
     ! some local stuff
     FLOAT :: def_h, def_rsize
-    integer :: i, ix, iy, iz, ii(3)
+    integer :: i, ix, iy, iz, ii(MAX_DIM)
 
     call push_sub('simul_box.simul_box_init')
 
@@ -105,6 +105,8 @@ contains
 
     !--------------------------------------------------------------
     subroutine read_misc()
+
+      call push_sub('simul_box.read_misc')
 
       !%Variable DoubleFFTParameter
       !%Type float
@@ -147,6 +149,7 @@ contains
       if ((sb%periodic_dim < 0) .or. (sb%periodic_dim > 3) .or. (sb%periodic_dim > sb%dim)) &
         call input_error('PeriodicDimensions')
 
+      call pop_sub()
     end subroutine read_misc
 
 
@@ -154,6 +157,7 @@ contains
     subroutine read_box()
       integer(POINTER_SIZE) :: blk
 
+      call push_sub('simul_box.read_box')
       ! Read box shape.
       ! need to find out calc_mode already here since some of the variables here (e.g.
       ! periodic dimensions) can be different for the subsystems
@@ -300,6 +304,7 @@ contains
         end do
       end select
 
+      call pop_sub()
     end subroutine read_box
 
 
@@ -308,6 +313,8 @@ contains
       integer :: i
       integer(POINTER_SIZE) :: blk
 
+
+      call push_sub('simul_box.read_spacing')
       !%Variable Spacing
       !%Type float
       !%Section Mesh::Simulation Box
@@ -356,6 +363,7 @@ contains
         if(def_rsize>M_ZERO) call check_def(sb%h(i), def_rsize, 'Spacing')
       end do
 
+      call pop_sub()
     end subroutine read_spacing
 
 
@@ -364,6 +372,7 @@ contains
       integer :: i
       integer(POINTER_SIZE) :: blk
 
+      call push_sub('simul_box.read_box_offset')
       !%Variable BoxOffset
       !%Type float
       !%Section Mesh::Simulation Box
@@ -383,6 +392,7 @@ contains
       end if
       sb%box_offset(:) = sb%box_offset(:)*units_inp%length%factor
 
+      call pop_sub()
     end subroutine read_box_offset
 
 
@@ -401,6 +411,8 @@ contains
 
     !--------------------------------------------------------------
     subroutine build_lattice()
+
+      call push_sub('simul_box.build_lattice')
       ! build primitive vectors (only simple cubic, tetra, or orthororhombic )
       sb%rlat = M_ZERO
       sb%klat = M_ZERO
@@ -424,6 +436,7 @@ contains
         end do
       end do
 
+      call pop_sub()
     end subroutine build_lattice
 
   end subroutine simul_box_init
@@ -438,7 +451,7 @@ contains
   !--------------------------------------------------------------
   subroutine simul_box_write_info(sb, iunit)
     type(simul_box_t), intent(in) :: sb
-    integer,              intent(in) :: iunit
+    integer,           intent(in) :: iunit
 
     character(len=15), parameter :: bs(4) = (/ &
       'sphere        ', &
@@ -502,7 +515,7 @@ contains
     FLOAT,              intent(in) :: x(:) ! x(3)
 
     FLOAT, parameter :: DELTA_R = CNST(1e-12)
-    FLOAT :: r, re, im, xx(3)
+    FLOAT :: r, re, im, xx(MAX_DIM)
 
     xx(:) = x(:) - sb%box_offset(:)
 
@@ -570,6 +583,7 @@ contains
     simul_box_is_periodic = sb%periodic_dim > 0
   end function simul_box_is_periodic
 
+
   !--------------------------------------------------------------
   subroutine simul_box_dump(sb, iunit)
     type(simul_box_t), intent(in) :: sb
@@ -595,6 +609,7 @@ contains
     write(iunit, '(a20,3e22.14)')   'h=                  ', sb%h(1:3)
     write(iunit, '(a20,3e22.14)')   'box_offset=         ', sb%box_offset(1:3)
   end subroutine simul_box_dump
+
 
   !--------------------------------------------------------------
   subroutine simul_box_init_from_file(sb, geo, iunit)
@@ -624,8 +639,11 @@ contains
     read(iunit, *) str, sb%box_offset(1:3)
   end subroutine simul_box_init_from_file
 
+
+  !--------------------------------------------------------------
   logical function simul_box_is_eq(sb1, sb2) result(res)
     type(simul_box_t), intent(in) :: sb1, sb2
+
     res = .false.
     if(sb1%box_shape .ne. sb2%box_shape)             return
     if(sb1%dim .ne. sb2%dim)                         return
@@ -648,6 +666,7 @@ contains
     if(.not.(sb1%h .app. sb2%h))                     return
     if(.not.(sb1%box_offset .app. sb2%box_offset))   return
     res = .true.
+
   end function simul_box_is_eq
 
 end module simul_box_m

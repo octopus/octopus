@@ -69,7 +69,7 @@ contains
   !----------------------------------------------------------
   subroutine system_init(sys, parallel_mask)
     type(system_t), intent(out) :: sys
-    integer, intent(in)            :: parallel_mask
+    integer, intent(in)         :: parallel_mask
 
     call push_sub('systm.system_init')
 
@@ -149,8 +149,8 @@ contains
     type(mesh_t),      intent(in)    :: m
     type(simul_box_t), intent(in)    :: sb
     type(atom_t),      intent(in)    :: atom
-    integer,              intent(in)    :: spin_channels
-    FLOAT,                intent(inout) :: rho(:, :) ! (m%np, spin_channels)
+    integer,           intent(in)    :: spin_channels
+    FLOAT,             intent(inout) :: rho(:, :) ! (m%np, spin_channels)
 
     integer :: i, in_points, k, n
     FLOAT :: r, x
@@ -231,14 +231,14 @@ contains
     type(mesh_t),      intent(in)  :: m
     type(simul_box_t), intent(in)  :: sb
     type(geometry_t),  intent(in)  :: geo
-    FLOAT,                intent(in)  :: qtot  ! the total charge of the system
-    integer,              intent(in)  :: nspin, spin_channels
-    FLOAT,                intent(out) :: rho(:, :)
+    FLOAT,             intent(in)  :: qtot  ! the total charge of the system
+    integer,           intent(in)  :: nspin, spin_channels
+    FLOAT,             intent(out) :: rho(:, :)
 
     integer :: ia, is, gmd_opt, i
     integer, save :: iseed = 321
     integer(POINTER_SIZE) :: blk
-    FLOAT :: r, rnd, phi, theta, mag(3)
+    FLOAT :: r, rnd, phi, theta, mag(MAX_DIM)
     FLOAT, allocatable :: atom_rho(:,:)
 
     call push_sub('systm.guess_density')

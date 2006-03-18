@@ -19,10 +19,10 @@
 
 ! ---------------------------------------------------------
 subroutine td_init(gr, td, st, outp)
-  type(td_t),          intent(out)   :: td
-  type(grid_t),        intent(inout) :: gr
-  type(states_t),      intent(inout) :: st
-  type(output_t),      intent(in)    :: outp
+  type(td_t),     intent(out)   :: td
+  type(grid_t),   intent(inout) :: gr
+  type(states_t), intent(inout) :: st
+  type(output_t), intent(in)    :: outp
 
   integer :: dummy
 

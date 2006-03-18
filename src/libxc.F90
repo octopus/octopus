@@ -83,20 +83,20 @@ module lib_xc_m
     XC_LDA_C_AMGB           =  13      ! Attacalite et al
 
   ! the GGAs
-  integer, public, parameter ::    &
-    XC_GGA_X_PBE            = 101, &  ! Perdew, Burke & Ernzerhof exchange
-    XC_GGA_C_PBE            = 102, &  ! Perdew, Burke & Ernzerhof correlation
-    XC_GGA_XC_LB            = 103       ! van Leeuwen & Baerends
+  integer, public, parameter ::     &
+    XC_GGA_X_PBE            = 101,  &  ! Perdew, Burke & Ernzerhof exchange
+    XC_GGA_C_PBE            = 102,  &  ! Perdew, Burke & Ernzerhof correlation
+    XC_GGA_XC_LB            = 103      ! van Leeuwen & Baerends
 
   ! the meta-GGAs
-  integer, public, parameter ::    &
-    XC_MGGA_X_TPSS          = 201, &  ! Perdew, Tao, Staroverov & Scuseria exchange
-    XC_MGGA_C_TPSS          = 202     ! Perdew, Tao, Staroverov & Scuseria correlation
+  integer, public, parameter ::     &
+    XC_MGGA_X_TPSS          = 201,  &  ! Perdew, Tao, Staroverov & Scuseria exchange
+    XC_MGGA_C_TPSS          = 202      ! Perdew, Tao, Staroverov & Scuseria correlation
 
   ! the LCAs
-  integer, public, parameter ::    &
-    XC_LCA_OMC              = 301, &  ! Orestes, Marcasso & Capelle
-    XC_LCA_LCH              = 302     ! Lee, Colwell & Handy
+  integer, public, parameter ::     &
+    XC_LCA_OMC              = 301,  &  ! Orestes, Marcasso & Capelle
+    XC_LCA_LCH              = 302      ! Lee, Colwell & Handy
 
   ! info
   interface

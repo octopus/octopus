@@ -42,7 +42,9 @@ module atomic_m
     valconf_null,  &
     VALCONF_STRING_LENGTH
 
-  character(len=1), parameter :: spec_notation(0:3) = (/ 's', 'p', 'd', 'f' /)
+  character(len=1), parameter :: &
+    spec_notation(0:3) = (/ 's', 'p', 'd', 'f' /)
+
   integer, parameter :: VALCONF_STRING_LENGTH = 80
 
   type valconf
@@ -90,6 +92,7 @@ contains
     type(valconf), intent(out) :: c
     integer :: j
     character(len=1) :: lvalues(1:6)
+
     read (s,'(i2,1x,a2,i1,1x,i1,1x,6(i1,a1,f6.3,1x))') c%z, c%symbol, c%type, c%p,&
          (c%n(j),lvalues(j),c%occ(j,1),j=1,c%p)
     do j = 1, c%p
@@ -103,6 +106,7 @@ contains
           call write_fatal(1)
        end select
     end do
+
   end subroutine read_valconf
 
 
@@ -110,7 +114,7 @@ contains
   subroutine atomhxc(functl, g, nspin, dens, v, extra)
     character(len=*),  intent(in)  :: functl
     integer,           intent(in)  :: nspin
-    type(logrid_t), intent(in)  :: g
+    type(logrid_t),    intent(in)  :: g
     FLOAT,             intent(in)  :: dens(g%nrval, nspin)
     FLOAT,             intent(out) :: v(g%nrval, nspin)
     FLOAT,             intent(in), optional :: extra(g%nrval)
@@ -167,6 +171,7 @@ contains
     v = ve + xc
 
     deallocate(ve, xc, rho)
+
     call pop_sub()
   end subroutine atomhxc
 

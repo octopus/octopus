@@ -50,7 +50,7 @@ contains
   subroutine static_pol_run(sys, h, fromScratch)
     type(system_t), target, intent(inout) :: sys
     type(hamiltonian_t),    intent(inout) :: h
-    logical,                   intent(inout) :: fromScratch
+    logical,                intent(inout) :: fromScratch
 
     type(scf_t)             :: scfv
     type(grid_t),   pointer :: gr    ! shortcuts

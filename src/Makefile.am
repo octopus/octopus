@@ -103,7 +103,7 @@ CTAGS=ctags-exuberant -e
 	fi
 	@perl -pi -e 's/\\newline/\n/g' $*_oct.f90
 	@FC@ @FCFLAGS@ -c @FCFLAGS_f90@ -o $@ $*_oct.f90
-	@rm -f $*_oct.f90
+#	@rm -f $*_oct.f90
 
 # how to compile main.f90 (have to define some extra variables here)
 DATE := $(shell date)

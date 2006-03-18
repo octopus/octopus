@@ -73,7 +73,7 @@ contains
   ! ---------------------------------------------------------
   subroutine mpi_grp_init(grp, comm)
     type(mpi_grp_t), intent(out) :: grp   ! information about this MPI group
-    integer                         :: comm  ! the communicator that defined the group
+    integer                      :: comm  ! the communicator that defined the group
 
 #if defined(HAVE_MPI)
     integer :: mpi_err

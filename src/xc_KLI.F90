@@ -21,7 +21,7 @@
 subroutine X(xc_KLI_solve) (m, st, is, oep)
   type(mesh_t),   intent(in)    :: m
   type(states_t), intent(in)    :: st
-  integer,           intent(in)    :: is
+  integer,        intent(in)    :: is
   type(xc_oep_t), intent(inout) :: oep
 
 #if defined(HAVE_MPI)

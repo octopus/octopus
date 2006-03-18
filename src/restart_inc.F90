@@ -22,7 +22,7 @@
 subroutine X(restart_write_function)(dir, filename, gr, f, ierr, size)
   character(len=*), intent(in)  :: dir
   character(len=*), intent(in)  :: filename
-  type(grid_t),  intent(in)  :: gr
+  type(grid_t),     intent(in)  :: gr
   integer,          intent(out) :: ierr
   integer,          intent(in)  :: size
   R_TYPE,           intent(in)  :: f(size)
@@ -40,7 +40,7 @@ end subroutine X(restart_write_function)
 subroutine X(restart_read_function)(dir, filename, m, f, ierr)
   character(len=*), intent(in)  :: dir
   character(len=*), intent(in)  :: filename
-  type(mesh_t),  intent(in)  :: m
+  type(mesh_t),     intent(in)  :: m
   R_TYPE,           intent(out) :: f(1:m%np)
   integer,          intent(out) :: ierr
 
@@ -59,8 +59,8 @@ end subroutine X(restart_read_function)
 ! ---------------------------------------------------------
 subroutine X(restart_write) (dir, st, gr, ierr, iter)
   character(len=*),  intent(in)  :: dir
-  type(states_t), intent(in)  :: st
-  type(grid_t),   intent(in)  :: gr
+  type(states_t),    intent(in)  :: st
+  type(grid_t),      intent(in)  :: gr
   integer,           intent(out) :: ierr
   integer, optional, intent(in)  :: iter
 
@@ -282,6 +282,7 @@ subroutine X(restart_read) (dir, st, gr, ierr, iter)
 
 contains
 
+  ! ---------------------------------------------------------
   subroutine interpolation_init
     call mesh_init_stage_1(old_sb, old_mesh, gr%geo, old_cv, gr%f_der%n_ghost)
     call mesh_init_stage_2(old_sb, old_mesh, gr%geo, old_cv)
@@ -289,11 +290,15 @@ contains
     ALLOCATE(phi(old_mesh%np_global), old_mesh%np_global)
   end subroutine interpolation_init
 
+
+  ! ---------------------------------------------------------
   subroutine interpolation_end
     call mesh_end(old_mesh)
     deallocate(phi)
   end subroutine interpolation_end
 
+
+  ! ---------------------------------------------------------
   subroutine read_previous_mesh
 
     mesh_change = .false.
@@ -339,6 +344,7 @@ contains
     
   end subroutine read_previous_mesh
 
+
   ! ---------------------------------------------------------
   subroutine fill() ! Put random function in orbitals that could not be read.
     do ik = 1, st%d%nik
@@ -354,6 +360,7 @@ contains
       end do
     end do
  end subroutine fill
+
 
   ! ---------------------------------------------------------
   logical function index_is_wrong() ! .true. if the index (idim, ist, ik) is not present in st structure...

@@ -130,7 +130,7 @@ module states_m
   type states_dim_t
     integer :: dim                  ! Dimension of the state (one or two for spinors)
     integer :: nik                  ! Number of irreducible subspaces
-    integer :: nik_axis(3)          ! Number of kpoints per axis
+    integer :: nik_axis(MAX_DIM)    ! Number of kpoints per axis
     integer :: ispin                ! spin mode (unpolarized, spin polarized, spinors)
     integer :: nspin                ! dimension of rho (1, 2 or 4)
     integer :: spin_channels        ! 1 or 2, wether spin is or not considered.
@@ -397,7 +397,7 @@ contains
     integer(POINTER_SIZE) :: blk
     integer :: ip, id, is, ik, nstates
     integer :: ib, idim, inst, inik
-    FLOAT   :: x(3), r, psi_re, psi_im
+    FLOAT   :: x(MAX_DIM), r, psi_re, psi_im
 
     call push_sub('td.read_user_def_states')
 
@@ -635,7 +635,7 @@ contains
   subroutine states_generate_random(st, m, ist_start_, ist_end_)
     type(states_t), intent(inout) :: st
     type(mesh_t),   intent(in)    :: m
-    integer, optional, intent(in)    :: ist_start_, ist_end_
+    integer, optional, intent(in) :: ist_start_, ist_end_
 
     integer :: ist, ik, id, ist_start, ist_end
 
@@ -791,11 +791,11 @@ contains
   subroutine states_calculate_multipoles(gr, st, lmax, multipole)
     type(grid_t),   intent(in)  :: gr
     type(states_t), intent(in)  :: st
-    integer,           intent(in)  :: lmax
-    FLOAT,             intent(out) :: multipole(:, :) ! multipole((lmax + 1)**2, st%d%nspin)
+    integer,        intent(in)  :: lmax
+    FLOAT,          intent(out) :: multipole(:, :) ! multipole((lmax + 1)**2, st%d%nspin)
 
     integer :: i, is, l, lm, add_lm
-    FLOAT :: x(3), r, ylm
+    FLOAT :: x(MAX_DIM), r, ylm
     FLOAT, allocatable :: f(:)
 
     call push_sub('states.states_calculate_multipoles')
@@ -841,7 +841,7 @@ contains
   ! function to calculate the eigenvalues sum using occupations as weights
   function states_eigenvalues_sum(st) result(e)
     type(states_t), intent(in) :: st
-    FLOAT                         :: e
+    FLOAT                      :: e
 
     integer :: ik
 
@@ -857,13 +857,13 @@ contains
   ! ---------------------------------------------------------
   subroutine states_write_eigenvalues(iunit, nst, st, sb, error)
     integer,           intent(in) :: iunit, nst
-    type(states_t), intent(in) :: st
+    type(states_t),    intent(in) :: st
     type(simul_box_t), intent(in) :: sb
     FLOAT,             intent(in), optional :: error(nst, st%d%nik)
 
     integer ik, j, ns, is
     FLOAT :: o, oplus, ominus
-    character(len=80) tmp_str(3), cspin
+    character(len=80) tmp_str(MAX_DIM), cspin
 
     ns = 1
     if(st%d%nspin == 2) ns = 2
@@ -950,11 +950,11 @@ contains
   ! ---------------------------------------------------------
   subroutine states_write_bands(iunit, nst, st, sb)
     integer,           intent(in) :: iunit, nst
-    type(states_t), intent(in) :: st
+    type(states_t),    intent(in) :: st
     type(simul_box_t), intent(in) :: sb
 
     integer :: i, ik, j, mode, ns
-    FLOAT :: factor(3)
+    FLOAT :: factor(MAX_DIM)
 
     integer, parameter :: &
       GNUPLOT = 1024,     &
@@ -1036,7 +1036,7 @@ contains
     type(mesh_t),   intent(in)  :: m
     type(states_t), intent(in)  :: st
     type(states_t), intent(in)  :: gs_st
-    CMPLX,             intent(out) :: p(st%nst, gs_st%nst, st%d%nik)
+    CMPLX,          intent(out) :: p(st%nst, gs_st%nst, st%d%nik)
 
     integer :: uist, ist, ik
 
@@ -1083,8 +1083,8 @@ contains
   subroutine states_magnetic_moment(m, st, rho, mm)
     type(mesh_t),   intent(in)  :: m
     type(states_t), intent(in)  :: st
-    FLOAT,             intent(in)  :: rho(m%np, st%d%nspin)
-    FLOAT,             intent(out) :: mm(3)
+    FLOAT,          intent(in)  :: rho(m%np, st%d%nspin)
+    FLOAT,          intent(out) :: mm(3)
 
     FLOAT, allocatable :: md(:,:)
 
@@ -1106,9 +1106,9 @@ contains
     type(mesh_t),     intent(in)  :: m
     type(states_t),   intent(in)  :: st
     type(geometry_t), intent(in)  :: geo
-    FLOAT,               intent(in)  :: rho(m%np, st%d%nspin)
-    FLOAT,               intent(in)  :: r
-    FLOAT,               intent(out) :: lmm(3, geo%natoms)
+    FLOAT,            intent(in)  :: rho(m%np, st%d%nspin)
+    FLOAT,            intent(in)  :: r
+    FLOAT,            intent(out) :: lmm(3, geo%natoms)
 
     integer :: ia, i
     FLOAT :: ri

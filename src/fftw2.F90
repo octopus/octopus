@@ -53,7 +53,7 @@ module fft_m
   type fft_t
     integer :: slot                ! in which slot do we have this fft
 
-    integer :: n(3)                ! size of the fft
+    integer :: n(MAX_DIM)          ! size of the fft
     integer :: is_real             ! is the fft real or complex
     integer(POINTER_SIZE) :: planf ! the plan for forward transforms
     integer(POINTER_SIZE) :: planb ! the plan for backward transforms
@@ -95,8 +95,8 @@ contains
   ! ---------------------------------------------------------
   subroutine fft_init(sb, n, is_real, fft)
     type(simul_box_t), intent(in)    :: sb
-    integer,              intent(inout) :: n(3)
-    integer,              intent(in)    :: is_real
+    integer,           intent(inout) :: n(MAX_DIM)
+    integer,           intent(in)    :: is_real
     type(fft_t),       intent(out)   :: fft
 
     integer :: i, j
@@ -204,7 +204,7 @@ contains
   ! ---------------------------------------------------------
   subroutine fft_getdim_real(fft, d)
     type(fft_t), intent(in) :: fft
-    integer, intent(out) :: d(3)
+    integer,    intent(out) :: d(MAX_DIM)
 
     d = fft%n
   end subroutine fft_getdim_real
@@ -213,7 +213,7 @@ contains
   ! ---------------------------------------------------------
   subroutine fft_getdim_complex(fft, d)
     type(fft_t), intent(in) :: fft
-    integer, intent(out) :: d(3)
+    integer,    intent(out) :: d(MAX_DIM)
 
     d = fft%n
     if(fft%is_real == fft_real)  d(1) = d(1)/2 + 1
@@ -235,8 +235,8 @@ contains
   ! ---------------------------------------------------------
   subroutine dfft_backward(fft, c, r)
     type(fft_t), intent(in) :: fft
-    CMPLX, intent(in) :: c(fft%n(1),fft%n(2),fft%n(3))
-    FLOAT, intent(out)   :: r(fft%n(1),fft%n(2),fft%n(3))
+    CMPLX,    intent(in) :: c(fft%n(1),fft%n(2),fft%n(3))
+    FLOAT,   intent(out) :: r(fft%n(1),fft%n(2),fft%n(3))
 
     call rfftwnd_f77_one_complex_to_real(fft%planb, c, r)
 

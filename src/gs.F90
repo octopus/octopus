@@ -51,10 +51,10 @@ contains
   subroutine ground_state_run(sys, h, fromScratch)
     type(system_t),      intent(inout) :: sys
     type(hamiltonian_t), intent(inout) :: h
-    logical,                intent(inout) :: fromScratch
+    logical,             intent(inout) :: fromScratch
 
     type(scf_t) :: scfv
-    integer        :: ierr
+    integer     :: ierr
 
     call push_sub('gs.ground_state_run')
 

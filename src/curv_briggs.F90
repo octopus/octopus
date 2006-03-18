@@ -37,8 +37,8 @@ module curv_briggs_m
   implicit none
 
   type curv_briggs_t
-    FLOAT :: L(3)   ! size of the box
-    FLOAT :: beta   ! adjustable parameter between 0 and 1 that controls the degree of scaling
+    FLOAT :: L(MAX_DIM)  ! size of the box
+    FLOAT :: beta        ! adjustable parameter between 0 and 1 that controls the degree of scaling
   end type curv_briggs_t
 
 contains
@@ -65,8 +65,8 @@ contains
   subroutine curv_briggs_chi2x(sb, cv, chi, x)
     type(simul_box_t),   intent(in)  :: sb
     type(curv_briggs_t), intent(in)  :: cv
-    FLOAT,                  intent(in)  :: chi(:)  ! chi(sb%dim)
-    FLOAT,                  intent(out) :: x(:)    ! x(sb%dim)
+    FLOAT,               intent(in)  :: chi(:)  ! chi(sb%dim)
+    FLOAT,               intent(out) :: x(:)    ! x(sb%dim)
 
     integer :: i
 
@@ -82,8 +82,8 @@ contains
   subroutine curv_briggs_jacobian_inv(sb, cv, chi, J)
     type(simul_box_t),   intent(in)  :: sb
     type(curv_briggs_t), intent(in)  :: cv
-    FLOAT,                  intent(in)  :: chi(:)  ! chi(sb%dim)
-    FLOAT,                  intent(out) :: J(:,:)  ! J(sb%dim,sb%dim), the Jacobian
+    FLOAT,               intent(in)  :: chi(:)  ! chi(sb%dim)
+    FLOAT,               intent(out) :: J(:,:)  ! J(sb%dim,sb%dim), the Jacobian
 
     integer :: i
 

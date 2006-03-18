@@ -466,7 +466,7 @@ contains
     subroutine scf_write_static(dir, fname)
       character(len=*), intent(in) :: dir, fname
 
-      FLOAT :: e_dip(4, st%d%nspin), n_dip(3), angular(3), l2
+      FLOAT :: e_dip(4, st%d%nspin), n_dip(MAX_DIM), angular(MAX_DIM), l2
       FLOAT, parameter :: ATOMIC_TO_DEBYE = CNST(2.5417462)
       integer :: iunit, i, j
 
@@ -578,12 +578,12 @@ contains
 
     ! ---------------------------------------------------------
     subroutine write_magnetic_moments(iunit, m, st)
-      integer,           intent(in) :: iunit
+      integer,        intent(in) :: iunit
       type(mesh_t),   intent(in) :: m
       type(states_t), intent(in) :: st
 
       integer :: i
-      FLOAT :: mm(3)
+      FLOAT :: mm(MAX_DIM)
       FLOAT, allocatable :: lmm(:,:)
 
       call push_sub('scf.write_magnetic_moments')

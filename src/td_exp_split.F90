@@ -46,11 +46,11 @@ contains
     type(grid_t),        intent(in)    :: gr
     type(hamiltonian_t), intent(in)    :: h
     CMPLX,               intent(inout) :: psi(:,:) ! (NP_PART, dim)
-    type(zcf),           intent(inout) :: cf
+    type(zcf_t),         intent(inout) :: cf
     CMPLX,               intent(in)    :: factor
 
-    integer :: ix, iy, iz, k(3), idim
-    FLOAT :: cutoff, temp(3), g2
+    integer :: ix, iy, iz, k(MAX_DIM), idim
+    FLOAT :: cutoff, temp(MAX_DIM), g2
 
     call push_sub('td_exp_split.exp_kinetic')
 
@@ -150,9 +150,9 @@ contains
   subroutine zexp_vnlpsi (m, h, psi, factor_, order_)
     type(mesh_t),        intent(in) :: m
     type(hamiltonian_t), intent(in) :: h
-    CMPLX,                  intent(inout) :: psi(m%np, h%d%dim)
-    CMPLX,                  intent(in) :: factor_
-    logical,                intent(in) :: order_
+    CMPLX,            intent(inout) :: psi(m%np, h%d%dim)
+    CMPLX,               intent(in) :: factor_
+    logical,             intent(in) :: order_
 
 !!$    integer :: idim, ikbc, jkbc, &
 !!$         ivnl_start, ivnl_end, step, kbc_start, kbc_end, ivnl

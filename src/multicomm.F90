@@ -126,12 +126,13 @@ module multicomm_m
 
 contains
 
+  ! ---------------------------------------------------------
   ! create index and domain communicators
   subroutine multicomm_init(mc, parallel_mask, n_node, n_index, index_range, min_range)
     type(multicomm_t), intent(out)  :: mc
-    integer,              intent(in)   :: parallel_mask, n_node, n_index
-    integer,              intent(inout):: index_range(:)
-    integer,              intent(in)   :: min_range(:)
+    integer,           intent(in)   :: parallel_mask, n_node, n_index
+    integer,           intent(inout):: index_range(:)
+    integer,           intent(in)   :: min_range(:)
 
     integer :: i
     integer(POINTER_SIZE) :: blk
@@ -321,6 +322,7 @@ contains
     end subroutine assign_nodes
 
 
+    ! ---------------------------------------------------------
     ! check if a balanced distribution of nodes will be used
     subroutine sanity_check()
       FLOAT :: frac
@@ -410,8 +412,8 @@ contains
   ! ---------------------------------------------------------
   subroutine multicomm_proc(mc, index, proc)
     type(multicomm_t), intent(in)  :: mc
-    integer,              intent(in)  :: index(:) ! (mc%n_index)
-    integer,              intent(out) :: proc     ! the processor corresponding to that index
+    integer,           intent(in)  :: index(:) ! (mc%n_index)
+    integer,           intent(out) :: proc     ! the processor corresponding to that index
 
     type(multicomm_tree_t), pointer :: p
     integer :: i
@@ -637,7 +639,7 @@ contains
   ! ---------------------------------------------------------
   logical function multicomm_strategy_is_parallel(mc, level) result(r)
     type(multicomm_t), intent(in) :: mc
-    integer,              intent(in) :: level
+    integer,           intent(in) :: level
 
     r = iand(mc%par_strategy, 2**(level-1)).ne.0
   end function multicomm_strategy_is_parallel

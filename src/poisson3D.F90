@@ -82,8 +82,8 @@ contains
   subroutine init_fft(m)
     type(mesh_t), intent(in) :: m
 
-    integer :: ix, iy, iz, ixx(3), db(3)
-    FLOAT :: temp(3), modg2
+    integer :: ix, iy, iz, ixx(MAX_DIM), db(MAX_DIM)
+    FLOAT :: temp(MAX_DIM), modg2
     FLOAT :: gpar,gperp,gx,gz,r_c
     FLOAT :: DELTA_R = CNST(1.0e-12)
 

@@ -65,6 +65,8 @@ program broad
   call global_end()
 
 contains
+
+  ! ---------------------------------------------------------
   subroutine calc_broad(b, dir, fname, extracols)
     type(broad_t), intent(in) :: b
     character(len=*), intent(in) :: dir

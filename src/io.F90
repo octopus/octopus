@@ -10,7 +10,7 @@
 ! Converted into f90-module, A. Rubio 1999.                                   !
 !                                                                             !
 ! Logical unit management. Units 0 to min_lun-1 are "reserved",               !
-! since most of the "typical" files (output, etc) use them.                   !_m
+! since most of the "typical" files (output, etc) use them.                   !
 !                                                                             !
 ! Logical units min_lun to min_max are managed by this module.                !
 !                                                                             !
@@ -425,7 +425,6 @@ contains
   ! Given a path, it returns the extension (if it exists) of the file
   ! (that is, the part of the name that comes after its last point)
   ! If the filename does not have an extension, it returns the empty string.
-  ! ---------------------------------------------------------
   character(len=8) function io_get_extension(path) result(ext)
     character(len = * ), intent(in)  :: path
     integer :: i, j
@@ -440,6 +439,7 @@ contains
   end function io_get_extension
 
 
+  ! ---------------------------------------------------------
   ! check if debug mode or message flushing should be enabled or 
   ! disabled on the fly
   subroutine io_debug_on_the_fly()

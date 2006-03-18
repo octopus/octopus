@@ -39,7 +39,7 @@ module curv_modine_m
   implicit none
 
   type curv_modine_t
-    FLOAT :: L(3)          ! size of the box
+    FLOAT :: L(MAX_DIM)    ! size of the box
     FLOAT :: xbar          ! size of central flat region (in units of L)
     FLOAT :: Jbar          ! increase in density of points is 1/J
     FLOAT :: Jlocal        ! local (around the atoms) refinement
@@ -80,16 +80,16 @@ contains
     type(simul_box_t),   intent(in)  :: sb
     type(geometry_t),    intent(in)  :: geo
     type(curv_modine_t), intent(in)  :: cv
-    FLOAT,                  intent(in)  :: chi_(:)  ! chi_(sb%dim)
-    FLOAT,                  intent(out) :: x(:)     !   x (sb%dim)
+    FLOAT,               intent(in)  :: chi_(:)  ! chi_(sb%dim)
+    FLOAT,               intent(out) :: x(:)     !   x (sb%dim)
 
     integer, parameter :: q = 3
 
-    FLOAT :: chibar(sb%dim), r, chi
+    FLOAT :: chibar(MAX_DIM), r, chi
     logical :: neg
     integer :: i
 
-    chibar = cv%xbar*cv%L(:)
+    chibar(1:sb%dim) = cv%xbar*cv%L(1:sb%dim)
 
     do i = 1, sb%dim
       neg = (chi_(i) < 0)
@@ -118,18 +118,18 @@ contains
     type(simul_box_t),   intent(in)  :: sb
     type(geometry_t),    intent(in)  :: geo
     type(curv_modine_t), intent(in)  :: cv
-    FLOAT,                  intent(in)  :: chi_(:)  ! chi(sb%dim)
-    FLOAT,                  intent(out) :: J(:,:)   ! J(sb%dim,sb%dim), the Jacobian
+    FLOAT,               intent(in)  :: chi_(:)  ! chi(sb%dim)
+    FLOAT,               intent(out) :: J(:,:)   ! J(sb%dim,sb%dim), the Jacobian
 
     integer, parameter :: q = 3
 
-    FLOAT :: chibar(sb%dim), r, f, chi, J2(sb%dim), x(sb%dim)
+    FLOAT :: chibar(MAX_DIM), r, f, chi, J2(MAX_DIM), x(MAX_DIM)
     logical :: neg
     integer :: i, ix, iy
 
-    chibar = cv%xbar*cv%L(:)
+    chibar(1:sb%dim) = cv%xbar*cv%L(1:sb%dim)
 
-    J2(:) = M_ZERO
+    J2 = M_ZERO
     do i = 1, sb%dim
       neg = (chi_(i) < 0)
       chi = abs(chi_(i))

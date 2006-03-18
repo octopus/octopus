@@ -64,8 +64,8 @@ contains
 
   ! ---------------------------------------------------------
   subroutine mix_init(smix, m, d2, d3, def_)
-    type(mix_t),    intent(out) :: smix
-    type(mesh_t),   intent(in)  :: m
+    type(mix_t),       intent(out) :: smix
+    type(mesh_t),      intent(in)  :: m
     integer,           intent(in)  :: d2, d3
     integer, optional, intent(in)  :: def_
 
@@ -149,6 +149,7 @@ contains
   ! ---------------------------------------------------------
   subroutine mix_end(smix)
     type(mix_t), intent(inout) :: smix
+
     call push_sub('mix.mix_end')
 
     ! Arrays got allocated for all mixing schemes, except linear mixing
@@ -166,10 +167,10 @@ contains
   ! ---------------------------------------------------------
   subroutine mixing(smix, m, iter, d2, d3, vin, vout, vnew)
     type(mix_t), intent(inout) :: smix
-    type(mesh_t), intent(in)   :: m
-    integer,        intent(in)    :: iter, d2, d3
-    FLOAT,          intent(in)    :: vin(:, :, :), vout(:, :, :)
-    FLOAT,          intent(out)   :: vnew(:, :, :)
+    type(mesh_t),   intent(in) :: m
+    integer,     intent(in)    :: iter, d2, d3
+    FLOAT,       intent(in)    :: vin(:, :, :), vout(:, :, :)
+    FLOAT,       intent(out)   :: vnew(:, :, :)
 
     call push_sub('mix.mixing')
 
@@ -198,23 +199,27 @@ contains
     FLOAT,   intent(in)  :: vin(:, :, :), vout(:, :, :)
     FLOAT,   intent(out) :: vnew(:, :, :)
 
+    call push_sub('mix.mixing_linear')
+
     vnew(1:m%np,:,:) = vin(1:m%np,:,:)*(M_ONE - alpha) + alpha*vout(1:m%np,:,:)
 
+    call pop_sub()
   end subroutine mixing_linear
 
 
   ! ---------------------------------------------------------
   subroutine mixing_broyden(smix, m, d2, d3, vin, vout, vnew, iter)
     type(mix_t), intent(inout) :: smix
-    type(mesh_t), intent(in)   :: m
-    integer,        intent(in)    :: d2, d3, iter
-    FLOAT,          intent(in)    :: vin(:, :, :), vout(:, :, :)
-    FLOAT,          intent(out)   :: vnew(:, :, :)
-
+    type(mesh_t),   intent(in) :: m
+    integer,        intent(in) :: d2, d3, iter
+    FLOAT,          intent(in) :: vin(:, :, :), vout(:, :, :)
+    FLOAT,         intent(out) :: vnew(:, :, :)
 
     integer :: ipos, iter_used, i, j
     FLOAT :: gamma
     FLOAT, allocatable :: f(:, :, :)
+
+    call push_sub('mix.mixing_broyden')
 
     ALLOCATE(f(m%np, d2, d3), m%np*d2*d3)
 
@@ -259,23 +264,29 @@ contains
 
     deallocate(f)
 
+    call pop_sub()
   end subroutine mixing_broyden
 
 
   ! ---------------------------------------------------------
   subroutine broyden_extrapolation(alpha, m, d2, d3, vin, vnew, iter_used, f, df, dv)
-    FLOAT,   intent(in)         :: alpha
-    type(mesh_t), intent(in) :: m
-    integer, intent(in)         :: d2, d3, iter_used
-    FLOAT,   intent(in)         :: vin(:, :, :), f(:, :, :)
-    FLOAT,   intent(in)         :: df(:, :, :, :), dv(:, :, :, :)
-    FLOAT,   intent(out)        :: vnew(:, :, :)
-
+    FLOAT,   intent(in)       :: alpha
+    type(mesh_t), intent(in)  :: m
+    integer, intent(in)       :: d2, d3, iter_used
+    FLOAT,   intent(in)       :: vin(:, :, :), f(:, :, :)
+    FLOAT,   intent(in)       :: df(:, :, :, :), dv(:, :, :, :)
+    FLOAT,   intent(out)      :: vnew(:, :, :)
 
     FLOAT, parameter :: w0 = CNST(0.01)
-
     integer  :: i, j, k, l
-    FLOAT :: beta(iter_used, iter_used), gamma, work(iter_used), w(iter_used), x
+    FLOAT    :: gamma, x
+    FLOAT, allocatable :: beta(:, :), work(:), w(:)
+
+    call push_sub('mix.broyden_extrapolation')
+
+    ALLOCATE(beta(iter_used, iter_used), iter_used**2)
+    ALLOCATE(work(iter_used), iter_used)
+    ALLOCATE(w(iter_used), iter_used)
 
     if (iter_used == 0) then
       ! linear mixing...
@@ -326,6 +337,9 @@ contains
         dv(1:m%np, 1:d2, 1:d3, i))
     end do
 
+    deallocate(beta, work, w)
+
+    call pop_sub()
   end subroutine broyden_extrapolation
 
 
@@ -335,13 +349,15 @@ contains
   subroutine mixing_grpulay(smix, m, d2, d3, vin, vout, vnew, iter)
     type(mix_t), intent(inout) :: smix
     type(mesh_t), intent(in)   :: m
-    integer,        intent(in)    :: d2, d3
-    integer,        intent(in)    :: iter
-    FLOAT,          intent(in)    :: vin(:, :, :), vout(:, :, :)
-    FLOAT,          intent(out)   :: vnew(:, :, :)
+    integer,      intent(in)   :: d2, d3
+    integer,      intent(in)   :: iter
+    FLOAT,        intent(in)   :: vin(:, :, :), vout(:, :, :)
+    FLOAT,        intent(out)  :: vnew(:, :, :)
 
     integer :: ipos, iter_used
     FLOAT, allocatable :: f(:, :, :)
+
+    call push_sub('mix.mixing_grpulay')
 
     ALLOCATE(f(m%np, d2, d3), m%np*d2*d3)
     f = vout - vin
@@ -383,6 +399,8 @@ contains
     end select
 
     deallocate(f)
+
+    call pop_sub()
   end subroutine mixing_grpulay
 
 
@@ -395,7 +413,12 @@ contains
     FLOAT, intent(out) :: vnew(:, :, :)
 
     integer :: i, j, k, l
-    FLOAT :: a(iter_used, iter_used), alpha
+    FLOAT :: alpha
+    FLOAT, allocatable :: a(:, :)
+
+    call push_sub('mix.pulay_extrapolation')
+
+    ALLOCATE(a(iter_used, iter_used), iter_used**2)
 
     ! set matrix A
     a = M_ZERO
@@ -438,6 +461,9 @@ contains
       vnew(:, :, :) = vnew(:, :, :) + alpha * dv(:, :, :, i)
     end do
 
+    deallocate(a)
+
+    call pop_sub()
   end subroutine pulay_extrapolation
 
 end module mix_m

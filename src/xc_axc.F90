@@ -21,11 +21,11 @@
 subroutine xc_get_vxc_and_axc(gr, xcs, rho, j, ispin, vxc, axc, ex, ec, exc_j, ip, qtot)
   type(grid_t),       intent(inout) :: gr
   type(xc_t), target, intent(in)    :: xcs
-  FLOAT,                 intent(in)    :: rho(:, :), j(:,:,:)
-  integer,               intent(in)    :: ispin
-  FLOAT,                 intent(inout) :: vxc(:,:), axc(:,:,:)
-  FLOAT,                 intent(inout) :: ex, ec, exc_j
-  FLOAT,                 intent(in)    :: ip, qtot
+  FLOAT,              intent(in)    :: rho(:, :), j(:,:,:)
+  integer,            intent(in)    :: ispin
+  FLOAT,              intent(inout) :: vxc(:,:), axc(:,:,:)
+  FLOAT,              intent(inout) :: ex, ec, exc_j
+  FLOAT,              intent(in)    :: ip, qtot
 
   integer :: spin_channels, i, is, id
   FLOAT   :: e

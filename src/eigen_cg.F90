@@ -17,17 +17,18 @@
 !!
 !! $Id$
 
+! ---------------------------------------------------------
 ! conjugate-gradients method.
 subroutine eigen_solver_cg2(gr, st, h, tol, niter, converged, diff, reorder, verbose)
   type(grid_t),        intent(inout) :: gr
   type(states_t),      intent(inout) :: st
   type(hamiltonian_t), intent(inout) :: h
-  FLOAT,                  intent(in)    :: tol
-  integer,                intent(inout) :: niter
-  integer,                intent(inout) :: converged
-  FLOAT,        optional, intent(out)   :: diff(1:st%nst,1:st%d%nik)
-  logical,      optional, intent(in)    :: reorder
-  logical,      optional, intent(in)    :: verbose
+  FLOAT,               intent(in)    :: tol
+  integer,             intent(inout) :: niter
+  integer,             intent(inout) :: converged
+  FLOAT,     optional, intent(out)   :: diff(1:st%nst,1:st%d%nik)
+  logical,   optional, intent(in)    :: reorder
+  logical,   optional, intent(in)    :: verbose
 
   R_TYPE, allocatable :: h_psi(:,:), g(:,:), g0(:,:), &
     cg(:,:), ppsi(:,:)
@@ -204,18 +205,18 @@ subroutine eigen_solver_cg2(gr, st, h, tol, niter, converged, diff, reorder, ver
   call pop_sub()
 end subroutine eigen_solver_cg2
 
-
+! ---------------------------------------------------------
 ! The algorithm is essentially taken from Jiang et al. Phys. Rev. B 68, 165337 (2003).
 subroutine eigen_solver_cg2_new(gr, st, h, tol, niter, converged, diff, reorder, verbose)
   type(grid_t),        intent(inout) :: gr
   type(states_t),      intent(inout) :: st
   type(hamiltonian_t), intent(inout) :: h
-  FLOAT,                  intent(in)    :: tol
-  integer,                intent(inout) :: niter
-  integer,                intent(inout) :: converged
-  FLOAT,        optional, intent(out)   :: diff(1:st%nst,1:st%d%nik)
-  logical,      optional, intent(in)    :: reorder
-  logical,      optional, intent(in)    :: verbose
+  FLOAT,               intent(in)    :: tol
+  integer,             intent(inout) :: niter
+  integer,             intent(inout) :: converged
+  FLOAT,     optional, intent(out)   :: diff(1:st%nst,1:st%d%nik)
+  logical,   optional, intent(in)    :: reorder
+  logical,   optional, intent(in)    :: verbose
 
   integer :: nik, nst, dim, ik, ist, maxter, i, k, conv, conv_
   logical :: verbose_, reorder_

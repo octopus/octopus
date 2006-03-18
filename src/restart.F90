@@ -116,13 +116,13 @@ contains
 
   ! ---------------------------------------------------------
   subroutine restart_look (dir, m, kpoints, dim, nst, ierr)
-    character(len=*),  intent(in)    :: dir
-    type(mesh_t),   intent(in)    :: m
-    integer, intent(out) :: kpoints, dim, nst, ierr
+    character(len=*), intent(in) :: dir
+    type(mesh_t),     intent(in) :: m
+    integer,         intent(out) :: kpoints, dim, nst, ierr
 
-    character(len=256)   :: line
-    character(len=12)    :: filename
-    character(len=1)     :: char
+    character(len=256) :: line
+    character(len=12)  :: filename
+    character(len=1)   :: char
     integer :: iunit, iunit2, err, i, ist, idim, ik
     FLOAT :: occ, eigenval
 

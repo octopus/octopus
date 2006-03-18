@@ -17,15 +17,16 @@
 !!
 !! $Id$
 
+! ---------------------------------------------------------
 subroutine eigen_solver_evolution(gr, st, h, tol, niter, converged, diff, tau)
   type(grid_t), target,intent(inout) :: gr
   type(states_t),      intent(inout) :: st
   type(hamiltonian_t), target, intent(inout)    :: h
-  FLOAT,                  intent(in)    :: tol
-  integer,                intent(inout) :: niter
-  integer,                intent(inout) :: converged
-  FLOAT,                  intent(out)   :: diff(1:st%nst,1:st%d%nik)
-  FLOAT,                  intent(in)    :: tau
+  FLOAT,               intent(in)    :: tol
+  integer,             intent(inout) :: niter
+  integer,             intent(inout) :: converged
+  FLOAT,               intent(out)   :: diff(1:st%nst,1:st%d%nik)
+  FLOAT,               intent(in)    :: tau
 
   integer :: ik, ist, iter, maxiter, conv, conv_, matvec, i, j
   R_TYPE, allocatable :: hpsi(:, :), m(:, :), c(:, :), phi(:, :, :)
@@ -142,8 +143,8 @@ end subroutine eigen_solver_evolution
 
 ! ---------------------------------------------------------
 subroutine mv(x, y)
-  R_TYPE, intent(in) :: x(*)
-  R_TYPE, intent(out) :: y(*)
+  R_TYPE, intent(in) :: x(:)
+  R_TYPE, intent(out) :: y(:)
   integer :: idim
   R_TYPE, allocatable :: psi(:, :), hpsi(:, :)
 

@@ -129,7 +129,7 @@ contains
   !-------------------------------------------------------------------
   subroutine grid_write_info(gr, iunit)
     type(grid_t), intent(in) :: gr
-    integer,         intent(in) :: iunit
+    integer,      intent(in) :: iunit
 
     if(.not.mpi_grp_is_root(mpi_world)) then
       if(in_debug_mode) call write_debug_newlines(4)

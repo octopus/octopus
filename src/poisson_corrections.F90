@@ -59,10 +59,10 @@ contains
   subroutine correct_rho(m, ml, rho, rho_corrected, vh_correction)
     implicit none
     type(mesh_t), intent(in)  :: m
-    integer,         intent(in)  :: ml
-    FLOAT,           intent(in)  :: rho(:)
-    FLOAT,           intent(out) :: rho_corrected(:)
-    FLOAT,           intent(out) :: vh_correction(:)
+    integer,      intent(in)  :: ml
+    FLOAT,        intent(in)  :: rho(:)
+    FLOAT,        intent(out) :: rho_corrected(:)
+    FLOAT,        intent(out) :: vh_correction(:)
 
     integer :: i, add_lm, l, mm, lldfac, j
     FLOAT   :: alpha, r2
@@ -133,7 +133,7 @@ contains
   subroutine build_phi(m)
     type(mesh_t), intent(in) :: m
 
-    FLOAT :: alpha, beta, gamma, ylm, r, x(3)
+    FLOAT :: alpha, beta, gamma, ylm, r, x(MAX_DIM)
     integer :: i, l, add_lm, lldfac, j, mm
 
     ALLOCATE(phi((maxl+1)**2, m%np), (maxl+1)**2*m%np)
@@ -181,7 +181,7 @@ contains
   subroutine build_aux(m)
     type(mesh_t), intent(in) :: m
 
-    FLOAT :: ylm, r, x(3)
+    FLOAT :: ylm, r, x(MAX_DIM)
     integer :: i, l, add_lm, mm
 
     ALLOCATE(aux((maxl+1)**2, m%np), (maxl+1)**2*m%np)

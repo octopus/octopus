@@ -66,12 +66,12 @@ module derivatives_m
 
   type der_discr_t
     type(mesh_t), pointer :: m             ! pointer to the underlying mesh
-    integer                  :: dim           ! dimensionality of the space (sb%dim)
-    integer                  :: order         ! order of the discretization (value depends on stencil)
-    integer                  :: stencil_type  ! type of discretization
+    integer               :: dim           ! dimensionality of the space (sb%dim)
+    integer               :: order         ! order of the discretization (value depends on stencil)
+    integer               :: stencil_type  ! type of discretization
 
-    integer                  :: boundaries(3) ! bounday conditions
-    logical                  :: zero_bc
+    integer               :: boundaries(MAX_DIM) ! bounday conditions
+    logical               :: zero_bc
 
     FLOAT :: lapl_cutoff ! If the so-called variational discretization is used, this controls a
     ! possible filter on the Laplacian.
@@ -91,8 +91,8 @@ contains
   subroutine derivatives_init(sb, der, n_ghost, use_curvilinear)
     type(simul_box_t), intent(in)  :: sb
     type(der_discr_t), intent(out) :: der
-    integer,              intent(out) :: n_ghost(:)
-    logical,              intent(in)  :: use_curvilinear
+    integer,           intent(out) :: n_ghost(:)
+    logical,           intent(in)  :: use_curvilinear
 
     integer :: i
 
@@ -406,6 +406,7 @@ contains
 
   contains
 
+    ! ---------------------------------------------------------
     subroutine get_rhs_lapl(rhs)
       FLOAT, intent(out) :: rhs(:)
 
@@ -427,6 +428,7 @@ contains
 
     end subroutine get_rhs_lapl
 
+    ! ---------------------------------------------------------
     subroutine get_rhs_grad(dir, rhs)
       integer, intent(in)  :: dir
       FLOAT,   intent(out) :: rhs(:)
@@ -453,14 +455,14 @@ contains
   ! ---------------------------------------------------------
   subroutine make_discretization(dim, m, pol, rhs, n, op)
     integer,                intent(in)    :: dim
-    type(mesh_t),        intent(in)    :: m
+    type(mesh_t),           intent(in)    :: m
     integer,                intent(in)    :: pol(:,:)  ! pol(dim, op%n)
     integer,                intent(in)    :: n
     FLOAT,                  intent(inout) :: rhs(:,:)   ! rhs_(op%n, n)
-    type(nl_operator_t), intent(inout) :: op(:)
+    type(nl_operator_t),    intent(inout) :: op(:)
 
     integer :: p, p_max, i, j, k, pow_max
-    FLOAT   :: x(dim)
+    FLOAT   :: x(MAX_DIM)
     FLOAT, allocatable :: mat(:,:), sol(:,:), powers(:,:)
 
     call push_sub('derivatives.make_discretization')

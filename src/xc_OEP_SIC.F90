@@ -23,9 +23,9 @@ subroutine X(oep_sic) (xcs, gr, st, is, oep, ex, ec)
   type(xc_t),     intent(in)    :: xcs
   type(grid_t),   intent(inout) :: gr
   type(states_t), intent(inout) :: st
-  integer,           intent(in)    :: is
+  integer,           intent(in) :: is
   type(xc_oep_t), intent(inout) :: oep
-  FLOAT,             intent(inout) :: ex, ec
+  FLOAT,          intent(inout) :: ex, ec
 
   integer  :: i
   FLOAT :: ex2, ec2, ex_, ec_, edummy

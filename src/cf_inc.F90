@@ -17,10 +17,11 @@
 !!
 !! $Id$
 
-!!! The following routines handle creation/destruction of the cube
+! ---------------------------------------------------------
+! The following routines handle creation/destruction of the cube
 subroutine X(cf_new)(n, cf)
-  integer, intent(in) :: n(3)
-  type(X(cf)), intent(out) :: cf
+  integer, intent(in) :: n(MAX_DIM)
+  type(X(cf_t)), intent(out) :: cf
 
   call push_sub('cf_inc.Xcf_new')
 
@@ -36,9 +37,11 @@ subroutine X(cf_new)(n, cf)
   call pop_sub()
 end subroutine X(cf_new)
 
+
+! ---------------------------------------------------------
 subroutine X(cf_new_from)(cf, cf_i)
-  type(X(cf)), intent(out) :: cf
-  type(X(cf)), intent( in) :: cf_i
+  type(X(cf_t)), intent(out) :: cf
+  type(X(cf_t)), intent( in) :: cf_i
 
   call push_sub('cf_inc.Xcf_new_from')
   ASSERT(all(cf_i%n>0))
@@ -59,8 +62,10 @@ subroutine X(cf_new_from)(cf, cf_i)
   call pop_sub()
 end subroutine X(cf_new_from)
 
+
+! ---------------------------------------------------------
 subroutine X(cf_alloc_RS)(cf)
-  type(X(cf)), intent(inout) :: cf
+  type(X(cf_t)), intent(inout) :: cf
 
   call push_sub('cf_inc.Xcf_alloc_RS')
 
@@ -70,8 +75,10 @@ subroutine X(cf_alloc_RS)(cf)
   call pop_sub()
 end subroutine X(cf_alloc_RS)
 
+
+! ---------------------------------------------------------
 subroutine X(cf_free_RS)(cf)
-  type(X(cf)), intent(inout) :: cf
+  type(X(cf_t)), intent(inout) :: cf
 
   call push_sub('cf_inc.Xcf_free_RS')
 
@@ -82,9 +89,11 @@ subroutine X(cf_free_RS)(cf)
   call pop_sub()
 end subroutine X(cf_free_RS)
 
+
 #if defined(HAVE_FFT)
+! ---------------------------------------------------------
 subroutine X(cf_alloc_FS)(cf)
-  type(X(cf)), intent(inout) :: cf
+  type(X(cf_t)), intent(inout) :: cf
 
   call push_sub('cf_inc.Xcf_alloc_FS')
   ASSERT(.not.associated(cf%FS))
@@ -95,8 +104,10 @@ subroutine X(cf_alloc_FS)(cf)
   call pop_sub()
 end subroutine X(cf_alloc_FS)
 
+
+! ---------------------------------------------------------
 subroutine X(cf_free_FS)(cf)
-  type(X(cf)), intent(inout) :: cf
+  type(X(cf_t)), intent(inout) :: cf
 
   call push_sub('cf_inc.Xcf_free_FS')
   ASSERT(associated(cf%FS))
@@ -107,8 +118,10 @@ subroutine X(cf_free_FS)(cf)
 end subroutine X(cf_free_FS)
 #endif
 
+
+! ---------------------------------------------------------
 subroutine X(cf_free)(cf)
-  type(X(cf)), intent(inout) :: cf
+  type(X(cf_t)), intent(inout) :: cf
 
   call push_sub('cf_inc.Xcf_free')
 
@@ -132,11 +145,13 @@ subroutine X(cf_free)(cf)
   call pop_sub()
 end subroutine X(cf_free)
 
+
 #if defined(HAVE_FFT)
-!!! initializes the ffts. As the dimension of the fft may be adjusted, this
-!!! routine has to be called before allocating anything
+! ---------------------------------------------------------
+! initializes the ffts. As the dimension of the fft may be adjusted, this
+! routine has to be called before allocating anything
 subroutine X(cf_fft_init)(cf, sb)
-  type(X(cf)),          intent(inout) :: cf
+  type(X(cf_t)),     intent(inout) :: cf
   type(simul_box_t), intent(in)    :: sb
 
   call push_sub('cf_inc.Xcf_fft_init')
@@ -156,11 +171,13 @@ subroutine X(cf_fft_init)(cf, sb)
   call pop_sub()
 end subroutine X(cf_fft_init)
 
-!!! The next routines convert the function between real space and fourier space
-!!! Note that the dimensions of the function in FS are different wether f
-!!! is real or complex, because the FFT representation is different (FFTW scheme)._m
+
+! ---------------------------------------------------------
+! The next routines convert the function between real space and fourier space
+! Note that the dimensions of the function in FS are different wether f
+! is real or complex, because the FFT representation is different (FFTW scheme)._m
 subroutine X(cf_RS2FS)(cf)
-  type(X(cf)), intent(inout)  :: cf
+  type(X(cf_t)), intent(inout)  :: cf
 
   ASSERT(associated(cf%RS))
   if(.not.associated(cf%FS)) call X(cf_alloc_FS)(cf)
@@ -169,8 +186,10 @@ subroutine X(cf_RS2FS)(cf)
 
 end subroutine X(cf_RS2FS)
 
+
+! ---------------------------------------------------------
 subroutine X(cf_FS2RS)(cf)
-  type(X(cf)), intent(inout)  :: cf
+  type(X(cf_t)), intent(inout)  :: cf
 
   ASSERT(associated(cf%FS))
   if(.not.associated(cf%RS)) call X(cf_alloc_RS)(cf)
@@ -180,17 +199,18 @@ subroutine X(cf_FS2RS)(cf)
 end subroutine X(cf_FS2RS)
 
 
+! ---------------------------------------------------------
 ! This function calculates the laplacian of a function in Fourier space.
 ! optionally, one can apply a cutoff
 ! i.e. \nabla^2 f = min(cutoff, G^2) * f
 subroutine X(cf_FS_lapl)(sb, m, cf, cutoff_)
   type(simul_box_t), intent(in)    :: sb
   type(mesh_t),      intent(in)    :: m
-  type(X(cf)),          intent(inout) :: cf
-  FLOAT, optional,      intent(in)    :: cutoff_
+  type(X(cf_t)),     intent(inout) :: cf
+  FLOAT, optional,   intent(in)    :: cutoff_
 
-  FLOAT :: cutoff, temp(3), g2
-  integer :: k(3), ix, iy, iz
+  FLOAT :: cutoff, temp(MAX_DIM), g2
+  integer :: k(MAX_DIM), ix, iy, iz
 
   ASSERT(associated(cf%FS))
 
@@ -217,14 +237,15 @@ subroutine X(cf_FS_lapl)(sb, m, cf, cutoff_)
 end subroutine X(cf_FS_lapl)
 
 
+! ---------------------------------------------------------
 subroutine X(cf_FS_grad)(sb, m, cf, j)
   type(simul_box_t), intent(in)    :: sb
   type(mesh_t),      intent(in)    :: m
-  type(X(cf)),          intent(inout) :: cf
-  integer,              intent(in)    :: j
+  type(X(cf_t)),     intent(inout) :: cf
+  integer,           intent(in)    :: j
 
-  FLOAT :: temp(3), g
-  integer :: k(3), ix, iy, iz
+  FLOAT :: temp(MAX_DIM), g
+  integer  :: k(MAX_DIM), ix, iy, iz
 
   call push_sub('cf_inc.Xcf_FS_grad')
 

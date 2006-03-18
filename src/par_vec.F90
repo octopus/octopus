@@ -224,7 +224,7 @@ contains
     integer, allocatable :: ir(:), irr(:, :) ! Counters.
     integer              :: rank             ! Rank of current node.
     integer              :: ierr             ! MPI errorcode.
-    integer              :: p1(3)            ! Points.
+    integer              :: p1(MAX_DIM)      ! Points.
     integer, allocatable :: ghost_flag(:, :) ! To remember ghost pnts.
     integer              :: iunit            ! For debug output to files.
     character(len=3)     :: filenum
@@ -448,7 +448,6 @@ contains
     vp%part   = part
 
     call pop_sub()
-
   end subroutine vec_init
 
 

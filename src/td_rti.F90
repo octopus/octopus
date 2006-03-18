@@ -65,7 +65,7 @@ module td_rti_m
     FLOAT, pointer :: v_old(:, :, :) ! storage of the KS potential of previous iterations
     FLOAT, pointer :: vmagnus(:, :, :) ! auxiliary function to store the Magnus potentials.
 
-    type(zcf) :: cf              ! auxiliary cube for split operator methods
+    type(zcf_t) :: cf              ! auxiliary cube for split operator methods
   end type td_rti_t
 
 
@@ -242,9 +242,11 @@ contains
   subroutine td_rti_run_zero_iter(h, tr)
     type(hamiltonian_t), intent(in)    :: h
     type(td_rti_t),      intent(inout) :: tr
+
     tr%v_old(:, :, 2) = h%vhxc(:, :)
     tr%v_old(:, :, 3) = h%vhxc(:, :)
     tr%v_old(:, :, 1) = h%vhxc(:, :)
+
   end subroutine td_rti_run_zero_iter
 
 
@@ -255,7 +257,7 @@ contains
     type(grid_t),        intent(inout) :: gr
     type(states_t),      intent(inout) :: st
     type(td_rti_t),      intent(inout) :: tr
-    FLOAT,                  intent(in)    :: t, dt
+    FLOAT,                  intent(in) :: t, dt
 
     integer :: is, iter
     FLOAT   :: d, d_max
@@ -321,6 +323,7 @@ contains
     end if
 
     call pop_sub()
+
   contains
 
     ! ---------------------------------------------------------
@@ -358,6 +361,7 @@ contains
     subroutine td_rti1
       FLOAT :: p, pp(5), time(5), dtime(5)
       integer :: ik, ist, k
+
       call push_sub('td_rti.td_rti1')
 
       p = M_ONE/(M_FOUR - M_FOUR**(M_THIRD))
@@ -446,6 +450,7 @@ contains
     ! ---------------------------------------------------------
     subroutine td_rti3
       integer ik, ist
+
       call push_sub('td_rti.td_rti3')
 
       do ik = 1, st%d%nik
@@ -468,6 +473,7 @@ contains
     ! ---------------------------------------------------------
     subroutine td_rti4
       integer :: ist, ik
+
       call push_sub('td_rti.td_rti4')
 
       if(.not.h%ip_app) then

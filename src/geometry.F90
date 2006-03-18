@@ -61,15 +61,15 @@ module geometry_m
 
   type atom_t
     character(len=15) :: label
-    type(specie_t), pointer :: spec   ! pointer to specie
-    FLOAT :: x(3), v(3), f(3)            ! position/velocity/force of atom in real space
-    logical :: move                      ! should I move this atom in the optimization mode
+    type(specie_t), pointer :: spec              ! pointer to specie
+    FLOAT :: x(MAX_DIM), v(MAX_DIM), f(MAX_DIM)  ! position/velocity/force of atom in real space
+    logical :: move                              ! should I move this atom in the optimization mode
   end type atom_t
 
   type atom_classical_t
     character(len=15) :: label
 
-    FLOAT :: x(3), v(3), f(3)
+    FLOAT :: x(MAX_DIM), v(MAX_DIM), f(MAX_DIM)
     FLOAT :: charge
   end type atom_classical_t
 
@@ -250,7 +250,7 @@ contains
     type(geometry_t), intent(inout) :: geo
 
     integer :: i, j
-    FLOAT :: x(3), temperature, sigma, kin1, kin2
+    FLOAT   :: x(MAX_DIM), temperature, sigma, kin1, kin2
     integer(POINTER_SIZE) :: random_gen_pointer
     type(xyz_file_info) :: xyz
 
@@ -459,13 +459,13 @@ contains
 
   ! ---------------------------------------------------------
   subroutine loadPDB(iunit, geo)
-    integer,             intent(in)    :: iunit
+    integer,          intent(in)    :: iunit
     type(geometry_t), intent(inout) :: geo
 
     character(len=80) :: record
-    character(len=6) :: record_name
-    character(len=4) :: atm
-    character(len=3) :: res
+    character(len=6)  :: record_name
+    character(len=4)  :: atm
+    character(len=3)  :: res
     integer :: na, nca
 
     ! First count number of atoms
@@ -535,7 +535,7 @@ contains
   ! Returns the number of non-local operator that should be defined.
   function geometry_nvnl(geo) result(res)
     type(geometry_t), intent(in) :: geo
-    integer                         :: res
+    integer                      :: res
 
     type(specie_t), pointer :: s
     integer :: ia, l
@@ -613,7 +613,7 @@ contains
   ! ---------------------------------------------------------
   subroutine geometry_dipole(geo, dipole)
     type(geometry_t), intent(in)  :: geo
-    FLOAT,               intent(out) :: dipole(3)
+    FLOAT,            intent(out) :: dipole(MAX_DIM)
 
     integer :: i
 
@@ -628,7 +628,7 @@ contains
   ! ---------------------------------------------------------
   subroutine geometry_min_distance(geo, rmin)
     type(geometry_t), intent(in)  :: geo
-    FLOAT,               intent(out) :: rmin
+    FLOAT,            intent(out) :: rmin
 
     integer :: i, j
     FLOAT :: r
@@ -649,7 +649,7 @@ contains
   ! ---------------------------------------------------------
   subroutine cm_pos(geo, pos)
     type(geometry_t), intent(in)  :: geo
-    FLOAT,               intent(out) :: pos(3)
+    FLOAT,            intent(out) :: pos(MAX_DIM)
 
     FLOAT :: m
     integer :: i
@@ -666,7 +666,7 @@ contains
   ! ---------------------------------------------------------
   subroutine cm_vel(geo, vel)
     type(geometry_t), intent(in)  :: geo
-    FLOAT,               intent(out) :: vel(3)
+    FLOAT,            intent(out) :: vel(MAX_DIM)
 
     FLOAT :: m
     integer :: i
@@ -683,7 +683,7 @@ contains
   ! ---------------------------------------------------------
   subroutine atom_write_xyz(dir, fname, geo)
     character(len=*),    intent(in) :: dir, fname
-    type(geometry_t), intent(in) :: geo
+    type(geometry_t),    intent(in) :: geo
 
     integer i, iunit
 
@@ -717,8 +717,10 @@ contains
   ! ---------------------------------------------------------
   subroutine geometry_val_charge(geo, val_charge)
     type(geometry_t), intent(in) :: geo
-    FLOAT, intent(out) :: val_charge
+    FLOAT,           intent(out) :: val_charge
+
     integer :: i
+
     call push_sub('geometry.geometry_val_charge')
 
     val_charge = M_ZERO
@@ -733,8 +735,10 @@ contains
   ! ---------------------------------------------------------
   subroutine geometry_grid_defaults(geo, def_h, def_rsize)
     type(geometry_t), intent(in) :: geo
-    FLOAT, intent(out) :: def_h, def_rsize
+    FLOAT,           intent(out) :: def_h, def_rsize
+
     integer :: i
+
     call push_sub('geometry.geometry_grid_defaults')
 
     def_h     =  huge(PRECISION)

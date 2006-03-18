@@ -44,7 +44,7 @@ contains
       nr(1,3):nr(2,3))
     integer, intent(in) :: ix_(:)            ! Coodinates of requested point.
 
-    integer :: i, ix(3)    ! ix has to go until 3, not sb%dim
+    integer :: i, ix(MAX_DIM)      ! ix has to go until 3, not sb%dim
 
     ix = 0
     ix(1:dim) = ix_(1:dim) ! make a local copy that we can change

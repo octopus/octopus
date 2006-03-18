@@ -66,10 +66,10 @@ module td_write_m
     integer(POINTER_SIZE) :: out_spin
     integer(POINTER_SIZE) :: out_magnets
 
-    integer           :: lmax     ! maximum multipole moment to output
-    FLOAT             :: lmm_r    ! radius of the sphere used to compute the local magnetic moments
+    integer        :: lmax     ! maximum multipole moment to output
+    FLOAT          :: lmm_r    ! radius of the sphere used to compute the local magnetic moments
     type(states_t) :: gs_st    ! The states_type where the ground state is stored, in order to
-                                  ! calculate the projections(s) onto it.
+                               ! calculate the projections(s) onto it.
   end type td_write_t
 
 contains
@@ -80,9 +80,9 @@ contains
     type(grid_t),     intent(in) :: gr
     type(states_t),   intent(in) :: st
     type(geometry_t), intent(in) :: geo
-    logical,             intent(in) :: ions_move, there_are_lasers
-    integer,             intent(in) :: iter
-    FLOAT,               intent(in) :: dt
+    logical,          intent(in) :: ions_move, there_are_lasers
+    integer,          intent(in) :: iter
+    FLOAT,            intent(in) :: dt
 
 
     FLOAT :: rmin
@@ -237,7 +237,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine td_write_end(w)
-    type(td_write_t)       :: w
+    type(td_write_t) :: w
     call push_sub('td_write.td_write_end')
 
     if(mpi_grp_is_root(mpi_world)) then
@@ -262,12 +262,12 @@ contains
 
   ! ---------------------------------------------------------
   subroutine td_write_iter(w, gr, st, h, geo, kick, dt, i)
-    type(td_write_t),    intent(in) :: w
+    type(td_write_t),       intent(in) :: w
     type(grid_t),        intent(inout) :: gr
     type(states_t),      intent(inout) :: st
     type(hamiltonian_t), intent(inout) :: h
-    type(geometry_t),    intent(in)    :: geo
-    type(kick_t),        intent(in) :: kick
+    type(geometry_t),       intent(in) :: geo
+    type(kick_t),           intent(in) :: kick
     FLOAT,                  intent(in) :: dt
     integer,                intent(in) :: i
 
@@ -337,8 +337,8 @@ contains
   ! ---------------------------------------------------------
   subroutine td_write_spin(out_spin, m, st, iter)
     integer(POINTER_SIZE), intent(in) :: out_spin
-    type(mesh_t),       intent(in) :: m
-    type(states_t),     intent(in) :: st
+    type(mesh_t),          intent(in) :: m
+    type(states_t),        intent(in) :: st
     integer,               intent(in) :: iter
 
     character(len=130) :: aux
@@ -391,8 +391,8 @@ contains
     type(mesh_t),       intent(in) :: m
     type(states_t),     intent(in) :: st
     type(geometry_t),   intent(in) :: geo
-    FLOAT,                 intent(in) :: lmm_r
-    integer,               intent(in) :: iter
+    FLOAT,              intent(in) :: lmm_r
+    integer,            intent(in) :: iter
 
     integer :: ia
     character(len=50) :: aux
@@ -445,14 +445,14 @@ contains
 
   ! ---------------------------------------------------------
   subroutine td_write_angular(out_angular, gr, st, kick, iter)
-    integer(POINTER_SIZE), intent(in)    :: out_angular
+    integer(POINTER_SIZE), intent(in) :: out_angular
     type(grid_t),       intent(inout) :: gr
     type(states_t),     intent(inout) :: st
-    type(kick_t),       intent(in)    :: kick
-    integer,               intent(in)    :: iter
+    type(kick_t),          intent(in) :: kick
+    integer,               intent(in) :: iter
 
     character(len=130) :: aux
-    FLOAT :: angular(3)
+    FLOAT :: angular(MAX_DIM)
 
     call push_sub('td_write.td_write_angular')
 
@@ -531,10 +531,10 @@ contains
   ! ---------------------------------------------------------
   subroutine td_write_multipole(out_multip, gr, st, lmax, kick, iter)
     integer(POINTER_SIZE), intent(in) :: out_multip
-    type(grid_t),       intent(in) :: gr
-    type(states_t),     intent(in) :: st
+    type(grid_t),          intent(in) :: gr
+    type(states_t),        intent(in) :: st
     integer,               intent(in) :: lmax
-    type(kick_t),       intent(in) :: kick
+    type(kick_t),          intent(in) :: kick
     integer,               intent(in) :: iter
 
     integer :: is, l, m, add_lm
@@ -658,7 +658,7 @@ contains
   ! ---------------------------------------------------------
   subroutine td_write_nbo(out_coords, gr, iter, ke, pe)
     integer(POINTER_SIZE), intent(in) :: out_coords
-    type(grid_t),       intent(in) :: gr
+    type(grid_t),          intent(in) :: gr
     integer,               intent(in) :: iter
     FLOAT,                 intent(in) :: ke, pe
 
@@ -731,9 +731,9 @@ contains
   ! ---------------------------------------------------------
   subroutine td_write_gsp(out_gsp, m, st, gs_st, dt, iter)
     integer(POINTER_SIZE), intent(in) :: out_gsp
-    type(mesh_t),       intent(in) :: m
-    type(states_t),     intent(in) :: st
-    type(states_t),     intent(in) :: gs_st
+    type(mesh_t),          intent(in) :: m
+    type(states_t),        intent(in) :: st
+    type(states_t),        intent(in) :: gs_st
     FLOAT,                 intent(in) :: dt
     integer,               intent(in) :: iter
 
@@ -777,15 +777,15 @@ contains
   ! ---------------------------------------------------------
   subroutine td_write_acc(out_acc, gr, st, h, dt, iter)
     integer(POINTER_SIZE),  intent(in)    :: out_acc
-    type(grid_t),        intent(inout) :: gr
-    type(states_t),      intent(inout) :: st
-    type(hamiltonian_t), intent(inout) :: h
+    type(grid_t),           intent(inout) :: gr
+    type(states_t),         intent(inout) :: st
+    type(hamiltonian_t),    intent(inout) :: h
     FLOAT,                  intent(in)    :: dt
     integer,                intent(in)    :: iter
 
     integer :: i
     character(len=7) :: aux
-    FLOAT :: acc(3)
+    FLOAT :: acc(MAX_DIM)
 
     if(.not.mpi_grp_is_root(mpi_world)) return ! only first node outputs
 
@@ -822,13 +822,13 @@ contains
   ! ---------------------------------------------------------
   subroutine td_write_laser(out_laser, gr, h, dt, iter)
     integer(POINTER_SIZE),  intent(in) :: out_laser
-    type(grid_t),        intent(in) :: gr
-    type(hamiltonian_t), intent(in) :: h
+    type(grid_t),           intent(in) :: gr
+    type(hamiltonian_t),    intent(in) :: h
     FLOAT,                  intent(in) :: dt
     integer,                intent(in) :: iter
 
     integer :: i
-    FLOAT :: field(3)
+    FLOAT :: field(MAX_DIM)
     character(len=80) :: aux
 
     if(.not.mpi_grp_is_root(mpi_world)) return ! only first node outputs
@@ -892,7 +892,7 @@ contains
   ! ---------------------------------------------------------
   subroutine td_write_el_energy(out_energy, h, iter)
     integer(POINTER_SIZE),  intent(in) :: out_energy
-    type(hamiltonian_t), intent(in) :: h
+    type(hamiltonian_t),    intent(in) :: h
     integer,                intent(in) :: iter
 
     integer :: i
@@ -936,9 +936,9 @@ contains
   ! ---------------------------------------------------------
   subroutine td_write_proj(out_proj, gr, st, gs_st, iter)
     integer(POINTER_SIZE), intent(in) :: out_proj
-    type(grid_t),       intent(in) :: gr
-    type(states_t),     intent(in) :: st
-    type(states_t),     intent(in) :: gs_st
+    type(grid_t),          intent(in) :: gr
+    type(states_t),        intent(in) :: st
+    type(states_t),        intent(in) :: gs_st
     integer,               intent(in) :: iter
 
     CMPLX, allocatable :: projections(:,:,:)

@@ -80,7 +80,7 @@ module specie_m
 
     ! For the pseudopotential
     type(ps_t), pointer :: ps
-    logical                :: nlcc       ! true if we have non-local core corrections
+    logical             :: nlcc       ! true if we have non-local core corrections
 
     ! the default values for the spacing and atomic radius
     FLOAT :: def_rsize, def_h
@@ -102,7 +102,7 @@ contains
   ! ---------------------------------------------------------
   subroutine specie_debug(dir, s)
     character(len=*), intent(in)  :: dir
-    type(specie_t), intent(in) :: s
+    type(specie_t),    intent(in) :: s
 
     character(len=256) :: dirname
     integer :: iunit
@@ -148,8 +148,8 @@ contains
 
   ! ---------------------------------------------------------
   subroutine specie_filter(s, gmax)
-    type(specie_t),     intent(inout) :: s
-    FLOAT, intent(in) :: gmax
+    type(specie_t), intent(inout) :: s
+    FLOAT,             intent(in) :: gmax
 
     call push_sub('specie.specie_filter')
 
@@ -164,11 +164,11 @@ contains
 
   ! ---------------------------------------------------------
   subroutine specie_read(s, label)
-    type(specie_t),     intent(inout) :: s
-    character(len=*), intent(in) :: label
+    type(specie_t), intent(inout) :: s
+    character(len=*),  intent(in) :: label
 
     character(len=256) :: fname
-    character(len=10) :: lab
+    character(len=10)  :: lab
     integer :: i, row, n_spec_block, n_spec_def, iunit, read_data
     integer(POINTER_SIZE) :: blk
 
@@ -293,8 +293,8 @@ contains
 
   ! ---------------------------------------------------------
   subroutine read_from_default_file(iunit, read_data, s)
-    integer,           intent(in)    :: iunit
-    integer,           intent(inout) :: read_data
+    integer,        intent(in)    :: iunit
+    integer,        intent(inout) :: read_data
     type(specie_t), intent(inout) :: s
 
     character(len=10) :: label
@@ -338,9 +338,10 @@ contains
   ! ---------------------------------------------------------
   subroutine read_from_block(blk, row, s, read_data)
     integer(POINTER_SIZE), intent(in) :: blk
-    integer, intent(in) :: row
+    integer,               intent(in) :: row
     type(specie_t),     intent(inout) :: s
-    integer, intent(out) :: read_data
+    integer,              intent(out) :: read_data
+
     integer :: n, lmax, lloc
 
     call push_sub('specie.read_from_block')
@@ -422,7 +423,7 @@ contains
   ! ---------------------------------------------------------
   subroutine specie_init(s, ispin)
     type(specie_t), intent(inout) :: s
-    integer,           intent(in)    :: ispin
+    integer,        intent(in)    :: ispin
 
     integer :: i, l
     FLOAT   :: pot_re, pot_im
@@ -482,7 +483,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine specie_end(ns, s)
-    integer,           intent(in) :: ns
+    integer,        intent(in) :: ns
     type(specie_t), pointer    :: s(:)
 
     integer :: i
@@ -506,10 +507,10 @@ contains
   ! ---------------------------------------------------------
   FLOAT function specie_get_local(s, x) result(l)
     type(specie_t), intent(in) :: s
-    FLOAT,             intent(in) :: x(3)
+    FLOAT,          intent(in) :: x(MAX_DIM)
 
     FLOAT :: a1, a2, Rb2 ! for jellium
-    FLOAT :: xx(3), r, pot_re, pot_im
+    FLOAT :: xx(MAX_DIM), r, pot_re, pot_im
 
     xx(:) = x(:)
     r = sqrt(sum(xx(:)**2))
@@ -547,11 +548,11 @@ contains
   ! ---------------------------------------------------------
   subroutine specie_get_glocal(s, x, gv)
     type(specie_t), intent(in) :: s
-    FLOAT, intent(in) :: x(:)
-    FLOAT, intent(out) :: gv(:)
+    FLOAT,          intent(in) :: x(:)
+    FLOAT,         intent(out) :: gv(:)
 
     FLOAT, parameter :: Delta = CNST(1e-4)
-    FLOAT :: xx(3), r, l1, l2, pot_re, pot_im
+    FLOAT :: xx(MAX_DIM), r, l1, l2, pot_re, pot_im
     integer :: i
 
     gv = M_ZERO
@@ -601,9 +602,9 @@ contains
   ! returns the localized part of the potential in Fourier space
   ! ---------------------------------------------------------
   FLOAT function specie_get_local_fourier(dim, s, x) result(l)
-    integer,           intent(in) :: dim
+    integer,        intent(in) :: dim
     type(specie_t), intent(in) :: s
-    FLOAT,             intent(in) :: x(3)
+    FLOAT,          intent(in) :: x(MAX_DIM)
 
     FLOAT :: gmod
 
@@ -623,7 +624,7 @@ contains
   ! ---------------------------------------------------------
   FLOAT function specie_get_nlcc(s, x) result(l)
     type(specie_t), intent(in) :: s
-    FLOAT, intent(in) :: x(3)
+    FLOAT, intent(in) :: x(MAX_DIM)
 
     ! only for 3D pseudopotentials, please
     if(s%type==SPEC_PS_TM2.or.s%type==SPEC_PS_HGH) then
@@ -635,13 +636,13 @@ contains
 
   ! ---------------------------------------------------------
   subroutine specie_get_nl_part(s, x, l, lm, i, uV, duV, so)
-    type(specie_t), intent(in)  :: s
+    type(specie_t),    intent(in)  :: s
     FLOAT,             intent(in)  :: x(:)        ! (3)
     integer,           intent(in)  :: l, lm, i
     FLOAT,             intent(out) :: uV, duV(:)  ! (3)
     logical, optional, intent(in)  :: so
 
-    FLOAT :: r, uVr0, duvr0, ylm, gylm(3)
+    FLOAT :: r, uVr0, duvr0, ylm, gylm(MAX_DIM)
     FLOAT, parameter :: ylmconst = CNST(0.488602511902920) !  = sqr(3/(4*pi))
 
     r = sqrt(sum(x**2))
@@ -718,6 +719,7 @@ contains
     integer, intent(in) :: ispin
 
     integer :: is, n, i, l, m, n1, n2, n3
+
     call push_sub('specie.specie_iwf_fix_qn')
 
     if(.not.s%local) then

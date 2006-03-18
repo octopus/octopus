@@ -66,7 +66,7 @@ module poisson_m
     FFT_NOCUT     =  3, &
     FFT_CORRECTED =  4
 
-  type(dcf) :: fft_cf
+  type(dcf_t) :: fft_cf
   FLOAT, pointer :: fft_coulb_FS(:,:,:)
 #endif
 
@@ -234,8 +234,8 @@ contains
   !-----------------------------------------------------------------
   subroutine zpoisson_solve(gr, pot, rho)
     type(grid_t),  target, intent(inout) :: gr
-    CMPLX,                    intent(inout) :: pot(:)  ! pot(m%np)
-    CMPLX,                    intent(in)    :: rho(:)  ! rho(m%np)
+    CMPLX,                 intent(inout) :: pot(:)  ! pot(m%np)
+    CMPLX,                 intent(in)    :: rho(:)  ! rho(m%np)
 
     FLOAT, allocatable :: aux1(:), aux2(:)
 
@@ -265,8 +265,8 @@ contains
   !-----------------------------------------------------------------
   subroutine dpoisson_solve(gr, pot, rho)
     type(grid_t), target, intent(inout) :: gr
-    FLOAT,                   intent(inout) :: pot(:)  ! pot(m%np)
-    FLOAT,                   intent(in)    :: rho(:)  ! rho(m%np)
+    FLOAT,                intent(inout) :: pot(:)  ! pot(m%np)
+    FLOAT,                intent(in)    :: rho(:)  ! rho(m%np)
 
     FLOAT, allocatable :: rho_corrected(:), vh_correction(:)
 
@@ -310,6 +310,7 @@ contains
     call pop_sub()
     call profiling_out(C_PROFILING_POISSON_SOLVE)
   end subroutine dpoisson_solve
+
 
 #if defined(HAVE_FFT)
   !-----------------------------------------------------------------

@@ -38,7 +38,7 @@ contains
   subroutine logrid_init(g, a, b, nrval)
     type(logrid_t), intent(out) :: g
     FLOAT, intent(in)           :: a,b
-    integer, intent(in)            :: nrval
+    integer, intent(in)         :: nrval
 
     FLOAT :: rpb, ea
     integer  :: ir

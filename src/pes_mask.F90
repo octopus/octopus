@@ -61,12 +61,12 @@ subroutine PES_mask_doit(v, m, st, dt, mask)
   type(PES_mask_t), intent(inout) :: v
   type(mesh_t),     intent(in)    :: m
   type(states_t),   intent(in)    :: st
-  FLOAT,               intent(in)    :: dt
-  FLOAT,               pointer       :: mask(:)
+  FLOAT,            intent(in)    :: dt
+  FLOAT,            pointer       :: mask(:)
 
-  integer :: j, idim, ist, ik, ix, iy, iz, ix3(3), ixx(3)
+  integer :: j, idim, ist, ik, ix, iy, iz, ix3(MAX_DIM), ixx(MAX_DIM)
   CMPLX, allocatable :: wf1(:,:,:), wf2(:,:,:)
-  FLOAT :: temp(3), vec
+  FLOAT :: temp(MAX_DIM), vec
 
   ! propagate wave-function in momentum space
   temp(:) = M_TWO*M_PI/(m%l(:)*m%h(:))
@@ -112,19 +112,20 @@ subroutine PES_mask_doit(v, m, st, dt, mask)
 
   deallocate(wf1, wf2)
 
-  return
 end subroutine PES_mask_doit
 
+
+! ---------------------------------------------------------
 subroutine PES_mask_output(v, m, st, file)
   type(PES_mask_t), intent(in) :: v
   type(mesh_t),     intent(in) :: m
   type(states_t),   intent(in) :: st
-  character(len=*),    intent(in) :: file
+  character(len=*), intent(in) :: file
 
   FLOAT, allocatable :: spis(:,:,:), arpis(:,:,:)
-  FLOAT :: vec, temp(3)
+  FLOAT :: vec, temp(MAX_DIM)
   integer, allocatable :: npoints(:), ar_npoints(:)
-  integer :: p, ik, ii, ix, iy, iz, ixx(3), iunit
+  integer :: p, ik, ii, ix, iy, iz, ixx(MAX_DIM), iunit
   character(len=100) :: fn
 
   integer,  parameter :: n = 600, ar_n = 90

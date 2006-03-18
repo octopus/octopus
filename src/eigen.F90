@@ -83,7 +83,7 @@ module eigen_solver_m
 
   ! For the TRLan package
 #ifdef HAVE_TRLAN
-  integer                         :: ik_trlan
+  integer                      :: ik_trlan
   type(hamiltonian_t), pointer :: h_trlan
   type(mesh_t),        pointer :: m_trlan
   type(states_t),      pointer :: st_trlan
@@ -102,7 +102,7 @@ contains
     type(grid_t),         intent(in)  :: gr
     type(eigen_solver_t), intent(out) :: eigens
     type(states_t),       intent(in)  :: st
-    integer,                 intent(in)  :: max_iter_default
+    integer,              intent(in)  :: max_iter_default
 
     call push_sub('eigen.eigen_solver_init')
 
@@ -230,6 +230,7 @@ contains
     call pop_sub()
 
   contains
+    ! ---------------------------------------------------------
     subroutine init_filter()
       FLOAT, parameter :: alpha = M_HALF
 
@@ -266,9 +267,9 @@ contains
     type(grid_t),         intent(inout) :: gr
     type(states_t),       intent(inout) :: st
     type(hamiltonian_t),  intent(inout) :: h
-    integer,                 intent(in)    :: iter
-    logical,       optional, intent(inout) :: conv
-    logical,       optional, intent(in)    :: verbose
+    integer,              intent(in)    :: iter
+    logical,    optional, intent(inout) :: conv
+    logical,    optional, intent(in)    :: verbose
 
     logical :: verbose_
     integer :: maxiter
@@ -320,8 +321,9 @@ contains
   end subroutine eigen_solver_run
 
 
-!!! This routine in principle diagonalises the hamiltonian in the
-!!! basis defined by st. It has not been tested, and it is not used now
+  ! ---------------------------------------------------------
+  ! This routine in principle diagonalises the hamiltonian in the
+  ! basis defined by st. It has not been tested, and it is not used now
   subroutine eigen_diagon_subspace(gr, st, h)
     type(grid_t),        intent(inout) :: gr
     type(states_t),      intent(inout) :: st

@@ -67,8 +67,8 @@ contains
   ! ---------------------------------------------------------
   subroutine tm_init(pstm, filename, ispin)
     type(tm_t),    intent(inout) :: pstm
-    character(len=*), intent(in)    :: filename
-    integer,          intent(in)    :: ispin
+    character(len=*), intent(in) :: filename
+    integer,          intent(in) :: ispin
 
     character(len=256) :: filename2
     integer :: iunit, l, n
@@ -199,7 +199,7 @@ contains
   ! ---------------------------------------------------------
   subroutine tm_process(pstm, lmax, lloc)
     type(tm_t), intent(inout) :: pstm
-    integer,       intent(in)    :: lmax, lloc
+    integer,       intent(in) :: lmax, lloc
 
     call push_sub('tm.tm_process')
 
@@ -388,11 +388,11 @@ contains
 
   ! ---------------------------------------------------------
   subroutine read_file_data_bin(unit, psf)
-    integer,       intent(in)    :: unit
+    integer,       intent(in) :: unit
     type(tm_t), intent(inout) :: psf
 
-    integer  :: ndown, nup, l, i
-    FLOAT :: r2
+    integer :: ndown, nup, l, i
+    FLOAT   :: r2
     FLOAT, allocatable :: aux(:)
 
     call push_sub('tm.read_file_data_bin')
@@ -484,7 +484,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine read_file_data_ascii(unit, psf)
-    integer,       intent(in)    :: unit
+    integer,       intent(in) :: unit
     type(tm_t), intent(inout) :: psf
 
     integer  :: ndown, nup, i, l
@@ -599,7 +599,7 @@ contains
   ! ---------------------------------------------------------
   subroutine calculate_kb_cosines(pstm, lloc)
     type(tm_t), intent(inout) :: pstm
-    integer,       intent(in)    :: lloc
+    integer,       intent(in) :: lloc
 
     integer :: ir, l
     FLOAT :: dnrm, avgv, vphi
@@ -646,7 +646,7 @@ contains
   ! ---------------------------------------------------------
   subroutine ghost_analysis(pstm, lmax)
     type(tm_t), intent(in) :: pstm
-    integer,       intent(in) :: lmax
+    integer,    intent(in) :: lmax
 
     character(len=3) :: functl
     integer :: ir, l, nnode, nprin, ighost, irel, ierr
@@ -722,9 +722,9 @@ contains
   ! ---------------------------------------------------------
   subroutine get_cutoff_radii(pstm, lloc)
     type(tm_t), intent(inout) :: pstm
-    integer,       intent(in)    :: lloc
+    integer,    intent(in)    :: lloc
 
-    integer             :: l, ir
+    integer          :: l, ir
     FLOAT            :: dincv, phi
     FLOAT, parameter :: threshold = CNST(1.0e-6)
 
@@ -763,8 +763,8 @@ contains
   ! ---------------------------------------------------------
   subroutine get_local(psf, l_loc, rcore)
     type(tm_t), intent(inout) :: psf
-    integer,       intent(in)    :: l_loc
-    FLOAT,         intent(in)    :: rcore
+    integer,       intent(in) :: l_loc
+    FLOAT,         intent(in) :: rcore
 
     integer :: ir
     FLOAT :: a, b, qtot

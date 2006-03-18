@@ -17,6 +17,7 @@
 !!
 !! $Id$
 
+! ---------------------------------------------------------
 subroutine eigen_solver_cg3(m, st, h, tol, niter, converged, diff, reorder)
   use trl_info_m
   use trl_interface_m

@@ -61,16 +61,16 @@ module functions_m
   type f_der_t
     type(mesh_t), pointer :: m            ! a pointer to mesh
 
-    integer                  :: space        ! derivatives calculated in real or fourier space
+    integer               :: space        ! derivatives calculated in real or fourier space
 
     ! derivatives in real space
-    integer                  :: n_ghost(3)   ! ghost points to add in each dimension
+    integer               :: n_ghost(3)   ! ghost points to add in each dimension
     type(der_discr_t)     :: der_discr    ! discretization of the derivatives
 
     ! derivatives in fourier space
 #if defined(HAVE_FFT)
-    type(dcf) :: dcf_der, dcf_aux            ! auxiliary variables
-    type(zcf) :: zcf_der, zcf_aux            ! derivatives in fourier space
+    type(dcf_t) :: dcf_der, dcf_aux            ! auxiliary variables
+    type(zcf_t) :: zcf_der, zcf_aux            ! derivatives in fourier space
 #endif
   end type f_der_t
 
@@ -80,7 +80,7 @@ contains
   subroutine f_der_init(f_der, sb, use_curvlinear)
     type(f_der_t),     intent(out) :: f_der
     type(simul_box_t), intent(in)  :: sb
-    logical,              intent(in)  :: use_curvlinear
+    logical,           intent(in)  :: use_curvlinear
 
     call push_sub('f.f_der_init')
 

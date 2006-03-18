@@ -34,30 +34,30 @@ module lasers_m
   implicit none
 
   private
-  public ::                      &
-    laser_t,                     &
-    laser_init,                  &
-    laser_end,                   &
-    laser_write_info,            &
-    laser_field,                 &
-    laser_vector_field,          &
+  public ::                       &
+    laser_t,                      &
+    laser_init,                   &
+    laser_end,                    &
+    laser_write_info,             &
+    laser_field,                  &
+    laser_vector_field,           &
     laser_potential
 
-  integer, parameter ::          &
-    ENVELOPE_GAUSSIAN      =  1, &
-    ENVELOPE_COSINOIDAL    =  2, &
-    ENVELOPE_TRAPEZOIDAL   =  3, &
-    ENVELOPE_FROM_FILE     = 10, &
+  integer, parameter ::           &
+    ENVELOPE_GAUSSIAN      =  1,  &
+    ENVELOPE_COSINOIDAL    =  2,  &
+    ENVELOPE_TRAPEZOIDAL   =  3,  &
+    ENVELOPE_FROM_FILE     = 10,  &
     ENVELOPE_NUMERICAL     = 99
  
-  integer, parameter ::          &
-    SPATIAL_PART_DIPOLE    =  1, &
+  integer, parameter ::           &
+    SPATIAL_PART_DIPOLE    =  1,  &
     SPATIAL_PART_FROM_FILE =  2
 
   type laser_t
-    CMPLX :: pol(3) ! the polarization of the laser
-    FLOAT :: A0     ! the initial amplitude of the laser
-    FLOAT :: omega0 ! the average frequency of the laser
+    CMPLX :: pol(MAX_DIM) ! the polarization of the laser
+    FLOAT :: A0           ! the initial amplitude of the laser
+    FLOAT :: omega0       ! the average frequency of the laser
 
     integer  :: envelope
     integer  :: spatial_part
@@ -86,13 +86,13 @@ contains
 
   ! ---------------------------------------------------------
   subroutine laser_init(no_l, l, m)
-    integer, intent(out) :: no_l
-    type(laser_t), pointer :: l(:)
+    integer,     intent(out) :: no_l
+    type(laser_t),   pointer :: l(:)
     type(mesh_t), intent(in) :: m
 
-    integer :: i, no_c
     integer(POINTER_SIZE) :: blk
-    character(len=50) :: filename1, filename2
+    integer               :: i, no_c
+    character(len=50)     :: filename1, filename2
 
     call push_sub('lasers.laser_init')
 
@@ -246,8 +246,8 @@ contains
 
   ! ---------------------------------------------------------
   subroutine laser_end(no_l, l)
-    integer, intent(in) :: no_l
     type(laser_t), pointer :: l(:)
+    integer,    intent(in) :: no_l
 
     integer :: i
 
@@ -275,7 +275,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine laser_write_info(no_l, l, iunit)
-    integer, intent(in) :: no_l, iunit
+    integer,       intent(in) :: no_l, iunit
     type(laser_t), intent(in) :: l(no_l)
 
     integer :: i
@@ -317,15 +317,15 @@ contains
   ! ---------------------------------------------------------
   subroutine laser_potential(sb, no_l, l, t, m, pot)
     type(simul_box_t), intent(in) :: sb
-    integer,          intent(in)  :: no_l
-    type(laser_t), intent(in)  :: l(no_l)
-    FLOAT,            intent(in)  :: t
-    type(mesh_t),  intent(in)  :: m
+    integer,           intent(in) :: no_l
+    type(laser_t),     intent(in) :: l(no_l)
+    FLOAT,             intent(in) :: t
+    type(mesh_t),      intent(in) :: m
     FLOAT,            intent(out) :: pot(m%np)
 
     CMPLX :: amp
     integer :: i, j
-    FLOAT :: field(sb%dim)
+    FLOAT :: field(MAX_DIM)
 
     if(no_l == 0) then
       pot(1:m%np) = M_ZERO
@@ -342,7 +342,7 @@ contains
       else
         field(1:sb%dim) = real(amp*l(i)%pol(1:sb%dim))
         do j = 1, m%np
-          pot(j) = pot(j) + sum(field(:)*m%x(j,:))
+          pot(j) = pot(j) + sum(field(1:sb%dim)*m%x(j,1:sb%dim))
         end do
       end if
     end do
@@ -354,7 +354,7 @@ contains
   subroutine laser_field(sb, no_l, l, t, field)
     type(simul_box_t), intent(in) :: sb
     integer,          intent(in)  :: no_l
-    type(laser_t), intent(in)  :: l(no_l)
+    type(laser_t),    intent(in)  :: l(no_l)
     FLOAT,            intent(in)  :: t
     FLOAT,            intent(out) :: field(sb%dim)
 
@@ -385,7 +385,7 @@ contains
   subroutine laser_vector_field(sb, no_l, l, t, field)
     type(simul_box_t), intent(in) :: sb
     integer,          intent(in)  :: no_l
-    type(laser_t), intent(in)  :: l(no_l)
+    type(laser_t),    intent(in)  :: l(no_l)
     FLOAT,            intent(in)  :: t
     FLOAT,            intent(out) :: field(sb%dim)
 
@@ -400,6 +400,7 @@ contains
 
   end subroutine laser_vector_field
 
+
   ! The following routines have to be changed in order to add more
   ! laser envelopes
 
@@ -407,8 +408,8 @@ contains
   ! returns the amplitude of the electric field
   subroutine laser_amplitude(l, t, amp)
     type(laser_t), intent(in) :: l
-    FLOAT, intent(in) :: t
-    CMPLX, intent(out) :: amp
+    FLOAT,         intent(in) :: t
+    CMPLX,        intent(out) :: amp
 
     FLOAT :: r, ph
 
@@ -438,12 +439,13 @@ contains
     return
   end subroutine laser_amplitude
 
+
   ! ---------------------------------------------------------
   ! returns the amplitude of the vector field A
   subroutine laser_vector_amplitude(l, t, amp)
     type(laser_t), intent(in) :: l
-    FLOAT, intent(in) :: t
-    CMPLX, intent(out) :: amp
+    FLOAT,         intent(in) :: t
+    CMPLX,        intent(out) :: amp
 
     CMPLX :: r, tt
 

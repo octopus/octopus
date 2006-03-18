@@ -62,18 +62,18 @@ module mesh_m
     type(simul_box_t), pointer :: sb
     logical :: use_curvlinear
 
-    FLOAT :: h(3)              ! the (constant) spacing between the points
+    FLOAT :: h(MAX_DIM)         ! the (constant) spacing between the points
 
     ! When running serially, the local number of points is
     ! equal to the global number of points.
     ! Otherwise, the next two are different on each node.
-    integer  :: np             ! Local number of points in mesh
-    integer  :: np_part        ! Local points plus ghost points plus
-                               ! boundary points.
-    integer  :: np_global      ! Global number of points in mesh.
-    integer  :: np_part_global ! Global number of inner points and boundary points.
+    integer  :: np               ! Local number of points in mesh
+    integer  :: np_part          ! Local points plus ghost points plus
+                                 ! boundary points.
+    integer  :: np_global        ! Global number of points in mesh.
+    integer  :: np_part_global   ! Global number of inner points and boundary points.
 
-    integer  :: enlarge(3)     ! number of points to add for boundary conditions
+    integer  :: enlarge(MAX_DIM) ! number of points to add for boundary conditions
 
     integer, pointer :: Lxyz(:,:)       ! return x, y and z for each point
     integer, pointer :: Lxyz_inv(:,:,:) ! return points # for each xyz
@@ -81,7 +81,7 @@ module mesh_m
     FLOAT,   pointer :: x_tmp(:,:,:,:)  ! temporary arrays that we have to keep between calls to
     integer, pointer :: Lxyz_tmp(:,:,:) ! init_1 and init_2
 
-    logical            :: parallel_in_domains ! will I run parallel in domains?
+    logical         :: parallel_in_domains ! will I run parallel in domains?
     type(mpi_grp_t) :: mpi_grp             ! the mpi group describing parallelization in domains
     type(pv_t)      :: vp                  ! describes parallel vectors defined on the mesh.
 
@@ -108,7 +108,7 @@ contains
   subroutine mesh_double_box(sb, m, db)
     type(simul_box_t), intent(in)  :: sb
     type(mesh_t),      intent(in)  :: m
-    integer,              intent(out) :: db(3)
+    integer,           intent(out) :: db(MAX_DIM)
 
     integer :: i
 
@@ -128,7 +128,7 @@ contains
   ! ---------------------------------------------------------
   subroutine mesh_write_info(m, unit)
     type(mesh_t), intent(in) :: m
-    integer,         intent(in) :: unit
+    integer,      intent(in) :: unit
 
     if(.not.mpi_grp_is_root(mpi_world)) return
 
@@ -157,19 +157,19 @@ contains
 
   ! ---------------------------------------------------------
   subroutine mesh_r(m, i, r, a, x)
-    type(mesh_t),      intent(in)  :: m
-    integer,              intent(in)  :: i
-    FLOAT,                intent(out) :: r
-    FLOAT,                intent(in),  optional :: a(:) ! a(sb%dim)
-    FLOAT,                intent(out), optional :: x(:) ! x(sb%dim)
+    type(mesh_t), intent(in)  :: m
+    integer,      intent(in)  :: i
+    FLOAT,        intent(out) :: r
+    FLOAT,        intent(in),  optional :: a(:) ! a(sb%dim)
+    FLOAT,        intent(out), optional :: x(:) ! x(sb%dim)
 
-    FLOAT :: xx(m%sb%dim)
+    FLOAT :: xx(MAX_DIM)
 
-    xx(:) = m%x(i, 1:m%sb%dim)
-    if(present(a)) xx(:) = xx(:) - a(1:m%sb%dim)
-    r = sqrt(dot_product(xx, xx))
+    xx(1:m%sb%dim) = m%x(i, 1:m%sb%dim)
+    if(present(a)) xx(1:m%sb%dim) = xx(1:m%sb%dim) - a(1:m%sb%dim)
+    r = sqrt(dot_product(xx(1:m%sb%dim), xx(1:m%sb%dim)))
 
-    if(present(x)) x(1:m%sb%dim) = xx(:)
+    if(present(x)) x(1:m%sb%dim) = xx(1:m%sb%dim)
   end subroutine mesh_r
 
 
@@ -191,14 +191,14 @@ contains
   ! So, if n>0, the point is in the border.
   ! ----------------------------------------------------------------------*/
   subroutine mesh_inborder(m, i, n, d, width)
-    type(mesh_t),      intent(in)  :: m
-    integer,              intent(in)  :: i
-    FLOAT,                intent(in)  :: width
-    integer,              intent(out) :: n
-    FLOAT,                intent(out) :: d(3)
+    type(mesh_t), intent(in)  :: m
+    integer,      intent(in)  :: i
+    FLOAT,        intent(in)  :: width
+    integer,      intent(out) :: n
+    FLOAT,        intent(out) :: d(MAX_DIM)
 
     integer :: j
-    FLOAT :: x(3), r, dd
+    FLOAT   :: x(MAX_DIM), r, dd
 
     call mesh_r(m, i, r, x=x)
     n = 0

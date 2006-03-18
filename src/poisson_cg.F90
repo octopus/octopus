@@ -47,7 +47,7 @@ contains
   subroutine poisson_cg1_init(m, ml, thr)
     type(mesh_t), intent(in) :: m
     integer, intent(in) :: ml
-    FLOAT, intent(in)   :: thr
+    FLOAT,   intent(in) :: thr
 
     call push_sub('poisson_cg.poisson_cg1_init')
 
@@ -69,7 +69,7 @@ contains
   subroutine poisson_cg2_init(m, ml, thr)
     type(mesh_t), intent(in) :: m
     integer, intent(in) :: ml
-    FLOAT, intent(in) :: thr
+    FLOAT,   intent(in) :: thr
 
     call push_sub('poisson_cg.poisson_cg2_init')
 
@@ -92,8 +92,8 @@ contains
   subroutine poisson_cg1(m, der, pot, rho)
     type(mesh_t),      target, intent(in)    :: m
     type(der_discr_t), target, intent(in)    :: der
-    FLOAT,                        intent(inout) :: pot(:) ! pot(m%np)
-    FLOAT,                        intent(in)    :: rho(:) ! rho(m%np)
+    FLOAT,                     intent(inout) :: pot(:) ! pot(m%np)
+    FLOAT,                     intent(in)    :: rho(:) ! rho(m%np)
 
     integer :: iter
     FLOAT :: res
@@ -136,10 +136,10 @@ contains
   ! ---------------------------------------------------------
   subroutine poisson_cg2(m, der, pot, rho)
     implicit none
-    type(mesh_t), target, intent(in)    :: m
-    type(der_discr_t), target, intent(in)    :: der
-    FLOAT,                intent(inout) :: pot(:) ! pot(m%np)
-    FLOAT,                intent(in)    :: rho(:) ! rho(m%np)
+    type(mesh_t), target,      intent(in) :: m
+    type(der_discr_t), target, intent(in) :: der
+    FLOAT,                  intent(inout) :: pot(:) ! pot(m%np)
+    FLOAT,                     intent(in) :: rho(:) ! rho(m%np)
 
     integer :: iter
     FLOAT, allocatable :: rho_corrected(:), vh_correction(:), tmp(:)
@@ -181,12 +181,12 @@ contains
   subroutine boundary_conditions(m, rho, ml, pot)
     implicit none
     type(mesh_t), intent(in)  :: m
-    FLOAT,           intent(in)  :: rho(:)  ! rho(m%np)
-    integer,         intent(in)  :: ml
-    FLOAT,           intent(inout) :: pot(:)  ! pot(m%np_part)
+    FLOAT,        intent(in)  :: rho(:)  ! rho(m%np)
+    integer,      intent(in)  :: ml
+    FLOAT,        intent(inout) :: pot(:)  ! pot(m%np_part)
 
     integer :: i, add_lm, l, mm, bp_lower
-    FLOAT   :: x(3), r, s1, sa
+    FLOAT   :: x(MAX_DIM), r, s1, sa
     FLOAT, allocatable :: mult(:)
 
     ALLOCATE(mult((ml+1)**2), (ml+1)**2)

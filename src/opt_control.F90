@@ -201,7 +201,7 @@ contains
       integer, intent(in)    :: iter
       FLOAT,   intent(inout) :: l(0:2*td%max_iter, NDIM)
 
-      CMPLX :: d1, d2(NDIM)
+      CMPLX :: d1, d2(MAX_DIM)
       integer :: ik, p, dim, i
 
       d1 = M_z0; d2 = M_z0
@@ -291,8 +291,8 @@ contains
 
     ! ---------------------------------------------------------
     subroutine read_state(st, filename)
-      type(states_t), intent(out) :: st
-      character(len=*),  intent(in)  :: filename
+      type(states_t),   intent(out) :: st
+      character(len=*), intent(in)  :: filename
 
       integer :: ierr
 

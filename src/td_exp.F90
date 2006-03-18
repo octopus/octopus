@@ -51,10 +51,10 @@ module td_exp_m
     CHEBYSHEV          = 4
 
   type td_exp_t
-    integer  :: exp_method  ! which method is used to apply the exponential
-    FLOAT :: lanczos_tol    ! tolerance for the lanczos method
-    integer  :: exp_order   ! order to which the propagator is expanded
-    type(zcf) :: cf         ! auxiliary cube for split operator methods
+    integer   :: exp_method  ! which method is used to apply the exponential
+    FLOAT     :: lanczos_tol ! tolerance for the lanczos method
+    integer   :: exp_order   ! order to which the propagator is expanded
+    type(zcf_t) :: cf          ! auxiliary cube for split operator methods
   end type td_exp_t
 
 
@@ -214,15 +214,15 @@ contains
 
   ! ---------------------------------------------------------
   subroutine td_exp_dt(te, gr, h, zpsi, ik, timestep, t, order, vmagnus)
-    type(td_exp_t),      intent(inout)   :: te
-    type(grid_t),        intent(inout)   :: gr
-    type(hamiltonian_t), intent(inout)   :: h
-    integer,                intent(in)      :: ik
-    CMPLX,                  intent(inout)   :: zpsi(:, :)
-    FLOAT,                  intent(in)      :: timestep, t
-    integer,      optional, intent(out)     :: order ! For the methods that rely on Hamiltonian-vector
+    type(td_exp_t),      intent(inout) :: te
+    type(grid_t),        intent(inout) :: gr
+    type(hamiltonian_t), intent(inout) :: h
+    integer,             intent(in)    :: ik
+    CMPLX,               intent(inout) :: zpsi(:, :)
+    FLOAT,               intent(in)    :: timestep, t
+    integer, optional,   intent(out)   :: order ! For the methods that rely on Hamiltonian-vector
     ! multiplication, the number of these.
-    FLOAT,        optional, intent(in)      :: vmagnus(NP, h%d%nspin, 2)
+    FLOAT,     optional, intent(in)    :: vmagnus(NP, h%d%nspin, 2)
 
     logical :: apply_magnus
 

@@ -71,7 +71,7 @@ contains
   ! ---------------------------------------------------------
   subroutine xc_write_info(xcs, iunit)
     type(xc_t), intent(in) :: xcs
-    integer,       intent(in) :: iunit
+    integer,    intent(in) :: iunit
 
     integer :: i
 
@@ -98,9 +98,9 @@ contains
   ! ---------------------------------------------------------
   subroutine xc_init(xcs, ndim, spin_channels, cdft)
     type(xc_t), intent(out) :: xcs
-    integer,       intent(in)  :: ndim
-    integer,       intent(in)  :: spin_channels
-    logical,       intent(in)  :: cdft
+    integer,    intent(in)  :: ndim
+    integer,    intent(in)  :: spin_channels
+    logical,    intent(in)  :: cdft
 
     integer :: i
 

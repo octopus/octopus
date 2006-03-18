@@ -37,7 +37,7 @@ module spectrum_m
   public ::                        &
     spec_t,                        &
     kick_t,                        &
-    spec_sh,                       &
+    spec_sh_t,                     &
     spectrum_init,                 &
     spectrum_cross_section,        &
     spectrum_cross_section_tensor, &
@@ -76,14 +76,14 @@ module spectrum_m
     FLOAT             :: wprime(3)
   end type kick_t
 
-  type spec_sh
+  type spec_sh_t
     ! input
     character :: pol
 
     ! output
     integer :: no_e ! dimensions of sp
     FLOAT, pointer :: sp(:) ! do not forget to deallocate this
-  end type spec_sh
+  end type spec_sh_t
 
 contains
 
@@ -174,7 +174,8 @@ contains
   ! ---------------------------------------------------------
   subroutine kick_init(k, nspin)
     type(kick_t), intent(out) :: k
-    integer,         intent(in)  :: nspin
+    integer,      intent(in)  :: nspin
+
     integer(POINTER_SIZE) :: blk
     integer :: n, i, j
 
@@ -312,6 +313,7 @@ contains
   ! ---------------------------------------------------------
   subroutine spectrum_skip_header(iunit)
     integer, intent(in) :: iunit
+
     character(len=1) :: a
 
     rewind(iunit)
@@ -326,9 +328,9 @@ contains
 
   ! ---------------------------------------------------------
   subroutine spectrum_cross_section_tensor(s, out_file, in_file)
-    type(spec_t),  intent(inout) :: s
-    integer, intent(in)    :: out_file
-    integer, intent(in)    :: in_file(:)
+    type(spec_t), intent(inout) :: s
+    integer,      intent(in)    :: out_file
+    integer,      intent(in)    :: in_file(:)
 
     character(len=20) :: header_string
     integer :: nspin, energy_steps, i, is, j, equiv_axis, n_files, k
@@ -521,8 +523,8 @@ contains
 
   ! ---------------------------------------------------------
   subroutine spectrum_cross_section(in_file, out_file, s)
-    integer, intent(in)    :: in_file
-    integer, intent(in)    :: out_file
+    integer, intent(in) :: in_file
+    integer, intent(in) :: out_file
     type(spec_t),  intent(inout) :: s
 
     character(len=20) :: header_string
@@ -774,9 +776,9 @@ contains
 
   ! ---------------------------------------------------------
   subroutine spectrum_hs_from_mult(out_file, s, sh)
-    character(len=*), intent(in) :: out_file
-    type(spec_t), intent(inout) :: s
-    type(spec_sh), intent(inout) :: sh
+    character(len=*),   intent(in) :: out_file
+    type(spec_t),    intent(inout) :: s
+    type(spec_sh_t), intent(inout) :: sh
 
     integer :: i, j, iunit, nspin, time_steps, is, ie, ntiter, lmax
     FLOAT :: dt, dump
@@ -864,12 +866,12 @@ contains
 
   ! ---------------------------------------------------------
   subroutine spectrum_hs_from_acc(out_file, s, sh)
-    character(len=*), intent(in) :: out_file
-    type(spec_t), intent(inout) :: s
-    type(spec_sh), intent(inout) :: sh
+    character(len=*),   intent(in) :: out_file
+    type(spec_t),    intent(inout) :: s
+    type(spec_sh_t), intent(inout) :: sh
 
     integer :: i, j, iunit, time_steps, is, ie, ntiter
-    FLOAT :: dt, dummy, a(3)
+    FLOAT :: dt, dummy, a(MAX_DIM)
     CMPLX, allocatable :: acc(:)
     CMPLX :: c
 
@@ -928,10 +930,10 @@ contains
 
   ! ---------------------------------------------------------
   subroutine spectrum_angular_info(iunit, nspin, kick, time_steps, dt)
-    integer, intent(in)          :: iunit
-    integer, intent(out)         :: nspin, time_steps
+    integer, intent(in)       :: iunit
+    integer, intent(out)      :: nspin, time_steps
     type(kick_t), intent(out) :: kick
-    FLOAT, intent(out)           :: dt
+    FLOAT, intent(out)        :: dt
 
     integer :: j
     FLOAT :: t1, t2, dummy
@@ -1067,7 +1069,7 @@ contains
   ! ---------------------------------------------------------
   subroutine spectrum_acc_info(iunit, time_steps, dt)
     integer, intent(out) :: iunit, time_steps
-    FLOAT, intent(out) :: dt
+    FLOAT,   intent(out) :: dt
 
     integer :: j
     FLOAT :: t1, t2, dummy
@@ -1104,8 +1106,8 @@ contains
 
   ! ---------------------------------------------------------
   subroutine spectrum_fix_time_limits(time_steps, dt, start_time, end_time, is, ie, ntiter)
-    integer, intent(in) :: time_steps
-    FLOAT, intent(in) :: dt
+    integer,  intent(in) :: time_steps
+    FLOAT,    intent(in) :: dt
     FLOAT, intent(inout) :: start_time, end_time
     integer, intent(out) :: is, ie, ntiter
 

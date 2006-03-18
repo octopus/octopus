@@ -26,16 +26,16 @@
 !!
 !! We also implement the "smoothing" preconditioning described in that paper.
 
-!! WARNING: This is not working!!!!
-
+! ---------------------------------------------------------
+! WARNING: This is not working!!!!
 subroutine eigen_solver_plan(gr, st, hamilt, tol, niter, converged, diff)
   type(grid_t),        target, intent(inout) :: gr
   type(states_t),      target, intent(inout) :: st
   type(hamiltonian_t), target, intent(inout) :: hamilt
-  FLOAT,                          intent(in)    :: tol
-  integer,                        intent(inout) :: niter
-  integer,                        intent(out)   :: converged
-  FLOAT,                optional, intent(out)   :: diff(1:st%nst,1:st%d%nik)
+  FLOAT,                       intent(in)    :: tol
+  integer,                     intent(inout) :: niter
+  integer,                     intent(out)   :: converged
+  FLOAT,             optional, intent(out)   :: diff(1:st%nst,1:st%d%nik)
 
 
   ! Local stuff

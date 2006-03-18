@@ -191,7 +191,7 @@ contains
   subroutine poisson_multigrid_solver(gr, pot, rho)
     type(grid_t), intent(inout) :: gr
     FLOAT, intent(inout) :: pot(:)
-    FLOAT, intent(in)  :: rho(:)
+    FLOAT, intent(in)    :: rho(:)
 
     integer :: l, cl, t, np, curr_l
     FLOAT :: res, fmg_threshold = CNST(0.1)
@@ -502,11 +502,11 @@ contains
 
   ! ---------------------------------------------------------
   subroutine gridhier_init(a, mgrid, add_points_for_boundaries)
-    type(mg_float_pointer),pointer :: a(:)
-    type(multigrid_t), pointer :: mgrid
-    logical, intent(in) :: add_points_for_boundaries
+    type(mg_float_pointer), pointer :: a(:)
+    type(multigrid_t),      pointer :: mgrid
+    logical,             intent(in) :: add_points_for_boundaries
 
-    integer :: cl,l
+    integer :: cl, l
 
     cl = mgrid%n_levels
 
@@ -525,10 +525,10 @@ contains
 
   ! ---------------------------------------------------------
   subroutine gridhier_end(a, mgrid)
-    type(mg_float_pointer),pointer :: a(:)
-    type(multigrid_t), pointer :: mgrid
+    type(mg_float_pointer), pointer :: a(:)
+    type(multigrid_t),      pointer :: mgrid
 
-    integer :: cl,l
+    integer :: cl, l
 
     cl = mgrid%n_levels
 

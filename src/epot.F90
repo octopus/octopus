@@ -90,8 +90,8 @@ module external_pot_m
     ! Ions
     FLOAT,     pointer :: vpsl(:)          ! the local part of the pseudopotentials
 #ifdef HAVE_FFT
-    type(dcf), pointer :: local_cf(:)      ! for the local pseudopotential in Fourier space
-    type(dcf), pointer :: rhocore_cf(:)    ! and for the core density
+    type(dcf_t), pointer :: local_cf(:)      ! for the local pseudopotential in Fourier space
+    type(dcf_t), pointer :: rhocore_cf(:)    ! and for the core density
 #endif
 
     integer :: nvnl                        ! number of nonlocal operators
@@ -290,6 +290,7 @@ contains
     call pop_sub()
   end subroutine epot_init
 
+
   ! ---------------------------------------------------------
   subroutine epot_end(ep, sb, geo)
     type(epot_t),      intent(inout) :: ep
@@ -343,22 +344,23 @@ contains
 
   end subroutine epot_end
 
+
 #ifdef HAVE_FFT
   ! ---------------------------------------------------------
   subroutine epot_local_fourier_init(ep, m, sb, geo)
-    type(epot_t),     intent(inout) :: ep
-    type(mesh_t),     intent(in)    :: m
-    type(simul_box_t), intent(in)   :: sb
-    type(geometry_t), intent(in)    :: geo
+    type(epot_t),      intent(inout) :: ep
+    type(mesh_t),      intent(in)    :: m
+    type(simul_box_t), intent(in)    :: sb
+    type(geometry_t),  intent(in)    :: geo
 
     integer :: vlocal_cutoff
-    integer :: i, ix, iy, iz, ixx(3), db(3), c(3)
-    FLOAT :: x(3)
+    integer :: i, ix, iy, iz, ixx(MAX_DIM), db(MAX_DIM), c(MAX_DIM)
+    FLOAT :: x(MAX_DIM)
     FLOAT :: gpar, gperp, gx, gz, modg
-    FLOAT :: r_0, temp(3), tmp, norm
+    FLOAT :: r_0, temp(MAX_DIM), tmp, norm
 
     type(specie_t), pointer :: s ! shortcuts
-    type(dcf), pointer :: cf
+    type(dcf_t), pointer :: cf
 
     call push_sub('epot.epot_local_fourier_init')
 
@@ -515,14 +517,14 @@ contains
     type(simul_box_t), intent(in)    :: sb
     type(geometry_t),  intent(inout) :: geo
     type(states_t),    intent(inout) :: st
-    integer,              intent(in)    :: reltype
-    logical, optional,    intent(in)    :: fast_generation
+    integer,           intent(in)    :: reltype
+    logical, optional, intent(in)    :: fast_generation
 
     logical :: fast_generation_
     integer :: ia, i, l, lm, k, ierr, p
     type(specie_t), pointer :: s
     type(atom_t),   pointer :: a
-    type(dcf) :: cf_loc, cf_nlcc
+    type(dcf_t) :: cf_loc, cf_nlcc
 
     integer :: j
 
@@ -640,7 +642,7 @@ contains
     ! ---------------------------------------------------------
     subroutine build_local_part()
       integer :: i
-      FLOAT :: x(3)
+      FLOAT :: x(MAX_DIM)
 
       call push_sub('epot.build_local_part')
 
@@ -788,9 +790,9 @@ contains
       integer, intent(in) :: ivnl, l, lm
 
       integer :: i, j, k, d
-      FLOAT :: r, x(3), x_in(3)
-      FLOAT :: so_uv, so_duv(3)
-      FLOAT :: v, dv(3)
+      FLOAT :: r, x(MAX_DIM), x_in(MAX_DIM)
+      FLOAT :: so_uv, so_duv(MAX_DIM)
+      FLOAT :: v, dv(MAX_DIM)
 
       integer :: n_c, n_s
       CMPLX, allocatable :: grad_so(:, :, :)
@@ -922,10 +924,11 @@ contains
 
   ! ---------------------------------------------------------
   function epot_laser_scalar_pot(np, gr, ep, t) result(v)
-    integer, intent(in) :: np
+    integer,      intent(in) :: np
     type(grid_t), intent(in) :: gr
-    type(epot_t), intent(in)  :: ep
-    FLOAT, intent(in)  :: t
+    type(epot_t), intent(in) :: ep
+    FLOAT,        intent(in) :: t
+
     FLOAT :: v(np)
 
     call laser_potential(gr%sb, ep%no_lasers, ep%lasers, t, gr%m, v)
@@ -935,10 +938,10 @@ contains
 
   ! ---------------------------------------------------------
   subroutine epot_laser_vector_pot(sb, ep, t, a)
-    type(simul_box_t), intent(in) :: sb
-    type(epot_t), intent(in)  :: ep
-    FLOAT,           intent(in)  :: t
-    FLOAT,           intent(out) :: a(sb%dim)
+    type(simul_box_t), intent(in)  :: sb
+    type(epot_t),      intent(in)  :: ep
+    FLOAT,             intent(in)  :: t
+    FLOAT,             intent(out) :: a(sb%dim)
 
     call laser_vector_field(sb, ep%no_lasers, ep%lasers, t, a)
 
@@ -947,10 +950,10 @@ contains
 
   ! ---------------------------------------------------------
   subroutine epot_laser_field(sb, ep, t, e)
-    type(simul_box_t), intent(in) :: sb
-    type(epot_t), intent(in)  :: ep
-    FLOAT,           intent(in)  :: t
-    FLOAT,           intent(out) :: e(sb%dim)
+    type(simul_box_t), intent(in)  :: sb
+    type(epot_t),      intent(in)  :: ep
+    FLOAT,             intent(in)  :: t
+    FLOAT,             intent(out) :: e(sb%dim)
 
     call laser_field(sb, ep%no_lasers, ep%lasers, t, e)
 

@@ -27,11 +27,11 @@
 subroutine X(project)(mesh, p, n_projectors, psi, ppsi, periodic, ik)
   type(mesh_t),      intent(in)    :: mesh
   type(projector_t), intent(in)    :: p(:)
-  integer,              intent(in)    :: n_projectors
-  R_TYPE,               intent(in)    :: psi(:)  !psi(1:mesh%np)
-  R_TYPE,               intent(inout) :: ppsi(:) !ppsi(1:mesh%np)
-  logical,              intent(in)    :: periodic
-  integer,              intent(in)    :: ik
+  integer,           intent(in)    :: n_projectors
+  R_TYPE,            intent(in)    :: psi(:)   ! psi(1:mesh%np)
+  R_TYPE,            intent(inout) :: ppsi(:)  ! ppsi(1:mesh%np)
+  logical,           intent(in)    :: periodic
+  integer,           intent(in)    :: ik
 
   integer :: i, j, n_s, ip, k
   R_TYPE, allocatable :: lpsi(:), plpsi(:)
@@ -90,6 +90,8 @@ subroutine X(project)(mesh, p, n_projectors, psi, ppsi, periodic, ik)
   call pop_sub()
 end subroutine X(project)
 
+
+! ---------------------------------------------------------
 subroutine X(epot_forces) (gr, ep, st, t)
   type(grid_t), target, intent(in) :: gr
   type(epot_t),     intent(in)     :: ep
@@ -98,12 +100,12 @@ subroutine X(epot_forces) (gr, ep, st, t)
 
   type(geometry_t), pointer :: geo
   integer :: i, j, l, idim, ist, ik, ivnl
-  FLOAT :: d, r, zi, zj, x(3)
+  FLOAT :: d, r, zi, zj, x(MAX_DIM)
   type(atom_t), pointer :: atm
   R_TYPE, allocatable :: ppsi(:, :)
 
 #if defined(HAVE_MPI)
-  FLOAT :: f(3)
+  FLOAT :: f(MAX_DIM)
   integer :: mpi_err
 #endif
 
@@ -202,8 +204,10 @@ subroutine X(epot_forces) (gr, ep, st, t)
   call pop_sub()
 
 contains
+
+  ! ---------------------------------------------------------
   subroutine local_RS()
-    FLOAT :: r, x(3), gv(3)
+    FLOAT :: r, x(MAX_DIM), gv(MAX_DIM)
     FLOAT, allocatable :: force(:,:)
     integer  :: i, j, k, ns
 
@@ -229,9 +233,11 @@ contains
     deallocate(force)
   end subroutine local_RS
 
+
 #ifdef HAVE_FFT
+  ! ---------------------------------------------------------
   subroutine local_FS()
-    type(dcf) :: cf_for
+    type(dcf_t) :: cf_for
     FLOAT, allocatable :: force(:)
 
     ALLOCATE(force(NP), NP)

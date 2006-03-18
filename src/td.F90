@@ -87,7 +87,7 @@ contains
   subroutine td_run(sys, h, fromScratch)
     type(system_t), target, intent(inout) :: sys
     type(hamiltonian_t),    intent(inout) :: h
-    logical,                   intent(inout) :: fromScratch
+    logical,                intent(inout) :: fromScratch
 
     type(td_t)                :: td
     type(td_write_t) :: write_handler

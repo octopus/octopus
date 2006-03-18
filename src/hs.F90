@@ -34,7 +34,7 @@ program harmonic_spectrum
   character(len=100) :: txt
   integer :: mode
   type(spec_t) :: s
-  type(spec_sh)   :: sh
+  type(spec_sh_t) :: sh
 
   integer, parameter :: &
     HS_FROM_MULT = 1,   &

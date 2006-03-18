@@ -64,7 +64,7 @@ contains
   ! ---------------------------------------------------------
   subroutine lcao_initial_wf(n, gr, psi, ispin, ik, err)
     integer,         intent(in)  :: n
-    type(grid_t), intent(in)  :: gr
+    type(grid_t),    intent(in)  :: gr
     R_TYPE,          intent(out) :: psi(:, :)
     integer,         intent(in)  :: ispin
     integer,         intent(in)  :: ik
@@ -72,7 +72,7 @@ contains
 
     integer :: norbs, ia, i, j, idim, k, wf_dim
     type(specie_t), pointer :: s
-    FLOAT :: x(1:3), r
+    FLOAT :: x(MAX_DIM), r
 
     err = 0
     psi = R_TOTYPE(M_ZERO)
@@ -199,7 +199,7 @@ contains
   ! ---------------------------------------------------------
   subroutine lcao_end(lcao_data, nst)
     type(lcao_t), intent(inout) :: lcao_data
-    integer,            intent(in) :: nst
+    integer,         intent(in) :: nst
 
     call push_sub('lcao.lcao_end')
 
@@ -226,7 +226,7 @@ contains
     type(mesh_t),        intent(in)    :: m
     type(simul_box_t),   intent(in)    :: sb
     type(hamiltonian_t), intent(in)    :: h
-    integer, optional,      intent(in)    :: start
+    integer, optional,   intent(in)    :: start
 
     integer :: np, dim, nst, ik, n1, n2, idim, norbs, start_
     R_TYPE, allocatable :: hpsi(:,:)

@@ -46,13 +46,13 @@ contains
   subroutine static_pol_lr_run(sys, h, fromScratch)
     type(system_t), target, intent(inout) :: sys
     type(hamiltonian_t),    intent(inout) :: h
-    logical,                   intent(inout) :: fromScratch
+    logical,                intent(inout) :: fromScratch
 
     type(lr_t), allocatable :: lr(:,:,:) ! lr(NDIM,NS,NFREQ)
     type(grid_t),   pointer :: gr
 
-    FLOAT :: pol(1:sys%gr%sb%dim, 1:sys%gr%sb%dim)
-    FLOAT :: hpol(1:sys%gr%sb%dim, 1:sys%gr%sb%dim, 1:sys%gr%sb%dim)
+    FLOAT :: pol(1:MAX_DIM, 1:MAX_DIM)
+    FLOAT :: hpol(1:MAX_DIM, 1:MAX_DIM, 1:MAX_DIM)
 
     FLOAT :: w, delta
     integer :: nfreq, nsigma, ndim, i, j, sigma, ierr
@@ -63,31 +63,30 @@ contains
     
     gr => sys%gr
 
-    !FIRST WE CHECK WHAT WE WANT TO DO
+    ! first we check what we want to do
 
-    ndim=sys%gr%sb%dim
+    ndim = sys%gr%sb%dim
     if ( conf%devel_version ) then 
-      !! Read frequency
+      ! read frequency
       call loct_parse_float(check_inp('PolBaseFrequency'), M_ZERO , w)
     else
-      w=M_ZERO
+      w = M_ZERO
     endif
 
     if( w == M_ZERO ) then
-      dynamic_pol=.false.
-      complex_response=.false.
-      nfreq=1
-      nsigma=1
+      dynamic_pol = .false.
+      complex_response = .false.
+      nfreq = 1
+      nsigma = 1
     else 
-      dynamic_pol=.true.
-      complex_response=.true.
+      dynamic_pol = .true.
+      complex_response = .true.
       call loct_parse_float(check_inp('Delta'), M_ZERO , delta)
 !      complex_response=.false.
-      nfreq=1  !for now only polarizability, so only one frequency
-      nsigma=2 !but positive and negative values of the frequency must be considered
+      nfreq = 1   ! for now only polarizability, so only one frequency
+      nsigma = 2  ! but positive and negative values of the frequency must be considered
     end if
 
-    !!
 
     if(complex_response) then 
       ! allocate wfs
@@ -120,50 +119,49 @@ contains
     fromScratch = .true.
 
 
-
     ALLOCATE(lr(1:ndim,1:nsigma,1:nfreq),ndim*nfreq*nsigma)
 
-    do i=1,ndim
-      do sigma=1,nsigma
-        do j=1,nfreq
+    do i = 1, ndim
+      do sigma = 1, nsigma
+        do j = 1, nfreq
 
           call lr_init(lr(i,sigma,j), "SP")
 
           if( .not. complex_response ) then 
             call X(lr_alloc_fHxc)  (sys%st, gr%m, lr(i,sigma,j))
             ierr = X(lr_alloc_psi) (sys%st, gr%m, lr(i,sigma,j))
-            lr(i,sigma,j)%X(dl_psi)=M_ZERO
+            lr(i,sigma,j)%X(dl_psi) = M_ZERO
           else
             call zlr_alloc_fHxc(sys%st, gr%m, lr(i,sigma,j))
             ierr = zlr_alloc_psi(sys%st, gr%m, lr(i,sigma,j))
-            lr(i,sigma,j)%zdl_psi=M_ZERO
-            lr(i,sigma,j)%zdl_rho=M_ZERO
+            lr(i,sigma,j)%zdl_psi = M_ZERO
+            lr(i,sigma,j)%zdl_rho = M_ZERO
           end if
 
           call lr_build_fxc(gr%m, sys%st, sys%ks%xc, lr(i,sigma,j)%dl_Vxc)
-
 
         end do
       end do
     enddo
 
     if( dynamic_pol ) then 
-      print*, "CALCULATING DYNAMIC POLARIZABILITIES :-D"
-      print*, "WARNING, NOT WORKING!!!!!!!!!!!!!!!"
+      message(1) = "calculating dynamic polarizabilities :-D"
+      message(2) = "warning, not working!!!!!!!!!!!!!!!"
+      call write_warning(2)
       if( complex_response ) then 
-        call zdynamic(sys, h, lr, pol, cmplx(w,delta,PRECISION))
+        call zdynamic(sys, h, lr, pol(1:ndim), cmplx(w, delta, PRECISION))
       else 
-        call X(dynamic)(sys, h, lr, pol, R_TOTYPE(w))
+        call X(dynamic)(sys, h, lr, pol(1:ndim), R_TOTYPE(w))
       end if
     else 
-      call static(sys, h, lr(:,:,1), pol, hpol)
+      call static(sys, h, lr(:,:,1), pol(1:ndim), hpol(1:ndim))
       call output()
     end if
 
 
-    do i=1,ndim
-      do sigma=1,nsigma
-        do j=1,nfreq
+    do i = 1, ndim
+      do sigma = 1, nsigma
+        do j= 1, nfreq
           call lr_dealloc(lr(i,sigma,j))
         end do
       end do
@@ -183,7 +181,7 @@ contains
     ! ---------------------------------------------------------
     subroutine output()
       integer :: j, iunit,i,k
-      FLOAT :: msp, bpar(3)
+      FLOAT :: msp, bpar(MAX_DIM)
       call io_mkdir('linear')
 
       !! Output polarizabilty
@@ -217,9 +215,9 @@ contains
         write(iunit, '(a)') 'WARNING: Hyperpolarizability has not been tested for spin polarized systems'
       end if
 
-      do i=1,NDIM
-        do j=1,NDIM
-          do k=1,NDIM
+      do i = 1, NDIM
+        do j= 1, NDIM
+          do k= 1, NDIM
             write(iunit,'(3i2,f12.6)') i, j, k, hpol(i,j,k)/units_out%length%factor**(5)
           end do
         end do
@@ -227,24 +225,23 @@ contains
 
       if (NDIM == 3) then 
 
-        bpar=M_ZERO
-        do i=1,NDIM
-          do j=1,NDIM
+        bpar = M_ZERO
+        do i = 1, NDIM
+          do j = 1, NDIM
             if( i < j ) then 
-              bpar(i)=bpar(i)+M_THREE*hpol(i,j,j)
+              bpar(i) = bpar(i) + M_THREE*hpol(i,j,j)
             else 
-              bpar(i)=bpar(i)+M_THREE*hpol(j,j,i)
+              bpar(i) = bpar(i) + M_THREE*hpol(j,j,i)
             endif
 !              bpar(i)=bpar(i)+(hpol(i,j,j)+hpol(j,i,j)+hpol(j,j,i))
           end do
         end do
 
-        bpar=bpar/(M_FIVE * units_out%length%factor**(NDIM+2))
+        bpar = bpar / (M_FIVE * units_out%length%factor**(NDIM+2))
         write(iunit, '(a, 3f12.6,a)') 'B||', bpar(1:NDIM),&
                '  ( B||_i = 1/5 \sum_j(B_ijj+B_jij+B_jji) ) '
 
       endif
-
 
       call io_close(iunit)
 
@@ -252,13 +249,14 @@ contains
 
   end subroutine static_pol_lr_run
 
+
   ! ---------------------------------------------------------
   subroutine static(sys, h, lr, pol, hpol)
     type(system_t),      intent(inout) :: sys
     type(hamiltonian_t), intent(inout) :: h
     type(lr_t),          intent(inout) :: lr(:,:) ! lr(NDIM,1,1)
-    FLOAT,                  intent(out)   :: pol(:,:)
-    FLOAT,                  intent(out)   :: hpol(:,:,:)
+    FLOAT,               intent(out)   :: pol(:,:)
+    FLOAT,               intent(out)   :: hpol(:,:,:)
 
     integer :: i, j, k
     integer :: ispin, ist, ispin2, ist2,n,np, dim
@@ -324,7 +322,7 @@ contains
 
     pol = M_ZERO
     do i = 1, dim
-      do j = 1,np
+      do j = 1, np
         pol(i, 1:dim) = pol(i, 1:dim) - &
            sys%gr%m%x(j, 1:dim) * drhode(j, i) * sys%gr%m%vol_pp(j)
       end do
@@ -400,7 +398,6 @@ contains
   end subroutine static
 
 
-
 #include "undef.F90"
 #include "complex.F90"
 
@@ -409,7 +406,5 @@ contains
 #include "undef.F90"
 #include "real.F90"
 #include "em_resp_inc.F90"
-
-
 
 end module static_pol_lr_m

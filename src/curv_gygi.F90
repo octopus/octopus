@@ -96,8 +96,8 @@ contains
     type(simul_box_t), intent(in)  :: sb
     type(geometry_t),  intent(in)  :: geo
     type(curv_gygi_t), intent(in)  :: cv
-    FLOAT,                intent(in)  :: chi(:)  ! chi(sb%dim)
-    FLOAT,                intent(out) :: x(:)    ! x(sb%dim)
+    FLOAT,             intent(in)  :: chi(:)  ! chi(sb%dim)
+    FLOAT,             intent(out) :: x(:)    ! x(sb%dim)
 
     ! parameters
     integer, parameter :: max_iter = 500
@@ -169,10 +169,10 @@ contains
     type(simul_box_t), intent(in)  :: sb
     type(geometry_t),  intent(in)  :: geo
     type(curv_gygi_t), intent(in)  :: cv
-    FLOAT,                intent(in)  :: x(:)    ! x(sb%dim)
-    FLOAT,                intent(out) :: chi(:)  ! chi(sb%dim)
-    FLOAT,                intent(out) :: J(:,:)  ! J(sb%dim,sb%dim), the Jacobian
-    integer, optional, intent(in) :: natoms
+    FLOAT,             intent(in)  :: x(:)    ! x(sb%dim)
+    FLOAT,             intent(out) :: chi(:)  ! chi(sb%dim)
+    FLOAT,             intent(out) :: J(:,:)  ! J(sb%dim,sb%dim), the Jacobian
+    integer, optional, intent(in)  :: natoms
 
     integer :: i, ix, iy, natoms_
     FLOAT :: r, f_alpha, df_alpha

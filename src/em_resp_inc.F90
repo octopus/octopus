@@ -30,7 +30,7 @@ subroutine X(dynamic)(sys, h, lr, pol, w)
   integer :: dir, j, freq, sigma
 
   R_TYPE :: rhov
-  R_TYPE :: X(pol)(3,3)
+  R_TYPE :: X(pol)(MAX_DIM, MAX_DIM)
 
   call push_sub('static_pol_lr.dynamic')
 
@@ -70,15 +70,14 @@ subroutine X(dynamic)(sys, h, lr, pol, w)
 end subroutine X(dynamic)
 
 
-
 ! ---------------------------------------------------------
 subroutine X(get_response_e)(sys, h, lr, dir, nsigma, omega)
   type(system_t), target, intent(inout) :: sys
   type(hamiltonian_t),    intent(inout) :: h
   type(lr_t),             intent(inout) :: lr(:,:) !ndim,nsigma
-  integer,                   intent(in)    :: dir 
-  integer,                   intent(in)    :: nsigma 
-  R_TYPE,                   intent(in)    :: omega
+  integer,                intent(in)    :: dir 
+  integer,                intent(in)    :: nsigma 
+  R_TYPE,                 intent(in)    :: omega
   FLOAT, allocatable :: diff(:,:,:)
   FLOAT :: dpsimod,freq_sign
   integer :: iter, sigma, ik, ik2, ist, i, ist2
@@ -318,6 +317,7 @@ contains
 
     call pop_sub()
   end subroutine init_response_e
+
 
   !------------------------------------------------------------
   subroutine build_rho_dynamic()

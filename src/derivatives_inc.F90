@@ -27,9 +27,9 @@
 ! The transpose of the Laplacian.
 subroutine X(derivatives_laplt)(der, f, lapl, have_ghost_)
   type(der_discr_t), intent(in)    :: der
-  R_TYPE,               intent(inout) :: f(:)     ! f(m%np_part)
-  R_TYPE,               intent(out)   :: lapl(:)  ! lapl(m%np)
-  logical, optional,    intent(in)    :: have_ghost_
+  R_TYPE,            intent(inout) :: f(:)     ! f(m%np_part)
+  R_TYPE,            intent(out)   :: lapl(:)  ! lapl(m%np)
+  logical, optional, intent(in)    :: have_ghost_
 
   logical :: have_ghost
 
@@ -51,9 +51,9 @@ end subroutine X(derivatives_laplt)
 ! ---------------------------------------------------------
 subroutine X(derivatives_lapl)(der, f, lapl, have_ghost_)
   type(der_discr_t), intent(in)    :: der
-  R_TYPE, target,       intent(inout) :: f(:)     ! f(m%np_part)
-  R_TYPE,               intent(out)   :: lapl(:)  ! lapl(m%np)
-  logical, optional,    intent(in)    :: have_ghost_
+  R_TYPE, target,    intent(inout) :: f(:)     ! f(m%np_part)
+  R_TYPE,            intent(out)   :: lapl(:)  ! lapl(m%np)
+  logical, optional, intent(in)    :: have_ghost_
 
   logical :: have_ghost
 
@@ -81,8 +81,8 @@ end subroutine X(derivatives_lapl)
 ! ---------------------------------------------------------
 subroutine X(derivatives_grad)(der, f, grad)
   type(der_discr_t), intent(in)    :: der
-  R_TYPE, target,       intent(inout) :: f(:)       ! f(m%np_part)
-  R_TYPE,               intent(out)   :: grad(:,:)  ! grad(m%np, calc_dim)
+  R_TYPE, target,    intent(inout) :: f(:)       ! f(m%np_part)
+  R_TYPE,            intent(out)   :: grad(:,:)  ! grad(m%np, calc_dim)
 
   integer :: i
 
@@ -105,8 +105,8 @@ end subroutine X(derivatives_grad)
 ! ---------------------------------------------------------
 subroutine X(derivatives_div)(der, f, div)
   type(der_discr_t), intent(in)    :: der
-  R_TYPE,               intent(inout) :: f(:,:)   ! f(m%np_part, calc_dim)
-  R_TYPE,               intent(out)   :: div(:)   ! div(m%np)
+  R_TYPE,            intent(inout) :: f(:,:)   ! f(m%np_part, calc_dim)
+  R_TYPE,            intent(out)   :: div(:)   ! div(m%np)
 
   R_TYPE, allocatable :: tmp(:)
   integer :: i
@@ -132,8 +132,8 @@ end subroutine X(derivatives_div)
 ! ---------------------------------------------------------
 subroutine X(derivatives_curl)(der, f, curl)
   type(der_discr_t), intent(in)    :: der
-  R_TYPE,               intent(inout) :: f(:,:)    ! f(m%np_part, calc_dim)
-  R_TYPE,               intent(out)   :: curl(:,:) ! curl(m%np, calc_dim)
+  R_TYPE,            intent(inout) :: f(:,:)    ! f(m%np_part, calc_dim)
+  R_TYPE,            intent(out)   :: curl(:,:) ! curl(m%np, calc_dim)
 
   R_TYPE, allocatable :: tmp(:)
 

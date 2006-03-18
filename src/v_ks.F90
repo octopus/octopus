@@ -157,7 +157,7 @@ contains
   ! ---------------------------------------------------------
   subroutine v_ks_write_info(ks, iunit)
     type(v_ks_t), intent(in) :: ks
-    integer,         intent(in) :: iunit
+    integer,      intent(in) :: iunit
 
     call push_sub('v_ks.v_ks_write_info');
 

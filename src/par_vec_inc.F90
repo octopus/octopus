@@ -23,14 +23,14 @@
 ! no Xvec_gather_bndry as they are only written and not read).
 ! Xvec_scatter_all is Xvec_scatter followd by Xvec_scatter_bndry.
 
-
+! ---------------------------------------------------------
 ! Scatters a vector v to all nodes in vp with respect to
 ! to point -> node mapping in vp.
 ! v_local has at least to be of size vp%np_local(vp%partno).
 subroutine X(vec_scatter)(vp, v, v_local)
   type(pv_t), intent(in)  :: vp
-  R_TYPE,        intent(in)  :: v(:)
-  R_TYPE,        intent(out) :: v_local(:)
+  R_TYPE,     intent(in)  :: v(:)
+  R_TYPE,     intent(out) :: v_local(:)
 
   integer              :: i         ! Counter.
   integer              :: ierr      ! MPI errorcode.
@@ -73,13 +73,14 @@ subroutine X(vec_scatter)(vp, v, v_local)
 end subroutine X(vec_scatter)
 
 
+! ---------------------------------------------------------
 ! v_local has to be of length np_local+np_ghost+np_bndry
 ! for this to work.
 ! And v has to be of length np_part.
 subroutine X(vec_scatter_bndry)(vp, v, v_local)
   type(pv_t), intent(in)  :: vp
-  R_TYPE,        intent(in)  :: v(:)
-  R_TYPE,        intent(out) :: v_local(:)
+  R_TYPE,     intent(in)  :: v(:)
+  R_TYPE,     intent(out) :: v_local(:)
 
   integer              :: i         ! Counter.
   integer              :: ierr      ! MPI errorcode.
@@ -120,11 +121,12 @@ subroutine X(vec_scatter_bndry)(vp, v, v_local)
 end subroutine X(vec_scatter_bndry)
 
 
+! ---------------------------------------------------------
 ! Xvec_scatter followed by Xvec_scatter_bndry.
 subroutine X(vec_scatter_all)(vp, v, v_local)
   type(pv_t), intent(in)  :: vp
-  R_TYPE,        intent(in)  :: v(:)
-  R_TYPE,        intent(out) :: v_local(:)
+  R_TYPE,     intent(in)  :: v(:)
+  R_TYPE,     intent(out) :: v_local(:)
 
   call push_sub('par_vec.Xvec_scatter_all')
 
@@ -136,13 +138,14 @@ subroutine X(vec_scatter_all)(vp, v, v_local)
 end subroutine X(vec_scatter_all)
 
 
+! ---------------------------------------------------------
 ! Reverse operation of Xvec_scatter.
 ! All v_locals from the nodes are packed together
 ! into v on node vp%root in correct order.
 subroutine X(vec_gather)(vp, v, v_local)
   type(pv_t), intent(in)  :: vp
-  R_TYPE,        intent(out) :: v(:)
-  R_TYPE,        intent(in)  :: v_local(:)
+  R_TYPE,     intent(out) :: v(:)
+  R_TYPE,     intent(in)  :: v_local(:)
 
   integer              :: i         ! Counter.
   integer              :: ierr      ! MPI errorcode.
@@ -181,13 +184,14 @@ subroutine X(vec_gather)(vp, v, v_local)
 end subroutine X(vec_gather)
 
 
+! ---------------------------------------------------------
 ! Like Xvec_gather but the result is gathered
 ! on all nodes, i. e. v has to be a properly
 ! allocated aray on all nodes.
 subroutine X(vec_allgather)(vp, v, v_local)
   type(pv_t), intent(in)  :: vp
-  R_TYPE,        intent(out) :: v(:)
-  R_TYPE,        intent(in)  :: v_local(:)
+  R_TYPE,     intent(out) :: v(:)
+  R_TYPE,     intent(in)  :: v_local(:)
 
   integer              :: i         ! Counter.
   integer              :: ierr      ! MPI errorcode.
@@ -222,6 +226,7 @@ subroutine X(vec_allgather)(vp, v, v_local)
 end subroutine X(vec_allgather)
 
 
+! ---------------------------------------------------------
 ! Updates ghost points of every node. A vector suitable
 ! for non local operations contains local values and
 ! ghost point values.
@@ -229,7 +234,7 @@ end subroutine X(vec_allgather)
 ! vp%np_local(vp%partno)+vp%np_ghost(vp%partno)
 subroutine X(vec_ghost_update)(vp, v_local)
   type(pv_t), intent(in)    :: vp
-  R_TYPE,        intent(inout) :: v_local(:)
+  R_TYPE,     intent(inout) :: v_local(:)
 
   integer              :: i, j, k, r             ! Counters.
   integer              :: ierr                   ! MPI errorcode.
@@ -323,7 +328,7 @@ end subroutine X(vec_ghost_update)
 ! vp%np_local(vp%partno) elements are considered.
 R_TYPE function X(vec_integrate)(vp, v_local) result(s)
   type(pv_t), intent(in) :: vp
-  R_TYPE,        intent(in) :: v_local(:)
+  R_TYPE,     intent(in) :: v_local(:)
 
   integer :: ierr
   R_TYPE  :: s_local ! Sum of v_local(i).

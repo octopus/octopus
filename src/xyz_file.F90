@@ -51,7 +51,7 @@ module xyz_file_m
 
   type xyz_file_atom
     character(len=15) :: label  ! stuff that is always known
-    FLOAT             :: x(3)
+    FLOAT             :: x(MAX_DIM)
 
     FLOAT             :: charge ! stuff specific to PDB files
     character(len=3)  :: residue

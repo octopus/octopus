@@ -78,8 +78,8 @@ contains
 
   ! ---------------------------------------------------------
   subroutine hgh_init(psp, filename)
-    type(hgh_t), intent(inout)     :: psp
-    character(len=*), intent(in)      :: filename
+    type(hgh_t),    intent(inout) :: psp
+    character(len=*), intent(in)  :: filename
 
     integer :: iunit, i
     logical :: found
@@ -187,9 +187,9 @@ contains
 
   ! ---------------------------------------------------------
   function load_params(unit, params)
-    integer, intent(in)             :: unit        ! where to read from
-    type(hgh_t), intent(out)     :: params      ! obvious
-    integer                         :: load_params ! 0 if success,
+    integer,     intent(in)  :: unit        ! where to read from
+    type(hgh_t), intent(out) :: params      ! obvious
+    integer                  :: load_params ! 0 if success,
     ! 1 otherwise.
 
     integer :: i, iostat, j, k
@@ -375,7 +375,7 @@ contains
   function projectorr_scalar(r, p, i, l)
     type(hgh_t), intent(in)     :: p
     FLOAT, intent(in)           :: r
-    integer, intent(in)            :: i, l
+    integer, intent(in)         :: i, l
     FLOAT                       :: projectorr_scalar
 
     FLOAT :: x, y, rr
@@ -398,7 +398,7 @@ contains
   function projectorr_vector(r, p, i, l)
     type(hgh_t), intent(in)     :: p
     FLOAT, intent(in)           :: r(:)
-    integer, intent(in)            :: i, l
+    integer, intent(in)         :: i, l
     FLOAT, pointer              :: projectorr_vector(:)
 
     integer :: j
@@ -415,7 +415,7 @@ contains
   function projectorg(g, p, i, l)
     type(hgh_t), intent(in)     :: p
     FLOAT, intent(in)           :: g
-    integer, intent(in)            :: i, l
+    integer, intent(in)         :: i, l
     FLOAT                       :: projectorg
 
     !FLOAT, external :: gamma
@@ -472,7 +472,7 @@ contains
   ! ---------------------------------------------------------
   subroutine solve_schroedinger(psp, ierr)
     type(hgh_t), intent(inout) :: psp
-    integer,        intent(out)   :: ierr
+    integer,     intent(out)   :: ierr
 
     integer :: iter, ir, l, nnode, nprin, i, j, irr, n, k
     FLOAT :: vtot, a2b4, diff, nonl

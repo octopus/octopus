@@ -27,10 +27,9 @@ module cube_function_m
 #endif
 
   implicit none
-
   private
   public ::                     &
-    dcf, zcf,                   &
+    dcf_t, zcf_t,               &
     cf_phase_factor,            &
     dcf_new, zcf_new,           &
     dcf_new_from, zcf_new_from, &
@@ -46,20 +45,20 @@ module cube_function_m
     dcf_FS_grad, zcf_FS_grad,   &
     cf_surface_average
 
-  type dcf
-    integer :: n(3)   ! the linear dimensions of the cube
+  type dcf_t
+    integer :: n(MAX_DIM)   ! the linear dimensions of the cube
 
     FLOAT, pointer :: RS(:,:,:)
     CMPLX, pointer :: FS(:,:,:)
 
 #if defined(HAVE_FFT)
-    integer :: nx ! = n(1)/2 + 1, first dimension of the FS array
+    integer :: nx           ! = n(1)/2 + 1, first dimension of the FS array
     type(fft_t), pointer :: fft
 #endif
-  end type dcf
+  end type dcf_t
 
-  type zcf
-    integer :: n(3)   ! the linear dimensions of the cube
+  type zcf_t
+    integer :: n(MAX_DIM)   ! the linear dimensions of the cube
 
     CMPLX, pointer :: RS(:,:,:)
     CMPLX, pointer :: FS(:,:,:)
@@ -68,7 +67,7 @@ module cube_function_m
     integer :: nx ! = n(1),  first dimension of the FS array
     type(fft_t), pointer :: fft
 #endif
-  end type zcf
+  end type zcf_t
 
 
 contains
@@ -77,7 +76,7 @@ contains
   ! This function calculates the surface average of any function.
   ! WARNING: Some more careful testing should be done on this.
   FLOAT function cf_surface_average(cf) result(x)
-    type(dcf), intent(in)       :: cf
+    type(dcf_t), intent(in)       :: cf
 
     integer ix, iy, iz, npoints
     x = M_ZERO
@@ -132,12 +131,12 @@ contains
   subroutine cf_phase_factor(sb, m, vec, cf_i, cf_o)
     type(simul_box_t), intent(in)    :: sb
     type(mesh_t),      intent(in)    :: m
-    FLOAT,                intent(in)    :: vec(3)
-    type(dcf),            intent(in)    :: cf_i
-    type(dcf),            intent(inout) :: cf_o
+    FLOAT,             intent(in)    :: vec(MAX_DIM)
+    type(dcf_t),         intent(in)    :: cf_i
+    type(dcf_t),         intent(inout) :: cf_o
 
-    CMPLX :: k(3)
-    integer     :: n(3), ix, iy, iz, ixx, iyy, izz
+    CMPLX   :: k(MAX_DIM)
+    integer :: n(MAX_DIM), ix, iy, iz, ixx, iyy, izz
 
     ASSERT(all(cf_i%n == cf_o%n))
     ASSERT(associated(cf_i%FS).and.associated(cf_o%FS))

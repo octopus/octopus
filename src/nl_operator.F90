@@ -49,18 +49,18 @@ module nl_operator_m
 
   type nl_operator_t
     type(mesh_t), pointer :: m         ! pointer to the underlying mesh
-    integer                  :: n         ! number of points in discrete operator
-    integer                  :: np        ! number of points in mesh
-    integer, pointer         :: stencil(:,:)
+    integer               :: n         ! number of points in discrete operator
+    integer               :: np        ! number of points in mesh
+    integer, pointer      :: stencil(:,:)
 
     ! When running in parallel mode, the next three
     ! arrays are unique on each node.
-    integer, pointer         :: i(:,:)    ! index of the points
-    FLOAT,   pointer         :: w_re(:,:) ! weightsp, real part
-    FLOAT,   pointer         :: w_im(:,:) ! weightsp, imaginary part
+    integer, pointer      :: i(:,:)    ! index of the points
+    FLOAT,   pointer      :: w_re(:,:) ! weightsp, real part
+    FLOAT,   pointer      :: w_im(:,:) ! weightsp, imaginary part
 
-    logical                  :: const_w   ! are the weights independent of i
-    logical                  :: cmplx_op  ! .true. if we have also imaginary weights
+    logical               :: const_w   ! are the weights independent of i
+    logical               :: cmplx_op  ! .true. if we have also imaginary weights
   end type nl_operator_t
 
   interface assignment (=)
@@ -73,7 +73,7 @@ contains
   ! ---------------------------------------------------------
   subroutine nl_operator_init(op, n)
     type(nl_operator_t), intent(out) :: op
-    integer,                intent(in)  :: n
+    integer,             intent(in)  :: n
 
     ASSERT(n  > 0)
 
@@ -128,11 +128,11 @@ contains
   subroutine nl_operator_build(m, op, np, const_w, cmplx_op)
     type(mesh_t), target, intent(in)    :: m
     type(nl_operator_t),  intent(inout) :: op
-    integer,                 intent(in)    :: np       ! Number of (local) points.
-    logical, optional,      intent(in)     :: const_w  ! are the weights constant (independent of the point)
-    logical, optional,      intent(in)     :: cmplx_op ! do we have complex weights?
+    integer,              intent(in)    :: np       ! Number of (local) points.
+    logical, optional,    intent(in)    :: const_w  ! are the weights constant (independent of the point)
+    logical, optional,    intent(in)    :: cmplx_op ! do we have complex weights?
 
-    integer :: i, j, p1(3)
+    integer :: i, j, p1(MAX_DIM)
 
     call push_sub('nl_operator.nl_operator_build')
 
@@ -195,7 +195,6 @@ contains
     end do
 
     call pop_sub()
-
   end subroutine nl_operator_build
 
 
@@ -816,9 +815,9 @@ contains
   ! calculates fo = op fi
   ! ---------------------------------------------------------
   subroutine dnl_operator_operate(op, fi, fo)
-    FLOAT,                  intent(inout) :: fi(:)  ! fi(op%np_part)
+    FLOAT,               intent(inout) :: fi(:)  ! fi(op%np_part)
     type(nl_operator_t), intent(in)    :: op
-    FLOAT,                  intent(out)   :: fo(:)  ! fo(op%np_part)
+    FLOAT,               intent(out)   :: fo(:)  ! fo(op%np_part)
 
     integer :: ii, nn
 
@@ -850,9 +849,9 @@ contains
 
   ! ---------------------------------------------------------
   subroutine znl_operator_operate(op, fi, fo)
-    CMPLX,                  intent(inout) :: fi(:)  ! fi(op%np)
+    CMPLX,               intent(inout) :: fi(:)  ! fi(op%np)
     type(nl_operator_t), intent(in)    :: op
-    CMPLX,                  intent(out)   :: fo(:)  ! fo(op%np)
+    CMPLX,               intent(out)   :: fo(:)  ! fo(op%np)
 
     integer :: ii, nn
 
@@ -886,9 +885,9 @@ contains
   ! allow for complex operators
   ! ---------------------------------------------------------
   subroutine znl_operator_operate_cmplx(op, fi, fo)
-    CMPLX,                  intent(inout) :: fi(:)  ! fi(op%np)
+    CMPLX,               intent(inout) :: fi(:)  ! fi(op%np)
     type(nl_operator_t), intent(in)    :: op
-    CMPLX,                  intent(out)   :: fo(:)  ! fo(op%np)
+    CMPLX,               intent(out)   :: fo(:)  ! fo(op%np)
 
     integer :: ii, nn
 

@@ -270,6 +270,7 @@ contains
   ! -------------------------------------------------------------------
   integer function output_fill_how(where) result(how)
     character(len=*), intent(in) :: where
+
     how = 0
     if(index(where, "AxisX").ne.0)     how = ior(how, output_axis_x)
     if(index(where, "AxisY").ne.0)     how = ior(how, output_axis_y)
@@ -284,15 +285,16 @@ contains
 #if defined(HAVE_NETCDF)
     if(index(where, "NETCDF").ne.0) how = ior(how, output_dx_cdf)
 #endif
+
   end function output_fill_how
 
 #if defined(HAVE_NETCDF)
   ! ---------------------------------------------------------
   subroutine ncdf_error(func, status, filename, ierr)
-    character(len=*), intent(in) :: func
-    integer, intent(in) :: status
-    character(len=*), intent(in) :: filename
-    integer, intent(out) :: ierr
+    character(len=*), intent(in)  :: func
+    integer,          intent(in)  :: status
+    character(len=*), intent(in)  :: filename
+    integer,          intent(out) :: ierr
 
     if(status .eq. NF90_NOERR) return
     write(message(1),'(3a)') "NETCDF error in function '" , trim(func) , "'"
@@ -307,7 +309,7 @@ contains
   ! ---------------------------------------------------------
   integer function iopar_open(m, file, action, status, form, position, die) &
     result(iunit)
-    type(mesh_t),  intent(in)           :: m
+    type(mesh_t),     intent(in)           :: m
     character(len=*), intent(in)           :: file, action
     character(len=*), intent(in), optional :: status, form, position
     logical,          intent(in), optional :: die
@@ -335,7 +337,7 @@ contains
   ! ---------------------------------------------------------
   subroutine iopar_close(m, iunit)
     type(mesh_t), intent(in)    :: m
-    integer,         intent(inout) :: iunit
+    integer,      intent(inout) :: iunit
 
 #if defined(HAVE_MPI)
     integer :: mpi_err
@@ -359,7 +361,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine iopar_read(m, iunit, line, ierr)
-    type(mesh_t),  intent(in)  :: m
+    type(mesh_t),     intent(in)  :: m
     integer,          intent(in)  :: iunit
     character(len=*), intent(out) :: line
     integer,          intent(out) :: ierr
@@ -388,7 +390,7 @@ contains
   ! ---------------------------------------------------------
   subroutine iopar_backspace(m, iunit)
     type(mesh_t),  intent(in)  :: m
-    integer,          intent(in)  :: iunit
+    integer,       intent(in)  :: iunit
 
     call push_sub('out.iopar_read')
 

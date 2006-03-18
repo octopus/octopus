@@ -58,7 +58,7 @@ contains
   ! ---------------------------------------------------------
   subroutine xc_functl_init(functl, spin_channels)
     type(xc_functl_t), intent(out) :: functl
-    integer,              intent(in)  :: spin_channels
+    integer,           intent(in)  :: spin_channels
 
     functl%family = 0
     functl%id     = 0
@@ -70,8 +70,8 @@ contains
   ! ---------------------------------------------------------
   subroutine xc_j_functl_init(functl, cdft, spin_channels)
     type(xc_functl_t), intent(out) :: functl
-    logical,              intent(in)  :: cdft
-    integer,              intent(in)  :: spin_channels
+    logical,           intent(in)  :: cdft
+    integer,           intent(in)  :: spin_channels
 
     ! initialize structure
     call xc_functl_init(functl, spin_channels)
@@ -113,8 +113,8 @@ contains
   ! ---------------------------------------------------------
   subroutine xc_functl_init_exchange(functl, ndim, spin_channels)
     type(xc_functl_t), intent(out) :: functl
-    integer,              intent(in)  :: ndim
-    integer,              intent(in)  :: spin_channels
+    integer,           intent(in)  :: ndim
+    integer,           intent(in)  :: spin_channels
 
     integer :: j
     FLOAT :: alpha
@@ -182,8 +182,8 @@ contains
   ! ---------------------------------------------------------
   subroutine xc_functl_init_correlation(functl, ndim, spin_channels)
     type(xc_functl_t), intent(out) :: functl
-    integer,              intent(in)  :: ndim
-    integer,              intent(in)  :: spin_channels
+    integer,           intent(in)  :: ndim
+    integer,           intent(in)  :: spin_channels
 
     FLOAT :: alpha
 
@@ -289,7 +289,7 @@ contains
   ! ---------------------------------------------------------
   subroutine xc_functl_write_info(functl, iunit)
     type(xc_functl_t), intent(in) :: functl
-    integer,              intent(in) :: iunit
+    integer,           intent(in) :: iunit
 
     character(len=120) :: s1, s2
     integer(POINTER_SIZE) :: i, j

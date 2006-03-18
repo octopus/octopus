@@ -33,13 +33,14 @@ module curvlinear_m
   implicit none
 
   private
-  public :: curvlinear_t,              &
-            curvlinear_init,           &
-            curvlinear_chi2x,          &
-            curvlinear_det_Jac,        &
-            curvlinear_dump,           &
-            curvlinear_init_from_file, &
-            operator(.eq.)
+  public ::                     &
+    curvlinear_t,               &
+    curvlinear_init,            &
+    curvlinear_chi2x,           &
+    curvlinear_det_Jac,         &
+    curvlinear_dump,            &
+    curvlinear_init_from_file,  &
+    operator(.eq.)
 
   integer, parameter, public :: &
     CURV_METHOD_UNIFORM = 1,    &
@@ -118,8 +119,8 @@ contains
     type(simul_box_t),  intent(in)  :: sb
     type(geometry_t),   intent(in)  :: geo
     type(curvlinear_t), intent(in)  :: cv
-    FLOAT,                 intent(in)  :: chi(3)  ! chi(conf%dim)
-    FLOAT,                 intent(out) :: x(3)    ! x(conf%dim)
+    FLOAT,              intent(in)  :: chi(MAX_DIM)  ! chi(conf%dim)
+    FLOAT,              intent(out) :: x(MAX_DIM)    ! x(conf%dim)
 
     select case(cv%method)
     case(CURV_METHOD_UNIFORM)
@@ -140,35 +141,37 @@ contains
     type(simul_box_t),  intent(in)  :: sb
     type(geometry_t),   intent(in)  :: geo
     type(curvlinear_t), intent(in)  :: cv
-    FLOAT,                 intent(in)  :: x(:)    !   x(sb%dim)
-    FLOAT,                 intent(in)  :: chi(:)  ! chi(sb%dim)
+    FLOAT,              intent(in)  :: x(:)    !   x(sb%dim)
+    FLOAT,              intent(in)  :: chi(:)  ! chi(sb%dim)
 
-    FLOAT :: dummy(sb%dim), Jac(sb%dim, sb%dim)
+    FLOAT :: dummy(MAX_DIM), Jac(MAX_DIM, MAX_DIM)
     integer :: i
 
     select case(cv%method)
     case(CURV_METHOD_UNIFORM)
       jdet = M_ONE
     case(CURV_METHOD_GYGI)
-      call curv_gygi_jacobian(sb, geo, cv%gygi, x, dummy, Jac)
+      call curv_gygi_jacobian(sb, geo, cv%gygi, x, dummy(1:sb%dim), Jac(1:sb%dim, 1:sb%dim))
       jdet = M_ONE/lalg_determinant(sb%dim, Jac, invert = .false.)
     case(CURV_METHOD_BRIGGS)
-      call curv_briggs_jacobian_inv(sb, cv%briggs, chi, Jac)
+      call curv_briggs_jacobian_inv(sb, cv%briggs, chi, Jac(1:sb%dim, 1:sb%dim))
       jdet = M_ONE
       do i = 1, sb%dim
         jdet = jdet * Jac(i,i) ! Jacobian is diagonal in this method
       end do
     case(CURV_METHOD_MODINE)
-      call curv_modine_jacobian_inv(sb, geo, cv%modine, chi, Jac)
-      jdet = M_ONE*lalg_determinant(sb%dim, Jac, invert = .false.)
+      call curv_modine_jacobian_inv(sb, geo, cv%modine, chi, Jac(1:sb%dim, 1:sb%dim))
+      jdet = M_ONE*lalg_determinant(sb%dim, Jac(1:sb%dim, 1:sb%dim), invert = .false.)
     end select
 
   end function curvlinear_det_Jac
+
 
   ! ---------------------------------------------------------
   subroutine curvlinear_dump(cv, iunit)
     type(curvlinear_t), intent(in) :: cv
     integer,            intent(in) :: iunit
+
     write(iunit, '(a20,i4)')        'method=              ', cv%method
     select case(cv%method)
     case(CURV_METHOD_GYGI)
@@ -185,13 +188,17 @@ contains
       write(iunit, '(a20,e22.14)')  'jlocal=              ', cv%modine%jlocal
       write(iunit, '(a20,e22.14)')  'jrange=              ', cv%modine%jrange
     end select
+
   end subroutine curvlinear_dump
+
 
   ! ---------------------------------------------------------
   subroutine curvlinear_init_from_file(cv, iunit)
     type(curvlinear_t), intent(out) :: cv
     integer,            intent(in)  :: iunit
+
     character(len=20) :: str
+
     read(iunit, *) str, cv%method
     select case(cv%method)
     case(CURV_METHOD_GYGI)
@@ -208,10 +215,14 @@ contains
       read(iunit, *) str, cv%modine%jlocal
       read(iunit, *) str, cv%modine%jrange
     end select
+
   end subroutine curvlinear_init_from_file
 
+
+  ! ---------------------------------------------------------
   logical function curv_is_equal(cv1, cv2) result(res)
     type(curvlinear_t), intent(in) :: cv1, cv2
+
     res = .false.
     if(cv1%method .ne. cv2%method)                           return
     select case(cv1%method)
@@ -230,6 +241,7 @@ contains
       if(.not. (cv1%modine%jrange .app. cv2%modine%jrange) ) return
     end select
     res = .true.
+
   end function curv_is_equal
 
 end module curvlinear_m

@@ -22,8 +22,8 @@
 ! occupations...
 subroutine X(states_calc_dens)(st, np, rho)
   type(states_t), intent(in)  :: st
-  integer,           intent(in)  :: np
-  FLOAT,             intent(out) :: rho(:,:)
+  integer,        intent(in)  :: np
+  FLOAT,          intent(out) :: rho(:,:)
 
   integer :: i, ik, p, sp
   CMPLX   :: c
@@ -83,7 +83,7 @@ end subroutine X(states_calc_dens)
 ! Orthonormalizes nst orbital in mesh m
 subroutine X(states_gram_schmidt)(nst, m, dim, psi, start)
   integer,           intent(in)    :: nst, dim
-  type(mesh_t),   intent(in)    :: m
+  type(mesh_t),      intent(in)    :: m
   R_TYPE,            intent(inout) :: psi(:,:,:)   ! psi(m%np_part, dim, nst)
   integer, optional, intent(in)    :: start
 
@@ -120,7 +120,7 @@ end subroutine X(states_gram_schmidt)
 
 ! ---------------------------------------------------------
 R_TYPE function X(states_dotp)(m, dim, f1, f2) result(dotp)
-  type(mesh_t), intent(in) :: m
+  type(mesh_t),    intent(in) :: m
   integer,         intent(in) :: dim
   R_TYPE,          intent(in) :: f1(:,:), f2(:,:)
 
@@ -140,7 +140,7 @@ end function X(states_dotp)
 
 ! ---------------------------------------------------------
 subroutine X(states_normalize_orbital)(m, dim, psi)
-  type(mesh_t), intent(in)  :: m
+  type(mesh_t),    intent(in)  :: m
   integer,         intent(in)  :: dim
   R_TYPE,          intent(out) :: psi(:,:)
 
@@ -159,7 +159,7 @@ end subroutine X(states_normalize_orbital)
 
 ! ---------------------------------------------------------
 FLOAT function X(states_nrm2)(m, dim, f) result(nrm2)
-  type(mesh_t), intent(in) :: m
+  type(mesh_t),    intent(in) :: m
   integer,         intent(in) :: dim
   R_TYPE,          intent(in) :: f(:,:)
 
@@ -277,10 +277,10 @@ contains
 
   ! ---------------------------------------------------------
   subroutine mf2mf_RS2FS(m, fin, fout, c)
-    type(mesh_t), intent(in)    :: m
-    R_TYPE,          intent(in)    :: fin(:)
-    CMPLX,           intent(out)   :: fout(:)
-    type(X(cf)),     intent(inout) :: c
+    type(mesh_t),  intent(in)    :: m
+    R_TYPE,        intent(in)    :: fin(:)
+    CMPLX,         intent(out)   :: fout(:)
+    type(X(cf_t)), intent(inout) :: c
 
     call X(cf_alloc_RS) (c)
     call X(cf_alloc_FS) (c)
@@ -301,7 +301,7 @@ contains
     integer :: i, is, ik
     CMPLX, allocatable :: psi_fs(:), gpsi(:,:)
     FLOAT, allocatable :: c(:), r(:), gradr(:,:), j(:,:)
-    type(X(cf)) :: cf_tmp
+    type(X(cf_t)) :: cf_tmp
 
     FLOAT, parameter :: dmin = CNST(1e-10)
 
@@ -409,7 +409,7 @@ end subroutine X(states_output)
 ! -------------------------------------------------------------
 R_TYPE function X(states_mpdotp)(m, ik, st1, st2) result(dotp)
   type(mesh_t),   intent(in) :: m
-  integer,           intent(in) :: ik
+  integer,        intent(in) :: ik
   type(states_t), intent(in) :: st1, st2
 
   R_TYPE, allocatable :: a(:, :)
@@ -439,10 +439,10 @@ contains
   ! ---------------------------------------------------------
   subroutine X(calculate_matrix)(m, ik, st1, st2, n, a)
     type(mesh_t),   intent(in)  :: m
-    integer,           intent(in)  :: ik
+    integer,        intent(in)  :: ik
     type(states_t), intent(in)  :: st1, st2
-    integer,           intent(in)  :: n
-    R_TYPE,            intent(out) :: a(n, n)
+    integer,        intent(in)  :: n
+    R_TYPE,         intent(out) :: a(n, n)
 
     integer :: i, j, dim
 #if defined(HAVE_MPI)
@@ -506,12 +506,12 @@ end function X(states_mpdotp)
 
 ! ---------------------------------------------------------
 subroutine X(states_calc_angular)(gr, st, angular, l2)
-  type(grid_t),   intent(inout) :: gr
-  type(states_t), intent(inout) :: st
-  FLOAT,             intent(out)   :: angular(3)
-  FLOAT, optional,   intent(out)   :: l2
+  type(grid_t),    intent(inout) :: gr
+  type(states_t),  intent(inout) :: st
+  FLOAT,           intent(out)   :: angular(MAX_DIM)
+  FLOAT, optional, intent(out)   :: l2
 
-  FLOAT :: temp(3), ltemp
+  FLOAT :: temp(MAX_DIM), ltemp
   R_TYPE, allocatable :: lpsi(:, :)
   integer :: idim, ik, j
 #if defined(HAVE_MPI)

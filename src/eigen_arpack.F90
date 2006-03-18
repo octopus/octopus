@@ -23,14 +23,15 @@ subroutine eigen_solver_arpack(gr, st, h, tol_, niter, ncv, converged, diff)
   type(grid_t),        intent(inout) :: gr
   type(states_t),      intent(inout) :: st
   type(hamiltonian_t), intent(inout) :: h
-  FLOAT,                  intent(in)    :: tol_
-  integer,                intent(inout) :: niter
-  integer,                intent(in)    :: ncv
-  integer,                intent(inout) :: converged
-  FLOAT,        optional, intent(out)   :: diff(1:st%nst,1:st%d%nik)
+  FLOAT,               intent(in)    :: tol_
+  integer,             intent(inout) :: niter
+  integer,             intent(in)    :: ncv
+  integer,             intent(inout) :: converged
+  FLOAT,     optional, intent(out)   :: diff(1:st%nst,1:st%d%nik)
 
   logical, allocatable :: select(:)
-  FLOAT, allocatable :: ax(:), d(:, :), resid(:), v(:, :), workd(:), workev(:), workl(:)
+  FLOAT, allocatable :: ax(:), d(:, :), resid(:), v(:, :),   &
+    workd(:), workev(:), workl(:)
   integer :: ldv, nev, iparam(11), ipntr(14), ido, n, lworkl, info, ierr, &
     i, j, ishfts, maxitr, mode1, ik
   FLOAT :: tol, sigmar, sigmai

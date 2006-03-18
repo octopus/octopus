@@ -22,7 +22,7 @@ subroutine X(v_ks_calc)(gr, ks, h, st, calc_eigenval)
   type(v_ks_t),        intent(inout) :: ks
   type(hamiltonian_t), intent(inout) :: h
   type(states_t),      intent(inout) :: st
-  logical,      optional, intent(in)    :: calc_eigenval
+  logical,      optional, intent(in) :: calc_eigenval
 
   FLOAT :: amaldi_factor
 

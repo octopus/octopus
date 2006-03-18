@@ -25,11 +25,11 @@
 ! parallel in real-space domains).
 ! ---------------------------------------------------------
 subroutine X(mf2cf) (m, mf, cf)
-  type(mesh_t), intent(in)    :: m
-  R_TYPE,          intent(in)    :: mf(:)  ! mf(m%np_global)
-  type(X(cf)),     intent(inout) :: cf
+  type(mesh_t),  intent(in)    :: m
+  R_TYPE,        intent(in)    :: mf(:)  ! mf(m%np_global)
+  type(X(cf_t)), intent(inout) :: cf
 
-  integer :: i, ix, iy, iz, c(3)
+  integer :: i, ix, iy, iz, c(MAX_DIM)
 
   ASSERT(associated(cf%RS))
 
@@ -49,11 +49,11 @@ end subroutine X(mf2cf)
 
 ! ---------------------------------------------------------
 subroutine X(cf2mf) (m, cf, mf)
-  type(mesh_t), intent(in)  :: m
-  type(X(cf)),     intent(in)  :: cf
-  R_TYPE,          intent(out) :: mf(:)  ! mf(m%np_global)
+  type(mesh_t),  intent(in)  :: m
+  type(X(cf_t)), intent(in)  :: cf
+  R_TYPE,        intent(out) :: mf(:)  ! mf(m%np_global)
 
-  integer :: i, ix, iy, iz, c(3)
+  integer :: i, ix, iy, iz, c(MAX_DIM)
 
   ASSERT(associated(cf%RS))
 
@@ -76,9 +76,9 @@ end subroutine X(cf2mf)
 ! parallel in real-space domains).
 ! ---------------------------------------------------------
 subroutine X(mf2cf_FS) (m, mf, cf)
-  type(mesh_t), intent(in)    :: m
-  CMPLX,               intent(in)    :: mf(:)   ! mf(m%np_global)
-  type(X(cf)),         intent(inout) :: cf
+  type(mesh_t),  intent(in)    :: m
+  CMPLX,         intent(in)    :: mf(:)   ! mf(m%np_global)
+  type(X(cf_t)), intent(inout) :: cf
 
   integer :: i, ix, iy, iz
 
@@ -99,9 +99,9 @@ end subroutine X(mf2cf_FS)
 
 ! ---------------------------------------------------------
 subroutine X(cf_FS2mf) (m, cf, mf)
-  type(mesh_t), intent(in)  :: m
-  type(X(cf)),     intent(in)  :: cf
-  CMPLX,           intent(out) :: mf(:) ! mf(m%np_global)
+  type(mesh_t),  intent(in)  :: m
+  type(X(cf_t)), intent(in)  :: cf
+  CMPLX,         intent(out) :: mf(:) ! mf(m%np_global)
 
   integer :: i, ix, iy, iz
 
@@ -131,8 +131,8 @@ end subroutine X(cf_FS2mf)
 ! Calculation of derivatives
 ! ---------------------------------------------------------
 subroutine X(f_laplacian) (sb, f_der, f, lapl, cutoff_)
-  type(simul_box_t), intent(in) :: sb
-  type(f_der_t), intent(inout)  :: f_der
+  type(simul_box_t),    intent(in) :: sb
+  type(f_der_t),    intent(inout)  :: f_der
   R_TYPE,           intent(inout)  :: f(:)     ! f(m%np_part)
   R_TYPE,           intent(out)    :: lapl(:)  ! lapl(m%np_part)
   FLOAT, optional,  intent(in)     :: cutoff_
@@ -177,8 +177,8 @@ end subroutine X(f_laplacian)
 subroutine X(f_gradient) (sb, f_der, f, grad)
   type(simul_box_t), intent(in)    :: sb
   type(f_der_t),     intent(inout) :: f_der
-  R_TYPE, target,       intent(inout) :: f(:)         ! f(m%np_part)
-  R_TYPE,               intent(out)   :: grad(:,:)    ! grad(m%np, m%sb%dim)
+  R_TYPE, target,    intent(inout) :: f(:)         ! f(m%np_part)
+  R_TYPE,            intent(out)   :: grad(:,:)    ! grad(m%np, m%sb%dim)
 
   integer :: i
 
@@ -228,8 +228,8 @@ end subroutine X(f_gradient)
 subroutine X(f_divergence) (sb, f_der, f, divf)
   type(simul_box_t), intent(in)    :: sb
   type(f_der_t),     intent(inout) :: f_der
-  R_TYPE,               intent(inout) :: f(:,:)    ! f(m%np_part, sb%dim)
-  R_TYPE,               intent(out)   :: divf(:)   ! divf(m%np)
+  R_TYPE,            intent(inout) :: f(:,:)    ! f(m%np_part, sb%dim)
+  R_TYPE,            intent(out)   :: divf(:)   ! divf(m%np)
 
   integer :: i
   R_TYPE, allocatable :: aux(:)
@@ -275,8 +275,8 @@ end subroutine X(f_divergence)
 ! ---------------------------------------------------------
 subroutine X(f_curl) (f_der, f, curlf)
   type(f_der_t), intent(inout) :: f_der
-  R_TYPE,           intent(inout) :: f(:,:)     ! f(m%np_part, conf%dim)
-  R_TYPE,           intent(out)   :: curlf(:,:) ! curlf(m%np, conf%dim))
+  R_TYPE,        intent(inout) :: f(:,:)     ! f(m%np_part, conf%dim)
+  R_TYPE,        intent(out)   :: curlf(:,:) ! curlf(m%np, conf%dim))
 
   call push_sub('f_inc.Xf_curl')
 
@@ -305,11 +305,11 @@ end subroutine X(f_curl)
 subroutine X(f_angular_momentum)(sb, f_der, f, lf)
   type(simul_box_t), intent(in)    :: sb
   type(f_der_t),     intent(inout) :: f_der
-  R_TYPE,               intent(inout) :: f(:)     ! f(m%np_part)
-  R_TYPE,               intent(out)   :: lf(:,:)  ! lf(m%np, 3)
+  R_TYPE,            intent(inout) :: f(:)     ! f(m%np_part)
+  R_TYPE,            intent(out)   :: lf(:,:)  ! lf(m%np, 3)
 
   R_TYPE, allocatable :: gf(:, :)
-  FLOAT :: x(3)
+  FLOAT :: x(MAX_DIM)
   integer :: i
 
   call push_sub('f_inc.Xf_angular_momentum')
@@ -339,8 +339,8 @@ end subroutine X(f_angular_momentum)
 subroutine X(f_l2)(sb, f_der, f, l2f)
   type(simul_box_t), intent(in)    :: sb
   type(f_der_t),     intent(inout) :: f_der
-  R_TYPE,               intent(inout) :: f(:)   ! f(1:m%np_part)
-  R_TYPE,               intent(out)   :: l2f(:)
+  R_TYPE,            intent(inout) :: f(:)   ! f(1:m%np_part)
+  R_TYPE,            intent(out)   :: l2f(:)
 
   R_TYPE, allocatable :: gf(:, :), ggf(:, :, :)
   type(mesh_t), pointer :: m

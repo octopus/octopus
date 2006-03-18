@@ -22,7 +22,7 @@
 ! integrates a function
 R_TYPE function X(mf_integrate) (mesh, f) result(d)
   type(mesh_t), intent(in) :: mesh
-  R_TYPE,          intent(in) :: f(:)  ! f(mesh%np)
+  R_TYPE,       intent(in) :: f(:)  ! f(mesh%np)
 
   call profiling_in(C_PROFILING_MF_INTEGRATE)
   call push_sub('mf_inc.Xmf_integrate')
@@ -47,7 +47,7 @@ end function X(mf_integrate)
 ! this function returns the dot product between two vectors
 R_TYPE function X(mf_dotp)(mesh, f1, f2) result(dotp)
   type(mesh_t), intent(in) :: mesh
-  R_TYPE,          intent(in) :: f1(:), f2(:)
+  R_TYPE,       intent(in) :: f1(:), f2(:)
 
   R_TYPE, allocatable :: l(:)
   R_TYPE              :: dotp_tmp
@@ -93,7 +93,7 @@ end function X(mf_dotp)
 ! this function returns the norm of a vector
 FLOAT function X(mf_nrm2)(m, f) result(nrm2)
   type(mesh_t), intent(in) :: m
-  R_TYPE,          intent(in) :: f(:)
+  R_TYPE,       intent(in) :: f(:)
 
   call profiling_in(C_PROFILING_MF_NRM2)
   call push_sub('mf_inc.Xmf_nrm2')
@@ -110,9 +110,10 @@ end function X(mf_nrm2)
 ! This function calculates the x_i moment of the function f
 function X(mf_moment) (m, f, i, n) result(r)
   type(mesh_t), intent(in) :: m
-  R_TYPE,          intent(in) :: f(1:m%np)  ! f(m%np)
-  integer,         intent(in) :: i, n
-  R_TYPE                      :: r
+  R_TYPE,       intent(in) :: f(1:m%np)  ! f(m%np)
+  integer,      intent(in) :: i, n
+
+  R_TYPE                   :: r
 
   call push_sub('mf_inc.Xmf_moment')
 
@@ -135,12 +136,12 @@ end function X(mf_moment)
 ! This subroutine generates a gaussian wave-function in a
 ! random position in space
 subroutine X(mf_random)(m, f)
-  type(mesh_t),      intent(in)  :: m
-  R_TYPE,               intent(out) :: f(1:m%np)
+  type(mesh_t), intent(in)  :: m
+  R_TYPE,       intent(out) :: f(1:m%np)
 
   integer, save :: iseed = 123
   integer :: i
-  FLOAT :: a(3), rnd, r
+  FLOAT :: a(MAX_DIM), rnd, r
 
   call push_sub('mf_inc.Xmf_random')
 
@@ -205,14 +206,16 @@ subroutine X(mf_partial_integrate)(mesh, j, f, u)
   call pop_sub()
 end subroutine X(mf_partial_integrate)
 
+
+! ---------------------------------------------------------
 subroutine X(mf_interpolate) (mesh_in, mesh_out, full_interpolation, u, f)
   type(mesh_t), intent(in)  :: mesh_in, mesh_out
   logical,      intent(in)  :: full_interpolation
   R_TYPE,       intent(in)  :: u(:)    ! u(mesh_in%np_global)
   R_TYPE,       intent(out) :: f(:)    ! f(mesh%np)
 
-  FLOAT :: xmin, ymin, dx, dy, rmax, px, py, pz, xyzmin(3), xyzdel(3), ip
-  FLOAT, allocatable :: rsq(:), a(:, :), aux_u(:)
+  FLOAT :: xmin, ymin, dx, dy, rmax, px, py, pz, xyzmin(MAX_DIM), xyzdel(MAX_DIM), ip
+  FLOAT, allocatable   :: rsq(:), a(:, :), aux_u(:)
   integer, allocatable :: lcell(:, :, :), lnext(:)
   integer :: i, j, nq, nw, nr, ier, npoints, ix, iy, iz
 

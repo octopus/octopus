@@ -17,6 +17,7 @@
 !!
 !! $Id$
 
+! ---------------------------------------------------------
 ! calculates the eigenvalues of the real orbitals
 subroutine X(hamiltonian_eigenval)(h, gr, st)
   type(hamiltonian_t), intent(inout) :: h
@@ -47,10 +48,10 @@ end subroutine X(hamiltonian_eigenval)
 subroutine X(Hpsi) (h, gr, psi, hpsi, ik, t)
   type(hamiltonian_t), intent(inout) :: h
   type(grid_t),        intent(inout) :: gr
-  integer,                intent(in)    :: ik
-  R_TYPE,                 intent(inout) :: psi(:,:)  !  psi(m%np_part, h%d%dim)
-  R_TYPE,                 intent(out)   :: Hpsi(:,:) !  Hpsi(m%np_part, h%d%dim)
-  FLOAT, optional,        intent(in)    :: t
+  integer,             intent(in)    :: ik
+  R_TYPE,              intent(inout) :: psi(:,:)  !  psi(m%np_part, h%d%dim)
+  R_TYPE,              intent(out)   :: Hpsi(:,:) !  Hpsi(m%np_part, h%d%dim)
+  FLOAT, optional,     intent(in)    :: t
 
   call profiling_in(C_PROFILING_HPSI)
   call push_sub('h_inc.XHpsi')
@@ -87,14 +88,15 @@ subroutine X(Hpsi) (h, gr, psi, hpsi, ik, t)
   call profiling_out(C_PROFILING_HPSI)
 end subroutine X(Hpsi)
 
+
 ! ---------------------------------------------------------
 subroutine X(magnus) (h, gr, psi, hpsi, ik, vmagnus)
   type(hamiltonian_t), intent(in)    :: h
   type(grid_t),        intent(inout) :: gr
-  integer,                intent(in)    :: ik
-  R_TYPE,                 intent(inout) :: psi(:,:)  !  psi(NP_PART, h%d%dim)
-  R_TYPE,                 intent(out)   :: Hpsi(:,:) !  Hpsi(NP, h%d%dim)
-  FLOAT,                  intent(in)    :: vmagnus(NP, h%d%nspin, 2)
+  integer,             intent(in)    :: ik
+  R_TYPE,              intent(inout) :: psi(:,:)  !  psi(NP_PART, h%d%dim)
+  R_TYPE,              intent(out)   :: Hpsi(:,:) !  Hpsi(NP, h%d%dim)
+  FLOAT,               intent(in)    :: vmagnus(NP, h%d%nspin, 2)
 
   R_TYPE, allocatable :: auxpsi(:, :), aux2psi(:, :)
   integer :: idim
@@ -160,9 +162,9 @@ end subroutine X(magnus)
 subroutine X(kinetic) (h, gr, psi, hpsi, ik)
   type(hamiltonian_t), intent(in)    :: h
   type(grid_t),        intent(inout) :: gr
-  R_TYPE,                 intent(inout) :: psi(:,:)  !  psi(m%np_part, h%d%dim)
-  R_TYPE,                 intent(out)   :: Hpsi(:,:) !  Hpsi(m%np_part, h%d%dim)
-  integer,                intent(in)    :: ik
+  R_TYPE,              intent(inout) :: psi(:,:)  !  psi(m%np_part, h%d%dim)
+  R_TYPE,              intent(out)   :: Hpsi(:,:) !  Hpsi(m%np_part, h%d%dim)
+  integer,             intent(in)    :: ik
 
   integer :: idim
 #if defined(COMPLEX_WFNS)
@@ -205,15 +207,16 @@ subroutine X(kinetic) (h, gr, psi, hpsi, ik)
   call profiling_out(C_PROFILING_KINETIC)
 end subroutine X(kinetic)
 
+
 ! ---------------------------------------------------------
 ! Here we the terms arising from the presence of a possible static external
 ! magnetic field, and the terms that come from CDFT.
 subroutine X(magnetic_terms) (gr, h, psi, hpsi, ik)
   type(grid_t),        intent(inout) :: gr
   type(hamiltonian_t), intent(inout) :: h
-  R_TYPE,                 intent(inout) :: psi(:,:)  !  psi(m%np_part, h%d%dim)
-  R_TYPE,                 intent(out)   :: Hpsi(:,:) !  Hpsi(m%np, h%d%dim)
-  integer,                intent(in)    :: ik
+  R_TYPE,              intent(inout) :: psi(:,:)  !  psi(m%np_part, h%d%dim)
+  R_TYPE,              intent(out)   :: Hpsi(:,:) !  Hpsi(m%np, h%d%dim)
+  integer,             intent(in)    :: ik
 
   integer :: k
   FLOAT,  allocatable :: div(:), tmp(:,:)
@@ -314,9 +317,9 @@ subroutine X(vnlpsi) (h, m, sb, psi, hpsi, ik)
   type(hamiltonian_t), intent(in)    :: h
   type(mesh_t),        intent(in)    :: m
   type(simul_box_t),   intent(in)    :: sb
-  R_TYPE,                 intent(in)    :: psi(:,:)  !  psi(m%np_part, h%d%dim)
-  R_TYPE,                 intent(inout) :: Hpsi(:,:) !  Hpsi(m%np_part, h%d%dim)
-  integer,                intent(in)    :: ik
+  R_TYPE,              intent(in)    :: psi(:,:)  !  psi(m%np_part, h%d%dim)
+  R_TYPE,              intent(inout) :: Hpsi(:,:) !  Hpsi(m%np_part, h%d%dim)
+  integer,             intent(in)    :: ik
 
   integer :: idim
   call profiling_in(C_PROFILING_VNLPSI)
@@ -336,9 +339,9 @@ end subroutine X(vnlpsi)
 subroutine X(vlpsi) (h, m, psi, hpsi, ik)
   type(hamiltonian_t), intent(in)    :: h
   type(mesh_t),        intent(in)    :: m
-  integer,                intent(in)    :: ik
-  R_TYPE,                 intent(in)    :: psi(:,:)  !  psi(m%np_part, h%d%dim)
-  R_TYPE,                 intent(inout) :: Hpsi(:,:) !  Hpsi(m%np_part, h%d%dim)
+  integer,             intent(in)    :: ik
+  R_TYPE,              intent(in)    :: psi(:,:)  !  psi(m%np_part, h%d%dim)
+  R_TYPE,              intent(inout) :: Hpsi(:,:) !  Hpsi(m%np_part, h%d%dim)
 
   integer :: idim
 
@@ -376,13 +379,12 @@ end subroutine X(vlpsi)
 subroutine X(vlasers) (gr, h, psi, hpsi, t)
   type(grid_t),        intent(inout) :: gr
   type(hamiltonian_t), intent(in)    :: h
-  R_TYPE,                 intent(inout) :: psi(:,:)  !  psi(m%np_part, h%d%dim)
-  R_TYPE,                 intent(inout) :: Hpsi(:,:) !  Hpsi(m%np_part, h%d%dim)
-
-  FLOAT, intent(in) :: t
+  R_TYPE,              intent(inout) :: psi(:,:)  !  psi(m%np_part, h%d%dim)
+  R_TYPE,              intent(inout) :: Hpsi(:,:) !  Hpsi(m%np_part, h%d%dim)
+  FLOAT,               intent(in)    :: t
 
   integer :: k, idim
-  FLOAT :: a(NDIM)
+  FLOAT :: a(MAX_DIM)
   R_TYPE, allocatable :: grad(:,:)
 
   call push_sub('h_inc.Xvlasers')
@@ -402,7 +404,7 @@ subroutine X(vlasers) (gr, h, psi, hpsi, t)
       do idim = 1, h%d%dim
         call X(f_gradient)(gr%sb, gr%f_der, psi(:, idim), grad)
         do k = 1, NP
-          hpsi(k, idim) = hpsi(k, idim) - M_zI * sum(a(:)*grad(k,:)) + &
+          hpsi(k, idim) = hpsi(k, idim) - M_zI * sum(a(1:NDIM)*grad(k,:)) + &
             sum(a**2)/M_TWO * psi(k, idim)
         end do
       end do

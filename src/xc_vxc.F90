@@ -21,10 +21,10 @@
 subroutine xc_get_vxc(gr, xcs, rho, ispin, vxc, ex, ec, ip, qtot)
   type(grid_t),       intent(inout) :: gr
   type(xc_t), target, intent(in)    :: xcs
-  FLOAT,                 intent(in)    :: rho(:, :)
-  integer,               intent(in)    :: ispin
-  FLOAT,                 intent(inout) :: vxc(:,:), ex, ec
-  FLOAT,                 intent(in)    :: ip, qtot
+  FLOAT,              intent(in)    :: rho(:, :)
+  integer,            intent(in)    :: ispin
+  FLOAT,              intent(inout) :: vxc(:,:), ex, ec
+  FLOAT,              intent(in)    :: ip, qtot
 
   FLOAT, allocatable :: dens(:,:), dedd(:,:), l_dens(:), l_dedd(:), ex_per_vol(:), ec_per_vol(:)
   FLOAT, allocatable :: gdens(:,:,:), dedgd(:,:,:), l_gdens(:,:), l_dedgd(:,:)

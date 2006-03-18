@@ -49,7 +49,7 @@ contains
   subroutine unocc_run(sys, h, fromScratch)
     type(system_t),      intent(inout) :: sys
     type(hamiltonian_t), intent(inout) :: h
-    logical,                intent(inout) :: fromScratch
+    logical,             intent(inout) :: fromScratch
 
     type(eigen_solver_t) :: eigens
     integer :: iunit, ierr, ik, p, occupied_states

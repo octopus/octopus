@@ -21,9 +21,9 @@
 subroutine xc_get_fxc(xcs, m, rho, ispin, fxc)
   type(xc_t), target, intent(in)    :: xcs
   type(mesh_t),       intent(in)    :: m
-  FLOAT, intent(in)                    :: rho(:, :)
-  integer, intent(in)                  :: ispin
-  FLOAT,                 intent(inout) :: fxc(:,:,:)
+  FLOAT, intent(in)                 :: rho(:, :)
+  integer, intent(in)               :: ispin
+  FLOAT,              intent(inout) :: fxc(:,:,:)
 
   FLOAT, allocatable :: dens(:,:), dedd(:,:,:), l_dens(:), l_dedd(:,:)
 

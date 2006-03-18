@@ -44,7 +44,7 @@ contains
          PSEUDO  = 2,     &
          LARGE   = 3
 
-    FLOAT :: center(3), x1(3), x2(3), to(3)
+    FLOAT :: center(MAX_DIM), x1(MAX_DIM), x2(MAX_DIM), to(MAX_DIM)
     integer :: axis_type
     integer(POINTER_SIZE) :: blk
 
@@ -116,9 +116,9 @@ contains
   ! ---------------------------------------------------------
   subroutine find_center(geo, x)
     type(geometry_t), intent(in) :: geo
-    FLOAT, intent(out) :: x(3)
+    FLOAT, intent(out) :: x(MAX_DIM)
 
-    FLOAT :: xmin(3), xmax(3)
+    FLOAT :: xmin(MAX_DIM), xmax(MAX_DIM)
     integer  :: i, j
 
     xmin =  CNST(1e10)
@@ -137,7 +137,7 @@ contains
   ! ---------------------------------------------------------
   subroutine find_center_of_mass(geo, x, pseudo)
     type(geometry_t), intent(in) :: geo
-    FLOAT, intent(out) :: x(3)
+    FLOAT,  intent(out) :: x(MAX_DIM)
     logical, intent(in) :: pseudo
 
     FLOAT :: sm, m
@@ -158,7 +158,7 @@ contains
   ! ---------------------------------------------------------
   subroutine axis_large(geo, x, x2)
     type(geometry_t), intent(in) :: geo
-    FLOAT, intent(out) :: x(3), x2(3)
+    FLOAT, intent(out) :: x(MAX_DIM), x2(MAX_DIM)
 
     integer  :: i, j
     FLOAT :: rmax, r, r2
@@ -194,10 +194,10 @@ contains
   ! center of mass of the system
   subroutine axis_inertia(geo, x, x2, pseudo)
     type(geometry_t), intent(in) :: geo
-    FLOAT, intent(out) :: x(3), x2(3)
+    FLOAT,  intent(out) :: x(MAX_DIM), x2(MAX_DIM)
     logical, intent(in) :: pseudo
 
-    FLOAT :: m, tinertia(3,3), vec(3,3), e(3)
+    FLOAT :: m, tinertia(MAX_DIM, MAX_DIM), vec(MAX_DIM, MAX_DIM), e(MAX_DIM)
     integer :: i, j, iatom
 
     ! first calculate the inertia tensor
@@ -223,7 +223,7 @@ contains
   ! ---------------------------------------------------------
   subroutine translate(geo, x)
     type(geometry_t), intent(inout) :: geo
-    FLOAT, intent(in) :: x(3)
+    FLOAT, intent(in) :: x(MAX_DIM)
 
     integer  :: i
 
@@ -242,7 +242,8 @@ contains
     FLOAT, intent(in) :: from(3), from2(3), to(3) ! assumed to be normalize
 
     integer :: i
-    FLOAT :: m1(3,3), m2(3,3), m3(3,3), f2(3), per(3)
+    FLOAT :: m1(MAX_DIM, MAX_DIM), m2(MAX_DIM, MAX_DIM)
+    FLOAT :: m3(MAX_DIM, MAX_DIM), f2(MAX_DIM), per(MAX_DIM)
     FLOAT :: alpha, r
 
     ! initialize matrices
@@ -306,10 +307,10 @@ contains
 
   ! ---------------------------------------------------------
   subroutine rotate_x(m, angle)
-    FLOAT, intent(inout) :: m(3,3)
+    FLOAT, intent(inout) :: m(MAX_DIM, MAX_DIM)
     FLOAT, intent(in)    :: angle
 
-    FLOAT :: aux(3,3), ca, sa
+    FLOAT :: aux(MAX_DIM, MAX_DIM), ca, sa
 
     ca = cos(angle)
     sa = sin(angle)
@@ -327,10 +328,10 @@ contains
 
   ! ---------------------------------------------------------
   subroutine rotate_y(m, angle)
-    FLOAT, intent(inout) :: m(3,3)
+    FLOAT, intent(inout) :: m(MAX_DIM, MAX_DIM)
     FLOAT, intent(in)    :: angle
 
-    FLOAT :: aux(3,3), ca, sa
+    FLOAT :: aux(MAX_DIM, MAX_DIM), ca, sa
 
     ca = cos(angle)
     sa = sin(angle)
@@ -348,10 +349,10 @@ contains
 
   ! ---------------------------------------------------------
   subroutine rotate_z(m, angle)
-    FLOAT, intent(inout) :: m(3,3)
-    FLOAT, intent(in) :: angle
+    FLOAT, intent(inout) :: m(MAX_DIM, MAX_DIM)
+    FLOAT,    intent(in) :: angle
 
-    FLOAT :: aux(3,3), ca, sa
+    FLOAT :: aux(MAX_DIM, MAX_DIM), ca, sa
 
     ca = cos(angle)
     sa = sin(angle)

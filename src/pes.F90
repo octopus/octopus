@@ -61,8 +61,8 @@ contains
     type(pes_t),    intent(out)   :: p
     type(mesh_t),   intent(inout) :: m
     type(simul_box_t), intent(in) :: sb
-    type(states_t), intent(in)    :: st
-    integer,           intent(in)    :: ab, save_iter
+    type(states_t),    intent(in) :: st
+    integer,           intent(in) :: ab, save_iter
 
     !%%Variable CalcPES_rc
     !%%Type logical
@@ -116,9 +116,9 @@ contains
     type(PES_t),    intent(inout) :: p
     type(mesh_t),   intent(in)    :: m
     type(states_t), intent(in)    :: st
-    FLOAT,             intent(in)    :: dt
-    FLOAT,             pointer       :: mask(:)
-    integer,           intent(in)    :: ii
+    FLOAT,          intent(in)    :: dt
+    FLOAT,          pointer       :: mask(:)
+    integer,        intent(in)    :: ii
 
     if(p%calc_rc)   call PES_rc_doit  (p%rc, st, ii)
     if(p%calc_mask) call PES_mask_doit(p%mask, m, st, dt, mask)
@@ -131,8 +131,8 @@ contains
     type(PES_t),    intent(in) :: p
     type(mesh_t),   intent(in) :: m
     type(states_t), intent(in) :: st
-    integer,           intent(in) :: iter, save_iter
-    FLOAT,             intent(in) :: dt
+    integer,        intent(in) :: iter, save_iter
+    FLOAT,          intent(in) :: dt
 
     if(p%calc_rc)   call PES_rc_output   (p%rc, st, iter, save_iter, dt)
     if(p%calc_mask) call PES_mask_output (p%mask, m, st, "PES")
