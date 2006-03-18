@@ -149,12 +149,12 @@ contains
       message(2) = "warning, not working!!!!!!!!!!!!!!!"
       call write_warning(2)
       if( complex_response ) then 
-        call zdynamic(sys, h, lr, pol(1:ndim), cmplx(w, delta, PRECISION))
+        call zdynamic(sys, h, lr, pol(1:ndim, 1:ndim), cmplx(w, delta, PRECISION))
       else 
-        call X(dynamic)(sys, h, lr, pol(1:ndim), R_TOTYPE(w))
+        call X(dynamic)(sys, h, lr, pol(1:ndim, 1:ndim), R_TOTYPE(w))
       end if
     else 
-      call static(sys, h, lr(:,:,1), pol(1:ndim), hpol(1:ndim))
+      call static(sys, h, lr(:,:,1), pol(1:ndim, 1:ndim), hpol(1:ndim, 1:ndim, 1:ndim))
       call output()
     end if
 
