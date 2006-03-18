@@ -1,5 +1,5 @@
-!! $Id$
-!!
+! $Id$
+!
 
 #if defined(SINGLE_PRECISION)
 #  define DLAPACK(x) s ## x
@@ -77,7 +77,7 @@ subroutine zgeneigensolve(n, a, b, e)
   ALLOCATE(rwork(max(1, 3*n-2)), max(1, 3*n-2))
   bp = b
   call ZLAPACK(hegv) (1, 'V', 'U', n, a(1, 1), n, bp(1, 1), n, e(1), work(1), lwork, rwork(1), info)
-  deallocate(bp, work)
+  deallocate(bp, work, rwork)
 
   if(info.ne.0) then
     write(message(1),'(a,i5)') 'In dgeneigensolve, LAPACK dhegv returned error message ', info
