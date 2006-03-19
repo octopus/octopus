@@ -333,10 +333,10 @@ contains
 
     if(associated(st%rho_core)) then
       do is = 1, st%d%spin_channels
-        rho(:, is) = st%rho(:, is) + st%rho_core(:)/st%d%spin_channels
+        rho(1:m%np, is) = st%rho(1:m%np, is) + st%rho_core(1:m%np)/st%d%spin_channels
       end do
     else
-      rho = st%rho
+      rho(1:m%np, 1:st%d%nspin) = st%rho(1:m%np, 1:st%d%nspin)
     end if
     call xc_get_fxc(sys%ks%xc, m, rho, st%d%ispin, fxc)
 
@@ -350,7 +350,7 @@ contains
     end select
 
     ! clean up
-    deallocate(rho, fxc, pot, saved_K)
+    deallocate(fxc, rho, pot, saved_K)
 
     call pop_sub()
   contains
