@@ -116,15 +116,15 @@ subroutine X(xc_KLI_solve) (m, st, is, oep)
             call MPI_Recv(phi1(1, 1), st%d%dim*m%np, R_MPITYPE, st%node(oep%eigen_index(i)), &
               i, st%mpi_grp%comm, status, ierr)
           else
-            phi1(:,:) = st%X(psi)(:,:, oep%eigen_index(i), is)
+            phi1(1:m%np, 1:st%d%dim) = st%X(psi)(1:m%np, 1:st%d%dim, oep%eigen_index(i), is)
           end if
         end if
         call MPI_Barrier(st%mpi_grp%comm, ierr)
       else
-        phi1(:,:) = st%X(psi)(:,:, oep%eigen_index(i), is)
+        phi1(1:m%np, 1:st%d%dim) = st%X(psi)(1:m%np, 1:st%d%dim, oep%eigen_index(i), is)
       endif
 #else
-      phi1(:,:) = st%X(psi)(:,:, oep%eigen_index(i), is)
+      phi1(1:m%np, 1:st%d%dim) = st%X(psi)(1:m%np, 1:st%d%dim, oep%eigen_index(i), is)
 #endif
 
       if(mpi_grp_is_root(st%mpi_grp)) then
@@ -145,15 +145,15 @@ subroutine X(xc_KLI_solve) (m, st, is, oep)
               call MPI_Recv(phi2(1, 1), st%d%dim*m%np, R_MPITYPE, st%node(oep%eigen_index(j)), &
                 j, st%mpi_grp%comm, status, ierr)
             else
-              phi2(:,:) = st%X(psi)(:,:, oep%eigen_index(j), is)
+              phi2(1:m%np, 1:st%d%dim) = st%X(psi)(1:m%np, 1:st%d%dim, oep%eigen_index(j), is)
             end if
           end if
           call MPI_Barrier(st%mpi_grp%comm, ierr)
         else
-          phi2(:,:) = st%X(psi)(:,:, oep%eigen_index(j), is)
+          phi2(1:m%np, 1:st%d%dim) = st%X(psi)(1:m%np, 1:st%d%dim, oep%eigen_index(j), is)
         end if
 #else
-        phi2(:,:) = st%X(psi)(:,:, oep%eigen_index(j), is)
+        phi2(1:m%np, 1:st%d%dim) = st%X(psi)(1:m%np, 1:st%d%dim, oep%eigen_index(j), is)
 #endif
 
         if(mpi_grp_is_root(st%mpi_grp)) then
@@ -192,15 +192,15 @@ subroutine X(xc_KLI_solve) (m, st, is, oep)
             call MPI_Recv(phi1(1, 1), st%d%dim*m%np, R_MPITYPE, st%node(oep%eigen_index(i)), &
               i, st%mpi_grp%comm, status, ierr)
           else
-            phi1(:,:) = st%X(psi)(:,:, oep%eigen_index(i), is)
+            phi1(1:m%np, 1:st%d%dim) = st%X(psi)(1:m%np, 1:st%d%dim, oep%eigen_index(i), is)
           end if
         end if
         call MPI_Barrier(st%mpi_grp%comm, ierr)
       else
-        phi1(:,:) = st%X(psi)(:,:, oep%eigen_index(i), is)
+        phi1(1:m%np, 1:st%d%dim) = st%X(psi)(1:m%np, 1:st%d%dim, oep%eigen_index(i), is)
       end if
 #else
-      phi1(:,:) = st%X(psi)(:,:, oep%eigen_index(i), is)
+      phi1(1:m%np, 1:st%d%dim) = st%X(psi)(1:m%np, 1:st%d%dim, oep%eigen_index(i), is)
 #endif
       occ = st%occ(oep%eigen_index(i), is)
 
