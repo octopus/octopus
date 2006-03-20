@@ -110,12 +110,20 @@ double FC_FUNC_(oct_bessel_k1, OCT_BESSEL_K1)
 double FC_FUNC_(oct_erfc, OCT_ERFC)
 		 (double *x)
 {
+  /* avoid floating invalids in the asymptotic limit */
+  if(*x >  20.0) return  0.0;
+	if(*x < -20.0) return  2.0;
+	/* otherwise call gsl */
 	return gsl_sf_erfc(*x);
 }
 
 double FC_FUNC_(oct_erf, OCT_ERF)
 		 (double *x)
 {
+  /* avoid floating invalids in the asymptotic limit */
+  if(*x >  20.0) return  1.0;
+	if(*x < -20.0) return -1.0;
+	/* otherwise call gsl */
 	return gsl_sf_erf(*x);
 }
 
