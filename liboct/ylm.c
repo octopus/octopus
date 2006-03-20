@@ -21,6 +21,7 @@
 
 #include <stdlib.h>
 #include <math.h>
+#include <float.h>
 
 #include <gsl/gsl_sf_legendre.h>
 
@@ -41,8 +42,7 @@ double ylm(double x, double y, double z, int l, int m)
 	double r, rx, ry, rz, cosphi, sinphi, cosm, sinm, phase;
 	int i;
 
-	if(l == 0)
-		return sph_cnsts[0];
+	if(l == 0) return sph_cnsts[0];
 
 	r = sqrt(x*x + y*y + z*z);
 
@@ -82,10 +82,13 @@ double ylm(double x, double y, double z, int l, int m)
 		sinm = a*sinphi + b*cosphi;
 	}
 	phase = m<0 ? sinm : cosm;
-        phase = m==0 ? phase : sqrt(2.0)*phase;
+	phase = m==0 ? phase : sqrt(2.0)*phase;
+	
+	/* adding small number (~= 10^-308) to avoid floating invalids */
+	rz = rz + DBL_MIN;
 
 	r = gsl_sf_legendre_sphPlm(l, abs(m), rz);
 
-        /* I am not sure wether we are including the Condon-Shortley factor (-1)^m */
+	/* I am not sure wether we are including the Condon-Shortley factor (-1)^m */
 	return r*phase;
 }
