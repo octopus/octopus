@@ -287,7 +287,7 @@ contains
     call xc_gga_init(x_conf, x_info, XC_GGA_X_PBE, NSPIN)
     call xc_gga_init(c_conf, c_info, XC_GGA_C_PBE, NSPIN)
   else
-    call xc_lda_init(x_conf, x_info, XC_LDA_X, NSPIN, 3)
+    call xc_lda_init(x_conf, x_info, XC_LDA_X, NSPIN, 3, XC_NON_RELATIVISTIC)
     if(AUTHOR.EQ.'CA' .OR. AUTHOR.EQ.'ca' .OR.                                &
        AUTHOR.EQ.'PZ' .OR. AUTHOR.EQ.'pz') THEN
       call xc_lda_init(c_conf, c_info, XC_LDA_C_PZ, NSPIN)

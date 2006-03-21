@@ -148,7 +148,7 @@ contains
     case(XC_LDA_X)
       functl%family = XC_FAMILY_LDA
       call xc_lda_init(functl%conf, functl%info, XC_LDA_X, &
-        spin_channels, ndim)
+        spin_channels, ndim, XC_NON_RELATIVISTIC)
 
     case(XC_GGA_X_PBE, XC_GGA_XC_LB)
       functl%family = XC_FAMILY_GGA

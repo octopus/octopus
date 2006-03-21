@@ -134,12 +134,13 @@ module lib_xc_m
       integer,               intent(in)  :: functional
       integer,               intent(in)  :: nspin
     end subroutine xc_lda_init_
-    subroutine xc_lda_x_init(p, info, functional, nspin, dim)
+    subroutine xc_lda_x_init(p, info, functional, nspin, dim, irel)
       integer(POINTER_SIZE), intent(out) :: p
       integer(POINTER_SIZE), intent(out) :: info
       integer,               intent(in)  :: functional
       integer,               intent(in)  :: nspin  ! XC_UNPOLARIZED or XC_POLARIZED
       integer,               intent(in)  :: dim    ! 2 or 3 dimensions
+      integer,               intent(in)  :: irel   ! XC_NON_RELATIVISTIC or XC_RELATIVISTIC
     end subroutine xc_lda_x_init
 
     subroutine xc_lda_c_xalpha_init(p, info, functional, nspin, dim, alpha)
