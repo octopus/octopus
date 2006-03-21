@@ -1,0 +1,20 @@
+# $Id$
+Test     : Forces
+Author   : Alberto
+Date     : 21.03.06
+Arch     : Linux g38 2.6.14-desktop-2 #1 SMP PREEMPT Sun Nov 20 20:45:48 CET 2005 i686 GNU/Linux
+Release  : 2.0.1devel
+Programs : octopus
+Runtime  : short-run
+Enabled  : Yes
+
+# This is a calculation of the ground-state of a Nitrogen molecule at the
+# experimental equilibrium distance. The parameters of the calculation
+# are not optimal (grid spacings, etc), but this way the test runs faster,
+# and may be tagged as "short-run".
+# The purpose is to test the calculation of the force on the atoms.
+
+Input: 12-forces.01-N2_gs.inp
+
+Match ; Total Energy ; grep -A 6 '^Energy:' static/info ; \s*Total\s*=\s*-19.93813
+Match ; Force        ; grep -A 2 '^Forces on' static/info | tail -1 ; \s*-0.08652\d*
