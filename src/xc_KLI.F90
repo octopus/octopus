@@ -53,8 +53,11 @@ subroutine X(xc_KLI_solve) (m, st, is, oep)
 #endif
 
   do i = 1, m%np
-    oep%vxc(i)   = oep%socc* sum(st%occ(st%st_start:st%st_end, is) * &
-      R_REAL(oep%X(lxc)(i, st%st_start:st%st_end)*st%X(psi)(i, 1, st%st_start:st%st_end, is)))/rho_sigma(i)
+    oep%vxc(i) = M_ZERO
+    do j = st%st_start, st%st_end
+      oep%vxc(i) = oep%vxc(i) + oep%socc * st%occ(j, is) * oep%X(lxc)(i, j) * st%X(psi)(i, 1, j, is)
+    end do
+    oep%vxc(i) = oep%vxc(i) / rho_sigma(i)
   end do
 #if defined(HAVE_MPI)
   if(st%parallel_in_states) then

@@ -82,7 +82,7 @@ subroutine X(xc_oep_calc)(oep, xcs, apply_sic_pz, gr, h, st, vxc, ex, ec)
 
     ! calculate uxc_bar for the occupied states
     do ist = st%st_start, st%st_end
-      oep%uxc_bar(ist) = X(mf_dotp)(gr%m, st%X(psi)(1:NP, 1, ist, is), oep%X(lxc)(1:NP, ist))
+      oep%uxc_bar(ist) = X(mf_dotp)(gr%m, R_CONJ( st%X(psi)(1:NP, 1, ist, is) ), oep%X(lxc)(1:NP, ist))
     end do
 
 #if defined(HAVE_MPI)
