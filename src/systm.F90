@@ -63,6 +63,10 @@ module system_m
     type(multicomm_t)         :: mc    ! index and domain communicators
   end type system_t
 
+  integer, parameter :: INITRHO_PARAMAGNETIC  = 1, &
+                        INITRHO_FERROMAGNETIC = 2, &
+                        INITRHO_RANDOM        = 3, &
+                        INITRHO_USERDEF       = 123
 
 contains
 
@@ -202,6 +206,7 @@ contains
 
     case (SPEC_PS_TM2,SPEC_PS_HGH) ! ...from pseudopotential
       ! the outer loop sums densities over atoms in neighbour cells
+
       do k = 1, 3**sb%periodic_dim
         do i = 1, m%np
           call mesh_r(m, i, r, a=atom%x + sb%shift(k,:))
@@ -270,14 +275,14 @@ contains
       !% vector has the same direction as a vector provided by the user. In this case,
       !% the <tt>AtomsMagnetDirection</tt> block has to be set.
       !%End
-      call loct_parse_int(check_inp('GuessMagnetDensity'), 2, gmd_opt)
+      call loct_parse_int(check_inp('GuessMagnetDensity'), INITRHO_FERROMAGNETIC, gmd_opt)
       if(.not.varinfo_valid_option('GuessMagnetDensity', gmd_opt)) call input_error('GuessMagnetDensity')
       call messages_print_var_option(stdout, 'GuessMagnetDensity', gmd_opt)
     end if
 
     rho = M_ZERO
     select case (gmd_opt)
-    case (1) ! Paramagnetic
+    case (INITRHO_PARAMAGNETIC)
       ALLOCATE(atom_rho(m%np, 1), m%np*1)
       do ia = 1, geo%natoms
         call atom_density(m, sb, geo%atom(ia), 1, atom_rho(1:m%np, 1:1))
@@ -288,14 +293,16 @@ contains
         rho(1:m%np, 2) = rho(1:m%np, 1)
       end if
 
-    case (2) ! Ferromagnetic
+    case (INITRHO_FERROMAGNETIC)
       ALLOCATE(atom_rho(m%np, 2), m%np*2)
+      atom_rho = M_ZERO
+      rho = M_ZERO
       do ia = 1, geo%natoms
         call atom_density(m, sb, geo%atom(ia), 2, atom_rho(1:m%np, 1:2))
-        call lalg_axpy(m%np, 2, M_ONE, atom_rho, rho)
+        rho(1:m%np, 1:2) = rho(1:m%np, 1:2) + atom_rho(1:m%np, 1:2)
       end do
 
-    case (3) ! Random oriented spins
+    case (INITRHO_RANDOM) ! Random oriented spins
       ALLOCATE(atom_rho(m%np, 2), m%np*2)
       do ia = 1, geo%natoms
         call atom_density(m, sb, geo%atom(ia), 2, atom_rho)
@@ -325,7 +332,7 @@ contains
         end if
       end do
 
-    case (123) ! User-defined
+    case (INITRHO_USERDEF) ! User-defined
       
       !%Variable AtomsMagnetDirection
       !%Type block
