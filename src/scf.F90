@@ -589,22 +589,20 @@ contains
       call push_sub('scf.write_magnetic_moments')
 
       call states_magnetic_moment(m, st, st%rho(1:NP,:), mm)
-      write(iunit, '(a)') 'Total Magnetic Moment:'
-      if(st%d%ispin == SPIN_POLARIZED) then ! collinear spin
-        write(iunit, '(a,f10.6)') ' mz = ', mm(3)
-
-      else if(st%d%ispin == SPINORS) then ! non-collinear
-        write(iunit, '(1x,3(a,f10.6,3x))') 'mx = ',mm(1),'my = ',mm(2),'mz = ',mm(3)
-      end if
-
       ALLOCATE(lmm(3, gr%geo%natoms), 3*gr%geo%natoms)
       call states_local_magnetic_moments(m, st, gr%geo, st%rho(1:NP,:), scf%lmm_r, lmm)
 
-      write(iunit, '(a,a,a,f7.3,a)') 'Local Magnetic Moments (sphere radius [', &
-        trim(units_out%length%abbrev),'] = ', scf%lmm_r/units_out%length%factor, '):'
-
       if(mpi_grp_is_root(mpi_world)) then
 
+        write(iunit, '(a)') 'Total Magnetic Moment:'
+        if(st%d%ispin == SPIN_POLARIZED) then ! collinear spin
+          write(iunit, '(a,f10.6)') ' mz = ', mm(3)
+        else if(st%d%ispin == SPINORS) then ! non-collinear
+          write(iunit, '(1x,3(a,f10.6,3x))') 'mx = ',mm(1),'my = ',mm(2),'mz = ',mm(3)
+        end if
+
+        write(iunit, '(a,a,a,f7.3,a)') 'Local Magnetic Moments (sphere radius [', &
+             trim(units_out%length%abbrev),'] = ', scf%lmm_r/units_out%length%factor, '):'
         if(st%d%ispin == SPIN_POLARIZED) then ! collinear spin
           write(iunit,'(a,6x,14x,a)') ' Ion','mz'
           do i = 1, gr%geo%natoms
