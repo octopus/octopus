@@ -67,8 +67,7 @@ subroutine X(project)(mesh, p, n_projectors, psi, ppsi, periodic, ik)
       uvpsi = sum(lpsi(1:n_s)*p(ip)%bra(1:n_s, j))
 #if defined(HAVE_MPI)
       if(mesh%parallel_in_domains) then
-        call TS(MPI_Allreduce)(uvpsi, tmp, 1, R_MPITYPE, &
-          MPI_SUM, mesh%vp%comm, mpi_err)
+        call MPI_Allreduce(uvpsi, tmp, 1, R_MPITYPE, MPI_SUM, mesh%vp%comm, mpi_err)
         uvpsi = tmp
       end if
 #endif
