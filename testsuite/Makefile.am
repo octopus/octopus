@@ -30,10 +30,18 @@ sharedir = $(pkgdatadir)/testsuite
 EXTRA_DIST = oct-run_regression_test.pl oct-run_testsuite oct-run_regression_test.pl.pod
 
 check: 
-	@./oct-run_testsuite -l -s
+	@./oct-run_testsuite -l -s | tee rlog
+	@echo -e "\033[32;1mPassed: `grep OK rlog | wc -l` / `grep '\[ ' rlog | wc -l` \033[0m"
+	@if [ `grep FAIL rlog | wc -l` != "0"  ] ; \
+	 then echo -e "\033[31;1mFailed: `grep FAIL rlog | wc -l` / `grep '\[ ' rlog | wc -l` \033[0m" ; \
+	 else echo -e "\033[32;1m\nEverything seems to be OK \n\033[0m" ; fi
 
 check-full:
-	@./oct-run_testsuite -l -f
+	@./oct-run_testsuite -l -f | tee rlog
+	@echo -e "\033[32;1mPassed: `grep OK rlog | wc -l` / `grep '\[ ' rlog | wc -l` \033[0m"
+	@if [ `grep FAIL rlog | wc -l` != "0"  ] ; \
+	 then echo -e "\033[31;1mFailed: `grep FAIL rlog | wc -l` / `grep '\[ ' rlog | wc -l` \033[0m" ; \
+	 else echo -e "\033[32;1m\nEverything seems to be OK \n\033[0m" ; fi
 
 clean:
 	-rm -rf /tmp/tmp.* 

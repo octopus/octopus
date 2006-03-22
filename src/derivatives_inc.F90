@@ -82,20 +82,20 @@ end subroutine X(derivatives_lapl)
 subroutine X(derivatives_grad)(der, f, grad)
   type(der_discr_t), intent(in)    :: der
   R_TYPE, target,    intent(inout) :: f(:)       ! f(m%np_part)
-  R_TYPE,            intent(out)   :: grad(:,:)  ! grad(m%np, calc_dim)
+  R_TYPE,            intent(out)   :: grad(:,:)  ! grad(m%np, m%sb%dim)
 
   integer :: i
 
   ASSERT(ubound(f,    DIM=1) == der%m%np_part)
   ASSERT(ubound(grad, DIM=1) >= der%m%np)
-  ASSERT(ubound(grad, DIM=2) >= calc_dim)
+  ASSERT(ubound(grad, DIM=2) >= der%m%sb%dim)
 
   if(der%zero_bc) then
     f(der%m%np+1:der%m%np_part) = R_TOTYPE(M_ZERO)
   end if
 
   grad(:,:) = R_TOTYPE(M_ZERO)
-  do i = 1, calc_dim
+  do i = 1, der%m%sb%dim
     call X(nl_operator_operate) (der%grad(i), f, grad(:,i))
   end do
 
@@ -105,7 +105,7 @@ end subroutine X(derivatives_grad)
 ! ---------------------------------------------------------
 subroutine X(derivatives_div)(der, f, div)
   type(der_discr_t), intent(in)    :: der
-  R_TYPE,            intent(inout) :: f(:,:)   ! f(m%np_part, calc_dim)
+  R_TYPE,            intent(inout) :: f(:,:)   ! f(m%np_part, m%sb%dim)
   R_TYPE,            intent(out)   :: div(:)   ! div(m%np)
 
   R_TYPE, allocatable :: tmp(:)
@@ -120,7 +120,7 @@ subroutine X(derivatives_div)(der, f, div)
   ALLOCATE(tmp(der%m%np), der%m%np)
 
   div(:) = R_TOTYPE(M_ZERO)
-  do i = 1, calc_dim
+  do i = 1, der%m%sb%dim
     call X(nl_operator_operate) (der%grad(i), f(:,i), tmp)
      div(:) = div(:) + tmp(:)
   end do
@@ -132,15 +132,15 @@ end subroutine X(derivatives_div)
 ! ---------------------------------------------------------
 subroutine X(derivatives_curl)(der, f, curl)
   type(der_discr_t), intent(in)    :: der
-  R_TYPE,            intent(inout) :: f(:,:)    ! f(m%np_part, calc_dim)
-  R_TYPE,            intent(out)   :: curl(:,:) ! curl(m%np, calc_dim)
+  R_TYPE,            intent(inout) :: f(:,:)    ! f(m%np_part, der%m%sb%dim)
+  R_TYPE,            intent(out)   :: curl(:,:) ! curl(m%np, der%m%sb%dim)
 
   R_TYPE, allocatable :: tmp(:)
 
-  ASSERT(calc_dim == 3)
+  ASSERT(der%m%sb%dim == 3)
   ASSERT(ubound(f,    DIM=1) == der%m%np_part)
   ASSERT(ubound(curl, DIM=1) >= der%m%np)
-  ASSERT(ubound(curl, DIM=2) == calc_dim)
+  ASSERT(ubound(curl, DIM=2) == der%m%sb%dim)
 
   if(der%zero_bc) then
     f(der%m%np+1:der%m%np_part,:) = R_TOTYPE(M_ZERO)
