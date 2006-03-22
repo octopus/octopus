@@ -1112,21 +1112,26 @@ contains
 
     integer :: ia, i
     FLOAT :: ri
-    FLOAT, allocatable :: md(:,:)
+    FLOAT, allocatable :: md(:, :), aux(:, :)
 
     call push_sub('states.states_local_magnetic_moments')
 
-    ALLOCATE(md(m%np, 3), m%np*3)
+    ALLOCATE(md (m%np, 3), m%np*3)
+    ALLOCATE(aux(m%np, 3), m%np*3)
     call states_magnetization_dens(st, m%np, rho, md)
     lmm = M_ZERO
+    aux = M_ZERO
     do ia = 1, geo%natoms
       do i = 1, m%np
         call mesh_r(m, i, ri, a=geo%atom(ia)%x)
         if (ri > r) cycle
-        lmm(:, ia) = lmm(:, ia) + md(i, :)*m%vol_pp(i)
+        aux(i, :) = md(i, :)
       end do
+      lmm(1, ia) = dmf_integrate(m, aux(:, 1))
+      lmm(2, ia) = dmf_integrate(m, aux(:, 2))
+      lmm(3, ia) = dmf_integrate(m, aux(:, 3))
     end do
-    deallocate(md)
+    deallocate(md, aux)
 
     call pop_sub()
   end subroutine states_local_magnetic_moments
