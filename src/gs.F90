@@ -58,8 +58,7 @@ contains
 
     call push_sub('gs.ground_state_run')
 
-    ! allocate wfs
-    ALLOCATE(sys%st%X(psi)(sys%NP_PART, sys%st%d%dim, sys%st%nst, sys%st%d%nik), sys%NP_PART*sys%st%d%dim*sys%st%nst*sys%st%d%nik)
+    call X(states_allocate_wfns)(sys%st, sys%gr%m)
 
     if(.not.fromScratch) then
 

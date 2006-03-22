@@ -192,8 +192,7 @@ contains
       if(w%gs_st%d%ispin == SPINORS) then
         ALLOCATE(w%gs_st%mag(w%gs_st%nst, w%gs_st%d%nik, 2), w%gs_st%nst*w%gs_st%d%nik*2)
       end if
-      i = NP_PART*w%gs_st%d%dim*(w%gs_st%st_end-w%gs_st%st_start+1)*w%gs_st%d%nik
-      ALLOCATE(w%gs_st%zpsi(NP_PART, w%gs_st%d%dim, w%gs_st%st_start:w%gs_st%st_end, w%gs_st%d%nik), i)
+      call X(states_allocate_wfns)(w%gs_st, gr%m)
       w%gs_st%node(:)  = 0
       call zrestart_read(trim(tmpdir)//'restart_gs', w%gs_st, gr, ierr)
       if(ierr.ne.0) then

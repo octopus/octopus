@@ -125,8 +125,7 @@ contains
     subroutine init_()
       call push_sub('geom_opt.geom_opt_run')
 
-      ! allocate wfs
-      ALLOCATE(sys%st%X(psi)(sys%gr%m%np_part, sys%st%d%dim, sys%st%nst, sys%st%d%nik), sys%gr%m%np_part*sys%st%d%dim*sys%st%nst*sys%st%d%nik)
+      call X(states_allocate_wfns)(sys%st, sys%gr%m)
 
       ! shortcuts
       m   => sys%gr%m

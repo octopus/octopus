@@ -174,8 +174,7 @@ contains
       gr  => sys%gr
       st => sys%st
 
-      ! allocate wfs
-      ALLOCATE(sys%st%X(psi)(NP_PART, st%d%dim, st%nst, st%d%nik), NP_PART*st%d%dim*st%nst*st%d%nik)
+      call X(states_allocate_wfns)(st, gr%m)
 
       !%Variable POLStaticField
       !%Type float

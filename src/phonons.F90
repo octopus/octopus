@@ -127,10 +127,8 @@ contains
       integer :: i
 
       call push_sub('phonons.phonons_run')
+      call X(states_allocate_wfns)(sys%st, sys%gr%m)
 
-      ! allocate wfs
-      i = sys%gr%m%np_part*sys%st%d%dim*sys%st%nst*sys%st%d%nik
-      ALLOCATE(sys%st%X(psi)(sys%gr%m%np_part, sys%st%d%dim, sys%st%nst, sys%st%d%nik), i)
     end subroutine init_
 
     ! ---------------------------------------------------------

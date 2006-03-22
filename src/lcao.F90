@@ -139,6 +139,10 @@ contains
     end do
     if( (st%d%ispin.eq.SPINORS) ) norbs = norbs * 2
     lcao_data%st%nst = norbs
+    lcao_data%st%st_start = 1
+    lcao_data%st%st_end = norbs
+    lcao_data%st%d%dim = st%d%dim
+    lcao_data%st%d%nik = st%d%nik
     if(lcao_data%st%nst < st%nst) then
       lcao_data%state = 0
       write(message(1),'(a)') 'Cannot do LCAO initial calculation because there are not enough atomic orbitals.'
@@ -148,8 +152,7 @@ contains
       return
     end if
 
-    ALLOCATE(lcao_data%st%X(psi)(NP_PART, st%d%dim, norbs, st%d%nik), NP_PART*st%d%dim*norbs*st%d%nik)
-    lcao_data%st%X(psi) = R_TOTYPE(M_ZERO)
+    call X(states_allocate_wfns)(lcao_data%st, gr%m)
 
     do ik = 1, st%d%nik
       do n = 1, lcao_data%st%nst

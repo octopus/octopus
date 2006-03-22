@@ -190,7 +190,7 @@ contains
       st%st_end = st%nst
 
       deallocate(st%eigenval, st%occ)
-      ALLOCATE(sys%st%X(psi)(m%np_part, st%d%dim, st%nst, st%d%nik), m%np_part*st%d%dim*st%nst*st%d%nik)
+      call X(states_allocate_wfns)(st, m)
       ALLOCATE(st%eigenval(st%nst, st%d%nik), st%nst*st%d%nik)
       ALLOCATE(st%occ(st%nst, st%d%nik), st%nst*st%d%nik)
       if(st%d%ispin == SPINORS) then

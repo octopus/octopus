@@ -343,8 +343,7 @@ contains
 
       call td_init(gr, td, sys%st, sys%outp)
 
-      ! allocate memory
-      ALLOCATE(st%zpsi(NP, st%d%dim, st%st_start:st%st_end, st%d%nik), NP*st%d%dim*(st%st_end-st%st_start+1)*st%d%nik)
+      call X(states_allocate_wfns)(st, gr%m)
 
       ! psi_i is initialized in system_init
       psi_i => st

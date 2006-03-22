@@ -18,6 +18,20 @@
 !! $Id$
 
 ! ---------------------------------------------------------
+! Allocates the KS wavefunctions defined within an states_t
+! structure.
+subroutine X(states_allocate_wfns)(st, m)
+  type(states_t), intent(inout) :: st
+  type(mesh_t),    intent(in)    :: m
+  integer :: n
+
+  n = m%np_part * st%d%dim * (st%st_end-st%st_start+1) * st%d%nik
+  ALLOCATE(st%X(psi)(m%np_part, st%d%dim, st%st_start:st%st_end, st%d%nik), n)
+  st%X(psi) = R_TOTYPE(M_ZERO)
+
+end subroutine X(states_allocate_wfns)
+
+! ---------------------------------------------------------
 ! Calculates the new density out the wavefunctions and
 ! occupations...
 subroutine X(states_calc_dens)(st, np, rho)

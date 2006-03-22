@@ -100,7 +100,8 @@ contains
     sys%st%st_end = nst
     deallocate(sys%st%eigenval, sys%st%occ)
 
-    ALLOCATE(sys%st%X(psi) (sys%gr%m%np_part, sys%st%d%dim, sys%st%nst, sys%st%d%nik), sys%gr%m%np*sys%st%d%dim*sys%st%nst*sys%st%d%nik)
+    call X(states_allocate_wfns)(sys%st, sys%gr%m)
+
     ALLOCATE(sys%st%eigenval(sys%st%nst, sys%st%d%nik), sys%st%nst*sys%st%d%nik)
     ALLOCATE(sys%st%occ(sys%st%nst, sys%st%d%nik), sys%st%nst*sys%st%d%nik)
 

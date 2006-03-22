@@ -88,7 +88,9 @@ module states_m
     zstates_mpdotp,                 &
     dstates_calc_angular,           &
     zstates_calc_angular,           &
-    states_distribute_nodes
+    states_distribute_nodes,        &
+    dstates_allocate_wfns,          &
+    zstates_allocate_wfns
 
   type states_t
 
