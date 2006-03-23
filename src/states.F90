@@ -1122,8 +1122,8 @@ contains
     ALLOCATE(aux(m%np, 3), m%np*3)
     call states_magnetization_dens(st, m%np, rho, md)
     lmm = M_ZERO
-    aux = M_ZERO
     do ia = 1, geo%natoms
+      aux = M_ZERO
       do i = 1, m%np
         call mesh_r(m, i, ri, a=geo%atom(ia)%x)
         if (ri > r) cycle
