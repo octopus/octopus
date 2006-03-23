@@ -751,12 +751,6 @@ contains
 
     deallocate(angular, dumpa)
 
-    ! should output units, etc...
-    do i = 0, no_e
-      write(out_file,'(5e15.6)') i*s%energy_step / units_out%energy%factor, &
-        sp(i) * (units_out%length%factor)**3
-    end do
-
     ! print some info
     write(message(1), '(a,i8)')    'Number of time steps = ', ntiter
     write(message(2), '(a,i4)')    'SpecDampMode         = ', s%damp
@@ -769,6 +763,27 @@ contains
     write(message(9), '(a,5e15.6,5e15.6)') 'R(0) sum rule = ', sum1
     write(message(10),'(a,5e15.6,5e15.6)') 'R(2) sum rule = ', sum2
     call write_info(10)
+
+
+    ! Output to file
+    write(out_file, '(a15,i2)')      '# nspin        ', nspin
+    write(out_file, '(a15,3f18.12)') '# pol(1)       ', kick%pol(1:3, 1)
+    write(out_file, '(a15,3f18.12)') '# pol(2)       ', kick%pol(1:3, 2)
+    write(out_file, '(a15,3f18.12)') '# pol(3)       ', kick%pol(1:3, 3)
+    write(out_file, '(a15,i1)')      '# direction    ', kick%pol_dir
+    write(out_file, '(a15,i1)')      '# kick mode    ', kick%delta_strength_mode
+    write(out_file, '(a15,f18.12)')  '# kick strength', kick%delta_strength
+    write(out_file, '(a15,i1)')      '# Equiv. axis  ', kick%pol_equiv_axis
+    write(out_file, '(a15,3f18.12)') '# wprime       ', kick%wprime(1:3)
+    write(out_file, '(a1,a20,a20,a20)') '#', str_center("Energy", 20), str_center("R", 20), str_center("Re[beta]", 20)
+    write(out_file, '(a1,a20,a20,a20)') '#', str_center('['//trim(units_out%energy%abbrev) // ']', 20), &
+         str_center('['//trim(units_out%length%abbrev) //'^3]', 20), &
+         str_center('['//trim(units_out%length%abbrev) //'^4]', 20)
+    do i = 0, no_e
+      write(out_file,'(e20.8,e20.8,e20.8)') i*s%energy_step / units_out%energy%factor, &
+           aimag(sp(i)) / M_PI / (units_out%length%factor)**3, &
+           real(sp(i)) * P_C/(M_THREE*max(i,1)*s%energy_step) / (units_out%length%factor)**4
+    end do
 
     call pop_sub()
   end subroutine spectrum_rotatory_strength
