@@ -452,7 +452,7 @@ contains
         call states_write_eigenvalues(stdout, st%nst, st, gr%sb)
       end if
 
-      if(st%d%ispin == SPINORS) then
+      if(st%d%ispin > UNPOLARIZED) then
         call write_magnetic_moments(stdout, gr%m, st)
       end if
 
