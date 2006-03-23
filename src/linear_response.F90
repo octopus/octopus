@@ -76,7 +76,7 @@ contains
   integer function dlr_alloc_psi(st, m, lr) result(r)
     type(states_t), intent(in)  :: st
     type(mesh_t),   intent(in)  :: m
-    type(lr_t),     intent(out) :: lr
+    type(lr_t),     intent(inout) :: lr
 
     r =  1
     if(associated(lr%ddl_psi)) return ! do nothing
@@ -100,7 +100,7 @@ contains
   integer function zlr_alloc_psi(st, m, lr) result(r)
     type(states_t), intent(in)  :: st
     type(mesh_t),   intent(in)  :: m
-    type(lr_t),     intent(out) :: lr
+    type(lr_t),     intent(inout) :: lr
 
     r =  1
     if(associated(lr%zdl_psi)) return ! do nothing

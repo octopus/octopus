@@ -151,10 +151,13 @@ contains
     type(mix_t), intent(inout) :: smix
     call push_sub('mix.mix_end')
 
-    if (associated(smix%df))      deallocate(smix%df)
-    if (associated(smix%dv))      deallocate(smix%dv)
-    if (associated(smix%vin_old)) deallocate(smix%vin_old)
-    if (associated(smix%f_old))   deallocate(smix%f_old)
+    ! Arrays got allocated for all mixing schemes, except linear mixing
+    if (smix%type_of_mixing .ne. MIX_LINEAR) then
+      if (associated(smix%df))      deallocate(smix%df)
+      if (associated(smix%dv))      deallocate(smix%dv)
+      if (associated(smix%vin_old)) deallocate(smix%vin_old)
+      if (associated(smix%f_old))   deallocate(smix%f_old)
+    end if
 
     call pop_sub()
   end subroutine mix_end

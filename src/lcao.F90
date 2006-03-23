@@ -72,7 +72,7 @@ contains
 
     integer :: norbs, ia, i, j, idim, k, wf_dim
     type(specie_t), pointer :: s
-    FLOAT :: x(calc_dim), r
+    FLOAT :: x(1:3), r
 
     err = 0
     psi = R_TOTYPE(M_ZERO)
@@ -99,7 +99,7 @@ contains
         do j = 1, s%niwfs
           if(n == i) then
             do k = 1, gr%m%np
-              x(:) = gr%m%x(k, :) - gr%geo%atom(ia)%x(:)
+              x(1:calc_dim) = gr%m%x(k, 1:calc_dim) - gr%geo%atom(ia)%x(1:calc_dim)
               psi(k, idim) =  specie_get_iwf(s, j, calc_dim, states_spin_channel(ispin, ik, idim), x)
             end do
             r = X(states_nrm2)(gr%m, wf_dim, psi)

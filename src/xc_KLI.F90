@@ -21,7 +21,7 @@
 subroutine X(xc_KLI_solve) (m, st, is, oep)
   type(mesh_t),   intent(in)    :: m
   type(states_t), intent(in)    :: st
-  integer,           intent(in)    :: is
+  integer,        intent(in)    :: is
   type(xc_oep_t), intent(inout) :: oep
 
 #if defined(HAVE_MPI)
@@ -74,7 +74,7 @@ subroutine X(xc_KLI_solve) (m, st, is, oep)
   ALLOCATE(v_bar_S(st%nst), st%nst)
   do i = st%st_start, st%st_end
     if(st%occ(i, is) .gt. small) then
-      v_bar_S(i) = sum(R_ABS(st%X(psi)(1:m%np, 1, i, is))**2 * oep%vxc(1:m%np) * m%vol_pp(1:m%np))
+      v_bar_S(i) = dmf_dotp(m, (R_ABS(st%X(psi)(1:m%np, 1, i, is)))**2 , oep%vxc)
     end if
   end do
 
@@ -105,29 +105,31 @@ subroutine X(xc_KLI_solve) (m, st, is, oep)
     do i = 1, n
 
 #if defined(HAVE_MPI)
-    if(st%parallel_in_states) then
-      if(.not.mpi_grp_is_root(st%mpi_grp)) then
-        if(st%node(oep%eigen_index(i)) == st%mpi_grp%rank) then
-          call MPI_Send(st%X(psi)(1, 1, oep%eigen_index(i), is), st%d%dim*m%np, R_MPITYPE, &
-            0, i, st%mpi_grp%comm, status, ierr)
+      if(st%parallel_in_states) then
+        if(.not.mpi_grp_is_root(st%mpi_grp)) then
+          if(st%node(oep%eigen_index(i)) == st%mpi_grp%rank) then
+            call MPI_Send(st%X(psi)(1, 1, oep%eigen_index(i), is), st%d%dim*m%np, R_MPITYPE, &
+              0, i, st%mpi_grp%comm, ierr)
+          end if
+        else ! master node
+          if(st%node(oep%eigen_index(i)).ne.0) then
+            call MPI_Recv(phi1(1, 1), st%d%dim*m%np, R_MPITYPE, st%node(oep%eigen_index(i)), &
+              i, st%mpi_grp%comm, status, ierr)
+          else
+            phi1(1:m%np, 1:st%d%dim) = st%X(psi)(1:m%np, 1:st%d%dim, oep%eigen_index(i), is)
+          end if
         end if
-      else ! master node
-        if(st%node(oep%eigen_index(i)).ne.0) then
-          call MPI_Recv(phi1(1, 1), st%d%dim*m%np, R_MPITYPE, st%node(oep%eigen_index(i)), &
-            i, st%mpi_grp%comm, status, ierr)
-        else
-          phi1(:,:) = st%X(psi)(:,:, oep%eigen_index(i), is)
-        end if
-      end if
-      call MPI_Barrier(st%mpi_grp%comm, ierr)
-    end if
+        call MPI_Barrier(st%mpi_grp%comm, ierr)
+      else
+        phi1(1:m%np, 1:st%d%dim) = st%X(psi)(1:m%np, 1:st%d%dim, oep%eigen_index(i), is)
+      endif
 #else
-      phi1(:,:) = st%X(psi)(:,:, oep%eigen_index(i), is)
+      phi1(1:m%np, 1:st%d%dim) = st%X(psi)(1:m%np, 1:st%d%dim, oep%eigen_index(i), is)
 #endif
 
       if(mpi_grp_is_root(st%mpi_grp)) then
         d(1:m%np) = (R_REAL(phi1(1:m%np, 1))**2 + &
-          R_AIMAG(phi1(1:m%np, 1))**2) / rho_sigma(1:m%np) * m%vol_pp(1:m%np)
+          R_AIMAG(phi1(1:m%np, 1))**2) / rho_sigma(1:m%np)
       end if
 
       do j = i, n
@@ -136,24 +138,26 @@ subroutine X(xc_KLI_solve) (m, st, is, oep)
           if(.not.mpi_grp_is_root(st%mpi_grp)) then
             if(st%node(oep%eigen_index(j)) == st%mpi_grp%rank) then
               call MPI_Send(st%X(psi)(1, 1, oep%eigen_index(j), is), st%d%dim*m%np, R_MPITYPE, &
-                0, j, st%mpi_grp%comm, status, ierr)
+                0, j, st%mpi_grp%comm, ierr)
             end if
           else
             if(st%node(oep%eigen_index(j)).ne.0) then
               call MPI_Recv(phi2(1, 1), st%d%dim*m%np, R_MPITYPE, st%node(oep%eigen_index(j)), &
                 j, st%mpi_grp%comm, status, ierr)
             else
-              phi2(:,:) = st%X(psi)(:,:, oep%eigen_index(j), is)
+              phi2(1:m%np, 1:st%d%dim) = st%X(psi)(1:m%np, 1:st%d%dim, oep%eigen_index(j), is)
             end if
           end if
           call MPI_Barrier(st%mpi_grp%comm, ierr)
+        else
+          phi2(1:m%np, 1:st%d%dim) = st%X(psi)(1:m%np, 1:st%d%dim, oep%eigen_index(j), is)
         end if
 #else
-        phi2(:,:) = st%X(psi)(:,:, oep%eigen_index(j), is)
+        phi2(1:m%np, 1:st%d%dim) = st%X(psi)(1:m%np, 1:st%d%dim, oep%eigen_index(j), is)
 #endif
 
         if(mpi_grp_is_root(st%mpi_grp)) then
-          Ma(i, j) = - sum(d(1:m%np) * (R_REAL(phi2(1:m%np, 1))**2 + R_AIMAG(phi2(1:m%np, 1))**2) )
+          Ma(i, j) = - dmf_dotp(m, d, (R_REAL(phi2(1:m%np, 1))**2 + R_AIMAG(phi2(1:m%np, 1))**2) )
           Ma(j,i) = Ma(i,j)
         end if
       end do
@@ -181,20 +185,22 @@ subroutine X(xc_KLI_solve) (m, st, is, oep)
         if(.not.mpi_grp_is_root(st%mpi_grp)) then
           if(st%node(oep%eigen_index(i)) == st%mpi_grp%rank) then
             call MPI_Send(st%X(psi)(1, 1, oep%eigen_index(i), is), st%d%dim*m%np, R_MPITYPE, &
-              0, i, st%mpi_grp%comm, status, ierr)
+              0, i, st%mpi_grp%comm, ierr)
           end if
         else ! master
           if(st%node(oep%eigen_index(i)).ne.0) then
             call MPI_Recv(phi1(1, 1), st%d%dim*m%np, R_MPITYPE, st%node(oep%eigen_index(i)), &
               i, st%mpi_grp%comm, status, ierr)
           else
-            phi1(:,:) = st%X(psi)(:,:, oep%eigen_index(i), is)
+            phi1(1:m%np, 1:st%d%dim) = st%X(psi)(1:m%np, 1:st%d%dim, oep%eigen_index(i), is)
           end if
         end if
         call MPI_Barrier(st%mpi_grp%comm, ierr)
+      else
+        phi1(1:m%np, 1:st%d%dim) = st%X(psi)(1:m%np, 1:st%d%dim, oep%eigen_index(i), is)
       end if
 #else
-      phi1(:,:) = st%X(psi)(:,:, oep%eigen_index(i), is)
+      phi1(1:m%np, 1:st%d%dim) = st%X(psi)(1:m%np, 1:st%d%dim, oep%eigen_index(i), is)
 #endif
       occ = st%occ(oep%eigen_index(i), is)
 

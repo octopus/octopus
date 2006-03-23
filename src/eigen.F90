@@ -46,6 +46,9 @@ module eigen_solver_m
     eigen_solver_end,   &
     eigen_solver_run
 
+  private ::            &
+    mv
+
   type eigen_solver_t
     integer :: es_type    ! which eigen solver to use
 

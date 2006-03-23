@@ -6,20 +6,18 @@
 The main developing team of this program is composed of:
          
 @itemize @bullet
-@item Miguel A. L. Marques 
-(Donostia International Physics Center, San Sebasti@'{a}n, Espa@~na)
-@item Angel Rubio, 
-(Donostia International Physics Center and Department of Materials Science
-UPV/EHU, San Sebasti@'{a}n, Espa@~na), and 
-@item Alberto Castro, 
-(alberto.castro@@tddft.org, Theoretische Physik, Freie Universit@"at Berlin,
-Berlin 14195, Deutschland).
+@item Alberto Castro       (alberto.castro@@tddft.org)
+@item Angel Rubio          (arubio@@sc.ehu.es)
+@item Carlo Andrea Rozzi   (rozzi@@unimo.it)
+@item Florian Lorenzen     (lorenzen@@physik.fu-berlin.de)
+@item Heiko Appel          (appel@@physik.fu-berlin.de)
+@item Micael Oliveira      (micael@@teor.fis.uc.pt)
+@item Miguel A. L. Marques (marques@@tddft.org)
+@item Xavier Andrade       (andrade@@mirto.polytechnique.fr)
 @end itemize
 
 Other contributors are:
 @itemize @bullet
-@item Micael Oliveira: mixing, and a lot of stuff.
-@item Carlo Andrea Rozzi - infinite systems (almost done!)
 @item Sebastien Hamel    - paralel version of oct-excite.
 @end itemize
 

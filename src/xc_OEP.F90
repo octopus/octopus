@@ -58,8 +58,8 @@ module xc_OEP_m
     XC_OEP_FULL   = 5              ! half implemented
 
   type xc_oep_t
-    integer          :: level      ! 0 = no oep, 1 = Slater, 2 = KLI, 3 = CEDA, 4 = full OEP
-    FLOAT            :: mixing     ! how much of the function S(r) to add to vxc in every iteration
+    integer       :: level      ! 0 = no oep, 1 = Slater, 2 = KLI, 3 = CEDA, 4 = full OEP
+    FLOAT         :: mixing     ! how much of the function S(r) to add to vxc in every iteration
     type(lr_t)    :: lr         ! to solve the equation H psi = b
 
     integer          :: eigen_n
@@ -78,9 +78,11 @@ contains
   ! ---------------------------------------------------------
   subroutine xc_oep_init(oep, family, m, d)
     type(xc_oep_t),     intent(out) :: oep
-    integer,               intent(in)  :: family
+    integer,            intent(in)  :: family
     type(mesh_t),       intent(in)  :: m
     type(states_dim_t), intent(in)  :: d
+
+    call push_sub('xc_OEP.xc_oep_init')
 
     if(iand(family, XC_FAMILY_OEP).eq.0) then
       oep%level = XC_OEP_NONE
@@ -136,6 +138,7 @@ contains
     ! the linear equation has to be more converged if we are to attain the required precision
     !oep%lr%conv_abs_dens = oep%lr%conv_abs_dens / (oep%mixing)
 
+    call pop_sub()
   end subroutine xc_oep_init
 
 
@@ -143,19 +146,22 @@ contains
   subroutine xc_oep_end(oep)
     type(xc_oep_t), intent(inout) :: oep
 
+    call push_sub('xc_OEP.xc_oep_end')
+
     if(oep%level.ne.XC_OEP_NONE) then
       deallocate(oep%vxc); nullify(oep%vxc)
 
       if(oep%level == XC_OEP_FULL) call lr_dealloc(oep%lr)
     end if
 
+    call pop_sub()
   end subroutine xc_oep_end
 
 
   ! ---------------------------------------------------------
   subroutine xc_oep_write_info(oep, iunit)
     type(xc_oep_t), intent(in) :: oep
-    integer,           intent(in) :: iunit
+    integer,        intent(in) :: iunit
 
     if(oep%level.eq.XC_OEP_NONE) return
 
@@ -169,7 +175,7 @@ contains
   ! ---------------------------------------------------------
   subroutine xc_oep_SpinFactor(oep, nspin)
     type(xc_oep_t), intent(inout) :: oep
-    integer,           intent(in)    :: nspin
+    integer,        intent(in)    :: nspin
 
     select case(nspin)
     case(1) ! we need to correct or the spin occupancies
@@ -189,7 +195,7 @@ contains
   subroutine xc_oep_AnalizeEigen(oep, st, is)
     type(xc_oep_t), intent(inout) :: oep
     type(states_t), intent(in)    :: st
-    integer,           intent(in)    :: is
+    integer,        intent(in)    :: is
 
     integer  :: i
     FLOAT :: max_eigen
@@ -208,7 +214,7 @@ contains
     end do
 
 #if defined(HAVE_MPI)
-    if(st%st_end - st%st_start + 1 .ne. st%nst) then ! This holds only in the td part.
+    if(st%parallel_in_states) then
       call mpi_barrier(st%mpi_grp%comm, ierr)
       do i = 1, st%nst
         call mpi_bcast(eigenval(i), 1, R_MPITYPE, st%node(i), st%mpi_grp%comm, ierr)

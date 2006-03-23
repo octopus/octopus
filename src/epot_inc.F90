@@ -27,11 +27,11 @@
 subroutine X(project)(mesh, p, n_projectors, psi, ppsi, periodic, ik)
   type(mesh_t),      intent(in)    :: mesh
   type(projector_t), intent(in)    :: p(:)
-  integer,              intent(in)    :: n_projectors
-  R_TYPE,               intent(in)    :: psi(:)  !psi(1:mesh%np)
-  R_TYPE,               intent(inout) :: ppsi(:) !ppsi(1:mesh%np)
-  logical,              intent(in)    :: periodic
-  integer,              intent(in)    :: ik
+  integer,           intent(in)    :: n_projectors
+  R_TYPE,            intent(in)    :: psi(:)   ! psi(1:mesh%np)
+  R_TYPE,            intent(inout) :: ppsi(:)  ! ppsi(1:mesh%np)
+  logical,           intent(in)    :: periodic
+  integer,           intent(in)    :: ik
 
   integer :: i, j, n_s, ip, k
   R_TYPE, allocatable :: lpsi(:), plpsi(:)
@@ -67,8 +67,7 @@ subroutine X(project)(mesh, p, n_projectors, psi, ppsi, periodic, ik)
       uvpsi = sum(lpsi(1:n_s)*p(ip)%bra(1:n_s, j))
 #if defined(HAVE_MPI)
       if(mesh%parallel_in_domains) then
-        call TS(MPI_Allreduce)(uvpsi, tmp, 1, R_MPITYPE, &
-          MPI_SUM, mesh%vp%comm, mpi_err)
+        call MPI_Allreduce(uvpsi, tmp, 1, R_MPITYPE, MPI_SUM, mesh%vp%comm, mpi_err)
         uvpsi = tmp
       end if
 #endif

@@ -32,12 +32,12 @@ subroutine X(xc_oep_calc)(oep, xcs, apply_sic_pz, gr, h, st, vxc, ex, ec)
 
   type(xc_oep_t),      intent(inout) :: oep
   type(xc_t),          intent(in)    :: xcs
-  logical,                intent(in)    :: apply_sic_pz
+  logical,             intent(in)    :: apply_sic_pz
   type(grid_t),        intent(inout) :: gr
   type(hamiltonian_t), intent(inout) :: h
   type(states_t),      intent(inout) :: st
-  FLOAT,                  intent(inout) :: vxc(:,:) !vxc(NP, st%d%nspin)
-  FLOAT,                  intent(inout) :: ex, ec
+  FLOAT,               intent(inout) :: vxc(:,:) !vxc(NP, st%d%nspin)
+  FLOAT,               intent(inout) :: ex, ec
 
   FLOAT :: e
   integer :: is, ist, ixc
@@ -48,7 +48,7 @@ subroutine X(xc_oep_calc)(oep, xcs, apply_sic_pz, gr, h, st, vxc, ex, ec)
 
   if(oep%level == XC_OEP_NONE) return
 
-  call push_sub('xc_OEP_inc.h_xc_oep')
+  call push_sub('xc_OEP_inc.xc_oep_calc')
 
   ! initialize oep structure
   ALLOCATE(oep%eigen_type (st%nst), st%nst)
@@ -82,7 +82,7 @@ subroutine X(xc_oep_calc)(oep, xcs, apply_sic_pz, gr, h, st, vxc, ex, ec)
 
     ! calculate uxc_bar for the occupied states
     do ist = st%st_start, st%st_end
-      oep%uxc_bar(ist) = sum(R_REAL(st%X(psi)(1:NP, 1, ist, is) * oep%X(lxc)(1:NP, ist))*gr%m%vol_pp(1:NP))
+      oep%uxc_bar(ist) = X(mf_dotp)(gr%m, R_CONJ( st%X(psi)(1:NP, 1, ist, is) ), oep%X(lxc)(1:NP, ist))
     end do
 
 #if defined(HAVE_MPI)
@@ -121,14 +121,16 @@ subroutine X(xc_oep_solve) (gr, h, st, is, vxc, oep)
   type(grid_t),        intent(inout) :: gr
   type(hamiltonian_t), intent(inout) :: h
   type(states_t),      intent(in)    :: st
-  integer,                intent(in)    :: is
-  FLOAT,                  intent(inout) :: vxc(:) ! vxc(NP)
+  integer,             intent(in)    :: is
+  FLOAT,               intent(inout) :: vxc(:) ! vxc(NP)
   type(xc_oep_t),      intent(inout) :: oep
 
   integer :: iter, ist, ierr
   FLOAT :: vxc_bar, f
   FLOAT, allocatable :: s(:), vxc_old(:)
   R_TYPE, allocatable :: b(:,:)
+
+  call push_sub('xc_OEP_inc.xc_oep_solve')
 
   ALLOCATE(b(NP, 1),    NP*1)
   ALLOCATE(s(NP),       NP)
@@ -149,7 +151,7 @@ subroutine X(xc_oep_solve) (gr, h, st, is, vxc, oep)
     s = M_ZERO
     do ist = 1, st%nst
       ! evaluate right-hand side
-      vxc_bar    = sum(R_ABS(st%X(psi)(1:NP, 1, ist, is))**2 * oep%vxc(1:NP) * gr%m%vol_pp(1:NP))
+      vxc_bar    = dmf_dotp(gr%m, (R_ABS(st%X(psi)(1:NP, 1, ist, is)))**2, oep%vxc(1:NP))
       b(1:NP, 1) =  -(oep%vxc(1:NP) - (vxc_bar - oep%uxc_bar(ist)))*R_CONJ(st%X(psi)(1:NP, 1, ist, is)) &
         + oep%X(lxc)(1:NP, ist)
 
@@ -169,7 +171,7 @@ subroutine X(xc_oep_solve) (gr, h, st, is, vxc, oep)
 
     do ist = 1, st%nst
       if(oep%eigen_type(ist) == 2) then
-        vxc_bar = sum(R_ABS(st%X(psi)(1:NP, 1, ist, is))**2 * oep%vxc(1:NP) * gr%m%vol_pp(1:NP))
+        vxc_bar = dmf_dotp(gr%m, (R_ABS(st%X(psi)(1:NP, 1, ist, is)))**2, oep%vxc(1:NP))
         oep%vxc(1:NP) = oep%vxc(1:NP) - (vxc_bar - oep%uxc_bar(ist))
       end if
     end do
@@ -185,4 +187,5 @@ subroutine X(xc_oep_solve) (gr, h, st, is, vxc, oep)
   vxc(1:NP) = vxc_old(1:NP)
   deallocate(b, s, vxc_old)
 
+  call pop_sub()
 end subroutine X(xc_oep_solve)

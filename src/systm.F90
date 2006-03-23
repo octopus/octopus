@@ -290,9 +290,11 @@ contains
 
     case (2) ! Ferromagnetic
       ALLOCATE(atom_rho(m%np, 2), m%np*2)
+      atom_rho = M_ZERO
+      rho = M_ZERO
       do ia = 1, geo%natoms
         call atom_density(m, sb, geo%atom(ia), 2, atom_rho(1:m%np, 1:2))
-        call lalg_axpy(m%np, 2, M_ONE, atom_rho, rho)
+        rho(1:m%np, 1:2) = rho(1:m%np, 1:2) + atom_rho(1:m%np, 1:2)
       end do
 
     case (3) ! Random oriented spins

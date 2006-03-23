@@ -37,9 +37,9 @@
 subroutine X(oep_x) (gr, st, is, oep, ex)
   type(grid_t),   intent(inout) :: gr
   type(states_t), intent(in)    :: st
-  integer,           intent(in)    :: is
+  integer,        intent(in)    :: is
   type(xc_oep_t), intent(inout) :: oep
-  FLOAT,             intent(out)   :: ex
+  FLOAT,          intent(out)   :: ex
 
   integer :: i, j, ist, jst, i_max, node_to, node_fr, ist_s, ist_r
   integer, allocatable :: recv_stack(:), send_stack(:)
@@ -48,7 +48,7 @@ subroutine X(oep_x) (gr, st, is, oep, ex)
   R_TYPE, allocatable :: rho_ij(:), F_ij(:)
 
 #if defined(HAVE_MPI)
-  R_TYPE,  pointer     :: recv_buffer(:)
+  R_TYPE,  pointer :: recv_buffer(:)
   integer :: ierr, send_req, status(MPI_STATUS_SIZE)
 #endif
 
@@ -112,7 +112,7 @@ subroutine X(oep_x) (gr, st, is, oep, ex)
         ! send wave-function
         send_req = 0
         if((send_stack(ist_s) > 0).and.(node_to.ne.st%mpi_grp%rank)) then
-          call MPI_Isend(st%X(psi)(:, 1, send_stack(ist_s), is), NP, R_MPITYPE, &
+          call MPI_Isend(st%X(psi)(1, 1, send_stack(ist_s), is), NP, R_MPITYPE, &
             node_to, send_stack(ist_s), st%mpi_grp%comm, send_req, ierr)
         end if
       end if
@@ -172,7 +172,7 @@ subroutine X(oep_x) (gr, st, is, oep, ex)
           if(ist.ne.jst) r = M_TWO
 
           ex = ex - M_HALF * r * oep%sfact * oep%socc*st%occ(ist, is) * oep%socc*st%occ(jst, is) * &
-            sum(R_REAL(wf_ist(1:NP) * F_ij(1:NP) * R_CONJ(st%X(psi)(1:NP, 1, jst, is))) * gr%m%vol_pp(1:NP))
+            R_REAL(X(mf_dotp)(gr%m, st%X(psi)(1:NP, 1, jst, is), wf_ist(:)*F_ij(:)))
         end do
 
         if(st%node(ist) == st%mpi_grp%rank) then
@@ -183,8 +183,8 @@ subroutine X(oep_x) (gr, st, is, oep, ex)
         else
           if(st%parallel_in_states) then
             ! or send it to the node that has wf ist
-            call MPI_Isend(send_buffer(:), NP, R_MPITYPE, &
-              node_fr, ist, st%mpi_grp%comm, send_req, ierr)
+            call MPI_Isend(send_buffer(1), NP, R_MPITYPE, &
+             node_fr, ist, st%mpi_grp%comm, send_req, ierr)
           end if
 #endif
         end if

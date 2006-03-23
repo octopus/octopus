@@ -109,12 +109,13 @@ contains
 
   ! ---------------------------------------------------------
   ! puts space around string, so that it is centered
-  character(len=80) function str_center(s_in, l) result(s_out)
+  character(len=80) function str_center(s_in, l_in) result(s_out)
     character(len=*), intent(in) :: s_in
-    integer,          intent(in) :: l
+    integer,          intent(in) :: l_in
 
-    integer :: pad, i, li
+    integer :: pad, i, li, l
 
+    l = min(80, l_in)
     li = len(s_in)
     if(l < li) then
       s_out(1:l) = s_in(1:l)

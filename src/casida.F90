@@ -55,18 +55,18 @@ module casida_m
     integer, pointer  :: n_unocc(:)     ! number of unoccupied states
     character(len=80) :: wfn_list
 
-    integer          :: n_pairs         ! number of pairs to take into acount
-    integer, pointer :: pair_i(:)       ! holds the separated indices of compund index ia
-    integer, pointer :: pair_a(:)
-    integer, pointer :: pair_sigma(:)
-    FLOAT,   pointer :: mat(:,:)        ! general purpose matrix
-    FLOAT,   pointer :: w(:)            ! The excitation energies.
-    FLOAT,   pointer :: tm(:, :)        ! The transition matrix elements (between the many-particle states)
-    FLOAT,   pointer :: f(:)            ! The (dipole) strengths
-    FLOAT,   pointer :: s(:)            ! The diagonal part of the S-matrix
+    integer           :: n_pairs        ! number of pairs to take into acount
+    integer, pointer  :: pair_i(:)      ! holds the separated indices of compund index ia
+    integer, pointer  :: pair_a(:)
+    integer, pointer  :: pair_sigma(:)
+    FLOAT,   pointer  :: mat(:,:)       ! general purpose matrix
+    FLOAT,   pointer  :: w(:)           ! The excitation energies.
+    FLOAT,   pointer  :: tm(:, :)       ! The transition matrix elements (between the many-particle states)
+    FLOAT,   pointer  :: f(:)           ! The (dipole) strengths
+    FLOAT,   pointer  :: s(:)           ! The diagonal part of the S-matrix
 
-    logical            :: parallel_in_eh_pairs
-    type(mpi_grp_t) :: mpi_grp
+    logical           :: parallel_in_eh_pairs
+    type(mpi_grp_t)   :: mpi_grp
   end type casida_t
 
 contains
@@ -75,9 +75,9 @@ contains
   subroutine casida_run(sys, h, fromScratch)
     type(system_t),      intent(inout) :: sys
     type(hamiltonian_t), intent(inout) :: h
-    logical,                intent(inout) :: fromScratch
+    logical,             intent(inout) :: fromScratch
 
-    type(casida_t) ::  cas
+    type(casida_t) :: cas
     integer :: i, ierr, kpoints, dim, nst, ist
 
     call push_sub('casida.casida_run')
@@ -203,6 +203,7 @@ contains
   end subroutine casida_run
 
 
+  ! ---------------------------------------------------------
   ! allocates stuff, and constructs the arrays pair_i and pair_j
   subroutine casida_type_init(cas, dim, nspin, mc)
     type(casida_t), intent(inout) :: cas
@@ -285,6 +286,7 @@ contains
   end subroutine casida_type_end
 
 
+  ! ---------------------------------------------------------
   ! this subroutine calculates electronic excitation energies using
   ! the matrix formulation of M. Petersilka, or of M. Casida
   subroutine casida_work(sys, h, cas)
@@ -331,10 +333,10 @@ contains
 
     if(associated(st%rho_core)) then
       do is = 1, st%d%spin_channels
-        rho(:, is) = st%rho(:, is) + st%rho_core(:)/st%d%spin_channels
+        rho(1:m%np, is) = st%rho(1:m%np, is) + st%rho_core(1:m%np)/st%d%spin_channels
       end do
     else
-      rho = st%rho
+      rho(1:m%np, 1:st%d%nspin) = st%rho(1:m%np, 1:st%d%nspin)
     end if
     call xc_get_fxc(sys%ks%xc, m, rho, st%d%ispin, fxc)
 
@@ -348,7 +350,7 @@ contains
     end select
 
     ! clean up
-    deallocate(rho, fxc, pot, saved_K)
+    deallocate(fxc, rho, pot, saved_K)
 
     call pop_sub()
   contains
