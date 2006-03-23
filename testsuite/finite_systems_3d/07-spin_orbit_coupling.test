@@ -11,12 +11,12 @@ Enabled  : Yes
 
 Input: 07-spin_orbit_coupling.01-ground_state.inp
 
-Match ; Eigenvalues ; grep -A 9 'Eigenvalues \[' static/info | awk '{print $4" "$5" "$3}' | sort -r | head -n2 | tail -1 ; \s*1.00/ 0.00\s*-0.406\d*
-Match ; Eigenvalues ; grep -A 9 'Eigenvalues \[' static/info | awk '{print $4" "$5" "$3}' | sort -r | head -n3 | tail -1 ; \s*0.27/ 0.06\s*-0.027\d*
-Match ; Eigenvalues ; grep -A 9 'Eigenvalues \[' static/info | awk '{print $4" "$5" "$3}' | sort -r | head -n4 | tail -1 ; \s*0.22/ 0.12\s*-0.027\d*
-Match ; Eigenvalues ; grep -A 9 'Eigenvalues \[' static/info | awk '{print $4" "$5" "$3}' | sort -r | head -n5 | tail -1 ; \s*0.22/ 0.11\s*-0.107\d*
-Match ; Eigenvalues ; grep -A 9 'Eigenvalues \[' static/info | awk '{print $4" "$5" "$3}' | sort -r | head -n6 | tail -1 ; \s*0.18/ 0.16\s*-0.027\d*
-Match ; Eigenvalues ; grep -A 9 'Eigenvalues \[' static/info | awk '{print $4" "$5" "$3}' | sort -r | head -n7 | tail -1 ; \s*0.11/ 0.22\s*-0.107\d*
-Match ; Eigenvalues ; grep -A 9 'Eigenvalues \[' static/info | awk '{print $4" "$5" "$3}' | sort -r | head -n8 | tail -1 ; \s*0.00/ 1.00\s*-0.406\d*
-Match ; Eigenvalues ; grep -A 9 'Eigenvalues \[' static/info | awk '{print $4" "$5" "$3}' | sort -r | head -n9 | tail -1 ; \s*0.00/ 0.33\s*-0.027\d*
+Match ; Eigenvalues ; grep -A 9 'Eigenvalues \[' static/info | awk '{print $4" "$5" "$3}' | sort -r | head -n2 | tail -1 ; \s*1.00/ 0.00\s*-0.393\d*
+Match ; Eigenvalues ; grep -A 9 'Eigenvalues \[' static/info | awk '{print $4" "$5" "$3}' | sort -r | head -n3 | tail -1 ; \s*0.33/ 0.00\s*-0.017\d*
+Match ; Eigenvalues ; grep -A 9 'Eigenvalues \[' static/info | awk '{print $4" "$5" "$3}' | sort -r | head -n4 | tail -1 ; \s*0.22/ 0.11\s*-0.096\d*
+Match ; Eigenvalues ; grep -A 9 'Eigenvalues \[' static/info | awk '{print $4" "$5" "$3}' | sort -r | head -n5 | tail -1 ; \s*0.22/ 0.11\s*-0.017\d*
+Match ; Eigenvalues ; grep -A 9 'Eigenvalues \[' static/info | awk '{print $4" "$5" "$3}' | sort -r | head -n6 | tail -1 ; \s*0.11/ 0.22\s*-0.095\d*
+Match ; Eigenvalues ; grep -A 9 'Eigenvalues \[' static/info | awk '{print $4" "$5" "$3}' | sort -r | head -n7 | tail -1 ; \s*0.11/ 0.22\s*-0.017\d*
+Match ; Eigenvalues ; grep -A 9 'Eigenvalues \[' static/info | awk '{print $4" "$5" "$3}' | sort -r | head -n8 | tail -1 ; \s*0.00/ 1.00\s*-0.393\d*
+Match ; Eigenvalues ; grep -A 9 'Eigenvalues \[' static/info | awk '{print $4" "$5" "$3}' | sort -r | head -n9 | tail -1 ; \s*0.00/ 0.33\s*-0.017\d*
 
