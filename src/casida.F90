@@ -40,6 +40,7 @@ module casida_m
   use restart_m
   use mpi_m
   use multicomm_m
+  use output_m
   
   implicit none
 
@@ -86,6 +87,7 @@ contains
 
     type(casida_t) :: cas
     integer :: i, ierr, kpoints, dim, nst, ist
+    character(len=80) :: trandens
 
     call push_sub('casida.casida_run')
 
@@ -155,7 +157,6 @@ contains
     call write_info(1)
     call X(system_h_setup) (sys, h)
 
-    ! which states to take into account
     !%Variable LinearResponseKohnShamStates
     !%Type string
     !%Section Linear Response::Casida
@@ -177,6 +178,23 @@ contains
     call loct_parse_string(check_inp('LinearResponseKohnShamStates'), "1-1024", cas%wfn_list)
     write(message(1),'(a,a)') "Info: States that form the basis: ",trim(cas%wfn_list)
     Call write_info(1)
+
+    !%Variable LinearResponseTransitionDensities
+    !%Type string
+    !%Section Linear Response::Casida
+    !%Description
+    !% Specifies which transition densities are to be calculated and written down. The
+    !% transition density for the many-body state n will be written to a file called
+    !% linear/rho0n.
+    !% 
+    !% By default, no transition density is calculated. Note that you must also set
+    !% the output variable to contain the flat "transition_density", in order for this
+    !% to work. 
+    !%
+    !% This variable is a string in list form, i.e. expressions such as "1,2-5,8-15" are
+    !% valid.
+    !%End
+    call loct_parse_string(check_inp('LinearResponseTransitionDensity'), "0", trandens)
 
     ! Initialize structure
     call casida_type_init(cas, sys%gr%sb%dim, sys%st%d%nspin, sys%mc)
@@ -205,11 +223,43 @@ contains
     call casida_work(sys, h, cas)
     call casida_write(cas, 'casida')
 
+    ! Calculate and write the transition matrix
+    call get_transition_densities(cas, sys, trandens)
+
     call casida_type_end(cas)
 
     call pop_sub()
   end subroutine casida_run
 
+  ! ---------------------------------------------------------
+  subroutine get_transition_densities(cas, sys, trandens)
+    type(casida_t),    intent(in) :: cas
+    type(system_t),    intent(in) :: sys
+    character(len=80), intent(in) :: trandens
+
+    integer :: ia, iunit, ierr
+    character(len=5) :: intstr
+    character(len=130) :: filename
+    R_TYPE, allocatable :: n0I(:)
+    call push_sub('casida.get_transition_densities')
+
+    ALLOCATE(n0I(sys%gr%m%np), sys%gr%m%np)
+    n0I = M_ZERO
+
+    do ia = 1, cas%n_pairs
+      if(loct_isinstringlist(ia, trandens)) then
+        call transition_density(cas, sys%st, sys%gr%m, ia, n0I)
+        write(intstr,'(i5)') ia
+        write(intstr,'(i1)') len(trim(adjustl(intstr)))
+        write(filename,'(a,i'//trim(intstr)//')') 'n0',ia
+        call X(output_function)(sys%outp%how, "linear", trim(filename), &
+                                sys%gr%m, sys%gr%sb, n0I, M_ONE, ierr)
+      end if
+    end do
+
+    deallocate(n0I)
+    call pop_sub()
+  end subroutine get_transition_densities
 
   ! ---------------------------------------------------------
   ! allocates stuff, and constructs the arrays pair_i and pair_j
@@ -442,7 +492,7 @@ contains
           end if
           if(jb /= ia) cas%mat(jb, ia) = cas%mat(ia, jb) ! the matrix is symmetric
         end do
-        if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(counter-1, max)
+        if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(counter, max)
       end do
 
       ! sum all matrix elements
@@ -644,6 +694,32 @@ contains
 
   end function transition_matrix_element
 
+  ! ---------------------------------------------------------
+  subroutine transition_density(cas, st, m, ia, n0I)
+    type(casida_t), intent(in)  :: cas
+    type(states_t), intent(in)  :: st
+    type(mesh_t),   intent(in)  :: m
+    integer,        intent(in)  :: ia
+    R_TYPE,         intent(out) :: n0I(:)
+
+    integer :: i, jb
+    R_TYPE, allocatable :: x(:)
+
+    call push_sub('casida.transition_density')
+
+    ALLOCATE(x(cas%n_pairs), cas%n_pairs)
+
+    do i = 1, m%np
+      do jb = 1, cas%n_pairs
+        x(jb) = R_CONJ(st%X(psi)(i, 1, cas%pair(jb)%i, cas%pair(jb)%sigma)) * &
+                st%X(psi)(i, 1, cas%pair(jb)%a, cas%pair(jb)%sigma)
+      end do
+      n0I(i) = transition_matrix_element(cas, ia, x)
+    end do
+
+    deallocate(x)
+    call pop_sub()
+  end subroutine transition_density
 
   ! ---------------------------------------------------------
   ! FIXME It needs to re-order also the oscillator strengths, and the transition matrix elements.
