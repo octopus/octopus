@@ -62,7 +62,7 @@ char *get_token(char *s, char **dest)
 
   for(s1=s; isalnum(*s1) || *s1=='_' || *s1=='-'; s1++);
 
-  *dest = strndup(s, s1-s);
+  *dest = (char *) strndup(s, s1-s);
   return s1;
 }
 
@@ -71,10 +71,12 @@ char *get_token(char *s, char **dest)
 void get_text(FILE *in, char **dest)
 {
   char c, line[256];
+  int b;
 
   for(;;){
     /* check if the next line starts by a space */
-    if((c=getc(in)) == EOF) return;
+    if((b=getc(in)) == EOF) return;
+    c=(char) b;
     ungetc(c, in);
 
     if(!isspace(c)) return;

@@ -205,8 +205,8 @@ void FC_FUNC_(oct_gettimeofday, OCT_GETTIMEOFDAY)
   printf("%ld.%06ld \n", (long) tv.tv_sec, (long) tv.tv_usec);
 */
 #else
-  *sec  = 0
-  *usec = 0
+  *sec  = 0;
+  *usec = 0; 
 #endif
 }
 
