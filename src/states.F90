@@ -49,6 +49,7 @@ module states_m
   public ::                         &
     states_t,                       &
     states_dim_t,                   &
+    states_pair_t,                  &
     states_init,                    &
     states_read_user_def_orbitals,  &
     states_densities_init,          &
@@ -140,6 +141,12 @@ module states_m
     FLOAT, pointer :: kpoints(:,:)  ! obviously the kpoints
     FLOAT, pointer :: kweights(:)   ! weights for the kpoint integrations
   end type states_dim_t
+
+  type states_pair_t
+    integer :: i
+    integer :: a
+    integer :: sigma
+  end type states_pair_t
 
   ! Parameters...
   integer, public, parameter ::     &

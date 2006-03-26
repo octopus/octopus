@@ -40,8 +40,11 @@ module casida_m
   use restart_m
   use mpi_m
   use multicomm_m
-
+  
   implicit none
+
+  private
+  public :: casida_run
 
   integer, parameter ::    &
     CASIDA_EPS_DIFF   = 1, &
@@ -56,9 +59,9 @@ module casida_m
     character(len=80) :: wfn_list
 
     integer           :: n_pairs        ! number of pairs to take into acount
-    integer, pointer  :: pair_i(:)      ! holds the separated indices of compund index ia
-    integer, pointer  :: pair_a(:)
-    integer, pointer  :: pair_sigma(:)
+
+    type(states_pair_t), pointer :: pair(:)
+
     FLOAT,   pointer  :: mat(:,:)       ! general purpose matrix
     FLOAT,   pointer  :: w(:)           ! The excitation energies.
     FLOAT,   pointer  :: tm(:, :)       ! The transition matrix elements (between the many-particle states)
@@ -68,6 +71,10 @@ module casida_m
     logical           :: parallel_in_eh_pairs
     type(mpi_grp_t)   :: mpi_grp
   end type casida_t
+
+  interface assignment (=)
+    module procedure casida_t_copy
+  end interface
 
 contains
 
@@ -235,9 +242,7 @@ contains
     end if
 
     ! allocate stuff
-    ALLOCATE(cas%pair_i(cas%n_pairs), cas%n_pairs)
-    ALLOCATE(cas%pair_a(cas%n_pairs), cas%n_pairs)
-    ALLOCATE(cas%pair_sigma(cas%n_pairs), cas%n_pairs)
+    ALLOCATE(cas%pair(cas%n_pairs), cas%n_pairs)
     ALLOCATE(cas%mat(cas%n_pairs, cas%n_pairs), cas%n_pairs*cas%n_pairs)
     ALLOCATE(cas%tm(cas%n_pairs, dim), cas%n_pairs*dim)
     ALLOCATE(cas%f(cas%n_pairs), cas%n_pairs)
@@ -251,9 +256,9 @@ contains
         if(loct_isinstringlist(a, cas%wfn_list)) then
           do i = 1, cas%n_occ(k)
             if(loct_isinstringlist(i, cas%wfn_list)) then
-              cas%pair_i(j) = i
-              cas%pair_a(j) = a
-              cas%pair_sigma(j) = k
+              cas%pair(j)%i = i
+              cas%pair(j)%a = a
+              cas%pair(j)%sigma = k
               j = j + 1
             end if
           end do
@@ -278,10 +283,9 @@ contains
     type(casida_t), intent(inout) :: cas
     call push_sub('casida.casida_type_end')
 
-    ASSERT(associated(cas%pair_i))
-
-    deallocate(cas%pair_i, cas%pair_a, cas%mat, cas%tm, cas%s, cas%f, cas%w)
-    nullify   (cas%pair_i, cas%pair_a, cas%mat, cas%tm, cas%s, cas%f, cas%w)
+    ASSERT(associated(cas%pair))
+    deallocate(cas%pair, cas%mat, cas%tm, cas%s, cas%f, cas%w)
+    nullify   (cas%pair, cas%mat, cas%tm, cas%s, cas%f, cas%w)
 
     call pop_sub()
   end subroutine casida_type_end
@@ -358,7 +362,7 @@ contains
 
     ! ---------------------------------------------------------
     subroutine solve_petersilka
-      integer :: ia, a, i, iunit, k, sigma
+      integer :: ia, iunit, k
       FLOAT   :: f
       FLOAT, allocatable :: deltav(:), x(:)
 
@@ -371,16 +375,14 @@ contains
       iunit = io_open(trim(tmpdir)//'restart_casida', action='write', position='append', is_tmp=.true.)
 
       do ia = 1, cas%n_pairs
-        a = cas%pair_a(ia)
-        i = cas%pair_i(ia)
-        sigma = cas%pair_sigma(ia)
-        cas%w(ia) = st%eigenval(a, sigma) - st%eigenval(i, sigma)
+        cas%w(ia) = st%eigenval(cas%pair(ia)%a, cas%pair(ia)%sigma) - &
+                    st%eigenval(cas%pair(ia)%i, cas%pair(ia)%sigma)
 
         if(cas%type == CASIDA_PETERSILKA) then
           if(saved_K(ia, ia)) then
             f = cas%mat(ia, ia)
           else
-            f = K_term(i, a, sigma, i, a, sigma)
+            f = K_term(cas%pair(ia), cas%pair(ia))
             write(iunit, *) ia, ia, f
           end if
           cas%w(ia) = cas%w(ia) + M_TWO*f
@@ -409,10 +411,11 @@ contains
     ! ---------------------------------------------------------
     subroutine solve_casida()
       FLOAT :: temp
-      integer :: ia, jb, i, j, a, b, k, sigma, mu
+      integer :: ia, jb, k
       integer :: max, actual, iunit, counter
       FLOAT, allocatable :: deltav(:)
       R_TYPE, allocatable :: x(:)
+      type(states_pair_t), pointer :: p, q
 #ifdef HAVE_MPI
       integer :: mpi_err
       FLOAT, allocatable :: mpi_mat(:,:)
@@ -431,22 +434,13 @@ contains
       do jb = 1, cas%n_pairs
         actual = actual + 1
         if(mod(actual, cas%mpi_grp%size) .ne. cas%mpi_grp%rank) cycle
-
         do ia = jb, cas%n_pairs
           counter = counter + 1
-          i = cas%pair_i(ia)
-          a = cas%pair_a(ia)
-          sigma = cas%pair_sigma(ia)
-
           ! if not loaded, then calculate matrix element
           if(.not.saved_K(ia, jb)) then
-            j = cas%pair_i(jb)
-            b = cas%pair_a(jb)
-            mu = cas%pair_sigma(jb)
-            cas%mat(ia, jb) = K_term(i, a, sigma, j, b, mu)
+            cas%mat(ia, jb) = K_term(cas%pair(ia), cas%pair(jb))
           end if
           if(jb /= ia) cas%mat(jb, ia) = cas%mat(ia, jb) ! the matrix is symmetric
-
         end do
         if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(counter-1, max)
       end do
@@ -472,24 +466,19 @@ contains
         ! complete the matrix and output the restart file
         iunit = io_open(trim(tmpdir)//'restart_casida', action='write', position='append', is_tmp=.true.)
         do ia = 1, cas%n_pairs
-          i = cas%pair_i(ia)
-          a = cas%pair_a(ia)
-          sigma = cas%pair_sigma(ia)
-          temp = st%eigenval(a, sigma) - st%eigenval(i, sigma)
+          p => cas%pair(ia)
+          temp = st%eigenval(p%a, p%sigma) - st%eigenval(p%i, p%sigma)
 
           do jb = ia, cas%n_pairs
-            j = cas%pair_i(jb)
-            b = cas%pair_a(jb)
-            mu = cas%pair_sigma(jb)
-
+            q => cas%pair(jb)
             if(.not.saved_K(ia, jb)) write(iunit, *) ia, jb, cas%mat(ia, jb)
 
             if(sys%st%d%ispin == UNPOLARIZED) then
               cas%mat(ia, jb)  = M_FOUR * sqrt(temp) * cas%mat(ia, jb) * &
-                sqrt(st%eigenval(b, 1) - st%eigenval(j, 1))
+                sqrt(st%eigenval(q%a, 1) - st%eigenval(q%i, 1))
             else if(sys%st%d%ispin == SPIN_POLARIZED) then
               cas%mat(ia, jb)  = M_TWO * sqrt(temp) * cas%mat(ia, jb) * &
-                sqrt(st%eigenval(b, mu) - st%eigenval(j, mu))
+                sqrt(st%eigenval(q%a, q%sigma) - st%eigenval(q%i, q%sigma))
             end if
 
             if(jb /= ia) cas%mat(jb, ia) = cas%mat(ia, jb) ! the matrix is symmetric
@@ -513,13 +502,11 @@ contains
 
         ! And let us now get the S matrix...
         do ia = 1, cas%n_pairs
-          i = cas%pair_i(ia)
-          a = cas%pair_a(ia)
-          sigma = cas%pair_sigma(ia)
           if(sys%st%d%ispin == UNPOLARIZED) then
-            cas%s(ia) = M_HALF / ( st%eigenval(cas%pair_a(ia), 1) - st%eigenval(cas%pair_i(ia), 1) )
+            cas%s(ia) = M_HALF / ( st%eigenval(cas%pair(ia)%a, 1) - st%eigenval(cas%pair(ia)%i, 1) )
           elseif(sys%st%d%ispin == SPIN_POLARIZED) then
-            cas%s(ia) = M_ONE / ( st%eigenval(cas%pair_a(ia), sigma) - st%eigenval(cas%pair_i(ia), sigma) )
+            cas%s(ia) = M_ONE / ( st%eigenval(cas%pair(ia)%a, cas%pair(ia)%sigma) - &
+                                  st%eigenval(cas%pair(ia)%i, cas%pair(ia)%sigma) )
           end if
         end do
 
@@ -553,12 +540,16 @@ contains
     end subroutine solve_casida
 
 
-    ! return the matrix element of <i,a|v + fxc|j,b>
-    function K_term(i, a, sigma, j, b, mu)
+    ! return the matrix element of <i(p),a(p)|v + fxc|j(q),b(q)>
+    function K_term(p, q)
       FLOAT :: K_term
-      integer, intent(in) :: i, j, sigma, a, b, mu
+      type(states_pair_t), intent(in) :: p, q
 
+      integer :: i, j, sigma, a, b, mu
       FLOAT, allocatable :: rho_i(:), rho_j(:)
+
+      i = p%i; a = p%a; sigma = p%sigma
+      j = q%i; b = q%a; mu = q%sigma
 
       ALLOCATE(rho_i(m%np), m%np)
       ALLOCATE(rho_j(m%np), m%np)
@@ -580,7 +571,6 @@ contains
 
       deallocate(rho_i, rho_j)
     end function K_term
-
 
     ! ---------------------------------------------------------
     subroutine load_saved
@@ -623,9 +613,9 @@ contains
 
     ALLOCATE(f(m%np), m%np)
     do ia = 1, cas%n_pairs
-      i     = cas%pair_i(ia)
-      a     = cas%pair_a(ia)
-      sigma = cas%pair_sigma(ia)
+      i     = cas%pair(ia)%i
+      a     = cas%pair(ia)%a
+      sigma = cas%pair(ia)%sigma
       do k = 1, m%np
         f(k) = dv(k) * R_CONJ(st%X(psi) (k, 1, i, sigma)) * st%X(psi) (k, 1, a, sigma)
       end do
@@ -678,8 +668,10 @@ contains
       xtmp(:) = cas%tm(:, i); cas%tm(:, i) = xtmp(ind(:))
     end do
     tmp(:) = cas%f(:); cas%f(:) = tmp(ind(:))
-    itmp(:) = cas%pair_i(:) ; cas%pair_i(:) = itmp(ind(:))
-    itmp(:) = cas%pair_a(:) ; cas%pair_a(:) = itmp(ind(:))
+
+    itmp(:) = cas%pair(:)%i ;     cas%pair(:)%i     = itmp(ind(:))
+    itmp(:) = cas%pair(:)%a ;     cas%pair(:)%a     = itmp(ind(:))
+    itmp(:) = cas%pair(:)%sigma ; cas%pair(:)%sigma = itmp(ind(:))
     deallocate(ind, itmp, tmp, xtmp)
     call pop_sub()
   end subroutine sort_energies
@@ -699,31 +691,9 @@ contains
 
     call push_sub('casida.casida_write')
 
-    casp%type      = cas%type
+    casp = cas
+    dim = size(casp%tm, 2)
 
-    ALLOCATE(casp%n_occ(size(cas%n_occ)), size(cas%n_occ))
-    ALLOCATE(casp%n_unocc(size(cas%n_unocc)), size(cas%n_unocc))
-    casp%n_occ     = cas%n_occ
-    casp%n_unocc   = cas%n_unocc
-    casp%wfn_list  = cas%wfn_list
-    casp%n_pairs   = cas%n_pairs
-    ALLOCATE(casp%pair_i(casp%n_pairs), casp%n_pairs)
-    ALLOCATE(casp%pair_a(casp%n_pairs), casp%n_pairs)
-    ALLOCATE(casp%mat(casp%n_pairs, casp%n_pairs), casp%n_pairs*casp%n_pairs)
-
-    dim = size(cas%tm, 2)
-    ALLOCATE(casp%tm(casp%n_pairs, dim), casp%n_pairs*dim)
-    ALLOCATE(casp%s(casp%n_pairs), casp%n_pairs)
-    ALLOCATE(casp%f(casp%n_pairs), casp%n_pairs)
-    ALLOCATE(casp%w(casp%n_pairs), casp%n_pairs)
-
-    casp%tm        = cas%tm
-    casp%s         = cas%s
-    casp%f         = cas%f
-    casp%w         = cas%w
-    casp%pair_i    = cas%pair_i
-    casp%pair_a    = cas%pair_a
-    casp%mat       = cas%mat
     call sort_energies(casp)
 
     ! output excitation energies and oscillator strengths
@@ -739,7 +709,7 @@ contains
     end select
     do ia = 1, casp%n_pairs
       if((casp%type==CASIDA_EPS_DIFF).or.(casp%type==CASIDA_PETERSILKA)) then
-        write(iunit, '(2i4)', advance='no') casp%pair_i(ia), casp%pair_a(ia)
+        write(iunit, '(2i4)', advance='no') casp%pair(ia)%i, casp%pair(ia)%a
       end if
       write(iunit, '(5(es15.8,1x))') casp%w(ia) / units_out%energy%factor, &
         casp%w(ia)*abs(casp%tm(ia, 1:dim))**2, casp%f(ia)
@@ -752,7 +722,7 @@ contains
     iunit = io_open('linear/'//trim(filename)//'.vec', action='write')
     write(iunit, '(a14)', advance = 'no') ' value '
     do ia = 1, casp%n_pairs
-      write(iunit, '(3x,i4,a1,i4,2x)', advance='no') casp%pair_i(ia), ' - ', casp%pair_a(ia)
+      write(iunit, '(3x,i4,a1,i4,2x)', advance='no') casp%pair(ia)%i, ' - ', casp%pair(ia)%a
     end do
     write(iunit, '(1x)')
 
@@ -770,5 +740,45 @@ contains
     call casida_type_end(casp)
     call pop_sub()
   end subroutine casida_write
+
+  ! ---------------------------------------------------------
+  subroutine casida_t_copy(cas_out, cas_in)
+    type(casida_t), intent(out) :: cas_out
+    type(casida_t), intent(in)  :: cas_in
+
+    integer :: ia
+
+    cas_out%type = cas_in%type
+    ALLOCATE(cas_out%n_occ  (size(cas_in%n_occ)),   size(cas_in%n_occ))
+    ALLOCATE(cas_out%n_unocc(size(cas_in%n_unocc)), size(cas_in%n_unocc))
+    cas_out%n_occ    = cas_in%n_occ
+    cas_out%n_unocc  = cas_in%n_unocc
+    cas_out%wfn_list = cas_in%wfn_list
+    cas_out%n_pairs  = cas_in%n_pairs
+    ALLOCATE(cas_out%pair(cas_out%n_pairs), cas_out%n_pairs)
+    do ia = 1, cas_out%n_pairs
+      cas_out%pair(ia)%i     = cas_in%pair(ia)%i
+      cas_out%pair(ia)%a     = cas_in%pair(ia)%a
+      cas_out%pair(ia)%sigma = cas_in%pair(ia)%sigma
+    end do
+
+    ALLOCATE(cas_out%mat(cas_out%n_pairs, cas_out%n_pairs), cas_out%n_pairs**2)
+    ALLOCATE(cas_out%w(cas_out%n_pairs), cas_out%n_pairs)
+    ALLOCATE(cas_out%tm(cas_out%n_pairs, size(cas_in%tm, 2)), cas_out%n_pairs * size(cas_in%tm, 2))
+    ALLOCATE(cas_out%f(cas_out%n_pairs), cas_out%n_pairs)
+    ALLOCATE(cas_out%s(cas_out%n_pairs), cas_out%n_pairs)
+    cas_out%mat = cas_in%mat
+    cas_out%w   = cas_in%w
+    cas_out%tm  = cas_in%tm
+    cas_out%f   = cas_in%f
+    cas_out%s   = cas_in%s
+
+    cas_out%parallel_in_eh_pairs = cas_in%parallel_in_eh_pairs
+
+    cas_out%mpi_grp%comm = cas_in%mpi_grp%comm
+    cas_out%mpi_grp%size = cas_in%mpi_grp%size
+    cas_out%mpi_grp%rank = cas_in%mpi_grp%rank
+
+  end subroutine casida_t_copy
 
 end module casida_m
