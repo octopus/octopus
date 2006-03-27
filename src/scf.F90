@@ -509,12 +509,12 @@ contains
 
       if(mpi_grp_is_root(mpi_world)) then
         write(iunit, '(1x)')
-
-        if(st%d%ispin > UNPOLARIZED) then
-          call write_magnetic_moments(iunit, gr%m, st)
-          write(iunit, '(1x)')
-        end if
       end if
+      if(st%d%ispin > UNPOLARIZED) then
+        call write_magnetic_moments(iunit, gr%m, st)
+        write(iunit, '(1x)')
+      end if
+
 
       ! Next lines of code calculate the dipole of the molecule, summing the electronic and
       ! ionic contributions.
