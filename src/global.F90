@@ -129,7 +129,7 @@ contains
     call loct_gettimeofday(s_epoch_sec, s_epoch_usec)
 
     ! Get the environment variable OCTOPUS_INSTALL_DIR, that overrides SHARE_OCTOPUS/share/octopus
-    call loct_getenv("OCTOPUS_INSTALL_DIR", share)
+    call loct_getenv("OCTOPUS_ROOT", share)
 
     if(share.ne."") then
       conf%share = trim(share)//'/share/octopus'
