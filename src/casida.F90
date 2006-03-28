@@ -60,7 +60,6 @@ module casida_m
     character(len=80) :: wfn_list
 
     integer           :: n_pairs        ! number of pairs to take into acount
-
     type(states_pair_t), pointer :: pair(:)
 
     FLOAT,   pointer  :: mat(:,:)       ! general purpose matrix
@@ -72,10 +71,6 @@ module casida_m
     logical           :: parallel_in_eh_pairs
     type(mpi_grp_t)   :: mpi_grp
   end type casida_t
-
-  interface assignment (=)
-    module procedure casida_t_copy
-  end interface
 
 contains
 
@@ -722,139 +717,69 @@ contains
   end subroutine transition_density
 
   ! ---------------------------------------------------------
-  ! FIXME It needs to re-order also the oscillator strengths, and the transition matrix elements.
-  subroutine sort_energies(cas)
-    type(casida_t), intent(inout) :: cas
-    integer :: i
-    integer, allocatable :: ind(:), itmp(:)
-    FLOAT, allocatable :: tmp(:)
-    R_TYPE, allocatable :: xtmp(:)
-    integer :: dim
-
-    ALLOCATE( ind(cas%n_pairs), cas%n_pairs)
-    ALLOCATE(itmp(cas%n_pairs), cas%n_pairs)
-    ALLOCATE( tmp(cas%n_pairs), cas%n_pairs)
-    ALLOCATE(xtmp(cas%n_pairs), cas%n_pairs)
-
-    call push_sub('casida.sort_energies')
-
-    call sort(cas%w(1:cas%n_pairs), ind)
-    dim = size(cas%tm, 2)
-    do i = 1, dim
-      xtmp(:) = cas%tm(:, i); cas%tm(:, i) = xtmp(ind(:))
-    end do
-    tmp(:) = cas%f(:); cas%f(:) = tmp(ind(:))
-
-    itmp(:) = cas%pair(:)%i ;     cas%pair(:)%i     = itmp(ind(:))
-    itmp(:) = cas%pair(:)%a ;     cas%pair(:)%a     = itmp(ind(:))
-    itmp(:) = cas%pair(:)%sigma ; cas%pair(:)%sigma = itmp(ind(:))
-    deallocate(ind, itmp, tmp, xtmp)
-    call pop_sub()
-  end subroutine sort_energies
-
-
-  ! ---------------------------------------------------------
   subroutine casida_write(cas, filename)
     type(casida_t), intent(in) :: cas
     character(len=*),  intent(in) :: filename
 
     integer :: iunit, ia, jb, dim
     FLOAT   :: temp
-
-    type(casida_t) :: casp
+    integer, allocatable :: ind(:)
+    FLOAT, allocatable :: w(:)
 
     if(.not.mpi_grp_is_root(cas%mpi_grp)) return
 
     call push_sub('casida.casida_write')
 
-    casp = cas
-    dim = size(casp%tm, 2)
+    dim = size(cas%tm, 2)
 
-    call sort_energies(casp)
+    ALLOCATE(w(cas%n_pairs), cas%n_pairs)
+    ALLOCATE(ind(cas%n_pairs), cas%n_pairs)
+    w = cas%w
+    call sort(w, ind)
 
     ! output excitation energies and oscillator strengths
     call io_mkdir('linear')
     iunit = io_open('linear/'//trim(filename), action='write')
 
-    if(casp%type == CASIDA_EPS_DIFF) write(iunit, '(2a4)', advance='no') 'From', ' To '
+    if(cas%type == CASIDA_EPS_DIFF) write(iunit, '(2a4)', advance='no') 'From', ' To '
 
     select case(dim)
     case(1); write(iunit, '(3(a15,1x))') 'E' , '<x>', '<f>'
     case(2); write(iunit, '(4(a15,1x))') 'E' , '<x>', '<y>', '<f>'
     case(3); write(iunit, '(5(a15,1x))') 'E' , '<x>', '<y>', '<z>', '<f>'
     end select
-    do ia = 1, casp%n_pairs
-      if((casp%type==CASIDA_EPS_DIFF).or.(casp%type==CASIDA_PETERSILKA)) then
-        write(iunit, '(2i4)', advance='no') casp%pair(ia)%i, casp%pair(ia)%a
+    do ia = 1, cas%n_pairs
+      if((cas%type==CASIDA_EPS_DIFF).or.(cas%type==CASIDA_PETERSILKA)) then
+        write(iunit, '(2i4)', advance='no') cas%pair(ind(ia))%i, cas%pair(ind(ia))%a
       end if
-      write(iunit, '(5(es15.8,1x))') casp%w(ia) / units_out%energy%factor, &
-        casp%w(ia)*abs(casp%tm(ia, 1:dim))**2, casp%f(ia)
+      write(iunit, '(5(es15.8,1x))') cas%w(ind(ia)) / units_out%energy%factor, &
+        R_REAL(cas%tm(ind(ia), 1:dim)) / units_out%length%factor, cas%f(ind(ia))
     end do
     call io_close(iunit)
 
     ! output eigenvectors in casida approach
-    if(casp%type.ne.CASIDA_CASIDA) return
+    if(cas%type.ne.CASIDA_CASIDA) return
 
     iunit = io_open('linear/'//trim(filename)//'.vec', action='write')
     write(iunit, '(a14)', advance = 'no') ' value '
-    do ia = 1, casp%n_pairs
-      write(iunit, '(3x,i4,a1,i4,2x)', advance='no') casp%pair(ia)%i, ' - ', casp%pair(ia)%a
+    do ia = 1, cas%n_pairs
+      write(iunit, '(3x,i4,a1,i4,2x)', advance='no') cas%pair(ind(ia))%i, ' - ', cas%pair(ind(ia))%a
     end do
     write(iunit, '(1x)')
 
-    do ia = 1, casp%n_pairs
-      write(iunit, '(es14.6)', advance='no') casp%w(ia) / units_out%energy%factor
+    do ia = 1, cas%n_pairs
+      write(iunit, '(es14.6)', advance='no') cas%w(ind(ia)) / units_out%energy%factor
       temp = M_ONE
-      if(maxval(casp%mat(:, ia)) < abs(minval(casp%mat(:, ia)))) temp = -temp
-      do jb = 1, casp%n_pairs
-        write(iunit, '(es14.6)', advance='no') temp*casp%mat(jb, ia)
+      if( maxval(cas%mat(:, ind(ia))) < abs(minval(cas%mat(:, ind(ia)))) ) temp = -temp
+      do jb = 1, cas%n_pairs
+        write(iunit, '(es14.6)', advance='no') temp*cas%mat(jb, ia)
       end do
       write(iunit, '(1x)')
     end do
 
+    deallocate(w, ind)
     call io_close(iunit)
-    call casida_type_end(casp)
     call pop_sub()
   end subroutine casida_write
-
-  ! ---------------------------------------------------------
-  subroutine casida_t_copy(cas_out, cas_in)
-    type(casida_t), intent(out) :: cas_out
-    type(casida_t), intent(in)  :: cas_in
-
-    integer :: ia
-
-    cas_out%type = cas_in%type
-    ALLOCATE(cas_out%n_occ  (size(cas_in%n_occ)),   size(cas_in%n_occ))
-    ALLOCATE(cas_out%n_unocc(size(cas_in%n_unocc)), size(cas_in%n_unocc))
-    cas_out%n_occ    = cas_in%n_occ
-    cas_out%n_unocc  = cas_in%n_unocc
-    cas_out%wfn_list = cas_in%wfn_list
-    cas_out%n_pairs  = cas_in%n_pairs
-    ALLOCATE(cas_out%pair(cas_out%n_pairs), cas_out%n_pairs)
-    do ia = 1, cas_out%n_pairs
-      cas_out%pair(ia)%i     = cas_in%pair(ia)%i
-      cas_out%pair(ia)%a     = cas_in%pair(ia)%a
-      cas_out%pair(ia)%sigma = cas_in%pair(ia)%sigma
-    end do
-
-    ALLOCATE(cas_out%mat(cas_out%n_pairs, cas_out%n_pairs), cas_out%n_pairs**2)
-    ALLOCATE(cas_out%w(cas_out%n_pairs), cas_out%n_pairs)
-    ALLOCATE(cas_out%tm(cas_out%n_pairs, size(cas_in%tm, 2)), cas_out%n_pairs * size(cas_in%tm, 2))
-    ALLOCATE(cas_out%f(cas_out%n_pairs), cas_out%n_pairs)
-    ALLOCATE(cas_out%s(cas_out%n_pairs), cas_out%n_pairs)
-    cas_out%mat = cas_in%mat
-    cas_out%w   = cas_in%w
-    cas_out%tm  = cas_in%tm
-    cas_out%f   = cas_in%f
-    cas_out%s   = cas_in%s
-
-    cas_out%parallel_in_eh_pairs = cas_in%parallel_in_eh_pairs
-
-    cas_out%mpi_grp%comm = cas_in%mpi_grp%comm
-    cas_out%mpi_grp%size = cas_in%mpi_grp%size
-    cas_out%mpi_grp%rank = cas_in%mpi_grp%rank
-
-  end subroutine casida_t_copy
 
 end module casida_m
