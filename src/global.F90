@@ -120,13 +120,22 @@ contains
   ! ---------------------------------------------------------
   subroutine global_init()
 
+    character(len=256) :: share
+
     ! initialize mpi
     call mpi_mod_init()
 
     ! Get epoch time at node startup, just after the barrier to synchronize nodes first.
     call loct_gettimeofday(s_epoch_sec, s_epoch_usec)
 
-    conf%share      = SHARE_OCTOPUS
+    ! Get the environment variable OCTOPUS_INSTALL_DIR, that overrides SHARE_OCTOPUS/share/octopus
+    call loct_getenv("OCTOPUS_INSTALL_DIR", share)
+
+    if(share.ne."") then
+      conf%share = trim(share)//'/share/octopus'
+    else
+      conf%share = SHARE_OCTOPUS
+    end if
     conf%latest_cvs = LATEST_CVS
     conf%build_time = BUILD_TIME
     conf%version    = OCTOPUS_VERSION

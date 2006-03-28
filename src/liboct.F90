@@ -51,6 +51,7 @@ module lib_oct_m
     loct_mkdir,              &
     loct_rm,                 &
     loct_number_of_lines,    &
+    loct_getenv,             &
     loct_fft_optimize,       &
     loct_isinstringlist,     &
     loct_progress_bar,       &
@@ -333,6 +334,13 @@ module lib_oct_m
 
   ! ---------------------------------------------------------
   ! Varia
+  interface loct_getenv
+    subroutine oct_getenv(var, value)
+      character(len=256) :: var
+      character(len=256) :: value
+    end subroutine oct_getenv
+  end interface
+
   interface loct_fft_optimize
     subroutine oct_fft_optimize(n, p, par)
       integer, intent(inout) :: n
