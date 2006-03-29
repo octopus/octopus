@@ -435,3 +435,29 @@ subroutine X(vborders) (gr, h, psi, hpsi)
 
   call pop_sub()
 end subroutine X(vborders)
+
+! ---------------------------------------------------------
+subroutine X(vmask) (gr, h, st)
+  type(grid_t),        intent(in)    :: gr
+  type(hamiltonian_t), intent(in)    :: h
+  type(states_t),      intent(inout) :: st
+
+  integer :: ik, ist, idim
+
+  call push_sub('h_inc.Xvmask')
+
+  if(h%ab == MASK_ABSORBING) then
+    do ik = 1, st%d%nik
+      do ist = st%st_start, st%st_end
+        do idim = 1, st%d%dim
+           st%X(psi)(1:NP, idim, ist, ik) = st%X(psi)(1:NP, idim, ist, ik) * &
+             (M_ONE - h%ab_pot(1:NP))
+        end do
+      end do
+    end do
+  end if
+
+  call pop_sub()
+end subroutine X(vmask)
+
+

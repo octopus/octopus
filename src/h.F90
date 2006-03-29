@@ -57,11 +57,13 @@ module hamiltonian_m
     dvnlpsi,               &
     dmagnus,               &
     dkinetic,              &
+    dvmask,                &
     zhpsi,                 &
     zvlpsi,                &
     zvnlpsi,               &
     zmagnus,               &
-    zkinetic
+    zkinetic,              &
+    zvmask
 
 #ifdef COMPLEX_WFNS
   public :: zso

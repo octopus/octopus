@@ -197,16 +197,7 @@ contains
       call td_rti_dt(sys%ks, h, gr, st, td%tr, i*td%dt, td%dt)
 
       ! mask function?
-      if(h%ab == MASK_ABSORBING) then
-        do ik = 1, st%d%nik
-          do ist = st%st_start, st%st_end
-            do idim = 1, st%d%dim
-              st%zpsi(1:NP, idim, ist, ik) = st%zpsi(1:NP, idim, ist, ik) * &
-                (M_ONE - h%ab_pot(1:NP))
-            end do
-          end do
-        end do
-      end if
+      call zvmask(gr, h, st)
 
       ! update density
       call zstates_calc_dens(st, NP, st%rho)
