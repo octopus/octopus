@@ -105,6 +105,7 @@ subroutine X(states_gram_schmidt)(nst, m, dim, psi, start)
   FLOAT   :: nrm2
   R_TYPE  :: ss
 
+  call profiling_in(C_PROFILING_GRAM_SCHMIDT)
   call push_sub('states_inc.states_gram_schmidt')
 
   if(present(start)) then
@@ -129,6 +130,7 @@ subroutine X(states_gram_schmidt)(nst, m, dim, psi, start)
   end do
 
   call pop_sub()
+  call profiling_out(C_PROFILING_GRAM_SCHMIDT)
 end subroutine X(states_gram_schmidt)
 
 

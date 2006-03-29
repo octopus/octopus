@@ -109,8 +109,8 @@ contains
     call td_init(gr, td, st, sys%outp)
 
     call states_distribute_nodes(st, sys%mc)
-    ! allocate memory
-    allocate(st%zpsi(NP_PART, st%d%dim, st%st_start:st%st_end, st%d%nik))
+
+    call zstates_allocate_wfns(st, gr%m)
 
     call init_wfs()
 
@@ -129,7 +129,8 @@ contains
       geo%kinetic_energy = kinetic_energy(geo)
       select case(td%move_ions)
       case(NORMAL_VERLET)
-        allocate(x1(geo%natoms, NDIM), x2(geo%natoms, NDIM))
+        ALLOCATE(x1(geo%natoms, NDIM), NDIM*geo%natoms)
+        ALLOCATE(x2(geo%natoms, NDIM), NDIM*geo%natoms)
         do j = 1, geo%natoms
           if(geo%atom(j)%move) then
             x1(j, :) = geo%atom(j)%x(:) - td%dt*geo%atom(j)%v(:) + &
@@ -140,7 +141,7 @@ contains
           end if
         end do
       case(VELOCITY_VERLET)
-        allocate(f1(geo%natoms, NDIM))
+        ALLOCATE(f1(geo%natoms, NDIM), NDIM*geo%natoms)
       end select
     end if
 
