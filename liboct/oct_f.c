@@ -70,12 +70,13 @@ void FC_FUNC_(oct_getenv, OCT_GETENV)
   (STR_F_TYPE var, STR_F_TYPE value STR_ARG2)
 {
   char *name_c;
-  char *s;
+  char *var_c;
 
+  var_c = (char *) malloc(256);
+  var_c[0]='\0';
   name_c = TO_C_STR1(var);
-  *s = '\0';
-  if(getenv(name_c) != NULL) s = getenv(name_c);
-  TO_F_STR2(s, value);
+  if(getenv(name_c) != NULL) var_c = getenv(name_c);
+  TO_F_STR2(var_c, value);
 }
 
 /* this function gets a string of the form '1-12, 34' and fills
