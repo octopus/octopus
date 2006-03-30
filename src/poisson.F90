@@ -21,6 +21,7 @@
 
 module poisson_m
   use global_m
+  use mpi_m
   use messages_m
   use profiling_m
   use lib_oct_parser_m
@@ -355,6 +356,10 @@ contains
     call dcf_FS2RS(fft_cf)             ! Fourier transform back
     if(present(average_to_zero)) then
       if(average_to_zero) average = cf_surface_average(fft_cf)
+#if defined HAVE_MPI
+      ! Only root has the right average.
+      if(m%parallel_in_domains) call MPI_BCAST(average, 1, MPI_FLOAT, 0, m%mpi_grp%comm, k)
+#endif
     end if
 
     if(m%parallel_in_domains) then
