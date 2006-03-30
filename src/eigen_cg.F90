@@ -96,10 +96,8 @@ subroutine eigen_solver_cg2(gr, st, h, tol, niter, converged, diff, reorder, ver
         g(1:NP,:) = g(1:NP,:) - es(1)*ppsi(1:NP,:)
 
         ! Orthogonalize to lowest eigenvalues (already calculated)
-        do j = 1, p - 1
-          a0 = X(states_dotp) (gr%m, st%d%dim, st%X(psi)(:,:, j, ik), g)
-          g(1:NP,:) = g(1:NP,:) - a0 * st%X(psi)(1:NP,:, j, ik)
-        end do
+        if(p > 1) call X(states_gram_schmidt)(p - 1, gr%m, st%d%dim, st%X(psi)(:, :, :, ik), g, &
+                                              normalize = .false.)
 
         if(iter .ne. 1) gg1 = X(states_dotp) (gr%m, st%d%dim, g, g0)
 
@@ -223,6 +221,7 @@ subroutine eigen_solver_cg2_new(gr, st, h, tol, niter, converged, diff, reorder,
   R_TYPE, allocatable :: psi(:,:), phi(:, :), hpsi(:, :), hcgp(:, :), cg(:, :), sd(:, :), cgp(:, :)
   FLOAT :: ctheta, stheta, ctheta2, stheta2, mu, lambda, dump, &
            gamma, sol(2), alpha, beta, theta, theta2, res ! Could be complex?
+  logical, allocatable :: orthogonal(:)
 
   call push_sub('eigen_cg.eigen_solver_cg2_new')
 
@@ -250,6 +249,7 @@ subroutine eigen_solver_cg2_new(gr, st, h, tol, niter, converged, diff, reorder,
   ALLOCATE(hcgp(NP_PART, dim), NP_PART*dim)
   ALLOCATE(  sd(NP_PART, dim), NP_PART*dim)
   ALLOCATE( cgp(NP_PART, dim), NP_PART*dim)
+  ALLOCATE(orthogonal(nst), nst)
 
   kpoints: do ik = 1, nik
     conv = converged
@@ -271,6 +271,8 @@ subroutine eigen_solver_cg2_new(gr, st, h, tol, niter, converged, diff, reorder,
       hcgp = R_TOTYPE(M_ZERO)
       cg   = R_TOTYPE(M_ZERO)
 
+      orthogonal = .false.
+
       band: do i = 1, maxter - 1 ! One operation has already been made.
 
          ! Get H|psi> (through the linear formula)
@@ -289,10 +291,8 @@ subroutine eigen_solver_cg2_new(gr, st, h, tol, niter, converged, diff, reorder,
 
          ! Get steepest descent vector
          sd(1:NP, :) = lambda*psi(1:NP, :) - phi(1:NP, :)
-         do k = 1, ist - 1
-           dump = X(states_dotp)(gr%m, dim, st%X(psi)(:, :, k, ik), sd(:, :))
-           sd(1:NP, :) = sd(1:NP, :) - dump*st%X(psi)(1:NP, :, k, ik)
-         end do
+         if(ist > 1) call X(states_gram_schmidt)(ist - 1, gr%m, dim, st%X(psi)(:, :, :, ik), sd, &
+                                                 normalize = .false., mask = orthogonal(1:ist-1))
 
          ! Get conjugate-gradient vector
          gamma = X(states_dotp)(gr%m, dim, sd, sd)/mu
@@ -342,10 +342,10 @@ subroutine eigen_solver_cg2_new(gr, st, h, tol, niter, converged, diff, reorder,
         call write_info(1)
       end if
 
-      ! Reordering.
-      if(ist>1 .and. reorder_) call sort(st%eigenval(1:ist, ik), st%X(psi)(:, :, 1:ist, ik))
-
     end do states
+
+    ! Reordering.
+    if(reorder_) call sort(st%eigenval(1:nst, ik), st%X(psi)(:, :, 1:nst, ik))
 
     conv_ = conv_ + conv
 
@@ -353,7 +353,7 @@ subroutine eigen_solver_cg2_new(gr, st, h, tol, niter, converged, diff, reorder,
 
   converged = conv_
 
-  deallocate(phi, psi, hpsi, cg, hcgp, sd, cgp)
+  deallocate(phi, psi, hpsi, cg, hcgp, sd, cgp, orthogonal)
   if(verbose_) call messages_print_stress(stdout)
 
   call pop_sub()

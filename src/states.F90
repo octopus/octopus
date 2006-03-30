@@ -159,6 +159,14 @@ module states_m
     module procedure states_copy
   end interface
 
+  interface dstates_gram_schmidt
+    module procedure dstates_gram_schmidt1, dstates_gram_schmidt2
+  end interface
+
+  interface zstates_gram_schmidt
+    module procedure zstates_gram_schmidt1, zstates_gram_schmidt2
+  end interface
+
 contains
 
   ! ---------------------------------------------------------

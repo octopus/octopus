@@ -95,7 +95,7 @@ end subroutine X(states_calc_dens)
 
 ! ---------------------------------------------------------
 ! Orthonormalizes nst orbital in mesh m
-subroutine X(states_gram_schmidt)(nst, m, dim, psi, start)
+subroutine X(states_gram_schmidt1)(nst, m, dim, psi, start)
   integer,           intent(in)    :: nst, dim
   type(mesh_t),      intent(in)    :: m
   R_TYPE,            intent(inout) :: psi(:,:,:)   ! psi(m%np_part, dim, nst)
@@ -131,7 +131,57 @@ subroutine X(states_gram_schmidt)(nst, m, dim, psi, start)
 
   call pop_sub()
   call profiling_out(C_PROFILING_GRAM_SCHMIDT)
-end subroutine X(states_gram_schmidt)
+end subroutine X(states_gram_schmidt1)
+
+! ---------------------------------------------------------
+! Orthonormalizes phi to the nst orbitals psi.
+! It also permits to do only the orthogonalization (no normalization).
+! And one can pass an extra optional argument, mask, which:
+!  - on input, if mask(p) = .true., the p-orbital is not used.
+!  - on output, mask(p) = .true. if p was already orthogonal (to within 1e-12).
+subroutine X(states_gram_schmidt2)(nst, m, dim, psi, phi, normalize, mask)
+  integer,           intent(in)    :: nst, dim
+  type(mesh_t),      intent(in)    :: m
+  R_TYPE,            intent(inout) :: psi(:,:,:)   ! psi(m%np_part, dim, nst)
+  R_TYPE,            intent(inout) :: phi(:,:)     ! phi(m%np_part, dim)
+  logical, optional, intent(in)    :: normalize
+  logical, optional, intent(inout) :: mask(:)      ! nst
+
+  logical :: normalize_
+  integer :: q, idim
+  FLOAT   :: nrm2
+  R_TYPE  :: ss
+
+  call profiling_in(C_PROFILING_GRAM_SCHMIDT)
+  call push_sub('states_inc.states_gram_schmidt')
+
+  do q = 1, nst
+    if(present(mask)) then
+      if(mask(q)) cycle
+    end if
+    ss = X(states_dotp)(m, dim, psi(:,:, q), phi)
+    if(abs(ss) > CNST(1.0e-12)) then
+      do idim = 1, dim
+        call lalg_axpy(m%np, -ss, psi(:, idim, q), phi(:, idim))
+      end do
+    else
+      if(present(mask)) mask(q) = .true.
+    end if
+  end do
+
+  normalize_ = .false.
+  if(present(normalize)) normalize_ = normalize
+  if(normalize) then
+    nrm2 = X(states_nrm2)(m, dim, phi)
+    ss = R_TOTYPE(M_ONE/nrm2)
+    do idim = 1, dim
+      call lalg_scal(m%np, ss, phi(:, idim))
+    end do
+  end if
+
+  call pop_sub()
+  call profiling_out(C_PROFILING_GRAM_SCHMIDT)
+end subroutine X(states_gram_schmidt2)
 
 
 ! ---------------------------------------------------------

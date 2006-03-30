@@ -23,6 +23,7 @@ module eigen_solver_m
   use global_m
   use messages_m
   use datasets_m
+  use profiling_m
   use lib_oct_parser_m
   use lib_basic_alg_m
   use lib_adv_alg_m
@@ -275,6 +276,7 @@ contains
     integer :: maxiter
     FLOAT :: tol
 
+    call profiling_in(C_PROFILING_EIGEN_SOLVER)
     call push_sub('eigen.eigen_solver_run')
 
     verbose_ = .false.; if(present(verbose)) verbose_ = verbose
@@ -318,6 +320,7 @@ contains
     if(present(conv).and. eigens%converged == st%nst*st%d%nik) conv = .true.
 
     call pop_sub()
+    call profiling_out(C_PROFILING_EIGEN_SOLVER)
   end subroutine eigen_solver_run
 
 
