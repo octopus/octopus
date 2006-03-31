@@ -49,13 +49,16 @@ module specie_m
     specie_get_local_fourier,   &
     specie_get_nl_part,         &
     specie_get_nlcc,            &
+    specie_get_density,         &
     specie_get_iwf
+
 
 
   integer, public, parameter :: &
     SPEC_USDEF  = 123,          & ! user defined function
     SPEC_POINT  = 2,            & ! point charge: jellium sphere of radius 0.5 a.u.
     SPEC_JELLI  = 3,            & ! jellium sphere.
+    SPEC_ALL_E  = 124,          & ! All electron atom
     SPEC_PS_TM2 = PS_TM2,       & ! Troullier-Martins pseudopotential
     SPEC_PS_HGH = PS_HGH          ! HGH pseudopotential
 
@@ -71,6 +74,8 @@ module specie_m
     logical :: local              ! true if the potential is local, which in this case means
                                   ! it is *not* a pseudopotential.
 
+    logical :: has_density        ! true if the specie has a electric density 
+    
     ! for the user defined potential
     character(len=1024) :: user_def
     FLOAT :: omega
@@ -94,6 +99,7 @@ module specie_m
 
     ! The filtering parameters.
     FLOAT :: alpha, beta, rcut, beta2
+
   end type specie_t
 
 
@@ -175,6 +181,7 @@ contains
     call push_sub('specie.specie_read')
 
     s%local     = .true.  ! a local potential
+    s%has_density = .false. !there is no density associated
     s%nlcc      = .false. ! without non-local core corrections
     s%def_h     = -M_ONE  ! not defined
     s%def_rsize = -M_ONE  ! not defined
@@ -210,13 +217,14 @@ contains
     !% <br>&nbsp;&nbsp;'jlm'     | 23.2    | spec_jelli   | 8   | 5.0
     !% <br>&nbsp;&nbsp;'pnt'     | 32.3    | spec_point   | 2.0
     !% <br>&nbsp;&nbsp;'udf'     |  0.0    | user_defined | 8   | "1/2*r^2"
+    !% <br>&nbsp;&nbsp;'H_all'   |  1.0079 | spec_all_e   | 1   
     !% <br>%</tt>
     !%
     !%
     !%Option user_defined  123
     !% Specie with user defined potential. In this case, the fourth
     !% field is the valence charge and the fifth
-    !% field is a string with a mathematical expresion that defines the
+    !% field is a string with a mathematical expression that defines the
     !% potential (you can use any of the <i>x</i>, <i>y</i>, <i>z</i>
     !% or <i>r</i> variables).
     !%Option spec_point  2
@@ -236,6 +244,10 @@ contains
     !% Hartwigsen-Goedecker-Hutter pseudopotentials, the next field is
     !% the atomic number an the last two numbers are irrelevant, since they
     !% do are not necessary to define the HGH pseudopotentials.
+    !%Option spec_all_e   124
+    !% Atom represented with all electrons, the extra parameter is the
+    !% atomic number. WARNING: To correctly represent the atomic
+    !% potential, the atom will assumed to be on the closest grid point.
     !%End
 #endif 
 
@@ -371,6 +383,11 @@ contains
       s%Z_val = s%Z
       read_data = 5
 
+    case(SPEC_ALL_E)
+      call loct_parse_block_float(blk, row, 3, s%Z)      ! charge of the jellium sphere
+      s%Z_val = s%Z
+      read_data = 4
+
     case(SPEC_PS_TM2,SPEC_PS_HGH) ! a pseudopotential file
       s%local = .false.
       n = loct_parse_block_cols(blk, row)
@@ -433,6 +450,8 @@ contains
     ! masses are always in a.u.m, so convert them to a.u.
     s%weight =  units_inp%mass%factor * s%weight
 
+    s%has_density = .false.
+
     select case(s%type)
     case(SPEC_PS_TM2, SPEC_PS_HGH)
       ALLOCATE(s%ps, 1) ! allocate structure
@@ -470,6 +489,10 @@ contains
       s%niwfs = 2*s%z_val
       s%omega = sqrt( abs(M_TWO / CNST(1.0e-4) * pot_re ))
       if(s%omega <= M_ZERO) s%omega = CNST(0.1) 
+
+    case(SPEC_ALL_E)
+      s%has_density = .true.
+
     end select
 
     ALLOCATE(s%iwf_l(s%niwfs, ispin), s%niwfs*ispin)
@@ -538,10 +561,57 @@ contains
 
     case(SPEC_PS_TM2, SPEC_PS_HGH)
       l = loct_splint(s%ps%vl, r)
+
+    case(SPEC_ALL_E)
+      l=M_ZERO
+
     end select
 
   end function specie_get_local
 
+  ! ---------------------------------------------------------
+  subroutine specie_get_density(s, pos, np, gridpoints, gridvol, rho)
+    type(specie_t), intent(in) :: s
+    FLOAT,          intent(in) :: pos(MAX_DIM)
+    integer,        intent(in) :: np
+    FLOAT,          intent(in) :: gridpoints(:,:)
+    FLOAT,          intent(in) :: gridvol(:)
+    FLOAT,          intent(out) :: rho(:)
+    
+    FLOAT :: d, dmin
+    integer :: i, imin
+
+    call push_sub('specie.specie_get_density')
+
+!    xx(:) = x(:)
+!    r = sqrt(sum(xx(:)**2))
+
+    select case(s%type)
+    case(SPEC_ALL_E)
+      dmin=M_ZERO
+      !find the point of the grid that is closer to the atom
+      do i=1,np
+        d = sum( ( pos(1:MAX_DIM)-gridpoints(i,1:MAX_DIM) )**2 )
+        if ( ( d < dmin ) .or. ( i == 1 ) ) then 
+          imin = i
+          dmin = d 
+        end if
+!        print*, i,d 
+      end do
+!      print*, pos
+!      print*,"IMIN",imin, dmin, gridpoints(imin,1:MAX_DIM)
+      
+      write(message(1), '(a,f12.2,a)') "Atom displaced ", sqrt(d), " [b]"
+      call write_warning(1)
+
+      rho(1:np) = M_ZERO
+      rho(imin) = -s%Z/gridvol(imin)
+      print*,"total", sum(rho(1:np)*gridvol(1:np))
+    end select
+
+    call pop_sub()
+
+  end subroutine specie_get_density
 
   ! ---------------------------------------------------------
   ! returns the gradient of the external potential
@@ -593,6 +663,9 @@ contains
       gv(:) = M_ZERO
       if(r>CNST(0.00001)) gv(:) = -loct_splint(s%ps%dvl, r)*x(:)/r
 
+    case(SPEC_ALL_E)
+      gv(:)=M_ZERO
+      
     end select
 
   end subroutine specie_get_glocal
@@ -608,8 +681,12 @@ contains
 
     FLOAT :: gmod
 
-    if(dim /= 3 .or. s%type == SPEC_USDEF &
-      .or. s%type == SPEC_POINT .or. s%type == SPEC_JELLI) then
+    if(dim /= 3 &
+         .or. s%type == SPEC_USDEF &
+         .or. s%type == SPEC_POINT &
+         .or. s%type == SPEC_JELLI &
+         .or. s%type == SPEC_ALL_E &
+         ) then
       message(1) = 'Periodic arrays of usedef, jelli, point,'
       message(2) = '1D and 2D systems not implemented yet.'
       call write_fatal(2)
@@ -629,6 +706,8 @@ contains
     ! only for 3D pseudopotentials, please
     if(s%type==SPEC_PS_TM2.or.s%type==SPEC_PS_HGH) then
       l = loct_splint(s%ps%core, sqrt(sum(x**2)))
+    else
+      l=M_ZERO
     end if
 
   end function specie_get_nlcc

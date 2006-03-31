@@ -42,6 +42,7 @@ module system_m
   use multicomm_m
   use mpi_m
   use varinfo_m
+  use poisson_m
 
   implicit none
 
@@ -90,6 +91,7 @@ contains
     call grid_init_stage_2(sys%gr, sys%mc)
     call states_densities_init(sys%st, sys%gr)
     call output_init(sys%gr%sb, sys%outp)
+    call poisson_init(sys%gr)
     call v_ks_init(sys%gr, sys%ks, sys%st%d)
 
     call pop_sub()

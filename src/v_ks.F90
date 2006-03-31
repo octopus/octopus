@@ -97,7 +97,6 @@ contains
     else
       ! initilize hartree and xc modules
       call messages_print_stress(stdout, "Hartree")
-      call poisson_init(gr)
       call messages_print_stress(stdout)
 
       call xc_init(ks%xc, NDIM, d%spin_channels, d%cdft)

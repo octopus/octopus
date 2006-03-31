@@ -46,6 +46,7 @@ module external_pot_m
   use mpi_m
   use mpi_debug_m
   use varinfo_m
+  use poisson_m
 
   implicit none
 
@@ -511,11 +512,9 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine epot_generate(ep, m, sb, geo, st, reltype, fast_generation)
+  subroutine epot_generate(ep, gr, st, reltype, fast_generation)
     type(epot_t),      intent(inout) :: ep
-    type(mesh_t),      intent(in)    :: m
-    type(simul_box_t), intent(in)    :: sb
-    type(geometry_t),  intent(inout) :: geo
+    type(grid_t), target,  intent(inout) :: gr
     type(states_t),    intent(inout) :: st
     integer,           intent(in)    :: reltype
     logical, optional, intent(in)    :: fast_generation
@@ -528,7 +527,16 @@ contains
 
     integer :: j
 
+    type(mesh_t),      pointer :: m
+    type(simul_box_t), pointer :: sb
+    type(geometry_t),  pointer :: geo
+
+
     call push_sub('epot.epot_generate')
+
+    sb  => gr%sb
+    geo => gr%geo
+    m   => gr%m
 
     fast_generation_ = .false.
     if (present(fast_generation)) fast_generation_ = fast_generation
@@ -643,6 +651,7 @@ contains
     subroutine build_local_part()
       integer :: i
       FLOAT :: x(MAX_DIM)
+      FLOAT, allocatable  :: rho(:), phi(:)
 
       call push_sub('epot.build_local_part')
 
@@ -653,7 +662,21 @@ contains
           if(s%nlcc) then
             st%rho_core(i) = st%rho_core(i) + specie_get_nlcc(s, x)
           end if
+
         end do
+
+        if(s%has_density) then 
+          ALLOCATE(rho(1:m%np),m%np)
+          ALLOCATE(phi(1:m%np_part),m%np_part)
+
+          call specie_get_density(s,a%x,m%np,m%x,m%vol_pp,rho)
+          call dpoisson_solve(gr,phi,rho)
+          ep%vpsl(1:m%np_part)=ep%vpsl(1:m%np_part)+phi(1:m%np_part)
+
+          DEALLOCATE(rho)
+          DEALLOCATE(phi)
+        end if
+
 #ifdef HAVE_FFT
       else ! momentum space
         call cf_phase_factor(sb, m, a%x, ep%local_cf(s%index), cf_loc)

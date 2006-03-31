@@ -120,7 +120,7 @@ contains
     if(td%move_ions > 0) then
       if(td%iter > 0) then
         call td_read_nbo()
-        call epot_generate(h%ep, gr%m, gr%sb, geo, st, h%reltype)
+        call epot_generate(h%ep, gr, st, h%reltype)
         geo%eii = ion_ion_energy(geo)
         h%eii = geo%eii
       end if
@@ -186,9 +186,9 @@ contains
         end select
 
         if(mod(i, td%epot_regenerate) == 0) then
-          call epot_generate(h%ep, gr%m, gr%sb, geo, st, h%reltype)
+          call epot_generate(h%ep, gr, st, h%reltype)
         else
-          call epot_generate(h%ep, gr%m, gr%sb, geo, st, h%reltype, fast_generation = .true.)
+          call epot_generate(h%ep, gr, st, h%reltype, fast_generation = .true.)
         end if
         geo%eii = ion_ion_energy(geo)
         h%eii = geo%eii

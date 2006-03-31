@@ -131,7 +131,7 @@ contains
 
       call system_init(sys, parallel_mask)
       call hamiltonian_init(h, sys%gr, sys%st%d, sys%ks%ip_app)
-      call epot_generate(h%ep, sys%gr%m, sys%gr%sb, sys%gr%geo, sys%st, h%reltype)
+      call epot_generate(h%ep, sys%gr, sys%st, h%reltype)
 
       call restart_init()
     end if
