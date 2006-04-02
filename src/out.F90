@@ -50,11 +50,7 @@ module output_m
     dinput_function,              &
     zinput_function,              &
     doutput_function,             &
-    zoutput_function,             &
-    iopar_open,                   &
-    iopar_close,                  &
-    iopar_read,                   &
-    iopar_backspace
+    zoutput_function
 
   integer, parameter, public  ::  &
     output_potential  =     1,    &
@@ -308,104 +304,6 @@ contains
     ierr = 5
   end subroutine ncdf_error
 #endif
-
-
-  ! ---------------------------------------------------------
-  integer function iopar_open(m, file, action, status, form, position, die) &
-    result(iunit)
-    type(mesh_t),     intent(in)           :: m
-    character(len=*), intent(in)           :: file, action
-    character(len=*), intent(in), optional :: status, form, position
-    logical,          intent(in), optional :: die
-
-#if defined(HAVE_MPI)
-    integer :: mpi_err
-#endif
-
-    call push_sub('out.iopar_open')
-
-    if(mpi_grp_is_root(m%mpi_grp)) then
-      iunit = io_open(file, action, status, form, position, die, is_tmp=.true.)
-    end if
-
-#if defined(HAVE_MPI)
-    if(m%parallel_in_domains) then
-      call MPI_Bcast(iunit, 1, MPI_INTEGER, m%vp%root, m%vp%comm, mpi_err)
-    end if
-#endif
-
-    call pop_sub()
-  end function iopar_open
-
-
-  ! ---------------------------------------------------------
-  subroutine iopar_close(m, iunit)
-    type(mesh_t), intent(in)    :: m
-    integer,      intent(inout) :: iunit
-
-#if defined(HAVE_MPI)
-    integer :: mpi_err
-#endif
-
-    call push_sub('out.iopar_close')
-
-    if(mpi_grp_is_root(m%mpi_grp)) then
-      call io_close(iunit)
-    end if
-
-#if defined(HAVE_MPI)
-    if(m%parallel_in_domains) then
-      call MPI_Bcast(iunit, 1, MPI_INTEGER, m%vp%root, m%vp%comm, mpi_err)
-    end if
-#endif
-
-    call pop_sub()
-  end subroutine iopar_close
-
-
-  ! ---------------------------------------------------------
-  subroutine iopar_read(m, iunit, line, ierr)
-    type(mesh_t),     intent(in)  :: m
-    integer,          intent(in)  :: iunit
-    character(len=*), intent(out) :: line
-    integer,          intent(out) :: ierr
-
-#if defined(HAVE_MPI)
-    integer :: mpi_err
-#endif
-
-    call push_sub('out.iopar_read')
-
-    if(mpi_grp_is_root(m%mpi_grp)) then
-      read(iunit, '(a)', iostat=ierr) line
-    end if
-
-#if defined(HAVE_MPI)
-    if(m%parallel_in_domains) then
-      call MPI_Bcast(ierr, 1, MPI_INTEGER, m%vp%root, m%vp%comm, mpi_err)
-      call MPI_Bcast(line, len(line), MPI_CHARACTER, m%vp%root, m%vp%comm, mpi_err)
-    end if
-#endif
-
-    call pop_sub()
-  end subroutine iopar_read
-
-
-  ! ---------------------------------------------------------
-  subroutine iopar_backspace(m, iunit)
-    type(mesh_t),  intent(in)  :: m
-    integer,       intent(in)  :: iunit
-
-    call push_sub('out.iopar_read')
-
-    if(mpi_grp_is_root(m%mpi_grp)) then
-      backspace(iunit)
-    end if
-
-    call pop_sub()
-
-  end subroutine iopar_backspace
-
 
 #include "undef.F90"
 #include "real.F90"

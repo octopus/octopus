@@ -1,22 +1,21 @@
-! --------------------------------------------------------------------------- !
-!                                                                             !
-! This module implements an interface to the FORTRAN logical unit             !
-! system. Based on code by Richard Maine.                                     !
-!                                                                             !
-! Alberto Garcia, December 30, 1996                                           !
-! Rewritten as a single subroutine                                            !
-! with multiple entry points, March 7, 1998                                   !
-!                                                                             !
-! Converted into f90-module, A. Rubio 1999.                                   !
-!                                                                             !
-! Logical unit management. Units 0 to min_lun-1 are "reserved",               !
-! since most of the "typical" files (output, etc) use them.                   !
-!                                                                             !
-! Logical units min_lun to min_max are managed by this module.                !
-!                                                                             !
-! --------------------------------------------------------------------------- !
-!
-! $Id$
+!! Copyright (C) 2002 M. Marques, A. Castro, A. Rubio, G. Bertsch
+!!
+!! This program is free software; you can redistribute it and/or modify
+!! it under the terms of the GNU General Public License as published by
+!! the Free Software Foundation; either version 2, or (at your option)
+!! any later version.
+!!
+!! This program is distributed in the hope that it will be useful,
+!! but WITHOUT ANY WARRANTY; without even the implied warranty of
+!! MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+!! GNU General Public License for more details.
+!!
+!! You should have received a copy of the GNU General Public License
+!! along with this program; if not, write to the Free Software
+!! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
+!! 02111-1307, USA.
+!!
+!! $Id$
 
 #include "global.h"
 
@@ -44,7 +43,9 @@ module io_m
     io_close,            &
     io_assign,           &
     io_get_extension,    &
-    io_debug_on_the_fly
+    io_debug_on_the_fly, &
+    iopar_read,          &
+    iopar_backspace
 
 
   integer, parameter :: min_lun=10, max_lun=99
@@ -289,70 +290,116 @@ contains
 
 
   ! ---------------------------------------------------------
-  integer function io_open(file, action, status, form, position, die, is_tmp, recl) result(iunit)
+  integer function io_open(file, action, status, form, position, die, is_tmp, recl, grp) result(iunit)
     character(len=*), intent(in) :: file, action
     character(len=*), intent(in), optional :: status, form, position
     logical,          intent(in), optional :: die, is_tmp
     integer,          intent(in), optional :: recl
+    type(mpi_grp_t),  intent(in), optional :: grp
 
     character(len=20)  :: status_, form_, position_
     character(len=512) :: file_
     logical            :: die_, is_tmp_
     integer            :: iostat
+    type(mpi_grp_t)    :: grp_
+#if defined(HAVE_MPI)
+    integer              :: mpi_err
+#endif
 
-    status_ = 'unknown'
-    if(present(status  )) status_   = status
-    form_   = 'formatted'
-    if(present(form    )) form_     = form
-    position_ = 'asis'
-    if(present(position)) position_ = position
-    die_    = .true.
-    if(present(die     )) die_      = die
-
-    call io_assign(iunit)
-    if(iunit<0) then
-      if(die_) then
-        write(stderr, '(a)') '*** IO Error: Too many files open'
-        message(1) = 'Error: io_open.'
-        call write_fatal(1)
-      end if
-      return
+    if(present(grp)) then
+      grp_%comm = grp%comm
+      grp_%rank = grp%rank
+      grp_%size = grp%size
+    else
+      call mpi_grp_init(grp_, -1)
     end if
 
-    is_tmp_ = .false.
-    if(present(is_tmp)) is_tmp_ = is_tmp
-    file_ = io_workpath(file, is_tmp_)
 
-    if(present(recl)) then
-      open(unit=iunit, file=trim(file_), status=trim(status_), form=trim(form_), &
-        recl=recl, action=trim(action), position=trim(position_), iostat=iostat)
-    else
-      open(unit=iunit, file=trim(file_), status=trim(status_), form=trim(form_), &
-        action=trim(action), position=trim(position_), iostat=iostat)
-    endif
+    if(mpi_grp_is_root(grp_)) then
+
+      status_ = 'unknown'
+      if(present(status  )) status_   = status
+      form_   = 'formatted'
+      if(present(form    )) form_     = form
+      position_ = 'asis'
+      if(present(position)) position_ = position
+      die_    = .true.
+      if(present(die     )) die_      = die
+
+      call io_assign(iunit)
+      if(iunit<0) then
+        if(die_) then
+          write(stderr, '(a)') '*** IO Error: Too many files open'
+          message(1) = 'Error: io_open.'
+          call write_fatal(1)
+        end if
+        return
+      end if
+
+      is_tmp_ = .false.
+      if(present(is_tmp)) is_tmp_ = is_tmp
+      file_ = io_workpath(file, is_tmp_)
+
+      if(present(recl)) then
+        open(unit=iunit, file=trim(file_), status=trim(status_), form=trim(form_), &
+          recl=recl, action=trim(action), position=trim(position_), iostat=iostat)
+      else
+        open(unit=iunit, file=trim(file_), status=trim(status_), form=trim(form_), &
+          action=trim(action), position=trim(position_), iostat=iostat)
+      endif
       
 
-    if(iostat.ne.0) then
-      call io_free(iunit)
-      iunit = -1
-      if(die_) then
-        write(*, '(5a)') '*** IO Error: Could not open file "', trim(file_), &
-          '" for action="', trim(action), '"'
-        message(1) = 'Error: io_open.'
-        call write_fatal(1)
+      if(iostat.ne.0) then
+        call io_free(iunit)
+        iunit = -1
+        if(die_) then
+          write(*, '(5a)') '*** IO Error: Could not open file "', trim(file_), &
+            '" for action="', trim(action), '"'
+          message(1) = 'Error: io_open.'
+          call write_fatal(1)
+        end if
       end if
+
     end if
+
+#if defined(HAVE_MPI)
+    if(grp_%size > 1) then
+      call MPI_Bcast(iunit, 1, MPI_INTEGER, 0, grp_%comm, mpi_err)
+    end if
+#endif
 
   end function io_open
 
 
   ! ---------------------------------------------------------
-  subroutine io_close(iunit)
+  subroutine io_close(iunit, grp)
     integer, intent(inout) :: iunit
+    type(mpi_grp_t),  intent(in), optional :: grp
 
-    close(iunit)
-    call io_free(iunit)
-    iunit = -1
+    type(mpi_grp_t)    :: grp_
+#if defined(HAVE_MPI)
+    integer              :: mpi_err
+#endif
+
+    if(present(grp)) then
+      grp_%comm = grp%comm
+      grp_%rank = grp%rank
+      grp_%size = grp%size
+    else
+      call mpi_grp_init(grp_, -1)
+    end if
+
+    if(mpi_grp_is_root(grp_)) then
+      close(iunit)
+      call io_free(iunit)
+      iunit = -1
+    end if
+
+#if defined(HAVE_MPI)
+    if(grp_%size > 1) then
+      call MPI_Bcast(iunit, 1, MPI_INTEGER, 0, grp_%comm, mpi_err)
+    end if
+#endif
 
   end subroutine io_close
 
@@ -493,5 +540,48 @@ contains
 
     return
   end function io_file_exists
+
+
+  subroutine iopar_read(grp, iunit, line, ierr)
+    type(mpi_grp_t),  intent(in)  :: grp
+    integer,          intent(in)  :: iunit
+    character(len=*), intent(out) :: line
+    integer,          intent(out) :: ierr
+
+#if defined(HAVE_MPI)
+    integer :: mpi_err
+#endif
+
+    call push_sub('out.iopar_read')
+
+    if(mpi_grp_is_root(grp)) then
+      read(iunit, '(a)', iostat=ierr) line
+    end if
+
+#if defined(HAVE_MPI)
+    if(grp%size > 1) then
+      call MPI_Bcast(ierr, 1, MPI_INTEGER, 0, grp%comm, mpi_err)
+      call MPI_Bcast(line, len(line), MPI_CHARACTER, 0, grp%comm, mpi_err)
+    end if
+#endif
+
+    call pop_sub()
+  end subroutine iopar_read
+
+
+  ! ---------------------------------------------------------
+  subroutine iopar_backspace(grp, iunit)
+    type(mpi_grp_t), intent(in)  :: grp
+    integer,         intent(in)  :: iunit
+
+    call push_sub('out.iopar_read')
+
+    if(mpi_grp_is_root(grp)) then
+      backspace(iunit)
+    end if
+
+    call pop_sub()
+
+  end subroutine iopar_backspace
 
 end module io_m

@@ -175,14 +175,16 @@ subroutine X(restart_read) (dir, st, gr, ierr, iter)
   call messages_print_stress(stdout, trim(str))
 
   ! open files to read
-  iunit  = iopar_open(gr%m, trim(dir)//'/wfns', action='read', status='old', die=.false.)
+  iunit  = io_open(trim(dir)//'/wfns', action='read', status='old', die=.false., is_tmp = .true., grp = gr%m%mpi_grp)
   if(iunit < 0) then
+    write(*, *) 'AAAA'
     ierr = -1
     return
   end if
-  iunit2 = iopar_open(gr%m, trim(dir)//'/occs', action='read', status='old', die=.false.)
+  iunit2 = io_open(trim(dir)//'/occs', action='read', status='old', die=.false., is_tmp = .true., grp = gr%m%mpi_grp)
   if(iunit2 < 0) then
-    call iopar_close(gr%m, iunit)
+    write(*, *) 'BBBB'
+    call io_close(iunit, grp = gr%m%mpi_grp)
     ierr = -1
   end if
 
@@ -203,24 +205,24 @@ subroutine X(restart_read) (dir, st, gr, ierr, iter)
   filled = .false.
 
   ! Skip two lines.
-  call iopar_read(gr%m, iunit,  line, err); call iopar_read(gr%m, iunit,  line, err)
-  call iopar_read(gr%m, iunit2, line, err); call iopar_read(gr%m, iunit2, line, err)
+  call iopar_read(gr%m%mpi_grp, iunit,  line, err); call iopar_read(gr%m%mpi_grp, iunit,  line, err)
+  call iopar_read(gr%m%mpi_grp, iunit2, line, err); call iopar_read(gr%m%mpi_grp, iunit2, line, err)
 
   do
-    call iopar_read(gr%m, iunit, line, i)
+    call iopar_read(gr%m%mpi_grp, iunit, line, i)
     read(line, '(a)') char
     if(i.ne.0.or.char=='%') exit
 
-    call iopar_backspace(gr%m, iunit)
+    call iopar_backspace(gr%m%mpi_grp, iunit)
 
-    call iopar_read(gr%m, iunit, line, err)
+    call iopar_read(gr%m%mpi_grp, iunit, line, err)
     read(line, *) ik, char, ist, char, idim, char, filename
     if(index_is_wrong()) then
-      call iopar_read(gr%m, iunit2, line, err)
+      call iopar_read(gr%m%mpi_grp, iunit2, line, err)
       cycle
     end if
 
-    call iopar_read(gr%m, iunit2, line, err)
+    call iopar_read(gr%m%mpi_grp, iunit2, line, err)
     read(line, *) st%occ(ist, ik), char, st%eigenval(ist, ik)
 
     if(ist >= st%st_start .and. ist <= st%st_end) then
@@ -242,7 +244,7 @@ subroutine X(restart_read) (dir, st, gr, ierr, iter)
   end do
 
   if(present(iter)) then
-    call iopar_read(gr%m, iunit, line, err)
+    call iopar_read(gr%m%mpi_grp, iunit, line, err)
     read(line, *) filename, filename, iter
   end if
 
@@ -272,8 +274,8 @@ subroutine X(restart_read) (dir, st, gr, ierr, iter)
   end if
 
   deallocate(filled)
-  call iopar_close(gr%m, iunit)
-  call iopar_close(gr%m, iunit2)
+  call io_close(iunit, grp = gr%m%mpi_grp)
+  call io_close(iunit2, grp = gr%m%mpi_grp)
 
   if(mesh_change) call interpolation_end()
 
@@ -309,13 +311,13 @@ contains
 #endif
     if(present(iter)) return ! No intepolation, in case we are in the td part.
 
-    iunit_mesh  = iopar_open(gr%m, trim(dir)//'/mesh', action='read', status='old', die=.false.)
+    iunit_mesh  = io_open(trim(dir)//'/mesh', action='read', status='old', die=.false., grp = gr%m%mpi_grp)
     if(iunit_mesh < 0) return
 
     read(iunit_mesh, *); read(iunit_mesh, *); read(iunit_mesh, *)
     call curvlinear_init_from_file(old_cv, iunit_mesh)
     call simul_box_init_from_file(old_sb, gr%geo, iunit_mesh)
-    call iopar_close(gr%m, iunit_mesh)
+    call io_close(iunit_mesh, grp = gr%m%mpi_grp)
 
     if( .not. (old_cv.eq.gr%cv) ) then
       mesh_change = .true.

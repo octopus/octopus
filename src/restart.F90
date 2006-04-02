@@ -127,39 +127,39 @@ contains
     FLOAT :: occ, eigenval
 
     ierr = 0
-    iunit  = iopar_open(m, trim(dir)//'/wfns', action='read', status='old', die=.false.)
+    iunit  = io_open(trim(dir)//'/wfns', action='read', status='old', die=.false., grp = m%mpi_grp)
     if(iunit < 0) then
       ierr = -1
       return
     end if
-    iunit2 = iopar_open(m, trim(dir)//'/occs', action='read', status='old', die=.false.)
+    iunit2 = io_open(trim(dir)//'/occs', action='read', status='old', die=.false., grp = m%mpi_grp)
     if(iunit2 < 0) then
-      call iopar_close(m, iunit)
+      call io_close(iunit, grp = m%mpi_grp)
       ierr = -1
       return
     end if
 
     ! Skip two lines.
-    call iopar_read(m, iunit, line, err); call iopar_read(m, iunit, line, err)
-    call iopar_read(m, iunit2, line, err); call iopar_read(m, iunit2, line, err)
+    call iopar_read(m%mpi_grp, iunit, line, err); call iopar_read(m%mpi_grp, iunit, line, err)
+    call iopar_read(m%mpi_grp, iunit2, line, err); call iopar_read(m%mpi_grp, iunit2, line, err)
 
     kpoints = 1
     dim = 1
     nst = 1
     do
-      call iopar_read(m, iunit, line, i)
+      call iopar_read(m%mpi_grp, iunit, line, i)
       read(line, '(a)') char
       if(i.ne.0.or.char=='%') exit
       read(line, *) ik, char, ist, char, idim, char, filename
       if(ik > kpoints) kpoints = ik
       if(idim == 2)    dim     = 2
       if(ist>nst)      nst     = ist
-      call iopar_read(m, iunit2, line, err)
+      call iopar_read(m%mpi_grp, iunit2, line, err)
       read(line, *) occ, char, eigenval
     end do
 
-    call iopar_close(m, iunit)
-    call iopar_close(m, iunit2)
+    call io_close(iunit, grp = m%mpi_grp)
+    call io_close(iunit2, grp = m%mpi_grp)
   end subroutine restart_look
 
 
