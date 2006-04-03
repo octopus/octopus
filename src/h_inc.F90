@@ -218,15 +218,17 @@ subroutine X(magnetic_terms) (gr, h, psi, hpsi, ik)
   R_TYPE,              intent(out)   :: Hpsi(:,:) !  Hpsi(m%np, h%d%dim)
   integer,             intent(in)    :: ik
 
-  integer :: k
+  integer :: k, idim
   FLOAT,  allocatable :: div(:), tmp(:,:)
-  R_TYPE, allocatable :: grad(:,:), lhpsi(:,:)
+  R_TYPE, allocatable :: grad(:, :, :), lhpsi(:, :)
 
   call push_sub('h_inc.Xmagnetic_terms')
 
   if(h%d%cdft .or. associated(h%ep%A_static)) then
-    ALLOCATE(grad(NP, NDIM), NP*NDIM)
-    call X(f_gradient)(gr%sb, gr%f_der, psi(:, 1), grad)
+    ALLOCATE(grad(NP_PART, NDIM, h%d%dim), NP_PART*h%d%dim*NDIM)
+    do idim = 1, h%d%dim
+      call X(f_gradient)(gr%sb, gr%f_der, psi(:, idim), grad(:, :, idim))
+    end do
   else
     call pop_sub()
     return
@@ -247,7 +249,8 @@ subroutine X(magnetic_terms) (gr, h, psi, hpsi, ik)
         tmp(1:NP, :) = h%axc(1:NP, :, 2)
       end if
     case(SPINORS)
-      ! not implemented yet
+      write(message(1),'(a)') 'Current DFT not yet functional in spinors mode, sorry.'
+      call write_fatal(2)
     end select
     call df_divergence(gr%sb, gr%f_der, tmp, div)
     hpsi(1:NP, 1) = hpsi(1:NP, 1) - M_HALF*M_zI*div*psi(1:NP, 1)
@@ -256,18 +259,18 @@ subroutine X(magnetic_terms) (gr, h, psi, hpsi, ik)
     select case (h%d%ispin)
     case(UNPOLARIZED)
       do k = 1, NP
-        hpsi(k, 1) = hpsi(k, 1) - M_zI*dot_product(h%axc(k, :, 1), grad(k, :))
+        hpsi(k, 1) = hpsi(k, 1) - M_zI*dot_product(h%axc(k, 1:NDIM, 1), grad(k, 1:NDIM, 1))
       end do
     case(SPIN_POLARIZED)
       do k = 1, NP
         if(modulo(ik+1, 2) == 0) then ! we have a spin down
-          hpsi(k, 1) = hpsi(k, 1) -  M_zI*dot_product(h%axc(k, :, 1), grad(k, :))
+          hpsi(k, 1) = hpsi(k, 1) -  M_zI*dot_product(h%axc(k, 1:NDIM, 1), grad(k, 1:NDIM, 1))
         else
-          hpsi(k, 1) = hpsi(k, 1) -  M_zI*dot_product(h%axc(k, :, 2), grad(k, :))
+          hpsi(k, 1) = hpsi(k, 1) -  M_zI*dot_product(h%axc(k, 1:NDIM, 2), grad(k, 1:NDIM, 1))
         end if
       end do
     case(SPINORS)
-      ! not implemented yet
+      ! Not yet implemented
     end select
 
   endif
@@ -275,15 +278,15 @@ subroutine X(magnetic_terms) (gr, h, psi, hpsi, ik)
   !If we have an external magnetic field
   if (associated(h%ep%A_static)) then
     do k = 1, NP
-      hpsi(k, :) = hpsi(k, :) + M_HALF*dot_product(h%ep%A_static(k, :), h%ep%A_static(k, :))*psi(k, :)
-
+      hpsi(k, :) = hpsi(k, :) + M_HALF*dot_product(h%ep%A_static(k, 1:NDIM), h%ep%A_static(k, 1:NDIM))*psi(k, :)
       select case(h%d%ispin)
       case(UNPOLARIZED, SPIN_POLARIZED)
-        hpsi(k, 1) = hpsi(k, 1) - M_zI*dot_product(h%ep%A_static(k, :), grad(k, :))
+        hpsi(k, 1) = hpsi(k, 1) - M_zI*dot_product(h%ep%A_static(k, 1:NDIM), grad(k, 1:NDIM, 1))
       case (SPINORS)
-        ! not implemented yet
+        do idim = 1, h%d%dim
+          hpsi(k, idim) = hpsi(k, idim) - M_zI*dot_product(h%ep%A_static(k, 1:NDIM), grad(k, 1:NDIM, idim))
+        end do
       end select
-
     end do
   end if
 
