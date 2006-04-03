@@ -36,6 +36,9 @@ subroutine xc_get_vxc(gr, xcs, rho, ispin, vxc, ex, ec, ip, qtot)
 
   type(xc_functl_t), pointer :: functl(:)
 
+  call push_sub('xc_vxc.xc_get_vxc')
+  call profiling_in(C_PROFILING_XC_LOCAL)
+
   if(ispin == UNPOLARIZED) then
     functl => xcs%functl(:, 1)
   else
@@ -43,10 +46,11 @@ subroutine xc_get_vxc(gr, xcs, rho, ispin, vxc, ex, ec, ip, qtot)
   end if
 
   ! is there anything to do ?
-  if(iand(xcs%family, XC_FAMILY_LDA + XC_FAMILY_GGA + XC_FAMILY_MGGA) == 0) return
-
-  ! really start
-  call push_sub('xc_vxc.xc_get_vxc')
+  if(iand(xcs%family, XC_FAMILY_LDA + XC_FAMILY_GGA + XC_FAMILY_MGGA) == 0) then
+    call pop_sub()
+    call profiling_out(C_PROFILING_XC_LOCAL)
+    return
+  end if
 
   ! initialize a couple of handy variables
   gga           = iand(xcs%family, XC_FAMILY_GGA).ne.0
@@ -131,6 +135,7 @@ subroutine xc_get_vxc(gr, xcs, rho, ispin, vxc, ex, ec, ip, qtot)
   if(       mgga) call mgga_end()
 
   call pop_sub()
+  call profiling_out(C_PROFILING_XC_LOCAL)
 
 contains
 

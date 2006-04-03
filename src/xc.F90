@@ -26,6 +26,7 @@ module xc_m
   use lib_oct_parser_m
   use lib_basic_alg_m
   use lib_adv_alg_m
+  use profiling_m
   use mesh_m
   use grid_m
   use functions_m

@@ -385,7 +385,10 @@ contains
       end if
       evsum_in = evsum_out
 
-      if(forced_finish) exit
+      if(forced_finish) then
+        call profiling_out(C_PROFILING_SCF_CYCLE)
+        exit
+      end if
 
       ! check if debug mode should be enabled or disabled on the fly
       call io_debug_on_the_fly()

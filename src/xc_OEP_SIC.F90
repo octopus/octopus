@@ -34,7 +34,7 @@ subroutine X(oep_sic) (xcs, gr, st, is, oep, ex, ec)
   integer :: ierr
 #endif
 
-
+  call profiling_in(C_PROFILING_XC_SIC)
   call push_sub('xc_OEP_SIC.oep_sic')
 
   ALLOCATE(rho(NP, 2), NP*2)
@@ -88,4 +88,5 @@ subroutine X(oep_sic) (xcs, gr, st, is, oep, ex, ec)
 
   deallocate(rho, Vxc)
   call pop_sub()
+  call profiling_out(C_PROFILING_XC_SIC)
 end subroutine X(oep_sic)

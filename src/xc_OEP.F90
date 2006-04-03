@@ -27,6 +27,7 @@ module xc_OEP_m
   use lib_basic_alg_m
   use lib_adv_alg_m
   use lib_xc_m
+  use profiling_m
   use xc_m
   use mesh_m
   use functions_m

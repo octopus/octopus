@@ -53,7 +53,7 @@ subroutine X(oep_x) (gr, st, is, oep, ex)
 #endif
 
   ! Note: we assume that st%occ is known in all nodes
-
+  call profiling_in(C_PROFILING_XC_EXX)
   call push_sub('xc_OEP_x.oep_x')
 
   ALLOCATE(F_ij(NP), NP)
@@ -225,5 +225,6 @@ subroutine X(oep_x) (gr, st, is, oep, ex)
   deallocate(recv_stack, send_stack)
   deallocate(F_ij, rho_ij, send_buffer)
 
+  call profiling_out(C_PROFILING_XC_EXX)
   call pop_sub()
 end subroutine X(oep_x)

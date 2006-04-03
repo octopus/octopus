@@ -48,6 +48,7 @@ subroutine X(xc_oep_calc)(oep, xcs, apply_sic_pz, gr, h, st, vxc, ex, ec)
 
   if(oep%level == XC_OEP_NONE) return
 
+  call profiling_in(C_PROFILING_XC_OEP)
   call push_sub('xc_OEP_inc.xc_oep_calc')
 
   ! initialize oep structure
@@ -113,6 +114,7 @@ subroutine X(xc_oep_calc)(oep, xcs, apply_sic_pz, gr, h, st, vxc, ex, ec)
   deallocate(oep%eigen_type, oep%eigen_index, oep%X(lxc), oep%uxc_bar)
 
   call pop_sub()
+  call profiling_out(C_PROFILING_XC_OEP)
 end subroutine X(xc_OEP_calc)
 
 
@@ -130,6 +132,7 @@ subroutine X(xc_oep_solve) (gr, h, st, is, vxc, oep)
   FLOAT, allocatable :: s(:), vxc_old(:)
   R_TYPE, allocatable :: b(:,:)
 
+  call profiling_in(C_PROFILING_XC_OEP_FULL)
   call push_sub('xc_OEP_inc.xc_oep_solve')
 
   ALLOCATE(b(NP, 1),    NP*1)
@@ -188,4 +191,5 @@ subroutine X(xc_oep_solve) (gr, h, st, is, vxc, oep)
   deallocate(b, s, vxc_old)
 
   call pop_sub()
+  call profiling_out(C_PROFILING_XC_OEP_FULL)
 end subroutine X(xc_oep_solve)

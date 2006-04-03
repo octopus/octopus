@@ -56,7 +56,7 @@ module profiling_m
 
   integer, parameter ::                 & 
     C_TAG_LENGTH = 17,                  &  ! Max. number of characters of tag label.
-    C_NUM_TAGS   = 18                      ! Number of tags.
+    C_NUM_TAGS   = 24                      ! Number of tags.
 
   integer ::                            &
     pass_in(C_NUM_TAGS)           =  0, &
@@ -82,9 +82,15 @@ module profiling_m
     C_PROFILING_VNLPSI            = 13, &
     C_PROFILING_POISSON_SOLVE     = 14, &
     C_PROFILING_XC                = 15, &
-    C_PROFILING_TIME_STEP         = 16, &
-    C_PROFILING_GRAM_SCHMIDT      = 17, &
-    C_PROFILING_EIGEN_SOLVER      = 18
+    C_PROFILING_XC_LOCAL          = 16, &
+    C_PROFILING_XC_OEP            = 17, &
+    C_PROFILING_XC_EXX            = 18, &
+    C_PROFILING_XC_SIC            = 19, &
+    C_PROFILING_XC_KLI            = 20, &
+    C_PROFILING_XC_OEP_FULL       = 21, &
+    C_PROFILING_TIME_STEP         = 22, &
+    C_PROFILING_GRAM_SCHMIDT      = 23, &
+    C_PROFILING_EIGEN_SOLVER      = 24
 
   character(len=C_TAG_LENGTH), dimension(C_NUM_TAGS) :: tag_label = &
     (/                                  &
@@ -103,6 +109,12 @@ module profiling_m
     'VNLPSI           ',                &
     'POISSON_SOLVE    ',                &
     'XC               ',                &
+    'XC_LOCAL         ',                &
+    'XC_OEP           ',                &
+    'XC_EXX           ',                &
+    'XC_SIC           ',                &
+    'XC_KLI           ',                &
+    'XC_OEP_FULL      ',                &
     'TIME_STEP        ',                &
     'GRAM_SCHMIDT     ',                &
     'EIGEN_SOLVER     '                 &
@@ -220,6 +232,7 @@ contains
                           pass_in(i), ' .ne.', pass_out(i)
         cycle
       end if
+      if(pass_in(i) .eq. 0) cycle
       write(iunit, '(a,i20,i10,a1,i6.6,f17.7)') tag_label(i), pass_in(i), &
         time_sec(i), '.', time_usec(i), time_per_pass
     end do

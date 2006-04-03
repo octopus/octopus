@@ -34,6 +34,7 @@ subroutine X(xc_KLI_solve) (m, st, is, oep)
   R_TYPE, allocatable :: phi1(:,:), phi2(:,:)
   R_TYPE :: occ
 
+  call profiling_in(C_PROFILING_XC_KLI)
   call push_sub('xc_KLI.xc_KLI_solve')
 
   ! some intermediate quantities
@@ -226,4 +227,5 @@ subroutine X(xc_KLI_solve) (m, st, is, oep)
 
   deallocate(v_bar_S, rho_sigma)
   call pop_sub()
+  call profiling_out(C_PROFILING_XC_KLI)
 end subroutine X(xc_KLI_solve)
