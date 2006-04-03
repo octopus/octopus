@@ -177,13 +177,11 @@ subroutine X(restart_read) (dir, st, gr, ierr, iter)
   ! open files to read
   iunit  = io_open(trim(dir)//'/wfns', action='read', status='old', die=.false., is_tmp = .true., grp = gr%m%mpi_grp)
   if(iunit < 0) then
-    write(*, *) 'AAAA'
     ierr = -1
     return
   end if
   iunit2 = io_open(trim(dir)//'/occs', action='read', status='old', die=.false., is_tmp = .true., grp = gr%m%mpi_grp)
   if(iunit2 < 0) then
-    write(*, *) 'BBBB'
     call io_close(iunit, grp = gr%m%mpi_grp)
     ierr = -1
   end if

@@ -88,6 +88,8 @@ contains
   subroutine restart_init
     integer :: i
 
+    call push_sub('restart.restart_init')
+
     !%Variable RestartFileFormat
     !%Type integer
     !%Default restart_plain
@@ -111,6 +113,7 @@ contains
     end if
 #endif
 
+    call pop_sub()
   end subroutine restart_init
 
 
@@ -126,13 +129,15 @@ contains
     integer :: iunit, iunit2, err, i, ist, idim, ik
     FLOAT :: occ, eigenval
 
+    call push_sub('restart.restart_look')
+
     ierr = 0
-    iunit  = io_open(trim(dir)//'/wfns', action='read', status='old', die=.false., grp = m%mpi_grp)
+    iunit  = io_open(trim(dir)//'/wfns', action='read', status='old', die=.false., is_tmp = .true., grp = m%mpi_grp)
     if(iunit < 0) then
       ierr = -1
       return
     end if
-    iunit2 = io_open(trim(dir)//'/occs', action='read', status='old', die=.false., grp = m%mpi_grp)
+    iunit2 = io_open(trim(dir)//'/occs', action='read', status='old', die=.false., is_tmp = .true., grp = m%mpi_grp)
     if(iunit2 < 0) then
       call io_close(iunit, grp = m%mpi_grp)
       ierr = -1
@@ -160,6 +165,7 @@ contains
 
     call io_close(iunit, grp = m%mpi_grp)
     call io_close(iunit2, grp = m%mpi_grp)
+    call pop_sub()
   end subroutine restart_look
 
 

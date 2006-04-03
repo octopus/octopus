@@ -178,7 +178,7 @@ program octopus
 
     if(no_datasets > 1) then
       message(1) = 'Info: Multi-Dataset Mode'
-      message(2) = 'Info: Running dataset "'//current_label//'"'
+      message(2) = 'Info: Running dataset "'//trim(current_label)//'"'
       call write_info(2, stress = .true.)
     end if
 
