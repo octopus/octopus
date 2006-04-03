@@ -45,6 +45,7 @@ module spectrum_m
     spectrum_hs_from_mult,         &
     spectrum_hs_from_acc,          &
     spectrum_mult_info,            &
+    spectrum_skip_header,          &
     kick_init
 
   integer, public, parameter ::    &
