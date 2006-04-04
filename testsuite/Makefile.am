@@ -27,7 +27,7 @@ bin_SCRIPTS = oct-run_regression_test.pl oct-run_testsuite
 
 sharedir = $(pkgdatadir)/testsuite
 
-EXTRA_DIST = oct-run_regression_test.pl oct-run_testsuite oct-run_regression_test.pl.pod
+EXTRA_DIST = oct-run_regression_test.pl oct-run_testsuite
 
 check: 
 	@./oct-run_testsuite -l -s | tee rlog

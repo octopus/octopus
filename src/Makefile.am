@@ -47,7 +47,8 @@ noinst_HEADERS = \
 	pes_rc.F90 pes_mask.F90 \
 	td_init.F90 td_calc.F90\
 	out_inc.F90 math_cg_inc.F90 math_inc.F90 \
-	linalg_basic_blas.F90 linalg_basic_int.F90 linalg_adv_lapack.F90
+	linalg_basic_blas.F90 linalg_basic_int.F90 linalg_adv_lapack.F90 \
+	em_resp_inc.F90
 
 core_LIBS = @LIBS_LAPACK@ @LIBS_BLAS@ ../liboct/liboct.a ../liboct_parser/liboct_parser.a \
   ../libxc/libxc.a @GSL_LIBS@ @FCEXTRALIBS@
@@ -149,6 +150,7 @@ curvlinear.o: global.h
 curv_modine.o: global.h
 derivatives.o: global.h derivatives_inc.F90
 eigen.o: global.h eigen_cg.F90 eigen_trlan.F90 eigen_plan.F90 eigen_arpack.F90 eigen_evolution.F90
+em_resp.o : em_resp.F90 em_resp_inc.F90
 epot.o: global.h epot_inc.F90
 f.o: global.h f_inc.F90
 fft.o: global.h fftw2.F90 fftw3.F90

@@ -12,7 +12,7 @@ man_MANS = octopus.1 oct-atomic_occupations.1 oct-broad.1 oct-center-geom.1 oct-
         oct-display_partitions.1 oct-harmonic-spectrum.1 oct-ph.1 oct-rsf.1 oct-run_periodic_table.1 \
         oct-run_regression_test.pl.1 oct-run_testsuite.1 oct-xyz-anim.1
 
-EXTRA_DIST = update.el octopus.pod img/*.eps img/*.jpg
+EXTRA_DIST = update.el *.pod img/*.eps img/*.jpg
 
 CLEANFILES = *~ *.bak variables.texi
 
