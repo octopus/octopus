@@ -95,10 +95,8 @@ contains
       call write_info(1)
 
     else
-      ! initilize hartree and xc modules
-      call messages_print_stress(stdout, "Hartree")
-      call messages_print_stress(stdout)
 
+      ! initilize xc modules
       call xc_init(ks%xc, NDIM, d%spin_channels, d%cdft)
       ks%xc_family = ks%xc%family
 

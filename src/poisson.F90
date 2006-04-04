@@ -84,11 +84,13 @@ contains
 
     call push_sub('poisson.poisson_init')
 
+    call messages_print_stress(stdout, "Hartree")
     select case(NDIM)
     case(1); call init_1D()
     case(2); call init_2D()
     case(3); call init_3D()
     end select
+    call messages_print_stress(stdout)
 
   contains
 
