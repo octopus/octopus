@@ -42,7 +42,8 @@ module lib_xc_m
     xc_gga_lb,                      &
     xc_mgga_init,                   &
     xc_mgga,                        &
-    xc_mgga_end
+    xc_mgga_end,                    &
+    xc_lda_speedup
 
   ! Families of xc functionals
   integer, public, parameter ::     &
@@ -125,6 +126,12 @@ module lib_xc_m
     end subroutine xc_info_refs
   end interface
 
+  ! Decides wether or not to apply the speed-up tricks.
+  interface xc_lda_speedup
+    subroutine lda_speedup(i)
+      integer, intent(in) :: i
+    end subroutine lda_speedup
+  end interface
 
   ! We will use the same public interface (xc_lda_init) for the three C procedures
   interface xc_lda_init
