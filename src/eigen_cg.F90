@@ -275,6 +275,8 @@ subroutine eigen_solver_cg2_new(gr, st, h, tol, niter, converged, diff, reorder,
 
       band: do i = 1, maxter - 1 ! One operation has already been made.
 
+         if(mod(i, 5).eq.0) orthogonal = .false.
+
          ! Get H|psi> (through the linear formula)
          phi(1:NP, :) = ctheta*phi(1:NP, :) + stheta*hcgp(1:NP, :)
 
@@ -292,7 +294,7 @@ subroutine eigen_solver_cg2_new(gr, st, h, tol, niter, converged, diff, reorder,
          ! Get steepest descent vector
          sd(1:NP, :) = lambda*psi(1:NP, :) - phi(1:NP, :)
          if(ist > 1) call X(states_gram_schmidt)(ist - 1, gr%m, dim, st%X(psi)(:, :, :, ik), sd, &
-                                                 normalize = .false.)
+                                                 normalize = .false., mask = orthogonal)
 
          ! Get conjugate-gradient vector
          gamma = X(states_dotp)(gr%m, dim, sd, sd)/mu
