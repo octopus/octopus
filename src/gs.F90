@@ -164,13 +164,6 @@ contains
       end if
     end if
 
-    ! write wave-functions to disk
-    call X(restart_write)(trim(tmpdir)//'restart_gs', st, gr, err)
-    if(err.ne.0) then
-      message(1) = 'Unsuccesfull write of "'//trim(tmpdir)//'restart_gs"'
-      call write_fatal(1)
-    end if
-
     call pop_sub()
   end subroutine ground_state_init
 
