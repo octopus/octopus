@@ -144,7 +144,7 @@ contains
     if (s%type /= SPEC_USDEF ) write(iunit, '(a,i3)')    'lloc  = ', s%lloc
 
     if(.not.s%local) then
-      if(in_debug_mode) call ps_debug(s%ps, trim(dirname))
+       if(in_debug_mode) call ps_debug(s%ps, trim(dirname))
     end if
 
     call io_close(iunit)
@@ -492,7 +492,12 @@ contains
 
     case(SPEC_ALL_E)
       s%has_density = .true.
-
+      write(message(1),'(a,a,a)')    'Specie "',trim(s%label),'" is an all electron atom.'
+      write(message(2),'(a,f11.6)')  '   Z = ', s%z_val
+      write(message(3),'(a)')  '   Potential will be calulated solving poisson equation.'
+      call write_info(3)
+      write(message(1),'(a)')    'Gradients are not calculated, forces are not correct.'
+      call write_warning(1)
     end select
 
     ALLOCATE(s%iwf_l(s%niwfs, ispin), s%niwfs*ispin)
@@ -577,36 +582,42 @@ contains
     FLOAT,          intent(in) :: gridpoints(:,:)
     FLOAT,          intent(in) :: gridvol(:)
     FLOAT,          intent(out) :: rho(:)
-    
+
     FLOAT :: d, dmin
     integer :: i, imin
 
     call push_sub('specie.specie_get_density')
 
-!    xx(:) = x(:)
-!    r = sqrt(sum(xx(:)**2))
-
     select case(s%type)
     case(SPEC_ALL_E)
+
       dmin=M_ZERO
+
       !find the point of the grid that is closer to the atom
       do i=1,np
         d = sum( ( pos(1:MAX_DIM)-gridpoints(i,1:MAX_DIM) )**2 )
+
         if ( ( d < dmin ) .or. ( i == 1 ) ) then 
           imin = i
           dmin = d 
+
         end if
-!        print*, i,d 
+
       end do
-!      print*, pos
-!      print*,"IMIN",imin, dmin, gridpoints(imin,1:MAX_DIM)
       
-      write(message(1), '(a,f12.2,a)') "Atom displaced ", sqrt(d), " [b]"
-      call write_warning(1)
+      if (dmin > CNST(1e-5)) then 
+        
+        write(message(1), '(a,f12.2,a)') "Atom displaced ", sqrt(dmin), " [b]"
+        write(message(2), '(a,3f12.2)') "Original position ", pos
+        write(message(3), '(a,3f12.2)') "Displaced position ", gridpoints(imin,:) 
+        
+        call write_warning(3)
+        
+      endif
 
       rho(1:np) = M_ZERO
       rho(imin) = -s%Z/gridvol(imin)
-      print*,"total", sum(rho(1:np)*gridvol(1:np))
+
     end select
 
     call pop_sub()
@@ -665,7 +676,9 @@ contains
 
     case(SPEC_ALL_E)
       gv(:)=M_ZERO
-      
+!      write(message(1), '(a)') "Gradient not implemented for All Electron Atoms"
+!      call write_warning(1)
+        
     end select
 
   end subroutine specie_get_glocal
