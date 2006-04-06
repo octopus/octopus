@@ -22,6 +22,8 @@
 module lcao_m
   use global_m
   use messages_m
+  use datasets_m
+  use lib_oct_parser_m
   use lib_oct_m
   use lib_oct_gsl_spline_m
   use lib_basic_alg_m
@@ -92,11 +94,14 @@ contains
       err = 1; return
     end if
 
-    i = 1
-    do ia = 1, gr%geo%natoms
-      s => gr%geo%atom(ia)%spec
-      do idim = 1, wf_dim
-        do j = 1, s%niwfs
+    idim = 1
+    i = 1; j = 0
+    do
+      j = j + 1
+      do ia = 1, gr%geo%natoms
+        s => gr%geo%atom(ia)%spec
+        do idim = 1, wf_dim
+          if(j > s%niwfs) cycle
           if(n == i) then
             do k = 1, gr%m%np
               x(1:calc_dim) = gr%m%x(k, 1:calc_dim) - gr%geo%atom(ia)%x(1:calc_dim)
@@ -138,6 +143,29 @@ contains
       norbs = norbs + geo%atom(ia)%spec%niwfs
     end do
     if( (st%d%ispin.eq.SPINORS) ) norbs = norbs * 2
+    !%Variable LCAODimension
+    !%Type integer
+    !%Default 0
+    !%Section SCF
+    !%Description
+    !% Before starting the SCF cycle, an initial LCAO calculation can be performed
+    !% in order to obtain reasonable initial guesses for spin-orbitals and densities.
+    !% For this purpose, the code calculates a number of atomic orbitals -- this
+    !% number depends on the given species. The default dimension for the LCAO basis
+    !% set will be the sum of all these numbers. This dimension however can be
+    !% reduced (never increased) by making use of the variable LCAODimension.
+    !% Note that LCAODimension cannot be smaller than the number of orbitals needed
+    !% in the full calculation -- if LCAODimension is smaller, it will be changed
+    !% silently increased to meet this requirement. In the same way, if LCAODimension
+    !% is larger than the available number of atomic orbitals, it will be reduced.
+    !%End
+    call loct_parse_int(check_inp('LCAODimension'), 0, n)
+    if((n > 0) .and. (n <= st%nst)) then
+      norbs = st%nst
+    elseif( (n > st%nst) .and. (n < norbs) ) then
+      norbs = n
+    end if
+
     lcao_data%st%nst = norbs
     lcao_data%st%st_start = 1
     lcao_data%st%st_end = norbs
