@@ -71,7 +71,7 @@ subroutine td_init(gr, td, st, outp)
 #endif
 
   !%Variable MoveIons
-  !%Type logical
+  !%Type integer
   !%Default static_ions
   !%Section Time Dependent::Propagation
   !%Description
@@ -93,6 +93,24 @@ subroutine td_init(gr, td, st, outp)
     call write_warning(2)
     td%move_ions = VELOCITY_VERLET
   end if
+
+  !%Variable RecalculateGSDuringEvolution
+  !%Type logical
+  !%Default no
+  !%Section Time Dependent::Propagation
+  !%Description
+  !% In order to calculate some information about the system along the
+  !% evolution (e.g. projection onto the ground-state KS determinant,
+  !% projection of the TDKS spin-orbitals onto the grond-state KS
+  !% spin-orbitals), the ground-state KS orbitals are needed. If the
+  !% ionic potential changes -- that is, the ions move --, one may want
+  !% to recalculate the ground state. You may do this by setting this
+  !% variable.
+  !%
+  !% The recalculation is not done every time step, but only every
+  !% OutputEvery time steps.
+  !%End
+  call loct_parse_logical(check_inp("RecalculateGSDuringEvolution"), .false., td%recalculate_gs)
 
   call loct_parse_int(check_inp('TDFastEpotGeneration'), 1, td%epot_regenerate)
   if(td%epot_regenerate < 1) td%epot_regenerate = 1

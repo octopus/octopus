@@ -37,6 +37,7 @@ module timedep_m
   use v_ks_m
   use hamiltonian_m
   use external_pot_m
+  use ground_state_m
   use system_m
   use td_rti_m
   use td_write_m
@@ -71,6 +72,7 @@ module timedep_m
     integer           :: epot_regenerate! Every epot_regenerate, the external potential
     ! regenerated *exactly*.
     integer           :: move_ions      ! how do we move the ions?
+    logical           :: recalculate_gs ! Recalculate ground-state along the evolution.
 
     ! The *kick* used in "linear response in the time domain" calculations.
     type(kick_t)   :: kick
@@ -95,7 +97,7 @@ contains
     type(states_t),   pointer :: st
     type(geometry_t), pointer :: geo
     logical :: stopping
-    integer :: i, ii, j, idim, ist, ik
+    integer :: i, ii, j, idim, ist, ik, ierr
     FLOAT, allocatable ::  x1(:,:), x2(:,:), f1(:,:) ! stuff for verlet
     FLOAT :: etime
 
@@ -129,7 +131,6 @@ contains
       call init_verlet()
     end if
 
-
     if(td%iter == 0) then
       call apply_delta_field(td%kick)
       call td_run_zero_iter()
@@ -140,6 +141,8 @@ contains
     call messages_print_stress(stdout, "Time-Dependent Simulation")
     write(message(1), '(a7,1x,a14,a14,a17)') 'Iter ', 'Time ', 'Energy ', 'Elapsed Time '
     call write_info(1)
+    call messages_print_stress(stdout)
+
 
     ii = 1
     stopping = .false.
@@ -195,25 +198,41 @@ contains
       etime = loct_clock()
 
       ! write down data
-      ii = ii + 1
-      if(ii==sys%outp%iter+1 .or. i == td%max_iter .or. stopping) then ! output
-        if(i == td%max_iter) sys%outp%iter = ii - 1
-        ii = 1
-        call td_save_restart(i)
-        call td_write_data(write_handler, gr, st, h, sys%outp, geo, td%dt, i)
-      end if
+      call check_point()
 
       ! check if debug mode should be enabled or disabled on the fly
       call io_debug_on_the_fly()
 
       call profiling_out(C_PROFILING_TIME_STEP)
       if (stopping) exit
+
     end do propagation
 
     call td_write_end(write_handler)
     call end_()
 
   contains
+
+    ! ---------------------------------------------------------
+    subroutine check_point
+      ii = ii + 1
+      if(ii==sys%outp%iter+1 .or. i == td%max_iter .or. stopping) then ! output
+        if(i == td%max_iter) sys%outp%iter = ii - 1
+        ii = 1
+        call td_save_restart(i)
+        call td_write_data(write_handler, gr, st, h, sys%outp, geo, td%dt, i)
+        if( (td%move_ions > 0) .and. td%recalculate_gs) then
+          call messages_print_stress(stdout, 'Recalculating the ground state.')
+          fromScratch = .false.
+          call ground_state_run(sys, h, fromScratch)
+          call zrestart_read(trim(tmpdir)//'restart_td', st, gr, ierr, i)
+          call messages_print_stress(stdout, "Time-Dependent simulation proceeds")
+          write(message(1), '(a7,1x,a14,a14,a17)') 'Iter ', 'Time ', 'Energy ', 'Elapsed Time '
+          call write_info(1)
+          call messages_print_stress(stdout)
+        end if
+      end if
+    end subroutine check_point
 
     ! ---------------------------------------------------------
     subroutine init_verlet
