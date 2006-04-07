@@ -109,7 +109,6 @@ contains
     call td_init(gr, td, st, sys%outp)
 
     call states_distribute_nodes(st, sys%mc)
-
     call zstates_allocate_wfns(st, gr%m)
 
     call init_wfs()
@@ -127,22 +126,7 @@ contains
 
       call zepot_forces(gr, h%ep, st, td%iter*td%dt)
       geo%kinetic_energy = kinetic_energy(geo)
-      select case(td%move_ions)
-      case(NORMAL_VERLET)
-        ALLOCATE(x1(geo%natoms, NDIM), NDIM*geo%natoms)
-        ALLOCATE(x2(geo%natoms, NDIM), NDIM*geo%natoms)
-        do j = 1, geo%natoms
-          if(geo%atom(j)%move) then
-            x1(j, :) = geo%atom(j)%x(:) - td%dt*geo%atom(j)%v(:) + &
-              M_HALF * td%dt**2/geo%atom(j)%spec%weight * &
-              geo%atom(j)%f(:)
-          else
-            x1(j, :) = geo%atom(j)%x(:)
-          end if
-        end do
-      case(VELOCITY_VERLET)
-        ALLOCATE(f1(geo%natoms, NDIM), NDIM*geo%natoms)
-      end select
+      call init_verlet()
     end if
 
 
@@ -160,31 +144,13 @@ contains
     ii = 1
     stopping = .false.
     etime = loct_clock()
-    do i = td%iter, td%max_iter
+    propagation: do i = td%iter, td%max_iter
+
       if(clean_stop()) stopping = .true.
       call profiling_in(C_PROFILING_TIME_STEP)
       ! Move the ions.
       if( td%move_ions > 0 ) then
-        select case(td%move_ions)
-        case(NORMAL_VERLET)
-          x2 = x1
-          do j = 1, geo%natoms
-            if(geo%atom(j)%move) then
-              x1(j, :) = geo%atom(j)%x(:)
-              geo%atom(j)%x(:) = M_TWO*x1(j, :) - x2(j, :) + &
-                td%dt**2/geo%atom(j)%spec%weight * geo%atom(j)%f(:)
-              geo%atom(j)%v(:) = (geo%atom(j)%x(:) - x2(j, :)) / (M_TWO*td%dt)
-            end if
-          end do
-        case(VELOCITY_VERLET)
-          do j=1, geo%natoms
-            if(geo%atom(j)%move) then
-              geo%atom(j)%x(:) = geo%atom(j)%x(:) +  td%dt*geo%atom(j)%v(:) + &
-                M_HALF*td%dt**2/geo%atom(j)%spec%weight * geo%atom(j)%f(:)
-            end if
-          end do
-        end select
-
+        call apply_verlet_1
         if(mod(i, td%epot_regenerate) == 0) then
           call epot_generate(h%ep, gr, st, h%reltype)
         else
@@ -209,26 +175,12 @@ contains
 
       ! Recalculate forces, update velocities...
       if(td%move_ions > 0) then
-        if(td%move_ions == VELOCITY_VERLET) then
-          do j = 1, geo%natoms
-            f1(j, :) = geo%atom(j)%f(:)
-          end do
-        end if
         call zepot_forces(gr, h%ep, st, i*td%dt)
-        if(td%move_ions == VELOCITY_VERLET) then
-          do j = 1, geo%natoms
-            if(geo%atom(j)%move) then
-              geo%atom(j)%v(:) = geo%atom(j)%v(:) + &
-                td%dt/(M_TWO*geo%atom(j)%spec%weight) * &
-                (f1(j, :) + geo%atom(j)%f(:))
-            end if
-          end do
-        end if
+        call apply_verlet_2
         geo%kinetic_energy = kinetic_energy(geo)
       end if
 
       call td_write_iter(write_handler, gr, st, h, geo, td%kick, td%dt, i)
-
 
 #if !defined(DISABLE_PES) && defined(HAVE_FFT)
       call PES_doit(td%PESv, gr%m, st, ii, td%dt, h%ab_pot)
@@ -256,7 +208,7 @@ contains
 
       call profiling_out(C_PROFILING_TIME_STEP)
       if (stopping) exit
-    end do
+    end do propagation
 
     call td_write_end(write_handler)
     call end_()
@@ -264,13 +216,82 @@ contains
   contains
 
     ! ---------------------------------------------------------
+    subroutine init_verlet
+      select case(td%move_ions)
+      case(NORMAL_VERLET)
+        ALLOCATE(x1(geo%natoms, NDIM), NDIM*geo%natoms)
+        ALLOCATE(x2(geo%natoms, NDIM), NDIM*geo%natoms)
+        do j = 1, geo%natoms
+          if(geo%atom(j)%move) then
+            x1(j, :) = geo%atom(j)%x(:) - td%dt*geo%atom(j)%v(:) + &
+              M_HALF * td%dt**2/geo%atom(j)%spec%weight * &
+              geo%atom(j)%f(:)
+          else
+            x1(j, :) = geo%atom(j)%x(:)
+          end if
+        end do
+      case(VELOCITY_VERLET)
+        ALLOCATE(f1(geo%natoms, NDIM), NDIM*geo%natoms)
+      end select
+    end subroutine init_verlet
+
+    ! ---------------------------------------------------------
+    subroutine end_verlet
+      select case(td%move_ions)
+      case(NORMAL_VERLET)
+        deallocate(x1, x2)
+      case(VELOCITY_VERLET)
+        deallocate(f1)
+      end select
+    end subroutine end_verlet
+
+    ! ---------------------------------------------------------
+    subroutine apply_verlet_1
+      select case(td%move_ions)
+      case(NORMAL_VERLET)
+        x2 = x1
+        do j = 1, geo%natoms
+          if(geo%atom(j)%move) then
+            x1(j, :) = geo%atom(j)%x(:)
+            geo%atom(j)%x(:) = M_TWO*x1(j, :) - x2(j, :) + &
+              td%dt**2/geo%atom(j)%spec%weight * geo%atom(j)%f(:)
+            geo%atom(j)%v(:) = (geo%atom(j)%x(:) - x2(j, :)) / (M_TWO*td%dt)
+          end if
+        end do
+      case(VELOCITY_VERLET)
+        do j=1, geo%natoms
+          if(geo%atom(j)%move) then
+            geo%atom(j)%x(:) = geo%atom(j)%x(:) +  td%dt*geo%atom(j)%v(:) + &
+              M_HALF*td%dt**2/geo%atom(j)%spec%weight * geo%atom(j)%f(:)
+          end if
+        end do
+        do j = 1, geo%natoms
+          f1(j, :) = geo%atom(j)%f(:)
+        end do
+      end select
+    end subroutine apply_verlet_1
+
+    ! ---------------------------------------------------------
+    subroutine apply_verlet_2
+      if(td%move_ions == VELOCITY_VERLET) then
+        do j = 1, geo%natoms
+          if(geo%atom(j)%move) then
+            geo%atom(j)%v(:) = geo%atom(j)%v(:) + &
+              td%dt/(M_TWO*geo%atom(j)%spec%weight) * &
+              (f1(j, :) + geo%atom(j)%f(:))
+          end if
+        end do
+      end if
+    end subroutine apply_verlet_2
+
+    ! ---------------------------------------------------------
     subroutine end_()
       ! free memory
       deallocate(st%zpsi)
+      if(td%move_ions>0) call end_verlet
       call td_end(td)
       call pop_sub()
     end subroutine end_
-
 
     ! ---------------------------------------------------------
     subroutine init_wfs()
