@@ -37,5 +37,5 @@ Match ; Time-dependent start ; tail -1 td.general/multipoles; \s*3.5000000000\d*
 Input: 06-restart.04-restart_td_calc.inp
 
 # Check if the td restart is OK
-Match ; Time-dependent restart ; tail -1 td.general/multipoles; \s*7.0000000000\d*e\-01\s*0.0000000000\d*e\+00\s*0.0000000000\d*e\+00\s*0.0000000000\d*e\+00\s*0.0000000000\d*e\+00\s*9.9999999999\d*e\-01\s*-6.9697200503\d*e\-03
+Match ; Time-dependent restart ; tail -1 td.general/multipoles; \s*7.0000000000\d*e\-01\s*0.0000000000\d*e\+00\s*0.0000000000\d*e\+00\s*0.0000000000\d*e\+00\s*0.0000000000\d*e\+00\s*9.9999999999\d*e\-01\s*-6.96972005\d*e\-03
 

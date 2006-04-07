@@ -143,6 +143,16 @@ contains
       norbs = norbs + geo%atom(ia)%spec%niwfs
     end do
     if( (st%d%ispin.eq.SPINORS) ) norbs = norbs * 2
+
+    if(norbs < st%nst) then
+      lcao_data%state = 0
+      write(message(1),'(a)') 'Cannot do LCAO initial calculation because there are not enough atomic orbitals.'
+      call write_warning(1)
+      nullify(geo)
+      call pop_sub()
+      return
+    end if
+
     !%Variable LCAODimension
     !%Type integer
     !%Default 0
@@ -152,18 +162,24 @@ contains
     !% in order to obtain reasonable initial guesses for spin-orbitals and densities.
     !% For this purpose, the code calculates a number of atomic orbitals -- this
     !% number depends on the given species. The default dimension for the LCAO basis
-    !% set will be the sum of all these numbers. This dimension however can be
-    !% reduced (never increased) by making use of the variable LCAODimension.
-    !% Note that LCAODimension cannot be smaller than the number of orbitals needed
-    !% in the full calculation -- if LCAODimension is smaller, it will be changed
-    !% silently increased to meet this requirement. In the same way, if LCAODimension
-    !% is larger than the available number of atomic orbitals, it will be reduced.
+    !% set will be the sum of all these numbers, unless this dimension is larger than
+    !% twice the number of required orbitlas for the full calculation. 
+    !%
+    !% This dimension however can be reduced (never increased) by making use of the 
+    !% variable LCAODimension. Note that LCAODimension cannot be smaller than the 
+    !% number of orbitals needed in the full calculation -- if LCAODimension is smaller, 
+    !% it will be changed silently increased to meet this requirement. In the same way, 
+    !% if LCAODimension is larger than the available number of atomic orbitals, 
+    !% it will be reduced. If you want to use the largest possible number, set
+    !% LCAODimension to a negative number.
     !%End
     call loct_parse_int(check_inp('LCAODimension'), 0, n)
     if((n > 0) .and. (n <= st%nst)) then
       norbs = st%nst
     elseif( (n > st%nst) .and. (n < norbs) ) then
       norbs = n
+    elseif( n.eq.0) then
+      norbs = min(norbs, 2*st%nst)
     end if
 
     lcao_data%st%nst = norbs
@@ -171,15 +187,6 @@ contains
     lcao_data%st%st_end = norbs
     lcao_data%st%d%dim = st%d%dim
     lcao_data%st%d%nik = st%d%nik
-    if(lcao_data%st%nst < st%nst) then
-      lcao_data%state = 0
-      write(message(1),'(a)') 'Cannot do LCAO initial calculation because there are not enough atomic orbitals.'
-      call write_warning(1)
-      nullify(geo)
-      call pop_sub()
-      return
-    end if
-
     call X(states_allocate_wfns)(lcao_data%st, gr%m)
 
     do ik = 1, st%d%nik

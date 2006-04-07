@@ -119,7 +119,7 @@ contains
       ps%l_max = min(pstm%npotd - 1, lmax)   ! Maybe the file has not enough components.
       call valconf_copy(ps%conf, pstm%conf)
       ps%conf%z = z
-      ps%conf%p = ps%l_max + 1
+      ps%conf%p = pstm%npotd
       ps%kbc = 1
       ps%l_loc = lloc
       if(ps%l_max == 0) ps%l_loc = 0 ! Vanderbilt is not acceptable if ps%l_max == 0.
