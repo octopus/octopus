@@ -173,7 +173,7 @@ contains
 
     ! build density ...
     select case (s%type)
-    case (SPEC_USDEF) ! ... from userdef
+    case (SPEC_USDEF,SPEC_ALL_E) ! ... from userdef
       do i = 1, spin_channels
         rho(1:m%np, i) = M_ONE
         x = (real(s%z_val, PRECISION)/real(spin_channels, PRECISION)) / dmf_integrate(m, rho(:, i))
