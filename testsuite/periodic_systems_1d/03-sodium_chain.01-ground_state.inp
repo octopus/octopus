@@ -34,6 +34,8 @@ BoxShape = parallelepiped
  10 | 1 | 1
 %
 
+LCAODimension = 9
+
 MaximumIter = 1
 
 CenterOfInversion = yes
