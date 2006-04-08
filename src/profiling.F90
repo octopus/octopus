@@ -56,7 +56,7 @@ module profiling_m
 
   integer, parameter ::                 & 
     C_TAG_LENGTH = 17,                  &  ! Max. number of characters of tag label.
-    C_NUM_TAGS   = 24                      ! Number of tags.
+    C_NUM_TAGS   = 27                      ! Number of tags.
 
   integer ::                            &
     pass_in(C_NUM_TAGS)           =  0, &
@@ -90,7 +90,10 @@ module profiling_m
     C_PROFILING_XC_OEP_FULL       = 21, &
     C_PROFILING_TIME_STEP         = 22, &
     C_PROFILING_GRAM_SCHMIDT      = 23, &
-    C_PROFILING_EIGEN_SOLVER      = 24
+    C_PROFILING_EIGEN_SOLVER      = 24, &
+    C_PROFILING_DISK_ACCESS       = 25, &
+    C_PROFILING_LCAO              = 26, &
+    C_PROFILING_LCAO_INIT         = 27
 
   character(len=C_TAG_LENGTH), dimension(C_NUM_TAGS) :: tag_label = &
     (/                                  &
@@ -117,7 +120,10 @@ module profiling_m
     'XC_OEP_FULL      ',                &
     'TIME_STEP        ',                &
     'GRAM_SCHMIDT     ',                &
-    'EIGEN_SOLVER     '                 &
+    'EIGEN_SOLVER     ',                &
+    'DISK_ACCESS      ',                &
+    'LCAO             ',                &
+    'LCAO_INIT        '                 &
     /)
 
 contains

@@ -106,6 +106,7 @@ subroutine X(input_function_global)(filename, m, f, ierr, is_tmp)
 #endif
 #endif
 
+  call profiling_in(C_PROFILING_DISK_ACCESS)
   call push_sub('out_inc.Xinput_function_global')
 
   ierr = 0
@@ -138,6 +139,7 @@ subroutine X(input_function_global)(filename, m, f, ierr, is_tmp)
   end select
 
   call pop_sub()
+  call profiling_out(C_PROFILING_DISK_ACCESS)
 
 contains
 
@@ -383,6 +385,7 @@ subroutine X(output_function_global) (how, dir, fname, m, sb, f, u, ierr, is_tmp
   FLOAT              :: x0
   logical            :: gnuplot_mode = .false.
 
+  call profiling_in(C_PROFILING_DISK_ACCESS)
   call push_sub('out_inc.Xoutput_function_global')
 
   call io_mkdir(dir)
@@ -438,6 +441,7 @@ subroutine X(output_function_global) (how, dir, fname, m, sb, f, u, ierr, is_tmp
 #endif
 
   call pop_sub()
+  call profiling_out(C_PROFILING_DISK_ACCESS)
 
 contains
 

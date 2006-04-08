@@ -23,6 +23,7 @@ module output_m
   use global_m
   use messages_m
   use datasets_m
+  use profiling_m
   use lib_oct_m
   use lib_oct_parser_m
   use io_m

@@ -41,8 +41,7 @@ module ground_state_m
 
   private
   public ::           &
-    ground_state_run, &
-    ground_state_init
+    ground_state_run
 
 
 contains
@@ -121,13 +120,6 @@ contains
     call TS(MPI_Barrier)(MPI_COMM_WORLD, mpi_err)
 #endif
 
-    message(1) = 'Info: Random generating starting wavefunctions.'
-    call write_info(1)
-
-    ! wave functions are simply random gaussians
-    call states_generate_random(st, gr%m)
-
-    ! this is certainly a better density
     call system_guess_density(gr%m, gr%sb, gr%geo, st%qtot, st%d%nspin, &
       st%d%spin_channels, st%rho)
 
@@ -161,7 +153,11 @@ contains
 
         call states_fermi(st, gr%m)                         ! occupations
         call states_write_eigenvalues(stdout, st%nst, st, gr%sb)
+      else
+        call states_generate_random(st, gr%m)
       end if
+    else 
+      call states_generate_random(st, gr%m)
     end if
 
     call pop_sub()

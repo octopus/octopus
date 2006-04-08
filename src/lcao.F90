@@ -23,6 +23,7 @@ module lcao_m
   use global_m
   use messages_m
   use datasets_m
+  use profiling_m
   use lib_oct_parser_m
   use lib_oct_m
   use lib_oct_gsl_spline_m
@@ -47,7 +48,6 @@ module lcao_m
     lcao_t,          &
     lcao_init,       &
     lcao_wf,         &
-    lcao_initial_wf, &
     lcao_end
 
   type lcao_t
@@ -132,6 +132,7 @@ contains
 
     if(lcao_data%state == 1) return
 
+    call profiling_in(C_PROFILING_LCAO_INIT)
     call push_sub('lcao.lcao_init')
 
     geo => gr%geo
@@ -231,6 +232,7 @@ contains
     lcao_data%state = 1
 
     call pop_sub()
+    call profiling_out(C_PROFILING_LCAO_INIT)
   end subroutine lcao_init
 
 
@@ -272,6 +274,7 @@ contains
 
     ASSERT(lcao_data%state == 1)
 
+    call profiling_in(C_PROFILING_LCAO)
     call push_sub('lcao.lcao_wf')
 
     norbs = lcao_data%st%nst
@@ -322,6 +325,7 @@ contains
 
     deallocate(hpsi)
     call pop_sub()
+    call profiling_out(C_PROFILING_LCAO)
   end subroutine lcao_wf
 
 end module lcao_m
