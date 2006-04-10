@@ -37,6 +37,8 @@ MaximumIter = 200
 ConvRelDens = 1e-5
 
 LCAOStart = yes
+LCAODimension = 18
+
 
 EigenSolver = cg_new
 EigenSolverInitTolerance = 1e-2
@@ -50,4 +52,3 @@ TypeOfMixing = broyden
 NumberUnoccStates = 9
 
 PoissonSolver = fft_corrected
-
