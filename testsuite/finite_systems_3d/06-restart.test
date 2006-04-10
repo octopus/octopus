@@ -21,7 +21,7 @@ Input: 06-restart.01-ground_state.inp
 Input: 06-restart.02-restart_ground_state.inp
 
 # Check if the ground state restart is OK
-Match ; Ground state restart ; grep ' up' static/info ; \s*1\s*up\s*-0.01407\d*\s*0.0000\d*
+Match ; Ground state restart ; grep ' up' static/info ; \s*1\s*up\s*-0.01406\d*\s*0.0000\d*
 Match ; Ground state restart ; grep ' dn' static/info ; \s*1\s*dn\s*-0.08534\d*\s*1.0000\d* 
 
 
@@ -29,7 +29,7 @@ Match ; Ground state restart ; grep ' dn' static/info ; \s*1\s*dn\s*-0.08534\d*\
 # Start a time-dependent calculation
 Input: 06-restart.03-td_calc.inp
 
-Match ; Time-dependent start ; tail -1 td.general/multipoles; \s*3.5000000000\d*e\-01\s*0.0000000000\d*e\+00\s*0.0000000000\d*e\+00\s*0.0000000000\d*e\+00\s*0.0000000000\d*e\+00\s*9.9999999999\d*e\-01\s*-3.4954670794\d*e\-03
+Match ; Time-dependent start ; tail -1 td.general/multipoles; \s*3.5000000000\d*e\-01\s*0.0000000000\d*e\+00\s*0.0000000000\d*e\+00\s*0.0000000000\d*e\+00\s*0.0000000000\d*e\+00\s*9.99999999\d*e\-01\s*-3.49546701\d*e\-03
 
 
 
@@ -37,5 +37,5 @@ Match ; Time-dependent start ; tail -1 td.general/multipoles; \s*3.5000000000\d*
 Input: 06-restart.04-restart_td_calc.inp
 
 # Check if the td restart is OK
-Match ; Time-dependent restart ; tail -1 td.general/multipoles; \s*7.0000000000\d*e\-01\s*0.0000000000\d*e\+00\s*0.0000000000\d*e\+00\s*0.0000000000\d*e\+00\s*0.0000000000\d*e\+00\s*9.9999999999\d*e\-01\s*-6.96972005\d*e\-03
+Match ; Time-dependent restart ; tail -1 td.general/multipoles; \s*7.0000000000\d*e\-01\s*0.0000000000\d*e\+00\s*0.0000000000\d*e\+00\s*0.0000000000\d*e\+00\s*0.0000000000\d*e\+00\s*9.99999999\d*e\-01\s*-6.96971967\d*e\-03
 
