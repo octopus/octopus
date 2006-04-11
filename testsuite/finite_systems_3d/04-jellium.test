@@ -18,6 +18,6 @@ Enabled  : Yes
 
 Input: 04-jellium.01-ground_state.inp
 
-Match ; TotalEnergy ; grep -A 6 '^Energy:' static/info ; \s*Total\s*=\s*-0.576517
-Match ; Eigenvalue [s] ; grep -A 2 'Eigenvalues \[' static/info | tail -1 ; \s*-0.1676\d*\s*2.0000\d*
+Match ; TotalEnergy ; grep -A 6 '^Energy:' static/info ; \s*Total\s*=\s*-0.576753
+Match ; Eigenvalue [s] ; grep -A 2 'Eigenvalues \[' static/info | tail -1 ; \s*-0.1677\d*\s*2.0000\d*
 Match ; Eigenvalue [p] ; grep -A 3 'Eigenvalues \[' static/info | tail -1 ; \s*-0.1226\d*\s*2.0000\d*
