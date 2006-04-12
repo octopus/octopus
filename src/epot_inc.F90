@@ -98,7 +98,7 @@ subroutine X(epot_forces) (gr, ep, st, t)
   FLOAT,     optional, intent(in)    :: t
 
   type(geometry_t), pointer :: geo
-  integer :: i, j, l, idim, ist, ik, ivnl
+  integer :: i, j, l, idim, ist, ik, ivnl, ivnl_start, ivnl_end
   FLOAT :: d, r, zi, zj, x(MAX_DIM)
   type(atom_t), pointer :: atm
   R_TYPE, allocatable :: ppsi(:, :)
@@ -124,24 +124,42 @@ subroutine X(epot_forces) (gr, ep, st, t)
     atm_loop: do i = 1, geo%natoms
       atm => geo%atom(i)
       if(atm%spec%local) cycle
+
+      ! Here we learn which are the projector that correspond to atom i.
+      ! It assumes that the projectors of each atom are consecutive.
+      ivnl_start  = - 1
       do ivnl = 1, ep%nvnl
-        if(ep%p(ivnl)%iatom .ne. i) cycle
-        ik_loop: do ik = 1, st%d%nik
-          st_loop: do ist = st%st_start, st%st_end
-
-            do j = 1, NDIM
-              ppsi = R_TOTYPE(M_ZERO)
-              do idim = 1, st%d%dim
-                call X(project)(gr%m, ep%dp(j, ivnl:ivnl), 1, st%X(psi)(:, idim, ist, ik), ppsi(:, idim), &
-                  periodic = .false., ik = ik)
-              end do
-              atm%f(j) = atm%f(j) + M_TWO * st%occ(ist, ik) * &
-                X(states_dotp)(gr%m, st%d%dim, st%X(psi)(:, :, ist, ik), ppsi)
-            end do
-
-          end do st_loop
-        end do ik_loop
+        if(ep%dp(1, ivnl)%iatom .eq. i) then
+          ivnl_start = ivnl
+          exit
+        end if
       end do
+      if(ivnl_start .eq. -1) cycle
+      ivnl_end = ep%nvnl
+      do ivnl = ivnl_start, ep%nvnl
+        if(ep%dp(1, ivnl)%iatom .ne. i) then
+          ivnl_end = ivnl - 1
+          exit
+        end if
+      end do
+
+      ik_loop: do ik = 1, st%d%nik
+        st_loop: do ist = st%st_start, st%st_end
+
+          do j = 1, NDIM
+            ppsi = R_TOTYPE(M_ZERO)
+            do idim = 1, st%d%dim
+              call X(project)(gr%m, ep%dp(j, ivnl_start:ivnl_end), &
+                ivnl_end - ivnl_start + 1, st%X(psi)(:, idim, ist, ik), ppsi(:, idim), &
+                periodic = .false., ik = ik)
+            end do
+            atm%f(j) = atm%f(j) + M_TWO * st%occ(ist, ik) * &
+              X(states_dotp)(gr%m, st%d%dim, st%X(psi)(:, :, ist, ik), ppsi)
+          end do
+
+        end do st_loop
+      end do ik_loop
+
     end do atm_loop
     deallocate(ppsi)
   end if
