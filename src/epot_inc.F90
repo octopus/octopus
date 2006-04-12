@@ -108,6 +108,7 @@ subroutine X(epot_forces) (gr, ep, st, t)
   integer :: mpi_err
 #endif
 
+  call profiling_in(C_PROFILING_FORCES)
   call push_sub('epot_inc.epot_forces')
 
   geo => gr%geo
@@ -201,6 +202,7 @@ subroutine X(epot_forces) (gr, ep, st, t)
   !TODO: forces due to the magnetic fields (static and time-dependent)
 
   call pop_sub()
+  call profiling_out(C_PROFILING_FORCES)
 
 contains
 

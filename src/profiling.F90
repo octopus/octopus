@@ -56,7 +56,7 @@ module profiling_m
 
   integer, parameter ::                 & 
     C_TAG_LENGTH = 17,                  &  ! Max. number of characters of tag label.
-    C_NUM_TAGS   = 27                      ! Number of tags.
+    C_NUM_TAGS   = 29                      ! Number of tags.
 
   integer ::                            &
     pass_in(C_NUM_TAGS)           =  0, &
@@ -93,7 +93,9 @@ module profiling_m
     C_PROFILING_EIGEN_SOLVER      = 24, &
     C_PROFILING_DISK_ACCESS       = 25, &
     C_PROFILING_LCAO              = 26, &
-    C_PROFILING_LCAO_INIT         = 27
+    C_PROFILING_LCAO_INIT         = 27, &
+    C_PROFILING_FORCES            = 28, &
+    C_PROFILING_EPOT_GENERATE     = 29
 
   character(len=C_TAG_LENGTH), dimension(C_NUM_TAGS) :: tag_label = &
     (/                                  &
@@ -123,7 +125,9 @@ module profiling_m
     'EIGEN_SOLVER     ',                &
     'DISK_ACCESS      ',                &
     'LCAO             ',                &
-    'LCAO_INIT        '                 &
+    'LCAO_INIT        ',                &
+    'FORCES           ',                &
+    'EPOT_GENERATE    '                 &
     /)
 
 contains

@@ -532,6 +532,7 @@ contains
     type(geometry_t),  pointer :: geo
 
 
+    call profiling_in(C_PROFILING_EPOT_GENERATE)
     call push_sub('epot.epot_generate')
 
     sb  => gr%sb
@@ -644,6 +645,7 @@ contains
     end if
 
     call pop_sub()
+    call profiling_out(C_PROFILING_EPOT_GENERATE)
 
   contains
 
