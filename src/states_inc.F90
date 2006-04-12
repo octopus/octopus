@@ -160,7 +160,7 @@ subroutine X(states_gram_schmidt2)(nst, m, dim, psi, phi, normalize, mask)
       if(mask(q)) cycle
     end if
     ss = X(states_dotp)(m, dim, psi(:,:, q), phi)
-    if(abs(ss) > CNST(1.0e-12)) then
+    if(abs(ss) > CNST(1.0e-13)) then
       do idim = 1, dim
         call lalg_axpy(m%np, -ss, psi(:, idim, q), phi(:, idim))
       end do
