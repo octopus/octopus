@@ -39,6 +39,7 @@ module external_pot_m
   use logrid_m
   use ps_m
   use specie_m
+  use specie_grid_m
   use geometry_m
   use states_m
   use lasers_m
@@ -671,7 +672,7 @@ contains
           ALLOCATE(rho(1:m%np),m%np)
           ALLOCATE(phi(1:m%np_part),m%np_part)
 
-          call specie_get_density(s,a%x,m%np,m%x,m%vol_pp,rho)
+          call specie_get_density(s,a%x,m,rho)
           call dpoisson_solve(gr,phi,rho)
           ep%vpsl(1:m%np_part)=ep%vpsl(1:m%np_part)+phi(1:m%np_part)
 

@@ -49,7 +49,6 @@ module specie_m
     specie_get_local_fourier,   &
     specie_get_nl_part,         &
     specie_get_nlcc,            &
-    specie_get_density,         &
     specie_get_iwf
 
 
@@ -384,7 +383,7 @@ contains
       read_data = 5
 
     case(SPEC_ALL_E)
-      call loct_parse_block_float(blk, row, 3, s%Z)      ! charge of the jellium sphere
+      call loct_parse_block_float(blk, row, 3, s%Z)
       s%Z_val = s%Z
       read_data = 4
 
@@ -494,8 +493,11 @@ contains
       s%has_density = .true.
       write(message(1),'(a,a,a)')    'Specie "',trim(s%label),'" is an all electron atom.'
       write(message(2),'(a,f11.6)')  '   Z = ', s%z_val
-      write(message(3),'(a)')  '   Potential will be calulated solving poisson equation.'
-      call write_info(3)
+      write(message(3),'(a)')  '   Potential will be calulated solving poisson equation'
+      write(message(3),'(a)')  '   Potential will be calulated solving poisson equation'
+      write(message(4),'(a)')  '   for a delta density distribution.'
+      call write_info(4)
+
       write(message(1),'(a)')    'Gradients are not calculated, forces are not correct.'
       call write_warning(1)
     end select
@@ -573,56 +575,6 @@ contains
     end select
 
   end function specie_get_local
-
-  ! ---------------------------------------------------------
-  subroutine specie_get_density(s, pos, np, gridpoints, gridvol, rho)
-    type(specie_t), intent(in) :: s
-    FLOAT,          intent(in) :: pos(MAX_DIM)
-    integer,        intent(in) :: np
-    FLOAT,          intent(in) :: gridpoints(:,:)
-    FLOAT,          intent(in) :: gridvol(:)
-    FLOAT,          intent(out) :: rho(:)
-
-    FLOAT :: d, dmin
-    integer :: i, imin
-
-    call push_sub('specie.specie_get_density')
-
-    select case(s%type)
-    case(SPEC_ALL_E)
-
-      dmin=M_ZERO
-
-      !find the point of the grid that is closer to the atom
-      do i=1,np
-        d = sum( ( pos(1:MAX_DIM)-gridpoints(i,1:MAX_DIM) )**2 )
-
-        if ( ( d < dmin ) .or. ( i == 1 ) ) then 
-          imin = i
-          dmin = d 
-
-        end if
-
-      end do
-      
-      if (dmin > CNST(1e-5)) then 
-        
-        write(message(1), '(a,f12.2,a)') "Atom displaced ", sqrt(dmin), " [b]"
-        write(message(2), '(a,3f12.2)') "Original position ", pos
-        write(message(3), '(a,3f12.2)') "Displaced position ", gridpoints(imin,:) 
-        
-        call write_warning(3)
-        
-      endif
-
-      rho(1:np) = M_ZERO
-      rho(imin) = -s%Z/gridvol(imin)
-
-    end select
-
-    call pop_sub()
-
-  end subroutine specie_get_density
 
   ! ---------------------------------------------------------
   ! returns the gradient of the external potential
