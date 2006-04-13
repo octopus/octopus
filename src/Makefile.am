@@ -167,7 +167,7 @@ liboct_parser.o: global.h
 libxc.o: global.h
 linalg_adv.o: global.h linalg_adv_lapack.F90
 linalg_basic.o: global.h linalg_basic_blas.F90 linalg_basic_int.F90
-linear_response.o: global.h linear_response_inc.F90
+linear_response.o: global.h linear_response_inc.F90 linear_response_out.F90
 logrid.o: global.h
 main.o: global.h
 math.o: global.h math_cg_inc.F90 math_inc.F90
