@@ -174,6 +174,34 @@ end subroutine X(f_laplacian)
 
 
 ! ---------------------------------------------------------
+subroutine X(f_laplacian_diag) (sb, f_der, lapl, cutoff_)
+  type(simul_box_t), intent(in) :: sb
+  type(f_der_t), intent(inout)  :: f_der
+  R_TYPE,           intent(out)    :: lapl(:)  ! lapl(m%np)
+  FLOAT, optional,  intent(in)     :: cutoff_
+
+  FLOAT :: cutoff
+
+  call push_sub('f_inc.Xf_laplacian')
+
+  ASSERT(f_der%space==REAL_SPACE.or.f_der%space==FOURIER_SPACE)
+
+  select case(f_der%space)
+  case(REAL_SPACE)
+    call X(derivatives_lapl_diag) (f_der%der_discr, lapl)
+
+#if defined(HAVE_FFT)
+  case(FOURIER_SPACE)
+    message(1) = "Can not calculate diagonal of the laplacian in Fourier space"
+    call write_fatal(1)
+#endif
+  end select
+
+  call pop_sub()
+end subroutine X(f_laplacian_diag)
+
+
+! ---------------------------------------------------------
 subroutine X(f_gradient) (sb, f_der, f, grad)
   type(simul_box_t), intent(in)    :: sb
   type(f_der_t),     intent(inout) :: f_der

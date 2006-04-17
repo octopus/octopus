@@ -90,6 +90,64 @@ end subroutine X(Hpsi)
 
 
 ! ---------------------------------------------------------
+
+subroutine X(Hpsi_diag) (h, gr, hpsi, ik, t)
+  type(hamiltonian_t), intent(inout) :: h
+  type(grid_t),        intent(inout) :: gr
+  integer,             intent(in)    :: ik
+  R_TYPE,              intent(out)   :: Hpsi(:,:) !  Hpsi(m%np, h%d%dim)
+  FLOAT, optional,       intent(in)    :: t
+
+  integer :: idim
+  R_TYPE, allocatable :: fake_psi(:,:)
+
+  call profiling_in(C_PROFILING_HPSI)
+  call push_sub('h_inc.XHpsi_diag')
+
+    
+  do idim = 1, h%d%dim
+    call X(f_laplacian_diag) (gr%sb, gr%f_der, Hpsi(:, idim), cutoff_ = M_TWO*h%cutoff)
+    call lalg_scal(NP, R_TOTYPE(-M_HALF), Hpsi(:,idim) )
+  end do
+
+  ALLOCATE(fake_psi(1:gr%m%np_part,1:h%d%dim),gr%m%np_part*h%d%dim)
+
+  fake_psi(1:gr%m%np_part,1:h%d%dim)=M_ONE
+
+  call X(vlpsi)   (h, gr%m, fake_psi, hpsi, ik)
+
+  DEALLOCATE(fake_psi)
+
+  ! the non local potential is not considered
+  ! if(h%ep%nvnl > 0) call X(vnlpsi)  (h, gr%m, gr%sb, psi, hpsi, ik)
+  !  call X(magnetic_terms) (gr, h, psi, hpsi, ik)
+
+  ! Relativistic corrections...
+  !  select case(h%reltype)
+  !  case(NOREL)
+  !#if defined(COMPLEX_WFNS) && defined(R_TCOMPLEX)
+  !  case(SPIN_ORBIT)
+  !    call zso (h, gr, psi, hpsi, ik)
+  !#endif
+  !  case default
+  !    message(1) = 'Error: Internal.'
+  !    call write_fatal(1)
+  !  end select
+  
+  !  if(present(t)) then
+  !    if (h%d%cdft) then
+  !      message(1) = "TDCDFT not yet implemented"
+  !      call write_fatal(1)
+  !    end if
+  !    call X(vlasers)  (gr, h, psi, hpsi, t)
+  !    call X(vborders) (gr, h, psi, hpsi)
+  !  end if
+
+  call pop_sub()
+  call profiling_out(C_PROFILING_HPSI)
+end subroutine X(Hpsi_diag)
+
+! ---------------------------------------------------------
 subroutine X(magnus) (h, gr, psi, hpsi, ik, vmagnus)
   type(hamiltonian_t), intent(in)    :: h
   type(grid_t),        intent(inout) :: gr

@@ -46,6 +46,8 @@ module functions_m
     dcf2mf, zcf2mf,             &
     dcf_FS2mf, zcf_FS2mf,       &
     df_laplacian, zf_laplacian, &
+    df_laplacian_diag,          &
+    zf_laplacian_diag,          &
     df_gradient, zf_gradient,   &
     df_divergence,              &
     zf_divergence,              &

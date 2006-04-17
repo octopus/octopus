@@ -41,6 +41,8 @@ module nl_operator_m
     nl_operator_transpose,      &
     dnl_operator_operate,       &
     znl_operator_operate,       &
+    dnl_operator_operate_diag,  &
+    znl_operator_operate_diag,  &
     znl_operator_operate_cmplx, &
     nl_operator_end,            &
     nl_operator_skewadjoint,    &
@@ -879,6 +881,94 @@ contains
     call profiling_out(C_PROFILING_NL_OPERATOR)
 
   end subroutine znl_operator_operate
+
+
+  ! ---------------------------------------------------------
+  subroutine dnl_operator_operate_diag(op, fo)
+    type(nl_operator_t), intent(in)    :: op
+    FLOAT,               intent(out)   :: fo(:)  ! fo(op%np_part)
+
+    integer :: ii, nn, jj
+
+    call profiling_in(C_PROFILING_NL_OPERATOR)
+    call push_sub('nl_operator.dnl_operator_operate_diag')
+
+    
+    nn = op%n
+    if(op%const_w) then
+
+      do ii = 1, nn
+        if( 1 == op%i(ii,1)) then
+          fo(1:op%np) = op%w_re(ii, 1)
+          exit
+        end if
+      end do
+
+    else
+      
+      do ii = 1, op%np
+
+        do jj = 1, nn
+          
+          if( ii == op%i(jj,ii)) then
+            fo(ii) = op%w_re(jj, ii)
+            exit
+          end if
+
+        end do
+
+      end do
+
+    end if
+
+    call pop_sub()
+    call profiling_out(C_PROFILING_NL_OPERATOR)
+
+  end subroutine dnl_operator_operate_diag
+
+
+  ! ---------------------------------------------------------
+  subroutine znl_operator_operate_diag(op, fo)
+    type(nl_operator_t), intent(in)    :: op
+    CMPLX,               intent(out)   :: fo(:)  ! fo(op%np)
+
+    integer :: ii, nn, jj
+
+    call profiling_in(C_PROFILING_NL_OPERATOR)
+    call push_sub('nl_operator.znl_operator_operate_diag')
+
+    nn = op%n
+
+    if(op%const_w) then
+
+      do ii = 1, nn
+        if( 1 == op%i(ii,1)) then
+          fo(1:op%np) = op%w_re(ii, 1)
+          exit
+        end if
+      end do
+
+    else
+      
+      do ii = 1, op%np
+
+        do jj = 1, nn
+          
+          if( ii == op%i(jj,ii)) then
+            fo(ii) = op%w_re(jj, ii)
+            exit
+          end if
+
+        end do
+
+      end do
+
+    end if
+
+    call pop_sub()
+    call profiling_out(C_PROFILING_NL_OPERATOR)
+
+  end subroutine znl_operator_operate_diag
 
 
   ! ---------------------------------------------------------

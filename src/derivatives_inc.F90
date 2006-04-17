@@ -77,6 +77,21 @@ subroutine X(derivatives_lapl)(der, f, lapl, have_ghost_)
 
 end subroutine X(derivatives_lapl)
 
+! ---------------------------------------------------------
+subroutine X(derivatives_lapl_diag)(der, lapl)
+  type(der_discr_t), intent(in)    :: der
+  R_TYPE,            intent(out)   :: lapl(:)  ! lapl(m%np)
+
+  call push_sub('derivatives_inc.Xderivatives_lapl_diag')
+
+  ASSERT(ubound(lapl, DIM=1) >= der%m%np)
+
+  call X(nl_operator_operate_diag) (der%lapl, lapl)
+
+  call pop_sub()
+
+end subroutine X(derivatives_lapl_diag)
+
 
 ! ---------------------------------------------------------
 subroutine X(derivatives_grad)(der, f, grad)

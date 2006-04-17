@@ -50,6 +50,7 @@ module poisson_multigrid_m
   integer, parameter ::       &
     GAUSS_SEIDEL        = 1,  &
     GAUSS_JACOBI        = 2,  &
+    GAUSS_JACOBI2       = 3,  &
     CONJUGATE_GRADIENTS = 5
 
   logical :: initialized = .false.
@@ -139,6 +140,8 @@ contains
     !% Gauss-Seidel
     !%Option gauss_jacobi 2
     !% Gauss-Jacobi
+    !%Option gauss_jacobi2 3
+    !% Alternative implementation of Gauss-Jacobi.
     !%Option cg 5
     !% Conjugate-gradients
     !%End
@@ -237,7 +240,7 @@ contains
       res = residue(curr_l, phi(curr_l)%p, tau(curr_l)%p, err(curr_l)%p)
 
       !if ( gr%m%use_curvlinear ) then
-      !  print *, "base level", curr_l, "iter", t, " res ", res
+      !      print *, "base level", curr_l, "iter", t, " res ", res
       !end if
 
       if(res < threshold) then
@@ -305,7 +308,7 @@ contains
         phi_ini(l)%p(1:np) = phi(l)%p(1:np)
 
         ! presmoothing
-        call multigrid_relax(gr%mgrid%level(l)%m,gr%mgrid%level(l)%f_der, &
+        call multigrid_relax(gr,gr%mgrid%level(l)%m,gr%mgrid%level(l)%f_der, &
           phi(l)%p, tau(l)%p , presteps)
 
         if (l /= cl ) then
@@ -329,7 +332,7 @@ contains
 
       do l = cl, fl, -1
         ! postsmoothing
-        call multigrid_relax(gr%mgrid%level(l)%m,gr%mgrid%level(l)%f_der, &
+        call multigrid_relax(gr, gr%mgrid%level(l)%m,gr%mgrid%level(l)%f_der, &
           phi(l)%p, tau(l)%p , poststeps)
 
         if(l /= fl) then
@@ -358,7 +361,7 @@ contains
         end if
 
         ! presmoothing
-        call multigrid_relax(gr%mgrid%level(l)%m,gr%mgrid%level(l)%f_der, &
+        call multigrid_relax(gr, gr%mgrid%level(l)%m,gr%mgrid%level(l)%f_der, &
           phi(l)%p, tau(l)%p , presteps)
 
         ! error calcultion
@@ -370,12 +373,12 @@ contains
           restriction_method)
       end do
 
-      call multigrid_relax(gr%mgrid%level(cl)%m,gr%mgrid%level(cl)%f_der, &
+      call multigrid_relax(gr, gr%mgrid%level(cl)%m,gr%mgrid%level(cl)%f_der, &
         phi(cl)%p, tau(cl)%p , presteps)
 
       do l = cl, fl, -1
         ! postsmoothing
-        call multigrid_relax(gr%mgrid%level(l)%m,gr%mgrid%level(l)%f_der, &
+        call multigrid_relax(gr, gr%mgrid%level(l)%m,gr%mgrid%level(l)%f_der, &
           phi(l)%p, tau(l)%p , poststeps)
 
         if( l /= fl ) then
@@ -399,9 +402,10 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine multigrid_relax(m,f_der,pot,rho,steps)
+  subroutine multigrid_relax(gr, m,f_der,pot,rho,steps)
+    type(grid_t),          intent(in)    :: gr
     type(mesh_t),  target, intent(in)    :: m
-    type(f_der_t), target, intent(in)    :: f_der
+    type(f_der_t), target, intent(inout) :: f_der
     FLOAT,            intent(inout) :: pot(:)  ! pot(m%np)
     FLOAT,            intent(in)    :: rho(:)  ! rho(m%np)
     integer,          intent(in)    :: steps
@@ -409,14 +413,12 @@ contains
     integer :: t
     integer :: i, n, iter, diag = 1
     FLOAT   :: point_lap, factor
-    FLOAT, allocatable :: w(:), tmp(:)
+    FLOAT, allocatable :: w(:), lpot(:), ldiag(:), tmp(:)
 
     select case(relaxation_method)
 
     case(GAUSS_SEIDEL)
       call search_diagonal()
-
-      !       factor=-m%h(1)*m%h(1)/CNST(6.0)
 
       n=LAP%n
 
@@ -450,27 +452,49 @@ contains
       ALLOCATE(tmp(1:m%np), m%np)
 
       if(LAP%const_w) then
+
         w(1:n) = LAP%w_re(1:n,1)
         do t = 0, steps
           do i = 1, m%np
             point_lap = sum(w(1:n)*pot(LAP%i(1:n,i)))
+!            tmp(i) = -relax_factor/LAP%w_re(diag,1)*(point_lap-rho(i))
+            tmp(i) = factor*(point_lap-rho(i))
+          end do
+          pot(1:m%np) = pot(1:m%np) + tmp(1:m%np)
+        end do
+
+      else
+
+        do t = 0, steps
+          do i = 1, m%np
+            point_lap = sum(LAP%w_re(1:n,i)*pot(LAP%i(1:n,i)))
             tmp(i) = pot(i) + factor*(point_lap-rho(i))
           end do
           pot(1:m%np) = tmp(1:m%np)
         end do
-      else
-        do t = 0, steps
-          do i = 1, m%np
-            point_lap = sum(LAP%w_re(1:n,i)*pot(LAP%i(1:n,i)))
-            tmp(i) = pot(i) - relax_factor/LAP%w_re(diag,i)*(point_lap-rho(i))
-            !                print*,LAP%w_re(diag,i)
-          end do
-          pot(1:m%np) = tmp(1:m%np)
-        end do
+
       end if
 
       deallocate(w)
       deallocate(tmp)
+
+
+    case(GAUSS_JACOBI2)
+      call search_diagonal()
+
+      ALLOCATE(lpot(1:m%np_part), m%np_part)
+      ALLOCATE(ldiag(1:m%np), m%np)
+
+      call df_laplacian_diag(gr%sb, f_der, ldiag)
+
+      do t=1,steps
+        call df_laplacian(gr%sb, f_der, pot, lpot)
+        pot(1:m%np)=pot(1:m%np) - relax_factor/ldiag(1:m%np)*(lpot(1:m%np)-rho(1:m%np)) 
+      end do
+
+      deallocate(ldiag)
+      deallocate(lpot)
+      
 
     case(CONJUGATE_GRADIENTS)
       iter = steps
@@ -486,10 +510,9 @@ contains
     subroutine search_diagonal()
       do i = 1, LAP%n
         if( 1 == LAP%i(i,1)) then
+          diag = i
           if(LAP%const_w) then
             factor = CNST(-1.0)/LAP%w_re(i,1)*relax_factor;
-          else
-            diag = i
           end if
           exit
         end if
