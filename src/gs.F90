@@ -22,6 +22,7 @@
 module ground_state_m
   use global_m
   use messages_m
+  use varinfo_m
   use datasets_m
   use lib_oct_parser_m
   use system_m
@@ -39,6 +40,11 @@ module ground_state_m
 
   implicit none
 
+  integer, parameter :: &
+    LCAO_START_NONE   = 0,    &
+    LCAO_START_STATES = 1,    &
+    LCAO_START_FULL    = 2
+
   private
   public ::           &
     ground_state_run
@@ -52,7 +58,7 @@ contains
     type(hamiltonian_t), intent(inout) :: h
     logical,             intent(inout) :: fromScratch
 
-    logical :: lcao_start, lcao_start_default = .true.
+    integer :: lcao_start, lcao_start_default = LCAO_START_FULL
     type(lcao_t) :: lcao_data
     type(scf_t) :: scfv
     integer     :: ierr
@@ -82,36 +88,51 @@ contains
 #endif
 
     if(fromScratch) then
+      ! Randomly generate the initial wave-functions
       call states_generate_random(sys%st, sys%gr%m)
-    end if
 
-    ! setup Hamiltonian
-    message(1) = 'Info: Setting up Hamiltonian.'
-    call write_info(1)
-    call X(system_h_setup) (sys, h)
-
-    if(fromScratch) then
-      ! Get a better guess for the density
+      ! We do not compute the density from the random wave-functions. 
+      ! Instead, we try to get a better guess for the density
       call system_guess_density(sys%gr%m, sys%gr%sb, sys%gr%geo, sys%st%qtot, sys%st%d%nspin, &
            sys%st%d%spin_channels, sys%st%rho)
 
+      ! setup Hamiltonian (we do not call system_h_setup here because we do not want to
+      ! overwrite the guess density)
+      message(1) = 'Info: Setting up Hamiltonian.'
+      call write_info(1)
+      call X(v_ks_calc)(sys%gr, sys%ks, h, sys%st, calc_eigenval=.true.) ! get potentials
+      call states_fermi(sys%st, sys%gr%m)                                ! occupations
+      call hamiltonian_energy(h, sys%st, sys%gr%geo%eii, -1)             ! total energy
+
       ! The initial LCAO calculation is done by default if we have pseudopotentials.
       ! Otherwise, it is not the default value and has to be enforced in the input file.
-      if(sys%gr%geo%only_user_def) lcao_start_default = .false.
+      if(sys%gr%geo%only_user_def) lcao_start_default = LCAO_START_NONE
 
       !%Variable LCAOStart
-      !%Type logical
-      !%Default yes
+      !%Type integer
+      !%Default lcao_states
       !%Section SCF
       !%Description
-      !% Before starting a SCF calculation, performs
-      !% a LCAO calculation. These should provide <tt>octopus</tt> with a good set
-      !% of initial wave-functions, and help the convergence of the SCF cycle.
+      !% Before starting a SCF calculation, <tt>octopus</tt> can perform
+      !% a LCAO calculation. These can provide <tt>octopus</tt> with a good set
+      !% of initial wave-functions and with a new guess for the density.
       !% (Up to current version, only a minimal basis set used.)
+      !%Option lcao_none 0
+      !% Do not perform a LCAO calculation before the SCF cycle.
+      !%Option lcao_states 1
+      !% Do a LCAO calculation before the SCF cycle and use the resulting wave-functions as 
+      !% initail wave-functions without changing the guess density.
+      !% This will speed-up the convergence of the eigensolver during the first SCF iterations.
+      !%Option lcao_full 2
+      !% Do a LCAO calculation before the SCF cycle and use the LCAO wave-functions to build a new
+      !% guess density and a new KS potential.
+      !% Using the LCAO density as a new guess density may improve the convergence, but can
+      !% also slow it down or yield wrong results (especially for spin-polarized calculations).
       !%End
-      call loct_parse_logical(check_inp('LCAOStart'), lcao_start_default, lcao_start)
-      if(lcao_start) then
-        call X(v_ks_calc)(sys%gr, sys%ks, h, sys%st, calc_eigenval=.true.)
+      call loct_parse_int(check_inp('LCAOStart'), lcao_start_default, lcao_start)
+      if(.not.varinfo_valid_option('LCAOStart', lcao_start)) call input_error('LCAOStart')
+      call messages_print_var_option(stdout, 'LCAOStart', lcao_start)
+      if (lcao_start > LCAO_START_NONE) then
           
         lcao_data%state = 0 ! Uninitialized here.
         call lcao_init(sys%gr, lcao_data, sys%st, h)
@@ -122,11 +143,24 @@ contains
           
           call lcao_wf(lcao_data, sys%st, sys%gr%m, sys%gr%sb, h)
           call lcao_end(lcao_data, sys%st%nst)
-          
-          call X(system_h_setup) (sys, h)
+
+          !Just populate again the states, so that the eigenvalues are properly written
+          call states_fermi(sys%st, sys%gr%m)
           call states_write_eigenvalues(stdout, sys%st%nst, sys%st, sys%gr%sb)
+
+          if (lcao_start == LCAO_START_FULL) then
+            ! Update the density and the Hamiltonian
+            call X(system_h_setup) (sys, h)
+          end if
+
         end if
       end if
+
+    else
+      ! setup Hamiltonian
+      message(1) = 'Info: Setting up Hamiltonian.'
+      call write_info(1)
+      call X(system_h_setup) (sys, h)
 
     end if
 
