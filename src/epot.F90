@@ -270,6 +270,10 @@ contains
     ! The projectors
     ep%nvnl = geometry_nvnl(gr%geo)
     nullify(ep%p)
+
+    nullify(ep%dp)
+    nullify(ep%lso)
+    
     if(ep%nvnl > 0) then
       ALLOCATE(ep%p(ep%nvnl), ep%nvnl)
       do i = 1, ep%nvnl
@@ -298,6 +302,7 @@ contains
     type(epot_t),      intent(inout) :: ep
     type(simul_box_t), intent(in)    :: sb
     type(geometry_t),  intent(in)    :: geo
+
 
 #ifdef HAVE_FFT
     integer :: i
@@ -513,6 +518,33 @@ contains
 
 
   ! ---------------------------------------------------------
+  subroutine kill_projector(p)
+    type(projector_t), intent(inout) :: p
+    integer :: ierr
+    if(associated(p%jxyz)) then
+       deallocate(p%jxyz, stat = ierr)
+    end if
+    nullify(p%jxyz)
+    if(associated(p%uvu)) then
+       deallocate(p%uvu, stat = ierr)
+    end if
+    nullify(p%uvu)
+    if(associated(p%bra)) then
+       deallocate(p%bra, stat = ierr)
+    end if
+    nullify(p%bra)
+    if(associated(p%ket)) then
+       deallocate(p%ket, stat = ierr)
+    end if
+    nullify(p%ket)
+    if(associated(p%phases)) then
+       deallocate(p%phases, stat = ierr)
+    end if
+    nullify(p%phases)
+  end subroutine kill_projector
+
+
+  ! ---------------------------------------------------------
   subroutine epot_generate(ep, gr, st, reltype, fast_generation)
     type(epot_t),      intent(inout) :: ep
     type(grid_t), target,  intent(inout) :: gr
@@ -521,13 +553,10 @@ contains
     logical, optional, intent(in)    :: fast_generation
 
     logical :: fast_generation_
-    integer :: ia, i, l, lm, k, ierr, p
+    integer :: ia, i, l, lm, k, ierr, p, j
     type(specie_t), pointer :: s
     type(atom_t),   pointer :: a
     type(dcf_t) :: cf_loc, cf_nlcc
-
-    integer :: j
-
     type(mesh_t),      pointer :: m
     type(simul_box_t), pointer :: sb
     type(geometry_t),  pointer :: geo
@@ -579,39 +608,50 @@ contains
       do l = 0, s%ps%l_max
         if(s%ps%l_loc == l) cycle
         do lm = -l, l
+
           if(.not.fast_generation_) then
-            !The projectors maybe should be killed, in the same way that the nonlocal_op were.
-            !call nonlocal_op_kill(ep%vnl(i), sb)
+
             ! This if is a performance hack, necessary for when the ions move.
             ! For each atom, the sphere is the same, so we just calculate it once.
             if(p == 1) then
+
               k = i
               p = 2
-              deallocate(ep%p(i)%jxyz, stat = ierr)
+              call kill_projector(ep%p(i))
               do j = 1, sb%dim
-                deallocate(ep%dp(j, i)%jxyz, stat = ierr)
-              end do
-              do j = 1, sb%dim
-                deallocate(ep%lso(j, i)%jxyz, stat = ierr)
+                call kill_projector(ep%dp(j, i))
+                call kill_projector(ep%lso(j, i))
               end do
               call build_kb_sphere(i)
+
             else
+
+              call kill_projector(ep%p(i))
               ep%p(i)%n_points_in_sphere = ep%p(k)%n_points_in_sphere
               ep%p(i)%n_channels = ep%p(k)%n_channels
-              ep%p(i)%jxyz => ep%p(k)%jxyz
+              ALLOCATE(ep%p(i)%jxyz(ep%p(k)%n_points_in_sphere), ep%p(k)%n_points_in_sphere)
+              ep%p(i)%jxyz = ep%p(k)%jxyz
               do j = 1, sb%dim
+                call kill_projector(ep%dp(j, i))
                 ep%dp(j, i)%n_points_in_sphere = ep%dp(j, k)%n_points_in_sphere
                 ep%dp(j, i)%n_channels = ep%dp(j, k)%n_channels
-                ep%dp(j, i)%jxyz => ep%dp(j, k)%jxyz
+                ALLOCATE(ep%dp(j, i)%jxyz(ep%dp(j, k)%n_points_in_sphere), ep%dp(j, k)%n_points_in_sphere)
+                ep%dp(j, i)%jxyz = ep%dp(j, k)%jxyz
               end do
               do j = 1, sb%dim
+                call kill_projector(ep%lso(j, i))
                 ep%lso(j, i)%n_points_in_sphere = ep%lso(j, k)%n_points_in_sphere
                 ep%lso(j, i)%n_channels = ep%lso(j, k)%n_channels
-                ep%lso(j, i)%jxyz => ep%lso(j, k)%jxyz
+                ALLOCATE(ep%lso(j, i)%jxyz(ep%lso(j, k)%n_points_in_sphere), ep%lso(j, k)%n_points_in_sphere)
+                ep%lso(j, i)%jxyz = ep%lso(j, k)%jxyz
               end do
+
             end if
+
             call allocate_nl_part(i)
+
           end if
+
           call build_nl_part(i, l, lm)
 
           ep%p(i)%iatom             = ia
@@ -771,17 +811,16 @@ contains
       n_c = ep%p(ivnl)%n_channels
 
       ALLOCATE(ep%p(ivnl)%ket(n_s, n_c), n_s*n_c)
+      ALLOCATE(ep%p(ivnl)%bra(n_s, n_c), n_s*n_c)
       ALLOCATE(ep%p(ivnl)%uvu(n_c, n_c), n_c*n_c)
-
       ep%p(ivnl)%ket(:,:) =  M_ZERO
-      ep%p(ivnl)%bra      => ep%p(ivnl)%ket
+      ep%p(ivnl)%bra(:,:) =  M_ZERO
       ep%p(ivnl)%uvu(:,:) =  M_ZERO
 
       do d = 1, sb%dim
         ALLOCATE(ep%dp(d, ivnl)%ket(n_s, n_c), n_s*n_c)
         ALLOCATE(ep%dp(d, ivnl)%bra(n_s, n_c), n_s*n_c)
         ALLOCATE(ep%dp(d, ivnl)%uvu(n_c, n_c), n_c*n_c)
-
         ep%dp(d, ivnl)%ket(:,:) = M_ZERO
         ep%dp(d, ivnl)%bra(:,:) = M_ZERO
         ep%dp(d, ivnl)%uvu(:,:) = M_ZERO
@@ -791,7 +830,6 @@ contains
         ALLOCATE(ep%lso(d, ivnl)%ket(n_s, n_c), n_s*n_c)
         ALLOCATE(ep%lso(d, ivnl)%bra(n_s, n_c), n_s*n_c)
         ALLOCATE(ep%lso(d, ivnl)%uvu(n_c, n_c), n_c*n_c)
-
         ep%lso(d, ivnl)%ket(:,:) = M_ZERO
         ep%lso(d, ivnl)%bra(:,:) = M_ZERO
         ep%lso(d, ivnl)%uvu(:,:) = M_ZERO
@@ -801,8 +839,6 @@ contains
         ALLOCATE(ep%p(ivnl)%phases(n_s, st%d%nik), n_s*st%d%nik)
         do d = 1, sb%dim
           ALLOCATE( ep%dp(d,ivnl)%phases(n_s, st%d%nik), n_s*st%d%nik)
-        end do
-        do d = 1, sb%dim
           ALLOCATE(ep%lso(d,ivnl)%phases(n_s, st%d%nik), n_s*st%d%nik)
         end do
       end if
@@ -840,6 +876,7 @@ contains
             if(l .ne. s%ps%L_loc) then
               call specie_get_nl_part(s, x, l, lm, i, v, dv(1:3))
               ep%p(ivnl)%ket(j, i) = v
+              ep%p(ivnl)%bra(j, i) = v
               do d = 1, sb%dim
                 ep%dp(d, ivnl)%ket(j, i) = dv(d)
                 ep%dp(d, ivnl)%bra(j, i) = v
