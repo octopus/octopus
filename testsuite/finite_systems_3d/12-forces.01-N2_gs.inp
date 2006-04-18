@@ -21,7 +21,7 @@ spacing = 0.40
 MaximumIter = 200
 ConvRelDens = 1e-4
 
-LCAOStart = yes
+LCAOStart = lcao_full
 
 EigenSolver = cg_new
 EigenSolverInitTolerance = 1e-2

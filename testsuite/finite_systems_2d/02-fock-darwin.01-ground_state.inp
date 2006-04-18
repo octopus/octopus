@@ -41,7 +41,7 @@ NonInteractingElectrons = yes
 
 MaximumIter = 200
 ConvAbsDens = 1e-5
-LCAOStart = yes
+LCAOStart = lcao_full
 
 EigenSolver = cg
 EigenSolverInitTolerance = 1e-6

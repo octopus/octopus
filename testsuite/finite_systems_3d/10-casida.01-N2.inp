@@ -36,7 +36,7 @@ CFunctional = lda_c_vwn
 MaximumIter = 200
 ConvRelDens = 1e-5
 
-LCAOStart = yes
+LCAOStart = lcao_full
 LCAODimension = 18
 
 

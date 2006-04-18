@@ -35,7 +35,7 @@ CFunctional = no
 MaximumIter = 200
 ConvRelDens = 1e-5
 
-LCAOStart = no
+LCAOStart = lcao_none
 
 EigenSolver = cg
 EigenSolverInitTolerance = 1e-2
