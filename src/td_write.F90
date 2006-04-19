@@ -274,8 +274,8 @@ contains
 
     if(w%out_multip.ne.0)   call td_write_multipole(w%out_multip, gr, st, w%lmax, kick, i)
     if(w%out_angular.ne.0)  call td_write_angular(w%out_angular, gr, st, kick, i)
-    if(w%out_spin.ne.0)     call td_write_spin(w%out_spin, gr%m, st, i)
-    if(w%out_magnets.ne.0)  call td_write_local_magnetic_moments(w%out_magnets, gr%m, st, geo, w%lmm_r, i)
+    if(w%out_spin.ne.0)     call td_write_spin(w%out_spin, gr, st, i)
+    if(w%out_magnets.ne.0)  call td_write_local_magnetic_moments(w%out_magnets, gr, st, geo, w%lmm_r, i)
     if(w%out_proj.ne.0)     call td_write_proj(w%out_proj, gr, st, w%gs_st, i)
     if(w%out_coords.ne.0)   call td_write_nbo(w%out_coords, gr, i, geo%kinetic_energy, h%etot)
     if(w%out_gsp.ne.0)      call td_write_gsp(w%out_gsp, gr%m, st, w%gs_st, dt, i)
@@ -334,9 +334,9 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine td_write_spin(out_spin, m, st, iter)
+  subroutine td_write_spin(out_spin, gr, st, iter)
     integer(POINTER_SIZE), intent(in) :: out_spin
-    type(mesh_t),          intent(in) :: m
+    type(grid_t),          intent(inout) :: gr
     type(states_t),        intent(in) :: st
     integer,               intent(in) :: iter
 
@@ -345,11 +345,12 @@ contains
 
     call push_sub('td_write.td_write_spin')
 
-    if(mpi_grp_is_root(mpi_world)) then ! only first node outputs
+    ! The expectation value of the spin operator is half the total magnetic moment
+    ! This has to be calculated by all nodes
+    call states_magnetic_moment(gr%m, st, st%rho(1:NP,:), spin)
+    spin = M_HALF*spin
 
-      ! The expectation value of the spin operator is half the total magnetic moment
-      call states_magnetic_moment(m, st, st%rho, spin)
-      spin = M_HALF*spin
+    if(mpi_grp_is_root(mpi_world)) then ! only first node outputs
 
       if(iter ==0) then
         call td_write_print_header_init(out_spin)
@@ -385,9 +386,9 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine td_write_local_magnetic_moments(out_magnets, m, st, geo, lmm_r, iter)
+  subroutine td_write_local_magnetic_moments(out_magnets, gr, st, geo, lmm_r, iter)
     integer(POINTER_SIZE), intent(in) :: out_magnets
-    type(mesh_t),       intent(in) :: m
+    type(grid_t),       intent(inout) :: gr
     type(states_t),     intent(in) :: st
     type(geometry_t),   intent(in) :: geo
     FLOAT,              intent(in) :: lmm_r
@@ -399,11 +400,11 @@ contains
 
     call push_sub('td_write.td_write_local_magnetic_moments')
 
-    if(mpi_grp_is_root(mpi_world)) then ! only first node outputs
+    !get the atoms magnetization. This has to be calculated by all nodes
+    ALLOCATE(lmm(3, geo%natoms), 3*geo%natoms)
+    call states_local_magnetic_moments(gr%m, st, geo, st%rho(1:NP,:), lmm_r, lmm)
 
-      !get the atoms magnetization
-      ALLOCATE(lmm(3, geo%natoms), 3*geo%natoms)
-      call states_local_magnetic_moments(m, st, geo, st%rho, lmm_r, lmm)
+    if(mpi_grp_is_root(mpi_world)) then ! only first node outputs
 
       if(iter ==0) then
         call td_write_print_header_init(out_magnets)

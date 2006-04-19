@@ -80,7 +80,7 @@ contains
     message(1) = 'Info:  Setting up Hamiltonian.'
     call write_info(1)
 
-    call X(states_calc_dens)(sys%st, sys%gr%m%np, sys%st%rho)
+    call X(states_calc_dens)(sys%st, sys%gr%m%np, sys%st%rho(1:sys%gr%m%np,:))
     call X(v_ks_calc)(sys%gr, sys%ks, h, sys%st, calc_eigenval=.true.) ! get potentials
     call hamiltonian_energy(h, sys%st, sys%gr%geo%eii, -1)             ! total energy
 

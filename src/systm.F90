@@ -443,7 +443,7 @@ contains
     call push_sub('systm.hamiltonian_setup')
 
     call states_fermi(sys%st, sys%gr%m)
-    call dstates_calc_dens(sys%st, sys%gr%m%np, sys%st%rho)
+    call dstates_calc_dens(sys%st, sys%gr%m%np, sys%st%rho(1:sys%gr%m%np,:))
 
     call dv_ks_calc(sys%gr, sys%ks, h, sys%st, calc_eigenval=.true.) ! get potentials
     call states_fermi(sys%st, sys%gr%m)                            ! occupations
@@ -461,7 +461,7 @@ contains
     call push_sub('systm.hamiltonian_setup')
 
     call states_fermi(sys%st, sys%gr%m)
-    call zstates_calc_dens(sys%st, sys%gr%m%np, sys%st%rho)
+    call zstates_calc_dens(sys%st, sys%gr%m%np, sys%st%rho(1:sys%gr%m%np,:))
 
     call zv_ks_calc(sys%gr, sys%ks, h, sys%st, calc_eigenval=.true.) ! get potentials
     call states_fermi(sys%st, sys%gr%m)                              ! occupations
