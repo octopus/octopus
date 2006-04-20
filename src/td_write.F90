@@ -347,7 +347,7 @@ contains
 
     ! The expectation value of the spin operator is half the total magnetic moment
     ! This has to be calculated by all nodes
-    call states_magnetic_moment(gr%m, st, st%rho(1:NP,:), spin)
+    call states_magnetic_moment(gr%m, st, st%rho, spin)
     spin = M_HALF*spin
 
     if(mpi_grp_is_root(mpi_world)) then ! only first node outputs
@@ -402,7 +402,7 @@ contains
 
     !get the atoms magnetization. This has to be calculated by all nodes
     ALLOCATE(lmm(3, geo%natoms), 3*geo%natoms)
-    call states_local_magnetic_moments(gr%m, st, geo, st%rho(1:NP,:), lmm_r, lmm)
+    call states_local_magnetic_moments(gr%m, st, geo, st%rho, lmm_r, lmm)
 
     if(mpi_grp_is_root(mpi_world)) then ! only first node outputs
 

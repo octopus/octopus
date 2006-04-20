@@ -170,7 +170,7 @@ contains
       call zvmask(gr, h, st)
 
       ! update density
-      call zstates_calc_dens(st, NP, st%rho(1:NP,:))
+      call zstates_calc_dens(st, NP, st%rho)
 
       ! update hamiltonian and eigenvalues (fermi is *not* called)
       call zv_ks_calc(gr, sys%ks, h, st, calc_eigenval=.true.)
@@ -353,7 +353,7 @@ contains
         end if
       end if
 
-      call zstates_calc_dens(st, NP, st%rho(1:NP,:))
+      call zstates_calc_dens(st, NP, st%rho)
       call zv_ks_calc(gr, sys%ks, h, st, calc_eigenval=.true.)
       x = minval(st%eigenval(st%st_start, :))
 #ifdef HAVE_MPI

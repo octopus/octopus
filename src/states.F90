@@ -1073,24 +1073,24 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine states_magnetization_dens(st, np, rho, m)
+  subroutine states_magnetization_dens(m, st, rho, md)
+    type(mesh_t),   intent(in)  :: m
     type(states_t), intent(in)  :: st
-    integer,           intent(in)  :: np
-    FLOAT,             intent(in)  :: rho(np, st%d%nspin)
-    FLOAT,             intent(out) :: m(np, 3)
+    FLOAT,             intent(in)  :: rho(:,:) ! (np, st%d%nspin)
+    FLOAT,             intent(out) :: md(:,:)   ! (np, 3)
 
     call push_sub('states.states_magnetization_dens')
 
     select case (st%d%ispin)
     case (UNPOLARIZED)
-      m = M_ZERO
+      md = M_ZERO
     case (SPIN_POLARIZED)
-      m = M_ZERO
-      m(:, 3) = rho(:, 1) - rho(:, 2)
+      md = M_ZERO
+      md(1:m%np, 3) = rho(1:m%np, 1) - rho(1:m%np, 2)
     case (SPINORS)
-      m(:, 1) =  M_TWO*rho(:, 3)
-      m(:, 2) = -M_TWO*rho(:, 4)
-      m(:, 3) = rho(:, 1) - rho(:, 2)
+      md(1:m%np, 1) =  M_TWO*rho(1:m%np, 3)
+      md(1:m%np, 2) = -M_TWO*rho(1:m%np, 4)
+      md(1:m%np, 3) = rho(1:m%np, 1) - rho(1:m%np, 2)
     end select
 
     call pop_sub()
@@ -1101,7 +1101,7 @@ contains
   subroutine states_magnetic_moment(m, st, rho, mm)
     type(mesh_t),   intent(in)  :: m
     type(states_t), intent(in)  :: st
-    FLOAT,          intent(in)  :: rho(m%np, st%d%nspin)
+    FLOAT,          intent(in)  :: rho(:,:) ! (m%np_part, st%d%nspin)
     FLOAT,          intent(out) :: mm(3)
 
     FLOAT, allocatable :: md(:,:)
@@ -1109,7 +1109,7 @@ contains
     call push_sub('states.states_magnetic_moment')
 
     ALLOCATE(md(m%np, 3), m%np*3)
-    call states_magnetization_dens(st, m%np, rho, md)
+    call states_magnetization_dens(m, st, rho, md)
     mm(1) = dmf_integrate(m, md(:, 1))
     mm(2) = dmf_integrate(m, md(:, 2))
     mm(3) = dmf_integrate(m, md(:, 3))
@@ -1124,7 +1124,7 @@ contains
     type(mesh_t),     intent(in)  :: m
     type(states_t),   intent(in)  :: st
     type(geometry_t), intent(in)  :: geo
-    FLOAT,            intent(in)  :: rho(m%np, st%d%nspin)
+    FLOAT,            intent(in)  :: rho(:,:) ! (m%np_part, st%d%nspin)
     FLOAT,            intent(in)  :: r
     FLOAT,            intent(out) :: lmm(3, geo%natoms)
 
@@ -1136,7 +1136,7 @@ contains
 
     ALLOCATE(md (m%np, 3), m%np*3)
     ALLOCATE(aux(m%np, 3), m%np*3)
-    call states_magnetization_dens(st, m%np, rho, md)
+    call states_magnetization_dens(m, st, rho, md)
     lmm = M_ZERO
     do ia = 1, geo%natoms
       aux = M_ZERO

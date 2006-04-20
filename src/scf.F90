@@ -294,11 +294,11 @@ contains
       call states_fermi(st, gr%m)
 
       ! compute output density, potential (if needed) and eigenvalues sum
-      call X(states_calc_dens)(st, NP, st%rho(1:NP, :))
-      rhoout(:, 1, :) = st%rho(1:NP, :)
+      call X(states_calc_dens)(st, NP, st%rho)
+      rhoout(1:NP, 1, :) = st%rho(1:NP, :)
       if (h%d%cdft) then
         call states_calc_physical_current(gr, st, st%j)
-        rhoout(:, 2:dim, :) = st%j
+        rhoout(1:NP, 2:dim, :) = st%j(1:NP, 1:NDIM, :)
       end if
       if (scf%what2mix == MIXPOT) then
         call X(v_ks_calc) (gr, ks, h, st)
@@ -340,8 +340,8 @@ contains
       case (MIXDENS)
         ! mix input and output densities and compute new potential
         call mixing(scf%smix, gr%m, iter, dim, nspin, rhoin, rhoout, rhonew)
-        st%rho(1:NP,:) = rhonew(:, 1, :)
-        if (h%d%cdft) st%j(1:NP,:,:) = rhonew(:, 2:dim, :)
+        st%rho(1:NP,:) = rhonew(1:NP, 1, :)
+        if (h%d%cdft) st%j(1:NP,:,:) = rhonew(1:NP, 2:dim, :)
         call X(v_ks_calc) (gr, ks, h, st)
       case (MIXPOT)
         ! mix input and output potentials
@@ -378,7 +378,7 @@ contains
 
       ! save information for the next iteration
       rhoin(:, 1, :) = st%rho(1:NP, :)
-      if (h%d%cdft) rhoin(:, 2:dim, :) = st%j
+      if (h%d%cdft) rhoin(1:NP, 2:dim, :) = st%j(1:NP, 1:NDIM, :)
       if (scf%what2mix == MIXPOT) then
         vin(:, 1, :) = h%vhxc
         if (h%d%cdft) vin(:,2:dim,:) = h%axc(:,:,:)
@@ -591,9 +591,9 @@ contains
 
       call push_sub('scf.write_magnetic_moments')
 
-      call states_magnetic_moment(m, st, st%rho(1:NP,:), mm)
+      call states_magnetic_moment(m, st, st%rho, mm)
       ALLOCATE(lmm(3, gr%geo%natoms), 3*gr%geo%natoms)
-      call states_local_magnetic_moments(m, st, gr%geo, st%rho(1:NP,:), scf%lmm_r, lmm)
+      call states_local_magnetic_moments(m, st, gr%geo, st%rho, scf%lmm_r, lmm)
 
       if(mpi_grp_is_root(mpi_world)) then
 

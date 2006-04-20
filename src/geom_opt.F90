@@ -204,7 +204,7 @@ contains
       call atom_write_xyz(".", "work-min", geo)
 
       call epot_generate(h%ep, sys%gr, st, h%reltype)
-      call X(states_calc_dens) (st, m%np, st%rho(1:m%np,:))
+      call X(states_calc_dens) (st, m%np, st%rho)
       call X(v_ks_calc) (sys%gr, sys%ks, h, st, calc_eigenval=.true.)
       call hamiltonian_energy(h, st, geo%eii, -1)
 
