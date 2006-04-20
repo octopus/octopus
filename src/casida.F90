@@ -189,7 +189,7 @@ contains
     !% This variable is a string in list form, i.e. expressions such as "1,2-5,8-15" are
     !% valid.
     !%End
-    call loct_parse_string(check_inp('LinearResponseTransitionDensity'), "0", trandens)
+    call loct_parse_string(check_inp('LinearResponseTransitionDensities'), "0", trandens)
 
     ! Initialize structure
     call casida_type_init(cas, sys%gr%sb%dim, sys%st%d%nspin, sys%mc)
