@@ -62,6 +62,8 @@ module hamiltonian_m
     zvlpsi,                &
     zvnlpsi,               &
     zmagnus,               &
+    dhpsi_diag,            &
+    zhpsi_diag,            &
     zkinetic,              &
     zvmask
 
