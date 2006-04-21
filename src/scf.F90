@@ -469,9 +469,9 @@ contains
     subroutine scf_write_static(dir, fname)
       character(len=*), intent(in) :: dir, fname
 
-      FLOAT :: e_dip(4, st%d%nspin), n_dip(MAX_DIM), angular(MAX_DIM), l2
+      FLOAT :: e_dip(4, st%d%nspin), n_dip(MAX_DIM), angular(MAX_DIM), lsquare
       FLOAT, parameter :: ATOMIC_TO_DEBYE = CNST(2.5417462)
-      integer :: iunit, i, j
+      integer :: iunit, i, j, ik, ist
 
       call push_sub('scf.scf_write_static')
 
@@ -537,17 +537,39 @@ contains
         write(iunit,'(a)')
       end if
 
+      select case(NDIM)
+      case(3)
+        write(iunit,'(a)') 'Angular Momentum of the KS states [adimensional]'
+        write(iunit,'(6a)') '   #k', '  #st', '        <Lx>','        <Ly>','        <Lz>','        <L2>'
+        do ik = 1, st%d%nik
+          do ist = st%st_start, st%st_end
+            call X(states_angular_momentum)(gr, st%X(psi)(:, :, ist, ik), angular(1:3), l2 = lsquare)
+            write(iunit, '(2i5,4f12.6)') ik, ist, angular(1:3), lsquare
+          end do
+        end do
+      case(2)
+        write(iunit,'(a)') 'Angular Momentum of the KS states [adimensional]'
+        write(iunit,'(6a)') '   #k', '  #st', '        <Lz>', '        <L2>'
+        do ik = 1, st%d%nik
+          do ist = st%st_start, st%st_end
+            call X(states_angular_momentum)(gr, st%X(psi)(:, :, ist, ik), angular(1:3), l2 = lsquare)
+            write(iunit, '(2i5,4f12.6)') ik, ist, angular(3), lsquare
+          end do
+        end do
+      end select
+      write(iunit, '(a)')
+
       if(NDIM==3) then
-        call X(states_calc_angular)(gr, st, angular, l2 = l2)
+        call X(states_calc_angular)(gr, st, angular, l2 = lsquare)
 
         if(mpi_grp_is_root(mpi_world)) then
-          write(iunit,'(3a)') 'Angular Momentum L [adimensional]'
+          write(iunit,'(3a)') 'Total Angular Momentum L [adimensional]'
           do j = 1, NDIM
             write(iunit,'(6x,a1,i1,a3,es14.5)') 'L',j,' = ',angular(j)
           end do
           write(iunit,'(a)')
 
-          write(iunit,'(6x,a,es14.5)') 'L^2 = ', l2
+          write(iunit,'(6x,a,es14.5)') 'L^2 = ', lsquare
           write(iunit,'(a)')
         end if
       end if

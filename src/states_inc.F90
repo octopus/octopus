@@ -571,55 +571,109 @@ end function X(states_mpdotp)
 
 
 ! ---------------------------------------------------------
+! It calculates the expectation value of the angular
+! momentum of the state phi. If l2 is passed, it also
+! calculates the expectation value of the square of the
+! angular momentum of the state phi.
+! ---------------------------------------------------------
+subroutine X(states_angular_momentum)(gr, phi, l, l2)
+  type(grid_t), intent(inout)  :: gr
+  R_TYPE,       intent(inout)  :: phi(:, :)
+  FLOAT,        intent(out)    :: l(MAX_DIM)
+  FLOAT, optional, intent(out) :: l2
+
+  integer :: idim, dim
+  R_TYPE, allocatable :: lpsi(:, :)
+
+  call push_sub('states_inc.states_angular_momemtum')
+
+  ASSERT(gr%m%sb%dim .ne.1)
+
+  select case(gr%m%sb%dim)
+  case(3)
+    ALLOCATE(lpsi(NP_PART, 3), NP_PART*3)
+  case(2)
+    ALLOCATE(lpsi(NP_PART, 1), NP_PART*1)
+  end select
+
+  dim = size(phi, 2)
+
+  l = M_ZERO
+  if(present(l2)) l2 = M_ZERO
+
+  do idim = 1, dim
+#if defined(R_TREAL)
+    l = M_ZERO
+#else
+    call X(f_angular_momentum)(gr%sb, gr%f_der, phi(:, idim), lpsi)
+    select case(gr%m%sb%dim)
+    case(3)
+      l(1) = l(1) + X(mf_dotp)(gr%m, phi(:, idim), lpsi(:, 1))
+      l(2) = l(2) + X(mf_dotp)(gr%m, phi(:, idim), lpsi(:, 2))
+      l(3) = l(3) + X(mf_dotp)(gr%m, phi(:, idim), lpsi(:, 3))
+    case(2)
+      l(3) = l(3) + X(mf_dotp)(gr%m, phi(:, idim), lpsi(:, 1))
+    end select
+#endif
+    if(present(l2)) then
+      call X(f_l2)(gr%sb, gr%f_der, phi(:, idim), lpsi(:, 1))
+      l2 = l2 + X(mf_dotp)(gr%m, phi(:, idim), lpsi(:, 1))
+    end if
+  end do
+
+  deallocate(lpsi)
+  call pop_sub()
+end subroutine X(states_angular_momentum)
+
+
+! ---------------------------------------------------------
+! It calculates the sum of all the expectation values of
+! the angular momenta of each KS state, weighted by the
+! corresponding occupation numbers. If l2 is present, it
+! computes also the sum of the expectation values of L
+! squared of each KS state, also weighted. In the first
+! case, this sum would correspond to the expectation value
+! of the many-body angular momentum taken for the KS
+! Slater determinant. The second number is more unclear...
+! ---------------------------------------------------------
 subroutine X(states_calc_angular)(gr, st, angular, l2)
   type(grid_t),    intent(inout) :: gr
   type(states_t),  intent(inout) :: st
   FLOAT,           intent(out)   :: angular(MAX_DIM)
   FLOAT, optional, intent(out)   :: l2
 
-  FLOAT :: temp(MAX_DIM), ltemp
-  R_TYPE, allocatable :: lpsi(:, :)
-  integer :: idim, ik, j
+  integer :: ik, j
 #if defined(HAVE_MPI)
   integer :: mpi_err
 #endif
+  FLOAT :: temp(MAX_DIM), ltemp, angular_(MAX_DIM), l2_
 
   call push_sub('states_inc.states_calc_angular')
 
-  temp = M_ZERO; ltemp = M_ZERO
-  ALLOCATE(lpsi(NP, NDIM), NP*NDIM)
-
+  angular_= M_ZERO; l2_ = M_ZERO
   do ik = 1, st%d%nik
     do j  = st%st_start, st%st_end
-      do idim = 1, st%d%dim
-#if defined(R_TREAL)
-        temp = M_ZERO ! The expectation value of L of *any* real function is null
-#else
-        call X(f_angular_momentum)(gr%sb, gr%f_der, st%X(psi)(:, idim, j, ik), lpsi)
-
-        temp(1) = temp(1) + st%occ(j, ik)*X(mf_dotp)(gr%m, st%X(psi)(:, idim, j, ik), lpsi(:, 1))
-        temp(2) = temp(2) + st%occ(j, ik)*X(mf_dotp)(gr%m, st%X(psi)(:, idim, j, ik), lpsi(:, 2))
-        temp(3) = temp(3) + st%occ(j, ik)*X(mf_dotp)(gr%m, st%X(psi)(:, idim, j, ik), lpsi(:, 3))
-#endif
-        if(present(l2)) then
-          call X(f_l2)(gr%sb, gr%f_der, st%X(psi)(:, idim, j, ik), lpsi(:, 1))
-          ltemp = ltemp + st%occ(j, ik)*X(mf_dotp)(gr%m, st%X(psi)(:, idim, j, ik), lpsi(:, 1))
-        end if
-      end do
+      if(present(l2)) then
+        call X(states_angular_momentum)(gr, st%X(psi)(:, :, j, ik), temp, ltemp)
+        angular_ = angular_ + st%occ(j, ik) * temp
+        l2_ = l2_ + st%occ(j, ik) * ltemp
+      else
+        call X(states_angular_momentum)(gr, st%X(psi)(:, :, j, ik), temp)
+        angular_ = angular_ + st%occ(j, ik) * temp
+      end if
     end do
   end do
 
   if(st%parallel_in_states) then
 #if defined(HAVE_MPI)
-    call MPI_ALLREDUCE(temp, angular, 3, MPI_FLOAT, MPI_SUM, st%mpi_grp%comm, mpi_err)
-    if(present(l2)) call MPI_ALLREDUCE(ltemp, l2, 1, MPI_FLOAT, MPI_SUM, st%mpi_grp%comm, mpi_err)
+    call MPI_ALLREDUCE(angular_, angular, 3, MPI_FLOAT, MPI_SUM, st%mpi_grp%comm, mpi_err)
+    if(present(l2)) call MPI_ALLREDUCE(l2_, l2, 1, MPI_FLOAT, MPI_SUM, st%mpi_grp%comm, mpi_err)
 #endif
   else
-    angular = temp
-    if(present(l2)) l2 = ltemp
+    angular = angular_
+    if(present(l2)) l2 = l2_
   end if
-
-  deallocate(lpsi)
 
   call pop_sub()
 end subroutine X(states_calc_angular)
+

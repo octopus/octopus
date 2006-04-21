@@ -334,25 +334,37 @@ subroutine X(f_angular_momentum)(sb, f_der, f, lf)
   type(simul_box_t), intent(in)    :: sb
   type(f_der_t),     intent(inout) :: f_der
   R_TYPE,            intent(inout) :: f(:)     ! f(m%np_part)
-  R_TYPE,            intent(out)   :: lf(:,:)  ! lf(m%np, 3)
+  R_TYPE,            intent(out)   :: lf(:,:)  ! lf(m%np_part, 3) in 3D, lf(m%np_part, 1) in 2D
 
   R_TYPE, allocatable :: gf(:, :)
-  FLOAT :: x(MAX_DIM)
+  FLOAT :: x(sb%dim)
   integer :: i
 
   call push_sub('f_inc.Xf_angular_momentum')
 
-  ALLOCATE(gf(f_der%m%np, 3), f_der%m%np*3)
+  ASSERT(MAX_DIM.ne.1)
+
+  ALLOCATE(gf(f_der%m%np, sb%dim), f_der%m%np*sb%dim)
   call X(f_gradient)(sb, f_der, f, gf)
 
   do i = 1, f_der%m%np
     x = f_der%m%x(i,:)
-    lf(i, 1) = (x(2)*gf(i, 3) - x(3)*gf(i, 2))
-    lf(i, 2) = (x(3)*gf(i, 1) - x(1)*gf(i, 3))
-    lf(i, 3) = (x(1)*gf(i, 2) - x(2)*gf(i, 1))
+    select case(sb%dim)
+    case(3)
+      lf(i, 1) = (x(2)*gf(i, 3) - x(3)*gf(i, 2))
+      lf(i, 2) = (x(3)*gf(i, 1) - x(1)*gf(i, 3))
+      lf(i, 3) = (x(1)*gf(i, 2) - x(2)*gf(i, 1))
+    case(2)
+      lf(i, 1) = (x(1)*gf(i, 2) - x(2)*gf(i, 1))
+    end select
   end do
 #if defined(R_TCOMPLEX)
-  call lalg_scal(3, f_der%m%np, -M_zI, lf)
+  select case(sb%dim)
+  case(3)
+    call lalg_scal(f_der%m%np, 3, -M_zI, lf)
+  case(2)
+    call lalg_scal(f_der%m%np, 1, -M_zI, lf)
+  end select
 #endif
 
   deallocate(gf)
@@ -377,7 +389,7 @@ subroutine X(f_l2)(sb, f_der, f, l2f)
   m => f_der%m
 
   ALLOCATE(gf(m%np_part, sb%dim), m%np_part*sb%dim)
-  ALLOCATE(ggf(m%np, sb%dim, sb%dim), m%np*sb%dim*sb%dim)
+  ALLOCATE(ggf(m%np_part, sb%dim, sb%dim), m%np_part*sb%dim*sb%dim)
 
   call X(f_angular_momentum)(sb, f_der, f, gf)
   do j = 1, 3

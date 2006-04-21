@@ -88,6 +88,8 @@ module states_m
     zstates_output,                 &
     dstates_mpdotp,                 &
     zstates_mpdotp,                 &
+    dstates_angular_momentum,       &
+    zstates_angular_momentum,       &
     dstates_calc_angular,           &
     zstates_calc_angular,           &
     states_distribute_nodes,        &
