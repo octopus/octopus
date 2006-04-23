@@ -386,20 +386,39 @@ subroutine X(f_l2)(sb, f_der, f, l2f)
   type(mesh_t), pointer :: m
   integer :: j
 
+  call push_sub('f_inc.Xf_l2')
+
+  ASSERT(sb%dim.ne.1)
+
   m => f_der%m
 
-  ALLOCATE(gf(m%np_part, sb%dim), m%np_part*sb%dim)
-  ALLOCATE(ggf(m%np_part, sb%dim, sb%dim), m%np_part*sb%dim*sb%dim)
 
-  call X(f_angular_momentum)(sb, f_der, f, gf)
-  do j = 1, 3
-    call X(f_angular_momentum)(sb, f_der, gf(:,j), ggf(:,:,j))
-  end do
+  select case(sb%dim)
+  case(3)
+    ALLOCATE(gf(m%np_part, 3), m%np_part*3)
+    ALLOCATE(ggf(m%np_part, 3, 3), m%np_part*3*3)
 
-  l2f(:) = M_ZERO
-  do j = 1, 3
-    l2f(:) = l2f(:) + ggf(:, j, j)
-  end do
+    call X(f_angular_momentum)(sb, f_der, f, gf)
+
+    do j = 1, 3
+      call X(f_angular_momentum)(sb, f_der, gf(:,j), ggf(:,:,j))
+    end do
+
+    l2f(:) = M_ZERO
+    do j = 1, sb%dim
+      l2f(:) = l2f(:) + ggf(:, j, j)
+    end do
+
+  case(2)
+    ALLOCATE(gf(m%np_part, 1), m%np_part)
+    ALLOCATE(ggf(m%np_part, 1, 1), m%np_part)
+
+    call X(f_angular_momentum)(sb, f_der, f, gf)
+    call X(f_angular_momentum)(sb, f_der, gf(:, 1), ggf(:, :, 1))
+
+    l2f(:) = ggf(:, 1, 1)
+  end select
+
 
   ! In case of real functions, since the angular momentum calculations
   ! lack a (-i) prefactor, we must add a (-1) factor
@@ -408,4 +427,5 @@ subroutine X(f_l2)(sb, f_der, f, l2f)
 #endif
 
   deallocate(gf, ggf)
+  call pop_sub()
 end subroutine X(f_l2)
