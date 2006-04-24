@@ -469,10 +469,9 @@ contains
     subroutine scf_write_static(dir, fname)
       character(len=*), intent(in) :: dir, fname
 
-      FLOAT :: e_dip(4, st%d%nspin), n_dip(MAX_DIM), angular(MAX_DIM), lsquare
+      FLOAT :: e_dip(4, st%d%nspin), n_dip(MAX_DIM)
       FLOAT, parameter :: ATOMIC_TO_DEBYE = CNST(2.5417462)
-      FLOAT, allocatable :: ang(:, :, :), ang2(:, :)
-      integer :: iunit, i, j, ik, ist
+      integer :: iunit, i, j
 
       call push_sub('scf.scf_write_static')
 
@@ -539,36 +538,7 @@ contains
       end if
 
       ! Next is the angular momentum. Only applies to 2D and 3D.
-      select case(NDIM)
-      case(2, 3)
-        if(mpi_grp_is_root(mpi_world)) then
-          write(iunit,'(a)') 'Angular Momentum of the KS states [adimensional]'
-          write(iunit,'(6a)') '   #k', '  #st', '        <Lx>','        <Ly>','        <Lz>','        <L2>'
-        end if
-
-        ALLOCATE(ang (st%st_start:st%st_end, st%d%nik, 3), (st%st_end - st%st_start + 1)*st%d%nik*3)
-        ALLOCATE(ang2(st%st_start:st%st_end, st%d%nik), (st%st_end - st%st_start + 1)*st%d%nik)
-        do ik = 1, st%d%nik
-          do ist = st%st_start, st%st_end
-             call X(states_angular_momentum)(gr, st%X(psi)(:, :, ist, ik), ang(ist, ik, :), ang2(ist, ik))
-            if(mpi_grp_is_root(mpi_world)) then
-              write(iunit, '(2i5,4f12.6)') ik, ist, ang(ist, ik, 1:3), ang2(ist, ik)
-            end if
-          end do
-        end do
-        angular(1) =  states_eigenvalues_sum(st, ang(:, :, 1))
-        angular(2) =  states_eigenvalues_sum(st, ang(:, :, 2))
-        angular(3) =  states_eigenvalues_sum(st, ang(:, :, 3))
-        lsquare    =  states_eigenvalues_sum(st, ang2)
-        if(mpi_grp_is_root(mpi_world)) then
-          write(iunit,'(3a)') 'Total Angular Momentum L [adimensional]'
-          write(iunit,'(10x, 4a)') '        <Lx>','        <Ly>','        <Lz>','        <L2>'
-          write(iunit,'(10x,4f12.6)') angular(1:3), lsquare
-        end if
-
-        deallocate(ang, ang2)
-
-      end select
+      if(NDIM.ne.1) call write_angular_momentum(iunit)
       write(iunit, '(a)')
 
       if(mpi_grp_is_root(mpi_world)) then
@@ -597,6 +567,90 @@ contains
       call pop_sub()
     end subroutine scf_write_static
 
+    ! ---------------------------------------------------------
+    subroutine write_angular_momentum(iunit)
+      integer,        intent(in) :: iunit
+
+      integer :: ik, ist, ns, j
+      character(len=80) tmp_str(MAX_DIM), cspin
+      FLOAT :: angular(3), lsquare, o, oplus, ominus
+      FLOAT, allocatable :: ang(:, :, :), ang2(:, :)
+
+      ns = 1
+      if(st%d%nspin == 2) ns = 2
+
+      if(mpi_grp_is_root(mpi_world)) then
+        write(iunit,'(a)') 'Angular Momentum of the KS states [adimensional]:'
+        if (st%d%nik > ns) then
+          message(1) = 'Kpoints [' // trim(units_out%length%abbrev) // '^-1]'
+          call write_info(1, iunit)
+        end if
+      end if
+
+      ALLOCATE(ang (st%st_start:st%st_end, st%d%nik, 3), (st%st_end - st%st_start + 1)*st%d%nik*3)
+      ALLOCATE(ang2(st%st_start:st%st_end, st%d%nik), (st%st_end - st%st_start + 1)*st%d%nik)
+      do ik = 1, st%d%nik
+        do ist = st%st_start, st%st_end
+          call X(states_angular_momentum)(gr, st%X(psi)(:, :, ist, ik), ang(ist, ik, :), ang2(ist, ik))
+        end do
+      end do
+      angular(1) =  states_eigenvalues_sum(st, ang(:, :, 1))
+      angular(2) =  states_eigenvalues_sum(st, ang(:, :, 2))
+      angular(3) =  states_eigenvalues_sum(st, ang(:, :, 3))
+      lsquare    =  states_eigenvalues_sum(st, ang2)
+
+      do ik = 1, st%d%nik, ns
+        if(st%d%nik > ns) then
+          write(message(1), '(a,i4,3(a,f12.6),a)') '#k =',ik,', k = (',  &
+            st%d%kpoints(1, ik)*units_out%length%factor, ',',            &
+            st%d%kpoints(2, ik)*units_out%length%factor, ',',            &
+            st%d%kpoints(3, ik)*units_out%length%factor, ')'
+          call write_info(1, iunit)
+        end if
+
+        write(message(1), '(a4,1x,a5,1x,4a12,4x,a12,1x)')       &
+          '#st',' Spin','        <Lx>', '        <Ly>', '        <Lz>', '        <L2>', 'Occupation '
+        call write_info(1, iunit)
+
+        do j = 1, st%nst
+          do is = 0, ns-1
+
+            if(j > st%nst) then
+              o = M_ZERO
+              if(st%d%ispin == SPINORS) oplus = M_ZERO; ominus = M_ZERO
+            else
+              o = st%occ(j, ik+is)
+              if(st%d%ispin == SPINORS) then
+                oplus  = st%mag(j, ik+is, 1)
+                ominus = st%mag(j, ik+is, 2)
+              end if
+            end if
+
+            if(is.eq.0) cspin = 'up'
+            if(is.eq.1) cspin = 'dn'
+            if(st%d%ispin.eq.UNPOLARIZED.or.st%d%ispin.eq.SPINORS) cspin = '--'
+
+            write(tmp_str(1), '(i4,3x,a2)') j, trim(cspin)
+            if(st%d%ispin == SPINORS) then
+              write(tmp_str(2), '(1x,4f12.6,3x,f5.2,a1,f5.2)') &
+                ang(j, 1:3, ik), ang2(j, ik), oplus, '/', ominus
+            else
+              write(tmp_str(2), '(1x,4f12.6,3x,f12.6)') &
+                ang(j, 1:3, ik+is), ang2(j, ik+is), o
+            end if
+            message(1) = trim(tmp_str(1))//trim(tmp_str(2))
+            call write_info(1, iunit)
+          end do
+        end do
+
+      end do
+
+      write(message(1),'(a)') 'Total Angular Momentum L [adimensional]'
+      write(message(2),'(10x,4f12.6)') angular(1:3), lsquare
+      call write_info(2, iunit)
+
+      deallocate(ang, ang2)
+    end subroutine write_angular_momentum
 
     ! ---------------------------------------------------------
     subroutine write_magnetic_moments(iunit, m, st)
