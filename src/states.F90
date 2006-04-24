@@ -859,17 +859,34 @@ contains
 
   ! ---------------------------------------------------------
   ! function to calculate the eigenvalues sum using occupations as weights
-  function states_eigenvalues_sum(st) result(e)
-    type(states_t), intent(in) :: st
-    FLOAT                      :: e
+  function states_eigenvalues_sum(st, x) result(e)
+    type(states_t), intent(in)  :: st
+    FLOAT                       :: e
+    FLOAT, optional, intent(in) :: x(:, :)
 
     integer :: ik
+#ifdef HAVE_MPI
+    FLOAT :: s
+    integer :: err
+#endif
 
     e = M_ZERO
     do ik = 1, st%d%nik
-      e = e + st%d%kweights(ik) * sum(st%occ(st%st_start:st%st_end, ik)* &
-        st%eigenval(st%st_start:st%st_end, ik))
+      if(present(x)) then
+        e = e + st%d%kweights(ik) * sum(st%occ(st%st_start:st%st_end, ik)* &
+          x(st%st_start:st%st_end, ik))
+      else
+        e = e + st%d%kweights(ik) * sum(st%occ(st%st_start:st%st_end, ik)* &
+          st%eigenval(st%st_start:st%st_end, ik))
+      end if
     end do
+
+#ifdef HAVE_MPI
+    if(st%parallel_in_states) then
+      call MPI_ALLREDUCE(e, s, 1, MPI_FLOAT, MPI_SUM, st%mpi_grp%comm, err)
+      e = s
+    end if
+#endif
 
   end function states_eigenvalues_sum
 

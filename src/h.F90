@@ -336,22 +336,10 @@ contains
     integer,             intent(in)    :: iunit
 
     FLOAT :: e
-#ifdef HAVE_MPI
-    FLOAT :: s
-    integer :: err
-#endif
 
     call push_sub('h.hamiltonian_energy')
 
     e = states_eigenvalues_sum(st)
-
-#ifdef HAVE_MPI
-    if(st%parallel_in_states) then
-      call MPI_ALLREDUCE(e, s, 1, MPI_FLOAT, MPI_SUM, st%mpi_grp%comm, err)
-      e = s
-    end if
-#endif
-
     h%eii    = eii
     h%etot   = e + eii + h%epot + h%ex + h%ec
 
