@@ -471,6 +471,7 @@ contains
 
       FLOAT :: e_dip(4, st%d%nspin), n_dip(MAX_DIM), angular(MAX_DIM), lsquare
       FLOAT, parameter :: ATOMIC_TO_DEBYE = CNST(2.5417462)
+      FLOAT, allocatable :: ang(:, :, :), ang2(:, :)
       integer :: iunit, i, j, ik, ist
 
       call push_sub('scf.scf_write_static')
@@ -537,42 +538,38 @@ contains
         write(iunit,'(a)')
       end if
 
+      ! Next is the angular momentum. Only applies to 2D and 3D.
       select case(NDIM)
-      case(3)
-        write(iunit,'(a)') 'Angular Momentum of the KS states [adimensional]'
-        write(iunit,'(6a)') '   #k', '  #st', '        <Lx>','        <Ly>','        <Lz>','        <L2>'
+      case(2, 3)
+        if(mpi_grp_is_root(mpi_world)) then
+          write(iunit,'(a)') 'Angular Momentum of the KS states [adimensional]'
+          write(iunit,'(6a)') '   #k', '  #st', '        <Lx>','        <Ly>','        <Lz>','        <L2>'
+        end if
+
+        ALLOCATE(ang (st%st_start:st%st_end, st%d%nik, 3), (st%st_end - st%st_start + 1)*st%d%nik*3)
+        ALLOCATE(ang2(st%st_start:st%st_end, st%d%nik), (st%st_end - st%st_start + 1)*st%d%nik)
         do ik = 1, st%d%nik
           do ist = st%st_start, st%st_end
-            call X(states_angular_momentum)(gr, st%X(psi)(:, :, ist, ik), angular(1:3), l2 = lsquare)
-            write(iunit, '(2i5,4f12.6)') ik, ist, angular(1:3), lsquare
+             call X(states_angular_momentum)(gr, st%X(psi)(:, :, ist, ik), ang(ist, ik, :), ang2(ist, ik))
+            if(mpi_grp_is_root(mpi_world)) then
+              write(iunit, '(2i5,4f12.6)') ik, ist, ang(ist, ik, 1:3), ang2(ist, ik)
+            end if
           end do
         end do
-      case(2)
-        write(iunit,'(a)') 'Angular Momentum of the KS states [adimensional]'
-        write(iunit,'(6a)') '   #k', '  #st', '        <Lz>', '        <L2>'
-        do ik = 1, st%d%nik
-          do ist = st%st_start, st%st_end
-            call X(states_angular_momentum)(gr, st%X(psi)(:, :, ist, ik), angular(1:3), l2 = lsquare)
-            write(iunit, '(2i5,4f12.6)') ik, ist, angular(3), lsquare
-          end do
-        end do
-      end select
-      write(iunit, '(a)')
-
-      if(NDIM==3) then
-        call X(states_calc_angular)(gr, st, angular, l2 = lsquare)
-
+        angular(1) =  states_eigenvalues_sum(st, ang(:, :, 1))
+        angular(2) =  states_eigenvalues_sum(st, ang(:, :, 2))
+        angular(3) =  states_eigenvalues_sum(st, ang(:, :, 3))
+        lsquare    =  states_eigenvalues_sum(st, ang2)
         if(mpi_grp_is_root(mpi_world)) then
           write(iunit,'(3a)') 'Total Angular Momentum L [adimensional]'
-          do j = 1, NDIM
-            write(iunit,'(6x,a1,i1,a3,es14.5)') 'L',j,' = ',angular(j)
-          end do
-          write(iunit,'(a)')
-
-          write(iunit,'(6x,a,es14.5)') 'L^2 = ', lsquare
-          write(iunit,'(a)')
+          write(iunit,'(10x, 4a)') '        <Lx>','        <Ly>','        <Lz>','        <L2>'
+          write(iunit,'(10x,4f12.6)') angular(1:3), lsquare
         end if
-      end if
+
+        deallocate(ang, ang2)
+
+      end select
+      write(iunit, '(a)')
 
       if(mpi_grp_is_root(mpi_world)) then
         write(iunit, '(a)') 'Convergence:'

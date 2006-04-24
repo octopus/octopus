@@ -451,13 +451,24 @@ contains
     type(kick_t),          intent(in) :: kick
     integer,               intent(in) :: iter
 
+    integer :: ik, ist
     character(len=130) :: aux
-    FLOAT :: angular(MAX_DIM)
+    FLOAT :: angular(MAX_DIM), lsquare
+    FLOAT, allocatable :: ang(:, :, :), ang2(:, :)
 
     call push_sub('td_write.td_write_angular')
 
-    ! The angular momentum has to be calculated by all nodes...
-    call zstates_calc_angular(gr, st, angular)
+    ALLOCATE(ang (st%st_start:st%st_end, st%d%nik, 3), (st%st_end - st%st_start + 1)*st%d%nik*3)
+    ALLOCATE(ang2(st%st_start:st%st_end, st%d%nik), (st%st_end - st%st_start + 1)*st%d%nik)
+    do ik = 1, st%d%nik
+      do ist = st%st_start, st%st_end
+        call zstates_angular_momentum(gr, st%zpsi(:, :, ist, ik), ang(ist, ik, :), ang2(ist, ik))
+      end do
+    end do
+    angular(1) =  states_eigenvalues_sum(st, ang(:, :, 1))
+    angular(2) =  states_eigenvalues_sum(st, ang(:, :, 2))
+    angular(3) =  states_eigenvalues_sum(st, ang(:, :, 3))
+    lsquare    =  states_eigenvalues_sum(st, ang2)
 
     if(mpi_grp_is_root(mpi_world)) then ! Only first node outputs
 
@@ -502,11 +513,13 @@ contains
 
         !second line -> columns name
         call write_iter_header_start(out_angular)
-        write(aux, '(a2,18x)') 'Lx'
+        write(aux, '(a4,18x)') '<Lx>'
         call write_iter_header(out_angular, aux)
-        write(aux, '(a2,18x)') 'Ly'
+        write(aux, '(a4,18x)') '<Ly>'
         call write_iter_header(out_angular, aux)
-        write(aux, '(a2,18x)') 'Lz'
+        write(aux, '(a4,18x)') '<Lz>'
+        call write_iter_header(out_angular, aux)
+        write(aux, '(a4,18x)') '<L2>'
         call write_iter_header(out_angular, aux)
         call write_iter_nl(out_angular)
 
@@ -520,10 +533,12 @@ contains
 
       call write_iter_start(out_angular)
       call write_iter_double(out_angular, angular(1:3), 3)
+      call write_iter_double(out_angular, lsquare, 1)
       call write_iter_nl(out_angular)
 
     end if
 
+    deallocate(ang, ang2)
     call pop_sub()
   end subroutine td_write_angular
 

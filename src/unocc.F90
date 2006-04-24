@@ -92,8 +92,8 @@ contains
       call lcao_init(sys%gr, lcao_data, sys%st, h)
       if(lcao_data%state .eq. 1) then
         call lcao_wf(lcao_data, sys%st, sys%gr%m, sys%gr%sb, h, start = ierr+1)
+        call lcao_end(lcao_data, sys%st%nst)
       end if
-      call lcao_end(lcao_data, sys%st%nst)
     end if
 
     message(1) = "Info:  Starting calculation of unoccupied states"

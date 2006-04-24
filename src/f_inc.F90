@@ -342,7 +342,7 @@ subroutine X(f_angular_momentum)(sb, f_der, f, lf)
 
   call push_sub('f_inc.Xf_angular_momentum')
 
-  ASSERT(MAX_DIM.ne.1)
+  ASSERT(sb%dim.ne.1)
 
   ALLOCATE(gf(f_der%m%np, sb%dim), f_der%m%np*sb%dim)
   call X(f_gradient)(sb, f_der, f, gf)
@@ -361,9 +361,9 @@ subroutine X(f_angular_momentum)(sb, f_der, f, lf)
 #if defined(R_TCOMPLEX)
   select case(sb%dim)
   case(3)
-    call lalg_scal(f_der%m%np, 3, -M_zI, lf)
+    call lalg_scal(f_der%m%np_part, 3,  -M_zI, lf)
   case(2)
-    call lalg_scal(f_der%m%np, 1, -M_zI, lf)
+    call lalg_scal(f_der%m%np_part, 1,  -M_zI, lf)
   end select
 #endif
 
@@ -392,7 +392,6 @@ subroutine X(f_l2)(sb, f_der, f, l2f)
 
   m => f_der%m
 
-
   select case(sb%dim)
   case(3)
     ALLOCATE(gf(m%np_part, 3), m%np_part*3)
@@ -404,7 +403,7 @@ subroutine X(f_l2)(sb, f_der, f, l2f)
       call X(f_angular_momentum)(sb, f_der, gf(:,j), ggf(:,:,j))
     end do
 
-    l2f(:) = M_ZERO
+    l2f(:) = R_TOTYPE(M_ZERO)
     do j = 1, sb%dim
       l2f(:) = l2f(:) + ggf(:, j, j)
     end do

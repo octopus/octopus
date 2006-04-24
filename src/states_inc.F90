@@ -599,7 +599,7 @@ subroutine X(states_angular_momentum)(gr, phi, l, l2)
   dim = size(phi, 2)
 
   l = M_ZERO
-  if(present(l2)) l2 = M_ZERO
+  if(present(l2)) l2 = R_TOTYPE(M_ZERO)
 
   do idim = 1, dim
 #if defined(R_TREAL)
@@ -624,56 +624,3 @@ subroutine X(states_angular_momentum)(gr, phi, l, l2)
   deallocate(lpsi)
   call pop_sub()
 end subroutine X(states_angular_momentum)
-
-
-! ---------------------------------------------------------
-! It calculates the sum of all the expectation values of
-! the angular momenta of each KS state, weighted by the
-! corresponding occupation numbers. If l2 is present, it
-! computes also the sum of the expectation values of L
-! squared of each KS state, also weighted. In the first
-! case, this sum would correspond to the expectation value
-! of the many-body angular momentum taken for the KS
-! Slater determinant. The second number is more unclear...
-! ---------------------------------------------------------
-subroutine X(states_calc_angular)(gr, st, angular, l2)
-  type(grid_t),    intent(inout) :: gr
-  type(states_t),  intent(inout) :: st
-  FLOAT,           intent(out)   :: angular(MAX_DIM)
-  FLOAT, optional, intent(out)   :: l2
-
-  integer :: ik, j
-#if defined(HAVE_MPI)
-  integer :: mpi_err
-#endif
-  FLOAT :: temp(MAX_DIM), ltemp, angular_(MAX_DIM), l2_
-
-  call push_sub('states_inc.states_calc_angular')
-
-  angular_= M_ZERO; l2_ = M_ZERO
-  do ik = 1, st%d%nik
-    do j  = st%st_start, st%st_end
-      if(present(l2)) then
-        call X(states_angular_momentum)(gr, st%X(psi)(:, :, j, ik), temp, ltemp)
-        angular_ = angular_ + st%occ(j, ik) * temp
-        l2_ = l2_ + st%occ(j, ik) * ltemp
-      else
-        call X(states_angular_momentum)(gr, st%X(psi)(:, :, j, ik), temp)
-        angular_ = angular_ + st%occ(j, ik) * temp
-      end if
-    end do
-  end do
-
-  if(st%parallel_in_states) then
-#if defined(HAVE_MPI)
-    call MPI_ALLREDUCE(angular_, angular, 3, MPI_FLOAT, MPI_SUM, st%mpi_grp%comm, mpi_err)
-    if(present(l2)) call MPI_ALLREDUCE(l2_, l2, 1, MPI_FLOAT, MPI_SUM, st%mpi_grp%comm, mpi_err)
-#endif
-  else
-    angular = angular_
-    if(present(l2)) l2 = l2_
-  end if
-
-  call pop_sub()
-end subroutine X(states_calc_angular)
-

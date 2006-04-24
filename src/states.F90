@@ -90,8 +90,6 @@ module states_m
     zstates_mpdotp,                 &
     dstates_angular_momentum,       &
     zstates_angular_momentum,       &
-    dstates_calc_angular,           &
-    zstates_calc_angular,           &
     states_distribute_nodes,        &
     dstates_allocate_wfns,          &
     zstates_allocate_wfns
