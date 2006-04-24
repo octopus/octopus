@@ -114,69 +114,121 @@ end subroutine X(lr_build_dl_rho)
 ! This subroutine calculates the solution of
 !    (H - eps_{ist,ik} + omega) psi^1_{ist,ik} = y
 ! ---------------------------------------------------------
-subroutine X(lr_solve_HXeY) (lr, h, gr, d, ik, x, y, omega)
+subroutine X(lr_solve_HXeY) (lr, h, gr, d, ik, x, y, omega, &
+     st, ortogonalize_each_step)
   type(lr_t),          intent(inout) :: lr
   type(hamiltonian_t), intent(inout) :: h
   type(grid_t),        intent(inout) :: gr
   type(states_dim_t),  intent(in)    :: d
+  type(states_t), optional, intent(inout) :: st
+  logical, optional,   intent(in)    :: ortogonalize_each_step
 
   integer,                intent(in)    :: ik
   R_TYPE,                 intent(inout) :: x(:,:)   ! x(NP, d%dim)
   R_TYPE,                 intent(in)    :: y(:,:)   ! y(NP, d%dim)
-  R_TYPE, optional,       intent(in)    :: omega
+  R_TYPE,                 intent(in)    :: omega
 
   R_TYPE, allocatable :: r(:,:), p(:,:), conj(:,:), Hp(:,:)
   R_TYPE  :: alpha, beta, gamma
-  integer :: iter
+  integer :: iter, iunit
   logical :: conv_last, conv
 
+  logical :: gauss_jacobi
+
+  logical :: orto
+
   call push_sub('linear_response_inc.Xlr_solve_HXeY')
+
+  orto = present(st)
+
+  gauss_jacobi = .true.
+  gauss_jacobi = .false.
 
   ALLOCATE( r(NP, d%dim),      NP     *d%dim)
   ALLOCATE( p(NP_PART, d%dim), NP_PART*d%dim)
   ALLOCATE( conj(NP_PART, d%dim), NP_PART*d%dim)
   ALLOCATE(Hp(NP, d%dim),      NP     *d%dim)
 
-  ! Initial residue
-  call X(Hpsi)(h, gr, x, Hp, ik)
-  r(1:NP,1:d%dim) = y(1:NP,1:d%dim) - Hp(1:NP,1:d%dim)
-  if(present(omega)) r(1:NP,1:d%dim) = r(1:NP,1:d%dim) - omega*x(1:NP,1:d%dim)
+  if ( gauss_jacobi ) then 
 
-  ! Initial search direction
-  p(1:NP,1:d%dim) = r(1:NP,1:d%dim)
-  p((NP+1):NP_PART,1:d%dim)=M_ZERO
+    call X(Hpsi_diag)(h, gr, p, ik)
+    p(1:NP,1:d%dim) = CNST(0.25)/(p(1:NP,1:d%dim) + omega)
+    
+    call io_mkdir('linear')
 
-  conv_last = .false.
-  do iter = 1, lr%max_iter
-    conj(1:NP,1:d%dim) = R_CONJ(r(1:NP,1:d%dim))
-    gamma = X(states_dotp) (gr%m, d%dim, conj, r)
+    iunit = io_open('linear/diagonal', action='write')
 
-!    print*, "GAMMA", gamma
+    do iter=1,NP
+      write(iunit, '(i10, f12.6, f12.6, f12.6)') iter, abs(p(iter,1)), & 
+           R_REAL(p(iter,1)), R_AIMAG(p(iter,1))
+    end do
 
-    ! we require more precision here than for the density
-    conv = (sqrt(abs(gamma)) < lr%conv_abs_dens)
-    if(conv.and.conv_last) exit
-    conv_last = conv
+    call io_close(iunit)
 
-    call X(Hpsi)(h, gr, p, Hp, ik)
-    if(present(omega)) Hp(1:NP,1:d%dim) = Hp(1:NP,1:d%dim) + omega*p(1:NP,1:d%dim)
+!
+!      print*, iter, p(iter,1), 0404
+!    end do
 
-!    print*,"NORM", sum(R_CONJ(Hp(1:NP,1:d%dim))*Hp(1:NP,1:d%dim))
+!    print*, sum(abs(p(1:NP,1:d%dim)))
 
-    conj(1:NP_PART,1:d%dim)=R_CONJ(p(1:NP_PART,1:d%dim))
-    alpha = gamma/ X(states_dotp) (gr%m, d%dim, conj, Hp)
+    do iter = 1, (lr%max_iter*10)
 
-    r(1:NP,1:d%dim) = r(1:NP,1:d%dim) - alpha*Hp(1:NP,1:d%dim)
-    x(1:NP_PART,1:d%dim) = x(1:NP_PART,1:d%dim) + alpha* p(1:NP_PART,1:d%dim)
+      if(orto) call X(lr_orth_vector)(gr%m, st, x, ik)
+      call X(Hpsi)(h, gr, x, Hp, ik)
+      r(1:NP,1:d%dim) = y(1:NP,1:d%dim) - ( Hp(1:NP,1:d%dim) + omega*x(1:NP,1:d%dim) )
 
-    conj(1:NP,1:d%dim)=R_CONJ(r(1:NP,1:d%dim))
-    beta = X(states_dotp) (gr%m, d%dim, conj, r)/gamma
-    p(1:NP,1:d%dim) = r(1:NP,1:d%dim) + beta*p(1:NP,1:d%dim)
+      if( mod(iter,100)==0 ) print*, iter, sum(abs(r(1:NP,1:d%dim)))
 
-  end do
+      x(1:NP,1:d%dim)=x(1:NP,1:d%dim) + p(1:NP,1:d%dim)*r(1:NP,1:d%dim)
+
+
+    end do
+
+  else
+
+    ! Initial residue
+    call X(Hpsi)(h, gr, x, Hp, ik)
+    r(1:NP,1:d%dim) = y(1:NP,1:d%dim) - ( Hp(1:NP,1:d%dim) + omega*x(1:NP,1:d%dim) )
+    
+    ! Initial search direction
+    p(1:NP,1:d%dim) = r(1:NP,1:d%dim)
+    p((NP+1):NP_PART,1:d%dim)=M_ZERO
+    
+    conv_last = .false.
+    do iter = 1, lr%max_iter
+      conj(1:NP,1:d%dim) = R_CONJ(r(1:NP,1:d%dim))
+      gamma = X(states_dotp) (gr%m, d%dim, conj, r)
+      
+      !    print*, "GAMMA", gamma
+      
+      ! we require more precision here than for the density
+      conv = (sqrt(abs(gamma)) < lr%conv_abs_dens)
+      if(conv.and.conv_last) exit
+      conv_last = conv
+
+      if(orto) call X(lr_orth_vector)(gr%m, st, p, ik)   
+      call X(Hpsi)(h, gr, p, Hp, ik)
+      Hp(1:NP,1:d%dim) = Hp(1:NP,1:d%dim) + omega*p(1:NP,1:d%dim)
+      
+      !    print*,"NORM", sum(R_CONJ(Hp(1:NP,1:d%dim))*Hp(1:NP,1:d%dim))
+      
+      conj(1:NP_PART,1:d%dim)=R_CONJ(p(1:NP_PART,1:d%dim))
+      alpha = gamma/ X(states_dotp) (gr%m, d%dim, conj, Hp)
+      
+      r(1:NP,1:d%dim) = r(1:NP,1:d%dim) - alpha*Hp(1:NP,1:d%dim)
+      x(1:NP_PART,1:d%dim) = x(1:NP_PART,1:d%dim) + alpha* p(1:NP_PART,1:d%dim)
+!      
+      conj(1:NP,1:d%dim)=R_CONJ(r(1:NP,1:d%dim))
+      beta = X(states_dotp) (gr%m, d%dim, conj, r)/gamma
+      p(1:NP,1:d%dim) = r(1:NP,1:d%dim) + beta*p(1:NP,1:d%dim)
+      
+    end do
+    
+  end if
 
   lr%iter     = iter
   lr%abs_dens = gamma
+
   deallocate(r, p, Hp, conj)
 
   call pop_sub()
@@ -196,9 +248,9 @@ subroutine X(lr_orth_response)(m, st, lr)
   
   do ik = 1, st%d%nspin
     do ist = 1, st%nst
-      if(st%occ(ist, ik) > M_ZERO) then
+!      if(st%occ(ist, ik) > M_ZERO) then
         call X(lr_orth_vector) (m, st, lr%X(dl_psi)(:,:, ist, ik), ik)
-      end if
+!      end if
     end do
   end do
   

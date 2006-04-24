@@ -31,6 +31,11 @@ module linear_response_m
   use hamiltonian_m
   use xc_m
   use functions_m
+  use output_m 
+  use units_m
+  use cube_function_m
+  use lib_oct_m
+  use io_m
 
   implicit none
 
@@ -177,11 +182,15 @@ contains
 
 #include "undef.F90"
 #include "real.F90"
+
 #include "linear_response_inc.F90"
+#include "linear_response_out.F90" 
 
 #include "undef.F90"
 #include "complex.F90"
+
 #include "linear_response_inc.F90"
+#include "linear_response_out.F90" 
 
 
 end module linear_response_m

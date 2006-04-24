@@ -1,4 +1,4 @@
-!! Copyright (C) 2004 Eugene S. Kadantsev (ekadants@mjs1.phy.queensu.ca)
+!! Copyright (C) 2004 Xavier Andrade, Eugene S. Kadantsev (ekadants@mjs1.phy.queensu.ca)
 !!
 !! This program is free software; you can redistribute it and/or modify
 !! it under the terms of the GNU General Public License as published by
@@ -33,13 +33,23 @@ module static_pol_lr_m
   use linear_response_m
   use io_m
   use lib_oct_parser_m
+  use math_m
 
   implicit none
 
   private
   public :: &
        static_pol_lr_run
+  
+  type pol_props 
+     logical :: complex_response
+     logical :: add_fxc
+     logical :: use_unoccupied
+     logical :: dynamic
+     logical :: ort_each_step
+  end type pol_props
 
+  
 contains
 
   ! ---------------------------------------------------------
@@ -52,82 +62,63 @@ contains
     type(grid_t),   pointer :: gr
 
     FLOAT :: pol(1:MAX_DIM, 1:MAX_DIM)
+    CMPLX :: zpol(1:MAX_DIM, 1:MAX_DIM)
     FLOAT :: hpol(1:MAX_DIM, 1:MAX_DIM, 1:MAX_DIM)
 
-    FLOAT :: w, delta
-    integer :: nfreq, nsigma, ndim, i, j, sigma, ierr
-    logical :: dynamic_pol, complex_response
+    FLOAT :: delta
+    integer :: nfreq, nsigma, ndim, i, j, sigma, ierr, kpoints, dim, nst, ist
+    logical :: calculate_dir(1:MAX_DIM)
+    type(pol_props) :: props
+    
+    integer  :: nomega
+    FLOAT, allocatable :: omega(:)
 
+    integer ::iunit
 
     call push_sub('em_resp.static_pol_lr_run')
     
     gr => sys%gr
-
-    ! first we check what we want to do
-
     ndim = sys%gr%sb%dim
-    if ( conf%devel_version ) then 
-      ! read frequency
-      call loct_parse_float(check_inp('PolBaseFrequency'), M_ZERO , w)
-    else
-      w = M_ZERO
-    endif
+    call parse_freq_blk()
 
-    if( w == M_ZERO ) then
-      dynamic_pol = .false.
-      complex_response = .false.
+
+    call loct_parse_logical(check_inp('PolAddFXC'), .true., props%add_fxc)
+    call loct_parse_logical(check_inp('PolOrtEachStep'), .false., props%ort_each_step)
+
+    if( .not. props%dynamic ) then
+      props%complex_response = .false.
       nfreq = 1
       nsigma = 1
     else 
-      dynamic_pol = .true.
-      complex_response = .true.
       call loct_parse_float(check_inp('Delta'), M_ZERO , delta)
-!      complex_response=.false.
+      props%complex_response = (delta /= M_ZERO ) 
       nfreq = 1   ! for now only polarizability, so only one frequency
       nsigma = 2  ! but positive and negative values of the frequency must be considered
     end if
 
-
-    if(complex_response) then 
-      ! allocate wfs
-      allocate(sys%st%zpsi(gr%m%np_part, sys%st%d%dim, sys%st%nst, sys%st%d%nik))
-      ! load wave-functions
-      call zrestart_read(trim(tmpdir)//'restart_gs', sys%st, sys%gr, ierr)
-    else
-      allocate(sys%st%X(psi)(gr%m%np_part, sys%st%d%dim, sys%st%nst, sys%st%d%nik))
-      call X(restart_read) (trim(tmpdir)//'restart_gs', sys%st, sys%gr, ierr)
-    endif
-
-    if(ierr.ne.0) then
-      message(1) = "Could not read KS orbitals from '"//trim(tmpdir)//"restart_gs'"
-      message(2) = "Please run a calculation of the ground state first!"
-      call write_fatal(2)
-    end if
+    call read_wfs()
 
     ! setup Hamiltonian
     message(1) = 'Info: Setting up Hamiltonian for linear response'
     call write_info(1)
-
-    if(complex_response) then 
+    
+    if(props%complex_response) then 
       call zsystem_h_setup(sys, h)
     else
       call X(system_h_setup) (sys, h)
     endif
-
-    !if(.not.fromScratch) then ! try to load delta_psi
-    !  if(X(restart_read) (trim(tmpdir)//'restart_lr_static_pol', sys%st, m).ne.0) then
+    
     fromScratch = .true.
-
-
+    
     ALLOCATE(lr(1:ndim,1:nsigma,1:nfreq),ndim*nfreq*nsigma)
-
+    
     do i = 1, ndim
       do sigma = 1, nsigma
         do j = 1, nfreq
 
           call lr_init(lr(i,sigma,j), "SP")
 
-          if( .not. complex_response ) then 
+          if( .not. props%complex_response ) then 
             call X(lr_alloc_fHxc)  (sys%st, gr%m, lr(i,sigma,j))
             ierr = X(lr_alloc_psi) (sys%st, gr%m, lr(i,sigma,j))
             lr(i,sigma,j)%X(dl_psi) = M_ZERO
@@ -138,27 +129,59 @@ contains
             lr(i,sigma,j)%zdl_rho = M_ZERO
           end if
 
-          call lr_build_fxc(gr%m, sys%st, sys%ks%xc, lr(i,sigma,j)%dl_Vxc)
+          if(props%add_fxc) then 
+            call lr_build_fxc(gr%m, sys%st, sys%ks%xc, lr(i,sigma,j)%dl_Vxc)
+          else 
+            lr(i,sigma,j)%dl_Vxc=M_ZERO
+          end if
 
         end do
       end do
     enddo
 
-    if( dynamic_pol ) then 
-      message(1) = "calculating dynamic polarizabilities :-D"
-      message(2) = "warning, not working!!!!!!!!!!!!!!!"
-      call write_warning(2)
-      if( complex_response ) then 
-        call zdynamic(sys, h, lr, pol(1:ndim, 1:ndim), cmplx(w, delta, PRECISION))
-      else 
-        call X(dynamic)(sys, h, lr, pol(1:ndim, 1:ndim), R_TOTYPE(w))
-      end if
+
+
+    if( props%dynamic ) then 
+      
+      call io_mkdir('linear')
+      iunit = io_open('linear/dynpols', action='write')
+      !todo: write header
+      write(iunit, '(8a)')  '# ', 'freq ', '11 ' , '22 ' , '33 ', '12 ', '13 ', '23 '
+      call io_close(iunit)
+
+      !!the dynamic case
+      message(1) = "Info: Calculating dynamic polarizabilities."
+      call write_info(1)
+           
+      do i=1,nomega
+
+        write(message(1), '(a,f12.6)') 'Info: Calculating polarizability for frequency: ', omega(i)
+        call write_info(1)
+
+        if( props%complex_response ) then 
+          call zdynamic_response(sys, h, lr, props, zpol(1:ndim, 1:ndim), cmplx(omega(i), delta, PRECISION))
+        else 
+          call X(dynamic_response)(sys, h, lr, props, zpol(1:ndim, 1:ndim), R_TOTYPE(omega(i)))
+        end if
+        iunit = io_open('linear/dynpols', action='write', position='append' )
+        write(iunit, '(13f12.6)') omega(i), zpol(1,1), zpol(2,2), zpol(3,3), zpol(1,2), zpol(1,3), zpol(2,3)
+        call io_close(iunit)
+      end do
+
+
     else 
-      call static(sys, h, lr(:,:,1), pol(1:ndim, 1:ndim), hpol(1:ndim, 1:ndim, 1:ndim))
+
+      !!the static case
+
+      call static_response(sys, h, lr(:,:,1), props, &
+           pol(1:ndim, 1:ndim), hpol(1:ndim, 1:ndim, 1:ndim))
       call output()
+      do i = 1,ndim
+        call X(lr_output) (sys%st, sys%gr, lr(i,1,1) ,"linear", i, sys%outp)
+      end do
+
     end if
-
-
+    
     do i = 1, ndim
       do sigma = 1, nsigma
         do j= 1, nfreq
@@ -167,8 +190,9 @@ contains
       end do
     end do
 
+    if(props%dynamic) deallocate(omega)
     deallocate(lr)
-    if(complex_response) then 
+    if(props%complex_response) then 
       deallocate(sys%st%zpsi)
     else
       deallocate(sys%st%X(psi))
@@ -177,16 +201,117 @@ contains
       
       
   contains
-
     ! ---------------------------------------------------------
-    subroutine output()
-      integer :: j, iunit,i,k
-      FLOAT :: msp, bpar(MAX_DIM)
-      call io_mkdir('linear')
+    subroutine parse_freq_blk()
+      
+      integer(POINTER_SIZE) :: blk
+      integer :: nrow
+      integer :: number, j, k
+      FLOAT   :: omega_ini, omega_fin, domega
+      if (loct_parse_block(check_inp('PolFreqs'), blk) == 0) then 
 
-      !! Output polarizabilty
-      iunit = io_open('linear/polarizability_lr', action='write')
-      write(iunit, '(2a)', advance='no') '# Static polarizability tensor [', &
+        props%dynamic = .true.
+
+        nrow = loct_parse_block_n(blk)
+        nomega = 0
+
+        !count the number of frequencies
+        do i=0,(nrow-1)
+          call loct_parse_block_int(blk, i, 0, number)
+          nomega = nomega + number;
+        end do
+
+        ALLOCATE(omega(1:nomega),nomega)
+        
+        !read frequencies
+        j=1
+        do i=0,(nrow-1)
+          call loct_parse_block_int(blk, i, 0, number)
+          call loct_parse_block_float(blk, i, 1, omega_ini)
+          if(number > 1) then 
+            call loct_parse_block_float(blk, i, 2, omega_fin)
+            domega=(omega_fin-omega_ini)/(number-M_ONE)
+            do k=0,(number-1)
+              omega(j+k)=omega_ini+domega*k
+            end do
+            j=j+number
+          else
+            omega(j)=omega_ini
+            j=j+1
+          end if
+          
+        end do
+
+        call loct_parse_block_end(blk)
+
+        call sort(omega)
+
+    else 
+
+      props%dynamic = .false. 
+
+    end if
+
+  end subroutine parse_freq_blk
+
+  subroutine read_wfs()    
+    !check how many wfs we have
+    
+    call restart_look(trim(tmpdir)//'restart_gs', sys%gr%m, kpoints, dim, nst, ierr)
+    if(ierr.ne.0) then
+      message(1) = 'Could not properly read wave-functions from "'//trim(tmpdir)//'restart_gs".'
+      call write_fatal(1)
+    end if
+
+    !if there are unoccupied wfs, read them
+    if (nst > sys%st%nst) then 
+      
+      call loct_parse_logical(check_inp('LRUseUnoccupied'), .false. , props%use_unoccupied)
+
+      if (props%use_unoccupied) then 
+      
+        write(message(1), '(a,i2,a)') 'Info: Found ', (nst - sys%st%nst), ' unoccupied wavefunctions.'
+        call write_info(1)
+        
+        sys%st%nst    = nst
+        sys%st%st_end = nst
+        deallocate(sys%st%eigenval, sys%st%occ)
+        
+        ALLOCATE(sys%st%eigenval(sys%st%nst, sys%st%d%nik), sys%st%nst*sys%st%d%nik)
+        ALLOCATE(sys%st%occ(sys%st%nst, sys%st%d%nik), sys%st%nst*sys%st%d%nik)
+      else
+        write(message(1), '(a)') 'Info: Not using unoccupied wavefunctions.'
+        call write_info(1)
+      end if
+
+    end if
+
+    ! load wave-functions
+    if(props%complex_response) then 
+      call zstates_allocate_wfns(sys%st, gr%m)
+      call zrestart_read(trim(tmpdir)//'restart_gs', sys%st, sys%gr, ierr)
+    else
+      call X(states_allocate_wfns)(sys%st, gr%m)
+      call X(restart_read) (trim(tmpdir)//'restart_gs', sys%st, sys%gr, ierr)
+    endif
+    
+    if(ierr.ne.0) then
+      message(1) = "Could not read KS orbitals from '"//trim(tmpdir)//"restart_gs'"
+      message(2) = "Please run a calculation of the ground state first!"
+      call write_fatal(2)
+    end if
+    
+  end subroutine read_wfs
+
+  ! ---------------------------------------------------------
+  subroutine output()
+    integer :: j, iunit,i,k
+    FLOAT :: msp, bpar(MAX_DIM)
+    call io_mkdir('linear')
+    
+    !! Output polarizabilty
+    iunit = io_open('linear/polarizability_lr', action='write' )
+    write(iunit, '(2a)', advance='no') '# Static polarizability tensor [', &
            trim(units_out%length%abbrev)
       if(NDIM.ne.1) write(iunit, '(a,i1)', advance='no') '^', NDIM
       write(iunit, '(a)') ']'
@@ -251,10 +376,11 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine static(sys, h, lr, pol, hpol)
+  subroutine static_response(sys, h, lr, props, pol, hpol)
     type(system_t),      intent(inout) :: sys
     type(hamiltonian_t), intent(inout) :: h
     type(lr_t),          intent(inout) :: lr(:,:) ! lr(NDIM,1,1)
+    type(pol_props),     intent(in)    :: props
     FLOAT,               intent(out)   :: pol(:,:)
     FLOAT,               intent(out)   :: hpol(:,:,:)
 
@@ -270,7 +396,7 @@ contains
     np  = sys%gr%m%np
     dim = sys%gr%sb%dim
 
-    call push_sub('em_resp.static')
+    call push_sub('em_resp.static_response')
 
     message(1) = "Info:  Calculating static properties"
     call write_info(1)
@@ -292,7 +418,7 @@ contains
 
       call mix_init(lr(i,1)%mixer, sys%gr%m, 1, sys%st%d%nspin)
 
-      call X(get_response_e)(sys, h, lr(:,:), i, nsigma=1, omega=R_TOTYPE(M_ZERO))
+      call X(get_response_e)(sys, h, lr(:,:), i, 1, R_TOTYPE(M_ZERO), props)
       call mix_end(lr(i, 1)%mixer)
 
       do ispin = 1, sys%st%d%nspin
@@ -395,7 +521,7 @@ contains
     deallocate(kxc)
 
     call pop_sub()
-  end subroutine static
+  end subroutine static_response
 
 
 #include "undef.F90"

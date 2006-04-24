@@ -19,11 +19,12 @@
 
 
 ! ---------------------------------------------------------
-subroutine X(dynamic)(sys, h, lr, pol, w)
+subroutine X(dynamic_response)(sys, h, lr, props, pol, w)
   type(system_t),      intent(inout) :: sys
   type(hamiltonian_t), intent(inout) :: h
   type(lr_t),          intent(inout) :: lr(:,:,:) ! dim, nsigma(=2), nfreq(=1)
-  FLOAT,               intent(inout) :: pol(:,:)
+  type(pol_props),     intent(in)    :: props
+  CMPLX,               intent(inout) :: pol(:,:)
   R_TYPE,              intent(in)    :: w 
 
   
@@ -38,20 +39,16 @@ subroutine X(dynamic)(sys, h, lr, pol, w)
   X(pol) = M_ZERO
 
   do dir = 1, sys%gr%sb%dim
-    write(message(1), '(a,i1,a,f12.6)') 'Info: Calculating polarizability for direction ', &
-         dir, ' and frequency ', dble(w)
+    write(message(1), '(a,i1)') 'Info: Calculating polarizability for direction ', dir
 
     call write_info(1)
 
     do sigma = 1, 2
       call mix_init(lr(dir,sigma,freq)%mixer, sys%gr%m, 1, sys%st%d%nspin)
     end do
-    if( dir==3 ) then
-      call X(get_response_e)(sys, h, lr(:,:,freq), dir, nsigma=2 , omega=w)
-    else
-      print*, "WARNING: SETTING TO ZERO DIR ", dir
-      lr(dir,2,freq)%X(dl_rho)=M_ZERO
-    endif
+
+    call X(get_response_e)(sys, h, lr(:,:,freq), dir, 2 , w,props)
+
     do sigma = 1, 2
       call mix_end(lr(dir,sigma,freq)%mixer)
     end do
@@ -63,21 +60,24 @@ subroutine X(dynamic)(sys, h, lr, pol, w)
 
   end do
 
-  print*, X(pol)
+!  print*, X(pol)
+  pol=X(pol)
 
   call pop_sub()
 
-end subroutine X(dynamic)
+end subroutine X(dynamic_response)
 
 
 ! ---------------------------------------------------------
-subroutine X(get_response_e)(sys, h, lr, dir, nsigma, omega)
+subroutine X(get_response_e)(sys, h, lr, dir, nsigma, omega, props)
   type(system_t), target, intent(inout) :: sys
   type(hamiltonian_t),    intent(inout) :: h
   type(lr_t),             intent(inout) :: lr(:,:) !ndim,nsigma
   integer,                intent(in)    :: dir 
   integer,                intent(in)    :: nsigma 
   R_TYPE,                 intent(in)    :: omega
+  type(pol_props),        intent(in)    :: props
+
   FLOAT, allocatable :: diff(:,:,:)
   FLOAT :: dpsimod,freq_sign
   integer :: iter, sigma, ik, ik2, ist, i, ist2
@@ -108,7 +108,7 @@ subroutine X(get_response_e)(sys, h, lr, dir, nsigma, omega)
   ALLOCATE(a(st%nst,st%d%nspin),st%nst*st%d%nspin)
 
   diff=M_ZERO
-  print*, "OMEGA",  omega
+!  print*, "OMEGA",  omega
   call init_response_e()
   finish = .false.
   iter_loop: do iter=1, lr(dir,1)%max_iter
@@ -147,7 +147,8 @@ subroutine X(get_response_e)(sys, h, lr, dir, nsigma, omega)
           dV(1:m%np,ik) = dV(1:m%np,ik) +&
                lr(dir,sigma)%dl_Vxc(1:m%np, ik, ik2)*lr(dir,sigma)%X(dl_rho)(1:m%np,ik2)
         end do
-        
+
+
         do ist = 1, st%nst
           if(st%occ(ist, ik) <= M_ZERO) cycle
           
@@ -171,10 +172,14 @@ subroutine X(get_response_e)(sys, h, lr, dir, nsigma, omega)
             !            print*,sum(R_CONJ(Y(1:m%np,1))*st%X(psi)(1:m%np, 1, ist2, ik))
 !          end do
 
-          
-          call X(lr_solve_HXeY) (lr(dir,1), h, sys%gr, sys%st%d, ik, lr(dir,sigma)%X(dl_psi)(:,:, ist, ik), Y, &
-               -sys%st%eigenval(ist, ik) + freq_sign*omega)
-          
+          if(props%ort_each_step) then 
+            call X(lr_solve_HXeY) (lr(dir,1), h, sys%gr, sys%st%d, ik, lr(dir,sigma)%X(dl_psi)(:,:, ist, ik), Y, &
+                 -sys%st%eigenval(ist, ik) + freq_sign*omega, sys%st)
+          else
+            call X(lr_solve_HXeY) (lr(dir,1), h, sys%gr, sys%st%d, ik, lr(dir,sigma)%X(dl_psi)(:,:, ist, ik), Y, &
+                 -sys%st%eigenval(ist, ik) + freq_sign*omega)
+          end if
+
 !          call X(Hpsi)(h, sys%gr, lr(dir,sigma)%X(dl_psi)(:,:, ist, ik) , Hp, ik)
 !          Hp(1:m%np,1)=Hp(1:m%np,1)+&
 !               (-sys%st%eigenval(ist, ik)+freq_sign*omega)*lr(dir,sigma)%X(dl_psi)(1:m%np,1, ist, ik)&
@@ -192,11 +197,13 @@ subroutine X(get_response_e)(sys, h, lr, dir, nsigma, omega)
 
 !          if (nsigma == 2 ) then
             
-!            do ist2 = 1, st%nst
-!              lr(dir,sigma)%X(dl_psi)(1:m%np,1, ist, ik)=lr(dir,sigma)%X(dl_psi)(1:m%np, 1, ist, ik)&
-!                   +a(ist2,ik)/(sys%st%eigenval(ist2, ik)-sys%st%eigenval(ist, ik)+freq_sign*omega)*&
-!                   st%X(psi)(1:m%np, 1, ist2, ik)
-!            end do
+            do ist2 = 1, st%nst
+              if(sys%st%occ(ist2,ik) == M_ZERO ) then 
+                lr(dir,sigma)%X(dl_psi)(1:m%np,1, ist, ik)=lr(dir,sigma)%X(dl_psi)(1:m%np, 1, ist, ik)&
+                     +a(ist2,ik)/(sys%st%eigenval(ist2, ik)-sys%st%eigenval(ist, ik)+freq_sign*omega)*&
+                     st%X(psi)(1:m%np, 1, ist2, ik)
+              end if
+            end do
             
 !          endif
          
@@ -248,7 +255,7 @@ subroutine X(get_response_e)(sys, h, lr, dir, nsigma, omega)
       end do
 
       lr(dir,sigma)%abs_dens = sqrt(lr(dir,sigma)%abs_dens)
-      print*, sigma, lr(dir,sigma)%abs_dens
+      print*, "SCF RES", sigma, lr(dir,sigma)%abs_dens
       ! are we finished?
       finish(sigma) = (lr(dir,sigma)%abs_dens <= lr(dir,sigma)%conv_abs_dens)
       lr(dir,sigma)%abs_dens=M_ZERO
