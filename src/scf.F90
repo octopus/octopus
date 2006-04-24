@@ -59,23 +59,22 @@ module scf_m
     MIXPOT  = 1,        &
     MIXDENS = 2
 
-  type scf_t         ! some variables used for the scf cycle
-    integer :: max_iter ! maximum number of scf iterations
+  type scf_t      ! some variables used for the scf cycle
+    integer :: max_iter   ! maximum number of scf iterations
+
+    FLOAT :: lmm_r
 
     ! several convergence criteria
     FLOAT :: conv_abs_dens, conv_rel_dens, conv_abs_ev, conv_rel_ev
-
     FLOAT :: abs_dens, rel_dens, abs_ev, rel_ev
 
     integer :: what2mix
-
     logical :: lcao_restricted
 
     type(mix_t) :: smix
     type(eigen_solver_t) :: eigens
-
-    FLOAT :: lmm_r
   end type scf_t
+
 
 contains
 
@@ -510,12 +509,10 @@ contains
 
       call hamiltonian_energy(h, st, gr%geo%eii, iunit)
 
-      if(mpi_grp_is_root(mpi_world)) then
-        write(iunit, '(1x)')
-      end if
+      if(mpi_grp_is_root(mpi_world)) write(iunit, '(1x)')
       if(st%d%ispin > UNPOLARIZED) then
         call write_magnetic_moments(iunit, gr%m, st)
-        write(iunit, '(1x)')
+        if(mpi_grp_is_root(mpi_world)) write(iunit, '(1x)')
       end if
 
 
@@ -539,7 +536,7 @@ contains
 
       ! Next is the angular momentum. Only applies to 2D and 3D.
       if(NDIM.ne.1) call write_angular_momentum(iunit)
-      write(iunit, '(a)')
+      if(mpi_grp_is_root(mpi_world)) write(iunit, '(a)')
 
       if(mpi_grp_is_root(mpi_world)) then
         write(iunit, '(a)') 'Convergence:'
@@ -566,6 +563,7 @@ contains
 
       call pop_sub()
     end subroutine scf_write_static
+
 
     ! ---------------------------------------------------------
     subroutine write_angular_momentum(iunit)
@@ -633,10 +631,10 @@ contains
             write(tmp_str(1), '(i4,3x,a2)') j, trim(cspin)
             if(st%d%ispin == SPINORS) then
               write(tmp_str(2), '(1x,4f12.6,3x,f5.2,a1,f5.2)') &
-                ang(j, 1:3, ik), ang2(j, ik), oplus, '/', ominus
+                ang(j, 1:st%d%nik, ik), ang2(j, ik), oplus, '/', ominus
             else
               write(tmp_str(2), '(1x,4f12.6,3x,f12.6)') &
-                ang(j, 1:3, ik+is), ang2(j, ik+is), o
+                ang(j, 1:st%d%nik, ik+is), ang2(j, ik+is), o
             end if
             message(1) = trim(tmp_str(1))//trim(tmp_str(2))
             call write_info(1, iunit)
@@ -651,6 +649,7 @@ contains
 
       deallocate(ang, ang2)
     end subroutine write_angular_momentum
+
 
     ! ---------------------------------------------------------
     subroutine write_magnetic_moments(iunit, m, st)

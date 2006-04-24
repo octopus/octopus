@@ -553,7 +553,7 @@ contains
     logical, optional, intent(in)    :: fast_generation
 
     logical :: fast_generation_
-    integer :: ia, i, l, lm, k, ierr, p, j
+    integer :: ia, i, l, lm, k, p, j
     type(specie_t), pointer :: s
     type(atom_t),   pointer :: a
     type(dcf_t) :: cf_loc, cf_nlcc

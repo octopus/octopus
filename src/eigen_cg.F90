@@ -216,7 +216,7 @@ subroutine eigen_solver_cg2_new(gr, st, h, tol, niter, converged, diff, reorder,
   logical,   optional, intent(in)    :: reorder
   logical,   optional, intent(in)    :: verbose
 
-  integer :: nik, nst, dim, ik, ist, maxter, i, k, conv, conv_
+  integer :: nik, nst, dim, ik, ist, maxter, i, conv, conv_
   logical :: verbose_, reorder_
   R_TYPE, allocatable :: psi(:,:), phi(:, :), hpsi(:, :), hcgp(:, :), cg(:, :), sd(:, :), cgp(:, :)
   FLOAT :: ctheta, stheta, ctheta2, stheta2, mu, lambda, dump, &

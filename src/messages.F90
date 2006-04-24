@@ -420,12 +420,10 @@ contains
     adv_ = 'yes'
     if(present(adv)) adv_ = adv
 
-    if(mpi_grp_is_root(mpi_world)) then
-      write(iunit, '(a)', advance=trim(adv_)) trim(str)
-      if(flush_messages) then
-        if(iunit.eq.stderr) write(iunit_err, '(a)', advance=trim(adv_)) trim(str)
-        if(iunit.eq.stdout) write(iunit_out, '(a)', advance=trim(adv_)) trim(str)
-      end if
+    write(iunit, '(a)', advance=trim(adv_)) trim(str)
+    if(flush_messages) then
+      if(iunit.eq.stderr) write(iunit_err, '(a)', advance=trim(adv_)) trim(str)
+      if(iunit.eq.stdout) write(iunit_out, '(a)', advance=trim(adv_)) trim(str)
     end if
 
   end subroutine flush_msg

@@ -50,7 +50,7 @@ contains
     type(mesh_t),   intent(in) :: m
     FLOAT,          intent(out) :: rho(:)
 
-    FLOAT :: d, dmin, sigma
+    FLOAT :: d, dmin
     integer :: i, imin
 
     call push_sub('specie.specie_get_density')

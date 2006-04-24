@@ -97,7 +97,7 @@ contains
     type(states_t),   pointer :: st
     type(geometry_t), pointer :: geo
     logical :: stopping
-    integer :: i, ii, j, idim, ist, ik, ierr
+    integer :: i, ii, j, ik, ierr
     FLOAT, allocatable ::  x1(:,:), x2(:,:), f1(:,:) ! stuff for verlet
     FLOAT :: etime
 

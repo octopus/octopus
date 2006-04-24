@@ -180,8 +180,6 @@ subroutine X(f_laplacian_diag) (sb, f_der, lapl, cutoff_)
   R_TYPE,           intent(out)    :: lapl(:)  ! lapl(m%np)
   FLOAT, optional,  intent(in)     :: cutoff_
 
-  FLOAT :: cutoff
-
   call push_sub('f_inc.Xf_laplacian')
 
   ASSERT(f_der%space==REAL_SPACE.or.f_der%space==FOURIER_SPACE)

@@ -61,16 +61,15 @@ contains
     type(lr_t), allocatable :: lr(:,:,:) ! lr(NDIM,NS,NFREQ)
     type(grid_t),   pointer :: gr
 
-    FLOAT :: pol(1:MAX_DIM, 1:MAX_DIM)
+    FLOAT ::  pol(1:MAX_DIM, 1:MAX_DIM)
     CMPLX :: zpol(1:MAX_DIM, 1:MAX_DIM)
     FLOAT :: hpol(1:MAX_DIM, 1:MAX_DIM, 1:MAX_DIM)
 
     FLOAT :: delta
-    integer :: nfreq, nsigma, ndim, i, j, sigma, ierr, kpoints, dim, nst, ist
-    logical :: calculate_dir(1:MAX_DIM)
+    integer :: nfreq, nsigma, ndim, i, j, sigma, ierr, kpoints, dim, nst
     type(pol_props) :: props
     
-    integer  :: nomega
+    integer :: nomega
     FLOAT, allocatable :: omega(:)
 
     integer ::iunit
@@ -81,16 +80,15 @@ contains
     ndim = sys%gr%sb%dim
     call parse_freq_blk()
 
-
     call loct_parse_logical(check_inp('PolAddFXC'), .true., props%add_fxc)
     call loct_parse_logical(check_inp('PolOrtEachStep'), .false., props%ort_each_step)
 
-    if( .not. props%dynamic ) then
+    if(.not.props%dynamic) then
       props%complex_response = .false.
       nfreq = 1
       nsigma = 1
     else 
-      call loct_parse_float(check_inp('Delta'), M_ZERO , delta)
+      call loct_parse_float(check_inp('Delta'), M_ZERO, delta)
       props%complex_response = (delta /= M_ZERO ) 
       nfreq = 1   ! for now only polarizability, so only one frequency
       nsigma = 2  ! but positive and negative values of the frequency must be considered
@@ -110,50 +108,49 @@ contains
     
     fromScratch = .true.
     
-    ALLOCATE(lr(1:ndim,1:nsigma,1:nfreq),ndim*nfreq*nsigma)
+    ALLOCATE(lr(1:ndim,1:nsigma,1:nfreq), ndim*nfreq*nsigma)
     
     do i = 1, ndim
       do sigma = 1, nsigma
         do j = 1, nfreq
 
-          call lr_init(lr(i,sigma,j), "SP")
+          call lr_init(lr(i, sigma, j), "SP")
 
-          if( .not. props%complex_response ) then 
-            call X(lr_alloc_fHxc)  (sys%st, gr%m, lr(i,sigma,j))
-            ierr = X(lr_alloc_psi) (sys%st, gr%m, lr(i,sigma,j))
-            lr(i,sigma,j)%X(dl_psi) = M_ZERO
+          if(.not.props%complex_response) then 
+            call X(lr_alloc_fHxc)  (sys%st, gr%m, lr(i, sigma, j))
+            ierr = X(lr_alloc_psi) (sys%st, gr%m, lr(i, sigma, j))
+            lr(i, sigma, j)%X(dl_psi) = M_ZERO
           else
-            call zlr_alloc_fHxc(sys%st, gr%m, lr(i,sigma,j))
-            ierr = zlr_alloc_psi(sys%st, gr%m, lr(i,sigma,j))
-            lr(i,sigma,j)%zdl_psi = M_ZERO
-            lr(i,sigma,j)%zdl_rho = M_ZERO
+            call zlr_alloc_fHxc(sys%st, gr%m, lr(i, sigma, j))
+            ierr = zlr_alloc_psi(sys%st, gr%m, lr(i, sigma, j))
+            lr(i, sigma, j)%zdl_psi = M_ZERO
+            lr(i, sigma, j)%zdl_rho = M_ZERO
           end if
 
           if(props%add_fxc) then 
-            call lr_build_fxc(gr%m, sys%st, sys%ks%xc, lr(i,sigma,j)%dl_Vxc)
+            call lr_build_fxc(gr%m, sys%st, sys%ks%xc, lr(i, sigma, j)%dl_Vxc)
           else 
-            lr(i,sigma,j)%dl_Vxc=M_ZERO
+            lr(i, sigma, j)%dl_Vxc=M_ZERO
           end if
 
         end do
       end do
     enddo
 
-
-
-    if( props%dynamic ) then 
+    if(props%dynamic) then 
       
       call io_mkdir('linear')
       iunit = io_open('linear/dynpols', action='write')
-      !todo: write header
+
+      ! todo: write header
       write(iunit, '(8a)')  '# ', 'freq ', '11 ' , '22 ' , '33 ', '12 ', '13 ', '23 '
       call io_close(iunit)
 
-      !!the dynamic case
+      ! the dynamic case
       message(1) = "Info: Calculating dynamic polarizabilities."
       call write_info(1)
            
-      do i=1,nomega
+      do i= 1, nomega
 
         write(message(1), '(a,f12.6)') 'Info: Calculating polarizability for frequency: ', omega(i)
         call write_info(1)
@@ -168,24 +165,21 @@ contains
         call io_close(iunit)
       end do
 
-
     else 
 
-      !!the static case
-
-      call static_response(sys, h, lr(:,:,1), props, &
+      ! the static case
+      call static_response(sys, h, lr(:, :, 1), props, &
            pol(1:ndim, 1:ndim), hpol(1:ndim, 1:ndim, 1:ndim))
       call output()
       do i = 1,ndim
-        call X(lr_output) (sys%st, sys%gr, lr(i,1,1) ,"linear", i, sys%outp)
+        call X(lr_output) (sys%st, sys%gr, lr(i, 1, 1) ,"linear", i, sys%outp)
       end do
-
     end if
     
     do i = 1, ndim
       do sigma = 1, nsigma
         do j= 1, nfreq
-          call lr_dealloc(lr(i,sigma,j))
+          call lr_dealloc(lr(i, sigma, j))
         end do
       end do
     end do
@@ -199,8 +193,8 @@ contains
     endif
     call pop_sub()
       
-      
   contains
+
     ! ---------------------------------------------------------
     subroutine parse_freq_blk()
       
@@ -216,44 +210,42 @@ contains
         nomega = 0
 
         !count the number of frequencies
-        do i=0,(nrow-1)
+        do i= 0, nrow-1
           call loct_parse_block_int(blk, i, 0, number)
-          nomega = nomega + number;
+          nomega = nomega + number
         end do
 
-        ALLOCATE(omega(1:nomega),nomega)
+        ALLOCATE(omega(1:nomega), nomega)
         
         !read frequencies
-        j=1
-        do i=0,(nrow-1)
+        j = 1
+        do i = 0, nrow-1
           call loct_parse_block_int(blk, i, 0, number)
           call loct_parse_block_float(blk, i, 1, omega_ini)
           if(number > 1) then 
             call loct_parse_block_float(blk, i, 2, omega_fin)
-            domega=(omega_fin-omega_ini)/(number-M_ONE)
-            do k=0,(number-1)
-              omega(j+k)=omega_ini+domega*k
+            domega = (omega_fin-omega_ini)/(number-M_ONE)
+            do k = 0, number-1
+              omega(j+k) = omega_ini + domega*k
             end do
-            j=j+number
+            j = j + number
           else
-            omega(j)=omega_ini
-            j=j+1
+            omega(j) = omega_ini
+            j = j + 1
           end if
-          
         end do
 
         call loct_parse_block_end(blk)
 
         call sort(omega)
-
     else 
-
       props%dynamic = .false. 
-
     end if
 
   end subroutine parse_freq_blk
 
+
+  ! ---------------------------------------------------------
   subroutine read_wfs()    
     !check how many wfs we have
     
@@ -278,7 +270,7 @@ contains
         deallocate(sys%st%eigenval, sys%st%occ)
         
         ALLOCATE(sys%st%eigenval(sys%st%nst, sys%st%d%nik), sys%st%nst*sys%st%d%nik)
-        ALLOCATE(sys%st%occ(sys%st%nst, sys%st%d%nik), sys%st%nst*sys%st%d%nik)
+        ALLOCATE(     sys%st%occ(sys%st%nst, sys%st%d%nik), sys%st%nst*sys%st%d%nik)
       else
         write(message(1), '(a)') 'Info: Not using unoccupied wavefunctions.'
         call write_info(1)
@@ -303,13 +295,15 @@ contains
     
   end subroutine read_wfs
 
+
   ! ---------------------------------------------------------
   subroutine output()
-    integer :: j, iunit,i,k
+    integer :: j, iunit, i, k
     FLOAT :: msp, bpar(MAX_DIM)
+
     call io_mkdir('linear')
     
-    !! Output polarizabilty
+    ! Output polarizabilty
     iunit = io_open('linear/polarizability_lr', action='write' )
     write(iunit, '(2a)', advance='no') '# Static polarizability tensor [', &
            trim(units_out%length%abbrev)
@@ -329,7 +323,7 @@ contains
 
       call io_close(iunit)
 
-      !! Output first hyperpolarizabilty (beta)
+      ! Output first hyperpolarizabilty (beta)
       iunit = io_open('linear/beta_lr', action='write')
       write(iunit, '(2a)', advance='no') '# Static hyperpolarizability tensor [', &
            trim(units_out%length%abbrev)
@@ -341,8 +335,8 @@ contains
       end if
 
       do i = 1, NDIM
-        do j= 1, NDIM
-          do k= 1, NDIM
+        do j = 1, NDIM
+          do k = 1, NDIM
             write(iunit,'(3i2,f12.6)') i, j, k, hpol(i,j,k)/units_out%length%factor**(5)
           end do
         end do
@@ -385,7 +379,7 @@ contains
     FLOAT,               intent(out)   :: hpol(:,:,:)
 
     integer :: i, j, k
-    integer :: ispin, ist, ispin2, ist2,n,np, dim
+    integer :: ispin, ist, ispin2, ist2, n, np, dim
 
     R_TYPE :: prod
 
@@ -510,7 +504,7 @@ contains
     do k = 1, dim
       do j = 1, k
         do i = 1, j
-          hpol(i,j,k)=-(hpol(i,j,k)+hpol(j,k,i)+hpol(k,i,j)+hpol(k,j,i)+hpol(j,i,k)+hpol(i,k,j))
+          hpol(i,j,k) = -(hpol(i,j,k) + hpol(j,k,i) + hpol(k,i,j) + hpol(k,j,i) + hpol(j,i,k) + hpol(i,k,j))
         end do ! k
       end do ! j
     end do ! i

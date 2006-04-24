@@ -113,7 +113,7 @@ contains
     integer :: iunit
 
     if(.not.mpi_grp_is_root(mpi_world)) then
-      call write_debug_newlines(2)
+      call write_debug_newlines(4)
       return
     end if
 

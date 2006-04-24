@@ -26,7 +26,7 @@ subroutine X(lr_output) (st, gr, lr, dir, tag, outp)
   integer,          intent(in)    :: tag
   type(output_t),   intent(in)    :: outp
 
-  integer :: ik, ist, idim, is, id, ierr
+  integer :: ik, ist, idim, ierr
   character(len=80) :: fname
   FLOAT :: u
   FLOAT, allocatable :: dtmp(:)
@@ -37,9 +37,9 @@ subroutine X(lr_output) (st, gr, lr, dir, tag, outp)
   u = M_ONE/units_out%length%factor**NDIM
 
   if(iand(outp%what, output_density).ne.0) then
-    do is = 1, st%d%nspin
-      write(fname, '(a,i1,a,i1)') 'lr-density-', is,'-',tag
-      call X(output_function)(outp%how, dir, fname, gr%m, gr%sb, lr%X(dl_rho)(:, is), u, ierr)
+    do ist = 1, st%d%nspin
+      write(fname, '(a,i1,a,i1)') 'lr-density-', ist, '-',tag
+      call X(output_function)(outp%how, dir, fname, gr%m, gr%sb, lr%X(dl_rho)(:, ist), u, ierr)
     end do
   end if
 
@@ -48,9 +48,9 @@ subroutine X(lr_output) (st, gr, lr, dir, tag, outp)
 !    ! calculate current first
 !    call calc_paramagnetic_current(gr, st, st%j)
 !    do is = 1, st%d%nspin
-!      do id = 1, NDIM
-!        write(fname, '(a,i1,a,a)') 'current-', is, '-', index2axis(id)
-!        call doutput_function(outp%how, dir, fname, gr%m, gr%sb, st%j(:, id, is), u, ierr)
+!      do idim = 1, NDIM
+!        write(fname, '(a,i1,a,a)') 'current-', is, '-', index2axis(idim)
+!        call doutput_function(outp%how, dir, fname, gr%m, gr%sb, st%j(:, idim, is), u, ierr)
 !      end do
 !    end do
 !  end if
@@ -98,20 +98,19 @@ contains
     character(len=*), intent(in) :: filename
     
     integer :: spin, i, ist, idim
-
-
     R_TYPE, allocatable :: gpsi(:,:), gdl_psi(:,:)
     FLOAT,  allocatable :: grho(:,:), dl_rho(:),gdl_rho(:,:)
     FLOAT,  allocatable :: dl_elf(:,:)
 
-    ALLOCATE(gpsi(1:NP,1:NDIM),NP*NDIM)
-    ALLOCATE(gdl_psi(1:NP,1:NDIM),NP*NDIM)
-    ALLOCATE(grho(1:NP,1:NDIM),NP*NDIM)
-    ALLOCATE(gdl_rho(1:NP,1:NDIM),NP*NDIM)
 
-    ALLOCATE(dl_rho(1:NP_PART),NP_PART*NDIM)
+    ALLOCATE(gpsi(1:NP, 1:NDIM), NP*NDIM)
+    ALLOCATE(gdl_psi(1:NP, 1:NDIM), NP*NDIM)
+    ALLOCATE(grho(1:NP, 1:NDIM), NP*NDIM)
+    ALLOCATE(gdl_rho(1:NP, 1:NDIM), NP*NDIM)
 
-    ALLOCATE(dl_elf(1:NP,1:st%d%nspin),NP)
+    ALLOCATE(dl_rho(1:NP_PART), NP_PART*NDIM)
+
+    ALLOCATE(dl_elf(1:NP, 1:st%d%nspin), NP)
     
     dl_elf = M_ZERO
 
@@ -124,21 +123,21 @@ contains
           call X(f_gradient)(gr%sb, gr%f_der, st%X(psi)(:, idim, ist, spin), gpsi)
           call X(f_gradient)(gr%sb, gr%f_der, lr%X(dl_psi)(:, idim, ist, spin), gdl_psi)
           
-          do i=1,NP
-            dl_elf(i,spin)=dl_elf(i,spin)+M_TWO*R_REAL(sum(R_CONJ(gpsi(i,1:NDIM))*gdl_psi(i,1:NDIM)))
+          do i = 1, NP
+            dl_elf(i,spin) = dl_elf(i,spin) + M_TWO*R_REAL(sum(R_CONJ(gpsi(i,1:NDIM))*gdl_psi(i,1:NDIM)))
           end do
             
         end do
       end do
 
-      dl_rho(1:NP)=lr%X(dl_rho)(1:NP,spin)
-      dl_rho(NP+1:NP_PART)=M_ZERO
+      dl_rho(1:NP) = lr%X(dl_rho)(1:NP,spin)
+      dl_rho(NP+1:NP_PART) = M_ZERO
 
       call df_gradient(gr%sb, gr%f_der, dl_rho(:), gdl_rho)
       call df_gradient(gr%sb, gr%f_der, st%rho(:,spin), grho)
 
-      do i=1,NP
-        dl_elf(i,spin)=dl_elf(i,spin) &
+      do i= 1, NP
+        dl_elf(i,spin) = dl_elf(i,spin)                                             &
              - M_HALF   * sum(grho(i,1:NDIM)*R_REAL(gpsi(i,1:NDIM)))/st%rho(i,spin) & 
              + M_FOURTH * sum(grho(i,1:NDIM)**2)*dl_rho(i)/(st%rho(i,spin)**2)
       end do
@@ -148,19 +147,13 @@ contains
 
     end do
 
+    deallocate(gpsi)
+    deallocate(gdl_psi)
+    deallocate(grho)
 
-
-    DEALLOCATE(gpsi)
-    DEALLOCATE(gdl_psi)
-    DEALLOCATE(grho)
-
-    DEALLOCATE(dl_elf)
+    deallocate(dl_elf)
     
     
-
-    
-
-
 #if 0
     FLOAT :: f, d, s
     integer :: i, is, ik

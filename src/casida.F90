@@ -232,7 +232,7 @@ contains
     type(system_t),    intent(in) :: sys
     character(len=80), intent(in) :: trandens
 
-    integer :: ia, iunit, ierr
+    integer :: ia, ierr
     character(len=5) :: intstr
     character(len=130) :: filename
     R_TYPE, allocatable :: n0I(:)
