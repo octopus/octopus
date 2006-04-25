@@ -631,10 +631,10 @@ contains
             write(tmp_str(1), '(i4,3x,a2)') j, trim(cspin)
             if(st%d%ispin == SPINORS) then
               write(tmp_str(2), '(1x,4f12.6,3x,f5.2,a1,f5.2)') &
-                ang(j, 1:st%d%nik, ik), ang2(j, ik), oplus, '/', ominus
+                ang(j, ik, 1:3), ang2(j, ik), oplus, '/', ominus
             else
               write(tmp_str(2), '(1x,4f12.6,3x,f12.6)') &
-                ang(j, 1:st%d%nik, ik+is), ang2(j, ik+is), o
+                ang(j, ik+is, 1:3), ang2(j, ik+is), o
             end if
             message(1) = trim(tmp_str(1))//trim(tmp_str(2))
             call write_info(1, iunit)
