@@ -115,6 +115,8 @@ contains
 
     call init_wfs()
 
+    if(fromScratch) call modify_occs()
+
     call td_write_init(write_handler, gr, st, geo, (td%move_ions>0), (h%ep%no_lasers>0), td%iter, td%dt )
 
     ! Calculate initial forces and kinetic energy
@@ -528,6 +530,36 @@ contains
 
       call pop_sub()
     end subroutine td_save_restart
+
+    ! ---------------------------------------------------------
+    subroutine modify_occs()
+      integer(POINTER_SIZE) :: blk
+      integer  :: nrow
+      integer  :: spin, state
+      FLOAT    :: new_occ
+      blk = int(0, POINTER_SIZE)
+      
+      if(loct_parse_block(check_inp('ModifyOccupations'), blk) == 0) then
+        nrow = loct_parse_block_n(blk)
+        
+        do i=0,(nrow-1)
+          call loct_parse_block_int(blk, i, 0, spin)
+          call loct_parse_block_int(blk, i, 1, state)
+          call loct_parse_block_float(blk, i, 2, new_occ)
+          
+          
+          if ( (state <= sys%st%st_end) .and. (spin <= sys%st%d%nik)) then 
+            write(message(1), '(2i2,f12.6,a,f12.6)') spin,state, st%occ(state,spin), ' ->', new_occ
+            call write_info(1)
+            st%occ(state,spin) = new_occ
+          end if
+
+        end do
+        call loct_parse_block_end(blk)
+
+      end if
+
+    end subroutine modify_occs
 
   end subroutine td_run
 
