@@ -60,7 +60,6 @@ subroutine X(dynamic_response)(sys, h, lr, props, pol, w)
 
   end do
 
-!  print*, X(pol)
   pol=X(pol)
 
   call pop_sub()
@@ -122,7 +121,8 @@ subroutine X(get_response_e)(sys, h, lr, dir, nsigma, omega, props)
 
     if(nsigma==2) dl_rhoin(1,:,:,2) = R_AIMAG(lr(dir,1)%X(dl_rho)(:,:))
 
-    if(.not.h%ip_app) then
+    if (props%add_hartree .and. (.not. h%ip_app) ) then
+
       do sigma=1,nsigma
         do i = 1, m%np
           tmp(i) = sum(lr(dir,sigma)%X(dl_rho)(i,:))
@@ -130,8 +130,7 @@ subroutine X(get_response_e)(sys, h, lr, dir, nsigma, omega, props)
         call X(poisson_solve)(sys%gr, lr(dir,sigma)%X(dl_Vhar), tmp)
       end do
     end if
-
-
+    
     do ik = 1, st%d%nspin
       do sigma = 1, nsigma
 
@@ -141,13 +140,17 @@ subroutine X(get_response_e)(sys, h, lr, dir, nsigma, omega, props)
           freq_sign = -M_ONE
         end if
         
-        dV(1:m%np,ik) = lr(dir,sigma)%X(dl_Vhar)(1:m%np) + m%x(1:m%np,dir)
+        dV(1:m%np,ik) = m%x(1:m%np,dir)
 
-        do ik2 = 1, st%d%nspin
-          dV(1:m%np,ik) = dV(1:m%np,ik) +&
-               lr(dir,sigma)%dl_Vxc(1:m%np, ik, ik2)*lr(dir,sigma)%X(dl_rho)(1:m%np,ik2)
-        end do
+        if (props%add_hartree) dV(1:m%np,ik) = dV(1:m%np,ik) + lr(dir,sigma)%X(dl_Vhar)(1:m%np) 
 
+        if(props%add_fxc) then 
+          do ik2 = 1, st%d%nspin
+            dV(1:m%np,ik) = dV(1:m%np,ik) +&
+                 lr(dir,sigma)%dl_Vxc(1:m%np, ik, ik2)*lr(dir,sigma)%X(dl_rho)(1:m%np,ik2)
+          end do
+          
+        end if
 
         do ist = 1, st%nst
           if(st%occ(ist, ik) <= M_ZERO) cycle

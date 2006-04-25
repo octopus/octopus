@@ -47,6 +47,7 @@ module static_pol_lr_m
      logical :: use_unoccupied
      logical :: dynamic
      logical :: ort_each_step
+     logical :: add_hartree
   end type pol_props
 
   
@@ -78,17 +79,14 @@ contains
     
     gr => sys%gr
     ndim = sys%gr%sb%dim
-    call parse_freq_blk()
 
-    call loct_parse_logical(check_inp('PolAddFXC'), .true., props%add_fxc)
-    call loct_parse_logical(check_inp('PolOrtEachStep'), .false., props%ort_each_step)
+    call parse_input()
 
     if(.not.props%dynamic) then
       props%complex_response = .false.
       nfreq = 1
       nsigma = 1
     else 
-      call loct_parse_float(check_inp('Delta'), M_ZERO, delta)
       props%complex_response = (delta /= M_ZERO ) 
       nfreq = 1   ! for now only polarizability, so only one frequency
       nsigma = 2  ! but positive and negative values of the frequency must be considered
@@ -152,7 +150,9 @@ contains
            
       do i= 1, nomega
 
-        write(message(1), '(a,f12.6)') 'Info: Calculating polarizability for frequency: ', omega(i)
+        write(message(1), '(a,f12.6,3a)') 'Info: Calculating polarizability for frequency: ', & 
+             omega(i)/units_out%energy%factor, '[',trim(units_out%energy%abbrev),']'
+
         call write_info(1)
 
         if( props%complex_response ) then 
@@ -161,8 +161,12 @@ contains
           call X(dynamic_response)(sys, h, lr, props, zpol(1:ndim, 1:ndim), R_TOTYPE(omega(i)))
         end if
         iunit = io_open('linear/dynpols', action='write', position='append' )
+
+        !convert units 
+        zpol=zpol/units_out%length%factor**NDIM
         write(iunit, '(13f12.6)') omega(i), zpol(1,1), zpol(2,2), zpol(3,3), zpol(1,2), zpol(1,3), zpol(2,3)
         call io_close(iunit)
+
       end do
 
     else 
@@ -196,12 +200,14 @@ contains
   contains
 
     ! ---------------------------------------------------------
-    subroutine parse_freq_blk()
-      
+    subroutine parse_input()
       integer(POINTER_SIZE) :: blk
       integer :: nrow
       integer :: number, j, k
       FLOAT   :: omega_ini, omega_fin, domega
+
+      call push_sub('em_resp.parse_input')
+
       if (loct_parse_block(check_inp('PolFreqs'), blk) == 0) then 
 
         props%dynamic = .true.
@@ -226,11 +232,11 @@ contains
             call loct_parse_block_float(blk, i, 2, omega_fin)
             domega = (omega_fin-omega_ini)/(number-M_ONE)
             do k = 0, number-1
-              omega(j+k) = omega_ini + domega*k
+              omega(j+k) = (omega_ini + domega*k) * units_inp%energy%factor
             end do
             j = j + number
           else
-            omega(j) = omega_ini
+            omega(j) = omega_ini * units_inp%energy%factor
             j = j + 1
           end if
         end do
@@ -242,13 +248,25 @@ contains
       props%dynamic = .false. 
     end if
 
-  end subroutine parse_freq_blk
+    call loct_parse_float(check_inp('Delta'), M_ZERO, delta)
+    delta = delta * units_inp%energy%factor
+
+    call loct_parse_logical(check_inp('PolAddFXC'), .true., props%add_fxc)
+    call loct_parse_logical(check_inp('PolAddHartree'), .true., props%add_hartree)
+    call loct_parse_logical(check_inp('PolOrtEachStep'), .false., props%ort_each_step)
+    call loct_parse_logical(check_inp('LRUseUnoccupied'), .false. , props%use_unoccupied)
+
+    call pop_sub()
+
+  end subroutine parse_input
 
 
   ! ---------------------------------------------------------
   subroutine read_wfs()    
     !check how many wfs we have
-    
+
+    call push_sub('em_resp.parse_input')
+
     call restart_look(trim(tmpdir)//'restart_gs', sys%gr%m, kpoints, dim, nst, ierr)
     if(ierr.ne.0) then
       message(1) = 'Could not properly read wave-functions from "'//trim(tmpdir)//'restart_gs".'
@@ -258,8 +276,6 @@ contains
     !if there are unoccupied wfs, read them
     if (nst > sys%st%nst) then 
       
-      call loct_parse_logical(check_inp('LRUseUnoccupied'), .false. , props%use_unoccupied)
-
       if (props%use_unoccupied) then 
       
         write(message(1), '(a,i2,a)') 'Info: Found ', (nst - sys%st%nst), ' unoccupied wavefunctions.'
@@ -292,7 +308,9 @@ contains
       message(2) = "Please run a calculation of the ground state first!"
       call write_fatal(2)
     end if
-    
+
+    call pop_sub()
+
   end subroutine read_wfs
 
 
