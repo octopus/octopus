@@ -151,7 +151,7 @@ contains
       do i= 1, nomega
 
         write(message(1), '(a,f12.6,3a)') 'Info: Calculating polarizability for frequency: ', & 
-             omega(i)/units_out%energy%factor, '[',trim(units_out%energy%abbrev),']'
+             omega(i)/units_out%energy%factor, ' [',trim(units_out%energy%abbrev),']'
 
         call write_info(1)
 
@@ -439,13 +439,18 @@ contains
         ! Hartree and the potential and the derivative of the
         !  potential associated at the electric field
 
-        dVde(1:np,ispin, i) = lr(i,1)%X(dl_Vhar)(1:np) + sys%gr%m%x(1:np, i)
+        dVde(1:np,ispin, i) = sys%gr%m%x(1:np, i)
 
+        if(props%add_hartree) dVde(1:np,ispin, i) = dVde(1:np,ispin, i) + lr(i,1)%X(dl_Vhar)(1:np) 
+
+        if(props%add_fxc) then 
         ! xc
-        do ispin2 = 1, sys%st%d%nspin
-          dVde(1:np,ispin,i) = dVde(1:np,ispin,i) + &
-             lr(i,1)%dl_Vxc(1:np, ispin, ispin2)*lr(i,1)%X(dl_rho)(1:np, ispin2)
-        end do
+          do ispin2 = 1, sys%st%d%nspin
+            dVde(1:np,ispin,i) = dVde(1:np,ispin,i) + &
+                 lr(i,1)%dl_Vxc(1:np, ispin, ispin2)*lr(i,1)%X(dl_rho)(1:np, ispin2)
+          end do
+        end if
+
       end do
 
       ! the density
@@ -511,9 +516,11 @@ contains
             end do ! ist
           end do ! ispin
 
-          hpol(i, j, k) = hpol(i, j, k) + &
-             sum(kxc(1:np, 1, 1, 1) * drhode(1:np, i) * drhode(1:np, j)*drhode(1:np, k) * &
-             sys%gr%m%vol_pp(1:np))/CNST(6.0)
+          if(props%add_fxc) then 
+            hpol(i, j, k) = hpol(i, j, k) + &
+                 sum(kxc(1:np, 1, 1, 1) * drhode(1:np, i) * drhode(1:np, j)*drhode(1:np, k) * &
+                 sys%gr%m%vol_pp(1:np))/CNST(6.0)
+          end if
 
         end do ! k
       end do ! j
