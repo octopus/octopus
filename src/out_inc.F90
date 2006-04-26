@@ -422,7 +422,11 @@ subroutine X(output_function_global) (how, dir, fname, m, sb, f, u, ierr, is_tmp
   if(iand(how, output_dx)        .ne.0) call dx()
 
   if(iand(how, output_matlab).ne.0) then
+#if defined(R_TCOMPLEX)
     do j = 1, 3 ! re, im, abs
+#else
+    do j = 1, 1 ! only real part
+#endif
       if(iand(how, output_plane_x).ne.0) call out_matlab(how, 1, 2, 3, j) ! x=0; y; z; 
       if(iand(how, output_plane_y).ne.0) call out_matlab(how, 2, 1, 3, j) ! y=0; x; z;
       if(iand(how, output_plane_z).ne.0) call out_matlab(how, 3, 1, 2, j) ! z=0; x; y;
@@ -525,7 +529,10 @@ contains
 
     select case(out_what)      
     case(1:3);  filename = &
-      trim(dir)//'/'//trim(fname)//"."//index2axis(d1)//"=0.matlab."//trim(index2label(out_what))
+      trim(dir)//'/'//trim(fname)//"."//index2axis(d1)//"=0.matlab"
+#if defined(R_TCOMPLEX)
+      filename = trim(filename)//"."//trim(index2label(out_what))
+#endif
     case(4);    filename = &
       trim(dir)//'/meshgrid.'//index2axis(d1)//"=0."//trim(index2axis(d3))      ! meshgrid d3
     case(5);    filename = &
