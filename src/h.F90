@@ -83,8 +83,14 @@ module hamiltonian_m
     FLOAT, pointer :: Vhxc(:,:)   ! xc potential + hartree potential
     FLOAT, pointer :: axc(:,:,:)  ! xc vector-potential divided by c
 
-    ! the energies (total, ion-ion, exchange, correlation)
-    FLOAT :: etot, eii, ex, ec, exc_j, epot
+    ! Energies
+    FLOAT :: etot,    &  ! Total energy E = Eii + Sum[Eigenvalues] - U + Ex + Ec - Int[n v_xc]
+             eii,     &  ! Ionic energy Eii
+             ex,      &  ! Exchange     Ex
+             ec,      &  ! Correlation  Ec
+             exc_j,   &  ! 
+             epot,    &  ! Int[n vxc]   
+             ehartree    ! Hartree      U = (1/2)*Int [n v_Hartree]
 
     logical :: ip_app             ! independent particle approximation, or not.
     ! copied from sys%ks
@@ -341,16 +347,17 @@ contains
 
     e = states_eigenvalues_sum(st)
     h%eii    = eii
-    h%etot   = e + eii + h%epot + h%ex + h%ec
+    h%etot = eii + e - h%ehartree + h%ex + h%ec - h%epot
 
     if (iunit > 0) then
-      write(message(1), '(6x,a, f15.8)')'Ion-ion     = ', h%eii  / units_out%energy%factor
-      write(message(2), '(6x,a, f15.8)')'Eigenvalues = ', e      / units_out%energy%factor
-      write(message(3), '(6x,a, f15.8)')'Potentials  = ', h%epot / units_out%energy%factor
-      write(message(4), '(6x,a, f15.8)')'Exchange    = ', h%ex   / units_out%energy%factor
-      write(message(5), '(6x,a, f15.8)')'Correlation = ', h%ec   / units_out%energy%factor
-      write(message(6), '(6x,a, f15.8)')'Total       = ', h%etot / units_out%energy%factor
-      call write_info(6, iunit)
+      write(message(1), '(6x,a, f15.8)')'Ion-ion     = ', h%eii      / units_out%energy%factor
+      write(message(2), '(6x,a, f15.8)')'Eigenvalues = ', e          / units_out%energy%factor
+      write(message(3), '(6x,a, f15.8)')'Hartree     = ', h%ehartree / units_out%energy%factor
+      write(message(4), '(6x,a, f15.8)')'Int[n v_xc] = ', h%epot     / units_out%energy%factor
+      write(message(5), '(6x,a, f15.8)')'Exchange    = ', h%ex       / units_out%energy%factor
+      write(message(6), '(6x,a, f15.8)')'Correlation = ', h%ec       / units_out%energy%factor
+      write(message(7), '(6x,a, f15.8)')'Total       = ', h%etot     / units_out%energy%factor
+      call write_info(7, iunit)
     end if
 
     call pop_sub()

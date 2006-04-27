@@ -28,8 +28,9 @@ subroutine X(v_ks_calc)(gr, ks, h, st, calc_eigenval)
 
   call push_sub('v_ks_inc.Xv_ks_calc')
 
-  h%epot = M_ZERO
-  h%vhxc = M_ZERO
+  h%epot     = M_ZERO
+  h%ehartree = M_ZERO
+  h%vhxc     = M_ZERO
   if(h%d%cdft) h%axc = M_ZERO
 
   ! check if we should introduce the amaldi SIC correction
@@ -40,6 +41,10 @@ subroutine X(v_ks_calc)(gr, ks, h, st, calc_eigenval)
   if((.not.ks%ip_app).and.(amaldi_factor>M_ZERO)) then
     call v_hartree()
     call v_a_xc()
+
+    ! h%vhxc now only contains the xc part, so we add it together to the Hartree one.
+    h%vhxc(1:NP, 1) = h%vhxc(1:NP, 1) + h%vhartree(1:NP)
+    if(h%d%ispin > UNPOLARIZED) h%vhxc(1:NP, 2) = h%vhxc(1:NP, 2) + h%vhartree(1:NP)
   end if
 
   if(present(calc_eigenval)) call X(hamiltonian_eigenval) (h, gr, st)
@@ -63,19 +68,13 @@ contains
     end do
 
     ! Amaldi correction
-    if(ks%sic_type == sic_amaldi) rho(1:NP) = amaldi_factor*rho(1:NP)
+    if(ks%sic_type == sic_amaldi) rho = amaldi_factor*rho
 
     ! solve the poisson equation
     call dpoisson_solve(gr, h%vhartree, rho)
 
-    h%vhxc(1:NP, 1) = h%vhxc(1:NP, 1) + h%vhartree(1:NP)
-    if(h%d%ispin > UNPOLARIZED) h%vhxc(1:NP, 2) = h%vhxc(1:NP, 2) + h%vhartree(1:NP)
-
-    ! We first add 1/2 int n vH, to then subtract int n (vxc + vH)
-    ! this yields the correct formula epot = - int n (vxc + vH/2)
-    do is = 1, h%d%spin_channels
-      h%epot = h%epot + M_HALF*dmf_dotp(gr%m, st%rho(:, is), h%vhartree)
-    end do
+    ! Get the Hartree energy
+    h%ehartree = M_HALF*dmf_dotp(gr%m, rho, h%vhartree)
 
     deallocate(rho)
   end subroutine v_hartree
@@ -135,15 +134,15 @@ contains
 
     select case(h%d%ispin)
     case(UNPOLARIZED)
-      h%epot = h%epot - dmf_dotp(gr%m, st%rho(:, 1), h%vhxc(:, 1))
+      h%epot = h%epot + dmf_dotp(gr%m, st%rho(:, 1), h%vhxc(:, 1))
     case(SPIN_POLARIZED)
-      h%epot = h%epot - dmf_dotp(gr%m, st%rho(:, 1), h%vhxc(:, 1)) &
-         - dmf_dotp(gr%m, st%rho(:, 2), h%vhxc(:, 2))
+      h%epot = h%epot + dmf_dotp(gr%m, st%rho(:, 1), h%vhxc(:, 1)) &
+         + dmf_dotp(gr%m, st%rho(:, 2), h%vhxc(:, 2))
     case(SPINORS)
-      h%epot = h%epot - dmf_dotp(gr%m, st%rho(:, 1), h%vhxc(:, 1)) &
-         - dmf_dotp(gr%m, st%rho(:, 2), h%vhxc(:, 2)) &
-         - M_TWO*dmf_dotp(gr%m, st%rho(:, 3), h%vhxc(:, 3)) &
-         - M_TWO*dmf_dotp(gr%m, st%rho(:, 4), h%vhxc(:, 4))
+      h%epot = h%epot + dmf_dotp(gr%m, st%rho(:, 1), h%vhxc(:, 1)) &
+         + dmf_dotp(gr%m, st%rho(:, 2), h%vhxc(:, 2)) &
+         + M_TWO*dmf_dotp(gr%m, st%rho(:, 3), h%vhxc(:, 3)) &
+         + M_TWO*dmf_dotp(gr%m, st%rho(:, 4), h%vhxc(:, 4))
 
     end select
 
