@@ -16,5 +16,5 @@ Enabled  : Yes
 
 Input: 12-forces.01-N2_gs.inp
 
-Match ; Total Energy ; grep -A 6 '^Energy:' static/info ; \s*Total\s*=\s*-19.93808
+Match ; Total Energy ; grep -A 7 '^Energy:' static/info ; \s*Total\s*=\s*-19.93808
 Match ; Force        ; grep -A 2 '^Forces on' static/info | tail -1 ; \s*-0.08653\d*

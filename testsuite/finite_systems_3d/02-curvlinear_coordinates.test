@@ -12,5 +12,5 @@ Enabled  : Yes
 
 Input: 02-curvlinear_coordinates.01-gygi.inp
 
-Match ; TotalEnergy ; grep -A 6 '^Energy:' static/info ; \s*Total\s*=\s*-2.8750
+Match ; TotalEnergy ; grep -A 7 '^Energy:' static/info ; \s*Total\s*=\s*-2.8750
 Match ; Eigenvalues ; grep -A 2 'Eigenvalues \[' static/info | tail -1 ; \s*-0.5773\d*\s*2.0000\d*

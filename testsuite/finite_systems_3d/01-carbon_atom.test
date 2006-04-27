@@ -26,6 +26,6 @@ Enabled  : Yes
 
 Input: 01-carbon_atom.01-ground_state.inp
 
-Match ; Total Energy       ; grep -A 6 '^Energy:' static/info ; \s*Total\s*=\s*-146.742
+Match ; Total Energy       ; grep -A 7 '^Energy:' static/info ; \s*Total\s*=\s*-146.742
 Match ; Eigenvalue   [1up] ; grep -A 2 'Eigenvalues \[' static/info | tail -1 ; \s*-14.462\d*\s*1.0000\d*
 Match ; Eigenvalue [4down] ; grep -A 9 'Eigenvalues \[' static/info | tail -1 ; \s*-3.682\d*\s*0.000000\d*

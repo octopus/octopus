@@ -25,8 +25,7 @@ Enabled  : Yes
 
 Input: 03-helium_atom.01-ground_state.inp
 
-Match ; Total Energy #1 ; grep -A 6 '^Energy:' static/info ; \s*Total\s*=\s*-2.84045
-
+Match ; Total Energy #1 ; grep -A 7 '^Energy:' static/info ; \s*Total\s*=\s*-2.84045
 
 # This second example reproduces the ground-state calculation present in
 # [W.-C. Liu et al, Phys. Rev. Lett. 83, 520 (1999)]
@@ -34,4 +33,4 @@ Match ; Total Energy #1 ; grep -A 6 '^Energy:' static/info ; \s*Total\s*=\s*-2.8
 
 Input: 03-helium_atom.02-ground_state.inp
 
-Match ; Total Energy #2 ; grep -A 6 '^Energy:' static/info ; \s*Total\s*=\s*-2.238
+Match ; Total Energy #2 ; grep -A 7 '^Energy:' static/info ; \s*Total\s*=\s*-2.238

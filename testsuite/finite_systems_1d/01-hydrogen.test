@@ -21,5 +21,5 @@ Enabled  : Yes
 
 Input: 01-hydrogen.01-ground_state.inp
 
-Match ; TotalEnergy ; grep -A 6 '^Energy:' ground_state_static/info ; \s*Total\s*=\s*-0.6697
+Match ; TotalEnergy ; grep -A 7 '^Energy:' ground_state_static/info ; \s*Total\s*=\s*-0.6697
 Match ; 10th state  ; grep '10   --' excited_states_static/eigenvalues ; \s*-0.0177\d*

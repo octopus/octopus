@@ -40,7 +40,7 @@ Enabled  : Yes
 
 Input: 10-casida.01-N2.inp
 
-Match ; TotalEnergy    ; grep -A 6 '^Energy:' ground_state_static/info ; \s*Total\s*=\s*-19.9297\d*
+Match ; TotalEnergy    ; grep -A 7 '^Energy:' ground_state_static/info ; \s*Total\s*=\s*-19.9297\d*
 Match ; HOMO           ; grep -A 6  'Eigenvalues \[' ground_state_static/info | tail -1 ; \s*-0.3845\d*\s*2.0000\d*
 Match ; LUMO           ; grep -A 7  'Eigenvalues \[' unocc_states_static/eigenvalues | tail -1 ; \s*-0.0851\d*
 Match ; LUMO+8         ; grep -A 15 'Eigenvalues \[' unocc_states_static/eigenvalues | tail -1 ; \s*0.1531\d*

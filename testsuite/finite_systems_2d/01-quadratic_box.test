@@ -33,7 +33,7 @@ Match ; Eigenvalue with Hartree interaction ; grep -A 2 'Eigenvalues \[' static/
 Input : 01-quadratic_box.03-hartree+xc.inp
 
 Match ; Eigenvalue with Hartree, exchange, and correlation ; grep -A 2 'Eigenvalues \[' static/info | tail -1 ; \s*2.7394\d*\s*2.0000\d*
-Match ; Total energy ; grep -A 6 '^Energy:' static/info ; \s*Total\s*=\s*3.35400 
+Match ; Total energy ; grep -A 7 '^Energy:' static/info ; \s*Total\s*=\s*3.35400 
 
 
 # This calculation adds one electron to the previous test, and performs a spin-polarized calculation.
@@ -42,4 +42,4 @@ Match ; Total energy ; grep -A 6 '^Energy:' static/info ; \s*Total\s*=\s*3.35400
 
 Input : 01-quadratic_box.04-spin_polarized.inp
 
-Match ; Total energy, spin-polarized ; grep -A 6 '^Energy:' static/info ; \s*Total\s*=\s*7.7592
+Match ; Total energy, spin-polarized ; grep -A 7 '^Energy:' static/info ; \s*Total\s*=\s*7.7592
