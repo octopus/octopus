@@ -277,7 +277,7 @@ subroutine X(states_output) (st, gr, dir, outp)
   integer :: ik, ist, idim, is, id, ierr
   character(len=80) :: fname
   FLOAT :: u
-  FLOAT, allocatable :: dtmp(:)
+  FLOAT, allocatable :: dtmp(:), elf(:,:)
 
   call push_sub('states_inc.states_output')
 
@@ -334,20 +334,138 @@ subroutine X(states_output) (st, gr, dir, outp)
   end if
 
   if(NDIM==3) then
-    if(iand(outp%what, output_elf).ne.0)    call elf(.true.,  'elf_rs')
-    if(iand(outp%what, output_elf_FS).ne.0) call elf(.false., 'elf_fs')
+
+    ALLOCATE(elf(1:gr%m%np,1:st%d%nspin),gr%m%np*st%d%nspin)
+    
+    if(iand(outp%what, output_elf).ne.0)    call X(states_calc_elf)(st,gr,elf,.true.)
+    if(iand(outp%what, output_elf_FS).ne.0) call X(states_calc_elf)(st,gr,elf,.false.)
+
+    do is = 1, st%d%nspin
+      write(fname, '(a,a,i1)') 'elf_rs', '-', is
+      call doutput_function(outp%how, dir, trim(fname), gr%m, gr%sb, elf(:,is), M_ONE, ierr)
+    end do
+
+    DEALLOCATE(elf)
+
   end if
 
   call pop_sub()
-contains
+
+end subroutine X(states_output)
+
 
   ! ---------------------------------------------------------
+subroutine X(states_calc_elf)(st,gr, elf, rs, de)
+  type(states_t),   intent(inout) :: st
+  type(grid_t),     intent(inout) :: gr
+  FLOAT,             intent(inout):: elf(:,:)
+  logical, intent(in) :: rs
+  FLOAT,   optional, intent(inout):: de(:,:)
+
+  FLOAT :: f, d, s
+  integer :: i, is, ik, ist, idim, ierr
+  CMPLX, allocatable :: psi_fs(:), gpsi(:,:)
+  FLOAT, allocatable :: r(:), gradr(:,:), j(:,:)
+  type(X(cf_t)) :: cf_tmp
+
+  FLOAT, parameter :: dmin = CNST(1e-10)
+
+
+  character(len=80) :: fname
+
+  ! single or double occupancy
+  if(st%d%nspin == 1) then
+    s = M_TWO
+  else
+    s = M_ONE
+  end if
+
+  if(.not.rs) then
+    call X(cf_new)(gr%m%l, cf_tmp)
+    call X(cf_fft_init)(cf_tmp, gr%sb)
+  end if
+
+  do_is: do is = 1, st%d%nspin
+    ALLOCATE(    r(NP),       NP)
+    ALLOCATE(gradr(NP, NDIM), NP*NDIM)
+    ALLOCATE(    j(NP, NDIM), NP*NDIM)
+    r = M_ZERO; gradr = M_ZERO; j  = M_ZERO
+
+    elf(1:NP,is) = M_ZERO
+
+    ALLOCATE(psi_fs(NP_PART),  NP_PART)
+    ALLOCATE(gpsi  (NP, NDIM), NP*NDIM)
+    do ik = is, st%d%nik, st%d%nspin
+      do ist = 1, st%nst
+        do idim = 1, st%d%dim
+
+          if(rs) then
+            psi_fs(:) = cmplx(st%X(psi)(:, idim, ist, ik), KIND=PRECISION)
+          else
+            call mf2mf_RS2FS(gr%m, st%X(psi)(:, idim, ist, ik), psi_fs(:), cf_tmp)
+          end if
+          call zf_gradient(gr%sb, gr%f_der, psi_fs(:), gpsi)
+
+          if(.not.rs) then
+            do i = 1, NDIM
+              gpsi(:,i) = gpsi(:,i) * gr%m%h(i)**2 * real(cf_tmp%n(i), PRECISION) / (M_TWO*M_PI)
+            end do
+          end if
+
+          r(:) = r(:) + st%d%kweights(ik)*st%occ(ist, ik) * abs(psi_fs(:))**2
+          do i = 1, NDIM
+            gradr(:,i) = gradr(:,i) + st%d%kweights(ik)*st%occ(ist, ik) *  &
+                 M_TWO * real(conjg(psi_fs(:))*gpsi(:,i))
+            j (:,i) =  j(:,i) + st%d%kweights(ik)*st%occ(ist, ik) *  &
+                 aimag(conjg(psi_fs(:))*gpsi(:,i))
+          end do
+
+          do i = 1, NP
+            if(r(i) >= dmin) then
+              elf(i,is) = elf(i,is) + st%d%kweights(ik)*st%occ(ist, ik)/s * &
+                   sum(abs(gpsi(i, 1:NDIM))**2)
+            end if
+          end do
+        end do
+      end do
+    end do
+    deallocate(psi_fs, gpsi)
+
+    do i = 1, NP
+      if(r(i) >= dmin) then
+        elf(i,is) = elf(i,is) - (M_FOURTH*sum(gradr(i, 1:NDIM)**2) + sum(j(i, 1:NDIM)**2))/(s*r(i))
+      end if
+    end do
+
+    
+    if(present(de)) de(1:NP,is)=elf(1:NP,is)
+
+    ! normalization
+    f = M_THREE/M_FIVE*(M_SIX*M_PI**2)**M_TWOTHIRD
+    do i = 1, NP
+      if(abs(r(i)) >= dmin) then
+        d    = f*(r(i)/s)**(M_FIVE/M_THREE)
+        elf(i,is) = M_ONE/(M_ONE + (elf(i,is)/d)**2)
+      else
+        elf(i,is) = M_ZERO
+      end if
+    end do
+
+    deallocate(r, gradr, j)
+
+  end do do_is
+
+  if(.not.rs) call X(cf_free)(cf_tmp)
+
+contains 
+
+
   subroutine mf2mf_RS2FS(m, fin, fout, c)
     type(mesh_t),  intent(in)    :: m
     R_TYPE,        intent(in)    :: fin(:)
     CMPLX,         intent(out)   :: fout(:)
     type(X(cf_t)), intent(inout) :: c
-
+    
     call X(cf_alloc_RS) (c)
     call X(cf_alloc_FS) (c)
     call X(mf2cf) (m, fin, c)
@@ -356,109 +474,9 @@ contains
     call X(cf_free_RS) (c)
     call X(cf_free_FS) (c)
   end subroutine mf2mf_RS2FS
+  
+end subroutine X(states_calc_elf)
 
-
-  ! ---------------------------------------------------------
-  subroutine elf(rs, filename)
-    logical, intent(in) :: rs
-    character(len=*), intent(in) :: filename
-
-    FLOAT :: f, d, s
-    integer :: i, is, ik
-    CMPLX, allocatable :: psi_fs(:), gpsi(:,:)
-    FLOAT, allocatable :: c(:), r(:), gradr(:,:), j(:,:)
-    type(X(cf_t)) :: cf_tmp
-
-    FLOAT, parameter :: dmin = CNST(1e-10)
-
-    ! single or double occupancy
-    if(st%d%nspin == 1) then
-      s = M_TWO
-    else
-      s = M_ONE
-    end if
-
-    if(.not.rs) then
-      call X(cf_new)(gr%m%l, cf_tmp)
-      call X(cf_fft_init)(cf_tmp, gr%sb)
-    end if
-
-    ALLOCATE(c(NP), NP)
-
-    do_is: do is = 1, st%d%nspin
-      ALLOCATE(    r(NP),       NP)
-      ALLOCATE(gradr(NP, NDIM), NP*NDIM)
-      ALLOCATE(    j(NP, NDIM), NP*NDIM)
-      r = M_ZERO; gradr = M_ZERO; j  = M_ZERO
-      c = M_ZERO
-
-      ALLOCATE(psi_fs(NP_PART),  NP_PART)
-      ALLOCATE(gpsi  (NP, NDIM), NP*NDIM)
-      do ik = is, st%d%nik, st%d%nspin
-        do ist = 1, st%nst
-          do idim = 1, st%d%dim
-
-            if(rs) then
-              psi_fs(:) = cmplx(st%X(psi)(:, idim, ist, ik), KIND=PRECISION)
-            else
-              call mf2mf_RS2FS(gr%m, st%X(psi)(:, idim, ist, ik), psi_fs(:), cf_tmp)
-            end if
-            call zf_gradient(gr%sb, gr%f_der, psi_fs(:), gpsi)
-
-            if(.not.rs) then
-              do i = 1, NDIM
-                gpsi(:,i) = gpsi(:,i) * gr%m%h(i)**2 * real(cf_tmp%n(i), PRECISION) / (M_TWO*M_PI)
-              end do
-            end if
-
-            r(:) = r(:) + st%d%kweights(ik)*st%occ(ist, ik) * abs(psi_fs(:))**2
-            do i = 1, NDIM
-              gradr(:,i) = gradr(:,i) + st%d%kweights(ik)*st%occ(ist, ik) *  &
-                M_TWO * real(conjg(psi_fs(:))*gpsi(:,i))
-              j (:,i) =  j(:,i) + st%d%kweights(ik)*st%occ(ist, ik) *  &
-                aimag(conjg(psi_fs(:))*gpsi(:,i))
-            end do
-
-            do i = 1, NP
-              if(r(i) >= dmin) then
-                c(i) = c(i) + st%d%kweights(ik)*st%occ(ist, ik)/s * &
-                  sum(abs(gpsi(i, 1:NDIM))**2)
-              end if
-            end do
-          end do
-        end do
-      end do
-      deallocate(psi_fs, gpsi)
-
-      do i = 1, NP
-        if(r(i) >= dmin) then
-          c(i) = c(i) - (M_FOURTH*sum(gradr(i, 1:NDIM)**2) + sum(j(i, 1:NDIM)**2))/(s*r(i))
-        end if
-      end do
-
-      ! normalization
-      f = M_THREE/M_FIVE*(M_SIX*M_PI**2)**M_TWOTHIRD
-      do i = 1, NP
-        if(abs(r(i)) >= dmin) then
-          d    = f*(r(i)/s)**(M_FIVE/M_THREE)
-          c(i) = M_ONE/(M_ONE + (c(i)/d)**2)
-        else
-          c(i) = M_ZERO
-        end if
-      end do
-
-      deallocate(r, gradr, j)
-      write(fname, '(a,a,i1)') trim(filename), '-', is
-      call doutput_function(outp%how, dir, trim(fname), gr%m, gr%sb, c, M_ONE, ierr)
-
-    end do do_is
-
-    if(.not.rs) call X(cf_free)(cf_tmp)
-    deallocate(c)
-
-  end subroutine elf
-
-end subroutine X(states_output)
 
 
 ! -------------------------------------------------------------

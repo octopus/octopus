@@ -91,6 +91,8 @@ module states_m
     dstates_angular_momentum,       &
     zstates_angular_momentum,       &
     states_distribute_nodes,        &
+    dstates_calc_elf,               &
+    zstates_calc_elf,               &
     dstates_allocate_wfns,          &
     zstates_allocate_wfns
 
