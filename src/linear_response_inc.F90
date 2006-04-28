@@ -29,6 +29,7 @@ subroutine X(lr_alloc_fHxc) (st, m, lr)
 
   ! allocate variables
   ALLOCATE(lr%X(dl_rho) (m%np, st%d%nspin), m%np*st%d%nspin)
+  ALLOCATE(lr%X(dl_j) (m%np, MAX_DIM, st%d%nspin), m%np*MAX_DIM*st%d%nspin)
   ALLOCATE(lr%X(dl_Vhar)(m%np), m%np)
   ALLOCATE(lr%dl_Vxc(m%np, st%d%nspin, st%d%nspin), m%np*st%d%nspin*st%d%nspin)
 

@@ -41,15 +41,18 @@ module static_pol_lr_m
   public :: &
        static_pol_lr_run
   
-  type pol_props 
+  type pol_props_t
      logical :: complex_response
      logical :: add_fxc
      logical :: use_unoccupied
      logical :: dynamic
      logical :: ort_each_step
      logical :: add_hartree
-  end type pol_props
+  end type pol_props_t
 
+  type status_t
+     logical :: ok
+  end type status_t
   
 contains
 
@@ -61,6 +64,7 @@ contains
 
     type(lr_t), allocatable :: lr(:,:,:) ! lr(NDIM,NS,NFREQ)
     type(grid_t),   pointer :: gr
+    type(status_t)          :: status
 
     FLOAT ::  pol(1:MAX_DIM, 1:MAX_DIM)
     CMPLX :: zpol(1:MAX_DIM, 1:MAX_DIM)
@@ -68,7 +72,7 @@ contains
 
     FLOAT :: delta
     integer :: nfreq, nsigma, ndim, i, j, sigma, ierr, kpoints, dim, nst
-    type(pol_props) :: props
+    type(pol_props_t) :: props
     
     integer :: nomega
     FLOAT, allocatable :: omega(:)
@@ -156,16 +160,23 @@ contains
         call write_info(1)
 
         if( props%complex_response ) then 
-          call zdynamic_response(sys, h, lr, props, zpol(1:ndim, 1:ndim), cmplx(omega(i), delta, PRECISION))
+          call zdynamic_response(sys, h, lr, props, zpol(1:ndim, 1:ndim), cmplx(omega(i), delta, PRECISION),status)
         else 
-          call X(dynamic_response)(sys, h, lr, props, zpol(1:ndim, 1:ndim), R_TOTYPE(omega(i)))
+          call X(dynamic_response)(sys, h, lr, props, zpol(1:ndim, 1:ndim), R_TOTYPE(omega(i)),status)
         end if
-        iunit = io_open('linear/dynpols', action='write', position='append' )
 
-        !convert units 
-        zpol=zpol/units_out%length%factor**NDIM
-        write(iunit, '(13f12.6)') omega(i), zpol(1,1), zpol(2,2), zpol(3,3), zpol(1,2), zpol(1,3), zpol(2,3)
-        call io_close(iunit)
+
+          iunit = io_open('linear/dynpols', action='write', position='append' )
+        if(status%ok) then           
+          !convert units 
+          zpol=zpol/units_out%length%factor**NDIM
+          write(iunit, '(13f12.6)') omega(i), zpol(1,1), zpol(2,2), zpol(3,3), zpol(1,2), zpol(1,3), zpol(2,3)
+        else
+          write(iunit, '(a,f12.6)') '#calculation didnt converge for frequency ', omega(i)
+        end if
+
+          call io_close(iunit)
+          
 
       end do
 
@@ -175,6 +186,7 @@ contains
       call static_response(sys, h, lr(:, :, 1), props, &
            pol(1:ndim, 1:ndim), hpol(1:ndim, 1:ndim, 1:ndim))
       call output()
+
       do i = 1,ndim
         call X(lr_output) (sys%st, sys%gr, lr(i, 1, 1) ,"linear", i, sys%outp)
       end do
@@ -392,7 +404,7 @@ contains
     type(system_t),      intent(inout) :: sys
     type(hamiltonian_t), intent(inout) :: h
     type(lr_t),          intent(inout) :: lr(:,:) ! lr(NDIM,1,1)
-    type(pol_props),     intent(in)    :: props
+    type(pol_props_t),     intent(in)    :: props
     FLOAT,               intent(out)   :: pol(:,:)
     FLOAT,               intent(out)   :: hpol(:,:,:)
 
@@ -541,6 +553,60 @@ contains
 
     call pop_sub()
   end subroutine static_response
+
+  subroutine calc_lr_current(sys,h,lr,props)
+    type(system_t),      intent(inout) :: sys
+    type(hamiltonian_t), intent(inout) :: h
+    type(lr_t),          intent(inout) :: lr(:,:) ! lr(NDIM,1,1)
+    type(pol_props_t),     intent(in)    :: props
+
+    integer :: i, k, ist, ispin, idim, ndim, np
+
+    CMPLX, allocatable :: gpsi(:,:),gdl_psi(:,:,:)
+    
+    call states_calc_physical_current(sys%gr, sys%st, sys%st%j)
+
+    np = sys%NP
+    ndim = sys%NDIM
+
+    ALLOCATE(gpsi(1:np,1:ndim),np*ndim)
+    ALLOCATE(gdl_psi(1:np,1:ndim,2),np*ndim*2)
+    
+   
+    do i=1,ndim
+
+      lr(i,1)%zdl_j =M_ZERO
+
+      do ispin = 1, sys%st%d%nspin
+        do ist = 1, sys%st%nst
+          do idim = 1, sys%st%d%dim
+
+            call zf_gradient(sys%gr%sb, sys%gr%f_der, lr(i,1)%zdl_psi(:,idim,ist,ispin), gdl_psi(:,:,1))
+            call zf_gradient(sys%gr%sb, sys%gr%f_der, lr(i,2)%zdl_psi(:,idim,ist,ispin), gdl_psi(:,:,2))
+            call zf_gradient(sys%gr%sb, sys%gr%f_der, sys%st%zpsi(:,idim,ist,ispin), gpsi)
+
+            do k=1,sys%NDIM 
+              
+              lr(i,1)%zdl_j(1:np,k,ispin)= lr(i,1)%zdl_j(1:np,k,ispin)+(&
+                   +R_CONJ(sys%st%zpsi(1:np,idim,ist,ispin))*gdl_psi(1:np,k,1) &
+                   +R_CONJ(lr(i,2)%zdl_psi(1:np,idim,ist,ispin))*gpsi(1:np,k) & 
+                   -sys%st%zpsi(1:np,idim,ist,ispin)*R_CONJ(gdl_psi(1:np,k,2)) &
+                   -lr(i,1)%zdl_psi(1:np,idim,ist,ispin)*R_CONJ(gpsi(1:np,k)) &
+              )/(M_TWO*M_zI)
+
+            end do
+          end do
+        end do
+      end do 
+
+      lr(i,2)%zdl_j(1:np,1:ndim,1:sys%st%d%nspin)=R_CONJ(lr(i,1)%zdl_j(1:np,1:ndim,1:sys%st%d%nspin))
+
+    end do
+    
+    DEALLOCATE(gpsi)
+    DEALLOCATE(gdl_psi)
+
+  end subroutine calc_lr_current
 
 
 #include "undef.F90"

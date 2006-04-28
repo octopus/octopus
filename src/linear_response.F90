@@ -49,11 +49,13 @@ module linear_response_m
 
     ! the real quantities
     FLOAT, pointer :: ddl_rho(:,:)     ! response of the density
+    FLOAT, pointer :: ddl_j(:,:,:)     ! response of the current
     FLOAT, pointer :: ddl_psi(:,:,:,:) ! linear change of the real KS orbitals
     FLOAT, pointer :: ddl_Vhar(:)      ! linear change of the Hartree potential
 
     ! and the complex version
     CMPLX, pointer :: zdl_rho(:,:)     ! response of the density
+    CMPLX, pointer :: zdl_j(:,:,:)     ! response of the current
     CMPLX, pointer :: zdl_psi(:,:,:,:) ! linear change of the real KS orbitals
     CMPLX, pointer :: zdl_Vhar(:)      ! linear change of the complex KS orbitals
 
@@ -130,13 +132,13 @@ contains
     type(lr_t), intent(inout) :: lr
 
     if(associated(lr%ddl_rho)) then
-      deallocate(lr%ddl_rho, lr%ddl_Vhar, lr%dl_Vxc)
-      nullify   (lr%ddl_rho, lr%ddl_Vhar, lr%dl_Vxc)
+      deallocate(lr%ddl_rho, lr%ddl_Vhar, lr%dl_Vxc, lr%ddl_j)
+      nullify   (lr%ddl_rho, lr%ddl_Vhar, lr%dl_Vxc, lr%ddl_j)
     end if
 
     if(associated(lr%zdl_rho)) then
-      deallocate(lr%zdl_rho, lr%zdl_Vhar, lr%dl_Vxc)
-      nullify   (lr%zdl_rho, lr%zdl_Vhar, lr%dl_Vxc)
+      deallocate(lr%zdl_rho, lr%zdl_Vhar, lr%dl_Vxc, lr%zdl_j)
+      nullify   (lr%zdl_rho, lr%zdl_Vhar, lr%dl_Vxc, lr%zdl_j)
     end if
 
     if(associated(lr%ddl_psi)) then

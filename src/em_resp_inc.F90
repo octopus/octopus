@@ -19,14 +19,14 @@
 
 
 ! ---------------------------------------------------------
-subroutine X(dynamic_response)(sys, h, lr, props, pol, w)
+subroutine X(dynamic_response)(sys, h, lr, props, pol, w, status)
   type(system_t),      intent(inout) :: sys
   type(hamiltonian_t), intent(inout) :: h
   type(lr_t),          intent(inout) :: lr(:,:,:) ! dim, nsigma(=2), nfreq(=1)
-  type(pol_props),     intent(in)    :: props
+  type(pol_props_t),     intent(in)    :: props
   CMPLX,               intent(inout) :: pol(:,:)
   R_TYPE,              intent(in)    :: w 
-
+  type(status_t),      intent(out)   :: status
   
   integer :: dir, j, freq, sigma
 
@@ -47,7 +47,7 @@ subroutine X(dynamic_response)(sys, h, lr, props, pol, w)
       call mix_init(lr(dir,sigma,freq)%mixer, sys%gr%m, 1, sys%st%d%nspin)
     end do
 
-    call X(get_response_e)(sys, h, lr(:,:,freq), dir, 2 , w,props)
+    call X(get_response_e)(sys, h, lr(:,:,freq), dir, 2 , w, props, status)
 
     do sigma = 1, 2
       call mix_end(lr(dir,sigma,freq)%mixer)
@@ -68,14 +68,15 @@ end subroutine X(dynamic_response)
 
 
 ! ---------------------------------------------------------
-subroutine X(get_response_e)(sys, h, lr, dir, nsigma, omega, props)
+subroutine X(get_response_e)(sys, h, lr, dir, nsigma, omega, props, status)
   type(system_t), target, intent(inout) :: sys
   type(hamiltonian_t),    intent(inout) :: h
   type(lr_t),             intent(inout) :: lr(:,:) !ndim,nsigma
   integer,                intent(in)    :: dir 
   integer,                intent(in)    :: nsigma 
   R_TYPE,                 intent(in)    :: omega
-  type(pol_props),        intent(in)    :: props
+  type(pol_props_t),      intent(in)    :: props
+  type(status_t),optional,intent(out)   :: status
 
   FLOAT, allocatable :: diff(:,:,:)
   FLOAT :: dpsimod,freq_sign
@@ -89,7 +90,7 @@ subroutine X(get_response_e)(sys, h, lr, dir, nsigma, omega, props)
   type(states_t), pointer :: st
   
   call push_sub('static_pol_lr.get_response_e')
-  
+
   ASSERT( nsigma==1 .or. nsigma ==2 )
   
   m => sys%gr%m
@@ -222,7 +223,12 @@ subroutine X(get_response_e)(sys, h, lr, dir, nsigma, omega, props)
 
     if( lr(dir,1)%max_iter == iter  ) then 
       message(1) = "Self-consistent iteration for response did not converge"
-      call write_fatal(1);
+      if(present(status)) then 
+        status%ok = .false. 
+        call write_warning(1);
+      else
+        call write_fatal(1);
+      end if 
     end if
     ! calculate dl_rho
 
@@ -264,7 +270,8 @@ subroutine X(get_response_e)(sys, h, lr, dir, nsigma, omega, props)
       lr(dir,sigma)%abs_dens=M_ZERO
     end do
 
-    if( finish(1) .and. finish(2) ) then
+    if( finish(1) .and. finish(2) ) then 
+      if(present(status)) status%ok = .true.
       write(message(1), '(a, i4, a)')        &
            'Info: SCF for response converged in ', &
            iter, ' iterations'
@@ -282,7 +289,6 @@ subroutine X(get_response_e)(sys, h, lr, dir, nsigma, omega, props)
 #endif
     end if
 
-!    print*, "SUM", sum(dl_rhonew(1,:,:,2))
     
   end do iter_loop
 
