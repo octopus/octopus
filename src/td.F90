@@ -176,7 +176,7 @@ contains
 
       ! update hamiltonian and eigenvalues (fermi is *not* called)
       call zv_ks_calc(gr, sys%ks, h, st, calc_eigenval=.true.)
-      call hamiltonian_energy(h, st, geo%eii, -1)
+      call hamiltonian_energy(h, sys%gr, st, -1)
 
       ! Recalculate forces, update velocities...
       if(td%move_ions > 0) then
@@ -364,7 +364,7 @@ contains
       end if
 #endif
       call hamiltonian_span(h, minval(gr%m%h(1:NDIM)), x)
-      call hamiltonian_energy(h, st, geo%eii, -1)
+      call hamiltonian_energy(h, gr, st, -1)
 
     end subroutine init_wfs
 

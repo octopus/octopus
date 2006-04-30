@@ -82,7 +82,7 @@ contains
 
     call X(states_calc_dens)(sys%st, sys%gr%m%np, sys%st%rho)
     call X(v_ks_calc)(sys%gr, sys%ks, h, sys%st, calc_eigenval=.true.) ! get potentials
-    call hamiltonian_energy(h, sys%st, sys%gr%geo%eii, -1)             ! total energy
+    call hamiltonian_energy(h, sys%gr, sys%st, -1)             ! total energy
 
     if( (ierr.ne.0) .and. (ierr >= occupied_states)) then
       message(1) = "Info:  I will perform a LCAO calculation to get reasonable starting points."

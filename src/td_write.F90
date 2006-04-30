@@ -921,6 +921,7 @@ contains
       call write_iter_header_start(out_energy)
       call write_iter_header(out_energy, 'Total')
       call write_iter_header(out_energy, 'Ion-Ion')
+      call write_iter_header(out_energy, 'Eigenvalues')
       call write_iter_header(out_energy, 'Hartree')
       call write_iter_header(out_energy, 'Int[n v_xc]')
       call write_iter_header(out_energy, 'Exchange')
@@ -930,7 +931,7 @@ contains
       ! second line: units
       call write_iter_string(out_energy, '#[Iter n.]')
       call write_iter_header(out_energy, '[' // trim(units_out%time%abbrev) // ']')
-      do i = 1, 6
+      do i = 1, 7
         call write_iter_header(out_energy, '[' // trim(units_out%energy%abbrev) // ']')
       end do
       call write_iter_nl(out_energy)
@@ -940,6 +941,7 @@ contains
     call write_iter_start(out_energy)
     call write_iter_double(out_energy, h%etot/units_out%energy%factor, 1)
     call write_iter_double(out_energy, h%eii /units_out%energy%factor, 1)
+    call write_iter_double(out_energy, h%eeigen /units_out%energy%factor, 1)
     call write_iter_double(out_energy, h%ehartree /units_out%energy%factor, 1)
     call write_iter_double(out_energy, h%epot /units_out%energy%factor, 1)
     call write_iter_double(out_energy, h%ex  /units_out%energy%factor, 1)

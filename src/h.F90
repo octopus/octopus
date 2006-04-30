@@ -87,11 +87,14 @@ module hamiltonian_m
     ! Energies
     FLOAT :: etot,    &  ! Total energy E = Eii + Sum[Eigenvalues] - U + Ex + Ec - Int[n v_xc]
              eii,     &  ! Ionic energy Eii
+             eeigen,  &  ! Sum[Eigenvalues]
              ex,      &  ! Exchange     Ex
              ec,      &  ! Correlation  Ec
              exc_j,   &  ! 
              epot,    &  ! Int[n vxc]   
-             ehartree    ! Hartree      U = (1/2)*Int [n v_Hartree]
+             ehartree,&  ! Hartree      U = (1/2)*Int [n v_Hartree]
+             t0,      &  ! Kinetic energy of the non-interacting (KS) system of electrons
+             eext        ! External     V = <Phi|V|Phi> = Int[n v] (if no non-local pseudos exist)
 
     logical :: ip_app             ! independent particle approximation, or not.
     ! copied from sys%ks
@@ -342,29 +345,48 @@ contains
   ! This subroutine calculates the total energy of the system. Basically, it
   ! adds up the KS eigenvalues, and then it substracts the whatever double
   ! counts exist (see TDDFT theory for details).
-  subroutine hamiltonian_energy(h, st, eii, iunit)
+  subroutine hamiltonian_energy(h, gr, st, iunit, full)
     type(hamiltonian_t), intent(inout) :: h
-    type(states_t),      intent(in)    :: st
-    FLOAT,               intent(in)    :: eii
+    type(grid_t),        intent(inout) :: gr
+    type(states_t),      intent(inout) :: st
     integer,             intent(in)    :: iunit
+    logical, optional,   intent(in)    :: full
 
-    FLOAT :: e
+    integer :: full_
 
     call push_sub('h.hamiltonian_energy')
 
-    e = states_eigenvalues_sum(st)
-    h%eii    = eii
-    h%etot = eii + e - h%ehartree + h%ex + h%ec - h%epot
+    full_ = .false.
+    if(present(full)) full_ = full
+
+    if(full_) then
+      if(associated(st%zpsi)) then
+        h%t0     = zelectronic_kinetic_energy(h, gr, st)
+        h%eext   = zelectronic_external_energy(h, gr, st)
+      else
+        h%t0     = delectronic_kinetic_energy(h, gr, st)
+        h%eext   = delectronic_external_energy(h, gr, st)
+      end if
+    end if
+
+    h%eeigen = states_eigenvalues_sum(st)
+    h%eii    = gr%geo%eii
+    h%etot   = h%eii + h%eeigen - h%ehartree + h%ex + h%ec - h%epot
 
     if (iunit > 0) then
-      write(message(1), '(6x,a, f15.8)')'Ion-ion     = ', h%eii      / units_out%energy%factor
-      write(message(2), '(6x,a, f15.8)')'Eigenvalues = ', e          / units_out%energy%factor
-      write(message(3), '(6x,a, f15.8)')'Hartree     = ', h%ehartree / units_out%energy%factor
-      write(message(4), '(6x,a, f15.8)')'Int[n v_xc] = ', h%epot     / units_out%energy%factor
-      write(message(5), '(6x,a, f15.8)')'Exchange    = ', h%ex       / units_out%energy%factor
-      write(message(6), '(6x,a, f15.8)')'Correlation = ', h%ec       / units_out%energy%factor
-      write(message(7), '(6x,a, f15.8)')'Total       = ', h%etot     / units_out%energy%factor
+      write(message(1), '(6x,a, f15.8)')'Total       = ', h%etot     / units_out%energy%factor
+      write(message(2), '(6x,a, f15.8)')'Ion-ion     = ', h%eii      / units_out%energy%factor
+      write(message(3), '(6x,a, f15.8)')'Eigenvalues = ', h%eeigen   / units_out%energy%factor
+      write(message(4), '(6x,a, f15.8)')'Hartree     = ', h%ehartree / units_out%energy%factor
+      write(message(5), '(6x,a, f15.8)')'Int[n v_xc] = ', h%epot     / units_out%energy%factor
+      write(message(6), '(6x,a, f15.8)')'Exchange    = ', h%ex       / units_out%energy%factor
+      write(message(7), '(6x,a, f15.8)')'Correlation = ', h%ec       / units_out%energy%factor
       call write_info(7, iunit)
+      if(full_) then
+        write(message(1), '(6x,a, f15.8)')'Kinetic     = ', h%t0 / units_out%energy%factor
+        write(message(2), '(6x,a, f15.8)')'External    = ', h%eext / units_out%energy%factor
+        call write_info(2, iunit)
+      end if
     end if
 
     call pop_sub()

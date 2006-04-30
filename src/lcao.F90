@@ -288,7 +288,7 @@ contains
       do n1 = 1, lcao_data%st%nst
         hpsi = M_ZERO
         call X(vlpsi) (h, m, lcao_data%st%X(psi)(:,:, n1, ik), hpsi(:,:), ik)
-        if (h%ep%nvnl > 0) call X(vnlpsi) (h, m, sb, lcao_data%st%X(psi)(:,:, n1, ik), hpsi(:,:), ik)
+        if (h%ep%nvnl > 0) call X(vnlpsi) (h, m, lcao_data%st%X(psi)(:,:, n1, ik), hpsi(:,:), ik)
         do n2 = n1, lcao_data%st%nst
           lcao_data%v(n1, n2, ik) = X(states_dotp)(m, dim, hpsi, lcao_data%st%X(psi)(1:, : ,n2, ik))
           lcao_data%hamilt(n1, n2, ik) = lcao_data%k(n1, n2, ik) + lcao_data%v(n1 , n2, ik)

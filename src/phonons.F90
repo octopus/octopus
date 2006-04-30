@@ -181,7 +181,7 @@ contains
         call epot_generate(h%ep, gr, st, h%reltype)
         call X(states_calc_dens) (st, m%np, st%rho)
         call X(v_ks_calc) (gr, ks, h, st, calc_eigenval=.true.)
-        call hamiltonian_energy (h, st, geo%eii, -1)
+        call hamiltonian_energy (h, gr, st, -1)
         call scf_run(scf, gr, st, ks, h, outp)
         do j = 1, geo%natoms
           forces0(j, :) = geo%atom(j)%f(:)
@@ -193,7 +193,7 @@ contains
         call epot_generate(h%ep, gr, st, h%reltype)
         call X(states_calc_dens) (st, m%np, st%rho)
         call X(v_ks_calc) (gr, ks, h, st, calc_eigenval=.true.)
-        call hamiltonian_energy(h, st, geo%eii, -1)
+        call hamiltonian_energy(h, gr, st, -1)
         call scf_run(scf, gr, st, ks, h, outp)
         do j = 1, geo%natoms
           forces(j, :) = geo%atom(j)%f(:)

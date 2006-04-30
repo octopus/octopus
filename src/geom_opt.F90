@@ -206,7 +206,7 @@ contains
       call epot_generate(h%ep, sys%gr, st, h%reltype)
       call X(states_calc_dens) (st, m%np, st%rho)
       call X(v_ks_calc) (sys%gr, sys%ks, h, st, calc_eigenval=.true.)
-      call hamiltonian_energy(h, st, geo%eii, -1)
+      call hamiltonian_energy(h, sys%gr, st, -1)
 
       ! do scf calculation
       call scf_run(scfv, sys%gr, st, sys%ks, h, sys%outp)
