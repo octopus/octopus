@@ -79,8 +79,9 @@ module hamiltonian_m
 
     integer :: reltype            ! type of relativistic correction to use
 
-    FLOAT, pointer :: vhartree(:)
-    FLOAT, pointer :: Vhxc(:,:)   ! xc potential + hartree potential
+    FLOAT, pointer :: vhartree(:) ! hartree potential
+    FLOAT, pointer :: vxc(:,:)    ! xc potential
+    FLOAT, pointer :: vhxc(:,:)   ! xc potential + hartree potential
     FLOAT, pointer :: axc(:,:,:)  ! xc vector-potential divided by c
 
     ! Energies
@@ -158,8 +159,10 @@ contains
     ! In the case of spinors, vxc_11 = h%vxc(:, 1), vxc_22 = h%vxc(:, 2), Re(vxc_12) = h%vxc(:. 3);
     ! Im(vxc_12) = h%vxc(:, 4)
     ALLOCATE(h%vhartree(NP),        NP)
-    ALLOCATE(h%Vhxc(NP, h%d%nspin), NP*h%d%nspin)
-    h%Vhxc = M_ZERO
+    ALLOCATE(h%vxc(NP, h%d%nspin), NP*h%d%nspin)
+    ALLOCATE(h%vhxc(NP, h%d%nspin), NP*h%d%nspin)
+    h%vhxc = M_ZERO
+    h%vxc = M_ZERO
     if (h%d%cdft) then
       ALLOCATE(h%axc(NP, NDIM, h%d%nspin), NP*NDIM*h%d%nspin)
       h%axc = M_ZERO
@@ -312,6 +315,10 @@ contains
       deallocate(h%vhxc)
       nullify(h%vhxc)
     end if
+    if(associated(h%vxc)) then
+      deallocate(h%vxc)
+      nullify(h%vxc)
+    end if
     if(associated(h%axc)) then
       deallocate(h%axc)
       nullify(h%axc)
@@ -404,7 +411,7 @@ contains
         call doutput_function(outp%how, dir, 'vh', m, sb, h%vhartree, u, err)
         do is = 1, min(h%d%ispin, 2)
           write(fname, '(a,i1)') 'vxc-', is
-          call doutput_function(outp%how, dir, fname, m, sb, h%vhxc(:, is) - h%vhartree(:), u, err)
+          call doutput_function(outp%how, dir, fname, m, sb, h%vxc(:, is), u, err)
         end do
       end if
     end if

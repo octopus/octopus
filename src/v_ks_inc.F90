@@ -40,11 +40,9 @@ subroutine X(v_ks_calc)(gr, ks, h, st, calc_eigenval)
   ! No Hartree or xc if independent electrons
   if((.not.ks%ip_app).and.(amaldi_factor>M_ZERO)) then
     call v_hartree()
-    call v_a_xc()
-
-    ! h%vhxc now only contains the xc part, so we add it together to the Hartree one.
     h%vhxc(1:NP, 1) = h%vhxc(1:NP, 1) + h%vhartree(1:NP)
     if(h%d%ispin > UNPOLARIZED) h%vhxc(1:NP, 2) = h%vhxc(1:NP, 2) + h%vhartree(1:NP)
+    call v_a_xc()
   end if
 
   if(present(calc_eigenval)) call X(hamiltonian_eigenval) (h, gr, st)
@@ -83,16 +81,6 @@ contains
   subroutine v_a_xc()
     FLOAT, allocatable :: rho(:, :)
     integer :: is
-
-    ! next 5 lines are for an RPA calculation
-    !
-    !FLOAT, save, pointer ::  RPA_Vhxc(:, :)
-    !logical, save :: RPA_first = .true.
-    !
-    !if(RPA_first) then
-    !  ALLOCATE(RPA_Vhxc(NP, h%d%nspin), NP*h%d%nspin)
-    !  RPA_Vhxc = h%vhxc
-
     call profiling_in(C_PROFILING_XC)
 
     h%ex = M_ZERO
@@ -112,6 +100,7 @@ contains
     ! Amaldi correction
     if(ks%sic_type == sic_amaldi) rho(1:NP,:) = amaldi_factor*rho(1:NP,:)
 
+    ! Get the *local* xc term, which is added in h%vhxc to the Hartree term.
     if(h%d%cdft) then
       call xc_get_vxc_and_axc(gr, ks%xc, rho, st%j, st%d%ispin, h%vhxc, h%axc, &
          h%ex, h%ec, h%exc_j, -minval(st%eigenval(st%nst, :)), st%qtot)
@@ -125,24 +114,23 @@ contains
     call X(xc_oep_calc)(ks%oep, ks%xc, (ks%sic_type==sic_pz),  &
        gr, h, st, h%vhxc, h%ex, h%ec)
 
-    ! next 5 lines are for an RPA calculation
-    !  RPA_Vhxc = h%vhxc - RPA_Vhxc  ! RPA_Vhxc now includes the xc potential
-    !  RPA_first = .false.
-    !else
-    !  h%vhxc = h%vhxc + RPA_Vhxc
-    !end if
+    ! Get vxc, by substracting the Hartree term.
+    h%vxc = h%vhxc
+    h%vxc(1:NP, 1) = h%vxc(1:NP, 1) - h%vhartree(1:NP)
+    if(h%d%ispin > UNPOLARIZED) h%vxc(1:NP, 2) = h%vxc(1:NP, 2) - h%vhartree(1:NP)
 
+    ! Now we calculate Int[n vxc] = h%epot
     select case(h%d%ispin)
     case(UNPOLARIZED)
-      h%epot = h%epot + dmf_dotp(gr%m, st%rho(:, 1), h%vhxc(:, 1))
+      h%epot = h%epot + dmf_dotp(gr%m, st%rho(:, 1), h%vxc(:, 1))
     case(SPIN_POLARIZED)
-      h%epot = h%epot + dmf_dotp(gr%m, st%rho(:, 1), h%vhxc(:, 1)) &
-         + dmf_dotp(gr%m, st%rho(:, 2), h%vhxc(:, 2))
+      h%epot = h%epot + dmf_dotp(gr%m, st%rho(:, 1), h%vxc(:, 1)) &
+         + dmf_dotp(gr%m, st%rho(:, 2), h%vxc(:, 2))
     case(SPINORS)
-      h%epot = h%epot + dmf_dotp(gr%m, st%rho(:, 1), h%vhxc(:, 1)) &
-         + dmf_dotp(gr%m, st%rho(:, 2), h%vhxc(:, 2)) &
-         + M_TWO*dmf_dotp(gr%m, st%rho(:, 3), h%vhxc(:, 3)) &
-         + M_TWO*dmf_dotp(gr%m, st%rho(:, 4), h%vhxc(:, 4))
+      h%epot = h%epot + dmf_dotp(gr%m, st%rho(:, 1), h%vxc(:, 1)) &
+         + dmf_dotp(gr%m, st%rho(:, 2), h%vxc(:, 2)) &
+         + M_TWO*dmf_dotp(gr%m, st%rho(:, 3), h%vxc(:, 3)) &
+         + M_TWO*dmf_dotp(gr%m, st%rho(:, 4), h%vxc(:, 4))
 
     end select
 
