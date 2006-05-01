@@ -30,7 +30,7 @@ Input: 03-functionals.01-jellium-lsda.inp
 
 Match ; TotalEnergy ; grep -A 7 '^Energy:' static/info ; \s*Total\s*=\s*-0.5048
 Match ; Eigenvalues ; grep -A 2 'Eigenvalues \[' static/info | tail -1 ; \s*-0.201110\d*\s*2.0000\d*
-Match ; Exchange    ; grep -A 5 '^Energy:' static/info ; \s*Exchange\s*=\s*-0.95511
+Match ; Exchange    ; grep -A 8 '^Energy:' static/info ; \s*Exchange\s*=\s*-0.95511
 
 
 # Now, EXX/KLI for Li, 8 electrons (restarting from the previous run)
@@ -39,7 +39,7 @@ Input: 03-functionals.02-jellium-exx_kli.inp
 
 Match ; TotalEnergy ; grep -A 7 '^Energy:' static/info ; \s*Total\s*=\s*-0.32773
 Match ; Eigenvalues ; grep -A 2 'Eigenvalues \[' static/info | tail -1 ; \s*-0.251600\d*\s*2.0000\d*
-Match ; Exchange    ; grep -A 5 '^Energy:' static/info ; \s*Exchange\s*=\s*-1.03233
+Match ; Exchange    ; grep -A 8 '^Energy:' static/info ; \s*Exchange\s*=\s*-1.03233
 
 
 # And finally, full EXX for Li, 8 electrons (restarting from the previous run)
@@ -48,4 +48,4 @@ Input: 03-functionals.03-jellium-full_exx.inp
 
 Match ; TotalEnergy ; grep -A 7 '^Energy:' static/info ; \s*Total\s*=\s* -0.33433
 Match ; Eigenvalues ; grep -A 2 'Eigenvalues \[' static/info | tail -1 ; \s*-0.25205\d*\s*2.0000\d*
-Match ; Exchange    ; grep -A 5 '^Energy:' static/info ; \s*Exchange\s*=\s*-1.03277
+Match ; Exchange    ; grep -A 8 '^Energy:' static/info ; \s*Exchange\s*=\s*-1.03277
