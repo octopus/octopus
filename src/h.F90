@@ -352,7 +352,7 @@ contains
     integer,             intent(in)    :: iunit
     logical, optional,   intent(in)    :: full
 
-    integer :: full_
+    logical :: full_
 
     call push_sub('h.hamiltonian_energy')
 
