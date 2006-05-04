@@ -3,7 +3,7 @@ AC_DEFUN([ACX_ARPACK], [
 acx_arpack_ok=no
 
 dnl Check if the library was given in the command line
-AC_ARG_WITH(arpack, [AC_HELP_STRING([--with-arpack=DIR], [http://www.caam.rice.edu/software/ARPACK])])
+AC_ARG_WITH(arpack, [AS_HELP_STRING([--with-arpack=DIR], [http://www.caam.rice.edu/software/ARPACK])])
 case $with_arpack in
   yes) ;;
   no | "") acx_arpack_ok=disable ;;

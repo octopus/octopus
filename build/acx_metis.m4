@@ -4,7 +4,7 @@ dnl Since v2.0, Metis ships with octopus, so we enable it by default
 acx_metis_ok=yes
 
 dnl We disable METIS support only if the user is requesting this explicitely
-AC_ARG_ENABLE(metis, AC_HELP_STRING([--disable-metis], [Do not compile with internal Metis support]), [acx_metis_ok=no])
+AC_ARG_ENABLE(metis, AS_HELP_STRING([--disable-metis], [Do not compile with internal Metis support]), [acx_metis_ok=no])
 
 if test x"$acx_metis_ok" = xyes; then
   HAVE_METIS=1

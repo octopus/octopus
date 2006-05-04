@@ -3,7 +3,7 @@ AC_DEFUN([ACX_JDQZ], [
 acx_jdqz_ok=no
 
 dnl Check if the library was given in the command line
-AC_ARG_WITH(jdqz, [AC_HELP_STRING([--with-jdqz=DIR], [http://www.math.ruu.nl/people/vorst/jd.html])])
+AC_ARG_WITH(jdqz, [AS_HELP_STRING([--with-jdqz=DIR], [http://www.math.ruu.nl/people/vorst/jd.html])])
 case $with_jdqz in
   yes) ;;
   no | "") acx_jdqz_ok=disable ;;

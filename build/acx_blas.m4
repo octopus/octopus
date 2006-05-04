@@ -17,7 +17,7 @@ AC_FC_FUNC(dgemm)
 ])
 
 dnl Check if the library was given in the command line
-AC_ARG_WITH(blas, [AC_HELP_STRING([--with-blas=<lib>], [use BLAS library <lib>])])
+AC_ARG_WITH(blas, [AS_HELP_STRING([--with-blas=<lib>], [use BLAS library <lib>])])
 case $with_blas in
   yes | "") ;;
   no) acx_blas_ok=disable ;;

@@ -2,7 +2,7 @@ AC_DEFUN([ACX_NETCDF], [
 acx_netcdf_ok=no
 
 dnl Check if the library was given in the command line
-AC_ARG_WITH(netcdf, [AC_HELP_STRING([--with-netcdf=DIR], [http://www.unidata.ucar.edu/packages/netcdf/])])
+AC_ARG_WITH(netcdf, [AS_HELP_STRING([--with-netcdf=DIR], [http://www.unidata.ucar.edu/packages/netcdf/])])
 case $with_netcdf in
   yes) ;;
   no | "") acx_netcdf_ok=disable ;;

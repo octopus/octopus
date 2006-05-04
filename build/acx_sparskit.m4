@@ -3,7 +3,7 @@ AC_DEFUN([ACX_SPARSKIT], [
 acx_sparskit_ok=no
 
 dnl Check if the library was given in the command line
-AC_ARG_WITH(sparskit, [AC_HELP_STRING([--with-sparskit=DIR],[http://www-users.cs.umn.edu/~saad/software/])])
+AC_ARG_WITH(sparskit, [AS_HELP_STRING([--with-sparskit=DIR],[http://www-users.cs.umn.edu/~saad/software/])])
 case $with_sparskit in
   yes) ;;
   no | "") acx_sparskit_ok=disable ;;

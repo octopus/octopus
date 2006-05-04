@@ -16,7 +16,7 @@ m4_if(_AC_LANG, Fortran, [cheev=cheev], [AC_FC_FUNC(cheev)])
 
 dnl Check if the library was given in the command line
 if test $acx_lapack_ok = no; then
-  AC_ARG_WITH(lapack, [AC_HELP_STRING([--with-lapack=<lib>], [use LAPACK library <lib>])])
+  AC_ARG_WITH(lapack, [AS_HELP_STRING([--with-lapack=<lib>], [use LAPACK library <lib>])])
   case $with_lapack in
     yes | "") ;;
     no) acx_lapack_ok=disable ;;

@@ -2,7 +2,7 @@ AC_DEFUN([ACX_TRLAN], [
 acx_trlan_ok=no
 
 dnl Check if the library was given in the command line
-AC_ARG_WITH(trlan, [AC_HELP_STRING([--with-trlan=DIR], [http://www.nersc.gov/research/SIMON/trlan.html])])
+AC_ARG_WITH(trlan, [AS_HELP_STRING([--with-trlan=DIR], [http://www.nersc.gov/research/SIMON/trlan.html])])
 case $with_trlan in
   yes) ;;
   no | "") acx_trlan_ok=disable ;;

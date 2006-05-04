@@ -57,7 +57,7 @@ if test "${fft}" != "no"; then
 
   dnl Check if the library was given in the command line
   if test $acx_fft_ok = no; then
-    AC_ARG_WITH(fft-lib, [AC_HELP_STRING([--with-fft-lib=<lib>], [use FFT library <lib>])])
+    AC_ARG_WITH(fft-lib, [AS_HELP_STRING([--with-fft-lib=<lib>], [use FFT library <lib>])])
     case $with_fft_lib in
       yes | "") ;;
       no) acx_fft_ok=disable ;;
