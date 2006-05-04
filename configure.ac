@@ -64,7 +64,7 @@ AC_ARG_ENABLE(debug, AS_HELP_STRING([--disable-debug], [debug mode]), [DEBUG=${e
 
 
 dnl the MPI has a special treatment
-AC_ARG_ENABLE(mpi, AS_HELP_STRING([--enable-mpi(=PATH)], [Paralel version]))
+AC_ARG_ENABLE(mpi, AS_HELP_STRING([--enable-mpi(=PATH)], [Parallel version]))
 case $enable_mpi in
   yes) ;;
   no | "") enable_mpi=no ;;
