@@ -144,7 +144,7 @@ contains
     mc%n_node  = n_node
     mc%n_index = n_index  ! size(index_range)
 
-    call messages_print_stress(stdout, "Paralellization")
+    call messages_print_stress(stdout, "Parallelization")
 
     call strategy()
     if(mc%par_strategy.ne.P_STRATEGY_SERIAL) then
@@ -196,7 +196,7 @@ contains
       !%Description
       !% Specifies what kind of parallelization strategy octopus should use.
       !% The values can be combined, for example "par_domains + par_states"
-      !% means a combined paralellization in domains and states
+      !% means a combined parallelization in domains and states
       !%Option serial 0
       !% Octopus will run in serial.
       !%Option par_domains 1

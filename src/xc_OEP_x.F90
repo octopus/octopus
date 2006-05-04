@@ -19,7 +19,7 @@
 
 
 !------------------------------------------------------------
-! The paralellization of this routine is done in the following way:
+! The parallelization of this routine is done in the following way:
 ! We have to calculate the sum
 !    lxc = sum_{j>i) l_ij
 ! where the states i and j are divided in blocks and scattered among

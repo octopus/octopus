@@ -329,7 +329,7 @@ The main developing team of this program is composed of:
 
    * Carlo Andrea Rozzi - infinite systems (almost done!)
 
-   * Sebastien Hamel    - paralel version of oct-excite.
+   * Sebastien Hamel    - parallel version of oct-excite.
 
    `octopus' is based on a fixed-nucleus code written by George F.
 Bertsch and K. Yabana to perform real-time dynamics in clusters (Phys
@@ -1206,7 +1206,7 @@ File: octopus.info,  Node: Parallel,  Next: Units,  Prev: IO,  Up: Generalities
      _Default_: par_domains + par_states + par_kpoints
      Specifies what kind of parallelization strategy octopus should use.
      The values can be combined, for example "par_domains + par_states"
-     means a combined paralellization in domains and states
+     means a combined parallelization in domains and states
 
      _Options_:
         - *serial*:  Octopus will run in serial.

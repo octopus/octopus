@@ -43,7 +43,7 @@ subroutine eigen_solver_arpack(gr, st, h, tol_, niter, ncv, converged, diff)
 
 #if defined(HAVE_MPI)
     if(gr%m%parallel_in_domains) then
-      message(1) = 'Error: Arpack-Solver not parallized for domain decomposition.'
+      message(1) = 'Error: Arpack-Solver not parallelized for domain decomposition.'
       call write_fatal(1)
       !  FIXME: Need to adjust m%x and m%vol_pp occurences in the code below
       !         appropriately for domain decomposition. Also parallelization

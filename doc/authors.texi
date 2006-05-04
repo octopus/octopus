@@ -18,7 +18,7 @@ The main developing team of this program is composed of:
 
 Other contributors are:
 @itemize @bullet
-@item Sebastien Hamel    - paralel version of oct-excite.
+@item Sebastien Hamel    - parallel version of oct-excite.
 @end itemize
 
 @code{octopus} is based on a fixed-nucleus code written by

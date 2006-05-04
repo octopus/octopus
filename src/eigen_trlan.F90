@@ -39,7 +39,7 @@ subroutine eigen_solver_cg3(m, st, h, tol, niter, converged, diff, reorder)
   call push_sub('eigen_trlan.eigen_solver_cg3')
 
   if(m%parallel_in_domains) then
-    message(1) = 'Error: Trlan-Solver not parallized for domain decomposition.'
+    message(1) = 'Error: Trlan-Solver not parallelized for domain decomposition.'
     call write_fatal(1)
   end if
   !  FIXME: Need to adjust m%x and m%vol_pp occurences in the code below
