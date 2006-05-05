@@ -1,2 +1,2 @@
-configure config.log config.status
+config.log config.status
 aclocal.m4 autom4te.cache autogen*
