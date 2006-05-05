@@ -43,7 +43,7 @@ check-full:
 	 then echo -e "\033[31;1mFailed: `grep FAIL rlog | wc -l` / `grep '\[ ' rlog | wc -l` \033[0m" ; \
 	 else echo -e "\033[32;1m\nEverything seems to be OK \n\033[0m" ; fi
 
-clean:
+clean-local:
 	-rm -rf /tmp/tmp.* 
 
 .PHONY: regression_test check clean 
