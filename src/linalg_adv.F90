@@ -26,12 +26,14 @@ module lib_adv_alg_m
   implicit none
 
   private
-  public ::             &
-    lalg_geneigensolve, &
-    lalg_eigensolve,    &
-    lalg_determinant,   &
-    lalg_inverter,      &
-    lalg_linsyssolve
+  public ::                     &
+    lalg_geneigensolve,         &
+    lalg_eigensolve,            &
+    lalg_determinant,           &
+    lalg_inverter,              &
+    lalg_linsyssolve,           &
+    lalg_singular_value_decomp, &
+    lalg_svd_inverse
 
   interface lalg_geneigensolve
     module procedure dgeneigensolve, zgeneigensolve
@@ -53,6 +55,14 @@ module lib_adv_alg_m
 
   interface lalg_linsyssolve
     module procedure dlinsyssolve
+  end interface
+
+  interface lalg_singular_value_decomp
+    module procedure zsingular_value_decomp
+  end interface
+
+  interface lalg_svd_inverse
+    module procedure zsvd_inverse
   end interface
 
 contains

@@ -320,3 +320,93 @@ subroutine dlinsyssolve(n, nhrs, a, b, x)
   deallocate(ipiv, iwork, ferr, berr, work, r, c, af)
 
 end subroutine dlinsyssolve
+
+
+! computes the singular value decomposition of a complex NxN matrix a(:,:)
+subroutine zsingular_value_decomp(n, a, u, vt, sg_values)
+  integer, intent(in)    :: n
+  CMPLX,   intent(inout) :: a(n, n)  
+  CMPLX,   intent(out)   :: u(n, n), vt(n, n)  
+  FLOAT,   intent(out)   :: sg_values(n)
+
+  interface
+    subroutine ZLAPACK(gesvd) ( jobu, jobvt, m, n, a, lda, s, u, ldu, &
+      vt, ldvt, work, lwork, rwork, info )
+      character(1), intent(in)    :: jobu, jobvt
+      integer,      intent(in)    :: m, n
+      CMPLX,        intent(inout) :: a, u, vt ! a(lda,n), b(ldu,n), b(ldvt,n)
+      CMPLX,        intent(out)   :: work     ! work(lwork)
+      integer,      intent(in)    :: lda, ldu, ldvt, lwork
+      integer,      intent(out)   :: info
+      FLOAT,        intent(out)   :: s        ! s(min(m,n))
+      FLOAT,        intent(inout) :: rwork    ! rwork(5*min(m,n))
+    end subroutine ZLAPACK(gesvd)
+  end interface
+
+  integer :: m, info, lwork
+  CMPLX, allocatable :: work(:)
+  FLOAT, allocatable :: rwork(:)
+
+  ! for now we treat only square matrices
+  m = n 
+
+  ! double minimum lwork size to increase performance (see manpage)
+  lwork = 2*( 2*min(m, n) + max(m, n) )
+
+  ALLOCATE(work(lwork), lwork)
+  ALLOCATE(rwork(5*min(m, n)), 5*min(m, n))
+
+  call ZLAPACK(gesvd)( &
+    'A', 'A', m, n, a(1, 1), m, sg_values(1), u(1, 1), m, vt(1, 1), n, work(1), lwork, rwork(1), info )
+
+  if(info /= 0) then
+    write(message(1), '(a, i3)') 'In zsingular_value_decomp, LAPACK zgesvd returned info = ', info
+    call write_fatal(1)
+  end if
+
+  deallocate(rwork, work)
+
+end subroutine zsingular_value_decomp
+
+
+! computes inverse of a complex NxN matrix a(:,:) using the SVD decomposition 
+subroutine zsvd_inverse(n, a, threshold)
+  integer, intent(in)           :: n
+  CMPLX,   intent(inout)        :: a(n, n)    ! a will be replaced by its inverse
+  FLOAT,   intent(in), optional :: threshold
+
+  CMPLX, allocatable :: u(:,:), vt(:,:)
+  FLOAT, allocatable :: sg_values(:)
+  CMPLX   :: tmp
+  FLOAT   :: sg_inverse, threshold_
+  integer :: j, k, l
+
+  ALLOCATE( u(n, n), n*n)
+  ALLOCATE(vt(n, n), n*n)
+  ALLOCATE(sg_values(n), n)
+
+  call zsingular_value_decomp(n, a, u, vt, sg_values)
+
+  threshold_ = CNST(1e-10); 
+  if(present(threshold)) threshold_ = threshold
+
+  ! build inverse
+  do j = 1, n
+    do k = 1, n
+      tmp = M_ZERO
+      do l = 1, n
+        if (sg_values(l).lt.threshold_) then
+          write(message(1), '(a)') 'In zsvd_inverse: singular value below threshold.'
+          call write_warning(1)
+          sg_inverse = M_ZERO
+        else
+          sg_inverse = M_ONE/sg_values(l)
+        end if
+        tmp = tmp + conjg(vt(l, k))*sg_inverse*conjg(u(j, l))
+      end do
+      a(j, k) = tmp
+    end do
+  end do
+
+  deallocate(sg_values, vt, u)
+end subroutine zsvd_inverse
