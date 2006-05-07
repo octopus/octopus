@@ -44,6 +44,6 @@ check-full:
 	 else echo -e "\033[32;1m\nEverything seems to be OK \n\033[0m" ; fi
 
 clean-local:
-	-rm -rf /tmp/tmp.* 
+	-rm -rf /tmp/octopus.* 
 
 .PHONY: regression_test check clean 
