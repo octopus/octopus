@@ -149,7 +149,7 @@ contains
     !% <ul>
     !% <li><math>&lt;i|T + V_{ext}|j&gt;</math></li>
     !% <li><math>&lt;ij| 1/|r_1-r_2| |kl&gt;</math></li>
-    !%</ul>
+    !% </ul>
     !% in the directory ME
     !%End
     call loct_parse_logical(check_inp('WriteMatrixElements'), .false., l)

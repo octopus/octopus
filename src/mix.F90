@@ -78,7 +78,7 @@ contains
 
     !%Variable TypeOfMixing
     !%Type integer
-    !%Deafult broyden
+    !%Default broyden
     !%Section SCF::Mixing
     !%Description
     !% The scheme scheme used to produce, at each iteration in the self consistent cycle
