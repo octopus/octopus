@@ -50,6 +50,7 @@ module lib_oct_m
     loct_sysname,            &
     loct_mkdir,              &
     loct_rm,                 &
+    loct_rm_status_files,    &
     loct_number_of_lines,    &
     loct_getenv,             &
     loct_fft_optimize,       &
@@ -375,6 +376,15 @@ contains
     if(iand(i, 2**(modulo(a-1, 32))).ne.0) l = .true.
 
   end function loct_isinstringlist
+
+  subroutine loct_rm_status_files(current_label)
+    character(len=*), intent(in) :: current_label
+
+    call loct_rm(trim(current_label)//'oct-status-running')
+    call loct_rm(trim(current_label)//'oct-status-finished')
+    call loct_rm(trim(current_label)//'oct-status-aborted')
+
+  end subroutine loct_rm_status_files
 
   ! single precision version of the functions
   real(4) function oct_gamma4(x)

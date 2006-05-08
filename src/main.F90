@@ -144,6 +144,9 @@ program octopus
 
     ! datasets have to be available before calling the _init() functions below
     call io_init()
+    ! now we declare octopus as running
+    call io_switch_status('running')
+
     call profiling_init()
 
     call profiling_in(C_PROFILING_COMPLETE_DATASET)
@@ -192,6 +195,8 @@ program octopus
     call MPI_Barrier(MPI_COMM_WORLD, ierr)
 #endif
 
+    ! run finished successfully
+    call io_switch_status('finished')
     call io_end()
 
     call profiling_out(C_PROFILING_COMPLETE_DATASET)

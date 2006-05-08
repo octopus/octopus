@@ -112,6 +112,9 @@ contains
       close(iunit_err)
     end if
 
+    ! switch file indicator to state aborted
+    call switch_status('aborted')
+
 #ifdef HAVE_MPI
     call MPI_FINALIZE(ierr)
 #endif
@@ -268,6 +271,24 @@ contains
 
 
   ! ---------------------------------------------------------
+  subroutine switch_status(status)
+    character(len=*), intent(in) :: status
+
+    ! only root node is taking care of file I/O
+    if(.not.mpi_grp_is_root(mpi_world)) return     
+
+    ! remove old status files first, before we switch to state aborted
+    call loct_rm_status_files(current_label)
+    
+    ! create empty status file to indicate 'aborted state'
+    open(unit=iunit_err, file=trim(current_label)//'oct-status-'//trim(status), &
+      action='write', status='unknown')
+    close(iunit_err)
+    
+  end subroutine switch_status
+
+
+  ! ---------------------------------------------------------
   subroutine open_debug_trace(iunit)
     integer, intent(out) :: iunit
 
@@ -319,6 +340,9 @@ contains
     if(flush_messages.and.mpi_grp_is_root(mpi_world)) then
       close(iunit_out)
     end if
+
+    ! switch file indicator to state aborted
+    call switch_status('aborted')
 
 #ifdef HAVE_MPI
     call MPI_FINALIZE(mpi_err)
