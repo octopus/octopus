@@ -333,20 +333,20 @@ subroutine X(states_output) (st, gr, dir, outp)
     deallocate(dtmp)
   end if
 
-  if(NDIM==3) then
-
-    ALLOCATE(elf(1:gr%m%np,1:st%d%nspin),gr%m%np*st%d%nspin)
+  if(NDIM .eq. 3) then
+    if(  (iand(outp%what, output_elf).ne.0)  .or.   (iand(outp%what, output_elf_fs).ne.0)  ) then
+      ALLOCATE(elf(1:gr%m%np,1:st%d%nspin),gr%m%np*st%d%nspin)
     
-    if(iand(outp%what, output_elf).ne.0)    call X(states_calc_elf)(st,gr,elf,.true.)
-    if(iand(outp%what, output_elf_FS).ne.0) call X(states_calc_elf)(st,gr,elf,.false.)
+      if(iand(outp%what, output_elf).ne.0)    call X(states_calc_elf)(st,gr,elf,.true.)
+      if(iand(outp%what, output_elf_FS).ne.0) call X(states_calc_elf)(st,gr,elf,.false.)
 
-    do is = 1, st%d%nspin
-      write(fname, '(a,a,i1)') 'elf_rs', '-', is
-      call doutput_function(outp%how, dir, trim(fname), gr%m, gr%sb, elf(:,is), M_ONE, ierr)
-    end do
+      do is = 1, st%d%nspin
+        write(fname, '(a,a,i1)') 'elf_rs', '-', is
+        call doutput_function(outp%how, dir, trim(fname), gr%m, gr%sb, elf(:,is), M_ONE, ierr)
+      end do
 
-    DEALLOCATE(elf)
-
+      DEALLOCATE(elf)
+    end if
   end if
 
   call pop_sub()
