@@ -41,6 +41,7 @@ subroutine PES_rc_init(v, m, st, save_iter)
   !% <tt>%TDPES_rc_points
   !% <br>&nbsp;&nbsp;x1 | y1 | z1
   !% <br>%
+  !% </tt>
   !%End
   if (loct_parse_block(check_inp('PES_rc_points'), blk) < 0) call input_error('PES_rc_points')
 
