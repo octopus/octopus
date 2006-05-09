@@ -33,7 +33,7 @@ program xyzanim
   implicit none
 
   character(len=256) :: nbofile, xyzfile
-  integer :: ierr, sampling, i, nbo_unit, xyz_unit, iter, j
+  integer :: ierr, sampling, i, nbo_unit, xyz_unit, iter, j, record_length
   FLOAT :: dump
 
   type(geometry_t) :: geo
@@ -62,8 +62,10 @@ program xyzanim
   ! Initializes the atom system
   call geometry_init_xyz(geo)
 
+  record_length = 100 + 3*geo%natoms*3*20
+
   ! Opens the nbo file
-  nbo_unit = io_open(nbofile, action='read')
+  nbo_unit = io_open(nbofile, action='read', recl = record_length)
 
   ! Opens the xyz file
   xyz_unit = io_open(xyzfile, action='write')
