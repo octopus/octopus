@@ -1,0 +1,117 @@
+#! @PYTHON@
+# -*- coding: utf-8 mode: python -*-
+
+import sys
+import fileinput
+import re
+import cElementTree as ET
+
+root=ET.Element("variables")
+
+readingdesc=False
+readingoption=False
+variable=""
+type=""
+sections=""
+options=None
+default=""
+desc=""
+for line in fileinput.input():
+#    sys.stdout.write( "#" + line)
+    if re.match(r'^END.*', line):
+        theroot=root
+        for section in re.split('::',sections):
+            found=False
+            for subelement in theroot.getchildren():
+                if subelement.get('name') == section:
+                    theroot=subelement
+                    found=True
+                    break
+            if not found:
+                theroot=ET.SubElement(theroot,'section',{'name' : section})
+
+        variable=ET.SubElement(theroot,"variable",
+                       {"name" : variable,
+                        "type" : type})
+        descel=ET.SubElement(variable,"desc")
+        descel.text = desc.strip()
+        if options:
+            variable.append(options)
+        if default:
+            optel=ET.SubElement(variable,"default")
+            optel.text = default.strip()
+
+        readingdesc=False
+        readingoption=False
+        variable=""
+        type=""
+        sections=""
+        options=None
+        default=""
+        desc=""
+        continue
+    m=re.match(r'^Variable (.*)', line)
+    if m:
+        variable=m.group(1)
+        readingdesc=False
+        readingoption=False
+        continue
+    m=re.match(r'^Type (.*)', line)
+    if m:
+        type=m.group(1)
+        readingdesc=False
+        readingoption=False
+        continue
+    m=re.match(r'^Section (.*)', line)
+    if m:
+        sections=m.group(1)
+        readingdesc=False
+        readingoption=False
+        continue
+    m=re.match(r'^Default (.*)', line)
+    if m:
+        default=m.group(1)
+        readingdesc=False
+        readingoption=False
+        continue
+    m=re.match(r'^Option (.*) (.*)', line)
+    if m:
+        if not options:
+            options=ET.Element("options")
+        option=ET.SubElement(options,"option", {"name" : m.group(1), "value" : m.group(2)})
+        option.text = ""
+        readingdesc=False
+        readingoption=True
+        continue
+    if re.match(r'^Description', line):
+        desc = ""
+        readingdesc=True
+        readingoption=False
+        continue
+    if readingdesc:
+        desc += line.strip() + " "
+    elif readingoption:
+        option.text += line.strip() + " "
+#    else:
+#        print "### ERROR while in " + variable + ": ignoring " + line
+
+# in-place prettyprint formatter
+
+def indent(elem, level=0):
+    i = "\n" + level*"  "
+    if len(elem):
+        if not elem.text or not elem.text.strip():
+            elem.text = i + "  "
+        for elemx in elem:
+            indent(elemx, level+1)
+        elemx.tail = i
+        if not elem.tail or not elem.tail.strip():
+            elem.tail = i
+    else:
+        if level and (not elem.tail or not elem.tail.strip()):
+            elem.tail = i
+
+indent(root)
+
+tree = ET.ElementTree(root)
+tree.write(sys.stdout,"utf-8")

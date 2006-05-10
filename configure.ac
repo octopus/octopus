@@ -1,4 +1,4 @@
-## Copyright (C) 2002 M. Marques, A. Castro, A. Rubio, G. Bertsch
+## Copyright (C) 2002-2006 M. Marques, A. Castro, A. Rubio, G. Bertsch
 ##
 ## This program is free software; you can redistribute it and/or modify
 ## it under the terms of the GNU General Public License as published by
@@ -17,11 +17,12 @@
 ##
 ## $Id$
 
-AC_INIT([Octopus],[2.0.1devel],[marques@nautilus.fis.uc.pt],[octopus])
+AC_PREREQ(2.59)
+AC_INIT([Octopus],[2.1pre1],[octopus-devel@tddft.org],[octopus])
 AC_CONFIG_SRCDIR([src/global.F90])
 AM_INIT_AUTOMAKE
 
-AC_CONFIG_HEADERS(config.h)
+AC_CONFIG_HEADERS([config.h])
 
 # Installation prefix by default
 AC_PREFIX_DEFAULT($HOME)
@@ -36,18 +37,29 @@ AC_PROG_LN_S
 AC_PROG_MAKE_SET
 AC_PROG_RANLIB
 AC_PROG_YACC
+AM_PATH_PYTHON
 
 # Checks for header files.
-AC_FUNC_ALLOCA
+AC_HEADER_DIRENT
 AC_HEADER_STDC
-AC_CHECK_HEADERS([malloc.h stdlib.h string.h])
+AC_CHECK_HEADERS([fcntl.h float.h locale.h malloc.h stddef.h stdlib.h string.h strings.h sys/ioctl.h sys/time.h termios.h unistd.h])
+AC_FUNC_ALLOCA
 
 # Checks for typedefs, structures, and compiler characteristics.
 AC_C_CONST
+AC_TYPE_PID_T
+AC_TYPE_SIZE_T
+AC_HEADER_TIME
 
 # Checks for library functions.
+AC_FUNC_GETPGRP
+AC_PROG_GCC_TRADITIONAL
+AC_FUNC_MALLOC
+AC_FUNC_REALLOC
 AC_FUNC_SETVBUF_REVERSED
-AC_CHECK_FUNCS([sqrt strcasecmp strdup tcgetpgrp])
+AC_FUNC_STAT
+AC_FUNC_VPRINTF
+AC_CHECK_FUNCS([getcwd gettimeofday mkdir pow sqrt strcasecmp strdup strerror strncasecmp strndup uname tcgetpgrp])
 
 # Checks for size of pointer
 ACX_POINTER_SIZE
@@ -231,6 +243,7 @@ AC_CONFIG_FILES([Makefile
 	build/octopus.spec testsuite/Makefile testsuite/finite_systems_1d/Makefile 
 	testsuite/finite_systems_2d/Makefile testsuite/finite_systems_3d/Makefile 
 	testsuite/periodic_systems_1d/Makefile
+	build/var2xml.py
 ])
 
 AC_OUTPUT

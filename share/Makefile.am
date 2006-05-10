@@ -3,10 +3,13 @@
 SUBDIRS = PP recipes util samples
 
 sharedir = $(pkgdatadir)
-dist_share_DATA = logo variables varinfo
+dist_share_DATA = logo variables varinfo variables.xml
 
-CLEANFILES = variables varinfo
+CLEANFILES = variables varinfo variables.xml
 DISTCLEANFILES = Makefile.in
+
+variables.xml: varinfo
+	@PYTHON@ ../build/var2xml.py < $< > $@
 
 varinfo: RUN_SCRIPT
 
