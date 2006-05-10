@@ -38,6 +38,7 @@ module curvlinear_m
     curvlinear_init,            &
     curvlinear_chi2x,           &
     curvlinear_det_Jac,         &
+    curvlinear_write_info,      &
     curvlinear_dump,            &
     curvlinear_init_from_file,  &
     operator(.eq.)
@@ -166,6 +167,38 @@ contains
 
   end function curvlinear_det_Jac
 
+  ! ---------------------------------------------------------
+  subroutine curvlinear_write_info(cv, unit)
+    type(curvlinear_t), intent(in) :: cv
+    integer,            intent(in) :: unit
+
+    call push_sub('curvlinear.curvlinear_write_info')
+
+    select case(cv%method)
+    case(CURV_METHOD_GYGI)
+      write(message(1), '(a)')  '  Curvilinear Method = gygi'
+      write(message(2), '(a)')  '  Gygi Parameters:'
+      write(message(3), '(4x,a,f6.3)')  'A = ', cv%gygi%a
+      write(message(4), '(4x,3a,f6.3)') 'alpha [', &
+                                      trim(units_out%length%abbrev), '] = ', &
+                                      cv%gygi%alpha/units_out%length%factor
+      write(message(5), '(4x,3a,f6.3)') 'beta  [', &
+                                      trim(units_out%length%abbrev), '] = ', &
+                                      cv%gygi%beta/units_out%length%factor
+      call write_info(5, unit)
+
+    case(CURV_METHOD_BRIGGS)
+      write(message(1), '(a)') '  Curvilinear Method = briggs'
+      call write_info(1, unit)
+
+    case(CURV_METHOD_MODINE)
+      write(message(1), '(a)') ' Curvilinear  Method = modine'
+      call write_info(1, unit)
+
+    end select
+
+    call pop_sub()
+  end subroutine curvlinear_write_info
 
   ! ---------------------------------------------------------
   subroutine curvlinear_dump(cv, iunit)

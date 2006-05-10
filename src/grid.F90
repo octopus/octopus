@@ -132,13 +132,16 @@ contains
     integer,      intent(in) :: iunit
 
     if(.not.mpi_grp_is_root(mpi_world)) then
-      if(in_debug_mode) call write_debug_newlines(4)
+      if(in_debug_mode) call write_debug_newlines(6)
       return
     end if
 
     call messages_print_stress(iunit, "Grid")
     call simul_box_write_info(gr%sb, iunit)
     call mesh_write_info(gr%m, iunit)
+    if (gr%m%use_curvlinear) then
+      call curvlinear_write_info(gr%cv, iunit)
+    end if
     call messages_print_stress(iunit)
 
   end subroutine grid_write_info
