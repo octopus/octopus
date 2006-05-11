@@ -333,18 +333,24 @@ subroutine X(states_output) (st, gr, dir, outp)
     deallocate(dtmp)
   end if
 
-  if(NDIM .eq. 3) then
-    if(  (iand(outp%what, output_elf).ne.0)  .or.   (iand(outp%what, output_elf_fs).ne.0)  ) then
+  if(NDIM .eq. 3) then ! If the dimensions is not three, the ELF calculation will not work.
+    if(  iand(outp%what, output_elf).ne.0  ) then ! First, ELF in real space.
       ALLOCATE(elf(1:gr%m%np,1:st%d%nspin),gr%m%np*st%d%nspin)
-    
-      if(iand(outp%what, output_elf).ne.0)    call X(states_calc_elf)(st,gr,elf,.true.)
-      if(iand(outp%what, output_elf_FS).ne.0) call X(states_calc_elf)(st,gr,elf,.false.)
-
+      call X(states_calc_elf)(st, gr, elf)
       do is = 1, st%d%nspin
         write(fname, '(a,a,i1)') 'elf_rs', '-', is
         call doutput_function(outp%how, dir, trim(fname), gr%m, gr%sb, elf(:,is), M_ONE, ierr)
       end do
+      DEALLOCATE(elf)
+    end if
 
+    if(  iand(outp%what, output_elf_fs).ne.0  ) then ! Second, ELF in Fourier space.
+      ALLOCATE(elf(1:gr%m%np,1:st%d%nspin),gr%m%np*st%d%nspin)
+      call X(states_calc_elf_fs)(st, gr, elf)
+      do is = 1, st%d%nspin
+        write(fname, '(a,a,i1)') 'elf_fs', '-', is
+        call doutput_function(outp%how, dir, trim(fname), gr%m, gr%sb, elf(:,is), M_ONE, ierr)
+      end do
       DEALLOCATE(elf)
     end if
   end if
@@ -354,12 +360,118 @@ subroutine X(states_output) (st, gr, dir, outp)
 end subroutine X(states_output)
 
 
-  ! ---------------------------------------------------------
-subroutine X(states_calc_elf)(st,gr, elf, rs, de)
+! ---------------------------------------------------------
+! (time-dependent) electron localization function, (TD)ELF.
+! ---------------------------------------------------------
+subroutine X(states_calc_elf)(st,gr, elf, de)
   type(states_t),   intent(inout) :: st
   type(grid_t),     intent(inout) :: gr
   FLOAT,             intent(inout):: elf(:,:)
-  logical, intent(in) :: rs
+  FLOAT,   optional, intent(inout):: de(:,:)
+
+  FLOAT :: f, d, s
+  integer :: i, is, ik, ist, idim, ierr
+  CMPLX, allocatable :: psi_fs(:), gpsi(:,:)
+  FLOAT, allocatable :: r(:), gradr(:,:), j(:,:)
+  type(X(cf_t)) :: cf_tmp
+
+  FLOAT, parameter :: dmin = CNST(1e-10)
+#if defined(HAVE_MPI)
+  FLOAT, allocatable :: reduce_elf(:)
+#endif
+
+  character(len=80) :: fname
+
+  ! single or double occupancy
+  if(st%d%nspin == 1) then
+    s = M_TWO
+  else
+    s = M_ONE
+  end if
+
+  do_is: do is = 1, st%d%nspin
+    ALLOCATE(    r(NP),       NP)
+    ALLOCATE(gradr(NP, NDIM), NP*NDIM)
+    ALLOCATE(    j(NP, NDIM), NP*NDIM)
+    r = M_ZERO; gradr = M_ZERO; j  = M_ZERO
+
+    elf(1:NP,is) = M_ZERO
+
+    ALLOCATE(psi_fs(NP_PART),  NP_PART)
+    ALLOCATE(gpsi  (NP, NDIM), NP*NDIM)
+    do ik = is, st%d%nik, st%d%nspin
+      do ist = st%st_start, st%st_end
+        do idim = 1, st%d%dim
+
+          psi_fs(:) = cmplx(st%X(psi)(:, idim, ist, ik), KIND=PRECISION)
+          call zf_gradient(gr%sb, gr%f_der, psi_fs(:), gpsi)
+
+          r(:) = r(:) + st%d%kweights(ik)*st%occ(ist, ik) * abs(psi_fs(:))**2
+          do i = 1, NDIM
+            gradr(:,i) = gradr(:,i) + st%d%kweights(ik)*st%occ(ist, ik) *  &
+                 M_TWO * real(conjg(psi_fs(:))*gpsi(:,i))
+            j (:,i) =  j(:,i) + st%d%kweights(ik)*st%occ(ist, ik) *  &
+                 aimag(conjg(psi_fs(:))*gpsi(:,i))
+          end do
+
+          do i = 1, NP
+              elf(i,is) = elf(i,is) + st%d%kweights(ik)*st%occ(ist, ik)/s * &
+                   sum(abs(gpsi(i, 1:NDIM))**2)
+          end do
+        end do
+      end do
+    end do
+    deallocate(psi_fs, gpsi)
+
+#if defined(HAVE_MPI)
+    if(st%parallel_in_states) then
+      ALLOCATE(reduce_elf(1:NP), NP)
+      call MPI_ALLREDUCE(elf(1, is), reduce_elf(1), NP, MPI_FLOAT, MPI_SUM, st%mpi_grp%comm, ierr)
+      elf(1:NP, is) = reduce_elf(1:NP)
+      call MPI_ALLREDUCE(r(1), reduce_elf(1), NP, MPI_FLOAT, MPI_SUM, st%mpi_grp%comm, ierr)
+      r(1:NP) = reduce_elf(1:NP)
+      do i = 1, NDIM
+        call MPI_ALLREDUCE(gradr(1, i), reduce_elf(1), NP, MPI_FLOAT, MPI_SUM, st%mpi_grp%comm, ierr)
+        gradr(1:NP, i) = reduce_elf(1:NP)
+        call MPI_ALLREDUCE(j(1, i), reduce_elf(1), NP, MPI_FLOAT, MPI_SUM, st%mpi_grp%comm, ierr)
+        j(1:NP, i) = reduce_elf(1:NP)
+      end do
+      deallocate(reduce_elf)
+    end if
+#endif
+
+    do i = 1, NP
+      if(r(i) >= dmin) then
+        elf(i,is) = elf(i,is) - (M_FOURTH*sum(gradr(i, 1:NDIM)**2) + sum(j(i, 1:NDIM)**2))/(s*r(i))
+      end if
+    end do
+    
+    if(present(de)) de(1:NP,is)=elf(1:NP,is)
+
+    ! normalization
+    f = M_THREE/M_FIVE*(M_SIX*M_PI**2)**M_TWOTHIRD
+    do i = 1, NP
+      if(abs(r(i)) >= dmin) then
+        d    = f*(r(i)/s)**(M_FIVE/M_THREE)
+        elf(i,is) = M_ONE/(M_ONE + (elf(i,is)/d)**2)
+      else
+        elf(i,is) = M_ZERO
+      end if
+    end do
+
+    deallocate(r, gradr, j)
+
+  end do do_is
+
+end subroutine X(states_calc_elf)
+
+! ---------------------------------------------------------
+! ELF function in Fourier space. Not tested.
+! ---------------------------------------------------------
+subroutine X(states_calc_elf_fs)(st, gr, elf, de)
+  type(states_t),   intent(inout) :: st
+  type(grid_t),     intent(inout) :: gr
+  FLOAT,             intent(inout):: elf(:,:)
   FLOAT,   optional, intent(inout):: de(:,:)
 
   FLOAT :: f, d, s
@@ -380,10 +492,8 @@ subroutine X(states_calc_elf)(st,gr, elf, rs, de)
     s = M_ONE
   end if
 
-  if(.not.rs) then
-    call X(cf_new)(gr%m%l, cf_tmp)
-    call X(cf_fft_init)(cf_tmp, gr%sb)
-  end if
+  call X(cf_new)(gr%m%l, cf_tmp)
+  call X(cf_fft_init)(cf_tmp, gr%sb)
 
   do_is: do is = 1, st%d%nspin
     ALLOCATE(    r(NP),       NP)
@@ -399,18 +509,12 @@ subroutine X(states_calc_elf)(st,gr, elf, rs, de)
       do ist = 1, st%nst
         do idim = 1, st%d%dim
 
-          if(rs) then
-            psi_fs(:) = cmplx(st%X(psi)(:, idim, ist, ik), KIND=PRECISION)
-          else
-            call mf2mf_RS2FS(gr%m, st%X(psi)(:, idim, ist, ik), psi_fs(:), cf_tmp)
-          end if
+          call mf2mf_RS2FS(gr%m, st%X(psi)(:, idim, ist, ik), psi_fs(:), cf_tmp)
           call zf_gradient(gr%sb, gr%f_der, psi_fs(:), gpsi)
 
-          if(.not.rs) then
-            do i = 1, NDIM
-              gpsi(:,i) = gpsi(:,i) * gr%m%h(i)**2 * real(cf_tmp%n(i), PRECISION) / (M_TWO*M_PI)
-            end do
-          end if
+          do i = 1, NDIM
+            gpsi(:,i) = gpsi(:,i) * gr%m%h(i)**2 * real(cf_tmp%n(i), PRECISION) / (M_TWO*M_PI)
+          end do
 
           r(:) = r(:) + st%d%kweights(ik)*st%occ(ist, ik) * abs(psi_fs(:))**2
           do i = 1, NDIM
@@ -436,7 +540,6 @@ subroutine X(states_calc_elf)(st,gr, elf, rs, de)
         elf(i,is) = elf(i,is) - (M_FOURTH*sum(gradr(i, 1:NDIM)**2) + sum(j(i, 1:NDIM)**2))/(s*r(i))
       end if
     end do
-
     
     if(present(de)) de(1:NP,is)=elf(1:NP,is)
 
@@ -455,7 +558,7 @@ subroutine X(states_calc_elf)(st,gr, elf, rs, de)
 
   end do do_is
 
-  if(.not.rs) call X(cf_free)(cf_tmp)
+  call X(cf_free)(cf_tmp)
 
 contains 
 
@@ -475,7 +578,7 @@ contains
     call X(cf_free_FS) (c)
   end subroutine mf2mf_RS2FS
   
-end subroutine X(states_calc_elf)
+end subroutine X(states_calc_elf_fs)
 
 
 

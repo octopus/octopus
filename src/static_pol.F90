@@ -145,9 +145,9 @@ contains
         if(iand(sys%outp%what, output_elf).ne.0) then 
           
           if(1==k) then 
-            call X(states_calc_elf)(st,gr,elf,.true.)
+            call X(states_calc_elf)(st, gr, elf)
           else
-            call X(states_calc_elf)(st,gr,lr_elf,.true.)
+            call X(states_calc_elf)(st, gr, lr_elf)
             lr_elf(1:NP,1:st%d%nspin)=(lr_elf(1:NP,1:st%d%nspin)-elf(1:NP,1:st%d%nspin))/(M_TWO*e_field)
 
             !write

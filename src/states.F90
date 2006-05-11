@@ -93,6 +93,8 @@ module states_m
     states_distribute_nodes,        &
     dstates_calc_elf,               &
     zstates_calc_elf,               &
+    dstates_calc_elf_fs,            &
+    zstates_calc_elf_fs,            &
     dstates_allocate_wfns,          &
     zstates_allocate_wfns
 
