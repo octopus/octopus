@@ -159,8 +159,8 @@ program octopus
     ! Let us print the version
     message(1) = ""
     message(2) = str_center("Running octopus, version " // trim(conf%version), 70)
-    message(3) = str_center("(build time - " // trim(conf%build_time) // ")", 70)
-    message(4) = str_center("(latest cvs changes: " // trim(conf%latest_cvs) // ")", 70)
+    message(3) = str_center("build time - " // trim(conf%build_time) , 70)
+    message(4) = str_center("svn release number: " // trim(conf%latest_svn) , 70)
     message(5) = ""
     message(6) = str_center("Compiler: "//trim(conf%compiler), 70)
     message(7) = str_center("Compiler flags: "//trim(conf%fcflags), max(70, len(trim(conf%fcflags))+17))

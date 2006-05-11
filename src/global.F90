@@ -41,7 +41,7 @@ module global_m
     integer :: debug_level   ! How much debug should print
     logical :: devel_version ! If true then allow unstable parts of the code
     character(len=256) :: share       ! Name of the share dir
-    character(len=256) :: latest_cvs  ! rcs info of latest cvs commit
+    character(len=256) :: latest_svn  ! rcs info of latest svn commit
     character(len=50)  :: build_time  ! time octopus was compiled
     character(len=10)  :: version     ! version number
     character(len=256) :: compiler
@@ -136,7 +136,7 @@ contains
     else
       conf%share = SHARE_OCTOPUS
     end if
-    conf%latest_cvs = LATEST_CVS
+    conf%latest_svn = LATEST_SVN
     conf%build_time = BUILD_TIME
     conf%version    = OCTOPUS_VERSION
     conf%compiler   = FC
