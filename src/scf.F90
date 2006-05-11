@@ -223,13 +223,14 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine scf_run(scf, gr, st, ks, h, outp)
+  subroutine scf_run(scf, gr, st, ks, h, outp, gs_run)
     type(scf_t),         intent(inout) :: scf
     type(grid_t),        intent(inout) :: gr
     type(states_t),      intent(inout) :: st
     type(v_ks_t),        intent(inout) :: ks
     type(hamiltonian_t), intent(inout) :: h
     type(output_t),      intent(in)    :: outp
+    logical, optional,   intent(in)    :: gs_run
 
     type(lcao_t) :: lcao_data
 
@@ -239,9 +240,15 @@ contains
     FLOAT, allocatable :: vout(:,:,:), vin(:,:,:), vnew(:,:,:)
     FLOAT, allocatable :: tmp(:)
     character(len=8) :: dirname
-    logical :: finish, forced_finish
+    logical :: finish, forced_finish, gs_run_
 
     call push_sub('scf.scf_run')
+
+    if(present(gs_run)) then 
+      gs_run_ = gs_run
+    else 
+      gs_run_ = .true.
+    end if
 
     if(scf%lcao_restricted) then
       call lcao_init(gr, lcao_data, st, h)
@@ -351,13 +358,15 @@ contains
 
       ! Are we asked to stop? (Whenever Fortran is ready for signals, this should go away)
       forced_finish = clean_stop()
- 
-      ! save restart information
-      if(finish.or.(modulo(iter, 3) == 0).or.iter==scf%max_iter.or.forced_finish) then
-        call X(restart_write) (trim(tmpdir)//'restart_gs', st, gr, err, iter=iter)
-        if(err.ne.0) then
-          message(1) = 'Unsuccesfull write of "'//trim(tmpdir)//'restart_gs"'
-          call write_fatal(1)
+
+      if(gs_run_) then 
+        ! save restart information
+        if(finish.or.(modulo(iter, 3) == 0).or.iter==scf%max_iter.or.forced_finish) then
+          call X(restart_write) (trim(tmpdir)//'restart_gs', st, gr, err, iter=iter)
+          if(err.ne.0) then
+            message(1) = 'Unsuccesfull write of "'//trim(tmpdir)//'restart_gs"'
+            call write_fatal(1)
+          end if
         end if
       end if
 
@@ -369,7 +378,7 @@ contains
         exit
       end if
 
-      if(outp%duringscf) then
+      if(outp%duringscf .and. gs_run_) then
         write(dirname,'(a,i4.4)') "scf.",iter
         call X(states_output) (st, gr, dirname, outp)
         call hamiltonian_output(h, gr%m, gr%sb, dirname, outp)
@@ -412,12 +421,14 @@ contains
     ! calculate forces
     call X(epot_forces)(gr, h%ep, st)
 
-    ! output final information
-    call scf_write_static("static", "info")
-    call X(states_output) (st, gr, "static", outp)
-    if(iand(outp%what, output_geometry).ne.0) &
-      call atom_write_xyz("static", "geometry", gr%geo)
-    call hamiltonian_output(h, gr%m, gr%sb, "static", outp)
+    if(gs_run_) then 
+      ! output final information
+      call scf_write_static("static", "info")
+      call X(states_output) (st, gr, "static", outp)
+      if(iand(outp%what, output_geometry).ne.0) &
+           call atom_write_xyz("static", "geometry", gr%geo)
+      call hamiltonian_output(h, gr%m, gr%sb, "static", outp)
+    end if
 
     if(simul_box_is_periodic(gr%sb).and.st%d%nik > st%d%nspin) then
       iunit = io_open('static/bands.dat', action='write')

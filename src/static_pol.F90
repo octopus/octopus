@@ -36,6 +36,7 @@ module static_pol_m
   use geometry_m
   use restart_m
   use scf_m
+  use output_m
 
   implicit none
 
@@ -59,7 +60,9 @@ contains
     integer :: iunit, ios, i_start, i, j, is, k, ierr
     FLOAT :: e_field
     FLOAT, allocatable :: Vpsl_save(:), trrho(:), dipole(:, :, :)
+    FLOAT, allocatable :: elf(:,:), lr_elf(:,:)
     logical :: out_pol
+    character(len=80) :: fname
 
     call init_()
 
@@ -111,6 +114,12 @@ contains
     ALLOCATE(trrho(NP), NP)
     trrho = M_ZERO
 
+    !If we have to calculate lr_elf, allocate memory for it
+    if(iand(sys%outp%what, output_elf).ne.0) then 
+      ALLOCATE(elf(1:NP,1:st%d%nspin),NP*st%d%nspin)
+      ALLOCATE(lr_elf(1:NP,1:st%d%nspin),NP*st%d%nspin)
+    end if
+
     call scf_init(gr, scfv, st, h)
     do i = i_start, NDIM
       do k = 1, 2
@@ -118,9 +127,9 @@ contains
         write(message(2), '(a,i1,a,i1)')'Info: Calculating dipole moment for field ', i, ', #',k
         call write_info(2)
 
-        h%ep%vpsl = vpsl_save + (-1)**k*gr%m%x(:,i)*e_field
+        h%ep%vpsl(1:NP) = vpsl_save(1:NP) + (-1)**k*gr%m%x(1:NP,i)*e_field
 
-        call scf_run(scfv, sys%gr, st, sys%ks, h, sys%outp)
+        call scf_run(scfv, sys%gr, st, sys%ks, h, sys%outp, gs_run=.false.)
 
         trrho = M_ZERO
         do is = 1, st%d%spin_channels
@@ -132,7 +141,27 @@ contains
           dipole(i, j, k) = dmf_moment(gr%m, trrho, j, 1)
         end do
 
-      end do
+        !calculate lr-elf
+        if(iand(sys%outp%what, output_elf).ne.0) then 
+          
+          if(1==k) then 
+            call X(states_calc_elf)(st,gr,elf,.true.)
+          else
+            call X(states_calc_elf)(st,gr,lr_elf,.true.)
+            lr_elf(1:NP,1:st%d%nspin)=(lr_elf(1:NP,1:st%d%nspin)-elf(1:NP,1:st%d%nspin))/(M_TWO*e_field)
+
+            !write
+            do is = 1, st%d%nspin
+              write(fname, '(a,a,i1,a,i1)') 'lr_elf', '-', is, '-', i
+              call doutput_function(sys%outp%how, "linear", trim(fname),&
+                   gr%m, gr%sb, lr_elf(:,is), M_ONE, ierr)
+            end do
+
+          end if
+
+        end if
+          
+        end do
 
       ! Writes down the dipole to the file
       iunit = io_open(trim(tmpdir)//'restart.pol', action='write', status='old', position='append')
@@ -144,6 +173,11 @@ contains
       end if
     end do
     call scf_end(scfv)
+
+    if(iand(sys%outp%what, output_elf).ne.0) then 
+      DEALLOCATE(lr_elf)
+      DEALLOCATE(elf)
+    end if
 
     if(out_pol) then ! output pol file
       call io_mkdir('linear')
