@@ -198,7 +198,7 @@ double FC_FUNC_(oct_clock, OCT_CLOCK)
 void FC_FUNC_(oct_gettimeofday, OCT_GETTIMEOFDAY)
   (int *sec, int *usec)
 {
-#ifdef linux
+#ifdef HAVE_GETTIMEOFDAY
   struct timeval tv;
   struct timezone tz;
 
