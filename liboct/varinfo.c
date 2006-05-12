@@ -229,7 +229,7 @@ void FC_FUNC_(varinfo_getvar, VARINFO_GETVAR)
 
 
 /* --------------------------------------------------------- */
-void FC_FUNC_(varinfo_getinfo, VARINFO_GETVAR)
+void FC_FUNC_(varinfo_getinfo, VARINFO_GETINFO)
   (var_type **var, char **name, char **type, char **section, char **desc)
 {
   if(var == NULL){
