@@ -200,7 +200,7 @@ contains
     !% not required to define them explicitly in the Species block, as defaults 
     !% are provided by the program (you can override these defaults in any case). 
     !% Additional pseudopotentials can be downloaded from the 
-    !% <a href='http://www.tddft.org/programs/octopus/pseudo.php'>octopus homepage<a>.
+    !% <a href='http://www.tddft.org/programs/octopus/pseudo.php'>octopus homepage</a>.
     !%
     !% The format of this block is the following: The first field is
     !% the name of the specie, followed by the atomic mass (in atomic mass
@@ -238,7 +238,7 @@ contains
     !% directory or in the <i>OCTOPUS-HOME/share/PP/TM2</i> directory.
     !% The following three numbers are the atomic number, the maximum
     !% <i>l</i>-component of the pseudo-potential to consider in the
-    !% calculation, and the <i>l</i>-component to consider as local.</li>
+    !% calculation, and the <i>l</i>-component to consider as local.
     !%Option spec_ps_hgh  101
     !% Hartwigsen-Goedecker-Hutter pseudopotentials, the next field is
     !% the atomic number an the last two numbers are irrelevant, since they
