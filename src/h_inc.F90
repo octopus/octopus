@@ -273,7 +273,7 @@ subroutine X(magnetic_terms) (gr, h, psi, hpsi, ik)
   type(grid_t),        intent(inout) :: gr
   type(hamiltonian_t), intent(inout) :: h
   R_TYPE,              intent(inout) :: psi(:,:)  !  psi(m%np_part, h%d%dim)
-  R_TYPE,              intent(out)   :: Hpsi(:,:) !  Hpsi(m%np, h%d%dim)
+  R_TYPE,              intent(inout) :: Hpsi(:,:) !  Hpsi(m%np, h%d%dim)
   integer,             intent(in)    :: ik
 
   integer :: k, idim
