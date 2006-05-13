@@ -125,7 +125,7 @@ contains
 
     select case(cv%method)
     case(CURV_METHOD_UNIFORM)
-      x(1:sb%dim) = chi(1:sb%dim)
+      x = chi
     case(CURV_METHOD_GYGI)
       call curv_gygi_chi2x(sb, geo, cv%gygi, chi, x)
     case(CURV_METHOD_BRIGGS)

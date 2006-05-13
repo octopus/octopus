@@ -39,7 +39,7 @@ subroutine X(oep_x) (gr, st, is, oep, ex)
   type(states_t), intent(in)    :: st
   integer,        intent(in)    :: is
   type(xc_oep_t), intent(inout) :: oep
-  FLOAT,          intent(out)   :: ex
+  FLOAT,          intent(inout) :: ex
 
   integer :: i, j, ist, jst, i_max, node_to, node_fr, ist_s, ist_r
   integer, allocatable :: recv_stack(:), send_stack(:)

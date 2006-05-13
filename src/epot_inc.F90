@@ -300,10 +300,12 @@ contains
 
   ! ---------------------------------------------------------
   subroutine local_RS()
-    FLOAT :: r, x(MAX_DIM), gv(MAX_DIM)
-    FLOAT, allocatable :: force(:,:)
+    FLOAT :: r
+    FLOAT, allocatable :: force(:,:), x(:), gv(:)
     integer  :: i, j, k, ns
 
+    ALLOCATE(x(NDIM), NDIM)
+    ALLOCATE(gv(NDIM), NDIM)
     ns = min(2, st%d%nspin)
 
     ALLOCATE(force(NP, NDIM), NP*NDIM)
@@ -321,7 +323,7 @@ contains
       end do
     end do
 
-    deallocate(force)
+    deallocate(force, x, gv)
   end subroutine local_RS
 
 
