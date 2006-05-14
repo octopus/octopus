@@ -4,7 +4,7 @@ Test     : 1D-Neon - MPI
 Author   : Heiko
 Date     : 11.03.06
 Arch     : Linux n10 2.6.11.11-smp-1 #1 SMP Sun May 29 13:49:31 CEST 2005 x86_64 GNU/Linux
-Release  : 2.0.1devel
+Release  : 2.1pre1
 Programs : octopus_mpi
 Runtime  : short-run
 Enabled  : Yes

@@ -4,7 +4,7 @@ Test     : quadratic_box
 Author   : Alberto Castro
 Date     : 09.11.05
 Arch     : Linux g38 2.6.13.2-smp-1 #1 SMP Wed Sep 28 17:13:12 CEST 2005 i686 GNU/Linux
-Release  : 2.0.1devel
+Release  : 2.1pre1
 Programs : octopus_cmplx
 Runtime  : short-run
 Enabled  : Yes
