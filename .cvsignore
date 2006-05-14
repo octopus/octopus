@@ -3,7 +3,7 @@ config.status
 config.guess
 config.sub
 config.h
-config.h.in
+stamp-h1
 aclocal.m4
 autom4te.cache
 autogen*
@@ -12,6 +12,7 @@ Makefile
 
 Makefile.in
 configure
+config.h.in
 depcomp
 missing
 install-sh
