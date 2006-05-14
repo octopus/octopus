@@ -1,5 +1,30 @@
 #! /usr/bin/python
 # -*- coding: utf-8 mode: python -*-
+# var2xml.py - A converter to XML for the octopus embeded variabe definitions
+# Copyright (C) 2006 A. Thimm
+# 
+# This program is free software; you can redistribute it and/or
+# modify it under the terms of the GNU General Public License
+# as published by the Free Software Foundation; either version 2
+# of the License, or (at your option) any later version.
+# 
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+# 
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+# 
+# $Id: var2xml.py.in 2068 2006-05-13 12:12:42Z athimm $
+
+"""Convert octopus variable definition format into XML.
+
+Takes the variable definitions from stdin and outputs an XML
+representation on stdout.
+
+"""
 
 import sys
 import fileinput
@@ -9,7 +34,39 @@ import cElementTree as ET
 root=ET.Element("variables")
 
 
+def fixxmlstring(string):
+    """Return XML-sanitized string.
+    
+    This method replaces all bugus (from XML's POV) entities. It
+    later restores 'known' tags. Finally it also adds newlines
+    after <br />.
+        
+    """
+
+    string = string.replace('&', '&amp;')
+    string = string.replace('"', '&quot;')
+    #string = string.replace('<=', '&le;')
+    #string = string.replace('>=', '&ge;')
+    string = string.replace('<', '&lt;')
+    string = string.replace('>', '&gt;')
+    for tag in ['tt', 'math' ,'a', 'br', 'i', 'li', 'ul']:
+        string = re.sub(r'&lt;' + tag + r'&gt;', '<' + tag + r'>', string)
+        string = re.sub(r'&lt;' + tag + r'( .*?)&gt;', '<' + tag + r'\1>', string)
+        string = string.replace('<br>', '<br />')
+        string = string.replace('&lt;/' + tag + '&gt;', '</' + tag + '>')
+    return string
+
+
 class LineReader:
+
+    """Convert octopus variable definition format into XML.
+
+    This class is feed linewise with the extracted variable
+    definitions from the Fortran source and generates an XML
+    representation.
+
+    """
+
     def __init__(self):
         self.reset()
         
@@ -26,6 +83,16 @@ class LineReader:
         self.readoptiondesc=False
 
     def writeoutvariable(self):
+        """Create a variable element.
+
+        This method collates all parsed information about the variable
+        into an element and adds the element within the main tree. The
+        'section' information is used to determine where in the tree
+        the element will be appended to. In case the section tree part
+        is missing it is created on the fly.
+
+        """
+
         # Find/Create the (sub)section
         theroot=root
         for section in re.split('::',self.sections):
@@ -52,27 +119,23 @@ class LineReader:
 
         self.reset()
 
-    def fixxmlstring(self,string):
-        string = string.replace('&', '&amp;')
-        string = string.replace('"', '&quot;')
-        #string = string.replace('<=', '&le;')
-        #string = string.replace('>=', '&ge;')
-        string = string.replace('<', '&lt;')
-        string = string.replace('>', '&gt;')
-        for tag in ['tt', 'math' ,'a', 'br', 'i', 'li', 'ul']:
-            string = re.sub(r'&lt;' + tag + r'&gt;', '<' + tag + r'>', string)
-            string = re.sub(r'&lt;' + tag + r'( .*?)&gt;', '<' + tag + r'\1>', string)
-            string = string.replace('<br>', '<br />')
-            string = string.replace('&lt;/' + tag + '&gt;', '</' + tag + '>')
-        return string
-
     def feedline(self,line):
+        """Parse line for XML conversion.
+
+        This method takes a complete line as input and dependent on
+        the mode it is in (normal or multiline) it will either
+        continue constucting a multiline input (variable or options'
+        descriptions) or call parseline. Special handling happens for
+        the 'End' tag.
+        
+        """
+
         if self.multiline != None:
             if re.match(r'^ ', line):
                 self.multiline += ' ' + line.strip()
                 return
             else:
-                self.multiline = self.fixxmlstring(self.multiline.strip())
+                self.multiline = fixxmlstring(self.multiline.strip())
                 if(self.readoptiondesc):
                     if self.optionname=="":
                         option=ET.XML('<option value="' + self.optionvalue + '">'
@@ -92,6 +155,14 @@ class LineReader:
             self.parseline(line)
 
     def parseline(self,line):
+        """Parse non-multiline and no-'End' constucts.
+
+        This method takes a line assuming that it is not a multiline
+        and parses it. It doesn't expect 'End' tags (these are taken
+        care of feedline). If an unknown tag is found it gives an
+        error, but doesn't stop processing.
+
+        """
         m=re.match(r'^Variable (.*)', line)
         if m:
             self.variable=m.group(1)
@@ -176,7 +247,7 @@ def printelement(out,element,level=0,blockout=True):
         if hastext:
             if blockin:
                 out.write('\n' + (level+1)*'  ')
-            out.write(element.text)
+            out.write(fixxmlstring(element.text))
         # children
         if haschildren:
             for child in children:
@@ -194,7 +265,9 @@ def printelement(out,element,level=0,blockout=True):
         if element.tag == 'br':
             out.write('\n' + (level-1)*'  ')
     if hastail:
-        out.write(element.tail)
+        out.write(fixxmlstring(element.tail))
 
 
 printelement(sys.stdout,root)
+
+#ET.ElementTree(root).write("variables-raw.xml")

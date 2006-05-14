@@ -34,6 +34,29 @@ import cElementTree as ET
 root=ET.Element("variables")
 
 
+def fixxmlstring(string):
+    """Return XML-sanitized string.
+    
+    This method replaces all bugus (from XML's POV) entities. It
+    later restores 'known' tags. Finally it also adds newlines
+    after <br />.
+        
+    """
+
+    string = string.replace('&', '&amp;')
+    string = string.replace('"', '&quot;')
+    #string = string.replace('<=', '&le;')
+    #string = string.replace('>=', '&ge;')
+    string = string.replace('<', '&lt;')
+    string = string.replace('>', '&gt;')
+    for tag in ['tt', 'math' ,'a', 'br', 'i', 'li', 'ul']:
+        string = re.sub(r'&lt;' + tag + r'&gt;', '<' + tag + r'>', string)
+        string = re.sub(r'&lt;' + tag + r'( .*?)&gt;', '<' + tag + r'\1>', string)
+        string = string.replace('<br>', '<br />')
+        string = string.replace('&lt;/' + tag + '&gt;', '</' + tag + '>')
+    return string
+
+
 class LineReader:
 
     """Convert octopus variable definition format into XML.
@@ -96,28 +119,6 @@ class LineReader:
 
         self.reset()
 
-    def fixxmlstring(self,string):
-        """Return XML-sanitized string.
-
-        This method replaces all bugus (from XML's POV) entities. It
-        later restores 'known' tags. Finally it also adds newlines
-        after <br />.
-        
-        """
-
-        string = string.replace('&', '&amp;')
-        string = string.replace('"', '&quot;')
-        #string = string.replace('<=', '&le;')
-        #string = string.replace('>=', '&ge;')
-        string = string.replace('<', '&lt;')
-        string = string.replace('>', '&gt;')
-        for tag in ['tt', 'math' ,'a', 'br', 'i', 'li', 'ul']:
-            string = re.sub(r'&lt;' + tag + r'&gt;', '<' + tag + r'>', string)
-            string = re.sub(r'&lt;' + tag + r'( .*?)&gt;', '<' + tag + r'\1>', string)
-            string = string.replace('<br>', '<br />')
-            string = string.replace('&lt;/' + tag + '&gt;', '</' + tag + '>')
-        return string
-
     def feedline(self,line):
         """Parse line for XML conversion.
 
@@ -134,7 +135,7 @@ class LineReader:
                 self.multiline += ' ' + line.strip()
                 return
             else:
-                self.multiline = self.fixxmlstring(self.multiline.strip())
+                self.multiline = fixxmlstring(self.multiline.strip())
                 if(self.readoptiondesc):
                     if self.optionname=="":
                         option=ET.XML('<option value="' + self.optionvalue + '">'
@@ -246,7 +247,7 @@ def printelement(out,element,level=0,blockout=True):
         if hastext:
             if blockin:
                 out.write('\n' + (level+1)*'  ')
-            out.write(element.text)
+            out.write(fixxmlstring(element.text))
         # children
         if haschildren:
             for child in children:
@@ -264,7 +265,9 @@ def printelement(out,element,level=0,blockout=True):
         if element.tag == 'br':
             out.write('\n' + (level-1)*'  ')
     if hastail:
-        out.write(element.tail)
+        out.write(fixxmlstring(element.tail))
 
 
 printelement(sys.stdout,root)
+
+#ET.ElementTree(root).write("variables-raw.xml")
