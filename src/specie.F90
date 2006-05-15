@@ -486,8 +486,7 @@ contains
       write(message(4),'(a,f11.6)')  '   Rs [a.u]       = ', s%jradius * s%z_val ** (-M_ONE/M_THREE)
       call write_info(4)
       s%niwfs = 2*s%z_val
-      s%omega = sqrt( abs(M_TWO / CNST(1.0e-4) * pot_re ))
-      if(s%omega <= M_ZERO) s%omega = CNST(0.1) 
+      s%omega = CNST(0.1)
 
     case(SPEC_ALL_E)
       s%has_density = .true.
