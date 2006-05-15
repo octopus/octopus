@@ -92,6 +92,7 @@ contains
     end select
     call messages_print_stress(stdout)
 
+    call pop_sub()
   contains
 
     !%Variable PoissonSolver
