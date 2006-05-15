@@ -61,6 +61,8 @@ module eigen_solver_m
     integer :: arnoldi_vectors
     FLOAT :: imag_time
 
+    logical :: do_subspace_diag
+
     ! Stores information about how well it performed.
     FLOAT, pointer :: diff(:, :)
     integer           :: matvec
@@ -217,6 +219,17 @@ contains
     call loct_parse_int(check_inp('EigenSolverMaxIter'), max_iter_default, eigens%es_maxiter)
     if(eigens%es_maxiter < 1) call input_error('EigenSolverMaxIter')
 
+    !%Variable EigenSolverSubspaceDiag
+    !%Type logical
+    !%Default false
+    !%Section SCF::EigenSolver
+    !%Description
+    !% When true, a Rayleigh-Ritz projection is performed after the eigensolver routine. 
+    !% This is a diagonalization of the Hamiltonian in the subspace spanned by the eigenvectors 
+    !% that separates eigenvectors that have close eigenvalues.
+    !%End
+    call loct_parse_logical(check_inp('EigenSolverSubspaceDiag'), .false., eigens%do_subspace_diag)
+    
     select case(eigens%es_type)
     case(RS_PLAN)
       call init_filter()
@@ -315,7 +328,9 @@ contains
       call eigen_solver_evolution(gr, st, h, tol, maxiter, eigens%converged, eigens%diff, &
         tau = eigens%imag_time)
     end select
-
+    
+    if(eigens%do_subspace_diag) call eigen_diagon_subspace(gr, st, h)
+    
     eigens%matvec = maxiter
     if(present(conv).and. eigens%converged == st%nst*st%d%nik) conv = .true.
 
@@ -325,13 +340,12 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! This routine in principle diagonalises the hamiltonian in the
-  ! basis defined by st. It has not been tested, and it is not used now
+  ! This routine diagonalises the hamiltonian in the subspace defined by the states.
   subroutine eigen_diagon_subspace(gr, st, h)
     type(grid_t),        intent(inout) :: gr
     type(states_t),      intent(inout) :: st
     type(hamiltonian_t), intent(inout) :: h
-
+    
     R_TYPE, allocatable :: h_subspace(:,:), vec(:,:), f(:,:,:)
     integer :: ik, i, j
 
@@ -340,12 +354,10 @@ contains
     ALLOCATE(f(NP, st%d%dim, st%nst), NP*st%d%dim*st%nst)
 
     ik_loop: do ik = 1, st%d%nik
-      f = st%X(psi)(:,:,:, ik)
-
       eigenfunction_loop : do i = 1, st%nst
         call X(Hpsi)(h, gr, st%X(psi)(:,:, i, ik) , f(:,:, 1), ik)
         h_subspace(i, i) = st%eigenval(i, ik)
-        do j = i, st%nst
+        do j = i+1, st%nst
           h_subspace(i, j) = X(states_dotp) (gr%m, st%d%dim, st%X(psi)(:,:, j, ik), f(:,:, 1))
           h_subspace(j, i) = R_CONJ(h_subspace(i, j))
         end do
@@ -353,15 +365,18 @@ contains
 
       call lalg_eigensolve(st%nst, h_subspace, vec, st%eigenval(:, ik))
 
+      f(1:NP,1:st%d%dim,1:st%nst) = st%X(psi)(1:NP,1:st%d%dim,1:st%nst, ik)
       do i = 1, st%nst
         ! build new state
-        st%X(psi)(:,:, i, ik) = vec(i, i)*st%X(psi)(:,:, i, ik)
+        st%X(psi)(1:NP,1:st%d%dim, i, ik) = vec(i, i)*st%X(psi)(1:NP,1:st%d%dim, i, ik)
         do j = 1, st%nst
-          if(i.ne.j) st%X(psi)(:,:,i, ik) = st%X(psi)(:,:,i, ik) + vec(i, j)*f(:,:,j)
+          if(i.ne.j) st%X(psi)(1:NP,1:st%d%dim,i, ik) = st%X(psi)(1:NP,1:st%d%dim,i, ik) & 
+               + vec(j, i)*f(1:NP,1:st%d%dim,j)
         end do
 
         ! renormalize
-        st%X(psi)(:,:, i, ik) = st%X(psi)(:,:, i, ik)/X(states_nrm2)(gr%m, st%d%dim, st%X(psi)(:,:, i, ik))
+        st%X(psi)(1:NP,1:st%d%dim, i, ik) = &
+             st%X(psi)(1:NP,1:st%d%dim, i, ik)/X(states_nrm2)(gr%m, st%d%dim, st%X(psi)(:,:, i, ik))
       end do
     end do ik_loop
 
