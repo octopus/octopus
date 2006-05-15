@@ -350,6 +350,8 @@ contains
       end if
     end if
 
+    geo%kinetic_energy = kinetic_energy(geo)
+
     call pop_sub()
   end subroutine geometry_init_vel
 

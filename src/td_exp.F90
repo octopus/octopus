@@ -365,10 +365,10 @@ contains
 
         do k = max(1, n-1), n
           hm(k, n) = zstates_dotp(gr%m, h%d%dim, v(:, :, k), v(:, :, n+1))
-          call lalg_axpy(NP_PART, h%d%dim, -hm(k, n), v(:, :, k), v(:, :, n+1))
+          call lalg_axpy(NP, h%d%dim, -hm(k, n), v(:, :, k), v(:, :, n+1))
         end do
         hm(n+1, n) = zstates_nrm2(gr%m, h%d%dim, v(:, :, n+1))
-        call lalg_scal(NP_PART, h%d%dim, M_z1/hm(n+1, n), v(:, :, n+1))
+        call lalg_axpy(NP, h%d%dim, -hm(k, n), v(:, :, k), v(:, :, n+1))
         call zgpadm(6, n, timestep, -M_zI*hm(1:n, 1:n), n, wsp, lwsp, ipiv(1:n), iexph, ns, iflag)
         k = 0
         do i = 1, n
@@ -394,6 +394,9 @@ contains
         do j = 1, korder+1
           expo(j, i) = wsp( iexph + k); k = k + 1
         end do
+      end do
+      do i = 1, korder + 1
+        v(NP+1:NP_PART, 1:h%d%dim, i) = R_TOTYPE(M_ZERO)
       end do
       ! zpsi = nrm * V * expo(1:korder, 1) = nrm * V * expo * V^(T) * zpsi
       call lalg_gemv(NP_PART, h%d%dim, korder+1, M_z1*beta, v, expo(1:korder+1, 1), M_z0, zpsi)
