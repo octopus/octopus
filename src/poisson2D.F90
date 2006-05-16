@@ -21,6 +21,8 @@
 subroutine poisson2D_init(gr)
   type(grid_t), intent(inout) :: gr
 
+  call push_sub('poisson2D.poisson2D_init')
+
   ASSERT(poisson_solver == FFT_SPH .or. poisson_solver == DIRECT_SUM_2D)
 
 #ifdef HAVE_FFT
