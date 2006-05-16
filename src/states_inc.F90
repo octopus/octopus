@@ -47,7 +47,7 @@ subroutine X(states_calc_dens)(st, np, rho)
   integer :: ierr
 #endif
 
-  call push_sub('states_inc.states_calc_dens')
+  call push_sub('states_inc.Xstates_calc_dens')
 
   if(st%d%ispin == SPIN_POLARIZED) then
     sp = 2
@@ -89,7 +89,6 @@ subroutine X(states_calc_dens)(st, np, rho)
 #endif
 
   call pop_sub()
-  return
 end subroutine X(states_calc_dens)
 
 
@@ -105,8 +104,8 @@ subroutine X(states_gram_schmidt1)(nst, m, dim, psi, start)
   FLOAT   :: nrm2
   R_TYPE  :: ss
 
-  call profiling_in(C_PROFILING_GRAM_SCHMIDT)
-  call push_sub('states_inc.states_gram_schmidt')
+  call profiling_in(C_PROFILING_GRAM_SCHMIDT1)
+  call push_sub('states_inc.Xstates_gram_schmidt1')
 
   if(present(start)) then
     stst = start
@@ -130,7 +129,7 @@ subroutine X(states_gram_schmidt1)(nst, m, dim, psi, start)
   end do
 
   call pop_sub()
-  call profiling_out(C_PROFILING_GRAM_SCHMIDT)
+  call profiling_out(C_PROFILING_GRAM_SCHMIDT1)
 end subroutine X(states_gram_schmidt1)
 
 ! ---------------------------------------------------------
@@ -152,8 +151,8 @@ subroutine X(states_gram_schmidt2)(nst, m, dim, psi, phi, normalize, mask)
   FLOAT   :: nrm2
   R_TYPE  :: ss
 
-  call profiling_in(C_PROFILING_GRAM_SCHMIDT)
-  call push_sub('states_inc.states_gram_schmidt')
+  call profiling_in(C_PROFILING_GRAM_SCHMIDT2)
+  call push_sub('states_inc.Xstates_gram_schmidt2')
 
   do q = 1, nst
     if(present(mask)) then
@@ -180,7 +179,7 @@ subroutine X(states_gram_schmidt2)(nst, m, dim, psi, phi, normalize, mask)
   end if
 
   call pop_sub()
-  call profiling_out(C_PROFILING_GRAM_SCHMIDT)
+  call profiling_out(C_PROFILING_GRAM_SCHMIDT2)
 end subroutine X(states_gram_schmidt2)
 
 
@@ -213,6 +212,8 @@ subroutine X(states_normalize_orbital)(m, dim, psi)
   FLOAT   :: norm
   integer :: idim
 
+  call push_sub('states_inc.Xstates_normalize_orbital')
+
   norm = X(states_nrm2) (m, dim, psi)
   norm = sqrt(norm)
 
@@ -220,6 +221,7 @@ subroutine X(states_normalize_orbital)(m, dim, psi)
     psi(1:m%np, idim) = psi(1:m%np, idim)/norm
   end do
 
+  call pop_sub()
 end subroutine X(states_normalize_orbital)
 
 
@@ -253,7 +255,7 @@ FLOAT function X(states_residue)(m, dim, hf, e, f) result(r)
 
   R_TYPE, allocatable :: res(:,:)
 
-  call push_sub('states_inc.Xstates_nrm2')
+  call push_sub('states_inc.Xstates_residue')
 
   ALLOCATE(res(m%np_part, dim), m%np_part*dim)
 
@@ -279,7 +281,7 @@ subroutine X(states_output) (st, gr, dir, outp)
   FLOAT :: u
   FLOAT, allocatable :: dtmp(:), elf(:,:)
 
-  call push_sub('states_inc.states_output')
+  call push_sub('states_inc.Xstates_output')
 
   u = M_ONE/units_out%length%factor**NDIM
 
@@ -370,17 +372,16 @@ subroutine X(states_calc_elf)(st,gr, elf, de)
   FLOAT,   optional, intent(inout):: de(:,:)
 
   FLOAT :: f, d, s
-  integer :: i, is, ik, ist, idim, ierr
+  integer :: i, is, ik, ist, idim
   CMPLX, allocatable :: psi_fs(:), gpsi(:,:)
   FLOAT, allocatable :: r(:), gradr(:,:), j(:,:)
-  type(X(cf_t)) :: cf_tmp
 
   FLOAT, parameter :: dmin = CNST(1e-10)
 #if defined(HAVE_MPI)
   FLOAT, allocatable :: reduce_elf(:)
 #endif
 
-  character(len=80) :: fname
+  call push_sub('states_inc.Xstates_calc_elf')
 
   ! single or double occupancy
   if(st%d%nspin == 1) then
@@ -463,6 +464,7 @@ subroutine X(states_calc_elf)(st,gr, elf, de)
 
   end do do_is
 
+  call pop_sub()
 end subroutine X(states_calc_elf)
 
 ! ---------------------------------------------------------
@@ -475,7 +477,7 @@ subroutine X(states_calc_elf_fs)(st, gr, elf, de)
   FLOAT,   optional, intent(inout):: de(:,:)
 
   FLOAT :: f, d, s
-  integer :: i, is, ik, ist, idim, ierr
+  integer :: i, is, ik, ist, idim
   CMPLX, allocatable :: psi_fs(:), gpsi(:,:)
   FLOAT, allocatable :: r(:), gradr(:,:), j(:,:)
   type(X(cf_t)) :: cf_tmp
@@ -483,7 +485,7 @@ subroutine X(states_calc_elf_fs)(st, gr, elf, de)
   FLOAT, parameter :: dmin = CNST(1e-10)
 
 
-  character(len=80) :: fname
+  call push_sub('states_inc.Xstates_calc_elf_fs')
 
   ! single or double occupancy
   if(st%d%nspin == 1) then
@@ -559,6 +561,7 @@ subroutine X(states_calc_elf_fs)(st, gr, elf, de)
   end do do_is
 
   call X(cf_free)(cf_tmp)
+  call pop_sub()
 
 contains 
 
@@ -601,7 +604,7 @@ R_TYPE function X(states_mpdotp)(m, ik, st1, st2) result(dotp)
 
   R_TYPE, allocatable :: a(:, :)
 
-  call push_sub('states_inc.states_mpdotp')
+  call push_sub('states_inc.Xstates_mpdotp')
 
   ALLOCATE(a(st1%nst, st1%nst), st1%nst*st1%nst)
 
@@ -706,7 +709,7 @@ subroutine X(states_angular_momentum)(gr, phi, l, l2)
   integer :: idim, dim
   R_TYPE, allocatable :: lpsi(:, :)
 
-  call push_sub('states_inc.states_angular_momemtum')
+  call push_sub('states_inc.Xstates_angular_momemtum')
 
   ASSERT(gr%m%sb%dim .ne.1)
 
