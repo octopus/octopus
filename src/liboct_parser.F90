@@ -22,6 +22,7 @@
 module lib_oct_parser_m
   use global_m
   use mpi_m
+  use lib_oct_m
 
   implicit none
 
@@ -197,9 +198,10 @@ contains
 #ifdef HAVE_MPI
     integer :: mpi_err
 #endif
-
+    
     ! initialize the parser
-    ierr = loct_parse_init('out.oct', mpi_world%rank)
+    if(mpi_grp_is_root(mpi_world)) call loct_mkdir('status')
+    ierr = loct_parse_init('status/out.oct', mpi_world%rank)
     if(ierr .ne. 0) then
       write(6,'(a)') '*** Fatal Error (description follows)'
       write(6,'(a)') 'Error initializing liboct'

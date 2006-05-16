@@ -48,6 +48,18 @@ void FC_FUNC_(oct_mkdir, OCT_MKDIR)
   free(name_c);
 }
 
+void FC_FUNC_(oct_stat, OCT_STAT)
+	(int *ierr, STR_F_TYPE name STR_ARG1)
+{
+  char *name_c;
+	struct stat statbuf;
+
+  name_c = TO_C_STR1(name);
+	/* for the moment we are only interested in the return value
+		 could be extended if required. */
+  *ierr = stat(name_c, &statbuf);
+}
+
 void FC_FUNC_(oct_rm, OCT_RM)
      (STR_F_TYPE name STR_ARG1)
 {

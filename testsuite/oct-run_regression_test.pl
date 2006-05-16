@@ -119,7 +119,7 @@ if (!$opt_m) {
 $mscript = "$workdir/clean.sh";
 open(SCRIPT, ">$mscript") or die "could not create script file\n";
 print SCRIPT "#\!/bin/bash\n\n";
-print SCRIPT "rm -rf tmp static *_tmp *_static out.oct out ds* td.* \n";
+print SCRIPT "rm -rf tmp static status *_tmp *_static out.oct out ds* td.* \n";
 close(SCRIPT);
 chmod 0755, $mscript;
 

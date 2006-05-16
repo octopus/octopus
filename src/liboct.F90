@@ -49,6 +49,7 @@ module lib_oct_m
     loct_getcwd,             &
     loct_sysname,            &
     loct_mkdir,              &
+    loct_stat,               &
     loct_rm,                 &
     loct_rm_status_files,    &
     loct_number_of_lines,    &
@@ -320,6 +321,13 @@ module lib_oct_m
     end subroutine oct_mkdir
   end interface
 
+  interface loct_stat
+    subroutine oct_stat(ierr, name)
+      integer,          intent(out) :: ierr
+      character(len=*), intent(in)  :: name
+    end subroutine oct_stat
+  end interface
+
   interface loct_rm
     subroutine oct_rm(name)
       character(len=*), intent(in) :: name
@@ -380,9 +388,9 @@ contains
   subroutine loct_rm_status_files(current_label)
     character(len=*), intent(in) :: current_label
 
-    call loct_rm(trim(current_label)//'oct-status-running')
-    call loct_rm(trim(current_label)//'oct-status-finished')
-    call loct_rm(trim(current_label)//'oct-status-aborted')
+    call loct_rm('status/'//trim(current_label)//'oct-status-running')
+    call loct_rm('status/'//trim(current_label)//'oct-status-finished')
+    call loct_rm('status/'//trim(current_label)//'oct-status-aborted')
 
   end subroutine loct_rm_status_files
 

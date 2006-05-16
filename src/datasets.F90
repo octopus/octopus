@@ -35,7 +35,8 @@ module datasets_m
   integer,           public, allocatable :: dataset_runmode(:), dataset_run_order(:)
   integer,           public              :: current_dataset
   integer,           public              :: no_datasets
-  character(len=32), public              :: current_label, tmpdir
+  character(len=32), public              :: current_label
+  character(len=32), public              :: tmpdir, inputdir, outputdir
 
 
 contains

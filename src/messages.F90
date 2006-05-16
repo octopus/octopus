@@ -281,7 +281,7 @@ contains
     call loct_rm_status_files(current_label)
     
     ! create empty status file to indicate 'aborted state'
-    open(unit=iunit_err, file=trim(current_label)//'oct-status-'//trim(status), &
+    open(unit=iunit_err, file='status/'//trim(current_label)//'oct-status-'//trim(status), &
       action='write', status='unknown')
     close(iunit_err)
     

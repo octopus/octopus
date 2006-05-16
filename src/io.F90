@@ -60,7 +60,7 @@ contains
     character(len=128) :: filename
     character(len=256) :: node_hook
     logical :: file_exists, mpi_debug_hook
-    integer :: sec, usec
+    integer :: sec, usec, ierr
 
 
     lun_is_free(min_lun:max_lun)=.true.
@@ -187,6 +187,34 @@ contains
     !%End
     call loct_parse_string('TmpDir', 'tmp/', tmpdir)
     call io_mkdir(tmpdir, is_tmp=.true.)
+
+    ! restarts from scratch will be done from here
+    !%Variable InputDir
+    !%Default "tmp/"
+    !%Type string
+    !%Section Generalities
+    !%Description
+    !% The name of the input directory where octopus should read binary information
+    !% like the (re)start wave-functions.
+    !%End
+    call loct_parse_string('InputDir', 'tmp/', inputdir)  ! Note: the default is tmp/ (legacy behaviour)
+    call loct_stat(ierr, inputdir)
+    if (ierr == -1) then
+      write(message(1),'(a,a)') 'Could not find input directory: ', trim(inputdir)
+      call write_fatal(1)
+    end if
+
+    ! create directory for final (converged) output
+    !%Variable OutputDir
+    !%Default "tmp/"
+    !%Type string
+    !%Section Generalities
+    !%Description
+    !% The name of the directory where octopus will store (hopefully) converged binary 
+    !% output like the (re)start wave-functions.
+    !%End
+    call loct_parse_string('OutputDir', 'tmp/', outputdir) ! Again tmp/ as default (legacy behaviour)
+    call io_mkdir(outputdir)
 
     ! create debug directory if in debugging mode
     if(in_debug_mode) then
@@ -501,7 +529,8 @@ contains
     call loct_rm_status_files(current_label)
 
     ! create empty status file 
-    iunit = io_open('oct-status-'//trim(status), action='write', status='unknown')
+    iunit = io_open('status/'//trim(current_label)//'oct-status-'//trim(status), &
+      action='write', status='unknown', is_tmp=.true.)
     call io_close(iunit)
 
   end subroutine io_switch_status
