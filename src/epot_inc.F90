@@ -304,11 +304,11 @@ contains
     FLOAT, allocatable :: force(:,:), x(:), gv(:)
     integer  :: i, j, k, ns
 
-    ALLOCATE(x(NDIM), NDIM)
-    ALLOCATE(gv(NDIM), NDIM)
+    ALLOCATE(x(MAX_DIM), MAX_DIM)
+    ALLOCATE(gv(MAX_DIM), MAX_DIM)
     ns = min(2, st%d%nspin)
 
-    ALLOCATE(force(NP, NDIM), NP*NDIM)
+    ALLOCATE(force(NP, MAX_DIM), NP*MAX_DIM)
     do i = 1, geo%natoms
       atm => geo%atom(i)
 
