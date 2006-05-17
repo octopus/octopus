@@ -1,3 +1,10 @@
+octopus (2.1pre1-2) unstable; urgency=low
+
+  * Upstream removed the complex executable from the build 
+    system. Removing the executable also from the package build.
+
+ -- Heiko Appel <appel@physik.fu-berlin.de>  Thu, 18 May 2006 00:36:16 +0200
+
 octopus (2.1pre1-1) unstable; urgency=low
 
   * Development for octopus 2.1 begins. Tagging package again as unstable.
