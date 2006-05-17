@@ -1042,7 +1042,6 @@ contains
 
 #if defined(HAVE_MPI)
     FLOAT :: f(MAX_DIM)
-    integer :: mpi_err
 #endif
 
     call profiling_in(C_PROFILING_FORCES)
@@ -1084,7 +1083,6 @@ contains
             exit
           end if
         end do
-
 
 
         ik_loop: do ik = 1, st%d%nik
@@ -1146,19 +1144,13 @@ contains
         end do
       end do
     end if
-write(*,*) "1"
+
     ! now comes the local part of the PP
     if(.not.simul_box_is_periodic(gr%sb).or.geo%only_user_def) then ! Real space
-
-write(*,*) "2.1"
-
       call local_RS()
-write(*,*) "2.2"
 #if defined(HAVE_FFT)
     else ! Fourier space
-write(*,*) "3.1"
       call local_FS()
-write(*,*) "3.2"
 #endif
     end if
 
