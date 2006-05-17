@@ -193,7 +193,7 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine xc_oep_AnalizeEigen(oep, st, is)
+  subroutine xc_oep_AnalyzeEigen(oep, st, is)
     type(xc_oep_t), intent(inout) :: oep
     type(states_t), intent(in)    :: st
     integer,        intent(in)    :: is
@@ -201,9 +201,6 @@ contains
     integer  :: i
     FLOAT :: max_eigen
     FLOAT, allocatable :: eigenval(:), occ(:)
-#if defined(HAVE_MPI)
-    integer  :: ierr
-#endif
 
     ALLOCATE(eigenval(st%nst), st%nst)
     ALLOCATE     (occ(st%nst), st%nst)
@@ -216,10 +213,10 @@ contains
 
 #if defined(HAVE_MPI)
     if(st%parallel_in_states) then
-      call mpi_barrier(st%mpi_grp%comm, ierr)
+      call MPI_Barrier(st%mpi_grp%comm, mpi_err)
       do i = 1, st%nst
-        call mpi_bcast(eigenval(i), 1, R_MPITYPE, st%node(i), st%mpi_grp%comm, ierr)
-        call mpi_bcast(occ(i), 1, R_MPITYPE, st%node(i), st%mpi_grp%comm, ierr)
+        call MPI_Bcast(eigenval(i), 1, R_MPITYPE, st%node(i), st%mpi_grp%comm, mpi_err)
+        call MPI_Bcast(occ(i), 1, R_MPITYPE, st%node(i), st%mpi_grp%comm, mpi_err)
       end do
     end if
 #endif
@@ -251,7 +248,7 @@ contains
     oep%eigen_n = oep%eigen_n - 1
 
     deallocate(eigenval, occ)
-  end subroutine xc_oep_AnalizeEigen
+  end subroutine xc_oep_AnalyzeEigen
 
 
 #include "undef.F90"

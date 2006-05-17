@@ -391,7 +391,6 @@ subroutine mesh_partition(m, part)
   integer, allocatable :: xadj(:)        ! Indices of adjacency list in adjncy.
   integer, allocatable :: adjncy(:)      ! Adjacency lists.
   integer              :: options(5)     ! Options to METIS.
-  integer              :: ierr           ! MPI error code.
   integer, allocatable :: ppp(:)         ! Points per partition.
   integer              :: iunit          ! For debug output to files.
   character(len=3)     :: filenum
@@ -410,7 +409,7 @@ subroutine mesh_partition(m, part)
   ALLOCATE(adjncy(2*m%sb%dim*m%np_part_global), 2*m%sb%dim*m%np_part_global)
 
   ! Get number of partitions.
-  call MPI_Comm_size(m%mpi_grp%comm, p, ierr)
+  call MPI_Comm_Size(m%mpi_grp%comm, p, mpi_err)
 
   ! Set directions of possible neighbours.
   ! With this ordering of the directions it is possible
@@ -544,7 +543,7 @@ subroutine mesh_partition(m, part)
     call io_close(iunit)
   end if
 
-  call MPI_Barrier(m%mpi_grp%comm, ierr)
+  call MPI_Barrier(m%mpi_grp%comm, mpi_err)
 
   deallocate(xadj, adjncy)
   call pop_sub()

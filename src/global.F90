@@ -98,6 +98,9 @@ module global_m
 
   ! the standard input and output
   integer, public :: stderr, stdin, stdout
+  
+  ! used to store return values of mpi calls
+  integer, public :: mpi_err  
 
   ! global epoch time (time at startup)
   integer, public :: s_epoch_sec, s_epoch_usec

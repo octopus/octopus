@@ -40,7 +40,6 @@ subroutine td_calc_tacc(gr, st, h, acc, t)
   integer  :: j, k, i, ik, ist, idim
 
 #if defined(HAVE_MPI)
-  integer :: mpi_err
   FLOAT   :: y(MAX_DIM)
 #endif
 
@@ -124,7 +123,7 @@ subroutine td_calc_tacc(gr, st, h, acc, t)
 
 #if defined(HAVE_MPI)
   if(st%parallel_in_states) then
-    call MPI_ALLREDUCE(x(1), y(1), NDIM, MPI_FLOAT, MPI_SUM, st%mpi_grp%comm, mpi_err)
+    call MPI_Allreduce(x(1), y(1), NDIM, MPI_FLOAT, MPI_SUM, st%mpi_grp%comm, mpi_err)
     x = y
   end if
 #endif

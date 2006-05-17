@@ -24,9 +24,6 @@ subroutine X(xc_KLI_solve) (m, st, is, oep)
   integer,        intent(in)    :: is
   type(xc_oep_t), intent(inout) :: oep
 
-#if defined(HAVE_MPI)
-  integer :: ierr
-#endif
   integer :: i, j, n, kssi, kssj, proc
   FLOAT, allocatable :: rho_sigma(:), v_bar_S(:), sqphi(:, :, :), d(:)
   FLOAT, allocatable :: Ma(:,:), x(:,:), y(:,:)
@@ -53,7 +50,7 @@ subroutine X(xc_KLI_solve) (m, st, is, oep)
 #if defined(HAVE_MPI)
   if(st%parallel_in_states) then
     ALLOCATE(d(m%np), m%np)
-    call MPI_Allreduce(rho_sigma(1), d(1), m%np, MPI_FLOAT, MPI_SUM, st%mpi_grp%comm, ierr)
+    call MPI_Allreduce(rho_sigma(1), d(1), m%np, MPI_FLOAT, MPI_SUM, st%mpi_grp%comm, mpi_err)
     rho_sigma(1:m%np) = d(1:m%np)
   end if
 #endif
@@ -67,7 +64,7 @@ subroutine X(xc_KLI_solve) (m, st, is, oep)
   end do
 #if defined(HAVE_MPI)
   if(st%parallel_in_states) then
-    call MPI_Allreduce(oep%vxc(1),   d(1), m%np, MPI_FLOAT, MPI_SUM, st%mpi_grp%comm, ierr)
+    call MPI_Allreduce(oep%vxc(1),   d(1), m%np, MPI_FLOAT, MPI_SUM, st%mpi_grp%comm, mpi_err)
     oep%vxc(1:m%np)   = d(1:m%np)
     deallocate(d)
   end if
@@ -93,11 +90,11 @@ subroutine X(xc_KLI_solve) (m, st, is, oep)
   if(st%parallel_in_states) then
     ! Broadcast the vector v_bar_S  and sqphi to all processors
     do i = 1, st%nst
-      call MPI_Bcast(v_bar_S(i), 1, MPI_FLOAT, st%node(i), st%mpi_grp%comm, ierr)
+      call MPI_Bcast(v_bar_S(i), 1, MPI_FLOAT, st%node(i), st%mpi_grp%comm, mpi_err)
     end do
     do i = 1, n
       kssi = oep%eigen_index(i)
-      call MPI_Bcast(sqphi(1, 1, kssi), m%np, MPI_FLOAT, st%node(kssi), st%mpi_grp%comm, ierr)
+      call MPI_Bcast(sqphi(1, 1, kssi), m%np, MPI_FLOAT, st%node(kssi), st%mpi_grp%comm, mpi_err)
     end do
   end if
 #endif
@@ -128,9 +125,9 @@ subroutine X(xc_KLI_solve) (m, st, is, oep)
     if(st%parallel_in_states) then
       do i = 1, n
         kssi = oep%eigen_index(i)
-        call MPI_Bcast(y(i, 1), 1, MPI_FLOAT, st%node(kssi), st%mpi_grp%comm, ierr)
+        call MPI_Bcast(y(i, 1), 1, MPI_FLOAT, st%node(kssi), st%mpi_grp%comm, mpi_err)
         do j = 1, n
-           call MPI_Bcast(Ma(i, j), 1, MPI_FLOAT, st%node(kssi), st%mpi_grp%comm, ierr)
+           call MPI_Bcast(Ma(i, j), 1, MPI_FLOAT, st%node(kssi), st%mpi_grp%comm, mpi_err)
         end do
      end do
     end if

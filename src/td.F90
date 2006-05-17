@@ -117,7 +117,7 @@ contains
 
     if(fromScratch) call modify_occs()
 
-    call td_write_init(write_handler, gr, st, geo, (td%move_ions>0), (h%ep%no_lasers>0), td%iter, td%dt )
+    call td_write_init(write_handler, gr, st, geo, (td%move_ions>0), td%iter, td%dt )
 
     ! Calculate initial forces and kinetic energy
     if(td%move_ions > 0) then
@@ -360,7 +360,7 @@ contains
       x = minval(st%eigenval(st%st_start, :))
 #ifdef HAVE_MPI
       if(st%parallel_in_states) then
-        call MPI_BCAST(x, 1, MPI_FLOAT, 0, st%mpi_grp%comm, i)
+        call MPI_Bcast(x, 1, MPI_FLOAT, 0, st%mpi_grp%comm, mpi_err)
       end if
 #endif
       call hamiltonian_span(h, minval(gr%m%h(1:NDIM)), x)

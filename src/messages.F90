@@ -74,9 +74,6 @@ contains
     integer, intent(in) :: no_lines
 
     integer :: i
-#ifdef HAVE_MPI
-    integer :: ierr
-#endif
 
     if(flush_messages.and.mpi_grp_is_root(mpi_world)) then
       open(unit=iunit_err, file='messages.stderr', &
@@ -116,7 +113,7 @@ contains
     call switch_status('aborted')
 
 #ifdef HAVE_MPI
-    call MPI_FINALIZE(ierr)
+    call MPI_Finalize(mpi_err)
 #endif
 
     stop
@@ -318,10 +315,6 @@ contains
   subroutine input_error(var)
     character(len=*), intent(in) :: var
 
-#ifdef HAVE_MPI
-    integer :: mpi_err
-#endif
-
     if(flush_messages.and.mpi_grp_is_root(mpi_world)) then
       open(unit=iunit_out, file='messages.stdout', &
         action='write', position='append')
@@ -345,7 +338,7 @@ contains
     call switch_status('aborted')
 
 #ifdef HAVE_MPI
-    call MPI_FINALIZE(mpi_err)
+    call MPI_Finalize(mpi_err)
 #endif
     stop
   end subroutine input_error

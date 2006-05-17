@@ -462,7 +462,6 @@ contains
       R_TYPE, allocatable :: x(:)
       type(states_pair_t), pointer :: p, q
 #ifdef HAVE_MPI
-      integer :: mpi_err
       FLOAT, allocatable :: mpi_mat(:,:)
 #endif
 
@@ -494,7 +493,7 @@ contains
 #ifdef HAVE_MPI
       if(cas%parallel_in_eh_pairs) then
         ALLOCATE(mpi_mat(cas%n_pairs, cas%n_pairs), cas%n_pairs*cas%n_pairs)
-        call MPI_ALLREDUCE(cas%mat(1,1), mpi_mat(1,1), cas%n_pairs**2, &
+        call MPI_Allreduce(cas%mat(1,1), mpi_mat(1,1), cas%n_pairs**2, &
           MPI_FLOAT, MPI_SUM, cas%mpi_grp%comm, mpi_err)
         cas%mat = mpi_mat
         deallocate(mpi_mat)

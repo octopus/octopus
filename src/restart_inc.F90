@@ -110,7 +110,7 @@ subroutine X(restart_write) (dir, st, gr, ierr, iter)
           if(err == 0) ierr = ierr + 1
         end if
 #if defined(HAVE_MPI)
-        call TS(MPI_Barrier)(MPI_COMM_WORLD, err) ! now we all wait
+        call MPI_Barrier(MPI_COMM_WORLD, mpi_err) ! now we all wait
 #endif
         i = i + 1
       end do
@@ -129,7 +129,7 @@ subroutine X(restart_write) (dir, st, gr, ierr, iter)
   end if
 
 #if defined(HAVE_MPI)
-  call TS(MPI_Barrier)(MPI_COMM_WORLD, err) ! Since some processors did more than others...
+  call MPI_Barrier(MPI_COMM_WORLD, mpi_err) ! Since some processors did more than others...
 #endif
 
   call pop_sub()
@@ -160,9 +160,6 @@ subroutine X(restart_read) (dir, st, gr, ierr, iter)
   type(curvlinear_t)   :: old_cv
   type(simul_box_t)    :: old_sb
   logical              :: mesh_change, full_interpolation
-#if defined(HAVE_MPI)
-  integer              :: mpi_err
-#endif
 
   call push_sub('restart_inc.Xrestart_read')
 
@@ -248,7 +245,7 @@ subroutine X(restart_read) (dir, st, gr, ierr, iter)
 
 #if defined(HAVE_MPI)
   if(st%parallel_in_states) then
-    call mpi_allreduce(ierr, err, 1, MPI_INTEGER, MPI_SUM, st%mpi_grp%comm, mpi_err)
+    call MPI_Allreduce(ierr, err, 1, MPI_INTEGER, MPI_SUM, st%mpi_grp%comm, mpi_err)
     ierr = err
   end if
 #endif
@@ -314,7 +311,7 @@ contains
 
     read(iunit_mesh, *); read(iunit_mesh, *); read(iunit_mesh, *)
     call curvlinear_init_from_file(old_cv, iunit_mesh)
-    call simul_box_init_from_file(old_sb, gr%geo, iunit_mesh)
+    call simul_box_init_from_file(old_sb, iunit_mesh)
     call io_close(iunit_mesh, grp = gr%m%mpi_grp)
 
     if( .not. (old_cv.eq.gr%cv) ) then

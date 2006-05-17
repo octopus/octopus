@@ -46,7 +46,6 @@ subroutine X(input_function)(filename, m, f, ierr, is_tmp)
   logical :: is_tmp_ = .false.
 
 #if defined(HAVE_MPI)
-  integer             :: mpi_err
   R_TYPE, allocatable :: f_global(:)
 #endif
 
@@ -67,9 +66,9 @@ subroutine X(input_function)(filename, m, f, ierr, is_tmp)
 
     ! Only root knows if the file was succesfully read.
     ! Now, it tells everybody else.
-    call MPI_Debug_IN(m%vp%comm, C_MPI_BCAST)
+    call mpi_debug_in(m%vp%comm, C_MPI_BCAST)
     call MPI_Bcast(ierr, 1, MPI_INTEGER, m%vp%root, m%vp%comm, mpi_err)
-    call MPI_Debug_OUT(m%vp%comm, C_MPI_BCAST)
+    call mpi_debug_out(m%vp%comm, C_MPI_BCAST)
 
     ! Only scatter, when successfully read the file(s).
     if(ierr.le.0) then
@@ -333,7 +332,6 @@ subroutine X(output_function) (how, dir, fname, mesh, sb, f, u, ierr, is_tmp)
 
 #if defined(HAVE_MPI)
   R_TYPE, allocatable :: f_global(:)
-  integer             :: mpi_err
 #endif
 
   call push_sub('out_inc.Xoutput_function')

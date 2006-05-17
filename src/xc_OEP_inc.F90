@@ -42,9 +42,6 @@ subroutine X(xc_oep_calc)(oep, xcs, apply_sic_pz, gr, h, st, vxc, ex, ec)
   FLOAT :: e
   integer :: is, ist, ixc
   logical, save :: first = .true.
-#if defined(HAVE_MPI)
-  integer :: ierr
-#endif
 
   if(oep%level == XC_OEP_NONE) return
 
@@ -79,7 +76,7 @@ subroutine X(xc_oep_calc)(oep, xcs, apply_sic_pz, gr, h, st, vxc, ex, ec)
     end if
 
     ! get the HOMO state
-    call xc_oep_AnalizeEigen(oep, st, is)
+    call xc_oep_AnalyzeEigen(oep, st, is)
 
     ! calculate uxc_bar for the occupied states
     do ist = st%st_start, st%st_end
@@ -88,9 +85,9 @@ subroutine X(xc_oep_calc)(oep, xcs, apply_sic_pz, gr, h, st, vxc, ex, ec)
 
 #if defined(HAVE_MPI)
     if(st%parallel_in_states) then
-      call mpi_barrier(st%mpi_grp%comm, ierr)
+      call MPI_Barrier(st%mpi_grp%comm, mpi_err)
       do ist = 1, st%nst
-        call mpi_bcast(oep%uxc_bar(ist), 1, MPI_FLOAT, st%node(ist), st%mpi_grp%comm, ierr)
+        call MPI_Bcast(oep%uxc_bar(ist), 1, MPI_FLOAT, st%node(ist), st%mpi_grp%comm, mpi_err)
       end do
     end if
 #endif

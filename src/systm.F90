@@ -163,7 +163,7 @@ contains
     R_TYPE :: psi1, psi2
     type(specie_t), pointer :: s
 #if defined(HAVE_MPI)
-    integer :: in_points_red, mpi_err
+    integer :: in_points_red
 #endif
 
     ASSERT(spin_channels == 1 .or. spin_channels == 2)

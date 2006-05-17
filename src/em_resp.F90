@@ -39,19 +39,19 @@ module static_pol_lr_m
 
   private
   public :: &
-       static_pol_lr_run
+    static_pol_lr_run
   
   type pol_props_t
-     logical :: complex_response
-     logical :: add_fxc
-     logical :: use_unoccupied
-     logical :: dynamic
-     logical :: ort_each_step
-     logical :: add_hartree
+    logical :: complex_response
+    logical :: add_fxc
+    logical :: use_unoccupied
+    logical :: dynamic
+    logical :: ort_each_step
+    logical :: add_hartree
   end type pol_props_t
 
   type status_t
-     logical :: ok
+    logical :: ok
   end type status_t
   
 contains
@@ -110,7 +110,7 @@ contains
     
     fromScratch = .true.
     
-    ALLOCATE(lr(1:ndim,1:nsigma,1:nfreq), ndim*nfreq*nsigma)
+    ALLOCATE(lr(1:ndim, 1:nsigma, 1:nfreq), ndim*nfreq*nsigma)
     
     do i = 1, ndim
       do sigma = 1, nsigma
@@ -152,7 +152,7 @@ contains
       message(1) = "Info: Calculating dynamic polarizabilities."
       call write_info(1)
            
-      do i= 1, nomega
+      do i = 1, nomega
 
         write(message(1), '(a,f12.6,3a)') 'Info: Calculating polarizability for frequency: ', & 
              omega(i)/units_out%energy%factor, ' [',trim(units_out%energy%abbrev),']'
@@ -169,7 +169,7 @@ contains
           iunit = io_open('linear/dynpols', action='write', position='append' )
         if(status%ok) then           
           !convert units 
-          zpol=zpol/units_out%length%factor**NDIM
+          zpol = zpol/units_out%length%factor**NDIM
           write(iunit, '(13f12.6)') omega(i), zpol(1,1), zpol(2,2), zpol(3,3), zpol(1,2), zpol(1,3), zpol(2,3)
         else
           write(iunit, '(a,f12.6)') '#calculation didnt converge for frequency ', omega(i)
@@ -187,14 +187,14 @@ contains
            pol(1:ndim, 1:ndim), hpol(1:ndim, 1:ndim, 1:ndim))
       call output()
 
-      do i = 1,ndim
+      do i = 1, ndim
         call X(lr_output) (sys%st, sys%gr, lr(i, 1, 1) ,"linear", i, sys%outp)
       end do
     end if
     
     do i = 1, ndim
       do sigma = 1, nsigma
-        do j= 1, nfreq
+        do j = 1, nfreq
           call lr_dealloc(lr(i, sigma, j))
         end do
       end do
@@ -242,9 +242,9 @@ contains
           call loct_parse_block_float(blk, i, 1, omega_ini)
           if(number > 1) then 
             call loct_parse_block_float(blk, i, 2, omega_fin)
-            domega = (omega_fin-omega_ini)/(number-M_ONE)
+            domega = (omega_fin - omega_ini)/(number - M_ONE)
             do k = 0, number-1
-              omega(j+k) = (omega_ini + domega*k) * units_inp%energy%factor
+              omega(j + k) = (omega_ini + domega*k) * units_inp%energy%factor
             end do
             j = j + number
           else
@@ -344,7 +344,7 @@ contains
       do j = 1, NDIM
         write(iunit, '(3f12.6)') pol(j, 1:NDIM) &
              / units_out%length%factor**NDIM
-        msp = msp + pol(j,j)
+        msp = msp + pol(j, j)
       end do
       msp = msp / M_THREE
 
@@ -367,7 +367,7 @@ contains
       do i = 1, NDIM
         do j = 1, NDIM
           do k = 1, NDIM
-            write(iunit,'(3i2,f12.6)') i, j, k, hpol(i,j,k)/units_out%length%factor**(5)
+            write(iunit,'(3i2,f12.6)') i, j, k, hpol(i, j, k)/units_out%length%factor**(5)
           end do
         end do
       end do
@@ -378,11 +378,11 @@ contains
         do i = 1, NDIM
           do j = 1, NDIM
             if( i < j ) then 
-              bpar(i) = bpar(i) + M_THREE*hpol(i,j,j)
+              bpar(i) = bpar(i) + M_THREE*hpol(i, j, j)
             else 
-              bpar(i) = bpar(i) + M_THREE*hpol(j,j,i)
+              bpar(i) = bpar(i) + M_THREE*hpol(j, j, i)
             endif
-!              bpar(i)=bpar(i)+(hpol(i,j,j)+hpol(j,i,j)+hpol(j,j,i))
+!              bpar(i)=bpar(i)+(hpol(i, j, j)+hpol(j, i, j)+hpol(j, j, i))
           end do
         end do
 
@@ -440,7 +440,7 @@ contains
       write(message(1), '(a,i1)') 'Info: Derivative direction: ', i
       call write_info(1)
 
-      call mix_init(lr(i,1)%mixer, sys%gr%m, 1, sys%st%d%nspin)
+      call mix_init(lr(i, 1)%mixer, sys%gr%m, 1, sys%st%d%nspin)
 
       call X(get_response_e)(sys, h, lr(:,:), i, 1, R_TOTYPE(M_ZERO), props)
       call mix_end(lr(i, 1)%mixer)
@@ -453,13 +453,13 @@ contains
 
         dVde(1:np,ispin, i) = sys%gr%m%x(1:np, i)
 
-        if(props%add_hartree) dVde(1:np,ispin, i) = dVde(1:np,ispin, i) + lr(i,1)%X(dl_Vhar)(1:np) 
+        if(props%add_hartree) dVde(1:np, ispin, i) = dVde(1:np, ispin, i) + lr(i, 1)%X(dl_Vhar)(1:np) 
 
         if(props%add_fxc) then 
         ! xc
           do ispin2 = 1, sys%st%d%nspin
-            dVde(1:np,ispin,i) = dVde(1:np,ispin,i) + &
-                 lr(i,1)%dl_Vxc(1:np, ispin, ispin2)*lr(i,1)%X(dl_rho)(1:np, ispin2)
+            dVde(1:np, ispin, i) = dVde(1:np, ispin, i) + &
+                 lr(i, 1)%dl_Vxc(1:np, ispin, ispin2)*lr(i, 1)%X(dl_rho)(1:np, ispin2)
           end do
         end if
 
@@ -467,7 +467,7 @@ contains
 
       ! the density
       do n = 1, np
-        drhode(n, i) = sum(lr(i,1)%X(dl_rho)(n, 1:sys%st%d%nspin))
+        drhode(n, i) = sum(lr(i, 1)%X(dl_rho)(n, 1:sys%st%d%nspin))
       end do
       
     end do
@@ -505,7 +505,7 @@ contains
 
               ! <D\psi_n | P_c DV_scf P_c | D\psi_n >
 
-              tmp(1:np, 1)  = dVde(1:np, ispin, j) * lr(k,1)%X(dl_psi)(1:np,1,ist,ispin)
+              tmp(1:np, 1)  = dVde(1:np, ispin, j) * lr(k,1)%X(dl_psi)(1:np, 1, ist, ispin)
               hpol(i, j, k) = hpol(i, j, k) + &
                  spinfactor * sum(R_CONJ(lr(i, 1)%X(dl_psi)(1:np, 1, ist, ispin)) * &
                  tmp(1:np, 1) * sys%gr%m%vol_pp(1:np))
@@ -554,28 +554,26 @@ contains
     call pop_sub()
   end subroutine static_response
 
-  subroutine calc_lr_current(sys,h,lr,props)
+  subroutine calc_lr_current(sys, lr)
     type(system_t),      intent(inout) :: sys
-    type(hamiltonian_t), intent(inout) :: h
     type(lr_t),          intent(inout) :: lr(:,:) ! lr(NDIM,1,1)
-    type(pol_props_t),     intent(in)    :: props
 
     integer :: i, k, ist, ispin, idim, ndim, np
 
-    CMPLX, allocatable :: gpsi(:,:),gdl_psi(:,:,:)
+    CMPLX, allocatable :: gpsi(:,:), gdl_psi(:,:,:)
     
     call states_calc_physical_current(sys%gr, sys%st, sys%st%j)
 
     np = sys%NP
     ndim = sys%NDIM
 
-    ALLOCATE(gpsi(1:np,1:ndim),np*ndim)
-    ALLOCATE(gdl_psi(1:np,1:ndim,2),np*ndim*2)
+    ALLOCATE(   gpsi(1:np, 1:ndim),    np*ndim)
+    ALLOCATE(gdl_psi(1:np, 1:ndim, 2), np*ndim*2)
     
    
-    do i=1,ndim
+    do i = 1, ndim
 
-      lr(i,1)%zdl_j =M_ZERO
+      lr(i, 1)%zdl_j = M_ZERO
 
       do ispin = 1, sys%st%d%nspin
         do ist = 1, sys%st%nst
@@ -585,26 +583,26 @@ contains
             call zf_gradient(sys%gr%sb, sys%gr%f_der, lr(i,2)%zdl_psi(:,idim,ist,ispin), gdl_psi(:,:,2))
             call zf_gradient(sys%gr%sb, sys%gr%f_der, sys%st%zpsi(:,idim,ist,ispin), gpsi)
 
-            do k=1,sys%NDIM 
+            do k = 1, sys%NDIM 
               
-              lr(i,1)%zdl_j(1:np,k,ispin)= lr(i,1)%zdl_j(1:np,k,ispin)+(&
-                   +R_CONJ(sys%st%zpsi(1:np,idim,ist,ispin))*gdl_psi(1:np,k,1) &
-                   +R_CONJ(lr(i,2)%zdl_psi(1:np,idim,ist,ispin))*gpsi(1:np,k) & 
-                   -sys%st%zpsi(1:np,idim,ist,ispin)*R_CONJ(gdl_psi(1:np,k,2)) &
-                   -lr(i,1)%zdl_psi(1:np,idim,ist,ispin)*R_CONJ(gpsi(1:np,k)) &
-              )/(M_TWO*M_zI)
-
+              lr(i,1)%zdl_j(1:np,k,ispin) = lr(i, 1)%zdl_j(1:np, k, ispin) + (                      &
+                + R_CONJ( sys%st%zpsi(1:np, idim, ist, ispin)      ) *        gdl_psi(1:np, k, 1)   &
+                -         sys%st%zpsi(1:np, idim, ist, ispin)        * R_CONJ(gdl_psi(1:np, k, 2))  &
+                + R_CONJ( lr(i, 2)%zdl_psi(1:np, idim, ist, ispin) ) *        gpsi(1:np, k)         & 
+                -         lr(i, 1)%zdl_psi(1:np, idim, ist, ispin)   * R_CONJ(gpsi(1:np, k))        &
+                )/(M_TWO*M_zI)
+              
             end do
           end do
         end do
       end do 
 
-      lr(i,2)%zdl_j(1:np,1:ndim,1:sys%st%d%nspin)=R_CONJ(lr(i,1)%zdl_j(1:np,1:ndim,1:sys%st%d%nspin))
+      lr(i, 2)%zdl_j(1:np, 1:ndim, 1:sys%st%d%nspin) = R_CONJ(lr(i, 1)%zdl_j(1:np, 1:ndim, 1:sys%st%d%nspin))
 
     end do
     
-    DEALLOCATE(gpsi)
-    DEALLOCATE(gdl_psi)
+    deallocate(gpsi)
+    deallocate(gdl_psi)
 
   end subroutine calc_lr_current
 

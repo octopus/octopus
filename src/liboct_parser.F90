@@ -195,9 +195,6 @@ contains
   ! ---------------------------------------------------------
   subroutine parser_init
     integer :: ierr
-#ifdef HAVE_MPI
-    integer :: mpi_err
-#endif
     
     ! initialize the parser
     if(mpi_grp_is_root(mpi_world)) call loct_mkdir('status')
@@ -207,7 +204,7 @@ contains
       write(6,'(a)') 'Error initializing liboct'
       write(6,'(a)') 'Do you have write permissions in this directory?'
 #ifdef HAVE_MPI
-      call MPI_FINALIZE(mpi_err)
+      call MPI_Finalize(mpi_err)
 #endif
       stop
     end if
@@ -218,7 +215,7 @@ contains
       write(6,'(a)') '*** Fatal Error (description follows)'
       write(6,'(a)') 'Can not open variables file: '//trim(conf%share)//'/variables'
 #ifdef HAVE_MPI
-      call MPI_FINALIZE(mpi_err)
+      call MPI_Finalize(mpi_err)
 #endif
       stop
     end if
@@ -231,7 +228,7 @@ contains
       write(6,'(a)') 'Can not open input file!' 
       write(6,'(a)') 'Please provide an input file with name inp in the current workdir'
 #ifdef HAVE_MPI
-      call MPI_FINALIZE(mpi_err)
+      call MPI_Finalize(mpi_err)
 #endif
       stop
     end if

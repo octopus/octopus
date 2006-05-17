@@ -124,7 +124,7 @@ contains
         write(message(2), '(a,i1,a,i1)')'Info: Calculating dipole moment for field ', i, ', #',k
         call write_info(2)
 
-        h%ep%vpsl(1:NP) = vpsl_save(1:NP) + (-1)**k*gr%m%x(1:NP,i)*e_field
+        h%ep%vpsl(1:NP) = vpsl_save(1:NP) + (-1)**k*gr%m%x(1:NP, i)*e_field
 
         call scf_run(scfv, sys%gr, st, sys%ks, h, sys%outp, gs_run=.false.)
 
@@ -215,14 +215,14 @@ contains
       !allocate memory for what we want to output
       
       if(iand(sys%outp%what, output_density).ne.0) then 
-        ALLOCATE(lr_rho(1:NP,1:st%d%nspin),NP*st%d%nspin)
+        ALLOCATE(lr_rho(1:NP, 1:st%d%nspin), NP*st%d%nspin)
       end if
       
       if(iand(sys%outp%what, output_elf).ne.0) then 
-        ALLOCATE(elf(1:NP,1:st%d%nspin),NP*st%d%nspin)
-        ALLOCATE(lr_elf(1:NP,1:st%d%nspin),NP*st%d%nspin)
-        ALLOCATE(elfd(1:NP,1:st%d%nspin),NP*st%d%nspin)
-        ALLOCATE(lr_elfd(1:NP,1:st%d%nspin),NP*st%d%nspin)
+        ALLOCATE(    elf(1:NP, 1:st%d%nspin), NP*st%d%nspin)
+        ALLOCATE( lr_elf(1:NP, 1:st%d%nspin), NP*st%d%nspin)
+        ALLOCATE(   elfd(1:NP, 1:st%d%nspin), NP*st%d%nspin)
+        ALLOCATE(lr_elfd(1:NP, 1:st%d%nspin), NP*st%d%nspin)
       end if
       
     end subroutine output_init_
@@ -232,16 +232,16 @@ contains
       !DENSITY      
       if(iand(sys%outp%what, output_density).ne.0) then 
          
-        if(1==k) then 
-          lr_rho(1:NP,1:st%d%nspin)=st%rho(1:NP,1:st%d%nspin)
+        if(1 == k) then 
+          lr_rho(1:NP, 1:st%d%nspin) = st%rho(1:NP, 1:st%d%nspin)
         else
-          lr_rho(1:NP,1:st%d%nspin)=(st%rho(1:NP,1:st%d%nspin)-lr_rho(1:NP,1:st%d%nspin))/(M_TWO*e_field)
+          lr_rho(1:NP, 1:st%d%nspin) = (st%rho(1:NP, 1:st%d%nspin) - lr_rho(1:NP, 1:st%d%nspin)) / (M_TWO*e_field)
 
           !write
           do is = 1, st%d%nspin
             write(fname, '(a,a,i1,a,i1)') 'lr_density', '-', is, '-', i
             call doutput_function(sys%outp%how, "linear", trim(fname),&
-                gr%m, gr%sb, lr_rho(:,is), M_ONE, ierr)
+                gr%m, gr%sb, lr_rho(:, is), M_ONE, ierr)
           end do
 
         end if
@@ -256,17 +256,17 @@ contains
           call X(states_calc_elf)(st, gr, lr_elf,lr_elfd)
           
           !numerical derivative
-          lr_elf(1:NP,1:st%d%nspin)=(lr_elf(1:NP,1:st%d%nspin)-elf(1:NP,1:st%d%nspin))/(M_TWO*e_field)
-          lr_elfd(1:NP,1:st%d%nspin)=(lr_elfd(1:NP,1:st%d%nspin)-elfd(1:NP,1:st%d%nspin))/(M_TWO*e_field)
+           lr_elf(1:NP, 1:st%d%nspin) = ( lr_elf(1:NP, 1:st%d%nspin) -  elf(1:NP, 1:st%d%nspin)) / (M_TWO*e_field)
+          lr_elfd(1:NP, 1:st%d%nspin) = (lr_elfd(1:NP, 1:st%d%nspin) - elfd(1:NP, 1:st%d%nspin)) / (M_TWO*e_field)
 
           !write
           do is = 1, st%d%nspin
             write(fname, '(a,a,i1,a,i1)') 'lr_elf', '-', is, '-', i
             call doutput_function(sys%outp%how, "linear", trim(fname),&
-                gr%m, gr%sb, lr_elf(:,is), M_ONE, ierr)
+                gr%m, gr%sb, lr_elf(:, is), M_ONE, ierr)
             write(fname, '(a,a,i1,a,i1)') 'lr_D', '-', is, '-', i
             call doutput_function(sys%outp%how, "linear", trim(fname),&
-                gr%m, gr%sb, lr_elfd(:,is), M_ONE, ierr)
+                gr%m, gr%sb, lr_elfd(:, is), M_ONE, ierr)
           end do
 
         end if
@@ -278,14 +278,14 @@ contains
     subroutine output_end_()
 
       if(iand(sys%outp%what, output_density).ne.0) then 
-        DEALLOCATE(lr_rho)
+        deallocate(lr_rho)
       end if
       
       if(iand(sys%outp%what, output_elf).ne.0) then 
-        DEALLOCATE(lr_elf)
-        DEALLOCATE(elf)
-        DEALLOCATE(lr_elfd)
-        DEALLOCATE(elfd)
+        deallocate(lr_elf)
+        deallocate(elf)
+        deallocate(lr_elfd)
+        deallocate(elfd)
       end if
 
     end subroutine output_end_

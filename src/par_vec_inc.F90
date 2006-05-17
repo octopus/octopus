@@ -33,7 +33,6 @@ subroutine X(vec_scatter)(vp, v, v_local)
   R_TYPE,     intent(out) :: v_local(:)
 
   integer              :: i         ! Counter.
-  integer              :: ierr      ! MPI errorcode.
   integer, allocatable :: displs(:) ! Displacements for scatter.
   R_TYPE,  allocatable :: v_tmp(:)  ! Send buffer.
 
@@ -59,11 +58,11 @@ subroutine X(vec_scatter)(vp, v, v_local)
   ! Careful: MPI rank numbers range from 0 to mpiv%numprocs-1
   ! But partition numbers from 1 to vp%p with usually
   ! vp%p = mpiv%numprocs.
-  call MPI_Debug_IN(vp%comm, C_MPI_SCATTERV)
+  call mpi_debug_in(vp%comm, C_MPI_SCATTERV)
   call MPI_Scatterv(v_tmp, vp%np_local, displs, R_MPITYPE, v_local, &
                     vp%np_local(vp%partno), R_MPITYPE,              &
-                    vp%root, vp%comm, ierr)
-  call MPI_Debug_OUT(vp%comm, C_MPI_SCATTERV)
+                    vp%root, vp%comm, mpi_err)
+  call mpi_debug_out(vp%comm, C_MPI_SCATTERV)
 
   deallocate(v_tmp)
   deallocate(displs)
@@ -83,7 +82,6 @@ subroutine X(vec_scatter_bndry)(vp, v, v_local)
   R_TYPE,     intent(out) :: v_local(:)
 
   integer              :: i         ! Counter.
-  integer              :: ierr      ! MPI errorcode.
   integer, allocatable :: displs(:) ! Displacements for scatter.
   R_TYPE,  allocatable :: v_tmp(:)  ! Send buffer.
 
@@ -107,11 +105,11 @@ subroutine X(vec_scatter_bndry)(vp, v, v_local)
   ! Careful: MPI rank numbers range from 0 to mpiv%numprocs-1
   ! But partition numbers from 1 to vp%p with usually
   ! vp%p = mpiv%numprocs.
-  call MPI_Debug_IN(vp%comm, C_MPI_SCATTERV)
+  call mpi_debug_in(vp%comm, C_MPI_SCATTERV)
   call MPI_Scatterv(v_tmp, vp%np_bndry, displs, R_MPITYPE,                     &
                     v_local(vp%np_local(vp%partno)+vp%np_ghost(vp%partno)+1:), &
-                    vp%np_bndry(vp%partno), R_MPITYPE, vp%root, vp%comm, ierr)
-  call MPI_Debug_OUT(vp%comm, C_MPI_SCATTERV)
+                    vp%np_bndry(vp%partno), R_MPITYPE, vp%root, vp%comm, mpi_err)
+  call mpi_debug_out(vp%comm, C_MPI_SCATTERV)
 
   deallocate(v_tmp)
   deallocate(displs)
@@ -148,7 +146,6 @@ subroutine X(vec_gather)(vp, v, v_local)
   R_TYPE,     intent(in)  :: v_local(:)
 
   integer              :: i         ! Counter.
-  integer              :: ierr      ! MPI errorcode.
   integer, allocatable :: displs(:) ! Displacements for scatter.
   R_TYPE,  allocatable :: v_tmp(:)  ! Receive buffer.
 
@@ -161,11 +158,11 @@ subroutine X(vec_gather)(vp, v, v_local)
 
   ALLOCATE(v_tmp(vp%np), vp%np)
 
-  call MPI_Debug_IN(vp%comm, C_MPI_GATHERV)
+  call mpi_debug_in(vp%comm, C_MPI_GATHERV)
   call MPI_Gatherv(v_local, vp%np_local(vp%partno), R_MPITYPE, v_tmp, &
                    vp%np_local, displs, R_MPITYPE,                    &
-                   vp%root, vp%comm, ierr)
-  call MPI_Debug_OUT(vp%comm, C_MPI_GATHERV)
+                   vp%root, vp%comm, mpi_err)
+  call mpi_debug_out(vp%comm, C_MPI_GATHERV)
 
   ! Copy values from v_tmp to their original position in v.
   if(vp%rank.eq.vp%root) then
@@ -194,7 +191,6 @@ subroutine X(vec_allgather)(vp, v, v_local)
   R_TYPE,     intent(in)  :: v_local(:)
 
   integer              :: i         ! Counter.
-  integer              :: ierr      ! MPI errorcode.
   integer, allocatable :: displs(:) ! Displacements for scatter.
   R_TYPE,  allocatable :: v_tmp(:)  ! Receive buffer.
 
@@ -207,11 +203,11 @@ subroutine X(vec_allgather)(vp, v, v_local)
 
   ALLOCATE(v_tmp(vp%np), vp%np)
 
-  call MPI_Debug_IN(vp%comm, C_MPI_ALLGATHERV)
+  call mpi_debug_in(vp%comm, C_MPI_ALLGATHERV)
   call MPI_Allgatherv(v_local, vp%np_local(vp%partno), R_MPITYPE, v_tmp, &
                       vp%np_local, displs, R_MPITYPE,                    &
-                      vp%comm, ierr)
-  call MPI_Debug_OUT(vp%comm, C_MPI_ALLGATHERV)
+                      vp%comm, mpi_err)
+  call mpi_debug_out(vp%comm, C_MPI_ALLGATHERV)
 
   ! Copy values from v_tmp to their original position in v.
   do i = 1, vp%np
@@ -237,7 +233,6 @@ subroutine X(vec_ghost_update)(vp, v_local)
   R_TYPE,     intent(inout) :: v_local(:)
 
   integer              :: i, j, k, r             ! Counters.
-  integer              :: ierr                   ! MPI errorcode.
   integer              :: total                  ! Total number of ghost
                                                  ! points to send away.
   integer, allocatable :: sdispls(:), rdispls(:) ! Displacements for
@@ -303,13 +298,13 @@ subroutine X(vec_ghost_update)(vp, v_local)
   ! shows this spot is a serious bottleneck.
 
   ALLOCATE(recvcounts(1:vp%p), vp%p)
-  call MPI_Debug_IN(vp%comm, C_MPI_ALLTOALLV)
+  call mpi_debug_in(vp%comm, C_MPI_ALLTOALLV)
   recvcounts(1:vp%p) = vp%np_ghost_neigh(vp%partno, 1:vp%p)
   call MPI_Alltoallv(ghost_send, vp%np_ghost_neigh(1, vp%partno), sdispls(1), &
                      R_MPITYPE, v_local(vp%np_local(vp%partno)+1),        &
                      recvcounts(1), rdispls(1), R_MPITYPE,  &
-                     vp%comm, ierr)
-  call MPI_Debug_OUT(vp%comm, C_MPI_ALLTOALLV)
+                     vp%comm, mpi_err)
+  call mpi_debug_out(vp%comm, C_MPI_ALLTOALLV)
 
   deallocate(recvcounts, sdispls, rdispls)
   deallocate(ghost_send)
@@ -330,7 +325,6 @@ R_TYPE function X(vec_integrate)(vp, v_local) result(s)
   type(pv_t), intent(in) :: vp
   R_TYPE,     intent(in) :: v_local(:)
 
-  integer :: ierr
   R_TYPE  :: s_local ! Sum of v_local(i).
 
   call profiling_in(C_PROFILING_VEC_INTEGRATE)
@@ -338,9 +332,9 @@ R_TYPE function X(vec_integrate)(vp, v_local) result(s)
 
   s_local = sum(v_local(:vp%np_local(vp%partno)))
 
-  call MPI_Debug_IN(vp%comm, C_MPI_ALLREDUCE)
-  call MPI_Allreduce(s_local, s, 1, R_MPITYPE, MPI_SUM, vp%comm, ierr)
-  call MPI_Debug_OUT(vp%comm, C_MPI_ALLREDUCE)
+  call mpi_debug_in(vp%comm, C_MPI_ALLREDUCE)
+  call MPI_Allreduce(s_local, s, 1, R_MPITYPE, MPI_SUM, vp%comm, mpi_err)
+  call mpi_debug_out(vp%comm, C_MPI_ALLREDUCE)
 
   call pop_sub()
   call profiling_out(C_PROFILING_VEC_INTEGRATE)

@@ -75,12 +75,12 @@ module td_write_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine td_write_init(w, gr, st, geo, ions_move, there_are_lasers, iter, dt)
+  subroutine td_write_init(w, gr, st, geo, ions_move, iter, dt)
     type(td_write_t)             :: w
     type(grid_t),     intent(in) :: gr
     type(states_t),   intent(in) :: st
     type(geometry_t), intent(in) :: geo
-    logical,          intent(in) :: ions_move, there_are_lasers
+    logical,          intent(in) :: ions_move
     integer,          intent(in) :: iter
     FLOAT,            intent(in) :: dt
 
@@ -964,7 +964,7 @@ contains
     character(len=20) :: aux
     integer :: ik, ist, uist
 #if defined(HAVE_MPI)
-    integer :: mpi_err, k
+    integer :: k
 #endif
 
     call push_sub('td_write.td_write_proj')
@@ -997,7 +997,7 @@ contains
       do ist = 1, st%nst
         k = st%node(ist)
         do uist = 1, gs_st%nst
-          call mpi_bcast(projections(ist, uist, ik), 1, MPI_CMPLX, k, st%mpi_grp%comm, mpi_err)
+          call MPI_Bcast(projections(ist, uist, ik), 1, MPI_CMPLX, k, st%mpi_grp%comm, mpi_err)
         end do
       end do
     end do

@@ -869,7 +869,6 @@ contains
     integer :: ik
 #ifdef HAVE_MPI
     FLOAT :: s
-    integer :: err
 #endif
 
     e = M_ZERO
@@ -885,7 +884,7 @@ contains
 
 #ifdef HAVE_MPI
     if(st%parallel_in_states) then
-      call MPI_ALLREDUCE(e, s, 1, MPI_FLOAT, MPI_SUM, st%mpi_grp%comm, err)
+      call MPI_Allreduce(e, s, 1, MPI_FLOAT, MPI_SUM, st%mpi_grp%comm, mpi_err)
       e = s
     end if
 #endif
@@ -1186,7 +1185,6 @@ contains
     integer :: ik, p, sp, k
     CMPLX, allocatable :: grad(:,:)
 #if defined(HAVE_MPI)
-    integer :: ierr
     FLOAT, allocatable :: red(:,:,:)
 #endif
 
@@ -1236,8 +1234,8 @@ contains
 
 #if defined(HAVE_MPI)
     ALLOCATE(red(NP_PART, NDIM, st%d%nspin), NP_PART*NDIM*st%d%nspin)
-    call MPI_ALLREDUCE(jp(1, 1, 1), red(1, 1, 1), NP*NDIM*st%d%nspin,       &
-      MPI_FLOAT, MPI_SUM, st%mpi_grp%comm, ierr)
+    call MPI_Allreduce(jp(1, 1, 1), red(1, 1, 1), NP*NDIM*st%d%nspin,       &
+      MPI_FLOAT, MPI_SUM, st%mpi_grp%comm, mpi_err)
     jp = red
     deallocate(red)
 #endif
@@ -1270,7 +1268,7 @@ contains
     type(multicomm_t), intent(in)    :: mc
 
 #if defined(HAVE_MPI)
-    integer :: sn, sn1, r, j, k, ierr, i, ii, st_start, st_end
+    integer :: sn, sn1, r, j, k, i, ii, st_start, st_end
 #endif
 
     ! defaults
@@ -1319,7 +1317,7 @@ contains
         st%node((j-1)*sn1+1:j*sn1) = j - 1
       end do
       k = sn1*r
-      call MPI_BARRIER(st%mpi_grp%comm, ierr)
+      call MPI_Barrier(st%mpi_grp%comm, mpi_err)
       do j = 1, st%mpi_grp%size - r
         st%node(k+(j-1)*sn+1:k+j*sn) = r + j - 1
       end do

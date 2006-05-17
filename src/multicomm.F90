@@ -384,7 +384,7 @@ contains
     ! ---------------------------------------------------------
     subroutine group_comm_create()
 #if defined(HAVE_MPI)
-      integer :: i, mpi_err
+      integer :: i
       integer, allocatable :: me(:)
 
       ALLOCATE(mc%group_comm(mc%n_index), mc%n_index)
@@ -399,7 +399,7 @@ contains
         me(i) = 1
         call multicomm_proc(mc, me, mc%group_root(i))
 
-        call MPI_Comm_split(MPI_COMM_WORLD, mc%group_root(i), mpi_world%rank, &
+        call MPI_Comm_Split(MPI_COMM_WORLD, mc%group_root(i), mpi_world%rank, &
           mc%group_comm(i), mpi_err)
       end do
       deallocate(me)
@@ -585,7 +585,7 @@ contains
     type(multicomm_t) :: mc
 
 #if defined(HAVE_MPI)
-    integer :: i, mpi_err
+    integer :: i
 
     call push_sub('multicomm.multicomm_end')
 
@@ -594,7 +594,7 @@ contains
       do i = 1, mc%n_index
         if(.not.multicomm_strategy_is_parallel(mc, i)) cycle
 
-        call MPI_Comm_free(mc%group_comm(i), mpi_err)
+        call MPI_Comm_Free(mc%group_comm(i), mpi_err)
       end do
 
       ! now delete the tree

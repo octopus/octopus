@@ -612,9 +612,8 @@ contains
 
 
   !--------------------------------------------------------------
-  subroutine simul_box_init_from_file(sb, geo, iunit)
+  subroutine simul_box_init_from_file(sb, iunit)
     type(simul_box_t), intent(inout) :: sb
-    type(geometry_t),  intent(in)    :: geo
     integer,           intent(in)    :: iunit
     character(len=20) :: str
     read(iunit, *) str, sb%box_shape

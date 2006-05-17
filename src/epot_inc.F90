@@ -38,7 +38,6 @@ subroutine X(project)(mesh, p, n_projectors, psi, ppsi, periodic, ik)
   R_TYPE :: uvpsi
 #if defined(HAVE_MPI)
   R_TYPE :: tmp
-  integer :: mpi_err
 #endif
 
   call push_sub('epot_inc.project')
@@ -109,7 +108,6 @@ R_TYPE function X(psiprojectpsi)(mesh, p, n_projectors, psi, periodic, ik) resul
   R_TYPE :: uvpsi
 #if defined(HAVE_MPI)
   R_TYPE :: tmp
-  integer :: mpi_err
 #endif
 
   call push_sub('epot_inc.project')
@@ -181,7 +179,6 @@ subroutine X(epot_forces) (gr, ep, st, t)
 
 #if defined(HAVE_MPI)
   FLOAT :: f(MAX_DIM)
-  integer :: mpi_err
 #endif
 
   call profiling_in(C_PROFILING_FORCES)
@@ -244,7 +241,7 @@ subroutine X(epot_forces) (gr, ep, st, t)
     if(atm%spec%local) cycle
 
     if(st%parallel_in_states) then
-      call MPI_ALLREDUCE(atm%f(1), f(1), NDIM, MPI_FLOAT, MPI_SUM, st%mpi_grp%comm, mpi_err)
+      call MPI_Allreduce(atm%f(1), f(1), NDIM, MPI_FLOAT, MPI_SUM, st%mpi_grp%comm, mpi_err)
       atm%f = f
     end if
   end do

@@ -716,8 +716,8 @@ contains
           call dpoisson_solve(gr,phi,rho)
           ep%vpsl(1:m%np_part)=ep%vpsl(1:m%np_part)+phi(1:m%np_part)
 
-          DEALLOCATE(rho)
-          DEALLOCATE(phi)
+          deallocate(rho)
+          deallocate(phi)
         end if
 
 #ifdef HAVE_FFT

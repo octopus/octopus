@@ -91,7 +91,7 @@ contains
       lcao_data%state = 0
       call lcao_init(sys%gr, lcao_data, sys%st, h)
       if(lcao_data%state .eq. 1) then
-        call lcao_wf(lcao_data, sys%st, sys%gr%m, sys%gr%sb, h, start = ierr+1)
+        call lcao_wf(lcao_data, sys%st, sys%gr%m, h, start = ierr+1)
         call lcao_end(lcao_data, sys%st%nst)
       end if
     end if

@@ -167,7 +167,7 @@ contains
 #endif
 
 #ifdef HAVE_MPI
-    call MPI_Debug_Statistics()
+    call mpi_debug_statistics()
 #endif
 
   end subroutine run_end

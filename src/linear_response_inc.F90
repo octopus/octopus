@@ -115,14 +115,12 @@ end subroutine X(lr_build_dl_rho)
 ! This subroutine calculates the solution of
 !    (H - eps_{ist,ik} + omega) psi^1_{ist,ik} = y
 ! ---------------------------------------------------------
-subroutine X(lr_solve_HXeY) (lr, h, gr, d, ik, x, y, omega, &
-     st, ortogonalize_each_step)
+subroutine X(lr_solve_HXeY) (lr, h, gr, d, ik, x, y, omega, st)
   type(lr_t),          intent(inout) :: lr
   type(hamiltonian_t), intent(inout) :: h
   type(grid_t),        intent(inout) :: gr
   type(states_dim_t),  intent(in)    :: d
   type(states_t), optional, intent(inout) :: st
-  logical, optional,   intent(in)    :: ortogonalize_each_step
 
   integer,                intent(in)    :: ik
   R_TYPE,                 intent(inout) :: x(:,:)   ! x(NP, d%dim)

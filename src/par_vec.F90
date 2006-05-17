@@ -223,7 +223,6 @@ contains
     integer              :: i, j, k, r       ! Counters.
     integer, allocatable :: ir(:), irr(:, :) ! Counters.
     integer              :: rank             ! Rank of current node.
-    integer              :: ierr             ! MPI errorcode.
     integer              :: p1(MAX_DIM)      ! Points.
     integer, allocatable :: ghost_flag(:, :) ! To remember ghost pnts.
     integer              :: iunit            ! For debug output to files.
@@ -232,12 +231,12 @@ contains
     call push_sub('par_vec.vec_init')
 
     ! Shortcuts.
-    call MPI_Comm_size(comm, p, ierr)
+    call MPI_Comm_Size(comm, p, mpi_err)
     np_enl = np_part-np
 
     ! Store partition number and rank for later reference.
     ! Having both variables is a bit redundant but makes the code readable.
-    call MPI_Comm_rank(comm, rank, ierr)
+    call MPI_Comm_Rank(comm, rank, mpi_err)
     vp%rank   = rank
     vp%partno = rank + 1
 

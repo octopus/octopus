@@ -44,7 +44,6 @@ subroutine X(states_calc_dens)(st, np, rho)
 
 #ifdef HAVE_MPI
   FLOAT,  allocatable :: reduce_rho(:)
-  integer :: ierr
 #endif
 
   call push_sub('states_inc.Xstates_calc_dens')
@@ -80,8 +79,8 @@ subroutine X(states_calc_dens)(st, np, rho)
   if(st%parallel_in_states) then
     ALLOCATE(reduce_rho(1:np), np)
     do i = 1, st%d%nspin
-      call MPI_ALLREDUCE(rho(1, i), reduce_rho(1), np, &
-         MPI_FLOAT, MPI_SUM, st%mpi_grp%comm, ierr)
+      call MPI_Allreduce(rho(1, i), reduce_rho(1), np, &
+         MPI_FLOAT, MPI_SUM, st%mpi_grp%comm, mpi_err)
       rho(1:np, i) = reduce_rho(1:np)
     end do
     deallocate(reduce_rho)
@@ -343,7 +342,7 @@ subroutine X(states_output) (st, gr, dir, outp)
         write(fname, '(a,a,i1)') 'elf_rs', '-', is
         call doutput_function(outp%how, dir, trim(fname), gr%m, gr%sb, elf(:,is), M_ONE, ierr)
       end do
-      DEALLOCATE(elf)
+      deallocate(elf)
     end if
 
     if(  iand(outp%what, output_elf_fs).ne.0  ) then ! Second, ELF in Fourier space.
@@ -353,7 +352,7 @@ subroutine X(states_output) (st, gr, dir, outp)
         write(fname, '(a,a,i1)') 'elf_fs', '-', is
         call doutput_function(outp%how, dir, trim(fname), gr%m, gr%sb, elf(:,is), M_ONE, ierr)
       end do
-      DEALLOCATE(elf)
+      deallocate(elf)
     end if
   end if
 
@@ -427,14 +426,14 @@ subroutine X(states_calc_elf)(st,gr, elf, de)
 #if defined(HAVE_MPI)
     if(st%parallel_in_states) then
       ALLOCATE(reduce_elf(1:NP), NP)
-      call MPI_ALLREDUCE(elf(1, is), reduce_elf(1), NP, MPI_FLOAT, MPI_SUM, st%mpi_grp%comm, ierr)
+      call MPI_Allreduce(elf(1, is), reduce_elf(1), NP, MPI_FLOAT, MPI_SUM, st%mpi_grp%comm, mpi_err)
       elf(1:NP, is) = reduce_elf(1:NP)
-      call MPI_ALLREDUCE(r(1), reduce_elf(1), NP, MPI_FLOAT, MPI_SUM, st%mpi_grp%comm, ierr)
+      call MPI_Allreduce(r(1), reduce_elf(1), NP, MPI_FLOAT, MPI_SUM, st%mpi_grp%comm, mpi_err)
       r(1:NP) = reduce_elf(1:NP)
       do i = 1, NDIM
-        call MPI_ALLREDUCE(gradr(1, i), reduce_elf(1), NP, MPI_FLOAT, MPI_SUM, st%mpi_grp%comm, ierr)
+        call MPI_Allreduce(gradr(1, i), reduce_elf(1), NP, MPI_FLOAT, MPI_SUM, st%mpi_grp%comm, mpi_err)
         gradr(1:NP, i) = reduce_elf(1:NP)
-        call MPI_ALLREDUCE(j(1, i), reduce_elf(1), NP, MPI_FLOAT, MPI_SUM, st%mpi_grp%comm, ierr)
+        call MPI_Allreduce(j(1, i), reduce_elf(1), NP, MPI_FLOAT, MPI_SUM, st%mpi_grp%comm, mpi_err)
         j(1:NP, i) = reduce_elf(1:NP)
       end do
       deallocate(reduce_elf)
@@ -644,13 +643,13 @@ contains
 
     dim = st1%d%dim
 #if defined(HAVE_MPI)
-    call mpi_barrier(st1%mpi_grp%comm, ierr)
+    call MPI_Barrier(st1%mpi_grp%comm, mpi_err)
     ! Each process sends the states in st2 to the rest of the processes.
     do i = st1%st_start, st1%st_end
       do j = 0, st1%mpi_grp%size - 1
         if(st1%mpi_grp%rank.ne.j) then
-          call mpi_isend(st2%X(psi)(1, 1, i, ik), st1%d%dim*m%np, R_MPITYPE, &
-            j, i, st1%mpi_grp%comm, request, ierr)
+          call MPI_Isend(st2%X(psi)(1, 1, i, ik), st1%d%dim*m%np, R_MPITYPE, &
+            j, i, st1%mpi_grp%comm, request, mpi_err)
         end if
       end do
     end do
@@ -660,8 +659,8 @@ contains
     do j = 1, n
       l = st1%node(j)
       if(l.ne.st1%mpi_grp%rank) then
-        call mpi_irecv(phi2(1, 1), st1%d%dim*m%np, R_MPITYPE, l, j, st1%mpi_grp%comm, request, ierr)
-        call mpi_wait(request, status, ierr)
+        call MPI_Irecv(phi2(1, 1), st1%d%dim*m%np, R_MPITYPE, l, j, st1%mpi_grp%comm, request, mpi_err)
+        call MPI_Wait(request, status, mpi_err)
       else
         phi2(:, :) = st2%X(psi)(:, :, j, ik)
       end if
@@ -673,11 +672,11 @@ contains
 
     ! Each process holds some lines of the matrix. So it is broadcasted (All processes
     ! should get the whole matrix)
-    call MPI_BARRIER(st1%mpi_grp%comm, ierr)
+    call MPI_Barrier(st1%mpi_grp%comm, mpi_err)
     do i = 1, n
       k = st1%node(i)
       do j = 1, n
-        call MPI_BCAST(a(i, j), 1, R_MPITYPE, k, st1%mpi_grp%comm, ierr)
+        call MPI_Bcast(a(i, j), 1, R_MPITYPE, k, st1%mpi_grp%comm, mpi_err)
       end do
     end do
 #else

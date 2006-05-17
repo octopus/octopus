@@ -84,7 +84,7 @@ contains
     ! set barrier before the first communication takes place
     ! this ensures proper debug timing of MPI calls
 #if defined(HAVE_MPI)
-    call TS(MPI_Barrier)(MPI_COMM_WORLD, mpi_err)
+    call MPI_Barrier(MPI_COMM_WORLD, mpi_err)
 #endif
 
     if(fromScratch) then
@@ -141,7 +141,7 @@ contains
                lcao_data%st%nst,' orbitals.'
           call write_info(1)
           
-          call lcao_wf(lcao_data, sys%st, sys%gr%m, sys%gr%sb, h)
+          call lcao_wf(lcao_data, sys%st, sys%gr%m, h)
           call lcao_end(lcao_data, sys%st%nst)
 
           !Just populate again the states, so that the eigenvalues are properly written

@@ -116,7 +116,7 @@ subroutine X(Hpsi_diag) (h, gr, hpsi, ik, t)
 
   call X(vlpsi)   (h, gr%m, fake_psi, hpsi, ik)
 
-  DEALLOCATE(fake_psi)
+  deallocate(fake_psi)
 
   ! the non local potential is not considered
   ! if(h%ep%nvnl > 0) call X(vnlpsi)  (h, gr%m, gr%sb, psi, hpsi, ik)

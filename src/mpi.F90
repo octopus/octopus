@@ -48,11 +48,11 @@ contains
   subroutine mpi_mod_init()
 #if defined(HAVE_MPI)
     integer :: mpi_err
-    
+
     ! initialize MPI
-    call MPI_INIT(mpi_err)
+    call MPI_Init(mpi_err)
     call mpi_grp_init(mpi_world, MPI_COMM_WORLD)
-    call MPI_BARRIER(mpi_world%comm, mpi_err)
+    call MPI_Barrier(mpi_world%comm, mpi_err)
 #else
     call mpi_grp_init(mpi_world, -1)
 #endif
@@ -65,7 +65,7 @@ contains
     integer :: mpi_err
 
     ! end MPI
-    call MPI_FINALIZE(mpi_err)
+    call MPI_Finalize(mpi_err)
 #endif  
   end subroutine mpi_mod_end
 
@@ -80,8 +80,8 @@ contains
 
     if(comm .ne. -1) then
       grp%comm = comm
-      call MPI_COMM_RANK(grp%comm, grp%rank, mpi_err)
-      call MPI_COMM_SIZE(grp%comm, grp%size, mpi_err)
+      call MPI_Comm_Rank(grp%comm, grp%rank, mpi_err)
+      call MPI_Comm_Size(grp%comm, grp%size, mpi_err)
     else
 #endif
       grp%comm = -1

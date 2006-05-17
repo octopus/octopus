@@ -52,10 +52,6 @@ R_TYPE function X(mf_dotp)(mesh, f1, f2) result(dotp)
   R_TYPE, allocatable :: l(:)
   R_TYPE              :: dotp_tmp
 
-#if defined(HAVE_MPI)
-  integer :: ierr
-#endif
-
   call profiling_in(C_PROFILING_MF_DOTP)
   call push_sub('mf_inc.Xmf_dotp')
 
@@ -73,8 +69,8 @@ R_TYPE function X(mf_dotp)(mesh, f1, f2) result(dotp)
   if(mesh%parallel_in_domains) then
 #if defined(HAVE_MPI)
     call profiling_in(C_PROFILING_MF_DOTP_ALLREDUCE)
-    call TS(MPI_Allreduce)(dotp_tmp, dotp, 1, R_MPITYPE, &
-      MPI_SUM, mesh%vp%comm, ierr)
+    call MPI_Allreduce(dotp_tmp, dotp, 1, R_MPITYPE, &
+      MPI_SUM, mesh%vp%comm, mpi_err)
     call profiling_out(C_PROFILING_MF_DOTP_ALLREDUCE)
 #else
     ASSERT(.false.)
@@ -214,8 +210,12 @@ subroutine X(mf_interpolate) (mesh_in, mesh_out, full_interpolation, u, f)
   R_TYPE,       intent(in)  :: u(:)    ! u(mesh_in%np_global)
   R_TYPE,       intent(out) :: f(:)    ! f(mesh%np)
 
-  FLOAT :: xmin, ymin, dx, dy, rmax, px, py, pz, xyzmin(MAX_DIM), xyzdel(MAX_DIM), ip
-  FLOAT, allocatable   :: rsq(:), a(:, :), aux_u(:)
+  FLOAT :: xmin, ymin, dx, dy, rmax, px, py, pz, xyzmin(MAX_DIM), xyzdel(MAX_DIM)
+  FLOAT, allocatable :: rsq(:), a(:, :)
+#if !defined(R_TREAL)
+  FLOAT :: ip
+  FLOAT, allocatable :: aux_u(:)
+#endif  
   integer, allocatable :: lcell(:, :, :), lnext(:)
   integer :: i, j, nq, nw, nr, ier, npoints, ix, iy, iz
 

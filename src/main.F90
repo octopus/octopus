@@ -37,9 +37,6 @@ program octopus
   integer :: ns
   integer(POINTER_SIZE) :: blk
   character(len=256) :: sys_name
-#if defined(HAVE_MPI)
-  integer :: ierr
-#endif
 
   call global_init()
   call parser_init()
@@ -160,7 +157,7 @@ program octopus
     message(1) = ""
     message(2) = str_center("Running octopus, version " // trim(conf%version), 70)
     message(3) = str_center("build time - " // trim(conf%build_time) , 70)
-    message(4) = str_center("svn release number: " // trim(conf%latest_svn) , 70)
+    message(4) = str_center("svn revision: " // trim(conf%latest_svn) , 70)
     message(5) = ""
     message(6) = str_center("Compiler: "//trim(conf%compiler), 70)
     message(7) = str_center("Compiler flags: "//trim(conf%fcflags), max(70, len(trim(conf%fcflags))+17))
@@ -174,7 +171,7 @@ program octopus
     call write_info(2)
 
 #if defined(HAVE_MPI)
-    call MPI_Barrier(MPI_COMM_WORLD, ierr)
+    call MPI_Barrier(MPI_COMM_WORLD, mpi_err)
 #endif
 
     call print_date("Calculation started on ")
@@ -192,7 +189,7 @@ program octopus
 
 #if defined(HAVE_MPI)
     ! wait for all processors to finish
-    call MPI_Barrier(MPI_COMM_WORLD, ierr)
+    call MPI_Barrier(MPI_COMM_WORLD, mpi_err)
 #endif
 
     ! run finished successfully

@@ -331,9 +331,6 @@ contains
     logical            :: die_, is_tmp_
     integer            :: iostat
     type(mpi_grp_t)    :: grp_
-#if defined(HAVE_MPI)
-    integer              :: mpi_err
-#endif
 
     if(present(grp)) then
       grp_%comm = grp%comm
@@ -406,9 +403,6 @@ contains
     type(mpi_grp_t),  intent(in), optional :: grp
 
     type(mpi_grp_t)    :: grp_
-#if defined(HAVE_MPI)
-    integer              :: mpi_err
-#endif
 
     if(present(grp)) then
       grp_%comm = grp%comm
@@ -597,10 +591,6 @@ contains
     integer,          intent(in)  :: iunit
     character(len=*), intent(out) :: line
     integer,          intent(out) :: ierr
-
-#if defined(HAVE_MPI)
-    integer :: mpi_err
-#endif
 
     call push_sub('out.iopar_read')
 
