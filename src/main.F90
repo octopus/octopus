@@ -81,7 +81,7 @@ program octopus
   !%Section Generalities
   !%Description
   !% Decides what kind of calculation is to be performed
-  !%Option gs 01
+  !%Option gs 1
   !% Calculation of the ground state
   !%Option unocc 02
   !% Calculation of unoccupied/virtual KS states
