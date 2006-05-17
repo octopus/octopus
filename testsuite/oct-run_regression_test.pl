@@ -88,8 +88,6 @@ else{
   $octopus_exe =        "octopus";
   $octopus_exe = "../src/octopus"             if( -x "../src/octopus");
   $octopus_exe = "../src/octopus_mpi"         if( -x "../src/octopus_mpi");
-  $octopus_exe = "../src/octopus_cmplx"       if( -x "../src/octopus_cmplx");
-  $octopus_exe = "../src/octopus_cmplx_mpi"   if( -x "../src/octopus_cmplx_mpi");
 }
 if($octopus_exe !~ /^\//){
   $octopus_exe = $ENV{PWD}."/$octopus_exe";

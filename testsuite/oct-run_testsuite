@@ -4,7 +4,7 @@
 
 
 # Define octopus executables
-octopus_exe="octopus octopus_mpi octopus_cmplx octopus_cmplx_mpi"
+octopus_exe="octopus octopus_mpi"
 
 # Paths
 prefix=/usr
