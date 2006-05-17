@@ -104,7 +104,7 @@ contains
     sys%st%st_end = nst
     deallocate(sys%st%eigenval, sys%st%occ)
 
-    call X(states_allocate_wfns)(sys%st, sys%gr%m)
+    call states_allocate_wfns(sys%st, sys%gr%m)
 
     ALLOCATE(sys%st%eigenval(sys%st%nst, sys%st%d%nik), sys%st%nst*sys%st%d%nik)
     ALLOCATE(sys%st%occ(sys%st%nst, sys%st%d%nik), sys%st%nst*sys%st%d%nik)
@@ -116,7 +116,7 @@ contains
     sys%st%eigenval = huge(PRECISION)
     sys%st%occ      = M_ZERO
 
-    call X(restart_read) (trim(tmpdir)//'restart_gs', sys%st, sys%gr, ierr)
+    call restart_read(trim(tmpdir)//'restart_gs', sys%st, sys%gr, ierr)
     if(ierr.ne.0) then
       message(1) = 'Could not properly read wave-functions from "'//trim(tmpdir)//'restart_gs".'
       call write_fatal(1)
@@ -150,7 +150,7 @@ contains
     ! setup Hamiltonian
     message(1) = 'Info: Setting up Hamiltonian.'
     call write_info(1)
-    call X(system_h_setup) (sys, h)
+    call system_h_setup(sys, h)
 
     !%Variable LinearResponseKohnShamStates
     !%Type string
@@ -219,42 +219,16 @@ contains
     call casida_write(cas, 'casida')
 
     ! Calculate and write the transition matrix
-    call get_transition_densities(cas, sys, trandens)
+    if (sys%st%d%wfs_type == M_REAL) then
+      call dget_transition_densities(cas, sys, trandens)
+    else
+      call zget_transition_densities(cas, sys, trandens)
+    end if
 
     call casida_type_end(cas)
 
     call pop_sub()
   end subroutine casida_run
-
-  ! ---------------------------------------------------------
-  subroutine get_transition_densities(cas, sys, trandens)
-    type(casida_t),    intent(in) :: cas
-    type(system_t),    intent(in) :: sys
-    character(len=80), intent(in) :: trandens
-
-    integer :: ia, ierr
-    character(len=5) :: intstr
-    character(len=130) :: filename
-    R_TYPE, allocatable :: n0I(:)
-    call push_sub('casida.get_transition_densities')
-
-    ALLOCATE(n0I(sys%gr%m%np), sys%gr%m%np)
-    n0I = M_ZERO
-
-    do ia = 1, cas%n_pairs
-      if(loct_isinstringlist(ia, trandens)) then
-        call transition_density(cas, sys%st, sys%gr%m, ia, n0I)
-        write(intstr,'(i5)') ia
-        write(intstr,'(i1)') len(trim(adjustl(intstr)))
-        write(filename,'(a,i'//trim(intstr)//')') 'n0',ia
-        call X(output_function)(sys%outp%how, "linear", trim(filename), &
-                                sys%gr%m, sys%gr%sb, n0I, M_ONE, ierr)
-      end if
-    end do
-
-    deallocate(n0I)
-    call pop_sub()
-  end subroutine get_transition_densities
 
   ! ---------------------------------------------------------
   ! allocates stuff, and constructs the arrays pair_i and pair_j
@@ -364,7 +338,7 @@ contains
     ALLOCATE(saved_K(cas%n_pairs, cas%n_pairs), cas%n_pairs*cas%n_pairs)
     cas%mat = M_ZERO
     saved_K = .false.
-    cas%tm  = R_TOTYPE(M_ZERO)
+    cas%tm  = M_ZERO
     cas%f   = M_ZERO
     cas%w   = M_ZERO
     cas%s   = M_ZERO
@@ -439,7 +413,10 @@ contains
       ALLOCATE(x(cas%n_pairs), cas%n_pairs)
       ALLOCATE(deltav(m%np), m%np)
       do k = 1, m%sb%dim
-        x = ks_matrix_elements(cas, st, m, deltav)
+        
+        !WARNING: should x always be real?
+        x = dks_matrix_elements(cas, st, m, deltav)
+
         !FIXME: Calculate the oscillator strengths and matrix elements a la Petersilka
       end do
       deallocate(x, deltav)
@@ -459,7 +436,9 @@ contains
       integer :: ia, jb, k
       integer :: max, actual, iunit, counter
       FLOAT, allocatable :: deltav(:)
-      R_TYPE, allocatable :: x(:)
+
+      FLOAT, allocatable :: dx(:)
+      CMPLX, allocatable :: zx(:)
       type(states_pair_t), pointer :: p, q
 #ifdef HAVE_MPI
       FLOAT, allocatable :: mpi_mat(:,:)
@@ -555,17 +534,32 @@ contains
         end do
 
         ALLOCATE(deltav(m%np), m%np)
-        ALLOCATE(x(cas%n_pairs), cas%n_pairs)
-        do k = 1, m%sb%dim
-          deltav(1:m%np) = m%x(1:m%np, k)
-          ! let us get now the x vector.
-          x = ks_matrix_elements(cas, st, m, deltav)
-          ! And now we are able to get the transition matrix elements between many-electron states.
-          do ia = 1, cas%n_pairs
-            cas%tm(ia, k) = transition_matrix_element(cas, ia, x)
+        if (st%d%wfs_type == M_REAL) then
+          ALLOCATE(dx(cas%n_pairs), cas%n_pairs)
+          do k = 1, m%sb%dim
+            deltav(1:m%np) = m%x(1:m%np, k)
+            ! let us get now the x vector.
+            dx = dks_matrix_elements(cas, st, m, deltav)
+            ! And now we are able to get the transition matrix elements between many-electron states.
+            do ia = 1, cas%n_pairs
+              cas%tm(ia, k) = dtransition_matrix_element(cas, ia, dx)
+            end do
           end do
-        end do
-        deallocate(deltav, x)
+          deallocate(deltav, dx)
+        else
+          ALLOCATE(zx(cas%n_pairs), cas%n_pairs)
+          do k = 1, m%sb%dim
+            deltav(1:m%np) = m%x(1:m%np, k)
+            ! let us get now the x vector.
+            zx = zks_matrix_elements(cas, st, m, deltav)
+            ! And now we are able to get the transition matrix elements between many-electron states.
+            do ia = 1, cas%n_pairs
+              cas%tm(ia, k) = ztransition_matrix_element(cas, ia, zx)
+            end do
+          end do
+          deallocate(deltav, zx)
+        end if
+
 
         ! And the oscillatory strengths.
         do ia = 1, cas%n_pairs
@@ -598,8 +592,13 @@ contains
       ALLOCATE(rho_i(m%np), m%np)
       ALLOCATE(rho_j(m%np), m%np)
 
-      rho_i(:) =  st%X(psi) (1:m%np, 1, i, sigma) * R_CONJ(st%X(psi) (1:m%np, 1, a, sigma))
-      rho_j(:) =  R_CONJ(st%X(psi) (1:m%np, 1, j, mu)) * st%X(psi) (1:m%np, 1, b, mu)
+      if (st%d%wfs_type == M_REAL) then
+        rho_i(:) =  st%dpsi(1:m%np, 1, i, sigma) * st%dpsi(1:m%np, 1, a, sigma)
+        rho_j(:) =  st%dpsi(1:m%np, 1, j, mu) * st%dpsi(1:m%np, 1, b, mu)
+      else
+        rho_i(:) =  st%zpsi(1:m%np, 1, i, sigma) * conjg(st%zpsi(1:m%np, 1, a, sigma))
+        rho_j(:) =  conjg(st%zpsi(1:m%np, 1, j, mu)) * st%zpsi(1:m%np, 1, b, mu)
+      end if
 
       !  first the Hartree part (only works for real wfs...)
       if( j.ne.j_old  .or.   b.ne.b_old   .or.  mu.ne.mu_old) then
@@ -645,77 +644,6 @@ contains
 
 
   ! ---------------------------------------------------------
-  function ks_matrix_elements(cas, st, m, dv) result(x)
-    type(casida_t), intent(in) :: cas
-    type(states_t), intent(in) :: st
-    type(mesh_t),   intent(in) :: m
-    FLOAT, intent(in)   :: dv(:)
-    FLOAT :: x(cas%n_pairs)
-
-    R_TYPE, allocatable :: f(:)
-    integer :: k, ia, i, a, sigma
-
-    ALLOCATE(f(m%np), m%np)
-    do ia = 1, cas%n_pairs
-      i     = cas%pair(ia)%i
-      a     = cas%pair(ia)%a
-      sigma = cas%pair(ia)%sigma
-      do k = 1, m%np
-        f(k) = dv(k) * R_CONJ(st%X(psi) (k, 1, i, sigma)) * st%X(psi) (k, 1, a, sigma)
-      end do
-      x(ia) = X(mf_integrate)(m, f)
-    end do
-
-    deallocate(f)
-  end function ks_matrix_elements
-
-
-  ! ---------------------------------------------------------
-  R_TYPE function transition_matrix_element(cas, ia, x) result(z)
-    type(casida_t), intent(in) :: cas
-    integer,           intent(in) :: ia
-    R_TYPE,            intent(in) :: x(:)
-
-    integer :: jb
-
-    z = R_TOTYPE(M_ZERO)
-    if(cas%w(ia) > M_ZERO) then
-      do jb = 1, cas%n_pairs
-        z = z + x(jb) * (M_ONE/sqrt(cas%s(jb))) * cas%mat(jb, ia)
-      end do
-      z = (M_ONE/sqrt(cas%w(ia))) * z
-    end if
-
-  end function transition_matrix_element
-
-  ! ---------------------------------------------------------
-  subroutine transition_density(cas, st, m, ia, n0I)
-    type(casida_t), intent(in)  :: cas
-    type(states_t), intent(in)  :: st
-    type(mesh_t),   intent(in)  :: m
-    integer,        intent(in)  :: ia
-    R_TYPE,         intent(out) :: n0I(:)
-
-    integer :: i, jb
-    R_TYPE, allocatable :: x(:)
-
-    call push_sub('casida.transition_density')
-
-    ALLOCATE(x(cas%n_pairs), cas%n_pairs)
-
-    do i = 1, m%np
-      do jb = 1, cas%n_pairs
-        x(jb) = R_CONJ(st%X(psi)(i, 1, cas%pair(jb)%i, cas%pair(jb)%sigma)) * &
-                st%X(psi)(i, 1, cas%pair(jb)%a, cas%pair(jb)%sigma)
-      end do
-      n0I(i) = transition_matrix_element(cas, ia, x)
-    end do
-
-    deallocate(x)
-    call pop_sub()
-  end subroutine transition_density
-
-  ! ---------------------------------------------------------
   subroutine casida_write(cas, filename)
     type(casida_t), intent(in) :: cas
     character(len=*),  intent(in) :: filename
@@ -752,7 +680,7 @@ contains
         write(iunit, '(2i4)', advance='no') cas%pair(ind(ia))%i, cas%pair(ind(ia))%a
       end if
       write(iunit, '(5(es15.8,1x))') cas%w(ind(ia)) / units_out%energy%factor, &
-        R_REAL(cas%tm(ind(ia), 1:dim)) / units_out%length%factor, cas%f(ind(ia))
+        cas%tm(ind(ia), 1:dim) / units_out%length%factor, cas%f(ind(ia))
     end do
     call io_close(iunit)
 
@@ -780,5 +708,14 @@ contains
     call io_close(iunit)
     call pop_sub()
   end subroutine casida_write
+
+
+#include "undef.F90"
+#include "real.F90"
+#include "casida_inc.F90"
+
+#include "undef.F90"
+#include "complex.F90"
+#include "casida_inc.F90"
 
 end module casida_m

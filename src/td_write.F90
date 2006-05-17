@@ -192,9 +192,9 @@ contains
       if(w%gs_st%d%ispin == SPINORS) then
         ALLOCATE(w%gs_st%mag(w%gs_st%nst, w%gs_st%d%nik, 2), w%gs_st%nst*w%gs_st%d%nik*2)
       end if
-      call X(states_allocate_wfns)(w%gs_st, gr%m)
+      call states_allocate_wfns(w%gs_st, gr%m)
       w%gs_st%node(:)  = 0
-      call zrestart_read(trim(tmpdir)//'restart_gs', w%gs_st, gr, ierr)
+      call restart_read(trim(tmpdir)//'restart_gs', w%gs_st, gr, ierr)
       if(ierr.ne.0) then
         message(1) = "Could not load "//trim(tmpdir)//"restart_gs"
         call write_fatal(1)
@@ -319,7 +319,7 @@ contains
     ! now write down the rest
     write(filename, '(a,i7.7)') "td.", iter  ! name of directory
 
-    call zstates_output(st, gr, filename, outp)
+    call states_output(st, gr, filename, outp)
     if(iand(outp%what, output_geometry).ne.0) &
       call atom_write_xyz(filename, "geometry", geo)
     call hamiltonian_output(h, gr%m, gr%sb, filename, outp)

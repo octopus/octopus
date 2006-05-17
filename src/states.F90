@@ -54,6 +54,8 @@ module states_m
     states_init,                    &
     states_read_user_def_orbitals,  &
     states_densities_init,          &
+    states_allocate_wfns,           &
+    states_deallocate_wfns,         &
     states_null,                    &
     states_end,                     &
     states_copy,                    &
@@ -69,11 +71,14 @@ module states_m
     states_magnetic_moment,         &
     states_local_magnetic_moments,  &
     states_calc_physical_current,   &
+    states_calc_dens,               &
+    states_output,                  &
+    states_calc_elf,                &
+    states_calc_elf_fs,             &
     kpoints_write_info
 
+
   public ::                         &
-    dstates_calc_dens,              &
-    zstates_calc_dens,              &
     dstates_gram_schmidt,           &
     zstates_gram_schmidt,           &
     dstates_dotp,                   &
@@ -84,19 +89,11 @@ module states_m
     zstates_normalize_orbital,      &
     dstates_residue,                &
     zstates_residue,                &
-    dstates_output,                 &
-    zstates_output,                 &
     dstates_mpdotp,                 &
     zstates_mpdotp,                 &
     dstates_angular_momentum,       &
     zstates_angular_momentum,       &
-    states_distribute_nodes,        &
-    dstates_calc_elf,               &
-    zstates_calc_elf,               &
-    dstates_calc_elf_fs,            &
-    zstates_calc_elf_fs,            &
-    dstates_allocate_wfns,          &
-    zstates_allocate_wfns
+    states_distribute_nodes
 
   type states_t
 
@@ -136,6 +133,7 @@ module states_m
   end type states_t
 
   type states_dim_t
+    integer :: wfs_type            ! real (M_REAL) or complex (M_CMPLX) wavefunctions
     integer :: dim                  ! Dimension of the state (one or two for spinors)
     integer :: nik                  ! Number of irreducible subspaces
     integer :: nik_axis(MAX_DIM)    ! Number of kpoints per axis
@@ -158,6 +156,10 @@ module states_m
     UNPOLARIZED    = 1,             &
     SPIN_POLARIZED = 2,             &
     SPINORS        = 3
+
+  integer, public, parameter ::     &
+    M_REAL  = 1,             &
+    M_CMPLX = 2
 
   interface assignment (=)
     module procedure states_copy
@@ -197,6 +199,22 @@ contains
 
     call states_null(st)
 
+    !%Variable WaveFunctionsType
+    !%Type integer
+    !%Default real
+    !%Section States
+    !%Description
+    !% The calculations may be done using real or complex wave-functions.
+    !%Option real 1
+    !% Real wave-functions
+    !%Option complex 2
+    !% Complex wave-functions
+    !%End
+    call loct_parse_int(check_inp('WaveFunctionsType'), M_REAL, st%d%wfs_type)
+    if(.not.varinfo_valid_option('WaveFunctionsType', st%d%wfs_type)) call input_error('WaveFunctionsType')
+    call messages_print_var_option(stdout, 'WaveFunctionsType', st%d%wfs_type)
+
+
 
     !%Variable SpinComponents
     !%Type integer
@@ -222,12 +240,10 @@ contains
     !%End
     call loct_parse_int(check_inp('SpinComponents'), UNPOLARIZED, st%d%ispin)
     if(.not.varinfo_valid_option('SpinComponents', st%d%ispin)) call input_error('SpinComponents')
-#if !defined(COMPLEX_WFNS)
-    if(st%d%ispin == SPINORS) then
+    if (st%d%wfs_type == M_REAL .and. st%d%ispin == SPINORS) then
       message(1) = "Cannot use spinors with an executable compiled for real wavefunctions."
       call write_fatal(1)
     end if
-#endif
     call messages_print_var_option(stdout, 'SpinComponents', st%d%ispin)
 
     !%Variable ExcessCharge
@@ -296,21 +312,18 @@ contains
 
     ! current
     call loct_parse_logical(check_inp('CurrentDFT'), .false., st%d%cdft)
-#ifdef COMPLEX_WFNS
-    if (st%d%cdft .and. st%d%ispin == SPINORS) then
-      message(1) = "Sorry, Current DFT not working yet for spinors"
-      call write_fatal(1)
-    elseif (st%d%cdft) then
+    if (st%d%cdft) then
+      if (st%d%wfs_type == M_REAL) then
+        message(1) = "Cannot use Current DFT with real wave-functions."
+        call write_fatal(1)
+      end if
+      if(st%d%ispin == SPINORS) then
+        message(1) = "Sorry, Current DFT not working yet for spinors"
+        call write_fatal(1)
+      end if
       message(1) = "Info: Using Current DFT"
       call write_info(1)
     end if
-#else
-    if (st%d%cdft) then
-      message(1) = "Cannot use Current DFT with an executable compiled"
-      message(2) = "for real wavefunctions."
-      call write_fatal(2)
-    end if
-#endif
 
     ! For non-periodic systems this should just return the Gamma point
     call states_choose_kpoints(st%d, gr%sb, gr%geo)
@@ -407,6 +420,44 @@ contains
     call pop_sub()
   end subroutine states_init
 
+  ! ---------------------------------------------------------
+  ! Allocates the KS wavefunctions defined within an states_t
+  ! structure.
+  subroutine states_allocate_wfns(st, m)
+    type(states_t), intent(inout) :: st
+    type(mesh_t),    intent(in)    :: m
+    integer :: n
+
+    call push_sub('states.states_allocate_wfns')
+
+    n = m%np_part * st%d%dim * (st%st_end-st%st_start+1) * st%d%nik
+    if (st%d%wfs_type == M_REAL) then
+      ALLOCATE(st%dpsi(m%np_part, st%d%dim, st%st_start:st%st_end, st%d%nik), n)
+      st%dpsi = M_ZERO
+    else
+      ALLOCATE(st%zpsi(m%np_part, st%d%dim, st%st_start:st%st_end, st%d%nik), n)
+      st%zpsi = M_Z0
+    end if
+
+    call pop_sub()
+  end subroutine states_allocate_wfns
+
+  ! ---------------------------------------------------------
+  ! Deallocates the KS wavefunctions defined within an states_t
+  ! structure.
+  subroutine states_deallocate_wfns(st)
+    type(states_t), intent(inout) :: st
+
+    call push_sub('states.states_deallocate_wfns')
+
+    if (st%d%wfs_type == M_REAL) then
+      deallocate(st%dpsi); nullify(st%dpsi)
+    else
+      deallocate(st%zpsi); nullify(st%zpsi)
+    end if
+    
+    call pop_sub()
+  end subroutine states_deallocate_wfns
 
   ! ---------------------------------------------------------
   ! the routine reads formulas for user defined wavefunctions 
@@ -415,7 +466,6 @@ contains
     type(mesh_t),      intent(in) :: mesh
     type(states_t), intent(inout) :: st    
 
-    
     integer(POINTER_SIZE) :: blk
     integer :: ip, id, is, ik, nstates
     integer :: ib, idim, inst, inik
@@ -521,7 +571,6 @@ contains
 
   end subroutine states_densities_init
 
-
   ! ---------------------------------------------------------
   subroutine states_copy(stout, stin)
     type(states_t), intent(in)  :: stin
@@ -531,6 +580,7 @@ contains
 
     call states_null(stout)
 
+    stout%d%wfs_type = stin%d%wfs_type
     stout%d%dim = stin%d%dim
     stout%d%nik = stin%d%nik
     stout%d%nik_axis(:) = stout%d%nik_axis(:)
@@ -651,6 +701,74 @@ contains
     call pop_sub()
   end subroutine states_end
 
+  ! ---------------------------------------------------------
+  ! Calculates the new density out the wavefunctions and
+  ! occupations...
+  subroutine states_calc_dens(st, np, rho)
+    type(states_t), intent(in)  :: st
+    integer,        intent(in)  :: np
+    FLOAT,          intent(out) :: rho(:,:)
+
+    integer :: i, ik, p, sp
+    CMPLX   :: c
+
+#ifdef HAVE_MPI
+    FLOAT,  allocatable :: reduce_rho(:)
+#endif
+
+    call push_sub('states.states_calc_dens')
+
+    if(st%d%ispin == SPIN_POLARIZED) then
+      sp = 2
+    else
+      sp = 1
+    end if
+
+    rho = M_ZERO
+    do ik = 1, st%d%nik, sp
+      do p  = st%st_start, st%st_end
+        do i = 1, np
+
+          if (st%d%wfs_type == M_REAL) then
+            rho(i, 1) = rho(i, 1) + st%d%kweights(ik)  *st%occ(p, ik)*abs(st%dpsi(i, 1, p, ik))**2
+          else
+            rho(i, 1) = rho(i, 1) + st%d%kweights(ik)  *st%occ(p, ik)*abs(st%zpsi(i, 1, p, ik))**2
+          end if
+          select case(st%d%ispin)
+
+          case(SPIN_POLARIZED)
+            if (st%d%wfs_type == M_REAL) then
+              rho(i, 2) = rho(i, 2) + st%d%kweights(ik+1)*st%occ(p, ik+1)*abs(st%dpsi(i, 1, p, ik+1))**2
+            else
+              rho(i, 2) = rho(i, 2) + st%d%kweights(ik+1)*st%occ(p, ik+1)*abs(st%zpsi(i, 1, p, ik+1))**2
+            end if
+          case(SPINORS) ! in this case wave-functions are always complex
+            rho(i, 2) = rho(i, 2) + st%d%kweights(ik)  *st%occ(p, ik)*abs(st%zpsi(i, 2, p, ik))**2
+
+            c = st%d%kweights(ik)*st%occ(p, ik) * st%zpsi(i, 1, p, ik) * conjg(st%zpsi(i, 2, p, ik))
+            rho(i, 3) = rho(i, 3) + real(c, PRECISION)
+            rho(i, 4) = rho(i, 4) + aimag(c)
+          end select
+
+        end do
+      end do
+    end do
+
+#ifdef HAVE_MPI
+    ! reduce density
+    if(st%parallel_in_states) then
+      ALLOCATE(reduce_rho(1:np), np)
+      do i = 1, st%d%nspin
+        call MPI_Allreduce(rho(1, i), reduce_rho(1), np, &
+           MPI_FLOAT, MPI_SUM, st%mpi_grp%comm, mpi_err)
+        rho(1:np, i) = reduce_rho(1:np)
+      end do
+      deallocate(reduce_rho)
+    end if
+#endif
+
+    call pop_sub()
+  end subroutine states_calc_dens
 
   ! ---------------------------------------------------------
   ! generate a hydrogen s-wavefunction around a random point
@@ -671,13 +789,22 @@ contains
     do ik = 1, st%d%nik
       do ist = ist_start, ist_end
         do id = 1, st%d%dim
-          call X(mf_random)(m, st%X(psi)(:, id, ist, ik))
+          if (st%d%wfs_type == M_REAL) then
+            call dmf_random(m, st%dpsi(:, id, ist, ik))
+          else
+            call zmf_random(m, st%zpsi(:, id, ist, ik))
+          end if
         end do
         st%eigenval(ist, ik) = M_ZERO
       end do
       ! Do not orthonormalize if we have parallelization in states.
-      if(.not.st%parallel_in_states) &
-        call X(states_gram_schmidt)(ist_end, m, st%d%dim, st%X(psi)(:,:,1:ist_end,ik), start = ist_start)
+      if(.not.st%parallel_in_states) then
+        if (st%d%wfs_type == M_REAL) then
+          call dstates_gram_schmidt(ist_end, m, st%d%dim, st%dpsi(:,:,1:ist_end,ik), start = ist_start)
+        else
+          call zstates_gram_schmidt(ist_end, m, st%d%dim, st%zpsi(:,:,1:ist_end,ik), start = ist_start)
+        end if
+      end if
     end do
 
     call pop_sub()
@@ -703,8 +830,13 @@ contains
       if(st%d%ispin == SPINORS) then
         do ik = 1, st%d%nik
           do ie = 1, st%nst
-            st%mag(ie, ik, 1) = X(mf_nrm2) (m, st%X(psi)(1:m%np, 1, ie, ik))**2 * st%occ(ie, ik)
-            st%mag(ie, ik, 2) = X(mf_nrm2) (m, st%X(psi)(1:m%np, 2, ie, ik))**2 * st%occ(ie, ik)
+            if (st%d%wfs_type == M_REAL) then
+              st%mag(ie, ik, 1) = dmf_nrm2(m, st%dpsi(1:m%np, 1, ie, ik))**2 * st%occ(ie, ik)
+              st%mag(ie, ik, 2) = dmf_nrm2(m, st%dpsi(1:m%np, 2, ie, ik))**2 * st%occ(ie, ik)
+            else
+              st%mag(ie, ik, 1) = zmf_nrm2(m, st%zpsi(1:m%np, 1, ie, ik))**2 * st%occ(ie, ik)
+              st%mag(ie, ik, 2) = zmf_nrm2(m, st%zpsi(1:m%np, 2, ie, ik))**2 * st%occ(ie, ik)
+            end if
           end do
         end do
       end if
@@ -733,8 +865,13 @@ contains
       if(st%d%ispin == SPINORS) then
         do ik = 1, st%d%nik
           do ie = 1, st%nst
-            st%mag(ie, ik, 1) = X(mf_nrm2) (m, st%X(psi)(1:m%np, 1, ie, ik))**2 * st%occ(ie, ik)
-            st%mag(ie, ik, 2) = X(mf_nrm2) (m, st%X(psi)(1:m%np, 2, ie, ik))**2 * st%occ(ie, ik)
+            if (st%d%wfs_type == M_REAL) then
+              st%mag(ie, ik, 1) = dmf_nrm2(m, st%dpsi(1:m%np, 1, ie, ik))**2 * st%occ(ie, ik)
+              st%mag(ie, ik, 2) = dmf_nrm2(m, st%dpsi(1:m%np, 2, ie, ik))**2 * st%occ(ie, ik)
+            else
+              st%mag(ie, ik, 1) = zmf_nrm2(m, st%zpsi(1:m%np, 1, ie, ik))**2 * st%occ(ie, ik)
+              st%mag(ie, ik, 2) = zmf_nrm2(m, st%zpsi(1:m%np, 2, ie, ik))**2 * st%occ(ie, ik)
+            end if
           end do
         end do
       end if
@@ -788,13 +925,18 @@ contains
     if(st%d%ispin == SPINORS) then
       do ik = 1, st%d%nik
         do ie = 1, st%nst
-          st%mag(ie, ik, 1) = X(mf_nrm2) (m, st%X(psi)(1:m%np, 1, ie, ik))**2 * st%occ(ie, ik)
-          st%mag(ie, ik, 2) = X(mf_nrm2) (m, st%X(psi)(1:m%np, 2, ie, ik))**2 * st%occ(ie, ik)
+          if (st%d%wfs_type == M_REAL) then
+            st%mag(ie, ik, 1) = dmf_nrm2(m, st%dpsi(1:m%np, 1, ie, ik))**2 * st%occ(ie, ik)
+            st%mag(ie, ik, 2) = dmf_nrm2(m, st%dpsi(1:m%np, 2, ie, ik))**2 * st%occ(ie, ik)
+          else
+            st%mag(ie, ik, 1) = zmf_nrm2(m, st%zpsi(1:m%np, 1, ie, ik))**2 * st%occ(ie, ik)
+            st%mag(ie, ik, 2) = zmf_nrm2(m, st%zpsi(1:m%np, 2, ie, ik))**2 * st%occ(ie, ik)
+          end if
         end do
       end do
     end if
 
-    call pop_sub(); return
+    call pop_sub()
   end subroutine states_fermi
 
 
@@ -1184,11 +1326,13 @@ contains
 
     integer :: ik, p, sp, k
     CMPLX, allocatable :: grad(:,:)
-#if defined(HAVE_MPI)
+#ifdef  HAVE_MPI
     FLOAT, allocatable :: red(:,:,:)
 #endif
 
     call push_sub('states.calc_paramagnetic_current')
+
+    ASSERT(st%d%wfs_type == M_CMPLX)
 
     if(st%d%ispin == SPIN_POLARIZED) then
       sp = 2
@@ -1267,7 +1411,7 @@ contains
     type(states_t),    intent(inout) :: st
     type(multicomm_t), intent(in)    :: mc
 
-#if defined(HAVE_MPI)
+#ifdef HAVE_MPI
     integer :: sn, sn1, r, j, k, i, ii, st_start, st_end
 #endif
 
@@ -1325,6 +1469,362 @@ contains
 #endif
 
   end subroutine states_distribute_nodes
+
+
+  ! ---------------------------------------------------------
+  subroutine states_output(st, gr, dir, outp)
+    type(states_t),   intent(inout) :: st
+    type(grid_t),     intent(inout) :: gr
+    character(len=*), intent(in)    :: dir
+    type(output_t),   intent(in)    :: outp
+
+    integer :: ik, ist, idim, is, id, ierr
+    character(len=80) :: fname
+    FLOAT :: u
+    FLOAT, allocatable :: dtmp(:), elf(:,:)
+
+    call push_sub('states_inc.states_output')
+    
+    u = M_ONE/units_out%length%factor**NDIM
+
+    if(iand(outp%what, output_density).ne.0) then
+      do is = 1, st%d%nspin
+        write(fname, '(a,i1)') 'density-', is
+        call doutput_function(outp%how, dir, fname, gr%m, gr%sb, st%rho(:, is), u, ierr)
+      end do
+    end if
+
+
+    if(iand(outp%what, output_current).ne.0) then
+      ! calculate current first
+      call calc_paramagnetic_current(gr, st, st%j)
+      do is = 1, st%d%nspin
+        do id = 1, NDIM
+          write(fname, '(a,i1,a,a)') 'current-', is, '-', index2axis(id)
+          call doutput_function(outp%how, dir, fname, gr%m, gr%sb, st%j(:, id, is), u, ierr)
+        end do
+      end do
+    end if
+
+
+    if(iand(outp%what, output_wfs).ne.0) then
+      do ist = st%st_start, st%st_end
+        if(loct_isinstringlist(ist, outp%wfs_list)) then
+          do ik = 1, st%d%nik
+            do idim = 1, st%d%dim
+              write(fname, '(a,i3.3,a,i3.3,a,i1)') 'wf-', ik, '-', ist, '-', idim
+              if (st%d%wfs_type == M_REAL) then
+                call doutput_function(outp%how, dir, fname, gr%m, gr%sb, &
+                     st%dpsi(1:, idim, ist, ik), sqrt(u), ierr)
+              else
+                call zoutput_function(outp%how, dir, fname, gr%m, gr%sb, &
+                     st%zpsi(1:, idim, ist, ik), sqrt(u), ierr)
+              end if
+            end do
+          end do
+        end if
+      end do
+    end if
+
+    if(iand(outp%what, output_wfs_sqmod).ne.0) then
+      ALLOCATE(dtmp(NP_PART), NP_PART)
+      do ist = 1, st%nst
+        if(loct_isinstringlist(ist, outp%wfs_list)) then
+          do ik = 1, st%d%nik
+            do idim = 1, st%d%dim
+              write(fname, '(a,i3.3,a,i3.3,a,i1)') 'sqm-wf-', ik, '-', ist, '-', idim
+              if (st%d%wfs_type == M_REAL) then
+                dtmp = abs(st%dpsi(:, idim, ist, ik))**2
+              else
+                dtmp = abs(st%zpsi(:, idim, ist, ik))**2
+              end if
+              call doutput_function (outp%how, dir, fname, gr%m, gr%sb, dtmp, u, ierr)
+            end do
+          end do
+        end if
+      end do
+      deallocate(dtmp)
+    end if
+
+    if(NDIM .eq. 3) then ! If the dimensions is not three, the ELF calculation will not work.
+      if(  iand(outp%what, output_elf).ne.0  ) then ! First, ELF in real space.
+        ALLOCATE(elf(1:gr%m%np,1:st%d%nspin),gr%m%np*st%d%nspin)
+        call states_calc_elf(st, gr, elf)
+        do is = 1, st%d%nspin
+          write(fname, '(a,a,i1)') 'elf_rs', '-', is
+          call doutput_function(outp%how, dir, trim(fname), gr%m, gr%sb, elf(:,is), M_ONE, ierr)
+        end do
+        deallocate(elf)
+      end if
+
+      if(  iand(outp%what, output_elf_fs).ne.0  ) then ! Second, ELF in Fourier space.
+        ALLOCATE(elf(1:gr%m%np,1:st%d%nspin),gr%m%np*st%d%nspin)
+        call states_calc_elf_fs(st, gr, elf)
+        do is = 1, st%d%nspin
+          write(fname, '(a,a,i1)') 'elf_fs', '-', is
+          call doutput_function(outp%how, dir, trim(fname), gr%m, gr%sb, elf(:,is), M_ONE, ierr)
+        end do
+        deallocate(elf)
+      end if
+    end if
+
+    call pop_sub()
+  end subroutine states_output
+
+
+  ! ---------------------------------------------------------
+  ! (time-dependent) electron localization function, (TD)ELF.
+  ! ---------------------------------------------------------
+  subroutine states_calc_elf(st,gr, elf, de)
+    type(states_t),   intent(inout) :: st
+    type(grid_t),     intent(inout) :: gr
+    FLOAT,             intent(inout):: elf(:,:)
+    FLOAT,   optional, intent(inout):: de(:,:)
+
+    FLOAT :: f, d, s
+    integer :: i, is, ik, ist, idim, ierr
+    CMPLX, allocatable :: psi_fs(:), gpsi(:,:)
+    FLOAT, allocatable :: r(:), gradr(:,:), j(:,:)
+
+    FLOAT, parameter :: dmin = CNST(1e-10)
+#if defined(HAVE_MPI)
+    FLOAT, allocatable :: reduce_elf(:)
+#endif
+
+    character(len=80) :: fname
+
+    ! single or double occupancy
+    if(st%d%nspin == 1) then
+      s = M_TWO
+    else
+      s = M_ONE
+    end if
+
+    do_is: do is = 1, st%d%nspin
+      ALLOCATE(    r(NP),       NP)
+      ALLOCATE(gradr(NP, NDIM), NP*NDIM)
+      ALLOCATE(    j(NP, NDIM), NP*NDIM)
+      r = M_ZERO; gradr = M_ZERO; j  = M_ZERO
+      
+      elf(1:NP,is) = M_ZERO
+
+      ALLOCATE(psi_fs(NP_PART),  NP_PART)
+      ALLOCATE(gpsi  (NP, NDIM), NP*NDIM)
+      do ik = is, st%d%nik, st%d%nspin
+        do ist = st%st_start, st%st_end
+          do idim = 1, st%d%dim
+
+            if (st%d%wfs_type == M_REAL) then
+              psi_fs(:) = cmplx(st%dpsi(:, idim, ist, ik), KIND=PRECISION)
+            else
+              psi_fs(:) = st%zpsi(:, idim, ist, ik)
+            end if
+
+            call zf_gradient(gr%sb, gr%f_der, psi_fs(:), gpsi)
+
+            r(:) = r(:) + st%d%kweights(ik)*st%occ(ist, ik) * abs(psi_fs(:))**2
+            do i = 1, NDIM
+              gradr(:,i) = gradr(:,i) + st%d%kweights(ik)*st%occ(ist, ik) *  &
+                   M_TWO * real(conjg(psi_fs(:))*gpsi(:,i))
+              j (:,i) =  j(:,i) + st%d%kweights(ik)*st%occ(ist, ik) *  &
+                   aimag(conjg(psi_fs(:))*gpsi(:,i))
+            end do
+
+            do i = 1, NP
+              elf(i,is) = elf(i,is) + st%d%kweights(ik)*st%occ(ist, ik)/s * &
+                   sum(abs(gpsi(i, 1:NDIM))**2)
+            end do
+          end do
+        end do
+      end do
+      deallocate(psi_fs, gpsi)
+
+#if defined(HAVE_MPI)
+      if(st%parallel_in_states) then
+        ALLOCATE(reduce_elf(1:NP), NP)
+        call MPI_Allreduce(elf(1, is), reduce_elf(1), NP, MPI_FLOAT, MPI_SUM, st%mpi_grp%comm, mpi_err)
+        elf(1:NP, is) = reduce_elf(1:NP)
+        call MPI_Allreduce(r(1), reduce_elf(1), NP, MPI_FLOAT, MPI_SUM, st%mpi_grp%comm, ierr)
+        r(1:NP) = reduce_elf(1:NP)
+        do i = 1, NDIM
+          call MPI_Allreduce(gradr(1, i), reduce_elf(1), NP, MPI_FLOAT, MPI_SUM, st%mpi_grp%comm, mpi_err)
+          gradr(1:NP, i) = reduce_elf(1:NP)
+          call MPI_Allreduce(j(1, i), reduce_elf(1), NP, MPI_FLOAT, MPI_SUM, st%mpi_grp%comm, mpi_err)
+          j(1:NP, i) = reduce_elf(1:NP)
+        end do
+        deallocate(reduce_elf)
+      end if
+#endif
+
+      do i = 1, NP
+        if(r(i) >= dmin) then
+          elf(i,is) = elf(i,is) - (M_FOURTH*sum(gradr(i, 1:NDIM)**2) + sum(j(i, 1:NDIM)**2))/(s*r(i))
+        end if
+      end do
+    
+      if(present(de)) de(1:NP,is)=elf(1:NP,is)
+
+      ! normalization
+      f = M_THREE/M_FIVE*(M_SIX*M_PI**2)**M_TWOTHIRD
+      do i = 1, NP
+        if(abs(r(i)) >= dmin) then
+          d    = f*(r(i)/s)**(M_FIVE/M_THREE)
+          elf(i,is) = M_ONE/(M_ONE + (elf(i,is)/d)**2)
+        else
+          elf(i,is) = M_ZERO
+        end if
+      end do
+
+      deallocate(r, gradr, j)
+
+    end do do_is
+
+  end subroutine states_calc_elf
+
+  ! ---------------------------------------------------------
+  ! ELF function in Fourier space. Not tested.
+  ! ---------------------------------------------------------
+  subroutine states_calc_elf_fs(st, gr, elf, de)
+    type(states_t),   intent(inout) :: st
+    type(grid_t),     intent(inout) :: gr
+    FLOAT,             intent(inout):: elf(:,:)
+    FLOAT,   optional, intent(inout):: de(:,:)
+
+    FLOAT :: f, d, s
+    integer :: i, is, ik, ist, idim, ierr
+    CMPLX, allocatable :: psi_fs(:), gpsi(:,:)
+    FLOAT, allocatable :: r(:), gradr(:,:), j(:,:)
+    type(dcf_t) :: dcf_tmp
+    type(zcf_t) :: zcf_tmp
+
+    FLOAT, parameter :: dmin = CNST(1e-10)
+    character(len=80) :: fname
+    
+    ! single or double occupancy
+    if(st%d%nspin == 1) then
+      s = M_TWO
+    else
+      s = M_ONE
+    end if
+ 
+    if (st%d%wfs_type == M_REAL) then
+      call dcf_new(gr%m%l, dcf_tmp)
+      call dcf_fft_init(dcf_tmp, gr%sb)
+    else
+      call zcf_new(gr%m%l, zcf_tmp)
+      call zcf_fft_init(zcf_tmp, gr%sb)
+    end if
+
+    do_is: do is = 1, st%d%nspin
+      ALLOCATE(    r(NP),       NP)
+      ALLOCATE(gradr(NP, NDIM), NP*NDIM)
+      ALLOCATE(    j(NP, NDIM), NP*NDIM)
+      r = M_ZERO; gradr = M_ZERO; j  = M_ZERO
+
+      elf(1:NP,is) = M_ZERO
+
+      ALLOCATE(psi_fs(NP_PART),  NP_PART)
+      ALLOCATE(gpsi  (NP, NDIM), NP*NDIM)
+      do ik = is, st%d%nik, st%d%nspin
+        do ist = 1, st%nst
+          do idim = 1, st%d%dim
+            
+            if (st%d%wfs_type == M_REAL) then
+              call dmf2mf_RS2FS(gr%m, st%dpsi(:, idim, ist, ik), psi_fs(:), dcf_tmp)
+              call zf_gradient(gr%sb, gr%f_der, psi_fs(:), gpsi)
+              do i = 1, NDIM
+                gpsi(:,i) = gpsi(:,i) * gr%m%h(i)**2 * real(dcf_tmp%n(i), PRECISION) / (M_TWO*M_PI)
+              end do
+            else
+              call zmf2mf_RS2FS(gr%m, st%zpsi(:, idim, ist, ik), psi_fs(:), zcf_tmp)
+              call zf_gradient(gr%sb, gr%f_der, psi_fs(:), gpsi)
+              do i = 1, NDIM
+                gpsi(:,i) = gpsi(:,i) * gr%m%h(i)**2 * real(zcf_tmp%n(i), PRECISION) / (M_TWO*M_PI)
+              end do
+            end if
+
+            r(:) = r(:) + st%d%kweights(ik)*st%occ(ist, ik) * abs(psi_fs(:))**2
+            do i = 1, NDIM
+              gradr(:,i) = gradr(:,i) + st%d%kweights(ik)*st%occ(ist, ik) *  &
+                   M_TWO * real(conjg(psi_fs(:))*gpsi(:,i))
+              j (:,i) =  j(:,i) + st%d%kweights(ik)*st%occ(ist, ik) *  &
+                   aimag(conjg(psi_fs(:))*gpsi(:,i))
+            end do
+
+            do i = 1, NP
+              if(r(i) >= dmin) then
+                elf(i,is) = elf(i,is) + st%d%kweights(ik)*st%occ(ist, ik)/s * &
+                     sum(abs(gpsi(i, 1:NDIM))**2)
+              end if
+            end do
+          end do
+        end do
+      end do
+      deallocate(psi_fs, gpsi)
+
+      do i = 1, NP
+        if(r(i) >= dmin) then
+          elf(i,is) = elf(i,is) - (M_FOURTH*sum(gradr(i, 1:NDIM)**2) + sum(j(i, 1:NDIM)**2))/(s*r(i))
+        end if
+      end do
+    
+      if(present(de)) de(1:NP,is)=elf(1:NP,is)
+
+      ! normalization
+      f = M_THREE/M_FIVE*(M_SIX*M_PI**2)**M_TWOTHIRD
+      do i = 1, NP
+        if(abs(r(i)) >= dmin) then
+          d    = f*(r(i)/s)**(M_FIVE/M_THREE)
+          elf(i,is) = M_ONE/(M_ONE + (elf(i,is)/d)**2)
+        else
+          elf(i,is) = M_ZERO
+        end if
+      end do
+
+      deallocate(r, gradr, j)
+
+    end do do_is
+
+    if (st%d%wfs_type == M_REAL) then
+      call dcf_free(dcf_tmp)
+    else
+      call zcf_free(zcf_tmp)
+    end if
+
+  contains
+
+    subroutine dmf2mf_RS2FS(m, fin, fout, c)
+      type(mesh_t),  intent(in)    :: m
+      FLOAT,         intent(in)    :: fin(:)
+      CMPLX,         intent(out)   :: fout(:)
+      type(dcf_t),   intent(inout) :: c
+    
+      call dcf_alloc_RS(c)
+      call dcf_alloc_FS(c)
+      call dmf2cf(m, fin, c)
+      call dcf_RS2FS(c)
+      call dcf_FS2mf(m, c, fout)
+      call dcf_free_RS(c)
+      call dcf_free_FS(c)
+    end subroutine dmf2mf_RS2FS
+
+    subroutine zmf2mf_RS2FS(m, fin, fout, c)
+      type(mesh_t),  intent(in)    :: m
+      CMPLX,         intent(in)    :: fin(:)
+      CMPLX,         intent(out)   :: fout(:)
+      type(zcf_t),   intent(inout) :: c
+    
+      call zcf_alloc_RS(c)
+      call zcf_alloc_FS(c)
+      call zmf2cf(m, fin, c)
+      call zcf_RS2FS(c)
+      call zcf_FS2mf(m, c, fout)
+      call zcf_free_RS(c)
+      call zcf_free_FS(c)
+    end subroutine zmf2mf_RS2FS
+
+  end subroutine states_calc_elf_fs
+
 
 #include "states_kpoints.F90"
 

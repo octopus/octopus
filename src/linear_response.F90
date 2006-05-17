@@ -181,6 +181,28 @@ contains
   end subroutine lr_build_fxc
 
 
+  subroutine lr_alloc_fHxc(st, m, lr)
+    type(states_t), intent(in)  :: st
+    type(mesh_t),   intent(in)  :: m
+    type(lr_t),     intent(out) :: lr
+
+    lr%abs_dens = M_ZERO
+    lr%iter     = 0
+
+    ! allocate variables
+    if (st%d%wfs_type == M_REAL) then
+      ALLOCATE(lr%ddl_rho(m%np, st%d%nspin), m%np*st%d%nspin)
+      ALLOCATE(lr%ddl_j(m%np, MAX_DIM, st%d%nspin), m%np*MAX_DIM*st%d%nspin)
+      ALLOCATE(lr%ddl_Vhar(m%np), m%np)
+    else
+      ALLOCATE(lr%zdl_rho(m%np, st%d%nspin), m%np*st%d%nspin)
+      ALLOCATE(lr%zdl_j(m%np, MAX_DIM, st%d%nspin), m%np*MAX_DIM*st%d%nspin)
+      ALLOCATE(lr%zdl_Vhar(m%np), m%np)
+    end if
+    ALLOCATE(lr%dl_Vxc(m%np, st%d%nspin, st%d%nspin), m%np*st%d%nspin*st%d%nspin)
+
+  end subroutine lr_alloc_fHxc
+
 
 #include "undef.F90"
 #include "real.F90"

@@ -48,7 +48,8 @@ module eigen_solver_m
     eigen_solver_run
 
   private ::            &
-    mv
+    dmv,                &
+    zmv
 
   type eigen_solver_t
     integer :: es_type    ! which eigen solver to use
@@ -305,32 +306,50 @@ contains
     if(present(conv)) conv = .false.
     maxiter = eigens%es_maxiter
 
-    select case(eigens%es_type)
-    case(RS_CG_NEW)
-      call eigen_solver_cg2_new(gr, st, h, tol, maxiter, &
-        eigens%converged, eigens%diff, verbose = verbose_)
-    case(RS_CG)
-      call eigen_solver_cg2(gr, st, h, tol, maxiter, &
-        eigens%converged, eigens%diff, verbose = verbose_)
+    if (st%d%wfs_type == M_REAL) then 
+      select case(eigens%es_type)
+      case(RS_CG_NEW)
+        call deigen_solver_cg2_new(gr, st, h, tol, maxiter, &
+             eigens%converged, eigens%diff, verbose = verbose_)
+      case(RS_CG)
+        call deigen_solver_cg2(gr, st, h, tol, maxiter, &
+             eigens%converged, eigens%diff, verbose = verbose_)
 #ifdef HAVE_TRLAN
-    case(RS_LANCZOS)
-      call eigen_solver_cg3(gr%m, st, h, tol, maxiter, &
-        eigens%converged, eigens%diff)
+      case(RS_LANCZOS)
+        call eigen_solver_cg3(gr%m, st, h, tol, maxiter, &
+             eigens%converged, eigens%diff)
 #endif
-    case(RS_PLAN)
-      call eigen_solver_plan(gr, st, h, tol, maxiter, eigens%converged, eigens%diff)
+      case(RS_PLAN)
+        call deigen_solver_plan(gr, st, h, tol, maxiter, eigens%converged, eigens%diff)
 #if defined(HAVE_ARPACK)
-    case(ARPACK)
-      call eigen_solver_arpack(gr, st, h, tol, maxiter, eigens%arnoldi_vectors, &
-        eigens%converged, eigens%diff)
+      case(ARPACK)
+        call eigen_solver_arpack(gr, st, h, tol, maxiter, eigens%arnoldi_vectors, &
+             eigens%converged, eigens%diff)
 #endif
-    case(EVOLUTION)
-      call eigen_solver_evolution(gr, st, h, tol, maxiter, eigens%converged, eigens%diff, &
-        tau = eigens%imag_time)
-    end select
-    
-    if(eigens%do_subspace_diag) call eigen_diagon_subspace(gr, st, h)
-    
+      case(EVOLUTION)
+        call deigen_solver_evolution(gr, st, h, tol, maxiter, eigens%converged, eigens%diff, &
+             tau = eigens%imag_time)
+      end select
+
+      if(eigens%do_subspace_diag) call deigen_diagon_subspace(gr, st, h)
+    else
+      select case(eigens%es_type)
+      case(RS_CG_NEW)
+        call zeigen_solver_cg2_new(gr, st, h, tol, maxiter, &
+             eigens%converged, eigens%diff, verbose = verbose_)
+      case(RS_CG)
+        call zeigen_solver_cg2(gr, st, h, tol, maxiter, &
+             eigens%converged, eigens%diff, verbose = verbose_)
+      case(RS_PLAN)
+        call zeigen_solver_plan(gr, st, h, tol, maxiter, eigens%converged, eigens%diff)
+      case(EVOLUTION)
+        call zeigen_solver_evolution(gr, st, h, tol, maxiter, eigens%converged, eigens%diff, &
+             tau = eigens%imag_time)
+      end select
+
+      if(eigens%do_subspace_diag) call zeigen_diagon_subspace(gr, st, h)
+    end if
+
     eigens%matvec = maxiter
     if(present(conv).and. eigens%converged == st%nst*st%d%nik) conv = .true.
 
@@ -339,60 +358,27 @@ contains
   end subroutine eigen_solver_run
 
 
-  ! ---------------------------------------------------------
-  ! This routine diagonalises the hamiltonian in the subspace defined by the states.
-  subroutine eigen_diagon_subspace(gr, st, h)
-    type(grid_t),        intent(inout) :: gr
-    type(states_t),      intent(inout) :: st
-    type(hamiltonian_t), intent(inout) :: h
-    
-    R_TYPE, allocatable :: h_subspace(:,:), vec(:,:), f(:,:,:)
-    integer :: ik, i, j
-
-    ALLOCATE(h_subspace(st%nst, st%nst), st%nst*st%nst)
-    ALLOCATE(vec(st%nst, st%nst), st%nst*st%nst)
-    ALLOCATE(f(NP, st%d%dim, st%nst), NP*st%d%dim*st%nst)
-
-    ik_loop: do ik = 1, st%d%nik
-      eigenfunction_loop : do i = 1, st%nst
-        call X(Hpsi)(h, gr, st%X(psi)(:,:, i, ik) , f(:,:, 1), ik)
-        h_subspace(i, i) = st%eigenval(i, ik)
-        do j = i+1, st%nst
-          h_subspace(i, j) = X(states_dotp) (gr%m, st%d%dim, st%X(psi)(:,:, j, ik), f(:,:, 1))
-          h_subspace(j, i) = R_CONJ(h_subspace(i, j))
-        end do
-      end do eigenfunction_loop
-
-      call lalg_eigensolve(st%nst, h_subspace, vec, st%eigenval(:, ik))
-
-      f(1:NP,1:st%d%dim,1:st%nst) = st%X(psi)(1:NP,1:st%d%dim,1:st%nst, ik)
-      do i = 1, st%nst
-        ! build new state
-        st%X(psi)(1:NP,1:st%d%dim, i, ik) = vec(i, i)*st%X(psi)(1:NP,1:st%d%dim, i, ik)
-        do j = 1, st%nst
-          if(i.ne.j) st%X(psi)(1:NP,1:st%d%dim,i, ik) = st%X(psi)(1:NP,1:st%d%dim,i, ik) & 
-               + vec(j, i)*f(1:NP,1:st%d%dim,j)
-        end do
-
-        ! renormalize
-        st%X(psi)(1:NP,1:st%d%dim, i, ik) = &
-             st%X(psi)(1:NP,1:st%d%dim, i, ik)/X(states_nrm2)(gr%m, st%d%dim, st%X(psi)(:,:, i, ik))
-      end do
-    end do ik_loop
-
-    deallocate(f, h_subspace, vec)
-
-  end subroutine eigen_diagon_subspace
-
-
-#include "eigen_cg.F90"
-#ifdef HAVE_TRLAN
-#include "eigen_trlan.F90"
-#endif
-#include "eigen_plan.F90"
 #if defined(HAVE_ARPACK)
 #include "eigen_arpack.F90"
 #endif
+#ifdef HAVE_TRLAN
+#include "eigen_trlan.F90"
+#endif
+
+
+#include "undef.F90"
+#include "real.F90"
+#include "eigen_inc.F90"
+#include "eigen_cg.F90"
+#include "eigen_plan.F90"
+#include "eigen_evolution.F90"
+
+
+#include "undef.F90"
+#include "complex.F90"
+#include "eigen_inc.F90"
+#include "eigen_cg.F90"
+#include "eigen_plan.F90"
 #include "eigen_evolution.F90"
 
 end module eigen_solver_m

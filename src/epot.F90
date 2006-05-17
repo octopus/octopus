@@ -60,8 +60,7 @@ module external_pot_m
     epot_laser_scalar_pot,  &
     epot_laser_field,       &
     epot_laser_vector_pot,  &
-    depot_forces,           &
-    zepot_forces,           &
+    epot_forces,            &
     dproject, zproject,     &
     projector_t
 
@@ -215,9 +214,10 @@ contains
     nullify(ep%B_field, ep%A_static)
     if(loct_parse_block(check_inp('StaticMagneticField'), blk)==0) then
 
-#if !defined(COMPLEX_WFNS)
-      call input_error('StaticMagneticField')
-#endif
+!FIXME: the following lines are not valid anymore
+!!#if !defined(COMPLEX_WFNS)
+!!      call input_error('StaticMagneticField')
+!!#endif
 
       ALLOCATE(ep%B_field(3), 3)
       do i = 1, 3
@@ -1021,6 +1021,233 @@ contains
     call laser_field(sb, ep%no_lasers, ep%lasers, t, e)
 
   end subroutine epot_laser_field
+
+
+  ! ---------------------------------------------------------
+  subroutine epot_forces(gr, ep, st, t)
+    type(grid_t), target, intent(in) :: gr
+    type(epot_t),     intent(in)     :: ep
+    type(states_t),   intent(in)     :: st
+    FLOAT,     optional, intent(in)    :: t
+
+    type(geometry_t), pointer :: geo
+    integer :: i, j, l, idim, ist, ik, ivnl, ivnl_start, ivnl_end
+    FLOAT :: d, r, zi, zj, x(MAX_DIM)
+    type(atom_t), pointer :: atm
+
+    FLOAT, allocatable :: dppsi(:, :)
+    FLOAT :: dz
+    CMPLX, allocatable :: zppsi(:, :)
+    CMPLX :: zz
+
+#if defined(HAVE_MPI)
+    FLOAT :: f(MAX_DIM)
+    integer :: mpi_err
+#endif
+
+    call profiling_in(C_PROFILING_FORCES)
+    call push_sub('epot.epot_forces')
+
+    geo => gr%geo
+
+    ! init to 0
+    do i = 1, geo%natoms
+      geo%atom(i)%f = M_ZERO
+    end do
+
+    if(.not.geo%only_user_def) then
+      ! non-local component of the potential.
+      if (st%d%wfs_type == M_REAL) then
+        ALLOCATE(dppsi(gr%m%np, st%d%dim), gr%m%np*st%d%dim)
+      else
+        ALLOCATE(zppsi(gr%m%np, st%d%dim), gr%m%np*st%d%dim)
+      end if
+
+      atm_loop: do i = 1, geo%natoms
+        atm => geo%atom(i)
+        if(atm%spec%local) cycle
+
+        ! Here we learn which are the projector that correspond to atom i.
+        ! It assumes that the projectors of each atom are consecutive.
+        ivnl_start  = - 1
+        do ivnl = 1, ep%nvnl
+          if(ep%dp(1, ivnl)%iatom .eq. i) then
+            ivnl_start = ivnl
+            exit
+          end if
+        end do
+        if(ivnl_start .eq. -1) cycle
+        ivnl_end = ep%nvnl
+        do ivnl = ivnl_start, ep%nvnl
+          if(ep%dp(1, ivnl)%iatom .ne. i) then
+            ivnl_end = ivnl - 1
+            exit
+          end if
+        end do
+
+
+
+        ik_loop: do ik = 1, st%d%nik
+          st_loop: do ist = st%st_start, st%st_end
+
+            do j = 1, NDIM
+              do idim = 1, st%d%dim
+                if (st%d%wfs_type == M_REAL) then
+                  dz = dpsiprojectpsi(gr%m, ep%dp(j, ivnl_start:ivnl_end), &
+                       ivnl_end - ivnl_start + 1, st%dpsi(:, idim, ist, ik), &
+                       periodic = .false., ik = ik)
+                  atm%f(j) = atm%f(j) + M_TWO * st%occ(ist, ik) * dz
+                else
+                  zz = zpsiprojectpsi(gr%m, ep%dp(j, ivnl_start:ivnl_end), &
+                       ivnl_end - ivnl_start + 1, st%zpsi(:, idim, ist, ik), &
+                       periodic = .false., ik = ik)
+                  atm%f(j) = atm%f(j) + M_TWO * st%occ(ist, ik) * zz
+                end if
+
+              end do
+            end do
+
+          end do st_loop
+        end do ik_loop
+
+      end do atm_loop
+      if (st%d%wfs_type == M_REAL) then
+        deallocate(dppsi)
+      else
+        deallocate(zppsi)
+      end if
+    end if
+
+#if defined(HAVE_MPI)
+    do i = 1, geo%natoms
+      atm => geo%atom(i)
+      if(atm%spec%local) cycle
+
+      if(st%parallel_in_states) then
+        call MPI_ALLREDUCE(atm%f(1), f(1), NDIM, MPI_FLOAT, MPI_SUM, st%mpi_grp%comm, mpi_err)
+        atm%f = fEPOT_FORCES(epot_forces)
+      end if
+    end do
+#endif
+
+    if(.not.geo%only_user_def) then ! exclude user defined species for the moment
+      ! Now the ion, ion force term
+      do i = 1, geo%natoms
+        zi = geo%atom(i)%spec%Z_val
+        do j = 1, geo%natoms
+          if(i .ne. j) then
+            zj = geo%atom(j)%spec%Z_val
+            r = sqrt(sum((geo%atom(i)%x(1:NDIM) - geo%atom(j)%x(1:NDIM))**2))
+            d = zi * zj/r**3
+
+            geo%atom(i)%f(1:NDIM) = geo%atom(i)%f(1:NDIM) + &
+                 d*(geo%atom(i)%x(1:NDIM) - geo%atom(j)%x(1:NDIM))
+          end if
+        end do
+      end do
+    end if
+write(*,*) "1"
+    ! now comes the local part of the PP
+    if(.not.simul_box_is_periodic(gr%sb).or.geo%only_user_def) then ! Real space
+
+write(*,*) "2.1"
+
+      call local_RS()
+write(*,*) "2.2"
+#if defined(HAVE_FFT)
+    else ! Fourier space
+write(*,*) "3.1"
+      call local_FS()
+write(*,*) "3.2"
+#endif
+    end if
+
+    if(present(t).and.ep%no_lasers>0) then
+      call laser_field(gr%sb, ep%no_lasers, ep%lasers, t, x)
+      do i = 1, geo%natoms
+        geo%atom(i)%f(1:NDIM) = geo%atom(i)%f(1:NDIM) + &
+             geo%atom(i)%spec%Z_val * x(1:NDIM)
+      end do
+    end if
+
+    if(associated(ep%E_field)) then
+      do i = 1, geo%natoms
+        geo%atom(i)%f(1:NDIM) = geo%atom(i)%f(1:NDIM) + &
+             geo%atom(i)%spec%Z_val * ep%E_field(1:NDIM)
+      end do
+    end if
+
+    !TODO: forces due to the magnetic fields (static and time-dependent)
+
+    call pop_sub()
+    call profiling_out(C_PROFILING_FORCES)
+
+  contains
+
+    ! ---------------------------------------------------------
+    subroutine local_RS()
+      FLOAT :: r
+      FLOAT, allocatable :: force(:,:), x(:), gv(:)
+      integer  :: i, j, k, ns
+
+      ALLOCATE(x(MAX_DIM), MAX_DIM)
+      ALLOCATE(gv(MAX_DIM), MAX_DIM)
+      ns = min(2, st%d%nspin)
+
+      ALLOCATE(force(NP, MAX_DIM), NP*MAX_DIM)
+      do i = 1, geo%natoms
+        atm => geo%atom(i)
+
+        do j = 1, NP
+          call mesh_r(gr%m, j, r, x=x, a=atm%x)
+          call specie_get_glocal(atm%spec, x, gv)
+          force(j,1:NDIM) = sum(st%rho(j, 1:ns))*gv(1:NDIM)
+        end do
+
+        do k = 1, NDIM
+          atm%f(k) = atm%f(k) - dmf_integrate(gr%m, force(:, k))
+        end do
+      end do
+
+      deallocate(force, x, gv)
+    end subroutine local_RS
+
+
+#ifdef HAVE_FFT
+    ! ---------------------------------------------------------
+    subroutine local_FS()
+      type(dcf_t) :: cf_for
+      FLOAT, allocatable :: force(:)
+      
+      ALLOCATE(force(NP), NP)
+      call dcf_new_from(cf_for, ep%local_cf(1)) ! at least one specie must exist
+      call dcf_alloc_FS(cf_for)
+      call dcf_alloc_RS(cf_for)
+
+      do i = 1, geo%natoms
+        atm => geo%atom(i)
+        do j = 1, NDIM
+          cf_for%FS = M_z0
+          call cf_phase_factor(gr%sb, gr%m, atm%x, ep%local_cf(atm%spec%index), cf_for)
+
+          call dcf_FS_grad(gr%sb, gr%m, cf_for, j)
+          call dcf_FS2RS(cf_for)
+          call dcf2mf(gr%m, cf_for, force)
+          do l = 1, st%d%nspin
+            ! FIXME: When running with partitions, vol_pp is local
+            ! to the node. It is likely, that this code need changes.
+            atm%f(j) = atm%f(j) + sum(force(1:NP)*st%rho(1:NP, l)*gr%m%vol_pp(1:NP))
+          end do
+        end do
+      end do
+
+      call dcf_free(cf_for)
+      deallocate(force)
+    end subroutine local_FS
+#endif
+
+  end subroutine epot_forces
+
 
 #include "undef.F90"
 #include "real.F90"

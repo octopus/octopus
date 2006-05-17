@@ -49,7 +49,7 @@ subroutine td_calc_tacc(gr, st, h, acc, t)
   ! force exerted by the electrons on the ions. COMMENT: This has to be thought about.
   ! Maybe we are forgetting something....
   x = M_ZERO
-  call zepot_forces(gr, h%ep, st)
+  call epot_forces(gr, h%ep, st)
   do i = 1, gr%geo%natoms
     x = x - gr%geo%atom(i)%f
   end do
@@ -94,7 +94,7 @@ subroutine td_calc_tacc(gr, st, h, acc, t)
         call zvnlpsi(h, gr%m, xzpsi(:,:, j), vnl_xzpsi(:,:), ik)
 
         do idim = 1, st%d%dim
-          conj = R_CONJ(hzpsi(:, idim))
+          conj = conjg(hzpsi(:, idim))
           x(j) = x(j) - 2*st%occ(ist, ik)*zmf_dotp(gr%m, conj, vnl_xzpsi(:, idim) )
         end do
       end do
@@ -110,7 +110,7 @@ subroutine td_calc_tacc(gr, st, h, acc, t)
         vnl_xzpsi = M_z0
         call zvnlpsi(h, gr%m, xzpsi(:,:, j), vnl_xzpsi(:,:), ik)
         do idim = 1, st%d%dim
-          conj = R_CONJ(st%zpsi(:, idim, ist, ik))
+          conj = conjg(st%zpsi(:, idim, ist, ik))
           x(j) = x(j) + 2*st%occ(ist, ik)* &
             zmf_dotp(gr%m, conj, vnl_xzpsi(:, idim) )
         end do

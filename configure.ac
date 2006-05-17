@@ -138,15 +138,6 @@ dnl ============================================================================
 dnl find what is the extension of the programs supposed to be
 MYEXT=""
 
-dnl complex wavefunctions for the ground-state
-if test "${COMPLEX_WFNS}"; then
-  AC_DEFINE(COMPLEX_WFNS, 1, [octopus compiled for ground-state complex wavefunctions])
-  MYEXT="${MYEXT}_cmplx"
-  msg="complex wave functions"
-else
-  msg="real wave functions"
-fi
-
 dnl mpi
 AS_IF([test x"$enable_mpi" != x"no"], [MYEXT="${MYEXT}_mpi"])
 
@@ -167,7 +158,7 @@ dnl set the default extension for the programs
 EXEEXT="${MYEXT}${EXEEXT}"
 
 dnl we only generate the utilities if single precision, cmplx, and mpi are off
-if test x"$enable_mpi" = x"no" -a -z "${COMPLEX_WFNS}" -a -z "${SINGLE_PRECISION}"; then
+if test x"$enable_mpi" = x"no" -a -z "${SINGLE_PRECISION}"; then
   UTILITY_PROGRAMS='$(EXTRA_PROGRAMS)'
   msg="$msg + utilities"
 else

@@ -4,6 +4,8 @@ DebugLevel = 0
 
 CalculationMode = gs
 fromScratch = yes
+WaveFunctionsType = complex
+
 Radius = 7.0
 Spacing = 0.5
 %Coordinates

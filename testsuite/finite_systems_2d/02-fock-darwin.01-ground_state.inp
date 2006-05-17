@@ -20,6 +20,7 @@ SystemName = "qd"
 CalculationMode = gs
 FromScratch = yes
 Dimensions = 2
+WaveFunctionsType = complex
 
 omega = 0.25
 

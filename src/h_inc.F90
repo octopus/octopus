@@ -66,7 +66,7 @@ subroutine X(Hpsi) (h, gr, psi, hpsi, ik, t)
   ! Relativistic corrections...
   select case(h%reltype)
   case(NOREL)
-#if defined(COMPLEX_WFNS) && defined(R_TCOMPLEX)
+#if defined(R_TCOMPLEX)
   case(SPIN_ORBIT)
     call zso (h, gr, psi, hpsi, ik)
 #endif
@@ -225,7 +225,7 @@ subroutine X(kinetic) (h, gr, psi, hpsi, ik)
   integer,             intent(in)    :: ik
 
   integer :: idim
-#if defined(COMPLEX_WFNS)
+#if defined(R_TCOMPLEX)
   integer :: i
   R_TYPE, allocatable :: grad(:,:)
   FLOAT :: k2
@@ -235,7 +235,7 @@ subroutine X(kinetic) (h, gr, psi, hpsi, ik)
   call push_sub('h_inc.Xkinetic')
 
   if(simul_box_is_periodic(gr%sb)) then
-#if defined(COMPLEX_WFNS)
+#if defined(R_TCOMPLEX)
     ALLOCATE(grad(NP, NDIM), NP*NDIM)
     k2 = sum(h%d%kpoints(:, ik)**2)
     do idim = 1, h%d%dim
@@ -249,8 +249,8 @@ subroutine X(kinetic) (h, gr, psi, hpsi, ik)
     end do
     deallocate(grad)
 #else
-    message(1) = "Real wavefunction for ground state not yet implemented for polymers:"
-    message(2) = "Reconfigure with --enable-complex, and remake"
+    message(1) = "Real wave-function for ground state not yet implemented for polymers:"
+    message(2) = "use complex wave-functions instead."
     call write_fatal(2)
 #endif
 

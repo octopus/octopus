@@ -26,9 +26,8 @@
 !!
 !! We also implement the "smoothing" preconditioning described in that paper.
 
-! ---------------------------------------------------------
-! WARNING: This is not working!!!!
-subroutine eigen_solver_plan(gr, st, hamilt, tol, niter, converged, diff)
+
+subroutine X(eigen_solver_plan) (gr, st, hamilt, tol, niter, converged, diff)
   type(grid_t),        target, intent(inout) :: gr
   type(states_t),      target, intent(inout) :: st
   type(hamiltonian_t), target, intent(inout) :: hamilt
@@ -307,4 +306,4 @@ contains
     call pop_sub()
   end subroutine residual
 
-end subroutine eigen_solver_plan
+end subroutine X(eigen_solver_plan)

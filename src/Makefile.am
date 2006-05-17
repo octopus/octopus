@@ -42,14 +42,14 @@ noinst_HEADERS = \
 	xc_vxc.F90 xc_axc.F90 xc_fxc.F90 xc_kxc.F90 xc_KLI.F90 xc_OEP_x.F90 xc_OEP_SIC.F90 \
 	epot_inc.F90 \
 	v_ks_inc.F90 xc_OEP_inc.F90 h_inc.F90 h_so.F90 \
-	eigen_cg.F90 eigen_trlan.F90 eigen_plan.F90 eigen_arpack.F90 eigen_evolution.F90 \
-	crystal.F90 restart_inc.F90 states_inc.F90 states_kpoints.F90 \
+	eigen_inc.F90 eigen_cg.F90 eigen_trlan.F90 eigen_plan.F90 eigen_arpack.F90 eigen_evolution.F90 \
+	lcao_inc.F90 crystal.F90 restart_inc.F90 states_inc.F90 states_kpoints.F90 \
 	linear_response_inc.F90 \
 	pes_rc.F90 pes_mask.F90 \
 	td_init.F90 td_calc.F90\
 	out_inc.F90 math_cg_inc.F90 math_inc.F90 \
 	linalg_basic_blas.F90 linalg_basic_int.F90 linalg_adv_lapack.F90 \
-	em_resp_inc.F90
+	em_resp_inc.F90 unocc_inc.F90 casida_inc.F90
 
 core_LIBS = @LIBS_LAPACK@ @LIBS_BLAS@ ../liboct/liboct.a ../liboct_parser/liboct_parser.a \
   ../libxc/libxc.a @GSL_LIBS@ @FCEXTRALIBS@
@@ -116,7 +116,7 @@ global.o: global.F90
 		-DOCTOPUS_VERSION='"${VERSION}"' -DBUILD_TIME='"${DATE}"' -DFC='"${FC}"' \
 		-DFCFLAGS='"${FCFLAGS} ${FCFLAGS_f90}"' $< > $*_oct.f90
 	@FC@ @FCFLAGS@ -c @FCFLAGS_f90@ -o $@ $*_oct.f90
-	@rm -f $*_oct.f90
+#@rm -f $*_oct.f90
 
 # how to generate config_F90.h
 liboct_parser.F90: config_F90.h
@@ -141,7 +141,7 @@ depend:
 atomic.o: global.h
 blas.o: global.h
 broad.o: global.h
-casida.o: global.h
+casida.o: global.h casida_inc.F90
 centergeom.o: global.h
 cf.o: global.h cf_inc.F90
 crystal.o: global.h
@@ -150,7 +150,7 @@ curv_gygi.o: global.h
 curvlinear.o: global.h
 curv_modine.o: global.h
 derivatives.o: global.h derivatives_inc.F90
-eigen.o: global.h eigen_cg.F90 eigen_trlan.F90 eigen_plan.F90 eigen_arpack.F90 eigen_evolution.F90
+eigen.o: global.h eigen_inc.F90 eigen_cg.F90 eigen_trlan.F90 eigen_plan.F90 eigen_arpack.F90 eigen_evolution.F90
 em_resp.o : em_resp.F90 em_resp_inc.F90
 epot.o: global.h epot_inc.F90
 f.o: global.h f_inc.F90
@@ -162,7 +162,7 @@ h.o: global.h h_inc.F90 h_so.F90
 hgh.o: global.h
 hs.o: global.h
 lasers.o: global.h
-lcao.o: global.h
+lcao.o: global.h lcao_inc.F90
 liboct.o: global.h
 liboct_parser.o: global.h
 libxc.o: global.h
@@ -216,7 +216,7 @@ td_rti.o: global.h
 td_write.o: td_calc.F90
 tm.o: global.h
 units.o: global.h
-unocc.o: global.h
+unocc.o: global.h unocc_inc.F90
 v_ks.o: global.h v_ks_inc.F90
 xc.o: global.h xc_vxc.F90 xc_axc.F90 xc_fxc.F90
 xc_functl.o: global.h

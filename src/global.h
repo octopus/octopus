@@ -65,10 +65,3 @@
 #  define PREC(x)   d ## x
 #  define CNST(x)   x ## _8
 #endif
-
-! what do you wish for dinner, dear?
-#if defined(COMPLEX_WFNS)
-#  include "complex.F90"
-#else
-#  include "real.F90"
-#endif

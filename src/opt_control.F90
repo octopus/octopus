@@ -186,8 +186,8 @@ contains
          call write_info(1)
 !! CHECK: WHY DO WE NEED st%rho ?
          ! setup backward propagation
-         call zstates_calc_dens(chi, NP_PART, st%rho)
-         call zv_ks_calc(gr, sys%ks, h, chi, calc_eigenval=.true.)
+         call states_calc_dens(chi, NP_PART, st%rho)
+         call v_ks_calc(gr, sys%ks, h, chi, calc_eigenval=.true.)
          do i = 1, st%d%nspin
             v_old_f(:, i, 2) = h%vhxc(:, i)
          end do
@@ -213,8 +213,8 @@ contains
 
          ! setup forward propagation
          psi = initialstate  
-         call zstates_calc_dens(psi, NP_PART, st%rho)
-         call zv_ks_calc(gr, sys%ks, h, psi, calc_eigenval=.true.)
+         call states_calc_dens(psi, NP_PART, st%rho)
+         call v_ks_calc(gr, sys%ks, h, psi, calc_eigenval=.true.)
          do i = 1, st%d%nspin
             v_old_i(:, i, 2) = h%vhxc(:, i)
          end do
@@ -289,8 +289,8 @@ contains
          call write_info(1)
 
          ! setup backward propagation
-         call zstates_calc_dens(chi, NP_PART, st%rho)
-         call zv_ks_calc(gr, sys%ks, h, chi, calc_eigenval=.true.)
+         call states_calc_dens(chi, NP_PART, st%rho)
+         call v_ks_calc(gr, sys%ks, h, chi, calc_eigenval=.true.)
          do i = 1, st%d%nspin
             v_old_f(:, i, 2) = h%vhxc(:, i)
          end do
@@ -366,8 +366,8 @@ contains
          call write_info(1)
 
 !! CHECK: WHY DO WE NEED st%rho ?
-         call zstates_calc_dens(chi, NP_PART, st%rho)
-         call zv_ks_calc(gr, sys%ks, h, chi, calc_eigenval=.true.)
+         call states_calc_dens(chi, NP_PART, st%rho)
+         call v_ks_calc(gr, sys%ks, h, chi, calc_eigenval=.true.)
          do i = 1, st%d%nspin
             v_old_f(:, i, 2) = h%vhxc(:, i)
          end do
@@ -379,8 +379,8 @@ contains
 
          ! setup forward propagation
          psi = initialstate  
-         call zstates_calc_dens(psi, NP_PART, st%rho)
-         call zv_ks_calc(gr, sys%ks, h, psi, calc_eigenval=.true.)
+         call states_calc_dens(psi, NP_PART, st%rho)
+         call v_ks_calc(gr, sys%ks, h, psi, calc_eigenval=.true.)
          do i = 1, st%d%nspin
             v_old_i(:, i, 2) = h%vhxc(:, i)
          end do
@@ -524,15 +524,15 @@ contains
       ! chi
       td%tr%v_old => v_old_f
       h%ep%lasers(1)%numerical => laser_tmp
-      call zstates_calc_dens(chi, NP_PART, st%rho)
-      call zv_ks_calc(gr, sys%ks, h, chi, calc_eigenval=.true.)
+      call states_calc_dens(chi, NP_PART, st%rho)
+      call v_ks_calc(gr, sys%ks, h, chi, calc_eigenval=.true.)
       call td_rti_dt(sys%ks, h, gr, chi, td%tr, abs(iter*td%dt), abs(td%dt))
 
       ! psi
       td%tr%v_old => v_old_i
       h%ep%lasers(1)%numerical => laser
-      call zstates_calc_dens(psi, NP_PART, st%rho)
-      call zv_ks_calc(gr, sys%ks, h, psi, calc_eigenval=.true.)
+      call states_calc_dens(psi, NP_PART, st%rho)
+      call v_ks_calc(gr, sys%ks, h, psi, calc_eigenval=.true.)
       call td_rti_dt(sys%ks, h, gr, psi, td%tr, abs(iter*td%dt), abs(td%dt))
       !write(6,*) iter, psi%zpsi(45:50,1,1,1)
       !write(6,*) laser(2*iter,1)
@@ -557,16 +557,16 @@ contains
       ! psi
       td%tr%v_old => v_old_i
       h%ep%lasers(1)%numerical => laser
-      call zstates_calc_dens(psi_i, NP_PART, st%rho)
-      call zv_ks_calc(gr, sys%ks, h, psi_i, calc_eigenval=.true.)
+      call states_calc_dens(psi_i, NP_PART, st%rho)
+      call v_ks_calc(gr, sys%ks, h, psi_i, calc_eigenval=.true.)
       ! abs
       call td_rti_dt(sys%ks, h, gr, psi, td%tr, abs(iter*td%dt), td%dt)
 
       ! chi
       td%tr%v_old => v_old_f
       h%ep%lasers(1)%numerical => laser_tmp
-      call zstates_calc_dens(chi, NP_PART, st%rho)
-      call zv_ks_calc(gr, sys%ks, h, chi, calc_eigenval=.true.)
+      call states_calc_dens(chi, NP_PART, st%rho)
+      call v_ks_calc(gr, sys%ks, h, chi, calc_eigenval=.true.)
       ! abs
       call td_rti_dt(sys%ks, h, gr, chi, td%tr, abs(iter*td%dt), td%dt)
 !      write(6,*) laser_tmp(2*iter,1)
@@ -636,8 +636,8 @@ contains
       call write_info(1)
 
       ! setup the hamiltonian
-      call zstates_calc_dens(psi_n, NP_PART, st%rho)
-      call zv_ks_calc(gr, sys%ks, h, psi_n, calc_eigenval=.true.)
+      call states_calc_dens(psi_n, NP_PART, st%rho)
+      call v_ks_calc(gr, sys%ks, h, psi_n, calc_eigenval=.true.)
 
       ! setup start of the propagation
       do i = 1, st%d%nspin
@@ -655,8 +655,8 @@ contains
         ! time iterate wavefunctions
         call td_rti_dt(sys%ks, h, gr, psi_n, td%tr, abs(i*td%dt), td%dt)
         ! update
-        call zstates_calc_dens(psi_n, NP_PART, st%rho)
-        call zv_ks_calc(gr, sys%ks, h, psi_n, calc_eigenval=.true.)
+        call states_calc_dens(psi_n, NP_PART, st%rho)
+        call v_ks_calc(gr, sys%ks, h, psi_n, calc_eigenval=.true.)
 
       end do
       td%dt = -td%dt
@@ -675,8 +675,8 @@ contains
       call write_info(1)
 
       ! setup the hamiltonian
-      call zstates_calc_dens(psi_n, NP_PART, st%rho)
-      call zv_ks_calc(gr, sys%ks, h, psi_n, calc_eigenval=.true.)
+      call states_calc_dens(psi_n, NP_PART, st%rho)
+      call v_ks_calc(gr, sys%ks, h, psi_n, calc_eigenval=.true.)
       ! setup start of the propagation
       do i = 1, st%d%nspin
         v_old_i(:, i, 2) = h%vhxc(:, i)
@@ -694,8 +694,8 @@ contains
         call td_rti_dt(sys%ks, h, gr, psi_n, td%tr, abs(i*td%dt), abs(td%dt))
 
         ! update
-        call zstates_calc_dens(psi_n, NP_PART, st%rho)
-        call zv_ks_calc(gr, sys%ks, h, psi_n, calc_eigenval=.true.)
+        call states_calc_dens(psi_n, NP_PART, st%rho)
+        call v_ks_calc(gr, sys%ks, h, psi_n, calc_eigenval=.true.)
       
         !call loct_progress_bar(i-1, td%max_iter-1)
       end do
@@ -817,7 +817,7 @@ contains
 
       ! CHECK: STH GOES WRONG HERE: IF psi_i REPLACED BY PSI 
       ! probably something is ill-defined
-      call zstates_output(psi_i, gr, 'opt-control', sys%outp)
+      call states_output(psi_i, gr, 'opt-control', sys%outp)
       call zoutput_function(sys%outp%how,'opt-control','target',gr%m,gr%sb,targetstate%zpsi(:,1,1,1),M_ONE,ierr) 
       call zoutput_function(sys%outp%how,'opt-control','final',gr%m,gr%sb,psi%zpsi(:,1,1,1),M_ONE,ierr) 
       call pop_sub()
@@ -914,11 +914,17 @@ contains
 
       call td_init(gr, td, sys%st, sys%outp)
 
-      call zstates_allocate_wfns(st, gr%m)
+      call states_allocate_wfns(st, gr%m)
 
       ! psi_i is initialized in system_init
       psi_i => st
-        
+
+      !psi_i should have complex wavefunctions
+      if (psi_i%d%wfs_type /= M_CMPLX) then
+        message(1) = "error in init_.opt_control"
+        call write_fatal(1)
+      end if
+
       ! call write_info(2)
       v_old_i => td%tr%v_old
 
@@ -943,12 +949,16 @@ contains
 
       psi%st_start = psi_i%st_start
       psi%st_end = psi_i%st_end
+      psi%d%wfs_type = M_CMPLX
       initialstate%st_start = psi_i%st_start
       initialstate%st_end = psi_i%st_end
+      initialstate%d%wfs_type = M_CMPLX
       targetstate%st_start = psi_i%st_start
       targetstate%st_end = psi_i%st_end
+      targetstate%d%wfs_type = M_CMPLX
       chi%st_start = psi_i%st_start
       chi%st_end = psi_i%st_end
+      chi%d%wfs_type = M_CMPLX
       ALLOCATE(psi%zpsi(NP_PART, psi%d%dim, psi%st_start:psi%st_end, psi%d%nik), NP_PART*psi%d%dim*(psi%st_end-psi%st_start+1)*psi%d%nik)
       ALLOCATE(chi%zpsi(NP_PART, chi%d%dim, chi%st_start:chi%st_end, chi%d%nik), NP_PART*chi%d%dim*(chi%st_end-chi%st_start+1)*chi%d%nik)      
       ALLOCATE(initialstate%zpsi(NP_PART, initialstate%d%dim, initialstate%st_start:chi%st_end, chi%d%nik), NP_PART*initialstate%d%dim*(initialstate%st_end-initialstate%st_start+1)*initialstate%d%nik)

@@ -292,8 +292,8 @@ contains
       do iter = 1, 3
         call lalg_copy(NP, st%d%nspin, tr%v_old(:, :, 0), tr%v_old(:, :, 3))
 
-        call zstates_calc_dens(st, NP, st%rho)
-        call zv_ks_calc(gr, ks, h, st)
+        call states_calc_dens(st, NP, st%rho)
+        call v_ks_calc(gr, ks, h, st)
         tr%v_old(1:NP, :, 0) = h%vhxc  (1:NP, :)
         h%vhxc  (1:NP, :)    = tr%v_old(1:NP, :, 1)
 
@@ -337,8 +337,8 @@ contains
           call zexp_kinetic(gr, h, st%zpsi(:, :, ist, ik), tr%cf, -M_HALF*M_zI*dt)
         end do
       end do
-      call zstates_calc_dens(st, NP, st%rho)
-      call zv_ks_calc(gr, ks, h, st)
+      call states_calc_dens(st, NP, st%rho)
+      call v_ks_calc(gr, ks, h, st)
       do ik = 1, st%d%nik
         do ist = 1, st%nst
           if (h%ep%nvnl > 0) call zexp_vnlpsi (gr%m, h, st%zpsi(:, :, ist, ik), -M_zI*dt, .true.)
@@ -416,8 +416,8 @@ contains
           end do
         end do
 
-        call zstates_calc_dens(st, NP, st%rho)
-        call zv_ks_calc(gr, ks, h, st)
+        call states_calc_dens(st, NP, st%rho)
+        call v_ks_calc(gr, ks, h, st)
 
         st%zpsi = zpsi1
         deallocate(zpsi1)

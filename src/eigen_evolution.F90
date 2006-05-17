@@ -18,7 +18,7 @@
 !! $Id$
 
 ! ---------------------------------------------------------
-subroutine eigen_solver_evolution(gr, st, h, tol, niter, converged, diff, tau)
+subroutine X(eigen_solver_evolution) (gr, st, h, tol, niter, converged, diff, tau)
   type(grid_t), target,intent(inout) :: gr
   type(states_t),      intent(inout) :: st
   type(hamiltonian_t), target, intent(inout)    :: h
@@ -129,7 +129,7 @@ contains
     gr_ => gr
     ik_ =  ik
     call X(gexpv)(n, m, t, psi(:, 1), w(:, 1), tolerance, anorm, &
-      wsp, lwsp, iwsp, liwsp, mv, itrace, iflag)
+      wsp, lwsp, iwsp, liwsp, X(mv), itrace, iflag)
     nullify(h_)
     nullify(gr_)
     psi = w
@@ -138,11 +138,11 @@ contains
     j = iwsp(1)
   end subroutine exponentiate
 
-end subroutine eigen_solver_evolution
+end subroutine X(eigen_solver_evolution)
 
 
 ! ---------------------------------------------------------
-subroutine mv(x, y)
+subroutine X(mv) (x, y)
   R_TYPE, intent(in) :: x(:)
   R_TYPE, intent(out) :: y(:)
   integer :: idim
@@ -161,5 +161,5 @@ subroutine mv(x, y)
 
   deallocate(psi, hpsi)
 
-end subroutine mv
+end subroutine X(mv)
 

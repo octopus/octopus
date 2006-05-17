@@ -17,7 +17,7 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 # 
-# $Id: var2xml.py.in 2068 2006-05-13 12:12:42Z athimm $
+# $Id: var2xml.py.in 2075 2006-05-14 11:07:56Z athimm $
 
 """Convert octopus variable definition format into XML.
 

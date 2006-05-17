@@ -72,7 +72,7 @@ contains
     call init_()
 
     ! load wave-functions
-    call X(restart_read) (trim(tmpdir)//'restart_gs', sys%st, sys%gr, ierr)
+    call restart_read(trim(tmpdir)//'restart_gs', sys%st, sys%gr, ierr)
     if(ierr.ne.0) then
       message(1) = "Could not load wave-functions: Starting from scratch"
       call write_warning(1)
@@ -81,7 +81,7 @@ contains
     ! setup Hamiltonian
     message(1) = 'Info: Setting up Hamiltonian.'
     call write_info(1)
-    call X(system_h_setup) (sys, h)
+    call system_h_setup(sys, h)
 
     call scf_init(sys%gr, scfv, sys%st, h)
 
@@ -125,7 +125,7 @@ contains
     subroutine init_()
       call push_sub('geom_opt.geom_opt_run')
 
-      call X(states_allocate_wfns)(sys%st, sys%gr%m)
+      call states_allocate_wfns(sys%st, sys%gr%m)
 
       ! shortcuts
       m   => sys%gr%m
@@ -185,7 +185,7 @@ contains
 
     ! ---------------------------------------------------------
     subroutine end_()
-      deallocate(sys%st%X(psi))
+      call states_deallocate_wfns(sys%st)
     end subroutine end_
 
 
@@ -204,8 +204,8 @@ contains
       call atom_write_xyz(".", "work-min", geo)
 
       call epot_generate(h%ep, sys%gr, st, h%reltype)
-      call X(states_calc_dens) (st, m%np, st%rho)
-      call X(v_ks_calc) (sys%gr, sys%ks, h, st, calc_eigenval=.true.)
+      call states_calc_dens(st, m%np, st%rho)
+      call v_ks_calc(sys%gr, sys%ks, h, st, calc_eigenval=.true.)
       call hamiltonian_energy(h, sys%gr, st, -1)
 
       ! do scf calculation

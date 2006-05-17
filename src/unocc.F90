@@ -26,9 +26,12 @@ module unocc_m
   use lib_oct_parser_m
   use lib_oct_m
   use mesh_m
+  use mesh_function_m
+  use grid_m
   use states_m
   use system_m
   use restart_m
+  use poisson_m
   use v_ks_m
   use hamiltonian_m
   use eigen_solver_m
@@ -53,14 +56,15 @@ contains
 
     type(eigen_solver_t) :: eigens
     integer :: iunit, ierr, ik, p, occupied_states
-    R_TYPE, allocatable :: h_psi(:,:)
+    FLOAT, allocatable :: dh_psi(:,:)
+    CMPLX, allocatable :: zh_psi(:,:)
     logical :: converged, l
     type(lcao_t) :: lcao_data
 
     occupied_states = sys%st%nst
     call init_(sys%gr%m, sys%st)
 
-    call X(restart_read) (trim(tmpdir)//'restart_gs', sys%st, sys%gr, ierr)
+    call restart_read (trim(tmpdir)//'restart_gs', sys%st, sys%gr, ierr)
     if( (ierr .ne. 0)  .and.  (ierr < occupied_states) ) then
       message(1) = "Not all the occupied KS orbitals could be read from '"//trim(tmpdir)//"restart_gs'"
       message(2) = "Please run a ground-state calculation first!"
@@ -80,8 +84,8 @@ contains
     message(1) = 'Info:  Setting up Hamiltonian.'
     call write_info(1)
 
-    call X(states_calc_dens)(sys%st, sys%gr%m%np, sys%st%rho)
-    call X(v_ks_calc)(sys%gr, sys%ks, h, sys%st, calc_eigenval=.true.) ! get potentials
+    call states_calc_dens(sys%st, sys%gr%m%np, sys%st%rho)
+    call v_ks_calc(sys%gr, sys%ks, h, sys%st, calc_eigenval=.true.) ! get potentials
     call hamiltonian_energy(h, sys%gr, sys%st, -1)             ! total energy
 
     if( (ierr.ne.0) .and. (ierr >= occupied_states)) then
@@ -101,20 +105,34 @@ contains
 
     ! First, get the residues of the occupied states.
     ! These are assumed to be converged; otherwise one should do a SCF calculation.
-    ALLOCATE(h_psi(sys%gr%m%np, h%d%dim), sys%gr%m%np*h%d%dim)
+    if (sys%st%d%wfs_type == M_REAL) then
+      ALLOCATE(dh_psi(sys%gr%m%np, h%d%dim), sys%gr%m%np*h%d%dim)
+    else
+      ALLOCATE(zh_psi(sys%gr%m%np, h%d%dim), sys%gr%m%np*h%d%dim)
+    end if
     do ik = 1, sys%st%d%nik
       do p = 1, eigens%converged
-        call X(Hpsi)(h, sys%gr, sys%st%X(psi)(:,:, p, ik) , h_psi, ik)
-        eigens%diff(p, ik) = X(states_residue)(sys%gr%m, sys%st%d%dim, h_psi, sys%st%eigenval(p, ik), &
-          sys%st%X(psi)(:, :, p, ik))
+        if (sys%st%d%wfs_type == M_REAL) then
+          call dHpsi(h, sys%gr, sys%st%dpsi(:,:, p, ik) , dh_psi, ik)
+          eigens%diff(p, ik) = dstates_residue(sys%gr%m, sys%st%d%dim, dh_psi, sys%st%eigenval(p, ik), &
+               sys%st%dpsi(:, :, p, ik))
+        else
+          call zHpsi(h, sys%gr, sys%st%zpsi(:,:, p, ik) , zh_psi, ik)
+          eigens%diff(p, ik) = zstates_residue(sys%gr%m, sys%st%d%dim, zh_psi, sys%st%eigenval(p, ik), &
+               sys%st%zpsi(:, :, p, ik))
+        end if
       end do
     end do
-    deallocate(h_psi)
+    if (sys%st%d%wfs_type == M_REAL) then
+      deallocate(dh_psi)
+    else
+      deallocate(zh_psi)
+    end if
 
     call eigen_solver_run(eigens, sys%gr, sys%st, h, 1, converged, verbose = .true.)
 
     ! write restart information.
-    call X(restart_write) (trim(tmpdir)//'restart_gs', sys%st, sys%gr, ierr)
+    call restart_write (trim(tmpdir)//'restart_gs', sys%st, sys%gr, ierr)
     if(ierr.ne.0) then
       message(1) = 'Unsuccesfull write of "'//trim(tmpdir)//'restart_gs"'
       call write_fatal(1)
@@ -156,7 +174,7 @@ contains
     if(l) call write_matrix_elements(sys, h)
 
     ! output wave-functions
-    call X(states_output) (sys%st, sys%gr, "static", sys%outp)
+    call states_output(sys%st, sys%gr, "static", sys%outp)
 
     call end_()
 
@@ -190,7 +208,7 @@ contains
       st%st_end = st%nst
 
       deallocate(st%eigenval, st%occ)
-      call X(states_allocate_wfns)(st, m)
+      call states_allocate_wfns(st, m)
       ALLOCATE(st%eigenval(st%nst, st%d%nik), st%nst*st%d%nik)
       ALLOCATE(st%occ(st%nst, st%d%nik), st%nst*st%d%nik)
       if(st%d%ispin == SPINORS) then
@@ -213,7 +231,7 @@ contains
 
     ! ---------------------------------------------------------
     subroutine end_()
-      deallocate(sys%st%X(psi))
+      call states_deallocate_wfns(sys%st)
       call eigen_solver_end(eigens)
 
       call pop_sub()
@@ -225,96 +243,39 @@ contains
   ! ---------------------------------------------------------
   ! warning: only works for spin-unpolarized and 1 k-point
   subroutine write_matrix_elements(sys, h)
-    use mesh_function_m
-    use poisson_m
-
     type(system_t), target, intent(inout) :: sys
     type(hamiltonian_t),    intent(in)    :: h
 
-    type(states_t), pointer :: st
-    type(mesh_t),   pointer :: m
-
     call io_mkdir("ME")
-
-    st => sys%st
-    m  => sys%gr%m
 
     message(1) = "Computing Matrix Elements"
     call write_info(1)
 
     message(1) = "  :: one-body"
     call write_info(1)
-    call one_body()
+    if (sys%st%d%wfs_type == M_REAL) then
+      call done_body(sys%gr%m, sys%st, h)
+    else
+      call zone_body(sys%gr%m, sys%st, h)
+    end if
 
     message(1) = "  :: two-body"
     call write_info(1)
-    call two_body()
-
-  contains
-
-    ! ---------------------------------------------------------
-    subroutine one_body()
-      integer i, j, iunit
-      R_TYPE :: me
-
-      call io_assign(iunit)
-      iunit = io_open('ME/1-body', action='write')
-
-      do i = 1, st%nst
-        do j = 1, st%nst
-          if(j > i) cycle
-
-          me = st%eigenval(i,1) - X(mf_integrate) (m, R_CONJ(st%X(psi) (:, 1, i, 1)) * &
-            h%Vhxc(:, 1) * st%X(psi) (:, 1, j, 1))
-
-          write(iunit, *) i, j, me
-        end do
-      end do
-
-      call io_close(iunit)
-
-    end subroutine one_body
-
-
-    ! ---------------------------------------------------------
-    subroutine two_body()
-      integer i, j, k, l, iunit
-      R_TYPE :: me
-      R_TYPE, allocatable :: n(:), v(:)
-
-      call io_assign(iunit)
-      iunit = io_open('ME/2-body', action='write')
-
-      ALLOCATE(n(1:m%np), m%np)
-      ALLOCATE(v(1:m%np), m%np)
-
-      do i = 1, st%nst
-        do j = 1, st%nst
-          if(j > i) cycle
-
-          n(:) = R_CONJ(st%X(psi) (:, 1, i, 1)) * st%X(psi) (:, 1, j, 1)
-          call X(poisson_solve) (sys%gr, v, n)
-
-          do k = 1, st%nst
-            if(k > i) cycle
-            do l = 1, st%nst
-              if(l > k) cycle
-              if(l > j) cycle
-
-              me = X(mf_integrate) (m, v(:) * &
-                st%X(psi) (:, 1, k, 1) * R_CONJ(st%X(psi) (:, 1, l, 1)))
-
-              write(iunit, *) i, j, k, l, me
-            end do
-          end do
-        end do
-      end do
-
-      call io_close(iunit)
-
-    end subroutine two_body
+    if (sys%st%d%wfs_type == M_REAL) then
+      call dtwo_body(sys%gr, sys%st, h)
+    else
+      call ztwo_body(sys%gr, sys%st, h)
+    end if
 
   end subroutine write_matrix_elements
 
+
+#include "undef.F90"
+#include "real.F90"
+#include "unocc_inc.F90"
+
+#include "undef.F90"
+#include "complex.F90"
+#include "unocc_inc.F90"
 
 end module unocc_m

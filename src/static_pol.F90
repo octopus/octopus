@@ -68,7 +68,7 @@ contains
     call init_()
 
     ! load wave-functions
-    call X(restart_read) (trim(tmpdir)//'restart_gs', sys%st, gr, ierr)
+    call restart_read(trim(tmpdir)//'restart_gs', sys%st, gr, ierr)
     if(ierr.ne.0) then
       message(1) = "Could not read KS orbitals from '"//trim(tmpdir)//"restart_gs'"
       message(2) = "Please run a ground-state calculation first!"
@@ -78,7 +78,7 @@ contains
     ! setup Hamiltonian
     message(1) = 'Info: Setting up Hamiltonian.'
     call write_info(1)
-    call X(system_h_setup) (sys, h)
+    call system_h_setup (sys, h)
 
     ! Allocate the dipole...
     ALLOCATE(dipole(NDIM, NDIM, 2), NDIM*NDIM*2)
@@ -182,7 +182,7 @@ contains
       gr  => sys%gr
       st => sys%st
 
-      call X(states_allocate_wfns)(st, gr%m)
+      call states_allocate_wfns(st, gr%m)
 
       !%Variable POLStaticField
       !%Type float
@@ -205,7 +205,7 @@ contains
 
     ! ---------------------------------------------------------
     subroutine end_()
-      deallocate(sys%st%X(psi))
+      call states_deallocate_wfns(sys%st)
 
       call pop_sub()
     end subroutine end_
@@ -251,9 +251,9 @@ contains
       if(iand(sys%outp%what, output_elf).ne.0) then 
          
         if(1==k) then 
-          call X(states_calc_elf)(st, gr, elf,elfd)
+          call states_calc_elf(st, gr, elf,elfd)
         else
-          call X(states_calc_elf)(st, gr, lr_elf,lr_elfd)
+          call states_calc_elf(st, gr, lr_elf,lr_elfd)
           
           !numerical derivative
            lr_elf(1:NP, 1:st%d%nspin) = ( lr_elf(1:NP, 1:st%d%nspin) -  elf(1:NP, 1:st%d%nspin)) / (M_TWO*e_field)

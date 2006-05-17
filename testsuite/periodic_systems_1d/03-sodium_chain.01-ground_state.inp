@@ -7,6 +7,7 @@ Units = "eVA"
 
 Dimensions = 3
 PeriodicDimensions = 1
+WaveFunctionsType = complex
 
 %CalculationMode
   gs | unocc                     

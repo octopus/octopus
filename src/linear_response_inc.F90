@@ -19,24 +19,6 @@
 
 
 ! ---------------------------------------------------------
-subroutine X(lr_alloc_fHxc) (st, m, lr)
-  type(states_t), intent(in)  :: st
-  type(mesh_t),   intent(in)  :: m
-  type(lr_t),     intent(out) :: lr
-
-  lr%abs_dens = M_ZERO
-  lr%iter     = 0
-
-  ! allocate variables
-  ALLOCATE(lr%X(dl_rho) (m%np, st%d%nspin), m%np*st%d%nspin)
-  ALLOCATE(lr%X(dl_j) (m%np, MAX_DIM, st%d%nspin), m%np*MAX_DIM*st%d%nspin)
-  ALLOCATE(lr%X(dl_Vhar)(m%np), m%np)
-  ALLOCATE(lr%dl_Vxc(m%np, st%d%nspin, st%d%nspin), m%np*st%d%nspin*st%d%nspin)
-
-end subroutine X(lr_alloc_fHxc)
-
-
-! ---------------------------------------------------------
 subroutine X(lr_orth_vector) (m, st, v, ik)
   type(mesh_t),        intent(in)    :: m
   type(states_t),      intent(in)    :: st

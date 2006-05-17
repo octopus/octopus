@@ -50,6 +50,7 @@ module hamiltonian_m
     hamiltonian_energy,    &
     hamiltonian_output,    &
     hamiltonian_span,      &
+    zso,                   &
     dhamiltonian_eigenval, &
     zhamiltonian_eigenval, &
     dhpsi,                 &
@@ -66,6 +67,7 @@ module hamiltonian_m
     zhpsi_diag,            &
     zkinetic,              &
     zvmask
+
 
 #ifdef COMPLEX_WFNS
   public :: zso
@@ -197,21 +199,21 @@ contains
     call loct_parse_int(check_inp('RelativisticCorrection'), NOREL, h%reltype)
     if(.not.varinfo_valid_option('RelativisticCorrection', h%reltype)) call input_error('RelativisticCorrection')
 
-#ifdef COMPLEX_WFNS
-    call messages_print_var_option(stdout, "RelativisticCorrection", h%reltype)
+    if (h%d%wfs_type == M_REAL) then
+      if(h%reltype .ne. NOREL) then
+        message(1) = "Cannot apply relativistic corrections with an executable compiled"
+        message(2) = "for real wavefunctions."
+        call write_fatal(2)
+      end if
+    else
+      call messages_print_var_option(stdout, "RelativisticCorrection", h%reltype)
 
-    ! This is temporary...
-    if(h%reltype > SPIN_ORBIT) then
-      message(1) = 'Error: ZORA corrections not working yet. Visit us soon.'
-      call write_fatal(1)
+      ! This is temporary...
+      if(h%reltype > SPIN_ORBIT) then
+        message(1) = 'Error: ZORA corrections not working yet. Visit us soon.'
+        call write_fatal(1)
+      end if
     end if
-#else
-    if(h%reltype .ne. NOREL) then
-      message(1) = "Cannot apply relativistic corrections with an executable compiled"
-      message(2) = "for real wavefunctions."
-      call write_fatal(2)
-    end if
-#endif
 
     !%Variable TDGauge
     !%Type integer
@@ -360,12 +362,12 @@ contains
     if(present(full)) full_ = full
 
     if(full_) then
-      if(associated(st%zpsi)) then
-        h%t0     = zelectronic_kinetic_energy(h, gr, st)
-        h%eext   = zelectronic_external_energy(h, gr, st)
-      else
+      if(h%d%wfs_type == M_REAL) then
         h%t0     = delectronic_kinetic_energy(h, gr, st)
         h%eext   = delectronic_external_energy(h, gr, st)
+      else
+        h%t0     = zelectronic_kinetic_energy(h, gr, st)
+        h%eext   = zelectronic_external_energy(h, gr, st)
       end if
     end if
 
@@ -441,6 +443,38 @@ contains
     call pop_sub()
   end subroutine hamiltonian_output
 
+  subroutine zso (h, gr, psi, hpsi, ik)
+    type(hamiltonian_t), intent(in) :: h
+    type(grid_t) :: gr
+    CMPLX, intent(in) :: psi(:, :)
+    CMPLX, intent(inout) :: Hpsi(:, :)
+    integer, intent(in) :: ik
+
+    CMPLX, allocatable :: tpsi(:, :)
+
+    call push_sub('h.zso')
+
+    ASSERT(h%d%dim == 2)
+
+    ALLOCATE(tpsi(NP, 3), NP*3)
+
+    tpsi = M_z0
+    call zproject(gr%m, h%ep%lso(3, :), h%ep%nvnl, psi(:, 1), tpsi(:, 1), simul_box_is_periodic(gr%sb), ik)
+    call zproject(gr%m, h%ep%lso(1, :), h%ep%nvnl, psi(:, 2), tpsi(:, 2), simul_box_is_periodic(gr%sb), ik)
+    call zproject(gr%m, h%ep%lso(2, :), h%ep%nvnl, psi(:, 2), tpsi(:, 3), simul_box_is_periodic(gr%sb), ik)
+    hpsi(1:NP, 1) = hpsi(1:NP, 1) - M_zI * M_HALF * (tpsi(:, 1) + tpsi(:, 2) + M_zI * tpsi(:, 3))
+
+    tpsi = M_z0
+    call zproject(gr%m, h%ep%lso(3, :), h%ep%nvnl, psi(:, 2), tpsi(:, 1), simul_box_is_periodic(gr%sb), ik)
+    call zproject(gr%m, h%ep%lso(1, :), h%ep%nvnl, psi(:, 1), tpsi(:, 2), simul_box_is_periodic(gr%sb), ik)
+    call zproject(gr%m, h%ep%lso(2, :), h%ep%nvnl, psi(:, 1), tpsi(:, 3), simul_box_is_periodic(gr%sb), ik)
+    hpsi(1:NP, 2) = hpsi(1:NP, 2) - M_zI * M_HALF * (-tpsi(:, 1) + tpsi(:, 2) - M_zI * tpsi(:, 3))
+    
+    deallocate(tpsi)
+
+    call pop_sub()
+  end subroutine zso
+
 #include "undef.F90"
 #include "real.F90"
 #include "h_inc.F90"
@@ -448,9 +482,5 @@ contains
 #include "undef.F90"
 #include "complex.F90"
 #include "h_inc.F90"
-
-#if defined(COMPLEX_WFNS)
-#include "h_so.F90"
-#endif
 
 end module hamiltonian_m

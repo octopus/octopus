@@ -111,7 +111,9 @@ contains
     call td_init(gr, td, st, sys%outp)
 
     call states_distribute_nodes(st, sys%mc)
-    call zstates_allocate_wfns(st, gr%m)
+    ! We always have complex wave-functions during time-propagation
+    st%d%wfs_type = M_CMPLX
+    call states_allocate_wfns(st, gr%m)
 
     call init_wfs()
 
@@ -128,7 +130,7 @@ contains
         h%eii = geo%eii
       end if
 
-      call zepot_forces(gr, h%ep, st, td%iter*td%dt)
+      call epot_forces(gr, h%ep, st, td%iter*td%dt)
       geo%kinetic_energy = kinetic_energy(geo)
       call init_verlet()
     end if
@@ -172,15 +174,15 @@ contains
       call zvmask(gr, h, st)
 
       ! update density
-      call zstates_calc_dens(st, NP, st%rho)
+      call states_calc_dens(st, NP, st%rho)
 
       ! update hamiltonian and eigenvalues (fermi is *not* called)
-      call zv_ks_calc(gr, sys%ks, h, st, calc_eigenval=.true.)
+      call v_ks_calc(gr, sys%ks, h, st, calc_eigenval=.true.)
       call hamiltonian_energy(h, sys%gr, st, -1)
 
       ! Recalculate forces, update velocities...
       if(td%move_ions > 0) then
-        call zepot_forces(gr, h%ep, st, i*td%dt)
+        call epot_forces(gr, h%ep, st, i*td%dt)
         call apply_verlet_2
         geo%kinetic_energy = kinetic_energy(geo)
       end if
@@ -227,7 +229,7 @@ contains
           call messages_print_stress(stdout, 'Recalculating the ground state.')
           fromScratch = .false.
           call ground_state_run(sys, h, fromScratch)
-          call zrestart_read(trim(tmpdir)//'restart_td', st, gr, ierr, i)
+          call restart_read(trim(tmpdir)//'restart_td', st, gr, ierr, i)
           call messages_print_stress(stdout, "Time-Dependent simulation proceeds")
           write(message(1), '(a7,1x,a14,a14,a17)') 'Iter ', 'Time ', 'Energy ', 'Elapsed Time '
           call write_info(1)
@@ -321,7 +323,7 @@ contains
       FLOAT :: x
 
       if(.not.fromScratch) then
-        call zrestart_read(trim(tmpdir)//'restart_td', st, gr, ierr, td%iter)
+        call restart_read(trim(tmpdir)//'restart_td', st, gr, ierr, td%iter)
         if(ierr.ne.0) then
           message(1) = "Could not load "//trim(tmpdir)//"restart_td: Starting from scratch"
           call write_warning(1)
@@ -340,7 +342,7 @@ contains
       end if
 
       if(fromScratch) then
-        call zrestart_read(trim(tmpdir)//'restart_gs', st, gr, ierr)
+        call restart_read(trim(tmpdir)//'restart_gs', st, gr, ierr)
         if(ierr.ne.0) then
           message(1) = "Could not read KS orbitals from '"//trim(tmpdir)//"restart_gs'"
           message(2) = "Please run a ground-state calculation first!"
@@ -355,8 +357,8 @@ contains
         end if
       end if
 
-      call zstates_calc_dens(st, NP, st%rho)
-      call zv_ks_calc(gr, sys%ks, h, st, calc_eigenval=.true.)
+      call states_calc_dens(st, NP, st%rho)
+      call v_ks_calc(gr, sys%ks, h, st, calc_eigenval=.true.)
       x = minval(st%eigenval(st%st_start, :))
 #ifdef HAVE_MPI
       if(st%parallel_in_states) then
@@ -505,7 +507,7 @@ contains
       call push_sub('td.td_save_restart')
 
       ! first write resume file
-      call zrestart_write(trim(tmpdir)//'restart_td', st, gr, ierr, iter)
+      call restart_write(trim(tmpdir)//'restart_td', st, gr, ierr, iter)
       if(ierr.ne.0) then
         message(1) = 'Unsuccesfull write of "'//trim(tmpdir)//'restart_td"'
         call write_fatal(1)

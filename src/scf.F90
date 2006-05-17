@@ -300,14 +300,14 @@ contains
       call states_fermi(st, gr%m)
 
       ! compute output density, potential (if needed) and eigenvalues sum
-      call X(states_calc_dens)(st, NP, st%rho)
+      call states_calc_dens(st, NP, st%rho)
       rhoout(1:NP, 1, :) = st%rho(1:NP, :)
       if (h%d%cdft) then
         call states_calc_physical_current(gr, st, st%j)
         rhoout(1:NP, 2:dim, :) = st%j(1:NP, 1:NDIM, :)
       end if
       if (scf%what2mix == MIXPOT) then
-        call X(v_ks_calc) (gr, ks, h, st)
+        call v_ks_calc(gr, ks, h, st)
         vout(:, 1, :) = h%vhxc
         if (h%d%cdft) vout(:, 2:dim, :) = h%axc(:,:,:)
       end if
@@ -348,7 +348,7 @@ contains
         call mixing(scf%smix, gr%m, iter, dim, nspin, rhoin, rhoout, rhonew)
         st%rho(1:NP,:) = rhonew(1:NP, 1, :)
         if (h%d%cdft) st%j(1:NP,:,:) = rhonew(1:NP, 2:dim, :)
-        call X(v_ks_calc) (gr, ks, h, st)
+        call v_ks_calc(gr, ks, h, st)
       case (MIXPOT)
         ! mix input and output potentials
         call mixing(scf%smix, gr%m, iter, dim, nspin, vin, vout, vnew)
@@ -362,7 +362,7 @@ contains
       if(gs_run_) then 
         ! save restart information
         if(finish.or.(modulo(iter, 3) == 0).or.iter==scf%max_iter.or.forced_finish) then
-          call X(restart_write) (trim(tmpdir)//'restart_gs', st, gr, err, iter=iter)
+          call restart_write(trim(tmpdir)//'restart_gs', st, gr, err, iter=iter)
           if(err.ne.0) then
             message(1) = 'Unsuccesfull write of "'//trim(tmpdir)//'restart_gs"'
             call write_fatal(1)
@@ -380,7 +380,7 @@ contains
 
       if(outp%duringscf .and. gs_run_) then
         write(dirname,'(a,i4.4)') "scf.",iter
-        call X(states_output) (st, gr, dirname, outp)
+        call states_output(st, gr, dirname, outp)
         call hamiltonian_output(h, gr%m, gr%sb, dirname, outp)
       end if
 
@@ -406,7 +406,7 @@ contains
     end do
 
     if (scf%what2mix == MIXPOT) then
-      call X(v_ks_calc) (gr, ks, h, st)
+      call v_ks_calc(gr, ks, h, st)
       deallocate(vout, vin, vnew)
     else
       deallocate(rhonew)
@@ -419,12 +419,12 @@ contains
     end if
 
     ! calculate forces
-    call X(epot_forces)(gr, h%ep, st)
+    call epot_forces(gr, h%ep, st)
 
     if(gs_run_) then 
       ! output final information
       call scf_write_static("static", "info")
-      call X(states_output) (st, gr, "static", outp)
+      call states_output(st, gr, "static", outp)
       if(iand(outp%what, output_geometry).ne.0) &
            call atom_write_xyz("static", "geometry", gr%geo)
       call hamiltonian_output(h, gr%m, gr%sb, "static", outp)
@@ -600,7 +600,11 @@ contains
       ALLOCATE(ang2(st%st_start:st%st_end, st%d%nik), (st%st_end - st%st_start + 1)*st%d%nik)
       do ik = 1, st%d%nik
         do ist = st%st_start, st%st_end
-          call X(states_angular_momentum)(gr, st%X(psi)(:, :, ist, ik), ang(ist, ik, :), ang2(ist, ik))
+          if (st%d%wfs_type == M_REAL) then
+            call dstates_angular_momentum(gr, st%dpsi(:, :, ist, ik), ang(ist, ik, :), ang2(ist, ik))
+          else
+            call zstates_angular_momentum(gr, st%zpsi(:, :, ist, ik), ang(ist, ik, :), ang2(ist, ik))
+          end if
         end do
       end do
       angular(1) =  states_eigenvalues_sum(st, ang(:, :, 1))

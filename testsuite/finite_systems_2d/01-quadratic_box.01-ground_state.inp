@@ -11,6 +11,7 @@ SystemName = "qd"
 CalculationMode = gs
 FromScratch = yes
 Dimensions = 2
+WaveFunctionsType = complex
 
 %Species
 "qd" | 1.0 | user_defined | 1 | "0"

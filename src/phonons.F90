@@ -66,7 +66,7 @@ contains
     call init_()
 
     ! load wave-functions
-    call X(restart_read) (trim(tmpdir)//'restart_gs', sys%st, sys%gr, ierr)
+    call restart_read(trim(tmpdir)//'restart_gs', sys%st, sys%gr, ierr)
     if(ierr.ne.0) then
       message(1) = "Could not load wave-functions: Starting from scratch"
       call write_warning(1)
@@ -75,7 +75,7 @@ contains
     ! setup Hamiltonian
     message(1) = 'Info: Setting up Hamiltonian.'
     call write_info(1)
-    call X(system_h_setup) (sys, h)
+    call system_h_setup(sys, h)
 
     ! create directory for output
     call io_mkdir('phonons')
@@ -127,13 +127,13 @@ contains
       integer :: i
 
       call push_sub('phonons.phonons_run')
-      call X(states_allocate_wfns)(sys%st, sys%gr%m)
+      call states_allocate_wfns(sys%st, sys%gr%m)
 
     end subroutine init_
 
     ! ---------------------------------------------------------
     subroutine end_()
-      deallocate(sys%st%X(psi))
+      call states_deallocate_wfns(sys%st)
 
       call pop_sub()
     end subroutine end_
@@ -179,8 +179,8 @@ contains
 
         ! first force
         call epot_generate(h%ep, gr, st, h%reltype)
-        call X(states_calc_dens) (st, m%np, st%rho)
-        call X(v_ks_calc) (gr, ks, h, st, calc_eigenval=.true.)
+        call states_calc_dens(st, m%np, st%rho)
+        call v_ks_calc(gr, ks, h, st, calc_eigenval=.true.)
         call hamiltonian_energy (h, gr, st, -1)
         call scf_run(scf, gr, st, ks, h, outp)
         do j = 1, geo%natoms
@@ -191,8 +191,8 @@ contains
 
         ! second force
         call epot_generate(h%ep, gr, st, h%reltype)
-        call X(states_calc_dens) (st, m%np, st%rho)
-        call X(v_ks_calc) (gr, ks, h, st, calc_eigenval=.true.)
+        call states_calc_dens(st, m%np, st%rho)
+        call v_ks_calc(gr, ks, h, st, calc_eigenval=.true.)
         call hamiltonian_energy(h, gr, st, -1)
         call scf_run(scf, gr, st, ks, h, outp)
         do j = 1, geo%natoms

@@ -19,7 +19,7 @@
 
 ! ---------------------------------------------------------
 ! conjugate-gradients method.
-subroutine eigen_solver_cg2(gr, st, h, tol, niter, converged, diff, reorder, verbose)
+subroutine X(eigen_solver_cg2) (gr, st, h, tol, niter, converged, diff, reorder, verbose)
   type(grid_t),        intent(inout) :: gr
   type(states_t),      intent(inout) :: st
   type(hamiltonian_t), intent(inout) :: h
@@ -201,11 +201,11 @@ subroutine eigen_solver_cg2(gr, st, h, tol, niter, converged, diff, reorder, ver
   if(verbose_) call messages_print_stress(stdout)
 
   call pop_sub()
-end subroutine eigen_solver_cg2
+end subroutine X(eigen_solver_cg2)
 
 ! ---------------------------------------------------------
 ! The algorithm is essentially taken from Jiang et al. Phys. Rev. B 68, 165337 (2003).
-subroutine eigen_solver_cg2_new(gr, st, h, tol, niter, converged, diff, reorder, verbose)
+subroutine X(eigen_solver_cg2_new) (gr, st, h, tol, niter, converged, diff, reorder, verbose)
   type(grid_t),        intent(inout) :: gr
   type(states_t),      intent(inout) :: st
   type(hamiltonian_t), intent(inout) :: h
@@ -359,4 +359,4 @@ subroutine eigen_solver_cg2_new(gr, st, h, tol, niter, converged, diff, reorder,
   if(verbose_) call messages_print_stress(stdout)
 
   call pop_sub()
-end subroutine eigen_solver_cg2_new
+end subroutine X(eigen_solver_cg2_new)

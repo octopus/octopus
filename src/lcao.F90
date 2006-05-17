@@ -55,93 +55,39 @@ module lcao_m
                                ! 1 => initialized (k, s and v1 matrices filled)
     type(states_t) :: st
 
-    R_TYPE,  pointer  :: hamilt(:, :, :) ! hamilt stores the Hamiltonian in the LCAO subspace;
-    R_TYPE,  pointer  :: s     (:, :, :) ! s is the overlap matrix;
-    R_TYPE,  pointer  :: k     (:, :, :) ! k is the kinetic + spin orbit operator matrix;
-    R_TYPE,  pointer  :: v     (:, :, :) ! v is the potential.
+    FLOAT,  pointer  :: dhamilt(:, :, :) ! hamilt stores the Hamiltonian in the LCAO subspace;
+    FLOAT,  pointer  :: ds     (:, :, :) ! s is the overlap matrix;
+    FLOAT,  pointer  :: dk     (:, :, :) ! k is the kinetic + spin orbit operator matrix;
+    FLOAT,  pointer  :: dv     (:, :, :) ! v is the potential.
+
+    CMPLX,  pointer  :: zhamilt(:, :, :) ! hamilt stores the Hamiltonian in the LCAO subspace;
+    CMPLX,  pointer  :: zs     (:, :, :) ! s is the overlap matrix;
+    CMPLX,  pointer  :: zk     (:, :, :) ! k is the kinetic + spin orbit operator matrix;
+    CMPLX,  pointer  :: zv     (:, :, :) ! v is the potential.
   end type lcao_t
 
 contains
 
   ! ---------------------------------------------------------
-  subroutine lcao_initial_wf(n, gr, psi, ispin, ik, err)
-    integer,         intent(in)  :: n
-    type(grid_t),    intent(in)  :: gr
-    R_TYPE,          intent(out) :: psi(:, :)
-    integer,         intent(in)  :: ispin
-    integer,         intent(in)  :: ik
-    integer,         intent(out) :: err
-
-    integer :: norbs, ia, i, j, idim, k, wf_dim
-    type(specie_t), pointer :: s
-    FLOAT :: x(MAX_DIM), r
-
-    err = 0
-    psi = R_TOTYPE(M_ZERO)
-
-    norbs = 0
-    do ia = 1, gr%geo%natoms
-      norbs = norbs + gr%geo%atom(ia)%spec%niwfs
-    end do
-
-    wf_dim = 1
-    if( ispin.eq.SPINORS ) then
-      wf_dim = 2
-      norbs = norbs * 2
-    end if
-
-    if( (n>norbs) .or. (n<1) ) then
-      err = 1; return
-    end if
-
-    idim = 1
-    i = 1; j = 0
-    do
-      j = j + 1
-      do ia = 1, gr%geo%natoms
-        s => gr%geo%atom(ia)%spec
-        do idim = 1, wf_dim
-          if(j > s%niwfs) cycle
-          if(n == i) then
-            do k = 1, gr%m%np
-              x(1:calc_dim) = gr%m%x(k, 1:calc_dim) - gr%geo%atom(ia)%x(1:calc_dim)
-              psi(k, idim) =  specie_get_iwf(s, j, calc_dim, states_spin_channel(ispin, ik, idim), x)
-            end do
-            r = X(states_nrm2)(gr%m, wf_dim, psi)
-            psi = psi/r
-            return
-          end if
-          i = i + 1
-        end do
-      end do
-    end do
-
-  end subroutine lcao_initial_wf
-
-
-  ! ---------------------------------------------------------
   subroutine lcao_init(gr, lcao_data, st, h)
     type(lcao_t),         intent(out)   :: lcao_data
-    type(grid_t), target, intent(inout) :: gr
+    type(grid_t),         intent(inout) :: gr
     type(states_t),       intent(in)    :: st
     type(hamiltonian_t),  intent(in)    :: h
 
-    type(geometry_t), pointer :: geo
-    integer :: norbs, ik, n1, n2, ia, n, ierr
-    R_TYPE, allocatable :: hpsi(:,:)
+    integer :: ia, norbs, n
 
     if(lcao_data%state == 1) return
 
     call profiling_in(C_PROFILING_LCAO_INIT)
     call push_sub('lcao.lcao_init')
 
-    geo => gr%geo
     call states_null(lcao_data%st)
 
     ! Fix the dimension of the LCAO problem (lcao_data%dim)
     norbs = 0
-    do ia = 1, geo%natoms
-      norbs = norbs + geo%atom(ia)%spec%niwfs
+    do ia = 1, gr%geo%natoms
+      norbs = norbs + gr%geo%atom(ia)%spec%niwfs
     end do
     if( (st%d%ispin.eq.SPINORS) ) norbs = norbs * 2
 
@@ -149,7 +95,6 @@ contains
       lcao_data%state = 0
       write(message(1),'(a)') 'Cannot do LCAO initial calculation because there are not enough atomic orbitals.'
       call write_warning(1)
-      nullify(geo)
       call pop_sub()
       return
     end if
@@ -188,53 +133,21 @@ contains
     lcao_data%st%st_end = norbs
     lcao_data%st%d%dim = st%d%dim
     lcao_data%st%d%nik = st%d%nik
-    call X(states_allocate_wfns)(lcao_data%st, gr%m)
+    lcao_data%st%d%ispin = st%d%ispin
+    lcao_data%st%d%wfs_type = st%d%wfs_type
+    call states_allocate_wfns(lcao_data%st, gr%m)
 
-    do ik = 1, st%d%nik
-      do n = 1, lcao_data%st%nst
-        call lcao_initial_wf(n, gr, lcao_data%st%X(psi)(:, :, n, ik), st%d%ispin, ik, ierr)
-        if(ierr.ne.0) then
-          write(message(1),'(a)') 'Internal error in lcao_wf.'
-          call write_fatal(1)
-        end if
-      end do
-    end do
+    if (lcao_data%st%d%wfs_type == M_REAL) then
+      call dlcao_init(lcao_data, gr, h, norbs)
+    else
+      call zlcao_init(lcao_data, gr, h, norbs)
+    end if
 
-    ! Allocation of variables
-    ALLOCATE(lcao_data%hamilt(norbs, norbs, st%d%nik), norbs*norbs*st%d%nik)
-    ALLOCATE(lcao_data%s     (norbs, norbs, st%d%nik), norbs*norbs*st%d%nik)
-    ALLOCATE(lcao_data%k     (norbs, norbs, st%d%nik), norbs*norbs*st%d%nik)
-    ALLOCATE(lcao_data%v     (norbs, norbs, st%d%nik), norbs*norbs*st%d%nik)
-
-    ! Overlap and kinetic+so matrices.
-    ALLOCATE(hpsi(NP, st%d%dim), NP*st%d%dim)
-    do ik = 1, st%d%nik
-      do n1 = 1, lcao_data%st%nst
-        call X(kinetic) (h, gr, lcao_data%st%X(psi)(:, :, n1, ik), hpsi(:, :), ik)
-        ! Relativistic corrections...
-        select case(h%reltype)
-        case(NOREL)
-#if defined(COMPLEX_WFNS) && defined(R_TCOMPLEX)
-        case(SPIN_ORBIT)
-          call zso (h, gr, lcao_data%st%X(psi)(:, :, n1, ik), hpsi(:, :), ik)
-#endif
-        end select
-
-        do n2 = n1, lcao_data%st%nst
-          lcao_data%k(n1, n2, ik) = X(states_dotp)(gr%m, st%d%dim, hpsi, lcao_data%st%X(psi)(:, : ,n2, ik))
-          lcao_data%s(n1, n2, ik) = X(states_dotp)(gr%m, st%d%dim, lcao_data%st%X(psi)(:, :, n1, ik), &
-            lcao_data%st%X(psi)(:, : ,n2, ik))
-        end do
-
-      end do
-    end do
-    deallocate(hpsi)
     lcao_data%state = 1
 
     call pop_sub()
     call profiling_out(C_PROFILING_LCAO_INIT)
   end subroutine lcao_init
-
 
   ! ---------------------------------------------------------
   subroutine lcao_end(lcao_data, nst)
@@ -244,14 +157,22 @@ contains
     call push_sub('lcao.lcao_end')
 
     if(lcao_data%st%nst >= nst) then
-      if(associated(lcao_data%hamilt)) deallocate(lcao_data%hamilt)
-      if(associated(lcao_data%s     )) deallocate(lcao_data%s)
-      if(associated(lcao_data%k     )) deallocate(lcao_data%k)
-      if(associated(lcao_data%v     )) deallocate(lcao_data%v)
+      if(associated(lcao_data%dhamilt)) deallocate(lcao_data%dhamilt)
+      if(associated(lcao_data%ds     )) deallocate(lcao_data%ds)
+      if(associated(lcao_data%dk     )) deallocate(lcao_data%dk)
+      if(associated(lcao_data%dv     )) deallocate(lcao_data%dv)
+
+      if(associated(lcao_data%zhamilt)) deallocate(lcao_data%zhamilt)
+      if(associated(lcao_data%zs     )) deallocate(lcao_data%zs)
+      if(associated(lcao_data%zk     )) deallocate(lcao_data%zk)
+      if(associated(lcao_data%zv     )) deallocate(lcao_data%zv)
     endif
 
-    if(associated(lcao_data%st%X(psi))) then
-      deallocate(lcao_data%st%X(psi)); nullify(lcao_data%st%X(psi))
+    if(associated(lcao_data%st%dpsi)) then
+      deallocate(lcao_data%st%dpsi); nullify(lcao_data%st%dpsi)
+    end if
+    if(associated(lcao_data%st%zpsi)) then
+      deallocate(lcao_data%st%zpsi); nullify(lcao_data%st%zpsi)
     end if
 
     lcao_data%state = 0
@@ -267,64 +188,34 @@ contains
     type(hamiltonian_t), intent(in)    :: h
     integer, optional,   intent(in)    :: start
 
-    integer :: np, dim, nst, ik, n1, n2, idim, norbs, start_
-    R_TYPE, allocatable :: hpsi(:,:)
-    FLOAT, allocatable :: ev(:)
+    integer :: start_
 
     ASSERT(lcao_data%state == 1)
 
     call profiling_in(C_PROFILING_LCAO)
     call push_sub('lcao.lcao_wf')
 
-    norbs = lcao_data%st%nst
-    np = m%np
-    dim = st%d%dim
-    nst = st%nst
+    start_ = 1
+    if(present(start)) start_ = start
 
-    ! Hamiltonian and overlap matrices.
-    ALLOCATE(hpsi(np, dim), np*dim)
-    do ik = 1, st%d%nik
-      do n1 = 1, lcao_data%st%nst
-        hpsi = M_ZERO
-        call X(vlpsi) (h, m, lcao_data%st%X(psi)(:,:, n1, ik), hpsi(:,:), ik)
-        if (h%ep%nvnl > 0) call X(vnlpsi) (h, m, lcao_data%st%X(psi)(:,:, n1, ik), hpsi(:,:), ik)
-        do n2 = n1, lcao_data%st%nst
-          lcao_data%v(n1, n2, ik) = X(states_dotp)(m, dim, hpsi, lcao_data%st%X(psi)(1:, : ,n2, ik))
-          lcao_data%hamilt(n1, n2, ik) = lcao_data%k(n1, n2, ik) + lcao_data%v(n1 , n2, ik)
-          lcao_data%hamilt(n2, n1, ik) = R_CONJ(lcao_data%hamilt(n1, n2, ik))
-        end do
-      end do
-    end do
+    if (lcao_data%st%d%wfs_type == M_REAL) then
+      call dlcao_wf(lcao_data, st, m, h, start_)
+    else
+      call zlcao_wf(lcao_data, st, m, h, start_)
+    end if
 
-    do ik = 1, st%d%nik
-      ALLOCATE(ev(norbs), norbs)
-      call lalg_geneigensolve(norbs, lcao_data%hamilt(1:norbs, 1:norbs, ik), &
-        lcao_data%s(1:norbs, 1:norbs, ik), ev)
-
-      start_ = 1
-      if(present(start)) start_ = start
-
-      do n1 = start_, nst
-        st%eigenval(n1, ik) = ev(n1)
-        st%X(psi)(:, :, n1, ik) = R_TOTYPE(M_ZERO)
-      end do
-      deallocate(ev)
-
-      ! Change of base
-      do n1 = start_, nst
-        do idim = 1, dim
-          do n2 = 1, norbs
-            call lalg_axpy(np, lcao_data%hamilt(n2, n1, ik), lcao_data%st%X(psi)(:, idim, n2, ik), &
-              st%X(psi)(:, idim, n1, ik))
-          end do
-        end do
-      end do
-
-    end do
-
-    deallocate(hpsi)
     call pop_sub()
     call profiling_out(C_PROFILING_LCAO)
   end subroutine lcao_wf
+
+
+#include "undef.F90"
+#include "real.F90"
+#include "lcao_inc.F90"
+
+#include "undef.F90"
+#include "complex.F90"
+#include "lcao_inc.F90"
+
 
 end module lcao_m

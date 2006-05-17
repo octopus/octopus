@@ -9,6 +9,7 @@ fromScratch = yes
 
 Dimensions = 1
 PeriodicDimensions = 1
+WaveFunctionsType = complex
 
 NumberUnoccStates = 4
 ConvAbsDens = 1e-6

@@ -53,8 +53,7 @@ module system_m
     system_end,           &
     atom_density,         &
     system_guess_density, &
-    dsystem_h_setup,      &
-    zsystem_h_setup
+    system_h_setup
 
   type system_t
     type(grid_t),     pointer :: gr    ! the mesh
@@ -160,7 +159,7 @@ contains
 
     integer :: i, in_points, k, n
     FLOAT :: r, x
-    R_TYPE :: psi1, psi2
+    FLOAT :: psi1, psi2
     type(specie_t), pointer :: s
 #if defined(HAVE_MPI)
     integer :: in_points_red
@@ -436,38 +435,20 @@ contains
 
 
   !----------------------------------------------------------
-  subroutine dsystem_h_setup(sys, h)
+  subroutine system_h_setup(sys, h)
     type(system_t),      intent(inout) :: sys
     type(hamiltonian_t), intent(inout) :: h
 
     call push_sub('systm.hamiltonian_setup')
 
     call states_fermi(sys%st, sys%gr%m)
-    call dstates_calc_dens(sys%st, sys%gr%m%np, sys%st%rho)
+    call states_calc_dens(sys%st, sys%gr%m%np, sys%st%rho)
 
-    call dv_ks_calc(sys%gr, sys%ks, h, sys%st, calc_eigenval=.true.) ! get potentials
+    call v_ks_calc(sys%gr, sys%ks, h, sys%st, calc_eigenval=.true.) ! get potentials
     call states_fermi(sys%st, sys%gr%m)                            ! occupations
     call hamiltonian_energy(h, sys%gr, sys%st, -1)            ! total energy
 
     call pop_sub()
-  end subroutine dsystem_h_setup
-
-
-  !----------------------------------------------------------
-  subroutine zsystem_h_setup(sys, h)
-    type(system_t),      intent(inout) :: sys
-    type(hamiltonian_t), intent(inout) :: h
-
-    call push_sub('systm.hamiltonian_setup')
-
-    call states_fermi(sys%st, sys%gr%m)
-    call zstates_calc_dens(sys%st, sys%gr%m%np, sys%st%rho)
-
-    call zv_ks_calc(sys%gr, sys%ks, h, sys%st, calc_eigenval=.true.) ! get potentials
-    call states_fermi(sys%st, sys%gr%m)                              ! occupations
-    call hamiltonian_energy(h, sys%gr, sys%st, -1)           ! total energy
-
-    call pop_sub()
-  end subroutine zsystem_h_setup
+  end subroutine system_h_setup
 
 end module system_m

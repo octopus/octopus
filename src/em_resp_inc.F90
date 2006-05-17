@@ -365,3 +365,157 @@ contains
 end subroutine X(get_response_e)
 
 
+! ---------------------------------------------------------
+subroutine X(static_response) (sys, h, lr, props, pol, hpol)
+  type(system_t),      intent(inout) :: sys
+  type(hamiltonian_t), intent(inout) :: h
+  type(lr_t),          intent(inout) :: lr(:,:) ! lr(NDIM,1,1)
+  type(pol_props_t),     intent(in)    :: props
+  FLOAT,               intent(out)   :: pol(:,:)
+  FLOAT,               intent(out)   :: hpol(:,:,:)
+
+  integer :: i, j, k
+  integer :: ispin, ist, ispin2, ist2, n, np, dim
+
+  R_TYPE :: prod
+
+  R_TYPE, allocatable :: tmp(:,:), dVde(:,:,:), drhode(:,:)
+  FLOAT,  allocatable :: kxc(:,:,:,:)
+  FLOAT               :: spinfactor
+
+  np  = sys%gr%m%np
+  dim = sys%gr%sb%dim
+
+  call push_sub('em_resp.static_response')
+
+  message(1) = "Info:  Calculating static properties"
+  call write_info(1)
+
+  ALLOCATE(tmp(1:np, 1), np)
+  ALLOCATE(dVde(1:np, 1:sys%st%d%nspin, 1:dim), np*sys%st%d%nspin*dim)
+  ALLOCATE(drhode(1:np, 1:dim), np*dim)
+  ALLOCATE(kxc(1:np, 1:sys%st%d%nspin, 1:sys%st%d%nspin, 1:sys%st%d%nspin), np*sys%st%d%nspin**3)
+
+  call xc_get_kxc(sys%ks%xc, sys%gr%m, sys%st%rho, sys%st%d%ispin, kxc)
+
+  ! first the derivatives in all directions are calculated and stored
+  write(message(1), '(a)') 'Info: Calculating derivatives of the orbitals:'
+  call write_info(1)
+
+  do i = 1, dim
+    write(message(1), '(a,i1)') 'Info: Derivative direction: ', i
+    call write_info(1)
+
+    call mix_init(lr(i, 1)%mixer, sys%gr%m, 1, sys%st%d%nspin)
+
+    call X(get_response_e)(sys, h, lr(:,:), i, 1, R_TOTYPE(M_ZERO), props)
+    call mix_end(lr(i, 1)%mixer)
+
+    do ispin = 1, sys%st%d%nspin
+      ! the potential derivatives
+
+      ! Hartree and the potential and the derivative of the
+      !  potential associated at the electric field
+
+      dVde(1:np,ispin, i) = sys%gr%m%x(1:np, i)
+
+      if(props%add_hartree) dVde(1:np, ispin, i) = dVde(1:np, ispin, i) + lr(i,1)%X(dl_Vhar)(1:np) 
+
+      if(props%add_fxc) then 
+        ! xc
+        do ispin2 = 1, sys%st%d%nspin
+          dVde(1:np, ispin,i) = dVde(1:np, ispin,i) + &
+               lr(i, 1)%dl_Vxc(1:np, ispin, ispin2)*lr(i,1)%X(dl_rho)(1:np, ispin2)
+        end do
+      end if
+
+    end do
+
+    ! the density
+    do n = 1, np
+      drhode(n, i) = sum(lr(i, 1)%X(dl_rho)(n, 1:sys%st%d%nspin))
+    end do
+      
+  end do
+
+  write(message(1), '(a)') 'Info: Calculating polarizability tensor'
+  call write_info(1)
+
+  pol = M_ZERO
+  do i = 1, dim
+    do j = 1, np
+      pol(i, 1:dim) = pol(i, 1:dim) - &
+           sys%gr%m%x(j, 1:dim) * drhode(j, i) * sys%gr%m%vol_pp(j)
+    end do
+  end do
+
+  write(message(1), '(a)') 'Info: Calculating hyperpolarizability tensor'
+  call write_info(1)
+    
+  if (sys%st%d%nspin /= UNPOLARIZED ) then 
+    write(message(1), '(a)') 'WARNING: Hyperpolarizability has not been tested for spin polarized systems'
+    call write_warning(1)
+    spinfactor = M_ONE
+  else 
+    spinfactor = M_TWO
+  end if
+
+  hpol = M_ZERO
+
+  do i = 1, dim
+    do j = 1, dim
+      do k = 1, dim
+        
+        do ispin = 1, sys%st%d%nspin
+          do ist = 1, sys%st%nst
+
+            ! <D\psi_n | P_c DV_scf P_c | D\psi_n >
+
+            tmp(1:np, 1)  = dVde(1:np, ispin, j) * lr(k,1)%X(dl_psi)(1:np, 1, ist, ispin)
+            hpol(i, j, k) = hpol(i, j, k) + &
+                 spinfactor * sum(R_CONJ(lr(i, 1)%X(dl_psi)(1:np, 1, ist, ispin)) * &
+                 tmp(1:np, 1) * sys%gr%m%vol_pp(1:np))
+
+            do ispin2 = 1, sys%st%d%nspin
+              do ist2 = 1, sys%st%nst
+                
+                prod = sum(R_CONJ(lr(i, 1)%X(dl_psi)(1:np, 1, ist, ispin)) * &
+                     lr(k, 1)%X(dl_psi)(1:np, 1, ist2, ispin2) * sys%gr%m%vol_pp(1:np))
+
+                prod = prod * sum( &
+                     R_CONJ(sys%st%X(psi)(1:np, 1, ist2, ispin2)) * &
+                     dVde(1:np, ispin, j) * sys%st%X(psi)(1:np, 1, ist, ispin) * &
+                     sys%gr%m%vol_pp(1:np))
+
+                hpol(i, j, k) = hpol(i, j, k) - spinfactor*prod
+              end do ! ist2
+            end do ! ispin2
+            
+          end do ! ist
+        end do ! ispin
+
+        if(props%add_fxc) then 
+          hpol(i, j, k) = hpol(i, j, k) + &
+               sum(kxc(1:np, 1, 1, 1) * drhode(1:np, i) * drhode(1:np, j)*drhode(1:np, k) * &
+               sys%gr%m%vol_pp(1:np))/CNST(6.0)
+        end if
+
+      end do ! k
+    end do ! j
+  end do ! i
+
+  do k = 1, dim
+    do j = 1, k
+      do i = 1, j
+        hpol(i,j,k) = -(hpol(i,j,k) + hpol(j,k,i) + hpol(k,i,j) + hpol(k,j,i) + hpol(j,i,k) + hpol(i,k,j))
+      end do ! k
+    end do ! j
+  end do ! i
+
+  deallocate(tmp)
+  deallocate(dVde)
+  deallocate(drhode)
+  deallocate(kxc)
+
+  call pop_sub()
+end subroutine X(static_response)

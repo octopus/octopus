@@ -68,11 +68,11 @@ contains
 
     call push_sub('gs.ground_state_run')
 
-    call X(states_allocate_wfns)(sys%st, sys%gr%m)
+    call states_allocate_wfns(sys%st, sys%gr%m)
 
     if(.not.fromScratch) then
       ! load wave-functions
-      call X(restart_read) (trim(tmpdir)//'restart_gs', sys%st, sys%gr, ierr)
+      call restart_read(trim(tmpdir)//'restart_gs', sys%st, sys%gr, ierr)
       if(ierr.ne.0) then
         message(1) = "Could not load wave-functions from '"//trim(tmpdir)//"restart_gs'"
         message(2) = "Starting from scratch!"
@@ -100,7 +100,7 @@ contains
       ! overwrite the guess density)
       message(1) = 'Info: Setting up Hamiltonian.'
       call write_info(1)
-      call X(v_ks_calc)(sys%gr, sys%ks, h, sys%st, calc_eigenval=.true.) ! get potentials
+      call v_ks_calc(sys%gr, sys%ks, h, sys%st, calc_eigenval=.true.) ! get potentials
       call states_fermi(sys%st, sys%gr%m)                                ! occupations
       call hamiltonian_energy(h, sys%gr, sys%st, -1)             ! total energy
 
@@ -150,7 +150,7 @@ contains
 
           if (lcao_start == LCAO_START_FULL) then
             ! Update the density and the Hamiltonian
-            call X(system_h_setup) (sys, h)
+            call system_h_setup(sys, h)
           end if
 
         end if
@@ -160,16 +160,16 @@ contains
       ! setup Hamiltonian
       message(1) = 'Info: Setting up Hamiltonian.'
       call write_info(1)
-      call X(system_h_setup) (sys, h)
+      call system_h_setup(sys, h)
 
     end if
 
     ! run self consistency
-#ifdef COMPLEX_WFNS
-    message(1) = 'Info: SCF using complex wavefunctions.'
-#else
-    message(1) = 'Info: SCF using real wavefunctions.'
-#endif
+    if (sys%st%d%wfs_type == M_REAL) then
+      message(1) = 'Info: SCF using real wavefunctions.'
+    else
+      message(1) = 'Info: SCF using complex wavefunctions.'
+    end if
     call write_info(1)
 
     call scf_init(sys%gr, scfv, sys%st, h)
@@ -177,7 +177,8 @@ contains
     call scf_end(scfv)
 
     ! clean up
-    deallocate(sys%st%X(psi)); nullify(sys%st%X(psi))
+    call states_deallocate_wfns(sys%st)
+
     call pop_sub()
   end subroutine ground_state_run
 
