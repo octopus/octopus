@@ -1124,8 +1124,8 @@ contains
       if(atm%spec%local) cycle
 
       if(st%parallel_in_states) then
-        call MPI_ALLREDUCE(atm%f(1), f(1), NDIM, MPI_FLOAT, MPI_SUM, st%mpi_grp%comm, mpi_err)
-        atm%f = fEPOT_FORCES(epot_forces)
+        call MPI_Allreduce(atm%f(1), f(1), NDIM, MPI_FLOAT, MPI_SUM, st%mpi_grp%comm, mpi_err)
+        atm%f = f
       end if
     end do
 #endif
