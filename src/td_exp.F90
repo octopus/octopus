@@ -396,7 +396,7 @@ contains
         end do
       end do
       do i = 1, korder + 1
-        v(NP+1:NP_PART, 1:h%d%dim, i) = R_TOTYPE(M_ZERO)
+        v(NP+1:NP_PART, 1:h%d%dim, i) = M_Z0
       end do
       ! zpsi = nrm * V * expo(1:korder, 1) = nrm * V * expo * V^(T) * zpsi
       call lalg_gemv(NP_PART, h%d%dim, korder+1, M_z1*beta, v, expo(1:korder+1, 1), M_z0, zpsi)
