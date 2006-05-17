@@ -323,7 +323,7 @@ contains
         call deigen_solver_plan(gr, st, h, tol, maxiter, eigens%converged, eigens%diff)
 #if defined(HAVE_ARPACK)
       case(ARPACK)
-        call eigen_solver_arpack(gr, st, h, tol, maxiter, eigens%arnoldi_vectors, &
+        call deigen_solver_arpack(gr, st, h, tol, maxiter, eigens%arnoldi_vectors, &
              eigens%converged, eigens%diff)
 #endif
       case(EVOLUTION)
@@ -359,6 +359,11 @@ contains
 
 
 #if defined(HAVE_ARPACK)
+#include "undef.F90"
+#include "real.F90"
+#include "eigen_arpack.F90"
+#include "undef.F90"
+#include "complex.F90"
 #include "eigen_arpack.F90"
 #endif
 #ifdef HAVE_TRLAN

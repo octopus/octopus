@@ -19,7 +19,7 @@
 
 #include "global.h"
 
-subroutine eigen_solver_arpack(gr, st, h, tol_, niter, ncv, converged, diff)
+subroutine X(eigen_solver_arpack)(gr, st, h, tol_, niter, ncv, converged, diff)
   type(grid_t),        intent(inout) :: gr
   type(states_t),      intent(inout) :: st
   type(hamiltonian_t), intent(inout) :: h
@@ -151,4 +151,4 @@ contains
     deallocate(psi, hpsi)
   end subroutine av
 
-end subroutine eigen_solver_arpack
+end subroutine X(eigen_solver_arpack)
