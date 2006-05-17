@@ -361,10 +361,10 @@ contains
 #if defined(HAVE_ARPACK)
 #include "undef.F90"
 #include "real.F90"
-#include "eigen_arpack.F90"
+#include "eigen_arpack_inc.F90"
 #include "undef.F90"
 #include "complex.F90"
-#include "eigen_arpack.F90"
+#include "eigen_arpack_inc.F90"
 #endif
 #ifdef HAVE_TRLAN
 #include "eigen_trlan.F90"
@@ -374,16 +374,16 @@ contains
 #include "undef.F90"
 #include "real.F90"
 #include "eigen_inc.F90"
-#include "eigen_cg.F90"
-#include "eigen_plan.F90"
-#include "eigen_evolution.F90"
+#include "eigen_cg_inc.F90"
+#include "eigen_plan_inc.F90"
+#include "eigen_evolution_inc.F90"
 
 
 #include "undef.F90"
 #include "complex.F90"
 #include "eigen_inc.F90"
-#include "eigen_cg.F90"
-#include "eigen_plan.F90"
-#include "eigen_evolution.F90"
+#include "eigen_cg_inc.F90"
+#include "eigen_plan_inc.F90"
+#include "eigen_evolution_inc.F90"
 
 end module eigen_solver_m
