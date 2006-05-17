@@ -44,6 +44,7 @@ module lasers_m
     laser_potential
 
   integer, parameter ::           &
+    ENVELOPE_CONSTANT      =  0,  &
     ENVELOPE_GAUSSIAN      =  1,  &
     ENVELOPE_COSINOIDAL    =  2,  &
     ENVELOPE_TRAPEZOIDAL   =  3,  &
@@ -115,6 +116,9 @@ contains
     !% frequency. The "envelope" decides the shape of the enveloping function -- see the
     !% manual for details. "tau0", "t0" and "tau1" are three paramenters that decide on the
     !% temporal shape of the pulse -- the exact details depend on the particular envelope.
+    !% Envelope: 0 - constant ("cw")
+    !%           1 - Gaussian 
+    !%           2 - Cosinusoidal
     !% If the envelope is given in a file, this will be "filename1". If the spatial part
     !% of the field is given in a file, this will be "filename2".
     !%
@@ -324,7 +328,7 @@ contains
     FLOAT,            intent(out) :: pot(m%np)
 
     CMPLX :: amp
-    integer :: i, j
+    integer :: i, j, jj
     FLOAT :: field(MAX_DIM)
 
     if(no_l == 0) then
@@ -334,13 +338,22 @@ contains
 
     pot = M_ZERO
     do i = 1, no_l
-      call laser_amplitude(l(i), t, amp)
+      ! FIXME: need to check if calculation of jj is correct (time-grid mapping)
+      ! either M_HALF or M_ONE
+      if(l(i)%envelope == ENVELOPE_NUMERICAL) then
+         jj = int(abs(M_TWO*t/l(1)%dt) + M_HALF) ! steps of dt/2
+         field(1:sb%dim) = l(i)%numerical(1:sb%dim, jj)
+      else
+        call laser_amplitude(l(i), t, amp)
+        field(1:sb%dim) = real(amp*l(i)%pol(1:sb%dim))
+      endif
+
       if(l(i)%spatial_part == SPATIAL_PART_FROM_FILE) then
         do j = 1, m%np
           pot(j) = pot(j) + real(amp*l(i)%v(j))
         end do
       else
-        field(1:sb%dim) = real(amp*l(i)%pol(1:sb%dim))
+
         do j = 1, m%np
           pot(j) = pot(j) + sum(field(1:sb%dim)*m%x(j,1:sb%dim))
         end do
@@ -366,6 +379,8 @@ contains
       return
     end if
 
+   ! FIXME: need to check if calculation of i is correct (time-grid mapping)
+   ! either M_HALF or M_ONE
     if(no_l == 1 .and. l(1)%envelope == ENVELOPE_NUMERICAL) then
       i = int(abs(M_TWO*t/l(1)%dt) + M_HALF) ! steps of dt/2
       field(1:sb%dim) = l(1)%numerical(1:sb%dim, i)
@@ -415,6 +430,8 @@ contains
 
     ph = M_ZERO; r = M_ZERO
     select case (l%envelope)
+    case(ENVELOPE_CONSTANT)
+      r = M_ONE
     case(ENVELOPE_GAUSSIAN)
       r = exp(-(t - l%t0)**2 / (M_TWO*l%tau0**2))
     case(ENVELOPE_COSINOIDAL)
