@@ -45,12 +45,18 @@ module opt_control_m
   private
   public :: opt_control_run
 
-  integer, parameter, public  ::  &
-    oct_istate_gs = 1,            &
-    oct_istate_ex = 2,            &
-    oct_istate_sp = 3,            &
+  integer, parameter, private  ::  &
+    oct_istate_gs = 1,             &
+    oct_istate_ex = 2,             &
+    oct_istate_sp = 3,             &
     oct_istate_ud = 4             
   
+  integer, parameter, private  ::  &
+    oct_algorithm_zbr98 = 1,       &
+    oct_algorithm_zr98  = 2,       &
+    oct_algorithm_wg05  = 3       
+
+
 contains
 
   ! ---------------------------------------------------------
@@ -60,10 +66,9 @@ contains
 
     type(td_t)                :: td
     type(grid_t),     pointer :: gr   ! some shortcuts
-    type(states_t),   pointer :: st
+    type(states_t),   pointer :: st, psi_i
+    type(states_t)            :: chi, psi, target_st, initial_st
 
-    type(states_t),   pointer :: psi_i
-    type(states_t)            :: chi, psi, targetstate, initialstate
     FLOAT, pointer :: v_old_i(:,:,:), v_old_f(:,:,:)
     FLOAT, pointer :: laser_tmp(:,:), laser(:,:)
     integer :: i, ctr_iter, ctr_iter_max
@@ -73,13 +78,13 @@ contains
     FLOAT, allocatable :: convergence(:,:) , field(:)
     
     character(len=80) :: filename
-    character(len=5)  :: algtype
-    character(len=5)  :: totype
-    integer           :: istype
+    character(len=5)  :: algtype, totype
+    integer           :: istype, algorithm_type
+
     call push_sub('opt_control.opt_control_run')
 
-    ! CHECK:: ONLY DIPOLE APPROXIMATION IN LENGTH GAUGE
-    !         ONLY SINGLE PARTICLE (YET)
+    ! CHECK:: only dipole approximation in length gauge
+    !         only single particle (yet)
     if(h%gauge.ne.1) then
        write(message(1),'(a)') "So far only length gauge is supported..."
        call write_fatal(1)
@@ -90,43 +95,42 @@ contains
     ! CHECK if run mode is defined
     ! define feature_vector - > check if all options match
 
+    ! initialize oct run, defines initial laser... initial state
+    call init_()
 
-    ! INITIALIZE OCT RUN
-    call init_() ! defines initial laser... initial state
+    ! mode switcher
+    select case(algorithm_type)
+      
+    case(oct_algorithm_zbr98)    ! alternative name: BFB
+      call scheme_ZBR98(algtype) ! (0)  rabitz zbr98 type algorithm (states only)    
 
-    ! MODE SWITCHER
-    select case(trim(algtype))
-       
-    case('ZBR98') ! alternative name: BFB
-       ! (0)  RABITZ ZBR98 TYPE ALGORITHM (STATES ONLY)    
-       call scheme_ZBR98(algtype)
-    case('ZR98')  ! FBF
-       ! (1)  RABITZ ZR98  TYPE ALGORITHM 
-       call scheme_ZR98(algtype)
-       !! TODO: o generalize elements
-       !!       o time-dependent targets
-    case('WG05')  ! FB
-       ! (2) Werschnik, Gross Type: allows fixed fluence and filtering
-       call scheme_WG05(algtype)
-       !
-       ! (11) TD TARGETS RABITZ TYPE
-       ! (12) TD TARGETS WG     TYPE (with filter)
+    case(oct_algorithm_zr98)     ! fbf
+      call scheme_ZR98(algtype)  ! (1)  rabitz zr98  type algorithm 
+      ! TODO: o generalize elements
+      !       o time-dependent targets
+
+    case(oct_algorithm_wg05)  ! FB
+      call scheme_WG05(algtype)  ! (2) Werschnik, Gross Type: allows fixed fluence and filtering
+      ! (11) td targets rabitz type
+      ! (12) td targets wg     type (with filter)
+
     case DEFAULT
-        write(message(1),'(a)') "Unknown choice of OCT algorithm."
-        write(message(2),'(a)') "Choose: ZR98, ZBR98, WG05 ."
-        call write_fatal(2)
+      write(message(1),'(a)') "Unknown choice of OCT algorithm."
+      write(message(2),'(a)') "Choose: ZR98, ZBR98, WG05 ."
+      call write_fatal(2)
+
     end select
 
-    ! OUTPUT: States, Lasers, Convergence
+    ! output: States, Lasers, Convergence
     call output()
 
-    ! DONE ... CLEAN UP
+    ! done ... clean up
     write(message(1), '(a,i3)') 'Info: Cleaning up..#', ctr_iter
     call write_info(1)
     ! clean up
     td%tr%v_old => v_old_i
     nullify(h%ep%lasers(1)%numerical)
-    deallocate( laser )
+    deallocate(laser)
     ! write(6,*) 'DEBUG3'    
     deallocate(laser_tmp)
     ! write(6,*) 'DEBUG4'
@@ -163,7 +167,7 @@ contains
       message(1) = "Info: Initial forward propagation"
       call write_info(1)
       
-      psi = initialstate
+      psi = initial_st
       call prop_fwd(psi) 
 !! DEBUG
       call zoutput_function(sys%outp%how,'opt-control','prop1',gr%m,gr%sb,psi%zpsi(:,1,1,1),M_ONE,ierr)
@@ -174,17 +178,17 @@ contains
 
       ctr_loop: do
 
-         ! CHECK FOR STOP FILE AND DELETE FILE
+         ! check for stop file and delete file
 
          ! define target state
-         call target_calc('ZR98',targetstate,psi,chi) ! defines chi
+         call target_calc('ZR98', target_st, psi, chi) ! defines chi
 
          call iteration_manager(stoploop)
          if (stoploop)  exit ctr_loop
 
          message(1) = "Info: Setup backward"
          call write_info(1)
-!! CHECK: WHY DO WE NEED st%rho ?
+!! CHECK: why do we need st%rho ?
          ! setup backward propagation
          call states_calc_dens(chi, NP_PART, st%rho)
          call v_ks_calc(gr, sys%ks, h, chi, calc_eigenval=.true.)
@@ -212,7 +216,7 @@ contains
          call write_field(filename, laser_tmp)
 
          ! setup forward propagation
-         psi = initialstate  
+         psi = initial_st  
          call states_calc_dens(psi, NP_PART, st%rho)
          call v_ks_calc(gr, sys%ks, h, psi, calc_eigenval=.true.)
          do i = 1, st%d%nspin
@@ -275,12 +279,12 @@ contains
          message(1) = "Info: Initial forward propagation"
          call write_info(1)
          
-         psi = initialstate
+         psi = initial_st
          call prop_fwd(psi) 
          call zoutput_function(sys%outp%how,'opt-control','prop1',gr%m,gr%sb,psi%zpsi(:,1,1,1),M_ONE,ierr)
          
          ! define target state
-         call target_calc('ZR98',targetstate,psi,chi) ! defines chi
+         call target_calc('ZR98',target_st,psi,chi) ! defines chi
 
          call iteration_manager(stoploop)
          if (stoploop)  exit ctr_loop
@@ -349,7 +353,7 @@ contains
       message(1) = "Info: Initial backward propagation"
       call write_info(1)
       
-      call target_calc('ZBR98', targetstate, psi, chi)
+      call target_calc('ZBR98', target_st, psi, chi)
       call prop_bwd(chi) 
 !! DEBUG
       call zoutput_function(sys%outp%how, 'opt-control', 'initial_propZBR98', gr%m, gr%sb, psi%zpsi(:,1,1,1), M_ONE, ierr)
@@ -360,7 +364,7 @@ contains
 
       ctr_loop: do
 
-         ! CHECK FOR STOP FILE AND DELETE FILE
+         ! check for stop file and delete file
 
          message(1) = "Info: Setup forward"
          call write_info(1)
@@ -378,7 +382,7 @@ contains
          end do
 
          ! setup forward propagation
-         psi = initialstate  
+         psi = initial_st  
          call states_calc_dens(psi, NP_PART, st%rho)
          call v_ks_calc(gr, sys%ks, h, psi, calc_eigenval=.true.)
          do i = 1, st%d%nspin
@@ -403,12 +407,12 @@ contains
          call write_field(filename, laser)
 
 
-         ! ITERATION MANAGAMENT ! make own subroutine
+         ! iteration managament ! make own subroutine
          call iteration_manager(stoploop)
          if (stoploop)  exit ctr_loop
 
          ! and now backward
-         call target_calc('ZBR98',targetstate,psi,chi)
+         call target_calc('ZBR98',target_st,psi,chi)
          message(1) = "Info: Propagating backward"
          call write_info(1)
          td%dt = -td%dt
@@ -434,7 +438,7 @@ contains
       ! calculate overlap 
       message(1) = "Info: Calculate overlap"
       call write_info(1)
-      call calc_J() ! psi mit targetstate
+      call calc_J() ! psi mit target_st
       
       message(1) = "Info: Loop control"
       call write_info(1)
@@ -465,7 +469,7 @@ contains
     ! ---------------------------------------------------------
     subroutine target_calc(method, targetst, psi_in, chi_out)
       ! calculate chi = \hat{O} psi
-      ! do loop <targetstate|Psi> for all States
+      ! do loop <target_st|Psi> for all States
       character (len=*), intent(in)  :: method
       type(states_t),    intent(in)  :: targetst, psi_in
       type(states_t),    intent(out) :: chi_out
@@ -630,8 +634,6 @@ contains
     subroutine prop_bwd(psi_n) ! give initial chi and laser
       type(states_t), intent(inout)  :: psi_n
 
-      integer :: ierr
-
       message(1) = "Info: Backward propagating Chi"
       call write_info(1)
 
@@ -731,12 +733,13 @@ contains
         do p  = psi%st_start, psi%st_end
            do dim = 1, psi_i%d%dim
           ! WARNING gives garbage when calculated through zstates_dotp
-          !overlap = zstates_dotp(gr%m, psi%d%dim, psi%zpsi(:,:, p, ik), targetstate%zpsi(:,:, p, ik))
+          !overlap = zstates_dotp(gr%m, psi%d%dim, psi%zpsi(:,:, p, ik), target_st%zpsi(:,:, p, ik))
               !write(6,*) p, psi%zpsi(1:3, dim, p, ik)
-              !write(6,*) ik,targetstate%zpsi(1:3, dim, p, ik)
-              overlap= overlap + abs(zmf_integrate(gr%m,conjg(psi%zpsi(:, dim, p, ik))*targetstate%zpsi(:, dim, p, ik)))
+              !write(6,*) ik,target_st%zpsi(1:3, dim, p, ik)
+              overlap= overlap + abs(zmf_integrate(gr%m,conjg(psi%zpsi(:, dim, p, ik))*target_st%zpsi(:, dim, p, ik)))
               functional = overlap - penalty*fluence
-              write(message(1), '(6x,i3,1x,i3,a,f14.8,a,f14.8,a,f14.8)') ik, p, " => J1:", overlap, "   J: " , functional,  "  I: " , fluence
+              write(message(1), '(6x,i3,1x,i3,a,f14.8,a,f14.8,a,f14.8)') &
+                ik, p, " => J1:", overlap, "   J: " , functional,  "  I: " , fluence
               call write_info(1)
            end do
         end do
@@ -753,7 +756,6 @@ contains
 
       FLOAT   :: phi(1:m%np_part)
       integer :: ierr
-      logical :: is_tmp
 
       !write(6,*) 'mesh_change: ', mesh_change
       !call zrestart_read_function('tmp/restart_gs',filename, gr%m,phi, ierr)
@@ -818,7 +820,7 @@ contains
       ! CHECK: STH GOES WRONG HERE: IF psi_i REPLACED BY PSI 
       ! probably something is ill-defined
       call states_output(psi_i, gr, 'opt-control', sys%outp)
-      call zoutput_function(sys%outp%how,'opt-control','target',gr%m,gr%sb,targetstate%zpsi(:,1,1,1),M_ONE,ierr) 
+      call zoutput_function(sys%outp%how,'opt-control','target',gr%m,gr%sb,target_st%zpsi(:,1,1,1),M_ONE,ierr) 
       call zoutput_function(sys%outp%how,'opt-control','final',gr%m,gr%sb,psi%zpsi(:,1,1,1),M_ONE,ierr) 
       call pop_sub()
     end subroutine output
@@ -844,14 +846,14 @@ contains
       !%Description
       !% The string OCTInitialState describes the initial state of the quantum system
       !% Possible arguments are:
-      !%Option gs 1
+      !%Option istate_gs 1
       !% start in the ground state 
-      !%Option ex 2
+      !%Option istate_ex 2
       !% start in the excited state given by OCTISnumber
       !% (ordered by energy)
-      !%Option sp 3
+      !%Option istate_sp 3
       !% start in a superposition of states defined by the block OCTISsuperposition)
-      !%Option ud 4
+      !%Option istate_ud 4
       !% start in a userdefined state 
       !%End
 
@@ -860,7 +862,7 @@ contains
      
 
       ! make it work for single particle
-      call read_state(initialstate, gr%m, "0000000001")
+      call read_state(initial_st, gr%m, "0000000001")
       ! check options in parameter file
 
       ! initial superposition
@@ -892,7 +894,7 @@ contains
 
       ! parse input
       call loct_parse_string(check_inp('OCTTargetOperator'),'gs', totype)
-      call read_state(targetstate, gr%m, "0000000002")
+      call read_state(target_st, gr%m, "0000000002")
 
     end subroutine def_toperator
 
@@ -900,7 +902,6 @@ contains
     ! ---------------------------------------------------------
     subroutine init_()
       integer            :: ierr, kk, jj
-      FLOAT, allocatable :: field(:)
 
       call push_sub('opt_control.init_')  
 
@@ -931,42 +932,43 @@ contains
       ! now we initialize chi. This will repeat some stuff
       call states_init(psi, gr)
       call states_init(chi, gr)
-      call states_init(initialstate, gr)
-      call states_init(targetstate, gr)
+      call states_init(initial_st, gr)
+      call states_init(target_st, gr)
       if(h%ep%nvnl > 0) then
         ALLOCATE(psi%rho_core(NP_PART), NP_PART)
         psi%rho_core(NP_PART) = psi_i%rho_core(NP_PART)  
         
-        ALLOCATE(initialstate%rho_core(NP_PART), NP_PART)
-        initialstate%rho_core(NP_PART) = psi_i%rho_core(NP_PART)  
+        ALLOCATE(initial_st%rho_core(NP_PART), NP_PART)
+        initial_st%rho_core(NP_PART) = psi_i%rho_core(NP_PART)  
         
         ALLOCATE(chi%rho_core(NP_PART), NP_PART)
         chi%rho_core(NP_PART) = psi_i%rho_core(NP_PART) 
         
-        ALLOCATE(targetstate%rho_core(NP_PART), NP_PART)
-        targetstate%rho_core(NP_PART) = psi_i%rho_core(NP_PART)
+        ALLOCATE(target_st%rho_core(NP_PART), NP_PART)
+        target_st%rho_core(NP_PART) = psi_i%rho_core(NP_PART)
       end if 
 
       psi%st_start = psi_i%st_start
       psi%st_end = psi_i%st_end
       psi%d%wfs_type = M_CMPLX
-      initialstate%st_start = psi_i%st_start
-      initialstate%st_end = psi_i%st_end
-      initialstate%d%wfs_type = M_CMPLX
-      targetstate%st_start = psi_i%st_start
-      targetstate%st_end = psi_i%st_end
-      targetstate%d%wfs_type = M_CMPLX
+      initial_st%st_start = psi_i%st_start
+      initial_st%st_end = psi_i%st_end
+      initial_st%d%wfs_type = M_CMPLX
+      target_st%st_start = psi_i%st_start
+      target_st%st_end = psi_i%st_end
+      target_st%d%wfs_type = M_CMPLX
       chi%st_start = psi_i%st_start
       chi%st_end = psi_i%st_end
       chi%d%wfs_type = M_CMPLX
+
       ALLOCATE(psi%zpsi(NP_PART, psi%d%dim, psi%st_start:psi%st_end, psi%d%nik), NP_PART*psi%d%dim*(psi%st_end-psi%st_start+1)*psi%d%nik)
-      ALLOCATE(chi%zpsi(NP_PART, chi%d%dim, chi%st_start:chi%st_end, chi%d%nik), NP_PART*chi%d%dim*(chi%st_end-chi%st_start+1)*chi%d%nik)      
-      ALLOCATE(initialstate%zpsi(NP_PART, initialstate%d%dim, initialstate%st_start:chi%st_end, chi%d%nik), NP_PART*initialstate%d%dim*(initialstate%st_end-initialstate%st_start+1)*initialstate%d%nik)
-      ALLOCATE(targetstate%zpsi(NP_PART, targetstate%d%dim, targetstate%st_start:chi%st_end, chi%d%nik), NP_PART*targetstate%d%dim*(targetstate%st_end-targetstate%st_start+1)*targetstate%d%nik)
+      ALLOCATE(chi%zpsi(NP_PART, chi%d%dim, chi%st_start:chi%st_end, chi%d%nik), NP_PART*chi%d%dim*(chi%st_end-chi%st_start+1)*chi%d%nik)
+
+      ALLOCATE(initial_st%zpsi(NP_PART, initial_st%d%dim, initial_st%st_start:chi%st_end, chi%d%nik), NP_PART*initial_st%d%dim*(initial_st%st_end-initial_st%st_start+1)*initial_st%d%nik)
+      ALLOCATE(target_st%zpsi(NP_PART, target_st%d%dim, target_st%st_start:chi%st_end, chi%d%nik), NP_PART*target_st%d%dim*(target_st%st_end-target_st%st_start+1)*target_st%d%nik)
       ALLOCATE(v_old_f(NP_PART, chi%d%nspin, 3), NP_PART*chi%d%nspin*3)
 
 
-      
       ! INITIAL LASER FIELD 
 
       ! allocate memory
@@ -989,9 +991,9 @@ contains
             laser(:,jj) = laser(:,jj) + field
          end do
       enddo
-!!
+
       write(filename,'(a)') 'opt-control/initial_laser.1'
-!!
+
       call write_field(filename, laser)
       !! - deallocate multiple lasers
       call laser_end(h%ep%no_lasers,h%ep%lasers)
@@ -1002,22 +1004,22 @@ contains
       h%ep%lasers(1)%dt = td%dt
       h%ep%lasers(1)%numerical => laser   
       h%ep%lasers(1)%numerical => laser_tmp
-!!
+
       write(filename,'(a)') 'opt-control/initial_laser.2'
       call write_field(filename, laser)
-      write(6,*) 'LASER STRENGTH', SUM(laser**2)*abs(td%dt)
-!!
-      ! INITIAL LASER DEFINITION END
+      ! write(6,*) 'LASER STRENGTH', SUM(laser**2)*abs(td%dt)
+
+      ! initial laser definition end
       
    
-      !! READ IN OCT PARAMETERS
+      !! read in oct parameters
       ! description here
       call loct_parse_float(check_inp('OCTPenalty'), M_ONE, penalty)
       call loct_parse_float(check_inp('OCTEps'), CNST(1e-3), eps)
       call loct_parse_int(check_inp('OCTMaxIter'), 10, ctr_iter_max)
       call loct_parse_int(check_inp('OCTTargetMode'),0,targetmode)
       call loct_parse_int(check_inp('OCControlFilterMode'),0,filtermode)
-      call loct_parse_string(check_inp('OCTScheme'),'ZR98', algtype)
+      call loct_parse_int(check_inp('OCTScheme'), oct_algorithm_zr98, algorithm_type)
 
 
       if(ctr_iter_max < 0.and.eps<M_ZERO) then
@@ -1028,7 +1030,7 @@ contains
       if(ctr_iter_max < 0) ctr_iter_max = huge(ctr_iter_max)
 
       ALLOCATE(convergence(4,ctr_iter_max),ctr_iter_max*4)
-      ! INITIAL STATE
+      ! initial state
       ! replace by extra routine
       call def_istate()
       call def_toperator()
@@ -1036,8 +1038,8 @@ contains
       ! write(6,*) size(psi_i%zpsi)
       ! write(6,*) shape(psi_i%zpsi)
 
-      call zoutput_function(sys%outp%how,'opt-control','initial1',gr%m,gr%sb,initialstate%zpsi(:,1,1,1),u,ierr)
-      call zoutput_function(sys%outp%how,'opt-control','target1',gr%m,gr%sb,targetstate%zpsi(:,1,2,1),u,ierr) 
+      call zoutput_function(sys%outp%how,'opt-control','initial1',gr%m,gr%sb,initial_st%zpsi(:,1,1,1),u,ierr)
+      call zoutput_function(sys%outp%how,'opt-control','target1',gr%m,gr%sb,target_st%zpsi(:,1,2,1),u,ierr) 
 
      call pop_sub()
     end subroutine init_
