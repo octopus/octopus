@@ -253,16 +253,16 @@ contains
 
 #include "undef.F90"
 #include "real.F90"
-#include "xc_KLI.F90"
-#include "xc_OEP_x.F90"
-#include "xc_OEP_SIC.F90"
+#include "xc_KLI_inc.F90"
+#include "xc_OEP_x_inc.F90"
+#include "xc_OEP_SIC_inc.F90"
 #include "xc_OEP_inc.F90"
 
 #include "undef.F90"
 #include "complex.F90"
-#include "xc_KLI.F90"
-#include "xc_OEP_x.F90"
-#include "xc_OEP_SIC.F90"
+#include "xc_KLI_inc.F90"
+#include "xc_OEP_x_inc.F90"
+#include "xc_OEP_SIC_inc.F90"
 #include "xc_OEP_inc.F90"
 
 #include "undef.F90"

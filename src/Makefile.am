@@ -39,10 +39,10 @@ noinst_HEADERS = \
 	fftw2.F90 fftw3.F90 \
 	mesh_init.F90 par_vec_inc.F90 derivatives_inc.F90 cf_inc.F90 mf_inc.F90 f_inc.F90 \
 	poisson1D.F90 poisson2D.F90 poisson3D.F90 \
-	xc_vxc.F90 xc_axc.F90 xc_fxc.F90 xc_kxc.F90 xc_KLI.F90 xc_OEP_x.F90 xc_OEP_SIC.F90 \
+	xc_vxc.F90 xc_axc.F90 xc_fxc.F90 xc_kxc.F90 xc_KLI_inc.F90 xc_OEP_x_inc.F90 xc_OEP_SIC_inc.F90 \
 	epot_inc.F90 \
 	xc_OEP_inc.F90 h_inc.F90 \
-        eigen_trlan.F90 \
+	eigen_trlan.F90 \
 	eigen_inc.F90 eigen_cg_inc.F90 eigen_plan_inc.F90 eigen_arpack_inc.F90 eigen_evolution_inc.F90 \
 	lcao_inc.F90 crystal.F90 restart_inc.F90 states_inc.F90 states_kpoints.F90 \
 	linear_response_inc.F90 \
@@ -221,7 +221,7 @@ unocc.o: global.h unocc_inc.F90
 v_ks.o: global.h
 xc.o: global.h xc_vxc.F90 xc_axc.F90 xc_fxc.F90
 xc_functl.o: global.h
-xc_OEP.o: global.h xc_KLI.F90 xc_OEP_x.F90 xc_OEP_SIC.F90 xc_OEP_inc.F90
+xc_OEP.o: global.h xc_KLI_inc.F90 xc_OEP_x_inc.F90 xc_OEP_SIC_inc.F90 xc_OEP_inc.F90
 xyz_adjust.o: global.h
 xyzanim.o: global.h
 xyz_file.o: global.h
