@@ -184,7 +184,7 @@ contains
         call loct_parse_block_float(blk, 0, i-1, ep%E_field(i))
       end do
       call loct_parse_block_end(blk)
-
+      
       ! Compute the scalar potential
       ALLOCATE(ep%v_static(NP), NP)
       do i = 1, NP
@@ -208,16 +208,15 @@ contains
     !% Important note: The static magnetic field may only be applied if you 
     !% are using the executable compiled for real-only wavefunctions. If you
     !% get this as an error message, please remove the 'StaticMagneticField' 
-    !% block from you input file, or else try running with a complex executable 
-    !% (octopus_cmplx) instead.
+    !% block from you input file, or else try running with 
+    !% WaveFunctionsType = complex.
     !%End
     nullify(ep%B_field, ep%A_static)
     if(loct_parse_block(check_inp('StaticMagneticField'), blk)==0) then
-
-!FIXME: the following lines are not valid anymore
-!!#if !defined(COMPLEX_WFNS)
-!!      call input_error('StaticMagneticField')
-!!#endif
+      
+      if (st%d%wfs_type == M_REAL) then
+        call input_error('StaticMagneticField')
+      end if
 
       ALLOCATE(ep%B_field(3), 3)
       do i = 1, 3
