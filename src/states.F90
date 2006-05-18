@@ -433,6 +433,9 @@ contains
 
     end if
 
+    ! always use complex wave-functions for periodic systems
+    if(simul_box_is_periodic(m%sb)) st%d%wfs_type = M_CMPLX
+
     n = m%np_part * st%d%dim * (st%st_end-st%st_start+1) * st%d%nik
     if (st%d%wfs_type == M_REAL) then
       ALLOCATE(st%dpsi(m%np_part, st%d%dim, st%st_start:st%st_end, st%d%nik), n)
