@@ -134,8 +134,7 @@ contains
     lcao_data%st%d%dim = st%d%dim
     lcao_data%st%d%nik = st%d%nik
     lcao_data%st%d%ispin = st%d%ispin
-    lcao_data%st%d%wfs_type = st%d%wfs_type
-    call states_allocate_wfns(lcao_data%st, gr%m)
+    call states_allocate_wfns(lcao_data%st, gr%m, st%d%wfs_type)
 
     if (lcao_data%st%d%wfs_type == M_REAL) then
       call dlcao_init(lcao_data, gr, h, norbs)

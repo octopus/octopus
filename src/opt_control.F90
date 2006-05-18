@@ -915,16 +915,10 @@ contains
 
       call td_init(gr, td, sys%st, sys%outp)
 
-      call states_allocate_wfns(st, gr%m)
+      call states_allocate_wfns(st, gr%m, M_CMPLX)
 
       ! psi_i is initialized in system_init
       psi_i => st
-
-      !psi_i should have complex wavefunctions
-      if (psi_i%d%wfs_type /= M_CMPLX) then
-        message(1) = "error in init_.opt_control"
-        call write_fatal(1)
-      end if
 
       ! call write_info(2)
       v_old_i => td%tr%v_old
@@ -950,22 +944,17 @@ contains
 
       psi%st_start = psi_i%st_start
       psi%st_end = psi_i%st_end
-      psi%d%wfs_type = M_CMPLX
       initial_st%st_start = psi_i%st_start
       initial_st%st_end = psi_i%st_end
-      initial_st%d%wfs_type = M_CMPLX
       target_st%st_start = psi_i%st_start
       target_st%st_end = psi_i%st_end
-      target_st%d%wfs_type = M_CMPLX
       chi%st_start = psi_i%st_start
       chi%st_end = psi_i%st_end
-      chi%d%wfs_type = M_CMPLX
+      call states_allocate_wfns(psi,        gr%m, M_CMPLX)
+      call states_allocate_wfns(chi,        gr%m, M_CMPLX)
+      call states_allocate_wfns(initial_st, gr%m, M_CMPLX)
+      call states_allocate_wfns(target_st,  gr%m, M_CMPLX)
 
-      ALLOCATE(psi%zpsi(NP_PART, psi%d%dim, psi%st_start:psi%st_end, psi%d%nik), NP_PART*psi%d%dim*(psi%st_end-psi%st_start+1)*psi%d%nik)
-      ALLOCATE(chi%zpsi(NP_PART, chi%d%dim, chi%st_start:chi%st_end, chi%d%nik), NP_PART*chi%d%dim*(chi%st_end-chi%st_start+1)*chi%d%nik)
-
-      ALLOCATE(initial_st%zpsi(NP_PART, initial_st%d%dim, initial_st%st_start:chi%st_end, chi%d%nik), NP_PART*initial_st%d%dim*(initial_st%st_end-initial_st%st_start+1)*initial_st%d%nik)
-      ALLOCATE(target_st%zpsi(NP_PART, target_st%d%dim, target_st%st_start:chi%st_end, chi%d%nik), NP_PART*target_st%d%dim*(target_st%st_end-target_st%st_start+1)*target_st%d%nik)
       ALLOCATE(v_old_f(NP_PART, chi%d%nspin, 3), NP_PART*chi%d%nspin*3)
 
 

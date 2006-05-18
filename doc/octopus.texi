@@ -265,6 +265,14 @@ any later version published by the Free Software Foundation.
 
 
 
+
+
+
+
+
+
+
+
 @detailmenu
  --- The Detailed Node Listing ---
 
@@ -288,6 +296,7 @@ Input Variables
 * Generalities::                
 * Geometry Optimization::       
 * Hamiltonian::                 
+* Optimal Control::             
 * Output::                      
 * SCF::                         
 * States::                      

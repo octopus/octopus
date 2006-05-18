@@ -111,9 +111,8 @@ contains
     call td_init(gr, td, st, sys%outp)
 
     call states_distribute_nodes(st, sys%mc)
-    ! We always have complex wave-functions during time-propagation
-    st%d%wfs_type = M_CMPLX
-    call states_allocate_wfns(st, gr%m)
+    ! Alocate complex wave-functions during time-propagation
+    call states_allocate_wfns(st, gr%m, M_CMPLX)
 
     call init_wfs()
 

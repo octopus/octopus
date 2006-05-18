@@ -199,23 +199,6 @@ contains
 
     call states_null(st)
 
-    !%Variable WaveFunctionsType
-    !%Type integer
-    !%Default real
-    !%Section States
-    !%Description
-    !% The calculations may be done using real or complex wave-functions.
-    !%Option real 1
-    !% Real wave-functions
-    !%Option complex 2
-    !% Complex wave-functions
-    !%End
-    call loct_parse_int(check_inp('WaveFunctionsType'), M_REAL, st%d%wfs_type)
-    if(.not.varinfo_valid_option('WaveFunctionsType', st%d%wfs_type)) call input_error('WaveFunctionsType')
-    call messages_print_var_option(stdout, 'WaveFunctionsType', st%d%wfs_type)
-
-
-
     !%Variable SpinComponents
     !%Type integer
     !%Default unpolarized
@@ -313,10 +296,6 @@ contains
     ! current
     call loct_parse_logical(check_inp('CurrentDFT'), .false., st%d%cdft)
     if (st%d%cdft) then
-      if (st%d%wfs_type == M_REAL) then
-        message(1) = "Cannot use Current DFT with real wave-functions."
-        call write_fatal(1)
-      end if
       if(st%d%ispin == SPINORS) then
         message(1) = "Sorry, Current DFT not working yet for spinors"
         call write_fatal(1)
@@ -423,12 +402,44 @@ contains
   ! ---------------------------------------------------------
   ! Allocates the KS wavefunctions defined within an states_t
   ! structure.
-  subroutine states_allocate_wfns(st, m)
+  subroutine states_allocate_wfns(st, m, wfs_type)
     type(states_t), intent(inout) :: st
     type(mesh_t),    intent(in)    :: m
+    integer, optional, intent(in) :: wfs_type
+
     integer :: n
 
     call push_sub('states.states_allocate_wfns')
+
+    if (present(wfs_type)) then
+      ASSERT(wfs_type == M_REAL .or. wfs_type == M_CMPLX)
+      st%d%wfs_type = wfs_type
+    else ! read the wave-functions type from the input file
+
+      !%Variable WaveFunctionsType
+      !%Type integer
+      !%Default real
+      !%Section States
+      !%Description
+      !% The calculations may be done using real or complex wave-functions.
+      !%Option real 1
+      !% Real wave-functions
+      !%Option complex 2
+      !% Complex wave-functions
+      !%End
+      call loct_parse_int(check_inp('WaveFunctionsType'), M_REAL, st%d%wfs_type)
+      if(.not.varinfo_valid_option('WaveFunctionsType', st%d%wfs_type)) call input_error('WaveFunctionsType')
+      call messages_print_var_option(stdout, 'WaveFunctionsType', st%d%wfs_type)
+
+    end if
+
+    ! Check input
+    if (st%d%wfs_type == M_REAL) then
+      if (st%d%cdft) then
+        message(1) = "Cannot use Current DFT with real wave-functions."
+        call write_fatal(1)
+      end if
+    end if
 
     n = m%np_part * st%d%dim * (st%st_end-st%st_start+1) * st%d%nik
     if (st%d%wfs_type == M_REAL) then
