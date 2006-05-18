@@ -262,9 +262,9 @@ contains
     message(1) = "  :: two-body"
     call write_info(1)
     if (sys%st%d%wfs_type == M_REAL) then
-      call dtwo_body(sys%gr, sys%st, h)
+      call dtwo_body(sys%gr, sys%st)
     else
-      call ztwo_body(sys%gr, sys%st, h)
+      call ztwo_body(sys%gr, sys%st)
     end if
 
   end subroutine write_matrix_elements

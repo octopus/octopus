@@ -215,8 +215,8 @@ contains
     if(st%parallel_in_states) then
       call MPI_Barrier(st%mpi_grp%comm, mpi_err)
       do i = 1, st%nst
-        call MPI_Bcast(eigenval(i), 1, R_MPITYPE, st%node(i), st%mpi_grp%comm, mpi_err)
-        call MPI_Bcast(occ(i), 1, R_MPITYPE, st%node(i), st%mpi_grp%comm, mpi_err)
+        call MPI_Bcast(eigenval(i), 1, MPI_FLOAT, st%node(i), st%mpi_grp%comm, mpi_err)
+        call MPI_Bcast(occ(i), 1, MPI_FLOAT, st%node(i), st%mpi_grp%comm, mpi_err)
       end do
     end if
 #endif

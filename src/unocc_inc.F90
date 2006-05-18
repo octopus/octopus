@@ -44,11 +44,11 @@ subroutine X(one_body) (m, st, h)
   call io_close(iunit)
 end subroutine X(one_body)
 
+
 ! ---------------------------------------------------------
-subroutine X(two_body) (gr, st, h)
+subroutine X(two_body) (gr, st)
   type(grid_t),        intent(inout) :: gr
   type(states_t),      intent(in)    :: st
-  type(hamiltonian_t), intent(in)    :: h
 
   integer i, j, k, l, iunit
   R_TYPE :: me

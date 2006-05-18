@@ -240,7 +240,7 @@ contains
     end if
 
 #if defined(HAVE_MPI)
-    call TS(MPI_Barrier)(MPI_COMM_WORLD, err) ! Since some processors did more than others...
+    call MPI_Barrier(MPI_COMM_WORLD, mpi_err) ! Since some processors did more than others...
 #endif
 
     call pop_sub()

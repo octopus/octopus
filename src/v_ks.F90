@@ -308,12 +308,4 @@ contains
     end subroutine v_a_xc
   end subroutine v_ks_calc
 
-#include "undef.F90"
-#include "real.F90"
-#include "v_ks_inc.F90"
-
-#include "undef.F90"
-#include "complex.F90"
-#include "v_ks_inc.F90"
-
 end module v_ks_m

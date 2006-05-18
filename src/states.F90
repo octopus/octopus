@@ -1582,7 +1582,7 @@ contains
     FLOAT,   optional, intent(inout):: de(:,:)
 
     FLOAT :: f, d, s
-    integer :: i, is, ik, ist, idim, ierr
+    integer :: i, is, ik, ist, idim
     CMPLX, allocatable :: psi_fs(:), gpsi(:,:)
     FLOAT, allocatable :: r(:), gradr(:,:), j(:,:)
 
@@ -1590,8 +1590,6 @@ contains
 #if defined(HAVE_MPI)
     FLOAT, allocatable :: reduce_elf(:)
 #endif
-
-    character(len=80) :: fname
 
     ! single or double occupancy
     if(st%d%nspin == 1) then
@@ -1644,7 +1642,7 @@ contains
         ALLOCATE(reduce_elf(1:NP), NP)
         call MPI_Allreduce(elf(1, is), reduce_elf(1), NP, MPI_FLOAT, MPI_SUM, st%mpi_grp%comm, mpi_err)
         elf(1:NP, is) = reduce_elf(1:NP)
-        call MPI_Allreduce(r(1), reduce_elf(1), NP, MPI_FLOAT, MPI_SUM, st%mpi_grp%comm, ierr)
+        call MPI_Allreduce(r(1), reduce_elf(1), NP, MPI_FLOAT, MPI_SUM, st%mpi_grp%comm, mpi_err)
         r(1:NP) = reduce_elf(1:NP)
         do i = 1, NDIM
           call MPI_Allreduce(gradr(1, i), reduce_elf(1), NP, MPI_FLOAT, MPI_SUM, st%mpi_grp%comm, mpi_err)
@@ -1691,14 +1689,13 @@ contains
     FLOAT,   optional, intent(inout):: de(:,:)
 
     FLOAT :: f, d, s
-    integer :: i, is, ik, ist, idim, ierr
+    integer :: i, is, ik, ist, idim
     CMPLX, allocatable :: psi_fs(:), gpsi(:,:)
     FLOAT, allocatable :: r(:), gradr(:,:), j(:,:)
     type(dcf_t) :: dcf_tmp
     type(zcf_t) :: zcf_tmp
 
     FLOAT, parameter :: dmin = CNST(1e-10)
-    character(len=80) :: fname
     
     ! single or double occupancy
     if(st%d%nspin == 1) then

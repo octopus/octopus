@@ -247,7 +247,7 @@ contains
     integer :: i, j, dim
 #if defined(HAVE_MPI)
     R_TYPE, allocatable :: phi2(:, :)
-    integer :: k, l, ierr
+    integer :: k, l
     integer :: status(MPI_STATUS_SIZE)
     integer :: request
 #endif

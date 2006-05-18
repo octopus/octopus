@@ -40,13 +40,13 @@ module ground_state_m
 
   implicit none
 
-  integer, parameter :: &
-    LCAO_START_NONE   = 0,    &
-    LCAO_START_STATES = 1,    &
+  integer, parameter ::     &
+    LCAO_START_NONE    = 0, &
+    LCAO_START_STATES  = 1, &
     LCAO_START_FULL    = 2
 
   private
-  public ::           &
+  public ::                 &
     ground_state_run
 
 
@@ -62,9 +62,6 @@ contains
     type(lcao_t) :: lcao_data
     type(scf_t) :: scfv
     integer     :: ierr
-#if defined(HAVE_MPI)
-    integer :: mpi_err
-#endif
 
     call push_sub('gs.ground_state_run')
 
