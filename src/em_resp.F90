@@ -91,16 +91,21 @@ contains
       nfreq = 1
       nsigma = 1
     else 
-      props%complex_response = (delta /= M_ZERO ) 
+      props%complex_response = (delta /= M_ZERO )
       nfreq = 1   ! for now only polarizability, so only one frequency
       nsigma = 2  ! but positive and negative values of the frequency must be considered
     end if
 
-    ! when computing the dynamic response, one need to work with complex wave-functions
-    if(props%complex_response) then 
-      sys%st%d%wfs_type = M_CMPLX
-    endif
+    !if wfs were complex then we will calculate complex_response
+    props%complex_response = props%complex_response .or. (sys%st%d%wfs_type == M_CMPLX)
 
+    if (props%complex_response) then 
+      message(1) = 'Info: Response will be calculated using complex wavefunctions'
+    else
+      message(1) = 'Info: Response will be calculated using real wavefunctions'
+    end if
+    call write_info(1)
+    
     call read_wfs()
 
     ! setup Hamiltonian
@@ -120,14 +125,10 @@ contains
           call lr_init(lr(i, sigma, j), "SP")
 
           call lr_alloc_fHxc (sys%st, gr%m, lr(i, sigma, j))
-          if(.not.props%complex_response) then
-            if (sys%st%d%wfs_type == M_REAL) then
-              ierr = dlr_alloc_psi(sys%st, gr%m, lr(i, sigma, j))
-              lr(i, sigma, j)%ddl_psi = M_ZERO
-            else
-              ierr = zlr_alloc_psi(sys%st, gr%m, lr(i, sigma, j))
-              lr(i, sigma, j)%zdl_psi = M_ZERO
-            end if
+
+          if(.not.props%complex_response ) then
+            ierr = dlr_alloc_psi(sys%st, gr%m, lr(i, sigma, j))
+            lr(i, sigma, j)%ddl_psi = M_ZERO
           else
             ierr = zlr_alloc_psi(sys%st, gr%m, lr(i, sigma, j))
             lr(i, sigma, j)%zdl_psi = M_ZERO
@@ -145,7 +146,9 @@ contains
     enddo
 
     if(props%dynamic) then 
-      
+
+      !!DYNAMIC
+
       call io_mkdir('linear')
       iunit = io_open('linear/dynpols', action='write')
 
@@ -167,11 +170,7 @@ contains
         if( props%complex_response ) then 
           call zdynamic_response(sys, h, lr, props, zpol(1:ndim, 1:ndim), cmplx(omega(i), delta, PRECISION),status)
         else
-          if (sys%st%d%wfs_type == M_REAL) then
-            call ddynamic_response(sys, h, lr, props, zpol(1:ndim, 1:ndim), real(omega(i), PRECISION),status)
-          else
-            call zdynamic_response(sys, h, lr, props, zpol(1:ndim, 1:ndim), cmplx(omega(i), M_ZERO, PRECISION),status)
-          end if
+          call ddynamic_response(sys, h, lr, props, zpol(1:ndim, 1:ndim), real(omega(i), PRECISION),status)
         end if
 
         iunit = io_open('linear/dynpols', action='write', position='append' )
@@ -190,8 +189,9 @@ contains
 
     else 
 
-      ! the static case
-      if (sys%st%d%wfs_type == M_REAL) then
+      !!! STATIC
+      
+      if ( .not. props%complex_response) then
         call dstatic_response(sys, h, lr(:, :, 1), props, &
            pol(1:ndim, 1:ndim), hpol(1:ndim, 1:ndim, 1:ndim))
         call output()
@@ -200,6 +200,7 @@ contains
         end do
 
       else
+      
         call zstatic_response(sys, h, lr(:, :, 1), props, &
            pol(1:ndim, 1:ndim), hpol(1:ndim, 1:ndim, 1:ndim))
         call output()
@@ -322,7 +323,12 @@ contains
     end if
 
     ! load wave-functions
-    call states_allocate_wfns(sys%st, gr%m)
+    if ( props%complex_response ) then 
+      call states_allocate_wfns(sys%st, gr%m, M_CMPLX)
+    else 
+      call states_allocate_wfns(sys%st, gr%m, M_REAL)
+    end if
+    
     call restart_read(trim(tmpdir)//'restart_gs', sys%st, sys%gr, ierr)   
     if(ierr.ne.0) then
       message(1) = "Could not read KS orbitals from '"//trim(tmpdir)//"restart_gs'"
