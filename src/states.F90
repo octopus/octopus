@@ -433,14 +433,6 @@ contains
 
     end if
 
-    ! Check input
-    if (st%d%wfs_type == M_REAL) then
-      if (st%d%cdft) then
-        message(1) = "Cannot use Current DFT with real wave-functions."
-        call write_fatal(1)
-      end if
-    end if
-
     n = m%np_part * st%d%dim * (st%st_end-st%st_start+1) * st%d%nik
     if (st%d%wfs_type == M_REAL) then
       ALLOCATE(st%dpsi(m%np_part, st%d%dim, st%st_start:st%st_end, st%d%nik), n)
