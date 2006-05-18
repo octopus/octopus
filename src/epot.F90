@@ -117,9 +117,10 @@ module external_pot_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine epot_init(ep, gr)
-    type(epot_t),     intent(out) :: ep
-    type(grid_t),     intent(in)  :: gr
+  subroutine epot_init(ep, gr, wfs_type)
+    type(epot_t), intent(out) :: ep
+    type(grid_t), intent(in)  :: gr
+    integer,      intent(in)  :: wfs_type
 
     integer :: i, j
     integer(POINTER_SIZE) :: blk
@@ -214,7 +215,7 @@ contains
     nullify(ep%B_field, ep%A_static)
     if(loct_parse_block(check_inp('StaticMagneticField'), blk)==0) then
       
-      if (st%d%wfs_type == M_REAL) then
+      if (wfs_type == M_REAL) then
         call input_error('StaticMagneticField')
       end if
 

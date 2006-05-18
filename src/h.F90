@@ -175,7 +175,7 @@ contains
       nullify(h%axc)
     end if
 
-    call epot_init(h%ep, gr)
+    call epot_init(h%ep, gr, h%d%wfs_type)
 
     !%Variable RelativisticCorrection
     !%Type integer
