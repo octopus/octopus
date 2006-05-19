@@ -841,7 +841,7 @@ contains
 
       ! prepare initialstate
       !%Variable OCTInitialState
-      !%Type String
+      !%Type string
       !%Section Optimal Control
       !%Description
       !% The string OCTInitialState describes the initial state of the quantum system
@@ -879,7 +879,7 @@ contains
 
       ! prepare targetoperator      
       !%Variable OCTTargetState
-      !%Type String
+      !%Type string
       !%Section Optimal Control
       !%Description
       !% The string OCTTargetOperator describes the initial state of the quantum system
