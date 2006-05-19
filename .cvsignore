@@ -9,6 +9,7 @@ autom4te.cache
 autogen*
 Makefile
 .deps
+*.bak
 
 Makefile.in
 configure
