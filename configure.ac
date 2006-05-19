@@ -224,7 +224,6 @@ AC_CONFIG_FILES([Makefile
 	build/octopus.spec testsuite/Makefile testsuite/finite_systems_1d/Makefile 
 	testsuite/finite_systems_2d/Makefile testsuite/finite_systems_3d/Makefile 
 	testsuite/periodic_systems_1d/Makefile
-	build/var2xml.py
 ])
 
 AC_OUTPUT
