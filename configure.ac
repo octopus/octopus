@@ -37,7 +37,6 @@ AC_PROG_LN_S
 AC_PROG_MAKE_SET
 AC_PROG_RANLIB
 AC_PROG_YACC
-AM_PATH_PYTHON
 
 # Checks for header files.
 AC_HEADER_DIRENT
@@ -68,7 +67,6 @@ dnl ============================================================================
 dnl This part of the configuration file tries to sort out what needs to be built.
 dnl In particular, the code can be compile in single precision, mpi, using
 dnl complex wave-functions in the ground-state, and in debug mode.
-dnl It also checks whether the gui should be built
 
 dnl these are the --enable/--disable possible in octopus
 AC_ARG_ENABLE(complex, AS_HELP_STRING([--enable-complex], [Ground-state complex wavefunctions]), [COMPLEX_WFNS=1])
@@ -91,16 +89,8 @@ case $enable_mpi in
     ;;
 esac
 
-dnl should the gui be built? It defaults to no.
-AC_ARG_ENABLE([gui],
-	      AS_HELP_STRING([--enable-gui], [enable gui (default is NO)]),
-	      [ac_cv_build_gui=$enableval], [ac_cv_build_gui=no])
-AC_CACHE_CHECK([whether to build the gui], [ac_cv_build_gui], [ac_cv_build_gui=no])
-if test "$ac_cv_build_gui" = yes; then
-  if test -d $srcdir/gui; then
-    AC_CONFIG_SUBDIRS(gui)
-  fi
-fi
+dnl build/install python bits
+AC_CONFIG_SUBDIRS(python)
 
 dnl try to find out what is the default FORTRAN 90 compiler
 dnl note that this has to be done after the AC_ARG_ENABLE(mpi...)
