@@ -227,6 +227,7 @@ and Angel Rubio
 
 
 
+
  --- The Detailed Node Listing ---
 
 Installation
@@ -2272,7 +2273,7 @@ File: octopus.info,  Node: Optimal Control,  Next: Output,  Prev: Hamiltonian,  
 
    * *OCTInitialState*
      _Section_: Optimal Control
-     _Type_: String
+     _Type_: string
      The string OCTInitialState describes the initial state of the
      quantum system  Possible arguments are:
 
@@ -2289,7 +2290,7 @@ File: octopus.info,  Node: Optimal Control,  Next: Output,  Prev: Hamiltonian,  
 
    * *OCTTargetState*
      _Section_: Optimal Control
-     _Type_: String
+     _Type_: string
      The string OCTTargetOperator describes the initial state of the
      quantum system  Possible arguments are:  state_gs - Targetoperator
      is a projection operator on the ground state  state_ex -
@@ -4618,79 +4619,79 @@ Options Index
 
 Tag Table:
 Node: Top665
-Node: Authors3261
-Node: Copying6583
-Node: Installation8063
-Node: Quick instructions9032
-Node: Long instructions9567
-Ref: Long instructions-Footnote-119200
-Ref: Long instructions-Footnote-219758
-Node: Different octopus executables19970
-Node: The parser21436
-Node: Description24703
-Node: Mesh24986
-Node: Run Mode SCF25366
-Node: Run Mode Unoccupied States26419
-Node: Run Mode Time Dependent27112
-Node: Function output for visualization31083
-Node: Spectrum calculations32234
-Node: Input Variables32730
-Node: Generalities33227
-Node: Debug35357
-Node: IO38021
-Node: Parallel39786
-Node: Units41010
-Node: Geometry Optimization42283
-Node: Hamiltonian43271
-Node: Poisson49395
-Node: Multigrid50944
-Node: XC52931
-Node: Casida56082
-Node: Static Polarization57880
-Node: Vibrational Modes58273
-Node: General58753
-Node: Curvilinear64239
-Node: Gygi65673
-Node: Derivatives67072
-Node: FFTs68599
-Node: Simulation Box69718
-Node: Optimal Control73380
-Node: Output74721
-Node: SCF80839
-Node: Convergence84698
-Node: EigenSolver86203
-Node: Mixing89010
-Node: States90562
-Node: System96055
-Node: Coordinates96461
-Node: Species99636
-Node: Velocities102737
-Node: Time Dependent104237
-Node: Absorbing Boundaries106260
-Node: Linear Response107366
-Node: PES109849
-Node: Propagation110895
-Node: TD Output124292
-Node: Unoccupied States127264
-Node: Optical Spectra127867
-Node: oct-center-geometry129577
-Node: oct-harmonic-spectrum130253
-Node: Undocumented Variables131883
-Node: External utilities132988
-Node: oct-sf133563
-Node: oct-rsf134347
-Node: oct-hs-mult134474
-Node: oct-hs-acc134683
-Node: oct-xyz-anim134897
-Node: oct-excite135128
-Node: oct-broad135761
-Node: oct-make-st136120
-Node: oct-center-geom137400
-Node: wf.net138446
-Node: Examples139827
-Node: Hello world139986
-Ref: Hello world-Footnote-1146609
-Node: Benzene146693
-Node: Options Index147510
+Node: Authors3262
+Node: Copying6584
+Node: Installation8064
+Node: Quick instructions9033
+Node: Long instructions9568
+Ref: Long instructions-Footnote-119201
+Ref: Long instructions-Footnote-219759
+Node: Different octopus executables19971
+Node: The parser21437
+Node: Description24704
+Node: Mesh24987
+Node: Run Mode SCF25367
+Node: Run Mode Unoccupied States26420
+Node: Run Mode Time Dependent27113
+Node: Function output for visualization31084
+Node: Spectrum calculations32235
+Node: Input Variables32731
+Node: Generalities33228
+Node: Debug35358
+Node: IO38022
+Node: Parallel39787
+Node: Units41011
+Node: Geometry Optimization42284
+Node: Hamiltonian43272
+Node: Poisson49396
+Node: Multigrid50945
+Node: XC52932
+Node: Casida56083
+Node: Static Polarization57881
+Node: Vibrational Modes58274
+Node: General58754
+Node: Curvilinear64240
+Node: Gygi65674
+Node: Derivatives67073
+Node: FFTs68600
+Node: Simulation Box69719
+Node: Optimal Control73381
+Node: Output74722
+Node: SCF80840
+Node: Convergence84699
+Node: EigenSolver86204
+Node: Mixing89011
+Node: States90563
+Node: System96056
+Node: Coordinates96462
+Node: Species99637
+Node: Velocities102738
+Node: Time Dependent104238
+Node: Absorbing Boundaries106261
+Node: Linear Response107367
+Node: PES109850
+Node: Propagation110896
+Node: TD Output124293
+Node: Unoccupied States127265
+Node: Optical Spectra127868
+Node: oct-center-geometry129578
+Node: oct-harmonic-spectrum130254
+Node: Undocumented Variables131884
+Node: External utilities132989
+Node: oct-sf133564
+Node: oct-rsf134348
+Node: oct-hs-mult134475
+Node: oct-hs-acc134684
+Node: oct-xyz-anim134898
+Node: oct-excite135129
+Node: oct-broad135762
+Node: oct-make-st136121
+Node: oct-center-geom137401
+Node: wf.net138447
+Node: Examples139828
+Node: Hello world139987
+Ref: Hello world-Footnote-1146610
+Node: Benzene146694
+Node: Options Index147511
 
 End Tag Table
