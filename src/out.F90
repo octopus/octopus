@@ -62,7 +62,8 @@ module output_m
     output_current    =    32,    &
     output_ELF        =    64,    &
     output_ELF_FS     =   128,    &
-    output_td         =   256
+    output_td         =   256,    &
+    output_pol_density=   512
 
   integer, parameter, private ::  &
     output_axis_x     =     1,    &
@@ -156,6 +157,9 @@ contains
     !%Option transition_density 256
     !% Prints out the transition densities for some given excitations, specified with the
     !% variable "LinearResponseTransitionDensity".
+    !%Option pol_density 512
+    !% Prints out the density of dipole moment. For pol and pol_lr modules, 
+    !% prints the density of polarizability.
     !%End
     call loct_parse_int(check_inp('Output'), 0, outp%what)
     if(.not.varinfo_valid_option('Output', outp%what, is_flag=.true.)) then

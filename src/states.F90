@@ -1502,6 +1502,17 @@ contains
       end do
     end if
 
+    if(iand(outp%what, output_pol_density).ne.0) then
+      ALLOCATE(dtmp(NP), NP)
+      do idim=1, NDIM
+        do is = 1, st%d%nspin
+          dtmp(1:NP)=st%rho(:,is)*gr%m%x(:,idim)
+          write(fname, '(a,i1,a,i1)') 'dipole_density-', is, '-',idim
+          call doutput_function(outp%how, dir, fname, gr%m, gr%sb, dtmp(:), u, ierr)
+        end do
+      end do
+    end if
+
 
     if(iand(outp%what, output_current).ne.0) then
       ! calculate current first
