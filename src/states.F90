@@ -414,6 +414,11 @@ contains
     if (present(wfs_type)) then
       ASSERT(wfs_type == M_REAL .or. wfs_type == M_CMPLX)
       st%d%wfs_type = wfs_type
+
+    elseif (simul_box_is_periodic(m%sb)) then
+      ! always use complex wave-functions for periodic systems
+      st%d%wfs_type = M_CMPLX
+
     else ! read the wave-functions type from the input file
 
       !%Variable WaveFunctionsType
@@ -432,9 +437,6 @@ contains
       call messages_print_var_option(stdout, 'WaveFunctionsType', st%d%wfs_type)
 
     end if
-
-    ! always use complex wave-functions for periodic systems
-    if(simul_box_is_periodic(m%sb)) st%d%wfs_type = M_CMPLX
 
     n = m%np_part * st%d%dim * (st%st_end-st%st_start+1) * st%d%nik
     if (st%d%wfs_type == M_REAL) then
