@@ -437,7 +437,7 @@ contains
       integer :: max, actual, iunit, counter
       FLOAT, allocatable :: deltav(:)
 
-      FLOAT, allocatable :: dx(:)
+      FLOAT, allocatable :: dx(:), tmp(:,:)
       CMPLX, allocatable :: zx(:)
       type(states_pair_t), pointer :: p, q
 #ifdef HAVE_MPI
@@ -509,9 +509,12 @@ contains
           cas%mat(ia, ia) = temp**2 + cas%mat(ia, ia)
         end do
         call io_close(iunit)
-
+        ALLOCATE(tmp(1:cas%n_pairs,1:cas%n_pairs),cas%n_pairs*cas%n_pairs)
+        tmp(1:cas%n_pairs,1:cas%n_pairs) = cas%mat(1:cas%n_pairs,1:cas%n_pairs)
         ! now we diagonalize the matrix
-        call lalg_eigensolve(cas%n_pairs, cas%mat, cas%mat, cas%w)
+        call lalg_eigensolve(cas%n_pairs, tmp, cas%mat, cas%w)
+        DEALLOCATE(tmp)
+
         do ia = 1, cas%n_pairs
           if(cas%w(ia) < M_ZERO) then
             write(message(1),'(a,i4,a)') 'For whatever reason, the excitation energy',ia,' is negative.'

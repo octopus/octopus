@@ -124,7 +124,6 @@ contains
 
     ! ---------------------------------------------------------
     subroutine init_()
-      integer :: i
 
       call push_sub('phonons.phonons_run')
       call states_allocate_wfns(sys%st, sys%gr%m)
@@ -155,7 +154,7 @@ contains
     type(geometry_t), pointer :: geo
 
     integer :: i, j, alpha, beta, n, iunit
-    FLOAT, allocatable :: forces(:,:), forces0(:,:)
+    FLOAT, allocatable :: forces(:,:), forces0(:,:), tmpDM(:,:)
 
     m   => gr%m
     geo => gr%geo
@@ -217,9 +216,15 @@ contains
     call scf_end(scf)
     call io_close(iunit)
 
-    ! diagonalize DM
-    call lalg_eigensolve(ph%dim, ph%DM, ph%DM, ph%freq)
+    !we need a temporary copy of DM, to avoid passing the same array twice
+    ALLOCATE(tmpDM(ph%dim, ph%dim), ph%dim*ph%dim)
+    
+    tmpDM(1:ph%dim,1:ph%dim)=ph%DM(1:ph%dim,1:ph%dim)
 
+    ! diagonalize DM
+    call lalg_eigensolve(ph%dim, tmpDM, ph%DM, ph%freq)
+
+    deallocate(tmpDM)
   end subroutine get_DM
 
 end module phonons_m

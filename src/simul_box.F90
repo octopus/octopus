@@ -156,7 +156,8 @@ contains
     !--------------------------------------------------------------
     subroutine read_box()
       integer(POINTER_SIZE) :: blk
-
+      FLOAT :: default
+      
       call push_sub('simul_box.read_box')
       ! Read box shape.
       ! need to find out calc_mode already here since some of the variables here (e.g.
@@ -217,7 +218,8 @@ contains
         sb%rsize = sb%rsize * units_inp%length%factor
         if(def_rsize>M_ZERO) call check_def(def_rsize, sb%rsize, 'radius')
       case(MINIMUM)
-        call loct_parse_float(check_inp('radius'), sb%rsize, sb%rsize)
+        default=sb%rsize
+        call loct_parse_float(check_inp('radius'), default, sb%rsize)
         sb%rsize = sb%rsize * units_inp%length%factor
         if(sb%rsize < M_ZERO .and. def_rsize < M_ZERO) call input_error('Radius')
       end select
