@@ -84,6 +84,16 @@ contains
 
     call states_null(lcao_data%st)
 
+    !this is to avoid a bug whe deallocating in gfortran 4.2.0 20060520
+    nullify(lcao_data%dhamilt)
+    nullify(lcao_data%ds)
+    nullify(lcao_data%dk)
+    nullify(lcao_data%dv)
+    nullify(lcao_data%zhamilt)
+    nullify(lcao_data%zs)
+    nullify(lcao_data%zk)
+    nullify(lcao_data%zv)
+        
     ! Fix the dimension of the LCAO problem (lcao_data%dim)
     norbs = 0
     do ia = 1, gr%geo%natoms
