@@ -5,8 +5,6 @@ DebugLevel = 0
 CalculationMode = gs
 fromScratch = yes
 
-WaveFunctionsType = complex
-
 BoxShape = sphere
 Radius  = 5.0
 Spacing = 0.5

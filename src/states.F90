@@ -183,6 +183,10 @@ contains
     nullify(st%d)
     ALLOCATE(st%d, 1)
     nullify(st%d%kpoints, st%d%kweights)
+
+    ! By default, calculations use real wave-functions
+    st%d%wfs_type = M_REAL
+
   end subroutine states_null
 
 
@@ -223,11 +227,10 @@ contains
     !%End
     call loct_parse_int(check_inp('SpinComponents'), UNPOLARIZED, st%d%ispin)
     if(.not.varinfo_valid_option('SpinComponents', st%d%ispin)) call input_error('SpinComponents')
-    if (st%d%wfs_type == M_REAL .and. st%d%ispin == SPINORS) then
-      message(1) = "Cannot use spinors with an executable compiled for real wavefunctions."
-      call write_fatal(1)
-    end if
     call messages_print_var_option(stdout, 'SpinComponents', st%d%ispin)
+    ! Use of Spinors requires complex wave-functions
+    if (st%d%ispin == SPINORS) st%d%wfs_type = M_CMPLX
+
 
     !%Variable ExcessCharge
     !%Type float
@@ -296,6 +299,9 @@ contains
     ! current
     call loct_parse_logical(check_inp('CurrentDFT'), .false., st%d%cdft)
     if (st%d%cdft) then
+      ! Use of CDFT requires complex wave-functions
+      st%d%wfs_type = M_CMPLX
+
       if(st%d%ispin == SPINORS) then
         message(1) = "Sorry, Current DFT not working yet for spinors"
         call write_fatal(1)
@@ -306,6 +312,10 @@ contains
 
     ! For non-periodic systems this should just return the Gamma point
     call states_choose_kpoints(st%d, gr%sb, gr%geo)
+
+    ! Periodic systems require complex wave-functions
+    if(simul_box_is_periodic(gr%sb)) st%d%wfs_type = M_CMPLX
+
 
     ! we now allocate some arrays
     ALLOCATE(st%occ     (st%nst, st%d%nik), st%nst*st%d%nik)
@@ -414,28 +424,6 @@ contains
     if (present(wfs_type)) then
       ASSERT(wfs_type == M_REAL .or. wfs_type == M_CMPLX)
       st%d%wfs_type = wfs_type
-
-    elseif (simul_box_is_periodic(m%sb)) then
-      ! always use complex wave-functions for periodic systems
-      st%d%wfs_type = M_CMPLX
-
-    else ! read the wave-functions type from the input file
-
-      !%Variable WaveFunctionsType
-      !%Type integer
-      !%Default real
-      !%Section States
-      !%Description
-      !% The calculations may be done using real or complex wave-functions.
-      !%Option real 1
-      !% Real wave-functions
-      !%Option complex 2
-      !% Complex wave-functions
-      !%End
-      call loct_parse_int(check_inp('WaveFunctionsType'), M_REAL, st%d%wfs_type)
-      if(.not.varinfo_valid_option('WaveFunctionsType', st%d%wfs_type)) call input_error('WaveFunctionsType')
-      call messages_print_var_option(stdout, 'WaveFunctionsType', st%d%wfs_type)
-
     end if
 
     n = m%np_part * st%d%dim * (st%st_end-st%st_start+1) * st%d%nik

@@ -175,7 +175,12 @@ contains
       nullify(h%axc)
     end if
 
-    call epot_init(h%ep, gr, h%d%wfs_type)
+    !Initialize external potential
+    call epot_init(h%ep, gr)
+
+    !Static magnetic field requires complex wave-functions
+    if (associated(h%ep%B_field)) h%d%wfs_type = M_CMPLX
+
 
     !%Variable RelativisticCorrection
     !%Type integer
@@ -198,22 +203,16 @@ contains
     !%End
     call loct_parse_int(check_inp('RelativisticCorrection'), NOREL, h%reltype)
     if(.not.varinfo_valid_option('RelativisticCorrection', h%reltype)) call input_error('RelativisticCorrection')
-
-    if (h%d%wfs_type == M_REAL) then
-      if(h%reltype .ne. NOREL) then
-        message(1) = "Cannot apply relativistic corrections with an executable compiled"
-        message(2) = "for real wavefunctions."
-        call write_fatal(2)
-      end if
-    else
-      call messages_print_var_option(stdout, "RelativisticCorrection", h%reltype)
-
-      ! This is temporary...
-      if(h%reltype > SPIN_ORBIT) then
-        message(1) = 'Error: ZORA corrections not working yet. Visit us soon.'
-        call write_fatal(1)
-      end if
+    if (h%d%ispin /= SPINORS .and. h%reltype == SPIN_ORBIT) then
+      message(1) = "The Spin-orbit term can only be applied when using Spinors."
+      call write_fatal(1)
     end if
+    ! This is temporary...
+    if(h%reltype > SPIN_ORBIT) then
+      message(1) = 'Error: ZORA corrections not working yet. Visit us soon.'
+      call write_fatal(1)
+    end if
+    call messages_print_var_option(stdout, "RelativisticCorrection", h%reltype)
 
     !%Variable TDGauge
     !%Type integer
