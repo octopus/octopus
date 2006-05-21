@@ -18,7 +18,7 @@
 ## $Id$
 
 AC_PREREQ(2.59)
-AC_INIT([Octopus GUI], [0.0.1], [octopus-devel@tddft.org], octopus-gui)
+AC_INIT([octopus], [0.0.1], [octopus-devel@tddft.org], octopus-gui)
 AM_INIT_AUTOMAKE
 
 dnl AM_MAINTAINER_MODE
@@ -41,5 +41,5 @@ if test $ac_cv_build_gui = yes; then
      bonobo-activation-2.0 >= 2.14.0])
 fi
 
-AC_CONFIG_FILES([Makefile var2xml.py octopus-gui])
+AC_CONFIG_FILES([Makefile var2xml.py octopus-gui setup.py])
 AC_OUTPUT
