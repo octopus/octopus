@@ -9,7 +9,7 @@ CLEANFILES = variables varinfo variables.xml
 DISTCLEANFILES = Makefile.in
 
 variables.xml: ../src/*.F90
-	cat ../src/*.F90 | grep '^[[:space:]]*!%' | sed -e's,.*!%,,' | @PYTHON@ ../python/var2xml.py > $@
+	cat ../src/*.F90 | grep '^[[:space:]]*!%' | sed -e's,.*!%,,' | ../python/var2xml.py > $@
 
 varinfo: RUN_SCRIPT
 

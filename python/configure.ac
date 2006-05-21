@@ -41,5 +41,8 @@ if test $ac_cv_build_gui = yes; then
      bonobo-activation-2.0 >= 2.14.0])
 fi
 
-AC_CONFIG_FILES([Makefile var2xml.py octopus-gui setup.py])
+AC_CONFIG_FILES([Makefile])
+AC_CONFIG_FILES([var2xml.py], [chmod +x var2xml.py])
+AC_CONFIG_FILES([octopus-gui], [chmod +x octopus-gui])
+AC_CONFIG_FILES([setup.py], [chmod +x setup.py])
 AC_OUTPUT
