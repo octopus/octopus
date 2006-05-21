@@ -163,24 +163,30 @@ contains
     type(lcao_t), intent(inout) :: lcao_data
     integer,         intent(in) :: nst
 
+    integer :: wfs_type
+
     call push_sub('lcao.lcao_end')
 
-    if(lcao_data%st%nst >= nst) then
-      if(associated(lcao_data%dhamilt)) deallocate(lcao_data%dhamilt)
-      if(associated(lcao_data%ds     )) deallocate(lcao_data%ds)
-      if(associated(lcao_data%dk     )) deallocate(lcao_data%dk)
-      if(associated(lcao_data%dv     )) deallocate(lcao_data%dv)
+    wfs_type = lcao_data%st%d%wfs_type
 
-      if(associated(lcao_data%zhamilt)) deallocate(lcao_data%zhamilt)
-      if(associated(lcao_data%zs     )) deallocate(lcao_data%zs)
-      if(associated(lcao_data%zk     )) deallocate(lcao_data%zk)
-      if(associated(lcao_data%zv     )) deallocate(lcao_data%zv)
+    if(lcao_data%st%nst >= nst) then
+      if(wfs_type == M_REAL) then
+        if(associated(lcao_data%dhamilt)) deallocate(lcao_data%dhamilt)
+        if(associated(lcao_data%ds     )) deallocate(lcao_data%ds)
+        if(associated(lcao_data%dk     )) deallocate(lcao_data%dk)
+        if(associated(lcao_data%dv     )) deallocate(lcao_data%dv)
+      else
+        if(associated(lcao_data%zhamilt)) deallocate(lcao_data%zhamilt)
+        if(associated(lcao_data%zs     )) deallocate(lcao_data%zs)
+        if(associated(lcao_data%zk     )) deallocate(lcao_data%zk)
+        if(associated(lcao_data%zv     )) deallocate(lcao_data%zv)
+      end if
     endif
 
-    if(associated(lcao_data%st%dpsi)) then
+    if( associated(lcao_data%st%dpsi) .and. (wfs_type == M_REAL) ) then
       deallocate(lcao_data%st%dpsi); nullify(lcao_data%st%dpsi)
     end if
-    if(associated(lcao_data%st%zpsi)) then
+    if( associated(lcao_data%st%zpsi) .and. (wfs_type == M_CMPLX) ) then
       deallocate(lcao_data%st%zpsi); nullify(lcao_data%st%zpsi)
     end if
 
