@@ -69,7 +69,6 @@ dnl In particular, the code can be compile in single precision, mpi, using
 dnl complex wave-functions in the ground-state, and in debug mode.
 
 dnl these are the --enable/--disable possible in octopus
-AC_ARG_ENABLE(complex, AS_HELP_STRING([--enable-complex], [Ground-state complex wavefunctions]), [COMPLEX_WFNS=1])
 AC_ARG_ENABLE(single, AS_HELP_STRING([--enable-single], [octopus in single precision]), [SINGLE_PRECISION=1])
 AC_ARG_ENABLE(debug, AS_HELP_STRING([--disable-debug], [debug mode]), [DEBUG=${enableval}])
 
@@ -135,7 +134,6 @@ dnl debug mode
 if test "${SINGLE_PRECISION}"; then
   AC_DEFINE(SINGLE_PRECISION, 1, [octopus compiled in single precision])
   MYEXT="${MYEXT}_single"
-  msg="$msg, single precision"
 fi
 
 dnl debug mode
@@ -147,19 +145,19 @@ AC_SUBST(DEBUG)
 dnl set the default extension for the programs
 EXEEXT="${MYEXT}${EXEEXT}"
 
-dnl we only generate the utilities if single precision, cmplx, and mpi are off
+dnl we only generate the utilities if single precision and mpi are off
 if test x"$enable_mpi" = x"no" -a -z "${SINGLE_PRECISION}"; then
   UTILITY_PROGRAMS='$(EXTRA_PROGRAMS)'
-  msg="$msg + utilities"
+  msg="+ utilities"
 else
   UTILITY_PROGRAMS=''
+  msg=""
 fi
 AC_SUBST(UTILITY_PROGRAMS)
 
 dnl tell the user what we will be compiling
 echo "**********************************************"
-echo "***   octopus${EXEEXT} will be generated using"
-echo "***          $msg"
+echo "***   octopus${EXEEXT} $msg will be generated "
 echo "**********************************************"
 
 dnl ===================================================================
