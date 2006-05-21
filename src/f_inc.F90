@@ -389,6 +389,7 @@ subroutine X(f_l2)(sb, f_der, f, l2f)
   ASSERT(sb%dim.ne.1)
 
   m => f_der%m
+  l2f = R_TOTYPE(M_ZERO)
 
   select case(sb%dim)
   case(3)
@@ -401,9 +402,8 @@ subroutine X(f_l2)(sb, f_der, f, l2f)
       call X(f_angular_momentum)(sb, f_der, gf(:,j), ggf(:,:,j))
     end do
 
-    l2f(:) = R_TOTYPE(M_ZERO)
     do j = 1, sb%dim
-      l2f(:) = l2f(:) + ggf(:, j, j)
+      l2f(1:m%np) = l2f(1:m%np) + ggf(1:m%np, j, j)
     end do
 
   case(2)
@@ -413,7 +413,7 @@ subroutine X(f_l2)(sb, f_der, f, l2f)
     call X(f_angular_momentum)(sb, f_der, f, gf)
     call X(f_angular_momentum)(sb, f_der, gf(:, 1), ggf(:, :, 1))
 
-    l2f(:) = ggf(:, 1, 1)
+    l2f(1:m%np) = ggf(1:m%np, 1, 1)
   end select
 
 

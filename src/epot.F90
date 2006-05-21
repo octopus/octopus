@@ -853,6 +853,7 @@ contains
       n_s = ep%p(ivnl)%n_points_in_sphere
       n_c = ep%p(ivnl)%n_channels
       ALLOCATE(grad_so(n_s, 3, n_c), n_s*3*n_c)
+      grad_so = M_z0
 
       j_loop: do j = 1, n_s
         x_in(:) = m%x(ep%p(ivnl)%jxyz(j), :)
