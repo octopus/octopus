@@ -49,7 +49,9 @@ subroutine X(lcao_initial_wf) (n, m, geo, psi, ispin, ik, err)
   end if
 
   if ((n > norbs) .or. (n < 1)) then
-    err = 1; return
+    err = 1
+    call pop_sub()
+    return
   end if
 
   idim = 1
@@ -67,6 +69,7 @@ subroutine X(lcao_initial_wf) (n, m, geo, psi, ispin, ik, err)
           end do
           r = X(states_nrm2)(m, wf_dim, psi)
           psi = psi/r
+          call pop_sub()
           return
         end if
         i = i + 1
