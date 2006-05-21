@@ -11,5 +11,6 @@ Enabled  : Yes
 
 Input: 05-multigrid_solver.01-ground_state.inp
 
+Match ; Levels ; grep 'Multigrid levels:' out ; \s*Multigrid\s*levels:\s*3
 Match ; TotalEnergy ; grep -A 7 '^Energy:' static/info ; \s*Total\s*=\s*-0.3380
 Match ; Eigenvalues ; grep -A 2 'Eigenvalues \[' static/info | tail -1 ; \s*-0.13735\d*\s*2.0000\d* 

@@ -95,7 +95,7 @@ contains
     call loct_parse_int(check_inp('MultigridLevels'), 0, n_levels)
 
     if ( n_levels <= 0 )then
-      n_levels=n_levels-2
+      n_levels=n_levels-3
       np=m%np
 
       do while ( np > 1 )
