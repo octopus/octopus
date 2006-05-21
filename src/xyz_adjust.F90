@@ -145,6 +145,7 @@ contains
 
     x = M_ZERO
     m = M_ONE
+    sm = M_ZERO
     do i = 1, geo%natoms
       if(.not.pseudo) m = geo%atom(i)%spec%weight
       sm = sm + m

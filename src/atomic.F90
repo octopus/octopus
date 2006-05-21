@@ -278,6 +278,7 @@ contains
   ELSEIF ( FUNCTL.EQ.'GGA' .OR. FUNCTL.EQ.'gga') THEN
     GGA = .TRUE.
   ELSE
+    GGA = .FALSE.
     write(message(1),'(a,a)') 'Error: atomxc: Unknown functional ', FUNCTL
     call write_fatal(1)
   ENDIF

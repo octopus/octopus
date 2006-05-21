@@ -159,6 +159,7 @@ subroutine X(sparskit_solver_init)(n, sk)
     message(1) = 'Info: Sparskit solver type: Direct versions of Quasi Generalize Minimum Residual method'
     workspace_size = sk%size + (m+1) * (2*sk%size+4)
   case default
+    workspace_size = 0 !this avoid uninitialized warning
     write(message(1), '(a,i4,a)') "Input: '", sk%solver_type, &
       "' is not a valid Sparskit Solver"
     message(2) = '( Sparskit Solver =  cg | cgnr | bcg | dbcg | bcgstab | tfqmr | fom | gmres | fgmres | dqgmres )'

@@ -331,6 +331,8 @@ contains
 
     call push_sub('poisson.poisson_fft')
 
+    average=M_ZERO !this avoids a non-initialized warning
+    
     if(m%parallel_in_domains) then
       ALLOCATE(rho_global(m%np_global), m%np_global)
       ALLOCATE(pot_global(m%np_global), m%np_global)

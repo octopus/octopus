@@ -543,7 +543,7 @@ contains
 
     xx(:) = x(:)
     r = sqrt(sum(xx(:)**2))
-
+    l=M_ZERO
     select case(s%type)
     case(SPEC_USDEF)
       ! Note that as the s%user_def is in input units, we have to convert
@@ -570,7 +570,7 @@ contains
 
     case(SPEC_ALL_E)
       l=M_ZERO
-
+    
     end select
 
   end function specie_get_local
@@ -654,6 +654,7 @@ contains
       message(1) = 'Periodic arrays of usedef, jelli, point,'
       message(2) = '1D and 2D systems not implemented yet.'
       call write_fatal(2)
+      l = M_ZERO
     else
       gmod = sqrt(sum(x(:)**2))
       l = loct_splint(s%ps%vlocal_f, gmod)
@@ -740,6 +741,7 @@ contains
     if(.not.s%local) then
       phi =  loct_splint(s%ps%ur(i, is), sqrt(r2)) * loct_ylm(x(1), x(2), x(3), l, m)
     else
+      phi=M_ZERO
       select case(dim)
       case(1)
         phi = exp(-s%omega*r2/M_TWO) * hermite(i-1, x(1)*sqrt(s%omega) )
