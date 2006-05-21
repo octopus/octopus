@@ -62,6 +62,9 @@ subroutine X(eigen_solver_cg2) (gr, st, h, tol, niter, converged, diff, reorder,
   ALLOCATE(   g0(NP_PART, st%d%dim), NP_PART*st%d%dim)
   ALLOCATE(   cg(NP_PART, st%d%dim), NP_PART*st%d%dim)
 
+  ! Set the diff to zero, since it is intent(out)
+  diff = M_ZERO
+
   ! Start of main loop, which runs over all the eigenvectors searched
   ik_loop: do ik = 1, st%d%nik
     conv = converged
@@ -250,6 +253,9 @@ subroutine X(eigen_solver_cg2_new) (gr, st, h, tol, niter, converged, diff, reor
   ALLOCATE(  sd(NP_PART, dim), NP_PART*dim)
   ALLOCATE( cgp(NP_PART, dim), NP_PART*dim)
   ALLOCATE(orthogonal(nst), nst)
+
+  ! Set the diff to zero, since it is intent(out)
+  diff = M_ZERO
 
   kpoints: do ik = 1, nik
     conv = converged

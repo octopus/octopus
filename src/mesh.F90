@@ -169,7 +169,10 @@ contains
     if(present(a)) xx(1:m%sb%dim) = xx(1:m%sb%dim) - a(1:m%sb%dim)
     r = sqrt(dot_product(xx(1:m%sb%dim), xx(1:m%sb%dim)))
 
-    if(present(x)) x(1:m%sb%dim) = xx(1:m%sb%dim)
+    if(present(x)) then
+      x(1:MAX_DIM) = M_ZERO
+      x(1:m%sb%dim) = xx(1:m%sb%dim)
+    end if
   end subroutine mesh_r
 
 

@@ -1041,6 +1041,8 @@ contains
     FLOAT :: o, oplus, ominus
     character(len=80) tmp_str(MAX_DIM), cspin
 
+    call push_sub('states.states_write_eigenvalues')
+
     ns = 1
     if(st%d%nspin == 2) ns = 2
 
@@ -1120,6 +1122,7 @@ contains
       end do
     end do
 
+    call pop_sub()
   end subroutine states_write_eigenvalues
 
 
