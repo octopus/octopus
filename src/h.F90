@@ -166,6 +166,7 @@ contains
     ALLOCATE(h%vhartree(NP),        NP)
     ALLOCATE(h%vxc(NP, h%d%nspin), NP*h%d%nspin)
     ALLOCATE(h%vhxc(NP, h%d%nspin), NP*h%d%nspin)
+    h%vhartree = M_ZERO
     h%vhxc = M_ZERO
     h%vxc = M_ZERO
     if (h%d%cdft) then

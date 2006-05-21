@@ -69,6 +69,7 @@ contains
     FLOAT, allocatable :: mult(:)
     FLOAT, allocatable :: betal(:)
 
+    call push_sub('poisson_corrections.correct_rho')
 
     ALLOCATE(mult((ml+1)**2), (ml+1)**2)
     call get_multipoles(m, rho, ml, mult)
@@ -85,7 +86,7 @@ contains
       end do
     end do
 
-    rho_corrected(1:m%np) = rho(1:m%np)
+    rho_corrected = rho
     vh_correction = M_ZERO
     do i = 1, m%np
       r2 = dot_product(m%x(i, 1:3), m%x(i, 1:3)) ! mesh_r could be used, but it wastes time.
@@ -101,6 +102,7 @@ contains
     end do
 
     deallocate(mult, betal)
+    call pop_sub()
   end subroutine correct_rho
 
 
@@ -115,6 +117,8 @@ contains
     FLOAT   :: tmp(m%np)
     integer :: add_lm, l, mm
 
+    call push_sub('poisson_corrections.get_multipoles')
+
     mult(:) = M_ZERO
     add_lm = 1
     do l = 0, ml
@@ -126,6 +130,7 @@ contains
       end do
     end do
 
+    call pop_sub()
   end subroutine get_multipoles
 
 
@@ -135,6 +140,8 @@ contains
 
     FLOAT :: alpha, beta, gamma, ylm, r, x(MAX_DIM)
     integer :: i, l, add_lm, lldfac, j, mm
+
+    call push_sub('poisson_corrections.build_phi')
 
     ALLOCATE(phi((maxl+1)**2, m%np), (maxl+1)**2*m%np)
 
@@ -158,6 +165,7 @@ contains
       end do
     end do
 
+    call pop_sub()
   contains
 
     ! ---------------------------------------------------------
@@ -184,6 +192,7 @@ contains
     FLOAT :: ylm, r, x(MAX_DIM)
     integer :: i, l, add_lm, mm
 
+    call push_sub('poisson_corrections.build_aux')
     ALLOCATE(aux((maxl+1)**2, m%np), (maxl+1)**2*m%np)
 
     do i = 1, m%np
@@ -206,6 +215,7 @@ contains
       end do
     end do
 
+    call pop_sub()
   end subroutine build_aux
 
 

@@ -265,7 +265,7 @@ subroutine X(eigen_solver_plan) (gr, st, hamilt, tol, niter, converged, diff)
 
         ! Preconditioning
         do idim = 1, dim
-          call lalg_copy(NP, av(:, idim, d1 + 1), aux(:, idim))
+          call lalg_copy(NP_PART, av(:, idim, d1 + 1), aux(:, idim))
           call X(nl_operator_operate) (filter, aux(:, idim), v(:, idim, d1+1))
         end do
 

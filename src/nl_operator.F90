@@ -842,10 +842,12 @@ contains
         fo(ii) = sum(op%w_re(1:nn, ii) * fi(op%i(1:nn, ii)))
       end do
     end if
+    do ii = op%np + 1, size(fo)
+      fo(ii) = M_ZERO
+    end do
 
     call pop_sub()
     call profiling_out(C_PROFILING_NL_OPERATOR)
-
   end subroutine dnl_operator_operate
 
 
@@ -876,10 +878,12 @@ contains
         fo(ii) = sum(op%w_re(1:nn, ii) * fi(op%i(1:nn, ii)))
       end do
     end if
+    do ii = op%np + 1, size(fo)
+      fo(ii) = M_ZERO
+    end do
 
     call pop_sub()
     call profiling_out(C_PROFILING_NL_OPERATOR)
-
   end subroutine znl_operator_operate
 
 
