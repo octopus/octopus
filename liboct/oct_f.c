@@ -235,7 +235,7 @@ void FC_FUNC_(oct_gettimeofday, OCT_GETTIMEOFDAY)
 #endif
 }
 
-void FC_FUNC_(oct_nanosleep, OCT_CLOCK)
+void FC_FUNC_(oct_nanosleep, OCT_NANOSLEEP)
 	(int *sec, int *usec)
 {
 #ifdef linux
