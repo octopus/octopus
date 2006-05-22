@@ -154,7 +154,6 @@ contains
     ALLOCATE(vh_correction(m%np),      m%np)
     ALLOCATE(          tmp(m%np_part), m%np_part)
 
-    rho_corrected = M_ZERO
     tmp = M_ZERO
     call correct_rho(m, maxl, rho, rho_corrected, vh_correction)
     rho_corrected = - M_FOUR*M_PI*rho_corrected
