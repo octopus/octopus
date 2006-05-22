@@ -112,6 +112,7 @@ contains
     type(simul_box_t), intent(in)  :: sb
     type(output_t),    intent(out) :: outp
 
+    call push_sub('out.output_init')
 
     !%Variable Output
     !%Type flag
@@ -266,6 +267,7 @@ contains
     call loct_parse_int(check_inp('OutputEvery'), 1000, outp%iter)
 
     call loct_parse_logical(check_inp('OutputDuringSCF'), .false., outp%duringscf)
+    call pop_sub()
   end subroutine output_init
 
   ! -------------------------------------------------------------------

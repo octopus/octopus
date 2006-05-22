@@ -61,7 +61,7 @@ contains
   subroutine grid_init_stage_1(gr)
     type(grid_t),      intent(inout) :: gr
 
-    call push_sub('grid.grid_init')
+    call push_sub('grid.grid_init_stage_1')
 
     ! initialize curvlinear coordinates
     call curvlinear_init(gr%sb, gr%cv)
@@ -83,6 +83,8 @@ contains
     type(multicomm_t), intent(in)    :: mc
 
     logical :: filter
+ 
+    call push_sub('grid.grid_init_stage_2')
 
     call mesh_init_stage_3(gr%m, gr%geo, gr%cv,  &
       gr%f_der%der_discr%lapl%stencil,        &
@@ -103,6 +105,7 @@ contains
     ! print info concerning the grid
     call grid_write_info(gr, stdout)
 
+    call pop_sub()
   end subroutine grid_init_stage_2
 
 

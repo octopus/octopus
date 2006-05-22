@@ -87,6 +87,7 @@ contains
 
     if(iand(family, XC_FAMILY_OEP).eq.0) then
       oep%level = XC_OEP_NONE
+      call pop_sub()
       return
     end if
 

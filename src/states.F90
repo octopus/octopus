@@ -557,6 +557,7 @@ contains
   subroutine states_densities_init(st, gr)
     type(states_t),    intent(inout) :: st
     type(grid_t),      intent(in)    :: gr
+    call push_sub('states.states_densities_init')
 
     ! allocate arrays for charge and current densities
     ALLOCATE(st%rho(NP_PART, st%d%nspin), NP_PART*st%d%nspin)
@@ -565,6 +566,7 @@ contains
     st%j   = M_ZERO
     if(gr%geo%nlcc) ALLOCATE(st%rho_core(gr%m%np), gr%m%np)
 
+    call pop_sub()
   end subroutine states_densities_init
 
   ! ---------------------------------------------------------
