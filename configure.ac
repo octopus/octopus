@@ -58,7 +58,7 @@ AC_FUNC_REALLOC
 AC_FUNC_SETVBUF_REVERSED
 AC_FUNC_STAT
 AC_FUNC_VPRINTF
-AC_CHECK_FUNCS([getcwd gettimeofday mkdir pow sqrt strcasecmp strdup strerror strncasecmp strndup uname tcgetpgrp])
+AC_CHECK_FUNCS([getcwd gettimeofday mkdir pow sqrt strcasecmp strdup strerror strncasecmp strndup uname tcgetpgrp scandir alphasort])
 
 # Checks for size of pointer
 ACX_POINTER_SIZE

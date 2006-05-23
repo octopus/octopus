@@ -33,6 +33,8 @@
 void FC_FUNC_(oct_printrecipe, OCT_PRINTRECIPE)
 		 (STR_F_TYPE _dir, STR_F_TYPE filename STR_ARG2)
 {
+
+#if HAVE_SCANDIR && HAVE_ALPHASORT
   char *lang, *tmp, dir[512];
 	struct dirent **namelist;
 	int i, n;
@@ -86,4 +88,5 @@ void FC_FUNC_(oct_printrecipe, OCT_PRINTRECIPE)
 	free(namelist);
 
 	TO_F_STR2(dir, filename);
+#endif
 }
