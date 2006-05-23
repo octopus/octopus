@@ -22,7 +22,11 @@
 #ifndef __GSL_USERDEF_H__
 #define __GSL_USERDEF_H__
 
-gsl_complex gsl_complex_step_real (double a);  /* Heaviside step function */
+/* Heaviside step function */
+gsl_complex gsl_complex_step_real (double a);                   
+/* Minimum and maximum of two arguments (comparing real parts) */  
+gsl_complex gsl_complex_min_real (gsl_complex a, gsl_complex b);
+gsl_complex gsl_complex_max_real (gsl_complex a, gsl_complex b);
 
 
 #endif /* __GSL_USERDEF_H__ */

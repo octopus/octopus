@@ -27,16 +27,16 @@
 typedef struct sym_block_line{
   int n;
   char **fields;
-}sym_block_line;
+} sym_block_line;
 
 typedef struct sym_block{
   int n;
   sym_block_line *lines;
-}sym_block;
+} sym_block;
 
 typedef enum{
   S_CMPLX, S_STR, S_BLOCK, S_FNCT
-}symrec_type;
+} symrec_type;
 
 /* Data type for links in the chain of symbols. */
 typedef struct symrec{

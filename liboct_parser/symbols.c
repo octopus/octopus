@@ -139,6 +139,10 @@ static struct init_fntc arith_fncts[] = {
    but use GSL namespacing and macros. */
   {"step", gsl_complex_step_real},
 
+/* Minimum and maximum of two arguments (comparing real parts) */  
+  {"min", gsl_complex_min_real},
+  {"max", gsl_complex_max_real},
+
   {0, 0}
 };
 
@@ -174,7 +178,7 @@ void sym_init_table ()  /* puts arithmetic functions in table. */
     ptr->def = 1;
     ptr->value.fnctptr = arith_fncts[i].fnct;
   }
-  
+
   /* now the constants */
   for (i = 0; arith_cnts[i].fname != 0; i++){
     ptr = putsym(arith_cnts[i].fname, S_CMPLX);

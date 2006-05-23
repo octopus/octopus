@@ -58,28 +58,29 @@ line:
 | error '\n' { yyerrok; YYABORT;}
 ;
      
-exp: NUM             { $$ = $1;                           }
-| VAR                { if(!$1->def) sym_notdef($1); $$ = $1->value.c; }
-| VAR '=' exp        { $$ = $3; $1->value.c = $3; $1->def = 1; $1->type = S_CMPLX;}
-| FNCT '(' exp ')'   { $$ = (*($1->value.fnctptr))($3);   }
-| exp '+' exp        { $$ = gsl_complex_add($1, $3);      }
-| exp '-' exp        { $$ = gsl_complex_sub($1, $3);      }
-| exp '*' exp        { $$ = gsl_complex_mul($1, $3);      }
-| exp '/' exp        { $$ = gsl_complex_div($1, $3);      }
-| '-' exp  %prec NEG { $$ = gsl_complex_negative($2);     }
-| exp '^' exp        { $$ = gsl_complex_pow($1, $3);      }
-| exp '<' exp        { GSL_SET_COMPLEX (&$$, GSL_REAL($1) <  GSL_REAL($3), 0); } /* Boolean comparisons ues only the real part */
-| exp '>' exp        { GSL_SET_COMPLEX (&$$, GSL_REAL($1) >  GSL_REAL($3), 0); } /* with the exception of '==' */
-| exp LE  exp        { GSL_SET_COMPLEX (&$$, GSL_REAL($1) <= GSL_REAL($3), 0); }
-| exp GE  exp        { GSL_SET_COMPLEX (&$$, GSL_REAL($1) >= GSL_REAL($3), 0); }
-| exp EQUAL exp      { GSL_SET_COMPLEX (&$$, (GSL_REAL($1) == GSL_REAL($3)) && (GSL_IMAG($1) == GSL_IMAG($3)), 0)}
-| exp LAND  exp      { GSL_SET_COMPLEX (&$$, GSL_REAL($1) && GSL_REAL($3), 0); }
-| exp LOR   exp      { GSL_SET_COMPLEX (&$$, GSL_REAL($1) || GSL_REAL($3), 0); }
-| '!' exp  %prec NOT { GSL_SET_COMPLEX (&$$, !GSL_REAL($2), 0); }
-| '(' exp ',' exp ')'{ GSL_SET_COMPLEX (&$$, GSL_REAL($2), GSL_REAL($4)); }
-| '(' exp ')'        { $$ = $2;                           }
+exp: NUM                   { $$ = $1;                           }
+| VAR                      { if(!$1->def) sym_notdef($1); $$ = $1->value.c; }
+| VAR '=' exp              { $$ = $3; $1->value.c = $3; $1->def = 1; $1->type = S_CMPLX;}
+| FNCT '(' exp ')'         { $$ = (*($1->value.fnctptr))($3);   }
+| FNCT '[' exp ',' exp ']' { $$ = (*($1->value.fnctptr))($3, $5); }
+| exp '+' exp              { $$ = gsl_complex_add($1, $3);      }
+| exp '-' exp              { $$ = gsl_complex_sub($1, $3);      }
+| exp '*' exp              { $$ = gsl_complex_mul($1, $3);      }
+| exp '/' exp              { $$ = gsl_complex_div($1, $3);      }
+| '-' exp  %prec NEG       { $$ = gsl_complex_negative($2);     }
+| exp '^' exp              { $$ = gsl_complex_pow($1, $3);      }
+| exp '<' exp              { GSL_SET_COMPLEX (&$$, GSL_REAL($1) <  GSL_REAL($3), 0); } /* Boolean comparisons ues only the real part */
+| exp '>' exp              { GSL_SET_COMPLEX (&$$, GSL_REAL($1) >  GSL_REAL($3), 0); } /* with the exception of '==' */
+| exp LE  exp              { GSL_SET_COMPLEX (&$$, GSL_REAL($1) <= GSL_REAL($3), 0); }
+| exp GE  exp              { GSL_SET_COMPLEX (&$$, GSL_REAL($1) >= GSL_REAL($3), 0); }
+| exp EQUAL exp            { GSL_SET_COMPLEX (&$$, (GSL_REAL($1) == GSL_REAL($3)) && (GSL_IMAG($1) == GSL_IMAG($3)), 0); }
+| exp LAND  exp            { GSL_SET_COMPLEX (&$$, GSL_REAL($1) && GSL_REAL($3), 0); }
+| exp LOR   exp            { GSL_SET_COMPLEX (&$$, GSL_REAL($1) || GSL_REAL($3), 0); }
+| '!' exp  %prec NOT       { GSL_SET_COMPLEX (&$$, !GSL_REAL($2), 0); }
+| '(' exp ',' exp ')'      { GSL_SET_COMPLEX (&$$, GSL_REAL($2), GSL_REAL($4)); }
+| '(' exp ')'              { $$ = $2;                           }
 
-string: STR          { $$ = $1; }
-| VAR '=' STR        { $$ = $3; $1->value.str = $3; $1->def = 1; $1->type = S_STR; }
+string: STR                { $$ = $1; }
+| VAR '=' STR              { $$ = $3; $1->value.str = $3; $1->def = 1; $1->type = S_STR; }
 ;
 %%

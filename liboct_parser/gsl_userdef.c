@@ -22,20 +22,49 @@
 
 #include <gsl/gsl_complex_math.h>
 
-gsl_complex
-gsl_complex_step_real (double a)
+
+/* ------------------------------------------------------ */
+gsl_complex gsl_complex_step_real (double a)
 {        
   gsl_complex z;
-
+	
   if (a < 0)
-    {
-      GSL_SET_COMPLEX (&z, 0, 0);
-    }
+	{
+		GSL_SET_COMPLEX (&z, 0, 0);
+	}
   else
-    {
-      GSL_SET_COMPLEX (&z, 1, 0);
-    }
+	{
+		GSL_SET_COMPLEX (&z, 1, 0);
+	}
 
+  return z;
+}
+
+
+/* ------------------------------------------------------ */
+gsl_complex gsl_complex_min_real (gsl_complex a, gsl_complex b)
+{
+  gsl_complex z;
+  double min;
+	
+	/* just consider real parts */
+  min = GSL_REAL(a) < GSL_REAL(b) ? GSL_REAL(a) : GSL_REAL(b);
+  GSL_SET_COMPLEX (&z, min, 0);
+	
+  return z;
+}
+
+
+/* ------------------------------------------------------ */
+gsl_complex gsl_complex_max_real (gsl_complex a, gsl_complex b)
+{
+  gsl_complex z;
+  double max;
+	
+	/* just consider real parts */
+  max = GSL_REAL(a) > GSL_REAL(b) ? GSL_REAL(a) : GSL_REAL(b);
+  GSL_SET_COMPLEX (&z, max, 0);
+	
   return z;
 }
 
