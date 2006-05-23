@@ -1676,13 +1676,10 @@ contains
 
       ! normalization
       f = M_THREE/M_FIVE*(M_SIX*M_PI**2)**M_TWOTHIRD
+
       do i = 1, NP
-        if(abs(r(i)) >= dmin) then
-          d    = f*(r(i)/s)**(M_FIVE/M_THREE)
-          elf(i,is) = M_ONE/(M_ONE + (elf(i,is)/d)**2)
-        else
-          elf(i,is) = M_ZERO
-        end if
+        d    = f*f*(r(i)/s)**(M_TEN/M_THREE)
+        elf(i,is) = d/(d + elf(i,is)**2)
       end do
 
       deallocate(r, gradr, j)
