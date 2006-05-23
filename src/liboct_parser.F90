@@ -181,6 +181,18 @@ module lib_oct_parser_m
     end subroutine oct_parse_block_string
   end interface
 
+  ! ---------------------------------------------------------
+  ! The public subroutine loct_parse_expression accepts two
+  ! possible interfaces, one which assumes that the variables
+  ! in the expression are "x", "y", "z" and "r", and another
+  ! one which permits to set one variable to whichever string.
+  ! Examples of usage:
+  !
+  ! call loct_parse_expression(f_re, f_im, x, y, z, r, &
+  !   "0.5*0.01*r^2")
+  !
+  ! call loct_parse_expression(f_re, f_im, "t", t, "cos(0.01*t)")
+  ! ---------------------------------------------------------
   interface loct_parse_expression
     subroutine oct_parse_expression(re, im, x, y, z, r, pot)
       real(8), intent(in)  :: x, y, z, r
@@ -188,6 +200,13 @@ module lib_oct_parser_m
       character(len=*), intent(in) :: pot
     end subroutine oct_parse_expression
     module procedure oct_parse_expression4
+    subroutine oct_parse_expression1(re, im, c, x, string)
+      real(8), intent(out) :: re, im
+      character(len=*), intent(in) :: c
+      real(8), intent(in) :: x
+      character(len=*), intent(in) :: string
+    end subroutine oct_parse_expression1
+    module procedure oct_parse_expression14
   end interface
 
 contains
@@ -346,5 +365,14 @@ contains
     call oct_parse_expression(re, im, real(x4, 8), real(y4, 8), &
       real(z4, 8), real(r4, 8), pot)
   end subroutine oct_parse_expression4
+
+  subroutine oct_parse_expression14(re, im, c, x, string)
+    real(8), intent(out) :: re, im
+    character(len=*), intent(in) :: c
+    real(4), intent(in) :: x
+    character(len=*), intent(in) :: string
+
+    call oct_parse_expression1(re, im, c, real(x, 8), string)
+  end subroutine oct_parse_expression14
 
 end module lib_oct_parser_m
