@@ -191,20 +191,20 @@ while ($_ = <TESTSUITE>) {
 	 # serial or MPI run?
 	 if ( $octopus_exe =~ /mpi$/) {
 	   if( -x "$mpirun") {
-	     print "Executing: cd $workdir; $mpirun -np $np $octopus_exe &> out \n";
-	     system("cd $workdir; $mpirun -np $np $octopus_exe &> out");
+	     print "Executing: cd $workdir; $mpirun -np $np $octopus_exe 2>1 > out \n";
+	     system("cd $workdir; $mpirun -np $np $octopus_exe 2>1 > out");
 	   } else {
 	     print "No mpirun found: Skipping parallel test \n";
 	     exit 1;
 	   }
 	 } else {
-	   print "Executing: cd $workdir; $octopus_exe &> out \n";
-	   system("cd $workdir; $octopus_exe &> out");
+	   print "Executing: cd $workdir; $octopus_exe 2>1 > out \n";
+	   system("cd $workdir; $octopus_exe 2>1 > out");
 	 }
 	 system("grep -B2 -A5 'Running octopus' $workdir/out > build-stamp");
 	 print "Finished test run.\n\n"; }
        else {
-	 if(!$opt_i) { print "cd $workdir; $octopus_exe < inp &> out \n"; }
+	 if(!$opt_i) { print "cd $workdir; $octopus_exe < inp 2>1 > out \n"; }
        }
        $test{"run"} = 1;
      }
@@ -214,7 +214,7 @@ while ($_ = <TESTSUITE>) {
      @wfiles = `ls -d $workdir/* | grep -v inp`;
      $workfiles = join("",@wfiles);
      $workfiles =~ s/\n/ /g;
-     system("cp -a $workfiles $workdir/inp $workdir/$input_base");
+     system("cp -r $workfiles $workdir/inp $workdir/$input_base");
 
      # file for shell script with matches
      $mscript = "$workdir/$input_base/matches.sh";
