@@ -390,12 +390,12 @@ subroutine X(output_function_global) (how, dir, fname, m, sb, f, u, ierr, is_tmp
 
 ! Define the format; check if code is single precision or double precision
 #if defined(SINGLE_PRECISION)
-    mformat    = '(4es15.6)'
-    mformat2   = '(i6,5es15.6)'
+    mformat    = '(4es15.6E3)'
+    mformat2   = '(i6,5es15.6E3)'
     mfmtheader = '(a,a7,5a15)'
 #else
-    mformat    = '(4es23.14)'
-    mformat2   = '(i6,5es34.24)'
+    mformat    = '(4es23.14E3)'
+    mformat2   = '(i6,5es34.24E3)'
     mfmtheader = '(a,a10,5a23)'
 #endif
 
