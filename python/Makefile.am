@@ -10,8 +10,8 @@ DESTDIR=/
 all-local: ../share/variables.xml
 	@PYTHON@ ./setup.py build
 
-install-data-local:
-	@PYTHON@ ./setup.py install --root $(DESTDIR)
+#install-data-local:
+#	@PYTHON@ ./setup.py install --root $(DESTDIR)
 
 clean-local:
 	@PYTHON@ ./setup.py clean
