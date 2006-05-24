@@ -75,7 +75,8 @@ if (not @ARGV) { usage; }
 getopts("nlvhe:c:f:d:ipm");
 
 # Default values
-$workdir = `mktemp -d /tmp/octopus.XXXXXX`;
+use File::Temp qw/tempdir/;
+$workdir = tempdir('/tmp/octopus.XXXXXX');
 chomp($workdir);
 
 # Handle options
