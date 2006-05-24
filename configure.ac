@@ -88,8 +88,17 @@ case $enable_mpi in
     ;;
 esac
 
-dnl build/install python bits
-AC_CONFIG_SUBDIRS(python)
+dnl build/install python bits unless --disable-python is used
+AC_ARG_ENABLE([python],
+	      AS_HELP_STRING([--disable-python], [don't build/install python components]),
+	      [ac_cv_build_python=$enableval],
+	      [ac_cv_build_python=yes])
+if test $ac_cv_build_python = yes; then
+  AC_CONFIG_SUBDIRS(python)
+fi
+AM_CONDITIONAL([ENABLE_PYTHON], [test $ac_cv_build_python = yes])
+
+
 
 dnl try to find out what is the default FORTRAN 90 compiler
 dnl note that this has to be done after the AC_ARG_ENABLE(mpi...)

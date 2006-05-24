@@ -19,9 +19,13 @@
 ##
 ## $Id$
 
+if ENABLE_PYTHON
+  PYTHON_DIR = python
+endif
+
 SUBDIRS =        \
 	external_libs liboct_parser liboct libxc src doc \
-	share testsuite
+	share testsuite $(PYTHON_DIR)
 
 EXTRA_DIST =     \
 	TODO build/*.pl build/*.m4 build/*.in debian/*

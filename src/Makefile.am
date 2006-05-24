@@ -100,7 +100,7 @@ CTAGS=ctags-exuberant -e
 
 # how to compile a F90 file :)
 .F90.o:
-	@@FCCPP@ @CPPFLAGS@ $< > $*_oct.f90
+	@@FCCPP@ @CPPFLAGS@ -I. $< > $*_oct.f90
 	@if [ "@DEBUG@" = "no" ]; then \
 		cat $*_oct.f90 | grep -v pop_sub | grep -v push_sub >$*_oct.f91; \
 		mv -f $*_oct.f91 $*_oct.f90; \
@@ -114,7 +114,7 @@ DATE := $(shell date)
 LATEST_SVN := $(shell ../build/svn_release_number.sh 2>/dev/null) 
 
 global.o: global.F90
-	@FCCPP@ @CPPFLAGS@ -DSHARE_OCTOPUS='"${pkgdatadir}"' -DLATEST_SVN='"${LATEST_SVN}"' \
+	@FCCPP@ @CPPFLAGS@ -I. -DSHARE_OCTOPUS='"${pkgdatadir}"' -DLATEST_SVN='"${LATEST_SVN}"' \
 		-DOCTOPUS_VERSION='"${VERSION}"' -DBUILD_TIME='"${DATE}"' -DFC='"${FC}"' \
 		-DFCFLAGS='"${FCFLAGS} ${FCFLAGS_f90}"' $< > $*_oct.f90
 	@FC@ @FCFLAGS@ -c @FCFLAGS_f90@ -o $@ $*_oct.f90

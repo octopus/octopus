@@ -3,13 +3,10 @@
 SUBDIRS = PP recipes util samples
 
 sharedir = $(pkgdatadir)
-dist_share_DATA = logo variables varinfo variables.xml
+dist_share_DATA = logo variables varinfo
 
-CLEANFILES = variables varinfo variables.xml
+CLEANFILES = variables varinfo
 DISTCLEANFILES = Makefile.in
-
-variables.xml: ../src/*.F90
-	cat ../src/*.F90 | grep '^[[:space:]]*!%' | sed -e's,.*!%,,' | ../python/var2xml.py > $@
 
 varinfo: RUN_SCRIPT
 
