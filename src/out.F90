@@ -167,7 +167,7 @@ contains
       call input_error('Output')
     end if
 
-    if(iand(outp%what, output_wfs).ne.0) then
+    if(iand(outp%what, output_wfs).ne.0  .or.  iand(outp%what, output_wfs_sqmod).ne.0 ) then
       !%Variable OutputWfsNumber
       !%Type string
       !%Default "1-1024"
