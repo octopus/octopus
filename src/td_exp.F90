@@ -368,7 +368,7 @@ contains
           call lalg_axpy(NP, h%d%dim, -hm(k, n), v(:, :, k), v(:, :, n+1))
         end do
         hm(n+1, n) = zstates_nrm2(gr%m, h%d%dim, v(:, :, n+1))
-        call lalg_axpy(NP, h%d%dim, -hm(k, n), v(:, :, k), v(:, :, n+1))
+        call lalg_scal(NP, h%d%dim, M_z1/hm(n+1, n), v(:, :, n+1)) 
         call zgpadm(6, n, timestep, -M_zI*hm(1:n, 1:n), n, wsp, lwsp, ipiv(1:n), iexph, ns, iflag)
         k = 0
         do i = 1, n
