@@ -498,6 +498,8 @@ contains
     !%End
     if(loct_parse_block(check_inp('UserDefinedStates'), blk) == 0) then
 
+      call messages_print_stress(stdout, trim('Substitution of orbitals'))
+
       ! find out how many lines (i.e. states) the block has
       nstates = loct_parse_block_n(blk)
 
@@ -519,6 +521,12 @@ contains
               ! parse formula string
               call loct_parse_block_string(                            &
                 blk, ib-1, 3, st%user_def_states(id, is, ik))
+
+              write(message(1), '(a,3i5)') 'Substituting state of orbital with k, ist, dim = ', ik, is, id
+              write(message(2), '(2a)') '  with the expression:'
+              write(message(3), '(2a)') '  ',trim(st%user_def_states(id, is, ik))
+              call write_info(3)
+
               ! convert to C string
               call conv_to_C_string(st%user_def_states(id, is, ik))
 
@@ -543,6 +551,7 @@ contains
 
       end do
       call loct_parse_block_end(blk)
+      call messages_print_stress(stdout)
 
     else
       message(1) = '"UserDefinesStates" has to be specified as block.'
@@ -725,6 +734,7 @@ contains
     rho = M_ZERO
     do ik = 1, st%d%nik, sp
       do p  = st%st_start, st%st_end
+
         do i = 1, np
 
           if (st%d%wfs_type == M_REAL) then

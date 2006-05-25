@@ -645,7 +645,7 @@ contains
     do ix = 1, c%n(1)
       do iy = 1, c%n(2)
         do iz = 1, c%n(3)
-          write(iunit,'(2e20.10)') c%RS(ix, iy, iz)
+          write(iunit,'(2f25.15)') c%RS(ix, iy, iz)
         end do
       end do
     end do

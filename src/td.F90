@@ -116,8 +116,6 @@ contains
 
     call init_wfs()
 
-    if(fromScratch) call modify_occs()
-
     call td_write_init(write_handler, gr, st, geo, (td%move_ions>0), td%iter, td%dt )
 
     ! Calculate initial forces and kinetic energy
@@ -355,6 +353,8 @@ contains
           call states_read_user_def_orbitals(gr%m, st)
         end if
       end if
+
+      if(fromScratch) call modify_occs()
 
       call states_calc_dens(st, NP, st%rho)
       call v_ks_calc(gr, sys%ks, h, st, calc_eigenval=.true.)
