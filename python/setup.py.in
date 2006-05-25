@@ -19,9 +19,11 @@
 # 
 # $Id$
 
+from distutils.sysconfig import get_python_lib
 from distutils.core import setup
-setup(name='octopus',
-      version='0.0.1',
+
+setup(name='@PACKAGE_NAME@',
+      version='@PACKAGE_VERSION@',
       author='Axel Thimm',
       author_email='Axel.Thimm@physik.fu-berlin.de',
       url='http://www.tddft.org/programs/octopus/',

@@ -89,10 +89,11 @@ case $enable_mpi in
 esac
 
 dnl build/install python bits unless --disable-python is used
+dnl set temporarily to default to not enabling.
 AC_ARG_ENABLE([python],
 	      AS_HELP_STRING([--disable-python], [don't build/install python components]),
 	      [ac_cv_build_python=$enableval],
-	      [ac_cv_build_python=yes])
+	      [ac_cv_build_python=no])
 if test $ac_cv_build_python = yes; then
   AC_CONFIG_SUBDIRS(python)
 fi

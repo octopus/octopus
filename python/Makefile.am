@@ -10,8 +10,10 @@ DESTDIR=/
 all-local: ../share/variables.xml
 	@PYTHON@ ./setup.py build
 
-#install-data-local:
-#	@PYTHON@ ./setup.py install --root $(DESTDIR)
+pythonlibdir=$(shell python -c "from distutils.sysconfig import get_python_lib; print get_python_lib(0,False,'"$(prefix)"')")
+
+install-data-local:
+	@PYTHON@ ./setup.py install --install_purelib=$(pythonlibdir) --install-scripts=$(bindir) --root $(DESTDIR)
 
 clean-local:
 	@PYTHON@ ./setup.py clean
