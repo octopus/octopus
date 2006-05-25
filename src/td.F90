@@ -396,7 +396,8 @@ contains
 
       ! The wave-functions at time delta t read
       ! psi(delta t) = psi(t) exp(i k x)
-      if(k%delta_strength .ne. M_ZERO) then
+      delta_strength: if(k%delta_strength .ne. M_ZERO) then
+
         write(message(1),'(a,f11.6)')  'Info: Applying delta kick: k = ', k%delta_strength
         select case (k%delta_strength_mode)
         case (KICK_DENSITY_MODE)
@@ -442,17 +443,18 @@ contains
 
           end select
         end do
-      end if
 
-      ! the nuclei velocity will be changed by
-      ! Delta v_z = ( Z*e*E_0 / M) = - ( Z*k*\hbar / M)
-      ! where M and Z are the ionic mass and charge, respectively.
-      if(td%move_ions > 0) then
-        do i = 1, geo%natoms
-          geo%atom(i)%v(1:NDIM) = geo%atom(i)%v(1:NDIM) - &
-            k%delta_strength_mode*k%pol(1:NDIM, k%pol_dir)*geo%atom(i)%spec%z_val / geo%atom(i)%spec%weight
-        end do
-      end if
+        ! the nuclei velocity will be changed by
+        ! Delta v_z = ( Z*e*E_0 / M) = - ( Z*k*\hbar / M)
+        ! where M and Z are the ionic mass and charge, respectively.
+        if(td%move_ions > 0  .and. k%delta_strength .ne. M_ZERO) then
+          do i = 1, geo%natoms
+            geo%atom(i)%v(1:NDIM) = geo%atom(i)%v(1:NDIM) - &
+              k%delta_strength_mode*k%pol(1:NDIM, k%pol_dir)*geo%atom(i)%spec%z_val / geo%atom(i)%spec%weight
+          end do
+        end if
+
+      end if delta_strength
 
       call pop_sub()
     end subroutine apply_delta_field
