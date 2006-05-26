@@ -1,0 +1,15 @@
+# $Id: 05-multigrid_solver.test 2138 2006-05-21 23:20:05Z xavier $
+
+Test     : Multigrid
+Author   : Xavier Andrade
+Date     : 18.10.05
+Arch     : Linux bizet 2.6.8-2-686 #1 Thu May 19 17:53:30 JST 2005 i686 GNU/Linux
+Release  : 2.1pre1
+Programs : octopus
+Runtime  : short-run
+Enabled  : Yes
+
+Input: 13-full_potential_hydrogen.01-gs.inp
+
+Match ; TotalEnergy ; grep -A 7 '^Energy:' static/info ; \s*Total\s*=\s*-0.445
+Match ; Eigenvalues ; grep -A 2 'Eigenvalues \[' static/info | tail -1 ; \s*-0.232\d*\s*1.0000\d* 

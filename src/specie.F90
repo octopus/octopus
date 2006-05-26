@@ -245,8 +245,9 @@ contains
     !% do are not necessary to define the HGH pseudopotentials.
     !%Option spec_all_e   124
     !% Atom represented with all electrons, the extra parameter is the
-    !% atomic number. WARNING: To correctly represent the atomic
+    !% atomic number. WARNING 1: To correctly represent the atomic
     !% potential, the atom will assumed to be on the closest grid point.
+    !% WARNING 2: Currently you can't use LCAO with this specie.
     !%End
 #endif 
 
@@ -489,6 +490,7 @@ contains
       s%omega = CNST(0.1)
 
     case(SPEC_ALL_E)
+      s%niwfs = 2*s%z_val
       s%has_density = .true.
       write(message(1),'(a,a,a)')    'Specie "',trim(s%label),'" is an all electron atom.'
       write(message(2),'(a,f11.6)')  '   Z = ', s%z_val
@@ -498,6 +500,9 @@ contains
       call write_info(4)
 
       write(message(1),'(a)')    'Gradients are not calculated, forces are not correct.'
+      call write_warning(1)
+      
+      write(message(1),'(a)')    'If octopus stops with error, turnoff LCAO (LCAOStart = no).'
       call write_warning(1)
     end select
 

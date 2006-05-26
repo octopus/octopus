@@ -53,7 +53,7 @@ contains
     FLOAT :: d, dmin
     integer :: i, imin
 
-    call push_sub('specie.specie_get_density')
+    call push_sub('specie_grid.specie_get_density')
 
     select case(s%type)
 

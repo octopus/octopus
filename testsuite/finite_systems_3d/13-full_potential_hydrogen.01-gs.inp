@@ -1,0 +1,11 @@
+SystemName = "Full potential hydrogen"
+%Coordinates
+ 'H_f' | 0 | 0 | 0
+%
+%Species 
+ 'H_f' | 1.00794 | spec_all_e | 1
+%
+LCAOStart = no
+Radius = 8.0
+Spacing = 0.4
+fromScratch = yes

@@ -703,7 +703,7 @@ contains
 
           call specie_get_density(s,a%x,m,rho)
           call dpoisson_solve(gr,phi,rho)
-          ep%vpsl(1:m%np_part)=ep%vpsl(1:m%np_part)+phi(1:m%np_part)
+          ep%vpsl(1:m%np)=ep%vpsl(1:m%np)+phi(1:m%np)
 
           deallocate(rho)
           deallocate(phi)
