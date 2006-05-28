@@ -333,7 +333,7 @@ subroutine X(states_angular_momentum)(gr, phi, l, l2)
   dim = size(phi, 2)
 
   l = M_ZERO
-  if(present(l2)) l2 = R_TOTYPE(M_ZERO)
+  if(present(l2)) l2 = M_ZERO
 
   do idim = 1, dim
 #if defined(R_TREAL)

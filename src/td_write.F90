@@ -458,17 +458,17 @@ contains
 
     call push_sub('td_write.td_write_angular')
 
-    ALLOCATE(ang (st%st_start:st%st_end, st%d%nik, 3), (st%st_end - st%st_start + 1)*st%d%nik*3)
-    ALLOCATE(ang2(st%st_start:st%st_end, st%d%nik), (st%st_end - st%st_start + 1)*st%d%nik)
+    ALLOCATE(ang (st%nst, st%d%nik, 3), st%nst*st%d%nik*3)
+    ALLOCATE(ang2(st%nst, st%d%nik), st%nst*st%d%nik)
     do ik = 1, st%d%nik
       do ist = st%st_start, st%st_end
         call zstates_angular_momentum(gr, st%zpsi(:, :, ist, ik), ang(ist, ik, :), ang2(ist, ik))
       end do
     end do
-    angular(1) =  states_eigenvalues_sum(st, ang(:, :, 1))
-    angular(2) =  states_eigenvalues_sum(st, ang(:, :, 2))
-    angular(3) =  states_eigenvalues_sum(st, ang(:, :, 3))
-    lsquare    =  states_eigenvalues_sum(st, ang2)
+    angular(1) =  states_eigenvalues_sum(st, ang(1:st%nst, 1:st%d%nik, 1))
+    angular(2) =  states_eigenvalues_sum(st, ang(1:st%nst, 1:st%d%nik, 2))
+    angular(3) =  states_eigenvalues_sum(st, ang(1:st%nst, 1:st%d%nik, 3))
+    lsquare    =  states_eigenvalues_sum(st, ang21:st%nst, 1:st%d%nik))
 
     if(mpi_grp_is_root(mpi_world)) then ! Only first node outputs
 
