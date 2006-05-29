@@ -87,21 +87,26 @@ subroutine X(lr_output) (st, gr, lr, dir, tag, outp)
   end if
 
   if(NDIM==3) then
-    if(iand(outp%what, output_elf).ne.0)    call lr_elf('lr-elf')
+    if(iand(outp%what, output_elf).ne.0)    call lr_elf('lr-D','lr-elf')
   end if
 
   call pop_sub()
 contains
 
   ! ---------------------------------------------------------
-  subroutine lr_elf(filename)
-    character(len=*), intent(in) :: filename
+  subroutine lr_elf(filename1,filename2)
+    character(len=*), intent(in) :: filename1
+    character(len=*), intent(in) :: filename2
     
     integer :: spin, i, ist, idim
     R_TYPE, allocatable :: gpsi(:,:), gdl_psi(:,:)
     FLOAT,  allocatable :: grho(:,:), dl_rho(:),gdl_rho(:,:)
-    FLOAT,  allocatable :: dl_elf(:,:)
+    FLOAT,  allocatable :: dl_elf(:,:), elf(:,:), de(:,:)
+    FLOAT :: dl_d0,d0,d02
+    FLOAT :: f,s
 
+    FLOAT, parameter :: dmin = CNST(1e-6)
+    FLOAT :: u
 
     ALLOCATE(gpsi(1:NP, 1:NDIM), NP*NDIM)
     ALLOCATE(gdl_psi(1:NP, 1:NDIM), NP*NDIM)
@@ -110,8 +115,20 @@ contains
 
     ALLOCATE(dl_rho(1:NP_PART), NP_PART*NDIM)
 
-    ALLOCATE(dl_elf(1:NP, 1:st%d%nspin), NP)
+    ALLOCATE(elf(1:NP, 1:st%d%nspin), NP*st%d%nspin)
+    ALLOCATE(de(1:NP, 1:st%d%nspin), NP*st%d%nspin)
+    ALLOCATE(dl_elf(1:NP, 1:st%d%nspin), NP*st%d%nspin)
     
+    !calculate the gs elf
+    call states_calc_elf(st,gr,elf,de)
+
+    ! single or double occupancy
+    if(st%d%nspin == 1) then
+      s = M_TWO
+    else
+      s = M_ONE
+    end if
+
     dl_elf = M_ZERO
 
     do spin = 1, st%d%nspin
@@ -126,7 +143,7 @@ contains
           do i = 1, NP
             dl_elf(i,spin) = dl_elf(i,spin) + M_TWO*R_REAL(sum(R_CONJ(gpsi(i,1:NDIM))*gdl_psi(i,1:NDIM)))
           end do
-            
+          
         end do
       end do
 
@@ -137,103 +154,51 @@ contains
       call df_gradient(gr%sb, gr%f_der, st%rho(:,spin), grho)
 
       do i= 1, NP
-        dl_elf(i,spin) = dl_elf(i,spin)                                             &
-             - M_HALF   * sum(grho(i,1:NDIM)*R_REAL(gpsi(i,1:NDIM)))/st%rho(i,spin) & 
-             + M_FOURTH * sum(grho(i,1:NDIM)**2)*dl_rho(i)/(st%rho(i,spin)**2)
+        if(abs(st%rho(i,spin)) >= dmin) then
+          dl_elf(i,spin) = dl_elf(i,spin)                                             &
+               - M_HALF   * sum(grho(i,1:NDIM)*R_REAL(gdl_rho(i,1:NDIM)))/st%rho(i,spin) & 
+               + M_FOURTH * sum(grho(i,1:NDIM)**2)*dl_rho(i)/(st%rho(i,spin)**2)
+        end if
       end do
       
-      write(fname, '(a,a,i1,a,i1)') trim(filename), '-', spin, '-', tag 
+      write(fname, '(a,a,i1,a,i1)') trim(filename1), '-', spin, '-', tag 
+      call doutput_function(outp%how, dir, trim(fname), gr%m, gr%sb, dl_elf(:,spin), M_ONE, ierr)
+
+      u=CNST(0.01)
+
+      !normalization 
+      f = M_THREE/M_FIVE*(M_SIX*M_PI**2)**M_TWOTHIRD
+      do i = 1, NP
+
+!        if(abs(st%rho(i,spin)) >= dmin) then
+        d0 = f*(st%rho(i,spin)/s)**(M_FIVE/M_THREE)
+        dl_d0=M_FIVE/M_THREE*f*dl_rho(i)/s*(st%rho(i,spin)/s)**(M_TWOTHIRD)
+ 
+        dl_elf(i,spin)=-M_TWO*elf(i,spin)*de(i,spin)*dl_elf(i,spin)/(d0**2+dl_elf(i,spin)**2)
+!        dl_elf(i,spin)=(d0**2/(d0**2+(de(i,spin)+u)**2)-d0**2/(d0**2+(de(i,spin)-u)**2))*dl_elf(i,spin)/(M_TWO*u)
+        dl_elf(i,spin)=dl_elf(i,spin)+M_TWO*d0*dl_d0/(d0**2+de(i,spin)**2)*(1-elf(i,spin))
+!        dl_elf(i,spin)=dl_elf(i,spin)+((d0+u)**2/((d0+u)**2+de(i,spin)**2)-(d0-u)**2/((d0-u)**2+de(i,spin)**2))/(M_TWO*u)*dl_d0
+
+
+      if(abs(st%rho(i,spin)) < dmin) then
+        dl_elf(i,spin) = M_ZERO
+      end if
+
+      end do
+
+      write(fname, '(a,a,i1,a,i1)') trim(filename2), '-', spin, '-', tag 
       call doutput_function(outp%how, dir, trim(fname), gr%m, gr%sb, dl_elf(:,1), M_ONE, ierr)
 
-    end do
+    end do !spin
 
     deallocate(gpsi)
     deallocate(gdl_psi)
     deallocate(grho)
 
+    deallocate(elf)
+    deallocate(de)
     deallocate(dl_elf)
     
-    
-#if 0
-    FLOAT :: f, d, s
-    integer :: i, is, ik
-    CMPLX, allocatable :: psi_fs(:), gpsi(:,:)
-    FLOAT, allocatable :: c(:), r(:), gradr(:,:), j(:,:)
-    type(X(cf_t)) :: cf_tmp
-
-    FLOAT, parameter :: dmin = CNST(1e-10)
-
-    ! single or double occupancy
-    if(st%d%nspin == 1) then
-      s = M_TWO
-    else
-      s = M_ONE
-    end if
-
-    ALLOCATE(c(NP), NP)
-
-    do_is: do is = 1, st%d%nspin
-      ALLOCATE(    r(NP),       NP)
-      ALLOCATE(gradr(NP, NDIM), NP*NDIM)
-      ALLOCATE(    j(NP, NDIM), NP*NDIM)
-      r = M_ZERO; gradr = M_ZERO; j  = M_ZERO
-      c = M_ZERO
-
-      ALLOCATE(psi_fs(NP_PART),  NP_PART)
-      ALLOCATE(gpsi  (NP, NDIM), NP*NDIM)
-      do ik = is, st%d%nik, st%d%nspin
-        do ist = 1, st%nst
-          do idim = 1, st%d%dim
-
-            psi_fs(:) = cmplx(st%X(psi)(:, idim, ist, ik), KIND=PRECISION)
-            call zf_gradient(gr%sb, gr%f_der, psi_fs(:), gpsi)
-
-            r(:) = r(:) + st%d%kweights(ik)*st%occ(ist, ik) * abs(psi_fs(:))**2
-            do i = 1, NDIM
-              gradr(:,i) = gradr(:,i) + st%d%kweights(ik)*st%occ(ist, ik) *  &
-                M_TWO * real(conjg(psi_fs(:))*gpsi(:,i))
-              j (:,i) =  j(:,i) + st%d%kweights(ik)*st%occ(ist, ik) *  &
-                aimag(conjg(psi_fs(:))*gpsi(:,i))
-            end do
-
-            do i = 1, NP
-              if(r(i) >= dmin) then
-                c(i) = c(i) + st%d%kweights(ik)*st%occ(ist, ik)/s * &
-                  sum(abs(gpsi(i, 1:NDIM))**2)
-              end if
-            end do
-          end do
-        end do
-      end do
-      deallocate(psi_fs, gpsi)
-
-      do i = 1, NP
-        if(r(i) >= dmin) then
-          c(i) = c(i) - (M_FOURTH*sum(gradr(i, 1:NDIM)**2) + sum(j(i, 1:NDIM)**2))/(s*r(i))
-        end if
-      end do
-
-      ! normalization
-      f = M_THREE/M_FIVE*(M_SIX*M_PI**2)**M_TWOTHIRD
-      do i = 1, NP
-        if(abs(r(i)) >= dmin) then
-          d    = f*(r(i)/s)**(M_FIVE/M_THREE)
-          c(i) = M_ONE/(M_ONE + (c(i)/d)**2)
-        else
-          c(i) = M_ZERO
-        end if
-      end do
-
-      deallocate(r, gradr, j)
-      write(fname, '(a,a,i1)') trim(filename), '-', is
-      call doutput_function(outp%how, dir, trim(fname), gr%m, gr%sb, c, M_ONE, ierr)
-
-    end do do_is
-
-    deallocate(c)
-#endif 
-
-
   end subroutine lr_elf
 
 end subroutine X(lr_output)
