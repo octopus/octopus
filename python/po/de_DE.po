@@ -1,0 +1,53 @@
+# English translations for octopus package.
+# Copyright (C) 2006 Octopus Developer Team
+# This file is distributed under the same license as the octopus package.
+# Axel Thimm <Axel.Thimm@physik.fu-berlin.de>, 2006.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: octopus 0.0.1\n"
+"Report-Msgid-Bugs-To: Axel.Thimm@physik.fu-berlin.de\n"
+"POT-Creation-Date: 2006-05-29 14:54+0200\n"
+"PO-Revision-Date: 2006-05-29 14:56+0200\n"
+"Last-Translator: Axel Thimm <Axel.Thimm@physik.fu-berlin.de>\n"
+"Language-Team: English <en@translate.freefriends.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#: octopus/ui/widgets.py:162
+msgid "_File"
+msgstr "_Datei"
+
+#: octopus/ui/widgets.py:163
+msgid "Create a new project"
+msgstr "Ein neues Projekt erstellen"
+
+#: octopus/ui/widgets.py:164
+msgid "Open a project"
+msgstr ""
+
+#: octopus/ui/widgets.py:165
+msgid "Save a project"
+msgstr ""
+
+#: octopus/ui/widgets.py:166
+msgid "Save a project under a different name"
+msgstr ""
+
+#: octopus/ui/widgets.py:167
+msgid "Close a project"
+msgstr ""
+
+#: octopus/ui/widgets.py:168
+msgid "_Quit me!"
+msgstr ""
+
+#: octopus/ui/widgets.py:168
+msgid "Quit the program"
+msgstr ""
+
+#: octopus/ui/widgets.py:221
+msgid "Quiting? No."
+msgstr "Aufhören? Nein."
