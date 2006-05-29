@@ -228,6 +228,9 @@ and Angel Rubio
 
 
 
+
+
+
  --- The Detailed Node Listing ---
 
 Installation
@@ -1452,12 +1455,6 @@ File: octopus.info,  Node: Hamiltonian,  Next: Optimal Control,  Prev: Geometry 
      code in 2D mode the magnetic field will have to be in  the
      z-direction, so that the first two columns should be zero.
 
-     Important note: The static magnetic field may only be applied if
-     you  are using the executable compiled for real-only
-     wavefunctions. If you  get this as an error message, please remove
-     the 'StaticMagneticField'  block from you input file, or else try
-     running with  WaveFunctionsType = complex.
-
    * *VlocalCutoff*
      _Section_: Hamiltonian
      _Type_: integer
@@ -2353,6 +2350,10 @@ File: octopus.info,  Node: Output,  Next: SCF,  Prev: Optimal Control,  Up: Inpu
           "wf-k-p-i", where k stands for the _k_ number, p for the
           state, and  i for the spin channel.
 
+        - *pol_density* (512):  Prints out the density of dipole
+          moment. For pol and pol_lr modules,  prints the density of
+          polarizability.
+
         - *ELF* (64):  Prints out the electron localization function,
           ELF. The output file is called  "elf-i", where i stands for
           the spin channel.
@@ -2882,17 +2883,6 @@ File: octopus.info,  Node: States,  Next: System,  Prev: SCF,  Up: Input Variabl
      will be overwritten with  the given analytical expression for the
      orbital.
 
-   * *WaveFunctionsType*
-     _Section_: States
-     _Type_: integer
-     _Default_: real
-     The calculations may be done using real or complex wave-functions.
-
-     _Options_:
-        - *real* (1):  Real wave-functions
-
-        - *complex* (2):  Complex wave-functions
-
 
 
 File: octopus.info,  Node: System,  Next: Time Dependent,  Prev: States,  Up: Input Variables
@@ -3046,9 +3036,10 @@ File: octopus.info,  Node: Species,  Next: Velocities,  Prev: Coordinates,  Up: 
           or _r_ variables).
 
         - *spec_all_e* (124):  Atom represented with all electrons, the
-          extra parameter is the  atomic number. WARNING: To correctly
-          represent the atomic  potential, the atom will assumed to be
-          on the closest grid point.
+          extra parameter is the  atomic number. WARNING 1: To
+          correctly represent the atomic  potential, the atom will
+          assumed to be on the closest grid point.   WARNING 2:
+          Currently you can't use LCAO with this specie.
 
         - *spec_point* (2):  Point charge, the fourth field is the
           value of the charge.
@@ -4437,15 +4428,15 @@ Options Index
 * Output
 :                               Output.                       (line   7)
 * OutputBandsMode
-:                      Output.                                (line  61)
+:                      Output.                                (line  65)
 * OutputDir
 :                            Generalities.                    (line  61)
 * OutputEvery
 :                          TD Output.                         (line   7)
 * OutputHow
-:                            Output.                          (line  73)
+:                            Output.                          (line  77)
 * OutputWfsNumber
-:                      Output.                                (line 144)
+:                      Output.                                (line 148)
 * ParallelizationGroupRanks
 :            Parallel.                                        (line   7)
 * ParallelizationStrategy
@@ -4591,15 +4582,13 @@ Options Index
 * Velocities
 :                           Velocities.                       (line  14)
 * VlocalCutoff
-:                         Hamiltonian.                        (line 119)
+:                         Hamiltonian.                        (line 113)
 * VlocalCutoffRadius
-:                   Hamiltonian.                              (line 140)
+:                   Hamiltonian.                              (line 134)
 * WatterstromODESolver
 :                 General.                                    (line 164)
 * WatterstromODESolverNSteps
 :           General.                                          (line 184)
-* WaveFunctionsType
-:                    States.                                  (line 144)
 * What2Mix
 :                             Mixing.                         (line  41)
 * WorkDir
@@ -4619,79 +4608,79 @@ Options Index
 
 Tag Table:
 Node: Top665
-Node: Authors3262
-Node: Copying6584
-Node: Installation8064
-Node: Quick instructions9033
-Node: Long instructions9568
-Ref: Long instructions-Footnote-119201
-Ref: Long instructions-Footnote-219759
-Node: Different octopus executables19971
-Node: The parser21437
-Node: Description24704
-Node: Mesh24987
-Node: Run Mode SCF25367
-Node: Run Mode Unoccupied States26420
-Node: Run Mode Time Dependent27113
-Node: Function output for visualization31084
-Node: Spectrum calculations32235
-Node: Input Variables32731
-Node: Generalities33228
-Node: Debug35358
-Node: IO38022
-Node: Parallel39787
-Node: Units41011
-Node: Geometry Optimization42284
-Node: Hamiltonian43272
-Node: Poisson49396
-Node: Multigrid50945
-Node: XC52932
-Node: Casida56083
-Node: Static Polarization57881
-Node: Vibrational Modes58274
-Node: General58754
-Node: Curvilinear64240
-Node: Gygi65674
-Node: Derivatives67073
-Node: FFTs68600
-Node: Simulation Box69719
-Node: Optimal Control73381
-Node: Output74722
-Node: SCF80840
-Node: Convergence84699
-Node: EigenSolver86204
-Node: Mixing89011
-Node: States90563
-Node: System96056
-Node: Coordinates96462
-Node: Species99637
-Node: Velocities102738
-Node: Time Dependent104238
-Node: Absorbing Boundaries106261
-Node: Linear Response107367
-Node: PES109850
-Node: Propagation110896
-Node: TD Output124293
-Node: Unoccupied States127265
-Node: Optical Spectra127868
-Node: oct-center-geometry129578
-Node: oct-harmonic-spectrum130254
-Node: Undocumented Variables131884
-Node: External utilities132989
-Node: oct-sf133564
-Node: oct-rsf134348
-Node: oct-hs-mult134475
-Node: oct-hs-acc134684
-Node: oct-xyz-anim134898
-Node: oct-excite135129
-Node: oct-broad135762
-Node: oct-make-st136121
-Node: oct-center-geom137401
-Node: wf.net138447
-Node: Examples139828
-Node: Hello world139987
-Ref: Hello world-Footnote-1146610
-Node: Benzene146694
-Node: Options Index147511
+Node: Authors3265
+Node: Copying6587
+Node: Installation8067
+Node: Quick instructions9036
+Node: Long instructions9571
+Ref: Long instructions-Footnote-119204
+Ref: Long instructions-Footnote-219762
+Node: Different octopus executables19974
+Node: The parser21440
+Node: Description24707
+Node: Mesh24990
+Node: Run Mode SCF25370
+Node: Run Mode Unoccupied States26423
+Node: Run Mode Time Dependent27116
+Node: Function output for visualization31087
+Node: Spectrum calculations32238
+Node: Input Variables32734
+Node: Generalities33231
+Node: Debug35361
+Node: IO38025
+Node: Parallel39790
+Node: Units41014
+Node: Geometry Optimization42287
+Node: Hamiltonian43275
+Node: Poisson49079
+Node: Multigrid50628
+Node: XC52615
+Node: Casida55766
+Node: Static Polarization57564
+Node: Vibrational Modes57957
+Node: General58437
+Node: Curvilinear63923
+Node: Gygi65357
+Node: Derivatives66756
+Node: FFTs68283
+Node: Simulation Box69402
+Node: Optimal Control73064
+Node: Output74405
+Node: SCF80684
+Node: Convergence84543
+Node: EigenSolver86048
+Node: Mixing88855
+Node: States90407
+Node: System95627
+Node: Coordinates96033
+Node: Species99208
+Node: Velocities102381
+Node: Time Dependent103881
+Node: Absorbing Boundaries105904
+Node: Linear Response107010
+Node: PES109493
+Node: Propagation110539
+Node: TD Output123936
+Node: Unoccupied States126908
+Node: Optical Spectra127511
+Node: oct-center-geometry129221
+Node: oct-harmonic-spectrum129897
+Node: Undocumented Variables131527
+Node: External utilities132632
+Node: oct-sf133207
+Node: oct-rsf133991
+Node: oct-hs-mult134118
+Node: oct-hs-acc134327
+Node: oct-xyz-anim134541
+Node: oct-excite134772
+Node: oct-broad135405
+Node: oct-make-st135764
+Node: oct-center-geom137044
+Node: wf.net138090
+Node: Examples139471
+Node: Hello world139630
+Ref: Hello world-Footnote-1146253
+Node: Benzene146337
+Node: Options Index147154
 
 End Tag Table

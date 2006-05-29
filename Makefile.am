@@ -19,6 +19,8 @@
 ##
 ## $Id$
 
+ACLOCAL_AMFLAGS = -I m4
+
 if ENABLE_PYTHON
   PYTHON_DIR = python
 endif

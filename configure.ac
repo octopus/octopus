@@ -20,6 +20,7 @@
 AC_PREREQ(2.59)
 AC_INIT([Octopus],[2.1pre1],[octopus-devel@tddft.org],[octopus])
 AC_CONFIG_SRCDIR([src/global.F90])
+AC_CONFIG_AUX_DIR([build-aux])
 AM_INIT_AUTOMAKE
 
 AC_CONFIG_HEADERS([config.h])
@@ -93,7 +94,7 @@ dnl set temporarily to default to not enabling.
 AC_ARG_ENABLE([python],
 	      AS_HELP_STRING([--disable-python], [don't build/install python components]),
 	      [ac_cv_build_python=$enableval],
-	      [ac_cv_build_python=no])
+	      [ac_cv_build_python=yes])
 if test $ac_cv_build_python = yes; then
   AC_CONFIG_SUBDIRS(python)
 fi
