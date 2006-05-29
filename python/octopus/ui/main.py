@@ -45,6 +45,7 @@ class MainApplication(object):
 
     def run(self):
         splashwindow=widgets.SplashScreen()
+        splashwindow.show()
         projectwindow=widgets.ProjectWindow()
         projectwindow.show()
 

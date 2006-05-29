@@ -27,6 +27,11 @@ representation on stdout.
 """
 
 import sys
+sys.path.insert(0,"@pythondir_expanded@")
+
+import gettext
+gettext.install('octopus', "@datadir_expanded@/locale")
+
 import fileinput
 import re
 import cElementTree as ET
