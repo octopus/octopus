@@ -247,7 +247,7 @@ contains
     !% Atom represented with all electrons, the extra parameter is the
     !% atomic number. WARNING 1: To correctly represent the atomic
     !% potential, the atom will assumed to be on the closest grid point.
-    !% WARNING 2: Currently you can't use LCAO with this specie.
+    !% WARNING 2: Currently you can not use LCAO with this specie.
     !%End
 #endif 
 
