@@ -468,7 +468,7 @@ contains
     angular(1) =  states_eigenvalues_sum(st, ang(1:st%nst, 1:st%d%nik, 1))
     angular(2) =  states_eigenvalues_sum(st, ang(1:st%nst, 1:st%d%nik, 2))
     angular(3) =  states_eigenvalues_sum(st, ang(1:st%nst, 1:st%d%nik, 3))
-    lsquare    =  states_eigenvalues_sum(st, ang21:st%nst, 1:st%d%nik))
+    lsquare    =  states_eigenvalues_sum(st, ang2(1:st%nst, 1:st%d%nik))
 
     if(mpi_grp_is_root(mpi_world)) then ! Only first node outputs
 
