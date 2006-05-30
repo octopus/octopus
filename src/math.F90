@@ -481,7 +481,6 @@ contains
   !      = (1/x) * 2 * sum_{k=0}^{\infty} BesselJ[k, x]
   FLOAT function besselint(x) result(y)
     FLOAT, intent(in) :: x
-    real(8), external :: bessel
     integer :: k, nmax
     real(8) :: z, s
     real(8), allocatable :: bess(:)
