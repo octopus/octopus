@@ -1688,8 +1688,12 @@ contains
       f = M_THREE/M_FIVE*(M_SIX*M_PI**2)**M_TWOTHIRD
 
       do i = 1, NP
-        d    = f*f*(r(i)/s)**(M_TEN/M_THREE)
-        elf(i,is) = d/(d + elf(i,is)**2)
+        if(r(i) >= dmin) then
+          d    = f*f*(r(i)/s)**(M_TEN/M_THREE)
+          elf(i,is) = d/(d + elf(i,is)**2)
+        else
+          elf(i,is) = M_ZERO
+        endif 
       end do
 
       deallocate(r, gradr, j)
