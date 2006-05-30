@@ -22,7 +22,8 @@ AC_INIT([Octopus GUI], [2.1pre1], [octopus-devel@tddft.org], [octopus])
 AC_CONFIG_AUX_DIR([../build-aux])
 AM_INIT_AUTOMAKE
 AM_GNU_GETTEXT
-AM_GNU_GETTEXT_VERSION([0.14.5])
+dnl FIXME: find the lowest working version
+AM_GNU_GETTEXT_VERSION([0.14.1])
 AM_PO_SUBDIRS
 
 dnl AM_MAINTAINER_MODE
