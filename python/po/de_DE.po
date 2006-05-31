@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: octopus 0.0.1\n"
 "Report-Msgid-Bugs-To: Axel.Thimm@physik.fu-berlin.de\n"
-"POT-Creation-Date: 2006-05-29 14:54+0200\n"
+"POT-Creation-Date: 2006-05-31 20:50+0200\n"
 "PO-Revision-Date: 2006-05-29 14:56+0200\n"
 "Last-Translator: Axel Thimm <Axel.Thimm@physik.fu-berlin.de>\n"
 "Language-Team: English <en@translate.freefriends.org>\n"
@@ -16,38 +16,78 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-#: octopus/ui/widgets.py:162
+#: octopus/ui/widgets.py:119
 msgid "_File"
 msgstr "_Datei"
 
-#: octopus/ui/widgets.py:163
-msgid "Create a new project"
-msgstr "Ein neues Projekt erstellen"
-
-#: octopus/ui/widgets.py:164
-msgid "Open a project"
+#: octopus/ui/widgets.py:120
+msgid "_Edit"
 msgstr ""
 
-#: octopus/ui/widgets.py:165
-msgid "Save a project"
+#: octopus/ui/widgets.py:121
+#, fuzzy
+msgid "_View"
+msgstr "_Datei"
+
+#: octopus/ui/widgets.py:122
+msgid "_Projects"
 msgstr ""
 
-#: octopus/ui/widgets.py:166
-msgid "Save a project under a different name"
+#: octopus/ui/widgets.py:123
+msgid "_Help"
 msgstr ""
 
-#: octopus/ui/widgets.py:167
-msgid "Close a project"
-msgstr ""
-
-#: octopus/ui/widgets.py:168
+#: octopus/ui/widgets.py:124
 msgid "_Quit me!"
 msgstr ""
 
-#: octopus/ui/widgets.py:168
+#: octopus/ui/widgets.py:124
 msgid "Quit the program"
 msgstr ""
 
-#: octopus/ui/widgets.py:221
-msgid "Quiting? No."
-msgstr "Aufhören? Nein."
+#: octopus/ui/widgets.py:125
+msgid "Open octopus manual"
+msgstr ""
+
+#: octopus/ui/widgets.py:126
+msgid "About this application"
+msgstr ""
+
+#: octopus/ui/widgets.py:129
+msgid "View _ToolBar"
+msgstr ""
+
+#: octopus/ui/widgets.py:129 octopus/ui/widgets.py:130
+msgid "xxx"
+msgstr ""
+
+#: octopus/ui/widgets.py:130
+msgid "View _StatusBar"
+msgstr ""
+
+#: octopus/ui/widgets.py:136
+msgid "Create a new project"
+msgstr "Ein neues Projekt erstellen"
+
+#: octopus/ui/widgets.py:137
+msgid "Open a project"
+msgstr ""
+
+#: octopus/ui/widgets.py:138
+msgid "Save a project"
+msgstr ""
+
+#: octopus/ui/widgets.py:139
+msgid "Save a project under a different name"
+msgstr ""
+
+#: octopus/ui/widgets.py:141
+msgid "Close a project"
+msgstr ""
+
+#: octopus/ui/widgets.py:181
+msgid "Action not implemented yet."
+msgstr ""
+
+#~ msgid "Quiting? No."
+#~ msgstr "Aufhören? Nein."

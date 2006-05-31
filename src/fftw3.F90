@@ -222,6 +222,68 @@ contains
 
   end subroutine fft_init
 
+  ! ---------------------------------------------------------
+  subroutine fft1D_init(N, fft)
+    integer    ,  intent(in)    :: N
+    type(fft_t),  intent(out)   :: fft
+
+    CMPLX, allocatable :: cin(:), cout(:)
+
+    ALLOCATE(cin(N), N)
+    ALLOCATE(cout(N), N)
+    
+    
+    ! create plan and store in fft
+    call DFFTW(plan_dft_1d) (fft%planb, N, cin, cout, fftw_backward, fftw_measure)
+    call DFFTW(plan_dft_1d) (fft%planf, N, cin, cout, fftw_forward, fftw_measure)
+    deallocate(cin, cout)
+
+    !write(message(1), '(a)') "Info: 1D FFT plan created"
+    !call write_info(1)
+
+  end subroutine fft1D_init
+
+
+  ! ---------------------------------------------------------
+  subroutine fft1d_fwd(N, in, out)
+    CMPLX, intent(in)   :: in(:)
+    CMPLX, intent(out)  :: out(:)
+    integer, intent(in) :: N
+    
+    type(fft_t)  :: fft
+    
+    call fft1d_init(N, fft)
+    call DFFTW(execute_dft) (fft%planf, in, out)
+    call DFFTW(destroy_plan) (fft%planf)
+
+  end subroutine fft1d_fwd
+
+
+  ! ---------------------------------------------------------------------------
+  subroutine fft1d_bwd(N, in,out)
+    CMPLX, intent(in)   :: in(:)
+    CMPLX, intent(out)  :: out(:)
+    integer, intent(in) :: N
+
+    type(fft_t)  :: fft
+
+    call fft1d_init(N, fft)
+    call DFFTW(execute_dft) (fft%planb, in, out)
+    call DFFTW(destroy_plan) (fft%planb)
+
+  end subroutine fft1d_bwd
+
+
+  ! ---------------------------------------------------------
+  subroutine fft1d_end(fft)
+    type(fft_t), intent(inout) :: fft
+    
+     call DFFTW(destroy_plan) (fft%planf)
+     call DFFTW(destroy_plan) (fft%planb)
+     write(message(1), '(a)') "Info: 1D FFT deallocated"
+     call write_info(1)
+
+  end subroutine fft1d_end
 
   ! ---------------------------------------------------------
   subroutine fft_copy(fft_i, fft_o)

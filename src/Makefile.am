@@ -27,7 +27,7 @@ octopus_SOURCES = $(core_SRCS) \
 	eigen.F90 lcao.F90 pes.F90 \
 	scf.F90 gs.F90 unocc.F90 \
 	static_pol.F90 geom_opt.F90 phonons.F90 \
-	td_exp_split.F90 td_exp.F90 td_rti.F90 td_write.F90 td.F90 opt_control.F90 \
+	td_exp_split.F90 td_exp.F90 td_rti.F90 td_write.F90 td.F90 filters.F90 opt_control.F90 \
 	casida.F90 wave_matching.F90 em_resp.F90 pulpo.F90 \
 	run.F90 main.F90
 

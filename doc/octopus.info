@@ -1,4 +1,4 @@
-This is octopus.info, produced by makeinfo version 4.8 from
+This is octopus.info, produced by makeinfo version 4.7 from
 octopus.texi.
 
    This manual is for octopus 2.1pre1, a first principles, electronic
@@ -48,6 +48,9 @@ and Angel Rubio
 * External utilities::          External Utilities
 * Examples::                    Some examples.
 * Options Index::               An index with all the options.
+
+
+
 
 
 
@@ -2268,35 +2271,248 @@ File: octopus.info,  Node: Optimal Control,  Next: Output,  Prev: Hamiltonian,  
 6.4 Optimal Control
 ===================
 
+   * *OCTEps*
+     _Section_: Optimal Control
+     _Type_: Float
+     Define the convergence threshold.
+
+   * *OCTFilter*
+     _Section_: Optimal Control
+     _Type_: block
+     The block OCTFilter describes the type and shape of the filter
+     function  that are applied to the optimized laser field in each
+     iteration.   The filter forces the laser field to obtain the given
+     form in frequency space.   Each line of the block describes a
+     filter; this way you can actually have more  than one filter
+     function (e.g. a filter in time and two in frequency space). The
+     filters are applied in the given order, i.e., first the filter
+     specified by the first line is applied, then second line. This
+     order is important if the filters are conjugated, like time and
+     frequency. If they are conjugated the second filter can lift the
+     action of the first one. Use with care.   The syntax of each line
+     is, then:
+
+     %OCTFilter
+     domain | pol | pol | pol | function
+     %
+
+     Possible arguments for domain are:    freq 1  Specifies a spectral
+     filter.     time 2  Specifies a time-dependent envelope similar to
+     a time-dependent penalty.   Use it in the case of a fixed fluence
+     where a time-dependent penalty is not possible.   Characterize the
+     polarization vector with pol_x, pol_y, pol_z.   Finally define the
+     filter function by specifying the "function".   Some examples for
+     "function" are:
+
+     A Gaussian but the width specifies the FWHM point.
+
+     A sin**2 function.
+
+     A unit step. (to come...)
+
+   * *OCTFilterMode*
+     _Section_: Optimal Control
+     _Type_: integer
+   * *OCTFixFluenceTo*
+     _Section_: Optimal Control
+     _Type_: Float
+     The algorithm tries to obtain the specified fluence for the laser
+     field.   This works only in conjunction with the WG05 scheme.
+
    * *OCTInitialState*
      _Section_: Optimal Control
-     _Type_: string
+     _Type_: Integer
      The string OCTInitialState describes the initial state of the
      quantum system  Possible arguments are:
 
      _Options_:
-        - *istate_gs* (1):  start in the ground state
+        - *oct_is_groundstate* (1):  start in the ground state
 
-        - *istate_ex* (2):  start in the excited state given by
+        - *oct_is_excited* (2):  start in the excited state given by
           OCTISnumber  (ordered by energy)
 
-        - *istate_sp* (3):  start in a superposition of states defined
-          by the block OCTISsuperposition)
+        - *oct_is_superposition* (3):  start in a superposition of
+          states defined by the block OCTISsuperposition)
 
-        - *istate_ud* (4):  start in a userdefined state
+        - *oct_is_userdefined* (4):  start in a userdefined state
 
-   * *OCTTargetState*
+   * *OCTInitialSuperposition*
+     _Section_: Optimal Control
+     _Type_: block
+     The syntax of each line is, then:
+
+     %OCTInitialSuperposition
+     state1 | weight1 | state2 | weight2 | ...
+     %
+
+     Note that weight can be complex, to produce current carrying
+     superpositions.   Example:
+
+     %OCTInitialSuperposition
+     1 | 1 | 2 | -1 | ...
+     %
+
+   * *OCTInitialUserdefined*
+     _Section_: Optimal Control
+     _Type_: block
+     Example:
+
+     %UserDefinedStates
+     1 | 1 | 1 |  "exp(-r^2)*exp(-i*0.2*x)"
+     %
+
+   * *OCTLaserEnvelope*
+     _Section_: Optimal Control
+     _Type_: Block
+     Often a predefined time-dependent envelope on the laser field is
+     required.   This can be achieved by making the penalty factor
+     time-dependent.   Here, you may specify the required time
+     dependent envelope.   The code allows for more than one enevelope,
+     all of them will be added together and can weighted against each
+     other.   It is possible to choose different envelopes for
+     different polarization directions.   The block is similar to the
+     time filter.
+
+   * *OCTLocalTarget*
+     _Section_: Optimal Control
+     _Type_: block
+     This block defines the shape and position of the local target
+     operator.   It is possible to define several local operators which
+     are then summed up.   The syntax of each line is, then:
+
+     %OCTLocalTarget
+     "exp(-r^2)*exp(-i*0.2*x)"
+     %
+
+   * *OCTMaxIter*
+     _Section_: Optimal Control
+     _Type_: Integer
+     This variable defines the maximum number of iterations.
+
+   * *OCTPenalty*
+     _Section_: Optimal Control
+     _Type_: Float
+     The variable specificies the value of the penalty factor for the
+     integrated field strength (fluence). Large value - small fluence.
+     The value is always positive.   Use the negative value '-1' for a
+     time-dependent penalty factor.   The transient shape is specified
+     in the block OCTPenaltyTD.
+
+   * *OCTScheme*
+     _Section_: Optimal Control
+     _Type_: integer
+     _Default_: oct_algorithm_zbr98
+     In order to find the optimal laser field for a given task, e.g.,
+     the excitation from an initial state to a predefined final state
+     at the final time, optimal control theory can be applied to
+     quantum mechanics. The mathematical derivation leads a set of
+     equations which require the propagation of the wavefunction and a
+     lagrange multiplier (sometimes comparable to a wavefunction).
+     Several schemes have been sought to solve these control equations
+     which boils down to forward and backward propagations. However,
+     the order in which these equations are solved makes a huge
+     difference. Some schemes can be proven to increase the value of
+     the target functional (merit function) in each step. (In practice
+     this can be violated if the accuracy of the numerical time
+     propagation is small. Most likely in 3D.)
+
+     _Options_:
+        - *oct_algorithm_zbr98* (1):  Backward-Forward-Backward scheme
+          described in JCP 108, 1953 (1998).   Only possible if
+          targetoperator is a projection operator  Provides the fastest
+          and most stable convergence.   Monotonic convergence.
+
+        - *oct_algorithm_zr98* (2):  Forward-Backward-Forward scheme
+          described in JCP 109,385 (1998).   Works for projection and
+          local target operators  Convergence is stable but slower than
+          ZBR98.   Note that local operators show an extremely slow
+          convergence.   Monotonic convergence.
+
+        - *oct_algorithm_wg05* (3):  Forward-Backward scheme described
+          in J. Opt. B. 7 300 (2005).   Works for all kind target
+          operators and  can be used with all kind of filters and
+          allows a fixed fluence.   The price is a rather instable
+          convergence.   If the restrictions set by the filter and
+          fluence are reasonable, a good overlap can be expected with
+          20 iterations.   No monotonic convergence.
+
+        - *oct_algorithm_krotov* (4):  Yet to be implemented and
+          tested, some people swear on it.   Described in Zhao & Rice:
+          Optical Control of Molecules. (Appendix A)
+
+        - *oct_algorithm_mt03* (5):  Yet to be implemented and tested.
+          Basically an improved and generalized scheme. Comparable to
+          ZBR98/ZR98. (see JCP 118,8191 (2003))
+
+   * *OCTTargetMode*
      _Section_: Optimal Control
      _Type_: string
+     Option oct_targetmode_static  1
+
+   * *OCTTargetOperator*
+     _Section_: Optimal Control
+     _Type_: integer
      The string OCTTargetOperator describes the initial state of the
-     quantum system  Possible arguments are:  state_gs - Targetoperator
-     is a projection operator on the ground state  state_ex -
-     Targetoperator is a projection operator on the excited state given
-     by OCTTOnumber  (ordered by energy)  state_sp - Targetoperator is
-     a projection operator on a superposition of states defined by the
-     block OCTTOsuperposition)  state_ud - Targetoperator is a
-     projection operator on a user defined state  local_ud -
-     Targetoperator is a local operator
+     quantum system  Possible arguments are:
+
+     _Options_:
+        - *oct_tg_groundstate* (1):  Targetoperator is a projection
+          operator on the ground state
+
+        - *oct_tg_excited* (2):  Targetoperator is a projection
+          operator on the excited state given by OCTTOnumber
+
+        - *oct_tg_superposition* (3):  Targetoperator is a projection
+          operator on a superposition of states defined by the block
+          OCTTOsuperposition)
+
+        - *oct_tg_userdefined* (4):  Targetoperator is a projection
+          operator on a user defined state
+
+        - *oct_tg_local* (5):  Targetoperator is a local operator.
+          Specify the shape and position within the block
+          OCTLocalTarget.
+
+        - *oct_tg_td_local* (6):  Target operator is time-dependent,
+          please specify block OCTTdTarget
+
+   * *OCTTargetStateNumber*
+     _Section_: Optimal Control
+     _Type_: Integer
+     Specify the target state, ordered by energy  1 corresponds to the
+     ground state  Default is 2
+
+   * *OCTTargetSuperposition*
+     _Section_: Optimal Control
+     _Type_: block
+     The syntax of each line is, then:
+
+     %OCTTargetSuperposition
+     state1 | weight1 | state2 | weight2 | ...
+     %
+
+     Example:
+
+     %OCTTargetSuperposition
+     1 | 1 | 2 | -1 | ...
+     %
+
+   * *OCTTdTarget*
+     _Section_: Optimal Control
+     _Type_: block
+     OCTOPUS features also time-dependent targets, i.e., one wants to
+     optimize a laser field that achieves a predefined time-dependent
+     target. An example, could be the evolution of occupation numbers
+     in time.   A time-dependent target consists of two parts, i.e.,
+     the operator itself (a projection or a local operator) and its
+     time-dependence. Both are specified in one row of the block. You
+     may enter as many rows as you like. For time-dependent occupation
+     targets OCTOPUS takes care of the normalization.   The structure
+     of the block is as follows:
+
+     %OCTTdTarget
+     targetoperator | par | f_x(t) | f_y(t) | f_z(t) | weight |
+     %
 
 
 
@@ -3039,7 +3255,7 @@ File: octopus.info,  Node: Species,  Next: Velocities,  Prev: Coordinates,  Up: 
           extra parameter is the  atomic number. WARNING 1: To
           correctly represent the atomic  potential, the atom will
           assumed to be on the closest grid point.   WARNING 2:
-          Currently you can't use LCAO with this specie.
+          Currently you can not use LCAO with this specie.
 
         - *spec_point* (2):  Point charge, the fourth field is the
           value of the charge.
@@ -4415,10 +4631,40 @@ Options Index
 :                    Unoccupied States.                       (line   7)
 * Occupations
 :                          States.                            (line  65)
+* OCTEps
+:                               Optimal Control.              (line   7)
+* OCTFilter
+:                            Optimal Control.                 (line  12)
+* OCTFilterMode
+:                        Optimal Control.                     (line  46)
+* OCTFixFluenceTo
+:                      Optimal Control.                       (line  49)
 * OCTInitialState
-:                      Optimal Control.                       (line   7)
-* OCTTargetState
-:                       Optimal Control.                      (line  24)
+:                      Optimal Control.                       (line  55)
+* OCTInitialSuperposition
+:              Optimal Control.                               (line  72)
+* OCTInitialUserdefined
+:                Optimal Control.                             (line  88)
+* OCTLaserEnvelope
+:                     Optimal Control.                        (line  97)
+* OCTLocalTarget
+:                       Optimal Control.                      (line 109)
+* OCTMaxIter
+:                           Optimal Control.                  (line 120)
+* OCTPenalty
+:                           Optimal Control.                  (line 125)
+* OCTScheme
+:                            Optimal Control.                 (line 134)
+* OCTTargetMode
+:                        Optimal Control.                     (line 180)
+* OCTTargetOperator
+:                    Optimal Control.                         (line 185)
+* OCTTargetStateNumber
+:                 Optimal Control.                            (line 212)
+* OCTTargetSuperposition
+:               Optimal Control.                              (line 218)
+* OCTTdTarget
+:                          Optimal Control.                   (line 233)
 * ODESolver
 :                            General.                         (line   7)
 * ODESolverNSteps
@@ -4608,79 +4854,79 @@ Options Index
 
 Tag Table:
 Node: Top665
-Node: Authors3265
-Node: Copying6587
-Node: Installation8067
-Node: Quick instructions9036
-Node: Long instructions9571
-Ref: Long instructions-Footnote-119204
-Ref: Long instructions-Footnote-219762
-Node: Different octopus executables19974
-Node: The parser21440
-Node: Description24707
-Node: Mesh24990
-Node: Run Mode SCF25370
-Node: Run Mode Unoccupied States26423
-Node: Run Mode Time Dependent27116
-Node: Function output for visualization31087
-Node: Spectrum calculations32238
-Node: Input Variables32734
-Node: Generalities33231
-Node: Debug35361
-Node: IO38025
-Node: Parallel39790
-Node: Units41014
-Node: Geometry Optimization42287
-Node: Hamiltonian43275
-Node: Poisson49079
-Node: Multigrid50628
-Node: XC52615
-Node: Casida55766
-Node: Static Polarization57564
-Node: Vibrational Modes57957
-Node: General58437
-Node: Curvilinear63923
-Node: Gygi65357
-Node: Derivatives66756
-Node: FFTs68283
-Node: Simulation Box69402
-Node: Optimal Control73064
-Node: Output74405
-Node: SCF80684
-Node: Convergence84543
-Node: EigenSolver86048
-Node: Mixing88855
-Node: States90407
-Node: System95627
-Node: Coordinates96033
-Node: Species99208
-Node: Velocities102381
-Node: Time Dependent103881
-Node: Absorbing Boundaries105904
-Node: Linear Response107010
-Node: PES109493
-Node: Propagation110539
-Node: TD Output123936
-Node: Unoccupied States126908
-Node: Optical Spectra127511
-Node: oct-center-geometry129221
-Node: oct-harmonic-spectrum129897
-Node: Undocumented Variables131527
-Node: External utilities132632
-Node: oct-sf133207
-Node: oct-rsf133991
-Node: oct-hs-mult134118
-Node: oct-hs-acc134327
-Node: oct-xyz-anim134541
-Node: oct-excite134772
-Node: oct-broad135405
-Node: oct-make-st135764
-Node: oct-center-geom137044
-Node: wf.net138090
-Node: Examples139471
-Node: Hello world139630
-Ref: Hello world-Footnote-1146253
-Node: Benzene146337
-Node: Options Index147154
+Node: Authors3268
+Node: Copying6590
+Node: Installation8070
+Node: Quick instructions9039
+Node: Long instructions9574
+Ref: Long instructions-Footnote-119207
+Ref: Long instructions-Footnote-219765
+Node: Different octopus executables19977
+Node: The parser21443
+Node: Description24710
+Node: Mesh24993
+Node: Run Mode SCF25373
+Node: Run Mode Unoccupied States26426
+Node: Run Mode Time Dependent27119
+Node: Function output for visualization31090
+Node: Spectrum calculations32241
+Node: Input Variables32737
+Node: Generalities33234
+Node: Debug35364
+Node: IO38028
+Node: Parallel39793
+Node: Units41017
+Node: Geometry Optimization42290
+Node: Hamiltonian43278
+Node: Poisson49082
+Node: Multigrid50631
+Node: XC52618
+Node: Casida55769
+Node: Static Polarization57567
+Node: Vibrational Modes57960
+Node: General58440
+Node: Curvilinear63926
+Node: Gygi65360
+Node: Derivatives66759
+Node: FFTs68286
+Node: Simulation Box69405
+Node: Optimal Control73067
+Node: Output82364
+Node: SCF88643
+Node: Convergence92502
+Node: EigenSolver94007
+Node: Mixing96814
+Node: States98366
+Node: System103586
+Node: Coordinates103992
+Node: Species107167
+Node: Velocities110342
+Node: Time Dependent111842
+Node: Absorbing Boundaries113865
+Node: Linear Response114971
+Node: PES117454
+Node: Propagation118500
+Node: TD Output131897
+Node: Unoccupied States134869
+Node: Optical Spectra135472
+Node: oct-center-geometry137182
+Node: oct-harmonic-spectrum137858
+Node: Undocumented Variables139488
+Node: External utilities140593
+Node: oct-sf141168
+Node: oct-rsf141952
+Node: oct-hs-mult142079
+Node: oct-hs-acc142288
+Node: oct-xyz-anim142502
+Node: oct-excite142733
+Node: oct-broad143366
+Node: oct-make-st143725
+Node: oct-center-geom145005
+Node: wf.net146051
+Node: Examples147432
+Node: Hello world147591
+Ref: Hello world-Footnote-1154214
+Node: Benzene154298
+Node: Options Index155115
 
 End Tag Table
