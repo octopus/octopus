@@ -1009,7 +1009,8 @@ contains
 
     subroutine def_istate()
 
-      integer           :: kk, no_c, state, blk, no_blk
+      integer           :: kk, no_c, state, no_blk
+      integer(POINTER_SIZE) :: blk
       integer           :: p, ik, ib, nstates, idim, inst, inik
       integer           :: id ,is, ip, ierr, no_states
       character(len=10) :: fname
@@ -1202,7 +1203,8 @@ contains
 
     ! ----------------------------------------------------------------------
     subroutine def_toperator()
-      integer           :: blk, no_tds, no_c, jj, state
+      integer           :: no_tds, no_c, jj, state
+      integer(POINTER_SIZE) :: blk
       integer           :: ierr
       character(len=10) :: fname
       integer           :: ik, ib, idim, inst, inik

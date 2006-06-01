@@ -21,6 +21,7 @@
 module filter_m  
   use global_m
   use grid_m
+  !use varinfo_m
   use messages_m
   use datasets_m
   use io_m 
@@ -82,7 +83,8 @@ contains
     FLOAT,        intent(in) :: dt
     logical,      intent(out):: mode_tdpenalty
 
-    integer                   :: blk, no_lines, no_col, i
+    integer(POINTER_SIZE)    :: blk
+    integer                  :: no_lines, no_col, i
     type(filter_t),   pointer :: tdp(:)
 
     call push_sub('filter.def_tdpenalty_')
@@ -230,7 +232,8 @@ contains
     type(filter_t),   pointer     :: f(:)
     FLOAT,            intent(in)  :: dt
 
-    integer :: blk, no_c, i, no_f, ii
+    integer(POINTER_SIZE) :: blk
+    integer :: no_c, i, no_f, ii
 
     call push_sub('filter.def_filter')
     
