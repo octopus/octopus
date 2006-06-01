@@ -111,7 +111,7 @@ contains
     integer            :: bestJ_ctr_iter, bestJ1_ctr_iter
 
     character(len=80)  :: filename
-    character(len=5)   :: algtype
+
     integer            :: istype, algorithm_type, totype
     
     logical            :: dump_intermediate, mode_fixed_fluence
@@ -1647,7 +1647,8 @@ contains
 
       ! tdpenalty and fixed fluence do not work !
       if((mode_tdpenalty).AND.(mode_fixed_fluence)) then
-         write(message(1),'(a)') "Warning: Cannot use fixed fluence and td penalty."
+         write(message(1),'(a)') "Warning: Cannot use fixed fluence and" &
+              //" td penalty."
          write(message(2),'(a)') "Warning: Disabling td penalty."
          call write_info(2)
          tdpenalty = penalty
@@ -1655,7 +1656,8 @@ contains
 
       ! tdtargets only in ZR98 and WG05
       if((targetmode.eq.oct_targetmode_td).AND.((algorithm_type.eq.oct_algorithm_wg05).OR.(algorithm_type.eq.oct_algorithm_wg05))) then
-         write(message(1),'(a)') "Warning: Time-dependent targets work only with ZR98 and WG05."
+         write(message(1),'(a)') "Warning: Time-dependent targets work" &
+              // " only with ZR98 and WG05."
          write(message(2),'(a)') "Warning: Please change algorithm type."
          call write_fatal(2)
       end if
@@ -1672,7 +1674,8 @@ contains
       if( (td_tg_state) .AND. (SUM(psi_i%occ(1,:)).gt.1) ) then
       !if(td_tg_state) then
       !     if(psi_i%occ.gt.1) then
-         write(message(1),'(a)') "Warning: Time-dependent state targets work only with one electron."
+         write(message(1),'(a)') "Warning: Time-dependent state targets" &
+              // " work only with one electron."
          write(message(2),'(a)') "Warning: Please change input file."
          call write_fatal(2)
       end if
