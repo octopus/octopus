@@ -1603,10 +1603,10 @@ contains
     FLOAT,             intent(inout):: elf(:,:)
     FLOAT,   optional, intent(inout):: de(:,:)
 
-    FLOAT :: f, d, s
+    FLOAT :: s, f, D0
     integer :: i, is, ik, ist, idim
-    CMPLX, allocatable :: psi_fs(:), gpsi(:,:)
-    FLOAT, allocatable :: r(:), gradr(:,:), j(:,:)
+    CMPLX, allocatable :: wf_psi(:), gwf_psi(:,:)
+    FLOAT, allocatable :: rho(:), grho(:,:), jj(:,:)
 
     FLOAT, parameter :: dmin = CNST(1e-10)
 #if defined(HAVE_MPI)
@@ -1621,82 +1621,96 @@ contains
     end if
 
     do_is: do is = 1, st%d%nspin
-      ALLOCATE(    r(NP),       NP)
-      ALLOCATE(gradr(NP, NDIM), NP*NDIM)
-      ALLOCATE(    j(NP, NDIM), NP*NDIM)
-      r = M_ZERO; gradr = M_ZERO; j  = M_ZERO
+      ALLOCATE( rho(NP),       NP)           ! spin density
+      ALLOCATE(grho(NP, NDIM), NP*NDIM)      ! gradient of the spin density
+      ALLOCATE(  jj(NP, NDIM), NP*NDIM)      ! spin current
+      rho = M_ZERO; grho = M_ZERO; jj  = M_ZERO
       
-      elf(1:NP,is) = M_ZERO
+      elf(1:NP,is) = M_ZERO                  ! this will store the elf function
 
-      ALLOCATE(psi_fs(NP_PART),  NP_PART)
-      ALLOCATE(gpsi  (NP, NDIM), NP*NDIM)
+      ALLOCATE( wf_psi(NP_PART),  NP_PART)   ! to store the wave-functions
+      ALLOCATE(gwf_psi(NP, NDIM), NP*NDIM)   ! the gradients of the wave-functions
+
       do ik = is, st%d%nik, st%d%nspin
         do ist = st%st_start, st%st_end
           do idim = 1, st%d%dim
 
+            ! all calculations will be done with complex wave-functions
             if (st%d%wfs_type == M_REAL) then
-              psi_fs(:) = cmplx(st%dpsi(:, idim, ist, ik), KIND=PRECISION)
+              wf_psi(:) = cmplx(st%dpsi(:, idim, ist, ik), KIND=PRECISION)
             else
-              psi_fs(:) = st%zpsi(:, idim, ist, ik)
+              wf_psi(:) = st%zpsi(:, idim, ist, ik)
             end if
 
-            call zf_gradient(gr%sb, gr%f_der, psi_fs(:), gpsi)
+            ! calculate gradient of the wave-function
+            call zf_gradient(gr%sb, gr%f_der, wf_psi(:), gwf_psi)
 
-            r(:) = r(:) + st%d%kweights(ik)*st%occ(ist, ik) * abs(psi_fs(:))**2
+            ! sum over states to obtain the spin-density
+            rho(:) = rho(:) + st%d%kweights(ik)*st%occ(ist, ik)/s * abs(wf_psi(:))**2
+
             do i = 1, NDIM
-              gradr(:,i) = gradr(:,i) + st%d%kweights(ik)*st%occ(ist, ik) *  &
-                   M_TWO * real(conjg(psi_fs(:))*gpsi(:,i))
-              j (:,i) =  j(:,i) + st%d%kweights(ik)*st%occ(ist, ik) *  &
-                   aimag(conjg(psi_fs(:))*gpsi(:,i))
+              grho(:,i) = grho(:,i) + st%d%kweights(ik)*st%occ(ist, ik)/s *  &
+                 M_TWO * real(conjg(wf_psi(:))*gwf_psi(:,i))
+              jj(:,i)   =  jj(:,i)  + st%d%kweights(ik)*st%occ(ist, ik)/s *  &
+                 aimag(conjg(wf_psi(:))*gwf_psi(:,i))
             end do
 
+            ! elf will now contain the spin-kinetic energy density, tau
             do i = 1, NP
-              elf(i,is) = elf(i,is) + st%d%kweights(ik)*st%occ(ist, ik)/s * &
-                   sum(abs(gpsi(i, 1:NDIM))**2)
+              elf(i, is) = elf(i, is) + st%d%kweights(ik)*st%occ(ist, ik)/s * &
+                 sum(abs(gwf_psi(i, 1:NDIM))**2)
             end do
+
           end do
         end do
       end do
-      deallocate(psi_fs, gpsi)
+      deallocate(wf_psi, gwf_psi)
 
 #if defined(HAVE_MPI)
       if(st%parallel_in_states) then
         ALLOCATE(reduce_elf(1:NP), NP)
         call MPI_Allreduce(elf(1, is), reduce_elf(1), NP, MPI_FLOAT, MPI_SUM, st%mpi_grp%comm, mpi_err)
         elf(1:NP, is) = reduce_elf(1:NP)
-        call MPI_Allreduce(r(1), reduce_elf(1), NP, MPI_FLOAT, MPI_SUM, st%mpi_grp%comm, mpi_err)
-        r(1:NP) = reduce_elf(1:NP)
+
+        call MPI_Allreduce(rho(1), reduce_elf(1), NP, MPI_FLOAT, MPI_SUM, st%mpi_grp%comm, mpi_err)
+        rho(1:NP) = reduce_elf(1:NP)
+
         do i = 1, NDIM
-          call MPI_Allreduce(gradr(1, i), reduce_elf(1), NP, MPI_FLOAT, MPI_SUM, st%mpi_grp%comm, mpi_err)
-          gradr(1:NP, i) = reduce_elf(1:NP)
-          call MPI_Allreduce(j(1, i), reduce_elf(1), NP, MPI_FLOAT, MPI_SUM, st%mpi_grp%comm, mpi_err)
-          j(1:NP, i) = reduce_elf(1:NP)
+          call MPI_Allreduce(grho(1, i), reduce_elf(1), NP, MPI_FLOAT, MPI_SUM, st%mpi_grp%comm, mpi_err)
+          grho(1:NP, i) = reduce_elf(1:NP)
+          
+          call MPI_Allreduce(jj(1, i), reduce_elf(1), NP, MPI_FLOAT, MPI_SUM, st%mpi_grp%comm, mpi_err)
+          jj(1:NP, i) = reduce_elf(1:NP)
         end do
         deallocate(reduce_elf)
       end if
 #endif
 
+      ! elf will contain rho * D
       do i = 1, NP
-        if(r(i) >= dmin) then
-          elf(i,is) = elf(i,is) - (M_FOURTH*sum(gradr(i, 1:NDIM)**2) + sum(j(i, 1:NDIM)**2))/(s*r(i))
-        end if
+        elf(i, is) = elf(i, is)*rho(i)        &    ! + tau * rho
+           - M_FOURTH*sum(grho(i, 1:NDIM)**2) &    ! - | nabla rho |^2 / 4
+           + sum(jj(i, 1:NDIM)**2)                 ! - j^2
       end do
+
+      deallocate(grho, jj)   ! these are no longer needed
     
-      if(present(de)) de(1:NP,is)=elf(1:NP,is)
+      ! pass this information to the caller if requested
+      if(present(de)) de(1:NP,is) = elf(1:NP,is)
 
       ! normalization
       f = M_THREE/M_FIVE*(M_SIX*M_PI**2)**M_TWOTHIRD
 
       do i = 1, NP
-        if(r(i) >= dmin) then
-          d    = f*f*(r(i)/s)**(M_TEN/M_THREE)
-          elf(i,is) = d/(d + elf(i,is)**2)
+        if(rho(i) >= dmin) then
+          D0 = f * rho(i)**(M_EIGHT/M_THREE)
+          elf(i, is) = D0*D0/(D0*D0 + elf(i,is)**2)
         else
-          elf(i,is) = M_ZERO
-        endif 
+          elf(i, is) = M_ZERO
+        endif
       end do
 
-      deallocate(r, gradr, j)
+      deallocate(rho)
 
     end do do_is
 

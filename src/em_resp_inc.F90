@@ -388,7 +388,7 @@ subroutine X(static_response) (sys, h, lr, props, pol, hpol)
 
   call push_sub('em_resp.static_response')
 
-  message(1) = "Info:  Calculating static properties"
+  message(1) = "Info: Calculating static properties"
   call write_info(1)
 
   ALLOCATE(tmp(1:np, 1), np)

@@ -232,14 +232,14 @@ contains
       !DENSITY      
       if(iand(sys%outp%what, output_density).ne.0) then 
          
-        if(1 == k) then 
+        if(k == 1) then 
           lr_rho(1:NP, 1:st%d%nspin) = st%rho(1:NP, 1:st%d%nspin)
         else
           lr_rho(1:NP, 1:st%d%nspin) = (st%rho(1:NP, 1:st%d%nspin) - lr_rho(1:NP, 1:st%d%nspin)) / (M_TWO*e_field)
 
           !write
           do is = 1, st%d%nspin
-            write(fname, '(a,a,i1,a,i1)') 'lr_density', '-', is, '-', i
+            write(fname, '(a,a,i1,a,i1)') 'fd_density', '-', is, '-', i
             call doutput_function(sys%outp%how, "linear", trim(fname),&
                 gr%m, gr%sb, lr_rho(:, is), M_ONE, ierr)
           end do
@@ -250,10 +250,10 @@ contains
       !ELF
       if(iand(sys%outp%what, output_elf).ne.0) then 
          
-        if(1==k) then 
-          call states_calc_elf(st, gr, elf,elfd)
+        if(k == 1) then 
+          call states_calc_elf(st, gr, elf, elfd)
         else
-          call states_calc_elf(st, gr, lr_elf,lr_elfd)
+          call states_calc_elf(st, gr, lr_elf, lr_elfd)
           
           !numerical derivative
            lr_elf(1:NP, 1:st%d%nspin) = ( lr_elf(1:NP, 1:st%d%nspin) -  elf(1:NP, 1:st%d%nspin)) / (M_TWO*e_field)
@@ -261,10 +261,10 @@ contains
 
           !write
           do is = 1, st%d%nspin
-            write(fname, '(a,a,i1,a,i1)') 'lr_elf', '-', is, '-', i
+            write(fname, '(a,a,i1,a,i1)') 'fd_elf', '-', is, '-', i
             call doutput_function(sys%outp%how, "linear", trim(fname),&
                 gr%m, gr%sb, lr_elf(:, is), M_ONE, ierr)
-            write(fname, '(a,a,i1,a,i1)') 'lr_D', '-', is, '-', i
+            write(fname, '(a,a,i1,a,i1)') 'fd_D', '-', is, '-', i
             call doutput_function(sys%outp%how, "linear", trim(fname),&
                 gr%m, gr%sb, lr_elfd(:, is), M_ONE, ierr)
           end do
