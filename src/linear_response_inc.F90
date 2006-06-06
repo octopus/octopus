@@ -31,7 +31,7 @@ subroutine X(lr_orth_vector) (m, st, v, ik)
   call push_sub('linear_response_inc.Xlr_orth_vector')
 
   do ist = 1, st%nst
-    if(st%occ(ist, ik) > M_ZERO) then
+    if(st%occ(ist, ik) > lr_min_occ) then
       scalp = X(states_dotp)(m, st%d%dim, st%X(psi)(:,:, ist, ik), v)
       v(:,:) = v(:,:) - scalp*st%X(psi)(:,:, ist, ik)
     end if

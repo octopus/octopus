@@ -62,6 +62,8 @@ module linear_response_m
     FLOAT, pointer :: dl_Vxc(:,:,:)    ! linear change of the xc potential (fxc)
   end type lr_t
 
+  FLOAT, parameter :: lr_min_occ=CNST(1e-4)
+
 contains
 
   ! ---------------------------------------------------------

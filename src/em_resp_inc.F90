@@ -154,27 +154,26 @@ subroutine X(get_response_e)(sys, h, lr, dir, nsigma, omega, props, status)
         end if
 
         do ist = 1, st%nst
-          if(st%occ(ist, ik) <= M_ZERO) cycle
-          
+          if(st%occ(ist, ik) <= lr_min_occ) cycle
           Y(1:m%np,1) = -dV(1:m%np,ik)*st%X(psi)(1:m%np, 1, ist, ik)
           
-          
           !          if (nsigma == 2 ) then
-          
-          do ist2 = 1, st%nst
-            a(ist2,ik)=sum(R_CONJ(st%X(psi)(1:m%np, 1, ist2, ik))*Y(1:m%np ,1)*&
-                 sys%gr%m%vol_pp(1:m%np))
-            Y(1:m%np,1)=Y(1:m%np,1)-a(ist2,ik)*st%X(psi)(1:m%np, 1, ist2, ik)
+!          do ist2 = 1, st%nst
+!            if(st%occ(ist, ik) > min_occ) then 
+!              a(ist2,ik)=sum(R_CONJ(st%X(psi)(1:m%np, 1, ist2, ik))*Y(1:m%np ,1)*&
+!                   sys%gr%m%vol_pp(1:m%np))
+!              Y(1:m%np,1)=Y(1:m%np,1)-a(ist2,ik)*st%X(psi)(1:m%np, 1, ist2, ik)
+!            end if
             !              print*,sum(Y(1:m%np,1)*st%X(psi)(1:m%np, 1, ist2, ik))
-          end do
+!          end do
             
           !          else
           
-          !          call X(lr_orth_vector)(m, st, Y, ik)
+          call X(lr_orth_vector)(m, st, Y, ik)
           
-!          do ist2 = 1, st%nst
-            !            print*,sum(R_CONJ(Y(1:m%np,1))*st%X(psi)(1:m%np, 1, ist2, ik))
-!          end do
+          !          do ist2 = 1, st%nst
+          !            print*,sum(R_CONJ(Y(1:m%np,1))*st%X(psi)(1:m%np, 1, ist2, ik))
+          !          end do
 
           if(props%ort_each_step) then 
             call X(lr_solve_HXeY) (lr(dir,1), h, sys%gr, sys%st%d, ik, lr(dir,sigma)%X(dl_psi)(:,:, ist, ik), Y, &
@@ -201,13 +200,13 @@ subroutine X(get_response_e)(sys, h, lr, dir, nsigma, omega, props, status)
 
 !          if (nsigma == 2 ) then
             
-            do ist2 = 1, st%nst
-              if(sys%st%occ(ist2,ik) == M_ZERO ) then 
-                lr(dir,sigma)%X(dl_psi)(1:m%np,1, ist, ik)=lr(dir,sigma)%X(dl_psi)(1:m%np, 1, ist, ik)&
-                     +a(ist2,ik)/(sys%st%eigenval(ist2, ik)-sys%st%eigenval(ist, ik)+freq_sign*omega)*&
-                     st%X(psi)(1:m%np, 1, ist2, ik)
-              end if
-            end do
+!            do ist2 = 1, st%nst
+!              if(sys%st%occ(ist2,ik) == M_ZERO ) then 
+!                lr(dir,sigma)%X(dl_psi)(1:m%np,1, ist, ik)=lr(dir,sigma)%X(dl_psi)(1:m%np, 1, ist, ik)&
+!                     +a(ist2,ik)/(sys%st%eigenval(ist2, ik)-sys%st%eigenval(ist, ik)+freq_sign*omega)*&
+!                     st%X(psi)(1:m%np, 1, ist2, ik)
+!              end if
+!            end do
             
 !          endif
          
@@ -375,13 +374,12 @@ subroutine X(static_response) (sys, h, lr, props, pol, hpol)
   FLOAT,               intent(out)   :: hpol(:,:,:)
 
   integer :: i, j, k
-  integer :: ispin, ist, ispin2, ist2, n, np, dim
+  integer :: ispin, ist, ispin2, ist2, n, np, dim, ik
 
   R_TYPE :: prod
 
   R_TYPE, allocatable :: tmp(:,:), dVde(:,:,:), drhode(:,:)
   FLOAT,  allocatable :: kxc(:,:,:,:)
-  FLOAT               :: spinfactor
 
   np  = sys%gr%m%np
   dim = sys%gr%sb%dim
@@ -455,9 +453,6 @@ subroutine X(static_response) (sys, h, lr, props, pol, hpol)
   if (sys%st%d%nspin /= UNPOLARIZED ) then 
     write(message(1), '(a)') 'WARNING: Hyperpolarizability has not been tested for spin polarized systems'
     call write_warning(1)
-    spinfactor = M_ONE
-  else 
-    spinfactor = M_TWO
   end if
 
   hpol = M_ZERO
@@ -465,41 +460,47 @@ subroutine X(static_response) (sys, h, lr, props, pol, hpol)
   do i = 1, dim
     do j = 1, dim
       do k = 1, dim
-        
-        do ispin = 1, sys%st%d%nspin
-          do ist = 1, sys%st%nst
 
-            ! <D\psi_n | P_c DV_scf P_c | D\psi_n >
+        do ik=1, sys%st%d%nik
+          do ispin = 1, sys%st%d%nspin
+            do ist = 1, sys%st%nst
 
-            tmp(1:np, 1)  = dVde(1:np, ispin, j) * lr(k,1)%X(dl_psi)(1:np, 1, ist, ispin)
-            hpol(i, j, k) = hpol(i, j, k) + &
-                 spinfactor * sum(R_CONJ(lr(i, 1)%X(dl_psi)(1:np, 1, ist, ispin)) * &
-                 tmp(1:np, 1) * sys%gr%m%vol_pp(1:np))
-
-            do ispin2 = 1, sys%st%d%nspin
-              do ist2 = 1, sys%st%nst
+              if( sys%st%occ(ist, ik) > lr_min_occ ) then 
+                ! <D\psi_n | P_c DV_scf P_c | D\psi_n >
                 
-                prod = sum(R_CONJ(lr(i, 1)%X(dl_psi)(1:np, 1, ist, ispin)) * &
-                     lr(k, 1)%X(dl_psi)(1:np, 1, ist2, ispin2) * sys%gr%m%vol_pp(1:np))
+                tmp(1:np, 1)  = dVde(1:np, ispin, j) * lr(k,1)%X(dl_psi)(1:np, 1, ist, ispin)
+                hpol(i, j, k) = hpol(i, j, k) + &
+                     sys%st%d%kweights(ik)*sys%st%occ(ist, ik)* sum(R_CONJ(lr(i, 1)%X(dl_psi)(1:np, 1, ist, ispin)) * &
+                     tmp(1:np, 1) * sys%gr%m%vol_pp(1:np))
+                
+                do ispin2 = 1, sys%st%d%nspin
+                  do ist2 = 1, sys%st%nst
+                    if( sys%st%occ(ist2, ik) > lr_min_occ ) then 
+                      prod = sum(R_CONJ(lr(i, 1)%X(dl_psi)(1:np, 1, ist, ispin)) * &
+                           lr(k, 1)%X(dl_psi)(1:np, 1, ist2, ispin2) * sys%gr%m%vol_pp(1:np))
+                      
+                      prod = prod * sum( &
+                           R_CONJ(sys%st%X(psi)(1:np, 1, ist2, ispin2)) * &
+                           dVde(1:np, ispin, j) * sys%st%X(psi)(1:np, 1, ist, ispin) * &
+                         sys%gr%m%vol_pp(1:np))
+                      
+                      hpol(i, j, k) = hpol(i, j, k) - sys%st%d%kweights(ik)*sys%st%occ(ist, ik)*prod
+                    end if
+                  end do ! ist2
+                end do ! ispin2
 
-                prod = prod * sum( &
-                     R_CONJ(sys%st%X(psi)(1:np, 1, ist2, ispin2)) * &
-                     dVde(1:np, ispin, j) * sys%st%X(psi)(1:np, 1, ist, ispin) * &
-                     sys%gr%m%vol_pp(1:np))
-
-                hpol(i, j, k) = hpol(i, j, k) - spinfactor*prod
-              end do ! ist2
-            end do ! ispin2
+              end if
             
-          end do ! ist
-        end do ! ispin
+            end do ! ist
+          end do ! ispin
+        end do !ik
 
         if(props%add_fxc) then 
           hpol(i, j, k) = hpol(i, j, k) + &
                sum(kxc(1:np, 1, 1, 1) * drhode(1:np, i) * drhode(1:np, j)*drhode(1:np, k) * &
                sys%gr%m%vol_pp(1:np))/CNST(6.0)
         end if
-
+        
       end do ! k
     end do ! j
   end do ! i
