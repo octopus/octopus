@@ -69,9 +69,12 @@ contains
     FLOAT ::  pol(1:MAX_DIM, 1:MAX_DIM)
     CMPLX :: zpol(1:MAX_DIM, 1:MAX_DIM)
     FLOAT :: hpol(1:MAX_DIM, 1:MAX_DIM, 1:MAX_DIM)
+    FLOAT, allocatable :: hpol_density(:,:,:,:)
 
     FLOAT :: delta
-    integer :: nfreq, nsigma, ndim, i, j, sigma, ierr, kpoints, dim, nst
+    integer :: nfreq, nsigma, ndim, i, j, sigma, ierr, kpoints, dim, nst, k
+    character(len=80) :: fname
+
     type(pol_props_t) :: props
     
     integer :: nomega
@@ -190,10 +193,11 @@ contains
     else 
 
       !!! STATIC
-      
+      ALLOCATE(hpol_density(sys%NP,MAX_DIM,MAX_DIM,MAX_DIM),sys%NP*MAX_DIM**3)
+
       if ( .not. props%complex_response) then
         call dstatic_response(sys, h, lr(:, :, 1), props, &
-           pol(1:ndim, 1:ndim), hpol(1:ndim, 1:ndim, 1:ndim))
+           pol(1:ndim, 1:ndim), hpol(1:ndim, 1:ndim, 1:ndim),hpol_density)
         call output()
         do i = 1, ndim
           call dlr_output(sys%st, sys%gr, lr(i, 1, 1) ,"linear", i, sys%outp)
@@ -202,14 +206,26 @@ contains
       else
       
         call zstatic_response(sys, h, lr(:, :, 1), props, &
-           pol(1:ndim, 1:ndim), hpol(1:ndim, 1:ndim, 1:ndim))
+           pol(1:ndim, 1:ndim), hpol(1:ndim, 1:ndim, 1:ndim),hpol_density)
         call output()
         do i = 1, ndim
           call zlr_output(sys%st, sys%gr, lr(i, 1, 1) ,"linear", i, sys%outp)
         end do
 
       end if
+      
+      if(iand(sys%outp%what, output_pol_density).ne.0) then
+        do i=1,NDIM
+          do j=1,NDIM
+            do k=1,NDIM
+              write(fname, '(a,i1,a,i1,a,i1)') 'beta-', i, '-', j, '-', k
+              call doutput_function (sys%outp%how, "linear", fname, gr%m, gr%sb, hpol_density(:,i,j,k), M_ONE, ierr)
+            end do
+          end do
+        end do
+      end if
 
+      deallocate(hpol_density)
     end if
     
     do i = 1, ndim

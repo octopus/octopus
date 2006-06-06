@@ -365,21 +365,23 @@ end subroutine X(get_response_e)
 
 
 ! ---------------------------------------------------------
-subroutine X(static_response) (sys, h, lr, props, pol, hpol)
+subroutine X(static_response) (sys, h, lr, props, pol, hpol, hpol_density)
   type(system_t),      intent(inout) :: sys
   type(hamiltonian_t), intent(inout) :: h
   type(lr_t),          intent(inout) :: lr(:,:) ! lr(NDIM,1,1)
   type(pol_props_t),     intent(in)    :: props
   FLOAT,               intent(out)   :: pol(:,:)
   FLOAT,               intent(out)   :: hpol(:,:,:)
+  FLOAT,               intent(inout) :: hpol_density(:,:,:,:) !(1:np,MAX_DIM,MAX_DIM,MAX_DIM)
 
   integer :: i, j, k
   integer :: ispin, ist, ispin2, ist2, n, np, dim, ik
 
   R_TYPE :: prod
 
-  R_TYPE, allocatable :: tmp(:,:), dVde(:,:,:), drhode(:,:)
-  FLOAT,  allocatable :: kxc(:,:,:,:)
+  R_TYPE, allocatable :: dVde(:,:,:), drhode(:,:)
+  FLOAT, allocatable :: tmp(:,:)
+  FLOAT,  allocatable :: kxc(:,:,:,:), hp_tmp(:,:,:,:)
 
   np  = sys%gr%m%np
   dim = sys%gr%sb%dim
@@ -434,7 +436,7 @@ subroutine X(static_response) (sys, h, lr, props, pol, hpol)
       drhode(n, i) = sum(lr(i, 1)%X(dl_rho)(n, 1:sys%st%d%nspin))
     end do
       
-  end do
+  end do !dim
 
   write(message(1), '(a)') 'Info: Calculating polarizability tensor'
   call write_info(1)
@@ -455,7 +457,7 @@ subroutine X(static_response) (sys, h, lr, props, pol, hpol)
     call write_warning(1)
   end if
 
-  hpol = M_ZERO
+  hpol_density = M_ZERO
 
   do i = 1, dim
     do j = 1, dim
@@ -469,22 +471,23 @@ subroutine X(static_response) (sys, h, lr, props, pol, hpol)
                 ! <D\psi_n | P_c DV_scf P_c | D\psi_n >
                 
                 tmp(1:np, 1)  = dVde(1:np, ispin, j) * lr(k,1)%X(dl_psi)(1:np, 1, ist, ispin)
-                hpol(i, j, k) = hpol(i, j, k) + &
-                     sys%st%d%kweights(ik)*sys%st%occ(ist, ik)* sum(R_CONJ(lr(i, 1)%X(dl_psi)(1:np, 1, ist, ispin)) * &
-                     tmp(1:np, 1) * sys%gr%m%vol_pp(1:np))
+                hpol_density(1:np,i, j, k) = hpol_density(1:np, i, j, k) + &
+                     sys%st%d%kweights(ik)*sys%st%occ(ist, ik)* &
+                     R_CONJ(lr(i, 1)%X(dl_psi)(1:np, 1, ist, ispin)) * tmp(1:np, 1)
                 
                 do ispin2 = 1, sys%st%d%nspin
                   do ist2 = 1, sys%st%nst
                     if( sys%st%occ(ist2, ik) > lr_min_occ ) then 
-                      prod = sum(R_CONJ(lr(i, 1)%X(dl_psi)(1:np, 1, ist, ispin)) * &
-                           lr(k, 1)%X(dl_psi)(1:np, 1, ist2, ispin2) * sys%gr%m%vol_pp(1:np))
-                      
-                      prod = prod * sum( &
-                           R_CONJ(sys%st%X(psi)(1:np, 1, ist2, ispin2)) * &
-                           dVde(1:np, ispin, j) * sys%st%X(psi)(1:np, 1, ist, ispin) * &
-                         sys%gr%m%vol_pp(1:np))
-                      
-                      hpol(i, j, k) = hpol(i, j, k) - sys%st%d%kweights(ik)*sys%st%occ(ist, ik)*prod
+
+                      tmp(1:np, 1)=R_CONJ(sys%st%X(psi)(1:np, 1, ist2, ispin2)) * &
+                           dVde(1:np, ispin, j) * sys%st%X(psi)(1:np, 1, ist, ispin)
+                      prod = dmf_integrate(sys%gr%m,tmp(1:np,1))
+
+                      hpol_density(1:np,i, j, k) = hpol_density(1:np,i, j, k) - & 
+                           sys%st%d%kweights(ik)*sys%st%occ(ist, ik)* & 
+                           R_CONJ(lr(i, 1)%X(dl_psi)(1:np, 1, ist, ispin)) * &
+                           lr(k, 1)%X(dl_psi)(1:np, 1, ist2, ispin2)*prod
+
                     end if
                   end do ! ist2
                 end do ! ispin2
@@ -496,22 +499,29 @@ subroutine X(static_response) (sys, h, lr, props, pol, hpol)
         end do !ik
 
         if(props%add_fxc) then 
-          hpol(i, j, k) = hpol(i, j, k) + &
-               sum(kxc(1:np, 1, 1, 1) * drhode(1:np, i) * drhode(1:np, j)*drhode(1:np, k) * &
-               sys%gr%m%vol_pp(1:np))/CNST(6.0)
+          hpol_density(1:np,i, j, k) = hpol_density(1:np,i, j, k) + &
+               kxc(1:np, 1, 1, 1) * drhode(1:np, i) * drhode(1:np, j)*drhode(1:np, k)/CNST(6.0)
         end if
         
       end do ! k
     end do ! j
   end do ! i
-
+  
+  ALLOCATE(hp_tmp(1:np,MAX_DIM,MAX_DIM,MAX_DIM),np*MAX_DIM**3)
+  hp_tmp(1:np,1:dim,1:dim,1:dim)=hpol_density(1:np,1:dim,1:dim,1:dim)
   do k = 1, dim
-    do j = 1, k
-      do i = 1, j
-        hpol(i,j,k) = -(hpol(i,j,k) + hpol(j,k,i) + hpol(k,i,j) + hpol(k,j,i) + hpol(j,i,k) + hpol(i,k,j))
+    do j = 1, dim
+      do i = 1, dim
+        hpol_density(1:np,i,j,k) = -( &
+             + hp_tmp(1:np,i,j,k) + hp_tmp(1:np,j,k,i) &
+             + hp_tmp(1:np,k,i,j) + hp_tmp(1:np,k,j,i) &
+             + hp_tmp(1:np,j,i,k) + hp_tmp(1:np,i,k,j))
+        hpol(i,j,k)=dmf_integrate(sys%gr%m,hpol_density(1:np,i,j,k))
       end do ! k
     end do ! j
   end do ! i
+  deallocate(hp_tmp)
+  
 
   deallocate(tmp)
   deallocate(dVde)
