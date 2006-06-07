@@ -1655,7 +1655,9 @@ contains
       end if
 
       ! tdtargets only in ZR98 and WG05
-      if((targetmode.eq.oct_targetmode_td).AND.((algorithm_type.eq.oct_algorithm_wg05).OR.(algorithm_type.eq.oct_algorithm_wg05))) then
+      if((targetmode.eq.oct_targetmode_td) & 
+           .AND.((algorithm_type.eq.oct_algorithm_wg05) & 
+           .OR.(algorithm_type.eq.oct_algorithm_wg05))) then
          write(message(1),'(a)') "Warning: Time-dependent targets work" &
               // " only with ZR98 and WG05."
          write(message(2),'(a)') "Warning: Please change algorithm type."
