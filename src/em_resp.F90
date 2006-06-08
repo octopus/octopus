@@ -398,7 +398,7 @@ contains
       do i = 1, NDIM
         do j = 1, NDIM
           do k = 1, NDIM
-            write(iunit,'(3i2,f12.6)') i, j, k, hpol(i, j, k)/units_out%length%factor**(5)
+            write(iunit,'(3i2,e20.8)') i, j, k, hpol(i, j, k)/units_out%length%factor**(5)
           end do
         end do
       end do
