@@ -101,7 +101,6 @@ fi
 AM_CONDITIONAL([ENABLE_PYTHON], [test $ac_cv_build_python = yes])
 
 
-
 dnl try to find out what is the default FORTRAN 90 compiler
 dnl note that this has to be done after the AC_ARG_ENABLE(mpi...)
 acx_save_fcflags="${FCFLAGS}"
@@ -183,9 +182,14 @@ ACX_LAPACK([], AC_MSG_ERROR([could not find required lapack library]))
 dnl check for GSL
 AC_LANG_PUSH(C)
 LIBS="${acx_save_libs}"
+
 AM_PATH_GSL([1.0], 
   [CFLAGS="$CFLAGS $GSL_CFLAGS"], 
   AC_MSG_ERROR([could not find required gsl library]))
+
+dnl check for GD library
+ACX_GDLIB
+
 LIBS="${FCLIBS}"
 AC_LANG_POP(C)
 

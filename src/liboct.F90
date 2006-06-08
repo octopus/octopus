@@ -59,6 +59,14 @@ module lib_oct_m
     loct_progress_bar,       &
     loct_printRecipe
 
+#if defined(HAVE_GDLIB)
+  public ::                    &
+    loct_gdimage_create_from,  &
+    loct_gdimage_sx,           &
+    loct_gdimage_sy,           &
+    loct_gdimage_get_pixel_rgb
+#endif
+
   public ::                  &
     write_iter_init,         &
     write_iter_clear,        &
@@ -369,6 +377,39 @@ module lib_oct_m
       character(len=*), intent(out) :: filename
     end subroutine oct_printRecipe
   end interface
+
+  ! ---------------------------------------------------------
+  ! GD library
+#if defined(HAVE_GDLIB)
+  interface loct_gdimage_create_from
+    function oct_gdimage_create_from(filename)
+      integer(POINTER_SIZE) :: oct_gdimage_create_from
+      character(len=*), intent(in) :: filename
+    end function oct_gdimage_create_from
+  end interface
+
+  interface loct_gdimage_sx
+    function oct_gdimage_sx(im)
+      integer :: oct_gdimage_sx
+      integer(POINTER_SIZE), intent(in) :: im
+    end function oct_gdimage_sx
+  end interface
+
+  interface loct_gdimage_sy
+    function oct_gdimage_sy(im)
+      integer :: oct_gdimage_sy
+      integer(POINTER_SIZE), intent(in) :: im
+    end function oct_gdimage_sy
+  end interface
+
+  interface loct_gdimage_get_pixel_rgb
+    subroutine oct_gdimage_get_pixel_rgb(im, x, y, r, g, b)
+      integer(POINTER_SIZE), intent(in)  :: im
+      integer,               intent(in)  :: x, y
+      integer,               intent(out) :: r, g, b
+    end subroutine oct_gdimage_get_pixel_rgb
+  end interface
+#endif
 
 contains
 

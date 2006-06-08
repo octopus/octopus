@@ -54,7 +54,7 @@ noinst_HEADERS = \
 	em_resp_inc.F90 unocc_inc.F90 casida_inc.F90
 
 core_LIBS = @LIBS_LAPACK@ @LIBS_BLAS@ ../liboct/liboct.a ../liboct_parser/liboct_parser.a \
-  ../libxc/libxc.a @GSL_LIBS@ @FCEXTRALIBS@
+  ../libxc/libxc.a @GSL_LIBS@ @GD_LIBS@ @FCEXTRALIBS@
 
 external_LIBS = ../external_libs/expokit/libexpokit.a \
   ../external_libs/qshep/libqshep.a
@@ -234,6 +234,3 @@ liboct_parser.o: global.o
 datasets.o: liboct_parser.o
 messages.o: liboct.o datasets.o
 io.o: global.o liboct_parser.o datasets.o
-
-
-

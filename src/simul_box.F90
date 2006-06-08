@@ -27,6 +27,7 @@ module simul_box_m
   use units_m
   use datasets_m
   use lib_oct_parser_m
+  use lib_oct_m
   use geometry_m
   use math_m
 
@@ -48,6 +49,7 @@ module simul_box_m
     CYLINDER       = 2,         &
     MINIMUM        = 3,         &
     PARALLELEPIPED = 4,         &
+    BOX_IMAGE      = 5,         &
     BOX_USDEF      = 123
 
   type simul_box_t
@@ -61,7 +63,8 @@ module simul_box_m
     FLOAT :: xsize          ! the length of the cylinder in the x direction
     FLOAT :: lsize(3)       ! half of the length of the parallelepiped in each direction.
 
-    character(len=1024) :: user_def ! for the user defined box
+    integer(POINTER_SIZE) :: image    ! for the box defined through an image
+    character(len=1024)   :: user_def ! for the user defined box
 
     FLOAT :: rlat(3,3)      ! lattice primitive vectors
     FLOAT :: klat(3,3)      ! reciprocal lattice primitive vectors
@@ -156,6 +159,7 @@ contains
     !--------------------------------------------------------------
     subroutine read_box()
       integer(POINTER_SIZE) :: blk
+      character(len=200) :: filename
       FLOAT :: default
       
       call push_sub('simul_box.read_box')
@@ -173,6 +177,7 @@ contains
       !% <ul>
       !% <li>Spherical or minimum mesh is not allowed for periodic systems.</li>
       !% <li>Cylindrical mesh is not allowed for systems that are periodic in more than one dimension.</li>
+      !% >li>Box_image is only allowed in 2D.</li>
       !% </ul>
       !%Option sphere 1
       !% The simulation box will be a sphere of radius Radius
@@ -185,13 +190,16 @@ contains
       !%Option parallelepiped 4
       !% The simulation box will be a parallelpiped whose dimensions are taken from
       !% the variable lsize.
+      !%Option box_image 5
+      !% The simulation box will be defined through an image. White means that the point
+      !% is contained in the simulation box, while any other color means that the point is out.
       !%Option user_defined 123
       !% The shape of the simulation box will be read from the variable <tt>BoxShapeUsDef</tt>
       !%End
       call loct_parse_int(check_inp('BoxShape'), MINIMUM, sb%box_shape)
       if(.not.varinfo_valid_option('BoxShape', sb%box_shape)) call input_error('BoxShape')
       select case(sb%box_shape)
-      case(SPHERE,MINIMUM,BOX_USDEF)
+      case(SPHERE,MINIMUM,BOX_IMAGE,BOX_USDEF)
         if(sb%dim>1 .and. simul_box_is_periodic(sb)) call input_error('BoxShape')
       case(CYLINDER)
         if (sb%dim>2 .and. &
@@ -200,6 +208,9 @@ contains
 
       ! ignore box_shape in 1D
       if(sb%dim==1.and.sb%box_shape /= PARALLELEPIPED) sb%box_shape=SPHERE
+
+      ! Can not use images in 1D or 3D
+      if(sb%dim/=2.and.sb%box_shape == BOX_IMAGE) call input_error('BoxShape')
 
       sb%rsize = -M_ONE
       !%Variable Radius
@@ -238,13 +249,13 @@ contains
       end if
 
       sb%lsize = M_ZERO
-      if(sb%box_shape == PARALLELEPIPED .or. sb%box_shape == BOX_USDEF) then
+      if(sb%box_shape == PARALLELEPIPED .or. sb%box_shape == BOX_IMAGE .or. sb%box_shape == BOX_USDEF) then
 
         !%Variable Lsize
         !%Type block
         !%Section Mesh::Simulation Box
         !%Description
-        !% In case BoxShape is "parallelepiped" or "user_defined", this is assumed to be a block of the form:
+        !% In case BoxShape is "parallelepiped", "box_image", or "user_defined", this is assumed to be a block of the form:
         !%
         !% <tt>%Lsize
         !% <br>&nbsp;&nbsp;sizex | sizey | sizez
@@ -272,6 +283,29 @@ contains
 
         call loct_parse_block_end(blk)
       end if
+
+      ! read in image for box_image
+      if(sb%box_shape == BOX_IMAGE) then
+
+        !%Variable BoxShapeImage
+        !%Type string
+        !%Section Mesh::Simulation Box
+        !%Description
+        !% Name of the file that contains the image that defines the simulation box.
+        !%End
+#if defined(HAVE_GDLIB)        
+        call loct_parse_string(check_inp("BoxShapeImage"), "", filename)
+        sb%image = loct_gdimage_create_from(filename)
+        if(sb%image == 0) then
+          message(1) = "Could not open file '" // filename // "'"
+          call write_fatal(1)
+        end if
+#else
+        message(1) = "To use 'BoxShape = box_image' you have to compile octopus"
+        message(2) = "with GD library support"
+        call write_fatal(2)
+#endif
+      end if     
 
       ! read in box shape for user defined boxes
       if(sb%box_shape == BOX_USDEF) then
@@ -312,11 +346,27 @@ contains
 
     !--------------------------------------------------------------
     subroutine read_spacing()
-      integer :: i
+      integer :: i, sx, sy
       integer(POINTER_SIZE) :: blk
 
 
       call push_sub('simul_box.read_spacing')
+
+      ! initialize to -1
+      sb%h = -M_ONE
+
+#if defined(HAVE_GDLIB)
+      if(sb%box_shape == BOX_IMAGE) then 
+        ! spacing is determined from lsize and the size of the image
+        sx = loct_gdImage_SX(sb%image)
+        sy = loct_gdImage_SY(sb%image)
+
+        sb%h(1) = M_TWO*sb%lsize(1)/real(sx, PRECISION)
+        sb%h(2) = M_TWO*sb%lsize(2)/real(sy, PRECISION)
+        return
+      end if
+#endif
+
       !%Variable Spacing
       !%Type float
       !%Section Mesh::Simulation Box
@@ -333,7 +383,6 @@ contains
       !% <br>%</tt>
       !%End
 
-      sb%h = -M_ONE
       if(loct_parse_block(check_inp('Spacing'), blk) == 0) then
         if(loct_parse_block_cols(blk,0) < sb%dim) call input_error('Spacing')
         do i = 1, sb%dim
@@ -455,11 +504,12 @@ contains
     type(simul_box_t), intent(in) :: sb
     integer,           intent(in) :: iunit
 
-    character(len=15), parameter :: bs(4) = (/ &
+    character(len=15), parameter :: bs(5) = (/ &
       'sphere        ', &
       'cylinder      ', &
       'around nuclei ', &
-      'parallelepiped'/)
+      'parallelepiped', &
+      'image defined '/)
 
     call push_sub('simul_box.simul_box_write_info')
 
@@ -518,6 +568,7 @@ contains
 
     FLOAT, parameter :: DELTA_R = CNST(1e-12)
     FLOAT :: r, re, im, xx(MAX_DIM)
+    integer :: red, green, blue, ix, iy
 
     xx(:) = x(:) - sb%box_offset(:)
 
@@ -537,6 +588,14 @@ contains
         (xx(1) >= -sb%lsize(1).and.xx(1) <= sb%lsize(1)).and. &
         (xx(2) >= -sb%lsize(2).and.xx(2) <= sb%lsize(2)).and. &
         (xx(3) >= -sb%lsize(3).and.xx(3) <= sb%lsize(3))
+
+#if defined(HAVE_GDLIB)
+    case(BOX_IMAGE)
+      ix = int((xx(1) + sb%lsize(1))/sb%h(1))
+      iy = int((xx(2) + sb%lsize(2))/sb%h(2))
+      call loct_gdimage_get_pixel_rgb(sb%image, ix, iy, red, green, blue)
+      in_box = (red == 255).and.(green == 255).and.(blue == 255)
+#endif
 
     case(BOX_USDEF)
       ! is it inside the user given boundaries
