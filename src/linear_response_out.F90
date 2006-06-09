@@ -26,7 +26,7 @@ subroutine X(lr_output) (st, gr, lr, dir, tag, outp)
   integer,          intent(in)    :: tag
   type(output_t),   intent(in)    :: outp
 
-  integer :: ik, ist, idim, ierr
+  integer :: ik, ist, idim, ierr, is
   character(len=80) :: fname
   FLOAT :: u
   FLOAT, allocatable :: dtmp(:)
@@ -43,18 +43,15 @@ subroutine X(lr_output) (st, gr, lr, dir, tag, outp)
     end do
   end if
 
-!#ifdef COMPLEX_WFNS
-!  if(iand(outp%what, output_current).ne.0) then
-!    ! calculate current first
-!    call calc_paramagnetic_current(gr, st, st%j)
-!    do is = 1, st%d%nspin
-!      do idim = 1, NDIM
-!        write(fname, '(a,i1,a,a)') 'current-', is, '-', index2axis(idim)
-!        call doutput_function(outp%how, dir, fname, gr%m, gr%sb, st%j(:, idim, is), u, ierr)
-!      end do
-!    end do
-!  end if
-!#endif
+  if( (iand(outp%what, output_current).ne.0) .and. (st%d%wfs_type == M_CMPLX) )then
+    do is = 1, st%d%nspin
+      do idim = 1, NDIM
+        write(fname, '(a,i1,a,i1,a,a)') 'lr_current-', is, '-', tag, '-',  index2axis(idim)
+        call zoutput_function(outp%how, dir, fname, gr%m, gr%sb, lr%dl_j(:, idim, is), u, ierr)
+      end do
+    end do
+  end if
+
 
   if(iand(outp%what, output_wfs).ne.0) then
     do ist = st%st_start, st%st_end
@@ -98,123 +95,19 @@ contains
     character(len=*), intent(in) :: filename1
     character(len=*), intent(in) :: filename2
     
-    integer :: i, is, ist, idim
-    R_TYPE, allocatable :: gpsi(:,:), gdl_psi(:,:)
-    FLOAT,  allocatable :: rho(:), grho(:,:), dl_rho(:), gdl_rho(:,:)
-    FLOAT,  allocatable :: dl_elf(:,:), elf(:,:), de(:,:)
-    FLOAT :: dl_d0, d0
-    FLOAT :: f, s
-
-    FLOAT, parameter :: dmin = CNST(1e-10)
-    FLOAT :: u, ik_weight
-
-    ALLOCATE(   gpsi(NP, NDIM), NP*NDIM)
-    ALLOCATE(gdl_psi(NP, NDIM), NP*NDIM)
-    ALLOCATE(   grho(NP, NDIM), NP*NDIM)
-    ALLOCATE(gdl_rho(NP, NDIM), NP*NDIM)
-
-    ALLOCATE(   rho(NP), NP)
-    ALLOCATE(dl_rho(NP), NP)
-
-    ALLOCATE(   elf(NP, st%d%nspin), NP*st%d%nspin)
-    ALLOCATE(    de(NP, st%d%nspin), NP*st%d%nspin)
-    ALLOCATE(dl_elf(NP, st%d%nspin), NP*st%d%nspin)
-    
-    !calculate the gs elf
-    call states_calc_elf(st, gr, elf, de)
-
-    ! single or double occupancy
-    if(st%d%nspin == 1) then
-      s = M_TWO
-    else
-      s = M_ONE
-    end if
-
-    dl_elf = M_ZERO
+    integer :: is, ierr
+    u=M_ONE
 
     do is = 1, st%d%nspin
-      rho  = M_ZERO
-      grho = M_ZERO
-      
-      dl_rho  = M_ZERO
-      gdl_rho = M_ZERO
-
-      do ik = is, st%d%nik, st%d%nspin
-        do ist = 1, st%nst
-          ik_weight = st%d%kweights(ik)*st%occ(ist, ik)/s
-
-          do idim = 1, st%d%dim
-          
-            call X(f_gradient)(gr%sb, gr%f_der, st%X(psi)   (:, idim, ist, is), gpsi)
-            call X(f_gradient)(gr%sb, gr%f_der, lr%X(dl_psi)(:, idim, ist, is), gdl_psi)
-
-            ! sum over states to obtain the spin-density
-            rho(1:NP)    = rho(1:NP)    + ik_weight * abs(st%X(psi)(1:NP, idim, ist, is))**2
-            dl_rho(1:NP) = dl_rho(1:NP) + ik_weight * M_TWO *  &
-               R_REAL(R_CONJ(st%X(psi)(1:NP, idim, ist, is)) * lr%X(dl_psi)(1:NP, idim, ist, is))
-
-            do i = 1, NDIM
-              grho(1:NP,i)    = grho(1:NP, i)   + ik_weight *  &
-                 M_TWO * R_REAL(R_CONJ(st%X(psi)(1:NP, idim, ist, is))*gpsi(1:NP,i))
-              
-              gdl_rho(1:NP,i) = gdl_rho(1:NP,i) + ik_weight * M_TWO * ( &
-                 R_REAL(R_CONJ(st%X(psi)(1:NP, idim, ist, is)) * gdl_psi(1:NP,i)) +      &
-                 R_REAL(gpsi(1:NP,i) * R_CONJ(lr%X(dl_psi)(1:NP, idim, ist, is)))  )
-                 
-                 
-              !jj(:,i)   =  jj(:,i)  + ik_weight *  &
-              !   aimag(conjg(wf_psi(:))*gwf_psi(:,i))
-            end do
-
-            do i = 1, NP
-              dl_elf(i, is) = dl_elf(i, is) +                             &
-                 dl_rho(i) * ik_weight * sum(R_ABS(gpsi(i, 1:NDIM))**2) + &
-                 rho(i)    * ik_weight * M_TWO*R_REAL(sum(R_CONJ(gpsi(i,1:NDIM))*gdl_psi(i,1:NDIM)))
-            end do
-          
-          end do
-        end do
-      end do
-      
-      do i= 1, NP
-        if(abs(st%rho(i, is)) >= dmin) then
-          dl_elf(i, is) = dl_elf(i, is)                       &
-             - M_HALF * sum(grho(i, 1:NDIM)*gdl_rho(i, 1:NDIM))
-        end if
-      end do
-      
       write(fname, '(a,a,i1,a,i1)') trim(filename1), '-', is, '-', tag 
-      call doutput_function(outp%how, dir, trim(fname), gr%m, gr%sb, dl_elf(:,is), M_ONE, ierr)
-      
-      !normalization 
-      f = M_THREE/M_FIVE*(M_SIX*M_PI**2)**M_TWOTHIRD
-      do i = 1, NP
-
-        if(abs(st%rho(i, is)) >= dmin) then
-          d0    = f * rho(i)**(M_EIGHT/M_THREE) + CNST(1e-5)
-          dl_d0 = M_EIGHT/M_THREE * f * dl_rho(i) * rho(i)**(M_FIVE/M_THREE)
-        
-          dl_elf(i, is) = - M_TWO * elf(i,is)**2 * (de(i, is)/d0) * &
-             ((dl_elf(i, is) - (de(i, is)/d0)*dl_d0)/d0)
-        else
-          dl_elf(i, is) = M_ZERO
-        end if
-
-      end do
-        
-      write(fname, '(a,a,i1,a,i1)') trim(filename2), '-', is, '-', tag 
-      call doutput_function(outp%how, dir, trim(fname), gr%m, gr%sb, dl_elf(:,is), M_ONE, ierr)
-      
+      call X(output_function)(outp%how, dir, trim(fname), gr%m, gr%sb, lr%X(dl_de)(1:NP,is), u, ierr)
     end do
 
-    deallocate(gpsi)
-    deallocate(gdl_psi)
-    deallocate(grho)
+    do is = 1, st%d%nspin
+      write(fname, '(a,a,i1,a,i1)') trim(filename2), '-', is, '-', tag 
+      call X(output_function)(outp%how, dir, trim(fname), gr%m, gr%sb, lr%X(dl_elf)(1:NP,is), u, ierr)
+    end do
 
-    deallocate(elf)
-    deallocate(de)
-    deallocate(dl_elf)
-    
   end subroutine lr_elf
 
 end subroutine X(lr_output)

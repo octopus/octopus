@@ -69,7 +69,11 @@ contains
     FLOAT ::  pol(1:MAX_DIM, 1:MAX_DIM)
     CMPLX :: zpol(1:MAX_DIM, 1:MAX_DIM)
     FLOAT :: hpol(1:MAX_DIM, 1:MAX_DIM, 1:MAX_DIM)
+
+    FLOAT :: betafactors(1:MAX_DIM)
+
     FLOAT, allocatable :: hpol_density(:,:,:,:)
+
 
     FLOAT :: delta
     integer :: nfreq, nsigma, ndim, i, j, sigma, ierr, kpoints, dim, nst, k
@@ -184,12 +188,26 @@ contains
         else
           write(iunit, '(a,f12.6)') '#calculation didnt converge for frequency ', omega(i)
         end if
-
-          call io_close(iunit)
+        
+        call io_close(iunit)
+        
+        if(1 == nomega ) then 
           
-
+          if( props%complex_response ) then 
+            do j = 1, NDIM
+              call zlr_calc_elf(sys%st,sys%gr, lr(j, 1, 1), lr(j,2,1))
+              call zlr_output(sys%st, sys%gr, lr(j, 1, 1) ,"linear", j, sys%outp)
+            end do
+          else
+            do j = 1, NDIM
+              call dlr_calc_elf(sys%st,sys%gr, lr(j, 1, 1), lr(j,2,1))
+              call dlr_output(sys%st, sys%gr, lr(j, 1, 1) ,"linear", j, sys%outp)
+            end do
+          end if
+        end if
+        
       end do
-
+      
     else 
 
       !!! STATIC
@@ -200,6 +218,7 @@ contains
            pol(1:ndim, 1:ndim), hpol(1:ndim, 1:ndim, 1:ndim),hpol_density)
         call output()
         do i = 1, ndim
+          call dlr_calc_elf(sys%st,sys%gr, lr(i, 1, 1))          
           call dlr_output(sys%st, sys%gr, lr(i, 1, 1) ,"linear", i, sys%outp)
         end do
 
@@ -209,6 +228,7 @@ contains
            pol(1:ndim, 1:ndim), hpol(1:ndim, 1:ndim, 1:ndim),hpol_density)
         call output()
         do i = 1, ndim
+          call zlr_calc_elf(sys%st,sys%gr, lr(i, 1, 1))
           call zlr_output(sys%st, sys%gr, lr(i, 1, 1) ,"linear", i, sys%outp)
         end do
 
@@ -288,9 +308,9 @@ contains
         call loct_parse_block_end(blk)
 
         call sort(omega)
-    else 
-      props%dynamic = .false. 
-    end if
+      else 
+        props%dynamic = .false. 
+      end if
 
     call loct_parse_float(check_inp('Delta'), M_ZERO, delta)
     delta = delta * units_inp%energy%factor
@@ -337,6 +357,7 @@ contains
       end if
 
     end if
+    
 
     ! load wave-functions
     if ( props%complex_response ) then 
@@ -413,7 +434,6 @@ contains
             else 
               bpar(i) = bpar(i) + M_THREE*hpol(j, j, i)
             endif
-!              bpar(i)=bpar(i)+(hpol(i, j, j)+hpol(j, i, j)+hpol(j, j, i))
           end do
         end do
 
@@ -429,59 +449,72 @@ contains
 
   end subroutine static_pol_lr_run
 
-
-  subroutine calc_lr_current(sys, lr)
-    type(system_t),      intent(inout) :: sys
-    type(lr_t),          intent(inout) :: lr(:,:) ! lr(NDIM,1,1)
+  subroutine lr_calc_current(st, gr, lr, lr_m)
+    type(states_t),   intent(inout) :: st
+    type(grid_t),     intent(inout) :: gr
+    type(lr_t),       intent(inout) :: lr
+    type(lr_t), optional, intent(inout) :: lr_m
 
     integer :: i, k, ist, ispin, idim, ndim, np
 
-    CMPLX, allocatable :: gpsi(:,:), gdl_psi(:,:,:)
-    
-    call states_calc_physical_current(sys%gr, sys%st, sys%st%j)
+    CMPLX, allocatable :: gpsi(:,:), gdl_psi(:,:), gdl_psi_m(:,:)
 
-    np = sys%NP
-    ndim = sys%NDIM
+    ALLOCATE(lr%dl_j(gr%m%np, MAX_DIM, st%d%nspin), gr%m%np*MAX_DIM*st%d%nspin)
 
-    ALLOCATE(   gpsi(1:np, 1:ndim),    np*ndim)
-    ALLOCATE(gdl_psi(1:np, 1:ndim, 2), np*ndim*2)
-    
+    np = NP
+    ndim = NDIM
+
+    ALLOCATE(   gpsi(1:np, 1:ndim), np*ndim)
+    ALLOCATE(gdl_psi(1:np, 1:ndim), np*ndim)
+    if(present(lr_m)) ALLOCATE(gdl_psi_m(1:np, 1:ndim), np*ndim)
    
-    do i = 1, ndim
+    lr%dl_j = M_ZERO
 
-      lr(i, 1)%zdl_j = M_ZERO
+    do ispin = 1, st%d%nspin
+      do ist = 1, st%nst
+        do idim = 1, st%d%dim
 
-      do ispin = 1, sys%st%d%nspin
-        do ist = 1, sys%st%nst
-          do idim = 1, sys%st%d%dim
+          call zf_gradient(gr%sb, gr%f_der, lr%zdl_psi(:,idim,ist,ispin), gdl_psi)
+          call zf_gradient(gr%sb, gr%f_der, st%zpsi(:,idim,ist,ispin), gpsi)
+          
+          if(present(lr_m)) then               
+            
 
-            call zf_gradient(sys%gr%sb, sys%gr%f_der, lr(i,1)%zdl_psi(:,idim,ist,ispin), gdl_psi(:,:,1))
-            call zf_gradient(sys%gr%sb, sys%gr%f_der, lr(i,2)%zdl_psi(:,idim,ist,ispin), gdl_psi(:,:,2))
-            call zf_gradient(sys%gr%sb, sys%gr%f_der, sys%st%zpsi(:,idim,ist,ispin), gpsi)
+            call zf_gradient(gr%sb, gr%f_der, lr_m%zdl_psi(:,idim,ist,ispin), gdl_psi_m)
 
-            do k = 1, sys%NDIM 
+            do k = 1, NDIM 
               
-              lr(i,1)%zdl_j(1:np,k,ispin) = lr(i,1)%zdl_j(1:np, k, ispin) + (                       &
-                + conjg(sys%st%zpsi(1:np, idim, ist, ispin)         ) *       gdl_psi(1:np,k,1)     &
-                -       sys%st%zpsi(1:np, idim, ist, ispin)           * conjg(gdl_psi(1:np, k, 2))  &
-                + conjg(lr(i,2)%zdl_psi(1:np, idim, ist, ispin)     ) *       gpsi(1:np,k)          & 
-                -       lr(i,1)%zdl_psi(1:np, idim, ist, ispin)       * conjg(gpsi(1:np,k))         &
-              )/(M_TWO*M_zI)
-
+              lr%dl_j(1:np,k,ispin) = lr%dl_j(1:np, k, ispin) + (           &
+                   + conjg(st%zpsi(1:np, idim, ist, ispin)) *       gdl_psi(1:np,k)   &
+                   -       st%zpsi(1:np, idim, ist, ispin) * conjg(gdl_psi_m(1:np,k))  &
+                   + conjg(lr_m%zdl_psi(1:np, idim, ist, ispin)) *     gpsi(1:np,k)   & 
+                   -       lr%zdl_psi(1:np, idim, ist, ispin)  * conjg(gpsi(1:np,k))  &
+                   )/(M_TWO*M_zI)
             end do
-          end do
+            
+          else 
+            
+            do k = 1, NDIM 
+              
+              lr%dl_j(1:np,k,ispin) = lr%dl_j(1:np, k, ispin) + (           &
+                   + conjg(st%zpsi(1:np, idim, ist, ispin)) *       gdl_psi(1:np,k)   &
+                   -       st%zpsi(1:np, idim, ist, ispin)  * conjg(gdl_psi(1:np,k))  &
+                   + conjg(lr%zdl_psi(1:np, idim, ist, ispin)) *       gpsi(1:np,k)   & 
+                   -       lr%zdl_psi(1:np, idim, ist, ispin)  * conjg(gpsi(1:np,k))  &
+                   )/(M_TWO*M_zI)
+              
+            end do
+            
+          end if
+          
         end do
-      end do 
-
-      lr(i, 2)%zdl_j(1:np, 1:ndim, 1:sys%st%d%nspin) = conjg(lr(i, 1)%zdl_j(1:np, 1:ndim, 1:sys%st%d%nspin))
-
+      end do
     end do
     
     deallocate(gpsi)
     deallocate(gdl_psi)
-
-  end subroutine calc_lr_current
-
+    
+  end subroutine lr_calc_current
 
 #include "undef.F90"
 #include "complex.F90"

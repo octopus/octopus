@@ -108,14 +108,11 @@ subroutine X(get_response_e)(sys, h, lr, dir, nsigma, omega, props, status)
   ALLOCATE(a(st%nst,st%d%nspin),st%nst*st%d%nspin)
 
   diff=M_ZERO
-!  print*, "OMEGA",  omega
+
   call init_response_e()
   finish = .false.
   iter_loop: do iter=1, lr(dir,1)%max_iter
 
-!    do sigma=1,nsigma
-!      dl_rhoin(1,:,:,sigma) = lr(dir,sigma)%X(dl_rho)(:,:)
-!    end do
     !we will use the two mixers, one for the real part and one for the complex
 
     dl_rhoin(1,:,:,1) = R_REAL(lr(dir,1)%X(dl_rho)(:,:))
@@ -130,6 +127,7 @@ subroutine X(get_response_e)(sys, h, lr, dir, nsigma, omega, props, status)
         end do
         call X(poisson_solve)(sys%gr, lr(dir,sigma)%X(dl_Vhar), tmp)
       end do
+
     end if
     
     do ik = 1, st%d%nspin
@@ -229,30 +227,26 @@ subroutine X(get_response_e)(sys, h, lr, dir, nsigma, omega, props, status)
         call write_fatal(1);
       end if 
     end if
-    ! calculate dl_rho
 
+    ! calculate dl_rho
     if(nsigma == 2 ) then
       call build_rho_dynamic()
-    else ! static case
+    else 
       lr(dir, 1)%X(dl_rho) = M_ZERO
       call X(lr_build_dl_rho)(m, st, lr(dir,1), type=3)
     end if
 
-    ! mix to get new density
     dl_rhonew(1,:,:,:) = M_ZERO
 
     finish=.true.
 
-    !we will use the two mixers, one for the real part and one for the complex
     dl_rhotmp(1,:,:,1) = R_REAL(lr(dir,1)%X(dl_rho)(:,:))
     if(nsigma==2) dl_rhotmp(1,:,:,2) = R_AIMAG(lr(dir,1)%X(dl_rho)(:,:))
-
 
     do sigma = 1, nsigma
 
       call mixing(lr(dir,sigma)%mixer, m, iter, 1, st%d%nspin, &
            dl_rhoin(:,:,:,sigma), dl_rhotmp(:,:,:,sigma), dl_rhonew(:,:,:,sigma))
-
 
       ! check for convergence
       lr(dir, sigma)%abs_dens = M_ZERO
@@ -263,7 +257,10 @@ subroutine X(get_response_e)(sys, h, lr, dir, nsigma, omega, props, status)
       end do
 
       lr(dir,sigma)%abs_dens = sqrt(lr(dir,sigma)%abs_dens)
-      print*, "SCF RES", sigma, lr(dir,sigma)%abs_dens
+
+      write(message(1), '(a, i1, e20.6)') "SCF Res ", sigma, lr(dir,sigma)%abs_dens
+      call write_info(1)
+
       ! are we finished?
       finish(sigma) = (lr(dir,sigma)%abs_dens <= lr(dir,sigma)%conv_abs_dens)
       lr(dir,sigma)%abs_dens=M_ZERO
@@ -277,23 +274,22 @@ subroutine X(get_response_e)(sys, h, lr, dir, nsigma, omega, props, status)
       call write_info(1)
       exit
     else
-
-#ifdef R_TCOMPLEX
+      if(props%complex_response) then 
         lr(dir,1)%X(dl_rho)(:,:) = cmplx(dl_rhonew(1,:,:,1),dl_rhonew(1,:,:,2),PRECISION)
         lr(dir,2)%X(dl_rho)(:,:) = cmplx(dl_rhonew(1,:,:,1),-dl_rhonew(1,:,:,2),PRECISION)
-#else
-      do sigma=1,nsigma
-        lr(dir,sigma)%X(dl_rho)(:,:) = dl_rhonew(1,:,:,1)
-      end do
-#endif
+      else
+        do sigma=1,nsigma
+          lr(dir,sigma)%X(dl_rho)(:,:) = dl_rhonew(1,:,:,1)
+        end do
+      end if
     end if
 
     
   end do iter_loop
 
   deallocate(dl_rhoin, dl_rhonew, dl_rhotmp)
-  deallocate(tmp, Y,dV)
-  deallocate(diff,a)
+  deallocate(tmp, Y, dV)
+  deallocate(diff, a)
   call pop_sub()
 
 contains
@@ -435,7 +431,7 @@ subroutine X(static_response) (sys, h, lr, props, pol, hpol, hpol_density)
     do n = 1, np
       drhode(n, i) = sum(lr(i, 1)%X(dl_rho)(n, 1:sys%st%d%nspin))
     end do
-      
+
   end do !dim
 
   write(message(1), '(a)') 'Info: Calculating polarizability tensor'
@@ -451,7 +447,7 @@ subroutine X(static_response) (sys, h, lr, props, pol, hpol, hpol_density)
 
   write(message(1), '(a)') 'Info: Calculating hyperpolarizability tensor'
   call write_info(1)
-    
+
   if (sys%st%d%nspin /= UNPOLARIZED ) then 
     write(message(1), '(a)') 'WARNING: Hyperpolarizability has not been tested for spin polarized systems'
     call write_warning(1)
@@ -469,12 +465,12 @@ subroutine X(static_response) (sys, h, lr, props, pol, hpol, hpol_density)
 
               if( sys%st%occ(ist, ik) > lr_min_occ ) then 
                 ! <D\psi_n | P_c DV_scf P_c | D\psi_n >
-                
+
                 tmp(1:np, 1)  = dVde(1:np, ispin, j) * lr(k,1)%X(dl_psi)(1:np, 1, ist, ispin)
                 hpol_density(1:np,i, j, k) = hpol_density(1:np, i, j, k) + &
                      sys%st%d%kweights(ik)*sys%st%occ(ist, ik)* &
                      R_CONJ(lr(i, 1)%X(dl_psi)(1:np, 1, ist, ispin)) * tmp(1:np, 1)
-                
+
                 do ispin2 = 1, sys%st%d%nspin
                   do ist2 = 1, sys%st%nst
                     if( sys%st%occ(ist2, ik) > lr_min_occ ) then 
@@ -493,7 +489,7 @@ subroutine X(static_response) (sys, h, lr, props, pol, hpol, hpol_density)
                 end do ! ispin2
 
               end if
-            
+
             end do ! ist
           end do ! ispin
         end do !ik
@@ -502,11 +498,11 @@ subroutine X(static_response) (sys, h, lr, props, pol, hpol, hpol_density)
           hpol_density(1:np,i, j, k) = hpol_density(1:np,i, j, k) + &
                kxc(1:np, 1, 1, 1) * drhode(1:np, i) * drhode(1:np, j)*drhode(1:np, k)/CNST(6.0)
         end if
-        
+
       end do ! k
     end do ! j
   end do ! i
-  
+
   ALLOCATE(hp_tmp(1:np,MAX_DIM,MAX_DIM,MAX_DIM),np*MAX_DIM**3)
   hp_tmp(1:np,1:dim,1:dim,1:dim)=hpol_density(1:np,1:dim,1:dim,1:dim)
   do k = 1, dim
@@ -521,7 +517,7 @@ subroutine X(static_response) (sys, h, lr, props, pol, hpol, hpol_density)
     end do ! j
   end do ! i
   deallocate(hp_tmp)
-  
+
 
   deallocate(tmp)
   deallocate(dVde)
@@ -530,3 +526,210 @@ subroutine X(static_response) (sys, h, lr, props, pol, hpol, hpol_density)
 
   call pop_sub()
 end subroutine X(static_response)
+
+subroutine X(lr_calc_elf)(st, gr, lr, lr_m)
+  type(states_t),   intent(inout) :: st
+  type(grid_t),     intent(inout) :: gr
+  type(lr_t),       intent(inout) :: lr
+  type(lr_t), optional, intent(inout) :: lr_m !when this argument is present, we are doing dynamical response
+
+  integer :: i, is, ist, idim, ik
+
+  R_TYPE, allocatable :: gpsi(:,:), gdl_psi(:,:), gdl_psi_m(:,:)
+  FLOAT,  allocatable :: rho(:), grho(:,:)
+  R_TYPE, allocatable :: dl_rho(:), gdl_rho(:,:)
+  FLOAT,  allocatable :: elf(:,:), de(:,:)
+  FLOAT :: dl_d0, d0
+  FLOAT :: f, s
+
+  FLOAT, parameter :: dmin = CNST(1e-10)
+  FLOAT :: u, ik_weight
+
+  call push_sub('em_resp_inc.Xcalc_lr_elf')
+
+  ALLOCATE(   gpsi(NP, NDIM), NP*NDIM)
+  ALLOCATE(gdl_psi(NP, NDIM), NP*NDIM)
+
+  if(present(lr_m)) ALLOCATE(gdl_psi_m(NP, NDIM), NP*NDIM)
+
+  ALLOCATE(   grho(NP, NDIM), NP*NDIM)
+  ALLOCATE(gdl_rho(NP, NDIM), NP*NDIM)
+
+  ALLOCATE(   rho(NP_PART), NP)
+  ALLOCATE(dl_rho(NP_PART), NP)
+
+  ALLOCATE(   elf(NP, st%d%nspin), NP*st%d%nspin)
+  ALLOCATE(    de(NP, st%d%nspin), NP*st%d%nspin)
+
+  ALLOCATE(lr%X(dl_de)(NP, st%d%nspin), NP*st%d%nspin)  
+  ALLOCATE(lr%X(dl_elf)(NP, st%d%nspin), NP*st%d%nspin)
+
+  !calculate the gs elf
+  call states_calc_elf(st, gr, elf, de)
+
+  if(st%d%wfs_type == M_CMPLX) then 
+    call states_calc_physical_current(gr, st, st%j)
+    if(present(lr_m)) then 
+      call lr_calc_current(st, gr, lr, lr_m)
+    else
+      call lr_calc_current(st, gr, lr)
+    end if
+  end if
+
+  ! single or double occupancy
+  if(st%d%nspin == 1) then
+    s = M_TWO
+  else
+    s = M_ONE
+  end if
+
+  lr%X(dl_de) = M_ZERO
+
+  do is = 1, st%d%nspin
+    rho  = M_ZERO
+    grho = M_ZERO
+
+    dl_rho  = M_ZERO
+    gdl_rho = M_ZERO
+
+    do ik = is, st%d%nik, st%d%nspin
+      do ist = 1, st%nst
+        ik_weight = st%d%kweights(ik)*st%occ(ist, ik)/s
+
+        do idim = 1, st%d%dim
+
+          call X(f_gradient)(gr%sb, gr%f_der, st%X(psi)   (:, idim, ist, is), gpsi)
+          call X(f_gradient)(gr%sb, gr%f_der, lr%X(dl_psi)(:, idim, ist, is), gdl_psi)
+
+          ! sum over states to obtain the spin-density
+          rho(1:NP)    = rho(1:NP)    + ik_weight * abs(st%X(psi)(1:NP, idim, ist, is))**2
+
+          !the gradient of the density
+          do i = 1, NDIM
+            grho(1:NP,i)    = grho(1:NP, i)   + ik_weight *  &
+                 M_TWO * R_REAL(R_CONJ(st%X(psi)(1:NP, idim, ist, is)) * gpsi(1:NP,i))
+          end do
+
+          !the variation of the density and its gradient
+
+          if(present(lr_m)) then 
+
+            call X(f_gradient)(gr%sb, gr%f_der, lr_m%X(dl_psi)(:, idim, ist, is), gdl_psi_m)
+
+            dl_rho(1:NP) = dl_rho(1:NP) + ik_weight * ( &
+                 R_CONJ(st%X(psi)(1:NP, idim, ist, is)) * lr%X(dl_psi)(1:NP, idim, ist, is)+ & 
+                 st%X(psi)(1:NP, idim, ist, is) * R_CONJ(lr_m%X(dl_psi)(1:NP, idim, ist, is)) )
+
+            do i=1,NDIM
+
+              gdl_rho(1:NP,i) = gdl_rho(1:NP,i) + ik_weight * ( &
+                   R_CONJ(st%X(psi)(1:NP, idim, ist, is)) * gdl_psi(1:NP,i) +      &
+                   R_CONJ(gpsi(1:NP,i))* lr%X(dl_psi)(1:NP, idim, ist, is)  +      &
+                   st%X(psi)(1:NP, idim, ist, is) * R_CONJ(gdl_psi_m(1:NP,i)) +      &
+                   gpsi(1:NP,i) * R_CONJ(lr_m%X(dl_psi)(1:NP, idim, ist, is))  )
+
+            end do
+
+          else
+            
+            dl_rho(1:NP) = dl_rho(1:NP) + ik_weight * M_TWO *  &
+                 R_REAL(R_CONJ(st%X(psi)(1:NP, idim, ist, is)) * lr%X(dl_psi)(1:NP, idim, ist, is))
+
+            do i=1,NDIM
+              gdl_rho(1:NP,i) = gdl_rho(1:NP,i) + ik_weight * M_TWO * ( &
+                   R_CONJ(st%X(psi)(1:NP, idim, ist, is)) * gdl_psi(1:NP,i) +      &
+                   gpsi(1:NP,i) * R_CONJ(lr%X(dl_psi)(1:NP, idim, ist, is))  )
+            end do
+
+          end if
+
+        end do !idim
+      end do !ist
+    end do !ik
+
+    !now we start to calculate the elf
+
+    !first the term that depends on the orbitals, this is the only term that is different for the dynamical case
+    do ik = is, st%d%nik, st%d%nspin
+      do ist = 1, st%nst
+        ik_weight = st%d%kweights(ik)*st%occ(ist, ik)/s
+        do idim = 1, st%d%dim
+
+          call X(f_gradient)(gr%sb, gr%f_der, st%X(psi)   (:, idim, ist, is), gpsi)
+          call X(f_gradient)(gr%sb, gr%f_der, lr%X(dl_psi)(:, idim, ist, is), gdl_psi)
+
+          if(present(lr_m)) then 
+
+            call X(f_gradient)(gr%sb, gr%f_der, lr_m%X(dl_psi)(:, idim, ist, is), gdl_psi_m)
+            do i = 1, NP
+              lr%X(dl_de)(i, is) = lr%X(dl_de)(i, is) +                             &
+                   dl_rho(i) * ik_weight * sum(R_ABS(gpsi(i, 1:NDIM))**2) + &
+                   rho(i)    * ik_weight * sum( & 
+                   R_CONJ(gpsi(i,1:NDIM))*gdl_psi(i,1:NDIM) &
+                   + gpsi(i,1:NDIM)*R_CONJ(gdl_psi_m(i,1:NDIM)) )
+            end do
+
+          else 
+
+            do i = 1, NP
+              lr%X(dl_de)(i, is) = lr%X(dl_de)(i, is) +                             &
+                   dl_rho(i) * ik_weight * sum(R_ABS(gpsi(i, 1:NDIM))**2) + &
+                   rho(i)    * ik_weight * M_TWO*(sum(R_CONJ(gpsi(i,1:NDIM))*gdl_psi(i,1:NDIM)))
+            end do
+
+          end if
+
+        end do
+      end do
+    end do
+
+    do i= 1, NP
+      if(abs(st%rho(i, is)) >= dmin) then
+        lr%X(dl_de)(i, is) = lr%X(dl_de)(i, is)                       &
+             - M_HALF * sum(grho(i, 1:NDIM)*gdl_rho(i, 1:NDIM))
+      end if
+    end do
+
+    if(st%d%wfs_type == M_CMPLX) then       
+      do i= 1, NP
+        if(abs(st%rho(i, is)) >= dmin) then
+          lr%X(dl_de)(i, is) = lr%X(dl_de)(i, is)                       &
+               +M_TWO*sum(st%j(i, 1:NDIM, is)*lr%dl_j(i, 1:NDIM, is))
+        end if
+      end do
+    end if
+
+    !normalization 
+    f = M_THREE/M_FIVE*(M_SIX*M_PI**2)**M_TWOTHIRD
+    do i = 1, NP
+
+      if(abs(st%rho(i, is)) >= dmin) then
+        d0    = f * rho(i)**(M_EIGHT/M_THREE) !+ CNST(1e-5)
+        dl_d0 = M_EIGHT/M_THREE * f * dl_rho(i) * rho(i)**(M_FIVE/M_THREE)
+
+        !        lr%X(dl_elf)(i, is) = - M_TWO * elf(i,is)**2 * (de(i, is)/d0) * &
+        !           ((lr%X(dl_de)(i, is) - (de(i, is)/d0)*dl_d0)/d0)
+        lr%X(dl_elf)(i,is) = M_TWO*d0*dl_d0/(d0**2+de(i,is)**2)*(1-elf(i,is))& 
+             -M_TWO*de(i,is)*lr%X(dl_de)(i,is)/(d0**2+de(i,is)**2)*elf(i,is)
+      else
+        lr%X(dl_elf)(i, is) = M_ZERO
+      end if
+
+    end do
+
+  end do
+
+  deallocate(gpsi)
+  deallocate(gdl_psi)
+  if(present(lr_m)) deallocate(gdl_psi_m)
+
+  deallocate(grho)
+  deallocate(gdl_rho)
+
+  deallocate(elf)
+  deallocate(de)
+
+  call pop_sub()
+
+end subroutine X(lr_calc_elf)
+

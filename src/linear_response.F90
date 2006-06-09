@@ -49,17 +49,23 @@ module linear_response_m
 
     ! the real quantities
     FLOAT, pointer :: ddl_rho(:,:)     ! response of the density
-    FLOAT, pointer :: ddl_j(:,:,:)     ! response of the current
     FLOAT, pointer :: ddl_psi(:,:,:,:) ! linear change of the real KS orbitals
     FLOAT, pointer :: ddl_Vhar(:)      ! linear change of the Hartree potential
 
     ! and the complex version
     CMPLX, pointer :: zdl_rho(:,:)     ! response of the density
-    CMPLX, pointer :: zdl_j(:,:,:)     ! response of the current
     CMPLX, pointer :: zdl_psi(:,:,:,:) ! linear change of the real KS orbitals
     CMPLX, pointer :: zdl_Vhar(:)      ! linear change of the complex KS orbitals
 
     FLOAT, pointer :: dl_Vxc(:,:,:)    ! linear change of the xc potential (fxc)
+    
+    !other observables
+    CMPLX, pointer :: dl_j(:,:,:)     ! response of the current
+    FLOAT, pointer :: ddl_de(:,:)     ! unnormalized elf
+    FLOAT, pointer :: ddl_elf(:,:)    ! normalized elf
+    CMPLX, pointer :: zdl_de(:,:)     ! unnormalized elf
+    CMPLX, pointer :: zdl_elf(:,:)    ! normalized elf
+    
   end type lr_t
 
   FLOAT, parameter :: lr_min_occ=CNST(1e-4)
@@ -78,6 +84,9 @@ contains
 
     nullify(lr%ddl_rho, lr%ddl_psi, lr%ddl_Vhar, lr%dl_Vxc)
     nullify(lr%zdl_rho, lr%zdl_psi, lr%zdl_Vhar, lr%dl_Vxc)
+    
+    nullify(lr%dl_j, lr%ddl_de, lr%zdl_de, lr%ddl_elf, lr%zdl_elf)
+    
   end subroutine lr_init
 
 
@@ -134,13 +143,13 @@ contains
     type(lr_t), intent(inout) :: lr
 
     if(associated(lr%ddl_rho)) then
-      deallocate(lr%ddl_rho, lr%ddl_Vhar, lr%dl_Vxc, lr%ddl_j)
-      nullify   (lr%ddl_rho, lr%ddl_Vhar, lr%dl_Vxc, lr%ddl_j)
+      deallocate(lr%ddl_rho, lr%ddl_Vhar, lr%dl_Vxc)
+      nullify   (lr%ddl_rho, lr%ddl_Vhar, lr%dl_Vxc)
     end if
 
     if(associated(lr%zdl_rho)) then
-      deallocate(lr%zdl_rho, lr%zdl_Vhar, lr%dl_Vxc, lr%zdl_j)
-      nullify   (lr%zdl_rho, lr%zdl_Vhar, lr%dl_Vxc, lr%zdl_j)
+      deallocate(lr%zdl_rho, lr%zdl_Vhar, lr%dl_Vxc)
+      nullify   (lr%zdl_rho, lr%zdl_Vhar, lr%dl_Vxc)
     end if
 
     if(associated(lr%ddl_psi)) then
@@ -152,6 +161,12 @@ contains
       deallocate(lr%zdl_psi)
       nullify   (lr%zdl_psi)
     end if
+
+    if(associated(lr%dl_j)) deallocate(lr%dl_j)
+    if(associated(lr%ddl_de)) deallocate(lr%ddl_de)
+    if(associated(lr%ddl_elf)) deallocate(lr%ddl_elf)
+    if(associated(lr%zdl_de)) deallocate(lr%zdl_de)
+    if(associated(lr%zdl_elf)) deallocate(lr%zdl_elf)
 
   end subroutine lr_dealloc
 
@@ -194,11 +209,9 @@ contains
     ! allocate variables
     if (st%d%wfs_type == M_REAL) then
       ALLOCATE(lr%ddl_rho(m%np, st%d%nspin), m%np*st%d%nspin)
-      ALLOCATE(lr%ddl_j(m%np, MAX_DIM, st%d%nspin), m%np*MAX_DIM*st%d%nspin)
       ALLOCATE(lr%ddl_Vhar(m%np), m%np)
     else
       ALLOCATE(lr%zdl_rho(m%np, st%d%nspin), m%np*st%d%nspin)
-      ALLOCATE(lr%zdl_j(m%np, MAX_DIM, st%d%nspin), m%np*MAX_DIM*st%d%nspin)
       ALLOCATE(lr%zdl_Vhar(m%np), m%np)
     end if
     ALLOCATE(lr%dl_Vxc(m%np, st%d%nspin, st%d%nspin), m%np*st%d%nspin*st%d%nspin)
