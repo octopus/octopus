@@ -24,12 +24,17 @@ module lib_basic_alg_m
 
   implicit none
 
-  ! private
+  private
   public ::    &
     lalg_swap, &
     lalg_scal, &
     lalg_axpy, &
-    lalg_copy
+    lalg_copy, &
+    lalg_dot,  &
+    lalg_nrm2, &
+    lalg_gemv, &
+    lalg_gemm
+
 
   interface lalg_swap
     module procedure swap_1_1

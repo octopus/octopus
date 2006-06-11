@@ -24,6 +24,7 @@ module td_exp_m
   use messages_m
   use lib_oct_m
   use lib_oct_parser_m
+  use datasets_m
   use blas_m
   use lib_basic_alg_m
   use math_m

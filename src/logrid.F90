@@ -26,6 +26,12 @@ module logrid_m
 
   implicit none
 
+  private
+  public ::      &
+    logrid_t,    &
+    logrid_init, &
+    logrid_end
+
   type logrid_t
     FLOAT :: a,b
     integer  :: nrval

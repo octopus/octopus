@@ -36,6 +36,13 @@ module curv_briggs_m
 
   implicit none
 
+  private
+  public ::                  &
+    curv_briggs_t,           &
+    curv_briggs_init,        &
+    curv_briggs_chi2x,       &
+    curv_briggs_jacobian_inv
+
   type curv_briggs_t
     FLOAT :: L(MAX_DIM)  ! size of the box
     FLOAT :: beta        ! adjustable parameter between 0 and 1 that controls the degree of scaling

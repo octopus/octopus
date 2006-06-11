@@ -26,7 +26,9 @@ module poisson_m
   use profiling_m
   use lib_oct_parser_m
   use units_m
+  use datasets_m
   use geometry_m
+  use simul_box_m
   use mesh_m
 #ifdef HAVE_FFT
   use fft_m

@@ -20,7 +20,11 @@
 #include "global.h"
 
 module curvlinear_m
+  use global_m
   use lib_oct_parser_m
+  use messages_m
+  use lib_adv_alg_m
+  use units_m
   use simul_box_m
   use geometry_m
   use curv_gygi_m

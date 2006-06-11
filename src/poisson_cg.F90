@@ -31,6 +31,7 @@ module poisson_cg_m
 
   implicit none
 
+  private
   public ::           &
     poisson_cg1_init, &
     poisson_cg1,      &
@@ -39,7 +40,7 @@ module poisson_cg_m
     poisson_cg2,      &
     poisson_cg2_end
 
-  FLOAT :: threshold
+  FLOAT, public :: threshold
 
 contains
 

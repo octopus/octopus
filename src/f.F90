@@ -25,9 +25,11 @@ module functions_m
   use messages_m
   use lib_oct_parser_m
   use lib_basic_alg_m
+  use datasets_m
   use mesh_m
   use mesh_function_m
   use cube_function_m
+  use simul_box_m
   use derivatives_m
   use varinfo_m
 #if defined(HAVE_FFT)

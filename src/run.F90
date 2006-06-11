@@ -24,6 +24,7 @@ module run_prog_m
   use global_m
   use messages_m
   use lib_oct_parser_m
+  use datasets_m
   use units_m
   use fft_m
   use restart_m

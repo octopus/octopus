@@ -21,10 +21,12 @@
 
 module cube_function_m
   use global_m
+  use messages_m
   use mesh_m
 #if defined(HAVE_FFT)
   use fft_m
 #endif
+  use simul_box_m
 
   implicit none
   private

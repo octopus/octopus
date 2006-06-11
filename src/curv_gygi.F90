@@ -34,6 +34,13 @@ module curv_gygi_m
 
   implicit none
 
+  private
+  public ::            &
+    curv_gygi_t,       &
+    curv_gygi_init,    &
+    curv_gygi_chi2x,   &
+    curv_gygi_jacobian
+
   type curv_gygi_t
     FLOAT :: A             ! local reduction in grid spacing is 1/(1+A)
     FLOAT :: alpha         ! range of enhacement of the resolution

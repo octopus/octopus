@@ -38,6 +38,13 @@ module curv_modine_m
 
   implicit none
 
+  private
+  public ::                  &
+    curv_modine_t,           &
+    curv_modine_init,        &
+    curv_modine_chi2x,       &
+    curv_modine_jacobian_inv
+
   type curv_modine_t
     FLOAT :: L(MAX_DIM)    ! size of the box
     FLOAT :: xbar          ! size of central flat region (in units of L)

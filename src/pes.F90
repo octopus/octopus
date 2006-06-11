@@ -23,6 +23,8 @@ module PES_m
 #if !defined(DISABLE_PES) && defined(HAVE_FFT)
   use global_m
   use lib_oct_parser_m
+  use messages_m
+  use datasets_m
   use io_m
   use units_m
   use fft_m
