@@ -71,7 +71,8 @@ dnl        AC_MSG_ERROR(GD library version < $REQ_GD_MAJORVERSION.$REQ_GD_MINORV
 dnl      fi
 
     else
-      AC_MSG_ERROR(No gdlib-config found.)
+      AC_MSG_WARN([GD library support has been disabled.
+                    *** some esoteric parts of octopus will not work.])
     fi
   else
     AC_MSG_WARN([GD library support has been disabled.

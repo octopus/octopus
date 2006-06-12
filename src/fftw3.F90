@@ -210,8 +210,8 @@ contains
         call DFFTW(plan_dft_r2c_2d) (fft_array(j)%planf, n(1), n(2), rin, cout, fftw_measure)
         call DFFTW(plan_dft_c2r_2d) (fft_array(j)%planb, n(1), n(2), cout, rin, fftw_measure)
       case(1)
-        message(1) = 'fft_init: creation of 1D plan not implemented.'
-        call write_fatal(1)
+        call DFFTW(plan_dft_r2c_1d) (fft_array(j)%planf, n(1), rin, cout, fftw_measure)
+        call DFFTW(plan_dft_c2r_1d) (fft_array(j)%planb, n(1), cout, rin, fftw_measure)
       end select
       deallocate(rin, cout)
     else
@@ -225,8 +225,8 @@ contains
         call DFFTW(plan_dft_2d) (fft_array(j)%planf, n(1), n(2), cin, cout, fftw_forward,  fftw_measure)
         call DFFTW(plan_dft_2d) (fft_array(j)%planb, n(1), n(2), cin, cout, fftw_backward, fftw_measure)
       case(1)
-        message(1) = 'fft_init: creation of 1D plan not implemented.'
-        call write_fatal(1)
+        call DFFTW(plan_dft_1d) (fft_array(j)%planf, n(1), cin, cout, fftw_forward,  fftw_measure)
+        call DFFTW(plan_dft_1d) (fft_array(j)%planb, n(1), cin, cout, fftw_backward, fftw_measure)
       end select
       deallocate(cin, cout)
     end if

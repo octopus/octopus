@@ -531,12 +531,13 @@ contains
         sb%xsize/units_out%length%factor
       call write_info(1, iunit)
     end if
-
-    write(message(1),'(3a, a, f6.3, a, f6.3, a, f6.3, a)')     &
-      '  Lengths [', trim(units_out%length%abbrev), '] = ',    &
-      '(', sb%lsize(1)/units_out%length%factor, ',',           &
-      sb%lsize(2)/units_out%length%factor, ',',                &
-      sb%lsize(3)/units_out%length%factor, ')'
+    if(sb%box_shape == PARALLELEPIPED) then
+      write(message(1),'(3a, a, f8.3, a, f8.3, a, f8.3, a)')     &
+        '  Lengths [', trim(units_out%length%abbrev), '] = ',    &
+        '(', sb%lsize(1)/units_out%length%factor, ',',           &
+        sb%lsize(2)/units_out%length%factor, ',',                &
+        sb%lsize(3)/units_out%length%factor, ')'
+    end if
 
     write(message(1), '(a,i1,a)') 'The octopus will run in ', sb%dim, ' dimension(s).'
     write(message(2), '(a,i1,a)') 'The octopus will treat the system as periodic in ', &
