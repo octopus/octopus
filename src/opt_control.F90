@@ -401,10 +401,14 @@ contains
          v_old_i(:, i, 2) = h%vhxc(:, i)
       end do
       v_old_i(:, :, 3) = v_old_i(:, :, 2)
-      
-      do i = 2, 3
-         v_old_f(:,:,i) = v_old_f(:,:,1) ! this one comes from the previous propagation
+
+!!!!new:
+      v_old_i(:, :, 0) = v_old_i(:, :, 2)
+      v_old_i(:, :, 1) = v_old_i(:, :, 2)
+      do i = 1, 3
+         v_old_f(:,:,i) = v_old_f(:,:,0) ! this one comes from the previous propagation
       end do
+
       message(1) = "Info: Propagating forward"
       call write_info(1)
 !      call loct_progress_bar(-1, td%max_iter-1)
@@ -1751,8 +1755,7 @@ contains
       call states_allocate_wfns(initial_st, gr%m, M_CMPLX)
       call states_allocate_wfns(target_st,  gr%m, M_CMPLX)
 
-      ALLOCATE(v_old_f(NP_PART, chi%d%nspin, 3), NP_PART*chi%d%nspin*3)
-
+      ALLOCATE(v_old_f(NP, chi%d%nspin, 0:3), NP_PART*chi%d%nspin*(3+1))
 
       ! INITIAL LASER FIELD 
 
@@ -1800,11 +1803,7 @@ contains
       
       call read_OCTparameters()
 
-
-
-
-
-      ALLOCATE(convergence(4,ctr_iter_max),ctr_iter_max*4)
+      ALLOCATE(convergence(4,0:ctr_iter_max),(ctr_iter_max+1)*4)
       ! initial state
       ! replace by extra routine
       call def_istate()
