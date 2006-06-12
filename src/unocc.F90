@@ -22,6 +22,7 @@
 module unocc_m
   use global_m
   use messages_m
+  use varinfo_m
   use datasets_m
   use lib_oct_parser_m
   use lib_oct_m
@@ -59,6 +60,7 @@ contains
     FLOAT, allocatable :: dh_psi(:,:)
     CMPLX, allocatable :: zh_psi(:,:)
     logical :: converged, l
+    integer :: lcao_start, lcao_start_default
     type(lcao_t) :: lcao_data
 
     occupied_states = sys%st%nst
@@ -88,15 +90,24 @@ contains
     call v_ks_calc(sys%gr, sys%ks, h, sys%st, calc_eigenval=.true.) ! get potentials
     call hamiltonian_energy(h, sys%gr, sys%st, -1)             ! total energy
 
-    if( (ierr.ne.0) .and. (ierr >= occupied_states)) then
-      message(1) = "Info:  I will perform a LCAO calculation to get reasonable starting points."
-      call write_info(1)
+    ! The initial LCAO calculation is done by default if we have pseudopotentials.
+    ! Otherwise, it is not the default value and has to be enforced in the input file.
+    lcao_start_default = LCAO_START_FULL
+    if(sys%gr%geo%only_user_def) lcao_start_default = LCAO_START_NONE
 
-      lcao_data%state = 0
-      call lcao_init(sys%gr, lcao_data, sys%st, h)
-      if(lcao_data%state .eq. 1) then
-        call lcao_wf(lcao_data, sys%st, sys%gr%m, h, start = ierr+1)
-        call lcao_end(lcao_data, sys%st%nst)
+    call loct_parse_int(check_inp('LCAOStart'), lcao_start_default, lcao_start)
+    if(.not.varinfo_valid_option('LCAOStart', lcao_start)) call input_error('LCAOStart')
+    call messages_print_var_option(stdout, 'LCAOStart', lcao_start)
+    if (lcao_start > LCAO_START_NONE) then
+      if( (ierr.ne.0) .and. (ierr >= occupied_states)) then
+        message(1) = "Info:  I will perform a LCAO calculation to get reasonable starting points."
+        call write_info(1)
+        lcao_data%state = 0
+        call lcao_init(sys%gr, lcao_data, sys%st, h)
+        if(lcao_data%state .eq. 1) then
+          call lcao_wf(lcao_data, sys%st, sys%gr%m, h, start = ierr+1)
+          call lcao_end(lcao_data, sys%st%nst)
+        end if
       end if
     end if
 

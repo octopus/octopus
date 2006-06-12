@@ -40,11 +40,6 @@ module ground_state_m
 
   implicit none
 
-  integer, parameter ::     &
-    LCAO_START_NONE    = 0, &
-    LCAO_START_STATES  = 1, &
-    LCAO_START_FULL    = 2
-
   private
   public ::                 &
     ground_state_run
@@ -58,7 +53,7 @@ contains
     type(hamiltonian_t), intent(inout) :: h
     logical,             intent(inout) :: fromScratch
 
-    integer :: lcao_start, lcao_start_default = LCAO_START_FULL
+    integer :: lcao_start, lcao_start_default
     type(lcao_t) :: lcao_data
     type(scf_t) :: scfv
     integer     :: ierr
@@ -103,6 +98,7 @@ contains
 
       ! The initial LCAO calculation is done by default if we have pseudopotentials.
       ! Otherwise, it is not the default value and has to be enforced in the input file.
+      lcao_start_default = LCAO_START_FULL
       if(sys%gr%geo%only_user_def) lcao_start_default = LCAO_START_NONE
 
       !%Variable LCAOStart

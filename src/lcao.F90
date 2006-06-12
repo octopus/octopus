@@ -50,6 +50,11 @@ module lcao_m
     lcao_wf,         &
     lcao_end
 
+  integer, public, parameter ::     &
+    LCAO_START_NONE    = 0, &
+    LCAO_START_STATES  = 1, &
+    LCAO_START_FULL    = 2
+
   type lcao_t
     integer           :: state ! 0 => non-initialized;
                                ! 1 => initialized (k, s and v1 matrices filled)
