@@ -19,6 +19,8 @@
 
 
 ! ---------------------------------------------------------
+! Orthogonalizes v against all the occupied states
+! ---------------------------------------------------------
 subroutine X(lr_orth_vector) (m, st, v, ik)
   type(mesh_t),        intent(in)    :: m
   type(states_t),      intent(in)    :: st
@@ -33,7 +35,7 @@ subroutine X(lr_orth_vector) (m, st, v, ik)
   do ist = 1, st%nst
     if(st%occ(ist, ik) > lr_min_occ) then
       scalp = X(states_dotp)(m, st%d%dim, st%X(psi)(:,:, ist, ik), v)
-      v(:,:) = v(:,:) - scalp*st%X(psi)(:,:, ist, ik)
+      v(1:m%np, 1:st%d%dim) = v(1:m%np, 1:st%d%dim) - scalp*st%X(psi)(1:m%np, 1:st%d%dim, ist, ik)
     end if
   end do
 
@@ -41,11 +43,12 @@ subroutine X(lr_orth_vector) (m, st, v, ik)
 end subroutine X(lr_orth_vector)
 
 
-! ---------------------------------------------------------
+! -------------------------------------------------------------------
 ! calculates
 !    lr%dl_rho += sum_{i occ} psi_i^0 (r) * psi_i^1*(r)   <=   type=1
 !    lr%dl_rho += sum_{i occ} psi_i^0*(r) * psi_i^1 (r)   <=   type=2
 !    type 3 => type 1 + type 2
+! --------------------------------------------------------------------
 subroutine X(lr_build_dl_rho) (m, st, lr, type)
   type(mesh_t),   intent(in)    :: m
   type(states_t), intent(in)    :: st
@@ -94,7 +97,7 @@ end subroutine X(lr_build_dl_rho)
 
 
 ! ---------------------------------------------------------
-! This subroutine calculates the solution of
+! This subroutine calculates the solution of using conjugated gradients
 !    (H - eps_{ist,ik} + omega) psi^1_{ist,ik} = y
 ! ---------------------------------------------------------
 subroutine X(lr_solve_HXeY) (lr, h, gr, d, ik, x, y, omega, st)
@@ -114,99 +117,53 @@ subroutine X(lr_solve_HXeY) (lr, h, gr, d, ik, x, y, omega, st)
   integer :: iter, iunit
   logical :: conv_last, conv
 
-  logical :: gauss_jacobi
-
   logical :: orto
 
   call push_sub('linear_response_inc.Xlr_solve_HXeY')
 
+  !if we have the states, we reorthogonalize after each application of the hamiltonian
   orto = present(st)
-
-  gauss_jacobi = .true.
-  gauss_jacobi = .false.
 
   ALLOCATE( r(NP, d%dim),      NP     *d%dim)
   ALLOCATE( p(NP_PART, d%dim), NP_PART*d%dim)
   ALLOCATE( conj(NP_PART, d%dim), NP_PART*d%dim)
   ALLOCATE(Hp(NP, d%dim),      NP     *d%dim)
 
-  if ( gauss_jacobi ) then 
-
-    call X(Hpsi_diag)(h, gr, p, ik)
-    p(1:NP,1:d%dim) = CNST(0.25)/(p(1:NP,1:d%dim) + omega)
+  ! Initial residue
+  call X(Hpsi)(h, gr, x, Hp, ik)
+  r(1:NP,1:d%dim) = y(1:NP,1:d%dim) - ( Hp(1:NP,1:d%dim) + omega*x(1:NP,1:d%dim) )
+  
+  ! Initial search direction
+  p(1:NP,1:d%dim) = r(1:NP,1:d%dim)
+  p((NP+1):NP_PART,1:d%dim)=M_ZERO
+  
+  conv_last = .false.
+  do iter = 1, lr%max_iter
+    conj(1:NP,1:d%dim) = R_CONJ(r(1:NP,1:d%dim))
+    gamma = X(states_dotp) (gr%m, d%dim, conj, r)
     
-    call io_mkdir('linear')
-
-    iunit = io_open('linear/diagonal', action='write')
-
-    do iter=1,NP
-      write(iunit, '(i10, f12.6, f12.6, f12.6)') iter, abs(p(iter,1)), & 
-           R_REAL(p(iter,1)), R_AIMAG(p(iter,1))
-    end do
-
-    call io_close(iunit)
-
-!
-!      print*, iter, p(iter,1), 0404
-!    end do
-
-!    print*, sum(abs(p(1:NP,1:d%dim)))
-
-    do iter = 1, (lr%max_iter*10)
-
-      if(orto) call X(lr_orth_vector)(gr%m, st, x, ik)
-      call X(Hpsi)(h, gr, x, Hp, ik)
-      r(1:NP,1:d%dim) = y(1:NP,1:d%dim) - ( Hp(1:NP,1:d%dim) + omega*x(1:NP,1:d%dim) )
-
-      if( mod(iter,100)==0 ) print*, iter, sum(abs(r(1:NP,1:d%dim)))
-
-      x(1:NP,1:d%dim)=x(1:NP,1:d%dim) + p(1:NP,1:d%dim)*r(1:NP,1:d%dim)
-
-
-    end do
-
-  else
-
-    ! Initial residue
-    call X(Hpsi)(h, gr, x, Hp, ik)
-    r(1:NP,1:d%dim) = y(1:NP,1:d%dim) - ( Hp(1:NP,1:d%dim) + omega*x(1:NP,1:d%dim) )
+    ! we require more precision here than for the density
+    conv = (sqrt(abs(gamma)) < lr%conv_abs_dens)
+    if(conv.and.conv_last) exit
+    conv_last = conv
     
-    ! Initial search direction
-    p(1:NP,1:d%dim) = r(1:NP,1:d%dim)
-    p((NP+1):NP_PART,1:d%dim)=M_ZERO
-    
-    conv_last = .false.
-    do iter = 1, lr%max_iter
-      conj(1:NP,1:d%dim) = R_CONJ(r(1:NP,1:d%dim))
-      gamma = X(states_dotp) (gr%m, d%dim, conj, r)
-      
-      !    print*, "GAMMA", gamma
-      
-      ! we require more precision here than for the density
-      conv = (sqrt(abs(gamma)) < lr%conv_abs_dens)
-      if(conv.and.conv_last) exit
-      conv_last = conv
+    if(orto) call X(lr_orth_vector)(gr%m, st, p, ik)   
 
-      if(orto) call X(lr_orth_vector)(gr%m, st, p, ik)   
-      call X(Hpsi)(h, gr, p, Hp, ik)
-      Hp(1:NP,1:d%dim) = Hp(1:NP,1:d%dim) + omega*p(1:NP,1:d%dim)
-      
-      !    print*,"NORM", sum(R_CONJ(Hp(1:NP,1:d%dim))*Hp(1:NP,1:d%dim))
-      
-      conj(1:NP_PART,1:d%dim)=R_CONJ(p(1:NP_PART,1:d%dim))
-      alpha = gamma/ X(states_dotp) (gr%m, d%dim, conj, Hp)
-      
-      r(1:NP,1:d%dim) = r(1:NP,1:d%dim) - alpha*Hp(1:NP,1:d%dim)
-      x(1:NP_PART,1:d%dim) = x(1:NP_PART,1:d%dim) + alpha* p(1:NP_PART,1:d%dim)
-!      
-      conj(1:NP,1:d%dim)=R_CONJ(r(1:NP,1:d%dim))
-      beta = X(states_dotp) (gr%m, d%dim, conj, r)/gamma
-      p(1:NP,1:d%dim) = r(1:NP,1:d%dim) + beta*p(1:NP,1:d%dim)
-      
-    end do
+    call X(Hpsi)(h, gr, p, Hp, ik)
+    Hp(1:NP,1:d%dim) = Hp(1:NP,1:d%dim) + omega*p(1:NP,1:d%dim)
     
-  end if
-
+    conj(1:NP_PART,1:d%dim)=R_CONJ(p(1:NP_PART,1:d%dim))
+    alpha = gamma/ X(states_dotp) (gr%m, d%dim, conj, Hp)
+    
+    r(1:NP,1:d%dim) = r(1:NP,1:d%dim) - alpha*Hp(1:NP,1:d%dim)
+    x(1:NP_PART,1:d%dim) = x(1:NP_PART,1:d%dim) + alpha* p(1:NP_PART,1:d%dim)
+    
+    conj(1:NP,1:d%dim)=R_CONJ(r(1:NP,1:d%dim))
+    beta = X(states_dotp) (gr%m, d%dim, conj, r)/gamma
+    p(1:NP,1:d%dim) = r(1:NP,1:d%dim) + beta*p(1:NP,1:d%dim)
+    
+  end do
+    
   lr%iter     = iter
   lr%abs_dens = gamma
 
@@ -229,9 +186,9 @@ subroutine X(lr_orth_response)(m, st, lr)
   
   do ik = 1, st%d%nspin
     do ist = 1, st%nst
-!      if(st%occ(ist, ik) > M_ZERO) then
+      if(st%occ(ist, ik) > lr_min_occ) then
         call X(lr_orth_vector) (m, st, lr%X(dl_psi)(:,:, ist, ik), ik)
-!      end if
+      end if
     end do
   end do
   
