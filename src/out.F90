@@ -62,7 +62,7 @@ module output_m
     output_current    =    32,    &
     output_ELF        =    64,    &
     output_ELF_FS     =   128,    &
-    output_td         =   256,    &
+    output_ksdipole   =   256,    &
     output_pol_density=   512
 
   integer, parameter, private ::  &
@@ -155,9 +155,9 @@ contains
     !%Option ELF_FS 128
     !% Prints the electron localization function in Fourier space. The output file is called
     !% "elf_FS-i", where i stands for the spin channel. (EXPERIMENTAL)
-    !%Option transition_density 256
-    !% Prints out the transition densities for some given excitations, specified with the
-    !% variable "LinearResponseTransitionDensity".
+    !%Option ksdipole 256
+    !% Prints out the dipole matrix elements between Kohn-Sham states (or just the single 
+    !% particle states, in independent electrons mode).
     !%Option pol_density 512
     !% Prints out the density of dipole moment. For pol and pol_lr modules, 
     !% prints the density of polarizability.

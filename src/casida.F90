@@ -182,9 +182,7 @@ contains
     !% transition density for the many-body state n will be written to a file called
     !% linear/rho0n.
     !% 
-    !% By default, no transition density is calculated. Note that you must also set
-    !% the output variable to contain the flat "transition_density", in order for this
-    !% to work. 
+    !% By default, no transition density is calculated. 
     !%
     !% This variable is a string in list form, i.e. expressions such as "1,2-5,8-15" are
     !% valid.

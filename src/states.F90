@@ -1489,13 +1489,13 @@ contains
     character(len=*), intent(in)    :: dir
     type(output_t),   intent(in)    :: outp
 
-    integer :: ik, ist, idim, is, id, ierr
+    integer :: ik, ist, idim, is, id, ierr, iunit
     character(len=80) :: fname
     FLOAT :: u
     FLOAT, allocatable :: dtmp(:), elf(:,:)
 
     call push_sub('states_inc.states_output')
-    
+
     u = M_ONE/units_out%length%factor**NDIM
 
     if(iand(outp%what, output_density).ne.0) then
@@ -1590,8 +1590,72 @@ contains
       end if
     end if
 
+    if(iand(outp%what, output_ksdipole).ne.0) then
+      ! The files will be called dir/dipole.k.d, where d will be the
+      ! direction ("x", "y" or "z"), and k is the k-point -- this may
+      ! also mean the spin subspace in spin-polarized calculations.
+      do idim = 1, gr%sb%dim
+        do ik = 1, st%d%nik
+          select case(idim)
+            case(1); write(fname,'(i3.3,a2)') ik, '.x'
+            case(2); write(fname,'(i3.3,a2)') ik, '.y'
+            case(3); write(fname,'(i3.3,a2)') ik, '.z'
+          end select
+          write(fname,'(a)') trim(dir)//'/dipole.'//trim(adjustl(fname))
+          iunit = io_open(file = fname, action = 'write')
+          call states_write_dipole_matrix(st, gr, idim, ik, iunit)
+          call io_close(iunit)
+        end do
+      end do
+    end if
+
     call pop_sub()
   end subroutine states_output
+
+
+  ! ---------------------------------------------------------
+  ! Prints out the dipole matrix elements between KS states.
+  ! It prints the states to the file opened in iunit.
+  ! It prints the dipole moment in the direction "k", for
+  ! the Kohn-Sham states in the irreducible subspace ik.
+  ! ---------------------------------------------------------
+  subroutine states_write_dipole_matrix(st, gr, k, ik, iunit)
+    type(states_t), intent(in) :: st
+    type(grid_t), intent(in) :: gr
+    integer, intent(in) :: k, ik, iunit
+
+    integer :: ii, jj
+    FLOAT, allocatable :: dipole(:, :)
+    CMPLX :: dip_element
+
+    call push_sub('states.states_write_dipole_matrix')
+
+    ALLOCATE(dipole(gr%m%np_part, st%d%dim), gr%m%np_part)
+    dipole = M_ZERO
+    do ii = 1, st%d%dim
+      dipole(1:gr%m%np, ii) = gr%m%x(1:gr%m%np, k)
+    end do
+
+    do ii = 1, st%nst
+      do jj = 1, st%nst
+        if (st%d%wfs_type == M_REAL) then 
+          write(iunit,fmt = '(f20.10)', advance = 'no') dstates_dotp(gr%m, st%d%dim, &
+            st%dpsi(:, :, ii, 1), &
+            st%dpsi(:, :, jj, 1) * dipole(:, :))
+        else
+          dip_element = zstates_dotp(gr%m, st%d%dim, &
+            st%zpsi(:, :, ii, 1), &
+            st%zpsi(:, :, jj, 1) * dipole(:, :))
+          write(iunit,fmt = '(f20.12,a1,f20.12,3x)', advance = 'no') &
+            real(dip_element, PRECISION), ',', aimag(dip_element)
+        end if
+        if(jj==st%nst) write(iunit, '(a)') 
+      end do
+    end do
+
+    deallocate(dipole)
+    call pop_sub()
+  end subroutine states_write_dipole_matrix
 
 
   ! ---------------------------------------------------------
