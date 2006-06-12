@@ -119,6 +119,7 @@ contains
     
     logical            :: dump_intermediate, mode_fixed_fluence
     logical            :: mode_tdpenalty, td_tg_state 
+    logical            :: oct_double_check
 
     call push_sub('opt_control.opt_control_run')
 
@@ -177,6 +178,15 @@ contains
 
     ! output: States, Lasers, Convergence
     call output()
+
+    ! do final test run: propagate initial state with optimal field
+    if(oct_double_check) then
+       psi = initial_st
+       call prop_fwd(psi)
+       call calc_overlap()
+       ! output anything else ??
+       ! what about td output - do a full td calculation
+    end if
 
     ! done ... clean up
     write(message(1), '(a,i3)') 'Info: Cleaning up..#', ctr_iter
@@ -674,7 +684,7 @@ contains
       if(targetmode==oct_targetmode_td) &
            call calc_inh(psi,td_tg,chi)
 
-      call td_rti_dt(sys%ks, h, gr, chi, td%tr, abs(iter*td%dt), td%dt)
+      call td_rti_dt(sys%ks, h, gr, chi, td%tr, abs(iter*td%dt),     td%dt )
     
       ! psi
       td%tr%v_old => v_old_i
@@ -682,7 +692,7 @@ contains
       call states_calc_dens(psi, NP_PART, dens_tmp)
       psi%rho = dens_tmp
       call v_ks_calc(gr, sys%ks, h, psi, calc_eigenval=.true.)
-      call td_rti_dt(sys%ks, h, gr, psi, td%tr, abs(iter*td%dt), td%dt)
+      call td_rti_dt(sys%ks, h, gr, psi, td%tr, abs(iter*td%dt),     td%dt )
 
       call pop_sub()
     end subroutine prop_iter_bwd
@@ -736,8 +746,6 @@ contains
       ! case SWITCH
       ! CHECK DIPOLE MOMENT FUNCTION - > VELOCITY GAUGE
 
-!! REPLACE gr%m%x(:,pol) by Dipol: mu_x = x +y , mu_x = x+iy
-
       d1 = M_z0 
       d2 = M_z0 
       do ik = 1, psi_i%d%nik
@@ -755,8 +763,14 @@ contains
             end do
          end do
       end do
-      l(1:NDIM, 2*iter) = aimag(d1*d2(1:NDIM))/tdpenalty(1:NDIM,2*iter)!a0(1:NDIM)
-      
+      ! Q: How to distinguish between the cases ?
+      !if((NDIM-dof).eq.1) then
+      !l(1:NDIM, 2*iter) = M_ONE/tdpenalty(1:NDIM,2*iter)*real(m_z1/(m_z2*m_zI)*(laser_pol(1:NDIM)*(d1*d2(1:NDIM)+conjg(d1)*conjg(d2(1:NDIM)))))
+      !endif
+      !if((NDIM-dof).eq.0) then
+      l(1:NDIM, 2*iter) = aimag(d1*d2(1:NDIM))/tdpenalty(1:NDIM,2*iter)
+
+      !endif
       ! extrapolate to t+-dt/2
       i = int(sign(M_ONE, td%dt))
       if(iter==0.or.iter==td%max_iter) then
@@ -775,15 +789,6 @@ contains
 
       message(1) = "Info: Backward propagating Chi"
       call write_info(1)
-      call states_init(psi_n, gr) 
-      if(h%ep%nvnl > 0) then
-         ALLOCATE(psi%rho_core(NP_PART), NP_PART)
-         psi_n%rho_core(NP_PART) = psi_i%rho_core(NP_PART) 
-      end if
-      psi_n%st_start = psi_i%st_start
-      psi_n%st_end = psi_i%st_end
-      call states_allocate_wfns(psi_n, gr%m, M_CMPLX)
-      call states_densities_init(psi_n, gr)
       ! setup the hamiltonian
       call states_calc_dens(psi_n, NP_PART, dens_tmp)
       psi_n%rho = dens_tmp
@@ -823,15 +828,6 @@ contains
 
       message(1) = "Info: Forward propagating Psi"
       call write_info(1)
-      call states_init(psi_n, gr) 
-      if(h%ep%nvnl > 0) then
-         ALLOCATE(psi%rho_core(NP_PART), NP_PART)
-         psi_n%rho_core(NP_PART) = psi_i%rho_core(NP_PART) 
-      end if
-      psi_n%st_start = psi_i%st_start
-      psi_n%st_end = psi_i%st_end
-      call states_allocate_wfns(psi_n, gr%m, M_CMPLX)
-      call states_densities_init(psi_n, gr)
 
       ! setup the hamiltonian
       call states_calc_dens(psi_n, NP_PART, dens_tmp)
@@ -1609,7 +1605,8 @@ contains
       !%Variable OCTFilterMode
       !%Type integer
       !%Section Optimal Control
-      !%Descriptio      !%End
+      !%Description     
+      !%End
       call loct_parse_int(check_inp('OCTFilterMode'),0,filtermode)
 
       if(filtermode.gt.0) then
@@ -1665,6 +1662,13 @@ contains
       !%End
       call loct_parse_int(check_inp('OCTScheme'), oct_algorithm_zr98, algorithm_type)
 
+      !%Variable OCTDoubleCheck
+      !%Type logical
+      !%Section Optimal Control
+      !%Description 
+      !% Run a normal propagation after the optimization using the optimized field. The default is true.
+      !%End
+      call loct_parse_logical(check_inp('OCTDoubleCheck'), .TRUE., oct_double_check)
 
       !! CATCH SOME INCOMBATIBILITIES:
       !! be careful with the order !!
