@@ -648,8 +648,8 @@ contains
       stout%d%kpoints = stin%d%kpoints
     end if
     if(associated(stin%d%kweights)) then
-      i = size(stin%d%kpoints, 1)
-      ALLOCATE(stout%d%kweights(size(stin%d%kpoints, 1)), i)
+      i = size(stin%d%kweights, 1)
+      ALLOCATE(stout%d%kweights(size(stin%d%kweights, 1)), i)
       stout%d%kweights = stin%d%kweights
     end if
     if(associated(stin%node)) then
