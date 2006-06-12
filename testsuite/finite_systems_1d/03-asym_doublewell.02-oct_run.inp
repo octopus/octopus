@@ -32,9 +32,9 @@ TDTimeStep = dt
 # OCT parameters
 # --------------
 
-OCTPenalty =5.0
+OCTPenalty =1.0
 OCTEps   = 0.000001
-OCTMaxIter = 3
+OCTMaxIter = 1
 OCTTargetMode = 0
 OCTFilterMode = 0
 #OCTFixFluenceTo = 0.05
@@ -58,7 +58,7 @@ gamma2 = 80
 # Laser field = Initial guess
 #-----------------------------
 
-ampl = 0.01
+ampl = 0.06
 freq = 0.157
 envelope = 0
 w = 5.0
@@ -73,7 +73,7 @@ Dimensions = 1
 fromScratch = yes
 
 BoxShape = sphere
-Spacing = 0.2
+Spacing = 0.1
 Radius =  8.0
 
 NonInteractingElectrons = yes

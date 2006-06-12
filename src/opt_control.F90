@@ -97,9 +97,12 @@ contains
     type(filter_t),   pointer :: f(:)
     type(td_target_t),pointer :: td_tg(:)
 
+
+    CMPLX              :: laser_pol(MAX_DIM)
+    integer            :: dof
     FLOAT, pointer     :: v_old_i(:,:,:), v_old_f(:,:,:)
     FLOAT, pointer     :: laser_tmp(:,:), laser(:,:)
-    FLOAT, allocatable ::  tdpenalty(:,:), a_penalty(:)
+    FLOAT, allocatable :: tdpenalty(:,:), a_penalty(:), dens_tmp(:,:)
     integer            :: i, ctr_iter, ctr_iter_max
     integer            :: targetmode, filtermode, iunit
     FLOAT              :: eps, penalty, overlap, functional, old_functional
@@ -147,18 +150,23 @@ contains
     ! mode switcher
     select case(algorithm_type)
       
-    case(oct_algorithm_zbr98)    ! alternative name: BFB
-      call scheme_ZBR98(algorithm_type) ! (0)  rabitz zbr98 type algorithm (states only)    
+    case(oct_algorithm_zbr98)    
+       ! (0)  rabitz zbr98 type algorithm (states only)    
+       call scheme_ZBR98(algorithm_type) 
 
-    case(oct_algorithm_zr98)     ! fbf
-      call scheme_ZR98(algorithm_type)  ! (1)  rabitz zr98  type algorithm 
-      ! TODO: o generalize elements
-      !       o time-dependent targets
+    case(oct_algorithm_zr98)     
+       ! (1)  rabitz zr98  type algorithm 
+       call scheme_ZR98(algorithm_type)  
+       ! TODO: o generalize elements
+       !       o time-dependent targets
 
-    case(oct_algorithm_wg05)  ! FB
-      call scheme_WG05(algorithm_type)  ! (2) Werschnik, Gross Type: allows fixed fluence and filtering
-      ! (11) td targets rabitz type
-      ! (12) td targets wg     type (with filter)
+    case(oct_algorithm_wg05)  
+       ! (2) Werschnik, Gross Type: allows fixed fluence and filtering
+       call scheme_WG05(algorithm_type)  
+       ! (11) td targets rabitz type
+       ! (12) td targets wg     type (with filter)
+
+    ! TODO: Krotov scheme
 
     case DEFAULT
       write(message(1),'(a)') "Unknown choice of OCT algorithm."
@@ -363,8 +371,8 @@ contains
 
          ! check for stop file and delete file
 
-         !message(1) = "Info: Setup forward"
-         !call write_info(1)
+         message(1) = "Info: Setup forward"
+         call write_info(1)
 
          ! forward propagation
          psi = initial_st  
@@ -395,7 +403,13 @@ contains
       integer, intent(in) :: method
       
       ! setup forward propagation
-      call states_calc_dens(psi, NP_PART, st%rho)
+      call states_densities_init(psi, gr)
+      call states_calc_dens(psi, NP_PART, dens_tmp)
+      !write(6,*) 'HEre' 
+      !psi%rho = M_ZERo
+      !write(6,*) 'HEre2'
+      psi%rho = dens_tmp
+      !write(6,*) 'HEre2'
       call v_ks_calc(gr, sys%ks, h, psi, calc_eigenval=.true.)
       do i = 1, st%d%nspin
          v_old_i(:, i, 2) = h%vhxc(:, i)
@@ -432,7 +446,8 @@ contains
       integer, intent(in) :: method
       
       ! setup backward propagation
-      call states_calc_dens(chi, NP_PART, st%rho)
+      call states_calc_dens(chi, NP_PART, dens_tmp)
+      chi%rho = dens_tmp
       call v_ks_calc(gr, sys%ks, h, chi, calc_eigenval=.true.)
       do i = 1, st%d%nspin
          v_old_f(:, i, 2) = h%vhxc(:, i)
@@ -613,15 +628,17 @@ contains
       ! chi
       td%tr%v_old => v_old_f
       h%ep%lasers(1)%numerical => laser_tmp
-      !call states_calc_dens(chi, NP_PART, st%rho)
-      !call v_ks_calc(gr, sys%ks, h, chi, calc_eigenval=.true.)
+      call states_calc_dens(chi, NP_PART, dens_tmp)
+      chi%rho = dens_tmp
+      call v_ks_calc(gr, sys%ks, h, chi, calc_eigenval=.true.)
       call td_rti_dt(sys%ks, h, gr, chi, td%tr, abs(iter*td%dt), abs(td%dt))
 
       ! psi
       td%tr%v_old => v_old_i
       h%ep%lasers(1)%numerical => laser
-      !call states_calc_dens(psi, NP_PART, st%rho)
-      !call v_ks_calc(gr, sys%ks, h, psi, calc_eigenval=.true.)
+      call states_calc_dens(psi, NP_PART, dens_tmp)
+      psi%rho = dens_tmp
+      call v_ks_calc(gr, sys%ks, h, psi, calc_eigenval=.true.)
       call td_rti_dt(sys%ks, h, gr, psi, td%tr, abs(iter*td%dt), abs(td%dt))
       !write(6,*) iter, psi%zpsi(45:50,1,1,1)
       !write(6,*) laser(2*iter,1)
@@ -647,7 +664,8 @@ contains
       ! chi
       td%tr%v_old => v_old_f
       h%ep%lasers(1)%numerical => laser_tmp   
-      call states_calc_dens(chi, NP_PART, st%rho)
+      call states_calc_dens(chi, NP_PART, dens_tmp)
+      chi%rho = dens_tmp
       call v_ks_calc(gr, sys%ks, h, chi, calc_eigenval=.true.)
 
       ! build td target 
@@ -661,7 +679,8 @@ contains
       ! psi
       td%tr%v_old => v_old_i
       h%ep%lasers(1)%numerical => laser
-      call states_calc_dens(psi, NP_PART, st%rho)
+      call states_calc_dens(psi, NP_PART, dens_tmp)
+      psi%rho = dens_tmp
       call v_ks_calc(gr, sys%ks, h, psi, calc_eigenval=.true.)
       call td_rti_dt(sys%ks, h, gr, psi, td%tr, abs(iter*td%dt), td%dt)
 
@@ -722,32 +741,22 @@ contains
       d1 = M_z0 
       d2 = M_z0 
       do ik = 1, psi_i%d%nik
-        do p  = psi_i%st_start, psi_i%st_end
-          do dim = 1, psi_i%d%dim
-             do pol=1, NDIM
-                !write(6,*) ik,p,dim,pol,d2
-                d2(pol) = d2(pol) + zmf_integrate(gr%m,conjg(chi%zpsi(:, dim, p, ik))*gr%m%x(:,pol)*psi%zpsi(:, dim, p, ik))
-             enddo
-             if(method.eq.oct_algorithm_zbr98) then
-                d1 = zmf_integrate(gr%m,conjg(psi%zpsi(:, dim, p, ik))*chi%zpsi(:, dim, p, ik))
-                
-                !chi%zpsi(:, dim, p, ik) = M_zI
-                !psi%zpsi(:, dim, p, ik) = M_z1
-                !write(6,*) 'res',zmf_integrate(gr%m,conjg(psi%zpsi(:, dim, p, ik))*chi%zpsi(:, dim, p, ik))
-                !stop
-! FIXME: should be the complex conj. but zbr98 does not converge
-                !d1 = zstates_dotp(gr%m, psi%d%dim,  chi%zpsi(:,:, p, ik), psi%zpsi(:,:, p, ik))
-                !write(6,*) d1
-             else
-                d1 = M_z1
-             end if
-          end do
-        end do
+         do p  = psi_i%st_start, psi_i%st_end
+            do dim = 1, psi_i%d%dim
+               do pol=1, NDIM
+                  d2(pol) = d2(pol) + zmf_integrate(gr%m,conjg(chi%zpsi(:, dim, p, ik))*laser_pol(pol)*gr%m%x(:,pol)*psi%zpsi(:, dim, p, ik))
+               enddo
+               if(method.eq.oct_algorithm_zbr98) then
+                  d1 = zmf_integrate(gr%m,conjg(psi%zpsi(:, dim, p, ik))*chi%zpsi(:, dim, p, ik))
+                  
+               else
+                  d1 = M_z1
+               end if
+            end do
+         end do
       end do
-      !write(6,*) NDIM, iter,  tdpenalty(1:NDIM,2*iter)
       l(1:NDIM, 2*iter) = aimag(d1*d2(1:NDIM))/tdpenalty(1:NDIM,2*iter)!a0(1:NDIM)
-!      write(6,*)  tdpenalty(1:NDIM,2*iter), d1
-      !write(6,*)  d2, -aimag(d1*d2(1:NDIM))/tdpenalty(1:NDIM,2*iter)
+      
       ! extrapolate to t+-dt/2
       i = int(sign(M_ONE, td%dt))
       if(iter==0.or.iter==td%max_iter) then
@@ -757,7 +766,6 @@ contains
         l(1:NDIM, 2*iter+  i) = M_HALF*(M_THREE*l(1:NDIM, 2*iter) -       l(1:NDIM, 2*iter-2*i))
         l(1:NDIM, 2*iter+2*i) = M_HALF*( M_FOUR*l(1:NDIM, 2*iter) - M_TWO*l(1:NDIM, 2*iter-2*i))
       end if
-      !write(6,*) l(2*iter,1),l(1:NDIM, 2*iter)
     end subroutine update_field
 
 
@@ -767,9 +775,18 @@ contains
 
       message(1) = "Info: Backward propagating Chi"
       call write_info(1)
-
+      call states_init(psi_n, gr) 
+      if(h%ep%nvnl > 0) then
+         ALLOCATE(psi%rho_core(NP_PART), NP_PART)
+         psi_n%rho_core(NP_PART) = psi_i%rho_core(NP_PART) 
+      end if
+      psi_n%st_start = psi_i%st_start
+      psi_n%st_end = psi_i%st_end
+      call states_allocate_wfns(psi_n, gr%m, M_CMPLX)
+      call states_densities_init(psi_n, gr)
       ! setup the hamiltonian
-      call states_calc_dens(psi_n, NP_PART, st%rho)
+      call states_calc_dens(psi_n, NP_PART, dens_tmp)
+      psi_n%rho = dens_tmp
       call v_ks_calc(gr, sys%ks, h, psi_n, calc_eigenval=.true.)
 
       ! setup start of the propagation
@@ -788,7 +805,8 @@ contains
         ! time iterate wavefunctions
         call td_rti_dt(sys%ks, h, gr, psi_n, td%tr, abs(i*td%dt), td%dt)
         ! update
-        call states_calc_dens(psi_n, NP_PART, st%rho)
+        call states_calc_dens(psi_n, NP_PART, dens_tmp)
+        psi_n%rho = dens_tmp
         call v_ks_calc(gr, sys%ks, h, psi_n, calc_eigenval=.true.)
 
       end do
@@ -805,9 +823,19 @@ contains
 
       message(1) = "Info: Forward propagating Psi"
       call write_info(1)
+      call states_init(psi_n, gr) 
+      if(h%ep%nvnl > 0) then
+         ALLOCATE(psi%rho_core(NP_PART), NP_PART)
+         psi_n%rho_core(NP_PART) = psi_i%rho_core(NP_PART) 
+      end if
+      psi_n%st_start = psi_i%st_start
+      psi_n%st_end = psi_i%st_end
+      call states_allocate_wfns(psi_n, gr%m, M_CMPLX)
+      call states_densities_init(psi_n, gr)
 
       ! setup the hamiltonian
-      call states_calc_dens(psi_n, NP_PART, st%rho)
+      call states_calc_dens(psi_n, NP_PART, dens_tmp)
+      psi_n%rho = dens_tmp
       call v_ks_calc(gr, sys%ks, h, psi_n, calc_eigenval=.true.)
       ! setup start of the propagation
       do i = 1, st%d%nspin
@@ -826,7 +854,8 @@ contains
         call td_rti_dt(sys%ks, h, gr, psi_n, td%tr, abs(i*td%dt), abs(td%dt))
 
         ! update
-        call states_calc_dens(psi_n, NP_PART, st%rho)
+        call states_calc_dens(psi_n, NP_PART, dens_tmp)
+        psi_n%rho = dens_tmp
         call v_ks_calc(gr, sys%ks, h, psi_n, calc_eigenval=.true.)
       
         !call loct_progress_bar(i-1, td%max_iter-1)
@@ -1112,7 +1141,7 @@ contains
                   call loct_parse_block_int(blk, i-1, kk-1, state)
                   call loct_parse_block_cmplx(blk, i-1, kk, c_weight)
                   write(fname,'(i10.10)') state
-                  write(6,*) 'pars ', state, c_weight
+                  !write(6,*) 'pars ', state, c_weight
                   call read_state(tmp_st, gr%m, fname)
                   initial_st%zpsi(:,:,1,1) = initial_st%zpsi(:,:,1,1) + c_weight * tmp_st%zpsi(:,:,1,1)
                enddo
@@ -1485,18 +1514,20 @@ contains
 
 
     subroutine read_OCTparameters()
-     
+      !read the parameters for the optimal control run     
       integer :: jj, kk
 
       call push_sub('opt_control.read_OCTparameters_')  
 
-      !! read in oct parameters
-      ! description here
       !%Variable OCTEps
       !%Type Float
       !%Section Optimal Control
       !%Description
       !% Define the convergence threshold.
+      !% For the monotonically convergent scheme: If the increase of the 
+      !% target functional is less then OCTEps the iteration is stopped.
+      !%Example
+      !% OCTEps = 0.00001
       !%End
       call loct_parse_float(check_inp('OCTEps'), CNST(1e-3), eps)
 
@@ -1504,7 +1535,8 @@ contains
       !%Type Integer
       !%Section Optimal Control
       !%Description
-      !% This variable defines the maximum number of iterations.
+      !% OCTMaxIter defines the maximum number of iterations.
+      !% Typical values range from 10-100.
       !%End
       call loct_parse_int(check_inp('OCTMaxIter'), 10, ctr_iter_max)
       
@@ -1520,14 +1552,20 @@ contains
       !%Section Optimal Control
       !%Description
       !% The variable specificies the value of the penalty factor for the integrated field strength (fluence). Large value - small fluence. The value is always positive.
-      !% Use the negative value '-1' for a time-dependent penalty factor.
-      !% The transient shape is specified in the block OCTPenaltyTD.
+      !% A transient shape can be specified using the block OCTLaserEnvelope.
+      !% In this case OCTPenalty is multiplied with time-dependent function. 
+      !% The value depends on the coupling between the states. A good start might be a value from 0.1 (strong fields) to 10 (weak fields). 
       !%End
       ALLOCATE(a_penalty(ctr_iter_max), ctr_iter_max)
       call loct_parse_float(check_inp('OCTPenalty'), M_ONE, penalty)
       ! penalty array for fixed fluence run 
       ! the array is only interesting for the development of new algorithms
       a_penalty = penalty
+
+      ! read in laser polarization and degress of freedom
+      call def_laserpol(laser_pol, dof)
+
+
 
       !%Variable OCTFixFluenceTo
       !%Type Float
@@ -1551,9 +1589,7 @@ contains
       write(filename,'(a)') 'opt-control/td_penalty'
       call write_field(filename, tdpenalty, td%max_iter, td%dt)
 !!
-   
 
-   
       !%Variable OCTTargetMode
       !%Type string
       !%Section Optimal Control
@@ -1691,6 +1727,86 @@ contains
       call pop_sub()
     end subroutine read_OCTparameters
 
+    ! ------------------------------------------------------
+    subroutine def_laserpol(laserpol, dof)
+      ! read the parameters for the laser polarization
+      CMPLX,   intent(out) :: laserpol(MAX_DIM)
+      integer, intent(out) :: dof
+    
+      integer               :: no_blk, no_c
+      integer(POINTER_SIZE) :: blk
+
+      call push_sub('opt_control.def_laserpol_') 
+
+         
+      !%Variable OCTPolarization
+      !%Type block
+      !%Section Optimal Control
+      !%Description
+      !% Define how many degress of freedom the laser has and how it is polarized.
+      !% The different examples below will explain this.
+      !% First of all, the syntax of each line is:
+      !%
+      !% <tt>%OCTPolarization
+      !% <br>&nbsp;&nbsp;dof | pol1 | pol2 | pol3 
+      !% <br>%</tt>
+      !% The variable defines the degress of freedom which is either 1 or 2.
+      !% pol1, pol2, pol3 define the polarization.
+      !%
+      !% Some examples:
+      !%
+      !% <tt>%OCTPolarization
+      !% <br>&nbsp;&nbsp;1 | 1 | 0 | 0 
+      !% <br>%</tt> 
+      !% Here we try to optimize the x-polarized laser.
+      !%
+      !% <tt>%OCTPolarization
+      !% <br>&nbsp;&nbsp;1 | 1 | 1 | 0 
+      !% <br>%</tt> 
+      !% The polarization is linear and lies in the x-y plane, only one laser field is optimized.
+      !%
+      !% <tt>%OCTPolarization
+      !% <br>&nbsp;&nbsp;2 | 1 | 1 | 0 
+      !% <br>%</tt> 
+      !% The polarization lies in the x-y plane, but this time two components of the laser field are optimized. This may lead to linear, circular, or ellipitically polarized fields, dependening on the problem.
+      !%
+      !% <tt>%OCTPolarization
+      !% <br>&nbsp;&nbsp;1 | 1 | i | 0 
+      !% <br>%</tt> 
+      !% If we know that the answer must be a circular polarized field we can also fix it and optimize only one component.  
+      !%End
+      if(loct_parse_block(check_inp('OCTPolarization'),blk)==0) then
+         no_blk = loct_parse_block_n(blk)
+         ! TODO: for each orbital            
+         do i=1, no_blk
+            no_c = loct_parse_block_cols(blk, i-1)
+            call loct_parse_block_int(blk,i-1, 0, dof)
+            if((dof.gt.3).OR.(dof.lt.1) ) then
+               message(1) = "OCTPolarization: Choose degrees of freedom between 1 and 3."
+               call write_fatal(1)
+
+            end if
+            call loct_parse_block_cmplx(blk,i-1, 1, laserpol(1))
+            call loct_parse_block_cmplx(blk,i-1, 2, laserpol(2))
+            call loct_parse_block_cmplx(blk,i-1, 3, laserpol(3))
+
+         end do
+         call loct_parse_block_end(blk)
+      else
+         message(1) = 'Input: No Polarization defined and degrees of freedom defined'
+         message(2) = 'Input: Using default: x-polarized.'
+         laserpol(1) = m_z1
+         laserpol(2) = m_z0
+         laserpol(3) = m_z0
+         dof  = 1
+         call write_info(2)
+      end if
+
+      h%ep%lasers(1)%pol(:) = laserpol(:)
+
+      call pop_sub()
+    end subroutine def_laserpol
+
     ! ---------------------------------------------------------
     subroutine init_()
       integer            :: ierr, kk, jj
@@ -1708,6 +1824,10 @@ contains
       call td_init(gr, td, sys%st, sys%outp)
       
       call states_allocate_wfns(st, gr%m, M_CMPLX)
+
+      ALLOCATE(dens_tmp(gr%m%np_part, st%d%nspin),gr%m%np_part*st%d%nspin) 
+
+
 
       ! psi_i is initialized in system_init
       psi_i => st
@@ -1754,6 +1874,11 @@ contains
       call states_allocate_wfns(chi,        gr%m, M_CMPLX)
       call states_allocate_wfns(initial_st, gr%m, M_CMPLX)
       call states_allocate_wfns(target_st,  gr%m, M_CMPLX)
+      
+      call states_densities_init(psi, gr)
+      call states_densities_init(chi, gr)
+      call states_densities_init(initial_st, gr)
+      call states_densities_init(target_st, gr)
 
       ALLOCATE(v_old_f(NP, chi%d%nspin, 0:3), NP_PART*chi%d%nspin*(3+1))
 
@@ -1797,10 +1922,12 @@ contains
       h%ep%lasers(1)%numerical => laser_tmp
       write(filename,'(a)') 'opt-control/initial_laser.2'
       call write_field(filename, laser, td%max_iter, td%dt)
-      ! write(6,*) 'LASER STRENGTH', SUM(laser**2)*abs(td%dt)
-
+      write(message(1),'(a,f14.8)') 'Input: Fluence of Initial laser ', &
+           SUM(laser**2)*abs(td%dt)
+      call write_info(1)
       ! initial laser definition end
       
+      ! call after laser is setup ! do not change order
       call read_OCTparameters()
 
       ALLOCATE(convergence(4,0:ctr_iter_max),(ctr_iter_max+1)*4)

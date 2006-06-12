@@ -17,7 +17,7 @@ Dimensions = 1
 fromScratch = yes
 
 BoxShape = sphere
-Spacing = 0.2
+Spacing = 0.1
 Radius =  8.0
 
 NonInteractingElectrons = yes

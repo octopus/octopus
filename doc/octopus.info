@@ -234,6 +234,26 @@ and Angel Rubio
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
  --- The Detailed Node Listing ---
 
 Installation
@@ -2174,7 +2194,8 @@ File: octopus.info,  Node: Simulation Box,  Prev: FFTs,  Up: Hamiltonian
         * Spherical or minimum mesh is not allowed for periodic systems.
 
         * Cylindrical mesh is not allowed for systems that are periodic
-          in more than one dimension.
+          in more than one dimension.   >li>Box_image is only allowed
+          in 2D.
 
      _Options_:
         - *user_defined* (123):  The shape of the simulation box will
@@ -2194,6 +2215,17 @@ File: octopus.info,  Node: Simulation Box,  Prev: FFTs,  Up: Hamiltonian
           parallelpiped whose dimensions are taken from  the variable
           lsize.
 
+        - *box_image* (5):  The simulation box will be defined through
+          an image. White means that the point  is contained in the
+          simulation box, while any other color means that the point is
+          out.
+
+   * *BoxShapeImage*
+     _Section_: Mesh::Simulation Box
+     _Type_: string
+     Name of the file that contains the image that defines the
+     simulation box.
+
    * *BoxShapeUsDef*
      _Section_: Mesh::Simulation Box
      _Type_: string
@@ -2204,8 +2236,8 @@ File: octopus.info,  Node: Simulation Box,  Prev: FFTs,  Up: Hamiltonian
    * *Lsize*
      _Section_: Mesh::Simulation Box
      _Type_: block
-     In case BoxShape is "parallelepiped" or "user_defined", this is
-     assumed to be a block of the form:
+     In case BoxShape is "parallelepiped", "box_image", or
+     "user_defined", this is assumed to be a block of the form:
 
      %Lsize
      sizex | sizey | sizez
@@ -2274,7 +2306,9 @@ File: octopus.info,  Node: Optimal Control,  Next: Output,  Prev: Hamiltonian,  
    * *OCTEps*
      _Section_: Optimal Control
      _Type_: Float
-     Define the convergence threshold.
+     Define the convergence threshold.   For the monotonically
+     convergent scheme: If the increase of the  target functional is
+     less then OCTEps the iteration is stopped.
 
    * *OCTFilter*
      _Section_: Optimal Control
@@ -2387,16 +2421,54 @@ File: octopus.info,  Node: Optimal Control,  Next: Output,  Prev: Hamiltonian,  
    * *OCTMaxIter*
      _Section_: Optimal Control
      _Type_: Integer
-     This variable defines the maximum number of iterations.
+     OCTMaxIter defines the maximum number of iterations.   Typical
+     values range from 10-100.
 
    * *OCTPenalty*
      _Section_: Optimal Control
      _Type_: Float
      The variable specificies the value of the penalty factor for the
      integrated field strength (fluence). Large value - small fluence.
-     The value is always positive.   Use the negative value '-1' for a
-     time-dependent penalty factor.   The transient shape is specified
-     in the block OCTPenaltyTD.
+     The value is always positive.   A transient shape can be specified
+     using the block OCTLaserEnvelope.   In this case OCTPenalty is
+     multiplied with time-dependent function.   The value depends on
+     the coupling between the states. A good start might be a value
+     from 0.1 (strong fields) to 10 (weak fields).
+
+   * *OCTPolarization*
+     _Section_: Optimal Control
+     _Type_: block
+     Define how many degress of freedom the laser has and how it is
+     polarized.   The different examples below will explain this.
+     First of all, the syntax of each line is:
+
+     %OCTPolarization
+     dof | pol1 | pol2 | pol3
+     %  The variable defines the degress of freedom which is either 1
+     or 2.   pol1, pol2, pol3 define the polarization.
+
+     Some examples:
+
+     %OCTPolarization
+     1 | 1 | 0 | 0
+     %  Here we try to optimize the x-polarized laser.
+
+     %OCTPolarization
+     1 | 1 | 1 | 0
+     %  The polarization is linear and lies in the x-y plane, only one
+     laser field is optimized.
+
+     %OCTPolarization
+     2 | 1 | 1 | 0
+     %  The polarization lies in the x-y plane, but this time two
+     components of the laser field are optimized. This may lead to
+     linear, circular, or ellipitically polarized fields, dependening
+     on the problem.
+
+     %OCTPolarization
+     1 | 1 | i | 0
+     %  If we know that the answer must be a circular polarized field
+     we can also fix it and optimize only one component.
 
    * *OCTScheme*
      _Section_: Optimal Control
@@ -4505,8 +4577,10 @@ Options Index
 :                            Simulation Box.                  (line   7)
 * BoxShape
 :                             Simulation Box.                 (line  13)
+* BoxShapeImage
+:                        Simulation Box.                      (line  48)
 * BoxShapeUsDef
-:                        Simulation Box.                      (line  42)
+:                        Simulation Box.                      (line  54)
 * CalcPES_mask
 :                         PES.                                (line   7)
 * CalcPES_rc
@@ -4608,7 +4682,7 @@ Options Index
 * LinearResponseTransitionDensities
 :    Casida.                                                  (line  27)
 * Lsize
-:                                Simulation Box.              (line  49)
+:                                Simulation Box.              (line  61)
 * MainAxis:                              oct-center-geom.     (line  12)
 * MakeStates:                            oct-make-st.         (line  12)
 * MaximumIter
@@ -4634,37 +4708,39 @@ Options Index
 * OCTEps
 :                               Optimal Control.              (line   7)
 * OCTFilter
-:                            Optimal Control.                 (line  12)
+:                            Optimal Control.                 (line  14)
 * OCTFilterMode
-:                        Optimal Control.                     (line  46)
+:                        Optimal Control.                     (line  48)
 * OCTFixFluenceTo
-:                      Optimal Control.                       (line  49)
+:                      Optimal Control.                       (line  51)
 * OCTInitialState
-:                      Optimal Control.                       (line  55)
+:                      Optimal Control.                       (line  57)
 * OCTInitialSuperposition
-:              Optimal Control.                               (line  72)
+:              Optimal Control.                               (line  74)
 * OCTInitialUserdefined
-:                Optimal Control.                             (line  88)
+:                Optimal Control.                             (line  90)
 * OCTLaserEnvelope
-:                     Optimal Control.                        (line  97)
+:                     Optimal Control.                        (line  99)
 * OCTLocalTarget
-:                       Optimal Control.                      (line 109)
+:                       Optimal Control.                      (line 111)
 * OCTMaxIter
-:                           Optimal Control.                  (line 120)
+:                           Optimal Control.                  (line 122)
 * OCTPenalty
-:                           Optimal Control.                  (line 125)
+:                           Optimal Control.                  (line 128)
+* OCTPolarization
+:                      Optimal Control.                       (line 139)
 * OCTScheme
-:                            Optimal Control.                 (line 134)
+:                            Optimal Control.                 (line 174)
 * OCTTargetMode
-:                        Optimal Control.                     (line 180)
+:                        Optimal Control.                     (line 220)
 * OCTTargetOperator
-:                    Optimal Control.                         (line 185)
+:                    Optimal Control.                         (line 225)
 * OCTTargetStateNumber
-:                 Optimal Control.                            (line 212)
+:                 Optimal Control.                            (line 252)
 * OCTTargetSuperposition
-:               Optimal Control.                              (line 218)
+:               Optimal Control.                              (line 258)
 * OCTTdTarget
-:                          Optimal Control.                   (line 233)
+:                          Optimal Control.                   (line 273)
 * ODESolver
 :                            General.                         (line   7)
 * ODESolverNSteps
@@ -4690,7 +4766,7 @@ Options Index
 * PDBCoordinates
 :                       Coordinates.                          (line  28)
 * PeriodicDimensions
-:                   Simulation Box.                           (line  66)
+:                   Simulation Box.                           (line  78)
 * PES_rc_points
 :                        PES.                                 (line  25)
 * PoissonSolver
@@ -4716,7 +4792,7 @@ Options Index
 * ProfilingMode
 :                        Debug.                               (line  48)
 * Radius
-:                               Simulation Box.               (line  82)
+:                               Simulation Box.               (line  94)
 * RandomVelocityTemp
 :                   Velocities.                               (line   7)
 * RecalculateGSDuringEvolution
@@ -4746,7 +4822,7 @@ Options Index
 * SICCorrection
 :                        XC.                                  (line  83)
 * Spacing
-:                              Simulation Box.                (line  92)
+:                              Simulation Box.                (line 104)
 * SparskitAbsTolerance
 :                 General.                                    (line  97)
 * SparskitKrylovSubspaceSize
@@ -4844,7 +4920,7 @@ Options Index
 * XFunctional
 :                          XC.                                (line  99)
 * Xlength
-:                              Simulation Box.                (line 106)
+:                              Simulation Box.                (line 118)
 * XYZCoordinates
 :                       Coordinates.                          (line  59)
 * XYZVelocities
@@ -4854,79 +4930,79 @@ Options Index
 
 Tag Table:
 Node: Top665
-Node: Authors3268
-Node: Copying6590
-Node: Installation8070
-Node: Quick instructions9039
-Node: Long instructions9574
-Ref: Long instructions-Footnote-119207
-Ref: Long instructions-Footnote-219765
-Node: Different octopus executables19977
-Node: The parser21443
-Node: Description24710
-Node: Mesh24993
-Node: Run Mode SCF25373
-Node: Run Mode Unoccupied States26426
-Node: Run Mode Time Dependent27119
-Node: Function output for visualization31090
-Node: Spectrum calculations32241
-Node: Input Variables32737
-Node: Generalities33234
-Node: Debug35364
-Node: IO38028
-Node: Parallel39793
-Node: Units41017
-Node: Geometry Optimization42290
-Node: Hamiltonian43278
-Node: Poisson49082
-Node: Multigrid50631
-Node: XC52618
-Node: Casida55769
-Node: Static Polarization57567
-Node: Vibrational Modes57960
-Node: General58440
-Node: Curvilinear63926
-Node: Gygi65360
-Node: Derivatives66759
-Node: FFTs68286
-Node: Simulation Box69405
-Node: Optimal Control73067
-Node: Output82364
-Node: SCF88643
-Node: Convergence92502
-Node: EigenSolver94007
-Node: Mixing96814
-Node: States98366
-Node: System103586
-Node: Coordinates103992
-Node: Species107167
-Node: Velocities110342
-Node: Time Dependent111842
-Node: Absorbing Boundaries113865
-Node: Linear Response114971
-Node: PES117454
-Node: Propagation118500
-Node: TD Output131897
-Node: Unoccupied States134869
-Node: Optical Spectra135472
-Node: oct-center-geometry137182
-Node: oct-harmonic-spectrum137858
-Node: Undocumented Variables139488
-Node: External utilities140593
-Node: oct-sf141168
-Node: oct-rsf141952
-Node: oct-hs-mult142079
-Node: oct-hs-acc142288
-Node: oct-xyz-anim142502
-Node: oct-excite142733
-Node: oct-broad143366
-Node: oct-make-st143725
-Node: oct-center-geom145005
-Node: wf.net146051
-Node: Examples147432
-Node: Hello world147591
-Ref: Hello world-Footnote-1154214
-Node: Benzene154298
-Node: Options Index155115
+Node: Authors3288
+Node: Copying6610
+Node: Installation8090
+Node: Quick instructions9059
+Node: Long instructions9594
+Ref: Long instructions-Footnote-119227
+Ref: Long instructions-Footnote-219785
+Node: Different octopus executables19997
+Node: The parser21463
+Node: Description24730
+Node: Mesh25013
+Node: Run Mode SCF25393
+Node: Run Mode Unoccupied States26446
+Node: Run Mode Time Dependent27139
+Node: Function output for visualization31110
+Node: Spectrum calculations32261
+Node: Input Variables32757
+Node: Generalities33254
+Node: Debug35384
+Node: IO38048
+Node: Parallel39813
+Node: Units41037
+Node: Geometry Optimization42310
+Node: Hamiltonian43298
+Node: Poisson49102
+Node: Multigrid50651
+Node: XC52638
+Node: Casida55789
+Node: Static Polarization57587
+Node: Vibrational Modes57980
+Node: General58460
+Node: Curvilinear63946
+Node: Gygi65380
+Node: Derivatives66779
+Node: FFTs68306
+Node: Simulation Box69425
+Node: Optimal Control73540
+Node: Output84301
+Node: SCF90580
+Node: Convergence94439
+Node: EigenSolver95944
+Node: Mixing98751
+Node: States100303
+Node: System105523
+Node: Coordinates105929
+Node: Species109104
+Node: Velocities112279
+Node: Time Dependent113779
+Node: Absorbing Boundaries115802
+Node: Linear Response116908
+Node: PES119391
+Node: Propagation120437
+Node: TD Output133834
+Node: Unoccupied States136806
+Node: Optical Spectra137409
+Node: oct-center-geometry139119
+Node: oct-harmonic-spectrum139795
+Node: Undocumented Variables141425
+Node: External utilities142530
+Node: oct-sf143105
+Node: oct-rsf143889
+Node: oct-hs-mult144016
+Node: oct-hs-acc144225
+Node: oct-xyz-anim144439
+Node: oct-excite144670
+Node: oct-broad145303
+Node: oct-make-st145662
+Node: oct-center-geom146942
+Node: wf.net147988
+Node: Examples149369
+Node: Hello world149528
+Ref: Hello world-Footnote-1156151
+Node: Benzene156235
+Node: Options Index157052
 
 End Tag Table
