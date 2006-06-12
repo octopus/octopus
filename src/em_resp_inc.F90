@@ -119,7 +119,7 @@ subroutine X(get_response_e)(sys, h, lr, dir, nsigma, omega, props, status)
 
     if(nsigma==2) dl_rhoin(1,:,:,2) = R_AIMAG(lr(dir,1)%X(dl_rho)(:,:))
 
-    if (props%add_hartree .and. (.not. h%ip_app) ) then
+    if (props%add_hartree) then
 
       do sigma=1,nsigma
         do i = 1, m%np

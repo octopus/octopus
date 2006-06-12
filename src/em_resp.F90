@@ -315,8 +315,14 @@ contains
     call loct_parse_float(check_inp('Delta'), M_ZERO, delta)
     delta = delta * units_inp%energy%factor
 
-    call loct_parse_logical(check_inp('PolAddFXC'), .true., props%add_fxc)
-    call loct_parse_logical(check_inp('PolAddHartree'), .true., props%add_hartree)
+    if(.not. h%ip_app) then 
+      call loct_parse_logical(check_inp('PolAddFXC'), .true., props%add_fxc)
+      call loct_parse_logical(check_inp('PolAddHartree'), .true., props%add_hartree)
+    else
+      props%add_fxc = .false. 
+      props%add_hartree = .false.
+    end if
+
     call loct_parse_logical(check_inp('PolOrtEachStep'), .false., props%ort_each_step)
     call loct_parse_logical(check_inp('LRUseUnoccupied'), .false. , props%use_unoccupied)
 
