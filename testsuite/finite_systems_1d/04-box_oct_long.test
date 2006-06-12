@@ -1,0 +1,59 @@
+# $Id: 03-asym_doublewell.test 2072 2006-05-14 10:45:38Z athimm $
+
+Test     : 1D Box
+Author   : Jan
+Date     : 12.06.06
+Arch     : Linux 
+Release  :
+Programs : octopus
+Runtime  : long-run
+Enabled  : Yes
+
+# The test ensures the optimal control algorithm ZBR98. It calculates the optimal laser field that transfers the ground-state to the first excited state. 
+# 
+# We do the following intermediate steps:
+# First, the two lowest eigenstates of the box
+# V(x) = -5*step(x+5)*step(5-x),
+# are calculated. 
+
+Input: 04-box.01-ground_state.inp
+
+Match ; TotalEnergy ; grep -A 7 '^Energy:' ground_state_static/info ; \s*Total\s*=\s*-4.9569
+Match ; 2th state  ; grep '2   --' excited_states_static/eigenvalues ; \s*-4.8279
+
+# Then, run the optimization for 15 iterations with ZBR98 scheme and compare the convergence.
+
+Input: 04-box.02-oct_long.inp
+
+# Match overlaps
+Match ; J1 1st iteration   ; grep ' 1  ' opt-control/convergence ; \s*0.88946\d*
+Match ; J1 2nd iteration   ; grep ' 2  ' opt-control/convergence ; \s*0.93384\d*
+Match ; J1 5th iteration   ; grep ' 5  ' opt-control/convergence ; \s*0.96531\d*
+Match ; J1 10th iteration  ; grep ' 10  ' opt-control/convergence ; \s*0.97990\d*
+Match ; J1 15th iteration  ; grep ' 15  ' opt-control/convergence ; \s*0.98630\d*
+
+
+# Then, run the optimization for 15 iterations with a ZR98 scheme and compare the convergence.
+
+Input: 04-box.03-oct_long.inp
+
+# Match overlaps
+Match ; J1 1st iteration  ; grep ' 1  ' opt-control/convergence ; \s*0.89638\d*
+Match ; J1 2nd iteration  ; grep ' 2  ' opt-control/convergence ; \s*0.95501\d*
+Match ; J1 5th iteration  ; grep ' 5  ' opt-control/convergence ; \s*0.97999\d*
+Match ; J1 10th iteration  ; grep ' 10  ' opt-control/convergence ; \s*0.98782\d*
+Match ; J1 15th iteration  ; grep ' 15  ' opt-control/convergence ; \s*0.99077\d*
+
+
+# Then, run the optimization for 15 iterations with a WG05 scheme and compare the convergence.
+
+Input: 04-box.04-oct_long.inp
+
+# Match overlaps
+Match ; J1 1st  iteration  ; grep ' 1  ' opt-control/convergence ; \s*0.84088\d*
+Match ; J1 2nd  iteration  ; grep ' 2  ' opt-control/convergence ; \s*0.87887\d*
+Match ; J1 5th  iteration  ; grep ' 5  ' opt-control/convergence ; \s*0.96441\d*
+Match ; J1 10th iteration  ; grep ' 10  ' opt-control/convergence ; \s*0.99353\d*
+Match ; J1 15th iteration  ; grep ' 15  ' opt-control/convergence ; \s*0.99814\d*
+
+

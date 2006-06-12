@@ -1,7 +1,7 @@
 # $Id: 01-hydrogen.01-ground_state.inp 1890 2006-03-11 20:26:30Z appel $
 #
 # The two lowest eigenstates of the asymmetric double well,
-#  V(x) = 1/64*(x)^4-1/4*(x)^2+1/256*(x)^3
+# V(x) = -5*step(x+5)*step(5-x)
 # are calculated. 
 
 DebugLevel = 0
@@ -17,19 +17,19 @@ Dimensions = 1
 fromScratch = yes
 
 BoxShape = sphere
-Spacing = 0.1
-Radius =  8.0
+Spacing = 0.4
+Radius =  15.0
 
 NonInteractingElectrons = yes
 
 %Species
-"AWD1D" | 1 | user_defined | 1 | "1/64*(x)^4-1/4*(x)^2+1/256*(x)^3"
+"Box1D" | 1 | user_defined | 1 | "-5*step(x+5)*step(5-x)"
 %
 
 NonInteractingElectrons = yes
 
 %Coordinates
-"AWD1D" | 0 | 0 | 0
+"Box1D" | 0 | 0 | 0
 %
 
 EigenSolverInitTolerance = 1.0e-6

@@ -34,15 +34,15 @@ TDTimeStep = dt
 
 OCTPenalty =1.0
 OCTEps   = 0.000001
-OCTMaxIter = 1
+OCTMaxIter = 15
 OCTTargetMode = 0
 OCTFilterMode = 0
 #OCTFixFluenceTo = 0.05
 OCTInitialState = 1
 OCTTargetOperator = 2
 OCTTargetStateNumber = 2
-OCTScheme  = oct_algorithm_zbr98
-OCTDoubleCheck = No
+OCTScheme  = oct_algorithm_wg05
+OCTDoubleCheck = No	
 gamma1 = 0.1
 gamma2 = 80
 #%OCTLaserEnvelope
@@ -74,17 +74,17 @@ Dimensions = 1
 fromScratch = yes
 
 BoxShape = sphere
-Spacing = 0.1
-Radius =  8.0
+Spacing = 0.4
+Radius =  15.0
 
 NonInteractingElectrons = yes
 
 %Species
-"ADW1D" | 1 | user_defined | 1 | "1/64*(x)^4-1/4*(x)^2+1/256*(x)^3"
+"Box1D" | 1 | user_defined | 1 | "-5*step(x+5)*step(5-x)"
 %
 
 %Coordinates
-"ADW1D" | 0 | 0 | 0
+"Box1D" | 0 | 0 | 0
 %
 
 EigenSolverInitTolerance = 1.0e-6
