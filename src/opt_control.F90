@@ -111,7 +111,7 @@ contains
     
     FLOAT              :: bestJ, bestJ1, bestJ_fluence, bestJ1_fluence
     FLOAT              :: bestJ_J1, bestJ1_J
-    integer            :: bestJ_ctr_iter, bestJ1_ctr_iter
+    integer            :: bestJ_ctr_iter, bestJ1_ctr_iter, ierr
 
     character(len=80)  :: filename
 
@@ -190,8 +190,18 @@ contains
 
     ! do final test run: propagate initial state with optimal field
     if(oct_double_check) then
+       message(1) = "Info: Optimization finished...checking the field"
+       call write_info(1)
+
        psi = initial_st
+       call zoutput_function(sys%outp%how,'opt-control','dcheck_istate',gr%m,gr%sb,psi%zpsi(:,1,1,1),M_ONE,ierr)
+       !laser = -laser
+       write(filename,'(a)') 'opt-control/dcheck_laser'
+       call write_field(filename, laser, td%max_iter, td%dt)
+
        call prop_fwd(psi)
+!! DEBUG
+      call zoutput_function(sys%outp%how,'opt-control','dcheck_state',gr%m,gr%sb,psi%zpsi(:,1,1,1),M_ONE,ierr)
        call calc_overlap()
        ! output anything else ??
        ! what about td output - do a full td calculation
@@ -583,7 +593,8 @@ contains
                do p  = psi_i%st_start, psi_i%st_end
                   do dim = 1, psi_i%d%dim
                      ! multiply orbtials with local operator
-                     chi_out%zpsi(:,dim,p,ik) = targetst%zpsi(:, 1, 1, 1)*psi_in%zpsi(:, dim, p, ik)
+                     !! FIXME: for multiple particles 1,1,1 -> dim,p,ik
+                     chi_out%zpsi(:,dim,p,ik) = targetst%zpsi(:, 1, 1 , 1)*psi_in%zpsi(:, dim, p, ik)
                   end do
                end do
             end do
@@ -813,7 +824,7 @@ contains
       td%tr%v_old => v_old_f
 
       td%dt = -td%dt
-      h%ep%lasers(1)%dt = td%dt
+      h%ep%lasers(1)%dt = -td%dt
 
       do i = td%max_iter-1, 0, -1
         ! time iterate wavefunctions
@@ -1916,7 +1927,7 @@ contains
       bestJ_ctr_iter = M_ZERO
       bestJ1_ctr_iter = M_ZERO
 
-      do jj = 1, td%max_iter
+      do jj = 0, 2*td%max_iter
          t = td%dt*(jj-1)/M_TWO
          !i = int(abs(M_TWO*t/l(1)%dt) + M_HALF)
          ! 
