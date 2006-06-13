@@ -123,6 +123,15 @@ contains
 
     call push_sub('opt_control.opt_control_run')
 
+    !! Initiall nullify the pointers
+    nullify(f)
+    nullify(td_tg)
+    nullify(v_old_i)
+    nullify(v_old_f)
+    nullify(laser_tmp)
+    nullify(laser)
+
+
     !! TODO: internal debug config, give some power to the user later
     dump_intermediate  = .TRUE.  ! dump laser fields during iteration
                                 ! this might create a lot of data
@@ -943,6 +952,7 @@ contains
       integer :: i, iunit
       FLOAT   :: tgrid(0:2*steps)
 
+      call push_sub('opt_control.write_field')
       
       call t_lookup(2*steps+1,dt/real(2,PRECISION),tgrid)
       iunit = io_open(filename, action='write')
@@ -951,6 +961,7 @@ contains
       end do
       call io_close(iunit)
 
+      call pop_sub()
     end subroutine write_field
 
 
@@ -1711,10 +1722,12 @@ contains
       ! td target with states works only for 1 electron
       ! TODO: HOW TO RETRIEVE NUMBER OF ELECTRONS
       !       UNCOMMENT LAST LINES
-      do jj=1, size(td_tg)
-         if(td_tg(jj)%type.eq.oct_tgtype_state) &
-              td_tg_state = .TRUE.
-      end do
+      if(associated(td_tg)) then
+        do jj=1, size(td_tg)
+          if(td_tg(jj)%type.eq.oct_tgtype_state) &
+            td_tg_state = .TRUE.
+        end do
+      end if
       ! occ in states_t
       !write(6,*) 'DEBUG: occ: ', shape(psi_i%occ), size(psi_i%occ)
       if( (td_tg_state) .AND. (SUM(psi_i%occ(1,:)).gt.1) ) then
