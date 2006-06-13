@@ -30,7 +30,7 @@ subroutine PES_mask_init(v, m, sb, st)
   call write_info(1)
 
   ! alloc ffts in case they are not allocated yet
-  call fft_init(sb, m%l, fft_complex, v%fft)
+  call fft_init(m%l, fft_complex, v%fft, optimize = .not.simul_box_is_periodic(sb))
 
   ! setup arrays to be used
   i = m%l(1)*m%l(2)*m%l(3)*(st%st_end-st%st_start+1)*st%d%nik

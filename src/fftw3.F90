@@ -30,7 +30,6 @@ module fft_m
   use lib_oct_m
   use lib_oct_parser_m
   use lib_basic_alg_m
-  use simul_box_m
 
   implicit none
 
@@ -42,8 +41,6 @@ module fft_m
     fft_init,      &
     fft_end,       &
     fft_copy,      &
-    fft1d_fwd,     &
-    fft1d_bwd,     &
     pad_feq,       &
     dfft_forward,  &
     zfft_forward,  &
@@ -146,16 +143,36 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine fft_init(sb, n, is_real, fft)
-    type(simul_box_t), intent(in)    :: sb
+  subroutine fft_init(n, is_real, fft, optimize)
     integer,           intent(inout) :: n(MAX_DIM)
     integer,           intent(in)    :: is_real
     type(fft_t),       intent(out)   :: fft
+    logical, optional, intent(in)    :: optimize
 
     FLOAT, allocatable :: rin(:, :, :)
     CMPLX, allocatable :: cin(:, :, :), cout(:, :, :)
 
-    integer :: i, j
+    integer :: i, j, dim
+    logical :: optimize_
+
+    ! First, figure out about the dimensionaliy of the FFT.
+    dim = 0
+    do i = 1, MAX_DIM
+      if(n(i) > 1) then 
+        dim = dim + 1
+      else
+        exit
+      end if
+    end do
+
+    if(dim.eq.0) then
+      message(1) = "Internal error in fft_init: apparently, a 1x1x1 FFT is required."
+      call write_fatal(1)
+    end if
+
+    optimize_ = .true.
+    if(present(optimize)) optimize_ = optimize
+
 
     ! OLD: I let it here because maybe I revert to this method later
     ! optimize dimensions in non-periodic directions
@@ -165,10 +182,10 @@ contains
     !    end do
     ! NEW
     ! optimize dimensions only for finite sys
-    if(.not.simul_box_is_periodic(sb)) then
-      do i = 1, sb%dim
-        if(n(i) /= 1 .and. fft_optimize) &
-          call loct_fft_optimize(n(i), 7, 1) ! always ask for an odd number
+    optimize_ = optimize_ .and. fft_optimize
+    if(optimize_) then
+      do i = 1, dim
+        call loct_fft_optimize(n(i), 7, 1)
       end do
     end if
 
@@ -202,7 +219,7 @@ contains
       ALLOCATE(rin(n(1), n(2), n(3)), n(1)*n(2)*n(3))
       ALLOCATE(cout(n(1)/2+1, n(2), n(3)), (n(1)/2+1)*n(2)*n(3))
 
-      select case(sb%dim)
+      select case(dim)
       case(3)
         call DFFTW(plan_dft_r2c_3d) (fft_array(j)%planf, n(1), n(2), n(3), rin, cout, fftw_measure)
         call DFFTW(plan_dft_c2r_3d) (fft_array(j)%planb, n(1), n(2), n(3), cout, rin, fftw_measure)
@@ -217,7 +234,7 @@ contains
     else
       ALLOCATE( cin(n(1), n(2), n(3)), n(1)*n(2)*n(3))
       ALLOCATE(cout(n(1), n(2), n(3)), n(1)*n(2)*n(3))
-      select case(sb%dim)
+      select case(dim)
       case(3)
         call DFFTW(plan_dft_3d) (fft_array(j)%planf, n(1), n(2), n(3), cin, cout, fftw_forward,  fftw_measure)
         call DFFTW(plan_dft_3d) (fft_array(j)%planb, n(1), n(2), n(3), cin, cout, fftw_backward, fftw_measure)
@@ -238,68 +255,6 @@ contains
 
   end subroutine fft_init
 
-  ! ---------------------------------------------------------
-  subroutine fft1D_init(N, fft)
-    integer    ,  intent(in)    :: N
-    type(fft_t),  intent(out)   :: fft
-
-    CMPLX, allocatable :: cin(:), cout(:)
-
-    ALLOCATE(cin(N), N)
-    ALLOCATE(cout(N), N)
-    
-    
-    ! create plan and store in fft
-    call DFFTW(plan_dft_1d) (fft%planb, N, cin, cout, fftw_backward, fftw_measure)
-    call DFFTW(plan_dft_1d) (fft%planf, N, cin, cout, fftw_forward, fftw_measure)
-    deallocate(cin, cout)
-
-    !write(message(1), '(a)') "Info: 1D FFT plan created"
-    !call write_info(1)
-
-  end subroutine fft1D_init
-
-
-  ! ---------------------------------------------------------
-  subroutine fft1d_fwd(N, in, out)
-    CMPLX, intent(in)   :: in(:)
-    CMPLX, intent(out)  :: out(:)
-    integer, intent(in) :: N
-    
-    type(fft_t)  :: fft
-    
-    call fft1d_init(N, fft)
-    call DFFTW(execute_dft) (fft%planf, in, out)
-    call DFFTW(destroy_plan) (fft%planf)
-
-  end subroutine fft1d_fwd
-
-
-  ! ---------------------------------------------------------------------------
-  subroutine fft1d_bwd(N, in,out)
-    CMPLX, intent(in)   :: in(:)
-    CMPLX, intent(out)  :: out(:)
-    integer, intent(in) :: N
-
-    type(fft_t)  :: fft
-
-    call fft1d_init(N, fft)
-    call DFFTW(execute_dft) (fft%planb, in, out)
-    call DFFTW(destroy_plan) (fft%planb)
-
-  end subroutine fft1d_bwd
-
-
-  ! ---------------------------------------------------------
-  subroutine fft1d_end(fft)
-    type(fft_t), intent(inout) :: fft
-    
-     call DFFTW(destroy_plan) (fft%planf)
-     call DFFTW(destroy_plan) (fft%planb)
-     write(message(1), '(a)') "Info: 1D FFT deallocated"
-     call write_info(1)
-
-  end subroutine fft1d_end
 
   ! ---------------------------------------------------------
   subroutine fft_copy(fft_i, fft_o)

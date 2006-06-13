@@ -31,7 +31,6 @@ module fft_m
   use lib_oct_m
   use lib_oct_parser_m
   use lib_basic_alg_m
-  use simul_box_m
 
   implicit none
 
@@ -96,13 +95,32 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine fft_init(sb, n, is_real, fft)
-    type(simul_box_t), intent(in)    :: sb
+  subroutine fft_init(n, is_real, fft, optimize)
+    integer,           intent(inout) :: n(MAX_DIM)
     integer,           intent(inout) :: n(MAX_DIM)
     integer,           intent(in)    :: is_real
     type(fft_t),       intent(out)   :: fft
 
-    integer :: i, j
+    integer :: i, j, dim
+    logical :: optimize_
+
+    ! First, figure out about the dimensionaliy of the FFT.
+    dim = 0
+    do i = 1, MAX_DIM
+      if(n(i) > 1) then 
+        dim = dim + 1
+      else
+        exit
+      end if
+    end do
+
+    if(dim.eq.0) then
+      message(1) = "Internal error in fft_init: apparently, a 1x1x1 FFT is required."
+      call write_fatal(1)
+    end if
+
+    optimize_ = .true.
+    if(present(optimize)) optimize_ = optimize
 
     ! OLD: I let it here because maybe I revert to this method later_m
     ! optimize dimensions in non-periodic directions
@@ -112,10 +130,10 @@ contains
     !    end do
     ! NEW
     ! optimize dimensions only for finite sys
-    if(.not.simul_box_is_periodic(sb)) then
-      do i = 1, sb%dim
-        if(n(i).ne.1 .and. fft_optimize) &
-          call loct_fft_optimize(n(i), 7, 1) ! always ask for an odd number
+    optimize_ = optimize_ .and. fft_optimize
+    if(optimize_) then
+      do i = 1, dim
+        call loct_fft_optimize(n(i), 7, 1)
       end do
     end if
 
@@ -146,14 +164,14 @@ contains
     fft_array(j)%n       = n
     fft_array(j)%is_real = is_real
     if(is_real == fft_real) then
-      call rfftwnd_f77_create_plan(fft_array(j)%planf, sb%dim, n, &
+      call rfftwnd_f77_create_plan(fft_array(j)%planf, dim, n, &
         fftw_real_to_complex + fftw_forward,  fftw_measure + fftw_threadsafe)
-      call rfftwnd_f77_create_plan(fft_array(j)%planb, sb%dim, n, &
+      call rfftwnd_f77_create_plan(fft_array(j)%planb, dim, n, &
         fftw_complex_to_real + fftw_backward, fftw_measure + fftw_threadsafe)
     else
-      call  fftwnd_f77_create_plan(fft_array(j)%planf, sb%dim, n, &
+      call  fftwnd_f77_create_plan(fft_array(j)%planf, dim, n, &
         fftw_forward,  fftw_measure + fftw_threadsafe)
-      call  fftwnd_f77_create_plan(fft_array(j)%planb, sb%dim, n, &
+      call  fftwnd_f77_create_plan(fft_array(j)%planb, dim, n, &
         fftw_backward, fftw_measure + fftw_threadsafe)
     end if
     fft = fft_array(j)

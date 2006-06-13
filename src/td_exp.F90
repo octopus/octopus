@@ -413,7 +413,7 @@ contains
     subroutine split
       call push_sub('td_exp.split')
 
-      if(h%gauge == 2) then
+      if(h%gauge == VELOCITY) then
         message(1) = 'Split operator does not work well if velocity gauge is used.'
         call write_fatal(1)
       end if

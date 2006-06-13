@@ -160,15 +160,14 @@ contains
     integer,          intent(in)   :: filtermode, steps
     FLOAT,            intent(inout):: laser_inout(:,:)
 
-    integer        :: no_f, i, kk, is_real
-    CMPLX          :: tmp(0:2*steps), tmp2(0:2*steps)
-    type(fft_t)    :: fft
+    integer        :: no_f, i, kk, n(3)
+    CMPLX          :: tmp(0:2*steps, 1, 1), tmp2(0:2*steps, 1, 1) ! Have to be three-dimensional to use the fft_m module
+    type(fft_t)    :: fft_handler
 
     call push_sub('filter.apply_filter_')
 
-  
-    is_real = 0
-    !call fft_init(gr%sb, 2*steps+1, is_real, fft)
+    n(1:3) = (/ 2*steps+1, 1, 1 /)
+    call fft_init(n, fft_complex, fft_handler, optimize = .false.)
     
     no_f = size(filter)
     !kk   = M_ZERO
@@ -192,14 +191,14 @@ contains
           ! transform to freq space
           do kk=1, NDIM
              !write(6,*) 'in:', SUM(laser_inout(kk,:)**2)
-             tmp2(:) = cmplx(laser_inout(kk,:))
-             call fft1d_fwd(2*steps+1, tmp2, tmp)
+             tmp2(:, 1, 1) = cmplx(laser_inout(kk,:))
+             call zfft_forward(fft_handler, tmp2, tmp)
              !write(6,*) SUM(abs(tmp)**2)/real((2*steps+1), PRECISION)
              !
-             tmp(:) = tmp*filter(i)%numerical(kk,:)
-             call fft1d_bwd(2*steps+1, tmp, tmp2)
+             tmp(:, 1, 1) = tmp(:, 1, 1)*filter(i)%numerical(kk,:)
+             call zfft_backward(fft_handler, tmp, tmp2)
     
-             laser_inout(kk,:) = real(tmp2, PRECISION)/real((2*steps+1), PRECISION)
+             laser_inout(kk,:) = real(tmp2(:, 1, 1), PRECISION)/real((2*steps+1), PRECISION)
              !write(6,*) 'out:', SUM(laser_inout(kk,:)**2)
              !write(6,*) SUM(laser_inout(kk,:)**2)          
           enddo
@@ -221,8 +220,8 @@ contains
        end select
     end do
     
+    call fft_end(fft_handler)
     call pop_sub()
-
   end subroutine apply_filter
 
   ! ---------------------------------------------------------
@@ -443,25 +442,6 @@ contains
     call pop_sub()
     
   end subroutine w_lookup
-
-
-!!$!------------------------------------------------------------------
-!!$  subroutine fft1(in,out)
-!!$    use fft_m
-!!$    implicit none 
-!!$    include "fftw_f77.i"
-!!$    complex(wpc),INTENT(IN) :: in(:)
-!!$    complex(wpc),INTENT(OUT):: out(:)
-!!$    real(wp) :: root
-!!$    integer(wpi)  :: plan, N
-!!$    N=Size(in)
-!!$    call fftw_f77_create_plan(plan,N,FFTW_FORWARD,FFTW_ESTIMATE+FFTW_IN_PLACE)
-!!$    root = SQRT(real(N,kind=wp))
-!!$    call fftw_f77_one(plan,in,out)
-!!$    out = out/root !real(N) ! normalize
-!!$    call fftw_f77_destroy_plan(plan)
-!!$
-!!$  end subroutine fft1
 
 
 ! ----------------------------------------------------------------

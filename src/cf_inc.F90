@@ -161,10 +161,10 @@ subroutine X(cf_fft_init)(cf, sb)
 
   ALLOCATE(cf%fft, 1)
 #ifdef R_TREAL
-  call fft_init(sb, cf%n, fft_real, cf%fft)
+  call fft_init(cf%n, fft_real, cf%fft, optimize = .not.simul_box_is_periodic(sb))
   cf%nx = cf%n(1)/2 + 1
 #else
-  call fft_init(sb, cf%n, fft_complex, cf%fft)
+  call fft_init(cf%n, fft_complex, cf%fft, optimize = .not.simul_box_is_periodic(sb))
   cf%nx = cf%n(1)
 #endif
 
