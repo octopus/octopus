@@ -30,7 +30,7 @@ SUBDIRS =        \
 	share testsuite $(PYTHON_DIR)
 
 EXTRA_DIST =     \
-	TODO build/*.pl build/*.m4 build/*.in debian/*
+	TODO m4/*.m4 build/*.pl build/*.in debian/*
 
 CLEANFILES =     \
 	*~ *.bak *.pc*
