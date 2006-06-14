@@ -608,7 +608,7 @@ contains
       ! and inside the simulation box
       xx(:) = xx(:)/units_inp%length%factor ! convert from a.u. to input units
       r = sqrt(sum(xx(:)**2))
-      call loct_parse_expression(re, im, xx(1), xx(2), xx(3), r, sb%user_def)
+      call loct_parse_expression(re, im, xx(1), xx(2), xx(3), r, M_ZERO, sb%user_def)
       in_box = in_box .and. (re .ne. M_ZERO)
     end select
 

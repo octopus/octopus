@@ -476,7 +476,7 @@ contains
       call write_info(2)
       s%niwfs = 2*s%z_val
       call loct_parse_expression(pot_re, pot_im, CNST(0.01), M_ZERO,   &
-        M_ZERO, CNST(0.01), s%user_def)
+        M_ZERO, CNST(0.01), M_ZERO, s%user_def)
       s%omega = sqrt( abs(M_TWO / CNST(1.0e-4) * pot_re ))
       ! To avoid problems with constant potentials.
       if(s%omega <= M_ZERO) s%omega = CNST(0.1) 
@@ -556,7 +556,7 @@ contains
       xx(:) = xx(:)/units_inp%length%factor ! convert from a.u. to input units
       r = r/units_inp%length%factor
       call loct_parse_expression(                            &
-        pot_re, pot_im, xx(1), xx(2), xx(3), r, s%user_def)
+        pot_re, pot_im, xx(1), xx(2), xx(3), r, M_ZERO, s%user_def)
       l = pot_re * units_inp%energy%factor  ! convert from input units to a.u.
 
     case(SPEC_POINT, SPEC_JELLI)
@@ -606,12 +606,12 @@ contains
 
         xx(i) = xx(i) - Delta/units_inp%length%factor
         call loct_parse_expression(pot_re, pot_im,           &
-          xx(1), xx(2), xx(3), sqrt(sum(xx(:)**2)), s%user_def)
+          xx(1), xx(2), xx(3), sqrt(sum(xx(:)**2)), M_ZERO, s%user_def)
         l1 = pot_re * units_inp%energy%factor     ! convert from input units to a.u.
 
         xx(i) = xx(i) + M_TWO*Delta/units_inp%length%factor
         call loct_parse_expression(pot_re, pot_im,           &
-          xx(1), xx(2), xx(3), sqrt(sum(xx(:)**2)), s%user_def)
+          xx(1), xx(2), xx(3), sqrt(sum(xx(:)**2)), M_ZERO, s%user_def)
         l2 = pot_re * units_inp%energy%factor     ! convert from input units to a.u.
 
         gv(i) = (l2 - l1)/(M_TWO*Delta)

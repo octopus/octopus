@@ -537,7 +537,7 @@ contains
 
                 ! parse user defined expressions
                 call loct_parse_expression(psi_re, psi_im,             &
-                  x(1), x(2), x(3), r, st%user_def_states(id, is, ik))
+                  x(1), x(2), x(3), r, M_ZERO, st%user_def_states(id, is, ik))
                 ! fill state
                 st%zpsi(ip, id, is, ik) = psi_re + M_zI*psi_im
               end do

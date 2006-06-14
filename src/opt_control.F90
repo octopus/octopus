@@ -1194,7 +1194,7 @@ contains
                               
                               ! parse user defined expressions
                               call loct_parse_expression(psi_re, psi_im,             &
-                                   x(1), x(2), x(3), r, initial_st%user_def_states(id, is, ik))
+                                   x(1), x(2), x(3), r, M_ZERO, initial_st%user_def_states(id, is, ik))
                               ! fill state
                               write(6,*) psi_re, psi_im
                               initial_st%zpsi(ip, id, is, ik) = psi_re + M_zI*psi_im
@@ -1404,7 +1404,7 @@ contains
 
                   ! parse user defined expressions
                   call loct_parse_expression(psi_re, psi_im, &
-                       x(1), x(2), x(3), r, expression)
+                       x(1), x(2), x(3), r, M_ZERO, expression)
 
                   ! fill state
                   target_st%zpsi(ip, 1, 1, 1) = target_st%zpsi(ip, 1, 1, 1) &
@@ -1478,7 +1478,7 @@ contains
 
            !     ! parse user defined expressions
            !     call loct_parse_expression(psi_re, psi_im,             &
-           !       x(1), x(2), x(3), r, st%user_def_states(id, is, ik))
+           !       x(1), x(2), x(3), r, M_ZERO, st%user_def_states(id, is, ik))
            !     ! fill state
            !     st%zpsi(ip, id, is, ik) = psi_re + M_zI*psi_im
 
