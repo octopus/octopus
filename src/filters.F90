@@ -255,20 +255,16 @@ contains
     !%  
     !%
     !% Possible arguments for domain are:
-    !%   freq 1
-    !% Specifies a spectral filter.
-    !%   time 2
+    !%  
+    !% *freq* - Specifies a spectral filter.
+    !% 
+    !% *time*  - 
     !% Specifies a time-dependent envelope similar to a time-dependent penalty.
     !% Use it in the case of a fixed fluence where a time-dependent penalty is not possible.
     !% Characterize the polarization vector with pol_x, pol_y, pol_z.
     !% Finally define the filter function by specifying the "function".
     !% Some examples for "function" are:
-    !% 
-    !% A Gaussian but the width specifies the FWHM point.
-    !%  
-    !% A sin**2 function.
-    !%  
-    !% A unit step. (to come...)
+    !%
     !%  
     !%An example for the block is:
     !% <tt>%OCTFilter
@@ -277,7 +273,15 @@ contains
     !% <br>&nbsp;&nbsp;
     !% <br>&nbsp;&nbsp;
     !% <br>%</tt>
-    !%  
+    !%   
+    !% 
+    !% Or a spectral Gaussian Filter at w=0.1567:
+    !%
+    !% <tt>%OCTFilter
+    !% <br>&nbsp;&nbsp;time | 1 | 0 | 0 | "exp(-80*( w + 0.1567 )^2  ) + exp(-80*( w - 0.1567 )^2  )"
+    !% <br>%</tt>
+    !%
+    !% Be careful that also the negative frequency component is filtered since the resulting field has to be real valued.
     !%End
     if((filtermode==timefreq).AND.(loct_parse_block(check_inp('OCTFilter'),blk)==0)) then
        no_f = loct_parse_block_n(blk)

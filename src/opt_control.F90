@@ -150,10 +150,6 @@ contains
        call write_fatal(1)
     end if
 
-    
-    ! CHECK if run mode is defined
-    ! define feature_vector - > check if all options match
-
     ! initialize oct run, defines initial laser... initial state
     call init_()
 
@@ -177,7 +173,8 @@ contains
        ! (12) td targets wg     type (with filter)
 
     ! TODO: Krotov scheme
-
+    ! MT03 scheme: with additional parameters
+   
     case DEFAULT
       write(message(1),'(a)') "Unknown choice of OCT algorithm."
       write(message(2),'(a)') "Choose: ZR98, ZBR98, WG05 ."
@@ -193,42 +190,29 @@ contains
        message(1) = "Info: Optimization finished...checking the field"
        call write_info(1)
 
-       psi = initial_st
-       call zoutput_function(sys%outp%how,'opt-control','dcheck_istate',gr%m,gr%sb,psi%zpsi(:,1,1,1),M_ONE,ierr)
-       !laser = -laser
-       write(filename,'(a)') 'opt-control/dcheck_laser'
-       call write_field(filename, laser, td%max_iter, td%dt)
+       call states_copy(psi, initial_st)
 
        call prop_fwd(psi)
-!! DEBUG
-      call zoutput_function(sys%outp%how,'opt-control','dcheck_state',gr%m,gr%sb,psi%zpsi(:,1,1,1),M_ONE,ierr)
        call calc_overlap()
        ! output anything else ??
        ! what about td output - do a full td calculation
     end if
 
-    ! done ... clean up
-    write(message(1), '(a,i3)') 'Info: Cleaning up..#', ctr_iter
-    call write_info(1)
     ! clean up
     td%tr%v_old => v_old_i
     nullify(h%ep%lasers(1)%numerical)
     deallocate(laser)
-    ! write(6,*) 'DEBUG3'    
     deallocate(laser_tmp)
-    ! write(6,*) 'DEBUG4'
-
-!deallocate(convergence)
+   
+    deallocate(convergence)
 !! PROBLEMS WITH DEALLOCATION
-
+    !write(6,*) 'DEBUG5'
     !nullify(v_old_f)
     !deallocate(v_old_f)
 !! ----
-    ! write(6,*) 'DEBUG5'
     call states_end(psi_i)
-    ! write(6,*) 'DEBUG6'
     call end_()
-    ! write(6,*) 'DEBUG7'
+
     call pop_sub()
 
   contains
@@ -249,13 +233,13 @@ contains
       ! first propagate chi to ti
       message(1) = "Info: Initial forward propagation"
       call write_info(1)
-      
-      psi = initial_st
+
+      call states_copy(psi, initial_st)
       call prop_fwd(psi) 
 !! DEBUG
       call zoutput_function(sys%outp%how,'opt-control','prop1',gr%m,gr%sb,psi%zpsi(:,1,1,1),M_ONE,ierr)
 !!stop
-
+      call zoutput_function(sys%outp%how,'opt-control','zr98_istate1',gr%m,gr%sb,initial_st%zpsi(:,1,1,1),M_ONE,ierr)
       old_functional = -CNST(1e10)
       ctr_iter = 0
 
@@ -277,17 +261,17 @@ contains
          end if
 
          ! forward propagation
-         psi = initial_st  
-
+         call states_copy(psi, initial_st)
+         call zoutput_function(sys%outp%how,'opt-control','zr98_istate',gr%m,gr%sb,psi%zpsi(:,1,1,1),M_ONE,ierr)
          call fwd_step(method)
-
+         call zoutput_function(sys%outp%how,'opt-control','dcheck_istate_zr98A',gr%m,gr%sb,initial_st%zpsi(:,1,1,1),M_ONE,ierr)
          if(dump_intermediate) then
             write(filename,'(a,i3.3)') 'opt-control/laser.', ctr_iter
             call write_field(filename, laser, td%max_iter, td%dt)
          end if
       
       end do ctr_loop
-
+      call zoutput_function(sys%outp%how,'opt-control','dcheck_istate_zr98',gr%m,gr%sb,initial_st%zpsi(:,1,1,1),M_ONE,ierr)
       call pop_sub()
 
     end subroutine scheme_zr98
@@ -316,7 +300,7 @@ contains
          message(1) = "Info: Initial forward propagation"
          call write_info(1)
          
-         psi = initial_st
+         call states_copy(psi, initial_st)
          call prop_fwd(psi) 
 
 !! DEBUG
@@ -404,7 +388,7 @@ contains
          call write_info(1)
 
          ! forward propagation
-         psi = initial_st  
+         call states_copy(psi, initial_st)  
 
          call fwd_step(method)
 
@@ -1046,18 +1030,7 @@ contains
       call pop_sub()
     end subroutine output
 
-    !subroutine dipole_moment_function()
-    ! define dipole moment function 
-    ! free in x- and y
-    ! mu_x = x 
-    ! mu_y = y
-    ! or force elliptic / linear : use only first component
-    ! mu_x = x + iy
-    !
-
-    !end subroutine dipole_moment_function
-
-
+!------------------------------------------------------------------------
     subroutine def_istate()
 
       integer           :: kk, no_c, state, no_blk
@@ -1420,34 +1393,31 @@ contains
             no_states = loct_parse_block_n(blk)
             target_st%zpsi(ip, 1, 1, 1) = m_z0
             do ib = 1, no_states
-               write(6,*) 'HELLO LOCALTARGET' 
-               ! read formula strings and convert to C strings
-               ! does the block entry match and is this node responsible?
-               !if(.not.(id.eq.idim .and. is.eq.inst .and. ik.eq.inik    &
-               !     .and. psi_i%st_start.le.is .and. psi_i%st_end.ge.is) ) cycle
-                        
                ! parse formula string
-               call loct_parse_block_string(                            &
-                    blk, ib-1, 0, expression)
+               call loct_parse_block_string(blk, ib-1, 0, expression)
                ! convert to C string
                call conv_to_C_string(expression)
                
                do ip = 1, gr%m%np
                   x = gr%m%x(ip, :)
                   r = sqrt(sum(x(:)**2))
-                  
+
                   ! parse user defined expressions
                   call loct_parse_expression(psi_re, psi_im, &
                        x(1), x(2), x(3), r, expression)
+
                   ! fill state
-                  write(6,*) psi_re, psi_im
-                  target_st%zpsi(ip, 1, 1, 1) = target_st%zpsi(ip, 1, 1, 1) + psi_re + M_zI*psi_im
+                  target_st%zpsi(ip, 1, 1, 1) = target_st%zpsi(ip, 1, 1, 1) &
+                       + psi_re + M_zI*psi_im
                end do
+
                ! normalize orbital
-               call zstates_normalize_orbital(gr%m, psi_i%d%dim, target_st%zpsi(:,:, is, ik))
+               call zstates_normalize_orbital(gr%m, psi_i%d%dim, &
+                    target_st%zpsi(:,:, is, ik))
             end do
             call loct_parse_block_end(blk)
-            call zoutput_function(sys%outp%how,'opt-control','tg_local',gr%m,gr%sb,initial_st%zpsi(:,1,1,1),u,ierr)
+            call zoutput_function(sys%outp%how,'opt-control','tg_local',&
+                 gr%m,gr%sb,target_st%zpsi(:,1,1,1),u,ierr)
          else
             message(1) = '"OCTLocalTarget" has to be specified as block.'
             call write_fatal(1)
