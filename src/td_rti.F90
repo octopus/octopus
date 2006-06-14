@@ -213,6 +213,7 @@ contains
 
     ! allocate memory to store the old KS potentials
     ALLOCATE(tr%v_old(NP, st%d%nspin, 0:3), NP*st%d%nspin*(3+1))
+    tr%v_old(:, :, :) = M_ZERO
     call td_exp_init(gr, tr%te)             ! initialize propagator
 
   end subroutine td_rti_init
