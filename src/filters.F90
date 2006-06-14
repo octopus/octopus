@@ -246,7 +246,10 @@ contains
     !% that are applied to the optimized laser field in each iteration.
     !% The filter forces the laser field to obtain the given form in frequency space.
     !% Each line of the block describes a filter; this way you can actually have more
-    !% than one filter function (e.g. a filter in time and two in frequency space). The filters are applied in the given order, i.e., first the filter specified by the first line is applied, then second line. This order is important if the filters are conjugated, like time and frequency. If they are conjugated the second filter can lift the action of the first one. Use with care.
+    !% than one filter function (e.g. a filter in time and two in frequency space). The filters are 
+    !% applied in the given order, i.e., first the filter specified by the first line is applied, then 
+    !% second line. This order is important if the filters are conjugated, like time and frequency. 
+    !% If they are conjugated the second filter can lift the action of the first one. Use with care.
     !% The syntax of each line is, then:
     !%
     !% <tt>%OCTFilter
@@ -256,9 +259,10 @@ contains
     !%
     !% Possible arguments for domain are:
     !%  
-    !% *freq* - Specifies a spectral filter.
+    !% *frequency_filter* - Specifies a spectral filter.
     !% 
-    !% *time*  - 
+    !% *time_filter*  - 
+    !%
     !% Specifies a time-dependent envelope similar to a time-dependent penalty.
     !% Use it in the case of a fixed fluence where a time-dependent penalty is not possible.
     !% Characterize the polarization vector with pol_x, pol_y, pol_z.
@@ -282,6 +286,11 @@ contains
     !% <br>%</tt>
     !%
     !% Be careful that also the negative frequency component is filtered since the resulting field has to be real valued.
+    !%
+    !%Option frequency_filter 1
+    !% The filter is applied in the frequency domain
+    !%Option time_filter 2
+    !% The filter is applied in the time domain.
     !%End
     if((filtermode==timefreq).AND.(loct_parse_block(check_inp('OCTFilter'),blk)==0)) then
        no_f = loct_parse_block_n(blk)

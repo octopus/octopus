@@ -50,8 +50,8 @@ gamma2 = 80
 #  1 | 0 | 0 | "exp(-gamma*( t - 3*stime/4)^2  )" | 1
 #%
 %OCTFilter
-#   time | 1 | 0 | 0 | "exp(-gamma1*( t - stime/4 )^2  ) + exp(-gamma1*( t - 3*stime/4 )^2  )"
-   freq | 1 | 0 | 0 | "exp(-gamma2*( w + 0.1567 )^2  ) + exp(-gamma2*( w - 0.1567 )^2  )"
+#   time_filter | 1 | 0 | 0 | "exp(-gamma1*( t - stime/4 )^2  ) + exp(-gamma1*( t - 3*stime/4 )^2  )"
+   frequency_filter | 1 | 0 | 0 | "exp(-gamma2*( w + 0.1567 )^2  ) + exp(-gamma2*( w - 0.1567 )^2  )"
 %
 
 
