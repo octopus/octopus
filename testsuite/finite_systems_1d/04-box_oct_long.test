@@ -51,7 +51,7 @@ Input: 04-box.04-oct_long.inp
 
 # Match overlaps
 Match ; J1 1st  iteration  ; grep ' 1  ' opt-control/convergence ; \s*0.844\d*
-Match ; J1 2nd  iteration  ; grep ' 2  ' opt-control/convergence ; \s*0.82\d*
+Match ; J1 2nd  iteration  ; grep ' 2  ' opt-control/convergence ; \s*0.92\d*
 Match ; J1 5th  iteration  ; grep ' 5  ' opt-control/convergence ; \s*0.99\d*
 Match ; J1 10th iteration  ; grep ' 10  ' opt-control/convergence ; \s*0.999\d*
 Match ; J1 15th iteration  ; grep ' 15  ' opt-control/convergence ; \s*0.998\d*
