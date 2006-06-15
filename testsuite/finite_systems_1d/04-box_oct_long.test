@@ -26,11 +26,11 @@ Match ; 2th state  ; grep '2   --' excited_states_static/eigenvalues ; \s*-4.827
 Input: 04-box.02-oct_long.inp
 
 # Match overlaps
-Match ; J1 1st iteration   ; grep ' 1  ' opt-control/convergence ; \s*0.88946\d*
-Match ; J1 2nd iteration   ; grep ' 2  ' opt-control/convergence ; \s*0.93384\d*
-Match ; J1 5th iteration   ; grep ' 5  ' opt-control/convergence ; \s*0.96531\d*
-Match ; J1 10th iteration  ; grep ' 10  ' opt-control/convergence ; \s*0.97990\d*
-Match ; J1 15th iteration  ; grep ' 15  ' opt-control/convergence ; \s*0.98630\d*
+Match ; J1 1st iteration   ; grep ' 1  ' opt-control/convergence ; \s*0.890\d*
+Match ; J1 2nd iteration   ; grep ' 2  ' opt-control/convergence ; \s*0.939\d*
+Match ; J1 5th iteration   ; grep ' 5  ' opt-control/convergence ; \s*0.972\d*
+Match ; J1 10th iteration  ; grep ' 10  ' opt-control/convergence ; \s*0.982\d*
+Match ; J1 15th iteration  ; grep ' 15  ' opt-control/convergence ; \s*0.985\d*
 
 
 # Then, run the optimization for 15 iterations with a ZR98 scheme and compare the convergence.
@@ -38,11 +38,11 @@ Match ; J1 15th iteration  ; grep ' 15  ' opt-control/convergence ; \s*0.98630\d
 Input: 04-box.03-oct_long.inp
 
 # Match overlaps
-Match ; J1 1st iteration  ; grep ' 1  ' opt-control/convergence ; \s*0.89638\d*
-Match ; J1 2nd iteration  ; grep ' 2  ' opt-control/convergence ; \s*0.95501\d*
-Match ; J1 5th iteration  ; grep ' 5  ' opt-control/convergence ; \s*0.97999\d*
-Match ; J1 10th iteration  ; grep ' 10  ' opt-control/convergence ; \s*0.98782\d*
-Match ; J1 15th iteration  ; grep ' 15  ' opt-control/convergence ; \s*0.99077\d*
+Match ; J1 1st iteration  ; grep ' 1  ' opt-control/convergence ; \s*0.787\d*
+Match ; J1 2nd iteration  ; grep ' 2  ' opt-control/convergence ; \s*0.8\d*
+Match ; J1 5th iteration  ; grep ' 5  ' opt-control/convergence ; \s*0.933\d*
+Match ; J1 10th iteration  ; grep ' 10  ' opt-control/convergence ; \s*0.970\d*
+Match ; J1 15th iteration  ; grep ' 15  ' opt-control/convergence ; \s*0.983\d*
 
 
 # Then, run the optimization for 15 iterations with a WG05 scheme and compare the convergence.
@@ -50,10 +50,10 @@ Match ; J1 15th iteration  ; grep ' 15  ' opt-control/convergence ; \s*0.99077\d
 Input: 04-box.04-oct_long.inp
 
 # Match overlaps
-Match ; J1 1st  iteration  ; grep ' 1  ' opt-control/convergence ; \s*0.84088\d*
-Match ; J1 2nd  iteration  ; grep ' 2  ' opt-control/convergence ; \s*0.87887\d*
-Match ; J1 5th  iteration  ; grep ' 5  ' opt-control/convergence ; \s*0.96441\d*
-Match ; J1 10th iteration  ; grep ' 10  ' opt-control/convergence ; \s*0.99353\d*
-Match ; J1 15th iteration  ; grep ' 15  ' opt-control/convergence ; \s*0.99814\d*
+Match ; J1 1st  iteration  ; grep ' 1  ' opt-control/convergence ; \s*0.844\d*
+Match ; J1 2nd  iteration  ; grep ' 2  ' opt-control/convergence ; \s*0.82\d*
+Match ; J1 5th  iteration  ; grep ' 5  ' opt-control/convergence ; \s*0.99\d*
+Match ; J1 10th iteration  ; grep ' 10  ' opt-control/convergence ; \s*0.999\d*
+Match ; J1 15th iteration  ; grep ' 15  ' opt-control/convergence ; \s*0.998\d*
 
 
