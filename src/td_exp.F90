@@ -274,14 +274,14 @@ contains
       call push_sub('td_exp.fourth')
 
       ALLOCATE(zpsi1 (NP_PART, h%d%dim), NP_PART*h%d%dim)
-      ALLOCATE(hzpsi1(NP,      h%d%dim), NP     *h%d%dim)
+      ALLOCATE(hzpsi1(NP_PART, h%d%dim), NP_PART*h%d%dim)
       zfact = M_z1
-      call lalg_copy(NP, h%d%dim, zpsi(:,:), zpsi1(:,:))
+      call lalg_copy(NP_PART, h%d%dim, zpsi(:,:), zpsi1(:,:))
       do i = 1, te%exp_order
         zfact = zfact*(-M_zI*timestep)/i
         call operate(zpsi1, hzpsi1)
-        call lalg_axpy(NP, h%d%dim, zfact, hzpsi1(:,:), zpsi(:,:))
-        if(i .ne. te%exp_order) call lalg_copy(NP, h%d%dim, hzpsi1(:,:), zpsi1(:,:))
+        call lalg_axpy(NP_PART, h%d%dim, zfact, hzpsi1(:,:), zpsi(:,:))
+        if(i .ne. te%exp_order) call lalg_copy(NP_PART, h%d%dim, hzpsi1(:,:), zpsi1(:,:))
       end do
       deallocate(zpsi1, hzpsi1)
 
@@ -314,21 +314,21 @@ contains
       ALLOCATE(zpsi1(NP_PART, h%d%dim, 0:2), NP_PART*h%d%dim*3)
       zpsi1 = M_z0
       do j = te%exp_order-1, 0, -1
-        call lalg_copy(NP, h%d%dim, zpsi1(:,:, 1), zpsi1(:,:, 2))
-        call lalg_copy(NP, h%d%dim, zpsi1(:,:, 0), zpsi1(:,:, 1))
+        call lalg_copy(NP_PART, h%d%dim, zpsi1(:,:, 1), zpsi1(:,:, 2))
+        call lalg_copy(NP_PART, h%d%dim, zpsi1(:,:, 0), zpsi1(:,:, 1))
 
         call operate(zpsi1(:, :, 1), zpsi1(:, :, 0))
         zfact = 2*(-M_zI)**j*loct_bessel(j, h%spectral_half_span*timestep)
 
-        call lalg_axpy(NP, h%d%dim, cmplx(-h%spectral_middle_point, M_ZERO, PRECISION), &
+        call lalg_axpy(NP_PART, h%d%dim, cmplx(-h%spectral_middle_point, M_ZERO, PRECISION), &
           zpsi1(:,:, 1), zpsi1(:,:, 0))
-        call lalg_scal(NP, h%d%dim, cmplx(M_TWO/h%spectral_half_span, M_ZERO, PRECISION), zpsi1(:,:, 0))
-        call lalg_axpy(NP, h%d%dim, zfact, zpsi(:,:), zpsi1(:,:, 0))
-        call lalg_axpy(NP, h%d%dim, cmplx(-M_ONE, M_ZERO, PRECISION), zpsi1(:,:, 2),  zpsi1(:,:, 0))
+        call lalg_scal(NP_PART, h%d%dim, cmplx(M_TWO/h%spectral_half_span, M_ZERO, PRECISION), zpsi1(:,:, 0))
+        call lalg_axpy(NP_PART, h%d%dim, zfact, zpsi(:,:), zpsi1(:,:, 0))
+        call lalg_axpy(NP_PART, h%d%dim, cmplx(-M_ONE, M_ZERO, PRECISION), zpsi1(:,:, 2),  zpsi1(:,:, 0))
       end do
 
       zpsi(:, :) = M_HALF*(zpsi1(:, :, 0) - zpsi1(:, :, 2))
-      call lalg_scal(NP, h%d%dim, exp(-M_zI*h%spectral_middle_point*timestep), zpsi(:,:))
+      call lalg_scal(NP_PART, h%d%dim, exp(-M_zI*h%spectral_middle_point*timestep), zpsi(:,:))
       deallocate(zpsi1)
 
       if(present(order)) order = te%exp_order
@@ -366,10 +366,10 @@ contains
 
         do k = max(1, n-1), n
           hm(k, n) = zstates_dotp(gr%m, h%d%dim, v(:, :, k), v(:, :, n+1))
-          call lalg_axpy(NP, h%d%dim, -hm(k, n), v(:, :, k), v(:, :, n+1))
+          call lalg_axpy(NP_PART, h%d%dim, -hm(k, n), v(:, :, k), v(:, :, n+1))
         end do
         hm(n+1, n) = zstates_nrm2(gr%m, h%d%dim, v(:, :, n+1))
-        call lalg_scal(NP, h%d%dim, M_z1/hm(n+1, n), v(:, :, n+1)) 
+        call lalg_scal(NP_PART, h%d%dim, M_z1/hm(n+1, n), v(:, :, n+1)) 
         call zgpadm(6, n, timestep, -M_zI*hm(1:n, 1:n), n, wsp, lwsp, ipiv(1:n), iexph, ns, iflag)
         k = 0
         do i = 1, n
