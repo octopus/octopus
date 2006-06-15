@@ -685,8 +685,8 @@ contains
       ! build td target 
       ! chi norm is not conserved 
       ! TODO: additional precision for inh. propagation
-      if(targetmode==oct_targetmode_td) &
-           call calc_inh(psi,td_tg,chi)
+      !if(targetmode==oct_targetmode_td) &
+      !     call calc_inh(psi,td_tg,real(abs(iter*td%dt),PRECISION),chi)
 
       call td_rti_dt(sys%ks, h, gr, chi, td%tr, abs(iter*td%dt),     td%dt )
     
@@ -703,7 +703,8 @@ contains
 
 
 ! ---------------------------------------------------------------
-    subroutine calc_inh(psi_n, tg, chi_n)
+    subroutine calc_inh(psi_n, tg, time, chi_n)
+      REAL          , intent(in)     :: time
       type(states_t), intent(in)     :: psi_n
       type(states_t), intent(inout)  :: chi_n
       type(td_target_t), intent(in)  :: tg(:)
@@ -711,28 +712,44 @@ contains
       integer :: jj
       ! 
 
+!use 
+! loct_parse_expression(re, im, x, y, z, r, t, expr)
+! and generate local operator from input file in every time step
+
+
+! distinguish between local and wavefunction td target
+! for the local target read in function from input file
+
       ! TODO: change to right dimensions
       !       build target operator
-      do jj=1, size(tg)
-         ! build operator
-         if(tg(jj)%type.eq.oct_tgtype_local) then
-            ! build gauss (width)
-            !exp(-(grid/M_TWO - tg(jj)%numerical)**2 / (M_TWO*tg(jj)%width**2))
-            chi_n%zpsi(:,:,1,1) = chi_n%zpsi(:,:,1,1) - td%dt*psi_n%zpsi(:,:,1,1)*M_ZERO
-            !x = mesh%x(ip, :)
-            !r = sqrt(sum(x(:)**2))
-         else
-            ! not implemented yet
-            !do ik = 1, psi%d%nik
-               !do p  = psi%st_start, psi%st_end
-            !           olap = M_z0     
-            !           olap = zstates_dotp(gr%m, psi_in%d%dim,  targetst%zpsi(:,:, p, ik), psi_in%zpsi(:,:, p, ik))
-            ! enddo
-            ! enddo
-            ! mulitply with state
-            chi_n%zpsi(:,:,1,1) = chi_n%zpsi(:,:,1,1) - td%dt*M_ZERO
-         end if
-      end do
+!!$      do jj=1, size(tg)
+!!$         ! build operator
+!!$         if(tg(jj)%type.eq.oct_tgtype_local) then
+!!$            ! build gauss (width)
+!!$            !exp(-(grid/M_TWO - tg(jj)%numerical)**2 / (M_TWO*tg(jj)%width**2))
+!!$            chi_n%zpsi(:,:,1,1) = chi_n%zpsi(:,:,1,1) - td%dt*psi_n%zpsi(:,:,1,1)*M_ZERO
+!!$            !x = mesh%x(ip, :)
+!!$            !r = sqrt(sum(x(:)**2))
+!!$         else
+!!$
+!!$            ! read in 
+!!$            ! parse user defined expressions
+!!$            do ip = 1, gr%m%np
+!!$               x = gr%m%x(ip, :)
+!!$               r = sqrt(sum(x(:)**2))
+!!$               call loct_parse_expression(psi_re, psi_im, &
+!!$                    x(1), x(2), x(3), r, M_ZERO, expression)
+!!$               chi_n%zpsi(ip,dim,1,1) = chi_n%zpsi(:,:,1,1) &
+!!$                    - td%dt*(psi_re+m_zI*psi_im)
+!!$            ! not implemented yet
+!!$            !do ik = 1, psi%d%nik
+!!$               !do p  = psi%st_start, psi%st_end
+!!$            !           olap = M_z0     
+!!$            !           olap = zstates_dotp(gr%m, psi_in%d%dim,  targetst%zpsi(:,:, p, ik), psi_in%zpsi(:,:, p, ik))
+!!$            ! enddo
+!!$            ! enddo
+!!$         end if
+!!$      end do
 
     end subroutine calc_inh
 
@@ -756,10 +773,13 @@ contains
          do p  = psi_i%st_start, psi_i%st_end
             do dim = 1, psi_i%d%dim
                do pol=1, NDIM
-                  d2(pol) = d2(pol) + zmf_integrate(gr%m,conjg(chi%zpsi(:, dim, p, ik))*laser_pol(pol)*gr%m%x(:,pol)*psi%zpsi(:, dim, p, ik))
+                  d2(pol) = d2(pol) + zmf_integrate(gr%m,&
+                       conjg(chi%zpsi(:, dim, p, ik))*laser_pol(pol)&
+                       *gr%m%x(:,pol)*psi%zpsi(:, dim, p, ik))
                enddo
                if(method.eq.oct_algorithm_zbr98) then
-                  d1 = zmf_integrate(gr%m,conjg(psi%zpsi(:, dim, p, ik))*chi%zpsi(:, dim, p, ik))
+                  d1 = zmf_integrate(gr%m,conjg(psi%zpsi(:, dim, p, ik))&
+                       *chi%zpsi(:, dim, p, ik))
                   
                else
                   d1 = M_z1
@@ -773,7 +793,6 @@ contains
       !endif
       !if((NDIM-dof).eq.0) then
       l(1:NDIM, 2*iter) = aimag(d1*d2(1:NDIM))/tdpenalty(1:NDIM,2*iter)
-
       !endif
       ! extrapolate to t+-dt/2
       i = int(sign(M_ONE, td%dt))
@@ -808,7 +827,7 @@ contains
       td%tr%v_old => v_old_f
 
       td%dt = -td%dt
-      h%ep%lasers(1)%dt = -td%dt
+      h%ep%lasers(1)%dt = td%dt
 
       do i = td%max_iter-1, 0, -1
         ! time iterate wavefunctions

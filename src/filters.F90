@@ -462,6 +462,8 @@ contains
     type(filter_t), pointer    :: f(:)
 
     integer :: i, no_f
+    
+    if(.not.associated(f)) return
 
     call push_sub('filter.filter_end_')
 
