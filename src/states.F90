@@ -1184,7 +1184,7 @@ contains
       do j = 1, nst
         do ik = 1, st%d%nik, ns
           write(iunit, '(1x,3(f10.4))', advance='no')  st%d%kpoints(:,ik)/factor(:)
-          write(iunit, '(3x,f12.6))',   advance='yes') st%eigenval(j, ik)/units_out%energy%factor
+          write(iunit, '(3x,f12.6)',   advance='yes') st%eigenval(j, ik)/units_out%energy%factor
         end do
         write(iunit, '(a)')' '
       end do
@@ -1193,7 +1193,7 @@ contains
       ! k_x, k_y, k_z, e_1, e_2, ..., e_n
       do ik = 1, st%d%nik, ns
         write(iunit, '(1x,3(f10.4))', advance='no')   st%d%kpoints(:,ik)/factor(:)
-        write(iunit, '(3x,20f12.6))', advance='yes') (st%eigenval(j, ik)/units_out%energy%factor, j=1,nst)
+        write(iunit, '(3x,20f12.6)', advance='yes') (st%eigenval(j, ik)/units_out%energy%factor, j=1,nst)
       end do
     end select
 

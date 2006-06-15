@@ -971,7 +971,7 @@ contains
       call t_lookup(2*steps+1,dt/real(2,PRECISION),tgrid)
       iunit = io_open(filename, action='write')
       do i = 0, 2*steps
-         write(iunit, '(4es30.16e4))') tgrid(i), las(:, i)
+         write(iunit, '(4es30.16e4)') tgrid(i), las(:, i)
       end do
       call io_close(iunit)
 
@@ -1632,7 +1632,7 @@ contains
                !write(6,*) f(kk)%numerical(:,0)
                iunit = io_open(filename, action='write')
                do i = 0, 2*td%max_iter
-                  write(iunit, '(4ES30.16E4))') i*td%dt*M_HALF, f(kk)%numerical(:,i)
+                  write(iunit, '(4ES30.16E4)') i*td%dt*M_HALF, f(kk)%numerical(:,i)
                end do
                call io_close(iunit)
                !call write_field(filename, real(f(kk)%numerical(:,:), PRECISION), td%max_iter, td%dt)
