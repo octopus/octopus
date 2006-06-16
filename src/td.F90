@@ -194,7 +194,7 @@ contains
       write(message(1), '(i7,1x,2f14.6,f14.3, i10)') i, &
         i*td%dt       / units_out%time%factor, &
         (h%etot + geo%kinetic_energy) / units_out%energy%factor, &
-        (loct_clock() - etime)/1e6
+        loct_clock() - etime
       call write_info(1)
       etime = loct_clock()
 

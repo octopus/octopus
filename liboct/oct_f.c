@@ -204,7 +204,7 @@ void FC_FUNC_(oct_metis_part_graph_vkway, OCT_METIS_PART_GRAPH_VKWAY)
 double FC_FUNC_(oct_clock, OCT_CLOCK)
   ()
 {
-  return (double) clock();
+  return (double) clock()/CLOCKS_PER_SEC;
 }
 
 void FC_FUNC_(oct_gettimeofday, OCT_GETTIMEOFDAY)

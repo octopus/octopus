@@ -559,7 +559,7 @@ contains
 
       write(iunit_out,'(a,i6,a,i6.6,f12.6,i8, a)', advance='no') "* I ", &
         sec,'.',usec, &
-        loct_clock()/CNST(1e6), &
+        loct_clock(), &
         loct_getmem(), " | "
       do i = no_sub_stack-1, 1, -1
         write(iunit_out,'(a)', advance='no') "..|"
@@ -607,7 +607,7 @@ contains
 
       write(iunit_out,'(a,i6,a,i6.6,f12.6,i8, a)', advance='no') "* O ", &
         sec,'.',usec, &
-        (loct_clock()-time_stack(no_sub_stack))/CNST(1e6), &
+        loct_clock()-time_stack(no_sub_stack), &
         loct_getmem(), " | "
       do i = no_sub_stack-1, 1, -1
         write(iunit_out,'(a)', advance='no') "..|"
