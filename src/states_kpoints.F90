@@ -167,7 +167,7 @@ subroutine states_choose_kpoints(d, sb, geo)
   ALLOCATE(kw(nkmax), nkmax)
 
   call crystal_init(sb%rlat, geo%nspecies, natom, geo%natoms, coorat, d%nik_axis, &
-    kshifts, nk, kp, kw)
+    kshifts, nk, nkmax, kp, kw)
 
   ! double d%nik and copy points for spin polarized calc
   select case(d%ispin)

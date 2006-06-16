@@ -51,21 +51,22 @@
       contains
 
       subroutine crystal_init(al,ntype,natom,maxnatom,coorat,    &
-                              nk_axis,k_shift,nrk,rk,w)
+                              nk_axis,k_shift,nrk,nrkmax,rk,w)
 
-      integer  :: nx,ny,nz,nrk,ntype,maxnatom,nk_axis(3)
-      integer  :: natom(ntype)
-      FLOAT :: sx,sy,sz,k_shift(3)
-      FLOAT :: rk(3,*), w(*) , al(3,3)
-      FLOAT :: coorat(ntype,maxnatom,3)
+      integer, intent(in)  :: nrkmax,ntype,maxnatom
+      integer, intent(in)  ::   nk_axis(3),natom(ntype)
+      integer, intent(out) :: nrk
+      FLOAT, intent(in)    :: al(3,3), coorat(ntype,maxnatom,3)
+      FLOAT, intent(in)    :: k_shift(3)
+      FLOAT, intent(out)   :: rk(3,nrkmax), w(nrkmax)
 
 ! Local
 
-      integer  :: ipr, invers_no, jabs, jcar, neg
+      integer  :: ipr, invers_no, jabs, jcar, neg, nx, ny, nz
       FLOAT :: volume_check, celvol, ek, ek1, ek2
       FLOAT :: a1(3),a2(3),a3(3),am(3),      &
-                       b1(3), b2(3), b3(3), ba(3),   &
-                       rkcar(3),rkmod(3,4)
+               b1(3), b2(3), b3(3), ba(3),   &
+               rkcar(3),rkmod(3,4), sx, sy, sz
 !      FLOAT :: scale
 !      character(len=1) :: np
 !      logical :: vol_input
