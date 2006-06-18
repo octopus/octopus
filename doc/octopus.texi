@@ -1,0 +1,420 @@
+\input texinfo @c -*-texinfo-*- 
+@c %**start of header
+@setfilename octopus.info 
+@c including the file vers-octopus.texi makes "C-u 10 M-x
+@c texinfo-multiple-files-update" fail
+@set VERSION 2.1pre1
+@settitle the @code{octopus} @value{VERSION} manual
+@c %**end of header
+
+@macro octopus
+@code{octopus}@w{ }
+@end macro
+
+@copying
+This manual is for octopus @value{VERSION}, a first principles, electronic
+structure, excited states, time-dependent density functional
+theory program.
+
+Copyright @copyright{} 2002, 2003, 2004
+Miguel A. L. Marques, Alberto Castro and Angel Rubio
+
+@quotation
+Permission is granted to copy, distribute and/or modify this document
+under the terms of the GNU Free Documentation License, Version 1.1 or
+any later version published by the Free Software Foundation.
+@end quotation
+@end copying
+
+@c This is to install octopus into the info main tree.
+@dircategory Individual utilities
+@direntry
+* octopus: (octopus).           The octopus program.
+@end direntry
+
+@titlepage
+
+@title the @code{octopus} manual
+@subtitle Version @value{VERSION}
+@sp 1
+@subtitle Electronic Structure
+@subtitle Molecular Dynamics
+@subtitle Excited-State Dynamics
+@subtitle Recipes-Generator
+@subtitle @value{UPDATED-MONTH}
+@sp 4
+@image{img/octosex,8cm,}
+@center Male Hapalochlaena lunulata (top),
+@center and female Hapalochlaena lunulata (bottom).
+@center Photograph by Roy Caldwell.
+
+@sp 1
+@author Miguel A. L. Marques
+@author Alberto Castro
+@author Angel Rubio.
+
+@page
+@vskip 0pt plus 1filll
+@insertcopying
+@end titlepage
+
+@c @summarycontents
+@contents
+
+
+@iftex
+@headings off
+@c @evenheading @thispage{}            @| @thistitle @| @image{octosex,1.7cm}
+@c @oddheading  @image{octosex,1.75cm} @| @thischapter  @| @thispage{} 
+@evenheading @thispage{}            @| @thistitle @|
+@oddheading  @| @thischapter  @| @thispage{} 
+@end iftex
+
+@ifnottex
+@node Top, Authors, (dir), (dir)
+@top octopus
+@insertcopying
+@end ifnottex
+
+@ifhtml
+@image{img/octosex,8cm}
+@center Male Hapalochlaena lunulata (top),
+@center and female Hapalochlaena lunulata (bottom).
+@center Photograph by Roy Caldwell.
+@end ifhtml
+
+@menu
+* Authors::                     The authors of the thing, and the collaborators.
+* Copying::                     The licence.
+* Installation::                How to install the program.
+* The parser::                  The input file syntax.
+* Description::                 How the code works in general terms.
+* Input Variables::             The options to put in the input file.
+* Undocumented Variables::      The variables that we did not have time to document.
+* External utilities::          External Utilities
+* Examples::                    Some examples.
+* Options Index::               An index with all the options.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+@detailmenu
+ --- The Detailed Node Listing ---
+
+Installation
+
+* Quick instructions::          
+* Long instructions::           
+* Different octopus executables::  
+
+Description
+
+* Mesh::                        
+* Run Mode SCF::                
+* Run Mode Unoccupied States::  
+* Run Mode Time Dependent::     
+* Function output for visualization::  
+* Spectrum calculations::       
+
+Input Variables
+
+* Generalities::                
+* Geometry Optimization::       
+* Hamiltonian::                 
+* Optimal Control::             
+* Output::                      
+* SCF::                         
+* States::                      
+* System::                      
+* Time Dependent::              
+* Unoccupied States::           
+
+Generalities
+
+* Debug::                       
+* IO::                          
+* Parallel::                    
+* Units::                       
+
+Hamiltonian
+
+* Poisson::                     
+* XC::                          
+* Casida::                      
+* Static Polarization::         
+* Vibrational Modes::           
+* General::                     
+* Curvilinear::                 
+* Derivatives::                 
+* FFTs::                        
+* Simulation Box::              
+
+Poisson
+
+* Multigrid::                   
+
+Curvilinear
+
+* Gygi::                        
+
+SCF
+
+* Convergence::                 
+* EigenSolver::                 
+* Mixing::                      
+
+System
+
+* Coordinates::                 
+* Species::                     
+* Velocities::                  
+
+Time Dependent
+
+* Absorbing Boundaries::        
+* Linear Response::             
+* PES::                         
+* Propagation::                 
+* TD Output::                   
+
+Unoccupied States
+
+* Optical Spectra::             
+* oct-center-geometry::         
+* oct-harmonic-spectrum::       
+
+External utilities
+
+* oct-sf::                      
+* oct-rsf::                     
+* oct-hs-mult::                 
+* oct-hs-acc::                  
+* oct-xyz-anim::                
+* oct-excite::                  
+* oct-broad::                   
+* oct-make-st::                 
+* oct-center-geom::             
+* wf.net::                      
+
+Examples
+
+* Hello world::                 
+* Benzene::                     
+
+@end detailmenu
+@end menu
+
+@include authors.texi
+@include copying.texi
+@include installation.texi
+@include parser.texi
+@include description.texi
+@include variables.texi
+@include undocumented.texi
+@include external.texi
+@include examples.texi
+@include index.texi
+
+@bye

@@ -2,5 +2,4 @@ texinfo.tex
 *.1
 
 variables.texi
-octopus.texi
 *.info
