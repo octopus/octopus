@@ -121,7 +121,9 @@ contains
       cf%RS(1, 1, cf%n(3))       + cf%RS(cf%n(1), 1, cf%n(3)) + &
       cf%RS(1, cf%n(2), cf%n(3)) + cf%RS(cf%n(1), cf%n(2), cf%n(3))
 
-    npoints = 6*(cf%n(1)-2)**2 + 12*(cf%n(1)-2) + 8
+    npoints = 2*(cf%n(1)-2)**2 + 4*(cf%n(1)-2) + &
+              2*(cf%n(2)-2)**2 + 4*(cf%n(2)-2) + &
+              2*(cf%n(3)-2)**2 + 4*(cf%n(3)-2) + 8
     x = x/npoints
 
   end function cf_surface_average

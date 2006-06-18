@@ -68,6 +68,8 @@ subroutine poisson3D_init(gr)
 
   if (poisson_solver == FFT_CORRECTED) then
      call loct_parse_int(check_inp('PoissonSolverMaxMultipole'), 2, maxl)
+     write(message(1),'(a,i2)')'Info: Multipoles corrected up to L =',  maxl
+     call write_info(1)
      call build_aux(gr%m)
      call build_phi(gr%m)
   end if
