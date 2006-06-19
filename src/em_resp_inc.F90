@@ -23,7 +23,7 @@ subroutine X(dynamic_response)(sys, h, lr, props, pol, w, status)
   type(system_t),      intent(inout) :: sys
   type(hamiltonian_t), intent(inout) :: h
   type(lr_t),          intent(inout) :: lr(:,:,:) ! dim, nsigma(=2), nfreq(=1)
-  type(pol_props_t),     intent(in)    :: props
+  type(pol_props_t),   intent(in)    :: props
   CMPLX,               intent(inout) :: pol(:,:)
   R_TYPE,              intent(in)    :: w 
   type(status_t),      intent(out)   :: status
@@ -31,18 +31,18 @@ subroutine X(dynamic_response)(sys, h, lr, props, pol, w, status)
   integer :: dir, j, freq, sigma
 
   R_TYPE :: rhov
-  R_TYPE :: X(pol)(MAX_DIM, MAX_DIM)
 
   call push_sub('static_pol_lr.dynamic')
 
   freq = 1
-  X(pol) = M_ZERO
+  pol = M_ZERO
 
+  !iterate for each direction
   do dir = 1, sys%gr%sb%dim
+
     write(message(1), '(a,i1)') 'Info: Calculating polarizability for direction ', dir
-
     call write_info(1)
-
+    
     do sigma = 1, 2
       call mix_init(lr(dir,sigma,freq)%mixer, sys%gr%m, 1, sys%st%d%nspin)
     end do
@@ -53,21 +53,26 @@ subroutine X(dynamic_response)(sys, h, lr, props, pol, w, status)
       call mix_end(lr(dir,sigma,freq)%mixer)
     end do
 
+    !calculate the polarizability
     do j = 1, sys%gr%m%np
       rhov = sum(lr(dir,2,freq)%X(dl_rho)(j,1:sys%st%d%nspin))*sys%gr%m%vol_pp(j)
-      X(pol)(dir, :) = X(pol)(dir, :) - sys%gr%m%x(j,:)*rhov
+      pol(dir, :) = pol(dir, :) - sys%gr%m%x(j,:)*rhov
     end do
 
   end do
 
-  pol=X(pol)
 
   call pop_sub()
 
 end subroutine X(dynamic_response)
 
 
-! ---------------------------------------------------------
+! -------------------------------------------------------------
+! this is the central routine of the electromagnetic response
+! it calculates the first order variations of the wavefunctions 
+! for an electric field
+!--------------------------------------------------------------
+
 subroutine X(get_response_e)(sys, h, lr, dir, nsigma, omega, props, status)
   type(system_t), target, intent(inout) :: sys
   type(hamiltonian_t),    intent(inout) :: h
@@ -81,9 +86,9 @@ subroutine X(get_response_e)(sys, h, lr, dir, nsigma, omega, props, status)
   FLOAT, allocatable :: diff(:,:,:)
   FLOAT :: dpsimod,freq_sign
   integer :: iter, sigma, ik, ik2, ist, i, ist2
-  FLOAT, allocatable :: dl_rhoin(:,:,:,:), dl_rhonew(:,:,:,:), dl_rhotmp(:,:,:,:), dtmp(:)
-  R_TYPE, allocatable :: Y(:, :),dV(:,:), tmp(:), Hp(:,:)
-  R_TYPE, allocatable :: a(:,:)
+  FLOAT, allocatable :: dl_rhoin(:, :, :, :), dl_rhonew(:, :, :, :), dl_rhotmp(:, :, :, :), dtmp(:)
+  R_TYPE, allocatable :: Y(:, :),dV(:, :), tmp(:)
+
   logical :: finish(2)
 
   type(mesh_t), pointer :: m
@@ -99,35 +104,39 @@ subroutine X(get_response_e)(sys, h, lr, dir, nsigma, omega, props, status)
   ALLOCATE(tmp(m%np),m%np)
   ALLOCATE(dtmp(m%np),m%np)
   ALLOCATE(Y(m%np,1),m%np*1)
-  ALLOCATE(Hp(m%np,1),m%np*1)
   ALLOCATE(dV(m%np,st%d%nspin),m%np*st%d%nspin)
   ALLOCATE(dl_rhoin(1,m%np,st%d%nspin,nsigma),1*m%np*st%d%nspin*nsigma)
   ALLOCATE(dl_rhonew(1,m%np,st%d%nspin,nsigma),1*m%np*st%d%nspin*nsigma)
   ALLOCATE(dl_rhotmp(1,m%np,st%d%nspin,nsigma),1*m%np*st%d%nspin*nsigma)
   ALLOCATE(diff(st%nst,st%d%nspin,nsigma),st%nst*st%d%nspin*nsigma)
-  ALLOCATE(a(st%nst,st%d%nspin),st%nst*st%d%nspin)
 
   diff=M_ZERO
 
   call init_response_e()
   finish = .false.
+
+  message(1)="--------------------------------------------"
+  call write_info(1)
+
+  !self consistency iteration for response
   iter_loop: do iter=1, lr(dir,1)%max_iter
+    write(message(1), '(a, i3)') "LR SCF Iteration: ", iter
+    write(message(2), '(a, f20.6, a, f20.6, a, i1)') "Frequency: ", R_REAL(omega), " Delta : ", R_AIMAG(omega), " Dir: ", dir
+    call write_info(2)
+    
+    !we will use the two mixers, one for the real part and one for the complex 
+    !(this is ugly, we should have complex mixers)
+    dl_rhoin(1, :, :, 1) = R_REAL(lr(dir, 1)%X(dl_rho)(:, :))
+    if(nsigma==2) dl_rhoin(1, :, :, 2) = R_AIMAG(lr(dir, 1)%X(dl_rho)(:, :))
 
-    !we will use the two mixers, one for the real part and one for the complex
-
-    dl_rhoin(1,:,:,1) = R_REAL(lr(dir,1)%X(dl_rho)(:,:))
-
-    if(nsigma==2) dl_rhoin(1,:,:,2) = R_AIMAG(lr(dir,1)%X(dl_rho)(:,:))
-
+    !calculate the variation of hartree term
     if (props%add_hartree) then
-
       do sigma=1,nsigma
         do i = 1, m%np
-          tmp(i) = sum(lr(dir,sigma)%X(dl_rho)(i,:))
+          tmp(i) = sum(lr(dir, sigma)%X(dl_rho)(i, :))
         end do
         call X(poisson_solve)(sys%gr, lr(dir,sigma)%X(dl_Vhar), tmp)
       end do
-
     end if
     
     do ik = 1, st%d%nspin
@@ -139,84 +148,69 @@ subroutine X(get_response_e)(sys, h, lr, dir, nsigma, omega, props, status)
           freq_sign = -M_ONE
         end if
         
-        dV(1:m%np,ik) = m%x(1:m%np,dir)
+        !Calculate H^(1):
 
-        if (props%add_hartree) dV(1:m%np,ik) = dV(1:m%np,ik) + lr(dir,sigma)%X(dl_Vhar)(1:m%np) 
+        !* Vext
+        dV(1:m%np, ik) = m%x(1:m%np, dir)
 
+        !* hartree
+        if (props%add_hartree) dV(1:m%np, ik) = dV(1:m%np, ik) + lr(dir, sigma)%X(dl_Vhar)(1:m%np) 
+
+        !* fxc
         if(props%add_fxc) then 
           do ik2 = 1, st%d%nspin
-            dV(1:m%np,ik) = dV(1:m%np,ik) +&
-                 lr(dir,sigma)%dl_Vxc(1:m%np, ik, ik2)*lr(dir,sigma)%X(dl_rho)(1:m%np,ik2)
+            dV(1:m%np, ik) = dV(1:m%np, ik) + &
+                 lr(dir, sigma)%dl_Vxc(1:m%np, ik, ik2)*lr(dir, sigma)%X(dl_rho)(1:m%np, ik2)
           end do
-          
         end if
 
+        !now calculate response for each state
         do ist = 1, st%nst
           if(st%occ(ist, ik) <= lr_min_occ) cycle
-          Y(1:m%np,1) = -dV(1:m%np,ik)*st%X(psi)(1:m%np, 1, ist, ik)
-          
-          !          if (nsigma == 2 ) then
-!          do ist2 = 1, st%nst
-!            if(st%occ(ist, ik) > min_occ) then 
-!              a(ist2,ik)=sum(R_CONJ(st%X(psi)(1:m%np, 1, ist2, ik))*Y(1:m%np ,1)*&
-!                   sys%gr%m%vol_pp(1:m%np))
-!              Y(1:m%np,1)=Y(1:m%np,1)-a(ist2,ik)*st%X(psi)(1:m%np, 1, ist2, ik)
-!            end if
-            !              print*,sum(Y(1:m%np,1)*st%X(psi)(1:m%np, 1, ist2, ik))
-!          end do
-            
-          !          else
-          
-          call X(lr_orth_vector)(m, st, Y, ik)
-          
-          !          do ist2 = 1, st%nst
-          !            print*,sum(R_CONJ(Y(1:m%np,1))*st%X(psi)(1:m%np, 1, ist2, ik))
-          !          end do
 
+          !calculate the RHS of the Sternheimer eq
+          Y(1:m%np, 1) = -dV(1:m%np, ik)*st%X(psi)(1:m%np, 1, ist, ik)
+
+          !and project it into the unoccupied states
+          call X(lr_orth_vector)(m, st, Y, ik)
+
+          !solve the Sternheimer equation
           if(props%ort_each_step) then 
-            call X(lr_solve_HXeY) (lr(dir,1), h, sys%gr, sys%st%d, ik, lr(dir,sigma)%X(dl_psi)(:,:, ist, ik), Y, &
+            call X(lr_solve_HXeY) (lr(dir, 1), h, sys%gr, sys%st%d, ik, lr(dir, sigma)%X(dl_psi)(:,:, ist, ik), Y, &
                  -sys%st%eigenval(ist, ik) + freq_sign*omega, sys%st)
           else
-            call X(lr_solve_HXeY) (lr(dir,1), h, sys%gr, sys%st%d, ik, lr(dir,sigma)%X(dl_psi)(:,:, ist, ik), Y, &
+            call X(lr_solve_HXeY) (lr(dir, 1), h, sys%gr, sys%st%d, ik, lr(dir, sigma)%X(dl_psi)(:,:, ist, ik), Y, &
                  -sys%st%eigenval(ist, ik) + freq_sign*omega)
           end if
 
-!          call X(Hpsi)(h, sys%gr, lr(dir,sigma)%X(dl_psi)(:,:, ist, ik) , Hp, ik)
-!          Hp(1:m%np,1)=Hp(1:m%np,1)+&
-!               (-sys%st%eigenval(ist, ik)+freq_sign*omega)*lr(dir,sigma)%X(dl_psi)(1:m%np,1, ist, ik)&
-!               -Y(1:m%np,1)
-         
-!          print*,"RES", sum(R_REAL(R_CONJ(Hp(1:m%np,1))*Hp(1:m%np,1)))
-
-!          do ist2 = 1, st%nst
-!            print*,sum(R_CONJ(lr(dir,sigma)%X(dl_psi)(1:m%np,1, ist, ik))*st%X(psi)(1:m%np, 1, ist2, ik))
-!          end do
-
-          !altough dl_psi should be orthogonal to psi
+          !altough the dl_psi we get should be orthogonal to psi
           !a re-orthogonalization is sometimes necessary 
-          call X(lr_orth_vector)(m, st, lr(dir,sigma)%X(dl_psi)(:,:, ist, ik), ik)
+          if(.not. props%ort_each_step) then 
+            call X(lr_orth_vector)(m, st, lr(dir,sigma)%X(dl_psi)(:,:, ist, ik), ik)
+          end if
 
-!          if (nsigma == 2 ) then
-            
-!            do ist2 = 1, st%nst
-!              if(sys%st%occ(ist2,ik) == M_ZERO ) then 
-!                lr(dir,sigma)%X(dl_psi)(1:m%np,1, ist, ik)=lr(dir,sigma)%X(dl_psi)(1:m%np, 1, ist, ik)&
-!                     +a(ist2,ik)/(sys%st%eigenval(ist2, ik)-sys%st%eigenval(ist, ik)+freq_sign*omega)*&
-!                     st%X(psi)(1:m%np, 1, ist2, ik)
-!              end if
-!            end do
-            
-!          endif
-         
+          !calculate and print the norm of the variations and how much
+          !they change, this is only to have an idea of the converge process
           dpsimod = sum(R_ABS(lr(dir,sigma)%X(dl_psi)(1:m%np, 1, ist, ik))**2 * sys%gr%m%vol_pp(1:m%np))
-          
-          print*, iter, (3-2*sigma)*ist, dpsimod, (dpsimod-diff(ist,ik,sigma))
-
+          write(message(1), '(i4, f20.6, e20.6)') (3-2*sigma)*ist, dpsimod, (dpsimod-diff(ist,ik,sigma))
+          call write_info(1)
           diff(ist,ik,sigma)=dpsimod
 
-        end do
-      end do
-    end do
+        end do !ist
+      end do !sigma
+    end do !ik
+
+    ! calculate dl_rho
+    if(nsigma == 2 ) then
+      call build_rho_dynamic()
+    else 
+      lr(dir, 1)%X(dl_rho) = M_ZERO
+      call X(lr_build_dl_rho)(m, st, lr(dir,1), type=3)
+    end if
+
+    dl_rhonew(1, 1:m%np, 1:st%d%nspin, 1:nsigma) = M_ZERO
+
+    !all the rest is the mixing and checking for convergency
 
     if( lr(dir,1)%max_iter == iter  ) then 
       message(1) = "Self-consistent iteration for response did not converge"
@@ -227,16 +221,6 @@ subroutine X(get_response_e)(sys, h, lr, dir, nsigma, omega, props, status)
         call write_fatal(1);
       end if 
     end if
-
-    ! calculate dl_rho
-    if(nsigma == 2 ) then
-      call build_rho_dynamic()
-    else 
-      lr(dir, 1)%X(dl_rho) = M_ZERO
-      call X(lr_build_dl_rho)(m, st, lr(dir,1), type=3)
-    end if
-
-    dl_rhonew(1,:,:,:) = M_ZERO
 
     finish=.true.
 
@@ -258,22 +242,35 @@ subroutine X(get_response_e)(sys, h, lr, dir, nsigma, omega, props, status)
 
       lr(dir,sigma)%abs_dens = sqrt(lr(dir,sigma)%abs_dens)
 
-      write(message(1), '(a, i1, e20.6)') "SCF Res ", sigma, lr(dir,sigma)%abs_dens
-      call write_info(1)
-
       ! are we finished?
       finish(sigma) = (lr(dir,sigma)%abs_dens <= lr(dir,sigma)%conv_abs_dens)
-      lr(dir,sigma)%abs_dens=M_ZERO
     end do
 
+
+    if(nsigma == 1) then 
+      write(message(1), '(a, e20.6)') "Res ", lr(dir,1)%abs_dens
+      lr(dir,1)%abs_dens=M_ZERO 
+    else 
+      write(message(1), '(a, 2e20.6)') "Res ", lr(dir,1)%abs_dens, lr(dir,2)%abs_dens
+      lr(dir,1)%abs_dens=M_ZERO 
+      lr(dir,2)%abs_dens=M_ZERO 
+    endif
+    message(2)="--------------------------------------------"
+    call write_info(2)
+
+    
+      
     if( finish(1) .and. finish(2) ) then 
+
       if(present(status)) status%ok = .true.
       write(message(1), '(a, i4, a)')        &
            'Info: SCF for response converged in ', &
            iter, ' iterations'
       call write_info(1)
       exit
+
     else
+      
       if(props%complex_response) then 
         lr(dir,1)%X(dl_rho)(:,:) = cmplx(dl_rhonew(1,:,:,1),dl_rhonew(1,:,:,2),PRECISION)
         lr(dir,2)%X(dl_rho)(:,:) = cmplx(dl_rhonew(1,:,:,1),-dl_rhonew(1,:,:,2),PRECISION)
@@ -282,14 +279,21 @@ subroutine X(get_response_e)(sys, h, lr, dir, nsigma, omega, props, status)
           lr(dir,sigma)%X(dl_rho)(:,:) = dl_rhonew(1,:,:,1)
         end do
       end if
+
     end if
 
     
   end do iter_loop
 
-  deallocate(dl_rhoin, dl_rhonew, dl_rhotmp)
-  deallocate(tmp, Y, dV)
-  deallocate(diff, a)
+  deallocate(tmp)
+  deallocate(dtmp)
+  deallocate(Y)
+  deallocate(dV)
+  deallocate(dl_rhoin)
+  deallocate(dl_rhonew)
+  deallocate(dl_rhotmp)
+  deallocate(diff)
+
   call pop_sub()
 
 contains
@@ -308,7 +312,6 @@ contains
             call mesh_r(m, i, rd)
             do sigma = 1, nsigma
               lr(dir, sigma)%X(dl_psi)(i, 1, ist, ik) = st%X(psi)(i, 1, ist, ik)*rd*exp(-rd)
-              !                lr(dir, sigma)%X(dl_psi)(i, 1, ist, ik) = M_ZERO
             end do
           end do
         end if
@@ -567,6 +570,7 @@ subroutine X(lr_calc_elf)(st, gr, lr, lr_m)
   !calculate the gs elf
   call states_calc_elf(st, gr, elf, de)
 
+  !calculate current and its variation
   if(st%d%wfs_type == M_CMPLX) then 
     call states_calc_physical_current(gr, st, st%j)
     if(present(lr_m)) then 
@@ -592,6 +596,9 @@ subroutine X(lr_calc_elf)(st, gr, lr, lr_m)
     dl_rho  = M_ZERO
     gdl_rho = M_ZERO
 
+    
+    !first we calculate the denisities and its gradients, this could
+    !be done directly, but it is less precise numerically
     do ik = is, st%d%nik, st%d%nspin
       do ist = 1, st%nst
         ik_weight = st%d%kweights(ik)*st%occ(ist, ik)/s
@@ -649,7 +656,8 @@ subroutine X(lr_calc_elf)(st, gr, lr, lr_m)
 
     !now we start to calculate the elf
 
-    !first the term that depends on the orbitals, this is the only term that is different for the dynamical case
+    !first the term that depends on the orbitals
+    !this is the only term that is different for the dynamical case
     do ik = is, st%d%nik, st%d%nspin
       do ist = 1, st%nst
         ik_weight = st%d%kweights(ik)*st%occ(ist, ik)/s
@@ -683,6 +691,7 @@ subroutine X(lr_calc_elf)(st, gr, lr, lr_m)
       end do
     end do
 
+    !the density term
     do i= 1, NP
       if(abs(st%rho(i, is)) >= dmin) then
         lr%X(dl_de)(i, is) = lr%X(dl_de)(i, is)                       &
@@ -690,6 +699,7 @@ subroutine X(lr_calc_elf)(st, gr, lr, lr_m)
       end if
     end do
 
+    !the current term
     if(st%d%wfs_type == M_CMPLX) then       
       do i= 1, NP
         if(abs(st%rho(i, is)) >= dmin) then
@@ -699,20 +709,22 @@ subroutine X(lr_calc_elf)(st, gr, lr, lr_m)
       end do
     end if
 
-    !normalization 
+    !now the normalization 
     f = M_THREE/M_FIVE*(M_SIX*M_PI**2)**M_TWOTHIRD
     do i = 1, NP
 
       if(abs(st%rho(i, is)) >= dmin) then
-        d0    = f * rho(i)**(M_EIGHT/M_THREE) !+ CNST(1e-5)
+
+        d0    = f * rho(i)**(M_EIGHT/M_THREE)
         dl_d0 = M_EIGHT/M_THREE * f * dl_rho(i) * rho(i)**(M_FIVE/M_THREE)
 
-        !        lr%X(dl_elf)(i, is) = - M_TWO * elf(i,is)**2 * (de(i, is)/d0) * &
-        !           ((lr%X(dl_de)(i, is) - (de(i, is)/d0)*dl_d0)/d0)
         lr%X(dl_elf)(i,is) = M_TWO*d0*dl_d0/(d0**2+de(i,is)**2)*(1-elf(i,is))& 
              -M_TWO*de(i,is)*lr%X(dl_de)(i,is)/(d0**2+de(i,is)**2)*elf(i,is)
+
       else
+
         lr%X(dl_elf)(i, is) = M_ZERO
+
       end if
 
     end do
