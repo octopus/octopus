@@ -54,8 +54,8 @@ module linear_response_m
 
     ! and the complex version
     CMPLX, pointer :: zdl_rho(:,:)     ! response of the density
-    CMPLX, pointer :: zdl_psi(:,:,:,:) ! linear change of the real KS orbitals
-    CMPLX, pointer :: zdl_Vhar(:)      ! linear change of the complex KS orbitals
+    CMPLX, pointer :: zdl_psi(:,:,:,:) ! linear change of the complex KS orbitals
+    CMPLX, pointer :: zdl_Vhar(:)      ! linear change of the Hartree potential
 
     FLOAT, pointer :: dl_Vxc(:,:,:)    ! linear change of the xc potential (fxc)
     
@@ -68,7 +68,7 @@ module linear_response_m
     
   end type lr_t
 
-  FLOAT, parameter :: lr_min_occ=CNST(1e-4)
+  FLOAT, parameter :: lr_min_occ=CNST(1e-4) !the minimum value for a state to be considered occupied
 
 contains
 
@@ -89,17 +89,17 @@ contains
     
   end subroutine lr_init
 
-
   ! ---------------------------------------------------------
   integer function dlr_alloc_psi(st, m, lr) result(r)
     type(states_t), intent(in) :: st
     type(mesh_t),   intent(in) :: m
     type(lr_t),  intent(inout) :: lr
 
-    r =  1
+    r = 1
     if(associated(lr%ddl_psi)) return ! do nothing
 
-    ALLOCATE(lr%ddl_psi(m%np_part, st%d%dim, st%nst, st%d%nspin), m%np_part*st%d%dim*st%nst*st%d%nspin)
+    ALLOCATE(lr%ddl_psi(m%np_part, st%d%dim, st%nst, st%d%nspin),
+         m%np_part*st%d%dim*st%nst*st%d%nspin)
 
     if(associated(lr%zdl_psi)) then
       r = 2
@@ -120,10 +120,11 @@ contains
     type(mesh_t),   intent(in) :: m
     type(lr_t),  intent(inout) :: lr
 
-    r =  1
+    r = 1
     if(associated(lr%zdl_psi)) return ! do nothing
 
-    ALLOCATE(lr%zdl_psi(m%np_part, st%d%dim, st%nst, st%d%nspin), m%np_part*st%d%dim*st%nst*st%d%nspin)
+    ALLOCATE(lr%zdl_psi(m%np_part, st%d%dim, st%nst, st%d%nspin),
+         m%np_part*st%d%dim*st%nst*st%d%nspin)
 
     if(associated(lr%ddl_psi)) then
       r = 2
@@ -193,11 +194,13 @@ contains
     end if
     fxc = M_ZERO
     call xc_get_fxc(xcs, m, rho, st%d%ispin, fxc)
+    deallocate(rho)
 
     call pop_sub()
   end subroutine lr_build_fxc
 
 
+  ! ---------------------------------------------------------
   subroutine lr_alloc_fHxc(st, m, lr)
     type(states_t), intent(in)  :: st
     type(mesh_t),   intent(in)  :: m
