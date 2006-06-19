@@ -48,6 +48,7 @@ module static_pol_lr_m
     logical :: dynamic
     logical :: ort_each_step
     logical :: add_hartree
+    logical :: from_scratch
   end type pol_props_t
 
   type status_t
@@ -74,6 +75,7 @@ contains
 
     FLOAT, allocatable :: hpol_density(:,:,:,:)
 
+    character(len=15) :: dirname
 
     FLOAT :: delta
     integer :: nfreq, nsigma, ndim, i, j, sigma, ierr, kpoints, dim, nst, k
@@ -103,7 +105,7 @@ contains
       nsigma = 2  ! but positive and negative values of the frequency must be considered
     end if
 
-    !if wfs were complex then we will calculate complex_response
+    !if wfs are complex then we will calculate complex_response
     props%complex_response = props%complex_response .or. (sys%st%d%wfs_type == M_CMPLX)
 
     if (props%complex_response) then 
@@ -121,8 +123,6 @@ contains
 
     call system_h_setup(sys, h)
 
-    fromScratch = .true.
-    
     ALLOCATE(lr(1:ndim, 1:nsigma, 1:nfreq), ndim*nfreq*nsigma)
     
     do i = 1, ndim
@@ -136,6 +136,7 @@ contains
           if(.not.props%complex_response ) then
             ierr = dlr_alloc_psi(sys%st, gr%m, lr(i, sigma, j))
             lr(i, sigma, j)%ddl_psi = M_ZERO
+            lr(i, sigma, j)%ddl_rho = M_ZERO
           else
             ierr = zlr_alloc_psi(sys%st, gr%m, lr(i, sigma, j))
             lr(i, sigma, j)%zdl_psi = M_ZERO
@@ -147,10 +148,31 @@ contains
           else 
             lr(i, sigma, j)%dl_Vxc=M_ZERO
           end if
-
+          
         end do
       end do
-    enddo
+    end do
+
+    if(.not.fromScratch) then
+      ! load wave-functions
+      do i = 1, ndim
+        do sigma = 1, nsigma
+          do j = 1, nfreq
+            write(dirname,'(a,i1,a,i1)') "restart_lr_", i, "_", sigma
+            call restart_read(trim(tmpdir)//dirname, sys%st, sys%gr, ierr, lr=lr(i, sigma, j))
+            if(ierr.ne.0) then
+              message(1) = "Could not load wave-functions from '"//trim(tmpdir)//dirname
+              message(2) = "Starting from scratch!"
+              call write_warning(2)
+              fromScratch = .true.
+            end if
+          end do
+        end do
+      end do
+    end if
+
+    props%from_scratch = fromScratch
+    
 
     if(props%dynamic) then 
 
@@ -173,6 +195,10 @@ contains
              omega(i)/units_out%energy%factor, ' [',trim(units_out%energy%abbrev),']'
 
         call write_info(1)
+
+        if( i > 1 ) then 
+          props%from_scratch = .false.
+        end if
 
         if( props%complex_response ) then 
           call zdynamic_response(sys, h, lr, props, zpol(1:ndim, 1:ndim), cmplx(omega(i), delta, PRECISION),status)

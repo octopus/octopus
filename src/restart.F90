@@ -37,6 +37,7 @@ module restart_m
   use mpi_debug_m
   use varinfo_m
   use math_m
+  use linear_response_m
 
   implicit none
 
@@ -164,12 +165,14 @@ contains
   end subroutine restart_look
 
   ! ---------------------------------------------------------
-  subroutine restart_write(dir, st, gr, ierr, iter)
+  subroutine restart_write(dir, st, gr, ierr, iter, lr)
     character(len=*),  intent(in)  :: dir
     type(states_t),    intent(in)  :: st
     type(grid_t),      intent(in)  :: gr
     integer,           intent(out) :: ierr
     integer, optional, intent(in)  :: iter
+    !if this next argument is present, the lr wfs are stored instead of the gs wfs
+    type(lr_t), optional, intent(in)  :: lr 
 
     integer :: iunit, iunit2, iunit_mesh, err, ik, ist, idim, i
     character(len=40) :: filename, mformat
@@ -177,6 +180,11 @@ contains
     call push_sub('restart.restart_write')
 
     ASSERT((associated(st%dpsi) .and. st%d%wfs_type == M_REAL) .or. (associated(st%zpsi) .and. st%d%wfs_type == M_CMPLX))
+
+    if(present(lr)) then 
+      ASSERT((associated(lr%ddl_psi) .and. st%d%wfs_type == M_REAL) .or.
+      (associated(lr%zdl_psi) .and. st%d%wfs_type == M_CMPLX))
+    endif
 
     mformat = '(f15.8,a,f15.8,a,f15.8,a,f15.8,a,f15.8)'
     ierr = 0
@@ -213,10 +221,18 @@ contains
           end if
 
           if(st%st_start <= ist .and. st%st_end >= ist) then
-            if (st%d%wfs_type == M_REAL) then
-              call drestart_write_function(dir, filename, gr, st%dpsi(:, idim, ist, ik), err, size(st%dpsi,1))
+            if( .not. present(lr) ) then 
+              if (st%d%wfs_type == M_REAL) then
+                call drestart_write_function(dir, filename, gr, st%dpsi(:, idim, ist, ik), err, size(st%dpsi,1))
+              else
+                call zrestart_write_function(dir, filename, gr, st%zpsi(:, idim, ist, ik), err, size(st%zpsi,1))
+              end if
             else
-              call zrestart_write_function(dir, filename, gr, st%zpsi(:, idim, ist, ik), err, size(st%zpsi,1))
+              if (st%d%wfs_type == M_REAL) then
+                call drestart_write_function(dir, filename, gr, lr%ddl_psi(:, idim, ist, ik), err, size(st%dpsi,1))
+              else
+                call zrestart_write_function(dir, filename, gr, lr%zdl_psi(:, idim, ist, ik), err, size(st%zpsi,1))
+              end if
             end if
             if(err == 0) ierr = ierr + 1
           end if
@@ -252,12 +268,14 @@ contains
   ! <0 => Fatal error
   ! =0 => read all wave-functions
   ! >0 => could only read x wavefunctions
-  subroutine restart_read(dir, st, gr, ierr, iter)
+  subroutine restart_read(dir, st, gr, ierr, iter, lr)
     character(len=*),  intent(in)  :: dir
     type(states_t), intent(inout)  :: st
     type(grid_t),      intent(in)  :: gr
     integer,           intent(out) :: ierr
     integer, optional, intent(out) :: iter
+    !if this next argument is present, the lr wfs are read instead of the gs wfs
+    type(lr_t), optional, intent(inout)  :: lr 
 
     integer              :: iunit, iunit2, iunit_mesh, err, ik, ist, idim, i
     character(len=12)    :: filename
@@ -277,13 +295,21 @@ contains
 
     ! sanity check
     ASSERT((associated(st%dpsi) .and. st%d%wfs_type == M_REAL) .or. (associated(st%zpsi) .and. st%d%wfs_type == M_CMPLX))
-
+    
+    if(present(lr)) then 
+      ASSERT((associated(lr%ddl_psi) .and. st%d%wfs_type == M_REAL) .or.
+      (associated(lr%zdl_psi) .and. st%d%wfs_type == M_CMPLX))
+    endif
 
     ierr = 0
 
-    write(str, '(a,i5)') 'Loading restart information'
-    call messages_print_stress(stdout, trim(str))
+    if(.not. present(lr)) then 
+      write(str, '(a,i5)') 'Loading restart information'
+    else
+      write(str, '(a,i5)') 'Loading restart information for linear response'
+    end if
 
+    call messages_print_stress(stdout, trim(str))
     ! open files to read
     iunit  = io_open(trim(dir)//'/wfns', action='read', status='old', die=.false., is_tmp = .true., grp = gr%m%mpi_grp)
     if(iunit < 0) then
@@ -334,10 +360,18 @@ contains
 
       if(ist >= st%st_start .and. ist <= st%st_end) then
         if(.not.mesh_change) then
-          if (st%d%wfs_type == M_REAL) then
-            call drestart_read_function(dir, filename, gr%m, st%dpsi(:, idim, ist, ik), err)
+          if( .not. present(lr) ) then 
+            if (st%d%wfs_type == M_REAL) then
+              call drestart_read_function(dir, filename, gr%m, st%dpsi(:, idim, ist, ik), err)
+            else
+              call zrestart_read_function(dir, filename, gr%m, st%zpsi(:, idim, ist, ik), err)
+            end if
           else
-            call zrestart_read_function(dir, filename, gr%m, st%zpsi(:, idim, ist, ik), err)
+            if (st%d%wfs_type == M_REAL) then
+              call drestart_read_function(dir, filename, gr%m, lr%ddl_psi(:, idim, ist, ik), err)
+            else
+              call zrestart_read_function(dir, filename, gr%m, lr%zdl_psi(:, idim, ist, ik), err)
+            end if
           end if
           if(err <= 0) then
             filled(idim, ist, ik) = .true.
@@ -346,10 +380,18 @@ contains
         else
           if (st%d%wfs_type == M_REAL) then
             call drestart_read_function(dir, filename, old_mesh, dphi, err)
-            call dmf_interpolate(old_mesh, gr%m, full_interpolation, dphi, st%dpsi(:, idim, ist, ik))
+            if( .not. present(lr) ) then 
+              call dmf_interpolate(old_mesh, gr%m, full_interpolation, dphi, st%dpsi(:, idim, ist, ik))
+            else
+              call dmf_interpolate(old_mesh, gr%m, full_interpolation, dphi, lr%ddl_psi(:, idim, ist, ik))
+            end if
           else
-            call zrestart_read_function(dir, filename, old_mesh, zphi, err)
-            call zmf_interpolate(old_mesh, gr%m, full_interpolation, zphi, st%zpsi(:, idim, ist, ik))
+              call zrestart_read_function(dir, filename, old_mesh, zphi, err)
+            if( .not. present(lr) ) then 
+              call zmf_interpolate(old_mesh, gr%m, full_interpolation, zphi, st%zpsi(:, idim, ist, ik))
+            else
+              call zmf_interpolate(old_mesh, gr%m, full_interpolation, zphi, lr%zdl_psi(:, idim, ist, ik))
+            end if
           end if
           if(err <= 0) then
             filled(idim, ist, ik) = .true.

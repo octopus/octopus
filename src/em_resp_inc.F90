@@ -85,7 +85,7 @@ subroutine X(get_response_e)(sys, h, lr, dir, nsigma, omega, props, status)
 
   FLOAT, allocatable :: diff(:,:,:)
   FLOAT :: dpsimod,freq_sign
-  integer :: iter, sigma, ik, ik2, ist, i, ist2
+  integer :: iter, sigma, ik, ik2, ist, i, ist2, err
   FLOAT, allocatable :: dl_rhoin(:, :, :, :), dl_rhonew(:, :, :, :), dl_rhotmp(:, :, :, :), dtmp(:)
   R_TYPE, allocatable :: Y(:, :),dV(:, :), tmp(:)
 
@@ -94,6 +94,8 @@ subroutine X(get_response_e)(sys, h, lr, dir, nsigma, omega, props, status)
   type(mesh_t), pointer :: m
   type(states_t), pointer :: st
   
+  character(len=15) :: dirname
+
   call push_sub('static_pol_lr.get_response_e')
 
   ASSERT( nsigma==1 .or. nsigma ==2 )
@@ -210,6 +212,12 @@ subroutine X(get_response_e)(sys, h, lr, dir, nsigma, omega, props, status)
 
     dl_rhonew(1, 1:m%np, 1:st%d%nspin, 1:nsigma) = M_ZERO
 
+    !write restart info
+    do sigma=1,nsigma 
+      write(dirname,'(a,i1,a,i1)') "restart_lr_", dir, "_", sigma
+      call restart_write(trim(tmpdir)//dirname, st, sys%gr, err, iter=iter, lr=lr(dir, sigma))
+    end do
+    
     !all the rest is the mixing and checking for convergency
 
     if( lr(dir,1)%max_iter == iter  ) then 
@@ -305,18 +313,21 @@ contains
 
     call push_sub('static_pol_lr.init_response_e')
 
-    do ik = 1, st%d%nspin
-      do ist = 1, st%nst
-        if (st%occ(ist, ik) > M_ZERO) then
-          do i = 1, m%np
-            call mesh_r(m, i, rd)
-            do sigma = 1, nsigma
-              lr(dir, sigma)%X(dl_psi)(i, 1, ist, ik) = st%X(psi)(i, 1, ist, ik)*rd*exp(-rd)
+    if(props%from_scratch) then
+      !initialize response wfns
+      do ik = 1, st%d%nspin
+        do ist = 1, st%nst
+          if (st%occ(ist, ik) > M_ZERO) then
+            do i = 1, m%np
+              call mesh_r(m, i, rd)
+              do sigma = 1, nsigma
+                lr(dir, sigma)%X(dl_psi)(i, 1, ist, ik) = st%X(psi)(i, 1, ist, ik)*rd*exp(-rd)
+              end do
             end do
-          end do
-        end if
+          end if
+        end do
       end do
-    end do
+    end if
 
     do sigma=1,nsigma
       lr(dir,sigma)%X(dl_Vhar)(:) = M_ZERO
