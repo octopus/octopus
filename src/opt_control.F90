@@ -414,6 +414,8 @@ contains
     ! ----------------------------------------------------------
     subroutine fwd_step(method)
       integer, intent(in) :: method
+
+      call push_sub('opt_control.fwd_step')
       
       ! setup forward propagation
       call states_densities_init(psi, gr)
@@ -451,13 +453,15 @@ contains
          call write_field(filename, laser, td%max_iter, td%dt)
       endif
     
+      call pop_sub()
     end subroutine fwd_step
 
 
     ! --------------------------------------------------------
     subroutine bwd_step(method) 
       integer, intent(in) :: method
-      
+      call push_sub('opt_control.bwd_step')
+
       ! setup backward propagation
       call states_calc_dens(chi, NP_PART, dens_tmp)
       chi%rho = dens_tmp
@@ -487,13 +491,17 @@ contains
          write(filename,'(a,i3.3)') 'opt-control/b_laser.', ctr_iter
          call write_field(filename, laser_tmp, td%max_iter, td%dt)
       end if
+
+      call pop_sub()
     end subroutine bwd_step
 
 
     ! ---------------------------------------------------------
     subroutine iteration_manager(stoploop)
       logical, intent(out) :: stoploop
+      call push_sub('opt_control.iteration_manager')
       
+      stoploop = .false.
       ! calculate overlap 
       message(1) = "Info: Calculate overlap"
       call write_info(1)
@@ -556,6 +564,7 @@ contains
       ctr_iter = ctr_iter + 1
       old_functional = functional
       
+      call pop_sub()
     end subroutine iteration_manager
 
     
@@ -565,11 +574,12 @@ contains
       ! do loop <target_st|Psi> for all States
       integer,           intent(in)  :: method
       type(states_t),    intent(in)  :: targetst, psi_in
-      type(states_t),    intent(out) :: chi_out
+      type(states_t),    intent(inout) :: chi_out
 
       CMPLX   :: olap
       integer :: ik, p, dim
     
+      call push_sub('opt_control.target_calc')
 
       if(targetmode==oct_targetmode_static) then
          if(totype.eq.oct_tg_local) then ! only zr98 and wg05
@@ -621,6 +631,7 @@ contains
      !   end do
      !end do
 
+     call pop_sub()
    end subroutine target_calc
 
 
@@ -764,6 +775,8 @@ contains
       CMPLX :: d2(NDIM)
       integer :: ik, p, dim, i, pol
 
+      call push_sub('opt_control.update_field')
+
       ! case SWITCH
       ! CHECK DIPOLE MOMENT FUNCTION - > VELOCITY GAUGE
 
@@ -803,12 +816,14 @@ contains
         l(1:NDIM, 2*iter+  i) = M_HALF*(M_THREE*l(1:NDIM, 2*iter) -       l(1:NDIM, 2*iter-2*i))
         l(1:NDIM, 2*iter+2*i) = M_HALF*( M_FOUR*l(1:NDIM, 2*iter) - M_TWO*l(1:NDIM, 2*iter-2*i))
       end if
+      call pop_sub()
     end subroutine update_field
 
 
     ! ---------------------------------------------------------
     subroutine prop_bwd(psi_n) ! give initial chi and laser
       type(states_t), intent(inout)  :: psi_n
+      call push_sub('opt_control.prop_bwd')
 
       message(1) = "Info: Backward propagating Chi"
       call write_info(1)
@@ -839,7 +854,8 @@ contains
 
       end do
       td%dt = -td%dt
-     
+
+      call pop_sub()
     end subroutine prop_bwd
 
 
@@ -848,6 +864,8 @@ contains
       type(states_t), intent(inout)  :: psi_n
 
       integer :: ierr
+
+      call push_sub('opt_control.prop_fwd')
 
       message(1) = "Info: Forward propagating Psi"
       call write_info(1)
@@ -884,6 +902,7 @@ contains
 
       message(1) = ""
       call write_info(1)
+      call pop_sub()
     end subroutine prop_fwd
 
     ! ---------------------------------------------------------
@@ -915,6 +934,7 @@ contains
     ! ---------------------------------------------------------
     subroutine calc_overlap()
       integer :: ik, p, dim
+      call push_sub('opt_control.calc_overlap')
 
       overlap = M_z0;
       do ik = 1, psi%d%nik
@@ -933,28 +953,30 @@ contains
         end do
      end do
    
+     call pop_sub()
    end subroutine calc_overlap
 
 
     ! ---------------------------------------------------------
     subroutine read_state(st, m, filename)
-      type(states_t),   intent(out) :: st
+      type(states_t),   intent(inout) :: st
       type(mesh_t),     intent(in)  :: m
       character(len=*), intent(in)  :: filename
-
-      FLOAT   :: phi(1:m%np_part)
       integer :: ierr
+
+      call push_sub('opt_control.read_state')
 
       !write(6,*) 'mesh_change: ', mesh_change
       !call zrestart_read_function('tmp/restart_gs',filename, gr%m,phi, ierr)
-      call dinput_function('tmp/restart_gs/'//trim(filename), m, phi(:), ierr, is_tmp=.TRUE.)
+      call zinput_function('tmp/restart_gs/'//trim(filename), m, st%zpsi(:, 1, 1, 1), ierr, is_tmp=.TRUE.)
       !call zrestart_read('tmp/restart_gs', st,gr, ierr)
 
-      st%zpsi(:,1,1,1) = phi
-      if(ierr.ne.0) then
+      if(ierr > 0) then
          message(1) = "Unsuccesfull read of states in 'tmp/restart_gs/" // trim(filename) // "'"
         call write_fatal(1)
       end if
+
+      call pop_sub()
     end subroutine read_state
 
     
