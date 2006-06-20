@@ -176,14 +176,18 @@ contains
 
     integer :: iunit, iunit2, iunit_mesh, err, ik, ist, idim, i
     character(len=40) :: filename, mformat
+    logical :: boolean
 
     call push_sub('restart.restart_write')
 
-    ASSERT((associated(st%dpsi) .and. st%d%wfs_type == M_REAL) .or. (associated(st%zpsi) .and. st%d%wfs_type == M_CMPLX))
+    boolean = (associated(st%dpsi) .and. st%d%wfs_type == M_REAL) .or. &
+              (associated(st%zpsi) .and. st%d%wfs_type == M_CMPLX)
+    ASSERT(boolean)
 
     if(present(lr)) then 
-      ASSERT((associated(lr%ddl_psi) .and. st%d%wfs_type == M_REAL) .or.
-      (associated(lr%zdl_psi) .and. st%d%wfs_type == M_CMPLX))
+      boolean = (associated(lr%ddl_psi) .and. st%d%wfs_type == M_REAL) .or. &
+                (associated(lr%zdl_psi) .and. st%d%wfs_type == M_CMPLX)
+      ASSERT(boolean)
     endif
 
     mformat = '(f15.8,a,f15.8,a,f15.8,a,f15.8,a,f15.8)'
@@ -289,16 +293,19 @@ contains
     type(mesh_t)         :: old_mesh
     type(curvlinear_t)   :: old_cv
     type(simul_box_t)    :: old_sb
-    logical              :: mesh_change, full_interpolation
+    logical              :: mesh_change, full_interpolation, boolean
 
     call push_sub('restart.restart_read')
 
     ! sanity check
-    ASSERT((associated(st%dpsi) .and. st%d%wfs_type == M_REAL) .or. (associated(st%zpsi) .and. st%d%wfs_type == M_CMPLX))
+    boolean = (associated(st%dpsi) .and. st%d%wfs_type == M_REAL) .or. &
+              (associated(st%zpsi) .and. st%d%wfs_type == M_CMPLX)
+    ASSERT(boolean)
     
     if(present(lr)) then 
-      ASSERT((associated(lr%ddl_psi) .and. st%d%wfs_type == M_REAL) .or.
-      (associated(lr%zdl_psi) .and. st%d%wfs_type == M_CMPLX))
+      boolean = (associated(lr%ddl_psi) .and. st%d%wfs_type == M_REAL) .or. &
+                (associated(lr%zdl_psi) .and. st%d%wfs_type == M_CMPLX)
+      ASSERT(boolean)
     endif
 
     ierr = 0
