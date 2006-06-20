@@ -18,6 +18,7 @@
 !! $Id$
 
 #include "global.h"
+#define RESTART_DIR "restart_pol_lr/"
 
 module static_pol_lr_m
   use global_m
@@ -48,7 +49,6 @@ module static_pol_lr_m
     logical :: dynamic
     logical :: ort_each_step
     logical :: add_hartree
-    logical :: from_scratch
   end type pol_props_t
 
   type status_t
@@ -75,7 +75,7 @@ contains
 
     FLOAT, allocatable :: hpol_density(:,:,:,:)
 
-    character(len=15) :: dirname
+    character(len=30) :: dirname
 
     FLOAT :: delta
     integer :: nfreq, nsigma, ndim, i, j, sigma, ierr, kpoints, dim, nst, k
@@ -158,34 +158,39 @@ contains
       do i = 1, ndim
         do sigma = 1, nsigma
           do j = 1, nfreq
-            write(dirname,'(a,i1,a,i1)') "restart_lr_", i, "_", sigma
+            write(dirname,'(a,i1,a,i1)') RESTART_DIR, i, "_", sigma
             call restart_read(trim(tmpdir)//dirname, sys%st, sys%gr, ierr, lr=lr(i, sigma, j))
             if(ierr.ne.0) then
-              message(1) = "Could not load wave-functions from '"//trim(tmpdir)//dirname
-              message(2) = "Starting from scratch!"
-              call write_warning(2)
-              fromScratch = .true.
+              message(1) = "Could not load response wave-functions from '"//trim(tmpdir)//dirname
+              call write_warning(1)
             end if
           end do
         end do
       end do
     end if
-
-    props%from_scratch = fromScratch
-    
+    call io_mkdir(trim(tmpdir)//RESTART_DIR)
 
     if(props%dynamic) then 
 
       !!DYNAMIC
 
-      call io_mkdir('linear')
-      iunit = io_open('linear/dynpols', action='write')
+      if(.not. fromScratch) then
+        iunit = io_open('linear/dynpols', action='read', status='old', die=.false.)
+        if(iunit > 0) then
+          call io_close(iunit)
+        else
+          fromScratch = .true.
+        end if
+      end if
 
-      ! todo: write header
-      write(iunit, '(8a)')  '# ', 'freq ', '11 ' , '22 ' , '33 ', '12 ', '13 ', '23 '
-      call io_close(iunit)
+      if(fromScratch) then 
+        call io_mkdir('linear')
+        iunit = io_open('linear/dynpols', action='write')
+        ! todo: write header
+        write(iunit, '(8a)')  '# ', 'freq ', '11 ' , '22 ' , '33 ', '12 ', '13 ', '23 '
+        call io_close(iunit)
+      end if
 
-      ! the dynamic case
       message(1) = "Info: Calculating dynamic polarizabilities."
       call write_info(1)
            
@@ -195,10 +200,6 @@ contains
              omega(i)/units_out%energy%factor, ' [',trim(units_out%energy%abbrev),']'
 
         call write_info(1)
-
-        if( i > 1 ) then 
-          props%from_scratch = .false.
-        end if
 
         if( props%complex_response ) then 
           call zdynamic_response(sys, h, lr, props, zpol(1:ndim, 1:ndim), cmplx(omega(i), delta, PRECISION),status)
@@ -216,7 +217,7 @@ contains
         end if
         
         call io_close(iunit)
-        
+
         if(1 == nomega ) then 
           
           if( props%complex_response ) then 
