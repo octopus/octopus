@@ -32,6 +32,7 @@ module lib_oct_m
     loct_erf,                &
     loct_erfc,               &
     loct_ylm,                &
+    loct_poisson_finite_cylinder, &
     loct_bessel,             &
     loct_bessel_In,          &
     loct_bessel_j0,          &
@@ -258,6 +259,13 @@ module lib_oct_m
       integer, intent(in) :: l, m
     end function oct_ylm
     module procedure oct_ylm4
+  end interface
+
+  interface loct_poisson_finite_cylinder
+    function oct_poisson_finite_cylinder(gx, gperp, xsize, rsize)
+      real(8) :: oct_poisson_finite_cylinder
+      real(8), intent(in) :: gx, gperp, rsize, xsize
+    end function oct_poisson_finite_cylinder
   end interface
 
   ! ---------------------------------------------------------

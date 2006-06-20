@@ -333,3 +333,12 @@ void FC_FUNC_(break_c_string, BREAK_C_STRING)
 
   TO_F_STR1(line, line_f);
 }
+
+/* --------------------- from poisson_finite_cyl.c ---------------------- */
+double poisson_finite_cylinder(double kx, double kr, double x0,double r0);
+
+double FC_FUNC_(oct_poisson_finite_cylinder, OCT_POISSON_FINITE_CYLINDER)
+  (double *gx, double *gperp, double *xsize, double *rsize)
+{
+  return poisson_finite_cylinder(*gx, *gperp, *xsize, *rsize);
+}

@@ -25,6 +25,7 @@ module poisson_m
   use messages_m
   use profiling_m
   use lib_oct_parser_m
+  use lib_oct_m
   use units_m
   use datasets_m
   use geometry_m
@@ -167,7 +168,7 @@ contains
 
       if(poisson_solver /= gr%sb%periodic_dim .and. &
         poisson_solver < CG .and. &
-        poisson_solver /= FFT_CORRECTED) then
+        poisson_solver /= FFT_CORRECTED .and. poisson_solver /= FFT_CYL) then
         write(message(1), '(a,i1,a)')'The System is periodic in ', gr%sb%periodic_dim ,' dimension(s),'
         write(message(2), '(a,i1,a)')'but Poisson Solver is set for ',poisson_solver,' dimensions.'
         message(3) =                 'You know what you are doing, right?'

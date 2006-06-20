@@ -86,7 +86,7 @@ contains
 
     integer :: ix, iy, iz, ixx(MAX_DIM), db(MAX_DIM)
     FLOAT :: temp(MAX_DIM), modg2
-    FLOAT :: gpar,gperp,gx,gz,r_c
+    FLOAT :: gpar, gperp, gx, gy, gz, r_c
     FLOAT :: DELTA_R = CNST(1.0e-12)
 
     ! double the box to perform the fourier transforms
@@ -134,33 +134,62 @@ contains
                 select case(poisson_solver)
                 case(FFT_SPH)
                    fft_Coulb_FS(ix, iy, iz) = cutoff0(sqrt(modg2),r_c)/modg2
+
                 case(FFT_CYL)
-                   gx = abs(temp(1)*ixx(1))
+                   gx = temp(1)*ixx(1)
                    gperp = sqrt((temp(2)*ixx(2))**2+(temp(3)*ixx(3))**2)
-                   fft_Coulb_FS(ix, iy, iz) = cutoff1(gx,gperp,r_c)/modg2
-                case(FFT_PLA)
+                   if (gr%sb%periodic_dim==1) then
+                     fft_Coulb_FS(ix, iy, iz) = cutoff1(abs(gx), gperp, r_c)/modg2
+                   else if (gr%sb%periodic_dim==0) then
+                     gy = temp(2)*ixx(2)
+                     gz = temp(3)*ixx(3)
+                     if ((gz >= M_ZERO) .and. (gy >= M_ZERO)) then
+                       fft_Coulb_FS(ix, iy, iz) = loct_poisson_finite_cylinder(gx, gperp, M_TWO*m%sb%xsize, M_TWO*m%sb%rsize)
+                     end if
+                     if ((gz >= M_ZERO) .and. (gy < M_ZERO)) then
+                       fft_Coulb_FS(ix, iy, iz) = fft_Coulb_FS(ix, -ixx(2) + 1, iz)
+                     end if
+                     if ((gz < M_ZERO) .and. (gy >= M_ZERO)) then
+                       fft_Coulb_FS(ix, iy, iz) = fft_Coulb_FS(ix, iy, -ixx(3) + 1)
+                     end if
+                     if ((gz < M_ZERO) .and. (gy < M_ZERO) ) then
+                       fft_Coulb_FS(ix, iy, iz) = fft_Coulb_FS(ix, -ixx(2) + 1, -ixx(3) + 1)
+                     end if
+                   end if
+
+                 case(FFT_PLA)
                    gz = abs(temp(3)*ixx(3))
                    gpar = sqrt((temp(1)*ixx(1))**2+(temp(2)*ixx(2))**2)
                    fft_Coulb_FS(ix, iy, iz) = cutoff2(gpar,gz,r_c)/modg2
+
                 case(FFT_NOCUT, FFT_CORRECTED)
                    fft_Coulb_FS(ix, iy, iz) = M_ONE/modg2
                 end select
+
              else
                 select case(poisson_solver)
                 case(FFT_SPH)
-                   fft_Coulb_FS(ix, iy, iz) = r_c**2/M_TWO
+                  fft_Coulb_FS(ix, iy, iz) = r_c**2/M_TWO
+
                 case (FFT_CYL)
-                   fft_Coulb_FS(ix, iy, iz) = -(M_HALF*log(r_c)-M_FOURTH)*r_c**2
+                  if (gr%sb%periodic_dim == 1) then
+                    fft_Coulb_FS(ix, iy, iz) = -(M_HALF*log(r_c) - M_FOURTH)*r_c**2
+                  else if (gr%sb%periodic_dim == 0) then
+                    fft_Coulb_FS(ix, iy, iz) = loct_poisson_finite_cylinder(M_ZERO, M_ZERO, M_TWO*m%sb%xsize, M_TWO*m%sb%rsize)
+                  end if
+
                 case(FFT_PLA)
-                   fft_Coulb_FS(ix, iy, iz) = -M_HALF*r_c**2
+                  fft_Coulb_FS(ix, iy, iz) = -M_HALF*r_c**2
+
                 case (FFT_NOCUT, FFT_CORRECTED)
-                   fft_Coulb_FS(ix, iy, iz) = M_ZERO
+                  fft_Coulb_FS(ix, iy, iz) = M_ZERO
                 end select
              end if
-             fft_Coulb_FS(ix, iy, iz) = M_FOUR*M_PI*fft_Coulb_FS(ix, iy, iz)
           end do
        end do
     end do
+
+    fft_Coulb_FS(:,:,:) = M_FOUR*M_PI*fft_Coulb_FS(:,:,:)
 
   end subroutine init_fft
 #endif

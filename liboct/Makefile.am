@@ -4,7 +4,7 @@ noinst_LIBRARIES = liboct.a
 
 liboct_a_SOURCES = recipes.c ylm.c varia.c \
 	oct_f.c oct_gsl_f.c oct_gdlib_f.c  \
-	write_iter.c varinfo.c
+	write_iter.c varinfo.c poisson_finite_cyl.c
 AM_CPPFLAGS = -I$(top_srcdir)/liboct_parser -I$(top_srcdir)/external_libs/metis-4.0/
 AM_CFLAGS = @GD_CFLAGS@
 
