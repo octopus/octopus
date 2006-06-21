@@ -121,7 +121,7 @@ subroutine X(get_response_e)(sys, h, lr, dir, nsigma, omega, props, status)
   call write_info(1)
 
   !self consistency iteration for response
-  iter_loop: do iter=1, lr(dir,1)%max_iter
+  iter_loop: do iter=1, props%scf_iter
     write(message(1), '(a, i3)') "LR SCF Iteration: ", iter
     write(message(2), '(a, f20.6, a, f20.6, a, i1)') "Frequency: ", R_REAL(omega), " Delta : ", R_AIMAG(omega), " Dir: ", dir
     call write_info(2)
@@ -220,7 +220,7 @@ subroutine X(get_response_e)(sys, h, lr, dir, nsigma, omega, props, status)
     
     !all the rest is the mixing and checking for convergency
 
-    if( lr(dir,1)%max_iter == iter  ) then 
+    if( props%scf_iter == iter  ) then 
       message(1) = "Self-consistent iteration for response did not converge"
       if(present(status)) then 
         status%ok = .false. 

@@ -49,6 +49,7 @@ module static_pol_lr_m
     logical :: dynamic
     logical :: ort_each_step
     logical :: add_hartree
+    integer :: scf_iter
   end type pol_props_t
 
   type status_t
@@ -351,7 +352,10 @@ contains
     end if
 
     call loct_parse_logical(check_inp('PolOrtEachStep'), .false., props%ort_each_step)
+    call loct_parse_int(check_inp('PolSCFIterations'), 200, props%scf_iter)
+
     call loct_parse_logical(check_inp('LRUseUnoccupied'), .false. , props%use_unoccupied)
+
 
     call pop_sub()
 
