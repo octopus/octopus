@@ -33,7 +33,7 @@ module linear_response_m
   use functions_m
   use output_m 
   use units_m
-  use cube_function_m
+  use mesh_function_m
   use lib_oct_m
   use io_m
 
@@ -44,6 +44,8 @@ module linear_response_m
     FLOAT   :: abs_dens       ! convergence reached
     integer :: max_iter       ! maximum number of iterations
     integer :: iter           ! number of iterations used
+    integer :: solver         !the linear solver to use
+    logical :: ort_each_step  
 
     type(mix_t) :: mixer   ! can not live without it
 
@@ -70,6 +72,10 @@ module linear_response_m
 
   FLOAT, parameter :: lr_min_occ=CNST(1e-4) !the minimum value for a state to be considered occupied
 
+  integer, parameter :: LR_CG = 1
+  integer, parameter :: LR_BCG = 2
+  integer, parameter :: LR_BICGSTAB = 3
+
 contains
 
   ! ---------------------------------------------------------
@@ -81,6 +87,9 @@ contains
     call loct_parse_float(check_inp(trim(prefix)//"ConvAbsDens"), &
         CNST(1e-5), lr%conv_abs_dens)
     call loct_parse_int  (check_inp(trim(prefix)//"MaximumIter"), 50, lr%max_iter)
+
+    call loct_parse_int  (check_inp(trim(prefix)//"LinearSolver"), LR_CG, lr%solver)
+    call loct_parse_logical(check_inp(trim(prefix)//"OrtEachStep"), .false., lr%ort_each_step)
 
     nullify(lr%ddl_rho, lr%ddl_psi, lr%ddl_Vhar, lr%dl_Vxc)
     nullify(lr%zdl_rho, lr%zdl_psi, lr%zdl_Vhar, lr%dl_Vxc)
@@ -227,12 +236,13 @@ contains
 
 #include "linear_response_inc.F90"
 #include "linear_response_out.F90" 
+#include "linear_response_solvers.F90" 
 
 #include "undef.F90"
 #include "complex.F90"
 
 #include "linear_response_inc.F90"
 #include "linear_response_out.F90" 
-
+#include "linear_response_solvers.F90" 
 
 end module linear_response_m

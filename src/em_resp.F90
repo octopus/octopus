@@ -47,7 +47,6 @@ module static_pol_lr_m
     logical :: add_fxc
     logical :: use_unoccupied
     logical :: dynamic
-    logical :: ort_each_step
     logical :: add_hartree
     integer :: scf_iter
   end type pol_props_t
@@ -130,7 +129,7 @@ contains
       do sigma = 1, nsigma
         do j = 1, nfreq
 
-          call lr_init(lr(i, sigma, j), "SP")
+          call lr_init(lr(i, sigma, j), "Pol")
 
           call lr_alloc_fHxc (sys%st, gr%m, lr(i, sigma, j))
 
@@ -351,11 +350,9 @@ contains
       props%add_hartree = .false.
     end if
 
-    call loct_parse_logical(check_inp('PolOrtEachStep'), .false., props%ort_each_step)
     call loct_parse_int(check_inp('PolSCFIterations'), 200, props%scf_iter)
 
     call loct_parse_logical(check_inp('LRUseUnoccupied'), .false. , props%use_unoccupied)
-
 
     call pop_sub()
 

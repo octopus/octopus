@@ -123,7 +123,8 @@ subroutine X(get_response_e)(sys, h, lr, dir, nsigma, omega, props, status)
   !self consistency iteration for response
   iter_loop: do iter=1, props%scf_iter
     write(message(1), '(a, i3)') "LR SCF Iteration: ", iter
-    write(message(2), '(a, f20.6, a, f20.6, a, i1)') "Frequency: ", R_REAL(omega), " Delta : ", R_AIMAG(omega), " Dir: ", dir
+    write(message(2), '(a, f20.6, a, f20.6, a, i1)') &
+         "Frequency: ", R_REAL(omega), " Delta : ", R_AIMAG(omega), " Dir: ", dir
     call write_info(2)
     
     !we will use the two mixers, one for the real part and one for the complex 
@@ -177,24 +178,19 @@ subroutine X(get_response_e)(sys, h, lr, dir, nsigma, omega, props, status)
           call X(lr_orth_vector)(m, st, Y, ik)
 
           !solve the Sternheimer equation
-          if(props%ort_each_step) then 
-            call X(lr_solve_HXeY) (lr(dir, 1), h, sys%gr, sys%st%d, ik, lr(dir, sigma)%X(dl_psi)(:,:, ist, ik), Y, &
-                 -sys%st%eigenval(ist, ik) + freq_sign*omega, sys%st)
-          else
-            call X(lr_solve_HXeY) (lr(dir, 1), h, sys%gr, sys%st%d, ik, lr(dir, sigma)%X(dl_psi)(:,:, ist, ik), Y, &
-                 -sys%st%eigenval(ist, ik) + freq_sign*omega)
-          end if
+          call X(lr_solve_HXeY) (lr(dir, 1), h, sys%gr, sys%st%d, ik, lr(dir, sigma)%X(dl_psi)(:,:, ist, ik), Y, &
+               -sys%st%eigenval(ist, ik) + freq_sign*omega, st=sys%st)
 
           !altough the dl_psi we get should be orthogonal to psi
           !a re-orthogonalization is sometimes necessary 
-          if(.not. props%ort_each_step) then 
-            call X(lr_orth_vector)(m, st, lr(dir,sigma)%X(dl_psi)(:,:, ist, ik), ik)
-          end if
+          call X(lr_orth_vector)(m, st, lr(dir,sigma)%X(dl_psi)(:,:, ist, ik), ik)
 
           !calculate and print the norm of the variations and how much
           !they change, this is only to have an idea of the converge process
           dpsimod = sum(R_ABS(lr(dir,sigma)%X(dl_psi)(1:m%np, 1, ist, ik))**2 * sys%gr%m%vol_pp(1:m%np))
-          write(message(1), '(i4, f20.6, e20.6)') (3-2*sigma)*ist, dpsimod, (dpsimod-diff(ist,ik,sigma))
+          write(message(1), '(i4, f20.6, e20.6, i4, e20.6)') &
+               (3-2*sigma)*ist, dpsimod, (dpsimod-diff(ist,ik,sigma)),&
+               lr(dir, 1)%iter, lr(dir, 1)%abs_dens 
           call write_info(1)
           diff(ist,ik,sigma)=dpsimod
 

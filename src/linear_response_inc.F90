@@ -95,82 +95,38 @@ subroutine X(lr_build_dl_rho) (m, st, lr, type)
   call pop_sub()
 end subroutine X(lr_build_dl_rho)
 
-
 ! ---------------------------------------------------------
 ! This subroutine calculates the solution of using conjugated gradients
-!    (H - eps_{ist,ik} + omega) psi^1_{ist,ik} = y
+!    (H + omega) x = y
 ! ---------------------------------------------------------
+
 subroutine X(lr_solve_HXeY) (lr, h, gr, d, ik, x, y, omega, st)
   type(lr_t),          intent(inout) :: lr
   type(hamiltonian_t), intent(inout) :: h
   type(grid_t),        intent(inout) :: gr
   type(states_dim_t),  intent(in)    :: d
+  integer,             intent(in)    :: ik
+  R_TYPE,              intent(inout) :: x(:,:)   ! x(NP, d%dim)
+  R_TYPE,              intent(in)    :: y(:,:)   ! y(NP, d%dim)
+  R_TYPE,              intent(in)    :: omega
+
   type(states_t), optional, intent(inout) :: st
-
-  integer,                intent(in)    :: ik
-  R_TYPE,                 intent(inout) :: x(:,:)   ! x(NP, d%dim)
-  R_TYPE,                 intent(in)    :: y(:,:)   ! y(NP, d%dim)
-  R_TYPE,                 intent(in)    :: omega
-
-  R_TYPE, allocatable :: r(:,:), p(:,:), conj(:,:), Hp(:,:)
-  R_TYPE  :: alpha, beta, gamma
-  integer :: iter, iunit
-  logical :: conv_last, conv
-
-  logical :: orto
-
-  call push_sub('linear_response_inc.Xlr_solve_HXeY')
-
-  !if we have the states, we reorthogonalize after each application of the hamiltonian
-  orto = present(st)
-
-  ALLOCATE( r(NP, d%dim),      NP     *d%dim)
-  ALLOCATE( p(NP_PART, d%dim), NP_PART*d%dim)
-  ALLOCATE( conj(NP_PART, d%dim), NP_PART*d%dim)
-  ALLOCATE(Hp(NP, d%dim),      NP     *d%dim)
-
-  ! Initial residue
-  call X(Hpsi)(h, gr, x, Hp, ik)
-  r(1:NP,1:d%dim) = y(1:NP,1:d%dim) - ( Hp(1:NP,1:d%dim) + omega*x(1:NP,1:d%dim) )
   
-  ! Initial search direction
-  p(1:NP,1:d%dim) = r(1:NP,1:d%dim)
-  p((NP+1):NP_PART,1:d%dim)=M_ZERO
+  select case(lr%solver)
+  case(LR_CG)
+    call X(lr_solver_cg)(lr, h, gr, d, ik, x, y, omega, st)
+  case(LR_BCG)
+    call X(lr_solver_bcg)(lr, h, gr, d, ik, x, y, omega, st)
+  case(LR_BICGSTAB)
+    call X(lr_solver_bicgstab)(lr, h, gr, d, ik, x, y, omega, st)
+  case default 
+    message(1)="Unknown linear response solver"
+    call write_fatal(1)
+  end select
   
-  conv_last = .false.
-  do iter = 1, lr%max_iter
-    conj(1:NP,1:d%dim) = R_CONJ(r(1:NP,1:d%dim))
-    gamma = X(states_dotp) (gr%m, d%dim, conj, r)
-    
-    ! we require more precision here than for the density
-    conv = (sqrt(abs(gamma)) < lr%conv_abs_dens)
-    if(conv.and.conv_last) exit
-    conv_last = conv
-    
-    if(orto) call X(lr_orth_vector)(gr%m, st, p, ik)   
 
-    call X(Hpsi)(h, gr, p, Hp, ik)
-    Hp(1:NP,1:d%dim) = Hp(1:NP,1:d%dim) + omega*p(1:NP,1:d%dim)
-    
-    conj(1:NP_PART,1:d%dim)=R_CONJ(p(1:NP_PART,1:d%dim))
-    alpha = gamma/ X(states_dotp) (gr%m, d%dim, conj, Hp)
-    
-    r(1:NP,1:d%dim) = r(1:NP,1:d%dim) - alpha*Hp(1:NP,1:d%dim)
-    x(1:NP_PART,1:d%dim) = x(1:NP_PART,1:d%dim) + alpha* p(1:NP_PART,1:d%dim)
-    
-    conj(1:NP,1:d%dim)=R_CONJ(r(1:NP,1:d%dim))
-    beta = X(states_dotp) (gr%m, d%dim, conj, r)/gamma
-    p(1:NP,1:d%dim) = r(1:NP,1:d%dim) + beta*p(1:NP,1:d%dim)
-    
-  end do
-    
-  lr%iter     = iter
-  lr%abs_dens = gamma
-
-  deallocate(r, p, Hp, conj)
-
-  call pop_sub()
 end subroutine X(lr_solve_HXeY)
+
 
 ! ---------------------------------------------------------
 ! orthogonalizes response of \alpha KS orbital to all occupied

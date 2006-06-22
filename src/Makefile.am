@@ -45,12 +45,11 @@ noinst_HEADERS = \
 	eigen_trlan.F90 \
 	eigen_inc.F90 eigen_cg_inc.F90 eigen_plan_inc.F90 eigen_arpack_inc.F90 eigen_evolution_inc.F90 \
 	lcao_inc.F90 crystal.F90 restart_inc.F90 states_inc.F90 states_kpoints.F90 \
-	linear_response_inc.F90 \
 	pes_rc.F90 pes_mask.F90 \
 	td_init.F90 td_calc.F90\
 	out_inc.F90 math_cg_inc.F90 math_inc.F90 \
 	linalg_basic_blas.F90 linalg_basic_int.F90 linalg_adv_lapack.F90 \
-	linear_response_out.F90 \
+	linear_response_inc.F90 linear_response_out.F90 linear_response_solvers.F90\
 	em_resp_inc.F90 unocc_inc.F90 casida_inc.F90
 
 core_LIBS = @LIBS_LAPACK@ @LIBS_BLAS@ ../liboct/liboct.a ../liboct_parser/liboct_parser.a \
@@ -170,7 +169,7 @@ liboct_parser.o: global.h
 libxc.o: global.h
 linalg_adv.o: global.h linalg_adv_lapack.F90
 linalg_basic.o: global.h linalg_basic_blas.F90 linalg_basic_int.F90
-linear_response.o: global.h linear_response_inc.F90 linear_response_out.F90
+linear_response.o: global.h linear_response_inc.F90 linear_response_out.F90 linear_response_solvers.F90
 logrid.o: global.h
 main.o: global.h
 math.o: global.h math_cg_inc.F90 math_inc.F90
