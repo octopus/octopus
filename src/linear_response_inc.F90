@@ -21,11 +21,12 @@
 ! ---------------------------------------------------------
 ! Orthogonalizes v against all the occupied states
 ! ---------------------------------------------------------
-subroutine X(lr_orth_vector) (m, st, v, ik)
+subroutine X(lr_orth_vector) (m, st, v, ik, tol)
   type(mesh_t),        intent(in)    :: m
   type(states_t),      intent(in)    :: st
   R_TYPE,              intent(inout) :: v(:,:)
   integer,             intent(in)    :: ik
+  FLOAT,   optional,   intent(in)    :: tol
 
   R_TYPE  :: scalp
   integer :: ist
@@ -35,6 +36,9 @@ subroutine X(lr_orth_vector) (m, st, v, ik)
   do ist = 1, st%nst
     if(st%occ(ist, ik) > lr_min_occ) then
       scalp = X(states_dotp)(m, st%d%dim, st%X(psi)(:,:, ist, ik), v)
+      if(present(tol)) then 
+        if( ABS(scalp) < tol ) cycle
+      end if
       v(1:m%np, 1:st%d%dim) = v(1:m%np, 1:st%d%dim) - scalp*st%X(psi)(1:m%np, 1:st%d%dim, ist, ik)
     end if
   end do
@@ -100,25 +104,23 @@ end subroutine X(lr_build_dl_rho)
 !    (H + omega) x = y
 ! ---------------------------------------------------------
 
-subroutine X(lr_solve_HXeY) (lr, h, gr, d, ik, x, y, omega, st)
+subroutine X(lr_solve_HXeY) (lr, h, gr, st, ik, x, y, omega)
   type(lr_t),          intent(inout) :: lr
   type(hamiltonian_t), intent(inout) :: h
   type(grid_t),        intent(inout) :: gr
-  type(states_dim_t),  intent(in)    :: d
+  type(states_t),      intent(in)    :: st
   integer,             intent(in)    :: ik
   R_TYPE,              intent(inout) :: x(:,:)   ! x(NP, d%dim)
   R_TYPE,              intent(in)    :: y(:,:)   ! y(NP, d%dim)
   R_TYPE,              intent(in)    :: omega
 
-  type(states_t), optional, intent(inout) :: st
-  
   select case(lr%solver)
   case(LR_CG)
-    call X(lr_solver_cg)(lr, h, gr, d, ik, x, y, omega, st)
+    call X(lr_solver_cg)(lr, h, gr, st, ik, x, y, omega)
   case(LR_BCG)
-    call X(lr_solver_bcg)(lr, h, gr, d, ik, x, y, omega, st)
+    call X(lr_solver_bcg)(lr, h, gr, st, ik, x, y, omega)
   case(LR_BICGSTAB)
-    call X(lr_solver_bicgstab)(lr, h, gr, d, ik, x, y, omega, st)
+    call X(lr_solver_bicgstab)(lr, h, gr, st, ik, x, y, omega)
   case default 
     message(1)="Unknown linear response solver"
     call write_fatal(1)

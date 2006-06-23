@@ -83,11 +83,10 @@ subroutine X(get_response_e)(sys, h, lr, dir, nsigma, omega, props, status)
   type(pol_props_t),      intent(in)    :: props
   type(status_t),optional,intent(out)   :: status
 
-  FLOAT, allocatable :: diff(:,:,:)
   FLOAT :: dpsimod,freq_sign
   integer :: iter, sigma, ik, ik2, ist, i, ist2, err
   FLOAT, allocatable :: dl_rhoin(:, :, :, :), dl_rhonew(:, :, :, :), dl_rhotmp(:, :, :, :), dtmp(:)
-  R_TYPE, allocatable :: Y(:, :),dV(:, :), tmp(:)
+  R_TYPE, allocatable :: Y(:, :, :),dV(:, :, :), tmp(:)
 
   logical :: finish(2)
 
@@ -105,14 +104,12 @@ subroutine X(get_response_e)(sys, h, lr, dir, nsigma, omega, props, status)
   
   ALLOCATE(tmp(m%np),m%np)
   ALLOCATE(dtmp(m%np),m%np)
-  ALLOCATE(Y(m%np,1),m%np*1)
-  ALLOCATE(dV(m%np,st%d%nspin),m%np*st%d%nspin)
+  ALLOCATE(Y(m%np, 1, nsigma), m%np*1*nsigma)
+  ALLOCATE(dV(m%np, st%d%nspin, nsigma), m%np*st%d%nspin*nsigma)
   ALLOCATE(dl_rhoin(1,m%np,st%d%nspin,nsigma),1*m%np*st%d%nspin*nsigma)
   ALLOCATE(dl_rhonew(1,m%np,st%d%nspin,nsigma),1*m%np*st%d%nspin*nsigma)
   ALLOCATE(dl_rhotmp(1,m%np,st%d%nspin,nsigma),1*m%np*st%d%nspin*nsigma)
-  ALLOCATE(diff(st%nst,st%d%nspin,nsigma),st%nst*st%d%nspin*nsigma)
 
-  diff=M_ZERO
 
   call init_response_e()
   finish = .false.
@@ -145,42 +142,45 @@ subroutine X(get_response_e)(sys, h, lr, dir, nsigma, omega, props, status)
     do ik = 1, st%d%nspin
       do sigma = 1, nsigma
 
-        if(sigma==1) then 
-          freq_sign =  M_ONE
-        else
-          freq_sign = -M_ONE
-        end if
-        
         !Calculate H^(1):
 
         !* Vext
-        dV(1:m%np, ik) = m%x(1:m%np, dir)
+        dV(1:m%np, ik, sigma) = m%x(1:m%np, dir)
 
         !* hartree
-        if (props%add_hartree) dV(1:m%np, ik) = dV(1:m%np, ik) + lr(dir, sigma)%X(dl_Vhar)(1:m%np) 
+        if (props%add_hartree) dV(1:m%np, ik, sigma) = dV(1:m%np, ik, sigma) &
+             + lr(dir, sigma)%X(dl_Vhar)(1:m%np) 
 
         !* fxc
         if(props%add_fxc) then 
           do ik2 = 1, st%d%nspin
-            dV(1:m%np, ik) = dV(1:m%np, ik) + &
+            dV(1:m%np, ik, sigma) = dV(1:m%np, ik, sigma) + &
                  lr(dir, sigma)%dl_Vxc(1:m%np, ik, ik2)*lr(dir, sigma)%X(dl_rho)(1:m%np, ik2)
           end do
         end if
+      end do
 
         !now calculate response for each state
-        do ist = 1, st%nst
+      do ist = 1, st%nst
+        do sigma = 1, nsigma
           if(st%occ(ist, ik) <= lr_min_occ) cycle
-
+          
           !calculate the RHS of the Sternheimer eq
-          Y(1:m%np, 1) = -dV(1:m%np, ik)*st%X(psi)(1:m%np, 1, ist, ik)
+          Y(1:m%np, 1, sigma) = -dV(1:m%np, ik, sigma)*st%X(psi)(1:m%np, 1, ist, ik)
 
           !and project it into the unoccupied states
-          call X(lr_orth_vector)(m, st, Y, ik)
+          call X(lr_orth_vector)(m, st, Y(:,:, sigma), ik)
+
+          if(sigma==1) then 
+            freq_sign = M_ONE 
+          else 
+            freq_sign = -M_ONE
+          end if
 
           !solve the Sternheimer equation
-          call X(lr_solve_HXeY) (lr(dir, 1), h, sys%gr, sys%st%d, ik, lr(dir, sigma)%X(dl_psi)(:,:, ist, ik), Y, &
-               -sys%st%eigenval(ist, ik) + freq_sign*omega, st=sys%st)
-
+          call X(lr_solve_HXeY) (lr(dir, sigma), h, sys%gr, sys%st%d, ik, lr(dir, sigma)%X(dl_psi)(:,:, ist, ik),&
+               Y(:,:, sigma), -sys%st%eigenval(ist, ik) + freq_sign*omega, st=sys%st)
+          
           !altough the dl_psi we get should be orthogonal to psi
           !a re-orthogonalization is sometimes necessary 
           call X(lr_orth_vector)(m, st, lr(dir,sigma)%X(dl_psi)(:,:, ist, ik), ik)
@@ -188,14 +188,12 @@ subroutine X(get_response_e)(sys, h, lr, dir, nsigma, omega, props, status)
           !calculate and print the norm of the variations and how much
           !they change, this is only to have an idea of the converge process
           dpsimod = sum(R_ABS(lr(dir,sigma)%X(dl_psi)(1:m%np, 1, ist, ik))**2 * sys%gr%m%vol_pp(1:m%np))
-          write(message(1), '(i4, f20.6, e20.6, i4, e20.6)') &
-               (3-2*sigma)*ist, dpsimod, (dpsimod-diff(ist,ik,sigma)),&
-               lr(dir, 1)%iter, lr(dir, 1)%abs_dens 
+          write(message(1), '(i4, f20.6, i5, e20.6)') &
+               (3-2*sigma)*ist, dpsimod, lr(dir, sigma)%iter, lr(dir, sigma)%abs_dens 
           call write_info(1)
-          diff(ist,ik,sigma)=dpsimod
 
-        end do !ist
-      end do !sigma
+        end do !sigma
+      end do !ist
     end do !ik
 
     ! calculate dl_rho
@@ -296,7 +294,6 @@ subroutine X(get_response_e)(sys, h, lr, dir, nsigma, omega, props, status)
   deallocate(dl_rhoin)
   deallocate(dl_rhonew)
   deallocate(dl_rhotmp)
-  deallocate(diff)
 
   call pop_sub()
 

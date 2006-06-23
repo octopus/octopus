@@ -36,6 +36,7 @@ module linear_response_m
   use mesh_function_m
   use lib_oct_m
   use io_m
+  use lib_basic_alg_m
 
   implicit none
 
@@ -45,6 +46,7 @@ module linear_response_m
     integer :: max_iter       ! maximum number of iterations
     integer :: iter           ! number of iterations used
     integer :: solver         !the linear solver to use
+    integer :: preconditioner !the linear solver to use
     logical :: ort_each_step  
 
     type(mix_t) :: mixer   ! can not live without it
@@ -72,9 +74,17 @@ module linear_response_m
 
   FLOAT, parameter :: lr_min_occ=CNST(1e-4) !the minimum value for a state to be considered occupied
 
-  integer, parameter :: LR_CG = 1
+  !solvers ( values must be < 100 )
+  integer, parameter :: LR_CG = 5
   integer, parameter :: LR_BCG = 2
   integer, parameter :: LR_BICGSTAB = 3
+
+  !preconditioners ( values must be multiples of 100 )
+  integer, parameter :: LR_NONE = 0
+  integer, parameter :: LR_DIAG = 100
+  integer, parameter :: LR_TETER = 200
+
+  
 
 contains
 
@@ -82,13 +92,41 @@ contains
   subroutine lr_init(lr, prefix)
     type(lr_t),       intent(out) :: lr
     character(len=*), intent(in)  :: prefix
+    integer :: fsolver
+
+    call push_sub('linear_response.lr_init')
 
     ! read some parameters from the input file
     call loct_parse_float(check_inp(trim(prefix)//"ConvAbsDens"), &
         CNST(1e-5), lr%conv_abs_dens)
     call loct_parse_int  (check_inp(trim(prefix)//"MaximumIter"), 50, lr%max_iter)
 
-    call loct_parse_int  (check_inp(trim(prefix)//"LinearSolver"), LR_CG, lr%solver)
+    
+    !%Variable LinearSolver
+    !%Type integer
+    !%Default cg
+    !%Section Hamiltonian::Poisson
+    !%Description
+    !% Defines which method to use in order to solve the Sternheimer equation.
+    !% An optional preconditioner can be added.
+    !%Option cg 5
+    !% Conjugated gradients
+    !%Option bcg 2
+    !% Biconjugated gradients
+    !%Option bicgstab 3
+    !% Biconjugated gradients stabilized
+    !%Option diag_prec 100
+    !% Preconditioning using the diagonal of the operator.
+    !%Option teter_prec 100
+    !% Preconditioning using the diagonal of the kinetic energy operator.
+    !%End
+
+
+    call loct_parse_int  (check_inp(trim(prefix)//"LinearSolver"), LR_CG, fsolver)
+    
+    lr%solver = mod(fsolver, 100)
+    lr%preconditioner = (fsolver-lr%solver)
+
     call loct_parse_logical(check_inp(trim(prefix)//"OrtEachStep"), .false., lr%ort_each_step)
 
     nullify(lr%ddl_rho, lr%ddl_psi, lr%ddl_Vhar, lr%dl_Vxc)
@@ -96,6 +134,8 @@ contains
     
     nullify(lr%dl_j, lr%ddl_de, lr%zdl_de, lr%ddl_elf, lr%zdl_elf)
     
+    call pop_sub()
+
   end subroutine lr_init
 
   ! ---------------------------------------------------------
@@ -103,6 +143,8 @@ contains
     type(states_t), intent(in) :: st
     type(mesh_t),   intent(in) :: m
     type(lr_t),  intent(inout) :: lr
+
+    call push_sub('linear_response.dlr_alloc_psi')
 
     r = 1
     if(associated(lr%ddl_psi)) return ! do nothing
@@ -120,6 +162,8 @@ contains
       lr%ddl_psi = M_ZERO
     end if
 
+    call pop_sub()
+
   end function dlr_alloc_psi
 
 
@@ -128,6 +172,8 @@ contains
     type(states_t), intent(in) :: st
     type(mesh_t),   intent(in) :: m
     type(lr_t),  intent(inout) :: lr
+
+    call push_sub('linear_response.zlr_alloc_psi')
 
     r = 1
     if(associated(lr%zdl_psi)) return ! do nothing
@@ -144,6 +190,8 @@ contains
       r = -1
       lr%zdl_psi = M_z0
     end if
+
+    call pop_sub()
 
   end function zlr_alloc_psi
 
@@ -186,7 +234,7 @@ contains
     type(mesh_t),   intent(in)  :: m
     type(states_t), intent(in)  :: st
     type(xc_t),     intent(in)  :: xcs
-    FLOAT,          intent(out) :: fxc(:,:,:)
+    FLOAT,          intent(inout) :: fxc(:,:,:)
 
     FLOAT, allocatable :: rho(:, :)
     integer :: is
@@ -213,7 +261,9 @@ contains
   subroutine lr_alloc_fHxc(st, m, lr)
     type(states_t), intent(in)  :: st
     type(mesh_t),   intent(in)  :: m
-    type(lr_t),     intent(out) :: lr
+    type(lr_t),     intent(inout) :: lr
+
+    call push_sub('linear_response.lr_alloc_fHxc')
 
     lr%abs_dens = M_ZERO
     lr%iter     = 0
@@ -227,6 +277,8 @@ contains
       ALLOCATE(lr%zdl_Vhar(m%np), m%np)
     end if
     ALLOCATE(lr%dl_Vxc(m%np, st%d%nspin, st%d%nspin), m%np*st%d%nspin*st%d%nspin)
+
+    call pop_sub()
 
   end subroutine lr_alloc_fHxc
 

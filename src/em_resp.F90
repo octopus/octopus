@@ -135,11 +135,9 @@ contains
 
           if(.not.props%complex_response ) then
             ierr = dlr_alloc_psi(sys%st, gr%m, lr(i, sigma, j))
-            lr(i, sigma, j)%ddl_psi = M_ZERO
             lr(i, sigma, j)%ddl_rho = M_ZERO
           else
             ierr = zlr_alloc_psi(sys%st, gr%m, lr(i, sigma, j))
-            lr(i, sigma, j)%zdl_psi = M_ZERO
             lr(i, sigma, j)%zdl_rho = M_ZERO
           end if
 
