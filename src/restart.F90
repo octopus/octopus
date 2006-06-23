@@ -176,18 +176,18 @@ contains
 
     integer :: iunit, iunit2, iunit_mesh, err, ik, ist, idim, i
     character(len=40) :: filename, mformat
-    logical :: boolean
+    logical :: wfns_are_associated, lr_wfns_are_associated
 
     call push_sub('restart.restart_write')
 
-    boolean = (associated(st%dpsi) .and. st%d%wfs_type == M_REAL) .or. &
-              (associated(st%zpsi) .and. st%d%wfs_type == M_CMPLX)
-    ASSERT(boolean)
+    wfns_are_associated = (associated(st%dpsi) .and. st%d%wfs_type == M_REAL) .or. &
+         (associated(st%zpsi) .and. st%d%wfs_type == M_CMPLX)
+    ASSERT(wfns_are_associated)
 
     if(present(lr)) then 
-      boolean = (associated(lr%ddl_psi) .and. st%d%wfs_type == M_REAL) .or. &
+      lr_wfns_are_associated = (associated(lr%ddl_psi) .and. st%d%wfs_type == M_REAL) .or. &
                 (associated(lr%zdl_psi) .and. st%d%wfs_type == M_CMPLX)
-      ASSERT(boolean)
+      ASSERT(lr_wfns_are_associated)
     endif
 
     mformat = '(f15.8,a,f15.8,a,f15.8,a,f15.8,a,f15.8)'
