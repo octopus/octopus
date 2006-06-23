@@ -178,8 +178,8 @@ subroutine X(get_response_e)(sys, h, lr, dir, nsigma, omega, props, status)
           end if
 
           !solve the Sternheimer equation
-          call X(lr_solve_HXeY) (lr(dir, sigma), h, sys%gr, sys%st%d, ik, lr(dir, sigma)%X(dl_psi)(:,:, ist, ik),&
-               Y(:,:, sigma), -sys%st%eigenval(ist, ik) + freq_sign*omega, st=sys%st)
+          call X(lr_solve_HXeY) (lr(dir, sigma), h, sys%gr, sys%st, ik, lr(dir, sigma)%X(dl_psi)(:,:, ist, ik),&
+               Y(:,:, sigma), -sys%st%eigenval(ist, ik) + freq_sign*omega)
           
           !altough the dl_psi we get should be orthogonal to psi
           !a re-orthogonalization is sometimes necessary 
