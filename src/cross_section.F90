@@ -41,6 +41,12 @@ program cross_section
   ! Initialize stuff
   call global_init()
   call parser_init()
+  call loct_parse_int('DebugLevel', 0, conf%debug_level)
+  if(conf%debug_level>0) then
+    in_debug_mode = .true.
+  else
+    in_debug_mode = .false.
+  end if
   call datasets_init(1)
   call io_init()
   if(in_debug_mode) then

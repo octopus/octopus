@@ -510,7 +510,7 @@ contains
       ! Note that the cross section elements do not have to be transformed to the proper units, since
       ! they have been read from the "cross_section_vector.x", that are already in the proper units.
       write(out_file,'(3e20.8)', advance = 'no') (i*s%energy_step) / units_out%energy%factor, &
-        average , sqrt(anisotropy) 
+        average , sqrt(max(anisotropy, M_ZERO)) 
       do j = 1, nspin
         write(out_file,'(9e20.8)', advance = 'no') sigma(1:3, 1:3, i, j)
       end do
