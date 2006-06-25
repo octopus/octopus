@@ -99,36 +99,6 @@ subroutine X(lr_build_dl_rho) (m, st, lr, type)
   call pop_sub()
 end subroutine X(lr_build_dl_rho)
 
-! ---------------------------------------------------------
-! This subroutine calculates the solution of using conjugated gradients
-!    (H + omega) x = y
-! ---------------------------------------------------------
-
-subroutine X(lr_solve_HXeY) (lr, h, gr, st, ik, x, y, omega)
-  type(lr_t),          intent(inout) :: lr
-  type(hamiltonian_t), intent(inout) :: h
-  type(grid_t),        intent(inout) :: gr
-  type(states_t),      intent(in)    :: st
-  integer,             intent(in)    :: ik
-  R_TYPE,              intent(inout) :: x(:,:)   ! x(NP, d%dim)
-  R_TYPE,              intent(in)    :: y(:,:)   ! y(NP, d%dim)
-  R_TYPE,              intent(in)    :: omega
-
-  select case(lr%solver)
-  case(LR_CG)
-    call X(lr_solver_cg)(lr, h, gr, st, ik, x, y, omega)
-  case(LR_BCG)
-    call X(lr_solver_bcg)(lr, h, gr, st, ik, x, y, omega)
-  case(LR_BICGSTAB)
-    call X(lr_solver_bicgstab)(lr, h, gr, st, ik, x, y, omega)
-  case default 
-    message(1)="Unknown linear response solver"
-    call write_fatal(1)
-  end select
-  
-
-end subroutine X(lr_solve_HXeY)
-
 
 ! ---------------------------------------------------------
 ! orthogonalizes response of \alpha KS orbital to all occupied

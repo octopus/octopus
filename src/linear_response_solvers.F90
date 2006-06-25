@@ -17,6 +17,55 @@
 !!
 !! $Id: linear_response_inc.F90 2196 2006-06-12 15:59:20Z xavier $
 
+
+! ---------------------------------------------------------
+! This subroutine calculates the solution of using conjugated gradients
+!    (H + omega) x = y
+! ---------------------------------------------------------
+
+subroutine X(lr_solve_HXeY) (lr, h, gr, st, ik, x, y, omega)
+  type(lr_t),          intent(inout) :: lr
+  type(hamiltonian_t), intent(inout) :: h
+  type(grid_t),        intent(inout) :: gr
+  type(states_t),      intent(in)    :: st
+  integer,             intent(in)    :: ik
+  R_TYPE,              intent(inout) :: x(:,:)   ! x(NP, d%dim)
+  R_TYPE,              intent(in)    :: y(:,:)   ! y(NP, d%dim)
+  R_TYPE,              intent(in)    :: omega
+
+  FLOAT :: res
+  R_TYPE, allocatable :: r(:,:)
+
+  select case(lr%solver)
+
+  case(LR_CG)
+    call X(lr_solver_cg)(lr, h, gr, st, ik, x, y, omega)
+
+  case(LR_BCG)
+    call X(lr_solver_bcg)(lr, h, gr, st, ik, x, y, omega)
+
+  case(LR_BICGSTAB)
+    call X(lr_solver_bicgstab)(lr, h, gr, st, ik, x, y, omega)
+
+  case default 
+    message(1)="Unknown linear response solver"
+    call write_fatal(1)
+
+  end select
+  
+  ALLOCATE(r(NP, st%d%dim), NP*st%d%dim)
+
+!  call X(lr_orth_vector)(gr%m, st, x, ik)
+
+  call X(Hpsi)(h, gr, x, r, ik)
+  r(1:NP,1:st%d%dim) = y(1:NP,1:st%d%dim) - (r(1:NP,1:st%d%dim) + omega*x(1:NP,1:st%d%dim))
+  res = abs(X(states_dotp)(gr%m, st%d%dim, r, r))
+!  print*, lr%abs_dens, res 
+  deallocate(r)
+
+end subroutine X(lr_solve_HXeY)
+
+
 subroutine X(preconditioning)(lr, h, gr, st, ik, a, ahat, omega)
   type(lr_t),          intent(inout) :: lr
   type(hamiltonian_t), intent(inout) :: h
@@ -27,8 +76,6 @@ subroutine X(preconditioning)(lr, h, gr, st, ik, a, ahat, omega)
   R_TYPE,              intent(inout) :: ahat(:,:)   ! y(NP, d%dim)
   R_TYPE,              intent(in)    :: omega
 
-  integer :: idim
-
   call push_sub('linear_response_solver.Xpreconditioning')
 
   select case(lr%preconditioner)
@@ -38,15 +85,8 @@ subroutine X(preconditioning)(lr, h, gr, st, ik, a, ahat, omega)
     
   case(LR_DIAG)
     call X(Hpsi_diag)(h, gr, ahat, ik)
-    ahat(1:NP, 1:st%d%dim)=a(1:NP, 1:st%d%dim)/(ahat+omega)
+    ahat(1:NP, 1:st%d%dim)=a(1:NP, 1:st%d%dim)/(ahat+omega+M_TEN)
     
-  case(LR_TETER)
-    do idim = 1, st%d%dim
-      call X(f_laplacian_diag) (gr%sb, gr%f_der, ahat(:, idim))
-      call lalg_scal(NP, R_TOTYPE(-M_HALF), ahat(:,idim) )
-    end do
-    ahat(1:NP, 1:st%d%dim)=a(1:NP, 1:st%d%dim)/(ahat+omega)
-
   case default
     message(1)="Invalid preconditioner"
     call write_fatal(1)
@@ -70,7 +110,7 @@ subroutine X(lr_solver_cg) (lr, h, gr, st, ik, x, y, omega)
 
   R_TYPE, allocatable :: r(:,:), p(:,:), Hp(:,:)
   R_TYPE  :: alpha, beta, gamma
-  integer :: iter, iunit
+  integer :: iter
   logical :: conv_last, conv
 
   call push_sub('linear_response_solvers.Xlr_solver_cg')
@@ -133,7 +173,7 @@ subroutine X(lr_solver_bcg) (lr, h, gr, st, ik, x, y, omega)
 
   R_TYPE, allocatable :: r(:,:), p(:,:), Hp(:,:), rs(:,:), ps(:,:)
   R_TYPE  :: alpha, beta, gamma
-  integer :: iter, iunit, id
+  integer :: iter
   logical :: conv_last, conv
 
   call push_sub('linear_response_solvers.Xlr_solver_bcg')
@@ -213,9 +253,8 @@ subroutine X(lr_solver_bicgstab) (lr, h, gr, st, ik, x, y, omega)
   R_TYPE,              intent(in)    :: omega
 
   R_TYPE, allocatable :: r(:,:), p(:,:), Hp(:,:), rs(:,:), s(:,:), Hs(:,:), phat(:,:), shat(:,:)
-  R_TYPE  :: alpha, beta, gamma, w, normy, rho_1, rho_2
-  integer :: iter, iunit, id
-  logical :: conv_last, conv
+  R_TYPE  :: alpha, beta, w, rho_1, rho_2
+  integer :: iter
 
   call push_sub('linear_response_solver.Xlr_solver_bicgstab')
 
@@ -237,10 +276,6 @@ subroutine X(lr_solver_bicgstab) (lr, h, gr, st, ik, x, y, omega)
   call X(Hpsi)(h, gr, x, Hp, ik)
   r(1:NP,1:st%d%dim) = y(1:NP,1:st%d%dim) - ( Hp(1:NP,1:st%d%dim) + omega*x(1:NP,1:st%d%dim) )
   rs(1:NP,1:st%d%dim) = r(1:NP,1:st%d%dim)
-
-  normy = X(states_dotp) (gr%m, st%d%dim, y, y)
-
-  if(normy==M_ZERO) normy=M_ONE
 
   do iter = 1, lr%max_iter
     
@@ -269,9 +304,10 @@ subroutine X(lr_solver_bicgstab) (lr, h, gr, st, ik, x, y, omega)
     
     s(1:NP,1:st%d%dim) = r(1:NP,1:st%d%dim) - alpha * Hp(1:NP,1:st%d%dim)
 
-    if( abs(X(states_dotp) (gr%m, st%d%dim, s, s)/normy) < lr%conv_abs_dens**2 ) then 
+    lr%abs_dens = abs(X(states_dotp) (gr%m, st%d%dim, s, s))
+
+    if(  lr%abs_dens < lr%conv_abs_dens**2 ) then 
       x(1:NP,1:st%d%dim) = x(1:NP,1:st%d%dim) + alpha*phat(1:NP,1:st%d%dim)
-      lr%abs_dens = X(states_dotp) (gr%m, st%d%dim, s, s)/normy
       exit
     end if
 
@@ -286,10 +322,10 @@ subroutine X(lr_solver_bicgstab) (lr, h, gr, st, ik, x, y, omega)
          + alpha*phat(1:NP,1:st%d%dim) + w*shat(1:NP,1:st%d%dim)
     
     r(1:NP,1:st%d%dim) = s(1:NP,1:st%d%dim) - w * Hs(1:NP,1:st%d%dim)
-    
+
     rho_2=rho_1
 
-    lr%abs_dens = abs(X(states_dotp) (gr%m, st%d%dim, r, r)/normy)
+    lr%abs_dens = abs(X(states_dotp) (gr%m, st%d%dim, r, r))
 
     if( lr%abs_dens < lr%conv_abs_dens**2 ) then 
       exit
@@ -309,5 +345,3 @@ subroutine X(lr_solver_bicgstab) (lr, h, gr, st, ik, x, y, omega)
 
   call pop_sub()
 end subroutine X(lr_solver_bicgstab)
-
-

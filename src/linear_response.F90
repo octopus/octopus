@@ -82,9 +82,6 @@ module linear_response_m
   !preconditioners ( values must be multiples of 100 )
   integer, parameter :: LR_NONE = 0
   integer, parameter :: LR_DIAG = 100
-  integer, parameter :: LR_TETER = 200
-
-  
 
 contains
 
@@ -117,8 +114,6 @@ contains
     !% Biconjugated gradients stabilized
     !%Option diag_prec 100
     !% Preconditioning using the diagonal of the operator.
-    !%Option teter_prec 100
-    !% Preconditioning using the diagonal of the kinetic energy operator.
     !%End
 
 

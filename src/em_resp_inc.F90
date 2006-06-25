@@ -28,7 +28,7 @@ subroutine X(dynamic_response)(sys, h, lr, props, pol, w, status)
   R_TYPE,              intent(in)    :: w 
   type(status_t),      intent(out)   :: status
   
-  integer :: dir, j, freq, sigma
+  integer :: dir, j, freq
 
   R_TYPE :: rhov
 
@@ -43,15 +43,11 @@ subroutine X(dynamic_response)(sys, h, lr, props, pol, w, status)
     write(message(1), '(a,i1)') 'Info: Calculating polarizability for direction ', dir
     call write_info(1)
     
-    do sigma = 1, 2
-      call mix_init(lr(dir,sigma,freq)%mixer, sys%gr%m, 1, sys%st%d%nspin)
-    end do
+    call mix_init(lr(dir, 1, freq)%mixer, sys%gr%m, sys%st%d%nspin, 1, func_type=sys%st%d%wfs_type)
 
     call X(get_response_e)(sys, h, lr(:,:,freq), dir, 2 , w, props, status)
 
-    do sigma = 1, 2
-      call mix_end(lr(dir,sigma,freq)%mixer)
-    end do
+    call mix_end(lr(dir, 1, freq)%mixer)
 
     !calculate the polarizability
     do j = 1, sys%gr%m%np
@@ -83,10 +79,11 @@ subroutine X(get_response_e)(sys, h, lr, dir, nsigma, omega, props, status)
   type(pol_props_t),      intent(in)    :: props
   type(status_t),optional,intent(out)   :: status
 
-  FLOAT :: dpsimod,freq_sign
+  FLOAT :: dpsimod, freq_sign
   integer :: iter, sigma, ik, ik2, ist, i, err
-  FLOAT, allocatable :: dl_rhoin(:, :, :, :), dl_rhonew(:, :, :, :), dl_rhotmp(:, :, :, :), dtmp(:)
+  R_TYPE, allocatable :: dl_rhoin(:, :, :), dl_rhonew(:, :, :), dl_rhotmp(:, :, :)
   R_TYPE, allocatable :: Y(:, :, :),dV(:, :, :), tmp(:)
+  R_TYPE :: abs_dens
 
   logical :: finish(2)
 
@@ -103,12 +100,11 @@ subroutine X(get_response_e)(sys, h, lr, dir, nsigma, omega, props, status)
   st => sys%st
   
   ALLOCATE(tmp(m%np),m%np)
-  ALLOCATE(dtmp(m%np),m%np)
   ALLOCATE(Y(m%np, 1, nsigma), m%np*1*nsigma)
   ALLOCATE(dV(m%np, st%d%nspin, nsigma), m%np*st%d%nspin*nsigma)
-  ALLOCATE(dl_rhoin(1,m%np,st%d%nspin,nsigma),1*m%np*st%d%nspin*nsigma)
-  ALLOCATE(dl_rhonew(1,m%np,st%d%nspin,nsigma),1*m%np*st%d%nspin*nsigma)
-  ALLOCATE(dl_rhotmp(1,m%np,st%d%nspin,nsigma),1*m%np*st%d%nspin*nsigma)
+  ALLOCATE(dl_rhoin(m%np, st%d%nspin, 1), 1*m%np*st%d%nspin)
+  ALLOCATE(dl_rhonew(m%np, st%d%nspin, 1), 1*m%np*st%d%nspin)
+  ALLOCATE(dl_rhotmp(m%np, st%d%nspin, 1),1*m%np*st%d%nspin)
 
 
   call init_response_e()
@@ -124,10 +120,7 @@ subroutine X(get_response_e)(sys, h, lr, dir, nsigma, omega, props, status)
          "Frequency: ", R_REAL(omega), " Delta : ", R_AIMAG(omega), " Dir: ", dir
     call write_info(2)
     
-    !we will use the two mixers, one for the real part and one for the complex 
-    !(this is ugly, we should have complex mixers)
-    dl_rhoin(1, :, :, 1) = R_REAL(lr(dir, 1)%X(dl_rho)(:, :))
-    if(nsigma==2) dl_rhoin(1, :, :, 2) = R_AIMAG(lr(dir, 1)%X(dl_rho)(:, :))
+    dl_rhoin(1:m%np, 1:st%d%nspin, 1) = lr(dir, 1)%X(dl_rho)(1:m%np, 1:st%d%nspin)
 
     !calculate the variation of hartree term
     if (props%add_hartree) then
@@ -204,7 +197,7 @@ subroutine X(get_response_e)(sys, h, lr, dir, nsigma, omega, props, status)
       call X(lr_build_dl_rho)(m, st, lr(dir,1), type=3)
     end if
 
-    dl_rhonew(1, 1:m%np, 1:st%d%nspin, 1:nsigma) = M_ZERO
+    dl_rhonew(1:m%np, 1:st%d%nspin, 1) = M_ZERO
 
     !write restart info
     do sigma=1,nsigma 
@@ -224,43 +217,39 @@ subroutine X(get_response_e)(sys, h, lr, dir, nsigma, omega, props, status)
       end if 
     end if
 
-    finish=.true.
 
-    dl_rhotmp(1,:,:,1) = R_REAL(lr(dir,1)%X(dl_rho)(:,:))
-    if(nsigma==2) dl_rhotmp(1,:,:,2) = R_AIMAG(lr(dir,1)%X(dl_rho)(:,:))
+    dl_rhotmp(1:m%np, 1:st%d%nspin, 1) = lr(dir,1)%X(dl_rho)(1:m%np, 1:st%d%nspin)
 
-    do sigma = 1, nsigma
+    call X(mixing)(lr(dir,1)%mixer, m, iter, st%d%nspin, 1, dl_rhoin, dl_rhotmp, dl_rhonew)
 
-      call dmixing(lr(dir,sigma)%mixer, m, iter, 1, st%d%nspin, &
-           dl_rhoin(:,:,:,sigma), dl_rhotmp(:,:,:,sigma), dl_rhonew(:,:,:,sigma))
+    abs_dens =  M_ZERO
 
-      ! check for convergence
-      lr(dir, sigma)%abs_dens = M_ZERO
-
-      do ik = 1, st%d%nspin
-        dtmp(:) = (dl_rhoin(1,:,ik,sigma) - dl_rhotmp(1,:,ik,sigma))**2
-        lr(dir,sigma)%abs_dens = lr(dir,sigma)%abs_dens + dmf_integrate(m, dtmp)
-      end do
-
-      lr(dir,sigma)%abs_dens = sqrt(lr(dir,sigma)%abs_dens)
-
-      ! are we finished?
-      finish(sigma) = (lr(dir,sigma)%abs_dens <= lr(dir,sigma)%conv_abs_dens)
+    do ik = 1, st%d%nspin
+      tmp(:) = R_REAL(dl_rhoin(:, ik, 1) - dl_rhotmp(:, ik, 1))**2 &
+           + M_zI*R_AIMAG(dl_rhoin(:,ik, 1) - dl_rhotmp(:, ik, 1))**2
+      abs_dens = abs_dens + X(mf_integrate)(m, tmp)
     end do
 
+    lr(dir,1)%abs_dens = sqrt(R_REAL(abs_dens))
+    if(nsigma ==  2 ) lr(dir,2)%abs_dens = sqrt(R_AIMAG(abs_dens))
+
+    ! are we finished?
+    finish=.true.
+    do sigma = 1, nsigma
+      finish(sigma) = (lr(dir,sigma)%abs_dens <= lr(dir,sigma)%conv_abs_dens)
+    end do
 
     if(nsigma == 1) then 
       write(message(1), '(a, e20.6)') "Res ", lr(dir,1)%abs_dens
       lr(dir,1)%abs_dens=M_ZERO 
     else 
       write(message(1), '(a, 2e20.6)') "Res ", lr(dir,1)%abs_dens, lr(dir,2)%abs_dens
-      lr(dir,1)%abs_dens=M_ZERO 
-      lr(dir,2)%abs_dens=M_ZERO 
+      lr(dir,1)%abs_dens = M_ZERO 
+      lr(dir,2)%abs_dens = M_ZERO 
     endif
+
     message(2)="--------------------------------------------"
     call write_info(2)
-
-    
       
     if( finish(1) .and. finish(2) ) then 
 
@@ -273,22 +262,14 @@ subroutine X(get_response_e)(sys, h, lr, dir, nsigma, omega, props, status)
 
     else
       
-      if(props%complex_response) then 
-        lr(dir,1)%X(dl_rho)(:,:) = cmplx(dl_rhonew(1,:,:,1),dl_rhonew(1,:,:,2),PRECISION)
-        lr(dir,2)%X(dl_rho)(:,:) = cmplx(dl_rhonew(1,:,:,1),-dl_rhonew(1,:,:,2),PRECISION)
-      else
-        do sigma=1,nsigma
-          lr(dir,sigma)%X(dl_rho)(:,:) = dl_rhonew(1,:,:,1)
-        end do
-      end if
+      lr(dir,1)%X(dl_rho)(1:m%np, 1:st%d%nspin) = dl_rhonew(1:m%np, 1:st%d%nspin, 1)
+      lr(dir,2)%X(dl_rho)(1:m%np, 1:st%d%nspin) = R_CONJ(dl_rhonew(1:m%np, 1:st%d%nspin, 1))
 
     end if
-
     
   end do iter_loop
 
   deallocate(tmp)
-  deallocate(dtmp)
   deallocate(Y)
   deallocate(dV)
   deallocate(dl_rhoin)
