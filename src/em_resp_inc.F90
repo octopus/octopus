@@ -263,7 +263,7 @@ subroutine X(get_response_e)(sys, h, lr, dir, nsigma, omega, props, status)
     else
       
       lr(dir,1)%X(dl_rho)(1:m%np, 1:st%d%nspin) = dl_rhonew(1:m%np, 1:st%d%nspin, 1)
-      lr(dir,2)%X(dl_rho)(1:m%np, 1:st%d%nspin) = R_CONJ(dl_rhonew(1:m%np, 1:st%d%nspin, 1))
+      if(nsigma == 2) lr(dir,2)%X(dl_rho)(1:m%np, 1:st%d%nspin) = R_CONJ(dl_rhonew(1:m%np, 1:st%d%nspin, 1))
 
     end if
     
