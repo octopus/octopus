@@ -231,7 +231,7 @@ subroutine X(get_response_e)(sys, h, lr, dir, nsigma, omega, props, status)
 
     do sigma = 1, nsigma
 
-      call mixing(lr(dir,sigma)%mixer, m, iter, 1, st%d%nspin, &
+      call dmixing(lr(dir,sigma)%mixer, m, iter, 1, st%d%nspin, &
            dl_rhoin(:,:,:,sigma), dl_rhotmp(:,:,:,sigma), dl_rhonew(:,:,:,sigma))
 
       ! check for convergence

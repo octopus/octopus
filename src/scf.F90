@@ -345,13 +345,13 @@ contains
       select case (scf%what2mix)
       case (MIXDENS)
         ! mix input and output densities and compute new potential
-        call mixing(scf%smix, gr%m, iter, dim, nspin, rhoin, rhoout, rhonew)
+        call dmixing(scf%smix, gr%m, iter, dim, nspin, rhoin, rhoout, rhonew)
         st%rho(1:NP,:) = rhonew(1:NP, 1, :)
         if (h%d%cdft) st%j(1:NP,:,:) = rhonew(1:NP, 2:dim, :)
         call v_ks_calc(gr, ks, h, st)
       case (MIXPOT)
         ! mix input and output potentials
-        call mixing(scf%smix, gr%m, iter, dim, nspin, vin, vout, vnew)
+        call dmixing(scf%smix, gr%m, iter, dim, nspin, vin, vout, vnew)
         h%vhxc = vnew(:, 1, :)
         if (h%d%cdft) h%axc(:,:,:) = vnew(:,2:dim,:)
       end select

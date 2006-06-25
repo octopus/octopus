@@ -176,7 +176,7 @@ math.o: global.h math_cg_inc.F90 math_inc.F90
 mesh.o: global.h mesh_init.F90
 mesh_lib.o: global.h
 mf.o: global.h mf_inc.F90
-mix.o: global.h
+mix.o: global.h mix_inc.F90
 mpi_debug.o: global.h mpi_debug_inc.F90
 profiling.o: global.h
 nl_operator.o: global.h
