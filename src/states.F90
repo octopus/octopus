@@ -157,10 +157,6 @@ module states_m
     SPIN_POLARIZED = 2,             &
     SPINORS        = 3
 
-  integer, public, parameter ::     &
-    M_REAL  = 1,             &
-    M_CMPLX = 2
-
   interface assignment (=)
     module procedure states_copy
   end interface
