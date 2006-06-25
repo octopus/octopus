@@ -569,7 +569,10 @@ contains
 
     FLOAT, parameter :: DELTA_R = CNST(1e-12)
     FLOAT :: r, re, im, xx(MAX_DIM)
+
+#if defined(HAVE_GDLIB)
     integer :: red, green, blue, ix, iy
+#endif
 
     xx(:) = x(:) - sb%box_offset(:)
 

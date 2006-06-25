@@ -111,7 +111,7 @@ contains
     
     FLOAT              :: bestJ, bestJ1, bestJ_fluence, bestJ1_fluence
     FLOAT              :: bestJ_J1, bestJ1_J
-    integer            :: bestJ_ctr_iter, bestJ1_ctr_iter, ierr
+    integer            :: bestJ_ctr_iter, bestJ1_ctr_iter
 
     character(len=80)  :: filename
 
