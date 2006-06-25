@@ -71,8 +71,6 @@ contains
     CMPLX :: zpol(1:MAX_DIM, 1:MAX_DIM)
     FLOAT :: hpol(1:MAX_DIM, 1:MAX_DIM, 1:MAX_DIM)
 
-    FLOAT :: betafactors(1:MAX_DIM)
-
     FLOAT, allocatable :: hpol_density(:,:,:,:)
 
     character(len=30) :: dirname
@@ -487,7 +485,7 @@ contains
     type(lr_t),       intent(inout) :: lr
     type(lr_t), optional, intent(inout) :: lr_m
 
-    integer :: i, k, ist, ispin, idim, ndim, np
+    integer :: k, ist, ispin, idim, ndim, np
 
     CMPLX, allocatable :: gpsi(:,:), gdl_psi(:,:), gdl_psi_m(:,:)
 

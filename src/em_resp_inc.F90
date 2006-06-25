@@ -84,7 +84,7 @@ subroutine X(get_response_e)(sys, h, lr, dir, nsigma, omega, props, status)
   type(status_t),optional,intent(out)   :: status
 
   FLOAT :: dpsimod,freq_sign
-  integer :: iter, sigma, ik, ik2, ist, i, ist2, err
+  integer :: iter, sigma, ik, ik2, ist, i, err
   FLOAT, allocatable :: dl_rhoin(:, :, :, :), dl_rhonew(:, :, :, :), dl_rhotmp(:, :, :, :), dtmp(:)
   R_TYPE, allocatable :: Y(:, :, :),dV(:, :, :), tmp(:)
 
@@ -534,7 +534,7 @@ subroutine X(lr_calc_elf)(st, gr, lr, lr_m)
   FLOAT :: f, s
 
   FLOAT, parameter :: dmin = CNST(1e-10)
-  FLOAT :: u, ik_weight
+  FLOAT :: ik_weight
 
   call push_sub('em_resp_inc.Xcalc_lr_elf')
 
