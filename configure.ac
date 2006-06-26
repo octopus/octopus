@@ -42,7 +42,7 @@ AC_PROG_YACC
 # Checks for header files.
 AC_HEADER_DIRENT
 AC_HEADER_STDC
-AC_CHECK_HEADERS([fcntl.h float.h locale.h malloc.h stddef.h stdlib.h string.h strings.h sys/ioctl.h sys/time.h termios.h unistd.h])
+AC_CHECK_HEADERS([fcntl.h float.h locale.h malloc.h stddef.h stdlib.h string.h strings.h sys/ioctl.h sys/time.h termios.h unistd.h signal.h])
 AC_FUNC_ALLOCA
 
 # Checks for typedefs, structures, and compiler characteristics.
@@ -59,7 +59,7 @@ AC_FUNC_REALLOC
 AC_FUNC_SETVBUF_REVERSED
 AC_FUNC_STAT
 AC_FUNC_VPRINTF
-AC_CHECK_FUNCS([getcwd gettimeofday mkdir pow sqrt strcasecmp strdup strerror strncasecmp strndup uname tcgetpgrp scandir alphasort])
+AC_CHECK_FUNCS([getcwd gettimeofday mkdir pow sqrt strcasecmp strdup strerror strncasecmp strndup uname tcgetpgrp scandir alphasort sigaction])
 
 # Checks for size of pointer
 ACX_POINTER_SIZE

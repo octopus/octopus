@@ -192,6 +192,8 @@ contains
 
     mformat = '(f15.8,a,f15.8,a,f15.8,a,f15.8,a,f15.8)'
     ierr = 0
+
+    call block_signals()
     if(mpi_grp_is_root(mpi_world)) then
       call io_mkdir(dir, is_tmp=.true.)
 
@@ -262,6 +264,7 @@ contains
 #if defined(HAVE_MPI)
     call MPI_Barrier(MPI_COMM_WORLD, mpi_err) ! Since some processors did more than others...
 #endif
+    call unblock_signals()
 
     call pop_sub()
   end subroutine restart_write
