@@ -160,56 +160,81 @@ contains
     integer,          intent(in)   :: filtermode, steps
     FLOAT,            intent(inout):: laser_inout(:,:)
 
-    integer        :: no_f, i, kk, n(3)
+    integer        :: no_f, i, kk, n(3), last, first, grouplength, ii
     CMPLX          :: tmp(0:2*steps, 1, 1), tmp2(0:2*steps, 1, 1) ! Have to be three-dimensional to use the fft_m module
+    CMPLX          :: filt(0:2*steps, NDIM)
     type(fft_t)    :: fft_handler
 
     call push_sub('filter.apply_filter_')
 
     n(1:3) = (/ 2*steps+1, 1, 1 /)
     call fft_init(n, fft_complex, fft_handler, optimize = .false.)
-    
+
+    filt = m_z0
     no_f = size(filter)
-    !kk   = M_ZERO
-    ! apply filters line by line
-    do i=1, no_f
-    !do while(kk.lt.no_f)
-    !   kk = kk + 1
-    !   groupmembers = 0
-    !   do i=kk+1, no_f-1
-    !      if(filter(i)%group.eq.filter(kk)%group).AND.(filter(i)%domain.eq.filter(kk)%domain) then
-    !      groupmembers = groupmembers + 1 
-    !   end do
-            
+    i   = 0
+    !do i=1, no_f
+    do while(i.lt.no_f )
+       i = i + 1
        ! decide time or freq
-       write(message(1),'(a,i2)') "Info: Applying filter ",i         
+       write(message(1),'(a,i2)') "Info: Applying filter "         
        call write_info(1)  
-       
+ 
        select case(filter(i)%domain)
     
        case(filter_freq)
           ! transform to freq space
+
+          ! group filters
+          ii = i + 1
+          grouplength = 0
+          filt = filter(i)%numerical(:,:)
+          do while(ii.lt.no_f+1) 
+             if(filter(ii)%domain.eq.filter_freq) then
+                grouplength = grouplength + 1
+                filt(:,:) = filt(:,:) + filter(ii)%numerical(:,:)
+             end if
+             ii = ii + 1
+             first = i
+             last  = i + grouplength
+          end do
+          write(6,'(a,i2,a,i2)') 'Adding filters from: ',first,'to: ',last
+          i = ii - 1
           do kk=1, NDIM
              !write(6,*) 'in:', SUM(laser_inout(kk,:)**2)
              tmp2(:, 1, 1) = cmplx(laser_inout(kk,:))
+             
              call zfft_forward(fft_handler, tmp2, tmp)
              !write(6,*) SUM(abs(tmp)**2)/real((2*steps+1), PRECISION)
              !
-             tmp(:, 1, 1) = tmp(:, 1, 1)*filter(i)%numerical(kk,:)
+             tmp(:, 1, 1) = tmp(:, 1, 1)*filt(:,kk)
              call zfft_backward(fft_handler, tmp, tmp2)
     
-             laser_inout(kk,:) = real(tmp2(:, 1, 1), PRECISION)/real((2*steps+1), PRECISION)
+             laser_inout(kk,:) = real(tmp2(:, 1, 1), PRECISION)!/real((2*steps+1), PRECISION)
              !write(6,*) 'out:', SUM(laser_inout(kk,:)**2)
              !write(6,*) SUM(laser_inout(kk,:)**2)          
           enddo
           
        case(filter_time)
-          ! filter in time
-          !if(filter(i)%group)
+          ! group filters
+          ii = i + 1
+          grouplength = 0
+          filt = filter(i)%numerical(:,:)
+          do while(ii.lt.no_f+1) 
+             if(filter(ii)%domain.eq.filter_time) then
+                grouplength = grouplength + 1
+                filt = filt + filter(ii)%numerical(:,:)
+             end if
+             first = i
+             last  = i + grouplength
+             ii = ii + 1
+          end do
+          i = ii - 1
+          write(6,*) 'Adding filters from: ',first,'to: ',last
           do kk=1, NDIM
-             laser_inout(kk,:) = laser_inout(kk,:)*filter(i)%numerical(kk,:)
+             laser_inout(kk,:) = laser_inout(kk,:)*filt(:,kk)
           enddo
-          
+
        case(filter_phase)
           ! phase only optimization
           message(1) = "to be implemented soon"
