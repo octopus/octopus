@@ -177,7 +177,7 @@ contains
       !% <ul>
       !% <li>Spherical or minimum mesh is not allowed for periodic systems.</li>
       !% <li>Cylindrical mesh is not allowed for systems that are periodic in more than one dimension.</li>
-      !% >li>Box_image is only allowed in 2D.</li>
+      !% <li>Box_image is only allowed in 2D.</li>
       !% </ul>
       !%Option sphere 1
       !% The simulation box will be a sphere of radius Radius

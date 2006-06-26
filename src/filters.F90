@@ -90,7 +90,7 @@ contains
     call push_sub('filter.def_tdpenalty_')
     mode_tdpenalty = .FALSE.
     !%Variable OCTLaserEnvelope
-    !%Type Block
+    !%Type block
     !%Section Optimal Control
     !%Description
     !% Often a predefined time-dependent envelope on the laser field is required. 
@@ -295,7 +295,7 @@ contains
     !% Some examples for "function" are:
     !%
     !%  
-    !%An example for the block is:
+    !% An example for the block is:
     !% <tt>%OCTFilter
     !% <br>&nbsp;&nbsp;time | 1 | 0 | 0 | "exp(-gamma*( t - stime/4 )^2  )" 
     !% <br>&nbsp;&nbsp;time | 0 | 1 | 0 | "exp(-gamma*( t - stime/4 )^2  )" 

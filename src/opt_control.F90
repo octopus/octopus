@@ -1180,7 +1180,7 @@ contains
       ALLOCATE(tmp_st%zpsi(NP_PART, tmp_st%d%dim, tmp_st%st_start:tmp_st%st_end, tmp_st%d%nik), NP_PART*tmp_st%d%dim*(tmp_st%st_end-tmp_st%st_start+1)*tmp_st%d%nik)
 
       !%Variable OCTInitialState
-      !%Type Integer
+      !%Type integer
       !%Section Optimal Control
       !%Description
       !% The string OCTInitialState describes the initial state of the quantum system
@@ -1210,7 +1210,7 @@ contains
          message(1) =  'Info: Using Excited State for InitialState'
          call write_info(1)
          !%Variable OCTTargetStateNumber
-         !%Type Integer
+         !%Type integer
          !%Section Optimal Control
          !%Description
          !% Specify the target state, ordered by energy
@@ -1413,7 +1413,7 @@ contains
          call write_info(1)
          ! read in excited state
          !%Variable OCTTargetStateNumber
-         !%Type Integer
+         !%Type integer
          !%Section Optimal Control
          !%Description
          !% Specify the target state, ordered by energy
@@ -1504,7 +1504,7 @@ contains
          !% <br>&nbsp;&nbsp; "exp(-r^2)*exp(-i*0.2*x)"
          !% <br>%</tt>
          !%  
-         !%Example
+         !% Example
          !%
          !% <tt>%OCTLocalTarget
          !% <br>&nbsp;&nbsp; "exp(-r^2)*exp(-i*0.2*x)"
@@ -1567,17 +1567,17 @@ contains
       !% <br>&nbsp;&nbsp;expression | weight
       !% <br>%</tt>
       !%  
-      !%Targetoperator: state local
+      !% Targetoperator: state local
       !% local: gauss, gaussFWHM, ud
       !% state: 
-      !%Par depends on the target operator:
+      !% Par depends on the target operator:
       !% *oct_tdtype_local*: width
       !% *oct_tgtype_state*: excited state
-      !%Td function:
+      !% Td function:
       !% describe the time-dependence
       !% local:  describe the motion of the center, e.g. cos
       !% state:  describe the evolution of the occupation, e.g. sin2 
-      !%Weight:
+      !% Weight:
       !% describe the relative importance if you have specified several targets
       !%End
       if((targetmode==oct_targetmode_td)&
@@ -1616,19 +1616,19 @@ contains
       call push_sub('opt_control.read_OCTparameters_')  
 
       !%Variable OCTEps
-      !%Type Float
+      !%Type float
       !%Section Optimal Control
       !%Description
       !% Define the convergence threshold.
       !% For the monotonically convergent scheme: If the increase of the 
       !% target functional is less then OCTEps the iteration is stopped.
-      !%Example
+      !% Example
       !% OCTEps = 0.00001
       !%End
       call loct_parse_float(check_inp('OCTEps'), CNST(1e-3), eps)
 
       !%Variable OCTMaxIter
-      !%Type Integer
+      !%Type integer
       !%Section Optimal Control
       !%Description
       !% OCTMaxIter defines the maximum number of iterations.
@@ -1644,7 +1644,7 @@ contains
       if(ctr_iter_max < 0) ctr_iter_max = huge(ctr_iter_max)
    
       !%Variable OCTPenalty
-      !%Type Float
+      !%Type float
       !%Section Optimal Control
       !%Description
       !% The variable specificies the value of the penalty factor for the integrated field strength (fluence). Large value - small fluence. The value is always positive.
@@ -1664,7 +1664,7 @@ contains
 
 
       !%Variable OCTFixFluenceTo
-      !%Type Float
+      !%Type float
       !%Section Optimal Control
       !%Description
       !% The algorithm tries to obtain the specified fluence for the laser field. 
@@ -1691,9 +1691,9 @@ contains
       !%Section Optimal Control
       !%Description
       !% Option *oct_targetmode_static*  0
-      !%Static or time-independent targets
+      !% Static or time-independent targets
       !% Option *oct_targetmode_td*      1
-      !%Time-dependent targets, specify block OCTTdTarget
+      !% Time-dependent targets, specify block OCTTdTarget
       !%End
       call loct_parse_int(check_inp('OCTTargetMode'),oct_targetmode_static,targetmode)
       
