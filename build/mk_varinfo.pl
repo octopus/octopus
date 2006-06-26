@@ -2,7 +2,7 @@
 
 if(!-d 'src' && !-d 'share'){
   print stderr "Please run this script from the octopus main directory\n";
-  exit;
+  exit 1;
 }
 
 opendir(DIR, 'src');
@@ -51,7 +51,7 @@ foreach $F90file (@F90){
 
       if(!/!%End/i){
 	print stderr "In info block of variable $var (file src/$F90file), block is incomplete\n";
-	exit;
+	exit 2;
       }else{
 	printf OUT_text "END\n\n";
 	printf OUT_orig "END\n\n";
@@ -75,7 +75,7 @@ sub put_opt{
   if($opt{$a} && ($opt{$a} ne $b)){
     print stderr "Option '", $a, "' is multiply defined\n",
       "    '", $opt{$b}, "' ne '", $b, "'\n";
-    exit;
+    exit 3;
   }
   $opt{$a} = $b;
 }

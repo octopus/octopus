@@ -110,10 +110,10 @@ contains
     !% theory is necessary to solve the sterheimer equation, this is a self
     !% consistent linear equation where the operator is the shifted Kohn-Sham hamiltonian.
     !% This variable which method to use in order to solve this linear equation.
-    !% An optional preconditioner can be added.
     !%Option cg 5
-    !% Conjugated gradients. This is the faster solver but does not
-    !& work when a imaginary part when an imaginary shift is added.
+    !% Conjugated gradients. This is the fastest solver but does not
+    !% work when a imaginary part when an imaginary shift is
+    !% added. This is the default when real functions are used.
     !%Option bcg 2
     !% Biconjugated gradients. This solver is a generalization of the
     !% conjugated gradients for non-hermitian operators. It has some
@@ -122,8 +122,6 @@ contains
     !% Biconjugated gradients stabilized. This is an improved version
     !% of bcg that is faster and more stable. This is the default when
     !% complex response is calculated.
-    !%Option diag_prec 100
-    !% Preconditioning using the diagonal of the operator. 
     !%End
 
     if(present(def_solver)) then
