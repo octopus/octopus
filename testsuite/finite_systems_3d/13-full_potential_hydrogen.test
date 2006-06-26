@@ -1,6 +1,6 @@
 # $Id: 05-multigrid_solver.test 2138 2006-05-21 23:20:05Z xavier $
 
-Test     : Multigrid
+Test     : Full Potential Hydrogen
 Author   : Xavier Andrade
 Date     : 18.10.05
 Arch     : Linux bizet 2.6.8-2-686 #1 Thu May 19 17:53:30 JST 2005 i686 GNU/Linux
