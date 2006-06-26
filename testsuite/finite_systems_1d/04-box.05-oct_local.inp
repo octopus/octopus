@@ -1,0 +1,93 @@
+
+CalculationMode = opt_control
+
+# ------------------
+# TD RUN Parameters
+# ------------------
+
+stime  = 100.0
+dt = 0.01
+TDEvolutionMethod = split
+TDExponentialMethod = standard
+TDExponentialOrder = 4
+TDLanczosTol = 5.0e-5
+TDMaximumIter = stime/dt
+TDTimeStep = dt
+
+
+# --------------
+# OCT parameters
+# --------------
+
+OCTPenalty =1.0
+OCTEps   = 0.000001
+OCTMaxIter = 25
+OCTTargetMode = 0
+OCTFilterMode = 0
+#OCTFixFluenceTo = 0.05
+OCTInitialState = 1
+OCTTargetOperator = 5
+OCTScheme  = oct_algorithm_zr98
+OCTDoubleCheck = No	
+gamma1 = 0.1
+gamma2 = 80
+%OCTLaserEnvelope
+  1 | 0 | 0 | "exp(-gamma1*( t - stime/4 )^2  )" | 1
+%
+%OCTFilter
+#   time_filter | 1 | 0 | 0 | "exp(-gamma1*( t - stime/4 )^2  ) + exp(-gamma1*( t - 3*stime/4 )^2  )"
+   frequency_filter | 1 | 0 | 0 | "exp(-gamma2*( w + 0.1567 )^2  ) + exp(-gamma2*( w - 0.1567 )^2  )"
+%
+
+%OCTPolarization
+1 | 1 | 0 | 0
+%
+
+%OCTLocalTarget
+"exp( -10*(x-3)^2  )"
+%
+
+#----------------------------
+# Laser field = Initial guess
+#-----------------------------
+
+ampl = 0.1
+freq1 = 0.02
+envelope = 0
+w1 = 5.0
+cycles = 4
+tau = (pi/freq1)*cycles
+t0 = tau
+%TDLasers
+  1 | 0 | 0 | ampl | freq1 | envelope | tau | t0
+%
+
+Dimensions = 1
+fromScratch = yes
+
+BoxShape = sphere
+Spacing = 0.4
+Radius =  15.0
+
+NonInteractingElectrons = yes
+
+%Species
+"Box1D" | 1 | user_defined | 1 | "-5*step(x+5)*step(5-x)"
+%
+
+%Coordinates
+"Box1D" | 0 | 0 | 0
+%
+
+EigenSolverInitTolerance = 1.0e-6
+EigenSolverFinalTolerance = 1.0e-6
+EigenSolverMaxIter = 1000
+Mixing = 1.0
+TypeOfMixing = linear
+
+NumberUnoccStates = 4
+
+Output = potential + density + wfs
+OutputHow = axis_x
+
+TDOutput = laser + td_occup 

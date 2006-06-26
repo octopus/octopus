@@ -1,0 +1,42 @@
+# $Id: 03-asym_doublewell.test 2072 2006-05-14 10:45:38Z athimm $
+
+Test     : 1D Asymmetric Double Well
+Author   : Jan Werschnik
+Date     : 20.06.06
+Arch     : Linux 
+Release  :
+Programs : octopus
+Runtime  : long-run
+Enabled  : Yes
+
+# The test ensures a number features of the optimal control implementation in octopus.
+# 
+# We do the following intermediate steps:
+# First, the two lowest eigenstates of the asymmetric double well,
+# V(x) = 1/64*(x)^4-1/4*(x)^2+1/256*(x)^3,
+# are calculated.
+# A similar potential is used in Rev Mod (Haenggi, Griffoni)
+
+
+Input: 05-adw.01-ground_state.inp
+
+Match ; TotalEnergy ; grep -A 7 '^Energy:' ground_state_static/info ; \s*Total\s*=\s*-0.6206
+Match ; 2th state  ; grep '2   --' excited_states_static/eigenvalues ; \s*-0.4638
+
+# Now use filter and optimize direct transition to 1st excited state with a predefined fluence.
+
+Input: 05-adw.02-filter_fixed.inp
+
+# Match overlaps
+Match ; J1 1st  iteration  ; grep ' 1  ' opt-control/convergence ; \s*0.993\d*
+Match ; J1 2nd  iteration  ; grep ' 2  ' opt-control/convergence ; \s*0.994\d*
+Match ; J1 5th  iteration  ; grep ' 5  ' opt-control/convergence ; \s*0.995\d*
+
+# Now use filter and optimize indirect transition via 3rd excited state.
+
+Input: 05-adw.03-filter_indirect.inp
+
+# Match overlaps 
+Match ; J1 1st  iteration  ; grep ' 1  ' opt-control/convergence ; \s*0.249\d*
+Match ; J1 2nd  iteration  ; grep ' 2  ' opt-control/convergence ; \s*0.568\d*
+Match ; J1 5th  iteration  ; grep ' 5  ' opt-control/convergence ; \s*0.83\d*
