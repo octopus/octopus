@@ -1,0 +1,29 @@
+# $Id: 05-multigrid_solver.test 2138 2006-05-21 23:20:05Z xavier $
+
+Test     : Linear Response Polarizabilities
+Author   : Xavier Andrade
+Date     : 18.10.05
+Arch     : Linux bizet 2.6.8-2-686 #1 Thu May 19 17:53:30 JST 2005 i686 GNU/Linux
+Release  : 2.1pre1
+Programs : octopus
+Runtime  : short-run
+Enabled  : Yes
+
+Input: 14-h2o_pol_lr.01_h2o_gs
+
+Match ; TotalEnergy ; grep -A 7 '^Energy:' static/info ; \s*Total\s*=\s*-16.06
+Match ; Eigenvalues ; grep -A 2 'Eigenvalues \[' static/info | tail -1 ; \s*-1.16\d*\s*2.0000\d* 
+
+Input: 14-h2o_pol_lr.02_h2o_static_pol
+
+Match ; Polarizability 11; head -2 linear/polarizability_lr ; \s*15.26
+Match ; Mean polarizability ; grep  'Mean' linear/polarizability_lr ; \s*16.89
+Match ; Hyperpolarizability ; grep  'B||' linear/beta_lr ; \s*-22.84
+
+Input: 14-h2o_pol_lr.03_h2o_dyn_pol
+Match ; Polarizability w=0.0; tail -2 linear/dynpols | head -1 ; \s*15.26
+Match ; Polarizability w=0.1; tail -1 linear/dynpols; \s*15.92
+
+Input: 14-h2o_pol_lr.04_h2o_dyn_pol_cmplx
+Match ; Complex polarizability w=0.0; tail -2 linear/dynpols | head -1 ; \s*0.27
+Match ; Complex polarizability w=0.1; tail -1 linear/dynpols; \s*0.31

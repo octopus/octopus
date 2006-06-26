@@ -57,7 +57,6 @@ subroutine X(dynamic_response)(sys, h, lr, props, pol, w, status)
 
   end do
 
-
   call pop_sub()
 
 end subroutine X(dynamic_response)
@@ -85,7 +84,7 @@ subroutine X(get_response_e)(sys, h, lr, dir, nsigma, omega, props, status)
   R_TYPE, allocatable :: Y(:, :, :),dV(:, :, :), tmp(:)
   R_TYPE :: abs_dens
 
-  logical :: finish(2)
+  logical :: finish(2), conv_last, conv
 
   type(mesh_t), pointer :: m
   type(states_t), pointer :: st
@@ -113,6 +112,9 @@ subroutine X(get_response_e)(sys, h, lr, dir, nsigma, omega, props, status)
   message(1)="--------------------------------------------"
   call write_info(1)
 
+  conv = .false.
+  conv_last = .false.
+
   !self consistency iteration for response
   iter_loop: do iter=1, props%scf_iter
     write(message(1), '(a, i3)') "LR SCF Iteration: ", iter
@@ -126,7 +128,7 @@ subroutine X(get_response_e)(sys, h, lr, dir, nsigma, omega, props, status)
     if (props%add_hartree) then
       do sigma=1,nsigma
         do i = 1, m%np
-          tmp(i) = sum(lr(dir, sigma)%X(dl_rho)(i, :))
+          tmp(i) = sum(lr(dir, sigma)%X(dl_rho)(i, 1:st%d%nspin))
         end do
         call X(poisson_solve)(sys%gr, lr(dir,sigma)%X(dl_Vhar), tmp)
       end do
@@ -142,7 +144,7 @@ subroutine X(get_response_e)(sys, h, lr, dir, nsigma, omega, props, status)
 
         !* hartree
         if (props%add_hartree) dV(1:m%np, ik, sigma) = dV(1:m%np, ik, sigma) &
-             + lr(dir, sigma)%X(dl_Vhar)(1:m%np) 
+             + lr(dir, sigma)%X(dl_Vhar)(1:m%np)
 
         !* fxc
         if(props%add_fxc) then 
@@ -252,7 +254,14 @@ subroutine X(get_response_e)(sys, h, lr, dir, nsigma, omega, props, status)
     call write_info(2)
       
     if( finish(1) .and. finish(2) ) then 
+      if(conv_last) then 
+        conv = .true.
+      else
+        conv_last = .true.
+      end if
+    end if
 
+    if(conv) then
       if(present(status)) status%ok = .true.
       write(message(1), '(a, i4, a)')        &
            'Info: SCF for response converged in ', &

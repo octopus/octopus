@@ -45,7 +45,6 @@ module static_pol_lr_m
   type pol_props_t
     logical :: complex_response
     logical :: add_fxc
-    logical :: use_unoccupied
     logical :: dynamic
     logical :: add_hartree
     integer :: scf_iter
@@ -126,8 +125,12 @@ contains
     do i = 1, ndim
       do sigma = 1, nsigma
         do j = 1, nfreq
-
-          call lr_init(lr(i, sigma, j), "Pol")
+          
+          if (props%complex_response) then 
+            call lr_init(lr(i, sigma, j), "Pol", def_solver=LR_BICGSTAB)
+          else
+            call lr_init(lr(i, sigma, j), "Pol", def_solver=LR_CG)            
+          end if
 
           call lr_alloc_fHxc (sys%st, gr%m, lr(i, sigma, j))
 
@@ -348,8 +351,6 @@ contains
 
     call loct_parse_int(check_inp('PolSCFIterations'), 200, props%scf_iter)
 
-    call loct_parse_logical(check_inp('LRUseUnoccupied'), .false. , props%use_unoccupied)
-
     call pop_sub()
 
   end subroutine parse_input
@@ -366,28 +367,6 @@ contains
       message(1) = 'Could not properly read wave-functions from "'//trim(tmpdir)//'restart_gs".'
       call write_fatal(1)
     end if
-
-    !if there are unoccupied wfs, read them
-    if (nst > sys%st%nst) then 
-      
-      if (props%use_unoccupied) then 
-      
-        write(message(1), '(a,i2,a)') 'Info: Found ', (nst - sys%st%nst), ' unoccupied wavefunctions.'
-        call write_info(1)
-        
-        sys%st%nst    = nst
-        sys%st%st_end = nst
-        deallocate(sys%st%eigenval, sys%st%occ)
-        
-        ALLOCATE(sys%st%eigenval(sys%st%nst, sys%st%d%nik), sys%st%nst*sys%st%d%nik)
-        ALLOCATE(     sys%st%occ(sys%st%nst, sys%st%d%nik), sys%st%nst*sys%st%d%nik)
-      else
-        write(message(1), '(a)') 'Info: Not using unoccupied wavefunctions.'
-        call write_info(1)
-      end if
-
-    end if
-    
 
     ! load wave-functions
     if ( props%complex_response ) then 

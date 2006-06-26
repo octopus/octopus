@@ -86,9 +86,11 @@ module linear_response_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine lr_init(lr, prefix)
+  subroutine lr_init(lr, prefix, def_solver)
     type(lr_t),       intent(out) :: lr
     character(len=*), intent(in)  :: prefix
+    integer, optional, intent(in) :: def_solver
+
     integer :: fsolver
 
     call push_sub('linear_response.lr_init')
@@ -96,31 +98,45 @@ contains
     ! read some parameters from the input file
     call loct_parse_float(check_inp(trim(prefix)//"ConvAbsDens"), &
         CNST(1e-5), lr%conv_abs_dens)
-    call loct_parse_int  (check_inp(trim(prefix)//"MaximumIter"), 50, lr%max_iter)
+    call loct_parse_int  (check_inp(trim(prefix)//"MaximumIter"), 1000, lr%max_iter)
 
     
     !%Variable LinearSolver
     !%Type integer
     !%Default cg
-    !%Section Hamiltonian::Poisson
+    !%Section Linear Response::Polarizabities
     !%Description
-    !% Defines which method to use in order to solve the Sternheimer equation.
+    !% To calculate response using density functional perturbation
+    !% theory is necessary to solve the sterheimer equation, this is a self
+    !% consistent linear equation where the operator is the shifted Kohn-Sham hamiltonian.
+    !% This variable which method to use in order to solve this linear equation.
     !% An optional preconditioner can be added.
     !%Option cg 5
-    !% Conjugated gradients
+    !% Conjugated gradients. This is the faster solver but does not
+    !& work when a imaginary part when an imaginary shift is added.
     !%Option bcg 2
-    !% Biconjugated gradients
+    !% Biconjugated gradients. This solver is a generalization of the
+    !% conjugated gradients for non-hermitian operators. It has some
+    !% stability problems, so the bigstab should be prefered.
     !%Option bicgstab 3
-    !% Biconjugated gradients stabilized
+    !% Biconjugated gradients stabilized. This is an improved version
+    !% of bcg that is faster and more stable. This is the default when
+    !% complex response is calculated.
     !%Option diag_prec 100
-    !% Preconditioning using the diagonal of the operator.
+    !% Preconditioning using the diagonal of the operator. 
     !%End
 
+    if(present(def_solver)) then
+      call loct_parse_int  (check_inp(trim(prefix)//"LinearSolver"), def_solver, fsolver)
+    else 
+      call loct_parse_int  (check_inp(trim(prefix)//"LinearSolver"), LR_CG, fsolver)
+    end if
 
-    call loct_parse_int  (check_inp(trim(prefix)//"LinearSolver"), LR_CG, fsolver)
-    
+    !the last 2 digits select the linear solver
     lr%solver = mod(fsolver, 100)
-    lr%preconditioner = (fsolver-lr%solver)
+
+    !the next 2 digits select the preconditioner
+    lr%preconditioner = (fsolver - lr%solver)
 
     call loct_parse_logical(check_inp(trim(prefix)//"OrtEachStep"), .false., lr%ort_each_step)
 

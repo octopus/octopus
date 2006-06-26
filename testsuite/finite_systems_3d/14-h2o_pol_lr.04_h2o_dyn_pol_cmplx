@@ -1,0 +1,17 @@
+SystemName = 'H2O'
+CalculationMode = pol_lr
+
+%Coordinates
+ 'O'  |  0.000000  | -0.553586  |  0.000000
+ 'H'  |  1.429937  |  0.553586  |  0.000000
+ 'H'  | -1.429937  |  0.553586  |  0.000000
+%
+
+Spacing = 0.65
+
+%PolFreqs 
+2 | 0.0 | 0.1
+%
+
+Delta = 0.01
+PolConvAbsDens = 1e-2
