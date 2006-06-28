@@ -202,7 +202,9 @@ contains
           write(message(1), '(a,f14.8)') " => overlap:", overlap
           call write_info(1)
        else
-          call calc_overlap()
+         overlap = abs(zstates_mpdotp(gr%m, psi, target_st))
+         write(message(1), '(6x,a,f14.8)') " => overlap:", overlap
+         call write_info(1)
        end if
        
        ! output anything else ??
@@ -1004,7 +1006,9 @@ contains
          ! 1/T * int(<Psi| O | Psi>)
          overlap = SUM(td_fitness) / real(td%max_iter, PRECISION) 
       else
-         call calc_overlap()
+        overlap = abs(zstates_mpdotp(gr%m, psi, target_st))
+        write(message(1), '(6x,a,f14.8)') " => overlap:", overlap
+        call write_info(1)
       end if
       functional = overlap - J2
       
@@ -1014,32 +1018,6 @@ contains
       convergence(4,ctr_iter) = tdpenalty(1,1)
 
     end subroutine calc_J
-
-
-    ! ---------------------------------------------------------
-    subroutine calc_overlap()
-      integer :: ik, p, dim
-      call push_sub('opt_control.calc_overlap')
-
-      overlap = M_z0;
-      do ik = 1, psi%d%nik
-        do p  = psi%st_start, psi%st_end
-           do dim = 1, psi_i%d%dim
-          ! WARNING gives garbage when calculated through zstates_dotp
-          !overlap = zstates_dotp(gr%m, psi%d%dim, psi%zpsi(:,:, p, ik), target_st%zpsi(:,:, p, ik))
-              !write(6,*) p, psi%zpsi(1:3, dim, p, ik)
-              !write(6,*) ik,target_st%zpsi(1:3, dim, p, ik)
-              overlap= overlap + abs(zmf_integrate(gr%m,conjg(psi%zpsi(:, dim, p, ik))*target_st%zpsi(:, dim, p, ik)))
-              
-              write(message(1), '(6x,i3,1x,i3,a,f14.8,a,f14.8,a,f14.8)') &
-                ik, p, " => overlap:", overlap
-              call write_info(1)
-           end do
-        end do
-     end do
-   
-     call pop_sub()
-   end subroutine calc_overlap
 
 
     ! ---------------------------------------------------------

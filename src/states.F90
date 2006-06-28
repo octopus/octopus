@@ -1920,6 +1920,77 @@ contains
   end subroutine states_calc_elf_fs
 
 
+  ! ---------------------------------------------------------
+  ! Returns information about which single particle orbitals are
+  ! occupied or not in a _many-particle_ state st:
+  !   n_filled are the number of orbitals that are totally filled
+  !            (the occupation number is two, if ispin = UNPOLARIZED,
+  !            or it is one in the other cases).
+  !   n_half_filled is only meaningfull if ispin = UNPOLARIZED. It 
+  !            is the number of orbitals where there is only one 
+  !            electron in the orbital.
+  !   n_partially_filled is the number of orbitals that are not filled
+  !            or half-filled, nor empty.
+  ! The integer arrays filled, partially_filled and half_filled point
+  !   to the indexes where the filled, partially filled and half_filled
+  !   orbitals are, respectively.
+  subroutine occupied_states(st, ik, filled, partially_filled, half_filled, &
+                             n_filled, n_partially_filled, n_half_filled)
+    type(states_t), intent(in) :: st
+    integer, intent(in)  :: ik
+    integer, intent(out) :: n_filled, n_partially_filled, n_half_filled
+    integer, intent(out) :: filled(:), partially_filled(:), half_filled(:)
+
+    integer :: j, i
+    FLOAT :: occ
+    FLOAT, parameter :: M_THRESHOLD = CNST(1.0e-6)
+    call push_sub('states_inc.occupied_states')
+
+    filled(:) = 0
+    partially_filled(:) = 0
+    half_filled(:) = 0
+    n_filled = 0
+    n_partially_filled = 0
+    n_half_filled = 0
+
+    select case(st%d%ispin)
+    case(UNPOLARIZED)
+      do j = 1, st%nst
+        if(abs(st%occ(j, ik)-M_TWO) < M_THRESHOLD) then
+          n_filled = n_filled + 1
+          filled(n_filled) = j
+        elseif(abs(st%occ(j, ik)-M_ONE) < M_THRESHOLD) then
+          n_half_filled = n_half_filled + 1
+          half_filled(n_half_filled) = j
+        elseif(st%occ(j, ik) > M_THRESHOLD ) then
+          n_partially_filled = n_partially_filled + 1
+          partially_filled(n_partially_filled) = j
+        elseif(abs(st%occ(j, ik)) > M_THRESHOLD ) then
+          message(1) = 'Internal error: Illegal values in the occupation numbers.'
+          call write_fatal(1)
+         end if
+      end do
+    case(SPIN_POLARIZED, SPINORS)
+      do j = 1, st%nst
+        if(abs(st%occ(j, ik)-M_ONE) < M_THRESHOLD) then
+          n_filled = n_filled + 1
+          filled(n_filled) = j
+        elseif(st%occ(j, ik) > M_THRESHOLD ) then
+          n_partially_filled = n_partially_filled + 1
+          partially_filled(n_partially_filled) = j
+        elseif(abs(st%occ(j, ik)) > M_THRESHOLD ) then
+          message(1) = 'Internal error: Illegal values in the occupation numbers.'
+          call write_fatal(1)
+         end if
+      end do
+    end select
+
+    call pop_sub()
+  end subroutine occupied_states
+
+
+
+
 #include "states_kpoints.F90"
 
 #include "undef.F90"

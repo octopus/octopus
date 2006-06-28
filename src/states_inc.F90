@@ -196,23 +196,17 @@ end function X(states_residue)
 
 
 ! -------------------------------------------------------------
-! Returns the dot product of two many-body states st1 and
-! st2, for a given irreducible subspace (k-point) ik.
-! Warning: it does not do any check on the "conformance" of
-!  the two states. (maybe a subroutine should be written
-!  for that purpose...)
-! Warning: it disregards completely the occupation number
-!  problem. This is not important, unless the occupations
-!  are different in the two states (this is not the case
-!  for the moment), or if any of the occupation is null
-!  (this can be problem, and will have to be cared about.
+! Returns the dot product of two many-body states st1 and st2.
+! Warning: it does not permit fractional occupation numbers.
 ! -------------------------------------------------------------
 R_TYPE function X(states_mpdotp)(m, st1, st2) result(dotp)
   type(mesh_t),   intent(in) :: m
   type(states_t), intent(in) :: st1, st2
 
-  integer :: ik, ispin, nik, nst
-  R_TYPE, allocatable :: a(:, :)
+  integer :: ik, ispin, nik, nst, i1, j1, i2, j2, k1, k2, i, j
+  integer, allocatable :: filled1(:), filled2(:), partially_filled1(:), partially_filled2(:), &
+                          half_filled1(:), half_filled2(:)
+  R_TYPE, allocatable :: a(:, :), b(:, :)
   call push_sub('states_inc.Xstates_mpdotp')
 
   ispin = st1%d%ispin
@@ -225,23 +219,79 @@ R_TYPE function X(states_mpdotp)(m, st1, st2) result(dotp)
   ALLOCATE(a(nst, nst), nst*nst)
   dotp = M_ONE
 
+  ALLOCATE(filled1(nst), nst)
+  ALLOCATE(filled2(nst), nst)
+  ALLOCATE(partially_filled1(nst), nst)
+  ALLOCATE(partially_filled2(nst), nst)
+  ALLOCATE(half_filled1(nst), nst)
+  ALLOCATE(half_filled2(nst), nst)
+
   select case(ispin)
   case(UNPOLARIZED)
     do ik = 1, nik
       call X(calculate_matrix) (m, ik, st1, st2, nst, a)
-      dotp = dotp * ((lalg_determinant(nst, a, invert = .false.))**2) ** st1%d%kweights(ik)
+
+      call occupied_states(st1, ik, filled1, partially_filled1, half_filled1, i1, j1, k1)
+      call occupied_states(st2, ik, filled2, partially_filled2, half_filled2, i2, j2, k2)
+      if( (j1 > 0) .or. (j2 > 0) ) then
+        message(1) = 'Cannot calcualte many-body dot products with partially occupied orbitals'
+        call write_fatal(1)
+      end if
+      if(  (i1 .ne. i2)  .or.  (k1 .ne. k2) ) then
+        message(1) = 'Internal Error: different number of occupied states in states_mpdotp'
+        call write_fatal(1)
+      end if
+
+      ALLOCATE(b(i1+k1, i1+k1), (i1+k1)*(i1+k1))
+      do i = 1, i1
+        do j = 1, i1
+          b(i, j) = a(filled1(i), filled2(j))
+        end do
+        do j = i1 + 1, i1 + k1
+          b(i, j) = a(filled1(i), half_filled2(j))
+        end do
+      end do
+      do i = i1 + 1, i1 + k1
+        do j = 1, i1
+          b(i, j) = a(half_filled1(i), filled2(j))
+        end do
+        do j = i1 + 1, i1 + k1
+          b(i, j) = a(half_filled1(i), half_filled2(j))
+        end do
+      end do
+
+      dotp = dotp * (lalg_determinant(i1+k1, b, invert = .false.)) ** st1%d%kweights(ik)
+      if(i1 > 0) then
+        dotp = dotp * (lalg_determinant(i1, b(1:i1, 1:i1), invert = .false.)) ** st1%d%kweights(ik)
+      end if
+
     end do
-  case(SPIN_POLARIZED)
-    do ik = 1, nik, 2
-      call X(calculate_matrix) (m, ik, st1, st2, nst, a)
-      dotp = dotp * (lalg_determinant(nst, a, invert = .false.))** st1%d%kweights(ik)
-      call X(calculate_matrix) (m, ik+1, st1, st2, nst, a)
-      dotp = dotp * (lalg_determinant(nst, a, invert = .false.))** st1%d%kweights(ik)
-    end do
-  case(SPINORS)
+  case(SPIN_POLARIZED, SPINORS)
     do ik = 1, nik
+
       call X(calculate_matrix) (m, ik, st1, st2, nst, a)
-      dotp = dotp * lalg_determinant(nst, a, invert = .false.) ** st1%d%kweights(ik)
+
+      call occupied_states(st1, ik, filled1, partially_filled1, half_filled1, i1, j1, k1)
+      call occupied_states(st2, ik, filled2, partially_filled2, half_filled2, i2, j2, k2)
+      if( (j1 > 0) .or. (j2 > 0) ) then
+        message(1) = 'Cannot calcualte many-body dot products with partially occupied orbitals'
+        call write_fatal(1)
+      end if
+      if(i1 .ne. i2) then
+        message(1) = 'Internal Error: different number of occupied states in states_mpdotp'
+        call write_fatal(1)
+      end if
+
+      ALLOCATE(b(i1, i1), i1*i1)
+      do i = 1, i1
+        do j = 1, i1
+          b(i, j) = a(filled1(i), filled2(j))
+        end do
+      end do
+
+      dotp = dotp * lalg_determinant(i1, b, invert = .false.) ** st1%d%kweights(ik)
+      deallocate(b)
+
     end do
   end select
 
