@@ -757,7 +757,7 @@ contains
     call push_sub('td_write.td_write_gsp')
 
     ! all processors calculate the projection
-    gsp = zstates_mpdotp(m, 1, st, gs_st)
+    gsp = zstates_mpdotp(m, st, gs_st)
 
     if(mpi_grp_is_root(mpi_world)) then
       if(iter == 0) then

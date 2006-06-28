@@ -207,33 +207,45 @@ end function X(states_residue)
 !  for the moment), or if any of the occupation is null
 !  (this can be problem, and will have to be cared about.
 ! -------------------------------------------------------------
-R_TYPE function X(states_mpdotp)(m, ik, st1, st2) result(dotp)
+R_TYPE function X(states_mpdotp)(m, st1, st2) result(dotp)
   type(mesh_t),   intent(in) :: m
-  integer,        intent(in) :: ik
   type(states_t), intent(in) :: st1, st2
 
+  integer :: ik, ispin, nik, nst
   R_TYPE, allocatable :: a(:, :)
-
   call push_sub('states_inc.Xstates_mpdotp')
 
-  ALLOCATE(a(st1%nst, st1%nst), st1%nst*st1%nst)
+  ispin = st1%d%ispin
+  ASSERT(ispin.eq.st2%d%ispin)
+  nik   = st1%d%nik
+  ASSERT(nik.eq.st2%d%nik)
+  nst   = st1%nst
+  ASSERT(nst.eq.st2%nst)
 
-  call X(calculate_matrix)(m, ik, st1, st2, st1%nst, a)
-  dotp = lalg_determinant(st1%nst, a, invert = .false.)
+  ALLOCATE(a(nst, nst), nst*nst)
+  dotp = M_ONE
 
-  select case(st1%d%ispin)
+  select case(ispin)
   case(UNPOLARIZED)
-    dotp = dotp**2
+    do ik = 1, nik
+      call X(calculate_matrix) (m, ik, st1, st2, nst, a)
+      dotp = dotp * ((lalg_determinant(nst, a, invert = .false.))**2) ** st1%d%kweights(ik)
+    end do
   case(SPIN_POLARIZED)
-    ! We assume that ik is an odd number (maybe this should be checked. So one
-    ! spin component is ik and another spin component is ik + 1.
-    call X(calculate_matrix)(m, ik+1, st1, st2, st1%nst, a)
-    dotp = dotp*lalg_determinant(st1%nst, a, invert = .false.)
+    do ik = 1, nik, 2
+      call X(calculate_matrix) (m, ik, st1, st2, nst, a)
+      dotp = dotp * (lalg_determinant(nst, a, invert = .false.))** st1%d%kweights(ik)
+      call X(calculate_matrix) (m, ik+1, st1, st2, nst, a)
+      dotp = dotp * (lalg_determinant(nst, a, invert = .false.))** st1%d%kweights(ik)
+    end do
+  case(SPINORS)
+    do ik = 1, nik
+      call X(calculate_matrix) (m, ik, st1, st2, nst, a)
+      dotp = dotp * lalg_determinant(nst, a, invert = .false.) ** st1%d%kweights(ik)
+    end do
   end select
 
   deallocate(a)
-  call pop_sub()
-
 contains
 
   ! ---------------------------------------------------------
