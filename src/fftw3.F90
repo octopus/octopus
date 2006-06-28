@@ -249,7 +249,7 @@ contains
     end if
     fft = fft_array(j)
 
-    write(message(1), '(a,i4,a,i4,a,i4,a,i2)') "Info: FFT allocated with size (", &
+    write(message(1), '(a,i7,a,i7,a,i7,a,i2)') "Info: FFT allocated with size (", &
       n(1), ",", n(2), ",", n(3), ") in slot ", j
     call write_info(1)
 

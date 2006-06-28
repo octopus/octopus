@@ -1652,7 +1652,7 @@ contains
       !% In this case OCTPenalty is multiplied with time-dependent function. 
       !% The value depends on the coupling between the states. A good start might be a value from 0.1 (strong fields) to 10 (weak fields). 
       !%End
-      ALLOCATE(a_penalty(ctr_iter_max), ctr_iter_max)
+      ALLOCATE(a_penalty(0:ctr_iter_max+1), ctr_iter_max+2)
       call loct_parse_float(check_inp('OCTPenalty'), M_ONE, penalty)
       ! penalty array for fixed fluence run 
       ! the array is only interesting for the development of new algorithms

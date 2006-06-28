@@ -162,15 +162,16 @@ contains
 
     integer        :: no_f, i, kk, n(3), last, first, grouplength, ii
     CMPLX          :: tmp(0:2*steps, 1, 1), tmp2(0:2*steps, 1, 1) ! Have to be three-dimensional to use the fft_m module
-    CMPLX          :: filt(0:2*steps, NDIM)
+    CMPLX          :: filt(NDIM, 0:2*steps)
     type(fft_t)    :: fft_handler
 
     call push_sub('filter.apply_filter_')
 
     n(1:3) = (/ 2*steps+1, 1, 1 /)
+
     call fft_init(n, fft_complex, fft_handler, optimize = .false.)
 
-    filt = m_z0
+    filt = M_z0
     no_f = size(filter)
     i   = 0
     !do i=1, no_f
@@ -188,7 +189,7 @@ contains
           ! group filters
           ii = i + 1
           grouplength = 0
-          filt = filter(i)%numerical(:,:)
+          filt(:, :) = filter(i)%numerical(:,:)
           do while(ii.lt.no_f+1) 
              if(filter(ii)%domain.eq.filter_freq) then
                 grouplength = grouplength + 1
@@ -207,7 +208,7 @@ contains
              call zfft_forward(fft_handler, tmp2, tmp)
              !write(6,*) SUM(abs(tmp)**2)/real((2*steps+1), PRECISION)
              !
-             tmp(:, 1, 1) = tmp(:, 1, 1)*filt(:,kk)
+             tmp(:, 1, 1) = tmp(:, 1, 1)*filt(kk,:)
              call zfft_backward(fft_handler, tmp, tmp2)
     
              laser_inout(kk,:) = real(tmp2(:, 1, 1), PRECISION)!/real((2*steps+1), PRECISION)
@@ -219,11 +220,11 @@ contains
           ! group filters
           ii = i + 1
           grouplength = 0
-          filt = filter(i)%numerical(:,:)
+          filt(:, :) = filter(i)%numerical(:,:)
           do while(ii.lt.no_f+1) 
              if(filter(ii)%domain.eq.filter_time) then
                 grouplength = grouplength + 1
-                filt = filt + filter(ii)%numerical(:,:)
+                filt(:, :) = filt(:, :) + filter(ii)%numerical(:,:)
              end if
              first = i
              last  = i + grouplength
@@ -232,7 +233,7 @@ contains
           i = ii - 1
           write(6,*) 'Adding filters from: ',first,'to: ',last
           do kk=1, NDIM
-             laser_inout(kk,:) = laser_inout(kk,:)*filt(:,kk)
+             laser_inout(kk,:) = laser_inout(kk,:)*filt(kk, :)
           enddo
 
        case(filter_phase)
@@ -244,7 +245,7 @@ contains
           call write_fatal(1)
        end select
     end do
-    
+
     call fft_end(fft_handler)
     call pop_sub()
   end subroutine apply_filter
