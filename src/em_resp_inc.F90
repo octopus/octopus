@@ -84,7 +84,7 @@ subroutine X(get_response_e)(sys, h, lr, dir, nsigma, omega, props, status)
   R_TYPE, allocatable :: Y(:, :, :),dV(:, :, :), tmp(:)
   R_TYPE :: abs_dens
 
-  logical :: finish(2), conv_last, conv
+  logical :: conv_last, conv
 
   type(mesh_t), pointer :: m
   type(states_t), pointer :: st
@@ -107,7 +107,6 @@ subroutine X(get_response_e)(sys, h, lr, dir, nsigma, omega, props, status)
 
 
   call init_response_e()
-  finish = .false.
 
   message(1)="--------------------------------------------"
   call write_info(1)
@@ -116,10 +115,10 @@ subroutine X(get_response_e)(sys, h, lr, dir, nsigma, omega, props, status)
   conv_last = .false.
 
   !self consistency iteration for response
-  iter_loop: do iter=1, props%scf_iter
+  iter_loop: do iter=1, lr(dir,1)%max_scf_iter
     write(message(1), '(a, i3)') "LR SCF Iteration: ", iter
     write(message(2), '(a, f20.6, a, f20.6, a, i1)') &
-         "Frequency: ", R_REAL(omega), " Delta : ", R_AIMAG(omega), " Dir: ", dir
+         "Frequency: ", R_REAL(omega), " Eta : ", R_AIMAG(omega), " Dir: ", dir
     call write_info(2)
     
     dl_rhoin(1:m%np, 1:st%d%nspin, 1) = lr(dir, 1)%X(dl_rho)(1:m%np, 1:st%d%nspin)
@@ -155,7 +154,7 @@ subroutine X(get_response_e)(sys, h, lr, dir, nsigma, omega, props, status)
         end if
       end do
 
-        !now calculate response for each state
+      !now calculate response for each state
       do ist = 1, st%nst
         do sigma = 1, nsigma
           if(st%occ(ist, ik) <= lr_min_occ) cycle
@@ -180,11 +179,11 @@ subroutine X(get_response_e)(sys, h, lr, dir, nsigma, omega, props, status)
           !a re-orthogonalization is sometimes necessary 
           call X(lr_orth_vector)(m, st, lr(dir,sigma)%X(dl_psi)(:,:, ist, ik), ik)
 
-          !calculate and print the norm of the variations and how much
-          !they change, this is only to have an idea of the converge process
+          ! print the norm of the variations, and the number of
+          ! iterations and residual of the linear solver
           dpsimod = sum(R_ABS(lr(dir,sigma)%X(dl_psi)(1:m%np, 1, ist, ik))**2 * sys%gr%m%vol_pp(1:m%np))
           write(message(1), '(i4, f20.6, i5, e20.6)') &
-               (3-2*sigma)*ist, dpsimod, lr(dir, sigma)%iter, lr(dir, sigma)%abs_dens 
+               (3-2*sigma)*ist, dpsimod, lr(dir, sigma)%iter, lr(dir, sigma)%abs_psi 
           call write_info(1)
 
         end do !sigma
@@ -209,14 +208,14 @@ subroutine X(get_response_e)(sys, h, lr, dir, nsigma, omega, props, status)
     
     !all the rest is the mixing and checking for convergency
 
-    if( props%scf_iter == iter  ) then 
+    if( lr(dir, 1)%max_scf_iter == iter  ) then 
       message(1) = "Self-consistent iteration for response did not converge"
-      if(present(status)) then 
-        status%ok = .false. 
+      if(present(status)) then
+        status%ok = .false.
         call write_warning(1);
       else
         call write_fatal(1);
-      end if 
+      end if
     end if
 
 
@@ -231,29 +230,15 @@ subroutine X(get_response_e)(sys, h, lr, dir, nsigma, omega, props, status)
            + M_zI*R_AIMAG(dl_rhoin(:,ik, 1) - dl_rhotmp(:, ik, 1))**2
       abs_dens = abs_dens + X(mf_integrate)(m, tmp)
     end do
+    
+    lr(dir,1)%abs_dens = sqrt(abs_dens)
 
-    lr(dir,1)%abs_dens = sqrt(R_REAL(abs_dens))
-    if(nsigma ==  2 ) lr(dir,2)%abs_dens = sqrt(R_AIMAG(abs_dens))
-
-    ! are we finished?
-    finish=.true.
-    do sigma = 1, nsigma
-      finish(sigma) = (lr(dir,sigma)%abs_dens <= lr(dir,sigma)%conv_abs_dens)
-    end do
-
-    if(nsigma == 1) then 
-      write(message(1), '(a, e20.6)') "Res ", lr(dir,1)%abs_dens
-      lr(dir,1)%abs_dens=M_ZERO 
-    else 
-      write(message(1), '(a, 2e20.6)') "Res ", lr(dir,1)%abs_dens, lr(dir,2)%abs_dens
-      lr(dir,1)%abs_dens = M_ZERO 
-      lr(dir,2)%abs_dens = M_ZERO 
-    endif
+    write(message(1), '(a, e20.6)') "Res ", lr(dir,1)%abs_dens
 
     message(2)="--------------------------------------------"
     call write_info(2)
       
-    if( finish(1) .and. finish(2) ) then 
+    if( lr(dir,1)%abs_dens <= lr(dir,1)%conv_abs_dens ) then 
       if(conv_last) then 
         conv = .true.
       else

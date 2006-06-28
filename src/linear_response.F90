@@ -43,11 +43,14 @@ module linear_response_m
   type lr_t
     FLOAT   :: conv_abs_dens  ! convergence required
     FLOAT   :: abs_dens       ! convergence reached
+    FLOAT   :: conv_abs_psi   ! convergence required 
+    FLOAT   :: abs_psi        ! convergence reached
     integer :: max_iter       ! maximum number of iterations
+    integer :: max_scf_iter   ! maximum number of iterations
     integer :: iter           ! number of iterations used
-    integer :: solver         !the linear solver to use
-    integer :: preconditioner !the linear solver to use
-    logical :: ort_each_step  
+    integer :: solver         ! the linear solver to use
+    integer :: preconditioner ! the preconditioner solver to use
+    integer :: ort_min_step   ! the step where to start orthogonalization
 
     type(mix_t) :: mixer   ! can not live without it
 
@@ -75,6 +78,8 @@ module linear_response_m
   FLOAT, parameter :: lr_min_occ=CNST(1e-4) !the minimum value for a state to be considered occupied
 
   !solvers ( values must be < 100 )
+  integer, parameter :: LR_HX_FIXED = 11
+  integer, parameter :: LR_HX = 10
   integer, parameter :: LR_CG = 5
   integer, parameter :: LR_BCG = 2
   integer, parameter :: LR_BICGSTAB = 3
@@ -95,25 +100,56 @@ contains
 
     call push_sub('linear_response.lr_init')
 
-    ! read some parameters from the input file
+    ! BEGIN INPUT PARSING
+
+    !%Variable ConvAbsDens
+    !%Type float
+    !%Default 1e-5
+    !%Section Linear Response::SCF
+    !%Description
+    !% The tolerance in the variation of the density, to determine if
+    !% the SCF for linear response is converged.
+    !%End
+
     call loct_parse_float(check_inp(trim(prefix)//"ConvAbsDens"), &
         CNST(1e-5), lr%conv_abs_dens)
-    call loct_parse_int  (check_inp(trim(prefix)//"MaximumIter"), 1000, lr%max_iter)
-
     
+    !%Variable MaximumIter
+    !%Type integer
+    !%Default 200
+    !%Section Linear Response::SCF
+    !%Description
+    !% The maximum number of SCF iterations to calculate response.
+    !%End
+
+    call loct_parse_int(check_inp('PolSCFIterations'), 200, lr%max_scf_iter)
+
     !%Variable LinearSolver
     !%Type integer
     !%Default cg
-    !%Section Linear Response::Polarizabities
+    !%Section Linear Response::Solver
     !%Description
     !% To calculate response using density functional perturbation
     !% theory is necessary to solve the sterheimer equation, this is a self
-    !% consistent linear equation where the operator is the shifted Kohn-Sham hamiltonian.
-    !% This variable which method to use in order to solve this linear equation.
+    !% consistent linear equation where the operator is the Kohn-Sham
+    !% hamiltonian with a complex shift. This variable selects which
+    !% method to use in order to solve this linear equation.
+    !%Option hx 10
+    !% This solver aproximates the solution of the non-hermitian
+    !% equation by a power series in terms of the inverse of the
+    !% hamiltonian. Each term implies solving a hermitian linear equation by
+    !% conjugated gradients.
+    !% Altough this might sound inefficient, the hermitian equations
+    !% to solve are better conditioned than the original, so this can be more
+    !% efficient than a non-hermitian solver.
+    !% This version of the solvers apply the number of terms in the
+    !% series as needed to be under the tolerance required.
+    !%Option hx_fixed 11
+    !% This is the same prevoius solver, but only two steps of the
+    !% series are applied.
     !%Option cg 5
     !% Conjugated gradients. This is the fastest solver but does not
-    !% work when a imaginary part when an imaginary shift is
-    !% added. This is the default when real functions are used.
+    !% work when an imaginary shift is added. This is the default.
     !%Option bcg 2
     !% Biconjugated gradients. This solver is a generalization of the
     !% conjugated gradients for non-hermitian operators. It has some
@@ -121,7 +157,7 @@ contains
     !%Option bicgstab 3
     !% Biconjugated gradients stabilized. This is an improved version
     !% of bcg that is faster and more stable. This is the default when
-    !% complex response is calculated.
+    !% complex polarizabilities are calculated.
     !%End
 
     if(present(def_solver)) then
@@ -136,13 +172,89 @@ contains
     !the next 2 digits select the preconditioner
     lr%preconditioner = (fsolver - lr%solver)
 
-    call loct_parse_logical(check_inp(trim(prefix)//"OrtEachStep"), .false., lr%ort_each_step)
+
+    !%Variable LinearSolverMaxIter
+    !%Type integer
+    !%Default 1000
+    !%Section Linear Response::Solver
+    !%Description
+    !% Maximum number of iterations the linear solver does, even if
+    !% convergency is not achieved.
+    !%End
+
+    call loct_parse_int  (check_inp(trim(prefix)//"LinearSolverMaxIter"), 1000, lr%max_iter)
+
+    !%Variable LinearSolverTol
+    !%Type float
+    !%Default 1e-6
+    !%Section Linear Response::Solver
+    !%Description
+    !% This is the tolerance to determine that the linear solver has converged.
+    !%End
+    
+    call loct_parse_float(check_inp(trim(prefix)//"LinearSolverTol"), &
+        CNST(1e-6), lr%conv_abs_psi)
+    
+    !%Variable LinearSolverOrthogonalization
+    !%Type integer
+    !%Default 50
+    !%Section Linear Response::Solver
+    !%Description
+    !% A good preconditioner to the Sternheimer equation is the
+    !% projector onto the unoccupied state.
+    !% The problem is that this operator is expensive to apply because it
+    !% requires to orthogonalize with respect to all the occupied
+    !% wavenfunctions.
+    !% To overcome this, the operator is only applied is the linear solver
+    !% has not converged after a certain number of steps. This variable
+    !% controls that number. The default is to start to orthogonalize
+    !% after 50 steps of linear solver. A value of 1 will activate
+    !% orthogonalization always and 0 means that it will not be used
+    !% at all.
+    !%Option always 1 
+    !% The ortogonalization preconditioner will be applied always.
+    !%Option never 0 
+    !% The ortogonalization will not be used.
+    !%End
+
+    call loct_parse_int(check_inp(trim(prefix)//"LinearSolverOrthogonalization"), 50, lr%ort_min_step)
+    
+    ! END INPUT PARSING
 
     nullify(lr%ddl_rho, lr%ddl_psi, lr%ddl_Vhar, lr%dl_Vxc)
     nullify(lr%zdl_rho, lr%zdl_psi, lr%zdl_Vhar, lr%dl_Vxc)
     
     nullify(lr%dl_j, lr%ddl_de, lr%zdl_de, lr%ddl_elf, lr%zdl_elf)
     
+    !WRITE INFO
+    
+    write(message(1),'(a)') 'Linear Reponse'
+    call messages_print_stress(stdout, trim(message(1)))
+    
+    
+    ! solver 
+    select case(lr%solver)
+      case(LR_CG)
+        message(1)='Linear Solver: Conjugated Gradients'
+
+      case(LR_BCG)
+        message(1)='Linear Solver: Biconjugated Gradients'
+
+      case(LR_BICGSTAB)
+        message(1)='Linear Solver: Biconjugated Gradients Stabilized'
+
+      case(LR_HX_FIXED)
+        message(1)='Linear Solver: Fixed Hermitian Expansion'
+
+      case(LR_HX)
+        message(1)='Linear Solver: Hermitian Expansion'
+
+    end select
+
+    call write_info(1)
+    
+    call messages_print_stress(stdout)
+
     call pop_sub()
 
   end subroutine lr_init
@@ -290,6 +402,11 @@ contains
     call pop_sub()
 
   end subroutine lr_alloc_fHxc
+
+  logical function precondition(lr) result(prec)
+    type(lr_t),     intent(in) :: lr
+    prec=(lr%preconditioner /= 0)
+  end function precondition
 
 
 #include "undef.F90"

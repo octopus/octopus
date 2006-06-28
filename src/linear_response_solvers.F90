@@ -33,13 +33,16 @@ subroutine X(lr_solve_HXeY) (lr, h, gr, st, ik, x, y, omega)
   R_TYPE,              intent(in)    :: y(:,:)   ! y(NP, d%dim)
   R_TYPE,              intent(in)    :: omega
 
-  FLOAT :: res
-  R_TYPE, allocatable :: r(:,:)
-
   select case(lr%solver)
 
   case(LR_CG)
     call X(lr_solver_cg)(lr, h, gr, st, ik, x, y, omega)
+
+  case(LR_HX_FIXED)
+    call X(lr_solver_hx)(lr, h, gr, st, ik, x, y, omega, 1)
+
+  case(LR_HX)
+    call X(lr_solver_hx)(lr, h, gr, st, ik, x, y, omega, 2)
 
   case(LR_BCG)
     call X(lr_solver_bcg)(lr, h, gr, st, ik, x, y, omega)
@@ -52,16 +55,6 @@ subroutine X(lr_solve_HXeY) (lr, h, gr, st, ik, x, y, omega)
     call write_fatal(1)
 
   end select
-  
-  ALLOCATE(r(NP, st%d%dim), NP*st%d%dim)
-
-!  call X(lr_orth_vector)(gr%m, st, x, ik)
-
-  call X(Hpsi)(h, gr, x, r, ik)
-  r(1:NP,1:st%d%dim) = y(1:NP,1:st%d%dim) - (r(1:NP,1:st%d%dim) + omega*x(1:NP,1:st%d%dim))
-  res = abs(X(states_dotp)(gr%m, st%d%dim, r, r))
-!  print*, lr%abs_dens, res 
-  deallocate(r)
 
 end subroutine X(lr_solve_HXeY)
 
@@ -85,7 +78,7 @@ subroutine X(preconditioning)(lr, h, gr, st, ik, a, ahat, omega)
     
   case(LR_DIAG)
     call X(Hpsi_diag)(h, gr, ahat, ik)
-    ahat(1:NP, 1:st%d%dim)=a(1:NP, 1:st%d%dim)/(ahat+omega+M_TEN)
+    ahat(1:NP, 1:st%d%dim)=a(1:NP, 1:st%d%dim)/(ahat+omega)
     
   case default
     message(1)="Invalid preconditioner"
@@ -131,13 +124,10 @@ subroutine X(lr_solver_cg) (lr, h, gr, st, ik, x, y, omega)
   do iter = 1, lr%max_iter
     gamma = X(states_dotp) (gr%m, st%d%dim, r, r)
 
-    ! we require more precision here than for the density
-    conv = (sqrt(abs(gamma)) < lr%conv_abs_dens)
+    conv = ( abs(gamma) < lr%conv_abs_psi**2)
     if(conv.and.conv_last) exit
     conv_last = conv
     
-    if(lr%ort_each_step) call X(lr_orth_vector)(gr%m, st, p, ik)   
-
     call X(Hpsi)(h, gr, p, Hp, ik)
     Hp(1:NP,1:st%d%dim) = Hp(1:NP,1:st%d%dim) + omega*p(1:NP,1:st%d%dim)
     
@@ -151,8 +141,8 @@ subroutine X(lr_solver_cg) (lr, h, gr, st, ik, x, y, omega)
     
   end do
     
-  lr%iter     = iter
-  lr%abs_dens = gamma
+  lr%iter = iter
+  lr%abs_psi = sqrt(abs(gamma))
 
   deallocate(r, p, Hp)
 
@@ -174,7 +164,7 @@ subroutine X(lr_solver_bcg) (lr, h, gr, st, ik, x, y, omega)
   R_TYPE, allocatable :: r(:,:), p(:,:), Hp(:,:), rs(:,:), ps(:,:)
   R_TYPE  :: alpha, beta, gamma
   integer :: iter
-  logical :: conv_last, conv
+  logical :: conv_last, conv, orto
 
   call push_sub('linear_response_solvers.Xlr_solver_bcg')
 
@@ -196,16 +186,18 @@ subroutine X(lr_solver_bcg) (lr, h, gr, st, ik, x, y, omega)
   ps(1:NP,1:st%d%dim) = rs(1:NP,1:st%d%dim)
   ps((NP+1):NP_PART,1:st%d%dim)=M_ZERO
   
+  orto= .false.
   conv_last = .false.
   do iter = 1, lr%max_iter
+    if( iter == lr%ort_min_step ) orto = .true.
+    
     gamma = X(states_dotp) (gr%m, st%d%dim, r, rs)
 
-    ! we require more precision here than for the density
-    conv = (sqrt(abs(gamma)) < lr%conv_abs_dens)
+    conv = (sqrt(abs(gamma)) < lr%conv_abs_psi)
     if(conv.and.conv_last) exit
     conv_last = conv
     
-    if(lr%ort_each_step) call X(lr_orth_vector)(gr%m, st, p, ik)
+    if(orto) call X(lr_orth_vector)(gr%m, st, p, ik)
 
     call X(Hpsi)(h, gr, p, Hp, ik)
     Hp(1:NP,1:st%d%dim) = Hp(1:NP,1:st%d%dim) + omega*p(1:NP,1:st%d%dim)
@@ -215,7 +207,7 @@ subroutine X(lr_solver_bcg) (lr, h, gr, st, ik, x, y, omega)
     x(1:NP_PART,1:st%d%dim) = x(1:NP_PART,1:st%d%dim) + alpha*p(1:NP_PART,1:st%d%dim)
     r(1:NP,1:st%d%dim) = r(1:NP,1:st%d%dim) - alpha*Hp(1:NP,1:st%d%dim)
 
-    if(lr%ort_each_step) call X(lr_orth_vector)(gr%m, st, ps, ik)   
+    if(orto) call X(lr_orth_vector)(gr%m, st, ps, ik)   
 
     call X(Hpsi)(h, gr, ps, Hp, ik)
     Hp(1:NP,1:st%d%dim) = Hp(1:NP,1:st%d%dim) + R_CONJ(omega)*p(1:NP,1:st%d%dim)
@@ -229,8 +221,8 @@ subroutine X(lr_solver_bcg) (lr, h, gr, st, ik, x, y, omega)
     
   end do
     
-  lr%iter     = iter
-  lr%abs_dens = gamma
+  lr%iter     = 2*iter
+  lr%abs_psi = sqrt(abs(gamma))
 
   deallocate(r, p, rs, ps, Hp)
 
@@ -252,33 +244,42 @@ subroutine X(lr_solver_bicgstab) (lr, h, gr, st, ik, x, y, omega)
   R_TYPE,              intent(in)    :: y(:,:)   ! y(NP, st%d%dim)
   R_TYPE,              intent(in)    :: omega
 
-  R_TYPE, allocatable :: r(:,:), p(:,:), Hp(:,:), rs(:,:), s(:,:), Hs(:,:), phat(:,:), shat(:,:)
+  R_TYPE, allocatable :: r(:,:), Hp(:,:), rs(:,:), Hs(:,:), p(:,:), s(:,:)
+  R_TYPE, pointer :: phat(:,:), shat(:,:)
   R_TYPE  :: alpha, beta, w, rho_1, rho_2
+  logical :: conv_last, conv, orto
   integer :: iter
+  FLOAT :: gamma
 
   call push_sub('linear_response_solver.Xlr_solver_bicgstab')
 
   ALLOCATE( r(NP, st%d%dim), NP     *st%d%dim)
   ALLOCATE( p(NP_PART, st%d%dim), NP_PART*st%d%dim)
-  ALLOCATE( phat(NP_PART, st%d%dim), NP_PART*st%d%dim)
   ALLOCATE(rs(NP, st%d%dim),      NP     *st%d%dim)
   ALLOCATE( s(NP_PART, st%d%dim), NP_PART*st%d%dim)
-  ALLOCATE( shat(NP_PART, st%d%dim), NP_PART*st%d%dim)
   ALLOCATE(Hp(NP, st%d%dim),      NP     *st%d%dim)
   ALLOCATE(Hs(NP, st%d%dim),      NP     *st%d%dim)
 
   p=M_ZERO
   s=M_ZERO
-  phat=M_ZERO
-  shat=M_ZERO
+
+  if(precondition(lr)) then 
+    ALLOCATE( phat(NP_PART, st%d%dim), NP_PART*st%d%dim)
+    ALLOCATE( shat(NP_PART, st%d%dim), NP_PART*st%d%dim)
+    phat=M_ZERO
+    shat=M_ZERO
+  end if
 
   ! Initial residue
   call X(Hpsi)(h, gr, x, Hp, ik)
   r(1:NP,1:st%d%dim) = y(1:NP,1:st%d%dim) - ( Hp(1:NP,1:st%d%dim) + omega*x(1:NP,1:st%d%dim) )
   rs(1:NP,1:st%d%dim) = r(1:NP,1:st%d%dim)
 
+  orto = .false.
+  conv_last = .false.
   do iter = 1, lr%max_iter
-    
+    if( iter == lr%ort_min_step ) orto = .true.    
+
     rho_1 = X(states_dotp) (gr%m, st%d%dim, rs, r)
     
     if( rho_1 == M_ZERO ) then
@@ -295,42 +296,65 @@ subroutine X(lr_solver_bicgstab) (lr, h, gr, st, ik, x, y, omega)
            beta * (p(1:NP,1:st%d%dim) - w*Hp(1:NP,1:st%d%dim))
     end if
 
-    if(lr%ort_each_step) call X(lr_orth_vector)(gr%m, st, p, ik)   
-    call X(preconditioning)(lr, h, gr, st, ik, p, phat, omega)
-    call X(Hpsi)(h, gr, phat, Hp, ik)
-    Hp(1:NP,1:st%d%dim) = Hp(1:NP,1:st%d%dim) + omega*phat(1:NP,1:st%d%dim)
-    
+    if(orto) call X(lr_orth_vector)(gr%m, st, p, ik)   
+
+    if(precondition(lr)) then 
+      call X(preconditioning)(lr, h, gr, st, ik, p, phat, omega)
+      call X(Hpsi)(h, gr, phat, Hp, ik)
+      Hp(1:NP,1:st%d%dim) = Hp(1:NP,1:st%d%dim) + omega*phat(1:NP,1:st%d%dim)
+    else 
+      call X(Hpsi)(h, gr, p, Hp, ik)
+      Hp(1:NP,1:st%d%dim) = Hp(1:NP,1:st%d%dim) + omega*p(1:NP,1:st%d%dim)
+    end if
+      
     alpha = rho_1/X(states_dotp) (gr%m, st%d%dim, rs, Hp)
     
     s(1:NP,1:st%d%dim) = r(1:NP,1:st%d%dim) - alpha * Hp(1:NP,1:st%d%dim)
 
-    lr%abs_dens = abs(X(states_dotp) (gr%m, st%d%dim, s, s))
+    gamma = abs(X(states_dotp) (gr%m, st%d%dim, s, s))
 
-    if(  lr%abs_dens < lr%conv_abs_dens**2 ) then 
-      x(1:NP,1:st%d%dim) = x(1:NP,1:st%d%dim) + alpha*phat(1:NP,1:st%d%dim)
-      exit
+    if( gamma < lr%conv_abs_psi**2 ) then 
+       if(precondition(lr)) then
+         x(1:NP,1:st%d%dim) = x(1:NP,1:st%d%dim) + alpha*phat(1:NP,1:st%d%dim)
+       else
+         x(1:NP,1:st%d%dim) = x(1:NP,1:st%d%dim) + alpha*p(1:NP,1:st%d%dim)
+       end if
+       exit
     end if
 
-    if(lr%ort_each_step) call X(lr_orth_vector)(gr%m, st, s, ik, CNST(1e-4))
-    call X(preconditioning)(lr, h, gr, st, ik, s, shat, omega)
-    call X(Hpsi)(h, gr, shat, Hs, ik)
-    Hs(1:NP,1:st%d%dim) = Hs(1:NP,1:st%d%dim) + omega*shat(1:NP,1:st%d%dim)
+    if(orto) call X(lr_orth_vector)(gr%m, st, s, ik, CNST(1e-4))
+
+    if(precondition(lr)) then 
+      call X(preconditioning)(lr, h, gr, st, ik, s, shat, omega)
+      call X(Hpsi)(h, gr, shat, Hs, ik)
+      Hs(1:NP,1:st%d%dim) = Hs(1:NP,1:st%d%dim) + omega*shat(1:NP,1:st%d%dim)
+    else 
+      call X(Hpsi)(h, gr, s, Hs, ik)
+      Hs(1:NP,1:st%d%dim) = Hs(1:NP,1:st%d%dim) + omega*s(1:NP,1:st%d%dim)
+    end if
 
     w = X(states_dotp) (gr%m, st%d%dim, Hs, s) / X(states_dotp) (gr%m, st%d%dim, Hs, Hs)
 
-    x(1:NP,1:st%d%dim) = x(1:NP,1:st%d%dim) &
-         + alpha*phat(1:NP,1:st%d%dim) + w*shat(1:NP,1:st%d%dim)
-    
+    if(precondition(lr)) then
+      x(1:NP,1:st%d%dim) = x(1:NP,1:st%d%dim) &
+           + alpha*phat(1:NP,1:st%d%dim) + w*shat(1:NP,1:st%d%dim)
+    else
+      x(1:NP,1:st%d%dim) = x(1:NP,1:st%d%dim) &
+           + alpha*p(1:NP,1:st%d%dim) + w*s(1:NP,1:st%d%dim)
+    end if
+
     r(1:NP,1:st%d%dim) = s(1:NP,1:st%d%dim) - w * Hs(1:NP,1:st%d%dim)
 
     rho_2=rho_1
 
-    lr%abs_dens = abs(X(states_dotp) (gr%m, st%d%dim, r, r))
+    gamma = abs(X(states_dotp) (gr%m, st%d%dim, r, r))
+    conv = (gamma < lr%conv_abs_psi**2)
 
-    if( lr%abs_dens < lr%conv_abs_dens**2 ) then 
+    if( conv .and. conv_last ) then 
       exit
     end if
-    
+    conv_last = conv
+
     if( w == M_ZERO ) then
       message(1)="w == MZERO"
       call write_fatal(1)
@@ -339,9 +363,117 @@ subroutine X(lr_solver_bicgstab) (lr, h, gr, st, ik, x, y, omega)
         
   end do
     
-  lr%iter = iter
+  lr%iter = 2*iter
+  lr%abs_psi=sqrt(gamma)
 
-  deallocate(r, p, Hp, s, rs, Hs, phat, shat)
+  deallocate(r, p, Hp, s, rs, Hs)
+
+  if(precondition(lr)) deallocate(phat, shat)
 
   call pop_sub()
 end subroutine X(lr_solver_bicgstab)
+
+!---------------------------------------------------------------------
+
+subroutine X(lr_solver_hx) (lr, h, gr, st, ik, x, y, omega, mode)
+  type(lr_t),          intent(inout) :: lr
+  type(hamiltonian_t), intent(inout) :: h
+  type(grid_t),        intent(inout) :: gr
+  type(states_t),      intent(in)    :: st
+  integer,                intent(in)    :: ik
+  R_TYPE,                 intent(inout) :: x(:,:)   ! x(NP, st%d%dim)
+  R_TYPE,                 intent(in)    :: y(:,:)   ! y(NP, st%d%dim)
+  R_TYPE,                 intent(in)    :: omega
+  integer,                intent(in)    :: mode ! 1 => fixed 2 => var
+
+  R_TYPE :: w, tau
+  R_TYPE, allocatable :: x0(:,:), r(:,:), xi(:,:)
+  
+  logical :: x0_is_ok
+
+  integer :: total_cg_iter, iter, max_iter
+
+  !separate the frequency
+  w = R_REAL(omega)
+  tau = -M_zI*R_AIMAG(omega)
+
+  ALLOCATE( x0(NP_PART, st%d%dim), NP_PART*st%d%dim)
+  ALLOCATE( xi(NP_PART, st%d%dim), NP_PART*st%d%dim)
+  ALLOCATE( r(NP, st%d%dim), NP*st%d%dim)
+
+  x0 = M_ZERO
+  xi = M_ZERO
+
+  x0(1:NP_PART, 1:st%d%dim) = x(1:NP_PART, 1:st%d%dim)
+
+  !calculate an approximation of the solution
+  call X(Hpsi)(h, gr, x0, r, ik)
+  r(1:NP,1:st%d%dim) =  ( r(1:NP,1:st%d%dim) + omega*x0(1:NP,1:st%d%dim) ) - y(1:NP,1:st%d%dim)
+
+  lr%abs_psi = sqrt(abs(X(states_dotp) (gr%m, st%d%dim, r, r)))
+
+  if ( lr%abs_psi < lr%conv_abs_psi ) then
+    return
+  end if
+  
+  if ( lr%abs_psi < 1e-02 ) then
+    x0_is_ok = .true.
+  else
+    x0_is_ok = .false.
+  end if
+  !first term
+  call X(lr_solver_cg)(lr, h, gr, st, ik, x, y, w)
+
+  !othogonalize the result against the occupied states 
+  call X(lr_orth_vector)(gr%m, st, x, ik)
+
+#ifdef R_TREAL
+  !we just solved the real case
+  return
+#endif
+
+  r(1:NP, 1:st%d%dim) = x(1:NP, 1:st%d%dim)
+
+  ASSERT( mode == 1 .or. mode == 2 )
+  if( mode == 1 ) max_iter = 1
+  if( mode == 2 ) max_iter = 10
+
+  total_cg_iter = lr%iter
+  do iter = 1, max_iter
+
+    !estimate an initial value
+    if(x0_is_ok) xi(1:NP_PART, 1:st%d%dim) = (x0(1:NP_PART, 1:st%d%dim) - x(1:NP_PART, 1:st%d%dim))/tau
+
+    !multiply by A^-1
+    call X(lr_solver_cg)(lr, h, gr, st, ik, xi, r, w)
+
+    !accumulate the number of iterations
+    total_cg_iter = total_cg_iter + lr%iter + 1
+    
+    !othogonalize the result against the occupied states
+    call X(lr_orth_vector)(gr%m, st, xi, ik)
+    
+    !accumulate
+    x(1:NP, 1:st%d%dim) = x(1:NP, 1:st%d%dim) + tau*xi(1:NP, 1:st%d%dim)
+
+    !calculate the residual
+    call X(Hpsi)(h, gr, x, r, ik)
+    r(1:NP,1:st%d%dim) = y(1:NP,1:st%d%dim) - ( r(1:NP,1:st%d%dim) + omega*x(1:NP,1:st%d%dim) )
+    lr%abs_psi = sqrt(abs(X(states_dotp) (gr%m, st%d%dim, r, r)))
+
+    !and check for convergency
+    if ( lr%abs_psi < lr%conv_abs_psi ) then
+      exit
+    end if
+
+    !copy xi to r and multiply by tau
+    r(1:NP, 1:st%d%dim) = tau*xi(1:NP, 1:st%d%dim)
+    
+  end do !i
+
+  lr%iter = total_cg_iter 
+
+  deallocate(x0, xi, r)
+
+end subroutine X(lr_solver_hx)
+

@@ -45,9 +45,8 @@ module static_pol_lr_m
   type pol_props_t
     logical :: complex_response
     logical :: add_fxc
-    logical :: dynamic
     logical :: add_hartree
-    integer :: scf_iter
+    logical :: dynamic
   end type pol_props_t
 
   type status_t
@@ -74,7 +73,7 @@ contains
 
     character(len=30) :: dirname
 
-    FLOAT :: delta
+    FLOAT :: eta
     integer :: nfreq, nsigma, ndim, i, j, sigma, ierr, kpoints, dim, nst, k
     character(len=80) :: fname
 
@@ -97,7 +96,7 @@ contains
       nfreq = 1
       nsigma = 1
     else 
-      props%complex_response = (delta /= M_ZERO )
+      props%complex_response = (eta /= M_ZERO )
       nfreq = 1   ! for now only polarizability, so only one frequency
       nsigma = 2  ! but positive and negative values of the frequency must be considered
     end if
@@ -105,13 +104,6 @@ contains
     !if wfs are complex then we will calculate complex_response
     props%complex_response = props%complex_response .or. (sys%st%d%wfs_type == M_CMPLX)
 
-    if (props%complex_response) then 
-      message(1) = 'Info: Response will be calculated using complex wavefunctions'
-    else
-      message(1) = 'Info: Response will be calculated using real wavefunctions'
-    end if
-    call write_info(1)
-    
     call read_wfs()
 
     ! setup Hamiltonian
@@ -169,6 +161,8 @@ contains
     end if
     call io_mkdir(trim(tmpdir)//RESTART_DIR)
 
+    call info()
+
     if(props%dynamic) then 
 
       !!DYNAMIC
@@ -185,8 +179,12 @@ contains
       if(fromScratch) then 
         call io_mkdir('linear')
         iunit = io_open('linear/dynpols', action='write')
-        ! todo: write header
-        write(iunit, '(8a)')  '# ', 'freq ', '11 ' , '22 ' , '33 ', '12 ', '13 ', '23 '
+
+        write(iunit, '(a)')       '# Frequency dependent polarizability, real and imaginary parts are included'
+        write(iunit, '(3a)')      '# Frequency units: [',  trim(units_out%energy%abbrev),'/hbar]'
+        write(iunit, '(3a,i1,a)') '# Polarizability units: [',  trim(units_out%length%abbrev),'^',NDIM,']'
+        write(iunit, '(8a)')      '# ', 'Frequency ', &
+             'alpha_11 ' , 'Alpha_22 ' , 'alpha_33 ', 'alpha_12 ', 'alpha_13 ', 'alpha_23 '
         call io_close(iunit)
       end if
 
@@ -201,7 +199,7 @@ contains
         call write_info(1)
 
         if( props%complex_response ) then 
-          call zdynamic_response(sys, h, lr, props, zpol(1:ndim, 1:ndim), cmplx(omega(i), delta, PRECISION),status)
+          call zdynamic_response(sys, h, lr, props, zpol(1:ndim, 1:ndim), cmplx(omega(i), eta, PRECISION),status)
         else
           call ddynamic_response(sys, h, lr, props, zpol(1:ndim, 1:ndim), real(omega(i), PRECISION),status)
         end if
@@ -293,10 +291,31 @@ contains
     subroutine parse_input()
       integer(POINTER_SIZE) :: blk
       integer :: nrow
-      integer :: number, j, k
+      integer :: number, j, k, ham_var
       FLOAT   :: omega_ini, omega_fin, domega
 
       call push_sub('em_resp.parse_input')
+
+      !%Variable PolFreqs
+      !%Type block
+      !%Section Linear Response::Polarizabilities
+      !%Description
+      !% This block defines for which frequencies the polarizabilities
+      !% will be calculated. If is not present the static (omega = 0) response
+      !% is calculated.
+      !%
+      !% Each row of the block indicates a sequence of frequency values, the
+      !% first column is an integer that indicates the number of steps, the
+      !% second number is the initial frequency, and the third number the final
+      !% frequency. If the first number is one, then only the initial value is
+      !% considered. The block can have any number of rows. Consider the next example:
+      !%
+      !% <tt>%PolFreqs
+      !% <br>31 | 0.0 | 1.0
+      !% <br> 1 | 0.32
+      !% <br>%</tt>
+      !%
+      !%End
 
       if (loct_parse_block(check_inp('PolFreqs'), blk) == 0) then 
 
@@ -338,18 +357,41 @@ contains
         props%dynamic = .false. 
       end if
 
-    call loct_parse_float(check_inp('Delta'), M_ZERO, delta)
-    delta = delta * units_inp%energy%factor
+    !%Variable PolEta
+    !%Type float
+    !%Default 0.0
+    !%Section Linear Response::Polarizabilities
+    !%Description
+    !% Imaginary part of the frequency.
+    !%End
+
+    call loct_parse_float(check_inp('PolEta'), M_ZERO, eta)
+    eta = eta * units_inp%energy%factor
+
+    !%Variable PolHamiltonianVariation
+    !%Type integer
+    !%Default hartree+fxc
+    !%Section Linear Response::Polarizabilities
+    !%Description
+    !% The terms are considered in the variation of the
+    !% hamiltonian. V_ext is always considered. The default is to include
+    !% the fxc and hartree terms. If you want to do RPA only include
+    !% hartree, it won't be faster though.
+    !%Option hartree 1 
+    !% The variation of the hartree potential.
+    !%Option fxc 2
+    !% The exchange and correlation kernel, the variation of the
+    !% exchange and correlation potential.
+    !%End
 
     if(.not. h%ip_app) then 
-      call loct_parse_logical(check_inp('PolAddFXC'), .true., props%add_fxc)
-      call loct_parse_logical(check_inp('PolAddHartree'), .true., props%add_hartree)
+      call loct_parse_int(check_inp('PolHamiltonianVariation'), 3, ham_var)    
+      props%add_fxc = ((ham_var/2) == 1)
+      props%add_hartree = (mod(ham_var, 2) == 1)
     else
       props%add_fxc = .false. 
       props%add_hartree = .false.
     end if
-
-    call loct_parse_int(check_inp('PolSCFIterations'), 200, props%scf_iter)
 
     call pop_sub()
 
@@ -455,6 +497,39 @@ contains
       call io_close(iunit)
 
     end subroutine output
+
+
+    subroutine info()
+
+      write(message(1),'(a)') 'Linear Reponse Polarizabilities'
+      call messages_print_stress(stdout, trim(message(1)))
+
+      if (props%complex_response) then 
+        message(1) = 'Wavefunctions type: Complex'
+      else
+        message(1) = 'Wavefunctions type: Real'
+      end if
+      call write_info(1)
+
+      if (props%add_hartree .and. props%add_fxc) then 
+        message(1)='Hamiltonian variation: V_ext + hartree + fxc'
+      else
+        message(1)='Hamiltonian variation: V_ext'
+        if (props%add_fxc) message(1)='Hamiltonian variation: V_ext + fxc'
+        if (props%add_hartree) message(1)='Hamiltonian variation: V_ext + hartree'
+      end if
+      call write_info(1)
+      
+      if (props%dynamic) then 
+        write(message(1),'(a,i3,a)') 'Calculating dynamic polarizability tensor for ', nomega, ' frequencies.'
+      else
+        message(1)='Calculating static polarizability and first static hyperpolarizability tensors.'
+      end if
+      call write_info(1)
+
+      call messages_print_stress(stdout)
+
+    end subroutine info
 
   end subroutine static_pol_lr_run
 
