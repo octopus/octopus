@@ -149,7 +149,7 @@ void progress_bar(int actual, int max)
 	(void) gettimeofday(&now, (struct timezone *) 0);
 	elapsed = now.tv_sec - start.tv_sec;
 	
-	if(elapsed < 0.0 || actual <= 0) {
+	if(elapsed <= 0.0 || actual <= 0) {
 	  sprintf(buf + strlen(buf),
 	    "     --:-- ETA");
 	}else{

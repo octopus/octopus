@@ -2101,8 +2101,8 @@ contains
       n_possible_pairs = n_filled(1) * n_empty(1)
     end select
 
-
     iunit = io_open(file = trim(filename), action = 'read', status = 'old', die = .true.)
+    call io_skip_header(iunit)
 
     ! Now we cound the number of pairs in the file
     j = 0

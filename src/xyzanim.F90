@@ -28,7 +28,6 @@ program xyzanim
   use io_m
   use units_m
   use geometry_m
-  use spectrum_m
 
   implicit none
 
@@ -70,7 +69,7 @@ program xyzanim
   ! Opens the xyz file
   xyz_unit = io_open(xyzfile, action='write')
 
-  call spectrum_skip_header(nbo_unit)
+  call io_skip_header(nbo_unit)
   ierr = 0
   do while(ierr == 0)
     read(unit = nbo_unit, iostat = ierr, fmt = *) iter, dump, dump, dump, dump, &

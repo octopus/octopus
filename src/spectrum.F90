@@ -45,7 +45,6 @@ module spectrum_m
     spectrum_hs_from_mult,         &
     spectrum_hs_from_acc,          &
     spectrum_mult_info,            &
-    spectrum_skip_header,          &
     kick_init
 
   integer, public, parameter ::    &
@@ -312,22 +311,6 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine spectrum_skip_header(iunit)
-    integer, intent(in) :: iunit
-
-    character(len=1) :: a
-
-    rewind(iunit)
-    read(iunit,'(a)') a
-    do while(a=='#')
-      read(iunit,'(a)') a
-    end do
-    backspace(iunit)
-
-  end subroutine spectrum_skip_header
-
-
-  ! ---------------------------------------------------------
   subroutine spectrum_cross_section_tensor(s, out_file, in_file)
     type(spec_t), intent(inout) :: s
     integer,      intent(in)    :: out_file
@@ -346,7 +329,7 @@ contains
     equiv_axis = 3 - n_files + 1
 
     call spectrum_cross_section_info(in_file(1), nspin, kick, energy_steps, dw)
-    call spectrum_skip_header(in_file(1))
+    call io_skip_header(in_file(1))
 
     ALLOCATE(sigma (3, 3, 0:energy_steps, nspin), 3*3*(energy_steps+1)*nspin)
     ALLOCATE(sigmap(3, 3, 0:energy_steps, nspin), 3*3*(energy_steps+1)*nspin)
@@ -392,7 +375,7 @@ contains
     case(2)
 
       call spectrum_cross_section_info(in_file(2), i, kick, j, dump)
-      call spectrum_skip_header(in_file(2))
+      call io_skip_header(in_file(2))
 
       do i = 0, energy_steps
         read(in_file(1), *) dump, sigmau(1:3, i, 1:nspin)
@@ -428,8 +411,8 @@ contains
 
       call spectrum_cross_section_info(in_file(2), i, kick, j, dump)
       call spectrum_cross_section_info(in_file(3), i, kick, j, dump)
-      call spectrum_skip_header(in_file(2))
-      call spectrum_skip_header(in_file(3))
+      call io_skip_header(in_file(2))
+      call io_skip_header(in_file(3))
 
       do i = 0, energy_steps
         read(in_file(1), *) dump, sigmau(1:3, i, 1:nspin)
@@ -550,7 +533,7 @@ contains
     call spectrum_fix_time_limits(time_steps, dt, s%start_time, s%end_time, is, ie, ntiter)
 
     ! Read the dipole.
-    call spectrum_skip_header(in_file)
+    call io_skip_header(in_file)
     ALLOCATE(dipole(3, 0:time_steps, nspin), 3*(time_steps+1)*nspin)
     do i = 0, time_steps
       select case(nspin)
@@ -700,7 +683,7 @@ contains
 
     ! load dipole from file
     ALLOCATE(angular(0:time_steps, 3), (time_steps+1)*3)
-    call spectrum_skip_header(in_file)
+    call io_skip_header(in_file)
     do i = 0, time_steps
       read(in_file, *) j, dump, angular(i, 1:3)
     end do
@@ -811,7 +794,7 @@ contains
     call spectrum_mult_info(iunit, nspin, lmax, kick, time_steps, dt)
     call spectrum_fix_time_limits(time_steps, dt, s%start_time, s%end_time, is, ie, ntiter)
 
-    call spectrum_skip_header(iunit)
+    call io_skip_header(iunit)
 
     ! load dipole from file
     ALLOCATE(dipole(0:time_steps), time_steps+1)
@@ -897,7 +880,7 @@ contains
     ! load dipole from file
     ALLOCATE(acc(0:time_steps), time_steps+1)
     acc = M_ZERO
-    call spectrum_skip_header(iunit)
+    call io_skip_header(iunit)
     do i = 1, time_steps
       read(iunit, *) j, dummy, a
       select case(sh%pol)
@@ -966,7 +949,7 @@ contains
     read(iunit, '(15x,f18.12)')  kick%delta_strength
     read(iunit, '(15x,i2)')      kick%pol_equiv_axis
     read(iunit, '(15x,3f18.12)') kick%wprime(1:3)
-    call spectrum_skip_header(iunit)
+    call io_skip_header(iunit)
 
     ! count number of time_steps
     time_steps = 0
@@ -1014,7 +997,7 @@ contains
     read(iunit, '(15x,f18.12)')  kick%delta_strength
     read(iunit, '(15x,i2)')      kick%pol_equiv_axis
     read(iunit, '(15x,3f18.12)') kick%wprime(1:3)
-    call spectrum_skip_header(iunit)
+    call io_skip_header(iunit)
 
     ! count number of time_steps
     time_steps = 0
@@ -1097,7 +1080,7 @@ contains
     end if
 
     ! read in dipole
-    call spectrum_skip_header(iunit)
+    call io_skip_header(iunit)
 
     ! count number of time_steps
     time_steps = 0

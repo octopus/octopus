@@ -386,7 +386,7 @@ contains
       call push_sub('casida.solve_petersilka')
 
       ! initialize progress bar
-      if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(-1, cas%n_pairs-1)
+      if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(-1, cas%n_pairs)
 
       ! file to save matrix elements
       iunit = io_open(trim(tmpdir)//'restart_casida', action='write', position='append', is_tmp=.true.)
@@ -405,7 +405,7 @@ contains
           cas%w(ia) = cas%w(ia) + M_TWO*f
         end if
 
-        if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(ia-1, cas%n_pairs-1)
+        if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(ia, cas%n_pairs)
       end do
 
       ALLOCATE(x(cas%n_pairs), cas%n_pairs)
@@ -419,7 +419,6 @@ contains
       end do
       deallocate(x, deltav)
 
-      ! complete progress bar
       if(mpi_grp_is_root(mpi_world)) write(*, "(1x)")
 
       ! close restart file
@@ -649,6 +648,7 @@ contains
     type(casida_t), intent(in) :: cas
     character(len=*),  intent(in) :: filename
 
+    character(len=5) :: str
     integer :: iunit, ia, jb, dim
     FLOAT   :: temp
     integer, allocatable :: ind(:)
@@ -686,27 +686,36 @@ contains
     call io_close(iunit)
 
     ! output eigenvectors in casida approach
+
     if(cas%type.ne.CASIDA_CASIDA) return
 
-    iunit = io_open('linear/'//trim(filename)//'.vec', action='write')
-    write(iunit, '(a14)', advance = 'no') ' value '
+    call loct_mkdir('linear/excitations')
     do ia = 1, cas%n_pairs
-      write(iunit, '(3x,i4,a1,i4,2x)', advance='no') cas%pair(ind(ia))%i, ' - ', cas%pair(ind(ia))%a
-    end do
-    write(iunit, '(1x)')
+      write(str,'(i5.5)') ia
+      iunit = io_open('linear/excitations/'//trim(str), action='write')
+      ! First, a little header
+      write(iunit,'(a,es14.5)') '# Energy ['// trim(units_out%energy%abbrev) // '] = ', &
+                                cas%w(ind(ia)) / units_out%energy%factor
+        write(iunit,'(a,es14.5)') '# <X> ['//trim(units_out%length%abbrev)// '] = ', &
+                                  cas%tm(ind(ia),1) / units_out%length%factor
+      if(dim > 1) &
+        write(iunit,'(a,es14.5)') '# <Y> ['//trim(units_out%length%abbrev)// '] = ', &
+                                  cas%tm(ind(ia),2) / units_out%length%factor
+      if(dim > 2) &
+        write(iunit,'(a,es14.5)') '# <Z> ['//trim(units_out%length%abbrev)// '] = ', &
+                                  cas%tm(ind(ia),3) / units_out%length%factor
 
-    do ia = 1, cas%n_pairs
-      write(iunit, '(es14.6)', advance='no') cas%w(ind(ia)) / units_out%energy%factor
       temp = M_ONE
-      if( maxval(cas%mat(:, ind(ia))) < abs(minval(cas%mat(:, ind(ia)))) ) temp = -temp
+      ! I do not know what this does, or what is for.
+      !if( maxval(cas%mat(:, ind(ia))) < abs(minval(cas%mat(:, ind(ia)))) ) temp = -temp
+
       do jb = 1, cas%n_pairs
-        write(iunit, '(es14.6)', advance='no') temp*cas%mat(jb, ia)
+        write(iunit,*) cas%pair(jb)%i, cas%pair(jb)%a, cas%pair(jb)%sigma, temp * cas%mat(jb, ind(ia))
       end do
-      write(iunit, '(1x)')
+      call io_close(iunit)
     end do
 
     deallocate(w, ind)
-    call io_close(iunit)
     call pop_sub()
   end subroutine casida_write
 

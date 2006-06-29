@@ -46,7 +46,8 @@ module io_m
     io_switch_status,    &
     io_debug_on_the_fly, &
     iopar_read,          &
-    iopar_backspace
+    iopar_backspace,     &
+    io_skip_header
 
 
   integer, parameter :: min_lun=10, max_lun=99
@@ -623,5 +624,21 @@ contains
     call pop_sub()
 
   end subroutine iopar_backspace
+
+
+  ! ---------------------------------------------------------
+  subroutine io_skip_header(iunit)
+    integer, intent(in) :: iunit
+
+    character(len=1) :: a
+
+    rewind(iunit)
+    read(iunit,'(a)') a
+    do while(a=='#')
+      read(iunit,'(a)') a
+    end do
+    backspace(iunit)
+
+  end subroutine io_skip_header
 
 end module io_m
