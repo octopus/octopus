@@ -81,7 +81,7 @@ contains
     !%Variable MultigridLevels
     !%Type integer
     !%Default 0 
-    !%Section Hamiltonian
+    !%Section Mesh
     !%Description
     !% Number of levels in the grid hierachy used for multigrid. Positive
     !% numbers indicate an absolute numbers of levels, negative
