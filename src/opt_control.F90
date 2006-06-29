@@ -1515,7 +1515,7 @@ contains
 
                ! normalize orbital
                call zstates_normalize_orbital(gr%m, psi_i%d%dim, &
-                    target_st%zpsi(:,:, is, ik))
+                    target_st%zpsi(:,:, 1, 1))
             end do
             call loct_parse_block_end(blk)
             call zoutput_function(sys%outp%how,'opt-control','tg_local',&
