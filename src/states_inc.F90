@@ -196,6 +196,46 @@ end function X(states_residue)
 
 
 ! -------------------------------------------------------------
+! Returns the dot product of two many-body states; the first
+! one is an "excited_state".
+! -------------------------------------------------------------
+R_TYPE function X(states_mpdotp_x)(m, excited_state, st) result(dotp)
+  type(mesh_t),   intent(in) :: m
+  type(states_excited_t), intent(in) :: excited_state
+  type(states_t), intent(in)         :: st
+
+  integer :: i, a, sigma, j, ik
+  type(states_t) :: aux_st
+  R_TYPE, allocatable :: phi(:, :)
+  call push_sub('states_inc.Xstates_mpdotp_x')
+
+  dotp = M_ZERO
+
+  call states_copy(aux_st, excited_state%st)
+
+  ALLOCATE(phi(m%np_part, st%d%dim), m%np_part * st%d%dim)
+
+  do j = 1, excited_state%n_pairs
+    i     = excited_state%pair(j)%i
+    a     = excited_state%pair(j)%a
+    sigma = excited_state%pair(j)%sigma
+    
+    ! WARNING: periodic systems are not considered in these expressions.
+    phi(:, :) = aux_st%X(psi)(:, :, i, sigma)
+    aux_st%X(psi)(:, :, i, sigma) = aux_st%X(psi)(:, :, a, sigma)
+
+    dotp = dotp + excited_state%weight(j) * X(states_mpdotp)(m, aux_st, st)
+
+    aux_st%X(psi)(:, :, i, sigma) = phi(:, :)
+  end do
+
+  call states_end(aux_st)
+  deallocate(phi)
+  call pop_sub()
+end function X(states_mpdotp_x)
+
+
+! -------------------------------------------------------------
 ! Returns the dot product of two many-body states st1 and st2.
 ! Warning: it does not permit fractional occupation numbers.
 ! -------------------------------------------------------------
@@ -213,8 +253,8 @@ R_TYPE function X(states_mpdotp)(m, st1, st2) result(dotp)
   ASSERT(ispin.eq.st2%d%ispin)
   nik   = st1%d%nik
   ASSERT(nik.eq.st2%d%nik)
-  nst   = st1%nst
-  ASSERT(nst.eq.st2%nst)
+  ! Can only consider the number of states of the state that comes with less states.
+  nst = min(st1%nst, st2%nst)
 
   ALLOCATE(a(nst, nst), nst*nst)
   dotp = M_ONE
@@ -282,15 +322,17 @@ R_TYPE function X(states_mpdotp)(m, st1, st2) result(dotp)
         call write_fatal(1)
       end if
 
-      ALLOCATE(b(i1, i1), i1*i1)
-      do i = 1, i1
-        do j = 1, i1
-          b(i, j) = a(filled1(i), filled2(j))
+      if(i1 > 0) then
+        ALLOCATE(b(i1, i1), i1*i1)
+        do i = 1, i1
+          do j = 1, i1
+            b(i, j) = a(filled1(i), filled2(j))
+          end do
         end do
-      end do
 
-      dotp = dotp * lalg_determinant(i1, b, invert = .false.) ** st1%d%kweights(ik)
-      deallocate(b)
+        dotp = dotp * lalg_determinant(i1, b, invert = .false.) ** st1%d%kweights(ik)
+        deallocate(b)
+      end if
 
     end do
   end select

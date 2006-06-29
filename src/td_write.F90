@@ -180,6 +180,8 @@ contains
     w%lmm_r = w%lmm_r * units_inp%length%factor
 
     if( (w%out_proj.ne.0)  .or.  (w%out_gsp.ne.0) ) then
+      nullify(w%gs_st)
+      ALLOCATE(w%gs_st, 1)
       call states_copy(w%gs_st, st)
       ! WARNING: should be first deallocate, then nullify?
       nullify(w%gs_st%zpsi, w%gs_st%node, w%gs_st%occ, w%gs_st%eigenval, w%gs_st%mag)
@@ -319,7 +321,7 @@ contains
     if(w%out_magnets.ne.0)  call td_write_local_magnetic_moments(w%out_magnets, gr, st, geo, w%lmm_r, i)
     if(w%out_proj.ne.0)     call td_write_proj(w%out_proj, gr, st, w%gs_st, i)
     if(w%out_coords.ne.0)   call td_write_nbo(w%out_coords, gr, i, geo%kinetic_energy, h%etot)
-    if(w%out_gsp.ne.0)      call td_write_gsp(w%out_gsp, gr%m, st, w%gs_st, dt, i)
+    if(w%out_gsp.ne.0)      call td_write_gsp(w%out_gsp, gr%m, st, w%gs_st, w%n_excited_states, w%excited_st, dt, i)
     if(w%out_acc.ne.0)      call td_write_acc(w%out_acc, gr, st, h, dt, i)
     if(w%out_laser.ne.0)    call td_write_laser(w%out_laser, gr, h, dt, i)
     if(w%out_energy.ne.0)   call td_write_el_energy(w%out_energy, h, i)
@@ -785,20 +787,33 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine td_write_gsp(out_gsp, m, st, gs_st, dt, iter)
+  subroutine td_write_gsp(out_gsp, m, st, gs_st, n_excited_states, excited_st, dt, iter)
     integer(POINTER_SIZE), intent(in) :: out_gsp
     type(mesh_t),          intent(in) :: m
     type(states_t),        intent(in) :: st
     type(states_t),        intent(in) :: gs_st
+    integer,               intent(in) :: n_excited_states
+    type(states_excited_t),intent(in) :: excited_st(:)
     FLOAT,                 intent(in) :: dt
     integer,               intent(in) :: iter
-
+ 
+    integer :: j
+    character(len=6) :: excited_name
     CMPLX :: gsp
+    CMPLX, allocatable :: excited_state_p(:)
+
 
     call push_sub('td_write.td_write_gsp')
 
     ! all processors calculate the projection
     gsp = zstates_mpdotp(m, st, gs_st)
+
+    if(n_excited_states > 0) then
+      ALLOCATE(excited_state_p(n_excited_states), n_excited_states)
+      do j = 1, n_excited_states
+        excited_state_p(j) = zstates_mpdotp_x(m, excited_st(j), st)
+      end do
+    end if
 
     if(mpi_grp_is_root(mpi_world)) then
       if(iter == 0) then
@@ -806,8 +821,13 @@ contains
 
         ! first line -> column names
         call write_iter_header_start(out_gsp)
-        call write_iter_header(out_gsp, 'Re <Phi_gs|Phi(t)>')
-        call write_iter_header(out_gsp, 'Im <Phi_gs|Phi(t)>')
+        call write_iter_header(out_gsp, 'Re<Phi_gs|Phi(t)>')
+        call write_iter_header(out_gsp, 'Im<Phi_gs|Phi(t)>')
+        do j = 1, n_excited_states
+          write(excited_name,'(a2,i3,a1)') 'P(',j,')'
+          call write_iter_header(out_gsp, 'Re<'//excited_name//'|Phi(t)>')
+          call write_iter_header(out_gsp, 'Im<'//excited_name//'|Phi(t)>')
+        end do
         call write_iter_nl(out_gsp)
 
         ! second line -> units
@@ -823,9 +843,16 @@ contains
       call write_iter_double(out_gsp, iter*dt/units_out%time%factor,  1)
       call write_iter_double(out_gsp, real(gsp),  1)
       call write_iter_double(out_gsp, aimag(gsp), 1)
+      do j = 1, n_excited_states
+        call write_iter_double(out_gsp, real(excited_state_p(j)),  1)
+        call write_iter_double(out_gsp, aimag(excited_state_p(j)), 1)
+      end do
       call write_iter_nl(out_gsp)
     end if
 
+    if(n_excited_states > 0) then
+      deallocate(excited_state_p)
+    end if
     call pop_sub()
   end subroutine td_write_gsp
 

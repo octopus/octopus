@@ -94,6 +94,8 @@ module states_m
     zstates_residue,                &
     dstates_mpdotp,                 &
     zstates_mpdotp,                 &
+    dstates_mpdotp_x,               &
+    zstates_mpdotp_x,               &
     dstates_angular_momentum,       &
     zstates_angular_momentum,       &
     states_distribute_nodes
@@ -183,9 +185,11 @@ contains
 
   ! ---------------------------------------------------------
   subroutine states_null(st)
-    type(states_t), intent(out) :: st
+    type(states_t), intent(inout) :: st
+    call push_sub('states.states_null')
 
     nullify(st%dpsi, st%zpsi, st%rho, st%j, st%rho_core, st%eigenval, st%occ, st%mag)
+
     nullify(st%d)
     ALLOCATE(st%d, 1)
     nullify(st%d%kpoints, st%d%kweights)
@@ -193,6 +197,7 @@ contains
     ! By default, calculations use real wave-functions
     st%d%wfs_type = M_REAL
 
+    call pop_sub()
   end subroutine states_null
 
 
@@ -586,8 +591,8 @@ contains
 
   ! ---------------------------------------------------------
   subroutine states_copy(stout, stin)
+    type(states_t), intent(inout) :: stout
     type(states_t), intent(in)  :: stin
-    type(states_t), intent(out) :: stout
 
     integer :: i
 
