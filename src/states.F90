@@ -51,6 +51,7 @@ module states_m
     states_t,                       &
     states_dim_t,                   &
     states_pair_t,                  &
+    states_excited_t,               &
     states_init,                    &
     states_read_user_def_orbitals,  &
     states_densities_init,          &
@@ -75,7 +76,9 @@ module states_m
     states_output,                  &
     states_calc_elf,                &
     states_calc_elf_fs,             &
-    kpoints_write_info
+    kpoints_write_info,             &
+    states_init_excited_state,      &
+    states_kill_excited_state
 
 
   public ::                         &
@@ -150,6 +153,13 @@ module states_m
     integer :: a
     integer :: sigma
   end type states_pair_t
+
+  type states_excited_t
+    type(states_t), pointer :: st
+    integer :: n_pairs
+    type(states_pair_t), pointer :: pair(:)
+    FLOAT, pointer :: weight(:)
+  end type states_excited_t
 
   ! Parameters...
   integer, public, parameter ::     &
@@ -1989,6 +1999,214 @@ contains
   end subroutine occupied_states
 
 
+  ! ---------------------------------------------------------
+  ! Fills in a excited_state structure, by reading a file called
+  ! "filename". This file describes the "promotions" from occupied
+  ! to unoccupied levels that change the initial Slater determinant
+  ! structure specified in ground_state. These promotions are a set
+  ! of electron hole pairs. The structure of the file is thus four
+  ! columns:
+  !
+  ! i  a  sigma  weight
+  ! 
+  ! where i should be an occupied state, a an unoccupied one, and sigma
+  ! the spin state of the corresponding orbital, if the calculation is
+  ! of spin-polarized type. This pair is then associated to a
+  ! creation-annihiliation pair a^t_{a,sigma} a_{i,sigma}, so that the
+  ! excited state will be a linear combination in the form:
+  ! 
+  ! |ExcitedState> = Sum [ weight(i,a,sigma) a^t_{a,sigma} a_{i,sigma} |GroundState> ]
+  !
+  ! where weight is the number in the fourth column.
+  ! These weights should be normalized to one; otherwise the routine
+  ! will normalize them, and emit a warning.
+  !
+  ! This file structure should be the one spit by the casida module; this
+  ! does not happen now, but that has to be changed.
+  ! ---------------------------------------------------------
+  subroutine states_init_excited_state(excited_state, ground_state, filename) 
+    type(states_excited_t), intent(inout) :: excited_state
+    type(states_t), pointer               :: ground_state
+    character(len=*), intent(in)          :: filename
+
+    integer :: iunit, nst, ispin, nik, ik, &
+               n_possible_pairs, i, a, n_pairs, sigma, j, ios, k, nspin
+    integer, allocatable :: n_filled(:), n_partially_filled(:), n_half_filled(:), n_empty(:), &
+                            filled(:, :), partially_filled(:, :), half_filled(:, :)
+    FLOAT :: dump
+    logical :: ok
+
+    call push_sub('states.states_init_excited_state')
+
+    ! This is just to make the code more readable.
+    nst   = ground_state%nst
+    nik   = ground_state%d%nik
+    ispin = ground_state%d%ispin
+    nspin = ground_state%d%nspin
+
+    if( nik > 2 .or. ( (nik.eq.2) .and. (ispin .ne. SPIN_POLARIZED))  ) then
+      message(1) = 'Cannot calculate projections onto excited states for periodic systems.'
+      call write_fatal(1)
+    end if
+
+    ALLOCATE(n_filled(nspin), nspin)
+    ALLOCATE(n_empty(nspin), nspin)
+    ALLOCATE(n_partially_filled(nspin), nspin)
+    ALLOCATE(n_half_filled(nspin), nspin)
+    ALLOCATE(filled(nst, nspin), nst*nspin)
+    ALLOCATE(partially_filled(nst, nspin), nst*nspin)
+    ALLOCATE(half_filled(nst, nspin), nst*nspin)
+
+    select case(ispin)
+    case(UNPOLARIZED)
+      call occupied_states(ground_state, 1, filled(:, 1), partially_filled(:, 1), half_filled(:, 1), &
+                           n_filled(1), n_partially_filled(1), n_half_filled(1))
+      if(n_partially_filled(1) > 0) then
+        message(1) = 'Cannot calculate projections onto excited states if there are partially filled orbitals.'
+        call write_fatal(1)
+      end if
+      if(n_half_filled(1) > 0) then
+        message(1) = 'Cannot calculate projections onto excited states if there are half-filled orbitals.'
+        message(2) = 'Use the spin-polarized mode instead.'
+        call write_fatal(2)
+      end if
+      n_empty(1) = nst - n_filled(1)
+      n_possible_pairs = n_filled(1) * n_empty(1)
+    case(SPIN_POLARIZED)
+      call occupied_states(ground_state, 1, filled(:, 1), partially_filled(:, 1), half_filled(:, 1), &
+                           n_filled(1), n_partially_filled(1), n_half_filled(1))
+      call occupied_states(ground_state, 2, filled(:, 2), partially_filled(:, 2), half_filled(:, 2), &
+                           n_filled(2), n_partially_filled(2), n_half_filled(2))
+      if(n_partially_filled(1)*n_partially_filled(2) > 0) then
+        message(1) = 'Cannot calculate projections onto excited states if there are partially filled orbitals.'
+        call write_fatal(1)
+      end if
+      n_empty(1) = nst - n_filled(1)
+      n_empty(2) = nst - n_filled(2)
+      n_possible_pairs = n_filled(1) * n_empty(1) + n_filled(2) * n_empty(2)
+
+    case(SPINORS)
+      call occupied_states(ground_state, 1, filled(:, 1), partially_filled(:, 1), half_filled(:, 1), &
+                           n_filled(1), n_partially_filled(1), n_half_filled(1))
+      if(n_partially_filled(1) > 0) then
+        message(1) = 'Cannot calculate projections onto excited states if there are partially filled orbitals.'
+        call write_fatal(1)
+      end if
+      n_empty(1) = nst - n_filled(1)
+      n_possible_pairs = n_filled(1) * n_empty(1)
+    end select
+
+
+    iunit = io_open(file = trim(filename), action = 'read', status = 'old', die = .true.)
+
+    ! Now we cound the number of pairs in the file
+    j = 0
+    do
+      read(iunit, *, iostat = ios), i, a, sigma, dump
+      if(ios > 0) then
+        message(1) = 'Error attempting to read the electron-hole pairs in file "'//trim(filename)//'"'
+        call write_fatal(1)
+      elseif(ios < 0) then
+        exit
+      end if
+      j = j + 1
+    end do
+    if(j.eq.0) then
+      message(1) = 'File "'//trim(filename)//' is empty?"'
+      call write_fatal(1)
+    elseif(j > n_possible_pairs) then
+      message(1) = 'File "'//trim(filename)//' contains too many electron-hole pairs.'
+      call write_fatal(1)
+    end if 
+
+
+    excited_state%n_pairs = j
+    ALLOCATE(excited_state%pair(j), j)
+    ALLOCATE(excited_state%weight(j), j)
+
+    rewind(iunit)
+    do j = 1, excited_state%n_pairs
+      read(iunit, *) excited_state%pair(j)%i, excited_state%pair(j)%a, &
+                     excited_state%pair(j)%sigma, excited_state%weight(j)
+      if(   ( (ispin .eq. UNPOLARIZED) .or. (ispin .eq. SPINORS) ) .and. (excited_state%pair(j)%sigma.ne.1) ) then
+        message(1) = 'Error reading excited state in file "'//trim(filename)//'":'
+        message(2) = 'Cannot treat a electron-hole pair for "down" spin when not working in spin-polarized mode.'
+        call write_fatal(2)
+      end if
+      ! Check if it is a legitimate electron-hole swap.
+
+      ! First, if the occupied states belongs to the list of occupied states.
+      ok = .false.
+      do k = 1, n_filled(excited_state%pair(j)%sigma)
+        ok = excited_state%pair(j)%i .eq. filled(k, excited_state%pair(j)%sigma)
+        if(ok) exit
+      end do
+      if(.not.ok) then
+        write(message(1),'(a6,i3,a1,i3,a8,i1,a)') 'Pair (',  excited_state%pair(j)%i,  ',',  &
+          excited_state%pair(j)%a,  ';sigma =',   excited_state%pair(j)%sigma,  ') is not valid.'
+        call write_fatal(1)
+      end if
+
+      ! Then, that the unoccupied state is really unoccupied.
+      ok = .true.
+      do k = 1, n_filled(excited_state%pair(j)%sigma)
+        ok = .not. (excited_state%pair(j)%a .eq. filled(k, excited_state%pair(j)%sigma))
+      end do
+      ok = .not. (excited_state%pair(j)%a > nst)
+      if(.not.ok) then
+        write(message(1),'(a6,i3,a1,i3,a8,i1,a)') 'Pair (',  excited_state%pair(j)%i,  ',',  &
+          excited_state%pair(j)%a,  ';sigma =',   excited_state%pair(j)%sigma,  ') is not valid.'
+          call write_fatal(1)
+      end if
+
+      ! Now, we check that there are no repetitions:
+      do k = 1, j - 1
+        ok = .not. pair_is_eq(excited_state%pair(j), excited_state%pair(k))
+        if(.not.ok) then
+          write(message(1),'(a6,i3,a1,i3,a8,i1,a)') 'Pair (',  excited_state%pair(j)%i,  ',',  &
+            excited_state%pair(j)%a,  ';sigma =',   excited_state%pair(j)%sigma,  ') is repeated in the file.'
+          call write_fatal(1)
+        end if
+      end do
+
+    end do
+
+    ! Now we point to the ground state from which the excited state is defined.
+    excited_state%st => ground_state
+
+    ! Check about the normalization.
+    dump = sum(excited_state%weight(1:excited_state%n_pairs)**2)
+    if(.not. abs(dump - M_ONE) < CNST(1.0e-5)) then
+      excited_state%weight(1:excited_state%n_pairs) = excited_state%weight(1:excited_state%n_pairs) / sqrt(dump)
+      message(1) = 'The excited state in file "'//trim(filename)//'" was not normalized.'
+      call write_warning(1)
+    end if
+
+    call io_close(iunit)
+
+    deallocate(n_filled, n_partially_filled, n_half_filled, n_empty, filled, partially_filled, half_filled)
+    call pop_sub()
+  end subroutine states_init_excited_state
+
+
+  ! ---------------------------------------------------------
+  ! Kills an excited_state structure.
+  ! ---------------------------------------------------------
+  subroutine states_kill_excited_state(excited_state)
+    type(states_excited_t), intent(inout) :: excited_state
+    integer :: ierr
+    call push_sub('states.states_init_excited_state')
+    nullify(excited_state%st)
+    deallocate(excited_state%pair, stat = ierr); nullify(excited_state%pair)
+    deallocate(excited_state%weight, stat = ierr); nullify(excited_state%weight)
+    call pop_sub()
+  end subroutine states_kill_excited_state
+
+
+  logical function pair_is_eq(p, q) result(res)
+    type(states_pair_t), intent(in) :: p, q
+    res = (p%i.eq.q%i) .and. (p%a.eq.q%a) .and. (p%sigma.eq.q%sigma)
+  end function pair_is_eq
 
 
 #include "states_kpoints.F90"

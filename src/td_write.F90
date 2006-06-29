@@ -68,8 +68,10 @@ module td_write_m
 
     integer        :: lmax     ! maximum multipole moment to output
     FLOAT          :: lmm_r    ! radius of the sphere used to compute the local magnetic moments
-    type(states_t) :: gs_st    ! The states_type where the ground state is stored, in order to
-                               ! calculate the projections(s) onto it.
+    type(states_t), pointer :: gs_st    ! The states_type where the ground state is stored, in order to
+                                        ! calculate the projections(s) onto it.
+    integer        :: n_excited_states  ! number of excited sates onto which the projections are calculated.
+    type(states_excited_t), pointer :: excited_st(:) ! The excited states.
   end type td_write_t
 
 contains
@@ -87,6 +89,8 @@ contains
 
     FLOAT :: rmin
     integer :: ierr, first, i, flags
+    integer(POINTER_SIZE) :: blk
+    character(len=100) :: filename
 
     call push_sub('td_write.td_write_handler')
 
@@ -201,6 +205,37 @@ contains
       end if
     end if
 
+    ! Build the excited states...
+    if( w%out_gsp.ne.0) then
+      !%Variable TDExcitedStatesToProject
+      !%Type block
+      !%Section Time Dependent::TD Output
+      !%Description
+      !% [WARNING: This is a *very* experimental feature] The population of the excited states
+      !% (as defined by <Phi_I|Phi(t)> where |Phi(t)> is the many-body time dependent state at
+      !% time t, and |Phi_I> is the excited state of interest) can be approximated -- not clear 
+      !% how well--  by substituting those real many-body states by the time-dependent Kohn-Sham
+      !% determinant and by some modification of the Kohn-Sham ground state determinant (e.g.,
+      !% a simple HOMO-LUMO substitution, or the Casida ansatz for excited statesi in linear
+      !% response theory. If you set TDOuput to contain, you may ask for these approximated
+      !% populations for a number of excited states, which will be described in the files specified
+      !% in this block: each line should be the name of a file that contains one excited state.
+      !%
+      !% FIXME: description of the format of the files.
+      !%End
+      if(loct_parse_block('TDExcitedStatesToProject', blk) == 0) then
+        w%n_excited_states = loct_parse_block_n(blk)
+        ALLOCATE(w%excited_st(w%n_excited_states), w%n_excited_states)
+        do i = 1, w%n_excited_states
+          call loct_parse_block_string(blk, i-1, 0, filename)
+          call states_init_excited_state(w%excited_st(i), w%gs_st, trim(filename)) 
+        end do
+      else
+        w%n_excited_states = 0
+        nullify(w%excited_st)
+      end if
+    end if
+
     if (iter == 0) then
       first = 0
     else
@@ -237,6 +272,7 @@ contains
   ! ---------------------------------------------------------
   subroutine td_write_end(w)
     type(td_write_t) :: w
+    integer :: i
     call push_sub('td_write.td_write_end')
 
     if(mpi_grp_is_root(mpi_world)) then
@@ -253,6 +289,11 @@ contains
     end if
     if( (w%out_gsp.ne.0) .or. (w%out_proj.ne.0) ) then
       call states_end(w%gs_st)
+    end if
+    if( w%out_gsp.ne.0 ) then
+      do i = 1, w%n_excited_states
+        call states_kill_excited_state(w%excited_st(i))
+      end do
     end if
 
     call pop_sub()

@@ -376,7 +376,7 @@ contains
     !% The terms are considered in the variation of the
     !% hamiltonian. V_ext is always considered. The default is to include
     !% the fxc and hartree terms. If you want to do RPA only include
-    !% hartree, it won't be faster though.
+    !% hartree, it will not be faster though.
     !%Option hartree 1 
     !% The variation of the hartree potential.
     !%Option fxc 2
