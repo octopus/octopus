@@ -368,7 +368,7 @@ contains
         rho(:, is) = st%rho(:, is) + st%rho_core(:)/st%d%spin_channels
       end do
     else
-      rho = st%rho
+      rho(1:m%np, 1:st%d%nspin) = st%rho(1:m%np, 1:st%d%nspin)
     end if
     fxc = M_ZERO
     call xc_get_fxc(xcs, m, rho, st%d%ispin, fxc)
