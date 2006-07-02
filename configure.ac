@@ -54,12 +54,10 @@ AC_HEADER_TIME
 # Checks for library functions.
 AC_FUNC_GETPGRP
 AC_PROG_GCC_TRADITIONAL
-AC_FUNC_MALLOC
-AC_FUNC_REALLOC
 AC_FUNC_SETVBUF_REVERSED
 AC_FUNC_STAT
 AC_FUNC_VPRINTF
-AC_CHECK_FUNCS([getcwd gettimeofday mkdir pow sqrt strcasecmp strdup strerror strncasecmp strndup uname tcgetpgrp scandir alphasort sigaction])
+AC_CHECK_FUNCS([getcwd gettimeofday mkdir pow sqrt strcasecmp strdup strerror strncasecmp strndup uname tcgetpgrp scandir alphasort sigaction malloc realloc])
 
 # Checks for size of pointer
 ACX_POINTER_SIZE

@@ -81,6 +81,16 @@ contains
 
     call push_sub('run.run')
 
+    !%Variable fromScratch
+    !%Type logical
+    !%Default 0
+    !%Section Generalities
+    !%Description
+    !% When this variable is yes, octopus will always perform a
+    !% calculation from the beginning, without looking for restart
+    !% information.
+    !%End
+
     call loct_parse_logical(check_inp('fromScratch'), .false., fromScratch)
 
     select case(calc_mode)
