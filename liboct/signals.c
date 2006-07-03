@@ -5,7 +5,7 @@
 #include <stdlib.h>
 
 
-void FC_FUNC(block_signals, BLOCK_SIGNALS)(){
+void FC_FUNC_(block_signals, BLOCK_SIGNALS)(){
 #if HAVE_SIGACTION && HAVE_SIGNAL_H
   struct sigaction act;
 
@@ -18,7 +18,7 @@ void FC_FUNC(block_signals, BLOCK_SIGNALS)(){
 #endif    
 }
 
-void FC_FUNC(unblock_signals, UNBLOCK_SIGNALS)(){
+void FC_FUNC_(unblock_signals, UNBLOCK_SIGNALS)(){
 #if HAVE_SIGACTION && HAVE_SIGNAL_H
   struct sigaction act;
 
