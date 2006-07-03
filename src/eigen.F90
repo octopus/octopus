@@ -37,6 +37,7 @@ module eigen_solver_m
   use functions_m
   use states_m
   use hamiltonian_m
+  use preconditioners_m
 
   implicit none
 
@@ -97,7 +98,7 @@ module eigen_solver_m
   type(grid_t),        pointer :: gr_
   integer                         :: ik_
 
-  type(nl_operator_t) :: filter
+  type(preconditioner_smoothing_t) :: filter
 
 contains
 
@@ -233,7 +234,7 @@ contains
     
     select case(eigens%es_type)
     case(RS_PLAN)
-      call init_filter()
+      call init_preconditioner(filter, gr)
     end select
 
     nullify(eigens%diff)
@@ -244,20 +245,6 @@ contains
 
     call pop_sub()
 
-  contains
-    ! ---------------------------------------------------------
-    subroutine init_filter()
-      FLOAT, parameter :: alpha = M_HALF
-
-      ! the filter has a star stencil like the laplacian
-      call nl_operator_init(filter, 2*NDIM + 1)
-      call stencil_star_get_lapl(NDIM, 1, filter%stencil)
-      call nl_operator_build(gr%m, filter, NP, const_w = .true.)
-
-      filter%w_re(1, 1) = alpha
-      filter%w_re(2:,1) = M_HALF*(M_ONE-alpha)/NDIM
-
-    end subroutine init_filter
   end subroutine eigen_solver_init
 
 
@@ -267,7 +254,7 @@ contains
 
     select case(eigens%es_type)
     case(RS_PLAN)
-      call nl_operator_end(filter)
+      call end_preconditioner(filter)
     end select
 
     deallocate(eigens%diff)

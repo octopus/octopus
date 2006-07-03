@@ -20,7 +20,7 @@ core_SRCS = $(basic_SRCS) \
 	out.F90 multigrid.F90 grid.F90 \
 	poisson_corrections.F90 poisson_cg.F90 poisson_multigrid.F90 poisson.F90 \
 	crystal.F90 states.F90 xc_functl.F90 xc.F90 mix.F90 spectrum.F90 \
-	specie_grid.F90
+	specie_grid.F90 preconditioners.F90 
 
 octopus_SOURCES = $(core_SRCS) \
 	lasers.F90 epot.F90 h.F90 linear_response.F90 restart.F90 xc_OEP.F90 v_ks.F90 systm.F90 \
@@ -200,6 +200,7 @@ scf.o: global.h
 sparskit.o: global.h sparskit_inc.F90 sparskit_driver.F90
 specie.o: global.h
 specie_grid.o: global.h
+preconditioners.o: global.h preconditioners_inc.F90
 spectrum.o: global.h
 spline.o: global.h
 states.o: global.h states_kpoints.F90 states_inc.F90

@@ -65,12 +65,13 @@ contains
     !%Variable MainAxis
     !%Type block
     !%Section Utilities::oct-center-geometry
-    !%Description A vector of three reals defining the axis to which
-    !% the molecule should be aligned. If not present, the default value will
+    !%Description 
+    !% A vector of three reals defining the axis to which the molecule
+    !% should be aligned. If not present, the default value will
     !% be:
-    !% %MainAxis
-    !%  1 | 0 | 1 
-    !% %
+    !% <tt>%MainAxis
+    !% <br> 1 | 0 | 1 
+    !% <br>%</tt>
     !%End
 
     !%Variable AxisType
