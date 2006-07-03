@@ -75,7 +75,7 @@ module eigen_solver_m
 #ifdef HAVE_TRLAN
   integer, parameter :: RS_LANCZOS = 1
 #endif
-  integer, parameter :: RS_PLAN    = 2
+  integer, parameter :: RS_PLAN    = 11
 #if defined(HAVE_ARPACK)
   integer, parameter :: ARPACK     = 3
 #endif
@@ -121,8 +121,8 @@ contains
     !%Option cg 5
     !% Conjugate-gradients algorithm
     !%Option trlan 1
-    !% Lanczos scheme. Requiers the TRLan package.
-    !%Option plan 2
+    !% Lanczos scheme. Requires the TRLan package.
+    !%Option plan 11
     !% Preconditioned Lanczos scheme.
     !%Option arpack 3
     !% Implicitly Restarted Arnoldi Method. Requires the ARPACK package

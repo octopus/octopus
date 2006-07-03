@@ -15,4 +15,4 @@ GuessMagnetDensity = user_defined
 %AtomsMagnetDirection
  1 | 1 | 0
 %
-Eigensolver = lanczos
+Eigensolver = plan

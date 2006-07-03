@@ -25,6 +25,6 @@ ExtraStates = 4
 %
 
 MaximumIter = 2
-Eigensolver = lanczos
+Eigensolver = plan
 EigenSolverInitTolerance = 1e-5
 
