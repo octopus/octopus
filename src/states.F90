@@ -2130,6 +2130,7 @@ contains
     ALLOCATE(excited_state%weight(j), j)
 
     rewind(iunit)
+    call io_skip_header(iunit)
     do j = 1, excited_state%n_pairs
       read(iunit, *) excited_state%pair(j)%i, excited_state%pair(j)%a, &
                      excited_state%pair(j)%sigma, excited_state%weight(j)
