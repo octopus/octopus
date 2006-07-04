@@ -239,9 +239,10 @@ end function X(states_mpdotp_x)
 ! Returns the dot product of two many-body states st1 and st2.
 ! Warning: it does not permit fractional occupation numbers.
 ! -------------------------------------------------------------
-R_TYPE function X(states_mpdotp)(m, st1, st2) result(dotp)
-  type(mesh_t),   intent(in) :: m
-  type(states_t), intent(in) :: st1, st2
+R_TYPE function X(states_mpdotp_g)(m, st1, st2, mat) result(dotp)
+  type(mesh_t),     intent(in) :: m
+  type(states_t),   intent(in) :: st1, st2
+  R_TYPE, optional, intent(in) :: mat(:, :, :)
 
   integer :: ik, ispin, nik, nst, i1, j1, i2, j2, k1, k2, i, j
   integer, allocatable :: filled1(:), filled2(:), partially_filled1(:), partially_filled2(:), &
@@ -269,7 +270,11 @@ R_TYPE function X(states_mpdotp)(m, st1, st2) result(dotp)
   select case(ispin)
   case(UNPOLARIZED)
     do ik = 1, nik
-      call X(calculate_matrix) (m, ik, st1, st2, nst, a)
+      if(present(mat)) then
+        a(1:nst, 1:nst) = mat(1:nst, 1:nst, ik)
+      else
+        call X(calculate_matrix) (m, ik, st1, st2, nst, a)
+      end if
 
       call occupied_states(st1, ik, filled1, partially_filled1, half_filled1, i1, j1, k1)
       call occupied_states(st2, ik, filled2, partially_filled2, half_filled2, i2, j2, k2)
@@ -338,74 +343,77 @@ R_TYPE function X(states_mpdotp)(m, st1, st2) result(dotp)
   end select
 
   deallocate(a)
-contains
+  call pop_sub()
+end function X(states_mpdotp_g)
 
-  ! ---------------------------------------------------------
-  subroutine X(calculate_matrix)(m, ik, st1, st2, n, a)
-    type(mesh_t),   intent(in)  :: m
-    integer,        intent(in)  :: ik
-    type(states_t), intent(in)  :: st1, st2
-    integer,        intent(in)  :: n
-    R_TYPE,         intent(out) :: a(n, n)
 
-    integer :: i, j, dim
+! ---------------------------------------------------------
+subroutine X(calculate_matrix)(m, ik, st1, st2, n, a)
+  type(mesh_t),   intent(in)  :: m
+  integer,        intent(in)  :: ik
+  type(states_t), intent(in)  :: st1, st2
+  integer,        intent(in)  :: n
+  R_TYPE,         intent(out) :: a(n, n)
+
+  integer :: i, j, dim
 #if defined(HAVE_MPI)
-    R_TYPE, allocatable :: phi2(:, :)
-    integer :: k, l
-    integer :: status(MPI_STATUS_SIZE)
-    integer :: request
+  R_TYPE, allocatable :: phi2(:, :)
+  integer :: k, l
+  integer :: status(MPI_STATUS_SIZE)
+  integer :: request
 #endif
 
-    dim = st1%d%dim
-#if defined(HAVE_MPI)
-    call MPI_Barrier(st1%mpi_grp%comm, mpi_err)
-    ! Each process sends the states in st2 to the rest of the processes.
-    do i = st1%st_start, st1%st_end
-      do j = 0, st1%mpi_grp%size - 1
-        if(st1%mpi_grp%rank.ne.j) then
-          call MPI_Isend(st2%X(psi)(1, 1, i, ik), st1%d%dim*m%np, R_MPITYPE, &
-            j, i, st1%mpi_grp%comm, request, mpi_err)
-        end if
-      end do
-    end do
+  call push_sub('states_inc.calculate_matrix')
 
-    ! Processes are received, and then the matrix elements are calculated.
-    ALLOCATE(phi2(m%np, st1%d%dim), m%np*st1%d%dim)
-    do j = 1, n
-      l = st1%node(j)
-      if(l.ne.st1%mpi_grp%rank) then
-        call MPI_Irecv(phi2(1, 1), st1%d%dim*m%np, R_MPITYPE, l, j, st1%mpi_grp%comm, request, mpi_err)
-        call MPI_Wait(request, status, mpi_err)
-      else
-        phi2(:, :) = st2%X(psi)(:, :, j, ik)
+  dim = st1%d%dim
+#if defined(HAVE_MPI)
+  call MPI_Barrier(st1%mpi_grp%comm, mpi_err)
+  ! Each process sends the states in st2 to the rest of the processes.
+  do i = st1%st_start, st1%st_end
+    do j = 0, st1%mpi_grp%size - 1
+      if(st1%mpi_grp%rank.ne.j) then
+        call MPI_Isend(st2%X(psi)(1, 1, i, ik), st1%d%dim*m%np, R_MPITYPE, &
+          j, i, st1%mpi_grp%comm, request, mpi_err)
       end if
-      do i = st1%st_start, st1%st_end
-        a(i, j) = X(states_dotp)(m, dim, st1%X(psi)(1:, :, i, ik), phi2(1:, :))
-      end do
     end do
-    deallocate(phi2)
+  end do
 
-    ! Each process holds some lines of the matrix. So it is broadcasted (All processes
-    ! should get the whole matrix)
-    call MPI_Barrier(st1%mpi_grp%comm, mpi_err)
-    do i = 1, n
-      k = st1%node(i)
-      do j = 1, n
-        call MPI_Bcast(a(i, j), 1, R_MPITYPE, k, st1%mpi_grp%comm, mpi_err)
-      end do
+  ! Processes are received, and then the matrix elements are calculated.
+  ALLOCATE(phi2(m%np, st1%d%dim), m%np*st1%d%dim)
+  do j = 1, n
+    l = st1%node(j)
+    if(l.ne.st1%mpi_grp%rank) then
+      call MPI_Irecv(phi2(1, 1), st1%d%dim*m%np, R_MPITYPE, l, j, st1%mpi_grp%comm, request, mpi_err)
+      call MPI_Wait(request, status, mpi_err)
+    else
+      phi2(:, :) = st2%X(psi)(:, :, j, ik)
+    end if
+    do i = st1%st_start, st1%st_end
+      a(i, j) = X(states_dotp)(m, dim, st1%X(psi)(1:, :, i, ik), phi2(1:, :))
     end do
+  end do
+  deallocate(phi2)
+
+  ! Each process holds some lines of the matrix. So it is broadcasted (All processes
+  ! should get the whole matrix)
+  call MPI_Barrier(st1%mpi_grp%comm, mpi_err)
+  do i = 1, n
+    k = st1%node(i)
+    do j = 1, n
+      call MPI_Bcast(a(i, j), 1, R_MPITYPE, k, st1%mpi_grp%comm, mpi_err)
+    end do
+  end do
 #else
-    do i = 1, n
-      do j = 1, n
-        a(i, j) = X(states_dotp)(m, dim, st1%X(psi)(1:, :, i, ik), &
-          st2%X(psi)(1:, :, j, ik))
-      end do
+  do i = 1, n
+    do j = 1, n
+      a(i, j) = X(states_dotp)(m, dim, st1%X(psi)(1:, :, i, ik), &
+        st2%X(psi)(1:, :, j, ik))
     end do
+  end do
 #endif
 
-  end subroutine X(calculate_matrix)
-
-end function X(states_mpdotp)
+  call pop_sub()
+end subroutine X(calculate_matrix)
 
 
 ! ---------------------------------------------------------

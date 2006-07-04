@@ -94,8 +94,6 @@ module states_m
     zstates_residue,                &
     dstates_mpdotp,                 &
     zstates_mpdotp,                 &
-    dstates_mpdotp_x,               &
-    zstates_mpdotp_x,               &
     dstates_angular_momentum,       &
     zstates_angular_momentum,       &
     states_distribute_nodes
@@ -179,6 +177,14 @@ module states_m
 
   interface zstates_gram_schmidt
     module procedure zstates_gram_schmidt1, zstates_gram_schmidt2
+  end interface
+
+  interface dstates_mpdotp
+    module procedure dstates_mpdotp_g, dstates_mpdotp_x
+  end interface
+
+  interface zstates_mpdotp
+    module procedure zstates_mpdotp_g, zstates_mpdotp_x
   end interface
 
 contains
@@ -2026,8 +2032,8 @@ contains
   ! These weights should be normalized to one; otherwise the routine
   ! will normalize them, and emit a warning.
   !
-  ! This file structure should be the one spit by the casida module; this
-  ! does not happen now, but that has to be changed.
+  ! This file structure is the one spit by the casida module, in the files
+  ! in the directory "excitations".
   ! ---------------------------------------------------------
   subroutine states_init_excited_state(excited_state, ground_state, filename) 
     type(states_excited_t), intent(inout) :: excited_state
@@ -2107,7 +2113,7 @@ contains
     ! Now we cound the number of pairs in the file
     j = 0
     do
-      read(iunit, *, iostat = ios), i, a, sigma, dump
+      read(iunit, *, iostat = ios) i, a, sigma, dump
       if(ios > 0) then
         message(1) = 'Error attempting to read the electron-hole pairs in file "'//trim(filename)//'"'
         call write_fatal(1)

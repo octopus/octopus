@@ -806,12 +806,12 @@ contains
     call push_sub('td_write.td_write_gsp')
 
     ! all processors calculate the projection
-    gsp = zstates_mpdotp(m, st, gs_st)
+    gsp = zstates_mpdotp(m, gs_st, st)
 
     if(n_excited_states > 0) then
       ALLOCATE(excited_state_p(n_excited_states), n_excited_states)
       do j = 1, n_excited_states
-        excited_state_p(j) = zstates_mpdotp_x(m, excited_st(j), st)
+        excited_state_p(j) = zstates_mpdotp(m, excited_st(j), st)
       end do
     end if
 
