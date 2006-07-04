@@ -276,16 +276,17 @@ contains
          ! forward propagation
          call states_copy(psi, initial_st)
          call states_copy(psi2, initial_st) ! for td target
-         call zoutput_function(sys%outp%how,'opt-control','zr98_istate',gr%m,gr%sb,psi%zpsi(:,1,1,1),M_ONE,ierr)
+         call zoutput_function(sys%outp%how,'opt-control','last_bwd',gr%m,gr%sb,psi%zpsi(:,1,1,1),M_ONE,ierr)
          call fwd_step(method)
-         call zoutput_function(sys%outp%how,'opt-control','dcheck_istate_zr98A',gr%m,gr%sb,initial_st%zpsi(:,1,1,1),M_ONE,ierr)
+         write(filename,'(a,i3.3)') 'PsiT.', ctr_iter
+         call zoutput_function(sys%outp%how,'opt-control',filename,gr%m,gr%sb,initial_st%zpsi(:,1,1,1),M_ONE,ierr)
          if(dump_intermediate) then
             write(filename,'(a,i3.3)') 'opt-control/laser.', ctr_iter
             call write_field(filename, laser, td%max_iter, td%dt)
          end if
       
       end do ctr_loop
-      call zoutput_function(sys%outp%how,'opt-control','dcheck_istate_zr98',gr%m,gr%sb,initial_st%zpsi(:,1,1,1),M_ONE,ierr)
+
       call pop_sub()
 
     end subroutine scheme_zr98
@@ -317,8 +318,9 @@ contains
          call states_copy(psi, initial_st)
          call prop_fwd(psi) 
 
-!! DEBUG
-         call zoutput_function(sys%outp%how,'opt-control','prop1',gr%m,gr%sb,psi%zpsi(:,1,1,1),M_ONE,ierr)
+!! DEBUG         
+         write(filename,'(a,i3.3)') 'PsiT.', ctr_iter
+         call zoutput_function(sys%outp%how,'opt-control',filename,gr%m,gr%sb,psi%zpsi(:,1,1,1),M_ONE,ierr)
 !!         
          ! define target state
          call target_calc(method,target_st,psi,chi) ! defines chi
@@ -408,7 +410,8 @@ contains
 
          !write(6,*) 'norm', zstates_dotp(gr%m, psi%d%dim,  psi%zpsi(:,:, 1, 1), psi%zpsi(:,:, 1, 1))
          !write(6,*) 'norm', zstates_dotp(gr%m, psi%d%dim,  chi%zpsi(:,:, 1, 1), chi%zpsi(:,:, 1, 1))
-         call zoutput_function(sys%outp%how,'opt-control','last_fwd',gr%m,gr%sb,psi%zpsi(:,1,1,1),M_ONE, ierr) 
+         write(filename,'(a,i3.3)') 'PsiT.', ctr_iter
+         call zoutput_function(sys%outp%how,'opt-control',filename,gr%m,gr%sb,psi%zpsi(:,1,1,1),M_ONE, ierr) 
          !write(6,*) 'penalty ',tdpenalty(:,2)
          ! iteration managament ! make own subroutine
          call iteration_manager(stoploop)

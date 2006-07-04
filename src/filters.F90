@@ -358,7 +358,7 @@ contains
     integer,        intent(in)    :: steps
     FLOAT,          intent(in)    :: dt
     integer :: i, iunit
-    integer :: kk, ip
+    integer :: kk, ip, pol
     FLOAT   :: grid(0:2*steps)
     FLOAT   :: width, f_re, f_im
     CMPLX   :: ff(NDIM,0:2*steps)
@@ -372,17 +372,27 @@ contains
        do ip=0, 2*steps
           call loct_parse_expression(f_re, f_im, "t", grid(ip), fp%expression)
           ! FIXME: polarization   
-          ff(:,ip) = f_re + M_zI*f_im 
+          do pol=1,NDIM
+             ff(pol,ip) = fp%fpol(pol)*(f_re + M_zI*f_im)
+             if(fp%fpol(pol).eq.m_z0) ff(pol,ip) = m_z1
+          end do
+
           !write(6,*) f_re, f_im
        end do
    
 
     case(filter_freq)
        call w_lookup(2*steps+1,dt,grid)
+       ff(:,:) = m_z1
        do ip=0, 2*steps
           call loct_parse_expression(f_re, f_im, "w", grid(ip), fp%expression)      
+
           ! FIXME: polarization
-          ff(:,ip) = f_re + M_zI*f_im 
+          ! if
+          do pol=1,NDIM
+             ff(pol,ip) = fp%fpol(pol)*(f_re + M_zI*f_im)
+             if(fp%fpol(pol).eq.m_z0) ff(pol,ip) = m_z1
+          end do
        end do
        
     case default
