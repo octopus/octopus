@@ -78,17 +78,19 @@ subroutine X(get_response_e)(sys, h, lr, dir, nsigma, omega, props, status)
   type(pol_props_t),      intent(in)    :: props
   type(status_t),optional,intent(out)   :: status
 
-  FLOAT :: dpsimod, freq_sign
+  FLOAT :: dpsimod
   integer :: iter, sigma, ik, ik2, ist, i, err
   R_TYPE, allocatable :: dl_rhoin(:, :, :), dl_rhonew(:, :, :), dl_rhotmp(:, :, :)
   R_TYPE, allocatable :: Y(:, :, :),dV(:, :, :), tmp(:)
-  R_TYPE :: abs_dens
+  R_TYPE :: abs_dens, omega_sigma
 
   logical :: conv_last, conv
 
   type(mesh_t), pointer :: m
   type(states_t), pointer :: st
-  
+
+  integer total_iter
+
   character(len=30) :: dirname
 
   call push_sub('static_pol_lr.get_response_e')
@@ -120,6 +122,8 @@ subroutine X(get_response_e)(sys, h, lr, dir, nsigma, omega, props, status)
     write(message(2), '(a, f20.6, a, f20.6, a, i1)') &
          "Frequency: ", R_REAL(omega), " Eta : ", R_AIMAG(omega), " Dir: ", dir
     call write_info(2)
+
+    total_iter = 0
     
     dl_rhoin(1:m%np, 1:st%d%nspin, 1) = lr(dir, 1)%X(dl_rho)(1:m%np, 1:st%d%nspin)
 
@@ -166,15 +170,15 @@ subroutine X(get_response_e)(sys, h, lr, dir, nsigma, omega, props, status)
           call X(lr_orth_vector)(m, st, Y(:,:, sigma), ik)
 
           if(sigma==1) then 
-            freq_sign = M_ONE 
+            omega_sigma = omega
           else 
-            freq_sign = -M_ONE
+            omega_sigma = -R_CONJ(omega)
           end if
 
           !solve the Sternheimer equation
           call X(lr_solve_HXeY) (lr(dir, sigma), h, sys%gr, sys%st, ik, lr(dir, sigma)%X(dl_psi)(:,:, ist, ik),&
-               Y(:,:, sigma), -sys%st%eigenval(ist, ik) + freq_sign*omega)
-          
+               Y(:,:, sigma), -sys%st%eigenval(ist, ik) + omega_sigma)
+
           !altough the dl_psi we get should be orthogonal to psi
           !a re-orthogonalization is sometimes necessary 
           call X(lr_orth_vector)(m, st, lr(dir,sigma)%X(dl_psi)(:,:, ist, ik), ik)
@@ -186,6 +190,8 @@ subroutine X(get_response_e)(sys, h, lr, dir, nsigma, omega, props, status)
                (3-2*sigma)*ist, dpsimod, lr(dir, sigma)%iter, lr(dir, sigma)%abs_psi 
           call write_info(1)
 
+          total_iter=total_iter + lr(dir, sigma)%iter
+          
         end do !sigma
       end do !ist
     end do !ik
@@ -233,7 +239,7 @@ subroutine X(get_response_e)(sys, h, lr, dir, nsigma, omega, props, status)
     
     lr(dir,1)%abs_dens = sqrt(abs_dens)
 
-    write(message(1), '(a, e20.6)') "Res ", lr(dir,1)%abs_dens
+    write(message(1), '(a, e20.6, a, i5)') "SCF Residual ", lr(dir,1)%abs_dens, " Total Iterations ", total_iter
 
     message(2)="--------------------------------------------"
     call write_info(2)
