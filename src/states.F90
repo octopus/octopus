@@ -96,7 +96,9 @@ module states_m
     zstates_mpdotp,                 &
     dstates_angular_momentum,       &
     zstates_angular_momentum,       &
-    states_distribute_nodes
+    states_distribute_nodes,        &
+    dcalculate_matrix,              &
+    zcalculate_matrix
 
   type states_t
 

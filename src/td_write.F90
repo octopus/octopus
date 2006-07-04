@@ -57,7 +57,7 @@ module td_write_m
   type td_write_t
     integer(POINTER_SIZE) :: out_multip
     integer(POINTER_SIZE) :: out_coords
-    integer(POINTER_SIZE) :: out_gsp
+    integer(POINTER_SIZE) :: out_populations
     integer(POINTER_SIZE) :: out_acc
     integer(POINTER_SIZE) :: out_laser
     integer(POINTER_SIZE) :: out_energy
@@ -111,11 +111,10 @@ contains
     !%Option spin 4
     !% Outputs the expectation value of the spin, that can be used to calculate magnetic
     !% cicular dichroism (EXPERIMENTAL)
-    !%Option gs_proj 8
+    !%Option populations 8
     !% Outputs the projection of the time-dependent Kohn-Sham Slater determinant
-    !% onto the ground-state to the file <tt>td.general/gs_projection</tt>. As the calculation
-    !% of the projection is fairly heavy, this is only done every <tt>OutputEvery</tt> 
-    !% iterations.
+    !% onto the ground-state (or approximations to the excited states) to the file 
+    !% <tt>td.general/populations</tt>.
     !%Option geometry 16
     !% If set (and if the atoms are allowed to move), outputs the coordinates, velocities,
     !% and forces of the atoms to the the file <tt>td.general/coordinates</tt>.
@@ -145,7 +144,7 @@ contains
     w%out_multip  = 0; if(iand(flags,   1).ne.0) w%out_multip  = 1
     w%out_angular = 0; if(iand(flags,   2).ne.0) w%out_angular = 1
     w%out_spin    = 0; if(iand(flags,   4).ne.0) w%out_spin    = 1
-    w%out_gsp     = 0; if(iand(flags,   8).ne.0) w%out_gsp     = 1
+    w%out_populations = 0; if(iand(flags,   8).ne.0) w%out_populations     = 1
     w%out_coords  = 0; if(iand(flags,  16).ne.0.and.ions_move) w%out_coords = 1
     w%out_acc     = 0; if(iand(flags,  32).ne.0) w%out_acc     = 1
     w%out_laser   = 0; if(iand(flags,  64).ne.0) w%out_laser   = 1
@@ -179,7 +178,7 @@ contains
     call loct_parse_float(check_inp('LocalMagneticMomentsSphereRadius'), rmin*M_HALF/units_inp%length%factor, w%lmm_r)
     w%lmm_r = w%lmm_r * units_inp%length%factor
 
-    if( (w%out_proj.ne.0)  .or.  (w%out_gsp.ne.0) ) then
+    if( (w%out_proj.ne.0)  .or.  (w%out_populations.ne.0) ) then
       nullify(w%gs_st)
       ALLOCATE(w%gs_st, 1)
       call states_copy(w%gs_st, st)
@@ -208,7 +207,7 @@ contains
     end if
 
     ! Build the excited states...
-    if( w%out_gsp.ne.0) then
+    if( w%out_populations.ne.0) then
       !%Variable TDExcitedStatesToProject
       !%Type block
       !%Section Time Dependent::TD Output
@@ -255,8 +254,8 @@ contains
         trim(io_workpath("td.general/magnetic_moments")))
       if(w%out_coords.ne.0)  call write_iter_init(w%out_coords,  first, dt/units_out%time%factor, &
         trim(io_workpath("td.general/coordinates")))
-      if(w%out_gsp.ne.0)     call write_iter_init(w%out_gsp,     first, dt/units_out%time%factor, &
-        trim(io_workpath("td.general/gs_projection")))
+      if(w%out_populations.ne.0) call write_iter_init(w%out_populations,     first, dt/units_out%time%factor, &
+        trim(io_workpath("td.general/populations")))
       if(w%out_acc.ne.0)     call write_iter_init(w%out_acc,     first, dt/units_out%time%factor, &
         trim(io_workpath("td.general/acceleration")))
       if(w%out_laser.ne.0)   call write_iter_init(w%out_laser,   first, dt/units_out%time%factor, &
@@ -283,19 +282,19 @@ contains
       if(w%out_spin.ne.0)    call write_iter_end(w%out_spin)
       if(w%out_magnets.ne.0) call write_iter_end(w%out_magnets)
       if(w%out_coords.ne.0)  call write_iter_end(w%out_coords)
-      if(w%out_gsp.ne.0)     call write_iter_end(w%out_gsp)
+      if(w%out_populations.ne.0)     call write_iter_end(w%out_populations)
       if(w%out_acc.ne.0)     call write_iter_end(w%out_acc)
       if(w%out_laser.ne.0)   call write_iter_end(w%out_laser)
       if(w%out_energy.ne.0)  call write_iter_end(w%out_energy)
       if(w%out_proj.ne.0)    call write_iter_end(w%out_proj)
     end if
-    if( (w%out_gsp.ne.0) .or. (w%out_proj.ne.0) ) then
-      call states_end(w%gs_st)
-    end if
-    if( w%out_gsp.ne.0 ) then
+    if( w%out_populations.ne.0 ) then
       do i = 1, w%n_excited_states
         call states_kill_excited_state(w%excited_st(i))
       end do
+    end if
+    if( (w%out_populations.ne.0) .or. (w%out_proj.ne.0) ) then
+      call states_end(w%gs_st)
     end if
 
     call pop_sub()
@@ -321,7 +320,8 @@ contains
     if(w%out_magnets.ne.0)  call td_write_local_magnetic_moments(w%out_magnets, gr, st, geo, w%lmm_r, i)
     if(w%out_proj.ne.0)     call td_write_proj(w%out_proj, gr, st, w%gs_st, i)
     if(w%out_coords.ne.0)   call td_write_nbo(w%out_coords, gr, i, geo%kinetic_energy, h%etot)
-    if(w%out_gsp.ne.0)      call td_write_gsp(w%out_gsp, gr%m, st, w%gs_st, w%n_excited_states, w%excited_st, dt, i)
+    if(w%out_populations.ne.0) &
+      call td_write_populations(w%out_populations, gr%m, st, w%gs_st, w%n_excited_states, w%excited_st, dt, i)
     if(w%out_acc.ne.0)      call td_write_acc(w%out_acc, gr, st, h, dt, i)
     if(w%out_laser.ne.0)    call td_write_laser(w%out_laser, gr, h, dt, i)
     if(w%out_energy.ne.0)   call td_write_el_energy(w%out_energy, h, i)
@@ -352,7 +352,7 @@ contains
       if(w%out_spin.ne.0)    call write_iter_flush(w%out_spin)
       if(w%out_magnets.ne.0) call write_iter_flush(w%out_magnets)
       if(w%out_coords.ne.0)  call write_iter_flush(w%out_coords)
-      if(w%out_gsp.ne.0)     call write_iter_flush(w%out_gsp)
+      if(w%out_populations.ne.0)     call write_iter_flush(w%out_populations)
       if(w%out_acc.ne.0)     call write_iter_flush(w%out_acc)
       if(w%out_laser.ne.0)   call write_iter_flush(w%out_laser)
       if(w%out_energy.ne.0)  call write_iter_flush(w%out_energy)
@@ -787,8 +787,8 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine td_write_gsp(out_gsp, m, st, gs_st, n_excited_states, excited_st, dt, iter)
-    integer(POINTER_SIZE), intent(in) :: out_gsp
+  subroutine td_write_populations(out_populations, m, st, gs_st, n_excited_states, excited_st, dt, iter)
+    integer(POINTER_SIZE), intent(in) :: out_populations
     type(mesh_t),          intent(in) :: m
     type(states_t),        intent(in) :: st
     type(states_t),        intent(in) :: gs_st
@@ -797,64 +797,72 @@ contains
     FLOAT,                 intent(in) :: dt
     integer,               intent(in) :: iter
  
-    integer :: j
+    integer :: j, ik
     character(len=6) :: excited_name
     CMPLX :: gsp
     CMPLX, allocatable :: excited_state_p(:)
+    CMPLX, allocatable :: dotprodmatrix(:, :, :)
 
 
-    call push_sub('td_write.td_write_gsp')
+    call push_sub('td_write.td_write_populations')
+
+    ALLOCATE(dotprodmatrix(gs_st%nst, st%nst, st%d%nik), gs_st%nst*st%nst*st%d%nik)
+    do ik = 1, st%d%nik
+      call zcalculate_matrix(m, ik, gs_st, st, dotprodmatrix(:, :, ik))
+    end do
 
     ! all processors calculate the projection
-    gsp = zstates_mpdotp(m, gs_st, st)
+    gsp = zstates_mpdotp(m, gs_st, st, dotprodmatrix)
 
     if(n_excited_states > 0) then
       ALLOCATE(excited_state_p(n_excited_states), n_excited_states)
       do j = 1, n_excited_states
-        excited_state_p(j) = zstates_mpdotp(m, excited_st(j), st)
+        excited_state_p(j) = zstates_mpdotp(m, excited_st(j), st, dotprodmatrix)
       end do
     end if
 
     if(mpi_grp_is_root(mpi_world)) then
       if(iter == 0) then
-        call td_write_print_header_init(out_gsp)
+        call td_write_print_header_init(out_populations)
 
         ! first line -> column names
-        call write_iter_header_start(out_gsp)
-        call write_iter_header(out_gsp, 'Re<Phi_gs|Phi(t)>')
-        call write_iter_header(out_gsp, 'Im<Phi_gs|Phi(t)>')
+        call write_iter_header_start(out_populations)
+        call write_iter_header(out_populations, 'Re<Phi_gs|Phi(t)>')
+        call write_iter_header(out_populations, 'Im<Phi_gs|Phi(t)>')
         do j = 1, n_excited_states
           write(excited_name,'(a2,i3,a1)') 'P(',j,')'
-          call write_iter_header(out_gsp, 'Re<'//excited_name//'|Phi(t)>')
-          call write_iter_header(out_gsp, 'Im<'//excited_name//'|Phi(t)>')
+          call write_iter_header(out_populations, 'Re<'//excited_name//'|Phi(t)>')
+          call write_iter_header(out_populations, 'Im<'//excited_name//'|Phi(t)>')
         end do
-        call write_iter_nl(out_gsp)
+        call write_iter_nl(out_populations)
 
         ! second line -> units
-        call write_iter_string(out_gsp, '#[Iter n.]')
-        call write_iter_header(out_gsp, '[' // trim(units_out%time%abbrev) // ']')
-        call write_iter_nl(out_gsp)
+        call write_iter_string(out_populations, '#[Iter n.]')
+        call write_iter_header(out_populations, '[' // trim(units_out%time%abbrev) // ']')
+        call write_iter_nl(out_populations)
 
-        call td_write_print_header_end(out_gsp)
+        call td_write_print_header_end(out_populations)
       end if
 
       ! can not call write_iter_start, for the step is not 1
-      call write_iter_int(out_gsp, iter, 1)
-      call write_iter_double(out_gsp, iter*dt/units_out%time%factor,  1)
-      call write_iter_double(out_gsp, real(gsp),  1)
-      call write_iter_double(out_gsp, aimag(gsp), 1)
+      call write_iter_int(out_populations, iter, 1)
+      call write_iter_double(out_populations, iter*dt/units_out%time%factor,  1)
+      call write_iter_double(out_populations, real(gsp),  1)
+      call write_iter_double(out_populations, aimag(gsp), 1)
       do j = 1, n_excited_states
-        call write_iter_double(out_gsp, real(excited_state_p(j)),  1)
-        call write_iter_double(out_gsp, aimag(excited_state_p(j)), 1)
+        call write_iter_double(out_populations, real(excited_state_p(j)),  1)
+        call write_iter_double(out_populations, aimag(excited_state_p(j)), 1)
       end do
-      call write_iter_nl(out_gsp)
+      call write_iter_nl(out_populations)
     end if
 
     if(n_excited_states > 0) then
       deallocate(excited_state_p)
     end if
+    deallocate(dotprodmatrix)
     call pop_sub()
-  end subroutine td_write_gsp
+  end subroutine td_write_populations
+
 
 
   ! ---------------------------------------------------------

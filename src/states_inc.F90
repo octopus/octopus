@@ -198,39 +198,48 @@ end function X(states_residue)
 ! -------------------------------------------------------------
 ! Returns the dot product of two many-body states; the first
 ! one is an "excited_state".
+!
+! WARNING!!!!: periodic systems are not considered in these expressions.
 ! -------------------------------------------------------------
-R_TYPE function X(states_mpdotp_x)(m, excited_state, st) result(dotp)
+R_TYPE function X(states_mpdotp_x)(m, excited_state, st, mat) result(dotp)
   type(mesh_t),   intent(in) :: m
   type(states_excited_t), intent(in) :: excited_state
   type(states_t), intent(in)         :: st
+  R_TYPE, optional, intent(in)       :: mat(:, :, :)
 
   integer :: i, a, sigma, j, ik
-  type(states_t) :: aux_st
-  R_TYPE, allocatable :: phi(:, :)
+  R_TYPE, allocatable :: mat_local(:, :, :), row(:)
+
   call push_sub('states_inc.Xstates_mpdotp_x')
 
   dotp = M_ZERO
 
-  call states_copy(aux_st, excited_state%st)
+  ASSERT(excited_state%st%d%nik.eq.st%d%nik)
 
-  ALLOCATE(phi(m%np_part, st%d%dim), m%np_part * st%d%dim)
+  ALLOCATE(mat_local(excited_state%st%nst, st%nst, st%d%nik), st%nst*excited_state%st%nst*st%d%nik)
+  ALLOCATE(row(st%nst), st%nst)
+
+  if(present(mat)) then
+    do ik = 1, st%d%nik
+      mat_local = mat
+    end do
+  else 
+    do ik = 1, st%d%nik
+      call X(calculate_matrix) (m, ik, excited_state%st, st, mat_local(:, :, ik))
+    end do
+  end if
 
   do j = 1, excited_state%n_pairs
     i     = excited_state%pair(j)%i
     a     = excited_state%pair(j)%a
     sigma = excited_state%pair(j)%sigma
-    
-    ! WARNING: periodic systems are not considered in these expressions.
-    phi(:, :) = aux_st%X(psi)(:, :, i, sigma)
-    aux_st%X(psi)(:, :, i, sigma) = aux_st%X(psi)(:, :, a, sigma)
-
-    dotp = dotp + excited_state%weight(j) * X(states_mpdotp)(m, aux_st, st)
-
-    aux_st%X(psi)(:, :, i, sigma) = phi(:, :)
+    row(:) = mat_local(i, :, sigma)
+    mat_local(i, :, sigma) = mat_local(a, :, sigma)
+    dotp = dotp + excited_state%weight(j) * X(states_mpdotp_g)(m, excited_state%st, st, mat_local) 
+    mat_local(i, :, sigma) = row(:)
   end do
 
-  call states_end(aux_st)
-  deallocate(phi)
+  deallocate(mat_local, row)
   call pop_sub()
 end function X(states_mpdotp_x)
 
@@ -257,7 +266,7 @@ R_TYPE function X(states_mpdotp_g)(m, st1, st2, mat) result(dotp)
   ! Can only consider the number of states of the state that comes with less states.
   nst = min(st1%nst, st2%nst)
 
-  ALLOCATE(a(nst, nst), nst*nst)
+  ALLOCATE(a(st1%nst, st2%nst), st1%nst*st2%nst)
   dotp = M_ONE
 
   ALLOCATE(filled1(nst), nst)
@@ -271,9 +280,9 @@ R_TYPE function X(states_mpdotp_g)(m, st1, st2, mat) result(dotp)
   case(UNPOLARIZED)
     do ik = 1, nik
       if(present(mat)) then
-        a(1:nst, 1:nst) = mat(1:nst, 1:nst, ik)
+        a(1:st1%nst, 1:st2%nst) = mat(1:st1%nst, 1:st2%nst, ik)
       else
-        call X(calculate_matrix) (m, ik, st1, st2, nst, a)
+        call X(calculate_matrix) (m, ik, st1, st2, a)
       end if
 
       call occupied_states(st1, ik, filled1, partially_filled1, half_filled1, i1, j1, k1)
@@ -314,7 +323,11 @@ R_TYPE function X(states_mpdotp_g)(m, st1, st2, mat) result(dotp)
   case(SPIN_POLARIZED, SPINORS)
     do ik = 1, nik
 
-      call X(calculate_matrix) (m, ik, st1, st2, nst, a)
+      if(present(mat)) then
+        a(1:st1%nst, 1:st2%nst) = mat(1:st1%nst, 1:st2%nst, ik)
+      else
+        call X(calculate_matrix) (m, ik, st1, st2, a)
+      end if
 
       call occupied_states(st1, ik, filled1, partially_filled1, half_filled1, i1, j1, k1)
       call occupied_states(st2, ik, filled2, partially_filled2, half_filled2, i2, j2, k2)
@@ -348,14 +361,13 @@ end function X(states_mpdotp_g)
 
 
 ! ---------------------------------------------------------
-subroutine X(calculate_matrix)(m, ik, st1, st2, n, a)
+subroutine X(calculate_matrix)(m, ik, st1, st2, a)
   type(mesh_t),   intent(in)  :: m
   integer,        intent(in)  :: ik
   type(states_t), intent(in)  :: st1, st2
-  integer,        intent(in)  :: n
-  R_TYPE,         intent(out) :: a(n, n)
+  R_TYPE,         intent(out) :: a(:, :)
 
-  integer :: i, j, dim
+  integer :: i, j, dim, n1, n2
 #if defined(HAVE_MPI)
   R_TYPE, allocatable :: phi2(:, :)
   integer :: k, l
@@ -364,6 +376,9 @@ subroutine X(calculate_matrix)(m, ik, st1, st2, n, a)
 #endif
 
   call push_sub('states_inc.calculate_matrix')
+
+  n1 = st1%nst
+  n2 = st2%nst
 
   dim = st1%d%dim
 #if defined(HAVE_MPI)
@@ -380,7 +395,7 @@ subroutine X(calculate_matrix)(m, ik, st1, st2, n, a)
 
   ! Processes are received, and then the matrix elements are calculated.
   ALLOCATE(phi2(m%np, st1%d%dim), m%np*st1%d%dim)
-  do j = 1, n
+  do j = 1, n2
     l = st1%node(j)
     if(l.ne.st1%mpi_grp%rank) then
       call MPI_Irecv(phi2(1, 1), st1%d%dim*m%np, R_MPITYPE, l, j, st1%mpi_grp%comm, request, mpi_err)
@@ -389,7 +404,7 @@ subroutine X(calculate_matrix)(m, ik, st1, st2, n, a)
       phi2(:, :) = st2%X(psi)(:, :, j, ik)
     end if
     do i = st1%st_start, st1%st_end
-      a(i, j) = X(states_dotp)(m, dim, st1%X(psi)(1:, :, i, ik), phi2(1:, :))
+      a(i, j) = X(states_dotp)(m, dim, st1%X(psi)(:, :, i, ik), phi2(:, :))
     end do
   end do
   deallocate(phi2)
@@ -397,17 +412,17 @@ subroutine X(calculate_matrix)(m, ik, st1, st2, n, a)
   ! Each process holds some lines of the matrix. So it is broadcasted (All processes
   ! should get the whole matrix)
   call MPI_Barrier(st1%mpi_grp%comm, mpi_err)
-  do i = 1, n
+  do i = 1, n1
     k = st1%node(i)
-    do j = 1, n
+    do j = 1, n2
       call MPI_Bcast(a(i, j), 1, R_MPITYPE, k, st1%mpi_grp%comm, mpi_err)
     end do
   end do
 #else
-  do i = 1, n
-    do j = 1, n
-      a(i, j) = X(states_dotp)(m, dim, st1%X(psi)(1:, :, i, ik), &
-        st2%X(psi)(1:, :, j, ik))
+  do i = 1, n1
+    do j = 1, n2
+      a(i, j) = X(states_dotp)(m, dim, st1%X(psi)(:, :, i, ik), &
+        st2%X(psi)(:, :, j, ik))
     end do
   end do
 #endif
