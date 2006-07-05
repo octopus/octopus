@@ -26,10 +26,11 @@ subroutine X(lr_output) (st, gr, lr, dir, tag, outp)
   integer,          intent(in)    :: tag
   type(output_t),   intent(in)    :: outp
 
-  integer :: ik, ist, idim, ierr, is
+  integer :: ik, ist, idim, ierr, is, i
   character(len=80) :: fname
   FLOAT :: u
   FLOAT, allocatable :: dtmp(:)
+  R_TYPE, allocatable :: tmp(:)
   
 
   call push_sub('lr_response_out.lr_output')
@@ -37,10 +38,22 @@ subroutine X(lr_output) (st, gr, lr, dir, tag, outp)
   u = M_ONE/units_out%length%factor**NDIM
 
   if(iand(outp%what, output_density).ne.0) then
-    do ist = 1, st%d%nspin
-      write(fname, '(a,i1,a,i1)') 'lr_density-', ist, '-', tag
-      call X(output_function)(outp%how, dir, fname, gr%m, gr%sb, lr%X(dl_rho)(:, ist), u, ierr)
+    do is = 1, st%d%nspin
+      write(fname, '(a,i1,a,i1)') 'lr_density-', is, '-', tag
+      call X(output_function)(outp%how, dir, fname, gr%m, gr%sb, lr%X(dl_rho)(:, is), u, ierr)
     end do
+  end if
+
+  if(iand(outp%what, output_pol_density).ne.0) then
+    ALLOCATE(tmp(1:NP),NP)
+    do is = 1, st%d%nspin
+      do i=1,NDIM
+        tmp(1:NP)=gr%m%x(1:NP,i)*lr%X(dl_rho)(:, is)
+        write(fname, '(a,i1,a,i1,a,i1)') 'alpha_density-', is, '-', tag, '-', i
+        call X(output_function)(outp%how, dir, fname, gr%m, gr%sb, tmp, u, ierr)
+      end do
+    end do
+    deallocate(tmp)
   end if
 
   if( (iand(outp%what, output_current).ne.0) .and. (st%d%wfs_type == M_CMPLX) )then

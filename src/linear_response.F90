@@ -44,6 +44,7 @@ module linear_response_m
     FLOAT   :: conv_abs_dens  ! convergence required
     FLOAT   :: abs_dens       ! convergence reached
     FLOAT   :: conv_abs_psi   ! convergence required 
+    FLOAT   :: conv_abs_psi_r ! convergence required 
     FLOAT   :: abs_psi        ! convergence reached
     integer :: max_iter       ! maximum number of iterations
     integer :: max_scf_iter   ! maximum number of iterations
@@ -51,6 +52,9 @@ module linear_response_m
     integer :: solver         ! the linear solver to use
     integer :: preconditioner ! the preconditioner solver to use
     integer :: ort_min_step   ! the step where to start orthogonalization
+
+    logical :: dynamic_tol
+    FLOAT :: dynamic_tol_factor
 
     type(mix_t) :: mixer   ! can not live without it
 
@@ -122,7 +126,7 @@ contains
     !% The maximum number of SCF iterations to calculate response.
     !%End
 
-    call loct_parse_int(check_inp('PolSCFIterations'), 200, lr%max_scf_iter)
+    call loct_parse_int(check_inp(trim(prefix)//'SCFIterations'), 200, lr%max_scf_iter)
 
     !%Variable LinearSolver
     !%Type integer
@@ -194,6 +198,7 @@ contains
     
     call loct_parse_float(check_inp(trim(prefix)//"LinearSolverTol"), &
         CNST(1e-6), lr%conv_abs_psi)
+    lr%conv_abs_psi_r=lr%conv_abs_psi
     
     !%Variable LinearSolverOrthogonalization
     !%Type integer
@@ -219,6 +224,31 @@ contains
 
     call loct_parse_int(check_inp(trim(prefix)//"LinearSolverOrthogonalization"), 50, lr%ort_min_step)
     
+    !%Variable DynamicalTol
+    !%Type logical
+    !%Default true
+    !%Section Linear Response::SCF
+    !%Description
+    !% If this variable is true, the tolerance of the LinearSolver is
+    !% adjusted according to the level of convergency of the self
+    !% consistency.
+    !%End
+
+    call loct_parse_logical(check_inp(trim(prefix)//'DynamicalTol'), .true., lr%dynamic_tol)
+
+    !%Variable DynamicalTolFactor
+    !%Type float
+    !%Default 0.5
+    !%Section Linear Response::SCF
+    !%Description
+    !% This factor controls how much the tolerance is increased at
+    !% first iterations. Larger values means larger tolerance.
+    !%End
+
+    if( lr%dynamic_tol ) then 
+      call loct_parse_float(check_inp(trim(prefix)//'DynamicalTolFactor'), CNST(0.5), lr%dynamic_tol_factor)
+    end if
+
     ! END INPUT PARSING
 
     nullify(lr%ddl_rho, lr%ddl_psi, lr%ddl_Vhar, lr%dl_Vxc)
@@ -365,7 +395,7 @@ contains
     ALLOCATE(rho(m%np, st%d%nspin), m%np*st%d%nspin)
     if(associated(st%rho_core)) then
       do is = 1, st%d%spin_channels
-        rho(:, is) = st%rho(:, is) + st%rho_core(:)/st%d%spin_channels
+        rho(1:m%np, is) = st%rho(1:m%np, is) + st%rho_core(1:m%np)/st%d%spin_channels
       end do
     else
       rho(1:m%np, 1:st%d%nspin) = st%rho(1:m%np, 1:st%d%nspin)
@@ -407,6 +437,36 @@ contains
     type(lr_t),     intent(in) :: lr
     prec=(lr%preconditioner /= 0)
   end function precondition
+
+  subroutine dynamic_tol_init(lr)
+    type(lr_t),     intent(inout) :: lr
+
+    if( lr%dynamic_tol ) then
+      lr%conv_abs_psi = lr%dynamic_tol_factor*lr%conv_abs_psi_r/lr%conv_abs_dens
+      lr%conv_abs_psi = max(lr%conv_abs_psi, lr%conv_abs_psi_r)
+      lr%conv_abs_psi = min(lr%conv_abs_psi, CNST(0.1))
+    end if
+
+  end subroutine dynamic_tol_init
+
+  subroutine dynamic_tol_step(lr, iter)
+    type(lr_t),     intent(inout) :: lr
+    integer,        intent(in)    :: iter
+
+    if( lr%dynamic_tol .and. iter >= 0 ) then 
+      lr%conv_abs_psi = lr%dynamic_tol_factor*(lr%conv_abs_psi_r/lr%conv_abs_dens)*lr%abs_dens
+      lr%conv_abs_psi = max(lr%conv_abs_psi, lr%conv_abs_psi_r)
+      lr%conv_abs_psi = min(lr%conv_abs_psi, CNST(0.1))
+    end if
+      
+  end subroutine dynamic_tol_step
+
+  subroutine dynamic_tol_end(lr)
+    type(lr_t),     intent(inout) :: lr
+
+    lr%conv_abs_psi=lr%conv_abs_psi_r
+
+  end subroutine dynamic_tol_end
 
 
 #include "undef.F90"

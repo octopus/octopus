@@ -110,6 +110,10 @@ subroutine X(get_response_e)(sys, h, lr, dir, nsigma, omega, props, status)
 
   call init_response_e()
 
+  do sigma = 1, nsigma
+    call dynamic_tol_init(lr(dir, sigma))
+  end do
+
   message(1)="--------------------------------------------"
   call write_info(1)
 
@@ -137,6 +141,7 @@ subroutine X(get_response_e)(sys, h, lr, dir, nsigma, omega, props, status)
       end do
     end if
     
+
     do ik = 1, st%d%nspin
       do sigma = 1, nsigma
 
@@ -236,8 +241,10 @@ subroutine X(get_response_e)(sys, h, lr, dir, nsigma, omega, props, status)
            + M_zI*R_AIMAG(dl_rhoin(:,ik, 1) - dl_rhotmp(:, ik, 1))**2
       abs_dens = abs_dens + X(mf_integrate)(m, tmp)
     end do
-    
-    lr(dir,1)%abs_dens = sqrt(abs_dens)
+
+    do sigma = 1, nsigma
+      lr(dir, sigma)%abs_dens = sqrt(abs_dens)
+    end do
 
     write(message(1), '(a, e20.6, a, i5)') "SCF Residual ", lr(dir,1)%abs_dens, " Total Iterations ", total_iter
 
@@ -265,9 +272,17 @@ subroutine X(get_response_e)(sys, h, lr, dir, nsigma, omega, props, status)
       lr(dir,1)%X(dl_rho)(1:m%np, 1:st%d%nspin) = dl_rhonew(1:m%np, 1:st%d%nspin, 1)
       if(nsigma == 2) lr(dir,2)%X(dl_rho)(1:m%np, 1:st%d%nspin) = R_CONJ(dl_rhonew(1:m%np, 1:st%d%nspin, 1))
 
+      do sigma = 1, nsigma
+        call dynamic_tol_step(lr(dir, sigma), iter)
+      end do
+
     end if
     
   end do iter_loop
+
+  do sigma = 1, nsigma
+    call dynamic_tol_end(lr(dir, sigma))
+  end do
 
   deallocate(tmp)
   deallocate(Y)
