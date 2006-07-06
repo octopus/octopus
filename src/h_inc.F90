@@ -484,13 +484,13 @@ subroutine X(vlasers) (gr, h, psi, hpsi, t)
 
   if(h%ep%no_lasers > 0) then
     select case(h%gauge)
-    case(1) ! length gauge
+    case(LENGTH)
 
       do k = 1, h%d%dim
         hpsi(1:NP, k)= hpsi(1:NP, k) + epot_laser_scalar_pot(gr%m%np, gr, h%ep, t)*psi(1:NP, k)
       end do
 
-    case(2) ! velocity gauge
+    case(VELOCITY)
 
       call epot_laser_vector_pot(gr%sb, h%ep, t, a)
       ALLOCATE(grad(NP, NDIM), NP*NDIM)

@@ -113,12 +113,10 @@ contains
     !%
     !% The first three (possibly complex) numbers mark the polarization direction of the
     !% field. The "amplitude" is obviously the amplitude of the field. The "omega" is the
-    !% frequency. The "envelope" decides the shape of the enveloping function -- see the
-    !% manual for details. "tau0", "t0" and "tau1" are three paramenters that decide on the
+    !% frequency. The "envelope" decides the shape of the enveloping function.
+    !% "tau0", "t0" and "tau1" are three paramenters that decide on the
     !% temporal shape of the pulse -- the exact details depend on the particular envelope.
-    !% Envelope: 0 - constant ("cw")
-    !%           1 - Gaussian 
-    !%           2 - Cosinusoidal
+    !%
     !% If the envelope is given in a file, this will be "filename1". If the spatial part
     !% of the field is given in a file, this will be "filename2".
     !%
@@ -128,7 +126,26 @@ contains
     !% In order to give the spatial shape of the field in a file, the component "filename2"
     !% has to be present. If it is not present, then the laser field will be a dipolar field
     !% (which is the usual case).
+    !%
+    !% The possible options for the envelope are:
+    !%
+    !%Option envelope_constant 0
+    !% The envelope is just the unit function. The laser is not a pulse, but a continuous wave (cw).
+    !%Option envelope_gaussian 1
+    !% The envelope is a Gaussian function. To fully determine its shape, you need to specify the width (tau0)
+    !% and the peak time (t0).
+    !%Option envelope_cosinusoidal 2
+    !% The envelope is a half-cycle of a cosine function. To fully determine its shape, you need to specify the width (tau0)
+    !% and the peak time (t0).
+    !%Option envelope_trapezoidal 3
+    !% The envelope looks like a trapezoid: it starts at zero, ramps linearly until one during tau1 units of time, stays
+    !% at that maximum for tau0 units of time, and then decays linearly to zero during tau1 units of time.
+    !%Option envelope_fromfile 10
+    !% The shape of the laser pulse is read from a file, indicated in the field "filename1".
+    !%Option envelope_numerical 99
+    !% The laser shape is generated internally. This option is used if the code is run in the optimal-control mode.
     !%End
+
     no_l = 0
     if(loct_parse_block(check_inp('TDLasers'), blk) == 0) then
       no_l = loct_parse_block_n(blk)
