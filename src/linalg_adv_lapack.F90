@@ -186,7 +186,7 @@ FLOAT function ddeterminant(n, a, invert) result(d)
   ALLOCATE(ipiv(n), n)
 
   call DLAPACK(getrf)(n, n, a(1, 1), n, ipiv(1), info)
-  if(info /= 0) then
+  if(info < 0) then
     write(message(1), '(a, i3)') 'In dinvert, LAPACK dgetrf returned info = ', info
     call write_fatal(1)
   end if
@@ -245,7 +245,7 @@ CMPLX function zdeterminant(n, a, invert) result(d)
   ALLOCATE(ipiv(n), n)
 
   call ZLAPACK(getrf)(n, n, a(1, 1), n, ipiv(1), info)
-  if(info /= 0) then
+  if(info < 0) then
     write(message(1), '(a, i3)') 'In dinvert, LAPACK dgetrf returned info = ', info
     call write_fatal(1)
   end if
