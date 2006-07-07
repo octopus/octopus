@@ -54,7 +54,7 @@ module linear_response_m
     integer :: ort_min_step   ! the step where to start orthogonalization
 
     logical :: dynamic_tol
-    FLOAT :: dynamic_tol_factor
+    FLOAT :: dynamic_tol_factor, last_tol
 
     type(mix_t) :: mixer   ! can not live without it
 
@@ -202,7 +202,7 @@ contains
     
     !%Variable LinearSolverOrthogonalization
     !%Type integer
-    !%Default 50
+    !%Default 0
     !%Section Linear Response::Solver
     !%Description
     !% A good preconditioner to the Sternheimer equation is the
@@ -212,17 +212,16 @@ contains
     !% wavenfunctions.
     !% To overcome this, the operator is only applied is the linear solver
     !% has not converged after a certain number of steps. This variable
-    !% controls that number. The default is to start to orthogonalize
-    !% after 50 steps of linear solver. A value of 1 will activate
+    !% controls that number. A value of 1 will activate
     !% orthogonalization always and 0 means that it will not be used
-    !% at all.
+    !% at all. The default is 0.
     !%Option always 1 
     !% The ortogonalization preconditioner will be applied always.
     !%Option never 0 
     !% The ortogonalization will not be used.
     !%End
 
-    call loct_parse_int(check_inp(trim(prefix)//"LinearSolverOrthogonalization"), 50, lr%ort_min_step)
+    call loct_parse_int(check_inp(trim(prefix)//"LinearSolverOrthogonalization"), 0, lr%ort_min_step)
     
     !%Variable DynamicalTol
     !%Type logical
@@ -441,10 +440,12 @@ contains
   subroutine dynamic_tol_init(lr)
     type(lr_t),     intent(inout) :: lr
 
+    lr%last_tol = CNST(0.1)
+
     if( lr%dynamic_tol ) then
       lr%conv_abs_psi = lr%dynamic_tol_factor*lr%conv_abs_psi_r/lr%conv_abs_dens
       lr%conv_abs_psi = max(lr%conv_abs_psi, lr%conv_abs_psi_r)
-      lr%conv_abs_psi = min(lr%conv_abs_psi, CNST(0.1))
+      lr%conv_abs_psi = min(lr%conv_abs_psi, lr%last_tol)
     end if
 
   end subroutine dynamic_tol_init
@@ -456,7 +457,9 @@ contains
     if( lr%dynamic_tol .and. iter >= 0 ) then 
       lr%conv_abs_psi = lr%dynamic_tol_factor*(lr%conv_abs_psi_r/lr%conv_abs_dens)*lr%abs_dens
       lr%conv_abs_psi = max(lr%conv_abs_psi, lr%conv_abs_psi_r)
-      lr%conv_abs_psi = min(lr%conv_abs_psi, CNST(0.1))
+      lr%conv_abs_psi = min(lr%conv_abs_psi, lr%last_tol)
+
+      lr%last_tol = lr%conv_abs_psi
     end if
       
   end subroutine dynamic_tol_step

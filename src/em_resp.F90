@@ -167,6 +167,7 @@ contains
 
       !!DYNAMIC
 
+      !open or create linear/dynpols file
       if(.not. fromScratch) then
         iunit = io_open('linear/dynpols', action='read', status='old', die=.false.)
         if(iunit > 0) then
@@ -203,6 +204,7 @@ contains
         else
           call ddynamic_response(sys, h, lr, props, zpol(1:ndim, 1:ndim), real(omega(i), PRECISION),status)
         end if
+        
 
         iunit = io_open('linear/dynpols', action='write', position='append' )
         if(status%ok) then           
@@ -215,19 +217,21 @@ contains
         
         call io_close(iunit)
 
-        if(1 == nomega ) then 
-          
-          if( props%complex_response ) then 
-            do j = 1, NDIM
-              call zlr_calc_elf(sys%st,sys%gr, lr(j, 1, 1), lr(j,2,1))
-              call zlr_output(sys%st, sys%gr, lr(j, 1, 1) ,"linear", j, sys%outp)
-            end do
-          else
-            do j = 1, NDIM
-              call dlr_calc_elf(sys%st,sys%gr, lr(j, 1, 1), lr(j,2,1))
-              call dlr_output(sys%st, sys%gr, lr(j, 1, 1) ,"linear", j, sys%outp)
-            end do
-          end if
+        
+        write(dirname, '(a,f5.3)') 'linear/freq_', omega(i)/units_out%energy%factor
+        message(1)='Info: Output will be written to '//dirname//' directory.'
+        call write_info(1)
+        
+        if( props%complex_response ) then 
+          do j = 1, NDIM
+            call zlr_calc_elf(sys%st,sys%gr, lr(j, 1, 1), lr(j,2,1))
+            call zlr_output(sys%st, sys%gr, lr(j, 1, 1), dirname, j, sys%outp)
+          end do
+        else
+          do j = 1, NDIM
+            call dlr_calc_elf(sys%st,sys%gr, lr(j, 1, 1), lr(j,2,1))
+            call dlr_output(sys%st, sys%gr, lr(j, 1, 1), dirname, j, sys%outp)
+          end do
         end if
         
       end do
