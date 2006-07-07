@@ -81,7 +81,7 @@ contains
     logical,             intent(inout) :: fromScratch
 
     type(casida_t) :: cas
-    integer :: i, ierr, kpoints, dim, nst, ist
+    integer :: i, ierr, kpoints, dim, nst, ist, n_filled, n_partially_filled, n_half_filled
     character(len=80) :: trandens
 
     call push_sub('casida.casida_run')
@@ -127,9 +127,8 @@ contains
 
     cas%n_occ(:) = 0
     do i = 1, sys%st%d%nspin
-      do ist = 1, sys%st%nst
-        if(sys%st%occ(ist, i) > M_ZERO) cas%n_occ(i) = cas%n_occ(i) + 1
-      end do
+      call occupied_states(sys%st, i, n_filled, n_partially_filled, n_half_filled)
+      cas%n_occ(i) = n_filled + n_partially_filled + n_half_filled
       cas%n_unocc(i) = sys%st%nst - cas%n_occ(i)
     end do
 

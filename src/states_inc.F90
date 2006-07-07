@@ -285,8 +285,8 @@ R_TYPE function X(states_mpdotp_g)(m, st1, st2, mat) result(dotp)
         call X(calculate_matrix) (m, ik, st1, st2, a)
       end if
 
-      call occupied_states(st1, ik, filled1, partially_filled1, half_filled1, i1, j1, k1)
-      call occupied_states(st2, ik, filled2, partially_filled2, half_filled2, i2, j2, k2)
+      call occupied_states(st1, ik, i1, j1, k1, filled1, partially_filled1, half_filled1)
+      call occupied_states(st2, ik, i2, j2, k2, filled2, partially_filled2, half_filled2)
       if( (j1 > 0) .or. (j2 > 0) ) then
         message(1) = 'Cannot calcualte many-body dot products with partially occupied orbitals'
         call write_fatal(1)
@@ -329,8 +329,8 @@ R_TYPE function X(states_mpdotp_g)(m, st1, st2, mat) result(dotp)
         call X(calculate_matrix) (m, ik, st1, st2, a)
       end if
 
-      call occupied_states(st1, ik, filled1, partially_filled1, half_filled1, i1, j1, k1)
-      call occupied_states(st2, ik, filled2, partially_filled2, half_filled2, i2, j2, k2)
+      call occupied_states(st1, ik, i1, j1, k1, filled1, partially_filled1, half_filled1)
+      call occupied_states(st2, ik, i2, j2, k2, filled2, partially_filled2, half_filled2)
       if( (j1 > 0) .or. (j2 > 0) ) then
         message(1) = 'Cannot calcualte many-body dot products with partially occupied orbitals'
         call write_fatal(1)

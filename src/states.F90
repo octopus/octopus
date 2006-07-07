@@ -77,6 +77,7 @@ module states_m
     states_calc_elf,                &
     states_calc_elf_fs,             &
     kpoints_write_info,             &
+    occupied_states,                &
     states_init_excited_state,      &
     states_kill_excited_state
 
@@ -1957,21 +1958,21 @@ contains
   ! The integer arrays filled, partially_filled and half_filled point
   !   to the indexes where the filled, partially filled and half_filled
   !   orbitals are, respectively.
-  subroutine occupied_states(st, ik, filled, partially_filled, half_filled, &
-                             n_filled, n_partially_filled, n_half_filled)
+  subroutine occupied_states(st, ik, n_filled, n_partially_filled, n_half_filled, &
+                             filled, partially_filled, half_filled)
     type(states_t), intent(in) :: st
     integer, intent(in)  :: ik
     integer, intent(out) :: n_filled, n_partially_filled, n_half_filled
-    integer, intent(out) :: filled(:), partially_filled(:), half_filled(:)
+    integer, optional, intent(out) :: filled(:), partially_filled(:), half_filled(:)
 
     integer :: j, i
     FLOAT :: occ
     FLOAT, parameter :: M_THRESHOLD = CNST(1.0e-6)
     call push_sub('states_inc.occupied_states')
 
-    filled(:) = 0
-    partially_filled(:) = 0
-    half_filled(:) = 0
+    if(present(filled))           filled(:) = 0
+    if(present(partially_filled)) partially_filled(:) = 0
+    if(present(half_filled))      half_filled(:) = 0
     n_filled = 0
     n_partially_filled = 0
     n_half_filled = 0
@@ -1981,13 +1982,13 @@ contains
       do j = 1, st%nst
         if(abs(st%occ(j, ik)-M_TWO) < M_THRESHOLD) then
           n_filled = n_filled + 1
-          filled(n_filled) = j
+          if(present(filled)) filled(n_filled) = j
         elseif(abs(st%occ(j, ik)-M_ONE) < M_THRESHOLD) then
           n_half_filled = n_half_filled + 1
-          half_filled(n_half_filled) = j
+          if(present(half_filled)) half_filled(n_half_filled) = j
         elseif(st%occ(j, ik) > M_THRESHOLD ) then
           n_partially_filled = n_partially_filled + 1
-          partially_filled(n_partially_filled) = j
+          if(present(partially_filled)) partially_filled(n_partially_filled) = j
         elseif(abs(st%occ(j, ik)) > M_THRESHOLD ) then
           message(1) = 'Internal error: Illegal values in the occupation numbers.'
           call write_fatal(1)
@@ -1997,10 +1998,10 @@ contains
       do j = 1, st%nst
         if(abs(st%occ(j, ik)-M_ONE) < M_THRESHOLD) then
           n_filled = n_filled + 1
-          filled(n_filled) = j
+          if(present(filled)) filled(n_filled) = j
         elseif(st%occ(j, ik) > M_THRESHOLD ) then
           n_partially_filled = n_partially_filled + 1
-          partially_filled(n_partially_filled) = j
+          if(present(partially_filled)) partially_filled(n_partially_filled) = j
         elseif(abs(st%occ(j, ik)) > M_THRESHOLD ) then
           message(1) = 'Internal error: Illegal values in the occupation numbers.'
           call write_fatal(1)
@@ -2072,8 +2073,8 @@ contains
 
     select case(ispin)
     case(UNPOLARIZED)
-      call occupied_states(ground_state, 1, filled(:, 1), partially_filled(:, 1), half_filled(:, 1), &
-                           n_filled(1), n_partially_filled(1), n_half_filled(1))
+      call occupied_states(ground_state, 1, n_filled(1), n_partially_filled(1), n_half_filled(1), &
+                           filled(:, 1), partially_filled(:, 1), half_filled(:, 1))
       if(n_partially_filled(1) > 0) then
         message(1) = 'Cannot calculate projections onto excited states if there are partially filled orbitals.'
         call write_fatal(1)
@@ -2086,10 +2087,10 @@ contains
       n_empty(1) = nst - n_filled(1)
       n_possible_pairs = n_filled(1) * n_empty(1)
     case(SPIN_POLARIZED)
-      call occupied_states(ground_state, 1, filled(:, 1), partially_filled(:, 1), half_filled(:, 1), &
-                           n_filled(1), n_partially_filled(1), n_half_filled(1))
-      call occupied_states(ground_state, 2, filled(:, 2), partially_filled(:, 2), half_filled(:, 2), &
-                           n_filled(2), n_partially_filled(2), n_half_filled(2))
+      call occupied_states(ground_state, 1, n_filled(1), n_partially_filled(1), n_half_filled(1), &
+                           filled(:, 1), partially_filled(:, 1), half_filled(:, 1))
+      call occupied_states(ground_state, 2, n_filled(2), n_partially_filled(2), n_half_filled(2), &
+                           filled(:, 2), partially_filled(:, 2), half_filled(:, 2))
       if(n_partially_filled(1)*n_partially_filled(2) > 0) then
         message(1) = 'Cannot calculate projections onto excited states if there are partially filled orbitals.'
         call write_fatal(1)
@@ -2099,8 +2100,8 @@ contains
       n_possible_pairs = n_filled(1) * n_empty(1) + n_filled(2) * n_empty(2)
 
     case(SPINORS)
-      call occupied_states(ground_state, 1, filled(:, 1), partially_filled(:, 1), half_filled(:, 1), &
-                           n_filled(1), n_partially_filled(1), n_half_filled(1))
+      call occupied_states(ground_state, 1, n_filled(1), n_partially_filled(1), n_half_filled(1), &
+                           filled(:, 1), partially_filled(:, 1), half_filled(:, 1))
       if(n_partially_filled(1) > 0) then
         message(1) = 'Cannot calculate projections onto excited states if there are partially filled orbitals.'
         call write_fatal(1)
