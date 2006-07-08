@@ -224,12 +224,18 @@ contains
         
         if( props%complex_response ) then 
           do j = 1, NDIM
-            call zlr_calc_elf(sys%st,sys%gr, lr(j, 1, 1), lr(j,2,1))
+            if(NDIM==3) then
+              if(iand(sys%outp%what, output_elf).ne.0) &
+                   call zlr_calc_elf(sys%st,sys%gr, lr(j, 1, 1), lr(j,2,1))
+            end if
             call zlr_output(sys%st, sys%gr, lr(j, 1, 1), dirname, j, sys%outp)
           end do
         else
           do j = 1, NDIM
-            call dlr_calc_elf(sys%st,sys%gr, lr(j, 1, 1), lr(j,2,1))
+            if(NDIM==3) then
+              if(iand(sys%outp%what, output_elf).ne.0) &
+                   call dlr_calc_elf(sys%st,sys%gr, lr(j, 1, 1), lr(j,2,1))
+            end if
             call dlr_output(sys%st, sys%gr, lr(j, 1, 1), dirname, j, sys%outp)
           end do
         end if
@@ -286,6 +292,7 @@ contains
 
     if(props%dynamic) deallocate(omega)
     deallocate(lr)
+
     call states_deallocate_wfns(sys%st)
     call pop_sub()
       
@@ -547,7 +554,7 @@ contains
 
     CMPLX, allocatable :: gpsi(:,:), gdl_psi(:,:), gdl_psi_m(:,:)
 
-    ALLOCATE(lr%dl_j(gr%m%np, MAX_DIM, st%d%nspin), gr%m%np*MAX_DIM*st%d%nspin)
+    if(.not. associated(lr%dl_j)) ALLOCATE(lr%dl_j(gr%m%np, MAX_DIM, st%d%nspin), gr%m%np*MAX_DIM*st%d%nspin)
 
     np = NP
     ndim = NDIM

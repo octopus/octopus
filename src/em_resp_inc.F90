@@ -548,8 +548,8 @@ subroutine X(lr_calc_elf)(st, gr, lr, lr_m)
   ALLOCATE(   elf(NP, st%d%nspin), NP*st%d%nspin)
   ALLOCATE(    de(NP, st%d%nspin), NP*st%d%nspin)
 
-  ALLOCATE(lr%X(dl_de)(NP, st%d%nspin), NP*st%d%nspin)  
-  ALLOCATE(lr%X(dl_elf)(NP, st%d%nspin), NP*st%d%nspin)
+  if( .not. associated(lr%X(dl_de)) ) ALLOCATE(lr%X(dl_de)(NP, st%d%nspin), NP*st%d%nspin)  
+  if( .not. associated(lr%X(dl_elf))) ALLOCATE(lr%X(dl_elf)(NP, st%d%nspin), NP*st%d%nspin)
 
   !calculate the gs elf
   call states_calc_elf(st, gr, elf, de)
