@@ -292,6 +292,7 @@ contains
 
     if(props%dynamic) deallocate(omega)
     deallocate(lr)
+    deallocate(hpol_density)
 
     call states_deallocate_wfns(sys%st)
     call pop_sub()
@@ -608,7 +609,8 @@ contains
     
     deallocate(gpsi)
     deallocate(gdl_psi)
-    
+    if(present(lr_m)) deallocate(gdl_psi_m)
+
   end subroutine lr_calc_current
 
 #include "undef.F90"
