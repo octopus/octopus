@@ -72,13 +72,18 @@ module opt_control_m
   integer, parameter, private  ::  &
     oct_tgtype_state = 1,       &
     oct_tgtype_local = 2
-
+  
+  integer, parameter, private  ::  &
+    oct_ftype_gauss = 1,       &
+    oct_ftype_step = 2
   type td_target_t
      integer :: type     ! local or state 
-     FLOAT   :: par      
+     FLOAT   :: par 
+     FLOAT   :: width      ! width parameter
      FLOAT   :: weight     ! relative weight of filter
  
-     character(len=1024) :: expression ! expression of user def func
+     character(len=1024) :: expression(MAX_DIM) ! expression of user def func
+     integer             :: ftype         ! which function: gaussian etc
 
      FLOAT, pointer :: spatial(:)   ! x,y,z dependence
      CMPLX, pointer :: tdshape(:,:) ! evaluate user defined functions
@@ -279,7 +284,7 @@ contains
          call zoutput_function(sys%outp%how,'opt-control','last_bwd',gr%m,gr%sb,psi%zpsi(:,1,1,1),M_ONE,ierr)
          call fwd_step(method)
          write(filename,'(a,i3.3)') 'PsiT.', ctr_iter
-         call zoutput_function(sys%outp%how,'opt-control',filename,gr%m,gr%sb,initial_st%zpsi(:,1,1,1),M_ONE,ierr)
+         call zoutput_function(sys%outp%how,'opt-control',filename,gr%m,gr%sb,psi%zpsi(:,1,1,1),M_ONE,ierr)
          if(dump_intermediate) then
             write(filename,'(a,i3.3)') 'opt-control/laser.', ctr_iter
             call write_field(filename, laser, td%max_iter, td%dt)
@@ -705,7 +710,7 @@ contains
       ! new electric field
       if(targetmode==oct_targetmode_td) then
          ! psi(0) --> psi(T) with old field (for chi)
-         call calc_inh(psi2,td_tg,real(abs(iter*td%dt),PRECISION),&
+         call calc_inh(psi2,td_tg,iter,&
               td%dt,td%max_iter,chi)
          ! psi2
          h%ep%lasers(1)%numerical => laser_tmp
@@ -757,7 +762,7 @@ contains
 
       ! calc inh first, then update field
       if(targetmode==oct_targetmode_td) &
-           call calc_inh(psi,td_tg,real(abs(iter*td%dt),PRECISION),&
+           call calc_inh(psi,td_tg,iter, &
            td%dt,td%max_iter,chi)
       ! new electric field
       call update_field(iter+1, laser_tmp, method)!, tdpenalty(:,iter*2))
@@ -784,13 +789,14 @@ contains
 
 
 ! ---------------------------------------------------------------
-    subroutine calc_inh(psi_n, tg, tt, dt, steps, chi_n)
-      FLOAT          , intent(in)     :: dt, tt
-      integer        , intent(in)     :: steps
+    subroutine calc_inh(psi_n, tg, iter, dt, steps, chi_n)
+      FLOAT          , intent(in)     :: dt
+      integer        , intent(in)     :: steps, iter
       type(states_t),  intent(in)     :: psi_n
       type(states_t),  intent(inout)  :: chi_n
       type(td_target_t), intent(in)   :: tg(:)
 
+      CMPLX               :: tgt(NP_PART)
       integer             :: jj, ip, dim
       FLOAT               :: x(MAX_DIM), r, psi_re, psi_im
       CMPLX               :: olap
@@ -802,46 +808,91 @@ contains
       ! TODO: change to right dimensions
       !       build target operator
 
-      do jj=1, size(tg)
-         ! build target_function and calc inhomogeneity
-         if(tg(jj)%type.eq.oct_tgtype_local) then
-            ! build operator
-            do ip = 1, gr%m%np
-               x = gr%m%x(ip, :)
-               r = sqrt(sum(x(:)**2))
-               call loct_parse_expression(psi_re, psi_im, &
-                    x(1), x(2), x(3), r, tt, td_tg(jj)%expression)
-              
-               ! need tdtarget for fitness calculation
-               tdtarget(ip) = (psi_re+m_zI*psi_im)
-               chi_n%zpsi(ip,:,1,1) = chi_n%zpsi(ip,:,1,1) &
-                    - sign(M_ONE,dt)/real(td%max_iter)*tdtarget(ip)*&
-                    psi_n%zpsi(ip,:,1,1)
-            end do
-            !call zoutput_function(sys%outp%how,'opt-control','inh',gr%m,gr%sb,tdtarget,M_ONE, ierr) 
-         else
-            ! build operator
-            do ip = 1, gr%m%np
-               x = gr%m%x(ip, :)
-               r = sqrt(sum(x(:)**2))
-               call loct_parse_expression(psi_re, psi_im, &
-                    x(1), x(2), x(3), r, tt, td_tg(jj)%expression)
-              
-               ! need tdtarget for fitness calculation
-               tdtarget(ip) = (psi_re+m_zI*psi_im)
-
-            end do
-            olap= m_z0
-            do dim=1, psi_i%d%dim
-               olap = zmf_integrate(gr%m,psi_n%zpsi(:,dim,1,1)*&
-                    conjg(tdtarget(:)))
-               chi_n%zpsi(:,dim,1,1) = chi_n%zpsi(ip,dim,1,1) &
+      ! FIXME: more flexibility when defining multiple target operators
+      ! usually one has only one specie of operators, i.e., only local or only non-local, when mixing these, this routine has to be improved.
+      if(tg(1)%type.eq.oct_tgtype_local) then
+         ! local td operator
+         ! build operator
+         !do ip = 1, gr%m%np
+         !   x = gr%m%x(ip, :)
+         !   r = sqrt(sum(x(:)**2))
+         
+         !   call loct_parse_expression(psi_re, psi_im, &
+         !        x(1), x(2), x(3), r, tt, td_tg(jj)%expression)
+         
+         !   ! need tdtarget for fitness calculation
+         ! tdtarget(:) = (psi_re+m_zI*psi_im)
+         do jj=1, size(tg)       
+            call build_tdtarget(tg(jj),tgt, iter) ! tdtarget is build
+            tdtarget(:) = tdtarget(:) + tgt(:) 
+         end do
+         do dim=1, psi_i%d%dim
+            chi_n%zpsi(:,dim,1,1) = chi_n%zpsi(:,dim,1,1) &
+                 - sign(M_ONE,dt)/real(td%max_iter)*tdtarget(:)* &
+                 psi_n%zpsi(:,dim,1,1)
+         enddo
+         !call zoutput_function(sys%outp%how,'opt-control','inh',gr%m,gr%sb,tdtarget,M_ONE, ierr) 
+      else 
+         ! build operator 
+         ! non-local td operator
+         !do ip = 1, gr%m%np
+         !   x = gr%m%x(ip, :)
+         !   r = sqrt(sum(x(:)**2))
+         !   call loct_parse_expression(psi_re, psi_im, &
+         !        x(1), x(2), x(3), r, tt, td_tg(jj)%expression)
+         !   tdtarget(ip) = (psi_re+m_zI*psi_im)  
+         ! need tdtarget for fitness calculation
+         do jj=1, size(tg) 
+               call build_tdtarget(tg(jj), tgt, iter)
+               tdtarget = tgt
+               olap= m_z0
+               do dim=1, psi_i%d%dim
+                  olap = zmf_integrate(gr%m,psi_n%zpsi(:,dim,1,1)*&
+                       conjg(tdtarget(:)))
+                  chi_n%zpsi(:,dim,1,1) = chi_n%zpsi(:,dim,1,1) &
                     - sign(M_ONE,dt)/real(td%max_iter)*olap*tdtarget(:)
+               end do
             end do
          end if
-      end do
 
     end subroutine calc_inh
+    
+    ! ---------------------------------------------------------
+    subroutine build_tdtarget(tdtg, tgt, iter)
+      type(td_target_t), intent(in)   :: tdtg
+      integer,           intent(in)   :: iter
+      CMPLX  ,           intent(out)   :: tgt(:)
+
+      integer :: kk, pol
+
+      SELECT CASE(tdtg%ftype)
+      CASE(1)
+         ! gauss
+         ! Product x = gr%m%x(ip, :) 
+         tgt = M_ONE
+         do pol=1, NDIM
+            tgt = tgt * exp( - (gr%m%x(:, pol) - &
+                 real(tdtg%tdshape(pol,iter),PRECISION ))**2/(M_TWO*tdtg%width**2))
+            write(6,*) pol, iter, real(tdtg%tdshape(pol,iter),PRECISION ) 
+         enddo
+         write(6,*) maxloc(abs(tgt)) 
+      !CASE(2)
+         ! tgt = M-zero
+      !   ! step
+      !   Nwidth = tg(jj)%width
+      !   Nwmin  = tg(jj)%numerical
+      !   Nwmax  = 
+      !   do kk=1,  gr%m%np  tg(jj)%width  tg(jj)%tdshape
+      !   
+      !   end do
+      CASE DEFAULT
+         message(1)="Unknown TD Target Operator: Choose Gaussian(1) or Step(2)"
+         call write_fatal(1)
+      END SELECT
+
+
+    end subroutine build_tdtarget
+
 
     ! ---------------------------------------------------------
     subroutine update_field(iter, l, method)
@@ -1056,7 +1107,7 @@ contains
       
       call t_lookup(2*steps+1,dt/real(2,PRECISION),tgrid)
       iunit = io_open(filename, action='write')
-      do i = 0, 2*steps
+      do i = 0, 2*steps, 2
          write(iunit, '(4es30.16e4)') tgrid(i), las(:, i)
       end do
       call io_close(iunit)
@@ -1338,7 +1389,7 @@ contains
       character(len=10) :: fname
       integer           :: ik, ib, idim, inst, inik
       integer           :: id, is, ip, no_states, kk, p
-      integer           :: no_blk
+      integer           :: no_blk, pol
       FLOAT             :: x(MAX_DIM), r, psi_re, psi_im, weight
       CMPLX             :: c_weight      
       type(states_t)    :: tmp_st
@@ -1545,21 +1596,34 @@ contains
       !% The structure of the block is as follows:
       !%
       !% <tt>%OCTTdTarget
-      !% <br>&nbsp;&nbsp;expression | weight
+      !% <br>&nbsp;&nbsp;type | ftype | width | weight | g_x(t) | g_y(t) | g_z(t) 
       !% <br>%</tt>
       !%  
-      !% Targetoperator: state local
-      !% local: gauss, gaussFWHM, ud
-      !% state: 
-      !% Par depends on the target operator:
-      !% *oct_tdtype_local*: width
-      !% *oct_tgtype_state*: excited state
-      !% Td function:
+      !% Type:
+      !% Choose betweem local and state target. 
+      !% *oct_tgtype_local*
+      !% *oct_tgtype_state*
+      !%
+      !% Ftype: 
+      !% Spatial function of target operator.
+      !% *oct_ftype_gauss*
+      !%
+      !% width:
+      !% width of the Gaussian 
+      !%
+      !% weight:
+      !% If multiple operators ae defined weight the importance between them
+      !% g_x(t), g_y(t), g_z(t):
       !% describe the time-dependence
-      !% local:  describe the motion of the center, e.g. cos
-      !% state:  describe the evolution of the occupation, e.g. sin2 
-      !% Weight:
-      !% describe the relative importance if you have specified several targets
+      !% 
+      !% Example: 
+      !% R0=1.0
+      !% <tt>%OCTTdTarget
+      !% <br>&nbsp;&nbsp;oct_tgtype_local | oct_ftype_gauss | 20 | 1 | "R0*sin(1.0*t)" | "R0*cos(1.0*t)" | "0"
+      !% <br>%</tt>
+      !% 
+      !% In this example we define a narrow Gaussian which circles with radius R0 around the center. 
+      !% 
       !%End
       if((targetmode==oct_targetmode_td)&
            .AND.(loct_parse_block(check_inp('OCTTdTarget'),blk)==0)) then
@@ -1567,22 +1631,28 @@ contains
          no_tds = loct_parse_block_n(blk)
          ALLOCATE(td_tg(no_tds), no_tds)
          do i=1, no_tds
+            do pol=1, MAX_DIM
+               td_tg(i)%expression(pol) = " "
+            end do
             ! The structure of the block is:
             ! domain | function_type | center | width | weight 
             no_c = loct_parse_block_cols(blk, i-1)
-            td_tg(i)%type = oct_tgtype_local
-            call loct_parse_block_string(blk, i-1, 0, td_tg(i)%expression)
-            call loct_parse_block_float(blk, i-1, 1, td_tg(i)%weight)
+            !td_tg(i)%type = oct_tgtype_local
+            call loct_parse_block_int(blk, i-1, 0, td_tg(i)%type)
+            call loct_parse_block_int(blk, i-1, 1, td_tg(i)%ftype)
+            call loct_parse_block_float(blk, i-1, 2, td_tg(i)%width)
+            call loct_parse_block_float(blk, i-1, 3, td_tg(i)%weight)
+            do pol=1, NDIM
+               call loct_parse_block_string(blk, i-1, 3+pol, &
+                    td_tg(i)%expression(pol))
+            end do
             !
-            !ALLOCATE(td_tg(i)%numerical(NDIM,0:2*td%max_iter), NDIM*(2*td%max_iter+1))
-            !ALLOCATE(td_tg(i)%spatial(), NDIM)
-            ! call build td functions
+            ALLOCATE(td_tg(i)%tdshape(NDIM,0:2*td%max_iter), NDIM*(2*td%max_iter+1))
+            call build_tdshape(td_tg(i), td%max_iter, td%dt)
+            
          end do
 
       end if
-!! DEBUG 
-      call zoutput_function(sys%outp%how,'opt-control','tgstate',gr%m,gr%sb,target_st%zpsi(:,1,1,1),u,ierr)
-!!
       ! calc norm, give warning when to small
 
       call pop_sub()
@@ -1590,6 +1660,34 @@ contains
     end subroutine def_toperator
 
 
+    !----------------------------------------------------------
+    subroutine build_tdshape(td_tg, steps, dt)
+      type(td_target_t), intent(inout) :: td_tg
+      integer,           intent(in)    :: steps
+      FLOAT,             intent(in)    :: dt
+
+      FLOAT   :: tgrid(0:2*steps)
+      FLOAT   :: width, f_re, f_im
+      integer :: kk, pol
+
+      call t_lookup(2*steps+1,dt/real(2,PRECISION),tgrid)
+      do kk=0, 2*steps
+         do pol=1,NDIM
+            f_re = M_ZERO
+            f_im = M_ZERO
+            !call loct_parse_expression(f_re, f_im, "t", tgrid(kk), &
+            !     td_tg%expression(pol))
+            write(6,*) td_tg%expression(pol)
+            call loct_parse_expression(f_re, f_im, & 	
+                 M_ZERO, M_ZERO, M_ZERO, M_ZERO, tgrid(kk), &
+                 td_tg%expression(pol)) 
+            td_tg%tdshape(pol,kk) = f_re + M_zI*f_im
+            write(6,*)  tgrid(kk), f_re , f_im
+         end do
+      end do
+    end subroutine build_tdshape
+
+    !------------------------------------------------------
     subroutine read_OCTparameters()
       !read the parameters for the optimal control run     
       integer :: jj, kk
@@ -1843,6 +1941,7 @@ contains
       FLOAT               :: mxloc(MAX_DIM)
       integer             :: tt, pos(1)
       FLOAT               :: t
+      CMPLX               :: tgt(NP_PART)
       call push_sub('opt_control.init_tdtarget')
 
       ! td target fitness
@@ -1863,19 +1962,16 @@ contains
          ! build target_function and calc inhomogeneity
          do tt=0, td%max_iter, 20
             t = real(tt,PRECISION)*td%dt
-            do ip = 1, gr%m%np
-               x = gr%m%x(ip, :)
-               r = sqrt(sum(x(:)**2))
-               call loct_parse_expression(psi_re, psi_im, &
-                    x(1), x(2), x(3), r, t, td_tg(jj)%expression)
-              
-               ! need tdtarget for fitness calculation
-               tdtarget(ip) = (psi_re+m_zI*psi_im)
-            end do
-            ! FIXME: Is that also correct for 2D ?
+            write(6,*) tt, trim(td_tg(jj)%expression(1))
+            write(6,*) tt, trim(td_tg(jj)%expression(2))
+            write(6,*) tt, trim(td_tg(jj)%expression(3))
+            call build_tdtarget(td_tg(jj),tgt,tt)
+            tdtarget = tgt
             pos = maxloc(abs(tdtarget))
+            write(6,*) pos
             mxloc(:) = gr%m%x(pos(1),:) 
-            write(iunit, '(4es30.16e4)') t, mxloc
+            write(6,*) mxloc
+            write(iunit, '(4es30.16e4)') t, mxloc, td_tg(jj)%tdshape(1,tt)
          end do
          close(iunit)
       end do

@@ -72,7 +72,9 @@ module lasers_m
     FLOAT :: dt
 
     type(loct_spline_t) :: phase     ! when reading a laser from a file
-    type(loct_spline_t) :: amplitude
+    type(loct_spline_t) :: amplitude1
+    type(loct_spline_t) :: amplitude2
+    type(loct_spline_t) :: amplitude3
 
     FLOAT, pointer :: v(:)              ! the spatial part.
 
@@ -173,12 +175,16 @@ contains
         l(i)%t0   = l(i)%t0   * units_inp%time%factor
         l(i)%tau1 = l(i)%tau1 * units_inp%time%factor
 
-        if(l(i)%envelope == ENVELOPE_TRAPEZOIDAL .and. no_c < 9)  call input_error('TDLasers')
-        if(l(i)%envelope == ENVELOPE_FROM_FILE   .and. no_c < 10) call input_error('TDLasers')
+        if(l(i)%envelope == ENVELOPE_TRAPEZOIDAL .and. no_c < 9)  &
+             call input_error('TDLasers')
+        if(l(i)%envelope == ENVELOPE_FROM_FILE   .and. no_c < 10) &
+             call input_error('TDLasers')
         if(no_c>10) l(i)%spatial_part = SPATIAL_PART_FROM_FILE
 
-        if(l(i)%envelope == ENVELOPE_FROM_FILE)         call get_envelope_from_file(l(i), trim(filename1))
-        if(l(i)%spatial_part == SPATIAL_PART_FROM_FILE) call get_spatial_part_from_file(l(i), trim(filename2))
+        if(l(i)%envelope == ENVELOPE_FROM_FILE)   &
+             call get_envelope_from_file(l(i), trim(filename1))
+        if(l(i)%spatial_part == SPATIAL_PART_FROM_FILE) &
+             call get_spatial_part_from_file(l(i), trim(filename2))
 
         ! normalize polarization
         l(i)%pol(:) = l(i)%pol(:)/sqrt(sum(abs(l(i)%pol(:))**2))
@@ -228,7 +234,7 @@ contains
 
       integer :: iunit, lines, j
       FLOAT :: dummy
-      FLOAT, allocatable :: t(:), am(:), ph(:)
+      FLOAT, allocatable :: t(:), am1(:), am2(:), am3(:)
 
       iunit = io_open(filename, action='read', status='old')
 
@@ -243,23 +249,41 @@ contains
 
       ! allocate and read info
       ALLOCATE( t(lines), lines)
-      ALLOCATE(am(lines), lines)
-      ALLOCATE(ph(lines), lines)
-      do j = 1, lines
-        read(iunit, *, err=100, end=100) t(j), am(j), ph(j)
-      end do
+      ALLOCATE(am1(lines), lines)
+      ALLOCATE(am2(lines), lines)
+      ALLOCATE(am3(lines), lines)
+      am1(:) = M_ZERO
+      am2(:) = M_ZERO
+      am3(:) = M_ZERO
+      
+      SELECT CASE(m%sb%dim)
+      CASE(1)
+         do j = 1, lines
+            read(iunit,*, err=100, end=100) t(j), am1(j)
+         end do
+      CASE(2)
+         do j = 1, lines
+            read(iunit,*, err=100, end=100) t(j), am1(j), am2(j)
+         end do
+      CASE(3)
+         do j = 1, lines
+            read(iunit,*, err=100, end=100) t(j), am1(j), am2(j), am3(j)
+         end do
+      END SELECT
       call io_close(iunit)
 
       ! build splines
-      t = t*l%tau0
-      call loct_spline_init(l%amplitude)
-      call loct_spline_fit(lines, t, am, l%amplitude)
+      !t = t*l%tau0 ! to scale for different units(?)
+      call loct_spline_init(l%amplitude1)
+      call loct_spline_fit(lines, t, am1, l%amplitude1)
 
-      call loct_spline_init(l%phase)
-      call loct_spline_fit(lines, t, ph, l%phase)
+      call loct_spline_init(l%amplitude2)
+      call loct_spline_fit(lines, t, am2, l%amplitude2)
 
+      call loct_spline_init(l%amplitude3)
+      call loct_spline_fit(lines, t, am3, l%amplitude3)
       ! clean
-      deallocate(t, am, ph)
+      deallocate(t, am1, am2, am3)
 
     end subroutine get_envelope_from_file
   end subroutine laser_init
@@ -277,8 +301,9 @@ contains
     do i = 1, no_l
       select case(l(i)%envelope)
       case(ENVELOPE_FROM_FILE)
-        call loct_spline_end(l(i)%amplitude)
-        call loct_spline_end(l(i)%phase)
+        call loct_spline_end(l(i)%amplitude1)
+        call loct_spline_end(l(i)%amplitude2)
+        call loct_spline_end(l(i)%amplitude3)
       case(ENVELOPE_NUMERICAL)
         if(associated(l(i)%numerical)) then
           deallocate(l(i)%numerical); nullify(l(i)%numerical)
@@ -316,7 +341,7 @@ contains
       write(iunit, '(3x,a,es14.4,a)') 'Intensity: ', &
         (l(i)%A0*CNST(5.14225e9))**2*CNST(1.3272e-3), " [W/cm^2]"
       if(l(i)%envelope == ENVELOPE_FROM_FILE) then
-        write(iunit, '(3x,a)') 'Amplitude and phase information read from file.'
+        write(iunit, '(3x,a)') 'Amplitudes are read from file.'
       else
         write(iunit,'(3x,a,f10.4,3a)') 'Width:     ', l(i)%tau0/units_inp%time%factor, &
           ' [', trim(units_inp%time%abbrev), ']'
@@ -360,6 +385,10 @@ contains
       if(l(i)%envelope == ENVELOPE_NUMERICAL) then
          jj = int(abs(M_TWO*t/l(1)%dt) + M_HALF) ! steps of dt/2
          field(1:sb%dim) = l(i)%numerical(1:sb%dim, jj)
+      else if(l(i)%envelope == ENVELOPE_FROM_FILE) then
+         field(1) = loct_splint(l(i)%amplitude1, t)
+         field(2) = loct_splint(l(i)%amplitude2, t)
+         field(3) = loct_splint(l(i)%amplitude3, t)
       else
         call laser_amplitude(l(i), t, amp)
         field(1:sb%dim) = real(amp*l(i)%pol(1:sb%dim))
@@ -464,8 +493,8 @@ contains
         r = (l%t0 + l%tau0/M_TWO + l%tau1 - t)/l%tau1
       end if
     case(ENVELOPE_FROM_FILE)
-      r  = loct_splint(l%amplitude, t)
-      ph = loct_splint(l%phase, t)
+      r  = M_ONE  !loct_splint(l%amplitude, t)
+      ph = M_ZERO !loct_splint(l%phase, t)
     end select
 
     amp = l%A0 * r * exp(M_zI * (l%omega0*t + ph))
