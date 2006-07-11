@@ -873,9 +873,8 @@ contains
          do pol=1, NDIM
             tgt = tgt * exp( - (gr%m%x(:, pol) - &
                  real(tdtg%tdshape(pol,iter),PRECISION ))**2/(M_TWO*tdtg%width**2))
-            write(6,*) pol, iter, real(tdtg%tdshape(pol,iter),PRECISION ) 
          enddo
-         write(6,*) maxloc(abs(tgt)) 
+         
       !CASE(2)
          ! tgt = M-zero
       !   ! step
@@ -1352,7 +1351,7 @@ contains
                               call loct_parse_expression(psi_re, psi_im,             &
                                    x(1), x(2), x(3), r, M_ZERO, initial_st%user_def_states(id, is, ik))
                               ! fill state
-                              write(6,*) psi_re, psi_im
+                              !write(6,*) psi_re, psi_im
                               initial_st%zpsi(ip, id, is, ik) = psi_re + M_zI*psi_im
                         end do
                         ! normalize orbital
@@ -1489,7 +1488,7 @@ contains
                   call loct_parse_block_int(blk, i-1, kk-1, state)
                   call loct_parse_block_cmplx(blk, i-1, kk, c_weight)
                   write(fname,'(i10.10)') state
-                  write(6,*) 'pars ', state, c_weight
+                  !write(6,*) 'pars ', state, c_weight
                   call read_state(tmp_st, gr%m, fname)
                   target_st%zpsi(:,:,1,1) = target_st%zpsi(:,:,1,1) + c_weight * tmp_st%zpsi(:,:,1,1)
                enddo
@@ -1677,12 +1676,10 @@ contains
             f_im = M_ZERO
             !call loct_parse_expression(f_re, f_im, "t", tgrid(kk), &
             !     td_tg%expression(pol))
-            write(6,*) td_tg%expression(pol)
             call loct_parse_expression(f_re, f_im, & 	
                  M_ZERO, M_ZERO, M_ZERO, M_ZERO, tgrid(kk), &
                  td_tg%expression(pol)) 
             td_tg%tdshape(pol,kk) = f_re + M_zI*f_im
-            write(6,*)  tgrid(kk), f_re , f_im
          end do
       end do
     end subroutine build_tdshape
@@ -1791,7 +1788,7 @@ contains
       if(filtermode.gt.0) then
          call def_filter(gr, td%max_iter, td%dt, filtermode, f)
 !! DEBUG
-         write(6,*) 'filter defined', size(f)
+         !write(6,*) 'filter defined', size(f)
          do kk=1, size(f)
             write(filename,'(a,i2.2)') 'opt-control/filter', kk
             if(f(kk)%domain.eq.1) then
@@ -1960,17 +1957,17 @@ contains
          write(filename,'(a,i2.2)') 'opt-control/td_target_',jj
          iunit = io_open(filename, action='write')
          ! build target_function and calc inhomogeneity
-         do tt=0, td%max_iter, 20
+         do tt=0, td%max_iter, 20 
             t = real(tt,PRECISION)*td%dt
-            write(6,*) tt, trim(td_tg(jj)%expression(1))
-            write(6,*) tt, trim(td_tg(jj)%expression(2))
-            write(6,*) tt, trim(td_tg(jj)%expression(3))
+            !write(6,*) tt, trim(td_tg(jj)%expression(1))
+            !write(6,*) tt, trim(td_tg(jj)%expression(2))
+            !write(6,*) tt, trim(td_tg(jj)%expression(3))
             call build_tdtarget(td_tg(jj),tgt,tt)
             tdtarget = tgt
             pos = maxloc(abs(tdtarget))
-            write(6,*) pos
+            !write(6,*) pos
             mxloc(:) = gr%m%x(pos(1),:) 
-            write(6,*) mxloc
+            !write(6,*) mxloc
             write(iunit, '(4es30.16e4)') t, mxloc, td_tg(jj)%tdshape(1,tt)
          end do
          close(iunit)
