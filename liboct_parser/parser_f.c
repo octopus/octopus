@@ -277,6 +277,9 @@ void FC_FUNC_(oct_parse_expression, OCT_PARSE_EXPRESSION)
 {
   symrec *rec;
   parse_result c;
+  char *s_c;
+
+  s_c  = TO_C_STR1(pot);
   
   rec = putsym("x", S_CMPLX);
   GSL_SET_COMPLEX(&rec->value.c, *x, 0);
@@ -298,7 +301,7 @@ void FC_FUNC_(oct_parse_expression, OCT_PARSE_EXPRESSION)
   GSL_SET_COMPLEX(&rec->value.c, *t, 0);
   rec->def = 1;
   
-  parse_exp(pot, &c);
+  parse_exp(s_c, &c);
   
   /* clean up */
   rmsym("x");
@@ -318,12 +321,15 @@ void FC_FUNC_(oct_parse_expression1, OCT_PARSE_EXPRESSION1)
 
   symrec *rec;
   parse_result c;
+  char *s_c;
+
+  s_c  = TO_C_STR1(string);
 
   rec = putsym(variable, S_CMPLX);
   GSL_SET_COMPLEX(&rec->value.c, *val, 0);
   rec->def = 1;
 
-  parse_exp(string, &c);
+  parse_exp(s_c, &c);
 
   rmsym(variable);
 
