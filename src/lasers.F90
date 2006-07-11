@@ -428,16 +428,20 @@ contains
    ! FIXME: need to check if calculation of i is correct (time-grid mapping)
    ! either M_HALF or M_ONE
     if(no_l == 1 .and. l(1)%envelope == ENVELOPE_NUMERICAL) then
-      i = int(abs(M_TWO*t/l(1)%dt) + M_HALF) ! steps of dt/2
-      field(1:sb%dim) = l(1)%numerical(1:sb%dim, i)
+       i = int(abs(M_TWO*t/l(1)%dt) + M_HALF) ! steps of dt/2
+       field(1:sb%dim) = l(1)%numerical(1:sb%dim, i)
+    else if(l(i)%envelope == ENVELOPE_FROM_FILE) then
+       field(1) = loct_splint(l(i)%amplitude1, t)
+       field(2) = loct_splint(l(i)%amplitude2, t)
+       field(3) = loct_splint(l(i)%amplitude3, t)
     else
-      field = M_ZERO
-      do i = 1, no_l
-        call laser_amplitude(l(i), t, amp)
-        field(1:sb%dim) = field(1:sb%dim) + real(amp*l(i)%pol(1:sb%dim))
-      end do
+       field = M_ZERO
+       do i = 1, no_l
+          call laser_amplitude(l(i), t, amp)
+          field(1:sb%dim) = field(1:sb%dim) + real(amp*l(i)%pol(1:sb%dim))
+       end do
     end if
-
+    
   end subroutine laser_field
 
 
