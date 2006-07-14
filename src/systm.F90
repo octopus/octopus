@@ -43,6 +43,7 @@ module system_m
   use mpi_m
   use varinfo_m
   use poisson_m
+  use units_m
 
   implicit none
 
@@ -93,6 +94,9 @@ contains
     call poisson_init(sys%gr)
     call v_ks_init(sys%gr, sys%ks, sys%st%d)
 
+    !print the mesh information if it is required
+    call print_r()
+
     call pop_sub()
 
   contains
@@ -118,6 +122,24 @@ contains
 
     end subroutine parallel_init
 
+    subroutine print_r()
+      FLOAT :: u
+      integer :: i, ierr
+      character(len=80) :: fname
+      
+      
+      if(iand(sys%outp%what, output_r).ne.0) then
+        u = M_ONE/units_out%length%factor
+        
+        do i=1, sys%NDIM
+          write(fname, '(a,i1)') 'r-', i
+          call doutput_function(sys%outp%how, 'status/', fname, sys%gr%m, sys%gr%sb, sys%gr%m%x(:,i), u, ierr)
+        end do
+        
+      end if
+      
+    end subroutine print_r
+    
   end subroutine system_init
 
 

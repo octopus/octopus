@@ -63,7 +63,8 @@ module output_m
     output_ELF        =    64,    &
     output_ELF_FS     =   128,    &
     output_ksdipole   =   256,    &
-    output_pol_density=   512
+    output_pol_density=   512,    &
+    output_r          =  1024
 
   integer, parameter, private ::  &
     output_axis_x     =     1,    &
@@ -161,6 +162,9 @@ contains
     !%Option pol_density 512
     !% Prints out the density of dipole moment. For pol and pol_lr modules, 
     !% prints the density of polarizability.
+    !%Option mesh_r 1024
+    !% Prints out the values of the coordinates over the grid. Files
+    !% will be in the 'status/' directory.
     !%End
     call loct_parse_int(check_inp('Output'), 0, outp%what)
     if(.not.varinfo_valid_option('Output', outp%what, is_flag=.true.)) then
