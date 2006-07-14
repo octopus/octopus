@@ -47,8 +47,8 @@ module io_m
     io_debug_on_the_fly, &
     iopar_read,          &
     iopar_backspace,     &
-    io_skip_header
-
+    io_skip_header,      &
+    io_file_exists
 
   integer, parameter :: min_lun=10, max_lun=99
   logical            :: lun_is_free(min_lun:max_lun)

@@ -35,6 +35,7 @@ module static_pol_lr_m
   use io_m
   use lib_oct_parser_m
   use math_m
+  use string_m
 
   implicit none
 
@@ -160,97 +161,43 @@ contains
       end do
     end if
     call io_mkdir(trim(tmpdir)//RESTART_DIR)
-
+    
     call info()
-
+    
     if(props%dynamic) then 
-
+      
       !!DYNAMIC
-
-      !open or create linear/dynpols file
-      if(.not. fromScratch) then
-        iunit = io_open('linear/dynpols', action='read', status='old', die=.false.)
-        if(iunit > 0) then
-          call io_close(iunit)
-        else
-          fromScratch = .true.
-        end if
-      end if
-
-      if(fromScratch) then 
-        call io_mkdir('linear')
-        iunit = io_open('linear/dynpols', action='write')
-
-        write(iunit, '(a)')       '# Frequency dependent polarizability, real and imaginary parts are included'
-        write(iunit, '(3a)')      '# Frequency units: [',  trim(units_out%energy%abbrev),'/hbar]'
-        write(iunit, '(3a,i1,a)') '# Polarizability units: [',  trim(units_out%length%abbrev),'^',NDIM,']'
-        write(iunit, '(8a)')      '# ', 'Frequency ', &
-             'alpha_11 ' , 'Alpha_22 ' , 'alpha_33 ', 'alpha_12 ', 'alpha_13 ', 'alpha_23 '
-        call io_close(iunit)
-      end if
-
+      call dynamic_output_init()
+      
       message(1) = "Info: Calculating dynamic polarizabilities."
       call write_info(1)
-           
+      
       do i = 1, nomega
-
+        
         write(message(1), '(a,f12.6,3a)') 'Info: Calculating polarizability for frequency: ', & 
              omega(i)/units_out%energy%factor, ' [',trim(units_out%energy%abbrev),']'
-
+        
         call write_info(1)
-
+        
         if( props%complex_response ) then 
           call zdynamic_response(sys, h, lr, props, zpol(1:ndim, 1:ndim), cmplx(omega(i), eta, PRECISION),status)
         else
           call ddynamic_response(sys, h, lr, props, zpol(1:ndim, 1:ndim), real(omega(i), PRECISION),status)
         end if
         
-
-        iunit = io_open('linear/dynpols', action='write', position='append' )
-        if(status%ok) then           
-          !convert units 
-          zpol = zpol/units_out%length%factor**NDIM
-          write(iunit, '(13f12.6)') omega(i), zpol(1,1), zpol(2,2), zpol(3,3), zpol(1,2), zpol(1,3), zpol(2,3)
-        else
-          write(iunit, '(a,f12.6)') '#calculation didnt converge for frequency ', omega(i)
-        end if
-        
-        call io_close(iunit)
-
-        
-        write(dirname, '(a,f5.3)') 'linear/freq_', omega(i)/units_out%energy%factor
-        message(1)='Info: Output will be written to '//dirname//' directory.'
-        call write_info(1)
-        
-        if( props%complex_response ) then 
-          do j = 1, NDIM
-            if(NDIM==3) then
-              if(iand(sys%outp%what, output_elf).ne.0) &
-                   call zlr_calc_elf(sys%st,sys%gr, lr(j, 1, 1), lr(j,2,1))
-            end if
-            call zlr_output(sys%st, sys%gr, lr(j, 1, 1), dirname, j, sys%outp)
-          end do
-        else
-          do j = 1, NDIM
-            if(NDIM==3) then
-              if(iand(sys%outp%what, output_elf).ne.0) &
-                   call dlr_calc_elf(sys%st,sys%gr, lr(j, 1, 1), lr(j,2,1))
-            end if
-            call dlr_output(sys%st, sys%gr, lr(j, 1, 1), dirname, j, sys%outp)
-          end do
-        end if
+        call dynamic_output()
         
       end do
-      
-    else 
 
-      !!! STATIC
+    else 
+      
+      !! STATIC
       ALLOCATE(hpol_density(sys%NP,MAX_DIM,MAX_DIM,MAX_DIM),sys%NP*MAX_DIM**3)
 
       if ( .not. props%complex_response) then
         call dstatic_response(sys, h, lr(:, :, 1), props, &
            pol(1:ndim, 1:ndim), hpol(1:ndim, 1:ndim, 1:ndim),hpol_density)
-        call output()
+        call static_output()
         do i = 1, ndim
           call dlr_calc_elf(sys%st,sys%gr, lr(i, 1, 1))          
           call dlr_output(sys%st, sys%gr, lr(i, 1, 1) ,"linear", i, sys%outp)
@@ -260,7 +207,7 @@ contains
       
         call zstatic_response(sys, h, lr(:, :, 1), props, &
            pol(1:ndim, 1:ndim), hpol(1:ndim, 1:ndim, 1:ndim),hpol_density)
-        call output()
+        call static_output()
         do i = 1, ndim
           call zlr_calc_elf(sys%st,sys%gr, lr(i, 1, 1))
           call zlr_output(sys%st, sys%gr, lr(i, 1, 1) ,"linear", i, sys%outp)
@@ -442,7 +389,7 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine output()
+  subroutine static_output()
     integer :: j, iunit, i, k
     FLOAT :: msp, bpar(MAX_DIM)
 
@@ -508,7 +455,7 @@ contains
 
       call io_close(iunit)
 
-    end subroutine output
+    end subroutine static_output
 
 
     subroutine info()
@@ -542,6 +489,116 @@ contains
       call messages_print_stress(stdout)
 
     end subroutine info
+    
+    subroutine dynamic_output_init()
+      logical :: file_doesnt_exist
+      integer :: out_file, nspin
+      character(len=20) :: header_string
+
+      ! check file linear/dynpols
+      file_doesnt_exist = .not. io_file_exists('linear/dynpols', &
+           'Warning: File linear/dynpols found. New information will be appended')
+      
+      if( file_doesnt_exist .or. fromScratch ) then
+        call io_mkdir('linear')
+        out_file = io_open('linear/dynpols', action='write')
+        write(out_file, '(a)')       '# Frequency dependent polarizability, real and imaginary parts are included'
+        write(out_file, '(3a)')      '# Frequency units: [',  trim(units_out%energy%abbrev),'/hbar]'
+        write(out_file, '(3a,i1,a)') '# Polarizability units: [',  trim(units_out%length%abbrev),'^',NDIM,']'
+        write(out_file, '(8a)')      '# ', 'Frequency ', &
+             'alpha_11 ' , 'Alpha_22 ' , 'alpha_33 ', 'alpha_12 ', 'alpha_13 ', 'alpha_23 '
+        call io_close(out_file)        
+      end if
+
+      ! check file linear/cross-section-tensor
+      file_doesnt_exist = .not. io_file_exists('linear/cross_section_tensor', &
+           'Warning: File linear/cross_section_tensor already exists. New information will be appended')
+
+      if( file_doesnt_exist .or. fromScratch ) then
+        call io_mkdir('linear')
+        out_file = io_open('linear/cross_section_tensor', action='write')
+
+        !this header is the same from sprectrum.F90
+        write(out_file, '(a1, a20)', advance = 'no') '#', str_center("Energy", 20)
+        write(out_file, '(a20)', advance = 'no') str_center("(1/3)*Tr[sigma]", 20)
+        write(out_file, '(a20)', advance = 'no') str_center("Anisotropy[sigma]", 20)
+        
+        do i = 1, 3
+          do k = 1, 3
+            write(header_string,'(a6,i1,a1,i1,a1)') 'sigma(',i,',',k,')'
+            write(out_file, '(a20)', advance = 'no') str_center(trim(header_string), 20)
+          end do
+        end do
+
+        write(out_file, *)
+        write(out_file, '(a1,a20)', advance = 'no') '#', str_center('['//trim(units_out%energy%abbrev) // ']', 20)
+        do i = 1, 2+nspin*9
+          write(out_file, '(a20)', advance = 'no')  str_center('['//trim(units_out%length%abbrev) //'^2]', 20)
+        end do
+        write(out_file,*)
+        
+        call io_close(out_file)
+      end if
+
+    end subroutine dynamic_output_init
+
+    subroutine dynamic_output()
+      FLOAT :: sigma(MAX_DIM, MAX_DIM), sigmap(MAX_DIM, MAX_DIM)
+      FLOAT :: average, anisotropy
+      integer :: out_file
+
+      !write dynpols
+      iunit = io_open('linear/dynpols', action='write', position='append' )
+      if(status%ok) then           
+        !convert units 
+        zpol = zpol/units_out%length%factor**NDIM
+        write(iunit, '(13f12.6)') omega(i), zpol(1,1), zpol(2,2), zpol(3,3), zpol(1,2), zpol(1,3), zpol(2,3)
+      else
+        write(iunit, '(a,f12.6)') '#calculation didnt converge for frequency ', omega(i)
+      end if
+      
+      call io_close(iunit)
+      
+      sigma(1:MAX_DIM, 1:MAX_DIM) = aimag(zpol(1:MAX_DIM, 1:MAX_DIM)) * &
+           omega(i)/units_out%energy%factor * M_FOUR * M_PI / P_c 
+      
+      !write sigma
+      out_file = io_open('linear/cross_section_tensor', action='write', position='append' )
+      average = M_THIRD* ( sigma(1, 1) + sigma(2, 2) + sigma(3, 3) )
+      sigmap(:, :) = matmul(sigma(:, :),sigma(:, :))
+      anisotropy =  M_THIRD * ( M_THREE * (sigmap(1, 1) + sigmap(2, 2) + sigmap(3, 3)) - &
+           (sigma(1, 1) + sigma(2, 2) + sigma(3, 3))**2 )
+      
+      write(out_file,'(3e20.8)', advance = 'no') omega(i) / units_out%energy%factor, &
+           average , sqrt(max(anisotropy, M_ZERO)) 
+      write(out_file,'(9e20.8)', advance = 'no') sigma(1:3, 1:3)
+      write(out_file,'(a)', advance = 'yes')
+      call io_close(out_file)
+
+      !write functions
+      write(dirname, '(a,f5.3)') 'linear/freq_', omega(i)/units_out%energy%factor
+      message(1)='Info: Output will be written to '//dirname//' directory.'
+      call write_info(1)
+      
+      if( props%complex_response ) then 
+        do j = 1, NDIM
+          if(NDIM==3) then
+            if(iand(sys%outp%what, output_elf).ne.0) &
+                 call zlr_calc_elf(sys%st,sys%gr, lr(j, 1, 1), lr(j,2,1))
+          end if
+          call zlr_output(sys%st, sys%gr, lr(j, 1, 1), dirname, j, sys%outp)
+        end do
+      else
+        do j = 1, NDIM
+          if(NDIM==3) then
+            if(iand(sys%outp%what, output_elf).ne.0) &
+                 call dlr_calc_elf(sys%st,sys%gr, lr(j, 1, 1), lr(j,2,1))
+          end if
+          call dlr_output(sys%st, sys%gr, lr(j, 1, 1), dirname, j, sys%outp)
+        end do
+      end if
+      
+    end subroutine dynamic_output
 
   end subroutine static_pol_lr_run
 

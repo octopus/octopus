@@ -51,7 +51,7 @@ subroutine X(dynamic_response)(sys, h, lr, props, pol, w, status)
 
     !calculate the polarizability
     do j = 1, sys%gr%m%np
-      rhov = sum(lr(dir,2,freq)%X(dl_rho)(j,1:sys%st%d%nspin))*sys%gr%m%vol_pp(j)
+      rhov = sum(lr(dir, 1, freq)%X(dl_rho)(j, 1:sys%st%d%nspin))*sys%gr%m%vol_pp(j)
       pol(dir, :) = pol(dir, :) - sys%gr%m%x(j,:)*rhov
     end do
 
