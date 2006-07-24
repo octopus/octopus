@@ -297,7 +297,10 @@ contains
     call push_sub('linear_response.dlr_alloc_psi')
 
     r = 1
-    if(associated(lr%ddl_psi)) return ! do nothing
+    if(associated(lr%ddl_psi)) then 
+      call pop_sub()
+      return ! do nothing
+    end if
 
     ALLOCATE(lr%ddl_psi(m%np_part, st%d%dim, st%nst, st%d%nspin),
          m%np_part*st%d%dim*st%nst*st%d%nspin)
@@ -326,7 +329,10 @@ contains
     call push_sub('linear_response.zlr_alloc_psi')
 
     r = 1
-    if(associated(lr%zdl_psi)) return ! do nothing
+    if(associated(lr%zdl_psi)) then 
+      call pop_sub()
+      return ! do nothing
+    end if
 
     ALLOCATE(lr%zdl_psi(m%np_part, st%d%dim, st%nst, st%d%nspin),
          m%np_part*st%d%dim*st%nst*st%d%nspin)
