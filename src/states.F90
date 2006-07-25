@@ -2079,13 +2079,22 @@ contains
         message(1) = 'Cannot calculate projections onto excited states if there are partially filled orbitals.'
         call write_fatal(1)
       end if
-      if(n_half_filled(1) > 0) then
-        message(1) = 'Cannot calculate projections onto excited states if there are half-filled orbitals.'
-        message(2) = 'Use the spin-polarized mode instead.'
-        call write_fatal(2)
+      ! We will not accept, for the moment being, to construct excited states in spin-restricted mode if
+      ! there are single-particle states that are half filled, *unless* there is only one state and is
+      ! half filled (single particle calculation).
+      if(  (n_half_filled(1) .ne. 0  .and. n_filled(1) > 0)  .or. (n_half_filled(1) > 1)  ) then
+        message(1) = 'Cannot construct excited states from ground states that contain half-filled'
+        message(2) = 'orbitals - unless they are just one-particle states with only one half-filled'
+        message(3) = 'orbital and no doubly occupied one. Try using the spin-unrestricted mode.'
+        call write_fatal(3)
       end if
-      n_empty(1) = nst - n_filled(1)
-      n_possible_pairs = n_filled(1) * n_empty(1)
+      if(n_half_filled(1).eq.0) then
+        n_empty(1) = nst - n_filled(1)
+        n_possible_pairs = n_filled(1) * n_empty(1)
+      else ! This is for the one-electron case.
+        n_empty(1) = nst - 1
+        n_possible_pairs = n_empty(1)
+      end if
     case(SPIN_POLARIZED)
       call occupied_states(ground_state, 1, n_filled(1), n_partially_filled(1), n_half_filled(1), &
                            filled(:, 1), partially_filled(:, 1), half_filled(:, 1))
@@ -2116,17 +2125,18 @@ contains
     ! Now we cound the number of pairs in the file
     j = 0
     do
+      read(iunit, *, end = 101) 
+      backspace(iunit)
       read(iunit, *, iostat = ios) i, a, sigma, dump
-      if(ios > 0) then
+      if(ios .ne. 0) then
         message(1) = 'Error attempting to read the electron-hole pairs in file "'//trim(filename)//'"'
         call write_fatal(1)
-      elseif(ios < 0) then
-        exit
       end if
       j = j + 1
     end do
+101 continue
     if(j.eq.0) then
-      message(1) = 'File "'//trim(filename)//' is empty?"'
+      message(1) = 'File "'//trim(filename)//'" is empty?'
       call write_fatal(1)
     elseif(j > n_possible_pairs) then
       message(1) = 'File "'//trim(filename)//' contains too many electron-hole pairs.'
@@ -2156,6 +2166,10 @@ contains
         ok = excited_state%pair(j)%i .eq. filled(k, excited_state%pair(j)%sigma)
         if(ok) exit
       end do
+      ! Treat differently the one-electron case in unpolarized mode
+      if( ispin .eq. UNPOLARIZED .and. (n_half_filled(1).eq.1) ) then
+        ok = excited_state%pair(j)%i .eq. half_filled(1, excited_state%pair(j)%sigma)
+      end if
       if(.not.ok) then
         write(message(1),'(a6,i3,a1,i3,a8,i1,a)') 'Pair (',  excited_state%pair(j)%i,  ',',  &
           excited_state%pair(j)%a,  ';sigma =',   excited_state%pair(j)%sigma,  ') is not valid.'
@@ -2167,6 +2181,10 @@ contains
       do k = 1, n_filled(excited_state%pair(j)%sigma)
         ok = .not. (excited_state%pair(j)%a .eq. filled(k, excited_state%pair(j)%sigma))
       end do
+      ! Treat differently the one-electron case in unpolarized mode
+      if( ispin .eq. UNPOLARIZED .and. (n_half_filled(1).eq.1) ) then
+        ok = .not. (excited_state%pair(j)%i .eq. half_filled(1, excited_state%pair(j)%sigma))
+      end if
       ok = .not. (excited_state%pair(j)%a > nst)
       if(.not.ok) then
         write(message(1),'(a6,i3,a1,i3,a8,i1,a)') 'Pair (',  excited_state%pair(j)%i,  ',',  &
