@@ -188,15 +188,15 @@ contains
         call dynamic_output()
         
       end do
-
-    else 
       
+    else 
+
       !! STATIC
       ALLOCATE(hpol_density(sys%NP,MAX_DIM,MAX_DIM,MAX_DIM),sys%NP*MAX_DIM**3)
 
       if ( .not. props%complex_response) then
         call dstatic_response(sys, h, lr(:, :, 1), props, &
-           pol(1:ndim, 1:ndim), hpol(1:ndim, 1:ndim, 1:ndim),hpol_density)
+             pol(1:ndim, 1:ndim), hpol(1:ndim, 1:ndim, 1:ndim),hpol_density)
         call static_output()
         do i = 1, ndim
           call dlr_calc_elf(sys%st,sys%gr, lr(i, 1, 1))          
@@ -204,9 +204,9 @@ contains
         end do
 
       else
-      
+
         call zstatic_response(sys, h, lr(:, :, 1), props, &
-           pol(1:ndim, 1:ndim), hpol(1:ndim, 1:ndim, 1:ndim),hpol_density)
+             pol(1:ndim, 1:ndim), hpol(1:ndim, 1:ndim, 1:ndim),hpol_density)
         call static_output()
         do i = 1, ndim
           call zlr_calc_elf(sys%st,sys%gr, lr(i, 1, 1))
@@ -214,7 +214,7 @@ contains
         end do
 
       end if
-      
+
       if(iand(sys%outp%what, output_pol_density).ne.0) then
         do i=1,NDIM
           do j=1,NDIM
@@ -228,7 +228,7 @@ contains
 
       deallocate(hpol_density)
     end if
-    
+
     do i = 1, ndim
       do sigma = 1, nsigma
         do j = 1, nfreq
@@ -242,7 +242,7 @@ contains
 
     call states_deallocate_wfns(sys%st)
     call pop_sub()
-      
+
   contains
 
     ! ---------------------------------------------------------
@@ -306,7 +306,7 @@ contains
         end do
 
         ALLOCATE(omega(1:nomega), nomega)
-        
+
         !read frequencies
         j = 1
         do i = 0, nrow-1
@@ -328,7 +328,7 @@ contains
         call loct_parse_block_end(blk)
 
         call sort(omega)
-      else 
+      else
 
         nomega = 1
         ALLOCATE(omega(1:nomega), nomega)
@@ -336,88 +336,88 @@ contains
 
       end if
 
-    !%Variable PolEta
-    !%Type float
-    !%Default 0.0
-    !%Section Linear Response::Polarizabilities
-    !%Description
-    !% Imaginary part of the frequency.
-    !%End
+      !%Variable PolEta
+      !%Type float
+      !%Default 0.0
+      !%Section Linear Response::Polarizabilities
+      !%Description
+      !% Imaginary part of the frequency.
+      !%End
 
-    call loct_parse_float(check_inp('PolEta'), M_ZERO, eta)
-    eta = eta * units_inp%energy%factor
+      call loct_parse_float(check_inp('PolEta'), M_ZERO, eta)
+      eta = eta * units_inp%energy%factor
 
-    !%Variable PolHamiltonianVariation
-    !%Type integer
-    !%Default hartree+fxc
-    !%Section Linear Response::Polarizabilities
-    !%Description
-    !% The terms are considered in the variation of the
-    !% hamiltonian. V_ext is always considered. The default is to include
-    !% the fxc and hartree terms. If you want to do RPA only include
-    !% hartree, it will not be faster though.
-    !%Option hartree 1 
-    !% The variation of the hartree potential.
-    !%Option fxc 2
-    !% The exchange and correlation kernel, the variation of the
-    !% exchange and correlation potential.
-    !%End
+      !%Variable PolHamiltonianVariation
+      !%Type integer
+      !%Default hartree+fxc
+      !%Section Linear Response::Polarizabilities
+      !%Description
+      !% The terms are considered in the variation of the
+      !% hamiltonian. V_ext is always considered. The default is to include
+      !% the fxc and hartree terms. If you want to do RPA only include
+      !% hartree, it will not be faster though.
+      !%Option hartree 1 
+      !% The variation of the hartree potential.
+      !%Option fxc 2
+      !% The exchange and correlation kernel, the variation of the
+      !% exchange and correlation potential.
+      !%End
 
-    if(.not. h%ip_app) then 
-      call loct_parse_int(check_inp('PolHamiltonianVariation'), 3, ham_var)    
-      props%add_fxc = ((ham_var/2) == 1)
-      props%add_hartree = (mod(ham_var, 2) == 1)
-    else
-      props%add_fxc = .false. 
-      props%add_hartree = .false.
-    end if
+      if(.not. h%ip_app) then 
+        call loct_parse_int(check_inp('PolHamiltonianVariation'), 3, ham_var)    
+        props%add_fxc = ((ham_var/2) == 1)
+        props%add_hartree = (mod(ham_var, 2) == 1)
+      else
+        props%add_fxc = .false. 
+        props%add_hartree = .false.
+      end if
 
-    call pop_sub()
+      call pop_sub()
 
-  end subroutine parse_input
-
-
-  ! ---------------------------------------------------------
-  subroutine read_wfs()    
-    !check how many wfs we have
-
-    call push_sub('em_resp.parse_input')
-
-    call restart_look(trim(tmpdir)//'restart_gs', sys%gr%m, kpoints, dim, nst, ierr)
-    if(ierr.ne.0) then
-      message(1) = 'Could not properly read wave-functions from "'//trim(tmpdir)//'restart_gs".'
-      call write_fatal(1)
-    end if
-
-    ! load wave-functions
-    if ( props%complex_response ) then 
-      call states_allocate_wfns(sys%st, gr%m, M_CMPLX)
-    else 
-      call states_allocate_wfns(sys%st, gr%m, M_REAL)
-    end if
-    
-    call restart_read(trim(tmpdir)//'restart_gs', sys%st, sys%gr, ierr)   
-    if(ierr.ne.0) then
-      message(1) = "Could not read KS orbitals from '"//trim(tmpdir)//"restart_gs'"
-      message(2) = "Please run a calculation of the ground state first!"
-      call write_fatal(2)
-    end if
-
-    call pop_sub()
-
-  end subroutine read_wfs
+    end subroutine parse_input
 
 
-  ! ---------------------------------------------------------
-  subroutine static_output()
-    integer :: j, iunit, i, k
-    FLOAT :: msp, bpar(MAX_DIM)
+    ! ---------------------------------------------------------
+    subroutine read_wfs()    
+      !check how many wfs we have
 
-    call io_mkdir('linear')
-    
-    ! Output polarizabilty
-    iunit = io_open('linear/polarizability_lr', action='write' )
-    write(iunit, '(2a)', advance='no') '# Static polarizability tensor [', &
+      call push_sub('em_resp.parse_input')
+
+      call restart_look(trim(tmpdir)//'restart_gs', sys%gr%m, kpoints, dim, nst, ierr)
+      if(ierr.ne.0) then
+        message(1) = 'Could not properly read wave-functions from "'//trim(tmpdir)//'restart_gs".'
+        call write_fatal(1)
+      end if
+
+      ! load wave-functions
+      if ( props%complex_response ) then 
+        call states_allocate_wfns(sys%st, gr%m, M_CMPLX)
+      else 
+        call states_allocate_wfns(sys%st, gr%m, M_REAL)
+      end if
+
+      call restart_read(trim(tmpdir)//'restart_gs', sys%st, sys%gr, ierr)   
+      if(ierr.ne.0) then
+        message(1) = "Could not read KS orbitals from '"//trim(tmpdir)//"restart_gs'"
+        message(2) = "Please run a calculation of the ground state first!"
+        call write_fatal(2)
+      end if
+
+      call pop_sub()
+
+    end subroutine read_wfs
+
+
+    ! ---------------------------------------------------------
+    subroutine static_output()
+      integer :: j, iunit, i, k
+      FLOAT :: msp, bpar(MAX_DIM)
+
+      call io_mkdir('linear')
+
+      ! Output polarizabilty
+      iunit = io_open('linear/polarizability_lr', action='write' )
+      write(iunit, '(2a)', advance='no') '# Static polarizability tensor [', &
            trim(units_out%length%abbrev)
       if(NDIM.ne.1) write(iunit, '(a,i1)', advance='no') '^', NDIM
       write(iunit, '(a)') ']'
@@ -469,7 +469,7 @@ contains
 
         bpar = bpar / (M_FIVE * units_out%length%factor**(NDIM+2))
         write(iunit, '(a, 3f12.6,a)') 'B||', bpar(1:NDIM),&
-               '  ( B||_i = 1/5 \sum_j(B_ijj+B_jij+B_jji) ) '
+             '  ( B||_i = 1/5 \sum_j(B_ijj+B_jij+B_jji) ) '
 
       endif
 
@@ -498,7 +498,7 @@ contains
         if (props%add_hartree) message(1)='Hamiltonian variation: V_ext + hartree'
       end if
       call write_info(1)
-      
+
       if (props%dynamic) then 
         write(message(1),'(a,i3,a)') 'Calculating polarizability tensor for ', nomega, ' frequencies.'
       else
@@ -509,7 +509,7 @@ contains
       call messages_print_stress(stdout)
 
     end subroutine info
-    
+
     subroutine dynamic_output_init()
       logical :: file_doesnt_exist
       integer :: out_file, nspin
@@ -518,7 +518,7 @@ contains
       ! check file linear/dynpols
       file_doesnt_exist = .not. io_file_exists('linear/dynpols', &
            'Warning: File linear/dynpols found. New information will be appended')
-      
+
       if( file_doesnt_exist .or. fromScratch ) then
         call io_mkdir('linear')
         out_file = io_open('linear/dynpols', action='write')
@@ -542,7 +542,7 @@ contains
         write(out_file, '(a1, a20)', advance = 'no') '#', str_center("Energy", 20)
         write(out_file, '(a20)', advance = 'no') str_center("(1/3)*Tr[sigma]", 20)
         write(out_file, '(a20)', advance = 'no') str_center("Anisotropy[sigma]", 20)
-        
+
         do i = 1, 3
           do k = 1, 3
             write(header_string,'(a6,i1,a1,i1,a1)') 'sigma(',i,',',k,')'
@@ -556,7 +556,7 @@ contains
           write(out_file, '(a20)', advance = 'no')  str_center('['//trim(units_out%length%abbrev) //'^2]', 20)
         end do
         write(out_file,*)
-        
+
         call io_close(out_file)
       end if
 
@@ -576,19 +576,19 @@ contains
       else
         write(iunit, '(a,f12.6)') '#calculation didnt converge for frequency ', omega(i)
       end if
-      
+
       call io_close(iunit)
-      
+
       sigma(1:MAX_DIM, 1:MAX_DIM) = aimag(zpol(1:MAX_DIM, 1:MAX_DIM)) * &
            omega(i)/units_out%energy%factor * M_FOUR * M_PI / P_c 
-      
+
       !write sigma
       out_file = io_open('linear/cross_section_tensor', action='write', position='append' )
       average = M_THIRD* ( sigma(1, 1) + sigma(2, 2) + sigma(3, 3) )
       sigmap(:, :) = matmul(sigma(:, :),sigma(:, :))
       anisotropy =  M_THIRD * ( M_THREE * (sigmap(1, 1) + sigmap(2, 2) + sigmap(3, 3)) - &
            (sigma(1, 1) + sigma(2, 2) + sigma(3, 3))**2 )
-      
+
       write(out_file,'(3e20.8)', advance = 'no') omega(i) / units_out%energy%factor, &
            average , sqrt(max(anisotropy, M_ZERO)) 
       write(out_file,'(9e20.8)', advance = 'no') sigma(1:3, 1:3)
@@ -599,7 +599,7 @@ contains
       write(dirname, '(a,f5.3)') 'linear/freq_', omega(i)/units_out%energy%factor
       message(1)='Info: Output will be written to '//dirname//' directory.'
       call write_info(1)
-      
+
       if( props%complex_response ) then 
         do j = 1, NDIM
           if(NDIM==3) then
@@ -617,7 +617,7 @@ contains
           call dlr_output(sys%st, sys%gr, lr(j, 1, 1), dirname, j, sys%outp)
         end do
       end if
-      
+
     end subroutine dynamic_output
 
   end subroutine static_pol_lr_run
@@ -640,7 +640,7 @@ contains
     ALLOCATE(   gpsi(1:np, 1:ndim), np*ndim)
     ALLOCATE(gdl_psi(1:np, 1:ndim), np*ndim)
     if(present(lr_m)) ALLOCATE(gdl_psi_m(1:np, 1:ndim), np*ndim)
-   
+
     lr%dl_j = M_ZERO
 
     do ispin = 1, st%d%nspin
@@ -649,14 +649,14 @@ contains
 
           call zf_gradient(gr%sb, gr%f_der, lr%zdl_psi(:,idim,ist,ispin), gdl_psi)
           call zf_gradient(gr%sb, gr%f_der, st%zpsi(:,idim,ist,ispin), gpsi)
-          
+
           if(present(lr_m)) then               
-            
+
 
             call zf_gradient(gr%sb, gr%f_der, lr_m%zdl_psi(:,idim,ist,ispin), gdl_psi_m)
 
             do k = 1, NDIM 
-              
+
               lr%dl_j(1:np,k,ispin) = lr%dl_j(1:np, k, ispin) + (           &
                    + conjg(st%zpsi(1:np, idim, ist, ispin)) *       gdl_psi(1:np,k)   &
                    -       st%zpsi(1:np, idim, ist, ispin) * conjg(gdl_psi_m(1:np,k))  &
@@ -664,26 +664,26 @@ contains
                    -       lr%zdl_psi(1:np, idim, ist, ispin)  * conjg(gpsi(1:np,k))  &
                    )/(M_TWO*M_zI)
             end do
-            
+
           else 
-            
+
             do k = 1, NDIM 
-              
+
               lr%dl_j(1:np,k,ispin) = lr%dl_j(1:np, k, ispin) + (           &
                    + conjg(st%zpsi(1:np, idim, ist, ispin)) *       gdl_psi(1:np,k)   &
                    -       st%zpsi(1:np, idim, ist, ispin)  * conjg(gdl_psi(1:np,k))  &
                    + conjg(lr%zdl_psi(1:np, idim, ist, ispin)) *       gpsi(1:np,k)   & 
                    -       lr%zdl_psi(1:np, idim, ist, ispin)  * conjg(gpsi(1:np,k))  &
                    )/(M_TWO*M_zI)
-              
+
             end do
-            
+
           end if
-          
+
         end do
       end do
     end do
-    
+
     deallocate(gpsi)
     deallocate(gdl_psi)
     if(present(lr_m)) deallocate(gdl_psi_m)
