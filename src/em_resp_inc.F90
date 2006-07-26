@@ -261,6 +261,12 @@ subroutine X(get_response_e)(sys, h, lr, dir, nsigma, omega, props, status)
 
     if(conv) then
       if(present(status)) status%ok = .true.
+
+      do sigma=1,nsigma 
+        write(dirname,'(a,i1,a,i1)') RESTART_DIR, dir, "_", sigma
+        call restart_write(trim(tmpdir)//dirname, st, sys%gr, err, lr=lr(dir, sigma))
+      end do
+
       write(message(1), '(a, i4, a)')        &
            'Info: SCF for response converged in ', &
            iter, ' iterations'

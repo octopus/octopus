@@ -169,7 +169,7 @@ contains
       !!DYNAMIC
       call dynamic_output_init()
       
-      message(1) = "Info: Calculating dynamic polarizabilities."
+      message(1) = "Info: Calculating polarizabilities."
       call write_info(1)
       
       do i = 1, nomega
@@ -251,8 +251,27 @@ contains
       integer :: nrow
       integer :: number, j, k, ham_var
       FLOAT   :: omega_ini, omega_fin, domega
+      logical :: static
 
       call push_sub('em_resp.parse_input')
+
+      !%Variable PolStatic
+      !%Type logical
+      !%Default false
+      !%Section Linear Response::Polarizabilities
+      !%Description
+      !% Normally, when static polarizability is requested a dynamic
+      !% polarizability at zero frequency is done. But when this !%
+      !% variable is true, the old code for static polarizability is used. This
+      !% is mainly for comparison purporses and this option (and the old code)
+      !% will disappear in the future.
+      !%
+      !% If you want the first static hyperpolarizability you need to
+      !% use this option.
+      !%End
+
+      call loct_parse_logical(check_inp('PolStatic'), .false., static)
+      props%dynamic = .not. static
 
       !%Variable PolFreqs
       !%Type block
@@ -276,8 +295,6 @@ contains
       !%End
 
       if (loct_parse_block(check_inp('PolFreqs'), blk) == 0) then 
-
-        props%dynamic = .true.
 
         nrow = loct_parse_block_n(blk)
         nomega = 0
@@ -312,7 +329,11 @@ contains
 
         call sort(omega)
       else 
-        props%dynamic = .false. 
+
+        nomega = 1
+        ALLOCATE(omega(1:nomega), nomega)
+        omega(1)=M_ZERO
+
       end if
 
     !%Variable PolEta
@@ -479,7 +500,7 @@ contains
       call write_info(1)
       
       if (props%dynamic) then 
-        write(message(1),'(a,i3,a)') 'Calculating dynamic polarizability tensor for ', nomega, ' frequencies.'
+        write(message(1),'(a,i3,a)') 'Calculating polarizability tensor for ', nomega, ' frequencies.'
       else
         message(1)='Calculating static polarizability and first static hyperpolarizability tensors.'
       end if

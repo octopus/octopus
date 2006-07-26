@@ -26,4 +26,4 @@ Match ; Polarizability w=0.1; tail -1 linear/dynpols; \s*15.92
 
 Input: 14-h2o_pol_lr.04_h2o_dyn_pol_cmplx.inp
 Match ; Complex polarizability w=0.0; tail -2 linear/dynpols | head -1 ; \s*15.17
-Match ; Complex polarizability w=0.1; tail -1 linear/dynpols; \s*-0.15
+Match ; Complex polarizability w=0.1; tail -1 linear/dynpols; \s*0.15

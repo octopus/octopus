@@ -14,3 +14,4 @@ Spacing = 0.65
 PolConvAbsDens = 1e-2
 PolLinearSolverTol = 1e-2
 PolDynamicalTol = no
+PolStatic = true
