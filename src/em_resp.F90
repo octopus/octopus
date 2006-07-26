@@ -239,7 +239,6 @@ contains
 
     if(props%dynamic) deallocate(omega)
     deallocate(lr)
-    deallocate(hpol_density)
 
     call states_deallocate_wfns(sys%st)
     call pop_sub()
