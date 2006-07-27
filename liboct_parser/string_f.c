@@ -59,23 +59,26 @@ void to_f_str(char *c, _fcd f)
 char *to_c_str(STR_F_TYPE f, unsigned long l) 
 {
 	char *c;
-	int i;
+	int i, ll;
 
-	for(l--; l>=0; l--)                 /* find length of fortran string */
-		if(f[l] != ' ') break;
-	l++;                                /* need space for th '\0' */
-	c = (char *)malloc((l+1)*sizeof(char)); /* alloc c string */
-	for(i=0; i<l; i++) c[i] = f[i];     /* copy fortran string onto c string */
+        ll = (int)l; /* I do this because otherwise there are troubles with the NAG 64 bits compiler on the Opteron */
+
+	for(ll--; ll>=0; ll--)                 /* find length of fortran string */
+		if(f[ll] != ' ') break;
+	ll++;                                /* need space for th '\0' */
+	c = (char *)malloc((ll+1)*sizeof(char)); /* alloc c string */
+	for(i=0; i<ll; i++) c[i] = f[i];     /* copy fortran string onto c string */
 	c[i] = '\0';                        /* add '\0' to the end of the c string */
 	return c;
 }
 
 void to_f_str(char *c, STR_F_TYPE f, unsigned long l)
 {
-  int i;
-  for(i=0; i<l && c[i]!='\0'; i++) /* copy string */
+  int i,ll;
+  ll = (int)l;
+  for(i=0; i<ll && c[i]!='\0'; i++) /* copy string */
     f[i] = c[i];
-  for(; i<l; i++)                  /* fill the rest with whitespace */
+  for(; i<ll; i++)                  /* fill the rest with whitespace */
     f[i] = ' ';
 }
 
