@@ -48,7 +48,13 @@ module restart_m
     restart_write,      &
     restart_read,       &
     restart_format,     &
-    restart_look
+    restart_look,       &
+    drestart_write_function, &
+    zrestart_write_function, &
+    drestart_read_function, &
+    zrestart_read_function
+
+  
 
   integer, parameter :: &
     RESTART_PLAIN  = 1, &

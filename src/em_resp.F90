@@ -48,6 +48,7 @@ module static_pol_lr_m
     logical :: add_fxc
     logical :: add_hartree
     logical :: dynamic
+    logical :: from_scratch
   end type pol_props_t
 
   type status_t
@@ -89,6 +90,8 @@ contains
     
     gr => sys%gr
     ndim = sys%gr%sb%dim
+
+    props%from_scratch = fromScratch
 
     call parse_input()
 
@@ -526,7 +529,7 @@ contains
         write(out_file, '(3a)')      '# Frequency units: [',  trim(units_out%energy%abbrev),'/hbar]'
         write(out_file, '(3a,i1,a)') '# Polarizability units: [',  trim(units_out%length%abbrev),'^',NDIM,']'
         write(out_file, '(8a)')      '# ', 'Frequency ', &
-             'alpha_11 ' , 'Alpha_22 ' , 'alpha_33 ', 'alpha_12 ', 'alpha_13 ', 'alpha_23 '
+             'alpha_11 ' , 'alpha_22 ' , 'alpha_33 ', 'alpha_12 ', 'alpha_13 ', 'alpha_23 '
         call io_close(out_file)        
       end if
 

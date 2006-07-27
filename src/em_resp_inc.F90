@@ -107,6 +107,8 @@ subroutine X(get_response_e)(sys, h, lr, dir, nsigma, omega, props, status)
   ALLOCATE(dl_rhonew(m%np, st%d%nspin, 1), 1*m%np*st%d%nspin)
   ALLOCATE(dl_rhotmp(m%np, st%d%nspin, 1),1*m%np*st%d%nspin)
 
+  conv = .false.
+  conv_last = .false.
 
   call init_response_e()
 
@@ -116,9 +118,6 @@ subroutine X(get_response_e)(sys, h, lr, dir, nsigma, omega, props, status)
 
   message(1)="--------------------------------------------"
   call write_info(1)
-
-  conv = .false.
-  conv_last = .false.
 
   !self consistency iteration for response
   iter_loop: do iter=1, lr(dir,1)%max_scf_iter
@@ -212,6 +211,7 @@ subroutine X(get_response_e)(sys, h, lr, dir, nsigma, omega, props, status)
     dl_rhonew(1:m%np, 1:st%d%nspin, 1) = M_ZERO
 
     !write restart info
+    call X(restart_write_lr_density)(sys, lr(dir, 1), R_REAL(omega), dir)
     do sigma=1,nsigma 
       write(dirname,'(a,i1,a,i1)') RESTART_DIR, dir, "_", sigma
       call restart_write(trim(tmpdir)//dirname, st, sys%gr, err, iter=iter, lr=lr(dir, sigma))
@@ -303,7 +303,7 @@ contains
 
   !------------------------------------------------------------
   subroutine init_response_e()
-    integer :: ik, ist, i
+    integer :: ik, ist, i, ierr
     FLOAT :: rd
 
     call push_sub('static_pol_lr.init_response_e')
@@ -313,10 +313,21 @@ contains
       call X(lr_orth_response)(m, st, lr(dir,sigma))
     end do
 
-    if(nsigma == 2 ) then 
-      call build_rho_dynamic() 
-    else
-      call X(lr_build_dl_rho)(m, st, lr(dir,1), 3)
+    if(.not. props%from_scratch ) then 
+      !try to read the density from restart information
+      call X(restart_read_lr_density)(sys, lr(dir, 1), R_REAL(omega), dir, ierr)
+      lr(dir, 2)%X(dl_rho) = R_CONJ(lr(dir, 1)%X(dl_rho))
+    else 
+      ierr = 1 
+    end if
+
+    !if this fails, build density from wavefunctions
+    if ( ierr .ne. 0 ) then 
+      if(nsigma == 2 ) then 
+        call build_rho_dynamic() 
+      else
+        call X(lr_build_dl_rho)(m, st, lr(dir,1), 3)
+      end if
     end if
 
     call pop_sub()
@@ -326,7 +337,6 @@ contains
   !------------------------------------------------------------
   subroutine build_rho_dynamic()
     R_TYPE  :: a
-
 
     do sigma=1,nsigma 
       lr(dir,sigma)%X(dl_rho)=M_ZERO
@@ -734,4 +744,48 @@ subroutine X(lr_calc_elf)(st, gr, lr, lr_m)
   call pop_sub()
 
 end subroutine X(lr_calc_elf)
+
+subroutine X(restart_write_lr_density)(sys, lr, omega, tag)
+  type(system_t),  intent(inout) :: sys
+  type(lr_t),         intent(in) :: lr
+  FLOAT,              intent(in) :: omega
+  integer,            intent(in) :: tag
+
+  character(len=80) :: fname
+  integer :: is, ierr
+
+  do is = 1, sys%st%d%nspin
+    write(fname, '(a, f5.3, a, i1, a, i1, a)') 'density-', omega, '-', tag, '-', is, '.'
+    call X(restart_write_function)(trim(tmpdir)//RESTART_DIR, fname, sys%gr,&
+         lr%X(dl_rho)(:, is), ierr, size(lr%X(dl_rho),1))
+  end do
+
+end subroutine X(restart_write_lr_density)
+
+subroutine X(restart_read_lr_density)(sys, lr, omega, tag, ierr)
+  type(system_t),  intent(inout) :: sys
+  type(lr_t),      intent(inout) :: lr
+  FLOAT,              intent(in) :: omega
+  integer,            intent(in) :: tag
+  integer,         intent(inout) :: ierr
+
+  character(len=80) :: fname
+  integer :: is
+
+  do is = 1, sys%st%d%nspin
+    write(fname, '(a, f5.3, a, i1, a, i1, a)') 'density-', omega, '-', tag, '-', is, '.'
+    call X(restart_read_function)(trim(tmpdir)//RESTART_DIR, fname, sys%gr%m,&
+         lr%X(dl_rho)(:, is), ierr)
+  end do
+
+  if( ierr .ne. 0 ) then 
+    write(message(1),'(a, f5.3)') 'Could not load restart density for frequency ', omega/units_out%energy%factor
+    call write_info(1)
+  else
+    write(message(1),'(a, f5.3)') 'Loaded restart density for frequency ', omega/units_out%energy%factor
+    call write_info(1)
+  endif
+
+end subroutine X(restart_read_lr_density)
+
 
