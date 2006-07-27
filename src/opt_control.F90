@@ -864,6 +864,7 @@ contains
       CMPLX  ,           intent(out)   :: tgt(:)
 
       integer :: kk, pol
+      call push_sub('opt_control.build_tdtarget')
 
       SELECT CASE(tdtg%ftype)
       CASE(1)
@@ -889,7 +890,7 @@ contains
          call write_fatal(1)
       END SELECT
 
-
+      call pop_sub()
     end subroutine build_tdtarget
 
 
@@ -1940,6 +1941,10 @@ contains
       FLOAT               :: t
       CMPLX               :: tgt(NP_PART)
       call push_sub('opt_control.init_tdtarget')
+
+      if(.not.associated(td_tg)) then
+         call pop_sub(); return
+      end if
 
       ! td target fitness
       ALLOCATE(td_fitness(0:td%max_iter), td%max_iter+1)
