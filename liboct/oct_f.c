@@ -32,6 +32,10 @@
 #include <math.h>
 #include <time.h>
 
+#ifdef HAVE_DIRENT_H
+#include <dirent.h>
+#endif
+
 #include "string_f.h" /* fortran <-> c string compatibility issues */
 
 /* *********************** interface functions ********************** */
@@ -52,7 +56,7 @@ void FC_FUNC_(oct_stat, OCT_STAT)
 	(int *ierr, STR_F_TYPE name STR_ARG1)
 {
   char *name_c;
-	struct stat statbuf;
+  struct stat statbuf;
 
   name_c = TO_C_STR1(name);
 	/* for the moment we are only interested in the return value
@@ -341,4 +345,100 @@ double FC_FUNC_(oct_poisson_finite_cylinder, OCT_POISSON_FINITE_CYLINDER)
   (double *gx, double *gperp, double *xsize, double *rsize)
 {
   return poisson_finite_cylinder(*gx, *gperp, *xsize, *rsize);
+}
+
+
+/* 
+
+This functions searchs in directory given by dirname, all files that have the following name:
+
+*-<real_number>-<integer>*
+
+It returns the value of <real_number> found that it is closer to freq
+and which value of <integer> matches with the tag argument.
+
+The value found is returned in the freq argument.
+
+On error, ierr is set to something different of 0, actual values are:
+
+0 : value found
+1 : no matching file found
+2 : can not open the directory
+ 
+*/
+
+void FC_FUNC_(oct_search_file_lr, OCT_SEARCH_FILE_LR)
+     (double * freq, int * tag, int * ierr, STR_F_TYPE dirname STR_ARG1)
+{
+#if HAVE_DIRENT_H && HAVE_CLOSEDIR && HAVE_READDIR && HAVE_STRCHR && HAVE_STRTOD
+
+  DIR * dir;
+  struct dirent * ent;
+  char * name_c;
+  char * num_start, * num_end;
+  double read_value, min;
+  int found_something, read_tag;
+
+  name_c = TO_C_STR1(dirname);
+  dir = opendir(name_c);
+
+
+  if(dir == NULL){
+    *ierr = 2;
+    return;
+  }
+  free(name_c);
+
+  ent = NULL;
+  found_something = 0;
+
+  while(1) {
+    ent = readdir(dir);
+    if( ent == NULL ) break;
+
+    num_start = strchr(ent -> d_name, '-');
+
+    if(num_start != NULL) {
+      num_start++; /*now this point to the beginning of the number */
+
+      /* take the numerical value from the string */
+      read_value = strtod(num_start, &num_end);
+      
+      if ( num_end == num_start ) continue; /* no number found */
+
+      /* check that we have the correct tag */
+      if(num_end[0] == '-') {
+
+	num_start=num_end+1;
+	read_tag = (int) strtol(num_start, &num_end, 10);
+	if ( num_end == num_start ) continue; /* no tag found */
+	if ( read_tag != *tag ) continue; /* tag does not match */
+ 
+      } else continue;
+
+
+      /* if this is the first number we found or the value is closer than previous */
+      if ( !found_something || (fabs(min-*freq) > fabs(read_value-*freq)) ) {
+	min = read_value;
+	found_something = 1;
+      }
+    }
+
+  }
+
+  closedir(dir);
+
+  if(found_something) {
+    *ierr = 0;
+    *freq = min ;
+  } else {
+    *ierr = 1;
+  }
+
+#else
+#warning directory search not compiled
+  printf("Warning: Directory search not implemented\n");
+
+#endif
+
 }

@@ -753,11 +753,13 @@ subroutine X(restart_write_lr_density)(sys, lr, omega, tag)
   character(len=80) :: fname
   integer :: is, ierr
 
+  call block_signals();
   do is = 1, sys%st%d%nspin
-    write(fname, '(a, f5.3, a, i1, a, i1, a)') 'density-', omega, '-', tag, '-', is, '.'
+    write(fname, '(a, f6.4, a, i1, a, i1, a)') 'density-', omega, '-', tag, '-', is, '.'
     call X(restart_write_function)(trim(tmpdir)//RESTART_DIR, fname, sys%gr,&
          lr%X(dl_rho)(:, is), ierr, size(lr%X(dl_rho),1))
   end do
+  call unblock_signals();
 
 end subroutine X(restart_write_lr_density)
 
@@ -769,20 +771,50 @@ subroutine X(restart_read_lr_density)(sys, lr, omega, tag, ierr)
   integer,         intent(inout) :: ierr
 
   character(len=80) :: fname
-  integer :: is
+  integer :: is, s_ierr
+  FLOAT :: closest_omega
 
+  ierr = 0;
   do is = 1, sys%st%d%nspin
-    write(fname, '(a, f5.3, a, i1, a, i1, a)') 'density-', omega, '-', tag, '-', is, '.'
+    write(fname, '(a, f6.4, a, i1, a, i1, a)') 'density-', omega, '-', tag, '-', is, '.'
     call X(restart_read_function)(trim(tmpdir)//RESTART_DIR, fname, sys%gr%m,&
-         lr%X(dl_rho)(:, is), ierr)
+         lr%X(dl_rho)(:, is), s_ierr)
+    if( s_ierr /=0 ) ierr = s_ierr;
   end do
 
-  if( ierr .ne. 0 ) then 
-    write(message(1),'(a, f5.3)') 'Could not load restart density for frequency ', omega/units_out%energy%factor
+
+  if( ierr == 0 ) then 
+    write(message(1),'(a, f6.4)') 'Loaded restart density for frequency ', omega/units_out%energy%factor
     call write_info(1)
+
   else
-    write(message(1),'(a, f5.3)') 'Loaded restart density for frequency ', omega/units_out%energy%factor
+
+    write(message(1),'(a, f6.4)') 'Could not load restart density for frequency ', omega/units_out%energy%factor
     call write_info(1)
+    
+    !search for the density of the closest frequency
+    closest_omega = omega
+    call oct_search_file_lr(closest_omega, tag, ierr, trim(tmpdir)//RESTART_DIR)
+    
+    !atempt to read 
+    if(ierr == 0 ) then 
+      
+      do is = 1, sys%st%d%nspin
+        write(fname, '(a, f6.4, a, i1, a, i1, a)') 'density-', closest_omega, '-', tag, '-', is, '.'
+        call X(restart_read_function)(trim(tmpdir)//RESTART_DIR, fname, sys%gr%m,&
+             lr%X(dl_rho)(:, is), s_ierr)
+        if( s_ierr /=0 ) ierr = s_ierr;
+      end do
+      
+    end if
+
+    if(ierr == 0 ) then 
+
+      write(message(1),'(a, f6.4)') 'Using restart density from frequency ', closest_omega/units_out%energy%factor
+      call write_info(1)
+
+    end if
+
   endif
 
 end subroutine X(restart_read_lr_density)
