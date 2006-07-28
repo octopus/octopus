@@ -15,7 +15,7 @@
 !! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
 !! 02111-1307, USA.
 !!
-!! $Id: eigen.F90 2092 2006-05-17 22:26:53 +0000 (Wed, 17 May 2006) appel $
+!! $Id$
 
 #include "global.h"
 
@@ -28,16 +28,16 @@ module preconditioners_m
   implicit none
   private
   
-  integer, public, parameter ::          &
-       PRECONDITIONER_SMOOTHING = 1001
-
-  public ::                       &
-       init_preconditioner,       &
-       end_preconditioner,        &
-       dapply_preconditioner,     &
-       zapply_preconditioner,     &
-       preconditioner_smoothing_t
-
+  integer, public, parameter ::     &
+    PRECONDITIONER_SMOOTHING = 1001
+  
+  public ::                         &
+    init_preconditioner,            &
+    end_preconditioner,             &
+    dapply_preconditioner,          &
+    zapply_preconditioner,          &
+    preconditioner_smoothing_t
+  
   interface init_preconditioner
     module procedure init_preconditioner_smoothing
   end interface
@@ -47,13 +47,13 @@ module preconditioners_m
   end interface
 
   interface dapply_preconditioner
-    module procedure dapply_preconditioner_smoothing
-    module procedure dapply_preconditioner_smoothing_wfs
+    module procedure dapply_precond_smoothing
+    module procedure dapply_precond_smoothing_wfs
   end interface
 
   interface zapply_preconditioner
-    module procedure zapply_preconditioner_smoothing
-    module procedure zapply_preconditioner_smoothing_wfs
+    module procedure zapply_precond_smoothing
+    module procedure zapply_precond_smoothing_wfs
   end interface
 
   type preconditioner_smoothing_t
@@ -61,7 +61,8 @@ module preconditioners_m
   end type preconditioner_smoothing_t
   
 contains
- 
+
+  ! --------------------------------------------------------- 
   subroutine init_preconditioner_smoothing(this, gr)
     type(preconditioner_smoothing_t), intent(inout) :: this 
     type(grid_t),        intent(in)    :: gr
