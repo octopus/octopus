@@ -518,6 +518,8 @@ contains
       integer :: out_file, nspin
       character(len=20) :: header_string
 
+      nspin=1
+
       ! check file linear/dynpols
       file_doesnt_exist = .not. io_file_exists('linear/dynpols', &
            'Warning: File linear/dynpols found. New information will be appended')
