@@ -316,22 +316,23 @@ void FC_FUNC_(oct_parse_expression, OCT_PARSE_EXPRESSION)
 
 /* --------------------------------------------------------- */
 void FC_FUNC_(oct_parse_expression1, OCT_PARSE_EXPRESSION1)
-	(double *re, double *im, char* variable, double *val, STR_F_TYPE string STR_ARG1)
+  (double *re, double *im, STR_F_TYPE variable, double *val, STR_F_TYPE string STR_ARG2)
 {
 
   symrec *rec;
   parse_result c;
-  char *s_c;
+  char *s_c, *var_c;
 
-  s_c  = TO_C_STR1(string);
+  var_c = TO_C_STR1(variable);
+  s_c  = TO_C_STR2(string);
 
-  rec = putsym(variable, S_CMPLX);
+  rec = putsym(var_c, S_CMPLX);
   GSL_SET_COMPLEX(&rec->value.c, *val, 0);
   rec->def = 1;
 
   parse_exp(s_c, &c);
 
-  rmsym(variable);
+  rmsym(var_c);
 
   *re = GSL_REAL(c.value.c);
   *im = GSL_IMAG(c.value.c);
