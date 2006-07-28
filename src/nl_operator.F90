@@ -54,6 +54,7 @@ module nl_operator_m
     integer               :: n         ! number of points in discrete operator
     integer               :: np        ! number of points in mesh
     integer, pointer      :: stencil(:,:)
+    integer               :: stencil_center ! center point of stencil
 
     ! When running in parallel mode, the next three
     ! arrays are unique on each node.
@@ -168,6 +169,18 @@ contains
     ! set initially to zero
     op%w_re = M_ZERO
     if (op%cmplx_op) op%w_im = M_ZERO
+
+    ! store center point of the stencil
+    do i = 1, op%n
+      if(                              & 
+        op%stencil(1, i) .eq. 0 .and.  &
+        op%stencil(2, i) .eq. 0 .and.  &
+        op%stencil(3, i) .eq. 0        &
+        ) then
+        op%stencil_center = i
+        exit
+      end if
+    end do
 
     ! Build lookup table op%i from stencil.
     ALLOCATE(op%i(op%n, np), op%n*np)
