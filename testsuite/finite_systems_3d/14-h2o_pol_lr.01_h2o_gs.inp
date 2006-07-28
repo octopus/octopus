@@ -1,3 +1,5 @@
+# $Id:$
+
 SystemName = 'H2O'
 CalculationMode = gs
 
