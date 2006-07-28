@@ -47,17 +47,17 @@ module opt_control_m
   public :: opt_control_run
 
   integer, parameter, private  ::  &
-    oct_is_groundstate   = 1,             &
-    oct_is_excited       = 2,             &
-    oct_is_superposition = 3,             &
+    oct_is_groundstate   = 1,      &
+    oct_is_excited       = 2,      &
+    oct_is_superposition = 3,      &
     oct_is_userdefined   = 4         
     
   integer, parameter, private  ::  &
-    oct_tg_groundstate   = 1,             &
-    oct_tg_excited       = 2,             &
-    oct_tg_superposition = 3,             &
-    oct_tg_userdefined   = 4,             &
-    oct_tg_local         = 5,             &        
+    oct_tg_groundstate   = 1,      &
+    oct_tg_excited       = 2,      &
+    oct_tg_superposition = 3,      &
+    oct_tg_userdefined   = 4,      &
+    oct_tg_local         = 5,      &        
     oct_tg_td_local      = 6   
 
   integer, parameter, private  ::  &
@@ -66,28 +66,29 @@ module opt_control_m
     oct_algorithm_wg05  = 3       
  
   integer, parameter, private  ::  &
-    oct_targetmode_static = 0,       &
+    oct_targetmode_static = 0,     &
     oct_targetmode_td     = 1
   
   integer, parameter, private  ::  &
-    oct_tgtype_state = 1,       &
+    oct_tgtype_state = 1,          &
     oct_tgtype_local = 2
   
   integer, parameter, private  ::  &
-    oct_ftype_gauss = 1,       &
+    oct_ftype_gauss = 1,           &
     oct_ftype_step = 2
-  type td_target_t
-     integer :: type     ! local or state 
-     FLOAT   :: par 
-     FLOAT   :: width      ! width parameter
-     FLOAT   :: weight     ! relative weight of filter
- 
-     character(len=1024) :: expression(MAX_DIM) ! expression of user def func
-     integer             :: ftype         ! which function: gaussian etc
 
-     FLOAT, pointer :: spatial(:)   ! x,y,z dependence
-     CMPLX, pointer :: tdshape(:,:) ! evaluate user defined functions
-     
+
+  type td_target_t
+    integer :: type       ! local or state 
+    FLOAT   :: par 
+    FLOAT   :: width      ! width parameter
+    FLOAT   :: weight     ! relative weight of filter
+    
+    character(len=1024) :: expression(MAX_DIM) ! expression of user def func
+    integer             :: ftype               ! which function: gaussian etc
+    
+    FLOAT, pointer :: spatial(:)   ! x,y,z dependence
+    CMPLX, pointer :: tdshape(:,:) ! evaluate user defined functions
   end type td_target_t
 
 contains
@@ -155,8 +156,8 @@ contains
     ! CHECK:: only dipole approximation in length gauge
     !         only single particle (yet)
     if(h%gauge.ne.1) then
-       write(message(1),'(a)') "So far only length gauge is supported..."
-       call write_fatal(1)
+      write(message(1),'(a)') "So far only length gauge is supported..."
+      call write_fatal(1)
     end if
 
     ! initialize oct run, defines initial laser... initial state
@@ -166,21 +167,21 @@ contains
     select case(algorithm_type)
       
     case(oct_algorithm_zbr98)    
-       ! (0)  rabitz zbr98 type algorithm (states only)    
-       call scheme_ZBR98(algorithm_type) 
+      ! (0)  rabitz zbr98 type algorithm (states only)    
+      call scheme_ZBR98(algorithm_type) 
 
     case(oct_algorithm_zr98)     
-       ! (1)  rabitz zr98  type algorithm 
-       call scheme_ZR98(algorithm_type)  
-       ! TODO: o generalize elements
-       !       o time-dependent targets
-
+      ! (1)  rabitz zr98  type algorithm 
+      call scheme_ZR98(algorithm_type)  
+      ! TODO: o generalize elements
+      !       o time-dependent targets
+      
     case(oct_algorithm_wg05)  
-       ! (2) Werschnik, Gross Type: allows fixed fluence and filtering
-       call scheme_WG05(algorithm_type)  
-       ! (11) td targets rabitz type
-       ! (12) td targets wg     type (with filter)
-
+      ! (2) Werschnik, Gross Type: allows fixed fluence and filtering
+      call scheme_WG05(algorithm_type)  
+      ! (11) td targets rabitz type
+      ! (12) td targets wg     type (with filter)
+      
     ! TODO: Krotov scheme
     ! MT03 scheme: with additional parameters
    
@@ -188,32 +189,32 @@ contains
       write(message(1),'(a)') "Unknown choice of OCT algorithm."
       write(message(2),'(a)') "Choose: ZR98, ZBR98, WG05 ."
       call write_fatal(2)
-
+      
     end select
-
+    
     ! output: States, Lasers, Convergence
     call output()
 
     ! do final test run: propagate initial state with optimal field
     if(oct_double_check) then
-       message(1) = "Info: Optimization finished...checking the field"
-       call write_info(1)
-
-       call states_copy(psi, initial_st)
-
-       call prop_fwd(psi)
-       if(targetmode==oct_targetmode_td) then
-          overlap = SUM(td_fitness) * abs(td%dt)
-          write(message(1), '(a,f14.8)') " => overlap:", overlap
-          call write_info(1)
-       else
-         overlap = abs(zstates_mpdotp(gr%m, psi, target_st))
-         write(message(1), '(6x,a,f14.8)') " => overlap:", overlap
-         call write_info(1)
-       end if
-       
-       ! output anything else ??
-       ! what about td output - do a full td calculation
+      message(1) = "Info: Optimization finished...checking the field"
+      call write_info(1)
+      
+      call states_copy(psi, initial_st)
+      
+      call prop_fwd(psi)
+      if(targetmode==oct_targetmode_td) then
+        overlap = SUM(td_fitness) * abs(td%dt)
+        write(message(1), '(a,f14.8)') " => overlap:", overlap
+        call write_info(1)
+      else
+        overlap = abs(zstates_mpdotp(gr%m, psi, target_st))
+        write(message(1), '(6x,a,f14.8)') " => overlap:", overlap
+        call write_info(1)
+      end if
+      
+      ! output anything else ??
+      ! what about td output - do a full td calculation
     end if
 
     ! clean up
@@ -221,7 +222,7 @@ contains
     nullify(h%ep%lasers(1)%numerical)
     deallocate(laser)
     deallocate(laser_tmp)
-   
+    
     deallocate(convergence)
 !! PROBLEMS WITH DEALLOCATION
     !write(6,*) 'DEBUG5'
@@ -230,15 +231,15 @@ contains
 !! ----
     call states_end(psi_i)
     call end_()
-
+    
     call pop_sub()
 
   contains
-
+    
     ! ---------------------------------------------------------
     subroutine scheme_zr98(method)
       integer, intent(in) :: method
-
+      
       integer :: ierr
       logical :: stoploop
      
@@ -260,42 +261,42 @@ contains
       call zoutput_function(sys%outp%how,'opt-control','zr98_istate1',gr%m,gr%sb,initial_st%zpsi(:,1,1,1),M_ONE,ierr)
       old_functional = -CNST(1e10)
       ctr_iter = 0
-
-      ctr_loop: do
-
-         ! check for stop file and delete file
-
-         ! define target state
-         call target_calc(method, target_st, psi, chi) ! defines chi
-
-         call iteration_manager(stoploop)
-         if (stoploop)  exit ctr_loop
-
-         call bwd_step(method)
-
-         if(dump_intermediate) then
-            write(filename,'(a,i3.3)') 'opt-control/b_laser.', ctr_iter
-            call write_field(filename, laser_tmp, td%max_iter, td%dt)
-         end if
-
-         ! forward propagation
-         call states_copy(psi, initial_st)
-         call states_copy(psi2, initial_st) ! for td target
-         call zoutput_function(sys%outp%how,'opt-control','last_bwd',gr%m,gr%sb,psi%zpsi(:,1,1,1),M_ONE,ierr)
-         call fwd_step(method)
-         write(filename,'(a,i3.3)') 'PsiT.', ctr_iter
-         call zoutput_function(sys%outp%how,'opt-control',filename,gr%m,gr%sb,psi%zpsi(:,1,1,1),M_ONE,ierr)
-         if(dump_intermediate) then
-            write(filename,'(a,i3.3)') 'opt-control/laser.', ctr_iter
-            call write_field(filename, laser, td%max_iter, td%dt)
-         end if
       
+      ctr_loop: do
+        
+        ! check for stop file and delete file
+        
+        ! define target state
+        call target_calc(method, target_st, psi, chi) ! defines chi
+        
+        call iteration_manager(stoploop)
+        if (stoploop)  exit ctr_loop
+        
+        call bwd_step(method)
+        
+        if(dump_intermediate) then
+          write(filename,'(a,i3.3)') 'opt-control/b_laser.', ctr_iter
+          call write_field(filename, laser_tmp, td%max_iter, td%dt)
+        end if
+        
+        ! forward propagation
+        call states_copy(psi, initial_st)
+        call states_copy(psi2, initial_st) ! for td target
+        call zoutput_function(sys%outp%how,'opt-control','last_bwd',gr%m,gr%sb,psi%zpsi(:,1,1,1),M_ONE,ierr)
+        call fwd_step(method)
+        write(filename,'(a,i3.3)') 'PsiT.', ctr_iter
+        call zoutput_function(sys%outp%how,'opt-control',filename,gr%m,gr%sb,psi%zpsi(:,1,1,1),M_ONE,ierr)
+        
+        if(dump_intermediate) then
+          write(filename,'(a,i3.3)') 'opt-control/laser.', ctr_iter
+          call write_field(filename, laser, td%max_iter, td%dt)
+        end if
+        
       end do ctr_loop
-
+      
       call pop_sub()
-
     end subroutine scheme_zr98
-
+    
 
     !---------------------------------------
     subroutine scheme_wg05(method)
@@ -304,7 +305,7 @@ contains
       integer :: ierr
       logical :: stoploop
 
-      call push_sub('opt_control.scheme_WG05_')
+      call push_sub('opt_control.scheme_WG05')
       
       stoploop = .FALSE.
     
@@ -316,61 +317,59 @@ contains
 
       ctr_loop: do
          
-         ! first propagate chi to ti
-         message(1) = "Info: Initial forward propagation"
-         call write_info(1)
-         
-         call states_copy(psi, initial_st)
-         call prop_fwd(psi) 
-
+        ! first propagate chi to ti
+        message(1) = "Info: Initial forward propagation"
+        call write_info(1)
+        
+        call states_copy(psi, initial_st)
+        call prop_fwd(psi) 
+        
 !! DEBUG         
-         write(filename,'(a,i3.3)') 'PsiT.', ctr_iter
-         call zoutput_function(sys%outp%how,'opt-control',filename,gr%m,gr%sb,psi%zpsi(:,1,1,1),M_ONE,ierr)
+        write(filename,'(a,i3.3)') 'PsiT.', ctr_iter
+        call zoutput_function(sys%outp%how,'opt-control',filename,gr%m,gr%sb,psi%zpsi(:,1,1,1),M_ONE,ierr)
 !!         
-         ! define target state
-         call target_calc(method,target_st,psi,chi) ! defines chi
-
-         call iteration_manager(stoploop)
-         if (stoploop)  exit ctr_loop
-
-         call bwd_step(method)
-         call calc_fluence(laser_tmp, fluence)      
-
-   
-         !! FILTER STUFF / ALPHA STUFF
-         if (filtermode.gt.0) & 
-              call apply_filter(gr, td%max_iter, filtermode, f, laser_tmp)
-         ! RECALC FIELD
-         if (mode_fixed_fluence) then
-            call calc_fluence(laser_tmp, fluence)      
+        ! define target state
+        call target_calc(method,target_st,psi,chi) ! defines chi
+        
+        call iteration_manager(stoploop)
+        if (stoploop)  exit ctr_loop
+        
+        call bwd_step(method)
+        call calc_fluence(laser_tmp, fluence)      
+        
+        
+        !! FILTER STUFF / ALPHA STUFF
+        if (filtermode.gt.0) & 
+          call apply_filter(gr, td%max_iter, filtermode, f, laser_tmp)
+        ! RECALC FIELD
+        if (mode_fixed_fluence) then
+          call calc_fluence(laser_tmp, fluence)      
 !! DEBUG
  !           write (6,*) 'actual fluence', fluence
 !! 
-            a_penalty(ctr_iter + 1) = &
-                 sqrt(fluence * a_penalty(ctr_iter)**2 / targetfluence )
+          a_penalty(ctr_iter + 1) = &
+            sqrt(fluence * a_penalty(ctr_iter)**2 / targetfluence )
 !! DEBUG
  !           write (6,*) 'actual penalty', a_penalty(ctr_iter)
  !           write (6,*) 'next penalty', a_penalty(ctr_iter + 1)
 !!
-            tdpenalty = a_penalty(ctr_iter + 1)
-            laser_tmp = laser_tmp * a_penalty(ctr_iter) / a_penalty(ctr_iter + 1)
-            call calc_fluence(laser_tmp, fluence)
+          tdpenalty = a_penalty(ctr_iter + 1)
+          laser_tmp = laser_tmp * a_penalty(ctr_iter) / a_penalty(ctr_iter + 1)
+          call calc_fluence(laser_tmp, fluence)
 !! DEBUG
   !          write (6,*) 'renormalized', fluence, targetfluence
 !!
-         end if
+        end if
 
-         laser = laser_tmp
-         !
-         ! dump here: since the fwd_step is missing
-         write(filename,'(a,i3.3)') 'opt-control/laser.', ctr_iter
-         call write_field(filename, laser, td%max_iter, td%dt)   
-      
-         
+        laser = laser_tmp
+        !
+        ! dump here: since the fwd_step is missing
+        write(filename,'(a,i3.3)') 'opt-control/laser.', ctr_iter
+        call write_field(filename, laser, td%max_iter, td%dt)   
+        
       end do ctr_loop
 
       call pop_sub()
-
     end subroutine scheme_wg05
 
  
@@ -403,35 +402,34 @@ contains
 
       ctr_loop: do
 
-         ! check for stop file and delete file
-
-         message(1) = "Info: Setup forward"
-         call write_info(1)
-
-         ! forward propagation
-         call states_copy(psi, initial_st)  
-
-         call fwd_step(method)
-
-         !write(6,*) 'norm', zstates_dotp(gr%m, psi%d%dim,  psi%zpsi(:,:, 1, 1), psi%zpsi(:,:, 1, 1))
-         !write(6,*) 'norm', zstates_dotp(gr%m, psi%d%dim,  chi%zpsi(:,:, 1, 1), chi%zpsi(:,:, 1, 1))
-         write(filename,'(a,i3.3)') 'PsiT.', ctr_iter
-         call zoutput_function(sys%outp%how,'opt-control',filename,gr%m,gr%sb,psi%zpsi(:,1,1,1),M_ONE, ierr) 
-         !write(6,*) 'penalty ',tdpenalty(:,2)
-         ! iteration managament ! make own subroutine
-         call iteration_manager(stoploop)
-         if (stoploop)  exit ctr_loop
-
+        ! check for stop file and delete file
+        message(1) = "Info: Setup forward"
+        call write_info(1)
+        
+        ! forward propagation
+        call states_copy(psi, initial_st)  
+        
+        call fwd_step(method)
+        
+        !write(6,*) 'norm', zstates_dotp(gr%m, psi%d%dim,  psi%zpsi(:,:, 1, 1), psi%zpsi(:,:, 1, 1))
+        !write(6,*) 'norm', zstates_dotp(gr%m, psi%d%dim,  chi%zpsi(:,:, 1, 1), chi%zpsi(:,:, 1, 1))
+        write(filename,'(a,i3.3)') 'PsiT.', ctr_iter
+        call zoutput_function(sys%outp%how,'opt-control',filename,gr%m,gr%sb,psi%zpsi(:,1,1,1),M_ONE, ierr) 
+        !write(6,*) 'penalty ',tdpenalty(:,2)
+        ! iteration managament ! make own subroutine
+        call iteration_manager(stoploop)
+        if (stoploop)  exit ctr_loop
+        
          ! and now backward
-         call target_calc(method,target_st,psi,chi)
-         call bwd_step(method)
-         call zoutput_function(sys%outp%how,'opt-control','last_bwd',gr%m,gr%sb,psi%zpsi(:,1,1,1),M_ONE, ierr) 
-      
-
+        call target_calc(method,target_st,psi,chi)
+        call bwd_step(method)
+        call zoutput_function(sys%outp%how,'opt-control','last_bwd',gr%m,gr%sb,psi%zpsi(:,1,1,1),M_ONE, ierr) 
+        
       end do ctr_loop
 
       call pop_sub()
     end subroutine scheme_zbr98
+
 
     ! ----------------------------------------------------------
     subroutine fwd_step(method)
@@ -449,7 +447,7 @@ contains
       !write(6,*) 'HEre2'
       call v_ks_calc(gr, sys%ks, h, psi, calc_eigenval=.true.)
       do i = 1, st%d%nspin
-         v_old_i(:, i, 2) = h%vhxc(:, i)
+        v_old_i(:, i, 2) = h%vhxc(:, i)
       end do
       v_old_i(:, :, 3) = v_old_i(:, :, 2)
 
@@ -457,7 +455,7 @@ contains
       v_old_i(:, :, 0) = v_old_i(:, :, 2)
       v_old_i(:, :, 1) = v_old_i(:, :, 2)
       do i = 1, 3
-         v_old_f(:,:,i) = v_old_f(:,:,0) ! this one comes from the previous propagation
+        v_old_f(:,:,i) = v_old_f(:,:,0) ! this one comes from the previous propagation
       end do
 
       message(1) = "Info: Propagating forward"
@@ -466,24 +464,24 @@ contains
       h%ep%lasers(1)%dt = td%dt
       do i = 1, td%max_iter
   
-         call prop_iter_fwd(i,method)
-         if(targetmode==oct_targetmode_td) &
-              call calc_tdfitness(td_tg, tdtarget, td_fitness(i))     
+        call prop_iter_fwd(i,method)
+        if(targetmode==oct_targetmode_td) &
+          call calc_tdfitness(td_tg, tdtarget, td_fitness(i))     
         ! if td_target
-     
-         !         call loct_progress_bar(i-1, td%max_iter-1)
+        
+        !         call loct_progress_bar(i-1, td%max_iter-1)
       end do
       
       ! dump new laser field
       if(dump_intermediate) then
-         write(filename,'(a,i3.3)') 'opt-control/laser.', ctr_iter
-         call write_field(filename, laser, td%max_iter, td%dt)
+        write(filename,'(a,i3.3)') 'opt-control/laser.', ctr_iter
+        call write_field(filename, laser, td%max_iter, td%dt)
       endif
-    
+      
       call pop_sub()
     end subroutine fwd_step
-
-
+    
+    
     ! --------------------------------------------------------
     subroutine bwd_step(method) 
       integer, intent(in) :: method
@@ -494,12 +492,12 @@ contains
       chi%rho = dens_tmp
       call v_ks_calc(gr, sys%ks, h, chi, calc_eigenval=.true.)
       do i = 1, st%d%nspin
-         v_old_f(:, i, 2) = h%vhxc(:, i)
+        v_old_f(:, i, 2) = h%vhxc(:, i)
       end do
       v_old_f(:, :, 3) = v_old_f(:, :, 2)
       
       do i = 2, 3
-         v_old_i(:,:,i) = v_old_i(:,:,1) ! this one comes the previous propagation
+        v_old_i(:,:,i) = v_old_i(:,:,1) ! this one comes the previous propagation
       end do
 
       message(1) = "Info: Propagating backward"
@@ -508,15 +506,15 @@ contains
       td%dt = -td%dt
       h%ep%lasers(1)%dt = td%dt
       do i = td%max_iter-1, 0, -1
-         call prop_iter_bwd(i,method)
-         !call loct_progress_bar(td%max_iter-1-i, td%max_iter-1)
+        call prop_iter_bwd(i,method)
+        !call loct_progress_bar(td%max_iter-1-i, td%max_iter-1)
       end do
       td%dt = -td%dt
 
       ! dump new laser field
       if(dump_intermediate) then
-         write(filename,'(a,i3.3)') 'opt-control/b_laser.', ctr_iter
-         call write_field(filename, laser_tmp, td%max_iter, td%dt)
+        write(filename,'(a,i3.3)') 'opt-control/b_laser.', ctr_iter
+        call write_field(filename, laser_tmp, td%max_iter, td%dt)
       end if
 
       call pop_sub()
@@ -540,63 +538,64 @@ contains
       ! TODO:: check for STOP FILE AND delete it
 
       if((ctr_iter .eq. ctr_iter_max).or.(eps>M_ZERO.and.abs(functional-old_functional) < eps)) then
-         if((ctr_iter .eq. ctr_iter_max)) then
-            message(1) = "Info: Maximum number of iterations reached"
-            call write_info(1)
-         endif
-         if(eps > M_ZERO .and. abs(functional-old_functional) < eps ) then
-            message(1) = "Info: Convergence threshold reached"
-            call write_info(1)
-         endif
- 
-         stoploop = .TRUE.
-
+        if((ctr_iter .eq. ctr_iter_max)) then
+          message(1) = "Info: Maximum number of iterations reached"
+          call write_info(1)
+        endif
+        if(eps > M_ZERO .and. abs(functional-old_functional) < eps ) then
+          message(1) = "Info: Convergence threshold reached"
+          call write_info(1)
+        endif
+        
+        stoploop = .TRUE.
       end if
+
       write(message(1), '(a,i3)') 'Info: Optimal control iteration #', ctr_iter
       call write_info(1)
+
       if(mode_fixed_fluence) then
-         write(message(1), '(6x,a,f10.5,a,f10.5,a,f10.5,a,f10.5)') &
-              " => J1:", overlap, "   J: " , functional,  "  I: " , fluence, &
-              " penalty: ", a_penalty(ctr_iter)
+        write(message(1), '(6x,a,f10.5,a,f10.5,a,f10.5,a,f10.5)') &
+          " => J1:", overlap, "   J: " , functional,  "  I: " , fluence, &
+          " penalty: ", a_penalty(ctr_iter)
       else
-         write(message(1), '(6x,a,f14.8,a,f14.8,a,f14.8)') &
-              " => J1:", overlap, "   J: " , functional,  "  I: " , fluence
+        write(message(1), '(6x,a,f14.8,a,f14.8,a,f14.8)') &
+          " => J1:", overlap, "   J: " , functional,  "  I: " , fluence
       end if
       call write_info(1)
 
       ! store field with best J
       if(functional.gt.bestJ) then
-         !write(6,*) '*'
-         bestJ          = functional
-         bestJ_J1       = overlap
-         bestJ_fluence  = fluence
-         bestJ_ctr_iter = ctr_iter
-         ! dump to disc
-         write(filename,'(a)') 'opt-control/laser.bestJ'
-         call write_field(filename, laser, td%max_iter, td%dt)
+        !write(6,*) '*'
+        bestJ          = functional
+        bestJ_J1       = overlap
+        bestJ_fluence  = fluence
+        bestJ_ctr_iter = ctr_iter
+        ! dump to disc
+        write(filename,'(a)') 'opt-control/laser.bestJ'
+        call write_field(filename, laser, td%max_iter, td%dt)
       end if
-
+      
       ! store field with best J1
       if(overlap.gt.bestJ1) then
-         !write(6,*) '*'
-         bestJ1          = overlap
-         bestJ1_J        = functional
-         bestJ1_fluence  = fluence       
-         bestJ1_ctr_iter = ctr_iter
-         ! dump to disc
-         write(filename,'(a)') 'opt-control/laser.bestJ1'
-         call write_field(filename, laser, td%max_iter, td%dt)
+        !write(6,*) '*'
+        bestJ1          = overlap
+        bestJ1_J        = functional
+        bestJ1_fluence  = fluence       
+        bestJ1_ctr_iter = ctr_iter
+        ! dump to disc
+        write(filename,'(a)') 'opt-control/laser.bestJ1'
+        call write_field(filename, laser, td%max_iter, td%dt)
       end if
-
+      
       ctr_iter = ctr_iter + 1
       old_functional = functional
       
       call pop_sub()
     end subroutine iteration_manager
 
+    
     ! ---------------------------------------------------------
     subroutine calc_tdfitness(tg, tdtarget, merit)
-
       type(td_target_t), intent(in) :: tg(:)
       CMPLX,             intent(in) :: tdtarget(:)
       FLOAT,             intent(out):: merit
@@ -604,27 +603,27 @@ contains
 
       merit = M_ZERO
       do jj=1, size(tg)
-         if(tg(jj)%type.eq.oct_tgtype_local) then
-            do ik = 1, psi_i%d%nik
-               do p  = psi_i%st_start, psi_i%st_end
-                  do dim = 1, psi_i%d%dim
-                     merit = merit + &
-                          zmf_integrate(gr%m, tdtarget(:)* &
-                          abs(psi%zpsi(:,dim,ik,p))**2)
-                  end do
-               end do
+        if(tg(jj)%type.eq.oct_tgtype_local) then
+          do ik = 1, psi_i%d%nik
+            do p  = psi_i%st_start, psi_i%st_end
+              do dim = 1, psi_i%d%dim
+                merit = merit + &
+                  zmf_integrate(gr%m, tdtarget(:)* &
+                  abs(psi%zpsi(:,dim,ik,p))**2)
+              end do
             end do
-         else
-            do ik = 1, psi_i%d%nik
-               do p  = psi_i%st_start, psi_i%st_end
-                  do dim = 1, psi_i%d%dim
-                     merit = merit + &
-                          abs(zmf_integrate(gr%m, tdtarget(:)* &
-                          conjg(psi%zpsi(:,dim,ik,p))))**2
-                  end do
-               end do
+          end do
+        else
+          do ik = 1, psi_i%d%nik
+            do p  = psi_i%st_start, psi_i%st_end
+              do dim = 1, psi_i%d%dim
+                merit = merit + &
+                  abs(zmf_integrate(gr%m, tdtarget(:)* &
+                  conjg(psi%zpsi(:,dim,ik,p))))**2
+              end do
             end do
-         end if
+          end do
+        end if
       end do
       
     end subroutine calc_tdfitness
@@ -636,45 +635,45 @@ contains
       integer,           intent(in)  :: method
       type(states_t),    intent(in)  :: targetst, psi_in
       type(states_t),    intent(inout) :: chi_out
-
+      
       CMPLX   :: olap
       integer :: ik, p, dim
     
       call push_sub('opt_control.target_calc')
 
       if(targetmode==oct_targetmode_static) then
-         if(totype.eq.oct_tg_local) then ! only zr98 and wg05
-            do ik = 1, psi_i%d%nik
-               do p  = psi_i%st_start, psi_i%st_end
-                  do dim = 1, psi_i%d%dim
-                     ! multiply orbtials with local operator
-                     !! FIXME: for multiple particles 1,1,1 -> dim,p,ik
-                     chi_out%zpsi(:,dim,p,ik) = targetst%zpsi(:, 1, 1 , 1)*psi_in%zpsi(:, dim, p, ik)
-                  end do
-               end do
+        if(totype.eq.oct_tg_local) then ! only zr98 and wg05
+          do ik = 1, psi_i%d%nik
+            do p  = psi_i%st_start, psi_i%st_end
+              do dim = 1, psi_i%d%dim
+                ! multiply orbtials with local operator
+                !! FIXME: for multiple particles 1,1,1 -> dim,p,ik
+                chi_out%zpsi(:,dim,p,ik) = targetst%zpsi(:, 1, 1 , 1)*psi_in%zpsi(:, dim, p, ik)
+              end do
             end do
-         else ! totype nonlocal (all other totypes)
-            do ik = 1, psi_i%d%nik
-               do p  = psi_i%st_start, psi_i%st_end
-                  olap = M_z0
-                  do dim = 1, psi_i%d%dim
-                     olap = olap + zmf_integrate(gr%m,conjg(targetst%zpsi(:, dim, p, ik))*psi_in%zpsi(:, dim, p, ik))
-                  end do
-                  if(method == oct_algorithm_zr98) &
-                       chi_out%zpsi(:,:,p,ik) = olap*targetst%zpsi(:, :, p, ik)
-                  if(method == oct_algorithm_zbr98) then
-                     chi_out%zpsi(:,:,p,ik) = targetst%zpsi(:, :, p, ik)
-                    end if
-                  if(method == oct_algorithm_wg05) &
-                       chi_out%zpsi(:,:,p,ik) = olap*targetst%zpsi(:, :, p, ik)
-               end do
+          end do
+        else ! totype nonlocal (all other totypes)
+          do ik = 1, psi_i%d%nik
+            do p  = psi_i%st_start, psi_i%st_end
+              olap = M_z0
+              do dim = 1, psi_i%d%dim
+                olap = olap + zmf_integrate(gr%m,conjg(targetst%zpsi(:, dim, p, ik))*psi_in%zpsi(:, dim, p, ik))
+              end do
+              if(method == oct_algorithm_zr98) &
+                chi_out%zpsi(:,:,p,ik) = olap*targetst%zpsi(:, :, p, ik)
+              if(method == oct_algorithm_zbr98) then
+                chi_out%zpsi(:,:,p,ik) = targetst%zpsi(:, :, p, ik)
+              end if
+              if(method == oct_algorithm_wg05) &
+                chi_out%zpsi(:,:,p,ik) = olap*targetst%zpsi(:, :, p, ik)
             end do
-         end if
+          end do
+        end if
       else
-         ! time-dependent target
-         message(1) = 'Info: Time-dependent Target selected'
-         call write_info(1)
-         chi_out%zpsi = M_z0
+        ! time-dependent target
+        message(1) = 'Info: Time-dependent Target selected'
+        call write_info(1)
+        chi_out%zpsi = M_z0
       end if
 
 !      do ik = 1, psi%d%nik
@@ -696,200 +695,204 @@ contains
      call pop_sub()
    end subroutine target_calc
 
-    ! ---------------------------------------------------------
-    subroutine prop_iter_fwd(iter,method)
-      integer, intent(in) :: method
-      integer,           intent(in) :: iter
-      
-      call push_sub('opt_control.prop_iter_fwd')
-      
-      ! chi(0) --> chi(T) [laser_tmp]
-      !         |------------laser     
-      ! psi(0) --> psi(T) 
-      
-      ! new electric field
-      if(targetmode==oct_targetmode_td) then
-         ! psi(0) --> psi(T) with old field (for chi)
-         call calc_inh(psi2,td_tg,iter,&
-              td%dt,td%max_iter,chi)
-         ! psi2
-         h%ep%lasers(1)%numerical => laser_tmp
-         td%tr%v_old => v_old_i
-         h%ep%lasers(1)%numerical => laser
-         call states_calc_dens(psi2, NP_PART, dens_tmp)
-         psi2%rho = dens_tmp
-         call v_ks_calc(gr, sys%ks, h, psi2, calc_eigenval=.true.)
-         call td_rti_dt(sys%ks, h, gr, psi2, td%tr, abs(iter*td%dt), abs(td%dt))
-      end if
-      
-      call update_field(iter-1, laser, method)
-      
-      ! chi
-      td%tr%v_old => v_old_f
-      h%ep%lasers(1)%numerical => laser_tmp
-      call states_calc_dens(chi, NP_PART, dens_tmp)
-      chi%rho = dens_tmp
-      call v_ks_calc(gr, sys%ks, h, chi, calc_eigenval=.true.) 
-      call td_rti_dt(sys%ks, h, gr, chi, td%tr, abs(iter*td%dt), abs(td%dt))
-      
-      ! psi
-      td%tr%v_old => v_old_i
-      h%ep%lasers(1)%numerical => laser
-      call states_calc_dens(psi, NP_PART, dens_tmp)
-      psi%rho = dens_tmp
-      call v_ks_calc(gr, sys%ks, h, psi, calc_eigenval=.true.)
-      call td_rti_dt(sys%ks, h, gr, psi, td%tr, abs(iter*td%dt), abs(td%dt))
-      !write(6,*) iter, psi%zpsi(45:50,1,1,1)
-      !write(6,*) laser(2*iter,1)
-      
-      call pop_sub()
-    end subroutine prop_iter_fwd
-
    
-    ! ---------------------------------------------------------
-    subroutine prop_iter_bwd(iter, method)
-      ! do backward propagation step with update of field
-      ! works for time-independent and td targets
-
-      integer, intent(in)           :: iter
-      integer, intent(in) :: method
-      
-      call push_sub('opt_control.prop_iter_bwd')
-      ! chi(T) --> chi(0)
-      !         |------------laser_tmp
-      ! psi(T) --> psi(0) [laser]
+   ! ---------------------------------------------------------
+   subroutine prop_iter_fwd(iter,method)
+     integer, intent(in) :: method
+     integer,           intent(in) :: iter
+     
+     call push_sub('opt_control.prop_iter_fwd')
+     
+     ! chi(0) --> chi(T) [laser_tmp]
+     !         |------------laser     
+     ! psi(0) --> psi(T) 
+     
+     ! new electric field
+     if(targetmode==oct_targetmode_td) then
+       ! psi(0) --> psi(T) with old field (for chi)
+       call calc_inh(psi2,td_tg,iter,&
+         td%dt,chi)
+       ! psi2
+       h%ep%lasers(1)%numerical => laser_tmp
+       td%tr%v_old => v_old_i
+       h%ep%lasers(1)%numerical => laser
+       call states_calc_dens(psi2, NP_PART, dens_tmp)
+       psi2%rho = dens_tmp
+       call v_ks_calc(gr, sys%ks, h, psi2, calc_eigenval=.true.)
+       call td_rti_dt(sys%ks, h, gr, psi2, td%tr, abs(iter*td%dt), abs(td%dt))
+     end if
+     
+     call update_field(iter-1, laser, method)
+     
+     ! chi
+     td%tr%v_old => v_old_f
+     h%ep%lasers(1)%numerical => laser_tmp
+     call states_calc_dens(chi, NP_PART, dens_tmp)
+     chi%rho = dens_tmp
+     call v_ks_calc(gr, sys%ks, h, chi, calc_eigenval=.true.) 
+     call td_rti_dt(sys%ks, h, gr, chi, td%tr, abs(iter*td%dt), abs(td%dt))
+     
+     ! psi
+     td%tr%v_old => v_old_i
+     h%ep%lasers(1)%numerical => laser
+     call states_calc_dens(psi, NP_PART, dens_tmp)
+     psi%rho = dens_tmp
+     call v_ks_calc(gr, sys%ks, h, psi, calc_eigenval=.true.)
+     call td_rti_dt(sys%ks, h, gr, psi, td%tr, abs(iter*td%dt), abs(td%dt))
+     !write(6,*) iter, psi%zpsi(45:50,1,1,1)
+     !write(6,*) laser(2*iter,1)
+     
+     call pop_sub()
+   end subroutine prop_iter_fwd
    
-
-      ! calc inh first, then update field
-      if(targetmode==oct_targetmode_td) &
-           call calc_inh(psi,td_tg,iter, &
-           td%dt,td%max_iter,chi)
-      ! new electric field
-      call update_field(iter+1, laser_tmp, method)!, tdpenalty(:,iter*2))
-
-
-      ! chi
-      td%tr%v_old => v_old_f
-      h%ep%lasers(1)%numerical => laser_tmp   
-      call states_calc_dens(chi, NP_PART, dens_tmp)
-      chi%rho = dens_tmp
-      call v_ks_calc(gr, sys%ks, h, chi, calc_eigenval=.true.)
-      call td_rti_dt(sys%ks, h, gr, chi, td%tr, abs(iter*td%dt),     td%dt )
-    
-      ! psi
-      td%tr%v_old => v_old_i
-      h%ep%lasers(1)%numerical => laser
-      call states_calc_dens(psi, NP_PART, dens_tmp)
-      psi%rho = dens_tmp
-      call v_ks_calc(gr, sys%ks, h, psi, calc_eigenval=.true.)
-      call td_rti_dt(sys%ks, h, gr, psi, td%tr, abs(iter*td%dt),     td%dt )
-
-      call pop_sub()
-    end subroutine prop_iter_bwd
-
-
-! ---------------------------------------------------------------
-    subroutine calc_inh(psi_n, tg, iter, dt, steps, chi_n)
-      FLOAT          , intent(in)     :: dt
-      integer        , intent(in)     :: steps, iter
-      type(states_t),  intent(in)     :: psi_n
-      type(states_t),  intent(inout)  :: chi_n
-      type(td_target_t), intent(in)   :: tg(:)
-
-      CMPLX               :: tgt(NP_PART)
-      integer             :: jj, ip, dim
-      FLOAT               :: x(MAX_DIM), r, psi_re, psi_im
-      CMPLX               :: olap
-
-      ! tdtarget is defined globally
-      !      CMPLX               :: tdop(gr%m%np)
-
-      ! distinguish between local and wavefunction td target
-      ! TODO: change to right dimensions
-      !       build target operator
-
-      ! FIXME: more flexibility when defining multiple target operators
-      ! usually one has only one specie of operators, i.e., only local or only non-local, when mixing these, this routine has to be improved.
-      if(tg(1)%type.eq.oct_tgtype_local) then
-         ! local td operator
-         ! build operator
-         !do ip = 1, gr%m%np
-         !   x = gr%m%x(ip, :)
-         !   r = sqrt(sum(x(:)**2))
-         
-         !   call loct_parse_expression(psi_re, psi_im, &
-         !        x(1), x(2), x(3), r, tt, td_tg(jj)%expression)
-         
-         !   ! need tdtarget for fitness calculation
-         ! tdtarget(:) = (psi_re+m_zI*psi_im)
-         do jj=1, size(tg)       
-            call build_tdtarget(tg(jj),tgt, iter) ! tdtarget is build
-            tdtarget(:) = tdtarget(:) + tgt(:) 
-         end do
+   
+   ! ---------------------------------------------------------
+   subroutine prop_iter_bwd(iter, method)
+     ! do backward propagation step with update of field
+     ! works for time-independent and td targets
+     
+     integer, intent(in)           :: iter
+     integer, intent(in) :: method
+     
+     call push_sub('opt_control.prop_iter_bwd')
+     ! chi(T) --> chi(0)
+     !         |------------laser_tmp
+     ! psi(T) --> psi(0) [laser]
+     
+     
+     ! calc inh first, then update field
+     if(targetmode==oct_targetmode_td) &
+       call calc_inh(psi,td_tg,iter, &
+       td%dt,chi)
+     ! new electric field
+     call update_field(iter+1, laser_tmp, method)!, tdpenalty(:,iter*2))
+     
+     
+     ! chi
+     td%tr%v_old => v_old_f
+     h%ep%lasers(1)%numerical => laser_tmp   
+     call states_calc_dens(chi, NP_PART, dens_tmp)
+     chi%rho = dens_tmp
+     call v_ks_calc(gr, sys%ks, h, chi, calc_eigenval=.true.)
+     call td_rti_dt(sys%ks, h, gr, chi, td%tr, abs(iter*td%dt),     td%dt )
+     
+     ! psi
+     td%tr%v_old => v_old_i
+     h%ep%lasers(1)%numerical => laser
+     call states_calc_dens(psi, NP_PART, dens_tmp)
+     psi%rho = dens_tmp
+     call v_ks_calc(gr, sys%ks, h, psi, calc_eigenval=.true.)
+     call td_rti_dt(sys%ks, h, gr, psi, td%tr, abs(iter*td%dt),     td%dt )
+     
+     call pop_sub()
+   end subroutine prop_iter_bwd
+   
+   
+   ! ---------------------------------------------------------------
+   subroutine calc_inh(psi_n, tg, iter, dt, chi_n)
+     FLOAT,           intent(in)     :: dt
+     integer,         intent(in)     :: iter
+     type(states_t),  intent(in)     :: psi_n
+     type(states_t),  intent(inout)  :: chi_n
+     type(td_target_t), intent(in)   :: tg(:)
+     
+     CMPLX               :: tgt(NP_PART)
+     integer             :: jj, dim
+     !     integer             :: jj, ip, dim
+     !     FLOAT               :: r, x(MAX_DIM), psi_re, psi_im
+     CMPLX               :: olap
+     
+     ! tdtarget is defined globally
+     !      CMPLX               :: tdop(gr%m%np)
+     
+     ! distinguish between local and wavefunction td target
+     ! TODO: change to right dimensions
+     !       build target operator
+     
+     ! FIXME: more flexibility when defining multiple target operators
+     ! usually one has only one specie of operators, i.e., only local or only non-local, when mixing these, this routine has to be improved.
+     if(tg(1)%type.eq.oct_tgtype_local) then
+       ! local td operator
+       ! build operator
+       !do ip = 1, gr%m%np
+       !   x = gr%m%x(ip, :)
+       !   r = sqrt(sum(x(:)**2))
+       
+       !   call loct_parse_expression(psi_re, psi_im, &
+       !        x(1), x(2), x(3), r, tt, td_tg(jj)%expression)
+       
+       !   ! need tdtarget for fitness calculation
+       ! tdtarget(:) = (psi_re+m_zI*psi_im)
+       do jj=1, size(tg)       
+         call build_tdtarget(tg(jj),tgt, iter) ! tdtarget is build
+         tdtarget(:) = tdtarget(:) + tgt(:) 
+       end do
+       do dim=1, psi_i%d%dim
+         chi_n%zpsi(:,dim,1,1) = chi_n%zpsi(:,dim,1,1) &
+           - sign(M_ONE,dt)/real(td%max_iter)*tdtarget(:)* &
+           psi_n%zpsi(:,dim,1,1)
+       enddo
+       !call zoutput_function(sys%outp%how,'opt-control','inh',gr%m,gr%sb,tdtarget,M_ONE, ierr) 
+     else 
+       ! build operator 
+       ! non-local td operator
+       !do ip = 1, gr%m%np
+       !   x = gr%m%x(ip, :)
+       !   r = sqrt(sum(x(:)**2))
+       !   call loct_parse_expression(psi_re, psi_im, &
+       !        x(1), x(2), x(3), r, tt, td_tg(jj)%expression)
+       !   tdtarget(ip) = (psi_re+m_zI*psi_im)  
+       ! need tdtarget for fitness calculation
+       do jj=1, size(tg) 
+         call build_tdtarget(tg(jj), tgt, iter)
+         tdtarget = tgt
+         olap= m_z0
          do dim=1, psi_i%d%dim
-            chi_n%zpsi(:,dim,1,1) = chi_n%zpsi(:,dim,1,1) &
-                 - sign(M_ONE,dt)/real(td%max_iter)*tdtarget(:)* &
-                 psi_n%zpsi(:,dim,1,1)
-         enddo
-         !call zoutput_function(sys%outp%how,'opt-control','inh',gr%m,gr%sb,tdtarget,M_ONE, ierr) 
-      else 
-         ! build operator 
-         ! non-local td operator
-         !do ip = 1, gr%m%np
-         !   x = gr%m%x(ip, :)
-         !   r = sqrt(sum(x(:)**2))
-         !   call loct_parse_expression(psi_re, psi_im, &
-         !        x(1), x(2), x(3), r, tt, td_tg(jj)%expression)
-         !   tdtarget(ip) = (psi_re+m_zI*psi_im)  
-         ! need tdtarget for fitness calculation
-         do jj=1, size(tg) 
-               call build_tdtarget(tg(jj), tgt, iter)
-               tdtarget = tgt
-               olap= m_z0
-               do dim=1, psi_i%d%dim
-                  olap = zmf_integrate(gr%m,psi_n%zpsi(:,dim,1,1)*&
-                       conjg(tdtarget(:)))
-                  chi_n%zpsi(:,dim,1,1) = chi_n%zpsi(:,dim,1,1) &
-                    - sign(M_ONE,dt)/real(td%max_iter)*olap*tdtarget(:)
-               end do
-            end do
-         end if
+           olap = zmf_integrate(gr%m,psi_n%zpsi(:,dim,1,1)*&
+             conjg(tdtarget(:)))
+           chi_n%zpsi(:,dim,1,1) = chi_n%zpsi(:,dim,1,1) &
+             - sign(M_ONE,dt)/real(td%max_iter)*olap*tdtarget(:)
+         end do
+       end do
+     end if
+     
+   end subroutine calc_inh
+   
 
-    end subroutine calc_inh
-    
-    ! ---------------------------------------------------------
-    subroutine build_tdtarget(tdtg, tgt, iter)
-      type(td_target_t), intent(in)   :: tdtg
-      integer,           intent(in)   :: iter
-      CMPLX  ,           intent(out)   :: tgt(:)
-
-      integer :: kk, pol
-      call push_sub('opt_control.build_tdtarget')
-
-      SELECT CASE(tdtg%ftype)
-      CASE(1)
-         ! gauss
-         ! Product x = gr%m%x(ip, :) 
-         tgt = M_ONE
-         do pol=1, NDIM
-            tgt = tgt * exp( - (gr%m%x(:, pol) - &
-                 real(tdtg%tdshape(pol,iter),PRECISION ))**2/(M_TWO*tdtg%width**2))
-         enddo
-         
-      !CASE(2)
-         ! tgt = M-zero
-      !   ! step
-      !   Nwidth = tg(jj)%width
-      !   Nwmin  = tg(jj)%numerical
-      !   Nwmax  = 
-      !   do kk=1,  gr%m%np  tg(jj)%width  tg(jj)%tdshape
-      !   
-      !   end do
-      CASE DEFAULT
-         message(1)="Unknown TD Target Operator: Choose Gaussian(1) or Step(2)"
-         call write_fatal(1)
-      END SELECT
-
+   ! ---------------------------------------------------------
+   subroutine build_tdtarget(tdtg, tgt, iter)
+     type(td_target_t), intent(in)   :: tdtg
+     integer,           intent(in)   :: iter
+     CMPLX  ,           intent(out)   :: tgt(:)
+     
+     !     integer :: kk
+     integer :: pol
+     call push_sub('opt_control.build_tdtarget')
+     
+     select case(tdtg%ftype)
+     case(1)
+       ! gauss
+       ! Product x = gr%m%x(ip, :) 
+       tgt = M_ONE
+       do pol=1, NDIM
+         tgt = tgt * exp( - (gr%m%x(:, pol) - &
+           real(tdtg%tdshape(pol,iter),PRECISION ))**2/(M_TWO*tdtg%width**2))
+       enddo
+       
+       !CASE(2)
+       ! tgt = M-zero
+       !   ! step
+       !   Nwidth = tg(jj)%width
+       !   Nwmin  = tg(jj)%numerical
+       !   Nwmax  = 
+       !   do kk=1,  gr%m%np  tg(jj)%width  tg(jj)%tdshape
+       !   
+       !   end do
+     case default
+       message(1)="Unknown TD Target Operator: Choose Gaussian(1) or Step(2)"
+       call write_fatal(1)
+     end select
+     
       call pop_sub()
     end subroutine build_tdtarget
 
@@ -898,37 +901,37 @@ contains
     subroutine update_field(iter, l, method)
       integer, intent(in)      :: iter
       FLOAT,   intent(inout)   :: l(1:NDIM,0:2*td%max_iter)
-!      FLOAT,   intent(in)      :: a0(:)
+      !      FLOAT,   intent(in)      :: a0(:)
       integer, intent(in)      :: method
       
       CMPLX :: d1
       CMPLX :: d2(NDIM)
       integer :: ik, p, dim, i, pol
-
+      
       call push_sub('opt_control.update_field')
-
+      
       ! case SWITCH
       ! CHECK DIPOLE MOMENT FUNCTION - > VELOCITY GAUGE
-
+      
       d1 = M_z0 
       d2 = M_z0 
       do ik = 1, psi_i%d%nik
-         do p  = psi_i%st_start, psi_i%st_end
-            do dim = 1, psi_i%d%dim
-               do pol=1, NDIM
-                  d2(pol) = d2(pol) + zmf_integrate(gr%m,&
-                       conjg(chi%zpsi(:, dim, p, ik))*laser_pol(pol)&
-                       *gr%m%x(:,pol)*psi%zpsi(:, dim, p, ik))
-               enddo
-               if(method.eq.oct_algorithm_zbr98) then
-                  d1 = zmf_integrate(gr%m,conjg(psi%zpsi(:, dim, p, ik))&
-                       *chi%zpsi(:, dim, p, ik))
-                  
-               else
-                  d1 = M_z1
-               end if
-            end do
-         end do
+        do p  = psi_i%st_start, psi_i%st_end
+          do dim = 1, psi_i%d%dim
+            do pol=1, NDIM
+              d2(pol) = d2(pol) + zmf_integrate(gr%m,&
+                conjg(chi%zpsi(:, dim, p, ik))*laser_pol(pol)&
+                *gr%m%x(:,pol)*psi%zpsi(:, dim, p, ik))
+            enddo
+            if(method.eq.oct_algorithm_zbr98) then
+              d1 = zmf_integrate(gr%m,conjg(psi%zpsi(:, dim, p, ik))&
+                *chi%zpsi(:, dim, p, ik))
+              
+            else
+              d1 = M_z1
+            end if
+          end do
+        end do
       end do
       ! Q: How to distinguish between the cases ?
       !if((NDIM-dof).eq.1) then
@@ -946,6 +949,7 @@ contains
         l(1:NDIM, 2*iter+  i) = M_HALF*(M_THREE*l(1:NDIM, 2*iter) -       l(1:NDIM, 2*iter-2*i))
         l(1:NDIM, 2*iter+2*i) = M_HALF*( M_FOUR*l(1:NDIM, 2*iter) - M_TWO*l(1:NDIM, 2*iter-2*i))
       end if
+
       call pop_sub()
     end subroutine update_field
 
@@ -954,7 +958,7 @@ contains
     subroutine prop_bwd(psi_n) ! give initial chi and laser
       type(states_t), intent(inout)  :: psi_n
       call push_sub('opt_control.prop_bwd')
-
+      
       message(1) = "Info: Backward propagating Chi"
       call write_info(1)
       ! setup the hamiltonian
@@ -981,10 +985,10 @@ contains
         call states_calc_dens(psi_n, NP_PART, dens_tmp)
         psi_n%rho = dens_tmp
         call v_ks_calc(gr, sys%ks, h, psi_n, calc_eigenval=.true.)
-
+        
       end do
       td%dt = -td%dt
-
+      
       call pop_sub()
     end subroutine prop_bwd
 
@@ -1022,22 +1026,23 @@ contains
 
         ! if td_target
         if(targetmode==oct_targetmode_td) &
-             call calc_tdfitness(td_tg, tdtarget, td_fitness(i))
+          call calc_tdfitness(td_tg, tdtarget, td_fitness(i))
         
         ! update
         call states_calc_dens(psi_n, NP_PART, dens_tmp)
         psi_n%rho = dens_tmp
         call v_ks_calc(gr, sys%ks, h, psi_n, calc_eigenval=.true.)
-      
+        
         !call loct_progress_bar(i-1, td%max_iter-1)
       end do
-
+      
       call zoutput_function(sys%outp%how,'opt-control','last_fwd',gr%m,gr%sb,psi_n%zpsi(:,1,1,1),M_ONE, ierr) 
-
+      
       message(1) = ""
       call write_info(1)
       call pop_sub()
     end subroutine prop_fwd
+
 
     ! ---------------------------------------------------------
     subroutine calc_fluence(laserin, fluenceout)
@@ -1045,7 +1050,6 @@ contains
       FLOAT, intent(out):: fluenceout
       
       fluenceout = SUM(laserin**2) * abs(td%dt)/M_TWO      
-
 
     end subroutine calc_fluence
 
@@ -1135,6 +1139,7 @@ contains
       
     end subroutine write_fieldw
 
+
     ! ---------------------------------------------------------
     subroutine output()
       integer :: iunit, loop, ierr
@@ -1183,22 +1188,25 @@ contains
       call states_output(psi_i, gr, 'opt-control', sys%outp)
       call zoutput_function(sys%outp%how,'opt-control','target',gr%m,gr%sb,target_st%zpsi(:,1,1,1),M_ONE,ierr) 
       call zoutput_function(sys%outp%how,'opt-control','final',gr%m,gr%sb,psi%zpsi(:,1,1,1),M_ONE,ierr) 
+
       call pop_sub()
     end subroutine output
 
-!------------------------------------------------------------------------
-    subroutine def_istate()
 
+    !------------------------------------------------------------------------
+    subroutine def_istate()
       integer           :: kk, no_c, state, no_blk
       integer(POINTER_SIZE) :: blk
-      integer           :: p, ik, ib, nstates, idim, inst, inik
-      integer           :: id ,is, ip, ierr, no_states
+!      integer           :: nstates
+      integer           :: p, ik, ib, idim, inst, inik
+      integer           :: id ,is, ip, ierr, no_states, isize
       character(len=10) :: fname
       type(states_t)    :: tmp_st 
-      FLOAT             :: x(MAX_DIM), r, psi_re, psi_im, weight
+!      FLOAT             :: weight
+      FLOAT             :: x(MAX_DIM), r, psi_re, psi_im
       CMPLX             :: c_weight
       
-      call push_sub('opt_control.def_istate_')
+      call push_sub('opt_control.def_istate')
 
       ! ALLOCATE tmp_state
       call states_init(tmp_st, gr) 
@@ -1209,7 +1217,8 @@ contains
       tmp_st%st_start = psi_i%st_start
       tmp_st%st_end = psi_i%st_end
       tmp_st%d%wfs_type = M_CMPLX
-      ALLOCATE(tmp_st%zpsi(NP_PART, tmp_st%d%dim, tmp_st%st_start:tmp_st%st_end, tmp_st%d%nik), NP_PART*tmp_st%d%dim*(tmp_st%st_end-tmp_st%st_start+1)*tmp_st%d%nik)
+      isize = NP_PART*tmp_st%d%dim*(tmp_st%st_end-tmp_st%st_start+1)*tmp_st%d%nik
+      ALLOCATE(tmp_st%zpsi(NP_PART, tmp_st%d%dim, tmp_st%st_start:tmp_st%st_end, tmp_st%d%nik), isize)
 
       !%Variable OCTInitialState
       !%Type integer
@@ -1234,145 +1243,145 @@ contains
       ! make it work for single particle
       select case(istype)
       case(oct_is_groundstate) 
-         message(1) =  'Info: Using Ground State for InitialState'
-         call write_info(1)
-         ! TODO: more particles
-         call read_state(initial_st, gr%m, "0000000001")      
+        message(1) =  'Info: Using Ground State for InitialState'
+        call write_info(1)
+        ! TODO: more particles
+        call read_state(initial_st, gr%m, "0000000001")      
       case(oct_is_excited)  
-         message(1) =  'Info: Using Excited State for InitialState'
-         call write_info(1)
-         !%Variable OCTTargetStateNumber
-         !%Type integer
-         !%Section Optimal Control
-         !%Description
-         !% Specify the target state, ordered by energy
-         !% 1 corresponds to the ground state
-         !% default is 2
-         !%End
-         call loct_parse_int(check_inp('OCTInitialStateNumber'), 2, state)
-
-         write(fname,'(i10.10)') state
-         call read_state(initial_st, gr%m, fname)
+        message(1) =  'Info: Using Excited State for InitialState'
+        call write_info(1)
+        !%Variable OCTTargetStateNumber
+        !%Type integer
+        !%Section Optimal Control
+        !%Description
+        !% Specify the target state, ordered by energy
+        !% 1 corresponds to the ground state
+        !% default is 2
+        !%End
+        call loct_parse_int(check_inp('OCTInitialStateNumber'), 2, state)
+        
+        write(fname,'(i10.10)') state
+        call read_state(initial_st, gr%m, fname)
       case(oct_is_superposition)   
-         message(1) =  'Info: Using Superposition of States for InitialState'
-         call write_info(1)
-         !%Variable OCTInitialSuperposition
-         !%Type block
-         !%Section Optimal Control
-         !%Description
-         !% The syntax of each line is, then:
-         !%
-         !% <tt>%OCTInitialSuperposition
-         !% <br>&nbsp;&nbsp;state1 | weight1 | state2 | weight2 | ... 
-         !% <br>%</tt>
-         !%  
-         !%
-         !% Note that weight can be complex, to produce current carrying superpositions.
-         !% Example:
-         !%
-         !% <tt>%OCTInitialSuperposition
-         !% <br>&nbsp;&nbsp;1 | 1 | 2 | -1 | ... 
-         !% <br>%</tt>
-         !%  
-         !%
-         !%End 
-         if(loct_parse_block(check_inp('OCTInitialSuperposition'),blk)==0) then
-            no_blk = loct_parse_block_n(blk)
-            ! TODO: for each orbital            
-            do i=1, no_blk
-               ! The structure of the block is:
-               ! domain | function_type | center | width | weight 
-               no_c = loct_parse_block_cols(blk, i-1)
-               initial_st%zpsi(:,:,i,1) = M_z0
-               do kk=1, no_c, 2
-                  call loct_parse_block_int(blk, i-1, kk-1, state)
-                  call loct_parse_block_cmplx(blk, i-1, kk, c_weight)
-                  write(fname,'(i10.10)') state
-                  !write(6,*) 'pars ', state, c_weight
-                  call read_state(tmp_st, gr%m, fname)
-                  initial_st%zpsi(:,:,1,1) = initial_st%zpsi(:,:,1,1) + c_weight * tmp_st%zpsi(:,:,1,1)
-               enddo
-            end do
-            ! normalize state
-            do ik = 1, psi%d%nik
-               do p  = psi%st_start, psi%st_end
-                  call zstates_normalize_orbital(gr%m, psi_i%d%dim, &
-                       initial_st%zpsi(:,:, p, ik))
-               enddo
+        message(1) =  'Info: Using Superposition of States for InitialState'
+        call write_info(1)
+        !%Variable OCTInitialSuperposition
+        !%Type block
+        !%Section Optimal Control
+        !%Description
+        !% The syntax of each line is, then:
+        !%
+        !% <tt>%OCTInitialSuperposition
+        !% <br>&nbsp;&nbsp;state1 | weight1 | state2 | weight2 | ... 
+        !% <br>%</tt>
+        !%  
+        !%
+        !% Note that weight can be complex, to produce current carrying superpositions.
+        !% Example:
+        !%
+        !% <tt>%OCTInitialSuperposition
+        !% <br>&nbsp;&nbsp;1 | 1 | 2 | -1 | ... 
+        !% <br>%</tt>
+        !%  
+        !%
+        !%End 
+        if(loct_parse_block(check_inp('OCTInitialSuperposition'),blk)==0) then
+          no_blk = loct_parse_block_n(blk)
+          ! TODO: for each orbital            
+          do i=1, no_blk
+            ! The structure of the block is:
+            ! domain | function_type | center | width | weight 
+            no_c = loct_parse_block_cols(blk, i-1)
+            initial_st%zpsi(:,:,i,1) = M_z0
+            do kk=1, no_c, 2
+              call loct_parse_block_int(blk, i-1, kk-1, state)
+              call loct_parse_block_cmplx(blk, i-1, kk, c_weight)
+              write(fname,'(i10.10)') state
+              !write(6,*) 'pars ', state, c_weight
+              call read_state(tmp_st, gr%m, fname)
+              initial_st%zpsi(:,:,1,1) = initial_st%zpsi(:,:,1,1) + c_weight * tmp_st%zpsi(:,:,1,1)
             enddo
-            !            end do
-                
-            end if
-            
-         case(oct_is_userdefined) 
-            message(1) =  'Info: Building userdefined InitialState'
-            call write_info(1)
-
-            !%Variable OCTInitialUserdefined
-            !%Type block
-            !%Section Optimal Control
-            !%Description
-            !% 
-            !% Example:
-            !%
-            !% <tt>%UserDefinedStates
-            !% <br>&nbsp;&nbsp; 1 | 1 | 1 |  "exp(-r^2)*exp(-i*0.2*x)"
-            !% <br>%</tt>
-            !%  
-            !%End
-            if(loct_parse_block(check_inp('OCTInitialUserdefined'),blk)==0) then
-
-               no_states = loct_parse_block_n(blk)
-               do ib = 1, no_states
-               write(6,*) 'HELLO USERDEF' 
-                  call loct_parse_block_int(blk, ib-1, 0, idim)
-                  call loct_parse_block_int(blk, ib-1, 1, inst)
-                  call loct_parse_block_int(blk, ib-1, 2, inik)
-                  write(6,*) ' DEBUG: ', idim,inst,inik
-                  ! read formula strings and convert to C strings
-                  do id = 1, psi_i%d%dim
-                     do is = 1, psi_i%nst
-                        do ik = 1, psi_i%d%nik   
-                           
-                           ! does the block entry match and is this node responsible?
-                           if(.not.(id.eq.idim .and. is.eq.inst .and. ik.eq.inik    &
-                                .and. psi_i%st_start.le.is .and. psi_i%st_end.ge.is) ) cycle
-                           
-                           ! parse formula string
-                           call loct_parse_block_string(                            &
-                                blk, ib-1, 3, psi_i%user_def_states(id, is, ik))
-                           ! convert to C string
-                           call conv_to_C_string(psi_i%user_def_states(id, is, ik))
-                           
-                           do ip = 1, gr%m%np
-                              x = gr%m%x(ip, :)
-                              r = sqrt(sum(x(:)**2))
-                              
-                              ! parse user defined expressions
-                              call loct_parse_expression(psi_re, psi_im,             &
-                                   x(1), x(2), x(3), r, M_ZERO, initial_st%user_def_states(id, is, ik))
-                              ! fill state
-                              !write(6,*) psi_re, psi_im
-                              initial_st%zpsi(ip, id, is, ik) = psi_re + M_zI*psi_im
-                        end do
-                        ! normalize orbital
-                        call zstates_normalize_orbital(gr%m, psi_i%d%dim, initial_st%zpsi(:,:, is, ik))
-                     end do
+          end do
+          ! normalize state
+          do ik = 1, psi%d%nik
+            do p  = psi%st_start, psi%st_end
+              call zstates_normalize_orbital(gr%m, psi_i%d%dim, &
+                initial_st%zpsi(:,:, p, ik))
+            enddo
+          enddo
+          !            end do
+          
+        end if
+        
+      case(oct_is_userdefined) 
+        message(1) =  'Info: Building userdefined InitialState'
+        call write_info(1)
+        
+        !%Variable OCTInitialUserdefined
+        !%Type block
+        !%Section Optimal Control
+        !%Description
+        !% 
+        !% Example:
+        !%
+        !% <tt>%UserDefinedStates
+        !% <br>&nbsp;&nbsp; 1 | 1 | 1 |  "exp(-r^2)*exp(-i*0.2*x)"
+        !% <br>%</tt>
+        !%  
+        !%End
+        if(loct_parse_block(check_inp('OCTInitialUserdefined'),blk)==0) then
+          
+          no_states = loct_parse_block_n(blk)
+          do ib = 1, no_states
+            write(6,*) 'HELLO USERDEF' 
+            call loct_parse_block_int(blk, ib-1, 0, idim)
+            call loct_parse_block_int(blk, ib-1, 1, inst)
+            call loct_parse_block_int(blk, ib-1, 2, inik)
+            write(6,*) ' DEBUG: ', idim,inst,inik
+            ! read formula strings and convert to C strings
+            do id = 1, psi_i%d%dim
+              do is = 1, psi_i%nst
+                do ik = 1, psi_i%d%nik   
+                  
+                  ! does the block entry match and is this node responsible?
+                  if(.not.(id.eq.idim .and. is.eq.inst .and. ik.eq.inik    &
+                    .and. psi_i%st_start.le.is .and. psi_i%st_end.ge.is) ) cycle
+                  
+                  ! parse formula string
+                  call loct_parse_block_string(                            &
+                    blk, ib-1, 3, psi_i%user_def_states(id, is, ik))
+                  ! convert to C string
+                  call conv_to_C_string(psi_i%user_def_states(id, is, ik))
+                  
+                  do ip = 1, gr%m%np
+                    x = gr%m%x(ip, :)
+                    r = sqrt(sum(x(:)**2))
+                    
+                    ! parse user defined expressions
+                    call loct_parse_expression(psi_re, psi_im,             &
+                      x(1), x(2), x(3), r, M_ZERO, initial_st%user_def_states(id, is, ik))
+                    ! fill state
+                    !write(6,*) psi_re, psi_im
+                    initial_st%zpsi(ip, id, is, ik) = psi_re + M_zI*psi_im
                   end do
-               enddo
-            end do
-            call loct_parse_block_end(blk)
-            call zoutput_function(sys%outp%how,'opt-control','is_userdef',gr%m,gr%sb,initial_st%zpsi(:,1,1,1),u,ierr)
-         else
-            message(1) = '"UserDefinedStates" has to be specified as block.'
-            call write_fatal(1)
-         end if
-         
+                  ! normalize orbital
+                  call zstates_normalize_orbital(gr%m, psi_i%d%dim, initial_st%zpsi(:,:, is, ik))
+                end do
+              end do
+            enddo
+          end do
+          call loct_parse_block_end(blk)
+          call zoutput_function(sys%outp%how,'opt-control','is_userdef',gr%m,gr%sb,initial_st%zpsi(:,1,1,1),u,ierr)
+        else
+          message(1) = '"UserDefinedStates" has to be specified as block.'
+          call write_fatal(1)
+        end if
+        
       case default
-         write(message(1),'(a)') "No valid initial state defined."
-         write(message(2),'(a)') "Choosing the ground state."
-         call write_info(2)
-      end select 
+        write(message(1),'(a)') "No valid initial state defined."
+        write(message(2),'(a)') "Choosing the ground state."
+        call write_info(2)
+      end select
 !! DEBUG 
       call zoutput_function(sys%outp%how,'opt-control','istate',gr%m,gr%sb,initial_st%zpsi(:,1,1,1),u,ierr)
 !!
@@ -1383,20 +1392,22 @@ contains
 
     ! ----------------------------------------------------------------------
     subroutine def_toperator()
-      integer           :: no_tds, no_c, jj, state
+      integer           :: no_tds, no_c, state
       integer(POINTER_SIZE) :: blk
       integer           :: ierr
       character(len=10) :: fname
-      integer           :: ik, ib, idim, inst, inik
-      integer           :: id, is, ip, no_states, kk, p
+      integer           :: ik, ib
+!      integer           :: is, id, jj, inik, inst, idim
+      integer           :: no_states, kk, p, ip
       integer           :: no_blk, pol
-      FLOAT             :: x(MAX_DIM), r, psi_re, psi_im, weight
+!      FLOAT             :: weight
+      FLOAT             :: x(MAX_DIM), r, psi_re, psi_im
       CMPLX             :: c_weight      
       type(states_t)    :: tmp_st
       character(len=1024) :: expression
 
 
-      call push_sub('opt_control.def_toperator_')
+      call push_sub('opt_control.def_toperator')
 
       ! ALLOCATE tmp_state
       call states_init(tmp_st, gr) 
@@ -1432,160 +1443,160 @@ contains
       call loct_parse_int(check_inp('OCTTargetOperator'),oct_tg_excited, totype)
       select case(totype)
       case(oct_tg_groundstate)
-         message(1) =  'Info: Using Ground State for TargetOperator'
-         call write_info(1)
-         ! Target State is ground state
-         ! rarely used: photo association
-         ! maybe other cooling stuff
-         ! TODO: expand to many particles
-         call read_state(target_st, gr%m, "0000000001")
-
+        message(1) =  'Info: Using Ground State for TargetOperator'
+        call write_info(1)
+        ! Target State is ground state
+        ! rarely used: photo association
+        ! maybe other cooling stuff
+        ! TODO: expand to many particles
+        call read_state(target_st, gr%m, "0000000001")
+        
       case(oct_tg_excited) 
-         message(1) =  'Info: Using Excited State for TargetOperator'
-         call write_info(1)
-         ! read in excited state
-         !%Variable OCTTargetStateNumber
-         !%Type integer
-         !%Section Optimal Control
-         !%Description
-         !% Specify the target state, ordered by energy
-         !% 1 corresponds to the ground state
-         !% Default is 2
-         !%End
-         call loct_parse_int(check_inp('OCTTargetStateNumber'), 2, state)
-         write(fname,'(i10.10)') state
-         call read_state(target_st, gr%m, fname)
+        message(1) =  'Info: Using Excited State for TargetOperator'
+        call write_info(1)
+        ! read in excited state
+        !%Variable OCTTargetStateNumber
+        !%Type integer
+        !%Section Optimal Control
+        !%Description
+        !% Specify the target state, ordered by energy
+        !% 1 corresponds to the ground state
+        !% Default is 2
+        !%End
+        call loct_parse_int(check_inp('OCTTargetStateNumber'), 2, state)
+        write(fname,'(i10.10)') state
+        call read_state(target_st, gr%m, fname)
       case(oct_tg_superposition)  
-         message(1) =  'Info: Using Superposition of States for TargetOperator'
-         call write_info(1)
-         !%Variable OCTTargetSuperposition
-         !%Type block
-         !%Section Optimal Control
-         !%Description
-         !% The syntax of each line is, then:
-         !%
-         !% <tt>%OCTTargetSuperposition
-         !% <br>&nbsp;&nbsp;state1 | weight1 | state2 | weight2 | ... 
-         !% <br>%</tt>
-         !% 
-         !% Example:
-         !%
-         !% <tt>%OCTTargetSuperposition
-         !% <br>&nbsp;&nbsp;1 | 1 | 2 | -1 | ... 
-         !% <br>%</tt>
-         !%  
-         !% 
-         !%
-         !%End
-         if(loct_parse_block(check_inp('OCTTargetSuperposition'),blk)==0) then
-            no_blk = loct_parse_block_n(blk)
-            ! TODO: for each orbital            
-            do i=1, no_blk
-               ! The structure of the block is:
-               ! domain | function_type | center | width | weight 
-               no_c = loct_parse_block_cols(blk, i-1)
-               target_st%zpsi(:,:,i,1) = M_z0
-               do kk=1, no_c, 2
-                  call loct_parse_block_int(blk, i-1, kk-1, state)
-                  call loct_parse_block_cmplx(blk, i-1, kk, c_weight)
-                  write(fname,'(i10.10)') state
-                  !write(6,*) 'pars ', state, c_weight
-                  call read_state(tmp_st, gr%m, fname)
-                  target_st%zpsi(:,:,1,1) = target_st%zpsi(:,:,1,1) + c_weight * tmp_st%zpsi(:,:,1,1)
-               enddo
-            end do
-            ! normalize state
-            do ik = 1, psi%d%nik
-               do p  = psi%st_start, psi%st_end
-                  call zstates_normalize_orbital(gr%m, psi_i%d%dim, &
-                       target_st%zpsi(:,:, p, ik))
-               enddo
+        message(1) =  'Info: Using Superposition of States for TargetOperator'
+        call write_info(1)
+        !%Variable OCTTargetSuperposition
+        !%Type block
+        !%Section Optimal Control
+        !%Description
+        !% The syntax of each line is, then:
+        !%
+        !% <tt>%OCTTargetSuperposition
+        !% <br>&nbsp;&nbsp;state1 | weight1 | state2 | weight2 | ... 
+        !% <br>%</tt>
+        !% 
+        !% Example:
+        !%
+        !% <tt>%OCTTargetSuperposition
+        !% <br>&nbsp;&nbsp;1 | 1 | 2 | -1 | ... 
+        !% <br>%</tt>
+        !%  
+        !% 
+        !%
+        !%End
+        if(loct_parse_block(check_inp('OCTTargetSuperposition'),blk)==0) then
+          no_blk = loct_parse_block_n(blk)
+          ! TODO: for each orbital            
+          do i=1, no_blk
+            ! The structure of the block is:
+            ! domain | function_type | center | width | weight 
+            no_c = loct_parse_block_cols(blk, i-1)
+            target_st%zpsi(:,:,i,1) = M_z0
+            do kk=1, no_c, 2
+              call loct_parse_block_int(blk, i-1, kk-1, state)
+              call loct_parse_block_cmplx(blk, i-1, kk, c_weight)
+              write(fname,'(i10.10)') state
+              !write(6,*) 'pars ', state, c_weight
+              call read_state(tmp_st, gr%m, fname)
+              target_st%zpsi(:,:,1,1) = target_st%zpsi(:,:,1,1) + c_weight * tmp_st%zpsi(:,:,1,1)
             enddo
-            !            end do
-                
-         end if
+          end do
+          ! normalize state
+          do ik = 1, psi%d%nik
+            do p  = psi%st_start, psi%st_end
+              call zstates_normalize_orbital(gr%m, psi_i%d%dim, &
+                target_st%zpsi(:,:, p, ik))
+            enddo
+          enddo
+          !            end do
+          
+        end if
         
 
       case(oct_tg_userdefined) 
-         message(1) =  'Info: Using userdefined state for Targetoperator'
-         call write_info(1)
-         !%Variable OCTInitialUserdefined
-         !%Type block
-         !%Section Optimal Control
-         !%Description
-         !% 
-         !% Example:
-         !%
-         !% <tt>%UserDefinedStates
-         !% <br>&nbsp;&nbsp; 1 | 1 | 1 |  "exp(-r^2)*exp(-i*0.2*x)"
-         !% <br>%</tt>
-         !%  
-         !%End
+        message(1) =  'Info: Using userdefined state for Targetoperator'
+        call write_info(1)
+        !%Variable OCTInitialUserdefined
+        !%Type block
+        !%Section Optimal Control
+        !%Description
+        !% 
+        !% Example:
+        !%
+        !% <tt>%UserDefinedStates
+        !% <br>&nbsp;&nbsp; 1 | 1 | 1 |  "exp(-r^2)*exp(-i*0.2*x)"
+        !% <br>%</tt>
+        !%  
+        !%End
       case(oct_tg_local) 
-         message(1) =  'Info: Using Local Target'
-         call write_info(1)
-         !%Variable OCTLocalTarget
-         !%Type block
-         !%Section Optimal Control
-         !%Description
-         !% This block defines the shape and position of the local target operator. 
-         !% It is possible to define several local operators which are then summed up.
-         !% The syntax of each line is, then:
-         !%
-         !% <tt>%OCTLocalTarget
-         !% <br>&nbsp;&nbsp; "exp(-r^2)*exp(-i*0.2*x)"
-         !% <br>%</tt>
-         !%  
-         !% Example
-         !%
-         !% <tt>%OCTLocalTarget
-         !% <br>&nbsp;&nbsp; "exp(-r^2)*exp(-i*0.2*x)"
-         !% <br>%</tt>
-         !%
-         !%End
-         ! parse input
-
-         if(loct_parse_block(check_inp('OCTLocalTarget'),blk)==0) then
-            no_states = loct_parse_block_n(blk)
-            target_st%zpsi(ip, 1, 1, 1) = m_z0
-            do ib = 1, no_states
-               ! parse formula string
-               call loct_parse_block_string(blk, ib-1, 0, expression)
-               ! convert to C string
-               call conv_to_C_string(expression)
-               
-               do ip = 1, gr%m%np
-                  x = gr%m%x(ip, :)
-                  r = sqrt(sum(x(:)**2))
-
-                  ! parse user defined expressions
-                  call loct_parse_expression(psi_re, psi_im, &
-                       x(1), x(2), x(3), r, M_ZERO, expression)
-
-                  ! fill state
-                  target_st%zpsi(ip, 1, 1, 1) = target_st%zpsi(ip, 1, 1, 1) &
-                       + psi_re + M_zI*psi_im
-               end do
-
-               ! normalize orbital
-               call zstates_normalize_orbital(gr%m, psi_i%d%dim, &
-                    target_st%zpsi(:,:, 1, 1))
+        message(1) =  'Info: Using Local Target'
+        call write_info(1)
+        !%Variable OCTLocalTarget
+        !%Type block
+        !%Section Optimal Control
+        !%Description
+        !% This block defines the shape and position of the local target operator. 
+        !% It is possible to define several local operators which are then summed up.
+        !% The syntax of each line is, then:
+        !%
+        !% <tt>%OCTLocalTarget
+        !% <br>&nbsp;&nbsp; "exp(-r^2)*exp(-i*0.2*x)"
+        !% <br>%</tt>
+        !%  
+        !% Example
+        !%
+        !% <tt>%OCTLocalTarget
+        !% <br>&nbsp;&nbsp; "exp(-r^2)*exp(-i*0.2*x)"
+        !% <br>%</tt>
+        !%
+        !%End
+        ! parse input
+        
+        if(loct_parse_block(check_inp('OCTLocalTarget'),blk)==0) then
+          no_states = loct_parse_block_n(blk)
+          target_st%zpsi(ip, 1, 1, 1) = m_z0
+          do ib = 1, no_states
+            ! parse formula string
+            call loct_parse_block_string(blk, ib-1, 0, expression)
+            ! convert to C string
+            call conv_to_C_string(expression)
+            
+            do ip = 1, gr%m%np
+              x = gr%m%x(ip, :)
+              r = sqrt(sum(x(:)**2))
+              
+              ! parse user defined expressions
+              call loct_parse_expression(psi_re, psi_im, &
+                x(1), x(2), x(3), r, M_ZERO, expression)
+              
+              ! fill state
+              target_st%zpsi(ip, 1, 1, 1) = target_st%zpsi(ip, 1, 1, 1) &
+                + psi_re + M_zI*psi_im
             end do
-            call loct_parse_block_end(blk)
-            call zoutput_function(sys%outp%how,'opt-control','tg_local',&
-                 gr%m,gr%sb,target_st%zpsi(:,1,1,1),u,ierr)
-         else
-            message(1) = '"OCTLocalTarget" has to be specified as block.'
-            call write_fatal(1)
-         end if
+            
+            ! normalize orbital
+            call zstates_normalize_orbital(gr%m, psi_i%d%dim, &
+              target_st%zpsi(:,:, 1, 1))
+          end do
+          call loct_parse_block_end(blk)
+          call zoutput_function(sys%outp%how,'opt-control','tg_local',&
+            gr%m,gr%sb,target_st%zpsi(:,1,1,1),u,ierr)
+        else
+          message(1) = '"OCTLocalTarget" has to be specified as block.'
+          call write_fatal(1)
+        end if
       case(oct_tg_td_local)
-         target_st%zpsi(:,1,1,1) = m_z0
-
+        target_st%zpsi(:,1,1,1) = m_z0
+        
       case default
-         write(message(1),'(a)') "Target Operator not properly defined."
-         call write_fatal(1)
+        write(message(1),'(a)') "Target Operator not properly defined."
+        call write_fatal(1)
       end select
-
+      
 
       !%Variable OCTTdTarget
       !%Type block
@@ -1626,37 +1637,36 @@ contains
       !% 
       !%End
       if((targetmode==oct_targetmode_td)&
-           .AND.(loct_parse_block(check_inp('OCTTdTarget'),blk)==0)) then
-  
-         no_tds = loct_parse_block_n(blk)
-         ALLOCATE(td_tg(no_tds), no_tds)
-         do i=1, no_tds
-            do pol=1, MAX_DIM
-               td_tg(i)%expression(pol) = " "
-            end do
-            ! The structure of the block is:
-            ! domain | function_type | center | width | weight 
-            no_c = loct_parse_block_cols(blk, i-1)
-            !td_tg(i)%type = oct_tgtype_local
-            call loct_parse_block_int(blk, i-1, 0, td_tg(i)%type)
-            call loct_parse_block_int(blk, i-1, 1, td_tg(i)%ftype)
-            call loct_parse_block_float(blk, i-1, 2, td_tg(i)%width)
-            call loct_parse_block_float(blk, i-1, 3, td_tg(i)%weight)
-            do pol=1, NDIM
-               call loct_parse_block_string(blk, i-1, 3+pol, &
-                    td_tg(i)%expression(pol))
-            end do
-            !
-            ALLOCATE(td_tg(i)%tdshape(NDIM,0:2*td%max_iter), NDIM*(2*td%max_iter+1))
-            call build_tdshape(td_tg(i), td%max_iter, td%dt)
-            
-         end do
-
+        .AND.(loct_parse_block(check_inp('OCTTdTarget'),blk)==0)) then
+        
+        no_tds = loct_parse_block_n(blk)
+        ALLOCATE(td_tg(no_tds), no_tds)
+        do i=1, no_tds
+          do pol=1, MAX_DIM
+            td_tg(i)%expression(pol) = " "
+          end do
+          ! The structure of the block is:
+          ! domain | function_type | center | width | weight 
+          no_c = loct_parse_block_cols(blk, i-1)
+          !td_tg(i)%type = oct_tgtype_local
+          call loct_parse_block_int(blk, i-1, 0, td_tg(i)%type)
+          call loct_parse_block_int(blk, i-1, 1, td_tg(i)%ftype)
+          call loct_parse_block_float(blk, i-1, 2, td_tg(i)%width)
+          call loct_parse_block_float(blk, i-1, 3, td_tg(i)%weight)
+          do pol=1, NDIM
+            call loct_parse_block_string(blk, i-1, 3+pol, &
+              td_tg(i)%expression(pol))
+          end do
+          !
+          ALLOCATE(td_tg(i)%tdshape(NDIM,0:2*td%max_iter), NDIM*(2*td%max_iter+1))
+          call build_tdshape(td_tg(i), td%max_iter, td%dt)
+          
+        end do
+        
       end if
       ! calc norm, give warning when to small
-
+      
       call pop_sub()
-
     end subroutine def_toperator
 
 
@@ -1667,30 +1677,32 @@ contains
       FLOAT,             intent(in)    :: dt
 
       FLOAT   :: tgrid(0:2*steps)
-      FLOAT   :: width, f_re, f_im
+      FLOAT   :: f_re, f_im
       integer :: kk, pol
 
       call t_lookup(2*steps+1,dt/real(2,PRECISION),tgrid)
       do kk=0, 2*steps
-         do pol=1,NDIM
-            f_re = M_ZERO
-            f_im = M_ZERO
-            !call loct_parse_expression(f_re, f_im, "t", tgrid(kk), &
-            !     td_tg%expression(pol))
-            call loct_parse_expression(f_re, f_im, & 	
-                 M_ZERO, M_ZERO, M_ZERO, M_ZERO, tgrid(kk), &
-                 td_tg%expression(pol)) 
-            td_tg%tdshape(pol,kk) = f_re + M_zI*f_im
-         end do
+        do pol=1,NDIM
+          f_re = M_ZERO
+          f_im = M_ZERO
+          !call loct_parse_expression(f_re, f_im, "t", tgrid(kk), &
+          !     td_tg%expression(pol))
+          call loct_parse_expression(f_re, f_im, & 	
+            M_ZERO, M_ZERO, M_ZERO, M_ZERO, tgrid(kk), &
+            td_tg%expression(pol)) 
+          td_tg%tdshape(pol,kk) = f_re + M_zI*f_im
+        end do
       end do
     end subroutine build_tdshape
-
+    
+    
     !------------------------------------------------------
     subroutine read_OCTparameters()
       !read the parameters for the optimal control run     
-      integer :: jj, kk
+!      integer :: jj
+      integer :: kk
 
-      call push_sub('opt_control.read_OCTparameters_')  
+      call push_sub('opt_control.read_OCTparameters')  
 
       !%Variable OCTEps
       !%Type float
@@ -1787,26 +1799,26 @@ contains
       call loct_parse_int(check_inp('OCTFilterMode'),0,filtermode)
 
       if(filtermode.gt.0) then
-         call def_filter(gr, td%max_iter, td%dt, filtermode, f)
-!! DEBUG
-         !write(6,*) 'filter defined', size(f)
-         do kk=1, size(f)
-            write(filename,'(a,i2.2)') 'opt-control/filter', kk
-            if(f(kk)%domain.eq.1) then
-               call write_fieldw(filename, real(f(kk)%numerical(:,:), PRECISION))
-            else
-               !write(6,*) f(kk)%numerical(:,0)
-               iunit = io_open(filename, action='write')
-               do i = 0, 2*td%max_iter
-                  write(iunit, '(4ES30.16E4)') i*td%dt*M_HALF, f(kk)%numerical(:,i)
-               end do
-               call io_close(iunit)
-               !call write_field(filename, real(f(kk)%numerical(:,:), PRECISION), td%max_iter, td%dt)
-         end if
-!!
-         end do
+        call def_filter(gr, td%max_iter, td%dt, filtermode, f)
+        !! DEBUG
+        !write(6,*) 'filter defined', size(f)
+        do kk=1, size(f)
+          write(filename,'(a,i2.2)') 'opt-control/filter', kk
+          if(f(kk)%domain.eq.1) then
+            call write_fieldw(filename, real(f(kk)%numerical(:,:), PRECISION))
+          else
+            !write(6,*) f(kk)%numerical(:,0)
+            iunit = io_open(filename, action='write')
+            do i = 0, 2*td%max_iter
+              write(iunit, '(4ES30.16E4)') i*td%dt*M_HALF, f(kk)%numerical(:,i)
+            end do
+            call io_close(iunit)
+            !call write_field(filename, real(f(kk)%numerical(:,:), PRECISION), td%max_iter, td%dt)
+          end if
+          !!
+        end do
       end if
-
+      
       !%Variable OCTScheme
       !%Type integer
       !%Section Optimal Control
@@ -1851,6 +1863,7 @@ contains
       call pop_sub()
     end subroutine read_OCTparameters
 
+
     ! ------------------------------------------------------
     subroutine def_laserpol(laserpol, dof)
       ! read the parameters for the laser polarization
@@ -1860,9 +1873,8 @@ contains
       integer               :: no_blk, no_c
       integer(POINTER_SIZE) :: blk
 
-      call push_sub('opt_control.def_laserpol_') 
+      call push_sub('opt_control.def_laserpol') 
 
-         
       !%Variable OCTPolarization
       !%Type block
       !%Section Optimal Control
@@ -1900,30 +1912,30 @@ contains
       !% If we know that the answer must be a circular polarized field we can also fix it and optimize only one component.  
       !%End
       if(loct_parse_block(check_inp('OCTPolarization'),blk)==0) then
-         no_blk = loct_parse_block_n(blk)
-         ! TODO: for each orbital            
-         do i=1, no_blk
-            no_c = loct_parse_block_cols(blk, i-1)
-            call loct_parse_block_int(blk,i-1, 0, dof)
-            if((dof.gt.3).OR.(dof.lt.1) ) then
-               message(1) = "OCTPolarization: Choose degrees of freedom between 1 and 3."
-               call write_fatal(1)
-
-            end if
-            call loct_parse_block_cmplx(blk,i-1, 1, laserpol(1))
-            call loct_parse_block_cmplx(blk,i-1, 2, laserpol(2))
-            call loct_parse_block_cmplx(blk,i-1, 3, laserpol(3))
-
-         end do
-         call loct_parse_block_end(blk)
+        no_blk = loct_parse_block_n(blk)
+        ! TODO: for each orbital            
+        do i=1, no_blk
+          no_c = loct_parse_block_cols(blk, i-1)
+          call loct_parse_block_int(blk,i-1, 0, dof)
+          if((dof.gt.3).OR.(dof.lt.1) ) then
+            message(1) = "OCTPolarization: Choose degrees of freedom between 1 and 3."
+            call write_fatal(1)
+            
+          end if
+          call loct_parse_block_cmplx(blk,i-1, 1, laserpol(1))
+          call loct_parse_block_cmplx(blk,i-1, 2, laserpol(2))
+          call loct_parse_block_cmplx(blk,i-1, 3, laserpol(3))
+          
+        end do
+        call loct_parse_block_end(blk)
       else
-         message(1) = 'Input: No Polarization defined and degrees of freedom defined'
-         message(2) = 'Input: Using default: x-polarized.'
-         laserpol(1) = m_z1
-         laserpol(2) = m_z0
-         laserpol(3) = m_z0
-         dof  = 1
-         call write_info(2)
+        message(1) = 'Input: No Polarization defined and degrees of freedom defined'
+        message(2) = 'Input: Using default: x-polarized.'
+        laserpol(1) = m_z1
+        laserpol(2) = m_z0
+        laserpol(3) = m_z0
+        dof  = 1
+        call write_info(2)
       end if
 
       h%ep%lasers(1)%pol(:) = laserpol(:)
@@ -1934,8 +1946,9 @@ contains
 
     !---------------------------------------------------------------
     subroutine init_tdtarget()
-      integer             :: jj, ip
-      FLOAT               :: x(MAX_DIM), r, psi_re, psi_im
+      integer             :: jj
+!      integer             :: ip
+!      FLOAT               :: psi_re, psi_im, x(MAX_DIM), r
       FLOAT               :: mxloc(MAX_DIM)
       integer             :: tt, pos(1)
       FLOAT               :: t
@@ -1979,7 +1992,6 @@ contains
       end do
     
       call pop_sub()
-
     end subroutine init_tdtarget
 
 
@@ -1987,13 +1999,12 @@ contains
     subroutine init_()
       integer            :: ierr, kk, jj
 
-      call push_sub('opt_control.init_')  
+      call push_sub('opt_control.init')  
 
       call io_mkdir('opt-control')
       ! some shortcuts
       gr  => sys%gr
       st  => sys%st
-
 
       ! prepare unit factor u for output
       u  = M_ONE/units_out%length%factor**NDIM
@@ -2011,7 +2022,7 @@ contains
 
       No_electrons = SUM(psi_i%occ(1,:))
       write(message(1),'(a,i4)') 'Info: Number of electrons: ', &
-           No_electrons
+        No_electrons
       call write_info(1)
 
       !! FIXME: is this check obsolete ?
@@ -2091,13 +2102,13 @@ contains
       bestJ1_ctr_iter = M_ZERO
 
       do jj = 0, 2*td%max_iter
-         t = td%dt*(jj-1)/M_TWO
-         !i = int(abs(M_TWO*t/l(1)%dt) + M_HALF)
-         ! 
-         do kk=1, h%ep%no_lasers
-            call laser_field(gr%sb,h%ep%no_lasers,h%ep%lasers,t,field)
-            laser(:,jj) = laser(:,jj) + field
-         end do
+        t = td%dt*(jj-1)/M_TWO
+        !i = int(abs(M_TWO*t/l(1)%dt) + M_HALF)
+        ! 
+        do kk=1, h%ep%no_lasers
+          call laser_field(gr%sb,h%ep%no_lasers,h%ep%lasers,t,field)
+          laser(:,jj) = laser(:,jj) + field
+        end do
       enddo
       write(filename,'(a)') 'opt-control/initial_laser.1'
       call write_field(filename, laser, td%max_iter, td%dt)
@@ -2119,12 +2130,9 @@ contains
       ! initial laser definition end
 
   
-
       ! call after laser is setup ! do not change order
       call read_OCTparameters()
 
-
-      
       ! global fitness
       ALLOCATE(convergence(4,0:ctr_iter_max),(ctr_iter_max+1)*4)
 
@@ -2139,9 +2147,10 @@ contains
       call zoutput_function(sys%outp%how,'opt-control','initial1',gr%m,gr%sb,initial_st%zpsi(:,1,1,1),u,ierr)
       call zoutput_function(sys%outp%how,'opt-control','target1',gr%m,gr%sb,target_st%zpsi(:,1,1,1),u,ierr) 
 
-     call pop_sub()
+      call pop_sub()
     end subroutine init_
-
+    
+    
     ! ---------------------------------------------------------
     subroutine check_faulty_runmodes()
 
@@ -2152,48 +2161,48 @@ contains
       
       ! FixedFluence and Filter only work with WG05
       if((mode_fixed_fluence).and.(algorithm_type.ne.oct_algorithm_wg05)) then
-         write(message(1),'(a)') "Cannot optimize to a given fluence with the chosen algorithm."
-         write(message(2),'(a)') "Switching to scheme WG05."         
-         call write_info(2)
-         algorithm_type = oct_algorithm_wg05
+        write(message(1),'(a)') "Cannot optimize to a given fluence with the chosen algorithm."
+        write(message(2),'(a)') "Switching to scheme WG05."         
+        call write_info(2)
+        algorithm_type = oct_algorithm_wg05
       end if
-
+      
       ! Filters work only with WG05
       if((filtermode.gt.0).and.(algorithm_type.ne.oct_algorithm_wg05)) then
-         write(message(1),'(a)') "Warning: Cannot use filters with the chosen algorithm."
-         write(message(2),'(a)') "Warning: Switching to scheme WG05."
-         call write_info(2)
-         algorithm_type = oct_algorithm_wg05
+        write(message(1),'(a)') "Warning: Cannot use filters with the chosen algorithm."
+        write(message(2),'(a)') "Warning: Switching to scheme WG05."
+        call write_info(2)
+        algorithm_type = oct_algorithm_wg05
       end if
-
+      
       ! tdpenalty and fixed fluence do not work !
       if((mode_tdpenalty).AND.(mode_fixed_fluence)) then
-         write(message(1),'(a)') "Warning: Cannot use fixed fluence and" &
-              //" td penalty."
-         write(message(2),'(a)') "Warning: Disabling td penalty."
-         call write_info(2)
-         tdpenalty = penalty
+        write(message(1),'(a)') "Warning: Cannot use fixed fluence and" &
+          //" td penalty."
+        write(message(2),'(a)') "Warning: Disabling td penalty."
+        call write_info(2)
+        tdpenalty = penalty
       end if
       
       ! local targets only in ZR98 and WG05
       if((totype.eq.oct_tg_local) & 
-           .AND.(algorithm_type.eq.oct_algorithm_zbr98)) then
-         write(message(1),'(a)') "Warning: Local targets work" &
-              // " only with ZR98 and WG05."
-         write(message(2),'(a)') "Warning: Switching to ZR98."
-         call write_info(2)
-         algorithm_type = oct_algorithm_zr98
+        .AND.(algorithm_type.eq.oct_algorithm_zbr98)) then
+        write(message(1),'(a)') "Warning: Local targets work" &
+          // " only with ZR98 and WG05."
+        write(message(2),'(a)') "Warning: Switching to ZR98."
+        call write_info(2)
+        algorithm_type = oct_algorithm_zr98
       end if
-
+      
       ! tdtargets only in ZR98 and WG05
       if((targetmode.eq.oct_targetmode_td) & 
-           .AND.(algorithm_type.eq.oct_algorithm_zbr98)) then
-         write(message(1),'(a)') "Warning: Time-dependent targets work" &
-              // " only with ZR98 and WG05."
-         write(message(2),'(a)') "Warning: Please change algorithm type."
-         call write_fatal(2)
+        .AND.(algorithm_type.eq.oct_algorithm_zbr98)) then
+        write(message(1),'(a)') "Warning: Time-dependent targets work" &
+          // " only with ZR98 and WG05."
+        write(message(2),'(a)') "Warning: Please change algorithm type."
+        call write_fatal(2)
       end if
-
+      
       ! td target with states works only for 1 electron
       ! TODO: HOW TO RETRIEVE NUMBER OF ELECTRONS
       !       UNCOMMENT LAST LINES
@@ -2208,18 +2217,19 @@ contains
       if( (td_tg_state) .AND. (SUM(psi_i%occ(1,:)).gt.1) ) then
       !if(td_tg_state) then
       !     if(psi_i%occ.gt.1) then
-         write(message(1),'(a)') "Warning: Time-dependent state targets" &
-              // " work only with one electron."
-         write(message(2),'(a)') "Warning: Please change input file."
-         call write_fatal(2)
+        write(message(1),'(a)') "Warning: Time-dependent state targets" &
+          // " work only with one electron."
+        write(message(2),'(a)') "Warning: Please change input file."
+        call write_fatal(2)
       end if
       
 
 
     end subroutine check_faulty_runmodes
+
+
     ! ---------------------------------------------------------
     subroutine end_()
-
       ! TODO:: deallocate filters (if there were any)
       call filter_end(f)
       call td_end(td)
