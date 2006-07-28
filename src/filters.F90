@@ -15,7 +15,8 @@
 !! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
 !! 02111-1307, USA.
 !!
-!! $Id: filters.F90,v 1.42 2006/03/18 17:56:50 appel Exp $
+!! $Id$
+
 #include "global.h"
 
 module filter_m  
@@ -36,46 +37,46 @@ module filter_m
   !use output_m
 
   implicit none
-
+  
   type filter_t
-     FLOAT :: weight       ! relative weight of filter
-     FLOAT :: center       ! center in freq or time 
-     FLOAT :: width        ! width in freq or time
-
-     CMPLX :: fpol(MAX_DIM)
-     CMPLX, pointer :: numerical(:,:) ! (ndim,0:2*steps) store values of filter
-     character(len=1024) :: expression
-
-     integer :: domain, ftype
-
+    FLOAT :: weight       ! relative weight of filter
+    FLOAT :: center       ! center in freq or time 
+    FLOAT :: width        ! width in freq or time
+    
+    CMPLX :: fpol(MAX_DIM)
+    CMPLX, pointer :: numerical(:,:) ! (ndim,0:2*steps) store values of filter
+    character(len=1024) :: expression
+    
+    integer :: domain, ftype
   end type filter_t
 
-  integer, parameter, private  ::  &
-       timefreq = 1, &
-       phase    = 2 
-
-  integer, parameter, private  ::  &
-       filter_freq = 1,            &
-       filter_time = 2,            &
-       filter_phase= 3
-
-  integer, parameter, private  ::  &
-       filter_pol_x  = 1,           &
-       filter_pol_y  = 2,           &
-       filter_pol_xy = 3
+  integer, parameter, private  :: &
+    timefreq = 1,                 &
+    phase    = 2 
   
-  integer, parameter, private  ::  &
-       filter_type_gauss      = 1,           &
-       filter_type_gaussFWHM  = 2,           &
-       filter_type_sin2       = 3
- 
- integer, parameter, private  ::  &
-       gauss      = 1,           &
-       gaussFWHM  = 2,           &
-       sin2       = 3
-
+  integer, parameter, private  :: &
+    filter_freq = 1,              &
+    filter_time = 2,              &
+    filter_phase= 3
+  
+  integer, parameter, private  :: &
+    filter_pol_x  = 1,            &
+    filter_pol_y  = 2,            &
+    filter_pol_xy = 3
+  
+  integer, parameter, private  :: &
+    filter_type_gauss     = 1,    &
+    filter_type_gaussFWHM = 2,    &
+    filter_type_sin2      = 3
+  
+  integer, parameter, private  :: &
+    gauss      = 1,               &
+    gaussFWHM  = 2,               &
+    sin2       = 3
+  
 contains
   
+  ! ---------------------------------------------------------
   subroutine def_tdpenalty(gr, tdpenalty, steps, dt, mode_tdpenalty)
     type(grid_t), pointer    :: gr
     FLOAT,        intent(out):: tdpenalty(:,:)
@@ -85,10 +86,11 @@ contains
 
     integer(POINTER_SIZE)    :: blk
     integer                  :: no_lines, no_col, i
-    type(filter_t),   pointer :: tdp(:)
+    type(filter_t),  pointer :: tdp(:)
 
-    call push_sub('filter.def_tdpenalty_')
+    call push_sub('filters.def_tdpenalty')
     mode_tdpenalty = .FALSE.
+
     !%Variable OCTLaserEnvelope
     !%Type block
     !%Section Optimal Control
@@ -102,57 +104,58 @@ contains
     !%End
         
     if (loct_parse_block(check_inp('OCTLaserEnvelope'), blk)==0) then
-       no_lines = loct_parse_block_n(blk)
-       ALLOCATE(tdp(no_lines), no_lines)
-       mode_tdpenalty = .TRUE.
-
-       ! The structure of the block is:
-       ! polarization | function | weight 
-       do i = 1, no_lines
-          no_col = loct_parse_block_cols(blk, i-1)
-          call loct_parse_block_cmplx(blk, i-1, 0, tdp(i)%fpol(1)) 
-          call loct_parse_block_cmplx(blk, i-1, 1, tdp(i)%fpol(2))
-          call loct_parse_block_cmplx(blk, i-1, 2, tdp(i)%fpol(3))
-          ! parse formula string
-          call loct_parse_block_string(                            &
-               blk, i-1, 3, tdp(i)%expression)  
-          ! convert to C string
-          call conv_to_C_string(tdp(i)%expression)
-          call loct_parse_block_float(blk, i-1, 4, tdp(i)%weight)
-          !call loct_parse_block_int(blk, i-1, 1, tdp(i)%ftype)
-          !call loct_parse_block_float(blk, i-1, 2, tdp(i)%center)
-          !call loct_parse_block_float(blk, i-1, 3, tdp(i)%width)
-
-          tdp(i)%domain = filter_time
-
-          ALLOCATE(tdp(i)%numerical(NDIM,0:2*steps), NDIM*(2*steps+1))
-          call build_filter(gr, tdp(i), steps, dt)
-       end do
-       
-       tdp(i)%weight = tdp(i)%weight/SUM(tdp(:)%weight)
-
-       tdpenalty = M_ZERO
-       do i=1,no_lines
-          
-          tdpenalty =  tdpenalty &
-               + tdp(i)%weight * real(tdp(i)%numerical,PRECISION)
-       end do
-
-       tdpenalty = M_ONE / (tdpenalty + real(0.0000001,PRECISION )) 
-
-       ! all we want to know is tdpenalty
-       do i = 1, no_lines
-          if(associated(tdp(i)%numerical)) then
-             deallocate(tdp(i)%numerical) 
-             nullify(tdp(i)%numerical)
-          end if
-       end do
-       call loct_parse_block_end(blk)
+      no_lines = loct_parse_block_n(blk)
+      ALLOCATE(tdp(no_lines), no_lines)
+      mode_tdpenalty = .TRUE.
+      
+      ! The structure of the block is:
+      ! polarization | function | weight 
+      do i = 1, no_lines
+        no_col = loct_parse_block_cols(blk, i-1)
+        call loct_parse_block_cmplx(blk, i-1, 0, tdp(i)%fpol(1)) 
+        call loct_parse_block_cmplx(blk, i-1, 1, tdp(i)%fpol(2))
+        call loct_parse_block_cmplx(blk, i-1, 2, tdp(i)%fpol(3))
+        ! parse formula string
+        call loct_parse_block_string(                            &
+          blk, i-1, 3, tdp(i)%expression)  
+        ! convert to C string
+        call conv_to_C_string(tdp(i)%expression)
+        call loct_parse_block_float(blk, i-1, 4, tdp(i)%weight)
+        !call loct_parse_block_int(blk, i-1, 1, tdp(i)%ftype)
+        !call loct_parse_block_float(blk, i-1, 2, tdp(i)%center)
+        !call loct_parse_block_float(blk, i-1, 3, tdp(i)%width)
+        
+        tdp(i)%domain = filter_time
+        
+        ALLOCATE(tdp(i)%numerical(NDIM,0:2*steps), NDIM*(2*steps+1))
+        call build_filter(gr, tdp(i), steps, dt)
+      end do
+      
+      tdp(i)%weight = tdp(i)%weight/SUM(tdp(:)%weight)
+      
+      tdpenalty = M_ZERO
+      do i=1,no_lines
+        
+        tdpenalty =  tdpenalty &
+          + tdp(i)%weight * real(tdp(i)%numerical,PRECISION)
+      end do
+      
+      tdpenalty = M_ONE / (tdpenalty + real(0.0000001,PRECISION )) 
+      
+      ! all we want to know is tdpenalty
+      do i = 1, no_lines
+        if(associated(tdp(i)%numerical)) then
+          deallocate(tdp(i)%numerical) 
+          nullify(tdp(i)%numerical)
+        end if
+      end do
+      call loct_parse_block_end(blk)
     end if
-    call pop_sub()
 
+    call pop_sub()
   end subroutine def_tdpenalty
   
+
   ! ---------------------------------------------------------
   subroutine apply_filter(gr, steps, filtermode, filter, laser_inout)  
     type(grid_t),     pointer      :: gr
@@ -165,91 +168,92 @@ contains
     CMPLX          :: filt(NDIM, 0:2*steps)
     type(fft_t)    :: fft_handler
 
-    call push_sub('filter.apply_filter_')
+    call push_sub('filters.apply_filter')
 
     n(1:3) = (/ 2*steps+1, 1, 1 /)
-
+    
     call fft_init(n, fft_complex, fft_handler, optimize = .false.)
-
+    
     filt = M_z0
     no_f = size(filter)
-    i   = 0
+    i    = 0
     !do i=1, no_f
     do while(i.lt.no_f )
-       i = i + 1
-       ! decide time or freq
-       write(message(1),'(a,i2)') "Info: Applying filter "         
-       call write_info(1)  
- 
-       select case(filter(i)%domain)
-    
-       case(filter_freq)
-          ! transform to freq space
-
-          ! group filters
-          ii = i + 1
-          grouplength = 0
-          filt(:, :) = filter(i)%numerical(:,:)
-          do while(ii.lt.no_f+1) 
-             if(filter(ii)%domain.eq.filter_freq) then
-                grouplength = grouplength + 1
-                filt(:,:) = filt(:,:) + filter(ii)%numerical(:,:)
-             end if
-             ii = ii + 1
-             first = i
-             last  = i + grouplength
-          end do
-          write(6,'(a,i2,a,i2)') 'Adding filters from: ',first,'to: ',last
-          i = ii - 1
-          do kk=1, NDIM
-             !write(6,*) 'in:', SUM(laser_inout(kk,:)**2)
-             tmp2(:, 1, 1) = cmplx(laser_inout(kk,:))
-             
-             call zfft_forward(fft_handler, tmp2, tmp)
-             !write(6,*) SUM(abs(tmp)**2)/real((2*steps+1), PRECISION)
-             !
-             tmp(:, 1, 1) = tmp(:, 1, 1)*filt(kk,:)
-             call zfft_backward(fft_handler, tmp, tmp2)
-    
-             laser_inout(kk,:) = real(tmp2(:, 1, 1), PRECISION)!/real((2*steps+1), PRECISION)
-             !write(6,*) 'out:', SUM(laser_inout(kk,:)**2)
-             !write(6,*) SUM(laser_inout(kk,:)**2)          
-          enddo
+      i = i + 1
+      ! decide time or freq
+      write(message(1),'(a,i2)') "Info: Applying filter "         
+      call write_info(1)  
+      
+      select case(filter(i)%domain)
+        
+      case(filter_freq)
+        ! transform to freq space
+        
+        ! group filters
+        ii = i + 1
+        grouplength = 0
+        filt(:, :) = filter(i)%numerical(:,:)
+        do while(ii.lt.no_f+1) 
+          if(filter(ii)%domain.eq.filter_freq) then
+            grouplength = grouplength + 1
+            filt(:,:) = filt(:,:) + filter(ii)%numerical(:,:)
+          end if
+          ii = ii + 1
+          first = i
+          last  = i + grouplength
+        end do
+        write(6,'(a,i2,a,i2)') 'Adding filters from: ',first,'to: ',last
+        i = ii - 1
+        do kk=1, NDIM
+          !write(6,*) 'in:', SUM(laser_inout(kk,:)**2)
+          tmp2(:, 1, 1) = cmplx(laser_inout(kk,:))
           
-       case(filter_time)
-          ! group filters
-          ii = i + 1
-          grouplength = 0
-          filt(:, :) = filter(i)%numerical(:,:)
-          do while(ii.lt.no_f+1) 
-             if(filter(ii)%domain.eq.filter_time) then
-                grouplength = grouplength + 1
-                filt(:, :) = filt(:, :) + filter(ii)%numerical(:,:)
-             end if
-             first = i
-             last  = i + grouplength
-             ii = ii + 1
-          end do
-          i = ii - 1
-          write(6,*) 'Adding filters from: ',first,'to: ',last
-          do kk=1, NDIM
-             laser_inout(kk,:) = laser_inout(kk,:)*filt(kk, :)
-          enddo
-
-       case(filter_phase)
-          ! phase only optimization
-          message(1) = "to be implemented soon"
-          call write_fatal(1)
-       case default
-          message(1) = "...I don't know this filter type..."
-          call write_fatal(1)
-       end select
+          call zfft_forward(fft_handler, tmp2, tmp)
+          !write(6,*) SUM(abs(tmp)**2)/real((2*steps+1), PRECISION)
+          !
+          tmp(:, 1, 1) = tmp(:, 1, 1)*filt(kk,:)
+          call zfft_backward(fft_handler, tmp, tmp2)
+          
+          laser_inout(kk,:) = real(tmp2(:, 1, 1), PRECISION)!/real((2*steps+1), PRECISION)
+          !write(6,*) 'out:', SUM(laser_inout(kk,:)**2)
+          !write(6,*) SUM(laser_inout(kk,:)**2)          
+        enddo
+        
+      case(filter_time)
+        ! group filters
+        ii = i + 1
+        grouplength = 0
+        filt(:, :) = filter(i)%numerical(:,:)
+        do while(ii.lt.no_f+1) 
+          if(filter(ii)%domain.eq.filter_time) then
+            grouplength = grouplength + 1
+            filt(:, :) = filt(:, :) + filter(ii)%numerical(:,:)
+          end if
+          first = i
+          last  = i + grouplength
+          ii = ii + 1
+        end do
+        i = ii - 1
+        write(6,*) 'Adding filters from: ',first,'to: ',last
+        do kk=1, NDIM
+          laser_inout(kk,:) = laser_inout(kk,:)*filt(kk, :)
+        enddo
+        
+      case(filter_phase)
+        ! phase only optimization
+        message(1) = "to be implemented soon"
+        call write_fatal(1)
+      case default
+        message(1) = "...I don't know this filter type..."
+        call write_fatal(1)
+      end select
     end do
-
+    
     call fft_end(fft_handler)
     call pop_sub()
   end subroutine apply_filter
-
+  
+  
   ! ---------------------------------------------------------
   subroutine def_filter(gr, steps, dt, filtermode, f)    
     type(grid_t),     pointer     :: gr
@@ -258,11 +262,10 @@ contains
     FLOAT,            intent(in)  :: dt
 
     integer(POINTER_SIZE) :: blk
-    integer :: no_c, i, no_f, ii
+    integer :: no_c, i, no_f
 
-    call push_sub('filter.def_filter')
-    
-    
+    call push_sub('filters.def_filter')
+        
     ! filter function
     !%Variable OCTFilter
     !%Type block
@@ -318,37 +321,39 @@ contains
     !%Option time_filter 2
     !% The filter is applied in the time domain.
     !%End
+
     if((filtermode==timefreq).AND.(loct_parse_block(check_inp('OCTFilter'),blk)==0)) then
-       no_f = loct_parse_block_n(blk)
-       ALLOCATE(f(no_f), no_f)
-       do i=1, no_f
-          ! The structure of the block is:
-          ! domain | function_type | center | width | weight 
-          no_c = loct_parse_block_cols(blk, i-1)       
-          call loct_parse_block_int(blk, i-1, 0, f(i)%domain)
-          call loct_parse_block_cmplx(blk, i-1, 1, f(i)%fpol(1))
-          call loct_parse_block_cmplx(blk, i-1, 2, f(i)%fpol(2))
-          call loct_parse_block_cmplx(blk, i-1, 3, f(i)%fpol(3))
-          ! parse formula string
-          call loct_parse_block_string(                            &
-               blk, i-1, 4, f(i)%expression)
-          ! convert to C string
-          call conv_to_C_string(f(i)%expression)
+      no_f = loct_parse_block_n(blk)
+      ALLOCATE(f(no_f), no_f)
+      do i=1, no_f
+        ! The structure of the block is:
+        ! domain | function_type | center | width | weight 
+        no_c = loct_parse_block_cols(blk, i-1)       
+        call loct_parse_block_int(blk, i-1, 0, f(i)%domain)
+        call loct_parse_block_cmplx(blk, i-1, 1, f(i)%fpol(1))
+        call loct_parse_block_cmplx(blk, i-1, 2, f(i)%fpol(2))
+        call loct_parse_block_cmplx(blk, i-1, 3, f(i)%fpol(3))
+        ! parse formula string
+        call loct_parse_block_string(                            &
+          blk, i-1, 4, f(i)%expression)
+        ! convert to C string
+        call conv_to_C_string(f(i)%expression)
+        
+        !call loct_parse_block_int(blk, i-1, 2, f(i)%ftype)
+        !call loct_parse_block_float(blk, i-1, 3, f(i)%center)
+        !call loct_parse_block_float(blk, i-1, 4, f(i)%width)
+        !call loct_parse_block_float(blk, i-1, 5, f(i)%weight)
+        ALLOCATE(f(i)%numerical(NDIM,0:2*steps), NDIM*(2*steps+1))
+        call build_filter(gr, f(i), steps, dt)
+      end do
+      
+      call loct_parse_block_end(blk)
+      
+    end if
 
-!          call loct_parse_block_int(blk, i-1, 2, f(i)%ftype)
-!          call loct_parse_block_float(blk, i-1, 3, f(i)%center)
-!          call loct_parse_block_float(blk, i-1, 4, f(i)%width)
-!          call loct_parse_block_float(blk, i-1, 5, f(i)%weight)
-          ALLOCATE(f(i)%numerical(NDIM,0:2*steps), NDIM*(2*steps+1))
-          call build_filter(gr, f(i), steps, dt)
-       end do
-           
-       call loct_parse_block_end(blk)
-
-       end if
     call pop_sub()
-    
   end subroutine def_filter
+
 
   !------------------------------------------------
   subroutine build_filter(gr, fp, steps, dt)
@@ -357,8 +362,9 @@ contains
     type(filter_t), intent(inout) :: fp
     integer,        intent(in)    :: steps
     FLOAT,          intent(in)    :: dt
+
     integer :: i, iunit
-    integer :: kk, ip, pol
+    integer :: ip, pol
     FLOAT   :: grid(0:2*steps)
     FLOAT   :: width, f_re, f_im
     CMPLX   :: ff(NDIM,0:2*steps)
@@ -368,41 +374,39 @@ contains
     ff = M_z0
     select case(fp%domain)
     case(filter_time)
-       call t_lookup(2*steps+1,dt/real(2.0,PRECISION),grid)
-       do ip=0, 2*steps
-          call loct_parse_expression(f_re, f_im, "t", grid(ip), fp%expression)
-          ! FIXME: polarization   
-          do pol=1,NDIM
-             ff(pol,ip) = fp%fpol(pol)*(f_re + M_zI*f_im)
-             if(fp%fpol(pol).eq.m_z0) ff(pol,ip) = m_z1
-          end do
-
-          !write(6,*) f_re, f_im
-       end do
-   
-
+      call t_lookup(2*steps+1,dt/real(2.0,PRECISION),grid)
+      do ip=0, 2*steps
+        call loct_parse_expression(f_re, f_im, "t", grid(ip), fp%expression)
+        ! FIXME: polarization   
+        do pol=1,NDIM
+          ff(pol,ip) = fp%fpol(pol)*(f_re + M_zI*f_im)
+          if(fp%fpol(pol).eq.m_z0) ff(pol,ip) = m_z1
+        end do
+        
+        !write(6,*) f_re, f_im
+      end do
+      
     case(filter_freq)
-       call w_lookup(2*steps+1,dt,grid)
-       ff(:,:) = m_z1
-       do ip=0, 2*steps
-          call loct_parse_expression(f_re, f_im, "w", grid(ip), fp%expression)      
-
-          ! FIXME: polarization
-          ! if
-          do pol=1,NDIM
-             ff(pol,ip) = fp%fpol(pol)*(f_re + M_zI*f_im)
-             if(fp%fpol(pol).eq.m_z0) ff(pol,ip) = m_z1
-          end do
-       end do
-       
+      call w_lookup(2*steps+1,dt,grid)
+      ff(:,:) = m_z1
+      do ip=0, 2*steps
+        call loct_parse_expression(f_re, f_im, "w", grid(ip), fp%expression)      
+        
+        ! FIXME: polarization
+        ! if
+        do pol=1,NDIM
+          ff(pol,ip) = fp%fpol(pol)*(f_re + M_zI*f_im)
+          if(fp%fpol(pol).eq.m_z0) ff(pol,ip) = m_z1
+        end do
+      end do
+      
     case default
-       write(message(1),'(a)') "Unknown choice of domain for filter."
-       write(message(2),'(a)') "Choose: time or freq ."
-       call write_fatal(2)
+      write(message(1),'(a)') "Unknown choice of domain for filter."
+      write(message(2),'(a)') "Choose: time or freq ."
+      call write_fatal(2)
     end select
-
     
-
+    
     !select case (fp%ftype)
     !case(filter_type_gauss)
     !   write(message(1), '(a)') 'Info: Building Gaussian'
@@ -420,7 +424,7 @@ contains
  
     iunit = io_open('opt-control/filtertest', action='write')
     do i = 0, steps
-       write(iunit, '(4es20.12)') grid(i), ff(:, i)
+      write(iunit, '(4es20.12)') grid(i), ff(:, i)
     end do
     call io_close(iunit)
     
@@ -437,13 +441,12 @@ contains
     !   write(message(1),'(a)') "Unknown filter function."
     !   call write_fatal(1)
     !end select
-    
-      
+          
     fp%numerical(:,:) = ff(:,:)
     
     call pop_sub()
-
   end subroutine build_filter
+
 
   ! ---------------------------------------------------------
   subroutine t_lookup(steps,dt,tgrid)
@@ -454,6 +457,7 @@ contains
     FLOAT,   intent(out) :: tgrid(:)
 
     integer  :: i
+ 
     call push_sub('filter.t_lookup_')
 
     do i=1, steps
@@ -461,8 +465,8 @@ contains
     enddo
 
     call pop_sub()
-
   end subroutine t_lookup
+
 
   ! ---------------------------------------------------------
   subroutine w_lookup(steps,dt,wgrid)
@@ -486,14 +490,12 @@ contains
     do i=int((steps)/2), steps-1 
        wgrid(i+1) = real(i-steps, PRECISION) * df * M_TWO * M_PI
     enddo   
-
-
-    call pop_sub()
     
+    call pop_sub()
   end subroutine w_lookup
 
 
-! ----------------------------------------------------------------
+  ! ----------------------------------------------------------------
   subroutine filter_end(f)
     type(filter_t), pointer    :: f(:)
 
@@ -519,7 +521,6 @@ contains
     nullify(f)
 
     call pop_sub()
-
   end subroutine filter_end
 
 end module filter_m

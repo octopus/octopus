@@ -1965,8 +1965,7 @@ contains
     integer, intent(out) :: n_filled, n_partially_filled, n_half_filled
     integer, optional, intent(out) :: filled(:), partially_filled(:), half_filled(:)
 
-    integer :: j, i
-    FLOAT :: occ
+    integer :: j
     FLOAT, parameter :: M_THRESHOLD = CNST(1.0e-6)
     call push_sub('states_inc.occupied_states')
 
@@ -2043,8 +2042,8 @@ contains
     type(states_t), pointer               :: ground_state
     character(len=*), intent(in)          :: filename
 
-    integer :: iunit, nst, ispin, nik, ik, &
-               n_possible_pairs, i, a, n_pairs, sigma, j, ios, k, nspin
+    integer :: iunit, nst, ispin, nik, &
+               n_possible_pairs, i, a, sigma, j, ios, k, nspin
     integer, allocatable :: n_filled(:), n_partially_filled(:), n_half_filled(:), n_empty(:), &
                             filled(:, :), partially_filled(:, :), half_filled(:, :)
     FLOAT :: dump

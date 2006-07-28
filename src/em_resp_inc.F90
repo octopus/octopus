@@ -303,8 +303,7 @@ contains
 
   !------------------------------------------------------------
   subroutine init_response_e()
-    integer :: ik, ist, i, ierr
-    FLOAT :: rd
+    integer :: ierr
 
     call push_sub('static_pol_lr.init_response_e')
 

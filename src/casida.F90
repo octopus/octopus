@@ -81,7 +81,7 @@ contains
     logical,             intent(inout) :: fromScratch
 
     type(casida_t) :: cas
-    integer :: i, ierr, kpoints, dim, nst, ist, n_filled, n_partially_filled, n_half_filled
+    integer :: i, ierr, kpoints, dim, nst, n_filled, n_partially_filled, n_half_filled
     character(len=80) :: trandens
 
     call push_sub('casida.casida_run')
