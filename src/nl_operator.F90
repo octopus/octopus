@@ -146,8 +146,8 @@ contains
     op%m        => m
     op%const_w  = .false.
     op%cmplx_op = .false.
-    if(present(const_w )) op%const_w = const_w
-    if(present(cmplx_op)) op%const_w = cmplx_op
+    if(present(const_w )) op%const_w  = const_w
+    if(present(cmplx_op)) op%cmplx_op = cmplx_op
 
     ! allocate weights op%w
     if(op%const_w) then
