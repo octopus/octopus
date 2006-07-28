@@ -43,7 +43,6 @@ module nl_operator_m
     znl_operator_operate,       &
     dnl_operator_operate_diag,  &
     znl_operator_operate_diag,  &
-    znl_operator_operate_cmplx, &
     nl_operator_end,            &
     nl_operator_skewadjoint,    &
     nl_operator_selfadjoint,    &
@@ -62,7 +61,7 @@ module nl_operator_m
     FLOAT,   pointer      :: w_re(:,:) ! weightsp, real part
     FLOAT,   pointer      :: w_im(:,:) ! weightsp, imaginary part
 
-    logical               :: const_w   ! are the weights independent of i
+    logical               :: const_w   ! are the weights independent of index i
     logical               :: cmplx_op  ! .true. if we have also imaginary weights
   end type nl_operator_t
 
@@ -882,14 +881,26 @@ contains
 #endif
 
     nn = op%n
-    if(op%const_w) then
-      do ii = 1, op%np
-        fo(ii) = sum(op%w_re(1:nn, 1)  * fi(op%i(1:nn, ii)))
-      end do
+    if(op%cmplx_op) then
+      if(op%const_w) then
+        do ii = 1, op%np
+          fo(ii) = sum(cmplx(op%w_re(1:nn, 1),  op%w_im(1:nn, 1))  * fi(op%i(1:nn, ii)))
+        end do
+      else
+        do ii = 1, op%np
+          fo(ii) = sum(cmplx(op%w_re(1:nn, ii), op%w_im(1:nn, ii)) * fi(op%i(1:nn, ii)))
+        end do
+      end if
     else
-      do ii = 1, op%np
-        fo(ii) = sum(op%w_re(1:nn, ii) * fi(op%i(1:nn, ii)))
-      end do
+      if(op%const_w) then
+        do ii = 1, op%np
+          fo(ii) = sum(op%w_re(1:nn, 1)  * fi(op%i(1:nn, ii)))
+        end do
+      else
+        do ii = 1, op%np
+          fo(ii) = sum(op%w_re(1:nn, ii) * fi(op%i(1:nn, ii)))
+        end do
+      end if
     end if
     do ii = op%np + 1, size(fo)
       fo(ii) = M_ZERO
@@ -910,32 +921,23 @@ contains
     call profiling_in(C_PROFILING_NL_OPERATOR)
     call push_sub('nl_operator.dnl_operator_operate_diag')
 
-    
     nn = op%n
     if(op%const_w) then
-
       do ii = 1, nn
-        if( 1 == op%i(ii,1)) then
+        if( 1 == op%i(ii,1) ) then
           fo(1:op%np) = op%w_re(ii, 1)
           exit
         end if
       end do
-
     else
-      
       do ii = 1, op%np
-
         do jj = 1, nn
-          
-          if( ii == op%i(jj,ii)) then
+          if( ii == op%i(jj,ii) ) then
             fo(ii) = op%w_re(jj, ii)
             exit
           end if
-
         end do
-
       end do
-
     end if
 
     call pop_sub()
@@ -956,71 +958,47 @@ contains
 
     nn = op%n
 
-    if(op%const_w) then
-
-      do ii = 1, nn
-        if( 1 == op%i(ii,1)) then
-          fo(1:op%np) = op%w_re(ii, 1)
-          exit
-        end if
-      end do
-
-    else
-      
-      do ii = 1, op%np
-
-        do jj = 1, nn
-          
-          if( ii == op%i(jj,ii)) then
-            fo(ii) = op%w_re(jj, ii)
+    if(op%cmplx_op) then
+      if(op%const_w) then
+        do ii = 1, nn
+          if( 1 == op%i(ii,1) ) then
+            fo(1:op%np) = cmplx(op%w_re(ii, 1), op%w_im(ii, 1))
             exit
           end if
-
         end do
-
-      end do
-
+      else
+        do ii = 1, op%np
+          do jj = 1, nn
+            if( ii == op%i(jj,ii) ) then
+              fo(ii) = cmplx(op%w_re(jj, ii), op%w_im(jj, ii))
+              exit
+            end if
+          end do
+        end do
+      end if
+    else
+      if(op%const_w) then
+        do ii = 1, nn
+          if( 1 == op%i(ii,1) ) then
+            fo(1:op%np) = op%w_re(ii, 1)
+            exit
+          end if
+        end do
+      else
+        do ii = 1, op%np
+          do jj = 1, nn
+            if( ii == op%i(jj,ii) ) then
+              fo(ii) = op%w_re(jj, ii)
+              exit
+            end if
+          end do
+        end do
+      end if
     end if
 
     call pop_sub()
     call profiling_out(C_PROFILING_NL_OPERATOR)
 
   end subroutine znl_operator_operate_diag
-
-
-  ! ---------------------------------------------------------
-  ! allow for complex operators
-  ! ---------------------------------------------------------
-  subroutine znl_operator_operate_cmplx(op, fi, fo)
-    CMPLX,               intent(inout) :: fi(:)  ! fi(op%np)
-    type(nl_operator_t), intent(in)    :: op
-    CMPLX,               intent(out)   :: fo(:)  ! fo(op%np)
-
-    integer :: ii, nn
-
-    call profiling_in(C_PROFILING_NL_OPERATOR)
-    call push_sub('nl_operator.znl_operator_operate_complex')
-
-#if defined(HAVE_MPI)
-    if(op%m%parallel_in_domains) then
-      call zvec_ghost_update(op%m%vp, fi)
-    end if
-#endif
-
-    nn = op%n
-    if(op%const_w) then
-      do ii = 1, op%np
-        fo(ii) = sum(cmplx(op%w_re(1:nn, 1),  op%w_im(1:nn, 1))  * fi(op%i(1:nn, ii)))
-      end do
-    else
-      do ii = 1, op%np
-        fo(ii) = sum(cmplx(op%w_re(1:nn, ii), op%w_im(1:nn, ii)) * fi(op%i(1:nn, ii)))
-      end do
-    end if
-
-    call pop_sub()
-    call profiling_out(C_PROFILING_NL_OPERATOR)
-
-  end subroutine znl_operator_operate_cmplx
 
 end module nl_operator_m
