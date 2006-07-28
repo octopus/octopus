@@ -51,8 +51,8 @@ build-stamp:  config.status
 ifeq (x86_64-linux,$(DEB_HOST_GNU_TYPE))
 	echo "Will assume NAGWare Fortran 95 compiler Release 5.0(395)"
 	FC=f95 \
-	CFLAGS="-static -Wall -O3" \
-	FCFLAGS="-mismatch_all -maxcontin=100 -Bstatic -u -dcfuns -colour=error:red,warn:blue,info:yellow -kind=byte -abi=64 -ieee=full -O4 -Ounroll=4" \
+	CFLAGS="-Wall -O3" \
+	FCFLAGS="-mismatch_all -maxcontin=100 -u -dcfuns -colour=error:red,warn:blue,info:yellow -kind=byte -abi=64 -ieee=full -O4 -Ounroll=4" \
 	./configure --with-lapack="-L$(HOME)/opt/nag -llapack -lg2c" \
 	--with-blas="-L$(HOME)/opt/nag -lblas" \
 	--with-fft-lib="-L$(HOME)/opt/nag -lfftw3" \
@@ -199,7 +199,7 @@ binary-arch: build install
 #	dh_installinit
 #	dh_installcron
 	dh_installman
-	dh_installinfo
+#	dh_installinfo
 #	dh_undocumented
 	dh_installchangelogs ChangeLog
 	dh_link
