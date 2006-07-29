@@ -1,4 +1,4 @@
-!! Copyright (C) 2002 M. Marques, A. Castro, A. Rubio, G. Bertsch
+!! Copyright (C) 2002-2006 M. Marques, A. Castro, A. Rubio, G. Bertsch
 !!
 !! This program is free software; you can redistribute it and/or modify
 !! it under the terms of the GNU General Public License as published by
@@ -15,7 +15,8 @@
 !! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
 !! 02111-1307, USA.
 !!
-!! $Id: mix.F90 2051 2006-05-08 23:09:42Z athimm $
+!! -*- coding: utf-8 mode: f90 -*-
+!! $Id$
 
 #include "global.h"
 

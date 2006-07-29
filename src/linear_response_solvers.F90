@@ -15,7 +15,8 @@
 !! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
 !! 02111-1307, USA.
 !!
-!! $Id: linear_response_inc.F90 2196 2006-06-12 15:59:20Z xavier $
+!! -*- coding: utf-8 mode: f90 -*-
+!! $Id$
 
 
 ! ---------------------------------------------------------

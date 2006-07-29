@@ -1,5 +1,6 @@
-! $Id$
-!
+!! -*- coding: utf-8 mode: f90 -*-
+!! $Id$
+
 
 #include "global.h"
 
