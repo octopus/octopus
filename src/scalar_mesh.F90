@@ -53,8 +53,8 @@ module scalar_mesh_m
     integer :: np                   ! number of points in the mesh
     FLOAT   :: min, max             ! lower and upper boundary for scalar grid
     FLOAT   :: center               ! highest density of gridpoints is around center
-    FLOAT   :: alpha1 = CNST(0.3)   ! parameters for logarithmic grid below(1) and above(2) center
-    FLOAT   :: alpha2 = CNST(0.3)
+    FLOAT   :: alpha1               ! parameters for logarithmic grid below(1) and above(2) center
+    FLOAT   :: alpha2 
     FLOAT   :: dx                   ! grid spacing for linear grid
     FLOAT, pointer    :: mesh(:)    ! the mesh points
     FLOAT, pointer    :: weights(:) ! weights for integrations
@@ -74,7 +74,7 @@ contains
     call push_sub('scalar_mesh.scalar_mesh_init')
     !%Variable ScalarMeshType
     !%Type integer
-    !%Default mesh_sinh
+    !%Default mesh_linear
     !%Section Math::General
     !%Description
     !% Specifies what kind of scalar mesh will be used
@@ -89,11 +89,11 @@ contains
     !%Option gauss_legendre 5
     !% Gauss-Legendre mesh
     !%End
-    call loct_parse_int  (check_inp(trim(label)//'MeshType'),             4, sm%mtype)
+    call loct_parse_int  (check_inp(trim(label)//'MeshType'),             1, sm%mtype)
     if( sm%mtype.lt.MESH_MINVAL.or.sm%mtype.gt.MESH_MAXVAL ) then
       call input_error(check_inp(trim(label)//'MeshType'))
     end if
-    call loct_parse_int  (check_inp(trim(label)//'MeshNPoints'),         20, sm%np)
+    call loct_parse_int  (check_inp(trim(label)//'MeshNPoints'),          0, sm%np)
     call loct_parse_float(check_inp(trim(label)//'MeshMin'),      CNST(0.0), sm%min)
     call loct_parse_float(check_inp(trim(label)//'MeshMax'),      CNST(4.0), sm%max)
     call loct_parse_float(check_inp(trim(label)//'MeshCenter'),   CNST(2.0), sm%center)
@@ -193,6 +193,9 @@ contains
           sm%weights(sm%np+1 - i) = EMcLCoeff(i)*(sm%max-sm%min)/(sm%np-1)
         end do
       end if
+
+      ! special case of a single point
+      if (sm%np .eq. 1) sm%weights = M_ONE
 
 
     case(MESH_LOG)
