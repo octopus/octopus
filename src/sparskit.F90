@@ -61,7 +61,7 @@ module sparskit_m
     zsk_driver_fgmres,           &
     zsk_driver_dqgmres
 
-  integer, private, parameter :: &
+  integer, public, parameter ::  &
     SK_CG      =  1,             &  ! Conjugate Gradient Method
     SK_CGNR    =  2,             &  ! Conjugate Gradient Method (Normal Residual equation)
     SK_BCG     =  3,             &  ! Bi-Conjugate Gradient Method
@@ -75,7 +75,7 @@ module sparskit_m
     SK_MINVAL  = SK_CG,          &
     SK_MAXVAL  = SK_DQGMRES
 
-  FLOAT, allocatable   :: sk_work(:), sk_b(:), sk_y(:)
+  FLOAT, allocatable :: sk_work(:), sk_b(:), sk_y(:)
 
   type sparskit_solver_t
     integer :: size                 ! size of the linear system
@@ -84,11 +84,14 @@ module sparskit_m
     integer :: preconditioning      ! what kind of preconditioning to use
     integer :: maxiter              ! maximum number of iterations
     integer :: used_iter            ! number of performed iterations
+    integer :: iter_out             ! determines how often status info of the solver is printed
+    FLOAT   :: residual_norm        ! used store current error norm
     FLOAT   :: rel_tolerance        ! relative tolerance
     FLOAT   :: abs_tolerance        ! absolute tolerance
 
     integer :: ipar(16)             ! integer parameter array for the reverse communication protocol
     FLOAT   :: fpar(16)             ! floating-point parameter array for the reverse communication protocol
+    logical :: verbose              ! if .true. then the solver will emit more details
   end type sparskit_solver_t
 
 
@@ -108,14 +111,14 @@ end module sparskit_m
 
 
 ! ---------------------------------------------------------
-FLOAT function distdot(n,x,ix,y,iy)
+FLOAT function distdot(n, x, ix, y, iy)
   use blas_m
   !  use lib_basic_alg_m
 
   integer, intent(in) :: n, ix, iy
-  FLOAT, intent(in)   :: x, y
+  FLOAT,   intent(in) :: x, y
 
-  distdot = ddot(n,x,ix,y,iy)
+  distdot = ddot(n, x, ix, y, iy)
   !  distdot = lalg_dot(n, x, y)
 
 end function distdot

@@ -19,7 +19,7 @@
 !! $Id$
 
 ! ---------------------------------------------------------
-subroutine DRIVER (sk, op, sol, rhs, sk_work)
+subroutine DRIVER (sk, op, opt, sol, rhs, sk_work)
   type(sparskit_solver_t), intent(inout) :: sk
   R_TYPE, intent(in)    :: rhs(:)
   R_TYPE, intent(out)   :: sol(:)
@@ -30,6 +30,10 @@ subroutine DRIVER (sk, op, sol, rhs, sk_work)
       FLOAT, intent(in)  :: x(:)
       FLOAT, intent(out) :: y(:)
     end subroutine op
+    subroutine opt(x, y)
+      FLOAT, intent(in)  :: x(:)
+      FLOAT, intent(out) :: y(:)
+    end subroutine opt
   end interface
 #endif
 #ifdef R_TCOMPLEX
@@ -38,6 +42,10 @@ subroutine DRIVER (sk, op, sol, rhs, sk_work)
       FLOAT, intent(in)  :: xre(:), xim(:)
       FLOAT, intent(out) :: yre(:), yim(:)
     end subroutine op
+    subroutine opt(xre, xim, yre, yim)
+      FLOAT, intent(in)  :: xre(:), xim(:)
+      FLOAT, intent(out) :: yre(:), yim(:)
+    end subroutine opt
   end interface
 #endif
 
@@ -47,11 +55,16 @@ subroutine DRIVER (sk, op, sol, rhs, sk_work)
 
 #ifdef R_TREAL
   sk_b = rhs
+  ! initial guess
+  sk_y = sol
 #endif
 #ifdef R_TCOMPLEX
   do i = 1, sk%size/2
     sk_b(i)           = real (rhs(i))
     sk_b(i+sk%size/2) = aimag(rhs(i))
+    ! initial guess
+    sk_y(i)           = real (sol(i))
+    sk_y(i+sk%size/2) = aimag(sol(i))
   end do
 #endif
 
@@ -84,8 +97,13 @@ subroutine DRIVER (sk, op, sol, rhs, sk_work)
 #endif
     case(2)
       ! call atmux(n,w(sk%ipar(8)),w(sk%ipar(9)),a,ja,ia)
-      message(1) = 'Error: Matrix vector multiplication with A^T not implemented yet.'
-      call write_fatal(1)
+#ifdef R_TREAL
+      call opt(sk_work(sk%ipar(8):sk%ipar(8)+sk%size),sk_work(sk%ipar(9):sk%ipar(9)+sk%size))
+#endif
+#ifdef R_TCOMPLEX
+      call opt(sk_work(sk%ipar(8):sk%ipar(8)+sk%size/2),sk_work(sk%ipar(8)+sk%size/2:sk%ipar(8)+sk%size), &
+        sk_work(sk%ipar(9):sk%ipar(9)+sk%size/2),sk_work(sk%ipar(9)+sk%size/2:sk%ipar(9)+sk%size))
+#endif
     case(3)
       ! left preconditioner solver
       message(1) = 'Error: Preconditioning not implemented yet.'
@@ -106,8 +124,9 @@ subroutine DRIVER (sk, op, sol, rhs, sk_work)
       ! successful exit of solver
       exit solver_iter
     case(-1)
-      message(1) = 'Error: Maximum iteration number "SparskitMaxIter" exceeded.'
-      call write_fatal(1)
+!      message(1) = 'Warning: Maximum iteration number "SparskitMaxIter" exceeded.'
+!      call write_warning(1)
+      exit solver_iter
     case(-2)
       message(1) = 'Error: Insufficient work space.'
       call write_fatal(1)
@@ -131,15 +150,30 @@ subroutine DRIVER (sk, op, sol, rhs, sk_work)
       call write_fatal(1)
     end select
 
+    if(sk%iter_out > 0) then
+      if(mod(i, sk%iter_out) == 0) then
+        write(message(1), '(a,i7)') 'Sparskit Iter: ', i
+        call write_info(1)
+      end if
+    end if
+      
   end do solver_iter
 
   if(i.gt.sk%maxiter) then
-    message(1) = 'Warning: Maxiter reached'
-    call write_fatal(1)
+!    message(1) = 'Warning: Maxiter reached'
+!    call write_warning(1)
   end if
 
+  ! set back to zero to initialize the solver for the next call
+  sk%ipar(1) = 0
   ! store the number of iterations used
-  sk%used_iter = i
+  sk%used_iter = i - 1
+  ! reset 
+  sk%ipar(7) = 0
+
+  ! store current error norm
+  sk%residual_norm = sk%fpar(6)
+
 
 #ifdef R_TREAL
   sol = sk_y

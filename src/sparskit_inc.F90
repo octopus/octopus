@@ -93,7 +93,16 @@ subroutine X(sparskit_solver_init)(n, sk)
   !% This variable controls the maximum number of iteration steps that
   !% will be performed by the (iterative) linear solver.
   !%End
-  call loct_parse_int(check_inp('SparskitMaxIter'),          1000, sk%maxiter)
+  call loct_parse_int(check_inp('SparskitMaxIter'),          5000, sk%maxiter)
+
+  !%Variable SparskitIterOut
+  !%Type integer
+  !%Default 0
+  !%Section Math::General
+  !%Description
+  !% Determines how often status info of the solver is printed
+  !%End
+  call loct_parse_int(check_inp('SparskitIterOut'),            -1, sk%iter_out)
 
   !%Variable SparskitRelTolerance
   !%Type float
@@ -104,7 +113,7 @@ subroutine X(sparskit_solver_init)(n, sk)
   !% for the iteratve solution process. This variable can be used to 
   !% specify the tolerance.
   !%End
-  call loct_parse_float(check_inp('SparskitRelTolerance'), CNST(1e-8), sk%rel_tolerance)
+  call loct_parse_float(check_inp('SparskitRelTolerance'), CNST(1e-5), sk%rel_tolerance)
 
   !%Variable SparskitAbsTolerance
   !%Type float
@@ -115,7 +124,15 @@ subroutine X(sparskit_solver_init)(n, sk)
   !% for the iteratve solution process. This variable can be used to 
   !% specify the tolerance.
   !%End
-  call loct_parse_float(check_inp('SparskitAbsTolerance'), CNST(1e-8), sk%abs_tolerance)
+  call loct_parse_float(check_inp('SparskitAbsTolerance'), CNST(1e-10), sk%abs_tolerance)
+
+  !%Type logical
+  !%Default no
+  !%Section Math::General
+  !%Description
+  !% When set to yes, the sparskit solver will emit more details 
+  !%End
+  call loct_parse_logical(check_inp('SparskitVerboseSolver'), .false., sk%verbose)
 
   ! size of the problem
   sk%size = n
@@ -123,6 +140,8 @@ subroutine X(sparskit_solver_init)(n, sk)
   sk%size = 2*n
 #endif
 
+  ! initialize workspace size
+  workspace_size = 0 
 
   ! Krylov subspace size
   m = sk%krylov_size
@@ -160,7 +179,6 @@ subroutine X(sparskit_solver_init)(n, sk)
     message(1) = 'Info: Sparskit solver type: Direct versions of Quasi Generalize Minimum Residual method'
     workspace_size = sk%size + (m+1) * (2*sk%size+4)
   case default
-    workspace_size = 0 !this avoid uninitialized warning
     write(message(1), '(a,i4,a)') "Input: '", sk%solver_type, &
       "' is not a valid Sparskit Solver"
     message(2) = '( Sparskit Solver =  cg | cgnr | bcg | dbcg | bcgstab | tfqmr | fom | gmres | fgmres | dqgmres )'
@@ -202,7 +220,7 @@ end subroutine X(sparskit_solver_init)
 
 
 ! ---------------------------------------------------------
-subroutine X(sparskit_solver_run)(sk, op, sol, rhs)
+subroutine X(sparskit_solver_run)(sk, op, opt, sol, rhs)
   type(sparskit_solver_t), intent(inout) :: sk
   R_TYPE, intent(in)  :: rhs(:)
   R_TYPE, intent(out) :: sol(:)
@@ -212,6 +230,10 @@ subroutine X(sparskit_solver_run)(sk, op, sol, rhs)
       FLOAT, intent(in)  :: x(:)
       FLOAT, intent(out) :: y(:)
     end subroutine op
+    subroutine opt(x, y)
+      FLOAT, intent(in)  :: x(:)
+      FLOAT, intent(out) :: y(:)
+    end subroutine opt
   end interface
 #endif
 #ifdef R_TCOMPLEX
@@ -220,33 +242,40 @@ subroutine X(sparskit_solver_run)(sk, op, sol, rhs)
       FLOAT, intent(in)  :: xre(:), xim(:)
       FLOAT, intent(out) :: yre(:), yim(:)
     end subroutine op
+    subroutine opt(xre, xim, yre, yim)
+      FLOAT, intent(in)  :: xre(:), xim(:)
+      FLOAT, intent(out) :: yre(:), yim(:)
+    end subroutine opt
   end interface
 #endif
 
 
   call push_sub('sparskit_inc.Xsparskit_solver_run')
 
+  ! initialize counter
+  sk%used_iter = 0
+
   select case(sk%solver_type)
   case(SK_CG)
-    call X(sk_driver_cg)     (sk, op, sol, rhs, sk_work)
-  case(SK_CGNR)
-    call X(sk_driver_cgnr)   (sk, op, sol, rhs, sk_work)
-  case(SK_BCG)
-    call X(sk_driver_bcg)    (sk, op, sol, rhs, sk_work)
-  case(SK_DBCG)
-    call X(sk_driver_dbcg)   (sk, op, sol, rhs, sk_work)
-  case(SK_BCGSTAB)
-    call X(sk_driver_bcgstab)(sk, op, sol, rhs, sk_work)
-  case(SK_TFQMR)
-    call X(sk_driver_tfqmr)  (sk, op, sol, rhs, sk_work)
-  case(SK_FOM)
-    call X(sk_driver_fom)    (sk, op, sol, rhs, sk_work)
-  case(SK_GMRES)
-    call X(sk_driver_gmres)  (sk, op, sol, rhs, sk_work)
-  case(SK_FGMRES)
-    call X(sk_driver_fgmres) (sk, op, sol, rhs, sk_work)
-  case(SK_DQGMRES)
-    call X(sk_driver_dqgmres)(sk, op, sol, rhs, sk_work)
+    call X(sk_driver_cg)     (sk, op, opt, sol, rhs, sk_work)
+  case(SK_CGNR)                          
+    call X(sk_driver_cgnr)   (sk, op, opt, sol, rhs, sk_work)
+  case(SK_BCG)                           
+    call X(sk_driver_bcg)    (sk, op, opt, sol, rhs, sk_work)
+  case(SK_DBCG)                          
+    call X(sk_driver_dbcg)   (sk, op, opt, sol, rhs, sk_work)
+  case(SK_BCGSTAB)                       
+    call X(sk_driver_bcgstab)(sk, op, opt, sol, rhs, sk_work)
+  case(SK_TFQMR)                         
+    call X(sk_driver_tfqmr)  (sk, op, opt, sol, rhs, sk_work)
+  case(SK_FOM)                           
+    call X(sk_driver_fom)    (sk, op, opt, sol, rhs, sk_work)
+  case(SK_GMRES)                         
+    call X(sk_driver_gmres)  (sk, op, opt, sol, rhs, sk_work)
+  case(SK_FGMRES)                        
+    call X(sk_driver_fgmres) (sk, op, opt, sol, rhs, sk_work)
+  case(SK_DQGMRES)                       
+    call X(sk_driver_dqgmres)(sk, op, opt, sol, rhs, sk_work)
   case default
     write(message(1), '(a,i4,a)') "Input: '", sk%solver_type, &
       "' is not a valid Sparsekit Solver"
