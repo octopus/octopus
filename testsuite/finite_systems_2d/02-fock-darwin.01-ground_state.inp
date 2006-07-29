@@ -1,3 +1,4 @@
+# -*- coding: utf-8 mode: shell-script -*-
 # $Id$
 #
 # This is a 2D system of 20 non-interacting electrons in 2D, confined

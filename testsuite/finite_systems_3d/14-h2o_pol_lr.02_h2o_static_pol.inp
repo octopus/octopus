@@ -1,4 +1,5 @@
-# $Id:$
+# -*- coding: utf-8 mode: shell-script -*-
+# $Id$
 
 SystemName = 'H2O'
 CalculationMode = pol_lr

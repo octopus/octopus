@@ -1,3 +1,4 @@
+# -*- coding: utf-8 mode: shell-script -*-
 # $Id$
 #
 # This test calculates a one-dimensional model for Hydrogen, considering

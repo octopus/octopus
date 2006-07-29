@@ -1,4 +1,5 @@
-# $Id: 03-asym_doublewell.test 2072 2006-05-14 10:45:38Z athimm $
+# -*- coding: utf-8 mode: shell-script -*-
+# $Id$
 
 Test     : Asymmetric Double Well
 Author   : Jan

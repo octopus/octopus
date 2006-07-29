@@ -1,3 +1,6 @@
+# -*- coding: utf-8 mode: shell-script -*-
+# $Id:$
+
 SystemName = "Full potential hydrogen"
 %Coordinates
  'H_f' | 0 | 0 | 0

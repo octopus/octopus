@@ -1,4 +1,5 @@
-# $Id: 01-hydrogen.01-ground_state.inp 1890 2006-03-11 20:26:30Z appel $
+# -*- coding: utf-8 mode: shell-script -*-
+# $Id$
 #
 # The two lowest eigenstates of the asymmetric double well,
 #  V(x) = 1/64*(x)^4-1/4*(x)^2+1/256*(x)^3
