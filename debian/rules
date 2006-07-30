@@ -61,7 +61,6 @@ ifeq (x86_64-linux,$(DEB_HOST_GNU_TYPE))
 	--with-arpack="-L$(HOME)/opt/nag/lib -larpack" \
 	--with-sparskit="-L$(HOME)/opt/nag/lib -lskit" \
 	--disable-gdlib \
-	--program-suffix="-nag-5.0" \
 	--host=$(DEB_HOST_GNU_TYPE) --build=$(DEB_BUILD_GNU_TYPE) \
 	--prefix=/usr --mandir=\$${prefix}/share/man --infodir=\$${prefix}/share/info
 endif
@@ -97,6 +96,10 @@ endif
 
   # Add here commands to install the package into debian/octopus.
 	$(MAKE) install prefix=$(CURDIR)/debian/octopus/usr
+
+ifeq (x86_64-linux,$(DEB_HOST_GNU_TYPE))
+	cd $(CURDIR)/debian/octopus/usr/bin && ln -s octopus octopus-nag-5.0
+endif
 
 
 ## Intel(R) Fortran Compiler for Intel(R) EM64T-based applications, Version 9.1, Build 20060707
@@ -216,11 +219,10 @@ endif
 	$(MAKE)
 
   # Add here commands to install the package into debian/octopus.
-ifeq (x86_64-linux,$(DEB_HOST_GNU_TYPE))
-	install -m 755 src/octopus_mpi $(CURDIR)/debian/octopus/usr/bin/octopus-nag-5.0_mpi
-endif
-ifeq (i386-linux,$(DEB_HOST_GNU_TYPE))
 	install -m 755 src/octopus_mpi $(CURDIR)/debian/octopus/usr/bin/octopus_mpi
+
+ifeq (x86_64-linux,$(DEB_HOST_GNU_TYPE))
+	cd $(CURDIR)/debian/octopus/usr/bin && ln -s octopus_mpi octopus-nag-5.0_mpi
 endif
 
 
