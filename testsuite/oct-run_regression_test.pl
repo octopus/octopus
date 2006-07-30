@@ -18,6 +18,7 @@ Usage: oct-run_regression_test.pl [options]
     -v        verbose
     -h        this usage
     -e        name of octopus executable
+    -s        exec suffix for octopus executable
     -c        create template
     -f        filename of testsuite
     -d        working directory for the tests
@@ -72,7 +73,7 @@ EndOfTemplate
 
 if (not @ARGV) { usage; }
 
-getopts("nlvhe:c:f:d:ipm");
+getopts("nlvhe:c:f:d:s:ipm");
 
 # Default values
 use File::Temp qw/tempdir/;
@@ -98,6 +99,10 @@ die "could not find executable: $octopus_exe \n" if (`which $octopus_exe` eq "")
 
 
 chomp($octopus_exe);
+
+# determine exec suffix
+$exec_suffix = "";
+if($opt_s)  { $exec_suffix = $opt_s; } 
 
 $octopus_base = basename($octopus_exe);
 chomp($octopus_base);
@@ -135,7 +140,7 @@ while ($_ = <TESTSUITE>) {
   if(!$opt_i) {
     print "\033[34m ***** $test{\"name\"} ***** \033[0m \n\n";
     print "Using workdir    : $workdir \n";
-    print "Using executable : $octopus_exe \n";
+    print "Using executable : $octopus_exe$exec_suffix \n";
     print "Using test file  : $opt_f \n";
   }
  }
@@ -189,23 +194,26 @@ while ($_ = <TESTSUITE>) {
        if ( !$opt_n ) {
 	 print "\nStarting test run ...\n";
 
+	 # if given, first append exec suffix
+	 if($opt_s)  { $octopus_exe_suffix = $octopus_exe . $exec_suffix; }
+
 	 # serial or MPI run?
-	 if ( $octopus_exe =~ /mpi$/) {
+	 if ( $octopus_exe_suffix =~ /mpi$/) {
 	   if( -x "$mpirun") {
-	     print "Executing: cd $workdir; $mpirun -np $np $octopus_exe > out 2>&1 \n";
-	     system("cd $workdir; $mpirun -np $np $octopus_exe > out 2>&1");
+	     print "Executing: cd $workdir; $mpirun -np $np $octopus_exe_suffix > out 2>&1 \n";
+	     system("cd $workdir; $mpirun -np $np $octopus_exe_suffix > out 2>&1");
 	   } else {
 	     print "No mpirun found: Skipping parallel test \n";
 	     exit 1;
 	   }
 	 } else {
-	   print "Executing: cd $workdir; $octopus_exe > out 2>&1 \n";
-	   system("cd $workdir; $octopus_exe > out 2>&1");
+	   print "Executing: cd $workdir; $octopus_exe_suffix > out 2>&1 \n";
+	   system("cd $workdir; $octopus_exe_suffix > out 2>&1");
 	 }
 	 system("grep -B2 -A5 'Running octopus' $workdir/out > build-stamp");
 	 print "Finished test run.\n\n"; }
        else {
-	 if(!$opt_i) { print "cd $workdir; $octopus_exe < inp > out 2>&1 \n"; }
+	 if(!$opt_i) { print "cd $workdir; $octopus_exe_suffix < inp > out 2>&1 \n"; }
        }
        $test{"run"} = 1;
      }

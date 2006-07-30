@@ -26,6 +26,7 @@ Usage: oct-run_testsuite [options]
      -s            run short testsuite
      -f            run full testsuite
      -l            local run
+     -e            exec suffix for octopus executable
      -p            installation prefix [default: /usr]
      -m address    mail report to address
 
@@ -52,12 +53,13 @@ function run_testsuite() {
 for x in $octopus_exe; do
     for y in $(find $testsuite -name "*.test" | xargs grep $match | awk -F: '{print $1}' | sort -u); do
 	ybase=`basename $y`
-	xybase=${x}-${ybase%.test}
+	xybase=${x}${exec_suffix}-${ybase%.test}
 	if [ "$local_run" == "yes" ]; then
 	    octopus_local=`pwd`/../src/$x
 	    [ -x $octopus_local ] && CMD ./oct-run_regression_test.pl -l -p -e $octopus_local -f $y | tee ${xybase}.log
 	else
-	    [ -x $prefix/bin/$x ] && CMD $prefix/bin/oct-run_regression_test.pl -l -p -e $prefix/bin/$x -f $y | tee ${xybase}.log
+	    [ -x $prefix/bin/${x}${exec_suffix} ] && \
+		CMD $prefix/bin/oct-run_regression_test.pl -l -p -e $prefix/bin/$x -s ${exec_suffix} -f $y | tee ${xybase}.log
 	fi
 	[ -e out.log ] && mv out.log ${xybase}.out.log
     done
@@ -102,11 +104,12 @@ done
 match="short-run"
 send_mail="no"
 
-while getopts "hnlsfp:m:" opt ; do
+while getopts "hnlsfp:e:m:" opt ; do
     case "$opt" in
         h) usage ;;
         n) echo="echo"; dry_run="yes";; 
         p) prefix="$OPTARG"; testsuite=$prefix/share/octopus/testsuite ;;
+        e) exec_suffix="$OPTARG";;
         l) local_run="yes";;
         s) match="short-run" ;;
         f) match="long-run" ;;
