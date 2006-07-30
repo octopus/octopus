@@ -195,7 +195,11 @@ while ($_ = <TESTSUITE>) {
 	 print "\nStarting test run ...\n";
 
 	 # if given, first append exec suffix
-	 if($opt_s)  { $octopus_exe_suffix = $octopus_exe . $exec_suffix; }
+	 if($opt_s) {
+           $octopus_exe_suffix = $octopus_exe . $exec_suffix;
+         } else {
+           $octopus_exe_suffix = $octopus_exe
+         }
 
 	 # serial or MPI run?
 	 if ( $octopus_exe_suffix =~ /mpi$/) {

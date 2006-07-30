@@ -58,8 +58,13 @@ for x in $octopus_exe; do
 	    octopus_local=`pwd`/../src/$x
 	    [ -x $octopus_local ] && CMD ./oct-run_regression_test.pl -l -p -e $octopus_local -f $y | tee ${xybase}.log
 	else
-	    [ -x $prefix/bin/${x}${exec_suffix} ] && \
-		CMD $prefix/bin/oct-run_regression_test.pl -l -p -e $prefix/bin/$x -s ${exec_suffix} -f $y | tee ${xybase}.log
+	    if [ -x $prefix/bin/${x}${exec_suffix} ]; then
+              if [ -z "${exec_suffix}" ]; then
+		CMD $prefix/bin/oct-run_regression_test.pl -l -p -e $prefix/bin/$x -f $y | tee ${xybase}.log
+              else
+                CMD $prefix/bin/oct-run_regression_test.pl -l -p -e $prefix/bin/$x -s ${exec_suffix} -f $y | tee ${xybase}.log
+              fi
+            fi
 	fi
 	[ -e out.log ] && mv out.log ${xybase}.out.log
     done
