@@ -216,7 +216,12 @@ endif
 	$(MAKE)
 
   # Add here commands to install the package into debian/octopus.
+ifeq (x86_64-linux,$(DEB_HOST_GNU_TYPE))
+	install -m 755 src/octopus_mpi $(CURDIR)/debian/octopus/usr/bin/octopus-nag-5.0_mpi
+endif
+ifeq (i386-linux,$(DEB_HOST_GNU_TYPE))
 	install -m 755 src/octopus_mpi $(CURDIR)/debian/octopus/usr/bin/octopus_mpi
+endif
 
 
 ## Intel(R) Fortran Compiler for Intel(R) EM64T-based applications, Version 9.1, Build 20060707
