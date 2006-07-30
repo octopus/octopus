@@ -61,6 +61,7 @@ ifeq (x86_64-linux,$(DEB_HOST_GNU_TYPE))
 	--with-arpack="-L$(HOME)/opt/nag/lib -larpack" \
 	--with-sparskit="-L$(HOME)/opt/nag/lib -lskit" \
 	--disable-gdlib \
+	--program-suffix="-nag-5.0" \
 	--host=$(DEB_HOST_GNU_TYPE) --build=$(DEB_BUILD_GNU_TYPE) \
 	--prefix=/usr --mandir=\$${prefix}/share/man --infodir=\$${prefix}/share/info
 endif
@@ -228,6 +229,7 @@ ifeq (x86_64-linux,$(DEB_HOST_GNU_TYPE))
 	echo "Will use Intel(R) Fortran Compiler, Version 9.1, Build 20060707"
 	FC=$(HOME)/opt/intel-9.1/mpich2/bin/mpif90  \
 	CFLAGS="-Wall -O3" \
+	LDFLAGS="-L$(HOME)/opt/intel-9.1/mpich2/lib -lmpich" \
 	FCFLAGS="-O3 -funroll-loops -align -pad -ip -I$(HOME)/opt/intel-9.1/include" \
 	./configure \
 	--program-suffix="-intel-9.1" \
@@ -256,6 +258,7 @@ ifeq (x86_64-linux,$(DEB_HOST_GNU_TYPE))
 	echo "Will use Intel(R) Fortran Compiler, Version 9.1, Build 20060707"
 	FC=$(HOME)/opt/intel-9.1/mpich2/bin/mpif90  \
 	CFLAGS="-Wall -g -O0" \
+	LDFLAGS="-L$(HOME)/opt/intel-9.1/mpich2/lib -lmpich" \
 	FCFLAGS="-g -O0 -assume minus0 -debug extended -debug-parameters all -inline-debug-info -std90 -fpe0 -traceback -fpstkchk -vec-report0 -mp1 -prec_div -warn ignore_loc -warn uncalled -warn unused -warn truncated_source -warn interfaces -warn declarations -ftrapuv -check noarg_temp_created -check bounds -check format -check output_conversion -check uninit -I$(HOME)/opt/intel-9.1/include" \
 	./configure \
 	--program-suffix="-intel-9.1-debug" \
