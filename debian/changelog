@@ -1,3 +1,18 @@
+octopus (2.1pre1-3) unstable; urgency=low
+
+  * On amd64 linking to the gdlib causes octopus to segfault always when 
+    statically linked executables are used (independent of the compiler). 
+    Add --disable-gdlib so that -Bstatic/-static can be used again. 
+ 
+  * Adding optimized and debug executables to the package. They are build with
+    the Intel compiler. The executables carry the program suffix -intel-9.1 and
+    -intel-9.1-debug respectively. This is mainly used for nightly builds and 
+    regression testing.
+
+  * Remove outdated metis configure options.
+
+ -- Heiko Appel <appel@physik.fu-berlin.de>  Sun, 30 Jul 2006 11:34:46 +0200
+
 octopus (2.1pre1-2) unstable; urgency=low
 
   * Upstream removed the complex executable from the build 

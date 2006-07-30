@@ -51,20 +51,19 @@ build-stamp:  config.status
 ifeq (x86_64-linux,$(DEB_HOST_GNU_TYPE))
 	echo "Will assume NAGWare Fortran 95 compiler Release 5.0(395)"
 	FC=f95 \
-	CFLAGS="-Wall -O3" \
-	FCFLAGS="-mismatch_all -maxcontin=100 -u -dcfuns -colour=error:red,warn:blue,info:yellow -kind=byte -abi=64 -ieee=full -O4 -Ounroll=4" \
+	CFLAGS="-Wall -static -O3" \
+	FCFLAGS="-mismatch_all -Bstatic -maxcontin=100 -u -dcfuns -colour=error:red,warn:blue,info:yellow -kind=byte -abi=64 -ieee=full -O4 -Ounroll=4" \
 	./configure --with-lapack="-L$(HOME)/opt/nag -llapack -lg2c" \
 	--with-blas="-L$(HOME)/opt/nag -lblas" \
 	--with-fft-lib="-L$(HOME)/opt/nag -lfftw3" \
 	--with-netcdf="-L$(HOME)/opt/nag/lib -I$(HOME)/opt/nag/include -lnetcdf" \
-	--with-metis="-L$(HOME)/opt/nag/lib -I$(HOME)/opt/nag/include -lmetis" \
 	--with-jdqz="-L$(HOME)/opt/nag/lib" \
 	--with-arpack="-L$(HOME)/opt/nag/lib -larpack" \
 	--with-sparskit="-L$(HOME)/opt/nag/lib -lskit" \
+	--disable-gdlib \
 	--host=$(DEB_HOST_GNU_TYPE) --build=$(DEB_BUILD_GNU_TYPE) \
 	--prefix=/usr --mandir=\$${prefix}/share/man --infodir=\$${prefix}/share/info
 endif
-
 
 ## Intel(R) Fortran Compiler for 32-bit applications, Version 7.1   Build 20031103Z
 ifeq (i386-linux,$(DEB_HOST_GNU_TYPE))
@@ -98,8 +97,69 @@ endif
   # Add here commands to install the package into debian/octopus.
 	$(MAKE) install prefix=$(CURDIR)/debian/octopus/usr
 
-  # inbetween we cleanup
+
+## Intel(R) Fortran Compiler for Intel(R) EM64T-based applications, Version 9.1, Build 20060707
+ifeq (x86_64-linux,$(DEB_HOST_GNU_TYPE))
+	# inbetween we cleanup
 	$(MAKE) distclean
+
+	# first a optimized version	
+	autoreconf -i
+
+	echo "Will use Intel(R) Fortran Compiler, Version 9.1, Build 20060707"
+	FC=ifort \
+	CFLAGS="-Wall -static -O3" \
+	FCFLAGS="-static -O3 -funroll-loops -align -pad -ip -I$(HOME)/opt/intel-9.1/include" \
+	./configure \
+	--program-suffix="-intel-9.1" \
+	--with-lapack="-L$(HOME)/opt/intel-9.1/lib -llapack" \
+	--with-blas="-L$(HOME)/opt/intel-9.1/lib -lblas" \
+	--with-fft-lib="-L$(HOME)/opt/intel-9.1/lib -lfftw3" \
+	--with-netcdf="-L$(HOME)/opt/intel-9.1/lib -I$(HOME)/opt/intel-9.1/include -lnetcdf" \
+	--with-jdqz="-L$(HOME)/opt/intel-9.1/lib" \
+	--with-arpack="-L$(HOME)/opt/intel-9.1/lib -larpack" \
+	--with-sparskit="-L$(HOME)/opt/intel-9.1/lib -lskit" \
+	--disable-gdlib \
+	--host=$(DEB_HOST_GNU_TYPE) --build=$(DEB_BUILD_GNU_TYPE) \
+	--prefix=/usr --mandir=\$${prefix}/share/man --infodir=\$${prefix}/share/info
+
+	$(MAKE)
+
+	# only install executables
+	$(MAKE) -C src install prefix=$(CURDIR)/debian/octopus/usr
+
+	# inbetween we cleanup	
+	$(MAKE) distclean
+
+	# next the debug version
+	autoreconf -i
+
+	echo "Will use Intel(R) Fortran Compiler, Version 9.1, Build 20060707"
+	FC=ifort \
+	CFLAGS="-Wall -static -g -O0" \
+	FCFLAGS="-static -g -O0 -assume minus0 -debug extended -debug-parameters all -inline-debug-info -std90 -fpe0 -traceback -fpstkchk -vec-report0 -mp1 -prec_div -warn ignore_loc -warn uncalled -warn unused -warn truncated_source -warn interfaces -warn declarations -ftrapuv -check noarg_temp_created -check bounds -check format -check output_conversion -check uninit -I$(HOME)/opt/intel-9.1/include" \
+	./configure \
+	--program-suffix="-intel-9.1-debug" \
+	--with-lapack="-L$(HOME)/opt/intel-9.1/lib -llapack" \
+	--with-blas="-L$(HOME)/opt/intel-9.1/lib -lblas" \
+	--with-fft-lib="-L$(HOME)/opt/intel-9.1/lib -lfftw3" \
+	--with-netcdf="-L$(HOME)/opt/intel-9.1/lib -I$(HOME)/opt/intel-9.1/include -lnetcdf" \
+	--with-jdqz="-L$(HOME)/opt/intel-9.1/lib" \
+	--with-arpack="-L$(HOME)/opt/intel-9.1/lib -larpack" \
+	--with-sparskit="-L$(HOME)/opt/intel-9.1/lib -lskit" \
+	--disable-gdlib \
+	--host=$(DEB_HOST_GNU_TYPE) --build=$(DEB_BUILD_GNU_TYPE) \
+	--prefix=/usr --mandir=\$${prefix}/share/man --infodir=\$${prefix}/share/info
+
+	$(MAKE)
+
+	# only install executables
+	$(MAKE) -C src install prefix=$(CURDIR)/debian/octopus/usr
+
+	# inbetween we cleanup	
+	$(MAKE) distclean
+endif
+
 
 
 ####################################################################################################
@@ -114,13 +174,13 @@ ifeq (x86_64-linux,$(DEB_HOST_GNU_TYPE))
 	echo "Will assume NAGWare Fortran 95 compiler Release 5.0(395)"
 	FC=$(HOME)/opt/nag/mpich/bin/mpif90 \
 	CPPFLAGS="-I$(HOME)/opt/nag/mpich/include" \
-	CFLAGS="-static -Wall -O3 -I$(HOME)/opt/nag/include/metis -I$(HOME)/opt/nag/include" \
-	FCFLAGS="-colour -kind=byte -mismatch_all -abi=64 -ieee=full -O4 -Ounroll=4 -Bstatic" \
+	CFLAGS="-Wall -O3 -I$(HOME)/opt/nag/include" \
+	FCFLAGS="-colour -kind=byte -mismatch_all -abi=64 -ieee=full -O4 -Ounroll=4" \
 	./configure --with-lapack="-L$(HOME)/opt/nag -llapack -lg2c" --with-blas="-L$(HOME)/opt/nag -lblas" \
-	--with-metis="-L$(HOME)/opt/nag/lib -I$(HOME)/opt/nag/include -lmetis" \
 	--with-jdqz="-L$(HOME)/opt/nag/lib" \
 	--with-arpack="-L$(HOME)/opt/nag/lib -larpack" \
 	--with-sparskit="-L$(HOME)/opt/nag/lib -lskit" \
+	--disable-gdlib \
 	--enable-mpi --program-suffix="-mpi" \
 	--host=$(DEB_HOST_GNU_TYPE) --build=$(DEB_BUILD_GNU_TYPE) \
 	--prefix=/usr --mandir=\$${prefix}/share/man --infodir=\$${prefix}/share/info
@@ -134,14 +194,13 @@ ifeq (i386-linux,$(DEB_HOST_GNU_TYPE))
 	LDFLAGS="-lpthread -L$(HOME)/opt/intel/mpich/lib -lmpich" \
 	LDFCFLAGS="-L/usr/lib -lpthread" \
 	FCFLAGS="-mp1 -prec_div -O3 -tpp7 -xW -static \
-	-I$(HOME)/opt/intel/include -I$(HOME)/opt/intel/include/metis -I$(HOME)/opt/intel/mpich/include" \
+	-I$(HOME)/opt/intel/include -I$(HOME)/opt/intel/mpich/include" \
 	CPPFLAGS="-I$(HOME)/opt/intel/include -I$(HOME)/opt/intel/mpich/include" \
-	CFLAGS="-static -Wall -O3 -I$(HOME)/opt/intel/include/metis" \
+	CFLAGS="-static -Wall -O3" \
 	./configure  \
 	--with-blas="-L/opt/intel/compiler70/ia32/lib -lguide -lCEPCF90 -L$(HOME)/opt/intel/lib -lblas -L/usr/lib -lpthread" \
 	--with-lapack="-L/opt/intel/compiler70/ia32/lib -lguide -lCEPCF90 -L$(HOME)/opt/intel/lib -llapack -L/usr/lib -lpthread" \
 	--with-fft-lib="-L/opt/intel/compiler70/ia32/lib -lguide -lCEPCF90 -L$(HOME)/opt/intel/lib -lfftw3 -L/usr/lib -lpthread" \
-	--with-metis="-L/opt/intel/compiler70/ia32/lib -lguide -lCEPCF90 -I$(HOME)/opt/intel/include -L$(HOME)/opt/intel/lib -lmetis -L/usr/lib -lpthread" \
 	--with-netcdf="-L/opt/intel/compiler70/ia32/lib -lguide -lCEPCF90 -L$(HOME)/opt/intel/lib -I$(HOME)/opt/intel/include \
 		       -lnetcdf -L/usr/lib -lpthread" \
 	--with-jdqz="-L$(HOME)/opt/intel/lib" \
@@ -157,6 +216,67 @@ endif
 
   # Add here commands to install the package into debian/octopus.
 	install -m 755 src/octopus_mpi $(CURDIR)/debian/octopus/usr/bin/octopus_mpi
+
+
+## Intel(R) Fortran Compiler for Intel(R) EM64T-based applications, Version 9.1, Build 20060707
+ifeq (x86_64-linux,$(DEB_HOST_GNU_TYPE))
+	# inbetween we cleanup
+	$(MAKE) distclean
+
+	# first a optimized version	
+	autoreconf -i
+	echo "Will use Intel(R) Fortran Compiler, Version 9.1, Build 20060707"
+	FC=$(HOME)/opt/intel-9.1/mpich2/bin/mpif90  \
+	CFLAGS="-Wall -O3" \
+	FCFLAGS="-O3 -funroll-loops -align -pad -ip -I$(HOME)/opt/intel-9.1/include" \
+	./configure \
+	--program-suffix="-intel-9.1" \
+	--with-lapack="-L$(HOME)/opt/intel-9.1/lib -llapack" \
+	--with-blas="-L$(HOME)/opt/intel-9.1/lib -lblas" \
+	--with-fft-lib="-L$(HOME)/opt/intel-9.1/lib -lfftw3" \
+	--with-netcdf="-L$(HOME)/opt/intel-9.1/lib -I$(HOME)/opt/intel-9.1/include -lnetcdf" \
+	--with-jdqz="-L$(HOME)/opt/intel-9.1/lib" \
+	--with-arpack="-L$(HOME)/opt/intel-9.1/lib -larpack" \
+	--with-sparskit="-L$(HOME)/opt/intel-9.1/lib -lskit" \
+	--disable-gdlib \
+	--enable-mpi \
+	--host=$(DEB_HOST_GNU_TYPE) --build=$(DEB_BUILD_GNU_TYPE) \
+	--prefix=/usr --mandir=\$${prefix}/share/man --infodir=\$${prefix}/share/info
+
+	$(MAKE)
+
+	# only install mpi executable
+	install -m 755 src/octopus_mpi $(CURDIR)/debian/octopus/usr/bin/octopus-intel-9.1_mpi
+
+	# inbetween we cleanup	
+	$(MAKE) distclean
+
+	# next the debug version
+	autoreconf -i
+	echo "Will use Intel(R) Fortran Compiler, Version 9.1, Build 20060707"
+	FC=$(HOME)/opt/intel-9.1/mpich2/bin/mpif90  \
+	CFLAGS="-Wall -g -O0" \
+	FCFLAGS="-g -O0 -assume minus0 -debug extended -debug-parameters all -inline-debug-info -std90 -fpe0 -traceback -fpstkchk -vec-report0 -mp1 -prec_div -warn ignore_loc -warn uncalled -warn unused -warn truncated_source -warn interfaces -warn declarations -ftrapuv -check noarg_temp_created -check bounds -check format -check output_conversion -check uninit -I$(HOME)/opt/intel-9.1/include" \
+	./configure \
+	--program-suffix="-intel-9.1-debug" \
+	--with-lapack="-L$(HOME)/opt/intel-9.1/lib -llapack" \
+	--with-blas="-L$(HOME)/opt/intel-9.1/lib -lblas" \
+	--with-fft-lib="-L$(HOME)/opt/intel-9.1/lib -lfftw3" \
+	--with-netcdf="-L$(HOME)/opt/intel-9.1/lib -I$(HOME)/opt/intel-9.1/include -lnetcdf" \
+	--with-jdqz="-L$(HOME)/opt/intel-9.1/lib" \
+	--with-arpack="-L$(HOME)/opt/intel-9.1/lib -larpack" \
+	--with-sparskit="-L$(HOME)/opt/intel-9.1/lib -lskit" \
+	--disable-gdlib \
+	--enable-mpi \
+	--host=$(DEB_HOST_GNU_TYPE) --build=$(DEB_BUILD_GNU_TYPE) \
+	--prefix=/usr --mandir=\$${prefix}/share/man --infodir=\$${prefix}/share/info
+
+	$(MAKE)
+
+	# only install executables
+	install -m 755 src/octopus_mpi $(CURDIR)/debian/octopus/usr/bin/octopus-intel-9.1-debug_mpi
+endif
+
 
 	touch build-stamp
 
