@@ -175,9 +175,11 @@ contains
     
     call fft_init(n, fft_complex, fft_handler, optimize = .false.)
     
-    filt = M_z0
-    no_f = size(filter)
-    i    = 0
+    filt  = M_z0
+    no_f  = size(filter)
+    i     = 0
+    first = 0
+
     !do i=1, no_f
     do while(i.lt.no_f )
       i = i + 1
@@ -203,7 +205,10 @@ contains
           first = i
           last  = i + grouplength
         end do
-        write(6,'(a,i2,a,i2)') 'Adding filters from: ',first,'to: ',last
+
+        write(message(1),'(a,i2,a,i2)') 'Adding filters from: ',first,'to: ',last
+        call write_info(1)
+
         i = ii - 1
         do kk=1, NDIM
           !write(6,*) 'in:', SUM(laser_inout(kk,:)**2)
@@ -235,7 +240,10 @@ contains
           ii = ii + 1
         end do
         i = ii - 1
-        write(6,*) 'Adding filters from: ',first,'to: ',last
+
+        write(message(1),*) 'Adding filters from: ',first,'to: ',last
+        call write_info(1)
+
         do kk=1, NDIM
           laser_inout(kk,:) = laser_inout(kk,:)*filt(kk, :)
         enddo
