@@ -21,11 +21,12 @@
 
 ! ---------------------------------------------------------
 ! This routine diagonalises the hamiltonian in the subspace defined by the states.
-subroutine X(eigen_diagon_subspace) (gr, st, h)
+subroutine X(eigen_diagon_subspace) (gr, st, h, diff)
   type(grid_t),        intent(inout) :: gr
   type(states_t),      intent(inout) :: st
   type(hamiltonian_t), intent(inout) :: h
-  
+  FLOAT,     optional, intent(out)   :: diff(1:st%nst,1:st%d%nik)
+
   R_TYPE, allocatable :: h_subspace(:,:), vec(:,:), f(:,:,:)
   integer :: ik, i, j
 
@@ -34,6 +35,8 @@ subroutine X(eigen_diagon_subspace) (gr, st, h)
   ALLOCATE(f(NP, st%d%dim, st%nst), NP*st%d%dim*st%nst)
 
   ik_loop: do ik = 1, st%d%nik
+
+    !calculate the matrix representation of the hamiltonian in the subspace <psi|H|psi>
     eigenfunction_loop : do i = 1, st%nst
       call X(Hpsi)(h, gr, st%X(psi)(:,:, i, ik) , f(:,:, 1), ik)
       h_subspace(i, i) = st%eigenval(i, ik)
@@ -43,8 +46,11 @@ subroutine X(eigen_diagon_subspace) (gr, st, h)
       end do
     end do eigenfunction_loop
 
+    
+    !diagonalize the hamiltonian in the subspace
     call lalg_eigensolve(st%nst, h_subspace, vec, st%eigenval(:, ik))
 
+    !the new states are the given by the eigenvectors of the matrix
     f(1:NP,1:st%d%dim,1:st%nst) = st%X(psi)(1:NP,1:st%d%dim,1:st%nst, ik)
     do i = 1, st%nst
       ! build new state
@@ -58,6 +64,17 @@ subroutine X(eigen_diagon_subspace) (gr, st, h)
       st%X(psi)(1:NP,1:st%d%dim, i, ik) = &
            st%X(psi)(1:NP,1:st%d%dim, i, ik)/X(states_nrm2)(gr%m, st%d%dim, st%X(psi)(:,:, i, ik))
     end do
+
+    !recalculate the residue
+    if(present(diff)) then 
+      do i = 1, st%nst
+        call X(Hpsi)(h, gr, st%X(psi)(:,:, i, ik) , f(:,:, 1), ik)
+        diff(i, ik)=X(states_residue)(gr%m, st%d%dim, f(:,:,1), st%eigenval(i, ik), &
+             st%X(psi)(:, :, i, ik))
+      end do
+    end if
+
+
   end do ik_loop
 
   deallocate(f, h_subspace, vec)

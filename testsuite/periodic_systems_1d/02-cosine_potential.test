@@ -22,7 +22,7 @@ Match ; Bands ; grep '^   1' ds02_static/eigenvalues | tac | head -n 1 | tail -n
 
 # 2nd Band
 Match ; Bands ; grep '^   2' ds02_static/eigenvalues | tac | head -n 6 | tail -n 1 ; \s*-0.006033\d*\s*0.0000\d*
-Match ; Bands ; grep '^   2' ds02_static/eigenvalues | tac | head -n 5 | tail -n 1 ; \s*-0.006082\d*\s*0.0000\d*
+Match ; Bands ; grep '^   2' ds02_static/eigenvalues | tac | head -n 5 | tail -n 1 ; \s*-0.006085\d*\s*0.0000\d*
 Match ; Bands ; grep '^   2' ds02_static/eigenvalues | tac | head -n 4 | tail -n 1 ; \s*-0.006223\d*\s*0.0000\d*
 Match ; Bands ; grep '^   2' ds02_static/eigenvalues | tac | head -n 3 | tail -n 1 ; \s*-0.006391\d*\s*0.0000\d*
 Match ; Bands ; grep '^   2' ds02_static/eigenvalues | tac | head -n 2 | tail -n 1 ; \s*-0.006526\d*\s*0.0000\d*

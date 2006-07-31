@@ -57,16 +57,18 @@ subroutine X(eigen_solver_cg2) (gr, st, h, tol, niter, converged, diff, reorder,
   niter = 0
   moved = 0
 
-  ALLOCATE(h_psi(NP, st%d%dim), NP*st%d%dim)
-  ALLOCATE( ppsi(NP, st%d%dim), NP*st%d%dim)
-  ALLOCATE(    g(NP, st%d%dim), NP*st%d%dim)
-  ALLOCATE(   g0(NP, st%d%dim), NP*st%d%dim)
+  ALLOCATE(h_psi(NP_PART, st%d%dim), NP_PART*st%d%dim)
+  ALLOCATE( ppsi(NP_PART, st%d%dim), NP_PART*st%d%dim)
+  ALLOCATE(    g(NP_PART, st%d%dim), NP_PART*st%d%dim)
+  ALLOCATE(   g0(NP_PART, st%d%dim), NP_PART*st%d%dim)
   ALLOCATE(   cg(NP_PART, st%d%dim), NP_PART*st%d%dim)
 
   cg(1:NP_PART, 1:st%d%dim)=M_ZERO
 
   ! Set the diff to zero, since it is intent(out)
-  diff(1:st%nst,1:st%d%nik) = M_ZERO
+  if(present(diff)) then 
+    diff(1:st%nst,1:st%d%nik) = M_ZERO
+  end if
 
   ! Start of main loop, which runs over all the eigenvectors searched
   ik_loop: do ik = 1, st%d%nik
@@ -248,12 +250,12 @@ subroutine X(eigen_solver_cg2_new) (gr, st, h, tol, niter, converged, diff, reor
   maxter = niter
   niter = 0
 
-  ALLOCATE( phi(NP, dim), NP*dim)
+  ALLOCATE( phi(NP_PART, dim), NP_PART*dim)
   ALLOCATE( psi(NP_PART, dim), NP_PART*dim)
-  ALLOCATE(hpsi(NP, dim), NP*dim)
-  ALLOCATE(  cg(NP, dim), NP*dim)
-  ALLOCATE(hcgp(NP, dim), NP*dim)
-  ALLOCATE(  sd(NP, dim), NP*dim)
+  ALLOCATE(hpsi(NP_PART, dim), NP_PART*dim)
+  ALLOCATE(  cg(NP_PART, dim), NP_PART*dim)
+  ALLOCATE(hcgp(NP_PART, dim), NP_PART*dim)
+  ALLOCATE(  sd(NP_PART, dim), NP_PART*dim)
   ALLOCATE( cgp(NP_PART, dim), NP_PART*dim)
   ALLOCATE(orthogonal(nst), nst)
 
@@ -261,7 +263,9 @@ subroutine X(eigen_solver_cg2_new) (gr, st, h, tol, niter, converged, diff, reor
   cgp(1:NP_PART, 1:dim) = M_ZERO
 
   ! Set the diff to zero, since it is intent(out)
-  diff(1:st%nst,1:st%d%nik) = M_ZERO
+  if(present(diff)) then 
+    diff(1:st%nst,1:st%d%nik) = M_ZERO
+  end if
 
   kpoints: do ik = 1, nik
     conv = converged
@@ -290,7 +294,7 @@ subroutine X(eigen_solver_cg2_new) (gr, st, h, tol, niter, converged, diff, reor
          if(mod(i, 5).eq.0) orthogonal = .false.
 
          ! Get H|psi> (through the linear formula)
-         phi(1:NP, :) = ctheta*phi(1:NP, :) + stheta*hcgp(1:NP, :)
+         phi(1:NP, 1:dim) = ctheta*phi(1:NP, 1:dim) + stheta*hcgp(1:NP, 1:dim)
 
          ! lambda = <psi|H|psi> = <psi|phi>
          lambda = X(states_dotp)(gr%m, dim, psi, phi)

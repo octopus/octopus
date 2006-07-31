@@ -224,14 +224,14 @@ contains
 
     !%Variable EigenSolverSubspaceDiag
     !%Type logical
-    !%Default false
+    !%Default true
     !%Section SCF::EigenSolver
     !%Description
     !% When true, a Rayleigh-Ritz projection is performed after the eigensolver routine. 
     !% This is a diagonalization of the Hamiltonian in the subspace spanned by the eigenvectors 
     !% that separates eigenvectors that have close eigenvalues.
     !%End
-    call loct_parse_logical(check_inp('EigenSolverSubspaceDiag'), .false., eigens%do_subspace_diag)
+    call loct_parse_logical(check_inp('EigenSolverSubspaceDiag'), .true., eigens%do_subspace_diag)
     
     select case(eigens%es_type)
     case(RS_PLAN)
