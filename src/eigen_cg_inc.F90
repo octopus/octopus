@@ -57,14 +57,16 @@ subroutine X(eigen_solver_cg2) (gr, st, h, tol, niter, converged, diff, reorder,
   niter = 0
   moved = 0
 
-  ALLOCATE(h_psi(NP_PART, st%d%dim), NP_PART*st%d%dim)
-  ALLOCATE( ppsi(NP_PART, st%d%dim), NP_PART*st%d%dim)
-  ALLOCATE(    g(NP_PART, st%d%dim), NP_PART*st%d%dim)
-  ALLOCATE(   g0(NP_PART, st%d%dim), NP_PART*st%d%dim)
+  ALLOCATE(h_psi(NP, st%d%dim), NP*st%d%dim)
+  ALLOCATE( ppsi(NP, st%d%dim), NP*st%d%dim)
+  ALLOCATE(    g(NP, st%d%dim), NP*st%d%dim)
+  ALLOCATE(   g0(NP, st%d%dim), NP*st%d%dim)
   ALLOCATE(   cg(NP_PART, st%d%dim), NP_PART*st%d%dim)
 
+  cg(1:NP_PART, 1:st%d%dim)=M_ZERO
+
   ! Set the diff to zero, since it is intent(out)
-  diff = M_ZERO
+  diff(1:st%nst,1:st%d%nik) = M_ZERO
 
   ! Start of main loop, which runs over all the eigenvectors searched
   ik_loop: do ik = 1, st%d%nik
@@ -91,13 +93,13 @@ subroutine X(eigen_solver_cg2) (gr, st, h, tol, niter, converged, diff, reorder,
         ! if approximate inverse preconditioner....
         !call pre(hpsi%val   , g%val   )
         !call pre(psi(m)%val , ppsi%val)
-        g(1:NP,:) = h_psi(1:NP,:)
-        ppsi(1:NP,:) = st%X(psi)(1:NP,:, p, ik)
+        g(1:NP, 1:st%d%dim) = h_psi(1:NP, 1:st%d%dim)
+        ppsi(1:NP, 1:st%d%dim) = st%X(psi)(1:NP, 1:st%d%dim, p, ik)
 
         es(1) = X(states_dotp) (gr%m, st%d%dim, st%X(psi)(:,:, p, ik), g)
         es(2) = X(states_dotp) (gr%m, st%d%dim, st%X(psi)(:,:, p, ik), ppsi)
         es(1) = es(1)/es(2)
-        g(1:NP,:) = g(1:NP,:) - es(1)*ppsi(1:NP,:)
+        g(1:NP, 1:st%d%dim) = g(1:NP, 1:st%d%dim) - es(1)*ppsi(1:NP, 1:st%d%dim)
 
         ! Orthogonalize to lowest eigenvalues (already calculated)
         if(p > 1) call X(states_gram_schmidt)(p - 1, gr%m, st%d%dim, st%X(psi)(:, :, :, ik), g, &
@@ -107,7 +109,7 @@ subroutine X(eigen_solver_cg2) (gr, st, h, tol, niter, converged, diff, reorder,
 
         ! Approximate inverse preconditioner...
         !call ipre(g, g0)
-        g0(1:NP,:) = g(1:NP,:)
+        g0(1:NP, 1:st%d%dim) = g(1:NP, 1:st%d%dim)
 
         gg = X(states_dotp) (gr%m, st%d%dim, g, g0)
         if( abs(gg) < CNST(1.0e-15) ) then
@@ -120,16 +122,16 @@ subroutine X(eigen_solver_cg2) (gr, st, h, tol, niter, converged, diff, reorder,
         ! Starting or following iterations...
         if(iter .eq. 1) then
           gg0 = gg
-          cg (1:NP, :) = g(1:NP, :)
+          cg (1:NP, 1:st%d%dim) = g(1:NP, 1:st%d%dim)
         else
           !gamma = gg/gg0        ! (Fletcher-Reeves)
           gamma = (gg - gg1)/gg0   ! (Polack-Ribiere)
           gg0 = gg
-          cg(1:NP,:) = gamma*cg(1:NP,:)
-          cg(1:NP,:) = cg(1:NP,:) + g(1:NP,:)
+          cg(1:NP, 1:st%d%dim) = gamma*cg(1:NP, 1:st%d%dim)
+          cg(1:NP, 1:st%d%dim) = cg(1:NP, 1:st%d%dim) + g(1:NP, 1:st%d%dim)
 
           norma = gamma*cg0*sin(theta)
-          cg(1:NP, :) = cg(1:NP, :) - norma * st%X(psi)(1:NP, :, p, ik)
+          cg(1:NP, 1:st%d%dim) = cg(1:NP, 1:st%d%dim) - norma * st%X(psi)(1:NP, 1:st%d%dim, p, ik)
         end if
 
         ! cg contains now the conjugate gradient
@@ -163,7 +165,7 @@ subroutine X(eigen_solver_cg2) (gr, st, h, tol, niter, converged, diff, reorder,
         end do
 
         ! Calculate H|psi>
-        h_psi(1:NP,:) = a0*h_psi(1:NP,:) + b0*ppsi(1:NP,:)
+        h_psi(1:NP, 1:st%d%dim) = a0*h_psi(1:NP, 1:st%d%dim) + b0*ppsi(1:NP, 1:st%d%dim)
 
         res = X(states_residue)(gr%m, st%d%dim, h_psi, st%eigenval(p, ik), &
           st%X(psi)(:, :, p, ik))
@@ -246,17 +248,20 @@ subroutine X(eigen_solver_cg2_new) (gr, st, h, tol, niter, converged, diff, reor
   maxter = niter
   niter = 0
 
-  ALLOCATE (phi(NP_PART, dim), NP_PART*dim)
+  ALLOCATE( phi(NP, dim), NP*dim)
   ALLOCATE( psi(NP_PART, dim), NP_PART*dim)
-  ALLOCATE(hpsi(NP_PART, dim), NP_PART*dim)
-  ALLOCATE(  cg(NP_PART, dim), NP_PART*dim)
-  ALLOCATE(hcgp(NP_PART, dim), NP_PART*dim)
-  ALLOCATE(  sd(NP_PART, dim), NP_PART*dim)
+  ALLOCATE(hpsi(NP, dim), NP*dim)
+  ALLOCATE(  cg(NP, dim), NP*dim)
+  ALLOCATE(hcgp(NP, dim), NP*dim)
+  ALLOCATE(  sd(NP, dim), NP*dim)
   ALLOCATE( cgp(NP_PART, dim), NP_PART*dim)
   ALLOCATE(orthogonal(nst), nst)
 
+  psi(1:NP_PART, 1:dim) = M_ZERO
+  cgp(1:NP_PART, 1:dim) = M_ZERO
+
   ! Set the diff to zero, since it is intent(out)
-  diff = M_ZERO
+  diff(1:st%nst,1:st%d%nik) = M_ZERO
 
   kpoints: do ik = 1, nik
     conv = converged
@@ -264,7 +269,7 @@ subroutine X(eigen_solver_cg2_new) (gr, st, h, tol, niter, converged, diff, reor
 
       ! Orthogonalize starting eigenfunctions to those already calculated...
       call X(states_gram_schmidt)(ist, gr%m, dim, st%X(psi)(:, 1:dim, 1:ist, ik), start=ist)
-      psi(1:NP, :) = st%X(psi)(1:NP, :, ist, ik)
+      psi(1:NP, 1:dim) = st%X(psi)(1:NP, 1:dim, ist, ik)
 
       ! Calculate starting gradient: |hpsi> = H|psi>
       call X(Hpsi)(h, gr, psi, phi, ik); niter = niter + 1
@@ -299,20 +304,20 @@ subroutine X(eigen_solver_cg2_new) (gr, st, h, tol, niter, converged, diff, reor
          end if
 
          ! Get steepest descent vector
-         sd(1:NP, :) = lambda*psi(1:NP, :) - phi(1:NP, :)
+         sd(1:NP, 1:dim) = lambda*psi(1:NP, 1:dim) - phi(1:NP, 1:dim)
          if(ist > 1) call X(states_gram_schmidt)(ist - 1, gr%m, dim, st%X(psi)(:, :, :, ik), sd, &
                                                  normalize = .false., mask = orthogonal)
 
          ! Get conjugate-gradient vector
          gamma = X(states_dotp)(gr%m, dim, sd, sd)/mu
          mu    = X(states_dotp)(gr%m, dim, sd, sd)
-         cg(1:NP,:) = sd(1:NP,:) + gamma*cg(1:NP,:)
+         cg(1:NP, 1:dim) = sd(1:NP, 1:dim) + gamma*cg(1:NP, 1:dim)
 
          !
          dump = X(states_dotp)(gr%m, dim, psi, cg)
-         cgp(1:NP,:) = cg(1:NP,:) - dump*psi(1:NP,:)
+         cgp(1:NP, 1:dim) = cg(1:NP, 1:dim) - dump*psi(1:NP, 1:dim)
          dump = sqrt(X(states_dotp)(gr%m, dim, cgp, cgp))
-         cgp(1:NP,:) = cgp(1:NP,:)/dump
+         cgp(1:NP, 1:dim) = cgp(1:NP, 1:dim)/dump
 
          call X(Hpsi)(h, gr, cgp, hcgp, ik); niter = niter + 1
 
@@ -335,11 +340,11 @@ subroutine X(eigen_solver_cg2_new) (gr, st, h, tol, niter, converged, diff, reor
             ctheta = ctheta2
          end if
 
-         psi(1:NP,:) = ctheta*psi(1:NP,:) + stheta*cgp(1:NP,:)
+         psi(1:NP, 1:dim) = ctheta*psi(1:NP, 1:dim) + stheta*cgp(1:NP, 1:dim)
 
       end do band
 
-      st%X(psi)(1:NP, :, ist, ik) = psi(1:NP, :)
+      st%X(psi)(1:NP, 1:dim, ist, ik) = psi(1:NP, 1:dim)
       st%eigenval(ist, ik) = lambda
 
       if(verbose_) then
