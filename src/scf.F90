@@ -278,9 +278,9 @@ contains
       ALLOCATE( vin(NP, dim, nspin), NP*dim*nspin)
       ALLOCATE(vnew(NP, dim, nspin), NP*dim*nspin)
 
-      vin(:, 1, :) = h%vhxc
+      vin(1:NP, 1, 1:nspin) = h%vhxc(1:NP, 1:nspin)
       vout = M_ZERO
-      if (st%d%cdft) vin(:, 2:dim, :) = h%axc(:,:,:)
+      if (st%d%cdft) vin(1:NP, 2:dim, 1:nspin) = h%axc(1:NP, 1:NDIM, 1:nspin)
     else
       ALLOCATE(rhonew(NP, dim, nspin), NP*dim*nspin)
     end if
@@ -302,15 +302,15 @@ contains
 
       ! compute output density, potential (if needed) and eigenvalues sum
       call states_calc_dens(st, NP, st%rho)
-      rhoout(1:NP, 1, :) = st%rho(1:NP, :)
+      rhoout(1:NP, 1, 1:nspin) = st%rho(1:NP, 1:nspin)
       if (h%d%cdft) then
         call states_calc_physical_current(gr, st, st%j)
-        rhoout(1:NP, 2:dim, :) = st%j(1:NP, 1:NDIM, :)
+        rhoout(1:NP, 2:dim, 1:nspin) = st%j(1:NP, 1:NDIM, 1:nspin)
       end if
       if (scf%what2mix == MIXPOT) then
         call v_ks_calc(gr, ks, h, st)
-        vout(:, 1, :) = h%vhxc
-        if (h%d%cdft) vout(:, 2:dim, :) = h%axc(:,:,:)
+        vout(1:NP, 1, 1:nspin) = h%vhxc(1:NP, 1:nspin)
+        if (h%d%cdft) vout(1:NP, 2:dim, 1:nspin) = h%axc(1:NP, 1:NDIM, 1:nspin)
       end if
       evsum_out = states_eigenvalues_sum(st)
 
@@ -322,7 +322,7 @@ contains
       ALLOCATE(tmp(NP), NP)
       do is = 1, nspin
         do idim = 1, dim
-          tmp = (rhoin(:, idim, is) - rhoout(:, idim, is))**2
+          tmp = (rhoin(1:NP, idim, is) - rhoout(1:NP, idim, is))**2
           scf%abs_dens = scf%abs_dens + dmf_integrate(gr%m, tmp)
         end do
       end do
@@ -347,14 +347,14 @@ contains
       case (MIXDENS)
         ! mix input and output densities and compute new potential
         call dmixing(scf%smix, gr%m, iter, dim, nspin, rhoin, rhoout, rhonew)
-        st%rho(1:NP,:) = rhonew(1:NP, 1, :)
-        if (h%d%cdft) st%j(1:NP,:,:) = rhonew(1:NP, 2:dim, :)
+        st%rho(1:NP,1:nspin) = rhonew(1:NP, 1, 1:nspin)
+        if (h%d%cdft) st%j(1:NP,1:NDIM,1:nspin) = rhonew(1:NP, 2:dim, 1:nspin)
         call v_ks_calc(gr, ks, h, st)
       case (MIXPOT)
         ! mix input and output potentials
         call dmixing(scf%smix, gr%m, iter, dim, nspin, vin, vout, vnew)
-        h%vhxc = vnew(:, 1, :)
-        if (h%d%cdft) h%axc(:,:,:) = vnew(:,2:dim,:)
+        h%vhxc(1:NP, 1:nspin) = vnew(1:NP, 1, 1:nspin)
+        if (h%d%cdft) h%axc(1:NP, 1:NDIM, 1:nspin) = vnew(1:NP, 2:dim, 1:nspin)
       end select
 
       ! Are we asked to stop? (Whenever Fortran is ready for signals, this should go away)
@@ -386,11 +386,11 @@ contains
       end if
 
       ! save information for the next iteration
-      rhoin(:, 1, :) = st%rho(1:NP, :)
-      if (h%d%cdft) rhoin(1:NP, 2:dim, :) = st%j(1:NP, 1:NDIM, :)
+      rhoin(1:NP, 1, 1:nspin) = st%rho(1:NP, 1:nspin)
+      if (h%d%cdft) rhoin(1:NP, 2:dim, 1:nspin) = st%j(1:NP, 1:NDIM, 1:nspin)
       if (scf%what2mix == MIXPOT) then
-        vin(:, 1, :) = h%vhxc
-        if (h%d%cdft) vin(:,2:dim,:) = h%axc(:,:,:)
+        vin(1:NP, 1, 1:nspin) = h%vhxc(1:NP, 1:nspin)
+        if (h%d%cdft) vin(1:NP, 2:dim, 1:nspin) = h%axc(1:NP, 1:NDIM, 1:nspin)
       end if
       evsum_in = evsum_out
 

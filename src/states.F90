@@ -348,7 +348,7 @@ contains
     end if
 
     ! initially we mark all 'formulas' as undefined
-    st%user_def_states(:, :, :) = 'undefined'
+    st%user_def_states(1:st%d%dim, 1:st%nst, 1:st%d%nik) = 'undefined'
 
     !%Variable Occupations
     !%Type block
@@ -420,7 +420,7 @@ contains
 
     st%st_start = 1; st%st_end = st%nst
     ALLOCATE(st%node(st%nst), st%nst)
-    st%node(:) = 0
+    st%node(1:st%nst) = 0
 
     call mpi_grp_init(st%mpi_grp, -1)
     st%parallel_in_states = .false.
@@ -611,7 +611,7 @@ contains
     stout%d%wfs_type = stin%d%wfs_type
     stout%d%dim = stin%d%dim
     stout%d%nik = stin%d%nik
-    stout%d%nik_axis(:) = stout%d%nik_axis(:)
+    stout%d%nik_axis(1:MAX_DIM) = stout%d%nik_axis(1:MAX_DIM)
     stout%d%ispin = stin%d%ispin
     stout%d%nspin = stin%d%nspin
     stout%d%spin_channels = stin%d%spin_channels
@@ -1194,7 +1194,7 @@ contains
     if(st%d%nspin == 2) ns = 2
 
     ! define the scaling factor to output k_i/G_i, instead of k_i
-    do i =1,3
+    do i =1,MAX_DIM
       factor(i) = M_ONE
       if (sb%klat(i,i) /= M_ZERO) factor(i) = sb%klat(i,i)
     end do
@@ -1204,7 +1204,7 @@ contains
       ! output bands in gnuplot format
       do j = 1, nst
         do ik = 1, st%d%nik, ns
-          write(iunit, '(1x,3(f10.4))', advance='no')  st%d%kpoints(:,ik)/factor(:)
+          write(iunit, '(1x,3(f10.4))', advance='no')  st%d%kpoints(1:MAX_DIM,ik)/factor(1:MAX_DIM)
           write(iunit, '(3x,f12.6)',   advance='yes') st%eigenval(j, ik)/units_out%energy%factor
         end do
         write(iunit, '(a)')' '
@@ -1213,7 +1213,7 @@ contains
       ! output bands in xmgrace format, i.e.:
       ! k_x, k_y, k_z, e_1, e_2, ..., e_n
       do ik = 1, st%d%nik, ns
-        write(iunit, '(1x,3(f10.4))', advance='no')   st%d%kpoints(:,ik)/factor(:)
+        write(iunit, '(1x,3(f10.4))', advance='no')   st%d%kpoints(1:MAX_DIM,ik)/factor(1:MAX_DIM)
         write(iunit, '(3x,20f12.6)', advance='yes') (st%eigenval(j, ik)/units_out%energy%factor, j=1,nst)
       end do
     end select
@@ -1302,7 +1302,7 @@ contains
 
     call push_sub('states.states_magnetic_moment')
 
-    ALLOCATE(md(m%np, 3), m%np*3)
+    ALLOCATE(md(m%np, MAX_DIM), m%np*MAX_DIM)
     call states_magnetization_dens(m, st, rho, md)
     mm(1) = dmf_integrate(m, md(:, 1))
     mm(2) = dmf_integrate(m, md(:, 2))
@@ -1320,7 +1320,7 @@ contains
     type(geometry_t), intent(in)  :: geo
     FLOAT,            intent(in)  :: rho(:,:) ! (m%np_part, st%d%nspin)
     FLOAT,            intent(in)  :: r
-    FLOAT,            intent(out) :: lmm(3, geo%natoms)
+    FLOAT,            intent(out) :: lmm(MAX_DIM, geo%natoms)
 
     integer :: ia, i
     FLOAT :: ri
@@ -1328,8 +1328,8 @@ contains
 
     call push_sub('states.states_local_magnetic_moments')
 
-    ALLOCATE(md (m%np, 3), m%np*3)
-    ALLOCATE(aux(m%np, 3), m%np*3)
+    ALLOCATE(md (m%np, MAX_DIM), m%np*MAX_DIM)
+    ALLOCATE(aux(m%np, MAX_DIM), m%np*MAX_DIM)
     call states_magnetization_dens(m, st, rho, md)
     lmm = M_ZERO
     do ia = 1, geo%natoms
@@ -1337,7 +1337,7 @@ contains
       do i = 1, m%np
         call mesh_r(m, i, ri, a=geo%atom(ia)%x)
         if (ri > r) cycle
-        aux(i, :) = md(i, :)
+        aux(i, 1:MAX_DIM) = md(i, 1:MAX_DIM)
       end do
       lmm(1, ia) = dmf_integrate(m, aux(:, 1))
       lmm(2, ia) = dmf_integrate(m, aux(:, 2))
@@ -1381,8 +1381,8 @@ contains
 
         ! spin-up density
         do k = 1, NDIM
-          jp(:, k, 1) = jp(:, k, 1) + st%d%kweights(ik)*st%occ(p, ik)       &
-            * aimag(conjg(st%zpsi(:, 1, p, ik)) * grad(:, k))
+          jp(1:NP, k, 1) = jp(1:NP, k, 1) + st%d%kweights(ik)*st%occ(p, ik)       &
+            * aimag(conjg(st%zpsi(1:NP, 1, p, ik)) * grad(1:NP, k))
         end do
 
         ! spin-down density
@@ -1390,8 +1390,8 @@ contains
           call zf_gradient(gr%sb, gr%f_der, st%zpsi(:, 1, p, ik+1), grad)
 
           do k = 1, NDIM
-            jp(:, k, 2) = jp(:, k, 2) + st%d%kweights(ik+1)*st%occ(p, ik+1) &
-              * aimag(conjg(st%zpsi(:, 1, p, ik+1)) * grad(:, k))
+            jp(1:NP, k, 2) = jp(1:NP, k, 2) + st%d%kweights(ik+1)*st%occ(p, ik+1) &
+              * aimag(conjg(st%zpsi(1:NP, 1, p, ik+1)) * grad(1:NP, k))
           end do
 
           ! WARNING: the next lines DO NOT work properly
@@ -1399,8 +1399,8 @@ contains
           call zf_gradient(gr%sb, gr%f_der, st%zpsi(:, 2, p, ik), grad)
 
           do k = 1, NDIM
-            jp(:, k, 2) = jp(:, k, 2) + st%d%kweights(ik)*st%occ(p, ik)     &
-              * aimag(conjg(st%zpsi(:, 2, p, ik)) * grad(:, k))
+            jp(1:NP, k, 2) = jp(1:NP, k, 2) + st%d%kweights(ik)*st%occ(p, ik)     &
+              * aimag(conjg(st%zpsi(1:NP, 2, p, ik)) * grad(1:NP, k))
           end do
         end if
 
@@ -1530,7 +1530,7 @@ contains
       ALLOCATE(dtmp(NP), NP)
       do idim=1, NDIM
         do is = 1, st%d%nspin
-          dtmp(1:NP)=st%rho(:,is)*gr%m%x(:,idim)
+          dtmp(1:NP)=st%rho(1:NP,is)*gr%m%x(1:NP,idim)
           write(fname, '(a,i1,a,i1)') 'dipole_density-', is, '-',idim
           call doutput_function(outp%how, dir, fname, gr%m, gr%sb, dtmp(:), u, ierr)
         end do

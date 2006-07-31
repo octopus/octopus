@@ -50,7 +50,7 @@ subroutine states_choose_kpoints(d, sb, geo)
       call write_fatal(1)
     end select
 
-    ALLOCATE(d%kpoints (3, d%nik), 3*d%nik)
+    ALLOCATE(d%kpoints (MAX_DIM, d%nik), MAX_DIM*d%nik)
     ALLOCATE(d%kweights   (d%nik),   d%nik)
     d%kpoints  = M_ZERO
     d%kweights = M_ONE

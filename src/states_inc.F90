@@ -186,7 +186,7 @@ FLOAT function X(states_residue)(m, dim, hf, e, f) result(r)
 
   ALLOCATE(res(m%np_part, dim), m%np_part*dim)
 
-  res(1:m%np, :) = hf(1:m%np, :) - e*f(1:m%np, :)
+  res(1:m%np, 1:dim) = hf(1:m%np, 1:dim) - e*f(1:m%np, 1:dim)
 
   r = X(states_nrm2)(m, dim, res)
   deallocate(res)
