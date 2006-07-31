@@ -48,7 +48,6 @@ EigenSolverInitTolerance = 1e-6
 EigenSolverFinalTolerance = 1e-6
 EigenSolverMaxIter = 50
 TypeOfMixing = broyden
-Mixing = 0.5
 
 PoissonSolver = fft
 

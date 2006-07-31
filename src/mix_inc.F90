@@ -34,7 +34,7 @@ subroutine X(mixing)(smix, m, iter, d2, d3, vin, vout, vnew)
   
   select case (smix%type_of_mixing)
   case (MIX_LINEAR)
-    call X(mixing_linear)(smix%alpha, m, vin, vout, vnew)
+    call X(mixing_linear)(smix%alpha, m, d2, d3, vin, vout, vnew)
     
   case (MIX_BROYDEN)
     call X(mixing_broyden)(smix, m, d2, d3, vin, vout, vnew, iter)
@@ -49,15 +49,16 @@ end subroutine X(mixing)
 
 
 ! ---------------------------------------------------------
-subroutine X(mixing_linear)(alpha, m, vin, vout, vnew)
+subroutine X(mixing_linear)(alpha, m, d2, d3, vin, vout, vnew)
   FLOAT,        intent(in) :: alpha
   type(mesh_t), intent(in) :: m
+  integer,      intent(in) :: d2, d3
   R_TYPE,       intent(in) :: vin(:, :, :), vout(:, :, :)
   R_TYPE,       intent(out):: vnew(:, :, :)
 
   call push_sub('mix_inc.Xmixing_linear')
   
-  vnew(1:m%np,:,:) = vin(1:m%np,:,:)*(M_ONE - alpha) + alpha*vout(1:m%np,:,:)
+  vnew(1:m%np, 1:d2, 1:d3) = vin(1:m%np, 1:d2, 1:d3)*(M_ONE - alpha) + alpha*vout(1:m%np, 1:d2, 1:d3)
   
   call pop_sub()
 end subroutine X(mixing_linear)
@@ -217,7 +218,7 @@ subroutine X(mixing_grpulay)(smix, m, d2, d3, vin, vout, vnew, iter)
   call push_sub('mix_inc.Xmixing_grpulay')
   
   ALLOCATE(f(m%np, d2, d3), m%np*d2*d3)
-  f = vout - vin
+  f(1:m%np, 1:d2, 1:d3) = vout(1:m%np, 1:d2, 1:d3) - vin(1:m%np, 1:d2, 1:d3)
   
   ! we only extrapolate a new vector every two iterations
   select case (mod(iter, 2_i4))
