@@ -62,27 +62,27 @@ if COMPILE_METIS
   external_LIBS += ../external_libs/metis-4.0/libmetis.a
 endif
 
-octopus_LDADD = @LIBS_FFT@ @LIBS_TRLAN@ @LIBS_ARPACK@ @LIBS_SPARSKIT@ \
+octopus_LDADD = @FCDEBUGFLAGS@ @LIBS_FFT@ @LIBS_TRLAN@ @LIBS_ARPACK@ @LIBS_SPARSKIT@ \
   @LIBS_NETCDF@ @LIBS_MPI@ $(core_LIBS) $(external_LIBS) @LIBS_LAPACK@ @LIBS_BLAS@
 
 # now the utility programs
 oct_cross_section_SOURCES = $(basic_SRCS) spectrum.F90 cross_section.F90
-oct_cross_section_LDADD   = @LIBS_LAPACK@ @LIBS_BLAS@ $(core_LIBS) $(external_LIBS)
+oct_cross_section_LDADD   = @FCDEBUGFLAGS@ @LIBS_LAPACK@ @LIBS_BLAS@ $(core_LIBS) $(external_LIBS)
 
 oct_rsf_SOURCES = $(basic_SRCS) spectrum.F90 rotational_strength.F90
-oct_rsf_LDADD   = @LIBS_LAPACK@ @LIBS_BLAS@ $(core_LIBS) $(external_LIBS)
+oct_rsf_LDADD   =  @FCDEBUGFLAGS@ @LIBS_LAPACK@ @LIBS_BLAS@ $(core_LIBS) $(external_LIBS)
 
 oct_harmonic_spectrum_SOURCES = $(basic_SRCS) spectrum.F90 hs.F90
-oct_harmonic_spectrum_LDADD   = @LIBS_LAPACK@ @LIBS_BLAS@ $(core_LIBS) $(external_LIBS)
+oct_harmonic_spectrum_LDADD   = @FCDEBUGFLAGS@ @LIBS_LAPACK@ @LIBS_BLAS@ $(core_LIBS) $(external_LIBS)
 
 oct_xyz_anim_SOURCES = $(core_SRCS) xyzanim.F90
 oct_xyz_anim_LDADD   = $(octopus_LDADD)
 
 oct_broad_SOURCES = $(basic_SRCS) broad.F90
-oct_broad_LDADD = $(core_LIBS) $(external_LIBS)
+oct_broad_LDADD = @FCDEBUGFLAGS@ $(core_LIBS) $(external_LIBS)
 
 oct_ph_SOURCES = $(basic_SRCS) phonon_spectrum.F90
-oct_ph_LDADD = $(core_LIBS) $(external_LIBS)
+oct_ph_LDADD = @FCDEBUGFLAGS@ $(core_LIBS) $(external_LIBS)
 
 oct_center_geom_SOURCES = $(core_SRCS) xyz_adjust.F90 centergeom.F90
 oct_center_geom_LDADD = $(octopus_LDADD)
@@ -118,7 +118,8 @@ CTAGS=ctags-exuberant -e
 # some exception for atomic.F90: Don't compile with debug flags (I guess nobody
 # really wants to invest time to fix out of bounds and "variable usage before definition"
 # in this spaghetti code)
-atomic.o: atomic_oct.f90
+atomic.o: atomic.F90
+	@@FCCPP@ @CPPFLAGS@ -I. $< > $*_oct.f90
 	@FC@ @FCFLAGS@ -c @FCFLAGS_f90@ -o $@ $*_oct.f90
 	@rm -f $*_oct.f90
 
