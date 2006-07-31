@@ -227,6 +227,7 @@ fi
 LINK="$FC $FCFLAGS $LDFLAGS -o \$@"
 AC_SUBST(LINK)
 AC_SUBST(FCEXTRALIBS)
+AC_SUBST(FCDEBUGFLAGS)
 
 AC_CONFIG_FILES([Makefile 
   external_libs/Makefile external_libs/expokit/Makefile external_libs/metis-4.0/Makefile  external_libs/qshep/Makefile

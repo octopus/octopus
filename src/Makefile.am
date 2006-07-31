@@ -87,9 +87,6 @@ oct_ph_LDADD = $(core_LIBS) $(external_LIBS)
 oct_center_geom_SOURCES = $(core_SRCS) xyz_adjust.F90 centergeom.F90
 oct_center_geom_LDADD = $(octopus_LDADD)
 
-# cleaning
-CLEANFILES = *~ *.bak *.mod *.il *.d *.pc* ifc* config_F90.h
-DISTCLEANFILES = Makefile.in dirs.h
 
 # ctags
 CTAGS=ctags-exuberant -e
@@ -98,17 +95,34 @@ CTAGS=ctags-exuberant -e
 -include Makefile.local
 
 # how to compile a F90 file :)
+
+# Define empty rule to override the native rule of automake (otherwise the native
+# rule will have precedence over the pattern based rules below). Could not figure out
+# how to remove .F90 from .SUFFIXES, which would be an alternative route.
 .F90.o:
+
+# compilation is a two step process: first we preprocess F90 files to generate _oct.f90 files
+%_oct.f90: %.F90
 	@@FCCPP@ @CPPFLAGS@ -I. $< > $*_oct.f90
 	@if [ "@DEBUG@" = "no" ]; then \
 		cat $*_oct.f90 | grep -v pop_sub | grep -v push_sub >$*_oct.f91; \
 		mv -f $*_oct.f91 $*_oct.f90; \
 	fi
 	@perl -pi -e 's/\\newline/\n/g' $*_oct.f90
+
+# then we actually compile _oct.f90 files and cleanup
+%.o: %_oct.f90
+	@FC@ @FCFLAGS@ @FCDEBUGFLAGS@ -c @FCFLAGS_f90@ -o $@ $*_oct.f90
+	@rm -f $*_oct.f90
+
+# some exception for atomic.F90: Don't compile with debug flags (I guess nobody
+# really wants to invest time to fix out of bounds and "variable usage before definition"
+# in this spaghetti code)
+atomic.o: atomic_oct.f90
 	@FC@ @FCFLAGS@ -c @FCFLAGS_f90@ -o $@ $*_oct.f90
 	@rm -f $*_oct.f90
 
-# how to compile main.f90 (have to define some extra variables here)
+# how to compile global.F90 (have to define some extra variables here)
 DATE := $(shell date)
 LATEST_SVN := $(shell ../build/svn_release_number.sh 2>/dev/null) 
 
@@ -117,7 +131,12 @@ global.o: global.F90
 		-DOCTOPUS_VERSION='"${VERSION}"' -DBUILD_TIME='"${DATE}"' -DFC='"${FC}"' \
 		-DFCFLAGS='"${FCFLAGS} ${FCFLAGS_f90}"' $< > $*_oct.f90
 	@FC@ @FCFLAGS@ -c @FCFLAGS_f90@ -o $@ $*_oct.f90
-#@rm -f $*_oct.f90
+	@rm -f $*_oct.f90
+
+# cleaning
+CLEANFILES = *~ *.bak *.mod *.il *.d *.pc* ifc* config_F90.h
+DISTCLEANFILES = Makefile.in dirs.h
+
 
 # how to generate config_F90.h
 liboct_parser.F90: config_F90.h
