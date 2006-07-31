@@ -120,6 +120,11 @@ CTAGS=ctags-exuberant -e
 # in this spaghetti code)
 atomic.o: atomic.F90
 	@@FCCPP@ @CPPFLAGS@ -I. $< > $*_oct.f90
+	@if [ "@DEBUG@" = "no" ]; then \
+		cat $*_oct.f90 | grep -v pop_sub | grep -v push_sub >$*_oct.f91; \
+		mv -f $*_oct.f91 $*_oct.f90; \
+	fi
+	@perl -pi -e 's/\\newline/\n/g' $*_oct.f90
 	@FC@ @FCFLAGS@ -c @FCFLAGS_f90@ -o $@ $*_oct.f90
 	@rm -f $*_oct.f90
 
