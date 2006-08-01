@@ -88,7 +88,7 @@ echo >> stamp
 for x in $octopus_exe; do
     for y in $(find $testsuite -name "*.test" | xargs grep $match | awk -F: '{print $1}' | sort -u); do
 	ybase=`basename $y`
-	xybase=${x}-${ybase%.test}
+	xybase=${x}${exec_suffix}-${ybase%.test}
 	failed_tests=$(grep FAIL ${xybase}.log | wc -l) 
 	echo "Checking for failed tests: ${xybase}.log"
 	if [ $failed_tests -gt 0 ]; then
