@@ -80,7 +80,9 @@ module states_m
     kpoints_write_info,             &
     occupied_states,                &
     states_init_excited_state,      &
-    states_kill_excited_state
+    states_kill_excited_state,      &
+    wfs_are_complex,                &
+    wfs_are_real
 
 
   public ::                         &
@@ -140,7 +142,7 @@ module states_m
   end type states_t
 
   type states_dim_t
-    integer :: wfs_type            ! real (M_REAL) or complex (M_CMPLX) wavefunctions
+    integer :: wfs_type             ! real (M_REAL) or complex (M_CMPLX) wavefunctions
     integer :: dim                  ! Dimension of the state (one or two for spinors)
     integer :: nik                  ! Number of irreducible subspaces
     integer :: nik_axis(MAX_DIM)    ! Number of kpoints per axis
@@ -2240,6 +2242,16 @@ contains
     type(states_pair_t), intent(in) :: p, q
     res = (p%i.eq.q%i) .and. (p%a.eq.q%a) .and. (p%sigma.eq.q%sigma)
   end function pair_is_eq
+
+  logical function wfs_are_complex(st) result (wac)
+    type(states_t),    intent(inout) :: st
+    wac = (st%d%wfs_type == M_CMPLX)
+  end function wfs_are_complex
+
+  logical function wfs_are_real(st) result (war)
+    type(states_t),    intent(inout) :: st
+    war = (st%d%wfs_type == M_REAL)
+  end function wfs_are_real
 
 
 #include "states_kpoints.F90"
