@@ -179,6 +179,7 @@ contains
     no_f  = size(filter)
     i     = 0
     first = 0
+    last  = 0
 
     !do i=1, no_f
     do while(i.lt.no_f )
