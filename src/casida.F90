@@ -689,7 +689,7 @@ contains
 
     if(cas%type.ne.CASIDA_CASIDA) return
 
-    call loct_mkdir('linear/excitations')
+    call io_mkdir('linear/excitations')
     do ia = 1, cas%n_pairs
       write(str,'(i5.5)') ia
       iunit = io_open('linear/excitations/'//trim(str), action='write')
