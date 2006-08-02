@@ -223,7 +223,7 @@ endif
 	install -m 755 src/octopus_mpi $(CURDIR)/debian/octopus/usr/bin/octopus_mpi
 
 ifeq (x86_64-linux,$(DEB_HOST_GNU_TYPE))
-	cd $(CURDIR)/debian/octopus/usr/bin && ln -s octopus_mpi octopus-nag-5.0_mpi
+	cd $(CURDIR)/debian/octopus/usr/bin && ln -s octopus_mpi octopus_mpi-nag-5.0
 endif
 
 
@@ -256,7 +256,7 @@ ifeq (x86_64-linux,$(DEB_HOST_GNU_TYPE))
 	$(MAKE)
 
 	# only install mpi executable
-	install -m 755 src/octopus_mpi $(CURDIR)/debian/octopus/usr/bin/octopus-intel-9.1_mpi
+	install -m 755 src/octopus_mpi $(CURDIR)/debian/octopus/usr/bin/octopus_mpi-intel-9.1
 
 	# inbetween we cleanup	
 	$(MAKE) distclean
@@ -286,7 +286,7 @@ ifeq (x86_64-linux,$(DEB_HOST_GNU_TYPE))
 	$(MAKE)
 
 	# only install executables
-	install -m 755 src/octopus_mpi $(CURDIR)/debian/octopus/usr/bin/octopus-intel-9.1-debug_mpi
+	install -m 755 src/octopus_mpi $(CURDIR)/debian/octopus/usr/bin/octopus_mpi-intel-9.1-debug
 endif
 
 
