@@ -280,5 +280,5 @@ while ($_ = <TESTSUITE>) {
 }
 
 if (!$opt_i) { print "\n\n\n"; }
-if ($opt_l && $valid)  { system ("cp $workdir/out out.log"); }
+if ($opt_l)  { system ("cp $workdir/out out.log"); }
 if (!$opt_p && !$opt_m && $test_succeded) { system ("rm -rf $workdir"); }
