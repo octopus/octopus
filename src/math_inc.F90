@@ -160,49 +160,133 @@ subroutine X(shellsort2)(a, x)
 end subroutine X(shellsort2)
 
 
-  ! ---------------------------------------------------------
-  ! These routines compare numbers or arrays of numbers to
-  ! within a certain threshold (to avoid considering differences
-  ! due to rounding as significant). They are not to be
-  ! accessed directly, but throught the .app. operator.
-  ! ---------------------------------------------------------
-  logical function X(approximate_equal)(a, b) result(app)
-    R_TYPE, intent(in) :: a, b
+! ---------------------------------------------------------
+! These routines compare numbers or arrays of numbers to
+! within a certain threshold (to avoid considering differences
+! due to rounding as significant). They are not to be
+! accessed directly, but throught the .app. operator.
+! ---------------------------------------------------------
+logical function X(approximate_equal)(a, b) result(app)
+  R_TYPE, intent(in) :: a, b
 #if defined(R_TREAL)
-    app = abs(a-b) < APP_THRESHOLD
+  app = abs(a-b) < APP_THRESHOLD
 #else
-    app = (abs(R_REAL(a)-R_REAL(b))   < APP_THRESHOLD) .and. &
-          (abs(R_AIMAG(a)-R_AIMAG(b)) < APP_THRESHOLD)
+  app = &
+    (abs(R_REAL(a)-R_REAL(b))   < APP_THRESHOLD) .and. &
+    (abs(R_AIMAG(a)-R_AIMAG(b)) < APP_THRESHOLD)
 #endif
-  end function X(approximate_equal)
-  logical function X(approximate_equal_1)(a, b) result(app)
-    R_TYPE, intent(in) :: a(:), b(:)
-    integer :: i
-    app = .false.
-    if(size(a).ne.size(b)) return
-    do i = 1, size(a)
-      app = X(approximate_equal)(a(i), b(i))
-      if(.not.app) return
+end function X(approximate_equal)
+
+
+! ---------------------------------------------------------
+logical function X(approximate_equal_1)(a, b) result(app)
+  R_TYPE, intent(in) :: a(:), b(:)
+  integer :: i
+  app = .false.
+  if(size(a).ne.size(b)) return
+  do i = 1, size(a)
+    app = X(approximate_equal)(a(i), b(i))
+    if(.not.app) return
+  end do
+end function X(approximate_equal_1)
+
+
+! ---------------------------------------------------------
+logical function X(approximate_equal_2)(a, b) result(app)
+  R_TYPE, intent(in) :: a(:, :), b(:, :)
+  integer :: i
+  app = .false.
+  if(any(shape(a).ne.shape(b))) return
+  do i = 1, size(a, 1)
+    app = X(approximate_equal_1)(a(i, :), b(i, :))
+    if(.not.app) return
+  end do
+end function X(approximate_equal_2)
+
+
+! ---------------------------------------------------------
+logical function X(approximate_equal_3)(a, b) result(app)
+  R_TYPE, intent(in) :: a(:, :, :), b(:, :, :)
+  integer :: i
+  app = .false.
+  if(any(shape(a).ne.shape(b))) return
+  do i = 1, size(a, 1)
+    app = X(approximate_equal_2)(a(i, :, :), b(i, :, :))
+    if(.not.app) return
+  end do
+end function X(approximate_equal_3)
+
+
+! ---------------------------------------------------------
+! This is an implementation of the Parker-Traub algorithm
+! for the inversion of Vandermonde matrices. 
+!   F. Parker, Inverses of Vandermonde matrices, Amer. Math. 
+!   Monthly, 71, 1964, p410-411
+!   J. Traub, Associated polynomials and uniform methods for 
+!   the solution of linear problems
+!   SIAM Review, 8, No. 3, 1966, p277-301
+! The algorithm inverts a Vandermonde matrix in O(N^2) operations
+! 
+! 2006-08-02 Heiko Appel
+! ---------------------------------------------------------
+subroutine X(parker_traub)(nsize, vdm_base, vdm_inverse)
+  integer, intent(in)  :: nsize
+  R_TYPE,  intent(in)  :: vdm_base(:)       ! Vandermonde base
+  R_TYPE,  intent(out) :: vdm_inverse(:,:)  ! Inverse of Vandermonde matrix
+  
+  integer :: j, k
+  R_TYPE, allocatable :: ap(:), an(:), q(:, :), pp(:)
+  
+  call push_sub('math_inc.Xparker_traub')
+
+  ALLOCATE(an(0:nsize), nsize+1)
+  ALLOCATE(ap(0:nsize), nsize+1)
+  ALLOCATE(pp(1:nsize), nsize  )
+  ALLOCATE( q(0:nsize, 1:nsize), nsize*(nsize+1))
+  
+  ! compute coefficients a_j
+  ap(0) = - vdm_base(1)
+  ap(1) =   R_TOTYPE(M_ONE)
+  
+  do k = 2, nsize
+    an(0) = - vdm_base(k)*ap(0)
+    an(k) = ap(k-1)
+    do j = 1, k-1
+      an(j) = ap(j-1) - vdm_base(k)*ap(j)
     end do
-  end function X(approximate_equal_1)
-  logical function X(approximate_equal_2)(a, b) result(app)
-    R_TYPE, intent(in) :: a(:, :), b(:, :)
-    integer :: i
-    app = .false.
-    if(any(shape(a).ne.shape(b))) return
-    do i = 1, size(a, 1)
-      app = X(approximate_equal_1)(a(i, :), b(i, :))
-      if(.not.app) return
+    ap = an
+  end do
+  
+  ! compute coefficients q_k,j
+  q = R_TOTYPE(M_ZERO)
+  
+  do j = 1, nsize
+    q(0, j) = R_TOTYPE(M_ONE)
+    do k = 1, nsize
+      q(k, j) = vdm_base(j)*q(k-1, j) + an(nsize-k) 
     end do
-  end function X(approximate_equal_2)
-  logical function X(approximate_equal_3)(a, b) result(app)
-    R_TYPE, intent(in) :: a(:, :, :), b(:, :, :)
-    integer :: i
-    app = .false.
-    if(any(shape(a).ne.shape(b))) return
-    do i = 1, size(a, 1)
-      app = X(approximate_equal_2)(a(i, :, :), b(i, :, :))
-      if(.not.app) return
+  end do
+  
+  ! compute derivative polynomial at base points
+  ! this amounts to Parkers variant of the algorithm
+  pp = R_TOTYPE(M_ONE)
+  do j = 1, nsize
+    do k = 1, nsize
+      if(k.ne.j) then
+        pp(j) = pp(j) * ( vdm_base(j) - vdm_base(k) )
+      end if
     end do
-  end function X(approximate_equal_3)
+  end do
+  
+  ! compute inverse 
+  do j = 1, nsize
+    do k = 0, nsize-1 
+      vdm_inverse(k+1, j) = q(nsize-1 - k, j) / pp(j) 
+    end do
+  end do
+  
+  deallocate(q, pp, ap, an)
+  
+  call pop_sub()
+end subroutine X(parker_traub)
 

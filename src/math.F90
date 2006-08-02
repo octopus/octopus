@@ -37,6 +37,8 @@ module math_m
   public ::                     &
     dconjugate_gradients,       &
     zconjugate_gradients,       &
+    dparker_traub,              &
+    zparker_traub,              &
     ddot_product,               &
     zdot_product,               &
     quickrnd,                   &
@@ -96,7 +98,7 @@ module math_m
   ! Euler McLaurin Integration constants
   FLOAT, public, parameter :: EMcLCoeff(1:5) =  &
     (/                                          &
-    CNST( 95.0)/CNST(288.0),                    &
+    CNST(    95.0)/CNST(288.0),                 &
     CNST(   317.0)/CNST(240.0),                 &
     CNST(    23.0)/CNST( 30.0),                 &
     CNST(   793.0)/CNST(720.0),                 &
