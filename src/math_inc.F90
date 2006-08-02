@@ -290,3 +290,71 @@ subroutine X(parker_traub)(nsize, vdm_base, vdm_inverse)
   call pop_sub()
 end subroutine X(parker_traub)
 
+
+! ---------------------------------------------------------
+! Newton-Raphson method for matrices. Starting from a 
+! sufficiently good initial guess, this routine can be used 
+! to polish inverse matrices.
+! 
+! 2006-08-02 Heiko Appel
+! ---------------------------------------------------------
+subroutine X(matrix_newton_raphson)(nsteps, nsize, a, b)
+  integer, intent(in)    :: nsteps, nsize
+  R_TYPE,  intent(in)    :: a(:,:)  ! matrix whose inverse to improve
+  R_TYPE,  intent(inout) :: b(:,:)  ! initial guess for the inverse
+  
+  integer :: is
+  R_TYPE, allocatable :: ab(:,:), bab(:,:)
+  
+  call push_sub('math_inc.Xmatrix_newton_raphson')
+
+  ALLOCATE( ab(1:nsize, 1:nsize), nsize*nsize)
+  ALLOCATE(bab(1:nsize, 1:nsize), nsize*nsize)
+
+  do is = 1, nsteps
+
+    ab  = R_TOTYPE(M_ZERO)
+    bab = R_TOTYPE(M_ZERO)
+    ab  = matmul(a, b)
+    bab = matmul(b, ab)
+
+    ! Newton-Raphson step
+    b = R_TOTYPE(M_TWO)*b - bab 
+
+  end do
+
+  deallocate(ab, bab)
+
+  call pop_sub()
+end subroutine X(matrix_newton_raphson)
+
+
+! ---------------------------------------------------------
+! gives a measure for the quality of the inverse
+FLOAT function X(matrix_inv_residual)(nsize, a, b) result(residual)
+  integer, intent(in) :: nsize
+  R_TYPE,  intent(in) :: a(:,:), b(:,:) ! matrix and approximate inverse
+
+  integer :: i, j
+  R_TYPE, allocatable :: ab(:,:)
+
+  ALLOCATE(ab(1:nsize, 1:nsize), nsize*nsize)
+
+  ab = R_TOTYPE(M_ZERO)
+  ab = matmul(a, b)
+
+  residual = M_ZERO
+  do i = 1, nsize   
+    do j = 1, nsize
+      if(i.ne.j) then 
+        residual = residual + abs(ab(i, j)) 
+      end if
+    end do
+  end do
+
+  ! account for the size of the matrices
+  residual = residual / nsize**2
+
+  deallocate(ab)
+
+end function X(matrix_inv_residual)

@@ -39,6 +39,10 @@ module math_m
     zconjugate_gradients,       &
     dparker_traub,              &
     zparker_traub,              &
+    dmatrix_newton_raphson,     &
+    zmatrix_newton_raphson,     &
+    dmatrix_inv_residual,       &
+    zmatrix_inv_residual,       &
     ddot_product,               &
     zdot_product,               &
     quickrnd,                   &
