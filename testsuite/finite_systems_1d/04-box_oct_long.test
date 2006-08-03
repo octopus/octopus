@@ -8,7 +8,7 @@ Arch     : Linux
 Release  :
 Programs : octopus
 Runtime  : long-run
-Enabled  : No
+Enabled  : Yes
 
 # The test ensures the optimal control algorithm ZR98/WG05. It calculates the optimal laser field that transfers the ground-state to the first excited state. 
 # 
