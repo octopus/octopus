@@ -2,10 +2,6 @@
 #
 # $Id$
 
-
-# Define octopus executables
-octopus_exe="octopus octopus_mpi"
-
 # Paths
 prefix=/usr
 testsuite=$prefix/share/octopus/testsuite
@@ -17,7 +13,7 @@ arch=${MACHTYPE%-pc-linux-gnu}
 function usage() {
     cat <<EOF
 
- Copyright (C) 2005 by Heiko Appel
+ Copyright (C) 2005-2006 by Heiko Appel
 
 Usage: oct-run_testsuite [options]
     
@@ -28,6 +24,7 @@ Usage: oct-run_testsuite [options]
      -l            local run
      -e            exec suffix for octopus executable
      -p            installation prefix [default: /usr]
+     -w            without MPI tests (do not run parallel tests)
      -m address    mail report to address
 
 Report bugs to <appel@physik.fu-berlin.de>.
@@ -37,7 +34,6 @@ EOF
 
 
 # Dry run ...
-
 function CMD {
     [ "$dry_run" -o "$verbose" ] && echo -e "\033[32m$@\033[0m";
     [ ! "$dry_run" ] && eval "$@";
@@ -45,7 +41,6 @@ function CMD {
 
 
 # Run all tests
-
 function run_testsuite() {
 
 [ "$local_run" == "yes" ] && testsuite=$(pwd)
@@ -74,16 +69,9 @@ done
 
 
 # Send report via mail
-
 function mail_report() {
 
-rm -rf stamp
-echo >> stamp
-uname -a >> stamp
-cat /proc/cpuinfo | grep 'model name' | awk -F: '{print $2}' >> stamp
-cat /proc/meminfo | grep MemTotal >> stamp
-echo >> stamp
-
+datestamp=$(date +"%Y-%m-%d")
 
 for x in $octopus_exe; do
     for y in $(find $testsuite -name "*.test" | xargs grep $match | awk -F: '{print $1}' | sort -u); do
@@ -94,7 +82,7 @@ for x in $octopus_exe; do
 	if [ $failed_tests -gt 0 ]; then
 	    echo "Found: $failed_tests"
 	    echo "Mailing report to: $mailaddr"
-            cat stamp ${xybase}.log ${xybase}.out.log | mutt -s "[oct-run_testsuite on $arch] daily report" $mailaddr
+            cat oct-header ${xybase}.log ${xybase}.out.log | mutt -s "[oct-run_testsuite on $arch] daily report - $datestamp" $mailaddr
 	fi
     done
 done
@@ -109,7 +97,7 @@ done
 match="short-run"
 send_mail="no"
 
-while getopts "hnlsfp:e:m:" opt ; do
+while getopts "hnlsfwp:e:m:" opt ; do
     case "$opt" in
         h) usage ;;
         n) echo="echo"; dry_run="yes";; 
@@ -118,21 +106,47 @@ while getopts "hnlsfp:e:m:" opt ; do
         l) local_run="yes";;
         s) match="short-run" ;;
         f) match="long-run" ;;
+        w) run_in_parallel="no" ;;
         m) mailaddr="$OPTARG"; send_mail="yes" ;;
         ?) echo "Error parsing arguments"; exit 1 ;;
     esac
 done
-shift $(( OPTIND - 1 ))
+shift $[ OPTIND - 1 ]
 
 # for now the long-run matches everything
 [ "${match}" == "long-run" ] && match=.
 
+# Define octopus executables
+# should we run in serial and in parallel?
+if [ "${run_in_parallel}" == "no" ]; then
+    octopus_exe="octopus"
+else
+    octopus_exe="octopus octopus_mpi"
+fi
+    
+# get epoch seconds at testsuite start
+testsuite_start=$(date +%s) 
+
 # run testsuite
 run_testsuite $match
 
+# get epoch seconds after we are done and compute time difference
+testsuite_end=$(date +%s) 
+timediff_sec=$[ testsuite_end - testsuite_start ]
+
+rm -rf oct-header
+# time calculation stays correct if $timediff_sec < 24h
+RUNTIME="Total run-time of the testsuite: $(date +%H:%M:%S -d "00:00:00 + $timediff_sec sec")" 
+# save runtime for mail header
+echo $RUNTIME > oct-header
+echo "" >> oct-header
+
+# and print also to the screen
+echo $RUNTIME
+echo ""
+
 # should we send a mail report?
 [ "${send_mail}" == "yes" ] && mail_report $match $mailaddr
-
 
 # clean up
 rm -f octopus*.log stamp build-stamp
