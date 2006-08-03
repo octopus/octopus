@@ -18,50 +18,197 @@
 !! -*- coding: utf-8 mode: f90 -*-
 !! $Id$
 
+subroutine X(lr_calc_polarizability)(sys, lr, zpol)
+  type(system_t), target, intent(inout) :: sys
+  type(lr_t),             intent(inout) :: lr(:,:)
+  CMPLX,                  intent(out)   :: zpol(1:MAX_DIM, 1:MAX_DIM)
 
-! ---------------------------------------------------------
-subroutine X(dynamic_response)(sys, h, lr, props, pol, w, status)
-  type(system_t),      intent(inout) :: sys
-  type(hamiltonian_t), intent(inout) :: h
-  type(lr_t),          intent(inout) :: lr(:,:,:) ! dim, nsigma(=2), nfreq(=1)
-  type(pol_props_t),   intent(in)    :: props
-  CMPLX,               intent(inout) :: pol(:,:)
-  R_TYPE,              intent(in)    :: w 
-  type(status_t),      intent(out)   :: status
+  integer :: dir1, dir2, j
+  CMPLX :: zpol_tmp(1:MAX_DIM, 1:MAX_DIM)
+  CMPLX, allocatable  :: dl_rho_tot(:), tmp(:)
+
+  ALLOCATE(dl_rho_tot(1:sys%gr%m%np), sys%gr%m%np)
+  ALLOCATE(tmp(1:sys%gr%m%np), sys%gr%m%np)
+
+  zpol_tmp = M_ZERO
   
-  integer :: dir, j, freq
+  do dir1 = 1, sys%gr%sb%dim
 
-  R_TYPE :: rhov
-
-  call push_sub('static_pol_lr.dynamic')
-
-  freq = 1
-  pol = M_ZERO
-
-  !iterate for each direction
-  do dir = 1, sys%gr%sb%dim
-
-    write(message(1), '(a,i1)') 'Info: Calculating polarizability for direction ', dir
-    call write_info(1)
-    
-    call mix_init(lr(dir, 1, freq)%mixer, sys%gr%m, sys%st%d%nspin, 1, func_type=sys%st%d%wfs_type)
-
-    call X(get_response_e)(sys, h, lr(:,:,freq), dir, 2 , w, props, status)
-
-    call mix_end(lr(dir, 1, freq)%mixer)
-
-    !calculate the polarizability
+    !sum dl_rho for all spin components
     do j = 1, sys%gr%m%np
-      rhov = sum(lr(dir, 1, freq)%X(dl_rho)(j, 1:sys%st%d%nspin))*sys%gr%m%vol_pp(j)
-      pol(dir, :) = pol(dir, :) - sys%gr%m%x(j,:)*rhov
+      dl_rho_tot(j) = sum(lr(dir1, 1)%X(dl_rho)(j, 1:sys%st%d%nspin))
     end do
+    
+    do dir2 = 1, sys%gr%sb%dim
+      tmp(1:sys%gr%m%np) = sys%gr%m%x(1:sys%gr%m%np, dir2) * dl_rho_tot(1:sys%gr%m%np)
+      zpol_tmp(dir1, dir2) = zpol_tmp(dir1, dir2) - zmf_integrate(sys%gr%m, tmp)
+    end do
+    
+  end do
+  
+  deallocate(dl_rho_tot, tmp)
 
+  !symmetrize
+  do dir1 = 1, sys%gr%sb%dim
+    do dir2 = 1, sys%gr%sb%dim
+      zpol(dir1, dir2) = M_HALF*(zpol_tmp(dir1, dir2) + zpol_tmp(dir2, dir1))
+    end do
   end do
 
+end subroutine X(lr_calc_polarizability)
+
+#if 1
+! ---------------------------------------------------------
+subroutine X(lr_calc_beta) (sys, lr, props, beta)
+  type(system_t),      intent(inout) :: sys
+  type(lr_t),          intent(inout) :: lr(:,:) ! lr(NDIM,1,1)
+  type(pol_props_t),   intent(in)    :: props
+  CMPLX,               intent(out)   :: beta(1:MAX_DIM, 1:MAX_DIM, 1:MAX_DIM)
+
+  integer :: i, j, k, dir
+  integer :: ispin, ist, ispin2, ist2, n, np, dim, ik
+
+  R_TYPE :: prod
+
+  R_TYPE, allocatable :: dVde(:,:,:), drhode(:,:)
+  R_TYPE, allocatable :: tmp(:,:)
+  FLOAT,  allocatable :: kxc(:,:,:,:)
+  R_TYPE, allocatable :: hpol_density(:)
+
+  R_TYPE :: beta_tmp(1:MAX_DIM, 1:MAX_DIM, 1:MAX_DIM)
+
+  np  = sys%gr%m%np
+  dim = sys%gr%sb%dim
+
+  call push_sub('em_resp_inc.Xlr_calc_beta')
+
+  write(message(1), '(a)') 'Info: Calculating hyperpolarizability tensor'
+  call write_info(1)
+
+  !calculate kxc, the derivative of fxc
+  ALLOCATE(kxc(1:np, 1:sys%st%d%nspin, 1:sys%st%d%nspin, 1:sys%st%d%nspin), np*sys%st%d%nspin**3)
+  call xc_get_kxc(sys%ks%xc, sys%gr%m, sys%st%rho, sys%st%d%ispin, kxc)
+
+
+  ALLOCATE(tmp(1:np, 1), np)
+  ALLOCATE(dVde(1:np, 1:sys%st%d%nspin, 1:dim), np*sys%st%d%nspin*dim)
+  ALLOCATE(drhode(1:np, 1:dim), np*dim)
+  ALLOCATE(hpol_density(1:np), np)
+
+  do dir = 1, sys%gr%sb%dim
+
+      ! the density
+      do n = 1, np
+        drhode(n, dir) = sum(lr(dir, 1)%X(dl_rho)(n, 1:sys%st%d%nspin))
+      end do
+
+      !the \delta of hartree potential
+      call X(poisson_solve)(sys%gr, lr(dir, 1)%X(dl_Vhar), drhode(:, dir))
+
+    do ispin = 1, sys%st%d%nspin
+
+      ! the potential variation
+
+      !the external potential, r
+      dVde(1:np,ispin, dir) = sys%gr%m%x(1:np, dir)
+
+      !the hartree term
+      if(props%add_hartree) then 
+        dVde(1:np, ispin, dir) = dVde(1:np, ispin, dir) + lr(dir, 1)%X(dl_Vhar)(1:np) 
+      end if
+
+      !the fxc term
+      if(props%add_fxc) then 
+        ! xc
+        do ispin2 = 1, sys%st%d%nspin
+          dVde(1:np, ispin, dir) = dVde(1:np, ispin, dir) + &
+               lr(dir, 1)%dl_Vxc(1:np, ispin, ispin2)*lr(dir, 1)%X(dl_rho)(1:np, ispin2)
+        end do
+      end if
+      
+    end do
+    
+  end do !dir
+
+  if (sys%st%d%nspin /= UNPOLARIZED ) then 
+    write(message(1), '(a)') 'WARNING: Hyperpolarizability has not been tested for spin polarized systems'
+    call write_warning(1)
+  end if
+
+  beta_tmp = M_ZERO
+
+  do i = 1, dim
+    do j = 1, dim
+      do k = 1, dim
+
+        hpol_density(1:np)=M_ZERO
+
+        do ik=1, sys%st%d%nik
+          do ispin = 1, sys%st%d%nspin
+            do ist = 1, sys%st%nst
+              
+              if( sys%st%occ(ist, ik) > lr_min_occ ) then 
+                ! <D\psi_n | P_c DV_scf P_c | D\psi_n >
+                
+                hpol_density(1:np) = hpol_density(1:np) + &
+                     sys%st%d%kweights(ik)*sys%st%occ(ist, ik)* &
+                     R_CONJ(lr(i, 2)%X(dl_psi)(1:np, 1, ist, ispin)) &
+                     * dVde(1:np, ispin, j) * lr(k,1)%X(dl_psi)(1:np, 1, ist, ispin)
+                
+                do ispin2 = 1, sys%st%d%nspin
+                  do ist2 = 1, sys%st%nst
+                    if( sys%st%occ(ist2, ik) > lr_min_occ ) then 
+                      
+                      tmp(1:np, 1)=R_CONJ(sys%st%X(psi)(1:np, 1, ist2, ispin2)) * &
+                           dVde(1:np, ispin, j) * sys%st%X(psi)(1:np, 1, ist, ispin)
+                      prod = X(mf_integrate)(sys%gr%m,tmp(1:np,1))
+                      
+                      hpol_density(1:np) = hpol_density(1:np) - & 
+                           sys%st%d%kweights(ik)*sys%st%occ(ist, ik)* & 
+                           R_CONJ(lr(i, 2)%X(dl_psi)(1:np, 1, ist, ispin)) * &
+                           lr(k, 1)%X(dl_psi)(1:np, 1, ist2, ispin2)*prod
+                      
+                    end if
+                  end do ! ist2
+                end do ! ispin2
+                
+              end if
+              
+            end do ! ist
+          end do ! ispin
+        end do !ik
+
+        if(props%add_fxc) then 
+          hpol_density(1:np) = hpol_density(1:np) + &
+               kxc(1:np, 1, 1, 1) * drhode(1:np, i) * drhode(1:np, j)*drhode(1:np, k)/CNST(6.0)
+        end if
+        
+        beta_tmp(i,j,k)=X(mf_integrate)(sys%gr%m, hpol_density(1:np))
+
+      end do ! k
+    end do ! j
+  end do ! i
+  
+  do k = 1, dim
+    do j = 1, dim
+      do i = 1, dim
+        beta(i,j,k) = -( &
+             + beta_tmp(i,j,k) + beta_tmp(j,k,i) &
+             + beta_tmp(k,i,j) + beta_tmp(k,j,i) &
+             + beta_tmp(j,i,k) + beta_tmp(i,k,j))
+      end do ! k
+    end do ! j
+  end do ! i
+
+  deallocate(hpol_density)
+  deallocate(tmp)
+  deallocate(dVde)
+  deallocate(drhode)
+  deallocate(kxc)
+
   call pop_sub()
-
-end subroutine X(dynamic_response)
-
+end subroutine X(lr_calc_beta)
+#endif
 
 ! -------------------------------------------------------------
 ! this is the central routine of the electromagnetic response
@@ -100,6 +247,8 @@ subroutine X(get_response_e)(sys, h, lr, dir, nsigma, omega, props, status)
   
   m => sys%gr%m
   st => sys%st
+  
+  call mix_init(lr(dir, 1)%mixer, sys%gr%m, sys%st%d%nspin, 1, func_type=sys%st%d%wfs_type)
   
   ALLOCATE(tmp(m%np),m%np)
   ALLOCATE(Y(m%np, 1, nsigma), m%np*1*nsigma)
@@ -291,6 +440,8 @@ subroutine X(get_response_e)(sys, h, lr, dir, nsigma, omega, props, status)
     call dynamic_tol_end(lr(dir, sigma))
   end do
 
+  call mix_end(lr(dir, 1)%mixer)
+
   deallocate(tmp)
   deallocate(Y)
   deallocate(dV)
@@ -316,7 +467,7 @@ contains
     if(.not. props%from_scratch ) then 
       !try to read the density from restart information
       call X(restart_read_lr_density)(sys, lr(dir, 1), R_REAL(omega), dir, ierr)
-      lr(dir, 2)%X(dl_rho) = R_CONJ(lr(dir, 1)%X(dl_rho))
+      if(nsigma == 2) lr(dir, 2)%X(dl_rho) = R_CONJ(lr(dir, 1)%X(dl_rho))
     else 
       ierr = 1 
     end if

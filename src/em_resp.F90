@@ -45,11 +45,12 @@ module static_pol_lr_m
     static_pol_lr_run
   
   type pol_props_t
-    logical :: complex_response
     logical :: add_fxc
     logical :: add_hartree
     logical :: dynamic
     logical :: from_scratch
+    logical :: calc_hyperpol
+    logical :: calc_pol
   end type pol_props_t
 
   type status_t
@@ -64,28 +65,29 @@ contains
     type(hamiltonian_t),    intent(inout) :: h
     logical,                intent(inout) :: fromScratch
 
-    type(lr_t), allocatable :: lr(:,:,:) ! lr(NDIM,NS,NFREQ)
+    type(lr_t), allocatable :: lr(:,:) ! lr(NDIM,NS,NFREQ)
+
     type(grid_t),   pointer :: gr
+
     type(status_t)          :: status
 
-    FLOAT ::  pol(1:MAX_DIM, 1:MAX_DIM)
-    CMPLX :: zpol(1:MAX_DIM, 1:MAX_DIM)
-    FLOAT :: hpol(1:MAX_DIM, 1:MAX_DIM, 1:MAX_DIM)
+    FLOAT :: pol(1:MAX_DIM, 1:MAX_DIM), hpol(1:MAX_DIM, 1:MAX_DIM, 1:MAX_DIM)
+    CMPLX :: alpha(1:MAX_DIM, 1:MAX_DIM), beta(1:MAX_DIM, 1:MAX_DIM, 1:MAX_DIM)
 
     FLOAT, allocatable :: hpol_density(:,:,:,:)
 
-    character(len=30) :: dirname
+    FLOAT :: eta, freq_factor(MAX_DIM)
 
-    FLOAT :: eta
-    integer :: nfreq, nsigma, ndim, i, j, sigma, ierr, kpoints, dim, nst, k
-    character(len=80) :: fname
+    integer :: nsigma, sigma, ndim, i, j, k, nomega, dir, ierr
+
+    character(len=80) :: fname, dirname
 
     type(pol_props_t) :: props
     
-    integer :: nomega
     FLOAT, allocatable :: omega(:)
 
-    integer ::iunit
+    logical :: complex_response
+
 
     call push_sub('em_resp.static_pol_lr_run')
     
@@ -96,18 +98,17 @@ contains
 
     call parse_input()
 
+    complex_response = (eta /= M_ZERO )
+    nsigma = 2  ! positive and negative values of the frequency must be considered
+      
+    !this will call the old static code
     if(.not.props%dynamic) then
-      props%complex_response = .false.
-      nfreq = 1
+      complex_response = .false.
       nsigma = 1
-    else 
-      props%complex_response = (eta /= M_ZERO )
-      nfreq = 1   ! for now only polarizability, so only one frequency
-      nsigma = 2  ! but positive and negative values of the frequency must be considered
     end if
 
     !if wfs are complex then we will calculate complex_response
-    props%complex_response = props%complex_response .or. (sys%st%d%wfs_type == M_CMPLX)
+    complex_response = complex_response .or. wfs_are_complex(sys%st)
 
     call read_wfs()
 
@@ -117,53 +118,50 @@ contains
 
     call system_h_setup(sys, h)
 
-    ALLOCATE(lr(1:ndim, 1:nsigma, 1:nfreq), ndim*nfreq*nsigma)
+    ALLOCATE(lr(1:ndim, 1:nsigma), ndim*nsigma)
     
-    do i = 1, ndim
+    do dir = 1, ndim
       do sigma = 1, nsigma
-        do j = 1, nfreq
-          
-          if (props%complex_response) then 
-            call lr_init(lr(i, sigma, j), "Pol", def_solver=LR_BICGSTAB)
-          else
-            call lr_init(lr(i, sigma, j), "Pol", def_solver=LR_CG)            
-          end if
-
-          call lr_alloc_fHxc (sys%st, gr%m, lr(i, sigma, j))
-
-          if(.not.props%complex_response ) then
-            ierr = dlr_alloc_psi(sys%st, gr%m, lr(i, sigma, j))
-            lr(i, sigma, j)%ddl_rho = M_ZERO
-          else
-            ierr = zlr_alloc_psi(sys%st, gr%m, lr(i, sigma, j))
-            lr(i, sigma, j)%zdl_rho = M_ZERO
-          end if
-
-          if(props%add_fxc) then 
-            call lr_build_fxc(gr%m, sys%st, sys%ks%xc, lr(i, sigma, j)%dl_Vxc)
-          else 
-            lr(i, sigma, j)%dl_Vxc=M_ZERO
-          end if
-          
-        end do
+        
+        if (wfs_are_complex(sys%st)) then 
+          call lr_init(lr(dir, sigma), "Pol", def_solver=LR_BICGSTAB)
+        else
+          call lr_init(lr(dir, sigma), "Pol", def_solver=LR_CG)            
+        end if
+        
+        call lr_alloc_fHxc (sys%st, gr%m, lr(dir, sigma))
+        
+        if(wfs_are_real(sys%st)) then
+          ierr = dlr_alloc_psi(sys%st, gr%m, lr(dir, sigma))
+          lr(dir, sigma)%ddl_rho = M_ZERO
+        else
+          ierr = zlr_alloc_psi(sys%st, gr%m, lr(dir, sigma))
+          lr(dir, sigma)%zdl_rho = M_ZERO
+        end if
+        
+        if(props%add_fxc) then 
+          call lr_build_fxc(gr%m, sys%st, sys%ks%xc, lr(dir, sigma)%dl_Vxc)
+        else 
+          lr(dir, sigma)%dl_Vxc=M_ZERO
+        end if
+        
       end do
     end do
-
+    
     if(.not.fromScratch) then
       ! load wave-functions
-      do i = 1, ndim
+      do dir = 1, ndim
         do sigma = 1, nsigma
-          do j = 1, nfreq
-            write(dirname,'(a,i1,a,i1)') RESTART_DIR, i, "_", sigma
-            call restart_read(trim(tmpdir)//dirname, sys%st, sys%gr, ierr, lr=lr(i, sigma, j))
-            if(ierr.ne.0) then
-              message(1) = "Could not load response wave-functions from '"//trim(tmpdir)//dirname
-              call write_warning(1)
-            end if
-          end do
+          write(dirname,'(a,i1,a,i1)') RESTART_DIR, dir, "_", sigma
+          call restart_read(trim(tmpdir)//dirname, sys%st, sys%gr, ierr, lr=lr(dir, sigma))
+          if(ierr.ne.0) then
+            message(1) = "Could not load response wave-functions from '"//trim(tmpdir)//dirname
+            call write_warning(1)
+          end if
         end do
       end do
     end if
+
     call io_mkdir(trim(tmpdir)//RESTART_DIR)
     
     call info()
@@ -176,19 +174,47 @@ contains
       message(1) = "Info: Calculating polarizabilities."
       call write_info(1)
       
+      !iterate for each frequency
       do i = 1, nomega
         
-        write(message(1), '(a,f12.6,3a)') 'Info: Calculating polarizability for frequency: ', & 
-             omega(i)/units_out%energy%factor, ' [',trim(units_out%energy%abbrev),']'
-        
-        call write_info(1)
-        
-        if( props%complex_response ) then 
-          call zdynamic_response(sys, h, lr, props, zpol(1:ndim, 1:ndim), cmplx(omega(i), eta, PRECISION),status)
-        else
-          call ddynamic_response(sys, h, lr, props, zpol(1:ndim, 1:ndim), real(omega(i), PRECISION),status)
+        !iterate for each direction
+        do dir = 1, sys%gr%sb%dim
+
+          write(message(1), '(a,i1,a,f5.3)') 'Info: Calculating response for direction ', dir, &
+               ' and frequency ', freq_factor(dir)*omega(i)/units_out%energy%factor
+          call write_info(1)
+
+          
+          if(wfs_are_complex(sys%st)) then 
+            call zget_response_e(sys, h, lr(:,:), dir, 2 , &
+                 freq_factor(dir)*omega(i) + M_zI * eta, props, status)
+          else
+            call dget_response_e(sys, h, lr(:,:), dir, 2 , &
+                 freq_factor(dir)*omega(i), props, status)
+          end if
+          
+          
+        end do
+
+        !calculate polarizability
+        if(props%calc_pol) then 
+          if(wfs_are_complex(sys%st)) then 
+            call zlr_calc_polarizability(sys, lr, alpha)
+          else
+            call dlr_calc_polarizability(sys, lr, alpha)
+          end if
         end if
-        
+
+        !calculate hyperpolarizability
+        if(props%calc_hyperpol) then 
+          print*, "ACA"
+          if(wfs_are_complex(sys%st)) then 
+            call zlr_calc_beta(sys, lr, props, beta)
+          else
+            call dlr_calc_beta(sys, lr, props, beta)
+          end if
+        end if
+
         call dynamic_output()
         
       end do
@@ -198,23 +224,23 @@ contains
       !! STATIC
       ALLOCATE(hpol_density(sys%NP,MAX_DIM,MAX_DIM,MAX_DIM),sys%NP*MAX_DIM**3)
 
-      if ( .not. props%complex_response) then
-        call dstatic_response(sys, h, lr(:, :, 1), props, &
+      if ( wfs_are_real(sys%st) ) then
+        call dstatic_response(sys, h, lr(:, :), props, &
              pol(1:ndim, 1:ndim), hpol(1:ndim, 1:ndim, 1:ndim),hpol_density)
         call static_output()
-        do i = 1, ndim
-          call dlr_calc_elf(sys%st,sys%gr, lr(i, 1, 1))          
-          call dlr_output(sys%st, sys%gr, lr(i, 1, 1) ,"linear", i, sys%outp)
+        do dir = 1, ndim
+          call dlr_calc_elf(sys%st,sys%gr, lr(dir, 1))          
+          call dlr_output(sys%st, sys%gr, lr(dir, 1) ,"linear", dir, sys%outp)
         end do
 
       else
 
-        call zstatic_response(sys, h, lr(:, :, 1), props, &
+        call zstatic_response(sys, h, lr(:, :), props, &
              pol(1:ndim, 1:ndim), hpol(1:ndim, 1:ndim, 1:ndim),hpol_density)
         call static_output()
-        do i = 1, ndim
-          call zlr_calc_elf(sys%st,sys%gr, lr(i, 1, 1))
-          call zlr_output(sys%st, sys%gr, lr(i, 1, 1) ,"linear", i, sys%outp)
+        do dir = 1, ndim
+          call zlr_calc_elf(sys%st,sys%gr, lr(dir, 1))
+          call zlr_output(sys%st, sys%gr, lr(dir, 1) ,"linear", dir, sys%outp)
         end do
 
       end if
@@ -223,7 +249,7 @@ contains
         do i=1,NDIM
           do j=1,NDIM
             do k=1,NDIM
-              write(fname, '(a,i1,a,i1,a,i1)') 'beta-', i, '-', j, '-', k
+              write(fname, '(a,i1,a,i1,a,i1)') 'beta-', dir, '-', j, '-', k
               call doutput_function (sys%outp%how, "linear", fname, gr%m, gr%sb, hpol_density(:,i,j,k), M_ONE, ierr)
             end do
           end do
@@ -231,13 +257,12 @@ contains
       end if
 
       deallocate(hpol_density)
+
     end if
 
-    do i = 1, ndim
+    do dir = 1, ndim
       do sigma = 1, nsigma
-        do j = 1, nfreq
-          call lr_dealloc(lr(i, sigma, j))
-        end do
+        call lr_dealloc(lr(dir, sigma))
       end do
     end do
 
@@ -332,11 +357,16 @@ contains
         call loct_parse_block_end(blk)
 
         call sort(omega)
+
       else
 
+        !there is no frequency block, we calculate response for w=0.0
         nomega = 1
         ALLOCATE(omega(1:nomega), nomega)
         omega(1)=M_ZERO
+        !and we calculate both polarizability and hyperpolarizability
+        props%calc_hyperpol = .true.
+        props%calc_pol = .true.
 
       end if
 
@@ -359,7 +389,7 @@ contains
       !% The terms are considered in the variation of the
       !% hamiltonian. V_ext is always considered. The default is to include
       !% the fxc and hartree terms. If you want to do RPA only include
-      !% hartree, it will not be faster though.
+      !% hartree.
       !%Option hartree 1 
       !% The variation of the hartree potential.
       !%Option fxc 2
@@ -376,6 +406,28 @@ contains
         props%add_hartree = .false.
       end if
 
+      if (loct_parse_block(check_inp('PolHyper'), blk) == 0) then 
+
+          call loct_parse_block_float(blk, 0, 0, freq_factor(1))
+          call loct_parse_block_float(blk, 0, 1, freq_factor(2))
+          call loct_parse_block_float(blk, 0, 2, freq_factor(3))
+          
+          print*, freq_factor(1), freq_factor(2), freq_factor(3)
+
+        call loct_parse_block_end(blk)
+
+        props%calc_hyperpol = .true.
+        props%calc_pol = .false.
+
+      else
+        
+        props%calc_hyperpol = .false.
+        props%calc_pol = .true.
+
+        freq_factor(1:MAX_DIM)=M_ONE
+
+      end if
+
       call pop_sub()
 
     end subroutine parse_input
@@ -383,6 +435,8 @@ contains
 
     ! ---------------------------------------------------------
     subroutine read_wfs()    
+      integer :: kpoints, nst, ierr, dim
+
       !check how many wfs we have
 
       call push_sub('em_resp.parse_input')
@@ -394,13 +448,13 @@ contains
       end if
 
       ! load wave-functions
-      if ( props%complex_response ) then 
+      if ( complex_response ) then 
         call states_allocate_wfns(sys%st, gr%m, M_CMPLX)
       else 
         call states_allocate_wfns(sys%st, gr%m, M_REAL)
       end if
 
-      call restart_read(trim(tmpdir)//'restart_gs', sys%st, sys%gr, ierr)   
+      call restart_read(trim(tmpdir)//'restart_gs', sys%st, sys%gr, ierr)  
       if(ierr.ne.0) then
         message(1) = "Could not read KS orbitals from '"//trim(tmpdir)//"restart_gs'"
         message(2) = "Please run a calculation of the ground state first!"
@@ -487,7 +541,7 @@ contains
       write(message(1),'(a)') 'Linear Reponse Polarizabilities'
       call messages_print_stress(stdout, trim(message(1)))
 
-      if (props%complex_response) then 
+      if (wfs_are_real(sys%st)) then 
         message(1) = 'Wavefunctions type: Complex'
       else
         message(1) = 'Wavefunctions type: Real'
@@ -521,49 +575,57 @@ contains
 
       nspin=1
 
-      ! check file linear/dynpols
-      file_doesnt_exist = .not. io_file_exists('linear/dynpols', &
-           'Warning: File linear/dynpols found. New information will be appended')
 
-      if( file_doesnt_exist .or. fromScratch ) then
-        call io_mkdir('linear')
-        out_file = io_open('linear/dynpols', action='write')
-        write(out_file, '(a)')       '# Frequency dependent polarizability, real and imaginary parts are included'
-        write(out_file, '(3a)')      '# Frequency units: [',  trim(units_out%energy%abbrev),'/hbar]'
-        write(out_file, '(3a,i1,a)') '# Polarizability units: [',  trim(units_out%length%abbrev),'^',NDIM,']'
-        write(out_file, '(8a)')      '# ', 'Frequency ', &
-             'alpha_11 ' , 'alpha_22 ' , 'alpha_33 ', 'alpha_12 ', 'alpha_13 ', 'alpha_23 '
-        call io_close(out_file)        
-      end if
-
-      ! check file linear/cross-section-tensor
-      file_doesnt_exist = .not. io_file_exists('linear/cross_section_tensor', &
-           'Warning: File linear/cross_section_tensor already exists. New information will be appended')
-
-      if( file_doesnt_exist .or. fromScratch ) then
-        call io_mkdir('linear')
-        out_file = io_open('linear/cross_section_tensor', action='write')
-
-        !this header is the same from sprectrum.F90
-        write(out_file, '(a1, a20)', advance = 'no') '#', str_center("Energy", 20)
-        write(out_file, '(a20)', advance = 'no') str_center("(1/3)*Tr[sigma]", 20)
-        write(out_file, '(a20)', advance = 'no') str_center("Anisotropy[sigma]", 20)
-
-        do i = 1, 3
-          do k = 1, 3
-            write(header_string,'(a6,i1,a1,i1,a1)') 'sigma(',i,',',k,')'
-            write(out_file, '(a20)', advance = 'no') str_center(trim(header_string), 20)
+      if(props%calc_pol) then 
+        
+        ! check file linear/dynpols
+        file_doesnt_exist = .not. io_file_exists('linear/dynpols', &
+             'Warning: File linear/dynpols found. New information will be appended')
+        
+        if( file_doesnt_exist .or. fromScratch ) then
+          call io_mkdir('linear')
+          out_file = io_open('linear/dynpols', action='write')
+          write(out_file, '(a)')       '# Frequency dependent polarizability, real and imaginary parts are included'
+          write(out_file, '(3a)')      '# Frequency units: [',  trim(units_out%energy%abbrev),'/hbar]'
+          write(out_file, '(3a,i1,a)') '# Polarizability units: [',  trim(units_out%length%abbrev),'^',NDIM,']'
+          write(out_file, '(8a)')      '# ', 'Frequency ', &
+               'alpha_11 ' , 'alpha_22 ' , 'alpha_33 ', 'alpha_12 ', 'alpha_13 ', 'alpha_23 '
+          call io_close(out_file)        
+        end if
+        
+        ! check file linear/cross-section-tensor
+        file_doesnt_exist = .not. io_file_exists('linear/cross_section_tensor', &
+             'Warning: File linear/cross_section_tensor already exists. New information will be appended')
+        
+        if( file_doesnt_exist .or. fromScratch ) then
+          call io_mkdir('linear')
+          out_file = io_open('linear/cross_section_tensor', action='write')
+          
+          !this header is the same from sprectrum.F90
+          write(out_file, '(a1, a20)', advance = 'no') '#', str_center("Energy", 20)
+          write(out_file, '(a20)', advance = 'no') str_center("(1/3)*Tr[sigma]", 20)
+          write(out_file, '(a20)', advance = 'no') str_center("Anisotropy[sigma]", 20)
+          
+          do i = 1, 3
+            do k = 1, 3
+              write(header_string,'(a6,i1,a1,i1,a1)') 'sigma(',i,',',k,')'
+              write(out_file, '(a20)', advance = 'no') str_center(trim(header_string), 20)
+            end do
           end do
-        end do
-
-        write(out_file, *)
-        write(out_file, '(a1,a20)', advance = 'no') '#', str_center('['//trim(units_out%energy%abbrev) // ']', 20)
-        do i = 1, 2+nspin*9
-          write(out_file, '(a20)', advance = 'no')  str_center('['//trim(units_out%length%abbrev) //'^2]', 20)
-        end do
-        write(out_file,*)
-
-        call io_close(out_file)
+          
+          write(out_file, *)
+          write(out_file, '(a1,a20)', advance = 'no') '#', str_center('['//trim(units_out%energy%abbrev) // ']', 20)
+          do i = 1, 2+nspin*9
+            write(out_file, '(a20)', advance = 'no')  str_center('['//trim(units_out%length%abbrev) //'^2]', 20)
+          end do
+          write(out_file,*)
+          
+          call io_close(out_file)
+        end if
+      end if
+      
+      if(props%calc_hyperpol)  then 
+        
       end if
 
     end subroutine dynamic_output_init
@@ -571,59 +633,67 @@ contains
     subroutine dynamic_output()
       FLOAT :: sigma(MAX_DIM, MAX_DIM), sigmap(MAX_DIM, MAX_DIM)
       FLOAT :: average, anisotropy
-      integer :: out_file
+      integer :: out_file, iunit
 
-      !write dynpols
-      iunit = io_open('linear/dynpols', action='write', position='append' )
-      if(status%ok) then           
-        !convert units 
-        zpol = zpol/units_out%length%factor**NDIM
-        write(iunit, '(13f12.6)') omega(i), zpol(1,1), zpol(2,2), zpol(3,3), zpol(1,2), zpol(1,3), zpol(2,3)
-      else
-        write(iunit, '(a,f12.6)') '#calculation didnt converge for frequency ', omega(i)
+      if(props%calc_pol) then 
+        !write dynpols
+        iunit = io_open('linear/dynpols', action='write', position='append' )
+        if(status%ok) then           
+          !convert units 
+          alpha = alpha/units_out%length%factor**NDIM
+          write(iunit, '(13f12.6)') omega(i), alpha(1,1), alpha(2,2), alpha(3,3), alpha(1,2), alpha(1,3), alpha(2,3)
+        else
+          write(iunit, '(a,f12.6)') '#calculation did not converge for frequency ', omega(i)
+        end if
+        
+        call io_close(iunit)
+        
+        sigma(1:MAX_DIM, 1:MAX_DIM) = aimag(alpha(1:MAX_DIM, 1:MAX_DIM)) * &
+             omega(i)/units_out%energy%factor * M_FOUR * M_PI / P_c 
+        
+        !write sigma
+        out_file = io_open('linear/cross_section_tensor', action='write', position='append' )
+        average = M_THIRD* ( sigma(1, 1) + sigma(2, 2) + sigma(3, 3) )
+        sigmap(:, :) = matmul(sigma(:, :),sigma(:, :))
+        anisotropy =  M_THIRD * ( M_THREE * (sigmap(1, 1) + sigmap(2, 2) + sigmap(3, 3)) - &
+             (sigma(1, 1) + sigma(2, 2) + sigma(3, 3))**2 )
+        
+        write(out_file,'(3e20.8)', advance = 'no') omega(i) / units_out%energy%factor, &
+             average , sqrt(max(anisotropy, M_ZERO)) 
+        write(out_file,'(9e20.8)', advance = 'no') sigma(1:3, 1:3)
+        write(out_file,'(a)', advance = 'yes')
+        call io_close(out_file)
       end if
 
-      call io_close(iunit)
+      if(props%calc_hyperpol) then 
 
-      sigma(1:MAX_DIM, 1:MAX_DIM) = aimag(zpol(1:MAX_DIM, 1:MAX_DIM)) * &
-           omega(i)/units_out%energy%factor * M_FOUR * M_PI / P_c 
-
-      !write sigma
-      out_file = io_open('linear/cross_section_tensor', action='write', position='append' )
-      average = M_THIRD* ( sigma(1, 1) + sigma(2, 2) + sigma(3, 3) )
-      sigmap(:, :) = matmul(sigma(:, :),sigma(:, :))
-      anisotropy =  M_THIRD * ( M_THREE * (sigmap(1, 1) + sigmap(2, 2) + sigmap(3, 3)) - &
-           (sigma(1, 1) + sigma(2, 2) + sigma(3, 3))**2 )
-
-      write(out_file,'(3e20.8)', advance = 'no') omega(i) / units_out%energy%factor, &
-           average , sqrt(max(anisotropy, M_ZERO)) 
-      write(out_file,'(9e20.8)', advance = 'no') sigma(1:3, 1:3)
-      write(out_file,'(a)', advance = 'yes')
-      call io_close(out_file)
+      end if
 
       !write functions
-      write(dirname, '(a,f5.3)') 'linear/freq_', omega(i)/units_out%energy%factor
-      message(1)='Info: Output will be written to '//dirname//' directory.'
-      call write_info(1)
+      do dir = 1, NDIM
+          
+        write(dirname, '(a,f5.3)') 'linear/freq_', freq_factor(dir)*omega(i)/units_out%energy%factor
 
-      if( props%complex_response ) then 
-        do j = 1, NDIM
+        if( wfs_are_complex(sys%st) ) then 
+          
           if(NDIM==3) then
             if(iand(sys%outp%what, output_elf).ne.0) &
-                 call zlr_calc_elf(sys%st,sys%gr, lr(j, 1, 1), lr(j,2,1))
+                 call zlr_calc_elf(sys%st,sys%gr, lr(dir, 1), lr(j, 2))
           end if
-          call zlr_output(sys%st, sys%gr, lr(j, 1, 1), dirname, j, sys%outp)
-        end do
-      else
-        do j = 1, NDIM
+          call zlr_output(sys%st, sys%gr, lr(dir, 1), dirname, dir, sys%outp)
+          
+        else
+          
           if(NDIM==3) then
             if(iand(sys%outp%what, output_elf).ne.0) &
-                 call dlr_calc_elf(sys%st,sys%gr, lr(j, 1, 1), lr(j,2,1))
+                 call dlr_calc_elf(sys%st,sys%gr, lr(j, 1), lr(j, 2))
           end if
-          call dlr_output(sys%st, sys%gr, lr(j, 1, 1), dirname, j, sys%outp)
-        end do
-      end if
-
+          call dlr_output(sys%st, sys%gr, lr(j, 1), dirname, j, sys%outp)
+          
+        end if
+      
+      end do
+      
     end subroutine dynamic_output
 
   end subroutine static_pol_lr_run
