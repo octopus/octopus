@@ -26,4 +26,4 @@ Enabled  : Yes
 
 Input: 11-sic.01-gs.inp
 
-Match ; Ionization Potential ; grep -A 5 'Eigenvalues \[' static/info | tail -1 ; \s*-0.5427\d*\s*2.0000\d*
+Match ; Ionization Potential ; grep -A 5 'Eigenvalues \[' static/info | tail -1 ; \s*-0.5428\d*\s*2.0000\d*
