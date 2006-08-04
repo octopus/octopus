@@ -675,10 +675,10 @@ contains
         write(dirname, '(a,f5.3)') 'linear/freq_', freq_factor(dir)*omega(i)/units_out%energy%factor
 
         if( wfs_are_complex(sys%st) ) then 
-          
+
           if(NDIM==3) then
             if(iand(sys%outp%what, output_elf).ne.0) &
-                 call zlr_calc_elf(sys%st,sys%gr, lr(dir, 1), lr(j, 2))
+                 call zlr_calc_elf(sys%st,sys%gr, lr(dir, 1), lr(dir, 2))
           end if
           call zlr_output(sys%st, sys%gr, lr(dir, 1), dirname, dir, sys%outp)
           
@@ -686,9 +686,9 @@ contains
           
           if(NDIM==3) then
             if(iand(sys%outp%what, output_elf).ne.0) &
-                 call dlr_calc_elf(sys%st,sys%gr, lr(j, 1), lr(j, 2))
+                 call dlr_calc_elf(sys%st,sys%gr, lr(dir, 1), lr(dir, 2))
           end if
-          call dlr_output(sys%st, sys%gr, lr(j, 1), dirname, j, sys%outp)
+          call dlr_output(sys%st, sys%gr, lr(dir, 1), dirname, dir, sys%outp)
           
         end if
       
@@ -708,6 +708,8 @@ contains
 
     CMPLX, allocatable :: gpsi(:,:), gdl_psi(:,:), gdl_psi_m(:,:)
 
+    call push_sub('em_resp.lr_calc_current')
+  
     if(.not. associated(lr%dl_j)) ALLOCATE(lr%dl_j(gr%m%np, MAX_DIM, st%d%nspin), gr%m%np*MAX_DIM*st%d%nspin)
 
     np = NP
@@ -723,13 +725,12 @@ contains
       do ist = 1, st%nst
         do idim = 1, st%d%dim
 
-          call zf_gradient(gr%sb, gr%f_der, lr%zdl_psi(:,idim,ist,ispin), gdl_psi)
-          call zf_gradient(gr%sb, gr%f_der, st%zpsi(:,idim,ist,ispin), gpsi)
+          call zf_gradient(gr%sb, gr%f_der, lr%zdl_psi(:, idim, ist, ispin), gdl_psi)
+          call zf_gradient(gr%sb, gr%f_der, st%zpsi(:, idim, ist, ispin), gpsi)
 
           if(present(lr_m)) then               
 
-
-            call zf_gradient(gr%sb, gr%f_der, lr_m%zdl_psi(:,idim,ist,ispin), gdl_psi_m)
+            call zf_gradient(gr%sb, gr%f_der, lr_m%zdl_psi(:, idim, ist, ispin), gdl_psi_m)
 
             do k = 1, NDIM 
 
@@ -763,6 +764,8 @@ contains
     deallocate(gpsi)
     deallocate(gdl_psi)
     if(present(lr_m)) deallocate(gdl_psi_m)
+
+    call pop_sub()
 
   end subroutine lr_calc_current
 
