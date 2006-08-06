@@ -98,7 +98,7 @@ void FC_FUNC_(oct_getenv, OCT_GETENV)
 /* this function gets a string of the form '1-12, 34' and fills
 	 array l with the 1 if the number is in the list, or 0 otherwise */
 void FC_FUNC_(oct_wfs_list, OCT_WFS_LIST)
-		 (STR_F_TYPE str, int l[32] STR_ARG1)
+		 (STR_F_TYPE str, int l[16384] STR_ARG1)
 {
   int i, i1, i2;
   char c[20], *c1, *str_c, *s;
@@ -107,7 +107,7 @@ void FC_FUNC_(oct_wfs_list, OCT_WFS_LIST)
   s = str_c;
   
   /* clear list */
-  for(i=0; i<32; i++)
+  for(i=0; i<16384; i++)
     l[i] = 0;
   
   while(*s){
@@ -123,13 +123,13 @@ void FC_FUNC_(oct_wfs_list, OCT_WFS_LIST)
 	if(isdigit(*s)) *c1++ = *s;
       *c1 = '\0';
       i2 = atoi(c) - 1;
-    }else /* single value */
+    } else /* single value */
       i2 = i1;
     
     for(i=i1; i<=i2; i++)
-      if(i>=0 && i<1024)
-	l[i/32] |= 1 << (i % 32);
-    
+      if(i>=0 && i<16384)
+				l[i] = 1;
+
     if(*s) s++;
   }
 

@@ -1558,7 +1558,7 @@ contains
         if(loct_isinstringlist(ist, outp%wfs_list)) then
           do ik = 1, st%d%nik
             do idim = 1, st%d%dim
-              write(fname, '(a,i3.3,a,i3.3,a,i1)') 'wf-', ik, '-', ist, '-', idim
+              write(fname, '(a,i3.3,a,i4.4,a,i1)') 'wf-', ik, '-', ist, '-', idim
               if (st%d%wfs_type == M_REAL) then
                 call doutput_function(outp%how, dir, fname, gr%m, gr%sb, &
                      st%dpsi(1:, idim, ist, ik), sqrt(u), ierr, is_tmp = .false.)
@@ -1578,7 +1578,7 @@ contains
         if(loct_isinstringlist(ist, outp%wfs_list)) then
           do ik = 1, st%d%nik
             do idim = 1, st%d%dim
-              write(fname, '(a,i3.3,a,i3.3,a,i1)') 'sqm-wf-', ik, '-', ist, '-', idim
+              write(fname, '(a,i3.3,a,i4.4,a,i1)') 'sqm-wf-', ik, '-', ist, '-', idim
               if (st%d%wfs_type == M_REAL) then
                 dtmp = abs(st%dpsi(:, idim, ist, ik))**2
               else

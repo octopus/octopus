@@ -422,16 +422,19 @@ module lib_oct_m
 
 contains
 
-  logical function loct_isinstringlist(a, s) result(l)
+  logical function loct_isinstringlist(a, s) result(inlist)
     integer,          intent(in) :: a
     character(len=*), intent(in) :: s
 
-    integer :: list(32), i
+    integer, allocatable :: list(:)
+
+    allocate(list(2**14))
 
     call oct_wfs_list(s, list)
-    l = .false.
-    i = list((a-1)/32 + 1)
-    if(iand(i, 2**(modulo(a-1, 32))).ne.0) l = .true.
+    inlist = .false.
+    if (list(a).eq.1) inlist = .true.
+
+    deallocate(list)
 
   end function loct_isinstringlist
 

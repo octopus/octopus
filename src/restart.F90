@@ -536,7 +536,7 @@ contains
         do ist = st%st_start, st%st_end
           do idim = 1, st%d%dim
             if(filled(idim, ist, ik)) cycle
-            write(message(1),'(a,3i4)') 'Randomizing wavefunction: #dim, #ist, #ik = ', idim, ist, ik
+            write(message(1),'(a,3i5)') 'Randomizing wavefunction: #dim, #ist, #ik = ', idim, ist, ik
             call write_warning(1)
             
             call states_generate_random(st, gr%m, ist, ist)
