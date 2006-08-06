@@ -1517,14 +1517,15 @@ contains
     FLOAT :: u
     FLOAT, allocatable :: dtmp(:), elf(:,:)
 
-    call push_sub('states_inc.states_output')
+    call push_sub('states.states_output')
 
     u = M_ONE/units_out%length%factor**NDIM
 
     if(iand(outp%what, output_density).ne.0) then
       do is = 1, st%d%nspin
         write(fname, '(a,i1)') 'density-', is
-        call doutput_function(outp%how, dir, fname, gr%m, gr%sb, st%rho(:, is), u, ierr)
+        call doutput_function(outp%how, dir, fname, gr%m, gr%sb, &
+          st%rho(:, is), u, ierr, is_tmp = .false.)
       end do
     end if
 
@@ -1534,11 +1535,11 @@ contains
         do is = 1, st%d%nspin
           dtmp(1:NP)=st%rho(1:NP,is)*gr%m%x(1:NP,idim)
           write(fname, '(a,i1,a,i1)') 'dipole_density-', is, '-',idim
-          call doutput_function(outp%how, dir, fname, gr%m, gr%sb, dtmp(:), u, ierr)
+          call doutput_function(outp%how, dir, fname, gr%m, gr%sb, &
+            dtmp(:), u, ierr, is_tmp = .false.)
         end do
       end do
     end if
-
 
     if( (iand(outp%what, output_current).ne.0) .and. (st%d%wfs_type == M_CMPLX) ) then
       ! calculate current first
@@ -1546,11 +1547,11 @@ contains
       do is = 1, st%d%nspin
         do id = 1, NDIM
           write(fname, '(a,i1,a,a)') 'current-', is, '-', index2axis(id)
-          call doutput_function(outp%how, dir, fname, gr%m, gr%sb, st%j(:, id, is), u, ierr)
+          call doutput_function(outp%how, dir, fname, gr%m, gr%sb, &
+            st%j(:, id, is), u, ierr, is_tmp = .false.)
         end do
       end do
     end if
-
 
     if(iand(outp%what, output_wfs).ne.0) then
       do ist = st%st_start, st%st_end
@@ -1560,10 +1561,10 @@ contains
               write(fname, '(a,i3.3,a,i3.3,a,i1)') 'wf-', ik, '-', ist, '-', idim
               if (st%d%wfs_type == M_REAL) then
                 call doutput_function(outp%how, dir, fname, gr%m, gr%sb, &
-                     st%dpsi(1:, idim, ist, ik), sqrt(u), ierr)
+                     st%dpsi(1:, idim, ist, ik), sqrt(u), ierr, is_tmp = .false.)
               else
                 call zoutput_function(outp%how, dir, fname, gr%m, gr%sb, &
-                     st%zpsi(1:, idim, ist, ik), sqrt(u), ierr)
+                     st%zpsi(1:, idim, ist, ik), sqrt(u), ierr, is_tmp = .false.)
               end if
             end do
           end do
@@ -1583,7 +1584,8 @@ contains
               else
                 dtmp = abs(st%zpsi(:, idim, ist, ik))**2
               end if
-              call doutput_function (outp%how, dir, fname, gr%m, gr%sb, dtmp, u, ierr)
+              call doutput_function (outp%how, dir, fname, gr%m, gr%sb, &
+                dtmp, u, ierr, is_tmp = .false.)
             end do
           end do
         end if
@@ -1597,7 +1599,8 @@ contains
         call states_calc_elf(st, gr, elf)
         do is = 1, st%d%nspin
           write(fname, '(a,a,i1)') 'elf_rs', '-', is
-          call doutput_function(outp%how, dir, trim(fname), gr%m, gr%sb, elf(:,is), M_ONE, ierr)
+          call doutput_function(outp%how, dir, trim(fname), gr%m, gr%sb, &
+            elf(:,is), M_ONE, ierr, is_tmp = .false.)
         end do
         deallocate(elf)
       end if
@@ -1607,7 +1610,8 @@ contains
         call states_calc_elf_fs(st, gr, elf)
         do is = 1, st%d%nspin
           write(fname, '(a,a,i1)') 'elf_fs', '-', is
-          call doutput_function(outp%how, dir, trim(fname), gr%m, gr%sb, elf(:,is), M_ONE, ierr)
+          call doutput_function(outp%how, dir, trim(fname), gr%m, gr%sb, &
+            elf(:,is), M_ONE, ierr, is_tmp = .false.)
         end do
         deallocate(elf)
       end if
