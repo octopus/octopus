@@ -433,6 +433,67 @@ end subroutine X(calculate_matrix)
 
 
 ! ---------------------------------------------------------
+! The routine calculates the expectation value of the momentum 
+! operator
+! <p> = < phi*(ist, k) | -i \nabla | phi(ist, ik) >
+!
+! Note, the blas routines cdotc, zdotc take care of complex 
+! conjugation *. Therefore we pass phi directly.
+! ---------------------------------------------------------
+subroutine X(states_calc_momentum)(gr, st, p)
+  type(grid_t),   intent(inout) :: gr
+  type(states_t), intent(inout) :: st
+  FLOAT,            intent(out) :: p(:,:,:)
+
+  integer :: idim, ist, ik, i
+  CMPLX               :: expect_val_p
+  R_TYPE, allocatable :: grad(:,:,:)  
+
+  call push_sub('states_inc.Xstates_calc_momentum')
+  
+  ALLOCATE(grad(NP, st%d%dim, NDIM), NP*st%d%dim*NDIM)
+
+  do ik = 1, st%d%nik
+    do ist = st%st_start, st%st_end
+
+      do idim = 1, st%d%dim
+        ! compute gradient of st%X(psi)
+        call X(f_gradient)(gr%sb, gr%f_der, &
+          st%X(psi)(1:NP_PART, idim, ist, ik), grad(1:NP, idim, 1:NDIM))
+      end do
+      
+      do i = 1, NDIM
+        ! since the expectation value of the momentum operator is real
+        ! for square integrable wfns this integral should be purely imaginary 
+        ! for complex wfns but real for real wfns (see case distinction below)
+        expect_val_p = X(states_dotp)(gr%m, st%d%dim, &
+          st%X(psi)(1:NP, 1:st%d%dim, ist, ik), grad(1:NP, 1:st%d%dim, i))
+
+        ! In the case of real wave functions we do not include the 
+        ! -i prefactor of p = -i \nabla
+        if (st%d%wfs_type == M_REAL) then
+          p(i, ist, ik) = real( expect_val_p )
+        else
+          p(i, ist, ik) = real( -M_zI*expect_val_p )
+        end if
+      end do
+
+      ! have to add the momentum vector in the case of periodic systems, 
+      ! since st%X(psi) contains only u_k
+      do i = 1, gr%sb%periodic_dim
+        p(i, ist, ik) = p(i, ist, ik) + st%d%kpoints(i, ik)
+      end do
+      
+    end do
+  end do
+  
+  deallocate(grad)
+
+  call pop_sub()
+end subroutine X(states_calc_momentum)
+
+
+! ---------------------------------------------------------
 ! It calculates the expectation value of the angular
 ! momentum of the state phi. If l2 is passed, it also
 ! calculates the expectation value of the square of the

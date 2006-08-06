@@ -98,6 +98,8 @@ module states_m
     zstates_residue,                &
     dstates_mpdotp,                 &
     zstates_mpdotp,                 &
+    dstates_calc_momentum,          &
+    zstates_calc_momentum,          &
     dstates_angular_momentum,       &
     zstates_angular_momentum,       &
     states_distribute_nodes,        &
