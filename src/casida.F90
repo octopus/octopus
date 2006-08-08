@@ -626,9 +626,10 @@ contains
       iunit = io_open(trim(tmpdir)//'restart_casida', action='read', status='old', die=.false., is_tmp=.true.)
       err = min(iunit, 0)
 
-      do while(err .eq. 0)
+      do
         read(iunit, fmt=*, iostat=err) ia, jb, val
-        if(err.eq.0 .and. (ia > 0.and.ia <= cas%n_pairs) .and. (jb > 0.and.jb <= cas%n_pairs)) then
+        if(err.ne.0) exit
+        if((ia > 0.and.ia <= cas%n_pairs) .and. (jb > 0.and.jb <= cas%n_pairs)) then
           cas%mat(ia, jb) = val
           saved_K(ia, jb) = .true.
           cas%mat(jb, ia) = val
