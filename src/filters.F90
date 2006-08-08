@@ -131,16 +131,18 @@ contains
         ALLOCATE(tdp(i)%numerical(NDIM,0:2*steps), NDIM*(2*steps+1))
         call build_filter(gr, tdp(i), steps, dt)
       end do
-      
-      tdp(i)%weight = tdp(i)%weight/SUM(tdp(:)%weight)
-      
+
+      do i = 1, no_lines      
+        tdp(i)%weight = tdp(i)%weight/SUM(tdp(1:no_lines)%weight)
+      end do
+
       tdpenalty = M_ZERO
       do i=1,no_lines
         
         tdpenalty =  tdpenalty &
           + tdp(i)%weight * real(tdp(i)%numerical,PRECISION)
       end do
-      
+
       tdpenalty = M_ONE / (tdpenalty + real(0.0000001,PRECISION )) 
       
       ! all we want to know is tdpenalty

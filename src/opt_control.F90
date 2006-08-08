@@ -559,7 +559,7 @@ contains
           " => J1:", overlap, "   J: " , functional,  "  I: " , fluence, &
           " penalty: ", a_penalty(ctr_iter)
       else
-        write(message(1), '(6x,a,f14.8,a,f14.8,a,f14.8)') &
+        write(message(1), '(6x,a,f14.8,a,f20.8,a,f14.8)') &
           " => J1:", overlap, "   J: " , functional,  "  I: " , fluence
       end if
       call write_info(1)
@@ -1070,7 +1070,7 @@ contains
         call write_info(1)
       end if
       functional = overlap - J2
-      
+
       convergence(1,ctr_iter) = functional
       convergence(2,ctr_iter) = overlap
       convergence(3,ctr_iter) = fluence
@@ -1161,7 +1161,7 @@ contains
       write(iunit, '(a)')       'Best value of target functional'
       write(iunit, '(a,i4)')    'Iteration  = ', bestJ1_ctr_iter
       write(iunit, '(a,f14.8)') 'Overlap    = ', bestJ1
-      write(iunit, '(a,f14.8)') 'Functional = ', bestJ1_J
+      write(iunit, '(a,es18.8)') 'Functional = ', bestJ1_J
       write(iunit, '(a,f14.8)') 'Fluence = ',    bestJ1_fluence
       call io_close(iunit)
       message(1) = "Info: Output States"
@@ -1174,7 +1174,8 @@ contains
       write(iunit, '(4(a))') '# iteration ','functional ','overlap ','penalty '
       ! DATA
       do loop=1,ctr_iter_max
-         write(iunit, '(i6,4(f14.8))') loop, convergence(1,loop), convergence(2,loop), convergence(3,loop),convergence(4,loop)
+         write(iunit, '(i6,3f18.8,es20.10)') loop, convergence(1,loop), convergence(2,loop), &
+           convergence(3,loop),convergence(4,loop)
       end do
       call io_close(iunit)
       !do loop=1,ctr_iter_max
@@ -1559,7 +1560,7 @@ contains
         
         if(loct_parse_block(check_inp('OCTLocalTarget'),blk)==0) then
           no_states = loct_parse_block_n(blk)
-          target_st%zpsi(ip, 1, 1, 1) = m_z0
+          target_st%zpsi(:, 1, 1, 1) = m_z0
           do ib = 1, no_states
             ! parse formula string
             call loct_parse_block_string(blk, ib-1, 0, expression)
