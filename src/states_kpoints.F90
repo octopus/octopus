@@ -29,6 +29,7 @@ subroutine states_choose_kpoints(d, sb, geo)
   FLOAT :: total_weight, kmax
 
   ! local variables for the crystal_init call
+  logical :: full_ws_cell
   integer :: is, nk
   integer, allocatable :: natom(:)      ! natom(i) is the number of atoms of specie i
   FLOAT :: kshifts(MAX_DIM)
@@ -163,12 +164,41 @@ subroutine states_choose_kpoints(d, sb, geo)
     coorat(:,:,i) = coorat(:,:,i) / sb%rlat(i, i) + M_HALF
   end do
 
+  !%Variable FullWignerSeitzCell
+  !%Type logical
+  !%Default no
+  !%Section States
+  !%Description
+  !% If true, no symmetry is taken into account for the choice of k-points.
+  !% Instead the k-point sampling will range over the full Wigner-Seitz cell.
+  !%End
+  call loct_parse_logical('FullWignerSeitzCell', .false., full_ws_cell)
 
-  ALLOCATE(kp(3, nkmax), 3*nkmax)
-  ALLOCATE(kw(nkmax), nkmax)
+  if (full_ws_cell) then
+    ! find out how many points we have inside the Wigner-Seitz cell
+    nkmax = points_inside_ws_cell(d%nik_axis, sb%klat) 
 
-  call crystal_init(sb%rlat, geo%nspecies, natom, geo%natoms, coorat, d%nik_axis, &
-    kshifts, nk, nkmax, kp, kw)
+    write(message(1), '(a,i5)' ) 'Info: Total number of k-points inside Wigner-Seitz cell:', nkmax
+    call write_info(1)
+    
+    ALLOCATE(kp(3, nkmax), 3*nkmax)
+    ALLOCATE(kw(nkmax), nkmax)
+
+    ! get kpoints
+    call get_points_in_ws_cell(d%nik_axis, sb%klat, kp) 
+
+    ! equal weights for all points
+    nk = nkmax
+    kw = M_ONE/nk
+  else
+    ALLOCATE(kp(3, nkmax), 3*nkmax)
+    ALLOCATE(kw(nkmax), nkmax)
+
+    ! choose k-points according to Monkhorst-Pack scheme
+    ! all points are equal, but some are more equal than others :)
+    call crystal_init(sb%rlat, geo%nspecies, natom, geo%natoms, coorat, d%nik_axis, &
+      kshifts, nk, nkmax, kp, kw)
+  end if
 
   ! double d%nik and copy points for spin polarized calc
   select case(d%ispin)
@@ -191,7 +221,7 @@ subroutine states_choose_kpoints(d, sb, geo)
     d%kweights(::2)  = kw(:)
     d%kweights(2::2) = kw(:)
   end select
-
+  
   deallocate(natom, coorat)
   deallocate(kp, kw)
 
@@ -222,3 +252,192 @@ subroutine kpoints_write_info(d,iunit)
 
   call pop_sub()
 end subroutine kpoints_write_info
+
+
+! ---------------------------------------------------------
+subroutine get_points_in_ws_cell(nik_axis, klat, kp) 
+  integer, intent(in) :: nik_axis(:)
+  FLOAT,   intent(in) :: klat(:,:)
+  FLOAT,  intent(out) :: kp(:,:)
+
+  integer :: ix, iy, iz, inik, iunit
+  FLOAT   :: k_point(3)
+
+  call push_sub('states_kpoints.get_points_in_ws_cell')
+
+  iunit = io_open('static/wigner_seitz_cell.dat', action = 'write')
+  write(iunit, '(a,7x,a,14x,a,14x,a)') '# index','k_x','k_y','k_z'
+
+  inik = 1
+
+  do ix = 0, nik_axis(1) - 1
+    do iy = 0, nik_axis(2) - 1
+      do iz = 0, nik_axis(3) - 1
+
+        k_point(1) = -klat(1, 1)/M_TWO + ix * ( klat(1,1) / (nik_axis(1) - 1) ) 
+        k_point(2) = -klat(2, 2)/M_TWO + iy * ( klat(2,2) / (nik_axis(2) - 1) ) 
+        k_point(3) = -klat(3, 3)/M_TWO + iz * ( klat(3,3) / (nik_axis(3) - 1) )
+
+        if (in_wigner_seitz_cell(k_point, klat)) then
+          kp(:, inik) = k_point
+          write(iunit,'(i4, 3f18.12)') inik, kp(:, inik)
+          inik = inik + 1          
+        end if
+        
+      end do
+    end do
+  end do
+
+  call io_close(iunit)
+
+  call pop_sub()
+end subroutine get_points_in_ws_cell
+
+
+! ---------------------------------------------------------
+integer function points_inside_ws_cell(nik_axis, klat) result(no_of_points)
+  integer, intent(in) :: nik_axis(:)
+  FLOAT,   intent(in) :: klat(:,:)
+
+  integer :: ix, iy, iz, inik
+  FLOAT   :: k_point(3)
+
+  call push_sub('states_kpoints.points_inside_ws_cell')
+
+  ! find out how many k-points are contained in the Wigner-Seitz cell
+
+  inik = 0
+
+  do ix = 0, nik_axis(1) - 1 
+    do iy = 0, nik_axis(2) - 1
+      do iz = 0, nik_axis(3) - 1
+
+        k_point(1) = -klat(1, 1)/M_TWO + ix * ( klat(1, 1) / (nik_axis(1) - 1) )
+        k_point(2) = -klat(2, 2)/M_TWO + iy * ( klat(2, 2) / (nik_axis(2) - 1) ) 
+        k_point(3) = -klat(3, 3)/M_TWO + iz * ( klat(3, 3) / (nik_axis(3) - 1) )
+
+        if (in_wigner_seitz_cell(k_point, klat)) inik = inik + 1
+
+      end do
+    end do
+  end do
+
+  no_of_points = inik
+
+  call pop_sub()
+end function points_inside_ws_cell
+
+
+! ---------------------------------------------------------
+logical function in_wigner_seitz_cell(k_point, klat) result(in_cell)
+  FLOAT, intent(in) :: k_point(:)
+  FLOAT, intent(in) :: klat(:,:)
+
+  integer, allocatable :: bragg_normal(:,:)
+  integer :: ib, ws_cell_type
+  FLOAT   :: half_dist(3), normal(3), asize
+
+  ! Wigner Seitz cells of cubic lattices
+  integer, parameter :: &
+    CUBE         = 1,   &
+    OCTAHEDRON   = 2,   &
+    DODECAHEDRON = 3
+
+  call push_sub('states_kpoints.in_wigner_seitz_cell')
+
+  ! Warning: currently the routine allows only for cubic systems
+  ! Tetragonal, orthorombic and monoclinic systems are excluded
+  asize = klat(1, 1)
+
+  half_dist(:) = (/               &
+    asize/M_TWO,                  &  ! cube
+    asize/M_FOUR * sqrt(M_THREE), &  ! octahedron
+    asize/M_FOUR * sqrt(  M_TWO)  &  ! dodecahedron
+    /)
+  
+  !%Variable WignerSeitzCellType
+  !%Type integer
+  !%Default cube
+  !%Section States
+  !%Description
+  !% Determines which form of Wigner-Seitz cell octopus should
+  !% use for a full k-point sampling (currently this is not
+  !% automatically determined from atomic positions and has to
+  !% be specified manually)
+  !%Option cube 1
+  !% The Wigner-Seitz cell is has simple cubic form
+  !%Option octahedron 2
+  !% The Wigner-Seitz cell is has the form of a octahedron
+  !%Option dodecahedron 3
+  !% The Wigner-Seitz cell is has the form of a octahedron
+  !%End
+  call loct_parse_int('WignerSeitzCellType', CUBE, ws_cell_type)
+
+  ! the number of Bragg planes corresponds to the coordination number
+  ! of the respective Bravais lattice
+  select case(ws_cell_type)
+  case(CUBE)
+
+    ALLOCATE(bragg_normal(3, 6), 3*6)
+
+    bragg_normal(1:3, 1) = (/  2,   0,   0/) 
+    bragg_normal(1:3, 2) = (/ -2,   0,   0/) 
+    bragg_normal(1:3, 3) = (/  0,   2,   0/) 
+    bragg_normal(1:3, 4) = (/  0,  -2,   0/) 
+    bragg_normal(1:3, 5) = (/  0,   0,   2/) 
+    bragg_normal(1:3, 6) = (/  0,   0,  -2/) 
+
+  case(OCTAHEDRON)
+
+    ALLOCATE(bragg_normal(3, 8), 3*8)
+
+    bragg_normal(1:3, 1) = (/ -1,  -1,  -1 /) 
+    bragg_normal(1:3, 2) = (/ -1,   1,  -1 /) 
+    bragg_normal(1:3, 3) = (/  1,  -1,  -1 /) 
+    bragg_normal(1:3, 4) = (/  1,   1,  -1 /) 
+    bragg_normal(1:3, 5) = (/ -1,  -1,   1 /) 
+    bragg_normal(1:3, 6) = (/ -1,   1,   1 /) 
+    bragg_normal(1:3, 7) = (/  1,  -1,   1 /) 
+    bragg_normal(1:3, 8) = (/  1,   1,   1 /) 
+    
+  case(DODECAHEDRON)
+
+    ALLOCATE(bragg_normal(3, 12), 3*12)
+
+    bragg_normal(1:3,  1) = (/  0,  -1,  -1 /) 
+    bragg_normal(1:3,  2) = (/  0,  -1,   1 /) 
+    bragg_normal(1:3,  3) = (/ -1,  -1,   0 /) 
+    bragg_normal(1:3,  4) = (/  1,  -1,   0 /) 
+    bragg_normal(1:3,  5) = (/  0,   1,  -1 /) 
+    bragg_normal(1:3,  6) = (/  0,   1,   1 /) 
+    bragg_normal(1:3,  7) = (/ -1,   1,   0 /) 
+    bragg_normal(1:3,  8) = (/  1,   1,   0 /) 
+    bragg_normal(1:3,  9) = (/ -1,   0,  -1 /) 
+    bragg_normal(1:3, 10) = (/ -1,   0,   1 /) 
+    bragg_normal(1:3, 11) = (/  1,   0,  -1 /) 
+    bragg_normal(1:3, 12) = (/  1,   0,   1 /) 
+
+  end select
+
+
+  in_cell = .true.
+
+  ! loop over all Bragg planes  
+  do ib = 1, size(bragg_normal, 2) 
+
+    ! compute normalized normal vector of Bragg plane 
+    normal = bragg_normal(:, ib) / &
+      sqrt(dot_product(real(bragg_normal(:, ib)), real(bragg_normal(:, ib)))) 
+
+    ! if the projection of the current k-point onto the normal of the 
+    ! Bragg plane is larger than half_dist the k-point lies outside the WS cell 
+    if (dot_product(k_point, normal) .gt. half_dist(ws_cell_type)) then
+      in_cell = .false. 
+    end if
+
+  end do
+  
+  deallocate(bragg_normal)
+
+  call pop_sub()
+end function in_wigner_seitz_cell

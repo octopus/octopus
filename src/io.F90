@@ -190,6 +190,9 @@ contains
     call loct_parse_string('TmpDir', 'tmp/', tmpdir)
     call io_mkdir(tmpdir, is_tmp=.true.)
 
+    ! create static directory
+    call io_mkdir('static', is_tmp=.false.)
+
     ! restarts from scratch will be done from here
     !%Variable InputDir
     !%Default "tmp/"
