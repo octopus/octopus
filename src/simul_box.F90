@@ -568,7 +568,7 @@ contains
     type(geometry_t),   intent(in) :: geo
     FLOAT,              intent(in) :: x(:) ! x(3)
 
-    FLOAT, parameter :: DELTA_R = CNST(1e-12)
+    FLOAT, parameter :: DELTA = CNST(1e-12)
     FLOAT :: r, re, im, xx(MAX_DIM)
 
 #if defined(HAVE_GDLIB)
@@ -579,20 +579,20 @@ contains
 
     select case(sb%box_shape)
     case(SPHERE)
-      in_box = (sqrt(sum(xx(:)**2)) <= sb%rsize+DELTA_R)
+      in_box = (sqrt(sum(xx(:)**2)) <= sb%rsize+DELTA)
 
     case(CYLINDER)
       r = sqrt(xx(2)**2 + xx(3)**2)
-      in_box = (r<=sb%rsize+DELTA_R .and. abs(xx(1))<=sb%xsize+DELTA_R)
+      in_box = (r<=sb%rsize+DELTA .and. abs(xx(1))<=sb%xsize+DELTA)
 
     case(MINIMUM)
       in_box = in_minimum()
 
     case(PARALLELEPIPED)
       in_box =  &
-        (xx(1) >= -sb%lsize(1).and.xx(1) <= sb%lsize(1)).and. &
-        (xx(2) >= -sb%lsize(2).and.xx(2) <= sb%lsize(2)).and. &
-        (xx(3) >= -sb%lsize(3).and.xx(3) <= sb%lsize(3))
+        (xx(1) >= -sb%lsize(1)-DELTA.and.xx(1) <= sb%lsize(1)+DELTA).and. &
+        (xx(2) >= -sb%lsize(2)-DELTA.and.xx(2) <= sb%lsize(2)+DELTA).and. &
+        (xx(3) >= -sb%lsize(3)-DELTA.and.xx(3) <= sb%lsize(3)+DELTA)
 
 #if defined(HAVE_GDLIB)
     case(BOX_IMAGE)
@@ -605,10 +605,10 @@ contains
     case(BOX_USDEF)
       ! is it inside the user given boundaries
       in_box =  &
-        (xx(1) >= -sb%lsize(1).and.xx(1) <= sb%lsize(1)).and. &
-        (xx(2) >= -sb%lsize(2).and.xx(2) <= sb%lsize(2)).and. &
-        (xx(3) >= -sb%lsize(3).and.xx(3) <= sb%lsize(3))
-
+        (xx(1) >= -sb%lsize(1)-DELTA.and.xx(1) <= sb%lsize(1)+DELTA).and. &
+        (xx(2) >= -sb%lsize(2)-DELTA.and.xx(2) <= sb%lsize(2)+DELTA).and. &
+        (xx(3) >= -sb%lsize(3)-DELTA.and.xx(3) <= sb%lsize(3)+DELTA)
+      
       ! and inside the simulation box
       xx(:) = xx(:)/units_inp%length%factor ! convert from a.u. to input units
       r = sqrt(sum(xx(:)**2))
@@ -631,7 +631,7 @@ contains
         else
           radius = geo%atom(i)%spec%def_rsize
         endif
-        if(r <= radius + DELTA_R) then
+        if(r <= radius + DELTA) then
           in_minimum = .true.
           exit
         end if
