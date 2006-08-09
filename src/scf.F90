@@ -25,6 +25,7 @@ module scf_m
   use mpi_m
   use messages_m
   use datasets_m
+  use lib_oct_m
   use lib_oct_parser_m
   use units_m
   use geometry_m
@@ -236,7 +237,7 @@ contains
     type(lcao_t) :: lcao_data
 
     integer :: iter, iunit, is, idim, nspin, dim, err
-    FLOAT :: evsum_out, evsum_in
+    FLOAT :: evsum_out, evsum_in, etime
     FLOAT, allocatable :: rhoout(:,:,:), rhoin(:,:,:), rhonew(:,:,:)
     FLOAT, allocatable :: vout(:,:,:), vin(:,:,:), vnew(:,:,:)
     FLOAT, allocatable :: tmp(:)
@@ -289,6 +290,8 @@ contains
     ! SCF cycle
     do iter = 1, scf%max_iter
       call profiling_in(C_PROFILING_SCF_CYCLE)
+
+      etime = loct_clock()
 
       if(scf%lcao_restricted) then
         call lcao_wf(lcao_data, st, gr%m, h)
@@ -470,6 +473,10 @@ contains
       if(st%d%ispin > UNPOLARIZED) then
         call write_magnetic_moments(stdout, gr%m, st)
       end if
+
+      write(message(1),'(a)') ''
+      write(message(2),'(a,f14.2)') 'Elapsed time for SCF step:', loct_clock() - etime
+      call write_info(2)      
 
       call messages_print_stress(stdout)
 
