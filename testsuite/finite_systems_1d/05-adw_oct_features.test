@@ -40,4 +40,4 @@ Input: 05-adw.03-filter_indirect.inp
 # Match overlaps 
 Match ; J1 1st  iteration  ; grep ' 1  ' opt-control/convergence ; \s*0.249\d*
 Match ; J1 2nd  iteration  ; grep ' 2  ' opt-control/convergence ; \s*0.568\d*
-Match ; J1 5th  iteration  ; grep ' 5  ' opt-control/convergence ; \s*0.83\d*
+Match ; J1 5th  iteration  ; grep ' 5  ' opt-control/convergence ; \s*0.947\d*
