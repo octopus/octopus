@@ -207,7 +207,6 @@ contains
 
         !calculate hyperpolarizability
         if(props%calc_hyperpol) then 
-          print*, "ACA"
           if(wfs_are_complex(sys%st)) then 
             call zlr_calc_beta(sys, lr, props, beta)
           else
@@ -412,7 +411,7 @@ contains
           call loct_parse_block_float(blk, 0, 1, freq_factor(2))
           call loct_parse_block_float(blk, 0, 2, freq_factor(3))
           
-          print*, freq_factor(1), freq_factor(2), freq_factor(3)
+!          print*, freq_factor(1), freq_factor(2), freq_factor(3)
 
         call loct_parse_block_end(blk)
 
@@ -575,6 +574,7 @@ contains
 
       nspin=1
 
+      call io_mkdir('linear')
 
       if(props%calc_pol) then 
         
@@ -583,7 +583,6 @@ contains
              'Warning: File linear/dynpols found. New information will be appended')
         
         if( file_doesnt_exist .or. fromScratch ) then
-          call io_mkdir('linear')
           out_file = io_open('linear/dynpols', action='write')
           write(out_file, '(a)')       '# Frequency dependent polarizability, real and imaginary parts are included'
           write(out_file, '(3a)')      '# Frequency units: [',  trim(units_out%energy%abbrev),'/hbar]'
@@ -666,7 +665,17 @@ contains
       end if
 
       if(props%calc_hyperpol) then 
-
+        iunit = io_open('linear/beta', action='write', position='append' )
+        if(status%ok) then           
+          write(iunit, '(7f12.6)') omega(i), &
+               real(beta(1,1,1)), aimag(beta(1,1,1)), &
+               real(beta(2,2,2)), aimag(beta(2,2,2)), &
+               real(beta(3,3,3)), aimag(beta(3,3,3))
+        else
+          write(iunit, '(a,f12.6)') '#calculation did not converge for frequency ', omega(i)
+        end if
+        
+        call io_close(iunit)
       end if
 
       !write functions
