@@ -167,6 +167,8 @@ contains
     if(simul_box_is_periodic(sys%gr%sb).and. sys%st%d%nik>sys%st%d%nspin) then
       iunit = io_open('static/bands.dat', action='write')
       call states_write_bands(iunit, sys%st%nst, sys%st, sys%gr%sb)
+      call states_write_dos('static', sys%st)
+      call states_write_fermi_energy('static', sys%st, sys%gr%m, sys%gr%sb)
       call io_close(iunit)
     end if
 

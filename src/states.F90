@@ -66,7 +66,9 @@ module states_m
     states_calculate_multipoles,    &
     states_eigenvalues_sum,         &
     states_write_eigenvalues,       &
+    states_write_dos,               &
     states_write_bands,             &
+    states_write_fermi_energy,      &
     states_spin_channel,            &
     states_calc_projection,         &
     states_magnetization_dens,      &
@@ -1198,7 +1200,7 @@ contains
     if(st%d%nspin == 2) ns = 2
 
     ! define the scaling factor to output k_i/G_i, instead of k_i
-    do i =1,MAX_DIM
+    do i = 1, MAX_DIM
       factor(i) = M_ONE
       if (sb%klat(i,i) /= M_ZERO) factor(i) = sb%klat(i,i)
     end do
@@ -1223,6 +1225,170 @@ contains
     end select
 
   end subroutine states_write_bands
+
+
+  ! ---------------------------------------------------------
+  subroutine states_write_dos(dir, st)
+    character(len=*), intent(in) :: dir
+    type(states_t),   intent(in) :: st
+
+    integer :: ie, ik, ist, epoints, iunit
+    FLOAT   :: emin, emax, de, gamma, energy
+    FLOAT   :: evalmax, evalmin, tdos, eextend
+    FLOAT, allocatable :: dos(:,:)
+    character(len=64)  :: filename
+
+    call push_sub('states.states_write_dos')
+
+    evalmin = minval(st%eigenval/units_out%energy%factor)
+    evalmax = maxval(st%eigenval/units_out%energy%factor)
+    ! we extend the energy mesh by this amount
+    eextend  = (evalmax - evalmin) / M_FOUR
+
+    !%Variable DOSEnergyMin
+    !%Type float
+    !%Default 
+    !%Section Output
+    !%Description
+    !% Lower bound for the energy mesh of the DOS
+    !%End
+    call loct_parse_float(check_inp('DOSEnergyMin'), evalmin - eextend, emin)
+
+    !%Variable DOSEnergyMax
+    !%Type float
+    !%Default 
+    !%Section Output
+    !%Description
+    !% Upper bound for the energy mesh of the DOS
+    !%End
+    call loct_parse_float(check_inp('DOSEnergyMax'), evalmax + eextend, emax)
+
+    !%Variable DOSEnergyPoints
+    !%Type integer
+    !%Default 200
+    !%Section Output
+    !%Description
+    !% Determines how many energy points octopus should use for 
+    !% the DOS energy grid
+    !%End
+    call loct_parse_int(check_inp('DOSEnergyPoints'), 500, epoints)
+
+    !%Variable DOSGamma
+    !%Type float
+    !%Default 
+    !%Section Output
+    !%Description
+    !% Determines the width of the Lorentzian which is used to sum 
+    !% up the DOS sum
+    !%End
+    call loct_parse_float(check_inp('DOSGamma'), &
+      CNST(0.008)/units_out%energy%factor, gamma)
+
+    ! spacing for energy mesh
+    de = (emax - emin) / (epoints - 1)
+
+    ! space for state dependent DOS
+    ALLOCATE(dos(epoints, st%nst), epoints*st%nst)
+
+    ! compute band resolved density of states
+    do ist = 1, st%nst
+
+      write(filename, '(a,i4.4,a)') 'dos-', ist, '.dat'
+      iunit = io_open(trim(dir)//'/'//trim(filename), action='write')
+      
+      do ie = 1, epoints
+        energy = emin + (ie - 1) * de
+        dos(ie, ist) = M_ZERO
+        ! sum up Lorentzians
+        do ik = 1, st%d%nik
+          dos(ie, ist) = dos(ie, ist) + st%d%kweights(ik) * M_ONE/M_Pi * &
+            gamma / ( (energy - st%eigenval(ist, ik)/units_out%energy%factor)**2 + gamma**2 )
+        end do
+        write(iunit, '(2f12.6)') energy, dos(ie, ist)
+      end do
+      
+      call io_close(iunit)
+    end do
+    
+    iunit = io_open(trim(dir)//'/'//'total-dos.dat', action='write')    
+
+    ! compute total density of states
+    do ie = 1, epoints
+      energy = emin + (ie - 1) * de
+      tdos = M_ZERO
+      do ist = 1, st%nst
+        tdos = tdos + dos(ie, ist)
+      end do
+      write(iunit, '(2f12.6)') energy, tdos
+    end do
+
+    call io_close(iunit)
+
+    deallocate(dos)
+
+    call pop_sub()
+  end subroutine states_write_dos
+
+
+  ! ---------------------------------------------------------
+  subroutine states_write_fermi_energy(dir, st, m, sb)
+    character(len=*),  intent(in) :: dir
+    type(states_t), intent(inout) :: st
+    type(mesh_t),      intent(in) :: m
+    type(simul_box_t), intent(in) :: sb
+
+    integer :: iunit, i
+    FLOAT :: scale, maxdos
+    FLOAT :: factor(MAX_DIM)
+
+    call push_sub('states.states_write_fermi_energy')
+
+    call states_fermi(st, m)
+    
+    iunit = io_open(trim(dir)//'/'//'bands-efermi.dat', action='write')    
+
+    scale = units_out%energy%factor
+
+    ! define the scaling factor to output k_i/G_i, instead of k_i
+    do i = 1, MAX_DIM
+      factor(i) = M_ONE
+      if (sb%klat(i,i) /= M_ZERO) factor(i) = sb%klat(i,i)
+    end do
+
+    ! write fermi energy in a format that can be used together 
+    ! with bands.dat
+    write(iunit, '(a)') '# Fermi energy in a format compatible with bands.dat'
+
+    write(iunit, '(4f12.6)')               &
+      minval(st%d%kpoints(1,:)/factor(1)), &
+      minval(st%d%kpoints(2,:)/factor(2)), &
+      minval(st%d%kpoints(3,:)/factor(3)), &
+      st%ef/scale
+
+    write(iunit, '(4f12.6)')               &
+      maxval(st%d%kpoints(1,:)/factor(1)), &
+      maxval(st%d%kpoints(2,:)/factor(2)), &
+      maxval(st%d%kpoints(3,:)/factor(3)), &
+      st%ef/scale
+
+    call io_close(iunit)
+
+    ! now we write the same information so that it can be used 
+    ! together with total-dos.dat
+    iunit = io_open(trim(dir)//'/'//'total-dos-efermi.dat', action='write')    
+
+    write(iunit, '(a)') '# Fermi energy in a format compatible with total-dos.dat'    
+    
+    ! this is the maximum that tdos can reach
+    maxdos = sum(st%d%kweights) * st%nst
+
+    write(iunit, '(4f12.6)') st%ef/scale, M_ZERO
+    write(iunit, '(4f12.6)') st%ef/scale, maxdos
+
+    call io_close(iunit)
+
+    call pop_sub()
+  end subroutine states_write_fermi_energy
 
 
   ! -------------------------------------------------------
