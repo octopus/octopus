@@ -46,13 +46,15 @@ end subroutine X(hamiltonian_eigenval)
 
 
 ! ---------------------------------------------------------
-subroutine X(Hpsi) (h, gr, psi, hpsi, ik, t)
+subroutine X(Hpsi) (h, gr, psi, hpsi, ik, t, E)
   type(hamiltonian_t), intent(inout) :: h
   type(grid_t),        intent(inout) :: gr
   integer,             intent(in)    :: ik
   R_TYPE,              intent(inout) :: psi(:,:)  !  psi(m%np_part, h%d%dim)
   R_TYPE,              intent(out)   :: Hpsi(:,:) !  Hpsi(m%np_part, h%d%dim)
   FLOAT, optional,     intent(in)    :: t
+  FLOAT, optional,     intent(in)    :: E
+
 
   call profiling_in(C_PROFILING_HPSI)
   call push_sub('h_inc.XHpsi')
@@ -85,6 +87,11 @@ subroutine X(Hpsi) (h, gr, psi, hpsi, ik, t)
     call X(vborders) (gr, h, psi, hpsi)
   end if
 
+  if(present(E)) then
+    ! compute (H-E) psi = hpsi
+    hpsi = hpsi - E*psi
+  end if
+  
   call pop_sub()
   call profiling_out(C_PROFILING_HPSI)
 end subroutine X(Hpsi)
