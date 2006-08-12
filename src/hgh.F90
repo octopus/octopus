@@ -517,7 +517,7 @@ contains
         do ir = 2, psp%g%nrval
           vtot = 2*psp%vlocal(ir) + ve(ir, 1) + dble(l*(l + 1))/(psp%g%rofi(ir)**2)
           nonl = M_ZERO
-          if(iter>1 .and. psp%l_max >=0 .and. psp%rphi(ir, n) > 1.0e-7) then
+          if(iter>2 .and. psp%l_max >=0 .and. psp%rphi(ir, n) > 1.0e-7) then
             do i = 1, 3
               do j = 1, 3
                 do irr = 2, psp%g%nrval
