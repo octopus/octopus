@@ -112,6 +112,16 @@ subroutine states_choose_kpoints(d, sb, geo)
     call loct_parse_block_end(blk)
   end if
 
+  !%Variable FullWignerSeitzCell
+  !%Type logical
+  !%Default no
+  !%Section States
+  !%Description
+  !% If true, no symmetry is taken into account for the choice of k-points.
+  !% Instead the k-point sampling will range over the full Wigner-Seitz cell.
+  !%End
+  call loct_parse_logical('FullWignerSeitzCell', .false., full_ws_cell)
+
   !%Variable CenterOfInversion
   !%Type integer
   !%Default no
@@ -123,30 +133,33 @@ subroutine states_choose_kpoints(d, sb, geo)
   !%Option yes 1
   !% The system has a center of inversion: use half BZ
   !%End
+  if(.not. full_ws_cell) then
 
-  if(sb%periodic_dim == 1) then
-    call loct_parse_int(check_inp('CenterOfInversion'), 0, coi)
-    d%nik = d%nik_axis(1)/(1 + coi) + 1
-    ALLOCATE(d%kpoints(3, d%nik), 3*d%nik)
-    ALLOCATE(d%kweights  (d%nik),   d%nik)
-    d%kpoints     = M_ZERO
-    d%kweights    = M_ONE
-    kmax          = (M_ONE - coi*M_HALF)*sb%klat(1,1)
-    total_weight  = M_ZERO
-
-    do i = 1, d%nik
-      d%kpoints(1, i) = (i-1)*kmax/real(d%nik-1)
-      if (i /= 1 .and. i /= d%nik) then
-        d%kweights(i) = d%kweights(i) + coi
+    if(sb%periodic_dim == 1) then
+      call loct_parse_int(check_inp('CenterOfInversion'), 0, coi)
+      d%nik = d%nik_axis(1)/(1 + coi) + 1
+      ALLOCATE(d%kpoints(3, d%nik), 3*d%nik)
+      ALLOCATE(d%kweights  (d%nik),   d%nik)
+      d%kpoints     = M_ZERO
+      d%kweights    = M_ONE
+      kmax          = (M_ONE - coi*M_HALF)*sb%klat(1,1)
+      total_weight  = M_ZERO
+      
+      do i = 1, d%nik
+        d%kpoints(1, i) = (i-1)*kmax/real(d%nik-1)
+        if (i /= 1 .and. i /= d%nik) then
+          d%kweights(i) = d%kweights(i) + coi
+        end if
+        total_weight = total_weight + d%kweights(i)
+      end do
+      d%kweights = d%kweights/total_weight
+      if (d%ispin == 2) then
+        message(1) = 'Not implemented yet.'
+        call write_fatal(1)
       end if
-      total_weight = total_weight + d%kweights(i)
-    end do
-    d%kweights = d%kweights/total_weight
-    if (d%ispin == 2) then
-      message(1) = 'Not implemented yet.'
-      call write_fatal(1)
+      return
     end if
-    return
+
   end if
 
   ALLOCATE(natom(geo%nspecies), geo%nspecies)
@@ -160,23 +173,13 @@ subroutine states_choose_kpoints(d, sb, geo)
     coorat(is, natom(is), :) = geo%atom(i)%x(:)
   end do
 
-  do i = 1, 3
+  do i = 1, sb%dim
     coorat(:,:,i) = coorat(:,:,i) / sb%rlat(i, i) + M_HALF
   end do
 
-  !%Variable FullWignerSeitzCell
-  !%Type logical
-  !%Default no
-  !%Section States
-  !%Description
-  !% If true, no symmetry is taken into account for the choice of k-points.
-  !% Instead the k-point sampling will range over the full Wigner-Seitz cell.
-  !%End
-  call loct_parse_logical('FullWignerSeitzCell', .false., full_ws_cell)
-
   if (full_ws_cell) then
     ! find out how many points we have inside the Wigner-Seitz cell
-    nkmax = points_inside_ws_cell(d%nik_axis, sb%klat) 
+    nkmax = points_inside_ws_cell(sb%periodic_dim, d%nik_axis, sb%klat) 
 
     write(message(1), '(a,i5)' ) 'Info: Total number of k-points inside Wigner-Seitz cell:', nkmax
     call write_info(1)
@@ -185,7 +188,7 @@ subroutine states_choose_kpoints(d, sb, geo)
     ALLOCATE(kw(nkmax), nkmax)
 
     ! get kpoints
-    call get_points_in_ws_cell(d%nik_axis, sb%klat, kp) 
+    call get_points_in_ws_cell(sb%periodic_dim, d%nik_axis, sb%klat, kp) 
 
     ! equal weights for all points
     nk = nkmax
@@ -247,7 +250,7 @@ subroutine kpoints_write_info(d,iunit)
 
   do ik = 1, d%nik
      write(message(1),'(i4,1x,4f12.4)') ik,d%kpoints(:,ik)*units_out%length%factor, d%kweights(ik)
-     call write_info(1,iunit,verbose_limit=80)
+     call write_info(1, iunit, verbose_limit=80)
   end do
 
   call pop_sub()
@@ -255,18 +258,20 @@ end subroutine kpoints_write_info
 
 
 ! ---------------------------------------------------------
-subroutine get_points_in_ws_cell(nik_axis, klat, kp) 
+subroutine get_points_in_ws_cell(dim, nik_axis, klat, kp) 
+  integer, intent(in) :: dim
   integer, intent(in) :: nik_axis(:)
   FLOAT,   intent(in) :: klat(:,:)
   FLOAT,  intent(out) :: kp(:,:)
 
-  integer :: ix, iy, iz, inik, iunit
+  integer :: ix, iy, iz, inik, iunit, ik(3), id
   FLOAT   :: k_point(3)
 
   call push_sub('states_kpoints.get_points_in_ws_cell')
 
   iunit = io_open('static/wigner_seitz_cell.dat', action = 'write')
-  write(iunit, '(a,7x,a,14x,a,14x,a)') '# index','k_x','k_y','k_z'
+  write(message(1), '(a,7x,a,14x,a,14x,a)') '# index','k_x','k_y','k_z'
+  call write_info(1, iunit)
 
   inik = 1
 
@@ -274,13 +279,17 @@ subroutine get_points_in_ws_cell(nik_axis, klat, kp)
     do iy = 0, nik_axis(2) - 1
       do iz = 0, nik_axis(3) - 1
 
-        k_point(1) = -klat(1, 1)/M_TWO + ix * ( klat(1,1) / (nik_axis(1) - 1) ) 
-        k_point(2) = -klat(2, 2)/M_TWO + iy * ( klat(2,2) / (nik_axis(2) - 1) ) 
-        k_point(3) = -klat(3, 3)/M_TWO + iz * ( klat(3,3) / (nik_axis(3) - 1) )
+        k_point = M_ZERO
+        ik = (/ ix, iy, iz /)
+
+        do id = 1, dim
+          k_point(id) = -klat(id, id) + ik(id) * ( M_TWO*klat(id, id) / (nik_axis(id) - 1) ) 
+        end do
 
         if (in_wigner_seitz_cell(k_point, klat)) then
           kp(:, inik) = k_point
-          write(iunit,'(i4, 3f18.12)') inik, kp(:, inik)
+          write(message(1),'(i4, 3f18.12)') inik, kp(:, inik)
+          call write_info(1, iunit)
           inik = inik + 1          
         end if
         
@@ -295,11 +304,12 @@ end subroutine get_points_in_ws_cell
 
 
 ! ---------------------------------------------------------
-integer function points_inside_ws_cell(nik_axis, klat) result(no_of_points)
+integer function points_inside_ws_cell(dim, nik_axis, klat) result(no_of_points)
+  integer, intent(in) :: dim
   integer, intent(in) :: nik_axis(:)
   FLOAT,   intent(in) :: klat(:,:)
 
-  integer :: ix, iy, iz, inik
+  integer :: ix, iy, iz, inik, ik(3), id
   FLOAT   :: k_point(3)
 
   call push_sub('states_kpoints.points_inside_ws_cell')
@@ -312,9 +322,12 @@ integer function points_inside_ws_cell(nik_axis, klat) result(no_of_points)
     do iy = 0, nik_axis(2) - 1
       do iz = 0, nik_axis(3) - 1
 
-        k_point(1) = -klat(1, 1)/M_TWO + ix * ( klat(1, 1) / (nik_axis(1) - 1) )
-        k_point(2) = -klat(2, 2)/M_TWO + iy * ( klat(2, 2) / (nik_axis(2) - 1) ) 
-        k_point(3) = -klat(3, 3)/M_TWO + iz * ( klat(3, 3) / (nik_axis(3) - 1) )
+        k_point = M_ZERO
+        ik = (/ ix, iy, iz /)
+
+        do id = 1, dim
+          k_point(id) = -klat(id, id) + ik(id) * ( M_TWO*klat(id, id) / (nik_axis(id) - 1) ) 
+        end do
 
         if (in_wigner_seitz_cell(k_point, klat)) inik = inik + 1
 
@@ -347,7 +360,7 @@ logical function in_wigner_seitz_cell(k_point, klat) result(in_cell)
 
   ! Warning: currently the routine allows only for cubic systems
   ! Tetragonal, orthorombic and monoclinic systems are excluded
-  asize = klat(1, 1)
+  asize = M_TWO*klat(1, 1)
 
   half_dist(:) = (/               &
     asize/M_TWO,                  &  ! cube
