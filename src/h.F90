@@ -437,6 +437,16 @@ contains
         do is = 1, min(h%d%ispin, 2)
           write(fname, '(a,i1)') 'vxc-', is
           call doutput_function(outp%how, dir, fname, m, sb, h%vxc(:, is), u, err)
+
+          ! finally the full KS potential (without non-local PP contributions)
+          write(fname, '(a,i1)') 'vks-', is
+          if (h%ep%classic_pot > 0) then
+            call doutput_function(outp%how, dir, fname, m, sb, &
+              h%ep%vpsl + h%ep%Vclassic + h%vhartree + h%vxc(:, is), u, err)
+          else
+            call doutput_function(outp%how, dir, fname, m, sb, &
+              h%ep%vpsl + h%vhartree + h%vxc(:, is), u, err)
+          end if
         end do
       end if
     end if
