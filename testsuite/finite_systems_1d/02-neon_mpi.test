@@ -18,7 +18,7 @@ Enabled  : Yes
 Processors : 3
 Input      : 02-neon_mpi.01-ground_state-kli_par_domains.inp
 
-Match ; TotalEnergy ; grep -A 7 '^Energy:' static/info ; \s*Total\s*=\s*-31.5264
+Match ; TotalEnergy ; grep -A 7 '^Energy:' static/info ; \s*Total\s*=\s*-31.526
 
 
 # now we start a td calculation parallel in states on 5 processors

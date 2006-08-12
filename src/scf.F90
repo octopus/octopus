@@ -557,11 +557,7 @@ contains
       end if
 
       ! Output expecation values of the momentum operator
-      if(mpi_grp_is_root(mpi_world)) then
-        write(iunit, '(a)')
-        call write_momentum(iunit)
-        write(iunit, '(a)')
-      end if
+      call write_momentum(iunit)
 
       ! Next is the angular momentum. Only applies to 2D and 3D.
       if(NDIM.ne.1) call write_angular_momentum(iunit)
