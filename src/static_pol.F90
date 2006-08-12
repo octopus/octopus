@@ -53,7 +53,6 @@ contains
     type(system_t), target, intent(inout) :: sys
     type(hamiltonian_t),    intent(inout) :: h
     logical,                intent(inout) :: fromScratch
-
     type(scf_t)             :: scfv
     type(grid_t),   pointer :: gr    ! shortcuts
     type(states_t), pointer :: st
@@ -156,7 +155,7 @@ contains
 
     if(out_pol) then ! output pol file
       call io_mkdir('linear')
-      iunit = io_open('linear/polarizability', action='write')
+      iunit = io_open('linear/polarizability_fd', action='write')
       write(iunit, '(2a)', advance='no') '# Static polarizability tensor [', &
         trim(units_out%length%abbrev)
       if(NDIM.ne.1) write(iunit, '(a,i1)', advance='no') '^', NDIM

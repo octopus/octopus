@@ -59,11 +59,11 @@ module run_prog_m
     M_GS                 =   1,  &
     M_UNOCC              =   2,  &
     M_TD                 =   3,  &
-    M_STATIC_POL         =   4,  &
+    M_FD_STATIC_POL      =   4,  &
     M_GEOM_OPT           =   5,  &
     M_PHONONS            =   6,  &
     M_OPT_CONTROL        =   7,  &
-    M_LR_STATIC_POL      =   8,  &
+    M_LR_POL             =   8,  &
     M_CASIDA             =   9,  &
     M_WAVE_MATCHING      =  10,  &
     M_BO_MD              =  98,  &
@@ -81,7 +81,7 @@ contains
 
     call push_sub('run.run')
 
-    !%Variable fromScratch
+    !%Variable FromScratch
     !%Type logical
     !%Default 0
     !%Section Generalities
@@ -100,9 +100,9 @@ contains
       call unocc_run(sys, h, fromScratch)
     case(M_TD)
       call td_run(sys, h, fromScratch)
-    case(M_STATIC_POL)
+    case(M_FD_STATIC_POL)
       call static_pol_run(sys, h, fromScratch)
-    case(M_LR_STATIC_POL)
+    case(M_LR_POL)
       call static_pol_lr_run(sys, h, fromScratch)
     case(M_GEOM_OPT)
       call geom_opt_run(sys, h)

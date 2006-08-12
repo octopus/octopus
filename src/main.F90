@@ -88,8 +88,8 @@ program octopus
   !% Calculation of unoccupied/virtual KS states
   !%Option td 03
   !% Time-dependent calculation
-  !%Option pol 04
-  !% Calculation of the static polarizability
+  !%Option pol_fd 04
+  !% Calculation of the static polarizability through finite differences.
   !%Option geom 05
   !% Optimization of the geometry
   !%Option phonons 06
@@ -97,7 +97,7 @@ program octopus
   !%Option opt_control 07
   !% Optimal control.
   !%Option pol_lr 08
-  !% Linear-response calculation of the polarizability
+  !% Linear-response calculation of the polarizabilities.
   !%Option casida 09
   !% Excitations via linear-response TDDFT
   !%Option wave_matching 10
