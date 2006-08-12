@@ -164,12 +164,18 @@ contains
     call states_write_eigenvalues(iunit, sys%st%nst, sys%st, sys%gr%sb, eigens%diff)
     call io_close(iunit)
 
+    ! calculate momentum of KS states
+    if (sys%st%d%wfs_type == M_REAL) then
+      call dstates_calc_momentum(sys%gr, sys%st)
+    else
+      call zstates_calc_momentum(sys%gr, sys%st)
+    end if
+    
     if(simul_box_is_periodic(sys%gr%sb).and. sys%st%d%nik>sys%st%d%nspin) then
-      iunit = io_open('static/bands.dat', action='write')
-      call states_write_bands(iunit, sys%st%nst, sys%st, sys%gr%sb)
-      call states_write_dos('static', sys%st)
+      call states_write_bands('static', sys%st%nst, sys%st, sys%gr%sb)
+      call states_write_dos  ('static', sys%st)
       call states_write_fermi_energy('static', sys%st, sys%gr%m, sys%gr%sb)
-      call io_close(iunit)
+      call states_degeneracy_matrix(sys%st)
     end if
 
     !%Variable WriteMatrixElements
@@ -221,9 +227,10 @@ contains
       st%nst    = st%nst + nus
       st%st_end = st%nst
 
-      deallocate(st%eigenval, st%occ)
+      deallocate(st%eigenval, st%momentum, st%occ)
       call states_allocate_wfns(st, m)
       ALLOCATE(st%eigenval(st%nst, st%d%nik), st%nst*st%d%nik)
+      ALLOCATE(st%momentum(3, st%nst, st%d%nik), st%nst*st%d%nik)
       ALLOCATE(st%occ(st%nst, st%d%nik), st%nst*st%d%nik)
       if(st%d%ispin == SPINORS) then
         ALLOCATE(st%mag(st%nst, st%d%nik, 2), st%nst*st%d%nik*2)

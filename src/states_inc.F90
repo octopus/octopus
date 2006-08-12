@@ -440,10 +440,9 @@ end subroutine X(calculate_matrix)
 ! Note, the blas routines cdotc, zdotc take care of complex 
 ! conjugation *. Therefore we pass phi directly.
 ! ---------------------------------------------------------
-subroutine X(states_calc_momentum)(gr, st, p)
+subroutine X(states_calc_momentum)(gr, st)
   type(grid_t),   intent(inout) :: gr
   type(states_t), intent(inout) :: st
-  FLOAT,            intent(out) :: p(:,:,:)
 
   integer :: idim, ist, ik, i
   CMPLX               :: expect_val_p
@@ -472,17 +471,17 @@ subroutine X(states_calc_momentum)(gr, st, p)
         ! In the case of real wave functions we do not include the 
         ! -i prefactor of p = -i \nabla
         if (st%d%wfs_type == M_REAL) then
-          p(i, ist, ik) = real( expect_val_p )
+          st%momentum(i, ist, ik) = real( expect_val_p )
         else
-          p(i, ist, ik) = real( -M_zI*expect_val_p )
+          st%momentum(i, ist, ik) = real( -M_zI*expect_val_p )
         end if
       end do
 
       ! have to add the momentum vector in the case of periodic systems, 
       ! since st%X(psi) contains only u_k
       do i = 1, gr%sb%periodic_dim
-        p(i, ist, ik) = p(i, ist, ik) + st%d%kpoints(i, ik)
-      end do
+        st%momentum(i, ist, ik) = st%momentum(i, ist, ik) + st%d%kpoints(i, ik)
+      end do      
       
     end do
   end do

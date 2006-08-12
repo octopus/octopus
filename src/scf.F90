@@ -236,7 +236,7 @@ contains
 
     type(lcao_t) :: lcao_data
 
-    integer :: iter, iunit, is, idim, nspin, dim, err
+    integer :: iter, is, idim, nspin, dim, err
     FLOAT :: evsum_out, evsum_in, etime
     FLOAT, allocatable :: rhoout(:,:,:), rhoin(:,:,:), rhonew(:,:,:)
     FLOAT, allocatable :: vout(:,:,:), vin(:,:,:), vnew(:,:,:)
@@ -426,6 +426,16 @@ contains
     ! calculate forces
     call epot_forces(gr, h%ep, st)
 
+    ! calculate momentum of KS states
+    write(message(1),'(a)') 'Info: Calculating momentum'
+    call write_info(1)
+
+    if (st%d%wfs_type == M_REAL) then
+      call dstates_calc_momentum(gr, st)
+    else
+      call zstates_calc_momentum(gr, st)
+    end if
+
     if(gs_run_) then 
       ! output final information
       call scf_write_static("static", "info")
@@ -436,11 +446,10 @@ contains
     end if
 
     if(simul_box_is_periodic(gr%sb).and.st%d%nik > st%d%nspin) then
-      iunit = io_open('static/bands.dat', action='write')
-      call states_write_bands(iunit, st%nst, st, gr%sb)
-      call states_write_dos('static', st)
+      call states_write_bands('static', st%nst, st, gr%sb)
+      call states_write_dos  ('static', st)
       call states_write_fermi_energy('static', st, gr%m, gr%sb)
-      call io_close(iunit)
+      call states_degeneracy_matrix(st)
     end if
 
     call pop_sub()
@@ -693,23 +702,11 @@ contains
     subroutine write_momentum(iunit)
       integer,        intent(in) :: iunit
 
-      FLOAT, allocatable :: p(:,:,:)
       integer :: idim, ist, ik, i, j, is, ns, iunit2
       character(len=80) tmp_str, cspin
       FLOAT :: o, oplus, ominus
 
       call push_sub('scf.write_momentum')   
-
-      ALLOCATE(p(NDIM, st%nst, st%d%nik), NDIM*st%nst*st%d%nik)
-
-      write(message(1),'(a)') 'Info: Calculating momentum'
-      call write_info(1)
-
-      if (st%d%wfs_type == M_REAL) then
-        call dstates_calc_momentum(gr, st, p)
-      else
-        call zstates_calc_momentum(gr, st, p)
-      end if
 
       ns = 1
       if(st%d%nspin == 2) ns = 2
@@ -754,10 +751,10 @@ contains
 
             if(st%d%ispin == SPINORS) then
               write(message(1), '(i4,3x,a2,1x,3f12.6,4x,f5.2,a1,f5.2)') &
-                j, trim(cspin), p(:, j, ik), oplus, '/', ominus              
+                j, trim(cspin), st%momentum(:, j, ik), oplus, '/', ominus              
             else
               write(message(1), '(i4,3x,a2,1x,3f12.6,3x,f12.6)')        &
-                j, trim(cspin), p(:, j, ik), o
+                j, trim(cspin), st%momentum(:, j, ik), o
             end if
             call write_info(1, iunit)
 
@@ -770,18 +767,17 @@ contains
       end do
 
       ! also write to disk for further processing
-      iunit2 = io_open("static/momentum", action='write')
+      iunit2 = io_open('static/momentum', action='write')
 
       do ik = 1, st%d%nik
         do j = 1, st%nst
-          write(iunit2, '(2i4,3x, 3f12.6,3x,f12.6)') &
-            j, ik, p(:, j, ik), st%occ(j, ik)
+          write(message(1), '(2i4,3x, 3f12.6,3x,f12.6)') &
+            j, ik, st%momentum(:, j, ik), st%occ(j, ik)
+          call write_info(1, iunit2)
         end do
       end do
 
       call io_close(iunit2)
-
-      deallocate(p)
 
       call pop_sub()
     end subroutine write_momentum

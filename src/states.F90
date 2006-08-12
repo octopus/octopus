@@ -69,6 +69,7 @@ module states_m
     states_write_dos,               &
     states_write_bands,             &
     states_write_fermi_energy,      &
+    states_degeneracy_matrix,       &
     states_spin_channel,            &
     states_calc_projection,         &
     states_magnetization_dens,      &
@@ -130,6 +131,7 @@ module states_m
     logical        :: fixed_occ     ! should the occupation numbers be fixed?
     FLOAT, pointer :: occ(:,:)      ! the occupation numbers
     FLOAT, pointer :: mag(:, :, :)
+    FLOAT, pointer :: momentum(:, :, :)
 
     FLOAT :: qtot                   ! (-) The total charge in the system (used in Fermi)
     FLOAT :: val_charge             ! valence charge
@@ -345,8 +347,9 @@ contains
 
 
     ! we now allocate some arrays
-    ALLOCATE(st%occ     (st%nst, st%d%nik), st%nst*st%d%nik)
-    ALLOCATE(st%eigenval(st%nst, st%d%nik), st%nst*st%d%nik)
+    ALLOCATE(st%occ     (st%nst, st%d%nik),      st%nst*st%d%nik)
+    ALLOCATE(st%eigenval(st%nst, st%d%nik),      st%nst*st%d%nik)
+    ALLOCATE(st%momentum(3, st%nst, st%d%nik), 3*st%nst*st%d%nik)
     ! allocate space for formula strings that define user defined states
     ALLOCATE(st%user_def_states(st%d%dim, st%nst, st%d%nik), st%d%dim*st%nst*st%d%nik)
     if(st%d%ispin == SPINORS) then
@@ -436,6 +439,7 @@ contains
     call pop_sub()
   end subroutine states_init
 
+
   ! ---------------------------------------------------------
   ! Allocates the KS wavefunctions defined within an states_t
   ! structure.
@@ -465,6 +469,7 @@ contains
     call pop_sub()
   end subroutine states_allocate_wfns
 
+
   ! ---------------------------------------------------------
   ! Deallocates the KS wavefunctions defined within an states_t
   ! structure.
@@ -481,6 +486,7 @@ contains
     
     call pop_sub()
   end subroutine states_deallocate_wfns
+
 
   ! ---------------------------------------------------------
   ! the routine reads formulas for user defined wavefunctions 
@@ -605,6 +611,7 @@ contains
     call pop_sub()
   end subroutine states_densities_init
 
+
   ! ---------------------------------------------------------
   subroutine states_copy(stout, stin)
     type(states_t), intent(inout) :: stout
@@ -694,8 +701,8 @@ contains
     call push_sub('states.states_end')
 
     if(associated(st%rho)) then
-      deallocate(st%rho, st%occ, st%eigenval, st%node)
-      nullify   (st%rho, st%occ, st%eigenval, st%node)
+      deallocate(st%rho, st%occ, st%eigenval, st%momentum, st%node)
+      nullify   (st%rho, st%occ, st%eigenval, st%momentum, st%node)
     end if
 
     if(associated(st%j)) then
@@ -734,6 +741,7 @@ contains
 
     call pop_sub()
   end subroutine states_end
+
 
   ! ---------------------------------------------------------
   ! Calculates the new density out the wavefunctions and
@@ -804,6 +812,7 @@ contains
 
     call pop_sub()
   end subroutine states_calc_dens
+
 
   ! ---------------------------------------------------------
   ! generate a hydrogen s-wavefunction around a random point
@@ -1166,34 +1175,46 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine states_write_bands(iunit, nst, st, sb)
-    integer,           intent(in) :: iunit, nst
+  subroutine states_write_bands(dir, nst, st, sb)
+    character(len=*),  intent(in) :: dir    
+    integer,           intent(in) :: nst
     type(states_t),    intent(in) :: st
     type(simul_box_t), intent(in) :: sb
 
-    integer :: i, ik, j, mode, ns
-    FLOAT :: factor(MAX_DIM)
+    integer :: i, ik, j, ns, iunit
+    FLOAT   :: factor(MAX_DIM)
+    logical :: scaled_kvec, grace_mode, gnuplot_mode
 
     integer, parameter :: &
       GNUPLOT = 1024,     &
       XMGRACE = 2048
 
-    if(.not.mpi_grp_is_root(mpi_world)) return
-
-    !%Variable OutputBandsMode
-    !%Type integer
-    !%Default 1024
+    !%Variable OutputBandsGnuplotMode
+    !%Type logical
+    !%Default no
     !%Section Output
     !%Description
-    !% Chose if the band file is to be written in gnuplot or xmgrace friendly format
-    !%Option gnuplot 1024
-    !% gnuplot format
-    !%Option xmgrace 2048
-    !% xmgrace format
+    !% The band file will be written in gnuplot friendly format
     !%End
-    call loct_parse_int(check_inp('OutputBandsMode'), GNUPLOT, mode)
-    if(.not.varinfo_valid_option('OutputBandsMode', mode)) call input_error('OutputBandsMode')
-    call messages_print_var_option(stdout, "OutputBandsMode", mode)
+    call loct_parse_logical(check_inp('OutputBandsGnuplotMode'), .true., gnuplot_mode)
+
+    !%Variable OutputBandsGraceMode
+    !%Type logical
+    !%Default no
+    !%Section Output
+    !%Description
+    !% The band file will be written in grace friendly format
+    !%End
+    call loct_parse_logical(check_inp('OutputBandsGraceMode'), .false., grace_mode)
+
+    !%Variable OutputBandsScaledKvec
+    !%Type logical
+    !%Default no
+    !%Section Output
+    !%Description
+    !% Should octopus use scaled k-vectors (k_i/G_i) for the output of bands?
+    !%End
+    call loct_parse_logical(check_inp('OutputBandsScaledKvec'), .true., scaled_kvec)
 
     ! shortcuts
     ns = 1
@@ -1202,27 +1223,47 @@ contains
     ! define the scaling factor to output k_i/G_i, instead of k_i
     do i = 1, MAX_DIM
       factor(i) = M_ONE
-      if (sb%klat(i,i) /= M_ZERO) factor(i) = sb%klat(i,i)
+      if(scaled_kvec) then
+        if (sb%klat(i,i) /= M_ZERO) factor(i) = sb%klat(i,i)
+      end if
     end do
 
-    select case(mode)
-    case(GNUPLOT)
+    if (gnuplot_mode) then
+      iunit = io_open('static/bands-gp.dat', action='write')    
+      ! write header
+      write(message(1), '(a, i6)') '# bands:', nst
+      call write_info(1, iunit)
+      
       ! output bands in gnuplot format
       do j = 1, nst
         do ik = 1, st%d%nik, ns
-          write(iunit, '(1x,3(f10.4))', advance='no')  st%d%kpoints(1:MAX_DIM,ik)/factor(1:MAX_DIM)
-          write(iunit, '(3x,f12.6)',   advance='yes') st%eigenval(j, ik)/units_out%energy%factor
+          write(message(1), '(1x,3f14.8,3x,f14.8)')       &
+            st%d%kpoints(1:MAX_DIM,ik)/factor(1:MAX_DIM), &
+            st%eigenval(j, ik)/units_out%energy%factor
+          call write_info(1, iunit)
         end do
-        write(iunit, '(a)')' '
+        write(message(1), '(a)') ''
+        call write_info(1, iunit)        
       end do
-    case(XMGRACE)
+      call io_close(iunit)
+    end if
+
+    if (grace_mode) then
+      iunit = io_open('static/bands-grace.dat', action='write')    
+      ! write header
+      write(message(1), '(a, i6)') '# bands:', nst
+      call write_info(1, iunit)
+
       ! output bands in xmgrace format, i.e.:
       ! k_x, k_y, k_z, e_1, e_2, ..., e_n
       do ik = 1, st%d%nik, ns
-        write(iunit, '(1x,3(f10.4))', advance='no')   st%d%kpoints(1:MAX_DIM,ik)/factor(1:MAX_DIM)
-        write(iunit, '(3x,20f12.6)', advance='yes') (st%eigenval(j, ik)/units_out%energy%factor, j=1,nst)
+        write(message(1), '(1x,3f14.8,3x,16384f14.8)')    &
+          st%d%kpoints(1:MAX_DIM,ik)/factor(1:MAX_DIM),   &
+          (st%eigenval(j, ik)/units_out%energy%factor, j = 1, nst)
+        call write_info(1, iunit)
       end do
-    end select
+      call io_close(iunit)
+    end if
 
   end subroutine states_write_bands
 
@@ -1265,7 +1306,7 @@ contains
 
     !%Variable DOSEnergyPoints
     !%Type integer
-    !%Default 200
+    !%Default 500
     !%Section Output
     !%Description
     !% Determines how many energy points octopus should use for 
@@ -1304,7 +1345,8 @@ contains
           dos(ie, ist) = dos(ie, ist) + st%d%kweights(ik) * M_ONE/M_Pi * &
             gamma / ( (energy - st%eigenval(ist, ik)/units_out%energy%factor)**2 + gamma**2 )
         end do
-        write(iunit, '(2f12.6)') energy, dos(ie, ist)
+        write(message(1), '(2f12.6)') energy, dos(ie, ist)
+        call write_info(1, iunit)
       end do
       
       call io_close(iunit)
@@ -1319,7 +1361,8 @@ contains
       do ist = 1, st%nst
         tdos = tdos + dos(ie, ist)
       end do
-      write(iunit, '(2f12.6)') energy, tdos
+      write(message(1), '(2f12.6)') energy, tdos
+      call write_info(1, iunit)
     end do
 
     call io_close(iunit)
@@ -1357,38 +1400,141 @@ contains
 
     ! write fermi energy in a format that can be used together 
     ! with bands.dat
-    write(iunit, '(a)') '# Fermi energy in a format compatible with bands.dat'
+    write(message(1), '(a)') '# Fermi energy in a format compatible with bands-gp.dat'
 
-    write(iunit, '(4f12.6)')               &
+    write(message(2), '(4f12.6)')               &
       minval(st%d%kpoints(1,:)/factor(1)), &
       minval(st%d%kpoints(2,:)/factor(2)), &
       minval(st%d%kpoints(3,:)/factor(3)), &
       st%ef/scale
 
-    write(iunit, '(4f12.6)')               &
+    write(message(3), '(4f12.6)')               &
       maxval(st%d%kpoints(1,:)/factor(1)), &
       maxval(st%d%kpoints(2,:)/factor(2)), &
       maxval(st%d%kpoints(3,:)/factor(3)), &
       st%ef/scale
 
+    call write_info(3, iunit)
     call io_close(iunit)
 
     ! now we write the same information so that it can be used 
     ! together with total-dos.dat
     iunit = io_open(trim(dir)//'/'//'total-dos-efermi.dat', action='write')    
 
-    write(iunit, '(a)') '# Fermi energy in a format compatible with total-dos.dat'    
+    write(message(1), '(a)') '# Fermi energy in a format compatible with total-dos.dat'    
     
     ! this is the maximum that tdos can reach
     maxdos = sum(st%d%kweights) * st%nst
 
-    write(iunit, '(4f12.6)') st%ef/scale, M_ZERO
-    write(iunit, '(4f12.6)') st%ef/scale, maxdos
+    write(message(2), '(4f12.6)') st%ef/scale, M_ZERO
+    write(message(3), '(4f12.6)') st%ef/scale, maxdos
 
+    call write_info(3, iunit)
     call io_close(iunit)
 
     call pop_sub()
   end subroutine states_write_fermi_energy
+
+
+  ! -------------------------------------------------------
+  subroutine states_degeneracy_matrix(st)
+    type(states_t), intent(in) :: st
+
+    integer :: is, js, inst, inik, dsize, iunit
+    integer, allocatable :: eindex(:,:), sindex(:)
+    integer, allocatable :: degeneracy_matrix(:, :)
+    FLOAT,   allocatable :: eigenval_sorted(:)
+    FLOAT :: degen_thres, evis, evjs
+
+    call push_sub('states.states_degeneracy_matrix')
+
+    ALLOCATE(eigenval_sorted(st%nst*st%d%nik),   st%nst*st%d%nik)
+    ALLOCATE(         sindex(st%nst*st%d%nik),   st%nst*st%d%nik)
+    ALLOCATE(      eindex(2, st%nst*st%d%nik), 2*st%nst*st%d%nik)
+    dsize = st%nst*st%d%nik * st%nst*st%d%nik
+    ALLOCATE(degeneracy_matrix(st%nst*st%d%nik, st%nst*st%d%nik), dsize)
+    
+    ! convert double index "inst, inik" to single index "is"
+    ! and keep mapping array
+    is = 1
+    do inst = 1, st%nst
+      do inik = 1, st%d%nik
+        eigenval_sorted(is) = st%eigenval(inst, inik)        
+        eindex(1, is) = inst
+        eindex(2, is) = inik
+        is = is + 1
+      end do
+    end do
+    
+    ! sort eigenvalues
+    call sort(eigenval_sorted, sindex)
+
+    !%Variable DegeneracyMatrixThreshold
+    !%Type float
+    !%Default 1e-5
+    !%Section States
+    !%Description
+    !% A state j with energy E_j will be considered degenerate with a state
+    !% with energy E_i, if  E_i - threshold < E_j < E_i + threshold.
+    !%End
+    call loct_parse_float(check_inp('DegeneracyMatrixThreshold'), CNST(1e-5), degen_thres)    
+
+    ! setup degeneracy matrix. the matrix summarizes the degeneracy relations 
+    ! among the states
+    degeneracy_matrix = 0
+
+    do is = 1, st%nst*st%d%nik
+      do js = 1, st%nst*st%d%nik
+
+        ! a state is always degenerate to itself
+        if ( is.eq.js ) cycle
+
+        evis = st%eigenval(eindex(1, sindex(is)), eindex(2, sindex(is)))
+        evjs = st%eigenval(eindex(1, sindex(js)), eindex(2, sindex(js)))
+
+        ! is evjs in the "evis plus minus threshold" bracket?
+        if( (evjs.gt.evis - degen_thres).and.(evjs.lt.evis + degen_thres) ) then
+          ! mark forward scattering states with +1 and backward scattering
+          ! states with -1
+          degeneracy_matrix(is, js) = &
+            sign(M_ONE, st%momentum(1, eindex(1, sindex(js)), eindex(2, sindex(js))))
+        end if
+
+      end do
+    end do
+
+    ! write matrix to "tmp/restart_gs" directory
+    iunit = io_open('tmp/restart_gs/degeneracy_matrix', action='write', is_tmp = .true.)    
+
+    write(message(1), '(a)') '# index  kx ky kz  eigenvalue  degeneracy matrix'
+    call write_info(1, iunit)
+
+    do is = 1, st%nst*st%d%nik
+      write(message(1), '(i6,4e24.16,32767i3)') is, st%d%kpoints(:, eindex(2, sindex(is))), &
+        eigenval_sorted(is), (degeneracy_matrix(is, js), js = 1, st%nst*st%d%nik)
+      call write_info(1, iunit)
+    end do
+    
+    call io_close(iunit)
+    
+    ! write index vectors to "tmp/restart_gs" directory
+    iunit = io_open('tmp/restart_gs/index_vectors', action='write', is_tmp = .true.)    
+
+    write(message(1), '(a)') '# index  sindex  eindex1 eindex2'
+    call write_info(1, iunit)    
+
+    do is = 1, st%nst*st%d%nik
+      write(message(1),'(4i6)') is, sindex(is), eindex(1, sindex(is)), eindex(2, sindex(is))
+      call write_info(1, iunit)
+    end do
+    
+    call io_close(iunit)
+    
+    deallocate(eigenval_sorted, sindex, eindex)
+    deallocate(degeneracy_matrix)
+    
+    call pop_sub()
+  end subroutine states_degeneracy_matrix
 
 
   ! -------------------------------------------------------
