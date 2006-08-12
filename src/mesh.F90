@@ -43,6 +43,7 @@ module mesh_m
     mesh_init_stage_1, &
     mesh_init_stage_2, &
     mesh_init_stage_3, &
+    mesh_dump,         &
     mesh_end,          &
     mesh_double_box,   &
     mesh_inborder,     &
@@ -247,6 +248,25 @@ contains
    end function mesh_gcutoff
 
 
+   !--------------------------------------------------------------
+   subroutine mesh_dump(mesh, iunit)
+     type(mesh_t), intent(in) :: mesh
+     integer,      intent(in) :: iunit
+     
+     call push_sub('mesh.mesh_dump')
+     
+     write(iunit, '(a20,3i8)')   'nr(1, :)=           ', mesh%nr(1, :)
+     write(iunit, '(a20,3i8)')   'nr(2, :)=           ', mesh%nr(2, :)
+     write(iunit, '(a20,1i10)')  'np=                 ', mesh%np
+     write(iunit, '(a20,1i10)')  'np_part=            ', mesh%np_part
+     write(iunit, '(a20,1i10)')  'np_global=          ', mesh%np_global
+     write(iunit, '(a20,1i10)')  'np_part_global=     ', mesh%np_part_global
+     
+     call pop_sub()
+   end subroutine mesh_dump
+   
+   
+   !--------------------------------------------------------------
    subroutine mesh_end(m)
      type(mesh_t), intent(inout) :: m
 

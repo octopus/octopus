@@ -218,6 +218,7 @@ contains
       write(iunit_mesh,'(a)') '# except for the geometry of the system.'
       call curvlinear_dump(gr%cv, iunit_mesh)
       call simul_box_dump(gr%sb, iunit_mesh)
+      call mesh_dump(gr%m, iunit_mesh)
       call io_close(iunit_mesh)
     end if
 
