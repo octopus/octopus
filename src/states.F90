@@ -1183,11 +1183,7 @@ contains
 
     integer :: i, ik, j, ns, iunit
     FLOAT   :: factor(MAX_DIM)
-    logical :: scaled_kvec, grace_mode, gnuplot_mode
-
-    integer, parameter :: &
-      GNUPLOT = 1024,     &
-      XMGRACE = 2048
+    logical :: grace_mode, gnuplot_mode
 
     if(.not.mpi_grp_is_root(mpi_world)) return
 
@@ -1209,15 +1205,6 @@ contains
     !%End
     call loct_parse_logical(check_inp('OutputBandsGraceMode'), .false., grace_mode)
 
-    !%Variable OutputBandsScaledKvec
-    !%Type logical
-    !%Default no
-    !%Section Output
-    !%Description
-    !% Should octopus use scaled k-vectors (k_i/G_i) for the output of bands?
-    !%End
-    call loct_parse_logical(check_inp('OutputBandsScaledKvec'), .true., scaled_kvec)
-
     ! shortcuts
     ns = 1
     if(st%d%nspin == 2) ns = 2
@@ -1225,21 +1212,20 @@ contains
     ! define the scaling factor to output k_i/G_i, instead of k_i
     do i = 1, MAX_DIM
       factor(i) = M_ONE
-      if(scaled_kvec) then
-        if (sb%klat(i,i) /= M_ZERO) factor(i) = sb%klat(i,i)
-      end if
+      if (sb%klat(i,i) /= M_ZERO) factor(i) = sb%klat(i,i)      
     end do
 
     if (gnuplot_mode) then
-      iunit = io_open('static/bands-gp.dat', action='write')    
+      iunit = io_open(trim(dir)//'/'//'bands-gp.dat', action='write')    
       ! write header
-      write(iunit, '(a, i6)') '# bands:', nst
+      write(iunit, '(a, i6)') '# kx ky kz (unscaled), kx ky kz (scaled), bands:', nst
       
       ! output bands in gnuplot format
       do j = 1, nst
         do ik = 1, st%d%nik, ns
-          write(iunit, '(1x,3f14.8,3x,f14.8)')       &
-            st%d%kpoints(1:MAX_DIM,ik)/factor(1:MAX_DIM), &
+          write(iunit, '(1x,6f14.8,3x,f14.8)')            &
+            st%d%kpoints(1:MAX_DIM,ik),                   & ! unscaled
+            st%d%kpoints(1:MAX_DIM,ik)/factor(1:MAX_DIM), & ! scaled
             st%eigenval(j, ik)/units_out%energy%factor
         end do
         write(iunit, '(a)') ''
@@ -1248,15 +1234,16 @@ contains
     end if
 
     if (grace_mode) then
-      iunit = io_open('static/bands-grace.dat', action='write')    
+      iunit = io_open(trim(dir)//'/'//'bands-grace.dat', action='write')    
       ! write header
-      write(iunit, '(a, i6)') '# bands:', nst
+      write(iunit, '(a, i6)') '# kx ky kz (unscaled), kx ky kz (scaled), bands:', nst
 
       ! output bands in xmgrace format, i.e.:
       ! k_x, k_y, k_z, e_1, e_2, ..., e_n
       do ik = 1, st%d%nik, ns
-        write(iunit, '(1x,3f14.8,3x,16384f14.8)')    &
-          st%d%kpoints(1:MAX_DIM,ik)/factor(1:MAX_DIM),   &
+        write(iunit, '(1x,6f14.8,3x,16384f14.8)')         &
+          st%d%kpoints(1:MAX_DIM,ik),                     & ! unscaled
+          st%d%kpoints(1:MAX_DIM,ik)/factor(1:MAX_DIM),   & ! scaled
           (st%eigenval(j, ik)/units_out%energy%factor, j = 1, nst)
       end do
       call io_close(iunit)

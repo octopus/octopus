@@ -283,11 +283,15 @@ subroutine get_points_in_ws_cell(dim, nik_axis, klat, kp)
         ik = (/ ix, iy, iz /)
 
         do id = 1, dim
-          k_point(id) = -klat(id, id)/M_TWO + ik(id) * ( klat(id, id) / (nik_axis(id) - 1) ) 
+          k_point(id) = -klat(id, id) + ik(id) * ( M_TWO*klat(id, id) / (nik_axis(id) - 1) ) 
         end do
 
         if (in_wigner_seitz_cell(k_point, klat)) then
-          kp(:, inik) = k_point
+          ! return a scaled point (to be compatible with crystal_init)
+          kp(:, inik) = M_ZERO
+          do id = 1, dim
+            kp(id, inik) = k_point(id)/klat(id, id)
+          end do
           write(message(1),'(i4, 3f18.12)') inik, kp(:, inik)
           call write_info(1, iunit)
           inik = inik + 1          
@@ -326,7 +330,7 @@ integer function points_inside_ws_cell(dim, nik_axis, klat) result(no_of_points)
         ik = (/ ix, iy, iz /)
 
         do id = 1, dim
-          k_point(id) = -klat(id, id)/M_TWO + ik(id) * ( klat(id, id) / (nik_axis(id) - 1) ) 
+          k_point(id) = -klat(id, id) + ik(id) * ( M_TWO*klat(id, id) / (nik_axis(id) - 1) ) 
         end do
 
         if (in_wigner_seitz_cell(k_point, klat)) inik = inik + 1
@@ -360,7 +364,7 @@ logical function in_wigner_seitz_cell(k_point, klat) result(in_cell)
 
   ! Warning: currently the routine allows only for cubic systems
   ! Tetragonal, orthorombic and monoclinic systems are excluded
-  asize = M_TWO*klat(1, 1)
+  asize = klat(1, 1)
 
   half_dist(:) = (/               &
     asize/M_TWO,                  &  ! cube
