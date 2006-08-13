@@ -1386,19 +1386,30 @@ contains
     ! with bands.dat
     write(message(1), '(a)') '# Fermi energy in a format compatible with bands-gp.dat'
 
-    write(message(2), '(4f12.6)')               &
+    write(message(2), '(7f12.6)')          &
+      minval(st%d%kpoints(1,:)),           &
+      minval(st%d%kpoints(2,:)),           &
+      minval(st%d%kpoints(3,:)),           &
       minval(st%d%kpoints(1,:)/factor(1)), &
       minval(st%d%kpoints(2,:)/factor(2)), &
       minval(st%d%kpoints(3,:)/factor(3)), &
       st%ef/scale
 
-    write(message(3), '(4f12.6)')               &
+    ! Gamma point
+    write(message(3), '(7f12.6)')          &
+      (M_ZERO, i = 1, 6),                  &
+      st%ef/scale
+    
+    write(message(4), '(7f12.6)')          &
+      maxval(st%d%kpoints(1,:)),           &
+      maxval(st%d%kpoints(2,:)),           &
+      maxval(st%d%kpoints(3,:)),           &
       maxval(st%d%kpoints(1,:)/factor(1)), &
       maxval(st%d%kpoints(2,:)/factor(2)), &
       maxval(st%d%kpoints(3,:)/factor(3)), &
       st%ef/scale
 
-    call write_info(3, iunit)
+    call write_info(4, iunit)
     call io_close(iunit)
 
     ! now we write the same information so that it can be used 
