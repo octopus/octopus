@@ -1189,6 +1189,8 @@ contains
       GNUPLOT = 1024,     &
       XMGRACE = 2048
 
+    if(.not.mpi_grp_is_root(mpi_world)) return
+
     !%Variable OutputBandsGnuplotMode
     !%Type logical
     !%Default no
@@ -1231,19 +1233,16 @@ contains
     if (gnuplot_mode) then
       iunit = io_open('static/bands-gp.dat', action='write')    
       ! write header
-      write(message(1), '(a, i6)') '# bands:', nst
-      call write_info(1, iunit)
+      write(iunit, '(a, i6)') '# bands:', nst
       
       ! output bands in gnuplot format
       do j = 1, nst
         do ik = 1, st%d%nik, ns
-          write(message(1), '(1x,3f14.8,3x,f14.8)')       &
+          write(iunit, '(1x,3f14.8,3x,f14.8)')       &
             st%d%kpoints(1:MAX_DIM,ik)/factor(1:MAX_DIM), &
             st%eigenval(j, ik)/units_out%energy%factor
-          call write_info(1, iunit)
         end do
-        write(message(1), '(a)') ''
-        call write_info(1, iunit)        
+        write(iunit, '(a)') ''
       end do
       call io_close(iunit)
     end if
@@ -1251,16 +1250,14 @@ contains
     if (grace_mode) then
       iunit = io_open('static/bands-grace.dat', action='write')    
       ! write header
-      write(message(1), '(a, i6)') '# bands:', nst
-      call write_info(1, iunit)
+      write(iunit, '(a, i6)') '# bands:', nst
 
       ! output bands in xmgrace format, i.e.:
       ! k_x, k_y, k_z, e_1, e_2, ..., e_n
       do ik = 1, st%d%nik, ns
-        write(message(1), '(1x,3f14.8,3x,16384f14.8)')    &
+        write(iunit, '(1x,3f14.8,3x,16384f14.8)')    &
           st%d%kpoints(1:MAX_DIM,ik)/factor(1:MAX_DIM),   &
           (st%eigenval(j, ik)/units_out%energy%factor, j = 1, nst)
-        call write_info(1, iunit)
       end do
       call io_close(iunit)
     end if
@@ -1503,16 +1500,16 @@ contains
       end do
     end do
 
+    if(.not.mpi_grp_is_root(mpi_world)) return
+
     ! write matrix to "tmp/restart_gs" directory
     iunit = io_open('tmp/restart_gs/degeneracy_matrix', action='write', is_tmp = .true.)    
 
-    write(message(1), '(a)') '# index  kx ky kz  eigenvalue  degeneracy matrix'
-    call write_info(1, iunit)
+    write(iunit, '(a)') '# index  kx ky kz  eigenvalue  degeneracy matrix'
 
     do is = 1, st%nst*st%d%nik
-      write(message(1), '(i6,4e24.16,32767i3)') is, st%d%kpoints(:, eindex(2, sindex(is))), &
+      write(iunit, '(i6,4e24.16,32767i3)') is, st%d%kpoints(:, eindex(2, sindex(is))), &
         eigenval_sorted(is), (degeneracy_matrix(is, js), js = 1, st%nst*st%d%nik)
-      call write_info(1, iunit)
     end do
     
     call io_close(iunit)
@@ -1520,12 +1517,10 @@ contains
     ! write index vectors to "tmp/restart_gs" directory
     iunit = io_open('tmp/restart_gs/index_vectors', action='write', is_tmp = .true.)    
 
-    write(message(1), '(a)') '# index  sindex  eindex1 eindex2'
-    call write_info(1, iunit)    
+    write(iunit, '(a)') '# index  sindex  eindex1 eindex2'
 
     do is = 1, st%nst*st%d%nik
-      write(message(1),'(4i6)') is, sindex(is), eindex(1, sindex(is)), eindex(2, sindex(is))
-      call write_info(1, iunit)
+      write(iunit,'(4i6)') is, sindex(is), eindex(1, sindex(is)), eindex(2, sindex(is))
     end do
     
     call io_close(iunit)
