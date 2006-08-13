@@ -283,7 +283,7 @@ subroutine get_points_in_ws_cell(dim, nik_axis, klat, kp)
         ik = (/ ix, iy, iz /)
 
         do id = 1, dim
-          k_point(id) = -klat(id, id) + ik(id) * ( M_TWO*klat(id, id) / (nik_axis(id) - 1) ) 
+          k_point(id) = -klat(id, id)/M_TWO + ik(id) * ( klat(id, id) / (nik_axis(id) - 1) ) 
         end do
 
         if (in_wigner_seitz_cell(k_point, klat)) then
@@ -326,7 +326,7 @@ integer function points_inside_ws_cell(dim, nik_axis, klat) result(no_of_points)
         ik = (/ ix, iy, iz /)
 
         do id = 1, dim
-          k_point(id) = -klat(id, id) + ik(id) * ( M_TWO*klat(id, id) / (nik_axis(id) - 1) ) 
+          k_point(id) = -klat(id, id)/M_TWO + ik(id) * ( klat(id, id) / (nik_axis(id) - 1) ) 
         end do
 
         if (in_wigner_seitz_cell(k_point, klat)) inik = inik + 1
