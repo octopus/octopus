@@ -65,24 +65,21 @@ ifeq (x86_64-linux,$(DEB_HOST_GNU_TYPE))
 	--prefix=/usr --mandir=\$${prefix}/share/man --infodir=\$${prefix}/share/info
 endif
 
-## Intel(R) Fortran Compiler for 32-bit applications, Version 7.1   Build 20031103Z
+## Intel(R) Fortran Compiler for 32-bit applications, Version 9.1    Build 20060706Z
 ifeq (i386-linux,$(DEB_HOST_GNU_TYPE))
-	echo "Intel(R) Fortran Compiler for 32-bit applications, Version 7.1   Build 20031103Z"
-	FC=ifc \
-	LDFLAGS="-lpthread" \
-	LDFCFLAGS="-L/usr/lib -lpthread" \
-	FCFLAGS="-mp1 -prec_div -O3 -tpp7 -xW -static -I$(HOME)/opt/intel/include" \
-	CPPFLAGS="-I$(HOME)/opt/intel/include" \
-	CFLAGS="-static -Wall -O3" \
-	./configure  \
-	--with-blas="-L/opt/intel/compiler70/ia32/lib -lguide -lCEPCF90 -L$(HOME)/opt/intel/lib -lblas -L/usr/lib -lpthread" \
-	--with-lapack="-L/opt/intel/compiler70/ia32/lib -lguide -lCEPCF90 -L$(HOME)/opt/intel/lib -llapack -L/usr/lib -lpthread" \
-	--with-fft-lib="-L/opt/intel/compiler70/ia32/lib -lguide -lCEPCF90 -L$(HOME)/opt/intel/lib -lfftw3 -L/usr/lib -lpthread" \
-	--with-netcdf="-L$(HOME)/opt/intel/lib -lguide -lCEPCF90 -L$(HOME)/opt/intel/lib -I$(HOME)/opt/intel/include \
-		       -lnetcdf -L/usr/lib -lpthread" \
-	--with-jdqz="-L$(HOME)/opt/intel/lib" \
-	--with-arpack="-L$(HOME)/opt/intel/lib -larpack -lPEPCF90" \
-	--with-sparskit="-L$(HOME)/opt/intel/lib -lskit" \
+	echo "Will use Intel(R) Fortran Compiler for 32-bit applications, Version 9.1    Build 20060706Z"
+	FC=ifort \
+	CFLAGS="-Wall -static -O3" \
+	FCFLAGS="-static -O3 -funroll-loops -align -pad -ip -I$(HOME)/opt/intel-9.1-i386/include" \
+	./configure \
+	--with-lapack="-L$(HOME)/opt/intel-9.1-i386/lib -llapack" \
+	--with-blas="-L$(HOME)/opt/intel-9.1-i386/lib -lblas" \
+	--with-fft-lib="-L$(HOME)/opt/intel-9.1-i386/lib -lfftw3" \
+	--with-netcdf="-L$(HOME)/opt/intel-9.1-i386/lib -I$(HOME)/opt/intel-9.1-i386/include -lnetcdf" \
+	--with-jdqz="-L$(HOME)/opt/intel-9.1-i386/lib" \
+	--with-arpack="-L$(HOME)/opt/intel-9.1-i386/lib -larpack" \
+	--with-sparskit="-L$(HOME)/opt/intel-9.1-i386/lib -lskit" \
+	--disable-gdlib \
 	--host=$(DEB_HOST_GNU_TYPE) --build=$(DEB_BUILD_GNU_TYPE) \
 	--prefix=/usr --mandir=\$${prefix}/share/man --infodir=\$${prefix}/share/info
 endif
@@ -99,6 +96,79 @@ endif
 
 ifeq (x86_64-linux,$(DEB_HOST_GNU_TYPE))
 	cd $(CURDIR)/debian/octopus/usr/bin && ln -s octopus octopus-nag-5.0
+endif
+
+ifeq (i386-linux,$(DEB_HOST_GNU_TYPE))
+	cd $(CURDIR)/debian/octopus/usr/bin && ln -s octopus octopus-intel-9.1
+endif
+
+
+ifeq (i386-linux,$(DEB_HOST_GNU_TYPE))
+	# inbetween we cleanup
+	$(MAKE) distclean
+
+	# first a version with Intel 7.1
+	autoreconf -i
+
+## Intel(R) Fortran Compiler for 32-bit applications, Version 7.1   Build 20031103Z
+	echo "Intel(R) Fortran Compiler for 32-bit applications, Version 7.1   Build 20031103Z"
+	FC=ifc \
+	LDFLAGS="-lpthread" \
+	LDFCFLAGS="-L/usr/lib -lpthread" \
+	FCFLAGS="-mp1 -prec_div -O3 -tpp7 -xW -static -I$(HOME)/opt/intel/include" \
+	CPPFLAGS="-I$(HOME)/opt/intel/include" \
+	CFLAGS="-static -Wall -O3" \
+	./configure  \
+	--program-suffix="-intel-7.1" \
+	--with-blas="-L/opt/intel/compiler70/ia32/lib -lguide -lCEPCF90 -L$(HOME)/opt/intel/lib -lblas -L/usr/lib -lpthread" \
+	--with-lapack="-L/opt/intel/compiler70/ia32/lib -lguide -lCEPCF90 -L$(HOME)/opt/intel/lib -llapack -L/usr/lib -lpthread" \
+	--with-fft-lib="-L/opt/intel/compiler70/ia32/lib -lguide -lCEPCF90 -L$(HOME)/opt/intel/lib -lfftw3 -L/usr/lib -lpthread" \
+	--with-netcdf="-L$(HOME)/opt/intel/lib -lguide -lCEPCF90 -L$(HOME)/opt/intel/lib -I$(HOME)/opt/intel/include \
+		       -lnetcdf -L/usr/lib -lpthread" \
+	--with-jdqz="-L$(HOME)/opt/intel/lib" \
+	--with-arpack="-L$(HOME)/opt/intel/lib -larpack -lPEPCF90" \
+	--with-sparskit="-L$(HOME)/opt/intel/lib -lskit" \
+	--disable-gdlib \
+	--host=$(DEB_HOST_GNU_TYPE) --build=$(DEB_BUILD_GNU_TYPE) \
+	--prefix=/usr --mandir=\$${prefix}/share/man --infodir=\$${prefix}/share/info
+
+	$(MAKE)
+
+	# only install executables
+	$(MAKE) -C src install prefix=$(CURDIR)/debian/octopus/usr
+
+	# inbetween we cleanup	
+	$(MAKE) distclean
+
+	# next the debug version
+	autoreconf -i
+
+## Intel(R) Fortran Compiler for 32-bit applications, Version 9.1    Build 20060706Z
+	echo "Will use Intel(R) Fortran Compiler, Version 9.1, Build 20060706Z"
+	FC=ifort \
+	CFLAGS="-Wall -static -g -O0" \
+	FCDEBUGFLAGS="-g -O0 -assume minus0 -debug extended -debug-parameters all -inline-debug-info -std90 -fpe0 -traceback -fpstkchk -vec-report0 -mp1 -prec_div -warn ignore_loc -warn uncalled -warn unused -warn truncated_source -warn interfaces -warn declarations -ftrapuv -check noarg_temp_created -check bounds -check format -check output_conversion -check uninit" \
+	FCFLAGS="-static -I$(HOME)/opt/intel-9.1-i386/include" \
+	./configure \
+	--program-suffix="-intel-9.1-debug" \
+	--with-lapack="-L$(HOME)/opt/intel-9.1-i386/lib -llapack" \
+	--with-blas="-L$(HOME)/opt/intel-9.1-i386/lib -lblas" \
+	--with-fft-lib="-L$(HOME)/opt/intel-9.1-i386/lib -lfftw3" \
+	--with-netcdf="-L$(HOME)/opt/intel-9.1-i386/lib -I$(HOME)/opt/intel-9.1-i386/include -lnetcdf" \
+	--with-jdqz="-L$(HOME)/opt/intel-9.1-i386/lib" \
+	--with-arpack="-L$(HOME)/opt/intel-9.1-i386/lib -larpack" \
+	--with-sparskit="-L$(HOME)/opt/intel-9.1-i386/lib -lskit" \
+	--disable-gdlib \
+	--host=$(DEB_HOST_GNU_TYPE) --build=$(DEB_BUILD_GNU_TYPE) \
+	--prefix=/usr --mandir=\$${prefix}/share/man --infodir=\$${prefix}/share/info
+
+	$(MAKE)
+
+	# only install executables
+	$(MAKE) -C src install prefix=$(CURDIR)/debian/octopus/usr
+
+	# inbetween we cleanup	
+	$(MAKE) distclean
 endif
 
 
@@ -192,8 +262,51 @@ ifeq (x86_64-linux,$(DEB_HOST_GNU_TYPE))
 endif
 
 
-## Intel(R) Fortran Compiler for 32-bit applications, Version 7.1   Build 20031103Z
+## Intel(R) Fortran Compiler for 32-bit applications, Version 9.1    Build 20060706Z
 ifeq (i386-linux,$(DEB_HOST_GNU_TYPE))
+	echo "Will use Intel(R) Fortran Compiler, Version 9.1, Build 20060706Z"
+	FC=$(HOME)/opt/intel-9.1-i386/mpich2/bin/mpif90  \
+	CFLAGS="-static -Wall -O3" \
+	LDFLAGS="-L$(HOME)/opt/intel-9.1-i386/mpich2/lib -lmpich" \
+	FCFLAGS="-O3 -static -funroll-loops -align -pad -ip -I$(HOME)/opt/intel-9.1-i386/include" \
+	./configure \
+	--program-suffix="-intel-9.1" \
+	--with-lapack="-L$(HOME)/opt/intel-9.1-i386/lib -llapack" \
+	--with-blas="-L$(HOME)/opt/intel-9.1-i386/lib -lblas" \
+	--with-fft-lib="-L$(HOME)/opt/intel-9.1-i386/lib -lfftw3" \
+	--with-netcdf="-L$(HOME)/opt/intel-9.1-i386/lib -I$(HOME)/opt/intel-9.1-i386/include -lnetcdf" \
+	--with-jdqz="-L$(HOME)/opt/intel-9.1-i386/lib" \
+	--with-arpack="-L$(HOME)/opt/intel-9.1-i386/lib -larpack" \
+	--with-sparskit="-L$(HOME)/opt/intel-9.1-i386/lib -lskit" \
+	--disable-gdlib \
+	--enable-mpi \
+	--host=$(DEB_HOST_GNU_TYPE) --build=$(DEB_BUILD_GNU_TYPE) \
+	--prefix=/usr --mandir=\$${prefix}/share/man --infodir=\$${prefix}/share/info
+endif
+
+  # Add here commands to compile the package.
+	$(MAKE)
+
+  # Add here commands to install the package into debian/octopus.
+	install -m 755 src/octopus_mpi $(CURDIR)/debian/octopus/usr/bin/octopus_mpi
+
+ifeq (x86_64-linux,$(DEB_HOST_GNU_TYPE))
+	cd $(CURDIR)/debian/octopus/usr/bin && ln -s octopus_mpi octopus_mpi-nag-5.0
+endif
+
+ifeq (i386-linux,$(DEB_HOST_GNU_TYPE))
+	cd $(CURDIR)/debian/octopus/usr/bin && ln -s octopus_mpi octopus_mpi-intel-9.1
+endif
+
+
+ifeq (i386-linux,$(DEB_HOST_GNU_TYPE))
+	# inbetween we cleanup
+	$(MAKE) distclean
+
+	# first a version with Intel 7.1
+	autoreconf -i
+
+## Intel(R) Fortran Compiler for 32-bit applications, Version 7.1   Build 20031103Z
 	echo "Intel(R) Fortran Compiler for 32-bit applications, Version 7.1   Build 20031103Z"
 	FC=$(HOME)/opt/intel/mpich/bin/mpif90 \
 	LDFLAGS="-lpthread -L$(HOME)/opt/intel/mpich/lib -lmpich" \
@@ -214,17 +327,45 @@ ifeq (i386-linux,$(DEB_HOST_GNU_TYPE))
 	--enable-mpi --program-suffix="-mpi" \
 	--host=$(DEB_HOST_GNU_TYPE) --build=$(DEB_BUILD_GNU_TYPE) \
 	--prefix=/usr --mandir=\$${prefix}/share/man --infodir=\$${prefix}/share/info
-endif
 
-  # Add here commands to compile the package.
 	$(MAKE)
 
-  # Add here commands to install the package into debian/octopus.
-	install -m 755 src/octopus_mpi $(CURDIR)/debian/octopus/usr/bin/octopus_mpi
+	# only install mpi executable
+	install -m 755 src/octopus_mpi $(CURDIR)/debian/octopus/usr/bin/octopus_mpi-intel-7.1
 
-ifeq (x86_64-linux,$(DEB_HOST_GNU_TYPE))
-	cd $(CURDIR)/debian/octopus/usr/bin && ln -s octopus_mpi octopus_mpi-nag-5.0
+	# inbetween we cleanup	
+	$(MAKE) distclean
+
+	# next the debug version
+	autoreconf -i
+## Intel(R) Fortran Compiler for 32-bit applications, Version 9.1    Build 20060706Z
+	echo "Will use Intel(R) Fortran Compiler, Version 9.1, Build 20060706Z"
+	FC=$(HOME)/opt/intel-9.1-i386/mpich2/bin/mpif90  \
+	CFLAGS="-static -Wall -g -O0" \
+	LDFLAGS="-L$(HOME)/opt/intel-9.1-i386/mpich2/lib -lmpich" \
+	FCDEBUGFLAGS="-g -O0 -assume minus0 -debug extended -debug-parameters all -inline-debug-info -std90 -fpe0 -traceback -fpstkchk -vec-report0 -mp1 -prec_div -warn ignore_loc -warn uncalled -warn unused -warn truncated_source -warn interfaces -warn declarations -ftrapuv -check noarg_temp_created -check bounds -check format -check output_conversion -check uninit" \
+	FCFLAGS="-static -I$(HOME)/opt/intel-9.1-i386/include" \
+	./configure \
+	--program-suffix="-intel-9.1-debug" \
+	--with-lapack="-L$(HOME)/opt/intel-9.1-i386/lib -llapack" \
+	--with-blas="-L$(HOME)/opt/intel-9.1-i386/lib -lblas" \
+	--with-fft-lib="-L$(HOME)/opt/intel-9.1-i386/lib -lfftw3" \
+	--with-netcdf="-L$(HOME)/opt/intel-9.1-i386/lib -I$(HOME)/opt/intel-9.1-i386/include -lnetcdf" \
+	--with-jdqz="-L$(HOME)/opt/intel-9.1-i386/lib" \
+	--with-arpack="-L$(HOME)/opt/intel-9.1-i386/lib -larpack" \
+	--with-sparskit="-L$(HOME)/opt/intel-9.1-i386/lib -lskit" \
+	--disable-gdlib \
+	--enable-mpi \
+	--host=$(DEB_HOST_GNU_TYPE) --build=$(DEB_BUILD_GNU_TYPE) \
+	--prefix=/usr --mandir=\$${prefix}/share/man --infodir=\$${prefix}/share/info
+
+	$(MAKE)
+
+	# only install executables
+	install -m 755 src/octopus_mpi $(CURDIR)/debian/octopus/usr/bin/octopus_mpi-intel-9.1-debug
 endif
+
+
 
 
 ## Intel(R) Fortran Compiler for Intel(R) EM64T-based applications, Version 9.1, Build 20060707
