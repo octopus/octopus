@@ -4,7 +4,8 @@
 DebugLevel = 0
 
 %CalculationMode 
-  gs | unocc
+   gs  |  unocc
+  "gs" | "unocc"
 %
 fromScratch = yes
 

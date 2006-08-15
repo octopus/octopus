@@ -10,7 +10,8 @@ Dimensions = 3
 PeriodicDimensions = 1
 
 %CalculationMode
-  gs | unocc                     
+   gs  |  unocc                     
+  "gs" | "unocc"
 %
 
 %Species
