@@ -1181,9 +1181,13 @@ contains
     type(states_t),    intent(in) :: st
     type(simul_box_t), intent(in) :: sb
 
-    integer :: i, ik, j, ns, iunit
+    integer :: i, ik, j, ns, is
+    integer, allocatable :: iunit(:)
     FLOAT   :: factor(MAX_DIM)
     logical :: grace_mode, gnuplot_mode
+    character(len=80) :: filename    
+
+    call push_sub('states.states_write_bands')
 
     if(.not.mpi_grp_is_root(mpi_world)) return
 
@@ -1209,6 +1213,8 @@ contains
     ns = 1
     if(st%d%nspin == 2) ns = 2
 
+    ALLOCATE(iunit(0:ns-1), ns)
+
     ! define the scaling factor to output k_i/G_i, instead of k_i
     do i = 1, MAX_DIM
       factor(i) = M_ONE
@@ -1216,39 +1222,66 @@ contains
     end do
 
     if (gnuplot_mode) then
-      iunit = io_open(trim(dir)//'/'//'bands-gp.dat', action='write')    
-      ! write header
-      write(iunit, '(a, i6)') '# kx ky kz (unscaled), kx ky kz (scaled), bands:', nst
-      
+      do is = 0, ns-1
+        if (ns.gt.1) then
+          write(filename, '(a,i1.1,a)') 'bands-gp-', is+1,'.dat'
+        else
+          write(filename, '(a)') 'bands-gp.dat'
+        end if
+        iunit(is) = io_open(trim(dir)//'/'//trim(filename), action='write')    
+        ! write header
+        write(iunit(is), '(a, i6)') '# kx ky kz (unscaled), kx ky kz (scaled), bands:', nst
+      end do
+
       ! output bands in gnuplot format
       do j = 1, nst
         do ik = 1, st%d%nik, ns
-          write(iunit, '(1x,6f14.8,3x,f14.8)')            &
-            st%d%kpoints(1:MAX_DIM,ik),                   & ! unscaled
-            st%d%kpoints(1:MAX_DIM,ik)/factor(1:MAX_DIM), & ! scaled
-            st%eigenval(j, ik)/units_out%energy%factor
+          do is = 0, ns-1
+            write(iunit(is), '(1x,6f14.8,3x,f14.8)')            &
+              st%d%kpoints(1:MAX_DIM, ik+is),                   & ! unscaled
+              st%d%kpoints(1:MAX_DIM, ik+is)/factor(1:MAX_DIM), & ! scaled
+              st%eigenval(j, ik+is)/units_out%energy%factor
+          end do
         end do
-        write(iunit, '(a)') ''
+        do is = 0, ns-1
+          write(iunit(is), '(a)') ''
+        end do
       end do
-      call io_close(iunit)
+      do is = 0, ns-1
+        call io_close(iunit(is))
+      end do
     end if
 
     if (grace_mode) then
-      iunit = io_open(trim(dir)//'/'//'bands-grace.dat', action='write')    
-      ! write header
-      write(iunit, '(a, i6)') '# kx ky kz (unscaled), kx ky kz (scaled), bands:', nst
+      do is = 0, ns-1
+        if (ns.gt.1) then
+          write(filename, '(a,i1.1,a)') 'bands-grace-', is+1,'.dat'
+        else
+          write(filename, '(a)') 'bands-grace.dat'
+        end if
+        iunit(is) = io_open(trim(dir)//'/'//trim(filename), action='write')    
+        ! write header
+        write(iunit(is), '(a, i6)') '# kx ky kz (unscaled), kx ky kz (scaled), bands:', nst
+      end do
 
       ! output bands in xmgrace format, i.e.:
       ! k_x, k_y, k_z, e_1, e_2, ..., e_n
       do ik = 1, st%d%nik, ns
-        write(iunit, '(1x,6f14.8,3x,16384f14.8)')         &
-          st%d%kpoints(1:MAX_DIM,ik),                     & ! unscaled
-          st%d%kpoints(1:MAX_DIM,ik)/factor(1:MAX_DIM),   & ! scaled
-          (st%eigenval(j, ik)/units_out%energy%factor, j = 1, nst)
+        do is = 0, ns-1
+          write(iunit(is), '(1x,6f14.8,3x,16384f14.8)')         &
+            st%d%kpoints(1:MAX_DIM, ik+is),                     & ! unscaled
+            st%d%kpoints(1:MAX_DIM, ik+is)/factor(1:MAX_DIM),   & ! scaled
+            (st%eigenval(j, ik+is)/units_out%energy%factor, j = 1, nst)
+        end do
       end do
-      call io_close(iunit)
+      do is = 0, ns-1
+        call io_close(iunit(is))
+      end do        
     end if
 
+    deallocate(iunit)
+
+    call pop_sub()
   end subroutine states_write_bands
 
 
@@ -1257,10 +1290,11 @@ contains
     character(len=*), intent(in) :: dir
     type(states_t),   intent(in) :: st
 
-    integer :: ie, ik, ist, epoints, iunit
+    integer :: ie, ik, ist, epoints, is, ns
+    integer, allocatable :: iunit(:)
     FLOAT   :: emin, emax, de, gamma, energy
     FLOAT   :: evalmax, evalmin, tdos, eextend
-    FLOAT, allocatable :: dos(:,:)
+    FLOAT, allocatable :: dos(:,:,:)
     character(len=64)  :: filename
 
     call push_sub('states.states_write_dos')
@@ -1312,46 +1346,90 @@ contains
     ! spacing for energy mesh
     de = (emax - emin) / (epoints - 1)
 
-    ! space for state dependent DOS
-    ALLOCATE(dos(epoints, st%nst), epoints*st%nst)
+    ! shortcuts
+    ns = 1
+    if(st%d%nspin == 2) ns = 2
 
-    ! compute band resolved density of states
+    ! space for state dependent DOS
+    ALLOCATE(dos(epoints, st%nst, 0:ns-1), epoints*st%nst*ns)
+    ALLOCATE(iunit(0:ns-1), ns)    
+
+    ! compute band/spin resolved density of states
     do ist = 1, st%nst
 
-      write(filename, '(a,i4.4,a)') 'dos-', ist, '.dat'
-      iunit = io_open(trim(dir)//'/'//trim(filename), action='write')
+      do is = 0, ns-1
+        if (ns.gt.1) then
+          write(filename, '(a,i4.4,a,i1.1,a)') 'dos-', ist, '-', is+1,'.dat'
+        else
+          write(filename, '(a,i4.4,a)') 'dos-', ist, '.dat'
+        end if
+        iunit(is) = io_open(trim(dir)//'/'//trim(filename), action='write')    
+        ! write header
+        write(iunit(is), '(a)') '# energy, band resolved DOS'
+      end do
       
       do ie = 1, epoints
         energy = emin + (ie - 1) * de
-        dos(ie, ist) = M_ZERO
+        dos(ie, ist, :) = M_ZERO
         ! sum up Lorentzians
-        do ik = 1, st%d%nik
-          dos(ie, ist) = dos(ie, ist) + st%d%kweights(ik) * M_ONE/M_Pi * &
-            gamma / ( (energy - st%eigenval(ist, ik)/units_out%energy%factor)**2 + gamma**2 )
+        do ik = 1, st%d%nik, ns
+          do is = 0, ns-1
+            dos(ie, ist, is) = dos(ie, ist, is) + st%d%kweights(ik+is) * M_ONE/M_Pi * &
+              gamma / ( (energy - st%eigenval(ist, ik+is)/units_out%energy%factor)**2 + gamma**2 )
+          end do
         end do
-        write(message(1), '(2f12.6)') energy, dos(ie, ist)
-        call write_info(1, iunit)
+        do is = 0, ns-1
+          write(message(1), '(2f12.6)') energy, dos(ie, ist, is)
+          call write_info(1, iunit(is))
+        end do
       end do
-      
-      call io_close(iunit)
+
+      do is = 0, ns-1
+        call io_close(iunit(is))
+      end do
     end do
-    
-    iunit = io_open(trim(dir)//'/'//'total-dos.dat', action='write')    
+
+    ! for spin polarized calculations also output spin resolved tdos
+    if(st%d%nspin .gt. 1) then    
+      do is = 0, ns-1
+        write(filename, '(a,i1.1,a)') 'total-dos-', is+1,'.dat'
+        iunit(is) = io_open(trim(dir)//'/'//trim(filename), action='write')    
+        ! write header
+        write(iunit(is), '(a)') '# energy, total DOS (spin resolved)'
+
+        do ie = 1, epoints
+          energy = emin + (ie - 1) * de
+          tdos = M_ZERO
+          do ist = 1, st%nst
+            tdos = tdos + dos(ie, ist, is)
+          end do
+          write(message(1), '(2f12.6)') energy, tdos
+          call write_info(1, iunit(is))
+        end do
+
+        call io_close(iunit(is))
+      end do
+    end if
+
+
+    iunit(1) = io_open(trim(dir)//'/'//'total-dos.dat', action='write')    
 
     ! compute total density of states
     do ie = 1, epoints
       energy = emin + (ie - 1) * de
       tdos = M_ZERO
       do ist = 1, st%nst
-        tdos = tdos + dos(ie, ist)
+        do is = 0, ns-1
+          tdos = tdos + dos(ie, ist, is)
+        end do
       end do
       write(message(1), '(2f12.6)') energy, tdos
-      call write_info(1, iunit)
+      call write_info(1, iunit(1))
     end do
 
-    call io_close(iunit)
+    call io_close(iunit(1))
 
-    deallocate(dos)
+    deallocate(iunit, dos)
 
     call pop_sub()
   end subroutine states_write_dos
