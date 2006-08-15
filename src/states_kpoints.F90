@@ -224,7 +224,7 @@ subroutine states_choose_kpoints(d, sb, geo)
     d%kweights(::2)  = kw(:)
     d%kweights(2::2) = kw(:)
   end select
-  
+
   deallocate(natom, coorat)
   deallocate(kp, kw)
 
@@ -270,7 +270,7 @@ subroutine get_points_in_ws_cell(dim, nik_axis, klat, kp)
   call push_sub('states_kpoints.get_points_in_ws_cell')
 
   iunit = io_open('static/wigner_seitz_cell.dat', action = 'write')
-  write(message(1), '(a,7x,a,14x,a,14x,a)') '# index','k_x','k_y','k_z'
+  write(message(1), '(a)') '# index  k_x, k_y, k_z (unscaled)  k_x, k_y, k_z (scaled)'
   call write_info(1, iunit)
 
   inik = 1
@@ -292,7 +292,7 @@ subroutine get_points_in_ws_cell(dim, nik_axis, klat, kp)
           do id = 1, dim
             kp(id, inik) = k_point(id)/klat(id, id)
           end do
-          write(message(1),'(i4, 3f18.12)') inik, kp(:, inik)
+          write(message(1),'(i4, 6f18.12)') inik, k_point(:), kp(:, inik)
           call write_info(1, iunit)
           inik = inik + 1          
         end if
