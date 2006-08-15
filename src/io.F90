@@ -62,7 +62,7 @@ contains
     character(len=128) :: filename
     character(len=256) :: node_hook
     logical :: file_exists, mpi_debug_hook
-    integer :: sec, usec, ierr
+    integer :: sec, usec
 
 
     lun_is_free(min_lun:max_lun)=.true.
@@ -202,12 +202,14 @@ contains
     !% The name of the input directory where octopus should read binary information
     !% like the (re)start wave-functions.
     !%End
-    call loct_parse_string('InputDir', 'tmp/', inputdir)  ! Note: the default is tmp/ (legacy behaviour)
-    call loct_stat(ierr, inputdir)
-    if (ierr == -1) then
-      write(message(1),'(a,a)') 'Could not find input directory: ', trim(inputdir)
-      call write_fatal(1)
-    end if
+
+    ! disabled for the moment
+    ! call loct_parse_string('InputDir', 'tmp/', inputdir)  ! Note: the default is tmp/ (legacy behaviour)
+    ! call loct_stat(ierr, inputdir)
+    ! if (ierr == -1) then
+    !  write(message(1),'(a,a)') 'Could not find input directory: ', trim(inputdir)
+    !  call write_fatal(1)
+    ! end if
 
     ! create directory for final (converged) output
     !%Variable OutputDir
@@ -218,8 +220,10 @@ contains
     !% The name of the directory where octopus will store (hopefully) converged binary 
     !% output like the (re)start wave-functions.
     !%End
-    call loct_parse_string('OutputDir', 'tmp/', outputdir) ! Again tmp/ as default (legacy behaviour)
-    call io_mkdir(outputdir)
+
+    ! disabled for the moment
+    ! call loct_parse_string('OutputDir', 'tmp/', outputdir) ! Again tmp/ as default (legacy behaviour)
+    ! call io_mkdir(outputdir)
 
     ! create debug directory if in debugging mode
     if(in_debug_mode) then
