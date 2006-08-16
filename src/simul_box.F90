@@ -31,6 +31,7 @@ module simul_box_m
   use lib_oct_m
   use geometry_m
   use math_m
+  use io_m
 
   implicit none
 
@@ -76,6 +77,18 @@ module simul_box_m
     integer :: dim
     integer :: periodic_dim
 
+    ! If scattering_box = .true. then the size of the simulation box is determined 
+    ! by scatt_box_factors(:),  scatt_box_central_size and the size/spacing of the 
+    ! asymptotic unit cell
+    logical :: scattering_box       
+    integer :: scatt_box_central_size  ! size of the central region (without unit cell padding)
+    integer :: scatt_box_factors(3)    ! contains multiples for the repetition of the asymptotic unit cell
+    integer :: asympt_uc_nr(2, 3)      ! used to read in the dimensions of the asymptotic unit cell
+    integer :: asympt_uc_np            ! NP of the asymptotic unit cell
+    integer :: asympt_uc_dim           ! dimensions of the asymptotic unit cell
+    integer :: asympt_uc_periodic_dim  ! periodic dimensions of the asymptotic unit cell
+    FLOAT   :: asympt_uc_lsize(3)      ! lsize of asymptotic unit cell 
+
   end type simul_box_t
 
   interface operator(.eq.)
@@ -100,6 +113,7 @@ contains
     call read_misc()          ! miscellany stuff
     call read_box()           ! parameters defining the simulation box
     call read_spacing ()      ! parameters defining the (canonical) spacing
+    call adjust_scatt_box()   ! adjust parameters for a scattering calculation 
     call read_box_offset()    ! parameters defining the offset of the origin
     call build_lattice()      ! build lattice vectors
 
@@ -109,6 +123,10 @@ contains
 
     !--------------------------------------------------------------
     subroutine read_misc()
+
+      integer :: iunit, ierr
+      integer(POINTER_SIZE) :: blk
+      character(len=256)    :: tmp_str
 
       call push_sub('simul_box.read_misc')
 
@@ -152,6 +170,77 @@ contains
       call loct_parse_int(check_inp('PeriodicDimensions'), 0, sb%periodic_dim)
       if ((sb%periodic_dim < 0) .or. (sb%periodic_dim > 3) .or. (sb%periodic_dim > sb%dim)) &
         call input_error('PeriodicDimensions')
+
+      sb%scattering_box = .false.
+
+      !%Variable ScatteringRegionCellFactors
+      !%Type block
+      !%Section Mesh::Simulation Box
+      !%Description
+      !% This block determines how often an "asymptotic unit cell" is repeated in
+      !% x, y, z direction of the central region.
+      !%End
+      if(loct_parse_block(check_inp('ScatteringRegionCellFactors'), blk) == 0) then
+        if(loct_parse_block_cols(blk, 0) < sb%dim) call input_error('ScatteringRegionCellFactors')
+        do i = 1, sb%dim
+          call loct_parse_block_int(blk, 0, i-1, sb%scatt_box_factors(i))
+        end do
+        call loct_parse_block_end(blk)
+
+        !%Variable ScatteringRegionCentralSize
+        !%Type integer
+        !%Default 1
+        !%Section Mesh::Simulation Box
+        !%Description
+        !% The value determines how many points to use for the central region along the x-axis 
+        !% (i.e. central region without unit cell padding)
+        !%End
+        call loct_parse_int(check_inp('ScatteringRegionCentralSize'), 1, sb%scatt_box_central_size)
+        
+        ! At this point the block ScatteringRegionBoxFactors was given by the user. The 
+        ! geometry of the simulation box will now only be determined by sb%scatt_box_factors 
+        ! and the size/spacing of the asymptotic unit cell.
+        sb%scattering_box = .true.
+            
+        ! open file with information on the mesh of the asymptotic cell
+        iunit = io_open('asymptotic_cell/restart_gs/mesh', action='read', status='old', die=.false., is_tmp=.true.)
+
+        if (iunit < 0) then
+          message(1) = 'Error: Could not read directory asymptotic_cell. Please provide a tmp'
+          message(2) = '       directory with name asymptotic_cell which contains the asymptotic'
+          message(3) = '       unit cell to be used.'
+          call write_fatal(3)
+        end if
+
+        ! read in size of the asymptotic unit cell
+        do i = 1, 5
+          read(iunit, fmt=*, iostat=ierr) 
+          if(ierr.ne.0) then
+            message(1) = 'Error: An error occurred while reading asymptotic_cell/restart_gs/mesh.'
+            call write_fatal(1)
+          end if
+        end do
+        ! line 6
+        read(iunit, fmt='(a20,i4)')      tmp_str, sb%asympt_uc_dim
+        ! line 7
+        read(iunit, fmt='(a20,i4)')      tmp_str, sb%asympt_uc_periodic_dim
+        ! line 8 (read format should match the output format in simul_box_dump)
+        read(iunit, fmt='(a20,3e22.14)') tmp_str, sb%asympt_uc_lsize(:)
+        ! skip a couple of lines
+        do i = 9, 11
+          read(iunit, fmt=*) 
+        end do
+        ! now lines 12, 13 (read format should match the output format in mesh_dump)
+        read(iunit, fmt='(a20,3i8)') tmp_str, sb%asympt_uc_nr(1, :)
+        read(iunit, fmt='(a20,3i8)') tmp_str, sb%asympt_uc_nr(2, :)
+        ! line 14
+        read(iunit, fmt='(a20,1i10)')  tmp_str, sb%asympt_uc_np
+
+        ! need to modify sb%periodic_dim
+        sb%periodic_dim = sb%asympt_uc_periodic_dim
+
+        call io_close(iunit)
+      end if
 
       call pop_sub()
     end subroutine read_misc
@@ -417,6 +506,28 @@ contains
 
       call pop_sub()
     end subroutine read_spacing
+
+
+    !--------------------------------------------------------------
+    subroutine adjust_scatt_box()
+
+      call push_sub('simul_box.adjust_scatt_box')
+
+      if(.not.sb%scattering_box) return
+
+      do i = 1, sb%periodic_dim
+        sb%h(i) = abs( sb%asympt_uc_lsize(i) / sb%asympt_uc_nr(1, i) )
+      end do
+
+      sb%lsize(1) = 2*sb%asympt_uc_lsize(1)*sb%scatt_box_factors(1)  &
+        + sb%h(1)*sb%scatt_box_central_size 
+      
+      do i = 2, sb%periodic_dim
+        sb%lsize(i) = sb%asympt_uc_lsize(i)*sb%scatt_box_factors(i)
+      end do
+      
+      call pop_sub()
+    end subroutine adjust_scatt_box
 
 
     !--------------------------------------------------------------
