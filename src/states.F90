@@ -1412,7 +1412,7 @@ contains
     end if
 
 
-    iunit(1) = io_open(trim(dir)//'/'//'total-dos.dat', action='write')    
+    iunit(0) = io_open(trim(dir)//'/'//'total-dos.dat', action='write')    
 
     ! compute total density of states
     do ie = 1, epoints
@@ -1424,10 +1424,10 @@ contains
         end do
       end do
       write(message(1), '(2f12.6)') energy, tdos
-      call write_info(1, iunit(1))
+      call write_info(1, iunit(0))
     end do
 
-    call io_close(iunit(1))
+    call io_close(iunit(0))
 
     deallocate(iunit, dos)
 
