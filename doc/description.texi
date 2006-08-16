@@ -3,7 +3,7 @@
 
 @c **********************************************************************
 @menu
-* Mesh::                        
+* The mesh::                    
 * Run Mode SCF::                
 * Run Mode Unoccupied States::  
 * Run Mode Time Dependent::     
@@ -11,8 +11,8 @@
 * Spectrum calculations::       
 @end menu
 
-@node Mesh, Run Mode SCF, Description, Description
-@section Mesh
+@node The mesh, Run Mode SCF, Description, Description
+@section The mesh
 
 @code{octopus} uses a grid in real space to solve the Kohn-Sham equations.
 The grid is equally-spaced, but the spacings can be different for each 
@@ -21,7 +21,7 @@ be tuned to suit the geometric configuration of the system.
 
 
 @c **********************************************************************
-@node Run Mode SCF, Run Mode Unoccupied States, Mesh, Description
+@node Run Mode SCF, Run Mode Unoccupied States, The mesh, Description
 @section Run Mode SCF
 
 The ground-state electronic density in a Kohn-Sham (KS) based

@@ -110,7 +110,7 @@ contains
     !%Variable ConvAbsDens
     !%Type float
     !%Default 1e-5
-    !%Section Linear Response::SCF
+    !%Section Linear Response::SCF in LR calculations
     !%Description
     !% The tolerance in the variation of the density, to determine if
     !% the SCF for linear response is converged.
@@ -122,7 +122,7 @@ contains
     !%Variable MaximumIter
     !%Type integer
     !%Default 200
-    !%Section Linear Response::SCF
+    !%Section Linear Response::SCF in LR calculations
     !%Description
     !% The maximum number of SCF iterations to calculate response.
     !%End
@@ -227,7 +227,7 @@ contains
     !%Variable DynamicalTol
     !%Type logical
     !%Default true
-    !%Section Linear Response::SCF
+    !%Section Linear Response::SCF in LR calculations
     !%Description
     !% If this variable is true, the tolerance of the LinearSolver is
     !% adjusted according to the level of convergency of the self
@@ -239,7 +239,7 @@ contains
     !%Variable DynamicalTolFactor
     !%Type float
     !%Default 0.5
-    !%Section Linear Response::SCF
+    !%Section Linear Response::SCF in LR calculations
     !%Description
     !% This factor controls how much the tolerance is increased at
     !% first iterations. Larger values means larger tolerance.
