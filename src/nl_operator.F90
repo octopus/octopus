@@ -58,9 +58,9 @@ module nl_operator_m
 
     ! When running in parallel mode, the next three
     ! arrays are unique on each node.
-    integer, allocatable  :: i(:,:)    ! index of the points
-    FLOAT,   allocatable  :: w_re(:,:) ! weightsp, real part
-    FLOAT,   allocatable  :: w_im(:,:) ! weightsp, imaginary part
+    integer, pointer  :: i(:,:)    ! index of the points
+    FLOAT,   pointer  :: w_re(:,:) ! weightsp, real part
+    FLOAT,   pointer  :: w_im(:,:) ! weightsp, imaginary part
 
     logical               :: const_w   ! are the weights independent of index i
     logical               :: cmplx_op  ! .true. if we have also imaginary weights
