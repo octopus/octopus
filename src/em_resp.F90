@@ -578,12 +578,12 @@ contains
 
       if(props%calc_pol) then 
         
-        ! check file linear/dynpols
-        file_doesnt_exist = .not. io_file_exists('linear/dynpols', &
-             'Warning: File linear/dynpols found. New information will be appended')
+        ! check file linear/alpha
+        file_doesnt_exist = .not. io_file_exists('linear/alpha', &
+             'Warning: File linear/alpha found. New information will be appended')
         
         if( file_doesnt_exist .or. fromScratch ) then
-          out_file = io_open('linear/dynpols', action='write')
+          out_file = io_open('linear/alpha', action='write')
           write(out_file, '(a)')       '# Frequency dependent polarizability, real and imaginary parts are included'
           write(out_file, '(3a)')      '# Frequency units: [',  trim(units_out%energy%abbrev),'/hbar]'
           write(out_file, '(3a,i1,a)') '# Polarizability units: [',  trim(units_out%length%abbrev),'^',NDIM,']'
@@ -635,8 +635,8 @@ contains
       integer :: out_file, iunit
 
       if(props%calc_pol) then 
-        !write dynpols
-        iunit = io_open('linear/dynpols', action='write', position='append' )
+        !write alpha
+        iunit = io_open('linear/alpha', action='write', position='append' )
         if(status%ok) then           
           !convert units 
           alpha = alpha/units_out%length%factor**NDIM
