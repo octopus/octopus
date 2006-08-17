@@ -222,7 +222,7 @@ subroutine X(lr_solver_bcg) (lr, h, gr, st, ik, x, y, omega)
     
   end do
     
-  lr%iter     = 2*iter
+  lr%iter     = iter
   lr%abs_psi = sqrt(abs(gamma))
 
   deallocate(r, p, rs, ps, Hp)
@@ -364,7 +364,7 @@ subroutine X(lr_solver_bicgstab) (lr, h, gr, st, ik, x, y, omega)
         
   end do
     
-  lr%iter = 2*iter
+  lr%iter = iter
   lr%abs_psi=sqrt(gamma)
 
   deallocate(r, p, Hp, s, rs, Hs)
