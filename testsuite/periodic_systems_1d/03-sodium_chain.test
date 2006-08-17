@@ -13,17 +13,17 @@ Enabled  : Yes
 
 Input: 03-sodium_chain.01-ground_state.inp
 
-Match ; Bands ; grep '^   1' ds02_static/eigenvalues | tac | head -n 6 | tail -n 1 ; \s*-17.6430\d*\s*2.0000\d*
-Match ; Bands ; grep '^   1' ds02_static/eigenvalues | tac | head -n 5 | tail -n 1 ; \s*-17.5470\d*\s*2.0000\d*
-Match ; Bands ; grep '^   1' ds02_static/eigenvalues | tac | head -n 4 | tail -n 1 ; \s*-17.2596\d*\s*2.0000\d*
-Match ; Bands ; grep '^   1' ds02_static/eigenvalues | tac | head -n 3 | tail -n 1 ; \s*-16.7832\d*\s*0.0000\d*
-Match ; Bands ; grep '^   1' ds02_static/eigenvalues | tac | head -n 2 | tail -n 1 ; \s*-16.1237\d*\s*0.0000\d*
-Match ; Bands ; grep '^   1' ds02_static/eigenvalues | tac | head -n 1 | tail -n 1 ; \s*-15.3471\d*\s*0.0000\d*
+Match ; Bands ; grep '^   1' unoccstatic/eigenvalues | tac | head -n 6 | tail -n 1 ; \s*-17.6430\d*\s*2.0000\d*
+Match ; Bands ; grep '^   1' unoccstatic/eigenvalues | tac | head -n 5 | tail -n 1 ; \s*-17.5470\d*\s*2.0000\d*
+Match ; Bands ; grep '^   1' unoccstatic/eigenvalues | tac | head -n 4 | tail -n 1 ; \s*-17.2596\d*\s*2.0000\d*
+Match ; Bands ; grep '^   1' unoccstatic/eigenvalues | tac | head -n 3 | tail -n 1 ; \s*-16.7832\d*\s*0.0000\d*
+Match ; Bands ; grep '^   1' unoccstatic/eigenvalues | tac | head -n 2 | tail -n 1 ; \s*-16.1237\d*\s*0.0000\d*
+Match ; Bands ; grep '^   1' unoccstatic/eigenvalues | tac | head -n 1 | tail -n 1 ; \s*-15.3471\d*\s*0.0000\d*
 
-Match ; Bands ; grep '^   2' ds02_static/eigenvalues | tac | head -n 6 | tail -n 1 ; \s*-15.2299\d*\s*0.0000\d*
-Match ; Bands ; grep '^   2' ds02_static/eigenvalues | tac | head -n 5 | tail -n 1 ; \s*-15.1377\d*\s*0.0000\d*
-Match ; Bands ; grep '^   2' ds02_static/eigenvalues | tac | head -n 4 | tail -n 1 ; \s*-14.8639\d*\s*0.0000\d*
-Match ; Bands ; grep '^   2' ds02_static/eigenvalues | tac | head -n 3 | tail -n 1 ; \s*-14.3548\d*\s*0.0000\d*
-Match ; Bands ; grep '^   2' ds02_static/eigenvalues | tac | head -n 2 | tail -n 1 ; \s*-14.1533\d*\s*0.0000\d*
-Match ; Bands ; grep '^   2' ds02_static/eigenvalues | tac | head -n 1 | tail -n 1 ; \s*-15.2112\d*\s*0.0000\d*
+Match ; Bands ; grep '^   2' unoccstatic/eigenvalues | tac | head -n 6 | tail -n 1 ; \s*-15.2299\d*\s*0.0000\d*
+Match ; Bands ; grep '^   2' unoccstatic/eigenvalues | tac | head -n 5 | tail -n 1 ; \s*-15.1377\d*\s*0.0000\d*
+Match ; Bands ; grep '^   2' unoccstatic/eigenvalues | tac | head -n 4 | tail -n 1 ; \s*-14.8639\d*\s*0.0000\d*
+Match ; Bands ; grep '^   2' unoccstatic/eigenvalues | tac | head -n 3 | tail -n 1 ; \s*-14.3548\d*\s*0.0000\d*
+Match ; Bands ; grep '^   2' unoccstatic/eigenvalues | tac | head -n 2 | tail -n 1 ; \s*-14.1533\d*\s*0.0000\d*
+Match ; Bands ; grep '^   2' unoccstatic/eigenvalues | tac | head -n 1 | tail -n 1 ; \s*-15.2112\d*\s*0.0000\d*
 
