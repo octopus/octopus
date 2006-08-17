@@ -58,9 +58,9 @@ module nl_operator_m
 
     ! When running in parallel mode, the next three
     ! arrays are unique on each node.
-    integer, pointer      :: i(:,:)    ! index of the points
-    FLOAT,   pointer      :: w_re(:,:) ! weightsp, real part
-    FLOAT,   pointer      :: w_im(:,:) ! weightsp, imaginary part
+    integer, allocatable  :: i(:,:)    ! index of the points
+    FLOAT,   allocatable  :: w_re(:,:) ! weightsp, real part
+    FLOAT,   allocatable  :: w_im(:,:) ! weightsp, imaginary part
 
     logical               :: const_w   ! are the weights independent of index i
     logical               :: cmplx_op  ! .true. if we have also imaginary weights
@@ -253,19 +253,14 @@ contains
   ! ---------------------------------------------------------
   ! opt has to be initialised and built.
   subroutine nl_operator_skewadjoint(op, opt, m)
-    type(nl_operator_t), intent(in)  :: op
-    type(nl_operator_t), intent(out) :: opt
+    type(nl_operator_t), target, intent(in)  :: op
+    type(nl_operator_t), target, intent(out) :: opt
     type(mesh_t),        intent(in)  :: m
 
     integer          :: np, i, j, index, l, k
-    integer, pointer :: op_i(:, :)
     FLOAT, pointer   :: vol_pp(:)
-    FLOAT, pointer   :: w_re(:, :), w_re_t(:, :)
-    FLOAT, pointer   :: w_im(:, :), w_im_t(:, :)
 
-#if defined(HAVE_MPI)
-    type(nl_operator_t) :: opg, opgt
-#endif
+    type(nl_operator_t), pointer :: opg, opgt
 
     call push_sub('nl_operator.nl_operator_skewadjoint')
 
@@ -273,50 +268,39 @@ contains
 
     if(m%parallel_in_domains) then
 #if defined(HAVE_MPI)
+      ALLOCATE(opg, 1)
+      ALLOCATE(opgt, 1)
       call nl_operator_allgather(op, opg)
       call nl_operator_init(opgt, op%n)
       call nl_operator_equal(opgt, opg)
       ALLOCATE(vol_pp(m%np_global), m%np_global)
       call dvec_allgather(m%vp, vol_pp, m%vol_pp)
-
-      op_i   => opg%i
-      w_re   => opg%w_re
-      w_re_t => opgt%w_re
-      if(op%cmplx_op) then
-        w_im   => opg%w_im
-        w_im_t => opgt%w_im
-      end if
 #else
       ASSERT(.false.)
 #endif
     else
-      op_i   => op%i
-      w_re   => op%w_re
-      w_re_t => opt%w_re
-      if(op%cmplx_op) then
-        w_im   => op%w_im
-        w_im_t => opt%w_im
-      end if
+      opg  => op
+      opgt => opt
       vol_pp => m%vol_pp
     end if
 
     np = m%np_global
-    w_re_t = M_ZERO
-    if (op%cmplx_op) w_im_t = M_ZERO
+    opgt%w_re = M_ZERO
+    if (op%cmplx_op) opgt%w_im = M_ZERO
     do i = 1, m%np_global
       do j = 1, op%n
-        index = op_i(j, i)
+        index = opg%i(j, i)
         if(index <= m%np_global) then
           do l = 1, op%n
-            k = op_i(l, index)
+            k = opg%i(l, index)
             if( k == i ) then
               if(.not.op%const_w) then
-                w_re_t(j, i) = M_HALF*w_re(j, i) - M_HALF*(vol_pp(index)/vol_pp(i))*w_re(l, index)
+                opgt%w_re(j, i) = M_HALF*opg%w_re(j, i) - M_HALF*(vol_pp(index)/vol_pp(i))*opg%w_re(l, index)
                 if (op%cmplx_op) &
-                   w_im_t(j, i) = M_HALF*w_im(j, i) - M_HALF*(vol_pp(index)/vol_pp(i))*w_im(l, index)
+                   opgt%w_im(j, i) = M_HALF*opg%w_im(j, i) - M_HALF*(vol_pp(index)/vol_pp(i))*opg%w_im(l, index)
               else
-                w_re_t(j, 1) = w_re(l, 1)
-                if (op%cmplx_op) w_im_t(j, 1) = w_im(l, 1)
+                opgt%w_re(j, 1) = opg%w_re(l, 1)
+                if (op%cmplx_op) opgt%w_im(j, 1) = opg%w_im(l, 1)
               end if
             end if
           end do
@@ -328,13 +312,14 @@ contains
 #if defined(HAVE_MPI)
       deallocate(vol_pp)
       do i = 1, m%vp%np_local(m%vp%partno)
-        opt%w_re(:, i) = w_re_t(:, m%vp%local(m%vp%xlocal(m%vp%partno)+i-1))
+        opt%w_re(:, i) = opgt%w_re(:, m%vp%local(m%vp%xlocal(m%vp%partno)+i-1))
         if(opt%cmplx_op) then
-          opt%w_im(:, i) = w_im_t(:, m%vp%local(m%vp%xlocal(m%vp%partno)+i-1))
+          opt%w_im(:, i) = opgt%w_im(:, m%vp%local(m%vp%xlocal(m%vp%partno)+i-1))
         end if
       end do
       call nl_operator_end(opg)
       call nl_operator_end(opgt)
+      deallocate(opg, opgt)
 #endif
     end if
 
@@ -344,19 +329,14 @@ contains
 
   ! ---------------------------------------------------------
   subroutine nl_operator_selfadjoint(op, opt, m)
-    type(nl_operator_t), intent(in)  :: op
-    type(nl_operator_t), intent(out) :: opt
+    type(nl_operator_t), target, intent(in)  :: op
+    type(nl_operator_t), target, intent(out) :: opt
     type(mesh_t),        intent(in)  :: m
 
     integer          :: np, i, j, index, l, k
-    integer, pointer :: op_i(:, :)
     FLOAT, pointer   :: vol_pp(:)
-    FLOAT, pointer   :: w_re(:, :), w_re_t(:, :)
-    FLOAT, pointer   :: w_im(:, :), w_im_t(:, :)
 
-#if defined(HAVE_MPI)
-    type(nl_operator_t) :: opg, opgt
-#endif
+    type(nl_operator_t), pointer :: opg, opgt
 
     call push_sub('nl_operator.nl_operator_selfadjoint')
 
@@ -365,50 +345,39 @@ contains
 
     if(m%parallel_in_domains) then
 #if defined(HAVE_MPI)
+      ALLOCATE(opg, 1)
+      ALLOCATE(opgt, 1)
       call nl_operator_allgather(op, opg)
       call nl_operator_init(opgt, op%n)
       opgt = opg
       ALLOCATE(vol_pp(m%np_global), m%np_global)
       call dvec_allgather(m%vp, vol_pp, m%vol_pp)
-
-      op_i   => opg%i
-      w_re   => opg%w_re
-      w_re_t => opgt%w_re
-      if(op%cmplx_op) then
-        w_im   => opg%w_im
-        w_im_t => opgt%w_im
-      end if
 #else
       ASSERT(.false.)
 #endif
-    else
-      op_i   => op%i
-      w_re   => op%w_re
-      w_re_t => opt%w_re
-      if(op%cmplx_op) then
-        w_im   => op%w_im
-        w_im_t => opt%w_im
-      end if
+    else      
+      opg  => op
+      opgt => opt
       vol_pp => m%vol_pp
     end if
 
     np = m%np_global
-    w_re_t = M_ZERO
-    if (op%cmplx_op) w_im_t = M_ZERO
+    opgt%w_re = M_ZERO
+    if (op%cmplx_op) opgt%w_im = M_ZERO
     do i = 1, m%np_global
       do j = 1, op%n
-        index = op_i(j, i)
+        index = opg%i(j, i)
         if(index <= m%np_global) then
           do l = 1, op%n
-            k = op_i(l, index)
+            k = opg%i(l, index)
             if( k == i ) then
               if(.not.op%const_w) then
-                w_re_t(j, i) = M_HALF*w_re(j, i) + M_HALF*(vol_pp(index)/vol_pp(i))*w_re(l, index)
+                opgt%w_re(j, i) = M_HALF*opg%w_re(j, i) + M_HALF*(vol_pp(index)/vol_pp(i))*opg%w_re(l, index)
                 if (op%cmplx_op) &
-                  w_im_t(j, i) = M_HALF*w_im(j, i) + M_HALF*(vol_pp(index)/vol_pp(i))*w_im(l, index)
+                  opgt%w_im(j, i) = M_HALF*opg%w_im(j, i) + M_HALF*(vol_pp(index)/vol_pp(i))*opg%w_im(l, index)
               else
-                w_re_t(j, 1) = w_re(l, 1)
-                if (op%cmplx_op) w_im_t(j, 1) = w_im(l, 1)
+                opgt%w_re(j, 1) = opg%w_re(l, 1)
+                if (op%cmplx_op) opgt%w_im(j, 1) = opg%w_im(l, 1)
               end if
             end if
           end do
@@ -420,13 +389,14 @@ contains
     if(m%parallel_in_domains) then
       deallocate(vol_pp)
       do i = 1, m%vp%np_local(m%vp%partno)
-        opt%w_re(:, i) = w_re_t(:, m%vp%local(m%vp%xlocal(m%vp%partno)+i-1))
+        opt%w_re(:, i) = opgt%w_re(:, m%vp%local(m%vp%xlocal(m%vp%partno)+i-1))
         if(opt%cmplx_op) then
-          opt%w_im(:, i) = w_im_t(:, m%vp%local(m%vp%xlocal(m%vp%partno)+i-1))
+          opt%w_im(:, i) = opgt%w_im(:, m%vp%local(m%vp%xlocal(m%vp%partno)+i-1))
         end if
       end do
       call nl_operator_end(opg)
       call nl_operator_end(opgt)
+      deallocate(opg, opgt)
     end if
 #endif
 
@@ -644,32 +614,25 @@ contains
   ! call this routine because the distributed operator has
   ! to be collected.
   subroutine nl_operator_op_to_matrix(op, a, b)
-    type(nl_operator_t), intent(in) :: op
+    type(nl_operator_t), target, intent(in) :: op
     FLOAT, intent(out)                 :: a(:, :)
     FLOAT, optional, intent(out)       :: b(:, :)
 
     integer          :: i, j, k, index
-    integer, pointer :: op_i(:, :)
-    FLOAT, pointer   :: w_re(:, :), w_im(:, :)
-    type(nl_operator_t) :: opg
+
+    type(nl_operator_t), pointer :: opg
 
     call push_sub('nl_operator.nl_operator_op_to_matrix')
 
     if(op%m%parallel_in_domains) then
 #if defined(HAVE_MPI)
+      ALLOCATE(opg, 1)
       call nl_operator_gather(op, opg)
-      ! Take these shortcuts.
-      op_i => opg%i
-      w_re => opg%w_re
-      if(opg%cmplx_op) w_im => opg%w_im
 #else
       ASSERT(.false.)
 #endif
     else
-      ! Take these shortcuts.
-      op_i => op%i
-      w_re => op%w_re
-      if(op%cmplx_op) w_im => op%w_im
+      opg => op
     end if
 
     if(mpi_grp_is_root(op%m%mpi_grp)) then
@@ -677,15 +640,18 @@ contains
       do i = 1, op%m%np_global
         if(.not.op%const_w) k = i
         do j = 1, op%n
-          index = op_i(j, i)
+          index = opg%i(j, i)
           if(index <= op%m%np_global) then
-            a(i, index) = w_re(j, k)
-            if (op%cmplx_op) b(i, index) = w_im(j, k)
+            a(i, index) = opg%w_re(j, k)
+            if (op%cmplx_op) b(i, index) = opg%w_im(j, k)
           end if
         end do
       end do
       
-      if(op%m%parallel_in_domains) call nl_operator_end(opg)
+      if(op%m%parallel_in_domains) then 
+        call nl_operator_end(opg)
+        deallocate(opg)
+      end if
     end if
     if(in_debug_mode) call write_debug_newlines(2)
 
@@ -806,20 +772,10 @@ contains
 
     call push_sub('nl_operator.nl_operator_end')
 
-    ASSERT(associated(op%i))
-    ASSERT(associated(op%w_re))
-    ASSERT(associated(op%stencil))
-
-    if (op%cmplx_op) then
-      ASSERT(associated(op%w_im))
-    end if
-
     deallocate(op%i, op%w_re, op%stencil)
-    nullify   (op%i, op%w_re, op%stencil)
 
     if (op%cmplx_op) then
       deallocate(op%w_im)
-      nullify   (op%w_im)
     end if
 
     call pop_sub()
