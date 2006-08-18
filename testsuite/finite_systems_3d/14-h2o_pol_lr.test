@@ -22,9 +22,9 @@ Match ; Mean polarizability ; grep  'Mean' linear/polarizability_lr ; \s*16.89
 Match ; Hyperpolarizability ; tail -1 linear/beta_lr ; \s*-22.84
 
 Input: 14-h2o_pol_lr.03_h2o_dyn_pol.inp
-Match ; Polarizability w=0.0; tail -2 linear/dynpols | head -1 ; \s*15.26
-Match ; Polarizability w=0.1; tail -1 linear/dynpols; \s*15.92
+Match ; Polarizability w=0.0; tail -2 linear/alpha | head -1 ; \s*15.26
+Match ; Polarizability w=0.1; tail -1 linear/alpha; \s*15.92
 
 Input: 14-h2o_pol_lr.04_h2o_dyn_pol_cmplx.inp
-Match ; Complex polarizability w=0.0; tail -2 linear/dynpols | head -1 ; \s*15.17
-Match ; Complex polarizability w=0.1; tail -1 linear/dynpols; \s*0.15
+Match ; Complex polarizability w=0.0; tail -2 linear/alpha | head -1 ; \s*15.17
+Match ; Complex polarizability w=0.1; tail -1 linear/alpha; \s*0.15
