@@ -46,6 +46,7 @@ module linear_response_m
     FLOAT   :: abs_dens       ! convergence reached
     FLOAT   :: conv_abs_psi   ! convergence required 
     FLOAT   :: conv_abs_psi_r ! convergence required 
+    FLOAT   :: conv_max_abs_psi ! convergence required 
     FLOAT   :: abs_psi        ! convergence reached
     integer :: max_iter       ! maximum number of iterations
     integer :: max_scf_iter   ! maximum number of iterations
@@ -249,6 +250,19 @@ contains
       call loct_parse_float(check_inp(trim(prefix)//'DynamicalTolFactor'), CNST(0.5), lr%dynamic_tol_factor)
     end if
 
+    !%Variable LinearSolverMaxTol
+    !%Type float
+    !%Default 1e-2
+    !%Section Linear Response::Solver
+    !%Description
+    !% This is the maximun tolerance that will be applied to the
+    !% linear solver when dynamical tolerance is used.
+    !%End
+    if( lr%dynamic_tol ) then 
+      call loct_parse_float(check_inp(trim(prefix)//"LinearSolverMaxTol"), &
+           CNST(1e-2), lr%conv_max_abs_psi)
+    end if
+
     ! END INPUT PARSING
 
     nullify(lr%ddl_rho, lr%ddl_psi, lr%ddl_Vhar, lr%dl_Vxc)
@@ -447,7 +461,7 @@ contains
   subroutine dynamic_tol_init(lr)
     type(lr_t),     intent(inout) :: lr
 
-    lr%last_tol = CNST(0.1)
+    lr%last_tol = lr%conv_max_abs_psi
 
     if( lr%dynamic_tol ) then
       lr%conv_abs_psi = lr%dynamic_tol_factor*lr%conv_abs_psi_r/lr%conv_abs_dens
