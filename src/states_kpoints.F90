@@ -120,7 +120,7 @@ subroutine states_choose_kpoints(d, sb, geo)
   !% If true, no symmetry is taken into account for the choice of k-points.
   !% Instead the k-point sampling will range over the full Wigner-Seitz cell.
   !%End
-  call loct_parse_logical('FullWignerSeitzCell', .false., full_ws_cell)
+  call loct_parse_logical(check_inp('FullWignerSeitzCell'), .false., full_ws_cell)
 
   !%Variable CenterOfInversion
   !%Type integer
@@ -144,7 +144,7 @@ subroutine states_choose_kpoints(d, sb, geo)
       d%kweights    = M_ONE
       kmax          = (M_ONE - coi*M_HALF)*sb%klat(1,1)
       total_weight  = M_ZERO
-      
+
       do i = 1, d%nik
         d%kpoints(1, i) = (i-1)*kmax/real(d%nik-1)
         if (i /= 1 .and. i /= d%nik) then
@@ -157,6 +157,8 @@ subroutine states_choose_kpoints(d, sb, geo)
         message(1) = 'Not implemented yet.'
         call write_fatal(1)
       end if
+
+      call pop_sub()
       return
     end if
 
@@ -233,7 +235,7 @@ end subroutine states_choose_kpoints
 
 
 ! ---------------------------------------------------------
-subroutine kpoints_write_info(d,iunit)
+subroutine kpoints_write_info(d, iunit)
   type(states_dim_t), intent(in) :: d
   integer, intent(in) :: iunit
 
