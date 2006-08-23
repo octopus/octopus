@@ -54,7 +54,7 @@ module output_m
     doutput_function,             &
     zoutput_function
 
-  integer, parameter, public  ::  &
+  integer, parameter, public ::   &
     output_potential  =     1,    &
     output_density    =     2,    &
     output_wfs        =     4,    &
@@ -67,7 +67,7 @@ module output_m
     output_pol_density=   512,    &
     output_r          =  1024
 
-  integer, parameter, private ::  &
+  integer, parameter, public ::   &
     output_axis_x     =     1,    &
     output_axis_y     =     2,    &
     output_axis_z     =     4,    &
