@@ -126,6 +126,7 @@ subroutine X(sparskit_solver_init)(n, sk)
   !%End
   call loct_parse_float(check_inp('SparskitAbsTolerance'), CNST(1e-10), sk%abs_tolerance)
 
+  !%Variable SparskitVerboseSolver
   !%Type logical
   !%Default no
   !%Section Math::General
