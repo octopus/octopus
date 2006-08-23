@@ -231,7 +231,7 @@ contains
     apply_magnus = .false.
     if(present(vmagnus)) apply_magnus = .true.
 
-    call push_sub('td_exp.td_dtexp')
+    call push_sub('td_exp.td_exp_td')
 
     select case(te%exp_method)
     case(FOURTH_ORDER);      call fourth
