@@ -319,6 +319,7 @@ contains
       integer :: i, is, ierr
       character(len=50) :: filename
       FLOAT :: x
+      logical :: only_userdef_istates
 
       if(.not.fromScratch) then
         call restart_read(trim(tmpdir)//'restart_td', st, gr, ierr, td%iter)
@@ -340,11 +341,25 @@ contains
       end if
 
       if(fromScratch) then
-        call restart_read(trim(tmpdir)//'restart_gs', st, gr, ierr)
-        if(ierr.ne.0) then
-          message(1) = "Could not read KS orbitals from '"//trim(tmpdir)//"restart_gs'"
-          message(2) = "Please run a ground-state calculation first!"
-          call write_fatal(2)
+
+        !%Variable OnlyUserDefinedInitialStates
+        !%Type logical
+        !%Default no
+        !%Section States
+        !%Description
+        !% If true, then only user defined states from the block UserDefinedStates
+        !% will be used as initial states for a time propagation. No attempt is made
+        !% to load ground state orbitals from a previous ground state run.
+        !%End
+        call loct_parse_logical('OnlyUserDefinedInitialStates', .false., only_userdef_istates)
+
+        if(.not. only_userdef_istates) then
+          call restart_read(trim(tmpdir)//'restart_gs', st, gr, ierr)
+          if(ierr.ne.0) then
+            message(1) = "Could not read KS orbitals from '"//trim(tmpdir)//"restart_gs'"
+            message(2) = "Please run a ground-state calculation first!"
+            call write_fatal(2)
+          end if
         end if
 
         ! check if we should deploy user defined wavefunctions. 
