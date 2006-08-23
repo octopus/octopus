@@ -5,7 +5,7 @@ Test     : Sodium
 Author   : Heiko Appel
 Date     : 04.05.05
 Arch     : Linux miraculix 2.6.11.6-acpi-up #1 Thu Apr 7 15:01:29 CEST 2005 i686 GNU/Linux
-Release  : 2.1.0rc1
+Release  : 2.2.0pre1
 Programs : octopus
 Runtime  : short-run
 Enabled  : Yes

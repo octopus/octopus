@@ -3,7 +3,7 @@
 @setfilename octopus.info 
 @c including the file vers-octopus.texi makes "C-u 10 M-x
 @c texinfo-multiple-files-update" fail
-@set VERSION 2.1.0rc1
+@set VERSION 2.2.0pre1
 @settitle the @code{octopus} @value{VERSION} manual
 @c %**end of header
 

@@ -5,7 +5,7 @@ Test     : Fock-Darwin spectrum
 Author   : Alberto
 Date     : 17.11.05
 Arch     : Linux g38 2.6.13.2-smp-1 #1 SMP Wed Sep 28 17:13:12 CEST 2005 i686 GNU/Linux
-Release  : 2.1.0rc1
+Release  : 2.2.0pre1
 Programs : octopus
 Runtime  : short-run
 Enabled  : Yes

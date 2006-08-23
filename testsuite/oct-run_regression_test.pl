@@ -52,7 +52,7 @@ Test     :
 Author   : $author
 Date     : $date
 Arch     : $arch
-Release  :
+Release  : 2.2.0pre1
 Programs : octopus
 Runtime  : short-run
 Enabled  : Yes

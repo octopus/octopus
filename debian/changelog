@@ -1,3 +1,9 @@
+octopus (2.2.0pre1-1) unstable; urgency=low
+
+  * Development for octopus 2.2 begins.
+
+ -- Heiko Appel <appel@physik.fu-berlin.de>  Wed, 23 Aug 2006 22:45:22 +0200
+
 octopus (2.1.0rc1-1) unstable; urgency=low
 
   * First release candidate for octopus 2.1.0.

@@ -18,7 +18,7 @@
 ## $Id$
 
 AC_PREREQ(2.59)
-AC_INIT([Octopus],[2.1.0rc1],[octopus-devel@tddft.org],[octopus])
+AC_INIT([Octopus],[2.2.0pre1],[octopus-devel@tddft.org],[octopus])
 AC_CONFIG_SRCDIR([src/global.F90])
 AC_CONFIG_AUX_DIR([build-aux])
 AM_INIT_AUTOMAKE

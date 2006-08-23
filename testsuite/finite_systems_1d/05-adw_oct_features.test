@@ -5,7 +5,7 @@ Test     : 1D Asymmetric Double Well
 Author   : Jan Werschnik
 Date     : 20.06.06
 Arch     : Linux 
-Release  : 2.1.0rc1
+Release  : 2.2.0pre1
 Programs : octopus
 Runtime  : long-run
 Enabled  : Yes

@@ -5,7 +5,7 @@ Test     : Curvilinear Coordinates
 Author   : Alberto
 Date     : 13.11.05
 Arch     : Linux rhodas 2.4.26-1-386 #1 Thu Jul 22 12:46:23 JST 2004 i686 GNU/Linux
-Release  : 2.1.0rc1
+Release  : 2.2.0pre1
 Programs : octopus
 Runtime  : short-run
 Enabled  : Yes
