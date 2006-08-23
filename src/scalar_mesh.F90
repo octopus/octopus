@@ -144,7 +144,11 @@ contains
     xmin2    = M_ZERO
     xmax2    = sm%max - sm%center
     sm%label = label
-    sm%dx    = (sm%max-sm%min)/sm%np
+    if(sm%np.gt.0) then
+      sm%dx    = (sm%max-sm%min)/sm%np
+    else
+      sm%dx    = M_ZERO
+    end if
 
     ! all meshes, except the linear one, need an odd number of mesh 
     ! points. Stop the code, if the user is giving wrong input.
