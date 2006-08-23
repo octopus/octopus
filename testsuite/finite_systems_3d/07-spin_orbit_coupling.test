@@ -5,7 +5,7 @@ Test     : Spin-orbit coupling
 Author   : Micael
 Date     : 10.07.05
 Arch     : Linux localhost.localdomain 2.6.11-1.27_FC3 #1 Tue May 17 20:27:37 EDT 2005 i686 i686 i386 GNU/Linux
-Release  : 2.1pre1
+Release  : 2.1.0rc1
 Programs : octopus
 Runtime  : short-run
 Enabled  : Yes

@@ -5,7 +5,7 @@ Test     : Free Electron Bands in 1D
 Author   : Carlo + Heiko
 Date     : 16.06.05
 Arch     : Linux n11 2.6.11.6-smp-1 #1 SMP Mon Apr 11 20:30:44 CEST 2005 i686 GNU/Linux
-Release  : 2.1pre1
+Release  : 2.1.0rc1
 Programs : octopus
 Runtime  : short-run
 Enabled  : Yes

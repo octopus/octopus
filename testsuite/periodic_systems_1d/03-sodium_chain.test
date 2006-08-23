@@ -5,7 +5,7 @@ Test     : Sodium chain
 Author   : Carlo + Heiko
 Date     : 06.12.05
 Arch     : Linux n10 2.6.11.11-smp-1 #1 SMP Sun May 29 13:49:31 CEST 2005 x86_64 GNU/Linux
-Release  : 2.1pre1
+Release  : 2.1.0rc1
 Programs : octopus
 Runtime  : short-run
 Enabled  : Yes

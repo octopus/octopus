@@ -1,3 +1,9 @@
+octopus (2.1.0rc1-1) unstable; urgency=low
+
+  * First release candidate for octopus 2.1.0.
+
+ -- Heiko Appel <appel@physik.fu-berlin.de>  Wed, 23 Aug 2006 22:17:16 +0200
+
 octopus (2.1pre1-3) unstable; urgency=low
 
   * On amd64 linking to the gdlib causes octopus to segfault always when 

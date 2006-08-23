@@ -5,7 +5,7 @@ Test     : Asymmetric Double Well
 Author   : Jan
 Date     : 19.05.06
 Arch     : Linux 
-Release  :
+Release  : 2.1.0rc1
 Programs : octopus
 Runtime  : short-run
 Enabled  : Yes
