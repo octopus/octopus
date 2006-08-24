@@ -1,5 +1,5 @@
 # -*- coding: utf-8 mode: shell-script -*-
-# $Id:$
+# $Id$
 
 DebugLevel = 0
 
@@ -25,7 +25,10 @@ EigenSolverFinalTolerance = 1e-5
 EigenSolverFinalToleranceIteration = 6
 EigenSolverMaxIter = 25
 
-ConvRelDens = 5.0e-6
+# With orbital dependent xc potentials, one should mix the potential.
+What2Mix = potential
+
+ConvRelDens = 1.0e-5
 
 TypeOfMixing = broyden
 
