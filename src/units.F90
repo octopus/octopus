@@ -119,7 +119,7 @@ contains
     !%End
 
     if(loct_parse_isdef(check_inp('Units')).ne.0) then
-      call loct_parse_string('Units', "a.u", c)
+      call loct_parse_string(check_inp('Units'), "a.u", c)
       cinp = c(1:3)
       cout = c(1:3)
     else

@@ -351,7 +351,7 @@ contains
         !% will be used as initial states for a time propagation. No attempt is made
         !% to load ground state orbitals from a previous ground state run.
         !%End
-        call loct_parse_logical('OnlyUserDefinedInitialStates', .false., only_userdef_istates)
+        call loct_parse_logical(check_inp('OnlyUserDefinedInitialStates'), .false., only_userdef_istates)
 
         if(.not. only_userdef_istates) then
           call restart_read(trim(tmpdir)//'restart_gs', st, gr, ierr)

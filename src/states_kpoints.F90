@@ -390,7 +390,7 @@ logical function in_wigner_seitz_cell(k_point, klat) result(in_cell)
   !%Option dodecahedron 3
   !% The Wigner-Seitz cell is has the form of a octahedron
   !%End
-  call loct_parse_int('WignerSeitzCellType', CUBE, ws_cell_type)
+  call loct_parse_int(check_inp('WignerSeitzCellType'), CUBE, ws_cell_type)
 
   ! the number of Bragg planes corresponds to the coordination number
   ! of the respective Bravais lattice
