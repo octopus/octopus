@@ -127,8 +127,13 @@ AC_FC_WRAPPERS
 acx_save_libs="${LIBS}"
 LIBS="${FCEXTRALIBS} $FCLIBS"
 
-dnl some functions we may need
-AC_CHECK_FUNCS([flush])
+dnl Sometimes Fortran may use the flush function, sometimes not.
+dnl I put a call to AC_TRY_LINK_FUNC instead of AC_CHECK_FUNCS, since the latter
+dnl seems to fail with some autotools versions, due to a call to some broken
+dnl version of AC_LANG_FUNC_LINK_TRY.
+dnl AC_CHECK_FUNCS([flush])
+AC_TRY_LINK_FUNC(flush, [AC_DEFINE(HAVE_FLUSH,1,
+  [Define if the flush function can be called from Fortran ])], [])
 
 dnl check wether we have or not a compiler that allows for very long lines...
 ACX_LONG_FORTRAN_LINES
