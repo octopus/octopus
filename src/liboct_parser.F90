@@ -200,13 +200,13 @@ module lib_oct_parser_m
       real(8), intent(out) :: re, im
       character(len=*), intent(in) :: pot
     end subroutine oct_parse_expression
-    module procedure oct_parse_expression4
     subroutine oct_parse_expression1(re, im, c, x, string)
       real(8), intent(out) :: re, im
       character(len=*), intent(in) :: c
       real(8), intent(in) :: x
       character(len=*), intent(in) :: string
     end subroutine oct_parse_expression1
+    module procedure oct_parse_expression4
     module procedure oct_parse_expression14
   end interface
 

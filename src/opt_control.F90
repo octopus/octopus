@@ -811,7 +811,8 @@ contains
      !       build target operator
      
      ! FIXME: more flexibility when defining multiple target operators
-     ! usually one has only one specie of operators, i.e., only local or only non-local, when mixing these, this routine has to be improved.
+     ! usually one has only one specie of operators, i.e., only local or only non-local, 
+     ! when mixing these, this routine has to be improved.
      if(tg(1)%type.eq.oct_tgtype_local) then
        ! local td operator
        ! build operator
@@ -936,7 +937,8 @@ contains
       end do
       ! Q: How to distinguish between the cases ?
       !if((NDIM-dof).eq.1) then
-      !l(1:NDIM, 2*iter) = M_ONE/tdpenalty(1:NDIM,2*iter)*real(m_z1/(m_z2*m_zI)*(laser_pol(1:NDIM)*(d1*d2(1:NDIM)+conjg(d1)*conjg(d2(1:NDIM)))))
+      !l(1:NDIM, 2*iter) = M_ONE/tdpenalty(1:NDIM,2*iter)*real(m_z1/(m_z2*m_zI) * &
+      !(laser_pol(1:NDIM)*(d1*d2(1:NDIM)+conjg(d1)*conjg(d2(1:NDIM)))))
       !endif
       !if((NDIM-dof).eq.0) then
       l(1:NDIM, 2*iter) = aimag(d1*d2(1:NDIM))/tdpenalty(1:NDIM,2*iter)
@@ -1604,8 +1606,14 @@ contains
       !%Type block
       !%Section Optimal Control
       !%Description
-      !% OCTOPUS features also time-dependent targets, i.e., one wants to optimize a laser field that achieves a predefined time-dependent target. An example, could be the evolution of occupation numbers in time.
-      !% A time-dependent target consists of two parts, i.e., the operator itself (a projection or a local operator) and its time-dependence. Both are specified in one row of the block. You may enter as many rows as you like. For time-dependent occupation targets OCTOPUS takes care of the normalization.
+      !% octopus features also time-dependent targets, i.e., one wants to optimize a laser 
+      !% field that achieves a predefined time-dependent target. An example, could be the 
+      !% evolution of occupation numbers in time. A time-dependent target consists of two 
+      !% parts, i.e., the operator itself (a projection or a local operator) and its 
+      !% time-dependence. Both are specified in one row of the block. You may enter as many 
+      !% rows as you like. For time-dependent occupation targets OCTOPUS takes care of the 
+      !% normalization.
+      !% 
       !% The structure of the block is as follows:
       !%
       !% <tt>%OCTTdTarget
@@ -1738,10 +1746,12 @@ contains
       !%Type float
       !%Section Optimal Control
       !%Description
-      !% The variable specificies the value of the penalty factor for the integrated field strength (fluence). Large value - small fluence. The value is always positive.
-      !% A transient shape can be specified using the block OCTLaserEnvelope.
+      !% The variable specificies the value of the penalty factor for the 
+      !% integrated field strength (fluence). Large value - small fluence. The value is 
+      !% always positive. A transient shape can be specified using the block OCTLaserEnvelope.
       !% In this case OCTPenalty is multiplied with time-dependent function. 
-      !% The value depends on the coupling between the states. A good start might be a value from 0.1 (strong fields) to 10 (weak fields). 
+      !% The value depends on the coupling between the states. A good start might be a 
+      !% value from 0.1 (strong fields) to 10 (weak fields). 
       !%End
       ALLOCATE(a_penalty(0:ctr_iter_max+1), ctr_iter_max+2)
       call loct_parse_float(check_inp('OCTPenalty'), M_ONE, penalty)
@@ -1826,7 +1836,16 @@ contains
       !%Section Optimal Control
       !%Default oct_algorithm_zbr98
       !%Description
-      !% In order to find the optimal laser field for a given task, e.g., the excitation from an initial state to a predefined final state at the final time, optimal control theory can be applied to quantum mechanics. The mathematical derivation leads a set of equations which require the propagation of the wavefunction and a lagrange multiplier (sometimes comparable to a wavefunction). Several schemes have been sought to solve these control equations which boils down to forward and backward propagations. However, the order in which these equations are solved makes a huge difference. Some schemes can be proven to increase the value of the target functional (merit function) in each step. (In practice this can be violated if the accuracy of the numerical time propagation is small. Most likely in 3D.)
+      !% In order to find the optimal laser field for a given task, e.g., the excitation from an
+      !% initial state to a predefined final state at the final time, optimal control theory can 
+      !% be applied to quantum mechanics. The mathematical derivation leads a set of equations 
+      !% which require the propagation of the wavefunction and a lagrange multiplier (sometimes
+      !% comparable to a wavefunction). Several schemes have been sought to solve these control 
+      !% equations which boils down to forward and backward propagations. However, the order in
+      !% which these equations are solved makes a huge difference. Some schemes can be proven 
+      !% to increase the value of the target functional (merit function) in each step. (In 
+      !% practice this can be violated if the accuracy of the numerical time propagation is
+      !% small. Most likely in 3D.)
       !%Option oct_algorithm_zbr98 1 
       !% Backward-Forward-Backward scheme described in JCP 108, 1953 (1998).
       !% Only possible if targetoperator is a projection operator
@@ -1843,13 +1862,15 @@ contains
       !% Works for all kind target operators and 
       !% can be used with all kind of filters and allows a fixed fluence.
       !% The price is a rather instable convergence. 
-      !% If the restrictions set by the filter and fluence are reasonable, a good overlap can be expected with 20 iterations.
+      !% If the restrictions set by the filter and fluence are reasonable, a good overlap can be 
+      !% expected with 20 iterations.
       !% No monotonic convergence.
       !%Option oct_algorithm_krotov 4
       !% Yet to be implemented and tested, some people swear on it.
       !% Described in Zhao & Rice: Optical Control of Molecules. (Appendix A)
       !%Option oct_algorithm_mt03 5
-      !% Yet to be implemented and tested. Basically an improved and generalized scheme. Comparable to ZBR98/ZR98. (see JCP 118,8191 (2003))
+      !% Yet to be implemented and tested. Basically an improved and generalized scheme. 
+      !% Comparable to ZBR98/ZR98. (see JCP 118,8191 (2003))
       !%End
       call loct_parse_int(check_inp('OCTScheme'), oct_algorithm_zr98, algorithm_type)
 
@@ -1906,7 +1927,9 @@ contains
       !% <tt>%OCTPolarization
       !% <br>&nbsp;&nbsp;2 | 1 | 1 | 0 
       !% <br>%</tt> 
-      !% The polarization lies in the x-y plane, but this time two components of the laser field are optimized. This may lead to linear, circular, or ellipitically polarized fields, dependening on the problem.
+      !% The polarization lies in the x-y plane, but this time two components of the laser
+      !% field are optimized. This may lead to linear, circular, or ellipitically polarized 
+      !% fields, dependening on the problem.
       !%
       !% <tt>%OCTPolarization
       !% <br>&nbsp;&nbsp;1 | 1 | i | 0 
