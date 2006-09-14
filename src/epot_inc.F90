@@ -52,7 +52,8 @@ subroutine X(project)(mesh, p, n_projectors, psi, ppsi, periodic, ik)
       if(ip.ne.1) ppsi(p(ip-1)%jxyz(1:n_s)) = ppsi(p(ip-1)%jxyz(1:n_s)) + plpsi(1:n_s)
       n_s = p(ip)%n_points_in_sphere
 
-      deallocate(lpsi, plpsi, stat = j)
+      if(allocated(lpsi))  deallocate(lpsi, stat = j)
+      if(allocated(plpsi)) deallocate(plpsi, stat = j)
       ALLOCATE( lpsi(n_s), n_s)
       ALLOCATE(plpsi(n_s), n_s)
 
@@ -111,7 +112,7 @@ R_TYPE function X(psiprojectpsi)(mesh, p, n_projectors, psi, periodic, ik) resul
   R_TYPE :: tmp
 #endif
 
-  call push_sub('epot_inc.project')
+  call push_sub('epot_inc.psiprojectpsi')
 
   res = R_TOTYPE(M_ZERO)
 
@@ -122,7 +123,8 @@ R_TYPE function X(psiprojectpsi)(mesh, p, n_projectors, psi, periodic, ik) resul
 
     if(p(ip)%iatom .ne. k) then
       n_s = p(ip)%n_points_in_sphere
-      deallocate(lpsi, plpsi, stat = j)
+      if(allocated(lpsi))  deallocate(lpsi, stat = j)
+      if(allocated(plpsi)) deallocate(plpsi, stat = j)
       ALLOCATE( lpsi(n_s), n_s)
       ALLOCATE(plpsi(n_s), n_s)
 

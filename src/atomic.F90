@@ -635,7 +635,7 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
 !                                                                             !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-
+  nt = 0
   del = M_HALF
   de  = M_ZERO
   niter = 0
