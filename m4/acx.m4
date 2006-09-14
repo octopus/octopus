@@ -63,6 +63,19 @@ AC_MSG_RESULT($acx_long_lines_ok)
 
 
 ################################################
+# Check for the presence of a given function in Fortran.
+# It substitutes AC_CHECK_FUNC, since the latter
+# seems to fail with some autotools versions, due to a call to some broken
+# version of AC_LANG_FUNC_LINK_TRY.
+AC_DEFUN([ACX_FORTRAN_CHECK_FUNC],
+[AC_LANG_PUSH(Fortran)dnl
+AC_TRY_LINK_FUNC($1, [AC_DEFINE_UNQUOTED(AS_TR_CPP([HAVE_$1]),1,
+  [Define if the $1 function can be called from Fortran])], [])dnl
+AC_LANG_POP(Fortran)dnl
+])
+
+
+################################################
 # AC_LANG_FUNC_LINK_TRY(Fortran)(FUNCTION)
 # ----------------------------------
 m4_define([AC_LANG_FUNC_LINK_TRY(Fortran)],
