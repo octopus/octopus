@@ -38,6 +38,7 @@ module ground_state_m
   use mesh_m
   use mpi_m
   use mpi_debug_m
+  use guess_density_m
 
   implicit none
 
@@ -86,7 +87,7 @@ contains
 
       ! We do not compute the density from the random wave-functions. 
       ! Instead, we try to get a better guess for the density
-      call system_guess_density(sys%gr%m, sys%gr%sb, sys%gr%geo, sys%st%qtot, sys%st%d%nspin, &
+      call guess_density(sys%gr%m, sys%gr%sb, sys%gr%geo, sys%st%qtot, sys%st%d%nspin, &
            sys%st%d%spin_channels, sys%st%rho)
 
       ! setup Hamiltonian (we do not call system_h_setup here because we do not want to
