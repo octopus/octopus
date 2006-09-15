@@ -32,11 +32,8 @@ SUBDIRS =        \
 EXTRA_DIST =     \
 	TODO build/*.pl build/*.in debian/*
 
-CLEANFILES =     \
-	*~ *.bak *.pc*
-
 DISTCLEANFILES = \
-	config.log config.status Makefile.in build/octopus.spec
+	config.log config.status build/octopus.spec
 
 
 RPM_DIR = $(HOME)/software/rpm
