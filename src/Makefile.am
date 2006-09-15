@@ -112,7 +112,7 @@ CTAGS=ctags-exuberant -e
 
 # then we actually compile _oct.f90 files and cleanup
 %.o: %_oct.f90
-	@FC@ @FCFLAGS@ @FCDEBUGFLAGS@ -c @FCFLAGS_f90@ -o $@ $*_oct.f90
+	@FC@ @FCFLAGS@ @FCFLAGS_NETCDF@ @FCDEBUGFLAGS@ -c @FCFLAGS_f90@ -o $@ $*_oct.f90
 	@rm -f $*_oct.f90
 
 # some exception for atomic.F90: Don't compile with debug flags (I guess nobody
