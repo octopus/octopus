@@ -73,13 +73,15 @@ def var2element(variable):
 def element2var(element):
     name=element.get("name")
     type=element.get("type")
-    description="xxx"
+    description="no description available"
     for child in element.getchildren():
-        if child.tag=="desc":
-            strio=StringIO.StringIO()
-            ET.ElementTree(child).write(strio)
-            m=re.match(r'<desc>\s*(.*?)\s*</desc>', strio.getvalue(), re.S | re.M)
-            description=m.group(1)
+        if child.tag=="desc" and ((child.text and child.text.strip())
+                                  or child.getchildren() != []):
+                strio=StringIO.StringIO()
+                #ET.ElementTree(child).write(strio)
+                printelement(strio,child)
+                m=re.match(r'<desc>\s*(.*?)\s*</desc>', strio.getvalue(), re.S | re.M)
+                description=m.group(1)
     return base.variable_by_type(name,type,description)
 
 def MakeElement(variabletree, root=ET.Element("variables")):

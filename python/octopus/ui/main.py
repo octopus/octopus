@@ -29,6 +29,8 @@ gtk loop.
 import gtk
 import gnome.ui
 
+import about
+import splash
 import widgets
 
 class MainApplication(object):
@@ -42,12 +44,18 @@ class MainApplication(object):
         """
 
         gnome.init(package_name, package_version)
+        about.package_name=package_name
+        about.package_version=package_version
+        self.projectwindows=[]
 
     def run(self):
-        splashwindow=widgets.SplashScreen()
+
+        splashwindow=splash.SplashScreen()
         splashwindow.show()
+
         projectwindow=widgets.ProjectWindow()
         projectwindow.show()
+        self.projectwindows.append(projectwindow)
 
         gtk.main()
 

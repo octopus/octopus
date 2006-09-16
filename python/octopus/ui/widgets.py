@@ -1,6 +1,6 @@
 #! @PYTHON@
 # -*- coding: utf-8 mode: python -*-
-# widgets.by - Widgets and other GUI elements for Octopus.
+# widgets.py - Widgets and other GUI elements for Octopus.
 # Copyright (C) 2006 A. Thimm
 # 
 # This program is free software; you can redistribute it and/or
@@ -24,41 +24,10 @@
 """
 
 import gtk
-#import gtk.glade
-import gtk.gdk
-
 import gnome.ui
 
-class SplashScreen(gtk.Window):
-
-    def __init__(self):
-        gtk.Window.__init__(self, gtk.WINDOW_TOPLEVEL)
-
-        self.set_type_hint(gtk.gdk.WINDOW_TYPE_HINT_SPLASHSCREEN)
-        self.set_position(gtk.WIN_POS_CENTER_ALWAYS)
-        self.stick()
-        self.set_keep_above(True)
-
-        vbox=gtk.VBox()
-#        label=gtk.Label("""octopus
-#
-#        I'm just an annoying spashscreen.
-#        """)
-#        label.show()
-#        vbox.pack_start(label, True, True, 10)
-        image=gtk.Image()
-        image.set_from_file(PKGDATADIR + "/oct_main.jpg")
-        image.show()
-        vbox.pack_end(image, True, True, 10)
-        self.add(vbox)
-        vbox.show()
-
-#        self.connect("button_release_event", self.hide)
-
-    def show(self):
-        gtk.Window.show_now(self)
-        import gobject
-        gobject.timeout_add(2000, self.hide)
+import about
+import vartreeview
 
 class ProjectWindow(gnome.ui.App):
 
@@ -97,7 +66,7 @@ class ProjectWindow(gnome.ui.App):
     </toolbar>
     </ui>'''
 
-    def __init__(self, appname="", title=""):
+    def __init__(self, appname="appname", title="title"):
 
         # Create the toplevel window
         gnome.ui.App.__init__(self, appname, title)
@@ -106,8 +75,42 @@ class ProjectWindow(gnome.ui.App):
         self.connect('destroy', lambda w: gtk.main_quit())
         self.connect('delete_event', self.quit_delete)
 
+        # Create a StatusBar
+        import gobject
+        statusbar = gobject.new(gnome.ui.AppBar, has_progress=True, has_status=True,
+                                interactivity=False)
+        self.statusbar=statusbar
+
+        self.set_statusbar(statusbar)
         # Create a UIManager instance
         uimanager = gtk.UIManager()
+
+        def select_menu(menuitem, tooltip):
+            statusbar.push(tooltip)
+
+        def deselect_menu(menuitem):
+            statusbar.pop()
+
+        def connect_menus(uimanager, action, widget):
+            if isinstance(widget, gtk.MenuItem):
+                tooltip = action.get_property('tooltip')
+                if tooltip:
+                    cid = widget.connect('select', select_menu, tooltip)
+                    cid2 = widget.connect('deselect', deselect_menu)
+                    widget.set_data('kiwiapp::cids', (cid, cid2))
+
+        def disconnect_menus(uimanager, action, widget):
+            if isinstance(widget, gtk.MenuItem):
+                tooltip = action.get_property('tooltip')
+                if tooltip:
+                    cids = widget.get_data('kiwiapp::cids') or ()
+                    for name, cid in cids:
+                        widget.disconnect(cid)
+
+        uimanager.connect("connect-proxy", connect_menus)
+        uimanager.connect("disconnect-proxy", disconnect_menus)
+
+
         # Add the accelerator group to the toplevel window
         accelgroup = uimanager.get_accel_group()
         self.add_accel_group(accelgroup)
@@ -126,8 +129,8 @@ class ProjectWindow(gnome.ui.App):
                                   ('About', gtk.STOCK_ABOUT, None, None, _('About this application'), self.about_action)
                                   ])
 
-        actiongroup0.add_toggle_actions([('ViewToolBar', None, _('View _ToolBar'), None, _('xxx'), self.noop_action),
-                                        ('ViewStatusBar', None, _('View _StatusBar'), None, _('xxx'), self.noop_action)])
+        actiongroup0.add_toggle_actions([('ViewToolBar', None, _('View _Toolbar'), None, _('Visibility of the toolbar'), self.viewtoolbar_action, True),
+                                        ('ViewStatusBar', None, _('View _Statusbar'), None, _('Visibility of the statusbar'), self.viewstatusbar_action, True)])
 
 
 
@@ -161,21 +164,149 @@ class ProjectWindow(gnome.ui.App):
         toolbar = uimanager.get_widget('/Toolbar')
         self.set_toolbar(toolbar)
 
-        # Create a StatusBar
+        notebook=gtk.Notebook()
+        notebook.append_page(vartreeview.VariableTreeView(), gtk.Label("Variables"))
+        self.set_contents(notebook)
 
-        import gobject
-        statusbar = gobject.new(gnome.ui.AppBar, has_progress=True, has_status=True,
-                                interactivity=False)
+###############
+
+#        import gtk.gtkgl
+        import vtk
+        from vtk.gtk.GtkGLExtVTKRenderWindowInteractor import GtkGLExtVTKRenderWindowInteractor
+
+        # The GtkVTKRenderWindows
+        gvtk1 = GtkGLExtVTKRenderWindowInteractor()
+        gvtk2 = GtkGLExtVTKRenderWindowInteractor()
+        gvtk3 = GtkGLExtVTKRenderWindowInteractor()
+        #gvtk1.SetDesiredUpdateRate(1000)
+        gvtk1.set_size_request(800, 600)
+        gvtk2.set_size_request(800, 600)
+        gvtk3.set_size_request(800, 600)
+        #if sys.platform != 'win32':
+        #   gvtk1.set_resize_mode(gtk.RESIZE_IMMEDIATE)
+
+        notebook.append_page(gvtk1, gtk.Label("VTK Test"))
+        notebook.append_page(gvtk2, gtk.Label("Na2"))
+        notebook.append_page(gvtk3, gtk.Label("benzene"))
+
+        gvtk1.show()
+        gvtk1.Initialize()
+        gvtk1.Start()
+        # prevents 'q' from exiting the app.
+        gvtk1.AddObserver("ExitEvent", lambda o,e,x=None: x)
+        gvtk2.show()
+        gvtk2.Initialize()
+        gvtk2.Start()
+        # prevents 'q' from exiting the app.
+        gvtk2.AddObserver("ExitEvent", lambda o,e,x=None: x)
+        gvtk3.show()
+        gvtk3.Initialize()
+        gvtk3.Start()
+        # prevents 'q' from exiting the app.
+        gvtk3.AddObserver("ExitEvent", lambda o,e,x=None: x)
+
+        # The VTK stuff.
+        cone = vtk.vtkConeSource()
+        cone.SetResolution(80)
+        coneMapper = vtk.vtkPolyDataMapper()
+        coneMapper.SetInput(cone.GetOutput())
+        #coneActor = vtk.vtkLODActor()
+        coneActor = vtk.vtkActor()
+        coneActor.SetMapper(coneMapper)
+        coneActor.GetProperty().SetColor(0.5, 0.5, 1.0)
+        ren1 = vtk.vtkRenderer()
+        gvtk1.GetRenderWindow().AddRenderer(ren1)
+        ren1.AddActor(coneActor)
+
+        import vtk, vtk.util.vtkImageImportFromArray
+        import Scientific.IO.NetCDF
+
+        densitydataNa2=Scientific.IO.NetCDF.NetCDFFile("/tmp/Na2-density-1.ncdf")
+        densitydataNa2vtk=vtk.util.vtkImageImportFromArray.vtkImageImportFromArray()
+        densitydataNa2vtk.SetArray(densitydataNa2.variables['rdata'].getValue())
+        densityNa2Contour = vtk.vtkContourFilter()
+        densityNa2Contour.SetInput(densitydataNa2vtk.GetOutput())
+        densityNa2Contour.SetValue(0, 1e-7)
+        densityNa2Contour.SetValue(1, 1e-4)
+        densityNa2Contour.SetValue(2, 1e-3)
+        densityNa2Contour.SetValue(3, 2e-3)
+        densityNa2Contour.SetValue(4, 5e-3)
+        densityNa2Contour.SetValue(5, 6e-3)
+        densityNa2Contour.SetValue(6, 7e-3)
+        densityNa2Normals = vtk.vtkPolyDataNormals()
+        densityNa2Normals.SetInputConnection(densityNa2Contour.GetOutputPort())
+        densityNa2Normals.SetFeatureAngle(60.0)
+        densityNa2Mapper = vtk.vtkPolyDataMapper()
+        densityNa2Mapper.SetInputConnection(densityNa2Normals.GetOutputPort())
+        densityNa2Mapper.ScalarVisibilityOff()
+        densityNa2Property = vtk.vtkProperty()
+        #densityNa2Property.SetColor(colorTransferFunction)
+        densityNa2Property.SetOpacity(0.30)
+        densityNa2 = vtk.vtkActor()
+        densityNa2.SetMapper(densityNa2Mapper)
+        densityNa2.SetProperty(densityNa2Property)
+
+        # An outline provides context around the data.
+        outlineDataNa2 = vtk.vtkOutlineFilter()
+        outlineDataNa2.SetInput(densitydataNa2vtk.GetOutput())
+        mapOutlineNa2 = vtk.vtkPolyDataMapper()
+        mapOutlineNa2.SetInputConnection(outlineDataNa2.GetOutputPort())
+        outlineNa2 = vtk.vtkActor()
+        outlineNa2.SetMapper(mapOutlineNa2)
+        outlineNa2.GetProperty().SetColor(0, 0, 0)
         
-        self.set_statusbar(statusbar)
+        ren2 = vtk.vtkRenderer()
+        ren2.SetBackground(1, 1, 1)
+        gvtk2.GetRenderWindow().AddRenderer(ren2)
+        ren2.AddActor(outlineNa2)
+        ren2.AddActor(densityNa2)
 
-        self.set_contents(VariableTreeView())
+        densitydatabenzene=Scientific.IO.NetCDF.NetCDFFile("/tmp/benzene-density-1.ncdf")
+        densitydatabenzenevtk=vtk.util.vtkImageImportFromArray.vtkImageImportFromArray()
+        densitydatabenzenevtk.SetArray(densitydatabenzene.variables['rdata'].getValue())
+        densitybenzeneContour = vtk.vtkContourFilter()
+        densitybenzeneContour.SetInput(densitydatabenzenevtk.GetOutput())
+        densitybenzeneContour.SetValue(0, 1e-6)
+        densitybenzeneContour.SetValue(1, 1e-5)
+        densitybenzeneContour.SetValue(2, 1e-4)
+        densitybenzeneContour.SetValue(3, 1e-3)
+        densitybenzeneContour.SetValue(4, 1e-2)
+        densitybenzeneContour.SetValue(5, 4e-2)
+        densitybenzeneContour.SetValue(6, 0.1)
+        densitybenzeneContour.SetValue(7, 0.2)
+        densitybenzeneContour.SetValue(8, 0.3)
+        densitybenzeneNormals = vtk.vtkPolyDataNormals()
+        densitybenzeneNormals.SetInputConnection(densitybenzeneContour.GetOutputPort())
+        densitybenzeneNormals.SetFeatureAngle(60.0)
+        densitybenzeneMapper = vtk.vtkPolyDataMapper()
+        densitybenzeneMapper.SetInputConnection(densitybenzeneNormals.GetOutputPort())
+        densitybenzeneMapper.ScalarVisibilityOff()
+        densitybenzeneProperty = vtk.vtkProperty()
+        #densitybenzeneProperty.SetColor(colorTransferFunction)
+        densitybenzeneProperty.SetOpacity(0.30)
+        densitybenzene = vtk.vtkActor()
+        densitybenzene.SetMapper(densitybenzeneMapper)
+        densitybenzene.SetProperty(densitybenzeneProperty)
 
-#        statusbar.show()
+        # An outline provides context around the data.
+        outlineDatabenzene = vtk.vtkOutlineFilter()
+        outlineDatabenzene.SetInput(densitydatabenzenevtk.GetOutput())
+        mapOutlinebenzene = vtk.vtkPolyDataMapper()
+        mapOutlinebenzene.SetInputConnection(outlineDatabenzene.GetOutputPort())
+        outlinebenzene = vtk.vtkActor()
+        outlinebenzene.SetMapper(mapOutlinebenzene)
+        outlinebenzene.GetProperty().SetColor(0, 0, 0)
+
+        ren3 = vtk.vtkRenderer()
+        ren3.SetBackground(1, 1, 1)
+        gvtk3.GetRenderWindow().AddRenderer(ren3)
+        ren3.AddActor(outlinebenzene)
+        ren3.AddActor(densitybenzene)
+
+###############
+
         self.show_all()
-        self.flash('sss')
-#        statusbar.show()
-
+#        self.show()
 
     def noop_action(self, action):
         print _('Action not implemented yet.')
@@ -194,120 +325,23 @@ class ProjectWindow(gnome.ui.App):
         self.quit()
         return True
 
-    def about_action(self, action):
-        import gtk.gdk, string
-        about=gtk.AboutDialog()
-        about.set_name("@PACKAGE_NAME@")
-        about.set_version("@PACKAGE_VERSION@")
-        about.set_license(file("COPYING", "r").read())
-        about.set_authors(map(string.strip, file("AUTHORS", "r").readlines()))
-        about.set_copyright("© 2002-2006 The octopus development team")
-        about.set_comments("A real-space, real-time implementation of TDDFT")
-        about.set_website("http://www.tddft.org/programs/octopus/")
-        about.set_website_label("Octopus Homepage")
-        about.set_logo(gtk.gdk.pixbuf_new_from_file(PKGDATADIR + "/oct_main.jpg"))
-        about.show()
-        about.run()
+    def viewtoolbar_action(self, action):
+        bonobo_toolbar = self.get_dock_item_by_name('Toolbar')
+        if bonobo_toolbar:
+            if action.get_active():
+                bonobo_toolbar.show()
+            else:
+                bonobo_toolbar.hide()
 
-#    def show(self):
-#        return None
-
-class VariableTreeView(gtk.HPaned):
-
-    def __init__(self):
-
-        gtk.HPaned.__init__(self)
-
-        # create a treestore with three columns to use as the
-        # model
-        self.treestore = gtk.TreeStore(str, str, object)
-
-        import cElementTree as ET
-        variablesxml=ET.parse(PKGDATADIR + "/variables.xml")
-        root=variablesxml.getroot()
-
-        import octopus.variables.base
-        import octopus.variables.XML
-
-        variabletree=octopus.variables.base.VariableTree()
-        def MakeVars(variabletree, theroot):
-            for subelement in theroot.getchildren():
-                if subelement.tag=='section':
-                    section=octopus.variables.base.VariableTree(subelement.get('name'))
-                    MakeVars(section, subelement)
-                    variabletree.add_section(section)
-                elif subelement.tag=='variable':
-                    variabletree.variables.append(octopus.variables.XML.element2var(subelement))
-        MakeVars(variabletree, root)
-
-        def createtree2(section, treeparent):
-            for variable in section.variables:
-                self.treestore.append(treeparent, [variable.name, variable.type, variable])
-            for subsection in section.subsections:
-                createtree2(subsection, self.treestore.append(treeparent, [subsection.name, '', subsection]))
-        createtree2(variabletree, None)
-
-        # create the treeview using self.treestore
-        self.treeview = gtk.TreeView(self.treestore)
-
-        # create the Self.TreeviewColumn to display the data
-        self.tvcolumn0 = gtk.TreeViewColumn('Name')
-        self.tvcolumn1 = gtk.TreeViewColumn('Type')
-
-        # add self.tvcolumn to self.treeview
-        self.treeview.append_column(self.tvcolumn0)
-        self.treeview.append_column(self.tvcolumn1)
-
-        # create a CellRendererText to render the data
-        cell0 = gtk.CellRendererText()
-        cell1 = gtk.CellRendererText()
-
-        # add the cell to the self.tvcolumn and allow it to expand
-        self.tvcolumn0.pack_start(cell0, True)
-        self.tvcolumn1.pack_start(cell1, True)
-
-        # set the cell "text" attribute to column 0 - retrieve text
-        # from that column in self.treestore
-        self.tvcolumn0.add_attribute(cell0, 'text', 0)
-        self.tvcolumn1.add_attribute(cell1, 'text', 1)
-
-        # make it searchable
-        self.treeview.set_search_column(0)
-
-        # Allow sorting on the column
-        self.tvcolumn0.set_sort_column_id(0)
-        self.tvcolumn1.set_sort_column_id(0)
-
-        # Disallow drag and drop reordering of rows
-        self.treeview.set_reorderable(False)
-#        self.treeview.set_reorderable(True)
-
-        treeselection = self.treeview.get_selection()
-        treeselection.set_mode(gtk.SELECTION_BROWSE)
-
-        treeselection.connect("changed",self.myfunc)
-        
-        self.textview = gtk.TextView()
-        self.textview.set_wrap_mode(gtk.WRAP_WORD)
-        
-        scrolled_window1 = gtk.ScrolledWindow()
-        scrolled_window1.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
-        scrolled_window2 = gtk.ScrolledWindow()
-        scrolled_window2.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
-        
-        scrolled_window1.add_with_viewport(self.treeview)
-        scrolled_window2.add_with_viewport(self.textview)
-        
-        self.add1(scrolled_window1)
-        self.add2(scrolled_window2)
-
-    def myfunc(self,selection):
-        (model, iter) = selection.get_selected()
-        row=model[iter]
-        description=row[2].description
-        if description!="":
-            self.textview.get_buffer().set_text(row[2].description)
+    def viewstatusbar_action(self, action):
+        if action.get_active():
+            self.statusbar.show()
         else:
-            self.textview.get_buffer().set_text("Missing description")
-        #statusbar.push(row[0])
+            self.statusbar.hide()
+
+    def about_action(self, action):
+        aboutwindow=about.AboutWindow()
+        aboutwindow.show()
+        aboutwindow.run()
+
 

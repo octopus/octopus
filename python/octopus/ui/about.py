@@ -1,6 +1,6 @@
 #! @PYTHON@
 # -*- coding: utf-8 mode: python -*-
-# octopus-gui - A graphical user interface for octopus
+# about.py - About window for octopus-gui.
 # Copyright (C) 2006 A. Thimm
 # 
 # This program is free software; you can redistribute it and/or
@@ -19,25 +19,27 @@
 # 
 # $Id$
 
-"""A graphical user interface for octopus
+"""About window for octopus-gui.
 
-This is the graphical frontent for octopus.
 """
 
-import sys
-sys.path.insert(0,"@pythondir_expanded@")
+package_name=""
+package_version=""
 
-import gettext
-gettext.install('octopus', "@datadir_expanded@/locale")
+import gtk.gdk, string
 
 import octopus.paths
-octopus.paths.PKGDATADIR="@datadir_expanded@/octopus"
 
-import octopus.ui.main
-#import octopus.ui.widgets
-#octopus.ui.widgets.PKGDATADIR="@datadir_expanded@/octopus"
+class AboutWindow(gtk.AboutDialog):
 
-
-if __name__ == "__main__":
-    app=octopus.ui.main.MainApplication("@PACKAGE_NAME@", "@PACKAGE_VERSION@")
-    app.run()
+    def __init__(self):
+        gtk.AboutDialog.__init__(self)
+        self.set_name(package_name)
+        self.set_version(package_version)
+        self.set_license(file("COPYING", "r").read())
+        self.set_authors(map(string.strip, file("AUTHORS", "r").readlines()))
+        self.set_copyright("© 2002-2006 The octopus development team")
+        self.set_comments("A real-space, real-time implementation of TDDFT")
+        self.set_website("http://www.tddft.org/programs/octopus/")
+        self.set_website_label("Octopus Homepage")
+        self.set_logo(gtk.gdk.pixbuf_new_from_file(octopus.paths.PKGDATADIR + "/oct_main.jpg"))
