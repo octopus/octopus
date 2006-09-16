@@ -39,7 +39,9 @@ module guess_density_m
   implicit none
 
   private
-  public :: guess_density
+  public ::            &
+    guess_density,     &
+    get_specie_density
 
   integer, parameter :: INITRHO_PARAMAGNETIC  = 1, &
                         INITRHO_FERROMAGNETIC = 2, &
@@ -334,5 +336,55 @@ contains
     deallocate(atom_rho)
     call pop_sub()
   end subroutine guess_density
+
+  ! ---------------------------------------------------------
+  subroutine get_specie_density(s, pos, m, rho)
+    type(specie_t), intent(in) :: s
+    FLOAT,          intent(in) :: pos(MAX_DIM)
+    type(mesh_t),   intent(in) :: m
+    FLOAT,          intent(out) :: rho(:)
+
+    FLOAT :: d, dmin
+    integer :: i, imin
+
+    call push_sub('specie_grid.specie_get_density')
+
+    select case(s%type)
+
+    case(SPEC_ALL_E)
+
+      dmin=M_ZERO
+
+      !find the point of the grid that is closer to the atom
+      do i=1,m%np
+        d = sum( ( pos(1:MAX_DIM)-m%x(i,1:MAX_DIM) )**2 )
+
+        if ( ( d < dmin ) .or. ( i == 1 ) ) then 
+          imin = i
+          dmin = d 
+
+        end if
+
+      end do
+
+      if (dmin > CNST(1e-5)) then 
+
+        write(message(1), '(a,f12.2,a)') "Atom displaced ", sqrt(dmin), " [b]"
+        write(message(2), '(a,3f12.2)') "Original position ", pos
+        write(message(3), '(a,3f12.2)') "Displaced position ", m%x(imin,:) 
+
+        call write_warning(3)
+
+      endif
+
+      rho(1:m%np) = M_ZERO
+      rho(imin) = -s%Z/m%vol_pp(imin)
+
+
+    end select
+
+    call pop_sub()
+
+  end subroutine get_specie_density
 
 end module guess_density_m
