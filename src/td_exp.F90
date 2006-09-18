@@ -49,7 +49,7 @@ module td_exp_m
     SPLIT_OPERATOR     = 0, &
     SUZUKI_TROTTER     = 1, &
     LANCZOS_EXPANSION  = 2, &
-    FOURTH_ORDER       = 3, &
+    TAYLOR             = 3, &
     CHEBYSHEV          = 4
 
   type td_exp_t
@@ -69,7 +69,7 @@ contains
 
     !%Variable TDExponentialMethod
     !%Type integer
-    !%Default standard
+    !%Default taylor
     !%Section Time Dependent::Propagation
     !%Description
     !% Method used to numerically calculate the exponential of the Hamiltonian,
@@ -125,7 +125,7 @@ contains
     !% is calculated, but also the larger the dimension of the Arnoldi
     !% subspace. If the maximum dimension allowed by <tt>TDExpOrder</tt> is not
     !% enough to meet the criterium, the above-mentioned warning is emitted.
-    !%Option standard 3
+    !%Option taylor 3
     !% This method amounts to a straightforward application of the definition of
     !% the exponential of an operator, in terms of it Taylor expansion.
     !%
@@ -145,16 +145,16 @@ contains
     !%
     !% <MATH>\exp_{\rm CHEB} \left( -i\delta t H \right) = \sum_{k=0}^{\infty} (2-\delta_{k0})(-i)^{k}J_k(\delta t) T_k(H),</MATH>
     !%
-    !% where <math>J_k</math> are the Bessel functions of the first kind, and H has te be previously
+    !% where <math>J_k</math> are the Bessel functions of the first kind, and H has to be previously
     !% scaled to <math>[-1,1]</math>.
     !% See H. Tal-Ezer and R. Kosloff, J. Chem. Phys. <b>81</b>,
     !% 3967 (1984); R. Kosloff, Annu. Rev. Phys. Chem. <b>45</b>, 145 (1994);
     !% C. W. Clenshaw, MTAC <b>9</b>, 118 (1955).
     !%End
-    call loct_parse_int(check_inp('TDExponentialMethod'), FOURTH_ORDER, te%exp_method)
+    call loct_parse_int(check_inp('TDExponentialMethod'), TAYLOR, te%exp_method)
 
     select case(te%exp_method)
-    case(FOURTH_ORDER)
+    case(TAYLOR)
     case(CHEBYSHEV)
     case(LANCZOS_EXPANSION)
       !%Variable TDLanczosTol
@@ -181,7 +181,7 @@ contains
     end select
     call messages_print_var_option(stdout, 'TDExponentialMethod', te%exp_method)
 
-    if(te%exp_method==FOURTH_ORDER.or.te%exp_method==CHEBYSHEV.or.te%exp_method==LANCZOS_EXPANSION) then
+    if(te%exp_method==TAYLOR.or.te%exp_method==CHEBYSHEV.or.te%exp_method==LANCZOS_EXPANSION) then
       !%Variable TDExpOrder
       !%Type integer
       !%Default 4
@@ -234,7 +234,7 @@ contains
     call push_sub('td_exp.td_exp_td')
 
     select case(te%exp_method)
-    case(FOURTH_ORDER);      call fourth
+    case(TAYLOR);            call taylor_series
     case(LANCZOS_EXPANSION)
       if(h%ab .eq. IMAGINARY_ABSORBING) then
         message(1) = 'Lanczos expansion exponential method not supported for non-hermtian'
@@ -267,12 +267,12 @@ contains
 
 
     ! ---------------------------------------------------------
-    subroutine fourth()
+    subroutine taylor_series()
       CMPLX :: zfact
       CMPLX, allocatable :: zpsi1(:,:), hzpsi1(:,:)
       integer :: i, idim
 
-      call push_sub('td_exp.fourth')
+      call push_sub('td_exp.taylor_series')
 
       ALLOCATE(zpsi1 (NP_PART, h%d%dim), NP_PART*h%d%dim)
       ALLOCATE(hzpsi1(NP,      h%d%dim), NP     *h%d%dim)
@@ -296,7 +296,7 @@ contains
 
       if(present(order)) order = te%exp_order
       call pop_sub()
-    end subroutine fourth
+    end subroutine taylor_series
 
 
     ! ---------------------------------------------------------

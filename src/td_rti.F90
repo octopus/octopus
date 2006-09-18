@@ -35,6 +35,7 @@ module td_rti_m
   use v_ks_m
   use hamiltonian_m
   use external_pot_m
+  use sparskit_m
   use td_exp_m
   use td_exp_split_m
   use grid_m
@@ -48,7 +49,9 @@ module td_rti_m
     td_rti_init,              &
     td_rti_end,               &
     td_rti_run_zero_iter,     &
-    td_rti_dt
+    td_rti_dt,                &
+    td_zop,                   &
+    td_zopt
 
   integer, parameter ::       &
     SPLIT_OPERATOR       = 0, &
@@ -56,20 +59,31 @@ module td_rti_m
     REVERSAL             = 2, &
     APP_REVERSAL         = 3, &
     EXPONENTIAL_MIDPOINT = 4, &
-    MAGNUS               = 5
+    CRANK_NICHOLSON      = 5, &
+    MAGNUS               = 6
 
   FLOAT, parameter :: scf_threshold = CNST(1.0e-3)
 
   type td_rti_t
-    integer           :: method  ! which evolution method to use
+    integer        :: method  ! which evolution method to use
     type(td_exp_t) :: te      ! how to apply the propagator (e^{-i H \Delta t})
 
-    FLOAT, pointer :: v_old(:, :, :) ! storage of the KS potential of previous iterations
+    FLOAT, pointer :: v_old(:, :, :)   ! storage of the KS potential of previous iterations
     FLOAT, pointer :: vmagnus(:, :, :) ! auxiliary function to store the Magnus potentials.
 
-    type(zcf_t) :: cf              ! auxiliary cube for split operator methods
+    type(zcf_t) :: cf                  ! auxiliary cube for split operator methods
   end type td_rti_t
 
+#ifdef HAVE_SPARSKIT
+  type(sparskit_solver_t), pointer, private :: tdsk
+  type(grid_t),            pointer, private :: grid_p
+  type(states_t),          pointer, private :: states_p
+  type(hamiltonian_t),     pointer, private :: h_p
+  type(td_rti_t),          pointer, private :: tr_p
+  CMPLX, allocatable,      private :: zpsi_tmp(:,:,:,:)
+  integer,                 private :: ik_op, ist_op, idim_op
+  FLOAT,                   private :: t_op, dt_op
+#endif
 
 contains
 
@@ -184,7 +198,13 @@ contains
     !% <MATH>
     !%   U_{\rm EM}(t+\delta t, t) = \exp \left( -i\delta t H_{t+\delta t/2}\right)\,.
     !% </MATH>
-    !%Option magnus 5
+    !%Option crank_nicholson 5
+    !% Classical Crank-Nicholson propagator.
+    !%
+    !% <MATH>
+    !%  (1 + i\delta t/2 H_{n+1/2}) \psi_{n+1} = (1 - i\delta t/2 H_{n+1/2}) \psi_{n}  
+    !% </MATH>
+    !%Option magnus 6
     !% Magnus Expansion (M4).
     !% This is the most sophisticated approach. It is a fourth order scheme (feature
     !% that shares with the ST scheme; the other schemes are in principle second order).
@@ -205,6 +225,17 @@ contains
     case(REVERSAL)
     case(APP_REVERSAL)
     case(EXPONENTIAL_MIDPOINT)
+    case(CRANK_NICHOLSON)   
+#ifdef HAVE_SPARSKIT
+      ALLOCATE(tdsk, 1)
+      call zsparskit_solver_init(NP, tdsk)
+      ALLOCATE(zpsi_tmp(1:NP_PART, 1:st%d%dim, 1:st%nst, 1:st%d%nik), NP_PART*st%d%dim*st%nst*st%d%nik)
+#else
+      message(1) = 'Octopus was not compiled with support for the sparskit library. This'
+      message(2) = 'library is required if the Crank-Nicholson propagator is selected.'
+      message(3) = 'Try to use a different propagation scheme or recompile with sparskit support.'
+      call write_fatal(3)
+#endif
     case(MAGNUS)
       ALLOCATE(tr%vmagnus(NP, st%d%nspin, 2), NP*st%d%nspin*2)
     case default
@@ -228,15 +259,19 @@ contains
     deallocate(tr%v_old)         ! clean ols KS potentials
     nullify(tr%v_old)
 
-    if(tr%method == MAGNUS) then
+    select case(tr%method)
+    case(MAGNUS)
       ASSERT(associated(tr%vmagnus))
       deallocate(tr%vmagnus); nullify(tr%vmagnus)
-    end if
-
-    if(tr%method == SUZUKI_TROTTER .or. tr%method == SPLIT_OPERATOR) then
+    case(CRANK_NICHOLSON) 
+#ifdef HAVE_SPARSKIT
+      call zsparskit_solver_end()
+      deallocate(zpsi_tmp)
+#endif
+    case(SUZUKI_TROTTER, SPLIT_OPERATOR)
       call zcf_free(tr%cf)
-    end if
-
+    end select
+    
     call td_exp_end(tr%te)       ! clean propagator method
   end subroutine td_rti_end
 
@@ -255,12 +290,12 @@ contains
 
   ! ---------------------------------------------------------
   subroutine td_rti_dt(ks, h, gr, st, tr, t, dt)
-    type(v_ks_t),        intent(inout) :: ks
-    type(hamiltonian_t), intent(inout) :: h
-    type(grid_t),        intent(inout) :: gr
-    type(states_t),      intent(inout) :: st
-    type(td_rti_t),      intent(inout) :: tr
-    FLOAT,                  intent(in) :: t, dt
+    type(v_ks_t),                intent(inout) :: ks
+    type(hamiltonian_t), target, intent(inout) :: h
+    type(grid_t),        target, intent(inout) :: gr
+    type(states_t),      target, intent(inout) :: st
+    type(td_rti_t),      target, intent(inout) :: tr
+    FLOAT,                          intent(in) :: t, dt
 
     integer :: is, iter
     FLOAT   :: d, d_max
@@ -281,14 +316,14 @@ contains
     call lalg_copy(NP, st%d%nspin, tr%v_old(:, :, 1), tr%v_old(:, :, 2))
     call lalg_copy(NP, st%d%nspin, h%vhxc(:, :),      tr%v_old(:, :, 1))
     call dextrapolate(2, NP, st%d%nspin, tr%v_old(:, :, 1:3), tr%v_old(:, :, 0), dt, dt)
-
     select case(tr%method)
     case(SPLIT_OPERATOR);       call td_rti0
     case(SUZUKI_TROTTER);       call td_rti1
     case(REVERSAL);             call td_rti2
     case(APP_REVERSAL);         call td_rti3
     case(EXPONENTIAL_MIDPOINT); call td_rti4
-    case(MAGNUS);               call td_rti5
+    case(CRANK_NICHOLSON);      call td_rti5
+    case(MAGNUS);               call td_rti6
     end select
 
     if(self_consistent) then
@@ -318,7 +353,8 @@ contains
         case(REVERSAL);             call td_rti2
         case(APP_REVERSAL);         call td_rti3
         case(EXPONENTIAL_MIDPOINT); call td_rti4
-        case(MAGNUS);               call td_rti5
+        case(CRANK_NICHOLSON);      call td_rti5
+        case(MAGNUS);               call td_rti6
         end select
       end do
 
@@ -397,6 +433,7 @@ contains
 
 
     ! ---------------------------------------------------------
+    ! Propagator with enforced time-reversal symmetry
     subroutine td_rti2
       FLOAT, allocatable :: vhxc_t1(:,:), vhxc_t2(:,:)
       CMPLX, allocatable :: zpsi1(:,:,:,:)
@@ -451,6 +488,7 @@ contains
 
 
     ! ---------------------------------------------------------
+    ! Propagator with approximate enforced time-reversal symmetry
     subroutine td_rti3
       integer ik, ist
 
@@ -474,6 +512,7 @@ contains
 
 
     ! ---------------------------------------------------------
+    ! Exponential midpoint
     subroutine td_rti4
       integer :: ist, ik
 
@@ -494,12 +533,103 @@ contains
 
 
     ! ---------------------------------------------------------
+    ! Crank-Nicholson propagator
     subroutine td_rti5
+#ifdef HAVE_SPARSKIT
+      FLOAT, allocatable :: vhxc_t1(:,:), vhxc_t2(:,:)
+      CMPLX, allocatable :: zpsi1(:,:,:,:), zpsi_rhs_pred(:,:,:,:), zpsi_rhs_corr(:,:,:,:)
+      integer :: ik, ist, idim, isize, ip, ii
+
+      call push_sub('td_rti.td_rti5')
+
+      isize = NP_PART*(st%st_end-st%st_start+1)*st%d%nik*st%d%dim
+      ALLOCATE(zpsi_rhs_corr(NP_PART, 1:st%d%dim, st%st_start:st%st_end, 1:st%d%nik), isize)
+
+      zpsi_rhs_corr = st%zpsi ! store zpsi for corrector step
+
+      ! define pointer and variables for usage in td_zop, td_zopt routines
+      grid_p    => gr
+      states_p  => st
+      h_p       => h
+      tr_p      => tr
+      dt_op = dt
+      t_op  = t
+
+      ! we (ab)use td_exp_dt to compute (1-i\delta t/2 H_n)\psi^n
+      ! exponential order needs to be only 1
+      tr%te%exp_method = 3 ! == taylor expansion
+      tr%te%exp_order  = 1
+
+      if(.not.h%ip_app) then
+        ALLOCATE(zpsi_rhs_pred(NP_PART, 1:st%d%dim, st%st_start:st%st_end, 1:st%d%nik), isize)
+        zpsi_rhs_pred = st%zpsi ! store zpsi for predictor step
+        
+        ALLOCATE(vhxc_t1(NP, st%d%nspin), NP*st%d%nspin)
+        ALLOCATE(vhxc_t2(NP, st%d%nspin), NP*st%d%nspin)
+        vhxc_t1 = h%vhxc
+
+        ! get rhs of CN linear system (rhs1 = (1-i\delta t/2 H_n)\psi^n)
+        do ik = 1, st%d%nik
+          do ist = st%st_start, st%st_end
+            call td_exp_dt(tr%te, gr, h, zpsi_rhs_pred(:, :, ist, ik), ik, dt/M_TWO, t-dt)
+          end do
+        end do
+
+        ! predictor step: 
+        ! solve (1+i\delta t/2 H_n)\psi^{predictor}_{n+1} = (1-i\delta t/2 H_n)\psi^n
+        do idim = 1, st%d%dim
+          do ik = 1, st%d%nik
+            do ist = st%st_start, st%st_end
+              idim_op = idim; ist_op = ist; ik_op = ik
+              call zsparskit_solver_run(tdsk, td_zop, td_zopt, &
+                st%zpsi(1:NP, idim, ist, ik), zpsi_rhs_pred(1:NP, idim, ist, ik))
+            end do
+          end do
+        end do
+
+        call states_calc_dens(st, NP, st%rho)
+        call v_ks_calc(gr, ks, h, st)
+
+        vhxc_t2 = h%vhxc
+        ! compute potential at n+1/2 as average
+        h%vhxc = (vhxc_t1 + vhxc_t2)/M_TWO
+      end if
+
+      ! get rhs of CN linear system (rhs2 = (1-i\delta t H_{n+1/2})\psi^n)
+      do ik = 1, st%d%nik
+        do ist = st%st_start, st%st_end
+          call td_exp_dt(tr%te, gr, h, zpsi_rhs_corr(:, :, ist, ik), ik, dt/M_TWO, t-dt)
+        end do
+      end do
+
+      ! corrector step: 
+      ! solve (1+i\delta t/2 H_{n+1/2})\psi_{n+1} = (1-i\delta t/2 H_{n+1/2})\psi^n
+      do idim = 1, st%d%dim
+        do ik = 1, st%d%nik
+          do ist = st%st_start, st%st_end
+            idim_op = idim; ist_op = ist; ik_op = ik
+            call zsparskit_solver_run(tdsk, td_zop, td_zopt, &
+              st%zpsi(1:NP, idim, ist, ik), zpsi_rhs_corr(1:NP, idim, ist, ik))
+          end do
+        end do
+      end do
+      
+      if(.not.h%ip_app) deallocate(vhxc_t1, vhxc_t2, zpsi_rhs_pred)
+      deallocate(zpsi_rhs_corr)
+
+      call pop_sub()
+#endif
+    end subroutine td_rti5
+
+
+    ! ---------------------------------------------------------
+    ! Magnus propagator
+    subroutine td_rti6
       integer :: j, is, ist, k
       FLOAT :: time(2)
       FLOAT, allocatable :: vaux(:, :, :)
 
-      call push_sub('td_rti.td_rti5')
+      call push_sub('td_rti.td_rti6')
 
       ALLOCATE(vaux(NP, st%d%nspin, 2), NP*st%d%nspin*2)
 
@@ -540,8 +670,51 @@ contains
 
       deallocate(vaux)
       call pop_sub()
-    end subroutine td_rti5
+    end subroutine td_rti6
 
   end subroutine td_rti_dt
+
+
+  ! ---------------------------------------------------------
+  ! operators for Crank-Nicholson scheme
+  subroutine td_zop(xre, xim, yre, yim)
+    FLOAT, intent(in)  :: xre(:), xim(:)
+    FLOAT, intent(out) :: yre(:), yim(:)
+
+    call push_sub('td_rti.td_zop')
+#ifdef HAVE_SPARSKIT    
+    zpsi_tmp(1:grid_p%m%np, idim_op, ist_op, ik_op) = xre(1:grid_p%m%np) + M_zI*xim(1:grid_p%m%np)
+
+    ! propagate backwards
+    call td_exp_dt(tr_p%te, grid_p, h_p, zpsi_tmp(:, :, ist_op, ik_op), ik_op, -dt_op/M_TWO, t_op)
+
+    yre(1:grid_p%m%np) =  real(zpsi_tmp(1:grid_p%m%np, idim_op, ist_op, ik_op))
+    yim(1:grid_p%m%np) = aimag(zpsi_tmp(1:grid_p%m%np, idim_op, ist_op, ik_op))
+#endif    
+    call pop_sub()
+  end subroutine td_zop
+  
+
+  ! ---------------------------------------------------------
+  ! Transpose of H (called e.g. by bi-conjugate gradient solver)
+  subroutine td_zopt(xre, xim, yre, yim)
+    FLOAT, intent(in)  :: xre(:), xim(:)
+    FLOAT, intent(out) :: yre(:), yim(:)
+    
+    call push_sub('td_rti.td_zopt')
+#ifdef HAVE_SPARSKIT        
+    ! To act with the transpose of H on the wfn we apply H to the conjugate of psi
+    ! and conjugate the resulting hpsi (note that H is not a purely real operator
+    ! for scattering wavefunctions anymore).
+    zpsi_tmp(1:grid_p%m%np, idim_op, ist_op, ik_op) = xre(1:grid_p%m%np) - M_zI*xim(1:grid_p%m%np)
+    
+    ! propagate backwards
+    call td_exp_dt(tr_p%te, grid_p, h_p, zpsi_tmp(:, :, ist_op, ik_op), ik_op, -dt_op/M_TWO, t_op)
+
+    yre(1:grid_p%m%np) =    real(zpsi_tmp(1:grid_p%m%np, idim_op, ist_op, ik_op))
+    yim(1:grid_p%m%np) = - aimag(zpsi_tmp(1:grid_p%m%np, idim_op, ist_op, ik_op))
+#endif        
+    call pop_sub()
+  end subroutine td_zopt
 
 end module td_rti_m
