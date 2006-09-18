@@ -38,34 +38,34 @@ module derivatives_m
   implicit none
 
   private
-  public ::              &
-    der_discr_t,         &
-    derivatives_init,    &
-    derivatives_end,     &
-    derivatives_build,   &
-    dderivatives_lapl,   &
-    dderivatives_lapl_diag,   &
-    dderivatives_laplt,  &
-    dderivatives_grad,   &
-    dderivatives_div,    &
-    dderivatives_curl,   &
-    zderivatives_lapl,   &
-    zderivatives_lapl_diag,   &
-    zderivatives_laplt,  &
-    zderivatives_grad,   &
-    zderivatives_div,    &
+  public ::                 &
+    der_discr_t,            &
+    derivatives_init,       &
+    derivatives_end,        &
+    derivatives_build,      &
+    dderivatives_lapl,      &
+    dderivatives_lapl_diag, &
+    dderivatives_laplt,     &
+    dderivatives_grad,      &
+    dderivatives_div,       &
+    dderivatives_curl,      &
+    zderivatives_lapl,      &
+    zderivatives_lapl_diag, &
+    zderivatives_laplt,     &
+    zderivatives_grad,      &
+    zderivatives_div,       &
     zderivatives_curl
 
-  integer, parameter ::  &
-    DER_BC_ZERO_F  = 0,  &  ! function is zero at the boundaries
-    DER_BC_ZERO_DF = 1,  &  ! first derivative of the function is zero
-    DER_BC_PERIOD  = 2      ! boundary is periodic
+  integer, parameter ::     &
+    DER_BC_ZERO_F    = 0,   &  ! function is zero at the boundaries
+    DER_BC_ZERO_DF   = 1,   &  ! first derivative of the function is zero
+    DER_BC_PERIOD    = 2       ! boundary is periodic
 
-  integer, parameter ::  &
-    DER_STAR        = 1, &
-    DER_VARIATIONAL = 2, &
-    DER_CUBE        = 3, &
-    DER_STARPLUS    = 4
+  integer, parameter ::     &
+    DER_STAR         = 1,   &
+    DER_VARIATIONAL  = 2,   &
+    DER_CUBE         = 3,   &
+    DER_STARPLUS     = 4
 
   type der_discr_t
     type(mesh_t), pointer :: m             ! pointer to the underlying mesh
@@ -76,8 +76,9 @@ module derivatives_m
     integer               :: boundaries(MAX_DIM) ! bounday conditions
     logical               :: zero_bc
 
-    FLOAT :: lapl_cutoff ! If the so-called variational discretization is used, this controls a
-    ! possible filter on the Laplacian.
+    ! If the so-called variational discretization is used, this controls a
+    FLOAT :: lapl_cutoff   ! possible filter on the Laplacian.
+
 
     type(nl_operator_t), pointer :: op(:)  ! op(1:conf%dim) => gradient
     ! op(conf%dim+1) => laplacian
@@ -278,6 +279,7 @@ contains
     integer, allocatable :: polynomials(:,:)
     FLOAT,   allocatable :: rhs(:,:)
     integer :: i, j, k, up
+    logical :: const_w_, cmplx_op_
 
     type(nl_operator_t) :: auxop
 
@@ -289,9 +291,18 @@ contains
 
     der%m => m    ! make a pointer to the underlying mesh
 
+    const_w_  = .true.
+    cmplx_op_ = .false.
+
+    ! need non-constant weights for curvlinear and scattering meshes
+    if ( m%use_curvlinear .or. m%sb%scattering_box) const_w_ = .false.
+
+    ! we need complex weights for a scattering calculation
+    if ( m%sb%scattering_box ) cmplx_op_ = .true.
+
     ! build operators
     do i = 1, der%dim+1
-      call nl_operator_build(m, der%op(i), der%m%np, .not.m%use_curvlinear)
+      call nl_operator_build(m, der%op(i), der%m%np, const_w = const_w_, cmplx_op = cmplx_op_)
     end do
 
     if(m%use_curvlinear.or.der%stencil_type==DER_CUBE) then
@@ -349,14 +360,14 @@ contains
         do i = 1, der%dim
           call nl_operator_init(auxop, der%grad(i)%n)
           auxop%stencil = der%grad(i)%stencil
-          call nl_operator_build(m, auxop, der%m%np, const_w = .false.)
+          call nl_operator_build(m, auxop, der%m%np, const_w = const_w_, cmplx_op = cmplx_op_)
           call nl_operator_skewadjoint(der%grad(i), auxop, der%m)
           call nl_operator_equal(der%grad(i), auxop)
           call nl_operator_end(auxop)
         end do
         call nl_operator_init(auxop, der%lapl%n)
         auxop%stencil = der%lapl%stencil
-        call nl_operator_build(m, auxop, der%m%np, const_w = .false.)
+        call nl_operator_build(m, auxop, der%m%np, const_w = const_w_, cmplx_op = cmplx_op_)
         call nl_operator_selfadjoint(der%lapl, auxop, der%m)
         call nl_operator_equal(der%lapl, auxop)
         call nl_operator_end(auxop)
