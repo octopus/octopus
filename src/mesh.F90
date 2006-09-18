@@ -31,6 +31,7 @@ module mesh_m
   use curvlinear_m
   use simul_box_m
   use lib_adv_alg_m
+  use mesh_lib_m
   use io_m
   use par_vec_m
   use multicomm_m
@@ -44,12 +45,16 @@ module mesh_m
     mesh_init_stage_2, &
     mesh_init_stage_3, &
     mesh_dump,         &
+    mesh_lxyz_dump,    &
     mesh_end,          &
     mesh_double_box,   &
     mesh_inborder,     &
     mesh_r,            &
     mesh_gcutoff,      &
-    mesh_write_info
+    mesh_write_info,   &
+    translate_point,   &
+    translate_by_asympt_ucell, &
+    scatt_box_index
 
 
   ! Describes mesh distribution to nodes.
@@ -83,6 +88,9 @@ module mesh_m
     FLOAT,   pointer :: x_tmp(:,:,:,:)  ! temporary arrays that we have to keep between calls to
     integer, pointer :: Lxyz_tmp(:,:,:) ! init_1 and init_2
 
+    integer, pointer :: boundary_indices(:,:) ! contains the list of mesh indices for boundary points
+    integer          :: boundary_np(6)        ! total number of boundary points
+
     logical         :: parallel_in_domains ! will I run parallel in domains?
     type(mpi_grp_t) :: mpi_grp             ! the mpi group describing parallelization in domains
     type(pv_t)      :: vp                  ! describes parallel vectors defined on the mesh.
@@ -102,6 +110,17 @@ module mesh_m
                                         ! for local points.
 
   end type mesh_t
+
+
+  integer, parameter, public ::      &
+     LEFT_BOUNDARY_X  =  1,          &
+    RIGHT_BOUNDARY_X  =  2,          &
+     LEFT_BOUNDARY_Y  =  3,          &
+    RIGHT_BOUNDARY_Y  =  4,          &
+     LEFT_BOUNDARY_Z  =  5,          &
+    RIGHT_BOUNDARY_Z  =  6,          &
+    MAX_BOUNDARY_DIM  = RIGHT_BOUNDARY_Z
+
 
 contains
 
@@ -237,18 +256,113 @@ contains
    end subroutine mesh_inborder
 
 
-   !/*-------------------------------------------------------------
+   !--------------------------------------------------------------
+   integer function translate_by_asympt_ucell(mesh, index, tfactors) result (tindex)
+     type(mesh_t), intent(in) :: mesh
+     integer,      intent(in) :: index
+     integer,      intent(in) :: tfactors(:)
+
+     integer :: ixyz(MAX_DIM), id
+     
+     call push_sub('mesh.translate_by_asympt_ucell')
+
+     ASSERT(index >= 1 .and. index <= mesh%np)
+     
+     ixyz(:) = mesh%Lxyz(index, :)
+
+     do id = 1, mesh%sb%dim
+       ixyz(id) = ixyz(id) + tfactors(id) *                           &
+         (mesh%sb%asympt_uc_nr(2, id) - mesh%sb%asympt_uc_nr(1, id) + 1)
+     end do
+
+     tindex = mesh_index(mesh%sb%dim, mesh%sb%periodic_dim, mesh%nr, mesh%Lxyz_inv, ixyz) 
+
+     ! check if the translated point is still inside the domain and return
+     ! a negative index otherwise to indicate that the requested translation
+     ! is not valid
+     if (tindex < 1 .or. tindex > mesh%np) then
+       tindex = -1
+     end if
+
+     call pop_sub()
+   end function translate_by_asympt_ucell
+
+
+   !--------------------------------------------------------------
+   integer function translate_point(mesh, index, tdist) result (tindex)
+     type(mesh_t), intent(in) :: mesh
+     integer,      intent(in) :: index
+     integer,      intent(in) :: tdist(:)
+
+     integer :: ixyz(MAX_DIM), id
+     
+     call push_sub('mesh.translate_point')
+
+     ASSERT(index >= 1 .and. index <= mesh%np)
+     
+     ixyz(:) = mesh%Lxyz(index, :)
+
+     do id = 1, mesh%sb%dim
+       ixyz(id) = ixyz(id) + tdist(id)
+     end do
+
+     tindex = mesh_index(mesh%sb%dim, mesh%sb%periodic_dim, mesh%nr, mesh%Lxyz_inv, ixyz) 
+
+     ! check if the translated point is still inside the domain and return
+     ! a negative index otherwise to indicate that the requested translation
+     ! is not valid
+     if (tindex < 1 .or. tindex > mesh%np) then
+       tindex = -1
+     end if
+
+     call pop_sub()
+   end function translate_point
+
+
+   ! --------------------------------------------------------------
+   ! the function takes an index of the asymptotic unit cell as input
+   ! and returns the corresponding index inside the scattering box
+   ! (given the start index for the placement of the unit cell)
+   ! --------------------------------------------------------------
+   integer function scatt_box_index(mesh, index, box_start) result (sb_index)
+     type(mesh_t), intent(in) :: mesh
+     integer,      intent(in) :: index
+     integer,      intent(in) :: box_start
+
+     integer :: ixyz(MAX_DIM), ixyz_box_start(MAX_DIM)
+
+     call push_sub('mesh.scatt_box_index')
+
+     ASSERT(index >= 1 .and. index <= mesh%np)
+     
+     ixyz_box_start(:) = mesh%Lxyz(box_start, :)
+     ixyz(:) = mesh%sb%asympt_uc_Lxyz(index, :) - mesh%sb%asympt_uc_Lxyz(1, :)
+
+     ! get new index
+     sb_index = mesh_index(mesh%sb%dim, mesh%sb%periodic_dim, mesh%nr, &
+       mesh%Lxyz_inv, ixyz + ixyz_box_start) 
+
+     ! consistency check as in translate_point
+     if (sb_index < 1 .or. sb_index > mesh%np) then
+       sb_index = -1
+     end if
+
+     call pop_sub()
+   end function scatt_box_index
+
+
+   ! --------------------------------------------------------------
    ! mesgh_gcutoff returns the "natural" band limitation of the
    ! grid m, in terms of the maximum G vector. For a cubic regular
    ! grid of spacing h is M_PI/h.
-   ! --------------------------------------------------------------*/
+   ! --------------------------------------------------------------
    FLOAT function mesh_gcutoff(m) result(gmax)
      type(mesh_t), intent(in) :: m
      gmax = M_PI/(maxval(m%h))
    end function mesh_gcutoff
 
 
-   !--------------------------------------------------------------
+   ! --------------------------------------------------------------
    subroutine mesh_dump(mesh, iunit)
      type(mesh_t), intent(in) :: mesh
      integer,      intent(in) :: iunit
@@ -261,12 +375,29 @@ contains
      write(iunit, '(a20,1i10)')  'np_part=            ', mesh%np_part
      write(iunit, '(a20,1i10)')  'np_global=          ', mesh%np_global
      write(iunit, '(a20,1i10)')  'np_part_global=     ', mesh%np_part_global
-     
+
      call pop_sub()
    end subroutine mesh_dump
+
+
+   ! --------------------------------------------------------------
+   subroutine mesh_Lxyz_dump(mesh, iunit)
+     type(mesh_t), intent(in) :: mesh
+     integer,      intent(in) :: iunit
+
+     integer :: ip
+
+     call push_sub('mesh.Lxyz_dump')
+     
+     do ip = 1, mesh%np
+       write(iunit, '(3i8)')   mesh%Lxyz(ip, :)
+     end do
+
+     call pop_sub()
+   end subroutine mesh_Lxyz_dump
    
    
-   !--------------------------------------------------------------
+   ! --------------------------------------------------------------
    subroutine mesh_end(m)
      type(mesh_t), intent(inout) :: m
 

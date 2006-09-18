@@ -181,8 +181,8 @@ contains
     !if this next argument is present, the lr wfs are stored instead of the gs wfs
     type(lr_t), optional, intent(in)  :: lr 
 
-    integer :: iunit, iunit2, iunit_mesh, err, ik, ist, idim, i
-    character(len=40) :: filename, mformat
+    integer :: iunit, iunit2, iunit_mesh, iunit_states, err, ik, ist, idim, i
+    character(len=80) :: filename, mformat
     logical :: wfns_are_associated, lr_wfns_are_associated
 
     call push_sub('restart.restart_write')
@@ -197,7 +197,7 @@ contains
       ASSERT(lr_wfns_are_associated)
     endif
 
-    mformat = '(f15.8,a,f15.8,a,f15.8,a,f15.8,a,f15.8)'
+    mformat = '(f12.8,a,f15.8,a,4(f12.8,a),i10.10,3(a,i8))'
     ierr = 0
 
     call block_signals()
@@ -209,7 +209,7 @@ contains
       write(iunit,'(a)') '%Wavefunctions'
 
       iunit2 = io_open(trim(dir)//'/occs', action='write', is_tmp=.true.)
-      write(iunit2,'(a)') '# occupations           eigenvalue[a.u.]        K-Points'
+      write(iunit2,'(a)') '# occupations | eigenvalue[a.u.] | K-Points | K-Weights | filename | ik | ist | idim'
       write(iunit2,'(a)') '%Occupations_Eigenvalues_K-Points'
 
       iunit_mesh = io_open(trim(dir)//'/mesh', action='write', is_tmp=.true.)
@@ -220,6 +220,14 @@ contains
       call simul_box_dump(gr%sb, iunit_mesh)
       call mesh_dump(gr%m, iunit_mesh)
       call io_close(iunit_mesh)
+
+      iunit_mesh = io_open(trim(dir)//'/Lxyz', action='write', is_tmp=.true.)
+      call mesh_Lxyz_dump(gr%m, iunit_mesh)
+      call io_close(iunit_mesh)      
+
+      iunit_states = io_open(trim(dir)//'/states', action='write', is_tmp=.true.)
+      call states_dump(st, iunit_states)
+      call io_close(iunit_states)      
     end if
 
     i = 1
@@ -230,8 +238,9 @@ contains
 
           if(mpi_grp_is_root(mpi_world)) then
             write(unit=iunit,  fmt=*) ik, ' | ', ist, ' | ', idim, ' | "', trim(filename), '"'
-            write(unit=iunit2, fmt=mformat) st%occ(ist,ik), ' | ', st%eigenval(ist, ik), ' | ', &
-                 st%d%kpoints(1,ik), ' | ', st%d%kpoints(2,ik), ' | ', st%d%kpoints(3,ik)
+            write(unit=iunit2, fmt=mformat) st%occ(ist,ik), ' | ', st%eigenval(ist, ik), ' | ',   &
+                 st%d%kpoints(1,ik), ' | ', st%d%kpoints(2,ik), ' | ', st%d%kpoints(3,ik) , ' | ', &
+                 st%d%kweights(ik), ' | ', i, ' | ', ik, ' | ', ist, ' | ', idim
           end if
 
           if(st%st_start <= ist .and. st%st_end >= ist) then

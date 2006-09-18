@@ -54,6 +54,10 @@ module simul_box_m
     BOX_IMAGE      = 5,         &
     BOX_USDEF      = 123
 
+  integer, parameter, public :: &
+    UC_SPACING = 1,             &
+    UC_LSIZE   = 2
+
   type simul_box_t
     integer  :: box_shape   ! 1->sphere, 2->cylinder, 3->sphere around each atom,
                             ! 4->parallelpiped (orthonormal, up to now).
@@ -88,6 +92,18 @@ module simul_box_m
     integer :: asympt_uc_dim           ! dimensions of the asymptotic unit cell
     integer :: asympt_uc_periodic_dim  ! periodic dimensions of the asymptotic unit cell
     FLOAT   :: asympt_uc_lsize(3)      ! lsize of asymptotic unit cell 
+    integer, pointer :: asympt_uc_Lxyz(:, :)
+
+    FLOAT, pointer :: asympt_uc_occ(:,:)     ! obviously the kpoints
+    FLOAT, pointer :: asympt_uc_eigenval(:,:) ! weights for the kpoint integrations
+    FLOAT, pointer :: asympt_uc_kpoints(:,:)  ! obviously the kpoints
+    FLOAT, pointer :: asympt_uc_kweights(:)   ! weights for the kpoint integrations
+
+    integer :: asympt_uc_st_nst           ! states nst in the asymptotic unit cell
+    integer :: asympt_uc_st_dim           ! states dim in the asymptotic unit cell
+    integer :: asympt_uc_st_nik           ! states nik in the asymptotic unit cell
+
+    integer :: scatt_box_central_units
 
   end type simul_box_t
 
@@ -124,7 +140,7 @@ contains
     !--------------------------------------------------------------
     subroutine read_misc()
 
-      integer :: iunit, ierr
+      integer :: iunit, ierr, ip, id
       integer(POINTER_SIZE) :: blk
       character(len=256)    :: tmp_str
 
@@ -182,10 +198,18 @@ contains
       !%End
       if(loct_parse_block(check_inp('ScatteringRegionCellFactors'), blk) == 0) then
         if(loct_parse_block_cols(blk, 0) < sb%dim) call input_error('ScatteringRegionCellFactors')
+
+        sb%scatt_box_factors = 1
         do i = 1, sb%dim
           call loct_parse_block_int(blk, 0, i-1, sb%scatt_box_factors(i))
         end do
         call loct_parse_block_end(blk)
+
+        ! correct factors, if the user was attempting to repeat cells along the
+        ! non-periodic directions
+        do id = sb%periodic_dim + 1, sb%dim
+!!$          sb%scatt_box_factors(id) = 1      ! only one cell, more than one would cause repetition
+        end do
 
         !%Variable ScatteringRegionCentralSize
         !%Type integer
@@ -239,6 +263,18 @@ contains
         ! need to modify sb%periodic_dim
         sb%periodic_dim = sb%asympt_uc_periodic_dim
 
+        call io_close(iunit)
+
+        ! read Lxyz array of asymptotic cell
+        iunit = io_open('asymptotic_cell/restart_gs/Lxyz', action='read', status='old', die=.false., is_tmp=.true.)
+
+        ALLOCATE(sb%asympt_uc_Lxyz(sb%asympt_uc_np, 3), sb%asympt_uc_np*3)
+
+        do ip = 1, sb%asympt_uc_np
+          read(iunit, fmt='(3i8)') ix, iy, iz
+          sb%asympt_uc_Lxyz(ip, :) = (/ ix, iy, iz /)
+        end do
+        
         call io_close(iunit)
       end if
 
@@ -511,18 +547,39 @@ contains
     !--------------------------------------------------------------
     subroutine adjust_scatt_box()
 
-      call push_sub('simul_box.adjust_scatt_box')
+      FLOAT   :: lsize
+      integer :: scatt_box_central_units
 
       if(.not.sb%scattering_box) return
 
-      do i = 1, sb%periodic_dim
+      call push_sub('simul_box.adjust_scatt_box')
+
+      do i = 1, 1 ! sb%dim 
         sb%h(i) = abs( sb%asympt_uc_lsize(i) / sb%asympt_uc_nr(1, i) )
       end do
 
+      !%Variable ScatteringRegionCentralUnits
+      !%Type integer
+      !%Default 1
+      !%Section Mesh::Simulation Box
+      !%Description
+      !% Determines the factor which is used for ScatteringRegionCentralSize
+      !%Option 1
+      !% Spacing of the asymptotic unit cell
+      !%Option 2
+      !% Lsize of the asymptotic unit cell
+      !%End
+      call loct_parse_int(check_inp('ScatteringRegionCentralUnits'), UC_SPACING, sb%scatt_box_central_units)      
+
+      select case(sb%scatt_box_central_units)
+      case(UC_SPACING); lsize = sb%h(1)
+      case(UC_LSIZE);   lsize = sb%asympt_uc_lsize(1)
+      end select
+     
       sb%lsize(1) = 2*sb%asympt_uc_lsize(1)*sb%scatt_box_factors(1)  &
-        + sb%h(1)*sb%scatt_box_central_size 
+        + lsize*sb%scatt_box_central_size 
       
-      do i = 2, sb%periodic_dim
+      do i = 2, sb%asympt_uc_periodic_dim 
         sb%lsize(i) = sb%asympt_uc_lsize(i)*sb%scatt_box_factors(i)
       end do
       
@@ -606,8 +663,14 @@ contains
 
 
   !--------------------------------------------------------------
-  subroutine simul_box_end()
+  subroutine simul_box_end(sb)
+    type(simul_box_t), intent(inout) :: sb    
 
+    call push_sub('simul_box.simul_box_end')
+
+    if(sb%scattering_box) deallocate(sb%asympt_uc_Lxyz)
+    
+    call pop_sub()
   end subroutine simul_box_end
 
 

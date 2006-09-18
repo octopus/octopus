@@ -85,7 +85,8 @@ module states_m
     states_init_excited_state,      &
     states_kill_excited_state,      &
     wfs_are_complex,                &
-    wfs_are_real
+    wfs_are_real,                   &
+    states_dump
 
 
   public ::                         &
@@ -2627,21 +2628,40 @@ contains
   end subroutine states_kill_excited_state
 
 
+  ! ---------------------------------------------------------
   logical function pair_is_eq(p, q) result(res)
     type(states_pair_t), intent(in) :: p, q
     res = (p%i.eq.q%i) .and. (p%a.eq.q%a) .and. (p%sigma.eq.q%sigma)
   end function pair_is_eq
 
+
+  ! ---------------------------------------------------------
   logical function wfs_are_complex(st) result (wac)
     type(states_t),    intent(inout) :: st
     wac = (st%d%wfs_type == M_CMPLX)
   end function wfs_are_complex
 
+
+  ! ---------------------------------------------------------
   logical function wfs_are_real(st) result (war)
     type(states_t),    intent(inout) :: st
     war = (st%d%wfs_type == M_REAL)
   end function wfs_are_real
 
+
+  ! ---------------------------------------------------------
+  subroutine states_dump(st, iunit)
+    type(states_t), intent(in) :: st
+     integer,       intent(in) :: iunit
+
+     call push_sub('states.states_dump')
+     
+     write(iunit, '(a20,1i10)')  'nst=                ', st%nst
+     write(iunit, '(a20,1i10)')  'dim=                ', st%d%dim
+     write(iunit, '(a20,1i10)')  'nik=                ', st%d%nik
+
+     call pop_sub()
+  end subroutine states_dump
 
 #include "states_kpoints.F90"
 
