@@ -52,7 +52,6 @@ subroutine DRIVER (sk, op, opt, sol, rhs, sk_work)
   integer :: i
 
   call push_sub('sparskit_driver.sparskit_driver')
-
 #ifdef R_TREAL
   sk_b = rhs
   ! initial guess
@@ -71,7 +70,6 @@ subroutine DRIVER (sk, op, opt, sol, rhs, sk_work)
 
   ! Start iterative solution of the linear system
   solver_iter: do i = 1, sk%maxiter
-
     ! Run actual solver
 #ifdef HAVE_SPARSKIT
     if(in_debug_mode) call push_sub('sparskit_driver.sparskit_solver')
@@ -174,6 +172,11 @@ subroutine DRIVER (sk, op, opt, sol, rhs, sk_work)
   ! store current error norm
   sk%residual_norm = sk%fpar(6)
 
+  ! output status info
+  if(sk%verbose) then
+    write(message(1), '(a,I5,a,E18.12)') 'Sparskit iter: ', sk%used_iter, ' residual norm: ', sk%residual_norm
+    call write_info(1)
+  end if
 
 #ifdef R_TREAL
   sol = sk_y
