@@ -22,7 +22,7 @@ if test $acx_netcdf_ok = no; then
   for netcdf_fcflags in "" -I/usr/local/include -I/usr/local/include/netcdf-3 \
       -I/usr/include -I/usr/include/netcdf-3; do
     for netcdf_libsL in "" -L/usr/local/lib64 -L/usr/lib64 -L/usr/local/lib -L/usr/lib; do
-      for netcdf_libsl in "" -lnetcdf "-lnetcdff -lnetcdf"; do
+      for netcdf_libsl in "" $LIBS_NETCDF -lnetcdf "-lnetcdff -lnetcdf"; do
 	if test "$netcdf_libsL" -a "$netcdf_libsl"; then
 	  netcdf_libs="$netcdf_libsL $netcdf_libsl"
 	else
