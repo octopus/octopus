@@ -33,7 +33,11 @@ dnl First, check LIBS_LAPACK environment variable
 if test $acx_lapack_ok = no; then
   AC_MSG_CHECKING([for $cheev in $LIBS_LAPACK])
   AC_TRY_LINK_FUNC($cheev, [acx_lapack_ok=yes], [])
-  AC_MSG_RESULT($acx_lapack_ok)
+  if test $acx_lapack_ok = no; then
+    AC_MSG_RESULT([$acx_lapack_ok])
+  else
+    AC_MSG_RESULT([$acx_lapack_ok ($LIBS_LAPACK)])
+  fi
 fi
 
 dnl Generic LAPACK library?

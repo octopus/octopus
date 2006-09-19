@@ -9,7 +9,11 @@ dnl First, check LIBS_MPI environment variable
 if test $acx_mpi_ok = no; then
   AC_MSG_CHECKING([for MPI_init in $LIBS_MPI])
   AC_TRY_LINK_FUNC(MPI_init, [acx_mpi_ok=yes], [])
-  AC_MSG_RESULT($acx_mpi_ok)
+  if test $acx_mpi_ok = no; then
+    AC_MSG_RESULT([$acx_mpi_ok])
+  else
+    AC_MSG_RESULT([$acx_mpi_ok ($LIBS_MPI)])
+  fi
 fi
 
 if test $acx_mpi_ok = no; then

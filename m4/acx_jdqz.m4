@@ -29,7 +29,11 @@ if test $acx_jdqz_ok = no; then
     call jdqz
     end program main
 ], acx_jdqz_ok=yes, [])
-  AC_MSG_RESULT($acx_jdqz_ok)
+  if test $acx_jdqz_ok = no; then
+    AC_MSG_RESULT([$acx_jdqz_ok])
+  else
+    AC_MSG_RESULT([$acx_jdqz_ok ($LIBS_JDQZ)])
+  fi
 fi
 
 dnl First, check if it links
@@ -47,7 +51,11 @@ if test $acx_jdqz_ok = no; then
     call jdqz
     end program main
 ], [acx_jdqz_ok=yes; LIBS_JDQZ="$LIBS_JDQZ -ljdqz"], [])
-  AC_MSG_RESULT($acx_jdqz_ok)
+  if test $acx_jdqz_ok = no; then
+    AC_MSG_RESULT([$acx_jdqz_ok])
+  else
+    AC_MSG_RESULT([$acx_jdqz_ok ($LIBS_JDQZ)])
+  fi
 fi
 
 dnl Put the library.

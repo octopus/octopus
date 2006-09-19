@@ -34,7 +34,11 @@ if test $acx_blas_ok = no; then
   if test "x$LIBS_BLAS" != x; then
     AC_MSG_CHECKING([for $sgemm in $LIBS_BLAS])
     AC_TRY_LINK_FUNC($sgemm, [acx_blas_ok=yes], [])
-    AC_MSG_RESULT($acx_blas_ok)
+    if test $acx_blas_ok = no; then
+      AC_MSG_RESULT([$acx_blas_ok])
+    else
+      AC_MSG_RESULT([$acx_blas_ok ($LIBS_BLAS)])
+    fi
   fi
 fi
 

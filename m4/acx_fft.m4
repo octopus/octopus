@@ -74,7 +74,11 @@ if test "${fft}" != "no"; then
     if test "x$LIBS_FFT" != x; then
       AC_MSG_CHECKING([for $fft_func in $LIBS_FFT])
       AC_TRY_LINK_FUNC($fft_func, [acx_fft_ok=yes], [])
-      AC_MSG_RESULT($acx_fft_ok)
+      if test $acx_fft_ok = no; then
+        AC_MSG_RESULT([$acx_fft_ok])
+      else
+        AC_MSG_RESULT([$acx_fft_ok ($LIBS_FFT)])
+      fi
     fi
   fi
 

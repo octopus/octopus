@@ -25,7 +25,11 @@ if test $acx_sparskit_ok = no; then
     call bcgstab
     end program main
 ], acx_sparskit_ok=yes, [])
-  AC_MSG_RESULT($acx_sparskit_ok)
+  if test $acx_sparskit_ok = no; then
+    AC_MSG_RESULT([$acx_sparskit_ok])
+  else
+    AC_MSG_RESULT([$acx_sparskit_ok ($LIBS_SPARSKIT)])
+  fi
 fi
 
 dnl ... check if it links ...
@@ -39,7 +43,11 @@ if test $acx_sparskit_ok = no; then
     call bcgstab
     end program main
 ], [acx_sparskit_ok=yes; LIBS_SPARSKIT="$LIBS_SPARSKIT -lskit"], [])
-  AC_MSG_RESULT($acx_sparskit_ok)
+  if test $acx_sparskit_ok = no; then
+    AC_MSG_RESULT([$acx_sparskit_ok])
+  else
+    AC_MSG_RESULT([$acx_sparskit_ok ($LIBS_SPARSKIT)])
+  fi
 fi
 
 dnl Put the library.

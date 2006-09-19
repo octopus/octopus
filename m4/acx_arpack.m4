@@ -23,7 +23,11 @@ if test $acx_arpack_ok = no; then
     call dsaupd
     end program main
 ], acx_arpack_ok=yes, [])
-  AC_MSG_RESULT($acx_arpack_ok)
+  if test $acx_arpack_ok = no; then
+    AC_MSG_RESULT([$acx_arpack_ok])
+  else
+    AC_MSG_RESULT([$acx_arpack_ok ($LIBS_ARPACK)])
+  fi
 fi
 
 dnl First, check if it links
@@ -35,7 +39,11 @@ if test $acx_arpack_ok = no; then
     call dsaupd
     end program main
 ], [acx_arpack_ok=yes; LIBS_ARPACK="$LIBS_ARPACK -larpack"], [])
-  AC_MSG_RESULT($acx_arpack_ok)
+  if test $acx_arpack_ok = no; then
+    AC_MSG_RESULT([$acx_arpack_ok])
+  else
+    AC_MSG_RESULT([$acx_arpack_ok ($LIBS_ARPACK)])
+  fi
 fi
 
 dnl Put the library.
