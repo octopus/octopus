@@ -345,7 +345,10 @@ contains
     FLOAT,          intent(out) :: rho(:)
 
     FLOAT :: d, dmin
-    integer :: i, imin
+    integer :: i, imin, rankmin
+#if defined(HAVE_MPI)
+    FLOAT :: min_loc_in(2), min_loc_out(2)
+#endif
 
     call push_sub('specie_grid.specie_get_density')
 
@@ -367,18 +370,37 @@ contains
 
       end do
 
-      if (dmin > CNST(1e-5)) then 
+      rankmin = 0
+#if defined(HAVE_MPI)
+      if(m%parallel_in_domains) then
+        min_loc_in(1) = dmin
+        min_loc_in(2) = m%np_global * m%mpi_grp%rank  + real(imin, PRECISION) 
+        call mpi_allreduce(min_loc_in, min_loc_out, 1, MPI_2DOUBLE_PRECISION, &
+          MPI_MINLOC, m%mpi_grp%comm, mpi_err)
+        dmin = min_loc_out(1)
+        imin = mod(nint(min_loc_out(2)), m%np_global)
+        rankmin = nint(min_loc_out(2))/m%np_global
+      end if
+#endif
 
-        write(message(1), '(a,f12.2,a)') "Atom displaced ", sqrt(dmin), " [b]"
-        write(message(2), '(a,3f12.2)') "Original position ", pos
-        write(message(3), '(a,3f12.2)') "Displaced position ", m%x(imin,:) 
+      if(m%mpi_grp%rank .eq. rankmin) then
 
-        call write_warning(3)
+        if (dmin > CNST(1e-5)) then 
 
-      endif
+          write(message(1), '(a,f12.2,a)') "Atom displaced ", sqrt(dmin), " [b]"
+          write(message(2), '(a,3f12.2)') "Original position ", pos
+          write(message(3), '(a,3f12.2)') "Displaced position ", m%x(imin,:) 
 
-      rho(1:m%np) = M_ZERO
-      rho(imin) = -s%Z/m%vol_pp(imin)
+          call write_warning(3)
+
+        endif
+
+        rho(1:m%np) = M_ZERO
+        rho(imin) = -s%Z/m%vol_pp(imin)
+
+      else
+        rho(1:m%np) = M_ZERO
+      end if
 
 
     end select
