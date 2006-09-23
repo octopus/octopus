@@ -83,13 +83,10 @@ end subroutine X(lcao_initial_wf)
 
 
 ! ---------------------------------------------------------
-!!$subroutine X(lcao_init) (lcao_data, gr, h, norbs)
 subroutine X(lcao_init) (lcao_data, gr, geo, h, norbs)
   type(lcao_t), target, intent(inout) :: lcao_data
   type(grid_t),         intent(inout) :: gr
-!!!!NEW
   type(geometry_t),     intent(in)    :: geo
-!!!!ENDOFNEW
   type(hamiltonian_t),  intent(in)    :: h
   integer,              intent(in)    :: norbs
 
@@ -103,7 +100,6 @@ subroutine X(lcao_init) (lcao_data, gr, geo, h, norbs)
 
   do ik = 1, st%d%nik
     do n = 1, st%nst
-!!$      call X(lcao_initial_wf) (n, gr%m, gr%geo, st%X(psi)(:, :, n, ik), st%d%ispin, ik, ierr)
       call X(lcao_initial_wf) (n, gr%m, geo, st%X(psi)(:, :, n, ik), st%d%ispin, ik, ierr)
       if(ierr.ne.0) then
         write(message(1),'(a)') 'Internal error in lcao_wf.'
