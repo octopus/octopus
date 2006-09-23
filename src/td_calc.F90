@@ -31,7 +31,7 @@
 ! ---------------------------------------------------------
 subroutine td_calc_tacc(gr, geo, st, h, acc, t)
   type(grid_t),        intent(inout) :: gr
-  type(geometry_t),    intent(in)    :: geo
+  type(geometry_t),    intent(inout) :: geo
   type(states_t),      intent(inout) :: st
   type(hamiltonian_t), intent(inout) :: h
   FLOAT,               intent(in)    :: t

@@ -119,27 +119,29 @@ contains
     call loct_parse_int(check_inp('OEP_level'), XC_OEP_KLI, oep%level)
     if(.not.varinfo_valid_option('OEP_level', oep%level)) call input_error('OEP_level')
 
-    if(oep%level == XC_OEP_FULL) then
-      call loct_parse_float(check_inp('OEP_mixing'), M_ONE, oep%mixing)
+    if(oep%level.ne.XC_OEP_NONE) then
+      if(oep%level == XC_OEP_FULL) then
+        call loct_parse_float(check_inp('OEP_mixing'), M_ONE, oep%mixing)
+      end if
+
+      ! this routine is only prepared for finite systems, and ispin = 1, 2
+      if(d%ispin > SPIN_POLARIZED .or. d%nik>d%ispin) then
+        message(1) = "OEP only works for finite systems and collinear spin!"
+        call write_fatal(1)
+      end if
+    
+      ! obtain the spin factors
+      call xc_oep_SpinFactor(oep, d%nspin)
+
+      ! This variable will keep vxc across iterations
+      ALLOCATE(oep%vxc(m%np), m%np)
+
+      ! when performing full OEP, we need to solve a linear equation
+      if(oep%level == XC_OEP_FULL) call lr_init(oep%lr, "OEP")
+
+      ! the linear equation has to be more converged if we are to attain the required precision
+      !oep%lr%conv_abs_dens = oep%lr%conv_abs_dens / (oep%mixing)
     end if
-
-    ! this routine is only prepared for finite systems, and ispin = 1, 2
-    if(d%ispin > SPIN_POLARIZED .or. d%nik>d%ispin) then
-      message(1) = "OEP only works for finite systems and collinear spin!"
-      call write_fatal(1)
-    end if
-
-    ! obtain the spin factors
-    call xc_oep_SpinFactor(oep, d%nspin)
-
-    ! This variable will keep vxc across iterations
-    ALLOCATE(oep%vxc(m%np), m%np)
-
-    ! when performing full OEP, we need to solve a linear equation
-    if(oep%level == XC_OEP_FULL) call lr_init(oep%lr, "OEP")
-
-    ! the linear equation has to be more converged if we are to attain the required precision
-    !oep%lr%conv_abs_dens = oep%lr%conv_abs_dens / (oep%mixing)
 
     call pop_sub()
   end subroutine xc_oep_init

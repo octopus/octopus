@@ -308,7 +308,7 @@ contains
     type(grid_t),        intent(inout) :: gr
     type(states_t),      intent(inout) :: st
     type(hamiltonian_t), intent(inout) :: h
-    type(geometry_t),       intent(in) :: geo
+    type(geometry_t),    intent(inout) :: geo
     type(kick_t),           intent(in) :: kick
     FLOAT,                  intent(in) :: dt
     integer,                intent(in) :: i
@@ -872,7 +872,7 @@ contains
   subroutine td_write_acc(out_acc, gr, geo, st, h, dt, iter)
     integer(POINTER_SIZE),  intent(in)    :: out_acc
     type(grid_t),           intent(inout) :: gr
-    type(geometry_t),       intent(in)    :: geo
+    type(geometry_t),       intent(inout) :: geo
     type(states_t),         intent(inout) :: st
     type(hamiltonian_t),    intent(inout) :: h
     FLOAT,                  intent(in)    :: dt

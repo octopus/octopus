@@ -1018,7 +1018,7 @@ contains
   ! ---------------------------------------------------------
   subroutine epot_forces(gr, geo, ep, st, t)
     type(grid_t), target, intent(in) :: gr
-    type(geometry_t), intent(in)     :: geo
+    type(geometry_t), intent(inout)  :: geo
     type(epot_t),     intent(in)     :: ep
     type(states_t),   intent(in)     :: st
     FLOAT,     optional, intent(in)    :: t
