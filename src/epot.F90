@@ -119,9 +119,10 @@ module external_pot_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine epot_init(ep, gr)
+  subroutine epot_init(ep, gr, geo)
     type(epot_t), intent(out) :: ep
     type(grid_t), intent(in)  :: gr
+    type(geometry_t), intent(in) :: geo
 
     integer :: i, j
     integer(POINTER_SIZE) :: blk
@@ -135,12 +136,12 @@ contains
 
     ! should we calculate the local pseudopotentials in Fourier space?
     ! This depends on wether we have periodic dimensions or not
-    if(simul_box_is_periodic(gr%sb).and.(.not.gr%geo%only_user_def)) then
-      call epot_local_fourier_init(ep, gr%m, gr%sb, gr%geo)
+    if(simul_box_is_periodic(gr%sb).and.(.not.geo%only_user_def)) then
+      call epot_local_fourier_init(ep, gr%m, gr%sb, geo)
     end if
 
     ep%classic_pot = 0
-    if(gr%geo%ncatoms > 0) then
+    if(geo%ncatoms > 0) then
 
       !%Variable ClassicPotential
       !%Type integer
@@ -156,7 +157,7 @@ contains
         call write_info(1)
 
         ALLOCATE(ep%Vclassic(NP), NP)
-        call epot_generate_classic(ep, gr%m, gr%geo)
+        call epot_generate_classic(ep, gr%m, geo)
       end if
     end if
 
@@ -259,7 +260,7 @@ contains
     call loct_parse_float(check_inp('GyromagneticRatio'), P_g, ep%gyromagnetic_ratio)
 
     ! The projectors
-    ep%nvnl = geometry_nvnl(gr%geo)
+    ep%nvnl = geometry_nvnl(geo)
     nullify(ep%p)
 
     nullify(ep%dp)
@@ -536,9 +537,10 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine epot_generate(ep, gr, st, reltype, fast_generation)
+  subroutine epot_generate(ep, gr, geo, st, reltype, fast_generation)
     type(epot_t),      intent(inout) :: ep
     type(grid_t), target,  intent(inout) :: gr
+    type(geometry_t),  intent(inout) :: geo
     type(states_t),    intent(inout) :: st
     integer,           intent(in)    :: reltype
     logical, optional, intent(in)    :: fast_generation
@@ -550,14 +552,12 @@ contains
     type(dcf_t) :: cf_loc, cf_nlcc
     type(mesh_t),      pointer :: m
     type(simul_box_t), pointer :: sb
-    type(geometry_t),  pointer :: geo
 
 
     call profiling_in(C_PROFILING_EPOT_GENERATE)
     call push_sub('epot.epot_generate')
 
     sb  => gr%sb
-    geo => gr%geo
     m   => gr%m
 
     fast_generation_ = .false.
@@ -1016,13 +1016,13 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine epot_forces(gr, ep, st, t)
+  subroutine epot_forces(gr, geo, ep, st, t)
     type(grid_t), target, intent(in) :: gr
+    type(geometry_t), intent(in)     :: geo
     type(epot_t),     intent(in)     :: ep
     type(states_t),   intent(in)     :: st
     FLOAT,     optional, intent(in)    :: t
 
-    type(geometry_t), pointer :: geo
     integer :: i, j, l, idim, ist, ik, ivnl, ivnl_start, ivnl_end
     FLOAT :: d, r, zi, zj, x(MAX_DIM)
     type(atom_t), pointer :: atm
@@ -1038,8 +1038,6 @@ contains
 
     call profiling_in(C_PROFILING_FORCES)
     call push_sub('epot.epot_forces')
-
-    geo => gr%geo
 
     ! init to 0
     do i = 1, geo%natoms

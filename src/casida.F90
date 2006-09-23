@@ -117,7 +117,7 @@ contains
     sys%st%eigenval = huge(PRECISION)
     sys%st%occ      = M_ZERO
 
-    call restart_read(trim(tmpdir)//'restart_gs', sys%st, sys%gr, ierr)
+    call restart_read(trim(tmpdir)//'restart_gs', sys%st, sys%gr, sys%geo, ierr)
     if(ierr.ne.0) then
       message(1) = 'Could not properly read wave-functions from "'//trim(tmpdir)//'restart_gs".'
       call write_fatal(1)

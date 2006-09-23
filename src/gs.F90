@@ -66,7 +66,7 @@ contains
 
     if(.not.fromScratch) then
       ! load wave-functions
-      call restart_read(trim(tmpdir)//'restart_gs', sys%st, sys%gr, ierr)
+      call restart_read(trim(tmpdir)//'restart_gs', sys%st, sys%gr, sys%geo, ierr)
       if(ierr.ne.0) then
         message(1) = "Could not load wave-functions from '"//trim(tmpdir)//"restart_gs'"
         message(2) = "Starting from scratch!"
@@ -87,7 +87,7 @@ contains
 
       ! We do not compute the density from the random wave-functions. 
       ! Instead, we try to get a better guess for the density
-      call guess_density(sys%gr%m, sys%gr%sb, sys%gr%geo, sys%st%qtot, sys%st%d%nspin, &
+      call guess_density(sys%gr%m, sys%gr%sb, sys%geo, sys%st%qtot, sys%st%d%nspin, &
            sys%st%d%spin_channels, sys%st%rho)
 
       ! setup Hamiltonian (we do not call system_h_setup here because we do not want to
@@ -96,12 +96,13 @@ contains
       call write_info(1)
       call v_ks_calc(sys%gr, sys%ks, h, sys%st, calc_eigenval=.true.) ! get potentials
       call states_fermi(sys%st, sys%gr%m)                                ! occupations
-      call hamiltonian_energy(h, sys%gr, sys%st, -1)             ! total energy
+      call hamiltonian_energy(h, sys%gr, sys%geo, sys%st, -1)             ! total energy
+
 
       ! The initial LCAO calculation is done by default if we have pseudopotentials.
       ! Otherwise, it is not the default value and has to be enforced in the input file.
       lcao_start_default = LCAO_START_FULL
-      if(sys%gr%geo%only_user_def) lcao_start_default = LCAO_START_NONE
+      if(sys%geo%only_user_def) lcao_start_default = LCAO_START_NONE
 
       !%Variable LCAOStart
       !%Type integer
@@ -130,7 +131,7 @@ contains
       if (lcao_start > LCAO_START_NONE) then
           
         lcao_data%state = 0 ! Uninitialized here.
-        call lcao_init(sys%gr, lcao_data, sys%st, h)
+        call lcao_init(sys%gr, sys%geo, lcao_data, sys%st, h)
         if(lcao_data%state == 1) then
           write(message(1),'(a,i4,a)') 'Info: Performing initial LCAO calculation with ', &
                lcao_data%st%nst,' orbitals.'
@@ -167,8 +168,8 @@ contains
     end if
     call write_info(1)
 
-    call scf_init(sys%gr, scfv, sys%st, h)
-    call scf_run(scfv, sys%gr, sys%st, sys%ks, h, sys%outp)
+    call scf_init(sys%gr, sys%geo, scfv, sys%st, h)
+    call scf_run(scfv, sys%gr, sys%geo, sys%st, sys%ks, h, sys%outp)
     call scf_end(scfv)
 
     ! clean up

@@ -221,9 +221,11 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine states_init(st, gr)
+  subroutine states_init(st, gr, geo)
     type(states_t),    intent(inout) :: st
     type(grid_t),      intent(in)    :: gr
+    type(geometry_t),  intent(in)    :: geo
+
 
     FLOAT :: excess_charge, r
     integer :: nempty, i, j
@@ -298,7 +300,7 @@ contains
       call write_fatal(2)
     end if
 
-    call geometry_val_charge(gr%geo, st%val_charge)
+    call geometry_val_charge(geo, st%val_charge)
     st%qtot = -(st%val_charge + excess_charge)
 
     select case(st%d%ispin)
@@ -341,7 +343,7 @@ contains
     end if
 
     ! For non-periodic systems this should just return the Gamma point
-    call states_choose_kpoints(st%d, gr%sb, gr%geo)
+    call states_choose_kpoints(st%d, gr%sb, geo)
 
     ! Periodic systems require complex wave-functions
     if(simul_box_is_periodic(gr%sb)) st%d%wfs_type = M_CMPLX
@@ -597,9 +599,10 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine states_densities_init(st, gr)
+  subroutine states_densities_init(st, gr, geo)
     type(states_t),    intent(inout) :: st
     type(grid_t),      intent(in)    :: gr
+    type(geometry_t),  intent(in)    :: geo
     call push_sub('states.states_densities_init')
 
     ! allocate arrays for charge and current densities
@@ -607,7 +610,7 @@ contains
     ALLOCATE(st%j(NP_PART, NDIM, st%d%nspin), NP_PART*NDIM*st%d%nspin)
     st%rho = M_ZERO
     st%j   = M_ZERO
-    if(gr%geo%nlcc) ALLOCATE(st%rho_core(gr%m%np), gr%m%np)
+    if(geo%nlcc) ALLOCATE(st%rho_core(gr%m%np), gr%m%np)
 
     call pop_sub()
   end subroutine states_densities_init

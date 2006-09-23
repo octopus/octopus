@@ -141,9 +141,10 @@ module hamiltonian_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine hamiltonian_init(h, gr, states_dim, ip_app)
+  subroutine hamiltonian_init(h, gr, geo, states_dim, ip_app)
     type(hamiltonian_t), intent(out)   :: h
     type(grid_t),        intent(inout) :: gr
+    type(geometry_t),    intent(in)    :: geo
     type(states_dim_t),  pointer       :: states_dim
     logical,             intent(in)    :: ip_app
 
@@ -178,7 +179,8 @@ contains
     end if
 
     !Initialize external potential
-    call epot_init(h%ep, gr)
+    call epot_init(h%ep, gr, geo)
+
 
     !Static magnetic field requires complex wave-functions
     if (associated(h%ep%B_field)) h%d%wfs_type = M_CMPLX
@@ -307,9 +309,10 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine hamiltonian_end(h, gr)
+  subroutine hamiltonian_end(h, gr, geo)
     type(hamiltonian_t), intent(inout) :: h
     type(grid_t),        intent(in)    :: gr
+    type(geometry_t),    intent(in)    :: geo
 
     call push_sub('h.hamiltonian_end')
 
@@ -330,7 +333,7 @@ contains
       nullify(h%axc)
     end if
 
-    call epot_end(h%ep, gr%sb, gr%geo)
+    call epot_end(h%ep, gr%sb, geo)
 
     if(associated(h%ab_pot)) then
       deallocate(h%ab_pot); nullify(h%ab_pot)
@@ -348,9 +351,12 @@ contains
   ! This subroutine calculates the total energy of the system. Basically, it
   ! adds up the KS eigenvalues, and then it substracts the whatever double
   ! counts exist (see TDDFT theory for details).
-  subroutine hamiltonian_energy(h, gr, st, iunit, full)
+  subroutine hamiltonian_energy(h, gr, geo, st, iunit, full)
     type(hamiltonian_t), intent(inout) :: h
     type(grid_t),        intent(inout) :: gr
+!!!!NEW
+    type(geometry_t),    intent(in)    :: geo
+!!!!ENDOFNEW
     type(states_t),      intent(inout) :: st
     integer,             intent(in)    :: iunit
     logical, optional,   intent(in)    :: full
@@ -373,7 +379,7 @@ contains
     end if
 
     h%eeigen = states_eigenvalues_sum(st)
-    h%eii    = gr%geo%eii
+    h%eii    = geo%eii
     h%etot   = h%eii + h%eeigen - h%ehartree + h%ex + h%ec - h%epot
 
     if (iunit > 0) then

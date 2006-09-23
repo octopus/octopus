@@ -106,7 +106,7 @@ contains
 
     ! some shortcuts
     gr  => sys%gr
-    geo => sys%gr%geo
+    geo => sys%geo
     st  => sys%st
 
     call td_init(gr, td, st, sys%outp)
@@ -123,12 +123,12 @@ contains
     if(td%move_ions > 0) then
       if(td%iter > 0) then
         call td_read_nbo()
-        call epot_generate(h%ep, gr, st, h%reltype)
+        call epot_generate(h%ep, gr, sys%geo, st, h%reltype)
         geo%eii = ion_ion_energy(geo)
         h%eii = geo%eii
       end if
 
-      call epot_forces(gr, h%ep, st, td%iter*td%dt)
+      call epot_forces(gr, sys%geo, h%ep, st, td%iter*td%dt)
       geo%kinetic_energy = kinetic_energy(geo)
       call init_verlet()
     end if
@@ -157,9 +157,9 @@ contains
       if( td%move_ions > 0 ) then
         call apply_verlet_1
         if(mod(i, td%epot_regenerate) == 0) then
-          call epot_generate(h%ep, gr, st, h%reltype)
+          call epot_generate(h%ep, gr, sys%geo, st, h%reltype)
         else
-          call epot_generate(h%ep, gr, st, h%reltype, fast_generation = .true.)
+          call epot_generate(h%ep, gr, sys%geo, st, h%reltype, fast_generation = .true.)
         end if
         geo%eii = ion_ion_energy(geo)
         h%eii = geo%eii
@@ -176,11 +176,11 @@ contains
 
       ! update hamiltonian and eigenvalues (fermi is *not* called)
       call v_ks_calc(gr, sys%ks, h, st, calc_eigenval=.true.)
-      call hamiltonian_energy(h, sys%gr, st, -1)
+      call hamiltonian_energy(h, sys%gr, sys%geo, st, -1)
 
       ! Recalculate forces, update velocities...
       if(td%move_ions > 0) then
-        call epot_forces(gr, h%ep, st, i*td%dt)
+        call epot_forces(gr, sys%geo, h%ep, st, i*td%dt)
         call apply_verlet_2
         geo%kinetic_energy = kinetic_energy(geo)
       end if
@@ -227,7 +227,7 @@ contains
           call messages_print_stress(stdout, 'Recalculating the ground state.')
           fromScratch = .false.
           call ground_state_run(sys, h, fromScratch)
-          call restart_read(trim(tmpdir)//'restart_td', st, gr, ierr, i)
+          call restart_read(trim(tmpdir)//'restart_td', st, gr, geo, ierr, i)
           call messages_print_stress(stdout, "Time-Dependent simulation proceeds")
           write(message(1), '(a7,1x,a14,a14,a17)') 'Iter ', 'Time ', 'Energy ', 'Elapsed Time '
           call write_info(1)
@@ -322,7 +322,7 @@ contains
       logical :: only_userdef_istates
 
       if(.not.fromScratch) then
-        call restart_read(trim(tmpdir)//'restart_td', st, gr, ierr, td%iter)
+        call restart_read(trim(tmpdir)//'restart_td', st, gr, geo, ierr, td%iter)
         if(ierr.ne.0) then
           message(1) = "Could not load "//trim(tmpdir)//"restart_td: Starting from scratch"
           call write_warning(1)
@@ -354,7 +354,7 @@ contains
         call loct_parse_logical(check_inp('OnlyUserDefinedInitialStates'), .false., only_userdef_istates)
 
         if(.not. only_userdef_istates) then
-          call restart_read(trim(tmpdir)//'restart_gs', st, gr, ierr)
+          call restart_read(trim(tmpdir)//'restart_gs', st, gr, geo, ierr)
           if(ierr.ne.0) then
             message(1) = "Could not read KS orbitals from '"//trim(tmpdir)//"restart_gs'"
             message(2) = "Please run a ground-state calculation first!"
@@ -381,7 +381,7 @@ contains
       end if
 #endif
       call hamiltonian_span(h, minval(gr%m%h(1:NDIM)), x)
-      call hamiltonian_energy(h, gr, st, -1)
+      call hamiltonian_energy(h, gr, geo, st, -1)
 
     end subroutine init_wfs
 

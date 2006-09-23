@@ -200,7 +200,7 @@ contains
       end if
       call states_allocate_wfns(w%gs_st, gr%m)
       w%gs_st%node(:)  = 0
-      call restart_read(trim(tmpdir)//'restart_gs', w%gs_st, gr, ierr)
+      call restart_read(trim(tmpdir)//'restart_gs', w%gs_st, gr, geo, ierr)
       if(ierr.ne.0) then
         message(1) = "Could not load "//trim(tmpdir)//"restart_gs"
         call write_fatal(1)
@@ -315,15 +315,15 @@ contains
 
     call push_sub('td_write.td_write_iter')
 
-    if(w%out_multip.ne.0)   call td_write_multipole(w%out_multip, gr, st, w%lmax, kick, i)
+    if(w%out_multip.ne.0)   call td_write_multipole(w%out_multip, gr, geo, st, w%lmax, kick, i)
     if(w%out_angular.ne.0)  call td_write_angular(w%out_angular, gr, st, kick, i)
     if(w%out_spin.ne.0)     call td_write_spin(w%out_spin, gr, st, i)
     if(w%out_magnets.ne.0)  call td_write_local_magnetic_moments(w%out_magnets, gr, st, geo, w%lmm_r, i)
     if(w%out_proj.ne.0)     call td_write_proj(w%out_proj, gr, st, w%gs_st, i)
-    if(w%out_coords.ne.0)   call td_write_nbo(w%out_coords, gr, i, geo%kinetic_energy, h%etot)
+    if(w%out_coords.ne.0)   call td_write_nbo(w%out_coords, gr, geo, i, geo%kinetic_energy, h%etot)
     if(w%out_populations.ne.0) &
       call td_write_populations(w%out_populations, gr%m, st, w%gs_st, w%n_excited_states, w%excited_st, dt, i)
-    if(w%out_acc.ne.0)      call td_write_acc(w%out_acc, gr, st, h, dt, i)
+    if(w%out_acc.ne.0)      call td_write_acc(w%out_acc, gr, geo, st, h, dt, i)
     if(w%out_laser.ne.0)    call td_write_laser(w%out_laser, gr, h, dt, i)
     if(w%out_energy.ne.0)   call td_write_el_energy(w%out_energy, h, i)
 
@@ -588,9 +588,10 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine td_write_multipole(out_multip, gr, st, lmax, kick, iter)
+  subroutine td_write_multipole(out_multip, gr, geo, st, lmax, kick, iter)
     integer(POINTER_SIZE), intent(in) :: out_multip
     type(grid_t),          intent(in) :: gr
+    type(geometry_t),      intent(in) :: geo
     type(states_t),        intent(in) :: st
     integer,               intent(in) :: lmax
     type(kick_t),          intent(in) :: kick
@@ -690,7 +691,7 @@ contains
     ALLOCATE(nuclear_dipole(1:3), 3)
     ALLOCATE(multipole((lmax + 1)**2, st%d%nspin), (lmax + 1)**2*st%d%nspin)
     call states_calculate_multipoles(gr, st, lmax, multipole)
-    call geometry_dipole(gr%geo, nuclear_dipole)
+    call geometry_dipole(geo, nuclear_dipole)
     do is = 1, st%d%nspin
       multipole(2:4, is) = nuclear_dipole(1:3) - multipole(2:4, is)
     end do
@@ -715,9 +716,10 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine td_write_nbo(out_coords, gr, iter, ke, pe)
+  subroutine td_write_nbo(out_coords, gr, geo, iter, ke, pe)
     integer(POINTER_SIZE), intent(in) :: out_coords
     type(grid_t),          intent(in) :: gr
+    type(geometry_t),      intent(in) :: geo
     integer,               intent(in) :: iter
     FLOAT,                 intent(in) :: ke, pe
 
@@ -735,19 +737,19 @@ contains
       call write_iter_header(out_coords, 'Epot')
       call write_iter_header(out_coords, 'Etot')
 
-      do i = 1, gr%geo%natoms
+      do i = 1, geo%natoms
         do j = 1, NDIM
           write(aux, '(a2,i3,a1,i3,a1)') 'x(', i, ',', j, ')'
           call write_iter_header(out_coords, aux)
         end do
       end do
-      do i = 1, gr%geo%natoms
+      do i = 1, geo%natoms
         do j = 1, NDIM
           write(aux, '(a2,i3,a1,i3,a1)') 'v(', i, ',',j,')'
           call write_iter_header(out_coords, aux)
         end do
       end do
-      do i = 1, gr%geo%natoms
+      do i = 1, geo%natoms
         do j = 1, NDIM
           write(aux, '(a2,i3,a1,i3,a1)') 'f(', i, ',',j,')'
           call write_iter_header(out_coords, aux)
@@ -773,14 +775,14 @@ contains
     call write_iter_double(out_coords,     pe /units_out%energy%factor, 1)
     call write_iter_double(out_coords, (ke+pe)/units_out%energy%factor, 1)
 
-    do i = 1, gr%geo%natoms
-      call write_iter_double(out_coords, gr%geo%atom(i)%x(1:NDIM)/units_out%length%factor,   NDIM)
+    do i = 1, geo%natoms
+      call write_iter_double(out_coords, geo%atom(i)%x(1:NDIM)/units_out%length%factor,   NDIM)
     end do
-    do i = 1, gr%geo%natoms
-      call write_iter_double(out_coords, gr%geo%atom(i)%v(1:NDIM)/units_out%velocity%factor, NDIM)
+    do i = 1, geo%natoms
+      call write_iter_double(out_coords, geo%atom(i)%v(1:NDIM)/units_out%velocity%factor, NDIM)
     end do
-    do i = 1, gr%geo%natoms
-      call write_iter_double(out_coords, gr%geo%atom(i)%f(1:NDIM)/units_out%force%factor,    NDIM)
+    do i = 1, geo%natoms
+      call write_iter_double(out_coords, geo%atom(i)%f(1:NDIM)/units_out%force%factor,    NDIM)
     end do
     call write_iter_nl(out_coords)
 
@@ -867,9 +869,10 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine td_write_acc(out_acc, gr, st, h, dt, iter)
+  subroutine td_write_acc(out_acc, gr, geo, st, h, dt, iter)
     integer(POINTER_SIZE),  intent(in)    :: out_acc
     type(grid_t),           intent(inout) :: gr
+    type(geometry_t),       intent(in)    :: geo
     type(states_t),         intent(inout) :: st
     type(hamiltonian_t),    intent(inout) :: h
     FLOAT,                  intent(in)    :: dt
@@ -902,7 +905,7 @@ contains
       call td_write_print_header_end(out_acc)
     end if
 
-    call td_calc_tacc(gr, st, h, acc, dt*i)
+    call td_calc_tacc(gr, geo, st, h, acc, dt*i)
 
     call write_iter_start(out_acc)
     call write_iter_double(out_acc, acc/units_out%acceleration%factor, NDIM)

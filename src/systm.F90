@@ -49,6 +49,7 @@ module system_m
     system_h_setup
 
   type system_t
+    type(geometry_t)            :: geo
     type(grid_t),     pointer :: gr    ! the mesh
     type(states_t),   pointer :: st    ! the states
     type(v_ks_t)              :: ks    ! the Kohn-Sham potentials
@@ -68,17 +69,17 @@ contains
     ALLOCATE(sys%gr, 1)
     ALLOCATE(sys%st, 1)
 
-    call geometry_init(sys%gr%geo)
-    call simul_box_init(sys%gr%sb, sys%gr%geo)
-    call states_init(sys%st, sys%gr)
-    call grid_init_stage_1(sys%gr)
+    call geometry_init(sys%geo)
+    call simul_box_init(sys%gr%sb, sys%geo)
+    call states_init(sys%st, sys%gr, sys%geo)
+    call grid_init_stage_1(sys%gr, sys%geo)
 
     call parallel_init()
 
-    call grid_init_stage_2(sys%gr, sys%mc)
-    call states_densities_init(sys%st, sys%gr)
+    call grid_init_stage_2(sys%gr, sys%mc, sys%geo)
+    call states_densities_init(sys%st, sys%gr, sys%geo)
     call output_init(sys%gr%sb, sys%outp)
-    call poisson_init(sys%gr)
+    call poisson_init(sys%gr, sys%geo)
     call v_ks_init(sys%gr, sys%ks, sys%st%d)
 
     !print the mesh information if it is required
@@ -147,6 +148,10 @@ contains
       deallocate(s%st); nullify(s%st)
     end if
 
+!!!!NEW
+    call geometry_end(s%geo)
+!!!!ENDOFNEW
+
     call grid_end(s%gr)
     deallocate(s%gr);  nullify(s%gr)
 
@@ -166,7 +171,7 @@ contains
 
     call v_ks_calc(sys%gr, sys%ks, h, sys%st, calc_eigenval=.true.) ! get potentials
     call states_fermi(sys%st, sys%gr%m)                            ! occupations
-    call hamiltonian_energy(h, sys%gr, sys%st, -1)            ! total energy
+    call hamiltonian_energy(h, sys%gr, sys%geo, sys%st, -1)            ! total energy
 
     call pop_sub()
   end subroutine system_h_setup

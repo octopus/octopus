@@ -73,7 +73,7 @@ contains
     call init_()
 
     ! load wave-functions
-    call restart_read(trim(tmpdir)//'restart_gs', sys%st, sys%gr, ierr)
+    call restart_read(trim(tmpdir)//'restart_gs', sys%st, sys%gr, sys%geo, ierr)
     if(ierr.ne.0) then
       message(1) = "Could not load wave-functions: Starting from scratch"
       call write_warning(1)
@@ -84,7 +84,7 @@ contains
     call write_info(1)
     call system_h_setup(sys, h)
 
-    call scf_init(sys%gr, scfv, sys%st, h)
+    call scf_init(sys%gr, sys%geo, scfv, sys%st, h)
 
     ALLOCATE(x(3*geo%natoms), 3*geo%natoms)
     do i = 0, geo%natoms - 1
@@ -130,7 +130,7 @@ contains
 
       ! shortcuts
       m   => sys%gr%m
-      geo => sys%gr%geo
+      geo => sys%geo
       st  => sys%st
 
       !%Variable GOMethod
@@ -204,13 +204,13 @@ contains
       end do
       call atom_write_xyz(".", "work-min", geo)
 
-      call epot_generate(h%ep, sys%gr, st, h%reltype)
+      call epot_generate(h%ep, sys%gr, sys%geo, st, h%reltype)
       call states_calc_dens(st, m%np, st%rho)
       call v_ks_calc(sys%gr, sys%ks, h, st, calc_eigenval=.true.)
-      call hamiltonian_energy(h, sys%gr, st, -1)
+      call hamiltonian_energy(h, sys%gr, sys%geo, st, -1)
 
       ! do scf calculation
-      call scf_run(scfv, sys%gr, st, sys%ks, h, sys%outp)
+      call scf_run(scfv, sys%gr, sys%geo, st, sys%ks, h, sys%outp)
 
       ! store results
       f = h%etot

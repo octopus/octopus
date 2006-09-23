@@ -439,7 +439,7 @@ contains
       call push_sub('opt_control.fwd_step')
       
       ! setup forward propagation
-      call states_densities_init(psi, gr)
+      call states_densities_init(psi, gr, sys%geo)
       call states_calc_dens(psi, NP_PART, dens_tmp)
       !write(6,*) 'HEre' 
       !psi%rho = M_ZERo
@@ -1213,7 +1213,7 @@ contains
       call push_sub('opt_control.def_istate')
 
       ! ALLOCATE tmp_state
-      call states_init(tmp_st, gr) 
+      call states_init(tmp_st, gr, sys%geo) 
       if(h%ep%nvnl > 0) then
          ALLOCATE(tmp_st%rho_core(NP_PART), NP_PART)
          tmp_st%rho_core(NP_PART) = psi_i%rho_core(NP_PART)
@@ -1414,7 +1414,7 @@ contains
       call push_sub('opt_control.def_toperator')
 
       ! ALLOCATE tmp_state
-      call states_init(tmp_st, gr) 
+      call states_init(tmp_st, gr, sys%geo) 
       if(h%ep%nvnl > 0) then
          ALLOCATE(tmp_st%rho_core(NP_PART), NP_PART)
          tmp_st%rho_core(NP_PART) = psi_i%rho_core(NP_PART)
@@ -2062,11 +2062,11 @@ contains
       v_old_i => td%tr%v_old
 
       ! now we initialize chi. This will repeat some stuff
-      call states_init(psi, gr)
-      call states_init(psi2, gr)
-      call states_init(chi, gr)
-      call states_init(initial_st, gr)
-      call states_init(target_st, gr)
+      call states_init(psi, gr, sys%geo)
+      call states_init(psi2, gr, sys%geo)
+      call states_init(chi, gr, sys%geo)
+      call states_init(initial_st, gr, sys%geo)
+      call states_init(target_st, gr, sys%geo)
       if(h%ep%nvnl > 0) then
         ALLOCATE(psi%rho_core(NP_PART), NP_PART)
         psi%rho_core(NP_PART) = psi_i%rho_core(NP_PART)  
@@ -2101,11 +2101,11 @@ contains
       call states_allocate_wfns(initial_st, gr%m, M_CMPLX)
       call states_allocate_wfns(target_st,  gr%m, M_CMPLX)
      
-      call states_densities_init(psi, gr)
-      call states_densities_init(psi2, gr)
-      call states_densities_init(chi, gr)
-      call states_densities_init(initial_st, gr)
-      call states_densities_init(target_st, gr)
+      call states_densities_init(psi, gr, sys%geo)
+      call states_densities_init(psi2, gr, sys%geo)
+      call states_densities_init(chi, gr, sys%geo)
+      call states_densities_init(initial_st, gr, sys%geo)
+      call states_densities_init(target_st, gr, sys%geo)
 
       ALLOCATE(v_old_f(NP, chi%d%nspin, 0:3), NP_PART*chi%d%nspin*(3+1))
 

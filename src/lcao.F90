@@ -75,9 +75,10 @@ module lcao_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine lcao_init(gr, lcao_data, st, h)
+  subroutine lcao_init(gr, geo, lcao_data, st, h)
     type(lcao_t),         intent(out)   :: lcao_data
     type(grid_t),         intent(inout) :: gr
+    type(geometry_t),     intent(in)    :: geo
     type(states_t),       intent(in)    :: st
     type(hamiltonian_t),  intent(in)    :: h
 
@@ -102,8 +103,8 @@ contains
         
     ! Fix the dimension of the LCAO problem (lcao_data%dim)
     norbs = 0
-    do ia = 1, gr%geo%natoms
-      norbs = norbs + gr%geo%atom(ia)%spec%niwfs
+    do ia = 1, geo%natoms
+      norbs = norbs + geo%atom(ia)%spec%niwfs
     end do
     if( (st%d%ispin.eq.SPINORS) ) norbs = norbs * 2
 
@@ -153,9 +154,9 @@ contains
     call states_allocate_wfns(lcao_data%st, gr%m, st%d%wfs_type)
 
     if (lcao_data%st%d%wfs_type == M_REAL) then
-      call dlcao_init(lcao_data, gr, h, norbs)
+      call dlcao_init(lcao_data, gr, geo, h, norbs)
     else
-      call zlcao_init(lcao_data, gr, h, norbs)
+      call zlcao_init(lcao_data, gr, geo, h, norbs)
     end if
 
     lcao_data%state = 1

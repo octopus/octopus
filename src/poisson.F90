@@ -81,8 +81,9 @@ module poisson_m
 contains
 
   !-----------------------------------------------------------------
-  subroutine poisson_init(gr)
+  subroutine poisson_init(gr, geo)
     type(grid_t), intent(inout) :: gr
+    type(geometry_t), intent(in) :: geo
 
     if(poisson_solver.ne.-99) return ! already initialized
 
@@ -204,7 +205,7 @@ contains
       end if
 
       call messages_print_var_option(stdout, "PoissonSolver", poisson_solver)
-      call poisson3D_init(gr)
+      call poisson3D_init(gr, geo)
     end subroutine init_3D
 
   end subroutine poisson_init

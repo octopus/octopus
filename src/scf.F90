@@ -81,8 +81,9 @@ module scf_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine scf_init(gr, scf, st, h)
+  subroutine scf_init(gr, geo, scf, st, h)
     type(grid_t),        intent(in)    :: gr
+    type(geometry_t),    intent(in)    :: geo
     type(scf_t),         intent(inout) :: scf
     type(states_t),      intent(in)    :: st
     type(hamiltonian_t), intent(in)    :: h
@@ -202,8 +203,8 @@ contains
       call write_info(1)
     end if
 
-    call geometry_min_distance(gr%geo, rmin)
-    if(gr%geo%natoms == 1) rmin = CNST(100.0)
+    call geometry_min_distance(geo, rmin)
+    if(geo%natoms == 1) rmin = CNST(100.0)
     call loct_parse_float(check_inp('LocalMagneticMomentsSphereRadius'), rmin*M_HALF/units_inp%length%factor, scf%lmm_r)
     scf%lmm_r = scf%lmm_r * units_inp%length%factor
 
@@ -225,9 +226,10 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine scf_run(scf, gr, st, ks, h, outp, gs_run)
+  subroutine scf_run(scf, gr, geo, st, ks, h, outp, gs_run)
     type(scf_t),         intent(inout) :: scf
     type(grid_t),        intent(inout) :: gr
+    type(geometry_t),    intent(inout) :: geo
     type(states_t),      intent(inout) :: st
     type(v_ks_t),        intent(inout) :: ks
     type(hamiltonian_t), intent(inout) :: h
@@ -253,7 +255,7 @@ contains
     end if
 
     if(scf%lcao_restricted) then
-      call lcao_init(gr, lcao_data, st, h)
+      call lcao_init(gr, geo, lcao_data, st, h)
       if(.not.lcao_data%state == 1) then
         message(1) = 'Nothing to do'
         call write_fatal(1)
@@ -318,7 +320,7 @@ contains
       evsum_out = states_eigenvalues_sum(st)
 
       ! recalculate total energy
-      call hamiltonian_energy(h, gr, st, 0)
+      call hamiltonian_energy(h, gr, geo, st, 0)
 
       ! compute convergence criteria
       scf%abs_dens = M_ZERO
@@ -424,7 +426,7 @@ contains
     end if
 
     ! calculate forces
-    call epot_forces(gr, h%ep, st)
+    call epot_forces(gr, geo, h%ep, st)
 
     ! calculate momentum of KS states
     write(message(1),'(a)') 'Info: Calculating momentum'
@@ -441,7 +443,7 @@ contains
       call scf_write_static("static", "info")
       call states_output(st, gr, "static", outp)
       if(iand(outp%what, output_geometry).ne.0) &
-           call atom_write_xyz("static", "geometry", gr%geo)
+        call atom_write_xyz("static", "geometry", geo)
       call hamiltonian_output(h, gr%m, gr%sb, "static", outp)
     end if
 
@@ -509,8 +511,6 @@ contains
         call io_mkdir(dir)
         iunit = io_open(trim(dir) // "/" // trim(fname), action='write')
 
-        write(iunit, '(a,a)') 'System name: ', gr%geo%sysname
-
         call grid_write_info(gr, iunit)
 
         if(simul_box_is_periodic(gr%sb)) then
@@ -538,7 +538,7 @@ contains
         write(iunit, '(a)') 'Energy:'
       end if
 
-      call hamiltonian_energy(h, gr, st, iunit, full = .true.)
+      call hamiltonian_energy(h, gr, geo, st, iunit, full = .true.)
 
       if(mpi_grp_is_root(mpi_world)) write(iunit, '(1x)')
       if(st%d%ispin > UNPOLARIZED) then
@@ -553,7 +553,7 @@ contains
       do j = 1, 3
         e_dip(j+1, 1) = sum(e_dip(j+1, :))
       end do
-      call geometry_dipole(gr%geo, n_dip)
+      call geometry_dipole(geo, n_dip)
       n_dip(1:NDIM) = n_dip(1:NDIM) - e_dip(2:NDIM+1, 1)
 
       if(mpi_grp_is_root(mpi_world)) then
@@ -586,9 +586,9 @@ contains
 
         write(iunit,'(3a)') 'Forces on the ions [', trim(units_out%force%abbrev), "]"
         write(iunit,'(a,10x,14x,a,14x,a,14x,a)') ' Ion','x','y','z'
-        do i = 1, gr%geo%natoms
-          write(iunit,'(i4,a10,3f15.6)') i, trim(gr%geo%atom(i)%spec%label), &
-            gr%geo%atom(i)%f(:) / units_out%force%factor
+        do i = 1, geo%natoms
+          write(iunit,'(i4,a10,3f15.6)') i, trim(geo%atom(i)%spec%label), &
+            geo%atom(i)%f(:) / units_out%force%factor
         end do
 
         call io_close(iunit)
@@ -796,8 +796,8 @@ contains
       call push_sub('scf.write_magnetic_moments')
 
       call states_magnetic_moment(m, st, st%rho, mm)
-      ALLOCATE(lmm(3, gr%geo%natoms), 3*gr%geo%natoms)
-      call states_local_magnetic_moments(m, st, gr%geo, st%rho, scf%lmm_r, lmm)
+      ALLOCATE(lmm(3, geo%natoms), 3*geo%natoms)
+      call states_local_magnetic_moments(m, st, geo, st%rho, scf%lmm_r, lmm)
 
       if(mpi_grp_is_root(mpi_world)) then
 
@@ -812,13 +812,13 @@ contains
              trim(units_out%length%abbrev),'] = ', scf%lmm_r/units_out%length%factor, '):'
         if(st%d%ispin == SPIN_POLARIZED) then ! collinear spin
           write(iunit,'(a,6x,14x,a)') ' Ion','mz'
-          do i = 1, gr%geo%natoms
-            write(iunit,'(i4,a10,f15.6)') i, trim(gr%geo%atom(i)%spec%label), lmm(3, i)
+          do i = 1, geo%natoms
+            write(iunit,'(i4,a10,f15.6)') i, trim(geo%atom(i)%spec%label), lmm(3, i)
           end do
         else if(st%d%ispin == SPINORS) then ! non-collinear
           write(iunit,'(a,8x,13x,a,13x,a,13x,a)') ' Ion','mx','my','mz'
-          do i = 1, gr%geo%natoms
-            write(iunit,'(i4,a10,3f15.6)') i, trim(gr%geo%atom(i)%spec%label), lmm(1, i), lmm(2, i), lmm(3, i)
+          do i = 1, geo%natoms
+            write(iunit,'(i4,a10,3f15.6)') i, trim(geo%atom(i)%spec%label), lmm(1, i), lmm(2, i), lmm(3, i)
           end do
         end if
 

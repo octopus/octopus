@@ -32,6 +32,7 @@ module restart_m
   use simul_box_m
   use mesh_m
   use mesh_function_m
+  use geometry_m
   use grid_m
   use output_m
   use mpi_m
@@ -292,10 +293,11 @@ contains
   ! <0 => Fatal error
   ! =0 => read all wave-functions
   ! >0 => could only read x wavefunctions
-  subroutine restart_read(dir, st, gr, ierr, iter, lr)
+  subroutine restart_read(dir, st, gr, geo, ierr, iter, lr)
     character(len=*),  intent(in)  :: dir
     type(states_t), intent(inout)  :: st
     type(grid_t),      intent(in)  :: gr
+    type(geometry_t),  intent(in)  :: geo
     integer,           intent(out) :: ierr
     integer, optional, intent(out) :: iter
     !if this next argument is present, the lr wfs are read instead of the gs wfs
@@ -471,9 +473,10 @@ contains
 
     ! ---------------------------------------------------------
     subroutine interpolation_init
-      call mesh_init_stage_1(old_sb, old_mesh, gr%geo, old_cv, gr%f_der%n_ghost)
-      call mesh_init_stage_2(old_sb, old_mesh, gr%geo, old_cv)
-      call mesh_init_stage_3(old_mesh, gr%geo, old_cv)
+      call mesh_init_stage_1(old_sb, old_mesh, geo, old_cv, gr%f_der%n_ghost)
+      call mesh_init_stage_2(old_sb, old_mesh, geo, old_cv)
+      call mesh_init_stage_3(old_mesh, geo, old_cv)
+
       if (st%d%wfs_type == M_REAL) then
         ALLOCATE(dphi(old_mesh%np_global), old_mesh%np_global)
       else

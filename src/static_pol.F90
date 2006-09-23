@@ -68,7 +68,7 @@ contains
     call init_()
 
     ! load wave-functions
-    call restart_read(trim(tmpdir)//'restart_gs', sys%st, gr, ierr)
+    call restart_read(trim(tmpdir)//'restart_gs', sys%st, gr, sys%geo, ierr)
     if(ierr.ne.0) then
       message(1) = "Could not read KS orbitals from '"//trim(tmpdir)//"restart_gs'"
       message(2) = "Please run a ground-state calculation first!"
@@ -117,7 +117,8 @@ contains
 
     call output_init_()
 
-    call scf_init(gr, scfv, st, h)
+!!$    call scf_init(gr, scfv, st, h)
+    call scf_init(gr, sys%geo, scfv, st, h)
     do i = i_start, NDIM
       do k = 1, 2
         write(message(1), '(a)')
@@ -126,7 +127,8 @@ contains
 
         h%ep%vpsl(1:NP) = vpsl_save(1:NP) + (-1)**k*gr%m%x(1:NP, i)*e_field
 
-        call scf_run(scfv, sys%gr, st, sys%ks, h, sys%outp, gs_run=.false.)
+!!$        call scf_run(scfv, sys%gr, st, sys%ks, h, sys%outp, gs_run=.false.)
+        call scf_run(scfv, sys%gr, sys%geo, st, sys%ks, h, sys%outp, gs_run=.false.)
 
         trrho = M_ZERO
         do is = 1, st%d%spin_channels

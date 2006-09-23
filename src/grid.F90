@@ -48,7 +48,6 @@ module grid_m
 
   type grid_t
     type(simul_box_t)           :: sb
-    type(geometry_t)            :: geo
     type(mesh_t)                :: m
     type(f_der_t)               :: f_der
     type(curvlinear_t)          :: cv
@@ -59,8 +58,9 @@ module grid_m
 contains
 
   !-------------------------------------------------------------------
-  subroutine grid_init_stage_1(gr)
+  subroutine grid_init_stage_1(gr, geo)
     type(grid_t),      intent(inout) :: gr
+    type(geometry_t),  intent(in)    :: geo
 
     call push_sub('grid.grid_init_stage_1')
 
@@ -71,23 +71,24 @@ contains
     call f_der_init(gr%f_der, gr%sb, gr%cv%method.ne.CURV_METHOD_UNIFORM)
 
     ! now we generate create the mesh and the derivatives
-    call mesh_init_stage_1(gr%sb, gr%m, gr%geo, gr%cv, gr%f_der%n_ghost)
-    call mesh_init_stage_2(gr%sb, gr%m, gr%geo, gr%cv)
+    call mesh_init_stage_1(gr%sb, gr%m, geo, gr%cv, gr%f_der%n_ghost)
+    call mesh_init_stage_2(gr%sb, gr%m, geo, gr%cv)
 
     call pop_sub()
   end subroutine grid_init_stage_1
 
 
   !-------------------------------------------------------------------
-  subroutine grid_init_stage_2(gr, mc)
+  subroutine grid_init_stage_2(gr, mc, geo)
     type(grid_t),      intent(inout) :: gr
     type(multicomm_t), intent(in)    :: mc
+    type(geometry_t),  intent(inout) :: geo
 
     logical :: filter
  
     call push_sub('grid.grid_init_stage_2')
 
-    call mesh_init_stage_3(gr%m, gr%geo, gr%cv,  &
+    call mesh_init_stage_3(gr%m, geo, gr%cv,  &
       gr%f_der%der_discr%lapl%stencil,        &
       gr%f_der%der_discr%lapl%n, mc)
 
@@ -95,10 +96,10 @@ contains
 
     ! do we want to filter out the external potentials, or not.
     call loct_parse_logical(check_inp('FilterPotentials'), .false., filter)
-    if(filter) call geometry_filter(gr%geo, mesh_gcutoff(gr%m))
+    if(filter) call geometry_filter(geo, mesh_gcutoff(gr%m))
 
     ! Now that we are really done with initializing the geometry, print debugging information.
-    if(in_debug_mode) call geometry_debug(gr%geo, 'debug')
+    if(in_debug_mode) call geometry_debug(geo, 'debug')
 
     ! multigrids are not initialized by default
     nullify(gr%mgrid)
@@ -123,8 +124,6 @@ contains
       call multigrid_end(gr%mgrid)
       deallocate(gr%mgrid); nullify(gr%mgrid)
     end if
-
-    call geometry_end(gr%geo)
 
     call pop_sub()
   end subroutine grid_end
@@ -152,11 +151,12 @@ contains
 
 
   !-------------------------------------------------------------------
-  subroutine grid_create_multigrid(gr)
+  subroutine grid_create_multigrid(gr, geo)
     type(grid_t), intent(inout) :: gr
+    type(geometry_t), intent(in) :: geo
 
     ALLOCATE(gr%mgrid, 1)
-    call multigrid_init(gr%geo, gr%cv, gr%m, gr%f_der, gr%mgrid)
+    call multigrid_init(geo, gr%cv, gr%m, gr%f_der, gr%mgrid)
 
   end subroutine grid_create_multigrid
 

@@ -29,8 +29,9 @@
 ! WARNING: This subroutine only works if ions are not
 !          allowed to move
 ! ---------------------------------------------------------
-subroutine td_calc_tacc(gr, st, h, acc, t)
+subroutine td_calc_tacc(gr, geo, st, h, acc, t)
   type(grid_t),        intent(inout) :: gr
+  type(geometry_t),    intent(in)    :: geo
   type(states_t),      intent(inout) :: st
   type(hamiltonian_t), intent(inout) :: h
   FLOAT,               intent(in)    :: t
@@ -50,9 +51,9 @@ subroutine td_calc_tacc(gr, st, h, acc, t)
   ! force exerted by the electrons on the ions. COMMENT: This has to be thought about.
   ! Maybe we are forgetting something....
   x = M_ZERO
-  call epot_forces(gr, h%ep, st)
-  do i = 1, gr%geo%natoms
-    x = x - gr%geo%atom(i)%f
+  call epot_forces(gr, geo, h%ep, st)
+  do i = 1, geo%natoms
+    x = x - geo%atom(i)%f
   end do
   acc = x
 

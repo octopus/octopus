@@ -153,7 +153,7 @@ contains
       do dir = 1, ndim
         do sigma = 1, nsigma
           write(dirname,'(a,i1,a,i1)') RESTART_DIR, dir, "_", sigma
-          call restart_read(trim(tmpdir)//dirname, sys%st, sys%gr, ierr, lr=lr(dir, sigma))
+          call restart_read(trim(tmpdir)//dirname, sys%st, sys%gr, sys%geo, ierr, lr=lr(dir, sigma))
           if(ierr.ne.0) then
             message(1) = "Could not load response wave-functions from '"//trim(tmpdir)//dirname
             call write_warning(1)
@@ -453,7 +453,7 @@ contains
         call states_allocate_wfns(sys%st, gr%m, M_REAL)
       end if
 
-      call restart_read(trim(tmpdir)//'restart_gs', sys%st, sys%gr, ierr)  
+      call restart_read(trim(tmpdir)//'restart_gs', sys%st, sys%gr, sys%geo, ierr)  
       if(ierr.ne.0) then
         message(1) = "Could not read KS orbitals from '"//trim(tmpdir)//"restart_gs'"
         message(2) = "Please run a calculation of the ground state first!"

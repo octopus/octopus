@@ -141,8 +141,8 @@ contains
       call get_parallel_mask()
 
       call system_init(sys, parallel_mask)
-      call hamiltonian_init(h, sys%gr, sys%st%d, sys%ks%ip_app)
-      call epot_generate(h%ep, sys%gr, sys%st, h%reltype)
+      call hamiltonian_init(h, sys%gr, sys%geo, sys%st%d, sys%ks%ip_app)
+      call epot_generate(h%ep, sys%gr, sys%geo, sys%st, h%reltype)
 
       call restart_init()
     end if
@@ -169,7 +169,7 @@ contains
   ! ---------------------------------------------------------
   subroutine run_end()
     if(calc_mode .ne. M_PULPO_A_FEIRA) then
-       call hamiltonian_end(h, sys%gr)
+       call hamiltonian_end(h, sys%gr, sys%geo)
        call system_end(sys)
     end if
 

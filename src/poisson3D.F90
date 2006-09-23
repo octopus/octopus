@@ -19,8 +19,9 @@
 !! $Id$
 
 ! ---------------------------------------------------------
-subroutine poisson3D_init(gr)
+subroutine poisson3D_init(gr, geo)
   type(grid_t), intent(inout) :: gr
+  type(geometry_t), intent(in) :: geo
 
   call push_sub('poisson3D.poisson3D_init')
 
@@ -61,7 +62,7 @@ subroutine poisson3D_init(gr)
 
      call poisson_multigrid_init(gr%m, maxl, threshold)
 
-     call grid_create_multigrid(gr)
+     call grid_create_multigrid(gr, geo)
   end select
 
 #ifdef HAVE_FFT

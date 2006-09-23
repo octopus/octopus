@@ -67,7 +67,7 @@ contains
     occupied_states = sys%st%nst
     call init_(sys%gr%m, sys%st)
 
-    call restart_read (trim(tmpdir)//'restart_gs', sys%st, sys%gr, ierr)
+    call restart_read (trim(tmpdir)//'restart_gs', sys%st, sys%gr, sys%geo, ierr)
     if( (ierr .ne. 0)  .and.  (ierr < occupied_states) ) then
       message(1) = "Not all the occupied KS orbitals could be read from '"//trim(tmpdir)//"restart_gs'"
       message(2) = "Please run a ground-state calculation first!"
@@ -89,12 +89,12 @@ contains
 
     call states_calc_dens(sys%st, sys%gr%m%np, sys%st%rho)
     call v_ks_calc(sys%gr, sys%ks, h, sys%st, calc_eigenval=.true.) ! get potentials
-    call hamiltonian_energy(h, sys%gr, sys%st, -1)             ! total energy
+    call hamiltonian_energy(h, sys%gr, sys%geo, sys%st, -1)             ! total energy
 
     ! The initial LCAO calculation is done by default if we have pseudopotentials.
     ! Otherwise, it is not the default value and has to be enforced in the input file.
     lcao_start_default = LCAO_START_FULL
-    if(sys%gr%geo%only_user_def) lcao_start_default = LCAO_START_NONE
+    if(sys%geo%only_user_def) lcao_start_default = LCAO_START_NONE
 
     call loct_parse_int(check_inp('LCAOStart'), lcao_start_default, lcao_start)
     if(.not.varinfo_valid_option('LCAOStart', lcao_start)) call input_error('LCAOStart')
@@ -104,7 +104,7 @@ contains
         message(1) = "Info:  I will perform a LCAO calculation to get reasonable starting points."
         call write_info(1)
         lcao_data%state = 0
-        call lcao_init(sys%gr, lcao_data, sys%st, h)
+        call lcao_init(sys%gr, sys%geo, lcao_data, sys%st, h)
         if(lcao_data%state .eq. 1) then
           call lcao_wf(lcao_data, sys%st, sys%gr%m, h, start = ierr+1)
           call lcao_end(lcao_data, sys%st%nst)

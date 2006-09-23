@@ -75,8 +75,6 @@ module geometry_m
   end type atom_classical_t
 
   type geometry_t
-    character(len=20) :: sysname    ! the name of the system we are running
-
     integer :: natoms
     type(atom_t), pointer :: atom(:)
 
@@ -92,7 +90,6 @@ module geometry_m
 
     logical :: nlpp                 ! is any species having non-local pp
     logical :: nlcc                 ! is any species having non-local core corrections?
-
   end type geometry_t
 
 contains
@@ -121,16 +118,6 @@ contains
     type(xyz_file_info) :: xyz
 
     call push_sub('geometry.geometry_init_xyz')
-
-    !%Variable SystemName
-    !%Type string
-    !%Default "system"
-    !%Section System
-    !%Description
-    !% A string that identifies the current run. This parameter is seldomly used, but
-    !% it is sometimes useful to have in the input file.
-    !%End
-    call loct_parse_string(check_inp('SystemName'), 'system', geo%sysname)
 
     ! load positions of the atoms
     call xyz_file_init(xyz)
