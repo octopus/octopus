@@ -1,0 +1,24 @@
+This very simple library tries to do what many think impossible: to
+allow the passage of strings between Fortran and C and viceversa. Almost
+all Fortran compilers pass strings by including hidden parameters that
+contain the length of the string. The exception is the CRAY compiler,
+where a string is a structure, and there is a series of functions that
+allow to handle it.
+
+An example of the use is
+
+>>>>>>>>>>>>>>>>>>
+void FC_FUNC_(xc_info_family, XC_INFO_FAMILY)
+     (void **info, STR_F_TYPE s STR_ARG1)
+{
+  TO_F_STR1(((func_type *)(*info))->family, s);
+}
+<<<<<<<<<<<<<<<<<<
+
+STR_F_TYPE: defines the (compiler dependent) type of the string
+STR_ARG1  : used to add the hidden arguments that some compilers use
+TO_F_STR1 : converts a C string to a Fortran string
+TO_C_STR1 : converts a Fortran string in a Fortran string
+
+The number (in this case 1) refers to the number of strings present in
+the argument list.

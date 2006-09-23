@@ -222,6 +222,10 @@ if test x"$enable_mpi" != x"no"; then
   ACX_MPI([], AC_MSG_WARN([could not compile an mpi test program]))
 fi
 
+dnl now I run configure for the internal libraries
+AC_CONFIG_SUBDIRS([libstring_f])
+CPPFLAGS="$CPPFLAGS -I../libstring_f"
+
 # This is certainly wrong, but I don't know
 # how to do it right
 LINK="$FC $FCFLAGS $LDFLAGS -o \$@"
@@ -230,14 +234,33 @@ AC_SUBST(FCEXTRALIBS)
 AC_SUBST(FCDEBUGFLAGS)
 
 AC_CONFIG_FILES([Makefile 
-  external_libs/Makefile external_libs/expokit/Makefile external_libs/metis-4.0/Makefile  external_libs/qshep/Makefile
-	liboct_parser/Makefile liboct/Makefile libxc/Makefile src/Makefile doc/Makefile
-	doc/pdf/Makefile doc/html/Makefile share/Makefile share/PP/Makefile share/PP/TM2/Makefile share/PP/HGH/Makefile
-	share/recipes/Makefile share/recipes/en/Makefile share/recipes/es/Makefile 
-	share/recipes/it/Makefile share/util/Makefile share/samples/Makefile
-	build/octopus.spec testsuite/Makefile testsuite/finite_systems_1d/Makefile 
-	testsuite/finite_systems_2d/Makefile testsuite/finite_systems_3d/Makefile 
-	testsuite/periodic_systems_1d/Makefile
+  external_libs/Makefile
+  external_libs/expokit/Makefile
+  external_libs/metis-4.0/Makefile
+  external_libs/qshep/Makefile
+  liboct_parser/Makefile
+  liboct/Makefile
+  libxc/Makefile
+  src/Makefile
+  doc/Makefile
+  doc/pdf/Makefile
+  doc/html/Makefile
+  share/Makefile
+  share/PP/Makefile
+  share/PP/TM2/Makefile
+  share/PP/HGH/Makefile
+  share/recipes/Makefile
+  share/recipes/en/Makefile
+  share/recipes/es/Makefile 
+  share/recipes/it/Makefile
+  share/util/Makefile
+  share/samples/Makefile
+  build/octopus.spec
+  testsuite/Makefile
+  testsuite/finite_systems_1d/Makefile 
+  testsuite/finite_systems_2d/Makefile testsuite/finite_systems_3d/Makefile 
+  testsuite/periodic_systems_1d/Makefile
 ])
 
 AC_OUTPUT
+

@@ -52,8 +52,12 @@ noinst_HEADERS = \
 	linear_response_inc.F90 linear_response_out.F90 linear_response_solvers.F90\
 	em_resp_inc.F90 unocc_inc.F90 casida_inc.F90
 
-core_LIBS = @LIBS_LAPACK@ @LIBS_BLAS@ ../liboct/liboct.a ../liboct_parser/liboct_parser.a \
-  ../libxc/libxc.a @GSL_LIBS@ @GD_LIBS@ @FCEXTRALIBS@
+core_LIBS = @LIBS_LAPACK@ @LIBS_BLAS@ \
+  ../liboct/liboct.a \
+  ../liboct_parser/liboct_parser.a \
+  ../libxc/libxc.a \
+  -L../libstring_f -lstring_f \
+  @GSL_LIBS@ @GD_LIBS@ @FCEXTRALIBS@
 
 external_LIBS = ../external_libs/expokit/libexpokit.a \
   ../external_libs/qshep/libqshep.a

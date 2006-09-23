@@ -26,8 +26,8 @@ if ENABLE_PYTHON
 endif
 
 SUBDIRS =        \
-	external_libs liboct_parser liboct libxc src doc \
-	share testsuite $(PYTHON_DIR)
+	external_libs libstring_f liboct_parser liboct libxc \
+	src doc share testsuite $(PYTHON_DIR)
 
 EXTRA_DIST =     \
 	TODO build/*.pl build/*.in debian/*
