@@ -45,24 +45,21 @@ function run_testsuite() {
 
 [ "$local_run" == "yes" ] && testsuite=$(pwd)
 
-for x in $octopus_exe; do
-    for y in $(find $testsuite -name "*.test" | xargs grep $match | awk -F: '{print $1}' | sort -u); do
+for y in $(find $testsuite -name "*.test" | xargs grep $match | awk -F: '{print $1}' | sort -u); do
 	ybase=`basename $y`
-	xybase=${x}${exec_suffix}-${ybase%.test}
+	xybase=${ybase%.test}
 	if [ "$local_run" == "yes" ]; then
-	    octopus_local=`pwd`/../src/$x
-	    [ -x $octopus_local ] && CMD ./oct-run_regression_test.pl -l -p -e $octopus_local -f $y | tee ${xybase}.log
+	    octopus_local=`pwd`/../src
+	    [ -d $octopus_local ] && CMD ./oct-run_regression_test.pl -l -p -D $octopus_local -f $y | tee ${xybase}.log
 	else
-	    if [ -x $prefix/bin/${x}${exec_suffix} ]; then
-              if [ -z "${exec_suffix}" ]; then
-		CMD $prefix/bin/oct-run_regression_test.pl -l -p -e $prefix/bin/$x -f $y | tee ${xybase}.log
-              else
-                CMD $prefix/bin/oct-run_regression_test.pl -l -p -e $prefix/bin/$x -s ${exec_suffix} -f $y | tee ${xybase}.log
-              fi
+            if [ -z "${exec_suffix}" ]; then
+         	CMD $prefix/bin/oct-run_regression_test.pl -l -p -D $prefix/bin -f $y | tee ${xybase}.log
+            else
+                CMD $prefix/bin/oct-run_regression_test.pl -l -p -D $prefix/bin -s ${exec_suffix} -f $y | tee ${xybase}.log
             fi
+
 	fi
 	[ -e out.log ] && mv out.log ${xybase}.out.log
-    done
 done
 
 }
@@ -73,10 +70,9 @@ function mail_report() {
 
 datestamp=$(date +"%Y-%m-%d")
 
-for x in $octopus_exe; do
-    for y in $(find $testsuite -name "*.test" | xargs grep $match | awk -F: '{print $1}' | sort -u); do
+for y in $(find $testsuite -name "*.test" | xargs grep $match | awk -F: '{print $1}' | sort -u); do
 	ybase=`basename $y`
-	xybase=${x}${exec_suffix}-${ybase%.test}
+	xybase=${ybase%.test}
 	failed_tests=$(grep FAIL ${xybase}.log | wc -l) 
 	echo "Checking for failed tests: ${xybase}.log"
 	if [ $failed_tests -gt 0 ]; then
@@ -84,7 +80,6 @@ for x in $octopus_exe; do
 	    echo "Mailing report to: $mailaddr"
             cat oct-header ${xybase}.log ${xybase}.out.log | mutt -s "[oct-run_testsuite on $arch] daily report - $datestamp" $mailaddr
 	fi
-    done
 done
 
 }
@@ -115,14 +110,6 @@ shift $[ OPTIND - 1 ]
 
 # for now the long-run matches everything
 [ "${match}" == "long-run" ] && match=.
-
-# Define octopus executables
-# should we run in serial and in parallel?
-if [ "${run_in_parallel}" == "no" ]; then
-    octopus_exe="octopus"
-else
-    octopus_exe="octopus octopus_mpi"
-fi
     
 # get epoch seconds at testsuite start
 testsuite_start=$(date +%s) 

@@ -17,8 +17,8 @@ Usage: oct-run_regression_test.pl [options]
     -n        dry-run
     -v        verbose
     -h        this usage
-    -e        name of octopus executable
-    -s        exec suffix for octopus executable
+    -D        name of the directory where to look for the executables   
+    -s        exec suffix for the executables
     -c        create template
     -f        filename of testsuite
     -d        working directory for the tests
@@ -73,39 +73,37 @@ EndOfTemplate
 
 if (not @ARGV) { usage; }
 
-getopts("nlvhe:c:f:d:s:ipm");
+getopts("nlvhD:c:f:d:s:ipm");
 
 # Default values
 use File::Temp qw/tempdir/;
-$workdir = tempdir('/tmp/octopus.XXXXXX');
-chomp($workdir);
 
 # Handle options
 $opt_h && usage;
 $opt_c && create_template;
-if($opt_d)  { $workdir = $opt_d; }
+####NEW This has to be handled in a differenty way.
+#if($opt_d)  { $workdir = $opt_d; }
+####
 
-if($opt_e)  { $octopus_exe = $opt_e; }
-else{
-  $octopus_exe =        "octopus";
-  $octopus_exe = "../src/octopus"             if( -x "../src/octopus");
-  $octopus_exe = "../src/octopus_mpi"         if( -x "../src/octopus_mpi");
+my $exec_directory;
+if($opt_D) {
+ $exec_directory = $opt_D;
+ if($exec_directory !~ /^\//){
+  $exec_directory = $ENV{PWD}."/$exec_directory";
+ }
+} else {
+ $exec_directory = "/usr/bin";
 }
-if($octopus_exe !~ /^\//){
-  $octopus_exe = $ENV{PWD}."/$octopus_exe";
-}
 
-die "could not find executable: $octopus_exe \n" if (`which $octopus_exe` eq "");
-
-
-chomp($octopus_exe);
+# Find out which executables are available.
+opendir(EXEC_DIRECTORY, $exec_directory) || 
+ die "Could not open the directory $exec_directory to look for executables";
+@octopus_execs = grep { /^oct/ } readdir(EXEC_DIRECTORY);
+closedir(EXEC_DIRECTORY);
 
 # determine exec suffix
 $exec_suffix = "";
 if($opt_s)  { $exec_suffix = $opt_s; } 
-
-$octopus_base = basename($octopus_exe);
-chomp($octopus_base);
 
 # MPI stuff
 $mpirun = $ENV{MPIRUN};
@@ -114,67 +112,89 @@ chomp($mpirun);
 # default number of processors for MPI runs is 2
 $np = 2;
 
-if (!$opt_m) {
-  system ("rm -rf $workdir");
-  mkdir $workdir;
-}
-
-# create script for cleanups in the current workdir
-$mscript = "$workdir/clean.sh";
-open(SCRIPT, ">$mscript") or die "could not create script file\n";
-print SCRIPT "#\!/bin/bash\n\n";
-print SCRIPT "rm -rf tmp static status *_tmp *_static out.oct out ds* td.* \n";
-close(SCRIPT);
-chmod 0755, $mscript;
-
-# testsuite
+# Figure out which are the executables to test
 open(TESTSUITE, "<".$opt_f ) or die "cannot open testsuite file\n";
-
+my @executables;
 while ($_ = <TESTSUITE>) {
-
- # skip comments
- next if /^#/;
 
  if ( $_ =~ /^Test\s*:\s*(.*)\s*$/) {
   $test{"name"} = $1;
-  if(!$opt_i) {
-    print "\033[34m ***** $test{\"name\"} ***** \033[0m \n\n";
-    print "Using workdir    : $workdir \n";
-    print "Using executable : $octopus_exe$exec_suffix \n";
-    print "Using test file  : $opt_f \n";
-  }
  }
-
 
  if ( $_ =~ /^Programs\s*:\s*(.*)\s*$/) {
-  $valid=1;
+  $i = 0;
   foreach my $program (split(/;/,$1)) {
-    $program =~ s/^\s*//;
-    $program =~ s/\s*$//;
-    $valid = $program cmp $octopus_base;
-    last if ( ! $valid );
-    $program = "${program}_debug";
-    $valid = $program cmp $octopus_base;
-    last if ( ! $valid );
-  }
-  if ( $valid ) {
-    print "\n$opt_f \033[31mnot valid\033[0m for executable: $octopus_exe\n";
-    print "Skipping ... \n\n";
-    exit 1;
-  }
+   $program =  "$program$exec_suffix";
+   $program =~ s/^\s+//;
+   foreach my $x (@octopus_execs) {
+    $valid = $program cmp $x;
+    if(!$valid) {
+     $executables[$i] = "$exec_directory/$x";
+     $i = $i+1;
+    };
+   }
+  } 
  }
+}
+close(TESTSUITE);
 
- if ( $_ =~ /^Enabled\s*:\s*(.*)\s*$/) {
-  %test = ();
-  $enabled = $1;
-  $enabled =~ s/^\s*//;
-  $enabled =~ s/\s*$//;
-  $test{"enabled"} = $enabled;
- }
+# Die if not suitable executable was found.
+if( @executables == 0 ){
+ print "\033[34m ***** $test{\"name\"} ***** \033[0m \n\n";
+ print "\033[31mNo valid executable\033[0m found for $opt_f\n";
+ print "Skipping ... \n\n";
+ exit 1;
+}
+
+# Loop over all the executables.
+foreach my $octopus_exe (@executables){
+
+ $workdir = tempdir('/tmp/octopus.XXXXXX');
+ chomp($workdir);
+
+ if (!$opt_m) {
+  system ("rm -rf $workdir");
+  mkdir $workdir;
+ }   
 
 
- # Running this regression test if it is enabled
- if ( $enabled eq "Yes" ) {
+ # create script for cleanups in the current workdir
+ $mscript = "$workdir/clean.sh";
+ open(SCRIPT, ">$mscript") or die "could not create script file\n";
+ print SCRIPT "#\!/bin/bash\n\n";
+ print SCRIPT "rm -rf tmp static status *_tmp *_static out.oct out ds* td.* \n";
+ close(SCRIPT);
+ chmod 0755, $mscript;
+
+ # testsuite
+ open(TESTSUITE, "<".$opt_f ) or die "cannot open testsuite file\n";
+
+ while ($_ = <TESTSUITE>) {
+
+  # skip comments
+  next if /^#/;
+
+  if ( $_ =~ /^Test\s*:\s*(.*)\s*$/) {
+   $test{"name"} = $1;
+   if(!$opt_i) {
+    print "\033[34m ***** $test{\"name\"} ***** \033[0m \n\n";
+    print "Using workdir    : $workdir \n";
+    print "Using executable : $octopus_exe\n";
+    print "Using test file  : $opt_f \n";
+   }
+  }
+
+  if ( $_ =~ /^Enabled\s*:\s*(.*)\s*$/) {
+   %test = ();
+   $enabled = $1;
+   $enabled =~ s/^\s*//;
+   $enabled =~ s/\s*$//;
+   $test{"enabled"} = $enabled;
+  }
+
+
+  # Running this regression test if it is enabled
+  if ( $enabled eq "Yes" ) {
 
    if ( $_ =~ /^Processors\s*:\s*(.*)\s*$/) {
      $np = $1;
@@ -194,12 +214,7 @@ while ($_ = <TESTSUITE>) {
        if ( !$opt_n ) {
 	 print "\nStarting test run ...\n";
 
-	 # if given, first append exec suffix
-	 if($opt_s) {
-           $octopus_exe_suffix = $octopus_exe . $exec_suffix;
-         } else {
-           $octopus_exe_suffix = $octopus_exe
-         }
+         $octopus_exe_suffix = $octopus_exe;
 
 	 # serial or MPI run?
 	 if ( $octopus_exe_suffix =~ /mpi$/) {
@@ -274,11 +289,17 @@ while ($_ = <TESTSUITE>) {
      }
    }
 
- } else {
+  } else {
    if ( $_ =~ /^RUN/) { print " skipping test\n"; }
+  }
  }
+
+ if ($opt_l)  { system ("cat $workdir/out >> out.log"); }
+ if (!$opt_p && !$opt_m && $test_succeded) { system ("rm -rf $workdir"); }
+
+ close(TESTSUITE)
+
 }
 
+
 if (!$opt_i) { print "\n\n\n"; }
-if ($opt_l)  { system ("cp $workdir/out out.log"); }
-if (!$opt_p && !$opt_m && $test_succeded) { system ("rm -rf $workdir"); }
