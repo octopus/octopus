@@ -344,11 +344,8 @@ contains
     type(mesh_t),   intent(in) :: m
     FLOAT,          intent(out) :: rho(:)
 
-    FLOAT :: d, dmin
+    FLOAT :: dmin
     integer :: i, imin, rankmin
-#if defined(HAVE_MPI)
-    FLOAT :: min_loc_in(2), min_loc_out(2)
-#endif
 
     call push_sub('specie_grid.specie_get_density')
 
@@ -356,33 +353,7 @@ contains
 
     case(SPEC_ALL_E)
 
-      dmin=M_ZERO
-
-      !find the point of the grid that is closer to the atom
-      do i=1,m%np
-        d = sum( ( pos(1:MAX_DIM)-m%x(i,1:MAX_DIM) )**2 )
-
-        if ( ( d < dmin ) .or. ( i == 1 ) ) then 
-          imin = i
-          dmin = d 
-
-        end if
-
-      end do
-
-      rankmin = 0
-#if defined(HAVE_MPI)
-      if(m%parallel_in_domains) then
-        min_loc_in(1) = dmin
-        min_loc_in(2) = m%np_global * m%mpi_grp%rank  + real(imin, PRECISION) 
-        call mpi_allreduce(min_loc_in, min_loc_out, 1, MPI_2DOUBLE_PRECISION, &
-          MPI_MINLOC, m%mpi_grp%comm, mpi_err)
-        dmin = min_loc_out(1)
-        imin = mod(nint(min_loc_out(2)), m%np_global)
-        rankmin = nint(min_loc_out(2))/m%np_global
-      end if
-#endif
-
+      imin = mesh_nearest_point(m, pos, dmin, rankmin)
       if(m%mpi_grp%rank .eq. rankmin) then
 
         if (dmin > CNST(1e-5)) then 

@@ -52,6 +52,7 @@ module mesh_m
     mesh_r,            &
     mesh_gcutoff,      &
     mesh_write_info,   &
+    mesh_nearest_point,&
     translate_point,   &
     translate_by_asympt_ucell, &
     scatt_box_index
@@ -254,6 +255,55 @@ contains
      end select
 
    end subroutine mesh_inborder
+
+
+   !/*---------------------------------------------------------------------
+   ! Returns the index of the point which is nearest to a given vector
+   ! position pos. Variable dmin will hold, on exit, the distance between
+   ! pos and this nearest mesh point. rankmin will be zero, if the mesh is
+   ! not partitioned, and the rank of the processor which holds the point
+   ! ind if the mesh is partitioned.
+   ! ----------------------------------------------------------------------*/
+   integer function mesh_nearest_point(mesh, pos, dmin, rankmin) result(ind)
+     type(mesh_t), intent(in)  :: mesh
+     FLOAT,        intent(in)  :: pos(MAX_DIM)
+     FLOAT,        intent(out) :: dmin
+     integer,      intent(out) :: rankmin
+
+     FLOAT :: d
+     integer :: imin, i
+#if defined(HAVE_MPI)
+     FLOAT :: min_loc_in(2), min_loc_out(2)
+#endif
+
+     call push_sub('mesh.mesh_nearest_point')
+
+     !find the point of the grid that is closer to the atom
+     dmin = M_ZERO
+     do i=1,mesh%np
+       d = sum( ( pos(1:MAX_DIM)-mesh%x(i,1:MAX_DIM) )**2 )
+       if ( ( d < dmin ) .or. ( i == 1 ) ) then 
+         imin = i
+         dmin = d 
+       end if
+     end do
+
+     rankmin = 0
+#if defined(HAVE_MPI)
+     if(mesh%parallel_in_domains) then
+       min_loc_in(1) = dmin
+       min_loc_in(2) = mesh%np_global * mesh%mpi_grp%rank  + real(imin, PRECISION) 
+       call mpi_allreduce(min_loc_in, min_loc_out, 1, MPI_2DOUBLE_PRECISION, &
+         MPI_MINLOC, mesh%mpi_grp%comm, mpi_err)
+       dmin = min_loc_out(1)
+       imin = mod(nint(min_loc_out(2)), mesh%np_global)
+       rankmin = nint(min_loc_out(2))/mesh%np_global
+     end if
+#endif
+
+     ind = imin
+     call pop_sub()
+   end function mesh_nearest_point
 
 
    !--------------------------------------------------------------
