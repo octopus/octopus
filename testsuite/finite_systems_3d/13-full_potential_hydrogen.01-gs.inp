@@ -1,9 +1,9 @@
 # -*- coding: utf-8 mode: shell-script -*-
-# $Id:$
+# $Id$
 
 SystemName = "Full potential hydrogen"
 %Coordinates
- 'H_f' | 0 | 0 | 0
+ 'H_f' | 0.1875 | 0 | 0
 %
 %Species 
  'H_f' | 1.00794 | spec_all_e | 1
@@ -12,3 +12,9 @@ LCAOStart = no
 Radius = 8.0
 Spacing = 0.4
 fromScratch = yes
+
+NonInteractingElectrons = yes
+
+TypeOfMixing = linear
+Mixing = 1.0
+EigenSolverMaxIter = 300
