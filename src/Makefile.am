@@ -3,7 +3,7 @@
 EXTRA_PROGRAMS = oct-cross-section oct-rsf oct-harmonic-spectrum \
                  oct-broad oct-ph oct-xyz-anim oct-center-geom
 
-bin_PROGRAMS = octopus @UTILITY_PROGRAMS@
+bin_PROGRAMS = octopus oct-test @UTILITY_PROGRAMS@
 
 basic_SRCS = liboct.F90 string.F90 varinfo.F90 mpi.F90 global.F90 liboct_parser.F90 \
 	     messages.F90 datasets.F90 io.F90 units.F90 mpi_debug.F90 profiling.F90 \
@@ -91,6 +91,9 @@ oct_ph_LDADD =  $(core_LIBS) $(external_LIBS)
 oct_center_geom_SOURCES = $(core_SRCS) xyz_adjust.F90 centergeom.F90
 oct_center_geom_LDADD = $(octopus_LDADD)
 
+oct_test_SOURCES = $(core_SRCS) lasers.F90 epot.F90 h.F90 linear_response.F90 restart.F90 xc_OEP.F90 v_ks.F90 \
+	systm.F90 test.F90
+oct_test_LDADD = $(octopus_LDADD)
 
 # ctags
 CTAGS=ctags-exuberant -e
@@ -238,6 +241,7 @@ td_exp_split.o: global.h
 td.o: global.h td_init.F90
 td_rti.o: global.h
 td_write.o: td_calc.F90
+test.o: global.h
 tm.o: global.h
 units.o: global.h
 unocc.o: global.h unocc_inc.F90

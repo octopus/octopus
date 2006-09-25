@@ -1,0 +1,15 @@
+# -*- coding: utf-8 mode: shell-script -*-
+# $Id: oct-run_regression_test.pl 2423 2006-09-24 21:25:52Z acastro $
+
+Test     : Hartree
+Author   : Alberto
+Date     : 25.09.06
+Arch     : Linux g38 2.6.14-desktop-10 #1 SMP PREEMPT Sat Jul 15 18:57:27 CEST 2006 i686 GNU/Linux
+Release  : 2.2.0pre1
+Programs : oct-test
+Runtime  : short-run
+Enabled  : Yes
+
+Input: 15-hartree.01-rectangular.inp
+Match ; Dumb test ; grep '^Hartree test' hartree_results ; \s*0.0000
+

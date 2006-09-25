@@ -41,14 +41,16 @@ sub create_template {
   $author = `whoami`;
   chomp($author);
   $author =~ s/^(\w)(.*)/\u$1$2/;
-  $cvs_id = qw($Id$);
+#  $cvs_id = qw($Id$);
+  $cvs_id = "\$Id: oct-run_regression_test.pl 2423 2006-09-24 21:25:52Z acastro \$";
 
   open(TEMPLATE, ">".$opt_c );
 
   print TEMPLATE <<EndOfTemplate;
+# -*- coding: utf-8 mode: shell-script -*-
 # $cvs_id
 
-Test     :
+Test     : $opt_c
 Author   : $author
 Date     : $date
 Arch     : $arch

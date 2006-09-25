@@ -27,6 +27,7 @@ module poisson_m
   use profiling_m
   use lib_oct_parser_m
   use lib_oct_m
+  use io_m
   use units_m
   use datasets_m
   use geometry_m
@@ -54,7 +55,8 @@ module poisson_m
     poisson_init,       &
     dpoisson_solve,     &
     zpoisson_solve,     &
-    poisson_end
+    poisson_end,        &
+    poisson_test
 
   integer, parameter :: &
     CG            =  5, &
@@ -396,74 +398,76 @@ contains
   end subroutine poisson_fft
 #endif
 
-!!$  !-----------------------------------------------------------------
-!!$  ! This routine checks the Hartree solver selected in the input
-!!$  ! file by calculating numerically and analytically the Hartree
-!!$  ! potential originated by a Gaussian distribution of charge.
-!!$  ! This only makes sense for finite systems.
-!!$  subroutine poisson_test(gr)
-!!$    type(grid_t), intent(inout) :: gr
-!!$
-!!$    FLOAT, allocatable :: rho(:), vh(:), vh_exact(:)
-!!$    FLOAT :: alpha, beta, r
-!!$    integer :: i, ierr
-!!$
-!!$    call push_sub('poisson.poisson_test')
-!!$
-!!$    if(calc_dim.eq.1) then
-!!$      write(message(1),'(a)') 'The Hartree integrator test is not implemented for the one dimensional case.'
-!!$      call write_warning(1)
-!!$      call pop_sub()
-!!$      return
-!!$    endif
-!!$
-!!$!   /* 
-!!$    ALLOCATE(     rho(NP), NP)
-!!$    ALLOCATE(      vh(NP), NP)
-!!$    ALLOCATE(vh_exact(NP), NP)
-!!$!   */
-!!$    rho = M_ZERO; vh = M_ZERO; vh_exact = M_ZERO
-!!$
-!!$    ! This builds a normalized Gaussian charge
-!!$    alpha = CNST(5.0) * gr%m%h(1)
-!!$    beta = M_ONE / ( alpha**calc_dim * sqrt(M_PI)**calc_dim )
-!!$    do i = 1, NP
-!!$      call mesh_r(gr%m, i, r)
-!!$      rho(i) = beta*exp(-(r/alpha)**2)
-!!$    end do
-!!$    write(message(1), '(a,f14.6)') 'Total charge of the Gaussian distribution', dmf_integrate(gr%m, rho)
-!!$
-!!$    ! This builds analytically its potential
-!!$    do i = 1, NP
-!!$      call mesh_r(gr%m, i, r)
-!!$      select case(calc_dim)
-!!$      case(3)
-!!$        if(r > r_small) then
-!!$          vh_exact(i) = loct_erf(r/alpha)/r
-!!$        else
-!!$          vh_exact(i) = (M_TWO/sqrt(M_PI))/alpha
-!!$        end if
-!!$      case(2)
-!!$        vh_exact(i) = beta * (M_PI)**(M_THREE*M_HALF) * alpha * exp(-r**2/(M_TWO*alpha**2)) * &
-!!$          loct_bessel_in(0, r**2/(M_TWO*alpha**2))
-!!$      end select
-!!$    end do
-!!$
-!!$    ! This calculates the numerical potential
-!!$    call dpoisson_solve(gr, vh, rho)
-!!$
-!!$    ! And this compares.
-!!$    write(message(2), '(a,f14.6)') 'Difference between exact and numerical result:', &
-!!$      dmf_integrate(gr%m, vh-vh_exact)
-!!$    ! Output
-!!$    call write_info(2)
-!!$    call doutput_function (output_fill_how('AxisX'), ".", "poisson_test_rho", gr%m, gr%sb, rho, M_ONE, ierr)
-!!$    call doutput_function (output_fill_how('AxisX'), ".", "poisson_test_exact", gr%m, gr%sb, vh_exact, M_ONE, ierr)
-!!$    call doutput_function (output_fill_how('AxisX'), ".", "poisson_test_numerical", gr%m, gr%sb, vh, M_ONE, ierr)
-!!$
-!!$    deallocate(rho, vh, vh_exact)
-!!$    call pop_sub()
-!!$  end subroutine poisson_test
+  !-----------------------------------------------------------------
+  ! This routine checks the Hartree solver selected in the input
+  ! file by calculating numerically and analytically the Hartree
+  ! potential originated by a Gaussian distribution of charge.
+  ! This only makes sense for finite systems.
+  subroutine poisson_test(gr)
+    type(grid_t), intent(inout) :: gr
+
+    FLOAT, allocatable :: rho(:), vh(:), vh_exact(:)
+    FLOAT :: alpha, beta, r, delta
+    integer :: i, ierr, iunit
+
+    call push_sub('poisson.poisson_test')
+
+    if(calc_dim.eq.1) then
+      write(message(1),'(a)') 'The Hartree integrator test is not implemented for the one dimensional case.'
+      call write_warning(1)
+      call pop_sub()
+      return
+    endif
+
+!
+    ALLOCATE(     rho(NP), NP)
+    ALLOCATE(      vh(NP), NP)
+    ALLOCATE(vh_exact(NP), NP)
+!
+    rho = M_ZERO; vh = M_ZERO; vh_exact = M_ZERO
+
+    ! This builds a normalized Gaussian charge
+    alpha = CNST(5.0) * gr%m%h(1)
+    beta = M_ONE / ( alpha**calc_dim * sqrt(M_PI)**calc_dim )
+    do i = 1, NP
+      call mesh_r(gr%m, i, r)
+      rho(i) = beta*exp(-(r/alpha)**2)
+    end do
+    write(message(1), '(a,f14.6)') 'Total charge of the Gaussian distribution', dmf_integrate(gr%m, rho)
+
+    ! This builds analytically its potential
+    do i = 1, NP
+      call mesh_r(gr%m, i, r)
+      select case(calc_dim)
+      case(3)
+        if(r > r_small) then
+          vh_exact(i) = loct_erf(r/alpha)/r
+        else
+          vh_exact(i) = (M_TWO/sqrt(M_PI))/alpha
+        end if
+      case(2)
+        vh_exact(i) = beta * (M_PI)**(M_THREE*M_HALF) * alpha * exp(-r**2/(M_TWO*alpha**2)) * &
+          loct_bessel_in(0, r**2/(M_TWO*alpha**2))
+      end select
+    end do
+
+    ! This calculates the numerical potential
+    call dpoisson_solve(gr, vh, rho)
+
+    ! And this compares.
+    delta = dmf_integrate(gr%m, vh-vh_exact)
+
+    ! Output
+    iunit = io_open("hartree_results", action='write')
+    write(iunit, '(a,f10.4)' ) 'Hartree test = ', delta
+    call io_close(iunit)
+    !call doutput_function (output_fill_how('AxisX'), ".", "poisson_test_rho", gr%m, gr%sb, rho, M_ONE, ierr)
+    !call doutput_function (output_fill_how('AxisX'), ".", "poisson_test_exact", gr%m, gr%sb, vh_exact, M_ONE, ierr)
+    !call doutput_function (output_fill_how('AxisX'), ".", "poisson_test_numerical", gr%m, gr%sb, vh, M_ONE, ierr)
+
+    deallocate(rho, vh, vh_exact)
+    call pop_sub()
+  end subroutine poisson_test
 
 
 #include "poisson1D.F90"
