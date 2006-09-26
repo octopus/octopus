@@ -77,12 +77,14 @@ module lib_xc_m
     XC_LDA_C_GL             =   5,  &  ! Gunnarson & Lundqvist
     XC_LDA_C_XALPHA         =   6,  &  ! Slaters Xalpha
     XC_LDA_C_VWN            =   7,  &  ! Vosko, Wilk, & Nussair
-    XC_LDA_C_PZ             =   8,  &  ! Perdew & Zunger
-    XC_LDA_C_OB_PZ          =   9,  &  ! Ortiz & Ballone (PZ)
-    XC_LDA_C_PW             =  10,  &  ! Perdew & Wang
-    XC_LDA_C_OB_PW          =  11,  &  ! Ortiz & Ballone (PW)
-    XC_LDA_C_LYP            =  12,  &  ! Lee, Yang, & Parr LDA
-    XC_LDA_C_AMGB           =  13      ! Attacalite et al
+    XC_LDA_C_VWN_RPA        =   8,  &  ! Vosko, Wilk, & Nussair (RPA)
+    XC_LDA_C_PZ             =   9,  &  ! Perdew & Zunger
+    XC_LDA_C_PZ_MOD         =  10,  &  ! Perdew & Zunger (Modified)
+    XC_LDA_C_OB_PZ          =  11,  &  ! Ortiz & Ballone (PZ)
+    XC_LDA_C_PW             =  12,  &  ! Perdew & Wang
+    XC_LDA_C_OB_PW          =  13,  &  ! Ortiz & Ballone (PW)
+    XC_LDA_C_LYP            =  14,  &  ! Lee, Yang, & Parr LDA
+    XC_LDA_C_AMGB           =  15      ! Attacalite et al
 
   ! the GGAs
   integer, public, parameter ::     &

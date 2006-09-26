@@ -193,7 +193,7 @@ contains
 
     !%Variable CFunctional
     !%Type integer
-    !%Default lda_c_pz
+    !%Default lda_c_pz_mod
     !%Section Hamiltonian::XC
     !%Description
     !% Defines the correlation functional
@@ -209,25 +209,30 @@ contains
     !% LDA: Slater s Xalpha
     !%Option lda_c_vwn 7
     !% LDA: Vosko, Wilk, & Nussair
-    !%Option lda_c_pz 8
+    !%Option lda_c_vwn_rpa 8
+    !% LDA: Vosko, Wilk, & Nussair (fit to the RPA correlation energy)
+    !%Option lda_c_pz 9
     !% LDA: Perdew & Zunger
-    !%Option lda_c_ob_pz 9
+    !%Option lda_c_pz_mod 10
+    !% LDA: Perdew & Zunger (Modified to improve the matching between
+    !%      the high and the low rs region)
+    !%Option lda_c_ob_pz 11
     !% LDA: Ortiz & Ballone (PZ-type parametrization)
-    !%Option lda_c_pw 10
+    !%Option lda_c_pw 12
     !% LDA: Perdew & Wang
-    !%Option lda_c_ob_pw 11
+    !%Option lda_c_ob_pw 13
     !% LDA: Ortiz & Ballone (PW-type parametrization)
-    !%Option lda_c_lyp 12
+    !%Option lda_c_lyp 14
     !% LDA: Lee, Yang, & Parr LDA
-    !%Option lda_c_amgb 13
-    !% LDA Attacalite et al functional for the 2D electron gas
+    !%Option lda_c_amgb 15
+    !% LDA: Attacalite et al functional for the 2D electron gas
     !%Option gga_c_pbe 102
-    !% Perdew, Burke & Ernzerhof correlation
+    !% GGA: Perdew, Burke & Ernzerhof correlation
     !%Option mgga_c_tpss 202
     !% MGGA (not working)
     !%End
     select case(calc_dim)
-      case(3); call loct_parse_int(check_inp('CFunctional'), XC_LDA_C_PZ, functl%id)
+      case(3); call loct_parse_int(check_inp('CFunctional'), XC_LDA_C_PZ_MOD, functl%id)
       case(2); call loct_parse_int(check_inp('CFunctional'), XC_LDA_C_AMGB, functl%id)
       case(1); call loct_parse_int(check_inp('CFunctional'), 0, functl%id)
     end select
@@ -237,7 +242,9 @@ contains
     case(0)
 
     case(XC_LDA_C_WIGNER, XC_LDA_C_RPA, XC_LDA_C_HL, XC_LDA_C_GL, XC_LDA_C_XALPHA, &
-      XC_LDA_C_VWN, XC_LDA_C_PZ, XC_LDA_C_OB_PZ, XC_LDA_C_PW, XC_LDA_C_OB_PW,     &
+      XC_LDA_C_VWN, XC_LDA_C_VWN_RPA,               &
+      XC_LDA_C_PZ, XC_LDA_C_PZ_MOD, XC_LDA_C_OB_PZ, &
+      XC_LDA_C_PW, XC_LDA_C_OB_PW,                  &
       XC_LDA_C_LYP, XC_LDA_C_AMGB)
 
       if(functl%id==XC_LDA_C_AMGB.and.ndim.ne.2) then

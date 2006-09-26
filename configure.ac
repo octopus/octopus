@@ -26,7 +26,7 @@ AM_INIT_AUTOMAKE
 AC_CONFIG_HEADERS([config.h])
 
 # Installation prefix by default
-AC_PREFIX_DEFAULT($HOME)
+AC_PREFIX_DEFAULT([/opt/etsf])
 
 # who am i
 AC_CANONICAL_HOST
@@ -226,6 +226,11 @@ dnl now I run configure for the internal libraries
 AC_CONFIG_SUBDIRS([libstring_f])
 CPPFLAGS="$CPPFLAGS -I../libstring_f"
 
+AC_CONFIG_SUBDIRS([libxc])
+AX_F90_MODULE_FLAG
+FCFLAGS="$FCFLAGS ${ax_f90_modflag}../libxc"
+
+
 # This is certainly wrong, but I don't know
 # how to do it right
 LINK="$FC $FCFLAGS $LDFLAGS -o \$@"
@@ -240,7 +245,6 @@ AC_CONFIG_FILES([Makefile
   external_libs/qshep/Makefile
   liboct_parser/Makefile
   liboct/Makefile
-  libxc/Makefile
   src/Makefile
   doc/Makefile
   doc/pdf/Makefile
@@ -258,7 +262,8 @@ AC_CONFIG_FILES([Makefile
   build/octopus.spec
   testsuite/Makefile
   testsuite/finite_systems_1d/Makefile 
-  testsuite/finite_systems_2d/Makefile testsuite/finite_systems_3d/Makefile 
+  testsuite/finite_systems_2d/Makefile
+  testsuite/finite_systems_3d/Makefile 
   testsuite/periodic_systems_1d/Makefile
 ])
 
