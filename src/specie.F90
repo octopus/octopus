@@ -87,6 +87,9 @@ module specie_m
     type(ps_t), pointer :: ps
     logical             :: nlcc       ! true if we have non-local core corrections
 
+    ! If we have an all-electron atom:
+    FLOAT :: sigma
+
     ! the default values for the spacing and atomic radius
     FLOAT :: def_rsize, def_h
 
@@ -246,11 +249,32 @@ contains
     !% do are not necessary to define the HGH pseudopotentials.
     !%Option spec_all_e   124
     !% Atom represented with all electrons, the extra parameter is the
-    !% atomic number. WARNING 1: To correctly represent the atomic
-    !% potential, the atom will assumed to be on the closest grid point.
-    !% WARNING 2: Currently you can not use LCAO with this specie.
+    !% atomic number. See the documentation of the variable 
+    !% SpecieAllElectronSigma.
+    !% 
+    !% WARNING: Currently you can not use LCAO with this specie.
     !%End
 #endif 
+
+    !%Variable SpecieAllElectronSigma
+    !%Type float
+    !%Default 0.5
+    !%Section System::Species
+    !%Description
+    !% An all-electron atom is defined by a Gaussian accumulation of positive charge 
+    !% (distorted if curvilinear coordinates are used), in the form:
+    !%
+    !% q(r) = z * beta * exp[ - (\vec{r}-\vec{r0})**2 / (sqrt(2) * delta * sigma) ]
+    !%
+    !% beta is chosen in order to maintain proper normalization (the integral of
+    !% q should sum up to z). delta is the grid spacing (the grid spacing in the first
+    !% dimension, to be precise). \vec{r0} is calculated in such a way that the
+    !% the first moment of q(r)/z is equal to the atomic position.
+    !%
+    !% For a precise description, see [N. A. Modine, Phys. Rev. B 55, 10289 (1997)]
+    !%end
+    call loct_parse_float(check_inp('SpecieAllElectronSigma'), CNST(0.2), s%sigma)
+    if(s%sigma <= M_ZERO) call input_error('SpecieAllElectronSigma')
 
     ! First, find out if there is a Species block.
     n_spec_block = 0

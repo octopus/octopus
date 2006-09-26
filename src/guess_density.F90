@@ -351,8 +351,7 @@ contains
     type(geometry_t),   intent(in)  :: geo
     FLOAT,              intent(out) :: rho(:)
 
-    FLOAT, parameter :: sigma      = CNST(0.2), &
-                        converged  = CNST(1.0e-5)
+    FLOAT, parameter :: converged  = CNST(1.0e-8)
     integer :: iter, i
     integer, parameter :: max_iter = 500
     FLOAT :: g(4, 1), x(1:4), chi0(3), jacobian(4, 4), delta, alpha, beta, update(4, 1), chi(3), r
@@ -373,7 +372,7 @@ contains
       ! Initial guess.
       call curvlinear_x2chi(m%sb, geo, cv, pos, chi0)
       delta = m%h(1)
-      alpha = sqrt(M_TWO)*sigma*delta
+      alpha = sqrt(M_TWO)*s%sigma*delta
 
       rho = M_ZERO
       do i = 1, m%np
