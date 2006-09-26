@@ -40,6 +40,7 @@ module curv_gygi_m
     curv_gygi_t,       &
     curv_gygi_init,    &
     curv_gygi_chi2x,   &
+    curv_gygi_x2chi,   &
     curv_gygi_jacobian
 
   type curv_gygi_t
@@ -170,6 +171,31 @@ contains
     deallocate(f, delta, J, chi2)
 
   end subroutine curv_gygi_chi2x
+
+
+  ! ---------------------------------------------------------
+  subroutine curv_gygi_x2chi(sb, geo, cv, x, chi)
+    type(simul_box_t), intent(in)  :: sb
+    type(geometry_t),  intent(in)  :: geo
+    type(curv_gygi_t), intent(in)  :: cv
+    FLOAT,             intent(in)  :: x(:)    ! x(sb%dim)
+    FLOAT,             intent(out) :: chi(:)  ! chi(sb%dim)
+
+    integer :: i, ia
+    FLOAT   :: r, ar, th, ex
+
+    chi(1:sb%dim) = x(1:sb%dim)
+    do ia = 1, geo%natoms
+      r = max(sqrt(sum((x(1:sb%dim) - geo%atom(ia)%x(1:sb%dim))**2)), CNST(1e-6))
+      ar = cv%A*cv%alpha/r
+      th = tanh(r/cv%alpha)
+      ex = exp(-(r/cv%beta)**2)
+      do i = 1, sb%dim
+        chi(i) = chi(i) + (x(i) - geo%atom(ia)%x(i)) * cv%a * ar * th * ex
+      end do
+    end do
+
+  end subroutine curv_gygi_x2chi
 
 
   ! ---------------------------------------------------------

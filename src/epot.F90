@@ -703,7 +703,7 @@ contains
           ALLOCATE(rho(1:m%np),m%np)
           ALLOCATE(phi(1:m%np_part),m%np_part)
 
-          call get_specie_density(s,a%x,m,rho)
+          call get_specie_density(s, a%x, m, gr%cv, geo, rho)
           call dpoisson_solve(gr,phi,rho)
           ep%vpsl(1:m%np)=ep%vpsl(1:m%np)+phi(1:m%np)
 

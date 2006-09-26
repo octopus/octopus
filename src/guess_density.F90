@@ -32,8 +32,10 @@ module guess_density_m
   use lib_oct_gsl_spline_m
   use specie_m
   use math_m
+  use lib_adv_alg_m
   use geometry_m
   use mpi_m
+  use curvlinear_m
   use multicomm_m
 
   implicit none
@@ -338,45 +340,150 @@ contains
   end subroutine guess_density
 
   ! ---------------------------------------------------------
-  subroutine get_specie_density(s, pos, m, rho)
-    type(specie_t), intent(in) :: s
-    FLOAT,          intent(in) :: pos(MAX_DIM)
-    type(mesh_t),   intent(in) :: m
-    FLOAT,          intent(out) :: rho(:)
+  ! Constructs an all-electron atom with the procedure sketched
+  ! in Modine et al. [Phys. Rev. B 55, 10289 (1997)], section II.B
+  ! ---------------------------------------------------------
+  subroutine get_specie_density(s, pos, m, cv, geo, rho)
+    type(specie_t),     intent(in) :: s
+    FLOAT,              intent(in) :: pos(MAX_DIM)
+    type(mesh_t),       intent(in)  :: m
+    type(curvlinear_t), intent(in)  :: cv
+    type(geometry_t),   intent(in)  :: geo
+    FLOAT,              intent(out) :: rho(:)
 
-    FLOAT :: dmin
-    integer :: i, imin, rankmin
+    FLOAT, parameter :: sigma      = CNST(0.2), &
+                        converged  = CNST(1.0e-5)
+    integer :: iter, i
+    integer, parameter :: max_iter = 500
+    FLOAT :: g(4, 1), x(1:4), chi0(3), jacobian(4, 4), delta, alpha, beta, update(4, 1), chi(3), r
 
     call push_sub('specie_grid.specie_get_density')
 
+    ASSERT(m%sb%dim == 3)
+    
     select case(s%type)
-
     case(SPEC_ALL_E)
 
-      imin = mesh_nearest_point(m, pos, dmin, rankmin)
-      if(m%mpi_grp%rank .eq. rankmin) then
+      !imin = mesh_nearest_point(m, pos, dmin, rankmin)
+      ! One should not use chi0 = chi(pos), but that chi0 that
+      ! makes the first moment of rho equal to pos. For that, one
+      ! would need to solve the corresponding non-linear equation through,
+      ! e.g., Newton-Raphson method.
 
-        if (dmin > CNST(1e-5)) then 
+      ! Initial guess.
+      call curvlinear_x2chi(m%sb, geo, cv, pos, chi0)
+      delta = m%h(1)
+      alpha = sqrt(M_TWO)*sigma*delta
 
-          write(message(1), '(a,f12.2,a)') "Atom displaced ", sqrt(dmin), " [b]"
-          write(message(2), '(a,3f12.2)') "Original position ", pos
-          write(message(3), '(a,3f12.2)') "Displaced position ", m%x(imin,:) 
+      rho = M_ZERO
+      do i = 1, m%np
 
-          call write_warning(3)
+        chi(1) = m%Lxyz(i, 1) * m%h(1) + m%sb%box_offset(1)
+        chi(2) = m%Lxyz(i, 2) * m%h(2) + m%sb%box_offset(2)
+        chi(3) = m%Lxyz(i, 3) * m%h(3) + m%sb%box_offset(3)
 
-        endif
+        r = sqrt( sum( (chi(1:3)-chi0(1:3))**2 ) )
 
-        rho(1:m%np) = M_ZERO
-        rho(imin) = -s%Z/m%vol_pp(imin)
+        if( (r/alpha)**2 < CNST(10.0)) then
+          rho(i) = exp(-(r/alpha)**2)
+        else
+          rho(i) = M_ZERO
+        end if
 
-      else
-        rho(1:m%np) = M_ZERO
-      end if
+      end do
 
+      beta = M_ONE / dmf_integrate(m, rho)
+      rho = beta*rho
+      !beta = M_ONE / ( alpha**calc_dim * sqrt(M_PI)**calc_dim )
+      x(1:3) = chi0(1:3)
+      x(4)   = beta
 
+      ! TODO: This Newton-Raphson procedure should make use of the root solver module.
+      do iter = 1, max_iter
+        g(1:4, 1) = -f(x, jacobian)
+
+        !write(0, *) 'Dipole error = ', -g(1:4, 1)
+
+        if(sqrt(dot_product(g(:, 1), g(:, 1))) < converged) exit
+
+        !write(*, *) 'JACOBIAN:'
+        !do i = 1, 4
+        !  write(*, '(4f16.6)') jacobian(i, 1:4)
+        !end do
+
+        call lalg_linsyssolve(4, 1, jacobian, g, update)
+        x(1:4) = x(1:4) + update(1:4, 1)
+      end do
+      rho = - s%z * rho
     end select
 
     call pop_sub()
+    contains
+
+    function f(x, jacobian)
+      FLOAT :: f(4)
+      FLOAT, intent(in)     :: x(4)
+      FLOAT, intent(out)    :: jacobian(4, 4)
+
+      integer :: i, j
+      FLOAT :: chi(3), r
+      FLOAT, allocatable :: xrho(:), grho(:, :)
+
+      ALLOCATE(grho(m%np, 4), 4*m%np)
+
+      rho = M_ZERO
+      do i = 1, m%np
+
+        chi(1) = m%Lxyz(i, 1) * m%h(1) + m%sb%box_offset(1)
+        chi(2) = m%Lxyz(i, 2) * m%h(2) + m%sb%box_offset(2)
+        chi(3) = m%Lxyz(i, 3) * m%h(3) + m%sb%box_offset(3)
+
+        r = sqrt( sum( (chi(1:3)-x(1:3))**2 ) )
+
+        if( (r/alpha)**2 < CNST(10.0)) then
+          grho(i, 4) = exp(-(r/alpha)**2)
+          rho(i) = x(4) * grho(i, 4)
+        else
+          grho(i, 4) = M_ZERO
+          rho(i) = M_ZERO
+        end if
+
+        do j = 1, 3
+          grho(i, j) = (M_TWO/alpha**2) * (chi(j)-x(j)) * rho(i)
+        end do
+      end do
+
+      !write(0, '(a,4f16.6)') 'x(1:4) = ', x(1:4)
+      !write(0, *) 'Norm1 = ', dmf_integrate(m, rho)
+
+      ALLOCATE(xrho(m%np), m%np)
+      do i = 1, 3
+        xrho(1:m%np) = rho(1:m%np) * m%x(1:m%np, i)
+        f(i) = dmf_integrate(m, xrho)
+
+        do j = 1, 3
+          xrho(1:m%np) = grho(1:m%np, j) * m%x(1:m%np, i)
+          jacobian(i, j) = dmf_integrate(m, xrho)
+        end do
+
+        xrho(1:m%np) = grho(1:m%np, 4) * m%x(1:m%np, i)
+        jacobian(i, 4) = dmf_integrate(m, xrho)
+
+      end do
+      do j = 1, 3
+        xrho(1:m%np) = grho(1:m%np, j)
+        jacobian(4, j) = dmf_integrate(m, xrho)
+      end do
+      xrho(1:m%np) = grho(1:m%np, 4)
+      jacobian(4, 4) = dmf_integrate(m, xrho)
+
+      deallocate(xrho)
+
+      f(1:3) = f(1:3) - pos(1:3)
+      f(4)   = dmf_integrate(m, rho) - M_ONE
+
+      deallocate(grho)
+    end function f
 
   end subroutine get_specie_density
 

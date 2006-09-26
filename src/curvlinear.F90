@@ -42,6 +42,7 @@ module curvlinear_m
     curvlinear_t,               &
     curvlinear_init,            &
     curvlinear_chi2x,           &
+    curvlinear_x2chi,           &
     curvlinear_det_Jac,         &
     curvlinear_write_info,      &
     curvlinear_dump,            &
@@ -140,6 +141,27 @@ contains
     end select
 
   end subroutine curvlinear_chi2x
+
+
+  ! ---------------------------------------------------------
+  subroutine curvlinear_x2chi(sb, geo, cv, x, chi)
+    type(simul_box_t),  intent(in)  :: sb
+    type(geometry_t),   intent(in)  :: geo
+    type(curvlinear_t), intent(in)  :: cv
+    FLOAT,              intent(in)  :: x(MAX_DIM)    ! x(conf%dim)
+    FLOAT,              intent(out) :: chi(MAX_DIM)  ! chi(conf%dim)
+
+    select case(cv%method)
+    case(CURV_METHOD_UNIFORM)
+      chi = x
+    case(CURV_METHOD_GYGI)
+      call curv_gygi_x2chi(sb, geo, cv%gygi, x, chi)
+    case(CURV_METHOD_BRIGGS, CURV_METHOD_MODINE)
+      message(1) = "Internal error in curvlinear_x2chi"
+      call write_fatal(1)
+    end select
+
+  end subroutine curvlinear_x2chi
 
 
   ! ---------------------------------------------------------
