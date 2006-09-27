@@ -19,110 +19,30 @@
 !! $Id$
 
 ! ---------------------------------------------------------
-subroutine X(root_solver_init)(rs)
-  type(root_solver_t), intent(out) :: rs
+subroutine X(root_solver_run)(rs, func, root, success, startval, interval_, coeff)
+  type(root_solver_t), intent(inout) :: rs
+  R_TYPE,                 intent(out)   :: root(:)    ! roots we are searchin
+  logical,                intent(out)   :: success
+  R_TYPE, optional,       intent(in)    :: startval(:)    ! start value for the search
+  FLOAT,  optional,       intent(in)    :: interval_(2) ! lower and upper boundary of search region
+  R_TYPE, optional,       intent(in)    :: coeff(:)    ! polynomial coefficients
+  interface
+    subroutine func(z, f, jf)
+      R_TYPE :: z(:) , f(:), jf(:, :)
+    end subroutine func
+  end interface
 
-  call push_sub('root_solver_inc.Xroot_solver_init')
-
-  !%Variable RootSolver
-  !%Type integer
-  !%Default root_newton
-  !%Section Math::General
-  !%Description
-  !% Specifies what kind of root solver will be used.
-  !%Option root_bisection 1
-  !% Bisection method
-  !%Option root_brent 2
-  !% Brent method
-  !%Option root_newton 3
-  !% Newton method
-  !%Option root_laguerre 4
-  !% Laguerre method
-  !%Option root_watterstrom 5
-  !% Watterstrom method
-  !%End
-  call loct_parse_int(check_inp('RootSolver'),        ROOT_NEWTON, rs%solver_type)
-  if( rs%solver_type.lt.ROOT_MINVAL.or.rs%solver_type.gt.ROOT_MAXVAL ) then
-    call input_error(check_inp('RootSolver'))
-  end if
-
-  !%Variable RootSolverMaxIter
-  !%Type integer
-  !%Default 100
-  !%Section Math::General
-  !%Description
-  !% In case of an interative root solver this variable determines the maximal number
-  !% of iteration steps.
-  !%End
-  call loct_parse_int    (check_inp('RootSolverMaxIter'),               100, rs%maxiter)
-
-  !%Variable RootSolverRelTolerance
-  !%Type float
-  !%Default 1e-8
-  !%Section Math::General
-  !%Description
-  !% Relative tolerance for the root finding process.
-  !%End
-  call loct_parse_float  (check_inp('RootSolverRelTolerance'),   CNST(1e-8), rs%rel_tolerance)
-
-  !%Variable RootSolverAbsTolerance
-  !%Type float
-  !%Default 1e-8
-  !%Section Math::General
-  !%Description
-  !% Relative tolerance for the root finding process.
-  !%End
-  call loct_parse_float  (check_inp('RootSolverAbsTolerance'),   CNST(1e-8), rs%abs_tolerance)
-
-  !%Variable RootSolverHavePolynomial
-  !%Type logical
-  !%Default no
-  !%Section Math::General
-  !%Description
-  !%  If set to yes, the coefficients of the polynomial have to be passed to
-  !%  the root solver.
-  !%End
-  call loct_parse_logical(check_inp('RootSolverHavePolynomial'),    .false., rs%have_polynomial)
-
-  !%Variable RootSolverWSRadius
-  !%Type float
-  !%Default 1.0
-  !%Section Math::General
-  !%Description
-  !% Radius of circle in the complex plane. If RootSolverWSRadius = 1.0
-  !% the unit roots of a n-th order polynomial are taken as initial values.
-  !%End
-  call loct_parse_float  (check_inp('RootSolverWSRadius'),       CNST( 1.0), rs%ws_radius)
-
-  call pop_sub()
-end subroutine X(root_solver_init)
-
-
-!!$! ---------------------------------------------------------
-!!$subroutine X(root_solver_run)(rs, func, roots, startval, interval_, coeff)
-!!$  type(root_solver_t), intent(inout) :: rs
-!!$  R_TYPE,                 intent(out)   :: roots(:)    ! roots we are searchin
-!!$  R_TYPE, optional,       intent(in)    :: startval    ! start value for the search
-!!$  FLOAT,  optional,       intent(in)    :: interval_(2) ! lower and upper boundary of search region
-!!$  R_TYPE, optional,       intent(in)    :: coeff(:)    ! polynomial coefficients
-!!$
 !!$  FLOAT :: interval(2) 
-!!$
-!!$  interface
-!!$    subroutine func(z,s)
-!!$      R_TYPE :: z,s      ! s = f(z)
-!!$    end subroutine func
-!!$  end interface
-!!$
-!!$
-!!$  call push_sub('root_solver_inc.Xroot_solver_run')
-!!$
-!!$  ! initialize array
-!!$  roots = M_ZERO
+
+  call push_sub('root_solver_inc.Xroot_solver_run')
+
+  ! Initializations
+  root = M_ZERO
+  success = .false.
 !!$
 !!$  if(present(interval_)) interval = interval_
 !!$
-!!$  select case(rs%solver_type)
+  select case(rs%solver_type)
 !!$
 !!$  case(ROOT_BISECTION)
 !!$#ifdef R_TREAL
@@ -141,7 +61,7 @@ end subroutine X(root_solver_init)
 !!$    if(present(interval_)) then
 !!$      message(1) = 'Info: root_solver: Using Brent method.'
 !!$      call write_info(1)
-!!$!!        call droot_brent(rs, func, roots(1), interval)
+!!$!!        call droot_brent(rs, func, root(1), interval)
 !!$    else
 !!$      message(1) = 'Error: root_solver: search interval required for Brent method.'
 !!$      call write_fatal(1)
@@ -153,50 +73,49 @@ end subroutine X(root_solver_init)
 !!$#endif
 !!$
 !!$
-!!$  case(ROOT_NEWTON)
-!!$    message(1) = 'Info: root_solver: Using Newton method.'
-!!$    call write_info(1)
-!!$    ! pass roots(1): only a single root will be returned
-!!$!!     call X(root_newton)(rs, func, roots(1), startval)
+#if defined(R_TREAL)
+  case(ROOT_NEWTON)
+    call droot_newton(rs, func, root, startval, success)
+#endif
+!!$!!     call X(root_newton)(rs, func, root(1), startval)
 !!$
 !!$
 !!$  case(ROOT_LAGUERRE)
 !!$    if(present(coeff)) then
 !!$      message(1) = 'Info: root_solver: Using Laguerre method.'
 !!$      call write_info(1)
-!!$      ! pass roots(1): only a single root will be returned
-!!$      call X(root_laguerre)(rs, roots(1), startval, coeff)
+!!$      ! pass root(1): only a single root will be returned
+!!$      call X(root_laguerre)(rs, root(1), startval, coeff)
 !!$    else
 !!$      message(1) = 'Error: root_solver: Laguerre method only valid for polynomials.'
 !!$      call write_fatal(1)
 !!$    end if
 !!$
-!!$  case(ROOT_WATTERSTROM)
-!!$#ifdef R_TREAL
-!!$    message(1) = 'Error: root_solver: Watterstrom method not defined for pure real arithmetic'
-!!$    call write_fatal(1)
-!!$#endif
-!!$#ifdef R_TCOMPLEX
-!!$    if(present(coeff)) then
-!!$      message(1) = 'Info: root_solver: Using Watterstrom method.'
-!!$      call write_info(1)
-!!$      call zroot_watterstrom(rs, roots, coeff)
-!!$    else
-!!$      message(1) = 'Error: root_solver: Watterstrom method only valid for polynomials.'
-!!$      call write_fatal(1)
-!!$    end if
-!!$#endif
-!!$
-!!$  case default
-!!$    write(message(1), '(a,i4,a)') "Input: '", rs%solver_t, &
-!!$      "' is not a valid root solver"
-!!$    message(2) = '( root solver =  root_bisection | root_brent | root_newton | root_laguerre | root_watterstrom )'
-!!$    call write_fatal(2)
-!!$  end select
-!!$
-!!$
-!!$  call pop_sub()
-!!$end subroutine X(root_solver_run)
+  case(ROOT_WATTERSTROM)
+#ifdef R_TREAL
+    message(1) = 'Error: root_solver: Watterstrom method not defined for pure real arithmetic'
+    call write_fatal(1)
+#endif
+#ifdef R_TCOMPLEX
+    if(present(coeff)) then
+      message(1) = 'Info: root_solver: Using Watterstrom method.'
+      call write_info(1)
+      call zroot_watterstrom(rs, root, coeff)
+    else
+      message(1) = 'Error: root_solver: Watterstrom method only valid for polynomials.'
+      call write_fatal(1)
+    end if
+#endif
+
+  case default
+    write(message(1), '(a,i4,a)') "Input: '", rs%solver_type, &
+      "' is not a valid root solver"
+    message(2) = '( root solver =  root_bisection | root_brent | root_newton | root_laguerre | root_watterstrom )'
+    call write_fatal(2)
+  end select
+
+  call pop_sub()
+end subroutine X(root_solver_run)
 
 
 ! ---------------------------------------------------------
@@ -217,27 +136,6 @@ subroutine X(root_solver_end)()
 
   call pop_sub()
 end subroutine X(root_solver_end)
-
-
-! ---------------------------------------------------------
-!!$subroutine X(root_newton)(rs, func, root, startval)
-!!$  type(root_solver_t), intent(in)  :: rs
-!!$  R_TYPE,                 intent(out) :: root        ! root we are searching
-!!$  R_TYPE,                 intent(in)  :: startval    ! start value for the search
-!!$
-!!$    interface
-!!$       subroutine func(z,s)
-!!$         R_TYPE :: z,s
-!!$       end subroutine func
-!!$    end interface
-!!$
-!!$  call push_sub('root_solver_inc.Xroot_newton')
-!!$
-!!$  message(1) = 'Error: root_solver: Not Newton Method not implemented yet.'
-!!$  call write_fatal(1)
-!!$
-!!$  call pop_sub()
-!!$end subroutine X(root_newton)
 
 
 ! ---------------------------------------------------------

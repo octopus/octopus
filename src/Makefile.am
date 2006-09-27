@@ -218,7 +218,7 @@ poisson_corrections.o: global.h
 poisson.o: global.h poisson1D.F90 poisson2D.F90 poisson3D.F90 poisson_multigrid.F90
 ps.o: global.h
 restart.o: global.h restart_inc.F90
-root_solver: global.h root_solver_inc.F90
+root_solver.o: global.h root_solver_inc.F90
 rotational_strength.o: global.h
 run.o: global.h
 scf.o: global.h

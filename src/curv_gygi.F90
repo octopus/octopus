@@ -32,6 +32,7 @@ module curv_gygi_m
   use geometry_m
   use simul_box_m
   use lib_adv_alg_m
+  use root_solver_m
 
   implicit none
 
@@ -108,53 +109,20 @@ contains
     FLOAT,             intent(in)  :: chi(:)  ! chi(sb%dim)
     FLOAT,             intent(out) :: x(:)    ! x(sb%dim)
 
-    ! parameters
-    integer, parameter :: max_iter = 500
-    FLOAT,   parameter :: x_conv   = CNST(1e-10)
-
     ! local variables
-    integer :: iter, i
-    FLOAT, allocatable :: f(:,:), delta(:,:), J(:,:), chi2(:)
+    integer :: i
     logical :: conv
+    type(root_solver_t) :: rs
 
-    ALLOCATE(f(sb%dim, 1), sb%dim*1)
-    ALLOCATE(delta(sb%dim, 1), sb%dim*1)
-    ALLOCATE(J(sb%dim, sb%dim), sb%dim*sb%dim)
-    ALLOCATE(chi2(sb%dim), sb%dim)
+    call root_solver_init(rs, solver_type = ROOT_NEWTON, maxiter = 500, abs_tolerance = CNST(1.0e-10))
 
-    x(1:sb%dim) = chi(1:sb%dim)
-
-
-    conv          = .false.
-    do iter = 1, max_iter
-      call curv_gygi_jacobian(sb, geo, cv, x, chi2, J)
-      f(:,1) = chi(1:sb%dim) - chi2(:)
-      if(sum(f(:,1)**2) < x_conv) then
-        conv = .true.
-        exit
-      end if
-
-      call lalg_linsyssolve(sb%dim, 1, J, f, delta)
-      x(1:sb%dim) = x(1:sb%dim) + delta(1:sb%dim, 1)
-    end do
+    i = geo%natoms
+    call droot_solver_run(rs, getf, x, conv, startval = chi)
 
     if(.not.conv) then
-      x(1:sb%dim) = chi(1:sb%dim)
       do i = 1, geo%natoms
-
-        conv          = .false.
-        do iter = 1, max_iter
-          call curv_gygi_jacobian(sb, geo, cv, x, chi2, J, i)
-          f(:,1) = chi(1:sb%dim) - chi2(:)
-          if(sum(f(:,1)**2) < x_conv) then
-            conv = .true.
-            exit
-          end if
-
-          call lalg_linsyssolve(sb%dim, 1, J, f, delta)
-          x(1:sb%dim) = x(1:sb%dim) + delta(1:sb%dim, 1)
-        end do
-
+        conv = .false.
+        call droot_solver_run(rs, getf, x, conv, startval = x)
       end do
     end if
 
@@ -167,8 +135,13 @@ contains
       call write_fatal(5)
     end if
 
-    ! clean up
-    deallocate(f, delta, J, chi2)
+    contains
+
+    subroutine getf(y, f, jf)
+      FLOAT :: y(:), f(:), jf(:, :)
+      call curv_gygi_jacobian(sb, geo, cv, y, f, jf, i)
+      f(:) = f(:) - chi(:)
+    end subroutine getf 
 
   end subroutine curv_gygi_chi2x
 

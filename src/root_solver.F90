@@ -26,19 +26,22 @@ module root_solver_m
   use datasets_m
   use lib_oct_parser_m
   use ode_solver_m
+  use lib_adv_alg_m
 
   implicit none
 
   private
   public ::                               &
     root_solver_t,                        &
-    droot_solver_init,                    &
-!    droot_solver_run,                     &
+    root_solver_init,                     &
+    root_solver_read,                     &
+    droot_solver_run,                     &
     droot_solver_end,                     &
-    zroot_solver_init,                    &
-!    zroot_solver_run,                     &
+    zroot_solver_run,                     &
     zroot_solver_end,                     &
     zroot_watterstrom
+ 
+
 
   integer, public, parameter ::           &
     ROOT_BISECTION   =  1,                &
@@ -50,6 +53,7 @@ module root_solver_m
     ROOT_MAXVAL      =  ROOT_WATTERSTROM
 
   type root_solver_t
+    private
     integer :: solver_type    ! what solver to use (see ROOT_* variables above)_m
     integer :: maxiter        ! maximal number of iterations
     integer :: usediter       ! number of actually performed iterations
@@ -57,7 +61,7 @@ module root_solver_m
     FLOAT   :: rel_tolerance
     FLOAT   :: ws_radius      ! radius of circle in complex plane; used for initial values
     logical :: have_polynomial
-   integer :: poly_order
+    integer :: poly_order
   end type root_solver_t
 
   ! a few variables which we have to define global
@@ -66,6 +70,114 @@ module root_solver_m
   integer            :: gorder
 
 contains
+
+  ! ---------------------------------------------------------
+  subroutine root_solver_init(rs, solver_type, maxiter, rel_tolerance, &
+    abs_tolerance, have_polynomial, ws_radius)
+    type(root_solver_t), intent(out) :: rs
+    integer, optional,   intent(in)  :: solver_type, maxiter
+    FLOAT, optional,     intent(in)  :: rel_tolerance, abs_tolerance, ws_radius
+    logical, optional,   intent(in)  :: have_polynomial
+
+    call push_sub('root_solver.root_solver_init')
+
+    ! Fill in the defaults
+    rs%solver_type     = ROOT_NEWTON
+    rs%maxiter         = 100
+    rs%rel_tolerance   = CNST(1.0e-8)
+    rs%abs_tolerance   = CNST(1.0e-8)
+    rs%have_polynomial = .false.
+    rs%ws_radius       = CNST(1.0)
+
+    if(present(solver_type))     rs%solver_type     = solver_type
+    if(present(maxiter))         rs%maxiter         = maxiter
+    if(present(rel_tolerance))   rs%rel_tolerance   = rel_tolerance
+    if(present(abs_tolerance))   rs%abs_tolerance   = abs_tolerance
+    if(present(have_polynomial)) rs%have_polynomial = have_polynomial
+    if(present(ws_radius))       rs%ws_radius       = ws_radius
+
+    call pop_sub()
+  end subroutine root_solver_init
+
+
+  ! ---------------------------------------------------------
+  subroutine root_solver_read(rs)
+    type(root_solver_t), intent(out) :: rs
+
+    call push_sub('root_solver_inc.root_solver_read')
+
+    !%Variable RootSolver
+    !%Type integer
+    !%Default root_newton
+    !%Section Math::General
+    !%Description
+    !% Specifies what kind of root solver will be used.
+    !%Option root_bisection 1
+    !% Bisection method
+    !%Option root_brent 2
+    !% Brent method
+    !%Option root_newton 3
+    !% Newton method
+    !%Option root_laguerre 4
+    !% Laguerre method
+    !%Option root_watterstrom 5
+    !% Watterstrom method
+    !%End
+    call loct_parse_int(check_inp('RootSolver'),        ROOT_NEWTON, rs%solver_type)
+    if( rs%solver_type.lt.ROOT_MINVAL.or.rs%solver_type.gt.ROOT_MAXVAL ) then
+      call input_error(check_inp('RootSolver'))
+    end if
+
+    !%Variable RootSolverMaxIter
+    !%Type integer
+    !%Default 100
+    !%Section Math::General
+    !%Description
+    !% In case of an interative root solver this variable determines the maximal number
+    !% of iteration steps.
+    !%End
+    call loct_parse_int    (check_inp('RootSolverMaxIter'),               100, rs%maxiter)
+
+    !%Variable RootSolverRelTolerance
+    !%Type float
+    !%Default 1e-8
+    !%Section Math::General
+    !%Description
+    !% Relative tolerance for the root finding process.
+    !%End
+    call loct_parse_float  (check_inp('RootSolverRelTolerance'),   CNST(1e-8), rs%rel_tolerance)
+
+    !%Variable RootSolverAbsTolerance
+    !%Type float
+    !%Default 1e-8
+    !%Section Math::General
+    !%Description
+    !% Relative tolerance for the root finding process.
+    !%End
+    call loct_parse_float  (check_inp('RootSolverAbsTolerance'),   CNST(1e-8), rs%abs_tolerance)
+
+    !%Variable RootSolverHavePolynomial
+    !%Type logical
+    !%Default no
+    !%Section Math::General
+    !%Description
+    !%  If set to yes, the coefficients of the polynomial have to be passed to
+    !%  the root solver.
+    !%End
+    call loct_parse_logical(check_inp('RootSolverHavePolynomial'),    .false., rs%have_polynomial)
+
+    !%Variable RootSolverWSRadius
+    !%Type float
+    !%Default 1.0
+    !%Section Math::General
+    !%Description
+    !% Radius of circle in the complex plane. If RootSolverWSRadius = 1.0
+    !% the unit roots of a n-th order polynomial are taken as initial values.
+    !%End
+    call loct_parse_float  (check_inp('RootSolverWSRadius'),       CNST( 1.0), rs%ws_radius)
+
+    call pop_sub()
+  end subroutine root_solver_read
 
   ! ---------------------------------------------------------
   subroutine droot_bisection
@@ -207,6 +319,58 @@ contains
     deallocate(numerator, denominator)
 
   end subroutine func_ws
+
+
+  ! ---------------------------------------------------------
+  ! Newton-Raphson scheme can only be used in the real case.
+  subroutine droot_newton(rs, func, root, startval, success)
+    type(root_solver_t), intent(in)  :: rs
+    FLOAT,               intent(out) :: root(:)        ! root we are searching
+    FLOAT,               intent(in)  :: startval(:)    ! start value for the search
+    logical,             intent(out) :: success
+    interface
+      subroutine func(z, f, jf)
+        FLOAT :: z(:), f(:), jf(:, :)
+      end subroutine func
+    end interface
+
+    integer :: n, iter
+    FLOAT   :: err
+    FLOAT, allocatable :: f(:), jf(:, :), delta(:, :), rhs(:, :)
+
+    call push_sub('root_solver_inc.Xroot_newton')
+
+    ! Figure out the dimensionality of the problem
+    n = size(startval)
+
+    ALLOCATE(f(n), n)
+    ALLOCATE(jf(n, n), n*n)
+    ALLOCATE(delta(n, 1), n)
+    ALLOCATE(rhs(n, 1), n)
+
+    root = startval
+    call func(root, f, jf)
+    err = sum(f(:)*f(:))
+
+    success = .true.
+    iter = 0
+    do while(err > rs%abs_tolerance)
+      rhs(1:n, 1) = -f(1:n)
+      call lalg_linsyssolve(n, 1, jf, rhs, delta)
+      root(1:n) = root(1:n) + delta(1:n, 1)
+      iter = iter + 1
+      if(iter > rs%maxiter) then
+        success = .false.
+        exit
+      end if
+      call func(root, f, jf)
+      err = sum(f(:)*f(:))
+    end do
+
+    deallocate(f, jf, delta, rhs)
+    call pop_sub()
+  end subroutine droot_newton
+
 
 
 #include "undef.F90"

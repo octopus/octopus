@@ -364,11 +364,6 @@ contains
     case(SPEC_ALL_E)
 
       !imin = mesh_nearest_point(m, pos, dmin, rankmin)
-      ! One should not use chi0 = chi(pos), but that chi0 that
-      ! makes the first moment of rho equal to pos. For that, one
-      ! would need to solve the corresponding non-linear equation through,
-      ! e.g., Newton-Raphson method.
-
       ! Initial guess.
       call curvlinear_x2chi(m%sb, geo, cv, pos, chi0)
       delta = m%h(1)
@@ -401,14 +396,14 @@ contains
       do iter = 1, max_iter
         g(1:4, 1) = -f(x, jacobian)
 
-        !write(0, *) 'Dipole error = ', -g(1:4, 1)
+        write(0, *) 'Error = ', -g(1:4, 1)
 
         if(sqrt(dot_product(g(:, 1), g(:, 1))) < converged) exit
 
-        !write(*, *) 'JACOBIAN:'
-        !do i = 1, 4
-        !  write(*, '(4f16.6)') jacobian(i, 1:4)
-        !end do
+        write(*, *) 'JACOBIAN:'
+        do i = 1, 4
+          write(*, '(4f16.6)') jacobian(i, 1:4)
+        end do
 
         call lalg_linsyssolve(4, 1, jacobian, g, update)
         x(1:4) = x(1:4) + update(1:4, 1)
@@ -452,35 +447,32 @@ contains
         end do
       end do
 
-      !write(0, '(a,4f16.6)') 'x(1:4) = ', x(1:4)
-      !write(0, *) 'Norm1 = ', dmf_integrate(m, rho)
-
       ALLOCATE(xrho(m%np), m%np)
+
+      ! First, we calculate the function f.
       do i = 1, 3
         xrho(1:m%np) = rho(1:m%np) * m%x(1:m%np, i)
-        f(i) = dmf_integrate(m, xrho)
+        f(i) = dmf_integrate(m, xrho) - pos(i)
+      end do
+      f(4) = dmf_integrate(m, rho) - M_ONE
 
-        do j = 1, 3
+      write(0, '(a,4f16.6)') 'x(1:4) = ', x(1:4)
+      write(0, *) 'Norm1 = ', dmf_integrate(m, rho)
+
+      do i = 1, 3
+        do j = 1, 4
           xrho(1:m%np) = grho(1:m%np, j) * m%x(1:m%np, i)
           jacobian(i, j) = dmf_integrate(m, xrho)
         end do
-
-        xrho(1:m%np) = grho(1:m%np, 4) * m%x(1:m%np, i)
-        jacobian(i, 4) = dmf_integrate(m, xrho)
-
       end do
-      do j = 1, 3
+      do j = 1, 4
         xrho(1:m%np) = grho(1:m%np, j)
         jacobian(4, j) = dmf_integrate(m, xrho)
       end do
-      xrho(1:m%np) = grho(1:m%np, 4)
-      jacobian(4, 4) = dmf_integrate(m, xrho)
 
       deallocate(xrho)
 
-      f(1:3) = f(1:3) - pos(1:3)
-      f(4)   = dmf_integrate(m, rho) - M_ONE
-
+ 
       deallocate(grho)
     end function f
 
