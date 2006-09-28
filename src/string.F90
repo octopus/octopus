@@ -129,7 +129,7 @@ contains
     do i = 1, pad
       s_out(i:i) = " ";
     end do
-    s_out(pad + 1:pad + li + 1) = s_in(1:li)
+    s_out(pad + 1:pad + li) = s_in(1:li)
     do i = pad + li + 1, l
       s_out(i:i) = " ";
     end do
