@@ -37,6 +37,7 @@ module guess_density_m
   use mpi_m
   use curvlinear_m
   use multicomm_m
+  use root_solver_m
 
   implicit none
 
@@ -351,10 +352,11 @@ contains
     type(geometry_t),   intent(in)  :: geo
     FLOAT,              intent(out) :: rho(:)
 
-    FLOAT, parameter :: converged  = CNST(1.0e-8)
     integer :: iter, i
-    integer, parameter :: max_iter = 500
-    FLOAT :: g(4, 1), x(1:4), chi0(3), jacobian(4, 4), delta, alpha, beta, update(4, 1), chi(3), r
+    logical :: conv
+    type(root_solver_t) :: rs
+    FLOAT :: x(1:4), chi0(3), delta, alpha, beta, startval(4)
+    FLOAT, allocatable :: grho(:, :)
 
     call push_sub('specie_grid.specie_get_density')
 
@@ -363,67 +365,39 @@ contains
     select case(s%type)
     case(SPEC_ALL_E)
 
+      ALLOCATE(grho(m%np, 4), 4*m%np)
+
       !imin = mesh_nearest_point(m, pos, dmin, rankmin)
       ! Initial guess.
       call curvlinear_x2chi(m%sb, geo, cv, pos, chi0)
       delta = m%h(1)
       alpha = sqrt(M_TWO)*s%sigma*delta
-
-      rho = M_ZERO
-      do i = 1, m%np
-
-        chi(1) = m%Lxyz(i, 1) * m%h(1) + m%sb%box_offset(1)
-        chi(2) = m%Lxyz(i, 2) * m%h(2) + m%sb%box_offset(2)
-        chi(3) = m%Lxyz(i, 3) * m%h(3) + m%sb%box_offset(3)
-
-        r = sqrt( sum( (chi(1:3)-chi0(1:3))**2 ) )
-
-        if( (r/alpha)**2 < CNST(10.0)) then
-          rho(i) = exp(-(r/alpha)**2)
-        else
-          rho(i) = M_ZERO
-        end if
-
-      end do
-
+      beta = M_ONE
+      startval(1:3) = chi0(1:3)
+      startval(4)   = beta
+      call getrho(startval)
       beta = M_ONE / dmf_integrate(m, rho)
-      rho = beta*rho
-      !beta = M_ONE / ( alpha**calc_dim * sqrt(M_PI)**calc_dim )
-      x(1:3) = chi0(1:3)
-      x(4)   = beta
+      startval(4)   = beta
 
-      ! TODO: This Newton-Raphson procedure should make use of the root solver module.
-      do iter = 1, max_iter
-        g(1:4, 1) = -f(x, jacobian)
+      call root_solver_init(rs, solver_type = ROOT_NEWTON, maxiter = 500, abs_tolerance = CNST(1.0e-10))
+      call droot_solver_run(rs, func, x, conv, startval = startval)
+      if(.not.conv) then
+        write(message(1),'(a)') 'Internal error in get_specie_density.'
+        call write_fatal(1)
+      end if
 
-        write(0, *) 'Error = ', -g(1:4, 1)
-
-        if(sqrt(dot_product(g(:, 1), g(:, 1))) < converged) exit
-
-        write(*, *) 'JACOBIAN:'
-        do i = 1, 4
-          write(*, '(4f16.6)') jacobian(i, 1:4)
-        end do
-
-        call lalg_linsyssolve(4, 1, jacobian, g, update)
-        x(1:4) = x(1:4) + update(1:4, 1)
-      end do
       rho = - s%z * rho
+
+      deallocate(grho)
     end select
 
     call pop_sub()
     contains
 
-    function f(x, jacobian)
-      FLOAT :: f(4)
-      FLOAT, intent(in)     :: x(4)
-      FLOAT, intent(out)    :: jacobian(4, 4)
-
+    subroutine getrho(xin)
+      FLOAT, intent(in) :: xin(:)
       integer :: i, j
-      FLOAT :: chi(3), r
-      FLOAT, allocatable :: xrho(:), grho(:, :)
-
-      ALLOCATE(grho(m%np, 4), 4*m%np)
+      FLOAT :: r, chi(3)
 
       rho = M_ZERO
       do i = 1, m%np
@@ -432,21 +406,31 @@ contains
         chi(2) = m%Lxyz(i, 2) * m%h(2) + m%sb%box_offset(2)
         chi(3) = m%Lxyz(i, 3) * m%h(3) + m%sb%box_offset(3)
 
-        r = sqrt( sum( (chi(1:3)-x(1:3))**2 ) )
+        r = sqrt( sum( (chi(1:3)-xin(1:3))**2 ) )
 
         if( (r/alpha)**2 < CNST(10.0)) then
           grho(i, 4) = exp(-(r/alpha)**2)
-          rho(i) = x(4) * grho(i, 4)
+          rho(i) = xin(4) * grho(i, 4)
         else
           grho(i, 4) = M_ZERO
           rho(i) = M_ZERO
         end if
 
         do j = 1, 3
-          grho(i, j) = (M_TWO/alpha**2) * (chi(j)-x(j)) * rho(i)
+          grho(i, j) = (M_TWO/alpha**2) * (chi(j)-xin(j)) * rho(i)
         end do
       end do
 
+    end subroutine getrho
+
+    subroutine func(xin, f, jacobian)
+      FLOAT :: xin(:), f(:), jacobian(:, :)
+
+      integer :: i, j
+      FLOAT :: chi(3), r
+      FLOAT, allocatable :: xrho(:)
+
+      call getrho(xin)
       ALLOCATE(xrho(m%np), m%np)
 
       ! First, we calculate the function f.
@@ -456,9 +440,7 @@ contains
       end do
       f(4) = dmf_integrate(m, rho) - M_ONE
 
-      write(0, '(a,4f16.6)') 'x(1:4) = ', x(1:4)
-      write(0, *) 'Norm1 = ', dmf_integrate(m, rho)
-
+      ! Now the jacobian.
       do i = 1, 3
         do j = 1, 4
           xrho(1:m%np) = grho(1:m%np, j) * m%x(1:m%np, i)
@@ -471,10 +453,7 @@ contains
       end do
 
       deallocate(xrho)
-
- 
-      deallocate(grho)
-    end function f
+    end subroutine func
 
   end subroutine get_specie_density
 
