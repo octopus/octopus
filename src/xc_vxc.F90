@@ -28,7 +28,7 @@ subroutine xc_get_vxc(gr, xcs, rho, ispin, vxc, ex, ec, ip, qtot)
   FLOAT,              intent(in)    :: ip, qtot
 
   FLOAT, allocatable :: dens(:,:), dedd(:,:), l_dens(:), l_dedd(:), ex_per_vol(:), ec_per_vol(:)
-  FLOAT, allocatable :: gdens(:,:,:), dedgd(:,:,:), l_gdens(:,:), l_dedgd(:,:)
+  FLOAT, allocatable :: gdens(:,:,:), dedgd(:,:,:), l_sigma(:), l_vsigma(:)
   FLOAT, allocatable :: tau(:,:), dedtau(:,:), l_tau(:), l_dedtau(:)
 
   integer :: i, ixc, spin_channels
@@ -67,9 +67,15 @@ subroutine xc_get_vxc(gr, xcs, rho, ispin, vxc, ex, ec, ip, qtot)
   space_loop: do i = 1, NP
 
     ! make a local copy with the correct memory order
-    l_dens (:)   = dens (i, :)
-    if( gga.or.mgga) l_gdens(:,:) = gdens(i, :,:)
-    if(        mgga) l_tau  (:)   = tau  (i, :)
+    l_dens(:) = dens (i, :)
+    if(gga.or.mgga) then
+      l_sigma(1) = sum(gdens(i, :,1)*gdens(i, :,1))
+      if(ispin == SPIN_POLARIZED) then
+        l_sigma(2) = sum(gdens(i, :,1)*gdens(i, :,2))
+        l_sigma(3) = sum(gdens(i, :,2)*gdens(i, :,2))
+      end if
+    end if
+    if(mgga) l_tau  (:)   = tau  (i, :)
 
     ! Calculate the potential/gradient density in local reference frame.
     functl_loop: do ixc = 1, 2
@@ -81,19 +87,19 @@ subroutine xc_get_vxc(gr, xcs, rho, ispin, vxc, ex, ec, ip, qtot)
       case(XC_FAMILY_GGA)
         if(functl(ixc)%id == XC_GGA_XC_LB) then
           call mesh_r(gr%m, i, r)
-          call xc_gga_lb(functl(ixc)%conf, l_dens(1), l_gdens(1,1), &
-            r, ip, qtot, l_dedd(1))
+          call xc_gga_lb(functl(ixc)%conf, l_dens(1), l_sigma(1), &
+             r, ip, qtot, l_dedd(1))
 
           e       = M_ZERO
-          l_dedgd = M_ZERO
+          l_vsigma = M_ZERO
         else
-          call xc_gga(functl(ixc)%conf, l_dens(1), l_gdens(1,1), &
-            e, l_dedd(1), l_dedgd(1,1))
+          call xc_gga(functl(ixc)%conf, l_dens(1), l_sigma(1), &
+            e, l_dedd(1), l_vsigma(1))
         end if
 
       case(XC_FAMILY_MGGA)
-        call xc_mgga(functl(ixc)%conf, l_dens(1), l_gdens(1,1), l_tau(1), &
-          e, l_dedd(1), l_dedgd(1,1), l_dedtau(1))
+        !call xc_mgga(functl(ixc)%conf, l_dens(1), l_gdens(1,1), l_tau(1), &
+        !  e, l_dedd(1), l_dedgd(1,1), l_dedtau(1))
 
       case default
         cycle
@@ -109,12 +115,15 @@ subroutine xc_get_vxc(gr, xcs, rho, ispin, vxc, ex, ec, ip, qtot)
       ! store results
       dedd(i,:) = dedd(i,:) + l_dedd(:)
 
-      if(functl(ixc)%family==XC_FAMILY_GGA) then
-        dedgd(i,:,:) = dedgd(i,:,:) + l_dedgd(:,:)
+      if(functl(ixc)%family==XC_FAMILY_GGA .or. functl(ixc)%family==XC_FAMILY_MGGA) then
+        dedgd(i,:,1) = dedgd(i,:,1) + M_TWO*l_vsigma(1)*gdens(i,:,1)
+        if(ispin == SPIN_POLARIZED) then
+          dedgd(i,:,1) = dedgd(i,:,1) + l_vsigma(2)*gdens(i,:,2)
+          dedgd(i,:,2) = dedgd(i,:,2) + M_TWO*l_vsigma(3)*gdens(i,:,2) + l_vsigma(2)*gdens(i,:,1)
+        end if
       end if
 
       if(functl(ixc)%family==XC_FAMILY_MGGA) then
-        dedgd (i,:,:) = dedgd (i,:,:) + l_dedgd(:,:)
         dedtau(i,:)   = dedtau(i,:)   + l_dedtau(:)
       end if
 
@@ -229,8 +238,8 @@ contains
     ! allocate variables
     ALLOCATE(gdens(NP,      3, spin_channels), NP     *3*spin_channels)
     ALLOCATE(dedgd(NP_PART, 3, spin_channels), NP_PART*3*spin_channels)
-    ALLOCATE(l_gdens(3, spin_channels), 3*spin_channels)
-    ALLOCATE(l_dedgd(3, spin_channels), 3*spin_channels)
+    ALLOCATE(l_sigma (3), 3)
+    ALLOCATE(l_vsigma(3), 3)
     gdens = M_ZERO
     dedgd = M_ZERO
 
@@ -244,7 +253,7 @@ contains
   ! ---------------------------------------------------------
   ! cleans up memory allocated in gga_init
   subroutine gga_end()
-    deallocate(gdens, dedgd, l_gdens, l_dedgd)
+    deallocate(gdens, dedgd, l_sigma, l_vsigma)
   end subroutine gga_end
 
 
