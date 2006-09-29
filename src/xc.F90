@@ -111,25 +111,6 @@ contains
 
     xcs%cdft   = cdft  ! make a copy of flag indicating the use of current-dft_m
 
-    !%Variable InterpolateLDA
-    !%Type logical
-    !%Default no
-    !%Section Hamiltonian::XC
-    !%Description
-    !% In order to speed-up the calculation of the LDA xc potentials, one can
-    !% pre-calculate it at the beginning, and then interpolate every time the xc
-    !% correlation has to be calculated.
-    !%End
-    call loct_parse_logical(check_inp('InterpolateLDA'), .false., interpolate_lda)
-    if(interpolate_lda) then
-      call xc_lda_speedup(1)
-      message(1) = "The LDA functionals will be interpolated instead of calculated."
-      message(2) = "Beware that this is still an experimental feature."
-      call write_warning(2)
-    else
-      call xc_lda_speedup(0)
-    end if
-
     ! get current-dependent functional
     call xc_j_functl_init (xcs%j_functl, cdft, spin_channels)
     xcs%family = xcs%j_functl%family

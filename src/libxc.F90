@@ -43,8 +43,7 @@ module lib_xc_m
     xc_gga_lb,                      &
     xc_mgga_init,                   &
     xc_mgga,                        &
-    xc_mgga_end,                    &
-    xc_lda_speedup
+    xc_mgga_end
 
   ! Families of xc functionals
   integer, public, parameter ::     &
@@ -89,9 +88,12 @@ module lib_xc_m
   ! the GGAs
   integer, public, parameter ::     &
     XC_GGA_X_PBE            = 101,  &  ! Perdew, Burke & Ernzerhof exchange
-    XC_GGA_C_PBE            = 102,  &  ! Perdew, Burke & Ernzerhof correlation
-    XC_GGA_XC_LB            = 103,  &  ! van Leeuwen & Baerends
-    XC_GGA_X_B88            = 104      ! Becke 88
+    XC_GGA_X_B86            = 102,  &  ! Becke 86 Xalpha,beta,gamma
+    XC_GGA_X_B86_R          = 103,  &  ! Becke 86 Xalpha,beta,gamma reoptimized
+    XC_GGA_X_B88            = 104,  &  ! Becke 88
+    XC_GGA_C_PBE            = 130,  &  ! Perdew, Burke & Ernzerhof correlation
+    XC_GGA_XC_LB            = 160      ! van Leeuwen & Baerends
+
 
   ! the meta-GGAs
   integer, public, parameter ::     &
@@ -130,13 +132,6 @@ module lib_xc_m
     end subroutine xc_info_refs
   end interface
 
-  ! Decides wether or not to apply the speed-up tricks.
-  interface xc_lda_speedup
-    subroutine lda_speedup(i)
-      integer, intent(in) :: i
-    end subroutine lda_speedup
-  end interface
-
   ! We will use the same public interface (xc_lda_init) for the three C procedures
   interface xc_lda_init
     subroutine xc_lda_init_(p, info, functional, nspin)
@@ -145,6 +140,7 @@ module lib_xc_m
       integer,               intent(in)  :: functional
       integer,               intent(in)  :: nspin
     end subroutine xc_lda_init_
+
     subroutine xc_lda_x_init(p, info, functional, nspin, dim, irel)
       integer(POINTER_SIZE), intent(out) :: p
       integer(POINTER_SIZE), intent(out) :: info
@@ -199,6 +195,7 @@ module lib_xc_m
       integer,               intent(in)  :: functional
       integer,               intent(in)  :: nspin
     end subroutine xc_gga_init_
+
     subroutine xc_gga_lb_init(p, info, functional, nspin, modified, threshold)
       integer(POINTER_SIZE), intent(out) :: p
       integer(POINTER_SIZE), intent(out) :: info

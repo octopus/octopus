@@ -228,7 +228,7 @@ CPPFLAGS="$CPPFLAGS -I../libstring_f"
 
 AC_CONFIG_SUBDIRS([libxc])
 AX_F90_MODULE_FLAG
-FCFLAGS="$FCFLAGS ${ax_f90_modflag}../libxc"
+FCFLAGS="$FCFLAGS ${ax_f90_modflag}../libxc/src/"
 
 
 # This is certainly wrong, but I don't know

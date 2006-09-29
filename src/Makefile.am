@@ -55,7 +55,7 @@ noinst_HEADERS = \
 core_LIBS = @LIBS_LAPACK@ @LIBS_BLAS@ \
   ../liboct/liboct.a \
   ../liboct_parser/liboct_parser.a \
-  ../libxc/libxc.a \
+  ../libxc/src/libxc.a \
   -L../libstring_f -lstring_f \
   @GSL_LIBS@ @GD_LIBS@ @FCEXTRALIBS@
 
