@@ -264,12 +264,15 @@ contains
     !% An all-electron atom is defined by a Gaussian accumulation of positive charge 
     !% (distorted if curvilinear coordinates are used), in the form:
     !%
-    !% q(r) = z * beta * exp[ - (\vec{r}-\vec{r0})**2 / (sqrt(2) * delta * sigma) ]
+    !% <MATH>
+    !% q(r) = z * \beta * exp[ - (\vec{r}-\vec{r0})**2 / (sqrt(2) * \delta * \sigma) ]
+    !% </MATH>
     !%
-    !% beta is chosen in order to maintain proper normalization (the integral of
-    !% q should sum up to z). delta is the grid spacing (the grid spacing in the first
-    !% dimension, to be precise). \vec{r0} is calculated in such a way that the
-    !% the first moment of q(r)/z is equal to the atomic position.
+    !% <math>\beta</math> is chosen in order to maintain proper normalization (the integral of
+    !% <math>q</math> should sum up to <math>z</math>). <math>\delta</math> is 
+    !% the grid spacing (the grid spacing in the first dimension, to be precise). 
+    !% <math>\vec{r0}</math> is calculated in such a way that the the first moment of 
+    !% <math>q(r)/z</math> is equal to the atomic position.
     !%
     !% For a precise description, see [N. A. Modine, Phys. Rev. B 55, 10289 (1997)]
     !%end
