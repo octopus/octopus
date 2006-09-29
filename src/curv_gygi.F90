@@ -50,6 +50,12 @@ module curv_gygi_m
     FLOAT :: beta          ! distance over which Euclidian coordinates are recovered
   end type curv_gygi_t
 
+  type(simul_box_t), pointer  :: sb_p
+  type(geometry_t),  pointer  :: geo_p
+  type(curv_gygi_t), pointer  :: cv_p
+  integer :: i_p
+  FLOAT :: chi_p(3)
+
 contains
 
   ! ---------------------------------------------------------
@@ -103,9 +109,9 @@ contains
 
   ! ---------------------------------------------------------
   subroutine curv_gygi_chi2x(sb, geo, cv, chi, x)
-    type(simul_box_t), intent(in)  :: sb
-    type(geometry_t),  intent(in)  :: geo
-    type(curv_gygi_t), intent(in)  :: cv
+    type(simul_box_t), target, intent(in)  :: sb
+    type(geometry_t), target,  intent(in)  :: geo
+    type(curv_gygi_t), target, intent(in)  :: cv
     FLOAT,             intent(in)  :: chi(:)  ! chi(sb%dim)
     FLOAT,             intent(out) :: x(:)    ! x(sb%dim)
 
@@ -116,15 +122,23 @@ contains
 
     call root_solver_init(rs, solver_type = ROOT_NEWTON, maxiter = 500, abs_tolerance = CNST(1.0e-10))
 
-    i = geo%natoms
+    sb_p  => sb
+    geo_p => geo
+    cv_p  => cv
+    i_p = geo%natoms
+    chi_p = chi
+
     call droot_solver_run(rs, getf, x, conv, startval = chi)
 
     if(.not.conv) then
       do i = 1, geo%natoms
         conv = .false.
+        i_p = i
         call droot_solver_run(rs, getf, x, conv, startval = x)
       end do
     end if
+
+    nullify(sb_p); nullify(geo_p); nullify(cv_p)
 
     if(.not.conv) then
       message(1) = "During the construction of the adaptive grid, the Newton-Raphson"
@@ -135,15 +149,15 @@ contains
       call write_fatal(5)
     end if
 
-    contains
-
-    subroutine getf(y, f, jf)
-      FLOAT :: y(:), f(:), jf(:, :)
-      call curv_gygi_jacobian(sb, geo, cv, y, f, jf, i)
-      f(:) = f(:) - chi(:)
-    end subroutine getf 
-
   end subroutine curv_gygi_chi2x
+
+
+  ! ---------------------------------------------------------
+  subroutine getf(y, f, jf)
+    FLOAT :: y(:), f(:), jf(:, :)
+    call curv_gygi_jacobian(sb_p, geo_p, cv_p, y, f, jf, i_p)
+    f(:) = f(:) - chi_p(:)
+  end subroutine getf 
 
 
   ! ---------------------------------------------------------

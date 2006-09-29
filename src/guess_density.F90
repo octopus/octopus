@@ -51,6 +51,11 @@ module guess_density_m
                         INITRHO_RANDOM        = 3, &
                         INITRHO_USERDEF       = 123
 
+  type(mesh_t), pointer :: m_p
+  FLOAT, allocatable :: rho_p(:)
+  FLOAT, allocatable :: grho_p(:, :)
+  FLOAT :: alpha_p
+  FLOAT :: pos_p(MAX_DIM)
 
 contains
 
@@ -347,16 +352,14 @@ contains
   subroutine get_specie_density(s, pos, m, cv, geo, rho)
     type(specie_t),     intent(in) :: s
     FLOAT,              intent(in) :: pos(MAX_DIM)
-    type(mesh_t),       intent(in)  :: m
+    type(mesh_t), target, intent(in)  :: m
     type(curvlinear_t), intent(in)  :: cv
     type(geometry_t),   intent(in)  :: geo
     FLOAT,              intent(out) :: rho(:)
 
-    integer :: iter, i
     logical :: conv
     type(root_solver_t) :: rs
     FLOAT :: x(1:4), chi0(3), delta, alpha, beta, startval(4)
-    FLOAT, allocatable :: grho(:, :)
 
     call push_sub('specie_grid.specie_get_density')
 
@@ -365,18 +368,22 @@ contains
     select case(s%type)
     case(SPEC_ALL_E)
 
-      ALLOCATE(grho(m%np, 4), 4*m%np)
+      ALLOCATE(rho_p(m%np), m%np)
+      ALLOCATE(grho_p(m%np, 4), 4*m%np)
 
-      !imin = mesh_nearest_point(m, pos, dmin, rankmin)
+      m_p => m
+      pos_p = pos
+
       ! Initial guess.
       call curvlinear_x2chi(m%sb, geo, cv, pos, chi0)
       delta = m%h(1)
       alpha = sqrt(M_TWO)*s%sigma*delta
+      alpha_p = alpha
       beta = M_ONE
       startval(1:3) = chi0(1:3)
       startval(4)   = beta
       call getrho(startval)
-      beta = M_ONE / dmf_integrate(m, rho)
+      beta = M_ONE / dmf_integrate(m, rho_p)
       startval(4)   = beta
 
       call root_solver_init(rs, solver_type = ROOT_NEWTON, maxiter = 500, abs_tolerance = CNST(1.0e-10))
@@ -386,75 +393,77 @@ contains
         call write_fatal(1)
       end if
 
-      rho = - s%z * rho
+      rho = - s%z * rho_p
 
-      deallocate(grho)
+      nullify(m_p)
+      deallocate(grho_p, rho_p)
     end select
 
     call pop_sub()
-    contains
-
-    subroutine getrho(xin)
-      FLOAT, intent(in) :: xin(:)
-      integer :: i, j
-      FLOAT :: r, chi(3)
-
-      rho = M_ZERO
-      do i = 1, m%np
-
-        chi(1) = m%Lxyz(i, 1) * m%h(1) + m%sb%box_offset(1)
-        chi(2) = m%Lxyz(i, 2) * m%h(2) + m%sb%box_offset(2)
-        chi(3) = m%Lxyz(i, 3) * m%h(3) + m%sb%box_offset(3)
-
-        r = sqrt( sum( (chi(1:3)-xin(1:3))**2 ) )
-
-        if( (r/alpha)**2 < CNST(10.0)) then
-          grho(i, 4) = exp(-(r/alpha)**2)
-          rho(i) = xin(4) * grho(i, 4)
-        else
-          grho(i, 4) = M_ZERO
-          rho(i) = M_ZERO
-        end if
-
-        do j = 1, 3
-          grho(i, j) = (M_TWO/alpha**2) * (chi(j)-xin(j)) * rho(i)
-        end do
-      end do
-
-    end subroutine getrho
-
-    subroutine func(xin, f, jacobian)
-      FLOAT :: xin(:), f(:), jacobian(:, :)
-
-      integer :: i, j
-      FLOAT :: chi(3), r
-      FLOAT, allocatable :: xrho(:)
-
-      call getrho(xin)
-      ALLOCATE(xrho(m%np), m%np)
-
-      ! First, we calculate the function f.
-      do i = 1, 3
-        xrho(1:m%np) = rho(1:m%np) * m%x(1:m%np, i)
-        f(i) = dmf_integrate(m, xrho) - pos(i)
-      end do
-      f(4) = dmf_integrate(m, rho) - M_ONE
-
-      ! Now the jacobian.
-      do i = 1, 3
-        do j = 1, 4
-          xrho(1:m%np) = grho(1:m%np, j) * m%x(1:m%np, i)
-          jacobian(i, j) = dmf_integrate(m, xrho)
-        end do
-      end do
-      do j = 1, 4
-        xrho(1:m%np) = grho(1:m%np, j)
-        jacobian(4, j) = dmf_integrate(m, xrho)
-      end do
-
-      deallocate(xrho)
-    end subroutine func
-
   end subroutine get_specie_density
+
+
+  ! ---------------------------------------------------------
+  subroutine func(xin, f, jacobian)
+    FLOAT :: xin(:), f(:), jacobian(:, :)
+
+    integer :: i, j
+    FLOAT, allocatable :: xrho(:)
+
+    call getrho(xin)
+    ALLOCATE(xrho(m_p%np), m_p%np)
+
+    ! First, we calculate the function f.
+    do i = 1, 3
+      xrho(1:m_p%np) = rho_p(1:m_p%np) * m_p%x(1:m_p%np, i)
+      f(i) = dmf_integrate(m_p, xrho) - pos_p(i)
+    end do
+    f(4) = dmf_integrate(m_p, rho_p) - M_ONE
+
+    ! Now the jacobian.
+    do i = 1, 3
+      do j = 1, 4
+        xrho(1:m_p%np) = grho_p(1:m_p%np, j) * m_p%x(1:m_p%np, i)
+        jacobian(i, j) = dmf_integrate(m_p, xrho)
+      end do
+    end do
+    do j = 1, 4
+      xrho(1:m_p%np) = grho_p(1:m_p%np, j)
+      jacobian(4, j) = dmf_integrate(m_p, xrho)
+    end do
+
+    deallocate(xrho)
+  end subroutine func
+
+
+  ! ---------------------------------------------------------
+  subroutine getrho(xin)
+    FLOAT, intent(in) :: xin(:)
+    integer :: i, j
+    FLOAT :: r, chi(3)
+
+    rho_p = M_ZERO
+    do i = 1, m_p%np
+
+      chi(1) = m_p%Lxyz(i, 1) * m_p%h(1) + m_p%sb%box_offset(1)
+      chi(2) = m_p%Lxyz(i, 2) * m_p%h(2) + m_p%sb%box_offset(2)
+      chi(3) = m_p%Lxyz(i, 3) * m_p%h(3) + m_p%sb%box_offset(3)
+
+      r = sqrt( sum( (chi(1:3)-xin(1:3))**2 ) )
+
+      if( (r/alpha_p)**2 < CNST(10.0)) then
+        grho_p(i, 4) = exp(-(r/alpha_p)**2)
+        rho_p(i) = xin(4) * grho_p(i, 4)
+      else
+        grho_p(i, 4) = M_ZERO
+        rho_p(i) = M_ZERO
+      end if
+
+      do j = 1, 3
+        grho_p(i, j) = (M_TWO/alpha_p**2) * (chi(j)-xin(j)) * rho_p(i)
+      end do
+    end do
+  end subroutine getrho 
+
 
 end module guess_density_m
