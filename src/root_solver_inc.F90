@@ -21,11 +21,11 @@
 ! ---------------------------------------------------------
 subroutine X(root_solver_run)(rs, func, root, success, startval, interval_, coeff)
   type(root_solver_t), intent(inout) :: rs
-  R_TYPE,                 intent(out)   :: root(:)    ! roots we are searchin
-  logical,                intent(out)   :: success
-  R_TYPE, optional,       intent(in)    :: startval(:)    ! start value for the search
-  FLOAT,  optional,       intent(in)    :: interval_(2) ! lower and upper boundary of search region
-  R_TYPE, optional,       intent(in)    :: coeff(:)    ! polynomial coefficients
+  R_TYPE,                intent(out)  :: root(:)        ! roots we are searching
+  logical,               intent(out)  :: success
+  R_TYPE, optional,      intent(in)   :: startval(:)    ! start value for the search
+  FLOAT,  optional,      intent(in)   :: interval_(2)   ! lower and upper boundary of search region
+  R_TYPE, optional,      intent(in)   :: coeff(:)       ! polynomial coefficients
   interface
     subroutine func(z, f, jf)
       R_TYPE :: z(:) , f(:), jf(:, :)

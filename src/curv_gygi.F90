@@ -108,6 +108,15 @@ contains
 
 
   ! ---------------------------------------------------------
+  subroutine getf(y, f, jf)
+    FLOAT :: y(:), f(:), jf(:, :)
+
+    call curv_gygi_jacobian(sb_p, geo_p, cv_p, y, f, jf, i_p)
+    f(:) = f(:) - chi_p(:)
+  end subroutine getf 
+
+
+  ! ---------------------------------------------------------
   subroutine curv_gygi_chi2x(sb, geo, cv, chi, x)
     type(simul_box_t), target, intent(in)  :: sb
     type(geometry_t), target,  intent(in)  :: geo
@@ -151,13 +160,6 @@ contains
 
   end subroutine curv_gygi_chi2x
 
-
-  ! ---------------------------------------------------------
-  subroutine getf(y, f, jf)
-    FLOAT :: y(:), f(:), jf(:, :)
-    call curv_gygi_jacobian(sb_p, geo_p, cv_p, y, f, jf, i_p)
-    f(:) = f(:) - chi_p(:)
-  end subroutine getf 
 
 
   ! ---------------------------------------------------------
