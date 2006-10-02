@@ -130,10 +130,22 @@ contains
     !%Description
     !% Defines the exchange functional
     !%Option lda_x 1
-    !% LDA
+    !% LDA: Slater exchange
     !%Option gga_x_pbe 101
-    !% GGA: Perdew, Burke & Ernzerhof (GGA)
-    !%Option gga_xc_lb 103
+    !% GGA: Perdew, Burke & Ernzerhof
+    !%Option gga_x_pbe_r 102
+    !% GGA: Perdew, Burke & Ernzerhof (revised)
+    !%Option gga_x_b86 103
+    !% GGA: Becke 86 Xalpha,beta,gamma
+    !%Option gga_x_b86_r 104
+    !% GGA: Becke 86 Xalpha,beta,gamma reoptimized
+    !%Option gga_x_b86_mgc 105
+    !% GGA: Becke 86 Xalpha,beta,gamma (with mod. grad. correction)
+    !%Option gga_x_b88 106
+    !% GGA: Becke 88
+    !%Option gga_x_g96 107
+    !% GGA: Gill 96
+    !%Option gga_xc_lb 160
     !% GGA: van Leeuwen & Baerends (GGA)
     !%Option mgga_x_tpss 201
     !% MGGA (not working)
@@ -142,18 +154,26 @@ contains
     !%End
     call loct_parse_int(check_inp('XFunctional'), XC_LDA_X, functl%id)
 
+    if(functl%id.ne.0) then
+      ! get the family of the functional
+      functl%family = xc_family_from_id(functl%id)
+
+      if(functl%family == XC_FAMILY_UNKNOWN) then
+        if(functl%id == XC_OEP_X) then
+          functl%family = XC_FAMILY_OEP
+        else
+          call input_error('XFunctional')
+        end if
+      end if
+    end if
+
     ! initialize
-    select case(functl%id)
-    case(0)
-
-    case(XC_LDA_X)
-      functl%family = XC_FAMILY_LDA
+    select case(functl%family)
+    case(XC_FAMILY_LDA)
       call xc_lda_init(functl%conf, functl%info, XC_LDA_X, &
-        spin_channels, ndim, XC_NON_RELATIVISTIC)
+         spin_channels, ndim, XC_NON_RELATIVISTIC)
 
-    case(XC_GGA_X_PBE, XC_GGA_XC_LB)
-      functl%family = XC_FAMILY_GGA
-
+    case(XC_FAMILY_GGA)
       if(functl%id == XC_GGA_XC_LB) then
         call loct_parse_int  (check_inp('LB94_modified'), 0, j)
         call loct_parse_float(check_inp('LB94_threshold'), CNST(1.0e-6), alpha)
@@ -163,18 +183,9 @@ contains
         call xc_gga_init(functl%conf, functl%info, functl%id, spin_channels)
       end if
 
-    case(XC_MGGA_X_TPSS)
-      functl%family = XC_FAMILY_MGGA
+    case(XC_FAMILY_MGGA)
       call xc_mgga_init(functl%conf, functl%info, functl%id, spin_channels)
 
-    case(XC_OEP_X)
-      functl%family = XC_FAMILY_OEP
-
-    case default
-      write(message(1), '(a,i3,a)') "'", functl%id, &
-        "' is not a known exchange functional!"
-      message(2) = "Please check the manual for a list of possible values."
-      call write_fatal(2)
     end select
 
   end subroutine xc_functl_init_exchange
@@ -222,12 +233,12 @@ contains
     !% LDA: Perdew & Wang
     !%Option lda_c_ob_pw 13
     !% LDA: Ortiz & Ballone (PW-type parametrization)
-    !%Option lda_c_lyp 14
-    !% LDA: Lee, Yang, & Parr LDA
-    !%Option lda_c_amgb 15
+    !%Option lda_c_amgb 14
     !% LDA: Attacalite et al functional for the 2D electron gas
-    !%Option gga_c_pbe 102
+    !%Option gga_c_pbe 130
     !% GGA: Perdew, Burke & Ernzerhof correlation
+    !%Option lda_c_lyp 131
+    !% LDA: Lee, Yang, & Parr LDA
     !%Option mgga_c_tpss 202
     !% MGGA (not working)
     !%End
@@ -237,22 +248,23 @@ contains
       case(1); call loct_parse_int(check_inp('CFunctional'), 0, functl%id)
     end select
 
-    ! initialize
-    select case(functl%id)
-    case(0)
+    if(functl%id.ne.0) then
+      ! get the family of the functional
+      functl%family = xc_family_from_id(functl%id)
 
-    case(XC_LDA_C_WIGNER, XC_LDA_C_RPA, XC_LDA_C_HL, XC_LDA_C_GL, XC_LDA_C_XALPHA, &
-      XC_LDA_C_VWN, XC_LDA_C_VWN_RPA,               &
-      XC_LDA_C_PZ, XC_LDA_C_PZ_MOD, XC_LDA_C_OB_PZ, &
-      XC_LDA_C_PW, XC_LDA_C_OB_PW,                  &
-      XC_LDA_C_LYP, XC_LDA_C_AMGB)
+      if(functl%family == XC_FAMILY_UNKNOWN) then
+        call input_error('CFunctional')
+      end if
+    end if
+
+    ! initialize
+    select case(functl%family)
+    case(XC_FAMILY_LDA)
 
       if(functl%id==XC_LDA_C_AMGB.and.ndim.ne.2) then
         message(1) = 'Functional AMGB only allowed in 2D'
         call write_fatal(1)
       end if
-
-      functl%family = XC_FAMILY_LDA
 
       if(functl%id.ne.XC_LDA_C_XALPHA) then
         call xc_lda_init(functl%conf, functl%info, functl%id, spin_channels)
@@ -262,19 +274,12 @@ contains
           spin_channels, ndim, alpha)
       end if
 
-    case(XC_GGA_C_PBE)
-      functl%family = XC_FAMILY_GGA
+    case(XC_FAMILY_GGA)
       call xc_gga_init(functl%conf, functl%info, functl%id, spin_channels)
 
-    case(XC_MGGA_C_TPSS)
-      functl%family = XC_FAMILY_MGGA
+    case(XC_FAMILY_MGGA)
       call xc_mgga_init(functl%conf, functl%info, functl%id, spin_channels)
 
-    case default
-      write(message(1), '(a,i3,a)') "'", functl%id, &
-        "' is not a known correlation functional!"
-      message(2) = "Please check the manual for a list of possible values."
-      call write_fatal(2)
     end select
 
   end subroutine xc_functl_init_correlation

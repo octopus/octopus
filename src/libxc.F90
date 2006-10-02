@@ -30,6 +30,7 @@ module lib_xc_m
     xc_info_name,                   &
     xc_info_family,                 &
     xc_info_refs,                   &
+    xc_family_from_id,              &
     xc_lda_init,                    &
     xc_lda,                         &
     xc_lda_fxc,                     &
@@ -47,6 +48,7 @@ module lib_xc_m
 
   ! Families of xc functionals
   integer, public, parameter ::     &
+    XC_FAMILY_UNKNOWN       =  -1,  &
     XC_FAMILY_LDA           =   1,  &
     XC_FAMILY_GGA           =   2,  &
     XC_FAMILY_MGGA          =   4,  &
@@ -82,16 +84,19 @@ module lib_xc_m
     XC_LDA_C_OB_PZ          =  11,  &  ! Ortiz & Ballone (PZ)
     XC_LDA_C_PW             =  12,  &  ! Perdew & Wang
     XC_LDA_C_OB_PW          =  13,  &  ! Ortiz & Ballone (PW)
-    XC_LDA_C_LYP            =  14,  &  ! Lee, Yang, & Parr LDA
-    XC_LDA_C_AMGB           =  15      ! Attacalite et al
+    XC_LDA_C_AMGB           =  14      ! Attacalite et al
 
   ! the GGAs
   integer, public, parameter ::     &
     XC_GGA_X_PBE            = 101,  &  ! Perdew, Burke & Ernzerhof exchange
-    XC_GGA_X_B86            = 102,  &  ! Becke 86 Xalpha,beta,gamma
-    XC_GGA_X_B86_R          = 103,  &  ! Becke 86 Xalpha,beta,gamma reoptimized
-    XC_GGA_X_B88            = 104,  &  ! Becke 88
+    XC_GGA_X_PBE_R          = 102,  &  ! Perdew, Burke & Ernzerhof exchange (revised)
+    XC_GGA_X_B86            = 103,  &  ! Becke 86 Xalpha,beta,gamma
+    XC_GGA_X_B86_R          = 104,  &  ! Becke 86 Xalpha,beta,gamma reoptimized
+    XC_GGA_X_B86_MGC        = 105,  &  ! Becke 88 Xalfa,beta,gamma (with mod. grad. correction)
+    XC_GGA_X_B88            = 106,  &  ! Becke 88
+    XC_GGA_X_G96            = 107,  &  ! Gill 96
     XC_GGA_C_PBE            = 130,  &  ! Perdew, Burke & Ernzerhof correlation
+    XC_GGA_C_LYP            = 131,  &  ! Lee, Yang & Parr
     XC_GGA_XC_LB            = 160      ! van Leeuwen & Baerends
 
 
@@ -131,6 +136,15 @@ module lib_xc_m
       character(len=*),      intent(out)   :: s
     end subroutine xc_info_refs
   end interface
+
+
+  ! functionals
+  interface
+    integer function xc_family_from_id(id)
+      integer, intent(in) :: id
+    end function xc_family_from_id
+  end interface
+
 
   ! We will use the same public interface (xc_lda_init) for the three C procedures
   interface xc_lda_init
