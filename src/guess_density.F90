@@ -51,7 +51,9 @@ module guess_density_m
                         INITRHO_RANDOM        = 3, &
                         INITRHO_USERDEF       = 123
 
-  type(mesh_t), pointer :: m_p
+  type(mesh_t),       pointer :: m_p
+  type(geometry_t),   pointer :: geo_p
+  type(curvlinear_t), pointer :: cv_p
   FLOAT, allocatable :: rho_p(:)
   FLOAT, allocatable :: grho_p(:, :)
   FLOAT :: alpha_p
@@ -353,8 +355,8 @@ contains
     type(specie_t),     intent(in) :: s
     FLOAT,              intent(in) :: pos(MAX_DIM)
     type(mesh_t), target, intent(in)  :: m
-    type(curvlinear_t), intent(in)  :: cv
-    type(geometry_t),   intent(in)  :: geo
+    type(curvlinear_t), target, intent(in)  :: cv
+    type(geometry_t), target, intent(in)  :: geo
     FLOAT,              intent(out) :: rho(:)
 
     logical :: conv
@@ -371,7 +373,9 @@ contains
       ALLOCATE(rho_p(m%np), m%np)
       ALLOCATE(grho_p(m%np, 4), 4*m%np)
 
-      m_p => m
+      m_p   => m
+      geo_p => geo
+      cv_p  => cv
       pos_p = pos
 
       ! Initial guess.
@@ -395,7 +399,7 @@ contains
 
       rho = - s%z * rho_p
 
-      nullify(m_p)
+      nullify(m_p, geo_p, cv_p)
       deallocate(grho_p, rho_p)
     end select
 
@@ -440,15 +444,13 @@ contains
   subroutine getrho(xin)
     FLOAT, intent(in) :: xin(:)
     integer :: i, j
-    FLOAT :: r, chi(3)
+    FLOAT :: r, chi(MAX_DIM), x(MAX_DIM)
 
-    rho_p = M_ZERO
+    rho_p = M_ZERO; x = M_ZERO
     do i = 1, m_p%np
 
-      chi(1) = m_p%Lxyz(i, 1) * m_p%h(1) + m_p%sb%box_offset(1)
-      chi(2) = m_p%Lxyz(i, 2) * m_p%h(2) + m_p%sb%box_offset(2)
-      chi(3) = m_p%Lxyz(i, 3) * m_p%h(3) + m_p%sb%box_offset(3)
-
+      x(1:m_p%sb%dim) = m_p%x(i, 1:m_p%sb%dim)
+      call curvlinear_x2chi(m_p%sb, geo_p, cv_p, x, chi)
       r = sqrt( sum( (chi(1:3)-xin(1:3))**2 ) )
 
       if( (r/alpha_p)**2 < CNST(10.0)) then
@@ -463,6 +465,7 @@ contains
         grho_p(i, j) = (M_TWO/alpha_p**2) * (chi(j)-xin(j)) * rho_p(i)
       end do
     end do
+
   end subroutine getrho 
 
 
