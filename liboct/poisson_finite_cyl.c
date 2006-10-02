@@ -74,8 +74,12 @@ static double int_aux(int index, double kx, double kr, double x0, double r0, int
 
   /*pass the given parameters to program*/
   const size_t wrk_size = 5000;
-  const double epsilon_abs = 1e-6;
-  const double epsilon_rel = 1e-6;
+  /* I believe that 1e-6 is over-killing, a substantial gain in time
+     is obtained by setting this threshold to 1e-3 */
+  /* const double epsilon_abs = 1e-6; */
+  /* const double epsilon_rel = 1e-6; */
+  const double epsilon_abs = 1e-3;
+  const double epsilon_rel = 1e-3;
 
   /*creating the workspace*/
   gsl_integration_workspace * ws
