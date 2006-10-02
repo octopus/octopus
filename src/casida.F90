@@ -624,7 +624,7 @@ contains
       call push_sub('casida.load_saved')
 
       iunit = io_open(trim(tmpdir)//'restart_casida', action='read', status='old', die=.false., is_tmp=.true.)
-      err = min(iunit, 0)
+      if( iunit <= 0) return
 
       do
         read(iunit, fmt=*, iostat=err) ia, jb, val
