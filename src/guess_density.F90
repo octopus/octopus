@@ -52,8 +52,6 @@ module guess_density_m
                         INITRHO_USERDEF       = 123
 
   type(mesh_t),       pointer :: m_p
-  type(geometry_t),   pointer :: geo_p
-  type(curvlinear_t), pointer :: cv_p
   FLOAT, allocatable :: rho_p(:)
   FLOAT, allocatable :: grho_p(:, :)
   FLOAT :: alpha_p
@@ -374,8 +372,6 @@ contains
       ALLOCATE(grho_p(m%np, 4), 4*m%np)
 
       m_p   => m
-      geo_p => geo
-      cv_p  => cv
       pos_p = pos
 
       ! Initial guess.
@@ -399,7 +395,7 @@ contains
 
       rho = - s%z * rho_p
 
-      nullify(m_p, geo_p, cv_p)
+      nullify(m_p)
       deallocate(grho_p, rho_p)
     end select
 
@@ -449,8 +445,12 @@ contains
     rho_p = M_ZERO; x = M_ZERO
     do i = 1, m_p%np
 
-      x(1:m_p%sb%dim) = m_p%x(i, 1:m_p%sb%dim)
-      call curvlinear_x2chi(m_p%sb, geo_p, cv_p, x, chi)
+      j  = m_p%vp%local(m_p%vp%xlocal(m_p%vp%partno)+i-1)
+
+      chi(1) = m_p%Lxyz(j, 1) * m_p%h(1) + m_p%sb%box_offset(1) 
+      chi(2) = m_p%Lxyz(j, 2) * m_p%h(2) + m_p%sb%box_offset(2) 
+      chi(3) = m_p%Lxyz(j, 3) * m_p%h(3) + m_p%sb%box_offset(3) 
+
       r = sqrt( sum( (chi(1:3)-xin(1:3))**2 ) )
 
       if( (r/alpha_p)**2 < CNST(10.0)) then
