@@ -174,7 +174,7 @@ contains
       
       message(1) = "Info: Calculating polarizabilities."
       call write_info(1)
-      i=-100000
+
       !iterate for each frequency
       do iomega = 1, nomega
         
@@ -652,15 +652,15 @@ contains
         if(status%ok) then           
           !convert units 
           alpha = alpha/units_out%length%factor**NDIM
-          write(iunit, '(13f12.6)') omega(i), alpha(1,1), alpha(2,2), alpha(3,3), alpha(1,2), alpha(1,3), alpha(2,3)
+          write(iunit, '(13f12.6)') omega(iomega), alpha(1,1), alpha(2,2), alpha(3,3), alpha(1,2), alpha(1,3), alpha(2,3)
         else
-          write(iunit, '(a,f12.6)') '#calculation did not converge for frequency ', omega(i)
+          write(iunit, '(a,f12.6)') '#calculation did not converge for frequency ', omega(iomega)
         end if
         
         call io_close(iunit)
         
         sigma(1:MAX_DIM, 1:MAX_DIM) = aimag(alpha(1:MAX_DIM, 1:MAX_DIM)) * &
-             omega(i)/units_out%energy%factor * M_FOUR * M_PI / P_c 
+             omega(iomega)/units_out%energy%factor * M_FOUR * M_PI / P_c 
         
         !write sigma
         out_file = io_open('linear/cross_section_tensor', action='write', position='append' )
@@ -669,7 +669,7 @@ contains
         anisotropy =  M_THIRD * ( M_THREE * (sigmap(1, 1) + sigmap(2, 2) + sigmap(3, 3)) - &
              (sigma(1, 1) + sigma(2, 2) + sigma(3, 3))**2 )
         
-        write(out_file,'(3e20.8)', advance = 'no') omega(i) / units_out%energy%factor, &
+        write(out_file,'(3e20.8)', advance = 'no') omega(iomega) / units_out%energy%factor, &
              average , sqrt(max(anisotropy, M_ZERO)) 
         write(out_file,'(9e20.8)', advance = 'no') sigma(1:3, 1:3)
         write(out_file,'(a)', advance = 'yes')
@@ -679,17 +679,17 @@ contains
       if(props%calc_hyperpol) then 
         iunit = io_open('linear/beta', action='write', position='append' )
         if(status%ok) then           
-          write(iunit, '(7f12.6)') omega(i), &
+          write(iunit, '(7f12.6)') omega(iomega), &
                real(beta(1,1,1)), aimag(beta(1,1,1)), &
                real(beta(2,2,2)), aimag(beta(2,2,2)), &
                real(beta(3,3,3)), aimag(beta(3,3,3))
         else
-          write(iunit, '(a,f12.6)') '#calculation did not converge for frequency ', omega(i)
+          write(iunit, '(a,f12.6)') '#calculation did not converge for frequency ', omega(iomega)
         end if
         
         call io_close(iunit)
 
-        write(dirname, '(a, f5.3)') 'linear/freq_', omega(i)/units_out%energy%factor
+        write(dirname, '(a, f5.3)') 'linear/freq_', omega(iomega)/units_out%energy%factor
 
         call io_mkdir(dirname)
 
@@ -742,7 +742,7 @@ contains
       !write functions
       do dir = 1, NDIM
           
-        write(dirname, '(a, f5.3)') 'linear/freq_', freq_factor(dir)*omega(i)/units_out%energy%factor
+        write(dirname, '(a, f5.3)') 'linear/freq_', freq_factor(dir)*omega(iomega)/units_out%energy%factor
 
         if( wfs_are_complex(sys%st) ) then 
 
