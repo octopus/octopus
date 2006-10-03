@@ -132,17 +132,19 @@ contains
 
     temp(:) = M_TWO*M_PI/(db(:)*m%h(:))
 
-    if(poisson_solver .eq. FFT_CYL) then
+    if( (poisson_solver .eq. FFT_CYL)  .and. (gr%sb%periodic_dim == 0) ) then
       ngp = 8*db(2)
       ALLOCATE(x(ngp), ngp)
       ALLOCATE(y(ngp), ngp)
     end if
 
+
     do ix = 1, fft_cf%nx
       ixx(1) = pad_feq(ix, db(1), .true.)
-      if(poisson_solver .eq. FFT_CYL) then
+      gx = temp(1)*ixx(1)
+
+      if( (poisson_solver .eq. FFT_CYL)  .and. (gr%sb%periodic_dim == 0) ) then
         call loct_spline_init(cylinder_cutoff_f)
-        gx = temp(1)*ixx(1)
         xmax = sqrt((temp(2)*db(2)/2)**2 + (temp(3)*db(3)/2)**2)
         do k = 1, ngp
           x(k) = (k-1)*(xmax/(ngp-1))
@@ -214,14 +216,14 @@ contains
           end do
        end do
 
-      if(poisson_solver .eq. FFT_CYL) then
+      if( (poisson_solver .eq. FFT_CYL) .and. (gr%sb%periodic_dim == 0) ) then
         call loct_spline_end(cylinder_cutoff_f)
       end if
     end do
 
     fft_Coulb_FS(:,:,:) = M_FOUR*M_PI*fft_Coulb_FS(:,:,:)
 
-    if(poisson_solver .eq. FFT_CYL) then
+    if( (poisson_solver .eq. FFT_CYL) .and. (gr%sb%periodic_dim == 0) ) then
       deallocate(x, y)
     end if
 

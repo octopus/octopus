@@ -408,7 +408,7 @@ contains
 
     FLOAT, allocatable :: rho(:), vh(:), vh_exact(:)
     FLOAT :: alpha, beta, r, delta
-    integer :: i, ierr, iunit
+    integer :: i, iunit
 
     call push_sub('poisson.poisson_test')
 

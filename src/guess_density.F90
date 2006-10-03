@@ -445,7 +445,9 @@ contains
     rho_p = M_ZERO; x = M_ZERO
     do i = 1, m_p%np
 
-      j  = m_p%vp%local(m_p%vp%xlocal(m_p%vp%partno)+i-1)
+      j = i
+      if(m_p%parallel_in_domains) &
+        j  = m_p%vp%local(m_p%vp%xlocal(m_p%vp%partno)+i-1)
 
       chi(1) = m_p%Lxyz(j, 1) * m_p%h(1) + m_p%sb%box_offset(1) 
       chi(2) = m_p%Lxyz(j, 2) * m_p%h(2) + m_p%sb%box_offset(2) 
