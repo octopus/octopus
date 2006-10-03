@@ -470,9 +470,9 @@ end subroutine atomxc
 !      A......THE PARAMETER APPEARING IN R(I) = B*(EXP(A(I-1))-1)             !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
-  FLOAT,   intent(in)  :: rho(*), r(*), drdi(*), srdrdi(*)
+  FLOAT,   intent(in)  :: rho(:), r(:), drdi(:), srdrdi(:)
   FLOAT,   intent(in)  :: a
-  FLOAT,   intent(out) :: v(*)
+  FLOAT,   intent(out) :: v(:)
   integer, intent(in)  :: nr
 
   FLOAT :: x,y,q,a2by4,ybyq,qbyy,qpartc,v0,qt,dz,t,beta,dv
@@ -614,7 +614,7 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
   integer :: ierr
 
 
-  DOUBLE, dimension(*) :: h, s, g, y
+  DOUBLE, dimension(n) :: h, s, g, y
   DOUBLE               :: e1, e2, del, de, et, t
   DOUBLE, parameter    :: tol = CNST(1.0e-5)
 
@@ -661,6 +661,7 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
 !                                                                             !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
+
   if(et.le.e1 .or. et.ge.e2 .or.                                              &
      nt.lt.nnode-1 .or. nt.gt.nnode) go to 2
   e=et
@@ -691,7 +692,6 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
 !                                                                             !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-
   if(n2.ge.nnode) go to 1
   del=del*M_TWO
   e2=e1+del
@@ -710,7 +710,6 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
 !                                                                             !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-
   if(n1.lt.nnode) go to 1
   del=del*M_TWO
   e1=e2-del
@@ -725,7 +724,6 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
 !  finally, the call to "nrmlzg" normalizes g to one electron.                !
 !                                                                             !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
 
 6 g(1) = M_ZERO
   do 7 i=2,n
@@ -763,8 +761,8 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
 
   implicit DOUBLE (a-h,o-z)
   DOUBLE :: e, de, dr, rmax, z, a, b, y2, g, gsg, x, gin, gsgin, xin
-  DOUBLE :: h(*), s(*), y(*), zdr, yn, ratio, t
   integer :: nmax,l,ncor,nnode,n,knk,nndin,i
+  DOUBLE :: h(nmax), s(nmax), y(nmax), zdr, yn, ratio, t
 
   zdr = z*a*b
   n=nmax
@@ -863,7 +861,7 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
   implicit DOUBLE (a-h,o-z)
-  DOUBLE s(*), g(*), norm, srnrm
+  DOUBLE s(:), g(:), norm, srnrm
   integer :: n,nm1,nm2,i
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -902,7 +900,7 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
 
   implicit DOUBLE (a-h,o-z)
   DOUBLE :: e, zdr, y2
-  DOUBLE :: h(*), s(*), t2, t3, d2, c0, c1, c2
+  DOUBLE :: h(:), s(:), t2, t3, d2, c0, c1, c2
   integer :: l
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!

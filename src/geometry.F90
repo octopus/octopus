@@ -530,7 +530,7 @@ contains
     type(specie_t), pointer :: s
     integer :: ia, l
 
-    call push_sub('geometry.atom_nvnl')
+    call push_sub('geometry.geometry_nvnl')
     res = 0
     do ia = 1, geo%natoms
       s => geo%atom(ia)%spec

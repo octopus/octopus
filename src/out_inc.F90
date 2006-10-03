@@ -158,7 +158,7 @@ contains
       ierr = 2
       return
     end if
-
+   
     read(unit = iunit, iostat = i) file_kind, file_np
     if(i.ne.0) then
       ierr = 3
@@ -175,28 +175,28 @@ contains
         case(doutput_kind*4) ! Real, single precision
           ALLOCATE(rs(m%np_global), m%np_global)
           read(unit = iunit) rs(1:m%np_global)
-          f = rs
+          f(1:m%np_global) = rs(1:m%np_global)
           deallocate(rs)
           ierr = -1
 
         case(zoutput_kind*4) ! Complex, single precision
           ALLOCATE(cs(m%np_global), m%np_global)
           read(unit = iunit) cs(1:m%np_global)
-          f = cs
+          f(1:m%np_global) = cs(1:m%np_global)
           deallocate(cs)
           ierr = -2
 
         case(doutput_kind*8) ! Real, double precision
           ALLOCATE(rd(m%np_global), m%np_global)
           read(unit = iunit) rd(1:m%np_global)
-          f = rd
+          f(1:m%np_global) = rd(1:m%np_global)
           deallocate(rd)
           ierr = -3
 
         case(zoutput_kind*8) ! Complex, double precision
           ALLOCATE(cd(m%np_global), m%np_global)
           read(unit = iunit) cd(1:m%np_global)
-          f = cd
+          f(1:m%np_global) = cd(1:m%np_global)
           deallocate(cd)
           ierr = -4
           
