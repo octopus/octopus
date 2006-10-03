@@ -51,6 +51,7 @@ module static_pol_lr_m
     logical :: from_scratch
     logical :: calc_hyperpol
     logical :: calc_pol
+    logical :: orth_response
   end type pol_props_t
 
   type status_t
@@ -78,7 +79,7 @@ contains
 
     FLOAT :: eta, freq_factor(MAX_DIM)
 
-    integer :: nsigma, sigma, ndim, i, j, k, nomega, dir, ierr
+    integer :: nsigma, sigma, ndim, i, j, k, nomega, dir, ierr, iomega
 
     character(len=80) :: fname, dirname
 
@@ -173,24 +174,24 @@ contains
       
       message(1) = "Info: Calculating polarizabilities."
       call write_info(1)
-      
+      i=-100000
       !iterate for each frequency
-      do i = 1, nomega
+      do iomega = 1, nomega
         
         !iterate for each direction
         do dir = 1, sys%gr%sb%dim
 
           write(message(1), '(a,i1,a,f5.3)') 'Info: Calculating response for direction ', dir, &
-               ' and frequency ', freq_factor(dir)*omega(i)/units_out%energy%factor
+               ' and frequency ', freq_factor(dir)*omega(iomega)/units_out%energy%factor
           call write_info(1)
 
           
           if(wfs_are_complex(sys%st)) then 
             call zget_response_e(sys, h, lr(:,:), dir, 2 , &
-                 freq_factor(dir)*omega(i) + M_zI * eta, props, status)
+                 freq_factor(dir)*omega(iomega) + M_zI * eta, props, status)
           else
             call dget_response_e(sys, h, lr(:,:), dir, 2 , &
-                 freq_factor(dir)*omega(i), props, status)
+                 freq_factor(dir)*omega(iomega), props, status)
           end if
           
           
@@ -213,10 +214,10 @@ contains
             call dlr_calc_beta(sys, lr, props, beta)
           end if
         end if
-
+        
         call dynamic_output()
         
-      end do
+      end do ! nomega
       
     else 
 
@@ -300,6 +301,17 @@ contains
 
       call loct_parse_logical(check_inp('PolStatic'), .false., static)
       props%dynamic = .not. static
+
+      !%Variable PolOrthResponse
+      !%Type logical
+      !%Default false
+      !%Section Linear Response::Polarizabilities
+      !%Description
+      !% Wheter variations should be orthogonalized or not against the
+      !% occupied states.
+      !%End
+
+      call loct_parse_logical(check_inp('PolOrthResponse'), .true., props%orth_response)
 
       !%Variable PolFreqs
       !%Type block
@@ -631,7 +643,7 @@ contains
 
     subroutine dynamic_output()
       FLOAT :: sigma(MAX_DIM, MAX_DIM), sigmap(MAX_DIM, MAX_DIM)
-      FLOAT :: average, anisotropy
+      FLOAT :: average, anisotropy, bpar(1:MAX_DIM)
       integer :: out_file, iunit
 
       if(props%calc_pol) then 
@@ -676,12 +688,61 @@ contains
         end if
         
         call io_close(iunit)
+
+        write(dirname, '(a, f5.3)') 'linear/freq_', omega(i)/units_out%energy%factor
+
+        call io_mkdir(dirname)
+
+        ! Output first hyperpolarizabilty (beta)
+        iunit = io_open(trim(dirname)//'/beta', action='write')
+
+        write(iunit, '(2a)', advance='no') '#hyperpolarizability tensor [', &
+             trim(units_out%length%abbrev)
+        if(NDIM.ne.1) write(iunit, '(a,i1)', advance='no') '^', NDIM+2
+        write(iunit, '(a)') ']'
+        
+        if (sys%st%d%nspin /= UNPOLARIZED ) then 
+          write(iunit, '(a)') 'WARNING: Hyperpolarizability has not been tested for spin polarized systems'
+        end if
+        
+        do i = 1, NDIM
+          do j = 1, NDIM
+            do k = 1, NDIM
+              write(iunit,'(3i2,e20.8,e20.8)') i, j, k, &
+                   real(beta(i, j, k))/units_out%length%factor**(5), aimag(beta(i, j, k))/units_out%length%factor**(5)
+            end do
+          end do
+        end do
+        
+        if (NDIM == 3) then 
+          
+          bpar = M_ZERO
+          do i = 1, NDIM
+            do j = 1, NDIM
+!              bpar(i) = bpar(i) + hpol(j, i, i) + hpol(i, j, i) + hpol(i, i, j)
+            if( i < j ) then
+              bpar(i) = bpar(i) + M_THREE*hpol(i, j, j)
+            else
+              bpar(i) = bpar(i) + M_THREE*hpol(j, j, i)
+            endif
+
+            end do
+          end do
+          
+          bpar = bpar / (M_FIVE * units_out%length%factor**(NDIM+2))
+          write(iunit, '(a, 3f12.6,a)') 'B||', bpar(1:NDIM),&
+               '  ( B||_i = 1/5 \sum_j(B_ijj+B_jij+B_jji) ) '
+
+        endif
+
+        call io_close(iunit)
+        
       end if
 
       !write functions
       do dir = 1, NDIM
           
-        write(dirname, '(a,f5.3)') 'linear/freq_', freq_factor(dir)*omega(i)/units_out%energy%factor
+        write(dirname, '(a, f5.3)') 'linear/freq_', freq_factor(dir)*omega(i)/units_out%energy%factor
 
         if( wfs_are_complex(sys%st) ) then 
 
@@ -700,7 +761,7 @@ contains
           call dlr_output(sys%st, sys%gr, lr(dir, 1), dirname, dir, sys%outp)
           
         end if
-      
+        
       end do
       
     end subroutine dynamic_output

@@ -57,7 +57,6 @@ subroutine X(lr_calc_polarizability)(sys, lr, zpol)
 
 end subroutine X(lr_calc_polarizability)
 
-#if 1
 ! ---------------------------------------------------------
 subroutine X(lr_calc_beta) (sys, lr, props, beta)
   type(system_t),      intent(inout) :: sys
@@ -66,7 +65,7 @@ subroutine X(lr_calc_beta) (sys, lr, props, beta)
   CMPLX,               intent(out)   :: beta(1:MAX_DIM, 1:MAX_DIM, 1:MAX_DIM)
 
   integer :: i, j, k, dir
-  integer :: ispin, ist, ispin2, ist2, n, np, dim, ik
+  integer :: ispin, ist, ispin2, ist2, n, np, dim, ik, sigma, op_sigma
 
   R_TYPE :: prod
 
@@ -97,26 +96,25 @@ subroutine X(lr_calc_beta) (sys, lr, props, beta)
 
   do dir = 1, sys%gr%sb%dim
 
-      ! the density
-      do n = 1, np
-        drhode(n, dir) = sum(lr(dir, 1)%X(dl_rho)(n, 1:sys%st%d%nspin))
-      end do
-
-      !the \delta of hartree potential
-      call X(poisson_solve)(sys%gr, lr(dir, 1)%X(dl_Vhar), drhode(:, dir))
-
+    ! the density
+    do n = 1, np
+      drhode(n, dir) = sum(lr(dir, 1)%X(dl_rho)(n, 1:sys%st%d%nspin))
+    end do
+    
+    !the \delta of hartree potential
+    call X(poisson_solve)(sys%gr, lr(dir, 1)%X(dl_Vhar), drhode(:, dir))
+    
     do ispin = 1, sys%st%d%nspin
-
-      ! the potential variation
-
+      
       !the external potential, r
       dVde(1:np,ispin, dir) = sys%gr%m%x(1:np, dir)
-
+!      dVde(1:np,ispin, dir) = M_ZERO
+      
       !the hartree term
       if(props%add_hartree) then 
         dVde(1:np, ispin, dir) = dVde(1:np, ispin, dir) + lr(dir, 1)%X(dl_Vhar)(1:np) 
       end if
-
+      
       !the fxc term
       if(props%add_fxc) then 
         ! xc
@@ -136,59 +134,76 @@ subroutine X(lr_calc_beta) (sys, lr, props, beta)
   end if
 
   beta_tmp = M_ZERO
-
-  do i = 1, dim
-    do j = 1, dim
-      do k = 1, dim
-
-        hpol_density(1:np)=M_ZERO
-
-        do ik=1, sys%st%d%nik
-          do ispin = 1, sys%st%d%nspin
-            do ist = 1, sys%st%nst
-              
-              if( sys%st%occ(ist, ik) > lr_min_occ ) then 
-                ! <D\psi_n | P_c DV_scf P_c | D\psi_n >
-                
-                hpol_density(1:np) = hpol_density(1:np) + &
-                     sys%st%d%kweights(ik)*sys%st%occ(ist, ik)* &
-                     R_CONJ(lr(i, 2)%X(dl_psi)(1:np, 1, ist, ispin)) &
-                     * dVde(1:np, ispin, j) * lr(k,1)%X(dl_psi)(1:np, 1, ist, ispin)
-                
-                do ispin2 = 1, sys%st%d%nspin
-                  do ist2 = 1, sys%st%nst
-                    if( sys%st%occ(ist2, ik) > lr_min_occ ) then 
-                      
-                      tmp(1:np, 1)=R_CONJ(sys%st%X(psi)(1:np, 1, ist2, ispin2)) * &
-                           dVde(1:np, ispin, j) * sys%st%X(psi)(1:np, 1, ist, ispin)
-                      prod = X(mf_integrate)(sys%gr%m,tmp(1:np,1))
-                      
-                      hpol_density(1:np) = hpol_density(1:np) - & 
-                           sys%st%d%kweights(ik)*sys%st%occ(ist, ik)* & 
-                           R_CONJ(lr(i, 2)%X(dl_psi)(1:np, 1, ist, ispin)) * &
-                           lr(k, 1)%X(dl_psi)(1:np, 1, ist2, ispin2)*prod
-                      
-                    end if
-                  end do ! ist2
-                end do ! ispin2
-                
-              end if
-              
-            end do ! ist
-          end do ! ispin
-        end do !ik
-
-        if(props%add_fxc) then 
-          hpol_density(1:np) = hpol_density(1:np) + &
-               kxc(1:np, 1, 1, 1) * drhode(1:np, i) * drhode(1:np, j)*drhode(1:np, k)/CNST(6.0)
-        end if
-        
-        beta_tmp(i,j,k)=X(mf_integrate)(sys%gr%m, hpol_density(1:np))
-
-      end do ! k
-    end do ! j
-  end do ! i
   
+  do sigma=1,2   
+    
+    op_sigma=2
+    
+    if(sigma==2) then 
+      op_sigma = 1
+      drhode = R_CONJ(drhode)
+      dVde = R_CONJ(dVde)
+    end if
+    
+    do i = 1, dim
+      do j = 1, dim
+        do k = 1, dim
+          
+          hpol_density(1:np)=M_ZERO
+          
+          do ik=1, sys%st%d%nik
+            do ispin = 1, sys%st%d%nspin
+              do ist = 1, sys%st%nst
+                
+                if( sys%st%occ(ist, ik) > lr_min_occ ) then 
+                  ! <D\psi_n | P_c DV_scf P_c | D\psi_n >
+                  
+                  hpol_density(1:np) = hpol_density(1:np) + &
+                       sys%st%d%kweights(ik)*sys%st%occ(ist, ik)* &
+                       R_CONJ(lr(i, op_sigma)%X(dl_psi)(1:np, 1, ist, ispin)) &
+                       * dVde(1:np, ispin, j) *lr(k,sigma)%X(dl_psi)(1:np, 1, ist, ispin)
+                  
+                  do ispin2 = 1, sys%st%d%nspin
+                    do ist2 = 1, sys%st%nst
+                      if( sys%st%occ(ist2, ik) > lr_min_occ ) then 
+                        
+                        tmp(1:np, 1)=R_CONJ(sys%st%X(psi)(1:np, 1, ist2, ispin2)) * &
+                             dVde(1:np, ispin, j) &
+                             * sys%st%X(psi)(1:np, 1, ist, ispin)
+                        prod = X(mf_integrate)(sys%gr%m, tmp(1:np,1))
+                        
+                        hpol_density(1:np) = hpol_density(1:np) - & 
+                             sys%st%d%kweights(ik)*sys%st%occ(ist, ik)* & 
+                             R_CONJ(lr(i, op_sigma)%X(dl_psi)(1:np, 1, ist, ispin)) * &
+                             lr(k, sigma)%X(dl_psi)(1:np, 1, ist2, ispin2)*prod
+                        
+                      end if
+                    end do ! ist2
+                  end do ! ispin2
+                  
+                end if
+                
+              end do ! ist
+            end do ! ispin
+          end do !ik
+
+          if (sigma == 1) then 
+            if(props%add_fxc) then 
+              hpol_density(1:np) = hpol_density(1:np) + &
+                   kxc(1:np, 1, 1, 1) * drhode(1:np, i) * drhode(1:np, j)*drhode(1:np, k)/CNST(6.0)
+            end if
+          end if
+
+          beta_tmp(i,j,k)= beta_tmp(i,j,k) + M_HALF * X(mf_integrate)(sys%gr%m, hpol_density(1:np))
+          
+        end do ! k
+      end do ! j
+    end do ! i
+    
+  end do !sigma
+
+      
+
   do k = 1, dim
     do j = 1, dim
       do i = 1, dim
@@ -200,6 +215,8 @@ subroutine X(lr_calc_beta) (sys, lr, props, beta)
     end do ! j
   end do ! i
 
+!  beta=beta_tmp
+
   deallocate(hpol_density)
   deallocate(tmp)
   deallocate(dVde)
@@ -208,7 +225,6 @@ subroutine X(lr_calc_beta) (sys, lr, props, beta)
 
   call pop_sub()
 end subroutine X(lr_calc_beta)
-#endif
 
 ! -------------------------------------------------------------
 ! this is the central routine of the electromagnetic response
@@ -321,8 +337,10 @@ subroutine X(get_response_e)(sys, h, lr, dir, nsigma, omega, props, status)
           Y(1:m%np, 1, sigma) = -dV(1:m%np, ik, sigma)*st%X(psi)(1:m%np, 1, ist, ik)
 
           !and project it into the unoccupied states
-          call X(lr_orth_vector)(m, st, Y(:,:, sigma), ik)
-
+          if(props%orth_response) then 
+            call X(lr_orth_vector)(m, st, Y(:,:, sigma), ik)
+          end if
+        
           if(sigma==1) then 
             omega_sigma = omega
           else 
@@ -335,7 +353,9 @@ subroutine X(get_response_e)(sys, h, lr, dir, nsigma, omega, props, status)
 
           !altough the dl_psi we get should be orthogonal to psi
           !a re-orthogonalization is sometimes necessary 
-          call X(lr_orth_vector)(m, st, lr(dir,sigma)%X(dl_psi)(:,:, ist, ik), ik)
+          if(props%orth_response) then 
+            call X(lr_orth_vector)(m, st, lr(dir,sigma)%X(dl_psi)(:,:, ist, ik), ik)
+          end if
 
           ! print the norm of the variations, and the number of
           ! iterations and residual of the linear solver
@@ -461,7 +481,9 @@ contains
 
     do sigma=1,nsigma
       lr(dir,sigma)%X(dl_Vhar)(:) = M_ZERO
-      call X(lr_orth_response)(m, st, lr(dir,sigma))
+      if(props%orth_response) then 
+        call X(lr_orth_response)(m, st, lr(dir,sigma))
+      end if
     end do
 
     if(.not. props%from_scratch ) then 
