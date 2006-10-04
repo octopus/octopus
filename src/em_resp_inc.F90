@@ -108,7 +108,6 @@ subroutine X(lr_calc_beta) (sys, lr, props, beta)
       
       !the external potential, r
       dVde(1:np,ispin, dir) = sys%gr%m%x(1:np, dir)
-!      dVde(1:np,ispin, dir) = M_ZERO
       
       !the hartree term
       if(props%add_hartree) then 
@@ -135,7 +134,7 @@ subroutine X(lr_calc_beta) (sys, lr, props, beta)
 
   beta_tmp = M_ZERO
   
-  do sigma=1,2   
+  do sigma=1,2
     
     op_sigma=2
     
@@ -161,15 +160,15 @@ subroutine X(lr_calc_beta) (sys, lr, props, beta)
                   hpol_density(1:np) = hpol_density(1:np) + &
                        sys%st%d%kweights(ik)*sys%st%occ(ist, ik)* &
                        R_CONJ(lr(i, op_sigma)%X(dl_psi)(1:np, 1, ist, ispin)) &
-                       * dVde(1:np, ispin, j) *lr(k,sigma)%X(dl_psi)(1:np, 1, ist, ispin)
+                       * dVde(1:np, ispin, j) * lr(k,sigma)%X(dl_psi)(1:np, 1, ist, ispin)
                   
                   do ispin2 = 1, sys%st%d%nspin
                     do ist2 = 1, sys%st%nst
                       if( sys%st%occ(ist2, ik) > lr_min_occ ) then 
                         
                         tmp(1:np, 1)=R_CONJ(sys%st%X(psi)(1:np, 1, ist2, ispin2)) * &
-                             dVde(1:np, ispin, j) &
-                             * sys%st%X(psi)(1:np, 1, ist, ispin)
+                             dVde(1:np, ispin, j) * sys%st%X(psi)(1:np, 1, ist, ispin)
+
                         prod = X(mf_integrate)(sys%gr%m, tmp(1:np,1))
                         
                         hpol_density(1:np) = hpol_density(1:np) - & 
@@ -187,11 +186,9 @@ subroutine X(lr_calc_beta) (sys, lr, props, beta)
             end do ! ispin
           end do !ik
 
-          if (sigma == 1) then 
-            if(props%add_fxc) then 
-              hpol_density(1:np) = hpol_density(1:np) + &
-                   kxc(1:np, 1, 1, 1) * drhode(1:np, i) * drhode(1:np, j)*drhode(1:np, k)/CNST(6.0)
-            end if
+          if(props%add_fxc) then 
+            hpol_density(1:np) = hpol_density(1:np) + &
+                 kxc(1:np, 1, 1, 1) * drhode(1:np, i) * drhode(1:np, j)*drhode(1:np, k)/CNST(6.0)
           end if
 
           beta_tmp(i,j,k)= beta_tmp(i,j,k) + M_HALF * X(mf_integrate)(sys%gr%m, hpol_density(1:np))
@@ -208,9 +205,9 @@ subroutine X(lr_calc_beta) (sys, lr, props, beta)
     do j = 1, dim
       do i = 1, dim
         beta(i,j,k) = -( &
-             + beta_tmp(i,j,k) + beta_tmp(j,k,i) &
+             + beta_tmp(i,j,k) + beta_tmp(j,i,k) &
              + beta_tmp(k,i,j) + beta_tmp(k,j,i) &
-             + beta_tmp(j,i,k) + beta_tmp(i,k,j))
+             + beta_tmp(j,k,i) + beta_tmp(i,k,j))
       end do ! k
     end do ! j
   end do ! i
@@ -672,7 +669,7 @@ subroutine X(static_response) (sys, h, lr, props, pol, hpol, hpol_density)
 
         if(props%add_fxc) then 
           hpol_density(1:np,i, j, k) = hpol_density(1:np,i, j, k) + &
-               kxc(1:np, 1, 1, 1) * drhode(1:np, i) * drhode(1:np, j)*drhode(1:np, k)/CNST(6.0)
+               kxc(1:np, 1, 1, 1) * drhode(1:np, i) * drhode(1:np, j) * drhode(1:np, k)/CNST(6.0)
         end if
 
       end do ! k

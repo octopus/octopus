@@ -54,6 +54,7 @@ module linear_response_m
     integer :: solver         ! the linear solver to use
     integer :: preconditioner ! the preconditioner solver to use
     integer :: ort_min_step   ! the step where to start orthogonalization
+    integer :: nst            ! the number of linear response orbitals
 
     logical :: dynamic_tol
     FLOAT :: dynamic_tol_factor, last_tol

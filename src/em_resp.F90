@@ -111,6 +111,8 @@ contains
     !if wfs are complex then we will calculate complex_response
     complex_response = complex_response .or. wfs_are_complex(sys%st)
 
+    ALLOCATE(lr(1:ndim, 1:nsigma), ndim*nsigma)
+
     call read_wfs()
 
     ! setup Hamiltonian
@@ -118,8 +120,6 @@ contains
     call write_info(1)
 
     call system_h_setup(sys, h)
-
-    ALLOCATE(lr(1:ndim, 1:nsigma), ndim*nsigma)
     
     do dir = 1, ndim
       do sigma = 1, nsigma
@@ -453,18 +453,39 @@ contains
       call push_sub('em_resp.parse_input')
 
       call restart_look(trim(tmpdir)//'restart_gs', sys%gr%m, kpoints, dim, nst, ierr)
+
       if(ierr.ne.0) then
         message(1) = 'Could not properly read wave-functions from "'//trim(tmpdir)//'restart_gs".'
         call write_fatal(1)
       end if
 
-      ! load wave-functions
+      do sigma=1,nsigma
+        do dir=1,NDIM
+          lr(dir, sigma)%nst =sys%st%nst
+        end do
+      end do
+
+      sys%st%nst    = nst
+      sys%st%st_end = nst
+      deallocate(sys%st%eigenval, sys%st%occ)
+
       if ( complex_response ) then 
         call states_allocate_wfns(sys%st, gr%m, M_CMPLX)
       else 
         call states_allocate_wfns(sys%st, gr%m, M_REAL)
       end if
 
+      ALLOCATE(sys%st%eigenval(sys%st%nst, sys%st%d%nik), sys%st%nst*sys%st%d%nik)
+      ALLOCATE(sys%st%occ(sys%st%nst, sys%st%d%nik), sys%st%nst*sys%st%d%nik)
+
+      if(sys%st%d%ispin == SPINORS) then
+        ALLOCATE(sys%st%mag(sys%st%nst, sys%st%d%nik, 2), sys%st%nst*sys%st%d%nik*2)
+        sys%st%mag = M_ZERO
+      end if
+      sys%st%eigenval = huge(PRECISION)
+      sys%st%occ      = M_ZERO
+
+      ! load wave-functions
       call restart_read(trim(tmpdir)//'restart_gs', sys%st, sys%gr, sys%geo, ierr)  
       if(ierr.ne.0) then
         message(1) = "Could not read KS orbitals from '"//trim(tmpdir)//"restart_gs'"
@@ -642,9 +663,67 @@ contains
     end subroutine dynamic_output_init
 
     subroutine dynamic_output()
-      FLOAT :: sigma(MAX_DIM, MAX_DIM), sigmap(MAX_DIM, MAX_DIM)
+      FLOAT :: cross(MAX_DIM, MAX_DIM), crossp(MAX_DIM, MAX_DIM)
       FLOAT :: average, anisotropy, bpar(1:MAX_DIM)
-      integer :: out_file, iunit
+      integer :: out_file, iunit, ist, ivar, ik, sigma
+      CMPLX   :: tr_beta, proj
+
+      !PROJECTIONS
+
+      do ik = 1, sys%st%d%nspin
+
+        do dir = 1, NDIM
+
+          write(dirname, '(a, f5.3)') 'linear/freq_', freq_factor(dir)*omega(iomega)/units_out%energy%factor
+          call io_mkdir(trim(dirname))
+          
+          write(fname, '(2a,i1,a,i1)') trim(dirname), '/projection-', ik, '-', dir
+          iunit = io_open(trim(fname), action='write')
+          
+          write(iunit, '(a)', advance='no') '# state '
+          do ivar = 1, lr(dir,1)%nst
+            do sigma=1,nsigma
+              
+              if( sigma == nsigma .and. ivar == lr(dir,1)%nst) then 
+                write(iunit, '(i3)', advance='yes') (3-2*sigma)*ivar
+              else 
+                write(iunit, '(i3)', advance='no') (3-2*sigma)*ivar
+              end if
+              
+            end do
+          end do
+
+          do ist = 1, sys%st%nst
+
+            write(iunit, '(i3)', advance='no') ist
+            
+            do ivar = 1, lr(dir,1)%nst
+              do sigma=1,nsigma
+
+                if(wfs_are_complex(sys%st)) then
+                  proj=zstates_dotp(sys%gr%m, sys%st%d%dim, &
+                       sys%st%zpsi(:,:, ist, ik), &
+                       lr(dir, sigma)%zdl_psi(:,:, ivar, ik))
+                else
+                  proj=dstates_dotp(sys%gr%m, sys%st%d%dim, &
+                       sys%st%dpsi(:,:, ist, ik), &
+                       lr(dir, sigma)%ddl_psi(:,:, ivar, ik))
+                end if
+
+                if( sigma == nsigma .and. ivar == lr(dir,1)%nst) then 
+                  write(iunit, '(f12.6)', advance='yes') abs(proj)
+                else 
+                  write(iunit, '(f12.6,a)', advance='no') abs(proj), ' '
+                end if
+                
+              end do
+            end do
+          end do
+          
+          call io_close(iunit)
+
+        end do
+      end do
 
       if(props%calc_pol) then 
         !write alpha
@@ -659,19 +738,19 @@ contains
         
         call io_close(iunit)
         
-        sigma(1:MAX_DIM, 1:MAX_DIM) = aimag(alpha(1:MAX_DIM, 1:MAX_DIM)) * &
+        cross(1:MAX_DIM, 1:MAX_DIM) = aimag(alpha(1:MAX_DIM, 1:MAX_DIM)) * &
              omega(iomega)/units_out%energy%factor * M_FOUR * M_PI / P_c 
         
-        !write sigma
+        !write cross
         out_file = io_open('linear/cross_section_tensor', action='write', position='append' )
-        average = M_THIRD* ( sigma(1, 1) + sigma(2, 2) + sigma(3, 3) )
-        sigmap(:, :) = matmul(sigma(:, :),sigma(:, :))
-        anisotropy =  M_THIRD * ( M_THREE * (sigmap(1, 1) + sigmap(2, 2) + sigmap(3, 3)) - &
-             (sigma(1, 1) + sigma(2, 2) + sigma(3, 3))**2 )
+        average = M_THIRD* ( cross(1, 1) + cross(2, 2) + cross(3, 3) )
+        crossp(:, :) = matmul(cross(:, :),cross(:, :))
+        anisotropy =  M_THIRD * ( M_THREE * (crossp(1, 1) + crossp(2, 2) + crossp(3, 3)) - &
+             (cross(1, 1) + cross(2, 2) + cross(3, 3))**2 )
         
         write(out_file,'(3e20.8)', advance = 'no') omega(iomega) / units_out%energy%factor, &
              average , sqrt(max(anisotropy, M_ZERO)) 
-        write(out_file,'(9e20.8)', advance = 'no') sigma(1:3, 1:3)
+        write(out_file,'(9e20.8)', advance = 'no') cross(1:3, 1:3)
         write(out_file,'(a)', advance = 'yes')
         call io_close(out_file)
       end if
@@ -719,11 +798,11 @@ contains
           bpar = M_ZERO
           do i = 1, NDIM
             do j = 1, NDIM
-!              bpar(i) = bpar(i) + hpol(j, i, i) + hpol(i, j, i) + hpol(i, i, j)
+!              bpar(i) = bpar(i) + beta(i, j, j) + beta(j, i, j) + beta(j, j, i)
             if( i < j ) then
-              bpar(i) = bpar(i) + M_THREE*hpol(i, j, j)
+              bpar(i) = bpar(i) + M_THREE*beta(i, j, j)
             else
-              bpar(i) = bpar(i) + M_THREE*hpol(j, j, i)
+              bpar(i) = bpar(i) + M_THREE*beta(j, j, i)
             endif
 
             end do
@@ -735,6 +814,10 @@ contains
 
         endif
 
+        tr_beta = sum(beta(1:NDIM,1:NDIM,1:NDIM))/(M_THREE * units_out%length%factor**(NDIM+2))
+
+        write(iunit, '(a, 2f12.6)') 'Tr', real(tr_beta), aimag(tr_beta)
+
         call io_close(iunit)
         
       end if
@@ -742,7 +825,7 @@ contains
       !write functions
       do dir = 1, NDIM
           
-        write(dirname, '(a, f5.3)') 'linear/freq_', freq_factor(dir)*omega(iomega)/units_out%energy%factor
+        write(dirname, '(a, f5.3)') 'linear/freq_', omega(iomega)/units_out%energy%factor
 
         if( wfs_are_complex(sys%st) ) then 
 
