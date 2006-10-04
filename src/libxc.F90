@@ -125,10 +125,9 @@ module lib_xc_m
       character(len=*),      intent(out) :: s
     end subroutine xc_info_name
 
-    subroutine xc_info_family(info, s)
+    integer function xc_info_family(info)
       integer(POINTER_SIZE), intent(in)  :: info
-      character(len=*),      intent(out) :: s
-    end subroutine xc_info_family
+    end function xc_info_family
 
     subroutine xc_info_refs(info, n, s)
       integer(POINTER_SIZE), intent(in)    :: info

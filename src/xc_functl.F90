@@ -305,7 +305,7 @@ contains
     integer,           intent(in) :: iunit
 
     character(len=120) :: s1, s2
-    integer(POINTER_SIZE) :: i, j
+    integer :: i, j
 
     select case (functl%family)
     case (XC_FAMILY_LDA, XC_FAMILY_GGA, XC_FAMILY_MGGA, XC_FAMILY_LCA)
@@ -313,16 +313,21 @@ contains
 
       i = xc_info_kind(functl%info)
       select case(i)
-      case(int(XC_EXCHANGE, POINTER_SIZE))
+      case(XC_EXCHANGE)
         write(message(1), '(2x,a)') 'Exchange'
-      case(int(XC_CORRELATION, POINTER_SIZE))
+      case(XC_CORRELATION)
         write(message(1), '(2x,a)') 'Correlation'
-      case(int(XC_EXCHANGE_CORRELATION, POINTER_SIZE))
+      case(XC_EXCHANGE_CORRELATION)
         write(message(1), '(2x,a)') 'Exchange-correlation'
       end select
 
       call xc_info_name  (functl%info, s1)
-      call xc_info_family(functl%info, s2)
+      select case(functl%family)
+        case (XC_FAMILY_LDA);  write(s2,'(a)') "LDA"
+        case (XC_FAMILY_GGA);  write(s2,'(a)') "GGA"
+        case (XC_FAMILY_MGGA); write(s2,'(a)') "MGGA"
+        case (XC_FAMILY_LCA);  write(s2,'(a)') "LCA"
+      end select
       write(message(2), '(4x,4a)') trim(s1), ' (', trim(s2), ')'
       call write_info(2, iunit)
       
