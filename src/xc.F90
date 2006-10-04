@@ -105,7 +105,6 @@ contains
     logical,    intent(in)  :: cdft
 
     integer :: i
-    logical :: interpolate_lda
 
     call push_sub('xc.xc_init')
 
