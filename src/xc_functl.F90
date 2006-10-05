@@ -305,7 +305,11 @@ contains
     integer,           intent(in) :: iunit
 
     character(len=120) :: s1, s2
-    integer :: i, j
+    integer :: j
+    integer(POINTER_SIZE) :: i
+
+
+    call push_sub('xc_functl.xc_functl_write_info')
 
     select case (functl%family)
     case (XC_FAMILY_LDA, XC_FAMILY_GGA, XC_FAMILY_MGGA, XC_FAMILY_LCA)
@@ -352,6 +356,7 @@ contains
 
     end select
 
+    call pop_sub()
   end subroutine xc_functl_write_info
 
 end module xc_functl_m

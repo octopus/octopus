@@ -77,6 +77,8 @@ contains
 
     integer :: i
 
+    call push_sub('xc.xc_write_info')
+
     if (xcs%cdft .and. iand(xcs%family, XC_FAMILY_LCA) /= 0) then
       write(message(1), '(a)') "Current-dependent exchange and correlation:"
       call write_info(1, iunit)
@@ -94,6 +96,7 @@ contains
       call xc_functl_write_info(xcs%functl(i, 1), iunit)
     end do
 
+    call pop_sub()
   end subroutine xc_write_info
 
 
