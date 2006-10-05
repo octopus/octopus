@@ -201,18 +201,18 @@ subroutine X(lr_calc_beta) (sys, lr, props, beta)
 
       
 
-  do k = 1, dim
-    do j = 1, dim
-      do i = 1, dim
-        beta(i,j,k) = -( &
-             + beta_tmp(i,j,k) + beta_tmp(j,i,k) &
-             + beta_tmp(k,i,j) + beta_tmp(k,j,i) &
-             + beta_tmp(j,k,i) + beta_tmp(i,k,j))
-      end do ! k
-    end do ! j
-  end do ! i
+!  do k = 1, dim
+!    do j = 1, dim
+!      do i = 1, dim
+!        beta(i,j,k) = -( &
+!             + beta_tmp(i,j,k) + beta_tmp(j,i,k) &
+!             + beta_tmp(k,i,j) + beta_tmp(k,j,i) &
+!             + beta_tmp(j,k,i) + beta_tmp(i,k,j))
+!      end do ! k
+!    end do ! j
+!  end do ! i
 
-!  beta=beta_tmp
+  beta=-beta_tmp*M_SIX
 
   deallocate(hpol_density)
   deallocate(tmp)

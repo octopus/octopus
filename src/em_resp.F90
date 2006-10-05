@@ -664,7 +664,7 @@ contains
 
     subroutine dynamic_output()
       FLOAT :: cross(MAX_DIM, MAX_DIM), crossp(MAX_DIM, MAX_DIM)
-      FLOAT :: average, anisotropy, bpar(1:MAX_DIM)
+      FLOAT :: average, anisotropy, bpar(1:MAX_DIM), bper(1:MAX_DIM) 
       integer :: out_file, iunit, ist, ivar, ik, sigma
       CMPLX   :: tr_beta, proj
 
@@ -798,25 +798,19 @@ contains
           bpar = M_ZERO
           do i = 1, NDIM
             do j = 1, NDIM
-!              bpar(i) = bpar(i) + beta(i, j, j) + beta(j, i, j) + beta(j, j, i)
-            if( i < j ) then
-              bpar(i) = bpar(i) + M_THREE*beta(i, j, j)
-            else
-              bpar(i) = bpar(i) + M_THREE*beta(j, j, i)
-            endif
-
+              bpar(i) = bpar(i) + beta(i, j, j) + beta(j, i, j) + beta(j, j, i)
+              bper(i) = bper(i) + M_TWO*beta(i, j, j) - M_THREE*beta(j, i, j) + M_TWO*beta(j, j, i)
             end do
           end do
           
           bpar = bpar / (M_FIVE * units_out%length%factor**(NDIM+2))
-          write(iunit, '(a, 3f12.6,a)') 'B||', bpar(1:NDIM),&
-               '  ( B||_i = 1/5 \sum_j(B_ijj+B_jij+B_jji) ) '
+          bper = bper / (M_FIVE * units_out%length%factor**(NDIM+2))
+
+          write(iunit, '(a, 3f12.6)') 'beta parallel     ', bpar(1:NDIM)
+          write(iunit, '(a, 3f12.6)') 'beta perpendicular', bper(1:NDIM)
+          write(iunit, '(a, 3f12.6)') 'beta K            ', M_THREE*M_HALF*(bpar(1:NDIM) - bper(1:NDIM))
 
         endif
-
-        tr_beta = sum(beta(1:NDIM,1:NDIM,1:NDIM))/(M_THREE * units_out%length%factor**(NDIM+2))
-
-        write(iunit, '(a, 2f12.6)') 'Tr', real(tr_beta), aimag(tr_beta)
 
         call io_close(iunit)
         
