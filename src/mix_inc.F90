@@ -149,6 +149,7 @@ subroutine X(broyden_extrapolation)(alpha, m, d2, d3, vin, vnew, iter_used, f, d
   if (iter_used == 0) then
     ! linear mixing...
     vnew(1:m%np, 1:d2, 1:d3) = vin(1:m%np, 1:d2, 1:d3) + alpha*f(1:m%np, 1:d2, 1:d3)
+    call pop_sub()
     return
   end if
   
@@ -300,6 +301,7 @@ subroutine X(pulay_extrapolation)(m, d2, d3, vin, vout, vnew, iter_used, f, df, 
   if (all(abs(a) < 1.0E-8)) then
       ! residuals are too small. Do not mix.
     vnew = vout
+    call pop_sub()
     return
   end if
   
