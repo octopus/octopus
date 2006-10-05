@@ -82,23 +82,23 @@ subroutine xc_get_vxc(gr, xcs, rho, ispin, vxc, ex, ec, ip, qtot)
 
       select case(functl(ixc)%family)
       case(XC_FAMILY_LDA)
-        call xc_lda(functl(ixc)%conf, l_dens(1), e, l_dedd(1))
+        call xc_f90_lda(functl(ixc)%conf, l_dens(1), e, l_dedd(1))
 
       case(XC_FAMILY_GGA)
         if(functl(ixc)%id == XC_GGA_XC_LB) then
           call mesh_r(gr%m, i, r)
-          call xc_gga_lb(functl(ixc)%conf, l_dens(1), l_sigma(1), &
+          call xc_f90_gga_lb(functl(ixc)%conf, l_dens(1), l_sigma(1), &
              r, ip, qtot, l_dedd(1))
 
           e       = M_ZERO
           l_vsigma = M_ZERO
         else
-          call xc_gga(functl(ixc)%conf, l_dens(1), l_sigma(1), &
+          call xc_f90_gga(functl(ixc)%conf, l_dens(1), l_sigma(1), &
             e, l_dedd(1), l_vsigma(1))
         end if
 
       case(XC_FAMILY_MGGA)
-        !call xc_mgga(functl(ixc)%conf, l_dens(1), l_gdens(1,1), l_tau(1), &
+        !call xc_f90_mgga(functl(ixc)%conf, l_dens(1), l_gdens(1,1), l_tau(1), &
         !  e, l_dedd(1), l_dedgd(1,1), l_dedtau(1))
 
       case default

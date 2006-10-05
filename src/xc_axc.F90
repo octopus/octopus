@@ -74,7 +74,7 @@ subroutine xc_get_vxc_and_axc(gr, xcs, rho, j, ispin, vxc, axc, ex, ec, exc_j, i
     ! Calculate the potential density in local reference frame.
     select case(xcs%j_functl%family)
     case(XC_FAMILY_LCA)
-      call xc_lca(xcs%j_functl%conf, l_dens(1), l_v(1,1), &
+      call xc_f90_lca(xcs%j_functl%conf, l_dens(1), l_v(1,1), &
         e, l_dedd(1), l_dedv(1,1))
     end select
 

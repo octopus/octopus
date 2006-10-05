@@ -286,15 +286,15 @@ contains
 
   ! initialize xc functional
   if(GGA) then
-    call xc_gga_init(x_conf, x_info, XC_GGA_X_PBE, NSPIN)
-    call xc_gga_init(c_conf, c_info, XC_GGA_C_PBE, NSPIN)
+    call xc_f90_gga_init(x_conf, x_info, XC_GGA_X_PBE, NSPIN)
+    call xc_f90_gga_init(c_conf, c_info, XC_GGA_C_PBE, NSPIN)
   else
-    call xc_lda_init(x_conf, x_info, XC_LDA_X, NSPIN, 3, XC_NON_RELATIVISTIC)
+    call xc_f90_lda_init(x_conf, x_info, XC_LDA_X, NSPIN, 3, XC_NON_RELATIVISTIC)
     if(AUTHOR.EQ.'CA' .OR. AUTHOR.EQ.'ca' .OR.                                &
        AUTHOR.EQ.'PZ' .OR. AUTHOR.EQ.'pz') THEN
-      call xc_lda_init(c_conf, c_info, XC_LDA_C_PZ, NSPIN)
+      call xc_f90_lda_init(c_conf, c_info, XC_LDA_C_PZ, NSPIN)
     else IF ( AUTHOR.EQ.'PW92' .OR. AUTHOR.EQ.'pw92' ) THEN
-      call xc_lda_init(c_conf, c_info, XC_LDA_C_PW, NSPIN)
+      call xc_f90_lda_init(c_conf, c_info, XC_LDA_C_PW, NSPIN)
     else
       write(message(1),'(a,a)') 'Error: LDAXC: Unknown author ', AUTHOR
       call write_fatal(1)
@@ -383,11 +383,11 @@ contains
 !    Find exchange and correlation energy densities and their
 !    derivatives with respect to density and density gradient
      IF (GGA) THEN
-       call xc_gga(x_conf, D(1), GD(1,1), EPSX, DEXDD(1), DEXDGD(1,1))
-       call xc_gga(c_conf, D(1), GD(1,1), EPSC, DECDD(1), DECDGD(1,1))
+       call xc_f90_gga(x_conf, D(1), GD(1,1), EPSX, DEXDD(1), DEXDGD(1,1))
+       call xc_f90_gga(c_conf, D(1), GD(1,1), EPSC, DECDD(1), DECDGD(1,1))
      ELSE
-       call xc_lda(x_conf, D(1), EPSX, DEXDD(1))
-       call xc_lda(c_conf, D(1), EPSC, DECDD(1))
+       call xc_f90_lda(x_conf, D(1), EPSX, DEXDD(1))
+       call xc_f90_lda(c_conf, D(1), EPSC, DECDD(1))
      ENDIF
 
 !       Add contributions to exchange-correlation energy and its
@@ -440,11 +440,11 @@ contains
   end DO
 
   if(GGA) then
-    call xc_gga_end(x_conf)
-    call xc_gga_end(c_conf)
+    call xc_f90_gga_end(x_conf)
+    call xc_f90_gga_end(c_conf)
   else
-    call xc_lda_end(x_conf)
-    call xc_lda_end(c_conf)
+    call xc_f90_lda_end(x_conf)
+    call xc_f90_lda_end(c_conf)
   end if
 end subroutine atomxc
 

@@ -62,7 +62,7 @@ subroutine xc_get_kxc(xcs, m, rho, ispin, kxc)
 
       select case(functl(ixc)%family)
       case(XC_FAMILY_LDA)
-        call xc_lda_kxc(functl(ixc)%conf, l_dens(1), l_dedd(1,1,1))
+        call xc_f90_lda_kxc(functl(ixc)%conf, l_dens(1), l_dedd(1,1,1))
 
       case default
         cycle
