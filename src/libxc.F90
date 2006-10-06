@@ -131,7 +131,7 @@ module lib_xc_m
 
     subroutine xc_f90_info_refs(info, n, s)
       integer(POINTER_SIZE), intent(in)    :: info
-      integer(POINTER_SIZE), intent(inout) :: n
+      integer,               intent(inout) :: n
       character(len=*),      intent(out)   :: s
     end subroutine xc_f90_info_refs
   end interface
@@ -140,7 +140,7 @@ module lib_xc_m
   ! functionals
   interface
     integer function xc_f90_family_from_id(id)
-      integer(POINTER_SIZE), intent(in) :: id
+      integer, intent(in) :: id
     end function xc_f90_family_from_id
   end interface
 

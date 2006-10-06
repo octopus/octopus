@@ -46,7 +46,7 @@ module xc_functl_m
 
   type xc_functl_t
     integer :: family              ! LDA, GGA, etc.
-    integer :: id                  ! identifier
+    integer :: id    ! identifier
 
     integer :: spin_channels       ! XC_UNPOLARIZED | XC_POLARIZED
 
