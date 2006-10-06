@@ -94,9 +94,9 @@ contains
     type(laser_t),   pointer :: l(:)
     type(mesh_t), intent(in) :: m
 
-    integer(POINTER_SIZE) :: blk
-    integer               :: i, no_c
-    character(len=50)     :: filename1, filename2
+    C_POINTER         :: blk
+    integer           :: i, no_c
+    character(len=50) :: filename1, filename2
 
     call push_sub('lasers.laser_init')
 

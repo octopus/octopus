@@ -24,9 +24,9 @@ subroutine states_choose_kpoints(d, sb, geo)
   type(simul_box_t),  intent(in)    :: sb
   type(geometry_t),   intent(in)    :: geo
 
-  integer  :: coi, i, nkmax
-  integer(POINTER_SIZE) :: blk
-  FLOAT :: total_weight, kmax
+  integer   :: coi, i, nkmax
+  C_POINTER :: blk
+  FLOAT     :: total_weight, kmax
 
   ! local variables for the crystal_init call
   logical :: full_ws_cell

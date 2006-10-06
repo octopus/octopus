@@ -155,7 +155,7 @@ contains
 
     integer :: ia, is, gmd_opt, i
     integer, save :: iseed = 321
-    integer(POINTER_SIZE) :: blk
+    C_POINTER :: blk
     FLOAT :: r, rnd, phi, theta, mag(MAX_DIM)
     FLOAT, allocatable :: atom_rho(:,:)
 

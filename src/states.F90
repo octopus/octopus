@@ -229,7 +229,7 @@ contains
 
     FLOAT :: excess_charge, r
     integer :: nempty, i, j
-    integer(POINTER_SIZE) :: blk
+    C_POINTER :: blk
 
     call push_sub('states.states_init')
 
@@ -498,7 +498,7 @@ contains
     type(mesh_t),      intent(in) :: mesh
     type(states_t), intent(inout) :: st    
 
-    integer(POINTER_SIZE) :: blk
+    C_POINTER :: blk
     integer :: ip, id, is, ik, nstates
     integer :: ib, idim, inst, inik
     FLOAT   :: x(MAX_DIM), r, psi_re, psi_im

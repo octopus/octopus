@@ -552,7 +552,7 @@ contains
 
     ! ---------------------------------------------------------
     subroutine modify_occs()
-      integer(POINTER_SIZE) :: blk
+      C_POINTER :: blk
       integer  :: nrow
       integer  :: spin, state
       FLOAT    :: new_occ

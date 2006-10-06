@@ -179,7 +179,7 @@ contains
     character(len=256) :: fname
     character(len=10)  :: lab
     integer :: i, row, n_spec_block, n_spec_def, iunit, read_data
-    integer(POINTER_SIZE) :: blk
+    C_POINTER :: blk
 
     call push_sub('specie.specie_read')
 
@@ -377,10 +377,10 @@ contains
 
   ! ---------------------------------------------------------
   subroutine read_from_block(blk, row, s, read_data)
-    integer(POINTER_SIZE), intent(in) :: blk
-    integer,               intent(in) :: row
-    type(specie_t),     intent(inout) :: s
-    integer,              intent(out) :: read_data
+    C_POINTER,      intent(in) :: blk
+    integer,        intent(in) :: row
+    type(specie_t), intent(inout) :: s
+    integer,        intent(out) :: read_data
 
     integer :: n, lmax, lloc
 

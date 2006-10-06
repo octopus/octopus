@@ -69,8 +69,8 @@ module simul_box_m
     FLOAT :: xsize          ! the length of the cylinder in the x direction
     FLOAT :: lsize(3)       ! half of the length of the parallelepiped in each direction.
 
-    integer(POINTER_SIZE) :: image    ! for the box defined through an image
-    character(len=1024)   :: user_def ! for the user defined box
+    C_POINTER           :: image    ! for the box defined through an image
+    character(len=1024) :: user_def ! for the user defined box
 
     FLOAT :: rlat(3,3)      ! lattice primitive vectors
     FLOAT :: klat(3,3)      ! reciprocal lattice primitive vectors
@@ -141,8 +141,8 @@ contains
     subroutine read_misc()
 
       integer :: iunit, ierr, ip, id
-      integer(POINTER_SIZE) :: blk
-      character(len=256)    :: tmp_str
+      C_POINTER :: blk
+      character(len=256) :: tmp_str
 
       call push_sub('simul_box.read_misc')
 
@@ -284,7 +284,7 @@ contains
 
     !--------------------------------------------------------------
     subroutine read_box()
-      integer(POINTER_SIZE) :: blk
+      C_POINTER :: blk
       character(len=200) :: filename
       FLOAT :: default
       
@@ -473,7 +473,7 @@ contains
     !--------------------------------------------------------------
     subroutine read_spacing()
       integer :: i, sx, sy
-      integer(POINTER_SIZE) :: blk
+      C_POINTER :: blk
 
 
       call push_sub('simul_box.read_spacing')
@@ -590,7 +590,7 @@ contains
     !--------------------------------------------------------------
     subroutine read_box_offset()
       integer :: i
-      integer(POINTER_SIZE) :: blk
+      C_POINTER :: blk
 
       call push_sub('simul_box.read_box_offset')
       !%Variable BoxOffset

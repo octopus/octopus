@@ -36,7 +36,7 @@ program octopus
   implicit none
 
   integer :: ns
-  integer(POINTER_SIZE) :: blk
+  C_POINTER :: blk
   character(len=256) :: sys_name
 
   call global_init()

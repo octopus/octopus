@@ -244,7 +244,7 @@ module lib_oct_gsl_spline_m
 
   ! the basic spline datatype
   type loct_spline_t
-    integer(POINTER_SIZE) :: spl, acc
+    C_POINTER :: spl, acc
   end type loct_spline_t
 
   ! Both the filling of the fuction, and the retrieval of the values
@@ -291,41 +291,41 @@ module lib_oct_gsl_spline_m
   ! take care of calling the GSL library.
   interface
     subroutine oct_spline_end(spl, acc)
-      integer(POINTER_SIZE), intent(inout) :: spl, acc
+      C_POINTER, intent(inout) :: spl, acc
     end subroutine oct_spline_end
 
     subroutine oct_spline_fit(nrc, x, y, spl, acc)
       integer, intent(in) :: nrc
       real(8), intent(in) :: x, y
-      integer(POINTER_SIZE), intent(inout) :: spl, acc
+      C_POINTER, intent(inout) :: spl, acc
     end subroutine oct_spline_fit
 
     real(8) function oct_spline_eval(x, spl, acc)
       real(8), intent(in) :: x
-      integer(POINTER_SIZE), intent(in) :: spl, acc
+      C_POINTER, intent(in) :: spl, acc
     end function oct_spline_eval
 
     real(8) function oct_spline_eval_der(x, spl, acc)
       real(8), intent(in) :: x
-      integer(POINTER_SIZE), intent(in) :: spl, acc
+      C_POINTER, intent(in) :: spl, acc
     end function oct_spline_eval_der
 
     integer function oct_spline_npoints(spl)
-      integer(POINTER_SIZE), intent(in) :: spl
+      C_POINTER, intent(in) :: spl
     end function oct_spline_npoints
 
     subroutine oct_spline_x(spl, x)
-      integer(POINTER_SIZE), intent(in) :: spl
+      C_POINTER, intent(in) :: spl
       real(8), intent(out) :: x
     end subroutine oct_spline_x
 
     subroutine oct_spline_y(spl, y)
-      integer(POINTER_SIZE), intent(in) :: spl
+      C_POINTER, intent(in) :: spl
       real(8), intent(out) :: y
     end subroutine oct_spline_y
 
     real(8) function oct_spline_eval_integ(spl, a, b, acc)
-      integer(POINTER_SIZE) :: spl, acc
+      C_POINTER :: spl, acc
       real(8) :: a, b
     end function oct_spline_eval_integ
   end interface

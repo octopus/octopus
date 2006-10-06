@@ -85,7 +85,7 @@ contains
     FLOAT,        intent(in) :: dt
     logical,      intent(out):: mode_tdpenalty
 
-    integer(POINTER_SIZE)    :: blk
+    C_POINTER                :: blk
     integer                  :: no_lines, no_col, i
     type(filter_t),  pointer :: tdp(:)
 
@@ -273,7 +273,7 @@ contains
     type(filter_t),   pointer     :: f(:)
     FLOAT,            intent(in)  :: dt
 
-    integer(POINTER_SIZE) :: blk
+    C_POINTER :: blk
     integer :: no_c, i, no_f
 
     call push_sub('filters.def_filter')

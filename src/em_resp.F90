@@ -276,11 +276,11 @@ contains
 
     ! ---------------------------------------------------------
     subroutine parse_input()
-      integer(POINTER_SIZE) :: blk
-      integer :: nrow
-      integer :: number, j, k, ham_var
-      FLOAT   :: omega_ini, omega_fin, domega
-      logical :: static
+      C_POINTER :: blk
+      integer   :: nrow
+      integer   :: number, j, k, ham_var
+      FLOAT     :: omega_ini, omega_fin, domega
+      logical   :: static
 
       call push_sub('em_resp.parse_input')
 

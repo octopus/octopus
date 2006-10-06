@@ -136,7 +136,7 @@ contains
     integer,           intent(in)   :: min_range(:)
 
     integer :: i
-    integer(POINTER_SIZE) :: blk
+    C_POINTER :: blk
 
     call push_sub('multicomm.multicomm_init')
 
@@ -259,7 +259,7 @@ contains
 
     ! ---------------------------------------------------------
     subroutine read_block(blk)
-      integer(POINTER_SIZE) :: blk
+      C_POINTER :: blk
 
       integer :: i, n
 

@@ -45,13 +45,13 @@ module xc_functl_m
     XC_OEP_X             = 401     ! Exact exchange
 
   type xc_functl_t
-    integer :: family              ! LDA, GGA, etc.
-    integer :: id    ! identifier
+    integer   :: family            ! LDA, GGA, etc.
+    integer   :: id                ! identifier
 
-    integer :: spin_channels       ! XC_UNPOLARIZED | XC_POLARIZED
+    integer   :: spin_channels     ! XC_UNPOLARIZED | XC_POLARIZED
 
-    integer(POINTER_SIZE) :: conf  ! the pointer used to call the library
-    integer(POINTER_SIZE) :: info  ! information about the functional
+    C_POINTER :: conf              ! the pointer used to call the library
+    C_POINTER :: info              ! information about the functional
   end type xc_functl_t
 
 contains
@@ -145,6 +145,10 @@ contains
     !% GGA: Becke 88
     !%Option gga_x_g96 107
     !% GGA: Gill 96
+    !%Option gga_x_pw86 108
+    !% GGA: Perdew & Wang 86
+    !%Option gga_x_pw91 109
+    !% GGA: Perdew & Wang 91
     !%Option gga_xc_lb 160
     !% GGA: van Leeuwen & Baerends (GGA)
     !%Option mgga_x_tpss 201
@@ -305,9 +309,8 @@ contains
     integer,           intent(in) :: iunit
 
     character(len=120) :: s1, s2
-    integer :: j
-    integer(POINTER_SIZE) :: i
-
+    C_POINTER :: str
+    integer :: i, j
 
     call push_sub('xc_functl.xc_functl_write_info')
 
@@ -335,13 +338,13 @@ contains
       write(message(2), '(4x,4a)') trim(s1), ' (', trim(s2), ')'
       call write_info(2, iunit)
       
-      i = 0; j = 1
-      call xc_f90_info_ref(functl%info, i, s1)
-      do while(i>=0)
-        write(message(1), '(4x,a,i1,2a)') '[', j, '] ', trim(s1)
+      i = 1; str = 0
+      call xc_f90_info_ref(functl%info, str, s1)
+      do while(str >= 0)
+        write(message(1), '(4x,a,i1,2a)') '[', i, '] ', trim(s1)
         call write_info(1, iunit)
-        call xc_f90_info_ref(functl%info, i, s1)
-        j = j + 1
+        call xc_f90_info_ref(functl%info, str, s1)
+        i = i + 1
       end do
 
     case (XC_FAMILY_OEP)

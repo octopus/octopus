@@ -63,6 +63,7 @@ sigaction malloc realloc opendir readdir closedir strchr strtod])
 
 # Checks for size of pointer
 ACX_POINTER_SIZE
+AC_DEFINE_UNQUOTED(C_POINTER, [integer(${ac_pointersize})], [The type of a C pointer])
 
 dnl ============================================================================
 dnl This part of the configuration file tries to sort out what needs to be built.

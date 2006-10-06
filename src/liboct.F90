@@ -86,61 +86,61 @@ module lib_oct_m
   ! write_iter functions
   interface
     subroutine write_iter_init(out,  iter, factor, file)
-      integer(POINTER_SIZE) :: out
-      integer               :: iter
-      FLOAT                 :: factor
-      character(len=*)      :: file
+      C_POINTER        :: out
+      integer          :: iter
+      FLOAT            :: factor
+      character(len=*) :: file
     end subroutine write_iter_init
     subroutine write_iter_clear(out)
-      integer(POINTER_SIZE) :: out
+      C_POINTER :: out
     end subroutine write_iter_clear
     subroutine write_iter_flush(out)
-      integer(POINTER_SIZE) :: out
+      C_POINTER :: out
     end subroutine write_iter_flush
     subroutine write_iter_end(out)
-      integer(POINTER_SIZE) :: out
+      C_POINTER :: out
     end subroutine write_iter_end
     subroutine write_iter_start(out)
-      integer(POINTER_SIZE) :: out
+      C_POINTER :: out
     end subroutine write_iter_start
     subroutine write_iter_string(out, string)
-      integer(POINTER_SIZE) :: out
-      character(len=*)      :: string
+      C_POINTER        :: out
+      character(len=*) :: string
     end subroutine write_iter_string
     subroutine write_iter_header_start(out)
-      integer(POINTER_SIZE) :: out
+      C_POINTER :: out
     end subroutine write_iter_header_start
     subroutine write_iter_header(out, string)
-      integer(POINTER_SIZE) :: out
-      character(len=*)      :: string
+      C_POINTER        :: out
+      character(len=*) :: string
     end subroutine write_iter_header
     subroutine write_iter_nl(out)
-      integer(POINTER_SIZE) :: out
+      C_POINTER :: out
     end subroutine write_iter_nl
   end interface
 
   interface write_iter_double
     subroutine write_iter_double_1(out, d, n)
-      integer(POINTER_SIZE) :: out
-      integer               :: n
-      FLOAT                 :: d
+      C_POINTER :: out
+      integer   :: n
+      FLOAT     :: d
     end subroutine write_iter_double_1
     subroutine write_iter_double_n(out, d, n)
-      integer(POINTER_SIZE) :: out
-      integer               :: n
-      FLOAT                 :: d(n)
+      C_POINTER :: out
+      integer   :: n
+      FLOAT     :: d(n)
     end subroutine write_iter_double_n
   end interface
   interface write_iter_int
     subroutine write_iter_int_1(out, i, n)
-      integer(POINTER_SIZE) :: out
-      integer               :: n
-      integer               :: i
+      C_POINTER :: out
+      integer   :: n
+      integer   :: i
     end subroutine write_iter_int_1
     subroutine write_iter_int_n(out, i, n)
-      integer(POINTER_SIZE) :: out
-      integer               :: n
-      integer               :: i(n)
+      C_POINTER :: out
+      integer   :: n
+      integer   :: i(n)
     end subroutine write_iter_int_n
   end interface
 
@@ -273,21 +273,21 @@ module lib_oct_m
   ! Functions to generate random numbers
   interface loct_ran_init
     subroutine oct_ran_init(r)
-      integer(POINTER_SIZE), intent(out) :: r
+      C_POINTER, intent(out) :: r
     end subroutine oct_ran_init
   end interface
 
   interface loct_ran_end
     subroutine oct_ran_end(r)
-      integer(POINTER_SIZE), intent(out) :: r
+      C_POINTER, intent(out) :: r
     end subroutine oct_ran_end
   end interface
 
   interface loct_ran_gaussian
     function oct_ran_gaussian(r, sigma)
       real(8) :: oct_ran_gaussian
-      integer(POINTER_SIZE), intent(in) :: r
-      real(8), intent(in) :: sigma
+      C_POINTER, intent(in) :: r
+      real(8),   intent(in) :: sigma
     end function oct_ran_gaussian
     module procedure oct_ran_gaussian4
   end interface
@@ -392,7 +392,7 @@ module lib_oct_m
 #if defined(HAVE_GDLIB)
   interface loct_gdimage_create_from
     function oct_gdimage_create_from(filename)
-      integer(POINTER_SIZE) :: oct_gdimage_create_from
+      C_POINTER :: oct_gdimage_create_from
       character(len=*), intent(in) :: filename
     end function oct_gdimage_create_from
   end interface
@@ -400,22 +400,22 @@ module lib_oct_m
   interface loct_gdimage_sx
     function oct_gdimage_sx(im)
       integer :: oct_gdimage_sx
-      integer(POINTER_SIZE), intent(in) :: im
+      C_POINTER, intent(in) :: im
     end function oct_gdimage_sx
   end interface
 
   interface loct_gdimage_sy
     function oct_gdimage_sy(im)
       integer :: oct_gdimage_sy
-      integer(POINTER_SIZE), intent(in) :: im
+      C_POINTER, intent(in) :: im
     end function oct_gdimage_sy
   end interface
 
   interface loct_gdimage_get_pixel_rgb
     subroutine oct_gdimage_get_pixel_rgb(im, x, y, r, g, b)
-      integer(POINTER_SIZE), intent(in)  :: im
-      integer,               intent(in)  :: x, y
-      integer,               intent(out) :: r, g, b
+      C_POINTER, intent(in)  :: im
+      integer,   intent(in)  :: x, y
+      integer,   intent(out) :: r, g, b
     end subroutine oct_gdimage_get_pixel_rgb
   end interface
 #endif
@@ -538,8 +538,8 @@ contains
   end function oct_ylm4
 
   real(4) function oct_ran_gaussian4(r, sigma)
-    integer(POINTER_SIZE), intent(in) :: r
-    real(4), intent(in) :: sigma
+    C_POINTER, intent(in) :: r
+    real(4),   intent(in) :: sigma
 
     oct_ran_gaussian4 = real(oct_ran_gaussian(r, real(sigma, kind=8)), kind=4)
   end function oct_ran_gaussian4

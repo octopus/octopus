@@ -239,7 +239,7 @@ contains
 
     integer :: i, j
     FLOAT   :: x(MAX_DIM), temperature, sigma, kin1, kin2
-    integer(POINTER_SIZE) :: random_gen_pointer
+    C_POINTER :: random_gen_pointer
     type(xyz_file_info) :: xyz
 
     call push_sub('geometry.geometry_init_vel')

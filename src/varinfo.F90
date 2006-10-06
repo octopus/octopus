@@ -50,7 +50,7 @@ contains
     integer,          intent(in) :: iunit
     character(len=*), intent(in) :: var
 
-    integer(POINTER_SIZE) :: handle, opt, name, type, section, desc
+    C_POINTER :: handle, opt, name, type, section, desc
     integer :: value
     logical :: first
 
@@ -90,7 +90,7 @@ contains
     integer,           intent(in) :: option
     logical, optional, intent(in) :: is_flag
 
-    integer(POINTER_SIZE) :: handle, opt, name, desc
+    C_POINTER :: handle, opt, name, desc
     integer :: value, option_
     logical :: is_flag_
 
@@ -132,7 +132,7 @@ contains
     integer,          intent(in) :: option
     character(len=*), intent(in), optional :: pre
 
-    integer(POINTER_SIZE) :: handle, opt, name, desc
+    C_POINTER :: handle, opt, name, desc
     integer :: value
 
     call varinfo_getvar(var, handle)

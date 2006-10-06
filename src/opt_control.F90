@@ -1200,7 +1200,7 @@ contains
     !------------------------------------------------------------------------
     subroutine def_istate()
       integer           :: kk, no_c, state, no_blk
-      integer(POINTER_SIZE) :: blk
+      C_POINTER         :: blk
 !      integer           :: nstates
       integer           :: p, ik, ib, idim, inst, inik
       integer           :: id ,is, ip, ierr, no_states, isize
@@ -1397,7 +1397,7 @@ contains
     ! ----------------------------------------------------------------------
     subroutine def_toperator()
       integer           :: no_tds, no_c, state
-      integer(POINTER_SIZE) :: blk
+      C_POINTER         :: blk
       integer           :: ierr
       character(len=10) :: fname
       integer           :: ik, ib
@@ -1893,8 +1893,8 @@ contains
       CMPLX,   intent(out) :: laserpol(MAX_DIM)
       integer, intent(out) :: dof
     
-      integer               :: no_blk, no_c
-      integer(POINTER_SIZE) :: blk
+      integer   :: no_blk, no_c
+      C_POINTER :: blk
 
       call push_sub('opt_control.def_laserpol') 
 

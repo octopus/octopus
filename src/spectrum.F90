@@ -176,7 +176,7 @@ contains
     type(kick_t), intent(out) :: k
     integer,      intent(in)  :: nspin
 
-    integer(POINTER_SIZE) :: blk
+    C_POINTER :: blk
     integer :: n, i, j
 
     call push_sub('spectrum.kick_init')

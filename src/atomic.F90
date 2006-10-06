@@ -266,7 +266,7 @@ contains
      DGDM(-NN:NN), DGIDFJ(-NN:NN), DRDM, DVOL,                       &
      EPSC, EPSX, F1, F2, GD(3,NSPIN)
 
-  integer(POINTER_SIZE) :: x_conf, x_info, c_conf, c_info
+  C_POINTER :: x_conf, x_info, c_conf, c_info
   !external :: GGAXC, LDAXC
 
   ! sanity check

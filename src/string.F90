@@ -139,20 +139,20 @@ contains
   ! ---------------------------------------------------------
   ! prints the C string given by the pointer str
   subroutine print_C_string(iunit, str, pre, advance)
-    integer,               intent(in) :: iunit
-    integer(POINTER_SIZE), intent(in) :: str
+    integer,                    intent(in) :: iunit
+    C_POINTER,                  intent(in) :: str
     character(len=*), optional, intent(in) :: pre
     character(len=*), optional, intent(in) :: advance
 
-    integer(POINTER_SIZE) :: s
-    character(len=256)    :: line
-    character(len=5)      :: advance_
+    C_POINTER          :: s
+    character(len=256) :: line
+    character(len=5)   :: advance_
 
     interface
       subroutine break_C_string(str, s, line)
-        integer(POINTER_SIZE), intent(in)    :: str
-        integer(POINTER_SIZE), intent(inout) :: s
-        character(len=*),      intent(out)   :: line
+        C_POINTER,        intent(in)    :: str
+        C_POINTER,        intent(inout) :: s
+        character(len=*), intent(out)   :: line
       end subroutine break_C_string
     end interface
 

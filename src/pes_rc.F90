@@ -25,7 +25,7 @@ subroutine PES_rc_init(v, m, st, save_iter)
   integer,        intent(in) :: save_iter
   type(PES_rc_t), intent(out) :: v
 
-  integer(POINTER_SIZE) :: blk
+  C_POINTER :: blk
   integer  :: i
   FLOAT ::  x(MAX_DIM)
 

@@ -125,7 +125,7 @@ contains
     type(geometry_t), intent(in) :: geo
 
     integer :: i, j
-    integer(POINTER_SIZE) :: blk
+    C_POINTER :: blk
     FLOAT, allocatable :: x(:)
 
     call push_sub('epot.epot_init')

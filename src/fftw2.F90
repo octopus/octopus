@@ -54,12 +54,12 @@ module fft_m
     fftw_threadsafe      =128
 
   type fft_t
-    integer :: slot                ! in which slot do we have this fft
+    integer   :: slot       ! in which slot do we have this fft
 
-    integer :: n(MAX_DIM)          ! size of the fft
-    integer :: is_real             ! is the fft real or complex
-    integer(POINTER_SIZE) :: planf ! the plan for forward transforms
-    integer(POINTER_SIZE) :: planb ! the plan for backward transforms
+    integer   :: n(MAX_DIM) ! size of the fft
+    integer   :: is_real    ! is the fft real or complex
+    C_POINTER :: planf      ! the plan for forward transforms
+    C_POINTER :: planb      ! the plan for backward transforms
   end type fft_t
 
   integer, private :: fft_refs(FFT_MAX)

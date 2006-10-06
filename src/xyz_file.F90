@@ -98,7 +98,7 @@ contains
     type(xyz_file_info), intent(inout) :: gf
 
     integer :: i, j, iunit
-    integer(POINTER_SIZE) :: blk
+    C_POINTER :: blk
     character(len=80) :: str
 
     call push_sub('xyz_file.xyz_file_read')
