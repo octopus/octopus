@@ -303,11 +303,10 @@ contains
 #if defined(HAVE_NETCDF)
   ! ---------------------------------------------------------
   subroutine ncdf_error(func, status, filename, ierr)
-    character(len=*), intent(in)  :: func
-    integer,          intent(in)  :: status
-    character(len=*), intent(in)  :: filename
-    integer,          intent(out) :: ierr
-
+    character(len=*), intent(in)    :: func
+    integer,          intent(in)    :: status
+    character(len=*), intent(in)    :: filename
+    integer,          intent(inout) :: ierr
     if(status .eq. NF90_NOERR) return
     write(message(1),'(3a)') "NETCDF error in function '" , trim(func) , "'"
     write(message(2),'(3a)') "(reading/writing ", trim(filename) , ")"
