@@ -127,7 +127,6 @@ CTAGS=ctags-exuberant -e
 # in this spaghetti code)
 atomic.o: atomic_oct.f90
 	@FC@ @FCFLAGS@ -c @FCFLAGS_f90@ -o $@ $*_oct.f90
-	@rm -f $*_oct.f90
 
 # how to compile global.F90 (have to define some extra variables here)
 DATE := $(shell date)
