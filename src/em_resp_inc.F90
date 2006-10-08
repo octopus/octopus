@@ -229,11 +229,12 @@ end subroutine X(lr_calc_beta)
 ! for an electric field
 !--------------------------------------------------------------
 
-subroutine X(get_response_e)(sys, h, lr, dir, nsigma, omega, props, status)
+subroutine X(get_response_e)(sys, h, lr, dir, tag, nsigma, omega, props, status)
   type(system_t), target, intent(inout) :: sys
   type(hamiltonian_t),    intent(inout) :: h
   type(lr_t),             intent(inout) :: lr(:,:) !ndim,nsigma
-  integer,                intent(in)    :: dir 
+  integer,                intent(in)    :: dir
+  integer,                intent(in)    :: tag
   integer,                intent(in)    :: nsigma 
   R_TYPE,                 intent(in)    :: omega
   type(pol_props_t),      intent(in)    :: props
@@ -380,7 +381,7 @@ subroutine X(get_response_e)(sys, h, lr, dir, nsigma, omega, props, status)
     !write restart info
     call X(restart_write_lr_density)(sys, lr(dir, 1), R_REAL(omega), dir)
     do sigma=1,nsigma 
-      write(dirname,'(a,i1,a,i1)') RESTART_DIR, dir, "_", sigma
+      write(dirname,'(a,i1,a,i1,a,i1)') RESTART_DIR//"wfs", dir, "_", tag, "_", sigma
       call restart_write(trim(tmpdir)//dirname, st, sys%gr, err, iter=iter, lr=lr(dir, sigma))
     end do
     
@@ -428,11 +429,6 @@ subroutine X(get_response_e)(sys, h, lr, dir, nsigma, omega, props, status)
 
     if(conv) then
       if(present(status)) status%ok = .true.
-
-      do sigma=1,nsigma 
-        write(dirname,'(a,i1,a,i1)') RESTART_DIR, dir, "_", sigma
-        call restart_write(trim(tmpdir)//dirname, st, sys%gr, err, lr=lr(dir, sigma))
-      end do
 
       write(message(1), '(a, i4, a)')        &
            'Info: SCF for response converged in ', &
@@ -577,7 +573,7 @@ subroutine X(static_response) (sys, h, lr, props, pol, hpol, hpol_density)
 
     call mix_init(lr(i, 1)%mixer, sys%gr%m, 1, sys%st%d%nspin)
 
-    call X(get_response_e)(sys, h, lr(:,:), i, 1, R_TOTYPE(M_ZERO), props)
+    call X(get_response_e)(sys, h, lr(:,:), i, 1, 1, R_TOTYPE(M_ZERO), props)
     call mix_end(lr(i, 1)%mixer)
 
     do ispin = 1, sys%st%d%nspin
