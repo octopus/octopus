@@ -39,7 +39,7 @@ program oct_test
 
   implicit none
 
-  integer :: iunit, which_test
+  integer :: which_test
   integer, parameter :: HARTREE_TEST = 1
 
   call global_init()

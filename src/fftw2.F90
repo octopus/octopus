@@ -98,9 +98,9 @@ contains
   ! ---------------------------------------------------------
   subroutine fft_init(n, is_real, fft, optimize)
     integer,           intent(inout) :: n(MAX_DIM)
-    integer,           intent(inout) :: n(MAX_DIM)
     integer,           intent(in)    :: is_real
     type(fft_t),       intent(out)   :: fft
+    logical,           intent(in), optional :: optimize
 
     integer :: i, j, dim
     logical :: optimize_
