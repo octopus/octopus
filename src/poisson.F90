@@ -225,14 +225,11 @@ contains
     case(FFT_CORRECTED)
       call dcf_free(fft_cf)
       deallocate(fft_coulb_FS); nullify(fft_coulb_FS)
-      call kill_phi()
-      call kill_aux()
+      call poisson_corrections_end()
 
 #endif
     case(CG_CORRECTED)
-      call poisson_cg2_end()
-      call kill_phi()
-      call kill_aux()
+      call poisson_cg_end()
     case(MULTIGRILLA)
       call poisson_multigrid_end()
     end select
@@ -310,7 +307,7 @@ contains
       ALLOCATE(rho_corrected(gr%m%np), gr%m%np)
       ALLOCATE(vh_correction(gr%m%np), gr%m%np)
 
-      call correct_rho(gr%m, maxl, rho, rho_corrected, vh_correction)
+      call correct_rho(gr%m, rho, rho_corrected, vh_correction)
       call poisson_fft(gr%m, pot, rho_corrected, average_to_zero = .true.)
 
       pot = pot + vh_correction
@@ -406,9 +403,9 @@ contains
   subroutine poisson_test(gr)
     type(grid_t), intent(inout) :: gr
 
-    FLOAT, allocatable :: rho(:), vh(:), vh_exact(:)
-    FLOAT :: alpha, beta, r, delta
-    integer :: i, iunit
+    FLOAT, allocatable :: rho(:), vh(:), vh_exact(:), rhop(:), x(:, :)
+    FLOAT :: alpha, beta, r, delta, norm, rnd
+    integer :: i, j, k, ierr, iunit, n, n_gaussians
 
     call push_sub('poisson.poisson_test')
 
@@ -419,36 +416,59 @@ contains
       return
     endif
 
-!
+    n_gaussians = 10
+
     ALLOCATE(     rho(NP), NP)
+    ALLOCATE(    rhop(NP), NP)
     ALLOCATE(      vh(NP), NP)
     ALLOCATE(vh_exact(NP), NP)
-!
+    ALLOCATE(x(gr%m%sb%dim, n_gaussians), gr%m%sb%dim*n_gaussians)
+
     rho = M_ZERO; vh = M_ZERO; vh_exact = M_ZERO
 
-    ! This builds a normalized Gaussian charge
-    alpha = CNST(5.0) * gr%m%h(1)
+    
+    n_gaussians = 5
+    alpha = CNST(4.0) * gr%m%h(1)
     beta = M_ONE / ( alpha**calc_dim * sqrt(M_PI)**calc_dim )
-    do i = 1, NP
-      call mesh_r(gr%m, i, r)
-      rho(i) = beta*exp(-(r/alpha)**2)
+
+    write(0, *) 'Building the Gaussian distribution of charge...'
+    rho = M_ZERO
+    do n = 1, n_gaussians
+      norm = M_ZERO
+      do while(abs(norm-M_ONE)> CNST(1.0e-6))
+        do k = 1, gr%m%sb%dim
+          call random_number(rnd)
+          x(k, n) = -gr%m%sb%lsize(k) + rnd*M_TWO*gr%m%sb%lsize(k)
+        end do
+        r = sqrt(sum(x(:, n)*x(:,n)))
+        do i = 1, NP
+          call mesh_r(gr%m, i, r, a = x(:, n))
+          rhop(i) = beta*exp(-(r/alpha)**2)
+        end do
+        norm = dmf_integrate(gr%m, rhop)
+      end do
+      rho = rho + rhop
     end do
     write(message(1), '(a,f14.6)') 'Total charge of the Gaussian distribution', dmf_integrate(gr%m, rho)
+    call write_info(1)
 
     ! This builds analytically its potential
-    do i = 1, NP
-      call mesh_r(gr%m, i, r)
-      select case(calc_dim)
-      case(3)
-        if(r > r_small) then
-          vh_exact(i) = loct_erf(r/alpha)/r
-        else
-          vh_exact(i) = (M_TWO/sqrt(M_PI))/alpha
-        end if
-      case(2)
-        vh_exact(i) = beta * (M_PI)**(M_THREE*M_HALF) * alpha * exp(-r**2/(M_TWO*alpha**2)) * &
-          loct_bessel_in(0, r**2/(M_TWO*alpha**2))
-      end select
+    vh_exact = M_ZERO
+    do n = 1, n_gaussians
+      do i = 1, NP
+        call mesh_r(gr%m, i, r, a = x(:, n))
+        select case(calc_dim)
+        case(3)
+          if(r > r_small) then
+            vh_exact(i) = vh_exact(i) + loct_erf(r/alpha)/r
+          else
+            vh_exact(i) = vh_exact(i) + (M_TWO/sqrt(M_PI))/alpha
+          end if
+        case(2)
+          vh_exact(i) = vh_exact(i) + beta * (M_PI)**(M_THREE*M_HALF) * alpha * exp(-r**2/(M_TWO*alpha**2)) * &
+            loct_bessel_in(0, r**2/(M_TWO*alpha**2))
+        end select
+      end do
     end do
 
     ! This calculates the numerical potential
@@ -459,13 +479,16 @@ contains
 
     ! Output
     iunit = io_open("hartree_results", action='write')
-    write(iunit, '(a,f10.4)' ) 'Hartree test = ', delta
+    write(iunit, '(a,f10.2)' ) 'Hartree test = ', delta
     call io_close(iunit)
-    !call doutput_function (output_fill_how('AxisX'), ".", "poisson_test_rho", gr%m, gr%sb, rho, M_ONE, ierr)
-    !call doutput_function (output_fill_how('AxisX'), ".", "poisson_test_exact", gr%m, gr%sb, vh_exact, M_ONE, ierr)
-    !call doutput_function (output_fill_how('AxisX'), ".", "poisson_test_numerical", gr%m, gr%sb, vh, M_ONE, ierr)
+    call doutput_function (output_fill_how('AxisX'), ".", "poisson_test_rho.x", gr%m, gr%sb, rho, M_ONE, ierr)
+    call doutput_function (output_fill_how('AxisX'), ".", "poisson_test_exact.x", gr%m, gr%sb, vh_exact, M_ONE, ierr)
+    call doutput_function (output_fill_how('AxisX'), ".", "poisson_test_numerical.x", gr%m, gr%sb, vh, M_ONE, ierr)
+    call doutput_function (output_fill_how('AxisY'), ".", "poisson_test_rho.y", gr%m, gr%sb, rho, M_ONE, ierr)
+    call doutput_function (output_fill_how('AxisY'), ".", "poisson_test_exact.y", gr%m, gr%sb, vh_exact, M_ONE, ierr)
+    call doutput_function (output_fill_how('AxisY'), ".", "poisson_test_numerical.y", gr%m, gr%sb, vh, M_ONE, ierr)
 
-    deallocate(rho, vh, vh_exact)
+    deallocate(rho, rhop, vh, vh_exact, x)
     call pop_sub()
   end subroutine poisson_test
 

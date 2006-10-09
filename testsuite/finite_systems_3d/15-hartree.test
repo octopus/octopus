@@ -11,5 +11,5 @@ Runtime  : short-run
 Enabled  : Yes
 
 Input: 15-hartree.01-rectangular.inp
-Match ; Dumb test ; grep '^Hartree test' hartree_results ; \s*0.0000
+Match ; Dumb test ; grep '^Hartree test' hartree_results ; \s*0.00
 

@@ -31,36 +31,51 @@ module poisson_corrections_m
   implicit none
 
   private
-  public ::         &
-    phi,            &
-    aux,            &
-    maxl,           &
-    der_pointer,    &
-    mesh_pointer,   &
-    build_phi,      &
-    kill_phi,       &
-    build_aux,      &
-    kill_aux,       &
-    correct_rho,    &
-    get_multipoles, &
-    op, opt, dotp
+  public ::                   &
+    poisson_corrections_init, &
+    poisson_corrections_end,  &
+    correct_rho,              &
+    boundary_conditions
 
-  type(der_discr_t), pointer :: der_pointer
-  type(mesh_t),      pointer :: mesh_pointer
+  public ::                   &
+    der_pointer,              &
+    mesh_pointer,             &
+    op, dotp
 
   integer :: maxl
   FLOAT, allocatable :: phi(:, :)
   FLOAT, allocatable :: aux(:, :)
-
   FLOAT, parameter :: alpha_ = M_FIVE
+
+  type(der_discr_t), pointer :: der_pointer
+  type(mesh_t),      pointer :: mesh_pointer
+
 
 contains
 
   ! ---------------------------------------------------------
-  subroutine correct_rho(m, ml, rho, rho_corrected, vh_correction)
+  subroutine poisson_corrections_init(ml, m)
+    integer, intent(in)      :: ml
+    type(mesh_t), intent(in) :: m
+
+    maxl = ml
+    call build_aux(m)
+    call build_phi(m)
+
+  end subroutine poisson_corrections_init
+
+
+  ! ---------------------------------------------------------
+  subroutine poisson_corrections_end
+    if(allocated(phi)) deallocate(phi)
+    if(allocated(aux)) deallocate(aux)
+  end subroutine poisson_corrections_end
+
+
+  ! ---------------------------------------------------------
+  subroutine correct_rho(m, rho, rho_corrected, vh_correction)
     implicit none
     type(mesh_t), intent(in)  :: m
-    integer,      intent(in)  :: ml
     FLOAT,        intent(in)  :: rho(:)
     FLOAT,        intent(out) :: rho_corrected(:)
     FLOAT,        intent(out) :: vh_correction(:)
@@ -72,14 +87,14 @@ contains
 
     call push_sub('poisson_corrections.correct_rho')
 
-    ALLOCATE(mult((ml+1)**2), (ml+1)**2)
-    call get_multipoles(m, rho, ml, mult)
+    ALLOCATE(mult((maxl+1)**2), (maxl+1)**2)
+    call get_multipoles(m, rho, maxl, mult)
 
     alpha = alpha_*m%h(1)
 
-    ALLOCATE(betal((ml+1)**2), (ml+1)**2)
+    ALLOCATE(betal((maxl+1)**2), (maxl+1)**2)
     add_lm = 1
-    do l = 0, ml
+    do l = 0, maxl
       do mm = -l, l
         lldfac = 1; do j = 1, 2*l+1, 2; lldfac = lldfac * j; end do
         betal(add_lm) = (2**(l+2))/( alpha**(2*l+3) * sqrt(M_PI) * lldfac )
@@ -94,7 +109,7 @@ contains
       r2 = dot_product(m%x(i, 1:3), m%x(i, 1:3)) ! mesh_r could be used, but it wastes time.
       r2 = exp(-r2/alpha**2)
       add_lm = 1
-      do l = 0, ml
+      do l = 0, maxl
         do mm = -l, l
           rho_corrected(i) = rho_corrected(i) - mult(add_lm) * betal(add_lm) * aux(add_lm, i) * r2
           vh_correction(i) = vh_correction(i) + mult(add_lm) * phi(add_lm, i)
@@ -182,12 +197,6 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine kill_phi
-    if(allocated(phi)) deallocate(phi)
-  end subroutine kill_phi
-
-
-  ! ---------------------------------------------------------
   subroutine build_aux(m)
     type(mesh_t), intent(in) :: m
 
@@ -222,12 +231,6 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine kill_aux
-   if(allocated(aux)) deallocate(aux)
-  end subroutine kill_aux
-
-
-  ! ---------------------------------------------------------
   subroutine op(x, y)
     FLOAT, intent(inout) :: x(:)
     FLOAT, intent(out)   :: y(:)
@@ -251,12 +254,39 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine opt(x, y)
-    FLOAT, intent(inout) :: x(:)
-    FLOAT, intent(out)   :: y(:)
+  subroutine boundary_conditions(m, rho, pot)
+    implicit none
+    type(mesh_t), intent(in)  :: m
+    FLOAT,        intent(in)  :: rho(:)  ! rho(m%np)
+    FLOAT,        intent(inout) :: pot(:)  ! pot(m%np_part)
 
-    call dderivatives_laplt(der_pointer, x, y)
-  end subroutine opt
+    integer :: i, add_lm, l, mm, bp_lower
+    FLOAT   :: x(MAX_DIM), r, s1, sa
+    FLOAT, allocatable :: mult(:)
+
+    ALLOCATE(mult((maxl+1)**2), (maxl+1)**2)
+
+    call get_multipoles(m, rho, maxl, mult)
+
+    bp_lower = m%np + 1
+    if(m%parallel_in_domains) bp_lower = bp_lower + m%vp%np_ghost(m%vp%partno)
+
+    pot(bp_lower:m%np_part) = M_ZERO
+    do i = bp_lower, m%np_part ! boundary conditions
+      call mesh_r(m, i, r, x=x)
+      add_lm = 1
+      do l = 0, maxl
+        s1 = M_FOUR*M_PI/((M_TWO*l + M_ONE)*r**(l + 1))
+        do mm = -l, l
+          sa = loct_ylm(x(1), x(2), x(3), l, mm)
+          pot(i) = pot(i) + sa * mult(add_lm) * s1
+          add_lm = add_lm+1
+        end do
+      end do
+    end do
+
+    deallocate(mult)
+  end subroutine boundary_conditions
 
 
 end module poisson_corrections_m

@@ -37,7 +37,6 @@ module poisson_multigrid_m
   implicit none
 
   integer ::                  &
-    maxmulti,                 &
     maxcycles,                &
     presteps,                 &
     poststeps,                &
@@ -80,7 +79,7 @@ contains
     FLOAT, intent(in)   :: thr
 
     call push_sub('poisson_multigrid.poisson_multigrid_init')
-    maxmulti  = ml
+    call poisson_corrections_init(ml, m)
     threshold = thr
 
     !%Variable PoissonSolverMGPresmoothingSteps
@@ -171,9 +170,6 @@ contains
       call loct_parse_float(check_inp('PoissonSolverMGRelaxationFactor'), M_ONE, relax_factor)
     end if
 
-    call build_aux(m)
-    call build_phi(m)
-
     initialized = .true.
 
     call pop_sub()
@@ -184,7 +180,7 @@ contains
   subroutine poisson_multigrid_end()
     call push_sub('poisson_multigrid.poisson_multigrid_end')
 
-    deallocate(aux, phi)
+    call poisson_corrections_end()
     initialized = .false.
 
     call pop_sub()
@@ -215,7 +211,7 @@ contains
     ALLOCATE(rho_corrected(gr%m%np), gr%m%np)
     ALLOCATE(vh_correction(gr%m%np), gr%m%np)
 
-    call correct_rho(gr%m, maxmulti, rho, rho_corrected, vh_correction)
+    call correct_rho(gr%m, rho, rho_corrected, vh_correction)
     rho_corrected = - M_FOUR*M_PI*rho_corrected
     pot = pot - vh_correction
 
