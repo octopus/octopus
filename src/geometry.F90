@@ -200,6 +200,7 @@ contains
     ! load positions of the classical atoms, if any
     call xyz_file_init(xyz)
     nullify(geo%catom)
+    geo%ncatoms = 0
     call xyz_file_read('Classical', xyz)
     if(xyz%file_type.ne.XYZ_FILE_ERR) then ! found classical atoms
       if(.not.iand(xyz%flags, XYZ_FLAGS_CHARGE).ne.0) then

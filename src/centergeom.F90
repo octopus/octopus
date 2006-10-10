@@ -36,11 +36,15 @@ program centergeom
 
   call global_init()                       ! initialize
   call parser_init()
+  call loct_parse_int('DebugLevel', 0, conf%debug_level)
+  if(conf%debug_level>0) then
+    in_debug_mode = .true.
+  else
+    in_debug_mode = .false.
+  end if
+
   call datasets_init(1)
   call io_init()
-  if(in_debug_mode) then
-     call io_mkdir('debug')
-  end if
   call units_init()
 
   call geometry_init_xyz(geo)              ! we need the geometry
