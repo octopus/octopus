@@ -100,8 +100,6 @@ subroutine X(lr_calc_beta) (sys, lr, props, beta)
   do iper = 1, 6
     call get_permutation(iper, freq_index)
 
-    print*, freq_index
-
     do dir = 1, sys%gr%sb%dim
 
       ! the density
@@ -209,17 +207,6 @@ subroutine X(lr_calc_beta) (sys, lr, props, beta)
 
   end do !iper
 
-!  do k = 1, dim
-!    do j = 1, dim
-!      do i = 1, dim
-!        beta(i,j,k) = -( &
-!             + beta_tmp(i,j,k) + beta_tmp(j,i,k) &
-!             + beta_tmp(k,i,j) + beta_tmp(k,j,i) &
-!             + beta_tmp(j,k,i) + beta_tmp(i,k,j))
-!      end do ! k
-!    end do ! j
-!  end do ! i
-
   beta=-beta_tmp
 
   deallocate(hpol_density)
@@ -243,7 +230,6 @@ contains
     case(1) ; p(1)=1 ; p(2)=2 ; p(3)=3
     case(2) ; p(1)=2 ; p(2)=3 ; p(3)=1
     case(3) ; p(1)=3 ; p(2)=1 ; p(3)=2
-
     case(4) ; p(1)=3 ; p(2)=2 ; p(3)=1
     case(5) ; p(1)=1 ; p(2)=3 ; p(3)=2
     case(6) ; p(1)=2 ; p(2)=1 ; p(3)=3

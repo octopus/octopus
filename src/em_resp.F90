@@ -1,3 +1,5 @@
+
+
 !! Copyright (C) 2004 Xavier Andrade, Eugene S. Kadantsev (ekadants@mjs1.phy.queensu.ca)
 !!
 !! This program is free software; you can redistribute it and/or modify
@@ -77,7 +79,7 @@ contains
 
     FLOAT, allocatable :: hpol_density(:,:,:,:)
 
-    FLOAT :: eta, freq_factor(MAX_DIM)
+    FLOAT :: eta, freq_factor(0:MAX_DIM) !starts from 0 to prevent a segfault
 
     integer :: nsigma, sigma, ndim, i, j, k, nomega, dir, ierr, iomega, ifactor, nfactor
 
@@ -195,15 +197,21 @@ contains
                  ' and frequency ', freq_factor(ifactor)*omega(iomega)/units_out%energy%factor
             call write_info(1)
             
-            
-            if(wfs_are_complex(sys%st)) then 
-              call zget_response_e(sys, h, lr(:, :, ifactor), dir, ifactor, 2 , &
-                   freq_factor(ifactor)*omega(iomega) + M_zI * eta, props, status)
+            if( ifactor > 1 .and. freq_factor(ifactor) ==  freq_factor(ifactor-1) ) then 
+
+              !if the previous frequency is the same, save work
+              call lr_copy(lr(dir, 1, ifactor-1), lr(dir, 1, ifactor))
+              call lr_copy(lr(dir, 2, ifactor-1), lr(dir, 2, ifactor))
+
             else
-              call dget_response_e(sys, h, lr(:, :, ifactor), dir, ifactor, 2 , &
-                   freq_factor(ifactor)*omega(iomega), props, status)
+              if (wfs_are_complex(sys%st)) then 
+                call zget_response_e(sys, h, lr(:, :, ifactor), dir, ifactor, 2 , &
+                     freq_factor(ifactor)*omega(iomega) + M_zI * eta, props, status)
+              else
+                call dget_response_e(sys, h, lr(:, :, ifactor), dir, ifactor, 2 , &
+                     freq_factor(ifactor)*omega(iomega), props, status)
+              end if
             end if
-            
           end do ! dir
           
         end do ! ifactor

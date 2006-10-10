@@ -493,6 +493,21 @@ contains
 
   end subroutine dynamic_tol_end
 
+  subroutine lr_copy(src, dest)
+    type(lr_t),     intent(in) :: src
+    type(lr_t),     intent(inout) :: dest
+
+    if(associated(src%zdl_rho)) then 
+      dest%zdl_rho = src%zdl_rho
+      dest%zdl_psi = src%zdl_psi
+    end if
+
+    if(associated(src%ddl_rho)) then 
+      dest%ddl_rho = src%ddl_rho
+      dest%ddl_psi = src%ddl_psi
+    end if
+
+  end subroutine lr_copy
 
 #include "undef.F90"
 #include "real.F90"
