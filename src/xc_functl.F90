@@ -149,6 +149,8 @@ contains
     !% GGA: Perdew & Wang 86
     !%Option gga_x_pw91 109
     !% GGA: Perdew & Wang 91
+    !%Option gga_x_optx 110
+    !% GGA: Handy & Cohen OPTX 01
     !%Option gga_xc_lb 160
     !% GGA: van Leeuwen & Baerends (GGA)
     !%Option mgga_x_tpss 201
