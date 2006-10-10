@@ -1,5 +1,5 @@
 # -*- coding: utf-8 mode: shell-script -*-
-# $Id$
+# $Id: 14-h2o_pol_lr.03_h2o_dyn_pol.inp 2308 2006-07-29 00:56:52Z appel $
 
 SystemName = 'H2O'
 CalculationMode = pol_lr
@@ -14,7 +14,15 @@ fromScratch = yes
 
 Spacing = 0.65
 
+%PolFreqs 
+2 | 0.0 | 0.1
+%
+
+%PolHyper
+1 | 1 | -2
+%
+
+
 PolConvAbsDens = 1e-2
 PolLinearSolverTol = 1e-2
 PolDynamicalTol = no
-PolStatic = true

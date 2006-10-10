@@ -49,10 +49,8 @@ module static_pol_lr_m
   type pol_props_t
     logical :: add_fxc
     logical :: add_hartree
-    logical :: dynamic
     logical :: from_scratch
     logical :: calc_hyperpol
-    logical :: calc_pol
     logical :: orth_response
   end type pol_props_t
 
@@ -74,10 +72,8 @@ contains
 
     type(status_t)          :: status
 
-    FLOAT :: pol(1:MAX_DIM, 1:MAX_DIM), hpol(1:MAX_DIM, 1:MAX_DIM, 1:MAX_DIM)
-    CMPLX :: alpha(1:MAX_DIM, 1:MAX_DIM), beta(1:MAX_DIM, 1:MAX_DIM, 1:MAX_DIM)
-
-    FLOAT, allocatable :: hpol_density(:,:,:,:)
+    CMPLX :: alpha(1:MAX_DIM, 1:MAX_DIM, 1:3)
+    CMPLX :: beta(1:MAX_DIM, 1:MAX_DIM, 1:MAX_DIM)
 
     FLOAT :: eta, freq_factor(0:MAX_DIM) !starts from 0 to prevent a segfault
 
@@ -86,14 +82,14 @@ contains
     character(len=80) :: fname, dirname
 
     type(pol_props_t) :: props
-    
+
     FLOAT, allocatable :: omega(:)
 
     logical :: complex_response
 
 
     call push_sub('em_resp.static_pol_lr_run')
-    
+
     gr => sys%gr
     ndim = sys%gr%sb%dim
 
@@ -104,17 +100,9 @@ contains
 
     if(props%calc_hyperpol) nfactor=3
 
-    complex_response = (eta /= M_ZERO )
     nsigma = 2  ! positive and negative values of the frequency must be considered
-      
-    !this will call the old static code
-    if(.not.props%dynamic) then
-      complex_response = .false.
-      nsigma = 1
-    end if
 
-    !if wfs are complex then we will calculate complex_response
-    complex_response = complex_response .or. wfs_are_complex(sys%st)
+    complex_response = (eta /= M_ZERO ) .or. wfs_are_complex(sys%st)
 
     ALLOCATE(lr(1:ndim, 1:nsigma, 1:nfactor), ndim*nsigma*nfactor)
 
@@ -125,34 +113,34 @@ contains
     call write_info(1)
 
     call system_h_setup(sys, h)
-    
+
     do dir = 1, ndim
       do sigma = 1, nsigma
         do ifactor = 1, nfactor 
 
-        if (wfs_are_complex(sys%st)) then 
-          call lr_init(lr(dir, sigma, ifactor), "Pol", def_solver=LR_BICGSTAB)
-        else
-          call lr_init(lr(dir, sigma, ifactor), "Pol", def_solver=LR_CG)            
-        end if
-        
-        call lr_alloc_fHxc (sys%st, gr%m, lr(dir, sigma, ifactor))
-        
-        if(wfs_are_real(sys%st)) then
-          ierr = dlr_alloc_psi(sys%st, gr%m, lr(dir, sigma, ifactor))
-          lr(dir, sigma, ifactor)%ddl_rho = M_ZERO
-        else
-          ierr = zlr_alloc_psi(sys%st, gr%m, lr(dir, sigma, ifactor))
-          lr(dir, sigma, ifactor)%zdl_rho = M_ZERO
-        end if
-        
-        if(props%add_fxc) then 
-          call lr_build_fxc(gr%m, sys%st, sys%ks%xc, lr(dir, sigma, ifactor)%dl_Vxc)
-        else 
-          lr(dir, sigma, ifactor)%dl_Vxc=M_ZERO
-        end if
+          if (wfs_are_complex(sys%st)) then 
+            call lr_init(lr(dir, sigma, ifactor), "Pol", def_solver=LR_BICGSTAB)
+          else
+            call lr_init(lr(dir, sigma, ifactor), "Pol", def_solver=LR_CG)            
+          end if
 
-        end do 
+          call lr_alloc_fHxc (sys%st, gr%m, lr(dir, sigma, ifactor))
+
+          if(wfs_are_real(sys%st)) then
+            ierr = dlr_alloc_psi(sys%st, gr%m, lr(dir, sigma, ifactor))
+            lr(dir, sigma, ifactor)%ddl_rho = M_ZERO
+          else
+            ierr = zlr_alloc_psi(sys%st, gr%m, lr(dir, sigma, ifactor))
+            lr(dir, sigma, ifactor)%zdl_rho = M_ZERO
+          end if
+
+          if(props%add_fxc) then 
+            call lr_build_fxc(gr%m, sys%st, sys%ks%xc, lr(dir, sigma, ifactor)%dl_Vxc)
+          else 
+            lr(dir, sigma, ifactor)%dl_Vxc=M_ZERO
+          end if
+
+        end do
       end do
     end do
 
@@ -172,112 +160,72 @@ contains
 
           end do
         end do
-    end do
+      end do
     end if
 
     call io_mkdir(trim(tmpdir)//RESTART_DIR)
-    
+
     call info()
+
+    message(1) = "Info: Calculating polarizabilities."
+    call write_info(1)
     
-    if(props%dynamic) then 
-      
-      !!DYNAMIC
-      call dynamic_output_init()
-      
-      message(1) = "Info: Calculating polarizabilities."
-      call write_info(1)
-      
-      do iomega = 1, nomega
-        
-        do ifactor = 1, nfactor
-          
-          do dir = 1, sys%gr%sb%dim
-            
-            write(message(1), '(a,i1,a,f5.3)') 'Info: Calculating response for direction ', dir, &
-                 ' and frequency ', freq_factor(ifactor)*omega(iomega)/units_out%energy%factor
-            call write_info(1)
-            
-            if( ifactor > 1 .and. freq_factor(ifactor) ==  freq_factor(ifactor-1) ) then 
+    call output_init()
 
-              !if the previous frequency is the same, save work
-              call lr_copy(lr(dir, 1, ifactor-1), lr(dir, 1, ifactor))
-              call lr_copy(lr(dir, 2, ifactor-1), lr(dir, 2, ifactor))
+    do iomega = 1, nomega
 
+      do ifactor = 1, nfactor
+
+        do dir = 1, sys%gr%sb%dim
+
+          write(message(1), '(a,i1,a,f5.3)') 'Info: Calculating response for direction ', dir, &
+               ' and frequency ', freq_factor(ifactor)*omega(iomega)/units_out%energy%factor
+          call write_info(1)
+
+          if( ifactor > 1 .and. freq_factor(ifactor) ==  freq_factor(ifactor-1) ) then 
+
+            !if the previous frequency is the same, save work
+            call lr_copy(lr(dir, 1, ifactor-1), lr(dir, 1, ifactor))
+            call lr_copy(lr(dir, 2, ifactor-1), lr(dir, 2, ifactor))
+
+          else
+            if (wfs_are_complex(sys%st)) then 
+              call zget_response_e(sys, h, lr(:, :, ifactor), dir, ifactor, 2 , &
+                   freq_factor(ifactor)*omega(iomega) + M_zI * eta, props, status)
             else
-              if (wfs_are_complex(sys%st)) then 
-                call zget_response_e(sys, h, lr(:, :, ifactor), dir, ifactor, 2 , &
-                     freq_factor(ifactor)*omega(iomega) + M_zI * eta, props, status)
-              else
-                call dget_response_e(sys, h, lr(:, :, ifactor), dir, ifactor, 2 , &
-                     freq_factor(ifactor)*omega(iomega), props, status)
-              end if
+              call dget_response_e(sys, h, lr(:, :, ifactor), dir, ifactor, 2 , &
+                   freq_factor(ifactor)*omega(iomega), props, status)
             end if
-          end do ! dir
-          
-        end do ! ifactor
-        
-        !calculate polarizability
-        if(props%calc_pol) then 
-          if(wfs_are_complex(sys%st)) then 
-            call zlr_calc_polarizability(sys, lr(:, :, 1), alpha)
-          else
-            call dlr_calc_polarizability(sys, lr(:, :, 1), alpha)
           end if
+        end do ! dir
+
+      end do ! ifactor
+
+      !calculate polarizability
+      do ifactor = 1, nfactor
+
+        if(wfs_are_complex(sys%st)) then 
+          call zlr_calc_polarizability(sys, lr(:, :, ifactor), alpha(:,:, ifactor))
+        else
+          call dlr_calc_polarizability(sys, lr(:, :, ifactor), alpha(:,:, ifactor))
         end if
-        
-        !calculate hyperpolarizability
-        if(props%calc_hyperpol) then 
-          if(wfs_are_complex(sys%st)) then 
-            call zlr_calc_beta(sys, lr(:, :, :), props, beta)
-          else
-            call dlr_calc_beta(sys, lr(:, :, :), props, beta)
-          end if
+
+      end do
+
+      !calculate hyperpolarizability
+      if(props%calc_hyperpol) then 
+
+        if(wfs_are_complex(sys%st)) then 
+          call zlr_calc_beta(sys, lr(:, :, :), props, beta)
+        else
+          call dlr_calc_beta(sys, lr(:, :, :), props, beta)
         end if
-        
-        call dynamic_output()
-        
-      end do ! nomega
-      
-    else 
-
-      !! STATIC
-      ALLOCATE(hpol_density(sys%NP,MAX_DIM,MAX_DIM,MAX_DIM),sys%NP*MAX_DIM**3)
-
-      if ( wfs_are_real(sys%st) ) then
-        call dstatic_response(sys, h, lr(:, :, 1), props, &
-             pol(1:ndim, 1:ndim), hpol(1:ndim, 1:ndim, 1:ndim),hpol_density)
-        call static_output()
-        do dir = 1, ndim
-          call dlr_calc_elf(sys%st,sys%gr, lr(dir, 1, 1))          
-          call dlr_output(sys%st, sys%gr, lr(dir, 1, 1) ,"linear", dir, sys%outp)
-        end do
-
-      else
-
-        call zstatic_response(sys, h, lr(:, :, ifactor), props, &
-             pol(1:ndim, 1:ndim), hpol(1:ndim, 1:ndim, 1:ndim),hpol_density)
-        call static_output()
-        do dir = 1, ndim
-          call zlr_calc_elf(sys%st,sys%gr, lr(dir, 1, 1))
-          call zlr_output(sys%st, sys%gr, lr(dir, 1, 1) ,"linear", dir, sys%outp)
-        end do
 
       end if
 
-      if(iand(sys%outp%what, output_pol_density).ne.0) then
-        do i=1,NDIM
-          do j=1,NDIM
-            do k=1,NDIM
-              write(fname, '(a,i1,a,i1,a,i1)') 'beta-', dir, '-', j, '-', k
-              call doutput_function (sys%outp%how, "linear", fname, gr%m, gr%sb, hpol_density(:,i,j,k), M_ONE, ierr)
-            end do
-          end do
-        end do
-      end if
+      call output()
 
-      deallocate(hpol_density)
-
-    end if
+    end do ! nomega
 
     do dir = 1, ndim
       do sigma = 1, nsigma
@@ -287,7 +235,7 @@ contains
       end do
     end do
 
-    if(props%dynamic) deallocate(omega)
+    deallocate(omega)
     deallocate(lr)
 
     call states_deallocate_wfns(sys%st)
@@ -304,24 +252,6 @@ contains
       logical   :: static
 
       call push_sub('em_resp.parse_input')
-
-      !%Variable PolStatic
-      !%Type logical
-      !%Default false
-      !%Section Linear Response::Polarizabilities
-      !%Description
-      !% Normally, when static polarizability is requested a dynamic
-      !% polarizability at zero frequency is done. But when this !%
-      !% variable is true, the old code for static polarizability is used. This
-      !% is mainly for comparison purporses and this option (and the old code)
-      !% will disappear in the future.
-      !%
-      !% If you want the first static hyperpolarizability you need to
-      !% use this option.
-      !%End
-
-      call loct_parse_logical(check_inp('PolStatic'), .false., static)
-      props%dynamic = .not. static
 
       !%Variable PolOrthResponse
       !%Type logical
@@ -391,15 +321,10 @@ contains
         call sort(omega)
 
       else
-
         !there is no frequency block, we calculate response for w=0.0
         nomega = 1
         ALLOCATE(omega(1:nomega), nomega)
         omega(1)=M_ZERO
-        !and we calculate both polarizability and hyperpolarizability
-        props%calc_hyperpol = .true.
-        props%calc_pol = .true.
-
       end if
 
       !%Variable PolEta
@@ -455,20 +380,17 @@ contains
 
       if (loct_parse_block(check_inp('PolHyper'), blk) == 0) then 
 
-          call loct_parse_block_float(blk, 0, 0, freq_factor(1))
-          call loct_parse_block_float(blk, 0, 1, freq_factor(2))
-          call loct_parse_block_float(blk, 0, 2, freq_factor(3))
-          
+        call loct_parse_block_float(blk, 0, 0, freq_factor(1))
+        call loct_parse_block_float(blk, 0, 1, freq_factor(2))
+        call loct_parse_block_float(blk, 0, 2, freq_factor(3))
+
         call loct_parse_block_end(blk)
 
         props%calc_hyperpol = .true.
-        props%calc_pol = .false.
 
       else
-        
-        props%calc_hyperpol = .false.
-        props%calc_pol = .true.
 
+        props%calc_hyperpol = .false.
         freq_factor(1:MAX_DIM)=M_ONE
 
       end if
@@ -535,74 +457,6 @@ contains
 
 
     ! ---------------------------------------------------------
-    subroutine static_output()
-      integer :: j, iunit, i, k
-      FLOAT :: msp, bpar(MAX_DIM)
-
-      call io_mkdir('linear')
-
-      ! Output polarizabilty
-      iunit = io_open('linear/polarizability_lr', action='write' )
-      write(iunit, '(2a)', advance='no') '# Static polarizability tensor [', &
-           trim(units_out%length%abbrev)
-      if(NDIM.ne.1) write(iunit, '(a,i1)', advance='no') '^', NDIM
-      write(iunit, '(a)') ']'
-
-      msp = M_ZERO
-      do j = 1, NDIM
-        write(iunit, '(3f12.6)') pol(j, 1:NDIM) &
-             / units_out%length%factor**NDIM
-        msp = msp + pol(j, j)
-      end do
-      msp = msp / M_THREE
-
-      write(iunit, '(a, f12.6)')  'Mean static polarizability', msp &
-           / units_out%length%factor**NDIM
-
-      call io_close(iunit)
-
-      ! Output first hyperpolarizabilty (beta)
-      iunit = io_open('linear/beta_lr', action='write')
-      write(iunit, '(2a)', advance='no') '# Static hyperpolarizability tensor [', &
-           trim(units_out%length%abbrev)
-      if(NDIM.ne.1) write(iunit, '(a,i1)', advance='no') '^', NDIM+2
-      write(iunit, '(a)') ']'
-
-      if (sys%st%d%nspin /= UNPOLARIZED ) then 
-        write(iunit, '(a)') 'WARNING: Hyperpolarizability has not been tested for spin polarized systems'
-      end if
-
-      do i = 1, NDIM
-        do j = 1, NDIM
-          do k = 1, NDIM
-            write(iunit,'(3i2,e20.8)') i, j, k, hpol(i, j, k)/units_out%length%factor**(5)
-          end do
-        end do
-      end do
-
-      if (NDIM == 3) then 
-
-        bpar = M_ZERO
-        do i = 1, NDIM
-          do j = 1, NDIM
-            if( i < j ) then 
-              bpar(i) = bpar(i) + M_THREE*hpol(i, j, j)
-            else 
-              bpar(i) = bpar(i) + M_THREE*hpol(j, j, i)
-            endif
-          end do
-        end do
-
-        bpar = bpar / (M_FIVE * units_out%length%factor**(NDIM+2))
-        write(iunit, '(a, 3f12.6,a)') 'B||', bpar(1:NDIM),&
-             '  ( B||_i = 1/5 \sum_j(B_ijj+B_jij+B_jji) ) '
-
-      endif
-
-      call io_close(iunit)
-
-    end subroutine static_output
-
 
     subroutine info()
 
@@ -625,93 +479,99 @@ contains
       end if
       call write_info(1)
 
-      if (props%dynamic) then 
-        write(message(1),'(a,i3,a)') 'Calculating polarizability tensor for ', nomega, ' frequencies.'
-      else
-        message(1)='Calculating static polarizability and first static hyperpolarizability tensors.'
-      end if
+      write(message(1),'(a,i3,a)') 'Calculating polarizability tensor for ', nomega, ' frequencies.'
+
       call write_info(1)
 
       call messages_print_stress(stdout)
 
     end subroutine info
 
-    subroutine dynamic_output_init()
-      logical :: file_doesnt_exist
-      integer :: out_file, nspin
-      character(len=20) :: header_string
+    subroutine output_init()
 
-      nspin=1
+      call io_mkdir('linear/')
 
-      call io_mkdir('linear')
+    end subroutine output_init
 
-      if(props%calc_pol) then 
-        
-        ! check file linear/alpha
-        file_doesnt_exist = .not. io_file_exists('linear/alpha', &
-             'Warning: File linear/alpha found. New information will be appended')
-        
-        if( file_doesnt_exist .or. fromScratch ) then
-          out_file = io_open('linear/alpha', action='write')
-          write(out_file, '(a)')       '# Frequency dependent polarizability, real and imaginary parts are included'
-          write(out_file, '(3a)')      '# Frequency units: [',  trim(units_out%energy%abbrev),'/hbar]'
-          write(out_file, '(3a,i1,a)') '# Polarizability units: [',  trim(units_out%length%abbrev),'^',NDIM,']'
-          write(out_file, '(8a)')      '# ', 'Frequency ', &
-               'alpha_11 ' , 'alpha_22 ' , 'alpha_33 ', 'alpha_12 ', 'alpha_13 ', 'alpha_23 '
-          call io_close(out_file)        
-        end if
-        
-        ! check file linear/cross-section-tensor
-        file_doesnt_exist = .not. io_file_exists('linear/cross_section_tensor', &
-             'Warning: File linear/cross_section_tensor already exists. New information will be appended')
-        
-        if( file_doesnt_exist .or. fromScratch ) then
-          call io_mkdir('linear')
-          out_file = io_open('linear/cross_section_tensor', action='write')
-          
-          !this header is the same from sprectrum.F90
-          write(out_file, '(a1, a20)', advance = 'no') '#', str_center("Energy", 20)
-          write(out_file, '(a20)', advance = 'no') str_center("(1/3)*Tr[sigma]", 20)
-          write(out_file, '(a20)', advance = 'no') str_center("Anisotropy[sigma]", 20)
-          
-          do i = 1, 3
-            do k = 1, 3
-              write(header_string,'(a6,i1,a1,i1,a1)') 'sigma(',i,',',k,')'
-              write(out_file, '(a20)', advance = 'no') str_center(trim(header_string), 20)
-            end do
-          end do
-          
-          write(out_file, *)
-          write(out_file, '(a1,a20)', advance = 'no') '#', str_center('['//trim(units_out%energy%abbrev) // ']', 20)
-          do i = 1, 2+nspin*9
-            write(out_file, '(a20)', advance = 'no')  str_center('['//trim(units_out%length%abbrev) //'^2]', 20)
-          end do
-          write(out_file,*)
-          
-          call io_close(out_file)
-        end if
-      end if
+    subroutine cross_section_header(out_file)
+      integer, intent(in) :: out_file
+      character(len=80) :: header_string
+
+      !this header is the same from sprectrum.F90
+      write(out_file, '(a1, a20)', advance = 'no') '#', str_center("Energy", 20)
+      write(out_file, '(a20)', advance = 'no') str_center("(1/3)*Tr[sigma]", 20)
+      write(out_file, '(a20)', advance = 'no') str_center("Anisotropy[sigma]", 20)
       
-      if(props%calc_hyperpol)  then 
-        
-      end if
+      do i = 1, 3
+        do k = 1, 3
+          write(header_string,'(a6,i1,a1,i1,a1)') 'sigma(',i,',',k,')'
+          write(out_file, '(a20)', advance = 'no') str_center(trim(header_string), 20)
+        end do
+      end do
+      
+      write(out_file, *)
+      write(out_file, '(a1,a20)', advance = 'no') '#', str_center('['//trim(units_out%energy%abbrev) // ']', 20)
+      do i = 1, 11
+        write(out_file, '(a20)', advance = 'no')  str_center('['//trim(units_out%length%abbrev) //'^2]', 20)
+      end do
+      write(out_file,*)
+    end subroutine cross_section_header
 
-    end subroutine dynamic_output_init
-
-    subroutine dynamic_output()
+    subroutine output()
       FLOAT :: cross(MAX_DIM, MAX_DIM), crossp(MAX_DIM, MAX_DIM)
       FLOAT :: average, anisotropy, bpar(1:MAX_DIM), bper(1:MAX_DIM) 
-      integer :: out_file, iunit, ist, ivar, ik, sigma
+      integer :: iunit, ist, ivar, ik, sigma
       CMPLX   :: tr_beta, proj
+      FLOAT   :: msp
 
-      !PROJECTIONS
+      !CREATE THE DIRECTORY FOR EACH FREQUENCY
+      do ifactor = 1, nfactor
 
-      do ik = 1, sys%st%d%nspin
+        write(dirname, '(a, f5.3)') 'linear/freq_', freq_factor(ifactor)*omega(iomega)/units_out%energy%factor
+        call io_mkdir(trim(dirname))
 
-        do ifactor = 1, nfactor
 
-          write(dirname, '(a, f5.3)') 'linear/freq_', freq_factor(ifactor)*omega(iomega)/units_out%energy%factor
-          call io_mkdir(trim(dirname))
+        !OUTPUT POLARIZABILITY
+        iunit = io_open(trim(dirname)//'/alpha', action='write')
+
+        write(iunit, '(2a)', advance='no') '# Polarizability tensor [', &
+             trim(units_out%length%abbrev)
+        if(NDIM.ne.1) write(iunit, '(a,i1)', advance='no') '^', NDIM
+        write(iunit, '(a)') ']'
+
+
+        msp = M_ZERO
+        do j = 1, NDIM
+          write(iunit, '(3f12.6)') real(alpha(j, 1:NDIM, ifactor)) / units_out%length%factor**NDIM
+          msp = msp + real(alpha(j, j, ifactor))
+        end do
+        msp = msp / M_THREE
+
+        write(iunit, '(a, f12.6)')  'Mean static polarizability', msp &
+             / units_out%length%factor**NDIM
+
+        call io_close(iunit)
+
+        !CROSS SECTION (THE COMPLEX PART OF POLARIZABILITY)
+        cross(1:MAX_DIM, 1:MAX_DIM) = aimag(alpha(1:MAX_DIM, 1:MAX_DIM, ifactor)) * &
+             omega(iomega)/units_out%energy%factor * M_FOUR * M_PI / P_c 
+
+        iunit = io_open(trim(dirname)//'/cross_section', action='write')
+        average = M_THIRD* ( cross(1, 1) + cross(2, 2) + cross(3, 3) )
+        crossp(:, :) = matmul(cross(:, :),cross(:, :))
+        anisotropy =  M_THIRD * ( M_THREE * (crossp(1, 1) + crossp(2, 2) + crossp(3, 3)) - &
+             (cross(1, 1) + cross(2, 2) + cross(3, 3))**2 )
+
+        call cross_section_header(iunit)
+        write(iunit,'(3e20.8)', advance = 'no') omega(iomega) / units_out%energy%factor, &
+             average , sqrt(max(anisotropy, M_ZERO)) 
+        write(iunit,'(9e20.8)', advance = 'no') cross(1:3, 1:3)
+        write(iunit,'(a)', advance = 'yes')
+        call io_close(iunit)
+
+
+        !PROJECTIONS
+        do ik = 1, sys%st%d%nspin
 
           do dir = 1, NDIM
 
@@ -762,40 +622,35 @@ contains
             call io_close(iunit)
 
           end do ! dir
-        end do ! factor
-      end do !ik
+        end do !ik
 
-      if(props%calc_pol) then 
-        !write alpha
-        iunit = io_open('linear/alpha', action='write', position='append' )
-        if(status%ok) then           
-          !convert units 
-          alpha = alpha/units_out%length%factor**NDIM
-          write(iunit, '(13f12.6)') omega(iomega), alpha(1,1), alpha(2,2), alpha(3,3), alpha(1,2), alpha(1,3), alpha(2,3)
-        else
-          write(iunit, '(a,f12.6)') '#calculation did not converge for frequency ', omega(iomega)
-        end if
+        !WRITE FUNCTIONS
+        do dir = 1, NDIM
 
-        call io_close(iunit)
+          if( wfs_are_complex(sys%st) ) then 
 
-        cross(1:MAX_DIM, 1:MAX_DIM) = aimag(alpha(1:MAX_DIM, 1:MAX_DIM)) * &
-             omega(iomega)/units_out%energy%factor * M_FOUR * M_PI / P_c 
+            if(NDIM==3) then
+              if(iand(sys%outp%what, output_elf).ne.0) &
+                   call zlr_calc_elf(sys%st,sys%gr, lr(dir, 1, ifactor), lr(dir, 2, ifactor))
+            end if
+            call zlr_output(sys%st, sys%gr, lr(dir, 1, ifactor), dirname, dir, sys%outp)
+            
+          else
 
-        !write cross
-        out_file = io_open('linear/cross_section_tensor', action='write', position='append' )
-        average = M_THIRD* ( cross(1, 1) + cross(2, 2) + cross(3, 3) )
-        crossp(:, :) = matmul(cross(:, :),cross(:, :))
-        anisotropy =  M_THIRD * ( M_THREE * (crossp(1, 1) + crossp(2, 2) + crossp(3, 3)) - &
-             (cross(1, 1) + cross(2, 2) + cross(3, 3))**2 )
+            if(NDIM==3) then
+              if(iand(sys%outp%what, output_elf).ne.0) &
+                   call dlr_calc_elf(sys%st,sys%gr, lr(dir, 1, ifactor), lr(dir, 2, ifactor))
+            end if
+            call dlr_output(sys%st, sys%gr, lr(dir, 1, ifactor), dirname, dir, sys%outp)
 
-        write(out_file,'(3e20.8)', advance = 'no') omega(iomega) / units_out%energy%factor, &
-             average , sqrt(max(anisotropy, M_ZERO)) 
-        write(out_file,'(9e20.8)', advance = 'no') cross(1:3, 1:3)
-        write(out_file,'(a)', advance = 'yes')
-        call io_close(out_file)
-      end if
+          end if
+        end do
 
-      if(props%calc_hyperpol) then 
+      end do
+
+      !HYPERPOLARIZABILITY
+      if(props%calc_hyperpol) then
+
         iunit = io_open('linear/beta', action='write', position='append' )
         if(status%ok) then           
           write(iunit, '(7f12.6)') omega(iomega), &
@@ -856,38 +711,8 @@ contains
 
       end if
 
-      !write functions
 
-      do ifactor = 1, nfactor
-        
-        write(dirname, '(a, f5.3)') 'linear/freq_', &
-             freq_factor(ifactor)*omega(iomega)/units_out%energy%factor
-        
-        do dir = 1, NDIM
-          
-          if( wfs_are_complex(sys%st) ) then 
-            
-            if(NDIM==3) then
-              if(iand(sys%outp%what, output_elf).ne.0) &
-                   call zlr_calc_elf(sys%st,sys%gr, lr(dir, 1, ifactor), lr(dir, 2, ifactor))
-            end if
-            call zlr_output(sys%st, sys%gr, lr(dir, 1, ifactor), dirname, dir, sys%outp)
-            
-          else
-            
-            if(NDIM==3) then
-              if(iand(sys%outp%what, output_elf).ne.0) &
-                   call dlr_calc_elf(sys%st,sys%gr, lr(dir, 1, ifactor), lr(dir, 2, ifactor))
-            end if
-            call dlr_output(sys%st, sys%gr, lr(dir, 1, ifactor), dirname, dir, sys%outp)
-            
-          end if
-          
-        end do
-
-      end do
-
-    end subroutine dynamic_output
+    end subroutine output
 
   end subroutine static_pol_lr_run
 
@@ -961,6 +786,7 @@ contains
     call pop_sub()
 
   end subroutine lr_calc_current
+
 
 #include "undef.F90"
 #include "complex.F90"
