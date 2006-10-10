@@ -97,8 +97,10 @@ contains
 
     props%from_scratch = fromScratch
 
-    nfactor = 1
     call parse_input()
+    nfactor = 1
+
+    if(props%calc_hyperpol) nfactor=3
 
     complex_response = (eta /= M_ZERO )
     nsigma = 2  ! positive and negative values of the frequency must be considered
@@ -218,9 +220,9 @@ contains
         !calculate hyperpolarizability
         if(props%calc_hyperpol) then 
           if(wfs_are_complex(sys%st)) then 
-            call zlr_calc_beta(sys, lr(:, :, 1), props, beta)
+            call zlr_calc_beta(sys, lr(:, :, :), props, beta)
           else
-            call dlr_calc_beta(sys, lr(:, :, 1), props, beta)
+            call dlr_calc_beta(sys, lr(:, :, :), props, beta)
           end if
         end if
         
@@ -427,6 +429,21 @@ contains
         props%add_fxc = .false. 
         props%add_hartree = .false.
       end if
+
+      !%Variable PolHyper
+      !%Type float
+      !%Default 0.0
+      !%Section Linear Response::Polarizabilities
+      !%Description
+      !% The terms are considered in the variation of the
+      !% hamiltonian. V_ext is always considered. The default is to include
+      !% the fxc and hartree terms. If you want to do RPA only include
+      !% hartree.
+      !%Option shg 1.0
+      !% Second harmonic generation 1 1 -2
+      !%Option or -1.0
+      !% Optical recitifcation, 1 -1 0
+      !%End
 
       if (loct_parse_block(check_inp('PolHyper'), blk) == 0) then 
 
