@@ -405,7 +405,7 @@ contains
 
     FLOAT, allocatable :: rho(:), vh(:), vh_exact(:), rhop(:), x(:, :)
     FLOAT :: alpha, beta, r, delta, norm, rnd
-    integer :: i, j, k, ierr, iunit, n, n_gaussians
+    integer :: i, k, ierr, iunit, n, n_gaussians
 
     call push_sub('poisson.poisson_test')
 

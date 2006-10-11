@@ -237,7 +237,6 @@ FCFLAGS="$FCFLAGS ${ax_f90_modflag}../libxc/src/"
 LINK="$FC $FCFLAGS $LDFLAGS -o \$@"
 AC_SUBST(LINK)
 AC_SUBST(FCEXTRALIBS)
-AC_SUBST(FCDEBUGFLAGS)
 
 AC_CONFIG_FILES([Makefile 
   external_libs/Makefile
