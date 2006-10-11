@@ -170,7 +170,7 @@ contains
     message(1) = "Info: Calculating polarizabilities."
     call write_info(1)
     
-    call output_init()
+    call pol_output_init()
 
     do iomega = 1, nomega
 
@@ -223,7 +223,7 @@ contains
 
       end if
 
-      call output()
+      call pol_output()
 
     end do ! nomega
 
@@ -487,11 +487,11 @@ contains
 
     end subroutine info
 
-    subroutine output_init()
+    subroutine pol_output_init()
 
       call io_mkdir('linear/')
 
-    end subroutine output_init
+    end subroutine pol_output_init
 
     subroutine cross_section_header(out_file)
       integer, intent(in) :: out_file
@@ -517,7 +517,7 @@ contains
       write(out_file,*)
     end subroutine cross_section_header
 
-    subroutine output()
+    subroutine pol_output()
       FLOAT :: cross(MAX_DIM, MAX_DIM), crossp(MAX_DIM, MAX_DIM)
       FLOAT :: average, anisotropy, bpar(1:MAX_DIM), bper(1:MAX_DIM) 
       integer :: iunit, ist, ivar, ik, sigma
@@ -712,7 +712,7 @@ contains
       end if
 
 
-    end subroutine output
+    end subroutine pol_output
 
   end subroutine static_pol_lr_run
 
