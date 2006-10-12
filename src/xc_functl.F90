@@ -155,6 +155,8 @@ contains
     !% GGA: dePristo & Kress 87 version R1
     !%Option gga_xc_dk87_r2 112
     !% GGA: dePristo & Kress 87 version R2
+    !%Option gga_xc_lg93 113
+    !% GGA: Lacks & Gordon 93
     !%Option gga_xc_lb 160
     !% GGA: van Leeuwen & Baerends (GGA)
     !%Option mgga_x_tpss 201
