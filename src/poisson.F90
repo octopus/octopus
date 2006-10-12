@@ -416,7 +416,7 @@ contains
       return
     endif
 
-    n_gaussians = 10
+    n_gaussians = 5
 
     ALLOCATE(     rho(NP), NP)
     ALLOCATE(    rhop(NP), NP)
@@ -426,8 +426,6 @@ contains
 
     rho = M_ZERO; vh = M_ZERO; vh_exact = M_ZERO
 
-    
-    n_gaussians = 5
     alpha = CNST(4.0) * gr%m%h(1)
     beta = M_ONE / ( alpha**calc_dim * sqrt(M_PI)**calc_dim )
 

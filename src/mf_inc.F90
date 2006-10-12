@@ -206,10 +206,10 @@ end subroutine X(mf_partial_integrate)
 
 ! ---------------------------------------------------------
 subroutine X(mf_interpolate) (mesh_in, mesh_out, full_interpolation, u, f)
-  type(mesh_t), intent(in)  :: mesh_in, mesh_out
-  logical,      intent(in)  :: full_interpolation
-  R_TYPE,       intent(in)  :: u(:)    ! u(mesh_in%np_global)
-  R_TYPE,       intent(out) :: f(:)    ! f(mesh%np)
+  type(mesh_t), intent(in)    :: mesh_in, mesh_out
+  logical,      intent(in)    :: full_interpolation
+  R_TYPE,       intent(inout) :: u(:)    ! u(mesh_in%np_global)
+  R_TYPE,       intent(out)   :: f(:)    ! f(mesh%np)
 
   FLOAT :: xmin, ymin, dx, dy, rmax, px, py, pz, xyzmin(MAX_DIM), xyzdel(MAX_DIM)
   FLOAT, allocatable :: rsq(:), a(:, :)
@@ -217,8 +217,9 @@ subroutine X(mf_interpolate) (mesh_in, mesh_out, full_interpolation, u, f)
   FLOAT :: ip
   FLOAT, allocatable :: aux_u(:)
 #endif  
+  R_TYPE, allocatable :: f_global(:)
   integer, allocatable :: lcell(:, :, :), lnext(:)
-  integer :: i, j, nq, nw, nr, ier, npoints, ix, iy, iz
+  integer :: i, j, k, nq, nw, nr, ier, npoints, ix, iy, iz, partno, initi, finali
 
   FLOAT, external :: qs2val, qs3val
 
@@ -343,16 +344,32 @@ subroutine X(mf_interpolate) (mesh_in, mesh_out, full_interpolation, u, f)
 
   else
 
+#if defined(HAVE_MPI)
+    if(mesh_in%parallel_in_domains) then
+      ALLOCATE(f_global(mesh_in%np_global), mesh_in%np_global)
+      call X(vec_allgather)(mesh_in%vp, f_global, u)
+    end if
+#endif
+
     f = M_ZERO
     do i = 1, mesh_out%np
-      ix = mesh_out%lxyz(i, 1); if ( ix < mesh_in%nr(1, 1) .or. ix > mesh_in%nr(2, 1) ) cycle
-      iy = mesh_out%lxyz(i, 2); if ( iy < mesh_in%nr(1, 2) .or. iy > mesh_in%nr(2, 2) ) cycle
-      iz = mesh_out%lxyz(i, 3); if ( iz < mesh_in%nr(1, 3) .or. iz > mesh_in%nr(2, 3) ) cycle
+      k = i
+      if(mesh_out%parallel_in_domains) &
+        k = mesh_out%vp%local(mesh_out%vp%xlocal(mesh_out%vp%partno)+i-1)
+      ix = mesh_out%lxyz(k, 1); if ( ix < mesh_in%nr(1, 1) .or. ix > mesh_in%nr(2, 1) ) cycle
+      iy = mesh_out%lxyz(k, 2); if ( iy < mesh_in%nr(1, 2) .or. iy > mesh_in%nr(2, 2) ) cycle
+      iz = mesh_out%lxyz(k, 3); if ( iz < mesh_in%nr(1, 3) .or. iz > mesh_in%nr(2, 3) ) cycle
       j = mesh_in%lxyz_inv(ix, iy, iz)
-      if(j>0 .and. j<=mesh_in%np_global) then
+      if(mesh_in%parallel_in_domains) then
+        if(j <= mesh_in%np_global) f(i) = f_global(j)
+      else
         f(i) = u(j)
       end if
     end do
+
+    if(mesh_in%parallel_in_domains) then
+      deallocate(f_global)
+    end if
 
   end if
 
