@@ -250,7 +250,9 @@ contains
     !%Option gga_c_pbe 130
     !% GGA: Perdew, Burke & Ernzerhof correlation
     !%Option lda_c_lyp 131
-    !% LDA: Lee, Yang, & Parr LDA
+    !% GGA: Lee, Yang, & Parr LDA
+    !%Option lda_c_p86 132
+    !% GGA: Perdew 86
     !%Option mgga_c_tpss 202
     !% MGGA (not working)
     !%End

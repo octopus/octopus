@@ -103,6 +103,7 @@ module lib_xc_m
     XC_GGA_X_LG93           = 113,  &  ! Lacks & Gordon 93
     XC_GGA_C_PBE            = 130,  &  ! Perdew, Burke & Ernzerhof correlation
     XC_GGA_C_LYP            = 131,  &  ! Lee, Yang & Parr
+    XC_GGA_C_P86            = 132,  &  ! Perdew 86
     XC_GGA_XC_LB            = 160      ! van Leeuwen & Baerends
 
 
