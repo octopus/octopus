@@ -35,7 +35,7 @@ module run_prog_m
   use timedep_m
   use unocc_m
   use static_pol_m
-  use static_pol_lr_m
+  use pol_lr_m
   use casida_m
   use wave_matching_m
   use geom_opt_m
@@ -103,7 +103,7 @@ contains
     case(M_FD_STATIC_POL)
       call static_pol_run(sys, h, fromScratch)
     case(M_LR_POL)
-      call static_pol_lr_run(sys, h, fromScratch)
+      call pol_lr_run(sys, h, fromScratch)
     case(M_GEOM_OPT)
       call geom_opt_run(sys, h)
     case(M_PHONONS)

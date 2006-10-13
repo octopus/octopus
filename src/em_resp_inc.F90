@@ -75,8 +75,6 @@ subroutine X(lr_calc_beta) (sys, lr, props, beta)
   FLOAT,  allocatable :: kxc(:,:,:,:)
   R_TYPE, allocatable :: hpol_density(:)
 
-  R_TYPE :: beta_tmp(1:MAX_DIM, 1:MAX_DIM, 1:MAX_DIM)
-
   np  = sys%gr%m%np
   dim = sys%gr%sb%dim
 
@@ -95,7 +93,7 @@ subroutine X(lr_calc_beta) (sys, lr, props, beta)
   ALLOCATE(drhode(1:np, 1:dim), np*dim)
   ALLOCATE(hpol_density(1:np), np)
 
-  beta_tmp = M_ZERO
+  beta(1:MAX_DIM, 1:MAX_DIM, 1:MAX_DIM) = M_ZERO
 
   do iper = 1, 6
     call get_permutation(iper, freq_index)
@@ -197,7 +195,7 @@ subroutine X(lr_calc_beta) (sys, lr, props, beta)
                    kxc(1:np, 1, 1, 1) * drhode(1:np, i) * drhode(1:np, j)*drhode(1:np, k)/CNST(6.0)
             end if
 
-            beta_tmp(i,j,k)= beta_tmp(i,j,k) + M_HALF * X(mf_integrate)(sys%gr%m, hpol_density(1:np))
+            beta(i,j,k)= beta(i,j,k) - M_HALF * X(mf_integrate)(sys%gr%m, hpol_density(1:np))
 
           end do ! k
         end do ! j
@@ -206,8 +204,6 @@ subroutine X(lr_calc_beta) (sys, lr, props, beta)
     end do !sigma
 
   end do !iper
-
-  beta=-beta_tmp
 
   deallocate(hpol_density)
   deallocate(tmp)

@@ -23,7 +23,7 @@
 #include "global.h"
 #define RESTART_DIR "restart_pol_lr/"
 
-module static_pol_lr_m
+module pol_lr_m
   use global_m
   use messages_m
   use units_m
@@ -44,7 +44,7 @@ module static_pol_lr_m
 
   private
   public :: &
-    static_pol_lr_run
+    pol_lr_run
   
   type pol_props_t
     logical :: add_fxc
@@ -61,7 +61,7 @@ module static_pol_lr_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine static_pol_lr_run(sys, h, fromScratch)
+  subroutine pol_lr_run(sys, h, fromScratch)
     type(system_t), target, intent(inout) :: sys
     type(hamiltonian_t),    intent(inout) :: h
     logical,                intent(inout) :: fromScratch
@@ -460,8 +460,13 @@ contains
 
     subroutine info()
 
-      write(message(1),'(a)') 'Linear Reponse Polarizabilities'
-      call messages_print_stress(stdout, trim(message(1)))
+      if(props%calc_hyperpol) then 
+        write(message(1),'(a)') 'Linear Reponse First Order Hyperpolarizabilities'
+        call messages_print_stress(stdout, trim(message(1)))
+      else 
+        write(message(1),'(a)') 'Linear Reponse Polarizabilities'
+        call messages_print_stress(stdout, trim(message(1)))
+      end if
 
       if (wfs_are_real(sys%st)) then 
         message(1) = 'Wavefunctions type: Complex'
@@ -479,7 +484,7 @@ contains
       end if
       call write_info(1)
 
-      write(message(1),'(a,i3,a)') 'Calculating polarizability tensor for ', nomega, ' frequencies.'
+      write(message(1),'(a,i3,a)') 'Calculating response for ', nomega, ' frequencies.'
 
       call write_info(1)
 
@@ -714,7 +719,7 @@ contains
 
     end subroutine pol_output
 
-  end subroutine static_pol_lr_run
+  end subroutine pol_lr_run
 
   subroutine lr_calc_current(st, gr, lr, lr_m)
     type(states_t),   intent(inout) :: st
@@ -797,4 +802,4 @@ contains
 #include "real.F90"
 #include "em_resp_inc.F90"
 
-end module static_pol_lr_m
+end module pol_lr_m
