@@ -82,10 +82,8 @@ contains
   subroutine grid_init_stage_2(gr, mc, geo)
     type(grid_t),      intent(inout) :: gr
     type(multicomm_t), intent(in)    :: mc
-    type(geometry_t),  intent(inout) :: geo
+    type(geometry_t),  intent(in)    :: geo
 
-    logical :: filter
- 
     call push_sub('grid.grid_init_stage_2')
 
     call mesh_init_stage_3(gr%m, geo, gr%cv,  &
@@ -93,13 +91,6 @@ contains
       gr%f_der%der_discr%lapl%n, mc)
 
     call f_der_build(gr%sb, gr%m, gr%f_der)
-
-    ! do we want to filter out the external potentials, or not.
-    call loct_parse_logical(check_inp('FilterPotentials'), .false., filter)
-    if(filter) call geometry_filter(geo, mesh_gcutoff(gr%m))
-
-    ! Now that we are really done with initializing the geometry, print debugging information.
-    if(in_debug_mode) call geometry_debug(geo, 'debug')
 
     ! multigrids are not initialized by default
     nullify(gr%mgrid)

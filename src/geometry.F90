@@ -350,6 +350,15 @@ contains
     type(geometry_t), intent(inout) :: geo
     FLOAT, intent(in) :: gmax
     integer :: i
+    logical :: filter
+
+    call push_sub('geometry.geometry_filter')
+
+    call loct_parse_logical(check_inp('FilterPotentials'), .false., filter)
+
+    if(.not.filter) then
+      call pop_sub(); return
+    end if
 
     message(1) = 'Info: filtering the potentials.'
     call write_info(1)
@@ -357,6 +366,7 @@ contains
       if(.not.geo%specie(i)%local) call specie_filter(geo%specie(i), gmax)
     end do
 
+    call pop_sub()
   end subroutine geometry_filter
 
 
@@ -437,6 +447,10 @@ contains
     integer :: i
 
     call push_sub('geometry.specie_debug')
+
+    if(.not.in_debug_mode) then
+      call pop_sub(); return
+    end if
 
     write(dirname, '(2a)') trim(dir), '/geometry'
     call io_mkdir(dirname)

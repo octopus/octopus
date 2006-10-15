@@ -77,6 +77,8 @@ contains
     call parallel_init()
 
     call grid_init_stage_2(sys%gr, sys%mc, sys%geo)
+    call geometry_filter(sys%geo, mesh_gcutoff(sys%gr%m))
+    call geometry_debug(sys%geo, 'debug')
     call states_densities_init(sys%st, sys%gr, sys%geo)
     call output_init(sys%gr%sb, sys%outp)
     call poisson_init(sys%gr, sys%geo)
