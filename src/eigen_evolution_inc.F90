@@ -39,11 +39,12 @@ subroutine X(eigen_solver_evolution) (gr, st, h, tol, niter, converged, diff, ta
   conv_ = 0
   matvec = 0
 
-  ALLOCATE(hpsi(gr%m%np, st%d%dim), gr%m%np*st%d%dim)
+  ALLOCATE(hpsi(NP_PART, st%d%dim), NP_PART*st%d%dim)
   ALLOCATE(m(st%nst, st%nst), st%nst*st%nst)
   ALLOCATE(c(st%nst, st%nst), st%nst*st%nst)
   ALLOCATE(eig(st%nst), st%nst)
-  ALLOCATE(phi(gr%m%np, st%d%dim, st%nst), gr%m%np*st%d%dim*st%nst)
+  ALLOCATE(phi(NP_PART, st%d%dim, st%nst), NP_PART*st%d%dim*st%nst)
+
 
   ! Warning: it seems that the algorithm is improved if some extra states are added -- states
   ! whose convergence should not be checked.
@@ -69,7 +70,7 @@ subroutine X(eigen_solver_evolution) (gr, st, h, tol, niter, converged, diff, ta
         c(:, i) = c(:, i) / sqrt(eig(i))
       end do
       ! Internally the BLAS does the Winograd-Strassen algorithm?
-      call lalg_gemm(gr%m%np * st%d%dim, st%nst, st%nst, R_TOTYPE(M_ONE), &
+      call lalg_gemm(gr%m%np_part * st%d%dim, st%nst, st%nst, R_TOTYPE(M_ONE), &
         st%X(psi)(:, :, :, ik), c, R_TOTYPE(M_ZERO), phi)
       do i = 1, st%nst
         st%X(psi)(:, :, i, ik) = phi(:, :, st%nst -i + 1)
@@ -112,7 +113,7 @@ contains
     R_TYPE, allocatable :: w(:, :), wsp(:)
 
 
-    n = st%d%dim * gr%m%np
+    n = st%d%dim * NP_PART
     m = 20 ! maximum size for the Krylov basis.
     t = -tau
     tolerance = CNST(1.0e-8)
@@ -124,7 +125,7 @@ contains
 
     ALLOCATE(wsp(lwsp), lwsp)
     ALLOCATE(iwsp(lwsp), lwsp)
-    ALLOCATE(w(gr%m%np, st%d%dim), gr%m%np*st%d%dim)
+    ALLOCATE(w(NP_PART, st%d%dim), NP_PART*st%d%dim)
 
     h_  => h
     gr_ => gr
@@ -144,20 +145,21 @@ end subroutine X(eigen_solver_evolution)
 
 ! ---------------------------------------------------------
 subroutine X(mv) (x, y)
-  R_TYPE, intent(in) :: x(:)
-  R_TYPE, intent(out) :: y(:)
-  integer :: idim
+  R_TYPE, intent(in) :: x(*)
+  R_TYPE, intent(out) :: y(*)
+  integer :: idim, np, np_part
   R_TYPE, allocatable :: psi(:, :), hpsi(:, :)
 
-  ALLOCATE(psi(gr_%m%np_part, h_%d%dim), gr_%m%np_part*h_%d%dim)
-  ALLOCATE(hpsi(gr_%m%np, h_%d%dim), gr_%m%np*h_%d%dim)
+  np = gr_%m%np; np_part = gr_%m%np_part
+  ALLOCATE(psi(np_part, h_%d%dim), np_part*h_%d%dim)
+  ALLOCATE(hpsi(np_part, h_%d%dim), np_part*h_%d%dim)
 
   do idim = 1, h_%d%dim
-    psi(1:gr_%m%np, idim) = x((idim-1)*gr_%m%np+1:idim*gr_%m%np)
+    psi(1:np, idim) = x((idim-1)*np_part+1:(idim-1)*np_part+np)
   end do
   call X(hpsi)(h_, gr_, psi, hpsi, ik_)
   do idim = 1, h_%d%dim
-    y((idim-1)*gr_%m%np+1:idim*gr_%m%np) = hpsi(1:gr_%m%np, idim)
+    y((idim-1)*np_part+1:(idim-1)*np_part+np) = hpsi(1:np, idim)
   end do
 
   deallocate(psi, hpsi)
