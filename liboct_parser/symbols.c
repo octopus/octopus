@@ -101,11 +101,19 @@ void sym_notdef (symrec *sym)
 }
 
 static struct init_fntc arith_fncts[] = {
-  {"sqrt",  gsl_complex_sqrt},
-  {"exp",   gsl_complex_exp},
-  {"ln",    gsl_complex_log},
-  {"log",   gsl_complex_log},
-  {"log10", gsl_complex_log10},
+  {"sqrt",   gsl_complex_sqrt},
+  {"exp",    gsl_complex_exp},
+  {"ln",     gsl_complex_log},
+  {"log",    gsl_complex_log},
+  {"log10",  gsl_complex_log10},
+
+  {"arg",    gsl_complex_carg},
+  {"abs",    gsl_complex_cabs},
+  {"abs2",   gsl_complex_cabs2},
+  {"logabs", gsl_complex_clogabs},
+
+  {"conjg",  gsl_complex_conjugate},
+  {"inv",    gsl_complex_inverse},
   
   {"sin",  gsl_complex_sin},
   {"cos",  gsl_complex_cos},
@@ -136,7 +144,7 @@ static struct init_fntc arith_fncts[] = {
   {"acoth", gsl_complex_arccoth},	
  
 /* user defined step function. this is not available in GSL, 
-   but use GSL namespacing and macros. */
+   but we use GSL namespacing and macros here. */
   {"step", gsl_complex_step_real},
 
 /* Minimum and maximum of two arguments (comparing real parts) */  

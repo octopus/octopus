@@ -1,4 +1,3 @@
-
 /*
  Copyright (C) 2002 M. Marques, A. Castro, A. Rubio, G. Bertsch
 
@@ -68,3 +67,42 @@ gsl_complex gsl_complex_max_real (gsl_complex a, gsl_complex b)
   return z;
 }
 
+/* ------------------------------------------------------ */
+gsl_complex gsl_complex_carg (gsl_complex a)
+{        
+  gsl_complex z;
+
+	GSL_SET_COMPLEX (&z, gsl_complex_arg(a), 0);
+
+  return z;
+}
+
+/* ------------------------------------------------------ */
+gsl_complex gsl_complex_cabs (gsl_complex a)
+{        
+  gsl_complex z;
+
+	GSL_SET_COMPLEX (&z, gsl_complex_abs(a), 0);
+
+  return z;
+}
+
+/* ------------------------------------------------------ */
+gsl_complex gsl_complex_cabs2 (gsl_complex a)
+{        
+  gsl_complex z;
+
+	GSL_SET_COMPLEX (&z, gsl_complex_abs2(a), 0);
+
+  return z;
+}
+
+/* ------------------------------------------------------ */
+gsl_complex gsl_complex_clogabs (gsl_complex a)
+{        
+  gsl_complex z;
+
+	GSL_SET_COMPLEX (&z, gsl_complex_logabs(a), 0);
+
+  return z;
+}

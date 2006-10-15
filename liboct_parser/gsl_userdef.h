@@ -28,5 +28,10 @@ gsl_complex gsl_complex_step_real (double a);
 gsl_complex gsl_complex_min_real (gsl_complex a, gsl_complex b);
 gsl_complex gsl_complex_max_real (gsl_complex a, gsl_complex b);
 
+/* arg, abs, abs2 and logabs with complex return values for consistency */
+gsl_complex gsl_complex_carg  (gsl_complex a);
+gsl_complex gsl_complex_cabs  (gsl_complex a);
+gsl_complex gsl_complex_cabs2 (gsl_complex a);
+gsl_complex gsl_complex_clogabs (gsl_complex a);
 
 #endif /* __GSL_USERDEF_H__ */
