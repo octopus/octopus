@@ -344,12 +344,12 @@ subroutine X(mf_interpolate) (mesh_in, mesh_out, full_interpolation, u, f)
 
   else
 
-#if defined(HAVE_MPI)
     if(mesh_in%parallel_in_domains) then
       ALLOCATE(f_global(mesh_in%np_global), mesh_in%np_global)
+#if defined(HAVE_MPI)
       call X(vec_allgather)(mesh_in%vp, f_global, u)
-    end if
 #endif
+    end if
 
     f = M_ZERO
     do i = 1, mesh_out%np
@@ -360,6 +360,7 @@ subroutine X(mf_interpolate) (mesh_in, mesh_out, full_interpolation, u, f)
       iy = mesh_out%lxyz(k, 2); if ( iy < mesh_in%nr(1, 2) .or. iy > mesh_in%nr(2, 2) ) cycle
       iz = mesh_out%lxyz(k, 3); if ( iz < mesh_in%nr(1, 3) .or. iz > mesh_in%nr(2, 3) ) cycle
       j = mesh_in%lxyz_inv(ix, iy, iz)
+
       if(mesh_in%parallel_in_domains) then
         if(j <= mesh_in%np_global) f(i) = f_global(j)
       else
