@@ -219,7 +219,7 @@ subroutine X(mf_interpolate) (mesh_in, mesh_out, full_interpolation, u, f)
 #endif  
   R_TYPE, allocatable :: f_global(:)
   integer, allocatable :: lcell(:, :, :), lnext(:)
-  integer :: i, j, k, nq, nw, nr, ier, npoints, ix, iy, iz, partno, initi, finali
+  integer :: i, j, k, nq, nw, nr, ier, npoints, ix, iy, iz
 
   FLOAT, external :: qs2val, qs3val
 
