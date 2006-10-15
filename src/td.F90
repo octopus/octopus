@@ -153,16 +153,20 @@ contains
 
       if(clean_stop()) stopping = .true.
       call profiling_in(C_PROFILING_TIME_STEP)
-      ! Move the ions.
-      if( td%move_ions > 0 ) then
-        call apply_verlet_1
+
+      if( td%move_ions > 0 .or. h%ep%extra_td_pot .ne. '0') then
+        ! Move the ions.
+        if( td%move_ions > 0 ) call apply_verlet_1
+        ! regenerate potential
         if(mod(i, td%epot_regenerate) == 0) then
-          call epot_generate(h%ep, gr, sys%geo, st, h%reltype)
+          call epot_generate(h%ep, gr, sys%geo, st, h%reltype, time = i*td%dt)
         else
-          call epot_generate(h%ep, gr, sys%geo, st, h%reltype, fast_generation = .true.)
+          call epot_generate(h%ep, gr, sys%geo, st, h%reltype, time = i*td%dt, fast_generation = .true.)
         end if
-        geo%eii = ion_ion_energy(geo)
-        h%eii = geo%eii
+        if( td%move_ions > 0 ) then
+          geo%eii = ion_ion_energy(geo)
+          h%eii = geo%eii
+        end if
       end if
 
       ! time iterate wavefunctions

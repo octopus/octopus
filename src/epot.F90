@@ -109,6 +109,11 @@ module external_pot_m
     FLOAT, pointer :: v_static(:)          ! static scalar potential
     FLOAT, pointer :: B_field(:)           ! static magnetic field
     FLOAT, pointer :: A_static(:,:)        ! static vector potential
+    
+    ! additional arbitrary td potential defined by formula string that will be added to the local
+    ! part of the potential
+    character(len=1024) :: extra_td_pot
+
 
     ! The gyromagnetic ratio (-2.0 for the electron, but different if we treat
     ! *effective* electrons in a quantum dot. It affects the spin Zeeman term.
@@ -169,6 +174,15 @@ contains
 
       call laser_write_info(ep%no_lasers, ep%lasers, stdout)
     end if
+
+    !%Variable UserDefinedTDPotential
+    !%Type string
+    !%Section Hamiltonian
+    !%Description
+    !% The formula string defined by this variable will be used as additional time dependent
+    !% potential (Note: this is available for all specie types, not only for user defined species)
+    !%End
+    call loct_parse_string(check_inp('UserDefinedTDPotential'), '0', ep%extra_td_pot)
 
     !%Variable StaticElectricField
     !%Type block
@@ -537,15 +551,17 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine epot_generate(ep, gr, geo, st, reltype, fast_generation)
+  subroutine epot_generate(ep, gr, geo, st, reltype, time, fast_generation)
     type(epot_t),      intent(inout) :: ep
     type(grid_t), target,  intent(inout) :: gr
     type(geometry_t),  intent(inout) :: geo
     type(states_t),    intent(inout) :: st
     integer,           intent(in)    :: reltype
+    FLOAT,   optional, intent(in)    :: time
     logical, optional, intent(in)    :: fast_generation
 
     logical :: fast_generation_
+    FLOAT   :: time_
     integer :: ia, i, l, lm, k, p, j
     type(specie_t), pointer :: s
     type(atom_t),   pointer :: a
@@ -562,7 +578,9 @@ contains
 
     fast_generation_ = .false.
     if (present(fast_generation)) fast_generation_ = fast_generation
-
+    time_ = M_ZERO
+    if (present(time)) time_ = time
+    
     ! first we assume that we need to recalculate the ion_ion energy
     geo%eii = ion_ion_energy(geo)
 
@@ -684,7 +702,7 @@ contains
     ! ---------------------------------------------------------
     subroutine build_local_part()
       integer :: i
-      FLOAT :: x(MAX_DIM)
+      FLOAT :: x(MAX_DIM), xx(MAX_DIM), r, pot_re, pot_im
       FLOAT, allocatable  :: rho(:), phi(:)
 
       call push_sub('epot.build_local_part')
@@ -692,9 +710,18 @@ contains
       if((.not.simul_box_is_periodic(sb)).or.geo%only_user_def) then
         do i = 1, m%np
           x(:) = m%x(i, :) - a%x(:)
-          ep%vpsl(i) = ep%vpsl(i) + specie_get_local(s, x)
+          ep%vpsl(i) = ep%vpsl(i) + specie_get_local(s, x, time_)
           if(s%nlcc) then
             st%rho_core(i) = st%rho_core(i) + specie_get_nlcc(s, x)
+          end if
+
+          ! add extra td potential specified in the input file (default is '0')
+          if(time_ > M_ZERO) then
+            xx(:) = x(:)/units_inp%length%factor   ! convert from a.u. to input units
+            r = sqrt(sum(x(:)**2))/units_inp%length%factor
+            call loct_parse_expression(pot_re, pot_im, xx(1), xx(2), xx(3), &
+              r, time_, ep%extra_td_pot)
+            ep%vpsl(i) = ep%vpsl(i) + pot_re * units_inp%energy%factor  ! convert from input units to a.u.
           end if
 
         end do
