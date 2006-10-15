@@ -1,0 +1,35 @@
+# -*- coding: utf-8 mode: shell-script -*-
+# $Id:$
+
+DebugLevel = 0
+
+CalculationMode = gs
+
+Dimensions = 1
+fromScratch = yes
+
+BoxShape = sphere
+Spacing = 0.2
+Radius = 50.0
+
+NonInteractingElectrons = no
+XFunctional = oep_x
+OEP_Level = oep_slater
+CFunctional = no
+
+%Species
+"Be1D" | 1 | user_defined | 4 | "-4/sqrt(1+(x)^2)"
+%
+
+%Coordinates
+"Be1D" | 0 | 0 | 0
+%
+
+EigenSolver = evolution
+EigenSolverInitTolerance = 1.0e-6
+EigenSolverFinalTolerance = 1.0e-6
+EigenSolverMaxIter = 1000
+
+Mixing = 0.1
+TypeOfMixing = broyden
+What2Mix = potential

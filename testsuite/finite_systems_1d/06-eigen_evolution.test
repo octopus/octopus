@@ -1,0 +1,17 @@
+# -*- coding: utf-8 mode: shell-script -*-
+# $Id: oct-run_regression_test.pl 2423 2006-09-24 21:25:52Z acastro $
+
+Test     : Eigensolver - Imaginary time propagation
+Author   : Heiko
+Date     : 15.10.06
+Arch     : Linux n10 2.6.16.25-smp-1 #1 SMP Sat Jul 15 19:00:56 CEST 2006 x86_64 GNU/Linux
+Release  : 2.2.0pre1
+Programs : octopus
+Runtime  : short-run
+Enabled  : Yes
+
+Input: 06-eigen_evolution.01-ground_state.inp
+
+Match ; TotalEnergy  ; grep -A 7 '^Energy:' static/info ; \s*Total\s*=\s*-8.6321
+Match ; Eigenvalue 1 ; grep -A 3 '^Eigenvalues \[H\]' static/info ; \s*1\s*--\s*-1.2948
+Match ; Eigenvalue 2 ; grep -A 3 '^Eigenvalues \[H\]' static/info ; \s*2\s*--\s*-1.2948
