@@ -44,7 +44,8 @@ module simul_box_m
     simul_box_in_box,           &
     simul_box_dump,             &
     simul_box_init_from_file,   &
-    operator(.eq.)
+    operator(.eq.),             &
+    assignment(=)
 
   integer, parameter, public :: &
     SPHERE         = 1,         &
@@ -109,6 +110,10 @@ module simul_box_m
 
   interface operator(.eq.)
     module procedure simul_box_is_eq
+  end interface
+
+  interface assignment (=)
+    module procedure simul_box_copy
   end interface
 
 contains
@@ -907,5 +912,61 @@ contains
     res = .true.
 
   end function simul_box_is_eq
+
+
+  !--------------------------------------------------------------
+  subroutine simul_box_copy(sbout, sbin)
+    type(simul_box_t), intent(out) :: sbout
+    type(simul_box_t), intent(in)  :: sbin
+    integer :: n1, n2
+    sbout%box_shape               = sbin%box_shape
+    sbout%h                       = sbin%h
+    sbout%box_offset              = sbin%box_offset
+    sbout%rsize                   = sbin%rsize
+    sbout%xsize                   = sbin%xsize
+    sbout%lsize                   = sbin%lsize
+    sbout%image                   = sbin%image
+    sbout%user_def                = sbin%user_def
+    sbout%rlat                    = sbin%rlat
+    sbout%klat                    = sbin%klat
+    sbout%shift                   = sbin%shift
+    sbout%fft_alpha               = sbin%fft_alpha
+    sbout%dim                     = sbin%dim
+    sbout%periodic_dim            = sbin%periodic_dim
+    sbout%scattering_box          = sbin%scattering_box
+    sbout%scatt_box_central_size  = sbin%scatt_box_central_size
+    sbout%scatt_box_factors       = sbin%scatt_box_factors
+    sbout%asympt_uc_nr            = sbin%asympt_uc_nr
+    sbout%asympt_uc_np            = sbin%asympt_uc_np
+    sbout%asympt_uc_dim           = sbin%asympt_uc_dim
+    sbout%asympt_uc_periodic_dim  = sbin%asympt_uc_periodic_dim
+    sbout%asympt_uc_lsize         = sbin%asympt_uc_lsize
+    sbout%asympt_uc_st_nst        = sbin%asympt_uc_st_nst
+    sbout%asympt_uc_st_dim        = sbin%asympt_uc_st_dim
+    sbout%asympt_uc_st_nik        = sbin%asympt_uc_st_nik
+    sbout%scatt_box_central_units = sbin%scatt_box_central_units
+    if(sbin%scattering_box) then
+      if(associated(sbin%asympt_uc_occ)) then
+        n1 = size(sbin%asympt_uc_occ, 1); n2 = size(sbin%asympt_uc_occ, 2)
+        ALLOCATE(sbout%asympt_uc_occ(n1, n2), n1*n2)
+      end if
+      if(associated(sbin%asympt_uc_eigenval)) then
+        n1 = size(sbin%asympt_uc_eigenval, 1); n2 = size(sbin%asympt_uc_eigenval, 2)
+        ALLOCATE(sbout%asympt_uc_eigenval(n1, n2), n1*n2)
+      end if
+      if(associated(sbin%asympt_uc_kpoints)) then
+        n1 = size(sbin%asympt_uc_kpoints, 1); n2 = size(sbin%asympt_uc_kpoints, 2)
+        ALLOCATE(sbout%asympt_uc_kpoints(n1, n2), n1*n2)
+      end if
+      if(associated(sbin%asympt_uc_kweights)) then
+        n1 = size(sbin%asympt_uc_kweights, 1)
+        ALLOCATE(sbout%asympt_uc_kweights(n1), n1)
+      end if
+      if(associated(sbin%asympt_uc_Lxyz)) then
+        n1 = size(sbin%asympt_uc_lxyz, 1); n2 = size(sbin%asympt_uc_lxyz, 2)
+        ALLOCATE(sbout%asympt_uc_lxyz(n1, n2), n1*n2)
+      end if
+    end if
+  end subroutine simul_box_copy
 
 end module simul_box_m

@@ -208,7 +208,7 @@ end subroutine X(mf_partial_integrate)
 subroutine X(mf_interpolate) (mesh_in, mesh_out, full_interpolation, u, f)
   type(mesh_t), intent(in)    :: mesh_in, mesh_out
   logical,      intent(in)    :: full_interpolation
-  R_TYPE,       intent(inout) :: u(:)    ! u(mesh_in%np_global)
+  R_TYPE,       intent(in)    :: u(:)    ! u(mesh_in%np_global)
   R_TYPE,       intent(out)   :: f(:)    ! f(mesh%np)
 
   FLOAT :: xmin, ymin, dx, dy, rmax, px, py, pz, xyzmin(MAX_DIM), xyzdel(MAX_DIM)
@@ -364,7 +364,7 @@ subroutine X(mf_interpolate) (mesh_in, mesh_out, full_interpolation, u, f)
       if(mesh_in%parallel_in_domains) then
         if(j <= mesh_in%np_global) f(i) = f_global(j)
       else
-        f(i) = u(j)
+        if(j <= mesh_in%np_global) f(i) = u(j)
       end if
     end do
 

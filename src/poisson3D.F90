@@ -47,6 +47,27 @@ subroutine poisson3D_init(gr, geo)
   !% multigrid solvers. Default is <math>10^{-5}</math>.
   !%End
 
+  !%Variable PoissonSolverIncreaseBox
+  !%Type logical
+  !%Section Hamiltonian::Poisson
+  !%Description
+  !% In case the selected Poisson solver is cg or cg_corrected, the boundary conditions
+  !% have to be calculated by means of performing a multipole expansion. Unfortunately,
+  !% if the charge distribution is not contained in a simulation box of approximately
+  !% spherical shape, the error can be quite large. Good cases are the spherical box,
+  !% the parallelpiped when all dimension are of similar magnitude, or the cylinder
+  !% in case the height is not too different to the diameter of the base. Bad cases
+  !% are the rest, including the "minimum" box, when the geometry of the molecule is
+  !% not compact enough.
+  !%
+  !% In order to cure this problem, the Hartree problem may me solved in an auxiliary
+  !% simulation box, which will contain the original one, but which will be a sphere.
+  !% This implies some extra computational effort -- since the density and potential have
+  !% to be transeferred between boxes --, and extra memory consumption -- since a new
+  !% grid has to be stored, which may need quite a lot of memory if you use curvilinear
+  !% coordinates.
+  !%End
+
   select case(poisson_solver)
   case(CG)
      call loct_parse_int(check_inp('PoissonSolverMaxMultipole'), 4, maxl)
@@ -60,7 +81,15 @@ subroutine poisson3D_init(gr, geo)
      call loct_parse_float(check_inp('PoissonSolverThreshold'), CNST(1.0e-6), threshold)
      write(message(1),'(a,i2)')'Info: Multipoles corrected up to L =',  maxl
      call write_info(1)
-     call poisson_cg_init(gr%m, maxl, threshold)
+     call loct_parse_logical(check_inp('PoissonSolverIncreaseBox'), .false., increase_box)
+     if(increase_box) then
+       write(message(1),'(a)') "Info: Poisson' equation will be solved in a larger grid."
+       call write_info(1)
+       call grid_create_largergrid(gr, geo, hartree_grid)
+       call poisson_cg_init(hartree_grid%m, maxl, threshold)
+     else
+       call poisson_cg_init(gr%m, maxl, threshold)
+     end if
 
   case(MULTIGRILLA)
      call loct_parse_int(check_inp('PoissonSolverMaxMultipole'), 4, maxl)

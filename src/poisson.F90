@@ -79,6 +79,10 @@ module poisson_m
 
   integer :: poisson_solver = -99
 
+  ! These variables are used for the case in which the Hartree problem
+  ! is solved in another (larger) grid.
+  type(grid_t) :: hartree_grid
+  logical :: increase_box
 
 contains
 
@@ -277,6 +281,7 @@ contains
     FLOAT,                intent(in)    :: rho(:)  ! rho(m%np)
 
     FLOAT, allocatable :: rho_corrected(:), vh_correction(:)
+    FLOAT, allocatable :: rhop(:), potp(:)
 
     call profiling_in(C_PROFILING_POISSON_SOLVE)
     call push_sub('poisson.dpoisson_solve')
@@ -294,7 +299,17 @@ contains
       call poisson_cg1(gr%m, gr%f_der%der_discr, pot, rho)
 
     case(CG_CORRECTED)
-      call poisson_cg2(gr%m, gr%f_der%der_discr, pot, rho)
+      if(increase_box) then
+        ALLOCATE(potp(hartree_grid%m%np_part), hartree_grid%m%np_part); potp = M_ZERO
+        ALLOCATE(rhop(hartree_grid%m%np_part), hartree_grid%m%np_part); rhop = M_ZERO
+        call dmf_interpolate(gr%m, hartree_grid%m, full_interpolation = .false., u = rho, f = rhop)
+        call dmf_interpolate(gr%m, hartree_grid%m, full_interpolation = .false., u = pot, f = potp)
+        call poisson_cg2(hartree_grid%m, hartree_grid%f_der%der_discr, potp, rhop)
+        call dmf_interpolate(hartree_grid%m, gr%m, full_interpolation = .false., u = potp, f = pot)
+        deallocate(potp, rhop)
+      else
+        call poisson_cg2(gr%m, gr%f_der%der_discr, pot, rho)
+      end if
 
     case(MULTIGRILLA)
       call poisson_multigrid_solver(gr, pot, rho)

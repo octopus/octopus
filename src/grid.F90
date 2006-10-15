@@ -44,7 +44,8 @@ module grid_m
     grid_init_stage_2,     &
     grid_end,              &
     grid_write_info,       &
-    grid_create_multigrid
+    grid_create_multigrid, &
+    grid_create_largergrid
 
   type grid_t
     type(simul_box_t)           :: sb
@@ -150,5 +151,47 @@ contains
     call multigrid_init(geo, gr%cv, gr%m, gr%f_der, gr%mgrid)
 
   end subroutine grid_create_multigrid
+
+
+  !-------------------------------------------------------------------
+  subroutine grid_create_largergrid(grin, geo, grout)
+    type(grid_t), intent(in)     :: grin
+    type(geometry_t), intent(in) :: geo
+    type(grid_t), intent(out)    :: grout
+
+    integer :: parallel_mask
+    type(multicomm_t) :: mc
+    integer :: index_dim, index_range(1)
+
+    call push_sub('grid.grid_create_largergrid')
+
+    grout%sb = grin%sb
+
+    ! Modification of the simulation box.
+    select case(grout%sb%box_shape)
+    case(CYLINDER)
+      grout%sb%box_shape = SPHERE
+      grout%sb%rsize = sqrt( grout%sb%lsize(1)**2 + grout%sb%lsize(2)**2 )
+      grout%sb%lsize(1:grout%sb%dim) = grout%sb%rsize
+    case(PARALLELEPIPED, MINIMUM)
+      grout%sb%box_shape = SPHERE
+      grout%sb%rsize = sqrt( sum(grout%sb%lsize(:)**2) )
+      grout%sb%lsize(1:grout%sb%dim) = grout%sb%rsize
+    end select
+
+    call grid_init_stage_1(grout, geo)
+
+    parallel_mask = 0
+    parallel_mask = ibset(parallel_mask, P_STRATEGY_DOMAINS - 1) ! all modes are parallel in domains
+
+    index_dim = 1
+    index_range(1) = grout%m%np_global
+
+    ! create index and domain communicators
+    call multicomm_init(mc, parallel_mask, grin%m%mpi_grp%size, index_dim, index_range(1:1), (/ 5 /))
+    call grid_init_stage_2(grout, mc, geo)
+
+    call pop_sub()
+  end subroutine grid_create_largergrid
 
 end module grid_m
