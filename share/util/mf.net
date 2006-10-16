@@ -1,13 +1,13 @@
 //
-// time: Sat Jun  3 13:29:52 2006
+// time: Mon Oct 16 22:22:31 2006
 //
 // version: 3.2.0 (format), 4.4.0 (DX)
 //
 //
 //
-// macro reference (indirect): CPK /usr/local/dx/cmsp/macros//CPK.net
+// macro reference (indirect): CPK /usr/lib/dx/cmsp/macros/CPK.net
 //
-// macro reference (direct): BallsAndSticks /usr/local/dx/cmsp/macros//BallsAndSticks.net
+// macro reference (direct): BallsAndSticks /usr/lib/dx/cmsp/macros/BallsAndSticks.net
 include "BallsAndSticks.net"
 //
 // MODULE main
@@ -116,24 +116,24 @@ include "BallsAndSticks.net"
 // comment: toggle on the "Show geometry" selector. Some control
 // comment: on the appearance of the model can be gained by toggling
 // comment: on the "Details..." selector. 
-// page assignment: Crystal	order=5, windowed=0, showing=0
-// page assignment: Crystal Axes	order=4, windowed=0, showing=0
-// page assignment: Geometry	order=14, windowed=0, showing=0
-// page assignment: Glyphs	order=6, windowed=0, showing=0
-// page assignment: Image	order=16, windowed=0, showing=0
-// page assignment: Import	order=1, windowed=0, showing=0
-// page assignment: ImportN	order=2, windowed=0, showing=0
-// page assignment: Iso 2	order=9, windowed=0, showing=0
-// page assignment: Isosurface	order=7, windowed=0, showing=0
-// page assignment: Slab_cut	order=12, windowed=0, showing=0
-// page assignment: Statistics	order=3, windowed=0, showing=0
-// page assignment: WriteImage	order=17, windowed=0, showing=1
-// page assignment: caption	order=13, windowed=0, showing=0
-// page assignment: map_iso	order=8, windowed=0, showing=0
-// page assignment: mapped_data	order=15, windowed=0, showing=0
-// page assignment: slab	order=10, windowed=0, showing=0
-// page assignment: slab_II	order=11, windowed=0, showing=0
-// workspace: width = 311, height = 608
+// page assignment: Crystal	order=6, windowed=0, showing=0
+// page assignment: Crystal Axes	order=5, windowed=0, showing=0
+// page assignment: Geometry	order=15, windowed=0, showing=0
+// page assignment: Glyphs	order=7, windowed=0, showing=0
+// page assignment: Image	order=17, windowed=0, showing=0
+// page assignment: Import	order=2, windowed=0, showing=0
+// page assignment: ImportN	order=3, windowed=0, showing=0
+// page assignment: Iso 2	order=10, windowed=0, showing=0
+// page assignment: Isosurface	order=8, windowed=0, showing=0
+// page assignment: Slab_cut	order=13, windowed=0, showing=0
+// page assignment: Statistics	order=4, windowed=0, showing=0
+// page assignment: WriteImage	order=18, windowed=0, showing=0
+// page assignment: caption	order=14, windowed=0, showing=0
+// page assignment: map_iso	order=9, windowed=0, showing=0
+// page assignment: mapped_data	order=16, windowed=0, showing=1
+// page assignment: slab	order=11, windowed=0, showing=0
+// page assignment: slab_II	order=12, windowed=0, showing=0
+// workspace: width = 603, height = 491
 // layout: snap = 0, width = 50, height = 50, align = NN
 //
 macro main(
@@ -254,7 +254,7 @@ main_Route_5_out_2 =
     ) [instance: 5, cache: 1];
     // 
     // node Import[1]: x = 89, y = 366, inputs = 6, label = Import
-    // input[3]: defaulting = 0, visible = 1, type = 32, value = "dx"
+    // input[3]: defaulting = 1, visible = 1, type = 32, value = "dx"
     // page group: Import
     //
 main_Import_1_out_1 = 
@@ -328,7 +328,7 @@ main_Route_11_out_2 =
     ) [instance: 11, cache: 1];
     // 
     // node Import[4]: x = 230, y = 347, inputs = 6, label = Import
-    // input[3]: defaulting = 0, visible = 1, type = 32, value = "dx"
+    // input[3]: defaulting = 1, visible = 1, type = 32, value = "dx"
     // page group: ImportN
     //
 main_Import_4_out_1 = 
@@ -402,7 +402,7 @@ main_Route_12_out_2 =
     ) [instance: 12, cache: 1];
     // 
     // node Import[5]: x = 391, y = 337, inputs = 6, label = Import
-    // input[3]: defaulting = 0, visible = 1, type = 32, value = "dx"
+    // input[3]: defaulting = 1, visible = 1, type = 32, value = "dx"
     // page group: ImportN
     //
 main_Import_5_out_1 = 
@@ -476,7 +476,7 @@ main_Route_13_out_2 =
     ) [instance: 13, cache: 1];
     // 
     // node Import[6]: x = 625, y = 337, inputs = 6, label = Import
-    // input[3]: defaulting = 0, visible = 1, type = 32, value = "dx"
+    // input[3]: defaulting = 1, visible = 1, type = 32, value = "dx"
     // page group: ImportN
     //
 main_Import_6_out_1 = 
@@ -550,7 +550,7 @@ main_Route_14_out_2 =
     ) [instance: 14, cache: 1];
     // 
     // node Import[7]: x = 858, y = 345, inputs = 6, label = Import
-    // input[3]: defaulting = 0, visible = 1, type = 32, value = "dx"
+    // input[3]: defaulting = 1, visible = 1, type = 32, value = "dx"
     // page group: ImportN
     //
 main_Import_7_out_1 = 
@@ -624,7 +624,7 @@ main_Route_15_out_2 =
     ) [instance: 15, cache: 1];
     // 
     // node Import[8]: x = 1063, y = 366, inputs = 6, label = Import
-    // input[3]: defaulting = 0, visible = 1, type = 32, value = "dx"
+    // input[3]: defaulting = 1, visible = 1, type = 32, value = "dx"
     // page group: ImportN
     //
 main_Import_8_out_1 = 
@@ -991,7 +991,7 @@ main_Compute_42_out_1 =
     // input[3]: defaulting = 0, visible = 0, type = 8, value = [0 0 0 ]
     // input[4]: visible = 1
     // input[5]: defaulting = 1, visible = 1, type = 8, value = [ 0.0 0.0 0.0 ]
-    // input[6]: defaulting = 1, visible = 1, type = 8, value = [52 52 52 ]
+    // input[6]: defaulting = 1, visible = 1, type = 8, value = [ 52.0 52.0 52.0 ]
     // input[7]: defaulting = 1, visible = 1, type = 8, value = [       1        1        1]
     // input[8]: visible = 1
     // input[9]: defaulting = 1, visible = 1, type = 8, value = [ 0.0 0.0 0.0 ]
@@ -1318,7 +1318,7 @@ main_Switch_3_out_1 =
     // input[7]: defaulting = 0, visible = 0, type = 16777217, value = { 1 53 1 1 53 1 }
     // page group: slab
     // vcr[1]: min = 1, max = 53, beg = 1, end = 53, cur = 4, inc = 1, loop = off, step = on, pal = off
-    // window: position = (0.6475,0.0352), size = 0.2695x0.1042
+    // window: position = (0.6477,0.0352), size = 0.2695x0.1045
     //
     main_Sequencer_1_in_3 = @frame;
 main_Sequencer_1_out_1[cache: 2] = 
@@ -1665,7 +1665,7 @@ main_Receiver_6_out_1[cache: 0] = max;
     // input[19]: defaulting = 1, visible = 1, type = 32, value = "Slab colormap"
     // page group: slab
     // Colormap: title = Slab colormap
-    // window: position = (0.4805,0.1393), size = 0.6348x0.5859
+    // window: position = (0.4805,0.1396), size = 0.6352x0.5859
     //
 main_Colormap_2_out_1[cache: 2],
 main_Colormap_2_out_2[cache: 2] = 
@@ -1965,7 +1965,7 @@ main_Route_2_out_2 =
     // input[1]: defaulting = 0, visible = 0, type = 32, value = "Scalar_2"
     // input[3]: defaulting = 0, visible = 0, type = 5, value = 0.0021 
     // input[5]: defaulting = 1, visible = 0, type = 5, value = 0.0
-    // input[6]: defaulting = 1, visible = 0, type = 5, value = 0.0079422807
+    // input[6]: defaulting = 1, visible = 0, type = 5, value = 0.00794228
     // input[7]: defaulting = 1, visible = 0, type = 5, value = 1.0
     // input[9]: defaulting = 1, visible = 0, type = 1, value = 4
     // output[1]: visible = 1, type = 5, value = 0.0021 
@@ -2030,7 +2030,7 @@ main_Route_7_out_2 =
     ) [instance: 7, cache: 1];
     // 
     // node Import[2]: x = 309, y = 297, inputs = 6, label = Import
-    // input[3]: defaulting = 0, visible = 1, type = 32, value = "dx"
+    // input[3]: defaulting = 1, visible = 1, type = 32, value = "dx"
     // page group: mapped_data
     //
 main_Import_2_out_1 = 
@@ -2079,7 +2079,7 @@ main_Map_2_out_1 =
     // input[19]: defaulting = 1, visible = 0, type = 32, value = "Mapped function colormap"
     // page group: map_iso
     // Colormap: title = Mapped function colormap
-    // window: position = (0.3447,0.0130), size = 0.6348x0.5859
+    // window: position = (0.3445,0.0127), size = 0.6352x0.5859
     //
 main_Colormap_3_out_1[cache: 2],
 main_Colormap_3_out_2[cache: 2] = 
@@ -3309,7 +3309,7 @@ main_Route_23_out_2 =
     // input[16]: defaulting = 1, visible = 0, type = 32, value = "none"
     // input[17]: defaulting = 1, visible = 0, type = 1, value = 1
     // input[18]: defaulting = 1, visible = 0, type = 1, value = 1
-    // input[19]: defaulting = 0, visible = 0, type = 1, value = 0
+    // input[19]: defaulting = 0, visible = 0, type = 3, value = 0
     // input[22]: defaulting = 0, visible = 0, type = 32, value = "black"
     // input[25]: defaulting = 0, visible = 0, type = 32, value = "dens.tiff"
     // input[26]: defaulting = 0, visible = 0, type = 32, value = "tiff"
@@ -3317,7 +3317,7 @@ main_Route_23_out_2 =
     // input[41]: defaulting = 0, visible = 0, type = 32, value = "rotate"
     // page group: Image
     // depth: value = 16
-    // window: position = (0.3125,0.1081), size = 0.6396x0.6849
+    // window: position = (0.3125,0.1084), size = 0.6398x0.6846
     // internal caching: 1
     //
 main_Image_2_out_1,
@@ -3618,9 +3618,8 @@ main_Plot_1_out_1 =
     // output[3]: visible = 0
     // page group: Slab_cut
     // depth: value = 16
-    // window: position = (0.0586,0.3451), size = 0.5410x0.5195
+    // window: position = (0.0586,0.3447), size = 0.5406x0.5195
     // internal caching: 1
-    // interaction mode = NONE
     //
 main_Image_4_out_1,
 main_Image_4_out_2,
@@ -3932,15 +3931,15 @@ slab_origin = main_Inquire_7_out_1;
     ) [instance: 2, cache: 1];
     //
     // decorator Annotate	pos=(639,99) size=208x44 style(Label), value = <NULL>
-    // annotation user_begin: 50
-    // annotation user: Constructs the axes and 
+    // annotation user_begin: 26
+    // annotation user: <NULL>
     // annotation user: shows them when requested
     // annotation user_end: <NULL>
     // page group: Crystal Axes
     //
     // decorator Annotate	pos=(27,21) size=189x44 style(Label), value = <NULL>
-    // annotation user_begin: 49
-    // annotation user: Computes lattice vectors 
+    // annotation user_begin: 24
+    // annotation user: <NULL>
     // annotation user: from lengths and angles
     // annotation user_end: <NULL>
     // page group: Crystal Axes
@@ -3985,7 +3984,7 @@ main_Compute_20_in_1 = "$0==1?0:1";
 main_Compute_20_out_1 = NULL;
 main_Route_5_out_1 = NULL;
 main_Import_1_in_2 = NULL;
-main_Import_1_in_3 = "dx";
+main_Import_1_in_3 = NULL;
 main_Import_1_in_4 = NULL;
 main_Import_1_in_5 = NULL;
 main_Import_1_in_6 = NULL;
@@ -4002,7 +4001,7 @@ main_Compute_25_in_1 = "$0==1?0:1";
 main_Compute_25_out_1 = NULL;
 main_Route_11_out_1 = NULL;
 main_Import_4_in_2 = NULL;
-main_Import_4_in_3 = "dx";
+main_Import_4_in_3 = NULL;
 main_Import_4_in_4 = NULL;
 main_Import_4_in_5 = NULL;
 main_Import_4_in_6 = NULL;
@@ -4018,7 +4017,7 @@ main_Compute_26_in_1 = "$0==1?0:1";
 main_Compute_26_out_1 = NULL;
 main_Route_12_out_1 = NULL;
 main_Import_5_in_2 = NULL;
-main_Import_5_in_3 = "dx";
+main_Import_5_in_3 = NULL;
 main_Import_5_in_4 = NULL;
 main_Import_5_in_5 = NULL;
 main_Import_5_in_6 = NULL;
@@ -4034,7 +4033,7 @@ main_Compute_27_in_1 = "$0==1?0:1";
 main_Compute_27_out_1 = NULL;
 main_Route_13_out_1 = NULL;
 main_Import_6_in_2 = NULL;
-main_Import_6_in_3 = "dx";
+main_Import_6_in_3 = NULL;
 main_Import_6_in_4 = NULL;
 main_Import_6_in_5 = NULL;
 main_Import_6_in_6 = NULL;
@@ -4050,7 +4049,7 @@ main_Compute_28_in_1 = "$0==1?0:1";
 main_Compute_28_out_1 = NULL;
 main_Route_14_out_1 = NULL;
 main_Import_7_in_2 = NULL;
-main_Import_7_in_3 = "dx";
+main_Import_7_in_3 = NULL;
 main_Import_7_in_4 = NULL;
 main_Import_7_in_5 = NULL;
 main_Import_7_in_6 = NULL;
@@ -4066,7 +4065,7 @@ main_Compute_29_in_1 = "$0==1?0:1";
 main_Compute_29_out_1 = NULL;
 main_Route_15_out_1 = NULL;
 main_Import_8_in_2 = NULL;
-main_Import_8_in_3 = "dx";
+main_Import_8_in_3 = NULL;
 main_Import_8_in_4 = NULL;
 main_Import_8_in_5 = NULL;
 main_Import_8_in_6 = NULL;
@@ -4479,7 +4478,7 @@ main_Transmitter_26_out_1 = NULL;
 main_Receiver_21_out_1 = NULL;
 main_Route_7_out_1 = NULL;
 main_Import_2_in_2 = NULL;
-main_Import_2_in_3 = "dx";
+main_Import_2_in_3 = NULL;
 main_Import_2_in_4 = NULL;
 main_Import_2_in_5 = NULL;
 main_Import_2_in_6 = NULL;
@@ -5323,6 +5322,318 @@ main_Integer_6_in_9 = NULL;
 main_Integer_6_in_10 = NULL;
 main_Integer_6_in_11 = NULL;
 main_Integer_6_out_1 = 1 ;
+macro Image(
+        id,
+        object,
+        where,
+        useVector,
+        to,
+        from,
+        width,
+        resolution,
+        aspect,
+        up,
+        viewAngle,
+        perspective,
+        options,
+        buttonState = 1,
+        buttonUpApprox = "none",
+        buttonDownApprox = "none",
+        buttonUpDensity = 1,
+        buttonDownDensity = 1,
+        renderMode = 0,
+        defaultCamera,
+        reset,
+        backgroundColor,
+        throttle,
+        RECenable = 0,
+        RECfile,
+        RECformat,
+        RECresolution,
+        RECaspect,
+        AAenable = 0,
+        AAlabels,
+        AAticks,
+        AAcorners,
+        AAframe,
+        AAadjust,
+        AAcursor,
+        AAgrid,
+        AAcolors,
+        AAannotation,
+        AAlabelscale,
+        AAfont,
+        interactionMode,
+        title,
+        AAxTickLocs,
+        AAyTickLocs,
+        AAzTickLocs,
+        AAxTickLabels,
+        AAyTickLabels,
+        AAzTickLabels,
+        webOptions) -> (
+        object,
+        camera,
+        where)
+{
+    ImageMessage(
+        id,
+        backgroundColor,
+        throttle,
+        RECenable,
+        RECfile,
+        RECformat,
+        RECresolution,
+        RECaspect,
+        AAenable,
+        AAlabels,
+        AAticks,
+        AAcorners,
+        AAframe,
+        AAadjust,
+        AAcursor,
+        AAgrid,
+        AAcolors,
+        AAannotation,
+        AAlabelscale,
+        AAfont,
+        AAxTickLocs,
+        AAyTickLocs,
+        AAzTickLocs,
+        AAxTickLabels,
+        AAyTickLabels,
+        AAzTickLabels,
+        interactionMode,
+        title,
+        renderMode,
+        buttonUpApprox,
+        buttonDownApprox,
+        buttonUpDensity,
+        buttonDownDensity) [instance: 1, cache: 1];
+    autoCamera =
+        AutoCamera(
+            object,
+            "front",
+            object,
+            resolution,
+            aspect,
+            [0,1,0],
+            perspective,
+            viewAngle,
+            backgroundColor) [instance: 1, cache: 1];
+    realCamera =
+        Camera(
+            to,
+            from,
+            width,
+            resolution,
+            aspect,
+            up,
+            perspective,
+            viewAngle,
+            backgroundColor) [instance: 1, cache: 1];
+    coloredDefaultCamera = 
+	 UpdateCamera(defaultCamera,
+            background=backgroundColor) [instance: 1, cache: 1];
+    nullDefaultCamera =
+        Inquire(defaultCamera,
+            "is null + 1") [instance: 1, cache: 1];
+    resetCamera =
+        Switch(
+            nullDefaultCamera,
+            coloredDefaultCamera,
+            autoCamera) [instance: 1, cache: 1];
+    resetNull = 
+        Inquire(
+            reset,
+            "is null + 1") [instance: 2, cache: 1];
+    reset =
+        Switch(
+            resetNull,
+            reset,
+            0) [instance: 2, cache: 1];
+    whichCamera =
+        Compute(
+            "($0 != 0 || $1 == 0) ? 1 : 2",
+            reset,
+            useVector) [instance: 1, cache: 1];
+    camera = Switch(
+            whichCamera,
+            resetCamera,
+            realCamera) [instance: 3, cache: 1];
+    AAobject =
+        AutoAxes(
+            object,
+            camera,
+            AAlabels,
+            AAticks,
+            AAcorners,
+            AAframe,
+            AAadjust,
+            AAcursor,
+            AAgrid,
+            AAcolors,
+            AAannotation,
+            AAlabelscale,
+            AAfont,
+            AAxTickLocs,
+            AAyTickLocs,
+            AAzTickLocs,
+            AAxTickLabels,
+            AAyTickLabels,
+            AAzTickLabels) [instance: 1, cache: 1];
+    switchAAenable = Compute("$0+1",
+	     AAenable) [instance: 2, cache: 1];
+    object = Switch(
+	     switchAAenable,
+	     object,
+	     AAobject) [instance:4, cache: 1];
+    SWapproximation_options =
+        Switch(
+            buttonState,
+            buttonUpApprox,
+            buttonDownApprox) [instance: 5, cache: 1];
+    SWdensity_options =
+        Switch(
+            buttonState,
+            buttonUpDensity,
+            buttonDownDensity) [instance: 6, cache: 1];
+    HWapproximation_options =
+        Format(
+            "%s,%s",
+            buttonDownApprox,
+            buttonUpApprox) [instance: 1, cache: 1];
+    HWdensity_options =
+        Format(
+            "%d,%d",
+            buttonDownDensity,
+            buttonUpDensity) [instance: 2, cache: 1];
+    switchRenderMode = Compute(
+	     "$0+1",
+	     renderMode) [instance: 3, cache: 1];
+    approximation_options = Switch(
+	     switchRenderMode,
+            SWapproximation_options,
+	     HWapproximation_options) [instance: 7, cache: 1];
+    density_options = Switch(
+	     switchRenderMode,
+            SWdensity_options,
+            HWdensity_options) [instance: 8, cache: 1];
+    renderModeString = Switch(
+            switchRenderMode,
+            "software",
+            "hardware")[instance: 9, cache: 1];
+    object_tag = Inquire(
+            object,
+            "object tag")[instance: 3, cache: 1];
+    annoted_object =
+        Options(
+            object,
+            "send boxes",
+            0,
+            "cache",
+            1,
+            "object tag",
+            object_tag,
+            "ddcamera",
+            whichCamera,
+            "rendering approximation",
+            approximation_options,
+            "render every",
+            density_options,
+            "button state",
+            buttonState,
+            "rendering mode",
+            renderModeString) [instance: 1, cache: 1];
+    RECresNull =
+        Inquire(
+            RECresolution,
+            "is null + 1") [instance: 4, cache: 1];
+    ImageResolution =
+        Inquire(
+            camera,
+            "camera resolution") [instance: 5, cache: 1];
+    RECresolution =
+        Switch(
+            RECresNull,
+            RECresolution,
+            ImageResolution) [instance: 10, cache: 1];
+    RECaspectNull =
+        Inquire(
+            RECaspect,
+            "is null + 1") [instance: 6, cache: 1];
+    ImageAspect =
+        Inquire(
+            camera,
+            "camera aspect") [instance: 7, cache: 1];
+    RECaspect =
+        Switch(
+            RECaspectNull,
+            RECaspect,
+            ImageAspect) [instance: 11, cache: 1];
+    switchRECenable = Compute(
+          "$0 == 0 ? 1 : (($2 == $3) && ($4 == $5)) ? ($1 == 1 ? 2 : 3) : 4",
+            RECenable,
+            switchRenderMode,
+            RECresolution,
+            ImageResolution,
+            RECaspect,
+	     ImageAspect) [instance: 4, cache: 1];
+    NoRECobject, RECNoRerenderObject, RECNoRerHW, RECRerenderObject = Route(switchRECenable, annoted_object);
+    Display(
+        NoRECobject,
+        camera,
+        where,
+        throttle) [instance: 1, cache: 1];
+    image =
+        Render(
+            RECNoRerenderObject,
+            camera) [instance: 1, cache: 1];
+    Display(
+        image,
+        NULL,
+        where,
+        throttle) [instance: 2, cache: 1];
+    WriteImage(
+        image,
+        RECfile,
+        RECformat) [instance: 1, cache: 1];
+    rec_where = Display(
+        RECNoRerHW,
+        camera,
+        where,
+        throttle) [instance: 1, cache: 0];
+    rec_image = ReadImageWindow(
+        rec_where) [instance: 1, cache: 1];
+    WriteImage(
+        rec_image,
+        RECfile,
+        RECformat) [instance: 1, cache: 1];
+    RECupdateCamera =
+	UpdateCamera(
+	    camera,
+	    resolution=RECresolution,
+	    aspect=RECaspect) [instance: 2, cache: 1];
+    Display(
+        RECRerenderObject,
+        camera,
+        where,
+        throttle) [instance: 1, cache: 1];
+    RECRerenderObject =
+	ScaleScreen(
+	    RECRerenderObject,
+	    NULL,
+	    RECresolution,
+	    camera) [instance: 1, cache: 1];
+    image =
+        Render(
+            RECRerenderObject,
+            RECupdateCamera) [instance: 2, cache: 1];
+    WriteImage(
+        image,
+        RECfile,
+        RECformat) [instance: 2, cache: 1];
+}
 main_Image_4_in_1 = "Image_4";
 main_Image_4_in_3 = "X16,,";
 main_Image_4_in_4 = 1;
