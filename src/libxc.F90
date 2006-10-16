@@ -101,6 +101,8 @@ module lib_xc_m
     XC_GGA_X_DK87_R1        = 111,  &  ! dePristo & Kress 87 version R1
     XC_GGA_X_DK87_R2        = 112,  &  ! dePristo & Kress 87 version R1
     XC_GGA_X_LG93           = 113,  &  ! Lacks & Gordon 93
+    XC_GGA_X_FT97_A         = 114,  &  ! Filatov & Thiel 97 (version A)
+    XC_GGA_X_FT97_B         = 115,  &  ! Filatov & Thiel 97 (version B)
     XC_GGA_C_PBE            = 130,  &  ! Perdew, Burke & Ernzerhof correlation
     XC_GGA_C_LYP            = 131,  &  ! Lee, Yang & Parr
     XC_GGA_C_P86            = 132,  &  ! Perdew 86
