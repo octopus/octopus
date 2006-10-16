@@ -774,16 +774,16 @@ contains
 
 #if defined(R_TCOMPLEX)
     if(status == NF90_NOERR) then
-      status = nf90_put_var (ncid, data_id, real(c%RS, PRECISION), map = (/c%n(3)*c%n(2), c%n(2), 1 /))
+      status = nf90_put_var (ncid, data_id, real(c%RS, PRECISION), map = (/c%n(2)*c%n(1), c%n(1), 1 /))
       call ncdf_error('nf90_put_var', status, filename, ierr)
     end if
     if(status == NF90_NOERR) then
-      status = nf90_put_var (ncid, data_im_id, aimag(c%RS), map = (/c%n(3)*c%n(2), c%n(2), 1 /))
+      status = nf90_put_var (ncid, data_im_id, aimag(c%RS), map = (/c%n(2)*c%n(1), c%n(1), 1 /))
       call ncdf_error('nf90_put_var', status, filename, ierr)
     end if
 #else
     if(status == NF90_NOERR) then
-      status = nf90_put_var (ncid, data_id, c%RS, map = (/c%n(3)*c%n(2), c%n(2), 1 /))
+      status = nf90_put_var (ncid, data_id, c%RS, map = (/c%n(2)*c%n(1), c%n(1), 1 /))
       call ncdf_error('nf90_put_var', status, filename, ierr)
     end if
 #endif
