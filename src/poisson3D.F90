@@ -86,10 +86,9 @@ subroutine poisson3D_init(gr, geo)
        write(message(1),'(a)') "Info: Poisson' equation will be solved in a larger grid."
        call write_info(1)
        call grid_create_largergrid(gr, geo, hartree_grid)
-       call poisson_cg_init(hartree_grid%m, maxl, threshold)
-     else
-       call poisson_cg_init(gr%m, maxl, threshold)
      end if
+     call poisson_cg_init(gr%m, maxl, threshold)
+
 
   case(MULTIGRILLA)
      call loct_parse_int(check_inp('PoissonSolverMaxMultipole'), 4, maxl)

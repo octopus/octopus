@@ -29,7 +29,7 @@ module poisson_cg_m
   use lib_oct_m
   use functions_m
   use poisson_corrections_m
-
+  
   implicit none
 
   private
@@ -116,38 +116,35 @@ contains
     FLOAT,                     intent(in) :: rho(:) ! rho(m%np)
 
     integer :: iter
-    FLOAT, allocatable :: rho_corrected(:), vh_correction(:), tmp(:)
+    FLOAT, allocatable :: rhs(:), x(:)
     FLOAT :: res
 
     call push_sub('poisson_cg.poisson_cg2')
 
+    iter = 400
     der_pointer  => der
     mesh_pointer => m
 
-    ALLOCATE(rho_corrected(m%np_part), m%np_part)
-    ALLOCATE(vh_correction(m%np),      m%np)
-    ALLOCATE(          tmp(m%np_part), m%np_part)
+    ALLOCATE(rhs(m%np_part), m%np_part)
+    ALLOCATE(x(m%np_part), m%np_part)
+    rhs = M_ZERO; x = M_ZERO
 
-    tmp = M_ZERO
-    call correct_rho(m, rho, rho_corrected, vh_correction)
-    rho_corrected = - M_FOUR*M_PI*rho_corrected
-    pot = pot - vh_correction
-    iter = 400
-    ! This assumes that the Laplacian is self-adjoint.
-    tmp(1:m%np) = pot(1:m%np)
-    call dconjugate_gradients(m%np_part, tmp, rho_corrected, op, dotp, iter, res, threshold)
+    rhs(1:m%np) = - M_FOUR*M_PI*rho(1:m%np)
+    x(1:m%np)   = pot(1:m%np)
+    call dconjugate_gradients(m%np_part, x, rhs, op, dotp, iter, res, threshold)
     if(res >= threshold) then
       message(1) = 'Conjugate gradients Poisson solver did not converge.'
       write(message(2), '(a,i8)')    '  Iter = ',iter
       write(message(3), '(a,e14.6)') '  Res = ', res
       call write_warning(3)
     end if
-    pot(1:m%np) = tmp(1:m%np) + vh_correction(1:m%np)
+    pot(1:m%np) = x(1:m%np)
 
     nullify(der_pointer, mesh_pointer)
-    deallocate(rho_corrected, vh_correction, tmp)
+    deallocate(rhs, x)
     call pop_sub()
   end subroutine poisson_cg2
+
 
 
 end module poisson_cg_m

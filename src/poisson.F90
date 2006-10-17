@@ -84,6 +84,15 @@ module poisson_m
   type(grid_t) :: hartree_grid
   logical :: increase_box
 
+  type hartree_t
+    private
+    integer        :: poisson_solver = -99
+    type(grid_t)   :: grid
+    logical        :: increase_grid
+    type(dcf_t)    :: fft_cf
+    FLOAT, pointer :: fft_coulb_FS(:,:,:)
+  end type hartree_t
+
 contains
 
   !-----------------------------------------------------------------
@@ -300,15 +309,28 @@ contains
 
     case(CG_CORRECTED)
       if(increase_box) then
-        ALLOCATE(potp(hartree_grid%m%np_part), hartree_grid%m%np_part); potp = M_ZERO
-        ALLOCATE(rhop(hartree_grid%m%np_part), hartree_grid%m%np_part); rhop = M_ZERO
-        call dmf_interpolate(gr%m, hartree_grid%m, full_interpolation = .false., u = rho, f = rhop)
+        ALLOCATE(potp(hartree_grid%m%np), hartree_grid%m%np)
+        ALLOCATE(rhop(hartree_grid%m%np), hartree_grid%m%np)
+        ALLOCATE(rho_corrected(gr%m%np), gr%m%np)
+        ALLOCATE(vh_correction(gr%m%np), gr%m%np)
+        potp = M_ZERO; rhop = M_ZERO; rho_corrected = M_ZERO; vh_correction = M_ZERO
+        call correct_rho(gr%m, rho, rho_corrected, vh_correction)
+        pot = pot - vh_correction
+        call dmf_interpolate(gr%m, hartree_grid%m, full_interpolation = .false., u = rho_corrected, f = rhop)
         call dmf_interpolate(gr%m, hartree_grid%m, full_interpolation = .false., u = pot, f = potp)
         call poisson_cg2(hartree_grid%m, hartree_grid%f_der%der_discr, potp, rhop)
         call dmf_interpolate(hartree_grid%m, gr%m, full_interpolation = .false., u = potp, f = pot)
+        pot = pot + vh_correction
+        deallocate(rho_corrected, vh_correction)
         deallocate(potp, rhop)
       else
-        call poisson_cg2(gr%m, gr%f_der%der_discr, pot, rho)
+        ALLOCATE(rho_corrected(gr%m%np), gr%m%np)
+        ALLOCATE(vh_correction(gr%m%np), gr%m%np)
+        call correct_rho(gr%m, rho, rho_corrected, vh_correction)
+        pot = pot - vh_correction
+        call poisson_cg2(gr%m, gr%f_der%der_discr, pot, rho_corrected)
+        pot = pot + vh_correction
+        deallocate(rho_corrected, vh_correction)
       end if
 
     case(MULTIGRILLA)
