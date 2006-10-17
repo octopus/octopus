@@ -2640,14 +2640,14 @@ contains
 
   ! ---------------------------------------------------------
   logical function wfs_are_complex(st) result (wac)
-    type(states_t),    intent(inout) :: st
+    type(states_t),    intent(in) :: st
     wac = (st%d%wfs_type == M_CMPLX)
   end function wfs_are_complex
 
 
   ! ---------------------------------------------------------
   logical function wfs_are_real(st) result (war)
-    type(states_t),    intent(inout) :: st
+    type(states_t),    intent(in) :: st
     war = (st%d%wfs_type == M_REAL)
   end function wfs_are_real
 
