@@ -175,10 +175,6 @@ contains
     ! Modification of the simulation box.
     select case(grout%sb%box_shape)
     case(CYLINDER)
-!!$      grout%sb%box_shape = SPHERE
-!!$      grout%sb%rsize = sqrt( grout%sb%lsize(1)**2 + grout%sb%lsize(2)**2 )
-!!$      grout%sb%lsize(1:grout%sb%dim) = grout%sb%rsize
-      write(0, *) 'A', grin%sb%lsize(1:3)
       grout%sb%box_shape = CYLINDER
       avg = M_HALF * (grin%sb%rsize + grin%sb%xsize)
       if(grin%sb%rsize <= grin%sb%xsize) then
@@ -190,7 +186,6 @@ contains
       end if
       grout%sb%lsize(1)        = grout%sb%xsize
       grout%sb%lsize(2:grout%sb%dim) = grout%sb%rsize
-      write(0, *) 'A', grout%sb%lsize(1:3)
     case(PARALLELEPIPED, MINIMUM, BOX_IMAGE, BOX_USDEF)
       grout%sb%box_shape = SPHERE
       grout%sb%rsize = sqrt( sum(grout%sb%lsize(:)**2) )
