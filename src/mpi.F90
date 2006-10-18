@@ -42,6 +42,10 @@ module mpi_m
     integer :: rank ! rank of comm (defined also in serial mode)
   end type mpi_grp_t
 
+  interface assignment (=)
+    module procedure mpi_grp_copy
+  end interface
+
   type(mpi_grp_t), public :: mpi_world
 
 contains
@@ -93,6 +97,14 @@ contains
 #endif
   end subroutine mpi_grp_init
 
+  ! ---------------------------------------------------------
+  subroutine mpi_grp_copy(mpi_grp_out, mpi_grp_in)
+    type(mpi_grp_t), intent(out) :: mpi_grp_out
+    type(mpi_grp_t), intent(in)  :: mpi_grp_in
+    mpi_grp_out%comm = mpi_grp_in%comm
+    mpi_grp_out%size = mpi_grp_in%size
+    mpi_grp_out%rank = mpi_grp_in%rank
+  end subroutine mpi_grp_copy
 
   ! ---------------------------------------------------------
   logical function mpi_grp_is_root(grp)

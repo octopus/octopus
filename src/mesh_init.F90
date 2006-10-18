@@ -148,16 +148,16 @@ end subroutine mesh_init_stage_2
 ! ---------------------------------------------------------
 ! When running parallel in domains, stencil and np_stencil
 ! are needed to compute the ghost points.
-! comm the communicator the parallelization takes places
-! in and is used to determine the number of partitions.
+! mpi_grp is the communicator group that will be used for
+! this mesh.
 ! ---------------------------------------------------------
-subroutine mesh_init_stage_3(mesh, geo, cv, stencil, np_stencil, comm)
+subroutine mesh_init_stage_3(mesh, geo, cv, stencil, np_stencil, mpi_grp)
   type(mesh_t),       intent(inout) :: mesh
   type(geometry_t),   intent(in)    :: geo
   type(curvlinear_t), intent(in)    :: cv
   integer, optional,  intent(in)    :: stencil(:, :)
   integer, optional,  intent(in)    :: np_stencil
-  integer, optional,  intent(in)    :: comm
+  type(mpi_grp_t), optional,  intent(in) :: mpi_grp
 
   integer :: np_stencil_, stencil_size
 
@@ -171,7 +171,7 @@ subroutine mesh_init_stage_3(mesh, geo, cv, stencil, np_stencil, comm)
 
   ! check if we are running in parallel in domains
   mesh%parallel_in_domains = .false.
-  if(present(comm)) mesh%parallel_in_domains = .true.
+  if(present(mpi_grp)) mesh%parallel_in_domains = .true.
 
   call create_x_Lxyz()
 
@@ -265,7 +265,7 @@ contains
     integer :: i, j
     integer, allocatable :: part(:)
 
-    call mpi_grp_init(mesh%mpi_grp, comm)
+    mesh%mpi_grp = mpi_grp
 
     ALLOCATE(part(mesh%np_part_global), mesh%np_part_global)
     call mesh_partition(mesh, part)

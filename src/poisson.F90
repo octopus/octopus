@@ -79,19 +79,16 @@ module poisson_m
 
   integer :: poisson_solver = -99
 
-  ! These variables are used for the case in which the Hartree problem
-  ! is solved in another (larger) grid.
-  type(grid_t) :: hartree_grid
-  logical :: increase_box
-
   type hartree_t
     private
     integer        :: poisson_solver = -99
+    logical        :: increase_box
     type(grid_t)   :: grid
-    logical        :: increase_grid
     type(dcf_t)    :: fft_cf
     FLOAT, pointer :: fft_coulb_FS(:,:,:)
   end type hartree_t
+
+  type(hartree_t) :: hartree_integrator
 
 contains
 
@@ -144,7 +141,7 @@ contains
     !% Multigrid method
     !%End
 
-    !-----------------------------------------------------------------
+    !---------------\--------------------------------------------------
     subroutine init_1D()
       poisson_solver = -NDIM ! internal type
 
@@ -298,28 +295,28 @@ contains
     ASSERT(poisson_solver.ne.-99)
 
     select case(poisson_solver)
-    case(-1)
+    case(DIRECT_SUM_1D)
       call poisson1d_solve(gr%m, pot, rho)
 
-    case(-2)
+    case(DIRECT_SUM_2D)
       call poisson2d_solve(gr%m, pot, rho)
 
     case(CG)
       call poisson_cg1(gr%m, gr%f_der%der_discr, pot, rho)
 
     case(CG_CORRECTED)
-      if(increase_box) then
-        ALLOCATE(potp(hartree_grid%m%np), hartree_grid%m%np)
-        ALLOCATE(rhop(hartree_grid%m%np), hartree_grid%m%np)
+      if(hartree_integrator%increase_box) then
+        ALLOCATE(potp(hartree_integrator%grid%m%np), hartree_integrator%grid%m%np)
+        ALLOCATE(rhop(hartree_integrator%grid%m%np), hartree_integrator%grid%m%np)
         ALLOCATE(rho_corrected(gr%m%np), gr%m%np)
         ALLOCATE(vh_correction(gr%m%np), gr%m%np)
         potp = M_ZERO; rhop = M_ZERO; rho_corrected = M_ZERO; vh_correction = M_ZERO
         call correct_rho(gr%m, rho, rho_corrected, vh_correction)
         pot = pot - vh_correction
-        call dmf_interpolate(gr%m, hartree_grid%m, full_interpolation = .false., u = rho_corrected, f = rhop)
-        call dmf_interpolate(gr%m, hartree_grid%m, full_interpolation = .false., u = pot, f = potp)
-        call poisson_cg2(hartree_grid%m, hartree_grid%f_der%der_discr, potp, rhop)
-        call dmf_interpolate(hartree_grid%m, gr%m, full_interpolation = .false., u = potp, f = pot)
+        call dmf_interpolate(gr%m, hartree_integrator%grid%m, full_interpolation = .false., u = rho_corrected, f = rhop)
+        call dmf_interpolate(gr%m, hartree_integrator%grid%m, full_interpolation = .false., u = pot, f = potp)
+        call poisson_cg2(hartree_integrator%grid%m, hartree_integrator%grid%f_der%der_discr, potp, rhop)
+        call dmf_interpolate(hartree_integrator%grid%m, gr%m, full_interpolation = .false., u = potp, f = pot)
         pot = pot + vh_correction
         deallocate(rho_corrected, vh_correction)
         deallocate(potp, rhop)
@@ -510,7 +507,7 @@ contains
     call dpoisson_solve(gr, vh, rho)
 
     ! And this compares.
-    delta = dmf_integrate(gr%m, vh-vh_exact)
+    delta = dmf_nrm2(gr%m, vh-vh_exact)
 
     ! Output
     iunit = io_open("hartree_results", action='write')

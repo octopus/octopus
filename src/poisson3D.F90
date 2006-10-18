@@ -81,11 +81,12 @@ subroutine poisson3D_init(gr, geo)
      call loct_parse_float(check_inp('PoissonSolverThreshold'), CNST(1.0e-6), threshold)
      write(message(1),'(a,i2)')'Info: Multipoles corrected up to L =',  maxl
      call write_info(1)
-     call loct_parse_logical(check_inp('PoissonSolverIncreaseBox'), .false., increase_box)
-     if(increase_box) then
+     call loct_parse_logical(check_inp('PoissonSolverIncreaseBox'), .false., hartree_integrator%increase_box)
+     if(gr%m%sb%box_shape .eq. SPHERE) hartree_integrator%increase_box = .false.
+     if(hartree_integrator%increase_box) then
        write(message(1),'(a)') "Info: Poisson' equation will be solved in a larger grid."
        call write_info(1)
-       call grid_create_largergrid(gr, geo, hartree_grid)
+       call grid_create_largergrid(gr, geo, hartree_integrator%grid)
      end if
      call poisson_cg_init(gr%m, maxl, threshold)
 

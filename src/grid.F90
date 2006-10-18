@@ -85,12 +85,15 @@ contains
     type(multicomm_t), intent(in)    :: mc
     type(geometry_t),  intent(in)    :: geo
 
+    type(mpi_grp_t) :: grp
+
     call push_sub('grid.grid_init_stage_2')
 
     if(multicomm_strategy_is_parallel(mc, P_STRATEGY_DOMAINS)) then
+      call mpi_grp_init(grp, mc%group_comm(P_STRATEGY_DOMAINS))
       call mesh_init_stage_3(gr%m, geo, gr%cv,  &
         gr%f_der%der_discr%lapl%stencil,        &
-        gr%f_der%der_discr%lapl%n, mc%group_comm(P_STRATEGY_DOMAINS))
+        gr%f_der%der_discr%lapl%n, grp)
     else
       call mesh_init_stage_3(gr%m, geo, gr%cv)
     end if
@@ -163,9 +166,7 @@ contains
     type(geometry_t), intent(in) :: geo
     type(grid_t), intent(out)    :: grout
 
-    integer :: parallel_mask
-    type(multicomm_t) :: mc
-    integer :: index_dim, index_range(1)
+    FLOAT :: avg
 
     call push_sub('grid.grid_create_largergrid')
 
@@ -174,26 +175,45 @@ contains
     ! Modification of the simulation box.
     select case(grout%sb%box_shape)
     case(CYLINDER)
-      grout%sb%box_shape = SPHERE
-      grout%sb%rsize = sqrt( grout%sb%lsize(1)**2 + grout%sb%lsize(2)**2 )
-      grout%sb%lsize(1:grout%sb%dim) = grout%sb%rsize
-    case(PARALLELEPIPED, MINIMUM)
+!!$      grout%sb%box_shape = SPHERE
+!!$      grout%sb%rsize = sqrt( grout%sb%lsize(1)**2 + grout%sb%lsize(2)**2 )
+!!$      grout%sb%lsize(1:grout%sb%dim) = grout%sb%rsize
+      write(0, *) 'A', grin%sb%lsize(1:3)
+      grout%sb%box_shape = CYLINDER
+      avg = M_HALF * (grin%sb%rsize + grin%sb%xsize)
+      if(grin%sb%rsize <= grin%sb%xsize) then
+        grout%sb%rsize = avg
+        grout%sb%xsize = grin%sb%xsize
+      else
+        grout%sb%xsize = avg
+        grout%sb%rsize = grin%sb%rsize
+      end if
+      grout%sb%lsize(1)        = grout%sb%xsize
+      grout%sb%lsize(2:grout%sb%dim) = grout%sb%rsize
+      write(0, *) 'A', grout%sb%lsize(1:3)
+    case(PARALLELEPIPED, MINIMUM, BOX_IMAGE, BOX_USDEF)
       grout%sb%box_shape = SPHERE
       grout%sb%rsize = sqrt( sum(grout%sb%lsize(:)**2) )
       grout%sb%lsize(1:grout%sb%dim) = grout%sb%rsize
+    case default
+      write(message(1),'(a)') 'Internal octopus error.'
+      call write_fatal(1)
     end select
 
     call grid_init_stage_1(grout, geo)
 
-    parallel_mask = 0
-    parallel_mask = ibset(parallel_mask, P_STRATEGY_DOMAINS - 1) ! all modes are parallel in domains
+    if(grin%m%parallel_in_domains) then
+      call mesh_init_stage_3(grout%m, geo, grout%cv,  &
+        grout%f_der%der_discr%lapl%stencil,        &
+        grout%f_der%der_discr%lapl%n, grin%m%mpi_grp)
+    else
+      call mesh_init_stage_3(grout%m, geo, grout%cv)
+    end if
 
-    index_dim = 1
-    index_range(1) = grout%m%np_global
+    call f_der_build(grout%sb, grout%m, grout%f_der)
 
-    ! create index and domain communicators
-    call multicomm_init(mc, parallel_mask, grin%m%mpi_grp%size, index_dim, index_range(1:1), (/ 5 /))
-    call grid_init_stage_2(grout, mc, geo)
+    ! multigrids are not initialized by default
+    nullify(grout%mgrid)
 
     call pop_sub()
   end subroutine grid_create_largergrid
