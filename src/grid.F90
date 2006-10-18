@@ -87,9 +87,13 @@ contains
 
     call push_sub('grid.grid_init_stage_2')
 
-    call mesh_init_stage_3(gr%m, geo, gr%cv,  &
-      gr%f_der%der_discr%lapl%stencil,        &
-      gr%f_der%der_discr%lapl%n, mc)
+    if(multicomm_strategy_is_parallel(mc, P_STRATEGY_DOMAINS)) then
+      call mesh_init_stage_3(gr%m, geo, gr%cv,  &
+        gr%f_der%der_discr%lapl%stencil,        &
+        gr%f_der%der_discr%lapl%n, mc%group_comm(P_STRATEGY_DOMAINS))
+    else
+      call mesh_init_stage_3(gr%m, geo, gr%cv)
+    end if
 
     call f_der_build(gr%sb, gr%m, gr%f_der)
 

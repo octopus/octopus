@@ -151,13 +151,13 @@ end subroutine mesh_init_stage_2
 ! comm the communicator the parallelization takes places
 ! in and is used to determine the number of partitions.
 ! ---------------------------------------------------------
-subroutine mesh_init_stage_3(mesh, geo, cv, stencil, np_stencil, mc)
+subroutine mesh_init_stage_3(mesh, geo, cv, stencil, np_stencil, comm)
   type(mesh_t),       intent(inout) :: mesh
   type(geometry_t),   intent(in)    :: geo
   type(curvlinear_t), intent(in)    :: cv
   integer, optional,  intent(in)    :: stencil(:, :)
   integer, optional,  intent(in)    :: np_stencil
-  type(multicomm_t), optional, intent(in) :: mc
+  integer, optional,  intent(in)    :: comm
 
   integer :: np_stencil_, stencil_size
 
@@ -171,8 +171,7 @@ subroutine mesh_init_stage_3(mesh, geo, cv, stencil, np_stencil, mc)
 
   ! check if we are running in parallel in domains
   mesh%parallel_in_domains = .false.
-  if(present(mc)) &
-    mesh%parallel_in_domains = multicomm_strategy_is_parallel(mc, P_STRATEGY_DOMAINS)
+  if(present(comm)) mesh%parallel_in_domains = .true.
 
   call create_x_Lxyz()
 
@@ -266,7 +265,7 @@ contains
     integer :: i, j
     integer, allocatable :: part(:)
 
-    call mpi_grp_init(mesh%mpi_grp, mc%group_comm(P_STRATEGY_DOMAINS))
+    call mpi_grp_init(mesh%mpi_grp, comm)
 
     ALLOCATE(part(mesh%np_part_global), mesh%np_part_global)
     call mesh_partition(mesh, part)

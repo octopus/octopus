@@ -34,7 +34,6 @@ module mesh_m
   use mesh_lib_m
   use io_m
   use par_vec_m
-  use multicomm_m
 
   implicit none
 
