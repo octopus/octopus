@@ -81,11 +81,8 @@ module poisson_m
 
   type hartree_t
     private
-    integer        :: poisson_solver = -99
     logical        :: increase_box
     type(grid_t)   :: grid
-    type(dcf_t)    :: fft_cf
-    FLOAT, pointer :: fft_coulb_FS(:,:,:)
   end type hartree_t
 
   type(hartree_t) :: hartree_integrator
