@@ -86,7 +86,8 @@ module states_m
     states_kill_excited_state,      &
     wfs_are_complex,                &
     wfs_are_real,                   &
-    states_dump
+    states_dump,                    &
+    assignment(=)
 
 
   public ::                         &
@@ -1984,14 +1985,27 @@ contains
 
     if(NDIM .eq. 3) then ! If the dimensions is not three, the ELF calculation will not work.
       if(  iand(outp%what, output_elf).ne.0  ) then ! First, ELF in real space.
-        ALLOCATE(elf(1:gr%m%np,1:st%d%nspin),gr%m%np*st%d%nspin)
-        call states_calc_elf(st, gr, elf)
-        do is = 1, st%d%nspin
-          write(fname, '(a,a,i1)') 'elf_rs', '-', is
-          call doutput_function(outp%how, dir, trim(fname), gr%m, gr%sb, &
-            elf(:,is), M_ONE, ierr, is_tmp = .false.)
-        end do
-        deallocate(elf)
+        select case(st%d%ispin)
+          case(UNPOLARIZED)
+            ALLOCATE(elf(1:gr%m%np, 1),gr%m%np)
+            call states_calc_elf(st, gr, elf)
+            write(fname, '(a)') 'elf_rs'
+            call doutput_function(outp%how, dir, trim(fname), gr%m, gr%sb, &
+              elf(:,1), M_ONE, ierr, is_tmp = .false.)
+            deallocate(elf)
+          case(SPIN_POLARIZED, SPINORS)
+            ALLOCATE(elf(1:gr%m%np, 3), 3*gr%m%np)
+            call states_calc_elf(st, gr, elf)
+            write(fname, '(a)') 'elf_rs'
+            call doutput_function(outp%how, dir, trim(fname), gr%m, gr%sb, &
+              elf(:, 3), M_ONE, ierr, is_tmp = .false.)
+            do is = 1, 2
+              write(fname, '(a,a,i1)') 'elf_rs', '-', is
+              call doutput_function(outp%how, dir, trim(fname), gr%m, gr%sb, &
+                elf(:, is), M_ONE, ierr, is_tmp = .false.)
+            end do
+            deallocate(elf)
+        end select
       end if
 
       if(  iand(outp%what, output_elf_fs).ne.0  ) then ! Second, ELF in Fourier space.
@@ -2080,18 +2094,28 @@ contains
   subroutine states_calc_elf(st,gr, elf, de)
     type(states_t),   intent(inout) :: st
     type(grid_t),     intent(inout) :: gr
-    FLOAT,             intent(inout):: elf(:,:)
+    FLOAT,             intent(inout):: elf(:,:) ! elf(NP, 1) if st%d%ispin = 1, elf(NP, 3) otherwise.
+                                                ! On output, it should contain the global ELF if st%d%ispin = 1,
+                                                ! otherwise elf(:, 3) contains the global elf, and 
+                                                ! elf(:, 1) and elf(:, 2) the spin resolved ELF.
     FLOAT,   optional, intent(inout):: de(:,:)
 
-    FLOAT :: s, f, D0
-    integer :: i, is, ik, ist, idim
+    FLOAT :: s, f, D0, dens
+    integer :: i, is, ik, ist, idim, nelfs
     CMPLX, allocatable :: wf_psi(:), gwf_psi(:,:)
-    FLOAT, allocatable :: rho(:), grho(:,:), jj(:,:)
+    FLOAT, allocatable :: rho(:, :), grho(:,:), jj(:,:)
+    FLOAT, allocatable :: kappa(:, :)
 
     FLOAT, parameter :: dmin = CNST(1e-10)
 #if defined(HAVE_MPI)
     FLOAT, allocatable :: reduce_elf(:)
 #endif
+
+    call push_sub('states.states_calc_elf')
+
+    ! We may or may not want the total elf. 
+    ! If we want it, the argument elf should have three components.c
+    nelfs = size(elf, 2)
 
     ! single or double occupancy
     if(st%d%nspin == 1) then
@@ -2100,16 +2124,16 @@ contains
       s = M_ONE
     end if
 
+    ALLOCATE(rho(NP, st%d%nspin), NP); rho = M_ZERO
+    ALLOCATE(kappa(NP, st%d%nspin), NP); kappa = M_ZERO
+    call states_calc_dens(st, NP, rho)
+
     do_is: do is = 1, st%d%nspin
-      ALLOCATE( rho(NP),       NP)           ! spin density
       ALLOCATE(grho(NP, NDIM), NP*NDIM)      ! gradient of the spin density
       ALLOCATE(  jj(NP, NDIM), NP*NDIM)      ! spin current
-      rho = M_ZERO; grho = M_ZERO; jj  = M_ZERO
-      
-      elf(1:NP,is) = M_ZERO                  ! this will store the elf function
-
       ALLOCATE( wf_psi(NP_PART),  NP_PART)   ! to store the wave-functions
       ALLOCATE(gwf_psi(NP, NDIM), NP*NDIM)   ! the gradients of the wave-functions
+      grho = M_ZERO; jj  = M_ZERO; wf_psi = M_ZERO; gwf_psi = M_ZERO
 
       do ik = is, st%d%nik, st%d%nspin
         do ist = st%st_start, st%st_end
@@ -2125,9 +2149,6 @@ contains
             ! calculate gradient of the wave-function
             call zf_gradient(gr%sb, gr%f_der, wf_psi(:), gwf_psi)
 
-            ! sum over states to obtain the spin-density
-            rho(:) = rho(:) + st%d%kweights(ik)*st%occ(ist, ik)/s * abs(wf_psi(:))**2
-
             do i = 1, NDIM
               grho(:,i) = grho(:,i) + st%d%kweights(ik)*st%occ(ist, ik)/s *  &
                  M_TWO * real(conjg(wf_psi(:))*gwf_psi(:,i))
@@ -2137,7 +2158,7 @@ contains
 
             ! elf will now contain the spin-kinetic energy density, tau
             do i = 1, NP
-              elf(i, is) = elf(i, is) + st%d%kweights(ik)*st%occ(ist, ik)/s * &
+              kappa(i, is) = kappa(i, is) + st%d%kweights(ik)*st%occ(ist, ik)/s * &
                  sum(abs(gwf_psi(i, 1:NDIM))**2)
             end do
 
@@ -2149,11 +2170,8 @@ contains
 #if defined(HAVE_MPI)
       if(st%parallel_in_states) then
         ALLOCATE(reduce_elf(1:NP), NP)
-        call MPI_Allreduce(elf(1, is), reduce_elf(1), NP, MPI_FLOAT, MPI_SUM, st%mpi_grp%comm, mpi_err)
-        elf(1:NP, is) = reduce_elf(1:NP)
-
-        call MPI_Allreduce(rho(1), reduce_elf(1), NP, MPI_FLOAT, MPI_SUM, st%mpi_grp%comm, mpi_err)
-        rho(1:NP) = reduce_elf(1:NP)
+        call MPI_Allreduce(kappa(1, is), reduce_elf(1), NP, MPI_FLOAT, MPI_SUM, st%mpi_grp%comm, mpi_err)
+        kappa(1:NP, is) = reduce_elf(1:NP)
 
         do i = 1, NDIM
           call MPI_Allreduce(grho(1, i), reduce_elf(1), NP, MPI_FLOAT, MPI_SUM, st%mpi_grp%comm, mpi_err)
@@ -2166,34 +2184,57 @@ contains
       end if
 #endif
 
-      ! elf will contain rho * D
+      ! kapp will contain rho * D
       do i = 1, NP
-        elf(i, is) = elf(i, is)*rho(i)        &    ! + tau * rho
-           - M_FOURTH*sum(grho(i, 1:NDIM)**2) &    ! - | nabla rho |^2 / 4
-           + sum(jj(i, 1:NDIM)**2)                 ! - j^2
+        kappa(i, is) = kappa(i, is)*rho(i, is)        &    ! + tau * rho
+           - M_FOURTH*sum(grho(i, 1:NDIM)**2) &            ! - | nabla rho |^2 / 4
+           + sum(jj(i, 1:NDIM)**2)                         ! - j^2
       end do
 
       deallocate(grho, jj)   ! these are no longer needed
     
       ! pass this information to the caller if requested
-      if(present(de)) de(1:NP,is) = elf(1:NP,is)
-
-      ! normalization
-      f = M_THREE/M_FIVE*(M_SIX*M_PI**2)**M_TWOTHIRD
-
-      do i = 1, NP
-        if(rho(i) >= dmin) then
-          D0 = f * rho(i)**(M_EIGHT/M_THREE)
-          elf(i, is) = D0*D0/(D0*D0 + elf(i,is)**2)
-        else
-          elf(i, is) = M_ZERO
-        endif
-      end do
-
-      deallocate(rho)
+      if(present(de)) de(1:NP,is) = kappa(1:NP,is)
 
     end do do_is
 
+    f = M_THREE/M_FIVE*(M_SIX*M_PI**2)**M_TWOTHIRD
+    select case(st%d%ispin)
+    case(UNPOLARIZED)
+      do i = 1, NP
+        if(rho(i, 1) >= dmin) then
+          D0 = f * rho(i, 1)**(M_EIGHT/M_THREE)
+          elf(i, 1) = D0*D0/(D0*D0 + kappa(i, 1)**2)
+        else
+          elf(i, 1) = M_ZERO
+        endif
+      end do
+    case(SPIN_POLARIZED, SPINORS)
+      if(nelfs .eq. 3) then
+        do i = 1, NP
+          dens = rho(i, 1) + rho(i, 2)
+          if( dens >= dmin ) then
+            D0 = f * dens ** (M_FIVE/M_THREE) * rho(i, 1) * rho(i, 2)
+            elf(i, 3) = D0*D0/(D0*D0 + (kappa(i, 1)*rho(i, 2) + kappa(i,2)*rho(i, 1))**2)
+          else
+            elf(i, 3) = M_ZERO
+          endif
+        end do
+      end if
+      do i = 1, NP
+        do is = 1, st%d%spin_channels
+          if(rho(i, is) >= dmin) then
+            D0 = f * rho(i, is)**(M_EIGHT/M_THREE)
+            elf(i, is) = D0*D0/(D0*D0 + kappa(i,is)**2)
+          else
+            elf(i, is) = M_ZERO
+          endif
+        end do
+      end do
+    end select
+
+    deallocate(rho, kappa)
+    call pop_sub()
   end subroutine states_calc_elf
 
   ! ---------------------------------------------------------
