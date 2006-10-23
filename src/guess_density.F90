@@ -350,49 +350,59 @@ contains
   ! in Modine et al. [Phys. Rev. B 55, 10289 (1997)], section II.B
   ! ---------------------------------------------------------
   subroutine get_specie_density(s, pos, m, cv, geo, rho)
-    type(specie_t),     intent(in) :: s
-    FLOAT,              intent(in) :: pos(MAX_DIM)
-    type(mesh_t), target, intent(in)  :: m
+    type(specie_t),             intent(in)  :: s
+    FLOAT,                      intent(in)  :: pos(MAX_DIM)
+    type(mesh_t),       target, intent(in)  :: m
     type(curvlinear_t), target, intent(in)  :: cv
-    type(geometry_t), target, intent(in)  :: geo
-    FLOAT,              intent(out) :: rho(:)
+    type(geometry_t),   target, intent(in)  :: geo
+    FLOAT,                      intent(out) :: rho(:)
 
-    logical :: conv
     type(root_solver_t) :: rs
-    FLOAT :: x(1:4), chi0(3), delta, alpha, beta, startval(4)
+    logical :: conv
+    integer :: dim
+    FLOAT   :: x(1:MAX_DIM+1), chi0(MAX_DIM), startval(MAX_DIM + 1)
+    FLOAT   :: delta, alpha, beta
 
     call push_sub('specie_grid.specie_get_density')
 
-    ASSERT(m%sb%dim == 3)
-    
     select case(s%type)
     case(SPEC_ALL_E)
+      dim = m%sb%dim
 
       ALLOCATE(rho_p(m%np), m%np)
-      ALLOCATE(grho_p(m%np, 4), 4*m%np)
+      ALLOCATE(grho_p(m%np, dim+1), 4*m%np)
 
       m_p   => m
       pos_p = pos
 
       ! Initial guess.
       call curvlinear_x2chi(m%sb, geo, cv, pos, chi0)
-      delta = m%h(1)
-      alpha = sqrt(M_TWO)*s%sigma*delta
-      alpha_p = alpha
-      beta = M_ONE
-      startval(1:3) = chi0(1:3)
-      startval(4)   = beta
+      delta   = m%h(1)
+      alpha   = sqrt(M_TWO)*s%sigma*delta
+      alpha_p = alpha  ! global copy of alpha
+      beta    = M_ONE
+
+      ! the first dim variables are the position of the delta function
+      startval(1:dim) = chi0(1:dim)
+      
+      ! the dim+1 variable is the normalization of the delta function
+      startval(dim+1) = beta
+
+      ! get a better estimate for beta
       call getrho(startval)
       beta = M_ONE / dmf_integrate(m, rho_p)
-      startval(4)   = beta
+      startval(dim+1) = beta
 
-      call root_solver_init(rs, solver_type = ROOT_NEWTON, maxiter = 500, abs_tolerance = CNST(1.0e-10))
-      call droot_solver_run(rs, func, x, conv, startval = startval)
+      ! solve equation
+      call root_solver_init(rs, solver_type=ROOT_NEWTON, maxiter=500, abs_tolerance=CNST(1.0e-10))
+      call droot_solver_run(rs, func, x, conv, startval=startval)
+
       if(.not.conv) then
         write(message(1),'(a)') 'Internal error in get_specie_density.'
         call write_fatal(1)
       end if
 
+      ! we want a charge of -Z
       rho = - s%z * rho_p
 
       nullify(m_p)
@@ -405,31 +415,33 @@ contains
 
   ! ---------------------------------------------------------
   subroutine func(xin, f, jacobian)
-    FLOAT :: xin(:), f(:), jacobian(:, :)
+    FLOAT :: xin(:), f(:), jacobian(:,:)
 
-    integer :: i, j
     FLOAT, allocatable :: xrho(:)
+    integer :: i, j, dim
+
+    dim = m_p%sb%dim
 
     call getrho(xin)
     ALLOCATE(xrho(m_p%np), m_p%np)
 
     ! First, we calculate the function f.
-    do i = 1, 3
+    do i = 1, dim
       xrho(1:m_p%np) = rho_p(1:m_p%np) * m_p%x(1:m_p%np, i)
       f(i) = dmf_integrate(m_p, xrho) - pos_p(i)
     end do
-    f(4) = dmf_integrate(m_p, rho_p) - M_ONE
+    f(dim+1) = dmf_integrate(m_p, rho_p) - M_ONE
 
     ! Now the jacobian.
-    do i = 1, 3
-      do j = 1, 4
+    do i = 1, dim
+      do j = 1, dim+1
         xrho(1:m_p%np) = grho_p(1:m_p%np, j) * m_p%x(1:m_p%np, i)
         jacobian(i, j) = dmf_integrate(m_p, xrho)
       end do
     end do
-    do j = 1, 4
+    do j = 1, dim+1
       xrho(1:m_p%np) = grho_p(1:m_p%np, j)
-      jacobian(4, j) = dmf_integrate(m_p, xrho)
+      jacobian(dim+1, j) = dmf_integrate(m_p, xrho)
     end do
 
     deallocate(xrho)
@@ -439,9 +451,11 @@ contains
   ! ---------------------------------------------------------
   subroutine getrho(xin)
     FLOAT, intent(in) :: xin(:)
-    integer :: i, j
-    FLOAT :: r, chi(MAX_DIM), x(MAX_DIM)
 
+    integer :: i, j, dim
+    FLOAT   :: r, chi(MAX_DIM), x(MAX_DIM)
+
+    dim = m_p%sb%dim
     rho_p = M_ZERO; x = M_ZERO
     do i = 1, m_p%np
 
@@ -449,21 +463,19 @@ contains
       if(m_p%parallel_in_domains) &
         j  = m_p%vp%local(m_p%vp%xlocal(m_p%vp%partno)+i-1)
 
-      chi(1) = m_p%Lxyz(j, 1) * m_p%h(1) + m_p%sb%box_offset(1) 
-      chi(2) = m_p%Lxyz(j, 2) * m_p%h(2) + m_p%sb%box_offset(2) 
-      chi(3) = m_p%Lxyz(j, 3) * m_p%h(3) + m_p%sb%box_offset(3) 
+      chi(1:dim) = m_p%Lxyz(j, 1:dim) * m_p%h(1:dim) + m_p%sb%box_offset(1:dim) 
 
-      r = sqrt( sum( (chi(1:3)-xin(1:3))**2 ) )
+      r = sqrt( sum( (chi(1:dim) - xin(1:dim))**2 ) )
 
       if( (r/alpha_p)**2 < CNST(10.0)) then
-        grho_p(i, 4) = exp(-(r/alpha_p)**2)
-        rho_p(i) = xin(4) * grho_p(i, 4)
+        grho_p(i, dim+1) = exp(-(r/alpha_p)**2)
+        rho_p(i)         = xin(dim+1) * grho_p(i, dim+1)
       else
-        grho_p(i, 4) = M_ZERO
-        rho_p(i) = M_ZERO
+        grho_p(i, dim+1) = M_ZERO
+        rho_p(i)         = M_ZERO
       end if
 
-      do j = 1, 3
+      do j = 1, dim
         grho_p(i, j) = (M_TWO/alpha_p**2) * (chi(j)-xin(j)) * rho_p(i)
       end do
     end do

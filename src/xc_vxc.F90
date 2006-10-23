@@ -82,7 +82,7 @@ subroutine xc_get_vxc(gr, xcs, rho, ispin, vxc, ex, ec, ip, qtot)
 
       select case(functl(ixc)%family)
       case(XC_FAMILY_LDA)
-        call xc_f90_lda(functl(ixc)%conf, l_dens(1), e, l_dedd(1))
+        call xc_f90_lda_vxc(functl(ixc)%conf, l_dens(1), e, l_dedd(1))
 
       case(XC_FAMILY_GGA)
         if(functl(ixc)%id == XC_GGA_XC_LB) then

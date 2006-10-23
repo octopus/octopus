@@ -245,9 +245,11 @@ contains
     !% LDA: Ortiz & Ballone (PZ-type parametrization)
     !%Option lda_c_pw 12
     !% LDA: Perdew & Wang
-    !%Option lda_c_ob_pw 13
+    !%Option lda_c_pw_mod 13
+    !% LDA: Perdew & Wang (Modified to match the original PBE routine)
+    !%Option lda_c_ob_pw 14
     !% LDA: Ortiz & Ballone (PW-type parametrization)
-    !%Option lda_c_amgb 14
+    !%Option lda_c_amgb 15
     !% LDA: Attacalite et al functional for the 2D electron gas
     !%Option gga_c_pbe 130
     !% GGA: Perdew, Burke & Ernzerhof correlation

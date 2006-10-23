@@ -83,8 +83,9 @@ module lib_xc_m
     XC_LDA_C_PZ_MOD         =  10,  &  ! Perdew & Zunger (Modified)
     XC_LDA_C_OB_PZ          =  11,  &  ! Ortiz & Ballone (PZ)
     XC_LDA_C_PW             =  12,  &  ! Perdew & Wang
-    XC_LDA_C_OB_PW          =  13,  &  ! Ortiz & Ballone (PW)
-    XC_LDA_C_AMGB           =  14      ! Attacalite et al
+    XC_LDA_C_PW_MOD         =  13,  &  ! Perdew & Wang (Modified)
+    XC_LDA_C_OB_PW          =  14,  &  ! Ortiz & Ballone (PW)
+    XC_LDA_C_AMGB           =  15      ! Attacalite et al
 
   ! the GGAs
   integer, public, parameter ::     &

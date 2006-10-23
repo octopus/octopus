@@ -38,6 +38,7 @@ module multigrid_m
     multigrid_t,                &
     multigrid_init,             &
     multigrid_end,              &
+    multigrid_mesh_half,        &
     multigrid_fine2coarse,      &
     multigrid_coarse2fine
 
@@ -136,34 +137,6 @@ contains
     call pop_sub()
 
   contains
-
-    !/*---------------------------------------------------------------------------------
-    ! Creates a mesh that has twice the spacing betwen the points than the in mesh.
-    ! This is used in the multi-grid routines
-    !---------------------------------------------------------------------------------*/
-    subroutine multigrid_mesh_half(geo, cv, mesh_in, mesh_out)
-      type(geometry_t),   intent(in)  :: geo
-      type(curvlinear_t), intent(in)  :: cv
-      type(mesh_t),       intent(in)  :: mesh_in
-      type(mesh_t),       intent(inout) :: mesh_out
-
-      call push_sub('multigrid.multigrid_mesh_half')
-
-      mesh_out%sb             => mesh_in%sb
-      mesh_out%use_curvlinear =  mesh_in%use_curvlinear
-
-      mesh_out%h(:)    = 2*mesh_in%h(:)
-      mesh_out%nr(:,:) = mesh_in%nr(:,:)/2
-      mesh_out%l(:)    = mesh_out%nr(2, :) - mesh_out%nr(1, :) + 1
-
-      mesh_out%enlarge = mesh_in%enlarge
-
-      call mesh_init_stage_2(mesh_out%sb, mesh_out, geo, cv)
-      call mesh_init_stage_3(mesh_out, geo, cv)
-
-      call pop_sub()
-    end subroutine multigrid_mesh_half
-
 
     ! ---------------------------------------------------------
     ! creates the lookup tables to go between the coarse and fine meshes
@@ -283,6 +256,33 @@ contains
     end subroutine get_transfer_tables
 
   end subroutine multigrid_init
+
+  !/*---------------------------------------------------------------------------------
+  ! Creates a mesh that has twice the spacing betwen the points than the in mesh.
+  ! This is used in the multi-grid routines
+  !---------------------------------------------------------------------------------*/
+  subroutine multigrid_mesh_half(geo, cv, mesh_in, mesh_out)
+    type(geometry_t),   intent(in)  :: geo
+    type(curvlinear_t), intent(in)  :: cv
+    type(mesh_t),       intent(in)  :: mesh_in
+    type(mesh_t),       intent(inout) :: mesh_out
+
+    call push_sub('multigrid.multigrid_mesh_half')
+
+    mesh_out%sb             => mesh_in%sb
+    mesh_out%use_curvlinear =  mesh_in%use_curvlinear
+
+    mesh_out%h(:)    = 2*mesh_in%h(:)
+    mesh_out%nr(:,:) = mesh_in%nr(:,:)/2
+    mesh_out%l(:)    = mesh_out%nr(2, :) - mesh_out%nr(1, :) + 1
+
+    mesh_out%enlarge = mesh_in%enlarge
+    
+    call mesh_init_stage_2(mesh_out%sb, mesh_out, geo, cv)
+    call mesh_init_stage_3(mesh_out, geo, cv)
+
+    call pop_sub()
+  end subroutine multigrid_mesh_half
 
 
   ! ---------------------------------------------------------

@@ -39,6 +39,7 @@ module ground_state_m
   use mpi_m
   use mpi_debug_m
   use guess_density_m
+  !use colle_salvetti_m
 
   implicit none
 
@@ -171,6 +172,9 @@ contains
     call scf_init(sys%gr, sys%geo, scfv, sys%st, h)
     call scf_run(scfv, sys%gr, sys%geo, sys%st, sys%ks, h, sys%outp)
     call scf_end(scfv)
+
+    ! colle and salvetti integral
+    !call colle_salvetti_int(sys%gr, sys%st)
 
     ! clean up
     call states_deallocate_wfns(sys%st)

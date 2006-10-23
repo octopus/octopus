@@ -26,7 +26,7 @@ subroutine xc_get_fxc(xcs, m, rho, ispin, fxc)
   integer, intent(in)               :: ispin
   FLOAT,              intent(inout) :: fxc(:,:,:)
 
-  FLOAT, allocatable :: dens(:,:), dedd(:,:,:), l_dens(:), l_dedd(:,:)
+  FLOAT, allocatable :: dens(:,:), dedd(:,:), l_dens(:), l_dedd(:)
 
   integer :: i, ixc, spin_channels
 
@@ -42,7 +42,7 @@ subroutine xc_get_fxc(xcs, m, rho, ispin, fxc)
   if(iand(xcs%family, XC_FAMILY_LDA) == 0) return
 
   ! really start
-  call push_sub('xc_fxc.xc_get_vxc')
+  call push_sub('xc_fxc.xc_get_fxc')
 
   ! This is a bit ugly (why functl(1) and not functl(2)?, but for the moment it works.
   spin_channels = functl(1)%spin_channels
@@ -59,14 +59,14 @@ subroutine xc_get_fxc(xcs, m, rho, ispin, fxc)
 
       select case(functl(ixc)%family)
       case(XC_FAMILY_LDA)
-        call xc_f90_lda_fxc(functl(ixc)%conf, l_dens(1), l_dedd(1,1))
+        call xc_f90_lda_fxc(functl(ixc)%conf, l_dens(1), l_dedd(1))
 
       case default
         cycle
       end select
 
       ! store results
-      dedd(i,:,:) = dedd(i,:,:) + l_dedd(:,:)
+      dedd(i,:) = dedd(i,:) + l_dedd(:)
 
     end do functl_loop
   end do space_loop
@@ -86,14 +86,17 @@ contains
   !   *) allocates dens(ity) and dedd, and their local variants
   !   *) calculates the density taking into account nlcc and non-collinear spin
   subroutine lda_init()
-    integer :: i
+    integer :: is
     FLOAT   :: d(spin_channels)
 
+    is = 1
+    if(ispin == SPIN_POLARIZED) is = 3
+
     ! allocate some general arrays
-    ALLOCATE(  dens(m%np, spin_channels),                m%np*spin_channels)
-    ALLOCATE(  dedd(m%np, spin_channels, spin_channels), m%np*spin_channels*spin_channels)
-    ALLOCATE(l_dens(spin_channels),                           spin_channels)
-    ALLOCATE(l_dedd(spin_channels, spin_channels),            spin_channels*spin_channels)
+    ALLOCATE(  dens(m%np, spin_channels), m%np*spin_channels)
+    ALLOCATE(  dedd(m%np, is), m%np*is)
+    ALLOCATE(l_dens(spin_channels), spin_channels)
+    ALLOCATE(l_dedd(is), is)
     dedd = M_ZERO
 
     ! get the density
@@ -126,7 +129,18 @@ contains
   ! calculates the LDA part of vxc, taking into account non-collinear spin
   subroutine lda_process()
 
-    fxc = fxc + dedd
+    select case(ispin)
+    case(UNPOLARIZED)
+      fxc(:,1,1) = fxc(:,1,1) + dedd(:,1)
+    case(SPIN_POLARIZED)
+      fxc(:,1,1) = fxc(:,1,1) + dedd(:,1)
+      fxc(:,2,2) = fxc(:,1,1) + dedd(:,3)
+      fxc(:,1,2) = fxc(:,1,2) + dedd(:,2)
+      fxc(:,2,1) = fxc(:,2,1) + dedd(:,2)
+    case(SPINORS)
+      message(1) = 'Do not know how to handle spinors'
+      call write_fatal(1)
+    end select
   end subroutine lda_process
 
 end subroutine xc_get_fxc

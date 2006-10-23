@@ -386,8 +386,8 @@ contains
        call xc_f90_gga(x_conf, D(1), GD(1,1), EPSX, DEXDD(1), DEXDGD(1,1))
        call xc_f90_gga(c_conf, D(1), GD(1,1), EPSC, DECDD(1), DECDGD(1,1))
      ELSE
-       call xc_f90_lda(x_conf, D(1), EPSX, DEXDD(1))
-       call xc_f90_lda(c_conf, D(1), EPSC, DECDD(1))
+       call xc_f90_lda_vxc(x_conf, D(1), EPSX, DEXDD(1))
+       call xc_f90_lda_vxc(c_conf, D(1), EPSC, DECDD(1))
      ENDIF
 
 !       Add contributions to exchange-correlation energy and its
