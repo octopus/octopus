@@ -2127,6 +2127,7 @@ contains
     ALLOCATE(rho(NP, st%d%nspin), NP); rho = M_ZERO
     ALLOCATE(kappa(NP, st%d%nspin), NP); kappa = M_ZERO
     call states_calc_dens(st, NP, rho)
+    rho = rho/s
 
     do_is: do is = 1, st%d%nspin
       ALLOCATE(grho(NP, NDIM), NP*NDIM)      ! gradient of the spin density
