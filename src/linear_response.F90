@@ -41,6 +41,44 @@ module linear_response_m
 
   implicit none
 
+  private
+
+  FLOAT, public, parameter :: lr_min_occ=CNST(1e-4) !the minimum value for a state to be considered occupied
+  
+  !solvers ( values must be < 100 )
+  integer, public, parameter :: LR_HX_FIXED = 11
+  integer, public, parameter :: LR_HX = 10
+  integer, public, parameter :: LR_CG = 5
+  integer, public, parameter :: LR_BCG = 2
+  integer, public, parameter :: LR_BICGSTAB = 3
+
+  !preconditioners ( values must be multiples of 100 )
+  integer, public, parameter :: LR_NONE = 0
+  integer, public, parameter :: LR_DIAG = 100
+
+  public :: &
+       lr_t, &
+       lr_init, &
+       lr_copy, & 
+       dlr_alloc_psi, &
+       zlr_alloc_psi, & 
+       dlr_solve_HXeY, & 
+       zlr_solve_HXeY, & 
+       dlr_output, & 
+       zlr_output, & 
+       dlr_orth_vector, & 
+       zlr_orth_vector, & 
+       dlr_build_dl_rho, & 
+       zlr_build_dl_rho, &
+       dlr_orth_response, &
+       zlr_orth_response, &
+       lr_dealloc, &
+       lr_build_fxc, &
+       lr_alloc_fHxc, &
+       dynamic_tol_init, & 
+       dynamic_tol_end, & 
+       dynamic_tol_step
+
   type lr_t
     FLOAT   :: conv_abs_dens  ! convergence required
     FLOAT   :: abs_dens       ! convergence reached
@@ -81,19 +119,6 @@ module linear_response_m
     CMPLX, pointer :: zdl_elf(:,:)    ! normalized elf
     
   end type lr_t
-
-  FLOAT, parameter :: lr_min_occ=CNST(1e-4) !the minimum value for a state to be considered occupied
-
-  !solvers ( values must be < 100 )
-  integer, parameter :: LR_HX_FIXED = 11
-  integer, parameter :: LR_HX = 10
-  integer, parameter :: LR_CG = 5
-  integer, parameter :: LR_BCG = 2
-  integer, parameter :: LR_BICGSTAB = 3
-
-  !preconditioners ( values must be multiples of 100 )
-  integer, parameter :: LR_NONE = 0
-  integer, parameter :: LR_DIAG = 100
 
 contains
 
@@ -493,18 +518,20 @@ contains
 
   end subroutine dynamic_tol_end
 
-  subroutine lr_copy(src, dest)
+  subroutine lr_copy(st, m, src, dest)
+    type(states_t), intent(in) :: st
+    type(mesh_t),   intent(in) :: m
     type(lr_t),     intent(in) :: src
     type(lr_t),     intent(inout) :: dest
 
-    if(associated(src%zdl_rho)) then 
-      dest%zdl_rho = src%zdl_rho
-      dest%zdl_psi = src%zdl_psi
-    end if
-
-    if(associated(src%ddl_rho)) then 
-      dest%ddl_rho = src%ddl_rho
-      dest%ddl_psi = src%ddl_psi
+    if( wfs_are_complex(st)) then 
+      dest%zdl_rho(1:m%np, 1:st%d%nspin) = src%zdl_rho(1:m%np, 1:st%d%nspin)
+      dest%zdl_psi(1:m%np, 1:st%d%dim, 1:st%nst, 1:st%d%nspin) = & 
+           src%zdl_psi(1:m%np, 1:st%d%dim, 1:st%nst, 1:st%d%nspin)
+    else
+      dest%ddl_rho(1:m%np, 1:st%d%nspin) = src%ddl_rho(1:m%np, 1:st%d%nspin)
+      dest%ddl_psi(1:m%np, 1:st%d%dim, 1:st%nst, 1:st%d%nspin) = & 
+           src%ddl_psi(1:m%np, 1:st%d%dim, 1:st%nst, 1:st%d%nspin)
     end if
 
   end subroutine lr_copy

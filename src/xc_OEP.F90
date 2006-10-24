@@ -39,6 +39,7 @@ module xc_OEP_m
   use grid_m
   use mpi_m
   use varinfo_m
+  use datasets_m
 
   implicit none
 

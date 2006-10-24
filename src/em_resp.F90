@@ -1,5 +1,3 @@
-
-
 !! Copyright (C) 2004 Xavier Andrade, Eugene S. Kadantsev (ekadants@mjs1.phy.queensu.ca)
 !!
 !! This program is free software; you can redistribute it and/or modify
@@ -39,13 +37,19 @@ module pol_lr_m
   use lib_oct_parser_m
   use math_m
   use string_m
+  use states_m
+  use grid_m
+  use datasets_m
+  use output_m
+  use xc_m
+  use functions_m
 
   implicit none
 
   private
   public :: &
-    pol_lr_run
-  
+       pol_lr_run
+
   type pol_props_t
     logical :: add_fxc
     logical :: add_hartree
@@ -57,7 +61,7 @@ module pol_lr_m
   type status_t
     logical :: ok
   end type status_t
-  
+
 contains
 
   ! ---------------------------------------------------------
@@ -96,11 +100,10 @@ contains
     props%from_scratch = fromScratch
 
     call parse_input()
-    nfactor = 1
-
-    if(props%calc_hyperpol) nfactor=3
 
     nsigma = 2  ! positive and negative values of the frequency must be considered
+    nfactor = 1
+    if(props%calc_hyperpol) nfactor=3
 
     complex_response = (eta /= M_ZERO ) .or. wfs_are_complex(sys%st)
 
@@ -169,7 +172,7 @@ contains
 
     message(1) = "Info: Calculating polarizabilities."
     call write_info(1)
-    
+
     call pol_output_init()
 
     do iomega = 1, nomega
@@ -182,11 +185,12 @@ contains
                ' and frequency ', freq_factor(ifactor)*omega(iomega)/units_out%energy%factor
           call write_info(1)
 
-          if( ifactor > 1 .and. freq_factor(ifactor) ==  freq_factor(ifactor-1) ) then 
+          if( ifactor > 1 .and. &
+               freq_factor(ifactor)*omega(iomega) ==  freq_factor(ifactor-1)*omega(iomega) ) then 
 
             !if the previous frequency is the same, save work
-            call lr_copy(lr(dir, 1, ifactor-1), lr(dir, 1, ifactor))
-            call lr_copy(lr(dir, 2, ifactor-1), lr(dir, 2, ifactor))
+            call lr_copy(sys%st, sys%gr%m, lr(dir, 1, ifactor-1), lr(dir, 1, ifactor))
+            call lr_copy(sys%st, sys%gr%m, lr(dir, 2, ifactor-1), lr(dir, 2, ifactor))
 
           else
             if (wfs_are_complex(sys%st)) then 
@@ -391,7 +395,7 @@ contains
       else
 
         props%calc_hyperpol = .false.
-        freq_factor(1:MAX_DIM)=M_ONE
+        freq_factor(1:MAX_DIM) = M_ONE
 
       end if
 
@@ -506,14 +510,14 @@ contains
       write(out_file, '(a1, a20)', advance = 'no') '#', str_center("Energy", 20)
       write(out_file, '(a20)', advance = 'no') str_center("(1/3)*Tr[sigma]", 20)
       write(out_file, '(a20)', advance = 'no') str_center("Anisotropy[sigma]", 20)
-      
+
       do i = 1, 3
         do k = 1, 3
           write(header_string,'(a6,i1,a1,i1,a1)') 'sigma(',i,',',k,')'
           write(out_file, '(a20)', advance = 'no') str_center(trim(header_string), 20)
         end do
       end do
-      
+
       write(out_file, *)
       write(out_file, '(a1,a20)', advance = 'no') '#', str_center('['//trim(units_out%energy%abbrev) // ']', 20)
       do i = 1, 11
@@ -557,23 +561,26 @@ contains
 
         call io_close(iunit)
 
-        !CROSS SECTION (THE COMPLEX PART OF POLARIZABILITY)
-        cross(1:MAX_DIM, 1:MAX_DIM) = aimag(alpha(1:MAX_DIM, 1:MAX_DIM, ifactor)) * &
-             omega(iomega)/units_out%energy%factor * M_FOUR * M_PI / P_c 
+        if( wfs_are_complex(sys%st)) then 
 
-        iunit = io_open(trim(dirname)//'/cross_section', action='write')
-        average = M_THIRD* ( cross(1, 1) + cross(2, 2) + cross(3, 3) )
-        crossp(:, :) = matmul(cross(:, :),cross(:, :))
-        anisotropy =  M_THIRD * ( M_THREE * (crossp(1, 1) + crossp(2, 2) + crossp(3, 3)) - &
-             (cross(1, 1) + cross(2, 2) + cross(3, 3))**2 )
+          !CROSS SECTION (THE COMPLEX PART OF POLARIZABILITY)
+          cross(1:MAX_DIM, 1:MAX_DIM) = aimag(alpha(1:MAX_DIM, 1:MAX_DIM, ifactor)) * &
+               omega(iomega)/units_out%energy%factor * M_FOUR * M_PI / P_c 
 
-        call cross_section_header(iunit)
-        write(iunit,'(3e20.8)', advance = 'no') omega(iomega) / units_out%energy%factor, &
-             average , sqrt(max(anisotropy, M_ZERO)) 
-        write(iunit,'(9e20.8)', advance = 'no') cross(1:3, 1:3)
-        write(iunit,'(a)', advance = 'yes')
-        call io_close(iunit)
+          iunit = io_open(trim(dirname)//'/cross_section', action='write')
+          average = M_THIRD* ( cross(1, 1) + cross(2, 2) + cross(3, 3) )
+          crossp(:, :) = matmul(cross(:, :),cross(:, :))
+          anisotropy =  M_THIRD * ( M_THREE * (crossp(1, 1) + crossp(2, 2) + crossp(3, 3)) - &
+               (cross(1, 1) + cross(2, 2) + cross(3, 3))**2 )
 
+          call cross_section_header(iunit)
+          write(iunit,'(3e20.8)', advance = 'no') omega(iomega) / units_out%energy%factor, &
+               average , sqrt(max(anisotropy, M_ZERO)) 
+          write(iunit,'(9e20.8)', advance = 'no') cross(1:3, 1:3)
+          write(iunit,'(a)', advance = 'yes')
+          call io_close(iunit)
+
+        end if
 
         !PROJECTIONS
         do ik = 1, sys%st%d%nspin
@@ -632,6 +639,10 @@ contains
         !WRITE FUNCTIONS
         do dir = 1, NDIM
 
+          write(dirname, '(a, f5.3)') 'linear/freq_', omega(iomega)/units_out%energy%factor
+
+          call io_mkdir(dirname)
+
           if( wfs_are_complex(sys%st) ) then 
 
             if(NDIM==3) then
@@ -639,7 +650,7 @@ contains
                    call zlr_calc_elf(sys%st,sys%gr, lr(dir, 1, ifactor), lr(dir, 2, ifactor))
             end if
             call zlr_output(sys%st, sys%gr, lr(dir, 1, ifactor), dirname, dir, sys%outp)
-            
+
           else
 
             if(NDIM==3) then
@@ -656,28 +667,12 @@ contains
       !HYPERPOLARIZABILITY
       if(props%calc_hyperpol) then
 
-        iunit = io_open('linear/beta', action='write', position='append' )
-        if(status%ok) then           
-          write(iunit, '(7f12.6)') omega(iomega), &
-               real(beta(1,1,1)), aimag(beta(1,1,1)), &
-               real(beta(2,2,2)), aimag(beta(2,2,2)), &
-               real(beta(3,3,3)), aimag(beta(3,3,3))
-        else
-          write(iunit, '(a,f12.6)') '#calculation did not converge for frequency ', omega(iomega)
-        end if
-
-        call io_close(iunit)
-
-        write(dirname, '(a, f5.3)') 'linear/freq_', omega(iomega)/units_out%energy%factor
-
-        call io_mkdir(dirname)
-
         ! Output first hyperpolarizabilty (beta)
         iunit = io_open(trim(dirname)//'/beta', action='write')
 
         write(iunit, '(2a)', advance='no') '#hyperpolarizability tensor [', &
              trim(units_out%length%abbrev)
-        if(NDIM.ne.1) write(iunit, '(a,i1)', advance='no') '^', NDIM+2
+        write(iunit, '(a,i1)', advance='no') '^', 5
         write(iunit, '(a)') ']'
 
         if (sys%st%d%nspin /= UNPOLARIZED ) then 
@@ -696,15 +691,17 @@ contains
         if (NDIM == 3) then 
 
           bpar = M_ZERO
+          bper = M_ZERO
+
           do i = 1, NDIM
             do j = 1, NDIM
-              bpar(i) = bpar(i) + beta(i, j, j) + beta(j, i, j) + beta(j, j, i)
-              bper(i) = bper(i) + M_TWO*beta(i, j, j) - M_THREE*beta(j, i, j) + M_TWO*beta(j, j, i)
+              bpar(i) = bpar(i) + real(beta(i, j, j) + beta(j, i, j) + beta(j, j, i))
+              bper(i) = bper(i) + real(M_TWO*beta(i, j, j) - M_THREE*beta(j, i, j) + M_TWO*beta(j, j, i))
             end do
           end do
 
-          bpar = bpar / (M_FIVE * units_out%length%factor**(NDIM+2))
-          bper = bper / (M_FIVE * units_out%length%factor**(NDIM+2))
+          bpar = bpar / (M_FIVE * units_out%length%factor**(5))
+          bper = bper / (M_FIVE * units_out%length%factor**(5))
 
           write(iunit, '(a, 3f12.6)') 'beta parallel     ', bpar(1:NDIM)
           write(iunit, '(a, 3f12.6)') 'beta perpendicular', bper(1:NDIM)
@@ -732,7 +729,7 @@ contains
     CMPLX, allocatable :: gpsi(:,:), gdl_psi(:,:), gdl_psi_m(:,:)
 
     call push_sub('em_resp.lr_calc_current')
-  
+
     if(.not. associated(lr%dl_j)) ALLOCATE(lr%dl_j(gr%m%np, MAX_DIM, st%d%nspin), gr%m%np*MAX_DIM*st%d%nspin)
 
     np = NP
