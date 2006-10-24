@@ -219,6 +219,8 @@ contains
     logical            :: function_is_complex = .false.
     character(len=512) :: file
 
+    FLOAT, allocatable :: x(:, :, :)
+
     file = io_workpath(filename, is_tmp=is_tmp)
 
     status = nf90_open(trim(file), NF90_WRITE, ncid)
@@ -244,7 +246,7 @@ contains
     end if
 
     if(status == NF90_NOERR) then
-       status = nf90_inquire_dimension (ncid, dim_data_id(1), len = ndim(1))
+       status = nf90_inquire_dimension (ncid, dim_data_id(1), len = ndim(3))
        call ncdf_error('nf90_inquire_dimension', status, file, ierr)
     end if
     if(status == NF90_NOERR) then
@@ -252,7 +254,7 @@ contains
        call ncdf_error('nf90_inquire_dimension', status, file, ierr)
     end if
     if(status == NF90_NOERR) then
-       status = nf90_inquire_dimension (ncid, dim_data_id(3), len = ndim(3))
+       status = nf90_inquire_dimension (ncid, dim_data_id(3), len = ndim(1))
        call ncdf_error('nf90_inquire_dimension', status, file, ierr)
     end if
     if((ndim(1) .ne. c%n(1)) .or. &
@@ -292,23 +294,28 @@ contains
        end select
     end if
 
+    ALLOCATE(x(c%n(3), c%n(2), c%n(1)), c%n(1)*c%n(2)*c%n(3))
 #if defined(R_TCOMPLEX)
     if(status == NF90_NOERR) then
-       status = nf90_get_var (ncid, data_id, re%RS, map = (/c%n(3)*c%n(2), c%n(2), 1 /))
+       status = nf90_get_var (ncid, data_id, x)
+       call transpose3(x, re%RS)
        call ncdf_error('nf90_get_var', status, file, ierr)
     end if
     if(file_kind<0) then
        if(status == NF90_NOERR) then
-          status = nf90_get_var (ncid, data_im_id, im%RS, map = (/c%n(3)*c%n(2), c%n(2), 1 /))
-          call ncdf_error('nf90_get_var', status, file, ierr)
+         status = nf90_get_var (ncid, data_id, x)
+         call transpose3(x, im%RS)
+         call ncdf_error('nf90_get_var', status, file, ierr)
        end if
     end if
 #else
     if(status == NF90_NOERR) then
-       status = nf90_get_var (ncid, data_id, c%RS, map = (/c%n(3)*c%n(2), c%n(2), 1 /))
+       status = nf90_get_var (ncid, data_id, x)
+       call transpose3(x, c%RS)
        call ncdf_error('nf90_get_var', status, file, ierr)
     end if
 #endif
+    deallocate(x)
 
     status = nf90_close(ncid)
   end subroutine dx_cdf
@@ -668,6 +675,7 @@ contains
     integer :: ncid, status, data_id, data_im_id, pos_id, dim_data_id(3), dim_pos_id(2)
     real(r4) :: pos(2, 3)
     type(X(cf_t)) :: c
+    FLOAT, allocatable :: x(:, :, :)
 
     ierr = 0
 
@@ -686,7 +694,7 @@ contains
 
     ! dimensions
     if(status == NF90_NOERR) then
-      status = nf90_def_dim (ncid, "dim_1", c%n(1), dim_data_id(1))
+      status = nf90_def_dim (ncid, "dim_1", c%n(3), dim_data_id(1))
       call ncdf_error('nf90_def_dim', status, filename, ierr)
     end if
 
@@ -696,7 +704,7 @@ contains
     end if
 
     if(status == NF90_NOERR) then
-      status = nf90_def_dim (ncid, "dim_3", c%n(3), dim_data_id(3))
+      status = nf90_def_dim (ncid, "dim_3", c%n(1), dim_data_id(3))
       call ncdf_error('nf90_der_dim', status, filename, ierr)
     end if
 
@@ -772,26 +780,30 @@ contains
       call ncdf_error('nf90_put_var', status, filename, ierr)
     end if
 
+    ALLOCATE(x(c%n(3), c%n(2), c%n(1)), c%n(1)*c%n(2)*c%n(3))
 #if defined(R_TCOMPLEX)
     if(status == NF90_NOERR) then
-      status = nf90_put_var (ncid, data_id, real(c%RS, PRECISION), map = (/c%n(2)*c%n(1), c%n(1), 1 /))
+      call transpose3(real(c%RS, PRECISION), x)
+      status = nf90_put_var (ncid, data_id, x)
       call ncdf_error('nf90_put_var', status, filename, ierr)
     end if
     if(status == NF90_NOERR) then
-      status = nf90_put_var (ncid, data_im_id, aimag(c%RS), map = (/c%n(2)*c%n(1), c%n(1), 1 /))
+      call transpose3(aimag(c%RS), x)
+      status = nf90_put_var (ncid, data_id, x)
       call ncdf_error('nf90_put_var', status, filename, ierr)
     end if
 #else
     if(status == NF90_NOERR) then
-      status = nf90_put_var (ncid, data_id, c%RS, map = (/c%n(2)*c%n(1), c%n(1), 1 /))
+      call transpose3(c%RS, x)
+      status = nf90_put_var (ncid, data_id, x)
       call ncdf_error('nf90_put_var', status, filename, ierr)
     end if
 #endif
+    deallocate(x)
 
     ! close
     status = nf90_close(ncid)
     call X(cf_free) (c)
-
   end subroutine dx_cdf
 
 #endif

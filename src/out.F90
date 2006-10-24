@@ -316,6 +316,20 @@ contains
   end subroutine ncdf_error
 #endif
 
+  subroutine transpose3(in, out)
+    FLOAT, intent(in)  :: in(:, :, :)
+    FLOAT, intent(out) :: out(:, :, :)
+    integer :: ix, iy, iz
+    do ix = 1, size(in, 1)
+      do iy = 1, size(in, 2)
+        do iz = 1, size(in, 3)
+          out(iz, iy, ix) = in(ix, iy, iz)
+        end do
+      end do
+    end do
+  end subroutine transpose3
+
+
 #include "undef.F90"
 #include "real.F90"
 #include "out_inc.F90"
