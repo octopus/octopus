@@ -714,17 +714,18 @@ contains
           if(s%nlcc) then
             st%rho_core(i) = st%rho_core(i) + specie_get_nlcc(s, x)
           end if
+        end do
 
-          ! add extra td potential specified in the input file (default is '0')
-          if(time_ > M_ZERO) then
+        if(time_ > M_ZERO .and. (ep%extra_td_pot .ne. '0') ) then
+          do i = 1, m%np
+            x(:) = m%x(i, :) - a%x(:)
             xx(:) = x(:)/units_inp%length%factor   ! convert from a.u. to input units
             r = sqrt(sum(x(:)**2))/units_inp%length%factor
             call loct_parse_expression(pot_re, pot_im, xx(1), xx(2), xx(3), &
               r, time_, ep%extra_td_pot)
             ep%vpsl(i) = ep%vpsl(i) + pot_re * units_inp%energy%factor  ! convert from input units to a.u.
-          end if
-
-        end do
+          end do
+        end if
 
         if(s%has_density) then 
           ALLOCATE(rho(1:m%np),m%np)

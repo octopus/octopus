@@ -309,9 +309,11 @@ void FC_FUNC_(oct_parse_expression, OCT_PARSE_EXPRESSION)
   rmsym("z");
   rmsym("r");
   rmsym("t");
-  
+
   *re = GSL_REAL(c.value.c);
   *im = GSL_IMAG(c.value.c);
+
+  free(s_c);
 }
 
 /* --------------------------------------------------------- */
@@ -336,4 +338,6 @@ void FC_FUNC_(oct_parse_expression1, OCT_PARSE_EXPRESSION1)
 
   *re = GSL_REAL(c.value.c);
   *im = GSL_IMAG(c.value.c);
+
+  free(s_c); free(var_c);
 }
