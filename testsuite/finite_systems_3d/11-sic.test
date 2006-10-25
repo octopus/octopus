@@ -15,7 +15,7 @@ Enabled  : Yes
 # correction (SIC), treating this latter term with the Krieger-Li-Iafrate
 # approximation (KLI) to the optimized effective potential method (OEP).
 # This is the functional used in:
-# [X.-M. Tong and S.-I Chu, Phys. Rev. B 55, 3406 (1997)],
+# [X.-M. Tong and S.-I Chu, Phys. Rev. A 55, 3406 (1997)],
 # to the best of my knowledge for the first time.
 #
 # The calculation reproduces the result given for Ar in Table IV of this paper.
