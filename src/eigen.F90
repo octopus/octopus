@@ -70,6 +70,9 @@ module eigen_solver_m
     FLOAT, pointer :: diff(:, :)
     integer           :: matvec
     integer           :: converged
+
+    ! stores information about the preconditioning
+    type(preconditioner_t) :: pre
   end type eigen_solver_t
 
 
@@ -97,9 +100,7 @@ module eigen_solver_m
 
   type(hamiltonian_t), pointer :: h_
   type(grid_t),        pointer :: gr_
-  integer                         :: ik_
-
-  type(preconditioner_smoothing_t) :: filter
+  integer                      :: ik_
 
 contains
 
@@ -234,8 +235,8 @@ contains
     call loct_parse_logical(check_inp('EigenSolverSubspaceDiag'), .true., eigens%do_subspace_diag)
     
     select case(eigens%es_type)
-    case(RS_PLAN)
-      call init_preconditioner(filter, gr)
+    case(RS_PLAN, RS_CG)
+      call preconditioner_init(eigens%pre, gr)
     end select
 
     nullify(eigens%diff)
@@ -254,8 +255,8 @@ contains
     type(eigen_solver_t), intent(inout) :: eigens
 
     select case(eigens%es_type)
-    case(RS_PLAN)
-      call end_preconditioner(filter)
+    case(RS_PLAN,RS_CG)
+      call preconditioner_end(eigens%pre)
     end select
 
     deallocate(eigens%diff)
@@ -300,7 +301,7 @@ contains
         call deigen_solver_cg2_new(gr, st, h, tol, maxiter, &
              eigens%converged, eigens%diff, verbose = verbose_)
       case(RS_CG)
-        call deigen_solver_cg2(gr, st, h, tol, maxiter, &
+        call deigen_solver_cg2(gr, st, h, eigens%pre, tol, maxiter, &
              eigens%converged, eigens%diff, verbose = verbose_)
 #ifdef HAVE_TRLAN
       case(RS_LANCZOS)
@@ -308,7 +309,7 @@ contains
              eigens%converged, eigens%diff)
 #endif
       case(RS_PLAN)
-        call deigen_solver_plan(gr, st, h, tol, maxiter, eigens%converged, eigens%diff)
+        call deigen_solver_plan(gr, st, h, eigens%pre, tol, maxiter, eigens%converged, eigens%diff)
 #if defined(HAVE_ARPACK)
       case(ARPACK)
         call deigen_solver_arpack(gr, st, h, tol, maxiter, eigens%arnoldi_vectors, &
@@ -326,10 +327,10 @@ contains
         call zeigen_solver_cg2_new(gr, st, h, tol, maxiter, &
              eigens%converged, eigens%diff, verbose = verbose_)
       case(RS_CG)
-        call zeigen_solver_cg2(gr, st, h, tol, maxiter, &
+        call zeigen_solver_cg2(gr, st, h, eigens%pre, tol, maxiter, &
              eigens%converged, eigens%diff, verbose = verbose_)
       case(RS_PLAN)
-        call zeigen_solver_plan(gr, st, h, tol, maxiter, eigens%converged, eigens%diff)
+        call zeigen_solver_plan(gr, st, h, eigens%pre, tol, maxiter, eigens%converged, eigens%diff)
       case(EVOLUTION)
         call zeigen_solver_evolution(gr, st, h, tol, maxiter, eigens%converged, eigens%diff, &
              tau = eigens%imag_time)

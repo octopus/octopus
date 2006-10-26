@@ -28,10 +28,11 @@
 !! We also implement the "smoothing" preconditioning described in that paper.
 
 
-subroutine X(eigen_solver_plan) (gr, st, hamilt, tol, niter, converged, diff)
+subroutine X(eigen_solver_plan) (gr, st, hamilt, pre, tol, niter, converged, diff)
   type(grid_t),        target, intent(inout) :: gr
   type(states_t),      target, intent(inout) :: st
   type(hamiltonian_t), target, intent(inout) :: hamilt
+  type(preconditioner_t),      intent(in)    :: pre
   FLOAT,                       intent(in)    :: tol
   integer,                     intent(inout) :: niter
   integer,                     intent(out)   :: converged
@@ -267,7 +268,7 @@ subroutine X(eigen_solver_plan) (gr, st, hamilt, tol, niter, converged, diff)
         ! Preconditioning
         do idim = 1, dim
           call lalg_copy(NP_PART, av(:, idim, d1 + 1), aux(:, idim))
-          call X(apply_preconditioner)(filter, aux(:, idim), v(:, idim, d1+1))
+          call X(preconditioner_apply)(pre, aux(:, idim), v(:, idim, d1+1))
         end do
 
       end do inner_loop

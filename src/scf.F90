@@ -613,7 +613,7 @@ contains
       if(st%d%nspin == 2) ns = 2
 
       if(mpi_grp_is_root(mpi_world)) then
-        write(iunit,'(a)') 'Angular Momentum of the KS states [adimensional]:'
+        write(iunit,'(a)') 'Angular Momentum of the KS states [dimensionless]:'
         if (st%d%nik > ns) then
           message(1) = 'Kpoints [' // trim(units_out%length%abbrev) // '^-1]'
           call write_info(1, iunit)
@@ -688,7 +688,7 @@ contains
 
       end do
 
-      write(message(1),'(a)') 'Total Angular Momentum L [adimensional]'
+      write(message(1),'(a)') 'Total Angular Momentum L [dimensionless]'
       write(message(2),'(10x,4f12.6)') angular(1:3), lsquare
       call write_info(2, iunit)
 

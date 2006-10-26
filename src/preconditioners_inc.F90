@@ -19,27 +19,16 @@
 !! $Id$
 
 ! --------------------------------------------------------- 
-subroutine X(apply_precond_smoothing)(this, a, b)
-  type(preconditioner_smoothing_t), intent(inout) :: this
-  R_TYPE, intent(inout) :: a(:)
-  R_TYPE, intent(inout) :: b(:)
+subroutine X(preconditioner_apply)(this, a, b)
+  type(preconditioner_t), intent(in)    :: this
+  R_TYPE,                 intent(inout) :: a(:)
+  R_TYPE,                 intent(out)   :: b(:)
   
-  call X(nl_operator_operate) (this%op, a(:), b(:))
+  select case(this%which)
+  case(PRECONDITIONER_NONE)
+    b(:) = a(:)
+  case(PRECONDITIONER_SMOOTHING)
+    call X(nl_operator_operate) (this%op, a(:), b(:))
+  end select
   
-end subroutine X(apply_precond_smoothing)
-
-
-! --------------------------------------------------------- 
-subroutine X(apply_precond_smoothing_wfs)(this, a, b, n)
-  type(preconditioner_smoothing_t), intent(inout) :: this
-  R_TYPE, intent(inout) :: a(:,:)
-  R_TYPE, intent(inout) :: b(:,:)
-  integer, intent(in)   :: n
-
-  integer :: i
-
-  do i=1, n
-    call X(nl_operator_operate) (this%op, a(:,i), b(:,i))
-  end  do
-  
-end subroutine X(apply_precond_smoothing_wfs)
+end subroutine X(preconditioner_apply)

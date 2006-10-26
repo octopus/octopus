@@ -57,6 +57,7 @@ EigenSolverInitTolerance = 1e-2
 EigenSolverFinalTolerance = 1e-5
 EigenSolverFinalToleranceIteration = 6
 EigenSolverMaxIter = 25
+Preconditioner = no
 
 TypeOfMixing = broyden
 What2Mix = potential

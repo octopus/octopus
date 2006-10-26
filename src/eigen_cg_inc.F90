@@ -20,10 +20,11 @@
 
 ! ---------------------------------------------------------
 ! conjugate-gradients method.
-subroutine X(eigen_solver_cg2) (gr, st, h, tol, niter, converged, diff, reorder, verbose)
+subroutine X(eigen_solver_cg2) (gr, st, h, pre, tol, niter, converged, diff, reorder, verbose)
   type(grid_t),        intent(inout) :: gr
   type(states_t),      intent(inout) :: st
   type(hamiltonian_t), intent(inout) :: h
+  type(preconditioner_t), intent(in) :: pre
   FLOAT,               intent(in)    :: tol
   integer,             intent(inout) :: niter
   integer,             intent(inout) :: converged
@@ -36,7 +37,7 @@ subroutine X(eigen_solver_cg2) (gr, st, h, tol, niter, converged, diff, reorder,
 
   R_TYPE :: es(2), a0, b0, gg, gg0, gg1, gamma, theta, norma
   FLOAT :: cg0, e0, res
-  integer  :: ik, moved, p, j, iter, maxter, conv, conv_
+  integer  :: idim, ik, moved, p, j, iter, maxter, conv, conv_
   logical  :: reord = .true., verbose_
 
   call push_sub('eigen_cg.eigen_solver_cg2')
@@ -92,11 +93,11 @@ subroutine X(eigen_solver_cg2) (gr, st, h, tol, niter, converged, diff, reorder,
       ! Starts iteration for this band
       iter_loop: do iter = 1, maxter
 
-        ! if approximate inverse preconditioner....
-        !call pre(hpsi%val   , g%val   )
-        !call pre(psi(m)%val , ppsi%val)
-        g(1:NP, 1:st%d%dim) = h_psi(1:NP, 1:st%d%dim)
-        ppsi(1:NP, 1:st%d%dim) = st%X(psi)(1:NP, 1:st%d%dim, p, ik)
+        ! inverse preconditioner....
+        do idim = 1, st%d%dim
+          call  X(preconditioner_apply)(pre, h_psi(:,idim), g(:,idim))
+          call  X(preconditioner_apply)(pre, st%X(psi)(1:NP, idim, p, ik), ppsi(:,idim))
+        end do
 
         es(1) = X(states_dotp) (gr%m, st%d%dim, st%X(psi)(:,:, p, ik), g)
         es(2) = X(states_dotp) (gr%m, st%d%dim, st%X(psi)(:,:, p, ik), ppsi)
@@ -110,8 +111,9 @@ subroutine X(eigen_solver_cg2) (gr, st, h, tol, niter, converged, diff, reorder,
         if(iter .ne. 1) gg1 = X(states_dotp) (gr%m, st%d%dim, g, g0)
 
         ! Approximate inverse preconditioner...
-        !call ipre(g, g0)
-        g0(1:NP, 1:st%d%dim) = g(1:NP, 1:st%d%dim)
+        do idim = 1, st%d%dim
+          call  X(preconditioner_apply)(pre, g(:,idim), g0(:,idim))
+        end do
 
         gg = X(states_dotp) (gr%m, st%d%dim, g, g0)
         if( abs(gg) < CNST(1.0e-15) ) then
