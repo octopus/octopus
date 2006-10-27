@@ -303,7 +303,7 @@ contains
     end if
     if(file_kind<0) then
        if(status == NF90_NOERR) then
-         status = nf90_get_var (ncid, data_id, x)
+         status = nf90_get_var (ncid, data_im_id, x)
          call transpose3(x, im%RS)
          call ncdf_error('nf90_get_var', status, file, ierr)
        end if
@@ -789,7 +789,7 @@ contains
     end if
     if(status == NF90_NOERR) then
       call transpose3(aimag(c%RS), x)
-      status = nf90_put_var (ncid, data_id, x)
+      status = nf90_put_var (ncid, data_im_id, x)
       call ncdf_error('nf90_put_var', status, filename, ierr)
     end if
 #else
