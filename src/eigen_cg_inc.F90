@@ -96,7 +96,7 @@ subroutine X(eigen_solver_cg2) (gr, st, h, pre, tol, niter, converged, diff, reo
         ! inverse preconditioner....
         do idim = 1, st%d%dim
           call  X(preconditioner_apply)(pre, h_psi(:,idim), g(:,idim))
-          call  X(preconditioner_apply)(pre, st%X(psi)(1:NP, idim, p, ik), ppsi(:,idim))
+          call  X(preconditioner_apply)(pre, st%X(psi)(:, idim, p, ik), ppsi(:,idim))
         end do
 
         es(1) = X(states_dotp) (gr%m, st%d%dim, st%X(psi)(:,:, p, ik), g)
