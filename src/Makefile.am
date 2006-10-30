@@ -240,7 +240,7 @@ tm.o: global.h
 units.o: global.h
 unocc.o: global.h unocc_inc.F90
 v_ks.o: global.h
-xc.o: global.h xc_vxc.F90 xc_axc.F90 xc_fxc.F90
+xc.o: global.h xc_vxc.F90 xc_axc.F90 xc_fxc.F90 xc_kxc.F90
 xc_functl.o: global.h
 xc_OEP.o: global.h xc_KLI_inc.F90 xc_OEP_x_inc.F90 xc_OEP_SIC_inc.F90 xc_OEP_inc.F90
 xyz_adjust.o: global.h

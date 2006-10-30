@@ -85,6 +85,7 @@ subroutine X(lr_calc_beta) (sys, lr, props, beta)
 
   !calculate kxc, the derivative of fxc
   ALLOCATE(kxc(1:np, 1:sys%st%d%nspin, 1:sys%st%d%nspin, 1:sys%st%d%nspin), np*sys%st%d%nspin**3)
+  kxc(:,:,:,:) = M_ZERO
   call xc_get_kxc(sys%ks%xc, sys%gr%m, sys%st%rho, sys%st%d%ispin, kxc)
 
 
