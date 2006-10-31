@@ -961,6 +961,7 @@ contains
         end do
       end if
 
+      deallocate(grad_so)
       call pop_sub()
     end subroutine build_nl_part
 
