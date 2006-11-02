@@ -1,0 +1,255 @@
+!! Copyright (C) 2002-2006 M. Marques, A. Castro, A. Rubio, G. Bertsch
+!!
+!! This program is free software; you can redistribute it and/or modify
+!! it under the terms of the GNU General Public License as published by
+!! the Free Software Foundation; either version 2, or (at your option)
+!! any later version.
+!!
+!! This program is distributed in the hope that it will be useful,
+!! but WITHOUT ANY WARRANTY; without even the implied warranty of
+!! MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+!! GNU General Public License for more details.
+!!
+!! You should have received a copy of the GNU General Public License
+!! along with this program; if not, write to the Free Software
+!! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
+!! 02111-1307, USA.
+!!
+!! -*- coding: utf-8 mode: f90 -*-
+!! $Id: states_inc.F90 2361 2006-08-12 20:24:24Z appel $
+
+
+! -------------------------------------------------------------
+! Returns the dot product of two many-body states; the first
+! one is an "excited_state".
+!
+! WARNING!!!!: periodic systems are not considered in these expressions.
+! -------------------------------------------------------------
+R_TYPE function X(states_mpdotp_x)(m, excited_state, st, mat) result(dotp)
+  type(mesh_t),           intent(in) :: m
+  type(excited_states_t), intent(in) :: excited_state
+  type(states_t),         intent(in) :: st
+  R_TYPE,       optional, intent(in) :: mat(:, :, :)
+
+  integer :: i, a, sigma, j, ik
+  R_TYPE, allocatable :: mat_local(:, :, :), row(:)
+
+  call push_sub('states_inc.Xstates_mpdotp_x')
+
+  dotp = M_ZERO
+
+  ASSERT(excited_state%st%d%nik.eq.st%d%nik)
+
+  ALLOCATE(mat_local(excited_state%st%nst, st%nst, st%d%nik), st%nst*excited_state%st%nst*st%d%nik)
+  ALLOCATE(row(st%nst), st%nst)
+
+  if(present(mat)) then
+    do ik = 1, st%d%nik
+      mat_local = mat
+    end do
+  else 
+    do ik = 1, st%d%nik
+      call X(calculate_matrix) (m, ik, excited_state%st, st, mat_local(:, :, ik))
+    end do
+  end if
+
+  do j = 1, excited_state%n_pairs
+    i     = excited_state%pair(j)%i
+    a     = excited_state%pair(j)%a
+    sigma = excited_state%pair(j)%sigma
+    row(:) = mat_local(i, :, sigma)
+    mat_local(i, :, sigma) = mat_local(a, :, sigma)
+    dotp = dotp + excited_state%weight(j) * X(states_mpdotp_g)(m, excited_state%st, st, mat_local) 
+    mat_local(i, :, sigma) = row(:)
+  end do
+
+  deallocate(mat_local, row)
+  call pop_sub()
+end function X(states_mpdotp_x)
+
+
+! -------------------------------------------------------------
+! Returns the dot product of two many-body states st1 and st2.
+! Warning: it does not permit fractional occupation numbers.
+! -------------------------------------------------------------
+R_TYPE function X(states_mpdotp_g)(m, st1, st2, mat) result(dotp)
+  type(mesh_t),     intent(in) :: m
+  type(states_t),   intent(in) :: st1, st2
+  R_TYPE, optional, intent(in) :: mat(:, :, :)
+
+  integer :: ik, ispin, nik, nst, i1, j1, i2, j2, k1, k2, i, j
+  integer, allocatable :: filled1(:), filled2(:), partially_filled1(:), partially_filled2(:), &
+                          half_filled1(:), half_filled2(:)
+  R_TYPE, allocatable :: a(:, :), b(:, :)
+  call push_sub('states_inc.Xstates_mpdotp')
+
+  ispin = st1%d%ispin
+  ASSERT(ispin.eq.st2%d%ispin)
+  nik   = st1%d%nik
+  ASSERT(nik.eq.st2%d%nik)
+  ! Can only consider the number of states of the state that comes with less states.
+  nst = min(st1%nst, st2%nst)
+
+  ALLOCATE(a(st1%nst, st2%nst), st1%nst*st2%nst)
+  dotp = M_ONE
+
+  ALLOCATE(filled1(nst), nst)
+  ALLOCATE(filled2(nst), nst)
+  ALLOCATE(partially_filled1(nst), nst)
+  ALLOCATE(partially_filled2(nst), nst)
+  ALLOCATE(half_filled1(nst), nst)
+  ALLOCATE(half_filled2(nst), nst)
+
+  select case(ispin)
+  case(UNPOLARIZED)
+    do ik = 1, nik
+      if(present(mat)) then
+        a(1:st1%nst, 1:st2%nst) = mat(1:st1%nst, 1:st2%nst, ik)
+      else
+        call X(calculate_matrix) (m, ik, st1, st2, a)
+      end if
+
+      call occupied_states(st1, ik, i1, j1, k1, filled1, partially_filled1, half_filled1)
+      call occupied_states(st2, ik, i2, j2, k2, filled2, partially_filled2, half_filled2)
+      if( (j1 > 0) .or. (j2 > 0) ) then
+        message(1) = 'Cannot calcualte many-body dot products with partially occupied orbitals'
+        call write_fatal(1)
+      end if
+      if(  (i1 .ne. i2)  .or.  (k1 .ne. k2) ) then
+        message(1) = 'Internal Error: different number of occupied states in states_mpdotp'
+        call write_fatal(1)
+      end if
+
+      ALLOCATE(b(i1+k1, i1+k1), (i1+k1)*(i1+k1))
+      do i = 1, i1
+        do j = 1, i1
+          b(i, j) = a(filled1(i), filled2(j))
+        end do
+        do j = i1 + 1, i1 + k1
+          b(i, j) = a(filled1(i), half_filled2(j))
+        end do
+      end do
+      do i = i1 + 1, i1 + k1
+        do j = 1, i1
+          b(i, j) = a(half_filled1(i), filled2(j))
+        end do
+        do j = i1 + 1, i1 + k1
+          b(i, j) = a(half_filled1(i), half_filled2(j))
+        end do
+      end do
+
+      dotp = dotp * (lalg_determinant(i1+k1, b, invert = .false.)) ** st1%d%kweights(ik)
+      if(i1 > 0) then
+        dotp = dotp * (lalg_determinant(i1, b(1:i1, 1:i1), invert = .false.)) ** st1%d%kweights(ik)
+      end if
+
+    end do
+  case(SPIN_POLARIZED, SPINORS)
+    do ik = 1, nik
+
+      if(present(mat)) then
+        a(1:st1%nst, 1:st2%nst) = mat(1:st1%nst, 1:st2%nst, ik)
+      else
+        call X(calculate_matrix) (m, ik, st1, st2, a)
+      end if
+
+      call occupied_states(st1, ik, i1, j1, k1, filled1, partially_filled1, half_filled1)
+      call occupied_states(st2, ik, i2, j2, k2, filled2, partially_filled2, half_filled2)
+      if( (j1 > 0) .or. (j2 > 0) ) then
+        message(1) = 'Cannot calcualte many-body dot products with partially occupied orbitals'
+        call write_fatal(1)
+      end if
+      if(i1 .ne. i2) then
+        message(1) = 'Internal Error: different number of occupied states in states_mpdotp'
+        call write_fatal(1)
+      end if
+
+      if(i1 > 0) then
+        ALLOCATE(b(i1, i1), i1*i1)
+        do i = 1, i1
+          do j = 1, i1
+            b(i, j) = a(filled1(i), filled2(j))
+          end do
+        end do
+
+        dotp = dotp * lalg_determinant(i1, b, invert = .false.) ** st1%d%kweights(ik)
+        deallocate(b)
+      end if
+
+    end do
+  end select
+
+  deallocate(a)
+  call pop_sub()
+end function X(states_mpdotp_g)
+
+
+! ---------------------------------------------------------
+subroutine X(calculate_matrix)(m, ik, st1, st2, a)
+  type(mesh_t),   intent(in)  :: m
+  integer,        intent(in)  :: ik
+  type(states_t), intent(in)  :: st1, st2
+  R_TYPE,         intent(out) :: a(:, :)
+
+  integer :: i, j, dim, n1, n2
+#if defined(HAVE_MPI)
+  R_TYPE, allocatable :: phi2(:, :)
+  integer :: k, l
+  integer :: status(MPI_STATUS_SIZE)
+  integer :: request
+#endif
+
+  call push_sub('states_inc.calculate_matrix')
+
+  n1 = st1%nst
+  n2 = st2%nst
+
+  dim = st1%d%dim
+#if defined(HAVE_MPI)
+  call MPI_Barrier(st1%mpi_grp%comm, mpi_err)
+  ! Each process sends the states in st2 to the rest of the processes.
+  do i = st1%st_start, st1%st_end
+    do j = 0, st1%mpi_grp%size - 1
+      if(st1%mpi_grp%rank.ne.j) then
+        call MPI_Isend(st2%X(psi)(1, 1, i, ik), st1%d%dim*m%np, R_MPITYPE, &
+          j, i, st1%mpi_grp%comm, request, mpi_err)
+      end if
+    end do
+  end do
+
+  ! Processes are received, and then the matrix elements are calculated.
+  ALLOCATE(phi2(m%np, st1%d%dim), m%np*st1%d%dim)
+  do j = 1, n2
+    l = st1%node(j)
+    if(l.ne.st1%mpi_grp%rank) then
+      call MPI_Irecv(phi2(1, 1), st1%d%dim*m%np, R_MPITYPE, l, j, st1%mpi_grp%comm, request, mpi_err)
+      call MPI_Wait(request, status, mpi_err)
+    else
+      phi2(:, :) = st2%X(psi)(:, :, j, ik)
+    end if
+    do i = st1%st_start, st1%st_end
+      a(i, j) = X(states_dotp)(m, dim, st1%X(psi)(:, :, i, ik), phi2(:, :))
+    end do
+  end do
+  deallocate(phi2)
+
+  ! Each process holds some lines of the matrix. So it is broadcasted (All processes
+  ! should get the whole matrix)
+  call MPI_Barrier(st1%mpi_grp%comm, mpi_err)
+  do i = 1, n1
+    k = st1%node(i)
+    do j = 1, n2
+      call MPI_Bcast(a(i, j), 1, R_MPITYPE, k, st1%mpi_grp%comm, mpi_err)
+    end do
+  end do
+#else
+  do i = 1, n1
+    do j = 1, n2
+      a(i, j) = X(states_dotp)(m, dim, st1%X(psi)(:, :, i, ik), &
+        st2%X(psi)(:, :, j, ik))
+    end do
+  end do
+#endif
+
+  call pop_sub()
+end subroutine X(calculate_matrix)
