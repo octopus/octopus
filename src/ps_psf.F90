@@ -20,39 +20,39 @@
 
 #include "global.h"
 
-module ps_tm_m
+module ps_psf_m
   use global_m
   use messages_m
   use atomic_m
   use io_m
   use logrid_m
   use ps_in_grid_m
-  use ps_tm_file_m
+  use ps_psf_file_m
 
   implicit none
 
   private
   public ::     &
-    ps_tm_t,       &
-    ps_tm_init,    &
-    ps_tm_end,     &
-    ps_tm_process
+    ps_psf_t,       &
+    ps_psf_init,    &
+    ps_psf_end,     &
+    ps_psf_process
 
-  type ps_tm_t
+  type ps_psf_t
 
-    type(ps_tm_file_t) :: tm_file
+    type(ps_psf_file_t) :: psf_file
     type(ps_in_grid_t) :: ps_grid
 
     type(valconf_t)    :: conf
     FLOAT, pointer     :: eigen(:, :)
     integer            :: ispin
-  end type ps_tm_t
+  end type ps_psf_t
 
 contains
 
   ! ---------------------------------------------------------
-  subroutine ps_tm_init(pstm, filename, ispin)
-    type(ps_tm_t),    intent(inout) :: pstm
+  subroutine ps_psf_init(pstm, filename, ispin)
+    type(ps_psf_t),   intent(inout) :: pstm
     character(len=*), intent(in)    :: filename
     integer,          intent(in)    :: ispin
 
@@ -61,7 +61,7 @@ contains
     logical :: found
     FLOAT :: x
 
-    call push_sub('ps_tm.ps_tm_init')
+    call push_sub('ps_psf.ps_psf_init')
 
     ! Sets the spin components
     pstm%ispin = ispin
@@ -75,16 +75,16 @@ contains
       call write_info(2)
 
       iunit = io_open(filename2, action='read', form='unformatted', status='old')
-      call ps_tm_file_read(iunit, .false., pstm%tm_file)
+      call ps_psf_file_read(iunit, .false., pstm%psf_file)
       call io_close(iunit)
     else
-      filename2 = trim(filename) // '.ascii'
+      filename2 = trim(filename) // '.psf'
       inquire(file=filename2, exist=found)
       if(.not.found) then
-        filename2 = trim(conf%share) // "/PP/TM2/" // trim(filename) // ".ascii"
+        filename2 = trim(conf%share) // "/PP/PSF/" // trim(filename) // ".psf"
         inquire(file=filename2, exist=found)
         if(.not.found) then
-          message(1) = "Pseudopotential file '" // trim(filename) // "{.vps|.ascii}' not found"
+          message(1) = "Pseudopotential file '" // trim(filename) // "{.vps|.psf}' not found"
           call write_fatal(1)
         end if
       end if
@@ -93,59 +93,59 @@ contains
       call write_info(2)
 
       iunit = io_open(filename2, action='read', form='formatted', status='old')
-      call ps_tm_file_read(iunit, .true., pstm%tm_file)
+      call ps_psf_file_read(iunit, .true., pstm%psf_file)
       call io_close(iunit)
     end if
 
     ! Fills the valence configuration data.
-    call build_valconf(pstm%tm_file, ispin, pstm%conf)
+    call build_valconf(pstm%psf_file, ispin, pstm%conf)
 
     ! Hack
-    if(mod(pstm%tm_file%nr, 2) == 0) pstm%tm_file%nr = pstm%tm_file%nr - 1
+    if(mod(pstm%psf_file%nr, 2) == 0) pstm%psf_file%nr = pstm%psf_file%nr - 1
 
-    call file_to_grid(pstm%tm_file, pstm%ps_grid)
+    call file_to_grid(pstm%psf_file, pstm%ps_grid)
 
     call pop_sub()
-  end subroutine ps_tm_init
+  end subroutine ps_psf_init
 
   
   ! ---------------------------------------------------------
-  subroutine ps_tm_end(ps_tm)
-    type(ps_tm_t), intent(inout) :: ps_tm
+  subroutine ps_psf_end(ps_psf)
+    type(ps_psf_t), intent(inout) :: ps_psf
 
-    call ps_in_grid_end(ps_tm%ps_grid)
-    call ps_tm_file_end(ps_tm%tm_file)
-  end subroutine ps_tm_end
+    call ps_in_grid_end(ps_psf%ps_grid)
+    call ps_psf_file_end(ps_psf%psf_file)
+  end subroutine ps_psf_end
 
 
   ! ---------------------------------------------------------
-  subroutine build_valconf(tm_file, ispin, conf)
-    type(ps_tm_file_t), intent(in)  :: tm_file
-    integer,            intent(in)  :: ispin
-    type(valconf_t),    intent(out) :: conf
+  subroutine build_valconf(psf_file, ispin, conf)
+    type(ps_psf_file_t), intent(in)  :: psf_file
+    integer,             intent(in)  :: ispin
+    type(valconf_t),     intent(out) :: conf
 
     character(len=1)  :: char1(6), char2
     integer :: i, l
     FLOAT   :: x
 
-    call push_sub('tm.build_valconf')
+    call push_sub('psf.build_valconf')
 
     call valconf_null(conf)
-    conf%symbol = tm_file%namatm
-    conf%p = tm_file%npotd
+    conf%symbol = psf_file%namatm
+    conf%p = psf_file%npotd
     write(char2,'(i1)') conf%p
 
-    select case(tm_file%irel)
+    select case(psf_file%irel)
     case('nrl')
       ! It seems that with some compiler version in the SP4 we can not have string
       ! concat inside the read statement, so we define read_fmt outside
-      read(tm_file%title, '('//char2//'(i1,a1,f5.2,10x))')        &
+      read(psf_file%title, '('//char2//'(i1,a1,f5.2,10x))')        &
         (conf%n(l), char1(l), conf%occ(l,1), l = 1, conf%p)
     case('isp')
-      read(tm_file%title, '('//char2//'(i1,a1,f4.2,1x,f4.2,6x))') &
+      read(psf_file%title, '('//char2//'(i1,a1,f4.2,1x,f4.2,6x))') &
         (conf%n(l), char1(l), conf%occ(l,1), conf%occ(l,2), l = 1, conf%p)
     case('rel')
-      read(tm_file%title, '('//char2//'(i1,a1,f5.2,10x))')        &
+      read(psf_file%title, '('//char2//'(i1,a1,f5.2,10x))')        &
         (conf%n(l), char1(l), conf%occ(l,1), l = 1, conf%p)
     end select
 
@@ -163,7 +163,7 @@ contains
 
     do i = 1, conf%p
       l = conf%l(i)
-      if(ispin==2 .and. tm_file%irel.ne.'isp') then
+      if(ispin==2 .and. psf_file%irel.ne.'isp') then
         x = conf%occ(i, 1)
         conf%occ(i, 1) = min(x, real(2*l+1, PRECISION))
         conf%occ(i, 2) = x - conf%occ(i,1)
@@ -174,70 +174,70 @@ contains
   end subroutine build_valconf 
 
   !----------------------------------------------------------------
-  subroutine file_to_grid(tm_file, ps_grid)
-    type(ps_tm_file_t), intent(in)  :: tm_file
-    type(ps_in_grid_t), intent(out) :: ps_grid
+  subroutine file_to_grid(psf_file, ps_grid)
+    type(ps_psf_file_t), intent(in)  :: psf_file
+    type(ps_in_grid_t),  intent(out) :: ps_grid
 
     ! Initializes the pseudo in the logaritmic grid.
     call ps_in_grid_init(ps_grid,                      &
-      LOGRID_TM, tm_file%a, tm_file%b, tm_file%nr,  &
-      tm_file%npotd, tm_file%npotu)
+      LOGRID_PSF, psf_file%a, psf_file%b, psf_file%nr,  &
+      psf_file%npotd, psf_file%npotu)
     
-    ps_grid%zval      = tm_file%zval
-    ps_grid%vps(:,:)  = tm_file%vps(:,:)
-    ps_grid%chcore(:) = tm_file%chcore(:)
+    ps_grid%zval      = psf_file%zval
+    ps_grid%vps(:,:)  = psf_file%vps(:,:)
+    ps_grid%chcore(:) = psf_file%chcore(:)
     if(ps_grid%so_no_l_channels > 0) then
-      ps_grid%so_vps(:,:) = tm_file%vso(:,:)
+      ps_grid%so_vps(:,:) = psf_file%vso(:,:)
     end if
 
     ps_grid%core_corrections = .true.
-    if(trim(tm_file%icore) == 'nc') ps_grid%core_corrections = .false.
+    if(trim(psf_file%icore) == 'nc') ps_grid%core_corrections = .false.
 
   end subroutine file_to_grid
 
 
   ! ---------------------------------------------------------
-  subroutine ps_tm_process(ps_tm, lmax, lloc)
-    type(ps_tm_t), intent(inout) :: ps_tm
+  subroutine ps_psf_process(ps_psf, lmax, lloc)
+    type(ps_psf_t), intent(inout) :: ps_psf
     integer,       intent(in)    :: lmax, lloc
 
-    call push_sub('tm.tm_process')
+    call push_sub('psf.psf_process')
 
     ! get the pseudoatomic eigenfunctions
-    ALLOCATE(ps_tm%eigen(ps_tm%tm_file%npotd, 3), ps_tm%tm_file%npotd*3)
-    call solve_schroedinger(ps_tm%tm_file, ps_tm%ps_grid%g, &
-      ps_tm%conf, ps_tm%ispin, ps_tm%ps_grid%rphi, ps_tm%eigen)
+    ALLOCATE(ps_psf%eigen(ps_psf%psf_file%npotd, 3), ps_psf%psf_file%npotd*3)
+    call solve_schroedinger(ps_psf%psf_file, ps_psf%ps_grid%g, &
+      ps_psf%conf, ps_psf%ispin, ps_psf%ps_grid%rphi, ps_psf%eigen)
 
     ! check norm of rphi
-    call ps_in_grid_check_rphi(ps_tm%ps_grid)
+    call ps_in_grid_check_rphi(ps_psf%ps_grid)
 
     ! Fix the local potential. Final argument is the core radius
-    call ps_in_grid_vlocal(ps_tm%ps_grid, lloc, M_THREE)
+    call ps_in_grid_vlocal(ps_psf%ps_grid, lloc, M_THREE)
 
     ! Calculate kb cosines and norms
-    call ps_in_grid_kb_cosines(ps_tm%ps_grid, lloc)
+    call ps_in_grid_kb_cosines(ps_psf%ps_grid, lloc)
 
     ! Ghost analysis.
-    call ghost_analysis(ps_tm%tm_file, ps_tm%ps_grid, ps_tm%ps_grid%g, ps_tm%eigen, lmax)
+    call ghost_analysis(ps_psf%psf_file, ps_psf%ps_grid, ps_psf%ps_grid%g, ps_psf%eigen, lmax)
 
     ! Define the KB-projector cut-off radii
-    call ps_in_grid_cutoff_radii(ps_tm%ps_grid, lloc)
+    call ps_in_grid_cutoff_radii(ps_psf%ps_grid, lloc)
 
     ! Calculate KB-projectors
-    call ps_in_grid_kb_projectors(ps_tm%ps_grid)
+    call ps_in_grid_kb_projectors(ps_psf%ps_grid)
 
-    deallocate(ps_tm%eigen)
+    deallocate(ps_psf%eigen)
     call pop_sub()
-  end subroutine ps_tm_process
+  end subroutine ps_psf_process
 
 
   ! ---------------------------------------------------------
-  subroutine solve_schroedinger(tm_file, g, conf, ispin, rphi, eigen)
-    type(ps_tm_file_t), intent(inout) :: tm_file ! WARNING: should be intent(in)
-    type(logrid_t),     intent(in)    :: g
-    type(valconf_t),    intent(in)    :: conf
-    integer,            intent(in)    :: ispin
-    FLOAT,              intent(out)   :: rphi(:,:,:), eigen(:,:)
+  subroutine solve_schroedinger(psf_file, g, conf, ispin, rphi, eigen)
+    type(ps_psf_file_t), intent(inout) :: psf_file ! WARNING: should be intent(in)
+    type(logrid_t),      intent(in)    :: g
+    type(valconf_t),     intent(in)    :: conf
+    integer,             intent(in)    :: ispin
+    FLOAT,               intent(out)   :: rphi(:,:,:), eigen(:,:)
     
 
     character(len=3) :: functl
@@ -251,10 +251,10 @@ contains
     DOUBLE :: e, z, dr, rmax
     DOUBLE, allocatable :: s(:), hato(:), gg(:), y(:)
 
-    call push_sub('tm.solve_schroedinger')
+    call push_sub('psf.solve_schroedinger')
 
     ! Let us be a bit informative.
-    message(1) = '      Calculating atomic pseudo-eigenfunctions for specie ' // tm_file%namatm // '....'
+    message(1) = '      Calculating atomic pseudo-eigenfunctions for specie ' // psf_file%namatm // '....'
     call write_info(1)
 
     ! Allocation.
@@ -270,36 +270,36 @@ contains
 
     ! These numerical parameters have to be fixed for egofv to work.
     s(:) = g%drdi(:)**2
-    a2b4 = M_FOURTH*tm_file%a**2
+    a2b4 = M_FOURTH*psf_file%a**2
 
     !  ionic pseudopotential if core-correction for hartree
-    if((tm_file%icore == 'pche') .or. (tm_file%icore == 'fche')) then
-      call vhrtre(tm_file%chcore, ve(:, 1), g%rofi, g%drdi, g%s, g%nrval, g%a)
-      do l = 1, tm_file%npotd
-        tm_file%vps(:, l) = tm_file%vps(:, l) + ve(:, 1)
+    if((psf_file%icore == 'pche') .or. (psf_file%icore == 'fche')) then
+      call vhrtre(psf_file%chcore, ve(:, 1), g%rofi, g%drdi, g%s, g%nrval, g%a)
+      do l = 1, psf_file%npotd
+        psf_file%vps(:, l) = psf_file%vps(:, l) + ve(:, 1)
       end do
     end if
 
     ! Calculation of the valence screening potential from the density:
     !       ve(1:nrval) is the hartree+xc potential created by the pseudo -
     !               valence charge distribution (everything in Rydberts, and bohrs)
-    rho(:, 1) = tm_file%rho_val(:)
-    select case(tm_file%icorr)
+    rho(:, 1) = psf_file%rho_val(:)
+    select case(psf_file%icorr)
     case('pb')
       functl = 'GGA'
     case default
       functl = 'LDA'
     end select
 
-    call atomhxc(functl, g, 1, rho(:, 1:1), ve(:, 1:1), tm_file%chcore)
+    call atomhxc(functl, g, 1, rho(:, 1:1), ve(:, 1:1), psf_file%chcore)
 
     ! Calculation of the pseudo-wave functions.
     !       rphi(1:nrval, 1:conf%p, :) : radial pseudo-wave functions. They are normalized so that
     !           int dr {rphi^2} = 1. Thus its units are of bohr^(-1/2).
     !       eigen(1:conf%p, :)        : eigenvalues, in Rydbergs.
-    do l = 1, tm_file%npotd
+    do l = 1, psf_file%npotd
       do ir = 2, g%nrval
-        vtot = tm_file%vps(ir, l) + ve(ir, 1) + dble((l-1)*l)/(g%rofi(ir)**2)
+        vtot = psf_file%vps(ir, l) + ve(ir, 1) + dble((l-1)*l)/(g%rofi(ir)**2)
         hato(ir) = vtot*s(ir) + a2b4
       end do
       hato(1) = linear_extrapolate(g%rofi(1), g%rofi(2), g%rofi(3), &
@@ -307,8 +307,8 @@ contains
 
       nnode = 1
       nprin = l
-      e     = -((tm_file%zval/dble(nprin))**2)
-      z     = tm_file%zval
+      e     = -((psf_file%zval/dble(nprin))**2)
+      z     = psf_file%zval
       dr    = CNST(-1.0e5)
       rmax = g%rofi(g%nrval)
 
@@ -342,9 +342,9 @@ contains
         iter = iter + 1
 
         spin: do is = 1, ispin
-          ang: do l = 1, tm_file%npotd
+          ang: do l = 1, psf_file%npotd
             do ir = 2, g%nrval
-              vtot = tm_file%vps(ir, l) + ve(ir, is) + dble((l-1)*l)/(g%rofi(ir)**2)
+              vtot = psf_file%vps(ir, l) + ve(ir, is) + dble((l-1)*l)/(g%rofi(ir)**2)
               hato(ir) = vtot*s(ir) + a2b4
             end do
             hato(1) = linear_extrapolate(g%rofi(1), g%rofi(2), g%rofi(3), &
@@ -352,8 +352,8 @@ contains
 
             nnode = 1
             nprin = l
-            e     = -((tm_file%zval/dble(nprin))**2)
-            z     = tm_file%zval
+            e     = -((psf_file%zval/dble(nprin))**2)
+            z     = psf_file%zval
             dr    = -CNST(1.0e5)
             rmax = g%rofi(g%nrval)
 
@@ -374,7 +374,7 @@ contains
 
         rho = M_ZERO
         do is = 1, ispin
-          do l = 1, tm_file%npotd
+          do l = 1, psf_file%npotd
             rho(:, is) = rho(:, is) + conf%occ(l, is)*rphi(:, l, 1 + is)**2
           end do
         end do
@@ -390,7 +390,7 @@ contains
         write(message(1),'(a,i4,a,e10.2)') '      Iter =',iter,'; Diff =',diff
         call write_info(1)
 
-        call atomhxc(functl, g, 2, rho, ve, tm_file%chcore)
+        call atomhxc(functl, g, 2, rho, ve, psf_file%chcore)
       end do self_consistent
 
     end if spin_polarized
@@ -404,8 +404,8 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine ghost_analysis(tm_file, ps_grid, g, eigen, lmax)
-    type(ps_tm_file_t), intent(in) :: tm_file
+  subroutine ghost_analysis(psf_file, ps_grid, g, eigen, lmax)
+    type(ps_psf_file_t), intent(in) :: psf_file
     type(ps_in_grid_t), intent(in) :: ps_grid
     type(logrid_t),     intent(in) :: g
     FLOAT,              intent(in) :: eigen(:,:)
@@ -419,7 +419,7 @@ contains
     DOUBLE :: z, e, dr, rmax
     DOUBLE, allocatable :: hato(:), s(:), gg(:), y(:)
 
-    call push_sub('tm.ghost_analysis')
+    call push_sub('psf.ghost_analysis')
 
     ALLOCATE(ve    (g%nrval), g%nrval)
     ALLOCATE(s     (g%nrval), g%nrval)
@@ -428,14 +428,14 @@ contains
     ALLOCATE(y     (g%nrval), g%nrval)
     ALLOCATE(elocal(2, lmax+1),  2*(lmax+1))
 
-    select case(tm_file%icorr)
+    select case(psf_file%icorr)
     case('pb')
       functl = 'GGA'
     case default
       functl = 'LDA'
     end select
 
-    call atomhxc(functl, g, 1, tm_file%rho_val(:), ve(:), ps_grid%chcore(:))
+    call atomhxc(functl, g, 1, psf_file%rho_val(:), ve(:), ps_grid%chcore(:))
 
     ! calculate eigenvalues of the local potential for ghost analysis
     s(:) = g%drdi(:)**2
@@ -488,4 +488,4 @@ contains
     call pop_sub()
   end subroutine ghost_analysis
 
-end module ps_tm_m
+end module ps_psf_m

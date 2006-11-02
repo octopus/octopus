@@ -29,9 +29,10 @@ module ps_m
   use logrid_m
   use atomic_m
   use ps_in_grid_m
-  use ps_tm_m
-  use ps_cpi_m
+  use ps_psf_m
   use ps_hgh_m
+  use ps_cpi_m
+  use ps_fhi_m
 
   implicit none
 
@@ -46,11 +47,12 @@ module ps_m
     ps_end
 
   integer, parameter, public :: &
-    PS_TYPE_TM2 = 100,          &
+    PS_TYPE_PSF = 100,          &
     PS_TYPE_HGH = 101,          &
-    PS_TYPE_CPI = 102
+    PS_TYPE_CPI = 102,          &
+    PS_TYPE_FHI = 103
 
-  character(len=3), parameter  :: ps_name(PS_TYPE_TM2:PS_TYPE_CPI) = (/"tm2", "hgh", "cpi"/)
+  character(len=3), parameter  :: ps_name(PS_TYPE_PSF:PS_TYPE_FHI) = (/"tm2", "hgh", "cpi", "fhi"/)
 
   type ps_t
     character(len=10) :: label
@@ -103,8 +105,9 @@ contains
     integer,           intent(in)  :: lmax, lloc, ispin
     FLOAT,             intent(in)  :: z
 
-    type(ps_tm_t)  :: ps_tm  ! In case Troullier-Martins ps are used.
+    type(ps_psf_t) :: ps_psf ! SIESTA pseudopotential
     type(ps_cpi_t) :: ps_cpi ! Fritz-haber pseudopotential
+    type(ps_fhi_t) :: ps_fhi ! Fritz-haber pseudopotential (from abinit)
     type(hgh_t)    :: psp    ! In case Hartwigsen-Goedecker-Hutter ps are used.
 
     FLOAT :: r
@@ -119,29 +122,29 @@ contains
     ps%ispin   = ispin
 
     ! Initialization and processing.
-    ASSERT(flavour==PS_TYPE_TM2.or.flavour==PS_TYPE_HGH.or.flavour==PS_TYPE_CPI)
+    ASSERT(flavour>=PS_TYPE_PSF.and.flavour<=PS_TYPE_FHI)
 
     select case(flavour)
-    case(PS_TYPE_TM2)
-      call ps_tm_init(ps_tm, trim(label), ispin)
+    case(PS_TYPE_PSF)
+      call ps_psf_init(ps_psf, trim(label), ispin)
 
-      call valconf_copy(ps%conf, ps_tm%conf)
+      call valconf_copy(ps%conf, ps_psf%conf)
       ps%z      = z
       ps%conf%z = z     ! atomic number
       ps%kbc    = 1     ! only one projector per angular momentum
       ps%l_loc  = lloc  ! the local part of the pseudo
 
-      ps%l_max  = min(ps_tm%ps_grid%no_l_channels - 1, lmax)   ! Maybe the file has not enough components.
-      ps%conf%p = ps_tm%ps_grid%no_l_channels
+      ps%l_max  = min(ps_psf%ps_grid%no_l_channels - 1, lmax)   ! Maybe the file has not enough components.
+      ps%conf%p = ps_psf%ps_grid%no_l_channels
       if(ps%l_max == 0) ps%l_loc = 0 ! Vanderbilt is not acceptable if ps%l_max == 0.
-      if(ps_tm%ps_grid%so_no_l_channels == 0) then
+      if(ps_psf%ps_grid%so_no_l_channels == 0) then
         ps%so_l_max = -1
       else
-        ps%so_l_max = min(ps_tm%ps_grid%no_l_channels, ps%l_max)
+        ps%so_l_max = min(ps_psf%ps_grid%no_l_channels, ps%l_max)
       end if
 
-      call ps_tm_process(ps_tm, lmax, ps%l_loc)
-      call logrid_copy(ps_tm%ps_grid%g, ps%g)
+      call ps_psf_process(ps_psf, lmax, ps%l_loc)
+      call logrid_copy(ps_psf%ps_grid%g, ps%g)
 
     case(PS_TYPE_CPI)
       call ps_cpi_init(ps_cpi, trim(label))
@@ -156,12 +159,32 @@ contains
       ps%kbc    = 1     ! only one projector epr angular momentum
       ps%l_loc  = lloc  ! the local part of the pseudo
 
-      ps%l_max  = min(ps_cpi%ps_grid%no_l_channels - 1, lmax)   ! Maybe the file has not enough components.
+      ps%l_max  = min(ps%conf%p - 1, lmax)   ! Maybe the file has not enough components.
       if(ps%l_max == 0) ps%l_loc = 0 ! Vanderbilt is not acceptable if ps%l_max == 0.
       ps%so_l_max = -1
 
       call ps_cpi_process(ps_cpi, lmax, ps%l_loc)
       call logrid_copy(ps_cpi%ps_grid%g, ps%g)
+
+    case(PS_TYPE_FHI)
+      call ps_fhi_init(ps_fhi, trim(label))
+
+      call valconf_null(ps%conf)
+      ps%conf%z      = z
+      ps%conf%symbol = label(1:2)
+      ps%conf%type   = 1
+      ps%conf%p      = ps_fhi%ps_grid%no_l_channels
+
+      ps%z      = z
+      ps%kbc    = 1     ! only one projector per angular momentum
+      ps%l_loc  = lloc  ! the local part of the pseudo
+
+      ps%l_max  = min(ps%conf%p - 1, lmax)   ! Maybe the file has not enough components.
+      if(ps%l_max == 0) ps%l_loc = 0 ! Vanderbilt is not acceptable if ps%l_max == 0.
+      ps%so_l_max = -1
+
+      call ps_fhi_process(ps_fhi, lmax, ps%l_loc)
+      call logrid_copy(ps_fhi%ps_grid%g, ps%g)
 
     case(PS_TYPE_HGH)
       call hgh_init(psp, trim(label))
@@ -204,12 +227,15 @@ contains
 
     ! Now we load the necessary information.
     select case(flavour)
-    case(PS_TYPE_TM2)
-      call ps_grid_load(ps, ps_tm%ps_grid)
-      call ps_tm_end(ps_tm)
+    case(PS_TYPE_PSF)
+      call ps_grid_load(ps, ps_psf%ps_grid)
+      call ps_psf_end(ps_psf)
     case(PS_TYPE_CPI)
       call ps_grid_load(ps, ps_cpi%ps_grid)
       call ps_cpi_end(ps_cpi)
+    case(PS_TYPE_FHI)
+      call ps_grid_load(ps, ps_fhi%ps_grid)
+      call ps_fhi_end(ps_fhi)
     case(PS_TYPE_HGH)
       call hgh_load(ps, psp)
       call hgh_end(psp)

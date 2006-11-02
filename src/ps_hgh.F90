@@ -119,7 +119,7 @@ contains
     psp%l_max = psp%l_max - 1
 
     ! Initializes the logarithmic grid. Parameters are hard-coded.
-    call logrid_init(psp%g, LOGRID_TM, CNST(3.0e-2), CNST(4.0e-4), 431)
+    call logrid_init(psp%g, LOGRID_PSF, CNST(3.0e-2), CNST(4.0e-4), 431)
 
     ! Allocation of stuff.
     ALLOCATE(psp%vlocal(psp%g%nrval), psp%g%nrval)

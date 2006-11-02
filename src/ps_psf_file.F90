@@ -16,22 +16,22 @@
 !! 02111-1307, USA.
 !!
 !! -*- coding: utf-8 mode: f90 -*-
-!! $Id: tm.F90 2307 2006-07-29 00:50:22Z appel $
+!! $Id: psf.F90 2307 2006-07-29 00:50:22Z appel $
 
 #include "global.h"
 
-module ps_tm_file_m
+module ps_psf_file_m
   use global_m
   use messages_m
   use ps_in_grid_m
 
   public ::                &
-    ps_tm_file_t,          &
-    ps_tm_file_read,       &
-    ps_tm_file_end
+    ps_psf_file_t,          &
+    ps_psf_file_read,       &
+    ps_psf_file_end
 
   ! First, the contents of the file.
-  type ps_tm_file_t
+  type ps_psf_file_t
     character(len=2)   :: namatm
     character(len=2)   :: icorr
     character(len=3)   :: irel
@@ -50,20 +50,20 @@ module ps_tm_file_m
     FLOAT, pointer     :: chcore(:)
     FLOAT, pointer     :: rho_val(:)
     FLOAT, pointer     :: vso(:,:)
-  end type ps_tm_file_t
+  end type ps_psf_file_t
   
 contains
 
   ! ---------------------------------------------------------
-  subroutine ps_tm_file_read(unit, ascii, psf)
-    integer,            intent(in)    :: unit
-    logical,            intent(in)    :: ascii
-    type(ps_tm_file_t), intent(inout) :: psf
+  subroutine ps_psf_file_read(unit, ascii, psf)
+    integer,             intent(in)    :: unit
+    logical,             intent(in)    :: ascii
+    type(ps_psf_file_t), intent(inout) :: psf
 
     integer  :: ndown, nup, i, l
     character(len=70) :: aux_s
 
-    call push_sub('tm.read_file_data_ascii')
+    call push_sub('psf.read_file_data_ascii')
 
     ! formats used in this routine
 8000 format(1x,i2)
@@ -181,16 +181,16 @@ contains
     ! psf%vps = psf%vps / M_TWO
 
     call pop_sub()
-  end subroutine ps_tm_file_read
+  end subroutine ps_psf_file_read
 
 
   ! ---------------------------------------------------------
-  subroutine ps_tm_file_end(psf)
-    type(ps_tm_file_t), intent(inout) :: psf
+  subroutine ps_psf_file_end(psf)
+    type(ps_psf_file_t), intent(inout) :: psf
 
     deallocate(psf%rofi, psf%vps, psf%chcore, psf%rho_val, psf%vso)
     nullify   (psf%rofi, psf%vps, psf%chcore, psf%rho_val, psf%vso)
-  end subroutine ps_tm_file_end
+  end subroutine ps_psf_file_end
 
 
-end module ps_tm_file_m
+end module ps_psf_file_m

@@ -32,17 +32,18 @@ module ps_cpi_m
   implicit none
 
   private
-  public ::     &
-    ps_cpi_t,       &
-    ps_cpi_init,    &
-    ps_cpi_end,     &
+  public ::              &
+    ps_cpi_t,            &
+    ps_cpi_init,         &
+    ps_cpi_end,          &
+    ps_cpi_file_to_grid, &
     ps_cpi_process
 
   type ps_cpi_t
-    type(ps_cpi_file_t) :: cpi_file
-    type(ps_in_grid_t)  :: ps_grid
+    type(ps_cpi_file_t), pointer :: cpi_file
+    type(ps_in_grid_t),  pointer :: ps_grid
 
-    type(valconf_t)     :: conf    ! what to do with this?
+    type(valconf_t),     pointer :: conf    ! what to do with this?
   end type ps_cpi_t
 
 contains
@@ -58,6 +59,11 @@ contains
     FLOAT :: x
 
     call push_sub('ps_cpi.ps_cpi_init')
+
+    ! allocate data
+    ALLOCATE(ps_cpi%cpi_file, 1)
+    ALLOCATE(ps_cpi%ps_grid,  1)
+    ALLOCATE(ps_cpi%conf,     1)
 
     ! Find out where the hell the file is.
     filename2 = trim(filename) // '.cpi'
@@ -82,7 +88,7 @@ contains
     ! Fills the valence configuration data.
     !call build_valconf(pstm%tm_file, ispin, pstm%conf)
 
-    call file_to_grid(ps_cpi%cpi_file, ps_cpi%ps_grid)
+    call ps_cpi_file_to_grid(ps_cpi%cpi_file, ps_cpi%ps_grid)
 
     call pop_sub()
   end subroutine ps_cpi_init
@@ -94,11 +100,16 @@ contains
 
     call ps_in_grid_end (ps_cpi%ps_grid)
     call ps_cpi_file_end(ps_cpi%cpi_file)
+
+    deallocate(ps_cpi%cpi_file)
+    deallocate(ps_cpi%ps_grid)
+    deallocate(ps_cpi%conf)
+
   end subroutine ps_cpi_end
 
 
   !----------------------------------------------------------------
-  subroutine file_to_grid(cpi_file, ps_grid)
+  subroutine ps_cpi_file_to_grid(cpi_file, ps_grid)
     type(ps_cpi_file_t), intent(in)  :: cpi_file
     type(ps_in_grid_t),  intent(out) :: ps_grid
 
@@ -118,7 +129,7 @@ contains
       ps_grid%chcore(:) = cpi_file%chcore(:)
     end if
 
-  end subroutine file_to_grid
+  end subroutine ps_cpi_file_to_grid
 
 
   ! ---------------------------------------------------------

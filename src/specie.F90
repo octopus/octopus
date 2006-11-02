@@ -59,9 +59,10 @@ module specie_m
     SPEC_POINT  = 2,            & ! point charge: jellium sphere of radius 0.5 a.u.
     SPEC_JELLI  = 3,            & ! jellium sphere.
     SPEC_ALL_E  = 124,          & ! All electron atom
-    SPEC_PS_TM2 = PS_TYPE_TM2,  & ! Troullier-Martins pseudopotential
+    SPEC_PS_PSF = PS_TYPE_PSF,  & ! SIESTA pseudopotential
     SPEC_PS_HGH = PS_TYPE_HGH,  & ! HGH pseudopotential
-    SPEC_PS_CPI = PS_TYPE_CPI     ! FHI pseudopotential (cpi format)
+    SPEC_PS_CPI = PS_TYPE_CPI,  & ! FHI pseudopotential (cpi format)
+    SPEC_PS_FHI = PS_TYPE_FHI     ! FHI pseudopotential (ABINIT format)
 
   type specie_t
     integer :: index              ! just a counter
@@ -216,7 +217,7 @@ contains
     !% In 3D, e.g.
     !%
     !% <tt>%Species
-    !% <br>&nbsp;&nbsp;'O'       | 15.9994 | spec_ps_tm2  | 8   | 1 | 1
+    !% <br>&nbsp;&nbsp;'O'       | 15.9994 | spec_ps_psf  | 8   | 1 | 1
     !% <br>&nbsp;&nbsp;'H'       |  1.0079 | spec_ps_hgh  | 1   | 0 | 0
     !% <br>&nbsp;&nbsp;'jlm'     | 23.2    | spec_jelli   | 8   | 5.0
     !% <br>&nbsp;&nbsp;'pnt'     | 32.3    | spec_point   | 2.0
@@ -237,17 +238,10 @@ contains
     !% Jellium sphere, the extra parameters are the charge of the jellium
     !% sphere (an equal value of valence charge is assumed) and the radius of
     !% the sphere.
-    !%Option spec_ps_tm2  100
-    !% Troullier Martins pseudopotential, the pseudopotential will be
+    !%Option spec_ps_psf  100
+    !% Troullier Martins pseudopotential in SIESTA format, the pseudopotential will be
     !% read from an <i>.ascii</i> or <i>.vps</i> file, either in the working
     !% directory or in the <i>OCTOPUS-HOME/share/PP/TM2</i> directory.
-    !% The following three numbers are the atomic number, the maximum
-    !% <i>l</i>-component of the pseudo-potential to consider in the
-    !% calculation, and the <i>l</i>-component to consider as local.
-    !%Option spec_ps_cpi  102
-    !% Fritz-Haber pseudopotential, the pseudopotential will be
-    !% read from an <i>.cpi</i> file, either in the working
-    !% directory or in the <i>OCTOPUS-HOME/share/PP/CPI</i> directory.
     !% The following three numbers are the atomic number, the maximum
     !% <i>l</i>-component of the pseudo-potential to consider in the
     !% calculation, and the <i>l</i>-component to consider as local.
@@ -255,6 +249,21 @@ contains
     !% Hartwigsen-Goedecker-Hutter pseudopotentials, the next field is
     !% the atomic number an the last two numbers are irrelevant, since they
     !% do are not necessary to define the HGH pseudopotentials.
+    !%Option spec_ps_cpi  102
+    !% Fritz-Haber pseudopotential, the pseudopotential will be
+    !% read from an <i>.cpi</i> file, either in the working
+    !% directory or in the <i>OCTOPUS-HOME/share/PP/CPI</i> directory.
+    !% The following three numbers are the atomic number, the maximum
+    !% <i>l</i>-component of the pseudo-potential to consider in the
+    !% calculation, and the <i>l</i>-component to consider as local.
+    !%Option spec_ps_fhi  103
+    !% Fritz-Haber pseudopotential (ABINIT format), the pseudopotential will be
+    !% read from an <i>.fhi</i> file, either in the working
+    !% directory or in the <i>OCTOPUS-HOME/share/PP/FHI</i> directory.
+    !% The following three numbers are the atomic number, the maximum
+    !% <i>l</i>-component of the pseudo-potential to consider in the
+    !% calculation, and the <i>l</i>-component to consider as local.
+    !% Note that you can use the pseudopotentials from ABINT homepage.
     !%Option spec_all_e   124
     !% Atom represented with all electrons, the extra parameter is the
     !% atomic number. See the documentation of the variable 
@@ -424,7 +433,7 @@ contains
       s%Z_val = s%Z
       read_data = 4
 
-    case(SPEC_PS_TM2,SPEC_PS_HGH,SPEC_PS_CPI) ! a pseudopotential file
+    case(SPEC_PS_PSF, SPEC_PS_HGH, SPEC_PS_CPI, SPEC_PS_FHI) ! a pseudopotential file
       s%local = .false.
       n = loct_parse_block_cols(blk, row)
 
@@ -489,7 +498,7 @@ contains
     s%has_density = .false.
 
     select case(s%type)
-    case(SPEC_PS_TM2, SPEC_PS_HGH, SPEC_PS_CPI)
+    case(SPEC_PS_PSF, SPEC_PS_HGH, SPEC_PS_CPI, SPEC_PS_FHI)
       ALLOCATE(s%ps, 1) ! allocate structure
       call ps_init(s%ps, s%label, s%type, s%Z, s%lmax, s%lloc, ispin)
       call ps_getradius(s%ps)
@@ -611,7 +620,7 @@ contains
         l = - s%Z/r
       end if
 
-    case(SPEC_PS_TM2, SPEC_PS_HGH, SPEC_PS_CPI)
+    case(SPEC_PS_PSF, SPEC_PS_HGH, SPEC_PS_CPI, SPEC_PS_FHI)
       l = loct_splint(s%ps%vl, r)
 
     case(SPEC_ALL_E)
@@ -671,7 +680,7 @@ contains
         gv(:) = s%Z*x(:)/r**3
       end if
 
-    case(SPEC_PS_TM2, SPEC_PS_HGH, SPEC_PS_CPI)
+    case(SPEC_PS_PSF, SPEC_PS_HGH, SPEC_PS_CPI, SPEC_PS_FHI)
       gv(:) = M_ZERO
       if(r>CNST(0.00001)) gv(:) = -loct_splint(s%ps%dvl, r)*x(:)/r
 
@@ -719,7 +728,7 @@ contains
     FLOAT, intent(in) :: x(MAX_DIM)
 
     ! only for 3D pseudopotentials, please
-    if(s%type==SPEC_PS_TM2.or.s%type==SPEC_PS_HGH.or.s%type==SPEC_PS_CPI) then
+    if(s%type==SPEC_PS_PSF.or.s%type==SPEC_PS_HGH.or.s%type==SPEC_PS_CPI.or.s%type==SPEC_PS_FHI) then
       l = loct_splint(s%ps%core, sqrt(sum(x**2)))
     else
       l = M_ZERO

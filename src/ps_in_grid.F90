@@ -141,7 +141,7 @@ contains
       ps%vlocal(:) = ps%vps(:, l_loc+1)
 
     else if(l_loc == -1) then
-      if(ps%g%flavor.ne.LOGRID_TM) then
+      if(ps%g%flavor.ne.LOGRID_PSF) then
         message(1) = "For the moment, Vanderbilt local potentials are only possible with tm grids"
         call write_fatal(1)
       end if

@@ -63,7 +63,6 @@ contains
     call push_sub('ps_cpi_file.read_file_data')
 
     read(unit, *) psf%zval, psf%no_l_channels
-    
     ! skip 10 lines
     do i = 1, 10
       read(unit, *)

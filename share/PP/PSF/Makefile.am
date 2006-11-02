@@ -1,6 +1,6 @@
 # $Id$
 
-tm2dir = $(pkgdatadir)/PP/TM2
-dist_tm2_DATA = *.ascii
+tm2dir = $(pkgdatadir)/PP/PSF
+dist_tm2_DATA = *.psf
 
 DISTCLEANFILES = Makefile.in

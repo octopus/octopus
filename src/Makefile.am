@@ -12,7 +12,11 @@ basic_SRCS = liboct.F90 string.F90 varinfo.F90 mpi.F90 global.F90 liboct_parser.
 core_SRCS = $(basic_SRCS) \
 	ode_solver.F90 root_solver.F90 spline.F90 sparskit.F90 \
 	libxc.F90 logrid.F90 periodic_table.F90 atomic.F90 \
-	ps_in_grid.F90 ps_tm_file.F90 ps_tm.F90 ps_cpi_file.F90 ps_cpi.F90 ps_hgh.F90 ps.F90 \
+	ps_in_grid.F90 \
+	ps_psf_file.F90 ps_psf.F90  \
+	ps_cpi_file.F90 ps_cpi.F90 \
+	ps_fhi_file.F90 ps_fhi.F90 \
+	ps_hgh.F90 ps.F90 \
 	specie.F90 xyz_file.F90 geometry.F90 simul_box.F90 \
 	curv_gygi.F90 curv_briggs.F90 curv_modine.F90 curvlinear.F90 \
 	fft.F90 mesh_lib.F90 par_vec.F90 mesh.F90 scalar_mesh.F90 nl_operator.F90 \

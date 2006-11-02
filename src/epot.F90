@@ -929,23 +929,20 @@ contains
       end if
 
       ! and here we calculate the uVu
-      if(s%ps%flavour == PS_TYPE_TM2.or.s%ps%flavour == PS_TYPE_CPI) then
-        if(l .ne. s%ps%L_loc) then
-          ep%p(ivnl)%uvu(1, 1) = s%ps%h(l, 1, 1)
+      if(l .ne. s%ps%L_loc) then
+        ep%p(ivnl)%uvu(1:n_c, 1:n_c) = s%ps%h(l, 1:n_c, 1:n_c)
+        do d = 1, sb%dim
+          ep%dp(d, ivnl)%uvu(1:n_c, 1:n_c) = s%ps%h(l, 1:n_c, 1:n_c)
+        end do
+
+        if(l <= s%ps%so_l_max) then
           do d = 1, sb%dim
-            ep%dp(d, ivnl)%uvu(1, 1) = s%ps%h(l, 1, 1)
+            ep%lso(d, ivnl)%uvu(1:n_c, 1:n_c) = s%ps%k(l, 1:n_c, 1:n_c)
           end do
         end if
-      else
-        ep%p(ivnl)%uvu(1:3, 1:3) = s%ps%h(l, 1:3, 1:3)
-        do d = 1, sb%dim
-          ep%dp(d, ivnl)%uvu(1:3, 1:3) = s%ps%h(l, 1:3, 1:3)
-        end do
-        do d = 1, sb%dim
-          ep%lso(d, ivnl)%uvu(1:3, 1:3) = s%ps%k(l, 1:3, 1:3)
-        end do
       end if
 
+      ! and here the phases for the periodic systems
       if(sb%periodic_dim/=0) then
         do j = 1, n_s
           x(:) = m%x(ep%p(ivnl)%jxyz(j), :)

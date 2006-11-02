@@ -84,7 +84,7 @@ contains
 
     ! build density ...
     select case (s%type)
-    case (SPEC_USDEF,SPEC_ALL_E,SPEC_PS_CPI) ! ... from userdef
+    case (SPEC_USDEF, SPEC_ALL_E, SPEC_PS_CPI, SPEC_PS_FHI) ! ... from userdef
       do i = 1, spin_channels
         rho(1:m%np, i) = M_ONE
         x = (real(s%z_val, PRECISION)/real(spin_channels, PRECISION)) / dmf_integrate(m, rho(:, i))
@@ -117,7 +117,7 @@ contains
         end do
       end if
 
-    case (SPEC_PS_TM2,SPEC_PS_HGH) ! ...from pseudopotential
+    case (SPEC_PS_PSF, SPEC_PS_HGH) ! ...from pseudopotential
       ! the outer loop sums densities over atoms in neighbour cells
 
       do k = 1, 3**sb%periodic_dim

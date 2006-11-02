@@ -37,8 +37,8 @@ module logrid_m
     derivate_in_log_grid
 
   integer, parameter, public :: &
-    LOGRID_TM   = 1, & ! log grid used in Troullier-Martins pseudopotentials
-    LOGRID_CPI  = 2    ! log grid used in FHI pseudopotentials
+    LOGRID_PSF  = 1, & ! log grid used in Troullier-Martins code
+    LOGRID_CPI  = 2    ! log grid used in FHI code
 
   type logrid_t
     integer  :: flavor
@@ -63,7 +63,7 @@ contains
     FLOAT :: rpb, ea
     integer  :: ir
 
-    ASSERT(flavor==LOGRID_TM.or.flavor==LOGRID_CPI)
+    ASSERT(flavor==LOGRID_PSF.or.flavor==LOGRID_CPI)
 
     g%flavor = flavor
     g%a = a; g%b = b; g%nrval = nrval
@@ -73,7 +73,7 @@ contains
     ALLOCATE(g%s(nrval),    nrval)
 
     select case(g%flavor)
-    case(LOGRID_TM)
+    case(LOGRID_PSF)
       rpb = b
       ea  = exp(a)
       do ir = 1, nrval

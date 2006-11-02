@@ -1,6 +1,6 @@
 # $Id$
 
-SUBDIRS = TM2 HGH
+SUBDIRS = PSF HGH
 
 ppdir = $(pkgdatadir)/PP
 dist_pp_DATA = defaults
