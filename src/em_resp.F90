@@ -122,9 +122,9 @@ contains
         do ifactor = 1, nfactor 
 
           if (wfs_are_complex(sys%st)) then 
-            call lr_init(lr(dir, sigma, ifactor), "Pol", def_solver=LR_BICGSTAB)
+            call lr_init(lr(dir, sigma, ifactor), sys%gr, "Pol", def_solver=LR_BICGSTAB)
           else
-            call lr_init(lr(dir, sigma, ifactor), "Pol", def_solver=LR_CG)            
+            call lr_init(lr(dir, sigma, ifactor), sys%gr, "Pol", def_solver=LR_CG)            
           end if
 
           call lr_alloc_fHxc (sys%st, gr%m, lr(dir, sigma, ifactor))

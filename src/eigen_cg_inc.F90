@@ -94,10 +94,8 @@ subroutine X(eigen_solver_cg2) (gr, st, h, pre, tol, niter, converged, diff, reo
       iter_loop: do iter = 1, maxter
 
         ! inverse preconditioner....
-        do idim = 1, st%d%dim
-          call  X(preconditioner_apply)(pre, h_psi(:,idim), g(:,idim))
-          call  X(preconditioner_apply)(pre, st%X(psi)(:, idim, p, ik), ppsi(:,idim))
-        end do
+        call  X(preconditioner_apply)(pre, gr, h, h_psi(:,:), g(:,:))
+        call  X(preconditioner_apply)(pre, gr, h, st%X(psi)(:,:, p, ik), ppsi(:,:))
 
         es(1) = X(states_dotp) (gr%m, st%d%dim, st%X(psi)(:,:, p, ik), g)
         es(2) = X(states_dotp) (gr%m, st%d%dim, st%X(psi)(:,:, p, ik), ppsi)
@@ -111,9 +109,7 @@ subroutine X(eigen_solver_cg2) (gr, st, h, pre, tol, niter, converged, diff, reo
         if(iter .ne. 1) gg1 = X(states_dotp) (gr%m, st%d%dim, g, g0)
 
         ! Approximate inverse preconditioner...
-        do idim = 1, st%d%dim
-          call  X(preconditioner_apply)(pre, g(:,idim), g0(:,idim))
-        end do
+        call  X(preconditioner_apply)(pre, gr, h, g(:,:), g0(:,:))
 
         gg = X(states_dotp) (gr%m, st%d%dim, g, g0)
         if( abs(gg) < CNST(1.0e-15) ) then

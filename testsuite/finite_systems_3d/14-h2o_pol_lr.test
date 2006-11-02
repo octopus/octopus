@@ -26,16 +26,16 @@ Match ; Polarizability ZZ w=0.1   ; head -4 linear/freq_0.100/alpha | tail -1 ; 
 
 Input: 14-h2o_pol_lr.03_h2o_dyn_pol_cmplx.inp
 Match ; Restart                   ; grep -c "Could not load response wave-functions" out ; \s*0
-Match ; Polarizability XX w=0.0   ; head -2 linear/freq_0.000/alpha | tail -1 ; \s*15.17
+Match ; Polarizability XX w=0.0   ; head -2 linear/freq_0.000/alpha | tail -1 ; \s*15.18
 Match ; Polarizability YY w=0.0   ; head -3 linear/freq_0.000/alpha | tail -1 ; \s*12.30
-Match ; Polarizability ZZ w=0.0   ; head -4 linear/freq_0.000/alpha | tail -1 ; \s*22.99
+Match ; Polarizability ZZ w=0.0   ; head -4 linear/freq_0.000/alpha | tail -1 ; \s*23.00
 
-Match ; Polarizability XX w=0.1   ; head -2 linear/freq_0.100/alpha | tail -1 ; \s*15.94
+Match ; Polarizability XX w=0.1   ; head -2 linear/freq_0.100/alpha | tail -1 ; \s*15.93
 Match ; Polarizability YY w=0.1   ; head -3 linear/freq_0.100/alpha | tail -1 ; \s*12.87
 Match ; Polarizability ZZ w=0.1   ; head -4 linear/freq_0.100/alpha | tail -1 ; \s*29.15
 
-Match ; Cross Section     w=0.1   ; grep -v \# linear/freq_0.100/cross_section ; \s*0.669
+Match ; Cross Section     w=0.1   ; grep -v \# linear/freq_0.100/cross_section ; \s*0.668
 
 Input: 14-h2o_pol_lr.04_h2o_hpol.inp
 Match ; Hyperpolarizability w=0.0 ; grep parallel linear/freq_0.000/beta ; \s*22.83
-Match ; Hyperpolarizability w=0.1 ; grep parallel linear/freq_0.100/beta ; \s*106.91
+Match ; Hyperpolarizability w=0.1 ; grep parallel linear/freq_0.100/beta ; \s*106.88

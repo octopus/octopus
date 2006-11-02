@@ -20,7 +20,7 @@
 
 #include "global.h"
 
-module hgh_m
+module ps_hgh_m
   ! For information about the Hartwinger-Goedecker-Hutter pseudopotentials, take a look at:
   !  (1) S. Goedecker, M. Teter and J. Hutter, Phys. Rev. B 54, 1703 (1996).
   !  (2) C. Hartwinger, S. Goedecker and J. Hutter, Phys. Rev. B 58, 3641 (1998).
@@ -54,7 +54,7 @@ module hgh_m
     FLOAT            :: h(0:3, 1:3, 1:3)
     FLOAT            :: k(0:3, 1:3, 1:3)
 
-    type(valconf)    :: conf
+    type(valconf_t)  :: conf
     integer          :: l_max     ! Maximum l for the Kleinmann-Bylander component.
 
     FLOAT, pointer   :: vlocal(:) ! Local potential
@@ -119,7 +119,7 @@ contains
     psp%l_max = psp%l_max - 1
 
     ! Initializes the logarithmic grid. Parameters are hard-coded.
-    call logrid_init(psp%g, CNST(3.0e-2), CNST(4.0e-4), 431)
+    call logrid_init(psp%g, LOGRID_TM, CNST(3.0e-2), CNST(4.0e-4), 431)
 
     ! Allocation of stuff.
     ALLOCATE(psp%vlocal(psp%g%nrval), psp%g%nrval)
@@ -649,4 +649,4 @@ contains
     call pop_sub()
   end subroutine hgh_debug
 
-end module hgh_m
+end module ps_hgh_m

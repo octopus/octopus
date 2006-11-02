@@ -482,7 +482,7 @@ contains
       ALLOCATE(lpot(1:m%np_part), m%np_part)
       ALLOCATE(ldiag(1:m%np), m%np)
 
-      call df_laplacian_diag(gr%sb, f_der, ldiag)
+      call f_laplacian_diag(gr%sb, f_der, ldiag)
 
       do t=1,steps
         call df_laplacian(gr%sb, f_der, pot, lpot)

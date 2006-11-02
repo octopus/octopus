@@ -79,11 +79,11 @@ module xc_OEP_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine xc_oep_init(oep, family, m, d)
-    type(xc_oep_t),     intent(out) :: oep
-    integer,            intent(in)  :: family
-    type(mesh_t),       intent(in)  :: m
-    type(states_dim_t), intent(in)  :: d
+  subroutine xc_oep_init(oep, family, gr, d)
+    type(xc_oep_t),     intent(out)   :: oep
+    integer,            intent(in)    :: family
+    type(grid_t),       intent(inout) :: gr
+    type(states_dim_t), intent(in)    :: d
 
     call push_sub('xc_OEP.xc_oep_init')
 
@@ -135,10 +135,10 @@ contains
       call xc_oep_SpinFactor(oep, d%nspin)
 
       ! This variable will keep vxc across iterations
-      ALLOCATE(oep%vxc(m%np), m%np)
+      ALLOCATE(oep%vxc(NP), NP)
 
       ! when performing full OEP, we need to solve a linear equation
-      if(oep%level == XC_OEP_FULL) call lr_init(oep%lr, "OEP")
+      if(oep%level == XC_OEP_FULL) call lr_init(oep%lr, gr, "OEP")
 
       ! the linear equation has to be more converged if we are to attain the required precision
       !oep%lr%conv_abs_dens = oep%lr%conv_abs_dens / (oep%mixing)

@@ -44,13 +44,12 @@ module derivatives_m
     derivatives_end,        &
     derivatives_build,      &
     dderivatives_lapl,      &
-    dderivatives_lapl_diag, &
+    derivatives_lapl_diag,  &
     dderivatives_laplt,     &
     dderivatives_grad,      &
     dderivatives_div,       &
     dderivatives_curl,      &
     zderivatives_lapl,      &
-    zderivatives_lapl_diag, &
     zderivatives_laplt,     &
     zderivatives_grad,      &
     zderivatives_div,       &
@@ -229,6 +228,24 @@ contains
     call pop_sub()
 
   end subroutine derivatives_get_stencil_lapl
+
+
+  ! ---------------------------------------------------------
+  ! Returns the diagonal elements of the laplacian needed for preconditioning
+  subroutine derivatives_lapl_diag(der, lapl)
+    type(der_discr_t), intent(in)  :: der
+    FLOAT,             intent(out) :: lapl(:)  ! lapl(m%np)
+
+    call push_sub('derivatives_inc.derivatives_lapl_diag')
+
+    ASSERT(ubound(lapl, DIM=1) >= der%m%np)
+
+    ! the laplacian is a real operator
+    call dnl_operator_operate_diag (der%lapl, lapl)
+
+    call pop_sub()
+
+  end subroutine derivatives_lapl_diag
 
 
   ! ---------------------------------------------------------

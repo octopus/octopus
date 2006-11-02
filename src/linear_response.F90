@@ -38,6 +38,7 @@ module linear_response_m
   use lib_oct_m
   use io_m
   use lib_basic_alg_m
+  use preconditioners_m
 
   implicit none
 
@@ -90,7 +91,7 @@ module linear_response_m
     integer :: max_scf_iter   ! maximum number of iterations
     integer :: iter           ! number of iterations used
     integer :: solver         ! the linear solver to use
-    integer :: preconditioner ! the preconditioner solver to use
+    type(preconditioner_t) :: pre ! the preconditioner to use
     integer :: ort_min_step   ! the step where to start orthogonalization
     integer :: nst            ! the number of linear response orbitals
 
@@ -123,10 +124,11 @@ module linear_response_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine lr_init(lr, prefix, def_solver)
-    type(lr_t),       intent(out) :: lr
-    character(len=*), intent(in)  :: prefix
-    integer, optional, intent(in) :: def_solver
+  subroutine lr_init(lr, gr, prefix, def_solver)
+    type(lr_t),        intent(out)   :: lr
+    type(grid_t),      intent(inout) :: gr
+    character(len=*),  intent(in)    :: prefix
+    integer, optional, intent(in)    :: def_solver
 
     integer :: fsolver
 
@@ -201,9 +203,7 @@ contains
     !the last 2 digits select the linear solver
     lr%solver = mod(fsolver, 100)
 
-    !the next 2 digits select the preconditioner
-    lr%preconditioner = (fsolver - lr%solver)
-
+    call preconditioner_init(lr%pre, gr)
 
     !%Variable LinearSolverMaxIter
     !%Type integer
@@ -478,11 +478,6 @@ contains
     call pop_sub()
 
   end subroutine lr_alloc_fHxc
-
-  logical function precondition(lr) result(prec)
-    type(lr_t),     intent(in) :: lr
-    prec=(lr%preconditioner /= 0)
-  end function precondition
 
   subroutine dynamic_tol_init(lr)
     type(lr_t),     intent(inout) :: lr

@@ -268,8 +268,8 @@ subroutine X(eigen_solver_plan) (gr, st, hamilt, pre, tol, niter, converged, dif
         ! Preconditioning
         do idim = 1, dim
           call lalg_copy(NP_PART, av(:, idim, d1 + 1), aux(:, idim))
-          call X(preconditioner_apply)(pre, aux(:, idim), v(:, idim, d1+1))
         end do
+        call X(preconditioner_apply)(pre, gr, hamilt, aux(:,:), v(:,:, d1+1))
 
       end do inner_loop
     end do outer_loop

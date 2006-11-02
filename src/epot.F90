@@ -929,7 +929,7 @@ contains
       end if
 
       ! and here we calculate the uVu
-      if(s%ps%flavour == PS_TM2) then
+      if(s%ps%flavour == PS_TYPE_TM2.or.s%ps%flavour == PS_TYPE_CPI) then
         if(l .ne. s%ps%L_loc) then
           ep%p(ivnl)%uvu(1, 1) = s%ps%h(l, 1, 1)
           do d = 1, sb%dim

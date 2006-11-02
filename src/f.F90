@@ -48,8 +48,7 @@ module functions_m
     dcf2mf, zcf2mf,             &
     dcf_FS2mf, zcf_FS2mf,       &
     df_laplacian, zf_laplacian, &
-    df_laplacian_diag,          &
-    zf_laplacian_diag,          &
+    f_laplacian_diag,           &
     df_gradient, zf_gradient,   &
     df_divergence,              &
     zf_divergence,              &
@@ -177,6 +176,32 @@ contains
 
     call pop_sub()
   end subroutine f_der_end
+
+
+  ! ---------------------------------------------------------
+  ! Returns the diagonal of the Laplacian needed for preconditioning
+  subroutine f_laplacian_diag (sb, f_der, lapl_diag)
+    type(simul_box_t), intent(in)    :: sb
+    type(f_der_t),     intent(inout) :: f_der
+    FLOAT,             intent(out)   :: lapl_diag(:)  ! lapl_diag(m%np)
+
+    call push_sub('f_inc.Xf_laplacian')
+
+    ASSERT(f_der%space==REAL_SPACE.or.f_der%space==FOURIER_SPACE)
+
+    select case(f_der%space)
+    case(REAL_SPACE)
+      call derivatives_lapl_diag (f_der%der_discr, lapl_diag)
+
+#if defined(HAVE_FFT)
+    case(FOURIER_SPACE)
+      message(1) = "Can not calculate diagonal of the laplacian in Fourier space"
+      call write_fatal(1)
+#endif
+    end select
+
+    call pop_sub()
+  end subroutine f_laplacian_diag
 
 #include "undef.F90"
 #include "real.F90"

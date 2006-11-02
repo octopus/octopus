@@ -82,7 +82,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine scf_init(gr, geo, scf, st, h)
-    type(grid_t),        intent(in)    :: gr
+    type(grid_t),        intent(inout) :: gr
     type(geometry_t),    intent(in)    :: geo
     type(scf_t),         intent(inout) :: scf
     type(states_t),      intent(in)    :: st

@@ -60,37 +60,6 @@ subroutine X(lr_solve_HXeY) (lr, h, gr, st, ik, x, y, omega)
 end subroutine X(lr_solve_HXeY)
 
 
-subroutine X(preconditioning)(lr, h, gr, st, ik, a, ahat, omega)
-  type(lr_t),          intent(inout) :: lr
-  type(hamiltonian_t), intent(inout) :: h
-  type(grid_t),        intent(inout) :: gr
-  type(states_t),      intent(in)    :: st
-  integer,             intent(in)    :: ik
-  R_TYPE,              intent(in)    :: a(:,:)   ! x(NP, d%dim)
-  R_TYPE,              intent(inout) :: ahat(:,:)   ! y(NP, d%dim)
-  R_TYPE,              intent(in)    :: omega
-
-  call push_sub('linear_response_solver.Xpreconditioning')
-
-  select case(lr%preconditioner)
-
-  case(LR_NONE) 
-    ahat(1:NP, 1:st%d%dim)=a(1:NP, 1:st%d%dim)
-    
-  case(LR_DIAG)
-    call X(Hpsi_diag)(h, gr, ahat, ik)
-    ahat(1:NP, 1:st%d%dim)=a(1:NP, 1:st%d%dim)/(ahat+omega)
-    
-  case default
-    message(1)="Invalid preconditioner"
-    call write_fatal(1)
-    
-  end select
-  
-  call pop_sub()
-
-end subroutine X(preconditioning)
-
 !Conjugated gradients
 subroutine X(lr_solver_cg) (lr, h, gr, st, ik, x, y, omega)
   type(lr_t),          intent(inout) :: lr
@@ -264,12 +233,11 @@ subroutine X(lr_solver_bicgstab) (lr, h, gr, st, ik, x, y, omega)
   p=M_ZERO
   s=M_ZERO
 
-  if(precondition(lr)) then 
-    ALLOCATE( phat(NP_PART, st%d%dim), NP_PART*st%d%dim)
-    ALLOCATE( shat(NP_PART, st%d%dim), NP_PART*st%d%dim)
-    phat=M_ZERO
-    shat=M_ZERO
-  end if
+  ! this will store the preconditined functions
+  ALLOCATE( phat(NP_PART, st%d%dim), NP_PART*st%d%dim)
+  ALLOCATE( shat(NP_PART, st%d%dim), NP_PART*st%d%dim)
+  phat=M_ZERO
+  shat=M_ZERO
 
   ! Initial residue
   call X(Hpsi)(h, gr, x, Hp, ik)
@@ -286,7 +254,6 @@ subroutine X(lr_solver_bicgstab) (lr, h, gr, st, ik, x, y, omega)
     if( rho_1 == M_ZERO ) then
       message(1)="rho_1 == MZERO"
       call write_fatal(1)
-      exit 
     end if
 
     if( iter == 1 ) then 
@@ -299,14 +266,10 @@ subroutine X(lr_solver_bicgstab) (lr, h, gr, st, ik, x, y, omega)
 
     if(orto) call X(lr_orth_vector)(gr%m, st, p, ik)   
 
-    if(precondition(lr)) then 
-      call X(preconditioning)(lr, h, gr, st, ik, p, phat, omega)
-      call X(Hpsi)(h, gr, phat, Hp, ik)
-      Hp(1:NP,1:st%d%dim) = Hp(1:NP,1:st%d%dim) + omega*phat(1:NP,1:st%d%dim)
-    else 
-      call X(Hpsi)(h, gr, p, Hp, ik)
-      Hp(1:NP,1:st%d%dim) = Hp(1:NP,1:st%d%dim) + omega*p(1:NP,1:st%d%dim)
-    end if
+    ! preconditioning 
+    call X(preconditioner_apply)(lr%pre, gr, h, p, phat, omega)
+    call X(Hpsi)(h, gr, phat, Hp, ik)
+    Hp(1:NP,1:st%d%dim) = Hp(1:NP,1:st%d%dim) + omega*phat(1:NP,1:st%d%dim)
       
     alpha = rho_1/X(states_dotp) (gr%m, st%d%dim, rs, Hp)
     
@@ -315,34 +278,20 @@ subroutine X(lr_solver_bicgstab) (lr, h, gr, st, ik, x, y, omega)
     gamma = abs(X(states_dotp) (gr%m, st%d%dim, s, s))
 
     if( gamma < lr%conv_abs_psi**2 ) then 
-       if(precondition(lr)) then
-         x(1:NP,1:st%d%dim) = x(1:NP,1:st%d%dim) + alpha*phat(1:NP,1:st%d%dim)
-       else
-         x(1:NP,1:st%d%dim) = x(1:NP,1:st%d%dim) + alpha*p(1:NP,1:st%d%dim)
-       end if
-       exit
+      x(1:NP,1:st%d%dim) = x(1:NP,1:st%d%dim) + alpha*phat(1:NP,1:st%d%dim)
+      exit
     end if
 
     if(orto) call X(lr_orth_vector)(gr%m, st, s, ik, CNST(1e-4))
 
-    if(precondition(lr)) then 
-      call X(preconditioning)(lr, h, gr, st, ik, s, shat, omega)
-      call X(Hpsi)(h, gr, shat, Hs, ik)
-      Hs(1:NP,1:st%d%dim) = Hs(1:NP,1:st%d%dim) + omega*shat(1:NP,1:st%d%dim)
-    else 
-      call X(Hpsi)(h, gr, s, Hs, ik)
-      Hs(1:NP,1:st%d%dim) = Hs(1:NP,1:st%d%dim) + omega*s(1:NP,1:st%d%dim)
-    end if
+    call X(preconditioner_apply)(lr%pre, gr, h, s, shat, omega)
+    call X(Hpsi)(h, gr, shat, Hs, ik)
+    Hs(1:NP,1:st%d%dim) = Hs(1:NP,1:st%d%dim) + omega*shat(1:NP,1:st%d%dim)
 
     w = X(states_dotp) (gr%m, st%d%dim, Hs, s) / X(states_dotp) (gr%m, st%d%dim, Hs, Hs)
 
-    if(precondition(lr)) then
-      x(1:NP,1:st%d%dim) = x(1:NP,1:st%d%dim) &
-           + alpha*phat(1:NP,1:st%d%dim) + w*shat(1:NP,1:st%d%dim)
-    else
-      x(1:NP,1:st%d%dim) = x(1:NP,1:st%d%dim) &
-           + alpha*p(1:NP,1:st%d%dim) + w*s(1:NP,1:st%d%dim)
-    end if
+    x(1:NP,1:st%d%dim) = x(1:NP,1:st%d%dim) &
+      + alpha*phat(1:NP,1:st%d%dim) + w*shat(1:NP,1:st%d%dim)
 
     r(1:NP,1:st%d%dim) = s(1:NP,1:st%d%dim) - w * Hs(1:NP,1:st%d%dim)
 
@@ -359,7 +308,6 @@ subroutine X(lr_solver_bicgstab) (lr, h, gr, st, ik, x, y, omega)
     if( w == M_ZERO ) then
       message(1)="w == MZERO"
       call write_fatal(1)
-      exit
     end if
         
   end do
@@ -368,8 +316,6 @@ subroutine X(lr_solver_bicgstab) (lr, h, gr, st, ik, x, y, omega)
   lr%abs_psi=sqrt(gamma)
 
   deallocate(r, p, Hp, s, rs, Hs)
-
-  if(precondition(lr)) deallocate(phat, shat)
 
   call pop_sub()
 end subroutine X(lr_solver_bicgstab)

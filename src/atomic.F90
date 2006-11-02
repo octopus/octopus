@@ -36,7 +36,7 @@ module atomic_m
 
   ! Next stuff is for the "valence_conf" data type, made to handle atomic configurations.
   public ::        &
-    valconf,       &
+    valconf_t,     &
     valconf_copy,  &
     write_valconf, &
     read_valconf,  &
@@ -48,15 +48,15 @@ module atomic_m
 
   integer, parameter :: VALCONF_STRING_LENGTH = 80
 
-  type valconf
+  type valconf_t
     integer           :: z
     character(len=2)  :: symbol
     integer           :: type     ! 0 for the most normal valence configuration, 1 for semicore.
     integer           :: p        ! number of orbitals.
     integer           :: n(6)     ! n quantum number
     integer           :: l(6)     ! l quantum number
-    FLOAT          :: occ(6,2) ! occupations of each level
-  end type
+    FLOAT             :: occ(6,2) ! occupations of each level
+  end type valconf_t
 
 
 contains
@@ -64,13 +64,15 @@ contains
   ! ---------------------------------------------------------
   ! Subroutines to write and read valence configurations.
   subroutine valconf_null(c)
-    type(valconf) :: c
+    type(valconf_t) :: c
+
     c%z = 0; c%symbol = ""; c%type = 0; c%p = 0; c%n = 0; c%l = 0; c%occ = M_ZERO
   end subroutine valconf_null
 
   subroutine valconf_copy(cout, cin)
-    type(valconf), intent(out) :: cout
-    type(valconf), intent(in)  :: cin
+    type(valconf_t), intent(out) :: cout
+    type(valconf_t), intent(in)  :: cin
+
     cout%z      = cin%z
     cout%symbol = cin%symbol
     cout%type   = cin%type
@@ -81,16 +83,19 @@ contains
   end subroutine valconf_copy
 
   subroutine write_valconf(c, s)
-    type(valconf), intent(in) :: c
+    type(valconf_t), intent(in) :: c
+
     character(len=VALCONF_STRING_LENGTH) :: s
     integer :: j
+
     write(s,'(i2,1x,a2,i1,1x,i1,a1,6(i1,a1,f6.3,a1))') c%z, c%symbol, c%type, c%p, ':',&
          (c%n(j),spec_notation(c%l(j)),c%occ(j,1),',',j=1,c%p)
   end subroutine write_valconf
 
   subroutine read_valconf(s, c)
     character(len=VALCONF_STRING_LENGTH), intent(in) :: s
-    type(valconf), intent(out) :: c
+    type(valconf_t), intent(out) :: c
+
     integer :: j
     character(len=1) :: lvalues(1:6)
 

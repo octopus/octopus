@@ -19,16 +19,41 @@
 !! $Id$
 
 ! --------------------------------------------------------- 
-subroutine X(preconditioner_apply)(this, a, b)
-  type(preconditioner_t), intent(in)    :: this
-  R_TYPE,                 intent(inout) :: a(:)
-  R_TYPE,                 intent(out)   :: b(:)
+subroutine X(preconditioner_apply)(pre, gr, h, a, b, omega)
+  type(preconditioner_t), intent(in)    :: pre
+  type(grid_t),           intent(inout) :: gr
+  type(hamiltonian_t),    intent(inout) :: h
+  R_TYPE,                 intent(inout) :: a(:,:)
+  R_TYPE,                 intent(out)   :: b(:,:)
+  R_TYPE,       optional, intent(in)    :: omega
   
-  select case(this%which)
+  integer :: i, idim
+  FLOAT, allocatable :: diag(:)
+
+  select case(pre%which)
   case(PRECONDITIONER_NONE)
-    b(:) = a(:)
+    do idim = 1, h%d%dim
+      call lalg_copy(NP, a(:,idim), b(:,idim))
+    end do
+
   case(PRECONDITIONER_SMOOTHING)
-    call X(nl_operator_operate) (this%op, a(:), b(:))
+    do idim = 1, h%d%dim
+      call X(nl_operator_operate) (pre%op, a(:, idim), b(:, idim))
+    end do
+
+  case(PRECONDITIONER_JACOBI)
+    ALLOCATE(diag(NP), NP)
+
+    do idim = 1, h%d%dim
+      diag(:) = pre%diag_lapl(1:NP) + h%ep%vpsl(1:NP) + h%vhxc(1:NP, idim)
+      if(present(omega)) then
+        diag(:) = diag(:) + omega
+      end if
+
+      b(1:NP,idim) = a(1:NP,idim)/diag(1:NP)
+    end do
+
+    deallocate(diag)
   end select
   
 end subroutine X(preconditioner_apply)

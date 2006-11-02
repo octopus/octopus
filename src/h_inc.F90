@@ -104,7 +104,7 @@ subroutine X(Hpsi_diag) (h, gr, hpsi, ik, t)
   type(grid_t),        intent(inout) :: gr
   integer,             intent(in)    :: ik
   R_TYPE,              intent(out)   :: Hpsi(:,:) !  Hpsi(m%np, h%d%dim)
-  FLOAT, optional,       intent(in)    :: t
+  FLOAT, optional,     intent(in)    :: t
 
   integer :: idim
   R_TYPE, allocatable :: fake_psi(:,:)
@@ -113,18 +113,18 @@ subroutine X(Hpsi_diag) (h, gr, hpsi, ik, t)
   call push_sub('h_inc.XHpsi_diag')
 
     
-  do idim = 1, h%d%dim
-    call X(f_laplacian_diag) (gr%sb, gr%f_der, Hpsi(:, idim), cutoff_ = M_TWO*h%cutoff)
-    call lalg_scal(NP, R_TOTYPE(-M_HALF), Hpsi(:,idim) )
-  end do
+  !do idim = 1, h%d%dim
+  !  call f_laplacian_diag (gr%sb, gr%f_der, Hpsi(:, idim))
+  !  call lalg_scal(NP, R_TOTYPE(-M_HALF), Hpsi(:,idim) )
+  !end do
 
-  ALLOCATE(fake_psi(1:gr%m%np_part,1:h%d%dim),gr%m%np_part*h%d%dim)
+  !ALLOCATE(fake_psi(1:gr%m%np_part,1:h%d%dim),gr%m%np_part*h%d%dim)
 
-  fake_psi(1:gr%m%np_part,1:h%d%dim)=M_ONE
+  !fake_psi(1:gr%m%np_part,1:h%d%dim)=M_ONE
 
-  call X(vlpsi)   (h, gr%m, fake_psi, hpsi, ik)
+  !call X(vlpsi)   (h, gr%m, fake_psi, hpsi, ik)
 
-  deallocate(fake_psi)
+  !deallocate(fake_psi)
 
   ! the non local potential is not considered
   ! if(h%ep%nvnl > 0) call X(vnlpsi)  (h, gr%m, gr%sb, psi, hpsi, ik)

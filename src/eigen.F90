@@ -106,10 +106,10 @@ contains
 
   ! ---------------------------------------------------------
   subroutine eigen_solver_init(gr, eigens, st, max_iter_default)
-    type(grid_t),         intent(in)  :: gr
-    type(eigen_solver_t), intent(out) :: eigens
-    type(states_t),       intent(in)  :: st
-    integer,              intent(in)  :: max_iter_default
+    type(grid_t),         intent(inout) :: gr
+    type(eigen_solver_t), intent(out)   :: eigens
+    type(states_t),       intent(in)    :: st
+    integer,              intent(in)    :: max_iter_default
 
     call push_sub('eigen.eigen_solver_init')
 

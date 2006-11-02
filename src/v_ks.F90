@@ -125,7 +125,7 @@ contains
         if(ks%sic_type == sic_pz) ks%xc_family = ior(ks%xc_family, XC_FAMILY_OEP)
       end if
 
-      call xc_oep_init(ks%oep, ks%xc_family, gr%m, d)
+      call xc_oep_init(ks%oep, ks%xc_family, gr, d)
 
       call v_ks_write_info(ks, stdout)
     end if

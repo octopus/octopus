@@ -29,13 +29,17 @@ module preconditioners_m
   use datasets_m
   use varinfo_m
   use messages_m
+  use hamiltonian_m
+  use lib_basic_alg_m
+  use functions_m
 
   implicit none
   private
   
-  integer, public, parameter ::      &
-    PRECONDITIONER_NONE      = 0, &
-    PRECONDITIONER_SMOOTHING = 1
+  integer, public, parameter ::     &
+    PRECONDITIONER_NONE      = 0,   &
+    PRECONDITIONER_SMOOTHING = 1,   &
+    PRECONDITIONER_JACOBI    = 2
   
   public ::                         &
     preconditioner_t,               &
@@ -48,14 +52,15 @@ module preconditioners_m
     integer :: which
 
     type(nl_operator_t) :: op
+    FLOAT, pointer      :: diag_lapl(:) ! diagonal of the laplacian
   end type preconditioner_t
   
 contains
 
   ! --------------------------------------------------------- 
   subroutine preconditioner_init(this, gr)
-    type(preconditioner_t), intent(out) :: this 
-    type(grid_t),           intent(in)  :: gr
+    type(preconditioner_t), intent(out)   :: this 
+    type(grid_t),           intent(inout) :: gr
     
     FLOAT, parameter :: alpha = M_HALF
     
@@ -67,16 +72,19 @@ contains
     !% Which preconditioner to use in order to solve the Kohn-Sham equations or
     !% the linear-response equations.
     !%Option no 0
-    !% Do not apply preconditioner
+    !% Do not apply preconditioner.
     !%Option filter 1
-    !% Filter preconditioner
+    !% Filter preconditioner.
+    !%Option jacobi 2
+    !% Jacobi preconditioner. only the local part of the pseudopotential is used.
     !%End
     call loct_parse_int(check_inp('Preconditioner'), PRECONDITIONER_SMOOTHING, this%which)
     if(.not.varinfo_valid_option('Preconditioner', this%which)) call input_error('Preconditioner')
     call messages_print_var_option(stdout, "Preconditioner", this%which)
     
 
-    if(this%which == PRECONDITIONER_SMOOTHING) then
+    select case(this%which)
+    case(PRECONDITIONER_SMOOTHING)
       ! the smoothing has a star stencil like the laplacian
       call nl_operator_init(this%op, 2*NDIM + 1)
       call stencil_star_get_lapl(NDIM, 1, this%op%stencil)
@@ -84,7 +92,12 @@ contains
       
       this%op%w_re(1, 1) = alpha
       this%op%w_re(2:,1) = M_HALF*(M_ONE-alpha)/NDIM
-    end if
+
+    case(PRECONDITIONER_JACOBI)
+      ALLOCATE(this%diag_lapl(NP), NP)
+      call f_laplacian_diag (gr%sb, gr%f_der, this%diag_lapl)
+      call lalg_scal(NP, -M_HALF, this%diag_lapl(:))
+    end select
 
   end subroutine preconditioner_init
 
@@ -93,9 +106,13 @@ contains
   subroutine preconditioner_end(this)
     type(preconditioner_t), intent(inout) :: this 
 
-    if(this%which == PRECONDITIONER_SMOOTHING) then
+    select case(this%which)
+    case(PRECONDITIONER_SMOOTHING)
       call nl_operator_end(this%op)
-    end if
+
+    case(PRECONDITIONER_JACOBI)
+      deallocate(this%diag_lapl)
+    end select
 
   end subroutine preconditioner_end
 
