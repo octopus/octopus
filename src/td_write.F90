@@ -126,8 +126,8 @@ contains
     !%Option laser 64
     !% If set, and if there are lasers defined in <tt>TDLasers</tt>,
     !% <tt>octopus</tt> outputs the laser field to the file <tt>td.general/laser</tt>.
-    !%Option el_energy 128
-    !% If <tt>set</tt>, <tt>octopus</tt> outputs the different components of the electronic energy
+    !%Option energy 128
+    !% If <tt>set</tt>, <tt>octopus</tt> outputs the different components of the energy
     !% to the file <tt>td.general/el_energy</tt>.
     !%Option td_occup 256
     !% If set, outputs the projections of the time-dependent Kohn-Sham
@@ -137,7 +137,7 @@ contains
     !% If set, outputs the local magnetic moments, integrated in sphere centered around each atom.
     !% The radius of the sphere can be ser with <tt>LocalMagneticMomentsSphereRadius</tt>
     !%End
-    call loct_parse_int(check_inp('TDOutput'), 1+16, flags)
+    call loct_parse_int(check_inp('TDOutput'), 1+16+128, flags)
     if(.not.varinfo_valid_option('TDOutput', flags, is_flag=.true.)) then
       call input_error('TDOutput')
     end if
@@ -262,7 +262,7 @@ contains
       if(w%out_laser.ne.0)   call write_iter_init(w%out_laser,   first, dt/units_out%time%factor, &
         trim(io_workpath("td.general/laser")))
       if(w%out_energy.ne.0)  call write_iter_init(w%out_energy,  first, dt/units_out%time%factor, &
-        trim(io_workpath("td.general/el_energy")))
+        trim(io_workpath("td.general/energy")))
       if(w%out_proj.ne.0)    call write_iter_init(w%out_proj,    first, dt/units_out%time%factor, &
         trim(io_workpath("td.general/projections")))
     end if
@@ -320,12 +320,12 @@ contains
     if(w%out_spin.ne.0)     call td_write_spin(w%out_spin, gr, st, i)
     if(w%out_magnets.ne.0)  call td_write_local_magnetic_moments(w%out_magnets, gr, st, geo, w%lmm_r, i)
     if(w%out_proj.ne.0)     call td_write_proj(w%out_proj, gr, st, w%gs_st, i)
-    if(w%out_coords.ne.0)   call td_write_nbo(w%out_coords, gr, geo, i, geo%kinetic_energy, h%etot)
+    if(w%out_coords.ne.0)   call td_write_coordinates(w%out_coords, gr, geo, i)
     if(w%out_populations.ne.0) &
       call td_write_populations(w%out_populations, gr%m, st, w%gs_st, w%n_excited_states, w%excited_st, dt, i)
     if(w%out_acc.ne.0)      call td_write_acc(w%out_acc, gr, geo, st, h, dt, i)
     if(w%out_laser.ne.0)    call td_write_laser(w%out_laser, gr, h, dt, i)
-    if(w%out_energy.ne.0)   call td_write_el_energy(w%out_energy, h, i)
+    if(w%out_energy.ne.0)   call td_write_energy(w%out_energy, h, i, geo%kinetic_energy)
 
     call pop_sub()
   end subroutine td_write_iter
@@ -716,15 +716,16 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine td_write_nbo(out_coords, gr, geo, iter, ke, pe)
+  subroutine td_write_coordinates(out_coords, gr, geo, iter)
     C_POINTER,        intent(in) :: out_coords
     type(grid_t),     intent(in) :: gr
     type(geometry_t), intent(in) :: geo
     integer,          intent(in) :: iter
-    FLOAT,            intent(in) :: ke, pe
 
     integer :: i, j
     character(len=50) :: aux
+
+    call push_sub('td_write.td_write_coordinates')
 
     if(.not.mpi_grp_is_root(mpi_world)) return ! only first node outputs
 
@@ -733,9 +734,6 @@ contains
 
       ! first line: column names
       call write_iter_header_start(out_coords)
-      call write_iter_header(out_coords, 'Ekin')
-      call write_iter_header(out_coords, 'Epot')
-      call write_iter_header(out_coords, 'Etot')
 
       do i = 1, geo%natoms
         do j = 1, NDIM
@@ -761,8 +759,7 @@ contains
       call write_iter_string(out_coords, '#[Iter n.]')
       call write_iter_header(out_coords, '[' // trim(units_out%time%abbrev) // ']')
       call write_iter_string(out_coords, &
-        'Energy in '      // trim(units_out%energy%abbrev)   //   &
-        ', Positions in ' // trim(units_out%length%abbrev)   //   &
+        'Positions in '   // trim(units_out%length%abbrev)   //   &
         ', Velocities in '// trim(units_out%velocity%abbrev) //   &
         ', Forces in '    // trim(units_out%force%abbrev))
       call write_iter_nl(out_coords)
@@ -771,9 +768,6 @@ contains
     end if
 
     call write_iter_start(out_coords)
-    call write_iter_double(out_coords,     ke /units_out%energy%factor, 1)
-    call write_iter_double(out_coords,     pe /units_out%energy%factor, 1)
-    call write_iter_double(out_coords, (ke+pe)/units_out%energy%factor, 1)
 
     do i = 1, geo%natoms
       call write_iter_double(out_coords, geo%atom(i)%x(1:NDIM)/units_out%length%factor,   NDIM)
@@ -786,7 +780,8 @@ contains
     end do
     call write_iter_nl(out_coords)
 
-  end subroutine td_write_nbo
+    call pop_sub()
+  end subroutine td_write_coordinates
 
 
   ! ---------------------------------------------------------
@@ -985,10 +980,11 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine td_write_el_energy(out_energy, h, iter)
+  subroutine td_write_energy(out_energy, h, iter, ke)
     C_POINTER,           intent(in) :: out_energy
     type(hamiltonian_t), intent(in) :: h
     integer,             intent(in) :: iter
+    FLOAT,               intent(in) :: ke
 
     integer :: i
 
@@ -1000,7 +996,9 @@ contains
       ! first line -> column names
       call write_iter_header_start(out_energy)
       call write_iter_header(out_energy, 'Total')
+      call write_iter_header(out_energy, 'Kinetic (ions)')
       call write_iter_header(out_energy, 'Ion-Ion')
+      call write_iter_header(out_energy, 'Electronic')
       call write_iter_header(out_energy, 'Eigenvalues')
       call write_iter_header(out_energy, 'Hartree')
       call write_iter_header(out_energy, 'Int[n v_xc]')
@@ -1019,8 +1017,10 @@ contains
     end if
 
     call write_iter_start(out_energy)
-    call write_iter_double(out_energy, h%etot/units_out%energy%factor, 1)
+    call write_iter_double(out_energy, (h%etot+ke)/units_out%energy%factor, 1)
+    call write_iter_double(out_energy, ke/units_out%energy%factor, 1)
     call write_iter_double(out_energy, h%eii /units_out%energy%factor, 1)
+    call write_iter_double(out_energy, (h%etot-h%eii)/units_out%energy%factor, 1)
     call write_iter_double(out_energy, h%eeigen /units_out%energy%factor, 1)
     call write_iter_double(out_energy, h%ehartree /units_out%energy%factor, 1)
     call write_iter_double(out_energy, h%epot /units_out%energy%factor, 1)
@@ -1029,7 +1029,7 @@ contains
     call write_iter_nl(out_energy)
 
 
-  end subroutine td_write_el_energy
+  end subroutine td_write_energy
 
 
   ! ---------------------------------------------------------
