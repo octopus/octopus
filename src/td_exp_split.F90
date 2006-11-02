@@ -23,19 +23,17 @@
 ! This module contains routines necessary to the split operator
 ! methods defined in td_exp
 module td_exp_split_m
-  use global_m
-  use messages_m
-  use fft_m
-  use lib_basic_alg_m
   use cube_function_m
-  use mesh_function_m
-  use functions_m
-  use simul_box_m
-  use mesh_m
-  use grid_m
-  use states_m
-  use hamiltonian_m
   use external_pot_m
+  use fft_m
+  use functions_m
+  use global_m
+  use grid_m
+  use hamiltonian_m
+  use mesh_m
+  use messages_m
+  use simul_box_m
+  use states_m
 
   implicit none
 

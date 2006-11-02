@@ -21,12 +21,9 @@
 #include "global.h"
 
 module ps_cpi_m
-  use global_m
-  use messages_m
   use atomic_m
   use io_m
   use logrid_m
-  use ps_in_grid_m
   use ps_cpi_file_m
 
   implicit none

@@ -21,19 +21,19 @@
 #include "global.h"
 
 module derivatives_m
-  use global_m
-  use messages_m
   use datasets_m
-  use varinfo_m
+  use global_m
+  use lib_adv_alg_m
   use lib_oct_parser_m
   use mesh_m
+  use messages_m
   use nl_operator_m
-  use lib_adv_alg_m
-  use stencil_star_m
-  use stencil_variational_m
-  use stencil_cube_m
-  use stencil_starplus_m
   use simul_box_m
+  use stencil_cube_m
+  use stencil_star_m
+  use stencil_starplus_m
+  use stencil_variational_m
+  use varinfo_m
 
   implicit none
 

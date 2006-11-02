@@ -21,14 +21,14 @@
 #include "global.h"
 
 module spectrum_m
-  use string_m
-  use global_m
-  use messages_m
-  use lib_oct_parser_m
   use datasets_m
+  use global_m
   use io_m
-  use units_m
   use lib_adv_alg_m
+  use lib_oct_parser_m
+  use messages_m
+  use string_m
+  use units_m
   use varinfo_m
 
   implicit none

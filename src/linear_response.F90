@@ -21,24 +21,20 @@
 #include "global.h"
 
 module linear_response_m
-  use global_m
-  use messages_m
   use datasets_m
+  use global_m
+  use grid_m
+  use hamiltonian_m
+  use lib_oct_m
   use lib_oct_parser_m
   use mesh_m
-  use grid_m
-  use states_m
+  use messages_m
   use mix_m
-  use hamiltonian_m
-  use xc_m
-  use functions_m
-  use output_m 
-  use units_m
-  use mesh_function_m
-  use lib_oct_m
-  use io_m
-  use lib_basic_alg_m
+  use output_m
   use preconditioners_m
+  use states_m
+  use units_m
+  use xc_m
 
   implicit none
 

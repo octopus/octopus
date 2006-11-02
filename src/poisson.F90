@@ -21,18 +21,18 @@
 #include "global.h"
 
 module poisson_m
-  use global_m
-  use mpi_m
-  use messages_m
-  use profiling_m
-  use lib_oct_parser_m
-  use lib_oct_m
-  use io_m
-  use units_m
   use datasets_m
   use geometry_m
-  use simul_box_m
+  use global_m
+  use io_m
+  use lib_oct_m
+  use lib_oct_parser_m
   use mesh_m
+  use messages_m
+  use mpi_m
+  use profiling_m
+  use simul_box_m
+  use units_m
 #ifdef HAVE_FFT
   use fft_m
   use cube_function_m

@@ -21,25 +21,24 @@
 #include "global.h"
 
 module restart_m
+  use curvlinear_m
+  use datasets_m
+  use geometry_m
+  use global_m
+  use grid_m
+  use io_m
   use lib_oct_m
   use lib_oct_parser_m
-  use global_m
-  use messages_m
-  use datasets_m
-  use io_m
-  use states_m
-  use curvlinear_m
-  use simul_box_m
-  use mesh_m
-  use mesh_function_m
-  use geometry_m
-  use grid_m
-  use output_m
-  use mpi_m
-  use mpi_debug_m
-  use varinfo_m
-  use math_m
   use linear_response_m
+  use math_m
+  use mesh_function_m
+  use mesh_m
+  use messages_m
+  use mpi_m
+  use output_m
+  use simul_box_m
+  use states_m
+  use varinfo_m
 
   implicit none
 

@@ -21,13 +21,11 @@
 #include "global.h"
 
 module poisson_cg_m
+  use derivatives_m
   use global_m
-  use messages_m
   use math_m
   use mesh_m
-  use derivatives_m
-  use lib_oct_m
-  use functions_m
+  use messages_m
   use poisson_corrections_m
   
   implicit none

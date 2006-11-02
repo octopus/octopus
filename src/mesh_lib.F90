@@ -21,7 +21,6 @@
 #include "global.h"
 
 module mesh_lib_m
-  use global_m
 
   implicit none
 

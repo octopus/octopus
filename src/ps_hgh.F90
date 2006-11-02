@@ -24,12 +24,12 @@ module ps_hgh_m
   ! For information about the Hartwinger-Goedecker-Hutter pseudopotentials, take a look at:
   !  (1) S. Goedecker, M. Teter and J. Hutter, Phys. Rev. B 54, 1703 (1996).
   !  (2) C. Hartwinger, S. Goedecker and J. Hutter, Phys. Rev. B 58, 3641 (1998).
-  use global_m
-  use messages_m
-  use io_m
   use atomic_m
-  use logrid_m
+  use global_m
+  use io_m
   use lib_oct_m
+  use logrid_m
+  use messages_m
 
   implicit none
 

@@ -19,10 +19,10 @@
 !! $Id$
 
 module pulpo_m
-  use io_m
   use global_m
-  use messages_m
+  use io_m
   use lib_oct_m
+  use messages_m
 
   private
   public :: pulpo_print

@@ -21,14 +21,14 @@
 #include "global.h"
 
 module mix_m
-  use global_m
-  use messages_m
   use datasets_m
-  use mesh_m
-  use mesh_function_m
-  use lib_oct_parser_m
-  use lib_basic_alg_m
+  use global_m
   use lib_adv_alg_m
+  use lib_basic_alg_m
+  use lib_oct_parser_m
+  use mesh_function_m
+  use mesh_m
+  use messages_m
   use varinfo_m
 
   implicit none

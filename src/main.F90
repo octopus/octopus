@@ -21,17 +21,17 @@
 #include "global.h"
 
 program octopus
-  use string_m
-  use global_m
-  use messages_m
   use datasets_m
+  use global_m
+  use io_m
   use lib_oct_m
   use lib_oct_parser_m
-  use run_prog_m
-  use io_m
-  use profiling_m
-  use varinfo_m
+  use messages_m
   use mpi_m
+  use profiling_m
+  use run_prog_m
+  use string_m
+  use varinfo_m
 
   implicit none
 

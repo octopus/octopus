@@ -22,11 +22,12 @@
 
 module excited_states_m
   use global_m
-  use states_m
-  use messages_m
-  use mesh_m
   use io_m
   use lib_adv_alg_m
+  use mesh_m
+  use messages_m
+  use mpi_m
+  use states_m
 
   implicit none
 

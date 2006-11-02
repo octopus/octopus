@@ -21,31 +21,29 @@
 #include "global.h"
 
 module td_write_m
-  use global_m
   use datasets_m
-  use units_m
-  use messages_m
+  use excited_states_m
+  use external_pot_m
+  use geometry_m
+  use global_m
+  use grid_m
+  use hamiltonian_m
   use io_m
+  use lasers_m
   use lib_oct_m
   use lib_oct_parser_m
-  use geometry_m
-  use mesh_m
-  use grid_m
+  use magnetic_m
   use mesh_function_m
-  use functions_m
-  use states_m
-  use states_output_m
-  use excited_states_m
+  use mesh_m
+  use messages_m
+  use mpi_m
   use output_m
   use restart_m
-  use lasers_m
-  use hamiltonian_m
-  use external_pot_m
-  use grid_m
   use spectrum_m
-  use mpi_m
+  use states_m
+  use states_output_m
+  use units_m
   use varinfo_m
-  use magnetic_m
 
   implicit none
 

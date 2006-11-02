@@ -26,14 +26,11 @@
 ! It assumes that the Oxygen atom is located at x0=0 (see Eq. (12))
 
 module curv_briggs_m
-  use lib_oct_parser_m
-  use global_m
-  use messages_m
   use datasets_m
-  use units_m
-  use geometry_m
+  use global_m
+  use lib_oct_parser_m
+  use messages_m
   use simul_box_m
-  use lib_adv_alg_m
 
   implicit none
 

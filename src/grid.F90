@@ -21,19 +21,16 @@
 #include "global.h"
 
 module grid_m
-  use global_m
-  use lib_oct_parser_m
-  use messages_m
-  use datasets_m
-  use mesh_m
-  use simul_box_m
-  use geometry_m
-  use functions_m
   use curvlinear_m
-  use multigrid_m
-  use par_vec_m
+  use functions_m
+  use geometry_m
+  use global_m
+  use mesh_m
+  use messages_m
   use mpi_m
   use multicomm_m
+  use multigrid_m
+  use simul_box_m
 
   implicit none
 

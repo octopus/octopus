@@ -21,11 +21,11 @@
 #include "global.h"
 
 module xc_functl_m
-  use global_m
-  use messages_m
   use datasets_m
+  use global_m
   use lib_oct_parser_m
   use lib_xc_m
+  use messages_m
 
   implicit none
 

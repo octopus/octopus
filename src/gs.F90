@@ -21,25 +21,24 @@
 #include "global.h"
 
 module ground_state_m
-  use global_m
-  use messages_m
-  use varinfo_m
   use datasets_m
-  use lib_oct_parser_m
-  use system_m
+  use global_m
+  use grid_m
+  use guess_density_m
   use hamiltonian_m
-  use v_ks_m
   use lcao_m
-  use states_m
+  use lib_oct_parser_m
+  use mesh_m
+  use messages_m
+  use mpi_debug_m
+  use mpi_m
   use restart_m
   use scf_m
-  use grid_m
   use simul_box_m
-  use mesh_m
-  use mpi_m
-  use mpi_debug_m
-  use guess_density_m
-  !use colle_salvetti_m
+  use states_m
+  use system_m
+  use v_ks_m
+  use varinfo_m
 
   implicit none
 
@@ -172,9 +171,6 @@ contains
     call scf_init(sys%gr, sys%geo, scfv, sys%st, h)
     call scf_run(scfv, sys%gr, sys%geo, sys%st, sys%ks, h, sys%outp)
     call scf_end(scfv)
-
-    ! colle and salvetti integral
-    !call colle_salvetti_int(sys%gr, sys%st)
 
     ! clean up
     call states_deallocate_wfns(sys%st)

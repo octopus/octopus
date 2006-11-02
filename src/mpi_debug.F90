@@ -23,12 +23,8 @@
 
 module mpi_debug_m
 #if defined(HAVE_MPI)
-  use varinfo_m
   use global_m
-  use messages_m
   use lib_oct_m
-  use lib_oct_parser_m
-  use datasets_m
   use messages_m
   use mpi_m
 

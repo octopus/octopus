@@ -21,28 +21,27 @@
 #include "global.h"
 
 module casida_m
-  use global_m
-  use messages_m
   use datasets_m
-  use lib_oct_parser_m
-  use units_m
-  use lib_oct_m
+  use excited_states_m
+  use global_m
+  use hamiltonian_m
   use io_m
   use lib_adv_alg_m
-  use math_m, only : sort
-  use mesh_m
-  use functions_m
+  use lib_oct_m
+  use lib_oct_parser_m
+  use math_m
   use mesh_function_m
-  use poisson_m
-  use states_m
-  use excited_states_m
-  use xc_m
-  use system_m
-  use hamiltonian_m
-  use restart_m
+  use mesh_m
+  use messages_m
   use mpi_m
   use multicomm_m
   use output_m
+  use poisson_m
+  use restart_m
+  use states_m
+  use system_m
+  use units_m
+  use xc_m
   
   implicit none
 

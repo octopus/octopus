@@ -22,8 +22,8 @@
 
 module stencil_star_m
   use global_m
+  use math_m
   use messages_m
-  use math_m, only: weights
   use nl_operator_m
 
   implicit none

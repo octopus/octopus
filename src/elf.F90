@@ -21,13 +21,14 @@
 #include "global.h"
 
 module elf_m
-  use global_m
-  use messages_m
-  use states_m
-  use grid_m
   use cube_function_m
-  use mesh_m
   use functions_m
+  use global_m
+  use grid_m
+  use mesh_m
+  use messages_m
+  use mpi_m
+  use states_m
 
   implicit none
 

@@ -21,24 +21,22 @@
 #include "global.h"
 
 module hamiltonian_m
-  use global_m
-  use messages_m
   use datasets_m
-  use profiling_m
-  use units_m
-  use lib_oct_parser_m
-  use lib_basic_alg_m
-  use functions_m
-  use mesh_m
-  use grid_m
-  use simul_box_m
-  use mesh_function_m
-  use geometry_m
-  use specie_m
-  use states_m
   use external_pot_m
-  use output_m
+  use functions_m
+  use geometry_m
+  use global_m
+  use grid_m
+  use lib_basic_alg_m
+  use lib_oct_parser_m
+  use mesh_m
+  use messages_m
   use mpi_m
+  use output_m
+  use profiling_m
+  use simul_box_m
+  use states_m
+  use units_m
   use varinfo_m
 
   implicit none

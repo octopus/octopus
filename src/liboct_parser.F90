@@ -22,8 +22,8 @@
 
 module lib_oct_parser_m
   use global_m
-  use mpi_m
   use lib_oct_m
+  use mpi_m
 
   implicit none
 

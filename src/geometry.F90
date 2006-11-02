@@ -21,17 +21,17 @@
 #include "global.h"
 
 module geometry_m
-  use global_m
-  use mpi_m
-  use varinfo_m
-  use messages_m
   use datasets_m
+  use global_m
+  use io_m
+  use lib_oct_m
+  use lib_oct_parser_m
+  use messages_m
+  use mpi_m
+  use specie_m
   use string_m
   use units_m
-  use lib_oct_parser_m
-  use lib_oct_m
-  use io_m
-  use specie_m
+  use varinfo_m
   use xyz_file_m
 
   implicit none

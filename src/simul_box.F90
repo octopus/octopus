@@ -21,17 +21,16 @@
 #include "global.h"
 
 module simul_box_m
+  use datasets_m
+  use geometry_m
   use global_m
+  use io_m
+  use lib_oct_parser_m
+  use math_m
   use messages_m
   use string_m
-  use varinfo_m
   use units_m
-  use datasets_m
-  use lib_oct_parser_m
-  use lib_oct_m
-  use geometry_m
-  use math_m
-  use io_m
+  use varinfo_m
 
   implicit none
 

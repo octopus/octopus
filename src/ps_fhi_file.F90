@@ -23,7 +23,6 @@
 module ps_fhi_file_m
   use global_m
   use messages_m
-  use ps_in_grid_m
 
   implicit none
 

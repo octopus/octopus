@@ -21,14 +21,15 @@
 #include "global.h"
 
 module magnetic_m
-  use global_m
-  use messages_m
-  use mesh_function_m
   use functions_m
-  use mesh_m
-  use states_m
   use geometry_m
+  use global_m
   use grid_m
+  use mesh_function_m
+  use mesh_m
+  use messages_m
+  use mpi_m
+  use states_m
 
   implicit none
 

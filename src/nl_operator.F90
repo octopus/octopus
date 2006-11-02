@@ -22,14 +22,13 @@
 
 module nl_operator_m
   use global_m
-  use messages_m
-  use mesh_m
-  use mesh_lib_m
-  use simul_box_m
   use io_m
-  use profiling_m
-  use par_vec_m
+  use mesh_lib_m
+  use mesh_m
+  use messages_m
   use mpi_m
+  use par_vec_m
+  use profiling_m
 
   implicit none
 

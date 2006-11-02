@@ -90,12 +90,12 @@ module par_vec_m
   ! deallocate(ul, vl, wl)
 
   use global_m
-  use messages_m
-  use mesh_lib_m
   use io_m
-  use profiling_m
-  use mpi_m
+  use mesh_lib_m
+  use messages_m
   use mpi_debug_m
+  use mpi_m
+  use profiling_m
 
   implicit none
 

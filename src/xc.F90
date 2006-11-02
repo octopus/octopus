@@ -21,21 +21,19 @@
 #include "global.h"
 
 module xc_m
-  use global_m
-  use messages_m
   use datasets_m
-  use lib_oct_parser_m
-  use lib_basic_alg_m
-  use lib_adv_alg_m
-  use profiling_m
-  use mesh_m
-  use grid_m
   use functions_m
-  use poisson_m
-  use states_m
+  use global_m
+  use grid_m
+  use lib_basic_alg_m
+  use lib_oct_parser_m
   use lib_xc_m
-  use xc_functl_m
   use mesh_function_m
+  use mesh_m
+  use messages_m
+  use profiling_m
+  use states_m
+  use xc_functl_m
 
   implicit none
 

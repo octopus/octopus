@@ -21,20 +21,20 @@
 #include "global.h"
 
 module geom_opt_m
-  use global_m
-  use messages_m
   use datasets_m
-  use lib_oct_parser_m
-  use units_m
-  use mesh_m
   use external_pot_m
-  use v_ks_m
-  use hamiltonian_m
   use geometry_m
+  use global_m
+  use hamiltonian_m
+  use lib_oct_parser_m
+  use mesh_m
+  use messages_m
+  use restart_m
+  use scf_m
   use states_m
   use system_m
-  use scf_m
-  use restart_m
+  use units_m
+  use v_ks_m
   use varinfo_m
 
   implicit none

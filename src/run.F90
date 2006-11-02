@@ -21,31 +21,29 @@
 #include "global.h"
 
 module run_prog_m
-  use global_m
-  use messages_m
-  use lib_oct_parser_m
-  use datasets_m
-  use units_m
-  use fft_m
-  use restart_m
-  use external_pot_m
-  use hamiltonian_m
-  use system_m
-  use scf_m
-  use timedep_m
-  use unocc_m
-  use static_pol_m
-  use pol_lr_m
   use casida_m
-  use wave_matching_m
+  use datasets_m
+  use external_pot_m
+  use fft_m
   use geom_opt_m
-  use phonons_m
-  use opt_control_m
+  use global_m
   use ground_state_m
-  use pulpo_m
-  use io_m
-  use multicomm_m
+  use hamiltonian_m
+  use lib_oct_parser_m
+  use messages_m
   use mpi_debug_m
+  use multicomm_m
+  use opt_control_m
+  use phonons_m
+  use pol_lr_m
+  use pulpo_m
+  use restart_m
+  use static_pol_m
+  use system_m
+  use timedep_m
+  use units_m
+  use unocc_m
+  use wave_matching_m
 
   implicit none
 

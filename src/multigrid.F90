@@ -21,14 +21,14 @@
 #include "global.h"
 
 module multigrid_m
-  use global_m
-  use messages_m
-  use datasets_m
-  use lib_oct_parser_m
   use curvlinear_m
-  use geometry_m
-  use mesh_m
+  use datasets_m
   use functions_m
+  use geometry_m
+  use global_m
+  use lib_oct_parser_m
+  use mesh_m
+  use messages_m
 
   implicit none
 

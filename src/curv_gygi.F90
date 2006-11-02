@@ -24,15 +24,14 @@
 ! F. Gygi and G. Galli, PRB 52 R2229 (1996).
 
 module curv_gygi_m
-  use lib_oct_parser_m
-  use global_m
-  use messages_m
   use datasets_m
-  use units_m
   use geometry_m
-  use simul_box_m
-  use lib_adv_alg_m
+  use global_m
+  use lib_oct_parser_m
+  use messages_m
   use root_solver_m
+  use simul_box_m
+  use units_m
 
   implicit none
 

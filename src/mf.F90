@@ -22,16 +22,13 @@
 
 module mesh_function_m
   use global_m
-  use messages_m
   use lib_basic_alg_m
   use math_m
   use mesh_m
-  use cube_function_m
+  use messages_m
+  use mpi_m
   use par_vec_m
   use profiling_m
-  use mpi_m
-  use mpi_debug_m
-  use par_vec_m
 
   implicit none
 

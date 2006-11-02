@@ -22,9 +22,9 @@
 
 module atomic_m
   use global_m
-  use messages_m
   use lib_xc_m
   use logrid_m
+  use messages_m
 
   implicit none
 

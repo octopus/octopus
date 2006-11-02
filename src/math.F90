@@ -25,11 +25,9 @@
 
 module math_m
   use global_m
-  use messages_m
-  use datasets_m
-  use lib_oct_m
   use lib_basic_alg_m
-  use lib_adv_alg_m
+  use lib_oct_m
+  use messages_m
 
   implicit none
 

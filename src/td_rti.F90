@@ -21,25 +21,14 @@
 #include "global.h"
 
 module td_rti_m
-  use global_m
-  use messages_m
-  use lib_oct_parser_m
   use datasets_m
   use lib_basic_alg_m
+  use lib_oct_parser_m
   use math_m
-  use mesh_m
-  use cube_function_m
-  use functions_m
   use mesh_function_m
-  use states_m
-  use v_ks_m
-  use hamiltonian_m
-  use external_pot_m
-  use sparskit_m
   use td_exp_m
   use td_exp_split_m
-  use grid_m
-  use varinfo_m
+  use v_ks_m
 
   implicit none
 

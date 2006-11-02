@@ -21,18 +21,18 @@
 #include "global.h"
 
 module ps_m
+  use atomic_m
   use global_m
-  use messages_m
-  use lib_oct_m
   use io_m
   use lib_oct_gsl_spline_m
+  use lib_oct_m
   use logrid_m
-  use atomic_m
-  use ps_in_grid_m
-  use ps_psf_m
-  use ps_hgh_m
+  use messages_m
   use ps_cpi_m
   use ps_fhi_m
+  use ps_hgh_m
+  use ps_in_grid_m
+  use ps_psf_m
 
   implicit none
 

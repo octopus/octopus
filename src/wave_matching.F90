@@ -21,12 +21,8 @@
 #include "global.h"
 
 module wave_matching_m
-  use global_m
-  use messages_m
   use datasets_m
-  use system_m
-  use hamiltonian_m
-  use io_m
+  use messages_m
 
   implicit none
 

@@ -22,29 +22,29 @@
 #define RESTART_DIR "restart_pol_lr/"
 
 module pol_lr_m
+  use datasets_m
+  use elf_m
+  use functions_m
   use global_m
-  use messages_m
-  use units_m
-  use mesh_m
-  use mesh_function_m
-  use system_m
-  use restart_m
+  use grid_m
   use hamiltonian_m
-  use mix_m
-  use poisson_m
-  use linear_response_m
   use io_m
   use lib_oct_parser_m
-  use math_m
-  use string_m
-  use states_m
+  use linear_response_m
   use magnetic_m
-  use elf_m
-  use grid_m
-  use datasets_m
+  use math_m
+  use mesh_function_m
+  use mesh_m
+  use messages_m
+  use mix_m
   use output_m
+  use poisson_m
+  use restart_m
+  use states_m
+  use string_m
+  use system_m
+  use units_m
   use xc_m
-  use functions_m
 
   implicit none
 

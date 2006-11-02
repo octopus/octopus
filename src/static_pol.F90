@@ -21,24 +21,24 @@
 #include "global.h"
 
 module static_pol_m
-  use global_m
-  use messages_m
   use datasets_m
-  use units_m
-  use lib_oct_parser_m
-  use lib_oct_m
+  use elf_m
+  use geometry_m
+  use global_m
+  use grid_m
+  use hamiltonian_m
   use io_m
+  use lib_oct_m
+  use lib_oct_parser_m
   use mesh_function_m
   use mesh_m
-  use grid_m
-  use system_m
-  use hamiltonian_m
-  use states_m
-  use geometry_m
+  use messages_m
+  use output_m
   use restart_m
   use scf_m
-  use output_m
-  use elf_m
+  use states_m
+  use system_m
+  use units_m
 
   implicit none
 

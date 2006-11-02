@@ -21,25 +21,21 @@
 #include "global.h"
 
 module v_ks_m
-  use global_m
-  use mpi_m
-  use messages_m
   use datasets_m
+  use global_m
+  use grid_m
+  use hamiltonian_m
+  use lib_oct_parser_m
+  use lib_xc_m
+  use mesh_function_m
+  use messages_m
+  use mpi_m
+  use poisson_m
   use profiling_m
   use states_m
-  use lib_oct_parser_m
-  use io_m
-  use lib_basic_alg_m
-  use functions_m
-  use mesh_m
-  use grid_m
-  use mesh_function_m
-  use poisson_m
-  use lib_xc_m
-  use xc_m
-  use xc_OEP_m
-  use hamiltonian_m
   use varinfo_m
+  use xc_OEP_m
+  use xc_m
   implicit none
 
   private

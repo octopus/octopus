@@ -21,17 +21,17 @@
 #include "global.h"
 
 module preconditioners_m
+  use datasets_m
+  use functions_m
   use global_m
   use grid_m
-  use nl_operator_m
-  use stencil_star_m
-  use lib_oct_parser_m
-  use datasets_m
-  use varinfo_m
-  use messages_m
   use hamiltonian_m
   use lib_basic_alg_m
-  use functions_m
+  use lib_oct_parser_m
+  use messages_m
+  use nl_operator_m
+  use stencil_star_m
+  use varinfo_m
 
   implicit none
   private

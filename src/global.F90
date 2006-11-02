@@ -21,8 +21,6 @@
 #include "global.h"
 
 module global_m
-  use varinfo_m
-  use string_m
   use lib_oct_m
   use mpi_m
 

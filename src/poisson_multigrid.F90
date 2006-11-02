@@ -21,17 +21,16 @@
 #include "global.h"
 
 module poisson_multigrid_m
-  use global_m
   use datasets_m
-  use lib_oct_parser_m
-  use messages_m
-  use mesh_m
   use functions_m
+  use global_m
   use grid_m
-  use output_m
+  use lib_oct_parser_m
+  use math_m
+  use mesh_m
+  use messages_m
   use multigrid_m
   use poisson_corrections_m
-  use math_m, only : dconjugate_gradients
   use varinfo_m
 
   implicit none

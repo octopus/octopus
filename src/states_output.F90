@@ -21,16 +21,16 @@
 #include "global.h"
 
 module states_output_m
-  use global_m
-  use messages_m
-  use states_m
-  use grid_m
-  use output_m
-  use units_m
-  use lib_oct_m
-  use io_m
-  use magnetic_m
   use elf_m
+  use global_m
+  use grid_m
+  use io_m
+  use lib_oct_m
+  use magnetic_m
+  use messages_m
+  use output_m
+  use states_m
+  use units_m
 
   private
   public ::                         &

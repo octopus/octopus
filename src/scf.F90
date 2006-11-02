@@ -21,34 +21,32 @@
 #include "global.h"
 
 module scf_m
-  use global_m
-  use mpi_m
-  use messages_m
   use datasets_m
+  use eigen_solver_m
+  use external_pot_m
+  use geometry_m
+  use global_m
+  use grid_m
+  use hamiltonian_m
+  use io_m
+  use lcao_m
   use lib_oct_m
   use lib_oct_parser_m
-  use units_m
-  use geometry_m
-  use simul_box_m
-  use mesh_m
+  use magnetic_m
   use mesh_function_m
-  use functions_m
+  use mesh_m
+  use messages_m
+  use mix_m
+  use mpi_m
+  use output_m
+  use profiling_m
+  use restart_m
+  use simul_box_m
   use states_m
   use states_output_m
-  use output_m
-  use restart_m
+  use units_m
   use v_ks_m
-  use hamiltonian_m
-  use external_pot_m
-  use xc_m
-  use eigen_solver_m
-  use mix_m
-  use lcao_m
-  use io_m
-  use grid_m
-  use profiling_m
   use varinfo_m
-  use magnetic_m
 
   implicit none
 

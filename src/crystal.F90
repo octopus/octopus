@@ -6,13 +6,11 @@
 
       module crystal_m
 
-      use global_m
-      use messages_m
-      use io_m
-      use units_m
-      use lib_adv_alg_m
-      use math_m
-      use blas_m
+  use blas_m
+  use global_m
+  use lib_adv_alg_m
+  use messages_m
+  use units_m
 
       implicit none
 

@@ -21,20 +21,18 @@
 #include "global.h"
 
 module external_pot_m
-  use global_m
-  use messages_m
-  use units_m
-  use lib_oct_m
-  use lib_oct_parser_m
-  use lib_oct_gsl_spline_m
   use datasets_m
   use fft_m
-  use math_m
-  use mesh_m
-  use mesh_function_m
-  use grid_m
-  use simul_box_m
   use functions_m
+  use global_m
+  use grid_m
+  use lib_oct_parser_m
+  use math_m
+  use mesh_function_m
+  use mesh_m
+  use messages_m
+  use simul_box_m
+  use units_m
 #ifdef HAVE_FFT
   use cube_function_m
 #endif
