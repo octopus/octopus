@@ -36,7 +36,6 @@ subroutine X(lcao_initial_wf) (n, m, geo, psi, ispin, ik, err)
   call push_sub('lcao_inc.Xlcao_initial_wf')
 
   err = 0
-  psi = R_TOTYPE(M_ZERO)
 
   norbs = 0
   do ia = 1, geo%natoms
@@ -55,26 +54,33 @@ subroutine X(lcao_initial_wf) (n, m, geo, psi, ispin, ik, err)
     return
   end if
 
+  psi(1:m%np, 1:wf_dim) = R_TOTYPE(M_ZERO)
+
   idim = 1
   i = 1; j = 0
-  do
+
+  do 
     j = j + 1
     do ia = 1, geo%natoms
       s => geo%atom(ia)%spec
-      do idim = 1, wf_dim
-        if(j > s%niwfs) cycle
-        if(n == i) then
+      if(j > s%niwfs) cycle
+      if(n == i) then
+        
+        do idim = 1, wf_dim
           do k = 1, m%np
             x(1:calc_dim) = m%x(k, 1:calc_dim) - geo%atom(ia)%x(1:calc_dim)
-            psi(k, idim) =  R_TOTYPE(specie_get_iwf(s, j, calc_dim, states_spin_channel(ispin, ik, idim), x(1:calc_dim)))
+            psi(k, idim) =  &
+                 R_TOTYPE(specie_get_iwf(s, j, calc_dim, states_spin_channel(ispin, ik, idim), x(1:calc_dim)))
           end do
-          r = X(states_nrm2)(m, wf_dim, psi)
-          psi = psi/r
-          call pop_sub()
-          return
-        end if
-        i = i + 1
-      end do
+        end do
+        
+        r = X(states_nrm2)(m, wf_dim, psi)
+        psi(1:m%np, 1:wf_dim) = psi(1:m%np, 1:wf_dim)/r
+        call pop_sub()
+        return
+        
+      end if
+      i = i + 1
     end do
   end do
 
@@ -116,6 +122,9 @@ subroutine X(lcao_init) (lcao_data, gr, geo, h, norbs)
 
   ! Overlap and kinetic+so matrices.
   ALLOCATE(hpsi(NP_PART, st%d%dim), NP_PART*st%d%dim)
+
+  hpsi(1:NP_PART, 1:st%d%dim) = M_ZERO
+
   do ik = 1, st%d%nik
     do n1 = 1, st%nst
       call X(kinetic) (h, gr, st%X(psi)(:, :, n1, ik), hpsi(:, :), ik)
@@ -185,7 +194,7 @@ subroutine X(lcao_wf) (lcao_data, st, m, h, start)
 
     do n1 = start, nst
       st%eigenval(n1, ik) = ev(n1)
-      st%X(psi)(:, :, n1, ik) = R_TOTYPE(M_ZERO)
+      st%X(psi)(1:m%np_part, 1:dim, n1, ik) = R_TOTYPE(M_ZERO)
     end do
     deallocate(ev)
 
