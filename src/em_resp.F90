@@ -38,6 +38,8 @@ module pol_lr_m
   use math_m
   use string_m
   use states_m
+  use magnetic_m
+  use elf_m
   use grid_m
   use datasets_m
   use output_m

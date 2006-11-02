@@ -35,6 +35,7 @@ module casida_m
   use mesh_function_m
   use poisson_m
   use states_m
+  use excited_states_m
   use xc_m
   use system_m
   use hamiltonian_m

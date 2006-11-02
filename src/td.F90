@@ -93,14 +93,14 @@ contains
     logical,                intent(inout) :: fromScratch
 
     type(td_t)                :: td
-    type(td_write_t) :: write_handler
+    type(td_write_t)          :: write_handler
     type(grid_t),     pointer :: gr   ! some shortcuts
     type(states_t),   pointer :: st
     type(geometry_t), pointer :: geo
-    logical :: stopping
-    integer :: i, ii, j, ik, ierr
-    FLOAT, allocatable ::  x1(:,:), x2(:,:), f1(:,:) ! stuff for verlet
-    FLOAT :: etime
+    logical                   :: stopping
+    integer                   :: i, ii, j, ik, ierr
+    FLOAT, allocatable        ::  x1(:,:), x2(:,:), f1(:,:) ! stuff for verlet
+    FLOAT                     :: etime
 
     call push_sub('td.td_run')
 

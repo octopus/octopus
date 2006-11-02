@@ -34,6 +34,8 @@ module opt_control_m
   use mesh_m
   use grid_m
   use states_m
+  use states_output_m
+  use excited_states_m
   use system_m
   use restart_m
   use v_ks_m

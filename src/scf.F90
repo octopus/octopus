@@ -34,6 +34,7 @@ module scf_m
   use mesh_function_m
   use functions_m
   use states_m
+  use states_output_m
   use output_m
   use restart_m
   use v_ks_m
@@ -47,6 +48,7 @@ module scf_m
   use grid_m
   use profiling_m
   use varinfo_m
+  use magnetic_m
 
   implicit none
 
@@ -309,7 +311,7 @@ contains
       call states_calc_dens(st, NP, st%rho)
       rhoout(1:NP, 1, 1:nspin) = st%rho(1:NP, 1:nspin)
       if (h%d%cdft) then
-        call states_calc_physical_current(gr, st, st%j)
+        call calc_physical_current(gr, st, st%j)
         rhoout(1:NP, 2:dim, 1:nspin) = st%j(1:NP, 1:NDIM, 1:nspin)
       end if
       if (scf%what2mix == MIXPOT) then
@@ -795,9 +797,9 @@ contains
 
       call push_sub('scf.write_magnetic_moments')
 
-      call states_magnetic_moment(m, st, st%rho, mm)
+      call magnetic_moment(m, st, st%rho, mm)
       ALLOCATE(lmm(3, geo%natoms), 3*geo%natoms)
-      call states_local_magnetic_moments(m, st, geo, st%rho, scf%lmm_r, lmm)
+      call magnetic_local_moments(m, st, geo, st%rho, scf%lmm_r, lmm)
 
       if(mpi_grp_is_root(mpi_world)) then
 

@@ -38,6 +38,7 @@ module static_pol_m
   use restart_m
   use scf_m
   use output_m
+  use elf_m
 
   implicit none
 
@@ -251,9 +252,9 @@ contains
       if(iand(sys%outp%what, output_elf).ne.0) then 
          
         if(k == 1) then 
-          call states_calc_elf(st, gr, elf, elfd)
+          call elf_calc(st, gr, elf, elfd)
         else
-          call states_calc_elf(st, gr, lr_elf, lr_elfd)
+          call elf_calc(st, gr, lr_elf, lr_elfd)
           
           !numerical derivative
            lr_elf(1:NP, 1:st%d%nspin) = ( lr_elf(1:NP, 1:st%d%nspin) -  elf(1:NP, 1:st%d%nspin)) / (M_TWO*e_field)

@@ -34,6 +34,8 @@ module td_write_m
   use mesh_function_m
   use functions_m
   use states_m
+  use states_output_m
+  use excited_states_m
   use output_m
   use restart_m
   use lasers_m
@@ -43,6 +45,7 @@ module td_write_m
   use spectrum_m
   use mpi_m
   use varinfo_m
+  use magnetic_m
 
   implicit none
 
@@ -72,7 +75,7 @@ module td_write_m
     type(states_t), pointer :: gs_st    ! The states_type where the ground state is stored, in order to
                                         ! calculate the projections(s) onto it.
     integer        :: n_excited_states  ! number of excited sates onto which the projections are calculated.
-    type(states_excited_t), pointer :: excited_st(:) ! The excited states.
+    type(excited_states_t), pointer :: excited_st(:) ! The excited states.
   end type td_write_t
 
 contains
@@ -230,7 +233,7 @@ contains
         ALLOCATE(w%excited_st(w%n_excited_states), w%n_excited_states)
         do i = 1, w%n_excited_states
           call loct_parse_block_string(blk, i-1, 0, filename)
-          call states_init_excited_state(w%excited_st(i), w%gs_st, trim(filename)) 
+          call excited_states_init(w%excited_st(i), w%gs_st, trim(filename)) 
         end do
       else
         w%n_excited_states = 0
@@ -291,7 +294,7 @@ contains
     end if
     if( w%out_populations.ne.0 ) then
       do i = 1, w%n_excited_states
-        call states_kill_excited_state(w%excited_st(i))
+        call excited_states_kill(w%excited_st(i))
       end do
     end if
     if( (w%out_populations.ne.0) .or. (w%out_proj.ne.0) ) then
@@ -391,7 +394,7 @@ contains
 
     ! The expectation value of the spin operator is half the total magnetic moment
     ! This has to be calculated by all nodes
-    call states_magnetic_moment(gr%m, st, st%rho, spin)
+    call magnetic_moment(gr%m, st, st%rho, spin)
     spin = M_HALF*spin
 
     if(mpi_grp_is_root(mpi_world)) then ! only first node outputs
@@ -446,7 +449,7 @@ contains
 
     !get the atoms magnetization. This has to be calculated by all nodes
     ALLOCATE(lmm(3, geo%natoms), 3*geo%natoms)
-    call states_local_magnetic_moments(gr%m, st, geo, st%rho, lmm_r, lmm)
+    call magnetic_local_moments(gr%m, st, geo, st%rho, lmm_r, lmm)
 
     if(mpi_grp_is_root(mpi_world)) then ! only first node outputs
 
@@ -791,7 +794,7 @@ contains
     type(states_t),         intent(in) :: st
     type(states_t),         intent(in) :: gs_st
     integer,                intent(in) :: n_excited_states
-    type(states_excited_t), intent(in) :: excited_st(:)
+    type(excited_states_t), intent(in) :: excited_st(:)
     FLOAT,                  intent(in) :: dt
     integer,                intent(in) :: iter
  

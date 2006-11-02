@@ -24,7 +24,9 @@ core_SRCS = $(basic_SRCS) \
 	cf.F90 mf.F90 f.F90 \
 	out.F90 multigrid.F90 grid.F90 \
 	poisson_corrections.F90 poisson_cg.F90 poisson_multigrid.F90 poisson.F90 \
-	crystal.F90 states.F90 xc_functl.F90 xc.F90 mix.F90 spectrum.F90 \
+	crystal.F90 \
+	states.F90 magnetic.F90 elf.F90 states_output.F90 excited_states.F90 \
+	xc_functl.F90 xc.F90 mix.F90 spectrum.F90 \
 	guess_density.F90
 
 octopus_SOURCES = $(core_SRCS) \
