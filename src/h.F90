@@ -22,7 +22,6 @@
 
 module hamiltonian_m
   use datasets_m
-  use external_pot_m
   use functions_m
   use geometry_m
   use global_m
@@ -30,6 +29,7 @@ module hamiltonian_m
   use lib_basic_alg_m
   use lib_oct_parser_m
   use mesh_m
+  use external_pot_m
   use messages_m
   use mpi_m
   use output_m
@@ -64,12 +64,6 @@ module hamiltonian_m
     zmagnus,               &
     zkinetic,              &
     zvmask
-
-
-#ifdef COMPLEX_WFNS
-  public :: zso
-#endif
-
 
   type hamiltonian_t
     ! The Hamiltonian must know what are the "dimensions" of the spaces,
