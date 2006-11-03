@@ -30,6 +30,7 @@ module preconditioners_m
   use lib_oct_parser_m
   use messages_m
   use nl_operator_m
+  use poisson_m
   use stencil_star_m
   use varinfo_m
 
@@ -37,9 +38,11 @@ module preconditioners_m
   private
   
   integer, public, parameter ::     &
-    PRECONDITIONER_NONE      = 0,   &
-    PRECONDITIONER_SMOOTHING = 1,   &
-    PRECONDITIONER_JACOBI    = 2
+    PRE_NONE      = 0,              &
+    PRE_SMOOTHING = 1,              &
+    PRE_JACOBI    = 2,              &
+    PRE_POISSON   = 3,              &
+    PRE_INCOMPLETE_INVERSE = 4
   
   public ::                         &
     preconditioner_t,               &
@@ -73,18 +76,24 @@ contains
     !% the linear-response equations.
     !%Option no 0
     !% Do not apply preconditioner.
-    !%Option filter 1
+    !%Option pre_filter 1
     !% Filter preconditioner.
-    !%Option jacobi 2
+    !%Option pre_jacobi 2
     !% Jacobi preconditioner. only the local part of the pseudopotential is used.
+    !% It does not help much, in my opinion
+    !%Option pre_poisson 3
+    !% Uses the full laplacian as preconditioner. The inverse is calculated through
+    !% the solution of the poisson equation. This is, of course, very slow.
+    !%Option pre_i_inverse 4
+    !% Incomplete inverse
     !%End
-    call loct_parse_int(check_inp('Preconditioner'), PRECONDITIONER_SMOOTHING, this%which)
+    call loct_parse_int(check_inp('Preconditioner'), PRE_SMOOTHING, this%which)
     if(.not.varinfo_valid_option('Preconditioner', this%which)) call input_error('Preconditioner')
     call messages_print_var_option(stdout, "Preconditioner", this%which)
     
 
     select case(this%which)
-    case(PRECONDITIONER_SMOOTHING)
+    case(PRE_SMOOTHING)
       ! the smoothing has a star stencil like the laplacian
       call nl_operator_init(this%op, 2*NDIM + 1)
       call stencil_star_get_lapl(NDIM, 1, this%op%stencil)
@@ -93,7 +102,7 @@ contains
       this%op%w_re(1, 1) = alpha
       this%op%w_re(2:,1) = M_HALF*(M_ONE-alpha)/NDIM
 
-    case(PRECONDITIONER_JACOBI)
+    case(PRE_JACOBI, PRE_INCOMPLETE_INVERSE)
       ALLOCATE(this%diag_lapl(NP), NP)
       call f_laplacian_diag (gr%sb, gr%f_der, this%diag_lapl)
       call lalg_scal(NP, -M_HALF, this%diag_lapl(:))
@@ -107,10 +116,10 @@ contains
     type(preconditioner_t), intent(inout) :: this 
 
     select case(this%which)
-    case(PRECONDITIONER_SMOOTHING)
+    case(PRE_SMOOTHING)
       call nl_operator_end(this%op)
 
-    case(PRECONDITIONER_JACOBI)
+    case(PRE_JACOBI, PRE_INCOMPLETE_INVERSE)
       deallocate(this%diag_lapl)
     end select
 

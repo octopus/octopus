@@ -188,21 +188,33 @@ contains
       nullify(w%gs_st%zpsi, w%gs_st%node, w%gs_st%occ, w%gs_st%eigenval, w%gs_st%mag)
       call restart_look (trim(tmpdir)//'restart_gs', gr%m, i, i, w%gs_st%nst, ierr)
 
-      ! We will store the ground-state Kohn-Sham system by all processors.
       w%gs_st%st_start = 1
+      if(w%out_populations == 0) then ! do only this when not calculating populations
+        ! We will store the ground-state Kohn-Sham system by all processors.
+        !%Variable TDProjStateStart
+        !%Type integer
+        !%Default 1
+        !%Section Time Dependent::TD Output
+        !%Description
+        !% Maximum multi-pole of the density output to the file @code{td.general/multipoles} 
+        !% during a time-dependent simulation. Must be 0 &lt; <tt>TDDipoleLmax &lt; 5</tt>.
+        !%End
+        call loct_parse_int(check_inp('TDProjStateStart'), w%gs_st%st_start, w%gs_st%st_start)
+      end if
       w%gs_st%st_end   = w%gs_st%nst
 
       ! allocate memory
-      ALLOCATE(w%gs_st%node(w%gs_st%nst), w%gs_st%nst)
-      ALLOCATE(w%gs_st%eigenval(w%gs_st%nst, w%gs_st%d%nik), w%gs_st%nst*w%gs_st%d%nik)
       ALLOCATE(w%gs_st%occ(w%gs_st%nst, w%gs_st%d%nik), w%gs_st%nst*w%gs_st%d%nik)
+      ALLOCATE(w%gs_st%eigenval(w%gs_st%nst, w%gs_st%d%nik), w%gs_st%nst*w%gs_st%d%nik)
+      ALLOCATE(w%gs_st%momentum(3, w%gs_st%nst, w%gs_st%d%nik), 3*w%gs_st%nst*w%gs_st%d%nik)
+      ALLOCATE(w%gs_st%node(w%gs_st%nst), w%gs_st%nst)
       if(w%gs_st%d%ispin == SPINORS) then
         ALLOCATE(w%gs_st%mag(w%gs_st%nst, w%gs_st%d%nik, 2), w%gs_st%nst*w%gs_st%d%nik*2)
       end if
       call states_allocate_wfns(w%gs_st, gr%m)
       w%gs_st%node(:)  = 0
       call restart_read(trim(tmpdir)//'restart_gs', w%gs_st, gr, geo, ierr)
-      if(ierr.ne.0) then
+      if(ierr.ne.0.and.ierr.ne.(w%gs_st%st_end-w%gs_st%st_start+1)*w%gs_st%d%nik*w%gs_st%d%dim) then
         message(1) = "Could not load "//trim(tmpdir)//"restart_gs"
         call write_fatal(1)
       end if
@@ -1058,7 +1070,7 @@ contains
         call write_iter_header_start(out_proj)
         do ik = 1, st%d%nik
           do ist = 1, st%nst
-            do uist = 1, gs_st%nst
+            do uist = gs_st%st_start, gs_st%st_end
               write(aux, '(i3,a,i3)') ist, ' -> ', uist
               call write_iter_header(out_proj, 'Re {'//trim(aux)//'}')
               call write_iter_header(out_proj, 'Im {'//trim(aux)//'}')
@@ -1077,7 +1089,7 @@ contains
     do ik = 1, st%d%nik
       do ist = 1, st%nst
         k = st%node(ist)
-        do uist = 1, gs_st%nst
+        do uist = gs_st%st_start, gs_st%st_end
           call MPI_Bcast(projections(ist, uist, ik), 1, MPI_CMPLX, k, st%mpi_grp%comm, mpi_err)
         end do
       end do
@@ -1088,7 +1100,7 @@ contains
       call write_iter_start(out_proj)
       do ik = 1, st%d%nik
         do ist = 1, st%nst
-          do uist = 1, gs_st%nst
+          do uist = gs_st%st_start, gs_st%st_end
             call write_iter_double(out_proj,  real(projections(ist, uist, ik)), 1)
             call write_iter_double(out_proj, aimag(projections(ist, uist, ik)), 1)
           end do

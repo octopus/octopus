@@ -668,7 +668,7 @@ contains
       deallocate(st%rho, st%occ, st%eigenval, st%momentum, st%node)
       nullify   (st%rho, st%occ, st%eigenval, st%momentum, st%node)
     end if
-
+ 
     if(associated(st%j)) then
       deallocate(st%j)
       nullify(st%j)
@@ -1600,7 +1600,7 @@ contains
     type(mesh_t),   intent(in)  :: m
     type(states_t), intent(in)  :: st
     type(states_t), intent(in)  :: gs_st
-    CMPLX,          intent(out) :: p(st%nst, gs_st%nst, st%d%nik)
+    CMPLX,          intent(out) :: p(:,:,:)
 
     integer :: uist, ist, ik
 
@@ -1608,7 +1608,7 @@ contains
 
     do ik = 1, st%d%nik
       do ist = st%st_start, st%st_end
-        do uist = 1, gs_st%nst
+        do uist = gs_st%st_start, gs_st%st_end
           p(ist, uist, ik) = zstates_dotp(m, st%d%dim, st%zpsi(:, :, ist, ik), gs_st%zpsi(:, :, uist, ik))
         end do
       end do

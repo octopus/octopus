@@ -61,7 +61,6 @@ subroutine X(lcao_initial_wf) (n, m, geo, psi, ispin, ik, err)
 
   do 
     j = j + 1
-    print *, j
     do ia = 1, geo%natoms
       s => geo%atom(ia)%spec
       do idim = 1, wf_dim
