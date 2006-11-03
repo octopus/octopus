@@ -25,11 +25,11 @@ module td_rti_m
   use lib_basic_alg_m
   use lib_oct_parser_m
   use math_m
-  use mesh_function_m
   use sparskit_m
   use td_exp_m
   use td_exp_split_m
   use v_ks_m
+  use mesh_function_m
 
   implicit none
 
