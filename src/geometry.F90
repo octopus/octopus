@@ -58,7 +58,8 @@ module geometry_m
     atom_write_xyz,        &
     loadPDB,               &
     geometry_val_charge,   &
-    geometry_grid_defaults
+    geometry_grid_defaults,&
+    assignment(=)
 
   type atom_t
     character(len=15) :: label
@@ -91,6 +92,10 @@ module geometry_m
     logical :: nlpp                 ! is any species having non-local pp
     logical :: nlcc                 ! is any species having non-local core corrections?
   end type geometry_t
+
+  interface assignment (=)
+    module procedure atom_copy
+  end interface
 
 contains
 
@@ -755,5 +760,18 @@ contains
 
     call pop_sub()
   end subroutine geometry_grid_defaults
+
+
+  !--------------------------------------------------------------
+  subroutine atom_copy(aout, ain)
+    type(atom_t), intent(out) :: aout
+    type(atom_t), intent(in)  :: ain
+    aout%label = ain%label
+    aout%spec  = ain%spec
+    aout%x     = ain%x
+    aout%v     = ain%v
+    aout%f     = ain%f
+    aout%move  = ain%move
+  end subroutine atom_copy
 
 end module geometry_m

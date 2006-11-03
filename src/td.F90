@@ -90,8 +90,8 @@ contains
     type(geometry_t), pointer :: geo
     logical                   :: stopping
     integer                   :: i, ii, j, ik, ierr
-    FLOAT, allocatable        ::  x1(:,:), x2(:,:), f1(:,:) ! stuff for verlet
     FLOAT                     :: etime
+    type(atom_t), allocatable :: atom1(:)
 
     call push_sub('td.td_run')
 
@@ -113,14 +113,15 @@ contains
     ! Calculate initial forces and kinetic energy
     if(td%move_ions > 0) then
       if(td%iter > 0) then
-        call td_read_nbo()
-        call epot_generate(h%ep, gr, sys%geo, st, h%reltype)
+        call td_read_coordinates()
+        call epot_generate(h%ep, gr, geo, st, h%reltype)
         geo%eii = ion_ion_energy(geo)
         h%eii = geo%eii
       end if
 
-      call epot_forces(gr, sys%geo, h%ep, st, td%iter*td%dt)
+      call epot_forces(gr, geo, h%ep, st, td%iter*td%dt)
       geo%kinetic_energy = kinetic_energy(geo)
+
       call init_verlet()
     end if
 
@@ -146,18 +147,11 @@ contains
       call profiling_in(C_PROFILING_TIME_STEP)
 
       if( td%move_ions > 0 .or. h%ep%extra_td_pot .ne. '0') then
-        ! Move the ions.
-        if( td%move_ions > 0 ) call apply_verlet_1
-        ! regenerate potential
-        if(mod(i, td%epot_regenerate) == 0) then
-          call epot_generate(h%ep, gr, sys%geo, st, h%reltype, time = i*td%dt)
-        else
-          call epot_generate(h%ep, gr, sys%geo, st, h%reltype, time = i*td%dt, fast_generation = .true.)
-        end if
-        if( td%move_ions > 0 ) then
-          geo%eii = ion_ion_energy(geo)
-          h%eii = geo%eii
-        end if
+        ! Move the ions: only half step, to obtain the external potential in the middle of the time slice.
+        if( td%move_ions > 0 ) call apply_verlet_1(td%dt*M_HALF)
+
+        call epot_generate(h%ep, gr, sys%geo, st, h%reltype, time = i*td%dt, &
+                           fast_generation = .not.(mod(i, td%epot_regenerate) == 0) ) 
       end if
 
       ! time iterate wavefunctions
@@ -169,8 +163,20 @@ contains
       ! update density
       call states_calc_dens(st, NP, st%rho)
 
+      if(td%move_ions > 0) then
+        ! Now really move the full time step, from the original positions.
+        geo%atom(1:geo%natoms) = atom1(1:geo%natoms)
+        call apply_verlet_1(td%dt)
+        call epot_generate(h%ep, gr, sys%geo, st, h%reltype, time = i*td%dt, &
+                           fast_generation = .true. ) 
+        geo%eii = ion_ion_energy(geo)
+        h%eii = geo%eii
+      end if
+
       ! update hamiltonian and eigenvalues (fermi is *not* called)
       call v_ks_calc(gr, sys%ks, h, st, calc_eigenval=.true.)
+
+      ! Get the energies.
       call hamiltonian_energy(h, sys%gr, sys%geo, st, -1)
 
       ! Recalculate forces, update velocities...
@@ -185,14 +191,6 @@ contains
 #if !defined(DISABLE_PES) && defined(HAVE_FFT)
       call PES_doit(td%PESv, gr%m, st, ii, td%dt, h%ab_pot)
 #endif
-
-      ! write info
-      write(message(1), '(i7,1x,2f14.6,f14.3, i10)') i, &
-        i*td%dt       / units_out%time%factor, &
-        (h%etot + geo%kinetic_energy) / units_out%energy%factor, &
-        loct_clock() - etime
-      call write_info(1)
-      etime = loct_clock()
 
       ! write down data
       call check_point()
@@ -212,6 +210,13 @@ contains
 
     ! ---------------------------------------------------------
     subroutine check_point
+      ! write info
+      write(message(1), '(i7,1x,2f14.6,f14.3, i10)') i, &
+        i*td%dt       / units_out%time%factor, &
+        (h%etot + geo%kinetic_energy) / units_out%energy%factor, &
+        loct_clock() - etime
+      call write_info(1)
+      etime = loct_clock()
       ii = ii + 1
       if(ii==sys%outp%iter+1 .or. i == td%max_iter .or. stopping) then ! output
         if(i == td%max_iter) sys%outp%iter = ii - 1
@@ -234,70 +239,51 @@ contains
     ! ---------------------------------------------------------
     subroutine init_verlet
       select case(td%move_ions)
-      case(NORMAL_VERLET)
-        ALLOCATE(x1(geo%natoms, NDIM), NDIM*geo%natoms)
-        ALLOCATE(x2(geo%natoms, NDIM), NDIM*geo%natoms)
-        do j = 1, geo%natoms
-          if(geo%atom(j)%move) then
-            x1(j, :) = geo%atom(j)%x(:) - td%dt*geo%atom(j)%v(:) + &
-              M_HALF * td%dt**2/geo%atom(j)%spec%weight * &
-              geo%atom(j)%f(:)
-          else
-            x1(j, :) = geo%atom(j)%x(:)
-          end if
-        end do
+      case(NORMAL_VERLET) ! temporarily disabled
       case(VELOCITY_VERLET)
-        ALLOCATE(f1(geo%natoms, NDIM), NDIM*geo%natoms)
+        ALLOCATE(atom1(geo%natoms), geo%natoms)
+        atom1(1:geo%natoms) = geo%atom(1:geo%natoms)
       end select
     end subroutine init_verlet
 
     ! ---------------------------------------------------------
     subroutine end_verlet
       select case(td%move_ions)
-      case(NORMAL_VERLET)
-        deallocate(x1, x2)
+      case(NORMAL_VERLET) ! temporarily disabled.
       case(VELOCITY_VERLET)
-        deallocate(f1)
+        deallocate(atom1)
       end select
     end subroutine end_verlet
 
     ! ---------------------------------------------------------
-    subroutine apply_verlet_1
+    subroutine apply_verlet_1(tau)
+      FLOAT, intent(in) :: tau
       select case(td%move_ions)
-      case(NORMAL_VERLET)
-        x2 = x1
-        do j = 1, geo%natoms
-          if(geo%atom(j)%move) then
-            x1(j, :) = geo%atom(j)%x(:)
-            geo%atom(j)%x(:) = M_TWO*x1(j, :) - x2(j, :) + &
-              td%dt**2/geo%atom(j)%spec%weight * geo%atom(j)%f(:)
-            geo%atom(j)%v(:) = (geo%atom(j)%x(:) - x2(j, :)) / (M_TWO*td%dt)
-          end if
-        end do
+      case(NORMAL_VERLET) ! temporarily disabled
       case(VELOCITY_VERLET)
+        atom1(1:geo%natoms) = geo%atom(1:geo%natoms)
         do j=1, geo%natoms
           if(geo%atom(j)%move) then
-            geo%atom(j)%x(:) = geo%atom(j)%x(:) +  td%dt*geo%atom(j)%v(:) + &
-              M_HALF*td%dt**2/geo%atom(j)%spec%weight * geo%atom(j)%f(:)
+            geo%atom(j)%x(:) = geo%atom(j)%x(:) +  tau*geo%atom(j)%v(:) + &
+              M_HALF*tau**2/geo%atom(j)%spec%weight * geo%atom(j)%f(:)
           end if
-        end do
-        do j = 1, geo%natoms
-          f1(j, :) = geo%atom(j)%f(:)
         end do
       end select
     end subroutine apply_verlet_1
 
     ! ---------------------------------------------------------
     subroutine apply_verlet_2
-      if(td%move_ions == VELOCITY_VERLET) then
+      select case(td%move_ions)
+      case(NORMAL_VERLET) ! temporarily disabled
+      case(VELOCITY_VERLET)      
         do j = 1, geo%natoms
           if(geo%atom(j)%move) then
             geo%atom(j)%v(:) = geo%atom(j)%v(:) + &
               td%dt/(M_TWO*geo%atom(j)%spec%weight) * &
-              (f1(j, :) + geo%atom(j)%f(:))
+              (atom1(j)%f(:) + geo%atom(j)%f(:))
           end if
         end do
-      end if
+      end select
     end subroutine apply_verlet_2
 
     ! ---------------------------------------------------------
@@ -478,8 +464,9 @@ contains
 
 
     ! ---------------------------------------------------------
-    subroutine td_read_nbo() ! reads the pos and vel from coordinates file
+    subroutine td_read_coordinates() ! reads the pos and vel from coordinates file
       integer :: i, iunit, record_length
+      call push_sub('td.td_read_coordinates')
 
       record_length = 100 + 3*geo%natoms*3*20
       call io_assign(iunit)
@@ -496,7 +483,7 @@ contains
       do i = 0, td%iter - 1
         read(iunit, *) ! skip previous iterations... sorry, but no seek in Fortran
       end do
-      read(iunit, '(88x)', advance='no') ! skip unrelevant information
+      read(iunit, '(8x)', advance='no') ! skip the time index.
 
       do i = 1, geo%natoms
         read(iunit, '(3es20.12)', advance='no') geo%atom(i)%x(1:NDIM)
@@ -512,7 +499,8 @@ contains
       end do
 
       call io_close(iunit)
-    end subroutine td_read_nbo
+      call pop_sub()
+    end subroutine td_read_coordinates
 
 
     ! ---------------------------------------------------------
