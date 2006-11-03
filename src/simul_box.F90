@@ -25,6 +25,7 @@ module simul_box_m
   use geometry_m
   use global_m
   use io_m
+  use lib_oct_m
   use lib_oct_parser_m
   use math_m
   use messages_m
