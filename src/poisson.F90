@@ -361,7 +361,7 @@ contains
 
     FLOAT, allocatable :: rho_global(:), pot_global(:)
 
-    integer :: k
+    integer :: k, j, i
     FLOAT :: average
 
     call push_sub('poisson.poisson_fft')
@@ -388,11 +388,14 @@ contains
 
 
     ! multiply by the FS of the Coulomb interaction
-    ! this works around a bug in Intel ifort 8
     do k = 1, fft_cf%n(3)
-      fft_cf%FS(:,:,k) = fft_cf%FS(:,:,k)*fft_Coulb_FS(:,:,k)
+      do j = 1, fft_cf%n(2)
+        do i = 1, fft_cf%nx
+          fft_cf%FS(i, j, k) = fft_cf%FS(i, j, k)*fft_Coulb_FS(i, j, k)
+        end do
+      end do
     end do
-
+    
     call dcf_FS2RS(fft_cf)             ! Fourier transform back
     if(present(average_to_zero)) then
       if(average_to_zero) average = cf_surface_average(fft_cf)
