@@ -260,16 +260,16 @@ contains
     ALLOCATE(aux2(gr%m%np), gr%m%np)
 
     ! first the real part
-    aux1(:) = real(rho(:))
-    aux2(:) = M_ZERO
+    aux1(1:NP) = real(rho(1:NP))
+    aux2(1:NP) = real(pot(1:NP))
     call dpoisson_solve(gr, aux2, aux1)
-    pot(:)  = aux2(:)
+    pot(1:NP)  = aux2(1:NP)
 
     ! now the imaginary part
-    aux1(:) = aimag(rho(:))
-    aux2(:) = M_ZERO
+    aux1(1:NP) = aimag(rho(1:NP))
+    aux2(1:NP) = aimag(pot(1:NP))
     call dpoisson_solve(gr, aux2, aux1)
-    pot(:)  = pot(:) + M_zI*aux2(:)
+    pot(1:NP) = pot(1:NP) + M_zI*aux2(1:NP)
 
     deallocate(aux1, aux2)
 
@@ -395,7 +395,7 @@ contains
         end do
       end do
     end do
-    
+
     call dcf_FS2RS(fft_cf)             ! Fourier transform back
     if(present(average_to_zero)) then
       if(average_to_zero) average = cf_surface_average(fft_cf)
