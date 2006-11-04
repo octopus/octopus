@@ -32,9 +32,9 @@ program xyzanim
 
   implicit none
 
-  character(len=256) :: nbofile, xyzfile
-  integer :: ierr, sampling, i, nbo_unit, xyz_unit, iter, j, record_length
-  FLOAT :: dump
+  character(len=256) :: coords_file, xyzfile
+  integer :: ierr, sampling, i, coords_unit, xyz_unit, iter, j, record_length
+  FLOAT :: time
 
   type(geometry_t) :: geo
 
@@ -49,7 +49,7 @@ program xyzanim
   call units_init()
 
   ! Sets the filenames
-  nbofile = 'td.general/coordinates'
+  coords_file = 'td.general/coordinates'
   xyzfile = 'td.general/movie.xyz'
 
   ! how often do we sample?
@@ -64,23 +64,23 @@ program xyzanim
 
   record_length = 100 + 3*geo%natoms*3*20
 
-  ! Opens the nbo file
-  nbo_unit = io_open(nbofile, action='read', recl = record_length)
+  ! Opens the coordinates file
+  coords_unit = io_open(coords_file, action='read', recl = record_length)
 
   ! Opens the xyz file
   xyz_unit = io_open(xyzfile, action='write')
 
-  call io_skip_header(nbo_unit)
+  call io_skip_header(coords_unit)
   ierr = 0
   do while(ierr == 0)
-    read(unit = nbo_unit, iostat = ierr, fmt = *) iter, dump, dump, dump, dump, &
+    read(unit = coords_unit, iostat = ierr, fmt = *) iter, time, &
       ((geo%atom(i)%x(j), j = 1, 3), i = 1, geo%natoms)
     if(mod(iter, sampling) == 0) then
       call write_xyz()
     end if
   end do
 
-  call io_close(nbo_unit); call io_close(xyz_unit)
+  call io_close(coords_unit); call io_close(xyz_unit)
 
   call io_end()
   call datasets_end()
@@ -94,7 +94,7 @@ contains
     integer :: i
     ! xyz format
     write(xyz_unit, '(i4)') geo%natoms
-    write(xyz_unit, '(i10)') iter
+    write(xyz_unit, '(i10,f20.6)') iter, time
     do i = 1, geo%natoms
       write(xyz_unit, '(6x,a,2x,3f12.6)') geo%atom(i)%label, geo%atom(i)%x(:)
     end do
