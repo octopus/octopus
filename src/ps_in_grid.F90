@@ -258,7 +258,7 @@ contains
     call push_sub('tm.get_cutoff_radii')
 
     ! local part ....
-    do ir = ps%g%nrval, 2, -1
+    do ir = ps%g%nrval-1, 2, -1
       dincv = abs(ps%vlocal(ir)*ps%g%rofi(ir) + M_TWO*ps%zval)
       if(dincv > threshold) exit
     end do
@@ -271,7 +271,7 @@ contains
         cycle
       end if
 
-      do ir = ps%g%nrval, 2, -1
+      do ir = ps%g%nrval-1, 2, -1
         phi = (ps%rphi(ir, l, 1)/ps%g%rofi(ir))*ps%dknorm(l)
         dincv = abs((ps%vps(ir, l) - ps%vlocal(ir))*phi)
 
@@ -285,8 +285,8 @@ contains
 
     ! now the SO part
     do l = 1, ps%so_no_l_channels
-      do ir = ps%g%nrval, 2, -1
-        phi = (ps%rphi(ir, l, 1)/ps%g%rofi(ir))*ps%dknorm(l)
+      do ir = ps%g%nrval-1, 2, -1
+        phi = (ps%rphi(ir, l, 1)/ps%g%rofi(ir))*ps%so_dknorm(l)
         dincv = abs((ps%so_vps(ir, l))*phi)
 
         if(dincv > threshold) exit

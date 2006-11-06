@@ -194,7 +194,7 @@ contains
       ps%kbc      = 3
       ps%l_loc    = -1
       ps%l_max    = psp%l_max
-      ps%so_l_max = ps%l_max
+      ps%so_l_max = psp%l_max
 
       call hgh_process(psp)
       call logrid_copy(psp%g, ps%g)
@@ -217,9 +217,9 @@ contains
     call loct_spline_init(ps%vlocal_f)
 
     if(ps%so_l_max >= 0) then
-      ALLOCATE(ps%so_kb   (1:ps%so_l_max, ps%kbc), ps%so_l_max*ps%kbc)
-      ALLOCATE(ps%so_dkb  (1:ps%so_l_max, ps%kbc), ps%so_l_max*ps%kbc)
-      ALLOCATE(ps%so_dknrm(1:ps%so_l_max),         ps%so_l_max)
+      ALLOCATE(ps%so_kb   (0:ps%so_l_max, ps%kbc), (ps%so_l_max+1)*ps%kbc)
+      ALLOCATE(ps%so_dkb  (0:ps%so_l_max, ps%kbc), (ps%so_l_max+1)*ps%kbc)
+      ALLOCATE(ps%so_dknrm(0:ps%so_l_max),         (ps%so_l_max+1))
 
       call loct_spline_init(ps%so_kb)
       call loct_spline_init(ps%so_dkb)
@@ -311,11 +311,13 @@ contains
         call loct_spline_der(ps%kb(l, j), ps%dkb(l, j))
       end do
     end do
+
     do l = 0, ps%so_l_max
       do j = 1, ps%kbc
         call loct_spline_der(ps%so_kb(l, j), ps%so_dkb(l, j))
       end do
     end do
+
     call loct_spline_der(ps%vl, ps%dvl)
 
     call pop_sub()
@@ -441,12 +443,12 @@ contains
     deallocate(fw)
 
     ! Spin-Orbit projectors
-    if(ps%so_l_max > 0) then
+    if(ps%so_l_max >= 0) then
       call loct_spline_print(ps%so_kb, so_unit)
       call loct_spline_print(ps%so_dkb, dso_unit)
-      ALLOCATE(fw(ps%so_l_max, ps%kbc), ps%so_l_max*ps%kbc)
+      ALLOCATE(fw(0:ps%so_l_max, ps%kbc), ps%so_l_max*ps%kbc)
       call loct_spline_init(fw)
-      do k = 1, ps%so_l_max
+      do k = 0, ps%so_l_max
         do j = 1, ps%kbc
           call loct_spline_3dft(ps%so_kb(k, j), fw(k, j), gmax = gmax)
         end do
@@ -480,7 +482,7 @@ contains
     call loct_spline_end(ps%kb)
     call loct_spline_end(ps%dkb)
     call loct_spline_end(ps%ur)
-    if(ps%so_l_max>=0) then
+    if(ps%so_l_max >= 0) then
       call loct_spline_end(ps%so_kb)
       call loct_spline_end(ps%so_dkb)
     end if
@@ -591,7 +593,10 @@ contains
     ps%h(0:ps%l_max, 1, 1) = ps_grid%dkbcos(1:ps%l_max+1)
     ps%dknrm(0:ps%l_max)   = ps_grid%dknorm(1:ps%l_max+1)
 
-    if(ps%so_l_max > 0) then
+    if(ps%so_l_max >= 0) then
+      ps%       k(0,1,1) = M_ZERO
+      ps%so_dknrm(0)     = M_ZERO
+
       ps%k(1:ps%so_l_max, 1, 1)  = ps_grid%so_dkbcos(1:ps%so_l_max)
       ps%so_dknrm(1:ps%so_l_max) = ps_grid%so_dknorm(1:ps%so_l_max)
     end if
@@ -644,10 +649,12 @@ contains
         call loct_spline_fit(g%nrval, g%rofi, hato, ps%kb(l-1, 1))
       end do
 
-      do l = 1, ps%so_l_max
+      do l = 0, ps%so_l_max
         nrc = logrid_index(g, ps_grid%so_kb_radius(l)) + 1
-        hato(1:nrc)         = ps_grid%so_KB(1:nrc, l)
-        hato(nrc+1:g%nrval) = M_ZERO
+        hato(1:g%nrval) = M_ZERO
+        if(l > 0) then
+          hato(1:nrc) = ps_grid%so_KB(1:nrc, l)
+        end if
 
         call loct_spline_fit(g%nrval, g%rofi, hato, ps%so_kb(l, 1))
       end do
