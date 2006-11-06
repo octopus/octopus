@@ -553,7 +553,6 @@ contains
     subroutine adjust_scatt_box()
 
       FLOAT   :: lsize
-      integer :: scatt_box_central_units
 
       if(.not.sb%scattering_box) return
 

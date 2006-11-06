@@ -255,7 +255,6 @@ contains
       integer   :: nrow
       integer   :: number, j, k, ham_var
       FLOAT     :: omega_ini, omega_fin, domega
-      logical   :: static
 
       call push_sub('em_resp.parse_input')
 
@@ -532,7 +531,7 @@ contains
       FLOAT :: cross(MAX_DIM, MAX_DIM), crossp(MAX_DIM, MAX_DIM)
       FLOAT :: average, anisotropy, bpar(1:MAX_DIM), bper(1:MAX_DIM) 
       integer :: iunit, ist, ivar, ik, sigma
-      CMPLX   :: tr_beta, proj
+      CMPLX   :: proj
       FLOAT   :: msp
 
       !CREATE THE DIRECTORY FOR EACH FREQUENCY

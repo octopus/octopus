@@ -37,7 +37,7 @@ subroutine X(eigen_solver_cg2) (gr, st, h, pre, tol, niter, converged, diff, reo
 
   R_TYPE :: es(2), a0, b0, gg, gg0, gg1, gamma, theta, norma
   FLOAT :: cg0, e0, res
-  integer  :: idim, ik, moved, p, j, iter, maxter, conv, conv_
+  integer  :: ik, moved, p, j, iter, maxter, conv, conv_
   logical  :: reord = .true., verbose_
 
   call push_sub('eigen_cg.eigen_solver_cg2')

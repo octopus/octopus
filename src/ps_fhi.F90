@@ -52,9 +52,8 @@ contains
     character(len=*), intent(in)    :: filename
 
     character(len=256) :: filename2
-    integer :: iunit, l, n
+    integer :: iunit
     logical :: found
-    FLOAT :: x
 
     call push_sub('ps_fhi.ps_fhi_init')
 

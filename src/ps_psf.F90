@@ -54,9 +54,8 @@ contains
     integer,          intent(in)    :: ispin
 
     character(len=256) :: filename2
-    integer :: iunit, l, n
+    integer :: iunit
     logical :: found
-    FLOAT :: x
 
     call push_sub('ps_psf.ps_psf_init')
 

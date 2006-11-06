@@ -27,7 +27,7 @@ subroutine X(preconditioner_apply)(pre, gr, h, a, b, omega)
   R_TYPE,                 intent(out)   :: b(:,:)
   R_TYPE,       optional, intent(in)    :: omega
   
-  integer :: i, idim
+  integer :: idim
   FLOAT   :: omega_
 
   omega_ = M_ZERO

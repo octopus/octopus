@@ -702,8 +702,8 @@ contains
     subroutine write_momentum(iunit)
       integer,        intent(in) :: iunit
 
-      integer :: idim, ist, ik, i, j, is, ns, iunit2
-      character(len=80) tmp_str, cspin
+      integer :: ik, j, is, ns, iunit2
+      character(len=80) cspin
       FLOAT :: o, oplus, ominus
 
       call push_sub('scf.write_momentum')   
