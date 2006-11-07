@@ -26,6 +26,7 @@ module ps_fhi_m
   use ps_cpi_file_m
   use ps_cpi_m
   use ps_fhi_file_m
+  use atomic_m
 
   implicit none
 
@@ -82,9 +83,6 @@ contains
     call ps_fhi_file_read(iunit, ps_fhi%fhi_file)
     call ps_cpi_file_read(iunit, ps_fhi%cpi_file)
     call io_close(iunit)
-
-    ! Fills the valence configuration data.
-    !call build_valconf(pstm%tm_file, ispin, pstm%conf)
 
     call ps_cpi_file_to_grid(ps_fhi%cpi_file, ps_fhi%ps_grid)
 

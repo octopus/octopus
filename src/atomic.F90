@@ -25,6 +25,7 @@ module atomic_m
   use lib_xc_m
   use logrid_m
   use messages_m
+  use periodic_table_m
 
   implicit none
 
@@ -50,7 +51,7 @@ module atomic_m
 
   type valconf_t
     integer           :: z
-    character(len=2)  :: symbol
+    character(len=3)  :: symbol
     integer           :: type     ! 0 for the most normal valence configuration, 1 for semicore.
     integer           :: p        ! number of orbitals.
     integer           :: n(6)     ! n quantum number

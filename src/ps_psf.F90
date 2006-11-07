@@ -38,11 +38,11 @@ module ps_psf_m
   type ps_psf_t
 
     type(ps_psf_file_t) :: psf_file
-    type(ps_in_grid_t) :: ps_grid
+    type(ps_in_grid_t)  :: ps_grid
 
-    type(valconf_t)    :: conf
-    FLOAT, pointer     :: eigen(:, :)
-    integer            :: ispin
+    type(valconf_t)     :: conf
+    FLOAT, pointer      :: eigen(:, :)
+    integer             :: ispin
   end type ps_psf_t
 
 contains
@@ -383,8 +383,8 @@ contains
         if(diff < tol) exit self_consistent
         if(iter>1) rho = 0.5*rho + 0.5*prev
 
-        write(message(1),'(a,i4,a,e10.2)') '      Iter =',iter,'; Diff =',diff
-        call write_info(1)
+        !write(message(1),'(a,i4,a,e10.2)') '      Iter =', iter, '; Diff =', diff
+        !call write_info(1)
 
         call atomhxc(functl, g, 2, rho, ve, psf_file%chcore)
       end do self_consistent

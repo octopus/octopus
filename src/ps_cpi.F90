@@ -82,7 +82,7 @@ contains
     call io_close(iunit)
 
     ! Fills the valence configuration data.
-    !call build_valconf(pstm%tm_file, ispin, pstm%conf)
+    !call valconf_guess(ps_cpi%conf, )
 
     call ps_cpi_file_to_grid(ps_cpi%cpi_file, ps_cpi%ps_grid)
 

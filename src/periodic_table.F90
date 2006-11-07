@@ -24,11 +24,12 @@ module periodic_table_m
   implicit none
 
   private
-  !pubcli ::
+  public ::  &
+    pt_number_from_symbol
   
-  integer, parameter :: n_elements = 103
+  integer, public, parameter :: pt_n_elements = 103
 
-  character(len=3), public :: pt_symbol(n_elements) = (/      &
+  character(len=3), public :: pt_symbol(pt_n_elements) = (/      &
     "H  ", "He ", "Li ", "Be ", "B  ", "C  ", "N  ", "O  ",   &
     "F  ", "Ne ", "Na ", "Mg ", "Al ", "Si ", "P  ", "S  ",   &
     "Cl ", "Ar ", "K  ", "Ca ", "Sc ", "Ti ", "V  ", "Cr ",   &
@@ -44,7 +45,7 @@ module periodic_table_m
     "Bk ", "Cf ", "Es ", "Fm ", "Md ", "No ", "Lw "           &
     /)
 
-  character(len=12), public :: pt_names(n_elements) = (/             &
+  character(len=12), public :: pt_names(pt_n_elements) = (/             &
     "Hydrogen    ", "Helium      ", "Lithium     ", "Beryllium   ",  &
     "Boron       ", "Carbon      ", "Nitrogen    ", "Oxygen      ",  &
     "Fluorine    ", "Neon        ", "Sodium      ", "Magnesium   ",  &
@@ -73,7 +74,7 @@ module periodic_table_m
     "Mendelevium ", "Nobelium    ", "Lawrencium  "                   &
     /)
 
-  FLOAT, public :: pt_atomic_mass(n_elements) = (/  &
+  FLOAT, public :: pt_atomic_mass(pt_n_elements) = (/  &
     CNST(  1.00794),   CNST(  4.002602), CNST(  6.941),    CNST(  9.01218),  &
     CNST( 10.81),      CNST( 12.011),    CNST( 14.00674),  CNST( 15.9994),   &
     CNST( 18.9984032), CNST( 20.1797),   CNST( 22.989768), CNST( 24.3050),   &
@@ -102,7 +103,7 @@ module periodic_table_m
     CNST(258.),        CNST(259.),       CNST(260.)                          &
    /)
 
-  character(len=22), public :: pt_electronic_configuration(n_elements) = (/ &
+  character(len=22), public :: pt_electronic_configuration(pt_n_elements) = (/ &
   "1s1                   ", "1s2                   ",  "[He] 2s1              ", "[He] 2s2              ",  &
   "[He] 2s2 2p1          ", "[He] 2s2 2p2          ",  "[He] 2s2 2p3          ", "[He] 2s2 2p4          ",  &
   "[He] 2s2 2p5          ", "[He] 2s2 2p6          ",  "[Ne] 3s1              ", "[Ne] 3s2              ",  &
@@ -131,5 +132,20 @@ module periodic_table_m
   "[Rn] 5f13 7s2         ", "[Rn] 5f14 7s2         ",  "[Rn] 5f14 6d1 7s2     "                             &
   /)
 
+contains
+  integer function pt_number_from_symbol(s) result(z)
+    character(len=3) :: s
+
+    integer :: i
+
+    z = -1
+    do i = 1, pt_n_elements
+      if(s == pt_symbol(i)) then
+        z = i
+        exit
+      end if
+    end do
+
+  end function pt_number_from_symbol
 
 end module periodic_table_m

@@ -36,7 +36,7 @@ octopus_SOURCES = $(core_SRCS) \
 	scf.F90 gs.F90 unocc.F90 \
 	static_pol.F90 geom_opt.F90 phonons.F90 \
 	td_exp_split.F90 td_exp.F90 td_rti.F90 td_write.F90 td.F90 filters.F90 opt_control.F90 \
-	casida.F90 wave_matching.F90 em_resp.F90 pulpo.F90 \
+	casida.F90 wave_matching.F90 em_resp_calc.F90 em_resp.F90 pulpo.F90 \
 	run.F90 main.F90
 
 noinst_HEADERS = \
@@ -179,6 +179,7 @@ curvlinear.o: global.h
 curv_modine.o: global.h
 derivatives.o: global.h derivatives_inc.F90
 eigen.o: global.h eigen_inc.F90 eigen_cg_inc.F90 eigen_trlan.F90 eigen_plan_inc.F90 eigen_arpack_inc.F90 eigen_evolution_inc.F90
+em_resp_calc.o: em_resp_calc_inc.F90
 em_resp.o : em_resp.F90 em_resp_inc.F90
 epot.o: global.h epot_inc.F90
 f.o: global.h f_inc.F90
