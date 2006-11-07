@@ -123,7 +123,7 @@ CTAGS=ctags-exuberant -e
 		cat $*_oct.f90 | grep -v pop_sub | grep -v push_sub >$*_oct.f91; \
 		mv -f $*_oct.f91 $*_oct.f90; \
 	fi
-	@perl -pi -e 's/\\newline/\n/g' $*_oct.f90
+	@perl -pi -e 's/\\newline/\n/g; s/\\cardinal/#/g' $*_oct.f90
 
 # then we actually compile _oct.f90 files and cleanup
 %.o: %_oct.f90

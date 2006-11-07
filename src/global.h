@@ -33,7 +33,9 @@
      if(.not.(expr)) then                    \newline \
        call assert_die (__STRING(expr), &    \newline \
                         __FILE__, __LINE__)  \newline \
-     end if
+     end if                                  \newline \
+     \cardinal __LINE__ __FILE__
+
 #else
 #  define ASSERT(expr)
 #endif
@@ -43,7 +45,8 @@
     allocate(x, stat=global_alloc_err)                 \newline \
      if(global_alloc_err.ne.0) then                    \newline \
        call alloc_error((size), __FILE__, __LINE__)    \newline \
-     end if
+     end if                                            \newline \
+     \cardinal __LINE__ __FILE__
 
 #define DOUBLE real(8)
 #define SINGLE real(4)
