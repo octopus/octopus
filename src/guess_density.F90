@@ -115,7 +115,7 @@ contains
         end do
       end if
 
-    case (SPEC_PS_PSF, SPEC_PS_HGH) ! ...from pseudopotential
+    case (SPEC_PS_PSF, SPEC_PS_HGH, SPEC_PS_UPF) ! ...from pseudopotential
       ! the outer loop sums densities over atoms in neighbour cells
 
       do k = 1, 3**sb%periodic_dim
@@ -308,7 +308,7 @@ contains
           rho(1:m%np, 1) = rho(1:m%np, 1) + cos(theta/M_TWO)**2*atom_rho(1:m%np, 1) &
             + sin(theta/M_TWO)**2*atom_rho(1:m%np, 2)
           rho(1:m%np, 2) = rho(1:m%np, 2) + sin(theta/M_TWO)**2*atom_rho(1:m%np, 1) &
-            + cos(theta/M_TWO)**2*atom_rho(1:m%np, 2)
+               + cos(theta/M_TWO)**2*atom_rho(1:m%np, 2)
           rho(1:m%np, 3) = rho(1:m%np, 3) + cos(theta/M_TWO)*sin(theta/M_TWO)*cos(phi)* &
             (atom_rho(1:m%np, 1) - atom_rho(1:m%np, 2))
           rho(1:m%np, 4) = rho(1:m%np, 4) - cos(theta/M_TWO)*sin(theta/M_TWO)*sin(phi)* &

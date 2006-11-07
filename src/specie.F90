@@ -61,7 +61,8 @@ module specie_m
     SPEC_PS_PSF = PS_TYPE_PSF,  & ! SIESTA pseudopotential
     SPEC_PS_HGH = PS_TYPE_HGH,  & ! HGH pseudopotential
     SPEC_PS_CPI = PS_TYPE_CPI,  & ! FHI pseudopotential (cpi format)
-    SPEC_PS_FHI = PS_TYPE_FHI     ! FHI pseudopotential (ABINIT format)
+    SPEC_PS_FHI = PS_TYPE_FHI,  & ! FHI pseudopotential (ABINIT format)
+    SPEC_PS_UPF = PS_TYPE_UPF     ! UPF pseudopotential
 
   type specie_t
     integer :: index              ! just a counter
@@ -262,7 +263,14 @@ contains
     !% The following three numbers are the atomic number, the maximum
     !% <i>l</i>-component of the pseudo-potential to consider in the
     !% calculation, and the <i>l</i>-component to consider as local.
-    !% Note that you can use the pseudopotentials from ABINT homepage.
+    !% Note that you can use the pseudopotentials from ABINT homepage
+    !%Option spec_ps_upf  104
+    !% UPF format, the pseudopotential will be
+    !% read from an <i>.UPF</i> file, either in the working
+    !% directory or in the <i>OCTOPUS-HOME/share/PP/UPF</i> directory.
+    !% The following three numbers are the atomic number, the maximum
+    !% <i>l</i>-component of the pseudo-potential to consider in the
+    !% calculation, and the <i>l</i>-component to consider as local.
     !%Option spec_all_e   124
     !% Atom represented with all electrons, the extra parameter is the
     !% atomic number. See the documentation of the variable 
@@ -432,7 +440,7 @@ contains
       s%Z_val = s%Z
       read_data = 4
 
-    case(SPEC_PS_PSF, SPEC_PS_HGH, SPEC_PS_CPI, SPEC_PS_FHI) ! a pseudopotential file
+    case(SPEC_PS_PSF, SPEC_PS_HGH, SPEC_PS_CPI, SPEC_PS_FHI, SPEC_PS_UPF) ! a pseudopotential file
       s%local = .false.
       n = loct_parse_block_cols(blk, row)
 
@@ -497,7 +505,7 @@ contains
     s%has_density = .false.
 
     select case(s%type)
-    case(SPEC_PS_PSF, SPEC_PS_HGH, SPEC_PS_CPI, SPEC_PS_FHI)
+    case(SPEC_PS_PSF, SPEC_PS_HGH, SPEC_PS_CPI, SPEC_PS_FHI, SPEC_PS_UPF)
       ALLOCATE(s%ps, 1) ! allocate structure
       call ps_init(s%ps, s%label, s%type, s%Z, s%lmax, s%lloc, ispin)
       call ps_getradius(s%ps)
@@ -619,7 +627,7 @@ contains
         l = - s%Z/r
       end if
 
-    case(SPEC_PS_PSF, SPEC_PS_HGH, SPEC_PS_CPI, SPEC_PS_FHI)
+    case(SPEC_PS_PSF, SPEC_PS_HGH, SPEC_PS_CPI, SPEC_PS_FHI, SPEC_PS_UPF)
       l = loct_splint(s%ps%vl, r)
 
     case(SPEC_ALL_E)
@@ -679,7 +687,7 @@ contains
         gv(:) = s%Z*x(:)/r**3
       end if
 
-    case(SPEC_PS_PSF, SPEC_PS_HGH, SPEC_PS_CPI, SPEC_PS_FHI)
+    case(SPEC_PS_PSF, SPEC_PS_HGH, SPEC_PS_CPI, SPEC_PS_FHI, SPEC_PS_UPF)
       gv(:) = M_ZERO
       if(r>CNST(0.00001)) gv(:) = -loct_splint(s%ps%dvl, r)*x(:)/r
 
@@ -727,7 +735,7 @@ contains
     FLOAT, intent(in) :: x(MAX_DIM)
 
     ! only for 3D pseudopotentials, please
-    if(s%type==SPEC_PS_PSF.or.s%type==SPEC_PS_HGH.or.s%type==SPEC_PS_CPI.or.s%type==SPEC_PS_FHI) then
+    if(s%type==SPEC_PS_PSF.or.s%type==SPEC_PS_HGH.or.s%type==SPEC_PS_CPI.or.s%type==SPEC_PS_FHI.or.s%type==SPEC_PS_UPF) then
       l = loct_splint(s%ps%core, sqrt(sum(x**2)))
     else
       l = M_ZERO

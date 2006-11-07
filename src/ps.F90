@@ -33,6 +33,7 @@ module ps_m
   use ps_hgh_m
   use ps_in_grid_m
   use ps_psf_m
+  use ps_upf_m
 
   implicit none
 
@@ -50,9 +51,10 @@ module ps_m
     PS_TYPE_PSF = 100,          &
     PS_TYPE_HGH = 101,          &
     PS_TYPE_CPI = 102,          &
-    PS_TYPE_FHI = 103
+    PS_TYPE_FHI = 103,          &
+    PS_TYPE_UPF = 104
 
-  character(len=3), parameter  :: ps_name(PS_TYPE_PSF:PS_TYPE_FHI) = (/"tm2", "hgh", "cpi", "fhi"/)
+  character(len=3), parameter  :: ps_name(PS_TYPE_PSF:PS_TYPE_UPF) = (/"tm2", "hgh", "cpi", "fhi", "upf"/)
 
   type ps_t
     character(len=10) :: label
@@ -87,8 +89,6 @@ module ps_m
     FLOAT :: rc_max
     FLOAT :: a_erf ! the a constant in erf(ar)/r
 
-    FLOAT, pointer :: dknrm(:) ! KB norm
-    FLOAT, pointer :: so_dknrm(:)
     FLOAT, pointer :: h(:,:,:), k(:, :, :)
   end type ps_t
 
@@ -108,6 +108,7 @@ contains
     type(ps_psf_t) :: ps_psf ! SIESTA pseudopotential
     type(ps_cpi_t) :: ps_cpi ! Fritz-haber pseudopotential
     type(ps_fhi_t) :: ps_fhi ! Fritz-haber pseudopotential (from abinit)
+    type(ps_upf_t) :: ps_upf ! In case UPF format is used
     type(hgh_t)    :: psp    ! In case Hartwigsen-Goedecker-Hutter ps are used.
 
     FLOAT :: r
@@ -122,7 +123,7 @@ contains
     ps%ispin   = ispin
 
     ! Initialization and processing.
-    ASSERT(flavour>=PS_TYPE_PSF.and.flavour<=PS_TYPE_FHI)
+    ASSERT(flavour>=PS_TYPE_PSF.and.flavour<=PS_TYPE_UPF)
 
     select case(flavour)
     case(PS_TYPE_PSF)
@@ -198,13 +199,28 @@ contains
 
       call hgh_process(psp)
       call logrid_copy(psp%g, ps%g)
+
+    case(PS_TYPE_UPF)
+      call ps_upf_init(ps_upf, trim(label))
+
+      call valconf_copy(ps%conf, ps_upf%conf)
+      ps%z      = z
+      ps%conf%z = z
+      ps%kbc    = 1
+      ps%l_max  = ps_upf%l_max
+      ps%l_loc  = ps_upf%l_local
+      ps%so_l_max = -1
+
+      ps%g%nrval = ps_upf%np
+      ALLOCATE(ps%g%rofi(ps%g%nrval), ps%g%nrval)
+      ps%g%rofi = ps_upf%r
+
     end select
 
     ! We allocate all the stuff
     ALLOCATE(ps%kb   (0:ps%l_max, ps%kbc),             (ps%l_max+1)*ps%kbc)
     ALLOCATE(ps%dkb  (0:ps%l_max, ps%kbc),             (ps%l_max+1)*ps%kbc)
     ALLOCATE(ps%ur   (ps%conf%p, ps%ispin),            ps%conf%p*ps%ispin)
-    ALLOCATE(ps%dknrm(0:ps%l_max),                     ps%l_max+1)
     ALLOCATE(ps%h    (0:ps%l_max, 1:ps%kbc, 1:ps%kbc), (ps%l_max+1)*ps%kbc*ps%kbc)
     ALLOCATE(ps%k    (0:ps%l_max, 1:ps%kbc, 1:ps%kbc), (ps%l_max+1)*ps%kbc*ps%kbc)
 
@@ -219,7 +235,6 @@ contains
     if(ps%so_l_max >= 0) then
       ALLOCATE(ps%so_kb   (0:ps%so_l_max, ps%kbc), (ps%so_l_max+1)*ps%kbc)
       ALLOCATE(ps%so_dkb  (0:ps%so_l_max, ps%kbc), (ps%so_l_max+1)*ps%kbc)
-      ALLOCATE(ps%so_dknrm(0:ps%so_l_max),         (ps%so_l_max+1))
 
       call loct_spline_init(ps%so_kb)
       call loct_spline_init(ps%so_dkb)
@@ -239,6 +254,9 @@ contains
     case(PS_TYPE_HGH)
       call hgh_load(ps, psp)
       call hgh_end(psp)
+    case(PS_TYPE_UPF)
+      call ps_upf_load(ps, ps_upf)
+      call ps_upf_end(ps_upf)
     end select
 
     ! Get the localized part of the pseudopotential.
@@ -492,7 +510,7 @@ contains
     call loct_spline_end(ps%core)
     call loct_spline_end(ps%vlocal_f)
 
-    deallocate(ps%kb, ps%dkb, ps%ur, ps%dknrm, ps%h, ps%k)
+    deallocate(ps%kb, ps%dkb, ps%ur, ps%h, ps%k)
     if(ps%so_l_max >=0) deallocate(ps%so_kb, ps%so_dkb)
 
     call pop_sub()
@@ -532,7 +550,6 @@ contains
 
     ! now we fit the splines
     call get_splines()
-    if(ps%so_l_max >= 0) ps%so_dknrm = ps%dknrm
 
     call pop_sub()
 
@@ -590,15 +607,12 @@ contains
     ps%icore = 'nc'
     if(ps_grid%core_corrections) ps%icore=''
 
+
     ps%h(0:ps%l_max, 1, 1) = ps_grid%dkbcos(1:ps%l_max+1)
-    ps%dknrm(0:ps%l_max)   = ps_grid%dknorm(1:ps%l_max+1)
 
     if(ps%so_l_max >= 0) then
-      ps%       k(0,1,1) = M_ZERO
-      ps%so_dknrm(0)     = M_ZERO
-
+      ps%k(0,1,1) = M_ZERO
       ps%k(1:ps%so_l_max, 1, 1)  = ps_grid%so_dkbcos(1:ps%so_l_max)
-      ps%so_dknrm(1:ps%so_l_max) = ps_grid%so_dknorm(1:ps%so_l_max)
     end if
 
     ! Increasing radius a little, just in case.
@@ -610,10 +624,8 @@ contains
 
     ! Passes from Rydbergs to Hartrees.
     ps%h(0:ps%l_max,:,:)    = ps%h(0:ps%l_max,:,:)    / M_TWO
-    ps%dknrm(0:ps%l_max)    = ps%dknrm(0:ps%l_max)    * M_TWO
     if(ps%so_l_max >= 0) then
       ps%k(0:ps%l_max,:,:)    = ps%k(0:ps%l_max,:,:)    / M_TWO
-      ps%so_dknrm(0:ps%l_max) = ps%so_dknrm(0:ps%l_max) * M_TWO
     end if
 
     call pop_sub()
@@ -685,5 +697,98 @@ contains
       deallocate(hato)
     end subroutine get_splines
   end subroutine ps_grid_load
+
+
+  ! ---------------------------------------------------------
+  subroutine ps_upf_load(ps, ps_upf)
+    type(ps_t),         intent(out) :: ps
+    type(ps_upf_t), intent(in)  :: ps_upf
+
+    integer :: i, l, ll, is, nrc, ir
+    FLOAT :: x
+    FLOAT, allocatable :: hato(:)
+
+    call push_sub('ps.ps_upf_load')
+
+    ! Fixes some components of ps, read in ps_upf
+    ps%z_val = ps_upf%z_val
+
+    ps%icore = 'nc'
+    if(ps_upf%nlcc) ps%icore=''
+
+    ps%h = M_ZERO
+    do i = 1, ps_upf%n_proj
+      ps%h(ps_upf%proj_l(i), 1, 1) = ps_upf%e(i)
+    end do
+
+    ! The spin-dependent pseudopotentials are not suported yet, so we need to fix the occupations
+    ! if we want to have a spin-dependent atomic density.
+    if(ps%ispin == 2) then
+      do l = 1, ps%conf%p
+        ll = ps%conf%l(l)
+        x = ps%conf%occ(l, 1)
+        ps%conf%occ(l, 1) = min(x, real(2*ll+1, PRECISION))
+        ps%conf%occ(l, 2) = x - ps%conf%occ(l, 1)
+      end do
+    end if
+
+    ALLOCATE(hato(ps%g%nrval), ps%g%nrval)
+
+
+    !Non-linear core-corrections
+    if(ps_upf%nlcc) then
+      ! find cutoff radius
+      hato = ps_upf%core_density/(M_FOUR*M_PI*ps%g%rofi**2)
+
+      do ir = ps%g%nrval-1, 1, -1
+        if(hato(ir) > eps) then
+          nrc = ir + 1
+          exit
+        end if
+      end do
+
+      hato(nrc:ps%g%nrval) = M_ZERO
+
+      call loct_spline_fit(ps%g%nrval, ps%g%rofi, hato, ps%core)
+    end if
+
+    ! Now the part corresponding to the local pseudopotential
+    ! where the asymptotic part is substracted
+    hato(:) = ps_upf%v_local/M_TWO
+    call loct_spline_fit(ps%g%nrval, ps%g%rofi, hato, ps%vl)
+
+    ! Increasing radius a little, just in case.
+    ! I have hard-coded a larger increase of the cutoff for the filtering.
+    ps%rc_max = maxval(ps_upf%kb_radius)
+    ps%rc_max = max(ps_upf%local_radius, ps%rc_max) * CNST(1.5)
+
+    ! Interpolate the KB-projection functions
+    hato = M_ZERO
+    call loct_spline_fit(ps%g%nrval, ps%g%rofi, hato, ps%kb(ps_upf%l_local, 1))
+
+    do i = 1, ps_upf%n_proj
+      nrc = logrid_index(ps%g, ps_upf%kb_radius(i)) + 1
+      hato(1:nrc)         = ps_upf%proj(1:nrc, i)
+      hato(nrc+1:ps%g%nrval) = M_ZERO
+
+      call loct_spline_fit(ps%g%nrval, ps%g%rofi, hato, ps%kb(ps_upf%proj_l(i), 1))
+    end do
+
+    ! Passes from Rydbergs to Hartrees.
+    ps%h(0:ps%l_max,:,:) = ps%h(0:ps%l_max,:,:)/M_TWO
+
+    ! Define the table for the pseudo-wavefunction components (using splines)
+    ! with a correct normalization function
+    do is = 1, ps%ispin
+      do l = 1, ps%conf%p
+        hato = ps_upf%wfs(:, l)/ps%g%rofi
+        call loct_spline_fit(ps%g%nrval, ps%g%rofi, hato, ps%Ur(l, is))
+      end do
+    end do
+
+    deallocate(hato)
+
+    call pop_sub()
+  end subroutine ps_upf_load
 
 end module ps_m

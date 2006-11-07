@@ -16,6 +16,7 @@ core_SRCS = $(basic_SRCS) \
 	ps_psf_file.F90 ps_psf.F90  \
 	ps_cpi_file.F90 ps_cpi.F90 \
 	ps_fhi_file.F90 ps_fhi.F90 \
+	ps_upf.F90 \
 	ps_hgh.F90 ps.F90 \
 	specie.F90 xyz_file.F90 geometry.F90 simul_box.F90 \
 	curv_gygi.F90 curv_briggs.F90 curv_modine.F90 curvlinear.F90 \
