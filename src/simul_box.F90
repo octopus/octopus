@@ -290,9 +290,11 @@ contains
     !--------------------------------------------------------------
     subroutine read_box()
       C_POINTER :: blk
-      character(len=200) :: filename
       FLOAT :: default
-      
+#if defined(HAVE_GDLIB)        
+      character(len=200) :: filename
+#endif      
+
       call push_sub('simul_box.read_box')
       ! Read box shape.
       ! need to find out calc_mode already here since some of the variables here (e.g.
@@ -477,9 +479,11 @@ contains
 
     !--------------------------------------------------------------
     subroutine read_spacing()
-      integer :: i, sx, sy
       C_POINTER :: blk
-
+      integer :: i
+#if defined(HAVE_GDLIB)
+      integer :: sx, sy
+#endif
 
       call push_sub('simul_box.read_spacing')
 

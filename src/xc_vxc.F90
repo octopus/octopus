@@ -98,8 +98,10 @@ subroutine xc_get_vxc(gr, xcs, rho, ispin, vxc, ex, ec, ip, qtot)
         end if
 
       case(XC_FAMILY_MGGA)
-        !call xc_f90_mgga(functl(ixc)%conf, l_dens(1), l_gdens(1,1), l_tau(1), &
-        !  e, l_dedd(1), l_dedgd(1,1), l_dedtau(1))
+        message(1) = 'Meta-GGAs are currently disabled.'
+        call write_fatal(1)
+        ! call xc_f90_mgga(functl(ixc)%conf, l_dens(1), l_gdens(1,1), l_tau(1), &
+        !   e, l_dedd(1), l_dedgd(1,1), l_dedtau(1))
 
       case default
         cycle
@@ -124,7 +126,7 @@ subroutine xc_get_vxc(gr, xcs, rho, ispin, vxc, ex, ec, ip, qtot)
       end if
 
       if(functl(ixc)%family==XC_FAMILY_MGGA) then
-        dedtau(i,:)   = dedtau(i,:)   + l_dedtau(:)
+        ! dedtau(i,:)   = dedtau(i,:)   + l_dedtau(:)
       end if
 
     end do functl_loop

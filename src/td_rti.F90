@@ -67,7 +67,6 @@ module td_rti_m
 #ifdef HAVE_SPARSKIT
   type(sparskit_solver_t), pointer, private :: tdsk
   type(grid_t),            pointer, private :: grid_p
-  type(states_t),          pointer, private :: states_p
   type(hamiltonian_t),     pointer, private :: h_p
   type(td_rti_t),          pointer, private :: tr_p
   CMPLX, allocatable,      private :: zpsi_tmp(:,:,:,:)
@@ -528,8 +527,8 @@ contains
     subroutine td_rti5
 #ifdef HAVE_SPARSKIT
       FLOAT, allocatable :: vhxc_t1(:,:), vhxc_t2(:,:)
-      CMPLX, allocatable :: zpsi1(:,:,:,:), zpsi_rhs_pred(:,:,:,:), zpsi_rhs_corr(:,:,:,:)
-      integer :: ik, ist, idim, isize, ip, ii
+      CMPLX, allocatable :: zpsi_rhs_pred(:,:,:,:), zpsi_rhs_corr(:,:,:,:)
+      integer :: ik, ist, idim, isize
 
       call push_sub('td_rti.td_rti5')
 
@@ -540,7 +539,6 @@ contains
 
       ! define pointer and variables for usage in td_zop, td_zopt routines
       grid_p    => gr
-      states_p  => st
       h_p       => h
       tr_p      => tr
       dt_op = dt

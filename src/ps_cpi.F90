@@ -129,9 +129,9 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine ps_cpi_process(ps_cpi, lmax, lloc)
+  subroutine ps_cpi_process(ps_cpi, lloc)
     type(ps_cpi_t), intent(inout) :: ps_cpi
-    integer,        intent(in)    :: lmax, lloc
+    integer,        intent(in)    :: lloc
 
     call push_sub('ps_cpi.ps_cpi_process')
 

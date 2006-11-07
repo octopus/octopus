@@ -164,7 +164,7 @@ contains
       if(ps%l_max == 0) ps%l_loc = 0 ! Vanderbilt is not acceptable if ps%l_max == 0.
       ps%so_l_max = -1
 
-      call ps_cpi_process(ps_cpi, lmax, ps%l_loc)
+      call ps_cpi_process(ps_cpi, ps%l_loc)
       call logrid_copy(ps_cpi%ps_grid%g, ps%g)
 
     case(PS_TYPE_FHI)
