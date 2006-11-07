@@ -813,7 +813,6 @@ contains
     call X(cf_free) (c)
   end subroutine out_netcdf
 
-#endif
 
   ! ---------------------------------------------------------
   subroutine write_variable(ncid, data_id, status, x)
@@ -830,5 +829,6 @@ contains
     
   end subroutine write_variable
 
+#endif /*defined(HAVE_NETCDF)*/
 
 end subroutine X(output_function_global)
