@@ -250,7 +250,10 @@ contains
     FLOAT, intent(in)  :: r(:,:,:)
     CMPLX, intent(out) :: c(:,:,:)
 
+    call push_sub('fftw2.dfft_forward')
     call rfftwnd_f77_one_real_to_complex(fft%planf, r, c)
+    call pop_sub()
+
   end subroutine dfft_forward
 
 
@@ -260,11 +263,15 @@ contains
     CMPLX,    intent(in) :: c(fft%n(1),fft%n(2),fft%n(3))
     FLOAT,   intent(out) :: r(fft%n(1),fft%n(2),fft%n(3))
 
+    call push_sub('fftw2.dfft_backward')
+
     call rfftwnd_f77_one_complex_to_real(fft%planb, c, r)
 
     ! multiply by 1/(N1*N2*N2)
     call lalg_scal(fft%n(1), fft%n(2), fft%n(3), &
       M_ONE/real(fft%n(1)*fft%n(2)*fft%n(3), PRECISION), r)
+
+    call pop_sub()
 
   end subroutine dfft_backward
 
@@ -276,7 +283,12 @@ contains
     CMPLX, intent(in)  :: r(:,:,:)
     CMPLX, intent(out) :: c(:,:,:)
 
+    call push_sub('fftw2.zfft_forward')
+
     call fftwnd_f77_one(fft%planf, r, c)
+
+    call pop_sub()
+
   end subroutine zfft_forward
 
 
@@ -286,11 +298,15 @@ contains
     CMPLX, intent(in)  :: c(fft%n(1), fft%n(2), fft%n(3))
     CMPLX, intent(out) :: r(fft%n(1), fft%n(2), fft%n(3))
 
+    call push_sub('fftw2.zfft_backward')
+
     call fftwnd_f77_one(fft%planb, c, r)
 
     ! multiply by 1/(N1*N2*N2)
     call lalg_scal(fft%n(1), fft%n(2), fft%n(3), &
       M_z1/real(fft%n(1)*fft%n(2)*fft%n(3), PRECISION), r)
+
+    call pop_sub()
 
   end subroutine zfft_backward
 
