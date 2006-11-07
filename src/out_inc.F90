@@ -78,7 +78,8 @@ subroutine X(input_function)(filename, m, f, ierr, is_tmp)
 
     deallocate(f_global)
 #else
-    ASSERT(.false.) ! internal error
+    ! internal error
+    ASSERT(.false.) 
 #endif
   else
     call X(input_function_global)(filename, m, f, ierr, is_tmp_)
@@ -121,14 +122,14 @@ subroutine X(input_function_global)(filename, m, f, ierr, is_tmp)
 #if defined(R_TCOMPLEX)
      call X(cf_new)(m%l, c); call dcf_new(m%l, re); call dcf_new(m%l, im)
      call X(cf_alloc_RS)(c); call dcf_alloc_RS(re); call dcf_alloc_RS(im)
-     call dx_cdf()
+     call read_netcdf()
      c%RS = re%RS + M_zI*im%RS
      call X(cf2mf) (m, c, f)
      call X(cf_free)(c); call dcf_free(re); call dcf_free(im)
 #else
      call X(cf_new)(m%l, c)
      call X(cf_alloc_RS)(c)
-     call dx_cdf()
+     call read_netcdf()
      call X(cf2mf) (m, c, f)
      call X(cf_free)(c)
 #endif
@@ -212,7 +213,7 @@ contains
 #if defined(HAVE_NETCDF)
 
   ! ---------------------------------------------------------
-  subroutine dx_cdf()
+  subroutine read_netcdf()
     integer :: ncid, ndims, nvars, natts, status, data_id, data_im_id, pos_id, &
          dim_data_id(MAX_DIM), dim_pos_id(2), ndim(MAX_DIM), xtype
     real(r4)           :: pos(2, 3)
@@ -318,7 +319,7 @@ contains
     deallocate(x)
 
     status = nf90_close(ncid)
-  end subroutine dx_cdf
+  end subroutine read_netcdf
 
 #endif
 
@@ -417,7 +418,7 @@ subroutine X(output_function_global) (how, dir, fname, m, sb, f, u, ierr, is_tmp
   ! should we output boundary points?
   if(iand(how, boundary_points)  .ne.0) np_max = m%np_part_global
 
-  if(iand(how, output_plain)     .ne.0) call plain()
+  if(iand(how, output_plain)     .ne.0) call out_plain()
   if(iand(how, output_axis_x)    .ne.0) call out_axis (1, 2, 3) ! x ; y=0,z=0
   if(iand(how, output_axis_y)    .ne.0) call out_axis (2, 1, 3) ! y ; x=0,z=0
   if(iand(how, output_axis_z)    .ne.0) call out_axis (3, 1, 2) ! z ; x=0,y=0
@@ -425,7 +426,7 @@ subroutine X(output_function_global) (how, dir, fname, m, sb, f, u, ierr, is_tmp
   if(iand(how, output_plane_y)   .ne.0) call out_plane(2, 1, 3) ! y=0; x; z;
   if(iand(how, output_plane_z)   .ne.0) call out_plane(3, 1, 2) ! z=0; x; y;
   if(iand(how, output_mesh_index).ne.0) call out_mesh_index()
-  if(iand(how, output_dx)        .ne.0) call dx()
+  if(iand(how, output_dx)        .ne.0) call out_dx()
 
   if(iand(how, output_matlab).ne.0) then
 #if defined(R_TCOMPLEX)
@@ -447,7 +448,7 @@ subroutine X(output_function_global) (how, dir, fname, m, sb, f, u, ierr, is_tmp
   end if
 
 #if defined(HAVE_NETCDF)
-  if(iand(how, output_dx_cdf)    .ne.0) call dx_cdf()
+  if(iand(how, output_netcdf)    .ne.0) call out_netcdf()
 #endif
 
   call pop_sub()
@@ -457,7 +458,7 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine plain()
+  subroutine out_plain()
 
     iunit = io_open(trim(dir)//'/'//trim(fname), action='write', form='unformatted', is_tmp=is_tmp)
 
@@ -465,7 +466,7 @@ contains
     write(unit=iunit, iostat=ierr) f(1:m%np_global)
     call io_close(iunit)
 
-  end subroutine plain
+  end subroutine out_plain
 
 
   ! ---------------------------------------------------------
@@ -613,7 +614,7 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine dx()
+  subroutine out_dx()
     integer :: ix, iy, iz
     FLOAT   :: offset(MAX_DIM)
     character(len=40) :: nitems
@@ -666,13 +667,14 @@ contains
     call io_close(iunit)
     call X(cf_free) (c)
 
-  end subroutine dx
+  end subroutine out_dx
 
 
 #if defined(HAVE_NETCDF)
   ! ---------------------------------------------------------
-  subroutine dx_cdf()
-    integer :: ncid, status, data_id, data_im_id, pos_id, dim_data_id(3), dim_pos_id(2)
+  subroutine out_netcdf()
+    integer :: ncid, status, data_id, data_im_id, pos_id, dim_min
+    integer :: dim_data_id(3), dim_pos_id(2)
     real(r4) :: pos(2, 3)
     type(X(cf_t)) :: c
     FLOAT, allocatable :: x(:, :, :)
@@ -718,27 +720,32 @@ contains
       call ncdf_error('nf90_def_dim', status, filename, ierr)
     end if
 
+    select case(sb%dim)
+    case(2); dim_min = 2
+    case(3); dim_min = 1
+    end select
+
 #if defined(SINGLE_PRECISION)
     if(status == NF90_NOERR) then
-      status = nf90_def_var (ncid, "rdata", NF90_FLOAT, dim_data_id, data_id)
+      status = nf90_def_var (ncid, "rdata", NF90_FLOAT, dim_data_id(dim_min:3), data_id)
       call ncdf_error('nf90_def_var', status, filename, ierr)
     end if
 #else
     if(status == NF90_NOERR) then
-      status = nf90_def_var (ncid, "rdata", NF90_DOUBLE, dim_data_id, data_id)
+      status = nf90_def_var (ncid, "rdata", NF90_DOUBLE, dim_data_id(dim_min:3), data_id)
       call ncdf_error('nf90_def_var', status, filename, ierr)
     end if
 #endif
 #if defined(R_TCOMPLEX)
 #if defined(SINGLE_PRECISION)
     if(status == NF90_NOERR) then
-      status = nf90_def_var (ncid, "idata", NF90_FLOAT, dim_data_id, data_im_id)
+      status = nf90_def_var (ncid, "idata", NF90_FLOAT, dim_data_id(dim_min:3), data_im_id)
       call ncdf_error('nf90_def_var', status, filename, ierr)
     end if
 
 #else
     if(status == NF90_NOERR) then
-      status = nf90_def_var (ncid, "idata", NF90_DOUBLE, dim_data_id, data_im_id)
+      status = nf90_def_var (ncid, "idata", NF90_DOUBLE, dim_data_id(dim_min:3), data_im_id)
       call ncdf_error('nf90_def_var', status, filename, ierr)
     end if
 #endif
@@ -784,18 +791,18 @@ contains
 #if defined(R_TCOMPLEX)
     if(status == NF90_NOERR) then
       call transpose3(real(c%RS, PRECISION), x)
-      status = nf90_put_var (ncid, data_id, x)
+      call write_variable(ncid, data_id, status, x)
       call ncdf_error('nf90_put_var', status, filename, ierr)
     end if
     if(status == NF90_NOERR) then
       call transpose3(aimag(c%RS), x)
-      status = nf90_put_var (ncid, data_im_id, x)
+      call write_variable(ncid, data_id, status, x)
       call ncdf_error('nf90_put_var', status, filename, ierr)
     end if
 #else
     if(status == NF90_NOERR) then
       call transpose3(c%RS, x)
-      status = nf90_put_var (ncid, data_id, x)
+      call write_variable(ncid, data_id, status, x)
       call ncdf_error('nf90_put_var', status, filename, ierr)
     end if
 #endif
@@ -804,8 +811,24 @@ contains
     ! close
     status = nf90_close(ncid)
     call X(cf_free) (c)
-  end subroutine dx_cdf
+  end subroutine out_netcdf
 
 #endif
+
+  ! ---------------------------------------------------------
+  subroutine write_variable(ncid, data_id, status, x)
+    integer, intent(in)  :: ncid, data_id
+    integer, intent(out) :: status
+    FLOAT,   intent(in)  :: x(:,:,:)
+
+    select case(sb%dim)
+    case(2); 
+      status = nf90_put_var (ncid, data_id, x(1,:,:))
+    case(3);
+      status = nf90_put_var (ncid, data_id, x)
+    end select
+    
+  end subroutine write_variable
+
 
 end subroutine X(output_function_global)

@@ -73,7 +73,7 @@ module output_m
     output_plane_y    =    16,    &
     output_plane_z    =    32,    &
     output_dx         =    64,    &
-    output_dx_cdf     =   128,    &
+    output_netcdf     =   128,    &
     output_plain      =   256,    &
     output_mesh_index =   512,    &
     output_gnuplot    =  1024,    &
@@ -213,7 +213,7 @@ contains
       !% For printing all the three dimensional information, the open source program
       !% visualization tool OpenDX (http://www.opendx.org/) is used. The string
       !% ".dx" is appended to previous file names.
-      !%Option dx_cdf 128
+      !%Option netcdf 128
       !% Outputs in NetCDF (http://www.unidata.ucar.edu/packages/netcdf/) format. This file
       !% can then be read, for example, by OpenDX. The string ".ncdf" is appended to previous file names.
       !% Requires the NetCDF library.
@@ -251,11 +251,11 @@ contains
       end if
 
       ! some modes are not available in some circunstances, so we reset outp%how
-      if(sb%dim == 1) outp%how = iand(outp%how, not(output_axis_y + output_plane_z))
-      if(sb%dim <= 2) outp%how = iand(outp%how, not(output_axis_z + output_plane_x + output_plane_y + &
-         output_dx + output_dx_cdf))
+      if(sb%dim == 1) outp%how = iand(outp%how, not(output_axis_y + output_plane_z + output_netcdf))
+      if(sb%dim <= 2) outp%how = iand(outp%how, not(output_axis_z + &
+        output_plane_x + output_plane_y + output_dx))
 #if !defined(HAVE_NETCDF)
-      outp%how = iand(outp%how, not(output_dx_cdf))
+      outp%how = iand(outp%how, not(output_netcdf))
 #endif
     end if
 
@@ -293,7 +293,7 @@ contains
     if(index(where, "MeshIndex").ne.0) how = ior(how, output_mesh_index)
     if(index(where, "Gnuplot").ne.0)   how = ior(how, output_gnuplot)
 #if defined(HAVE_NETCDF)
-    if(index(where, "NETCDF").ne.0) how = ior(how, output_dx_cdf)
+    if(index(where, "NETCDF").ne.0) how = ior(how, output_netcdf)
 #endif
 
   end function output_fill_how
