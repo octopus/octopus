@@ -329,7 +329,8 @@ contains
 
     if(ep%classic_pot > 0) then
       ep%classic_pot = 0
-      ASSERT(associated(ep%Vclassic)) ! sanity check
+      ! sanity check
+      ASSERT(associated(ep%Vclassic)) 
       deallocate(ep%Vclassic)         ! and clean up
       nullify(ep%Vclassic)
     end if

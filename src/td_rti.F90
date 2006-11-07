@@ -245,7 +245,8 @@ contains
   subroutine td_rti_end(tr)
     type(td_rti_t), intent(inout) :: tr
 
-    ASSERT(associated(tr%v_old)) ! sanity check
+    ! sanity check
+    ASSERT(associated(tr%v_old)) 
     deallocate(tr%v_old)         ! clean ols KS potentials
     nullify(tr%v_old)
 

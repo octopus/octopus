@@ -75,16 +75,22 @@ contains
       s = M_ONE
     end if
 
-    ALLOCATE(rho(NP, st%d%nspin), NP); rho = M_ZERO
-    ALLOCATE(kappa(NP, st%d%nspin), NP); kappa = M_ZERO
+    ALLOCATE(rho(NP, st%d%nspin), NP)
+    ALLOCATE(kappa(NP, st%d%nspin), NP)
+    rho = M_ZERO
+    kappa = M_ZERO
     call states_calc_dens(st, NP, rho)
     rho = rho/s
 
     do_is: do is = 1, st%d%nspin
-      ALLOCATE(grho(NP, NDIM), NP*NDIM)      ! gradient of the spin density
-      ALLOCATE(  jj(NP, NDIM), NP*NDIM)      ! spin current
-      ALLOCATE( wf_psi(NP_PART),  NP_PART)   ! to store the wave-functions
-      ALLOCATE(gwf_psi(NP, NDIM), NP*NDIM)   ! the gradients of the wave-functions
+      ! gradient of the spin density
+      ALLOCATE(grho(NP, NDIM), NP*NDIM)      
+      ! spin current
+      ALLOCATE(  jj(NP, NDIM), NP*NDIM)      
+      ! to store the wave-functions
+      ALLOCATE( wf_psi(NP_PART),  NP_PART)   
+      ! the gradients of the wave-functions
+      ALLOCATE(gwf_psi(NP, NDIM), NP*NDIM)   
       grho = M_ZERO; jj  = M_ZERO; wf_psi = M_ZERO; gwf_psi = M_ZERO
 
       do ik = is, st%d%nik, st%d%nspin

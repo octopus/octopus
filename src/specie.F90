@@ -506,7 +506,8 @@ contains
 
     select case(s%type)
     case(SPEC_PS_PSF, SPEC_PS_HGH, SPEC_PS_CPI, SPEC_PS_FHI, SPEC_PS_UPF)
-      ALLOCATE(s%ps, 1) ! allocate structure
+      ! allocate structure
+      ALLOCATE(s%ps, 1) 
       call ps_init(s%ps, s%label, s%type, s%Z, s%lmax, s%lloc, ispin)
       call ps_getradius(s%ps)
       call ps_derivatives(s%ps)
