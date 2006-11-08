@@ -35,12 +35,24 @@ module fft_m
 
   implicit none
 
+  private
+  
+  public :: &
+       fft_t, &
+       pad_feq, &
+       fft_real, fft_complex, &
+       fft_all_init, fft_all_end, &
+       fft_init, fft_end, &
+       fft_copy, &
+       dfft_forward, zfft_forward, &
+       dfft_backward, zfft_backward
+       
   ! global constants
   integer, parameter ::        &
     fft_real    = 0,           &
     fft_complex = 1
 
-  ! fftw constants WARNING -> they should be private
+  ! fftw constants
   integer, parameter ::        &
     fftw_forward         = -1, &
     fftw_backward        =  1, &
@@ -62,9 +74,9 @@ module fft_m
     C_POINTER :: planb      ! the plan for backward transforms
   end type fft_t
 
-  integer, private :: fft_refs(FFT_MAX)
-  type(fft_t), private :: fft_array(FFT_MAX)
-  logical, private :: fft_optimize
+  integer     :: fft_refs(FFT_MAX)
+  type(fft_t) :: fft_array(FFT_MAX)
+  logical     :: fft_optimize
 
 contains
 
