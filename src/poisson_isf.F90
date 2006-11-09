@@ -38,7 +38,7 @@ module poisson_isf_m
 
   type(dcf_t) :: rho_cf
   FLOAT, pointer :: karray(:, :, :)
-  integer, parameter :: itype_scf=8
+  integer, parameter :: itype_scf = 8 
   integer :: nfft1, nfft2, nfft3
 
 contains
@@ -101,6 +101,7 @@ contains
 
     call push_sub('poisson_isf.poisson_isf_init')
 
+    deallocate(karray)
     call dcf_free(rho_cf)
 
     call pop_sub()
