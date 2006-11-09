@@ -41,6 +41,7 @@ module poisson_m
   use math_m
   use poisson_corrections_m
   use poisson_cg_m
+  use poisson_isf_m
   use grid_m
   use output_m
   use poisson_multigrid_m
@@ -61,8 +62,9 @@ module poisson_m
   integer, parameter :: &
     CG            =  5, &
     CG_CORRECTED  =  6, &
-    MULTIGRILLA   =  7
-
+    MULTIGRILLA   =  7, &
+    ISF           =  8
+  
 #ifdef HAVE_FFT
   integer, parameter :: &
     DIRECT_SUM_1D = -1, &
@@ -136,6 +138,8 @@ contains
     !% Corrected conjugated gradients
     !%Option multigrid 7
     !% Multigrid method
+    !%Option isf 8
+    !% Interpolating Scaling Functions poisson solver.
     !%End
 
     !---------------\--------------------------------------------------
@@ -173,7 +177,7 @@ contains
     subroutine init_3D()
 #ifdef HAVE_FFT
       call loct_parse_int(check_inp('PoissonSolver'), gr%sb%periodic_dim, poisson_solver)
-      if(poisson_solver < FFT_SPH .or. poisson_solver > MULTIGRILLA ) then
+      if(poisson_solver < FFT_SPH .or. poisson_solver > ISF ) then
         call input_error('PoissonSolver')
       end if
 
@@ -239,6 +243,9 @@ contains
       call poisson_cg_end()
     case(MULTIGRILLA)
       call poisson_multigrid_end()
+    case(ISF)
+      call poisson_isf_end()
+
     end select
     poisson_solver = -99
 
@@ -344,6 +351,9 @@ contains
       pot = pot + vh_correction
       deallocate(rho_corrected, vh_correction)
 #endif
+    case(ISF)
+      call poisson_isf_solve(gr%m, pot, rho)
+      
     end select
 
     call pop_sub()

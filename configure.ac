@@ -243,6 +243,7 @@ AC_CONFIG_FILES([Makefile
   external_libs/expokit/Makefile
   external_libs/metis-4.0/Makefile
   external_libs/qshep/Makefile
+  external_libs/poisson_isf/Makefile
   liboct_parser/Makefile
   liboct/Makefile
   src/Makefile

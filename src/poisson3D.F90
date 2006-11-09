@@ -100,6 +100,10 @@ subroutine poisson3D_init(gr, geo)
      call poisson_multigrid_init(gr%m, maxl, threshold)
 
      call grid_create_multigrid(gr, geo)
+     
+  case(ISF)
+    call poisson_isf_init(gr%m)
+     
   end select
 
 #ifdef HAVE_FFT
