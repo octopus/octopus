@@ -255,7 +255,9 @@ contains
       end if
     end do
 
-    fft_Coulb_FS(:,:,:) = M_FOUR*M_PI*fft_Coulb_FS(:,:,:)
+    do k=1, fft_cf%n(3)
+      fft_Coulb_FS(1:fft_cf%nx, 1:fft_cf%n(2), k) = M_FOUR*M_PI*fft_Coulb_FS(1:fft_cf%nx, 1:fft_cf%n(2), k)
+    end do
 
     if( (poisson_solver .eq. FFT_CYL) .and. (gr%sb%periodic_dim == 0) ) then
       deallocate(x, y)
