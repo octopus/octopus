@@ -59,7 +59,7 @@ subroutine PSolver_Kernel(n01,n02,n03,nfft1,nfft2,nfft3, &
    real*8, intent(out) :: ehartree
    !Local variables
    real*8, dimension(:,:,:), allocatable :: zarray
-   real*8 :: factor,eht
+   real*8 :: factor
    integer :: n1,n2,n3,nd1,nd2,nd3,n1h,nd1h
    integer :: inzee,i_sign,i_allocated
 
@@ -103,8 +103,6 @@ subroutine PSolver_Kernel(n01,n02,n03,nfft1,nfft2,nfft3, &
    ! Calling this routine gives only the Hartree potential
    call zarray_out(n01,n02,n03,nd1h,nd2,nd3,&
         rhopot,zarray(1,1,inzee),factor,hgrid,ehartree)
-   print *,"The hartree energy is",ehartree
-
 
    !De-allocations
    deallocate(zarray)
@@ -864,7 +862,7 @@ subroutine test_kernel(n01,n02,n03,nfft1,nfft2,nfft3,&
   !Local variables
   real*8 :: a_gauss,a2
   real*8 :: rhotot,shft1,shft2,shft3,ehart
-  real*8 :: pi,x1,x2,x3,r,r2,factor,derf,max_diff,diff,tt
+  real*8 :: pi,x1,x2,x3,r,r2,factor,derf,max_diff,diff
   integer :: i1,i2,i3,ii1,ii2,ii3
   
   a_gauss=4.d0*hgrid

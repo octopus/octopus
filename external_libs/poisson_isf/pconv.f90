@@ -15,7 +15,7 @@ subroutine PARtest_kernel(n01,n02,n03,nfft1,nfft2,nfft3,&
  !Local variables
  real*8 :: a_gauss,a2
  real*8 :: rhotot,shft1,shft2,shft3,ehart
- real*8 :: pi,x1,x2,x3,r,r2,factor,derf,max_diff,diff,tt
+ real*8 :: pi,x1,x2,x3,r,r2,factor,derf,max_diff,diff
  integer :: i1,i2,i3,ii1,ii2,ii3
 
  a_gauss=4.d0*hgrid
@@ -168,7 +168,7 @@ subroutine calculate_pardimensions(n01,n02,n03,m1,m2,m3,n1,n2,n3,md1,md2,md3,nd1
  implicit none
  integer, intent(in) :: n01,n02,n03,nproc
  integer, intent(out) :: m1,m2,m3,n1,n2,n3,md1,md2,md3,nd1,nd2,nd3
- integer :: l1,l2,l3,l1A,l3A
+ integer :: l1,l2,l3
 
  !dimensions of the density in the real space, inverted for convenience
 
@@ -437,7 +437,6 @@ subroutine enterdensity(rhopot,m1,m2,m3,md1,md2,md3,iproc,nproc,zf)
  real*8, dimension(0:m1-1,0:m3-1,0:m2-1), intent(in) :: rhopot
  !Local Variables
  integer :: j1,j2,j3,jp2
- real*8 :: flag
 
  !Body
  do jp2=0,md2/nproc-1
@@ -522,12 +521,12 @@ subroutine ParBuild_Kernel(n01,n02,n03,nfft1,nfft2,nfft3,n1k,n2k,n3k,hgrid,itype
  real(kind=8), dimension(:,:,:,:), allocatable :: karrayfour
  real(kind=8), dimension(:,:,:), allocatable :: karray
 
- real(kind=8) :: ur_gauss,dr_gauss,acc_gauss,pgauss,kern,a_range,kern_tot
- real(kind=8) :: pi,factor,factor2,urange,dx,absci,p0gauss,weight,p0_cell
- real(kind=8) :: a1,a2,a3,amax
+ real(kind=8) :: ur_gauss,dr_gauss,acc_gauss,pgauss,kern,a_range
+ real(kind=8) :: factor,factor2,dx,absci,p0gauss,p0_cell
+ real(kind=8) :: a1,a2,a3
  integer :: n_scf,nker1,nker2,nker3
  integer :: i_gauss,n_range,n_cell,istart,iend,istart1,istart2,iend1,iend2
- integer :: i,j,n_iter,i_iter,ind,i1,i2,i3,i_kern,i_stat,i_allocated
+ integer :: i,n_iter,i1,i2,i3,i_kern,i_stat,i_allocated
  integer :: i01,i02,i03,n1h,n2h,n3h
 
  !Number of integration points : 2*itype_scf*n_points

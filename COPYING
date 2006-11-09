@@ -14,12 +14,12 @@ introduction.
 
 LICENSE EXCEPTIONS
 
-Octopus provides several external libraries, which are located in the 
-"external_libs" subdirectory of the octopus source distribution. The 
-GNU General Public License does not apply to these libraries. Separate 
-copyright notices can be found for each library in the respective 
-subdirectories of "external_libs". Copyright notices are also contained 
-in this document.
+Octopus provides several external libraries, which are located in the
+"external_libs" subdirectory of the octopus source distribution. The
+GNU General Public License does not necessarily apply to these
+libraries. Separate copyright notices can be found for each library in
+the respective subdirectories of "external_libs". Copyright notices
+are also contained in this document.
 
  Currently the following external libraries are provided:
 
@@ -47,7 +47,14 @@ in this document.
       University of North Texas
       (817) 565-2767
 
+  4. poisson_isf: Fast Poisson Solver for free boundary conditions
 
+      Copyright (C) Luigi Genovese, Thierry Deutsch, CEA Grenoble, 2006
+      Copyright (C) Stefan Goedecker, Basel Univ, 2006
+      Copyright (C) GB Consulting 2006
+      This package is distributed under the terms of the GNU General
+      Public License, see http://www.gnu.org/copyleft/gpl.txt .
+      WWW: http://pages.unibas.ch/comphys/comphys/SOFTWARE/
 
 
                        EXPOKIT COPYRIGHT NOTICE
