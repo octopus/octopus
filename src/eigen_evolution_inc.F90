@@ -126,7 +126,10 @@ contains
     ALLOCATE(wsp(lwsp), lwsp)
     ALLOCATE(iwsp(lwsp), lwsp)
     ALLOCATE(w(NP_PART, st%d%dim), NP_PART*st%d%dim)
-
+    
+    wsp=R_TOTYPE(M_ZERO)
+    iwsp=R_TOTYPE(M_ZERO)
+    
     h_  => h
     gr_ => gr
     ik_ =  ik
@@ -134,7 +137,7 @@ contains
       wsp, lwsp, iwsp, liwsp, X(mv), itrace, iflag)
     nullify(h_)
     nullify(gr_)
-    psi = w
+    psi(1:NP_PART, 1:st%d%dim) = w(1:NP_PART, 1:st%d%dim)
     deallocate(w)
 
     j = iwsp(1)
