@@ -218,7 +218,7 @@ subroutine X(lr_solver_bicgstab) (lr, h, gr, st, ik, x, y, omega)
   R_TYPE, pointer :: phat(:,:), shat(:,:)
   R_TYPE  :: alpha, beta, w, rho_1, rho_2
   logical :: conv_last, conv, orto
-  integer :: iter
+  integer :: iter, idim
   FLOAT :: gamma
 
   call push_sub('linear_response_solver.Xlr_solver_bicgstab')
@@ -246,6 +246,7 @@ subroutine X(lr_solver_bicgstab) (lr, h, gr, st, ik, x, y, omega)
 
   orto = .false.
   conv_last = .false.
+
   do iter = 1, lr%max_iter
     if( iter == lr%ort_min_step ) orto = .true.    
 
@@ -269,8 +270,12 @@ subroutine X(lr_solver_bicgstab) (lr, h, gr, st, ik, x, y, omega)
     ! preconditioning 
     call X(preconditioner_apply)(lr%pre, gr, h, p, phat, omega)
     call X(Hpsi)(h, gr, phat, Hp, ik)
-    Hp(1:NP,1:st%d%dim) = Hp(1:NP,1:st%d%dim) + omega*phat(1:NP,1:st%d%dim)
-      
+
+    !Hp = Hp + omega*phat
+    do idim = 1, st%d%dim 
+      call lalg_axpy(NP, omega, phat(:, idim), Hp(:, idim))
+    end do
+    
     alpha = rho_1/X(states_dotp) (gr%m, st%d%dim, rs, Hp)
     
     s(1:NP,1:st%d%dim) = r(1:NP,1:st%d%dim) - alpha * Hp(1:NP,1:st%d%dim)
@@ -286,7 +291,11 @@ subroutine X(lr_solver_bicgstab) (lr, h, gr, st, ik, x, y, omega)
 
     call X(preconditioner_apply)(lr%pre, gr, h, s, shat, omega)
     call X(Hpsi)(h, gr, shat, Hs, ik)
-    Hs(1:NP,1:st%d%dim) = Hs(1:NP,1:st%d%dim) + omega*shat(1:NP,1:st%d%dim)
+
+    !Hs = Hs + omega*phat
+    do idim = 1, st%d%dim 
+      call lalg_axpy(NP, omega, shat(:, idim), Hs(:, idim))
+    end do
 
     w = X(states_dotp) (gr%m, st%d%dim, Hs, s) / X(states_dotp) (gr%m, st%d%dim, Hs, Hs)
 
@@ -316,6 +325,7 @@ subroutine X(lr_solver_bicgstab) (lr, h, gr, st, ik, x, y, omega)
   lr%abs_psi=sqrt(gamma)
 
   deallocate(r, p, Hp, s, rs, Hs)
+  deallocate(phat, shat)
 
   call pop_sub()
 end subroutine X(lr_solver_bicgstab)
