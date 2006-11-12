@@ -80,41 +80,59 @@ end subroutine fourier_dim
 
 ! auxiliary subroutines --------------------------
 
-        subroutine init(n1,n2,n3,nd1,nd2,nd3,zin,z)
-        implicit real*8 (a-h,o-z)
-        dimension zin(2,n1,n2,n3),z(2,nd1,nd2,nd3)
-        do 9763,i3=1,n3
-        do 9763,i2=1,n2
-        do 9763,i1=1,n1
+subroutine init(n1,n2,n3,nd1,nd2,nd3,zin,z)
+  implicit none
+
+  integer :: n1, n2, n3, nd1, nd2, nd3
+  real(8) :: zin(2,n1,n2,n3)
+  real(8) :: z(2,nd1,nd2,nd3)
+  
+  integer :: i1, i2, i3
+
+  do i3=1,n3
+    do i2=1,n2
+      do i1=1,n1
         zin(1,i1,i2,i3) = cos(1.23*float(i1*111+ i2*11 + i3))
         zin(2,i1,i2,i3) = sin(3.21*float(i3*111 + i2*11 + i1))
         z(1,i1,i2,i3) = zin(1,i1,i2,i3) 
         z(2,i1,i2,i3) = zin(2,i1,i2,i3) 
-9763        continue
-        return
-        end
+      end do
+    end do
+  end do
 
-        subroutine vgl(n1,n2,n3,nd1,nd2,nd3,x,md1,md2,md3,y,scale,tta,ttm)
-        implicit real*8 (a-h,o-z)
-        dimension x(2,nd1,nd2,nd3),y(2,md1,md2,md3)
-        ttm=0.d0
-        tta=0.d0
-        do 976,i3=1,n3
-        do 976,i2=1,n2
-        do 976,i1=1,n1
+end subroutine init
+
+subroutine vgl(n1,n2,n3,nd1,nd2,nd3,x,md1,md2,md3,y,scale,tta,ttm)
+  implicit none
+  integer :: n1, n2, n3, nd1, nd2, nd3
+  real(8) :: x(2,nd1,nd2,nd3)
+  integer :: md1, md2, md3
+  real(8) :: y(2,md1,md2,md3)
+  real(8) :: scale, tta, ttm
+
+  integer :: i1, i2, i3
+  real(8) :: ttr, tti
+
+  ttm=0.d0
+  tta=0.d0
+  do i3=1,n3
+    do i2=1,n2
+      do i1=1,n1
         ttr=abs(x(1,i1,i2,i3)*scale-y(1,i1,i2,i3))/abs(y(1,i1,i2,i3))
         tti=abs(x(2,i1,i2,i3)*scale-y(2,i1,i2,i3))/abs(y(2,i1,i2,i3))
         ttm=max(ttr,tti,ttm)
         tta=tta+ttr+tti
-976        continue
-        tta=tta/(n1*n2*n3)
-        return
-        end
+      end do
+    end do
+  end do
+  tta=tta/(n1*n2*n3)
+
+end subroutine vgl
 
 
 ! FFT PART -----------------------------------------------------------------
 
-        subroutine FFT(n1,n2,n3,nd1,nd2,nd3,z,isign,inzee)
+subroutine FFT(n1, n2, n3, nd1, nd2, nd3, z, isign, inzee)
 !        CALCULATES THE DISCRETE FOURIERTRANSFORM F(I1,I2,I3)=
 !        S_(j1,j2,j3) EXP(isign*i*2*pi*(j1*i1/n1+j2*i2/n2+j3*i3/n3)) R(j1,j2,j3)
 !       with optimal performance on vector computer, workstations and 
@@ -167,7 +185,7 @@ end subroutine fourier_dim
 !  This file is distributed under the terms of the
 !  GNU General Public License, see http://www.gnu.org/copyleft/gpl.txt .
 
-        implicit real*8 (a-h,o-z)
+        implicit none
 !$      interface
 !$        integer ( kind=4 ) function omp_get_num_threads ( )
 !$        end function omp_get_num_threads
@@ -177,12 +195,20 @@ end subroutine fourier_dim
 !$        end function omp_get_thread_num
 !$      end interface
 
-        include 'perfdata.inc'
-        REAL(KIND=8), ALLOCATABLE, DIMENSION(:,:,:) :: zw  
-        REAL(KIND=8), ALLOCATABLE, DIMENSION(:,:) :: trig
-        INTEGER, ALLOCATABLE, DIMENSION(:) :: after,now,before
-        dimension z(2,nd1*nd2*nd3,2)
-        if (max(n1,n2,n3).gt.8192) stop 'fft:8192 limit reached'
+  integer, intent(in) :: n1, n2, n3, nd1, nd2, nd3
+  real(8) :: z(2,nd1*nd2*nd3,2)
+  integer :: isign, inzee
+
+  real(8), allocatable :: zw(:, :, :)
+  real(8), allocatable :: trig(:, :)
+  integer, allocatable :: after(:), now(:), before(:)
+
+
+  integer :: ncache, nfft, mm, i, ic
+  integer :: npr, iam, inzet, m, lot, nn, lotomp, j, jompa, jompb
+  integer :: n, ma, mb, jj, inzeep
+
+  if (max(n1,n2,n3).gt.8192) stop 'fft:8192 limit reached'
 
 ! some reasonable values of ncache: 
 !   IBM/RS6000/590: 16*1024 ; IBM/RS6000/390: 3*1024 ; 
@@ -190,190 +216,205 @@ end subroutine fourier_dim
 !   But if you care about performance find the optimal value of ncache yourself!
 !       On all vector machines: ncache=0
 
-        ncache=ncache_optimal
-        if (ncache <= max(n1,n2,n3)*4) ncache=max(n1,n2,n3/2)*4
-        if (timing_flag == 1) print *,'serial ncache=',ncache
-! check whether input values are reasonable
-	if (inzee.le.0 .or. inzee.ge.3) stop 'fft:wrong inzee'
-	if (isign.ne.1 .and. isign.ne.-1) stop 'fft:wrong isign'
-	if (n1.gt.nd1) stop 'fft:n1>nd1'
-	if (n2.gt.nd2) stop 'fft:n2>nd2'
-	if (n3.gt.nd3) stop 'fft:n3>nd3'
-	
+  ncache = 1024
+  if (ncache /= 0 .and. ncache <= max(n1,n2,n3)*4) ncache=max(n1,n2,n3/2)*4
 
-! vector computer with memory banks:
-      if (ncache.eq.0) then
-        allocate(trig(2,8192),after(20),now(20),before(20))
+  ! check whether input values are reasonable
+  if (inzee.le.0 .or. inzee.ge.3) stop 'fft:wrong inzee'
+  if (isign.ne.1 .and. isign.ne.-1) stop 'fft:wrong isign'
+  if (n1.gt.nd1) stop 'fft:n1>nd1'
+  if (n2.gt.nd2) stop 'fft:n2>nd2'
+  if (n3.gt.nd3) stop 'fft:n3>nd3'
+  
 
-        call ctrig(n3,trig,after,before,now,isign,ic)
-        nfft=nd1*n2
-        mm=nd1*nd2
-        do 51093,i=1,ic-1
-        call fftstp(mm,nfft,nd3,mm,nd3,z(1,1,inzee),z(1,1,3-inzee), &
-                          trig,after(i),now(i),before(i),isign)
-51093        inzee=3-inzee
-        i=ic
-        call fftrot(mm,nfft,nd3,mm,nd3,z(1,1,inzee),z(1,1,3-inzee), &
-                          trig,after(i),now(i),before(i),isign)
-        inzee=3-inzee
+  ! vector computer with memory banks:
+  if (ncache.eq.0) then
+    allocate(trig(2,8192),after(20),now(20),before(20))
+    
+    call ctrig(n3,trig,after,before,now,isign,ic)
+    nfft=nd1*n2
+    mm=nd1*nd2
+    
+    do i=1,ic-1
+      call fftstp(mm,nfft,nd3,mm,nd3,z(1,1,inzee),z(1,1,3-inzee), &
+           trig,after(i),now(i),before(i),isign)
+      inzee=3-inzee
+    end do
+    
+    i=ic
 
-        if (n2.ne.n3) call ctrig(n2,trig,after,before,now,isign,ic)
-        nfft=nd3*n1
-        mm=nd3*nd1
-        do 52093,i=1,ic-1
-        call fftstp(mm,nfft,nd2,mm,nd2,z(1,1,inzee),z(1,1,3-inzee), &
-                           trig,after(i),now(i),before(i),isign)
-52093        inzee=3-inzee
-        i=ic
-        call fftrot(mm,nfft,nd2,mm,nd2,z(1,1,inzee),z(1,1,3-inzee), &
-                       trig,after(i),now(i),before(i),isign)
-        inzee=3-inzee
+    call fftrot(mm,nfft,nd3,mm,nd3,z(1,1,inzee),z(1,1,3-inzee), &
+         trig,after(i),now(i),before(i),isign)
 
-        if (n1.ne.n2) call ctrig(n1,trig,after,before,now,isign,ic)
-        nfft=nd2*n3
-        mm=nd2*nd3
-        do 53093,i=1,ic-1
-        call fftstp(mm,nfft,nd1,mm,nd1,z(1,1,inzee),z(1,1,3-inzee), &
-                         trig,after(i),now(i),before(i),isign)
-53093        inzee=3-inzee
-        i=ic
-        call fftrot(mm,nfft,nd1,mm,nd1,z(1,1,inzee),z(1,1,3-inzee), &
-                         trig,after(i),now(i),before(i),isign)
-        inzee=3-inzee
+    inzee=3-inzee
+      
+    if (n2.ne.n3) call ctrig(n2,trig,after,before,now,isign,ic)
+    nfft=nd3*n1
+    mm=nd3*nd1
 
+    do i=1,ic-1
+      call fftstp(mm,nfft,nd2,mm,nd2,z(1,1,inzee),z(1,1,3-inzee), &
+           trig,after(i),now(i),before(i),isign)
+      inzee=3-inzee
+    end do
+    
+    i=ic
+    call fftrot(mm,nfft,nd2,mm,nd2,z(1,1,inzee),z(1,1,3-inzee), &
+         trig,after(i),now(i),before(i),isign)
+    inzee=3-inzee
+        
+    if (n1.ne.n2) call ctrig(n1,trig,after,before,now,isign,ic)
+    nfft=nd2*n3
+    mm=nd2*nd3
+    
+    do i=1,ic-1
+      call fftstp(mm,nfft,nd1,mm,nd1,z(1,1,inzee),z(1,1,3-inzee), &
+           trig,after(i),now(i),before(i),isign)
+      inzee=3-inzee
+    end do
+
+    i=ic
+
+    call fftrot(mm,nfft,nd1,mm,nd1,z(1,1,inzee),z(1,1,3-inzee), &
+         trig,after(i),now(i),before(i),isign)
+
+    inzee=3-inzee
+    
 ! RISC machine with cache:
-      else
-! INtel IFC does not understand default(private)
+  else
+    ! INtel IFC does not understand default(private)
 !!$omp parallel  default(private) &
 !$omp parallel & 
 !$omp private(zw,trig,before,after,now,i,j,iam,npr,jj,ma,mb,mm,ic,n,m,jompa,jompb,lot,lotomp,inzeep,inzet,nn,nfft) &
 !$omp shared(n1,n2,n3,nd1,nd2,nd3,z,isign,inzee,ncache) 
-        npr=1
-!$       npr=omp_get_num_threads()
-        iam=0
+    npr=1
+    !$       npr=omp_get_num_threads()
+    iam=0
 !$       iam=omp_get_thread_num()
-!        write(6,*) 'npr,iam',npr,iam
-! Critical section only necessary on Intel
+
+    ! Critical section only necessary on Intel
 !$omp critical
-        allocate(zw(2,ncache/4,2),trig(2,1024),after(20),now(20),before(20))
+    ALLOCATE(zw(2,ncache/4,2),trig(2,1024),after(20),now(20),before(20))
 !$omp end critical
 
-        inzet=inzee
-! TRANSFORM ALONG Z AXIS
+    inzet=inzee
+    ! TRANSFORM ALONG Z AXIS
 
-        mm=nd1*nd2
-        m=nd3
-        lot=max(1,ncache/(4*n3))
-        nn=lot
-        n=n3
-        if (2*n*lot*2.gt.ncache) stop 'fft:ncache1'
-
-        call ctrig(n3,trig,after,before,now,isign,ic)
-
-      if (ic.eq.1) then
-        i=ic
-        lotomp=(nd1*n2)/npr+1
-        ma=iam*lotomp+1
-        mb=min((iam+1)*lotomp,nd1*n2)
-        nfft=mb-ma+1
-        j=ma
-        jj=j*nd3-nd3+1
-        call fftrot(mm,nfft,m,mm,m,z(1,j,inzet),z(1,jj,3-inzet), &
-                          trig,after(i),now(i),before(i),isign)
-
-      else
-
-        lotomp=(nd1*n2)/npr+1
-        jompa=iam*lotomp+1
-        jompb=min((iam+1)*lotomp,nd1*n2)
-        do 1000,j=jompa,jompb,lot
+    mm = nd1*nd2
+    m = nd3
+    lot = max(1,ncache/(4*n3))
+    nn = lot
+    n=n3
+    if (2*n*lot*2.gt.ncache) stop 'fft:ncache1'
+    
+    call ctrig(n3,trig,after,before,now,isign,ic)
+    
+    if (ic.eq.1) then
+      i=ic
+      lotomp=(nd1*n2)/npr+1
+      ma=iam*lotomp+1
+      mb=min((iam+1)*lotomp,nd1*n2)
+      nfft=mb-ma+1
+      j=ma
+      jj=j*nd3-nd3+1
+      call fftrot(mm,nfft,m,mm,m,z(1,j,inzet),z(1,jj,3-inzet), &
+           trig,after(i),now(i),before(i),isign)
+      
+    else
+      
+      lotomp=(nd1*n2)/npr+1
+      jompa=iam*lotomp+1
+      jompb=min((iam+1)*lotomp,nd1*n2)
+      do j=jompa,jompb,lot
         ma=j
         mb=min(j+(lot-1),jompb)
         nfft=mb-ma+1
         jj=j*nd3-nd3+1
-
+        
         i=1
         inzeep=2
         call fftstp(mm,nfft,m,nn,n,z(1,j,inzet),zw(1,1,3-inzeep), &
-                         trig,after(i),now(i),before(i),isign)
+             trig,after(i),now(i),before(i),isign)
         inzeep=1
-
-        do 1093,i=2,ic-1
-        call fftstp(nn,nfft,n,nn,n,zw(1,1,inzeep),zw(1,1,3-inzeep), &
-                         trig,after(i),now(i),before(i),isign)
-1093        inzeep=3-inzeep
+        
+        do i=2,ic-1
+          call fftstp(nn,nfft,n,nn,n,zw(1,1,inzeep),zw(1,1,3-inzeep), &
+               trig,after(i),now(i),before(i),isign)
+          inzeep=3-inzeep
+        end do
         i=ic
         call fftrot(nn,nfft,n,mm,m,zw(1,1,inzeep),z(1,jj,3-inzet), &
-                         trig,after(i),now(i),before(i),isign)
-1000        continue
-      endif
+             trig,after(i),now(i),before(i),isign)
+      end do
+    endif
 
-        inzet=3-inzet
+    inzet=3-inzet
 
 !$omp barrier
 
 ! TRANSFORM ALONG Y AXIS
-        mm=nd3*nd1
-        m=nd2
-        lot=max(1,ncache/(4*n2))
-        nn=lot
-        n=n2
-        if (2*n*lot*2.gt.ncache) stop 'fft:ncache2'
-
-        if (n2.ne.n3) call ctrig(n2,trig,after,before,now,isign,ic)
-
-      if (ic.eq.1) then
-        i=ic
-        lotomp=(nd3*n1)/npr+1
-        ma=iam*lotomp+1
-        mb=min((iam+1)*lotomp,nd3*n1)
-        nfft=mb-ma+1
-        j=ma
-        jj=j*nd2-nd2+1
+    mm=nd3*nd1
+    m=nd2
+    lot=max(1,ncache/(4*n2))
+    nn=lot
+    n=n2
+    if (2*n*lot*2.gt.ncache) stop 'fft:ncache2'
+    
+    if (n2.ne.n3) call ctrig(n2,trig,after,before,now,isign,ic)
+    
+    if (ic.eq.1) then
+      i=ic
+      lotomp=(nd3*n1)/npr+1
+      ma=iam*lotomp+1
+      mb=min((iam+1)*lotomp,nd3*n1)
+      nfft=mb-ma+1
+      j=ma
+      jj=j*nd2-nd2+1
         call fftrot(mm,nfft,m,mm,m,z(1,j,inzet),z(1,jj,3-inzet), &
-                         trig,after(i),now(i),before(i),isign)
-
+             trig,after(i),now(i),before(i),isign)
+        
       else
-
+        
         lotomp=(nd3*n1)/npr+1
         jompa=iam*lotomp+1
         jompb=min((iam+1)*lotomp,nd3*n1)
-        do 2000,j=jompa,jompb,lot
-        ma=j
-        mb=min(j+(lot-1),jompb)
-        nfft=mb-ma+1
-        jj=j*nd2-nd2+1
-
-        i=1
-        inzeep=2
-        call fftstp(mm,nfft,m,nn,n,z(1,j,inzet),zw(1,1,3-inzeep), &
-                         trig,after(i),now(i),before(i),isign)
-        inzeep=1
-
-        do 2093,i=2,ic-1
-        call fftstp(nn,nfft,n,nn,n,zw(1,1,inzeep),zw(1,1,3-inzeep), &
-                         trig,after(i),now(i),before(i),isign)
-2093        inzeep=3-inzeep
-
-        i=ic
-        call fftrot(nn,nfft,n,mm,m,zw(1,1,inzeep),z(1,jj,3-inzet), &
-                         trig,after(i),now(i),before(i),isign)
-2000        continue
+        do j=jompa,jompb,lot
+          ma=j
+          mb=min(j+(lot-1),jompb)
+          nfft=mb-ma+1
+          jj=j*nd2-nd2+1
+          
+          i=1
+          inzeep=2
+          call fftstp(mm,nfft,m,nn,n,z(1,j,inzet),zw(1,1,3-inzeep), &
+               trig,after(i),now(i),before(i),isign)
+          inzeep=1
+          
+          do i=2,ic-1
+            call fftstp(nn,nfft,n,nn,n,zw(1,1,inzeep),zw(1,1,3-inzeep), &
+                 trig,after(i),now(i),before(i),isign)
+            inzeep=3-inzeep
+          end do
+          
+          i=ic
+          call fftrot(nn,nfft,n,mm,m,zw(1,1,inzeep),z(1,jj,3-inzet), &
+               trig,after(i),now(i),before(i),isign)
+        end do
       endif
-        inzet=3-inzet
-
+      inzet=3-inzet
+      
 !$omp barrier
 
 ! TRANSFORM ALONG X AXIS
-        mm=nd2*nd3
-        m=nd1
-        lot=max(1,ncache/(4*n1))
-        nn=lot
-        n=n1
-        if (2*n*lot*2.gt.ncache) stop 'fft:ncache3'
-
-        if (n1.ne.n2) call ctrig(n1,trig,after,before,now,isign,ic)
-
+      mm=nd2*nd3
+      m=nd1
+      lot=max(1,ncache/(4*n1))
+      nn=lot
+      n=n1
+      if (2*n*lot*2.gt.ncache) stop 'fft:ncache3'
+      
+      if (n1.ne.n2) call ctrig(n1,trig,after,before,now,isign,ic)
+      
       if (ic.eq.1) then
         i=ic
         lotomp=(nd2*n3)/npr+1
@@ -383,44 +424,45 @@ end subroutine fourier_dim
         j=ma
         jj=j*nd1-nd1+1
         call fftrot(mm,nfft,m,mm,m,z(1,j,inzet),z(1,jj,3-inzet), &
-                         trig,after(i),now(i),before(i),isign)
-
+             trig,after(i),now(i),before(i),isign)
+        
       else
-
+        
         lotomp=(nd2*n3)/npr+1
         jompa=iam*lotomp+1
         jompb=min((iam+1)*lotomp,nd2*n3)
-        do 3000,j=jompa,jompb,lot
-        ma=j
-        mb=min(j+(lot-1),jompb)
-        nfft=mb-ma+1
-        jj=j*nd1-nd1+1
-
-        i=1
-        inzeep=2
-        call fftstp(mm,nfft,m,nn,n,z(1,j,inzet),zw(1,1,3-inzeep), &
-                         trig,after(i),now(i),before(i),isign)
-        inzeep=1
-
-        do 3093,i=2,ic-1
-        call fftstp(nn,nfft,n,nn,n,zw(1,1,inzeep),zw(1,1,3-inzeep), &
-                         trig,after(i),now(i),before(i),isign)
-3093        inzeep=3-inzeep
+        do j=jompa,jompb,lot
+          ma=j
+          mb=min(j+(lot-1),jompb)
+          nfft=mb-ma+1
+          jj=j*nd1-nd1+1
+          
+          i=1
+          inzeep=2
+          call fftstp(mm,nfft,m,nn,n,z(1,j,inzet),zw(1,1,3-inzeep), &
+               trig,after(i),now(i),before(i),isign)
+          inzeep=1
+          
+        do i=2,ic-1
+          call fftstp(nn,nfft,n,nn,n,zw(1,1,inzeep),zw(1,1,3-inzeep), &
+               trig,after(i),now(i),before(i),isign)
+          inzeep=3-inzeep
+        end do
         i=ic
         call fftrot(nn,nfft,n,mm,m,zw(1,1,inzeep),z(1,jj,3-inzet), &
-                         trig,after(i),now(i),before(i),isign)
-3000        continue
-      endif
-        inzet=3-inzet
+             trig,after(i),now(i),before(i),isign)
+      end do
+    endif
+    inzet=3-inzet
         
-        deallocate(zw,trig,after,now,before)
-        if (iam.eq.0) inzee=inzet
+    deallocate(zw,trig,after,now,before)
+    if (iam.eq.0) inzee=inzet
 !$omp end parallel  
 
+    
+  endif
 
-      endif
-        return
-        end
+end subroutine FFT
 
 
 
@@ -434,10 +476,15 @@ end subroutine fourier_dim
 !     Different factorizations affect the performance
 !     Factoring 64 as 4*4*4 might for example be faster on some machines than 8*8.
 
-        implicit real*8 (a-h,o-z)
-        integer after,before
-        dimension now(7),after(7),before(7),trig(2,8192)
+        implicit none
+        integer :: n, isign, ic
+        integer :: now(7), after(7), before(7)
+        real(8) :: trig(2,8192)
+
+        integer :: i, j, itt, nh
+        real(8) :: angle, trigc, trigs, twopi
         INTEGER, DIMENSION(7,149) :: idata 
+
 ! The factor 6 is only allowed in the first place!
         data ((idata(i,j),i=1,7),j=1,149) /                        &
             3,   3, 1, 1, 1, 1, 1,       4,   4, 1, 1, 1, 1, 1,   &
@@ -591,9 +638,25 @@ end subroutine fourier_dim
 !  This file is distributed under the terms of the
 !  GNU General Public License, see http://www.gnu.org/copyleft/gpl.txt .
 
-        implicit real*8 (a-h,o-z)
-        integer after,before,atn,atb
-        dimension trig(2,8192),zin(2,mm,m),zout(2,nn,n)
+        implicit none
+
+        integer :: mm, nfft, m, nn, n, isign
+
+        integer :: after, before, atn, atb, now
+        real(8) :: trig(2,8192), zin(2, mm, m), zout(2, nn, n)
+
+        real(8) :: rt2i, dp, cp, cm, ci5, cr5, ci6, cr6, am, ap, ci8, cr8
+        real(8) :: r, r1, r2, r3, r4, r5, r6, r7, r8, r25, r34
+        real(8) :: s, s1, s2, s3, s4, s5, s6, s7, s8, s25, s34
+        real(8) :: bb, bm, dm, bp
+        real(8) :: cr2, ci2, cr3, ci3, cr4, ci4, cr7, ci7
+        real(8) :: cos2, sin2, cos4, sin4
+        real(8) :: ur1, ur2, ur3, ui1, ui2, ui3
+        real(8) :: vr1, vr2, vr3, vi1, vi2, vi3
+        integer :: ia, ib, i, j, ias, ic, itrig, itt
+        integer :: nin1, nin2, nin3, nin4, nin5, nin6, nin7, nin8
+        integer :: nout1, nout2, nout3, nout4, nout5, nout6, nout7, nout8
+        
         atn=after*now
         atb=after*before
 
@@ -2038,9 +2101,25 @@ end subroutine fourier_dim
 !  This file is distributed under the terms of the
 !  GNU General Public License, see http://www.gnu.org/copyleft/gpl.txt .
 
-        implicit real*8 (a-h,o-z)
-        integer after,before,atn,atb
-        dimension trig(2,8192),zin(2,mm,m),zout(2,n,nn)
+        implicit none
+
+        integer :: mm, nfft, m, nn, n, isign
+
+        integer :: after, before, atn, atb, now
+        real(8) :: trig(2,8192), zin(2, mm, m), zout(2, n, nn)
+
+        real(8) :: rt2i, dp, cp, cm, ci5, cr5, ci6, cr6, am, ap, ci8, cr8
+        real(8) :: r, r1, r2, r3, r4, r5, r6, r7, r8, r25, r34
+        real(8) :: s, s1, s2, s3, s4, s5, s6, s7, s8, s25, s34
+        real(8) :: bb, bm, dm, bp
+        real(8) :: cr2, ci2, cr3, ci3, cr4, ci4, cr7, ci7
+        real(8) :: cos2, sin2, cos4, sin4
+        real(8) :: ur1, ur2, ur3, ui1, ui2, ui3
+        real(8) :: vr1, vr2, vr3, vi1, vi2, vi3
+        integer :: ia, ib, i, j, ias, ic, itrig, itt
+        integer :: nin1, nin2, nin3, nin4, nin5, nin6, nin7, nin8
+        integer :: nout1, nout2, nout3, nout4, nout5, nout6, nout7, nout8
+
         atn=after*now
         atb=after*before
 
