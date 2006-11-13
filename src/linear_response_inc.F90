@@ -30,7 +30,7 @@ subroutine X(lr_orth_vector) (m, st, v, ik, tol)
   FLOAT,   optional,   intent(in)    :: tol
 
   R_TYPE  :: scalp
-  integer :: ist
+  integer :: ist, idim
 
   call push_sub('linear_response_inc.Xlr_orth_vector')
 
@@ -40,7 +40,12 @@ subroutine X(lr_orth_vector) (m, st, v, ik, tol)
       if(present(tol)) then 
         if( ABS(scalp) < tol ) cycle
       end if
-      v(1:m%np, 1:st%d%dim) = v(1:m%np, 1:st%d%dim) - scalp*st%X(psi)(1:m%np, 1:st%d%dim, ist, ik)
+
+      !v = v - scalp*st%X(psi)
+      do idim=1, st%d%dim
+        call lalg_axpy(m%np, -scalp, st%X(psi)(:, idim, ist, ik), v(:, idim))
+      end do
+
     end if
   end do
 

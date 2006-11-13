@@ -73,7 +73,7 @@ subroutine X(lr_solver_cg) (lr, h, gr, st, ik, x, y, omega)
 
   R_TYPE, allocatable :: r(:,:), p(:,:), Hp(:,:)
   R_TYPE  :: alpha, beta, gamma
-  integer :: iter
+  integer :: iter, idim
   logical :: conv_last, conv
 
   call push_sub('linear_response_solvers.Xlr_solver_cg')
@@ -99,16 +99,25 @@ subroutine X(lr_solver_cg) (lr, h, gr, st, ik, x, y, omega)
     conv_last = conv
     
     call X(Hpsi)(h, gr, p, Hp, ik)
-    Hp(1:NP,1:st%d%dim) = Hp(1:NP,1:st%d%dim) + omega*p(1:NP,1:st%d%dim)
-    
+    !Hp = Hp + omega*p
+    do idim = 1, st%d%dim
+      call lalg_axpy(NP, omega, p(:, idim), Hp(:, idim))
+    end do
+
     alpha = gamma/ X(states_dotp) (gr%m, st%d%dim, p, Hp)
-    
-    r(1:NP,1:st%d%dim) = r(1:NP,1:st%d%dim) - alpha*Hp(1:NP,1:st%d%dim)
-    x(1:NP_PART,1:st%d%dim) = x(1:NP_PART,1:st%d%dim) + alpha* p(1:NP_PART,1:st%d%dim)
-    
+
+    do idim = 1, st%d%dim
+      !r = r - alpha*Hp
+      call lalg_axpy(NP, -alpha, Hp(:, idim), r(:, idim))
+      !x = x + alpha*p
+      call lalg_axpy(NP,  alpha,  p(:, idim), x(:, idim))
+    end do
+
+
     beta = X(states_dotp) (gr%m, st%d%dim, r, r)/gamma
-    p(1:NP,1:st%d%dim) = r(1:NP,1:st%d%dim) + beta*p(1:NP,1:st%d%dim)
-    
+
+    p(1:NP, 1:st%d%dim) = r(1:NP, 1:st%d%dim) + beta*p(1:NP, 1:st%d%dim)
+
   end do
     
   lr%iter = iter
@@ -223,21 +232,21 @@ subroutine X(lr_solver_bicgstab) (lr, h, gr, st, ik, x, y, omega)
 
   call push_sub('linear_response_solver.Xlr_solver_bicgstab')
 
-  ALLOCATE( r(NP, st%d%dim), NP     *st%d%dim)
+  ALLOCATE( r(NP, st%d%dim),      NP     *st%d%dim)
   ALLOCATE( p(NP_PART, st%d%dim), NP_PART*st%d%dim)
   ALLOCATE(rs(NP, st%d%dim),      NP     *st%d%dim)
   ALLOCATE( s(NP_PART, st%d%dim), NP_PART*st%d%dim)
   ALLOCATE(Hp(NP, st%d%dim),      NP     *st%d%dim)
   ALLOCATE(Hs(NP, st%d%dim),      NP     *st%d%dim)
 
-  p=M_ZERO
-  s=M_ZERO
+  p=R_TOTYPE(M_ZERO)
+  s=R_TOTYPE(M_ZERO)
 
-  ! this will store the preconditined functions
+  ! this will store the preconditioned functions
   ALLOCATE( phat(NP_PART, st%d%dim), NP_PART*st%d%dim)
   ALLOCATE( shat(NP_PART, st%d%dim), NP_PART*st%d%dim)
-  phat=M_ZERO
-  shat=M_ZERO
+  phat=R_TOTYPE(M_ZERO)
+  shat=R_TOTYPE(M_ZERO)
 
   ! Initial residue
   call X(Hpsi)(h, gr, x, Hp, ik)
@@ -292,7 +301,7 @@ subroutine X(lr_solver_bicgstab) (lr, h, gr, st, ik, x, y, omega)
     call X(preconditioner_apply)(lr%pre, gr, h, s, shat, omega)
     call X(Hpsi)(h, gr, shat, Hs, ik)
 
-    !Hs = Hs + omega*phat
+    !Hs = Hs + omega*shat
     do idim = 1, st%d%dim 
       call lalg_axpy(NP, omega, shat(:, idim), Hs(:, idim))
     end do
