@@ -52,14 +52,14 @@ subroutine PSolver_Kernel(n01,n02,n03,nfft1,nfft2,nfft3, &
    implicit none
    !Arguments
    integer, intent(in)  :: n01,n02,n03,nfft1,nfft2,nfft3
-   real*8, intent(in) :: hgrid
+   real(8), intent(in) :: hgrid
    !logical, intent(in) :: xc_on
-   real*8, intent(in), dimension(nfft1/2+1,nfft2/2+1,nfft3/2+1) :: karray
-   real*8, intent(inout), dimension(n01,n02,n03) :: rhopot
-   real*8, intent(out) :: ehartree
+   real(8), intent(in), dimension(nfft1/2+1,nfft2/2+1,nfft3/2+1) :: karray
+   real(8), intent(inout), dimension(n01,n02,n03) :: rhopot
+   real(8), intent(out) :: ehartree
    !Local variables
-   real*8, dimension(:,:,:), allocatable :: zarray
-   real*8 :: factor
+   real(8), dimension(:,:,:), allocatable :: zarray
+   real(8) :: factor
    integer :: n1,n2,n3,nd1,nd2,nd3,n1h,nd1h
    integer :: inzee,i_sign,i_allocated
 
@@ -99,10 +99,10 @@ subroutine PSolver_Kernel(n01,n02,n03,nfft1,nfft2,nfft3, &
    !We have to multiply by a factor
    factor = hgrid**3/(n1*n2*n3)
    
-   
    ! Calling this routine gives only the Hartree potential
    call zarray_out(n01,n02,n03,nd1h,nd2,nd3,&
-        rhopot,zarray(1,1,inzee),factor,hgrid,ehartree)
+        rhopot,zarray(1,1,inzee),factor,hgrid)
+
 
    !De-allocations
    deallocate(zarray)
@@ -139,12 +139,12 @@ subroutine kernel_application(n1,n2,n3,nd1h,nd2,nd3,nfft1,nfft2,nfft3,zarray,kar
    implicit none
    !Arguments
    integer, intent(in)  :: n1,n2,n3,nd1h,nd2,nd3,nfft1,nfft2,nfft3,inzee
-   real*8, intent(in), dimension(nfft1/2+1,nfft2/2+1,nfft3/2+1) :: karray
-   real*8, intent(inout), dimension(2,nd1h,nd2,nd3,2) :: zarray
+   real(8), intent(in), dimension(nfft1/2+1,nfft2/2+1,nfft3/2+1) :: karray
+   real(8), intent(inout), dimension(2,nd1h,nd2,nd3,2) :: zarray
    !Local variables
-   real*8, dimension(:), allocatable :: cos_array,sin_array
-   real*8 :: a,b,c,d,pi2,g1,cp,sp
-   real*8 :: rfe,ife,rfo,ifo,rk,ik,rk2,ik2,re,ro,ie,io,rhk,ihk
+   real(8), dimension(:), allocatable :: cos_array,sin_array
+   real(8) :: a,b,c,d,pi2,g1,cp,sp
+   real(8) :: rfe,ife,rfo,ifo,rk,ik,rk2,ik2,re,ro,ie,io,rhk,ihk
    integer :: i1,i2,i3,j1,j2,j3,i_allocated,i_stat,ouzee,n1h,n2h,n3h
    integer :: si1,si2,si3
 
@@ -724,8 +724,8 @@ subroutine zarray_in(n01,n02,n03,nd1,nd2,nd3,density,zarray)
    implicit none
    !Arguments
    integer :: n01,n02,n03,nd1,nd2,nd3
-   real*8, dimension(n01,n02,n03) :: density
-   real*8, dimension(2,nd1,nd2,nd3) :: zarray
+   real(8), dimension(n01,n02,n03) :: density
+   real(8), dimension(2,nd1,nd2,nd3) :: zarray
    !Local variables
    integer :: i1,i2,i3,n01h,nd1hm,nd3hm,nd2hm
    !Half the size of n01
@@ -771,32 +771,26 @@ end subroutine zarray_in
 !! SOURCE
 !!
 subroutine zarray_out(n01,n02,n03,nd1,nd2,nd3,&
-     rhopot,zarray,factor,hgrid,ehartree)
+     rhopot,zarray,factor,hgrid)
   implicit none
   !Arguments
   integer :: n01,n02,n03,nd1,nd2,nd3
-  real*8, dimension(n01,n02,n03) :: rhopot
+  real(8), dimension(n01,n02,n03) :: rhopot
   !Convert zarray(2,nd1,nd2,nd3) -> zarray(2*nd1,nd2,nd3)
   !to use i1=1,n01 instead of i1=1,n1h + special case for modulo(n01,2)
-  real*8, dimension(2*nd1,nd2,nd3) :: zarray
-  real*8 :: factor,hgrid
-  real*8 :: ehartree
+  real(8), dimension(2*nd1,nd2,nd3) :: zarray
+  real(8) :: factor,hgrid
   !Local variables
-  real*8 :: pot1
   integer :: i1,i2,i3
   !
-  ehartree=0.d0
   do i3=1,n03
      do i2=1,n02
         do i1=1,n01
-           pot1 = factor*zarray(i1,i2,i3)
-           ehartree = ehartree + pot1 * rhopot(i1,i2,i3)
-           rhopot(i1,i2,i3) = pot1
+           rhopot(i1, i2, i3) = factor*zarray(i1,i2,i3)
         end do
      end do
   end do
-  !Double counting and integration step
-  ehartree=0.5d0*ehartree*hgrid**3
+
 end subroutine zarray_out
 !!***
 
@@ -814,9 +808,11 @@ end subroutine zarray_out
 subroutine check_symmetry(nd1,nd2,nd3,zarray,inzee)
   implicit none
   !Arguments
-  real*8, dimension(2,nd1*nd2*nd3,2) :: zarray
+  integer :: nd1, nd2, nd3
+  real(8), dimension(2,nd1*nd2*nd3,2) :: zarray
+
   !Local variables 
-  integer :: i1,i2,i3,nd1,nd2,nd3,ind1,ind2,inzee,f1,f2,f3
+  integer :: i1,i2,i3,ind1,ind2,inzee,f1,f2,f3
   f1=nd1
   f2=nd2
   f3=nd3
@@ -856,13 +852,13 @@ subroutine test_kernel(n01,n02,n03,nfft1,nfft2,nfft3,&
   implicit none
   !Arguments
   integer :: n01,n02,n03,nfft1,nfft2,nfft3
-  real*8 :: hgrid
-  real*8, dimension(nfft1/2+1,nfft2/2+1,nfft3/2+1) :: karray
-  real*8, dimension(n01,n02,n03) :: rhopot
+  real(8) :: hgrid
+  real(8), dimension(nfft1/2+1,nfft2/2+1,nfft3/2+1) :: karray
+  real(8), dimension(n01,n02,n03) :: rhopot
   !Local variables
-  real*8 :: a_gauss,a2
-  real*8 :: rhotot,shft1,shft2,shft3,ehart
-  real*8 :: pi,x1,x2,x3,r,r2,factor,derf,max_diff,diff
+  real(8) :: a_gauss,a2
+  real(8) :: rhotot,shft1,shft2,shft3,ehart
+  real(8) :: pi,x1,x2,x3,r,r2,factor,derf,max_diff,diff
   integer :: i1,i2,i3,ii1,ii2,ii3
   
   a_gauss=4.d0*hgrid
