@@ -653,7 +653,7 @@ end subroutine FFT
         real(8) :: cos2, sin2, cos4, sin4
         real(8) :: ur1, ur2, ur3, ui1, ui2, ui3
         real(8) :: vr1, vr2, vr3, vi1, vi2, vi3
-        integer :: ia, ib, i, j, ias, ic, itrig, itt
+        integer :: ia, ib, j, ias, itrig, itt
         integer :: nin1, nin2, nin3, nin4, nin5, nin6, nin7, nin8
         integer :: nout1, nout2, nout3, nout4, nout5, nout6, nout7, nout8
         
@@ -2116,7 +2116,7 @@ end subroutine FFT
         real(8) :: cos2, sin2, cos4, sin4
         real(8) :: ur1, ur2, ur3, ui1, ui2, ui3
         real(8) :: vr1, vr2, vr3, vi1, vi2, vi3
-        integer :: ia, ib, i, j, ias, ic, itrig, itt
+        integer :: ia, ib, j, ias, itrig, itt
         integer :: nin1, nin2, nin3, nin4, nin5, nin6, nin7, nin8
         integer :: nout1, nout2, nout3, nout4, nout5, nout6, nout7, nout8
 

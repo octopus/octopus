@@ -9,7 +9,7 @@ libpoisson_isf_a_SOURCES = \
 	PSolver_Kernel.f90 \
 	scaling_function.f90 \
 	smooth.f90  \
-        gequad.f
+        gequad.f90
 
 # These two files are the parallel code, not used right now
 #	pfft3d.f90 \
@@ -18,10 +18,6 @@ libpoisson_isf_a_SOURCES = \
 # how to compile a f90 file :)
 .f90.o:
 	@FC@ @FCFLAGS@ -c @FCFLAGS_f90@ -o $@ $<
-
-.f.o:
-	@FC@ @FCFLAGS@ -c @FCFLAGS_f90@ -o $@ $<
-
 
 scaling_function.o: lazy_100.inc  lazy_14.inc  \
 	lazy_16.inc  lazy_20.inc  lazy_24.inc  \
