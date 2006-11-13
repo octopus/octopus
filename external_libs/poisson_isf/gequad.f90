@@ -16,7 +16,7 @@ subroutine gequad(nterms, p, w, urange, drange, acc)
   
   implicit none
   integer :: nterms
-  real(8) :: p(:), w(:)
+  real(8) :: p(1:nterms), w(1:nterms)
   real(8) :: urange, drange, acc
   
   !       range [10^(-9),1] and accuracy ~10^(-8);
