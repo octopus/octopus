@@ -80,6 +80,7 @@ module poisson_m
 #endif
 
   integer :: poisson_solver = -99
+  type(mg_solver_t) :: mg
 
   type hartree_t
     private
@@ -242,7 +243,7 @@ contains
     case(CG_CORRECTED)
       call poisson_cg_end()
     case(MULTIGRILLA)
-      call poisson_multigrid_end()
+      call poisson_multigrid_end(mg)
     case(ISF)
       call poisson_isf_end()
 
@@ -335,7 +336,7 @@ contains
       end if
 
     case(MULTIGRILLA)
-      call poisson_multigrid_solver(gr, pot, rho)
+      call poisson_multigrid_solver(mg, gr, pot, rho)
 
 #ifdef HAVE_FFT
     case(FFT_SPH,FFT_CYL,FFT_PLA,FFT_NOCUT)

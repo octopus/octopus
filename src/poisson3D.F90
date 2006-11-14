@@ -97,7 +97,7 @@ subroutine poisson3D_init(gr, geo)
      write(message(1),'(a,i2)')'Info: Multipoles corrected up to L =',  maxl
      call write_info(1)
 
-     call poisson_multigrid_init(gr%m, maxl, threshold)
+     call poisson_multigrid_init(mg, gr%m, maxl, threshold)
 
      call grid_create_multigrid(gr, geo)
      

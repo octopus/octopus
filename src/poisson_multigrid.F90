@@ -25,6 +25,7 @@ module poisson_multigrid_m
   use functions_m
   use global_m
   use grid_m
+  use lib_basic_alg_m
   use lib_oct_parser_m
   use math_m
   use mesh_m
@@ -35,24 +36,11 @@ module poisson_multigrid_m
 
   implicit none
 
-  integer ::                  &
-    maxcycles,                &
-    presteps,                 &
-    poststeps,                &
-    restriction_method,       &
-    relaxation_method
-
-  FLOAT ::                    &
-    threshold,                &
-    relax_factor
-
   integer, parameter ::       &
     GAUSS_SEIDEL        = 1,  &
     GAUSS_JACOBI        = 2,  &
     GAUSS_JACOBI2       = 3,  &
     CONJUGATE_GRADIENTS = 5
-
-  logical :: initialized = .false.
 
 
   private
@@ -62,8 +50,23 @@ module poisson_multigrid_m
     poisson_multigrid_end,    &
     mg_float_pointer,         &
     gridhier_init,            &
-    gridhier_end
+    gridhier_end,             &
+    mg_solver_t
 
+  type mg_solver_t
+
+     FLOAT ::                    &
+          threshold,                &
+          relax_factor
+     
+     integer ::                     &
+          maxcycles,                &
+          presteps,                 &
+          poststeps,                &
+          restriction_method,       &
+          relaxation_method
+
+  end type mg_solver_t
 
   type mg_float_pointer
     FLOAT, pointer :: p(:)
@@ -72,14 +75,15 @@ module poisson_multigrid_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine poisson_multigrid_init(m, ml, thr)
-    type(mesh_t), intent(in) :: m
+  subroutine poisson_multigrid_init(this, m, ml, thr)
+    type(mg_solver_t), intent(inout) :: this
+    type(mesh_t), intent(inout) :: m
     integer, intent(in) :: ml
     FLOAT, intent(in)   :: thr
 
     call push_sub('poisson_multigrid.poisson_multigrid_init')
     call poisson_corrections_init(ml, m)
-    threshold = thr
+    this%threshold = thr
 
     !%Variable PoissonSolverMGPresmoothingSteps
     !%Type integer
@@ -89,7 +93,7 @@ contains
     !% Number of gauss-seidel smoothing steps before coarse level
     !% correction in multigrid Poisson solver.
     !%End
-    call loct_parse_int(check_inp('PoissonSolverMGPresmoothingSteps'), 2, presteps)
+    call loct_parse_int(check_inp('PoissonSolverMGPresmoothingSteps'), 2, this%presteps)
 
     !%Variable PoissonSolverMGPostsmoothingSteps
     !%Type integer
@@ -99,7 +103,7 @@ contains
     !% Number of gauss-seidel smoothing steps after coarse level
     !% correction in multigrid Poisson solver
     !%End
-    call loct_parse_int(check_inp('PoissonSolverMGPostsmoothingSteps'), 3, poststeps)
+    call loct_parse_int(check_inp('PoissonSolverMGPostsmoothingSteps'), 3, this%poststeps)
 
     !%Variable PoissonSolverMGMaxCycles
     !%Type integer
@@ -109,7 +113,7 @@ contains
     !% Maximum number of multigrid cycles that are performed if
     !% convergence is not achieved
     !%End
-    call loct_parse_int(check_inp('PoissonSolverMGMaxCycles'), 40, maxcycles)
+    call loct_parse_int(check_inp('PoissonSolverMGMaxCycles'), 40, this%maxcycles)
 
     !%Variable PoissonSolverMGRestrictionMethod
     !%Type integer
@@ -122,10 +126,10 @@ contains
     !%Option fullweight 2
     !% Fullweight restriction
     !%End
-    call loct_parse_int(check_inp('PoissonSolverMGRestrictionMethod'), 2, restriction_method)
-    if(.not.varinfo_valid_option('PoissonSolverMGRestrictionMethod', restriction_method)) &
+    call loct_parse_int(check_inp('PoissonSolverMGRestrictionMethod'), 2, this%restriction_method)
+    if(.not.varinfo_valid_option('PoissonSolverMGRestrictionMethod', this%restriction_method)) &
        call input_error('PoissonSolverMGRestrictionMethod')
-    call messages_print_var_option(stdout, "PoissonSolverMGRestrictionMethod", restriction_method)
+    call messages_print_var_option(stdout, "PoissonSolverMGRestrictionMethod", this%restriction_method)
 
     !%Variable PoissonSolverMGRelaxationMethod
     !%Type integer
@@ -145,14 +149,14 @@ contains
     !% Conjugate-gradients
     !%End
     if ( m%use_curvlinear ) then
-      call loct_parse_int(check_inp('PoissonSolverMGRelaxationMethod'), GAUSS_JACOBI, relaxation_method)
+      call loct_parse_int(check_inp('PoissonSolverMGRelaxationMethod'), GAUSS_JACOBI, this%relaxation_method)
     else
-      call loct_parse_int(check_inp('PoissonSolverMGRelaxationMethod'), GAUSS_SEIDEL, relaxation_method)
+      call loct_parse_int(check_inp('PoissonSolverMGRelaxationMethod'), GAUSS_SEIDEL, this%relaxation_method)
     end if
 
-    if(.not.varinfo_valid_option('PoissonSolverMGRelaxationMethod', relaxation_method)) &
+    if(.not.varinfo_valid_option('PoissonSolverMGRelaxationMethod', this%relaxation_method)) &
       call input_error('PoissonSolverMGRelaxationMethod')
-    call messages_print_var_option(stdout, "PoissonSolverMGRelaxationMethod", relaxation_method)
+    call messages_print_var_option(stdout, "PoissonSolverMGRelaxationMethod", this%relaxation_method)
 
     !%Variable PoissonSolverMGRelaxationFactor
     !%Type float
@@ -163,31 +167,32 @@ contains
     !% multigrid method, default is 1.0. This is mainly for debugging,
     !% overrelaxation does nos help in a multigrid scheme.
     !%End
-    if ( relaxation_method == GAUSS_JACOBI) then
-      call loct_parse_float(check_inp('PoissonSolverMGRelaxationFactor'), CNST(0.5), relax_factor )
+    if ( this%relaxation_method == GAUSS_JACOBI) then
+      call loct_parse_float(check_inp('PoissonSolverMGRelaxationFactor'), CNST(0.5), this%relax_factor )
     else
-      call loct_parse_float(check_inp('PoissonSolverMGRelaxationFactor'), M_ONE, relax_factor)
+      call loct_parse_float(check_inp('PoissonSolverMGRelaxationFactor'), M_ONE, this%relax_factor)
     end if
-
-    initialized = .true.
 
     call pop_sub()
   end subroutine poisson_multigrid_init
 
 
   ! ---------------------------------------------------------
-  subroutine poisson_multigrid_end()
+  subroutine poisson_multigrid_end(this)
+    type(mg_solver_t), intent(inout) :: this
+
     call push_sub('poisson_multigrid.poisson_multigrid_end')
 
     call poisson_corrections_end()
-    initialized = .false.
 
     call pop_sub()
   end subroutine poisson_multigrid_end
 
 
   ! ---------------------------------------------------------
-  subroutine poisson_multigrid_solver(gr, pot, rho)
+  subroutine poisson_multigrid_solver(this, gr, pot, rho)
+    type(mg_solver_t), intent(in) :: this
+
     type(grid_t), intent(inout) :: gr
     FLOAT, intent(inout) :: pot(:)
     FLOAT, intent(in)    :: rho(:)
@@ -203,8 +208,6 @@ contains
 
 
     call push_sub('poisson_multigrid.poisson_multigrid_solver');
-
-    ASSERT(initialized)
 
     ! correction for treating boundaries
     ALLOCATE(rho_corrected(gr%m%np), gr%m%np)
@@ -227,7 +230,7 @@ contains
 
     curr_l = 0
 
-    do t= 0, maxcycles
+    do t= 0, this%maxcycles
 
       if(t > 0) then ! during the first cycle only the residue is calculated
         call vcycle_fas(curr_l)
@@ -239,7 +242,7 @@ contains
       !      print *, "base level", curr_l, "iter", t, " res ", res
       !end if
 
-      if(res < threshold) then
+      if(res < this%threshold) then
         if(curr_l > 0 ) then
           call multigrid_coarse2fine(gr%mgrid, curr_l, phi(curr_l)%p, phi(curr_l-1)%p)
           curr_l = curr_l-1
@@ -252,13 +255,13 @@ contains
         curr_l = max(cl-1, 0)
         do l= 0, curr_l-1
           call multigrid_fine2coarse(gr%mgrid, l+1, tau(l)%p, tau(l+1)%p,&
-            restriction_method)
+            this%restriction_method)
         end do
       end  if
 
     end do
 
-    if(res >= threshold) then
+    if(res >= this%threshold) then
       message(1) = 'Multigrid Poisson solver did not converge.'
       write(message(2), '(a,e14.6)') '  Res = ', res
       call write_warning(2)
@@ -304,13 +307,13 @@ contains
         phi_ini(l)%p(1:np) = phi(l)%p(1:np)
 
         ! presmoothing
-        call multigrid_relax(gr,gr%mgrid%level(l)%m,gr%mgrid%level(l)%f_der, &
-          phi(l)%p, tau(l)%p , presteps)
+        call multigrid_relax(this, gr,gr%mgrid%level(l)%m,gr%mgrid%level(l)%f_der, &
+          phi(l)%p, tau(l)%p , this%presteps)
 
         if (l /= cl ) then
           ! transfer of the current solution
           call multigrid_fine2coarse(gr%mgrid, l+1, phi(l)%p, phi(l+1)%p,&
-            restriction_method)
+            this%restriction_method)
 
           ! error calculation
           call df_laplacian(gr%sb, gr%mgrid%level(l)%f_der, phi(l)%p, err(l)%p)
@@ -318,7 +321,7 @@ contains
 
           ! transfer error to coarser grid
           call multigrid_fine2coarse(gr%mgrid, l+1, err(l)%p, tau(l+1)%p,&
-            restriction_method)
+            this%restriction_method)
 
           ! the other part of the error
           call df_laplacian(gr%sb, gr%mgrid%level(l+1)%f_der, phi(l+1)%p, err(l+1)%p)
@@ -328,8 +331,8 @@ contains
 
       do l = cl, fl, -1
         ! postsmoothing
-        call multigrid_relax(gr, gr%mgrid%level(l)%m,gr%mgrid%level(l)%f_der, &
-          phi(l)%p, tau(l)%p , poststeps)
+        call multigrid_relax(this, gr, gr%mgrid%level(l)%m,gr%mgrid%level(l)%f_der, &
+          phi(l)%p, tau(l)%p , this%poststeps)
 
         if(l /= fl) then
           ! calculate correction as the diference with the
@@ -357,8 +360,8 @@ contains
         end if
 
         ! presmoothing
-        call multigrid_relax(gr, gr%mgrid%level(l)%m,gr%mgrid%level(l)%f_der, &
-          phi(l)%p, tau(l)%p , presteps)
+        call multigrid_relax(this, gr, gr%mgrid%level(l)%m,gr%mgrid%level(l)%f_der, &
+          phi(l)%p, tau(l)%p , this%presteps)
 
         ! error calcultion
         call df_laplacian(gr%sb, gr%mgrid%level(l)%f_der, phi(l)%p, err(l)%p);
@@ -366,16 +369,16 @@ contains
 
         ! transfer error to coarser grid
         call multigrid_fine2coarse(gr%mgrid, l+1, err(l)%p, tau(l+1)%p,&
-          restriction_method)
+          this%restriction_method)
       end do
 
-      call multigrid_relax(gr, gr%mgrid%level(cl)%m,gr%mgrid%level(cl)%f_der, &
-        phi(cl)%p, tau(cl)%p , presteps)
+      call multigrid_relax(this, gr, gr%mgrid%level(cl)%m,gr%mgrid%level(cl)%f_der, &
+        phi(cl)%p, tau(cl)%p , this%presteps)
 
       do l = cl, fl, -1
         ! postsmoothing
-        call multigrid_relax(gr, gr%mgrid%level(l)%m,gr%mgrid%level(l)%f_der, &
-          phi(l)%p, tau(l)%p , poststeps)
+        call multigrid_relax(this, gr, gr%mgrid%level(l)%m,gr%mgrid%level(l)%f_der, &
+          phi(l)%p, tau(l)%p , this%poststeps)
 
         if( l /= fl ) then
           call df_laplacian(gr%sb, gr%mgrid%level(l)%f_der, phi(l)%p, err(l)%p)
@@ -398,7 +401,9 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine multigrid_relax(gr, m,f_der,pot,rho,steps)
+  subroutine multigrid_relax(this, gr, m,f_der,pot,rho,steps)
+    type(mg_solver_t), intent(in) :: this
+
     type(grid_t),          intent(in)    :: gr
     type(mesh_t),  target, intent(in)    :: m
     type(f_der_t), target, intent(inout) :: f_der
@@ -411,7 +416,7 @@ contains
     FLOAT   :: point_lap, factor
     FLOAT, allocatable :: w(:), lpot(:), ldiag(:), tmp(:)
 
-    select case(relaxation_method)
+    select case(this%relaxation_method)
 
     case(GAUSS_SEIDEL)
       call search_diagonal()
@@ -421,7 +426,7 @@ contains
       ALLOCATE(w(1:n), n)
 
       if(LAP%const_w) then
-        w(1:n) = LAP%w_re(1:n,1)
+        call lalg_copy(n, LAP%w_re(1:n, 1), w)
         do t = 0, steps
           do i = 1, m%np, 1
             point_lap = sum(w(1:n)*pot(LAP%i(1:n,i)))
@@ -440,43 +445,6 @@ contains
       deallocate(w)
 
     case(GAUSS_JACOBI)
-      call search_diagonal()
-
-      n=LAP%n
-
-      ALLOCATE(w(1:n), n)
-      ALLOCATE(tmp(1:m%np), m%np)
-
-      if(LAP%const_w) then
-
-        w(1:n) = LAP%w_re(1:n,1)
-        do t = 0, steps
-          do i = 1, m%np
-            point_lap = sum(w(1:n)*pot(LAP%i(1:n,i)))
-!            tmp(i) = -relax_factor/LAP%w_re(diag,1)*(point_lap-rho(i))
-            tmp(i) = factor*(point_lap-rho(i))
-          end do
-          pot(1:m%np) = pot(1:m%np) + tmp(1:m%np)
-        end do
-
-      else
-
-        do t = 0, steps
-          do i = 1, m%np
-            point_lap = sum(LAP%w_re(1:n,i)*pot(LAP%i(1:n,i)))
-            tmp(i) = pot(i) + factor*(point_lap-rho(i))
-          end do
-          pot(1:m%np) = tmp(1:m%np)
-        end do
-
-      end if
-
-      deallocate(w)
-      deallocate(tmp)
-
-
-    case(GAUSS_JACOBI2)
-      call search_diagonal()
 
       ALLOCATE(lpot(1:m%np_part), m%np_part)
       ALLOCATE(ldiag(1:m%np), m%np)
@@ -485,7 +453,7 @@ contains
 
       do t=1,steps
         call df_laplacian(gr%sb, f_der, pot, lpot)
-        pot(1:m%np)=pot(1:m%np) - relax_factor/ldiag(1:m%np)*(lpot(1:m%np)-rho(1:m%np)) 
+        pot(1:m%np)=pot(1:m%np) - this%relax_factor/ldiag(1:m%np)*(lpot(1:m%np)-rho(1:m%np)) 
       end do
 
       deallocate(ldiag)
@@ -508,7 +476,7 @@ contains
         if( 1 == LAP%i(i,1)) then
           diag = i
           if(LAP%const_w) then
-            factor = CNST(-1.0)/LAP%w_re(i,1)*relax_factor;
+            factor = CNST(-1.0)/LAP%w_re(i,1)*this%relax_factor;
           end if
           exit
         end if
