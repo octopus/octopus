@@ -248,7 +248,7 @@ ifeq (x86_64-linux,$(DEB_HOST_GNU_TYPE))
 	FC=$(HOME)/opt/nag/mpich/bin/mpif90 \
 	CPPFLAGS="-I$(HOME)/opt/nag/mpich/include" \
 	CFLAGS="-Wall -O3 -I$(HOME)/opt/nag/include" \
-	FCFLAGS="-colour -kind=byte -mismatch_all -abi=64 -ieee=full -O4 -Ounroll=4" \
+	FCFLAGS="-colour -kind=byte -mismatch_all -maxcontin=100 -abi=64 -ieee=full -O4 -Ounroll=4" \
 	./configure --with-lapack="-L$(HOME)/opt/nag -llapack -lg2c" --with-blas="-L$(HOME)/opt/nag -lblas" \
 	--with-jdqz="-L$(HOME)/opt/nag/lib" \
 	--with-arpack="-L$(HOME)/opt/nag/lib -larpack" \
