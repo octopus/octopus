@@ -108,9 +108,10 @@ contains
   ! ---------------------------------------------------------
   subroutine ps_psf_end(ps_psf)
     type(ps_psf_t), intent(inout) :: ps_psf
-
+    call push_sub('ps_psf.ps_psf_end')
     call ps_in_grid_end(ps_psf%ps_grid)
     call ps_psf_file_end(ps_psf%psf_file)
+    call pop_sub()
   end subroutine ps_psf_end
 
 
@@ -173,22 +174,27 @@ contains
   subroutine file_to_grid(psf_file, ps_grid)
     type(ps_psf_file_t), intent(in)  :: psf_file
     type(ps_in_grid_t),  intent(out) :: ps_grid
+    integer :: nrval
+    call push_sub('ps_psf.file_to_grid')
 
     ! Initializes the pseudo in the logaritmic grid.
     call ps_in_grid_init(ps_grid,                      &
       LOGRID_PSF, psf_file%a, psf_file%b, psf_file%nr,  &
       psf_file%npotd, psf_file%npotu)
-    
+
+    nrval = ps_grid%g%nrval
+
     ps_grid%zval      = psf_file%zval
-    ps_grid%vps(:,:)  = psf_file%vps(:,:)
-    ps_grid%chcore(:) = psf_file%chcore(:)
+    ps_grid%vps(1:nrval,:)  = psf_file%vps(1:nrval,:)
+    ps_grid%chcore(1:nrval) = psf_file%chcore(1:nrval)
     if(ps_grid%so_no_l_channels > 0) then
-      ps_grid%so_vps(:,:) = psf_file%vso(:,:)
+      ps_grid%so_vps(1:nrval,:) = psf_file%vso(1:nrval,:)
     end if
 
     ps_grid%core_corrections = .true.
     if(trim(psf_file%icore) == 'nc') ps_grid%core_corrections = .false.
 
+    call pop_sub()
   end subroutine file_to_grid
 
 
@@ -279,7 +285,7 @@ contains
     ! Calculation of the valence screening potential from the density:
     !       ve(1:nrval) is the hartree+xc potential created by the pseudo -
     !               valence charge distribution (everything in Rydberts, and bohrs)
-    rho(:, 1) = psf_file%rho_val(:)
+    rho(1:g%nrval, 1) = psf_file%rho_val(1:g%nrval)
     select case(psf_file%icorr)
     case('pb')
       functl = 'GGA'

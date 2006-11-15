@@ -75,6 +75,8 @@ contains
     FLOAT,              intent(in)  :: a, b
     integer,            intent(in)  :: no_l, so_no_l
 
+    call push_sub('ps_in_grid.ps_in_grid_init')
+
     ! initialize logaritmic grid
     call logrid_init(ps%g, flavor, a, b, nrval)
 
@@ -101,11 +103,14 @@ contains
       ALLOCATE(ps%so_kb_radius(so_no_l), so_no_l)
     end if
 
+    call pop_sub()
   end subroutine ps_in_grid_init
 
 
   subroutine ps_in_grid_end(ps)
-    type(ps_in_grid_t), intent(out) :: ps
+    type(ps_in_grid_t), intent(inout) :: ps
+
+    call push_sub('ps_in_grid.ps_in_grid_end')
 
     deallocate(ps%vps, ps%chcore, ps%vlocal)
     nullify   (ps%vps, ps%chcore, ps%vlocal)
@@ -119,6 +124,8 @@ contains
     end if
 
     call logrid_end(ps%g)
+
+    call pop_sub()
   end subroutine ps_in_grid_end
 
 
@@ -178,6 +185,8 @@ contains
 
     integer :: l
 
+    call push_sub('ps_in_grid.ps_in_grid_kb_projectors')
+
     do l = 1, ps%no_l_channels
       ps%KB(2:, l) = (ps%vps(2:, l) - ps%vlocal(2:)) * &
         (ps%rphi(2:, l, 1)/ps%g%rofi(2:)) * ps%dknorm(l)
@@ -194,6 +203,7 @@ contains
         ps%so_KB(2, l), ps%so_KB(3, l))      
     end do
 
+    call pop_sub()
   end subroutine ps_in_grid_kb_projectors
 
 
@@ -255,7 +265,7 @@ contains
     FLOAT            :: dincv, phi
     FLOAT, parameter :: threshold = CNST(1.0e-6)
 
-    call push_sub('tm.get_cutoff_radii')
+    call push_sub('ps_in_grid.ps_in_grid_cutoff_radii')
 
     ! local part ....
     do ir = ps%g%nrval-1, 2, -1
@@ -307,6 +317,8 @@ contains
     integer :: l
     FLOAT   :: nrm
 
+    call push_sub('ps_in_grid.ps_in_grid_check_rphi')
+
     !  checking normalization of the wave functions
     do l = 1, ps%no_l_channels
       nrm = sqrt(sum(ps%g%drdi(:)*ps%rphi(:, l, 1)**2))
@@ -318,6 +330,7 @@ contains
       end if
     end do
 
+    call pop_sub()
   end subroutine ps_in_grid_check_rphi
 
 
