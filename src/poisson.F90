@@ -89,6 +89,7 @@ module poisson_m
   end type hartree_t
 
   type(hartree_t) :: hartree_integrator
+  type(poisson_corr_t) :: corrector
 
 contains
 
@@ -237,11 +238,13 @@ contains
     case(FFT_CORRECTED)
       call dcf_free(fft_cf)
       deallocate(fft_coulb_FS); nullify(fft_coulb_FS)
-      call poisson_corrections_end()
+      call poisson_corrections_end(corrector)
 
 #endif
-    case(CG_CORRECTED)
+    case(CG_CORRECTED, CG)
       call poisson_cg_end()
+      call poisson_corrections_end(corrector)
+
     case(MULTIGRILLA)
       call poisson_multigrid_end(mg)
     case(ISF)
@@ -307,7 +310,7 @@ contains
       call poisson2d_solve(gr%m, pot, rho)
 
     case(CG)
-      call poisson_cg1(gr%m, gr%f_der%der_discr, pot, rho)
+      call poisson_cg1(gr%m, corrector, gr%f_der%der_discr, pot, rho)
 
     case(CG_CORRECTED)
       if(hartree_integrator%increase_box) then
@@ -316,7 +319,7 @@ contains
         ALLOCATE(rho_corrected(gr%m%np), gr%m%np)
         ALLOCATE(vh_correction(gr%m%np), gr%m%np)
         potp = M_ZERO; rhop = M_ZERO; rho_corrected = M_ZERO; vh_correction = M_ZERO
-        call correct_rho(gr%m, rho, rho_corrected, vh_correction)
+        call correct_rho(corrector, gr%m, rho, rho_corrected, vh_correction)
         pot = pot - vh_correction
         call dmf_interpolate(gr%m, hartree_integrator%grid%m, full_interpolation = .false., u = rho_corrected, f = rhop)
         call dmf_interpolate(gr%m, hartree_integrator%grid%m, full_interpolation = .false., u = pot, f = potp)
@@ -328,7 +331,7 @@ contains
       else
         ALLOCATE(rho_corrected(gr%m%np), gr%m%np)
         ALLOCATE(vh_correction(gr%m%np), gr%m%np)
-        call correct_rho(gr%m, rho, rho_corrected, vh_correction)
+        call correct_rho(corrector, gr%m, rho, rho_corrected, vh_correction)
         pot = pot - vh_correction
         call poisson_cg2(gr%m, gr%f_der%der_discr, pot, rho_corrected)
         pot = pot + vh_correction
@@ -346,7 +349,7 @@ contains
       ALLOCATE(rho_corrected(gr%m%np), gr%m%np)
       ALLOCATE(vh_correction(gr%m%np), gr%m%np)
 
-      call correct_rho(gr%m, rho, rho_corrected, vh_correction)
+      call correct_rho(corrector, gr%m, rho, rho_corrected, vh_correction)
       call poisson_fft(gr%m, pot, rho_corrected, average_to_zero = .true.)
 
       pot = pot + vh_correction

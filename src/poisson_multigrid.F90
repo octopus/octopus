@@ -65,7 +65,9 @@ module poisson_multigrid_m
           poststeps,                &
           restriction_method,       &
           relaxation_method
-
+     
+     type(poisson_corr_t) :: corrector
+     
   end type mg_solver_t
 
   type mg_float_pointer
@@ -82,7 +84,7 @@ contains
     FLOAT, intent(in)   :: thr
 
     call push_sub('poisson_multigrid.poisson_multigrid_init')
-    call poisson_corrections_init(ml, m)
+    call poisson_corrections_init(this%corrector, ml, m)
     this%threshold = thr
 
     !%Variable PoissonSolverMGPresmoothingSteps
@@ -183,7 +185,7 @@ contains
 
     call push_sub('poisson_multigrid.poisson_multigrid_end')
 
-    call poisson_corrections_end()
+    call poisson_corrections_end(this%corrector)
 
     call pop_sub()
   end subroutine poisson_multigrid_end
@@ -213,7 +215,7 @@ contains
     ALLOCATE(rho_corrected(gr%m%np), gr%m%np)
     ALLOCATE(vh_correction(gr%m%np), gr%m%np)
 
-    call correct_rho(gr%m, rho, rho_corrected, vh_correction)
+    call correct_rho(this%corrector, gr%m, rho, rho_corrected, vh_correction)
     rho_corrected = - M_FOUR*M_PI*rho_corrected
     pot = pot - vh_correction
 

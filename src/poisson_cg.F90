@@ -47,8 +47,8 @@ contains
     type(mesh_t), intent(in) :: m
     integer, intent(in) :: ml
     FLOAT,   intent(in) :: thr
+
     call push_sub('poisson_cg.poisson_cg1_init')
-    call poisson_corrections_init(ml, m)
     threshold = thr
     call pop_sub()
   end subroutine poisson_cg_init
@@ -56,16 +56,18 @@ contains
 
   ! ---------------------------------------------------------
   subroutine poisson_cg_end
-    call poisson_corrections_end()
+
   end subroutine poisson_cg_end
 
 
   ! ---------------------------------------------------------
-  subroutine poisson_cg1(m, der, pot, rho)
+  subroutine poisson_cg1(m, corrector, der, pot, rho)
     type(mesh_t),      target, intent(in)    :: m
+    type(poisson_corr_t), intent(inout) :: corrector
     type(der_discr_t), target, intent(in)    :: der
     FLOAT,                     intent(inout) :: pot(:) ! pot(m%np)
     FLOAT,                     intent(in)    :: rho(:) ! rho(m%np)
+
 
     integer :: iter
     FLOAT :: res
@@ -80,7 +82,7 @@ contains
 
     ! build initial guess for the potential
     wk(1:m%np) = pot(1:m%np)
-    call boundary_conditions(m, rho, wk)
+    call boundary_conditions(corrector, m, rho, wk)
     call dderivatives_lapl(der, wk, lwk, .true.)
 
     zk(1:m%np) = -M_FOUR*M_PI*rho(1:m%np) - lwk(1:m%np)

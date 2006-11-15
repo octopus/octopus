@@ -35,46 +35,52 @@ module poisson_corrections_m
     poisson_corrections_init, &
     poisson_corrections_end,  &
     correct_rho,              &
-    boundary_conditions
+    boundary_conditions,      &
+    poisson_corr_t
 
   public ::                   &
+    op, dotp,                 &
     der_pointer,              &
-    mesh_pointer,             &
-    op, dotp
+    mesh_pointer
 
-  integer :: maxl
-  FLOAT, allocatable :: phi(:, :)
-  FLOAT, allocatable :: aux(:, :)
   FLOAT, parameter :: alpha_ = M_FIVE
+
+  type poisson_corr_t 
+     integer :: maxl
+     FLOAT, allocatable :: phi(:, :)
+     FLOAT, allocatable :: aux(:, :)
+  end type poisson_corr_t
 
   type(der_discr_t), pointer :: der_pointer
   type(mesh_t),      pointer :: mesh_pointer
-
-
+     
 contains
 
   ! ---------------------------------------------------------
-  subroutine poisson_corrections_init(ml, m)
+  subroutine poisson_corrections_init(this, ml, m)
+    type(poisson_corr_t), intent(inout) :: this
     integer, intent(in)      :: ml
     type(mesh_t), intent(in) :: m
 
-    maxl = ml
-    call build_aux(m)
-    call build_phi(m)
+    this%maxl = ml
+    call build_aux(this, m)
+    call build_phi(this, m)
 
   end subroutine poisson_corrections_init
 
 
   ! ---------------------------------------------------------
-  subroutine poisson_corrections_end
-    if(allocated(phi)) deallocate(phi)
-    if(allocated(aux)) deallocate(aux)
+  subroutine poisson_corrections_end(this)
+    type(poisson_corr_t), intent(inout) :: this
+
+    if(allocated(this%phi)) deallocate(this%phi)
+    if(allocated(this%aux)) deallocate(this%aux)
   end subroutine poisson_corrections_end
 
 
   ! ---------------------------------------------------------
-  subroutine correct_rho(m, rho, rho_corrected, vh_correction)
-    implicit none
+  subroutine correct_rho(this, m, rho, rho_corrected, vh_correction)
+    type(poisson_corr_t), intent(in) :: this
     type(mesh_t), intent(in)  :: m
     FLOAT,        intent(in)  :: rho(:)
     FLOAT,        intent(out) :: rho_corrected(:)
@@ -87,14 +93,14 @@ contains
 
     call push_sub('poisson_corrections.correct_rho')
 
-    ALLOCATE(mult((maxl+1)**2), (maxl+1)**2)
-    call get_multipoles(m, rho, maxl, mult)
+    ALLOCATE(mult((this%maxl+1)**2), (this%maxl+1)**2)
+    call get_multipoles(this, m, rho, this%maxl, mult)
 
     alpha = alpha_*m%h(1)
 
-    ALLOCATE(betal((maxl+1)**2), (maxl+1)**2)
+    ALLOCATE(betal((this%maxl+1)**2), (this%maxl+1)**2)
     add_lm = 1
-    do l = 0, maxl
+    do l = 0, this%maxl
       do mm = -l, l
         lldfac = 1; do j = 1, 2*l+1, 2; lldfac = lldfac * j; end do
         betal(add_lm) = (2**(l+2))/( alpha**(2*l+3) * sqrt(M_PI) * lldfac )
@@ -109,10 +115,10 @@ contains
       r2 = dot_product(m%x(i, 1:3), m%x(i, 1:3)) ! mesh_r could be used, but it wastes time.
       r2 = exp(-r2/alpha**2)
       add_lm = 1
-      do l = 0, maxl
+      do l = 0, this%maxl
         do mm = -l, l
-          rho_corrected(i) = rho_corrected(i) - mult(add_lm) * betal(add_lm) * aux(add_lm, i) * r2
-          vh_correction(i) = vh_correction(i) + mult(add_lm) * phi(add_lm, i)
+          rho_corrected(i) = rho_corrected(i) - mult(add_lm) * betal(add_lm) * this%aux(add_lm, i) * r2
+          vh_correction(i) = vh_correction(i) + mult(add_lm) * this%phi(add_lm, i)
           add_lm = add_lm + 1
         end do
       end do
@@ -124,8 +130,8 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine get_multipoles(m, rho, ml, mult)
-    implicit none
+  subroutine get_multipoles(this, m, rho, ml, mult)
+    type(poisson_corr_t), intent(in) :: this
     type(mesh_t), intent(in)  :: m
     FLOAT,           intent(in)  :: rho(:)  ! rho(m%np)
     integer,         intent(in)  :: ml
@@ -140,7 +146,7 @@ contains
     add_lm = 1
     do l = 0, ml
       do mm = -l, l
-        tmp(1:m%np) = rho(1:m%np)*aux(add_lm, 1:m%np)
+        tmp(1:m%np) = rho(1:m%np)*this%aux(add_lm, 1:m%np)
         ! Use Xmf_integrate, so things work parallel too.
         mult(add_lm) = dmf_integrate(m, tmp)
         add_lm = add_lm + 1
@@ -152,7 +158,8 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine build_phi(m)
+  subroutine build_phi(this, m)
+    type(poisson_corr_t), intent(inout) :: this
     type(mesh_t), intent(in) :: m
 
     FLOAT :: alpha, beta, gamma, ylm, r, x(MAX_DIM)
@@ -160,22 +167,22 @@ contains
 
     call push_sub('poisson_corrections.build_phi')
 
-    ALLOCATE(phi((maxl+1)**2, m%np), (maxl+1)**2*m%np)
+    ALLOCATE(this%phi((this%maxl+1)**2, m%np), (this%maxl+1)**2*m%np)
 
     alpha = alpha_*m%h(1)
     do i = 1, m%np
       call mesh_r(m, i, r, x = x)
       add_lm = 1
-      do l = 0, maxl
+      do l = 0, this%maxl
         lldfac = 1; do j = 1, 2*l+1, 2; lldfac = lldfac * j; end do
         beta = (2**(l+2))/( alpha**(2*l+3) * sqrt(M_PI) * lldfac )
         gamma = ( sqrt(M_PI)*2**(l+3) ) / lldfac
         do mm = -l, l
           ylm  = loct_ylm(x(1), x(2), x(3), l, mm)
           if(r .ne. M_ZERO) then
-            phi(add_lm, i) = gamma * isubl( l, r/alpha) * ylm / r**(l+1)
+            this%phi(add_lm, i) = gamma * isubl( l, r/alpha) * ylm / r**(l+1)
           else
-            phi(add_lm, i) = gamma * ylm / alpha
+            this%phi(add_lm, i) = gamma * ylm / alpha
           end if
           add_lm = add_lm + 1
         end do
@@ -186,7 +193,7 @@ contains
   contains
 
     ! ---------------------------------------------------------
-    FLOAT function isubl(l, x)
+    FLOAT function isubl( l, x)
       integer, intent(in) :: l
       FLOAT,   intent(in) :: x
 
@@ -197,28 +204,29 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine build_aux(m)
+  subroutine build_aux(this, m)
+    type(poisson_corr_t), intent(inout) :: this    
     type(mesh_t), intent(in) :: m
 
     FLOAT :: ylm, r, x(MAX_DIM)
     integer :: i, l, add_lm, mm
 
     call push_sub('poisson_corrections.build_aux')
-    ALLOCATE(aux((maxl+1)**2, m%np), (maxl+1)**2*m%np)
+    ALLOCATE(this%aux((this%maxl+1)**2, m%np), (this%maxl+1)**2*m%np)
 
     do i = 1, m%np
       call mesh_r(m, i, r, x = x)
       add_lm = 1
-      do l = 0, maxl
+      do l = 0, this%maxl
         do mm = -l, l
           ylm  = loct_ylm(x(1), x(2), x(3), l, mm)
           if(r .ne. M_ZERO) then
-            aux(add_lm, i) = r**l*ylm
+            this%aux(add_lm, i) = r**l*ylm
           else
             if(l==0) then
-              aux(add_lm, i) = ylm
+              this%aux(add_lm, i) = ylm
             else
-              aux(add_lm, i) = M_ZERO
+              this%aux(add_lm, i) = M_ZERO
             end if
           end if
           add_lm = add_lm + 1
@@ -254,8 +262,8 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine boundary_conditions(m, rho, pot)
-    implicit none
+  subroutine boundary_conditions(this, m, rho, pot)
+    type(poisson_corr_t), intent(in) :: this    
     type(mesh_t), intent(in)  :: m
     FLOAT,        intent(in)  :: rho(:)  ! rho(m%np)
     FLOAT,        intent(inout) :: pot(:)  ! pot(m%np_part)
@@ -264,9 +272,9 @@ contains
     FLOAT   :: x(MAX_DIM), r, s1, sa
     FLOAT, allocatable :: mult(:)
 
-    ALLOCATE(mult((maxl+1)**2), (maxl+1)**2)
+    ALLOCATE(mult((this%maxl+1)**2), (this%maxl+1)**2)
 
-    call get_multipoles(m, rho, maxl, mult)
+    call get_multipoles(this, m, rho, this%maxl, mult)
 
     bp_lower = m%np + 1
     if(m%parallel_in_domains) bp_lower = bp_lower + m%vp%np_ghost(m%vp%partno)
@@ -275,7 +283,7 @@ contains
     do i = bp_lower, m%np_part ! boundary conditions
       call mesh_r(m, i, r, x=x)
       add_lm = 1
-      do l = 0, maxl
+      do l = 0, this%maxl
         s1 = M_FOUR*M_PI/((M_TWO*l + M_ONE)*r**(l + 1))
         do mm = -l, l
           sa = loct_ylm(x(1), x(2), x(3), l, mm)

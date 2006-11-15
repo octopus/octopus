@@ -74,6 +74,7 @@ subroutine poisson3D_init(gr, geo)
      write(message(1),'(a,i2)')'Info: Boundary conditions fixed up to L =',  maxl
      call write_info(1)
      call loct_parse_float(check_inp('PoissonSolverThreshold'), CNST(1.0e-6), threshold)
+     call poisson_corrections_init(corrector, maxl, gr%m)
      call poisson_cg_init(gr%m, maxl, threshold)
 
   case(CG_CORRECTED)
@@ -88,6 +89,7 @@ subroutine poisson3D_init(gr, geo)
        call write_info(1)
        call grid_create_largergrid(gr, geo, hartree_integrator%grid)
      end if
+     call poisson_corrections_init(corrector, maxl, gr%m)
      call poisson_cg_init(gr%m, maxl, threshold)
 
 
@@ -113,7 +115,7 @@ subroutine poisson3D_init(gr, geo)
      call loct_parse_int(check_inp('PoissonSolverMaxMultipole'), 2, maxl)
      write(message(1),'(a,i2)')'Info: Multipoles corrected up to L =',  maxl
      call write_info(1)
-     call poisson_corrections_init(maxl, gr%m)
+     call poisson_corrections_init(corrector, maxl, gr%m)
   end if
 #endif
 
