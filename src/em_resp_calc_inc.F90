@@ -225,6 +225,9 @@ subroutine X(lr_calc_elf)(st, gr, lr, lr_m)
   deallocate(gdl_psi)
   if(present(lr_m)) deallocate(gdl_psi_m)
 
+  deallocate(rho)
+  deallocate(dl_rho)
+
   deallocate(grho)
   deallocate(gdl_rho)
 
@@ -384,7 +387,7 @@ subroutine X(lr_calc_beta) (sys, lr, props, beta)
                     hpol_density(1:np) = hpol_density(1:np) + &
                          sys%st%d%kweights(ik)*sys%st%occ(ist, ik)* &
                          R_CONJ(lr(i, op_sigma, freq_index(1))%X(dl_psi)(1:np, 1, ist, ispin)) &
-                         * dVde(1:np, ispin, j) &
+                         * R_REAL(dVde(1:np, ispin, j)) &
                          * lr(k, sigma, freq_index(3))%X(dl_psi)(1:np, 1, ist, ispin)
 
                     do ispin2 = 1, sys%st%d%nspin
@@ -392,7 +395,7 @@ subroutine X(lr_calc_beta) (sys, lr, props, beta)
                         if( sys%st%occ(ist2, ik) > lr_min_occ ) then 
 
                           tmp(1:np, 1)=R_CONJ(sys%st%X(psi)(1:np, 1, ist2, ispin2)) * &
-                               dVde(1:np, ispin, j) * sys%st%X(psi)(1:np, 1, ist, ispin)
+                               R_REAL(dVde(1:np, ispin, j)) * sys%st%X(psi)(1:np, 1, ist, ispin)
 
                           prod = X(mf_integrate)(sys%gr%m, tmp(1:np,1))
 
