@@ -47,8 +47,8 @@ module poisson_corrections_m
 
   type poisson_corr_t 
      integer :: maxl
-     FLOAT, allocatable :: phi(:, :)
-     FLOAT, allocatable :: aux(:, :)
+     FLOAT, pointer :: phi(:, :)
+     FLOAT, pointer :: aux(:, :)
   end type poisson_corr_t
 
   type(der_discr_t), pointer :: der_pointer
@@ -73,8 +73,8 @@ contains
   subroutine poisson_corrections_end(this)
     type(poisson_corr_t), intent(inout) :: this
 
-    if(allocated(this%phi)) deallocate(this%phi)
-    if(allocated(this%aux)) deallocate(this%aux)
+    if(associated(this%phi)) deallocate(this%phi)
+    if(associated(this%aux)) deallocate(this%aux)
   end subroutine poisson_corrections_end
 
 
