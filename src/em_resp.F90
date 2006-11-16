@@ -28,6 +28,7 @@ module pol_lr_m
   use grid_m
   use hamiltonian_m
   use io_m
+  use lib_basic_alg_m
   use lib_oct_parser_m
   use linear_response_m
   use math_m
@@ -147,9 +148,22 @@ contains
 
             write(dirname,'(a,i1,a,i1, a, i1)') RESTART_DIR//"wfs", dir, "_", ifactor, "_", sigma
             call restart_read(trim(tmpdir)//dirname, sys%st, sys%gr, sys%geo, ierr, lr=lr(dir, sigma, ifactor))
+
             if(ierr.ne.0) then
               message(1) = "Could not load response wave-functions from '"//trim(tmpdir)//dirname
               call write_warning(1)
+            end if
+
+            !check for restart files with the old name
+            if(ifactor == 1 .and. ierr /= 0 ) then 
+              write(dirname,'(a,i1,a,i1)') RESTART_DIR//"wfs", dir, "_", sigma
+              call restart_read(trim(tmpdir)//dirname, sys%st, sys%gr, sys%geo, ierr, lr=lr(dir, sigma, ifactor))
+
+              if(ierr .ne. 0) then 
+                message(1) = "Using "//trim(tmpdir)//dirname
+                call write_warning(1)
+              end if
+
             end if
 
           end do
@@ -523,6 +537,7 @@ contains
       CMPLX   :: proj
       FLOAT   :: msp
 
+
       !CREATE THE DIRECTORY FOR EACH FREQUENCY
       do ifactor = 1, nfactor
 
@@ -533,21 +548,28 @@ contains
         !OUTPUT POLARIZABILITY
         iunit = io_open(trim(dirname)//'/alpha', action='write')
 
-        write(iunit, '(2a)', advance='no') '# Polarizability tensor [', &
-             trim(units_out%length%abbrev)
-        if(NDIM.ne.1) write(iunit, '(a,i1)', advance='no') '^', NDIM
-        write(iunit, '(a)') ']'
+        if(status%ok) then 
+
+          write(iunit, '(2a)', advance='no') '# Polarizability tensor [', &
+               trim(units_out%length%abbrev)
+          if(NDIM.ne.1) write(iunit, '(a,i1)', advance='no') '^', NDIM
+          write(iunit, '(a)') ']'
 
 
-        msp = M_ZERO
-        do j = 1, NDIM
-          write(iunit, '(3f12.6)') real(alpha(j, 1:NDIM, ifactor)) / units_out%length%factor**NDIM
-          msp = msp + real(alpha(j, j, ifactor))
-        end do
-        msp = msp / M_THREE
+          msp = M_ZERO
+          do j = 1, NDIM
+            write(iunit, '(3f12.6)') real(alpha(j, 1:NDIM, ifactor)) / units_out%length%factor**NDIM
+            msp = msp + real(alpha(j, j, ifactor))
+          end do
+          msp = msp / M_THREE
 
-        write(iunit, '(a, f12.6)')  'Mean static polarizability', msp &
-             / units_out%length%factor**NDIM
+          write(iunit, '(a, f12.6)')  'Mean static polarizability', msp &
+               / units_out%length%factor**NDIM
+        else
+
+          call pol_write_fail(iunit)
+
+        end if
 
         call io_close(iunit)
 
@@ -558,68 +580,82 @@ contains
                omega(iomega)/units_out%energy%factor * M_FOUR * M_PI / P_c 
 
           iunit = io_open(trim(dirname)//'/cross_section', action='write')
-          average = M_THIRD* ( cross(1, 1) + cross(2, 2) + cross(3, 3) )
-          crossp(:, :) = matmul(cross(:, :),cross(:, :))
-          anisotropy =  M_THIRD * ( M_THREE * (crossp(1, 1) + crossp(2, 2) + crossp(3, 3)) - &
-               (cross(1, 1) + cross(2, 2) + cross(3, 3))**2 )
+          if(status%ok) then 
+            average = M_THIRD* ( cross(1, 1) + cross(2, 2) + cross(3, 3) )
+            crossp(:, :) = matmul(cross(:, :),cross(:, :))
+            anisotropy =  M_THIRD * ( M_THREE * (crossp(1, 1) + crossp(2, 2) + crossp(3, 3)) - &
+                 (cross(1, 1) + cross(2, 2) + cross(3, 3))**2 )
 
-          call cross_section_header(iunit)
-          write(iunit,'(3e20.8)', advance = 'no') omega(iomega) / units_out%energy%factor, &
-               average , sqrt(max(anisotropy, M_ZERO)) 
-          write(iunit,'(9e20.8)', advance = 'no') cross(1:3, 1:3)
-          write(iunit,'(a)', advance = 'yes')
+            call cross_section_header(iunit)
+            write(iunit,'(3e20.8)', advance = 'no') omega(iomega) / units_out%energy%factor, &
+                 average , sqrt(max(anisotropy, M_ZERO)) 
+            write(iunit,'(9e20.8)', advance = 'no') cross(1:3, 1:3)
+            write(iunit,'(a)', advance = 'yes')
+
+          else
+
+            call pol_write_fail(iunit)
+
+          end if
+
           call io_close(iunit)
 
         end if
 
         !PROJECTIONS
         do ik = 1, sys%st%d%nspin
-
           do dir = 1, NDIM
 
             write(fname, '(2a,i1,a,i1)') trim(dirname), '/projection-', ik, '-', dir
             iunit = io_open(trim(fname), action='write')
 
-            write(iunit, '(a)', advance='no') '# state '
-            do ivar = 1, lr(dir, 1, 1)%nst
-              do sigma=1,nsigma
-
-                if( sigma == nsigma .and. ivar == lr(dir, 1, 1)%nst) then 
-                  write(iunit, '(i3)', advance='yes') (3-2*sigma)*ivar
-                else 
-                  write(iunit, '(i3)', advance='no') (3-2*sigma)*ivar
-                end if
-
-              end do
-
-            end do
-
-            do ist = 1, sys%st%nst
-              write(iunit, '(i3)', advance='no') ist
-
+            if (status%ok) then 
+              write(iunit, '(a)', advance='no') '# state '
               do ivar = 1, lr(dir, 1, 1)%nst
                 do sigma=1,nsigma
 
-                  if(wfs_are_complex(sys%st)) then
-                    proj=zstates_dotp(sys%gr%m, sys%st%d%dim, &
-                         sys%st%zpsi(:,:, ist, ik), &
-                         lr(dir, sigma, ifactor)%zdl_psi(:,:, ivar, ik))
-                  else
-                    proj=dstates_dotp(sys%gr%m, sys%st%d%dim, &
-                         sys%st%dpsi(:,:, ist, ik), &
-                         lr(dir, sigma, ifactor)%ddl_psi(:,:, ivar, ik))
-                  end if
-
                   if( sigma == nsigma .and. ivar == lr(dir, 1, 1)%nst) then 
-                    write(iunit, '(f12.6)', advance='yes') abs(proj)
+                    write(iunit, '(i3)', advance='yes') (3-2*sigma)*ivar
                   else 
-                    write(iunit, '(f12.6,a)', advance='no') abs(proj), ' '
+                    write(iunit, '(i3)', advance='no') (3-2*sigma)*ivar
                   end if
 
                 end do
+
               end do
 
-            end do
+              do ist = 1, sys%st%nst
+                write(iunit, '(i3)', advance='no') ist
+
+                do ivar = 1, lr(dir, 1, 1)%nst
+                  do sigma=1,nsigma
+
+                    if(wfs_are_complex(sys%st)) then
+                      proj=zstates_dotp(sys%gr%m, sys%st%d%dim, &
+                           sys%st%zpsi(:,:, ist, ik), &
+                           lr(dir, sigma, ifactor)%zdl_psi(:,:, ivar, ik))
+                    else
+                      proj=dstates_dotp(sys%gr%m, sys%st%d%dim, &
+                           sys%st%dpsi(:,:, ist, ik), &
+                           lr(dir, sigma, ifactor)%ddl_psi(:,:, ivar, ik))
+                    end if
+
+                    if( sigma == nsigma .and. ivar == lr(dir, 1, 1)%nst) then 
+                      write(iunit, '(f12.6)', advance='yes') abs(proj)
+                    else 
+                      write(iunit, '(f12.6,a)', advance='no') abs(proj), ' '
+                    end if
+
+                  end do
+                end do
+
+              end do
+
+            else
+
+              call pol_write_fail(iunit)
+
+            end if
 
             call io_close(iunit)
 
@@ -627,31 +663,34 @@ contains
         end do !ik
 
         !WRITE FUNCTIONS
-        do dir = 1, NDIM
+        if(status%ok) then 
 
-          write(dirname, '(a, f5.3)') 'linear/freq_', omega(iomega)/units_out%energy%factor
+          do dir = 1, NDIM
 
-          call io_mkdir(dirname)
+            write(dirname, '(a, f5.3)') 'linear/freq_', omega(iomega)/units_out%energy%factor
 
-          if( wfs_are_complex(sys%st) ) then 
+            call io_mkdir(dirname)
 
-            if(NDIM==3) then
-              if(iand(sys%outp%what, output_elf).ne.0) &
-                   call zlr_calc_elf(sys%st,sys%gr, lr(dir, 1, ifactor), lr(dir, 2, ifactor))
+            if( wfs_are_complex(sys%st) ) then 
+
+              if(NDIM==3) then
+                if(iand(sys%outp%what, output_elf).ne.0) &
+                     call zlr_calc_elf(sys%st,sys%gr, lr(dir, 1, ifactor), lr(dir, 2, ifactor))
+              end if
+              call zlr_output(sys%st, sys%gr, lr(dir, 1, ifactor), dirname, dir, sys%outp)
+
+            else
+
+              if(NDIM==3) then
+                if(iand(sys%outp%what, output_elf).ne.0) &
+                     call dlr_calc_elf(sys%st,sys%gr, lr(dir, 1, ifactor), lr(dir, 2, ifactor))
+              end if
+              call dlr_output(sys%st, sys%gr, lr(dir, 1, ifactor), dirname, dir, sys%outp)
+
             end if
-            call zlr_output(sys%st, sys%gr, lr(dir, 1, ifactor), dirname, dir, sys%outp)
+          end do
 
-          else
-
-            if(NDIM==3) then
-              if(iand(sys%outp%what, output_elf).ne.0) &
-                   call dlr_calc_elf(sys%st,sys%gr, lr(dir, 1, ifactor), lr(dir, 2, ifactor))
-            end if
-            call dlr_output(sys%st, sys%gr, lr(dir, 1, ifactor), dirname, dir, sys%outp)
-
-          end if
-        end do
-
+        end if
       end do
 
       !HYPERPOLARIZABILITY
@@ -660,42 +699,50 @@ contains
         ! Output first hyperpolarizabilty (beta)
         iunit = io_open(trim(dirname)//'/beta', action='write')
 
-        write(iunit, '(2a)', advance='no') '#hyperpolarizability tensor [', &
-             trim(units_out%length%abbrev)
-        write(iunit, '(a,i1)', advance='no') '^', 5
-        write(iunit, '(a)') ']'
+        if(status%ok) then 
 
-        if (sys%st%d%nspin /= UNPOLARIZED ) then 
-          write(iunit, '(a)') 'WARNING: Hyperpolarizability has not been tested for spin polarized systems'
-        end if
+          write(iunit, '(2a)', advance='no') '#hyperpolarizability tensor [', &
+               trim(units_out%length%abbrev)
+          write(iunit, '(a,i1)', advance='no') '^', 5
+          write(iunit, '(a)') ']'
 
-        do i = 1, NDIM
-          do j = 1, NDIM
-            do k = 1, NDIM
-              write(iunit,'(3i2,e20.8,e20.8)') i, j, k, &
-                   real(beta(i, j, k))/units_out%length%factor**(5), aimag(beta(i, j, k))/units_out%length%factor**(5)
-            end do
-          end do
-        end do
-
-        if (NDIM == 3) then 
-
-          bpar = M_ZERO
-          bper = M_ZERO
+          if (sys%st%d%nspin /= UNPOLARIZED ) then 
+            write(iunit, '(a)') 'WARNING: Hyperpolarizability has not been tested for spin polarized systems'
+          end if
 
           do i = 1, NDIM
             do j = 1, NDIM
-              bpar(i) = bpar(i) + real(beta(i, j, j) + beta(j, i, j) + beta(j, j, i))
-              bper(i) = bper(i) + real(M_TWO*beta(i, j, j) - M_THREE*beta(j, i, j) + M_TWO*beta(j, j, i))
+              do k = 1, NDIM
+                write(iunit,'(3i2,e20.8,e20.8)') i, j, k, &
+                     real(beta(i, j, k))/units_out%length%factor**(5), aimag(beta(i, j, k))/units_out%length%factor**(5)
+              end do
             end do
           end do
 
-          bpar = bpar / (M_FIVE * units_out%length%factor**(5))
-          bper = bper / (M_FIVE * units_out%length%factor**(5))
+          if (NDIM == 3) then 
 
-          write(iunit, '(a, 3f12.6)') 'beta parallel     ', bpar(1:NDIM)
-          write(iunit, '(a, 3f12.6)') 'beta perpendicular', bper(1:NDIM)
-          write(iunit, '(a, 3f12.6)') 'beta K            ', M_THREE*M_HALF*(bpar(1:NDIM) - bper(1:NDIM))
+            bpar = M_ZERO
+            bper = M_ZERO
+
+            do i = 1, NDIM
+              do j = 1, NDIM
+                bpar(i) = bpar(i) + real(beta(i, j, j) + beta(j, i, j) + beta(j, j, i))
+                bper(i) = bper(i) + real(M_TWO*beta(i, j, j) - M_THREE*beta(j, i, j) + M_TWO*beta(j, j, i))
+              end do
+            end do
+
+            bpar = bpar / (M_FIVE * units_out%length%factor**(5))
+            bper = bper / (M_FIVE * units_out%length%factor**(5))
+
+            write(iunit, '(a, 3e20.8)') 'beta parallel     ', bpar(1:NDIM)
+            write(iunit, '(a, 3f20.8)') 'beta perpendicular', bper(1:NDIM)
+            write(iunit, '(a, 3f20.8)') 'beta K            ', M_THREE*M_HALF*(bpar(1:NDIM) - bper(1:NDIM))
+
+          endif
+
+        else 
+
+          call pol_write_fail(iunit)
 
         endif
 
@@ -705,6 +752,13 @@ contains
 
 
     end subroutine pol_output
+
+      subroutine pol_write_fail(iunit)
+        integer :: iunit
+        
+        write(iunit, '(a)') "#NOT CONVERGED"
+
+      end subroutine pol_write_fail
 
   end subroutine pol_lr_run
 
