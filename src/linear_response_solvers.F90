@@ -257,7 +257,7 @@ subroutine X(lr_solver_bicgstab) (lr, h, gr, st, ik, x, y, omega)
   conv_last = .false.
 
   do iter = 1, lr%max_iter
-    if( iter == lr%ort_min_step ) orto = .true.    
+    if( iter == lr%ort_min_step ) orto = .true.
 
     rho_1 = X(states_dotp) (gr%m, st%d%dim, rs, r)
     

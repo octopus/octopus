@@ -332,7 +332,7 @@ contains
     if(w%out_angular.ne.0)  call td_write_angular(w%out_angular, gr, st, kick, i)
     if(w%out_spin.ne.0)     call td_write_spin(w%out_spin, gr, st, i)
     if(w%out_magnets.ne.0)  call td_write_local_magnetic_moments(w%out_magnets, gr, st, geo, w%lmm_r, i)
-    if(w%out_proj.ne.0)     call td_write_proj(w%out_proj, gr, st, w%gs_st, i)
+    if(w%out_proj.ne.0)     call td_write_proj(w%out_proj, gr, st, w%gs_st, kick, i)
     if(w%out_coords.ne.0)   call td_write_coordinates(w%out_coords, gr, geo, i)
     if(w%out_populations.ne.0) &
       call td_write_populations(w%out_populations, gr%m, st, w%gs_st, w%n_excited_states, w%excited_st, dt, i)
@@ -501,6 +501,60 @@ contains
 
 
   ! ---------------------------------------------------------
+  subroutine td_write_kick_info(out, st, kick, lmax)
+    C_POINTER,         intent(in) :: out
+    type(states_t),    intent(in) :: st
+    type(kick_t),      intent(in) :: kick
+    integer, optional, intent(in) :: lmax
+
+    character(len=120) :: aux
+
+    write(aux, '(a15,i2)')      '# nspin        ', st%d%nspin
+    call write_iter_string(out, aux)
+    call write_iter_nl(out)
+
+    if(present(lmax)) then
+      write(aux, '(a15,i2)')      '# lmax         ', lmax
+      call write_iter_string(out, aux)
+      call write_iter_nl(out)
+    end if
+
+    write(aux, '(a15,3f18.12)') '# pol(1)       ', kick%pol(1:3, 1)
+    call write_iter_string(out, aux)
+    call write_iter_nl(out)
+
+    write(aux, '(a15,3f18.12)') '# pol(2)       ', kick%pol(1:3, 2)
+    call write_iter_string(out, aux)
+    call write_iter_nl(out)
+
+    write(aux, '(a15,3f18.12)') '# pol(3)       ', kick%pol(1:3, 3)
+    call write_iter_string(out, aux)
+    call write_iter_nl(out)
+
+    write(aux, '(a15,i2)')      '# direction    ', kick%pol_dir
+    call write_iter_string(out, aux)
+    call write_iter_nl(out)
+
+    write(aux, '(a15,i2)')      '# kick mode    ', kick%delta_strength_mode
+    call write_iter_string(out, aux)
+    call write_iter_nl(out)
+    
+    write(aux, '(a15,f18.12)')  '# kick strength', kick%delta_strength
+    call write_iter_string(out, aux)
+    call write_iter_nl(out)
+
+    write(aux, '(a15,i2)')      '# Equiv. axis  ', kick%pol_equiv_axis
+    call write_iter_string(out, aux)
+    call write_iter_nl(out)
+
+    write(aux, '(a15,3f18.12)') '# wprime       ', kick%wprime(1:3)
+    call write_iter_string(out, aux)
+    call write_iter_nl(out)
+
+  end subroutine td_write_kick_info
+
+
+  ! ---------------------------------------------------------
   subroutine td_write_angular(out_angular, gr, st, kick, iter)
     C_POINTER,      intent(in) :: out_angular
     type(grid_t),   intent(inout) :: gr
@@ -531,42 +585,7 @@ contains
 
       if(iter ==0) then
         call td_write_print_header_init(out_angular)
-
-        write(aux, '(a15,i2)')      '# nspin        ', st%d%nspin
-        call write_iter_string(out_angular, aux)
-        call write_iter_nl(out_angular)
-
-        write(aux, '(a15,3f18.12)') '# pol(1)       ', kick%pol(1:3, 1)
-        call write_iter_string(out_angular, aux)
-        call write_iter_nl(out_angular)
-
-        write(aux, '(a15,3f18.12)') '# pol(2)       ', kick%pol(1:3, 2)
-        call write_iter_string(out_angular, aux)
-        call write_iter_nl(out_angular)
-
-        write(aux, '(a15,3f18.12)') '# pol(3)       ', kick%pol(1:3, 3)
-        call write_iter_string(out_angular, aux)
-        call write_iter_nl(out_angular)
-
-        write(aux, '(a15,i2)')      '# direction    ', kick%pol_dir
-        call write_iter_string(out_angular, aux)
-        call write_iter_nl(out_angular)
-
-        write(aux, '(a15,i2)')      '# kick mode    ', kick%delta_strength_mode
-        call write_iter_string(out_angular, aux)
-        call write_iter_nl(out_angular)
-
-        write(aux, '(a15,f18.12)')  '# kick strength', kick%delta_strength
-        call write_iter_string(out_angular, aux)
-        call write_iter_nl(out_angular)
-
-        write(aux, '(a15,i2)')      '# Equiv. axis  ', kick%pol_equiv_axis
-        call write_iter_string(out_angular, aux)
-        call write_iter_nl(out_angular)
-
-        write(aux, '(a15,3f18.12)') '# wprime       ', kick%wprime(1:3)
-        call write_iter_string(out_angular, aux)
-        call write_iter_nl(out_angular)
+        call td_write_kick_info(out_angular, st, kick)
 
         !second line -> columns name
         call write_iter_header_start(out_angular)
@@ -618,46 +637,7 @@ contains
 
     if(mpi_grp_is_root(mpi_world).and.iter == 0) then
       call td_write_print_header_init(out_multip)
-
-      write(aux, '(a15,i2)')      '# nspin        ', st%d%nspin
-      call write_iter_string(out_multip, aux)
-      call write_iter_nl(out_multip)
-
-      write(aux, '(a15,i2)')      '# lmax         ', lmax
-      call write_iter_string(out_multip, aux)
-      call write_iter_nl(out_multip)
-
-      write(aux, '(a15,3f18.12)') '# pol(1)       ', kick%pol(1:3, 1)
-      call write_iter_string(out_multip, aux)
-      call write_iter_nl(out_multip)
-
-      write(aux, '(a15,3f18.12)') '# pol(2)       ', kick%pol(1:3, 2)
-      call write_iter_string(out_multip, aux)
-      call write_iter_nl(out_multip)
-
-      write(aux, '(a15,3f18.12)') '# pol(3)       ', kick%pol(1:3, 3)
-      call write_iter_string(out_multip, aux)
-      call write_iter_nl(out_multip)
-
-      write(aux, '(a15,i2)')      '# direction    ', kick%pol_dir
-      call write_iter_string(out_multip, aux)
-      call write_iter_nl(out_multip)
-
-      write(aux, '(a15,i2)')      '# kick mode    ', kick%delta_strength_mode
-      call write_iter_string(out_multip, aux)
-      call write_iter_nl(out_multip)
-
-      write(aux, '(a15,f18.12)')  '# kick strengtph', kick%delta_strength
-      call write_iter_string(out_multip, aux)
-      call write_iter_nl(out_multip)
-
-      write(aux, '(a15,i2)')      '# Equiv. axis  ', kick%pol_equiv_axis
-      call write_iter_string(out_multip, aux)
-      call write_iter_nl(out_multip)
-
-      write(aux, '(a15,3f18.12)') '# wprime       ', kick%wprime(1:3)
-      call write_iter_string(out_multip, aux)
-      call write_iter_nl(out_multip)
+      call td_write_kick_info(out_multip, st, kick, lmax)
 
       call write_iter_header_start(out_multip)
 
@@ -1046,32 +1026,53 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine td_write_proj(out_proj, gr, st, gs_st, iter)
+  subroutine td_write_proj(out_proj, gr, st, gs_st, kick, iter)
     C_POINTER,      intent(in) :: out_proj
     type(grid_t),   intent(in) :: gr
     type(states_t), intent(in) :: st
     type(states_t), intent(in) :: gs_st
+    type(kick_t),   intent(in) :: kick
     integer,        intent(in) :: iter
 
     CMPLX, allocatable :: projections(:,:,:)
-    character(len=20) :: aux
-    integer :: ik, ist, uist
-#if defined(HAVE_MPI)
-    integer :: k
-#endif
+    character(len=80) :: aux
+    integer :: ik, ist, uist, idir
 
     call push_sub('td_write.td_write_proj')
 
-    if(mpi_grp_is_root(mpi_world)) then
-      if(iter == 0) then
+    if(iter == 0) then
+      if(mpi_grp_is_root(mpi_world)) then
         call td_write_print_header_init(out_proj)
+        call td_write_kick_info(out_proj, st, kick)
 
-        ! first line -> column names
+        call write_iter_string(out_proj, "#%")
+        call write_iter_nl(out_proj)
+ 
+        write(aux, '(a,i8)') "# nik  ", st%d%nik
+        call write_iter_string(out_proj, aux)
+        call write_iter_nl(out_proj)
+
+        write(aux, '(a,2i8)') "#  st  ", st%st_start, st%st_end
+        call write_iter_string(out_proj, aux)
+        call write_iter_nl(out_proj)
+
+        write(aux, '(a,2i8)') "# ust  ", gs_st%st_start, gs_st%st_end
+        call write_iter_string(out_proj, aux)
+        call write_iter_nl(out_proj)
+
+        do ik = 1, st%d%nik
+          call write_iter_string(out_proj, "# w(ik)*occ(ist,ik)  ")
+          do ist = 1, st%nst
+            call write_iter_double(out_proj, st%d%kweights(ik)*st%occ(ist, ik), 1)
+          end do
+          call write_iter_nl(out_proj)
+        end do
+
         call write_iter_header_start(out_proj)
         do ik = 1, st%d%nik
           do ist = 1, st%nst
             do uist = gs_st%st_start, gs_st%st_end
-              write(aux, '(i3,a,i3)') ist, ' -> ', uist
+              write(aux, '(i4,a,i4)') ist, ' -> ', uist
               call write_iter_header(out_proj, 'Re {'//trim(aux)//'}')
               call write_iter_header(out_proj, 'Im {'//trim(aux)//'}')
             end do
@@ -1079,22 +1080,40 @@ contains
         end do
         call write_iter_nl(out_proj)
 
+      end if
+
+      ALLOCATE(projections(st%nst, gs_st%st_start:gs_st%st_end, st%d%nik), st%nst*gs_st%nst*st%d%nik)
+      do idir = 1, 3
+        projections(:,:,:) = M_Z0
+        call dipole_matrix_elements(idir)
+
+        write(aux, '(a,i1,a)') "<i|x_", idir, "|a>"
+        call write_iter_string(out_proj, "# ------")
+        call write_iter_header(out_proj, aux)
+        if(mpi_grp_is_root(mpi_world)) then
+          do ik = 1, st%d%nik
+            do ist = 1, st%nst
+              do uist = gs_st%st_start, gs_st%st_end
+                call write_iter_double(out_proj,  real(projections(ist, uist, ik)), 1)
+                call write_iter_double(out_proj, aimag(projections(ist, uist, ik)), 1)
+              end do
+            end do
+          end do
+          call write_iter_nl(out_proj)
+          
+        end if
+      end do
+      deallocate(projections)
+
+      if(mpi_grp_is_root(mpi_world)) then
         call td_write_print_header_end(out_proj)
       end if
+
     end if
 
-    ALLOCATE(projections(st%nst, gs_st%nst, st%d%nik), st%nst*gs_st%nst*st%d%nik)
-    call states_calc_projection(gr%m, st, gs_st, projections)
-#if defined(HAVE_MPI)
-    do ik = 1, st%d%nik
-      do ist = 1, st%nst
-        k = st%node(ist)
-        do uist = gs_st%st_start, gs_st%st_end
-          call MPI_Bcast(projections(ist, uist, ik), 1, MPI_CMPLX, k, st%mpi_grp%comm, mpi_err)
-        end do
-      end do
-    end do
-#endif
+    ALLOCATE(projections(st%nst, gs_st%st_start:gs_st%st_end, st%d%nik), st%nst*gs_st%nst*st%d%nik)
+    projections(:,:,:) = M_Z0
+    call calc_projections()
 
     if(mpi_grp_is_root(mpi_world)) then
       call write_iter_start(out_proj)
@@ -1111,6 +1130,80 @@ contains
 
     deallocate(projections)
     call pop_sub()
+
+  contains
+    ! ---------------------------------------------------------
+    ! This subroutine calculates:
+    ! p(uist, ist, ik) = < phi0(uist, k) | phi(ist, ik) (t) >
+    ! ---------------------------------------------------------
+    subroutine calc_projections()
+      integer :: uist, ist, ik
+#if defined(HAVE_MPI)
+      integer :: k
+#endif
+
+      do ik = 1, st%d%nik
+        do ist = st%st_start, st%st_end
+          do uist = gs_st%st_start, gs_st%st_end
+            projections(ist, uist, ik) = &
+              zstates_dotp(gr%m, st%d%dim, st%zpsi(:, :, ist, ik), gs_st%zpsi(:, :, uist, ik))
+          end do
+        end do
+      end do
+      
+#if defined(HAVE_MPI)
+      do ik = 1, st%d%nik
+        do ist = 1, st%nst
+          k = st%node(ist)
+          do uist = gs_st%st_start, gs_st%st_end
+            call MPI_Bcast(projections(ist, uist, ik), 1, MPI_CMPLX, k, st%mpi_grp%comm, mpi_err)
+          end do
+        end do
+      end do
+#endif
+    end subroutine calc_projections
+
+    subroutine dipole_matrix_elements(dir)
+      integer, intent(in) :: dir
+
+      integer :: uist, ist, ik, idim
+      CMPLX, allocatable :: xpsi(:,:)
+#if defined(HAVE_MPI)
+      integer :: k
+#endif
+
+      ALLOCATE(xpsi(NP, st%d%dim), NP*st%d%dim)
+      
+      do ik = 1, st%d%nik
+        do ist = st%st_start, st%st_end
+          do uist = gs_st%st_start, gs_st%st_end
+            
+            do idim = 1, st%d%dim
+              xpsi(1:NP, idim) = gr%m%x(1:NP, dir) * gs_st%zpsi(1:NP, idim, uist, ik)
+            end do
+
+            projections(ist, uist, ik) = &
+              zstates_dotp(gr%m, st%d%dim, st%zpsi(:, :, ist, ik), xpsi(:, :))
+
+            ! include the occupations in 
+            projections(ist, uist, ik) = projections(ist, uist, ik)
+          end do
+        end do
+      end do
+      
+      deallocate(xpsi)
+
+#if defined(HAVE_MPI)
+      do ik = 1, st%d%nik
+        do ist = 1, st%nst
+          k = st%node(ist)
+          do uist = gs_st%st_start, gs_st%st_end
+            call MPI_Bcast(projections(ist, uist, ik), 1, MPI_CMPLX, k, st%mpi_grp%comm, mpi_err)
+          end do
+        end do
+      end do
+#endif
+    end subroutine dipole_matrix_elements
   end subroutine td_write_proj
 
 

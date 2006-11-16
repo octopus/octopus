@@ -64,7 +64,6 @@ module states_m
     states_write_fermi_energy,      &
     states_degeneracy_matrix,       &
     states_spin_channel,            &
-    states_calc_projection,         &
     states_calc_dens,               &
     kpoints_write_info,             &
     wfs_are_complex,                &
@@ -1590,32 +1589,6 @@ contains
     end select
 
   end function states_spin_channel
-
-
-  ! ---------------------------------------------------------
-  ! This subroutine calculates:
-  ! p(uist, ist, ik) = < phi0(uist, k) | phi(ist, ik) (t) >
-  ! ---------------------------------------------------------
-  subroutine states_calc_projection(m, st, gs_st, p)
-    type(mesh_t),   intent(in)  :: m
-    type(states_t), intent(in)  :: st
-    type(states_t), intent(in)  :: gs_st
-    CMPLX,          intent(out) :: p(:,:,:)
-
-    integer :: uist, ist, ik
-
-    call push_sub('states.calc_projection')
-
-    do ik = 1, st%d%nik
-      do ist = st%st_start, st%st_end
-        do uist = gs_st%st_start, gs_st%st_end
-          p(ist, uist, ik) = zstates_dotp(m, st%d%dim, st%zpsi(:, :, ist, ik), gs_st%zpsi(:, :, uist, ik))
-        end do
-      end do
-    end do
-
-    call pop_sub()
-  end subroutine states_calc_projection
 
 
   ! ---------------------------------------------------------

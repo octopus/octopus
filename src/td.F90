@@ -125,10 +125,8 @@ contains
       call init_verlet()
     end if
 
-    if(td%iter == 0) then
-      call apply_delta_field(td%kick)
-      call td_run_zero_iter()
-    end if
+    if(td%iter == 0) call td_run_zero_iter()
+
     !call td_check_trotter(td, sys, h)
     td%iter = td%iter + 1
 
@@ -378,7 +376,13 @@ contains
       call push_sub('td.td_run_zero_iter')
 
       call io_mkdir('td.general')
+
       call td_write_iter(write_handler, gr, st, h, geo, td%kick, td%dt, 0)
+
+      ! I aply the delta electric field *after* td_write_iter, otherwise the
+      ! dipole matrix elements in write_proj are wrong
+      call apply_delta_field(td%kick)
+
       call td_save_restart(0)
       call td_write_data(write_handler, gr, st, h, sys%outp, geo, td%dt, 0)
       call td_rti_run_zero_iter(h, td%tr)

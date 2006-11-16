@@ -521,7 +521,7 @@ contains
 
     ! This function gives us back the unit connected to the "multipoles" file, the header information,
     ! the number of time steps, and the time step.
-    call spectrum_mult_info(in_file, nspin, lmax, kick, time_steps, dt)
+    call spectrum_mult_info(in_file, nspin, kick, time_steps, dt, lmax=lmax)
 
     ! Now we cannot process files that do not contain the dipole, or that contain more than the dipole.
     if(lmax.ne.1) then
@@ -601,21 +601,6 @@ contains
     end do
     ewsum = ewsum * s%energy_step; polsum = polsum * s%energy_step
 
-    write(message(1), '(a,i8)')    'Number of spin       = ', nspin
-    write(message(2), '(a,i8)')    'Number of time steps = ', time_steps
-    write(message(3), '(a,i4)')    'SpecDampMode         = ', s%damp
-    write(message(4), '(a,f10.4)') 'SpecDampFactor       = ', s%damp_factor * units_out%time%factor
-    write(message(5), '(a,f10.4)') 'SpecStartTime        = ', s%start_time   / units_out%time%factor
-    write(message(6), '(a,f10.4)') 'SpecEndTime          = ', s%end_time     / units_out%time%factor
-    write(message(7), '(a,f10.4)') 'SpecMaxEnergy        = ', s%max_energy   / units_inp%energy%factor
-    write(message(8), '(a,f10.4)') 'SpecEnergyStep       = ', s%energy_step  / units_inp%energy%factor
-    call write_info(8)
-
-    message(1) = ""
-    write(message(2),'(a,f16.6)')   'Electronic sum rule  = ', ewsum
-    write(message(3),'(a,f16.6)') 'Polariz. (sum rule)  = ', polsum  / units_inp%length%factor**3
-    call write_info(3)
-
     write(out_file, '(a15,i2)')      '# nspin        ', nspin
     write(out_file, '(a15,3f18.12)') '# pol(1)       ', kick%pol(1:3, 1)
     write(out_file, '(a15,3f18.12)') '# pol(2)       ', kick%pol(1:3, 2)
@@ -625,6 +610,19 @@ contains
     write(out_file, '(a15,f18.12)')  '# kick strength', kick%delta_strength
     write(out_file, '(a15,i1)')      '# Equiv. axis  ', kick%pol_equiv_axis
     write(out_file, '(a15,3f18.12)') '# wprime       ', kick%wprime(1:3)
+    write(out_file, '(a)') '#%'
+    write(out_file, '(a,i8)')    '# Number of time steps = ', time_steps
+    write(out_file, '(a,i4)')    '# SpecDampMode         = ', s%damp
+    write(out_file, '(a,f10.4)') '# SpecDampFactor       = ', s%damp_factor * units_out%time%factor
+    write(out_file, '(a,f10.4)') '# SpecStartTime        = ', s%start_time   / units_out%time%factor
+    write(out_file, '(a,f10.4)') '# SpecEndTime          = ', s%end_time     / units_out%time%factor
+    write(out_file, '(a,f10.4)') '# SpecMaxEnergy        = ', s%max_energy   / units_inp%energy%factor
+    write(out_file, '(a,f10.4)') '# SpecEnergyStep       = ', s%energy_step  / units_inp%energy%factor
+    write(out_file, '(a)') '#%'
+    write(out_file, '(a,f16.6)') '# Electronic sum rule  = ', ewsum
+    write(out_file, '(a,f16.6)') '# Polariz. (sum rule)  = ', polsum  / units_inp%length%factor**3
+    write(out_file, '(a)') '#%'
+    
     write(out_file, '(a1,a20)', advance = 'no') '#', str_center("Energy", 20)
     do j = 1, nspin
       do i = 1, 3
@@ -678,7 +676,7 @@ contains
 
     call push_sub('spectrum_rotatory_strength')
 
-    call spectrum_angular_info(in_file, nspin, kick, time_steps, dt)
+    call spectrum_mult_info(in_file, nspin, kick, time_steps, dt)
     call spectrum_fix_time_limits(time_steps, dt, s%start_time, s%end_time, is, ie, ntiter)
 
     ! load dipole from file
@@ -791,7 +789,7 @@ contains
     if(iunit < 0) then
       iunit = io_open('td.general/multipoles', action='read', status='old')
     end if
-    call spectrum_mult_info(iunit, nspin, lmax, kick, time_steps, dt)
+    call spectrum_mult_info(iunit, nspin, kick, time_steps, dt, lmax=lmax)
     call spectrum_fix_time_limits(time_steps, dt, s%start_time, s%end_time, is, ie, ntiter)
 
     call io_skip_header(iunit)
@@ -928,58 +926,13 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine spectrum_angular_info(iunit, nspin, kick, time_steps, dt)
-    integer, intent(in)       :: iunit
-    integer, intent(out)      :: nspin, time_steps
-    type(kick_t), intent(out) :: kick
-    FLOAT, intent(out)        :: dt
-
-    integer :: j
-    FLOAT :: t1, t2, dummy
-
-    call push_sub('spectrum.spectrum_angular_info')
-
-    rewind(iunit); read(iunit,*); read(iunit,*)
-    read(iunit, '(15x,i2)')      nspin
-    read(iunit, '(15x,3f18.12)') kick%pol(1:3, 1)
-    read(iunit, '(15x,3f18.12)') kick%pol(1:3, 2)
-    read(iunit, '(15x,3f18.12)') kick%pol(1:3, 3)
-    read(iunit, '(15x,i2)')      kick%pol_dir
-    read(iunit, '(15x,i2)')      kick%delta_strength_mode
-    read(iunit, '(15x,f18.12)')  kick%delta_strength
-    read(iunit, '(15x,i2)')      kick%pol_equiv_axis
-    read(iunit, '(15x,3f18.12)') kick%wprime(1:3)
-    call io_skip_header(iunit)
-
-    ! count number of time_steps
-    time_steps = 0
-    do
-      read(iunit, *, end=100) j, dummy
-      time_steps = time_steps + 1
-      if(time_steps == 1) t1 = dummy
-      if(time_steps == 2) t2 = dummy
-    end do
-100 continue
-    dt = (t2 - t1) * units_out%time%factor ! units_out is OK
-    time_steps = time_steps - 1
-
-    if(time_steps < 3) then
-      write(message(1),'(a)') "Empty file?"
-      call write_fatal(1)
-    end if
-
-    call pop_sub()
-  end subroutine spectrum_angular_info
-
-
-  ! ---------------------------------------------------------
-  subroutine spectrum_mult_info(iunit, nspin, lmax, kick, time_steps, dt)
-    integer, intent(in)  :: iunit
-    integer, intent(out) :: nspin
-    integer, intent(out) :: lmax
-    type(kick_t), intent(out) :: kick
-    integer, intent(out) :: time_steps
-    FLOAT,   intent(out) :: dt
+  subroutine spectrum_mult_info(iunit, nspin, kick, time_steps, dt, lmax)
+    integer,           intent(in)  :: iunit
+    integer,           intent(out) :: nspin
+    type(kick_t),      intent(out) :: kick
+    integer,           intent(out) :: time_steps
+    FLOAT,             intent(out) :: dt
+    integer, optional, intent(out) :: lmax
 
     integer :: j
     FLOAT :: t1, t2, dummy
@@ -988,7 +941,9 @@ contains
 
     rewind(iunit); read(iunit,*); read(iunit,*)
     read(iunit, '(15x,i2)')      nspin
-    read(iunit, '(15x,i2)')      lmax
+    if(present(lmax)) then
+      read(iunit, '(15x,i2)')      lmax
+    end if
     read(iunit, '(15x,3f18.12)') kick%pol(1:3, 1)
     read(iunit, '(15x,3f18.12)') kick%pol(1:3, 2)
     read(iunit, '(15x,3f18.12)') kick%pol(1:3, 3)
