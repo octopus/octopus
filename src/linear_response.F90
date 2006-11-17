@@ -516,15 +516,27 @@ contains
     type(lr_t),     intent(in) :: src
     type(lr_t),     intent(inout) :: dest
 
-    if( wfs_are_complex(st)) then 
-      dest%zdl_rho(1:m%np, 1:st%d%nspin) = src%zdl_rho(1:m%np, 1:st%d%nspin)
-      dest%zdl_psi(1:m%np, 1:st%d%dim, 1:st%nst, 1:st%d%nspin) = & 
-           src%zdl_psi(1:m%np, 1:st%d%dim, 1:st%nst, 1:st%d%nspin)
-    else
-      dest%ddl_rho(1:m%np, 1:st%d%nspin) = src%ddl_rho(1:m%np, 1:st%d%nspin)
-      dest%ddl_psi(1:m%np, 1:st%d%dim, 1:st%nst, 1:st%d%nspin) = & 
-           src%ddl_psi(1:m%np, 1:st%d%dim, 1:st%nst, 1:st%d%nspin)
-    end if
+    integer :: ik, idim, ist
+
+    do ik = 1, st%d%nspin
+      
+      if( wfs_are_complex(st)) then
+        call lalg_copy(m%np, src%zdl_rho(:, ik), dest%zdl_rho(:, ik))
+      else
+        call lalg_copy(m%np, src%ddl_rho(:, ik), dest%ddl_rho(:, ik))
+      end if
+    
+      do ist = 1, st%nst
+        do idim = 1, st%d%dim
+          if( wfs_are_complex(st)) then
+            call lalg_copy(m%np_part, src%zdl_psi(:, idim, ist, ik), dest%zdl_psi(:, idim, ist, ik))
+          else 
+            call lalg_copy(m%np_part, src%ddl_psi(:, idim, ist, ik), dest%ddl_psi(:, idim, ist, ik))
+          end if
+        end do
+      end do
+
+   end do
 
   end subroutine lr_copy
 

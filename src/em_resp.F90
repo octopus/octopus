@@ -71,7 +71,7 @@ contains
     CMPLX :: alpha(1:MAX_DIM, 1:MAX_DIM, 1:3)
     CMPLX :: beta(1:MAX_DIM, 1:MAX_DIM, 1:MAX_DIM)
 
-    FLOAT :: eta, freq_factor(0:MAX_DIM) !starts from 0 to prevent a segfault
+    FLOAT :: eta, freq_factor(1:MAX_DIM)
 
     integer :: nsigma, sigma, ndim, i, j, k, nomega, dir, ierr, iomega, ifactor, nfactor
 
@@ -81,7 +81,7 @@ contains
 
     FLOAT, allocatable :: omega(:)
 
-    logical :: complex_response
+    logical :: complex_response, have_to_calculate
 
 
     call push_sub('em_resp.static_pol_lr_run')
@@ -190,14 +190,40 @@ contains
                ' and frequency ', freq_factor(ifactor)*omega(iomega)/units_out%energy%factor
           call write_info(1)
 
-          if( ifactor > 1 .and. &
-               freq_factor(ifactor)*omega(iomega) ==  freq_factor(ifactor-1)*omega(iomega) ) then 
+          have_to_calculate = .true.
 
-            !if the previous frequency is the same, save work
-            call lr_copy(sys%st, sys%gr%m, lr(dir, 1, ifactor-1), lr(dir, 1, ifactor))
-            call lr_copy(sys%st, sys%gr%m, lr(dir, 2, ifactor-1), lr(dir, 2, ifactor))
+          if(ifactor > 1) then 
+            !if this frequency is zero and this is not the first
+            !iteration we don't have to do anything
+            if( nomega > 1 .and. freq_factor(ifactor) == M_ZERO) then 
+              have_to_calculate = .false. 
+            end if
+            
+            !if this frequency is the same as the previous one, just copy it
+            if( have_to_calculate .and. &
+                 freq_factor(ifactor)*omega(iomega) ==  freq_factor(ifactor-1)*omega(iomega) ) then 
+              
+              call lr_copy(sys%st, sys%gr%m, lr(dir, 1, ifactor-1), lr(dir, 1, ifactor))
+              call lr_copy(sys%st, sys%gr%m, lr(dir, 2, ifactor-1), lr(dir, 2, ifactor))
+              
+              have_to_calculate = .false.
+              
+            end if
 
-          else
+            !if this frequency is minus the previous one, copy it inverted
+            if( have_to_calculate .and. & 
+                 freq_factor(ifactor) ==  -freq_factor(ifactor-1) ) then 
+              
+              call lr_copy(sys%st, sys%gr%m, lr(dir, 1, ifactor-1), lr(dir, 2, ifactor))
+              call lr_copy(sys%st, sys%gr%m, lr(dir, 2, ifactor-1), lr(dir, 1, ifactor))
+              
+              have_to_calculate = .false.
+              
+            end if
+
+          end if
+
+          if(have_to_calculate) then 
             if (wfs_are_complex(sys%st)) then 
               call zget_response_e(sys, h, lr(:, :, ifactor), dir, ifactor, 2 , &
                    freq_factor(ifactor)*omega(iomega) + M_zI * eta, props, status)
@@ -206,32 +232,37 @@ contains
                    freq_factor(ifactor)*omega(iomega), props, status)
             end if
           end if
+
         end do ! dir
 
       end do ! ifactor
 
-      !calculate polarizability
-      do ifactor = 1, nfactor
+      if(status%ok) then 
 
-        if(wfs_are_complex(sys%st)) then 
-          call zlr_calc_polarizability(sys, lr(:, :, ifactor), alpha(:,:, ifactor))
-        else
-          call dlr_calc_polarizability(sys, lr(:, :, ifactor), alpha(:,:, ifactor))
-        end if
-
-      end do
-
-      !calculate hyperpolarizability
-      if(props%calc_hyperpol) then 
-
-        if(wfs_are_complex(sys%st)) then 
-          call zlr_calc_beta(sys, lr(:, :, :), props, beta)
-        else
-          call dlr_calc_beta(sys, lr(:, :, :), props, beta)
+        !calculate polarizability
+        do ifactor = 1, nfactor
+          
+          if(wfs_are_complex(sys%st)) then 
+            call zlr_calc_polarizability(sys, lr(:, :, ifactor), alpha(:,:, ifactor))
+          else
+            call dlr_calc_polarizability(sys, lr(:, :, ifactor), alpha(:,:, ifactor))
+          end if
+          
+        end do
+        
+        !calculate hyperpolarizability
+        if(props%calc_hyperpol) then 
+          
+          if(wfs_are_complex(sys%st)) then 
+            call zlr_calc_beta(sys, lr(:, :, :), props, beta)
+          else
+            call dlr_calc_beta(sys, lr(:, :, :), props, beta)
+          end if
+          
         end if
 
       end if
-
+      
       call pol_output()
 
     end do ! nomega
