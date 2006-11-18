@@ -194,7 +194,7 @@ contains
 
           if(ifactor > 1) then 
             !if this frequency is zero and this is not the first
-            !iteration we don't have to do anything
+            !iteration we do not have to do anything
             if( nomega > 1 .and. freq_factor(ifactor) == M_ZERO) then 
               have_to_calculate = .false. 
             end if
