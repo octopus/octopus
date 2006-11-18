@@ -26,6 +26,12 @@
 #define NDIM    gr%sb%dim
 #define LAP     f_der%der_discr%lapl
 
+#if defined(F90_ACCEPTS_LINE_NUMBERS)
+# define CARDINAL \cardinal __LINE__ __FILE__
+#else
+# define CARDINAL
+#endif
+
 #define __STRING(x)     #x
 
 #if !defined(NDEBUG) 
@@ -34,7 +40,7 @@
        call assert_die (__STRING(expr), &    \newline \
                         __FILE__, __LINE__)  \newline \
      end if                                  \
-     \newline\cardinal __LINE__ __FILE__
+     \newline CARDINAL
 
 #else
 #  define ASSERT(expr)
@@ -46,7 +52,7 @@
      if(global_alloc_err.ne.0) then                    \newline \
        call alloc_error((size), __FILE__, __LINE__)    \newline \
      end if                                            \
-     \newline\cardinal __LINE__ __FILE__
+     \newline CARDINAL
 
 #define DOUBLE real(8)
 #define SINGLE real(4)

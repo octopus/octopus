@@ -131,8 +131,11 @@ LIBS="${FCEXTRALIBS} $FCLIBS"
 dnl Sometimes Fortran may use the flush function, sometimes not.
 ACX_FORTRAN_CHECK_FUNC(flush)
 
-dnl check wether we have or not a compiler that allows for very long lines...
+dnl check whether we have or not a compiler that allows for very long lines...
 ACX_LONG_FORTRAN_LINES
+
+dnl check whether the Fortran 90 compiler accepts line markers cast by the preprocessor.
+ACX_F90_ACCEPTS_LINE_NUMBERS
 
 dnl ============================================================================
 dnl find what is the extension of the programs supposed to be

@@ -145,6 +145,21 @@ AC_MSG_RESULT($acx_long_lines_ok)
 
 
 ################################################
+# Check wether the compiler accepts preprocessor "# line-number" lines.
+# ----------------------------------
+AC_DEFUN([ACX_F90_ACCEPTS_LINE_NUMBERS],
+[
+AC_MSG_CHECKING([wether the compiler accepts "line-number" lines cast by the preprocessor])
+AC_COMPILE_IFELSE(
+    AC_LANG_PROGRAM( [], [# 1]),
+    [acx_f90_accepts_line_numbers_ok=yes; AC_DEFINE(F90_ACCEPTS_LINE_NUMBERS, 1, [compiler supports line-number lines])],
+    [acx_f90_accepts_line_numbers_ok=no])
+AC_MSG_RESULT($acx_f90_accepts_line_numbers_ok)
+]
+)
+
+
+################################################
 # Check for the presence of a given function in Fortran.
 # It substitutes AC_CHECK_FUNC, since the latter
 # seems to fail with some autotools versions, due to a call to some broken
