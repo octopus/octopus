@@ -21,8 +21,10 @@
 #include "global.h"
 
 module nl_operator_m
+  use datasets_m
   use global_m
   use io_m
+  use lib_oct_parser_m
   use mesh_lib_m
   use mesh_m
   use messages_m
@@ -69,6 +71,8 @@ module nl_operator_m
     module procedure nl_operator_equal
   end interface
 
+  integer :: op_function = -1
+
 contains
 
 
@@ -83,6 +87,23 @@ contains
 
     op%n  = n
     ALLOCATE(op%stencil(3, n), 3*n)
+
+    !%Variable OperateFunction
+    !%Type integer
+    !%Default 1
+    !%Section Mesh
+    !%Description
+    !% Which function use to apply the operators over the grid. This
+    !% is the function were octopus spend most of the calculation time.
+    !%Option fortran 0
+    !% The standard plain fortran function. This is the default.
+    !%Option c 3
+    !% The C version, using data prefetch directives and unrolled by hand.
+    !%End
+
+    if ( op_function == - 1) then
+      call loct_parse_int(check_inp('OperateFunction'), 0, op_function)
+    end if
 
     call pop_sub()
   end subroutine nl_operator_init
@@ -802,9 +823,15 @@ contains
 
     nn = op%n
     if(op%const_w) then
-      do ii = 1, op%np
-        fo(ii) = sum(op%w_re(1:nn, 1)  * fi(op%i(1:nn, ii)))
-      end do
+
+      if (op_function == 0) then 
+        do ii = 1, op%np
+          fo(ii) = sum(op%w_re(1:nn, 1)  * fi(op%i(1:nn, ii)))
+        end do
+      else
+        call doperate(op%np, nn, op%w_re(1, 1), op%i(1,1), fi, fo)
+      end if
+
     else
       do ii = 1, op%np
         fo(ii) = sum(op%w_re(1:nn, ii) * fi(op%i(1:nn, ii)))

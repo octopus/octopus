@@ -65,7 +65,9 @@ static double f_kr_zero(double w, void *p) {
 
 static double int_aux(int index, double kx, double kr, double x0, double r0, int which_int) {
 
+#ifdef HAVE_ASSERT
   assert(which_int == PFC_F_0 || which_int == PFC_F_KR || which_int == PFC_F_KX);
+#endif 
 
   /*variables*/
   double result, error;
