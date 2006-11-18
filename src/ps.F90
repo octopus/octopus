@@ -21,11 +21,13 @@
 #include "global.h"
 
 module ps_m
+  use datasets_m
   use atomic_m
   use global_m
   use io_m
   use lib_oct_gsl_spline_m
   use lib_oct_m
+  use lib_oct_parser_m
   use logrid_m
   use messages_m
   use ps_cpi_m
@@ -86,7 +88,13 @@ module ps_m
     type(valconf_t)  :: conf
 
     character(len=4) :: icore
-    FLOAT :: rc_max
+    FLOAT :: projectors_sphere_threshold ! The projectors are localized in real space,
+                                         ! and so they are contained in a sphere whose
+                                         ! radius is computed by making sure that the
+                                         ! projector functions absolute value is below
+                                         ! this threshold, for points outside the sphere.
+    FLOAT :: rc_max ! The radius of the spheres that contain the projector functions.
+
     FLOAT :: a_erf ! the a constant in erf(ar)/r
 
     FLOAT, pointer :: h(:,:,:), k(:, :, :)
@@ -273,6 +281,27 @@ contains
     call loct_spline_3dft(ps%vlocalized, ps%vlocal_f, CNST(50.0))
     call loct_spline_times(CNST(1.0)/(M_FOUR*M_PI), ps%vlocal_f)
 
+    ! Fix the threshold to calculate the radius of the projector function localization spheres:
+    !%Variable SpecieProjectorSphereThreshold
+    !%Type float
+    !%Default 0.001
+    !%Section System::Species
+    !%Description
+    !% The pseudopotentials may be composed of a local part, and a linear combination of nonlocal
+    !% operators. These nonlocal projectors have "projector" form, |v><v| (or, more generally
+    !% speaking, |u><v|). These projectors are localized in real space -- that is, the function v
+    !% has a finite support around the nucleus. This region where the projectors are localized should
+    !% be small or else the computation time required to operate with them will be very large.
+    !% 
+    !% In practice, this localization is fixed by requiring the definition of the projectors to be
+    !% contained in a sphere of a certain radius. This radius is computed by making sure that the 
+    !% absolute value of the projector functions, at points outside the localization sphere, is 
+    !% below a certain threshold. This threshold is set the SpecieProjectorSphereThreshold.
+    !%End
+    call loct_parse_float(check_inp('SpecieProjectorSphereThreshold'), &
+      CNST(0.001), ps%projectors_sphere_threshold)
+    if(ps%projectors_sphere_threshold <= M_ZERO) call input_error('SpecieProjectorSphereThreshold')
+
     deallocate(y)
     call pop_sub()
   end subroutine ps_init
@@ -281,15 +310,14 @@ contains
   ! ---------------------------------------------------------
   subroutine ps_getradius(ps)
     type(ps_t), intent(inout) :: ps
-
     integer :: l, j, i
-    FLOAT   :: r, dx, y
-    FLOAT, parameter :: threshold = CNST(1.0e-3)
+    FLOAT   :: r, dx, y, threshold
 
     call push_sub('ps.ps_getradius')
 
     ps%rc_max = CNST(0.0)
     dx = CNST(0.01)
+    threshold = ps%projectors_sphere_threshold
 
     do l = 0, ps%l_max
       do j = 1, ps%kbc
