@@ -17,8 +17,6 @@ AC_DEFUN([ACX_C_BUILTIN_EXPECT],[
       ],
       [
         AC_MSG_RESULT(no)
-        AC_DEFINE(__builtin_expect(a, b), (a),
-                  [Define a dummy __builtin_expect])
       ])
 ])
 
@@ -42,8 +40,6 @@ AC_DEFUN([ACX_C_BUILTIN_PREFETCH],[
       ],
       [
         AC_MSG_RESULT(no)
-        AC_DEFINE(__builtin_prefetch(a, b, c), [], 
-                  [Define a dummy __builtin_prefetch])
       ])
 ])
 
