@@ -829,7 +829,7 @@ contains
           fo(ii) = sum(op%w_re(1:nn, 1)  * fi(op%i(1:nn, ii)))
         end do
       else
-        call doperate(op%np, nn, op%w_re(1, 1), op%i(1,1), fi, fo)
+        call doperate(op%np, nn, op%w_re(1, 1), op%i(1,1), fi(1), fo(1))
       end if
 
     else
@@ -876,9 +876,15 @@ contains
       end if
     else
       if(op%const_w) then
-        do ii = 1, op%np
-          fo(ii) = sum(op%w_re(1:nn, 1)  * fi(op%i(1:nn, ii)))
-        end do
+
+        if(op_function == 0) then 
+          do ii = 1, op%np
+            fo(ii) = sum(op%w_re(1:nn, 1)  * fi(op%i(1:nn, ii)))
+          end do
+        else
+          call zoperate(op%np, nn, op%w_re(1, 1), op%i(1,1), fi(1), fo(1))
+        end if
+
       else
         do ii = 1, op%np
           fo(ii) = sum(op%w_re(1:nn, ii) * fi(op%i(1:nn, ii)))
