@@ -23,6 +23,7 @@
 #include <config.h>
 
 #define CACHELINE 8 //in doubles
+#define UNROLL    6
 
 /* If the __builtin_expect and __builtin_prefetch are not present (which
    should have be caught by the configure script, one needs  to define
@@ -34,54 +35,20 @@
 #define __builtin_prefetch(a, b, c)
 #endif
 
-
-
-static inline void doperate_fallback(const int np, const int n,
-				     const double * restrict w, 
-				     const int * opi, 
-				     const double * restrict fi, 
-				     double * restrict fo){
-  int i,j;
-  const int * restrict index;
-  
-  index = opi;
-
-  __builtin_prefetch (w, 0, 3);
-  __builtin_prefetch (w + CACHELINE, 0, 3);
-#if CACHELINE < 16
-  __builtin_prefetch (w + 2*CACHELINE, 0, 3);
-#endif
-
-  for(i = 0; i < np ; i++) {
-    
-    fo[i] = 0.0;
-    for(j = 0; j < n; j++) fo[i] += w[j] * fi[index[j]-1];
-    index += n;
-    
-  }
-
-}
-
 void FC_FUNC(doperate,DOPERATE)(const int * opnp, 
 				const int * opn, 
 				const double * restrict w, 
 				const int * opi, 
-				const double * restrict fi, 
+				const double * fi, 
 				double * restrict fo){
 
   const int n = opn[0];
   const int np = opnp[0];
 
-  int i, j;
+  int i, j, nm2;
   const int * restrict index;
-  register double a, b, c;
-
-  if( __builtin_expect((n-1)%3,0) ){
-    doperate_fallback(np, n, w, opi, fi, fo);
-    return;
-  }
-
-  index = opi;
+  const double * restrict mfi;
+  register double a;
 
   /* this instructs the compiler to brings the array w into the cache
      and keep it there */
@@ -91,22 +58,26 @@ void FC_FUNC(doperate,DOPERATE)(const int * opnp,
   __builtin_prefetch (w + 2*CACHELINE, 0, 3);
 #endif
 
+  index = opi;
+  mfi   = fi - 1;
+  nm2   = n - UNROLL + 1;
+
   for(i = 0; i < np; i++) {
+    a = w[0] * mfi[*index++];
 
-    a = 0.0 ; b = 0.0; c = 0.0;
-
-    for(j = 0; j < n-1; j += 3) {
-
-      a += w[j]   * fi[index[j  ]-1];
-      b += w[j+1] * fi[index[j+1]-1];
-      c += w[j+2] * fi[index[j+2]-1];
-
+    for(j = 1; j < nm2; j += UNROLL) {
+      a += w[j    ] * mfi[*index++];
+      a += w[j + 1] * mfi[*index++];
+      a += w[j + 2] * mfi[*index++];
+      a += w[j + 3] * mfi[*index++];
+      a += w[j + 4] * mfi[*index++];
+      a += w[j + 5] * mfi[*index++];
     }
 
-    fo[i] = a + b + c + w[n-1] * fi[index[n-1]-1];
+    for(; j < n; j++)
+      a += w[j] * mfi[*index++];
 
-    index += n;
-
+    fo[i] = a;
   }
 
 }
@@ -117,64 +88,22 @@ typedef struct {
   double im;
 } comp;
 
-static inline void zoperate_fallback(const int np, const int n,
-			      const double * restrict w, 
-			      const int * opi, 
-			      const comp * restrict fi, 
-			      comp * restrict fo){
-  int i,j;
-  const int * restrict index;
-
-  index = opi;
-
-  __builtin_prefetch (w, 0, 3);
-  __builtin_prefetch (w + CACHELINE, 0, 3);
-#if CACHELINE < 16
-  __builtin_prefetch (w + 2*CACHELINE, 0, 3);
-#endif
-
-  for(i = 0; i < np ; i++) {
-    
-    fo[i].re = 0.0;
-    fo[i].im = 0.0;
-
-    for(j = 0; j < n; j++) {
-
-      fo[i].re += w[j] * fi[(index[j]-1)].re;
-      fo[i].im += w[j] * fi[(index[j]-1)].im;
-
-    }
-
-    index += n;
-    
-  }
-
-}
-
 
 void FC_FUNC(zoperate,ZOPERATE)(const int * opnp, 
 				const int * opn, 
 				const double * restrict w, 
 				const int * opi, 
-				const comp * restrict fi, 
+				const comp * fi, 
 				comp * restrict fo){
 
   const int n = opn[0];
   const int np = opnp[0];
 
 
-  int i,j;
+  int i,j, nm2;
   const int * restrict index;
-
-  comp a, b, c;
-
-  if( __builtin_expect((n-1)%3,0) ){
-    zoperate_fallback(np, n, w, opi, fi, fo);
-    return;
-  }
-
-  index = opi;
-
+  const comp * restrict mfi;
+  register comp a;
 
   __builtin_prefetch (w, 0, 3);
   __builtin_prefetch (w + CACHELINE, 0, 3);
@@ -182,26 +111,34 @@ void FC_FUNC(zoperate,ZOPERATE)(const int * opnp,
   __builtin_prefetch (w + 2*CACHELINE, 0, 3);
 #endif
 
+  index = opi;
+  mfi   = fi - 1;
+  nm2   = n - UNROLL + 1;
+
   for(i = 0; i < np ; i++) {
-    
-    a.re = 0.0; a.im=0.0;
-    b.re = 0.0; b.im=0.0;
-    c.re = 0.0; c.im=0.0;
+    a.re = w[0] * mfi[*index  ].re;
+    a.im = w[0] * mfi[*index++].im;
 
-    for(j = 0; j < (n-1); j+=3) {
-
-      a.re += w[j] * fi[index[j]-1].re;
-      a.im += w[j] * fi[index[j]-1].im;
-      b.re += w[j+1] * fi[index[j+1]-1].re;
-      b.im += w[j+1] * fi[index[j+1]-1].im;
-      c.re += w[j+2] * fi[index[j+2]-1].re;
-      c.im += w[j+2] * fi[index[j+2]-1].im;
-
+    for(j = 1; j < nm2; j += UNROLL) {
+      a.re += w[j    ] * mfi[*index  ].re;
+      a.im += w[j    ] * mfi[*index++].im;
+      a.re += w[j + 1] * mfi[*index  ].re;
+      a.im += w[j + 1] * mfi[*index++].im;
+      a.re += w[j + 2] * mfi[*index  ].re;
+      a.im += w[j + 2] * mfi[*index++].im;
+      a.re += w[j + 3] * mfi[*index  ].re;
+      a.im += w[j + 3] * mfi[*index++].im;
+      a.re += w[j + 4] * mfi[*index  ].re;
+      a.im += w[j + 4] * mfi[*index++].im;
+      a.re += w[j + 5] * mfi[*index  ].re;
+      a.im += w[j + 5] * mfi[*index++].im;
+    }
+    for(; j < n; j++){
+      a.re += w[j] * mfi[*index  ].re;
+      a.im += w[j] * mfi[*index++].im;
     }
 
-    fo[i].re = a.re + b.re + c.re + w[n-1] * fi[index[n-1]-1].re;
-    fo[i].im = a.im + b.im + c.im + w[n-1] * fi[index[n-1]-1].im;
-    
-    index += n;
+    fo[i].re = a.re;
+    fo[i].im = a.im;
   }
 }

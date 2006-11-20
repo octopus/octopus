@@ -90,19 +90,19 @@ contains
 
     !%Variable OperateFunction
     !%Type integer
-    !%Default 1
+    !%Default c
     !%Section Mesh
     !%Description
     !% Which function use to apply the operators over the grid. This
-    !% is the function were octopus spend most of the calculation time.
+    !% is the function where octopus spends most of time.
     !%Option fortran 0
-    !% The standard plain fortran function. This is the default.
+    !% The standard plain fortran function.
     !%Option c 3
     !% The C version, using data prefetch directives and unrolled by hand.
     !%End
 
     if ( op_function == - 1) then
-      call loct_parse_int(check_inp('OperateFunction'), 0, op_function)
+      call loct_parse_int(check_inp('OperateFunction'), 3, op_function)
     end if
 
     call pop_sub()
