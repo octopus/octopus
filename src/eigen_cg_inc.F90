@@ -37,7 +37,7 @@ subroutine X(eigen_solver_cg2) (gr, st, h, pre, tol, niter, converged, diff, reo
 
   R_TYPE :: es(2), a0, b0, gg, gg0, gg1, gamma, theta, norma
   FLOAT :: cg0, e0, res
-  integer  :: ik, moved, p, j, iter, maxter, conv, conv_
+  integer  :: ik, moved, p, j, iter, maxter, conv, conv_, idim
   logical  :: reord = .true., verbose_
 
   call push_sub('eigen_cg.eigen_solver_cg2')
@@ -100,7 +100,11 @@ subroutine X(eigen_solver_cg2) (gr, st, h, pre, tol, niter, converged, diff, reo
         es(1) = X(states_dotp) (gr%m, st%d%dim, st%X(psi)(:,:, p, ik), g)
         es(2) = X(states_dotp) (gr%m, st%d%dim, st%X(psi)(:,:, p, ik), ppsi)
         es(1) = es(1)/es(2)
-        g(1:NP, 1:st%d%dim) = g(1:NP, 1:st%d%dim) - es(1)*ppsi(1:NP, 1:st%d%dim)
+
+        !this does: g(1:NP, 1:st%d%dim) = g(1:NP, 1:st%d%dim) - es(1)*ppsi(1:NP, 1:st%d%dim)
+        do idim = 1, st%d%dim
+          call lalg_axpy(NP, -es(1), ppsi(:, idim), g(:, idim))
+        end do
 
         ! Orthogonalize to lowest eigenvalues (already calculated)
         if(p > 1) call X(states_gram_schmidt)(p - 1, gr%m, st%d%dim, st%X(psi)(:, :, :, ik), g, &
@@ -122,7 +126,11 @@ subroutine X(eigen_solver_cg2) (gr, st, h, pre, tol, niter, converged, diff, reo
         ! Starting or following iterations...
         if(iter .eq. 1) then
           gg0 = gg
-          cg (1:NP, 1:st%d%dim) = g(1:NP, 1:st%d%dim)
+
+          !this does: cg(1:NP, 1:st%d%dim) = g(1:NP, 1:st%d%dim)
+          do idim = 1, st%d%dim
+            call lalg_copy(NP, g(:,idim), cg(:, idim))
+          end do
         else
           !gamma = gg/gg0        ! (Fletcher-Reeves)
           gamma = (gg - gg1)/gg0   ! (Polack-Ribiere)
@@ -131,7 +139,11 @@ subroutine X(eigen_solver_cg2) (gr, st, h, pre, tol, niter, converged, diff, reo
           cg(1:NP, 1:st%d%dim) = cg(1:NP, 1:st%d%dim) + g(1:NP, 1:st%d%dim)
 
           norma = gamma*cg0*sin(theta)
-          cg(1:NP, 1:st%d%dim) = cg(1:NP, 1:st%d%dim) - norma * st%X(psi)(1:NP, 1:st%d%dim, p, ik)
+
+          !this does: cg(1:NP, 1:st%d%dim) = cg(1:NP, 1:st%d%dim) - norma * st%X(psi)(1:NP, 1:st%d%dim, p, ik)
+          do idim = 1, st%d%dim 
+            call lalg_axpy(NP, -norma, st%X(psi)(:, idim, p, ik), cg(:, idim))
+          end do
         end if
 
         ! cg contains now the conjugate gradient

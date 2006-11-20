@@ -41,6 +41,12 @@ subroutine X(project)(mesh, p, n_projectors, psi, ppsi, periodic, ik)
   R_TYPE :: tmp
 #endif
 
+  !allocate an array big enough for all projectors
+  n_s = maxval(p(1:n_projectors)%n_points_in_sphere)
+
+  ALLOCATE( lpsi(n_s), n_s)
+  ALLOCATE(plpsi(n_s), n_s)
+  
   call push_sub('epot_inc.project')
 
   ! index labels the atom
@@ -51,11 +57,6 @@ subroutine X(project)(mesh, p, n_projectors, psi, ppsi, periodic, ik)
     if(p(ip)%iatom .ne. k) then
       if(ip.ne.1) ppsi(p(ip-1)%jxyz(1:n_s)) = ppsi(p(ip-1)%jxyz(1:n_s)) + plpsi(1:n_s)
       n_s = p(ip)%n_points_in_sphere
-
-      if(allocated(lpsi))  deallocate(lpsi, stat = j)
-      if(allocated(plpsi)) deallocate(plpsi, stat = j)
-      ALLOCATE( lpsi(n_s), n_s)
-      ALLOCATE(plpsi(n_s), n_s)
 
       lpsi(1:n_s)  = psi(p(ip)%jxyz(1:n_s))*mesh%vol_pp(p(ip)%jxyz(1:n_s))
       if(periodic) lpsi(1:n_s)  = lpsi(1:n_s) * p(ip)%phases(1:n_s, ik)
