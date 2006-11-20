@@ -56,7 +56,6 @@ module states_m
     states_copy,                    &
     states_generate_random,         &
     states_fermi,                   &
-    states_calculate_multipoles,    &
     states_eigenvalues_sum,         &
     states_write_eigenvalues,       &
     states_write_dos,               &
@@ -945,67 +944,6 @@ contains
 
     call pop_sub()
   end subroutine states_fermi
-
-
-  ! -----------------------------------------------------------------------------
-  ! This routine calculates the multipoles of the *electronic* charge
-  ! distribution, defined in the following way:
-  ! multipole(1, is) is the electronic charge (defined to be positive; integral
-  !   of the electronic density.
-  ! multipole(2:4, is) contains the dipole: integral of the electronic density
-  !   times x, y or z.
-  ! multipole(5:9, is) contains the quadrupole, defined in the usual way using
-  !   the spherical harmonics: multipole(5, is) = Integral [ rho * Y_{2,-2} ],
-  !   multipole(6, is) = Integral [ rho * Y_{2, -1} ].
-  ! And so on.
-  ! -----------------------------------------------------------------------------
-  subroutine states_calculate_multipoles(gr, st, lmax, multipole)
-    type(grid_t),   intent(in)  :: gr
-    type(states_t), intent(in)  :: st
-    integer,        intent(in)  :: lmax
-    FLOAT,          intent(out) :: multipole(:, :) ! multipole((lmax + 1)**2, st%d%nspin)
-
-    integer :: i, is, l, lm, add_lm
-    FLOAT :: x(MAX_DIM), r, ylm
-    FLOAT, allocatable :: f(:)
-
-    call push_sub('states.states_calculate_multipoles')
-
-    ALLOCATE(f(NP), NP)
-    f = M_ZERO
-
-    do is = 1, st%d%nspin
-
-      f(1:NP) = st%rho(1:NP, is)
-      multipole(1, is) = dmf_integrate(gr%m, f)
-
-      if(lmax>0) then
-        do i = 1, 3
-          f(1:NP) = st%rho(1:NP, is)*gr%m%x(1:NP, i)
-          multipole(i+1, is) = dmf_integrate(gr%m, f)
-        end do
-      end if
-
-      if(lmax>1) then
-        add_lm = 5
-        do l = 2, lmax
-          do lm = -l, l
-            do i = 1, NP
-              call mesh_r(gr%m, i, r, x=x)
-              ylm = loct_ylm(x(1), x(2), x(3), l, lm)
-              f(i) = st%rho(i, is) * ylm * r**l
-            end do
-            multipole(add_lm, is) = dmf_integrate(gr%m, f)
-            add_lm = add_lm + 1
-          end do
-        end do
-      end if
-
-    end do
-
-    deallocate(f)
-    call pop_sub()
-  end subroutine states_calculate_multipoles
 
 
   ! ---------------------------------------------------------

@@ -1,0 +1,154 @@
+#!<PERL>
+
+# First find out where we are
+if(-d 'td.general'){
+  chdir 'td.general';
+}
+
+# Find out if we have all the required files
+-f '../inp' or die 'Could not find inp file';
+(-f 'projections' || -f 'projections.1') or die 'Could not find projections';
+die "directory 'work-proj' already exists. Please delete!" if(-f "work-proj");
+
+# read headers of files
+my $file, @files = ();
+foreach $file ('projections', 'projections.1', 'projections.2', 'projections.3'){
+  if(-f $file){
+    my %finfo;
+    read_header($file, \%finfo);
+    push @files, \%finfo;
+  }
+}
+
+# create working directory
+mkdir "work_proj";
+
+# for every electron-hole pair
+for(my $j=0; $j<$files[0]->{"npairs"}; $j++){
+  my $ii, $aa;
+
+  foreach $file (@files){
+    my $ll;
+
+    # handle header
+    open(IN, "<".$file->{"filename"});
+    <IN>;
+    while(($ll=<IN>) && ($ll!~/######################/)){};
+
+    open(OUT, ">work_proj/multipoles$ext");
+    print OUT $file->{"header"};
+
+    # find out the column numbers
+    my $ii2ii, $ii2aa;
+    $ii = $file->{"ii"}[$j];
+    $aa = $file->{"aa"}[$j];
+    $ii2ii = $ii2aa = -1;
+
+    my $n = 0;
+    for(my $k=$file->{"st_s"}; $k<=$file->{"st_e"}; $k++){
+      for(my $l=$file->{"ust_s"}; $l<=$file->{"ust_e"}; $l++, $n++){
+	$ii2aa = $n if($ii==$k && $aa==$l);
+	$ii2ii = $n if($ii==$k && $ii==$l);
+      }
+    }
+    die "internal error" if($ii2aa<0 || $ii2ii<0);
+    $ii2aa = 3 + $ii2aa*2;
+    $ii2ii = 3 + $ii2ii*2;
+
+    # print partial-multipoles
+    my $occ = $file->{"occ"}[0][$ii-1];
+    while($ll=<IN>){
+      my @data = split(/ +/, $ll);
+      printf OUT "%8d%20.12e%20.12e", $data[1], $data[2], $occ;
+      for(my $dir=0; $dir<3; $dir++){
+	my $me_re = $file->{"me_re"}[$j][$dir];
+	printf OUT "%20.12e", $occ * $me_re * 2.0 *
+	  ($data[$ii2ii]*$data[$ii2aa] + $data[$ii2ii+1]*$data[$ii2aa+1]);
+      }
+      printf OUT "\n";
+    }
+    close(IN);
+    close(OUT);
+  }
+
+  # some information
+  print "Transition: $ii -> $aa\n";
+
+  # process partial-multipoles file
+  `cd work_proj; ln -sf ../../inp .; <BINDIR>/oct-cross-section`;
+  $outfile = sprintf("%04d_%04d", $ii, $aa);
+
+  # move partial spectra
+  foreach $file (@files){
+    rename("work_proj/cross_section_vector".$file->{"extension"}, $outfile."_vector".$file->{"extension"});
+  }
+  -f "work_proj/cross_section_tensor" && rename("work_proj/cross_section_tensor", $outfile."_tensor");
+}
+
+# clean-up workdir
+`rm -rf work_proj`;
+
+#--------------------------------
+sub read_header(){
+  my ($filename, $ref) = @_;
+
+  open(IN, "<$filename") || die "Could not open '$filename'\n";
+
+  $$ref{"filename"} = $filename;
+
+  $$ref{"extension"} = $file;
+  $$ref{"extension"} =~ s/projections//;
+
+  $$ref{"header"}  = <IN>;
+  $$ref{"header"} .= <IN>;
+  $$ref{"header"} .= <IN>;
+  $$ref{"header"} .= "# lmax          1\n";
+
+  my $ll;
+  while(($ll=<IN>) && ($ll !~ /^#%/)){
+    $$ref{"header"} .= $ll;
+  }
+
+  my @data;
+
+  @data = split(/ +/, <IN>);
+  $$ref{"nik"}   = int($data[2]);
+  @data = split(/ +/, <IN>);
+  $$ref{"st_s"}  = int($data[2]);
+  $$ref{"st_e"}  = int($data[3]);
+  @data = split(/ +/, <IN>);
+  $$ref{"ust_s"} = int($data[2]);
+  $$ref{"ust_e"} = int($data[3]);
+
+  for(my $k=0; $k<$$ref{"nik"}; $k++){
+    @data = split(/ +/, <IN>);
+    for(my $l=0; $l<=$#data-2; $l++){
+      $$ref{"occ"}[$k][$l] = $data[$l+2];
+    }
+  }
+
+  # get the labels
+  @data = split(/ +/, <IN>);
+  $$ref{"npairs"} = 0;
+  for(my $j=0; $data[3 + $j*10] eq 'Re'; $j++){
+    $$ref{"ii"}[$j] = $data[5 + $j*10];
+    $$ref{"aa"}[$j] = $data[7 + $j*10];
+    $$ref{"aa"}[$j] =~ s/}//;
+
+    $$ref{"npairs"}++;
+  }
+
+  # get the matrix elements
+  for(my $dir=0; $dir<3; $dir++){
+    @data = split(/ +/, <IN>);
+    for(my $j=0; $j<$$ref{"npairs"}; $j++){
+      $$ref{"me_re"}[$j][$dir] = $data[3 + 2*$j];
+      $$ref{"me_im"}[$j][$dir] = $data[4 + 2*$j];
+    }
+  }
+
+  while(($ll=<IN>) && ($ll!~/######################/)){};
+  $$ref{"header"} .= $ll;
+
+  close(IN);
+}

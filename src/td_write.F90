@@ -23,6 +23,7 @@
 module td_write_m
   use datasets_m
   use excited_states_m
+  use functions_m
   use geometry_m
   use global_m
   use grid_m
@@ -196,8 +197,11 @@ contains
         !%Default 1
         !%Section Time Dependent::TD Output
         !%Description
-        !% Maximum multi-pole of the density output to the file @code{td.general/multipoles} 
-        !% during a time-dependent simulation. Must be 0 &lt; <tt>TDDipoleLmax &lt; 5</tt>.
+        !% Only output projections to states above TDProjStateStart. Usually one is only interested
+        !% in particle-hole projections around the HOMO, so there is no need to calculate (and store)
+        !% the projections of all static onto all TD states. This sets a lower limit. The upper limit
+        !% is set by the number of states in the propagation and the number of uncoccupied states
+        !% available
         !%End
         call loct_parse_int(check_inp('TDProjStateStart'), w%gs_st%st_start, w%gs_st%st_start)
       end if
@@ -332,7 +336,7 @@ contains
     if(w%out_angular.ne.0)  call td_write_angular(w%out_angular, gr, st, kick, i)
     if(w%out_spin.ne.0)     call td_write_spin(w%out_spin, gr, st, i)
     if(w%out_magnets.ne.0)  call td_write_local_magnetic_moments(w%out_magnets, gr, st, geo, w%lmm_r, i)
-    if(w%out_proj.ne.0)     call td_write_proj(w%out_proj, gr, st, w%gs_st, kick, i)
+    if(w%out_proj.ne.0)     call td_write_proj(w%out_proj, gr, geo, st, w%gs_st, kick, i)
     if(w%out_coords.ne.0)   call td_write_coordinates(w%out_coords, gr, geo, i)
     if(w%out_populations.ne.0) &
       call td_write_populations(w%out_populations, gr%m, st, w%gs_st, w%n_excited_states, w%excited_st, dt, i)
@@ -683,7 +687,9 @@ contains
 
     ALLOCATE(nuclear_dipole(1:3), 3)
     ALLOCATE(multipole((lmax + 1)**2, st%d%nspin), (lmax + 1)**2*st%d%nspin)
-    call states_calculate_multipoles(gr, st, lmax, multipole)
+    do is = 1, st%d%nspin
+      call df_multipoles(gr%m, st%rho(:,is), lmax, multipole(:,is))
+    end do
     call geometry_dipole(geo, nuclear_dipole)
     do is = 1, st%d%nspin
       multipole(2:4, is) = nuclear_dipole(1:3) - multipole(2:4, is)
@@ -1026,13 +1032,14 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine td_write_proj(out_proj, gr, st, gs_st, kick, iter)
-    C_POINTER,      intent(in) :: out_proj
-    type(grid_t),   intent(in) :: gr
-    type(states_t), intent(in) :: st
-    type(states_t), intent(in) :: gs_st
-    type(kick_t),   intent(in) :: kick
-    integer,        intent(in) :: iter
+  subroutine td_write_proj(out_proj, gr, geo, st, gs_st, kick, iter)
+    C_POINTER,        intent(in) :: out_proj
+    type(grid_t),     intent(in) :: gr
+    type(geometry_t), intent(in) :: geo
+    type(states_t),   intent(in) :: st
+    type(states_t),   intent(in) :: gs_st
+    type(kick_t),     intent(in) :: kick
+    integer,          intent(in) :: iter
 
     CMPLX, allocatable :: projections(:,:,:)
     character(len=80) :: aux
@@ -1052,7 +1059,7 @@ contains
         call write_iter_string(out_proj, aux)
         call write_iter_nl(out_proj)
 
-        write(aux, '(a,2i8)') "#  st  ", st%st_start, st%st_end
+        write(aux, '(a,2i8)') "#  st  ", gs_st%st_start, st%st_end
         call write_iter_string(out_proj, aux)
         call write_iter_nl(out_proj)
 
@@ -1062,7 +1069,7 @@ contains
 
         do ik = 1, st%d%nik
           call write_iter_string(out_proj, "# w(ik)*occ(ist,ik)  ")
-          do ist = 1, st%nst
+          do ist = gs_st%st_start, st%nst
             call write_iter_double(out_proj, st%d%kweights(ik)*st%occ(ist, ik), 1)
           end do
           call write_iter_nl(out_proj)
@@ -1070,7 +1077,7 @@ contains
 
         call write_iter_header_start(out_proj)
         do ik = 1, st%d%nik
-          do ist = 1, st%nst
+          do ist = gs_st%st_start, st%nst
             do uist = gs_st%st_start, gs_st%st_end
               write(aux, '(i4,a,i4)') ist, ' -> ', uist
               call write_iter_header(out_proj, 'Re {'//trim(aux)//'}')
@@ -1082,7 +1089,7 @@ contains
 
       end if
 
-      ALLOCATE(projections(st%nst, gs_st%st_start:gs_st%st_end, st%d%nik), st%nst*gs_st%nst*st%d%nik)
+      ALLOCATE(projections(gs_st%st_start:st%nst, gs_st%st_start:gs_st%st_end, st%d%nik), st%nst*gs_st%nst*st%d%nik)
       do idir = 1, 3
         projections(:,:,:) = M_Z0
         call dipole_matrix_elements(idir)
@@ -1092,7 +1099,7 @@ contains
         call write_iter_header(out_proj, aux)
         if(mpi_grp_is_root(mpi_world)) then
           do ik = 1, st%d%nik
-            do ist = 1, st%nst
+            do ist = gs_st%st_start, st%nst
               do uist = gs_st%st_start, gs_st%st_end
                 call write_iter_double(out_proj,  real(projections(ist, uist, ik)), 1)
                 call write_iter_double(out_proj, aimag(projections(ist, uist, ik)), 1)
@@ -1111,14 +1118,14 @@ contains
 
     end if
 
-    ALLOCATE(projections(st%nst, gs_st%st_start:gs_st%st_end, st%d%nik), st%nst*gs_st%nst*st%d%nik)
+    ALLOCATE(projections(gs_st%st_start:st%nst, gs_st%st_start:gs_st%st_end, st%d%nik), st%nst*gs_st%nst*st%d%nik)
     projections(:,:,:) = M_Z0
     call calc_projections()
 
     if(mpi_grp_is_root(mpi_world)) then
       call write_iter_start(out_proj)
       do ik = 1, st%d%nik
-        do ist = 1, st%nst
+        do ist = gs_st%st_start, st%nst
           do uist = gs_st%st_start, gs_st%st_end
             call write_iter_double(out_proj,  real(projections(ist, uist, ik)), 1)
             call write_iter_double(out_proj, aimag(projections(ist, uist, ik)), 1)
@@ -1143,7 +1150,7 @@ contains
 #endif
 
       do ik = 1, st%d%nik
-        do ist = st%st_start, st%st_end
+        do ist = max(gs_st%st_start, st%st_start), st%st_end
           do uist = gs_st%st_start, gs_st%st_end
             projections(ist, uist, ik) = &
               zstates_dotp(gr%m, st%d%dim, st%zpsi(:, :, ist, ik), gs_st%zpsi(:, :, uist, ik))
@@ -1153,7 +1160,7 @@ contains
       
 #if defined(HAVE_MPI)
       do ik = 1, st%d%nik
-        do ist = 1, st%nst
+        do ist = gs_st%st_start, st%nst
           k = st%node(ist)
           do uist = gs_st%st_start, gs_st%st_end
             call MPI_Bcast(projections(ist, uist, ik), 1, MPI_CMPLX, k, st%mpi_grp%comm, mpi_err)
@@ -1163,30 +1170,33 @@ contains
 #endif
     end subroutine calc_projections
 
+
+    ! ---------------------------------------------------------
     subroutine dipole_matrix_elements(dir)
       integer, intent(in) :: dir
 
       integer :: uist, ist, ik, idim
+      FLOAT   :: n_dip(MAX_DIM)
       CMPLX, allocatable :: xpsi(:,:)
 #if defined(HAVE_MPI)
       integer :: k
 #endif
 
+      call geometry_dipole(geo, n_dip)
+
       ALLOCATE(xpsi(NP, st%d%dim), NP*st%d%dim)
       
       do ik = 1, st%d%nik
-        do ist = st%st_start, st%st_end
+        do ist = max(gs_st%st_start, st%st_start), st%st_end
           do uist = gs_st%st_start, gs_st%st_end
             
             do idim = 1, st%d%dim
               xpsi(1:NP, idim) = gr%m%x(1:NP, dir) * gs_st%zpsi(1:NP, idim, uist, ik)
             end do
 
-            projections(ist, uist, ik) = &
+            projections(ist, uist, ik) = n_dip(dir) - &
               zstates_dotp(gr%m, st%d%dim, st%zpsi(:, :, ist, ik), xpsi(:, :))
 
-            ! include the occupations in 
-            projections(ist, uist, ik) = projections(ist, uist, ik)
           end do
         end do
       end do
@@ -1195,7 +1205,7 @@ contains
 
 #if defined(HAVE_MPI)
       do ik = 1, st%d%nik
-        do ist = 1, st%nst
+        do ist = gs_st%st_start, st%nst
           k = st%node(ist)
           do uist = gs_st%st_start, gs_st%st_end
             call MPI_Bcast(projections(ist, uist, ik), 1, MPI_CMPLX, k, st%mpi_grp%comm, mpi_err)

@@ -46,7 +46,7 @@ module system_m
     system_h_setup
 
   type system_t
-    type(geometry_t)            :: geo
+    type(geometry_t)          :: geo
     type(grid_t),     pointer :: gr    ! the mesh
     type(states_t),   pointer :: st    ! the states
     type(v_ks_t)              :: ks    ! the Kohn-Sham potentials
@@ -147,9 +147,7 @@ contains
       deallocate(s%st); nullify(s%st)
     end if
 
-!!!!NEW
     call geometry_end(s%geo)
-!!!!ENDOFNEW
 
     call grid_end(s%gr)
     deallocate(s%gr);  nullify(s%gr)

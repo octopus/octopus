@@ -26,8 +26,10 @@ module functions_m
   use derivatives_m
   use global_m
   use lib_basic_alg_m
+  use lib_oct_m
   use lib_oct_parser_m
   use mesh_m
+  use mesh_function_m
   use messages_m
   use simul_box_m
   use varinfo_m
@@ -51,6 +53,8 @@ module functions_m
     df_gradient, zf_gradient,   &
     df_divergence,              &
     zf_divergence,              &
+    df_multipoles,              &
+    zf_multipoles,              &
     df_curl, zf_curl,           &
     df_angular_momentum,        &
     zf_angular_momentum,        &

@@ -104,6 +104,20 @@ if test $ac_cv_build_python = yes; then
 fi
 AM_CONDITIONAL([ENABLE_PYTHON], [test $ac_cv_build_python = yes])
 
+dnl build/install perl bits unless --disable-perl is used
+AC_ARG_ENABLE([perl],
+	      AS_HELP_STRING([--disable-perl], [don't build/install perl components]),
+	      [ac_cv_build_perl=$enableval],
+	      [ac_cv_build_perl=yes])
+if test $ac_cv_build_perl = yes; then
+  AC_PATH_PROG([PERL], [perl], [], [])
+  if test -z "$PERL" ; then
+     AC_MSG_WARN([perl not found. Disabling perl parts])
+     ac_cv_build_perl="no"
+  fi
+fi
+AM_CONDITIONAL([ENABLE_PERL], [test $ac_cv_build_perl = yes])
+
 
 dnl try to find out what is the default FORTRAN 90 compiler
 dnl note that this has to be done after the AC_ARG_ENABLE(mpi...)
@@ -253,6 +267,7 @@ AC_CONFIG_FILES([Makefile
   liboct_parser/Makefile
   liboct/Makefile
   src/Makefile
+  perl/Makefile
   doc/Makefile
   doc/pdf/Makefile
   doc/html/Makefile

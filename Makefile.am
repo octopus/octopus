@@ -25,9 +25,13 @@ if ENABLE_PYTHON
   PYTHON_DIR = python
 endif
 
+if ENABLE_PERL
+  PERL_DIR = perl
+endif
+
 SUBDIRS =        \
 	external_libs libstring_f liboct_parser liboct libxc \
-	src doc share testsuite $(PYTHON_DIR)
+	src doc share testsuite $(PYTHON_DIR) $(PERL_DIR)
 
 EXTRA_DIST =     \
 	TODO build/*.pl build/*.in debian/*
