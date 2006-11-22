@@ -796,7 +796,7 @@ contains
     end if
     if(status == NF90_NOERR) then
       call transpose3(aimag(c%RS), x)
-      call write_variable(ncid, data_id, status, x)
+      call write_variable(ncid, data_im_id, status, x)
       call ncdf_error('nf90_put_var', status, filename, ierr)
     end if
 #else
