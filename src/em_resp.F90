@@ -195,7 +195,7 @@ contains
           if(ifactor > 1) then 
             !if this frequency is zero and this is not the first
             !iteration we do not have to do anything
-            if( nomega > 1 .and. freq_factor(ifactor) == M_ZERO) then 
+            if( iomega > 1 .and. freq_factor(ifactor) == M_ZERO) then 
               have_to_calculate = .false. 
             end if
             
@@ -563,10 +563,12 @@ contains
 
     subroutine pol_output()
       FLOAT :: cross(MAX_DIM, MAX_DIM), crossp(MAX_DIM, MAX_DIM)
-      FLOAT :: average, anisotropy, bpar(1:MAX_DIM), bper(1:MAX_DIM) 
+      FLOAT :: average, anisotropy
+      CMPLX :: bpar(1:MAX_DIM), bper(1:MAX_DIM), bk(1:MAX_DIM)
       integer :: iunit, ist, ivar, ik, sigma
       CMPLX   :: proj
       FLOAT   :: msp
+      character, parameter :: axis(1:3) = (/ 'x', 'y', 'z' /)
 
 
       !CREATE THE DIRECTORY FOR EACH FREQUENCY
@@ -732,7 +734,7 @@ contains
 
         if(status%ok) then 
 
-          write(iunit, '(2a)', advance='no') '#hyperpolarizability tensor [', &
+          write(iunit, '(2a)', advance='no') 'First hyperpolarizability tensor: beta [', &
                trim(units_out%length%abbrev)
           write(iunit, '(a,i1)', advance='no') '^', 5
           write(iunit, '(a)') ']'
@@ -741,10 +743,12 @@ contains
             write(iunit, '(a)') 'WARNING: Hyperpolarizability has not been tested for spin polarized systems'
           end if
 
+          write(iunit, '()')
+
           do i = 1, NDIM
             do j = 1, NDIM
               do k = 1, NDIM
-                write(iunit,'(3i2,e20.8,e20.8)') i, j, k, &
+                write(iunit,'(a,e20.8,e20.8)') 'beta '//axis(i)//axis(j)//axis(k)//' ', &
                      real(beta(i, j, k))/units_out%length%factor**(5), aimag(beta(i, j, k))/units_out%length%factor**(5)
               end do
             end do
@@ -757,17 +761,33 @@ contains
 
             do i = 1, NDIM
               do j = 1, NDIM
-                bpar(i) = bpar(i) + real(beta(i, j, j) + beta(j, i, j) + beta(j, j, i))
-                bper(i) = bper(i) + real(M_TWO*beta(i, j, j) - M_THREE*beta(j, i, j) + M_TWO*beta(j, j, i))
+                bpar(i) = bpar(i) + beta(i, j, j) + beta(j, i, j) + beta(j, j, i)
+                bper(i) = bper(i) + M_TWO*beta(i, j, j) - M_THREE*beta(j, i, j) + M_TWO*beta(j, j, i)
               end do
             end do
 
+            write(iunit, '()')
+
             bpar = bpar / (M_FIVE * units_out%length%factor**(5))
             bper = bper / (M_FIVE * units_out%length%factor**(5))
+            bk(1:NDIM) = M_THREE*M_HALF*(bpar(1:NDIM) - bper(1:NDIM))
+            
+            do i = 1, NDIM
+              write(iunit, '(a, 2e20.8)') 'beta // '//axis(i), real(bpar(i)), aimag(bpar(i))
+            end do
 
-            write(iunit, '(a, 3e20.8)') 'beta parallel     ', bpar(1:NDIM)
-            write(iunit, '(a, 3f20.8)') 'beta perpendicular', bper(1:NDIM)
-            write(iunit, '(a, 3f20.8)') 'beta K            ', M_THREE*M_HALF*(bpar(1:NDIM) - bper(1:NDIM))
+            write(iunit, '()')
+            
+            do i = 1, NDIM
+              write(iunit, '(a, 2e20.8)') 'beta _L '//axis(i), real(bper(i)), aimag(bper(i))
+            end do
+
+            write(iunit, '()')
+
+            do i = 1, NDIM
+              write(iunit, '(a, 2e20.8)') 'beta  k '//axis(i), real(bk(i)), aimag(bk(i))
+            end do
+
 
           endif
 
