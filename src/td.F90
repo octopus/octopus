@@ -472,7 +472,7 @@ contains
       integer :: i, iunit, record_length
       call push_sub('td.td_read_coordinates')
 
-      record_length = 100 + 3*geo%natoms*3*20
+      record_length = 28 + 3*geo%natoms*3*20
       call io_assign(iunit)
       open(unit = iunit, file = 'td.general/coordinates', &
         action='read', status='old', recl = record_length)
@@ -487,7 +487,7 @@ contains
       do i = 0, td%iter - 1
         read(iunit, *) ! skip previous iterations... sorry, but no seek in Fortran
       end do
-      read(iunit, '(8x)', advance='no') ! skip the time index.
+      read(iunit, '(28x)', advance='no') ! skip the time index.
 
       do i = 1, geo%natoms
         read(iunit, '(3es20.12)', advance='no') geo%atom(i)%x(1:NDIM)
