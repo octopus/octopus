@@ -22,7 +22,7 @@
 
 #include <config.h>
 
-#define CACHELINE 8 //in doubles
+#define CACHELINE 64 
 #define UNROLL    6
 
 /* If the __builtin_expect and __builtin_prefetch are not present (which
@@ -34,6 +34,8 @@
 #if !defined(HAVE_BUILTIN_PREFETCH)
 #define __builtin_prefetch(a, b, c)
 #endif
+
+#include "operate_vec.c"
 
 void FC_FUNC(doperate,DOPERATE)(const int * opnp, 
 				const int * opn, 
@@ -53,9 +55,9 @@ void FC_FUNC(doperate,DOPERATE)(const int * opnp,
   /* this instructs the compiler to brings the array w into the cache
      and keep it there */
   __builtin_prefetch (w, 0, 3);
-  __builtin_prefetch (w + CACHELINE, 0, 3);
-#if CACHELINE < 16
-  __builtin_prefetch (w + 2*CACHELINE, 0, 3);
+  __builtin_prefetch (w + CACHELINE/8, 0, 3);
+#if CACHELINE < 128
+  __builtin_prefetch (w + 2*CACHELINE/8, 0, 3);
 #endif
 
   index = opi;
@@ -82,6 +84,7 @@ void FC_FUNC(doperate,DOPERATE)(const int * opnp,
 
 }
 
+#ifndef USE_VECTORS
 
 typedef struct {
   double re;
@@ -106,9 +109,9 @@ void FC_FUNC(zoperate,ZOPERATE)(const int * opnp,
   register comp a;
 
   __builtin_prefetch (w, 0, 3);
-  __builtin_prefetch (w + CACHELINE, 0, 3);
-#if CACHELINE < 16
-  __builtin_prefetch (w + 2*CACHELINE, 0, 3);
+  __builtin_prefetch (w + CACHELINE/8, 0, 3);
+#if CACHELINE < 128
+  __builtin_prefetch (w + 2*CACHELINE/8, 0, 3);
 #endif
 
   index = opi;
@@ -142,3 +145,4 @@ void FC_FUNC(zoperate,ZOPERATE)(const int * opnp,
     fo[i].im = a.im;
   }
 }
+#endif

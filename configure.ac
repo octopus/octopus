@@ -32,17 +32,24 @@ AC_PREFIX_DEFAULT([/opt/etsf])
 AC_CANONICAL_HOST
 
 # Checks for programs.
-AC_PROG_CC
 AC_PROG_INSTALL
 AC_PROG_LN_S
 AC_PROG_MAKE_SET
 AC_PROG_RANLIB
 AC_PROG_YACC
+AC_PROG_CC
+
+# optimizations extensions supported by the compiler
+AC_C_INLINE
+AC_C_RESTRICT
+ACX_C_BUILTIN_EXPECT
+ACX_C_BUILTIN_PREFETCH
+ACX_GCC_VECTORS
 
 # Checks for header files.
 AC_HEADER_DIRENT
 AC_HEADER_STDC
-AC_CHECK_HEADERS([fcntl.h float.h locale.h malloc.h stddef.h stdlib.h string.h strings.h sys/ioctl.h sys/time.h termios.h unistd.h signal.h])
+AC_CHECK_HEADERS([fcntl.h float.h locale.h malloc.h stddef.h stdlib.h string.h strings.h sys/ioctl.h sys/time.h termios.h unistd.h signal.h emmintrin.h])
 AC_FUNC_ALLOCA
 
 # Checks for typedefs, structures, and compiler characteristics.
@@ -50,9 +57,6 @@ AC_C_CONST
 AC_TYPE_PID_T
 AC_TYPE_SIZE_T
 AC_HEADER_TIME
-ACX_C_BUILTIN_EXPECT
-ACX_C_BUILTIN_PREFETCH
-AC_C_RESTRICT 
 
 # Checks for library functions.
 AC_FUNC_GETPGRP
@@ -62,11 +66,16 @@ AC_FUNC_STAT
 AC_FUNC_VPRINTF
 AC_CHECK_FUNCS([getcwd gettimeofday mkdir pow sqrt strcasecmp strdup \
 strerror strncasecmp strndup uname tcgetpgrp scandir alphasort \
-sigaction malloc realloc opendir readdir closedir strchr strtod assert])
+sigaction malloc realloc opendir readdir closedir strchr strtod assert \
+posix_memalign])
+ACX_MALLOC_ALIGNMENT
+ACX_FAKE_MALLOC
 
 # Checks for size of pointer
 ACX_POINTER_SIZE
 AC_DEFINE_UNQUOTED(C_POINTER, [integer(${ac_pointersize})], [The type of a C pointer])
+
+
 
 dnl ============================================================================
 dnl This part of the configuration file tries to sort out what needs to be built.

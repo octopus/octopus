@@ -16,3 +16,5 @@ DISTCLEANFILES = Makefile.in
 
 config.h: ../config.h
 	ln -sf ../config.h .
+
+operate.c: operate_vec.c
