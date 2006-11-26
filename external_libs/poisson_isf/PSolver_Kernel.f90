@@ -847,125 +847,125 @@ end subroutine check_symmetry
 !!
 !! SOURCE
 !!
-subroutine test_kernel(n01,n02,n03,nfft1,nfft2,nfft3,&
-     hgrid,karray,rhopot)
-  implicit none
-  !Arguments
-  integer :: n01,n02,n03,nfft1,nfft2,nfft3
-  real(8) :: hgrid
-  real(8), dimension(nfft1/2+1,nfft2/2+1,nfft3/2+1) :: karray
-  real(8), dimension(n01,n02,n03) :: rhopot
-  !Local variables
-  real(8) :: a_gauss,a2
-  real(8) :: rhotot,shft1,shft2,shft3,ehart
-  real(8) :: pi,x1,x2,x3,r,r2,factor,derf,max_diff,diff
-  integer :: i1,i2,i3,ii1,ii2,ii3
-  
-  a_gauss=4.d0*hgrid
-  a2 = a_gauss**2
-
-  write(*,*) 'test_kernel, dim kernel',nfft1/2+1,nfft2/2+1,nfft3/2+1
-  
-  !Shift the center of the Gaussian 
-  !away from central grid point to break symmetries
-  !shft1=1.3d0*hgrid
-  !shft2=0.5d0*hgrid
-  !shft3=0.1d0*hgrid
-  shft1=0.d0
-  shft2=0.d0
-  shft3=0.d0
-  
-  !Initialisation
-  pi = 4.d0*atan(1.d0)
-  !Normalisation
-  factor = 1.d0/(a_gauss*a2*pi*sqrt(pi))
-  !Gaussian function
-  rhotot=0.d0
-  do i3=1,n03
-     x3 = hgrid*(i3-n03/2)-shft3
-     do i2=1,n02
-        x2 = hgrid*(i2-n02/2)-shft2
-        do i1=1,n01
-           x1 = hgrid*(i1-n01/2)-shft1
-           r2 = x1*x1+x2*x2+x3*x3
-           rhopot(i1,i2,i3) = factor*exp(-r2/a2)
-           rhotot=rhotot+rhopot(i1,i2,i3)
-        end do
-     end do
-  end do
-  rhotot=rhotot*hgrid**3
-  
-  !! Plot values along x axis
-  !   open(unit=11,file='rho.dat')
-  !   do i3=1,n03
-  !      x1 =                            - shft1
-  !      x2 =                            - shft2
-  !      x3 = hgrid*(i3-n03/2) - shft3
-  !      r=sqrt(x1**2+x2**2+x3**2)
-  !      write(unit=11,fmt="(e10.3,e12.5,2(e21.14),e9.2,2(e12.5))") &
-  !           r, rhopot(n01/2,n02/2,i3)
-  !   end do
-  !   close(unit=11)
-  
-   !Calculate potential using Poisson Solver
-      write(*,*) 'testing poisson solver'
-      call PSolver_Kernel(n01,n02,n03,nfft1,nfft2,nfft3,&
-           hgrid,karray,rhopot,ehart)
-   
-   !! Plot values along x axis
-   !   open(unit=11,file='pot.dat')
-   !   do i3=1,n03
-   !      x1 =                            - shft1
-   !      x2 =                            - shft2
-   !      x3 = hgrid*(i3-n03/2) - shft3
-   !      r=sqrt(x1**2+x2**2+x3**2)
-   !      if (r == 0.d0) then
-   !         !limit_{x -> 0} erf(x/x) = 2/sqrt(pi)
-   !         factor = 2.d0/(sqrt(pi)*a_gauss)
-   !         tt=0.d0
-   !      else
-   !         factor = derf(r/a_gauss)/r
-   !         tt=abs(1.d0/r)
-   !      end if
-   !      write(unit=11,fmt="(e10.3,3(e21.14),e9.2,2(e12.5))") &
-   !           r, rhopot(n01/2,n02/2,i3),factor,tt
-   !   end do
-   !   close(unit=11)
-   
-   
-   
-   ! Global error 
-   max_diff = 0.d0
-   do i3=1,n03
-      x3 = hgrid*(i3-n03/2) - shft3
-      do i2=1,n02
-         x2 = hgrid*(i2-n02/2) - shft2
-         do i1=1,n01
-            x1 = hgrid*(i1-n01/2) - shft1
-            r=sqrt(x1**2+x2**2+x3**2)
-            if (r == 0.d0) then
-               !limit_{x -> 0} erf(x/x) = 2/sqrt(pi)
-               factor = 2.d0/(sqrt(pi)*a_gauss)
-            else
-               factor = derf(r/a_gauss)/r
-            end if
-            diff=abs(rhopot(i1,i2,i3)-factor)
-            if (diff.gt.max_diff) then
-               max_diff=diff
-               ii1=i1
-               ii2=i2
-               ii3=i3
-            endif
-         end do
-      end do
-   end do
-   
-   write(*,*) 'Testing Poisson Solver for a_gauss=',a_gauss
-   write(*,'(1x,a,f7.2,1x,e10.3,1x,e10.3)') &
-        'hgridh,Deltarho,max_diff',hgrid,rhotot-1.d0,max_diff
-   write(*,*) 'Max diff at : ',ii1,ii2,ii3
-   write(*,*) 'Poisson Solver test finished'
-
-end subroutine test_kernel
+!!$subroutine test_kernel(n01,n02,n03,nfft1,nfft2,nfft3,&
+!!$     hgrid,karray,rhopot)
+!!$  implicit none
+!!$  !Arguments
+!!$  integer :: n01,n02,n03,nfft1,nfft2,nfft3
+!!$  real(8) :: hgrid
+!!$  real(8), dimension(nfft1/2+1,nfft2/2+1,nfft3/2+1) :: karray
+!!$  real(8), dimension(n01,n02,n03) :: rhopot
+!!$  !Local variables
+!!$  real(8) :: a_gauss,a2
+!!$  real(8) :: rhotot,shft1,shft2,shft3,ehart
+!!$  real(8) :: pi,x1,x2,x3,r,r2,factor,derf,max_diff,diff
+!!$  integer :: i1,i2,i3,ii1,ii2,ii3
+!!$  
+!!$  a_gauss=4.d0*hgrid
+!!$  a2 = a_gauss**2
+!!$
+!!$  write(*,*) 'test_kernel, dim kernel',nfft1/2+1,nfft2/2+1,nfft3/2+1
+!!$  
+!!$  !Shift the center of the Gaussian 
+!!$  !away from central grid point to break symmetries
+!!$  !shft1=1.3d0*hgrid
+!!$  !shft2=0.5d0*hgrid
+!!$  !shft3=0.1d0*hgrid
+!!$  shft1=0.d0
+!!$  shft2=0.d0
+!!$  shft3=0.d0
+!!$  
+!!$  !Initialisation
+!!$  pi = 4.d0*atan(1.d0)
+!!$  !Normalisation
+!!$  factor = 1.d0/(a_gauss*a2*pi*sqrt(pi))
+!!$  !Gaussian function
+!!$  rhotot=0.d0
+!!$  do i3=1,n03
+!!$     x3 = hgrid*(i3-n03/2)-shft3
+!!$     do i2=1,n02
+!!$        x2 = hgrid*(i2-n02/2)-shft2
+!!$        do i1=1,n01
+!!$           x1 = hgrid*(i1-n01/2)-shft1
+!!$           r2 = x1*x1+x2*x2+x3*x3
+!!$           rhopot(i1,i2,i3) = factor*exp(-r2/a2)
+!!$           rhotot=rhotot+rhopot(i1,i2,i3)
+!!$        end do
+!!$     end do
+!!$  end do
+!!$  rhotot=rhotot*hgrid**3
+!!$  
+!!$  !! Plot values along x axis
+!!$  !   open(unit=11,file='rho.dat')
+!!$  !   do i3=1,n03
+!!$  !      x1 =                            - shft1
+!!$  !      x2 =                            - shft2
+!!$  !      x3 = hgrid*(i3-n03/2) - shft3
+!!$  !      r=sqrt(x1**2+x2**2+x3**2)
+!!$  !      write(unit=11,fmt="(e10.3,e12.5,2(e21.14),e9.2,2(e12.5))") &
+!!$  !           r, rhopot(n01/2,n02/2,i3)
+!!$  !   end do
+!!$  !   close(unit=11)
+!!$  
+!!$   !Calculate potential using Poisson Solver
+!!$      write(*,*) 'testing poisson solver'
+!!$      call PSolver_Kernel(n01,n02,n03,nfft1,nfft2,nfft3,&
+!!$           hgrid,karray,rhopot,ehart)
+!!$   
+!!$   !! Plot values along x axis
+!!$   !   open(unit=11,file='pot.dat')
+!!$   !   do i3=1,n03
+!!$   !      x1 =                            - shft1
+!!$   !      x2 =                            - shft2
+!!$   !      x3 = hgrid*(i3-n03/2) - shft3
+!!$   !      r=sqrt(x1**2+x2**2+x3**2)
+!!$   !      if (r == 0.d0) then
+!!$   !         !limit_{x -> 0} erf(x/x) = 2/sqrt(pi)
+!!$   !         factor = 2.d0/(sqrt(pi)*a_gauss)
+!!$   !         tt=0.d0
+!!$   !      else
+!!$   !         factor = derf(r/a_gauss)/r
+!!$   !         tt=abs(1.d0/r)
+!!$   !      end if
+!!$   !      write(unit=11,fmt="(e10.3,3(e21.14),e9.2,2(e12.5))") &
+!!$   !           r, rhopot(n01/2,n02/2,i3),factor,tt
+!!$   !   end do
+!!$   !   close(unit=11)
+!!$   
+!!$   
+!!$   
+!!$   ! Global error 
+!!$   max_diff = 0.d0
+!!$   do i3=1,n03
+!!$      x3 = hgrid*(i3-n03/2) - shft3
+!!$      do i2=1,n02
+!!$         x2 = hgrid*(i2-n02/2) - shft2
+!!$         do i1=1,n01
+!!$            x1 = hgrid*(i1-n01/2) - shft1
+!!$            r=sqrt(x1**2+x2**2+x3**2)
+!!$            if (r == 0.d0) then
+!!$               !limit_{x -> 0} erf(x/x) = 2/sqrt(pi)
+!!$               factor = 2.d0/(sqrt(pi)*a_gauss)
+!!$            else
+!!$               factor = derf(r/a_gauss)/r
+!!$            end if
+!!$            diff=abs(rhopot(i1,i2,i3)-factor)
+!!$            if (diff.gt.max_diff) then
+!!$               max_diff=diff
+!!$               ii1=i1
+!!$               ii2=i2
+!!$               ii3=i3
+!!$            endif
+!!$         end do
+!!$      end do
+!!$   end do
+!!$   
+!!$   write(*,*) 'Testing Poisson Solver for a_gauss=',a_gauss
+!!$   write(*,'(1x,a,f7.2,1x,e10.3,1x,e10.3)') &
+!!$        'hgridh,Deltarho,max_diff',hgrid,rhotot-1.d0,max_diff
+!!$   write(*,*) 'Max diff at : ',ii1,ii2,ii3
+!!$   write(*,*) 'Poisson Solver test finished'
+!!$
+!!$end subroutine test_kernel
 !!***
 

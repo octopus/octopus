@@ -624,7 +624,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine ps_grid_load(ps, ps_grid)
-    type(ps_t),         intent(out) :: ps
+    type(ps_t),         intent(inout) :: ps
     type(ps_in_grid_t), intent(in)  :: ps_grid
 
     call push_sub('ps.ps_grid_load')
