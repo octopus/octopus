@@ -21,6 +21,7 @@
 #include "global.h"
 
 module timedep_m
+  use io_m
   use external_pot_m
   use geometry_m
   use ground_state_m
@@ -483,7 +484,7 @@ contains
         return
       end if
 
-      read(iunit, *); read(iunit, *) ! skip header
+      call io_skip_header(iunit)
       do i = 0, td%iter - 1
         read(iunit, *) ! skip previous iterations... sorry, but no seek in Fortran
       end do
