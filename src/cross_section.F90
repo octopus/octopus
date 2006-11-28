@@ -52,11 +52,9 @@ program cross_section
   end if
   call units_init()
 
-
   call spectrum_init(s)
   call read_files('multipoles')
-
-
+  call calculate('cross_section')
 
   call io_end()
   call datasets_end()
