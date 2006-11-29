@@ -284,6 +284,8 @@ contains
         trim(io_workpath("td.general/projections")))
     end if
 
+    call io_mkdir('td.general')
+
     call pop_sub()
   end subroutine td_write_init
 

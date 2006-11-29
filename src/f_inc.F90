@@ -315,7 +315,7 @@ subroutine X(f_multipoles) (mesh, ff, lmax, multipole)
     integer,        intent(in)  :: lmax
     R_TYPE,         intent(out) :: multipole(:) ! multipole((lmax + 1)**2)
 
-    integer :: i, is, l, lm, add_lm
+    integer :: i, l, lm, add_lm
     FLOAT   :: x(MAX_DIM), r, ylm
     R_TYPE, allocatable :: ff2(:)
 

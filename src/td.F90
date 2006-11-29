@@ -376,8 +376,6 @@ contains
     subroutine td_run_zero_iter()
       call push_sub('td.td_run_zero_iter')
 
-      call io_mkdir('td.general')
-
       call td_write_iter(write_handler, gr, st, h, geo, td%kick, td%dt, 0)
 
       ! I aply the delta electric field *after* td_write_iter, otherwise the

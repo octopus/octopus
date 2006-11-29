@@ -416,7 +416,7 @@ contains
     integer :: t
     integer :: i, n, iter, diag = 1
     FLOAT   :: point_lap, factor
-    FLOAT, allocatable :: w(:), lpot(:), ldiag(:), tmp(:)
+    FLOAT, allocatable :: w(:), lpot(:), ldiag(:)
 
     select case(this%relaxation_method)
 
