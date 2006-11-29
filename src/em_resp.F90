@@ -610,7 +610,7 @@ contains
 
           !CROSS SECTION (THE COMPLEX PART OF POLARIZABILITY)
           cross(1:MAX_DIM, 1:MAX_DIM) = aimag(alpha(1:MAX_DIM, 1:MAX_DIM, ifactor)) * &
-               omega(iomega)/units_out%energy%factor * M_FOUR * M_PI / P_c 
+               freq_factor(ifactor)*omega(iomega)/units_out%energy%factor * M_FOUR * M_PI / P_c 
 
           iunit = io_open(trim(dirname)//'/cross_section', action='write')
           if(status%ok) then 
@@ -620,7 +620,7 @@ contains
                  (cross(1, 1) + cross(2, 2) + cross(3, 3))**2 )
 
             call cross_section_header(iunit)
-            write(iunit,'(3e20.8)', advance = 'no') omega(iomega) / units_out%energy%factor, &
+            write(iunit,'(3e20.8)', advance = 'no') freq_factor(ifactor)*omega(iomega) / units_out%energy%factor, &
                  average , sqrt(max(anisotropy, M_ZERO)) 
             write(iunit,'(9e20.8)', advance = 'no') cross(1:3, 1:3)
             write(iunit,'(a)', advance = 'yes')
