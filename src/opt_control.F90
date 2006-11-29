@@ -1083,6 +1083,9 @@ contains
       call push_sub('opt_control.read_state')
 
       call zinput_function('tmp/restart_gs/'//trim(filename), m, st%zpsi(:, 1, 1, 1), ierr, is_tmp=.TRUE.)
+      ! if we do not succeed try NetCDF
+      if(ierr>0) call zinput_function('tmp/restart_gs/'//trim(filename)//'.ncdf', &
+        m, st%zpsi(:, 1, 1, 1), ierr, is_tmp=.TRUE.)
 
       if(ierr > 0) then
          message(1) = "Unsuccesfull read of states in 'tmp/restart_gs/" // trim(filename) // "'"

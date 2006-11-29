@@ -95,26 +95,29 @@ contains
 
     !%Variable RestartFileFormat
     !%Type integer
-    !%Default restart_plain
+    !%Default restart_netcdf
     !%Section Generalities::IO
     !%Description
-    !% Determines in which format the restart file should be written
+    !% Determines in which format the restart files should be written. The default
+    !% is netcdf files (restart_netcdf) if the executable was compiled with netcdf 
+    !% libraries; otherwise the default is plain binary format.
     !%Option restart_plain 1
     !% Binary (platform dependent) format
     !%Option restart_netcdf 2
     !% NetCDF (platform independent) format. This requires the NETCDF library.
     !%End
-    call loct_parse_int(check_inp('RestartFileFormat'), RESTART_PLAIN, i)
-    if(.not.varinfo_valid_option('RestartFileFormat', i)) call input_error('RestartFileFormat')
-    call messages_print_var_option(stdout, "RestartFileFormat", i)
-
-    ! Fix the restart format...
-    restart_format = output_fill_how("Plain")
 #if defined(HAVE_NETCDF)
+    call loct_parse_int(check_inp('RestartFileFormat'), RESTART_NETCDF, i)
+    if(.not.varinfo_valid_option('RestartFileFormat', i)) call input_error('RestartFileFormat')
     if(i == RESTART_NETCDF) then
       restart_format = output_fill_how("NETCDF")
+    else
+      restart_format = output_fill_how("Plain")
     end if
+#else
+    restart_format = output_fill_how("Plain")
 #endif
+
 
     call pop_sub()
   end subroutine restart_init

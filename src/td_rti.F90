@@ -22,6 +22,7 @@
 
 module td_rti_m
   use datasets_m
+  use profiling_m
   use lib_basic_alg_m
   use lib_oct_parser_m
   use math_m
@@ -293,6 +294,7 @@ contains
     CMPLX, allocatable :: zpsi1(:, :, :, :)
     FLOAT, allocatable :: dtmp(:)
 
+    call profiling_in(C_PROFILING_ELEC_PROPAGATOR)
     call push_sub('td_rti.td_rti')
 
     self_consistent = .false.
@@ -352,6 +354,7 @@ contains
     end if
 
     call pop_sub()
+    call profiling_out(C_PROFILING_ELEC_PROPAGATOR)
 
   contains
 

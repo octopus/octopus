@@ -298,20 +298,32 @@ contains
     ALLOCATE(x(c%n(3), c%n(2), c%n(1)), c%n(1)*c%n(2)*c%n(3))
 #if defined(R_TCOMPLEX)
     if(status == NF90_NOERR) then
-       status = nf90_get_var (ncid, data_id, x)
+       select case(m%sb%dim)
+         case(1); status = nf90_get_var (ncid, data_id, x(1, 1, :))
+         case(2); status = nf90_get_var (ncid, data_id, x(1, :, :))
+         case(3); status = nf90_get_var (ncid, data_id, x)
+       end select
        call transpose3(x, re%RS)
        call ncdf_error('nf90_get_var', status, file, ierr)
     end if
     if(file_kind<0) then
        if(status == NF90_NOERR) then
-         status = nf90_get_var (ncid, data_im_id, x)
+         select case(m%sb%dim)
+           case(1); status = nf90_get_var (ncid, data_im_id, x(1, 1, :))
+           case(2); status = nf90_get_var (ncid, data_im_id, x(1, :, :))
+           case(3); status = nf90_get_var (ncid, data_im_id, x)
+         end select
          call transpose3(x, im%RS)
          call ncdf_error('nf90_get_var', status, file, ierr)
        end if
     end if
 #else
     if(status == NF90_NOERR) then
-       status = nf90_get_var (ncid, data_id, x)
+       select case(m%sb%dim)
+         case(1); status = nf90_get_var (ncid, data_id, x(1, 1, :))
+         case(2); status = nf90_get_var (ncid, data_id, x(1, :, :))
+         case(3); status = nf90_get_var (ncid, data_id, x)
+       end select
        call transpose3(x, c%RS)
        call ncdf_error('nf90_get_var', status, file, ierr)
     end if
@@ -721,6 +733,7 @@ contains
     end if
 
     select case(sb%dim)
+    case(1); dim_min = 3
     case(2); dim_min = 2
     case(3); dim_min = 1
     end select
@@ -821,6 +834,8 @@ contains
     FLOAT,   intent(in)  :: x(:,:,:)
 
     select case(sb%dim)
+    case(1);
+      status = nf90_put_var (ncid, data_id, x(1,1,:))
     case(2); 
       status = nf90_put_var (ncid, data_id, x(1,:,:))
     case(3);
