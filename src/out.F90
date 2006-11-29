@@ -251,7 +251,7 @@ contains
       end if
 
       ! some modes are not available in some circunstances, so we reset outp%how
-      if(sb%dim == 1) outp%how = iand(outp%how, not(output_axis_y + output_plane_z + output_netcdf))
+      if(sb%dim == 1) outp%how = iand(outp%how, not(output_axis_y + output_plane_z))
       if(sb%dim <= 2) outp%how = iand(outp%how, not(output_axis_z + &
         output_plane_x + output_plane_y + output_dx))
 #if !defined(HAVE_NETCDF)
