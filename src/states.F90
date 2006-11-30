@@ -35,6 +35,7 @@ module states_m
   use mesh_m
   use mpi_m
   use multicomm_m
+  use output_m
   use profiling_m
   use simul_box_m
   use string_m
@@ -457,9 +458,14 @@ contains
     type(states_t), intent(inout) :: st    
 
     C_POINTER :: blk
-    integer :: ip, id, is, ik, nstates
-    integer :: ib, idim, inst, inik
-    FLOAT   :: x(MAX_DIM), r, psi_re, psi_im
+    integer   :: ip, id, is, ik, nstates, ncols, ierr
+    integer   :: ib, idim, inst, inik, input_format
+    FLOAT     :: x(MAX_DIM), r, psi_re, psi_im
+    character(len=150) :: filename
+
+    integer, parameter ::      &
+      state_from_formula  = 4, &
+      state_from_file     = 5
 
     call push_sub('td.read_user_def_states')
 
@@ -484,6 +490,17 @@ contains
     !% contains kpoint and spin quantum numbers. Finally column 
     !% four contains a formula for the correspondig orbital.
     !% 
+    !% Alternatively, if the block UserDefinedStates has 5 columns
+    !% the state can be read from a file
+    !%
+    !% <tt>%UserDefinedStates
+    !% <br>&nbsp;&nbsp; 1 | 1 | 1 | file_format | "/path/to/file"
+    !% <br>%</tt>
+    !% 
+    !% The integer in column 4 defines the file format (currently 
+    !% not implemented, so simply use 0 there) and column 5 contains
+    !% the filename.
+    !%
     !% Octopus reads first the ground state orbitals from
     !% the restart_gs directory. Only the states that are
     !% specified in the above block will be overwritten with
@@ -503,50 +520,74 @@ contains
         call loct_parse_block_int(blk, ib-1, 1, inst)
         call loct_parse_block_int(blk, ib-1, 2, inik)
 
-        ! read formula strings and convert to C strings
+        ! find out how many columns this line has
+        ncols = loct_parse_block_cols(blk, ib-1)
+
+        ! loop over all states
         do id = 1, st%d%dim
           do is = 1, st%nst
             do ik = 1, st%d%nik   
-
+              
               ! does the block entry match and is this node responsible?
               if(.not.(id.eq.idim .and. is.eq.inst .and. ik.eq.inik    &
                 .and. st%st_start.le.is .and. st%st_end.ge.is) ) cycle
+              
+              select case(ncols)
 
-              ! parse formula string
-              call loct_parse_block_string(                            &
-                blk, ib-1, 3, st%user_def_states(id, is, ik))
+              case(state_from_formula) ! if 4 colums are given we got a formula
+                ! parse formula string
+                call loct_parse_block_string(                            &
+                  blk, ib-1, 3, st%user_def_states(id, is, ik))
+                
+                write(message(1), '(a,3i5)') 'Substituting state of orbital with k, ist, dim = ', ik, is, id
+                write(message(2), '(2a)') '  with the expression:'
+                write(message(3), '(2a)') '  ',trim(st%user_def_states(id, is, ik))
+                call write_info(3)
+                
+                ! convert to C string
+                call conv_to_C_string(st%user_def_states(id, is, ik))
+                
+                ! fill states with user defined formulas
+                do ip = 1, mesh%np
+                  x = mesh%x(ip, :)
+                  r = sqrt(sum(x(:)**2))
+                  
+                  ! parse user defined expressions
+                  call loct_parse_expression(psi_re, psi_im,             &
+                    x(1), x(2), x(3), r, M_ZERO, st%user_def_states(id, is, ik))
+                  ! fill state
+                  st%zpsi(ip, id, is, ik) = psi_re + M_zI*psi_im
+                end do
 
-              write(message(1), '(a,3i5)') 'Substituting state of orbital with k, ist, dim = ', ik, is, id
-              write(message(2), '(2a)') '  with the expression:'
-              write(message(3), '(2a)') '  ',trim(st%user_def_states(id, is, ik))
-              call write_info(3)
+              case(state_from_file) ! if 5 colums are given we have to read from a file
+                ! first read the file format (format is not used at the moment; for flexibility
+                ! this could be added at a later point)
+                call loct_parse_block_int(blk, ib-1, 3, input_format)                
+                ! then read the filename
+                call loct_parse_block_string(blk, ib-1, 4, filename)
 
-              ! convert to C string
-              call conv_to_C_string(st%user_def_states(id, is, ik))
+                write(message(1), '(a,3i5)') 'Substituting state of orbital with k, ist, dim = ', ik, is, id
+                write(message(2), '(2a)') '  with data from file:'
+                write(message(3), '(2a)') '  ',trim(filename)
+                call write_info(3)
 
-              ! fill states with user defined formulas
-              do ip = 1, mesh%np
-                x = mesh%x(ip, :)
-                r = sqrt(sum(x(:)**2))
+                ! finally read the state
+                call zinput_function(filename, mesh, st%zpsi(:, id, is, ik), ierr, .true.)
 
-                ! parse user defined expressions
-                call loct_parse_expression(psi_re, psi_im,             &
-                  x(1), x(2), x(3), r, M_ZERO, st%user_def_states(id, is, ik))
-                ! fill state
-                st%zpsi(ip, id, is, ik) = psi_re + M_zI*psi_im
-              end do
+              end select
 
               ! normalize orbital
               call zstates_normalize_orbital(mesh, st%d%dim, st%zpsi(:,:, is, ik))
-
+              
             end do
           end do
         end do
-
+        
       end do
+
       call loct_parse_block_end(blk)
       call messages_print_stress(stdout)
-
+      
     else
       message(1) = '"UserDefinesStates" has to be specified as block.'
       call write_fatal(1)
