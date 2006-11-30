@@ -997,7 +997,7 @@ contains
     read(iunit, '(15x,f18.12)')  kick%delta_strength
     read(iunit, '(15x,i2)')      kick%pol_equiv_axis
     read(iunit, '(15x,3f18.12)') kick%wprime(1:3)
-    read(iunit, *); read(iunit, *) ! skip header
+    call io_skip_header(iunit)
 
     ! count number of time_steps
     energy_steps = 0
