@@ -287,19 +287,21 @@ subroutine X(lr_calc_beta) (sys, lr, props, beta)
   type(pol_props_t),   intent(in)    :: props
   CMPLX,               intent(out)   :: beta(1:MAX_DIM, 1:MAX_DIM, 1:MAX_DIM)
 
-  integer :: i, j, k, dir
-  integer :: ispin, ist, ispin2, ist2, n, np, dim, ik, sigma, op_sigma
-  integer :: freq_index(1:3), iper
+  integer :: ifreq, isigma, idim, ispin, ispin2, np, ndim, idir, ist
+  integer :: ii, jj, kk, iperm, op_sigma, idim2, ist2, n
+  integer :: perm(1:3), u(1:3), w(1:3), ijk(1:3)
+
+  integer, parameter :: ik = 1 !kpoints not supported
 
   R_TYPE :: prod
 
-  R_TYPE, allocatable :: dVde(:,:,:), drhode(:,:)
-  R_TYPE, allocatable :: tmp(:,:)
+  R_TYPE, allocatable :: dH(:, :, :, :, :, :)
+  R_TYPE, allocatable :: tmp(:)
   FLOAT,  allocatable :: kxc(:,:,:,:)
   R_TYPE, allocatable :: hpol_density(:)
 
   np  = sys%gr%m%np
-  dim = sys%gr%sb%dim
+  ndim = sys%gr%sb%dim
 
   call push_sub('em_resp_inc.Xlr_calc_beta')
 
@@ -312,128 +314,133 @@ subroutine X(lr_calc_beta) (sys, lr, props, beta)
   call xc_get_kxc(sys%ks%xc, sys%gr%m, sys%st%rho, sys%st%d%ispin, kxc)
 
 
-  ALLOCATE(tmp(1:np, 1), np)
-  ALLOCATE(dVde(1:np, 1:sys%st%d%nspin, 1:dim), np*sys%st%d%nspin*dim)
-  ALLOCATE(drhode(1:np, 1:dim), np*dim)
+  ALLOCATE(tmp(1:np), np)
+  ALLOCATE(dH(1:np, 1:sys%st%d%dim, 1:sys%st%d%nspin, 1:ndim, 1:2, 1:3), np*sys%st%d%dim*sys%st%d%nspin*ndim*2*3)
   ALLOCATE(hpol_density(1:np), np)
+
+
+  do ifreq = 1, 3
+    do isigma = 1, 2
+      do idir = 1, ndim
+        do idim = 1, sys%st%d%dim
+          do ispin = 1, sys%st%d%nspin
+
+            dH(1:np, idim, idir, ispin, isigma, ifreq) = sys%gr%m%x(1:np, idir)
+
+            if(props%add_hartree) then 
+
+              call X(poisson_solve)(sys%gr, lr(idir, isigma, ifreq)%X(dl_Vhar), &
+                   lr(idir, isigma, ifreq)%X(dl_rho)(1:np, ispin))
+
+              dH(1:np, idim, ispin, idir, isigma, ifreq) = &
+                   dH(1:np, idim, ispin, idir, isigma, ifreq) &
+                   + lr(idir, isigma, ifreq)%X(dl_Vhar)(1:np)
+
+            end if
+
+            if(props%add_fxc) then 
+              do ispin2 = 1, sys%st%d%nspin
+                dH(1:np, idim, ispin, idir, isigma, ifreq) = dH(1:np, idim, ispin, idir, isigma, ifreq) &
+                     + lr(idir, isigma, ifreq)%dl_Vxc(1:np, ispin, ispin2) &
+                     * lr(idir, isigma, ifreq)%X(dl_rho)(1:np, ispin2)
+              end do
+            end if
+
+          end do !ispin
+        end do !idim
+      end do !idir
+    end do !isigma
+  end do !ifreq
 
   beta(1:MAX_DIM, 1:MAX_DIM, 1:MAX_DIM) = M_ZERO
 
-  do iper = 1, 6
-    call get_permutation(iper, freq_index)
 
-    do dir = 1, sys%gr%sb%dim
+  do ii = 1, ndim
+    do jj = 1, ndim
+      do kk = 1, ndim
 
-      ! the density
-      do n = 1, np
-        drhode(n, dir) = sum(lr(dir, 1, freq_index(2))%X(dl_rho)(n, 1:sys%st%d%nspin))
-      end do
+        ijk = (/ ii, jj, kk /)
 
-      !the \delta of hartree potential
-      call X(poisson_solve)(sys%gr, lr(dir, 1, freq_index(2))%X(dl_Vhar), drhode(:, dir))
+        do isigma = 1, 2
 
-      do ispin = 1, sys%st%d%nspin
+          op_sigma = 2 
+          if(isigma==2) op_sigma = 1
 
-        !the external potential, r
-        dVde(1:np,ispin, dir) = sys%gr%m%x(1:np, dir)
+          do iperm = 1, 6
 
-        !the hartree term
-        if(props%add_hartree) then 
-          dVde(1:np, ispin, dir) = dVde(1:np, ispin, dir) + lr(dir, 1, freq_index(2))%X(dl_Vhar)(1:np) 
-        end if
+            call get_permutation(iperm, perm)
 
-        !the fxc term
-        if(props%add_fxc) then 
-          ! xc
-          do ispin2 = 1, sys%st%d%nspin
-            dVde(1:np, ispin, dir) = dVde(1:np, ispin, dir) + &
-                 lr(dir, 1, freq_index(2))%dl_Vxc(1:np, ispin, ispin2)*&
-                 lr(dir, 1, freq_index(2))%X(dl_rho)(1:np, ispin2)
-          end do
-        end if
-
-      end do
-
-    end do !dir
-
-    if (sys%st%d%nspin /= UNPOLARIZED ) then 
-      write(message(1), '(a)') 'WARNING: Hyperpolarizability has not been tested for spin polarized systems'
-      call write_warning(1)
-    end if
-
-    do sigma=1,2
-
-      op_sigma=2
-
-      if(sigma==2) then 
-        op_sigma = 1
-        drhode = R_CONJ(drhode)
-        dVde = R_CONJ(dVde)
-      end if
-
-      do i = 1, dim
-        do j = 1, dim
-          do k = 1, dim
+            u(1:3) = ijk(perm(1:3))
+            w(1:3) = perm(1:3)
 
             hpol_density(1:np)=M_ZERO
 
-            do ik=1, sys%st%d%nik
-              do ispin = 1, sys%st%d%nspin
-                do ist = 1, sys%st%nst
+
+            do ispin = 1, sys%st%d%nspin
+              do ist = 1, sys%st%nst
+                do idim = 1, sys%st%d%dim
 
                   if( sys%st%occ(ist, ik) > lr_min_occ ) then 
-                    ! <D\psi_n | P_c DV_scf P_c | D\psi_n >
 
-                    hpol_density(1:np) = hpol_density(1:np) + &
-                         sys%st%d%kweights(ik)*sys%st%occ(ist, ik)* &
-                         R_CONJ(lr(i, op_sigma, freq_index(1))%X(dl_psi)(1:np, 1, ist, ispin)) &
-                         * R_REAL(dVde(1:np, ispin, j)) &
-                         * lr(k, sigma, freq_index(3))%X(dl_psi)(1:np, 1, ist, ispin)
+                    hpol_density(1:np) = hpol_density(1:np) &
+                         + sys%st%d%kweights(ik)*sys%st%occ(ist, ik) &
+                         * R_CONJ(lr(u(1), op_sigma, w(1))%X(dl_psi)(1:np, 1, ist, ispin)) &
+                         * R_REAL(dH(1:np, idim, ispin, u(2), isigma, w(2) )) &
+                         * lr(u(3), isigma, w(3))%X(dl_psi)(1:np, idim, ist, ispin)
 
                     do ispin2 = 1, sys%st%d%nspin
                       do ist2 = 1, sys%st%nst
-                        if( sys%st%occ(ist2, ik) > lr_min_occ ) then 
+                        do idim2 = 1, sys%st%d%dim
+                          if( sys%st%occ(ist2, ik) > lr_min_occ ) then 
 
-                          tmp(1:np, 1)=R_CONJ(sys%st%X(psi)(1:np, 1, ist2, ispin2)) * &
-                               R_REAL(dVde(1:np, ispin, j)) * sys%st%X(psi)(1:np, 1, ist, ispin)
+                            tmp(1:np)= &
+                                 R_CONJ(sys%st%X(psi)(1:np, idim2, ist2, ispin2)) * &
+                                 R_REAL(dH(1:np, idim2, ispin2, u(2), isigma, w(2))) * &
+                                 sys%st%X(psi)(1:np, idim, ist, ispin)
 
-                          prod = X(mf_integrate)(sys%gr%m, tmp(1:np,1))
+                            prod = X(mf_integrate)(sys%gr%m, tmp(1:np))
 
-                          hpol_density(1:np) = hpol_density(1:np) - & 
-                               sys%st%d%kweights(ik)*sys%st%occ(ist, ik)* & 
-                               R_CONJ(lr(i, op_sigma, freq_index(1))%X(dl_psi)(1:np, 1, ist, ispin)) * &
-                               lr(k, sigma, freq_index(3))%X(dl_psi)(1:np, 1, ist2, ispin2)*prod
+                            hpol_density(1:np) = hpol_density(1:np) - & 
+                                 sys%st%d%kweights(ik)*sys%st%occ(ist, ik)* & 
+                                 R_CONJ(lr(u(1), op_sigma, w(1))%X(dl_psi)(1:np, 1, ist, ispin)) * &
+                                 lr(u(3), isigma, w(3))%X(dl_psi)(1:np, idim2, ist2, ispin2)*prod
 
-                        end if
+                          end if
+                        end do !idim2
                       end do ! ist2
                     end do ! ispin2
 
                   end if
 
-                end do ! ist
-              end do ! ispin
-            end do !ik
+                end do !idim
+              end do !ist
+            end do !ispin
 
             if(props%add_fxc) then 
-              hpol_density(1:np) = hpol_density(1:np) + &
-                   kxc(1:np, 1, 1, 1) * drhode(1:np, i) * drhode(1:np, j)*drhode(1:np, k)/CNST(6.0)
+              do n = 1, np
+                hpol_density(n) = hpol_density(n) + &
+                     + kxc(n, 1, 1, 1) &
+                     * sum(lr(u(1), isigma, w(1))%X(dl_rho)(n, 1:sys%st%d%nspin)) &
+                     * sum(lr(u(2), isigma, w(2))%X(dl_rho)(n, 1:sys%st%d%nspin)) &
+                     * sum(lr(u(3), isigma, w(3))%X(dl_rho)(n, 1:sys%st%d%nspin)) &
+                     / CNST(6.0)
+              end do
             end if
 
-            beta(i,j,k)= beta(i,j,k) - M_HALF * X(mf_integrate)(sys%gr%m, hpol_density(1:np))
+            beta(ii, jj, kk)= beta(ii, jj, kk) - M_HALF * X(mf_integrate)(sys%gr%m, hpol_density(1:np))
 
-          end do ! k
-        end do ! j
-      end do ! i
 
-    end do !sigma
+          end do ! iperm
 
-  end do !iper
+        end do !isigma
+
+      end do !kk
+    end do !jj
+  end do !ii
 
   deallocate(hpol_density)
   deallocate(tmp)
-  deallocate(dVde)
-  deallocate(drhode)
-  deallocate(kxc)
+  deallocate(dH)
 
   call pop_sub()
 
@@ -457,5 +464,5 @@ contains
     end select
 
   end subroutine get_permutation
-  
+
 end subroutine X(lr_calc_beta)
