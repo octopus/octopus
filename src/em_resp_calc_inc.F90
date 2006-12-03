@@ -418,7 +418,7 @@ subroutine X(lr_calc_beta) (sys, lr, props, beta)
 
             if(props%add_fxc) then 
               do n = 1, np
-                hpol_density(n) = hpol_density(n) + &
+                hpol_density(n) = hpol_density(n) &
                      + kxc(n, 1, 1, 1) &
                      * sum(lr(u(1), isigma, w(1))%X(dl_rho)(n, 1:sys%st%d%nspin)) &
                      * sum(lr(u(2), isigma, w(2))%X(dl_rho)(n, 1:sys%st%d%nspin)) &
