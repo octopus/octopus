@@ -38,4 +38,4 @@ Match ; Cross Section     w=0.1   ; grep -v \# linear/freq_0.100/cross_section ;
 
 Input: 14-h2o_pol_lr.04_h2o_hpol.inp
 Match ; Hyperpolarizability w=0.0 ; grep //\ y  linear/freq_0.000/beta ; \s*2304
-Match ; Hyperpolarizability w=0.1 ; grep //\ y linear/freq_0.100/beta ; \s*10756
+Match ; Hyperpolarizability w=0.1 ; grep //\ y linear/freq_0.100/beta ; \s*9996
