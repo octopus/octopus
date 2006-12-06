@@ -325,7 +325,7 @@ subroutine X(lr_calc_beta) (sys, lr, props, beta)
         do idim = 1, sys%st%d%dim
           do ispin = 1, sys%st%d%nspin
 
-            dH(1:np, idim, idir, ispin, isigma, ifreq) = sys%gr%m%x(1:np, idir)
+            dH(1:np, idim, ispin, idir, isigma, ifreq) = sys%gr%m%x(1:np, idir)
 
             if(props%add_hartree) then 
 
