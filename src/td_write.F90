@@ -1096,10 +1096,10 @@ contains
         projections(:,:,:) = M_Z0
         call dipole_matrix_elements(idir)
 
-        write(aux, '(a,i1,a)') "<i|x_", idir, "|a>"
-        call write_iter_string(out_proj, "# ------")
-        call write_iter_header(out_proj, aux)
         if(mpi_grp_is_root(mpi_world)) then
+          write(aux, '(a,i1,a)') "<i|x_", idir, "|a>"
+          call write_iter_string(out_proj, "# ------")
+          call write_iter_header(out_proj, aux)
           do ik = 1, st%d%nik
             do ist = gs_st%st_start, st%nst
               do uist = gs_st%st_start, gs_st%st_end
@@ -1160,16 +1160,8 @@ contains
         end do
       end do
       
-#if defined(HAVE_MPI)
-      do ik = 1, st%d%nik
-        do ist = gs_st%st_start, st%nst
-          k = st%node(ist)
-          do uist = gs_st%st_start, gs_st%st_end
-            call MPI_Bcast(projections(ist, uist, ik), 1, MPI_CMPLX, k, st%mpi_grp%comm, mpi_err)
-          end do
-        end do
-      end do
-#endif
+      call distribute_projections()
+
     end subroutine calc_projections
 
 
@@ -1205,7 +1197,16 @@ contains
       
       deallocate(xpsi)
 
+      call distribute_projections()
+
+    end subroutine dipole_matrix_elements
+
+    subroutine distribute_projections
 #if defined(HAVE_MPI)
+      integer :: k, ik, ist, uist
+
+      if(.not.st%parallel_in_states) return
+
       do ik = 1, st%d%nik
         do ist = gs_st%st_start, st%nst
           k = st%node(ist)
@@ -1214,8 +1215,10 @@ contains
           end do
         end do
       end do
+
 #endif
-    end subroutine dipole_matrix_elements
+    end subroutine distribute_projections
+
   end subroutine td_write_proj
 
 
