@@ -1061,7 +1061,7 @@ contains
         call write_iter_string(out_proj, aux)
         call write_iter_nl(out_proj)
 
-        write(aux, '(a,2i8)') "#  st  ", gs_st%st_start, st%st_end
+        write(aux, '(a,2i8)') "#  st  ", gs_st%st_start, st%nst
         call write_iter_string(out_proj, aux)
         call write_iter_nl(out_proj)
 
