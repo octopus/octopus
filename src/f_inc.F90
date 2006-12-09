@@ -69,6 +69,7 @@ subroutine X(cf2mf) (m, cf, mf)
 
 end subroutine X(cf2mf)
 
+#if defined(HAVE_FFT)
 ! ---------------------------------------------------------
 ! The next two subroutines convert a function in Fourier space
 ! between the normal mesh and the cube
@@ -126,6 +127,7 @@ subroutine X(cf_FS2mf) (m, cf, mf)
   end do
 
 end subroutine X(cf_FS2mf)
+#endif
 
 
 ! ---------------------------------------------------------

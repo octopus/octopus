@@ -24,7 +24,9 @@ module run_prog_m
   use casida_m
   use datasets_m
   use external_pot_m
+#if defined(HAVE_FFT)
   use fft_m
+#endif
   use geom_opt_m
   use global_m
   use ground_state_m

@@ -33,20 +33,31 @@ module cube_function_m
   private
   public ::                     &
     dcf_t, zcf_t,               &
-    cf_phase_factor,            &
     dcf_new, zcf_new,           &
     dcf_new_from, zcf_new_from, &
     dcf_alloc_rs, zcf_alloc_rs, &
     dcf_free_rs, zcf_free_rs,   &
-    dcf_alloc_fs, zcf_alloc_fs, &
-    dcf_free_fs, zcf_free_fs,   &
     dcf_free, zcf_free,         &
-    dcf_fft_init, zcf_fft_init, &
-    dcf_RS2FS, zcf_RS2FS,       &
-    dcf_FS2RS, zcf_FS2RS,       &
-    dcf_FS_lapl, zcf_FS_lapl,   &
-    dcf_FS_grad, zcf_FS_grad,   &
     cf_surface_average
+
+#if defined(HAVE_FFT)
+  public ::                     &     
+    cf_phase_factor,            &
+    dcf_alloc_fs,               & 
+    zcf_alloc_fs,               &
+    dcf_free_fs,                &
+    zcf_free_fs,                &
+    dcf_fft_init,               &
+    zcf_fft_init,               &
+    dcf_RS2FS,                  &
+    zcf_RS2FS,                  &
+    dcf_FS2RS,                  &
+    zcf_FS2RS,                  &
+    dcf_FS_lapl,                &
+    zcf_FS_lapl,                &
+    dcf_FS_grad,                &
+    zcf_FS_grad
+#endif
 
   type dcf_t
     integer :: n(MAX_DIM)   ! the linear dimensions of the cube

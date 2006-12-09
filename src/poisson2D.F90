@@ -24,17 +24,20 @@ subroutine poisson2D_init(gr)
 
   call push_sub('poisson2D.poisson2D_init')
 
-  ASSERT(poisson_solver == FFT_SPH .or. poisson_solver == DIRECT_SUM_2D)
 
 #ifdef HAVE_FFT
+  ASSERT(poisson_solver == FFT_SPH .or. poisson_solver == DIRECT_SUM_2D)
   if (poisson_solver == FFT_SPH) call init_fft(gr%m)
+#else
+  ASSERT(poisson_solver == DIRECT_SUM_2D)
 #endif
 
   call pop_sub()
-contains
 
 #ifdef HAVE_FFT
   ! ---------------------------------------------------------
+contains
+
   subroutine init_fft(m)
     type(mesh_t), intent(in) :: m
 

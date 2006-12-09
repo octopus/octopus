@@ -30,12 +30,11 @@ module filter_m
   use lib_oct_m
   use string_m
   use lib_oct_parser_m
+#if defined(HAVE_FFT)
   use fft_m
-  !use lib_oct_gsl_spline_m
+#endif
   use units_m
   use mesh_m
-  !use simul_box_m
-  !use output_m
 
   implicit none
   
@@ -166,6 +165,8 @@ contains
     integer,          intent(in)   :: filtermode, steps
     FLOAT,            intent(inout):: laser_inout(:,:)
 
+#if defined(HAVE_FFT)
+
     integer        :: no_f, i, kk, n(3), last, first, grouplength, ii
     CMPLX          :: tmp(0:2*steps, 1, 1), tmp2(0:2*steps, 1, 1) ! Have to be three-dimensional to use the fft_m module
     CMPLX          :: filt(NDIM, 0:2*steps)
@@ -263,6 +264,10 @@ contains
     
     call fft_end(fft_handler)
     call pop_sub()
+#else
+    write(message(1),'(a)') "Internal error in filters.apply_filter"
+    call write_fatal(1)
+#endif
   end subroutine apply_filter
   
   

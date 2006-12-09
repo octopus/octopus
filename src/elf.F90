@@ -33,9 +33,10 @@ module elf_m
   implicit none
 
   private
-  public ::           &
-    elf_calc,         &
-    elf_calc_fs
+  public :: elf_calc
+#if defined(HAVE_FFT)
+  public :: elf_calc_fs
+#endif
 
 contains
 
@@ -196,6 +197,7 @@ contains
   end subroutine elf_calc
 
 
+#if defined(HAVE_FFT)
   ! ---------------------------------------------------------
   ! ELF function in Fourier space. Not tested.
   ! ---------------------------------------------------------
@@ -338,5 +340,6 @@ contains
     end subroutine zmf2mf_RS2FS
 
   end subroutine elf_calc_fs
+#endif
 
 end module elf_m

@@ -28,4 +28,8 @@
 # include "fftw2.F90"
 #elif HAVE_FFT == 3
 # include "fftw3.F90"
+#else
+! Some compilers do not like completely empty files.
+subroutine fft_dumb
+end subroutine fft_dumb
 #endif

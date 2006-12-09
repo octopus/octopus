@@ -22,7 +22,6 @@
 
 module external_pot_m
   use datasets_m
-  use fft_m
   use functions_m
   use global_m
   use grid_m
@@ -34,6 +33,7 @@ module external_pot_m
   use simul_box_m
   use units_m
 #ifdef HAVE_FFT
+  use fft_m
   use cube_function_m
 #endif
   use logrid_m
@@ -137,11 +137,13 @@ contains
     ALLOCATE(ep%vpsl(NP), NP)
     ep%vpsl = M_ZERO
 
+#if defined(HAVE_FFT)
     ! should we calculate the local pseudopotentials in Fourier space?
     ! This depends on wether we have periodic dimensions or not
     if(simul_box_is_periodic(gr%sb).and.(.not.geo%only_user_def)) then
       call epot_local_fourier_init(ep, gr%m, gr%sb, geo)
     end if
+#endif
 
     ep%classic_pot = 0
     if(geo%ncatoms > 0) then
@@ -564,7 +566,9 @@ contains
     integer :: ia, i, l, lm, k, p, j
     type(specie_t), pointer :: s
     type(atom_t),   pointer :: a
+#ifdef HAVE_FFT
     type(dcf_t) :: cf_loc, cf_nlcc
+#endif
     type(mesh_t),      pointer :: m
     type(simul_box_t), pointer :: sb
 

@@ -25,7 +25,9 @@
 module td_exp_split_m
   use cube_function_m
   use external_pot_m
+#if defined(HAVE_FFT)
   use fft_m
+#endif
   use functions_m
   use global_m
   use grid_m
@@ -37,6 +39,7 @@ module td_exp_split_m
 
   implicit none
 
+#if defined(HAVE_FFT)
 contains
 
   ! ---------------------------------------------------------
@@ -215,5 +218,6 @@ contains
 
     call pop_sub()
   end subroutine zexp_vnlpsi
+#endif
 
 end module td_exp_split_m
