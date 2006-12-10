@@ -2,6 +2,10 @@
 !  This file is distributed under the terms of the
 !  GNU General Public License, see http://www.gnu.org/copyleft/gpl.txt .
 
+#ifdef HAVE_MPI
+
+#include "mpif.h"
+
 !here we have all the subroutines needed for the parallel convolution
 
 !!$subroutine PARtest_kernel(n01,n02,n03,nfft1,nfft2,nfft3,&
@@ -151,7 +155,7 @@
 !!    nd1,nd2,nd3 fourier dimensions for which the kernel FFT is injective,
 !!                formally 1/8 of the fourier grid. Here the dimension nd3 is
 !!                enlarged to be a multiple of nproc
-!!
+!!                
 !! WARNING
 !!    The dimension m2 and m3 correspond to n03 and n02 respectively
 !!    this is needed since the convolution routine manage arrays of dimension
@@ -164,7 +168,8 @@
 !!
 !! SOURCE
 !!
-subroutine calculate_pardimensions(n01,n02,n03,m1,m2,m3,n1,n2,n3,md1,md2,md3,nd1,nd2,nd3,nproc)
+subroutine calculate_pardimensions(n01,n02,n03,m1,m2,m3,n1,n2,n3,md1, &
+  md2,md3,nd1,nd2,nd3,nproc)
  implicit none
  integer, intent(in) :: n01,n02,n03,nproc
  integer, intent(out) :: m1,m2,m3,n1,n2,n3,md1,md2,md3,nd1,nd2,nd3
@@ -258,8 +263,10 @@ end subroutine calculate_pardimensions
 !!    If xc_on is true, it also adds the XC potential and
 !!    ionic potential pot_ion
 !!
-!!    kernelLOC: the kernel in fourier space, calculated from ParBuild_Kernel routine
+!!    kernelLOC: the kernel in fourier space, calculated from ParBuil_Kernel routine
 !!               it is a local vector (each process have its own part)
+!!
+!!    comm: MPI communicator to use
 !!
 !!    We double the size of the mesh except in one dimension
 !!    in order to use the property of the density to be real.
@@ -273,7 +280,7 @@ end subroutine calculate_pardimensions
 !! SOURCE
 !!
 subroutine ParPSolver_Kernel(n01,n02,n03,nd1,nd2,nd3, &
-    hgrid,kernelLOC,rhopot,ehartree,iproc,nproc)
+    hgrid,kernelLOC,rhopot,ehartree,iproc,nproc,comm)
  implicit none
  !Arguments
  integer, intent(in)  :: n01,n02,n03,nd1,nd2,nd3,iproc,nproc
@@ -281,13 +288,14 @@ subroutine ParPSolver_Kernel(n01,n02,n03,nd1,nd2,nd3, &
  real*8, intent(in), dimension(nd1,nd2,nd3/nproc) :: kernelLOC
  real*8, intent(inout), dimension(n01,n02,n03) :: rhopot
  real*8, intent(out) :: ehartree
+ integer, intent(in) :: comm
  !Local variables
  integer :: m1,m2,m3,n1,n2,n3,md1,md2,md3
 
  call calculate_pardimensions(n01,n02,n03,m1,m2,m3,n1,n2,n3,md1,md2,md3,nd1,nd2,nd3,nproc)
 
  call  pconvxc_off(m1,m2,m3,n1,n2,n3,nd1,nd2,nd3,md1,md2,md3,iproc,nproc,&
-      rhopot,kernelLOC,hgrid,ehartree)
+      rhopot,kernelLOC,hgrid,ehartree,comm)
  if (iproc.eq.0) print *,"ehartree is",ehartree
 
 end subroutine ParPSolver_Kernel
@@ -316,6 +324,8 @@ end subroutine ParPSolver_Kernel
 !!    kernelLOC: the kernel in fourier space, calculated from ParBuild_Kernel routine
 !!               it is a local vector (each process have its own part)
 !!
+!!    comm: MPI communicator to use
+!!
 !!    We double the size of the mesh except in one dimension
 !!    in order to use the property of the density to be real.
 !! WARNING
@@ -328,9 +338,8 @@ end subroutine ParPSolver_Kernel
 !! SOURCE
 !!
 subroutine pconvxc_off(m1,m2,m3,n1,n2,n3,nd1,nd2,nd3,md1,md2,md3,iproc,nproc,&
-    rhopot,kernelloc,hgrid,ehartree)
+    rhopot,kernelloc,hgrid,ehartree,comm)
  implicit none
- include 'mpif.h'
  integer, intent(in) :: m1,m2,m3,n1,n2,n3,nd1,nd2,nd3,md1,md2,md3,iproc,nproc
  real(kind=8), dimension(nd1,nd2,nd3/nproc), intent(in) :: kernelloc
  real(kind=8), dimension(m1,m3,m2), intent(inout) :: rhopot
@@ -362,14 +371,14 @@ subroutine pconvxc_off(m1,m2,m3,n1,n2,n3,nd1,nd2,nd3,md1,md2,md3,iproc,nproc,&
 
  !this routine builds the values for each process of the potential (zf), multiplying by the factor
  call convolxc_off(n1,n2,n3,nd1,nd2,nd3,md1,md2,md3,nproc,iproc,kernelloc,zf&
-      ,scal,hgrid,ehartreeLOC)
+      ,scal,hgrid,ehartreeLOC,comm)
 
  !evaluating the total ehartree
  if (nproc.gt.1) then
       call cpu_time(t0)
       call system_clock(count1,count_rate,count_max)
     call MPI_ALLREDUCE(ehartreeLOC,ehartree,1,MPI_double_precision,  &
-         MPI_SUM,MPI_COMM_WORLD,ierr)
+         MPI_SUM,comm,ierr)
       call cpu_time(t1)
       call system_clock(count2,count_rate,count_max)
       tel=dble(count2-count1)/dble(count_rate)
@@ -399,7 +408,7 @@ subroutine pconvxc_off(m1,m2,m3,n1,n2,n3,nd1,nd2,nd3,md1,md2,md3,iproc,nproc,&
       call cpu_time(t0)
       call system_clock(count1,count_rate,count_max)
  call MPI_ALLGATHERV(rhopot(1,1,istart+1),gather_arr(iproc,1),MPI_double_precision,rhopot,gather_arr(:,1),&
-      gather_arr(:,2),MPI_double_precision,MPI_COMM_WORLD,ierr)
+      gather_arr(:,2),MPI_double_precision,comm,ierr)
       call cpu_time(t1)
       call system_clock(count2,count_rate,count_max)
       tel=dble(count2-count1)/dble(count_rate)
@@ -488,6 +497,7 @@ end subroutine enterdensity
 !!    n1k,n2k,n3k        Dimensions of the kernel FFT
 !!    hgrid              Mesh step
 !!    itype_scf          Order of the scaling function (8,14,16)
+!!    comm               MPI communicator to use
 !!
 !! AUTHORS
 !!    T. Deutsch, L. Genovese
@@ -496,7 +506,8 @@ end subroutine enterdensity
 !!
 !! SOURCE
 !!
-subroutine ParBuild_Kernel(n01,n02,n03,nfft1,nfft2,nfft3,n1k,n2k,n3k,hgrid,itype_scf,iproc,nproc,karrayoutLOC)
+subroutine ParBuild_Kernel(n01,n02,n03,nfft1,nfft2,nfft3,n1k,n2k,n3k,hgrid,itype_scf, &
+  iproc,nproc,comm,karrayoutLOC)
 
  implicit none
 
@@ -504,6 +515,7 @@ subroutine ParBuild_Kernel(n01,n02,n03,nfft1,nfft2,nfft3,n1k,n2k,n3k,hgrid,itype
  integer, intent(in) :: n01,n02,n03,nfft1,nfft2,nfft3,n1k,n2k,n3k,itype_scf,iproc,nproc
  real(kind=8), intent(in) :: hgrid
  real(kind=8), dimension(n1k,n2k,n3k/nproc), intent(out) :: karrayoutLOC
+ integer, intent(in) :: comm
 
  !Local variables
  !Do not touch !!!!
@@ -744,7 +756,7 @@ subroutine ParBuild_Kernel(n01,n02,n03,nfft1,nfft2,nfft3,n1k,n2k,n3k,hgrid,itype
 
  if(iproc .eq. 0) print *,"Do a 3D PHalFFT for the kernel"
 
- call kernelfft(nfft1,nfft2,nfft3,nker1,nker2,nker3,nproc,iproc,karray,karrayfour)
+ call kernelfft(nfft1,nfft2,nfft3,nker1,nker2,nker3,nproc,iproc,karray,karrayfour,comm)
 
 !!$  amax=0.d0
 !!$  do i1=1,nker1*nker2*nker3/nproc
@@ -766,3 +778,5 @@ subroutine ParBuild_Kernel(n01,n02,n03,nfft1,nfft2,nfft3,n1k,n2k,n3k,hgrid,itype
 
 end subroutine ParBuild_Kernel
 !!***
+
+#endif

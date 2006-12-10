@@ -1,5 +1,9 @@
 ! FFT PART RELATED TO THE CONVOLUTION-----------------------------------------------------------------
 
+#ifdef HAVE_MPI
+
+#include "mpif.h"
+
 !!!HERE POT MUST BE THE KERNEL (BEWARE THE HALF DIMENSION)
 
 !!****h* BigDFT/convolxc_off
@@ -30,6 +34,7 @@
 !!                  and the correct dimension
 !!     hgrid:       grid spacing, used for integrating eharthree
 !!     ehartree:    hartree energy of the potential
+!!     comm:        MPI communicator to use
 !!
 !! RESTRICTIONS on USAGE
 !!     Copyright (C) Stefan Goedecker, Cornell University, Ithaca, USA, 1994
@@ -47,16 +52,15 @@
 !! SOURCE
 !!
 subroutine convolxc_off(n1,n2,n3,nd1,nd2,nd3,md1,md2,md3,nproc,iproc,pot,zf&
-             ,scal,hgrid,ehartree)
+             ,scal,hgrid,ehartree,comm)
   implicit none
-  include 'mpif.h'
-  include 'perfdata.inc'
   !Arguments
   integer, intent(in) :: n1,n2,n3,nd1,nd2,nd3,md1,md2,md3,nproc,iproc
   real(kind=8), intent(in) :: scal,hgrid
   real(kind=8), intent(out) :: ehartree
   real(kind=8), dimension(nd1,nd2,nd3/nproc), intent(in) :: pot
   real(kind=8), dimension(md1,md3,md2/nproc), intent(inout) :: zf
+  integer, intent(in) :: comm
   !Local variables
   integer :: ncache,lzt,lot,ma,mb,nfft,ic1,ic2,ic3,Jp2stb,J2stb,Jp2stf,J2stf
   integer :: j1,j2,j3,i1,i2,i3,i,j,inzee,ierr
@@ -176,10 +180,10 @@ subroutine convolxc_off(n1,n2,n3,nd1,nd2,nd3,md1,md2,md3,nproc,iproc,pot,zf&
   !input: I1,J2,j3,jp3,(Jp2)
   if (nproc.gt.1) then
      !communication scheduling
-     call MPI_ALLTOALL(zmpi2,n1*(md2/nproc)*(nd3/nproc), &
-          MPI_double_precision, &
+     call MPI_Alltoall(zmpi2,n1*(md2/nproc)*(nd3/nproc), &
+          MPI_DOUBLE_PRECISION, &
           zmpi1,n1*(md2/nproc)*(nd3/nproc), &
-          MPI_double_precision,MPI_COMM_WORLD,ierr)
+          MPI_double_precision,comm,ierr)
   endif
   !output: I1,J2,j3,Jp2,(jp3)
 
@@ -322,7 +326,7 @@ subroutine convolxc_off(n1,n2,n3,nd1,nd2,nd3,md1,md2,md3,nproc,iproc,pot,zf&
      call MPI_ALLTOALL(zmpi1,n1*(md2/nproc)*(nd3/nproc), &
           MPI_double_precision, &
           zmpi2,n1*(md2/nproc)*(nd3/nproc), &
-          MPI_double_precision,MPI_COMM_WORLD,ierr)
+          MPI_double_precision,comm,ierr)
      !output: I1,J2,j3,jp3,(Jp2)
   endif
 
@@ -808,6 +812,7 @@ end subroutine unfill_downcorn
 !!                  The detailed table with allowed transform lengths can 
 !!                  be found in subroutine CTRIG
 !!     nd1,nd2,nd3: Dimensions of zr
+!!     comm:        MPI communicator to use
 !!
 !! RESTRICTIONS on USAGE
 !!     Copyright (C) Stefan Goedecker, Cornell University, Ithaca, USA, 1994
@@ -824,14 +829,13 @@ end subroutine unfill_downcorn
 !!
 !! SOURCE
 !!
-subroutine kernelfft(n1,n2,n3,nd1,nd2,nd3,nproc,iproc,zf,zr)
+subroutine kernelfft(n1,n2,n3,nd1,nd2,nd3,nproc,iproc,zf,zr,comm)
   implicit none
-  include 'mpif.h'
-  include 'perfdata.inc'
   !Arguments
   integer, intent(in) :: n1,n2,n3,nd1,nd2,nd3,nproc,iproc
   real(kind=8), dimension(nd1,n3,nd2/nproc), intent(in) :: zf
   real(kind=8), dimension(2,nd1,nd2,nd3/nproc), intent(out) :: zr
+  integer, intent(in) :: comm
   !Local variables
   !Local variables
   integer :: ncache,lzt,lot,ma,mb,nfft,ic1,ic2,ic3,Jp2st,J2st
@@ -927,7 +931,7 @@ subroutine kernelfft(n1,n2,n3,nd1,nd2,nd3,nproc,iproc,zf,zr)
      call MPI_ALLTOALL(zmpi2,2*n1*(nd2/nproc)*(nd3/nproc), &
           MPI_double_precision, &
           zmpi1,2*n1*(nd2/nproc)*(nd3/nproc), &
-          MPI_double_precision,MPI_COMM_WORLD,ierr)
+          MPI_double_precision,comm,ierr)
      ! output: I1,J2,j3,Jp2,(jp3)
   endif
 
@@ -1061,5 +1065,4 @@ end subroutine kernelfft
         return
         end
 
-
-
+#endif
