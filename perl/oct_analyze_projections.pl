@@ -35,7 +35,7 @@ for(my $j=0; $j<$files[0]->{"npairs"}; $j++){
     <IN>;
     while(($ll=<IN>) && ($ll!~/######################/)){};
 
-    open(OUT, ">work_proj/multipoles$ext");
+    open(OUT, ">work_proj/multipoles".$file->{"extension"});
     print OUT $file->{"header"};
 
     # find out the column numbers
@@ -96,7 +96,7 @@ sub read_header(){
 
   $$ref{"filename"} = $filename;
 
-  $$ref{"extension"} = $file;
+  $$ref{"extension"} = $filename;
   $$ref{"extension"} =~ s/projections//;
 
   $$ref{"header"}  = <IN>;
