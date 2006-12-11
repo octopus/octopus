@@ -1,9 +1,9 @@
-bin_SCRIPTS = oct_analyze_projections
-noinst_HEADERS = oct_analyze_projections.pl
+bin_SCRIPTS = oct-analyze_projections
+noinst_HEADERS = oct-analyze_projections.pl
 
-CLEANFILES = oct_analyze_projections
+CLEANFILES = oct-analyze_projections
 
-oct_analyze_projections: oct_analyze_projections.pl
+oct-analyze_projections: oct-analyze_projections.pl
 	@cat $< | \
 	  sed "s#<PERL>#${PERL}#" | \
 	  sed "s#<BINDIR>#${bindir}#" > $@
