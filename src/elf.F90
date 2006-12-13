@@ -147,7 +147,7 @@ contains
       do i = 1, NP
         kappa(i, is) = kappa(i, is)*rho(i, is)        &    ! + tau * rho
            - M_FOURTH*sum(grho(i, 1:NDIM)**2) &            ! - | nabla rho |^2 / 4
-           + sum(jj(i, 1:NDIM)**2)                         ! - j^2
+           - sum(jj(i, 1:NDIM)**2)                         ! - j^2
       end do
 
       deallocate(grho, jj)   ! these are no longer needed
