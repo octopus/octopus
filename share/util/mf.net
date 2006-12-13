@@ -215,8 +215,8 @@ main_Receiver_61_out_1[cache: 0] = c_repeat;
     //
     // 
     // node FileSelector[1]: x = 40, y = 9, inputs = 0, label = FileSelector
-    // output[1]: visible = 1, type = 32, value = NULL
-    // output[2]: visible = 1, type = 32, value = NULL
+    // output[1]: visible = 1, type = 32, value = NULL //1
+    // output[2]: visible = 1, type = 32, value = NULL //2
     // page group: Import
     //
     // 
