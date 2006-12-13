@@ -411,8 +411,8 @@ contains
 #if defined(HAVE_MPI)
       if(st%parallel_in_states) then
         ALLOCATE(reduce_elf(1:NP), NP)
-        call MPI_Allreduce(kappa(1, is), reduce_elf(1), NP, MPI_FLOAT, MPI_SUM, st%mpi_grp%comm, mpi_err)
-        kappa(1:NP, is) = reduce_elf(1:NP)
+        call MPI_Allreduce(tau(1, is), reduce_elf(1), NP, MPI_FLOAT, MPI_SUM, st%mpi_grp%comm, mpi_err)
+        tau(1:NP, is) = reduce_elf(1:NP)
         deallocate(reduce_elf)
       end if
 #endif
