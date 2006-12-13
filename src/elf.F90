@@ -33,7 +33,8 @@ module elf_m
   implicit none
 
   private
-  public :: elf_calc
+  public :: elf_calc,               &
+            kinetic_energy_density
 #if defined(HAVE_FFT)
   public :: elf_calc_fs
 #endif
@@ -341,5 +342,85 @@ contains
 
   end subroutine elf_calc_fs
 #endif
+
+  ! ---------------------------------------------------------
+  ! Calculates the kinetic energy density, tau, defined as:
+  !
+  !  tau(r, is) = sum_{i=1}^{Nst} | \nabla \phi_{i,is}(r) |^2
+  !
+  ! If the calculation is unpolarized, the subroutine gives
+  ! back the sum of the two spin-resolved densities, and the
+  ! argument is ignored:
+  !
+  !  tau(r, 1) = sum_{i=1}^{Nst} 2 | \nabla \phi_{i,is}(r) |^2
+  !
+  ! The previous expression assumes full or null occupations.
+  ! If fractional occupation numbers, each term in the sum
+  ! is weigthed by the occupation. Also, if we are working
+  ! with an infinite system, all k-points are summed up, with
+  ! its corresponding weight.
+  !
+  ! WARNING: It is not properly programmed for spinors.
+  ! ---------------------------------------------------------
+  subroutine kinetic_energy_density(st, gr, tau)
+    type(states_t),   intent(inout) :: st
+    type(grid_t),     intent(inout) :: gr
+    FLOAT,            intent(out)   :: tau(: ,:)
+
+    integer :: i, is, ik, ist, idim
+    CMPLX, allocatable :: wf_psi(:), gwf_psi(:,:)
+#if defined(HAVE_MPI)
+    FLOAT, allocatable :: reduce_elf(:)
+#endif
+
+    call push_sub('elf.kinetic_energy_density')
+
+    do is = 1, st%d%nspin
+
+      ALLOCATE( wf_psi(NP_PART),  NP_PART)   
+      ALLOCATE(gwf_psi(NP, NDIM), NP*NDIM)   
+      wf_psi = M_z0; gwf_psi = M_z0
+
+      tau(:, is) = M_ZERO
+
+      do ik = is, st%d%nik, st%d%nspin
+        do ist = st%st_start, st%st_end
+          do idim = 1, st%d%dim
+
+            ! all calculations will be done with complex wave-functions
+            if (st%d%wfs_type == M_REAL) then
+              wf_psi(:) = cmplx(st%dpsi(:, idim, ist, ik), KIND=PRECISION)
+            else
+              wf_psi(:) = st%zpsi(:, idim, ist, ik)
+            end if
+
+            ! calculate gradient of the wave-function
+            call zf_gradient(gr%sb, gr%f_der, wf_psi(:), gwf_psi)
+
+            ! tau will now contain the spin-kinetic energy density
+            do i = 1, NP
+              tau(i, is) = tau(i, is) + st%d%kweights(ik)*st%occ(ist, ik) * &
+                 sum(abs(gwf_psi(i, 1:NDIM))**2)
+            end do
+
+          end do
+        end do
+      end do
+      deallocate(wf_psi, gwf_psi)
+
+#if defined(HAVE_MPI)
+      if(st%parallel_in_states) then
+        ALLOCATE(reduce_elf(1:NP), NP)
+        call MPI_Allreduce(kappa(1, is), reduce_elf(1), NP, MPI_FLOAT, MPI_SUM, st%mpi_grp%comm, mpi_err)
+        kappa(1:NP, is) = reduce_elf(1:NP)
+        deallocate(reduce_elf)
+      end if
+#endif
+
+    end do
+
+
+    call pop_sub()
+  end subroutine kinetic_energy_density
 
 end module elf_m

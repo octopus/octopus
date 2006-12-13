@@ -63,7 +63,8 @@ module output_m
     output_ELF_FS     =   128,    &
     output_ksdipole   =   256,    &
     output_pol_density=   512,    &
-    output_r          =  1024
+    output_r          =  1024,    &
+    output_ked        =  2056
 
   integer, parameter, public ::   &
     output_axis_x     =     1,    &
@@ -164,6 +165,21 @@ contains
     !%Option mesh_r 1024
     !% Prints out the values of the coordinates over the grid. Files
     !% will be in the 'status/' directory.
+    !%Option kinetic_energy_density 2048
+    !% Prints out the kinetic energy density, defined as:
+    !%
+    !% <math>\tau_\sigma(\vec{r}) = \sum_{i=1}^{N_\sigma} 
+    !%  \vert \nabla \phi_{i\sigma}(\vec{r}) \vert^2\,. </math>
+    !%
+    !% The index <math>\sigma</math> is the spin index for spin-polarized cases,
+    !% or in case you are using spinors. For spin-unpolarized calculations, you
+    !% get the total kinetic energy density. The previous expression assumes full 
+    !% or null occupations. If fractional occupation numbers, each term in the sum
+    !% is weigthed by the occupation. Also, if we are working with an infinite 
+    !% system, all k-points are summed up, with its corresponding weight. The
+    !% files will be called "tau-1" and "tau-2", if the spin-resolved kinetic
+    !% energy density is produced (runs in spin-polarized and spinors mode), or
+    !% only "tau" if the run is in spin unpolarized mode.
     !%End
     call loct_parse_int(check_inp('Output'), 0, outp%what)
     if(.not.varinfo_valid_option('Output', outp%what, is_flag=.true.)) then

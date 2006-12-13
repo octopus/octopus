@@ -152,6 +152,24 @@ contains
         end select
       end if
 
+      if(iand(outp%what, output_ked).ne.0) then
+        ALLOCATE(elf(1:gr%m%np, 1),gr%m%np)
+        call kinetic_energy_density(st, gr, elf)
+        select case(st%d%ispin)
+          case(UNPOLARIZED)
+            write(fname, '(a)') 'tau'
+            call doutput_function(outp%how, dir, trim(fname), gr%m, gr%sb, &
+              elf(:,1), M_ONE, ierr, is_tmp = .false.)
+          case(SPIN_POLARIZED, SPINORS)
+            do is = 1, 2
+              write(fname, '(a,a,i1)') 'tau', '-', is
+              call doutput_function(outp%how, dir, trim(fname), gr%m, gr%sb, &
+                elf(:, is), M_ONE, ierr, is_tmp = .false.)
+            end do
+        end select
+        deallocate(elf)
+      end if
+
 #if defined(HAVE_FFT)
       if(  iand(outp%what, output_elf_fs).ne.0  ) then ! Second, ELF in Fourier space.
         ALLOCATE(elf(1:gr%m%np,1:st%d%nspin),gr%m%np*st%d%nspin)
