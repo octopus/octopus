@@ -140,7 +140,9 @@ contains
     !%Description
     !% Sampling rate for the spectrum.
     !%End
-    call loct_parse_float(check_inp('SpecEnergyStep'), CNST(0.01),  s%energy_step)
+    call loct_parse_float(check_inp('SpecEnergyStep'), CNST(0.01)/(M_TWO*P_Ry*units_inp%energy%factor),&
+         s%energy_step)
+    
 
     !%Variable SpecMaxEnergy
     !%Type integer
@@ -149,7 +151,8 @@ contains
     !%Description
     !% The Fourier transform is calculated for energies smaller than this value.
     !%End
-    call loct_parse_float(check_inp('SpecMaxEnergy'),  CNST(20.0),  s%max_energy)
+    call loct_parse_float(check_inp('SpecMaxEnergy'), CNST(20.0)/(M_TWO*P_Ry*units_inp%energy%factor),&
+         s%max_energy)
 
     !%Variable SpecDampFactor
     !%Type integer
