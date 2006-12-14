@@ -158,12 +158,19 @@ contains
 
     end do do_is
 
-    f = M_THREE/M_FIVE*(M_SIX*M_PI**2)**M_TWOTHIRD
+    select case(gr%sb%dim)
+      case(3); f = M_THREE/M_FIVE*(M_SIX*M_PI**2)**M_TWOTHIRD
+      case(2); f = M_Pi
+    end select
+
     select case(st%d%ispin)
     case(UNPOLARIZED)
       do i = 1, NP
         if(rho(i, 1) >= dmin) then
-          D0 = f * rho(i, 1)**(M_EIGHT/M_THREE)
+          select case(gr%sb%dim)
+            case(3); D0 = f * rho(i, 1)**(M_EIGHT/M_THREE)
+            case(2); D0 = f * rho(i, 1)**3
+          end select
           elf(i, 1) = D0*D0/(D0*D0 + kappa(i, 1)**2)
         else
           elf(i, 1) = M_ZERO
@@ -184,7 +191,10 @@ contains
       do i = 1, NP
         do is = 1, st%d%spin_channels
           if(rho(i, is) >= dmin) then
-            D0 = f * rho(i, is)**(M_EIGHT/M_THREE)
+            select case(gr%sb%dim)
+              case(3); D0 = f * rho(i, is)**(M_EIGHT/M_THREE)
+              case(2); D0 = f * rho(i, 1)**3
+            end select
             elf(i, is) = D0*D0/(D0*D0 + kappa(i,is)**2)
           else
             elf(i, is) = M_ZERO
