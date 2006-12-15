@@ -160,7 +160,7 @@ contains
 
     select case(gr%sb%dim)
       case(3); f = M_THREE/M_FIVE*(M_SIX*M_PI**2)**M_TWOTHIRD
-      case(2); f = M_Pi
+      case(2); f = M_TWO * M_Pi
     end select
 
     select case(st%d%ispin)
@@ -181,7 +181,10 @@ contains
         do i = 1, NP
           dens = rho(i, 1) + rho(i, 2)
           if( dens >= dmin ) then
-            D0 = f * dens ** (M_FIVE/M_THREE) * rho(i, 1) * rho(i, 2)
+            select case(gr%sb%dim)
+              case(3); D0 = f * dens ** (M_FIVE/M_THREE) * rho(i, 1) * rho(i, 2)
+              case(2); D0 = f * dens ** 2 * rho(i, 1) * rho(i, 2)
+            end select
             elf(i, 3) = D0*D0/(D0*D0 + (kappa(i, 1)*rho(i, 2) + kappa(i,2)*rho(i, 1))**2)
           else
             elf(i, 3) = M_ZERO
