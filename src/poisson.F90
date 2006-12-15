@@ -421,11 +421,11 @@ contains
 
     if(m%parallel_in_domains) then
 #if defined(HAVE_MPI)
-      call dcf2mf(m, fft_cf, pot_global)        ! put the density in a cube
+      call dcf2mf(m, fft_cf, pot_global)        ! put the density in a mesh
       call dvec_scatter(m%vp, pot_global, pot)
 #endif
     else
-      call dcf2mf(m, fft_cf, pot)        ! put the density in a cube
+      call dcf2mf(m, fft_cf, pot)        ! put the density in a mesh
     end if
 
     if(present(average_to_zero)) then
