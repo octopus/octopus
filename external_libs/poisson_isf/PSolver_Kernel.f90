@@ -3,9 +3,9 @@
 !  GNU General Public License, see http://www.gnu.org/copyleft/gpl.txt .
 
 
-!!****h* BigDFT/PSolver_Kernel
+!!****h* BigDFT/psolver_kernel
 !! NAME
-!!   PSolver_Kernel
+!!   psolver_kernel
 !!
 !! FUNCTION
 !!    Solver of Poisson equation applying a kernel
@@ -47,8 +47,8 @@
 !!
 !! SOURCE
 !!
-subroutine PSolver_Kernel(n01,n02,n03,nfft1,nfft2,nfft3, &
-     hgrid,karray,rhopot,ehartree)
+subroutine psolver_kernel(n01,n02,n03,nfft1,nfft2,nfft3, &
+     hgrid,karray,rhopot)
    implicit none
    !Arguments
    integer, intent(in)  :: n01,n02,n03,nfft1,nfft2,nfft3
@@ -56,7 +56,6 @@ subroutine PSolver_Kernel(n01,n02,n03,nfft1,nfft2,nfft3, &
    !logical, intent(in) :: xc_on
    real(8), intent(in), dimension(nfft1/2+1,nfft2/2+1,nfft3/2+1) :: karray
    real(8), intent(inout), dimension(n01,n02,n03) :: rhopot
-   real(8), intent(out) :: ehartree
    !Local variables
    real(8), dimension(:,:,:), allocatable :: zarray
    real(8) :: factor
@@ -64,7 +63,7 @@ subroutine PSolver_Kernel(n01,n02,n03,nfft1,nfft2,nfft3, &
    integer :: inzee,i_sign,i_allocated
 
    !Dimension of the FFT
-   call dimensions_FFT(n01,n02,n03,n1,n2,n3)
+   call calculate_dimensions(n01,n02,n03,n1,n2,n3)
    !Half size of nd1
    n1h=n1/2
    nd1 = n1 + modulo(n1+1,2)
@@ -101,7 +100,7 @@ subroutine PSolver_Kernel(n01,n02,n03,nfft1,nfft2,nfft3, &
    
    ! Calling this routine gives only the Hartree potential
    call zarray_out(n01,n02,n03,nd1h,nd2,nd3,&
-        rhopot,zarray(1,1,inzee),factor,hgrid)
+        rhopot,zarray(1,1,inzee),factor)
 
 
    !De-allocations
@@ -771,15 +770,15 @@ end subroutine zarray_in
 !! SOURCE
 !!
 subroutine zarray_out(n01,n02,n03,nd1,nd2,nd3,&
-     rhopot,zarray,factor,hgrid)
-  implicit none
+     rhopot,zarray,factor)
+  Implicit none
   !Arguments
   integer :: n01,n02,n03,nd1,nd2,nd3
   real(8), dimension(n01,n02,n03) :: rhopot
   !Convert zarray(2,nd1,nd2,nd3) -> zarray(2*nd1,nd2,nd3)
   !to use i1=1,n01 instead of i1=1,n1h + special case for modulo(n01,2)
   real(8), dimension(2*nd1,nd2,nd3) :: zarray
-  real(8) :: factor,hgrid
+  real(8) :: factor
   !Local variables
   integer :: i1,i2,i3
   !
@@ -968,4 +967,3 @@ end subroutine check_symmetry
 !!$
 !!$end subroutine test_kernel
 !!***
-

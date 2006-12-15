@@ -5,9 +5,9 @@
 
 
 
-!!****h* BigDFT/Build_Kernel
+!!****h* BigDFT/build_kernel
 !! NAME
-!!   Build_Kernel
+!!   build_kernel
 !!
 !! FUNCTION
 !!    Build the kernel of a gaussian function 
@@ -37,7 +37,7 @@
 !!
 !! SOURCE
 !!
-subroutine Build_Kernel(n01,n02,n03,nfft1,nfft2,nfft3,hgrid,itype_scf,karrayout)
+subroutine build_kernel(n01,n02,n03,nfft1,nfft2,nfft3,hgrid,itype_scf,karrayout)
   
   implicit none
   
@@ -216,16 +216,16 @@ end subroutine Build_Kernel
 !!***
 
 
-!!****h* BigDFT/Dimensions_FFT
+!!****h* BigDFT/calculate_dimensions
 !! NAME
-!!   Dimensions_FFT
+!!   calculate_dimensions
 !!
 !! FUNCTION
 !!   Give the dimensions of the FFT
 !!
 !! SOURCE
 !!
-subroutine Dimensions_FFT(n01,n02,n03,nfft1,nfft2,nfft3)
+subroutine calculate_dimensions(n01,n02,n03,nfft1,nfft2,nfft3)
   implicit none
   !Arguments
   integer, intent(in) :: n01,n02,n03
@@ -263,7 +263,7 @@ subroutine Dimensions_FFT(n01,n02,n03,nfft1,nfft2,nfft3)
   !nd2 = nfft2 + modulo(nfft2+1,2)
   !nd3 = nfft3 + modulo(nfft3+1,2)
   !write(*,*) 'out dimensions_fft',nfft1,nfft2,nfft3
-end subroutine Dimensions_FFT
+end subroutine calculate_dimensions
 !!***
 
 
