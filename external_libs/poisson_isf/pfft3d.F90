@@ -461,6 +461,7 @@ end subroutine multkernel
 
  	subroutine switch_upcorn(nfft,n2,lot,n1,lzt,zt,zw)
 	implicit real*8 (a-h,o-z)
+        integer :: lot, n1, n2, lzt, j, nfft, i
 	dimension zw(2,lot,n2),zt(2,lzt,n1)
 ! WARNING: Assuming that high frequencies are in the corners 
 !          and that n2 is multiple of 2
@@ -485,6 +486,9 @@ end subroutine multkernel
         
  	subroutine mpiswitch_upcorn(j3,nfft,Jp2stb,J2stb,lot,n1,md2,nd3,nproc,zmpi1,zw)
 	implicit real*8 (a-h,o-z)
+        integer :: n1, nd2, nd3, nproc, lot, mfft, jp2, jp2stb, j2
+        integer :: j2stb, nfft, i1, j3, md2
+        
         dimension zmpi1(2,n1/2,md2/nproc,nd3/nproc,nproc),zw(2,lot,n1)
 ! WARNING: Assuming that high frequencies are in the corners 
 !          and that n1 is multiple of 2
@@ -513,6 +517,7 @@ end subroutine multkernel
 
         subroutine halfill_upcorn(md1,md3,lot,nfft,n3,zf,zw)
 	implicit real*8 (a-h,o-z)
+        integer :: lot, n3, md1, md3, i3, i1, nfft
 	dimension zw(2,lot,n3/2),zf(md1,md3)
 ! WARNING: Assuming that high frequencies are in the corners 
 !          and that n3 is multiple of 4
@@ -692,6 +697,7 @@ end subroutine unscramble_pack
 
  	subroutine unswitch_downcorn(nfft,n2,lot,n1,lzt,zw,zt)
 	implicit real*8 (a-h,o-z)
+        integer :: lot, n2, lzt, n1, j, nfft, i
 	dimension zw(2,lot,n2),zt(2,lzt,n1)
 ! WARNING: Assuming that high frequencies are in the corners 
 !          and that n2 is multiple of 2
@@ -708,6 +714,8 @@ end subroutine unscramble_pack
 
  	subroutine unmpiswitch_downcorn(j3,nfft,Jp2stf,J2stf,lot,n1,md2,nd3,nproc,zw,zmpi1)
 	implicit real*8 (a-h,o-z)
+        integer :: n1, md2, nproc, nd3, lot, mfft, i1, j3
+        integer :: jp2, j2, nfft, jp2stf, j2stf
         dimension zmpi1(2,n1/2,md2/nproc,nd3/nproc,nproc),zw(2,lot,n1)
 ! WARNING: Assuming that high frequencies are in the corners 
 !          and that n1 is multiple of 2
@@ -839,16 +847,16 @@ end subroutine unfill_downcorn
 !! SOURCE
 !!
 subroutine kernelfft(n1,n2,n3,nd1,nd2,nd3,nproc,iproc,zf,zr,comm)
-#if defined(HAVE_MPI)
-#if defined(MPI_H)
-#include "mpif.h"
-#endif
-
 #if defined(MPI_MOD)
   use mpi
 #endif
 
   implicit none
+
+#if defined(HAVE_MPI)
+#if defined(MPI_H)
+#include "mpif.h"
+#endif
 
   !Arguments
   integer, intent(in) :: n1,n2,n3,nd1,nd2,nd3,nproc,iproc
@@ -1039,6 +1047,7 @@ end subroutine kernelfft
 
          subroutine switch(nfft,n2,lot,n1,lzt,zt,zw)
         implicit real(kind=8)        (a-h,o-z)
+        integer :: lot, n2, lzt, n1, j, nfft, i
         dimension zw(2,lot,n2),zt(2,lzt,n1)
 
         do 200,j=1,nfft
@@ -1052,6 +1061,8 @@ end subroutine kernelfft
 
          subroutine mpiswitch(j3,nfft,Jp2st,J2st,lot,n1,nd2,nd3,nproc,zmpi1,zw)
         implicit real(kind=8)        (a-h,o-z)
+        integer :: n1, nd2, nproc, nd3, lot, mfft, jp2, jp2st
+        integer :: j2st, nfft, i1, j3, j2
         dimension zmpi1(2,n1,nd2/nproc,nd3/nproc,nproc),zw(2,lot,n1)
 
         mfft=0
@@ -1074,6 +1085,7 @@ end subroutine kernelfft
 
         subroutine inserthalf(nd1,lot,nfft,n3,zf,zw)
         implicit real(kind=8)        (a-h,o-z)
+        integer :: lot, n3, nd1, i3, i1, nfft
         dimension zw(2,lot,n3/2),zf(nd1,n3)
 
         do 100,i3=1,n3/2

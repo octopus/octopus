@@ -216,15 +216,16 @@ subroutine pconvxc_off(m1,m2,m3,n1,n2,n3,nd1,nd2,nd3,md1,md2,md3,iproc,nproc,&
     rhopot,kernelloc,hgrid,comm)
 #if defined(HAVE_MPI)
 
-#if defined(MPI_H)
-#include "mpif.h"
-#endif
-
 #if defined(MPI_MOD)
   use mpi
 #endif
 
   implicit none
+
+#if defined(MPI_H)
+#include "mpif.h"
+#endif
+
 
  integer, intent(in) :: m1,m2,m3,n1,n2,n3,nd1,nd2,nd3,md1,md2,md3,iproc,nproc
  real(kind=8), dimension(nd1,nd2,nd3/nproc), intent(in) :: kernelloc
