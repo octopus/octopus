@@ -55,21 +55,22 @@ end function ncache_optimal
 !!
 subroutine convolxc_off(n1,n2,n3,nd1,nd2,nd3,md1,md2,md3, &
   nproc,iproc,pot,zf,scal,hgrid,comm)
-#if defined(HAVE_MPI)
-#if defined(MPI_H)
-#include "mpif.h"
-#endif
-
-#if defined(MPI_MOD)
-  use mpi
-#endif
-
   !Arguments
   integer, intent(in) :: n1,n2,n3,nd1,nd2,nd3,md1,md2,md3,nproc,iproc
   real(kind=8), intent(in) :: scal,hgrid
   real(kind=8), dimension(nd1,nd2,nd3/nproc), intent(in) :: pot
   real(kind=8), dimension(md1,md3,md2/nproc), intent(inout) :: zf
   integer, intent(in) :: comm
+
+#if defined(HAVE_MPI)
+#if defined(MPI_MOD)
+  use mpi
+#endif
+
+#if defined(MPI_H)
+#include "mpif.h"
+#endif
+
   !Local variables
   integer :: ncache,lzt,lot,ma,mb,nfft,ic1,ic2,ic3,Jp2stb,J2stb,Jp2stf,J2stf
   integer :: j2,j3,i1,i3,i,j,inzee,ierr
@@ -847,22 +848,24 @@ end subroutine unfill_downcorn
 !! SOURCE
 !!
 subroutine kernelfft(n1,n2,n3,nd1,nd2,nd3,nproc,iproc,zf,zr,comm)
+  !Arguments
+  integer, intent(in) :: n1,n2,n3,nd1,nd2,nd3,nproc,iproc
+  real(kind=8), dimension(nd1,n3,nd2/nproc), intent(in) :: zf
+  real(kind=8), dimension(2,nd1,nd2,nd3/nproc), intent(out) :: zr
+  integer, intent(in) :: comm
+
+#if defined(HAVE_MPI)
 #if defined(MPI_MOD)
   use mpi
 #endif
 
   implicit none
 
-#if defined(HAVE_MPI)
 #if defined(MPI_H)
 #include "mpif.h"
 #endif
 
-  !Arguments
-  integer, intent(in) :: n1,n2,n3,nd1,nd2,nd3,nproc,iproc
-  real(kind=8), dimension(nd1,n3,nd2/nproc), intent(in) :: zf
-  real(kind=8), dimension(2,nd1,nd2,nd3/nproc), intent(out) :: zr
-  integer, intent(in) :: comm
+
   !Local variables
   integer :: ncache,lzt,lot,ma,mb,nfft,ic1,ic2,ic3,Jp2st,J2st
   integer :: j2,j3,i1,i3,i,j,inzee,ierr
