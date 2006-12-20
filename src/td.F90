@@ -116,7 +116,7 @@ contains
 
     call init_wfs()
 
-    call td_write_init(write_handler, gr, st, geo, (td%move_ions>0), td%iter, td%dt )
+    call td_write_init(write_handler, gr, st, geo, (td%move_ions>0), h%ep%with_gauge_field, td%iter, td%dt )
 
     ! Calculate initial forces and kinetic energy
     if(td%move_ions > 0) then
@@ -131,7 +131,14 @@ contains
       geo%kinetic_energy = kinetic_energy(geo)
 
       call init_verlet()
+      
     end if
+    
+    !if (h%ep%with_gauge_field) then
+    !  call td_read_gauge_field()
+    !  call epot_generate(h%ep, gr, geo, st, h%reltype)
+    !  call epot_generate_gauge_field(h%ep, gr, st)
+    !end if
 
     if(td%iter == 0) call td_run_zero_iter()
 

@@ -173,7 +173,7 @@ contains
 
 
     !Static magnetic field requires complex wave-functions
-    if (associated(h%ep%B_field)) h%d%wfs_type = M_CMPLX
+    if (associated(h%ep%B_field) .or. h%ep%with_gauge_field) h%d%wfs_type = M_CMPLX
 
 
     !%Variable RelativisticCorrection

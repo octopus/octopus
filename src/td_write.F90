@@ -68,6 +68,7 @@ module td_write_m
     C_POINTER :: out_angular
     C_POINTER :: out_spin
     C_POINTER :: out_magnets
+    C_POINTER :: out_gauge_field
 
     integer        :: lmax     ! maximum multipole moment to output
     FLOAT          :: lmm_r    ! radius of the sphere used to compute the local magnetic moments
@@ -80,12 +81,13 @@ module td_write_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine td_write_init(w, gr, st, geo, ions_move, iter, dt)
+  subroutine td_write_init(w, gr, st, geo, ions_move, with_gauge_field, iter, dt)
     type(td_write_t)             :: w
     type(grid_t),     intent(in) :: gr
     type(states_t),   intent(in) :: st
     type(geometry_t), intent(in) :: geo
     logical,          intent(in) :: ions_move
+    logical,          intent(in) :: with_gauge_field
     integer,          intent(in) :: iter
     FLOAT,            intent(in) :: dt
 
@@ -138,6 +140,9 @@ contains
     !%Option local_mag_moments 512
     !% If set, outputs the local magnetic moments, integrated in sphere centered around each atom.
     !% The radius of the sphere can be ser with <tt>LocalMagneticMomentsSphereRadius</tt>
+    !%Option gauge_field 1024
+    !% If set, outputs the vector gauge field corresponding to a uniform (but time dependent) external electrical potential.
+    !% This is only useful in a time-dependent periodic run
     !%End
     call loct_parse_int(check_inp('TDOutput'), 1+16+128, flags)
     if(.not.varinfo_valid_option('TDOutput', flags, is_flag=.true.)) then
@@ -154,6 +159,7 @@ contains
     w%out_energy  = 0; if(iand(flags, 128).ne.0) w%out_energy  = 1
     w%out_proj    = 0; if(iand(flags, 256).ne.0) w%out_proj    = 1
     w%out_magnets = 0; if(iand(flags, 512).ne.0) w%out_magnets = 1
+    w%out_gauge_field = 0; if(iand(flags, 1024).ne.0 .and. with_gauge_field) w%out_gauge_field = 1
 
     !%Variable TDDipoleLmax
     !%Type integer
@@ -282,6 +288,8 @@ contains
         trim(io_workpath("td.general/energy")))
       if(w%out_proj.ne.0)    call write_iter_init(w%out_proj,    first, dt/units_out%time%factor, &
         trim(io_workpath("td.general/projections")))
+      if(w%out_gauge_field.ne.0)    call write_iter_init(w%out_gauge_field,    first, dt/units_out%time%factor, &
+        trim(io_workpath("td.general/A_gauge")))
     end if
 
     call io_mkdir('td.general')
@@ -307,6 +315,7 @@ contains
       if(w%out_laser.ne.0)   call write_iter_end(w%out_laser)
       if(w%out_energy.ne.0)  call write_iter_end(w%out_energy)
       if(w%out_proj.ne.0)    call write_iter_end(w%out_proj)
+      if(w%out_gauge_field.ne.0)    call write_iter_end(w%out_gauge_field)
     end if
     if( w%out_populations.ne.0 ) then
       do i = 1, w%n_excited_states
@@ -345,6 +354,7 @@ contains
     if(w%out_acc.ne.0)      call td_write_acc(w%out_acc, gr, geo, st, h, dt, i)
     if(w%out_laser.ne.0)    call td_write_laser(w%out_laser, gr, h, dt, i)
     if(w%out_energy.ne.0)   call td_write_energy(w%out_energy, h, i, geo%kinetic_energy)
+    if(w%out_gauge_field.ne.0)   call td_write_gauge_field(w%out_gauge_field, h, gr, i)
 
     call pop_sub()
   end subroutine td_write_iter
@@ -1032,6 +1042,63 @@ contains
 
   end subroutine td_write_energy
 
+  ! ---------------------------------------------------------
+  subroutine td_write_gauge_field(out_gauge, h, gr, iter)
+    C_POINTER,           intent(in) :: out_gauge
+    type(hamiltonian_t), intent(in) :: h
+    type(grid_t),        intent(in) :: gr
+    integer,             intent(in) :: iter
+    
+    integer :: j
+    character(len=50) :: aux
+
+    
+    call push_sub('td_write.td_write_out_gauge')
+    
+    if(.not.mpi_grp_is_root(mpi_world)) return ! only first node outputs
+
+    if(iter == 0) then
+      call td_write_print_header_init(out_gauge)
+
+      ! first line: column names
+      call write_iter_header_start(out_gauge)
+
+      do j = 1, NDIM
+        write(aux, '(a2,i3,a1)') 'A(', j, ')'
+        call write_iter_header(out_gauge, aux)
+      end do
+      !do j = 1, NDIM
+      !  write(aux, '(a2,i3,a1)') 'dA/dt(', j, ')'
+      !  call write_iter_header(out_gauge, aux)
+      !end do
+      !do j = 1, NDIM
+      !  write(aux, '(a2,i3,a1)') 'd^2A/dt^2(', j, ')'
+      !  call write_iter_header(out_gauge, aux)
+      !end do
+      call write_iter_nl(out_gauge)
+
+      ! second line: units
+      !call write_iter_string(out_gauge, '#[Iter n.]')
+      !call write_iter_header(out_gauge, '[' // trim(units_out%time%abbrev) // ']')
+      !call write_iter_string(out_gauge, &
+      !  'A Vector potential in '   // trim(units_out%length%abbrev) &
+      !  'A dot in '                // trim(units_out%length%abbrev) &
+      !  'A dot dot in '            // trim(units_out%length%abbrev)
+      !call write_iter_nl(out_gauge)
+
+      call td_write_print_header_end(out_gauge)
+    end if
+
+    call write_iter_start(out_gauge)
+
+    ! TODO: put the appropriate units here 
+    call write_iter_double(out_gauge, h%ep%A_gauge(1:NDIM),   NDIM)
+    !call write_iter_double(out_gauge, h%A_gauge(1:NDIM), NDIM)
+    !call write_iter_double(out_gauge, h%A_gauge(1:NDIM),    NDIM)
+    call write_iter_nl(out_gauge)
+    call pop_sub()
+    
+  end subroutine td_write_gauge_field
 
   ! ---------------------------------------------------------
   subroutine td_write_proj(out_proj, gr, geo, st, gs_st, kick, iter)

@@ -2051,7 +2051,7 @@ contains
       call output_init(sys%gr%sb, sys%outp)
 
       call td_init(gr, td, sys%st, sys%outp)
-      call td_write_init(write_handler, gr, sys%st, sys%geo, (td%move_ions>0), td%iter, td%dt)
+      call td_write_init(write_handler, gr, sys%st, sys%geo, (td%move_ions>0), h%ep%with_gauge_field, td%iter, td%dt)
       
       call states_allocate_wfns(st, gr%m, M_CMPLX)
 
