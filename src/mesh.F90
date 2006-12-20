@@ -235,15 +235,17 @@ contains
       if(dd.gt.M_ZERO) then
         n = 1; d(1) = dd
       end if
-      dd = abs(x(1)) - (m%sb%xsize - width)
-      if(dd.gt.M_ZERO) then
-        n = n + 1; d(n) = dd
+      if ( m%sb%periodic_dim.eq.0 ) then
+	dd = abs(x(1)) - (m%sb%xsize - width)
+	if(dd.gt.M_ZERO) then
+          n = n + 1; d(n) = dd
+	end if
       end if
     case(MINIMUM,BOX_USDEF)
       message(1) = "Absorbing boundaries are not yet implemented for the 'minimum' box"
       call write_fatal(1)
     case(PARALLELEPIPED)
-      do j = 1, m%sb%dim
+      do j = m%sb%periodic_dim+1, m%sb%dim
         dd = abs(x(j)) - (m%sb%lsize(j) - width)
         if(dd.gt.M_ZERO) then
            n = n + 1; d(n) = dd
