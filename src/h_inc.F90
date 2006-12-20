@@ -65,6 +65,7 @@ subroutine X(Hpsi) (h, gr, psi, hpsi, ik, t, E)
   call X(vlpsi)   (h, gr%m, psi, hpsi, ik)
   if(h%ep%nvnl > 0) call X(vnlpsi)  (h, gr%m, psi, hpsi, ik)
   call X(magnetic_terms) (gr, h, psi, hpsi, ik)
+  if (h%ep%with_gauge_field) call X(vgauge) (gr, h, psi, hpsi, ik)
 
   ! Relativistic corrections...
   select case(h%reltype)
@@ -458,6 +459,40 @@ subroutine X(vlasers) (gr, h, psi, hpsi, t)
   call pop_sub()
 end subroutine X(vlasers)
 
+
+! ---------------------------------------------------------
+subroutine X(vgauge) (gr, h, psi, hpsi, ik)
+  type(grid_t),        intent(inout) :: gr
+  type(hamiltonian_t), intent(in)    :: h
+  R_TYPE,              intent(inout) :: psi(:,:)  !  psi(m%np_part, h%d%dim)
+  R_TYPE,              intent(inout) :: Hpsi(:,:) !  Hpsi(m%np_part, h%d%dim)
+  integer,             intent(in)    :: ik
+
+  integer :: k, idim
+  R_TYPE, allocatable :: grad(:,:,:)
+
+  call push_sub('h_inc.Xvgauge')
+
+  if (associated(h%ep%A_gauge)) then
+    ALLOCATE(grad(NP_PART, NDIM, h%d%dim), NP_PART*h%d%dim*NDIM)
+    do idim = 1, h%d%dim
+      call X(f_gradient)(gr%sb, gr%f_der, psi(:, idim), grad(:, :, idim))
+    end do
+    do k = 1, NP
+      hpsi(k, :) = hpsi(k, :) + M_HALF*sum(h%ep%A_gauge(:)**2)*psi(k, :)
+      select case(h%d%ispin)
+      case(UNPOLARIZED, SPIN_POLARIZED)
+        hpsi(k, 1) = hpsi(k, 1) - M_zI*dot_product(h%ep%A_gauge(1:NDIM), grad(k, 1:NDIM, 1))
+      case (SPINORS)
+        do idim = 1, h%d%dim
+          hpsi(k, idim) = hpsi(k, idim) - M_zI*dot_product(h%ep%A_gauge(1:NDIM), grad(k, 1:NDIM, idim))
+        end do
+      end select
+    end do
+  end if
+
+  call pop_sub()
+end subroutine X(vgauge)
 
 ! ---------------------------------------------------------
 subroutine X(vborders) (gr, h, psi, hpsi)

@@ -26,6 +26,7 @@ module external_pot_m
   use global_m
   use grid_m
   use lib_oct_parser_m
+  use magnetic_m
   use math_m
   use mesh_function_m
   use mesh_m
@@ -52,16 +53,17 @@ module external_pot_m
   implicit none
 
   private
-  public ::                 &
-    epot_t,                 &
-    epot_init,              &
-    epot_end,               &
-    epot_generate,          &
-    epot_laser_scalar_pot,  &
-    epot_laser_field,       &
-    epot_laser_vector_pot,  &
-    epot_forces,            &
-    dproject, zproject,     &
+  public ::                    &
+    epot_t,                    &
+    epot_init,                 &
+    epot_end,                  &
+    epot_generate,             &
+    epot_generate_gauge_field, &
+    epot_laser_scalar_pot,     &
+    epot_laser_field,          &
+    epot_laser_vector_pot,     &
+    epot_forces,               &
+    dproject, zproject,        &
     projector_t
 
   ! /* The projector data type is intended to hold the non-local part of the
@@ -107,6 +109,8 @@ module external_pot_m
     FLOAT, pointer :: v_static(:)          ! static scalar potential
     FLOAT, pointer :: B_field(:)           ! static magnetic field
     FLOAT, pointer :: A_static(:,:)        ! static vector potential
+    FLOAT, pointer :: A_gauge(:)           ! gauge vector potential
+    logical :: with_gauge_field            ! true if A_gauge(:) is used
     
     ! additional arbitrary td potential defined by formula string that will be added to the local
     ! part of the potential
@@ -254,7 +258,30 @@ contains
       ep%A_static = -M_HALF/P_c*ep%A_static
 
     end if
-
+    
+    !%Variable GaugeVectorField
+    !%Type block
+    !%Section Hamiltonian
+    !%Description
+    !% The gauge vector field is used to include a uniform (but time dependent)
+    !% external electric field in a time dependent run for a periodic system
+    !% By default this field is kept null.
+    !%End
+    ! Read the initial gauge vector field
+    ep%with_gauge_field = .false.
+    if(simul_box_is_periodic(gr%sb)) then
+      nullify(ep%A_gauge)
+      if(loct_parse_block(check_inp('GaugeVectorField'), blk) == 0) then
+        ep%with_gauge_field = .true.
+        ALLOCATE(ep%A_gauge(NDIM), NDIM)
+        ep%A_gauge = M_ZERO
+	do i = 1, NDIM
+          call loct_parse_block_float(blk, 0, i-1, ep%A_gauge(i))
+	end do
+	call loct_parse_block_end(blk)
+      end if
+    end if
+    
     !%Variable GyromagneticRatio
     !%Type float
     !%Default 2.0023193043768
@@ -345,6 +372,7 @@ contains
     if(associated(ep%v_static)) deallocate(ep%v_static)
     if(associated(ep%B_field))  deallocate(ep%B_field)
     if(associated(ep%A_static)) deallocate(ep%A_static)
+    if(associated(ep%A_gauge)) deallocate(ep%A_gauge)
 
     if(ep%nvnl>0) then
       ASSERT(associated(ep%p))
@@ -550,7 +578,25 @@ contains
     nullify(p%phases)
   end subroutine kill_projector
 
+  ! ---------------------------------------------------------
+  subroutine epot_generate_gauge_field(ep, gr, st)
+    type(epot_t),   intent(inout) :: ep
+    type(grid_t),   intent(inout) :: gr
+    type(states_t), intent(inout) :: st
+    
+    FLOAT :: jp(NP, NDIM, st%d%nspin)
 
+    call push_sub('epot.epot_generate_gauge_field')
+    
+    call calc_paramagnetic_current(gr, st, jp)
+    
+    ! DEBUG
+    !write(*,*)'DO NOTHING'
+    ! END DEBUG
+    call pop_sub()
+  
+  end subroutine epot_generate_gauge_field
+  
   ! ---------------------------------------------------------
   subroutine epot_generate(ep, gr, geo, st, reltype, time, fast_generation)
     type(epot_t),      intent(inout) :: ep
