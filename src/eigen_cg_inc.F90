@@ -37,7 +37,7 @@ subroutine X(eigen_solver_cg2) (gr, st, h, pre, tol, niter, converged, diff, reo
 
   R_TYPE :: es(2), a0, b0, gg, gg0, gg1, gamma, theta, norma
   FLOAT :: cg0, e0, res
-  integer  :: ik, moved, p, j, iter, maxter, conv, conv_, idim
+  integer  :: ik, moved, p, j, iter, maxter, conv, conv_, idim, ns
   logical  :: reord = .true., verbose_
 
   call push_sub('eigen_cg.eigen_solver_cg2')
@@ -72,12 +72,25 @@ subroutine X(eigen_solver_cg2) (gr, st, h, pre, tol, niter, converged, diff, reo
   end if
 
   ! Start of main loop, which runs over all the eigenvectors searched
+  ns = 1
+  if(st%d%nspin == 2) ns = 2
   ik_loop: do ik = 1, st%d%nik
     conv = converged
+
+    if(verbose_) then
+      if(st%d%nik > ns) then
+	write(message(1), '(a,i4,3(a,f12.6),a)') '#k =',ik,', k = (',  &
+	  st%d%kpoints(1, ik)*units_out%length%factor, ',',            &
+	  st%d%kpoints(2, ik)*units_out%length%factor, ',',            &
+	  st%d%kpoints(3, ik)*units_out%length%factor, ')'
+	call write_info(1)
+      end if
+    end if
+    
     eigenfunction_loop : do p = conv + 1, st%nst
 
       if(verbose_) then
-        write(message(2),'(a,i4,a)') 'Eigenstate # ',p,':'
+        write(message(2),'(a,i4,a)') ' Eigenstate # ',p,':'
       end if
 
       ! Orthogonalize starting eigenfunctions to those already calculated...
