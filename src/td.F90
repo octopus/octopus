@@ -100,6 +100,9 @@ contains
     integer                   :: i, ii, j, ik, ierr
     FLOAT                     :: etime
     type(atom_t), allocatable :: atom1(:)
+    FLOAT, allocatable        :: A_gauge_tmp(:)
+    FLOAT, allocatable        :: A_gauge_dot_tmp(:)
+    FLOAT, allocatable        :: A_gauge_ddot_tmp(:)
 
     call push_sub('td.td_run')
 
@@ -134,11 +137,14 @@ contains
       
     end if
     
-    !if (h%ep%with_gauge_field) then
-    !  call td_read_gauge_field()
-    !  call epot_generate(h%ep, gr, geo, st, h%reltype)
-    !  call epot_generate_gauge_field(h%ep, gr, st)
-    !end if
+    ! Calculate initial value of the gauge vector field
+    if (h%ep%with_gauge_field) then
+      if(td%iter > 0) then
+        call td_read_gauge_field()
+      end if
+      call epot_generate_gauge_field(h%ep, gr, st)
+      call init_verlet_gauge_field()
+    end if
 
     if(td%iter == 0) call td_run_zero_iter()
 
@@ -158,17 +164,17 @@ contains
 
       if(clean_stop()) stopping = .true.
       call profiling_in(C_PROFILING_TIME_STEP)
+      
 
       if( td%move_ions > 0 .or. h%ep%extra_td_pot .ne. '0' .or. h%ep%with_gauge_field) then
         ! Move the ions: only half step, to obtain the external potential in the middle of the time slice.
         if( td%move_ions > 0 ) call apply_verlet_1(td%dt*M_HALF)
-
+	if( h%ep%with_gauge_field ) call apply_verlet_gauge_field_1(td%dt*M_HALF)
         call epot_generate(h%ep, gr, sys%geo, st, h%reltype, time = i*td%dt, &
                            fast_generation = .not.(mod(i, td%epot_regenerate) == 0) )
-	if (h%ep%with_gauge_field) call epot_generate_gauge_field(h%ep, gr, st) 
+        ! Calculate the gauge vector potential at half step
       end if
-
-
+      
       ! time iterate wavefunctions
       call td_rti_dt(sys%ks, h, gr, st, td%tr, i*td%dt, td%dt)
 
@@ -178,22 +184,27 @@ contains
       ! update density
       call states_calc_dens(st, NP, st%rho)
 
-      if(td%move_ions > 0) then
+      if(td%move_ions > 0 .or. h%ep%with_gauge_field) then
         ! Now really move the full time step, from the original positions.
-        geo%atom(1:geo%natoms) = atom1(1:geo%natoms)
-        call apply_verlet_1(td%dt)
+        if( td%move_ions > 0 ) then
+	  geo%atom(1:geo%natoms) = atom1(1:geo%natoms)
+          call apply_verlet_1(td%dt)
+	end if
+	if( h%ep%with_gauge_field ) then
+	  h%ep%A_gauge(1:NDIM) = A_gauge_tmp(1:NDIM)
+	  h%ep%A_gauge_dot(1:NDIM) = A_gauge_dot_tmp(1:NDIM)
+	  h%ep%A_gauge_ddot(1:NDIM) = A_gauge_ddot_tmp(1:NDIM)
+	  call apply_verlet_gauge_field_1(td%dt)
+	  call epot_generate_gauge_field(h%ep, gr, st)
+	end if
         call epot_generate(h%ep, gr, sys%geo, st, h%reltype, time = i*td%dt, &
                            fast_generation = .true. ) 
-        geo%eii = ion_ion_energy(geo)
-        h%eii = geo%eii
+        
+	if ( td%move_ions > 0 ) then
+	  geo%eii = ion_ion_energy(geo)
+          h%eii = geo%eii
+	end if
       end if
-      
-      if (h%ep%with_gauge_field) then
-        if(td%move_ions == 0) call epot_generate(h%ep, gr, sys%geo, st,     &
-		  h%reltype, time = i*td%dt, fast_generation = .true. )
-        call epot_generate_gauge_field(h%ep, gr, st)
-      end if
-
 
       ! update hamiltonian and eigenvalues (fermi is *not* called)
       call v_ks_calc(gr, sys%ks, h, st, calc_eigenval=.true.)
@@ -208,6 +219,11 @@ contains
         geo%kinetic_energy = kinetic_energy(geo)
       end if
 
+      if (h%ep%with_gauge_field) then
+        call epot_generate_gauge_field(h%ep, gr, st)
+	call apply_verlet_gauge_field_2
+      end if
+      
       call td_write_iter(write_handler, gr, st, h, geo, td%kick, td%dt, i)
 
 #if !defined(DISABLE_PES) && defined(HAVE_FFT)
@@ -309,10 +325,42 @@ contains
     end subroutine apply_verlet_2
 
     ! ---------------------------------------------------------
+    subroutine init_verlet_gauge_field
+      ALLOCATE(A_gauge_tmp(NDIM), NDIM)
+      ALLOCATE(A_gauge_dot_tmp(NDIM), NDIM)
+      ALLOCATE(A_gauge_ddot_tmp(NDIM), NDIM)
+      A_gauge_tmp(1:NDIM) = h%ep%A_gauge(1:NDIM)
+      A_gauge_dot_tmp(1:NDIM) = h%ep%A_gauge_dot(1:NDIM)
+      A_gauge_ddot_tmp(1:NDIM) = h%ep%A_gauge_ddot(1:NDIM)
+    end subroutine init_verlet_gauge_field
+
+    ! ---------------------------------------------------------
+    subroutine end_verlet_gauge_field
+      deallocate(A_gauge_tmp)
+      deallocate(A_gauge_dot_tmp)
+      deallocate(A_gauge_ddot_tmp)
+    end subroutine end_verlet_gauge_field
+
+   ! ---------------------------------------------------------
+    subroutine apply_verlet_gauge_field_1(tau)
+      FLOAT, intent(in) :: tau
+      A_gauge_tmp(1:NDIM) = h%ep%A_gauge(1:NDIM)
+      A_gauge_dot_tmp(1:NDIM) = h%ep%A_gauge_dot(1:NDIM)
+      A_gauge_ddot_tmp(1:NDIM) = h%ep%A_gauge_ddot(1:NDIM)
+      h%ep%A_gauge(:) = h%ep%A_gauge(:) +  tau*h%ep%A_gauge_dot(:) + M_HALF*tau**2*h%ep%A_gauge_ddot(:)
+    end subroutine apply_verlet_gauge_field_1
+   
+   ! ---------------------------------------------------------
+    subroutine apply_verlet_gauge_field_2
+      h%ep%A_gauge_dot(:) = h%ep%A_gauge_dot(:)  +  td%dt/M_TWO * (A_gauge_ddot_tmp(:) + h%ep%A_gauge_ddot(:))
+    end subroutine apply_verlet_gauge_field_2
+   
+   ! ---------------------------------------------------------
     subroutine end_()
       ! free memory
       deallocate(st%zpsi)
       if(td%move_ions>0) call end_verlet
+      if (h%ep%with_gauge_field) call end_verlet_gauge_field
       call td_end(td)
       call pop_sub()
     end subroutine end_
@@ -401,7 +449,7 @@ contains
 
       call td_write_iter(write_handler, gr, st, h, geo, td%kick, td%dt, 0)
 
-      ! I aply the delta electric field *after* td_write_iter, otherwise the
+      ! I apply the delta electric field *after* td_write_iter, otherwise the
       ! dipole matrix elements in write_proj are wrong
       call apply_delta_field(td%kick)
 
@@ -528,6 +576,39 @@ contains
       call pop_sub()
     end subroutine td_read_coordinates
 
+    ! ---------------------------------------------------------
+    subroutine td_read_gauge_field()
+      
+      integer :: i, iunit, record_length
+      
+      call push_sub('td.td_read_gauge_field')
+
+      record_length = 28 + 3*3*20
+      call io_assign(iunit)
+      open(unit = iunit, file = 'td.general/A_gauge', &
+        action='read', status='old', recl = record_length)
+      if(iunit < 0) then
+        message(1) = "Could not open file 'td.general/A_gauge'"
+        message(2) = "Starting simulation from initial value"
+        call write_warning(2)
+        return
+      end if
+
+      call io_skip_header(iunit)
+      do i = 0, td%iter - 1
+        read(iunit, *) ! skip previous iterations... sorry, but no seek in Fortran
+      end do
+      read(iunit, '(28x)', advance='no') ! skip the time index.
+
+      ! TODO: units are missing
+      read(iunit, '(3es20.12)', advance='no') h%ep%A_gauge(1:NDIM)
+      read(iunit, '(3es20.12)', advance='no') h%ep%A_gauge_dot(1:NDIM)
+      read(iunit, '(3es20.12)', advance='no') h%ep%A_gauge_ddot(1:NDIM)
+      !           !* units_out%length%factor
+ 
+      call io_close(iunit)
+      call pop_sub()
+    end subroutine td_read_gauge_field
 
     ! ---------------------------------------------------------
     subroutine td_save_restart(iter)

@@ -110,6 +110,8 @@ module external_pot_m
     FLOAT, pointer :: B_field(:)           ! static magnetic field
     FLOAT, pointer :: A_static(:,:)        ! static vector potential
     FLOAT, pointer :: A_gauge(:)           ! gauge vector potential
+    FLOAT, pointer :: A_gauge_dot(:)       ! dA_gauge/dt
+    FLOAT, pointer :: A_gauge_ddot(:)      ! d^2A_gauge/dt^2
     logical :: with_gauge_field            ! true if A_gauge(:) is used
     
     ! additional arbitrary td potential defined by formula string that will be added to the local
@@ -270,11 +272,15 @@ contains
     ! Read the initial gauge vector field
     ep%with_gauge_field = .false.
     if(simul_box_is_periodic(gr%sb)) then
-      nullify(ep%A_gauge)
+      nullify(ep%A_gauge, ep%A_gauge_dot, ep%A_gauge_ddot)
       if(loct_parse_block(check_inp('GaugeVectorField'), blk) == 0) then
         ep%with_gauge_field = .true.
         ALLOCATE(ep%A_gauge(NDIM), NDIM)
+        ALLOCATE(ep%A_gauge_dot(NDIM), NDIM)
+        ALLOCATE(ep%A_gauge_ddot(NDIM), NDIM)
         ep%A_gauge = M_ZERO
+	ep%A_gauge_dot = M_ZERO
+	ep%A_gauge_ddot = M_ZERO
 	do i = 1, NDIM
           call loct_parse_block_float(blk, 0, i-1, ep%A_gauge(i))
 	end do
@@ -373,6 +379,8 @@ contains
     if(associated(ep%B_field))  deallocate(ep%B_field)
     if(associated(ep%A_static)) deallocate(ep%A_static)
     if(associated(ep%A_gauge)) deallocate(ep%A_gauge)
+    if(associated(ep%A_gauge_dot)) deallocate(ep%A_gauge_dot)
+    if(associated(ep%A_gauge_ddot)) deallocate(ep%A_gauge_ddot)
 
     if(ep%nvnl>0) then
       ASSERT(associated(ep%p))
@@ -580,19 +588,40 @@ contains
 
   ! ---------------------------------------------------------
   subroutine epot_generate_gauge_field(ep, gr, st)
-    type(epot_t),   intent(inout) :: ep
-    type(grid_t),   intent(inout) :: gr
-    type(states_t), intent(inout) :: st
+    type(epot_t),      intent(inout) :: ep
+    type(grid_t),      intent(inout) :: gr
+    type(states_t),    intent(inout) :: st
     
-    FLOAT :: jp(NP, NDIM, st%d%nspin)
+    integer :: i, ispin
+    FLOAT :: jp(NP, NDIM, st%d%nspin), n_el, omega2, vol
 
     call push_sub('epot.epot_generate_gauge_field')
     
-    call calc_paramagnetic_current(gr, st, jp)
+    ASSERT(st%d%wfs_type == M_CMPLX)
+    
+    ! Integrate the charge density
+    n_el = M_ZERO
+    do ispin = 1, st%d%spin_channels
+      n_el = n_el + dmf_integrate(gr%m, st%rho(1:NP,ispin))
+    end do
+    
+    vol = M_ONE
+    do i = 1, NDIM
+      ! This only holds for a parallelepipedal box
+      vol = vol*gr%sb%rlat(i,i)
+    end do
+    
+    omega2 = M_FOUR*M_PI*P_c*n_el/vol
+    !call calc_paramagnetic_current(gr, st, jp)
     
     ! DEBUG
-    !write(*,*)'DO NOTHING'
+    ! Harmonic oscillator
+    ep%A_gauge_ddot(1:NDIM) = -omega2*ep%A_gauge(1:NDIM)
+    !write(*,'(a,3f12.6)')'OUT: A = ',ep%A_gauge(1:NDIM)
+    !write(*,'(a,3f12.6)')'OUT: dA/dt = ',ep%A_gauge_dot(1:NDIM)
+    !write(*,'(a,3f12.6)')'OUT: d^2A/dt^2 = ',ep%A_gauge_ddot(1:NDIM)
     ! END DEBUG
+       
     call pop_sub()
   
   end subroutine epot_generate_gauge_field

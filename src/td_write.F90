@@ -1067,14 +1067,14 @@ contains
         write(aux, '(a2,i3,a1)') 'A(', j, ')'
         call write_iter_header(out_gauge, aux)
       end do
-      !do j = 1, NDIM
-      !  write(aux, '(a2,i3,a1)') 'dA/dt(', j, ')'
-      !  call write_iter_header(out_gauge, aux)
-      !end do
-      !do j = 1, NDIM
-      !  write(aux, '(a2,i3,a1)') 'd^2A/dt^2(', j, ')'
-      !  call write_iter_header(out_gauge, aux)
-      !end do
+      do j = 1, NDIM
+        write(aux, '(a6,i3,a1)') 'dA/dt(', j, ')'
+        call write_iter_header(out_gauge, aux)
+      end do
+      do j = 1, NDIM
+        write(aux, '(a2,i3,a1)') 'd^2A/dt^2(', j, ')'
+        call write_iter_header(out_gauge, aux)
+      end do
       call write_iter_nl(out_gauge)
 
       ! second line: units
@@ -1093,8 +1093,8 @@ contains
 
     ! TODO: put the appropriate units here 
     call write_iter_double(out_gauge, h%ep%A_gauge(1:NDIM),   NDIM)
-    !call write_iter_double(out_gauge, h%A_gauge(1:NDIM), NDIM)
-    !call write_iter_double(out_gauge, h%A_gauge(1:NDIM),    NDIM)
+    call write_iter_double(out_gauge, h%ep%A_gauge_dot(1:NDIM), NDIM)
+    call write_iter_double(out_gauge, h%ep%A_gauge_ddot(1:NDIM),    NDIM)
     call write_iter_nl(out_gauge)
     call pop_sub()
     
