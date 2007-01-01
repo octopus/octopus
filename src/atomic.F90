@@ -174,7 +174,6 @@ contains
 
     call atomxc(xcfunc, xcauth, g%nrval, g%nrval, g%rofi, &
                 nspin, rho, ex, ec, dx, dc, xc)
-
     v = ve + xc
 
     deallocate(ve, xc, rho)
@@ -270,10 +269,11 @@ contains
   FLOAT :: AUX(MAXR), D(NSPIN), DECDD(NSPIN), DECDGD(3,NSPIN),             &
      DEXDD(NSPIN), DEXDGD(3,NSPIN),                                  &
      DGDM(-NN:NN), DGIDFJ(-NN:NN), DRDM, DVOL,                       &
-     EPSC, EPSX, F1, F2, GD(3,NSPIN)
-
+     EPSC, EPSX, F1, F2, GD(3,NSPIN), sigma(3), vxsigma(3), vcsigma(3)
   C_POINTER :: x_conf, x_info, c_conf, c_info
   !external :: GGAXC, LDAXC
+
+  call push_sub('atomic.atomxc')
 
   ! sanity check
   ASSERT(NSPIN==1.or.NSPIN==2)
@@ -371,6 +371,7 @@ contains
         80 CONTINUE
      ENDIF
 
+
 !    Find density and gradient of density at this point
      DO 90 IS = 1,NSPIN
         D(IS) = DENS(IR,IS)
@@ -386,15 +387,37 @@ contains
         110 CONTINUE
      ENDIF
 
+     ! The xc_f90_gga routines need as input these combinations of 
+     ! the gradient of the densities.
+     sigma(1) = gd(3, 1)*gd(3, 1)
+     if(NSPIN > 1) then
+       sigma(2) = gd(3, 1) * gd(3, 2)
+       sigma(3) = gd(3, 2) * gd(3, 2)
+     end if
+
 !    Find exchange and correlation energy densities and their
 !    derivatives with respect to density and density gradient
      IF (GGA) THEN
-       call xc_f90_gga(x_conf, D(1), GD(1,1), EPSX, DEXDD(1), DEXDGD(1,1))
-       call xc_f90_gga(c_conf, D(1), GD(1,1), EPSC, DECDD(1), DECDGD(1,1))
+       call xc_f90_gga(x_conf, D(1), sigma(1), EPSX, DEXDD(1), vxsigma(1))
+       call xc_f90_gga(c_conf, D(1), sigma(1), EPSC, DECDD(1), vcsigma(1))
      ELSE
        call xc_f90_lda_vxc(x_conf, D(1), EPSX, DEXDD(1))
        call xc_f90_lda_vxc(c_conf, D(1), EPSC, DECDD(1))
      ENDIF
+
+     ! The derivatives of the exchange and correlation energies per particle with
+     ! respect to the density gradient have to be recovered from the derivatives
+     ! with respect to the sigma values defined above.
+     if(gga) then
+       dexdgd(:, 1) = M_TWO * vxsigma(1)*gd(:, 1)
+       decdgd(:, 1) = M_TWO * vcsigma(1)*gd(:, 1)
+       if(NSPIN .eq. 2) then
+         dexdgd(:, 1) = dexdgd(:, 1) + vxsigma(2)*gd(:, 2)
+         dexdgd(:, 2) = M_TWO * vxsigma(3)*gd(:, 2) + vxsigma(2)*gd(:, 1)
+         decdgd(:, 1) = decdgd(:, 1) + vcsigma(2)*gd(:, 2)
+         decdgd(:, 2) = M_TWO * vcsigma(3)*gd(:, 2) + vcsigma(2)*gd(:, 1)
+       end if
+     end if
 
 !       Add contributions to exchange-correlation energy and its
 !       derivatives with respect to density at all points
@@ -452,6 +475,8 @@ contains
     call xc_f90_lda_end(x_conf)
     call xc_f90_lda_end(c_conf)
   end if
+
+  call pop_sub()
 end subroutine atomxc
 
 
@@ -483,6 +508,8 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
 
   FLOAT :: x,y,q,a2by4,ybyq,qbyy,qpartc,v0,qt,dz,t,beta,dv
   integer :: nrm1,nrm2,ir
+
+  call push_sub('atomic.vhrtre')
 
   NRM1 = NR - 1
   NRM2 = NR - 2
@@ -584,6 +611,7 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
     V(IR) = V(IR) + DV
   end do
 
+  call pop_sub()
   return
   end subroutine vhrtre
 

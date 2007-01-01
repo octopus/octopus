@@ -689,14 +689,12 @@ contains
         call loct_spline_fit(g%nrval, g%rofi, hato, ps%kb(l-1, 1))
       end do
 
-      do l = 0, ps%so_l_max
+      do l = 1, ps%so_l_max+1
         nrc = logrid_index(g, ps_grid%so_kb_radius(l)) + 1
         hato(1:g%nrval) = M_ZERO
-        if(l > 0) then
           hato(1:nrc) = ps_grid%so_KB(1:nrc, l)
-        end if
 
-        call loct_spline_fit(g%nrval, g%rofi, hato, ps%so_kb(l, 1))
+        call loct_spline_fit(g%nrval, g%rofi, hato, ps%so_kb(l-1, 1))
       end do
 
       ! Now the part corresponding to the local pseudopotential
