@@ -19,12 +19,12 @@
 !! $Id$
 
 ! ---------------------------------------------------------
-subroutine X(lr_output) (st, gr, lr, dir, tag, outp)
+subroutine X(lr_output) (st, gr, lr, dir, tag, isigma, outp)
   type(states_t),   intent(inout) :: st
   type(grid_t),     intent(inout) :: gr
   type(lr_t),       intent(inout) :: lr
   character(len=*), intent(in)    :: dir
-  integer,          intent(in)    :: tag
+  integer,          intent(in)    :: tag, isigma
   type(output_t),   intent(in)    :: outp
 
   integer :: ik, ist, idim, ierr, is, i
@@ -38,33 +38,41 @@ subroutine X(lr_output) (st, gr, lr, dir, tag, outp)
 
   u = M_ONE/units_out%length%factor**NDIM
 
-  if(iand(outp%what, output_density).ne.0) then
-    do is = 1, st%d%nspin
-      write(fname, '(a,i1,a,i1)') 'lr_density-', is, '-', tag
-      call X(output_function)(outp%how, dir, fname, gr%m, gr%sb, lr%X(dl_rho)(:, is), u, ierr)
-    end do
-  end if
+  if(isigma == 1) then ! the density, current, etc. are only defined for the + frequency
 
-  if(iand(outp%what, output_pol_density).ne.0) then
-    ALLOCATE(tmp(1:NP),NP)
-    do is = 1, st%d%nspin
-      do i=1,NDIM
-        tmp(1:NP)=gr%m%x(1:NP,i)*lr%X(dl_rho)(:, is)
-        write(fname, '(a,i1,a,i1,a,i1)') 'alpha_density-', is, '-', tag, '-', i
-        call X(output_function)(outp%how, dir, fname, gr%m, gr%sb, tmp, u, ierr)
+    if(iand(outp%what, output_density).ne.0) then
+      do is = 1, st%d%nspin
+        write(fname, '(a,i1,a,i1)') 'lr_density-', is, '-', tag
+        call X(output_function)(outp%how, dir, fname, gr%m, gr%sb, lr%X(dl_rho)(:, is), u, ierr)
       end do
-    end do
-    deallocate(tmp)
-  end if
+    end if
 
-  if( (iand(outp%what, output_current).ne.0) .and. (st%d%wfs_type == M_CMPLX) )then
-    do is = 1, st%d%nspin
-      do idim = 1, NDIM
-        write(fname, '(a,i1,a,i1,a,a)') 'lr_current-', is, '-', tag, '-',  index2axis(idim)
-        call zoutput_function(outp%how, dir, fname, gr%m, gr%sb, lr%dl_j(:, idim, is), u, ierr)
+    if(iand(outp%what, output_pol_density).ne.0) then
+      ALLOCATE(tmp(1:NP),NP)
+      do is = 1, st%d%nspin
+        do i=1,NDIM
+          tmp(1:NP)=gr%m%x(1:NP,i)*lr%X(dl_rho)(:, is)
+          write(fname, '(a,i1,a,i1,a,i1)') 'alpha_density-', is, '-', tag, '-', i
+          call X(output_function)(outp%how, dir, fname, gr%m, gr%sb, tmp, u, ierr)
+        end do
       end do
-    end do
-  end if
+      deallocate(tmp)
+    end if
+
+    if( (iand(outp%what, output_current).ne.0) .and. (st%d%wfs_type == M_CMPLX) )then
+      do is = 1, st%d%nspin
+        do idim = 1, NDIM
+          write(fname, '(a,i1,a,i1,a,a)') 'lr_current-', is, '-', tag, '-',  index2axis(idim)
+          call zoutput_function(outp%how, dir, fname, gr%m, gr%sb, lr%dl_j(:, idim, is), u, ierr)
+        end do
+      end do
+    end if
+
+    if(NDIM==3) then
+      if(iand(outp%what, output_elf).ne.0) call lr_elf('lr_D','lr_elf')
+    end if
+
+  end if ! isigma == 1
 
 
   if(iand(outp%what, output_wfs).ne.0) then
@@ -72,7 +80,8 @@ subroutine X(lr_output) (st, gr, lr, dir, tag, outp)
       if(loct_isinstringlist(ist, outp%wfs_list)) then
         do ik = 1, st%d%nik
           do idim = 1, st%d%dim
-            write(fname, '(a,i3.3,a,i3.3,a,i1,a,i1)') 'lr_wf-', ik, '-', ist, '-', idim,'-', tag
+            write(fname, '(a,i3.3,a,i3.3,a,i1,a,i1,a,i1)') &
+              'lr_wf-', ik, '-', ist, '-', idim, '-', tag, '-', isigma
             call X(output_function) (outp%how, dir, fname, gr%m, gr%sb, &
               lr%X(dl_psi) (1:, idim, ist, ik), sqrt(u), ierr)
           end do
@@ -87,7 +96,9 @@ subroutine X(lr_output) (st, gr, lr, dir, tag, outp)
       if(loct_isinstringlist(ist, outp%wfs_list)) then
         do ik = 1, st%d%nik
           do idim = 1, st%d%dim
-            write(fname, '(a,i3.3,a,i3.3,a,i1)') 'sqm_lr_wf-', ik, '-', ist, '-', idim
+            write(fname, '(a,i3.3,a,i3.3,a,i1,a,i1,a,i1)') &
+              'sqm_lr_wf-', ik, '-', ist, '-', idim, '-', isigma
+
             dtmp = abs(lr%X(dl_psi) (:, idim, ist, ik))**2
             call doutput_function (outp%how, dir, fname, gr%m, gr%sb, dtmp, u, ierr)
           end do
@@ -95,10 +106,6 @@ subroutine X(lr_output) (st, gr, lr, dir, tag, outp)
       end if
     end do
     deallocate(dtmp)
-  end if
-
-  if(NDIM==3) then
-    if(iand(outp%what, output_elf).ne.0)    call lr_elf('lr_D','lr_elf')
   end if
 
   call pop_sub()

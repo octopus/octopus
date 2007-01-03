@@ -34,7 +34,7 @@ subroutine X(get_response_e)(sys, h, lr, dir, tag, nsigma, omega, props, status)
   integer,                intent(in)    :: nsigma 
   R_TYPE,                 intent(in)    :: omega
   type(pol_props_t),      intent(in)    :: props
-  type(status_t),optional,intent(out)   :: status
+  type(em_resp_t),optional,intent(out)   :: status
 
   FLOAT :: dpsimod
   integer :: iter, sigma, ik, ik2, ist, i, err

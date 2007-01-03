@@ -65,7 +65,7 @@ module timedep_m
     VELOCITY_VERLET = 4
 
   type td_t
-    type(td_rti_t) :: tr             ! contains the details of the time evolution
+    type(td_rti_t)    :: tr             ! contains the details of the time evolution
     FLOAT             :: dt             ! time step
     integer           :: max_iter       ! maximum number of iterations to perform
     integer           :: iter           ! the actual iteration

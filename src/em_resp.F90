@@ -50,9 +50,25 @@ module pol_lr_m
   public :: &
        pol_lr_run
 
-  type status_t
+  type em_resp_t
+    integer :: nsigma ! 1: consider only positive values of the frequency
+                      ! 2: consider both positive and negative
+    integer :: nfactor! 1: only one frequency needed
+                      ! 3: three frequencies (for the hyperpolarizabilities)
+    integer :: nomega ! number of frequencies to consider
+
+    FLOAT :: eta                     ! small imaginary part to add to the frequency
+    FLOAT :: freq_factor(1:MAX_DIM)  !
+    FLOAT,      pointer :: omega(:)  ! the frequencies to consider
+    type(lr_t), pointer :: lr(:,:,:) ! linear response for (NDIM, nsigma, nomega)
+
+    type(pol_props_t) :: props
+
+    CMPLX :: alpha(1:MAX_DIM, 1:MAX_DIM, 1:3)          ! the linear polarizability
+    CMPLX :: beta(1:MAX_DIM, 1:MAX_DIM, 1:MAX_DIM)     ! first hyperpolarizability
+
     logical :: ok
-  end type status_t
+  end type em_resp_t
 
 contains
 
@@ -62,25 +78,11 @@ contains
     type(hamiltonian_t),    intent(inout) :: h
     logical,                intent(inout) :: fromScratch
 
-    type(lr_t), allocatable :: lr(:,:,:) ! lr(NDIM,NS,NFREQ)
-
     type(grid_t),   pointer :: gr
+    type(em_resp_t)         :: em_vars
 
-    type(status_t)          :: status
-
-    CMPLX :: alpha(1:MAX_DIM, 1:MAX_DIM, 1:3)
-    CMPLX :: beta(1:MAX_DIM, 1:MAX_DIM, 1:MAX_DIM)
-
-    FLOAT :: eta, freq_factor(1:MAX_DIM)
-
-    integer :: nsigma, sigma, ndim, i, j, k, nomega, dir, ierr, iomega, ifactor, nfactor
-
+    integer :: sigma, ndim, i, j, k, dir, ierr, iomega, ifactor
     character(len=80) :: fname, dirname
-
-    type(pol_props_t) :: props
-
-    FLOAT, allocatable :: omega(:)
-
     logical :: complex_response, have_to_calculate
 
 
@@ -89,50 +91,49 @@ contains
     gr => sys%gr
     ndim = sys%gr%sb%dim
 
-    props%from_scratch = fromScratch
+    em_vars%props%from_scratch = fromScratch
 
-    call parse_input()
+    call parse_input(em_vars%props)
 
-    nsigma = 2  ! positive and negative values of the frequency must be considered
-    nfactor = 1
-    if(props%calc_hyperpol) nfactor=3
+    em_vars%nsigma = 2  ! positive and negative values of the frequency must be considered
+    em_vars%nfactor = 1
+    if(em_vars%props%calc_hyperpol) em_vars%nfactor=3
 
-    complex_response = (eta /= M_ZERO ) .or. wfs_are_complex(sys%st)
+    complex_response = (em_vars%eta /= M_ZERO ) .or. wfs_are_complex(sys%st)
 
-    ALLOCATE(lr(1:ndim, 1:nsigma, 1:nfactor), ndim*nsigma*nfactor)
+    ALLOCATE(em_vars%lr(1:NDIM, 1:em_vars%nsigma, 1:em_vars%nfactor), NDIM*em_vars%nsigma*em_vars%nfactor)
 
     call read_wfs()
 
     ! setup Hamiltonian
     message(1) = 'Info: Setting up Hamiltonian for linear response'
     call write_info(1)
-
     call system_h_setup(sys, h)
 
     do dir = 1, ndim
-      do sigma = 1, nsigma
-        do ifactor = 1, nfactor 
+      do sigma = 1, em_vars%nsigma
+        do ifactor = 1, em_vars%nfactor 
 
           if (wfs_are_complex(sys%st)) then 
-            call lr_init(lr(dir, sigma, ifactor), sys%gr, "Pol", def_solver=LR_BICGSTAB)
+            call lr_init(em_vars%lr(dir, sigma, ifactor), sys%gr, "Pol", def_solver=LR_BICGSTAB)
           else
-            call lr_init(lr(dir, sigma, ifactor), sys%gr, "Pol", def_solver=LR_CG)            
+            call lr_init(em_vars%lr(dir, sigma, ifactor), sys%gr, "Pol", def_solver=LR_CG)            
           end if
 
-          call lr_alloc_fHxc (sys%st, gr%m, lr(dir, sigma, ifactor))
+          call lr_alloc_fHxc (sys%st, gr%m, em_vars%lr(dir, sigma, ifactor))
 
           if(wfs_are_real(sys%st)) then
-            ierr = dlr_alloc_psi(sys%st, gr%m, lr(dir, sigma, ifactor))
-            lr(dir, sigma, ifactor)%ddl_rho = M_ZERO
+            ierr = dlr_alloc_psi(sys%st, gr%m, em_vars%lr(dir, sigma, ifactor))
+            em_vars%lr(dir, sigma, ifactor)%ddl_rho = M_ZERO
           else
-            ierr = zlr_alloc_psi(sys%st, gr%m, lr(dir, sigma, ifactor))
-            lr(dir, sigma, ifactor)%zdl_rho = M_ZERO
+            ierr = zlr_alloc_psi(sys%st, gr%m, em_vars%lr(dir, sigma, ifactor))
+            em_vars%lr(dir, sigma, ifactor)%zdl_rho = M_ZERO
           end if
 
-          if(props%add_fxc) then 
-            call lr_build_fxc(gr%m, sys%st, sys%ks%xc, lr(dir, sigma, ifactor)%dl_Vxc)
+          if(em_vars%props%add_fxc) then 
+            call lr_build_fxc(gr%m, sys%st, sys%ks%xc, em_vars%lr(dir, sigma, ifactor)%dl_Vxc)
           else 
-            lr(dir, sigma, ifactor)%dl_Vxc=M_ZERO
+            em_vars%lr(dir, sigma, ifactor)%dl_Vxc=M_ZERO
           end if
 
         end do
@@ -140,14 +141,16 @@ contains
     end do
 
 
+    ! load wave-functions
     if(.not.fromScratch) then
-      ! load wave-functions
+
       do dir = 1, ndim
-        do sigma = 1, nsigma
-          do ifactor = 1, nfactor
+        do sigma = 1, em_vars%nsigma
+          do ifactor = 1, em_vars%nfactor
 
             write(dirname,'(a,i1,a,i1, a, i1)') RESTART_DIR//"wfs", dir, "_", ifactor, "_", sigma
-            call restart_read(trim(tmpdir)//dirname, sys%st, sys%gr, sys%geo, ierr, lr=lr(dir, sigma, ifactor))
+            call restart_read(trim(tmpdir)//dirname, sys%st, sys%gr, sys%geo, &
+              ierr, lr=em_vars%lr(dir, sigma, ifactor))
 
             if(ierr.ne.0) then
               message(1) = "Could not load response wave-functions from '"//trim(tmpdir)//dirname
@@ -157,7 +160,8 @@ contains
             !check for restart files with the old name
             if(ifactor == 1 .and. ierr /= 0 ) then 
               write(dirname,'(a,i1,a,i1)') RESTART_DIR//"wfs", dir, "_", sigma
-              call restart_read(trim(tmpdir)//dirname, sys%st, sys%gr, sys%geo, ierr, lr=lr(dir, sigma, ifactor))
+              call restart_read(trim(tmpdir)//dirname, sys%st, sys%gr, sys%geo, &
+                ierr, lr=em_vars%lr(dir, sigma, ifactor))
 
               if(ierr .ne. 0) then 
                 message(1) = "Using "//trim(tmpdir)//dirname
@@ -169,25 +173,23 @@ contains
           end do
         end do
       end do
+
     end if
 
     call io_mkdir(trim(tmpdir)//RESTART_DIR)
-
     call info()
 
     message(1) = "Info: Calculating polarizabilities."
     call write_info(1)
 
-    call pol_output_init()
+    call io_mkdir('linear/')
 
-    do iomega = 1, nomega
-
-      do ifactor = 1, nfactor
-
+    do iomega = 1, em_vars%nomega
+      do ifactor = 1, em_vars%nfactor
         do dir = 1, sys%gr%sb%dim
 
           write(message(1), '(a,i1,a,f5.3)') 'Info: Calculating response for direction ', dir, &
-               ' and frequency ', freq_factor(ifactor)*omega(iomega)/units_out%energy%factor
+               ' and frequency ', em_vars%freq_factor(ifactor)*em_vars%omega(iomega)/units_out%energy%factor
           call write_info(1)
 
           have_to_calculate = .true.
@@ -195,16 +197,16 @@ contains
           if(ifactor > 1) then 
             !if this frequency is zero and this is not the first
             !iteration we do not have to do anything
-            if( iomega > 1 .and. freq_factor(ifactor) == M_ZERO) then 
+            if( iomega > 1 .and. em_vars%freq_factor(ifactor) == M_ZERO) then 
               have_to_calculate = .false. 
             end if
             
             !if this frequency is the same as the previous one, just copy it
             if( have_to_calculate .and. &
-                 freq_factor(ifactor)*omega(iomega) ==  freq_factor(ifactor-1)*omega(iomega) ) then 
+              em_vars%freq_factor(ifactor)*em_vars%omega(iomega)==em_vars%freq_factor(ifactor-1)*em_vars%omega(iomega) ) then 
               
-              call lr_copy(sys%st, sys%gr%m, lr(dir, 1, ifactor-1), lr(dir, 1, ifactor))
-              call lr_copy(sys%st, sys%gr%m, lr(dir, 2, ifactor-1), lr(dir, 2, ifactor))
+              call lr_copy(sys%st, sys%gr%m, em_vars%lr(dir, 1, ifactor-1), em_vars%lr(dir, 1, ifactor))
+              call lr_copy(sys%st, sys%gr%m, em_vars%lr(dir, 2, ifactor-1), em_vars%lr(dir, 2, ifactor))
               
               have_to_calculate = .false.
               
@@ -212,10 +214,10 @@ contains
 
             !if this frequency is minus the previous one, copy it inverted
             if( have_to_calculate .and. & 
-                 freq_factor(ifactor) ==  -freq_factor(ifactor-1) ) then 
+                 em_vars%freq_factor(ifactor) == -em_vars%freq_factor(ifactor-1) ) then 
               
-              call lr_copy(sys%st, sys%gr%m, lr(dir, 1, ifactor-1), lr(dir, 2, ifactor))
-              call lr_copy(sys%st, sys%gr%m, lr(dir, 2, ifactor-1), lr(dir, 1, ifactor))
+              call lr_copy(sys%st, sys%gr%m, em_vars%lr(dir, 1, ifactor-1), em_vars%lr(dir, 2, ifactor))
+              call lr_copy(sys%st, sys%gr%m, em_vars%lr(dir, 2, ifactor-1), em_vars%lr(dir, 1, ifactor))
               
               have_to_calculate = .false.
               
@@ -225,66 +227,61 @@ contains
 
           if(have_to_calculate) then 
             if (wfs_are_complex(sys%st)) then 
-              call zget_response_e(sys, h, lr(:, :, ifactor), dir, ifactor, 2 , &
-                   freq_factor(ifactor)*omega(iomega) + M_zI * eta, props, status)
+              call zget_response_e(sys, h, em_vars%lr(:,:, ifactor), dir, ifactor, 2 , &
+                   em_vars%freq_factor(ifactor)*em_vars%omega(iomega) + M_zI * em_vars%eta, &
+                   em_vars%props, em_vars)
             else
-              call dget_response_e(sys, h, lr(:, :, ifactor), dir, ifactor, 2 , &
-                   freq_factor(ifactor)*omega(iomega), props, status)
+              call dget_response_e(sys, h, em_vars%lr(:,:, ifactor), dir, ifactor, 2 , &
+                   em_vars%freq_factor(ifactor)*em_vars%omega(iomega), &
+                   em_vars%props, em_vars)
             end if
           end if
 
         end do ! dir
-
       end do ! ifactor
 
-      if(status%ok) then 
 
-        !calculate polarizability
-        do ifactor = 1, nfactor
-          
-          if(wfs_are_complex(sys%st)) then 
-            call zlr_calc_polarizability(sys, lr(:, :, ifactor), alpha(:,:, ifactor))
-          else
-            call dlr_calc_polarizability(sys, lr(:, :, ifactor), alpha(:,:, ifactor))
-          end if
-          
-        end do
+      !calculate polarizability
+      do ifactor = 1, em_vars%nfactor
+        if(wfs_are_complex(sys%st)) then 
+          call zlr_calc_polarizability(sys, em_vars%lr(:,:, ifactor), em_vars%alpha(:,:, ifactor))
+        else
+          call dlr_calc_polarizability(sys, em_vars%lr(:,:, ifactor), em_vars%alpha(:,:, ifactor))
+        end if          
+      end do
         
-        !calculate hyperpolarizability
-        if(props%calc_hyperpol) then 
-          
-          if(wfs_are_complex(sys%st)) then 
-            call zlr_calc_beta(sys, lr(:, :, :), props, beta)
-          else
-            call dlr_calc_beta(sys, lr(:, :, :), props, beta)
-          end if
-          
+      !calculate hyperpolarizability
+      if(em_vars%props%calc_hyperpol) then           
+        if(wfs_are_complex(sys%st)) then 
+          call zlr_calc_beta(sys, em_vars%lr(:,:,:), em_vars%props, em_vars%beta)
+        else
+          call dlr_calc_beta(sys, em_vars%lr(:,:,:), em_vars%props, em_vars%beta)
         end if
-
       end if
       
-      call pol_output()
+      call em_resp_output(sys%st, sys%gr, sys%outp, em_vars, iomega)
 
     end do ! nomega
 
     do dir = 1, ndim
-      do sigma = 1, nsigma
-        do ifactor = 1, nfactor
-          call lr_dealloc(lr(dir, sigma, ifactor))
+      do sigma = 1, em_vars%nsigma
+        do ifactor = 1, em_vars%nfactor
+          call lr_dealloc(em_vars%lr(dir, sigma, ifactor))
         end do
       end do
     end do
 
-    deallocate(omega)
-    deallocate(lr)
-
+    deallocate(em_vars%omega, em_vars%lr)
     call states_deallocate_wfns(sys%st)
+
     call pop_sub()
 
   contains
 
     ! ---------------------------------------------------------
-    subroutine parse_input()
+    subroutine parse_input(props)
+      type(pol_props_t), intent(out) :: props
+
       C_POINTER :: blk
       integer   :: nrow
       integer   :: number, j, k, ham_var
@@ -327,15 +324,15 @@ contains
       if (loct_parse_block(check_inp('PolFreqs'), blk) == 0) then 
 
         nrow = loct_parse_block_n(blk)
-        nomega = 0
+        em_vars%nomega = 0
 
         !count the number of frequencies
-        do i= 0, nrow-1
+        do i = 0, nrow-1
           call loct_parse_block_int(blk, i, 0, number)
-          nomega = nomega + number
+          em_vars%nomega = em_vars%nomega + number
         end do
 
-        ALLOCATE(omega(1:nomega), nomega)
+        ALLOCATE(em_vars%omega(1:em_vars%nomega), em_vars%nomega)
 
         !read frequencies
         j = 1
@@ -346,24 +343,24 @@ contains
             call loct_parse_block_float(blk, i, 2, omega_fin)
             domega = (omega_fin - omega_ini)/(number - M_ONE)
             do k = 0, number-1
-              omega(j + k) = (omega_ini + domega*k) * units_inp%energy%factor
+              em_vars%omega(j + k) = (omega_ini + domega*k) * units_inp%energy%factor
             end do
             j = j + number
           else
-            omega(j) = omega_ini * units_inp%energy%factor
+            em_vars%omega(j) = omega_ini * units_inp%energy%factor
             j = j + 1
           end if
         end do
 
         call loct_parse_block_end(blk)
 
-        call sort(omega)
+        call sort(em_vars%omega)
 
       else
-        !there is no frequency block, we calculate response for w=0.0
-        nomega = 1
-        ALLOCATE(omega(1:nomega), nomega)
-        omega(1)=M_ZERO
+        !there is no frequency block, we calculate response for w = 0.0
+        em_vars%nomega = 1
+        ALLOCATE(em_vars%omega(1:em_vars%nomega), em_vars%nomega)
+        em_vars%omega(1) = M_ZERO
       end if
 
       !%Variable PolEta
@@ -374,8 +371,8 @@ contains
       !% Imaginary part of the frequency.
       !%End
 
-      call loct_parse_float(check_inp('PolEta'), M_ZERO, eta)
-      eta = eta * units_inp%energy%factor
+      call loct_parse_float(check_inp('PolEta'), M_ZERO, em_vars%eta)
+      em_vars%eta = em_vars%eta * units_inp%energy%factor
 
       !%Variable PolHamiltonianVariation
       !%Type integer
@@ -418,20 +415,16 @@ contains
       !%End
 
       if (loct_parse_block(check_inp('PolHyper'), blk) == 0) then 
-
-        call loct_parse_block_float(blk, 0, 0, freq_factor(1))
-        call loct_parse_block_float(blk, 0, 1, freq_factor(2))
-        call loct_parse_block_float(blk, 0, 2, freq_factor(3))
+        call loct_parse_block_float(blk, 0, 0, em_vars%freq_factor(1))
+        call loct_parse_block_float(blk, 0, 1, em_vars%freq_factor(2))
+        call loct_parse_block_float(blk, 0, 2, em_vars%freq_factor(3))
 
         call loct_parse_block_end(blk)
 
         props%calc_hyperpol = .true.
-
       else
-
         props%calc_hyperpol = .false.
-        freq_factor(1:MAX_DIM) = M_ONE
-
+        em_vars%freq_factor(1:MAX_DIM) = M_ONE
       end if
 
       call pop_sub()
@@ -454,14 +447,7 @@ contains
         call write_fatal(1)
       end if
 
-      do sigma=1,nsigma
-        do dir=1,NDIM
-          do ifactor = 1, nfactor
-            lr(dir, sigma, ifactor)%nst =sys%st%nst
-          end do
-        end do
-      end do
-
+      em_vars%lr(1:NDIM, 1:em_vars%nsigma, 1:em_vars%nfactor)%nst = sys%st%nst
       sys%st%nst    = nst
       sys%st%st_end = nst
       deallocate(sys%st%eigenval, sys%st%occ)
@@ -496,10 +482,9 @@ contains
 
 
     ! ---------------------------------------------------------
-
     subroutine info()
 
-      if(props%calc_hyperpol) then 
+      if(em_vars%props%calc_hyperpol) then 
         write(message(1),'(a)') 'Linear Reponse First Order Hyperpolarizabilities'
         call messages_print_stress(stdout, trim(message(1)))
       else 
@@ -514,32 +499,59 @@ contains
       end if
       call write_info(1)
 
-      if (props%add_hartree .and. props%add_fxc) then 
+      if (em_vars%props%add_hartree .and. em_vars%props%add_fxc) then 
         message(1)='Hamiltonian variation: V_ext + hartree + fxc'
       else
         message(1)='Hamiltonian variation: V_ext'
-        if (props%add_fxc) message(1)='Hamiltonian variation: V_ext + fxc'
-        if (props%add_hartree) message(1)='Hamiltonian variation: V_ext + hartree'
+        if (em_vars%props%add_fxc) message(1)='Hamiltonian variation: V_ext + fxc'
+        if (em_vars%props%add_hartree) message(1)='Hamiltonian variation: V_ext + hartree'
       end if
       call write_info(1)
 
-      write(message(1),'(a,i3,a)') 'Calculating response for ', nomega, ' frequencies.'
-
+      write(message(1),'(a,i3,a)') 'Calculating response for ', em_vars%nomega, ' frequencies.'
       call write_info(1)
 
       call messages_print_stress(stdout)
 
     end subroutine info
 
-    subroutine pol_output_init()
+  end subroutine pol_lr_run
 
-      call io_mkdir('linear/')
 
-    end subroutine pol_output_init
+  ! ---------------------------------------------------------
+  subroutine em_resp_output(st, gr, outp, em_vars, iomega)
+    type(states_t),  intent(inout) :: st
+    type(grid_t),    intent(inout) :: gr
+    type(output_t),  intent(in)    :: outp
+    type(em_resp_t), intent(inout) :: em_vars
+    integer,         intent(in)    :: iomega
+    
+    integer :: iunit, ifactor
+    character(len=80) :: dirname
 
+    do ifactor = 1, em_vars%nfactor
+      write(dirname, '(a, f5.3)') 'linear/freq_', &
+        em_vars%freq_factor(ifactor)*em_vars%omega(iomega)/units_out%energy%factor
+      call io_mkdir(trim(dirname))
+
+      call out_polarizability()
+      if(em_vars%props%calc_hyperpol) call out_hyperpolarizability()
+      call out_projections()
+
+      write(dirname, '(a, f5.3)') 'linear/freq_', em_vars%omega(iomega)/units_out%energy%factor
+      call io_mkdir(dirname)
+      call out_wavefunctions()
+    end do
+
+  contains
+
+    ! ---------------------------------------------------------
+    ! Note: this should be in spectrum.F90
     subroutine cross_section_header(out_file)
       integer, intent(in) :: out_file
+
       character(len=80) :: header_string
+      integer :: i, k
 
       !this header is the same from sprectrum.F90
       write(out_file, '(a1, a20)', advance = 'no') '#', str_center("Energy", 20)
@@ -561,258 +573,228 @@ contains
       write(out_file,*)
     end subroutine cross_section_header
 
-    subroutine pol_output()
+
+    ! ---------------------------------------------------------
+    subroutine out_polarizability()
       FLOAT :: cross(MAX_DIM, MAX_DIM), crossp(MAX_DIM, MAX_DIM)
+      FLOAT :: msp
       FLOAT :: average, anisotropy
-      CMPLX :: bpar(1:MAX_DIM), bper(1:MAX_DIM), bk(1:MAX_DIM)
-      integer :: iunit, ist, ivar, ik, sigma
-      CMPLX   :: proj
-      FLOAT   :: msp
-      character, parameter :: axis(1:3) = (/ 'x', 'y', 'z' /)
+      integer :: j
+
+      iunit = io_open(trim(dirname)//'/alpha', action='write')
+
+      if (.not.em_vars%ok) write(iunit, '(a)') "# WARNING: not converged"
+      write(iunit, '(2a)', advance='no') '# Polarizability tensor [', &
+        trim(units_out%length%abbrev)
+      if(NDIM.ne.1) write(iunit, '(a,i1)', advance='no') '^', NDIM
+      write(iunit, '(a)') ']'
 
 
-      !CREATE THE DIRECTORY FOR EACH FREQUENCY
-      do ifactor = 1, nfactor
+      msp = M_ZERO
+      do j = 1, NDIM
+        write(iunit, '(3f12.6)') real(em_vars%alpha(j, 1:NDIM, ifactor)) / units_out%length%factor**NDIM
+        msp = msp + real(em_vars%alpha(j, j, ifactor))
+      end do
+      msp = msp / M_THREE
 
-        write(dirname, '(a, f5.3)') 'linear/freq_', freq_factor(ifactor)*omega(iomega)/units_out%energy%factor
-        call io_mkdir(trim(dirname))
+      write(iunit, '(a, f12.6)')  'Mean static polarizability', msp &
+        / units_out%length%factor**NDIM
 
-
-        !OUTPUT POLARIZABILITY
-        iunit = io_open(trim(dirname)//'/alpha', action='write')
-
-        if(status%ok) then 
-
-          write(iunit, '(2a)', advance='no') '# Polarizability tensor [', &
-               trim(units_out%length%abbrev)
-          if(NDIM.ne.1) write(iunit, '(a,i1)', advance='no') '^', NDIM
-          write(iunit, '(a)') ']'
+      call io_close(iunit)
 
 
-          msp = M_ZERO
-          do j = 1, NDIM
-            write(iunit, '(3f12.6)') real(alpha(j, 1:NDIM, ifactor)) / units_out%length%factor**NDIM
-            msp = msp + real(alpha(j, j, ifactor))
-          end do
-          msp = msp / M_THREE
+      ! CROSS SECTION (THE COMPLEX PART OF POLARIZABILITY)
+      if( wfs_are_complex(st)) then 
+        cross(1:MAX_DIM, 1:MAX_DIM) = aimag(em_vars%alpha(1:MAX_DIM, 1:MAX_DIM, ifactor)) * &
+          em_vars%freq_factor(ifactor)*em_vars%omega(iomega)/units_out%energy%factor * M_FOUR * M_PI / P_c 
+        
+        iunit = io_open(trim(dirname)//'/cross_section', action='write')
+        if (.not.em_vars%ok) write(iunit, '(a)') "# WARNING: not converged"
 
-          write(iunit, '(a, f12.6)')  'Mean static polarizability', msp &
-               / units_out%length%factor**NDIM
-        else
-
-          call pol_write_fail(iunit)
-
-        end if
+        average = M_THIRD* ( cross(1, 1) + cross(2, 2) + cross(3, 3) )
+        crossp(:, :) = matmul(cross(:, :),cross(:, :))
+        anisotropy =  M_THIRD * ( M_THREE * (crossp(1, 1) + crossp(2, 2) + crossp(3, 3)) - &
+          (cross(1, 1) + cross(2, 2) + cross(3, 3))**2 )
+          
+        call cross_section_header(iunit)
+        write(iunit,'(3e20.8)', advance = 'no') &
+          em_vars%freq_factor(ifactor)*em_vars%omega(iomega) / units_out%energy%factor, &
+          average , sqrt(max(anisotropy, M_ZERO)) 
+        write(iunit,'(9e20.8)', advance = 'no') cross(1:3, 1:3)
+        write(iunit,'(a)', advance = 'yes')
 
         call io_close(iunit)
+      end if
 
-        if( wfs_are_complex(sys%st)) then 
+    end subroutine out_polarizability
 
-          !CROSS SECTION (THE COMPLEX PART OF POLARIZABILITY)
-          cross(1:MAX_DIM, 1:MAX_DIM) = aimag(alpha(1:MAX_DIM, 1:MAX_DIM, ifactor)) * &
-               freq_factor(ifactor)*omega(iomega)/units_out%energy%factor * M_FOUR * M_PI / P_c 
 
-          iunit = io_open(trim(dirname)//'/cross_section', action='write')
-          if(status%ok) then 
-            average = M_THIRD* ( cross(1, 1) + cross(2, 2) + cross(3, 3) )
-            crossp(:, :) = matmul(cross(:, :),cross(:, :))
-            anisotropy =  M_THIRD * ( M_THREE * (crossp(1, 1) + crossp(2, 2) + crossp(3, 3)) - &
-                 (cross(1, 1) + cross(2, 2) + cross(3, 3))**2 )
+    ! ---------------------------------------------------------
+    subroutine out_hyperpolarizability()
+      character, parameter :: axis(1:3) = (/ 'x', 'y', 'z' /)
 
-            call cross_section_header(iunit)
-            write(iunit,'(3e20.8)', advance = 'no') freq_factor(ifactor)*omega(iomega) / units_out%energy%factor, &
-                 average , sqrt(max(anisotropy, M_ZERO)) 
-            write(iunit,'(9e20.8)', advance = 'no') cross(1:3, 1:3)
-            write(iunit,'(a)', advance = 'yes')
+      CMPLX :: bpar(1:MAX_DIM), bper(1:MAX_DIM), bk(1:MAX_DIM)
+      integer :: i, j, k
 
-          else
+      ! Output first hyperpolarizabilty (beta)
+      iunit = io_open(trim(dirname)//'/beta', action='write')
 
-            call pol_write_fail(iunit)
+      if (.not.em_vars%ok) write(iunit, '(a)') "# WARNING: not converged"
 
-          end if
+      write(iunit, '(2a)', advance='no') 'First hyperpolarizability tensor: beta [', &
+        trim(units_out%length%abbrev)
+      write(iunit, '(a,i1)', advance='no') '^', 5
+      write(iunit, '(a)') ']'
 
+      if (st%d%nspin /= UNPOLARIZED ) then 
+        write(iunit, '(a)') 'WARNING: Hyperpolarizability has not been tested for spin polarized systems'
+      end if
+
+      write(iunit, '()')
+
+      do i = 1, NDIM
+        do j = 1, NDIM
+          do k = 1, NDIM
+            write(iunit,'(a,e20.8,e20.8)') 'beta '//axis(i)//axis(j)//axis(k)//' ', &
+              real( em_vars%beta(i, j, k))/units_out%length%factor**(5), &
+              aimag(em_vars%beta(i, j, k))/units_out%length%factor**(5)
+          end do
+        end do
+      end do
+
+      if (NDIM == 3) then 
+        bpar = M_ZERO
+        bper = M_ZERO
+
+        do i = 1, NDIM
+          do j = 1, NDIM
+            bpar(i) = bpar(i) + em_vars%beta(i, j, j) + &
+              em_vars%beta(j, i, j) + em_vars%beta(j, j, i)
+
+            bper(i) = bper(i) + M_TWO*em_vars%beta(i, j, j) - &
+              M_THREE*em_vars%beta(j, i, j) + M_TWO*em_vars%beta(j, j, i)
+          end do
+        end do
+
+        write(iunit, '()')
+
+        bpar = bpar / (M_FIVE * units_out%length%factor**(5))
+        bper = bper / (M_FIVE * units_out%length%factor**(5))
+        bk(1:NDIM) = M_THREE*M_HALF*(bpar(1:NDIM) - bper(1:NDIM))
+            
+        do i = 1, NDIM
+          write(iunit, '(a, 2e20.8)') 'beta // '//axis(i), real(bpar(i)), aimag(bpar(i))
+        end do
+        
+        write(iunit, '()')
+            
+        do i = 1, NDIM
+          write(iunit, '(a, 2e20.8)') 'beta _L '//axis(i), real(bper(i)), aimag(bper(i))
+        end do
+
+        write(iunit, '()')
+
+        do i = 1, NDIM
+          write(iunit, '(a, 2e20.8)') 'beta  k '//axis(i), real(bk(i)), aimag(bk(i))
+        end do
+      endif
+
+      call io_close(iunit)
+
+    end subroutine out_hyperpolarizability
+
+
+    ! ---------------------------------------------------------
+    subroutine out_projections()
+      CMPLX   :: proj
+      integer :: ist, ivar, ik, dir, sigma
+      character(len=80) :: fname
+
+      do ik = 1, st%d%nspin
+        do dir = 1, NDIM
+
+          write(fname, '(2a,i1,a,i1)') trim(dirname), '/projection-', ik, '-', dir
+          iunit = io_open(trim(fname), action='write')
+
+          if (.not.em_vars%ok) write(iunit, '(a)') "# WARNING: not converged"
+
+          write(iunit, '(a)', advance='no') '# state '
+          do ivar = 1, em_vars%lr(dir, 1, 1)%nst
+            do sigma = 1, em_vars%nsigma
+
+              if( sigma == em_vars%nsigma .and. ivar == em_vars%lr(dir, 1, 1)%nst) then 
+                write(iunit, '(i3)', advance='yes') (3 - 2*sigma)*ivar
+              else 
+                write(iunit, '(i3)', advance='no') (3 - 2*sigma)*ivar
+              end if
+
+            end do
+          end do
+
+          do ist = 1, st%nst
+            write(iunit, '(i3)', advance='no') ist
+
+            do ivar = 1, em_vars%lr(dir, 1, 1)%nst
+              do sigma = 1, em_vars%nsigma
+
+                if(wfs_are_complex(st)) then
+                  proj = zstates_dotp(gr%m, st%d%dim, &
+                    st%zpsi(:,:, ist, ik),                &
+                    em_vars%lr(dir, sigma, ifactor)%zdl_psi(:,:, ivar, ik))
+                else
+                  proj = dstates_dotp(gr%m, st%d%dim, &
+                    st%dpsi(:,:, ist, ik),                &
+                    em_vars%lr(dir, sigma, ifactor)%ddl_psi(:,:, ivar, ik))
+                end if
+                  
+                if( sigma == em_vars%nsigma .and. ivar == em_vars%lr(dir, 1, 1)%nst) then 
+                  write(iunit, '(f12.6)', advance='yes') abs(proj)
+                else 
+                  write(iunit, '(f12.6,a)', advance='no') abs(proj), ' '
+                end if
+
+              end do
+            end do
+
+          end do
           call io_close(iunit)
 
-        end if
+        end do ! dir
+      end do !ik
 
-        !PROJECTIONS
-        do ik = 1, sys%st%d%nspin
-          do dir = 1, NDIM
+    end subroutine out_projections
 
-            write(fname, '(2a,i1,a,i1)') trim(dirname), '/projection-', ik, '-', dir
-            iunit = io_open(trim(fname), action='write')
 
-            if (status%ok) then 
-              write(iunit, '(a)', advance='no') '# state '
-              do ivar = 1, lr(dir, 1, 1)%nst
-                do sigma=1,nsigma
+    ! ---------------------------------------------------------
+    subroutine out_wavefunctions()
+      integer :: dir, isigma
 
-                  if( sigma == nsigma .and. ivar == lr(dir, 1, 1)%nst) then 
-                    write(iunit, '(i3)', advance='yes') (3-2*sigma)*ivar
-                  else 
-                    write(iunit, '(i3)', advance='no') (3-2*sigma)*ivar
-                  end if
+      do dir = 1, NDIM
+        if( wfs_are_complex(st) ) then 
 
-                end do
+          if(NDIM==3) then
+            if(iand(outp%what, output_elf).ne.0) &
+              call zlr_calc_elf(st, gr, em_vars%lr(dir, 1, ifactor), em_vars%lr(dir, 2, ifactor))
+          end if
+          do isigma = 1, em_vars%nsigma
+            call zlr_output(st, gr, em_vars%lr(dir, isigma, ifactor), dirname, dir, isigma, outp)
+          end do
+        else
 
-              end do
-
-              do ist = 1, sys%st%nst
-                write(iunit, '(i3)', advance='no') ist
-
-                do ivar = 1, lr(dir, 1, 1)%nst
-                  do sigma=1,nsigma
-
-                    if(wfs_are_complex(sys%st)) then
-                      proj=zstates_dotp(sys%gr%m, sys%st%d%dim, &
-                           sys%st%zpsi(:,:, ist, ik), &
-                           lr(dir, sigma, ifactor)%zdl_psi(:,:, ivar, ik))
-                    else
-                      proj=dstates_dotp(sys%gr%m, sys%st%d%dim, &
-                           sys%st%dpsi(:,:, ist, ik), &
-                           lr(dir, sigma, ifactor)%ddl_psi(:,:, ivar, ik))
-                    end if
-
-                    if( sigma == nsigma .and. ivar == lr(dir, 1, 1)%nst) then 
-                      write(iunit, '(f12.6)', advance='yes') abs(proj)
-                    else 
-                      write(iunit, '(f12.6,a)', advance='no') abs(proj), ' '
-                    end if
-
-                  end do
-                end do
-
-              end do
-
-            else
-
-              call pol_write_fail(iunit)
-
-            end if
-
-            call io_close(iunit)
-
-          end do ! dir
-        end do !ik
-
-        !WRITE FUNCTIONS
-        if(status%ok) then 
-
-          do dir = 1, NDIM
-
-            write(dirname, '(a, f5.3)') 'linear/freq_', omega(iomega)/units_out%energy%factor
-
-            call io_mkdir(dirname)
-
-            if( wfs_are_complex(sys%st) ) then 
-
-              if(NDIM==3) then
-                if(iand(sys%outp%what, output_elf).ne.0) &
-                     call zlr_calc_elf(sys%st,sys%gr, lr(dir, 1, ifactor), lr(dir, 2, ifactor))
-              end if
-              call zlr_output(sys%st, sys%gr, lr(dir, 1, ifactor), dirname, dir, sys%outp)
-
-            else
-
-              if(NDIM==3) then
-                if(iand(sys%outp%what, output_elf).ne.0) &
-                     call dlr_calc_elf(sys%st,sys%gr, lr(dir, 1, ifactor), lr(dir, 2, ifactor))
-              end if
-              call dlr_output(sys%st, sys%gr, lr(dir, 1, ifactor), dirname, dir, sys%outp)
-
-            end if
+          if(NDIM==3) then
+            if(iand(outp%what, output_elf).ne.0) &
+              call dlr_calc_elf(st, gr, em_vars%lr(dir, 1, ifactor), em_vars%lr(dir, 2, ifactor))
+          end if
+          do isigma = 1, em_vars%nsigma
+            call dlr_output(st, gr, em_vars%lr(dir, isigma, ifactor), dirname, dir, isigma, outp)
           end do
 
         end if
       end do
 
-      !HYPERPOLARIZABILITY
-      if(props%calc_hyperpol) then
+    end subroutine out_wavefunctions
 
-        ! Output first hyperpolarizabilty (beta)
-        iunit = io_open(trim(dirname)//'/beta', action='write')
-
-        if(status%ok) then 
-
-          write(iunit, '(2a)', advance='no') 'First hyperpolarizability tensor: beta [', &
-               trim(units_out%length%abbrev)
-          write(iunit, '(a,i1)', advance='no') '^', 5
-          write(iunit, '(a)') ']'
-
-          if (sys%st%d%nspin /= UNPOLARIZED ) then 
-            write(iunit, '(a)') 'WARNING: Hyperpolarizability has not been tested for spin polarized systems'
-          end if
-
-          write(iunit, '()')
-
-          do i = 1, NDIM
-            do j = 1, NDIM
-              do k = 1, NDIM
-                write(iunit,'(a,e20.8,e20.8)') 'beta '//axis(i)//axis(j)//axis(k)//' ', &
-                     real(beta(i, j, k))/units_out%length%factor**(5), aimag(beta(i, j, k))/units_out%length%factor**(5)
-              end do
-            end do
-          end do
-
-          if (NDIM == 3) then 
-
-            bpar = M_ZERO
-            bper = M_ZERO
-
-            do i = 1, NDIM
-              do j = 1, NDIM
-                bpar(i) = bpar(i) + beta(i, j, j) + beta(j, i, j) + beta(j, j, i)
-                bper(i) = bper(i) + M_TWO*beta(i, j, j) - M_THREE*beta(j, i, j) + M_TWO*beta(j, j, i)
-              end do
-            end do
-
-            write(iunit, '()')
-
-            bpar = bpar / (M_FIVE * units_out%length%factor**(5))
-            bper = bper / (M_FIVE * units_out%length%factor**(5))
-            bk(1:NDIM) = M_THREE*M_HALF*(bpar(1:NDIM) - bper(1:NDIM))
-            
-            do i = 1, NDIM
-              write(iunit, '(a, 2e20.8)') 'beta // '//axis(i), real(bpar(i)), aimag(bpar(i))
-            end do
-
-            write(iunit, '()')
-            
-            do i = 1, NDIM
-              write(iunit, '(a, 2e20.8)') 'beta _L '//axis(i), real(bper(i)), aimag(bper(i))
-            end do
-
-            write(iunit, '()')
-
-            do i = 1, NDIM
-              write(iunit, '(a, 2e20.8)') 'beta  k '//axis(i), real(bk(i)), aimag(bk(i))
-            end do
-
-
-          endif
-
-        else 
-
-          call pol_write_fail(iunit)
-
-        endif
-
-        call io_close(iunit)
-
-      end if
-
-
-    end subroutine pol_output
-
-      subroutine pol_write_fail(iunit)
-        integer :: iunit
-        
-        write(iunit, '(a)') "#NOT CONVERGED"
-
-      end subroutine pol_write_fail
-
-  end subroutine pol_lr_run
-
+  end subroutine em_resp_output
 
 #include "undef.F90"
 #include "complex.F90"
