@@ -336,7 +336,7 @@ subroutine X(restart_write_lr_density)(sys, lr, omega, tag)
 
   call block_signals();
   do is = 1, sys%st%d%nspin
-    write(fname, '(a, f6.4, a, i1, a, i1, a)') 'density-', omega, '-', tag, '-', is, '.'
+    write(fname, '(a, f6.4, a, i1, a, i1)') 'density-', omega, '-', tag, '-', is
     call X(restart_write_function)(trim(tmpdir)//RESTART_DIR, fname, sys%gr,&
          lr%X(dl_rho)(:, is), ierr, size(lr%X(dl_rho),1))
   end do
@@ -358,7 +358,7 @@ subroutine X(restart_read_lr_density)(sys, lr, omega, tag, ierr)
 
   ierr = 0;
   do is = 1, sys%st%d%nspin
-    write(fname, '(a, f6.4, a, i1, a, i1, a)') 'density-', omega, '-', tag, '-', is, '.'
+    write(fname, '(a, f6.4, a, i1, a, i1)') 'density-', omega, '-', tag, '-', is
     call X(restart_read_function)(trim(tmpdir)//RESTART_DIR, fname, sys%gr%m,&
          lr%X(dl_rho)(:, is), s_ierr)
     if( s_ierr /=0 ) ierr = s_ierr;
@@ -382,7 +382,7 @@ subroutine X(restart_read_lr_density)(sys, lr, omega, tag, ierr)
     if(ierr == 0 ) then 
       
       do is = 1, sys%st%d%nspin
-        write(fname, '(a, f6.4, a, i1, a, i1, a)') 'density-', closest_omega, '-', tag, '-', is, '.'
+        write(fname, '(a, f6.4, a, i1, a, i1)') 'density-', closest_omega, '-', tag, '-', is
         call X(restart_read_function)(trim(tmpdir)//RESTART_DIR, fname, sys%gr%m,&
              lr%X(dl_rho)(:, is), s_ierr)
         if( s_ierr /=0 ) ierr = s_ierr;
