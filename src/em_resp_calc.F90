@@ -94,7 +94,7 @@ contains
             do k = 1, NDIM 
 
               lr%dl_j(1:np,k,ispin) = lr%dl_j(1:np, k, ispin) + (           &
-                + conjg(st%zpsi(1:np, idim, ist, ispin)) *       gdl_psi(1:np,k)   &
+                + conjg(st%zpsi(1:np, idim, ist, ispin)) *      gdl_psi(1:np,k)   &
                 -       st%zpsi(1:np, idim, ist, ispin) * conjg(gdl_psi_m(1:np,k))  &
                 + conjg(lr_m%zdl_psi(1:np, idim, ist, ispin)) *     gpsi(1:np,k)   & 
                 -       lr%zdl_psi(1:np, idim, ist, ispin)  * conjg(gpsi(1:np,k))  &

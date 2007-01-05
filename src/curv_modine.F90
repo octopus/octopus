@@ -21,7 +21,7 @@
 #include "global.h"
 
 ! This module implements the curvilinear coordinates given in
-! E.L. Briggs, D.J. Sullivan, and J. Bernholc, PRB 54 14362 (1996)
+! N. A. Modine, G. Zumbach, and E. Kaxiras, Phys. Rev. B 55, 10289-10301 (1997) 
 !
 ! The local refinement was changed for a simple exponential.
 ! I believe that the recipe given by the authors is too complicated
@@ -29,6 +29,7 @@
 
 module curv_modine_m
   use datasets_m
+  use geometry_m
   use geometry_m
   use global_m
   use lib_oct_parser_m
@@ -42,6 +43,7 @@ module curv_modine_m
   public ::                  &
     curv_modine_t,           &
     curv_modine_init,        &
+    curv_modine_end,         &
     curv_modine_chi2x,       &
     curv_modine_jacobian_inv
 
@@ -49,15 +51,22 @@ module curv_modine_m
     FLOAT :: L(MAX_DIM)    ! size of the box
     FLOAT :: xbar          ! size of central flat region (in units of L)
     FLOAT :: Jbar          ! increase in density of points is 1/J
-    FLOAT :: Jlocal        ! local (around the atoms) refinement
-    FLOAT :: Jrange        ! local refinement range
+
+    type(geometry_t), pointer :: geo        ! shortcut to geometry information
+    FLOAT,            pointer :: Jlocal(:)  ! local (around the atoms) refinement
+    FLOAT,            pointer :: Jrange(:)  ! local refinement range
+
+    integer, pointer :: chi_atoms(:,:)
   end type curv_modine_t
+
+  integer, parameter :: qq = 3
 
 contains
 
   ! ---------------------------------------------------------
-  subroutine curv_modine_init(sb, cv)
+  subroutine curv_modine_init(sb, geo, cv)
     type(simul_box_t),   intent(in)  :: sb
+    type(geometry_t),    intent(in)  :: geo
     type(curv_modine_t), intent(out) :: cv
 
     call loct_parse_float(check_inp('CurvModineXBar'), M_ONE/M_THREE, cv%xbar)
@@ -71,15 +80,33 @@ contains
       call write_fatal(1)
     end if
 
-    call loct_parse_float(check_inp('CurvModineJlocal'), CNST(0.5), cv%Jlocal)
-    call loct_parse_float(check_inp('CurvModineJrange'), M_TWO/units_inp%length%factor, cv%Jrange)
+    ALLOCATE(cv%Jlocal(geo%natoms), geo%natoms)
+    ALLOCATE(cv%Jrange(geo%natoms), geo%natoms)
+    ALLOCATE(cv%chi_atoms(sb%dim, geo%natoms), sb%dim*geo%natoms)
 
-    if(cv%Jlocal<M_ZERO.or.cv%Jlocal>M_ONE) then
+    ! WARNING: the reading has to be done for each atom kind
+    call loct_parse_float(check_inp('CurvModineJlocal'), CNST(0.5), cv%Jlocal(1))
+    call loct_parse_float(check_inp('CurvModineJrange'), M_TWO/units_inp%length%factor, cv%Jrange(1))
+
+    if(cv%Jlocal(1)<M_ZERO.or.cv%Jlocal(1)>M_ONE) then
       message(1) = 'The parameter "CurvModineJlocal" must lie between 0 and 1.'
       call write_fatal(1)
     end if
 
+    cv%Jlocal(:) = cv%Jlocal(1)
+    cv%Jrange(:) = cv%Jrange(1)
+
   end subroutine curv_modine_init
+
+
+  ! ---------------------------------------------------------
+  subroutine curv_modine_end(cv)
+    type(curv_modine_t), intent(inout) :: cv
+
+    deallocate(cv%Jlocal, cv%Jrange)
+    deallocate(cv%chi_atoms)
+
+  end subroutine curv_modine_end
 
 
   ! ---------------------------------------------------------
@@ -89,8 +116,6 @@ contains
     type(curv_modine_t), intent(in)  :: cv
     FLOAT,               intent(in)  :: chi_(:)  ! chi_(sb%dim)
     FLOAT,               intent(out) :: x(:)     !   x (sb%dim)
-
-    integer, parameter :: q = 3
 
     FLOAT :: chibar(MAX_DIM), r, chi
     logical :: neg
@@ -105,8 +130,8 @@ contains
       x(i) = cv%Jbar * chi
       if(chi > chibar(i)) then
         r = (chi-chibar(i))/(cv%L(i)-chibar(i))
-        x(i) = x(i) + cv%L(i)/M_TWO*(1-cv%Jbar) * r**q *   &
-           (q + M_ONE - (q - M_ONE)*r)
+        x(i) = x(i) + cv%L(i)/M_TWO*(1-cv%Jbar) * r**qq *   &
+           (qq + M_ONE - (qq - M_ONE)*r)
       end if
 
       if(neg) x(i) = -x(i)
@@ -114,7 +139,7 @@ contains
 
     do i = 1, geo%natoms
       r = max(sqrt(sum((x - geo%atom(i)%x)**2)), CNST(1e-6))
-      x(:) = x(:) - cv%Jlocal*(x - geo%atom(i)%x)*exp(-r**2/(M_TWO*cv%Jrange**2))
+      x(:) = x(:) - cv%Jlocal(i)*(x - geo%atom(i)%x)*exp(-r**2/(M_TWO*cv%Jrange(i)**2))
     end do
 
   end subroutine curv_modine_chi2x
@@ -127,8 +152,6 @@ contains
     type(curv_modine_t), intent(in)  :: cv
     FLOAT,               intent(in)  :: chi_(:)  ! chi(sb%dim)
     FLOAT,               intent(out) :: J(:,:)   ! J(sb%dim,sb%dim), the Jacobian
-
-    integer, parameter :: q = 3
 
     FLOAT :: chibar(MAX_DIM), r, f, chi, J2(MAX_DIM), x(MAX_DIM)
     logical :: neg
@@ -147,11 +170,11 @@ contains
       if(chi > chibar(i)) then
         r = (chi-chibar(i))/(cv%L(i)-chibar(i))
 
-        x(i)  = x(i) + cv%L(i)/M_TWO*(1-cv%Jbar) * r**q *   &
-           (q + M_ONE - (q - M_ONE)*r)
+        x(i)  = x(i) + cv%L(i)/M_TWO*(1-cv%Jbar) * r**qq *   &
+           (qq + M_ONE - (qq - M_ONE)*r)
 
-        J2(i) = J2(i) + cv%L(i)/M_TWO*(1-cv%Jbar) * r**(q-1)/(cv%L(i)-chibar(i)) *   &
-           (q*(q+1) - (q**2-1)*r)
+        J2(i) = J2(i) + cv%L(i)/M_TWO*(1-cv%Jbar) * r**(qq-1)/(cv%L(i)-chibar(i)) *   &
+           (qq*(qq+1) - (qq**2-1)*r)
       end if
 
       if(neg) x(i) = -x(i)
@@ -160,13 +183,13 @@ contains
     J(:,:) = M_ZERO
     do i = 1, geo%natoms
       r = max(sqrt(sum((x - geo%atom(i)%x)**2)), CNST(1e-6))
-      f = exp(-r**2/(M_TWO*cv%Jrange**2))
+      f = exp(-r**2/(M_TWO*cv%Jrange(i)**2))
 
       do ix = 1, sb%dim
-        J(ix, ix) = M_ONE - cv%Jlocal*f
+        J(ix, ix) = M_ONE - cv%Jlocal(i)*f
         do iy = 1, sb%dim
-          J(ix, iy) = J(ix, iy) + cv%Jlocal*(x(ix)-geo%atom(i)%x(ix))*(x(iy)-geo%atom(i)%x(iy)) * &
-             M_TWO/(M_TWO*cv%Jrange**2) * f
+          J(ix, iy) = J(ix, iy) + cv%Jlocal(i)*(x(ix)-geo%atom(i)%x(ix))*(x(iy)-geo%atom(i)%x(iy)) * &
+             M_TWO/(M_TWO*cv%Jrange(i)**2) * f
         end do
       end do
     end do

@@ -41,6 +41,7 @@ module curvlinear_m
   public ::                     &
     curvlinear_t,               &
     curvlinear_init,            &
+    curvlinear_end,             &
     curvlinear_chi2x,           &
     curvlinear_x2chi,           &
     curvlinear_det_Jac,         &
@@ -70,8 +71,9 @@ module curvlinear_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine curvlinear_init(sb, cv)
+  subroutine curvlinear_init(sb, geo, cv)
     type(simul_box_t),  intent(in)  :: sb
+    type(geometry_t),   intent(in)  :: geo
     type(curvlinear_t), intent(out) :: cv
 
     call push_sub('curvlinear.curvlinear_init')
@@ -114,12 +116,26 @@ contains
     case(CURV_METHOD_BRIGGS)
       call curv_briggs_init(sb, cv%briggs)
     case(CURV_METHOD_MODINE)
-      call curv_modine_init(sb, cv%modine)
+      call curv_modine_init(sb, geo, cv%modine)
     end select
 
     call pop_sub()
   end subroutine curvlinear_init
 
+
+  ! ---------------------------------------------------------
+  subroutine curvlinear_end(cv)
+    type(curvlinear_t), intent(inout) :: cv
+
+    select case(cv%method)
+    case(CURV_METHOD_GYGI)
+    case(CURV_METHOD_BRIGGS)
+    case(CURV_METHOD_MODINE)
+      call curv_modine_end(cv%modine)
+    end select
+
+  end subroutine curvlinear_end
+  
 
   ! ---------------------------------------------------------
   subroutine curvlinear_chi2x(sb, geo, cv, chi, x)

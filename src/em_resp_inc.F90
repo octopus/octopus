@@ -153,7 +153,8 @@ subroutine X(get_response_e)(sys, h, lr, dir, tag, nsigma, omega, props, status)
 
           ! print the norm of the variations, and the number of
           ! iterations and residual of the linear solver
-          dpsimod = sum(R_ABS(lr(dir,sigma)%X(dl_psi)(1:m%np, 1, ist, ik))**2 * sys%gr%m%vol_pp(1:m%np))
+          tmp(1:m%np) = R_ABS(lr(dir, sigma)%X(dl_psi)(1:m%np, 1, ist, ik))**2
+          dpsimod = X(mf_integrate)(m, tmp)
           write(message(1), '(i4, f20.6, i5, e20.6)') &
                (3-2*sigma)*ist, dpsimod, lr(dir, sigma)%iter, lr(dir, sigma)%abs_psi 
           call write_info(1)

@@ -191,11 +191,13 @@ contains
     deallocate(grad)
 
 #if defined(HAVE_MPI)
-    ALLOCATE(red(NP_PART, NDIM, st%d%nspin), NP_PART*NDIM*st%d%nspin)
-    call MPI_Allreduce(jp(1, 1, 1), red(1, 1, 1), NP*NDIM*st%d%nspin,       &
-      MPI_FLOAT, MPI_SUM, st%mpi_grp%comm, mpi_err)
-    jp = red
-    deallocate(red)
+    if(st%parallel_in_states) then
+      ALLOCATE(red(NP_PART, NDIM, st%d%nspin), NP_PART*NDIM*st%d%nspin)
+      call MPI_Allreduce(jp(1, 1, 1), red(1, 1, 1), NP*NDIM*st%d%nspin,       &
+        MPI_FLOAT, MPI_SUM, st%mpi_grp%comm, mpi_err)
+      jp = red
+      deallocate(red)
+    end if
 #endif
 
     call pop_sub()

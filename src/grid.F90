@@ -63,7 +63,7 @@ contains
     call push_sub('grid.grid_init_stage_1')
 
     ! initialize curvlinear coordinates
-    call curvlinear_init(gr%sb, gr%cv)
+    call curvlinear_init(gr%sb, geo, gr%cv)
 
     ! initilize derivatives
     call f_der_init(gr%f_der, gr%sb, gr%cv%method.ne.CURV_METHOD_UNIFORM)
