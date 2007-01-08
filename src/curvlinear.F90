@@ -204,7 +204,7 @@ contains
         jdet = jdet * Jac(i,i) ! Jacobian is diagonal in this method
       end do
     case(CURV_METHOD_MODINE)
-      call curv_modine_jacobian_inv(sb, geo, cv%modine, chi, Jac(1:sb%dim, 1:sb%dim))
+      call curv_modine_jacobian_inv(sb, geo, cv%modine, chi, dummy(1:sb%dim), Jac(1:sb%dim, 1:sb%dim))
       jdet = M_ONE*lalg_determinant(sb%dim, Jac(1:sb%dim, 1:sb%dim), invert = .false.)
     end select
 
