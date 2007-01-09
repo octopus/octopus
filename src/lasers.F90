@@ -297,26 +297,29 @@ contains
 
     integer :: i
 
-    if(no_l <= 0) return
+    call push_sub('laser.laser_end')
 
-    do i = 1, no_l
-      select case(l(i)%envelope)
-      case(ENVELOPE_FROM_FILE)
-        call loct_spline_end(l(i)%amplitude1)
-        call loct_spline_end(l(i)%amplitude2)
-        call loct_spline_end(l(i)%amplitude3)
-      case(ENVELOPE_NUMERICAL)
-        if(associated(l(i)%numerical)) then
-          deallocate(l(i)%numerical); nullify(l(i)%numerical)
+    if(no_l > 0) then
+      do i = 1, no_l
+        select case(l(i)%envelope)
+        case(ENVELOPE_FROM_FILE)
+          call loct_spline_end(l(i)%amplitude1)
+          call loct_spline_end(l(i)%amplitude2)
+          call loct_spline_end(l(i)%amplitude3)
+        case(ENVELOPE_NUMERICAL)
+          if(associated(l(i)%numerical)) then
+            deallocate(l(i)%numerical); nullify(l(i)%numerical)
+          end if
+        end select
+        if(l(i)%spatial_part == SPATIAL_PART_FROM_FILE) then
+          deallocate(l(i)%v); nullify(l(i)%v)
         end if
-      end select
-      if(l(i)%spatial_part == SPATIAL_PART_FROM_FILE) then
-        deallocate(l(i)%v); nullify(l(i)%v)
-      end if
-    end do
+      end do
 
-    deallocate(l); nullify(l)
+      deallocate(l); nullify(l)
+    end if
 
+    call pop_sub()
   end subroutine laser_end
 
 

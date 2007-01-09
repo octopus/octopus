@@ -271,8 +271,8 @@ contains
     !%End
     ! Read the initial gauge vector field
     ep%with_gauge_field = .false.
+    nullify(ep%A_gauge, ep%A_gauge_dot, ep%A_gauge_ddot)
     if(simul_box_is_periodic(gr%sb)) then
-      nullify(ep%A_gauge, ep%A_gauge_dot, ep%A_gauge_ddot)
       if(loct_parse_block(check_inp('GaugeVectorField'), blk) == 0) then
         ep%with_gauge_field = .true.
         ALLOCATE(ep%A_gauge(NDIM), NDIM)
@@ -342,10 +342,13 @@ contains
     type(simul_box_t), intent(in)    :: sb
     type(geometry_t),  intent(in)    :: geo
 
-
 #ifdef HAVE_FFT
     integer :: i
+#endif
 
+    call push_sub('epot.epot_end')
+
+#ifdef HAVE_FFT
     if(simul_box_is_periodic(sb).and.(.not.geo%only_user_def)) then
       do i = 1, geo%nspecies
         call dcf_free(ep%local_cf(i))
@@ -354,7 +357,6 @@ contains
       deallocate(ep%local_cf)
       if(geo%nlcc) deallocate(ep%rhocore_cf)
     end if
-
 #endif
 
     if(associated(ep%vpsl)) then
@@ -391,6 +393,8 @@ contains
 
       ! Here the spin-orbit should be finalized, but only if they have been built...
     end if
+
+    call pop_sub()
 
   end subroutine epot_end
 
