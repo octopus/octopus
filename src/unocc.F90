@@ -237,7 +237,7 @@ contains
         ALLOCATE(st%mag(st%nst, st%d%nik, 2), st%nst*st%d%nik*2)
         st%mag = M_ZERO
       end if
-      st%eigenval = huge(PRECISION)
+      st%eigenval = huge(REAL_PRECISION)
       st%occ      = M_ZERO
 
       ! now the eigen solver stuff

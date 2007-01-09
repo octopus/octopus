@@ -296,9 +296,9 @@ contains
         end if
 
         ! distibute the nodes so that domains is the last
-        f = real(n, PRECISION)
+        f = real(n, REAL_PRECISION)
         do i = k+1, mc%n_index
-          f = f/real(n_group_max(i), PRECISION)
+          f = f/real(n_group_max(i), REAL_PRECISION)
         end do
 
         ! get divisors of n
@@ -308,7 +308,7 @@ contains
         ! get the divisor of n >= f
         mc%group_sizes(k) = n
         do i = 1, n_divisors
-          if(real(divisors(i), PRECISION) >= f) then
+          if(real(divisors(i), REAL_PRECISION) >= f) then
             mc%group_sizes(k) = divisors(i)
             exit
           end if
@@ -363,8 +363,8 @@ contains
       ! calculate fraction of idle time
       frac = M_ONE
       do i = 1, mc%n_index
-        frac = frac * (M_ONE - real(mod(index_range(i), mc%group_sizes(i)), PRECISION)/ &
-          real(index_range(i), PRECISION))
+        frac = frac * (M_ONE - real(mod(index_range(i), mc%group_sizes(i)), REAL_PRECISION)/ &
+          real(index_range(i), REAL_PRECISION))
       end do
 
       write(message(1), '(a,f5.2,a)') "Info: Octopus will waste at least ", &

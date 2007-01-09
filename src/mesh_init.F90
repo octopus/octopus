@@ -96,13 +96,13 @@ subroutine mesh_init_stage_2(sb, mesh, geo, cv)
   ! We label 2 the points inside the mesh + enlargement
 
   do ix = mesh%nr(1,1), mesh%nr(2,1)
-    chi(1) = real(ix, PRECISION) * mesh%h(1) + sb%box_offset(1)
+    chi(1) = real(ix, REAL_PRECISION) * mesh%h(1) + sb%box_offset(1)
 
     do iy = mesh%nr(1,2), mesh%nr(2,2)
-      chi(2) = real(iy, PRECISION) * mesh%h(2) + sb%box_offset(2)
+      chi(2) = real(iy, REAL_PRECISION) * mesh%h(2) + sb%box_offset(2)
 
       do iz = mesh%nr(1,3), mesh%nr(2,3)
-        chi(3) = real(iz, PRECISION) * mesh%h(3) + sb%box_offset(3)
+        chi(3) = real(iz, REAL_PRECISION) * mesh%h(3) + sb%box_offset(3)
 
         call curvlinear_chi2x(sb, geo, cv, chi(:), mesh%x_tmp(:, ix, iy, iz))
 

@@ -792,7 +792,7 @@ contains
             rho(i, 2) = rho(i, 2) + st%d%kweights(ik)  *st%occ(p, ik)*abs(st%zpsi(i, 2, p, ik))**2
 
             c = st%d%kweights(ik)*st%occ(p, ik) * st%zpsi(i, 1, p, ik) * conjg(st%zpsi(i, 2, p, ik))
-            rho(i, 3) = rho(i, 3) + real(c, PRECISION)
+            rho(i, 3) = rho(i, 3) + real(c, REAL_PRECISION)
             rho(i, 4) = rho(i, 4) + aimag(c)
           end select
 
@@ -896,7 +896,7 @@ contains
     emax = maxval(st%eigenval)
 
     if(st%d%ispin == SPINORS) then
-      sumq = real(st%nst, PRECISION)
+      sumq = real(st%nst, REAL_PRECISION)
     else
       sumq = M_TWO*st%nst
     end if

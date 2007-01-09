@@ -875,7 +875,7 @@ contains
        tgt = M_ONE
        do pol=1, NDIM
          tgt = tgt * exp( - (gr%m%x(:, pol) - &
-           real(tdtg%tdshape(pol,iter),PRECISION ))**2/(M_TWO*tdtg%width**2))
+           real(tdtg%tdshape(pol,iter),REAL_PRECISION ))**2/(M_TWO*tdtg%width**2))
        enddo
        
        !case(2)
@@ -1086,7 +1086,7 @@ contains
       J2 = SUM(tdpenalty * laser**2) * abs(td%dt)/M_TWO
       if(targetmode==oct_targetmode_td) then
          ! 1/T * int(<Psi| O | Psi>)
-         overlap = SUM(td_fitness) / real(td%max_iter, PRECISION) 
+         overlap = SUM(td_fitness) / real(td%max_iter, REAL_PRECISION) 
       else
         overlap = abs(zstates_mpdotp(gr%m, psi, target_st))
         write(message(1), '(6x,a,f14.8)') " => overlap:", overlap
@@ -1136,7 +1136,7 @@ contains
 
       call push_sub('opt_control.write_field')
       
-      call t_lookup(2*steps+1,dt/real(2,PRECISION),tgrid)
+      call t_lookup(2*steps+1,dt/real(2,REAL_PRECISION),tgrid)
       iunit = io_open(filename, action='write')
       do i = 0, 2*steps, 2
          write(iunit, '(4es30.16e4)') tgrid(i), las(:, i)
@@ -1711,7 +1711,7 @@ contains
       FLOAT   :: f_re, f_im
       integer :: kk, pol
 
-      call t_lookup(2*steps+1,dt/real(2,PRECISION),tgrid)
+      call t_lookup(2*steps+1,dt/real(2,REAL_PRECISION),tgrid)
       do kk=0, 2*steps
         do pol=1,NDIM
           f_re = M_ZERO
@@ -1835,7 +1835,7 @@ contains
         do kk=1, size(f)
           write(filename,'(a,i2.2)') 'opt-control/filter', kk
           if(f(kk)%domain.eq.1) then
-            call write_fieldw(filename, real(f(kk)%numerical(:,:), PRECISION))
+            call write_fieldw(filename, real(f(kk)%numerical(:,:), REAL_PRECISION))
           else
             !write(6,*) f(kk)%numerical(:,0)
             iunit = io_open(filename, action='write')
@@ -1843,7 +1843,7 @@ contains
               write(iunit, '(4ES30.16E4)') i*td%dt*M_HALF, f(kk)%numerical(:,i)
             end do
             call io_close(iunit)
-            !call write_field(filename, real(f(kk)%numerical(:,:), PRECISION), td%max_iter, td%dt)
+            !call write_field(filename, real(f(kk)%numerical(:,:), REAL_PRECISION), td%max_iter, td%dt)
           end if
           !!
         end do
@@ -2015,7 +2015,7 @@ contains
          iunit = io_open(filename, action='write')
          ! build target_function and calc inhomogeneity
          do tt=0, td%max_iter, 20 
-            t = real(tt,PRECISION)*td%dt
+            t = real(tt,REAL_PRECISION)*td%dt
             !write(6,*) tt, trim(td_tg(jj)%expression(1))
             !write(6,*) tt, trim(td_tg(jj)%expression(2))
             !write(6,*) tt, trim(td_tg(jj)%expression(3))

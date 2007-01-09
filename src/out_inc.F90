@@ -803,7 +803,7 @@ contains
     ALLOCATE(x(c%n(3), c%n(2), c%n(1)), c%n(1)*c%n(2)*c%n(3))
 #if defined(R_TCOMPLEX)
     if(status == NF90_NOERR) then
-      call transpose3(real(c%RS, PRECISION), x)
+      call transpose3(real(c%RS, REAL_PRECISION), x)
       call write_variable(ncid, data_id, status, x)
       call ncdf_error('nf90_put_var', status, filename, ierr)
     end if

@@ -172,7 +172,7 @@ contains
     ec_per_vol = M_ZERO
 
     ! get the density
-    f = M_ONE/real(spin_channels, PRECISION)
+    f = M_ONE/real(spin_channels, REAL_PRECISION)
     do i = 1, NP
       d(1:spin_channels) = rho(i, 1:spin_channels)
 
@@ -207,7 +207,7 @@ contains
     integer :: i
     FLOAT :: d(2), f, dtot, dpol, vpol
 
-    f = M_ONE/real(spin_channels, PRECISION)
+    f = M_ONE/real(spin_channels, REAL_PRECISION)
     if(ispin == SPINORS) then
       ! rotate back (do not need the rotation matrix for this).
       do i = 1, NP

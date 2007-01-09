@@ -465,7 +465,7 @@ contains
         ALLOCATE(sys%st%mag(sys%st%nst, sys%st%d%nik, 2), sys%st%nst*sys%st%d%nik*2)
         sys%st%mag = M_ZERO
       end if
-      sys%st%eigenval = huge(PRECISION)
+      sys%st%eigenval = huge(REAL_PRECISION)
       sys%st%occ      = M_ZERO
 
       ! load wave-functions

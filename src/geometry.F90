@@ -643,7 +643,7 @@ contains
     integer :: i, j
     FLOAT :: r
 
-    rmin = huge(PRECISION)
+    rmin = huge(REAL_PRECISION)
     do i = 1, geo%natoms
       do j = i+1, geo%natoms
         r = sqrt(sum((geo%atom(i)%x-geo%atom(j)%x)**2))
@@ -751,8 +751,8 @@ contains
 
     call push_sub('geometry.geometry_grid_defaults')
 
-    def_h     =  huge(PRECISION)
-    def_rsize = -huge(PRECISION)
+    def_h     =  huge(REAL_PRECISION)
+    def_rsize = -huge(REAL_PRECISION)
     do i = 1, geo%nspecies
       def_h     = min(def_h,     geo%specie(i)%def_h)
       def_rsize = max(def_rsize, geo%specie(i)%def_rsize)

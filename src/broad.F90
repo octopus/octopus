@@ -95,7 +95,7 @@ contains
       e = e * units_inp%energy%factor
 
       do j1 = 1, n
-        w = b%min_energy + real(j1-1, PRECISION)*b%energy_step
+        w = b%min_energy + real(j1-1, REAL_PRECISION)*b%energy_step
         s(:, j1) = s(:, j1) + f(:)*b%b/((w-e)**2 + b%b**2)/M_PI ! lorentzian
       end do
     end do
@@ -105,7 +105,7 @@ contains
     ! print spectra
     iunit = io_open(trim(dir)//"/spectrum."//fname, action='write')
     do j1 = 1, n
-      w = b%min_energy + real(j1-1, PRECISION)*b%energy_step
+      w = b%min_energy + real(j1-1, REAL_PRECISION)*b%energy_step
       write(iunit, '(5es14.6)') w/units_inp%energy%factor, s(:, j1)*units_inp%energy%factor
     end do
     call io_close(iunit)

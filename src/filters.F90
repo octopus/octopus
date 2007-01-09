@@ -139,10 +139,10 @@ contains
       do i=1,no_lines
         
         tdpenalty =  tdpenalty &
-          + tdp(i)%weight * real(tdp(i)%numerical,PRECISION)
+          + tdp(i)%weight * real(tdp(i)%numerical,REAL_PRECISION)
       end do
 
-      tdpenalty = M_ONE / (tdpenalty + real(0.0000001,PRECISION )) 
+      tdpenalty = M_ONE / (tdpenalty + real(0.0000001,REAL_PRECISION )) 
       
       ! all we want to know is tdpenalty
       do i = 1, no_lines
@@ -219,12 +219,12 @@ contains
           tmp2(:, 1, 1) = cmplx(laser_inout(kk,:))
           
           call zfft_forward(fft_handler, tmp2, tmp)
-          !write(6,*) SUM(abs(tmp)**2)/real((2*steps+1), PRECISION)
+          !write(6,*) SUM(abs(tmp)**2)/real((2*steps+1), REAL_PRECISION)
           !
           tmp(:, 1, 1) = tmp(:, 1, 1)*filt(kk,:)
           call zfft_backward(fft_handler, tmp, tmp2)
           
-          laser_inout(kk,:) = real(tmp2(:, 1, 1), PRECISION)!/real((2*steps+1), PRECISION)
+          laser_inout(kk,:) = real(tmp2(:, 1, 1), REAL_PRECISION)!/real((2*steps+1), REAL_PRECISION)
           !write(6,*) 'out:', SUM(laser_inout(kk,:)**2)
           !write(6,*) SUM(laser_inout(kk,:)**2)          
         enddo
@@ -391,7 +391,7 @@ contains
     ff = M_z0
     select case(fp%domain)
     case(filter_time)
-      call t_lookup(2*steps+1,dt/real(2.0,PRECISION),grid)
+      call t_lookup(2*steps+1,dt/real(2.0,REAL_PRECISION),grid)
       do ip=0, 2*steps
         call loct_parse_expression(f_re, f_im, "t", grid(ip), fp%expression)
         ! FIXME: polarization   
@@ -478,7 +478,7 @@ contains
     call push_sub('filter.t_lookup_')
 
     do i=1, steps
-       tgrid(i) = ( real(i, PRECISION) - M_HALF ) * dt 
+       tgrid(i) = ( real(i, REAL_PRECISION) - M_HALF ) * dt 
     enddo
 
     call pop_sub()
@@ -500,12 +500,12 @@ contains
 
     wgrid = M_ZERO
 
-    df = M_TWO/(real(steps,PRECISION) * dt)
+    df = M_TWO/(real(steps,REAL_PRECISION) * dt)
     do i=1, int((steps)/2)
-       wgrid(i)   = real(i-1, PRECISION) * df * M_TWO * M_PI
+       wgrid(i)   = real(i-1, REAL_PRECISION) * df * M_TWO * M_PI
     enddo
     do i=int((steps)/2), steps-1 
-       wgrid(i+1) = real(i-steps, PRECISION) * df * M_TWO * M_PI
+       wgrid(i+1) = real(i-steps, REAL_PRECISION) * df * M_TWO * M_PI
     enddo   
     
     call pop_sub()

@@ -162,7 +162,7 @@ contains
       l = conf%l(i)
       if(ispin==2 .and. psf_file%irel.ne.'isp') then
         x = conf%occ(i, 1)
-        conf%occ(i, 1) = min(x, real(2*l+1, PRECISION))
+        conf%occ(i, 1) = min(x, real(2*l+1, REAL_PRECISION))
         conf%occ(i, 2) = x - conf%occ(i,1)
       end if
     end do

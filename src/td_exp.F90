@@ -327,11 +327,11 @@ contains
         zfact = 2*(-M_zI)**j*loct_bessel(j, h%spectral_half_span*timestep)
 
         do idim = 1, h%d%dim
-          call lalg_axpy(NP, cmplx(-h%spectral_middle_point, M_ZERO, PRECISION), &
+          call lalg_axpy(NP, cmplx(-h%spectral_middle_point, M_ZERO, REAL_PRECISION), &
                zpsi1(:, idim, 1), zpsi1(:, idim, 0))
-          call lalg_scal(NP, cmplx(M_TWO/h%spectral_half_span, M_ZERO, PRECISION), zpsi1(:, idim, 0))
+          call lalg_scal(NP, cmplx(M_TWO/h%spectral_half_span, M_ZERO, REAL_PRECISION), zpsi1(:, idim, 0))
           call lalg_axpy(NP, zfact, zpsi(:, idim), zpsi1(:, idim, 0))
-          call lalg_axpy(NP, cmplx(-M_ONE, M_ZERO, PRECISION), zpsi1(:, idim, 2),  zpsi1(:, idim, 0))
+          call lalg_axpy(NP, cmplx(-M_ONE, M_ZERO, REAL_PRECISION), zpsi1(:, idim, 2),  zpsi1(:, idim, 0))
         end do
       end do
 

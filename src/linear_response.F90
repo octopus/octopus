@@ -345,7 +345,7 @@ contains
 
     if(associated(lr%zdl_psi)) then
       r = 2
-      lr%ddl_psi = real(lr%zdl_psi, PRECISION)
+      lr%ddl_psi = real(lr%zdl_psi, REAL_PRECISION)
       deallocate(lr%zdl_psi)
       nullify(lr%zdl_psi)
     else

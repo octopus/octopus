@@ -187,7 +187,7 @@ subroutine X(ode_step)(os, func, startval, solutionp, solutionvec)
   ALLOCATE(yn(os%nsize),           os%nsize)
   ALLOCATE(y0(os%nsize),           os%nsize)
 
-  dh = (os%tmax-os%tmin)/real(os%nsteps, PRECISION)
+  dh = (os%tmax-os%tmin)/real(os%nsteps, REAL_PRECISION)
   tn = os%tmin
   yn = startval
 

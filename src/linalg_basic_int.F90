@@ -232,7 +232,7 @@ TYPE2 function FNAME(nrm2)(n, dx) result(nrm2)
   integer, intent(in) :: n
   TYPE1,   intent(in) :: dx(:)
 
-  nrm2 = sqrt(real(dot_product(dx(1:n), dx(1:n)), PRECISION))
+  nrm2 = sqrt(real(dot_product(dx(1:n), dx(1:n)), REAL_PRECISION))
 
 end function FNAME(nrm2)
 

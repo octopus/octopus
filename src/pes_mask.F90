@@ -163,7 +163,7 @@ subroutine PES_mask_output(v, m, st, file)
 
           ! angle resolved (assumes the pol is in the x direction)
           if(ixx(3)==0 .and. (ixx(1).ne.0 .or. ixx(2).ne.0)) then
-            vec = atan2(real(ixx(2), PRECISION), real(ixx(1), PRECISION))
+            vec = atan2(real(ixx(2), REAL_PRECISION), real(ixx(1), REAL_PRECISION))
             ii  = nint(abs(vec)*(ar_n-1)/M_PI) + 1
             if(ii <= ar_n) then ! should always be true
               do ik = 1, st%d%nik
@@ -214,7 +214,7 @@ subroutine PES_mask_output(v, m, st, file)
 
       do ix = 1, ar_n
         if(ar_npoints(ix) > 0) then
-          write(iunit, *)  (ix-1)*CNST(180.0)/real(ar_n-1, PRECISION), &
+          write(iunit, *)  (ix-1)*CNST(180.0)/real(ar_n-1, REAL_PRECISION), &
             arpis(ix, p, ik), ar_npoints(ix)
         end if
       end do
@@ -227,7 +227,7 @@ subroutine PES_mask_output(v, m, st, file)
 
   do ix = 1, ar_n
     if(ar_npoints(ix) > 0) then
-      write(iunit, *)  (ix-1)*CNST(180.0)/real(ar_n-1, PRECISION), &
+      write(iunit, *)  (ix-1)*CNST(180.0)/real(ar_n-1, REAL_PRECISION), &
         sum(arpis(ix, :, :)), ar_npoints(ix)
     end if
   end do
@@ -245,7 +245,7 @@ subroutine PES_mask_output(v, m, st, file)
 
         ! angle resolved
         if(ixx(3)==0.and.(ixx(1).ne.0 .or. ixx(2).ne.0)) then
-          vec = atan2(real(ixx(2), PRECISION), real(ixx(1), PRECISION))
+          vec = atan2(real(ixx(2), REAL_PRECISION), real(ixx(1), REAL_PRECISION))
           ii  = nint(abs(vec)*(ar_n-1)/M_PI) + 1
           if(ii <= ar_n) then ! should always be true
             do ik = 1, st%d%nik
@@ -269,7 +269,7 @@ subroutine PES_mask_output(v, m, st, file)
 
       do ix = 1, ar_n
         if(ar_npoints(ix) > 0) then
-          write(iunit, *)  (ix-1)*CNST(180.0)/real(ar_n-1, PRECISION), &
+          write(iunit, *)  (ix-1)*CNST(180.0)/real(ar_n-1, REAL_PRECISION), &
             arpis(ix, p, ik), ar_npoints(ix)
         end if
       end do
@@ -281,7 +281,7 @@ subroutine PES_mask_output(v, m, st, file)
   iunit = io_open(fn, action='write')
   do ix = 1, ar_n
     if(ar_npoints(ix) > 0) then
-      write(iunit, *)  (ix-1)*CNST(180.0)/real(ar_n-1, PRECISION), &
+      write(iunit, *)  (ix-1)*CNST(180.0)/real(ar_n-1, REAL_PRECISION), &
         sum(arpis(ix, :, :)), ar_npoints(ix)
     end if
   end do

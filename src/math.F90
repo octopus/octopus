@@ -165,7 +165,7 @@ contains
     integer, parameter :: im=6075, ia=106, ic=1283
 
     iseed = mod(iseed*ia + ic, im)
-    rnd = real(iseed, PRECISION)/real(im, PRECISION)
+    rnd = real(iseed, REAL_PRECISION)/real(im, REAL_PRECISION)
 
   end subroutine quickrnd
 

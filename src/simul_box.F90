@@ -496,8 +496,8 @@ contains
         sx = loct_gdImage_SX(sb%image)
         sy = loct_gdImage_SY(sb%image)
 
-        sb%h(1) = M_TWO*sb%lsize(1)/real(sx, PRECISION)
-        sb%h(2) = M_TWO*sb%lsize(2)/real(sy, PRECISION)
+        sb%h(1) = M_TWO*sb%lsize(1)/real(sx, REAL_PRECISION)
+        sb%h(2) = M_TWO*sb%lsize(2)/real(sy, REAL_PRECISION)
         return
       end if
 #endif

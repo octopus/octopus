@@ -219,9 +219,9 @@
 !      printout
 
 !        write(message(1),'(i4,3x,f10.6,3x,3f10.6,3x,3f10.6)') &
-!              i,w(i),(rk(j,i),j=1,3), (real(neg, PRECISION)*rkcar(j),j=1,3)
+!              i,w(i),(rk(j,i),j=1,3), (real(neg, REAL_PRECISION)*rkcar(j),j=1,3)
 !        call write_info(1)
-       write(6,9060)i,w(i),(rk(j,i),j=1,3), (real(neg, PRECISION)*rkcar(j),j=1,3)
+       write(6,9060)i,w(i),(rk(j,i),j=1,3), (real(neg, REAL_PRECISION)*rkcar(j),j=1,3)
 9060  format(i4,3x,f10.6,3x,3f10.6,3x,3f10.6)
 
   120 continue
@@ -290,17 +290,17 @@
 !      kmap is used to mark reducible k points and also to
 !      map reducible to irreducible k points
 
-      dx = M_ONE/real(nx, PRECISION)
-      dy = M_ONE/real(ny, PRECISION)
-      dz = M_ONE/real(nz, PRECISION)
+      dx = M_ONE/real(nx, REAL_PRECISION)
+      dy = M_ONE/real(ny, REAL_PRECISION)
+      dz = M_ONE/real(nz, REAL_PRECISION)
       n = 0
       do i = 1, nx
         do j = 1, ny
           do k = 1, nz
                n = n + 1
-            xk(1,n) = (real(i-1, PRECISION) + sx)*dx
-            xk(2,n) = (real(j-1, PRECISION) + sy)*dy
-            xk(3,n) = (real(k-1, PRECISION) + sz)*dz
+            xk(1,n) = (real(i-1, REAL_PRECISION) + sx)*dx
+            xk(2,n) = (real(j-1, REAL_PRECISION) + sy)*dy
+            xk(3,n) = (real(k-1, REAL_PRECISION) + sz)*dz
                kmap(n) = n
          end do
         end do
@@ -308,7 +308,7 @@
 
 !      reduce to irreducible zone
 
-      dw = M_ONE/real(n, PRECISION)
+      dw = M_ONE/real(n, REAL_PRECISION)
       nrk = 0
       do 120 i = 1, n
          if (kmap(i) /= i) go to 120
@@ -730,13 +730,13 @@
             do 140 l = 1, 3
                ttest = tnp(j,l)
                do m = 1, 3
-                  ttest = ttest + real(mtrx(i,m,l), PRECISION)*(tnp(i,m)-tnp(k,m))
+                  ttest = ttest + real(mtrx(i,m,l), REAL_PRECISION)*(tnp(i,m)-tnp(k,m))
                end do
                ttest = abs(ttest)
                itest = nint(ttest)
-               if (abs(ttest-real(itest, PRECISION)) < CNST(1.e-4)) go to 140
-!     if (abs(ttest-real(itest, PRECISION)) < CNST(1.e-6)) go to 140
-               write(6,*) i,j,l,abs(ttest-real(itest, PRECISION))
+               if (abs(ttest-real(itest, REAL_PRECISION)) < CNST(1.e-4)) go to 140
+!     if (abs(ttest-real(itest, REAL_PRECISION)) < CNST(1.e-6)) go to 140
+               write(6,*) i,j,l,abs(ttest-real(itest, REAL_PRECISION))
                mult(i,j) = -1
 !
                go to 150
@@ -761,9 +761,9 @@
                   ttest = ttest + mtrx(i,l,m)*tnp(j,m)
                end do
                itest = nint(ttest)
-               if (abs(ttest-real(itest, PRECISION)) < CNST(1.e-4)) go to 540
-!               if (abs(ttest-real(itest, PRECISION)) < CNST(1.e-6)) go to 540
-               write(6,*) i,j,k,l,abs(ttest-real(itest, PRECISION))
+               if (abs(ttest-real(itest, REAL_PRECISION)) < CNST(1.e-4)) go to 540
+!               if (abs(ttest-real(itest, REAL_PRECISION)) < CNST(1.e-6)) go to 540
+               write(6,*) i,j,k,l,abs(ttest-real(itest, REAL_PRECISION))
                mult(i,j) = -1
 
                go to 550

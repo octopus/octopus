@@ -241,7 +241,7 @@ contains
             st%zpsi(:, :, ii, 1), &
             st%zpsi(:, :, jj, 1) * dipole(:, :))
           write(iunit,fmt = '(f20.12,a1,f20.12,3x)', advance = 'no') &
-            real(dip_element, PRECISION), ',', aimag(dip_element)
+            real(dip_element, REAL_PRECISION), ',', aimag(dip_element)
         end if
         if(jj==st%nst) write(iunit, '(a)') 
       end do
