@@ -71,6 +71,59 @@ module curv_modine_m
 contains
 
   ! ---------------------------------------------------------
+  subroutine getf2(csi, f, jf)
+    FLOAT :: csi(:), f(:), jf(:, :)
+
+    integer :: i1, j1, i2, j2, index1, index2
+    FLOAT :: x(MAX_DIM), chi2(MAX_DIM), rr, dd, dd2
+
+    ! first we fill in cv%csi with the values we have
+    index1 = 1
+    do i1 = 1, geo_p%natoms
+      do j1 = 1, sb_p%dim
+        cv_p%csi(j1, i1) = csi(index1)
+        index1 = index1 + 1
+      end do
+    end do
+
+    ! get f and jf
+    jf(:,:) = M_ZERO
+    do i1 = 1, geo_p%natoms
+      call curv_modine_chi2chi2(sb_p, geo_p, cv_p, cv_p%chi_atoms(:,i1), chi2)
+      x(:) = chi2(:)
+
+      do i2 = 1, geo_p%natoms
+        rr = sqrt(sum((chi2(:) - cv_p%csi(:,i2))**2))
+        dd = exp(-rr**2/(M_TWO*cv_p%Jrange(i2)**2))
+
+        x(:) = x(:) - cv_p%Jlocal(i2)*(chi2(:) - cv_p%csi(:,i2)) * dd
+      end do
+
+      do j1 = 1, sb_p%dim
+        index1 = (i1-1)*sb_p%dim + j1
+        f(index1) = x(j1) - x_p(index1)
+
+        do i2 = 1, geo_p%natoms
+          rr  = sqrt(sum((chi2 - cv_p%csi(:,i2))**2))
+          dd  = exp(-rr**2/(M_TWO*cv_p%Jrange(i2)**2))
+          dd2 = -M_TWO/(M_TWO*cv_p%Jrange(i2)**2)*dd
+
+          index2 = (i2-1)*sb_p%dim + j1
+          jf(index1, index2) = cv_p%Jlocal(i2) * dd
+
+          do j2 = 1, sb_p%dim
+            index2 = (i2-1)*sb_p%dim + j2
+
+            jf(index1, index2) =  jf(index1, index2) + cv_p%Jlocal(i2) * dd2 * &
+              (chi2(j1) - cv_p%csi(j1,i2))*(chi2(j2) - cv_p%csi(j2,i2))
+          end do
+        end do
+      end do
+    end do
+
+  end subroutine getf2
+
+  ! ---------------------------------------------------------
   subroutine curv_modine_init(sb, geo, cv)
     type(simul_box_t),   target :: sb
     type(geometry_t),    target :: geo
@@ -178,60 +231,6 @@ contains
     end subroutine optimize
 
   end subroutine curv_modine_init
-
-
-  ! ---------------------------------------------------------
-  subroutine getf2(csi, f, jf)
-    FLOAT :: csi(:), f(:), jf(:, :)
-
-    integer :: i1, j1, i2, j2, index1, index2
-    FLOAT :: x(MAX_DIM), chi2(MAX_DIM), rr, dd, dd2
-
-    ! first we fill in cv%csi with the values we have
-    index1 = 1
-    do i1 = 1, geo_p%natoms
-      do j1 = 1, sb_p%dim
-        cv_p%csi(j1, i1) = csi(index1)
-        index1 = index1 + 1
-      end do
-    end do
-
-    ! get f and jf
-    jf(:,:) = M_ZERO
-    do i1 = 1, geo_p%natoms
-      call curv_modine_chi2chi2(sb_p, geo_p, cv_p, cv_p%chi_atoms(:,i1), chi2)
-      x(:) = chi2(:)
-
-      do i2 = 1, geo_p%natoms
-        rr = sqrt(sum((chi2(:) - cv_p%csi(:,i2))**2))
-        dd = exp(-rr**2/(M_TWO*cv_p%Jrange(i2)**2))
-
-        x(:) = x(:) - cv_p%Jlocal(i2)*(chi2(:) - cv_p%csi(:,i2)) * dd
-      end do
-
-      do j1 = 1, sb_p%dim
-        index1 = (i1-1)*sb_p%dim + j1
-        f(index1) = x(j1) - x_p(index1)
-
-        do i2 = 1, geo_p%natoms
-          rr  = sqrt(sum((chi2 - cv_p%csi(:,i2))**2))
-          dd  = exp(-rr**2/(M_TWO*cv_p%Jrange(i2)**2))
-          dd2 = -M_TWO/(M_TWO*cv_p%Jrange(i2)**2)*dd
-
-          index2 = (i2-1)*sb_p%dim + j1
-          jf(index1, index2) = cv_p%Jlocal(i2) * dd
-
-          do j2 = 1, sb_p%dim
-            index2 = (i2-1)*sb_p%dim + j2
-
-            jf(index1, index2) =  jf(index1, index2) + cv_p%Jlocal(i2) * dd2 * &
-              (chi2(j1) - cv_p%csi(j1,i2))*(chi2(j2) - cv_p%csi(j2,i2))
-          end do
-        end do
-      end do
-    end do
-
-  end subroutine getf2
 
 
   ! ---------------------------------------------------------
