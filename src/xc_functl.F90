@@ -50,7 +50,7 @@ module xc_functl_m
 
     integer   :: spin_channels     ! XC_UNPOLARIZED | XC_POLARIZED
 
-    C_POINTER :: conf              ! the pointer used to call the library
+    C_POINTER :: conf              ! the pointer used to cad the library
     C_POINTER :: info              ! information about the functional
   end type xc_functl_t
 
@@ -112,8 +112,9 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine xc_functl_init_exchange(functl, ndim, spin_channels)
+  subroutine xc_functl_init_exchange(functl, id, ndim, spin_channels)
     type(xc_functl_t), intent(out) :: functl
+    integer,           intent(in)  :: id
     integer,           intent(in)  :: ndim
     integer,           intent(in)  :: spin_channels
 
@@ -123,50 +124,7 @@ contains
     ! initialize structure
     call xc_functl_init(functl, spin_channels)
 
-    !%Variable XFunctional
-    !%Type integer
-    !%Default lda_x
-    !%Section Hamiltonian::XC
-    !%Description
-    !% Defines the exchange functional
-    !%Option lda_x 1
-    !% LDA: Slater exchange
-    !%Option gga_x_pbe 101
-    !% GGA: Perdew, Burke & Ernzerhof
-    !%Option gga_x_pbe_r 102
-    !% GGA: Perdew, Burke & Ernzerhof (revised)
-    !%Option gga_x_b86 103
-    !% GGA: Becke 86 Xalpha,beta,gamma
-    !%Option gga_x_b86_r 104
-    !% GGA: Becke 86 Xalpha,beta,gamma reoptimized
-    !%Option gga_x_b86_mgc 105
-    !% GGA: Becke 86 Xalpha,beta,gamma (with mod. grad. correction)
-    !%Option gga_x_b88 106
-    !% GGA: Becke 88
-    !%Option gga_x_g96 107
-    !% GGA: Gill 96
-    !%Option gga_x_pw86 108
-    !% GGA: Perdew & Wang 86
-    !%Option gga_x_pw91 109
-    !% GGA: Perdew & Wang 91
-    !%Option gga_x_optx 110
-    !% GGA: Handy & Cohen OPTX 01
-    !%Option gga_xc_dk87_r1 111
-    !% GGA: dePristo & Kress 87 (version R1)
-    !%Option gga_xc_dk87_r2 112
-    !% GGA: dePristo & Kress 87 (version R2)
-    !%Option gga_xc_ft97_a 114
-    !% GGA: Filatov & Thiel 97 (version A)
-    !%Option gga_xc_ft97_b 115
-    !% GGA: Filatov & Thiel 97 (version B)
-    !%Option gga_xc_lb 160
-    !% GGA: van Leeuwen & Baerends (GGA)
-    !%Option mgga_x_tpss 201
-    !% MGGA (not working)
-    !%Option oep_x 401
-    !% OEP: Exact exchange
-    !%End
-    call loct_parse_int(check_inp('XFunctional'), XC_LDA_X, functl%id)
+    functl%id = id
 
     if(functl%id.ne.0) then
       ! get the family of the functional
@@ -206,8 +164,9 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine xc_functl_init_correlation(functl, ndim, spin_channels)
+  subroutine xc_functl_init_correlation(functl, id, ndim, spin_channels)
     type(xc_functl_t), intent(out) :: functl
+    integer,           intent(in)  :: id
     integer,           intent(in)  :: ndim
     integer,           intent(in)  :: spin_channels
 
@@ -216,55 +175,7 @@ contains
     ! initialize structure
     call xc_functl_init(functl, spin_channels)
 
-    !%Variable CFunctional
-    !%Type integer
-    !%Default lda_c_pz_mod
-    !%Section Hamiltonian::XC
-    !%Description
-    !% Defines the correlation functional
-    !%Option lda_c_wigner 2
-    !% LDA: Wigner parametrization
-    !%Option lda_c_rpa 3
-    !% LDA: Random Phase Approximation
-    !%Option lda_c_hl 4
-    !% LDA: Hedin & Lundqvist
-    !%Option lda_c_gl 5
-    !% LDA: Gunnarson & Lundqvist
-    !%Option lda_c_xalpha 6
-    !% LDA: Slater s Xalpha
-    !%Option lda_c_vwn 7
-    !% LDA: Vosko, Wilk, & Nussair
-    !%Option lda_c_vwn_rpa 8
-    !% LDA: Vosko, Wilk, & Nussair (fit to the RPA correlation energy)
-    !%Option lda_c_pz 9
-    !% LDA: Perdew & Zunger
-    !%Option lda_c_pz_mod 10
-    !% LDA: Perdew & Zunger (Modified to improve the matching between
-    !%      the high and the low rs region)
-    !%Option lda_c_ob_pz 11
-    !% LDA: Ortiz & Ballone (PZ-type parametrization)
-    !%Option lda_c_pw 12
-    !% LDA: Perdew & Wang
-    !%Option lda_c_pw_mod 13
-    !% LDA: Perdew & Wang (Modified to match the original PBE routine)
-    !%Option lda_c_ob_pw 14
-    !% LDA: Ortiz & Ballone (PW-type parametrization)
-    !%Option lda_c_amgb 15
-    !% LDA: Attacalite et al functional for the 2D electron gas
-    !%Option gga_c_pbe 130
-    !% GGA: Perdew, Burke & Ernzerhof correlation
-    !%Option lda_c_lyp 131
-    !% GGA: Lee, Yang, & Parr LDA
-    !%Option lda_c_p86 132
-    !% GGA: Perdew 86
-    !%Option mgga_c_tpss 202
-    !% MGGA (not working)
-    !%End
-    select case(calc_dim)
-      case(3); call loct_parse_int(check_inp('CFunctional'), XC_LDA_C_PZ_MOD, functl%id)
-      case(2); call loct_parse_int(check_inp('CFunctional'), XC_LDA_C_AMGB, functl%id)
-      case(1); call loct_parse_int(check_inp('CFunctional'), 0, functl%id)
-    end select
+    functl%id = id
 
     if(functl%id.ne.0) then
       ! get the family of the functional

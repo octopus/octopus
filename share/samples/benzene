@@ -27,8 +27,7 @@ BoxShape = sphere
 radius   = 6
 spacing  =  0.22
 
-XFunctional = lda_x
-CFunctional = lda_c_pz
+XCFunctional = lda_x + lda_c_pz
 
 MaximumIter = 200
 ConvAbsDens = 1e-5

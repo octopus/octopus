@@ -38,8 +38,7 @@ ExtraStates = 2
 1 | 0 | 0 | 0
 %
 
-XFunctional = lda_x
-CFunctional = lda_c_pz
+XCFunctional = lda_x + lda_c_pz
 
 EigenSolver = cg
 EigenSolverInitTolerance = 1e-2

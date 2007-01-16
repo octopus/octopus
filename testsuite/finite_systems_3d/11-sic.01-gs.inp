@@ -13,8 +13,7 @@ fromScratch = yes
 spacing = 0.32
 radius = 12.0
 
-XFunctional = lda_x
-CFunctional = lda_c_xalpha
+XCFunctional = lda_x + lda_c_xalpha
 XAlpha = 2/3
 SICCorrection = sic_pz
 OEP_Level = oep_kli

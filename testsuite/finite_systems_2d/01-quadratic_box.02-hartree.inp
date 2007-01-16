@@ -36,8 +36,7 @@ delta | delta | delta
 DerivativesOrder = 1
 
 NonInteractingElectrons = no
-XFunctional = no
-CFunctional = no
+XCFunctional = no
 
 MaximumIter = 200
 ConvAbsDens = 1e-8

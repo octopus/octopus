@@ -16,9 +16,8 @@ Spacing = 0.2
 Radius = 50.0
 
 NonInteractingElectrons = no
-XFunctional = oep_x
+XCFunctional = oep_x
 OEP_Level = oep_kli
-CFunctional = no
 
 %Species
 "Neon1D" | 1 | user_defined | 10 | "-10/sqrt(1+(x)^2)"

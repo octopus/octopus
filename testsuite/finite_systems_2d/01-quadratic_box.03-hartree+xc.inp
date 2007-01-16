@@ -37,8 +37,7 @@ delta | delta | delta
 DerivativesOrder = 1
 
 NonInteractingElectrons = no
-XFunctional = lda_x
-CFunctional = lda_c_amgb
+XCFunctional = lda_x + lda_c_amgb
 
 MaximumIter = 200
 ConvAbsDens = 1e-8

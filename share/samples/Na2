@@ -17,8 +17,7 @@ BoxShape = sphere
 Radius  = 8.0
 Spacing = 0.3
 
-XFunctional = lda_x
-CFunctional = lda_c_pz
+XCFunctional = lda_x + lda_c_pz
 
 MaximumIter = 200
 ConvAbsDens = 1e-6
@@ -32,5 +31,3 @@ EigenSolverFinalToleranceIteration = 6
 EigenSolverMaxIter = 25
 
 TypeOfMixing = broyden
-
-

@@ -105,7 +105,7 @@ contains
     integer,    intent(in)  :: spin_channels
     logical,    intent(in)  :: cdft
 
-    integer :: i
+    integer :: i, x_id, c_id
 
     call push_sub('xc.xc_init')
 
@@ -116,11 +116,14 @@ contains
     xcs%family = xcs%j_functl%family
 
     if (xcs%family == XC_FAMILY_LCA .or. xcs%family == 0) then
+      
+      call parse()
+
       !we also need xc functionals that do not depend on the current
       !get both spin polarized and unpolarized
       do i = 1, 2
-        call xc_functl_init_exchange   (xcs%functl(1,i), ndim, i)
-        call xc_functl_init_correlation(xcs%functl(2,i), ndim, i)
+        call xc_functl_init_exchange   (xcs%functl(1,i), x_id, ndim, i)
+        call xc_functl_init_correlation(xcs%functl(2,i), c_id, ndim, i)
       end do
       xcs%family = ior(xcs%family, xcs%functl(1,1)%family)
       xcs%family = ior(xcs%family, xcs%functl(2,1)%family)
@@ -144,6 +147,125 @@ contains
     end if
 
     call pop_sub()
+    
+  contains 
+    
+    subroutine parse()
+      integer :: val, default
+
+      ! the first 3 digits of the numer indicate the X functional and
+      ! the next 3 the C functional.
+
+      default = XC_LDA_X
+
+      select case(calc_dim)
+      case(3); default = default + XC_LDA_C_PZ_MOD*1000
+      case(2); default = default + XC_LDA_C_AMGB*1000
+      end select
+
+      !%Variable XCFunctional
+      !%Type integer
+      !%Default lda_x
+      !%Section Hamiltonian::XC
+      !%Description
+      !% Defines the exchange and correlation functionals
+      !%Option lda_x 1
+      !% LDA: Slater exchange
+      !%Option gga_x_pbe 101
+      !% GGA: Perdew, Burke & Ernzerhof
+      !%Option gga_x_pbe_r 102
+      !% GGA: Perdew, Burke & Ernzerhof (revised)
+      !%Option gga_x_b86 103
+      !% GGA: Becke 86 Xalpha,beta,gamma
+      !%Option gga_x_b86_r 104
+      !% GGA: Becke 86 Xalpha,beta,gamma reoptimized
+      !%Option gga_x_b86_mgc 105
+      !% GGA: Becke 86 Xalpha,beta,gamma (with mod. grad. correction)
+      !%Option gga_x_b88 106
+      !% GGA: Becke 88
+      !%Option gga_x_g96 107
+      !% GGA: Gill 96
+      !%Option gga_x_pw86 108
+      !% GGA: Perdew & Wang 86
+      !%Option gga_x_pw91 109
+      !% GGA: Perdew & Wang 91
+      !%Option gga_x_optx 110
+      !% GGA: Handy & Cohen OPTX 01
+      !%Option gga_xc_dk87_r1 111
+      !% GGA: dePristo & Kress 87 (version R1)
+      !%Option gga_xc_dk87_r2 112
+      !% GGA: dePristo & Kress 87 (version R2)
+      !%Option gga_xc_ft97_a 114
+      !% GGA: Filatov & Thiel 97 (version A)
+      !%Option gga_xc_ft97_b 115
+      !% GGA: Filatov & Thiel 97 (version B)
+      !%Option gga_xc_lb 160
+      !% GGA: van Leeuwen & Baerends (GGA)
+      !%Option mgga_x_tpss 201
+      !% MGGA (not working)
+      !%Option oep_x 401
+      !% OEP: Exact exchange
+      !%Option lda_c_wigner 2000
+      !% LDA: Wigner parametrization
+      !%Option lda_c_rpa 3000
+      !% LDA: Random Phase Approximation
+      !%Option lda_c_hl 4000
+      !% LDA: Hedin & Lundqvist
+      !%Option lda_c_gl 5000
+      !% LDA: Gunnarson & Lundqvist
+      !%Option lda_c_xalpha 6000
+      !% LDA: Slater s Xalpha
+      !%Option lda_c_vwn 7000
+      !% LDA: Vosko, Wilk, & Nussair
+      !%Option lda_c_vwn_rpa 8000
+      !% LDA: Vosko, Wilk, & Nussair (fit to the RPA correlation energy)
+      !%Option lda_c_pz 9000
+      !% LDA: Perdew & Zunger
+      !%Option lda_c_pz_mod 10000
+      !% LDA: Perdew & Zunger (Modified to improve the matching between
+      !% the high and the low rs region)
+      !%Option lda_c_ob_pz 11000
+      !% LDA: Ortiz & Ballone (PZ-type parametrization)
+      !%Option lda_c_pw 12000
+      !% LDA: Perdew & Wang
+      !%Option lda_c_pw_mod 13000
+      !% LDA: Perdew & Wang (Modified to match the original PBE routine)
+      !%Option lda_c_ob_pw 14000
+      !% LDA: Ortiz & Ballone (PW-type parametrization)
+      !%Option lda_c_amgb 15000
+      !% LDA: Attacalite et al functional for the 2D electron gas
+      !%Option gga_c_pbe 130000
+      !% GGA: Perdew, Burke & Ernzerhof correlation
+      !%Option lda_c_lyp 131000
+      !% GGA: Lee, Yang, & Parr LDA
+      !%Option lda_c_p86 132000
+      !% GGA: Perdew 86
+      !%Option mgga_c_tpss 202000
+      !% MGGA (not working)
+      !%End
+
+      call loct_parse_int(check_inp('XCFunctional'), default, val)
+
+      c_id = val / 1000
+      x_id = val - c_id*1000
+
+      call loct_parse_int(check_inp('XFunctional'), -1, val)
+      
+      if ( val /= -1 ) then 
+        message(1) = 'XFunctional variable is deprecated. Please use XCFunctional instead.'
+        call write_fatal(1)
+      end if
+
+      call loct_parse_int(check_inp('CFunctional'), -1, val)
+      
+      if ( val /= -1 ) then 
+        message(1) = 'CFunctional variable is deprecated. Please use XCFunctional instead.'
+        call write_fatal(1)
+      end if
+
+      print*, val, x_id, c_id
+
+    end subroutine parse
 
   end subroutine xc_init
 

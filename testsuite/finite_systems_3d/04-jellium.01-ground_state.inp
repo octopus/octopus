@@ -31,8 +31,7 @@ BoxShape = sphere
 Radius  = 18.0
 Spacing = 0.5
 
-XFunctional = lda_x
-CFunctional = lda_c_gl
+XCFunctional = lda_x + lda_c_gl
 
 MaximumIter = 200
 ConvRelDens = 1e-5
