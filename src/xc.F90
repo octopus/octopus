@@ -263,8 +263,6 @@ contains
         call write_fatal(1)
       end if
 
-      print*, val, x_id, c_id
-
     end subroutine parse
 
   end subroutine xc_init
