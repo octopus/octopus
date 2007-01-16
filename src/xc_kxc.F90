@@ -36,9 +36,9 @@ subroutine xc_get_kxc(xcs, m, rho, ispin, kxc)
   type(xc_functl_t), pointer :: functl(:)
 
   if(ispin == UNPOLARIZED) then
-    functl => xcs%functl(:, 1)
+    functl => xcs%kernel(:, 1)
   else
-    functl => xcs%functl(:, 2)
+    functl => xcs%kernel(:, 2)
   end if
 
   ! is there anything to do? (only LDA by now)

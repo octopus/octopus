@@ -55,6 +55,9 @@ module xc_m
     integer :: family                   ! the families present
     type(xc_functl_t) :: functl(2,2) ! (1,:) => exchange,    (2,:) => correlation
                                         ! (:,1) => unpolarized, (:,2) => polarized
+
+    type(xc_functl_t) :: kernel(2,2)
+
     type(xc_functl_t) :: j_functl    ! current-depent part of the functional
 
     ! the meta-GGA can be implemented in two ways
@@ -105,7 +108,7 @@ contains
     integer,    intent(in)  :: spin_channels
     logical,    intent(in)  :: cdft
 
-    integer :: i, x_id, c_id
+    integer :: i, x_id, c_id, xk_id, ck_id
 
     call push_sub('xc.xc_init')
 
@@ -122,11 +125,20 @@ contains
       !we also need xc functionals that do not depend on the current
       !get both spin polarized and unpolarized
       do i = 1, 2
+
         call xc_functl_init_exchange   (xcs%functl(1,i), x_id, ndim, i)
         call xc_functl_init_correlation(xcs%functl(2,i), c_id, ndim, i)
+        
+        call xc_functl_init_exchange   (xcs%kernel(1,i), xk_id, ndim, i)
+        call xc_functl_init_correlation(xcs%kernel(2,i), ck_id, ndim, i)
+
       end do
+
       xcs%family = ior(xcs%family, xcs%functl(1,1)%family)
       xcs%family = ior(xcs%family, xcs%functl(2,1)%family)
+
+      xcs%family = ior(xcs%family, xcs%kernel(1,1)%family)
+      xcs%family = ior(xcs%family, xcs%kernel(2,1)%family)
 
       if (iand(xcs%family, XC_FAMILY_LCA).ne.0 .and. &
         iand(xcs%family, XC_FAMILY_MGGA + XC_FAMILY_OEP).ne.0) then
@@ -165,7 +177,7 @@ contains
 
       !%Variable XCFunctional
       !%Type integer
-      !%Default lda_x
+      !%Default lda_x+lda_c_pz_mod
       !%Section Hamiltonian::XC
       !%Description
       !% Defines the exchange and correlation functionals
@@ -263,6 +275,26 @@ contains
         call write_fatal(1)
       end if
 
+      !%Variable XCKernel
+      !%Type integer
+      !%Default xc_functional
+      !%Section Hamiltonian::XC
+      !%Description
+      !% Defines the exchange and correlation kernel
+      !%Option xc_functional -1
+      !% The same functional defined by XCFunctional
+      !%End
+
+      call loct_parse_int(check_inp('XCKernel'), -1, val)
+
+      if( -1 == val ) then
+        ck_id = c_id
+        xk_id = x_id
+      else
+        ck_id = val / 1000
+        xk_id = val - ck_id*1000  
+      end if
+
     end subroutine parse
 
   end subroutine xc_init
@@ -280,6 +312,8 @@ contains
     do i = 1, 2
       call xc_functl_end(xcs%functl(1,i))
       call xc_functl_end(xcs%functl(2,i))
+      call xc_functl_end(xcs%kernel(1,i))
+      call xc_functl_end(xcs%kernel(2,i))
     end do
     xcs%family = 0
 
