@@ -206,7 +206,8 @@ contains
     !% not required to define them explicitly in the Species block, as defaults 
     !% are provided by the program (you can override these defaults in any case). 
     !% Additional pseudopotentials can be downloaded from the 
-    !% <a href='http://www.tddft.org/programs/octopus/pseudo.php'>octopus homepage</a>.
+    !% <a href='http://www.tddft.org/programs/octopus/wiki/index.php/Pseudopotentials'>
+    !% octopus homepage</a>.
     !%
     !% The format of this block is the following: The first field is
     !% the name of the specie, followed by the atomic mass (in atomic mass

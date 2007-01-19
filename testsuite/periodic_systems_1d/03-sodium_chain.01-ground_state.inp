@@ -10,12 +10,12 @@ Dimensions = 3
 PeriodicDimensions = 1
 
 %CalculationMode
-   gs   |  unocc                     
-  "gs_" | "unocc_"
+   gs  |  unocc                     
+  "gs" | "unocc"
 %
 
 %Species
-  "Na"  | 23.0 | tm2 | 11 | 2 | 2
+  "Na"  | 23.0 | spec_ps_tm2 | 11 | 2 | 2
 %
 
 %Coordinates
@@ -37,7 +37,9 @@ BoxShape = parallelepiped
 %
 
 LCAODimension = 9
-unocc_EigenSolverMaxIter = 200
+
+MaximumIter = 1
 
 CenterOfInversion = yes
+
 NumberUnoccStates = 1

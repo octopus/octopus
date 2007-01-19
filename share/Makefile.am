@@ -14,3 +14,5 @@ variables: RUN_SCRIPT
 
 RUN_SCRIPT:
 	(cd ..; build/mk_varinfo.pl)
+
+EXTRA_DIST = variables.local

@@ -11,7 +11,7 @@ Radius  = 5.0
 Spacing = 0.5
 
 %Species
-"Pb" | 207.2 | hgh | 82 | 0 | 0
+"Pb" | 207.2 | spec_ps_hgh | 82 | 0 | 0
 %
 %Coordinates
   "Pb" | 0 | 0 | 0.0
