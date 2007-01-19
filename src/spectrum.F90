@@ -54,6 +54,11 @@ module spectrum_m
     SPECTRUM_DAMP_GAUSSIAN   = 3
 
   integer, public, parameter ::    &
+    SPECTRUM_TRANSFORM_EXP   = 1,  &
+    SPECTRUM_TRANSFORM_SIN   = 2,  &
+    SPECTRUM_TRANSFORM_COS   = 3
+
+  integer, public, parameter ::    &
     KICK_DENSITY_MODE        = 0,  &
     KICK_SPIN_MODE           = 1,  &
     KICK_SPIN_DENSITY_MODE   = 2
@@ -64,6 +69,7 @@ module spectrum_m
     FLOAT   :: energy_step         ! step in energy mesh
     FLOAT   :: max_energy          ! maximum of energy mesh
     integer :: damp                ! Damp type (none, exp or pol)
+    integer :: transform           ! sinus, cosinus or exponential transform
     FLOAT   :: damp_factor         ! factor used in damping
   end type spec_t
 
@@ -103,7 +109,7 @@ contains
     !%Option no 0
     !% No filtering at all.
     !%Option exponential 1
-    !% Exponential filtering, corresponding with a Lorentzian-shaped spectrum
+    !% Exponential filtering, corresponding to a Lorentzian-shaped spectrum
     !%Option polynomial 2
     !% Third-order polynomial damping.
     !%Option gaussian 3
@@ -112,6 +118,23 @@ contains
     call loct_parse_int  (check_inp('SpecDampMode'), SPECTRUM_DAMP_POLYNOMIAL, s%damp)
     if(.not.varinfo_valid_option('SpecDampMode', s%damp)) call input_error('SpecDampMode')
     call messages_print_var_option(stdout, 'SpecDampMode', s%damp)
+
+    !%Variable SpecTransform
+    !%Type integer
+    !%Default sinus
+    !%Section Utilities::Optical Spectra
+    !%Description
+    !% Decides which transform to perform
+    !%Option sinus 2
+    !% Sinus transform <math>\int dt \sin(wt) f(t)</math>
+    !%Option cosinus 3
+    !% Cosinus transform <math>\int dt \cos(wt) f(t)</math>
+    !%Option exponential 1
+    !% Exponential transform <math>\int dt \exp(-wt) f(t)</math>
+    !%End
+    call loct_parse_int  (check_inp('SpecTransform'), SPECTRUM_TRANSFORM_SIN, s%transform)
+    if(.not.varinfo_valid_option('SpecTransform', s%transform)) call input_error('SpecTransform')
+    call messages_print_var_option(stdout, 'SpecTransform', s%transform)
 
     !%Variable SpecStartTime
     !%Type integer
@@ -584,7 +607,16 @@ contains
       w = k*s%energy_step
       do j = is, ie
         jj = j - is
-        x = sin(w*jj*dt)
+
+        select case(s%transform)
+        case(SPECTRUM_TRANSFORM_SIN)
+          x = sin(w*jj*dt)
+        case(SPECTRUM_TRANSFORM_COS)
+          x = cos(w*jj*dt)
+        case(SPECTRUM_TRANSFORM_EXP)
+          x = exp(-w*jj*dt)
+        end select
+
         do isp = 1, nspin
           sigma(1:3, k, isp) = sigma(1:3, k, isp) + x*dumpa(j)*dipole(1:3, j, isp)
           sf(k, isp) = sf(k, isp) + x*dumpa(j)*sum(dipole(1:3, j, isp)*kick%pol(1:3,kick%pol_dir))
