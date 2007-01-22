@@ -20,7 +20,12 @@ but do not change the names of the frames (treeframe and basefrm)
 
 <FRAMESET cols="200,*" onResize="if (navigator.family == 'nn4') window.location.reload()"> 
   <FRAME src="varsLeftFrame.php?page=<?php echo $_GET["page"]; ?>" name="treeframe" > 
-  <FRAME SRC="varsRightFrame.html" name="basefrm"> 
+  <FRAME SRC="<?php
+if($_GET["section"])
+  echo "vars/".$_GET["section"].".html#".$_GET["name"];
+else
+  echo "varsRightFrame.html"
+?>" name="basefrm"> 
 </FRAMESET> 
 
 
