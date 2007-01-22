@@ -641,16 +641,16 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   subroutine egofv(h,s,n,e,g,y,l,z,a,b,rmax,nprin,nnode,dr,ierr)
 
-  implicit DOUBLE (a-h,o-z)
+  implicit REAL_DOUBLE (a-h,o-z)
 
-  DOUBLE :: a, b, e, z, rmax, dr
+  REAL_DOUBLE :: a, b, e, z, rmax, dr
   integer :: i,n,l,nprin,nnode,ncor,n1,n2,niter,nt
   integer :: ierr
 
 
-  DOUBLE, dimension(n) :: h, s, g, y
-  DOUBLE               :: e1, e2, del, de, et, t
-  DOUBLE, parameter    :: tol = CNST(1.0e-5)
+  REAL_DOUBLE, dimension(n) :: h, s, g, y
+  REAL_DOUBLE               :: e1, e2, del, de, et, t
+  REAL_DOUBLE, parameter    :: tol = CNST(1.0e-5)
 
   ncor=nprin-l-1
   n1=nnode
@@ -793,10 +793,10 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
 !       a and b specify the radial mesh r(i)=(exp(a*(i-1))-1)*b               !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-  implicit DOUBLE (a-h,o-z)
-  DOUBLE :: e, de, dr, rmax, z, a, b, y2, g, gsg, x, gin, gsgin, xin
+  implicit REAL_DOUBLE (a-h,o-z)
+  REAL_DOUBLE :: e, de, dr, rmax, z, a, b, y2, g, gsg, x, gin, gsgin, xin
   integer :: nmax,l,ncor,nnode,n,knk,nndin,i
-  DOUBLE :: h(nmax), s(nmax), y(nmax), zdr, yn, ratio, t
+  REAL_DOUBLE :: h(nmax), s(nmax), y(nmax), zdr, yn, ratio, t
 
   zdr = z*a*b
   n=nmax
@@ -894,8 +894,8 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
 !             (dr/di = a*b at the origin)                                     !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-  implicit DOUBLE (a-h,o-z)
-  DOUBLE s(:), g(:), norm, srnrm
+  implicit REAL_DOUBLE (a-h,o-z)
+  REAL_DOUBLE s(:), g(:), norm, srnrm
   integer :: n,nm1,nm2,i
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -932,9 +932,9 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
 
   subroutine bcorgn(e,h,s,l,zdr,y2)
 
-  implicit DOUBLE (a-h,o-z)
-  DOUBLE :: e, zdr, y2
-  DOUBLE :: h(:), s(:), t2, t3, d2, c0, c1, c2
+  implicit REAL_DOUBLE (a-h,o-z)
+  REAL_DOUBLE :: e, zdr, y2
+  REAL_DOUBLE :: h(:), s(:), t2, t3, d2, c0, c1, c2
   integer :: l
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -981,8 +981,8 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
 ! 22.7.85                                                                     !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-  implicit DOUBLE (a-h,o-z)
-  DOUBLE  h(*),s(*),                                                          &
+  implicit REAL_DOUBLE (a-h,o-z)
+  REAL_DOUBLE  h(*),s(*),                                                          &
    e,dr,rmax,yn,a,b,tnm1,tn,tnp1,beta,dg,c1,c2,c3,dn
   integer :: n
 
@@ -1010,10 +1010,10 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
 
   subroutine numin(e,h,s,y,n,nnode,yn,g,gsg,x,knk)
 
-  implicit DOUBLE (a-h,o-z)
-  DOUBLE :: e, yn, g, gsg, x
+  implicit REAL_DOUBLE (a-h,o-z)
+  REAL_DOUBLE :: e, yn, g, gsg, x
   integer :: i,n,nnode,knk
-  DOUBLE :: h(n),s(n),y(n),t
+  REAL_DOUBLE :: h(n),s(n),y(n),t
 
   y(n)=yn
   t=h(n)-e*s(n)
@@ -1064,10 +1064,10 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
 
   subroutine numout(e,h,s,y,ncor,knk,nnode,y2,g,gsg,x)
 
-  implicit DOUBLE (a-h,o-z)
-  DOUBLE :: e, y2, g, gsg, x
+  implicit REAL_DOUBLE (a-h,o-z)
+  REAL_DOUBLE :: e, y2, g, gsg, x
   integer :: ncor,nnode,knk,i,nm4
-  DOUBLE :: h(knk),s(knk),y(knk),t,xl
+  REAL_DOUBLE :: h(knk),s(knk),y(knk),t,xl
 
   y(1)=M_ZERO
   y(2)=y2

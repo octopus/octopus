@@ -479,8 +479,8 @@ contains
     FLOAT :: vtot, a2b4, diff, nonl
     FLOAT, allocatable :: prev(:, :), rho(:, :), ve(:, :)
     FLOAT, parameter :: tol = CNST(1.0e-4)
-    DOUBLE :: e, z, dr, rmax
-    DOUBLE, allocatable :: s(:), hato(:), g(:), y(:)
+    REAL_DOUBLE :: e, z, dr, rmax
+    REAL_DOUBLE, allocatable :: s(:), hato(:), g(:), y(:)
 
     call push_sub('hgh.solve_schroedinger')
 

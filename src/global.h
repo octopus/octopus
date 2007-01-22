@@ -54,8 +54,8 @@
      end if                                            \
      CARDINAL
 
-#define DOUBLE real(8)
-#define SINGLE real(4)
+#define REAL_DOUBLE real(8)
+#define REAL_SINGLE real(4)
 
 #if defined(SINGLE_PRECISION)
 #  define REAL_PRECISION 4

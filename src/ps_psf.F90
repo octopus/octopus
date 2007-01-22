@@ -250,8 +250,8 @@ contains
 
     ! These variables are in double precision, no matter if single precision version of
     ! octopus is compiled, because they are passed to egofv.
-    DOUBLE :: e, z, dr, rmax
-    DOUBLE, allocatable :: s(:), hato(:), gg(:), y(:)
+    REAL_DOUBLE :: e, z, dr, rmax
+    REAL_DOUBLE, allocatable :: s(:), hato(:), gg(:), y(:)
 
     call push_sub('psf.solve_schroedinger')
 
@@ -418,8 +418,8 @@ contains
     FLOAT :: vtot, a2b4
     FLOAT, allocatable :: ve(:), elocal(:,:)
 
-    DOUBLE :: z, e, dr, rmax
-    DOUBLE, allocatable :: hato(:), s(:), gg(:), y(:)
+    REAL_DOUBLE :: z, e, dr, rmax
+    REAL_DOUBLE, allocatable :: hato(:), s(:), gg(:), y(:)
 
     call push_sub('psf.ghost_analysis')
 
