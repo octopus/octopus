@@ -603,7 +603,7 @@ contains
       !  first the Hartree part (only works for real wfs...)
       if( j.ne.j_old  .or.   b.ne.b_old   .or.  mu.ne.mu_old) then
         pot = M_ZERO
-        if( (.not.h%ip_app) ) call dpoisson_solve(sys%gr, pot, rho_j)
+        if( (.not.h%ip_app) ) call dpoisson_solve(sys%gr, pot, rho_j, all_nodes=.false.)
       end if
 
       K_term = dmf_dotp(m, rho_i(:), pot(:))

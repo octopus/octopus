@@ -36,21 +36,25 @@
 !   index_range(3) = 2,      (number of k-points)
 ! and 12 processors, we could get
 !   mc%group_sizes = (2, 3, 2)
-! which means that space is divided in 8 domains, the states are divided among 4 nodes,
-! and the k-points in 2. One can view it as a tree (see degug/parallel_tree.dot)
+! which means
+! * that space is divided in 2 domains per state,
+! * the states are divided in 3 groups, i. e. 5 states per processor, and
+! * the whole setting is duplicated because of the 2 kpoints.
+! One can view it as a tree (see degug/parallel_tree.dot)
 !
 !                       ------------------
 !                       /                \         <- Division in k-points (1 k-point per node)
 !                  ---------          ---------
 !                /     |    \       /     |    \   <- Division in states   (5 states per node)
+!              ----  ----  ----   ----  ----  ----
 !              /  \  /  \  /  \   /  \  /  \  /  \ <- Division in domains  (50000 points per node)
 !
-! To perform collective operations (like a reduce), you can use the communicators_m
+! To perform collective operations (like a reduce), you can use the communicators
 ! provided in mc%group_comm(:). For example, to sum over states, the communicator
 ! to use is mc%group_comm(P_STRATEGY_STATES)
 !
-! You can use the routine multicomm_strategy_is_parallel to know is a certain_m
-! strategy is parallel.
+! You can use the routine multicomm_strategy_is_parallel to know if a certain
+! index is parallelized.
 
 module multicomm_m
   use datasets_m
@@ -77,8 +81,8 @@ module multicomm_m
   integer, public, parameter ::      &
     P_STRATEGY_SERIAL  = 0,          & ! single domain, all states, kpoints on a single processor
     P_STRATEGY_DOMAINS = 1,          & ! parallelization domains
-    P_STRATEGY_STATES  = 2,          & ! parallelization in kpoints
-    P_STRATEGY_KPOINTS = 3,          & ! parallelization in states
+    P_STRATEGY_STATES  = 2,          & ! parallelization in states
+    P_STRATEGY_KPOINTS = 3,          & ! parallelization in kpoints
     P_STRATEGY_OTHER   = 4             ! something else like e-h pairs
 
   integer,           parameter :: n_par_types = 4

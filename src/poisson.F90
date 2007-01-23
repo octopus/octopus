@@ -258,14 +258,23 @@ contains
 
 
   !-----------------------------------------------------------------
-  subroutine zpoisson_solve(gr, pot, rho)
-    type(grid_t),  target, intent(inout) :: gr
-    CMPLX,                 intent(inout) :: pot(:)  ! pot(m%np)
-    CMPLX,                 intent(in)    :: rho(:)  ! rho(m%np)
+  subroutine zpoisson_solve(gr, pot, rho, all_nodes)
+    type(grid_t), target, intent(inout) :: gr
+    CMPLX,                intent(inout) :: pot(:)  ! pot(m%np)
+    CMPLX,                intent(in)    :: rho(:)  ! rho(m%np)
+    logical, optional,    intent(in)    :: all_nodes
 
     FLOAT, allocatable :: aux1(:), aux2(:)
 
+    logical :: all_nodes_value
+
     call push_sub('poisson.zpoisson_solve')
+
+    if(present(all_nodes)) then
+      all_nodes_value = all_nodes
+    else
+      all_nodes_value = .true.
+    end if
 
     ALLOCATE(aux1(gr%m%np), gr%m%np)
     ALLOCATE(aux2(gr%m%np), gr%m%np)
@@ -273,13 +282,13 @@ contains
     ! first the real part
     aux1(1:NP) = real(rho(1:NP))
     aux2(1:NP) = real(pot(1:NP))
-    call dpoisson_solve(gr, aux2, aux1)
+    call dpoisson_solve(gr, aux2, aux1, all_nodes=all_nodes_value)
     pot(1:NP)  = aux2(1:NP)
 
     ! now the imaginary part
     aux1(1:NP) = aimag(rho(1:NP))
     aux2(1:NP) = aimag(pot(1:NP))
-    call dpoisson_solve(gr, aux2, aux1)
+    call dpoisson_solve(gr, aux2, aux1, all_nodes=all_nodes_value)
     pot(1:NP) = pot(1:NP) + M_zI*aux2(1:NP)
 
     deallocate(aux1, aux2)
@@ -289,16 +298,28 @@ contains
 
 
   !-----------------------------------------------------------------
-  subroutine dpoisson_solve(gr, pot, rho)
+  subroutine dpoisson_solve(gr, pot, rho, all_nodes)
     type(grid_t), target, intent(inout) :: gr
-    FLOAT,                intent(inout) :: pot(:)  ! pot(m%np)
-    FLOAT,                intent(in)    :: rho(:)  ! rho(m%np)
+    FLOAT,                intent(inout) :: pot(:)    ! pot(m%np)
+    FLOAT,                intent(in)    :: rho(:)    ! rho(m%np)
+    logical, optional,    intent(in)    :: all_nodes ! Is the poisson solver allowed to utilise
+                                                     ! all nodes or only the domain nodes for
+                                                     ! its calculations? (Defaults to .true.)
 
     FLOAT, allocatable :: rho_corrected(:), vh_correction(:)
     FLOAT, allocatable :: rhop(:), potp(:)
 
+    logical         :: all_nodes_value
+
     call profiling_in(C_PROFILING_POISSON_SOLVE)
     call push_sub('poisson.dpoisson_solve')
+
+    ! Check optional argument and set to default if necessary.
+    if(present(all_nodes)) then
+      all_nodes_value = all_nodes
+    else
+      all_nodes_value = .true.
+    end if
 
     ASSERT(poisson_solver.ne.-99)
 
@@ -356,7 +377,7 @@ contains
       deallocate(rho_corrected, vh_correction)
 #endif
     case(ISF)
-      call poisson_isf_solve(gr%m, pot, rho)
+      call poisson_isf_solve(gr%m, pot, rho, all_nodes_value)
       
     end select
 

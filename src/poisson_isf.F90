@@ -41,19 +41,34 @@ module poisson_isf_m
        poisson_isf_solve, & 
        poisson_isf_end
 
-  type(dcf_t)        :: rho_cf
-  FLOAT, pointer     :: kernel(:, :, :)
-  integer, parameter :: order_scaling_function = 8 
-  integer            :: nfft1, nfft2, nfft3
+  ! Datatype to store kernel values to solve poisson equation
+  ! on different communicators (configurations).
+  type isf_cnf_t
+    FLOAT, pointer  :: kernel(:, :, :)
+    integer         :: nfft1, nfft2, nfft3
+    type(mpi_grp_t) :: mpi_grp
+  end type isf_cnf_t
+
+  ! Indices for the cnf array
+  integer, parameter :: serial = 1
+  integer, parameter :: world = 1
+  integer, parameter :: domain = 2
+  integer, parameter :: n_cnf = 2
+
+  type(dcf_t)                  :: rho_cf
+  type(isf_cnf_t), allocatable :: cnf(:)
+  integer, parameter           :: order_scaling_function = 8 
 
 contains
-
+  ! ---------------------------------------------------------
   subroutine poisson_isf_init(m)
     type(mesh_t), intent(in) :: m
 
     integer :: n1, n2, n3
 #if defined(HAVE_MPI)
     integer :: m1, m2, m3, md1, md2, md3
+    integer :: n(3)
+    integer :: i_cnf
 #endif
 
     call push_sub('poisson_isf.poisson_isf_init')
@@ -61,38 +76,66 @@ contains
     call dcf_new(m%l, rho_cf)
 
 #if defined(HAVE_MPI)
-    call par_calculate_dimensions(rho_cf%n(1), rho_cf%n(2), rho_cf%n(3), &
-      m1, m2, m3, n1, n2, n3, md1, md2, md3, nfft1, nfft2, nfft3, mpi_world%size)
+    ! Allocate to configurations. The initialisation, especially the kernel,
+    ! depends on the number of nodes used for the calculations. To avoid
+    ! recalculating the kernel on each call of poisson_isf_solve depending on
+    ! the all_nodes argument, both kernels are calculated.
+    ALLOCATE(cnf(n_cnf), n_cnf)
+    cnf(world)%mpi_grp = mpi_world
+    cnf(domain)%mpi_grp = m%mpi_grp
 
-    ALLOCATE(kernel(nfft1, nfft2, nfft3/mpi_world%size), nfft1*nfft2*nfft3/mpi_world%size)
+    ! Build the kernel for all configurations. At the moment, this is
+    ! solving the poisson equation with all nodes (i_cnf == world) and
+    ! with the domain nodes only (i_cnf == domain).
+    do i_cnf = 1, n_cnf
+      call par_calculate_dimensions(rho_cf%n(1), rho_cf%n(2), rho_cf%n(3),         &
+        m1, m2, m3, n1, n2, n3, md1, md2, md3, cnf(i_cnf)%nfft1, cnf(i_cnf)%nfft2, &
+        cnf(i_cnf)%nfft3, cnf(i_cnf)%mpi_grp%size)
 
-    call par_build_kernel(rho_cf%n(1), rho_cf%n(2), rho_cf%n(3),       &
-      n1, n2, n3, nfft1, nfft2, nfft3, m%h(1), order_scaling_function, &
-      mpi_world%rank, mpi_world%size, mpi_world%comm, kernel)
+      ! Shortcuts to avoid to "line too long" errors.
+      n(1) = cnf(i_cnf)%nfft1
+      n(2) = cnf(i_cnf)%nfft2
+      n(3) = cnf(i_cnf)%nfft3
+
+      ALLOCATE(cnf(i_cnf)%kernel(n(1), n(2), n(3)/cnf(i_cnf)%mpi_grp%size), n(1)*n(2)*n(3) / cnf(i_cnf)%mpi_grp%size)
+
+    call par_build_kernel(rho_cf%n(1), rho_cf%n(2), rho_cf%n(3), n1, n2, n3,     &
+      cnf(i_cnf)%nfft1, cnf(i_cnf)%nfft2, cnf(i_cnf)%nfft3,                      &
+      m%h(1), order_scaling_function,                                            &
+      cnf(i_cnf)%mpi_grp%rank, cnf(i_cnf)%mpi_grp%size, cnf(i_cnf)%mpi_grp%comm, &
+      cnf(i_cnf)%kernel)
+    end do
 #else
+    ALLOCATE(cnf(1), 1)
+
     call calculate_dimensions(rho_cf%n(1), rho_cf%n(2), rho_cf%n(3), &
-      nfft1, nfft2, nfft3)
+      cnf(serial)%nfft1, cnf(serial)%nfft2, cnf(serial)%nfft3)
 
-    n1 = nfft1/2 + 1
-    n2 = nfft2/2 + 1
-    n3 = nfft3/2 + 1
+    n1 = cnf(serial)%nfft1/2 + 1
+    n2 = cnf(serial)%nfft2/2 + 1
+    n3 = cnf(serial)%nfft3/2 + 1
 
-    ALLOCATE(kernel(n1, n2, n3), n1*n2*n3)
+    ALLOCATE(cnf(serial)%kernel(n1, n2, n3), n1*n2*n3)
 
-    call build_kernel(rho_cf%n(1), rho_cf%n(2), rho_cf%n(3), &
-      nfft1, nfft2, nfft3, m%h(1), order_scaling_function, kernel)
+    call build_kernel(rho_cf%n(1), rho_cf%n(2), rho_cf%n(3),   &
+      cnf(serial)%nfft1, cnf(serial)%nfft2, cnf(serial)%nfft3, &
+      m%h(1), order_scaling_function, cnf(serial)%kernel)
 #endif
 
     call pop_sub()
   end subroutine poisson_isf_init
 
-  subroutine poisson_isf_solve(m, pot, rho)
-    type(mesh_t), intent(in) :: m
-    FLOAT, intent(out)       :: pot(:)
-    FLOAT, intent(in)        :: rho(:)
+  ! ---------------------------------------------------------
+  subroutine poisson_isf_solve(m, pot, rho, all_nodes)
+    type(mesh_t), intent(in)  :: m
+    FLOAT,        intent(out) :: pot(:)
+    FLOAT,        intent(in)  :: rho(:)
+    logical,      intent(in)  :: all_nodes
 
     FLOAT, allocatable :: rho_global(:)
     FLOAT, allocatable :: pot_global(:)
+
+    integer :: i_cnf
 
     call push_sub('poisson_isf.poisson_isf_solve')
 
@@ -114,12 +157,20 @@ contains
     end if
 
 #if defined(HAVE_MPI)
+    ! Choose configuration.
+    if(all_nodes) then
+      i_cnf = world
+    else
+      i_cnf = domain
+    end if
     call par_psolver_kernel(rho_cf%n(1), rho_cf%n(2), rho_cf%n(3), &
-      nfft1, nfft2, nfft3, m%h(1), kernel, rho_cf%RS,              &
-      mpi_world%rank, mpi_world%size, mpi_world%comm)
+      cnf(i_cnf)%nfft1, cnf(i_cnf)%nfft2, cnf(i_cnf)%nfft3,  &
+      m%h(1), cnf(i_cnf)%kernel, rho_cf%RS,                      &
+      cnf(i_cnf)%mpi_grp%rank, cnf(i_cnf)%mpi_grp%size, cnf(i_cnf)%mpi_grp%comm)
 #else   
-    call psolver_kernel(rho_cf%n(1), rho_cf%n(2), rho_cf%n(3), &
-      nfft1, nfft2, nfft3, m%h(1), kernel, rho_cf%RS)
+    call psolver_kernel(rho_cf%n(1), rho_cf%n(2), rho_cf%n(3),    &
+      cnf(serial)%nfft1, cnf(serial)%nfft2, cnf(serial)%nfft3, &
+      m%h(1), cnf(serial)%kernel, rho_cf%RS)
 #endif
 
     if(m%parallel_in_domains) then
@@ -137,10 +188,11 @@ contains
     call pop_sub()
   end subroutine poisson_isf_solve
 
+  ! ---------------------------------------------------------
   subroutine poisson_isf_end()
     call push_sub('poisson_isf.poisson_isf_end')
 
-    deallocate(kernel)
+    deallocate(cnf)
     call dcf_free(rho_cf)
 
     call pop_sub()

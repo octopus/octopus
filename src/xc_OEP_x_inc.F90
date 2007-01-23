@@ -155,14 +155,14 @@ subroutine X(oep_x) (gr, st, is, oep, ex)
 
           rho_ij(1:NP) = R_CONJ(wf_ist(1:NP))*st%X(psi)(1:NP, 1, jst, is)
           F_ij(1:NP) = R_TOTYPE(M_ZERO)
-          call X(poisson_solve)(gr, F_ij, rho_ij)
+          call X(poisson_solve)(gr, F_ij, rho_ij, all_nodes=.false.)
 
           ! this quantity has to be added to oep%X(lxc)(1:NP, ist)
           send_buffer(1:NP) = send_buffer(1:NP) + &
             oep%socc*st%occ(jst, is)*F_ij(1:NP)*R_CONJ(st%X(psi)(1:NP, 1, jst, is))
 
           ! if off-diagonal, then there is another contribution
-          ! not that the wf jst is always in this node
+          ! note that the wf jst is always in this node
           if(ist.ne.jst) then
             oep%X(lxc)(1:NP, jst) = oep%X(lxc)(1:NP, jst) - &
               oep%socc * st%occ(ist, is) * R_CONJ(F_ij(1:NP)*wf_ist(1:NP))
