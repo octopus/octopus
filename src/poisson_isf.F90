@@ -26,11 +26,8 @@ module poisson_isf_m
   use messages_m
   use mesh_m
   use functions_m
-
-#if defined(HAVE_MPI)
   use mpi_m
   use par_vec_m
-#endif
 
   implicit none
 
