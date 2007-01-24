@@ -37,18 +37,19 @@ module specie_m
   implicit none
 
   private
-  public ::                     &
-    specie_init,                &
-    specie_end,                 &
-    specie_t,                   &
-    specie_debug,               &
-    specie_filter,              &
-    specie_read,                &
-    specie_get_local,           &
-    specie_get_glocal,          &
-    specie_get_local_fourier,   &
-    specie_get_nl_part,         &
-    specie_get_nlcc,            &
+  public ::                   &
+    specie_init,              &
+    specie_end,               &
+    specie_t,                 &
+    specie_debug,             &
+    specie_filter,            &
+    specie_read,              &
+    specie_get_local,         &
+    specie_get_glocal,        &
+    specie_get_local_fourier, &
+    specie_real_nl_projector, &
+    specie_nl_projector,      &
+    specie_get_nlcc,          &
     specie_get_iwf
 
 
@@ -649,7 +650,7 @@ contains
     FLOAT, optional, intent(in) :: time
 
     FLOAT, parameter :: Delta = CNST(1e-4)
-    FLOAT :: xx(MAX_DIM), r, l1, l2, pot_re, pot_im, time_
+    FLOAT :: xx(MAX_DIM), r, l1, l2, pot_re, pot_im, time_, dvl_r
     integer :: i
 
     gv    = M_ZERO
@@ -691,7 +692,10 @@ contains
 
     case(SPEC_PS_PSF, SPEC_PS_HGH, SPEC_PS_CPI, SPEC_PS_FHI, SPEC_PS_UPF)
       gv(:) = M_ZERO
-      if(r>CNST(0.00001)) gv(:) = -loct_splint(s%ps%dvl, r)*x(:)/r
+      if(r>CNST(0.00001)) then
+        dvl_r = loct_splint(s%ps%dvl, r)
+        gv(:) = -dvl_r*x(:)/r
+      end if
 
     case(SPEC_ALL_E)
       gv(:)=M_ZERO
@@ -745,28 +749,22 @@ contains
 
   end function specie_get_nlcc
 
-
   ! ---------------------------------------------------------
-  subroutine specie_get_nl_part(s, x, l, lm, i, uV, duV, so)
+  ! This routine returns the non-local projector and its 
+  ! derivative build using real spherical harmonics
+  subroutine specie_real_nl_projector(s, x, l, lm, i, uV, duV)
     type(specie_t),    intent(in)  :: s
     FLOAT,             intent(in)  :: x(:)        ! (3)
     integer,           intent(in)  :: l, lm, i
     FLOAT,             intent(out) :: uV, duV(:)  ! (3)
-    logical, optional, intent(in)  :: so
 
     FLOAT :: r, uVr0, duvr0, ylm, gylm(MAX_DIM)
     FLOAT, parameter :: ylmconst = CNST(0.488602511902920) !  = sqr(3/(4*pi))
 
     r = sqrt(sum(x**2))
-    if(present(so)) then
-      ASSERT(so)
-
-      uVr0  = loct_splint(s%ps%so_kb(l, i), r)
-      duvr0 = loct_splint(s%ps%so_dkb(l, i), r)
-    else
-      uVr0  = loct_splint(s%ps%kb(l, i), r)
-      duvr0 = loct_splint(s%ps%dkb(l, i), r)
-    end if
+ 
+    uVr0  = loct_splint(s%ps%kb(l, i), r)
+    duvr0 = loct_splint(s%ps%dkb(l, i), r)
 
     call grylmr(x(1), x(2), x(3), l, lm, ylm, gylm)
     uv = uvr0*ylm
@@ -787,8 +785,28 @@ contains
       end if
     end if
 
-  end subroutine specie_get_nl_part
+  end subroutine specie_real_nl_projector
 
+  ! ---------------------------------------------------------
+  ! This routine returns the non-local projector build using 
+  ! spherical harmonics
+  subroutine specie_nl_projector(s, x, l, lm, i, uV)
+    type(specie_t),    intent(in)  :: s
+    FLOAT,             intent(in)  :: x(:)        ! (3)
+    integer,           intent(in)  :: l, lm, i
+    CMPLX,             intent(out) :: uV
+
+    FLOAT :: r, uVr0
+    CMPLX :: ylm
+
+    r = sqrt(sum(x**2))
+ 
+    uVr0  = loct_splint(s%ps%kb(l, i), r)
+
+    call ylmr(x(1), x(2), x(3), l, lm, ylm)
+    uv = uvr0*ylm
+
+  end subroutine specie_nl_projector
 
   ! ---------------------------------------------------------
   FLOAT function specie_get_iwf(s, j, dim, is, x) result(phi)

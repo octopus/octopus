@@ -198,10 +198,10 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine lcao_wf(lcao_data, st, m, h, start)
+  subroutine lcao_wf(lcao_data, st, gr, h, start)
     type(lcao_t),        intent(inout) :: lcao_data
     type(states_t),      intent(inout) :: st
-    type(mesh_t),        intent(in)    :: m
+    type(grid_t),        intent(inout) :: gr
     type(hamiltonian_t), intent(in)    :: h
     integer, optional,   intent(in)    :: start
 
@@ -216,9 +216,9 @@ contains
     if(present(start)) start_ = start
 
     if (lcao_data%st%d%wfs_type == M_REAL) then
-      call dlcao_wf(lcao_data, st, m, h, start_)
+      call dlcao_wf(lcao_data, st, gr, h, start_)
     else
-      call zlcao_wf(lcao_data, st, m, h, start_)
+      call zlcao_wf(lcao_data, st, gr, h, start_)
     end if
 
     call pop_sub()

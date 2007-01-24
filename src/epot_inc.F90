@@ -19,102 +19,100 @@
 !! $Id$
 
 !------------------------------------------------------------------------------
-! X(project) calculates the action of the sum of the np projectors p(1:np) on
-! the psi wavefunction. The result is summed up to ppsi:
-! |ppsi> = |ppsi> + \sum_{ip=1}^{np} \hat{p}(ip) |psi>
-! The action of the projector p is defined as:
-! \hat{p} |psi> = \sum_{ij} p%uvu(i,j) |p%ket(:, i)><p%bra(:, j)|psi>
-!------------------------------------------------------------------------------
-subroutine X(project)(mesh, p, n_projectors, psi, ppsi, periodic, ik)
+! X(project) calculates the action of the sum of the projectors p(1:n_projectors)
+! on the psi wavefunction. The result is summed up to ppsi
+subroutine X(project)(mesh, p, n_projectors, dim, psi, ppsi, reltype, periodic, ik)
   type(mesh_t),      intent(in)    :: mesh
   type(projector_t), intent(in)    :: p(:)
   integer,           intent(in)    :: n_projectors
-  R_TYPE,            intent(in)    :: psi(:)   ! psi(1:mesh%np)
-  R_TYPE,            intent(inout) :: ppsi(:)  ! ppsi(1:mesh%np)
+  integer,           intent(in)    :: dim
+  R_TYPE,            intent(in)    :: psi(:, :)   ! psi(1:mesh%np, dim)
+  R_TYPE,            intent(inout) :: ppsi(:, :)  ! ppsi(1:mesh%np, dim)
+  integer,           intent(in)    :: reltype
   logical,           intent(in)    :: periodic
   integer,           intent(in)    :: ik
 
-  integer :: i, j, n_s, ip, k
-  R_TYPE, allocatable :: lpsi(:), plpsi(:)
-  R_TYPE :: uvpsi
-#if defined(HAVE_MPI)
-  R_TYPE :: tmp
-#endif
+  integer :: n_s, k, ip, idim
+  R_TYPE, allocatable :: lpsi(:, :), plpsi(:,:)
 
-  !allocate an array big enough for all projectors
-  n_s = maxval(p(1:n_projectors)%n_points_in_sphere)
-
-  ALLOCATE( lpsi(n_s), n_s)
-  ALLOCATE(plpsi(n_s), n_s)
-  
   call push_sub('epot_inc.project')
 
-  ! index labels the atom
   k = p(1)%iatom - 1 ! This way I make sure that k is not equal to p(1)%iatom
-
   do ip = 1, n_projectors
 
     if(p(ip)%iatom .ne. k) then
-      if(ip.ne.1) ppsi(p(ip-1)%jxyz(1:n_s)) = ppsi(p(ip-1)%jxyz(1:n_s)) + plpsi(1:n_s)
-      n_s = p(ip)%n_points_in_sphere
+      n_s = p(ip)%n_s
+      if(allocated(lpsi))   deallocate(lpsi)
+      if(allocated(plpsi))  deallocate(plpsi)
+      ALLOCATE(lpsi(n_s, dim),  n_s*dim)
+      ALLOCATE(plpsi(n_s, dim), n_s*dim)
 
-      lpsi(1:n_s)  = psi(p(ip)%jxyz(1:n_s))*mesh%vol_pp(p(ip)%jxyz(1:n_s))
-      if(periodic) lpsi(1:n_s)  = lpsi(1:n_s) * p(ip)%phases(1:n_s, ik)
-      plpsi(1:n_s) = R_TOTYPE(M_ZERO)
+      do idim = 1, dim
+        lpsi(1:n_s, idim)  = psi(p(ip)%jxyz(1:n_s), idim)*mesh%vol_pp(p(ip)%jxyz(1:n_s))
+        if(periodic) lpsi(1:n_s, idim)  = lpsi(1:n_s, idim) * p(ip)%phases(1:n_s, ik)
+      end do
 
       k = p(ip)%iatom
     end if
 
-    do j = 1, p(ip)%n_channels
-      uvpsi = sum(lpsi(1:n_s)*p(ip)%bra(1:n_s, j))
-
-#if defined(HAVE_MPI)
-      if(mesh%parallel_in_domains) then
-        call MPI_Allreduce(uvpsi, tmp, 1, R_MPITYPE, MPI_SUM, mesh%vp%comm, mpi_err)
-        uvpsi = tmp
+    select case (p(ip)%type)
+    case (M_HGH)
+      if (periodic) then
+        call X(hgh_project)(mesh, p(ip)%hgh_p, dim, lpsi, plpsi, reltype, p(ip)%phases(:, ik))
+      else
+        call X(hgh_project)(mesh, p(ip)%hgh_p, dim, lpsi, plpsi, reltype)
+      end if
+    case (M_KB)
+      if (periodic) then
+        call X(kb_project)(mesh, p(ip)%kb_p, dim, lpsi, plpsi, p(ip)%phases(:, ik))
+      else
+        call X(kb_project)(mesh, p(ip)%kb_p, dim, lpsi, plpsi)
+      end if
+    case (M_RKB)
+#ifdef R_TCOMPLEX
+      !This can only be aplied to complex spinor wave-functions
+      if (periodic) then
+        call rkb_project(mesh, p(ip)%rkb_p, lpsi, plpsi, p(ip)%phases(:, ik))
+      else
+        call rkb_project(mesh, p(ip)%rkb_p, lpsi, plpsi)
       end if
 #endif
-      do i = 1, p(ip)%n_channels
-        if(periodic) then
-          plpsi(1:n_s) = plpsi(1:n_s) + &
-            p(ip)%uvu(i, j) * uvpsi * p(ip)%ket(1:n_s, i) * R_CONJ(p(ip)%phases(1:n_s, ik))
-        else
-          plpsi(1:n_s) = plpsi(1:n_s) + p(ip)%uvu(i, j) * uvpsi * p(ip)%ket(1:n_s, i)
-        end if
-      end do
+    end select
+
+    do idim = 1, dim
+      ppsi(p(ip)%jxyz(1:n_s), idim) = ppsi(p(ip)%jxyz(1:n_s), idim) + plpsi(1:n_s, idim)
     end do
 
   end do
 
-  ppsi(p(n_projectors)%jxyz(1:n_s)) = ppsi(p(n_projectors)%jxyz(1:n_s)) + plpsi(1:n_s)
-
   deallocate(plpsi, lpsi)
+
   call pop_sub()
 end subroutine X(project)
 
 
 !------------------------------------------------------------------------------
-! X(psiprojectpsi) calculates the expectation of the psi wavefuction taken over
-! the sum of the projectors p(1:np).
-! The action of the projector p is defined as above:
-! \hat{p} |psi> = \sum_{ij} p%uvu(i,j) |p%ket(:, i)><p%bra(:, j)|psi>.
+! X(psidprojectpsi) is used to calculate the contribution of the non-local part
+! to the force acting on the ions.
 !------------------------------------------------------------------------------
-R_TYPE function X(psiprojectpsi)(mesh, p, n_projectors, psi, periodic, ik) result(res)
+function X(psidprojectpsi)(mesh, p, n_projectors, dim, psi, periodic, ik) result(res)
   type(mesh_t),      intent(in)    :: mesh
   type(projector_t), intent(in)    :: p(:)
   integer,           intent(in)    :: n_projectors
-  R_TYPE,            intent(in)    :: psi(:)   ! psi(1:mesh%np)
+  integer,           intent(in)    :: dim
+  R_TYPE,            intent(in)    :: psi(:, :)   ! psi(1:mesh%np, 1:dim)
   logical,           intent(in)    :: periodic
   integer,           intent(in)    :: ik
+  R_TYPE :: res(3)
 
-  integer :: i, j, n_s, ip, k
-  R_TYPE, allocatable :: lpsi(:), plpsi(:)
-  R_TYPE :: uvpsi
+
+  integer ::  n_s, k, ip, idim
+  R_TYPE, allocatable :: lpsi(:, :)
 #if defined(HAVE_MPI)
   R_TYPE :: tmp
 #endif
 
-  call push_sub('epot_inc.psiprojectpsi')
+  call push_sub('epot_inc.psidprojectpsi')
 
   res = R_TOTYPE(M_ZERO)
 
@@ -124,45 +122,45 @@ R_TYPE function X(psiprojectpsi)(mesh, p, n_projectors, psi, periodic, ik) resul
   do ip = 1, n_projectors
 
     if(p(ip)%iatom .ne. k) then
-      n_s = p(ip)%n_points_in_sphere
-      if(allocated(lpsi))  deallocate(lpsi, stat = j)
-      if(allocated(plpsi)) deallocate(plpsi, stat = j)
-      ALLOCATE( lpsi(n_s), n_s)
-      ALLOCATE(plpsi(n_s), n_s)
+      n_s = p(ip)%n_s
+      if(allocated(lpsi))  deallocate(lpsi)
+      ALLOCATE( lpsi(n_s, dim), n_s*dim)
 
-      lpsi(1:n_s)  = psi(p(ip)%jxyz(1:n_s))*mesh%vol_pp(p(ip)%jxyz(1:n_s))
-      if(periodic) lpsi(1:n_s)  = lpsi(1:n_s) * p(ip)%phases(1:n_s, ik)
+      do idim = 1, dim
+        lpsi(1:n_s, idim)  = psi(p(ip)%jxyz(1:n_s), idim)*mesh%vol_pp(p(ip)%jxyz(1:n_s))
+        if(periodic) lpsi(1:n_s, idim)  = lpsi(1:n_s, idim) * p(ip)%phases(1:n_s, ik)
+      end do
 
       k = p(ip)%iatom
     end if
 
-    do j = 1, p(ip)%n_channels
-      uvpsi = sum(lpsi(1:n_s)*p(ip)%bra(1:n_s, j))
-#if defined(HAVE_MPI)
-      if(mesh%parallel_in_domains) then
-        call MPI_Allreduce(uvpsi, tmp, 1, R_MPITYPE, MPI_SUM, mesh%vp%comm, mpi_err)
-        uvpsi = tmp
+    select case (p(ip)%type)
+    case (M_HGH)
+      if (periodic) then
+        res = res + X(hgh_dproject)(mesh, p(ip)%hgh_p, dim, lpsi, p(ip)%phases(:, ik))
+      else
+        res = res + X(hgh_dproject)(mesh, p(ip)%hgh_p, dim, lpsi)
+      end if
+    case (M_KB)
+      if (periodic) then
+        res = res + X(kb_dproject)(mesh, p(ip)%kb_p, dim, lpsi, p(ip)%phases(:, ik))
+      else
+        res = res + X(kb_dproject)(mesh, p(ip)%kb_p, dim, lpsi)
+      end if
+    case (M_RKB)
+#ifdef R_TCOMPLEX
+      !This can only be aplied to complex spinor wave-functions
+      if (periodic) then
+        res = res + rkb_dproject(mesh, p(ip)%rkb_p, lpsi, p(ip)%phases(:, ik))
+      else
+        res = res + rkb_dproject(mesh, p(ip)%rkb_p, lpsi)
       end if
 #endif
-      do i = 1, p(ip)%n_channels
-        if(periodic) then
-          plpsi(1:n_s) = p(ip)%uvu(i, j) * uvpsi * p(ip)%ket(1:n_s, i) * R_CONJ(p(ip)%phases(1:n_s, ik))
-        else
-          plpsi(1:n_s) = p(ip)%uvu(i, j) * uvpsi * p(ip)%ket(1:n_s, i)
-        end if
-        res = res + sum(R_CONJ(lpsi(1:n_s)) * plpsi(1:n_s))
-      end do
-    end do
+    end select
 
   end do
 
-#if defined(HAVE_MPI)
-  if(mesh%parallel_in_domains) then
-    call MPI_Allreduce(res, tmp, 1, R_MPITYPE, MPI_SUM, mesh%vp%comm, mpi_err)
-    res = tmp
-  end if
-#endif
+  if(allocated(lpsi)) deallocate(lpsi)
 
-  deallocate(plpsi, lpsi)
   call pop_sub()
-end function X(psiprojectpsi)
+end function X(psidprojectpsi)

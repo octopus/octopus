@@ -41,6 +41,7 @@ module lib_oct_m
     loct_bessel_k0,          &
     loct_bessel_k1,          &
     loct_sph_bessel,         &
+    loct_legendre_sphplm,    &
     loct_ran_init,           &
     loct_ran_end,            &
     loct_ran_gaussian,       &
@@ -251,6 +252,15 @@ module lib_oct_m
       real(8), intent(in) :: x
     end function oct_erfc
     module procedure oct_erfc4
+  end interface
+
+  interface loct_legendre_sphplm
+    function oct_legendre_sphplm(l, m, x)
+      real(8) :: oct_legendre_sphplm
+      integer, intent(in) :: l, m
+      real(8), intent(in) :: x
+    end function oct_legendre_sphplm
+    module procedure oct_legendre_sphplm4
   end interface
 
   interface loct_ylm
@@ -529,6 +539,13 @@ contains
 
     oct_erfc4 = real(oct_erfc(real(x, kind=8)), kind=4)
   end function oct_erfc4
+
+  real(4) function oct_legendre_sphplm4(l, m, x)
+    integer, intent(in) :: l, m
+    real(4), intent(in) :: x
+
+    oct_legendre_sphplm4 = real(oct_legendre_sphplm(l, m, real(x, kind=8)), kind=4)
+  end function oct_legendre_sphplm4
 
   real(4) function oct_ylm4(x, y, z, l, m)
     real(4), intent(in) :: x, y, z

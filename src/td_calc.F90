@@ -93,7 +93,7 @@ subroutine td_calc_tacc(gr, geo, st, h, acc, t)
 
       do j = 1, NDIM
         vnl_xzpsi = M_z0
-        call zvnlpsi(h, gr%m, xzpsi(:,:, j), vnl_xzpsi(:,:), ik)
+        call zvnlpsi(h, gr, xzpsi(:,:, j), vnl_xzpsi(:,:), ik)
 
         do idim = 1, st%d%dim
           conj = conjg(hzpsi(:, idim))
@@ -110,7 +110,7 @@ subroutine td_calc_tacc(gr, geo, st, h, acc, t)
 
       do j = 1, NDIM
         vnl_xzpsi = M_z0
-        call zvnlpsi(h, gr%m, xzpsi(:,:, j), vnl_xzpsi(:,:), ik)
+        call zvnlpsi(h, gr, xzpsi(:,:, j), vnl_xzpsi(:,:), ik)
         do idim = 1, st%d%dim
           conj = conjg(st%zpsi(:, idim, ist, ik))
           x(j) = x(j) + 2*st%occ(ist, ik)* &

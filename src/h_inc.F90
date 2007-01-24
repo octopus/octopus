@@ -63,21 +63,9 @@ subroutine X(Hpsi) (h, gr, psi, hpsi, ik, t, E)
 
   call X(kinetic) (h, gr, psi, hpsi, ik)
   call X(vlpsi)   (h, gr%m, psi, hpsi, ik)
-  if(h%ep%nvnl > 0) call X(vnlpsi)  (h, gr%m, psi, hpsi, ik)
+  if(h%ep%nvnl > 0) call X(vnlpsi)  (h, gr, psi, hpsi, ik)
   call X(magnetic_terms) (gr, h, psi, hpsi, ik)
   if (h%ep%with_gauge_field) call X(vgauge) (gr, h, psi, hpsi, ik)
-
-  ! Relativistic corrections...
-  select case(h%reltype)
-  case(NOREL)
-#if defined(R_TCOMPLEX)
-  case(SPIN_ORBIT)
-    call zso (h, gr, psi, hpsi, ik)
-#endif
-  case default
-    message(1) = 'Error: Internal.'
-    call write_fatal(1)
-  end select
 
   if(present(t)) then
     if (h%d%cdft) then
@@ -119,7 +107,7 @@ subroutine X(magnus) (h, gr, psi, hpsi, ik, vmagnus)
   call X(kinetic) (h, gr, psi, hpsi, ik)
 
   auxpsi = hpsi
-  if (h%ep%nvnl > 0) call X(vnlpsi)  (h, gr%m, psi, auxpsi, ik)
+  if (h%ep%nvnl > 0) call X(vnlpsi)  (h, gr, psi, auxpsi, ik)
   select case(h%d%ispin)
   case(UNPOLARIZED)
     hpsi(1:NP, 1) = hpsi(1:NP, 1) -  M_zI*vmagnus(1:NP, 1, 1)*auxpsi(1:NP, 1)
@@ -142,7 +130,7 @@ subroutine X(magnus) (h, gr, psi, hpsi, ik, vmagnus)
     end if
   end select
   call X(kinetic) (h, gr, auxpsi, aux2psi, ik)
-  if (h%ep%nvnl > 0) call X(vnlpsi)  (h, gr%m, auxpsi, aux2psi, ik)
+  if (h%ep%nvnl > 0) call X(vnlpsi)  (h, gr, auxpsi, aux2psi, ik)
   hpsi(1:NP, 1) = hpsi(1:NP, 1) + M_zI*aux2psi(1:NP, 1)
 
   do idim = 1, h%d%dim
@@ -159,7 +147,7 @@ subroutine X(magnus) (h, gr, psi, hpsi, ik, vmagnus)
       hpsi(1:NP, 1) = hpsi(1:NP, 1) + vmagnus(1:NP, 2, 2)*psi(1:NP, 1)
     end if
   end select
-  if (h%ep%nvnl > 0) call X(vnlpsi)  (h, gr%m, psi, Hpsi, ik)
+  if (h%ep%nvnl > 0) call X(vnlpsi)  (h, gr, psi, Hpsi, ik)
   call X(vborders) (gr, h, psi, hpsi)
 
   deallocate(auxpsi, aux2psi)
@@ -325,21 +313,18 @@ end subroutine X(magnetic_terms)
 
 
 ! ---------------------------------------------------------
-subroutine X(vnlpsi) (h, m, psi, hpsi, ik)
+subroutine X(vnlpsi) (h, gr, psi, hpsi, ik)
   type(hamiltonian_t), intent(in)    :: h
-  type(mesh_t),        intent(in)    :: m
+  type(grid_t),        intent(inout) :: gr
   R_TYPE,              intent(in)    :: psi(:,:)  !  psi(m%np_part, h%d%dim)
   R_TYPE,              intent(inout) :: Hpsi(:,:) !  Hpsi(m%np_part, h%d%dim)
   integer,             intent(in)    :: ik
 
-  integer :: idim
   call profiling_in(C_PROFILING_VNLPSI)
   call push_sub('h_inc.Xvnlpsi')
 
-  do idim = 1, h%d%dim
-    call X(project)(m, h%ep%p(:), h%ep%nvnl, psi(:, idim), hpsi(:, idim), &
-      periodic = simul_box_is_periodic(m%sb), ik = ik)
-  end do
+  call X(project)(gr%m, h%ep%p, h%ep%nvnl, h%d%dim, psi, hpsi, &
+       h%reltype, periodic = simul_box_is_periodic(gr%m%sb), ik = ik)
 
   call pop_sub()
   call profiling_out(C_PROFILING_VNLPSI)
@@ -386,9 +371,9 @@ subroutine X(vlpsi) (h, m, psi, hpsi, ik)
 end subroutine X(vlpsi)
 
 ! ---------------------------------------------------------
-subroutine X(vexternal) (h, m, psi, hpsi, ik)
+subroutine X(vexternal) (h, gr, psi, hpsi, ik)
   type(hamiltonian_t), intent(in)    :: h
-  type(mesh_t),        intent(in)    :: m
+  type(grid_t),        intent(inout) :: gr
   integer,             intent(in)    :: ik
   R_TYPE,              intent(in)    :: psi(:,:)  !  psi(m%np_part, h%d%dim)
   R_TYPE,              intent(inout) :: Hpsi(:,:) !  Hpsi(m%np_part, h%d%dim)
@@ -400,19 +385,19 @@ subroutine X(vexternal) (h, m, psi, hpsi, ik)
 
   select case(h%d%ispin)
   case(UNPOLARIZED, SPIN_POLARIZED)
-    hpsi(1:m%np, 1) = hpsi(1:m%np, 1) + (h%ep%vpsl(1:m%np))*psi(1:m%np, 1)
+    hpsi(1:NP, 1) = hpsi(1:NP, 1) + (h%ep%vpsl(1:NP))*psi(1:NP, 1)
   case(SPINORS)
-    hpsi(1:m%np, 1) = hpsi(1:m%np, 1) + (h%ep%vpsl(1:m%np))*psi(1:m%np, 1)
-    hpsi(1:m%np, 2) = hpsi(1:m%np, 2) + (h%ep%vpsl(1:m%np))*psi(1:m%np, 2)
+    hpsi(1:NP, 1) = hpsi(1:NP, 1) + (h%ep%vpsl(1:NP))*psi(1:NP, 1)
+    hpsi(1:NP, 2) = hpsi(1:NP, 2) + (h%ep%vpsl(1:NP))*psi(1:NP, 2)
   end select
 
   if (associated(h%ep%E_field)) then
     do idim = 1, h%d%dim
-      hpsi(1:m%np, idim) = hpsi(1:m%np, idim) + h%ep%v_static*psi(1:m%np, idim)
+      hpsi(1:NP, idim) = hpsi(1:NP, idim) + h%ep%v_static*psi(1:NP, idim)
     end do
   end if
 
-  if(h%ep%nvnl > 0) call X(vnlpsi)  (h, m, psi, hpsi, ik)
+  if(h%ep%nvnl > 0) call X(vnlpsi)  (h, gr, psi, hpsi, ik)
 
   call pop_sub()
   call profiling_out(C_PROFILING_VLPSI)
@@ -588,7 +573,7 @@ FLOAT function X(electronic_external_energy)(h, gr, st) result(v)
   do ik = 1, st%d%nik
     do ist = st%st_start, st%st_end
       vpsi = R_TOTYPE(M_ZERO)
-      call X(vexternal) (h, gr%m, st%X(psi)(:, :, ist, ik), vpsi, ik)
+      call X(vexternal) (h, gr, st%X(psi)(:, :, ist, ik), vpsi, ik)
       t(ist, ik) = X(states_dotp) (gr%m, st%d%dim, st%X(psi)(:, :, ist, ik), vpsi)
     end do
   end do

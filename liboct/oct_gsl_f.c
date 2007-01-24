@@ -127,6 +127,12 @@ double FC_FUNC_(oct_erf, OCT_ERF)
 	return gsl_sf_erf(*x);
 }
 
+double FC_FUNC_(oct_legendre_sphplm, OCT_LEGENDRE_SPHPLM)
+		 (int *l, int *m, double *x)
+{
+  return gsl_sf_legendre_sphPlm(*l, *m, *x);
+}
+
 
 /* Vectors and Matrices */
 

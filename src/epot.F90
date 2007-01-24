@@ -49,6 +49,9 @@ module external_pot_m
   use mpi_debug_m
   use varinfo_m
   use poisson_m
+  use hgh_projector_m
+  use kb_projector_m
+  use rkb_projector_m
 
   implicit none
 
@@ -66,23 +69,28 @@ module external_pot_m
     dproject, zproject,        &
     projector_t
 
-  ! /* The projector data type is intended to hold the non-local part of the
+  ! The projector data type is intended to hold the non-local part of the
   ! pseudopotentials. The definition of the action of a projector (which is
-  ! done through the X(project) subroutine) is:
-  ! \hat{P} |phi> = \sum_{ij} uvu(i, j) | ket_i >< bra_j |phi>
-  ! i and j run from one to c. The phases are applied whenever the system is
-  ! periodic in some dimension.
-  ! For the pseudopotentials themselves, a = b. But to calculate the forces,
-  ! one needs to put in b the gradient of a. And in the case of the spin-orbit
-  ! coupling term, I have put in b the angular momentum of a. */
+  ! done through the X(project) subroutine) depends on the type of the 
+  ! projector. There are three different types:
+  !  -> HGH projector
+  !  -> "normal" Kleinman-Bylander projector (no spin-orbit)
+  !  -> "relativistc" Kleinman-Bylander projector (includes spin-orbit)
   type projector_t
-    integer          :: n_points_in_sphere
-    integer          :: n_channels
-    integer, pointer :: jxyz(:)
-    FLOAT,   pointer :: uvu(:, :)
-    FLOAT,   pointer :: ket(:, :), bra(:, :)
-    CMPLX,   pointer :: phases(:, :)
-    integer          :: iatom
+    private
+    integer :: type
+    integer :: iatom
+
+    integer          :: n_s     ! number of points inside the sphere
+    integer, pointer :: jxyz(:) ! index of the points inside the sphere
+    integer          :: nik
+    CMPLX,   pointer :: phases(:,:)
+
+    ! Only one of the following structures should be used at once
+    ! The one to be use depends on the value of type variable
+    type(hgh_projector_t), pointer :: hgh_p
+    type(kb_projector_t),  pointer :: kb_p
+    type(rkb_projector_t), pointer :: rkb_p
   end type projector_t
 
   type epot_t
@@ -91,20 +99,17 @@ module external_pot_m
     FLOAT, pointer :: vclassic(:) ! We use it to store the potential of the classic charges
 
     ! Ions
-    FLOAT,     pointer :: vpsl(:)          ! the local part of the pseudopotentials
+    FLOAT,       pointer :: vpsl(:)       ! the local part of the pseudopotentials
 #ifdef HAVE_FFT
-    type(dcf_t), pointer :: local_cf(:)      ! for the local pseudopotential in Fourier space
-    type(dcf_t), pointer :: rhocore_cf(:)    ! and for the core density
+    type(dcf_t), pointer :: local_cf(:)   ! for the local pseudopotential in Fourier space
+    type(dcf_t), pointer :: rhocore_cf(:) ! and for the core density
 #endif
-
-    integer :: nvnl                        ! number of nonlocal operators
-    type(projector_t), pointer :: p(:)
-    type(projector_t), pointer :: dp(:, :)
-    type(projector_t), pointer :: lso(:, :)
+    integer :: nvnl                       ! number of nonlocal operators
+    type(projector_t), pointer :: p(:)    ! non-local projectors
 
     ! External e-m fields
     integer :: no_lasers                   ! number of laser pulses used
-    type(laser_t), pointer :: lasers(:) ! lasers stuff
+    type(laser_t), pointer :: lasers(:)    ! lasers stuff
     FLOAT, pointer :: E_field(:)           ! static electric field
     FLOAT, pointer :: v_static(:)          ! static scalar potential
     FLOAT, pointer :: B_field(:)           ! static magnetic field
@@ -118,12 +123,15 @@ module external_pot_m
     ! part of the potential
     character(len=1024) :: extra_td_pot
 
-
     ! The gyromagnetic ratio (-2.0 for the electron, but different if we treat
     ! *effective* electrons in a quantum dot. It affects the spin Zeeman term.
     FLOAT :: gyromagnetic_ratio
 
   end type epot_t
+
+  integer, parameter :: M_HGH = 1, &
+                        M_KB  = 2, &
+                        M_RKB = 3
 
 contains
 
@@ -133,7 +141,7 @@ contains
     type(grid_t), intent(in)  :: gr
     type(geometry_t), intent(in) :: geo
 
-    integer :: i, j
+    integer :: i
     C_POINTER :: blk
     FLOAT, allocatable :: x(:)
 
@@ -309,26 +317,11 @@ contains
     ! The projectors
     ep%nvnl = geometry_nvnl(geo)
     nullify(ep%p)
-
-    nullify(ep%dp)
-    nullify(ep%lso)
     
     if(ep%nvnl > 0) then
       ALLOCATE(ep%p(ep%nvnl), ep%nvnl)
       do i = 1, ep%nvnl
-        nullify(ep%p(i)%jxyz, ep%p(i)%bra, ep%p(i)%ket, ep%p(i)%uvu, ep%p(i)%phases)
-      end do
-      ALLOCATE(ep%dp(NDIM, ep%nvnl), NDIM*ep%nvnl)
-      do i = 1, ep%nvnl
-        do j = 1, NDIM
-          nullify(ep%dp(j, i)%jxyz, ep%dp(j, i)%bra, ep%dp(j, i)%ket, ep%dp(j, i)%uvu, ep%dp(j, i)%phases)
-        end do
-      end do
-      ALLOCATE(ep%lso(NDIM, ep%nvnl), NDIM*ep%nvnl)
-      do i = 1, ep%nvnl
-        do j = 1, NDIM
-          nullify(ep%lso(j, i)%jxyz, ep%lso(j, i)%bra, ep%lso(j, i)%ket, ep%lso(j, i)%uvu, ep%lso(j, i)%phases)
-        end do
+        call projector_null(ep%p(i))
       end do
     end if
 
@@ -386,12 +379,7 @@ contains
 
     if(ep%nvnl>0) then
       ASSERT(associated(ep%p))
-      deallocate(ep%p); nullify(ep%p)
-
-      ASSERT(associated(ep%dp))
-      deallocate(ep%dp); nullify(ep%dp)
-
-      ! Here the spin-orbit should be finalized, but only if they have been built...
+      deallocate(ep%p)
     end if
 
     call pop_sub()
@@ -563,33 +551,6 @@ contains
   end subroutine epot_local_fourier_init
 #endif
 
-
-  ! ---------------------------------------------------------
-  subroutine kill_projector(p)
-    type(projector_t), intent(inout) :: p
-    integer :: ierr
-    if(associated(p%jxyz)) then
-       deallocate(p%jxyz, stat = ierr)
-    end if
-    nullify(p%jxyz)
-    if(associated(p%uvu)) then
-       deallocate(p%uvu, stat = ierr)
-    end if
-    nullify(p%uvu)
-    if(associated(p%bra)) then
-       deallocate(p%bra, stat = ierr)
-    end if
-    nullify(p%bra)
-    if(associated(p%ket)) then
-       deallocate(p%ket, stat = ierr)
-    end if
-    nullify(p%ket)
-    if(associated(p%phases)) then
-       deallocate(p%phases, stat = ierr)
-    end if
-    nullify(p%phases)
-  end subroutine kill_projector
-
   ! ---------------------------------------------------------
   subroutine epot_generate_gauge_field(ep, gr, st)
     type(epot_t),      intent(inout) :: ep
@@ -642,7 +603,7 @@ contains
 
     logical :: fast_generation_
     FLOAT   :: time_
-    integer :: ia, i, l, lm, k, p, j
+    integer :: ia, i, l, lm, k, p
     type(specie_t), pointer :: s
     type(atom_t),   pointer :: a
 #ifdef HAVE_FFT
@@ -701,54 +662,22 @@ contains
         do lm = -l, l
 
           if(.not.fast_generation_) then
-
             ! This if is a performance hack, necessary for when the ions move.
-            ! For each atom, the sphere is the same, so we just calculate it once.
+            ! For each atom, the sphere is the same, so we just calculate it once
             if(p == 1) then
-
               k = i
               p = 2
-              call kill_projector(ep%p(i))
-              do j = 1, sb%dim
-                call kill_projector(ep%dp(j, i))
-                call kill_projector(ep%lso(j, i))
-              end do
-              call build_kb_sphere(i)
-
+              call projector_end(ep%p(i))
+              call projector_build_kb_sphere(ep%p(i), sb, m, a, st)
             else
-
-              call kill_projector(ep%p(i))
-              ep%p(i)%n_points_in_sphere = ep%p(k)%n_points_in_sphere
-              ep%p(i)%n_channels = ep%p(k)%n_channels
-              ALLOCATE(ep%p(i)%jxyz(ep%p(k)%n_points_in_sphere), ep%p(k)%n_points_in_sphere)
-              ep%p(i)%jxyz = ep%p(k)%jxyz
-              do j = 1, sb%dim
-                call kill_projector(ep%dp(j, i))
-                ep%dp(j, i)%n_points_in_sphere = ep%dp(j, k)%n_points_in_sphere
-                ep%dp(j, i)%n_channels = ep%dp(j, k)%n_channels
-                ALLOCATE(ep%dp(j, i)%jxyz(ep%dp(j, k)%n_points_in_sphere), ep%dp(j, k)%n_points_in_sphere)
-                ep%dp(j, i)%jxyz = ep%dp(j, k)%jxyz
-              end do
-              do j = 1, sb%dim
-                call kill_projector(ep%lso(j, i))
-                ep%lso(j, i)%n_points_in_sphere = ep%lso(j, k)%n_points_in_sphere
-                ep%lso(j, i)%n_channels = ep%lso(j, k)%n_channels
-                ALLOCATE(ep%lso(j, i)%jxyz(ep%lso(j, k)%n_points_in_sphere), ep%lso(j, k)%n_points_in_sphere)
-                ep%lso(j, i)%jxyz = ep%lso(j, k)%jxyz
-              end do
-
+              call projector_copy_kb_sphere(ep%p(k), ep%p(i))
             end if
-
-            call allocate_nl_part(i)
 
           end if
 
-          call build_nl_part(i, l, lm)
+          call projector_init_nl_part(ep%p(i), sb, m, a, reltype, l, lm)
 
-          ep%p(i)%iatom             = ia
-          ep%dp(1:sb%dim, i)%iatom  = ia
-          ep%lso(1:sb%dim, i)%iatom = ia
-
+          ep%p(i)%iatom = ia
           i = i + 1
         end do
       end do
@@ -832,217 +761,6 @@ contains
 
       call pop_sub()
     end subroutine build_local_part
-
-
-    ! ---------------------------------------------------------
-    subroutine build_kb_sphere(ivnl)
-      integer, intent(in) :: ivnl
-      integer :: i, j, k, d
-      FLOAT :: r
-
-      call push_sub('epot.build_kb_sphere')
-
-      if (any(s%ps%rc_max + m%h(1) >= sb%lsize(1:sb%periodic_dim))) then
-        message(1)='KB sphere is larger than the box size'
-        write(message(2),'(a,f12.6,a)')  '  rc_max+h = ', s%ps%rc_max + m%h(1), ' [b]'
-        write(message(3),'(a,3f12.4,a)') '  lsize    = ', sb%lsize, ' [b]'
-        message(4)='Please change pseudopotential'
-        call write_fatal(4)
-      end if
-      j = 0
-      do k = 1, m%np
-        do i = 1, 3**sb%periodic_dim
-          call mesh_r(m, k, r, a=a%x + sb%shift(i,:))
-          if(r > s%ps%rc_max + m%h(1)) cycle
-          j = j + 1
-          exit
-        end do
-      end do
-
-      ep%p(ivnl)%n_points_in_sphere = j
-      ep%p(ivnl)%n_channels         = s%ps%kbc
-
-      do d = 1, sb%dim
-        ep%dp(d, ivnl)%n_points_in_sphere = j
-        ep%dp(d, ivnl)%n_channels         = s%ps%kbc
-      end do
-
-      do d = 1, sb%dim
-        ep%lso(d, ivnl)%n_points_in_sphere = j
-        ep%lso(d, ivnl)%n_channels         = s%ps%kbc
-      end do
-
-      ALLOCATE(ep%p(ivnl)%jxyz(j), j)
-      do d = 1, sb%dim
-        ALLOCATE(ep%dp(d, ivnl)%jxyz(j), j)
-      end do
-      do d = 1, sb%dim
-        ALLOCATE(ep%lso(d, ivnl)%jxyz(j), j)
-      end do
-
-      j = 0
-      do k = 1, m%np
-        do i = 1, 3**sb%periodic_dim
-          call mesh_r(m, k, r, a=a%x + sb%shift(i,:))
-          ! we enlarge slightly the mesh (good for the interpolation scheme)
-          if(r > s%ps%rc_max + m%h(1)) cycle
-          j = j + 1
-          ep%p(ivnl)%jxyz(j) = k
-          do d = 1, sb%dim
-            ep%dp(d, ivnl)%jxyz(j) = k
-          end do
-          do d = 1, sb%dim
-            ep%lso(d, ivnl)%jxyz(j) = k
-          end do
-          exit
-        end do
-      end do
-
-      call pop_sub()
-    end subroutine build_kb_sphere
-
-
-    ! ---------------------------------------------------------
-    subroutine allocate_nl_part(ivnl)
-      integer, intent(in) :: ivnl
-      integer :: n_s, n_c, d
-      call push_sub('epot.allocate_nl_part')
-
-      n_s = ep%p(ivnl)%n_points_in_sphere
-      n_c = ep%p(ivnl)%n_channels
-
-      ALLOCATE(ep%p(ivnl)%ket(n_s, n_c), n_s*n_c)
-      ALLOCATE(ep%p(ivnl)%bra(n_s, n_c), n_s*n_c)
-      ALLOCATE(ep%p(ivnl)%uvu(n_c, n_c), n_c*n_c)
-      ep%p(ivnl)%ket(:,:) =  M_ZERO
-      ep%p(ivnl)%bra(:,:) =  M_ZERO
-      ep%p(ivnl)%uvu(:,:) =  M_ZERO
-
-      do d = 1, sb%dim
-        ALLOCATE(ep%dp(d, ivnl)%ket(n_s, n_c), n_s*n_c)
-        ALLOCATE(ep%dp(d, ivnl)%bra(n_s, n_c), n_s*n_c)
-        ALLOCATE(ep%dp(d, ivnl)%uvu(n_c, n_c), n_c*n_c)
-        ep%dp(d, ivnl)%ket(:,:) = M_ZERO
-        ep%dp(d, ivnl)%bra(:,:) = M_ZERO
-        ep%dp(d, ivnl)%uvu(:,:) = M_ZERO
-      end do
-
-      do d = 1, sb%dim
-        ALLOCATE(ep%lso(d, ivnl)%ket(n_s, n_c), n_s*n_c)
-        ALLOCATE(ep%lso(d, ivnl)%bra(n_s, n_c), n_s*n_c)
-        ALLOCATE(ep%lso(d, ivnl)%uvu(n_c, n_c), n_c*n_c)
-        ep%lso(d, ivnl)%ket(:,:) = M_ZERO
-        ep%lso(d, ivnl)%bra(:,:) = M_ZERO
-        ep%lso(d, ivnl)%uvu(:,:) = M_ZERO
-      end do
-
-      if(sb%periodic_dim/=0) then
-        ALLOCATE(ep%p(ivnl)%phases(n_s, st%d%nik), n_s*st%d%nik)
-        do d = 1, sb%dim
-          ALLOCATE( ep%dp(d,ivnl)%phases(n_s, st%d%nik), n_s*st%d%nik)
-          ALLOCATE(ep%lso(d,ivnl)%phases(n_s, st%d%nik), n_s*st%d%nik)
-        end do
-      end if
-
-      call pop_sub()
-    end subroutine allocate_nl_part
-
-
-    ! ---------------------------------------------------------
-    subroutine build_nl_part(ivnl, l, lm)
-      integer, intent(in) :: ivnl, l, lm
-
-      integer :: i, j, k, d
-      FLOAT :: r, x(MAX_DIM), x_in(MAX_DIM)
-      FLOAT :: so_uv, so_duv(MAX_DIM)
-      FLOAT :: v, dv(MAX_DIM)
-
-      integer :: n_c, n_s
-      CMPLX, allocatable :: grad_so(:, :, :)
-
-      call push_sub('epot.build_nl_part')
-
-      n_s = ep%p(ivnl)%n_points_in_sphere
-      n_c = ep%p(ivnl)%n_channels
-      ALLOCATE(grad_so(n_s, 3, n_c), n_s*3*n_c)
-      grad_so = M_z0
-
-      j_loop: do j = 1, n_s
-        x_in(:) = m%x(ep%p(ivnl)%jxyz(j), :)
-        k_loop: do k = 1, 3**sb%periodic_dim
-          x(:) = x_in(:) - sb%shift(k,:) - a%x
-          r = sqrt(sum(x*x))
-          if (r > s%ps%rc_max + m%h(1)) cycle
-
-          i_loop : do i = 1, n_c
-            if(l .ne. s%ps%L_loc) then
-              call specie_get_nl_part(s, x, l, lm, i, v, dv(1:3))
-              ep%p(ivnl)%ket(j, i) = v
-              ep%p(ivnl)%bra(j, i) = v
-              do d = 1, sb%dim
-                ep%dp(d, ivnl)%ket(j, i) = dv(d)
-                ep%dp(d, ivnl)%bra(j, i) = v
-              end do
-            end if
-
-            if(l>0 .and. s%ps%so_l_max>=0) then
-              call specie_get_nl_part(s, x, l, lm, i, so_uv, so_duv(:), so=.true.)
-              grad_so(j, 1:3, i) = so_duv(1:3)
-              do d = 1, sb%dim
-                ep%lso(d, ivnl)%ket(j, i) = so_uv
-              end do
-            end if
-          end do i_loop
-
-        end do k_loop
-      end do j_loop
-
-      if(reltype == 1) then ! SPIN_ORBIT
-        do j = 1, n_s
-          x_in(1:3) = m%x(ep%lso(1, ivnl)%jxyz(j), 1:3)
-          x(1:3) = x_in(1:3) !- sb%shift(k, 1:3) !???
-          x = x - a%x
-          r = sqrt(sum(x*x))
-
-          ep%lso(1, ivnl)%bra(j, 1:n_c) = (x(2)*grad_so(j, 3, 1:n_c) - x(3)*grad_so(j, 2, 1:n_c))
-          ep%lso(2, ivnl)%bra(j, 1:n_c) = (x(3)*grad_so(j, 1, 1:n_c) - x(1)*grad_so(j, 3, 1:n_c))
-          ep%lso(3, ivnl)%bra(j, 1:n_c) = (x(1)*grad_so(j, 2, 1:n_c) - x(2)*grad_so(j, 1, 1:n_c))
-        end do
-      end if
-
-      ! and here we calculate the uVu
-      if(l .ne. s%ps%L_loc) then
-        ep%p(ivnl)%uvu(1:n_c, 1:n_c) = s%ps%h(l, 1:n_c, 1:n_c)
-        do d = 1, sb%dim
-          ep%dp(d, ivnl)%uvu(1:n_c, 1:n_c) = s%ps%h(l, 1:n_c, 1:n_c)
-        end do
-
-        if(l <= s%ps%so_l_max) then
-          do d = 1, sb%dim
-            ep%lso(d, ivnl)%uvu(1:n_c, 1:n_c) = s%ps%k(l, 1:n_c, 1:n_c)
-          end do
-        end if
-      end if
-
-      ! and here the phases for the periodic systems
-      if(sb%periodic_dim/=0) then
-        do j = 1, n_s
-          x(:) = m%x(ep%p(ivnl)%jxyz(j), :)
-          do k = 1, st%d%nik
-            ep%p(ivnl)%phases(j, k) = exp(M_zI*sum(st%d%kpoints(:, k)*x(:)))
-            do d = 1, sb%dim
-              ep%dp(d, ivnl)%phases(j, k) = exp(M_zI*sum(st%d%kpoints(:, k)*x(:)))
-            end do
-            do d = 1, sb%dim
-              ep%lso(d, ivnl)%phases(j, k) = exp(M_zI*sum(st%d%kpoints(:, k)*x(:)))
-            end do
-          end do
-        end do
-      end if
-
-      deallocate(grad_so)
-      call pop_sub()
-    end subroutine build_nl_part
 
   end subroutine epot_generate
 
@@ -1131,14 +849,14 @@ contains
     type(states_t),   intent(in)     :: st
     FLOAT,     optional, intent(in)    :: t
 
-    integer :: i, j, l, idim, ist, ik, ivnl, ivnl_start, ivnl_end
+    integer :: i, j, l, ist, ik, ivnl, ivnl_start, ivnl_end
     FLOAT :: d, r, zi, zj, x(MAX_DIM)
     type(atom_t), pointer :: atm
 
     FLOAT, allocatable :: dppsi(:, :)
-    FLOAT :: dz
+    FLOAT :: dz(MAX_DIM)
     CMPLX, allocatable :: zppsi(:, :)
-    CMPLX :: zz
+    CMPLX :: zz(MAX_DIM)
 
 #if defined(HAVE_MPI)
     FLOAT :: f(MAX_DIM)
@@ -1164,11 +882,13 @@ contains
         atm => geo%atom(i)
         if(atm%spec%local) cycle
 
+        ASSERT(NDIM == 3)
+
         ! Here we learn which are the projector that correspond to atom i.
         ! It assumes that the projectors of each atom are consecutive.
         ivnl_start  = - 1
         do ivnl = 1, ep%nvnl
-          if(ep%dp(1, ivnl)%iatom .eq. i) then
+          if(ep%p(ivnl)%iatom .eq. i) then
             ivnl_start = ivnl
             exit
           end if
@@ -1176,33 +896,27 @@ contains
         if(ivnl_start .eq. -1) cycle
         ivnl_end = ep%nvnl
         do ivnl = ivnl_start, ep%nvnl
-          if(ep%dp(1, ivnl)%iatom .ne. i) then
+          if(ep%p(ivnl)%iatom .ne. i) then
             ivnl_end = ivnl - 1
             exit
           end if
         end do
 
-
         ik_loop: do ik = 1, st%d%nik
           st_loop: do ist = st%st_start, st%st_end
 
-            do j = 1, NDIM
-              do idim = 1, st%d%dim
-                if (st%d%wfs_type == M_REAL) then
-                  dz = dpsiprojectpsi(gr%m, ep%dp(j, ivnl_start:ivnl_end), &
-                       ivnl_end - ivnl_start + 1, st%dpsi(:, idim, ist, ik), &
-                       periodic = .false., ik = ik)
-                  atm%f(j) = atm%f(j) + M_TWO * st%occ(ist, ik) * dz
-                else
-                  zz = zpsiprojectpsi(gr%m, ep%dp(j, ivnl_start:ivnl_end), &
-                       ivnl_end - ivnl_start + 1, st%zpsi(:, idim, ist, ik), &
-                       periodic = .false., ik = ik)
-                  atm%f(j) = atm%f(j) + M_TWO * st%occ(ist, ik) * zz
-                end if
-
-              end do
-            end do
-
+            if (st%d%wfs_type == M_REAL) then
+              dz = dpsidprojectpsi(gr%m, ep%p(ivnl_start:ivnl_end), &
+                   ivnl_end - ivnl_start + 1, st%d%dim, st%dpsi(:, :, ist, ik), &
+                   periodic = .false., ik = ik)
+              atm%f = atm%f + M_TWO * st%occ(ist, ik) * dz
+            else
+              zz = zpsidprojectpsi(gr%m, ep%p(ivnl_start:ivnl_end), &
+                   ivnl_end - ivnl_start + 1, st%d%dim, st%zpsi(:, :, ist, ik), &
+                   periodic = .false., ik = ik)
+              atm%f = atm%f + M_TWO * st%occ(ist, ik) * zz
+            end if
+            
           end do st_loop
         end do ik_loop
 
@@ -1338,6 +1052,173 @@ contains
 
   end subroutine epot_forces
 
+
+  ! ---------------------------------------------------------
+  subroutine projector_null(p)
+    type(projector_t), intent(out) :: p
+
+    p%type = 0
+    nullify(p%phases)
+    nullify(p%jxyz)
+    nullify(p%hgh_p)
+    nullify(p%kb_p)
+    nullify(p%rkb_p)
+
+  end subroutine projector_null
+
+  !---------------------------------------------------------
+  subroutine projector_build_kb_sphere(p, sb, m, a, st)
+    type(projector_t), intent(inout) :: p
+    type(simul_box_t), intent(in)    :: sb
+    type(mesh_t),      intent(in)    :: m
+    type(atom_t),      intent(in)    :: a
+    type(states_t),    intent(in)    :: st
+
+    integer :: i, j, k
+    FLOAT :: r, X(MAX_DIM)
+
+    call push_sub('epot.projector_build_kb_sphere')
+
+    if (any(a%spec%ps%rc_max + m%h(1) >= sb%lsize(1:sb%periodic_dim))) then
+      message(1)='KB sphere is larger than the box size'
+      write(message(2),'(a,f12.6,a)')  '  rc_max+h = ', a%spec%ps%rc_max + m%h(1), ' [b]'
+      write(message(3),'(a,3f12.4,a)') '  lsize    = ', sb%lsize, ' [b]'
+      message(4)='Please change pseudopotential'
+      call write_fatal(4)
+    end if
+
+    ! Get the total number of points inside the sphere
+    j = 0
+    do k = 1, m%np
+      do i = 1, 3**sb%periodic_dim
+        call mesh_r(m, k, r, a=a%x + sb%shift(i,:))
+        if(r > a%spec%ps%rc_max + m%h(1)) cycle
+        j = j + 1
+        exit
+      end do
+    end do
+
+    p%n_s = j
+    ALLOCATE(p%jxyz(j), j)
+
+    ! Get the index of the points inside the sphere
+    j = 0
+    do k = 1, m%np
+      do i = 1, 3**sb%periodic_dim
+        call mesh_r(m, k, r, a=a%x + sb%shift(i,:))
+        ! we enlarge slightly the mesh (good for the interpolation scheme)
+        if(r > a%spec%ps%rc_max + m%h(1)) cycle
+        j = j + 1
+        p%jxyz(j) = k
+        exit
+      end do
+    end do
+
+    ! and here the phases for the periodic systems
+    if (sb%periodic_dim /= 0) then
+      p%nik = st%d%nik
+
+      ALLOCATE(p%phases(p%n_s, p%nik), p%n_s*p%nik)
+
+      do j = 1, p%n_s
+        x(:) = m%x(p%jxyz(j), :)
+        do k = 1, p%nik
+          p%phases(j, k) = exp(M_zI*sum(st%d%kpoints(:, k)*x(:)))
+        end do
+      end do
+
+    end if
+
+    call pop_sub()
+  end subroutine projector_build_kb_sphere
+
+  !---------------------------------------------------------
+  subroutine projector_copy_kb_sphere(pi, po)
+    type(projector_t), intent(in)    :: pi
+    type(projector_t), intent(inout) :: po
+
+    call push_sub('epot.projector_copy_kb_sphere')
+
+    ASSERT(.not. associated(po%jxyz))
+
+    po%n_s = pi%n_s
+    ALLOCATE(po%jxyz(pi%n_s), pi%n_s)
+    po%jxyz = pi%jxyz
+
+    if (associated(pi%phases)) then
+      po%nik = pi%nik
+      ALLOCATE(po%phases(pi%n_s, pi%nik), pi%n_s*pi%nik)
+      po%phases = pi%phases
+    end if
+
+    call pop_sub()
+  end subroutine projector_copy_kb_sphere
+
+  !---------------------------------------------------------
+  subroutine projector_init_nl_part(p, sb, m, a, reltype, l, lm)
+    type(projector_t), intent(inout) :: p
+    type(simul_box_t), intent(in)    :: sb
+    type(mesh_t),      intent(in)    :: m
+    type(atom_t),      intent(in)    :: a
+    integer,           intent(in)    :: reltype
+    integer,           intent(in)    :: l, lm
+
+    call push_sub('epot.projector_init_nl_part')
+
+    select case (a%spec%ps%kbc)
+    case (1)
+      p%type = M_KB
+    case (2)
+      if (l == 0 .or. reltype == 0) then
+        p%type = M_KB
+      else
+        p%type = M_RKB
+      end if
+    case (3)
+      p%type = M_HGH
+    end select
+
+    select case (p%type)
+    case (M_HGH)
+      allocate(p%hgh_p)
+      call hgh_projector_null(p%hgh_p)
+      call hgh_projector_init(p%hgh_p, p%n_s, p%jxyz, sb, m, a, l, lm)
+    case (M_KB)
+      allocate(p%kb_p)
+      call kb_projector_null(p%kb_p)
+      call kb_projector_init(p%kb_p, p%n_s, p%jxyz, sb, m, a, l, lm)
+    case (M_RKB)
+      allocate(p%rkb_p)
+      call rkb_projector_null(p%rkb_p)
+      call rkb_projector_init(p%rkb_p, p%n_s, p%jxyz, sb, m, a, l, lm)
+    end select
+
+    call pop_sub()
+  end subroutine projector_init_nl_part
+
+  !---------------------------------------------------------
+  subroutine projector_end(p)
+    type(projector_t), intent(inout) :: p
+
+    call push_sub('epot.projector_end')
+
+    if (associated(p%jxyz)) deallocate(p%jxyz)
+    if (associated(p%phases)) deallocate(p%phases)
+    if (associated(p%hgh_p)) then
+      call hgh_projector_end(p%hgh_p)
+      deallocate(p%hgh_p)
+    end if
+    if (associated(p%kb_p)) then
+      call kb_projector_end(p%kb_p)
+      deallocate(p%kb_p)
+    end if
+    if (associated(p%rkb_p)) then
+      call rkb_projector_end(p%rkb_p)
+      deallocate(p%rkb_p)
+    end if
+
+    call pop_sub()
+  end subroutine projector_end
 
 #include "undef.F90"
 #include "real.F90"

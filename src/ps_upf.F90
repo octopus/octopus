@@ -37,6 +37,7 @@ module ps_upf_m
   type ps_upf_t
     type(valconf_t)    :: conf
 
+    integer :: kb_nc
     integer :: l_local
     FLOAT :: local_radius
     FLOAT, pointer :: kb_radius(:)
@@ -75,6 +76,10 @@ module ps_upf_m
 
     !Valence charge
     FLOAT,  pointer :: rho(:)
+    
+    !Extra information
+    FLOAT, pointer :: proj_j(:)
+
   end type ps_upf_t
 
 contains
@@ -121,7 +126,7 @@ contains
     ps_upf%conf%l(1:ps_upf%n_wfs) = ps_upf%l(1:ps_upf%n_wfs)
     ps_upf%conf%occ(1:ps_upf%n_wfs,1) = ps_upf%occ(1:ps_upf%n_wfs)
 
-    !For now we assume the local component is one of the angular momentum channels
+    !Check if the local component is one of the angular momentum channels
     ALLOCATE(found_l(0:ps_upf%l_max), ps_upf%l_max+1)
     found_l = .true.
     do l = 0, ps_upf%l_max
@@ -130,8 +135,7 @@ contains
       end if
     end do
     if (count(found_l) /= 1) then
-      message(1) = "error in ps_upf_ini"
-      call write_fatal(1)
+      ps_upf%l_local = -1
     else
       do l = 0, ps_upf%l_max
         if (found_l(l)) then
@@ -164,6 +168,7 @@ contains
     deallocate(ps_upf%v_local, ps_upf%proj_l, ps_upf%proj_np, ps_upf%proj, ps_upf%e)
     deallocate(ps_upf%wfs)
     deallocate(ps_upf%rho)
+    if (associated(ps_upf%proj_j)) deallocate(ps_upf%proj_j)
 
     call pop_sub()
   end subroutine ps_upf_end
@@ -178,6 +183,8 @@ contains
     character (len=80) :: dummy
 
     call push_sub('ps_upf.ps_upf_read_file')
+
+    ps_upf%kb_nc = 1
 
     !Header info
     call init_tag(unit, "PP_HEADER", .true.)
@@ -282,6 +289,20 @@ contains
     ALLOCATE(ps_upf%rho(ps_upf%np), ps_upf%np)
     read(unit,*) (ps_upf%rho(ir), ir = 1, ps_upf%np)
     call check_end_tag(unit, "PP_RHOATOM")
+
+    !Extra inforamation
+    if (tag_isdef(unit, "PP_ADDINFO")) then
+      ps_upf%kb_nc = 2
+
+      call init_tag(unit, "PP_ADDINFO", .true.)
+
+      ALLOCATE(ps_upf%proj_j(ps_upf%n_proj), ps_upf%n_proj)
+      do i = 1, ps_upf%n_proj
+        read(unit,*) dummy, dummy, ps_upf%proj_j(i)
+      end do
+
+      call check_end_tag(unit, "PP_ADDINFO")
+    end if
 
     call pop_sub()
   end subroutine ps_upf_file_read

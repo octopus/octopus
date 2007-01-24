@@ -49,7 +49,7 @@ module hamiltonian_m
     hamiltonian_energy,    &
     hamiltonian_output,    &
     hamiltonian_span,      &
-    zso,                   &
+!    zso,                   &
     dhamiltonian_eigenval, &
     zhamiltonian_eigenval, &
     dhpsi,                 &
@@ -449,38 +449,6 @@ contains
 
     call pop_sub()
   end subroutine hamiltonian_output
-
-  subroutine zso (h, gr, psi, hpsi, ik)
-    type(hamiltonian_t), intent(in) :: h
-    type(grid_t) :: gr
-    CMPLX, intent(in) :: psi(:, :)
-    CMPLX, intent(inout) :: Hpsi(:, :)
-    integer, intent(in) :: ik
-
-    CMPLX, allocatable :: tpsi(:, :)
-
-    call push_sub('h.zso')
-
-    ASSERT(h%d%dim == 2)
-
-    ALLOCATE(tpsi(NP, 3), NP*3)
-
-    tpsi = M_z0
-    call zproject(gr%m, h%ep%lso(3, :), h%ep%nvnl, psi(:, 1), tpsi(:, 1), simul_box_is_periodic(gr%sb), ik)
-    call zproject(gr%m, h%ep%lso(1, :), h%ep%nvnl, psi(:, 2), tpsi(:, 2), simul_box_is_periodic(gr%sb), ik)
-    call zproject(gr%m, h%ep%lso(2, :), h%ep%nvnl, psi(:, 2), tpsi(:, 3), simul_box_is_periodic(gr%sb), ik)
-    hpsi(1:NP, 1) = hpsi(1:NP, 1) - M_zI * M_HALF * (tpsi(:, 1) + tpsi(:, 2) + M_zI * tpsi(:, 3))
-
-    tpsi = M_z0
-    call zproject(gr%m, h%ep%lso(3, :), h%ep%nvnl, psi(:, 2), tpsi(:, 1), simul_box_is_periodic(gr%sb), ik)
-    call zproject(gr%m, h%ep%lso(1, :), h%ep%nvnl, psi(:, 1), tpsi(:, 2), simul_box_is_periodic(gr%sb), ik)
-    call zproject(gr%m, h%ep%lso(2, :), h%ep%nvnl, psi(:, 1), tpsi(:, 3), simul_box_is_periodic(gr%sb), ik)
-    hpsi(1:NP, 2) = hpsi(1:NP, 2) - M_zI * M_HALF * (-tpsi(:, 1) + tpsi(:, 2) - M_zI * tpsi(:, 3))
-    
-    deallocate(tpsi)
-
-    call pop_sub()
-  end subroutine zso
 
 #include "undef.F90"
 #include "real.F90"

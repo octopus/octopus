@@ -1,0 +1,139 @@
+!! Copyright (C) 2002-2006 M. Marques, A. Castro, A. Rubio, G. Bertsch
+!!
+!! This program is free software; you can redistribute it and/or modify
+!! it under the terms of the GNU General Public License as published by
+!! the Free Software Foundation; either version 2, or (at your option)
+!! any later version.
+!!
+!! This program is distributed in the hope that it will be useful,
+!! but WITHOUT ANY WARRANTY; without even the implied warranty of
+!! MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+!! GNU General Public License for more details.
+!!
+!! You should have received a copy of the GNU General Public License
+!! along with this program; if not, write to the Free Software
+!! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
+!! 02111-1307, USA.
+!!
+!! -*- coding: utf-8 mode: f90 -*-
+!! $Id: epot.F90 2648 2007-01-09 19:08:10Z lorenzen $
+
+#include "global.h"
+
+module hgh_projector_m
+  use global_m
+  use mesh_m
+  use messages_m
+  use simul_box_m
+  use ps_m
+  use specie_m
+  use geometry_m
+  use mpi_m
+  use mpi_debug_m
+
+  private
+  public :: &
+       hgh_projector_t,              &
+       hgh_projector_null,           &
+       hgh_projector_init,           &
+       dhgh_project, zhgh_project,   &
+       dhgh_dproject, zhgh_dproject, &
+       hgh_projector_end
+
+  
+
+  type hgh_projector_t
+    private
+    integer        :: n_s         ! number of points inside the sphere
+    FLOAT, pointer :: p(:, :)     ! projectors
+    FLOAT, pointer :: dp(:, :, :) ! projectors derivatives
+    FLOAT, pointer :: lp(:, :, :) ! angular momentum times projectors
+    FLOAT          :: h(3, 3)     ! parameters
+    FLOAT          :: k(3, 3)     ! spin-orbit parameters
+  end type hgh_projector_t
+
+
+contains
+
+  ! ---------------------------------------------------------
+  subroutine hgh_projector_null(hgh_p)
+    type(hgh_projector_t), intent(out) :: hgh_p
+
+    call push_sub('hgh_projector.hgh_projector_null')
+
+    nullify(hgh_p%p)
+    nullify(hgh_p%dp)
+    nullify(hgh_p%lp)
+    hgh_p%h = M_ZERO
+    hgh_p%k = M_ZERO
+
+    call pop_sub()
+  end subroutine hgh_projector_null
+
+  ! ---------------------------------------------------------
+  subroutine hgh_projector_init(hgh_p, n_s, jxyz, sb, m, a, l, lm)
+    type(hgh_projector_t), intent(inout) :: hgh_p
+    integer,               intent(in)    :: n_s
+    integer,               intent(in)    :: jxyz(:)
+    type(simul_box_t),     intent(in)    :: sb
+    type(mesh_t),          intent(in)    :: m
+    type(atom_t),          intent(in)    :: a
+    integer,               intent(in)    :: l, lm
+ 
+    integer :: j, k, i
+    FLOAT :: v, dv(3), x(3), x_in(3), r
+
+    call push_sub('hgh_projector.hgh_projector_init')
+
+    hgh_p%n_s = n_s
+    ALLOCATE(hgh_p%p (n_s, 3),    n_s*3)
+    ALLOCATE(hgh_p%dp(n_s, 3, 3), n_s*3*3)
+    ALLOCATE(hgh_p%lp(n_s, 3, 3), n_s*3*3)
+
+    do j = 1, hgh_p%n_s
+
+      x_in(:) = m%x(jxyz(j), :)
+      do k = 1, 3**sb%periodic_dim
+        x(:) = x_in(:) - sb%shift(k,:) - a%x
+        r = sqrt(sum(x*x))
+        if (r > a%spec%ps%rc_max + m%h(1)) cycle
+
+        do i = 1, 3
+          call specie_real_nl_projector(a%spec, x, l, lm, i, v, dv(1:3))
+          hgh_p%p(j, i) = v
+          hgh_p%dp(j, :, i) = dv(:)
+          hgh_p%lp(j, 1, i) = x(2)*dv(3) - x(3)*dv(2)
+          hgh_p%lp(j, 2, i) = x(3)*dv(1) - x(1)*dv(3)
+          hgh_p%lp(j, 3, i) = x(1)*dv(2) - x(2)*dv(1)
+        end do
+      end do
+    end do
+
+    hgh_p%h(:, :) = a%spec%ps%h(l, :, :)
+    hgh_p%k(:, :) = a%spec%ps%k(l, :, :)
+
+    call pop_sub()
+  end subroutine hgh_projector_init
+
+  ! ---------------------------------------------------------
+  subroutine hgh_projector_end(hgh_p)
+    type(hgh_projector_t), intent(inout) :: hgh_p
+
+    call push_sub('hgh_projector.hgh_projector_end')
+
+    if (associated(hgh_p%p))      deallocate(hgh_p%p)
+    if (associated(hgh_p%dp))     deallocate(hgh_p%dp)
+    if (associated(hgh_p%lp))   deallocate(hgh_p%lp)
+
+    call pop_sub()
+  end subroutine hgh_projector_end
+
+#include "undef.F90"
+#include "real.F90"
+#include "hgh_projector_inc.F90"
+
+#include "undef.F90"
+#include "complex.F90"
+#include "hgh_projector_inc.F90"
+
+end module hgh_projector_m

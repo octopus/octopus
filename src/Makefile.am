@@ -32,7 +32,8 @@ core_SRCS = $(basic_SRCS) \
 	guess_density.F90
 
 octopus_SOURCES = $(core_SRCS) \
-	lasers.F90 epot.F90 h.F90 preconditioners.F90 linear_response.F90 restart.F90 \
+	lasers.F90 rkb_projector.F90 kb_projector.F90 hgh_projector.F90 epot.F90 \
+	h.F90 preconditioners.F90 linear_response.F90 restart.F90 \
 	xc_OEP.F90 v_ks.F90 systm.F90 \
 	eigen.F90 lcao.F90 pes.F90 \
 	scf.F90 gs.F90 unocc.F90 \
@@ -50,7 +51,7 @@ noinst_HEADERS = \
 	mesh_init.F90 par_vec_inc.F90 derivatives_inc.F90 cf_inc.F90 mf_inc.F90 f_inc.F90 \
 	poisson1D.F90 poisson2D.F90 poisson3D.F90 mix_inc.F90 \
 	xc_vxc.F90 xc_axc.F90 xc_fxc.F90 xc_kxc.F90 xc_KLI_inc.F90 xc_OEP_x_inc.F90 xc_OEP_SIC_inc.F90 \
-	epot_inc.F90 \
+	kb_projector_inc.F90 hgh_projector_inc.F90 epot_inc.F90 \
 	xc_OEP_inc.F90 h_inc.F90 \
 	eigen_trlan.F90 preconditioners_inc.F90 \
 	eigen_inc.F90 eigen_cg_inc.F90 eigen_plan_inc.F90 eigen_arpack_inc.F90 eigen_evolution_inc.F90 \
@@ -102,7 +103,7 @@ oct_ph_LDADD =  $(core_LIBS) $(external_LIBS)
 oct_center_geom_SOURCES = $(core_SRCS) xyz_adjust.F90 centergeom.F90
 oct_center_geom_LDADD = $(octopus_LDADD)
 
-oct_test_SOURCES = $(core_SRCS) lasers.F90 epot.F90 h.F90 preconditioners.F90 linear_response.F90 restart.F90 xc_OEP.F90 v_ks.F90 \
+oct_test_SOURCES = $(core_SRCS) lasers.F90 rkb_projector.F90 kb_projector.F90 hgh_projector.F90 epot.F90 h.F90 preconditioners.F90 linear_response.F90 restart.F90 xc_OEP.F90 v_ks.F90 \
 	systm.F90 test.F90
 oct_test_LDADD = $(octopus_LDADD)
 
@@ -192,7 +193,9 @@ geom_opt.o: global.h
 gs.o: global.h
 h.o: global.h h_inc.F90
 hgh.o: global.h
+hgh_projector.o: global.h hgh_projector_inc.F90
 hs.o: global.h
+kb_projector.o: global.h kb_projector_inc.F90
 lasers.o: global.h
 lcao.o: global.h lcao_inc.F90
 liboct.o: global.h
@@ -225,6 +228,7 @@ poisson_corrections.o: global.h
 poisson.o: global.h poisson1D.F90 poisson2D.F90 poisson3D.F90 poisson_multigrid.F90
 ps.o: global.h
 restart.o: global.h restart_inc.F90
+rkb_projector.o: global.h
 root_solver.o: global.h root_solver_inc.F90
 rotational_strength.o: global.h
 run.o: global.h

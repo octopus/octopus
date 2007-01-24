@@ -297,7 +297,7 @@ contains
       etime = loct_clock()
 
       if(scf%lcao_restricted) then
-        call lcao_wf(lcao_data, st, gr%m, h)
+        call lcao_wf(lcao_data, st, gr, h)
       else
         scf%eigens%converged = 0
         call eigen_solver_run(scf%eigens, gr, st, h, iter)

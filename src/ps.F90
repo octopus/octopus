@@ -62,42 +62,42 @@ module ps_m
     character(len=10) :: label
     integer           :: flavour
 
-    type(loct_spline_t), pointer :: kb(:, :)     ! Kleynman-Bylander projectors
-    type(loct_spline_t), pointer :: so_kb(:, :)
-    type(loct_spline_t), pointer :: dkb(:, :)    ! derivatives of KB projectors
-    type(loct_spline_t), pointer :: so_dkb(:, :)
-    type(loct_spline_t), pointer :: Ur(:, :)     ! atomic wavefunctions
-    type(loct_spline_t) :: vl                    ! local part
-    type(loct_spline_t) :: vlocalized            ! The localized part of the local part :)
-    type(loct_spline_t) :: vlocal_f              ! localized part of local potential
-    ! in Fourier space (for periodic)
-    type(loct_spline_t) :: dvl                   ! derivative of the local part
-    type(loct_spline_t) :: core                  ! core charge
-
-    type(logrid_t) :: g
-
     integer  :: ispin    ! Consider spin (ispin = 2) or not (ispin = 1)
-    integer  :: kbc      ! Number of KB components (1 for TM ps, 3 for HGH)
-
     FLOAT    :: z, z_val
+    type(valconf_t)   :: conf
+    type(logrid_t) :: g
+    type(loct_spline_t), pointer :: Ur(:, :)     ! atomic wavefunctions
 
+    ! Kleynman and Bylander projectors stuff
     integer  :: l_max    ! maximum value of l to take
     integer  :: l_loc    ! which component to take as local
-    integer  :: so_l_max ! obvious meaning ;)
 
-    type(valconf_t)  :: conf
+    type(loct_spline_t) :: vl         ! local part
+    type(loct_spline_t) :: vlocalized ! The localized part of the local part :)
+    type(loct_spline_t) :: vlocal_f   ! localized part of local potential
+                                      ! in Fourier space (for periodic)
+    type(loct_spline_t) :: dvl        ! derivative of the local part
 
-    character(len=4) :: icore
-    FLOAT :: projectors_sphere_threshold ! The projectors are localized in real space,
-                                         ! and so they are contained in a sphere whose
-                                         ! radius is computed by making sure that the
-                                         ! projector functions absolute value is below
-                                         ! this threshold, for points outside the sphere.
+
+    FLOAT :: projectors_sphere_threshold ! The projectors are localized in real
+                                         ! space, and so they are contained in a 
+                                         ! sphere whose radius is computed by
+                                         ! making sure that the projector
+                                         ! functions absolute value is below this
+                                         ! threshold, for points outside the
+                                         ! sphere.
     FLOAT :: rc_max ! The radius of the spheres that contain the projector functions.
-
     FLOAT :: a_erf ! the a constant in erf(ar)/r
 
+    integer  :: kbc      ! Number of KB components (1 or 2 for TM ps, 3 for HGH)
     FLOAT, pointer :: h(:,:,:), k(:, :, :)
+    type(loct_spline_t), pointer :: kb(:, :)     ! Kleynman-Bylander projectors
+    type(loct_spline_t), pointer :: dkb(:, :)    ! derivatives of KB projectors
+
+    ! NLCC
+    character(len=4) :: icore
+    type(loct_spline_t) :: core ! core charge
+
   end type ps_t
 
   FLOAT, parameter :: eps = CNST(1.0e-8)
@@ -143,14 +143,9 @@ contains
       ps%kbc    = 1     ! only one projector per angular momentum
       ps%l_loc  = lloc  ! the local part of the pseudo
 
-      ps%l_max  = min(ps_psf%ps_grid%no_l_channels - 1, lmax)   ! Maybe the file has not enough components.
+      ps%l_max  = min(ps_psf%ps_grid%no_l_channels - 1, lmax) ! Maybe the file has not enough components.
       ps%conf%p = ps_psf%ps_grid%no_l_channels
       if(ps%l_max == 0) ps%l_loc = 0 ! Vanderbilt is not acceptable if ps%l_max == 0.
-      if(ps_psf%ps_grid%so_no_l_channels == 0) then
-        ps%so_l_max = -1
-      else
-        ps%so_l_max = min(ps_psf%ps_grid%no_l_channels, ps%l_max)
-      end if
 
       call ps_psf_process(ps_psf, lmax, ps%l_loc)
       call logrid_copy(ps_psf%ps_grid%g, ps%g)
@@ -170,7 +165,6 @@ contains
 
       ps%l_max  = min(ps%conf%p - 1, lmax)   ! Maybe the file has not enough components.
       if(ps%l_max == 0) ps%l_loc = 0 ! Vanderbilt is not acceptable if ps%l_max == 0.
-      ps%so_l_max = -1
 
       call ps_cpi_process(ps_cpi, ps%l_loc)
       call logrid_copy(ps_cpi%ps_grid%g, ps%g)
@@ -190,7 +184,6 @@ contains
 
       ps%l_max  = min(ps%conf%p - 1, lmax)   ! Maybe the file has not enough components.
       if(ps%l_max == 0) ps%l_loc = 0 ! Vanderbilt is not acceptable if ps%l_max == 0.
-      ps%so_l_max = -1
 
       call ps_fhi_process(ps_fhi, lmax, ps%l_loc)
       call logrid_copy(ps_fhi%ps_grid%g, ps%g)
@@ -203,7 +196,6 @@ contains
       ps%kbc      = 3
       ps%l_loc    = -1
       ps%l_max    = psp%l_max
-      ps%so_l_max = psp%l_max
 
       call hgh_process(psp)
       call logrid_copy(psp%g, ps%g)
@@ -214,10 +206,9 @@ contains
       call valconf_copy(ps%conf, ps_upf%conf)
       ps%z      = z
       ps%conf%z = z
-      ps%kbc    = 1
+      ps%kbc    = ps_upf%kb_nc
       ps%l_max  = ps_upf%l_max
       ps%l_loc  = ps_upf%l_local
-      ps%so_l_max = -1
 
       ps%g%nrval = ps_upf%np
       ALLOCATE(ps%g%rofi(ps%g%nrval), ps%g%nrval)
@@ -231,7 +222,6 @@ contains
     ALLOCATE(ps%ur   (ps%conf%p, ps%ispin),            ps%conf%p*ps%ispin)
     ALLOCATE(ps%h    (0:ps%l_max, 1:ps%kbc, 1:ps%kbc), (ps%l_max+1)*ps%kbc*ps%kbc)
     ALLOCATE(ps%k    (0:ps%l_max, 1:ps%kbc, 1:ps%kbc), (ps%l_max+1)*ps%kbc*ps%kbc)
-
     call loct_spline_init(ps%kb)
     call loct_spline_init(ps%dkb)
     call loct_spline_init(ps%vl)
@@ -239,14 +229,6 @@ contains
     call loct_spline_init(ps%dvl)
     call loct_spline_init(ps%core)
     call loct_spline_init(ps%vlocal_f)
-
-    if(ps%so_l_max >= 0) then
-      ALLOCATE(ps%so_kb   (0:ps%so_l_max, ps%kbc), (ps%so_l_max+1)*ps%kbc)
-      ALLOCATE(ps%so_dkb  (0:ps%so_l_max, ps%kbc), (ps%so_l_max+1)*ps%kbc)
-
-      call loct_spline_init(ps%so_kb)
-      call loct_spline_init(ps%so_dkb)
-    end if
 
     ! Now we load the necessary information.
     select case(flavour)
@@ -330,17 +312,6 @@ contains
       end do
     end do
 
-    do l = 0, ps%so_l_max
-      do j = 1, ps%kbc
-        do i = 2000, 1, -1
-          r = dx*(i-1)
-          y = loct_splint(ps%so_kb(l, j), r)
-          if(abs(y) > threshold) exit
-        end do
-        ps%rc_max = max(ps%rc_max, r)
-      end do
-    end do
-
     call pop_sub()
   end subroutine ps_getradius
 
@@ -355,12 +326,6 @@ contains
     do l = 0, ps%l_max
       do j = 1, ps%kbc
         call loct_spline_der(ps%kb(l, j), ps%dkb(l, j))
-      end do
-    end do
-
-    do l = 0, ps%so_l_max
-      do j = 1, ps%kbc
-        call loct_spline_der(ps%so_kb(l, j), ps%so_dkb(l, j))
       end do
     end do
 
@@ -446,7 +411,6 @@ contains
     write(info_unit,'(a,f6.3,/)') 'zval    : ', ps%z_val
     write(info_unit,'(a,i4)')     'lmax    : ', ps%l_max
     write(info_unit,'(a,i4)')     'lloc    : ', ps%l_loc
-    write(info_unit,'(a,i4)')     'so_lmax : ', ps%so_l_max
     write(info_unit,'(a,i4,/)')   'kbc     : ', ps%kbc
     write(info_unit,'(a,f9.5,/)') 'rcmax   : ', ps%rc_max
     write(info_unit,'(/,a,/)')    'h matrix:'
@@ -488,22 +452,6 @@ contains
     call loct_spline_end(fw)
     deallocate(fw)
 
-    ! Spin-Orbit projectors
-    if(ps%so_l_max >= 0) then
-      call loct_spline_print(ps%so_kb, so_unit)
-      call loct_spline_print(ps%so_dkb, dso_unit)
-      ALLOCATE(fw(0:ps%so_l_max, ps%kbc), ps%so_l_max*ps%kbc)
-      call loct_spline_init(fw)
-      do k = 0, ps%so_l_max
-        do j = 1, ps%kbc
-          call loct_spline_3dft(ps%so_kb(k, j), fw(k, j), gmax = gmax)
-        end do
-      end do
-      call loct_spline_print(fw, sow_unit)
-      call loct_spline_end(fw)
-      deallocate(fw)
-    end if
-
     ! Pseudo-wavefunctions
     call loct_spline_print(ps%ur, wave_unit)
 
@@ -528,10 +476,6 @@ contains
     call loct_spline_end(ps%kb)
     call loct_spline_end(ps%dkb)
     call loct_spline_end(ps%ur)
-    if(ps%so_l_max >= 0) then
-      call loct_spline_end(ps%so_kb)
-      call loct_spline_end(ps%so_dkb)
-    end if
 
     call loct_spline_end(ps%vl)
     call loct_spline_end(ps%dvl)
@@ -539,7 +483,6 @@ contains
     call loct_spline_end(ps%vlocal_f)
 
     deallocate(ps%kb, ps%dkb, ps%ur, ps%h, ps%k)
-    if(ps%so_l_max >=0) deallocate(ps%so_kb, ps%so_dkb)
 
     call pop_sub()
   end subroutine ps_end
@@ -599,7 +542,6 @@ contains
           nrc = nint(log(psp%kbr(l)/psp%g%b + M_ONE)/psp%g%a) + 1
           hato(1:nrc) = psp%kb(1:nrc, l, j)
           call loct_spline_fit(psp%g%nrval, psp%g%rofi, hato, ps%kb(l, j))
-          call loct_spline_fit(psp%g%nrval, psp%g%rofi, hato, ps%so_kb(l, j))
         end do
       end do
 
@@ -638,11 +580,6 @@ contains
 
     ps%h(0:ps%l_max, 1, 1) = ps_grid%dkbcos(1:ps%l_max+1)
 
-    if(ps%so_l_max >= 0) then
-      ps%k(0,1,1) = M_ZERO
-      ps%k(1:ps%so_l_max, 1, 1)  = ps_grid%so_dkbcos(1:ps%so_l_max)
-    end if
-
     ! Increasing radius a little, just in case.
     ! I have hard-coded a larger increase of the cutoff for the filtering.
     ps%rc_max = maxval(ps_grid%kb_radius(1:ps%l_max+1)) * CNST(1.5)
@@ -652,9 +589,6 @@ contains
 
     ! Passes from Rydbergs to Hartrees.
     ps%h(0:ps%l_max,:,:)    = ps%h(0:ps%l_max,:,:)    / M_TWO
-    if(ps%so_l_max >= 0) then
-      ps%k(0:ps%l_max,:,:)    = ps%k(0:ps%l_max,:,:)    / M_TWO
-    end if
 
     call pop_sub()
 
@@ -687,14 +621,6 @@ contains
         hato(nrc+1:g%nrval) = M_ZERO
 
         call loct_spline_fit(g%nrval, g%rofi, hato, ps%kb(l-1, 1))
-      end do
-
-      do l = 1, ps%so_l_max+1
-        nrc = logrid_index(g, ps_grid%so_kb_radius(l)) + 1
-        hato(1:g%nrval) = M_ZERO
-          hato(1:nrc) = ps_grid%so_KB(1:nrc, l)
-
-        call loct_spline_fit(g%nrval, g%rofi, hato, ps%so_kb(l-1, 1))
       end do
 
       ! Now the part corresponding to the local pseudopotential
@@ -730,7 +656,7 @@ contains
     type(ps_t),         intent(out) :: ps
     type(ps_upf_t), intent(in)  :: ps_upf
 
-    integer :: i, l, ll, is, nrc, ir
+    integer :: i, l, ll, is, nrc, ir, j, ij
     FLOAT :: x
     FLOAT, allocatable :: hato(:)
 
@@ -741,11 +667,6 @@ contains
 
     ps%icore = 'nc'
     if(ps_upf%nlcc) ps%icore=''
-
-    ps%h = M_ZERO
-    do i = 1, ps_upf%n_proj
-      ps%h(ps_upf%proj_l(i), 1, 1) = ps_upf%e(i)
-    end do
 
     ! The spin-dependent pseudopotentials are not suported yet, so we need to fix the occupations
     ! if we want to have a spin-dependent atomic density.
@@ -789,15 +710,31 @@ contains
     ps%rc_max = max(ps_upf%local_radius, ps%rc_max) * CNST(1.5)
 
     ! Interpolate the KB-projection functions
-    hato = M_ZERO
-    call loct_spline_fit(ps%g%nrval, ps%g%rofi, hato, ps%kb(ps_upf%l_local, 1))
+    if (ps_upf%l_local >= 0) then
+      hato = M_ZERO
+      do j = 1, ps%kbc
+        call loct_spline_fit(ps%g%nrval, ps%g%rofi, hato, ps%kb(ps_upf%l_local, j))
+      end do
+    end if
 
+    ps%h = M_ZERO
     do i = 1, ps_upf%n_proj
+
+      ij = 1
+      if (ps_upf%kb_nc == 2) then
+        if (ps_upf%proj_j(i) == ps_upf%proj_l(i) - M_HALF) ij = 2
+      end if
+      ps%h(ps_upf%proj_l(i), ij, ij) = ps_upf%e(i)
+
       nrc = logrid_index(ps%g, ps_upf%kb_radius(i)) + 1
       hato(1:nrc)         = ps_upf%proj(1:nrc, i)
       hato(nrc+1:ps%g%nrval) = M_ZERO
 
-      call loct_spline_fit(ps%g%nrval, ps%g%rofi, hato, ps%kb(ps_upf%proj_l(i), 1))
+      call loct_spline_fit(ps%g%nrval, ps%g%rofi, hato, ps%kb(ps_upf%proj_l(i), ij))
+      if (ps_upf%proj_l(i) == 0 .and. ps_upf%kb_nc == 2) then
+        hato = M_ZERO
+        call loct_spline_fit(ps%g%nrval, ps%g%rofi, hato, ps%kb(ps_upf%proj_l(i), 2))
+      end if
     end do
 
     ! Passes from Rydbergs to Hartrees.

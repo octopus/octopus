@@ -45,6 +45,7 @@ module math_m
     zdot_product,               &
     quickrnd,                   &
     stepf,                      &
+    ylmr,                       &
     grylmr,                     &
     weights,                    &
     cutoff0,                    &
@@ -186,6 +187,59 @@ contains
 
   end function stepf
 
+  ! ---------------------------------------------------------
+  ! Computes spherical harmonics ylm in the direction of vector r
+  subroutine ylmr(x, y, z, li, mi, ylm)
+    integer, intent(in) :: li, mi
+    FLOAT, intent(in) :: x, y, z
+    CMPLX, intent(out) :: ylm
+
+    integer :: i
+    FLOAT :: dx, dy, dz, r, plm, cosm, sinm, cosmm1, sinmm1, cosphi, sinphi
+
+    ! if l=0, no calculations are required
+    if (li == 0) then
+      ylm = cmplx(CNST(0.282094791773878), M_ZERO, REAL_PRECISION)
+      return
+    end if
+
+    r = sqrt(x*x + y*y + z*z)
+    dx = x/r; dy = y/r; dz = z/r
+
+    ! if r=0, direction is undefined => make ylm=0 except for l=0
+    if (r == M_ZERO) then
+      ylm = M_z0
+      return
+    end if
+
+    ! get the associated Legendre polynomial (including the normalization factor)
+    plm = loct_legendre_sphplm(li, abs(mi), dz)
+
+    ! compute sin(|m|*phi) and cos(|m|*phi)
+    r = sqrt(dx*dx + dy*dy)
+    if (abs(r) < CNST(1e-20)) r = CNST(1e-20)
+
+    cosphi = dx/r; sinphi = dy/r
+
+    cosm = M_ONE; sinm = M_ZERO
+    do i = 1, abs(mi)
+      cosmm1 = cosm
+      sinmm1 = sinm
+      cosm = cosmm1*cosphi - sinmm1*sinphi
+      sinm = cosmm1*sinphi + sinmm1*cosphi
+    end do
+
+    !And now ylm
+    ylm = plm*cmplx(cosm, sinm, REAL_PRECISION)
+
+    if (mi < 0) then
+      ylm = conjg(ylm)
+      do i = 1, abs(mi)
+        ylm = -ylm
+      end do
+    end if
+
+  end subroutine ylmr
 
   ! ---------------------------------------------------------
   ! This is a Numerical Recipes based subroutine
