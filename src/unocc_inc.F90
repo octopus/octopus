@@ -66,7 +66,7 @@ subroutine X(two_body) (gr, st)
       if(j > i) cycle
 
       n(:) = R_CONJ(st%X(psi) (:, 1, i, 1)) * st%X(psi) (:, 1, j, 1)
-      call X(poisson_solve) (gr, v, n)
+      call X(poisson_solve) (gr, v, n, all_nodes=.false.)
 
       do k = 1, st%nst
         if(k > i) cycle

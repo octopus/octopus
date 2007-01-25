@@ -330,7 +330,7 @@ subroutine X(lr_calc_beta) (sys, lr, props, beta)
             if(props%add_hartree) then 
 
               call X(poisson_solve)(sys%gr, lr(idir, isigma, ifreq)%X(dl_Vhar), &
-                   lr(idir, isigma, ifreq)%X(dl_rho)(1:np, ispin))
+                   lr(idir, isigma, ifreq)%X(dl_rho)(1:np, ispin), all_nodes=.false.)
 
               dH(1:np, idim, ispin, idir, isigma, ifreq) = &
                    dH(1:np, idim, ispin, idir, isigma, ifreq) &

@@ -96,7 +96,7 @@ subroutine X(get_response_e)(sys, h, lr, dir, tag, nsigma, omega, props, status)
         do i = 1, m%np
           tmp(i) = sum(lr(dir, sigma)%X(dl_rho)(i, 1:st%d%nspin))
         end do
-        call X(poisson_solve)(sys%gr, lr(dir,sigma)%X(dl_Vhar), tmp)
+        call X(poisson_solve)(sys%gr, lr(dir,sigma)%X(dl_Vhar), tmp, all_nodes=.false.)
       end do
     end if
     
