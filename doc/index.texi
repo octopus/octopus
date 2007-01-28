@@ -1,4 +1,0 @@
-@node    Options Index, , Examples, Top
-@unnumbered Options Index
-     
-@printindex vr
