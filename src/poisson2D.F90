@@ -27,84 +27,12 @@ subroutine poisson2D_init(gr)
 
 #ifdef HAVE_FFT
   ASSERT(poisson_solver == FFT_SPH .or. poisson_solver == DIRECT_SUM_2D)
-  if (poisson_solver == FFT_SPH) call init_fft(gr%m)
+  if (poisson_solver == FFT_SPH) call poisson_fft_build_2d(gr, poisson_solver)
 #else
   ASSERT(poisson_solver == DIRECT_SUM_2D)
 #endif
 
   call pop_sub()
-
-#ifdef HAVE_FFT
-  ! ---------------------------------------------------------
-contains
-
-  subroutine init_fft(m)
-    type(mesh_t), intent(in) :: m
-
-    type(loct_spline_t) :: besselintf
-    integer :: i, ix, iy, ixx(MAX_DIM), db(MAX_DIM), npoints
-    FLOAT :: temp(MAX_DIM), vec, r_c, maxf, dk
-    FLOAT :: DELTA_R = CNST(1.0e-12)
-    FLOAT, allocatable :: x(:), y(:)
-
-
-    ! double the box to perform the fourier transforms
-    if(poisson_solver.ne.FFT_CORRECTED) then
-      call mesh_double_box(gr%sb, gr%m, db)                 ! get dimensions of the double box
-      if (poisson_solver == FFT_SPH) db(1:2) = maxval(db)
-    else
-      db(:) = m%l(:)
-    end if
-
-    call dcf_new(db, fft_cf)      ! allocate cube function where we will perform
-    call dcf_fft_init(fft_cf, gr%sb) ! the ffts
-    db = fft_cf%n                 ! dimensions may have been optimized
-
-    call loct_parse_float(check_inp('PoissonCutoffRadius'),&
-      maxval(db(:)*m%h(:)/M_TWO)/units_inp%length%factor , r_c)
-    r_c = r_c*units_inp%length%factor
-    write(message(1),'(3a,f12.6)')'Info: Poisson Cutoff Radius [',  &
-      trim(units_out%length%abbrev), '] = ',       &
-      r_c/units_out%length%factor
-    call write_info(1)
-    if ( r_c > maxval(db(:)*m%h(:)/M_TWO) + DELTA_R) then
-      message(1) = 'Poisson cutoff radius is larger than cell size.'
-      message(2) = 'You can see electrons in next cell(s).'
-      call write_warning(2)
-    end if
-
-    call loct_spline_init(besselintf)
-
-    ! store the fourier transform of the Coulomb interaction
-    ALLOCATE(fft_Coulb_FS(fft_cf%nx, fft_cf%n(2), fft_cf%n(3)), fft_cf%nx*fft_cf%n(2)*fft_cf%n(3))
-    fft_Coulb_FS = M_ZERO
-
-    temp(:) = M_TWO*M_PI/(db(:)*m%h(:))
-
-    maxf = r_c * sqrt((temp(1)*db(1)/2)**2 + (temp(2)*db(2)/2)**2)
-    dk = CNST(0.3) ! This seems to be reasonable.
-    npoints = nint(maxf/dk)
-    allocate(x(npoints), y(npoints))
-    do i = 1, npoints
-       x(i) = (i-1) * maxf / (npoints-1)
-       y(i) = besselint(x(i))
-    end do
-    call loct_spline_fit(npoints, x, y, besselintf)
-
-    do iy = 1, db(2)
-      ixx(2) = pad_feq(iy, db(2), .true.)
-      do ix = 1, fft_cf%nx
-        ixx(1) = pad_feq(ix, db(1), .true.)
-        vec = sqrt( (temp(1)*ixx(1))**2 + (temp(2)*ixx(2))**2)
-        fft_coulb_fs(ix, iy, 1) = M_TWO * M_PI * r_c * loct_splint(besselintf, vec*r_c)
-      end do
-    end do
-
-    deallocate(x, y)
-    call loct_spline_end(besselintf)
-
-  end subroutine init_fft
-#endif
 
 end subroutine poisson2D_init
 

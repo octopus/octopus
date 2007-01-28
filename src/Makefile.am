@@ -24,7 +24,7 @@ core_SRCS = $(basic_SRCS) \
 	stencil_star.F90 stencil_variational.F90 stencil_cube.F90 stencil_starplus.F90 derivatives.F90 \
 	cf.F90 mf.F90 f.F90 \
 	out.F90 multigrid.F90 grid.F90 \
-	poisson_isf.F90 \
+	poisson_isf.F90 poisson_fft.F90 \
 	poisson_corrections.F90 poisson_cg.F90 poisson_multigrid.F90 poisson.F90 \
 	crystal.F90 \
 	states.F90 magnetic.F90 elf.F90 states_output.F90 excited_states.F90 \
@@ -221,6 +221,7 @@ par_vec.o: global.h par_vec_inc.F90
 pes.o: global.h pes_rc.F90 pes_mask.F90
 phonons.o: global.h
 phonon_spectrum.o: global.h
+poisson_fft.o: global.h
 poisson_isf.o: global.h
 poisson_cg.o: global.h
 poisson_multigrid.o: global.h

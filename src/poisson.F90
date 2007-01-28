@@ -33,15 +33,12 @@ module poisson_m
   use profiling_m
   use simul_box_m
   use units_m
-#ifdef HAVE_FFT
-  use fft_m
-  use cube_function_m
-#endif
   use functions_m
   use math_m
   use poisson_corrections_m
   use poisson_cg_m
   use poisson_isf_m
+  use poisson_fft_m
   use grid_m
   use output_m
   use poisson_multigrid_m
@@ -67,17 +64,6 @@ module poisson_m
     MULTIGRILLA   =  7, &
     ISF           =  8
   
-#ifdef HAVE_FFT
-  integer, parameter :: &
-    FFT_SPH       =  0, &
-    FFT_CYL       =  1, &
-    FFT_PLA       =  2, &
-    FFT_NOCUT     =  3, &
-    FFT_CORRECTED =  4
-
-  type(dcf_t) :: fft_cf
-  FLOAT, pointer :: fft_coulb_FS(:,:,:)
-#endif
 
   integer :: poisson_solver = -99
   type(mg_solver_t) :: mg
@@ -231,16 +217,13 @@ contains
     call push_sub('poisson.poisson_end')
 
     select case(poisson_solver)
-#ifdef HAVE_FFT
+
     case(FFT_SPH,FFT_CYL,FFT_PLA,FFT_NOCUT)
-      call dcf_free(fft_cf)
-      deallocate(fft_coulb_FS); nullify(fft_coulb_FS)
+      call poisson_fft_end()
     case(FFT_CORRECTED)
-      call dcf_free(fft_cf)
-      deallocate(fft_coulb_FS); nullify(fft_coulb_FS)
+      call poisson_fft_end()
       call poisson_corrections_end(corrector)
 
-#endif
     case(CG_CORRECTED, CG)
       call poisson_cg_end()
       call poisson_corrections_end(corrector)
@@ -386,83 +369,6 @@ contains
   end subroutine dpoisson_solve
 
 
-#if defined(HAVE_FFT)
-  !-----------------------------------------------------------------
-  subroutine poisson_fft(m, pot, rho, average_to_zero)
-    type(mesh_t), intent(in) :: m
-    FLOAT, intent(out) :: pot(:) ! pot(m%np)
-    FLOAT, intent(in)  :: rho(:) ! rho(m%np)
-    logical, intent(in), optional :: average_to_zero
-
-    FLOAT, allocatable :: rho_global(:), pot_global(:)
-
-    integer :: k, j, i
-    FLOAT :: average
-
-    call push_sub('poisson.poisson_fft')
-
-    average=M_ZERO !this avoids a non-initialized warning
-    
-    if(m%parallel_in_domains) then
-      ALLOCATE(rho_global(m%np_global), m%np_global)
-      ALLOCATE(pot_global(m%np_global), m%np_global)
-    end if
-
-    call dcf_alloc_RS(fft_cf)          ! allocate the cube in real space
-    call dcf_alloc_FS(fft_cf)          ! allocate the cube in Fourier space
-
-    if(m%parallel_in_domains) then
-#if defined HAVE_MPI
-      call dvec_gather(m%vp, rho_global, rho)
-      call dmf2cf(m, rho_global, fft_cf)        ! put the density in a cube
-#endif
-    else
-      call dmf2cf(m, rho, fft_cf)        ! put the density in a cube
-    end if
-    call dcf_RS2FS(fft_cf)             ! Fourier transform
-
-
-    ! multiply by the FS of the Coulomb interaction
-    do k = 1, fft_cf%n(3)
-      do j = 1, fft_cf%n(2)
-        do i = 1, fft_cf%nx
-          fft_cf%FS(i, j, k) = fft_cf%FS(i, j, k)*fft_Coulb_FS(i, j, k)
-        end do
-      end do
-    end do
-
-    call dcf_FS2RS(fft_cf)             ! Fourier transform back
-    if(present(average_to_zero)) then
-      if(average_to_zero) average = cf_surface_average(fft_cf)
-#if defined HAVE_MPI
-      ! Only root has the right average.
-      if(m%parallel_in_domains) call MPI_Bcast(average, 1, MPI_FLOAT, 0, m%mpi_grp%comm, k)
-#endif
-    end if
-
-    if(m%parallel_in_domains) then
-#if defined(HAVE_MPI)
-      call dcf2mf(m, fft_cf, pot_global)        ! put the density in a mesh
-      call dvec_scatter(m%vp, pot_global, pot)
-#endif
-    else
-      call dcf2mf(m, fft_cf, pot)        ! put the density in a mesh
-    end if
-
-    if(present(average_to_zero)) then
-      if(average_to_zero) pot = pot - average
-    end if
-
-    call dcf_free_RS(fft_cf)           ! memory is no longer needed
-    call dcf_free_FS(fft_cf)
-
-    if(m%parallel_in_domains) then
-      deallocate(rho_global, pot_global)
-    end if
-
-    call pop_sub()
-  end subroutine poisson_fft
-#endif
 
   !-----------------------------------------------------------------
   ! This routine checks the Hartree solver selected in the input
