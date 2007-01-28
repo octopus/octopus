@@ -63,7 +63,6 @@ module poisson_m
     CG_CORRECTED  =  6, &
     MULTIGRILLA   =  7, &
     ISF           =  8
-  
 
   integer :: poisson_solver = -99
   type(mg_solver_t) :: mg
@@ -163,32 +162,31 @@ contains
 
     !-----------------------------------------------------------------
     subroutine init_3D()
-#ifdef HAVE_FFT
-      call loct_parse_int(check_inp('PoissonSolver'), gr%sb%periodic_dim, poisson_solver)
+      integer :: default_solver
+
+      default_solver = ISF
+      if (gr%m%use_curvlinear) default_solver = CG_CORRECTED
+      if (gr%sb%periodic_dim > 0) default_solver = gr%sb%periodic_dim
+      
+      call loct_parse_int(check_inp('PoissonSolver'), default_solver, poisson_solver)
       if(poisson_solver < FFT_SPH .or. poisson_solver > ISF ) then
         call input_error('PoissonSolver')
       end if
 
-      if(poisson_solver /= gr%sb%periodic_dim .and. &
-        poisson_solver < CG .and. &
-        poisson_solver /= FFT_CORRECTED .and. poisson_solver /= FFT_CYL) then
+      if(gr%sb%periodic_dim > 0 .and. &
+           poisson_solver /= gr%sb%periodic_dim .and. &
+           poisson_solver < CG .and. &
+           poisson_solver /= FFT_CORRECTED .and. poisson_solver /= FFT_CYL) then
         write(message(1), '(a,i1,a)')'The System is periodic in ', gr%sb%periodic_dim ,' dimension(s),'
         write(message(2), '(a,i1,a)')'but Poisson Solver is set for ',poisson_solver,' dimensions.'
         message(3) =                 'You know what you are doing, right?'
         call write_warning(3)
       end if
-#else
-      call loct_parse_int(check_inp('PoissonSolver'), CG, poisson_solver)
-      if(poisson_solver < CG) then
-        call input_error('PoissonSolver')
-      end if
-#endif
 
-      if(gr%m%use_curvlinear .and. (poisson_solver.ne.CG_CORRECTED) .and. (poisson_solver.ne.MULTIGRILLA) ) then
+      if(gr%m%use_curvlinear .and. (poisson_solver.ne.CG_CORRECTED)) then
         message(1) = 'If curvilinear coordinates are used, then the only working'
-        message(2) = 'Poisson solvers are cg_corrected ("corrected conjugate gradients") and'
-        message(3) = 'multigrid.'
-        call write_fatal(3)
+        message(2) = 'Poisson solvers is cg_corrected'
+        call write_fatal(2)
       end if
 
       if(gr%m%parallel_in_domains .and. poisson_solver.eq.MULTIGRILLA) then
@@ -345,7 +343,6 @@ contains
     case(MULTIGRILLA)
       call poisson_multigrid_solver(mg, gr, pot, rho)
 
-#ifdef HAVE_FFT
     case(FFT_SPH,FFT_CYL,FFT_PLA,FFT_NOCUT)
       call poisson_fft(gr%m, pot, rho)
 
@@ -358,7 +355,7 @@ contains
 
       pot = pot + vh_correction
       deallocate(rho_corrected, vh_correction)
-#endif
+
     case(ISF)
       call poisson_isf_solve(gr%m, pot, rho, all_nodes_value)
       
