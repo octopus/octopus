@@ -348,7 +348,7 @@ contains
       if (iostat > 0) then
         message(1) = "Error in subroutine tag_isdef"
         call write_fatal(1)
-      elseif (iostat == -1) then
+      elseif (iostat < 0) then
         tag_isdef = .false.
         exit
       end if
