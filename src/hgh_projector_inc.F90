@@ -170,8 +170,10 @@ function X(hgh_dproject)(mesh, hgh_p, dim, psi, phases) result(res)
 
 #if defined(HAVE_MPI)
   if(mesh%parallel_in_domains) then
-    call MPI_Allreduce(res, tmp, 1, R_MPITYPE, MPI_SUM, mesh%vp%comm, mpi_err)
-    res = tmp
+    do k = 1, 3
+      call MPI_Allreduce(res(k), tmp, 1, R_MPITYPE, MPI_SUM, mesh%vp%comm, mpi_err)
+      res(k) = tmp
+    end do
   end if
 #endif
 

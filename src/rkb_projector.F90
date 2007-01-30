@@ -185,7 +185,7 @@ contains
 
 #if defined(HAVE_MPI)
         if(mesh%parallel_in_domains) then
-          call MPI_Allreduce(uvpsi, tmp, 1, R_MPITYPE, MPI_SUM, mesh%vp%comm, mpi_err)
+          call MPI_Allreduce(uvpsi, tmp, 1, MPI_CMPLX, MPI_SUM, mesh%vp%comm, mpi_err)
           uvpsi = tmp
         end if
 #endif
@@ -233,7 +233,7 @@ contains
         uvpsi = sum(psi(1:n_s, idim)*rkb_p%p(1:n_s, i))
 #if defined(HAVE_MPI)
         if(mesh%parallel_in_domains) then
-          call MPI_Allreduce(uvpsi, tmp, 1, R_MPITYPE, MPI_SUM, mesh%vp%comm, mpi_err)
+          call MPI_Allreduce(uvpsi, tmp, 1, MPI_CMPLX, MPI_SUM, mesh%vp%comm, mpi_err)
           uvpsi = tmp
         end if
 #endif
@@ -253,8 +253,10 @@ contains
 
 #if defined(HAVE_MPI)
     if(mesh%parallel_in_domains) then
-      call MPI_Allreduce(res, tmp, 1, R_MPITYPE, MPI_SUM, mesh%vp%comm, mpi_err)
-      res = tmp
+      do k = 1, 3
+        call MPI_Allreduce(res(k), tmp, 1, MPI_CMPLX, MPI_SUM, mesh%vp%comm, mpi_err)
+        res(k) = tmp
+      end do
     end if
 #endif
 
