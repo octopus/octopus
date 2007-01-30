@@ -13,6 +13,6 @@ varinfo: RUN_SCRIPT
 variables: RUN_SCRIPT
 
 RUN_SCRIPT:
-	(cd ..; build/mk_varinfo.pl)
+	(cd ..; build/mk_varinfo.pl; build/var2html.pl)
 
 EXTRA_DIST = variables.local
