@@ -314,7 +314,7 @@ contains
       dr    = CNST(-1.0e5)
       rmax = g%rofi(g%nrval)
 
-      call egofv(hato, s, g%nrval, e, gg, y, l, z, &
+      call egofv(hato, s, g%nrval, e, gg, y, l-1, z, &
         real(g%a, 8), real(g%b, 8), rmax, nprin, nnode, dr, ierr)
       
       if(ierr.ne.0) then
@@ -359,7 +359,7 @@ contains
             dr    = -CNST(1.0e5)
             rmax = g%rofi(g%nrval)
 
-            call egofv(hato, s, g%nrval, e, gg, y, l, z, &
+            call egofv(hato, s, g%nrval, e, gg, y, l-1, z, &
               real(g%a, 8), real(g%b, 8), rmax, nprin, nnode, dr, ierr)
 
             if(ierr.ne.0) then
