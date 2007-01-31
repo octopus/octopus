@@ -30,7 +30,6 @@ module linear_response_m
   use lib_oct_parser_m
   use mesh_m
   use messages_m
-  use mix_m
   use output_m
   use preconditioners_m
   use states_m
@@ -43,25 +42,12 @@ module linear_response_m
 
   FLOAT, public, parameter :: lr_min_occ=CNST(1e-4) !the minimum value for a state to be considered occupied
   
-  !solvers ( values must be < 100 )
-  integer, public, parameter :: LR_HX_FIXED = 11
-  integer, public, parameter :: LR_HX = 10
-  integer, public, parameter :: LR_CG = 5
-  integer, public, parameter :: LR_BCG = 2
-  integer, public, parameter :: LR_BICGSTAB = 3
-
-  !preconditioners ( values must be multiples of 100 )
-  integer, public, parameter :: LR_NONE = 0
-  integer, public, parameter :: LR_DIAG = 100
-
   public :: &
        lr_t, &
        lr_init, &
        lr_copy, & 
        dlr_alloc_psi, &
        zlr_alloc_psi, & 
-       dlr_solve_HXeY, & 
-       zlr_solve_HXeY, & 
        dlr_output, & 
        zlr_output, & 
        dlr_orth_vector, & 
@@ -72,36 +58,17 @@ module linear_response_m
        zlr_orth_response, &
        lr_dealloc, &
        lr_build_fxc, &
-       lr_alloc_fHxc, &
-       dynamic_tol_init, & 
-       dynamic_tol_end, & 
-       dynamic_tol_step
+       lr_alloc_fHxc
 
   type lr_t
-    FLOAT   :: conv_abs_dens  ! convergence required
-    FLOAT   :: abs_dens       ! convergence reached
-    FLOAT   :: conv_abs_psi   ! convergence required 
-    FLOAT   :: conv_abs_psi_r ! convergence required 
-    FLOAT   :: conv_max_abs_psi ! convergence required 
-    FLOAT   :: abs_psi        ! convergence reached
-    integer :: max_iter       ! maximum number of iterations
-    integer :: max_scf_iter   ! maximum number of iterations
-    integer :: iter           ! number of iterations used
-    integer :: solver         ! the linear solver to use
-    type(preconditioner_t) :: pre ! the preconditioner to use
-    integer :: ort_min_step   ! the step where to start orthogonalization
-    integer :: nst            ! the number of linear response orbitals
-
-    logical :: dynamic_tol
-    FLOAT :: dynamic_tol_factor, last_tol
-
-    type(mix_t) :: mixer   ! can not live without it
-
+    !the number of lr wfs
+    integer :: nst
+     
     ! the real quantities
     FLOAT, pointer :: ddl_rho(:,:)     ! response of the density
     FLOAT, pointer :: ddl_psi(:,:,:,:) ! linear change of the real KS orbitals
     FLOAT, pointer :: ddl_Vhar(:)      ! linear change of the Hartree potential
-
+    
     ! and the complex version
     CMPLX, pointer :: zdl_rho(:,:)     ! response of the density
     CMPLX, pointer :: zdl_psi(:,:,:,:) ! linear change of the complex KS orbitals
@@ -121,209 +88,15 @@ module linear_response_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine lr_init(lr, gr, prefix, def_solver)
+  subroutine lr_init(lr)
     type(lr_t),        intent(out)   :: lr
-    type(grid_t),      intent(inout) :: gr
-    character(len=*),  intent(in)    :: prefix
-    integer, optional, intent(in)    :: def_solver
-
-    integer :: fsolver
-
     call push_sub('linear_response.lr_init')
-
-    ! BEGIN INPUT PARSING
-
-    !%Variable ConvAbsDens
-    !%Type float
-    !%Default 1e-5
-    !%Section Linear Response::SCF in LR calculations
-    !%Description
-    !% The tolerance in the variation of the density, to determine if
-    !% the SCF for linear response is converged.
-    !%End
-
-    call loct_parse_float(check_inp(trim(prefix)//"ConvAbsDens"), &
-        CNST(1e-5), lr%conv_abs_dens)
-    
-    !%Variable MaximumIter
-    !%Type integer
-    !%Default 200
-    !%Section Linear Response::SCF in LR calculations
-    !%Description
-    !% The maximum number of SCF iterations to calculate response.
-    !%End
-
-    call loct_parse_int(check_inp(trim(prefix)//'SCFIterations'), 200, lr%max_scf_iter)
-
-    !%Variable LinearSolver
-    !%Type integer
-    !%Default cg
-    !%Section Linear Response::Solver
-    !%Description
-    !% To calculate response using density functional perturbation
-    !% theory is necessary to solve the sterheimer equation, this is a self
-    !% consistent linear equation where the operator is the Kohn-Sham
-    !% hamiltonian with a complex shift. This variable selects which
-    !% method to use in order to solve this linear equation.
-    !%Option hx 10
-    !% This solver aproximates the solution of the non-hermitian
-    !% equation by a power series in terms of the inverse of the
-    !% hamiltonian. Each term implies solving a hermitian linear equation by
-    !% conjugated gradients.
-    !% Altough this might sound inefficient, the hermitian equations
-    !% to solve are better conditioned than the original, so this can be more
-    !% efficient than a non-hermitian solver.
-    !% This version of the solvers apply the number of terms in the
-    !% series as needed to be under the tolerance required.
-    !%Option hx_fixed 11
-    !% This is the same prevoius solver, but only two steps of the
-    !% series are applied.
-    !%Option cg 5
-    !% Conjugated gradients. This is the fastest solver but does not
-    !% work when an imaginary shift is added. This is the default.
-    !%Option bcg 2
-    !% Biconjugated gradients. This solver is a generalization of the
-    !% conjugated gradients for non-hermitian operators. It has some
-    !% stability problems, so the bigstab should be prefered.
-    !%Option bicgstab 3
-    !% Biconjugated gradients stabilized. This is an improved version
-    !% of bcg that is faster and more stable. This is the default when
-    !% complex polarizabilities are calculated.
-    !%End
-
-    if(present(def_solver)) then
-      call loct_parse_int  (check_inp(trim(prefix)//"LinearSolver"), def_solver, fsolver)
-    else 
-      call loct_parse_int  (check_inp(trim(prefix)//"LinearSolver"), LR_CG, fsolver)
-    end if
-
-    !the last 2 digits select the linear solver
-    lr%solver = mod(fsolver, 100)
-
-    call preconditioner_init(lr%pre, gr)
-
-    !%Variable LinearSolverMaxIter
-    !%Type integer
-    !%Default 1000
-    !%Section Linear Response::Solver
-    !%Description
-    !% Maximum number of iterations the linear solver does, even if
-    !% convergency is not achieved.
-    !%End
-
-    call loct_parse_int  (check_inp(trim(prefix)//"LinearSolverMaxIter"), 1000, lr%max_iter)
-
-    !%Variable LinearSolverTol
-    !%Type float
-    !%Default 1e-6
-    !%Section Linear Response::Solver
-    !%Description
-    !% This is the tolerance to determine that the linear solver has converged.
-    !%End
-    
-    call loct_parse_float(check_inp(trim(prefix)//"LinearSolverTol"), &
-        CNST(1e-6), lr%conv_abs_psi)
-    lr%conv_abs_psi_r=lr%conv_abs_psi
-    
-    !%Variable LinearSolverOrthogonalization
-    !%Type integer
-    !%Default 0
-    !%Section Linear Response::Solver
-    !%Description
-    !% A good preconditioner to the Sternheimer equation is the
-    !% projector onto the unoccupied state.
-    !% The problem is that this operator is expensive to apply because it
-    !% requires to orthogonalize with respect to all the occupied
-    !% wavenfunctions.
-    !% To overcome this, the operator is only applied is the linear solver
-    !% has not converged after a certain number of steps. This variable
-    !% controls that number. A value of 1 will activate
-    !% orthogonalization always and 0 means that it will not be used
-    !% at all. The default is 0.
-    !%Option always 1 
-    !% The ortogonalization preconditioner will be applied always.
-    !%Option never 0 
-    !% The ortogonalization will not be used.
-    !%End
-
-    call loct_parse_int(check_inp(trim(prefix)//"LinearSolverOrthogonalization"), 0, lr%ort_min_step)
-    
-    !%Variable DynamicalTol
-    !%Type logical
-    !%Default true
-    !%Section Linear Response::SCF in LR calculations
-    !%Description
-    !% If this variable is true, the tolerance of the LinearSolver is
-    !% adjusted according to the level of convergency of the self
-    !% consistency.
-    !%End
-
-    call loct_parse_logical(check_inp(trim(prefix)//'DynamicalTol'), .true., lr%dynamic_tol)
-
-    !%Variable DynamicalTolFactor
-    !%Type float
-    !%Default 0.5
-    !%Section Linear Response::SCF in LR calculations
-    !%Description
-    !% This factor controls how much the tolerance is increased at
-    !% first iterations. Larger values means larger tolerance.
-    !%End
-
-    if( lr%dynamic_tol ) then 
-      call loct_parse_float(check_inp(trim(prefix)//'DynamicalTolFactor'), CNST(0.5), lr%dynamic_tol_factor)
-    end if
-
-    !%Variable LinearSolverMaxTol
-    !%Type float
-    !%Default 1e-2
-    !%Section Linear Response::Solver
-    !%Description
-    !% This is the maximun tolerance that will be applied to the
-    !% linear solver when dynamical tolerance is used.
-    !%End
-    if( lr%dynamic_tol ) then 
-      call loct_parse_float(check_inp(trim(prefix)//"LinearSolverMaxTol"), &
-           CNST(1e-2), lr%conv_max_abs_psi)
-    end if
-
-    ! END INPUT PARSING
 
     nullify(lr%ddl_rho, lr%ddl_psi, lr%ddl_Vhar, lr%dl_Vxc)
     nullify(lr%zdl_rho, lr%zdl_psi, lr%zdl_Vhar, lr%dl_Vxc)
     
     nullify(lr%dl_j, lr%ddl_de, lr%zdl_de, lr%ddl_elf, lr%zdl_elf)
     
-    !WRITE INFO
-    
-    write(message(1),'(a)') 'Linear Reponse'
-    call messages_print_stress(stdout, trim(message(1)))
-    
-    
-    ! solver 
-    select case(lr%solver)
-      case(LR_CG)
-        message(1)='Linear Solver: Conjugated Gradients'
-
-      case(LR_BCG)
-        message(1)='Linear Solver: Biconjugated Gradients'
-
-      case(LR_BICGSTAB)
-        message(1)='Linear Solver: Biconjugated Gradients Stabilized'
-
-      case(LR_HX_FIXED)
-        message(1)='Linear Solver: Fixed Hermitian Expansion'
-
-      case(LR_HX)
-        message(1)='Linear Solver: Hermitian Expansion'
-
-    end select
-
-    call write_info(1)
-    
-    call messages_print_stress(stdout)
-
-    call pop_sub()
-
   end subroutine lr_init
 
   ! ---------------------------------------------------------
@@ -459,9 +232,6 @@ contains
 
     call push_sub('linear_response.lr_alloc_fHxc')
 
-    lr%abs_dens = M_ZERO
-    lr%iter     = 0
-
     ! allocate variables
     if (st%d%wfs_type == M_REAL) then
       ALLOCATE(lr%ddl_rho(m%np, st%d%nspin), m%np*st%d%nspin)
@@ -475,40 +245,6 @@ contains
     call pop_sub()
 
   end subroutine lr_alloc_fHxc
-
-  subroutine dynamic_tol_init(lr)
-    type(lr_t),     intent(inout) :: lr
-
-    lr%last_tol = lr%conv_max_abs_psi
-
-    if( lr%dynamic_tol ) then
-      lr%conv_abs_psi = lr%dynamic_tol_factor*lr%conv_abs_psi_r/lr%conv_abs_dens
-      lr%conv_abs_psi = max(lr%conv_abs_psi, lr%conv_abs_psi_r)
-      lr%conv_abs_psi = min(lr%conv_abs_psi, lr%last_tol)
-    end if
-
-  end subroutine dynamic_tol_init
-
-  subroutine dynamic_tol_step(lr, iter)
-    type(lr_t),     intent(inout) :: lr
-    integer,        intent(in)    :: iter
-
-    if( lr%dynamic_tol .and. iter >= 0 ) then 
-      lr%conv_abs_psi = lr%dynamic_tol_factor*(lr%conv_abs_psi_r/lr%conv_abs_dens)*lr%abs_dens
-      lr%conv_abs_psi = max(lr%conv_abs_psi, lr%conv_abs_psi_r)
-      lr%conv_abs_psi = min(lr%conv_abs_psi, lr%last_tol)
-
-      lr%last_tol = lr%conv_abs_psi
-    end if
-      
-  end subroutine dynamic_tol_step
-
-  subroutine dynamic_tol_end(lr)
-    type(lr_t),     intent(inout) :: lr
-
-    lr%conv_abs_psi=lr%conv_abs_psi_r
-
-  end subroutine dynamic_tol_end
 
   subroutine lr_copy(st, m, src, dest)
     type(states_t), intent(in) :: st
@@ -545,13 +281,11 @@ contains
 
 #include "linear_response_inc.F90"
 #include "linear_response_out.F90" 
-#include "linear_response_solvers.F90" 
 
 #include "undef.F90"
 #include "complex.F90"
 
 #include "linear_response_inc.F90"
 #include "linear_response_out.F90" 
-#include "linear_response_solvers.F90" 
 
 end module linear_response_m

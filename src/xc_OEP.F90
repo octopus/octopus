@@ -29,6 +29,7 @@ module xc_OEP_m
   use lib_oct_parser_m
   use lib_xc_m
   use linear_response_m
+  use linear_solver_m
   use mesh_function_m
   use mesh_m
   use messages_m
@@ -36,8 +37,10 @@ module xc_OEP_m
   use poisson_m
   use profiling_m
   use states_m
+  use scf_tol_m
   use varinfo_m
   use xc_m
+
 
   implicit none
 
@@ -62,7 +65,8 @@ module xc_OEP_m
     integer       :: level      ! 0 = no oep, 1 = Slater, 2 = KLI, 3 = CEDA, 4 = full OEP
     FLOAT         :: mixing     ! how much of the function S(r) to add to vxc in every iteration
     type(lr_t)    :: lr         ! to solve the equation H psi = b
-
+    type(linear_solver_t) :: solver
+    type(scf_tol_t) :: scftol
     integer          :: eigen_n
     integer, pointer :: eigen_type(:), eigen_index(:)
     FLOAT            :: socc, sfact
@@ -136,7 +140,11 @@ contains
       ALLOCATE(oep%vxc(NP), NP)
 
       ! when performing full OEP, we need to solve a linear equation
-      if(oep%level == XC_OEP_FULL) call lr_init(oep%lr, gr, "OEP")
+      if(oep%level == XC_OEP_FULL) then 
+        call scf_tol_init(oep%scftol, "OEP",def_maximumiter=10)
+        call linear_solver_init(oep%solver, gr, "OEP")
+        call lr_init(oep%lr)
+      end if
 
       ! the linear equation has to be more converged if we are to attain the required precision
       !oep%lr%conv_abs_dens = oep%lr%conv_abs_dens / (oep%mixing)
@@ -155,7 +163,10 @@ contains
     if(oep%level.ne.XC_OEP_NONE) then
       deallocate(oep%vxc); nullify(oep%vxc)
 
-      if(oep%level == XC_OEP_FULL) call lr_dealloc(oep%lr)
+      if(oep%level == XC_OEP_FULL) then 
+        call lr_dealloc(oep%lr)
+        call linear_solver_end(oep%solver)
+      end if
     end if
 
     call pop_sub()

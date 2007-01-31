@@ -28,18 +28,18 @@ core_SRCS = $(basic_SRCS) \
 	poisson_corrections.F90 poisson_cg.F90 poisson_multigrid.F90 poisson.F90 \
 	crystal.F90 \
 	states.F90 magnetic.F90 elf.F90 states_output.F90 excited_states.F90 \
-	xc_functl.F90 xc.F90 mix.F90 spectrum.F90 \
+	xc_functl.F90 xc.F90 scf_tol.F90 mix.F90 spectrum.F90 \
 	guess_density.F90
 
 octopus_SOURCES = $(core_SRCS) \
 	lasers.F90 rkb_projector.F90 kb_projector.F90 hgh_projector.F90 epot.F90 \
-	h.F90 preconditioners.F90 linear_response.F90 restart.F90 \
+	h.F90 preconditioners.F90 linear_solver.F90 linear_response.F90 restart.F90 \
 	xc_OEP.F90 v_ks.F90 systm.F90 \
 	eigen.F90 lcao.F90 pes.F90 \
 	scf.F90 gs.F90 unocc.F90 \
 	static_pol.F90 geom_opt.F90 phonons.F90 \
 	td_exp_split.F90 td_exp.F90 td_rti.F90 td_write.F90 td.F90 filters.F90 opt_control.F90 \
-	casida.F90 wave_matching.F90 em_resp_calc.F90 em_resp.F90 vdW.F90 pulpo.F90 \
+	casida.F90 wave_matching.F90 sternheimer.F90 em_resp_calc.F90 em_resp.F90 vdW.F90 pulpo.F90 \
 	run.F90 main.F90
 
 noinst_HEADERS = \
@@ -60,8 +60,8 @@ noinst_HEADERS = \
 	td_init.F90 td_calc.F90\
 	out_inc.F90 math_cg_inc.F90 math_inc.F90 \
 	linalg_basic_blas.F90 linalg_basic_int.F90 linalg_adv_lapack.F90 \
-	linear_response_inc.F90 linear_response_out.F90 linear_response_solvers.F90\
-	em_resp_inc.F90 unocc_inc.F90 casida_inc.F90
+	linear_response_inc.F90 linear_response_out.F90 linear_solver_inc.F90\
+	sternheimer_inc.F90 em_resp_inc.F90 unocc_inc.F90 casida_inc.F90
 
 core_LIBS = @LIBS_LAPACK@ @LIBS_BLAS@ \
   ../liboct/liboct.a \
@@ -103,7 +103,7 @@ oct_ph_LDADD =  $(core_LIBS) $(external_LIBS)
 oct_center_geom_SOURCES = $(core_SRCS) xyz_adjust.F90 centergeom.F90
 oct_center_geom_LDADD = $(octopus_LDADD)
 
-oct_test_SOURCES = $(core_SRCS) lasers.F90 rkb_projector.F90 kb_projector.F90 hgh_projector.F90 epot.F90 h.F90 preconditioners.F90 linear_response.F90 restart.F90 xc_OEP.F90 v_ks.F90 \
+oct_test_SOURCES = $(core_SRCS) lasers.F90 rkb_projector.F90 kb_projector.F90 hgh_projector.F90 epot.F90 h.F90 preconditioners.F90 linear_solver.F90 linear_response.F90 restart.F90 xc_OEP.F90 v_ks.F90 \
 	systm.F90 test.F90
 oct_test_LDADD = $(octopus_LDADD)
 
@@ -183,8 +183,9 @@ curvlinear.o: global.h
 curv_modine.o: global.h
 derivatives.o: global.h derivatives_inc.F90
 eigen.o: global.h eigen_inc.F90 eigen_cg_inc.F90 eigen_trlan.F90 eigen_plan_inc.F90 eigen_arpack_inc.F90 eigen_evolution_inc.F90
-em_resp_calc.o: em_resp_calc_inc.F90
-em_resp.o : em_resp.F90 em_resp_inc.F90
+sternheimer.o: global.h sternheimer_inc.F90
+em_resp_calc.o: global.h em_resp_calc_inc.F90
+em_resp.o : global.h em_resp_inc.F90
 epot.o: global.h epot_inc.F90
 f.o: global.h f_inc.F90
 fft.o: global.h fftw2.F90 fftw3.F90
@@ -203,7 +204,8 @@ liboct_parser.o: global.h
 libxc.o: global.h
 linalg_adv.o: global.h linalg_adv_lapack.F90
 linalg_basic.o: global.h linalg_basic_blas.F90 linalg_basic_int.F90
-linear_response.o: global.h linear_response_inc.F90 linear_response_out.F90 linear_response_solvers.F90
+linear_solver.o: global.h linear_solver_inc.F90
+linear_response.o: global.h linear_response_inc.F90 linear_response_out.F90
 logrid.o: global.h
 main.o: global.h
 math.o: global.h math_cg_inc.F90 math_inc.F90
@@ -234,6 +236,7 @@ root_solver.o: global.h root_solver_inc.F90
 rotational_strength.o: global.h
 run.o: global.h
 scf.o: global.h
+scf_tol.o: global.h
 sparskit.o: global.h sparskit_inc.F90 sparskit_driver.F90
 specie.o: global.h
 guess_density.o: global.h

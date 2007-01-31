@@ -147,7 +147,7 @@ subroutine X(xc_oep_solve) (gr, h, st, is, vxc, oep)
   ! fix xc potential (needed for Hpsi)
   vxc(1:NP) = vxc_old(1:NP) + oep%vxc(1:NP)
 
-  do iter = 1, 10
+  do iter = 1, oep%scftol%max_iter
     ! iteration over all states
     s = M_ZERO
     do ist = 1, st%nst
@@ -159,9 +159,9 @@ subroutine X(xc_oep_solve) (gr, h, st, is, vxc, oep)
       call X(lr_orth_vector) (gr%m, st, b, is)
 
       ! and we now solve the equation [h-eps_i] psi_i = b_i
-      call X(lr_solve_HXeY) (oep%lr, h, gr, st, is, oep%lr%X(dl_psi)(:,:, ist, is), b, &
-        R_TOTYPE(-st%eigenval(ist, is)))
-
+      call X(solve_HXeY) (oep%solver, h, gr, st, is, oep%lr%X(dl_psi)(:,:, ist, is), b, &
+           R_TOTYPE(-st%eigenval(ist, is)))
+      
       call X(lr_orth_vector) (gr%m, st, oep%lr%X(dl_psi)(:,:, ist, is), is)
 
       ! calculate this funny function s
@@ -178,7 +178,7 @@ subroutine X(xc_oep_solve) (gr, h, st, is, vxc, oep)
     end do
 
     f = dmf_nrm2(gr%m, s)
-    if(f < oep%lr%conv_abs_dens) exit
+    if(f < oep%scftol%conv_abs_dens) exit
   end do
 
   write(message(1), '(a,i4,a,es14.6)') "Info: After ", iter, " iterations, the OEP converged to ", f

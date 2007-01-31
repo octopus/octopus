@@ -38,9 +38,9 @@ module pol_lr_m
   use messages_m
   use mix_m
   use output_m
-  use poisson_m
   use restart_m
   use states_m
+  use sternheimer_m
   use string_m
   use system_m
   use units_m
@@ -50,8 +50,7 @@ module pol_lr_m
 
   private
   public :: &
-       pol_lr_run, &
-       zget_response_e
+       pol_lr_run
 
   public :: &
     read_wfs, init_lr_wfs
@@ -87,6 +86,7 @@ contains
 
     type(grid_t),   pointer :: gr
     type(em_resp_t)         :: em_vars
+    type(sternheimer_t)     :: sh
 
     integer :: sigma, ndim, i, j, k, dir, ierr, iomega, ifactor
     character(len=80) :: fname, dirname
@@ -118,6 +118,8 @@ contains
     message(1) = 'Info: Setting up Hamiltonian for linear response'
     call write_info(1)
     call system_h_setup(sys, h)
+
+    call sternheimer_init(sh, sys%gr, "Pol", hermitian = wfs_are_real(sys%st))
 
     do dir = 1, ndim
       do sigma = 1, em_vars%nsigma
@@ -194,13 +196,12 @@ contains
 
           if(have_to_calculate) then 
             if (wfs_are_complex(sys%st)) then 
-              call zget_response_e(sys, h, em_vars%lr(:,:, ifactor), dir, ifactor, 2 , &
+              call zsternheimer_solve(sh, sys, h, em_vars%lr(:,:, ifactor), dir, ifactor, 2 , &
                    em_vars%freq_factor(ifactor)*em_vars%omega(iomega) + M_zI * em_vars%eta, &
-                   em_vars%props, em_vars%ok)
+                   RESTART_DIR)
             else
-              call dget_response_e(sys, h, em_vars%lr(:,:, ifactor), dir, ifactor, 2 , &
-                   em_vars%freq_factor(ifactor)*em_vars%omega(iomega), &
-                   em_vars%props, em_vars%ok)
+              call dsternheimer_solve(sh, sys, h, em_vars%lr(:,:, ifactor), dir, ifactor, 2 , &
+                   em_vars%freq_factor(ifactor)*em_vars%omega(iomega), RESTART_DIR)
             end if
           end if
 
@@ -237,6 +238,8 @@ contains
         end do
       end do
     end do
+
+    call sternheimer_end(sh)
 
     deallocate(em_vars%omega, em_vars%lr)
     call states_deallocate_wfns(sys%st)
@@ -452,11 +455,7 @@ contains
 
     integer :: ierr
 
-    if (wfs_are_complex(st)) then 
-      call lr_init(lr, gr, "Pol", def_solver=LR_BICGSTAB)
-    else
-      call lr_init(lr, gr, "Pol", def_solver=LR_CG)            
-    end if
+    call lr_init(lr)
 
     call lr_alloc_fHxc (st, gr%m, lr)
 

@@ -24,8 +24,8 @@
 !    (H + omega) x = y
 ! ---------------------------------------------------------
 
-subroutine X(lr_solve_HXeY) (lr, h, gr, st, ik, x, y, omega)
-  type(lr_t),          intent(inout) :: lr
+subroutine X(solve_HXeY) (this, h, gr, st, ik, x, y, omega)
+  type(linear_solver_t), intent(inout) :: this
   type(hamiltonian_t), intent(inout) :: h
   type(grid_t),        intent(inout) :: gr
   type(states_t),      intent(in)    :: st
@@ -34,22 +34,19 @@ subroutine X(lr_solve_HXeY) (lr, h, gr, st, ik, x, y, omega)
   R_TYPE,              intent(in)    :: y(:,:)   ! y(NP, d%dim)
   R_TYPE,              intent(in)    :: omega
 
-  select case(lr%solver)
+  select case(this%solver)
 
-  case(LR_CG)
-    call X(lr_solver_cg)(lr, h, gr, st, ik, x, y, omega)
+  case(LS_CG)
+    call X(lr_solver_cg)(this, h, gr, st, ik, x, y, omega)
 
-  case(LR_HX_FIXED)
-    call X(lr_solver_hx)(lr, h, gr, st, ik, x, y, omega, 1)
+  case(LS_HX_FIXED)
+    call X(lr_solver_hx)(this, h, gr, st, ik, x, y, omega, 1)
 
-  case(LR_HX)
-    call X(lr_solver_hx)(lr, h, gr, st, ik, x, y, omega, 2)
+  case(LS_HX)
+    call X(lr_solver_hx)(this, h, gr, st, ik, x, y, omega, 2)
 
-  case(LR_BCG)
-    call X(lr_solver_bcg)(lr, h, gr, st, ik, x, y, omega)
-
-  case(LR_BICGSTAB)
-    call X(lr_solver_bicgstab)(lr, h, gr, st, ik, x, y, omega)
+  case(LS_BICGSTAB)
+    call X(lr_solver_bicgstab)(this, h, gr, st, ik, x, y, omega)
 
   case default 
     message(1)="Unknown linear response solver"
@@ -57,12 +54,12 @@ subroutine X(lr_solve_HXeY) (lr, h, gr, st, ik, x, y, omega)
 
   end select
 
-end subroutine X(lr_solve_HXeY)
+end subroutine X(solve_HXeY)
 
 
 !Conjugated gradients
 subroutine X(lr_solver_cg) (lr, h, gr, st, ik, x, y, omega)
-  type(lr_t),          intent(inout) :: lr
+  type(linear_solver_t),          intent(inout) :: lr
   type(hamiltonian_t), intent(inout) :: h
   type(grid_t),        intent(inout) :: gr
   type(states_t),      intent(in)    :: st
@@ -88,19 +85,18 @@ subroutine X(lr_solver_cg) (lr, h, gr, st, ik, x, y, omega)
   
   ! Initial search direction
   p(1:NP,1:st%d%dim) = r(1:NP,1:st%d%dim)
-  p((NP+1):NP_PART,1:st%d%dim) = M_ZERO
+  p((NP+1):NP_PART,1:st%d%dim)=M_ZERO
   
   conv_last = .false.
   do iter = 1, lr%max_iter
     gamma = X(states_dotp) (gr%m, st%d%dim, r, r)
 
-    conv = ( abs(gamma) < lr%conv_abs_psi**2)
+    conv = ( abs(gamma) < lr%tol**2)
     if(conv.and.conv_last) exit
     conv_last = conv
     
     call X(Hpsi)(h, gr, p, Hp, ik)
-  
-    ! Hp = Hp + omega*p
+    !Hp = Hp + omega*p
     do idim = 1, st%d%dim
       call lalg_axpy(NP, omega, p(:, idim), Hp(:, idim))
     end do
@@ -129,94 +125,11 @@ subroutine X(lr_solver_cg) (lr, h, gr, st, ik, x, y, omega)
   call pop_sub()
 end subroutine X(lr_solver_cg)
 
-
-! BICONJUGATED GRADIENTS
-! Saad Page 210
-subroutine X(lr_solver_bcg) (lr, h, gr, st, ik, x, y, omega)
-  type(lr_t),          intent(inout) :: lr
-  type(hamiltonian_t), intent(inout) :: h
-  type(grid_t),        intent(inout) :: gr
-  type(states_t),      intent(in)    :: st
-  integer,             intent(in)    :: ik
-  R_TYPE,              intent(inout) :: x(:,:)   ! x(NP, st%d%dim)
-  R_TYPE,              intent(in)    :: y(:,:)   ! y(NP, st%d%dim)
-  R_TYPE,              intent(in)    :: omega
-
-  R_TYPE, allocatable :: r(:,:), p(:,:), Hp(:,:), rs(:,:), ps(:,:)
-  R_TYPE  :: alpha, beta, gamma
-  integer :: iter
-  logical :: conv_last, conv, orto
-
-  call push_sub('linear_response_solvers.Xlr_solver_bcg')
-
-  ALLOCATE( r(NP, st%d%dim),      NP     *st%d%dim)
-  ALLOCATE( p(NP_PART, st%d%dim), NP_PART*st%d%dim)
-  ALLOCATE(rs(NP, st%d%dim),      NP     *st%d%dim)
-  ALLOCATE(ps(NP_PART, st%d%dim), NP_PART*st%d%dim)
-  ALLOCATE(Hp(NP, st%d%dim),      NP     *st%d%dim)
-
-  ! Initial residue
-  call X(Hpsi)(h, gr, x, Hp, ik)
-  r(1:NP,1:st%d%dim) = y(1:NP,1:st%d%dim) - ( Hp(1:NP,1:st%d%dim) + omega*x(1:NP,1:st%d%dim) )
-  rs(1:NP,1:st%d%dim) = y(1:NP,1:st%d%dim) - ( Hp(1:NP,1:st%d%dim) + R_CONJ(omega)*x(1:NP,1:st%d%dim))
-
-  ! Initial search direction
-  p(1:NP,1:st%d%dim) = r(1:NP,1:st%d%dim)
-  p((NP+1):NP_PART,1:st%d%dim)=M_ZERO
-
-  ps(1:NP,1:st%d%dim) = rs(1:NP,1:st%d%dim)
-  ps((NP+1):NP_PART,1:st%d%dim)=M_ZERO
-  
-  orto= .false.
-  conv_last = .false.
-  do iter = 1, lr%max_iter
-    if( iter == lr%ort_min_step ) orto = .true.
-    
-    gamma = X(states_dotp) (gr%m, st%d%dim, r, rs)
-
-    conv = (sqrt(abs(gamma)) < lr%conv_abs_psi)
-    if(conv.and.conv_last) exit
-    conv_last = conv
-    
-    if(orto) call X(lr_orth_vector)(gr%m, st, p, ik)
-
-    call X(Hpsi)(h, gr, p, Hp, ik)
-    Hp(1:NP,1:st%d%dim) = Hp(1:NP,1:st%d%dim) + omega*p(1:NP,1:st%d%dim)
-    
-    alpha = gamma / X(states_dotp) (gr%m, st%d%dim, Hp, ps)
-
-    x(1:NP_PART,1:st%d%dim) = x(1:NP_PART,1:st%d%dim) + alpha*p(1:NP_PART,1:st%d%dim)
-    r(1:NP,1:st%d%dim) = r(1:NP,1:st%d%dim) - alpha*Hp(1:NP,1:st%d%dim)
-
-    if(orto) call X(lr_orth_vector)(gr%m, st, ps, ik)   
-
-    call X(Hpsi)(h, gr, ps, Hp, ik)
-    Hp(1:NP,1:st%d%dim) = Hp(1:NP,1:st%d%dim) + R_CONJ(omega)*p(1:NP,1:st%d%dim)
-
-    rs(1:NP,1:st%d%dim) = rs(1:NP,1:st%d%dim) - alpha*Hp(1:NP,1:st%d%dim)
-    
-    beta = X(states_dotp) (gr%m, st%d%dim, r, rs)/gamma
-
-    p(1:NP,1:st%d%dim) = r(1:NP,1:st%d%dim) + beta*p(1:NP,1:st%d%dim)
-    ps(1:NP,1:st%d%dim) = rs(1:NP,1:st%d%dim) + beta*ps(1:NP,1:st%d%dim)
-    
-  end do
-    
-  lr%iter     = iter
-  lr%abs_psi = sqrt(abs(gamma))
-
-  deallocate(r, p, rs, ps, Hp)
-
-  call pop_sub()
-end subroutine X(lr_solver_bcg)
-
-
-
 !BICONJUGATED GRADIENTS STABILIZED
 !see http://math.nist.gov/iml++/bicgstab.h.txt
 
 subroutine X(lr_solver_bicgstab) (lr, h, gr, st, ik, x, y, omega)
-  type(lr_t),          intent(inout) :: lr
+  type(linear_solver_t),          intent(inout) :: lr
   type(hamiltonian_t), intent(inout) :: h
   type(grid_t),        intent(inout) :: gr
   type(states_t),      intent(in)    :: st
@@ -228,7 +141,7 @@ subroutine X(lr_solver_bicgstab) (lr, h, gr, st, ik, x, y, omega)
   R_TYPE, allocatable :: r(:,:), Hp(:,:), rs(:,:), Hs(:,:), p(:,:), s(:,:)
   R_TYPE, pointer :: phat(:,:), shat(:,:)
   R_TYPE  :: alpha, beta, w, rho_1, rho_2
-  logical :: conv_last, conv, orto
+  logical :: conv_last, conv
   integer :: iter, idim
   FLOAT :: gamma
 
@@ -255,11 +168,10 @@ subroutine X(lr_solver_bicgstab) (lr, h, gr, st, ik, x, y, omega)
   r(1:NP,1:st%d%dim) = y(1:NP,1:st%d%dim) - ( Hp(1:NP,1:st%d%dim) + omega*x(1:NP,1:st%d%dim) )
   rs(1:NP,1:st%d%dim) = r(1:NP,1:st%d%dim)
 
-  orto = .false.
   conv_last = .false.
 
   do iter = 1, lr%max_iter
-    if( iter == lr%ort_min_step ) orto = .true.
+
 
     rho_1 = X(states_dotp) (gr%m, st%d%dim, rs, r)
     
@@ -276,8 +188,6 @@ subroutine X(lr_solver_bicgstab) (lr, h, gr, st, ik, x, y, omega)
            beta * (p(1:NP,1:st%d%dim) - w*Hp(1:NP,1:st%d%dim))
     end if
 
-    if(orto) call X(lr_orth_vector)(gr%m, st, p, ik)   
-
     ! preconditioning 
     call X(preconditioner_apply)(lr%pre, gr, h, p, phat, omega)
     call X(Hpsi)(h, gr, phat, Hp, ik)
@@ -293,12 +203,10 @@ subroutine X(lr_solver_bicgstab) (lr, h, gr, st, ik, x, y, omega)
 
     gamma = abs(X(states_dotp) (gr%m, st%d%dim, s, s))
 
-    if( gamma < lr%conv_abs_psi**2 ) then 
+    if( gamma < lr%tol**2 ) then 
       x(1:NP,1:st%d%dim) = x(1:NP,1:st%d%dim) + alpha*phat(1:NP,1:st%d%dim)
       exit
     end if
-
-    if(orto) call X(lr_orth_vector)(gr%m, st, s, ik, CNST(1e-4))
 
     call X(preconditioner_apply)(lr%pre, gr, h, s, shat, omega)
     call X(Hpsi)(h, gr, shat, Hs, ik)
@@ -318,7 +226,7 @@ subroutine X(lr_solver_bicgstab) (lr, h, gr, st, ik, x, y, omega)
     rho_2=rho_1
 
     gamma = abs(X(states_dotp) (gr%m, st%d%dim, r, r))
-    conv = (gamma < lr%conv_abs_psi**2)
+    conv = (gamma < lr%tol**2)
 
     if( conv .and. conv_last ) then 
       exit
@@ -341,10 +249,10 @@ subroutine X(lr_solver_bicgstab) (lr, h, gr, st, ik, x, y, omega)
   call pop_sub()
 end subroutine X(lr_solver_bicgstab)
 
-
 !---------------------------------------------------------------------
+
 subroutine X(lr_solver_hx) (lr, h, gr, st, ik, x, y, omega, mode)
-  type(lr_t),          intent(inout) :: lr
+  type(linear_solver_t), intent(inout) :: lr
   type(hamiltonian_t), intent(inout) :: h
   type(grid_t),        intent(inout) :: gr
   type(states_t),      intent(in)    :: st
@@ -380,7 +288,7 @@ subroutine X(lr_solver_hx) (lr, h, gr, st, ik, x, y, omega, mode)
 
   lr%abs_psi = sqrt(abs(X(states_dotp) (gr%m, st%d%dim, r, r)))
 
-  if ( lr%abs_psi < lr%conv_abs_psi ) then
+  if ( lr%abs_psi < lr%tol ) then
     return
   end if
   
@@ -393,7 +301,7 @@ subroutine X(lr_solver_hx) (lr, h, gr, st, ik, x, y, omega, mode)
   call X(lr_solver_cg)(lr, h, gr, st, ik, x, y, w)
 
   !othogonalize the result against the occupied states 
-  call X(lr_orth_vector)(gr%m, st, x, ik)
+  !  call X(lr_orth_vector)(gr%m, st, x, ik)
 
 #ifdef R_TREAL
   !we just solved the real case
@@ -419,7 +327,7 @@ subroutine X(lr_solver_hx) (lr, h, gr, st, ik, x, y, omega, mode)
     total_cg_iter = total_cg_iter + lr%iter + 1
     
     !othogonalize the result against the occupied states
-    call X(lr_orth_vector)(gr%m, st, xi, ik)
+!    call X(lr_orth_vector)(gr%m, st, xi, ik)
     
     !accumulate
     x(1:NP, 1:st%d%dim) = x(1:NP, 1:st%d%dim) + tau*xi(1:NP, 1:st%d%dim)
@@ -430,7 +338,7 @@ subroutine X(lr_solver_hx) (lr, h, gr, st, ik, x, y, omega, mode)
     lr%abs_psi = sqrt(abs(X(states_dotp) (gr%m, st%d%dim, r, r)))
 
     !and check for convergency
-    if ( lr%abs_psi < lr%conv_abs_psi ) then
+    if ( lr%abs_psi < lr%tol ) then
       exit
     end if
 

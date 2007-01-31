@@ -42,6 +42,7 @@ module vdw_m
   use poisson_m
   use restart_m
   use states_m
+  use sternheimer_m
   use string_m
   use system_m
   use units_m
@@ -64,6 +65,7 @@ contains
 
     type(lr_t) :: lr(MAX_DIM, 1)
     type(pol_props_t) :: props
+    type(sternheimer_t)     :: sh
 
     integer :: dir, i, iunit, gauss_start
     CMPLX :: omega
@@ -72,6 +74,8 @@ contains
     integer :: gaus_leg_n
     FLOAT, allocatable :: gaus_leg_points(:), gaus_leg_weights(:)
     FLOAT, parameter :: omega0 = CNST(0.3)
+
+    call sternheimer_init(sh, sys%gr, "Pol")
 
     call push_sub('vdw.vdw_run')
 
@@ -123,6 +127,7 @@ contains
 
     deallocate(gaus_leg_points)
     deallocate(gaus_leg_weights)
+    call sternheimer_end(sh)
 
     call pop_sub()
   contains
@@ -222,7 +227,7 @@ contains
           ' and imaginary frequency ', aimag(omega)/units_out%energy%factor
         call write_info(1)   
 
-        call zget_response_e(sys, h, lr, dir, 1, 1, omega, props, ok)
+        call zsternheimer_solve(sh,sys, h, lr, dir, 1, 1, omega, RESTART_DIR)
       end do
 
       call zlr_calc_polarizability(sys, lr(:,:), alpha(:,:))

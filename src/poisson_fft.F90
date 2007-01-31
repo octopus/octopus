@@ -182,7 +182,8 @@ contains
                   if (gr%sb%periodic_dim == 1) then
                     fft_Coulb_FS(ix, iy, iz) = -(M_HALF*log(r_c) - M_FOURTH)*r_c**2
                   else if (gr%sb%periodic_dim == 0) then
-                    fft_Coulb_FS(ix, iy, iz) = loct_poisson_finite_cylinder(M_ZERO, M_ZERO, M_TWO*gr%m%sb%xsize, M_TWO*gr%m%sb%rsize)
+                    fft_Coulb_FS(ix, iy, iz) = loct_poisson_finite_cylinder(M_ZERO, M_ZERO, &
+                         M_TWO*gr%m%sb%xsize, M_TWO*gr%m%sb%rsize)
                   end if
 
                 case(FFT_PLA)
