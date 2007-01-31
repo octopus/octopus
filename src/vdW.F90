@@ -111,10 +111,10 @@ contains
       write(iunit, '(5a,i1,a,f18.8)') "C_3  [", trim(units_out%energy%abbrev), " ",  &
         trim(units_out%length%abbrev), "^", sys%NDIM, "] = ", &
         c3/(units_out%energy%factor * units_out%length%factor**sys%NDIM)
-      write(iunit, '(5a,i1,af18.8)') "C_6  [", trim(units_out%energy%abbrev), " ",  &
+      write(iunit, '(5a,i1,a,f18.8)') "C_6  [", trim(units_out%energy%abbrev), " ",  &
         trim(units_out%length%abbrev), "^", 2*sys%NDIM, "] = ", &
         c6/(units_out%energy%factor * units_out%length%factor**(2*sys%NDIM))
-      write(iunit, '(5a,i1,af18.8)') "C_AT [", trim(units_out%energy%abbrev), " ",  &
+      write(iunit, '(5a,i1,a,f18.8)') "C_AT [", trim(units_out%energy%abbrev), " ",  &
         trim(units_out%length%abbrev), "^", 3*sys%NDIM, "] = ", &
         cat/(units_out%energy%factor * units_out%length%factor**(3*sys%NDIM))
 
