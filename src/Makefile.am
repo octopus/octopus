@@ -7,7 +7,7 @@ bin_PROGRAMS = octopus oct-test @UTILITY_PROGRAMS@
 
 basic_SRCS = liboct.F90 string.F90 varinfo.F90 mpi.F90 global.F90 liboct_parser.F90 \
 	     messages.F90 datasets.F90 io.F90 units.F90 mpi_debug.F90 profiling.F90 \
-             blas.F90 linalg_basic.F90 linalg_adv.F90 math.F90 multicomm.F90 
+             blas.F90 linalg_basic.F90 linalg_adv.F90 gauss_legendre.F90 math.F90 multicomm.F90 
 
 core_SRCS = $(basic_SRCS) \
 	ode_solver.F90 root_solver.F90 spline.F90 sparskit.F90 \
@@ -39,7 +39,7 @@ octopus_SOURCES = $(core_SRCS) \
 	scf.F90 gs.F90 unocc.F90 \
 	static_pol.F90 geom_opt.F90 phonons.F90 \
 	td_exp_split.F90 td_exp.F90 td_rti.F90 td_write.F90 td.F90 filters.F90 opt_control.F90 \
-	casida.F90 wave_matching.F90 em_resp_calc.F90 em_resp.F90 pulpo.F90 \
+	casida.F90 wave_matching.F90 em_resp_calc.F90 em_resp.F90 vdW.F90 pulpo.F90 \
 	run.F90 main.F90
 
 noinst_HEADERS = \

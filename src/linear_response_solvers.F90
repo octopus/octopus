@@ -88,7 +88,7 @@ subroutine X(lr_solver_cg) (lr, h, gr, st, ik, x, y, omega)
   
   ! Initial search direction
   p(1:NP,1:st%d%dim) = r(1:NP,1:st%d%dim)
-  p((NP+1):NP_PART,1:st%d%dim)=M_ZERO
+  p((NP+1):NP_PART,1:st%d%dim) = M_ZERO
   
   conv_last = .false.
   do iter = 1, lr%max_iter
@@ -99,7 +99,8 @@ subroutine X(lr_solver_cg) (lr, h, gr, st, ik, x, y, omega)
     conv_last = conv
     
     call X(Hpsi)(h, gr, p, Hp, ik)
-    !Hp = Hp + omega*p
+  
+    ! Hp = Hp + omega*p
     do idim = 1, st%d%dim
       call lalg_axpy(NP, omega, p(:, idim), Hp(:, idim))
     end do
@@ -128,8 +129,9 @@ subroutine X(lr_solver_cg) (lr, h, gr, st, ik, x, y, omega)
   call pop_sub()
 end subroutine X(lr_solver_cg)
 
-!BICONJUGATED GRADIENTS
-!Saad Page 210
+
+! BICONJUGATED GRADIENTS
+! Saad Page 210
 subroutine X(lr_solver_bcg) (lr, h, gr, st, ik, x, y, omega)
   type(lr_t),          intent(inout) :: lr
   type(hamiltonian_t), intent(inout) :: h
@@ -339,8 +341,8 @@ subroutine X(lr_solver_bicgstab) (lr, h, gr, st, ik, x, y, omega)
   call pop_sub()
 end subroutine X(lr_solver_bicgstab)
 
-!---------------------------------------------------------------------
 
+!---------------------------------------------------------------------
 subroutine X(lr_solver_hx) (lr, h, gr, st, ik, x, y, omega, mode)
   type(lr_t),          intent(inout) :: lr
   type(hamiltonian_t), intent(inout) :: h

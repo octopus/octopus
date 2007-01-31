@@ -256,7 +256,7 @@ subroutine X(lr_calc_polarizability)(sys, lr, zpol)
   
   do dir1 = 1, sys%gr%sb%dim
 
-    !sum dl_rho for all spin components
+    ! sum dl_rho for all spin components
     do j = 1, sys%gr%m%np
       dl_rho_tot(j) = sum(lr(dir1, 1)%X(dl_rho)(j, 1:sys%st%d%nspin))
     end do
@@ -270,7 +270,7 @@ subroutine X(lr_calc_polarizability)(sys, lr, zpol)
   
   deallocate(dl_rho_tot, tmp)
 
-  !symmetrize
+  ! symmetrize
   do dir1 = 1, sys%gr%sb%dim
     do dir2 = 1, sys%gr%sb%dim
       zpol(dir1, dir2) = M_HALF*(zpol_tmp(dir1, dir2) + zpol_tmp(dir2, dir1))

@@ -34,7 +34,7 @@ subroutine X(get_response_e)(sys, h, lr, dir, tag, nsigma, omega, props, status)
   integer,                intent(in)    :: nsigma 
   R_TYPE,                 intent(in)    :: omega
   type(pol_props_t),      intent(in)    :: props
-  type(em_resp_t),optional,intent(out)   :: status
+  logical,      optional, intent(out)   :: status
 
   FLOAT :: dpsimod
   integer :: iter, sigma, ik, ik2, ist, i, err
@@ -100,7 +100,6 @@ subroutine X(get_response_e)(sys, h, lr, dir, tag, nsigma, omega, props, status)
       end do
     end if
     
-
     do ik = 1, st%d%nspin
       do sigma = 1, nsigma
 
@@ -122,31 +121,31 @@ subroutine X(get_response_e)(sys, h, lr, dir, tag, nsigma, omega, props, status)
         end if
       end do
 
-      !now calculate response for each state
+      ! now calculate response for each state
       do ist = 1, st%nst
         do sigma = 1, nsigma
           if(st%occ(ist, ik) <= lr_min_occ) cycle
           
-          !calculate the RHS of the Sternheimer eq
+          ! calculate the RHS of the Sternheimer eq
           Y(1:m%np, 1, sigma) = -dV(1:m%np, ik, sigma)*st%X(psi)(1:m%np, 1, ist, ik)
 
-          !and project it into the unoccupied states
+          ! and project it into the unoccupied states
           if(props%orth_response) then 
             call X(lr_orth_vector)(m, st, Y(:,:, sigma), ik)
           end if
         
-          if(sigma==1) then 
+          if(sigma == 1) then 
             omega_sigma = omega
           else 
             omega_sigma = -R_CONJ(omega)
           end if
 
-          !solve the Sternheimer equation
-          call X(lr_solve_HXeY) (lr(dir, sigma), h, sys%gr, sys%st, ik, lr(dir, sigma)%X(dl_psi)(:,:, ist, ik),&
+          ! solve the Sternheimer equation
+          call X(lr_solve_HXeY) (lr(dir, sigma), h, sys%gr, sys%st, ik, lr(dir, sigma)%X(dl_psi)(:,:, ist, ik),  &
                Y(:,:, sigma), -sys%st%eigenval(ist, ik) + omega_sigma)
 
-          !altough the dl_psi we get should be orthogonal to psi
-          !a re-orthogonalization is sometimes necessary 
+          ! altough the dl_psi we get should be orthogonal to psi
+          ! a re-orthogonalization is sometimes necessary 
           if(props%orth_response) then 
             call X(lr_orth_vector)(m, st, lr(dir,sigma)%X(dl_psi)(:,:, ist, ik), ik)
           end if
@@ -159,19 +158,14 @@ subroutine X(get_response_e)(sys, h, lr, dir, tag, nsigma, omega, props, status)
                (3-2*sigma)*ist, dpsimod, lr(dir, sigma)%iter, lr(dir, sigma)%abs_psi 
           call write_info(1)
 
-          total_iter=total_iter + lr(dir, sigma)%iter
+          total_iter = total_iter + lr(dir, sigma)%iter
           
         end do !sigma
       end do !ist
     end do !ik
 
     ! calculate dl_rho
-    if(nsigma == 2 ) then
-      call build_rho_dynamic()
-    else 
-      lr(dir, 1)%X(dl_rho) = M_ZERO
-      call X(lr_build_dl_rho)(m, st, lr(dir,1), type=3)
-    end if
+    call X(lr_build_dl_rho)(m, st, lr(dir,:), omega, nsigma)
 
     dl_rhonew(1:m%np, 1:st%d%nspin, 1) = M_ZERO
 
@@ -187,7 +181,7 @@ subroutine X(get_response_e)(sys, h, lr, dir, tag, nsigma, omega, props, status)
     if( lr(dir, 1)%max_scf_iter == iter  ) then 
       message(1) = "Self-consistent iteration for response did not converge"
       if(present(status)) then
-        status%ok = .false.
+        status = .false.
         call write_warning(1);
       else
         call write_fatal(1);
@@ -225,7 +219,7 @@ subroutine X(get_response_e)(sys, h, lr, dir, tag, nsigma, omega, props, status)
     end if
 
     if(conv) then
-      if(present(status)) status%ok = .true.
+      if(present(status)) status = .true.
 
       write(message(1), '(a, i4, a)')        &
            'Info: SCF for response converged in ', &
@@ -234,7 +228,6 @@ subroutine X(get_response_e)(sys, h, lr, dir, tag, nsigma, omega, props, status)
       exit
 
     else
-      
       lr(dir,1)%X(dl_rho)(1:m%np, 1:st%d%nspin) = dl_rhonew(1:m%np, 1:st%d%nspin, 1)
       if(nsigma == 2) lr(dir,2)%X(dl_rho)(1:m%np, 1:st%d%nspin) = R_CONJ(dl_rhonew(1:m%np, 1:st%d%nspin, 1))
 
@@ -286,42 +279,11 @@ contains
 
     !if this fails, build density from wavefunctions
     if ( ierr .ne. 0 ) then 
-      if(nsigma == 2 ) then 
-        call build_rho_dynamic() 
-      else
-        call X(lr_build_dl_rho)(m, st, lr(dir,1), 3)
-      end if
+       call X(lr_build_dl_rho)(m, st, lr(dir,:), omega, nsigma)
     end if
 
     call pop_sub()
   end subroutine init_response_e
-
-
-  !------------------------------------------------------------
-  subroutine build_rho_dynamic()
-    R_TYPE  :: a
-
-    do sigma=1,nsigma 
-      lr(dir,sigma)%X(dl_rho)=M_ZERO
-    end do
-
-    do ik = 1, st%d%nspin
-      do ist = 1, st%nst
-        do i=1,m%np
-          
-          a=st%d%kweights(ik)*st%occ(ist, ik)*(&
-               R_CONJ(st%X(psi)(i, 1, ist, ik))*lr(dir,1)%X(dl_psi)(i,1,ist,ik) +&
-               R_CONJ(lr(dir,2)%X(dl_psi)(i,1,ist,ik))*st%X(psi)(i, 1, ist, ik))
-
-          lr(dir,1)%X(dl_rho)(i,ik)=lr(dir,1)%X(dl_rho)(i,ik)+ a
-
-          lr(dir,2)%X(dl_rho)(i,ik)=lr(dir,2)%X(dl_rho)(i,ik)+R_CONJ(a)
-
-        end do
-      end do
-    end do
-    
-  end  subroutine build_rho_dynamic
 
 end subroutine X(get_response_e)
 
@@ -335,13 +297,13 @@ subroutine X(restart_write_lr_density)(sys, lr, omega, tag)
   character(len=80) :: fname
   integer :: is, ierr
 
-  call block_signals();
+  call block_signals()
   do is = 1, sys%st%d%nspin
     write(fname, '(a, f6.4, a, i1, a, i1)') 'density-', omega, '-', tag, '-', is
     call X(restart_write_function)(trim(tmpdir)//RESTART_DIR, fname, sys%gr,&
          lr%X(dl_rho)(:, is), ierr, size(lr%X(dl_rho),1))
   end do
-  call unblock_signals();
+  call unblock_signals()
 
 end subroutine X(restart_write_lr_density)
 

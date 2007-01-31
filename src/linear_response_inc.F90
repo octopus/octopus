@@ -53,51 +53,53 @@ subroutine X(lr_orth_vector) (m, st, v, ik, tol)
 end subroutine X(lr_orth_vector)
 
 
-! -------------------------------------------------------------------
-! calculates
-!    lr%dl_rho += sum_{i occ} psi_i^0 (r) * psi_i^1*(r)   <=   type=1
-!    lr%dl_rho += sum_{i occ} psi_i^0*(r) * psi_i^1 (r)   <=   type=2
-!    type 3 => type 1 + type 2
 ! --------------------------------------------------------------------
-subroutine X(lr_build_dl_rho) (m, st, lr, type)
+subroutine X(lr_build_dl_rho) (m, st, lr, omega, nsigma)
   type(mesh_t),   intent(in)    :: m
   type(states_t), intent(in)    :: st
-  type(lr_t),     intent(inout) :: lr
-  integer,        intent(in)    :: type
+  type(lr_t),     intent(inout) :: lr(:)
+  R_TYPE,         intent(in)    :: omega
+  integer,        intent(in)    :: nsigma
 
-  integer :: i, p, ik, sp
+  integer :: i, ist, ik, ik2, sp
   CMPLX   :: c
-  R_TYPE  :: d(4)
+  R_TYPE  :: d
 
   call push_sub('linear_response_inc.Xlr_build_dl_rho')
+
+  ! initialize density
+  do i = 1, nsigma
+    lr(i)%X(dl_rho)(:, :) = M_ZERO
+  end do
 
   sp = 1
   if(st%d%ispin == SPIN_POLARIZED) sp = 2
 
+  ! calculate density
   do ik = 1, st%d%nik, sp
-    do p  = st%st_start, st%st_end
+    do ist  = st%st_start, st%st_end
       do i = 1, m%np
-        d(1) = st%d%kweights(ik)*st%occ(p, ik) * &
-          st%X(psi)(i, 1, p, ik)*R_CONJ(lr%X(dl_psi)(i, 1, p, ik))
 
-        select case(st%d%ispin)
-        case(SPIN_POLARIZED)
-          d(2) = st%d%kweights(ik+1)*st%occ(p, ik+1) * &
-            st%X(psi)(i, 1, p, ik+1)*R_CONJ(lr%X(dl_psi)(i, 1, p, ik+1))
+        do ik2 = ik, ik+sp-1 ! this loop takes care of the SPIN_POLARIZED case
+          d = st%d%kweights(ik2)*st%occ(ist, ik2)
 
-        case(SPINORS)
-          lr%X(dl_rho)(i, 2) = lr%X(dl_rho)(i, 2) + st%d%kweights(ik)*st%occ(p, ik) * &
-            st%X(psi)(i, 2, p, ik)*R_CONJ(lr%X(dl_psi)(i, 2, p, ik))
+          if(nsigma == 1) then  ! either omega purely real or purely imaginary
+            d = d * st%X(psi)(i, 1, ist, ik2)*R_CONJ(lr(1)%X(dl_psi)(i, 1, ist, ik2))
+            lr(1)%X(dl_rho)(i, 1) = lr(1)%X(dl_rho)(i, 1) + d + R_CONJ(d)
+          else
+            c = d*(                                                         &
+              R_CONJ(st%X(psi)(i, 1, ist, ik2))*lr(1)%X(dl_psi)(i, 1, ist, ik2) + &
+              st%X(psi)(i, 1, ist, ik2)*R_CONJ(lr(2)%X(dl_psi)(i, 1, ist, ik2)))
+            lr(1)%X(dl_rho)(i, 1) = lr(1)%X(dl_rho)(i, 1) + c
+            lr(2)%X(dl_rho)(i, 1) = lr(2)%X(dl_rho)(i, 1) + R_CONJ(c)
+          end if
+        end do
 
-          c = st%X(psi)(i, 1, p, ik) * R_CONJ(lr%X(dl_psi)(i, 2, p, ik))
+        if(st%d%ispin == SPINORS) then
+          message(1) = "Not yet implemented - please fix me"
+          call write_fatal(1)
+        end if
 
-          d(3) = st%d%kweights(ik)*st%occ(p, ik) * R_REAL(c)
-          d(4) = st%d%kweights(ik)*st%occ(p, ik) * R_AIMAG(c)
-        end select
-
-        if(type == 2) d(1:st%d%nspin) = R_CONJ(d(1:st%d%nspin))
-        if(type == 3) d(1:st%d%nspin) = R_CONJ(d(1:st%d%nspin)) + d(1:st%d%nspin)
-        lr%X(dl_rho)(i, 1:st%d%nspin) = lr%X(dl_rho)(i, 1:st%d%nspin) + d(1:st%d%nspin)
       end do
     end do
   end do

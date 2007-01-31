@@ -21,10 +21,12 @@
 #include "global.h"
 
 module em_resp_calc_m
+  use datasets_m
   use elf_m
   use functions_m
   use grid_m
   use global_m
+  use lib_oct_parser_m
   use linear_response_m
   use magnetic_m
   use mesh_function_m
@@ -39,6 +41,7 @@ module em_resp_calc_m
   private
   public ::                  &
     pol_props_t,             &
+    pol_props_init,          &
     lr_calc_current,         &
     dlr_calc_elf,            &
     zlr_calc_elf,            &
@@ -51,12 +54,63 @@ module em_resp_calc_m
     logical :: add_fxc
     logical :: add_hartree
     logical :: from_scratch
-    logical :: calc_hyperpol
     logical :: orth_response
   end type pol_props_t
 
 contains
 
+  subroutine pol_props_init(props, ip_app)
+    type(pol_props_t),  intent(out) :: props
+    logical,            intent(in)  :: ip_app
+
+    integer :: ham_var
+
+    !%Variable PolOrthResponse
+    !%Type logical
+    !%Default false
+    !%Section Linear Response::Polarizabilities
+    !%Description
+    !% Wheter variations should be orthogonalized or not against the
+    !% occupied states.
+    !%End
+
+    call loct_parse_logical(check_inp('PolOrthResponse'), .true., props%orth_response)
+
+
+    !%Variable PolHamiltonianVariation
+    !%Type integer
+    !%Default hartree+fxc
+    !%Section Linear Response::Polarizabilities
+    !%Description
+    !% The terms are considered in the variation of the
+    !% hamiltonian. V_ext is always considered. The default is to include
+    !% the fxc and hartree terms. If you want to do RPA only include
+    !% hartree.
+    !%Option hartree 1 
+    !% The variation of the hartree potential.
+    !%Option fxc 2
+    !% The exchange and correlation kernel, the variation of the
+    !% exchange and correlation potential.
+    !%End
+
+    if(.not. ip_app) then 
+      call loct_parse_int(check_inp('PolHamiltonianVariation'), 3, ham_var)    
+      props%add_fxc = ((ham_var/2) == 1)
+      props%add_hartree = (mod(ham_var, 2) == 1)
+    else
+      props%add_fxc = .false. 
+      props%add_hartree = .false.
+    end if
+    
+    message(1) = 'Hamiltonian variation: V_ext'
+    if(props%add_hartree) write(message(1), '(2a)') trim(message(1)), ' + hartree'
+    if(props%add_fxc)     write(message(1), '(2a)') trim(message(1)), ' + fxc'
+    call write_info(1)
+
+  end subroutine pol_props_init
+
+
+  ! ---------------------------------------------------------
   subroutine lr_calc_current(st, gr, lr, lr_m)
     type(states_t),   intent(inout) :: st
     type(grid_t),     intent(inout) :: gr

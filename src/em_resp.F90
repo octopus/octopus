@@ -24,6 +24,7 @@
 module pol_lr_m
   use datasets_m
   use em_resp_calc_m
+  use geometry_m
   use global_m
   use grid_m
   use hamiltonian_m
@@ -43,12 +44,17 @@ module pol_lr_m
   use string_m
   use system_m
   use units_m
+  use v_ks_m
 
   implicit none
 
   private
   public :: &
-       pol_lr_run
+       pol_lr_run, &
+       zget_response_e
+
+  public :: &
+    read_wfs, init_lr_wfs
 
   type em_resp_t
     integer :: nsigma ! 1: consider only positive values of the frequency
@@ -64,8 +70,9 @@ module pol_lr_m
 
     type(pol_props_t) :: props
 
-    CMPLX :: alpha(1:MAX_DIM, 1:MAX_DIM, 1:3)          ! the linear polarizability
-    CMPLX :: beta(1:MAX_DIM, 1:MAX_DIM, 1:MAX_DIM)     ! first hyperpolarizability
+    logical :: calc_hyperpol
+    CMPLX   :: alpha(1:MAX_DIM, 1:MAX_DIM, 1:3)          ! the linear polarizability
+    CMPLX   :: beta(1:MAX_DIM, 1:MAX_DIM, 1:MAX_DIM)     ! first hyperpolarizability
 
     logical :: ok
   end type em_resp_t
@@ -93,17 +100,19 @@ contains
 
     em_vars%props%from_scratch = fromScratch
 
-    call parse_input(em_vars%props)
+    call pol_props_init(em_vars%props, h%ip_app)
+    call parse_input()
 
     em_vars%nsigma = 2  ! positive and negative values of the frequency must be considered
     em_vars%nfactor = 1
-    if(em_vars%props%calc_hyperpol) em_vars%nfactor=3
+    if(em_vars%calc_hyperpol) em_vars%nfactor=3
 
     complex_response = (em_vars%eta /= M_ZERO ) .or. wfs_are_complex(sys%st)
 
     ALLOCATE(em_vars%lr(1:NDIM, 1:em_vars%nsigma, 1:em_vars%nfactor), NDIM*em_vars%nsigma*em_vars%nfactor)
 
-    call read_wfs()
+    call read_wfs(sys%st, sys%gr, sys%geo, complex_response)
+    em_vars%lr(1:NDIM, 1:em_vars%nsigma, 1:em_vars%nfactor)%nst = sys%st%nst
 
     ! setup Hamiltonian
     message(1) = 'Info: Setting up Hamiltonian for linear response'
@@ -114,40 +123,11 @@ contains
       do sigma = 1, em_vars%nsigma
         do ifactor = 1, em_vars%nfactor 
 
-          if (wfs_are_complex(sys%st)) then 
-            call lr_init(em_vars%lr(dir, sigma, ifactor), sys%gr, "Pol", def_solver=LR_BICGSTAB)
-          else
-            call lr_init(em_vars%lr(dir, sigma, ifactor), sys%gr, "Pol", def_solver=LR_CG)            
-          end if
+          call init_lr_wfs(sys%st, sys%gr, sys%ks, &
+            em_vars%lr(dir, sigma, ifactor), em_vars%props%add_fxc)
 
-          call lr_alloc_fHxc (sys%st, gr%m, em_vars%lr(dir, sigma, ifactor))
-
-          if(wfs_are_real(sys%st)) then
-            ierr = dlr_alloc_psi(sys%st, gr%m, em_vars%lr(dir, sigma, ifactor))
-            em_vars%lr(dir, sigma, ifactor)%ddl_rho = M_ZERO
-          else
-            ierr = zlr_alloc_psi(sys%st, gr%m, em_vars%lr(dir, sigma, ifactor))
-            em_vars%lr(dir, sigma, ifactor)%zdl_rho = M_ZERO
-          end if
-
-          if(em_vars%props%add_fxc) then 
-            call lr_build_fxc(gr%m, sys%st, sys%ks%xc, em_vars%lr(dir, sigma, ifactor)%dl_Vxc)
-          else 
-            em_vars%lr(dir, sigma, ifactor)%dl_Vxc=M_ZERO
-          end if
-
-        end do
-      end do
-    end do
-
-
-    ! load wave-functions
-    if(.not.fromScratch) then
-
-      do dir = 1, ndim
-        do sigma = 1, em_vars%nsigma
-          do ifactor = 1, em_vars%nfactor
-
+          ! load wave-functions
+          if(.not.fromScratch) then
             write(dirname,'(a,i1,a,i1, a, i1)') RESTART_DIR//"wfs", dir, "_", ifactor, "_", sigma
             call restart_read(trim(tmpdir)//dirname, sys%st, sys%gr, sys%geo, &
               ierr, lr=em_vars%lr(dir, sigma, ifactor))
@@ -157,24 +137,11 @@ contains
               call write_warning(1)
             end if
 
-            !check for restart files with the old name
-            if(ifactor == 1 .and. ierr /= 0 ) then 
-              write(dirname,'(a,i1,a,i1)') RESTART_DIR//"wfs", dir, "_", sigma
-              call restart_read(trim(tmpdir)//dirname, sys%st, sys%gr, sys%geo, &
-                ierr, lr=em_vars%lr(dir, sigma, ifactor))
+          end if
 
-              if(ierr .ne. 0) then 
-                message(1) = "Using "//trim(tmpdir)//dirname
-                call write_warning(1)
-              end if
-
-            end if
-
-          end do
         end do
       end do
-
-    end if
+    end do
 
     call io_mkdir(trim(tmpdir)//RESTART_DIR)
     call info()
@@ -229,11 +196,11 @@ contains
             if (wfs_are_complex(sys%st)) then 
               call zget_response_e(sys, h, em_vars%lr(:,:, ifactor), dir, ifactor, 2 , &
                    em_vars%freq_factor(ifactor)*em_vars%omega(iomega) + M_zI * em_vars%eta, &
-                   em_vars%props, em_vars)
+                   em_vars%props, em_vars%ok)
             else
               call dget_response_e(sys, h, em_vars%lr(:,:, ifactor), dir, ifactor, 2 , &
                    em_vars%freq_factor(ifactor)*em_vars%omega(iomega), &
-                   em_vars%props, em_vars)
+                   em_vars%props, em_vars%ok)
             end if
           end if
 
@@ -251,7 +218,7 @@ contains
       end do
         
       !calculate hyperpolarizability
-      if(em_vars%props%calc_hyperpol) then           
+      if(em_vars%calc_hyperpol) then           
         if(wfs_are_complex(sys%st)) then 
           call zlr_calc_beta(sys, em_vars%lr(:,:,:), em_vars%props, em_vars%beta)
         else
@@ -279,26 +246,13 @@ contains
   contains
 
     ! ---------------------------------------------------------
-    subroutine parse_input(props)
-      type(pol_props_t), intent(out) :: props
-
+    subroutine parse_input()
       C_POINTER :: blk
       integer   :: nrow
-      integer   :: number, j, k, ham_var
+      integer   :: number, j, k
       FLOAT     :: omega_ini, omega_fin, domega
 
       call push_sub('em_resp.parse_input')
-
-      !%Variable PolOrthResponse
-      !%Type logical
-      !%Default false
-      !%Section Linear Response::Polarizabilities
-      !%Description
-      !% Wheter variations should be orthogonalized or not against the
-      !% occupied states.
-      !%End
-
-      call loct_parse_logical(check_inp('PolOrthResponse'), .true., props%orth_response)
 
       !%Variable PolFreqs
       !%Type block
@@ -374,31 +328,6 @@ contains
       call loct_parse_float(check_inp('PolEta'), M_ZERO, em_vars%eta)
       em_vars%eta = em_vars%eta * units_inp%energy%factor
 
-      !%Variable PolHamiltonianVariation
-      !%Type integer
-      !%Default hartree+fxc
-      !%Section Linear Response::Polarizabilities
-      !%Description
-      !% The terms are considered in the variation of the
-      !% hamiltonian. V_ext is always considered. The default is to include
-      !% the fxc and hartree terms. If you want to do RPA only include
-      !% hartree.
-      !%Option hartree 1 
-      !% The variation of the hartree potential.
-      !%Option fxc 2
-      !% The exchange and correlation kernel, the variation of the
-      !% exchange and correlation potential.
-      !%End
-
-      if(.not. h%ip_app) then 
-        call loct_parse_int(check_inp('PolHamiltonianVariation'), 3, ham_var)    
-        props%add_fxc = ((ham_var/2) == 1)
-        props%add_hartree = (mod(ham_var, 2) == 1)
-      else
-        props%add_fxc = .false. 
-        props%add_hartree = .false.
-      end if
-
       !%Variable PolHyper
       !%Type float
       !%Default 0.0
@@ -421,9 +350,9 @@ contains
 
         call loct_parse_block_end(blk)
 
-        props%calc_hyperpol = .true.
+        em_vars%calc_hyperpol = .true.
       else
-        props%calc_hyperpol = .false.
+        em_vars%calc_hyperpol = .false.
         em_vars%freq_factor(1:MAX_DIM) = M_ONE
       end if
 
@@ -433,58 +362,9 @@ contains
 
 
     ! ---------------------------------------------------------
-    subroutine read_wfs()    
-      integer :: kpoints, nst, ierr, dim
-
-      !check how many wfs we have
-
-      call push_sub('em_resp.parse_input')
-
-      call restart_look(trim(tmpdir)//'restart_gs', sys%gr%m, kpoints, dim, nst, ierr)
-
-      if(ierr.ne.0) then
-        message(1) = 'Could not properly read wave-functions from "'//trim(tmpdir)//'restart_gs".'
-        call write_fatal(1)
-      end if
-
-      em_vars%lr(1:NDIM, 1:em_vars%nsigma, 1:em_vars%nfactor)%nst = sys%st%nst
-      sys%st%nst    = nst
-      sys%st%st_end = nst
-      deallocate(sys%st%eigenval, sys%st%occ)
-
-      if ( complex_response ) then 
-        call states_allocate_wfns(sys%st, gr%m, M_CMPLX)
-      else 
-        call states_allocate_wfns(sys%st, gr%m, M_REAL)
-      end if
-
-      ALLOCATE(sys%st%eigenval(sys%st%nst, sys%st%d%nik), sys%st%nst*sys%st%d%nik)
-      ALLOCATE(sys%st%occ(sys%st%nst, sys%st%d%nik), sys%st%nst*sys%st%d%nik)
-
-      if(sys%st%d%ispin == SPINORS) then
-        ALLOCATE(sys%st%mag(sys%st%nst, sys%st%d%nik, 2), sys%st%nst*sys%st%d%nik*2)
-        sys%st%mag = M_ZERO
-      end if
-      sys%st%eigenval = huge(REAL_PRECISION)
-      sys%st%occ      = M_ZERO
-
-      ! load wave-functions
-      call restart_read(trim(tmpdir)//'restart_gs', sys%st, sys%gr, sys%geo, ierr)  
-      if(ierr.ne.0) then
-        message(1) = "Could not read KS orbitals from '"//trim(tmpdir)//"restart_gs'"
-        message(2) = "Please run a calculation of the ground state first!"
-        call write_fatal(2)
-      end if
-
-      call pop_sub()
-
-    end subroutine read_wfs
-
-
-    ! ---------------------------------------------------------
     subroutine info()
 
-      if(em_vars%props%calc_hyperpol) then 
+      if(em_vars%calc_hyperpol) then 
         write(message(1),'(a)') 'Linear Reponse First Order Hyperpolarizabilities'
         call messages_print_stress(stdout, trim(message(1)))
       else 
@@ -499,15 +379,6 @@ contains
       end if
       call write_info(1)
 
-      if (em_vars%props%add_hartree .and. em_vars%props%add_fxc) then 
-        message(1)='Hamiltonian variation: V_ext + hartree + fxc'
-      else
-        message(1)='Hamiltonian variation: V_ext'
-        if (em_vars%props%add_fxc) message(1)='Hamiltonian variation: V_ext + fxc'
-        if (em_vars%props%add_hartree) message(1)='Hamiltonian variation: V_ext + hartree'
-      end if
-      call write_info(1)
-
       write(message(1),'(a,i3,a)') 'Calculating response for ', em_vars%nomega, ' frequencies.'
       call write_info(1)
 
@@ -517,6 +388,93 @@ contains
 
   end subroutine pol_lr_run
 
+
+  ! ---------------------------------------------------------
+  subroutine read_wfs(st, gr, geo, complex_wfs)
+    type(states_t),   intent(inout) :: st
+    type(grid_t),     intent(in)    :: gr
+    type(geometry_t), intent(in)    :: geo
+    logical,          intent(in)    :: complex_wfs
+
+    integer :: kpoints, nst, ierr, dim
+      
+    !check how many wfs we have
+
+    call push_sub('em_resp.read_wfs')
+
+    call restart_look(trim(tmpdir)//'restart_gs', gr%m, kpoints, dim, nst, ierr)
+
+    if(ierr.ne.0) then
+      message(1) = 'Could not properly read wave-functions from "'//trim(tmpdir)//'restart_gs".'
+      call write_fatal(1)
+    end if
+
+    st%nst    = nst
+    st%st_end = nst
+    deallocate(st%eigenval, st%occ)
+
+    if ( complex_wfs ) then 
+      call states_allocate_wfns(st, gr%m, M_CMPLX)
+    else 
+      call states_allocate_wfns(st, gr%m, M_REAL)
+    end if
+
+    ALLOCATE(st%eigenval(st%nst, st%d%nik), st%nst*st%d%nik)
+    ALLOCATE(st%occ(st%nst, st%d%nik), st%nst*st%d%nik)
+
+    if(st%d%ispin == SPINORS) then
+      ALLOCATE(st%mag(st%nst, st%d%nik, 2), st%nst*st%d%nik*2)
+      st%mag = M_ZERO
+    end if
+    st%eigenval = huge(REAL_PRECISION)
+    st%occ      = M_ZERO
+
+    ! load wave-functions
+    call restart_read(trim(tmpdir)//'restart_gs', st, gr, geo, ierr)  
+    if(ierr.ne.0) then
+      message(1) = "Could not read KS orbitals from '"//trim(tmpdir)//"restart_gs'"
+      message(2) = "Please run a calculation of the ground state first!"
+      call write_fatal(2)
+    end if
+
+    call pop_sub()
+
+  end subroutine read_wfs
+
+
+  ! ---------------------------------------------------------
+  subroutine init_lr_wfs(st, gr, ks, lr, add_fxc)
+    type(states_t),   intent(in)    :: st
+    type(grid_t),     intent(inout) :: gr
+    type(v_ks_t),     intent(in)    :: ks
+    type(lr_t),       intent(inout) :: lr
+    logical,          intent(in)    :: add_fxc
+
+    integer :: ierr
+
+    if (wfs_are_complex(st)) then 
+      call lr_init(lr, gr, "Pol", def_solver=LR_BICGSTAB)
+    else
+      call lr_init(lr, gr, "Pol", def_solver=LR_CG)            
+    end if
+
+    call lr_alloc_fHxc (st, gr%m, lr)
+
+    if(wfs_are_real(st)) then
+      ierr = dlr_alloc_psi(st, gr%m, lr)
+      lr%ddl_rho = M_ZERO
+    else
+      ierr = zlr_alloc_psi(st, gr%m, lr)
+      lr%zdl_rho = M_ZERO
+    end if
+
+    if(add_fxc) then
+      call lr_build_fxc(gr%m, st, ks%xc, lr%dl_Vxc)
+    else 
+      lr%dl_Vxc=M_ZERO
+    end if
+
+  end subroutine init_lr_wfs
 
   ! ---------------------------------------------------------
   subroutine em_resp_output(st, gr, outp, em_vars, iomega)
@@ -535,7 +493,7 @@ contains
       call io_mkdir(trim(dirname))
 
       call out_polarizability()
-      if(em_vars%props%calc_hyperpol) call out_hyperpolarizability()
+      if(em_vars%calc_hyperpol) call out_hyperpolarizability()
       call out_projections()
 
       write(dirname, '(a, f5.3)') 'linear/freq_', em_vars%omega(iomega)/units_out%energy%factor

@@ -45,6 +45,7 @@ module run_prog_m
   use timedep_m
   use units_m
   use unocc_m
+  use vdw_m
   use wave_matching_m
 
   implicit none
@@ -66,6 +67,7 @@ module run_prog_m
     M_LR_POL             =   8,  &
     M_CASIDA             =   9,  &
     M_WAVE_MATCHING      =  10,  &
+    M_VDW                =  11,  &
     M_BO_MD              =  98,  &
     M_PULPO_A_FEIRA      =  99
 
@@ -104,6 +106,8 @@ contains
       call static_pol_run(sys, h, fromScratch)
     case(M_LR_POL)
       call pol_lr_run(sys, h, fromScratch)
+    case(M_VDW)
+      call vdW_run(sys, h, fromScratch)
     case(M_GEOM_OPT)
       call geom_opt_run(sys, h)
     case(M_PHONONS)

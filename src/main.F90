@@ -102,6 +102,8 @@ program octopus
   !% Excitations via linear-response TDDFT
   !%Option wave_matching 10
   !% Wave-matching a la Heiko
+  !%Option vdW 11
+  !% Calculate van der Waals coefficients
   !%Option bo 98
   !% Born-Oppenheimer-like Molecular Dynamics
   !%Option recipe 99
