@@ -84,6 +84,7 @@ function X(kb_dproject)(mesh, kb_p, dim, psi, phases) result(res)
   R_TYPE, allocatable :: ppsi(:)
 #if defined(HAVE_MPI)
   R_TYPE :: tmp
+  R_TYPE :: tmp2(3)
 #endif
 
   res = R_TOTYPE(M_ZERO)
@@ -116,10 +117,8 @@ function X(kb_dproject)(mesh, kb_p, dim, psi, phases) result(res)
 
 #if defined(HAVE_MPI)
   if(mesh%parallel_in_domains) then
-    do k = 1, 3
-      call MPI_Allreduce(res(k), tmp, 1, R_MPITYPE, MPI_SUM, mesh%vp%comm, mpi_err)
-      res(k) = tmp
-    end do
+    call MPI_Allreduce(res, tmp2, 3, R_MPITYPE, MPI_SUM, mesh%vp%comm, mpi_err)
+    res = tmp2
   end if
 #endif
 

@@ -221,6 +221,7 @@ contains
     CMPLX, allocatable :: ppsi(:)
 #if defined(HAVE_MPI)
     CMPLX :: tmp
+    CMPLX :: tmp2(3)
 #endif
 
     res = M_z0
@@ -253,10 +254,8 @@ contains
 
 #if defined(HAVE_MPI)
     if(mesh%parallel_in_domains) then
-      do k = 1, 3
-        call MPI_Allreduce(res(k), tmp, 1, MPI_CMPLX, MPI_SUM, mesh%vp%comm, mpi_err)
-        res(k) = tmp
-      end do
+      call MPI_Allreduce(res, tmp2, 3, MPI_CMPLX, MPI_SUM, mesh%vp%comm, mpi_err)
+      res = tmp2
     end if
 #endif
 
