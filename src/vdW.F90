@@ -75,10 +75,9 @@ contains
     FLOAT, allocatable :: gaus_leg_points(:), gaus_leg_weights(:)
     FLOAT, parameter :: omega0 = CNST(0.3)
 
-    call sternheimer_init(sh, sys%gr, "Pol")
-
     call push_sub('vdw.vdw_run')
 
+    call sternheimer_init(sh, sys%gr, "Pol", hermitian=.false.)
     call input()
     call pol_props_init(props, h%ip_app)
     call init()
