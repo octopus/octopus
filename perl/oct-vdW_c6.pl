@@ -53,5 +53,5 @@ for($ii = 0; $ii<$jj; $ii++){
 $sum *= $omega[0]*3.0/$M_PI;
 
 print "C6 = $sum [a.u.]\n";
-$sum *= $P_BOHR**6/$P_HARTREE;
+$sum *= $P_HARTREE*$P_BOHR**6;
 print "C6 = $sum [eV A^6]\n";
