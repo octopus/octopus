@@ -254,7 +254,7 @@ contains
 
 #if defined(HAVE_MPI)
     if(mesh%parallel_in_domains) then
-      call MPI_Allreduce(res, tmp2, 3, MPI_CMPLX, MPI_SUM, mesh%vp%comm, mpi_err)
+      call MPI_Allreduce(res(1), tmp2(1), 3, MPI_CMPLX, MPI_SUM, mesh%vp%comm, mpi_err)
       res = tmp2
     end if
 #endif
