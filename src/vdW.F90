@@ -38,6 +38,7 @@ module vdw_m
   use mesh_m
   use messages_m
   use mix_m
+  use mpi_m
   use output_m
   use poisson_m
   use restart_m
@@ -82,7 +83,7 @@ contains
     call pol_props_init(props, h%ip_app)
     call init()
 
-    if(gauss_start == 1) then
+    if(gauss_start == 1 .and. mpi_grp_is_root(mpi_world)) then
       iunit = io_open('linear/vdw_c6', action='write')
       write(iunit, '(a,i3)') '# npoints = ', gaus_leg_n
       write(iunit, '(a1,a12,2a20)') '#', 'omega', 'domega', 'pol'
@@ -94,16 +95,18 @@ contains
       domega = gaus_leg_weights(i) * omega0 * (M_TWO)/(M_ONE + gaus_leg_points(i))**2
 
       pol = get_pol(omega)
-      iunit = io_open('linear/vdw_c6', action='write', position='append')
-      write(iunit, '(3es20.12)') aimag(omega), domega, pol
-      call io_close(iunit)
+      if(mpi_grp_is_root(mpi_world)) then
+        iunit = io_open('linear/vdw_c6', action='write', position='append')
+        write(iunit, '(3es20.12)') aimag(omega), domega, pol
+        call io_close(iunit)
+      end if
 
       c3  = c3  + M_THREE/M_PI * domega * pol 
       c6  = c6  + M_THREE/M_PI * domega * pol**2
       cat = cat + M_THREE/M_PI * domega * pol**3
     end do
 
-    if(gauss_start .le. gaus_leg_n) then
+    if((gauss_start .le. gaus_leg_n).and.mpi_grp_is_root(mpi_world)) then
       iunit = io_open('linear/vdw_c6', action='write', position='append')
       write(iunit, '(1x)')
       write(iunit, '(a,f18.8)') "C_3  [a.u.  ] = ", c3
@@ -210,6 +213,7 @@ contains
         end if
       end do
 
+      call io_mkdir(trim(tmpdir)//RESTART_DIR)
       call io_mkdir('linear/')
     end subroutine init
 
