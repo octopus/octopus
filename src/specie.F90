@@ -242,8 +242,8 @@ contains
     !% the sphere.
     !%Option spec_ps_psf  100
     !% Troullier Martins pseudopotential in SIESTA format, the pseudopotential will be
-    !% read from an <i>.ascii</i> or <i>.vps</i> file, either in the working
-    !% directory or in the <i>OCTOPUS-HOME/share/PP/TM2</i> directory.
+    !% read from an <i>.psf</i> file, either in the working
+    !% directory or in the <i>OCTOPUS-HOME/share/octopus/PP/PSF</i> directory.
     !% The following three numbers are the atomic number, the maximum
     !% <i>l</i>-component of the pseudo-potential to consider in the
     !% calculation, and the <i>l</i>-component to consider as local.
