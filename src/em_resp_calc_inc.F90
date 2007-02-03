@@ -281,10 +281,10 @@ end subroutine X(lr_calc_polarizability)
 
 
 ! ---------------------------------------------------------
-subroutine X(lr_calc_beta) (sys, lr, props, beta)
+subroutine X(lr_calc_beta) (sh, sys, lr, beta)
+  type(sternheimer_t), intent(inout) :: sh
   type(system_t),      intent(inout) :: sys
   type(lr_t),          intent(inout) :: lr(:,:,:)
-  type(pol_props_t),   intent(in)    :: props
   CMPLX,               intent(out)   :: beta(1:MAX_DIM, 1:MAX_DIM, 1:MAX_DIM)
 
   integer :: ifreq, isigma, idim, ispin, ispin2, np, ndim, idir, ist
@@ -327,7 +327,7 @@ subroutine X(lr_calc_beta) (sys, lr, props, beta)
 
             dH(1:np, idim, ispin, idir, isigma, ifreq) = sys%gr%m%x(1:np, idir)
 
-            if(props%add_hartree) then 
+            if(sternheimer_add_hartree(sh)) then 
 
               call X(poisson_solve)(sys%gr, lr(idir, isigma, ifreq)%X(dl_Vhar), &
                    lr(idir, isigma, ifreq)%X(dl_rho)(1:np, ispin), all_nodes=.false.)
@@ -338,7 +338,7 @@ subroutine X(lr_calc_beta) (sys, lr, props, beta)
 
             end if
 
-            if(props%add_fxc) then 
+            if(sternheimer_add_fxc(sh)) then 
               do ispin2 = 1, sys%st%d%nspin
                 dH(1:np, idim, ispin, idir, isigma, ifreq) = dH(1:np, idim, ispin, idir, isigma, ifreq) &
                      + lr(idir, isigma, ifreq)%dl_Vxc(1:np, ispin, ispin2) &
@@ -416,7 +416,7 @@ subroutine X(lr_calc_beta) (sys, lr, props, beta)
               end do !ist
             end do !ispin
 
-            if(props%add_fxc) then 
+            if(sternheimer_add_fxc(sh)) then 
               do n = 1, np
                 hpol_density(n) = hpol_density(n) &
                      + kxc(n, 1, 1, 1) &

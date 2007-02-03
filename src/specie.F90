@@ -290,9 +290,9 @@ contains
     !% An all-electron atom is defined by a Gaussian accumulation of positive charge 
     !% (distorted if curvilinear coordinates are used), in the form:
     !%
-    !% <MATH>
+    !% <math>
     !% q(r) = z * \beta * exp[ - (\vec{r}-\vec{r0})**2 / (sqrt(2) * \delta * \sigma) ]
-    !% </MATH>
+    !% </math>
     !%
     !% <math>\beta</math> is chosen in order to maintain proper normalization (the integral of
     !% <math>q</math> should sum up to <math>z</math>). <math>\delta</math> is 
@@ -301,7 +301,7 @@ contains
     !% <math>q(r)/z</math> is equal to the atomic position.
     !%
     !% For a precise description, see [N. A. Modine, Phys. Rev. B 55, 10289 (1997)]
-    !%end
+    !%End
     call loct_parse_float(check_inp('SpecieAllElectronSigma'), CNST(0.2), s%sigma)
     if(s%sigma <= M_ZERO) call input_error('SpecieAllElectronSigma')
 

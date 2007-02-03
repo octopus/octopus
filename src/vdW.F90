@@ -65,7 +65,6 @@ contains
     logical,                intent(inout) :: fromScratch
 
     type(lr_t) :: lr(MAX_DIM, 1)
-    type(pol_props_t) :: props
     type(sternheimer_t)     :: sh
 
     integer :: dir, i, iunit, gauss_start
@@ -78,9 +77,8 @@ contains
 
     call push_sub('vdw.vdw_run')
 
-    call sternheimer_init(sh, sys%gr, "Pol", hermitian=.false.)
+    call sternheimer_init(sh, h, sys%gr, "Pol", hermitian=.false.)
     call input()
-    call pol_props_init(props, h%ip_app)
     call init()
 
     if(gauss_start == 1 .and. mpi_grp_is_root(mpi_world)) then
@@ -198,7 +196,7 @@ contains
       call system_h_setup(sys, h)
 
       do dir = 1, sys%NDIM
-        call init_lr_wfs(sys%st, sys%gr, sys%ks, lr(dir,1), props%add_fxc)
+        call init_lr_wfs(sys%st, sys%gr, sys%ks, lr(dir,1), sternheimer_add_fxc(sh))
 
         ! load wave-functions
         if(.not.fromScratch) then
@@ -222,7 +220,6 @@ contains
     FLOAT function get_pol(omega)
       CMPLX, intent(in) :: omega
 
-      logical :: ok
       CMPLX :: alpha(1:MAX_DIM, 1:MAX_DIM)
 
       do dir = 1, sys%NDIM
@@ -230,7 +227,8 @@ contains
           ' and imaginary frequency ', aimag(omega)/units_out%energy%factor
         call write_info(1)   
 
-        call zsternheimer_solve(sh,sys, h, lr, dir, 1, 1, omega, RESTART_DIR)
+        call zsternheimer_solve(sh, sys, h, lr(dir, :), dir,  omega, sys%gr%m%x(:,dir), &
+             RESTART_DIR, em_rho_tag(real(omega),dir), em_wfs_tag(dir,1))
       end do
 
       call zlr_calc_polarizability(sys, lr(:,:), alpha(:,:))

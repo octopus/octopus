@@ -54,11 +54,10 @@ end subroutine X(lr_orth_vector)
 
 
 ! --------------------------------------------------------------------
-subroutine X(lr_build_dl_rho) (m, st, lr, omega, nsigma)
+subroutine X(lr_build_dl_rho) (m, st, lr, nsigma)
   type(mesh_t),   intent(in)    :: m
   type(states_t), intent(in)    :: st
   type(lr_t),     intent(inout) :: lr(:)
-  R_TYPE,         intent(in)    :: omega
   integer,        intent(in)    :: nsigma
 
   integer :: i, ist, ik, ik2, sp

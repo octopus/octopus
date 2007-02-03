@@ -25,16 +25,22 @@
 ! for an electric field
 !--------------------------------------------------------------
 
-subroutine X(sternheimer_solve)(this, sys, h, lr, dir, tag, nsigma, omega, restart_dir)
-  type(sternheimer_t) :: this
+subroutine X(sternheimer_solve)(&
+     this, sys, h, lr, nsigma, omega, vext, & 
+     restart_dir, rho_tag, wfs_tag, &
+     have_restart_rho)
+  type(sternheimer_t),    intent(inout) :: this
   type(system_t), target, intent(inout) :: sys
   type(hamiltonian_t),    intent(inout) :: h
-  type(lr_t),             intent(inout) :: lr(:,:) !ndim,nsigma
-  integer,                intent(in)    :: dir
-  integer,                intent(in)    :: tag
+  type(lr_t),             intent(inout) :: lr(:) 
   integer,                intent(in)    :: nsigma 
   R_TYPE,                 intent(in)    :: omega
+  FLOAT,                  intent(in)    :: vext(:)
   character(len=*),       intent(in)    :: restart_dir
+  character(len=*),       intent(in)    :: rho_tag
+  character(len=*),       intent(in)    :: wfs_tag
+  logical,      optional, intent(in)    :: have_restart_rho
+
 
   FLOAT :: dpsimod
   integer :: iter, sigma, ik, ik2, ist, i, err
@@ -50,7 +56,7 @@ subroutine X(sternheimer_solve)(this, sys, h, lr, dir, tag, nsigma, omega, resta
 
   integer total_iter
 
-  character(len=30) :: dirname
+  character(len=100) :: dirname
 
   call push_sub('static_pol_lr.get_response_e')
 
@@ -71,8 +77,19 @@ subroutine X(sternheimer_solve)(this, sys, h, lr, dir, tag, nsigma, omega, resta
   conv = .false.
   conv_last = .false.
 
-  call init_response_e()
+  do sigma=1,nsigma
+    lr(sigma)%X(dl_Vhar)(:) = M_ZERO
+    if(this%orth_response) then 
+      call X(lr_orth_response)(m, st, lr(sigma))
+    end if
+  end do
 
+  if (present(have_restart_rho)) then 
+    if (.not. have_restart_rho) call X(lr_build_dl_rho)(m, st, lr, nsigma)
+  else
+    call X(lr_build_dl_rho)(m, st, lr, nsigma)
+  end if
+  
   this%solver%tol = scf_tol_start(this%scftol, this%solver%initial_tol, this%solver%final_tol)
 
   message(1)="--------------------------------------------"
@@ -80,22 +97,23 @@ subroutine X(sternheimer_solve)(this, sys, h, lr, dir, tag, nsigma, omega, resta
 
   !self consistency iteration for response
   iter_loop: do iter=1, this%scftol%max_iter
+
     write(message(1), '(a, i3)') "LR SCF Iteration: ", iter
     write(message(2), '(a, f20.6, a, f20.6, a, i1)') &
-         "Frequency: ", R_REAL(omega), " Eta : ", R_AIMAG(omega), " Dir: ", dir
+         "Frequency: ", R_REAL(omega), " Eta : ", R_AIMAG(omega)
     call write_info(2)
 
     total_iter = 0
     
-    dl_rhoin(1:m%np, 1:st%d%nspin, 1) = lr(dir, 1)%X(dl_rho)(1:m%np, 1:st%d%nspin)
+    dl_rhoin(1:m%np, 1:st%d%nspin, 1) = lr(1)%X(dl_rho)(1:m%np, 1:st%d%nspin)
 
     !calculate the variation of hartree term
     if (this%add_hartree) then
       do sigma=1,nsigma
         do i = 1, m%np
-          tmp(i) = sum(lr(dir, sigma)%X(dl_rho)(i, 1:st%d%nspin))
+          tmp(i) = sum(lr(sigma)%X(dl_rho)(i, 1:st%d%nspin))
         end do
-        call X(poisson_solve)(sys%gr, lr(dir,sigma)%X(dl_Vhar), tmp, all_nodes=.false.)
+        call X(poisson_solve)(sys%gr, lr(sigma)%X(dl_Vhar), tmp, all_nodes=.false.)
       end do
     end if
     
@@ -106,17 +124,17 @@ subroutine X(sternheimer_solve)(this, sys, h, lr, dir, tag, nsigma, omega, resta
         !Calculate H^(1):
 
         !* Vext
-        dV(1:m%np, ik, sigma) = m%x(1:m%np, dir)
+        dV(1:m%np, ik, sigma) = vext(1:m%np)
 
         !* hartree
         if (this%add_hartree) dV(1:m%np, ik, sigma) = dV(1:m%np, ik, sigma) &
-             + lr(dir, sigma)%X(dl_Vhar)(1:m%np)
+             + lr(sigma)%X(dl_Vhar)(1:m%np)
 
         !* fxc
         if(this%add_fxc) then 
           do ik2 = 1, st%d%nspin
             dV(1:m%np, ik, sigma) = dV(1:m%np, ik, sigma) + &
-                 lr(dir, sigma)%dl_Vxc(1:m%np, ik, ik2)*lr(dir, sigma)%X(dl_rho)(1:m%np, ik2)
+                 lr(sigma)%dl_Vxc(1:m%np, ik, ik2)*lr(sigma)%X(dl_rho)(1:m%np, ik2)
           end do
         end if
       end do
@@ -141,18 +159,18 @@ subroutine X(sternheimer_solve)(this, sys, h, lr, dir, tag, nsigma, omega, resta
           end if
 
           !solve the Sternheimer equation
-          call X(solve_HXeY) (this%solver, h, sys%gr, sys%st, ik, lr(dir, sigma)%X(dl_psi)(:,:, ist, ik),&
+          call X(solve_HXeY) (this%solver, h, sys%gr, sys%st, ik, lr(sigma)%X(dl_psi)(:,:, ist, ik),&
                Y(:,:, sigma), -sys%st%eigenval(ist, ik) + omega_sigma)
           
           !altough the dl_psi we get should be orthogonal to psi
           !a re-orthogonalization is sometimes necessary 
           if(this%orth_response) then 
-            call X(lr_orth_vector)(m, st, lr(dir,sigma)%X(dl_psi)(:,:, ist, ik), ik)
+            call X(lr_orth_vector)(m, st, lr(sigma)%X(dl_psi)(:,:, ist, ik), ik)
           end if
 
           ! print the norm of the variations, and the number of
           ! iterations and residual of the linear solver
-          tmp(1:m%np) = R_ABS(lr(dir, sigma)%X(dl_psi)(1:m%np, 1, ist, ik))**2
+          tmp(1:m%np) = R_ABS(lr(sigma)%X(dl_psi)(1:m%np, 1, ist, ik))**2
           dpsimod = X(mf_integrate)(m, tmp)
           write(message(1), '(i4, f20.6, i5, e20.6)') &
                (3-2*sigma)*ist, dpsimod, iter, this%solver%abs_psi 
@@ -164,15 +182,16 @@ subroutine X(sternheimer_solve)(this, sys, h, lr, dir, tag, nsigma, omega, resta
       end do !ist
     end do !ik
 
-    call X(lr_build_dl_rho)(m, st, lr(dir,:), omega, nsigma)
+    call X(lr_build_dl_rho)(m, st, lr, nsigma)
 
     dl_rhonew(1:m%np, 1:st%d%nspin, 1) = M_ZERO
 
     !write restart info
-!    call X(restart_write_lr_density)(sys, lr(dir, 1), R_REAL(omega), dir)
+    call X(restart_write_lr_rho)(lr(1), sys%gr, st%d%nspin, restart_dir, rho_tag)
+
     do sigma=1,nsigma 
-      write(dirname,'(a,i1,a,i1,a,i1)') restart_dir//"wfs", dir, "_", tag, "_", sigma
-      call restart_write(trim(tmpdir)//dirname, st, sys%gr, err, iter=iter, lr=lr(dir, sigma))
+      write(dirname,'(a,a,i1)') trim(restart_dir)//trim(wfs_tag),'_', sigma
+      call restart_write(trim(tmpdir)//dirname, st, sys%gr, err, iter=iter, lr=lr(sigma))
     end do
     
     !all the rest is the mixing and checking for convergency
@@ -184,7 +203,7 @@ subroutine X(sternheimer_solve)(this, sys, h, lr, dir, tag, nsigma, omega, resta
     end if
 
 
-    dl_rhotmp(1:m%np, 1:st%d%nspin, 1) = lr(dir,1)%X(dl_rho)(1:m%np, 1:st%d%nspin)
+    dl_rhotmp(1:m%np, 1:st%d%nspin, 1) = lr(1)%X(dl_rho)(1:m%np, 1:st%d%nspin)
 
     call X(mixing)(this%mixer, m, iter, st%d%nspin, 1, dl_rhoin, dl_rhotmp, dl_rhonew)
 
@@ -222,8 +241,8 @@ subroutine X(sternheimer_solve)(this, sys, h, lr, dir, tag, nsigma, omega, resta
 
     else
       
-      lr(dir,1)%X(dl_rho)(1:m%np, 1:st%d%nspin) = dl_rhonew(1:m%np, 1:st%d%nspin, 1)
-      if(nsigma == 2) lr(dir,2)%X(dl_rho)(1:m%np, 1:st%d%nspin) = R_CONJ(dl_rhonew(1:m%np, 1:st%d%nspin, 1))
+      lr(1)%X(dl_rho)(1:m%np, 1:st%d%nspin) = dl_rhonew(1:m%np, 1:st%d%nspin, 1)
+      if(nsigma == 2) lr(2)%X(dl_rho)(1:m%np, 1:st%d%nspin) = R_CONJ(dl_rhonew(1:m%np, 1:st%d%nspin, 1))
 
       this%solver%tol = scf_tol_step(this%scftol, iter, abs_dens)
 
@@ -252,25 +271,16 @@ contains
 
     call push_sub('static_pol_lr.init_response_e')
 
-    do sigma=1,nsigma
-      lr(dir,sigma)%X(dl_Vhar)(:) = M_ZERO
-      if(this%orth_response) then 
-        call X(lr_orth_response)(m, st, lr(dir,sigma))
-      end if
-    end do
 
-    if(.not. this%from_scratch ) then 
+!    if(.not. this%from_scratch ) then 
       !try to read the density from restart information
-!      call X(restart_read_lr_density)(sys, lr(dir, 1), R_REAL(omega), dir, ierr)
-      if(nsigma == 2) lr(dir, 2)%X(dl_rho) = R_CONJ(lr(dir, 1)%X(dl_rho))
-    else 
+!      call X(restart_read_lr_rho)(sys, lr(1), R_REAL(omega), ierr)
+!      if(nsigma == 2) lr(2)%X(dl_rho) = R_CONJ(lr(1)%X(dl_rho))
+!    else 
       ierr = 1 
-    end if
+!    end if
 
-    !if this fails, build density from wavefunctions
-    if ( ierr .ne. 0 ) then 
-      call X(lr_build_dl_rho)(m, st, lr(dir,:), omega, nsigma)
-    end if
+    !if this fails, build rho from wavefunctions
 
     call pop_sub()
   end subroutine init_response_e

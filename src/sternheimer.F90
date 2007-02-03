@@ -52,7 +52,9 @@ module sternheimer_m
        sternheimer_init,   &
        sternheimer_end,    &
        dsternheimer_solve, & 
-       zsternheimer_solve
+       zsternheimer_solve, &
+       sternheimer_add_fxc, &
+       sternheimer_add_hartree
   
   type sternheimer_t
      private
@@ -61,24 +63,63 @@ module sternheimer_m
      type(scf_tol_t) :: scftol
      logical :: add_fxc
      logical :: add_hartree
-     logical :: from_scratch
      logical :: ok
      logical :: hermitian 
-     logical  :: orth_response
+     logical :: orth_response
  end type sternheimer_t
 
 contains
 
-  subroutine sternheimer_init(this, gr, prefix, hermitian)
+  subroutine sternheimer_init(this, h, gr, prefix, hermitian)
     type(sternheimer_t), intent(out) :: this
+    type(hamiltonian_t), intent(in)  :: h
     type(grid_t),      intent(inout) :: gr
     character(len=*),  intent(in)    :: prefix
     logical, optional, intent(in)    :: hermitian
+
+    integer :: ham_var
+
+    !%Variable OrthResponse
+    !%Type logical
+    !%Default true
+    !%Section Linear Response::Sternheimer
+    !%Description
+    !% Wheter variations of the wavefunctios should be orthogonalized
+    !% or not against the occupied states.
+    !%End
+
+    call loct_parse_logical(check_inp('PolOrthResponse'), .true., this%orth_response)
+
+    !%Variable HamiltonianVariation
+    !%Type integer
+    !%Default hartree+fxc
+    !%Section Linear Response::Sternheimer
+    !%Description
+    !% The terms are considered in the variation of the
+    !% hamiltonian. V_ext is always considered. The default is to include
+    !% also the exchange, correlation and hartree terms. If you want
+    !% to choose the exchange and correlation kernel use the variable
+    !% XCKernel.
+    !%Option hartree 1
+    !% The variation of the hartree potential.
+    !%Option fxc 2
+    !% The exchange and correlation kernel, the variation of the
+    !% exchange and correlation potential.
+    !%End
+
+    if(.not. h%ip_app) then 
+      call loct_parse_int(check_inp('PolHamiltonianVariation'), 3, ham_var)    
+      this%add_fxc = ((ham_var/2) == 1)
+      this%add_hartree = (mod(ham_var, 2) == 1)
+    else
+      this%add_fxc = .false. 
+      this%add_hartree = .false.
+    end if
     
-    this%add_fxc = .true.
-    this%add_hartree = .true.
-    this%orth_response = .true. 
-    this%from_scratch = .false.
+    message(1) = "Variation of the hamiltonian in Sternheimer equation: V_ext"
+    if(this%add_hartree) write(message(1), '(2a)') trim(message(1)), ' + hartree'
+    if(this%add_fxc)     write(message(1), '(2a)') trim(message(1)), ' + fxc'
+    call write_info(1)
 
     if(present(hermitian)) then 
       if(.not. hermitian) then 
@@ -92,6 +133,7 @@ contains
 
     call scf_tol_init(this%scftol, prefix)
 
+
   end subroutine sternheimer_init
 
   subroutine sternheimer_end(this)
@@ -101,6 +143,16 @@ contains
     call scf_tol_end(this%scftol)
 
   end subroutine sternheimer_end
+
+  logical function sternheimer_add_fxc(this) result(r)
+    type(sternheimer_t) :: this
+    r = this%add_fxc
+  end function sternheimer_add_fxc
+
+  logical function sternheimer_add_hartree(this) result(r)
+    type(sternheimer_t) :: this
+    r = this%add_hartree
+  end function sternheimer_add_hartree
 
 #include "complex.F90"
 #include "sternheimer_inc.F90"

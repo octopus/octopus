@@ -67,8 +67,6 @@ module pol_lr_m
     FLOAT,      pointer :: omega(:)  ! the frequencies to consider
     type(lr_t), pointer :: lr(:,:,:) ! linear response for (NDIM, nsigma, nomega)
 
-    type(pol_props_t) :: props
-
     logical :: calc_hyperpol
     CMPLX   :: alpha(1:MAX_DIM, 1:MAX_DIM, 1:3)          ! the linear polarizability
     CMPLX   :: beta(1:MAX_DIM, 1:MAX_DIM, 1:MAX_DIM)     ! first hyperpolarizability
@@ -88,9 +86,11 @@ contains
     type(em_resp_t)         :: em_vars
     type(sternheimer_t)     :: sh
 
-    integer :: sigma, ndim, i, j, k, dir, ierr, iomega, ifactor
-    character(len=80) :: fname, dirname
+    integer :: sigma, ndim, i, dir, ierr, iomega, ifactor
+    character(len=80) :: dirname
     logical :: complex_response, have_to_calculate
+
+    FLOAT :: closest_omega
 
 
     call push_sub('em_resp.static_pol_lr_run')
@@ -98,9 +98,6 @@ contains
     gr => sys%gr
     ndim = sys%gr%sb%dim
 
-    em_vars%props%from_scratch = fromScratch
-
-    call pol_props_init(em_vars%props, h%ip_app)
     call parse_input()
 
     em_vars%nsigma = 2  ! positive and negative values of the frequency must be considered
@@ -119,18 +116,18 @@ contains
     call write_info(1)
     call system_h_setup(sys, h)
 
-    call sternheimer_init(sh, sys%gr, "Pol", hermitian = wfs_are_real(sys%st))
+    call sternheimer_init(sh, h, sys%gr, "Pol", hermitian = wfs_are_real(sys%st))
 
     do dir = 1, ndim
       do sigma = 1, em_vars%nsigma
         do ifactor = 1, em_vars%nfactor 
 
           call init_lr_wfs(sys%st, sys%gr, sys%ks, &
-            em_vars%lr(dir, sigma, ifactor), em_vars%props%add_fxc)
+            em_vars%lr(dir, sigma, ifactor), sternheimer_add_fxc(sh))
 
           ! load wave-functions
           if(.not.fromScratch) then
-            write(dirname,'(a,i1,a,i1, a, i1)') RESTART_DIR//"wfs", dir, "_", ifactor, "_", sigma
+            write(dirname,'(a, i1)') RESTART_DIR//trim(em_wfs_tag(dir,ifactor))//'_', sigma
             call restart_read(trim(tmpdir)//dirname, sys%st, sys%gr, sys%geo, &
               ierr, lr=em_vars%lr(dir, sigma, ifactor))
 
@@ -157,22 +154,25 @@ contains
       do ifactor = 1, em_vars%nfactor
         do dir = 1, sys%gr%sb%dim
 
-          write(message(1), '(a,i1,a,f5.3)') 'Info: Calculating response for direction ', dir, &
-               ' and frequency ', em_vars%freq_factor(ifactor)*em_vars%omega(iomega)/units_out%energy%factor
+          write(message(1), '(a,i1,a)') 'Info: Calculating response for direction ', dir, &
+               ' and frequency '//&
+               trim(freq2str(em_vars%freq_factor(ifactor)*em_vars%omega(iomega)/units_out%energy%factor))
           call write_info(1)
 
           have_to_calculate = .true.
-
-          if(ifactor > 1) then 
-            !if this frequency is zero and this is not the first
-            !iteration we do not have to do anything
-            if( iomega > 1 .and. em_vars%freq_factor(ifactor) == M_ZERO) then 
-              have_to_calculate = .false. 
-            end if
+          
+          !if this frequency is zero and this is not the first
+          !iteration we do not have to do anything
+          if( iomega > 1 .and. em_vars%freq_factor(ifactor) == M_ZERO) then 
+            have_to_calculate = .false. 
+          end if
             
+          if(ifactor > 1) then 
+
             !if this frequency is the same as the previous one, just copy it
             if( have_to_calculate .and. &
-              em_vars%freq_factor(ifactor)*em_vars%omega(iomega)==em_vars%freq_factor(ifactor-1)*em_vars%omega(iomega) ) then 
+              em_vars%freq_factor(ifactor)*em_vars%omega(iomega)==&
+              em_vars%freq_factor(ifactor-1)*em_vars%omega(iomega) ) then 
               
               call lr_copy(sys%st, sys%gr%m, em_vars%lr(dir, 1, ifactor-1), em_vars%lr(dir, 1, ifactor))
               call lr_copy(sys%st, sys%gr%m, em_vars%lr(dir, 2, ifactor-1), em_vars%lr(dir, 2, ifactor))
@@ -195,13 +195,61 @@ contains
           end if
 
           if(have_to_calculate) then 
+
+            if( .not. fromscratch) then 
+
+              !try to load restart density
+              if (wfs_are_complex(sys%st)) then 
+                call zrestart_read_lr_rho(em_vars%lr(dir, 1, ifactor), sys%gr, sys%st%d%nspin, &
+                     RESTART_DIR, &
+                     em_rho_tag(em_vars%freq_factor(ifactor)*em_vars%omega(iomega), dir), ierr)
+              else 
+                call drestart_read_lr_rho(em_vars%lr(dir, 1, ifactor), sys%gr, sys%st%d%nspin, &
+                     RESTART_DIR, &
+                     em_rho_tag(em_vars%freq_factor(ifactor)*em_vars%omega(iomega), dir), ierr)
+              end if
+
+              !search for the density of the closest frequency
+              if( ierr /= 0) then 
+                
+                closest_omega = em_vars%freq_factor(ifactor)*em_vars%omega(iomega)
+                call oct_search_file_lr(closest_omega, dir, ierr, trim(tmpdir)//RESTART_DIR)
+                
+                !atempt to read 
+                if(ierr == 0 ) then 
+                  if (wfs_are_complex(sys%st)) then 
+                    call zrestart_read_lr_rho(em_vars%lr(dir, 1, ifactor), sys%gr, sys%st%d%nspin, &
+                         RESTART_DIR, em_rho_tag(closest_omega, dir), ierr)
+                  else 
+                    call drestart_read_lr_rho(em_vars%lr(dir, 1, ifactor), sys%gr, sys%st%d%nspin, &
+                         RESTART_DIR, em_rho_tag(closest_omega, dir), ierr)
+                  end if
+                end if
+                
+              end if
+
+              if(ierr == 0) then 
+                if (wfs_are_complex(sys%st)) then 
+                  em_vars%lr(dir, 2, ifactor)%zdl_rho = conjg(em_vars%lr(dir, 1, ifactor)%zdl_rho)
+                else 
+                  em_vars%lr(dir, 2, ifactor)%zdl_rho = em_vars%lr(dir, 1, ifactor)%zdl_rho
+                end if
+              end if
+
+            end if ! .not. fromscratch
+            
             if (wfs_are_complex(sys%st)) then 
-              call zsternheimer_solve(sh, sys, h, em_vars%lr(:,:, ifactor), dir, ifactor, 2 , &
+              call zsternheimer_solve(sh, sys, h, em_vars%lr(dir, :, ifactor), 2 , &
                    em_vars%freq_factor(ifactor)*em_vars%omega(iomega) + M_zI * em_vars%eta, &
-                   RESTART_DIR)
+                   sys%gr%m%x(:, dir), RESTART_DIR,&
+                   em_rho_tag(em_vars%freq_factor(ifactor)*em_vars%omega(iomega), dir),&
+                   em_wfs_tag(dir, ifactor), have_restart_rho=(ierr==0))
             else
-              call dsternheimer_solve(sh, sys, h, em_vars%lr(:,:, ifactor), dir, ifactor, 2 , &
-                   em_vars%freq_factor(ifactor)*em_vars%omega(iomega), RESTART_DIR)
+              call dsternheimer_solve(sh, sys, h, em_vars%lr(dir, :, ifactor), 2 , &
+                   em_vars%freq_factor(ifactor)*em_vars%omega(iomega), &
+                   sys%gr%m%x(:, dir), RESTART_DIR,&
+                   em_rho_tag(em_vars%freq_factor(ifactor)*em_vars%omega(iomega), dir),&
+                   em_wfs_tag(dir, ifactor), have_restart_rho=(ierr==0))
             end if
           end if
 
@@ -221,9 +269,9 @@ contains
       !calculate hyperpolarizability
       if(em_vars%calc_hyperpol) then           
         if(wfs_are_complex(sys%st)) then 
-          call zlr_calc_beta(sys, em_vars%lr(:,:,:), em_vars%props, em_vars%beta)
+          call zlr_calc_beta(sh, sys, em_vars%lr(:,:,:), em_vars%beta)
         else
-          call dlr_calc_beta(sys, em_vars%lr(:,:,:), em_vars%props, em_vars%beta)
+          call dlr_calc_beta(sh, sys, em_vars%lr(:,:,:), em_vars%beta)
         end if
       end if
       
@@ -332,18 +380,11 @@ contains
       em_vars%eta = em_vars%eta * units_inp%energy%factor
 
       !%Variable PolHyper
-      !%Type float
-      !%Default 0.0
+      !%Type block
       !%Section Linear Response::Polarizabilities
       !%Description
-      !% The terms are considered in the variation of the
-      !% hamiltonian. V_ext is always considered. The default is to include
-      !% the fxc and hartree terms. If you want to do RPA only include
-      !% hartree.
-      !%Option shg 1.0
-      !% Second harmonic generation 1 1 -2
-      !%Option or -1.0
-      !% Optical recitifcation, 1 -1 0
+      !% This blocks describes the multiples of the frequency used for
+      !% the dynamic hyperpolarizability.
       !%End
 
       if (loct_parse_block(check_inp('PolHyper'), blk) == 0) then 
@@ -487,16 +528,16 @@ contains
     character(len=80) :: dirname
 
     do ifactor = 1, em_vars%nfactor
-      write(dirname, '(a, f5.3)') 'linear/freq_', &
-        em_vars%freq_factor(ifactor)*em_vars%omega(iomega)/units_out%energy%factor
+      write(dirname, '(a, a)') 'linear/freq_', trim(freq2str(&
+           em_vars%freq_factor(ifactor)*em_vars%omega(iomega)/units_out%energy%factor))
       call io_mkdir(trim(dirname))
 
       call out_polarizability()
       if(em_vars%calc_hyperpol) call out_hyperpolarizability()
       call out_projections()
 
-      write(dirname, '(a, f5.3)') 'linear/freq_', em_vars%omega(iomega)/units_out%energy%factor
-      call io_mkdir(dirname)
+!      write(dirname, '(a, a)') 'linear/freq_', em_vars%omega(iomega)/units_out%energy%factor
+!      call io_mkdir(dirname)
       call out_wavefunctions()
     end do
 
@@ -752,7 +793,7 @@ contains
     end subroutine out_wavefunctions
 
   end subroutine em_resp_output
-
+  
 #include "undef.F90"
 #include "complex.F90"
 #include "em_resp_inc.F90"

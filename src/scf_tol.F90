@@ -102,7 +102,7 @@ contains
     !% convergency of the SCF.
     !%End
 
-    call loct_parse_int(check_inp(trim(prefix)//'SCFPolScheme'), SCF_ADAPTIVE, this%scheme)
+    call loct_parse_int(check_inp(trim(prefix)//'SCFTolScheme'), SCF_ADAPTIVE, this%scheme)
 
     if( this%scheme /= SCF_ADAPTIVE .and. this%scheme /= SCF_FIXED ) then 
       call input_error('SCFTolScheme')

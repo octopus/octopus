@@ -352,7 +352,7 @@ double FC_FUNC_(oct_poisson_finite_cylinder, OCT_POISSON_FINITE_CYLINDER)
 
 This functions searchs in directory given by dirname, all files that have the following name:
 
-*-<real_number>-<integer>*
+*_<real_number>_<integer>*
 
 It returns the value of <real_number> found that it is closer to freq
 and which value of <integer> matches with the tag argument.
@@ -396,7 +396,7 @@ void FC_FUNC_(oct_search_file_lr, OCT_SEARCH_FILE_LR)
     ent = readdir(dir);
     if( ent == NULL ) break;
 
-    num_start = strchr(ent -> d_name, '-');
+    num_start = strchr(ent -> d_name, '_');
 
     if(num_start != NULL) {
       num_start++; /*now this point to the beginning of the number */
@@ -407,7 +407,7 @@ void FC_FUNC_(oct_search_file_lr, OCT_SEARCH_FILE_LR)
       if ( num_end == num_start ) continue; /* no number found */
 
       /* check that we have the correct tag */
-      if(num_end[0] == '-') {
+      if(num_end[0] == '_') {
 
 	num_start=num_end+1;
 	read_tag = (int) strtol(num_start, &num_end, 10);

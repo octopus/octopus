@@ -72,11 +72,11 @@ subroutine restrict(n01,n02,n03,n1,n2,n3,x,y)
   allocate(w2(-1:2*n3-1,-omin:n1+omax,-omin:n2+omax))
   t1=0.d0
   do i3=-1,2*n3-1
-     do i2=-1,2*n2-1
-	do i1=-1,2*n1-1
-           t1=t1+x(i1,i2,i3)
-        enddo
-     enddo
+    do i2=-1,2*n2-1
+      do i1=-1,2*n1-1
+        t1=t1+x(i1,i2,i3)
+      enddo
+    enddo
   enddo
         
 ! i1,i2,i3 -> i2,i3,I1
@@ -91,11 +91,11 @@ subroutine restrict(n01,n02,n03,n1,n2,n3,x,y)
   
   t2=0.d0
   do i3=-omin,n3+omax
-     do i2=-omin,n2+omax
-	do i1=-omin,n1+omax
-           t2=t2+y(i1,i2,i3)
-        enddo
-     enddo
+    do i2=-omin,n2+omax
+      do i1=-omin,n1+omax
+        t2=t2+y(i1,i2,i3)
+      enddo
+    enddo
   enddo
 
   if (abs((t1-8*t2)/t1).gt.1.d-10) then
@@ -142,16 +142,16 @@ subroutine restrict_rot_grow(n,nt,x,y)
   do i=1,order
      cht(-i)=cht(i)
   enddo
-
+  
   do j=1,nt
-     do i=-omin,n+omax
-        tt=0.d0
-        do l=max(-order,-2*i-1),min(order,2*n-2*i-1)
-           tt=tt+cht(l)*x(2*i+l,j)
-           !write(*,*) 'i,l,2*i+l',i,l,2*i+l
-        enddo
-	y(j,i)=tt
-     end do
+    do i=-omin,n+omax
+      tt=0.d0
+      do l=max(-order,-2*i-1),min(order,2*n-2*i-1)
+        tt=tt+cht(l)*x(2*i+l,j)
+        !write(*,*) 'i,l,2*i+l',i,l,2*i+l
+      enddo
+      y(j,i)=tt
+    end do
   end do
 end subroutine restrict_rot_grow
 !!***

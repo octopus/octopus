@@ -38,6 +38,7 @@ module restart_m
   use output_m
   use simul_box_m
   use states_m
+  use units_m
   use varinfo_m
 
   implicit none
@@ -53,7 +54,11 @@ module restart_m
     drestart_write_function, &
     zrestart_write_function, &
     drestart_read_function, &
-    zrestart_read_function
+    zrestart_read_function, & 
+    drestart_write_lr_rho, &
+    zrestart_write_lr_rho, &
+    drestart_read_lr_rho, &
+    zrestart_read_lr_rho
 
   
 
@@ -89,7 +94,6 @@ contains
   ! ---------------------------------------------------------
   ! read restart format information
   subroutine restart_init
-    integer :: i
 
     call push_sub('restart.restart_init')
 
