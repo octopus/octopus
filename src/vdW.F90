@@ -77,7 +77,7 @@ contains
 
     call push_sub('vdw.vdw_run')
 
-    call sternheimer_init(sh, h, sys%gr, "Pol", hermitian=.false.)
+    call sternheimer_init(sh, sys, h, "Pol", hermitian=.false.)
     call input()
     call init()
 
@@ -196,7 +196,7 @@ contains
       call system_h_setup(sys, h)
 
       do dir = 1, sys%NDIM
-        call init_lr_wfs(sys%st, sys%gr, sys%ks, lr(dir,1), sternheimer_add_fxc(sh))
+        call init_lr_wfs(sys%st, sys%gr, lr(dir,1))
 
         ! load wave-functions
         if(.not.fromScratch) then

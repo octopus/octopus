@@ -43,9 +43,9 @@ subroutine X(sternheimer_solve)(&
 
 
   FLOAT :: dpsimod
-  integer :: iter, sigma, ik, ik2, ist, i, err
+  integer :: iter, sigma, ik, ist, err
   R_TYPE, allocatable :: dl_rhoin(:, :, :), dl_rhonew(:, :, :), dl_rhotmp(:, :, :)
-  R_TYPE, allocatable :: Y(:, :, :),dV(:, :, :), tmp(:)
+  R_TYPE, allocatable :: Y(:, :, :), hvar(:, :, :), tmp(:)
   FLOAT  :: abs_dens
   R_TYPE :: omega_sigma
 
@@ -69,7 +69,7 @@ subroutine X(sternheimer_solve)(&
   
   ALLOCATE(tmp(m%np),m%np)
   ALLOCATE(Y(m%np, 1, nsigma), m%np*1*nsigma)
-  ALLOCATE(dV(m%np, st%d%nspin, nsigma), m%np*st%d%nspin*nsigma)
+  ALLOCATE(hvar(m%np, st%d%nspin, nsigma), m%np*st%d%nspin*nsigma)
   ALLOCATE(dl_rhoin(m%np, st%d%nspin, 1), 1*m%np*st%d%nspin)
   ALLOCATE(dl_rhonew(m%np, st%d%nspin, 1), 1*m%np*st%d%nspin)
   ALLOCATE(dl_rhotmp(m%np, st%d%nspin, 1),1*m%np*st%d%nspin)
@@ -78,7 +78,6 @@ subroutine X(sternheimer_solve)(&
   conv_last = .false.
 
   do sigma=1,nsigma
-    lr(sigma)%X(dl_Vhar)(:) = M_ZERO
     if(this%orth_response) then 
       call X(lr_orth_response)(m, st, lr(sigma))
     end if
@@ -107,45 +106,16 @@ subroutine X(sternheimer_solve)(&
     
     dl_rhoin(1:m%np, 1:st%d%nspin, 1) = lr(1)%X(dl_rho)(1:m%np, 1:st%d%nspin)
 
-    !calculate the variation of hartree term
-    if (this%add_hartree) then
-      do sigma=1,nsigma
-        do i = 1, m%np
-          tmp(i) = sum(lr(sigma)%X(dl_rho)(i, 1:st%d%nspin))
-        end do
-        call X(poisson_solve)(sys%gr, lr(sigma)%X(dl_Vhar), tmp, all_nodes=.false.)
-      end do
-    end if
-    
+    call X(sternheimer_calc_hvar)(this, sys, lr, nsigma, vext, hvar)
 
     do ik = 1, st%d%nspin
-      do sigma = 1, nsigma
-
-        !Calculate H^(1):
-
-        !* Vext
-        dV(1:m%np, ik, sigma) = vext(1:m%np)
-
-        !* hartree
-        if (this%add_hartree) dV(1:m%np, ik, sigma) = dV(1:m%np, ik, sigma) &
-             + lr(sigma)%X(dl_Vhar)(1:m%np)
-
-        !* fxc
-        if(this%add_fxc) then 
-          do ik2 = 1, st%d%nspin
-            dV(1:m%np, ik, sigma) = dV(1:m%np, ik, sigma) + &
-                 lr(sigma)%dl_Vxc(1:m%np, ik, ik2)*lr(sigma)%X(dl_rho)(1:m%np, ik2)
-          end do
-        end if
-      end do
-
       !now calculate response for each state
       do ist = 1, st%nst
         do sigma = 1, nsigma
           if(st%occ(ist, ik) <= lr_min_occ) cycle
           
           !calculate the RHS of the Sternheimer eq
-          Y(1:m%np, 1, sigma) = -dV(1:m%np, ik, sigma)*st%X(psi)(1:m%np, 1, ist, ik)
+          Y(1:m%np, 1, sigma) = -hvar(1:m%np, ik, sigma)*st%X(psi)(1:m%np, 1, ist, ik)
 
           !and project it into the unoccupied states
           if(this%orth_response) then 
@@ -256,35 +226,69 @@ subroutine X(sternheimer_solve)(&
 
   deallocate(tmp)
   deallocate(Y)
-  deallocate(dV)
+  deallocate(hvar)
   deallocate(dl_rhoin)
   deallocate(dl_rhonew)
   deallocate(dl_rhotmp)
 
   call pop_sub()
 
-contains
-
-  !------------------------------------------------------------
-  subroutine init_response_e()
-    integer :: ierr
-
-    call push_sub('static_pol_lr.init_response_e')
-
-
-!    if(.not. this%from_scratch ) then 
-      !try to read the density from restart information
-!      call X(restart_read_lr_rho)(sys, lr(1), R_REAL(omega), ierr)
-!      if(nsigma == 2) lr(2)%X(dl_rho) = R_CONJ(lr(1)%X(dl_rho))
-!    else 
-      ierr = 1 
-!    end if
-
-    !if this fails, build rho from wavefunctions
-
-    call pop_sub()
-  end subroutine init_response_e
-
 end subroutine X(sternheimer_solve)
 
+subroutine X(sternheimer_calc_hvar)(this, sys, lr, nsigma, vext, hvar)
+  type(sternheimer_t),    intent(inout) :: this
+  type(system_t), target, intent(inout) :: sys
+  type(lr_t),             intent(inout) :: lr(:) 
+  integer,                intent(in)    :: nsigma 
+  FLOAT,                  intent(in)    :: vext(:)
+  R_TYPE,                 intent(out)   :: hvar(:,:,:)
 
+  R_TYPE, allocatable :: tmp(:), hartree(:,:)  
+  integer :: np, sigma, i, ik, ik2
+
+  call push_sub('sternheimer_inc.sternheimer_calc_hvar')
+
+  np = sys%gr%m%np
+
+  if (this%add_hartree) then 
+
+    ALLOCATE(tmp(1:np), np)
+    do i = 1, np
+      tmp(i) = sum(lr(1)%X(dl_rho)(i, 1:sys%st%d%nspin))
+    end do
+
+    ALLOCATE(hartree(1:np, 1:nsigma), np * nsigma)
+    hartree(1:np, 1) = R_TOTYPE(M_ZERO)
+    call X(poisson_solve)(sys%gr, hartree(:,1), tmp, all_nodes=.false.)
+    if (nsigma == 2) hartree(1:np, 2) = R_CONJ(hartree(1:np, 1))
+
+    deallocate(tmp)
+
+  end if
+
+  do ik = 1, sys%st%d%nspin
+    do sigma = 1, nsigma
+      
+      !* Vext
+      hvar(1:np, ik, sigma) = vext(1:np)
+      
+      !* hartree
+      if (this%add_hartree) hvar(1:np, ik, sigma) = hvar(1:np, ik, sigma) &
+           + hartree(1:np, sigma)
+
+      !* fxc
+      if(this%add_fxc) then 
+        do ik2 = 1, sys%st%d%nspin
+          hvar(1:np, ik, sigma) = hvar(1:np, ik, sigma) + &
+               this%fxc(1:np, ik, ik2)*lr(sigma)%X(dl_rho)(1:np, ik2)
+        end do
+      end if
+
+    end do
+  end do
+
+  if (this%add_hartree) deallocate(hartree)
+
+  call pop_sub()
+
+end subroutine X(sternheimer_calc_hvar)

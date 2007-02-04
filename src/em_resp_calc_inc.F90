@@ -295,7 +295,7 @@ subroutine X(lr_calc_beta) (sh, sys, lr, beta)
 
   R_TYPE :: prod
 
-  R_TYPE, allocatable :: dH(:, :, :, :, :, :)
+  R_TYPE, allocatable :: hvar(:, :, :, :, :, :)
   R_TYPE, allocatable :: tmp(:)
   FLOAT,  allocatable :: kxc(:,:,:,:)
   R_TYPE, allocatable :: hpol_density(:)
@@ -315,41 +315,19 @@ subroutine X(lr_calc_beta) (sh, sys, lr, beta)
 
 
   ALLOCATE(tmp(1:np), np)
-  ALLOCATE(dH(1:np, 1:sys%st%d%dim, 1:sys%st%d%nspin, 1:ndim, 1:2, 1:3), np*sys%st%d%dim*sys%st%d%nspin*ndim*2*3)
+  ALLOCATE(hvar(1:np, 1:sys%st%d%nspin, 1:2, 1:sys%st%d%dim, 1:ndim, 1:3), np*sys%st%d%nspin*2*sys%st%d%dim*ndim*3)
   ALLOCATE(hpol_density(1:np), np)
 
 
   do ifreq = 1, 3
-    do isigma = 1, 2
-      do idir = 1, ndim
-        do idim = 1, sys%st%d%dim
-          do ispin = 1, sys%st%d%nspin
-
-            dH(1:np, idim, ispin, idir, isigma, ifreq) = sys%gr%m%x(1:np, idir)
-
-            if(sternheimer_add_hartree(sh)) then 
-
-              call X(poisson_solve)(sys%gr, lr(idir, isigma, ifreq)%X(dl_Vhar), &
-                   lr(idir, isigma, ifreq)%X(dl_rho)(1:np, ispin), all_nodes=.false.)
-
-              dH(1:np, idim, ispin, idir, isigma, ifreq) = &
-                   dH(1:np, idim, ispin, idir, isigma, ifreq) &
-                   + lr(idir, isigma, ifreq)%X(dl_Vhar)(1:np)
-
-            end if
-
-            if(sternheimer_add_fxc(sh)) then 
-              do ispin2 = 1, sys%st%d%nspin
-                dH(1:np, idim, ispin, idir, isigma, ifreq) = dH(1:np, idim, ispin, idir, isigma, ifreq) &
-                     + lr(idir, isigma, ifreq)%dl_Vxc(1:np, ispin, ispin2) &
-                     * lr(idir, isigma, ifreq)%X(dl_rho)(1:np, ispin2)
-              end do
-            end if
-
-          end do !ispin
-        end do !idim
-      end do !idir
-    end do !isigma
+    do idir = 1, ndim
+      do idim = 1, sys%st%d%dim
+        
+        call X(sternheimer_calc_hvar)(sh, sys, lr(idir, :, ifreq), 2, sys%gr%m%x(:, idir), &
+             hvar(:, :, :, idim, idir, ifreq))
+        
+      end do !idim
+    end do !idir
   end do !ifreq
 
   beta(1:MAX_DIM, 1:MAX_DIM, 1:MAX_DIM) = M_ZERO
@@ -385,7 +363,7 @@ subroutine X(lr_calc_beta) (sh, sys, lr, beta)
                     hpol_density(1:np) = hpol_density(1:np) &
                          + sys%st%d%kweights(ik)*sys%st%occ(ist, ik) &
                          * R_CONJ(lr(u(1), op_sigma, w(1))%X(dl_psi)(1:np, 1, ist, ispin)) &
-                         * R_REAL(dH(1:np, idim, ispin, u(2), isigma, w(2) )) &
+                         * R_REAL(hvar(1:np, ispin, isigma, idim, u(2), w(2) )) &
                          * lr(u(3), isigma, w(3))%X(dl_psi)(1:np, idim, ist, ispin)
 
                     do ispin2 = 1, sys%st%d%nspin
@@ -395,7 +373,7 @@ subroutine X(lr_calc_beta) (sh, sys, lr, beta)
 
                             tmp(1:np)= &
                                  R_CONJ(sys%st%X(psi)(1:np, idim2, ist2, ispin2)) * &
-                                 R_REAL(dH(1:np, idim2, ispin2, u(2), isigma, w(2))) * &
+                                 R_REAL(hvar(1:np, ispin2, isigma, idim2, u(2), w(2))) * &
                                  sys%st%X(psi)(1:np, idim, ist, ispin)
 
                             prod = X(mf_integrate)(sys%gr%m, tmp(1:np))
@@ -440,7 +418,7 @@ subroutine X(lr_calc_beta) (sh, sys, lr, beta)
 
   deallocate(hpol_density)
   deallocate(tmp)
-  deallocate(dH)
+  deallocate(hvar)
 
   call pop_sub()
 

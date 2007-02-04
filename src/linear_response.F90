@@ -57,9 +57,8 @@ module linear_response_m
        zlr_build_dl_rho, &
        dlr_orth_response, &
        zlr_orth_response, &
-       lr_dealloc, &
-       lr_build_fxc, &
-       lr_alloc_fHxc
+       lr_dealloc
+
 
   type lr_t
     !the number of lr wfs
@@ -68,15 +67,11 @@ module linear_response_m
     ! the real quantities
     FLOAT, pointer :: ddl_rho(:,:)     ! response of the density
     FLOAT, pointer :: ddl_psi(:,:,:,:) ! linear change of the real KS orbitals
-    FLOAT, pointer :: ddl_Vhar(:)      ! linear change of the Hartree potential
     
     ! and the complex version
     CMPLX, pointer :: zdl_rho(:,:)     ! response of the density
     CMPLX, pointer :: zdl_psi(:,:,:,:) ! linear change of the complex KS orbitals
-    CMPLX, pointer :: zdl_Vhar(:)      ! linear change of the Hartree potential
 
-    FLOAT, pointer :: dl_Vxc(:,:,:)    ! linear change of the xc potential (fxc)
-    
     !other observables
     CMPLX, pointer :: dl_j(:,:,:)     ! response of the current
     FLOAT, pointer :: ddl_de(:,:)     ! unnormalized elf
@@ -93,8 +88,8 @@ contains
     type(lr_t),        intent(out)   :: lr
     call push_sub('linear_response.lr_init')
 
-    nullify(lr%ddl_rho, lr%ddl_psi, lr%ddl_Vhar, lr%dl_Vxc)
-    nullify(lr%zdl_rho, lr%zdl_psi, lr%zdl_Vhar, lr%dl_Vxc)
+    nullify(lr%ddl_rho, lr%ddl_psi)
+    nullify(lr%zdl_rho, lr%zdl_psi)
     
     nullify(lr%dl_j, lr%ddl_de, lr%zdl_de, lr%ddl_elf, lr%zdl_elf)
     
@@ -116,6 +111,8 @@ contains
 
     ALLOCATE(lr%ddl_psi(m%np_part, st%d%dim, st%nst, st%d%nspin),
          m%np_part*st%d%dim*st%nst*st%d%nspin)
+
+    ALLOCATE(lr%ddl_rho(m%np, st%d%nspin), m%np*st%d%nspin)
 
     if(associated(lr%zdl_psi)) then
       r = 2
@@ -148,6 +145,8 @@ contains
 
     ALLOCATE(lr%zdl_psi(m%np_part, st%d%dim, st%nst, st%d%nspin),
          m%np_part*st%d%dim*st%nst*st%d%nspin)
+         
+    ALLOCATE(lr%zdl_rho(m%np, st%d%nspin), m%np*st%d%nspin)
 
     if(associated(lr%ddl_psi)) then
       r = 2
@@ -169,13 +168,13 @@ contains
     type(lr_t), intent(inout) :: lr
 
     if(associated(lr%ddl_rho)) then
-      deallocate(lr%ddl_rho, lr%ddl_Vhar, lr%dl_Vxc)
-      nullify   (lr%ddl_rho, lr%ddl_Vhar, lr%dl_Vxc)
+      deallocate(lr%ddl_rho)
+      nullify   (lr%ddl_rho)
     end if
 
     if(associated(lr%zdl_rho)) then
-      deallocate(lr%zdl_rho, lr%zdl_Vhar, lr%dl_Vxc)
-      nullify   (lr%zdl_rho, lr%zdl_Vhar, lr%dl_Vxc)
+      deallocate(lr%zdl_rho)
+      nullify   (lr%zdl_rho)
     end if
 
     if(associated(lr%ddl_psi)) then
@@ -195,57 +194,6 @@ contains
     if(associated(lr%zdl_elf)) deallocate(lr%zdl_elf)
 
   end subroutine lr_dealloc
-
-
-  ! ---------------------------------------------------------
-  subroutine lr_build_fxc(m, st, xcs, fxc)
-    type(mesh_t),   intent(in)  :: m
-    type(states_t), intent(in)  :: st
-    type(xc_t),     intent(in)  :: xcs
-    FLOAT,          intent(inout) :: fxc(:,:,:)
-
-    FLOAT, allocatable :: rho(:, :)
-    integer :: is
-
-    call push_sub('linear_response.lr_build_fxc')
-
-    ALLOCATE(rho(m%np, st%d%nspin), m%np*st%d%nspin)
-    if(associated(st%rho_core)) then
-      do is = 1, st%d%spin_channels
-        rho(1:m%np, is) = st%rho(1:m%np, is) + st%rho_core(1:m%np)/st%d%spin_channels
-      end do
-    else
-      rho(1:m%np, 1:st%d%nspin) = st%rho(1:m%np, 1:st%d%nspin)
-    end if
-    fxc = M_ZERO
-    call xc_get_fxc(xcs, m, rho, st%d%ispin, fxc)
-    deallocate(rho)
-
-    call pop_sub()
-  end subroutine lr_build_fxc
-
-
-  ! ---------------------------------------------------------
-  subroutine lr_alloc_fHxc(st, m, lr)
-    type(states_t), intent(in)  :: st
-    type(mesh_t),   intent(in)  :: m
-    type(lr_t),     intent(inout) :: lr
-
-    call push_sub('linear_response.lr_alloc_fHxc')
-
-    ! allocate variables
-    if (st%d%wfs_type == M_REAL) then
-      ALLOCATE(lr%ddl_rho(m%np, st%d%nspin), m%np*st%d%nspin)
-      ALLOCATE(lr%ddl_Vhar(m%np), m%np)
-    else
-      ALLOCATE(lr%zdl_rho(m%np, st%d%nspin), m%np*st%d%nspin)
-      ALLOCATE(lr%zdl_Vhar(m%np), m%np)
-    end if
-    ALLOCATE(lr%dl_Vxc(m%np, st%d%nspin, st%d%nspin), m%np*st%d%nspin*st%d%nspin)
-
-    call pop_sub()
-
-  end subroutine lr_alloc_fHxc
 
   subroutine lr_copy(st, m, src, dest)
     type(states_t), intent(in) :: st

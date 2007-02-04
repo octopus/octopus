@@ -45,7 +45,7 @@ module pol_lr_m
   use system_m
   use units_m
   use v_ks_m
-
+  
   implicit none
 
   private
@@ -116,14 +116,13 @@ contains
     call write_info(1)
     call system_h_setup(sys, h)
 
-    call sternheimer_init(sh, h, sys%gr, "Pol", hermitian = wfs_are_real(sys%st))
+    call sternheimer_init(sh, sys, h, "Pol", hermitian = wfs_are_real(sys%st))
 
     do dir = 1, ndim
       do sigma = 1, em_vars%nsigma
         do ifactor = 1, em_vars%nfactor 
 
-          call init_lr_wfs(sys%st, sys%gr, sys%ks, &
-            em_vars%lr(dir, sigma, ifactor), sternheimer_add_fxc(sh))
+          call init_lr_wfs(sys%st, sys%gr, em_vars%lr(dir, sigma, ifactor))
 
           ! load wave-functions
           if(.not.fromScratch) then
@@ -487,18 +486,14 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine init_lr_wfs(st, gr, ks, lr, add_fxc)
+  subroutine init_lr_wfs(st, gr, lr)
     type(states_t),   intent(in)    :: st
     type(grid_t),     intent(inout) :: gr
-    type(v_ks_t),     intent(in)    :: ks
     type(lr_t),       intent(inout) :: lr
-    logical,          intent(in)    :: add_fxc
 
     integer :: ierr
 
     call lr_init(lr)
-
-    call lr_alloc_fHxc (st, gr%m, lr)
 
     if(wfs_are_real(st)) then
       ierr = dlr_alloc_psi(st, gr%m, lr)
@@ -506,12 +501,6 @@ contains
     else
       ierr = zlr_alloc_psi(st, gr%m, lr)
       lr%zdl_rho = M_ZERO
-    end if
-
-    if(add_fxc) then
-      call lr_build_fxc(gr%m, st, ks%xc, lr%dl_Vxc)
-    else 
-      lr%dl_Vxc=M_ZERO
     end if
 
   end subroutine init_lr_wfs
@@ -536,8 +525,9 @@ contains
       if(em_vars%calc_hyperpol) call out_hyperpolarizability()
       call out_projections()
 
-!      write(dirname, '(a, a)') 'linear/freq_', em_vars%omega(iomega)/units_out%energy%factor
-!      call io_mkdir(dirname)
+      write(dirname, '(a, a)') 'linear/freq_',trim(freq2str(&
+           em_vars%omega(iomega)/units_out%energy%factor))
+      call io_mkdir(dirname)
       call out_wavefunctions()
     end do
 

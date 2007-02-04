@@ -43,6 +43,8 @@ module sternheimer_m
   use string_m
   use system_m
   use units_m
+  use v_ks_m
+  use xc_m
 
   implicit none
 
@@ -54,7 +56,9 @@ module sternheimer_m
        dsternheimer_solve, & 
        zsternheimer_solve, &
        sternheimer_add_fxc, &
-       sternheimer_add_hartree
+       sternheimer_add_hartree, & 
+       dsternheimer_calc_hvar, &
+       zsternheimer_calc_hvar
   
   type sternheimer_t
      private
@@ -66,14 +70,17 @@ module sternheimer_m
      logical :: ok
      logical :: hermitian 
      logical :: orth_response
- end type sternheimer_t
-
+     
+     FLOAT, pointer :: fxc(:,:,:)    ! linear change of the xc potential (fxc)
+     
+  end type sternheimer_t
+  
 contains
-
-  subroutine sternheimer_init(this, h, gr, prefix, hermitian)
+  
+  subroutine sternheimer_init(this, sys, h, prefix, hermitian)
     type(sternheimer_t), intent(out) :: this
+    type(system_t),    intent(inout) :: sys
     type(hamiltonian_t), intent(in)  :: h
-    type(grid_t),      intent(inout) :: gr
     character(len=*),  intent(in)    :: prefix
     logical, optional, intent(in)    :: hermitian
 
@@ -123,16 +130,17 @@ contains
 
     if(present(hermitian)) then 
       if(.not. hermitian) then 
-        call linear_solver_init(this%solver, gr, prefix, def_solver=LS_BICGSTAB)
+        call linear_solver_init(this%solver, sys%gr, prefix, def_solver=LS_BICGSTAB)
       else
-        call linear_solver_init(this%solver, gr, prefix, def_solver=LS_CG)
+        call linear_solver_init(this%solver, sys%gr, prefix, def_solver=LS_CG)
       end if
     else
-      call linear_solver_init(this%solver, gr, prefix)
+      call linear_solver_init(this%solver, sys%gr, prefix)
     end if
 
     call scf_tol_init(this%scftol, prefix)
 
+    if(this%add_fxc) call sternheimer_build_fxc(this, sys%gr%m, sys%st, sys%ks%xc) 
 
   end subroutine sternheimer_init
 
@@ -141,8 +149,38 @@ contains
 
     call linear_solver_end(this%solver)
     call scf_tol_end(this%scftol)
+    if (this%add_fxc) deallocate(this%fxc)
 
   end subroutine sternheimer_end
+
+  subroutine sternheimer_build_fxc(this, m, st, xcs)
+    type(sternheimer_t), intent(out) :: this
+    type(mesh_t),   intent(in)  :: m
+    type(states_t), intent(in)  :: st
+    type(xc_t),     intent(in)  :: xcs
+
+    FLOAT, allocatable :: rho(:, :)
+    integer :: is
+
+    call push_sub('sternheimer.sternheimer_build_fxc')
+
+    ALLOCATE(this%fxc(m%np, st%d%nspin, st%d%nspin), m%np*st%d%nspin*st%d%nspin)
+
+    ALLOCATE(rho(m%np, st%d%nspin), m%np*st%d%nspin)
+    if(associated(st%rho_core)) then
+      do is = 1, st%d%spin_channels
+        rho(1:m%np, is) = st%rho(1:m%np, is) + st%rho_core(1:m%np)/st%d%spin_channels
+      end do
+    else
+      rho(1:m%np, 1:st%d%nspin) = st%rho(1:m%np, 1:st%d%nspin)
+    end if
+    this%fxc = M_ZERO
+    call xc_get_fxc(xcs, m, rho, st%d%ispin, this%fxc)
+    deallocate(rho)
+
+    call pop_sub()
+  end subroutine sternheimer_build_fxc
+
 
   logical function sternheimer_add_fxc(this) result(r)
     type(sternheimer_t) :: this
