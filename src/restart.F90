@@ -95,6 +95,10 @@ contains
   ! read restart format information
   subroutine restart_init
 
+#if defined(HAVE_NETCDF)
+    integer :: i
+#endif
+
     call push_sub('restart.restart_init')
 
     !%Variable RestartFileFormat
