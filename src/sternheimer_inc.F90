@@ -243,8 +243,8 @@ subroutine X(sternheimer_calc_hvar)(this, sys, lr, nsigma, vext, hvar)
   FLOAT,                  intent(in)    :: vext(:)
   R_TYPE,                 intent(out)   :: hvar(:,:,:)
 
-  R_TYPE, allocatable :: tmp(:), hartree(:,:)  
-  integer :: np, sigma, i, ik, ik2
+  R_TYPE, allocatable :: tmp(:), hartree(:)
+  integer :: np, i, ik, ik2
 
   call push_sub('sternheimer_inc.sternheimer_calc_hvar')
 
@@ -253,39 +253,37 @@ subroutine X(sternheimer_calc_hvar)(this, sys, lr, nsigma, vext, hvar)
   if (this%add_hartree) then 
 
     ALLOCATE(tmp(1:np), np)
+    ALLOCATE(hartree(1:np), np)
     do i = 1, np
       tmp(i) = sum(lr(1)%X(dl_rho)(i, 1:sys%st%d%nspin))
     end do
-
-    ALLOCATE(hartree(1:np, 1:nsigma), np * nsigma)
-    hartree(1:np, 1) = R_TOTYPE(M_ZERO)
-    call X(poisson_solve)(sys%gr, hartree(:,1), tmp, all_nodes=.false.)
-    if (nsigma == 2) hartree(1:np, 2) = R_CONJ(hartree(1:np, 1))
+    hartree(1:np) = R_TOTYPE(M_ZERO)
+    call X(poisson_solve)(sys%gr, hartree, tmp, all_nodes=.false.)
 
     deallocate(tmp)
 
   end if
 
   do ik = 1, sys%st%d%nspin
-    do sigma = 1, nsigma
-      
-      !* Vext
-      hvar(1:np, ik, sigma) = vext(1:np)
-      
-      !* hartree
-      if (this%add_hartree) hvar(1:np, ik, sigma) = hvar(1:np, ik, sigma) &
-           + hartree(1:np, sigma)
-
-      !* fxc
-      if(this%add_fxc) then 
-        do ik2 = 1, sys%st%d%nspin
-          hvar(1:np, ik, sigma) = hvar(1:np, ik, sigma) + &
-               this%fxc(1:np, ik, ik2)*lr(sigma)%X(dl_rho)(1:np, ik2)
-        end do
-      end if
-
-    end do
+    
+    !* Vext
+    hvar(1:np, ik, 1) = vext(1:np)
+    
+    !* hartree
+    if (this%add_hartree) hvar(1:np, ik, 1) = hvar(1:np, ik, 1) &
+         + hartree(1:np)
+    
+    !* fxc
+    if(this%add_fxc) then 
+      do ik2 = 1, sys%st%d%nspin
+        hvar(1:np, ik, 1) = hvar(1:np, ik, 1) + &
+             this%fxc(1:np, ik, ik2)*lr(1)%X(dl_rho)(1:np, ik2)
+      end do
+    end if
+    
   end do
+  
+  if (nsigma == 2) hvar(1:np, 1:sys%st%d%nspin, 2) = R_CONJ(hvar(1:np, 1:sys%st%d%nspin, 1))
 
   if (this%add_hartree) deallocate(hartree)
 

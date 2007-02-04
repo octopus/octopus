@@ -196,7 +196,8 @@ contains
       call system_h_setup(sys, h)
 
       do dir = 1, sys%NDIM
-        call init_lr_wfs(sys%st, sys%gr, lr(dir,1))
+        call lr_init(lr(dir,1))
+        call lr_allocate(lr(dir,1), sys%st, sys%gr%m)
 
         ! load wave-functions
         if(.not.fromScratch) then

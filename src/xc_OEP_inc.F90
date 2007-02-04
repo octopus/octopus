@@ -139,7 +139,8 @@ subroutine X(xc_oep_solve) (gr, h, st, is, vxc, oep)
 
   vxc_old(1:NP) = vxc(1:NP)
 
-  ierr = X(lr_alloc_psi) (st, gr%m, oep%lr)
+  if(.not. lr_is_allocated(oep%lr)) call lr_allocate(oep%lr, st, gr%m) 
+
   do ist = 1, st%nst
     call X(lr_orth_vector) (gr%m, st, oep%lr%X(dl_psi)(:,:, ist, is), is)
   end do

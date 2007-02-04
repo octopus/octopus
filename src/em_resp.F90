@@ -53,7 +53,7 @@ module pol_lr_m
        pol_lr_run
 
   public :: &
-    read_wfs, init_lr_wfs
+    read_wfs
 
   type em_resp_t
     integer :: nsigma ! 1: consider only positive values of the frequency
@@ -122,7 +122,8 @@ contains
       do sigma = 1, em_vars%nsigma
         do ifactor = 1, em_vars%nfactor 
 
-          call init_lr_wfs(sys%st, sys%gr, em_vars%lr(dir, sigma, ifactor))
+          call lr_init(em_vars%lr(dir, sigma, ifactor))
+          call lr_allocate(em_vars%lr(dir, sigma, ifactor), sys%st, sys%gr%m)
 
           ! load wave-functions
           if(.not.fromScratch) then
@@ -483,27 +484,6 @@ contains
     call pop_sub()
 
   end subroutine read_wfs
-
-
-  ! ---------------------------------------------------------
-  subroutine init_lr_wfs(st, gr, lr)
-    type(states_t),   intent(in)    :: st
-    type(grid_t),     intent(inout) :: gr
-    type(lr_t),       intent(inout) :: lr
-
-    integer :: ierr
-
-    call lr_init(lr)
-
-    if(wfs_are_real(st)) then
-      ierr = dlr_alloc_psi(st, gr%m, lr)
-      lr%ddl_rho = M_ZERO
-    else
-      ierr = zlr_alloc_psi(st, gr%m, lr)
-      lr%zdl_rho = M_ZERO
-    end if
-
-  end subroutine init_lr_wfs
 
   ! ---------------------------------------------------------
   subroutine em_resp_output(st, gr, outp, em_vars, iomega)

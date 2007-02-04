@@ -46,9 +46,8 @@ module linear_response_m
   public :: &
        lr_t, &
        lr_init, &
+       lr_allocate, &
        lr_copy, & 
-       dlr_alloc_psi, &
-       zlr_alloc_psi, & 
        dlr_output, & 
        zlr_output, & 
        dlr_orth_vector, & 
@@ -57,12 +56,14 @@ module linear_response_m
        zlr_build_dl_rho, &
        dlr_orth_response, &
        zlr_orth_response, &
-       lr_dealloc
+       lr_dealloc, &
+       lr_is_allocated
 
 
   type lr_t
     !the number of lr wfs
     integer :: nst
+    logical :: is_allocated
      
     ! the real quantities
     FLOAT, pointer :: ddl_rho(:,:)     ! response of the density
@@ -85,83 +86,52 @@ contains
 
   ! ---------------------------------------------------------
   subroutine lr_init(lr)
-    type(lr_t),        intent(out)   :: lr
+    type(lr_t),     intent(out)   :: lr
+
     call push_sub('linear_response.lr_init')
 
     nullify(lr%ddl_rho, lr%ddl_psi)
     nullify(lr%zdl_rho, lr%zdl_psi)
-    
     nullify(lr%dl_j, lr%ddl_de, lr%zdl_de, lr%ddl_elf, lr%zdl_elf)
-    
+
+    lr%is_allocated = .false.
+
+    call pop_sub()
+
   end subroutine lr_init
 
-  ! ---------------------------------------------------------
-  integer function dlr_alloc_psi(st, m, lr) result(r)
-    type(states_t), intent(in) :: st
-    type(mesh_t),   intent(in) :: m
-    type(lr_t),  intent(inout) :: lr
+  subroutine lr_allocate(lr, st, m)
+    type(lr_t),     intent(out)   :: lr
+    type(states_t), intent(in)    :: st
+    type(mesh_t),   intent(in)    :: m
 
-    call push_sub('linear_response.dlr_alloc_psi')
+    integer :: size
 
-    r = 1
-    if(associated(lr%ddl_psi)) then 
-      call pop_sub()
-      return ! do nothing
-    end if
+    call push_sub('linear_response.lr_init')
 
-    ALLOCATE(lr%ddl_psi(m%np_part, st%d%dim, st%nst, st%d%nspin),
-         m%np_part*st%d%dim*st%nst*st%d%nspin)
+    if (wfs_are_complex(st)) then 
 
-    ALLOCATE(lr%ddl_rho(m%np, st%d%nspin), m%np*st%d%nspin)
-
-    if(associated(lr%zdl_psi)) then
-      r = 2
-      lr%ddl_psi = real(lr%zdl_psi, REAL_PRECISION)
-      deallocate(lr%zdl_psi)
-      nullify(lr%zdl_psi)
+      ALLOCATE(lr%zdl_psi(m%np_part, st%d%dim, st%nst, st%d%nspin), size)
+      ALLOCATE(lr%zdl_rho(m%np, st%d%nspin), m%np*st%d%nspin)
+      
+      lr%zdl_psi = M_ZERO
+      lr%zdl_rho = M_ZERO
+      
     else
-      r = -1
+
+      ALLOCATE(lr%ddl_psi(m%np_part, st%d%dim, st%nst, st%d%nspin), size)
+      ALLOCATE(lr%ddl_rho(m%np, st%d%nspin), m%np*st%d%nspin)
+
       lr%ddl_psi = M_ZERO
+      lr%ddl_rho = M_ZERO
+
     end if
 
+    lr%is_allocated = .true.
+    
     call pop_sub()
 
-  end function dlr_alloc_psi
-
-
-  ! ---------------------------------------------------------
-  integer function zlr_alloc_psi(st, m, lr) result(r)
-    type(states_t), intent(in) :: st
-    type(mesh_t),   intent(in) :: m
-    type(lr_t),  intent(inout) :: lr
-
-    call push_sub('linear_response.zlr_alloc_psi')
-
-    r = 1
-    if(associated(lr%zdl_psi)) then 
-      call pop_sub()
-      return ! do nothing
-    end if
-
-    ALLOCATE(lr%zdl_psi(m%np_part, st%d%dim, st%nst, st%d%nspin),
-         m%np_part*st%d%dim*st%nst*st%d%nspin)
-         
-    ALLOCATE(lr%zdl_rho(m%np, st%d%nspin), m%np*st%d%nspin)
-
-    if(associated(lr%ddl_psi)) then
-      r = 2
-      lr%zdl_psi = lr%ddl_psi
-      deallocate(lr%ddl_psi)
-      nullify(lr%ddl_psi)
-    else
-      r = -1
-      lr%zdl_psi = M_z0
-    end if
-
-    call pop_sub()
-
-  end function zlr_alloc_psi
-
+  end subroutine lr_allocate
 
   ! ---------------------------------------------------------
   subroutine lr_dealloc(lr)
@@ -224,6 +194,11 @@ contains
    end do
 
   end subroutine lr_copy
+
+  logical function lr_is_allocated(this) 
+    type(lr_t),     intent(in) :: this
+    lr_is_allocated = this%is_allocated
+  end function lr_is_allocated
 
 #include "undef.F90"
 #include "real.F90"
