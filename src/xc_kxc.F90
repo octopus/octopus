@@ -42,7 +42,7 @@ subroutine xc_get_kxc(xcs, m, rho, ispin, kxc)
   end if
 
   ! is there anything to do? (only LDA by now)
-  if(iand(xcs%family, XC_FAMILY_LDA) == 0) return
+  if(iand(xcs%kernel_family, XC_FAMILY_LDA) == 0) return
 
   ! really start
   call push_sub('xc_kxc.xc_get_vxc')

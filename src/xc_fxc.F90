@@ -32,6 +32,8 @@ subroutine xc_get_fxc(xcs, m, rho, ispin, fxc)
 
   type(xc_functl_t), pointer :: functl(:)
 
+  call push_sub('xc_fxc.xc_get_fxc')
+
   if(ispin == UNPOLARIZED) then
     functl => xcs%kernel(:, 1)
   else
@@ -39,43 +41,41 @@ subroutine xc_get_fxc(xcs, m, rho, ispin, fxc)
   end if
 
   ! is there anything to do? (only LDA by now)
-  if(iand(xcs%family, XC_FAMILY_LDA) == 0) return
-
-  ! really start
-  call push_sub('xc_fxc.xc_get_fxc')
-
-  ! This is a bit ugly (why functl(1) and not functl(2)?, but for the moment it works.
-  spin_channels = functl(1)%spin_channels
-
-  call  lda_init()
-
-  space_loop: do i = 1, m%np
-
-    ! make a local copy with the correct memory order
-    l_dens (:)   = dens (i, :)
-
-    ! Calculate fxc
-    functl_loop: do ixc = 1, 2
-
-      select case(functl(ixc)%family)
-      case(XC_FAMILY_LDA)
-        call xc_f90_lda_fxc(functl(ixc)%conf, l_dens(1), l_dedd(1))
-
-      case default
-        cycle
-      end select
-
-      ! store results
-      dedd(i,:) = dedd(i,:) + l_dedd(:)
-
-    end do functl_loop
-  end do space_loop
-
-  call  lda_process()
-
-  ! clean up allocated memory
-  call  lda_end()
-
+  if( iand(xcs%kernel_family, XC_FAMILY_LDA) /= 0 ) then 
+    
+    ! This is a bit ugly (why functl(1) and not functl(2)?, but for the moment it works.
+    spin_channels = functl(1)%spin_channels
+    
+    call  lda_init()
+    
+    space_loop: do i = 1, m%np
+      
+      ! make a local copy with the correct memory order
+      l_dens (:)   = dens (i, :)
+      
+      ! Calculate fxc
+      functl_loop: do ixc = 1, 2
+        
+        select case(functl(ixc)%family)
+        case(XC_FAMILY_LDA)
+          call xc_f90_lda_fxc(functl(ixc)%conf, l_dens(1), l_dedd(1))
+          
+        case default
+          cycle
+        end select
+        
+        ! store results
+        dedd(i,:) = dedd(i,:) + l_dedd(:)
+        
+      end do functl_loop
+    end do space_loop
+    
+    call  lda_process()
+    
+    ! clean up allocated memory
+    call  lda_end()
+  end if
+  
   call pop_sub()
 
 

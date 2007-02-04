@@ -53,6 +53,7 @@ module xc_m
     logical :: cdft
 
     integer :: family                   ! the families present
+    integer :: kernel_family
     type(xc_functl_t) :: functl(2,2) ! (1,:) => exchange,    (2,:) => correlation
                                         ! (:,1) => unpolarized, (:,2) => polarized
 
@@ -117,6 +118,7 @@ contains
     ! get current-dependent functional
     call xc_j_functl_init (xcs%j_functl, cdft, spin_channels)
     xcs%family = xcs%j_functl%family
+    xcs%kernel_family = 0
 
     if (xcs%family == XC_FAMILY_LCA .or. xcs%family == 0) then
       
@@ -137,8 +139,8 @@ contains
       xcs%family = ior(xcs%family, xcs%functl(1,1)%family)
       xcs%family = ior(xcs%family, xcs%functl(2,1)%family)
 
-      xcs%family = ior(xcs%family, xcs%kernel(1,1)%family)
-      xcs%family = ior(xcs%family, xcs%kernel(2,1)%family)
+      xcs%kernel_family = ior(xcs%kernel_family, xcs%kernel(1,1)%family)
+      xcs%kernel_family = ior(xcs%kernel_family, xcs%kernel(2,1)%family)
 
       if (iand(xcs%family, XC_FAMILY_LCA).ne.0 .and. &
         iand(xcs%family, XC_FAMILY_MGGA + XC_FAMILY_OEP).ne.0) then
