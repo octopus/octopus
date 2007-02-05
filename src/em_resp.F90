@@ -269,9 +269,9 @@ contains
       !calculate hyperpolarizability
       if(em_vars%calc_hyperpol) then           
         if(wfs_are_complex(sys%st)) then 
-          call zlr_calc_beta(sh, sys, em_vars%lr(:,:,:), em_vars%beta)
+          call zlr_calc_beta(sh, sys, h, em_vars%lr(:,:,:), em_vars%beta)
         else
-          call dlr_calc_beta(sh, sys, em_vars%lr(:,:,:), em_vars%beta)
+          call dlr_calc_beta(sh, sys, h, em_vars%lr(:,:,:), em_vars%beta)
         end if
       end if
       

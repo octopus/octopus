@@ -28,6 +28,7 @@ module sternheimer_m
   use io_m
   use lib_basic_alg_m
   use lib_oct_parser_m
+  use lib_xc_m
   use linear_solver_m
   use linear_response_m
   use math_m
@@ -45,6 +46,7 @@ module sternheimer_m
   use units_m
   use v_ks_m
   use xc_m
+  use xc_OEP_kernel_m
 
   implicit none
 
@@ -70,7 +72,7 @@ module sternheimer_m
      logical :: ok
      logical :: hermitian 
      logical :: orth_response
-     
+     logical :: oep_kernel
      FLOAT, pointer :: fxc(:,:,:)    ! linear change of the xc potential (fxc)
      
   end type sternheimer_t
@@ -140,7 +142,7 @@ contains
 
     call scf_tol_init(this%scftol, prefix)
 
-    if(this%add_fxc) call sternheimer_build_fxc(this, sys%gr%m, sys%st, sys%ks%xc) 
+    if(this%add_fxc) call sternheimer_build_fxc(this, sys%gr%m, sys%st, sys%ks) 
 
   end subroutine sternheimer_init
 
@@ -149,15 +151,16 @@ contains
 
     call linear_solver_end(this%solver)
     call scf_tol_end(this%scftol)
+
     if (this%add_fxc) deallocate(this%fxc)
 
   end subroutine sternheimer_end
 
-  subroutine sternheimer_build_fxc(this, m, st, xcs)
+  subroutine sternheimer_build_fxc(this, m, st, ks)
     type(sternheimer_t), intent(out) :: this
     type(mesh_t),   intent(in)  :: m
     type(states_t), intent(in)  :: st
-    type(xc_t),     intent(in)  :: xcs
+    type(v_ks_t),     intent(in)  :: ks
 
     FLOAT, allocatable :: rho(:, :)
     integer :: is
@@ -166,19 +169,29 @@ contains
 
     ALLOCATE(this%fxc(m%np, st%d%nspin, st%d%nspin), m%np*st%d%nspin*st%d%nspin)
 
-    ALLOCATE(rho(m%np, st%d%nspin), m%np*st%d%nspin)
-    if(associated(st%rho_core)) then
-      do is = 1, st%d%spin_channels
-        rho(1:m%np, is) = st%rho(1:m%np, is) + st%rho_core(1:m%np)/st%d%spin_channels
-      end do
+    if( iand(ks%xc%kernel_family, XC_FAMILY_OEP) == 0 ) then 
+      
+      ALLOCATE(rho(m%np, st%d%nspin), m%np*st%d%nspin)
+      if(associated(st%rho_core)) then
+        do is = 1, st%d%spin_channels
+          rho(1:m%np, is) = st%rho(1:m%np, is) + st%rho_core(1:m%np)/st%d%spin_channels
+        end do
+      else
+        rho(1:m%np, 1:st%d%nspin) = st%rho(1:m%np, 1:st%d%nspin)
+      end if
+      this%fxc = M_ZERO
+      call xc_get_fxc(ks%xc, m, rho, st%d%ispin, this%fxc)
+      deallocate(rho)
+      this%oep_kernel = .false.
     else
-      rho(1:m%np, 1:st%d%nspin) = st%rho(1:m%np, 1:st%d%nspin)
+
+      call xc_oep_kernel_init(ks%oep)
+      this%oep_kernel = .true.
+
     end if
-    this%fxc = M_ZERO
-    call xc_get_fxc(xcs, m, rho, st%d%ispin, this%fxc)
-    deallocate(rho)
 
     call pop_sub()
+
   end subroutine sternheimer_build_fxc
 
 

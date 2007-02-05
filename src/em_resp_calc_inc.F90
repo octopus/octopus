@@ -281,9 +281,10 @@ end subroutine X(lr_calc_polarizability)
 
 
 ! ---------------------------------------------------------
-subroutine X(lr_calc_beta) (sh, sys, lr, beta)
+subroutine X(lr_calc_beta) (sh, sys, h, lr, beta)
   type(sternheimer_t), intent(inout) :: sh
   type(system_t),      intent(inout) :: sys
+  type(hamiltonian_t), intent(inout) :: h
   type(lr_t),          intent(inout) :: lr(:,:,:)
   CMPLX,               intent(out)   :: beta(1:MAX_DIM, 1:MAX_DIM, 1:MAX_DIM)
 
@@ -323,7 +324,7 @@ subroutine X(lr_calc_beta) (sh, sys, lr, beta)
     do idir = 1, ndim
       do idim = 1, sys%st%d%dim
         
-        call X(sternheimer_calc_hvar)(sh, sys, lr(idir, :, ifreq), 2, sys%gr%m%x(:, idir), &
+        call X(sternheimer_calc_hvar)(sh, sys, h, lr(idir, :, ifreq), 2, sys%gr%m%x(:, idir), &
              hvar(:, :, :, idim, idir, ifreq))
         
       end do !idim

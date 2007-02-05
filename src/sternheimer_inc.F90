@@ -106,7 +106,7 @@ subroutine X(sternheimer_solve)(&
     
     dl_rhoin(1:m%np, 1:st%d%nspin, 1) = lr(1)%X(dl_rho)(1:m%np, 1:st%d%nspin)
 
-    call X(sternheimer_calc_hvar)(this, sys, lr, nsigma, vext, hvar)
+    call X(sternheimer_calc_hvar)(this, sys, h, lr, nsigma, vext, hvar)
 
     do ik = 1, st%d%nspin
       !now calculate response for each state
@@ -235,9 +235,10 @@ subroutine X(sternheimer_solve)(&
 
 end subroutine X(sternheimer_solve)
 
-subroutine X(sternheimer_calc_hvar)(this, sys, lr, nsigma, vext, hvar)
+subroutine X(sternheimer_calc_hvar)(this, sys, h, lr, nsigma, vext, hvar)
   type(sternheimer_t),    intent(inout) :: this
   type(system_t), target, intent(inout) :: sys
+  type(hamiltonian_t), target, intent(inout) :: h
   type(lr_t),             intent(inout) :: lr(:) 
   integer,                intent(in)    :: nsigma 
   FLOAT,                  intent(in)    :: vext(:)
@@ -274,13 +275,17 @@ subroutine X(sternheimer_calc_hvar)(this, sys, lr, nsigma, vext, hvar)
          + hartree(1:np)
     
     !* fxc
-    if(this%add_fxc) then 
-      do ik2 = 1, sys%st%d%nspin
-        hvar(1:np, ik, 1) = hvar(1:np, ik, 1) + &
-             this%fxc(1:np, ik, ik2)*lr(1)%X(dl_rho)(1:np, ik2)
-      end do
+    if(this%add_fxc) then
+      if(.not. this%oep_kernel) then 
+        do ik2 = 1, sys%st%d%nspin
+          hvar(1:np, ik, 1) = hvar(1:np, ik, 1) + &
+               this%fxc(1:np, ik, ik2)*lr(1)%X(dl_rho)(1:np, ik2)
+        end do
+      else
+        call X(xc_oep_kernel_calc)(sys, h,lr, nsigma, hartree(:))
+        hvar(1:np, ik, 1) = hvar(1:np, ik, 1) + hartree(1:np)
+      end if
     end if
-    
   end do
   
   if (nsigma == 2) hvar(1:np, 1:sys%st%d%nspin, 2) = R_CONJ(hvar(1:np, 1:sys%st%d%nspin, 1))
