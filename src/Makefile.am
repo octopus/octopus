@@ -34,7 +34,7 @@ core_SRCS = $(basic_SRCS) \
 octopus_SOURCES = $(core_SRCS) \
 	lasers.F90 rkb_projector.F90 kb_projector.F90 hgh_projector.F90 epot.F90 \
 	h.F90 preconditioners.F90 linear_solver.F90 linear_response.F90 restart.F90 \
-	xc_OEP.F90 xc_OEP_kernel.F90 v_ks.F90 systm.F90 \
+	xc_OEP.F90 v_ks.F90 systm.F90  xc_OEP_kernel.F90\
 	eigen.F90 lcao.F90 pes.F90 \
 	scf.F90 gs.F90 unocc.F90 \
 	static_pol.F90 geom_opt.F90 phonons.F90 \
