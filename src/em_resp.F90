@@ -419,9 +419,9 @@ contains
       end if
 
       if (wfs_are_real(sys%st)) then 
-        message(1) = 'Wavefunctions type: Complex'
-      else
         message(1) = 'Wavefunctions type: Real'
+      else
+        message(1) = 'Wavefunctions type: Complex'
       end if
       call write_info(1)
 

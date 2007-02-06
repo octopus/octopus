@@ -107,18 +107,18 @@ contains
     if((gauss_start .le. gaus_leg_n).and.mpi_grp_is_root(mpi_world)) then
       iunit = io_open('linear/vdw_c6', action='write', position='append')
       write(iunit, '(1x)')
-      write(iunit, '(a,f18.8)') "C_3  [a.u.  ] = ", c3
-      write(iunit, '(a,f18.8)') "C_6  [a.u.  ] = ", c6
-      write(iunit, '(a,f18.8)') "C_AT [a.u.  ] = ", cat
+      write(iunit, '(a,es20.12)') "C_3  [a.u.  ] = ", c3
+      write(iunit, '(a,es20.12)') "C_6  [a.u.  ] = ", c6
+      write(iunit, '(a,es20.12)') "C_AT [a.u.  ] = ", cat
       write(iunit, '(1x)')
 
-      write(iunit, '(5a,i1,a,f18.8)') "C_3  [", trim(units_out%energy%abbrev), " ",  &
+      write(iunit, '(5a,i1,a,es20.12)') "C_3  [", trim(units_out%energy%abbrev), " ",  &
         trim(units_out%length%abbrev), "^", sys%NDIM, "] = ", &
         c3/(units_out%energy%factor * units_out%length%factor**sys%NDIM)
-      write(iunit, '(5a,i1,a,f18.8)') "C_6  [", trim(units_out%energy%abbrev), " ",  &
+      write(iunit, '(5a,i1,a,es20.12)') "C_6  [", trim(units_out%energy%abbrev), " ",  &
         trim(units_out%length%abbrev), "^", 2*sys%NDIM, "] = ", &
         c6/(units_out%energy%factor * units_out%length%factor**(2*sys%NDIM))
-      write(iunit, '(5a,i1,a,f18.8)') "C_AT [", trim(units_out%energy%abbrev), " ",  &
+      write(iunit, '(5a,i1,a,es20.12)') "C_AT [", trim(units_out%energy%abbrev), " ",  &
         trim(units_out%length%abbrev), "^", 3*sys%NDIM, "] = ", &
         cat/(units_out%energy%factor * units_out%length%factor**(3*sys%NDIM))
 
