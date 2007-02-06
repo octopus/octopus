@@ -154,6 +154,8 @@ contains
       do ifactor = 1, em_vars%nfactor
         do dir = 1, sys%gr%sb%dim
 
+          ierr = 0
+
           write(message(1), '(a,i1,a)') 'Info: Calculating response for direction ', dir, &
                ' and frequency '//&
                trim(freq2str(em_vars%freq_factor(ifactor)*em_vars%omega(iomega)/units_out%energy%factor))

@@ -77,9 +77,9 @@ contains
 
     call push_sub('vdw.vdw_run')
 
-    call sternheimer_init(sh, sys, h, "Pol", hermitian=.false.)
     call input()
     call init()
+    call sternheimer_init(sh, sys, h, "Pol", hermitian=.false.)
 
     if(gauss_start == 1 .and. mpi_grp_is_root(mpi_world)) then
       iunit = io_open('linear/vdw_c6', action='write')
@@ -228,7 +228,7 @@ contains
           ' and imaginary frequency ', aimag(omega)/units_out%energy%factor
         call write_info(1)   
 
-        call zsternheimer_solve(sh, sys, h, lr(dir, :), dir,  omega, sys%gr%m%x(:,dir), &
+        call zsternheimer_solve(sh, sys, h, lr(dir, :), 1,  omega, sys%gr%m%x(:,dir), &
              RESTART_DIR, em_rho_tag(real(omega),dir), em_wfs_tag(dir,1))
       end do
 
