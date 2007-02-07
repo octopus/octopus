@@ -135,12 +135,11 @@ contains
     ! --------------------------------------------------------------------
     subroutine input()
       !%Variable vdW_npoints
-      !%Type integers
+      !%Type integer
       !%Section Linear Response::Polarizabilities
       !%Description
       !% How many points to use in the Gauss-Legendre integration to obtain the
       !% van der Waals coefficients
-      !%
       !%End
       call  loct_parse_int(check_inp('vdW_npoints'), 6, gaus_leg_n)
 
