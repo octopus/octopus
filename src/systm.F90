@@ -35,6 +35,7 @@ module system_m
   use states_m
   use units_m
   use v_ks_m
+  use elf_m
 
   implicit none
 
@@ -78,6 +79,7 @@ contains
     call geometry_debug(sys%geo, 'debug')
     call states_densities_init(sys%st, sys%gr, sys%geo)
     call output_init(sys%gr%sb, sys%outp)
+    call elf_init
     call poisson_init(sys%gr, sys%geo)
     call v_ks_init(sys%gr, sys%ks, sys%st%d)
 
