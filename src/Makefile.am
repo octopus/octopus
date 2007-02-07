@@ -37,9 +37,10 @@ octopus_SOURCES = $(core_SRCS) \
 	xc_OEP.F90 v_ks.F90 systm.F90  xc_OEP_kernel.F90\
 	eigen.F90 lcao.F90 pes.F90 \
 	scf.F90 gs.F90 unocc.F90 \
-	static_pol.F90 geom_opt.F90 phonons.F90 \
+	static_pol.F90 geom_opt.F90 phonons.F90 phonons_fd.F90 \
 	td_exp_split.F90 td_exp.F90 td_rti.F90 td_write.F90 td.F90 filters.F90 opt_control.F90 \
-	casida.F90 wave_matching.F90 sternheimer.F90 em_resp_calc.F90 em_resp.F90 vdW.F90 pulpo.F90 \
+	casida.F90 wave_matching.F90 sternheimer.F90 em_resp_calc.F90 em_resp.F90 vdW.F90 \
+	phonons_lr.F90 pulpo.F90 \
 	run.F90 main.F90
 
 noinst_HEADERS = \
@@ -222,6 +223,8 @@ out.o: global.h out_inc.F90
 par_vec.o: global.h par_vec_inc.F90
 pes.o: global.h pes_rc.F90 pes_mask.F90
 phonons.o: global.h
+phonons_fd.o: global.h
+phonons_lr.o: global.h
 phonon_spectrum.o: global.h
 poisson_fft.o: global.h
 poisson_isf.o: global.h

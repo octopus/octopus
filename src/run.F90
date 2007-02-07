@@ -36,7 +36,8 @@ module run_prog_m
   use mpi_debug_m
   use multicomm_m
   use opt_control_m
-  use phonons_m
+  use phonons_fd_m
+  use phonons_lr_m
   use pol_lr_m
   use pulpo_m
   use restart_m
@@ -68,6 +69,7 @@ module run_prog_m
     M_CASIDA             =   9,  &
     M_WAVE_MATCHING      =  10,  &
     M_VDW                =  11,  &
+    M_PHONONS_LR         =  12,  &
     M_BO_MD              =  98,  &
     M_PULPO_A_FEIRA      =  99
 
@@ -112,6 +114,8 @@ contains
       call geom_opt_run(sys, h)
     case(M_PHONONS)
       call phonons_run(sys, h)
+    case(M_PHONONS_LR)
+      call phonons_lr_run(sys, h, fromScratch)
     case(M_OPT_CONTROL)
       call opt_control_run(sys, h)
     case(M_CASIDA)

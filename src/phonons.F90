@@ -43,11 +43,15 @@ module phonons_m
   implicit none
 
   private
-  public :: phonons_run
+  public :: &
+       phonons_t, &
+       phonons_init, &
+       phonons_end,  &
+       phonons_diagonalize_dm
 
   type phonons_t
     integer :: dim
-    FLOAT, pointer :: DM(:,:), freq(:)
+    FLOAT, pointer :: dm(:,:), freq(:)
 
     FLOAT :: disp
   end type phonons_t
@@ -55,174 +59,42 @@ module phonons_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine phonons_run(sys, h)
+  subroutine phonons_init(ph, sys)
+    type(phonons_t),     intent(out) :: ph
     type(system_t),      intent(inout) :: sys
-    type(hamiltonian_t), intent(inout) :: h
-
-    type(phonons_t) :: ph
-    integer :: i, j, iunit, ierr
-
-    call init_()
-
-    ! load wave-functions
-    call restart_read(trim(tmpdir)//'restart_gs', sys%st, sys%gr, sys%geo, ierr)
-    if(ierr.ne.0) then
-      message(1) = "Could not load wave-functions: Starting from scratch"
-      call write_warning(1)
-    end if
-
-    ! setup Hamiltonian
-    message(1) = 'Info: Setting up Hamiltonian.'
-    call write_info(1)
-    call system_h_setup(sys, h)
-
-    ! create directory for output
-    call io_mkdir('phonons')
 
     ph%dim = sys%geo%natoms*sys%gr%sb%dim
-    ALLOCATE(ph%DM(ph%dim, ph%dim), ph%dim*ph%dim)
+    ALLOCATE(ph%dm(ph%dim, ph%dim), ph%dim*ph%dim)
     ALLOCATE(ph%freq(ph%dim), ph%dim)
 
-    !%Variable Displacement
-    !%Type float
-    !%Default 0.01 a.u.
-    !%Section Linear Response::Vibrational Modes
-    !%Description
-    !% When calculating phonon properties by finite differences (<tt>CalculationMode = phonons</tt>)
-    !% <tt>Displacement</tt> controls how much the atoms are to be moved in order to calculate the 
-    !% dynamical matrix.
-    !%End
-    call loct_parse_float(check_inp('Displacement'), CNST(0.01)/units_inp%length%factor, ph%disp)
-    ph%disp = ph%disp*units_inp%length%factor
-
-    ! calculate dynamical matrix
-    call get_DM(sys%gr, sys%geo, sys%st, sys%ks, h, sys%outp, ph)
-
-    ! output phonon frequencies and eigenvectors
-    iunit = io_open('phonons/freq', action='write')
-    do i = 1, ph%dim
-      write(iunit, *) i, sqrt(abs(ph%freq(i))) * 219474.63 ! output cm^-1
-    end do
-    call io_close(iunit)
-
-    ! output phonon eigenvectors
-    iunit = io_open('phonons/vec', action='write')
-    do i = 1, ph%dim
-      write(iunit, '(i6)', advance='no') i
-      do j = 1, ph%dim
-        write(iunit, '(es14.5)', advance='no') ph%DM(j, i)
-      end do
-      write(iunit, '(1x)')
-    end do
-    call io_close(iunit)
-
-    deallocate(ph%DM, ph%freq)
-    call end_()
-
-  contains
-
-    ! ---------------------------------------------------------
-    subroutine init_()
-
-      call push_sub('phonons.phonons_run')
-      call states_allocate_wfns(sys%st, sys%gr%m)
-
-    end subroutine init_
-
-    ! ---------------------------------------------------------
-    subroutine end_()
-      call states_deallocate_wfns(sys%st)
-
-      call pop_sub()
-    end subroutine end_
-
-  end subroutine phonons_run
+  end subroutine phonons_init
 
 
   ! ---------------------------------------------------------
-  subroutine get_DM(gr, geo, st, ks, h, outp, ph)
-    type(grid_t), target, intent(inout) :: gr
-    type(geometry_t),     intent(inout) :: geo
-    type(states_t),       intent(inout) :: st
-    type(v_ks_t),         intent(inout) :: ks
-    type(hamiltonian_t),  intent(inout) :: h
-    type(output_t),       intent(in)    :: outp
+  subroutine phonons_end(ph)
+    type(phonons_t),     intent(inout) :: ph
+
+    deallocate(ph%dm)
+    deallocate(ph%freq)
+
+  end subroutine phonons_end
+
+  ! ---------------------------------------------------------
+  subroutine phonons_diagonalize_dm(ph)
     type(phonons_t),      intent(inout) :: ph
-
-    type(scf_t)               :: scf
-    type(mesh_t),     pointer :: m
-
-    integer :: i, j, alpha, beta, n, iunit
-    FLOAT, allocatable :: forces(:,:), forces0(:,:), tmpDM(:,:)
-
-    m   => gr%m
-
-    call scf_init(gr, geo, scf, st, h)
-    ALLOCATE(forces0(geo%natoms, 3), geo%natoms*3)
-    ALLOCATE(forces (geo%natoms, 3), geo%natoms*3)
-    forces = M_ZERO; forces0 = M_ZERO
-    n = geo%natoms*NDIM
-
-    call io_assign(iunit)
-    iunit = io_open('phonons/DM', action='write')
-
-    do i = 1, geo%natoms
-      do alpha = 1, NDIM
-        write(message(1), '(a,i3,a,i2)') 'Info: Moving atom ', i, ' in the direction ', alpha
-        call write_info(1)
-
-        ! move atom i in direction alpha by dist
-        geo%atom(i)%x(alpha) = geo%atom(i)%x(alpha) + ph%disp
-
-        ! first force
-        call epot_generate(h%ep, gr, geo, st, h%reltype)
-        call states_calc_dens(st, m%np, st%rho)
-        call v_ks_calc(gr, ks, h, st, calc_eigenval=.true.)
-        call hamiltonian_energy (h, gr, geo, st, -1)
-        call scf_run(scf, gr, geo, st, ks, h, outp)
-        do j = 1, geo%natoms
-          forces0(j, :) = geo%atom(j)%f(:)
-        end do
-
-        geo%atom(i)%x(alpha) = geo%atom(i)%x(alpha) - M_TWO*ph%disp
-
-        ! second force
-        call epot_generate(h%ep, gr, geo, st, h%reltype)
-        call states_calc_dens(st, m%np, st%rho)
-        call v_ks_calc(gr, ks, h, st, calc_eigenval=.true.)
-        call hamiltonian_energy(h, gr, geo, st, -1)
-        call scf_run(scf, gr, geo, st, ks, h, outp)
-        do j = 1, geo%natoms
-          forces(j, :) = geo%atom(j)%f(:)
-        end do
-
-        geo%atom(i)%x(alpha) = geo%atom(i)%x(alpha) + ph%disp
-
-        do j = 1, geo%natoms
-          do beta = 1, NDIM
-            ph%DM(NDIM*(i-1) + alpha, NDIM*(j-1) + beta) = &
-              (forces0(j, beta) - forces(j, beta)) / (M_TWO*ph%disp &
-              * sqrt(geo%atom(i)%spec%weight*geo%atom(j)%spec%weight))
-            write(iunit, '(es14.5)', advance='no') ph%DM(NDIM*(i-1) + alpha, NDIM*(j-1) + beta)
-          end do
-        end do
-        write(iunit, '(1x)')
-
-      end do
-    end do
-    deallocate(forces0, forces)
-    call scf_end(scf)
-    call io_close(iunit)
+    
+    FLOAT, allocatable :: tmpdm(:,:)
 
     !we need a temporary copy of DM, to avoid passing the same array twice
-    ALLOCATE(tmpDM(ph%dim, ph%dim), ph%dim*ph%dim)
+    ALLOCATE(tmpdm(ph%dim, ph%dim), ph%dim*ph%dim)
     
-    tmpDM(1:ph%dim,1:ph%dim)=ph%DM(1:ph%dim,1:ph%dim)
+    tmpdm(1:ph%dim,1:ph%dim)=ph%dm(1:ph%dim,1:ph%dim)
 
     ! diagonalize DM
-    call lalg_eigensolve(ph%dim, tmpDM, ph%DM, ph%freq)
+    call lalg_eigensolve(ph%dim, tmpdm, ph%dm, ph%freq)
 
-    deallocate(tmpDM)
-  end subroutine get_DM
+    deallocate(tmpdm)
+
+  end subroutine phonons_diagonalize_dm
 
 end module phonons_m
