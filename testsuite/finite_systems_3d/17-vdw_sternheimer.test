@@ -1,0 +1,28 @@
+# -*- coding: utf-8 mode: shell-script -*-
+# $Id: 05-multigrid_solver.test 2392 2006-08-23 20:50:36Z appel $
+
+Test     : Van der Waals coefficient; Sternheimer method
+Author   : Alberto Castro
+Date     : 07.02.07
+Arch     : Linux g38 2.6.14-desktop-10 #1 SMP PREEMPT Sat Jul 15 18:57:27 CEST 2006 i686 GNU/Linux
+Release  : 2.2.0pre1
+Programs : octopus
+Runtime  : long-run
+Enabled  : Yes
+
+# This test is the calculation of the C6 Hamaker coefficient for the
+# dispersion interaction between two He atoms.
+#
+# The result, 1.828 Hartree * bohr^6, is consistent with the results
+# quoted in [S. J. van Gisbergen et al, J. Chem. Phys. 103, 9347
+# (1995)], where they report 1.82.
+#
+# However, the calculation in this test is underconverged. By setting
+# the grid spacing to 0.20 a.u., and the box radius to 9.0 a.u., we
+# get 1.8626 Hartree * bohr^6.
+
+Input: 17-vdw_sternheimer.01-ground_state.inp
+Input: 17-vdw_sternheimer.02-vdw.inp
+
+Match ; C6 ; grep '^C_6  \[a.u.' linear/vdw_c6 ; \s*1.828\d*
+
