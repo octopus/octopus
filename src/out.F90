@@ -39,6 +39,7 @@ module output_m
   use mpi_m
   use mpi_debug_m
   use varinfo_m
+  use elf_m
 
   implicit none
 
@@ -196,6 +197,10 @@ contains
       !% five states, "2,3" to print the second and the third state, etc.
       !%End
       call loct_parse_string(check_inp('OutputWfsNumber'), "1-1024", outp%wfs_list)
+    end if
+
+    if(iand(outp%what, output_elf).ne.0) then
+      call elf_init
     end if
 
     outp%how = 0

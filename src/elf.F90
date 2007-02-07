@@ -21,6 +21,9 @@
 #include "global.h"
 
 module elf_m
+  use datasets_m
+  use io_m
+  use lib_oct_parser_m
   use cube_function_m
   use functions_m
   use global_m
@@ -33,13 +36,30 @@ module elf_m
   implicit none
 
   private
-  public :: elf_calc,               &
+  public :: elf_init,               &
+            elf_calc,               &
             kinetic_energy_density
 #if defined(HAVE_FFT)
   public :: elf_calc_fs
 #endif
 
+  logical :: with_current_term = .true.
+
 contains
+
+  subroutine elf_init
+    !%Variable ElfWithCurrentTerm
+    !%Type logical
+    !%Default true
+    !%Section Output
+    !%Description
+    !% The ELF, when calculated for complex wave functions, should contain
+    !% a term dependent on the current. This term is properly calculated by
+    !% default; however, for research purposes it may be useful not to add it.
+    !% If this feature proves to be useless, this option should go away.
+    !%End
+    call loct_parse_logical(check_inp('ElfWithCurrentTerm'), .true., with_current_term)
+  end subroutine elf_init
 
   ! ---------------------------------------------------------
   ! (time-dependent) electron localization function, (TD)ELF.
@@ -143,6 +163,8 @@ contains
         deallocate(reduce_elf)
       end if
 #endif
+
+      if(.not.with_current_term) jj = M_ZERO
 
       ! kapp will contain rho * D
       do i = 1, NP
