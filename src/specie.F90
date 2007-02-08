@@ -527,7 +527,7 @@ contains
       end do
     case(SPEC_USDEF)
       write(message(1),'(a,a,a)')    'Specie "',trim(s%label),'" is an user-defined potential.'
-      write(message(2),'(a,a)')      '   Potential = ', trim(s%user_def)
+      write(message(2),'(a,a)')      '   Potential = ', trim(s%user_def(1:240)) ! 256 - 16, 16 for "Potential ="
       call write_info(2)
       s%niwfs = 2*s%z_val
       call loct_parse_expression(pot_re, pot_im, CNST(0.01), M_ZERO,   &
