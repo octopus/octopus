@@ -1,8 +1,8 @@
 #!<PERL>
 
-# Physical constants
-my $P_BOHR    = 0.529177;
-my $P_HARTREE = 2.0*13.60580;
+# Physical constants; first we assume atomic units.
+my $P_BOHR    = 1.0;
+my $P_HARTREE = 1.0;
 my $P_C       = 137.036;
 my $M_PI      = 4 * atan2(1,1);
 
@@ -10,6 +10,17 @@ if($#ARGV != 1){
   print "usage: $PROGRAM_NAME cross_section1 cross_section2\n";
   exit 1;
 }
+
+# First, figure out about the units. Note that it only checks the units
+# of the first file; the units of the second file should be consistent.
+open(IN1, "<$ARGV[0]");
+while($_=<IN1>){
+ if ($_=~/\[eV\]/){
+   $P_BOHR    = 0.529177;
+   $P_HARTREE = 27.211383;
+ };
+}
+close(IN1);
 
 # read files
 open(IN1, "<$ARGV[0]");
@@ -53,5 +64,6 @@ for($ii = 0; $ii<$jj; $ii++){
 $sum *= $omega[0]*3.0/$M_PI;
 
 print "C6 = $sum [a.u.]\n";
-$sum *= $P_HARTREE*$P_BOHR**6;
+#$sum *= $P_HARTREE*$P_BOHR**6;
+$sum *= 0.529177**6 * 27.211383;
 print "C6 = $sum [eV A^6]\n";
