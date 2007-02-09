@@ -66,11 +66,16 @@ contains
 
     type(phonons_t) :: ph
 
-    integer :: iatom, ip, idir
+    integer :: iatom, ip, idir, jatom, jdir, idim, ist, ik
 
     FLOAT, allocatable :: dv(:, :, :)
 
     FLOAT :: x(1:MAX_DIM), r
+
+    FLOAT, allocatable :: tmp(:, :)
+
+
+    !CONSTRUCT
 
     call push_sub('phonons_lr.phonons_lr_run')
 
@@ -92,6 +97,13 @@ contains
 
     ALLOCATE(dv(1:sys%NP, 1:sys%NDIM, sys%geo%natoms), sys%NP*sys%NDIM*sys%geo%natoms)
 
+    ALLOCATE(tmp(1:sys%NP, 1:sys%st%d%dim), sys%NP*sys%st%d%dim)
+
+
+
+    !CALCULATE
+
+
     !calculate the derivative of the external potential with respect to the force
     do iatom = 1, sys%geo%natoms
 
@@ -105,14 +117,51 @@ contains
       
     end  do
 
+    call build_dm()
+
     do iatom = 1, sys%geo%natoms
       do idir = 1, sys%NDIM
+
         call dsternheimer_solve(sh, sys, h, lr, 1, M_ZERO, dv(1:sys%NP, idir, iatom), &
              RESTART_DIR, phn_rho_tag(iatom, idir), phn_wfs_tag(iatom, idir))
-      end do
 
+#if 1
+        do jatom = 1, sys%geo%natoms
+          do jdir = 1, sys%NDIM
+            
+            !<psi|dv|dpsi> 
+            tmp(1:sys%NP, 1:sys%st%d%dim) = M_ZERO
+            
+            do ist = 1, sys%st%nst
+              do idim = 1, sys%st%d%dim
+                do ik = 1, sys%st%d%nspin
+
+                  tmp(1:sys%NP, 1) = tmp(1:sys%NP, 1) + &
+                       sys%st%dpsi(1:sys%NP, idim, ist, ik) * &
+                       dv(1:sys%NP, idir, iatom) * &
+                       lr(1)%ddl_psi(1:sys%NP, idim, ist, ik)
+
+                end do
+              end do
+            end do
+
+            ph%dm(phonons_index(ph, iatom, idir), phonons_index(ph, iatom, idir)) = &
+                 ph%dm(phonons_index(ph, iatom, idir), phonons_index(ph, iatom, idir)) + &
+                 M_TWO * dmf_integrate(sys%gr%m, tmp(:,1))
+          end do
+        end do
+#endif            
+
+        
+
+      end do
     end do
     
+    call phonons_diagonalize_dm(ph)
+    call phonons_output(ph, "_lr")
+
+    !DESTRUCT
+
     deallocate(dv)
 
     call lr_dealloc(lr(1))
@@ -135,7 +184,60 @@ contains
       call pop_sub()
 
     end subroutine parse_input
+    
+    subroutine build_dm()
+      FLOAT :: ac, xi(1:MAX_DIM), xj(1:MAX_DIM), xk(1:MAX_DIM), r2
+      integer :: katom, kdir
 
+      do iatom = 1, sys%geo%natoms
+        do idir = 1, sys%NDIM
+
+          do jatom = 1, sys%geo%natoms
+            do jdir = 1, sys%NDIM
+
+              xi(1:MAX_DIM) = sys%geo%atom(iatom)%x(1:MAX_DIM)
+              xj(1:MAX_DIM) = sys%geo%atom(jatom)%x(1:MAX_DIM)
+
+              !ion - ion
+              if( iatom == jatom) then 
+
+                ac = M_ZERO
+                do katom = 1, sys%geo%natoms
+                  do kdir = 1, sys%NDIM
+
+                    xk(1:MAX_DIM) = sys%geo%atom(katom)%x(1:MAX_DIM)
+                    r2 = sum((xi(1:sys%NDIM) - xk(1:sys%NDIM))**2)
+                    
+                    ac = ac - sys%geo%atom(iatom)%spec%z * sys%geo%atom(katom)%spec%z &
+                         /(r2**CNST(1.5))*(&
+                         ddelta(idir, kdir) - (M_THREE*(xi(idir)-xk(idir))*(xi(kdir)-xk(kdir)))/r2 &
+                         ) 
+
+                  end do
+                end do
+
+              else
+
+                r2 = sum((xi(1:sys%NDIM) - xj(1:sys%NDIM))**2)
+                ac = sys%geo%atom(iatom)%spec%z * sys%geo%atom(jatom)%spec%z &
+                     /(r2**CNST(1.5))*(&
+                     ddelta(idir, jdir) - (M_THREE*(xi(idir)-xj(idir))*(xi(jdir)-xj(jdir)))/r2)
+
+              end if
+
+              !<psi|d2v|psi>
+              
+
+              ph%dm(phonons_index(ph, iatom, idir), phonons_index(ph, iatom, idir)) = ac
+
+            end do
+          end do
+
+        end do
+      end do
+      
+    end subroutine build_dm
+    
 
   end subroutine phonons_lr_run
 
@@ -213,5 +315,18 @@ contains
     call pop_sub()
     
   end function phn_wfs_tag
+
+  FLOAT function ddelta(i, j)
+    integer, intent(in) :: i
+    integer, intent(in) :: j
+
+    if ( i == j) then 
+      ddelta = M_ONE
+    else 
+      ddelta = M_ZERO
+    end if
+
+  end function ddelta
+
 
 end module phonons_lr_m

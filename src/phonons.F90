@@ -47,10 +47,13 @@ module phonons_m
        phonons_t, &
        phonons_init, &
        phonons_end,  &
-       phonons_diagonalize_dm
-
+       phonons_diagonalize_dm, &
+       phonons_index, &
+       phonons_output
+  
   type phonons_t
     integer :: dim
+    integer :: ndim
     FLOAT, pointer :: dm(:,:), freq(:)
 
     FLOAT :: disp
@@ -63,6 +66,7 @@ contains
     type(phonons_t),     intent(out) :: ph
     type(system_t),      intent(inout) :: sys
 
+    ph%ndim = sys%gr%sb%dim
     ph%dim = sys%geo%natoms*sys%gr%sb%dim
     ALLOCATE(ph%dm(ph%dim, ph%dim), ph%dim*ph%dim)
     ALLOCATE(ph%freq(ph%dim), ph%dim)
@@ -96,5 +100,40 @@ contains
     deallocate(tmpdm)
 
   end subroutine phonons_diagonalize_dm
+
+  integer function phonons_index(ph, iatom, idim)
+    type(phonons_t), intent(in) :: ph
+    integer,         intent(in) :: iatom, idim
+    phonons_index = (iatom-1)*ph%ndim + idim
+  end function phonons_index
+
+  subroutine phonons_output(ph, suffix)
+    type(phonons_t),   intent(in) :: ph
+    character (len=*), intent(in) :: suffix
+    
+    integer :: iunit, i, j
+
+    ! create directory for output
+    call io_mkdir('phonons')
+
+    ! output phonon frequencies and eigenvectors
+    iunit = io_open('phonons/freq'//trim(suffix), action='write')
+    do i = 1, ph%dim
+      write(iunit, *) i, sqrt(abs(ph%freq(i))) * 219474.63 ! output cm^-1
+    end do
+    call io_close(iunit)
+
+    ! output phonon eigenvectors
+    iunit = io_open('phonons/vec'//trim(suffix), action='write')
+    do i = 1, ph%dim
+      write(iunit, '(i6)', advance='no') i
+      do j = 1, ph%dim
+        write(iunit, '(es14.5)', advance='no') ph%dm(j, i)
+      end do
+      write(iunit, '(1x)')
+    end do
+    call io_close(iunit)
+    
+  end subroutine phonons_output
 
 end module phonons_m

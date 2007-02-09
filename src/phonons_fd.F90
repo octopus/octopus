@@ -70,9 +70,6 @@ contains
     call write_info(1)
     call system_h_setup(sys, h)
 
-    ! create directory for output
-    call io_mkdir('phonons')
-
     call phonons_init(ph, sys)
 
     !%Variable Displacement
@@ -90,25 +87,10 @@ contains
     ! calculate dynamical matrix
     call get_dm(sys%gr, sys%geo, sys%st, sys%ks, h, sys%outp, ph)
 
-    ! output phonon frequencies and eigenvectors
-    iunit = io_open('phonons/freq', action='write')
-    do i = 1, ph%dim
-      write(iunit, *) i, sqrt(abs(ph%freq(i))) * 219474.63 ! output cm^-1
-    end do
-    call io_close(iunit)
-
-    ! output phonon eigenvectors
-    iunit = io_open('phonons/vec', action='write')
-    do i = 1, ph%dim
-      write(iunit, '(i6)', advance='no') i
-      do j = 1, ph%dim
-        write(iunit, '(es14.5)', advance='no') ph%dm(j, i)
-      end do
-      write(iunit, '(1x)')
-    end do
-    call io_close(iunit)
-
+    call phonons_output(ph, "_fd")
+    
     call phonons_end(ph)
+
     call end_()
 
   contains
@@ -192,10 +174,11 @@ contains
 
         do j = 1, geo%natoms
           do beta = 1, NDIM
-            ph%dm(NDIM*(i-1) + alpha, NDIM*(j-1) + beta) = &
+            ph%dm(phonons_index(ph, i, alpha), phonons_index(ph, j, beta)) = &
               (forces0(j, beta) - forces(j, beta)) / (M_TWO*ph%disp &
               * sqrt(geo%atom(i)%spec%weight*geo%atom(j)%spec%weight))
-            write(iunit, '(es14.5)', advance='no') ph%dm(NDIM*(i-1) + alpha, NDIM*(j-1) + beta)
+            write(iunit, '(es14.5)', advance='no') &
+                 ph%dm(phonons_index(ph, i, alpha), phonons_index(ph, j, beta))
           end do
         end do
         write(iunit, '(1x)')
