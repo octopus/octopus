@@ -1167,6 +1167,10 @@ contains
     select case (a%spec%ps%kbc)
     case (1)
       p%type = M_KB
+      if (reltype == 1) then
+        write(message(1),'(a,a,a)') "Spin-orbit coupling for specie ", trim(a%spec%label), " is not available."
+        call write_warning(1)
+      end if
     case (2)
       if (l == 0 .or. reltype == 0) then
         p%type = M_KB
