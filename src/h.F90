@@ -49,7 +49,6 @@ module hamiltonian_m
     hamiltonian_energy,    &
     hamiltonian_output,    &
     hamiltonian_span,      &
-!    zso,                   &
     dhamiltonian_eigenval, &
     zhamiltonian_eigenval, &
     dhpsi,                 &
