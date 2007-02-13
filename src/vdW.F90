@@ -153,15 +153,20 @@ contains
       character(len=80) :: dirname
       FLOAT :: iomega, domega, pol
 
+      ! make some space for static polarizability
+      gaus_leg_n = gaus_leg_n + 1
+
       ! get gauss legendre points
       ALLOCATE(gaus_leg_points(gaus_leg_n), gaus_leg_n)
       ALLOCATE(gaus_leg_weights(gaus_leg_n), gaus_leg_n)
 
-      call gauss_legendre_points(gaus_leg_n, gaus_leg_points, gaus_leg_weights)
+      call gauss_legendre_points(gaus_leg_n-1, gaus_leg_points, gaus_leg_weights)
       c3  = M_ZERO
       c6  = M_ZERO
       cat = M_ZERO
       gauss_start = 1
+      gaus_leg_points (gaus_leg_n) = CNST(0.99999)
+      gaus_leg_weights(gaus_leg_n) = M_ZERO
 
       ! check if we can restart
       inquire(file='linear/vdw_c6', exist=file_exists)

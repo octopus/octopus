@@ -56,7 +56,7 @@ for(my $j=0; $j<$files[0]->{"npairs"}; $j++){
     $ii2ii = 3 + $ii2ii*2;
 
     # print partial-multipoles
-    my $occ = $file->{"occ"}[0][$ii-1];
+    my $occ = $file->{"occ"}[0][$ii-$file->{"st_s"}];
     while($ll=<IN>){
       my @data = split(/ +/, $ll);
       printf OUT "%8d%20.12e%20.12e", $data[1], $data[2], $occ;
