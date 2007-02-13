@@ -107,11 +107,11 @@ contains
 
     ! add extra point at zero
     psf%rofi(1) = M_ZERO
-    do i = l, psf%no_l_channels
+    do l = 1, psf%no_l_channels
       psf%vps(1,  l) = linear_extrapolate(psf%rofi(1), psf%rofi(2), psf%rofi(3), &
         psf%vps(2, l), psf%vps(3, l))
 
-      psf%rphi(1,  l) = M_ZERO
+      psf%rphi(1, l) = M_ZERO
     end do
 
     if(psf%core_corrections) then
