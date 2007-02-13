@@ -54,7 +54,7 @@ contains
     type(hamiltonian_t), intent(inout) :: h
 
     type(phonons_t) :: ph
-    integer :: i, j, iunit, ierr
+    integer :: i, j, ierr
 
     call init_()
 
@@ -126,7 +126,7 @@ contains
     type(scf_t)               :: scf
     type(mesh_t),     pointer :: m
 
-    integer :: i, j, alpha, beta, n, iunit
+    integer :: i, j, alpha, beta, n
     FLOAT, allocatable :: forces(:,:), forces0(:,:)
 
     m   => gr%m
@@ -136,9 +136,6 @@ contains
     ALLOCATE(forces (geo%natoms, 3), geo%natoms*3)
     forces = M_ZERO; forces0 = M_ZERO
     n = geo%natoms*NDIM
-
-    call io_assign(iunit)
-    iunit = io_open('phonons/DM', action='write')
 
     do i = 1, geo%natoms
       do alpha = 1, NDIM
@@ -153,7 +150,7 @@ contains
         call states_calc_dens(st, m%np, st%rho)
         call v_ks_calc(gr, ks, h, st, calc_eigenval=.true.)
         call hamiltonian_energy (h, gr, geo, st, -1)
-        call scf_run(scf, gr, geo, st, ks, h, outp)
+        call scf_run(scf, gr, geo, st, ks, h, outp, gs_run=.false.)
         do j = 1, geo%natoms
           forces0(j, :) = geo%atom(j)%f(:)
         end do
@@ -177,17 +174,13 @@ contains
             ph%dm(phonons_index(ph, i, alpha), phonons_index(ph, j, beta)) = &
               (forces0(j, beta) - forces(j, beta)) / (M_TWO*ph%disp &
               * sqrt(geo%atom(i)%spec%weight*geo%atom(j)%spec%weight))
-            write(iunit, '(es14.5)', advance='no') &
-                 ph%dm(phonons_index(ph, i, alpha), phonons_index(ph, j, beta))
           end do
         end do
-        write(iunit, '(1x)')
 
       end do
     end do
     deallocate(forces0, forces)
     call scf_end(scf)
-    call io_close(iunit)
 
     call phonons_diagonalize_dm(ph)
 

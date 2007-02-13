@@ -77,6 +77,7 @@ module ps_m
     type(loct_spline_t) :: vlocal_f   ! localized part of local potential
                                       ! in Fourier space (for periodic)
     type(loct_spline_t) :: dvl        ! derivative of the local part
+    type(loct_spline_t) :: d2vl       ! second derivative of the local part
 
 
     FLOAT :: projectors_sphere_threshold ! The projectors are localized in real
@@ -227,6 +228,7 @@ contains
     call loct_spline_init(ps%vl)
     call loct_spline_init(ps%vlocalized)
     call loct_spline_init(ps%dvl)
+    call loct_spline_init(ps%d2vl)
     call loct_spline_init(ps%core)
     call loct_spline_init(ps%vlocal_f)
 
@@ -330,6 +332,7 @@ contains
     end do
 
     call loct_spline_der(ps%vl, ps%dvl)
+    call loct_spline_der(ps%dvl, ps%d2vl)
 
     call pop_sub()
   end subroutine ps_derivatives
@@ -479,6 +482,7 @@ contains
 
     call loct_spline_end(ps%vl)
     call loct_spline_end(ps%dvl)
+    call loct_spline_end(ps%d2vl)
     call loct_spline_end(ps%core)
     call loct_spline_end(ps%vlocal_f)
 

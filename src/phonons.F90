@@ -54,7 +54,8 @@ module phonons_m
   type phonons_t
     integer :: dim
     integer :: ndim
-    FLOAT, pointer :: dm(:,:), freq(:)
+    integer :: natoms
+    FLOAT, pointer :: dm(:,:), vec(:,:), freq(:)
 
     FLOAT :: disp
   end type phonons_t
@@ -67,8 +68,10 @@ contains
     type(system_t),      intent(inout) :: sys
 
     ph%ndim = sys%gr%sb%dim
+    ph%natoms = sys%geo%natoms
     ph%dim = sys%geo%natoms*sys%gr%sb%dim
     ALLOCATE(ph%dm(ph%dim, ph%dim), ph%dim*ph%dim)
+    ALLOCATE(ph%vec(ph%dim, ph%dim), ph%dim*ph%dim)
     ALLOCATE(ph%freq(ph%dim), ph%dim)
 
   end subroutine phonons_init
@@ -87,18 +90,11 @@ contains
   subroutine phonons_diagonalize_dm(ph)
     type(phonons_t),      intent(inout) :: ph
     
-    FLOAT, allocatable :: tmpdm(:,:)
-
-    !we need a temporary copy of DM, to avoid passing the same array twice
-    ALLOCATE(tmpdm(ph%dim, ph%dim), ph%dim*ph%dim)
+    ph%vec = M_ZERO
     
-    tmpdm(1:ph%dim,1:ph%dim)=ph%dm(1:ph%dim,1:ph%dim)
-
     ! diagonalize DM
-    call lalg_eigensolve(ph%dim, tmpdm, ph%dm, ph%freq)
-
-    deallocate(tmpdm)
-
+    call lalg_eigensolve(ph%dim, ph%dm, ph%vec, ph%freq)
+    
   end subroutine phonons_diagonalize_dm
 
   integer function phonons_index(ph, iatom, idim)
@@ -111,10 +107,31 @@ contains
     type(phonons_t),   intent(in) :: ph
     character (len=*), intent(in) :: suffix
     
-    integer :: iunit, i, j
+    integer :: iunit, i, j, iatom, jatom, idir, jdir
+
 
     ! create directory for output
     call io_mkdir('phonons')
+
+    ! output dynamic matrix
+    call io_assign(iunit)
+    iunit = io_open('phonons/DM'//trim(suffix), action='write')
+
+    do iatom = 1, ph%natoms
+      do idir = 1, ph%ndim
+
+        do jatom = 1, ph%natoms
+          do jdir = 1, ph%ndim
+            
+            write(iunit, '(es14.5)', advance='no') &
+                 ph%dm(phonons_index(ph, iatom, idir), phonons_index(ph, jatom, jdir))
+          end do
+        end do
+        write(iunit, '(1x)')
+      end do
+    end do
+
+    call io_close(iunit)
 
     ! output phonon frequencies and eigenvectors
     iunit = io_open('phonons/freq'//trim(suffix), action='write')
@@ -128,7 +145,7 @@ contains
     do i = 1, ph%dim
       write(iunit, '(i6)', advance='no') i
       do j = 1, ph%dim
-        write(iunit, '(es14.5)', advance='no') ph%dm(j, i)
+        write(iunit, '(es14.5)', advance='no') ph%vec(j, i)
       end do
       write(iunit, '(1x)')
     end do

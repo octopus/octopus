@@ -58,7 +58,8 @@ module math_m
     hermite,                    &
     math_divisors,              &
     set_app_threshold,          &
-    operator(.app.)
+    operator(.app.),            &
+    ddelta
 
 
   !------------------------------------------------------------------------------
@@ -689,7 +690,18 @@ contains
     FLOAT, intent(in) :: thr
     APP_THRESHOLD = thr
   end subroutine set_app_threshold
+  
+  FLOAT function ddelta(i, j)
+    integer, intent(in) :: i
+    integer, intent(in) :: j
+    
+    if ( i == j) then 
+      ddelta = M_ONE
+    else 
+      ddelta = M_ZERO
+    end if
 
+  end function ddelta
 
 #include "undef.F90"
 #include "complex.F90"

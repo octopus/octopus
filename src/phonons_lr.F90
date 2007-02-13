@@ -23,6 +23,7 @@
 
 module phonons_lr_m
   use datasets_m
+  use functions_m
   use geometry_m
   use global_m
   use grid_m
@@ -66,13 +67,13 @@ contains
 
     type(phonons_t) :: ph
 
-    integer :: iatom, ip, idir, jatom, jdir, idim, ist, ik
+    integer :: iatom, ip, idir, jatom, jdir, idim, ik
 
-    FLOAT, allocatable :: dv(:, :, :)
+    FLOAT, allocatable :: dv(:, :, :), d2v(:, :, :, :)
 
-    FLOAT :: x(1:MAX_DIM), r
+    FLOAT :: x(1:MAX_DIM), r, total_mass, factor
 
-    FLOAT, allocatable :: tmp(:, :)
+    FLOAT, allocatable :: tmp(:)
 
 
     !CONSTRUCT
@@ -95,26 +96,26 @@ contains
     call lr_init(lr(1))
     call lr_allocate(lr(1), sys%st, sys%gr%m)
 
-    ALLOCATE(dv(1:sys%NP, 1:sys%NDIM, sys%geo%natoms), sys%NP*sys%NDIM*sys%geo%natoms)
+    ALLOCATE(dv(1:sys%NP_PART, 1:sys%NDIM, sys%geo%natoms), sys%NP_PART*sys%NDIM*sys%geo%natoms)
+    ALLOCATE(d2v(1:sys%NP, 1:sys%NDIM, 1:sys%NDIM, sys%geo%natoms), sys%NP*sys%NDIM*sys%NDIM*sys%geo%natoms)
 
-    ALLOCATE(tmp(1:sys%NP, 1:sys%st%d%dim), sys%NP*sys%st%d%dim)
-
-
+    ALLOCATE(tmp(1:sys%NP), sys%NP)
 
     !CALCULATE
 
-
-    !calculate the derivative of the external potential with respect to the force
+    !calculate the derivative of the external potential with respect to the forces
     do iatom = 1, sys%geo%natoms
+
+      !first derivative
 
       !the local part of the pseudo
       do ip = 1, sys%NP
         call mesh_r(sys%gr%m, ip, r, x=x, a=sys%geo%atom(iatom)%x)
         call specie_get_glocal(sys%geo%atom(iatom)%spec, x, dv(ip, 1:sys%NDIM, iatom))
+        call specie_get_g2local(sys%geo%atom(iatom)%spec, x, d2v(ip, 1:sys%NDIM, 1:sys%NDIM, iatom))
       end do
-
-      !the non-local part: tarea para la casa
       
+      !the non-local part: tarea para la casa
     end  do
 
     call build_dm()
@@ -125,44 +126,76 @@ contains
         call dsternheimer_solve(sh, sys, h, lr, 1, M_ZERO, dv(1:sys%NP, idir, iatom), &
              RESTART_DIR, phn_rho_tag(iatom, idir), phn_wfs_tag(iatom, idir))
 
-#if 1
         do jatom = 1, sys%geo%natoms
           do jdir = 1, sys%NDIM
             
             !<psi|dv|dpsi> 
-            tmp(1:sys%NP, 1:sys%st%d%dim) = M_ZERO
-            
-            do ist = 1, sys%st%nst
-              do idim = 1, sys%st%d%dim
-                do ik = 1, sys%st%d%nspin
+            tmp(1:sys%NP) = M_ZERO
 
-                  tmp(1:sys%NP, 1) = tmp(1:sys%NP, 1) + &
-                       sys%st%dpsi(1:sys%NP, idim, ist, ik) * &
-                       dv(1:sys%NP, idir, iatom) * &
-                       lr(1)%ddl_psi(1:sys%NP, idim, ist, ik)
-
-                end do
-              end do
+            do ik = 1, sys%st%d%nspin
+              tmp(1:sys%NP) = tmp(1:sys%NP) + dv(1:sys%NP, jdir, jatom)*lr(1)%ddl_rho(1:sys%NP, ik)
             end do
 
-            ph%dm(phonons_index(ph, iatom, idir), phonons_index(ph, iatom, idir)) = &
-                 ph%dm(phonons_index(ph, iatom, idir), phonons_index(ph, iatom, idir)) + &
-                 M_TWO * dmf_integrate(sys%gr%m, tmp(:,1))
-          end do
-        end do
-#endif            
+            ph%dm(phonons_index(ph, iatom, idir), phonons_index(ph, jatom, jdir)) = &
+                 ph%dm(phonons_index(ph, iatom, idir), phonons_index(ph, jatom, jdir)) + &
+                 dmf_integrate(sys%gr%m, tmp(:))
 
-        
+          end do        
+        end do
 
       end do
     end do
-    
+
+    do iatom = 1, sys%geo%natoms
+      do idir = 1, sys%NDIM
+
+        do jatom = 1, sys%geo%natoms
+          do jdir = 1, sys%NDIM
+
+            print '(4i1,a,4i1, f15.4)', iatom, idir, jatom, jdir, '-', jatom, jdir, iatom, idir, &
+                 ph%dm(phonons_index(ph, iatom, idir), phonons_index(ph, jatom, jdir))- &
+                 ph%dm(phonons_index(ph, jatom, jdir), phonons_index(ph, iatom, idir))
+          end do
+        end do
+      end do
+    end do
+
+    !divide by the atomic mass, we multiply by the total mass to have
+    !reasonable numbers, later we divide the frequencies by the total mass 
+
+    total_mass = M_ZERO
+    do iatom = 1, sys%geo%natoms
+      total_mass = total_mass + sys%geo%atom(iatom)%spec%weight
+    end do
+
+    do iatom = 1, sys%geo%natoms
+      do idir = 1, sys%NDIM
+
+        do jatom = 1, sys%geo%natoms
+          do jdir = 1, sys%NDIM
+
+            factor = total_mass/sqrt(sys%geo%atom(iatom)%spec%weight * sys%geo%atom(jatom)%spec%weight)
+
+            ph%dm(phonons_index(ph, iatom, idir), phonons_index(ph, jatom, jdir)) = &
+                 ph%dm(phonons_index(ph, iatom, idir), phonons_index(ph, jatom, jdir))*&
+                 factor
+
+          end do
+        end do
+
+      end do
+    end do
+
+
     call phonons_diagonalize_dm(ph)
+
+    ph%freq(1:ph%dim) = ph%freq(1:ph%dim)/total_mass
+    
     call phonons_output(ph, "_lr")
 
     !DESTRUCT
 
-    deallocate(dv)
+    deallocate(dv, d2v, tmp)
 
     call lr_dealloc(lr(1))
     
@@ -187,52 +220,64 @@ contains
     
     subroutine build_dm()
       FLOAT :: ac, xi(1:MAX_DIM), xj(1:MAX_DIM), xk(1:MAX_DIM), r2
-      integer :: katom, kdir
+      integer :: katom
+
 
       do iatom = 1, sys%geo%natoms
         do idir = 1, sys%NDIM
-
+          
           do jatom = 1, sys%geo%natoms
-            do jdir = 1, sys%NDIM
-
+            do jdir = 1, sys%NDIM         
+              
               xi(1:MAX_DIM) = sys%geo%atom(iatom)%x(1:MAX_DIM)
-              xj(1:MAX_DIM) = sys%geo%atom(jatom)%x(1:MAX_DIM)
 
               !ion - ion
               if( iatom == jatom) then 
-
+                
                 ac = M_ZERO
                 do katom = 1, sys%geo%natoms
-                  do kdir = 1, sys%NDIM
-
+                  if ( katom /= iatom ) then 
+                    
                     xk(1:MAX_DIM) = sys%geo%atom(katom)%x(1:MAX_DIM)
                     r2 = sum((xi(1:sys%NDIM) - xk(1:sys%NDIM))**2)
                     
-                    ac = ac - sys%geo%atom(iatom)%spec%z * sys%geo%atom(katom)%spec%z &
-                         /(r2**CNST(1.5))*(&
-                         ddelta(idir, kdir) - (M_THREE*(xi(idir)-xk(idir))*(xi(kdir)-xk(kdir)))/r2 &
-                         ) 
-
-                  end do
+                    ac = ac + sys%geo%atom(iatom)%spec%z * sys%geo%atom(katom)%spec%z &
+                         /(r2**CNST(1.5)) *(&
+                         -ddelta(idir, jdir) + &
+                         (M_THREE*(xi(idir)-xk(idir))*(xi(jdir)-xk(jdir)))/r2 &
+                         )
+                  end if
+                  
                 end do
-
-              else
-
+                
+              else ! iatom /= jatom
+                
+                xj(1:MAX_DIM) = sys%geo%atom(jatom)%x(1:MAX_DIM)
+                
                 r2 = sum((xi(1:sys%NDIM) - xj(1:sys%NDIM))**2)
                 ac = sys%geo%atom(iatom)%spec%z * sys%geo%atom(jatom)%spec%z &
                      /(r2**CNST(1.5))*(&
                      ddelta(idir, jdir) - (M_THREE*(xi(idir)-xj(idir))*(xi(jdir)-xj(jdir)))/r2)
 
               end if
-
+                
+            
               !<psi|d2v|psi>
+              if ( iatom == jatom ) then 
+                
+                tmp(1:sys%NP) = M_ZERO
+                do ik = 1, sys%st%d%nspin
+                  tmp(1:sys%NP) = tmp(1:sys%NP) + d2v(1:sys%NP, idir, jdir, iatom)*sys%st%rho(1:sys%NP, ik)
+                end do
+               
+                ac = ac + dmf_integrate(sys%gr%m, tmp(:))
               
+              end if
 
-              ph%dm(phonons_index(ph, iatom, idir), phonons_index(ph, iatom, idir)) = ac
-
+              
+              ph%dm(phonons_index(ph, iatom, idir), phonons_index(ph, jatom, jdir)) = ac
             end do
           end do
-
         end do
       end do
       
@@ -315,18 +360,5 @@ contains
     call pop_sub()
     
   end function phn_wfs_tag
-
-  FLOAT function ddelta(i, j)
-    integer, intent(in) :: i
-    integer, intent(in) :: j
-
-    if ( i == j) then 
-      ddelta = M_ONE
-    else 
-      ddelta = M_ZERO
-    end if
-
-  end function ddelta
-
 
 end module phonons_lr_m

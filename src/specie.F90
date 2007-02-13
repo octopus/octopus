@@ -46,6 +46,7 @@ module specie_m
     specie_read,              &
     specie_get_local,         &
     specie_get_glocal,        &
+    specie_get_g2local,       &
     specie_get_local_fourier, &
     specie_real_nl_projector, &
     specie_nl_projector,      &
@@ -699,12 +700,46 @@ contains
 
     case(SPEC_ALL_E)
       gv(:)=M_ZERO
-!      write(message(1), '(a)') "Gradient not implemented for All Electron Atoms"
-!      call write_warning(1)
         
     end select
 
   end subroutine specie_get_glocal
+
+  subroutine specie_get_g2local(s, x, g2v, time)
+    type(specie_t),  intent(in) :: s
+    FLOAT,           intent(in) :: x(:)
+    FLOAT,          intent(out) :: g2v(:,:)
+    FLOAT, optional, intent(in) :: time
+
+    FLOAT, parameter :: Delta = CNST(1e-4)
+    FLOAT :: xx(MAX_DIM), r, dvl_rr, d2vl_r
+    integer :: ii, jj
+
+    r = sqrt(sum(x(:)**2))
+
+    select case(s%type)
+    case(SPEC_PS_PSF, SPEC_PS_HGH, SPEC_PS_CPI, SPEC_PS_FHI, SPEC_PS_UPF)
+      g2v(:,:) = M_ZERO
+      if(r>CNST(0.00001)) then
+        dvl_rr = loct_splint(s%ps%dvl, r)/r
+        d2vl_r = loct_splint(s%ps%d2vl, r)
+
+        do ii= 1, 3
+          do jj = 1, 3
+            g2v(ii, jj) = ddelta(ii, jj)*dvl_rr  + x(ii)*x(jj)/(r*r)*(d2vl_r - dvl_rr)
+          end do
+        end do
+        
+      end if
+      
+    case default
+      write(message(1),'(a)')    'Second derivative of the potential not implemented.'
+      call write_fatal(1)
+      
+    end select
+    
+  end subroutine specie_get_g2local
+
 
 
   ! ---------------------------------------------------------
