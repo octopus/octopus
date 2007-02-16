@@ -556,7 +556,7 @@ contains
 
     main_loop: do 
       nmax = nmax + 100
-      if(.not.allocated(bess)) allocate(bess(0:nmax))
+      if(.not.allocated(bess)) ALLOCATE(bess(0:nmax), nmax+1)
 
       ! We need to do a backwards recursion since otherwise it is unstable.
       bess(0:nmax) = M_ZERO

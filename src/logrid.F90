@@ -21,7 +21,6 @@
 #include "global.h"
 
 module logrid_m
-
   use global_m
   use messages_m
 
@@ -121,7 +120,9 @@ contains
     go%b      = gi%b
     go%nrval  = gi%nrval
 
-    allocate(go%rofi(go%nrval), go%drdi(go%nrval), go%s(go%nrval))
+    ALLOCATE(go%rofi(go%nrval), go%nrval)
+    ALLOCATE(go%drdi(go%nrval), go%nrval)
+    ALLOCATE(go%s(go%nrval), go%nrval)
 
     go%rofi(:) = gi%rofi(:)
     go%drdi(:) = gi%drdi(:)

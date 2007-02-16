@@ -260,7 +260,8 @@ contains
     maxf = r_c * sqrt((temp(1)*db(1)/2)**2 + (temp(2)*db(2)/2)**2)
     dk = CNST(0.3) ! This seems to be reasonable.
     npoints = nint(maxf/dk)
-    allocate(x(npoints), y(npoints))
+    ALLOCATE(x(npoints), npoints)
+    ALLOCATE(y(npoints), npoints)
     do i = 1, npoints
        x(i) = (i-1) * maxf / (npoints-1)
        y(i) = besselint(x(i))

@@ -73,7 +73,7 @@ contains
     if(present(alpha)) alpha_ = alpha
     kmax = M_PI**2 * alpha_
 
-    allocate(fp(order+1))
+    ALLOCATE(fp(order+1), order+1)
     select case(order)
     case(1)
       fp(1) = -kmax/M_TWO

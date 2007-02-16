@@ -39,7 +39,6 @@ module datasets_m
   character(len=32), public              :: current_label
   character(len=32), public              :: tmpdir, inputdir, outputdir
 
-
 contains
 
   ! ---------------------------------------------------------
@@ -68,7 +67,8 @@ contains
       no_datasets = 1
     end if
 
-    allocate(dataset_label(no_datasets), dataset_runmode(no_datasets))
+    allocate(dataset_label(no_datasets))
+    allocate(dataset_runmode(no_datasets))
     allocate(dataset_run_order(no_datasets))
 
     ! assign some reasonable defaults

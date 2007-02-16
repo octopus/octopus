@@ -1183,15 +1183,15 @@ contains
 
     select case (p%type)
     case (M_HGH)
-      allocate(p%hgh_p)
+      ALLOCATE(p%hgh_p, 1)
       call hgh_projector_null(p%hgh_p)
       call hgh_projector_init(p%hgh_p, p%n_s, p%jxyz, sb, m, a, l, lm)
     case (M_KB)
-      allocate(p%kb_p)
+      ALLOCATE(p%kb_p, 1)
       call kb_projector_null(p%kb_p)
       call kb_projector_init(p%kb_p, p%n_s, p%jxyz, sb, m, a, l, lm)
     case (M_RKB)
-      allocate(p%rkb_p)
+      ALLOCATE(p%rkb_p, 1)
       call rkb_projector_null(p%rkb_p)
       call rkb_projector_init(p%rkb_p, p%n_s, p%jxyz, sb, m, a, l, lm)
     end select
