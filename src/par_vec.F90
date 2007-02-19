@@ -36,16 +36,16 @@ module par_vec_m
   !
   ! When working with non-periodic boundary conditions
   ! a globally defined vector v has two parts:
-  ! - v(:np) are the inner points
+  ! - v(1:np) are the inner points
   ! - v(np+1:np_part) are the boundary points
   ! In the typical case of zero boundary conditions
   ! v(np+1:np_part) is 0.
   ! The two parts are split according to the partitions.
-  ! The result of this slit are local vectors vl on each node
+  ! The result of this split are local vectors vl on each node
   ! which consist of three parts:
-  ! - v(:np_local)                                      local points.
-  ! - v(np_local+1:np_local+np_ghost)                   ghost points.
-  ! - v(np_local+np_ghost+1:np_local+np_ghost+np_bndry) boundary points.
+  ! - vl(1:np_local)                                     local points.
+  ! - vl(np_local+1:np_local+np_ghost)                   ghost points.
+  ! - vl(np_local+np_ghost+1:np_local+np_ghost+np_bndry) boundary points.
   !
   !
   ! Usage example for par_vec routines.
@@ -140,29 +140,34 @@ module par_vec_m
   end type pv_t
 
 #if defined(HAVE_MPI)
-  public ::             &
-    vec_init,           &
-    vec_end,            &
-    dvec_scatter,       &
-    zvec_scatter,       &
-    ivec_scatter,       &
-    dvec_scatter_bndry, &
-    zvec_scatter_bndry, &
-    ivec_scatter_bndry, &
-    dvec_scatter_all,   &
-    zvec_scatter_all,   &
-    ivec_scatter_all,   &
-    dvec_gather,        &
-    zvec_gather,        &
-    ivec_gather,        &
-    dvec_allgather,     &
-    zvec_allgather,     &
-    ivec_allgather,     &
-    dvec_ghost_update,  &
-    zvec_ghost_update,  &
-    ivec_ghost_update,  &
-    dvec_integrate,     &
-    zvec_integrate,     &
+  public ::              &
+    vec_init,            &
+    vec_end,             &
+    dvec_scatter,        &
+    zvec_scatter,        &
+    ivec_scatter,        &
+    dvec_scatter_bndry,  &
+    zvec_scatter_bndry,  &
+    ivec_scatter_bndry,  &
+    dvec_scatter_all,    &
+    zvec_scatter_all,    &
+    ivec_scatter_all,    &
+    dvec_gather,         &
+    zvec_gather,         &
+    ivec_gather,         &
+    dvec_allgather,      &
+    zvec_allgather,      &
+    ivec_allgather,      &
+    dvec_ghost_update,   &
+    zvec_ghost_update,   &
+    ivec_ghost_update,   &
+#if defined(HAVE_LIBNBC)
+    dvec_ighost_update,  &
+    zvec_ighost_update,  &
+    ivec_ighost_update,  &
+#endif
+    dvec_integrate,      &
+    zvec_integrate,      &
     ivec_integrate
 
 contains
@@ -194,9 +199,8 @@ contains
   ! from how it is in the rest of the code (for historical reasons
   ! and also because the vec_init has more a global than a local point
   ! of view on the mesh): See the comments in the parameter list.
-  subroutine vec_init(comm, root, part, np, np_part, nr,   &
-    Lxyz_inv, Lxyz, stencil, np_stencil, &
-    dim, periodic_dim, vp)
+  subroutine vec_init(comm, root, part, np, np_part, nr, &
+    Lxyz_inv, Lxyz, stencil, np_stencil, dim, periodic_dim, vp)
     integer,       intent(in)  :: comm         ! Communicator to use.
     integer,       intent(in)  :: root         ! The master node.
     ! The next seven entries come from the mesh.

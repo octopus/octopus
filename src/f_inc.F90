@@ -133,12 +133,13 @@ end subroutine X(cf_FS2mf)
 ! ---------------------------------------------------------
 ! Calculation of derivatives
 ! ---------------------------------------------------------
-subroutine X(f_laplacian) (sb, f_der, f, lapl, cutoff_)
-  type(simul_box_t),    intent(in) :: sb
-  type(f_der_t),    intent(inout)  :: f_der
-  R_TYPE,           intent(inout)  :: f(:)     ! f(m%np_part)
-  R_TYPE,           intent(out)    :: lapl(:)  ! lapl(m%np_part)
-  FLOAT, optional,  intent(in)     :: cutoff_
+subroutine X(f_laplacian) (sb, f_der, f, lapl, cutoff_, ghost_update)
+  type(simul_box_t), intent(in)    :: sb
+  type(f_der_t),     intent(inout) :: f_der
+  R_TYPE,            intent(inout) :: f(:)     ! f(m%np_part)
+  R_TYPE,            intent(out)   :: lapl(:)  ! lapl(m%np_part)
+  FLOAT, optional,   intent(in)    :: cutoff_
+  logical, optional, intent(in)    :: ghost_update
 
   FLOAT :: cutoff
 
@@ -148,7 +149,7 @@ subroutine X(f_laplacian) (sb, f_der, f, lapl, cutoff_)
 
   select case(f_der%space)
   case(REAL_SPACE)
-    call X(derivatives_lapl) (f_der%der_discr, f, lapl)
+    call X(derivatives_lapl) (f_der%der_discr, f, lapl, ghost_update=ghost_update)
 
 #if defined(HAVE_FFT)
   case(FOURIER_SPACE)
@@ -177,11 +178,12 @@ end subroutine X(f_laplacian)
 
 
 ! ---------------------------------------------------------
-subroutine X(f_gradient) (sb, f_der, f, grad)
+subroutine X(f_gradient) (sb, f_der, f, grad, ghost_update)
   type(simul_box_t), intent(in)    :: sb
   type(f_der_t),     intent(inout) :: f_der
   R_TYPE, target,    intent(inout) :: f(:)         ! f(m%np_part)
   R_TYPE,            intent(out)   :: grad(:,:)    ! grad(m%np, m%sb%dim)
+  logical, optional, intent(in)    :: ghost_update
 
   integer :: i
 
@@ -191,7 +193,7 @@ subroutine X(f_gradient) (sb, f_der, f, grad)
 
   select case(f_der%space)
   case(REAL_SPACE)
-    call X(derivatives_grad) (f_der%der_discr, f, grad)
+    call X(derivatives_grad) (f_der%der_discr, f, grad, ghost_update=ghost_update)
 
 #if defined(HAVE_FFT)
   case(FOURIER_SPACE)
@@ -228,11 +230,12 @@ end subroutine X(f_gradient)
 
 
 ! ---------------------------------------------------------
-subroutine X(f_divergence) (sb, f_der, f, divf)
+subroutine X(f_divergence) (sb, f_der, f, divf, ghost_update)
   type(simul_box_t), intent(in)    :: sb
   type(f_der_t),     intent(inout) :: f_der
   R_TYPE,            intent(inout) :: f(:,:)    ! f(m%np_part, sb%dim)
   R_TYPE,            intent(out)   :: divf(:)   ! divf(m%np)
+  logical, optional, intent(in)    :: ghost_update
 
   integer :: i
   R_TYPE, allocatable :: aux(:)
@@ -243,7 +246,7 @@ subroutine X(f_divergence) (sb, f_der, f, divf)
 
   select case(f_der%space)
   case(REAL_SPACE)
-    call X(derivatives_div) (f_der%der_discr, f, divf)
+    call X(derivatives_div) (f_der%der_discr, f, divf, ghost_update=ghost_update)
 
 #if defined(HAVE_FFT)
   case(FOURIER_SPACE)
@@ -276,10 +279,11 @@ end subroutine X(f_divergence)
 
 
 ! ---------------------------------------------------------
-subroutine X(f_curl) (f_der, f, curlf)
-  type(f_der_t), intent(inout) :: f_der
-  R_TYPE,        intent(inout) :: f(:,:)     ! f(m%np_part, conf%dim)
-  R_TYPE,        intent(out)   :: curlf(:,:) ! curlf(m%np, conf%dim))
+subroutine X(f_curl) (f_der, f, curlf, ghost_update)
+  type(f_der_t), intent(inout)  :: f_der
+  R_TYPE,        intent(inout)  :: f(:,:)     ! f(m%np_part, conf%dim)
+  R_TYPE,        intent(out)    :: curlf(:,:) ! curlf(m%np, conf%dim))
+  logical, optional, intent(in) :: ghost_update
 
   call push_sub('f_inc.Xf_curl')
 
@@ -312,47 +316,47 @@ end subroutine X(f_curl)
 ! And so on.
 ! -----------------------------------------------------------------------------
 subroutine X(f_multipoles) (mesh, ff, lmax, multipole)
-    type(mesh_t),   intent(in)  :: mesh
-    R_TYPE,         intent(in)  :: ff(:)
-    integer,        intent(in)  :: lmax
-    R_TYPE,         intent(out) :: multipole(:) ! multipole((lmax + 1)**2)
+  type(mesh_t),   intent(in)  :: mesh
+  R_TYPE,         intent(in)  :: ff(:)
+  integer,        intent(in)  :: lmax
+  R_TYPE,         intent(out) :: multipole(:) ! multipole((lmax + 1)**2)
 
-    integer :: i, l, lm, add_lm
-    FLOAT   :: x(MAX_DIM), r, ylm
-    R_TYPE, allocatable :: ff2(:)
+  integer :: i, l, lm, add_lm
+  FLOAT   :: x(MAX_DIM), r, ylm
+  R_TYPE, allocatable :: ff2(:)
 
-    call push_sub('states.states_calculate_multipoles')
+  call push_sub('states.states_calculate_multipoles')
 
-    ALLOCATE(ff2(mesh%np), mesh%np)
+  ALLOCATE(ff2(mesh%np), mesh%np)
 
-    ff2(1:mesh%np) = ff(1:mesh%np)
-    multipole(1) = X(mf_integrate)(mesh, ff2)
+  ff2(1:mesh%np) = ff(1:mesh%np)
+  multipole(1) = X(mf_integrate)(mesh, ff2)
 
-    if(lmax > 0) then
-      do i = 1, 3
-        ff2(1:mesh%np) = ff(1:mesh%np) * mesh%x(1:mesh%np, i)
-        multipole(i+1) = X(mf_integrate)(mesh, ff2)
-      end do
-    end if
-      
-    if(lmax>1) then
-      add_lm = 5
-      do l = 2, lmax
-        do lm = -l, l
-          do i = 1, mesh%np
-            call mesh_r(mesh, i, r, x=x)
-            ylm = loct_ylm(x(1), x(2), x(3), l, lm)
-            ff2(i) = ff(i) * ylm * r**l
-          end do
-          multipole(add_lm) = X(mf_integrate)(mesh, ff2)
-          add_lm = add_lm + 1
+  if(lmax > 0) then
+    do i = 1, 3
+      ff2(1:mesh%np) = ff(1:mesh%np) * mesh%x(1:mesh%np, i)
+      multipole(i+1) = X(mf_integrate)(mesh, ff2)
+    end do
+  end if
+
+  if(lmax>1) then
+    add_lm = 5
+    do l = 2, lmax
+      do lm = -l, l
+        do i = 1, mesh%np
+          call mesh_r(mesh, i, r, x=x)
+          ylm = loct_ylm(x(1), x(2), x(3), l, lm)
+          ff2(i) = ff(i) * ylm * r**l
         end do
+        multipole(add_lm) = X(mf_integrate)(mesh, ff2)
+        add_lm = add_lm + 1
       end do
-    end if
+    end do
+  end if
 
-    deallocate(ff2)
-    call pop_sub()
-  end subroutine X(f_multipoles)
+  deallocate(ff2)
+  call pop_sub()
+end subroutine X(f_multipoles)
 
 
 ! ---------------------------------------------------------
@@ -360,11 +364,12 @@ subroutine X(f_multipoles) (mesh, ff, lmax, multipole)
 ! In case of real functions, it does not include the -i prefactor
 ! (L = -i r ^ nabla).
 ! ---------------------------------------------------------
-subroutine X(f_angular_momentum)(sb, f_der, f, lf)
+subroutine X(f_angular_momentum)(sb, f_der, f, lf, ghost_update)
   type(simul_box_t), intent(in)    :: sb
   type(f_der_t),     intent(inout) :: f_der
   R_TYPE,            intent(inout) :: f(:)     ! f(m%np_part)
   R_TYPE,            intent(out)   :: lf(:,:)  ! lf(m%np_part, 3) in 3D, lf(m%np_part, 1) in 2D
+  logical, optional, intent(in)    :: ghost_update
 
   R_TYPE, allocatable :: gf(:, :)
   FLOAT :: x(sb%dim)
@@ -375,7 +380,7 @@ subroutine X(f_angular_momentum)(sb, f_der, f, lf)
   ASSERT(sb%dim.ne.1)
 
   ALLOCATE(gf(f_der%m%np, sb%dim), f_der%m%np*sb%dim)
-  call X(f_gradient)(sb, f_der, f, gf)
+  call X(f_gradient)(sb, f_der, f, gf, ghost_update=ghost_update)
 
   do i = 1, f_der%m%np
     x = f_der%m%x(i,:)
@@ -406,11 +411,12 @@ end subroutine X(f_angular_momentum)
 ! Square of the angular momentum L. This has to be very much improved if
 ! accuracy is needed.
 ! ---------------------------------------------------------
-subroutine X(f_l2)(sb, f_der, f, l2f)
+subroutine X(f_l2)(sb, f_der, f, l2f, ghost_update)
   type(simul_box_t), intent(in)    :: sb
   type(f_der_t),     intent(inout) :: f_der
   R_TYPE,            intent(inout) :: f(:)   ! f(1:m%np_part)
   R_TYPE,            intent(out)   :: l2f(:)
+  logical, optional, intent(in)    :: ghost_update
 
   R_TYPE, allocatable :: gf(:, :), ggf(:, :, :)
   type(mesh_t), pointer :: m
@@ -428,10 +434,10 @@ subroutine X(f_l2)(sb, f_der, f, l2f)
     ALLOCATE(gf(m%np_part, 3), m%np_part*3)
     ALLOCATE(ggf(m%np_part, 3, 3), m%np_part*3*3)
 
-    call X(f_angular_momentum)(sb, f_der, f, gf)
+    call X(f_angular_momentum)(sb, f_der, f, gf, ghost_update=ghost_update)
 
     do j = 1, 3
-      call X(f_angular_momentum)(sb, f_der, gf(:,j), ggf(:,:,j))
+      call X(f_angular_momentum)(sb, f_der, gf(:,j), ggf(:,:,j), ghost_update=ghost_update)
     end do
 
     do j = 1, sb%dim
@@ -442,8 +448,8 @@ subroutine X(f_l2)(sb, f_der, f, l2f)
     ALLOCATE(gf(m%np_part, 1), m%np_part)
     ALLOCATE(ggf(m%np_part, 1, 1), m%np_part)
 
-    call X(f_angular_momentum)(sb, f_der, f, gf)
-    call X(f_angular_momentum)(sb, f_der, gf(:, 1), ggf(:, :, 1))
+    call X(f_angular_momentum)(sb, f_der, f, gf, ghost_update=ghost_update)
+    call X(f_angular_momentum)(sb, f_der, gf(:, 1), ggf(:, :, 1), ghost_update=ghost_update)
 
     l2f(1:m%np) = ggf(1:m%np, 1, 1)
   end select

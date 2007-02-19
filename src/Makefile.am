@@ -79,6 +79,10 @@ if COMPILE_METIS
   external_LIBS += ../external_libs/metis-4.0/libmetis.a
 endif
 
+if COMPILE_LIBNBC
+  external_LIBS += ../external_libs/libnbc/libnbc.a
+endif
+
 octopus_LDADD = @LIBS_FFT@ @LIBS_TRLAN@ @LIBS_ARPACK@ @LIBS_SPARSKIT@ \
   @LIBS_NETCDF@ @LIBS_MPI@ $(core_LIBS) $(external_LIBS) @LIBS_LAPACK@ @LIBS_BLAS@
 

@@ -18,6 +18,7 @@
 !! -*- coding: utf-8 mode: f90 -*-
 !! $Id$
 
+
 ! ---------------------------------------------------------
 ! calculates the eigenvalues of the real orbitals
 subroutine X(hamiltonian_eigenval)(h, gr, st)
@@ -46,35 +47,50 @@ end subroutine X(hamiltonian_eigenval)
 
 
 ! ---------------------------------------------------------
-subroutine X(Hpsi) (h, gr, psi, hpsi, ik, t, E)
+subroutine X(hpsi) (h, gr, psi, hpsi, ik, t, E)
   type(hamiltonian_t), intent(inout) :: h
   type(grid_t),        intent(inout) :: gr
   integer,             intent(in)    :: ik
-  R_TYPE,              intent(inout) :: psi(:,:)  !  psi(m%np_part, h%d%dim)
-  R_TYPE,              intent(out)   :: Hpsi(:,:) !  Hpsi(m%np_part, h%d%dim)
+  R_TYPE,              intent(inout) :: psi(:,:)  ! psi(NP_PART, h%d%dim)
+  R_TYPE,              intent(out)   :: hpsi(:,:) ! hpsi(NP_PART, h%d%dim)
   FLOAT, optional,     intent(in)    :: t
   FLOAT, optional,     intent(in)    :: E
 
-
   call profiling_in(C_PROFILING_HPSI)
-  call push_sub('h_inc.XHpsi')
+  call push_sub('h_inc.Xhpsi')
 
-  ASSERT(ubound(psi, DIM=1) == gr%m%np_part)
+  ASSERT(ubound(psi, DIM=1) == NP_PART)
 
-  call X(kinetic) (h, gr, psi, hpsi, ik)
-  call X(vlpsi)   (h, gr%m, psi, hpsi, ik)
-  if(h%ep%nvnl > 0) call X(vnlpsi)  (h, gr, psi, hpsi, ik)
-  call X(magnetic_terms) (gr, h, psi, hpsi, ik)
-  if (h%ep%with_gauge_field) call X(vgauge) (gr, h, psi, hpsi, ik)
-
-  if(present(t)) then
-    if (h%d%cdft) then
-      message(1) = "TDCDFT not yet implemented"
-      call write_fatal(1)
-    end if
-    call X(vlasers)  (gr, h, psi, hpsi, t)
-    call X(vborders) (gr, h, psi, hpsi)
+  if(present(t).and.h%d%cdft) then
+    message(1) = "TDCDFT not yet implemented"
+    call write_fatal(1)
   end if
+
+  hpsi = R_TOTYPE(M_ZERO)
+
+#if defined(HAVE_LIBNBC)
+  if(gr%m%parallel_in_domains) then
+    call X(kinetic_prepare)(h, gr, psi)
+
+    call X(vlpsi)(h, gr%m, psi, hpsi, ik)
+    if(h%ep%nvnl > 0) call X(vnlpsi)(h, gr, psi, hpsi, ik)
+    if(present(t)) call X(vlasers)(gr, h, psi, hpsi, t)
+
+    call X(kinetic_wait)(h)
+    call X(kinetic_calculate)(h, gr, psi, hpsi, ik)
+  else
+#endif
+    call X(kinetic)(h, gr, psi, hpsi, ik)
+    call X(vlpsi)(h, gr%m, psi, hpsi, ik)
+    if(h%ep%nvnl > 0) call X(vnlpsi)(h, gr, psi, hpsi, ik)
+    if(present(t)) call X(vlasers)(gr, h, psi, hpsi, t)
+#if defined(HAVE_LIBNBC)
+  end if
+#endif
+
+  call X(magnetic_terms) (gr, h, psi, hpsi, ik)
+  if (h%ep%with_gauge_field) call X(vgauge) (gr, h, psi, hpsi)
+  if(present(t)) call X(vborders) (gr, h, psi, hpsi)
 
   if(present(E)) then
     ! compute (H-E) psi = hpsi
@@ -91,12 +107,13 @@ subroutine X(magnus) (h, gr, psi, hpsi, ik, vmagnus)
   type(hamiltonian_t), intent(in)    :: h
   type(grid_t),        intent(inout) :: gr
   integer,             intent(in)    :: ik
-  R_TYPE,              intent(inout) :: psi(:,:)  !  psi(NP_PART, h%d%dim)
-  R_TYPE,              intent(out)   :: Hpsi(:,:) !  Hpsi(NP, h%d%dim)
+  R_TYPE,              intent(inout) :: psi(:,:)  ! psi(NP_PART, h%d%dim)
+  R_TYPE,              intent(out)   :: hpsi(:,:) ! hpsi(NP, h%d%dim)
   FLOAT,               intent(in)    :: vmagnus(NP, h%d%nspin, 2)
 
   R_TYPE, allocatable :: auxpsi(:, :), aux2psi(:, :)
   integer :: idim
+
   ! We will assume, for the moment, no spinors.
 
   call push_sub('h_inc.Xmagnus')
@@ -126,7 +143,7 @@ subroutine X(magnus) (h, gr, psi, hpsi, ik, vmagnus)
     if(modulo(ik+1, 2) == 0) then
       auxpsi(1:NP, 1) = vmagnus(1:NP, 1, 1)*psi(1:NP, 1)
     else
-      auxpsi(1:NP, 1) = vmagnus(1:NP, 2, 1) *psi(1:NP, 1)
+      auxpsi(1:NP, 1) = vmagnus(1:NP, 2, 1)*psi(1:NP, 1)
     end if
   end select
   call X(kinetic) (h, gr, auxpsi, aux2psi, ik)
@@ -156,14 +173,76 @@ end subroutine X(magnus)
 
 
 ! ---------------------------------------------------------
+subroutine X(kinetic_prepare) (h, gr, psi)
+  type(hamiltonian_t), intent(in)    :: h
+  type(grid_t),        intent(inout) :: gr
+  R_TYPE,              intent(inout) :: psi(:,:)  ! psi(NP_PART, h%d%dim)
+
+  integer :: idim
+
+  call push_sub('h_inc.Xkinetic_prepare')
+
+  do idim = 1, h%d%dim
+#if defined(HAVE_LIBNBC)
+    call X(vec_ighost_update)(gr%m%vp, psi(:, idim), h%handles(idim))
+#else
+    call X(vec_ghost_update)(gr%m%vp, psi(:, idim))
+#endif
+  end do
+
+  call pop_sub()
+end subroutine X(kinetic_prepare)
+
+
+! ---------------------------------------------------------
+subroutine X(kinetic_wait) (h)
+  type(hamiltonian_t), intent(in)    :: h
+
+  integer :: idim
+
+#if defined(HAVE_LIBNBC)
+  call push_sub('h_inc.Xkinetic_wait')
+
+  do idim = 1, h%d%dim
+    call NBCF_Wait(h%handles(idim), mpi_err)
+  end do
+
+  call pop_sub()
+#endif
+end subroutine X(kinetic_wait)
+
+
+! ---------------------------------------------------------
 subroutine X(kinetic) (h, gr, psi, hpsi, ik)
   type(hamiltonian_t), intent(in)    :: h
   type(grid_t),        intent(inout) :: gr
-  R_TYPE,              intent(inout) :: psi(:,:)  !  psi(m%np_part, h%d%dim)
-  R_TYPE,              intent(out)   :: Hpsi(:,:) !  Hpsi(m%np_part, h%d%dim)
+  R_TYPE,              intent(inout) :: psi(:,:)  ! psi(NP_PART, h%d%dim)
+  R_TYPE,              intent(inout) :: hpsi(:,:) ! hpsi(NP_PART, h%d%dim)
   integer,             intent(in)    :: ik
 
-  integer :: idim
+  call push_sub('h_inc.Xkinetic')
+
+  if(gr%m%parallel_in_domains) then
+    call X(kinetic_prepare)(h, gr, psi)
+    call X(kinetic_wait)(h)
+  end if
+  call X(kinetic_calculate) (h, gr, psi, hpsi, ik)
+
+  call pop_sub()
+end subroutine X(kinetic)
+
+
+! ---------------------------------------------------------
+subroutine X(kinetic_calculate) (h, gr, psi, hpsi, ik)
+  type(hamiltonian_t), intent(in)    :: h
+  type(grid_t),        intent(inout) :: gr
+  R_TYPE,              intent(inout) :: psi(:,:)  ! psi(NP_PART, h%d%dim)
+  R_TYPE,              intent(inout) :: hpsi(:,:) ! hpsi(NP_PART, h%d%dim)
+  integer,             intent(in)    :: ik
+
+  integer             :: idim
+  R_TYPE, allocatable :: lapl(:, :)
+
 #if defined(R_TCOMPLEX)
   integer :: i
   R_TYPE, allocatable :: grad(:,:)
@@ -171,38 +250,46 @@ subroutine X(kinetic) (h, gr, psi, hpsi, ik)
 #endif
 
   call profiling_in(C_PROFILING_KINETIC)
-  call push_sub('h_inc.Xkinetic')
+  call push_sub('h_inc.Xkinetic_calculate')
+
+  ALLOCATE(lapl(gr%m%np, h%d%dim), gr%m%np*h%d%dim)
 
   if(simul_box_is_periodic(gr%sb)) then
 #if defined(R_TCOMPLEX)
     ALLOCATE(grad(NP, NDIM), NP*NDIM)
     k2 = sum(h%d%kpoints(:, ik)**2)
     do idim = 1, h%d%dim
-      call X(f_laplacian) (gr%sb, gr%f_der, psi(:, idim), Hpsi(:, idim), cutoff_ = M_TWO*h%cutoff)
-      call X(f_gradient)  (gr%sb, gr%f_der, psi(:, idim), grad(:, :))
+      call X(f_laplacian) (gr%sb, gr%f_der, psi(:, idim), lapl(:, idim), &
+        cutoff_ = M_TWO*h%cutoff, ghost_update=.false.)
+      call X(f_gradient)  (gr%sb, gr%f_der, psi(:, idim), grad(:, :), ghost_update=.false.)
       do i = 1, NP
-        Hpsi(i, idim) = -M_HALF*(Hpsi(i, idim) &
+        hpsi(i, idim) = hpsi(i, idim) - M_HALF*(lapl(i, idim)       &
           + M_TWO*M_zI*sum(h%d%kpoints(1:NDIM, ik)*grad(i, 1:NDIM)) &
           - k2*psi(i, idim))
       end do
     end do
     deallocate(grad)
 #else
+    idim = ik ! This lines sole purpose is to avoid unsed variable messages
+              ! if R_TCOMPLEX is undefined.
     message(1) = "Real wave-function for ground state not yet implemented for polymers:"
     message(2) = "use complex wave-functions instead."
     call write_fatal(2)
 #endif
-
   else
     do idim = 1, h%d%dim
-      call X(f_laplacian) (gr%sb, gr%f_der, psi(:, idim), Hpsi(:, idim), cutoff_ = M_TWO*h%cutoff)
-      call lalg_scal(NP, R_TOTYPE(-M_HALF), Hpsi(:,idim) )
+      call X(f_laplacian) (gr%sb, gr%f_der, psi(:, idim), lapl(:, idim), &
+        cutoff_ = M_TWO*h%cutoff, ghost_update=.false.)
+      call lalg_scal(NP, R_TOTYPE(-M_HALF), lapl(:, idim))
+      hpsi(1:gr%m%np, idim) = hpsi(1:gr%m%np, idim) + lapl(1:gr%m%np, idim)
     end do
   end if
 
+  deallocate(lapl)
+
   call pop_sub()
   call profiling_out(C_PROFILING_KINETIC)
-end subroutine X(kinetic)
+end subroutine X(kinetic_calculate)
 
 
 ! ---------------------------------------------------------
@@ -211,8 +298,8 @@ end subroutine X(kinetic)
 subroutine X(magnetic_terms) (gr, h, psi, hpsi, ik)
   type(grid_t),        intent(inout) :: gr
   type(hamiltonian_t), intent(inout) :: h
-  R_TYPE,              intent(inout) :: psi(:,:)  !  psi(m%np_part, h%d%dim)
-  R_TYPE,              intent(inout) :: Hpsi(:,:) !  Hpsi(m%np, h%d%dim)
+  R_TYPE,              intent(inout) :: psi(:,:)  ! psi(NP_PART, h%d%dim)
+  R_TYPE,              intent(inout) :: hpsi(:,:) ! hpsi(NP, h%d%dim)
   integer,             intent(in)    :: ik
 
   integer :: k, idim
@@ -272,7 +359,7 @@ subroutine X(magnetic_terms) (gr, h, psi, hpsi, ik)
 
   endif
 
-  !If we have an external magnetic field
+  ! If we have an external magnetic field
   if (associated(h%ep%A_static)) then
     do k = 1, NP
       hpsi(k, :) = hpsi(k, :) + M_HALF*dot_product(h%ep%A_static(k, 1:NDIM), h%ep%A_static(k, 1:NDIM))*psi(k, :)
@@ -287,7 +374,7 @@ subroutine X(magnetic_terms) (gr, h, psi, hpsi, ik)
     end do
   end if
 
-  !Zeeman term
+  ! Zeeman term
   if (associated(h%ep%B_field) .and. h%d%ispin /= UNPOLARIZED) then
     ALLOCATE(lhpsi(NP, h%d%dim), NP*h%d%dim)
     select case (h%d%ispin)
@@ -316,8 +403,8 @@ end subroutine X(magnetic_terms)
 subroutine X(vnlpsi) (h, gr, psi, hpsi, ik)
   type(hamiltonian_t), intent(in)    :: h
   type(grid_t),        intent(inout) :: gr
-  R_TYPE,              intent(in)    :: psi(:,:)  !  psi(m%np_part, h%d%dim)
-  R_TYPE,              intent(inout) :: Hpsi(:,:) !  Hpsi(m%np_part, h%d%dim)
+  R_TYPE,              intent(in)    :: psi(:,:)  ! psi(NP_PART, h%d%dim)
+  R_TYPE,              intent(inout) :: hpsi(:,:) ! hpsi(NP_PART, h%d%dim)
   integer,             intent(in)    :: ik
 
   call profiling_in(C_PROFILING_VNLPSI)
@@ -336,8 +423,8 @@ subroutine X(vlpsi) (h, m, psi, hpsi, ik)
   type(hamiltonian_t), intent(in)    :: h
   type(mesh_t),        intent(in)    :: m
   integer,             intent(in)    :: ik
-  R_TYPE,              intent(in)    :: psi(:,:)  !  psi(m%np_part, h%d%dim)
-  R_TYPE,              intent(inout) :: Hpsi(:,:) !  Hpsi(m%np_part, h%d%dim)
+  R_TYPE,              intent(in)    :: psi(:,:)  ! psi(NP_PART, h%d%dim)
+  R_TYPE,              intent(inout) :: hpsi(:,:) ! hpsi(NP_PART, h%d%dim)
 
   integer :: idim
 
@@ -354,9 +441,11 @@ subroutine X(vlpsi) (h, m, psi, hpsi, ik)
       hpsi(1:m%np, 1) = hpsi(1:m%np, 1) + (h%vhxc(1:m%np, 2) + h%ep%vpsl(1:m%np))*psi(1:m%np, 1)
     end if
   case(SPINORS)
-    hpsi(1:m%np, 1) = hpsi(1:m%np, 1) + (h%vhxc(1:m%np, 1) + h%ep%vpsl(1:m%np))*psi(1:m%np, 1) + &
+    hpsi(1:m%np, 1) = hpsi(1:m%np, 1) + (h%vhxc(1:m%np, 1) + &
+      h%ep%vpsl(1:m%np))*psi(1:m%np, 1) +                    &
       (h%vhxc(1:m%np, 3) + M_zI*h%vhxc(1:m%np, 4))*psi(1:m%np, 2)
-    hpsi(1:m%np, 2) = hpsi(1:m%np, 2) + (h%vhxc(1:m%np, 2) + h%ep%vpsl(1:m%np))*psi(1:m%np, 2) + &
+    hpsi(1:m%np, 2) = hpsi(1:m%np, 2) + (h%vhxc(1:m%np, 2) + &
+      h%ep%vpsl(1:m%np))*psi(1:m%np, 2) +                    &
       (h%vhxc(1:m%np, 3) - M_zI*h%vhxc(1:m%np, 4))*psi(1:m%np, 1)
   end select
 
@@ -370,13 +459,14 @@ subroutine X(vlpsi) (h, m, psi, hpsi, ik)
   call profiling_out(C_PROFILING_VLPSI)
 end subroutine X(vlpsi)
 
+
 ! ---------------------------------------------------------
 subroutine X(vexternal) (h, gr, psi, hpsi, ik)
   type(hamiltonian_t), intent(in)    :: h
   type(grid_t),        intent(inout) :: gr
   integer,             intent(in)    :: ik
-  R_TYPE,              intent(in)    :: psi(:,:)  !  psi(m%np_part, h%d%dim)
-  R_TYPE,              intent(inout) :: Hpsi(:,:) !  Hpsi(m%np_part, h%d%dim)
+  R_TYPE,              intent(in)    :: psi(:,:)  ! psi(NP_PART, h%d%dim)
+  R_TYPE,              intent(inout) :: hpsi(:,:) ! hpsi(NP_PART, h%d%dim)
 
   integer :: idim
 
@@ -408,8 +498,8 @@ end subroutine X(vexternal)
 subroutine X(vlasers) (gr, h, psi, hpsi, t)
   type(grid_t),        intent(inout) :: gr
   type(hamiltonian_t), intent(in)    :: h
-  R_TYPE,              intent(inout) :: psi(:,:)  !  psi(m%np_part, h%d%dim)
-  R_TYPE,              intent(inout) :: Hpsi(:,:) !  Hpsi(m%np_part, h%d%dim)
+  R_TYPE,              intent(inout) :: psi(:,:)  ! psi(NP_PART, h%d%dim)
+  R_TYPE,              intent(inout) :: hpsi(:,:) ! hpsi(NP_PART, h%d%dim)
   FLOAT,               intent(in)    :: t
 
   integer :: k, idim
@@ -446,12 +536,11 @@ end subroutine X(vlasers)
 
 
 ! ---------------------------------------------------------
-subroutine X(vgauge) (gr, h, psi, hpsi, ik)
+subroutine X(vgauge) (gr, h, psi, hpsi)
   type(grid_t),        intent(inout) :: gr
   type(hamiltonian_t), intent(in)    :: h
-  R_TYPE,              intent(inout) :: psi(:,:)  !  psi(m%np_part, h%d%dim)
-  R_TYPE,              intent(inout) :: Hpsi(:,:) !  Hpsi(m%np_part, h%d%dim)
-  integer,             intent(in)    :: ik
+  R_TYPE,              intent(inout) :: psi(:,:)  ! psi(NP_PART, h%d%dim)
+  R_TYPE,              intent(inout) :: hpsi(:,:) ! hpsi(NP_PART, h%d%dim)
 
   integer :: k, idim
   R_TYPE, allocatable :: grad(:,:,:)
@@ -479,12 +568,13 @@ subroutine X(vgauge) (gr, h, psi, hpsi, ik)
   call pop_sub()
 end subroutine X(vgauge)
 
+
 ! ---------------------------------------------------------
 subroutine X(vborders) (gr, h, psi, hpsi)
   type(grid_t),        intent(inout) :: gr
   type(hamiltonian_t), intent(in)    :: h
-  R_TYPE,                 intent(in)    :: psi(:,:)  !  psi(m%np_part, h%d%dim)
-  R_TYPE,                 intent(inout) :: Hpsi(:,:) !  Hpsi(m%np_part, h%d%dim)
+  R_TYPE,              intent(in)    :: psi(:,:)  ! psi(NP_PART, h%d%dim)
+  R_TYPE,              intent(inout) :: hpsi(:,:) ! hpsi(NP_PART, h%d%dim)
 
   integer :: idim
 
@@ -498,6 +588,7 @@ subroutine X(vborders) (gr, h, psi, hpsi)
 
   call pop_sub()
 end subroutine X(vborders)
+
 
 ! ---------------------------------------------------------
 subroutine X(vmask) (gr, h, st)
@@ -522,6 +613,7 @@ subroutine X(vmask) (gr, h, st)
 
   call pop_sub()
 end subroutine X(vmask)
+
 
 ! ---------------------------------------------------------
 FLOAT function X(electronic_kinetic_energy)(h, gr, st) result(t0)

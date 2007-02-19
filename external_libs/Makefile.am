@@ -1,3 +1,3 @@
 # $Id$
 
-SUBDIRS = expokit metis-4.0 qshep poisson_isf
+SUBDIRS = expokit metis-4.0 qshep poisson_isf libnbc

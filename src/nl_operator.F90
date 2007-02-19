@@ -805,18 +805,26 @@ contains
   ! ---------------------------------------------------------
   ! calculates fo = op fi
   ! ---------------------------------------------------------
-  subroutine dnl_operator_operate(op, fi, fo)
+  subroutine dnl_operator_operate(op, fi, fo, ghost_update)
     FLOAT,               intent(inout) :: fi(:)  ! fi(op%np_part)
     type(nl_operator_t), intent(in)    :: op
     FLOAT,               intent(out)   :: fo(:)  ! fo(op%np_part)
+    logical, optional,   intent(in)    :: ghost_update
 
     integer :: ii, nn
+    logical :: update
 
     call profiling_in(C_PROFILING_NL_OPERATOR)
     call push_sub('nl_operator.dnl_operator_operate')
 
+    if(present(ghost_update)) then
+      update = ghost_update
+    else
+      update = .true.
+    end if
+
 #if defined(HAVE_MPI)
-    if(op%m%parallel_in_domains) then
+    if(op%m%parallel_in_domains.and.update) then
       call dvec_ghost_update(op%m%vp, fi)
     end if
 #endif
@@ -847,18 +855,26 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine znl_operator_operate(op, fi, fo)
+  subroutine znl_operator_operate(op, fi, fo, ghost_update)
     CMPLX,               intent(inout) :: fi(:)  ! fi(op%np)
     type(nl_operator_t), intent(in)    :: op
     CMPLX,               intent(out)   :: fo(:)  ! fo(op%np)
+    logical, optional,   intent(in)    :: ghost_update
 
     integer :: ii, nn
+    logical :: update
 
     call profiling_in(C_PROFILING_NL_OPERATOR)
     call push_sub('nl_operator.znl_operator_operate')
 
+    if(present(ghost_update)) then
+      update = ghost_update
+    else
+      update = .true.
+    end if
+
 #if defined(HAVE_MPI)
-    if(op%m%parallel_in_domains) then
+    if(op%m%parallel_in_domains.and.update) then
       call zvec_ghost_update(op%m%vp, fi)
     end if
 #endif

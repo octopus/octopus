@@ -32,6 +32,7 @@ module hamiltonian_m
   use external_pot_m
   use messages_m
   use mpi_m
+  use par_vec_m
   use output_m
   use profiling_m
   use simul_box_m
@@ -109,6 +110,10 @@ module hamiltonian_m
     ! Kinetic Cutoff
     FLOAT :: cutoff
 
+#if defined(HAVE_LIBNBC)
+    ! NBC_Handles for the calculation of the kinetic energy in parallel.
+    C_POINTER, pointer :: handles(:)
+#endif
   end type hamiltonian_t
 
   integer, public, parameter :: &
@@ -145,6 +150,14 @@ contains
     ! make a couple of local copies
     h%ip_app = ip_app
     h%d => states_dim
+
+#if defined(HAVE_LIBNBC)
+    ! Allocate NBC_Handle.
+    ALLOCATE(h%handles(h%d%dim), h%d%dim)
+    do i = 1, h%d%dim
+      call NBCF_Newhandle(h%handles(i))
+    end do
+#endif
 
     ! initialize variables
     h%epot = M_ZERO
@@ -303,8 +316,21 @@ contains
     type(grid_t),        intent(in)    :: gr
     type(geometry_t),    intent(in)    :: geo
 
+#if defined(HAVE_LIBNBC)
+    integer :: ii
+#endif
+
     call push_sub('h.hamiltonian_end')
 
+#if defined(HAVE_LIBNBC)
+    if(associated(h%handles)) then
+      do ii = 1, h%d%dim
+        call NBCF_Freehandle(h%handles(ii))
+      end do
+      deallocate(h%handles)
+      nullify(h%handles)
+    end if
+#endif
     if(associated(h%vhartree)) then
       deallocate(h%vhartree)
       nullify(h%vhartree)

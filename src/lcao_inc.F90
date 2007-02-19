@@ -121,10 +121,12 @@ subroutine X(lcao_init) (lcao_data, gr, geo, h, norbs)
 
   ! Overlap and kinetic matrices.
   ALLOCATE(hpsi(NP_PART, st%d%dim), NP_PART*st%d%dim)
-  hpsi(1:NP_PART, 1:st%d%dim) = M_ZERO
+
 
   do ik = 1, st%d%nik
     do n1 = 1, st%nst
+
+      hpsi(1:NP_PART, 1:st%d%dim) = M_ZERO
       call X(kinetic) (h, gr, st%X(psi)(:, :, n1, ik), hpsi(:, :), ik)
 
       do n2 = n1, st%nst

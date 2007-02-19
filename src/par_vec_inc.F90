@@ -185,7 +185,7 @@ end subroutine X(vec_gather)
 ! ---------------------------------------------------------
 ! Like Xvec_gather but the result is gathered
 ! on all nodes, i. e. v has to be a properly
-! allocated aray on all nodes.
+! allocated array on all nodes.
 subroutine X(vec_allgather)(vp, v, v_local)
   type(pv_t), intent(in)  :: vp
   R_TYPE,     intent(out) :: v(:)
@@ -233,17 +233,92 @@ subroutine X(vec_ghost_update)(vp, v_local)
   type(pv_t), intent(in)    :: vp
   R_TYPE,     intent(inout) :: v_local(:)
 
-  integer              :: i, j, k, r             ! Counters.
-  integer              :: total                  ! Total number of ghost
-                                                 ! points to send away.
-  integer, allocatable :: sdispls(:), rdispls(:) ! Displacements for
-                                                 ! MPI_Alltoallv.
-  R_TYPE,  allocatable :: ghost_send(:)          ! Send buffer.
-  integer, allocatable :: recvcounts(:)
+  integer, pointer :: sdispls(:), rdispls(:) ! Displacements for
+                                             ! MPI_Alltoallv.
+  R_TYPE,  pointer :: ghost_send(:)          ! Send buffer.
+  integer, pointer :: recvcounts(:)
 
   call profiling_in(C_PROFILING_GHOST_UPDATE)
 
   call push_sub('par_vec.Xvec_ghost_update')
+
+  call X(vec_ghost_update_prepare)(vp, v_local, sdispls, rdispls, recvcounts, ghost_send)
+
+  ! Bring it on the way.
+  ! It has to examined whether it is better to use several point to
+  ! point send operations (thus, non-neighbour sends could explicitly be
+  ! skipped) or to use Alltoallv. In my opinion, Alltoallv just skips
+  ! any I/O if some sendcount is 0. This means, there is actually
+  ! no need to code this again.
+  ! Note: It is actually possible to do pair-wise communication. Roughly
+  ! p/2 pairs can communicate at the same time (as long as there is
+  ! a switched network). It then takes as much rounds of
+  ! communication as the maximum neighbour number of a particular node
+  ! is. If this speeds up communication depends on the MPI
+  ! implementation: A performant implementation might already work this
+  ! way. So only touch this code if profiling with many processors
+  ! shows this spot is a serious bottleneck.
+  call mpi_debug_in(vp%comm, C_MPI_ALLTOALLV)
+  call MPI_Alltoallv(ghost_send, vp%np_ghost_neigh(1, vp%partno), sdispls(1),           &
+    R_MPITYPE, v_local(vp%np_local(vp%partno)+1), recvcounts(1), rdispls(1), R_MPITYPE, &
+    vp%comm, mpi_err)
+  call mpi_debug_out(vp%comm, C_MPI_ALLTOALLV)
+
+  call X(vec_ghost_update_finish)(sdispls, rdispls, recvcounts, ghost_send)
+
+  call pop_sub()
+
+  call profiling_out(C_PROFILING_GHOST_UPDATE)
+end subroutine X(vec_ghost_update)
+
+
+#if defined(HAVE_LIBNBC)
+! ---------------------------------------------------------
+! The same as Xvec_ghost_update but in a non-blocking fashion.
+! The handle is an NBC_Handle to be used in an NBC_Wait call.
+subroutine X(vec_ighost_update)(vp, v_local, handle)
+  type(pv_t), intent(in)    :: vp
+  R_TYPE,     intent(inout) :: v_local(:)
+  C_POINTER,  intent(in)    :: handle
+
+  integer, pointer :: sdispls(:), rdispls(:) ! Displacements for
+                                             ! NBC_Alltoallv.
+  R_TYPE,  pointer :: ghost_send(:)          ! Send buffer.
+  integer, pointer :: recvcounts(:)
+
+  call profiling_in(C_PROFILING_GHOST_UPDATE)
+
+  call push_sub('par_vec.Xvec_ighost_update')
+
+  call X(vec_ghost_update_prepare)(vp, v_local, sdispls, rdispls, recvcounts, ghost_send)
+
+  call NBCF_Ialltoallv(ghost_send, vp%np_ghost_neigh(1, vp%partno), sdispls(1),          &
+    R_MPITYPE, v_local(vp%np_local(vp%partno)+1), recvcounts(1), rdispls(1), R_MPITYPE, &
+    vp%comm, handle, mpi_err)
+
+  call X(vec_ghost_update_finish)(sdispls, rdispls, recvcounts, ghost_send)
+
+  call pop_sub()
+
+  call profiling_out(C_PROFILING_GHOST_UPDATE)
+
+end subroutine X(vec_ighost_update)
+#endif
+
+
+subroutine X(vec_ghost_update_prepare) &
+  (vp, v_local, sdispls, rdispls, recvcounts, ghost_send)
+  type(pv_t),       intent(in)    :: vp
+  R_TYPE,           intent(inout) :: v_local(:)
+  integer, pointer                :: sdispls(:), rdispls(:) ! Displacements for
+                                                            ! Alltoallv.
+  R_TYPE,  pointer                :: ghost_send(:)          ! Send buffer.
+  integer, pointer                :: recvcounts(:)
+
+  integer :: i, j, k, r ! Counters.
+  integer :: total      ! Total number of ghost points to send away.
+
+  call push_sub('par_vec.Xvec_ghost_update_prepare')
 
   ! Calculate number of ghost points current node
   ! has to send to neighbours and allocate send buffer.
@@ -283,38 +358,27 @@ subroutine X(vec_ghost_update)(vp, v_local)
     end do
   end do
 
-  ! Bring it on the way.
-  ! It has to examined whether it is better to use several point to
-  ! point send operations (thus, non-neighbour sends could explicitly be
-  ! skipped) or to use Alltoallv. In my opinion, Alltoallv just skips
-  ! any I/O if some sendcount is 0. This means, there is actually
-  ! no need to code this again.
-  ! Note: It is actually possible to do pair-wise communication. Roughly
-  ! p/2 pairs can communicate at the same time (as long as there is
-  ! a switched network). It then takes as much rounds of
-  ! communication as the maximum neighbour number of a particular node
-  ! is. If this speeds up communication depends on the MPI
-  ! implementation: A performant implementation might already work this
-  ! way. So only touch this code if profiling with many processors
-  ! shows this spot is a serious bottleneck.
-
   ALLOCATE(recvcounts(1:vp%p), vp%p)
-  call mpi_debug_in(vp%comm, C_MPI_ALLTOALLV)
   recvcounts(1:vp%p) = vp%np_ghost_neigh(vp%partno, 1:vp%p)
-  call MPI_Alltoallv(ghost_send, vp%np_ghost_neigh(1, vp%partno), sdispls(1), &
-                     R_MPITYPE, v_local(vp%np_local(vp%partno)+1),        &
-                     recvcounts(1), rdispls(1), R_MPITYPE,  &
-                     vp%comm, mpi_err)
-  call mpi_debug_out(vp%comm, C_MPI_ALLTOALLV)
+
+  call pop_sub()
+end subroutine X(vec_ghost_update_prepare)
+
+
+subroutine X(vec_ghost_update_finish) &
+  (sdispls, rdispls, recvcounts, ghost_send)
+  integer, pointer :: sdispls(:), rdispls(:) ! Displacements for
+                                             ! Alltoallv.
+  R_TYPE,  pointer :: ghost_send(:)          ! Send buffer.
+  integer, pointer :: recvcounts(:)
+
+  call push_sub('par_vec.Xvec_ghost_update_finish')
 
   deallocate(recvcounts, sdispls, rdispls)
   deallocate(ghost_send)
 
   call pop_sub()
-
-  call profiling_out(C_PROFILING_GHOST_UPDATE)
-
-end subroutine X(vec_ghost_update)
+end subroutine X(vec_ghost_update_finish)
 
 
 ! Sums over all elements of a vector v which was

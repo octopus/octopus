@@ -247,6 +247,12 @@ if test x"$enable_mpi" != x"no"; then
 fi
 AM_CONDITIONAL(COMPILE_METIS, test x${HAVE_METIS} = x1)
 
+dnl check for LibNBC
+if test x"$enable_mpi" != x"no"; then
+ ACX_LIBNBC
+fi
+AM_CONDITIONAL(COMPILE_LIBNBC, test x${HAVE_LIBNBC} = x1)
+  
 dnl check for MPI
 if test x"$enable_mpi" != x"no"; then
   ACX_MPI([], AC_MSG_WARN([could not compile an mpi test program]))
@@ -273,6 +279,7 @@ AC_CONFIG_FILES([Makefile
   external_libs/metis-4.0/Makefile
   external_libs/qshep/Makefile
   external_libs/poisson_isf/Makefile
+  external_libs/libnbc/Makefile
   liboct_parser/Makefile
   liboct/Makefile
   src/Makefile
