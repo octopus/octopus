@@ -50,14 +50,17 @@ for y in $(find $testsuite -name "*.test" | xargs grep $match | awk -F: '{print 
 	xybase=${ybase%.test}
 	if [ "$local_run" == "yes" ]; then
 	    octopus_local=`pwd`/../src
-	    [ -d $octopus_local ] && CMD ./oct-run_regression_test.pl -l -p -D $octopus_local -f $y | tee ${xybase}.log
+	    if [ -z "${exec_suffix}" ]; then
+		[ -d $octopus_local ] && CMD ./oct-run_regression_test.pl -l -p -D $octopus_local -f $y | tee ${xybase}.log
+	    else
+		[ -d $octopus_local ] && CMD ./oct-run_regression_test.pl -l -p -D $octopus_local -s ${exec_suffix} -f $y | tee ${xybase}.log
+	    fi
 	else
             if [ -z "${exec_suffix}" ]; then
          	CMD $prefix/bin/oct-run_regression_test.pl -l -p -D $prefix/bin -f $y | tee ${xybase}.log
             else
                 CMD $prefix/bin/oct-run_regression_test.pl -l -p -D $prefix/bin -s ${exec_suffix} -f $y | tee ${xybase}.log
             fi
-
 	fi
 	[ -e out.log ] && mv out.log ${xybase}.out.log
 done
