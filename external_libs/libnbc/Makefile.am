@@ -1,6 +1,8 @@
 # $Id: Makefile.am 1809 2006-02-09 20:39:38Z appel $
 
-noinst_LIBRARIES = libnbc.a
+if COMPILE_LIBNBC
+  noinst_LIBRARIES = libnbc.a
+endif
 
 libnbc_a_SOURCES = \
 	nbc.h \
@@ -21,3 +23,6 @@ libnbc_a_SOURCES = \
 	nbc_iscatterv.c \
 	nbc_op.c \
 	nbcf.c
+
+CLEANFILES = *~ *.bak
+DISTCLEANFILES = Makefile.in
