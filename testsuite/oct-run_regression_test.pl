@@ -148,6 +148,10 @@ if( @executables == 0 ){
  exit 1;
 }
 
+
+# This variable counts the number of failed testcases.
+$failures = 0;
+
 # Loop over all the executables.
 foreach my $octopus_exe (@executables){
 
@@ -288,6 +292,7 @@ foreach my $octopus_exe (@executables){
      } else {
 	 print "$name: \t [ \033[31m FAIL \033[0m ] \n";
          $test_succeded = 0;
+	 $failures++;
      }
    }
 
@@ -305,3 +310,5 @@ foreach my $octopus_exe (@executables){
 
 
 if (!$opt_i) { print "\n\n\n"; }
+
+exit $failures;

@@ -9,6 +9,11 @@ testsuite=$prefix/share/octopus/testsuite
 # Arch
 arch=${MACHTYPE%-pc-linux-gnu}
 
+# Failure reporting.
+failed_tests=0
+total_tests=0
+failure_report=""
+
 # Usage
 function usage() {
     cat <<EOF
@@ -46,25 +51,35 @@ function run_testsuite() {
 [ "$local_run" == "yes" ] && testsuite=$(pwd)
 
 for y in $(find $testsuite -name "*.test" | xargs grep $match | awk -F: '{print $1}' | sort -u); do
-	ybase=`basename $y`
-	xybase=${ybase%.test}
-	if [ "$local_run" == "yes" ]; then
-	    octopus_local=`pwd`/../src
-	    if [ -z "${exec_suffix}" ]; then
-		[ -d $octopus_local ] && CMD ./oct-run_regression_test.pl -l -p -D $octopus_local -f $y | tee ${xybase}.log
-	    else
-		[ -d $octopus_local ] && CMD ./oct-run_regression_test.pl -l -p -D $octopus_local -s ${exec_suffix} -f $y | tee ${xybase}.log
-	    fi
-	else
-            if [ -z "${exec_suffix}" ]; then
-         	CMD $prefix/bin/oct-run_regression_test.pl -l -p -D $prefix/bin -f $y | tee ${xybase}.log
-            else
-                CMD $prefix/bin/oct-run_regression_test.pl -l -p -D $prefix/bin -s ${exec_suffix} -f $y | tee ${xybase}.log
-            fi
+    total_tests=$((total_tests + 1))
+    ybase=`basename $y`
+    xybase=${ybase%.test}
+    if [ "$local_run" == "yes" ]; then
+	bin_directory=`pwd`/../src
+    else
+	bin_directory=$prefix/bin
+    fi
+    if [ -n "${exec_suffix}" ]; then
+	suffix_opt="-s ${exec_suffix}"
+    else
+	suffix_opt=""
+    fi
+    if [ -d $bin_direcory ]; then
+	CMD ./oct-run_regression_test.pl -l -p $suffix_opt -D $bin_directory -f $y | \
+	    tee ${xybase}.log
+	# Look for failed testcases and add to failure summary.
+	failures=${PIPESTATUS[0]}
+	if [ $failures -ne 0 ]; then
+	    failed_tests=$((failed_tests + 1))
+	    test_name=`echo $y | sed "s|$testsuite/||"`
+	    name_length=`echo -n $test_name | wc -m`
+	    space_length=$((50 - name_length))
+	    spaces=`for((i = 1; i <= space_length; i++)); do echo -n ' '; done`
+	    failure_report="$failure_report    $test_name$spaces$failures\n"
 	fi
-	[ -e out.log ] && mv out.log ${xybase}.out.log
+    fi
+    [ -e out.log ] && mv out.log ${xybase}.out.log
 done
-
 }
 
 
@@ -74,22 +89,22 @@ function mail_report() {
 datestamp=$(date +"%Y-%m-%d")
 
 for y in $(find $testsuite -name "*.test" | xargs grep $match | awk -F: '{print $1}' | sort -u); do
-	ybase=`basename $y`
-	xybase=${ybase%.test}
-	failed_tests=$(grep FAIL ${xybase}.log | wc -l) 
-	echo "Checking for failed tests: ${xybase}.log"
-	if [ $failed_tests -gt 0 ]; then
-	    echo "Found: $failed_tests"
-	    echo "Mailing report to: $mailaddr"
-            cat oct-header ${xybase}.log ${xybase}.out.log | mutt -s "[oct-run_testsuite on $arch] daily report - $datestamp" $mailaddr
-	fi
+    ybase=`basename $y`
+    xybase=${ybase%.test}
+    failed_tests=$(grep FAIL ${xybase}.log | wc -l) 
+    echo "Checking for failed tests: ${xybase}.log"
+    if [ $failed_tests -gt 0 ]; then
+	echo "Found: $failed_tests"
+	echo "Mailing report to: $mailaddr"
+	cat oct-header ${xybase}.log ${xybase}.out.log | mutt -s "[oct-run_testsuite on $arch] daily report - $datestamp" $mailaddr
+    fi
 done
-
 }
 
 
 # show usage info if no args at all
 [ "$#" -eq 0 ] && usage;
+
 
 # some defaults
 match="short-run"
@@ -111,14 +126,29 @@ while getopts "hnlsfwp:e:m:" opt ; do
 done
 shift $[ OPTIND - 1 ]
 
+
 # for now the long-run matches everything
 [ "${match}" == "long-run" ] && match=.
+
     
 # get epoch seconds at testsuite start
 testsuite_start=$(date +%s) 
 
+
 # run testsuite
 run_testsuite $match
+
+
+# Failure reporting to STDOUT.
+if [ $failed_tests -gt 0 ]; then
+    echo -e "\033[31m ***** $failed_tests out of $total_tests testfiles failed *****\033[0m"
+    echo
+    echo "    testfile                                          # failed testcases"
+    echo "    --------------------------------------------------------------------"
+    echo -e "$failure_report"
+    echo -e "\n"
+fi    
+
 
 # get epoch seconds after we are done and compute time difference
 testsuite_end=$(date +%s) 
@@ -135,8 +165,10 @@ echo "" >> oct-header
 echo $RUNTIME
 echo ""
 
+    
 # should we send a mail report?
 [ "${send_mail}" == "yes" ] && mail_report $match $mailaddr
+
 
 # clean up
 rm -f octopus*.log stamp build-stamp
