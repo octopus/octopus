@@ -173,6 +173,7 @@ end subroutine X(magnus)
 
 
 ! ---------------------------------------------------------
+#if defined(HAVE_MPI)
 subroutine X(kinetic_prepare) (h, gr, psi)
   type(hamiltonian_t), intent(in)    :: h
   type(grid_t),        intent(inout) :: gr
@@ -192,15 +193,16 @@ subroutine X(kinetic_prepare) (h, gr, psi)
 
   call pop_sub()
 end subroutine X(kinetic_prepare)
+#endif
 
 
 ! ---------------------------------------------------------
+#if defined(HAVE_LIBNBC)
 subroutine X(kinetic_wait) (h)
-  type(hamiltonian_t), intent(in)    :: h
+  type(hamiltonian_t), intent(in) :: h
 
   integer :: idim
 
-#if defined(HAVE_LIBNBC)
   call push_sub('h_inc.Xkinetic_wait')
 
   do idim = 1, h%d%dim
@@ -208,8 +210,8 @@ subroutine X(kinetic_wait) (h)
   end do
 
   call pop_sub()
-#endif
 end subroutine X(kinetic_wait)
+#endif
 
 
 ! ---------------------------------------------------------
@@ -222,10 +224,14 @@ subroutine X(kinetic) (h, gr, psi, hpsi, ik)
 
   call push_sub('h_inc.Xkinetic')
 
+#if defined(HAVE_MPI)
   if(gr%m%parallel_in_domains) then
     call X(kinetic_prepare)(h, gr, psi)
+#if defined(HAVE_LIBNBC)
     call X(kinetic_wait)(h)
+#endif
   end if
+#endif
   call X(kinetic_calculate) (h, gr, psi, hpsi, ik)
 
   call pop_sub()
