@@ -235,7 +235,7 @@ foreach my $octopus_exe (@executables){
 	   print "Executing: cd $workdir; $octopus_exe_suffix > out 2>&1 \n";
 	   system("cd $workdir; $octopus_exe_suffix > out 2>&1");
 	 }
-	 system("grep -B2 -A5 'Running octopus' $workdir/out > build-stamp");
+	 system("grep -B2 -A5 'Running octopus' $workdir/out > $workdir/build-stamp");
 	 print "Finished test run.\n\n"; }
        else {
 	 if(!$opt_i) { print "cd $workdir; $octopus_exe_suffix < inp > out 2>&1 \n"; }
