@@ -48,7 +48,9 @@ module linear_solver_m
        linear_solver_init, &
        linear_solver_end, &
        dsolve_HXeY, & 
-       zsolve_HXeY
+       zsolve_HXeY, &
+       linear_solver_ops_per_iter
+  
 
   type linear_solver_t
      integer :: solver         
@@ -187,6 +189,26 @@ contains
     type(linear_solver_t), intent(inout) :: this
     this%solver = -1
   end subroutine linear_solver_end
+
+  integer function linear_solver_ops_per_iter(this) result(n)
+    type(linear_solver_t), intent(inout) :: this
+    
+    select case(this%solver)
+      
+    case(LS_CG)
+      n = 1
+    case(LS_HX_FIXED)
+      n = 1
+    case(LS_HX)
+      n = 1
+    case(LS_BICGSTAB)
+      n = 2
+    case default 
+      message(1)="Unknown linear response solver"
+      call write_fatal(1)
+    end select
+  
+  end function linear_solver_ops_per_iter
 
 #include "undef.F90"
 

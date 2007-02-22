@@ -94,6 +94,8 @@ subroutine X(sternheimer_solve)(&
   message(1)="--------------------------------------------"
   call write_info(1)
 
+  total_iter = 0
+    
   !self consistency iteration for response
   iter_loop: do iter=1, this%scftol%max_iter
 
@@ -102,8 +104,6 @@ subroutine X(sternheimer_solve)(&
          "Frequency: ", R_REAL(omega), " Eta : ", R_AIMAG(omega)
     call write_info(2)
 
-    total_iter = 0
-    
     dl_rhoin(1:m%np, 1:st%d%nspin, 1) = lr(1)%X(dl_rho)(1:m%np, 1:st%d%nspin)
 
     call X(sternheimer_calc_hvar)(this, sys, h, lr, nsigma, vext, hvar)
@@ -143,10 +143,10 @@ subroutine X(sternheimer_solve)(&
           tmp(1:m%np) = R_ABS(lr(sigma)%X(dl_psi)(1:m%np, 1, ist, ik))**2
           dpsimod = X(mf_integrate)(m, tmp)
           write(message(1), '(i4, f20.6, i5, e20.6)') &
-               (3-2*sigma)*ist, dpsimod, iter, this%solver%abs_psi 
+               (3-2*sigma)*ist, dpsimod, this%solver%iter, this%solver%abs_psi 
           call write_info(1)
 
-          total_iter=total_iter + iter
+          total_iter=total_iter + this%solver%iter
           
         end do !sigma
       end do !ist
@@ -187,7 +187,7 @@ subroutine X(sternheimer_solve)(&
 
     abs_dens = sqrt(abs_dens)
 
-    write(message(1), '(a, e20.6, a, i5)') "SCF Residual ", abs_dens, " Total Iterations ", total_iter
+    write(message(1), '(a, e20.6)') "SCF Residual ", abs_dens
 
     message(2)="--------------------------------------------"
     call write_info(2)
@@ -203,10 +203,11 @@ subroutine X(sternheimer_solve)(&
     if(conv) then
       this%ok = .true.
 
-      write(message(1), '(a, i4, a)')        &
-           'Info: SCF for response converged in ', &
-           iter, ' iterations'
-      call write_info(1)
+      write(message(1), '(a, i4, a)') &
+           'Info: SCF for response converged in ', iter, ' iterations.'
+      write(message(2), '(a, i8)') &
+           '      Total hamiltonian applications:', total_iter*linear_solver_ops_per_iter(this%solver)
+      call write_info(2)
       exit
 
     else
