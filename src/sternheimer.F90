@@ -60,7 +60,8 @@ module sternheimer_m
        sternheimer_add_fxc, &
        sternheimer_add_hartree, & 
        dsternheimer_calc_hvar, &
-       zsternheimer_calc_hvar
+       zsternheimer_calc_hvar, &
+       sternheimer_has_converged
   
   type sternheimer_t
      private
@@ -204,6 +205,11 @@ contains
     type(sternheimer_t) :: this
     r = this%add_hartree
   end function sternheimer_add_hartree
+
+  logical function sternheimer_has_converged(this) result(r)
+    type(sternheimer_t) :: this
+    r = this%ok
+  end function sternheimer_has_converged
 
 #include "complex.F90"
 #include "sternheimer_inc.F90"
