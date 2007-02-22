@@ -53,7 +53,7 @@ module poisson_isf_m
   integer, parameter :: n_cnf = 2
 
   type(dcf_t)                  :: rho_cf
-  type(isf_cnf_t), allocatable :: cnf(:)
+  type(isf_cnf_t)              :: cnf(1:2)
   integer, parameter           :: order_scaling_function = 8 
 
 contains
@@ -77,7 +77,6 @@ contains
     ! depends on the number of nodes used for the calculations. To avoid
     ! recalculating the kernel on each call of poisson_isf_solve depending on
     ! the all_nodes argument, both kernels are calculated.
-    ALLOCATE(cnf(n_cnf), n_cnf)
     cnf(world)%mpi_grp = mpi_world
     cnf(domain)%mpi_grp = m%mpi_grp
 
@@ -103,8 +102,6 @@ contains
       cnf(i_cnf)%kernel)
     end do
 #else
-    ALLOCATE(cnf(1), 1)
-
     call calculate_dimensions(rho_cf%n(1), rho_cf%n(2), rho_cf%n(3), &
       cnf(serial)%nfft1, cnf(serial)%nfft2, cnf(serial)%nfft3)
 
@@ -189,7 +186,6 @@ contains
   subroutine poisson_isf_end()
     call push_sub('poisson_isf.poisson_isf_end')
 
-    deallocate(cnf)
     call dcf_free(rho_cf)
 
     call pop_sub()
