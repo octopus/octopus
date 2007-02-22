@@ -71,7 +71,7 @@ module pol_lr_m
     CMPLX   :: alpha(1:MAX_DIM, 1:MAX_DIM, 1:3)          ! the linear polarizability
     CMPLX   :: beta(1:MAX_DIM, 1:MAX_DIM, 1:MAX_DIM)     ! first hyperpolarizability
 
-    logical :: ok
+    logical :: ok(1:3)
   end type em_resp_t
 
 contains
@@ -151,6 +151,9 @@ contains
     call io_mkdir('linear/')
 
     do iomega = 1, em_vars%nomega
+
+      em_vars%ok(1:3) = .true.
+
       do ifactor = 1, em_vars%nfactor
         do dir = 1, sys%gr%sb%dim
 
@@ -253,12 +256,15 @@ contains
                    em_rho_tag(em_vars%freq_factor(ifactor)*em_vars%omega(iomega), dir),&
                    em_wfs_tag(dir, ifactor), have_restart_rho=(ierr==0))
             end if
+            
+            em_vars%ok(ifactor) = em_vars%ok(ifactor) .and. sternheimer_has_converged(sh)
+            
           end if
 
         end do ! dir
       end do ! ifactor
-
-
+      
+      
       !calculate polarizability
       do ifactor = 1, em_vars%nfactor
         if(wfs_are_complex(sys%st)) then 
@@ -553,7 +559,7 @@ contains
 
       iunit = io_open(trim(dirname)//'/alpha', action='write')
 
-      if (.not.em_vars%ok) write(iunit, '(a)') "# WARNING: not converged"
+      if (.not.em_vars%ok(ifactor)) write(iunit, '(a)') "# WARNING: not converged"
       write(iunit, '(2a)', advance='no') '# Polarizability tensor [', &
         trim(units_out%length%abbrev)
       if(NDIM.ne.1) write(iunit, '(a,i1)', advance='no') '^', NDIM
@@ -579,7 +585,7 @@ contains
           em_vars%freq_factor(ifactor)*em_vars%omega(iomega)/units_out%energy%factor * M_FOUR * M_PI / P_c 
         
         iunit = io_open(trim(dirname)//'/cross_section', action='write')
-        if (.not.em_vars%ok) write(iunit, '(a)') "# WARNING: not converged"
+        if (.not.em_vars%ok(ifactor)) write(iunit, '(a)') "# WARNING: not converged"
 
         average = M_THIRD* ( cross(1, 1) + cross(2, 2) + cross(3, 3) )
         crossp(:, :) = matmul(cross(:, :),cross(:, :))
@@ -609,7 +615,7 @@ contains
       ! Output first hyperpolarizabilty (beta)
       iunit = io_open(trim(dirname)//'/beta', action='write')
 
-      if (.not.em_vars%ok) write(iunit, '(a)') "# WARNING: not converged"
+      if (.not.em_vars%ok(ifactor)) write(iunit, '(a)') "# WARNING: not converged"
 
       write(iunit, '(2a)', advance='no') 'First hyperpolarizability tensor: beta [', &
         trim(units_out%length%abbrev)
@@ -686,7 +692,7 @@ contains
           write(fname, '(2a,i1,a,i1)') trim(dirname), '/projection-', ik, '-', dir
           iunit = io_open(trim(fname), action='write')
 
-          if (.not.em_vars%ok) write(iunit, '(a)') "# WARNING: not converged"
+          if (.not.em_vars%ok(ifactor)) write(iunit, '(a)') "# WARNING: not converged"
 
           write(iunit, '(a)', advance='no') '# state '
           do ivar = 1, em_vars%lr(dir, 1, 1)%nst
