@@ -5,8 +5,12 @@ DebugLevel = 0
 
 CalculationMode = gs
 
+%Species
+  "He" | 4.0026020  | spec_ps_hgh | 2 | -1 | -1
+%
+
 %Coordinates
-"He" | 0 | 0 | 0 | no
+  "He" | 0 | 0 | 0 | no
 %
 
 BoxShape = sphere
@@ -14,6 +18,7 @@ Radius  = 7.0
 Spacing = 0.48
 CurvMethod = curv_gygi
 CurvGygiA = 0.80
+
 DerivativesSpace = real_space
 DerivativesStencil = stencil_starplus
 DerivativesOrder = 3

@@ -1,30 +1,14 @@
-SystemName = "He"
-CalculationMode = gs
-Units = "a.u"
-FromScratch = yes
+DebugLevel = 0
 
-%Coordinates
-"He" | 0 | 0 | 0 | no
+CalculationMode = gs
+
+%Species
+  "He" | 4.0026020  | spec_ps_hgh | 2 | -1 | -1
 %
 
-BoxShape = sphere
+%Coordinates
+  "He" | 0 | 0 | 0 | no
+%
+
 Radius  = 7.0
 Spacing = 0.24
-
-XCFunctional = lda_x + lda_c_pz
-
-MaximumIter = 200
-ConvAbsDens = 1e-6
-
-LCAOStart = yes
-
-EigenSolver = cg
-EigenSolverInitTolerance = 1e-2
-EigenSolverFinalTolerance = 1e-6
-EigenSolverFinalToleranceIteration = 6
-EigenSolverMaxIter = 25
-
-TypeOfMixing = broyden
-
-PolConvAbsDens = 1.0e-3
-PolLinearSolverTol = 1.0e-4
