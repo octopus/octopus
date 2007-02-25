@@ -112,7 +112,6 @@ subroutine X(eigen_solver_arpack)(gr, st, h, tol_, niter, ncv, converged, diff)
     ! This sets niter to the number of matrix-vector operations.
     niter = iparam(9)
     do j = 1, min(st%nst, converged)
-      write(*, *) 'Modifying the wavefunctions...'
       do i = 1, NP
         st%X(psi)(i, 1, j, ik) = v(i, j)/sqrt(gr%m%vol_pp(i))
       end do
@@ -138,11 +137,14 @@ contains
     integer :: i
     R_TYPE, allocatable :: psi(:, :), hpsi(:, :)
 
-    ALLOCATE(psi(NP, 1),  NP*1)
-    ALLOCATE(hpsi(NP, 1), NP*1)
+    ALLOCATE(psi(NP_PART, 1),  NP_PART*1)
+    ALLOCATE(hpsi(NP_PART, 1), NP_PART*1)
 
     do i = 1, NP
       psi(i, 1) = v(i)/sqrt(gr%m%vol_pp(i))
+    end do
+    do i = NP+1, NP_PART
+      psi(i, 1) = M_ZERO
     end do
     call X(hpsi)(h, gr, psi, hpsi, ik)
     do i = 1, NP

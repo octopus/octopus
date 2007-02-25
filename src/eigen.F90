@@ -150,10 +150,23 @@ contains
       !%Description
       !% This indicates how many Arnoldi vectors are generated
       !% It must satisfy EigenSolverArnoldiVectors - Number Of Eigenvectors >= 2.
-      !% See the ARPACK documentation for more details.
+      !% See the ARPACK documentation for more details. It will default to 
+      !% twice the number of eigenvectors (which is the number of states)
       !%End
-      call loct_parse_int(check_inp('EigenSolverArnoldiVectors'), 20, eigens%arnoldi_vectors)
+      call loct_parse_int(check_inp('EigenSolverArnoldiVectors'), 2*st%nst, eigens%arnoldi_vectors)
       if(eigens%arnoldi_vectors-st%nst < 2) call input_error('EigenSolverArnoldiVectors')
+
+      ! Arpack is not working in some cases, so let us check.
+      if(st%d%ispin .eq. SPINORS) then
+        write(message(1), '(a)') 'The ARPACK diagonalizer does not handle spinors (yet).'
+        write(message(2), '(a)') 'Please provide a different EigenSolver.'
+        call write_fatal(2)
+      end if
+      if(st%d%wfs_type .eq. M_CMPLX) Then
+        write(message(1), '(a)') 'The ARPACK diagonalizer does not handle complex wavefunctions (yet).'
+        write(message(2), '(a)') 'Please provide a different EigenSolver.'
+        call write_fatal(2)
+      end if
 #endif
 #if defined(HAVE_JDQZ)
     case(JDQZ)
