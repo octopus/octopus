@@ -54,7 +54,7 @@ for y in $(find $testsuite -name "*.test" | xargs grep $match | awk -F: '{print 
     total_tests=$((total_tests + 1))
     ybase=`basename $y`
     xybase=${ybase%.test}
-    if [ "$local_run" == "yes" ]; then
+    if [ "${local_run}" == "yes" ]; then
 	bin_directory=`pwd`/../src
     else
 	bin_directory=$prefix/bin
@@ -64,13 +64,13 @@ for y in $(find $testsuite -name "*.test" | xargs grep $match | awk -F: '{print 
     else
 	suffix_opt=""
     fi
-    if [ -d $bin_direcory ]; then
+    if [ -d "${bin_directory}" ]; then
 	CMD ${bin_directory}/oct-run_regression_test.pl -l \
 	    -p $suffix_opt -D $bin_directory -f $y | \
 	    tee ${xybase}.log
 	# Look for failed testcases and add to failure summary.
 	failures=${PIPESTATUS[0]}
-	if [ $failures -ne 0 ]; then
+	if [ "${failures}" -ne 0 ]; then
 	    failed_tests=$((failed_tests + 1))
 	    test_name=`echo $y | sed "s|$testsuite/||"`
 	    name_length=`echo -n $test_name | wc -m`
