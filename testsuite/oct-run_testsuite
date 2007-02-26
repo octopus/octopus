@@ -65,7 +65,8 @@ for y in $(find $testsuite -name "*.test" | xargs grep $match | awk -F: '{print 
 	suffix_opt=""
     fi
     if [ -d $bin_direcory ]; then
-	CMD ./oct-run_regression_test.pl -l -p $suffix_opt -D $bin_directory -f $y | \
+	CMD ${bin_directory}/oct-run_regression_test.pl -l \
+	    -p $suffix_opt -D $bin_directory -f $y | \
 	    tee ${xybase}.log
 	# Look for failed testcases and add to failure summary.
 	failures=${PIPESTATUS[0]}
