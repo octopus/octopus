@@ -56,8 +56,10 @@ for y in $(find $testsuite -name "*.test" | xargs grep $match | awk -F: '{print 
     xybase=${ybase%.test}
     if [ "${local_run}" == "yes" ]; then
 	bin_directory=`pwd`/../src
+	runtest_directory=$testsuite
     else
 	bin_directory=$prefix/bin
+	runtest_directory=$bin_directory
     fi
     if [ -n "${exec_suffix}" ]; then
 	suffix_opt="-s ${exec_suffix}"
@@ -65,7 +67,7 @@ for y in $(find $testsuite -name "*.test" | xargs grep $match | awk -F: '{print 
 	suffix_opt=""
     fi
     if [ -d "${bin_directory}" ]; then
-	CMD ${bin_directory}/oct-run_regression_test.pl -l \
+	CMD $runtest_directory/oct-run_regression_test.pl -l \
 	    -p $suffix_opt -D $bin_directory -f $y | \
 	    tee ${xybase}.log
 	# Look for failed testcases and add to failure summary.
