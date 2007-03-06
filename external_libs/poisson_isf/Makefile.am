@@ -35,3 +35,8 @@ config_F90.h: ../../config.h
 	grep '#define' $^ > $@
 
 CLEANFILES = config_F90.h
+
+noinst_HEADERS=lazy_100.inc  lazy_14.inc  \
+	lazy_16.inc  lazy_20.inc  lazy_24.inc  \
+	lazy_30.inc  lazy_40.inc  lazy_50.inc  \
+	lazy_60.inc  lazy_8.inc

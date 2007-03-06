@@ -62,8 +62,9 @@ noinst_HEADERS = \
 	out_inc.F90 math_cg_inc.F90 math_inc.F90 \
 	linalg_basic_blas.F90 linalg_basic_int.F90 linalg_adv_lapack.F90 \
 	linear_response_inc.F90 linear_response_out.F90 linear_solver_inc.F90\
-	sternheimer_inc.F90 em_resp_inc.F90 unocc_inc.F90 casida_inc.F90
-
+	sternheimer_inc.F90 em_resp_inc.F90 unocc_inc.F90 casida_inc.F90 \
+	excited_states_inc.F90 xc_OEP_kernel_inc.F90 em_resp_calc_inc.F90
+	
 core_LIBS = @LIBS_LAPACK@ @LIBS_BLAS@ \
   ../liboct/liboct.a \
   ../liboct_parser/liboct_parser.a \
@@ -192,6 +193,7 @@ sternheimer.o: global.h sternheimer_inc.F90
 em_resp_calc.o: global.h em_resp_calc_inc.F90
 em_resp.o : global.h em_resp_inc.F90
 epot.o: global.h epot_inc.F90
+excited_states.o: global.h excited_states_inc.F90
 f.o: global.h f_inc.F90
 fft.o: global.h fftw2.F90 fftw3.F90
 geometry.o: global.h

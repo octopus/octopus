@@ -9,7 +9,7 @@ liboct_a_SOURCES = recipes.c ylm.c varia.c \
 AM_CPPFLAGS = -I$(top_srcdir)/liboct_parser -I$(top_srcdir)/external_libs/metis-4.0/
 AM_CFLAGS = @GD_CFLAGS@
 
-noinst_HEADERS = varia.h
+noinst_HEADERS = varia.h operate_vec.c
 
 CLEANFILES = *~ *.bak
 DISTCLEANFILES = Makefile.in
