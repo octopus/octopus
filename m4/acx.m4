@@ -207,8 +207,8 @@ if test -z "${FCFLAGS}"; then
       ;;
     ifc|ifort*)
       FCFLAGS="-u -zero -fpp1 -nbs -pc80 -pad -align -unroll -O3 -ip"
-      a=`echo $host | sed "s/^i//" | sed "s/86*//"`
-      if test $a > 5 ; then
+      a=`echo $host | sed "s/^i//" | sed "s/86.*//"`
+      if test "$a" -gt 5 ; then
          FCFLAGS="$FCFLAGS -tpp7 -xW"
       fi
     ;;
