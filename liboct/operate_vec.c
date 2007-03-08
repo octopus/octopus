@@ -23,40 +23,22 @@
 #include <config.h>
 
 #if defined(HAVE_GCC_VECTORS) && defined(__SSE2__) && defined(HAVE_EMMINTRIN_H)
-
-#if defined(HAVE_16_BYTES_ALIGNED_MALLOC)
-
-#define USE_VECTORS
-
-#else /* DONT HAVE_16_BYTES_ALIGNED_MALLOC */
-
 #if defined(HAVE_POSIX_MEMALIGN) && defined(HAVE_FAKE_MALLOC)
 #define USE_VECTORS
-#define USE_FAKE_MALLOC
-#endif 
-
-#endif /* HAVE_16_BYTES_ALIGNED_MALLOC */
-#endif /* defined(HAVE_GCC_VECTORS) && defined(__SSE2__) && defined(HAVE_EMMINTRIN_H) */
-
-
-#ifdef USE_FAKE_MALLOC
 #define _XOPEN_SOURCE 600
-#endif 
+#endif
+#endif
 
+#ifdef USE_VECTORS
 #include <stdlib.h>
-
-#ifdef USE_FAKE_MALLOC
-
 #include <errno.h>
 
 /* 
-
-Override calls to malloc with calls to posix_memaling. 
+Override calls to malloc with calls to posix_memalign. 
 
 Not the most elegant thing in the world, but it appears that most x86
 Fortran compilers can't be instructed to align allocated memory to a
 16 bytes boundary as required by SSE.
-
 */
 
 void * malloc (size_t size){
@@ -69,12 +51,6 @@ void * malloc (size_t size){
     return NULL;
   }
 }
-
-#endif /* USE_FAKE_MALLOC */
-
-
-
-#ifdef USE_VECTORS
 
 typedef double v2df __attribute__ ((vector_size (16)));
 

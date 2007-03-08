@@ -68,8 +68,6 @@ AC_CHECK_FUNCS([getcwd gettimeofday mkdir pow sqrt strcasecmp strdup \
 strerror strncasecmp strndup uname tcgetpgrp scandir alphasort \
 sigaction malloc realloc opendir readdir closedir strchr strtod assert \
 posix_memalign])
-ACX_MALLOC_ALIGNMENT
-ACX_FAKE_MALLOC
 
 # Checks for size of pointer
 ACX_POINTER_SIZE
@@ -162,6 +160,9 @@ ACX_LONG_FORTRAN_LINES
 
 dnl check whether the Fortran 90 compiler accepts line markers cast by the preprocessor.
 ACX_F90_ACCEPTS_LINE_NUMBERS
+
+dnl Check if the Fortran 90 system can be convinced to use a different malloc(3).
+ACX_FAKE_MALLOC
 
 dnl ============================================================================
 dnl find what is the extension of the programs supposed to be
