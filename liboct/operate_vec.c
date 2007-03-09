@@ -22,15 +22,27 @@
 
 #include <config.h>
 
-#if defined(HAVE_GCC_VECTORS) && defined(__SSE2__) && defined(HAVE_EMMINTRIN_H)
-#if defined(HAVE_POSIX_MEMALIGN) && defined(HAVE_FAKE_MALLOC)
+#if defined(HAVE_GCC_VECTORS) && defined(__SSE2__) && defined(HAVE_EMMINTRIN_H) && defined(FC_USES_MALLOC)
+
+#if defined(HAVE_16_BYTES_ALIGNED_MALLOC)
+
 #define USE_VECTORS
-#define _XOPEN_SOURCE 600
-#endif
+
+#else /* not HAVE_16_BYTES_ALIGNED_MALLOC */
+
+#if defined(HAVE_POSIX_MEMALIGN)
+#define USE_VECTORS
+#define USE_FAKE_MALLOC
 #endif
 
-#ifdef USE_VECTORS
+#endif /* HAVE_16_BYTES_ALIGNED_MALLOC */
+
+#endif /* HAVE_GCC_VECTORS && __SSE2__ && HAVE_EMMINTRIN_H && FC_USES_MALLOC */
+
 #include <stdlib.h>
+
+#if defined(USE_FAKE_MALLOC)
+#define _XOPEN_SOURCE 600
 #include <errno.h>
 
 /* 
@@ -51,7 +63,10 @@ void * malloc (size_t size){
     return NULL;
   }
 }
+#endif /* USE_FAKE_MALLOC */
 
+
+#if defined(USE_VECTORS)
 typedef double v2df __attribute__ ((vector_size (16)));
 
 #include <emmintrin.h>
@@ -117,5 +132,4 @@ void FC_FUNC(zoperate,ZOPERATE)(const int * opnp,
   free(vw);
 
 }
-
 #endif /* USE_VECTORS */

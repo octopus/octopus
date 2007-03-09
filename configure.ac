@@ -69,6 +69,8 @@ strerror strncasecmp strndup uname tcgetpgrp scandir alphasort \
 sigaction malloc realloc opendir readdir closedir strchr strtod assert \
 posix_memalign])
 
+ACX_MALLOC_ALIGNMENT
+
 # Checks for size of pointer
 ACX_POINTER_SIZE
 AC_DEFINE_UNQUOTED(C_POINTER, [integer(${ac_pointersize})], [The type of a C pointer])
@@ -161,8 +163,8 @@ ACX_LONG_FORTRAN_LINES
 dnl check whether the Fortran 90 compiler accepts line markers cast by the preprocessor.
 ACX_F90_ACCEPTS_LINE_NUMBERS
 
-dnl Check if the Fortran 90 system can be convinced to use a different malloc(3).
-ACX_FAKE_MALLOC
+dnl Check if the Fortran 90 uses malloc(3).
+ACX_FC_USES_MALLOC
 
 dnl ============================================================================
 dnl find what is the extension of the programs supposed to be
