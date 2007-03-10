@@ -248,7 +248,6 @@ subroutine X(mf_interpolate) (mesh_in, mesh_out, full_interpolation, u, f)
     ALLOCATE(lnext(npoints), npoints)
     ALLOCATE(rsq(npoints), npoints)
 
-
     f = M_ZERO
 
 #if defined(R_TREAL)
@@ -376,3 +375,124 @@ subroutine X(mf_interpolate) (mesh_in, mesh_out, full_interpolation, u, f)
 
   call pop_sub()
 end subroutine X(mf_interpolate)
+
+
+! ---------------------------------------------------------
+! Given a function f defined on mesh, and a plane, it gives 
+! back the values of f on the plane, by doing the suitable
+! interpolation
+subroutine X(mf_interpolate_on_plane)(mesh, plane, f, f_in_plane)
+  type(mesh_t),       intent(in)  :: mesh
+  type(mesh_plane_t), intent(in)  :: plane
+  R_TYPE,             intent(in)  :: f(:)
+  R_TYPE,             intent(out) :: f_in_plane(:, :)
+
+  integer :: npoints, nq, nw, nr, ier, i, j
+  integer, allocatable :: lcell(:, :, :), lnext(:)
+  FLOAT, allocatable :: rsq(:), a(:, :)
+  R_TYPE, allocatable :: f_global(:)
+  FLOAT ::  xyzmin(MAX_DIM), xyzdel(MAX_DIM), rmax, px, py, pz
+  FLOAT, external :: qs2val, qs3val
+
+  call push_sub('mf_inc.Xmf_interpolate_on_plane')
+
+#if defined(R_TCOMPLEX)
+  message(1) = 'INTERNAL ERROR at Xmf_interpolate_on_plane: complex number not yet allowed'
+  call write_fatal(1)
+#endif
+
+  ! Prepare the interpolation
+  npoints = mesh%np_global
+  select case(mesh%sb%dim)
+    case(3)
+      nq = 17 ! This is the recommended value in qshep3d.f90
+      nw = 16 ! The recommended value in qshep3d.f90 is 32, but this speeds up things.
+      nr = nint((npoints/CNST(3.0))**(M_ONE/M_THREE))
+      ALLOCATE(lcell(nr, nr, nr), nr*nr*nr)
+      ALLOCATE(a(9, npoints), 9*npoints)
+    case default
+      message(1) = 'INTERNAL ERROR at Xmf_surface_integral: wrong dimensionality'
+  end select
+
+  ALLOCATE(lnext(npoints), npoints)
+  ALLOCATE(rsq(npoints), npoints)
+
+  ALLOCATE(f_global(mesh%np_global), mesh%np_global)
+#if defined HAVE_MPI
+  call dvec_gather(mesh%vp, f_global, f)
+#else
+  f_global = f
+#endif
+
+  call qshep3 ( npoints, mesh%x(1:npoints, 1), mesh%x(1:npoints, 2), mesh%x(1:npoints, 3), &
+                f_global, nq, nw, nr, lcell, lnext, xyzmin, &
+                xyzdel, rmax, rsq, a, ier )
+
+  do i = plane%nu, plane%mu
+    do j = plane%nv, plane%mv
+      px = plane%origin(1) + i*plane%spacing * plane%u(1) + j * plane%spacing * plane%v(1)
+      py = plane%origin(1) + i*plane%spacing * plane%u(2) + j * plane%spacing * plane%v(2)
+      pz = plane%origin(1) + i*plane%spacing * plane%u(3) + j * plane%spacing * plane%v(3)
+      f_in_plane(i, j) = qs3val ( px, py, pz, npoints, &
+                         mesh%x(1:npoints, 1), mesh%x(1:npoints, 2), mesh%x(1:npoints, 3), &
+                         f_global, nr, lcell, lnext, xyzmin, xyzdel, rmax, rsq, a )
+    end do
+  end do
+
+  deallocate(lcell, lnext, rsq, a, f_global)
+  call pop_sub()
+end subroutine X(mf_interpolate_on_plane)
+
+
+! ---------------------------------------------------------
+! This subroutine calculates the surface integral of a scalar
+! function on a given plane
+R_TYPE function X(mf_surface_integral_scalar) (mesh, f, plane) result(d)
+  type(mesh_t), intent(in)       :: mesh
+  R_TYPE,       intent(in)       :: f(:)  ! f(mesh%np)
+  type(mesh_plane_t), intent(in) :: plane
+
+  R_TYPE, allocatable :: f_in_plane(:, :)
+
+  call push_sub('mf_inc.mf_surface_integral')
+
+  if(mesh%sb%dim .ne. 3) then
+    message(1) = 'INTERNAL ERROR at Xmf_surface_integral: wrong dimensionality'
+    call write_fatal(1)
+  end if
+
+  ALLOCATE(f_in_plane(plane%nu:plane%mu, plane%nv:plane%mv), (plane%mu-plane%nu+1)*(plane%mv-plane%nv+1))
+
+  call X(mf_interpolate_on_plane)(mesh, plane, f, f_in_plane)
+
+  d = sum(f_in_plane(:, :)*plane%spacing**2)
+
+  deallocate(f_in_plane)
+  call pop_sub()
+end function X(mf_surface_integral_scalar)
+
+
+! ---------------------------------------------------------
+! This subroutine calculates the surface integral of a vector
+! function on a given plane
+R_TYPE function X(mf_surface_integral_vector) (mesh, f, plane) result(d)
+  type(mesh_t), intent(in)       :: mesh
+  R_TYPE,       intent(in)       :: f(:, :)  ! f(mesh%np, MAX_DIM)
+  type(mesh_plane_t), intent(in) :: plane
+
+  R_TYPE, allocatable :: fn(:)
+  integer :: i
+
+  call push_sub('mf_inc.mf_surface_integral')
+
+  ALLOCATE(fn(mesh%np), mesh%np)
+  do i = 1, mesh%np
+    fn(i) = sum(f(i, :)*plane%n(:))
+  end do
+  d =  X(mf_surface_integral_scalar)(mesh, fn, plane)
+  deallocate(fn)
+
+  call pop_sub()
+end function X(mf_surface_integral_vector)
+
+
