@@ -41,6 +41,7 @@ module phonons_lr_m
   use phonons_m
   use restart_m
   use specie_m
+  use specie_pot_m
   use states_m
   use sternheimer_m
   use string_m
@@ -111,8 +112,10 @@ contains
       !the local part of the pseudo
       do ip = 1, sys%NP
         call mesh_r(sys%gr%m, ip, r, x=x, a=sys%geo%atom(iatom)%x)
-        call specie_get_glocal(sys%geo%atom(iatom)%spec, x, dv(ip, 1:sys%NDIM, iatom))
-        call specie_get_g2local(sys%geo%atom(iatom)%spec, x, d2v(ip, 1:sys%NDIM, 1:sys%NDIM, iatom))
+        call specie_get_glocal(sys%geo%atom(iatom)%spec, sys%gr, &
+             sys%geo%atom(iatom)%x, sys%gr%m%x(ip,:), dv(ip, 1:sys%NDIM, iatom))
+        call specie_get_g2local(sys%geo%atom(iatom)%spec, sys%gr, &
+             sys%geo%atom(iatom)%x, sys%gr%m%x(ip,:), d2v(ip, 1:sys%NDIM, 1:sys%NDIM, iatom))
       end do
       
       !the non-local part: tarea para la casa

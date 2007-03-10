@@ -20,11 +20,13 @@
 
 #include "global.h"
 
-module guess_density_m
+module specie_pot_m
   use curvlinear_m
   use datasets_m
+  use double_grid_m
   use geometry_m
   use global_m
+  use grid_m
   use lib_oct_gsl_spline_m
   use lib_oct_parser_m
   use math_m
@@ -35,14 +37,20 @@ module guess_density_m
   use root_solver_m
   use simul_box_m
   use specie_m
+  use units_m
   use varinfo_m
 
   implicit none
 
   private
-  public ::            &
-    guess_density,     &
-    get_specie_density
+  public ::                   &
+    guess_density,            &
+    get_specie_density,       & 
+    specie_get_local,         &
+    specie_get_glocal,        &
+    specie_get_g2local,       &
+    specie_real_nl_projector, &
+    specie_nl_projector      
 
   integer, parameter :: INITRHO_PARAMAGNETIC  = 1, &
                         INITRHO_FERROMAGNETIC = 2, &
@@ -73,7 +81,7 @@ contains
     integer :: in_points_red
 #endif
 
-    call push_sub('guess_density.atom_density')
+    call push_sub('specie_pot.atom_density')
 
     ASSERT(spin_channels == 1 .or. spin_channels == 2)
 
@@ -157,7 +165,7 @@ contains
     FLOAT :: r, rnd, phi, theta, mag(MAX_DIM)
     FLOAT, allocatable :: atom_rho(:,:)
 
-    call push_sub('guess_density.guess_density')
+    call push_sub('specie_pot.guess_density')
 
     if (spin_channels == 1) then
       gmd_opt = 1
@@ -480,5 +488,224 @@ contains
 
   end subroutine getrho 
 
+  ! ---------------------------------------------------------
+  FLOAT function specie_get_local(s, gr, x_atom, x_grid, time) result(l)
+    type(specie_t),  intent(in) :: s
+    type(grid_t),    intent(in) :: gr
+    FLOAT,           intent(in) :: x_atom(MAX_DIM)
+    FLOAT,           intent(in) :: x_grid(MAX_DIM)
+    FLOAT, optional, intent(in) :: time
 
-end module guess_density_m
+    FLOAT :: a1, a2, Rb2 ! for jellium
+    FLOAT :: xx(MAX_DIM), r, pot_re, pot_im, time_
+
+    time_ = M_ZERO
+    if (present(time)) time_ = time
+
+    xx(:) = x_grid(:)-x_atom(:)
+    r = sqrt(sum(xx(:)**2))
+    l=M_ZERO
+    select case(s%type)
+    case(SPEC_USDEF)
+      ! Note that as the s%user_def is in input units, we have to convert
+      ! the units back and forth
+      xx(:) = xx(:)/units_inp%length%factor ! convert from a.u. to input units
+      r = r/units_inp%length%factor
+
+      call loct_parse_expression(                            &
+        pot_re, pot_im, xx(1), xx(2), xx(3), r, time_, s%user_def)
+      l = pot_re * units_inp%energy%factor  ! convert from input units to a.u.
+
+    case(SPEC_POINT, SPEC_JELLI)
+      a1 = s%Z/(M_TWO*s%jradius**3)
+      a2 = s%Z/s%jradius
+      Rb2= s%jradius**2
+
+      if(r <= s%jradius) then
+        l = (a1*(r*r - Rb2) - a2)
+      else
+        l = - s%Z/r
+      end if
+
+    case(SPEC_PS_PSF, SPEC_PS_HGH, SPEC_PS_CPI, SPEC_PS_FHI, SPEC_PS_UPF)
+      l = double_grid_apply(gr%dgrid, s%ps%vl, x_atom, x_grid)
+
+    case(SPEC_ALL_E)
+      l=M_ZERO
+    
+    end select
+      
+  end function specie_get_local
+
+  ! ---------------------------------------------------------
+  ! returns the gradient of the external potential
+  ! ---------------------------------------------------------
+  subroutine specie_get_glocal(s, gr, x_atom, x_grid, gv, time)
+    type(specie_t),  intent(in) :: s
+    type(grid_t),    intent(in) :: gr
+    FLOAT,           intent(in) :: x_atom(MAX_DIM)
+    FLOAT,           intent(in) :: x_grid(MAX_DIM)
+    FLOAT,          intent(out) :: gv(:)
+    FLOAT, optional, intent(in) :: time
+
+    FLOAT, parameter :: Delta = CNST(1e-4)
+    FLOAT :: x(MAX_DIM), r, l1, l2, pot_re, pot_im, time_, dvl_r
+    integer :: i
+
+    gv    = M_ZERO
+
+    time_ = M_ZERO
+    if (present(time)) time_ = time
+
+    x(:) = x_grid(:) - x_atom(:)
+    r = sqrt(sum(x(:)**2))
+
+    select case(s%type)
+    case(SPEC_USDEF)
+      ! Note that as the s%user_def is in input units, we have to convert
+      ! the units back and forth
+      x(:) = x(:)/units_inp%length%factor      ! convert from a.u. to input units
+      r = r / units_inp%length%factor 
+      do i = 1, 3
+        x(i) = x(i) - Delta/units_inp%length%factor
+        call loct_parse_expression(pot_re, pot_im,           &
+          x(1), x(2), x(3), r, time_, s%user_def)
+        l1 = pot_re * units_inp%energy%factor     ! convert from input units to a.u.
+
+        x(i) = x(i) + M_TWO*Delta/units_inp%length%factor
+        call loct_parse_expression(pot_re, pot_im,           &
+          x(1), x(2), x(3), r, time_, s%user_def)
+        l2 = pot_re * units_inp%energy%factor     ! convert from input units to a.u.
+
+        gv(i) = (l2 - l1)/(M_TWO*Delta)
+      end do
+
+    case(SPEC_POINT, SPEC_JELLI)
+      l1 = s%Z/(M_TWO*s%jradius**3)
+
+      if(r <= s%jradius) then
+        gv(:) = l1*x(:)
+      else
+        gv(:) = s%Z*x(:)/r**3
+      end if
+
+    case(SPEC_PS_PSF, SPEC_PS_HGH, SPEC_PS_CPI, SPEC_PS_FHI, SPEC_PS_UPF)
+      gv(:) = M_ZERO
+      if(r>CNST(0.00001)) then
+        dvl_r = double_grid_apply(gr%dgrid, s%ps%dvl, x_atom, x_grid)
+        gv(:) = -dvl_r*x(:)/r
+      end if
+
+    case(SPEC_ALL_E)
+      gv(:)=M_ZERO
+        
+    end select
+
+  end subroutine specie_get_glocal
+
+  subroutine specie_get_g2local(s, gr, x_atom, x_grid, g2v, time)
+    type(specie_t),  intent(in) :: s
+    type(grid_t),    intent(in) :: gr
+    FLOAT,           intent(in) :: x_atom(MAX_DIM)
+    FLOAT,           intent(in) :: x_grid(MAX_DIM)
+    FLOAT,          intent(out) :: g2v(:,:)
+    FLOAT, optional, intent(in) :: time
+
+    FLOAT, parameter :: Delta = CNST(1e-4)
+    FLOAT :: x(MAX_DIM), r, dvl_rr, d2vl_r
+    integer :: ii, jj
+
+    x(:) = x_grid(:) - x_atom(:)
+    r = sqrt(sum(x(:)**2))
+
+    select case(s%type)
+    case(SPEC_PS_PSF, SPEC_PS_HGH, SPEC_PS_CPI, SPEC_PS_FHI, SPEC_PS_UPF)
+      g2v(:,:) = M_ZERO
+      if(r>CNST(0.00001)) then
+        dvl_rr = double_grid_apply(gr%dgrid, s%ps%dvl, x_atom, x_grid)/r
+        d2vl_r = double_grid_apply(gr%dgrid, s%ps%d2vl, x_atom, x_grid)
+
+        do ii= 1, 3
+          do jj = 1, 3
+            g2v(ii, jj) = ddelta(ii, jj)*dvl_rr  + x(ii)*x(jj)/(r*r)*(d2vl_r - dvl_rr)
+          end do
+        end do
+        
+      end if
+      
+    case default
+      write(message(1),'(a)')    'Second derivative of the potential not implemented.'
+      call write_fatal(1)
+      
+    end select
+    
+  end subroutine specie_get_g2local
+
+  ! ---------------------------------------------------------
+  ! This routine returns the non-local projector and its 
+  ! derivative build using real spherical harmonics
+  subroutine specie_real_nl_projector(s, gr, x_atom, x_grid, l, lm, i, uV, duV)
+    type(specie_t),    intent(in)  :: s
+    type(grid_t),      intent(in)  :: gr
+    FLOAT,             intent(in)  :: x_atom(1:MAX_DIM)
+    FLOAT,             intent(in)  :: x_grid(1:MAX_DIM)
+    integer,           intent(in)  :: l, lm, i
+    FLOAT,             intent(out) :: uV, duV(1:MAX_DIM)
+
+    FLOAT :: r, uVr0, duvr0, ylm, gylm(MAX_DIM), x(MAX_DIM)
+    FLOAT, parameter :: ylmconst = CNST(0.488602511902920) !  = sqr(3/(4*pi))
+
+    x(1:MAX_DIM) = x_grid(1:MAX_DIM) - x_atom(1:MAX_DIM)
+
+    r = sqrt(sum(x(1:MAX_DIM)**2))
+
+    uVr0 = double_grid_apply(gr%dgrid, s%ps%kb(l, i), x_atom, x_grid)
+    duVr0 = double_grid_apply(gr%dgrid, s%ps%dkb(l, i), x_atom, x_grid)
+
+    call grylmr(x(1), x(2), x(3), l, lm, ylm, gylm)
+    uv = uvr0*ylm
+    if(r >= r_small) then
+      duv(:) = duvr0 * ylm * x(:)/r + uvr0 * gylm(:)
+    else
+      if(l == 1) then
+        duv = M_ZERO
+        if(lm == -1) then
+          duv(2) = -ylmconst * duvr0
+        else if(lm == 0) then
+          duv(3) =  ylmconst * duvr0
+        else if(lm == 1) then
+          duv(1) = -ylmconst * duvr0
+        end if
+      else
+        duv = M_ZERO
+      end if
+    end if
+
+  end subroutine specie_real_nl_projector
+
+  ! ---------------------------------------------------------
+  ! This routine returns the non-local projector build using 
+  ! spherical harmonics
+  subroutine specie_nl_projector(s, gr, x_atom, x_grid, l, lm, i, uV)
+    type(specie_t),    intent(in)  :: s
+    type(grid_t),      intent(in)  :: gr
+    FLOAT,             intent(in)  :: x_atom(1:MAX_DIM)
+    FLOAT,             intent(in)  :: x_grid(1:MAX_DIM)
+    integer,           intent(in)  :: l, lm, i
+    CMPLX,             intent(out) :: uV
+
+    FLOAT :: r, uVr0, x(MAX_DIM)
+    CMPLX :: ylm
+
+    x(1:MAX_DIM) = x_grid(1:MAX_DIM) - x_atom(1:MAX_DIM)
+
+    r = sqrt(sum(x(1:MAX_DIM)**2))
+
+    uVr0 = double_grid_apply(gr%dgrid, s%ps%kb(l, i), x_atom, x_grid)
+
+    call ylmr(x(1), x(2), x(3), l, lm, ylm)
+    uv = uvr0*ylm
+
+  end subroutine specie_nl_projector
+
+end module specie_pot_m

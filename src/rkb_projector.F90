@@ -22,11 +22,13 @@
 
 module rkb_projector_m
   use global_m
+  use grid_m
   use mesh_m
   use messages_m
   use simul_box_m
   use ps_m
   use specie_m
+  use specie_pot_m
   use geometry_m
   use mpi_m
   use mpi_debug_m
@@ -72,12 +74,11 @@ contains
   end subroutine rkb_projector_null
 
   ! ---------------------------------------------------------
-  subroutine rkb_projector_init(rkb_p, n_s, jxyz, sb, m, a, l, lm)
+  subroutine rkb_projector_init(rkb_p, n_s, jxyz, gr, a, l, lm)
     type(rkb_projector_t), intent(inout) :: rkb_p
     integer,               intent(in)    :: n_s
     integer,               intent(in)    :: jxyz(:)
-    type(simul_box_t),     intent(in)    :: sb
-    type(mesh_t),          intent(in)    :: m
+    type(grid_t),          intent(in)    :: gr
     type(atom_t),          intent(in)    :: a
     integer,               intent(in)    :: l, lm
  
@@ -96,33 +97,33 @@ contains
     !Build projectors
     do j = 1, rkb_p%n_s
 
-      x_in(:) = m%x(jxyz(j), :)
-      do k = 1, 3**sb%periodic_dim
-        x(:) = x_in(:) - sb%shift(k,:) - a%x
+      do k = 1, 3**gr%sb%periodic_dim
+        x_in(:) = gr%m%x(jxyz(j), :) - gr%sb%shift(k,:)
+        x(:) = x_in(:) - a%x
         r = sqrt(sum(x*x))
-        if (r > a%spec%ps%rc_max + m%h(1)) cycle
+        if (r > a%spec%ps%rc_max + gr%m%h(1)) cycle
 
         ! i runs over j=l+1/2 and j=l-1/2
         do i = 1, 2
-          call specie_nl_projector(a%spec, x, l, lm, i, zv)
+          call specie_nl_projector(a%spec, gr, a%x, x_in, l, lm, i, zv)
           rkb_p%bra(j, i) = conjg(zv)
 
           rkb_p%ket(j, i, 1, 1) = zv
           rkb_p%ket(j, i, 2, 2) = zv
           if (lm /= l) then
-            call specie_nl_projector(a%spec, x, l, lm+1, i, zv)
+            call specie_nl_projector(a%spec, gr, a%x, x_in, l, lm+1, i, zv)
             rkb_p%ket(j, i, 2, 1) = zv
           else
             rkb_p%ket(j, i, 2, 1) = M_z0
           end if
           if (lm /= -l) then
-            call specie_nl_projector(a%spec, x, l, lm-1, i, zv)
+            call specie_nl_projector(a%spec, gr, a%x, x_in, l, lm-1, i, zv)
             rkb_p%ket(j, i, 1, 2) = zv
           else
             rkb_p%ket(j, i, 1, 2) = M_z0
           end if
 
-          call specie_real_nl_projector(a%spec, x, l, lm, i, v, dv)
+          call specie_real_nl_projector(a%spec, gr, a%x, x_in, l, lm, i, v, dv)
           rkb_p%p(j, i) = v
           rkb_p%dp(j, :, i) = dv
         end do

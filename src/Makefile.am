@@ -23,13 +23,16 @@ core_SRCS = $(basic_SRCS) \
 	fft.F90 mesh_lib.F90 par_vec.F90 mesh.F90 scalar_mesh.F90 nl_operator.F90 \
 	stencil_star.F90 stencil_variational.F90 stencil_cube.F90 stencil_starplus.F90 derivatives.F90 \
 	cf.F90 mf.F90 f.F90 \
-	out.F90 multigrid.F90 grid.F90 \
+	out.F90  \
+	multigrid.F90 \
+	double_grid.F90 \
+	grid.F90 \
 	poisson_isf.F90 poisson_fft.F90 \
 	poisson_corrections.F90 poisson_cg.F90 poisson_multigrid.F90 poisson.F90 \
 	crystal.F90 \
 	states.F90 magnetic.F90 elf.F90 states_output.F90 excited_states.F90 \
 	xc_functl.F90 xc.F90 scf_tol.F90 mix.F90 spectrum.F90 \
-	guess_density.F90
+	specie_pot.F90
 
 octopus_SOURCES = $(core_SRCS) \
 	lasers.F90 rkb_projector.F90 kb_projector.F90 hgh_projector.F90 epot.F90 \
@@ -64,7 +67,7 @@ noinst_HEADERS = \
 	linear_response_inc.F90 linear_response_out.F90 linear_solver_inc.F90\
 	sternheimer_inc.F90 em_resp_inc.F90 unocc_inc.F90 casida_inc.F90 \
 	excited_states_inc.F90 xc_OEP_kernel_inc.F90 em_resp_calc_inc.F90
-	
+
 core_LIBS = @LIBS_LAPACK@ @LIBS_BLAS@ \
   ../liboct/liboct.a \
   ../liboct_parser/liboct_parser.a \
@@ -188,6 +191,7 @@ curv_gygi.o: global.h
 curvlinear.o: global.h
 curv_modine.o: global.h
 derivatives.o: global.h derivatives_inc.F90
+double_grid.o: global.h
 eigen.o: global.h eigen_inc.F90 eigen_cg_inc.F90 eigen_trlan.F90 eigen_plan_inc.F90 eigen_arpack_inc.F90 eigen_evolution_inc.F90
 sternheimer.o: global.h sternheimer_inc.F90
 em_resp_calc.o: global.h em_resp_calc_inc.F90
@@ -248,7 +252,7 @@ scf.o: global.h
 scf_tol.o: global.h
 sparskit.o: global.h sparskit_inc.F90 sparskit_driver.F90
 specie.o: global.h
-guess_density.o: global.h
+specie_pot.o: global.h
 preconditioners.o: global.h preconditioners_inc.F90
 spectrum.o: global.h
 spline.o: global.h

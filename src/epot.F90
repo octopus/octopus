@@ -40,7 +40,7 @@ module external_pot_m
   use logrid_m
   use ps_m
   use specie_m
-  use guess_density_m
+  use specie_pot_m
   use geometry_m
   use states_m
   use lasers_m
@@ -675,7 +675,7 @@ contains
 
           end if
 
-          call projector_init_nl_part(ep%p(i), sb, m, a, reltype, l, lm)
+          call projector_init_nl_part(ep%p(i), gr, a, reltype, l, lm)
 
           ep%p(i)%iatom = ia
           i = i + 1
@@ -720,9 +720,9 @@ contains
 
       if((.not.simul_box_is_periodic(sb)).or.geo%only_user_def) then
         do i = 1, m%np
-          x(:) = m%x(i, :) - a%x(:)
-          ep%vpsl(i) = ep%vpsl(i) + specie_get_local(s, x, time_)
+          ep%vpsl(i) = ep%vpsl(i) + specie_get_local(s, gr, a%x(:), m%x(i, :), time_)
           if(s%nlcc) then
+            x(:) = m%x(i, :) - a%x(:)
             st%rho_core(i) = st%rho_core(i) + specie_get_nlcc(s, x)
           end if
         end do
@@ -1003,7 +1003,7 @@ contains
 
         do j = 1, NP
           call mesh_r(gr%m, j, r, x=x, a=atm%x)
-          call specie_get_glocal(atm%spec, x, gv)
+          call specie_get_glocal(atm%spec, gr, atm%x, gr%m%x(j, :), gv)
           force(j,1:NDIM) = sum(st%rho(j, 1:ns))*gv(1:NDIM)
         end do
 
@@ -1154,10 +1154,9 @@ contains
   end subroutine projector_copy_kb_sphere
 
   !---------------------------------------------------------
-  subroutine projector_init_nl_part(p, sb, m, a, reltype, l, lm)
+  subroutine projector_init_nl_part(p, gr, a, reltype, l, lm)
     type(projector_t), intent(inout) :: p
-    type(simul_box_t), intent(in)    :: sb
-    type(mesh_t),      intent(in)    :: m
+    type(grid_t),      intent(in)    :: gr
     type(atom_t),      intent(in)    :: a
     integer,           intent(in)    :: reltype
     integer,           intent(in)    :: l, lm
@@ -1185,15 +1184,15 @@ contains
     case (M_HGH)
       ALLOCATE(p%hgh_p, 1)
       call hgh_projector_null(p%hgh_p)
-      call hgh_projector_init(p%hgh_p, p%n_s, p%jxyz, sb, m, a, l, lm)
+      call hgh_projector_init(p%hgh_p, p%n_s, p%jxyz, gr, a, l, lm)
     case (M_KB)
       ALLOCATE(p%kb_p, 1)
       call kb_projector_null(p%kb_p)
-      call kb_projector_init(p%kb_p, p%n_s, p%jxyz, sb, m, a, l, lm)
+      call kb_projector_init(p%kb_p, p%n_s, p%jxyz, gr, a, l, lm)
     case (M_RKB)
       ALLOCATE(p%rkb_p, 1)
       call rkb_projector_null(p%rkb_p)
-      call rkb_projector_init(p%rkb_p, p%n_s, p%jxyz, sb, m, a, l, lm)
+      call rkb_projector_init(p%rkb_p, p%n_s, p%jxyz, gr, a, l, lm)
     end select
 
     call pop_sub()

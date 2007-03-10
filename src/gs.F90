@@ -24,7 +24,6 @@ module ground_state_m
   use datasets_m
   use global_m
   use grid_m
-  use guess_density_m
   use hamiltonian_m
   use lcao_m
   use lib_oct_parser_m
@@ -35,6 +34,7 @@ module ground_state_m
   use restart_m
   use scf_m
   use simul_box_m
+  use specie_pot_m
   use states_m
   use system_m
   use v_ks_m

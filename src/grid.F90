@@ -22,6 +22,7 @@
 
 module grid_m
   use curvlinear_m
+  use double_grid_m
   use functions_m
   use geometry_m
   use global_m
@@ -50,6 +51,7 @@ module grid_m
     type(f_der_t)               :: f_der
     type(curvlinear_t)          :: cv
     type(multigrid_t), pointer  :: mgrid
+    type(double_grid_t)         :: dgrid
   end type grid_t
 
 
@@ -71,6 +73,8 @@ contains
     ! now we generate create the mesh and the derivatives
     call mesh_init_stage_1(gr%sb, gr%m, geo, gr%cv, gr%f_der%n_ghost)
     call mesh_init_stage_2(gr%sb, gr%m, geo, gr%cv)
+
+    call double_grid_init(gr%dgrid, gr%m, gr%sb%dim)
 
     call pop_sub()
   end subroutine grid_init_stage_1
@@ -112,6 +116,8 @@ contains
     type(grid_t), intent(inout) :: gr
 
     call push_sub('grid.grid_end')
+
+    call double_grid_end(gr%dgrid)
 
     call f_der_end(gr%f_der)
     call mesh_end(gr%m)

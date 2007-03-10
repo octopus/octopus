@@ -22,11 +22,13 @@
 
 module hgh_projector_m
   use global_m
+  use grid_m
   use mesh_m
   use messages_m
   use simul_box_m
   use ps_m
   use specie_m
+  use specie_pot_m
   use geometry_m
   use mpi_m
   use mpi_debug_m
@@ -71,12 +73,11 @@ contains
   end subroutine hgh_projector_null
 
   ! ---------------------------------------------------------
-  subroutine hgh_projector_init(hgh_p, n_s, jxyz, sb, m, a, l, lm)
+  subroutine hgh_projector_init(hgh_p, n_s, jxyz, gr, a, l, lm)
     type(hgh_projector_t), intent(inout) :: hgh_p
     integer,               intent(in)    :: n_s
     integer,               intent(in)    :: jxyz(:)
-    type(simul_box_t),     intent(in)    :: sb
-    type(mesh_t),          intent(in)    :: m
+    type(grid_t),          intent(in)    :: gr
     type(atom_t),          intent(in)    :: a
     integer,               intent(in)    :: l, lm
  
@@ -92,14 +93,14 @@ contains
 
     do j = 1, hgh_p%n_s
 
-      x_in(:) = m%x(jxyz(j), :)
-      do k = 1, 3**sb%periodic_dim
-        x(:) = x_in(:) - sb%shift(k,:) - a%x
+      do k = 1, 3**gr%sb%periodic_dim
+        x_in(:) = gr%m%x(jxyz(j), :) - gr%sb%shift(k,:)
+        x(:) = x_in(:) - a%x
         r = sqrt(sum(x*x))
-        if (r > a%spec%ps%rc_max + m%h(1)) cycle
+        if (r > a%spec%ps%rc_max + gr%m%h(1)) cycle
 
         do i = 1, 3
-          call specie_real_nl_projector(a%spec, x, l, lm, i, v, dv(1:3))
+          call specie_real_nl_projector(a%spec, gr, a%x, x_in, l, lm, i, v, dv(1:3))
           hgh_p%p(j, i) = v
           hgh_p%dp(j, :, i) = dv(:)
           hgh_p%lp(j, 1, i) = x(2)*dv(3) - x(3)*dv(2)
