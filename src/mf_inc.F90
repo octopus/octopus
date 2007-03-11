@@ -419,7 +419,7 @@ subroutine X(mf_interpolate_on_plane)(mesh, plane, f, f_in_plane)
 
   ALLOCATE(f_global(mesh%np_global), mesh%np_global)
 #if defined HAVE_MPI
-  call dvec_gather(mesh%vp, f_global, f)
+  call X(vec_gather)(mesh%vp, f_global, f)
 #else
   f_global = f
 #endif
