@@ -76,17 +76,26 @@ AC_DEFUN([ACX_FC_USES_MALLOC], [
        AC_LANG_CONFTEST([
            AC_LANG_SOURCE([[
                #ifdef HAVE_STDLIB_H
+	       #define _XOPEN_SOURCE 600
                #include <stdlib.h>
                #endif
+
                extern struct {
                  int status;
                } FC_FUNC_(fake_malloc, FAKE_MALLOC);
 
                void *malloc(size_t size) {
+	         static char a[1048576];
+                 static size_t current = 0;
+
                  FC_FUNC_(fake_malloc, FAKE_MALLOC).status = 0;
-                 return (void *)0;
+		 current += size;
+                 return a + current - size;
                }
 
+               void free(void * d) {
+               }
+	       
                void FC_FUNC(f_exit, F_EXIT)(int *status) {
                  exit(*status);
                }
