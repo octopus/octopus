@@ -44,31 +44,33 @@ module states_m
   implicit none
 
   private
-  public ::                         &
-    states_t,                       &
-    states_dim_t,                   &
-    states_init,                    &
-    states_read_user_def_orbitals,  &
-    states_densities_init,          &
-    states_allocate_wfns,           &
-    states_deallocate_wfns,         &
-    states_null,                    &
-    states_end,                     &
-    states_copy,                    &
-    states_generate_random,         &
-    states_fermi,                   &
-    states_eigenvalues_sum,         &
-    states_write_eigenvalues,       &
-    states_write_dos,               &
-    states_write_bands,             &
-    states_write_fermi_energy,      &
-    states_degeneracy_matrix,       &
-    states_spin_channel,            &
-    states_calc_dens,               &
-    kpoints_write_info,             &
-    wfs_are_complex,                &
-    wfs_are_real,                   &
-    states_dump,                    &
+  public ::                           &
+    states_t,                         &
+    states_dim_t,                     &
+    states_init,                      &
+    states_read_user_def_orbitals,    &
+    states_densities_init,            &
+    states_allocate_wfns,             &
+    states_deallocate_wfns,           &
+    states_null,                      &
+    states_end,                       &
+    states_copy,                      &
+    states_generate_random,           &
+    states_fermi,                     &
+    states_eigenvalues_sum,           &
+    states_write_eigenvalues,         &
+    states_write_dos,                 &
+    states_write_bands,               &
+    states_write_fermi_energy,        &
+    states_degeneracy_matrix,         &
+    states_write_current_flow,        &
+    states_spin_channel,              &
+    states_calc_dens,                 &
+    states_calc_paramagnetic_current, &
+    kpoints_write_info,               &
+    wfs_are_complex,                  &
+    wfs_are_real,                     &
+    states_dump,                      &
     assignment(=)
 
 
@@ -1552,6 +1554,93 @@ contains
 
 
   ! -------------------------------------------------------
+  ! WARNING: This subouroutine probably should not be here, but
+  ! in states_output. Also, the current flow probably should be 
+  ! calculated during td runs.
+  subroutine states_write_current_flow(dir, st, gr)
+    character(len=*),  intent(in)    :: dir    
+    type(states_t),    intent(inout) :: st
+    type(grid_t),      intent(inout) :: gr
+
+    C_POINTER :: blk
+    integer :: iunit, i, k
+    type(mesh_plane_t) :: plane
+    FLOAT :: flow
+    FLOAT, allocatable :: j(:, :)
+
+    call push_sub('states.states_write_current_flows')
+
+
+    !%Variable CurrentThroughPlane
+    !%Type block
+    !%Section States
+    !%Description
+    !% At the end of the ground state calculation, the code may calculate
+    !% the steady current that the obtained ground state electronic state
+    !% transverses a user-defined portion of a plane....
+    !%
+    !% Example:
+    !%
+    !% <tt>%CurrentThroughPlane
+    !% <br>&nbsp;&nbsp; 0.0 | 0.0 | 0.0
+    !% <br>&nbsp;&nbsp; 0.0 | 1.0 | 0.0
+    !% <br>&nbsp;&nbsp; 0.0 | 0.0 | 1.0
+    !% <br>&nbsp;&nbsp; 0.2
+    !% <br>&nbsp;&nbsp; 0 | 50
+    !% <br>&nbsp;&nbsp; -50 | 50
+    !% <br>%</tt>
+    !%
+    !%End
+
+    if(loct_parse_block(check_inp('CurrentThroughPlane'), blk).ne.0) then
+      call pop_sub(); return
+    end if
+
+    call loct_parse_block_float(blk, 0, 0, plane%origin(1))
+    call loct_parse_block_float(blk, 0, 1, plane%origin(2))
+    call loct_parse_block_float(blk, 0, 2, plane%origin(3))
+    call loct_parse_block_float(blk, 1, 0, plane%u(1))
+    call loct_parse_block_float(blk, 1, 1, plane%u(2))
+    call loct_parse_block_float(blk, 1, 2, plane%u(3))
+    call loct_parse_block_float(blk, 2, 0, plane%v(1))
+    call loct_parse_block_float(blk, 2, 1, plane%v(2))
+    call loct_parse_block_float(blk, 2, 2, plane%v(3))
+    call loct_parse_block_float(blk, 3, 0, plane%spacing)
+    call loct_parse_block_int(blk, 4, 0, plane%nu)
+    call loct_parse_block_int(blk, 4, 1, plane%mu)
+    call loct_parse_block_int(blk, 5, 0, plane%nv)
+    call loct_parse_block_int(blk, 5, 1, plane%mv)
+
+    iunit = io_open(trim(dir)//'/'//'current-flow', action='write')
+
+    write(iunit,'(a)')       '# Plane:'
+    write(iunit,'(a,3f9.5)') '# u = ', plane%u(1), plane%u(2), plane%u(3)
+    write(iunit,'(a,3f9.5)') '# v = ', plane%v(1), plane%v(2), plane%v(3)
+    write(iunit,'(a, f9.5)') '# spacing = ', plane%spacing
+    write(iunit,'(a,2i4)')   '# nu, mu = ', plane%nu, plane%mu
+    write(iunit,'(a,2i4)')   '# nu, mu = ', plane%nv, plane%mv
+
+    call states_calc_paramagnetic_current(gr, st, st%j)
+
+    ALLOCATE(j(NP, MAX_DIM), NP*MAX_DIM)
+
+    do k = 1, NDIM
+      do i = 1, NP
+        j(i, k) = sum(st%j(i, k, :))
+      end do
+    end do
+
+    flow = mf_surface_integral (gr%m, j, plane)
+
+    write(iunit,'(a,e20.21)') '# Flow: ', flow
+
+    deallocate(j)
+    call io_close(iunit)
+    call pop_sub()
+  end subroutine states_write_current_flow
+
+
+  ! -------------------------------------------------------
   integer function states_spin_channel(ispin, ik, dim)
     integer, intent(in) :: ispin, ik, dim
 
@@ -1662,6 +1751,79 @@ contains
 
      call pop_sub()
   end subroutine states_dump
+
+
+  ! ---------------------------------------------------------
+  ! This routine (obviously) assumes complex wave-functions
+  subroutine states_calc_paramagnetic_current(gr, st, jp)
+    type(grid_t),   intent(inout) :: gr
+    type(states_t), intent(inout) :: st
+    FLOAT,          intent(out)   :: jp(:,:,:)  ! (NP, NDIM, st%d%nspin)
+
+    integer :: ik, p, sp, k
+    CMPLX, allocatable :: grad(:,:)
+#ifdef  HAVE_MPI
+    FLOAT, allocatable :: red(:,:,:)
+#endif
+
+    call push_sub('magnetic.calc_paramagnetic_current')
+
+    ASSERT(st%d%wfs_type == M_CMPLX)
+
+    if(st%d%ispin == SPIN_POLARIZED) then
+      sp = 2
+    else
+      sp = 1
+    end if
+
+    jp = M_ZERO
+    ALLOCATE(grad(NP_PART, NDIM), NP_PART*NDIM)
+
+    do ik = 1, st%d%nik, sp
+      do p  = st%st_start, st%st_end
+        call zf_gradient(gr%sb, gr%f_der, st%zpsi(:, 1, p, ik), grad)
+
+        ! spin-up density
+        do k = 1, NDIM
+          jp(1:NP, k, 1) = jp(1:NP, k, 1) + st%d%kweights(ik)*st%occ(p, ik)       &
+            * aimag(conjg(st%zpsi(1:NP, 1, p, ik)) * grad(1:NP, k))
+        end do
+
+        ! spin-down density
+        if(st%d%ispin == SPIN_POLARIZED) then
+          call zf_gradient(gr%sb, gr%f_der, st%zpsi(:, 1, p, ik+1), grad)
+
+          do k = 1, NDIM
+            jp(1:NP, k, 2) = jp(1:NP, k, 2) + st%d%kweights(ik+1)*st%occ(p, ik+1) &
+              * aimag(conjg(st%zpsi(1:NP, 1, p, ik+1)) * grad(1:NP, k))
+          end do
+
+          ! WARNING: the next lines DO NOT work properly
+        else if(st%d%ispin == SPINORS) then ! off-diagonal densities
+          call zf_gradient(gr%sb, gr%f_der, st%zpsi(:, 2, p, ik), grad)
+
+          do k = 1, NDIM
+            jp(1:NP, k, 2) = jp(1:NP, k, 2) + st%d%kweights(ik)*st%occ(p, ik)     &
+              * aimag(conjg(st%zpsi(1:NP, 2, p, ik)) * grad(1:NP, k))
+          end do
+        end if
+
+      end do
+    end do
+    deallocate(grad)
+
+#if defined(HAVE_MPI)
+    if(st%parallel_in_states) then
+      ALLOCATE(red(NP_PART, NDIM, st%d%nspin), NP_PART*NDIM*st%d%nspin)
+      call MPI_Allreduce(jp(1, 1, 1), red(1, 1, 1), NP*NDIM*st%d%nspin,       &
+        MPI_FLOAT, MPI_SUM, st%mpi_grp%comm, mpi_err)
+      jp = red
+      deallocate(red)
+    end if
+#endif
+
+    call pop_sub()
+  end subroutine states_calc_paramagnetic_current
 
 #include "states_kpoints.F90"
 

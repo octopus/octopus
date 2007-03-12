@@ -76,7 +76,7 @@ contains
 
     if( (iand(outp%what, output_current).ne.0) .and. (st%d%wfs_type == M_CMPLX) ) then
       ! calculate current first
-      call calc_paramagnetic_current(gr, st, st%j)
+      call states_calc_paramagnetic_current(gr, st, st%j)
       do is = 1, st%d%nspin
         do id = 1, NDIM
           write(fname, '(a,i1,a,a)') 'current-', is, '-', index2axis(id)

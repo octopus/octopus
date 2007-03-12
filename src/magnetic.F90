@@ -38,8 +38,7 @@ module magnetic_m
     magnetic_density,          &
     magnetic_moment,           &
     magnetic_local_moments,    &
-    calc_physical_current,     &
-    calc_paramagnetic_current
+    calc_physical_current
 
 contains
 
@@ -132,79 +131,6 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! This routine (obviously) assumes complex wave-functions
-  subroutine calc_paramagnetic_current(gr, st, jp)
-    type(grid_t),   intent(inout) :: gr
-    type(states_t), intent(inout) :: st
-    FLOAT,          intent(out)   :: jp(:,:,:)  ! (NP, NDIM, st%d%nspin)
-
-    integer :: ik, p, sp, k
-    CMPLX, allocatable :: grad(:,:)
-#ifdef  HAVE_MPI
-    FLOAT, allocatable :: red(:,:,:)
-#endif
-
-    call push_sub('magnetic.calc_paramagnetic_current')
-
-    ASSERT(st%d%wfs_type == M_CMPLX)
-
-    if(st%d%ispin == SPIN_POLARIZED) then
-      sp = 2
-    else
-      sp = 1
-    end if
-
-    jp = M_ZERO
-    ALLOCATE(grad(NP_PART, NDIM), NP_PART*NDIM)
-
-    do ik = 1, st%d%nik, sp
-      do p  = st%st_start, st%st_end
-        call zf_gradient(gr%sb, gr%f_der, st%zpsi(:, 1, p, ik), grad)
-
-        ! spin-up density
-        do k = 1, NDIM
-          jp(1:NP, k, 1) = jp(1:NP, k, 1) + st%d%kweights(ik)*st%occ(p, ik)       &
-            * aimag(conjg(st%zpsi(1:NP, 1, p, ik)) * grad(1:NP, k))
-        end do
-
-        ! spin-down density
-        if(st%d%ispin == SPIN_POLARIZED) then
-          call zf_gradient(gr%sb, gr%f_der, st%zpsi(:, 1, p, ik+1), grad)
-
-          do k = 1, NDIM
-            jp(1:NP, k, 2) = jp(1:NP, k, 2) + st%d%kweights(ik+1)*st%occ(p, ik+1) &
-              * aimag(conjg(st%zpsi(1:NP, 1, p, ik+1)) * grad(1:NP, k))
-          end do
-
-          ! WARNING: the next lines DO NOT work properly
-        else if(st%d%ispin == SPINORS) then ! off-diagonal densities
-          call zf_gradient(gr%sb, gr%f_der, st%zpsi(:, 2, p, ik), grad)
-
-          do k = 1, NDIM
-            jp(1:NP, k, 2) = jp(1:NP, k, 2) + st%d%kweights(ik)*st%occ(p, ik)     &
-              * aimag(conjg(st%zpsi(1:NP, 2, p, ik)) * grad(1:NP, k))
-          end do
-        end if
-
-      end do
-    end do
-    deallocate(grad)
-
-#if defined(HAVE_MPI)
-    if(st%parallel_in_states) then
-      ALLOCATE(red(NP_PART, NDIM, st%d%nspin), NP_PART*NDIM*st%d%nspin)
-      call MPI_Allreduce(jp(1, 1, 1), red(1, 1, 1), NP*NDIM*st%d%nspin,       &
-        MPI_FLOAT, MPI_SUM, st%mpi_grp%comm, mpi_err)
-      jp = red
-      deallocate(red)
-    end if
-#endif
-
-    call pop_sub()
-  end subroutine calc_paramagnetic_current
-
-
-  ! ---------------------------------------------------------
   subroutine calc_physical_current(gr, st, j)
     type(grid_t),     intent(inout) :: gr
     type(states_t),   intent(inout) :: st
@@ -213,7 +139,7 @@ contains
     call push_sub('magnetic.calc_physical_current')
 
     ! Paramagnetic contribution to the physical current
-    call calc_paramagnetic_current(gr, st, j)
+    call states_calc_paramagnetic_current(gr, st, j)
 
     ! TODO
     ! Diamagnetic contribution to the physical current

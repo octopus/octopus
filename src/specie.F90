@@ -280,7 +280,7 @@ contains
 
     !%Variable SpecieAllElectronSigma
     !%Type float
-    !%Default 0.5
+    !%Default 0.2
     !%Section System::Species
     !%Description
     !% An all-electron atom is defined by a Gaussian accumulation of positive charge 
