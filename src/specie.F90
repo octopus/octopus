@@ -46,8 +46,8 @@ module specie_m
     specie_read,              &
     specie_get_local_fourier, &
     specie_get_nlcc,          &
-    specie_get_iwf
-
+    specie_get_iwf,           &
+    specie_is_ps
 
 
   integer, public, parameter :: &
@@ -521,6 +521,7 @@ contains
         ! if(sum(s%ps%conf%occ(i, :)).ne.M_ZERO) s%niwfs = s%niwfs + (2*l+1)
         s%niwfs = s%niwfs + (2*l+1)
       end do
+
     case(SPEC_USDEF)
       write(message(1),'(a,a,a)')    'Specie "',trim(s%label),'" is an user-defined potential.'
       write(message(2),'(a,a)')      '   Potential = ', trim(s%user_def(1:240)) ! 256 - 16, 16 for "Potential ="
@@ -758,5 +759,17 @@ contains
 
     call pop_sub()
   end subroutine specie_iwf_fix_qn
+
+  logical function specie_is_ps(s)
+    type(specie_t), intent(in) :: s
+    
+    specie_is_ps = &
+         ( s%type == SPEC_PS_PSF) .or. &
+         ( s%type == SPEC_PS_HGH) .or. &
+         ( s%type == SPEC_PS_CPI) .or. &
+         ( s%type == SPEC_PS_FHI) .or. &
+         ( s%type == SPEC_PS_UPF)
+    
+  end function specie_is_ps
 
 end module specie_m

@@ -45,7 +45,7 @@ module specie_pot_m
   private
   public ::                   &
     guess_density,            &
-    get_specie_density,       & 
+    specie_get_density,       & 
     specie_get_local,         &
     specie_get_glocal,        &
     specie_get_g2local,       &
@@ -351,15 +351,11 @@ contains
     call pop_sub()
   end subroutine guess_density
 
-  ! ---------------------------------------------------------
-  ! Constructs an all-electron atom with the procedure sketched
-  ! in Modine et al. [Phys. Rev. B 55, 10289 (1997)], section II.B
-  ! ---------------------------------------------------------
-  subroutine get_specie_density(s, pos, m, cv, geo, rho)
+
+  subroutine specie_get_density(s, pos, gr, geo, rho)
     type(specie_t),             intent(in)  :: s
     FLOAT,                      intent(in)  :: pos(MAX_DIM)
-    type(mesh_t),       target, intent(in)  :: m
-    type(curvlinear_t), target, intent(in)  :: cv
+    type(grid_t),       target, intent(in)  :: gr
     type(geometry_t),   target, intent(in)  :: geo
     FLOAT,                      intent(out) :: rho(:)
 
@@ -368,22 +364,44 @@ contains
     integer :: dim
     FLOAT   :: x(1:MAX_DIM+1), chi0(MAX_DIM), startval(MAX_DIM + 1)
     FLOAT   :: delta, alpha, beta
+    FLOAT   :: r, correction
+    integer :: ip
 
     call push_sub('specie_grid.specie_get_density')
 
     select case(s%type)
+
+    case(SPEC_PS_PSF, SPEC_PS_HGH, SPEC_PS_CPI, SPEC_PS_FHI, SPEC_PS_UPF)
+
+      do ip = 1, gr%m%np
+        r = sqrt(sum((pos(1:MAX_DIM)-gr%m%x(ip, 1:MAX_DIM))**2))
+        rho(ip) = -s%z_val*loct_splint(gr%dgrid%rho_corr, r)
+      end do
+
+      correction = -s%z_val / dmf_integrate(gr%m, rho)
+      rho(1:gr%m%np) = correction * rho(1:gr%m%np)
+      
+      write(message(1),'(a, f13.10)')  'Info: Localization charge correction ', correction
+      call write_info(1)
+
     case(SPEC_ALL_E)
-      dim = m%sb%dim
 
-      ALLOCATE(rho_p(m%np), m%np)
-      ALLOCATE(grho_p(m%np, dim+1), 4*m%np)
+      ! --------------------------------------------------------------
+      ! Constructs density for an all-electron atom with the procedure
+      ! sketched in Modine et al. [Phys. Rev. B 55, 10289 (1997)],
+      ! section II.B
+      ! --------------------------------------------------------------
+      dim = gr%m%sb%dim
 
-      m_p   => m
+      ALLOCATE(rho_p(gr%m%np), gr%m%np)
+      ALLOCATE(grho_p(gr%m%np, dim+1), 4*gr%m%np)
+
+      m_p   => gr%m
       pos_p = pos
 
       ! Initial guess.
-      call curvlinear_x2chi(m%sb, geo, cv, pos, chi0)
-      delta   = m%h(1)
+      call curvlinear_x2chi(gr%m%sb, geo, gr%cv, pos, chi0)
+      delta   = gr%m%h(1)
       alpha   = sqrt(M_TWO)*s%sigma*delta
       alpha_p = alpha  ! global copy of alpha
       beta    = M_ONE
@@ -396,7 +414,7 @@ contains
 
       ! get a better estimate for beta
       call getrho(startval)
-      beta = M_ONE / dmf_integrate(m, rho_p)
+      beta = M_ONE / dmf_integrate(gr%m, rho_p)
       startval(dim+1) = beta
 
       ! solve equation
@@ -416,7 +434,7 @@ contains
     end select
 
     call pop_sub()
-  end subroutine get_specie_density
+  end subroutine specie_get_density
 
 
   ! ---------------------------------------------------------
@@ -530,6 +548,9 @@ contains
     case(SPEC_PS_PSF, SPEC_PS_HGH, SPEC_PS_CPI, SPEC_PS_FHI, SPEC_PS_UPF)
       l = double_grid_apply(gr%dgrid, s%ps%vl, x_atom, x_grid)
 
+      if(dg_add_localization_density(gr%dgrid)) &
+           l = l - (-s%z_val) * loct_splint(gr%dgrid%pot_corr, r)
+     
     case(SPEC_ALL_E)
       l=M_ZERO
     

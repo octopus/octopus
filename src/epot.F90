@@ -22,10 +22,13 @@
 
 module external_pot_m
   use datasets_m
+  use double_grid_m
   use functions_m
   use global_m
   use grid_m
+  use io_m
   use lib_oct_parser_m
+  use lib_oct_gsl_spline_m
   use magnetic_m
   use math_m
   use mesh_function_m
@@ -646,6 +649,7 @@ contains
     do ia = 1, geo%natoms
       a => geo%atom(ia) ! shortcuts
       s => a%spec
+      if (specie_is_ps(s) .and. conf%debug_level > 0) call debug_pseudo()
       call build_local_part()
     end do
 
@@ -709,6 +713,27 @@ contains
     call profiling_out(C_PROFILING_EPOT_GENERATE)
 
   contains
+    ! ---------------------------------------------------------
+    subroutine debug_pseudo()
+      integer :: iunit, ii, nn
+      FLOAT :: r, dr
+
+      call io_mkdir('debug/')
+      iunit = io_open('debug/pseudo-'//trim(s%label), action='write')
+
+      dr = CNST(0.01)
+      nn = CNST(10.0)/dr
+      r = M_ZERO
+      do ii = 1, nn
+        write(iunit, '(4f12.6)') r, loct_splint(s%ps%vl, r),  &
+             -s%z_val*loct_splint(gr%dgrid%pot_corr, r), &
+             -s%z_val*loct_splint(gr%dgrid%rho_corr, r)
+        r = r + dr
+      end do
+
+      call io_close(iunit)
+
+    end subroutine debug_pseudo
 
     ! ---------------------------------------------------------
     subroutine build_local_part()
@@ -738,13 +763,26 @@ contains
           end do
         end if
 
-        if(s%has_density) then 
+        if(s%has_density .or. &
+             (specie_is_ps(s) .and. dg_add_localization_density(gr%dgrid) )) then 
+
           ALLOCATE(rho(1:m%np),m%np)
           ALLOCATE(phi(1:m%np_part),m%np_part)
 
-          call get_specie_density(s, a%x, m, gr%cv, geo, rho)
+          call specie_get_density(s, a%x, gr, geo, rho)
           call dpoisson_solve(gr,phi,rho)
           ep%vpsl(1:m%np)=ep%vpsl(1:m%np)+phi(1:m%np)
+
+          !calculate the deviation from the analitcal potential
+          do i = 1, m%np
+            x(:) = m%x(i, :) - a%x(:)
+            r = sqrt(sum(x(:)**2))
+            rho(i) = phi(i) - (-s%z_val)*loct_splint(gr%dgrid%pot_corr, r)
+            phi(i) = -s%z_val*loct_splint(gr%dgrid%pot_corr, r)
+          end do
+
+          write(message(1),'(a, e12.6)')  'Info: Deviation from analitical potential is ', abs(dmf_integrate(m, rho))
+          call write_info(1)
 
           deallocate(rho)
           deallocate(phi)
