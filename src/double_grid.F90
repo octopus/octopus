@@ -91,7 +91,7 @@ contains
     !% potential is erf(r)/r.
     !%End
 
-    call loct_parse_int(check_inp('LocalizationDensity'), F_GAUSSIAN, this%loc_function)
+    call loct_parse_int(check_inp('LocalizationDensity'), F_NONE, this%loc_function)
 
     call functions_init()
 
