@@ -1,0 +1,34 @@
+# -*- coding: utf-8 mode: shell-script -*-
+# $Id: oct-run_regression_test.pl 2423 2006-09-24 21:25:52Z acastro $
+
+Test     : 18-current.test
+Author   : Alberto
+Date     : 13.03.07
+Arch     : Linux appartment 2.6.18-4-686 #1 SMP Wed Feb 21 16:06:54 UTC 2007 i686 GNU/Linux
+Release  : 2.2.0pre1
+Programs : octopus
+Runtime  : long-run
+Enabled  : Yes
+
+# Calculation of a Hydrogen atom placed on a very small magnetic field (in order
+# to get orbitals with the proper symmetry). The electron is placed on the p_{+1}
+# orbital; this orbital has non-null current, and it produces a current flow
+# through the x=0,y>0 half plane.
+#
+# The (analytical) values of these kind of flows in one-electron atoms are
+# provided in I. Barth and J. Manz, Phys. Rev. A 75, 012510 (2007). The number
+# calculated by the test corresponds with the value given in Eq. 14 for Z = 1,
+# that is, in atomic units, I = 1/(16*pi) = 0.01989 a.u. ( = 0.132 mA)
+#
+# The presence of the small magnetic field increases the value of the current
+# slightly. Other source of error with respect to the analytical paper is the
+# use of a pseudopotential.
+#
+# TODO: This test is a little bit slow. It should be optimized to make it
+# faster. Also, the code should calculate the magnetic field induced by
+# the current (assuming magnetostatic approximation and the validity of
+# the Biot-Savart law).
+
+Input: 18-current.01-current.inp
+
+Match ; Current Flow ; grep 'Flow =' static/current-flow ; \s*0.200\d*
