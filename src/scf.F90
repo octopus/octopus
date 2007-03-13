@@ -446,6 +446,7 @@ contains
       if(iand(outp%what, output_geometry).ne.0) &
         call atom_write_xyz("static", "geometry", geo)
       call hamiltonian_output(h, gr%m, gr%sb, "static", outp)
+      call states_write_current_flow("static", st, gr)
     end if
 
     if(simul_box_is_periodic(gr%sb).and.st%d%nik > st%d%nspin) then

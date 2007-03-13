@@ -385,14 +385,14 @@ subroutine X(mf_interpolate_on_plane)(mesh, plane, f, f_in_plane)
   type(mesh_t),       intent(in)  :: mesh
   type(mesh_plane_t), intent(in)  :: plane
   R_TYPE,             intent(in)  :: f(:)
-  R_TYPE,             intent(out) :: f_in_plane(:, :)
+  R_TYPE,             intent(out) :: f_in_plane(plane%nu:plane%mu, plane%nv:plane%mv)
 
   integer :: npoints, nq, nw, nr, ier, i, j
   integer, allocatable :: lcell(:, :, :), lnext(:)
   FLOAT, allocatable :: rsq(:), a(:, :)
   R_TYPE, allocatable :: f_global(:)
   FLOAT ::  xyzmin(MAX_DIM), xyzdel(MAX_DIM), rmax, px, py, pz
-  FLOAT, external :: qs2val, qs3val
+  FLOAT, external :: qs3val
 
   call push_sub('mf_inc.Xmf_interpolate_on_plane')
 
@@ -403,6 +403,7 @@ subroutine X(mf_interpolate_on_plane)(mesh, plane, f, f_in_plane)
 
   ! Prepare the interpolation
   npoints = mesh%np_global
+
   select case(mesh%sb%dim)
     case(3)
       nq = 17 ! This is the recommended value in qshep3d.f90
@@ -411,18 +412,18 @@ subroutine X(mf_interpolate_on_plane)(mesh, plane, f, f_in_plane)
       ALLOCATE(lcell(nr, nr, nr), nr*nr*nr)
       ALLOCATE(a(9, npoints), 9*npoints)
     case default
-      message(1) = 'INTERNAL ERROR at Xmf_surface_integral: wrong dimensionality'
+      message(1) = 'INTERNAL ERROR at Xmf_interpolate_on_plane: wrong dimensionality'
   end select
 
   ALLOCATE(lnext(npoints), npoints)
   ALLOCATE(rsq(npoints), npoints)
-
   ALLOCATE(f_global(mesh%np_global), mesh%np_global)
 #if defined HAVE_MPI
   call X(vec_gather)(mesh%vp, f_global, f)
 #else
-  f_global = f
+  f_global(1:npoints) = f(1:npoints)
 #endif
+
 
   call qshep3 ( npoints, mesh%x(1:npoints, 1), mesh%x(1:npoints, 2), mesh%x(1:npoints, 3), &
                 f_global, nq, nw, nr, lcell, lnext, xyzmin, &
@@ -431,8 +432,8 @@ subroutine X(mf_interpolate_on_plane)(mesh, plane, f, f_in_plane)
   do i = plane%nu, plane%mu
     do j = plane%nv, plane%mv
       px = plane%origin(1) + i*plane%spacing * plane%u(1) + j * plane%spacing * plane%v(1)
-      py = plane%origin(1) + i*plane%spacing * plane%u(2) + j * plane%spacing * plane%v(2)
-      pz = plane%origin(1) + i*plane%spacing * plane%u(3) + j * plane%spacing * plane%v(3)
+      py = plane%origin(2) + i*plane%spacing * plane%u(2) + j * plane%spacing * plane%v(2)
+      pz = plane%origin(3) + i*plane%spacing * plane%u(3) + j * plane%spacing * plane%v(3)
       f_in_plane(i, j) = qs3val ( px, py, pz, npoints, &
                          mesh%x(1:npoints, 1), mesh%x(1:npoints, 2), mesh%x(1:npoints, 3), &
                          f_global, nr, lcell, lnext, xyzmin, xyzdel, rmax, rsq, a )
@@ -489,6 +490,7 @@ R_TYPE function X(mf_surface_integral_vector) (mesh, f, plane) result(d)
   do i = 1, mesh%np
     fn(i) = sum(f(i, :)*plane%n(:))
   end do
+
   d =  X(mf_surface_integral_scalar)(mesh, fn, plane)
   deallocate(fn)
 

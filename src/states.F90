@@ -1611,6 +1611,10 @@ contains
     call loct_parse_block_int(blk, 5, 0, plane%nv)
     call loct_parse_block_int(blk, 5, 1, plane%mv)
 
+    plane%n(1) = plane%u(2)*plane%v(3) - plane%u(3)*plane%v(2)
+    plane%n(2) = plane%u(3)*plane%v(1) - plane%u(1)*plane%v(3)
+    plane%n(3) = plane%u(1)*plane%v(2) - plane%u(2)*plane%v(1)
+
     iunit = io_open(trim(dir)//'/'//'current-flow', action='write')
 
     write(iunit,'(a)')       '# Plane:'
@@ -1618,7 +1622,7 @@ contains
     write(iunit,'(a,3f9.5)') '# v = ', plane%v(1), plane%v(2), plane%v(3)
     write(iunit,'(a, f9.5)') '# spacing = ', plane%spacing
     write(iunit,'(a,2i4)')   '# nu, mu = ', plane%nu, plane%mu
-    write(iunit,'(a,2i4)')   '# nu, mu = ', plane%nv, plane%mv
+    write(iunit,'(a,2i4)')   '# nv, mv = ', plane%nv, plane%mv
 
     call states_calc_paramagnetic_current(gr, st, st%j)
 
@@ -1632,7 +1636,7 @@ contains
 
     flow = mf_surface_integral (gr%m, j, plane)
 
-    write(iunit,'(a,e20.21)') '# Flow: ', flow
+    write(iunit,'(a,e20.12)') '# Flow = ', flow
 
     deallocate(j)
     call io_close(iunit)
