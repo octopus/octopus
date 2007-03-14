@@ -50,7 +50,6 @@ module double_grid_m
      integer :: dim
      integer :: loc_function
      type(loct_spline_t) :: rho_corr
-     type(loct_spline_t) :: pot_corr
 
   end type double_grid_t
 
@@ -115,10 +114,8 @@ contains
         end do
 
         call loct_spline_init(this%rho_corr)
-        call loct_spline_init(this%pot_corr)
         
         call loct_spline_fit(nn, r, rho, this%rho_corr)
-        call dg_get_potential_correction(this, this%pot_corr)
 
       end subroutine functions_init
 
@@ -128,7 +125,6 @@ contains
     type(double_grid_t), intent(inout) :: this
  
         call loct_spline_end(this%rho_corr)
-        call loct_spline_end(this%pot_corr)
 
   end subroutine double_grid_end
 

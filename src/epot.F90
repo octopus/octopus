@@ -726,6 +726,11 @@ contains
       integer :: iunit, ii, nn
       FLOAT :: r, dr
 
+      type(loct_spline_t) :: pot_corr
+      
+      call loct_spline_init(pot_corr)
+      call dg_get_potential_correction(gr%dgrid, pot_corr)
+
       call io_mkdir('debug/')
       iunit = io_open('debug/pseudo-'//trim(s%label), action='write')
 
@@ -734,13 +739,15 @@ contains
       r = M_ZERO
       do ii = 1, nn
         write(iunit, '(5f12.6)') r, loct_splint(s%ps%vl, r),  &
-             -s%z_val*loct_splint(gr%dgrid%pot_corr, r), &
+             -s%z_val*loct_splint(pot_corr, r), &
              -s%z_val*loct_splint(gr%dgrid%rho_corr, r), &
              loct_splint(s%ps%vll, r)
         r = r + dr
       end do
 
       call io_close(iunit)
+      
+      call loct_spline_end(pot_corr)
 
     end subroutine debug_pseudo
 
@@ -749,6 +756,8 @@ contains
       integer :: i
       FLOAT :: x(MAX_DIM), xx(MAX_DIM), r, pot_re, pot_im
       FLOAT, allocatable  :: rho(:), phi(:)
+
+      type(loct_spline_t) :: pot_corr
 
       call push_sub('epot.build_local_part')
 
@@ -784,15 +793,21 @@ contains
           ep%vpsl(1:m%np)=ep%vpsl(1:m%np)+phi(1:m%np)
 
           if (specie_is_ps(s)) then 
+            
+            call loct_spline_init(pot_corr)
+            call dg_get_potential_correction(gr%dgrid, pot_corr)
+            
             !calculate the deviation from the analitcal potential
             do i = 1, m%np
               x(:) = m%x(i, :) - a%x(:)
               r = sqrt(sum(x(:)**2))
-              rho(i) = phi(i) - (-s%z_val)*loct_splint(gr%dgrid%pot_corr, r)
+              rho(i) = phi(i) - (-s%z_val)*loct_splint(pot_corr, r)
             end do
+            call loct_spline_end(pot_corr)
             
             write(message(1),'(a, e12.6)')  'Info: Deviation from analitical potential is ', abs(dmf_integrate(m, rho))
             call write_info(1)
+
           end if
 
           deallocate(rho)

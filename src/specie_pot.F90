@@ -74,7 +74,9 @@ contains
     type(grid_t),        intent(in)    :: gr
 
     type(loct_spline_t) :: vlc
-
+    integer :: l, k
+    FLOAT :: qmax, hmax
+    
     call push_sub('specie_pot.specie_pot_init')
     
     if(dg_add_localization_density(gr%dgrid) .and. specie_is_ps(this) ) then
@@ -85,6 +87,22 @@ contains
 
       call loct_spline_init(this%ps%vll)
       call loct_spline_sum(vlc, this%ps%vl, this%ps%vll)
+
+      call loct_spline_end(vlc)
+
+      hmax = maxval(gr%m%h(1:MAX_DIM))
+      qmax = M_PI/hmax
+
+      write(message(1),'(a, f13.10, a, f13.10)')  'Info: hmax', hmax, ' qmax ', qmax
+      call write_info(1)
+
+      call loct_spline_filter(this%ps%vll, fs = (/ qmax, CNST(18.0) /), rs = (/ CNST(3.0), CNST(10.0) /))
+
+      do l = 0, this%ps%l_max
+        do k = 1, this%ps%kbc
+          call loct_spline_filter(this%ps%kb(l, k), l, fs = (/ qmax, CNST(18.0) /), rs = (/ CNST(3.0), CNST(10.0) /))
+        end do
+      end do
 
     end if
 
