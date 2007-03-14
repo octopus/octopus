@@ -1565,64 +1565,102 @@ contains
     C_POINTER :: blk
     integer :: iunit, i, k
     type(mesh_plane_t) :: plane
+    type(mesh_line_t) :: line
     FLOAT :: flow
     FLOAT, allocatable :: j(:, :)
 
     call push_sub('states.states_write_current_flows')
 
-
-    !%Variable CurrentThroughPlane
-    !%Type block
-    !%Section States
-    !%Description
-    !% At the end of the ground state calculation, the code may calculate
-    !% the steady current that the obtained ground state electronic state
-    !% transverses a user-defined portion of a plane....
-    !%
-    !% Example:
-    !%
-    !% <tt>%CurrentThroughPlane
-    !% <br>&nbsp;&nbsp; 0.0 | 0.0 | 0.0
-    !% <br>&nbsp;&nbsp; 0.0 | 1.0 | 0.0
-    !% <br>&nbsp;&nbsp; 0.0 | 0.0 | 1.0
-    !% <br>&nbsp;&nbsp; 0.2
-    !% <br>&nbsp;&nbsp; 0 | 50
-    !% <br>&nbsp;&nbsp; -50 | 50
-    !% <br>%</tt>
-    !%
-    !%End
-
     if(loct_parse_block(check_inp('CurrentThroughPlane'), blk).ne.0) then
       call pop_sub(); return
     end if
 
-    call loct_parse_block_float(blk, 0, 0, plane%origin(1))
-    call loct_parse_block_float(blk, 0, 1, plane%origin(2))
-    call loct_parse_block_float(blk, 0, 2, plane%origin(3))
-    call loct_parse_block_float(blk, 1, 0, plane%u(1))
-    call loct_parse_block_float(blk, 1, 1, plane%u(2))
-    call loct_parse_block_float(blk, 1, 2, plane%u(3))
-    call loct_parse_block_float(blk, 2, 0, plane%v(1))
-    call loct_parse_block_float(blk, 2, 1, plane%v(2))
-    call loct_parse_block_float(blk, 2, 2, plane%v(3))
-    call loct_parse_block_float(blk, 3, 0, plane%spacing)
-    call loct_parse_block_int(blk, 4, 0, plane%nu)
-    call loct_parse_block_int(blk, 4, 1, plane%mu)
-    call loct_parse_block_int(blk, 5, 0, plane%nv)
-    call loct_parse_block_int(blk, 5, 1, plane%mv)
+    select case(NDIM)
+    case(3)
 
-    plane%n(1) = plane%u(2)*plane%v(3) - plane%u(3)*plane%v(2)
-    plane%n(2) = plane%u(3)*plane%v(1) - plane%u(1)*plane%v(3)
-    plane%n(3) = plane%u(1)*plane%v(2) - plane%u(2)*plane%v(1)
+      !%Variable CurrentThroughPlane
+      !%Type block
+      !%Section States
+      !%Description
+      !% At the end of the ground state calculation, the code may calculate
+      !% the steady current that the obtained ground state electronic state
+      !% transverses a user-defined portion of a plane....
+      !%
+      !% In the 2D case, the current flow should be calculated through a line.
+      !%
+      !% Example (3D):
+      !%
+      !% <tt>%CurrentThroughPlane
+      !% <br>&nbsp;&nbsp; 0.0 | 0.0 | 0.0
+      !% <br>&nbsp;&nbsp; 0.0 | 1.0 | 0.0
+      !% <br>&nbsp;&nbsp; 0.0 | 0.0 | 1.0
+      !% <br>&nbsp;&nbsp; 0.2
+      !% <br>&nbsp;&nbsp; 0 | 50
+      !% <br>&nbsp;&nbsp; -50 | 50
+      !% <br>%</tt>
+      !%
+      !% Example (2D):
+      !%
+      !% <tt>%CurrentThroughPlane
+      !% <br>&nbsp;&nbsp; 0.0 | 0.0
+      !% <br>&nbsp;&nbsp; 1.0 | 0.0
+      !% <br>&nbsp;&nbsp; 0.2
+      !% <br>&nbsp;&nbsp; 0 | 50
+      !% <br>%</tt>
+      !%
+      !%End
 
-    iunit = io_open(trim(dir)//'/'//'current-flow', action='write')
+      call loct_parse_block_float(blk, 0, 0, plane%origin(1))
+      call loct_parse_block_float(blk, 0, 1, plane%origin(2))
+      call loct_parse_block_float(blk, 0, 2, plane%origin(3))
+      call loct_parse_block_float(blk, 1, 0, plane%u(1))
+      call loct_parse_block_float(blk, 1, 1, plane%u(2))
+      call loct_parse_block_float(blk, 1, 2, plane%u(3))
+      call loct_parse_block_float(blk, 2, 0, plane%v(1))
+      call loct_parse_block_float(blk, 2, 1, plane%v(2))
+      call loct_parse_block_float(blk, 2, 2, plane%v(3))
+      call loct_parse_block_float(blk, 3, 0, plane%spacing)
+      call loct_parse_block_int(blk, 4, 0, plane%nu)
+      call loct_parse_block_int(blk, 4, 1, plane%mu)
+      call loct_parse_block_int(blk, 5, 0, plane%nv)
+      call loct_parse_block_int(blk, 5, 1, plane%mv)
 
-    write(iunit,'(a)')       '# Plane:'
-    write(iunit,'(a,3f9.5)') '# u = ', plane%u(1), plane%u(2), plane%u(3)
-    write(iunit,'(a,3f9.5)') '# v = ', plane%v(1), plane%v(2), plane%v(3)
-    write(iunit,'(a, f9.5)') '# spacing = ', plane%spacing
-    write(iunit,'(a,2i4)')   '# nu, mu = ', plane%nu, plane%mu
-    write(iunit,'(a,2i4)')   '# nv, mv = ', plane%nv, plane%mv
+      plane%n(1) = plane%u(2)*plane%v(3) - plane%u(3)*plane%v(2)
+      plane%n(2) = plane%u(3)*plane%v(1) - plane%u(1)*plane%v(3)
+      plane%n(3) = plane%u(1)*plane%v(2) - plane%u(2)*plane%v(1)
+
+      iunit = io_open(trim(dir)//'/'//'current-flow', action='write')
+
+      write(iunit,'(a)')       '# Plane:'
+      write(iunit,'(a,3f9.5)') '# u = ', plane%u(1), plane%u(2), plane%u(3)
+      write(iunit,'(a,3f9.5)') '# v = ', plane%v(1), plane%v(2), plane%v(3)
+      write(iunit,'(a,3f9.5)') '# n = ', plane%n(1), plane%n(2), plane%n(3)
+      write(iunit,'(a, f9.5)') '# spacing = ', plane%spacing
+      write(iunit,'(a,2i4)')   '# nu, mu = ', plane%nu, plane%mu
+      write(iunit,'(a,2i4)')   '# nv, mv = ', plane%nv, plane%mv
+
+    case(2)
+
+      call loct_parse_block_float(blk, 0, 0, line%origin(1))
+      call loct_parse_block_float(blk, 0, 1, line%origin(2))
+      call loct_parse_block_float(blk, 1, 0, line%u(1))
+      call loct_parse_block_float(blk, 1, 1, line%u(2))
+      call loct_parse_block_float(blk, 2, 0, line%spacing)
+      call loct_parse_block_int(blk, 3, 0, line%nu)
+      call loct_parse_block_int(blk, 3, 1, line%mu)
+
+      line%n(1) = -line%u(2)
+      line%n(2) =  line%u(1)
+
+      iunit = io_open(trim(dir)//'/'//'current-flow', action='write')
+
+      write(iunit,'(a)')       '# Line:'
+      write(iunit,'(a,2f9.5)') '# u = ', line%u(1), line%u(2)
+      write(iunit,'(a,2f9.5)') '# n = ', line%n(1), line%n(2)
+      write(iunit,'(a, f9.5)') '# spacing = ', line%spacing
+      write(iunit,'(a,2i4)')   '# nu, mu = ', line%nu, line%mu
+
+    end select
 
     call states_calc_paramagnetic_current(gr, st, st%j)
 
@@ -1634,7 +1672,10 @@ contains
       end do
     end do
 
-    flow = mf_surface_integral (gr%m, j, plane)
+    select case(NDIM)
+      case(3); flow = mf_surface_integral (gr%m, j, plane)
+      case(2); flow = mf_line_integral (gr%m, j, line)
+    end select
 
     write(iunit,'(a,e20.12)') '# Flow = ', flow
 

@@ -39,6 +39,7 @@ module mesh_m
   public ::            &
     mesh_t,            &
     mesh_plane_t,      &
+    mesh_line_t,       &
     mesh_init_stage_1, &
     mesh_init_stage_2, &
     mesh_init_stage_3, &
@@ -125,6 +126,16 @@ module mesh_m
     FLOAT :: spacing
     integer :: nu, mu, nv, mv
   end type mesh_plane_t
+
+  ! This data type defines a line, and a regular grid defined on this
+  ! line (or rather, on a portion of this line).
+  type mesh_line_t
+    FLOAT :: n(MAX_DIM)
+    FLOAT :: u(MAX_DIM)
+    FLOAT :: origin(MAX_DIM)
+    FLOAT :: spacing
+    integer :: nu, mu
+  end type mesh_line_t
 
   integer, parameter, public ::      &
      LEFT_BOUNDARY_X  =  1,          &

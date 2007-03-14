@@ -424,7 +424,6 @@ subroutine X(mf_interpolate_on_plane)(mesh, plane, f, f_in_plane)
   f_global(1:npoints) = f(1:npoints)
 #endif
 
-
   call qshep3 ( npoints, mesh%x(1:npoints, 1), mesh%x(1:npoints, 2), mesh%x(1:npoints, 3), &
                 f_global, nq, nw, nr, lcell, lnext, xyzmin, &
                 xyzdel, rmax, rsq, a, ier )
@@ -443,6 +442,71 @@ subroutine X(mf_interpolate_on_plane)(mesh, plane, f, f_in_plane)
   deallocate(lcell, lnext, rsq, a, f_global)
   call pop_sub()
 end subroutine X(mf_interpolate_on_plane)
+
+
+! ---------------------------------------------------------
+! Given a function f defined on mesh, and a plane, it gives 
+! back the values of f on the plane, by doing the suitable
+! interpolation
+subroutine X(mf_interpolate_on_line)(mesh, line, f, f_in_line)
+  type(mesh_t),       intent(in)  :: mesh
+  type(mesh_line_t), intent(in)  :: line
+  R_TYPE,             intent(in)  :: f(:)
+  R_TYPE,             intent(out) :: f_in_line(line%nu:line%mu)
+
+  integer :: npoints, nq, nw, nr, ier, i, j
+  integer, allocatable :: lcell(:, :, :), lnext(:)
+  FLOAT, allocatable :: rsq(:), a(:, :)
+  R_TYPE, allocatable :: f_global(:)
+  FLOAT ::  rmax, px, py, pz, xmin, ymin, dx, dy
+  FLOAT, external :: qs2val
+
+  call push_sub('mf_inc.Xmf_interpolate_on_line')
+
+#if defined(R_TCOMPLEX)
+  message(1) = 'INTERNAL ERROR at Xmf_interpolate_on_line: complex number not yet allowed'
+  call write_fatal(1)
+#endif
+
+  ! Prepare the interpolation
+  npoints = mesh%np_global
+
+  select case(mesh%sb%dim)
+    case(2)
+      nq = 13 ! This is the recommended value in qshep3d.f90
+      nw = 19 ! The recommended value in qshep3d.f90 is 32, but this speeds up things.
+      nr = nint((npoints/CNST(3.0)))
+      ALLOCATE(lcell(nr, nr, 1), nr*nr)
+      ALLOCATE(a(5, npoints), 5*npoints)
+    case default
+      message(1) = 'INTERNAL ERROR at Xmf_interpolate_on_line: wrong dimensionality'
+  end select
+
+  ALLOCATE(lnext(npoints), npoints)
+  ALLOCATE(rsq(npoints), npoints)
+  ALLOCATE(f_global(mesh%np_global), mesh%np_global)
+#if defined HAVE_MPI
+  call X(vec_gather)(mesh%vp, f_global, f)
+#else
+  f_global(1:npoints) = f(1:npoints)
+#endif
+
+  call qshep2 ( npoints, mesh%x(1:npoints, 1), mesh%x(1:npoints, 2), &
+                f_global, nq, nw, nr, lcell(:, :, 1), lnext, xmin, ymin, &
+                dx, dy, rmax, rsq, a, ier )
+
+  do i = line%nu, line%mu
+    px = line%origin(1) + i*line%spacing * line%u(1)
+    py = line%origin(2) + i*line%spacing * line%u(2)
+
+    f_in_line(i) = qs2val ( px, py, npoints, &
+                            mesh%x(1:npoints, 1), mesh%x(1:npoints, 2), &
+                            f_global, nr, lcell(:, :, 1), lnext, xmin, ymin, dx, dy, rmax, rsq, a )
+  end do
+
+  deallocate(lcell, lnext, rsq, a, f_global)
+  call pop_sub()
+end subroutine X(mf_interpolate_on_line)
 
 
 ! ---------------------------------------------------------
@@ -492,9 +556,66 @@ R_TYPE function X(mf_surface_integral_vector) (mesh, f, plane) result(d)
   end do
 
   d =  X(mf_surface_integral_scalar)(mesh, fn, plane)
-  deallocate(fn)
 
+  deallocate(fn)
   call pop_sub()
 end function X(mf_surface_integral_vector)
+
+
+! ---------------------------------------------------------
+! This subroutine calculates the line integral of a scalar
+! function on a given line
+R_TYPE function X(mf_line_integral_scalar) (mesh, f, line) result(d)
+  type(mesh_t), intent(in)       :: mesh
+  R_TYPE,       intent(in)       :: f(:)  ! f(mesh%np)
+  type(mesh_line_t), intent(in) :: line
+
+  R_TYPE, allocatable :: f_in_line(:)
+
+  call push_sub('mf_inc.mf_line_integral_scalar')
+
+  if(mesh%sb%dim .ne. 2) then
+    message(1) = 'INTERNAL ERROR at Xmf_surface_integral: wrong dimensionality'
+    call write_fatal(1)
+  end if
+
+  ALLOCATE(f_in_line(line%nu:line%mu), line%mu-line%nu+1)
+
+  call X(mf_interpolate_on_line)(mesh, line, f, f_in_line)
+
+  d = sum(f_in_line(:)*line%spacing)
+
+  deallocate(f_in_line)
+  call pop_sub()
+end function X(mf_line_integral_scalar)
+
+
+! ---------------------------------------------------------
+! This subroutine calculates the line integral of a vector
+! function on a given line
+R_TYPE function X(mf_line_integral_vector) (mesh, f, line) result(d)
+  type(mesh_t), intent(in)       :: mesh
+  R_TYPE,       intent(in)       :: f(:, :)  ! f(mesh%np, MAX_DIM)
+  type(mesh_line_t), intent(in) :: line
+
+  R_TYPE, allocatable :: fn(:)
+  integer :: i
+
+  call push_sub('mf_inc.mf_line_integral_vector')
+
+  ALLOCATE(fn(mesh%np), mesh%np)
+  do i = 1, mesh%np
+    fn(i) = sum(f(i, :)*line%n(:))
+  end do
+
+  d =  X(mf_line_integral_scalar)(mesh, fn, line)
+
+  deallocate(fn)
+  call pop_sub()
+end function X(mf_line_integral_vector)
+
+
+
+
 
 

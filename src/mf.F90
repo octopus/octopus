@@ -48,11 +48,17 @@ module mesh_function_m
     zmf_partial_integrate, &
     dmf_interpolate,       &
     zmf_interpolate,       &
-    mf_surface_integral
+    mf_surface_integral,   &
+    mf_line_integral
 
   interface mf_surface_integral
     module procedure dmf_surface_integral_scalar, dmf_surface_integral_vector, &
                      zmf_surface_integral_scalar, zmf_surface_integral_vector
+  end interface
+
+  interface mf_line_integral
+    module procedure dmf_line_integral_scalar, dmf_line_integral_vector, &
+                     zmf_line_integral_scalar, zmf_line_integral_vector
   end interface
 
 contains
