@@ -149,8 +149,8 @@ end subroutine X(derivatives_div)
 ! ---------------------------------------------------------
 subroutine X(derivatives_curl)(der, f, curl, ghost_update)
   type(der_discr_t), intent(in)    :: der
-  R_TYPE,            intent(inout) :: f(:,:)    ! f(m%np_part, der%m%sb%dim)
-  R_TYPE,            intent(out)   :: curl(:,:) ! curl(m%np, der%m%sb%dim)
+  R_TYPE,            intent(inout) :: f(:,:)    ! f(m%np_part, der%m%sb%dim) 
+  R_TYPE,            intent(out)   :: curl(:,:) ! curl(m%np, der%m%sb%dim) if dim = 2, curl(m%np, 1) if dim = 1.
   logical, optional, intent(in)    :: ghost_update
 
   R_TYPE, allocatable :: tmp(:)
@@ -158,10 +158,18 @@ subroutine X(derivatives_curl)(der, f, curl, ghost_update)
 
   call push_sub('derivatives_inc.Xderivatives_div')
 
-  ASSERT(der%m%sb%dim == 3)
+  ASSERT(der%m%sb%dim == 3 .or. der%m%sb%dim == 2)
   ASSERT(ubound(f,    DIM=1) == der%m%np_part)
   ASSERT(ubound(curl, DIM=1) >= der%m%np)
-  ASSERT(ubound(curl, DIM=2) == der%m%sb%dim)
+  select case(der%m%sb%dim)
+    case(3)
+      ASSERT(ubound(curl, DIM=2) == der%m%sb%dim)
+    case(2)
+      ASSERT(ubound(curl, DIM=2) == 1)
+    case(1)
+      write(message(1),'(a)') 'INTERNAL ERROR at Xderivatives_curl: 1D not allowed'
+      call write_fatal(1)
+  end select
 
   if(der%zero_bc) then
     do i = 1, der%m%sb%dim
@@ -173,23 +181,30 @@ subroutine X(derivatives_curl)(der, f, curl, ghost_update)
 
   curl(:,:) = R_TOTYPE(M_ZERO)
 
-  call X(nl_operator_operate) (der%grad(3), f(:,1), tmp, ghost_update=ghost_update)
-  curl(:,2) = curl(:,2) + tmp(:)
-  call X(nl_operator_operate) (der%grad(2), f(:,1), tmp, ghost_update=ghost_update)
-  curl(:,3) = curl(:,3) - tmp(:)
+  select case(der%m%sb%dim)
+  case(3)
+    call X(nl_operator_operate) (der%grad(3), f(:,1), tmp, ghost_update=ghost_update)
+    curl(:,2) = curl(:,2) + tmp(:)
+    call X(nl_operator_operate) (der%grad(2), f(:,1), tmp, ghost_update=ghost_update)
+    curl(:,3) = curl(:,3) - tmp(:)
 
-  call X(nl_operator_operate) (der%grad(3), f(:,2), tmp, ghost_update=ghost_update)
-  curl(:,1) = curl(:,1) - tmp(:)
-  call X(nl_operator_operate) (der%grad(1), f(:,2), tmp, ghost_update=ghost_update)
-  curl(:,3) = curl(:,3) + tmp(:)
+    call X(nl_operator_operate) (der%grad(3), f(:,2), tmp, ghost_update=ghost_update)
+    curl(:,1) = curl(:,1) - tmp(:)
+    call X(nl_operator_operate) (der%grad(1), f(:,2), tmp, ghost_update=ghost_update)
+    curl(:,3) = curl(:,3) + tmp(:)
 
-  call X(nl_operator_operate) (der%grad(2), f(:,3), tmp, ghost_update=ghost_update)
-  curl(:,1) = curl(:,1) + tmp(:)
-  call X(nl_operator_operate) (der%grad(1), f(:,3), tmp, ghost_update=ghost_update)
-  curl(:,2) = curl(:,2) - tmp(:)
+    call X(nl_operator_operate) (der%grad(2), f(:,3), tmp, ghost_update=ghost_update)
+    curl(:,1) = curl(:,1) + tmp(:)
+    call X(nl_operator_operate) (der%grad(1), f(:,3), tmp, ghost_update=ghost_update)
+    curl(:,2) = curl(:,2) - tmp(:)
+  case(2)
+    call X(nl_operator_operate) (der%grad(2), f(:,1), tmp, ghost_update=ghost_update)
+    curl(:,1) = curl(:,1) - tmp(:)
+    call X(nl_operator_operate) (der%grad(1), f(:,2), tmp, ghost_update=ghost_update)
+    curl(:,1) = curl(:,1) + tmp(:)
+  end select
 
   deallocate(tmp)
-
   call pop_sub()
 end subroutine X(derivatives_curl)
 

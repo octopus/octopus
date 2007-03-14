@@ -282,7 +282,7 @@ end subroutine X(f_divergence)
 subroutine X(f_curl) (f_der, f, curlf, ghost_update)
   type(f_der_t), intent(inout)  :: f_der
   R_TYPE,        intent(inout)  :: f(:,:)     ! f(m%np_part, conf%dim)
-  R_TYPE,        intent(out)    :: curlf(:,:) ! curlf(m%np, conf%dim))
+  R_TYPE,        intent(out)    :: curlf(:,:) ! curlf(m%np, conf%dim) if dim = 3, curlf(m%np, 1) if dim = 2 
   logical, optional, intent(in) :: ghost_update
 
   call push_sub('f_inc.Xf_curl')
