@@ -250,8 +250,14 @@ contains
     !% of the output files are "Bind").
     !%End
     if(h%self_induced_magnetic) then
-      ALLOCATE(h%a_ind(NP_PART, MAX_DIM), NP_PART*MAX_DIM)
-      ALLOCATE(h%b_ind(NP_PART, MAX_DIM), NP_PART*MAX_DIM)
+      select case(NDIM)
+      case(3)
+        ALLOCATE(h%a_ind(NP_PART, MAX_DIM), NP_PART*MAX_DIM)
+        ALLOCATE(h%b_ind(NP_PART, MAX_DIM), NP_PART*MAX_DIM)
+      case(2)
+        ALLOCATE(h%a_ind(NP_PART, 2), NP_PART*2)
+        ALLOCATE(h%b_ind(NP_PART, 1), NP_PART)
+      end select
     end if
 
     !%Variable TDGauge
@@ -411,9 +417,7 @@ contains
   subroutine hamiltonian_energy(h, gr, geo, st, iunit, full)
     type(hamiltonian_t), intent(inout) :: h
     type(grid_t),        intent(inout) :: gr
-!!!!NEW
     type(geometry_t),    intent(in)    :: geo
-!!!!ENDOFNEW
     type(states_t),      intent(inout) :: st
     integer,             intent(in)    :: iunit
     logical, optional,   intent(in)    :: full
@@ -514,10 +518,14 @@ contains
       end if
 
       if(h%self_induced_magnetic) then
-        do is = 1, MAX_DIM
-          write(fname,'(a,i1)') 'Bind-', is
-          call doutput_function(outp%how, dir, fname, m, sb, h%b_ind(:, is), M_ONE, err)
-        end do
+        select case(sb%dim)
+        case(3)
+          call doutput_function(outp%how, dir, 'Bind_x', m, sb, h%b_ind(:, 1), M_ONE, err)
+          call doutput_function(outp%how, dir, 'Bind_y', m, sb, h%b_ind(:, 2), M_ONE, err)
+          call doutput_function(outp%how, dir, 'Bind_z', m, sb, h%b_ind(:, 3), M_ONE, err)
+        case(2)
+          call doutput_function(outp%how, dir, 'Bind_z', m, sb, h%b_ind(:, 1), M_ONE, err)
+        end select
       end if
     end if
 

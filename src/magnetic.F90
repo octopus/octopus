@@ -157,8 +157,8 @@ contains
   subroutine magnetic_induced(gr, st, a_ind, b_ind)
     type(grid_t), intent(inout) :: gr
     type(states_t), intent(inout) :: st
-    FLOAT, intent(out) :: a_ind(:, :) ! a(NP_PART, MAX_DIM)
-    FLOAT, intent(out) :: b_ind(:, :) ! b(NP_PART, MAX_DIM)
+    FLOAT, intent(out) :: a_ind(:, :) ! a(NP_PART, NDIM)
+    FLOAT, intent(out) :: b_ind(:, :) ! b(NP_PART, NDIM) if NDIM=3, b(NP_PART, 1) if NDIM=2
 
     integer :: i
     FLOAT, allocatable :: j(:, :, :)
