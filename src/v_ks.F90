@@ -36,6 +36,7 @@ module v_ks_m
   use varinfo_m
   use xc_OEP_m
   use xc_m
+  use magnetic_m
   implicit none
 
   private
@@ -200,6 +201,12 @@ contains
       if(h%d%ispin > UNPOLARIZED) h%vhxc(1:NP, 2) = h%vhxc(1:NP, 2) + h%vhartree(1:NP)
       call v_a_xc()
     end if
+
+    ! Calculate the potential vector induced by the electronic current
+    ! WARNING: calculating the self-induced magnetic field here only makes
+    ! sense if it is going to be used in the Hamiltonian, which does not happen
+    ! now. Otherwise one could just calculate it at the end of the calculation.
+    if(h%self_induced_magnetic) call magnetic_induced(gr, st, h%a_ind, h%b_ind)
 
     if(present(calc_eigenval)) then
       if (st%d%wfs_type == M_REAL) then

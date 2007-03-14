@@ -30,6 +30,7 @@ module magnetic_m
   use messages_m
   use mpi_m
   use states_m
+  use poisson_m
 
   implicit none
 
@@ -38,7 +39,8 @@ module magnetic_m
     magnetic_density,          &
     magnetic_moment,           &
     magnetic_local_moments,    &
-    calc_physical_current
+    calc_physical_current,     &
+    magnetic_induced
 
 contains
 
@@ -146,6 +148,45 @@ contains
 
     call pop_sub()
   end subroutine calc_physical_current
+
+
+  ! ---------------------------------------------------------
+  ! This soubroutine receives as input a current, and produces
+  ! as an output the vector potential that it induces.
+  ! WARNING: There is probably a problem for 2D. For 1D none of this makes sense?
+  subroutine magnetic_induced(gr, st, a_ind, b_ind)
+    type(grid_t), intent(inout) :: gr
+    type(states_t), intent(inout) :: st
+    FLOAT, intent(out) :: a_ind(:, :) ! a(NP_PART, MAX_DIM)
+    FLOAT, intent(out) :: b_ind(:, :) ! b(NP_PART, MAX_DIM)
+
+    integer :: i
+    FLOAT, allocatable :: j(:, :, :)
+
+    call push_sub('magnetic.magnetic_induced')
+
+    ! If the states are real, we should never have reached here, but
+    ! just in case we return zero.
+    if(st%d%wfs_type .eq. M_REAL) then
+      a_ind = M_ZERO
+      b_ind = M_ZERO
+      call pop_sub(); return
+    end if
+
+    ALLOCATE(j(NP_PART, NDIM, st%d%nspin), NP_PART*NDIM*st%d%nspin)
+    call states_calc_paramagnetic_current(gr, st, j)
+
+    a_ind = M_ZERO
+    do i = 1, NDIM
+      call dpoisson_solve(gr, a_ind(:, i), j(:, i, 1))
+    end do
+    a_ind = a_ind / P_C
+
+    call df_curl (gr%f_der, a_ind, b_ind)
+
+    deallocate(j)
+    call pop_sub()
+  end subroutine magnetic_induced
 
 
 end module magnetic_m

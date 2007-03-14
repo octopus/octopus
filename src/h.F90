@@ -77,6 +77,11 @@ module hamiltonian_m
     FLOAT, pointer :: vhxc(:,:)   ! xc potential + hartree potential
     FLOAT, pointer :: axc(:,:,:)  ! xc vector-potential divided by c
 
+    ! The self-induced potential vector and magnetic field
+    logical :: self_induced_magnetic
+    FLOAT, pointer :: a_ind(:, :)
+    FLOAT, pointer :: b_ind(:, :)
+
     ! Energies
     FLOAT :: etot,    &  ! Total energy E = Eii + Sum[Eigenvalues] - U + Ex + Ec - Int[n v_xc]
              eii,     &  ! Ionic energy Eii
@@ -220,6 +225,35 @@ contains
     end if
     call messages_print_var_option(stdout, "RelativisticCorrection", h%reltype)
 
+    call loct_parse_logical(check_inp('CalculateSelfInducedMagneticField'), .false., h%self_induced_magnetic)
+    !%Variable CalculateSelfInducedMagneticField
+    !%Type logical
+    !%Default no
+    !%Section Hamiltonian
+    !%Description
+    !% The existence of an electronic current implies the creation of a self-induced magnetic
+    !% field, which may in turn back-react on the system. Of course, a fully consistent treatment
+    !% of this kind of effects should be done of QED theory, but we will attempt a first
+    !% approximation to the problem by considering the lowest order relativistic terms
+    !% plugged in the normal Hamiltonian equations (spin-other-orbit coupling terms, etc). 
+    !% For the moment being, none of this is done, but a first step is taken by calculating
+    !% the induced magnetic field of a system that has a current, by considering the magnetostatic
+    !% approximation and Biot-Savart law:
+    !%
+    !% <math> \nabla^2 \vec{A} + 4\pi\alpha \vec{J} = 0</math>
+    !%
+    !% <math> \vec{B} = \vec{\nabla} \times \vec{A}
+    !%
+    !% If CalculateSelfInducedMagneticField is set to yes, this <math> B </math> field is
+    !% calculated at the end of a gs calculation (nothing is done -- yet -- in the td case)
+    !% and printed out, if the Output variable contains the "potential" keyword (the prefix
+    !% of the output files are "Bind").
+    !%End
+    if(h%self_induced_magnetic) then
+      ALLOCATE(h%a_ind(NP_PART, MAX_DIM), NP_PART*MAX_DIM)
+      ALLOCATE(h%b_ind(NP_PART, MAX_DIM), NP_PART*MAX_DIM)
+    end if
+
     !%Variable TDGauge
     !%Type integer
     !%Default length
@@ -347,6 +381,14 @@ contains
       deallocate(h%axc)
       nullify(h%axc)
     end if
+    if(associated(h%a_ind)) then
+      deallocate(h%a_ind)
+      nullify(h%a_ind)
+    end if
+    if(associated(h%b_ind)) then
+      deallocate(h%b_ind)
+      nullify(h%b_ind)
+    end if
 
     call epot_end(h%ep, gr%sb, geo)
 
@@ -468,6 +510,13 @@ contains
             call doutput_function(outp%how, dir, fname, m, sb, &
               h%ep%vpsl + h%vhartree + h%vxc(:, is), u, err)
           end if
+        end do
+      end if
+
+      if(h%self_induced_magnetic) then
+        do is = 1, MAX_DIM
+          write(fname,'(a,i1)') 'Bind-', is
+          call doutput_function(outp%how, dir, fname, m, sb, h%b_ind(:, is), M_ONE, err)
         end do
       end if
     end if
