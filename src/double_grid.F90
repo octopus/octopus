@@ -39,7 +39,8 @@ module double_grid_m
        double_grid_init, &
        double_grid_end,  &
        double_grid_apply, &
-       dg_add_localization_density
+       dg_add_localization_density, &
+       dg_get_potential_correction
 
   type double_grid_t
 
@@ -52,6 +53,9 @@ module double_grid_m
      type(loct_spline_t) :: pot_corr
 
   end type double_grid_t
+
+  FLOAT,   parameter :: rmax = CNST(30.0), sigma = CNST(0.625)
+  integer, parameter :: nn = 3000
   
   integer, parameter :: &
        F_NONE = 0,      &
@@ -98,22 +102,15 @@ contains
     contains
 
       subroutine functions_init()
-        integer, parameter :: nn = 3000
-        FLOAT,   parameter :: rmax = CNST(30.0), sigma = CNST(0.625)
         
         integer :: ii
-        FLOAT :: dr, r(1:nn), rho(1:nn), pot(1:nn)
+        FLOAT :: dr, r(1:nn), rho(1:nn)
 
         dr = rmax/(nn-M_ONE)
         
         r(1) = M_ZERO
-        pot(1) = M_TWO/(sqrt(M_TWO*M_PI)*sigma)
         do ii = 1, nn
-
           rho(ii) = M_ONE/(sigma*sqrt(M_TWO*M_PI))**3*exp(-M_HALF*r(ii)**2/sigma**2)
-
-          if ( ii /= 1 ) pot(ii) = erf(r(ii)/(sigma*sqrt(M_TWO)))/r(ii)
-
           if ( ii /= nn ) r(ii+1) = r(ii) + dr
         end do
 
@@ -121,7 +118,7 @@ contains
         call loct_spline_init(this%pot_corr)
         
         call loct_spline_fit(nn, r, rho, this%rho_corr)
-        call loct_spline_fit(nn, r, pot, this%pot_corr)
+        call dg_get_potential_correction(this, this%pot_corr)
 
       end subroutine functions_init
 
@@ -156,5 +153,27 @@ contains
     dg_add_localization_density = ( this%loc_function /= F_NONE )
     
   end function dg_add_localization_density
+
+  subroutine dg_get_potential_correction(this, vlc)
+    type(double_grid_t), intent(in) :: this
+    type(loct_spline_t), intent(out) :: vlc
+
+    FLOAT :: dr, r(1:nn), pot(1:nn)
+    integer :: ii
+    
+    dr = rmax/(nn-M_ONE)
+        
+    r(1) = M_ZERO
+
+    pot(1) = M_TWO/(sqrt(M_TWO*M_PI)*sigma)
+
+    do ii = 1, nn
+      if ( ii /= 1 ) pot(ii) = erf(r(ii)/(sigma*sqrt(M_TWO)))/r(ii)
+      if ( ii /= nn ) r(ii+1) = r(ii) + dr
+    end do
+    
+    call loct_spline_fit(nn, r, pot, vlc)
+
+  end subroutine dg_get_potential_correction
 
 end module double_grid_m

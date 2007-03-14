@@ -143,7 +143,7 @@ contains
   subroutine hamiltonian_init(h, gr, geo, states_dim, ip_app)
     type(hamiltonian_t), intent(out)   :: h
     type(grid_t),        intent(inout) :: gr
-    type(geometry_t),    intent(in)    :: geo
+    type(geometry_t),    intent(inout) :: geo
     type(states_dim_t),  pointer       :: states_dim
     logical,             intent(in)    :: ip_app
 
@@ -348,7 +348,7 @@ contains
   subroutine hamiltonian_end(h, gr, geo)
     type(hamiltonian_t), intent(inout) :: h
     type(grid_t),        intent(in)    :: gr
-    type(geometry_t),    intent(in)    :: geo
+    type(geometry_t),    intent(inout) :: geo
 
 #if defined(HAVE_LIBNBC)
     integer :: ii
@@ -390,7 +390,7 @@ contains
       nullify(h%b_ind)
     end if
 
-    call epot_end(h%ep, gr%sb, geo)
+    call epot_end(h%ep, gr, geo)
 
     if(associated(h%ab_pot)) then
       deallocate(h%ab_pot); nullify(h%ab_pot)

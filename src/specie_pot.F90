@@ -27,6 +27,7 @@ module specie_pot_m
   use geometry_m
   use global_m
   use grid_m
+  use io_m
   use lib_oct_gsl_spline_m
   use lib_oct_parser_m
   use math_m
@@ -45,12 +46,14 @@ module specie_pot_m
   private
   public ::                   &
     guess_density,            &
+    specie_pot_init,          &
+    specie_pot_end,           &
     specie_get_density,       & 
     specie_get_local,         &
     specie_get_glocal,        &
     specie_get_g2local,       &
     specie_real_nl_projector, &
-    specie_nl_projector      
+    specie_nl_projector
 
   integer, parameter :: INITRHO_PARAMAGNETIC  = 1, &
                         INITRHO_FERROMAGNETIC = 2, &
@@ -64,6 +67,44 @@ module specie_pot_m
   FLOAT :: pos_p(MAX_DIM)
 
 contains
+
+ ! ---------------------------------------------------------
+  subroutine specie_pot_init(this, gr)
+    type(specie_t),      intent(inout) :: this
+    type(grid_t),        intent(in)    :: gr
+
+    type(loct_spline_t) :: vlc
+
+    call push_sub('specie_pot.specie_pot_init')
+    
+    if(dg_add_localization_density(gr%dgrid) .and. specie_is_ps(this) ) then
+
+      call loct_spline_init(vlc)
+      call dg_get_potential_correction(gr%dgrid, vlc)
+      call loct_spline_times(this%z_val, vlc)
+
+      call loct_spline_init(this%ps%vll)
+      call loct_spline_sum(vlc, this%ps%vl, this%ps%vll)
+
+    end if
+
+    call pop_sub()
+
+  end subroutine specie_pot_init
+
+  ! ---------------------------------------------------------
+
+  subroutine specie_pot_end(this, gr)
+    type(specie_t),      intent(inout) :: this
+    type(grid_t),        intent(in)    :: gr
+
+    if(dg_add_localization_density(gr%dgrid) .and. specie_is_ps(this) ) then
+      
+      call loct_spline_end(this%ps%vll)
+      
+    end if
+
+  end subroutine specie_pot_end
 
   ! ---------------------------------------------------------
   subroutine atom_density(m, sb, atom, spin_channels, rho)
@@ -546,11 +587,13 @@ contains
       end if
 
     case(SPEC_PS_PSF, SPEC_PS_HGH, SPEC_PS_CPI, SPEC_PS_FHI, SPEC_PS_UPF)
-      l = double_grid_apply(gr%dgrid, s%ps%vl, x_atom, x_grid)
 
-      if(dg_add_localization_density(gr%dgrid)) &
-           l = l - (-s%z_val) * loct_splint(gr%dgrid%pot_corr, r)
-     
+      if(dg_add_localization_density(gr%dgrid)) then 
+        l = double_grid_apply(gr%dgrid, s%ps%vll, x_atom, x_grid)
+      else
+        l = double_grid_apply(gr%dgrid, s%ps%vl, x_atom, x_grid)
+      end if
+
     case(SPEC_ALL_E)
       l=M_ZERO
     

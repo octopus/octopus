@@ -73,6 +73,7 @@ module ps_m
     integer  :: l_loc    ! which component to take as local
 
     type(loct_spline_t) :: vl         ! local part
+    type(loct_spline_t) :: vll
     type(loct_spline_t) :: vlocalized ! The localized part of the local part :)
     type(loct_spline_t) :: vlocal_f   ! localized part of local potential
                                       ! in Fourier space (for periodic)

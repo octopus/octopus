@@ -142,7 +142,7 @@ contains
   subroutine epot_init(ep, gr, geo)
     type(epot_t), intent(out) :: ep
     type(grid_t), intent(in)  :: gr
-    type(geometry_t), intent(in) :: geo
+    type(geometry_t), intent(inout) :: geo
 
     integer :: i
     C_POINTER :: blk
@@ -328,15 +328,19 @@ contains
       end do
     end if
 
+    do i = 1, geo%nspecies
+      call specie_pot_init(geo%specie(i), gr)
+    end do
+
     call pop_sub()
   end subroutine epot_init
 
 
   ! ---------------------------------------------------------
-  subroutine epot_end(ep, sb, geo)
+  subroutine epot_end(ep, gr, geo)
     type(epot_t),      intent(inout) :: ep
-    type(simul_box_t), intent(in)    :: sb
-    type(geometry_t),  intent(in)    :: geo
+    type(grid_t),      intent(in)    :: gr
+    type(geometry_t),  intent(inout) :: geo
 
 #ifdef HAVE_FFT
     integer :: i
@@ -344,8 +348,12 @@ contains
 
     call push_sub('epot.epot_end')
 
+    do i = 1, geo%nspecies
+      call specie_pot_end(geo%specie(i), gr)
+    end do
+
 #ifdef HAVE_FFT
-    if(simul_box_is_periodic(sb).and.(.not.geo%only_user_def)) then
+    if(simul_box_is_periodic(gr%sb).and.(.not.geo%only_user_def)) then
       do i = 1, geo%nspecies
         call dcf_free(ep%local_cf(i))
         if(geo%specie(i)%nlcc) call dcf_free(ep%rhocore_cf(i))
@@ -725,9 +733,10 @@ contains
       nn = CNST(10.0)/dr
       r = M_ZERO
       do ii = 1, nn
-        write(iunit, '(4f12.6)') r, loct_splint(s%ps%vl, r),  &
+        write(iunit, '(5f12.6)') r, loct_splint(s%ps%vl, r),  &
              -s%z_val*loct_splint(gr%dgrid%pot_corr, r), &
-             -s%z_val*loct_splint(gr%dgrid%rho_corr, r)
+             -s%z_val*loct_splint(gr%dgrid%rho_corr, r), &
+             loct_splint(s%ps%vll, r)
         r = r + dr
       end do
 
@@ -763,6 +772,7 @@ contains
           end do
         end if
 
+
         if(s%has_density .or. &
              (specie_is_ps(s) .and. dg_add_localization_density(gr%dgrid) )) then 
 
@@ -773,16 +783,17 @@ contains
           call dpoisson_solve(gr,phi,rho)
           ep%vpsl(1:m%np)=ep%vpsl(1:m%np)+phi(1:m%np)
 
-          !calculate the deviation from the analitcal potential
-          do i = 1, m%np
-            x(:) = m%x(i, :) - a%x(:)
-            r = sqrt(sum(x(:)**2))
-            rho(i) = phi(i) - (-s%z_val)*loct_splint(gr%dgrid%pot_corr, r)
-            phi(i) = -s%z_val*loct_splint(gr%dgrid%pot_corr, r)
-          end do
-
-          write(message(1),'(a, e12.6)')  'Info: Deviation from analitical potential is ', abs(dmf_integrate(m, rho))
-          call write_info(1)
+          if (specie_is_ps(s)) then 
+            !calculate the deviation from the analitcal potential
+            do i = 1, m%np
+              x(:) = m%x(i, :) - a%x(:)
+              r = sqrt(sum(x(:)**2))
+              rho(i) = phi(i) - (-s%z_val)*loct_splint(gr%dgrid%pot_corr, r)
+            end do
+            
+            write(message(1),'(a, e12.6)')  'Info: Deviation from analitical potential is ', abs(dmf_integrate(m, rho))
+            call write_info(1)
+          end if
 
           deallocate(rho)
           deallocate(phi)
