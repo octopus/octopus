@@ -242,7 +242,7 @@ contains
     !%
     !% <math> \nabla^2 \vec{A} + 4\pi\alpha \vec{J} = 0</math>
     !%
-    !% <math> \vec{B} = \vec{\nabla} \times \vec{A}
+    !% <math> \vec{B} = \vec{\nabla} \times \vec{A}</math>
     !%
     !% If CalculateSelfInducedMagneticField is set to yes, this <math> B </math> field is
     !% calculated at the end of a gs calculation (nothing is done -- yet -- in the td case)
