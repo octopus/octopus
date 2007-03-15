@@ -26,6 +26,7 @@ module double_grid_m
   use global_m
   use mesh_m
   use messages_m
+  use lib_oct_m
   use lib_oct_gsl_spline_m
   use lib_oct_parser_m
   use specie_m
@@ -164,7 +165,7 @@ contains
     pot(1) = M_TWO/(sqrt(M_TWO*M_PI)*sigma)
 
     do ii = 1, nn
-      if ( ii /= 1 ) pot(ii) = erf(r(ii)/(sigma*sqrt(M_TWO)))/r(ii)
+      if ( ii /= 1 ) pot(ii) = loct_erf(r(ii)/(sigma*sqrt(M_TWO)))/r(ii)
       if ( ii /= nn ) r(ii+1) = r(ii) + dr
     end do
     
