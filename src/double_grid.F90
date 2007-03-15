@@ -40,6 +40,7 @@ module double_grid_m
        double_grid_init, &
        double_grid_end,  &
        double_grid_apply, &
+       double_grid_apply_local,     &
        dg_add_localization_density, &
        dg_get_potential_correction
 
@@ -129,6 +130,30 @@ contains
 
   end subroutine double_grid_end
 
+  subroutine double_grid_apply_local(this, s, m, x_atom, vl)
+    type(double_grid_t), intent(in)  :: this
+    type(specie_t),      intent(in)  :: s
+    type(mesh_t),        intent(in)  :: m
+    FLOAT,               intent(in)  :: x_atom(1:MAX_DIM)
+    FLOAT,               intent(out) :: vl(:)
+    
+    type(loct_spline_t), pointer  :: ps_spline
+    FLOAT :: r
+    integer :: ip
+
+    if(dg_add_localization_density(this)) then 
+      ps_spline => s%ps%vll
+    else
+      ps_spline => s%ps%vl
+    end if
+
+    do ip = 1, m%np
+      r = sqrt(sum( (m%x(ip, :) - x_atom(1:this%dim))**2 ))
+      vl(ip) = loct_splint(ps_spline, r)
+    end do
+
+  end subroutine double_grid_apply_local
+
   FLOAT function double_grid_apply(this, ps_spline, x_atom, x_grid) result(ww)
     type(double_grid_t), intent(in) :: this
     type(loct_spline_t), intent(in)  :: ps_spline
@@ -150,6 +175,7 @@ contains
     dg_add_localization_density = ( this%loc_function /= F_NONE )
     
   end function dg_add_localization_density
+
 
   subroutine dg_get_potential_correction(this, vlc)
     type(double_grid_t), intent(in) :: this

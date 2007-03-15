@@ -55,6 +55,7 @@ module specie_pot_m
     specie_real_nl_projector, &
     specie_nl_projector
 
+
   integer, parameter :: INITRHO_PARAMAGNETIC  = 1, &
                         INITRHO_FERROMAGNETIC = 2, &
                         INITRHO_RANDOM        = 3, &
@@ -566,58 +567,68 @@ contains
   end subroutine getrho 
 
   ! ---------------------------------------------------------
-  FLOAT function specie_get_local(s, gr, x_atom, x_grid, time) result(l)
+  subroutine specie_get_local(s, gr, x_atom, vl, time)
     type(specie_t),  intent(in) :: s
     type(grid_t),    intent(in) :: gr
     FLOAT,           intent(in) :: x_atom(MAX_DIM)
-    FLOAT,           intent(in) :: x_grid(MAX_DIM)
+    FLOAT,           intent(out):: vl(:)
     FLOAT, optional, intent(in) :: time
 
     FLOAT :: a1, a2, Rb2 ! for jellium
     FLOAT :: xx(MAX_DIM), r, pot_re, pot_im, time_
+    integer :: ip
+
 
     time_ = M_ZERO
+
     if (present(time)) time_ = time
 
-    xx(:) = x_grid(:)-x_atom(:)
-    r = sqrt(sum(xx(:)**2))
-    l=M_ZERO
-    select case(s%type)
-    case(SPEC_USDEF)
-      ! Note that as the s%user_def is in input units, we have to convert
-      ! the units back and forth
-      xx(:) = xx(:)/units_inp%length%factor ! convert from a.u. to input units
-      r = r/units_inp%length%factor
+      select case(s%type)
+      case(SPEC_USDEF)
 
-      call loct_parse_expression(                            &
-        pot_re, pot_im, xx(1), xx(2), xx(3), r, time_, s%user_def)
-      l = pot_re * units_inp%energy%factor  ! convert from input units to a.u.
+        do ip = 1, gr%m%np
+          
+          xx(:) = gr%m%x(ip,:)-x_atom(:)
+          r = sqrt(sum(xx(:)**2))
+          
+          ! Note that as the s%user_def is in input units, we have to convert
+          ! the units back and forth
+          xx(:) = xx(:)/units_inp%length%factor ! convert from a.u. to input units
+          r = r/units_inp%length%factor
+          
+          call loct_parse_expression(                            &
+               pot_re, pot_im, xx(1), xx(2), xx(3), r, time_, s%user_def)
+          vl(ip) = pot_re * units_inp%energy%factor  ! convert from input units to a.u.
 
-    case(SPEC_POINT, SPEC_JELLI)
-      a1 = s%Z/(M_TWO*s%jradius**3)
-      a2 = s%Z/s%jradius
-      Rb2= s%jradius**2
+        end do
 
-      if(r <= s%jradius) then
-        l = (a1*(r*r - Rb2) - a2)
-      else
-        l = - s%Z/r
-      end if
-
-    case(SPEC_PS_PSF, SPEC_PS_HGH, SPEC_PS_CPI, SPEC_PS_FHI, SPEC_PS_UPF)
-
-      if(dg_add_localization_density(gr%dgrid)) then 
-        l = double_grid_apply(gr%dgrid, s%ps%vll, x_atom, x_grid)
-      else
-        l = double_grid_apply(gr%dgrid, s%ps%vl, x_atom, x_grid)
-      end if
-
-    case(SPEC_ALL_E)
-      l=M_ZERO
-    
-    end select
+      case(SPEC_POINT, SPEC_JELLI)
+        a1 = s%Z/(M_TWO*s%jradius**3)
+        a2 = s%Z/s%jradius
+        Rb2= s%jradius**2
+        
+        do ip = 1, gr%m%np
+          
+          xx(:) = gr%m%x(ip,:)-x_atom(:)
+          r = sqrt(sum(xx(:)**2))
+          
+          if(r <= s%jradius) then
+            vl(ip) = (a1*(r*r - Rb2) - a2)
+          else
+            vl(ip) = - s%Z/r
+          end if
+          
+        end do
+        
+      case(SPEC_PS_PSF, SPEC_PS_HGH, SPEC_PS_CPI, SPEC_PS_FHI, SPEC_PS_UPF)
+        call double_grid_apply_local(gr%dgrid, s, gr%m, x_atom, vl(:))
+        
+      case(SPEC_ALL_E)
+        vl(1:gr%m%np) = M_ZERO
+        
+      end select
       
-  end function specie_get_local
+  end subroutine specie_get_local
 
   ! ---------------------------------------------------------
   ! returns the gradient of the external potential

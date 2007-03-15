@@ -755,21 +755,30 @@ contains
     subroutine build_local_part()
       integer :: i
       FLOAT :: x(MAX_DIM), xx(MAX_DIM), r, pot_re, pot_im
-      FLOAT, allocatable  :: rho(:), phi(:)
+      FLOAT, allocatable  :: rho(:), vl(:)
 
       type(loct_spline_t) :: pot_corr
 
       call push_sub('epot.build_local_part')
 
       if((.not.simul_box_is_periodic(sb)).or.geo%only_user_def) then
-        do i = 1, m%np
-          ep%vpsl(i) = ep%vpsl(i) + specie_get_local(s, gr, a%x(:), m%x(i, :), time_)
-          if(s%nlcc) then
+        !Real space
+
+        ALLOCATE(vl(1:m%np_part), m%np_part)
+        
+        !Local potential
+        call specie_get_local(s, gr, a%x(:), vl, time_)
+        ep%vpsl(1:m%np) = ep%vpsl(1:m%np) + vl(1:m%np)
+
+        !Non-local core corrections
+        if(s%nlcc .and. specie_is_ps(s)) then
+          do i = 1, m%np
             x(:) = m%x(i, :) - a%x(:)
             st%rho_core(i) = st%rho_core(i) + specie_get_nlcc(s, x)
-          end if
-        end do
-
+          end do
+        end if
+        
+        !Time dependent potential
         if(time_ > M_ZERO .and. (ep%extra_td_pot .ne. '0') ) then
           do i = 1, m%np
             x(:) = m%x(i, :) - a%x(:)
@@ -781,16 +790,15 @@ contains
           end do
         end if
 
-
+        !Local potential from density
         if(s%has_density .or. &
              (specie_is_ps(s) .and. dg_add_localization_density(gr%dgrid) )) then 
 
-          ALLOCATE(rho(1:m%np),m%np)
-          ALLOCATE(phi(1:m%np_part),m%np_part)
+          ALLOCATE(rho(1:m%np), m%np)
 
           call specie_get_density(s, a%x, gr, geo, rho)
-          call dpoisson_solve(gr,phi,rho)
-          ep%vpsl(1:m%np)=ep%vpsl(1:m%np)+phi(1:m%np)
+          call dpoisson_solve(gr, vl, rho)
+          ep%vpsl(1:m%np) = ep%vpsl(1:m%np) + vl(1:m%np)
 
           if (specie_is_ps(s)) then 
             
@@ -801,7 +809,7 @@ contains
             do i = 1, m%np
               x(:) = m%x(i, :) - a%x(:)
               r = sqrt(sum(x(:)**2))
-              rho(i) = phi(i) - (-s%z_val)*loct_splint(pot_corr, r)
+              rho(i) = vl(i) - (-s%z_val)*loct_splint(pot_corr, r)
             end do
             call loct_spline_end(pot_corr)
             
@@ -811,8 +819,10 @@ contains
           end if
 
           deallocate(rho)
-          deallocate(phi)
+
         end if
+
+        deallocate(vl)
 
 #ifdef HAVE_FFT
       else ! momentum space
