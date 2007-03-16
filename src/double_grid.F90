@@ -42,22 +42,28 @@ module double_grid_m
        double_grid_apply, &
        double_grid_apply_local,     &
        dg_add_localization_density, &
-       dg_get_potential_correction
+       dg_get_potential_correction, &
+       dg_filter_potential,         &
+       dg_get_hmax
 
   type double_grid_t
 
      FLOAT   :: h_fine(MAX_DIM)
-     FLOAT   :: h_coarse(MAX_DIM)
      integer :: nn
-     integer :: dim
      integer :: loc_function
      type(loct_spline_t) :: rho_corr
+     logical :: use_double_grid
+     logical :: filter
 
   end type double_grid_t
 
   FLOAT,   parameter :: rmax = CNST(30.0), sigma = CNST(0.625)
   integer, parameter :: nn = 3000
   
+  integer, parameter :: nw = 125
+  integer :: idx_fine(nw, 3), idx_coarse(nw, 3)
+  FLOAT :: weight(nw)
+
   integer, parameter :: &
        F_NONE = 0,      &
        F_GAUSSIAN = 1 
@@ -70,11 +76,31 @@ contains
     type(mesh_t),        intent(in)  :: m
     integer,             intent(in)  :: dim
 
-    this%nn = 3
-    this%h_fine(1:MAX_DIM) = m%h(1:MAX_DIM)/dble(this%nn)
-    this%h_coarse(1:MAX_DIM) = m%h(1:MAX_DIM)
-    this%dim = dim
-    
+    this%nn = 1
+    this%h_fine(1:MAX_DIM) = m%h(1:MAX_DIM)/M_THREE
+   
+    !%Variable DoubleGrid
+    !%Type logical
+    !%Default no
+    !%Section Mesh
+    !%Description
+    !% Enables or disables the use of a double grid technique to
+    !% increase the precision of the application of the
+    !% pseudopotentials.
+    !%End
+
+    call loct_parse_logical(check_inp('DoubleGrid'), .false., this%use_double_grid)
+
+    !%Variable DoubleGridFilter
+    !%Type logical
+    !%Default no
+    !%Section Mesh
+    !%Description
+    !% When this is enabled a filter is applied to the pseudopotential.
+    !%End
+
+    call loct_parse_logical(check_inp('DoubleGridFilter'), .false., this%filter)
+
     !%Variable LocalizationDensity
     !%Type integer
     !%Default none
@@ -96,9 +122,15 @@ contains
     !% potential is erf(r)/r.
     !%End
 
-    call loct_parse_int(check_inp('LocalizationDensity'), F_NONE, this%loc_function)
+    if ( this%use_double_grid .or. this%filter ) then 
+      call loct_parse_int(check_inp('LocalizationDensity'), F_GAUSSIAN, this%loc_function)
+    else
+      call loct_parse_int(check_inp('LocalizationDensity'), F_NONE, this%loc_function)
+    end if
 
     call functions_init()
+    
+    call init_data()
 
     contains
 
@@ -137,9 +169,13 @@ contains
     FLOAT,               intent(in)  :: x_atom(1:MAX_DIM)
     FLOAT,               intent(out) :: vl(:)
     
+    FLOAT, allocatable :: vv(:,:,:)
+
     type(loct_spline_t), pointer  :: ps_spline
     FLOAT :: r
-    integer :: ip
+    integer :: ip, idx_ip(1:3)
+
+    integer :: ii, jj, kk, idx(1:3)
 
     if(dg_add_localization_density(this)) then 
       ps_spline => s%ps%vll
@@ -147,10 +183,49 @@ contains
       ps_spline => s%ps%vl
     end if
 
-    do ip = 1, m%np
-      r = sqrt(sum( (m%x(ip, :) - x_atom(1:this%dim))**2 ))
-      vl(ip) = loct_splint(ps_spline, r)
-    end do
+    if (.not. this%use_double_grid) then 
+      
+      do ip = 1, m%np
+        r = sqrt(sum( (m%x(ip, :) - x_atom(:))**2 ))
+        vl(ip) = loct_splint(ps_spline, r)
+      end do
+      
+    else
+
+      ALLOCATE(vv(-this%nn:this%nn, -this%nn:this%nn, -this%nn:this%nn), (2*this%nn+1)**3 )
+      
+      vl(1:m%np) = M_ZERO
+      
+      do ip = 1, m%np
+        
+        do ii = -this%nn, this%nn
+          do jj = -this%nn, this%nn
+            do kk = -this%nn, this%nn
+              
+              idx = (/ii, jj, kk/)
+              
+              r = sqrt(sum( (m%x(ip, 1:3) + this%h_fine(1:3)*idx(1:3) - x_atom(1:3))**2 ))
+              vv(ii, jj, kk) = loct_splint(ps_spline, r)
+              
+            end do
+          end do
+        end do
+        
+        do ii = 1, nw
+          idx_ip(1:3) = m%Lxyz(ip, 1:3) + idx_coarse(ii, 1:3)
+          jj = m%Lxyz_inv( idx_ip(1), idx_ip(2), idx_ip(3) )
+          if ( jj <= m%np ) then 
+            vl(jj) = vl(jj) + weight(ii) * vv( idx_fine(ii, 1), idx_fine(ii, 2), idx_fine(ii, 3) )
+          end if
+        end do
+        
+      end do
+      
+      deallocate(vv)
+
+      vl(1:m%np) = vl(1:m%np) / CNST(27.0)
+
+    end if
 
   end subroutine double_grid_apply_local
 
@@ -160,11 +235,9 @@ contains
     FLOAT,               intent(in)  :: x_atom(1:MAX_DIM)
     FLOAT,               intent(in)  :: x_grid(1:MAX_DIM)
     
-    FLOAT :: x_fine_grid(1:MAX_DIM), r
+    FLOAT :: r
    
-    integer :: kk, idim
-    
-    r = sqrt(sum( (x_grid(1:this%dim)-x_atom(1:this%dim))**2 ))
+    r = sqrt(sum( (x_grid(:)-x_atom(:))**2 ))
     ww = loct_splint(ps_spline, r)
 
   end function double_grid_apply
@@ -198,5 +271,25 @@ contains
     call loct_spline_fit(nn, r, pot, vlc)
 
   end subroutine dg_get_potential_correction
+
+  logical function dg_filter_potential(this)
+    type(double_grid_t), intent(in) :: this
+
+    dg_filter_potential = this%filter
+  end function dg_filter_potential
+
+  FLOAT function dg_get_hmax(this, mesh) result(hmax)
+    type(double_grid_t), intent(in) :: this
+    type(mesh_t),        intent(in) :: mesh
+
+    if(this%use_double_grid) then 
+      hmax = maxval(this%h_fine(1:MAX_DIM))
+    else
+      hmax = maxval(mesh%h(1:MAX_DIM))
+    end if
+    
+  end function dg_get_hmax
+
+#include "double_grid_data.F90"
 
 end module double_grid_m

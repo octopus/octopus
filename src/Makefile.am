@@ -66,7 +66,8 @@ noinst_HEADERS = \
 	linalg_basic_blas.F90 linalg_basic_int.F90 linalg_adv_lapack.F90 \
 	linear_response_inc.F90 linear_response_out.F90 linear_solver_inc.F90\
 	sternheimer_inc.F90 em_resp_inc.F90 unocc_inc.F90 casida_inc.F90 \
-	excited_states_inc.F90 xc_OEP_kernel_inc.F90 em_resp_calc_inc.F90
+	excited_states_inc.F90 xc_OEP_kernel_inc.F90 em_resp_calc_inc.F90 \
+	double_grid_data.F90
 
 core_LIBS = @LIBS_LAPACK@ @LIBS_BLAS@ \
   ../liboct/liboct.a \
@@ -191,7 +192,7 @@ curv_gygi.o: global.h
 curvlinear.o: global.h
 curv_modine.o: global.h
 derivatives.o: global.h derivatives_inc.F90
-double_grid.o: global.h
+double_grid.o: global.h double_grid_data.F90
 eigen.o: global.h eigen_inc.F90 eigen_cg_inc.F90 eigen_trlan.F90 eigen_plan_inc.F90 eigen_arpack_inc.F90 eigen_evolution_inc.F90
 sternheimer.o: global.h sternheimer_inc.F90
 em_resp_calc.o: global.h em_resp_calc_inc.F90
