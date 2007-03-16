@@ -267,8 +267,7 @@ CPPFLAGS="$CPPFLAGS -I../libstring_f"
 
 AC_CONFIG_SUBDIRS([libxc])
 AX_F90_MODULE_FLAG
-FCFLAGS="$FCFLAGS ${ax_f90_modflag}../libxc/src/"
-
+FCFLAGS="$FCFLAGS ${ax_f90_modflag}../libxc/src/ ${ax_f90_modflag}../external_libs/qshep"
 
 # This is certainly wrong, but I don't know
 # how to do it right

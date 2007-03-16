@@ -29,6 +29,7 @@ module mesh_function_m
   use mpi_m
   use par_vec_m
   use profiling_m
+  use qshepmod_m
 
   implicit none
 

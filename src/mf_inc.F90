@@ -211,127 +211,86 @@ subroutine X(mf_interpolate) (mesh_in, mesh_out, full_interpolation, u, f)
   R_TYPE,       intent(in)    :: u(:)    ! u(mesh_in%np_global)
   R_TYPE,       intent(out)   :: f(:)    ! f(mesh%np)
 
-  FLOAT :: xmin, ymin, dx, dy, rmax, px, py, pz, xyzmin(MAX_DIM), xyzdel(MAX_DIM)
-  FLOAT, allocatable :: rsq(:), a(:, :)
+  FLOAT :: px, py, pz, ix, iy, iz
 #if !defined(R_TREAL)
   FLOAT :: ip
   FLOAT, allocatable :: aux_u(:)
 #endif  
   R_TYPE, allocatable :: f_global(:)
-  integer, allocatable :: lcell(:, :, :), lnext(:)
-  integer :: i, j, k, nq, nw, nr, ier, npoints, ix, iy, iz
+  integer :: i, j, k
+  type(qshep_t) :: interp
 
-  FLOAT, external :: qs2val, qs3val
-
-  call push_sub('mf_inc.Xmf_interpolate2d')
+  call push_sub('mf_inc.Xmf_interpolate')
 
   if(full_interpolation) then
-
-    npoints = mesh_in%np_global
-
-    select case(mesh_in%sb%dim)
-    case(2)
-      nq = 13
-      nw = 19
-      nr = nint(sqrt(npoints/CNST(3.0)))
-      ALLOCATE(lcell(nr, nr, 1), nr*nr)
-      ALLOCATE(a(5, npoints), 5*npoints)
-    case(3)
-      nq = 17 ! This is the recommended value in qshep3d.f90
-      nw = 16 ! The recommended value in qshep3d.f90 is 32, but this speeds up things.
-      nr = nint((npoints/CNST(3.0))**(M_ONE/M_THREE))
-      ALLOCATE(lcell(nr, nr, nr), nr*nr*nr)
-      ALLOCATE(a(9, npoints), 9*npoints)
-    case(1)
-      stop 'Believe it or not, cannot do 1D interpolation, only 2D or 3D.'
-    end select
-    ALLOCATE(lnext(npoints), npoints)
-    ALLOCATE(rsq(npoints), npoints)
-
-    f = M_ZERO
 
 #if defined(R_TREAL)
     select case(mesh_in%sb%dim)
     case(2)
-      call qshep2 ( npoints, mesh_in%x(1:npoints, 1), mesh_in%x(1:npoints, 2), &
-                    u, nq, nw, nr, lcell(:, :, 1), lnext, xmin, ymin, &
-                    dx, dy, rmax, rsq, a, ier )
+      call init_qshep(interp, mesh_in%np_global, u, mesh_in%x(:, 1), mesh_in%x(:, 2))
       do i = 1, mesh_out%np
         px = mesh_out%x(i, 1)
         py = mesh_out%x(i, 2)
-        f(i) = qs2val ( px, py, npoints, mesh_in%x(1:npoints, 1), mesh_in%x(1:npoints, 2), &
-                        u, nr, lcell(:, :, 1), lnext, xmin, &
-                        ymin, dx, dy, rmax, rsq, a )
+        f(i) = qshep_interpolate(interp, px, py)
       end do
+      call kill_qshep(interp)
     case(3)
-      call qshep3 ( npoints, mesh_in%x(1:npoints, 1), mesh_in%x(1:npoints, 2), mesh_in%x(1:npoints, 3), &
-                    u, nq, nw, nr, lcell, lnext, xyzmin, &
-                    xyzdel, rmax, rsq, a, ier )
+      call init_qshep(interp, mesh_in%np_global, u, &
+                      mesh_in%x(:, 1), mesh_in%x(:, 2), mesh_in%x(:, 3))
       do i = 1, mesh_out%np
         px = mesh_out%x(i, 1)
         py = mesh_out%x(i, 2)
         pz = mesh_out%x(i, 3)
-        f(i) = qs3val ( px, py, pz, npoints, &
-                        mesh_in%x(1:npoints, 1), mesh_in%x(1:npoints, 2), mesh_in%x(1:npoints, 3), &
-                        u, nr, lcell, lnext, xyzmin, xyzdel, rmax, rsq, a )
+        f(i) = qshep_interpolate(interp, px, py, pz)
       end do
+      call kill_qshep(interp)
     case(1)
       stop 'Believe it or not, cannot do 1D interpolation, only 2D or 3D.'
     end select
 #else
-    ALLOCATE(aux_u(npoints), npoints)
+    ALLOCATE(aux_u(mesh_in%np_global), mesh_in%np_global)
     select case(mesh_in%sb%dim)
     case(2)
       aux_u = R_REAL(u)
-      call qshep2 ( npoints, mesh_in%x(1:npoints, 1), mesh_in%x(1:npoints, 2), &
-                    aux_u, nq, nw, nr, lcell(:, :, 1), lnext, xmin, ymin, &
-                    dx, dy, rmax, rsq, a, ier )
+      call init_qshep(interp, mesh_in%np_global, aux_u, mesh_in%x(:, 1), mesh_in%x(:, 2))
       do i = 1, mesh_out%np
         px = mesh_out%x(i, 1)
         py = mesh_out%x(i, 2)
-        f(i) = qs2val ( px, py, npoints, mesh_in%x(1:npoints, 1), mesh_in%x(1:npoints, 2), &
-                        aux_u, nr, lcell(:, :, 1), lnext, xmin, &
-                        ymin, dx, dy, rmax, rsq, a )
+        f(i) = qshep_interpolate(interp, px, py)
       end do
+      call kill_qshep(interp)
       aux_u = R_AIMAG(u)
-      call qshep2 ( npoints, mesh_in%x(1:npoints, 1), mesh_in%x(1:npoints, 2), &
-                    aux_u, nq, nw, nr, lcell(:, :, 1), lnext, xmin, ymin, &
-                    dx, dy, rmax, rsq, a, ier )
+      call init_qshep(interp, mesh_in%np_global, aux_u, mesh_in%x(:, 1), mesh_in%x(:, 2))
       do i = 1, mesh_out%np
         px = mesh_out%x(i, 1)
         py = mesh_out%x(i, 2)
-        ip = qs2val ( px, py, npoints, mesh_in%x(1:npoints, 1), mesh_in%x(1:npoints, 2), &
-                      aux_u, nr, lcell(:, :, 1), lnext, xmin, &
-                      ymin, dx, dy, rmax, rsq, a )
+        ip = qshep_interpolate(interp, px, py)
         f(i) = f(i) + M_zI*ip
       end do
+      call kill_qshep(interp)
 
     case(3)
       aux_u = R_REAL(u)
-      call qshep3 ( npoints, mesh_in%x(1:npoints, 1), mesh_in%x(1:npoints, 2), mesh_in%x(1:npoints, 3), &
-                    aux_u, nq, nw, nr, lcell, lnext, xyzmin, &
-                    xyzdel, rmax, rsq, a, ier )
+      call init_qshep(interp, mesh_in%np_global, aux_u, &
+                      mesh_in%x(:, 1), mesh_in%x(:, 2), mesh_in%x(:, 3))
       do i = 1, mesh_out%np
         px = mesh_out%x(i, 1)
         py = mesh_out%x(i, 2)
         pz = mesh_out%x(i, 3)
-        f(i) = qs3val ( px, py, pz, npoints, &
-                        mesh_in%x(1:npoints, 1), mesh_in%x(1:npoints, 2), mesh_in%x(1:npoints, 3), &
-                        aux_u, nr, lcell, lnext, xyzmin, xyzdel, rmax, rsq, a )
+        f(i) = qshep_interpolate(interp, px, py, pz)
       end do
+      call kill_qshep(interp)
       aux_u = R_AIMAG(u)
-      call qshep3 ( npoints, mesh_in%x(1:npoints, 1), mesh_in%x(1:npoints, 2), mesh_in%x(1:npoints, 3), &
-                    aux_u, nq, nw, nr, lcell, lnext, xyzmin, &
-                    xyzdel, rmax, rsq, a, ier )
+      call init_qshep(interp, mesh_in%np_global, aux_u, &
+                      mesh_in%x(:, 1), mesh_in%x(:, 2), mesh_in%x(:, 3))
       do i = 1, mesh_out%np
         px = mesh_out%x(i, 1)
         py = mesh_out%x(i, 2)
         pz = mesh_out%x(i, 3)
-        ip = qs3val ( px, py, pz, npoints, &
-                      mesh_in%x(1:npoints, 1), mesh_in%x(1:npoints, 2), mesh_in%x(1:npoints, 3), &
-                      aux_u, nr, lcell, lnext, xyzmin, xyzdel, rmax, rsq, a )
+        ip = qshep_interpolate(interp, px, py, pz)
         f(i) = f(i) + M_zI*ip
       end do
+      call kill_qshep(interp)
 
     case(1)
       stop 'Believe it or not, cannot do 1D interpolation, only 2D or 3D.'
@@ -339,8 +298,6 @@ subroutine X(mf_interpolate) (mesh_in, mesh_out, full_interpolation, u, f)
     deallocate(aux_u)
 #endif
   
-    deallocate(rsq, a, lnext, lcell)
-
   else
 
     if(mesh_in%parallel_in_domains) then
@@ -387,12 +344,10 @@ subroutine X(mf_interpolate_on_plane)(mesh, plane, f, f_in_plane)
   R_TYPE,             intent(in)  :: f(:)
   R_TYPE,             intent(out) :: f_in_plane(plane%nu:plane%mu, plane%nv:plane%mv)
 
-  integer :: npoints, nq, nw, nr, ier, i, j
-  integer, allocatable :: lcell(:, :, :), lnext(:)
-  FLOAT, allocatable :: rsq(:), a(:, :)
-  R_TYPE, allocatable :: f_global(:)
-  FLOAT ::  xyzmin(MAX_DIM), xyzdel(MAX_DIM), rmax, px, py, pz
-  FLOAT, external :: qs3val
+  integer :: i, j
+  FLOAT, allocatable :: f_global(:)
+  FLOAT :: px, py, pz
+  type(qshep_t) :: interp
 
   call push_sub('mf_inc.Xmf_interpolate_on_plane')
 
@@ -401,45 +356,28 @@ subroutine X(mf_interpolate_on_plane)(mesh, plane, f, f_in_plane)
   call write_fatal(1)
 #endif
 
-  ! Prepare the interpolation
-  npoints = mesh%np_global
-
-  select case(mesh%sb%dim)
-    case(3)
-      nq = 17 ! This is the recommended value in qshep3d.f90
-      nw = 16 ! The recommended value in qshep3d.f90 is 32, but this speeds up things.
-      nr = nint((npoints/CNST(3.0))**(M_ONE/M_THREE))
-      ALLOCATE(lcell(nr, nr, nr), nr*nr*nr)
-      ALLOCATE(a(9, npoints), 9*npoints)
-    case default
-      message(1) = 'INTERNAL ERROR at Xmf_interpolate_on_plane: wrong dimensionality'
-  end select
-
-  ALLOCATE(lnext(npoints), npoints)
-  ALLOCATE(rsq(npoints), npoints)
   ALLOCATE(f_global(mesh%np_global), mesh%np_global)
 #if defined HAVE_MPI
   call X(vec_gather)(mesh%vp, f_global, f)
 #else
-  f_global(1:npoints) = f(1:npoints)
+  f_global(1:mesh%np_global) = f(1:mesh%np_global)
 #endif
 
-  call qshep3 ( npoints, mesh%x(1:npoints, 1), mesh%x(1:npoints, 2), mesh%x(1:npoints, 3), &
-                f_global, nq, nw, nr, lcell, lnext, xyzmin, &
-                xyzdel, rmax, rsq, a, ier )
+  call init_qshep(interp, mesh%np_global, f_global, mesh%x(1:mesh%np_global, 1), &
+                  mesh%x(1:mesh%np_global, 2), mesh%x(1:mesh%np_global, 3) )
 
   do i = plane%nu, plane%mu
     do j = plane%nv, plane%mv
       px = plane%origin(1) + i*plane%spacing * plane%u(1) + j * plane%spacing * plane%v(1)
       py = plane%origin(2) + i*plane%spacing * plane%u(2) + j * plane%spacing * plane%v(2)
       pz = plane%origin(3) + i*plane%spacing * plane%u(3) + j * plane%spacing * plane%v(3)
-      f_in_plane(i, j) = qs3val ( px, py, pz, npoints, &
-                         mesh%x(1:npoints, 1), mesh%x(1:npoints, 2), mesh%x(1:npoints, 3), &
-                         f_global, nr, lcell, lnext, xyzmin, xyzdel, rmax, rsq, a )
+      f_in_plane(i, j) = qshep_interpolate(interp, px, py, pz)
     end do
   end do
 
-  deallocate(lcell, lnext, rsq, a, f_global)
+  call kill_qshep(interp)
+
+  deallocate(f_global)
   call pop_sub()
 end subroutine X(mf_interpolate_on_plane)
 
@@ -454,13 +392,11 @@ subroutine X(mf_interpolate_on_line)(mesh, line, f, f_in_line)
   R_TYPE,             intent(in)  :: f(:)
   R_TYPE,             intent(out) :: f_in_line(line%nu:line%mu)
 
-  integer :: npoints, nq, nw, nr, ier, i, j
-  integer, allocatable :: lcell(:, :, :), lnext(:)
-  FLOAT, allocatable :: rsq(:), a(:, :)
-  R_TYPE, allocatable :: f_global(:)
-  FLOAT ::  rmax, px, py, pz, xmin, ymin, dx, dy
-  FLOAT, external :: qs2val
-
+  integer :: i
+  FLOAT, allocatable :: f_global(:)
+  FLOAT :: px, py
+  type(qshep_t) :: interp
+  
   call push_sub('mf_inc.Xmf_interpolate_on_line')
 
 #if defined(R_TCOMPLEX)
@@ -468,43 +404,23 @@ subroutine X(mf_interpolate_on_line)(mesh, line, f, f_in_line)
   call write_fatal(1)
 #endif
 
-  ! Prepare the interpolation
-  npoints = mesh%np_global
-
-  select case(mesh%sb%dim)
-    case(2)
-      nq = 13 ! This is the recommended value in qshep3d.f90
-      nw = 19 ! The recommended value in qshep3d.f90 is 32, but this speeds up things.
-      nr = nint((npoints/CNST(3.0)))
-      ALLOCATE(lcell(nr, nr, 1), nr*nr)
-      ALLOCATE(a(5, npoints), 5*npoints)
-    case default
-      message(1) = 'INTERNAL ERROR at Xmf_interpolate_on_line: wrong dimensionality'
-  end select
-
-  ALLOCATE(lnext(npoints), npoints)
-  ALLOCATE(rsq(npoints), npoints)
   ALLOCATE(f_global(mesh%np_global), mesh%np_global)
 #if defined HAVE_MPI
   call X(vec_gather)(mesh%vp, f_global, f)
 #else
-  f_global(1:npoints) = f(1:npoints)
+  f_global(1:mesh%np_global) = f(1:mesh%np_global)
 #endif
 
-  call qshep2 ( npoints, mesh%x(1:npoints, 1), mesh%x(1:npoints, 2), &
-                f_global, nq, nw, nr, lcell(:, :, 1), lnext, xmin, ymin, &
-                dx, dy, rmax, rsq, a, ier )
-
+  call init_qshep(interp, mesh%np_global, f_global, mesh%x(1:mesh%np_global, 1), mesh%x(1:mesh%np_global, 2))
   do i = line%nu, line%mu
     px = line%origin(1) + i*line%spacing * line%u(1)
     py = line%origin(2) + i*line%spacing * line%u(2)
-
-    f_in_line(i) = qs2val ( px, py, npoints, &
-                            mesh%x(1:npoints, 1), mesh%x(1:npoints, 2), &
-                            f_global, nr, lcell(:, :, 1), lnext, xmin, ymin, dx, dy, rmax, rsq, a )
+    f_in_line(i) = qshep_interpolate(interp, px, py)
   end do
+  call kill_qshep(interp)
 
-  deallocate(lcell, lnext, rsq, a, f_global)
+  deallocate(f_global)
+
   call pop_sub()
 end subroutine X(mf_interpolate_on_line)
 
