@@ -689,7 +689,7 @@ contains
     case(SPEC_PS_PSF, SPEC_PS_HGH, SPEC_PS_CPI, SPEC_PS_FHI, SPEC_PS_UPF)
       gv(:) = M_ZERO
       if(r>CNST(0.00001)) then
-        dvl_r = double_grid_apply(gr%dgrid, s%ps%dvl, x_atom, x_grid)
+        dvl_r = loct_splint(s%ps%dvl, r)
         gv(:) = -dvl_r*x(:)/r
       end if
 
@@ -719,8 +719,8 @@ contains
     case(SPEC_PS_PSF, SPEC_PS_HGH, SPEC_PS_CPI, SPEC_PS_FHI, SPEC_PS_UPF)
       g2v(:,:) = M_ZERO
       if(r>CNST(0.00001)) then
-        dvl_rr = double_grid_apply(gr%dgrid, s%ps%dvl, x_atom, x_grid)/r
-        d2vl_r = double_grid_apply(gr%dgrid, s%ps%d2vl, x_atom, x_grid)
+        dvl_rr = loct_splint(s%ps%dvl,r)/r
+        d2vl_r = loct_splint(s%ps%d2vl, r)
 
         do ii= 1, 3
           do jj = 1, 3
@@ -756,8 +756,8 @@ contains
 
     r = sqrt(sum(x(1:MAX_DIM)**2))
 
-    uVr0 = double_grid_apply(gr%dgrid, s%ps%kb(l, i), x_atom, x_grid)
-    duVr0 = double_grid_apply(gr%dgrid, s%ps%dkb(l, i), x_atom, x_grid)
+    uVr0  = loct_splint(s%ps%kb(l, i), r)
+    duVr0 = loct_splint(s%ps%dkb(l, i), r)
 
     call grylmr(x(1), x(2), x(3), l, lm, ylm, gylm)
     uv = uvr0*ylm
@@ -798,7 +798,7 @@ contains
 
     r = sqrt(sum(x(1:MAX_DIM)**2))
 
-    uVr0 = double_grid_apply(gr%dgrid, s%ps%kb(l, i), x_atom, x_grid)
+    uVr0 = loct_splint(s%ps%kb(l, i), r)
 
     call ylmr(x(1), x(2), x(3), l, lm, ylm)
     uv = uvr0*ylm
