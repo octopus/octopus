@@ -164,7 +164,7 @@ contains
 
   subroutine double_grid_apply_local(this, s, m, x_atom, vl)
     type(double_grid_t), intent(in)  :: this
-    type(specie_t),      intent(in)  :: s
+    type(specie_t), target, intent(in)  :: s
     type(mesh_t),        intent(in)  :: m
     FLOAT,               intent(in)  :: x_atom(1:MAX_DIM)
     FLOAT,               intent(out) :: vl(:)

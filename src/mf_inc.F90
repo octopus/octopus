@@ -211,7 +211,8 @@ subroutine X(mf_interpolate) (mesh_in, mesh_out, full_interpolation, u, f)
   R_TYPE,       intent(in)    :: u(:)    ! u(mesh_in%np_global)
   R_TYPE,       intent(out)   :: f(:)    ! f(mesh%np)
 
-  FLOAT :: px, py, pz, ix, iy, iz
+  FLOAT :: px, py, pz
+  integer :: ix, iy, iz
 #if !defined(R_TREAL)
   FLOAT :: ip
   FLOAT, allocatable :: aux_u(:)
