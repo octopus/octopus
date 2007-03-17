@@ -232,7 +232,7 @@ subroutine X(mf_interpolate) (mesh_in, mesh_out, full_interpolation, u, f)
       do i = 1, mesh_out%np
         px = mesh_out%x(i, 1)
         py = mesh_out%x(i, 2)
-        f(i) = qshep_interpolate(interp, px, py)
+        f(i) = qshep_interpolate(interp, u, px, py)
       end do
       call kill_qshep(interp)
     case(3)
@@ -242,7 +242,7 @@ subroutine X(mf_interpolate) (mesh_in, mesh_out, full_interpolation, u, f)
         px = mesh_out%x(i, 1)
         py = mesh_out%x(i, 2)
         pz = mesh_out%x(i, 3)
-        f(i) = qshep_interpolate(interp, px, py, pz)
+        f(i) = qshep_interpolate(interp, u, px, py, pz)
       end do
       call kill_qshep(interp)
     case(1)
@@ -257,7 +257,7 @@ subroutine X(mf_interpolate) (mesh_in, mesh_out, full_interpolation, u, f)
       do i = 1, mesh_out%np
         px = mesh_out%x(i, 1)
         py = mesh_out%x(i, 2)
-        f(i) = qshep_interpolate(interp, px, py)
+        f(i) = qshep_interpolate(interp, aux_u, px, py)
       end do
       call kill_qshep(interp)
       aux_u = R_AIMAG(u)
@@ -265,7 +265,7 @@ subroutine X(mf_interpolate) (mesh_in, mesh_out, full_interpolation, u, f)
       do i = 1, mesh_out%np
         px = mesh_out%x(i, 1)
         py = mesh_out%x(i, 2)
-        ip = qshep_interpolate(interp, px, py)
+        ip = qshep_interpolate(interp, aux_u, px, py)
         f(i) = f(i) + M_zI*ip
       end do
       call kill_qshep(interp)
@@ -278,7 +278,7 @@ subroutine X(mf_interpolate) (mesh_in, mesh_out, full_interpolation, u, f)
         px = mesh_out%x(i, 1)
         py = mesh_out%x(i, 2)
         pz = mesh_out%x(i, 3)
-        f(i) = qshep_interpolate(interp, px, py, pz)
+        f(i) = qshep_interpolate(interp, aux_u, px, py, pz)
       end do
       call kill_qshep(interp)
       aux_u = R_AIMAG(u)
@@ -288,7 +288,7 @@ subroutine X(mf_interpolate) (mesh_in, mesh_out, full_interpolation, u, f)
         px = mesh_out%x(i, 1)
         py = mesh_out%x(i, 2)
         pz = mesh_out%x(i, 3)
-        ip = qshep_interpolate(interp, px, py, pz)
+        ip = qshep_interpolate(interp, aux_u, px, py, pz)
         f(i) = f(i) + M_zI*ip
       end do
       call kill_qshep(interp)
@@ -372,7 +372,7 @@ subroutine X(mf_interpolate_on_plane)(mesh, plane, f, f_in_plane)
       px = plane%origin(1) + i*plane%spacing * plane%u(1) + j * plane%spacing * plane%v(1)
       py = plane%origin(2) + i*plane%spacing * plane%u(2) + j * plane%spacing * plane%v(2)
       pz = plane%origin(3) + i*plane%spacing * plane%u(3) + j * plane%spacing * plane%v(3)
-      f_in_plane(i, j) = qshep_interpolate(interp, px, py, pz)
+      f_in_plane(i, j) = qshep_interpolate(interp, f_global, px, py, pz)
     end do
   end do
 
@@ -416,7 +416,7 @@ subroutine X(mf_interpolate_on_line)(mesh, line, f, f_in_line)
   do i = line%nu, line%mu
     px = line%origin(1) + i*line%spacing * line%u(1)
     py = line%origin(2) + i*line%spacing * line%u(2)
-    f_in_line(i) = qshep_interpolate(interp, px, py)
+    f_in_line(i) = qshep_interpolate(interp, f_global, px, py)
   end do
   call kill_qshep(interp)
 

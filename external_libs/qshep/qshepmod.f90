@@ -15,7 +15,7 @@ module qshepmod_m
    real(8), pointer :: rsq(:), a(:, :)
    real(8) :: xmin, ymin, dx, dy, rmax, xyzmin(3), xyzdel(3)
 
-   real(8), pointer :: f(:), x(:), y(:), z(:)
+   real(8), pointer :: x(:), y(:), z(:)
   end type qshep_t
 
   contains
@@ -23,7 +23,7 @@ module qshepmod_m
   subroutine init_qshep(interp, npoints, f, x, y, z)
     type(qshep_t), intent(out) :: interp
     integer, intent(in) :: npoints
-    real(8), target :: f(:)
+    real(8), intent(in) :: f(:)
     real(8), target :: x(:), y(:)
     real(8), target, optional :: z(:)
 
@@ -60,14 +60,12 @@ module qshepmod_m
       call qshep2 ( npoints, x, y, f, interp%nq, interp%nw, interp%nr, interp%lcell(:, :, 1), &
                     interp%lnext, interp%xmin, interp%ymin, interp%dx, interp%dy, &
                     interp%rmax, interp%rsq, interp%a, ier )
-      interp%f => f
       interp%x => x
       interp%y => y
     case(3)
       call qshep3 ( npoints, x, y, z, f, interp%nq, interp%nw, interp%nr, interp%lcell, &
                     interp%lnext, interp%xyzmin, interp%xyzdel, interp%rmax, interp%rsq, &
                     interp%a, ier )
-      interp%f => f
       interp%x => x
       interp%y => y
       interp%z => z
@@ -75,8 +73,9 @@ module qshepmod_m
 
   end subroutine init_qshep
 
-  real(8) function qshep_interpolate(interp, px, py, pz) result(v)
+  real(8) function qshep_interpolate(interp, f, px, py, pz) result(v)
     type(qshep_t), intent(in) :: interp
+    real(8), intent(in) :: f(:)
     real(8), intent(in) :: px, py
     real(8), optional, intent(in) :: pz
 
@@ -85,11 +84,11 @@ module qshepmod_m
     select case(interp%dim)
     case(2)
       v = qs2val ( px, py, interp%npoints, interp%x, interp%y, &
-                   interp%f, interp%nr, interp%lcell(:, :, 1), interp%lnext, interp%xmin, &
+                   f, interp%nr, interp%lcell(:, :, 1), interp%lnext, interp%xmin, &
                    interp%ymin, interp%dx, interp%dy, interp%rmax, interp%rsq, interp%a )
     case(3)
       v = qs3val ( px, py, pz, interp%npoints, interp%x, interp%y, interp%z, &
-                   interp%f, interp%nr, interp%lcell, interp%lnext, interp%xyzmin, &
+                   f, interp%nr, interp%lcell, interp%lnext, interp%xyzmin, &
                    interp%xyzdel, interp%rmax, interp%rsq, interp%a )
     end select
 
@@ -100,7 +99,7 @@ module qshepmod_m
     type(qshep_t), intent(inout) :: interp
 
     if(associated(interp%lcell)) then
-      nullify(interp%lcell, interp%lnext, interp%rsq, interp%a, interp%f, interp%x, interp%y)
+      nullify(interp%lcell, interp%lnext, interp%rsq, interp%a, interp%x, interp%y)
       if(interp%dim .eq. 3) nullify(interp%z)
     end if
 
