@@ -240,7 +240,8 @@ module lib_oct_gsl_spline_m
     loct_spline_cut,      & ! [11]
     loct_spline_filter,   & ! [12]
     loct_spline_print,    & ! [13]
-    loct_spline_der
+    loct_spline_der,      &
+    loct_spline_der2
 
   ! the basic spline datatype
   type loct_spline_t
@@ -309,6 +310,11 @@ module lib_oct_gsl_spline_m
       real(8), intent(in) :: x
       C_POINTER, intent(in) :: spl, acc
     end function oct_spline_eval_der
+
+    real(8) function oct_spline_eval_der2(x, spl, acc)
+      real(8), intent(in) :: x
+      C_POINTER, intent(in) :: spl, acc
+    end function oct_spline_eval_der2
 
     integer function oct_spline_npoints(spl)
       C_POINTER, intent(in) :: spl
@@ -711,6 +717,33 @@ contains
     call oct_spline_fit(npoints, x(1), y(1), dspl%spl, dspl%acc)
 
   end subroutine loct_spline_der
+
+  subroutine loct_spline_der2(spl, dspl)
+    type(loct_spline_t), intent(in)    :: spl
+    type(loct_spline_t), intent(inout) :: dspl
+
+
+    integer :: npoints, i
+    real(8), allocatable :: x(:), y(:)
+
+    ! Use the grid of dspl if it is present, otherwise use the same one of spl.
+    if(dspl%spl == 0) then ! use the grid of spl
+      npoints = oct_spline_npoints(spl%spl)
+      ALLOCATE(x(npoints), npoints)
+      ALLOCATE(y(npoints), npoints)
+      call oct_spline_x(spl%spl, x(1))
+    else ! use the grid of dspl
+      npoints = oct_spline_npoints(dspl%spl)
+      ALLOCATE(x(npoints), npoints)
+      ALLOCATE(y(npoints), npoints)
+      call oct_spline_x(dspl%spl, x(1))
+    end if
+    do i = 1, npoints
+      y(i) = oct_spline_eval_der2(x(i), spl%spl, spl%acc)
+    end do
+    call oct_spline_fit(npoints, x(1), y(1), dspl%spl, dspl%acc)
+
+  end subroutine loct_spline_der2
 
   subroutine loct_spline_print_0(spl, iunit)
     type(loct_spline_t), intent(in) :: spl

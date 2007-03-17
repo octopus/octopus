@@ -234,6 +234,13 @@ double FC_FUNC_(oct_spline_eval_der, OCT_SPLINE_EVAL_DER)
   return gsl_spline_eval_deriv((gsl_spline *)(*spl), *x, (gsl_interp_accel *)(*acc));
 }
 
+/* Performs the second derivative of a spline */
+double FC_FUNC_(oct_spline_eval_der2, OCT_SPLINE_EVAL_DER2)
+     (double *x, void **spl, void **acc)
+{
+  return gsl_spline_eval_deriv2((gsl_spline *)(*spl), *x, (gsl_interp_accel *)(*acc));
+}
+
 
 /* Chebyshev Approximations */
 /*

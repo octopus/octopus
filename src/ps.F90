@@ -334,7 +334,7 @@ contains
     end do
 
     call loct_spline_der(ps%vl, ps%dvl)
-    call loct_spline_der(ps%dvl, ps%d2vl)
+    call loct_spline_der2(ps%vl, ps%d2vl)
 
     call pop_sub()
   end subroutine ps_derivatives
