@@ -213,10 +213,6 @@ subroutine X(mf_interpolate) (mesh_in, mesh_out, full_interpolation, u, f)
 
   FLOAT :: px, py, pz
   integer :: ix, iy, iz
-#if !defined(R_TREAL)
-  FLOAT :: ip
-  FLOAT, allocatable :: aux_u(:)
-#endif  
   R_TYPE, allocatable :: f_global(:)
   integer :: i, j, k
   type(qshep_t) :: interp
@@ -225,7 +221,6 @@ subroutine X(mf_interpolate) (mesh_in, mesh_out, full_interpolation, u, f)
 
   if(full_interpolation) then
 
-#if defined(R_TREAL)
     select case(mesh_in%sb%dim)
     case(2)
       call init_qshep(interp, mesh_in%np_global, u, mesh_in%x(:, 1), mesh_in%x(:, 2))
@@ -248,56 +243,6 @@ subroutine X(mf_interpolate) (mesh_in, mesh_out, full_interpolation, u, f)
     case(1)
       stop 'Believe it or not, cannot do 1D interpolation, only 2D or 3D.'
     end select
-#else
-    ALLOCATE(aux_u(mesh_in%np_global), mesh_in%np_global)
-    select case(mesh_in%sb%dim)
-    case(2)
-      aux_u = R_REAL(u)
-      call init_qshep(interp, mesh_in%np_global, aux_u, mesh_in%x(:, 1), mesh_in%x(:, 2))
-      do i = 1, mesh_out%np
-        px = mesh_out%x(i, 1)
-        py = mesh_out%x(i, 2)
-        f(i) = qshep_interpolate(interp, aux_u, px, py)
-      end do
-      call kill_qshep(interp)
-      aux_u = R_AIMAG(u)
-      call init_qshep(interp, mesh_in%np_global, aux_u, mesh_in%x(:, 1), mesh_in%x(:, 2))
-      do i = 1, mesh_out%np
-        px = mesh_out%x(i, 1)
-        py = mesh_out%x(i, 2)
-        ip = qshep_interpolate(interp, aux_u, px, py)
-        f(i) = f(i) + M_zI*ip
-      end do
-      call kill_qshep(interp)
-
-    case(3)
-      aux_u = R_REAL(u)
-      call init_qshep(interp, mesh_in%np_global, aux_u, &
-                      mesh_in%x(:, 1), mesh_in%x(:, 2), mesh_in%x(:, 3))
-      do i = 1, mesh_out%np
-        px = mesh_out%x(i, 1)
-        py = mesh_out%x(i, 2)
-        pz = mesh_out%x(i, 3)
-        f(i) = qshep_interpolate(interp, aux_u, px, py, pz)
-      end do
-      call kill_qshep(interp)
-      aux_u = R_AIMAG(u)
-      call init_qshep(interp, mesh_in%np_global, aux_u, &
-                      mesh_in%x(:, 1), mesh_in%x(:, 2), mesh_in%x(:, 3))
-      do i = 1, mesh_out%np
-        px = mesh_out%x(i, 1)
-        py = mesh_out%x(i, 2)
-        pz = mesh_out%x(i, 3)
-        ip = qshep_interpolate(interp, aux_u, px, py, pz)
-        f(i) = f(i) + M_zI*ip
-      end do
-      call kill_qshep(interp)
-
-    case(1)
-      stop 'Believe it or not, cannot do 1D interpolation, only 2D or 3D.'
-    end select
-    deallocate(aux_u)
-#endif
   
   else
 
@@ -346,16 +291,11 @@ subroutine X(mf_interpolate_on_plane)(mesh, plane, f, f_in_plane)
   R_TYPE,             intent(out) :: f_in_plane(plane%nu:plane%mu, plane%nv:plane%mv)
 
   integer :: i, j
-  FLOAT, allocatable :: f_global(:)
+  R_TYPE, allocatable :: f_global(:)
   FLOAT :: px, py, pz
   type(qshep_t) :: interp
 
   call push_sub('mf_inc.Xmf_interpolate_on_plane')
-
-#if defined(R_TCOMPLEX)
-  message(1) = 'INTERNAL ERROR at Xmf_interpolate_on_plane: complex number not yet allowed'
-  call write_fatal(1)
-#endif
 
   ALLOCATE(f_global(mesh%np_global), mesh%np_global)
 #if defined HAVE_MPI
@@ -394,16 +334,11 @@ subroutine X(mf_interpolate_on_line)(mesh, line, f, f_in_line)
   R_TYPE,             intent(out) :: f_in_line(line%nu:line%mu)
 
   integer :: i
-  FLOAT, allocatable :: f_global(:)
+  R_TYPE, allocatable :: f_global(:)
   FLOAT :: px, py
   type(qshep_t) :: interp
   
   call push_sub('mf_inc.Xmf_interpolate_on_line')
-
-#if defined(R_TCOMPLEX)
-  message(1) = 'INTERNAL ERROR at Xmf_interpolate_on_line: complex number not yet allowed'
-  call write_fatal(1)
-#endif
 
   ALLOCATE(f_global(mesh%np_global), mesh%np_global)
 #if defined HAVE_MPI

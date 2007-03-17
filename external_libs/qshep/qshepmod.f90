@@ -8,7 +8,7 @@ module qshepmod_m
             qshep_interpolate, &
             kill_qshep
 
-  type qshep_t
+  type qshepr_t
    private
    integer :: npoints, nq, nw, nr, dim
    integer, pointer :: lcell(:, :, :), lnext(:)
@@ -16,12 +16,60 @@ module qshepmod_m
    real(8) :: xmin, ymin, dx, dy, rmax, xyzmin(3), xyzdel(3)
 
    real(8), pointer :: x(:), y(:), z(:)
+  end type qshepr_t
+
+  type qshep_t
+   private
+   integer :: kind ! 0 for real functions (im is not used);  for complex ones.
+   type(qshepr_t) :: re, im
   end type qshep_t
+
+  interface init_qshep
+    module procedure dinit_qshep, zinit_qshep
+  end interface
+
+  interface qshep_interpolate
+    module procedure dqshep_interpolate, zqshep_interpolate
+  end interface qshep_interpolate
 
   contains
 
-  subroutine init_qshep(interp, npoints, f, x, y, z)
+  subroutine dinit_qshep(interp, npoints, f, x, y, z)
     type(qshep_t), intent(out) :: interp
+    integer, intent(in) :: npoints
+    real(8), intent(in) :: f(:)
+    real(8), target :: x(:), y(:)
+    real(8), target, optional :: z(:)
+
+    interp%kind = 0
+    if(present(z)) then
+      call init_qshepr(interp%re, npoints, f, x, y, z)
+    else
+      call init_qshepr(interp%re, npoints, f, x, y)
+    end if
+
+  end subroutine dinit_qshep
+
+  subroutine zinit_qshep(interp, npoints, f, x, y, z)
+    type(qshep_t), intent(out) :: interp
+    integer, intent(in) :: npoints
+    complex(8), intent(in) :: f(:)
+    real(8), target :: x(:), y(:)
+    real(8), target, optional :: z(:)
+
+    interp%kind = 1
+    if(present(z)) then
+      call init_qshepr(interp%re, npoints, real(f), x, y, z)
+      call init_qshepr(interp%im, npoints, aimag(f), x, y, z)
+    else
+      call init_qshepr(interp%re, npoints, real(f), x, y)
+      call init_qshepr(interp%im, npoints, aimag(f), x, y)
+    end if
+
+  end subroutine zinit_qshep
+
+  subroutine init_qshepr(interp, npoints, f, x, y, z)
+    type(qshepr_t), intent(out) :: interp
     integer, intent(in) :: npoints
     real(8), intent(in) :: f(:)
     real(8), target :: x(:), y(:)
@@ -71,10 +119,11 @@ module qshepmod_m
       interp%z => z
     end select
 
-  end subroutine init_qshep
+  end subroutine init_qshepr
 
-  real(8) function qshep_interpolate(interp, f, px, py, pz) result(v)
-    type(qshep_t), intent(in) :: interp
+
+  real(8) function qshep_interpolater(interp, f, px, py, pz) result(v)
+    type(qshepr_t), intent(in) :: interp
     real(8), intent(in) :: f(:)
     real(8), intent(in) :: px, py
     real(8), optional, intent(in) :: pz
@@ -92,17 +141,54 @@ module qshepmod_m
                    interp%xyzdel, interp%rmax, interp%rsq, interp%a )
     end select
 
-  end function qshep_interpolate
+  end function qshep_interpolater
 
+  real(8) function dqshep_interpolate(interp, f, px, py, pz) result(v)
+    type(qshep_t), intent(in) :: interp
+    real(8), intent(in) :: f(:)
+    real(8), intent(in) :: px, py
+    real(8), optional, intent(in) :: pz
+
+    if(present(pz)) then
+      v = qshep_interpolater(interp%re, f, px, py, pz)
+    else
+      v = qshep_interpolater(interp%re, f, px, py)
+    end if
+
+  end function dqshep_interpolate
+
+  complex(8) function zqshep_interpolate(interp, f, px, py, pz) result(v)
+    type(qshep_t), intent(in) :: interp
+    complex(8), intent(in) :: f(:)
+    real(8), intent(in) :: px, py
+    real(8), optional, intent(in) :: pz
+
+    if(present(pz)) then
+      v = cmplx(qshep_interpolater(interp%re, real(f), px, py, pz), &
+               qshep_interpolater(interp%im, aimag(f), px, py, pz), 8)
+    else
+      v = cmplx(qshep_interpolater(interp%re, real(f), px, py), &
+               qshep_interpolater(interp%im, aimag(f), px, py), 8)
+    end if
+
+  end function zqshep_interpolate
 
   subroutine kill_qshep(interp)
     type(qshep_t), intent(inout) :: interp
+
+    call kill_qshepr(interp%re)
+    if(interp%kind == 1) call kill_qshepr(interp%im)
+
+  end subroutine kill_qshep
+
+  subroutine kill_qshepr(interp)
+    type(qshepr_t), intent(inout) :: interp
 
     if(associated(interp%lcell)) then
       nullify(interp%lcell, interp%lnext, interp%rsq, interp%a, interp%x, interp%y)
       if(interp%dim .eq. 3) nullify(interp%z)
     end if
 
-  end subroutine kill_qshep
+  end subroutine kill_qshepr
 
 end module qshepmod_m
