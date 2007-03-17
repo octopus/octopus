@@ -24,6 +24,7 @@ module specie_pot_m
   use curvlinear_m
   use datasets_m
   use double_grid_m
+  use functions_m
   use geometry_m
   use global_m
   use grid_m
@@ -38,6 +39,7 @@ module specie_pot_m
   use root_solver_m
   use simul_box_m
   use specie_m
+  use poisson_m
   use units_m
   use varinfo_m
 
@@ -49,6 +51,7 @@ module specie_pot_m
     specie_pot_init,          &
     specie_pot_end,           &
     specie_get_density,       & 
+    specie_get_gdensity,      &
     specie_get_local,         &
     specie_get_glocal,        &
     specie_get_g2local,       &
@@ -89,6 +92,9 @@ contains
       call loct_spline_init(this%ps%vll)
       call loct_spline_sum(vlc, this%ps%vl, this%ps%vll)
 
+      call loct_spline_init(this%ps%dvll)
+      call loct_spline_der(this%ps%vll, this%ps%dvll)
+
       call loct_spline_end(vlc)
 
       if ( dg_filter_potential(gr%dgrid) ) then 
@@ -124,6 +130,7 @@ contains
     if(dg_add_localization_density(gr%dgrid) .and. specie_is_ps(this) ) then
       
       call loct_spline_end(this%ps%vll)
+      call loct_spline_end(this%ps%dvll)
       
     end if
 
@@ -430,6 +437,7 @@ contains
     FLOAT   :: delta, alpha, beta
     FLOAT   :: r, correction
     integer :: ip
+    type(loct_spline_t) :: rho_corr
 
     call push_sub('specie_grid.specie_get_density')
 
@@ -437,10 +445,15 @@ contains
 
     case(SPEC_PS_PSF, SPEC_PS_HGH, SPEC_PS_CPI, SPEC_PS_FHI, SPEC_PS_UPF)
 
+      call loct_spline_init(rho_corr)
+      call dg_get_density_correction(gr%dgrid, rho_corr)
+
       do ip = 1, gr%m%np
         r = sqrt(sum((pos(1:MAX_DIM)-gr%m%x(ip, 1:MAX_DIM))**2))
-        rho(ip) = -s%z_val*loct_splint(gr%dgrid%rho_corr, r)
+        rho(ip) = -s%z_val*loct_splint(rho_corr, r)
       end do
+
+      call loct_spline_end(rho_corr)
 
       correction = -s%z_val / dmf_integrate(gr%m, rho)
       rho(1:gr%m%np) = correction * rho(1:gr%m%np)
@@ -499,6 +512,46 @@ contains
 
     call pop_sub()
   end subroutine specie_get_density
+
+  subroutine specie_get_gdensity(s, pos, gr, rho)
+    type(specie_t),             intent(in)  :: s
+    FLOAT,                      intent(in)  :: pos(MAX_DIM)
+    type(grid_t),       target, intent(in)  :: gr
+    FLOAT,                      intent(out) :: rho(:, :)
+
+    logical :: conv
+    integer :: dim
+    FLOAT   :: x(1:MAX_DIM+1), chi0(MAX_DIM), startval(MAX_DIM + 1)
+    FLOAT   :: delta, alpha, beta
+    FLOAT   :: r, correction
+    integer :: ip
+    type(loct_spline_t) :: rho_corr, drho_corr
+
+    call push_sub('specie_grid.specie_get_density')
+
+    select case(s%type)
+
+    case(SPEC_PS_PSF, SPEC_PS_HGH, SPEC_PS_CPI, SPEC_PS_FHI, SPEC_PS_UPF)
+
+      call loct_spline_init(rho_corr)
+      call loct_spline_init(drho_corr)
+      call dg_get_density_correction(gr%dgrid, rho_corr)
+      call loct_spline_der(rho_corr, drho_corr)
+
+      do ip = 1, gr%m%np
+        x(1:MAX_DIM) = pos(1:MAX_DIM) - gr%m%x(ip, 1:MAX_DIM)
+        r = sqrt(sum(x(1:MAX_DIM)**2))
+        if ( r > CNST(1e-10) ) then 
+          rho(ip, 1:MAX_DIM) = -s%z_val*loct_splint(drho_corr, r)*x(1:MAX_DIM)/r
+        else
+          rho(ip, 1:MAX_DIM) = M_ZERO
+        end if
+      end do
+
+    end select
+
+    call pop_sub()
+  end subroutine specie_get_gdensity
 
 
   ! ---------------------------------------------------------
@@ -637,99 +690,136 @@ contains
   ! ---------------------------------------------------------
   ! returns the gradient of the external potential
   ! ---------------------------------------------------------
-  subroutine specie_get_glocal(s, gr, x_atom, x_grid, gv, time)
+  subroutine specie_get_glocal(s, gr, x_atom, gv, time)
     type(specie_t),  intent(in) :: s
-    type(grid_t),    intent(in) :: gr
+    type(grid_t),    intent(inout) :: gr
     FLOAT,           intent(in) :: x_atom(MAX_DIM)
-    FLOAT,           intent(in) :: x_grid(MAX_DIM)
-    FLOAT,          intent(out) :: gv(:)
+    FLOAT,          intent(out) :: gv(:, :)
     FLOAT, optional, intent(in) :: time
 
     FLOAT, parameter :: Delta = CNST(1e-4)
     FLOAT :: x(MAX_DIM), r, l1, l2, pot_re, pot_im, time_, dvl_r
-    integer :: i
+    FLOAT, allocatable :: grho(:, :)
+    integer :: i, ip
 
     gv    = M_ZERO
 
     time_ = M_ZERO
     if (present(time)) time_ = time
 
-    x(:) = x_grid(:) - x_atom(:)
-    r = sqrt(sum(x(:)**2))
-
     select case(s%type)
     case(SPEC_USDEF)
-      ! Note that as the s%user_def is in input units, we have to convert
-      ! the units back and forth
-      x(:) = x(:)/units_inp%length%factor      ! convert from a.u. to input units
-      r = r / units_inp%length%factor 
-      do i = 1, 3
-        x(i) = x(i) - Delta/units_inp%length%factor
-        call loct_parse_expression(pot_re, pot_im,           &
-          x(1), x(2), x(3), r, time_, s%user_def)
-        l1 = pot_re * units_inp%energy%factor     ! convert from input units to a.u.
 
-        x(i) = x(i) + M_TWO*Delta/units_inp%length%factor
-        call loct_parse_expression(pot_re, pot_im,           &
-          x(1), x(2), x(3), r, time_, s%user_def)
-        l2 = pot_re * units_inp%energy%factor     ! convert from input units to a.u.
-
-        gv(i) = (l2 - l1)/(M_TWO*Delta)
+      do ip = 1, gr%m%np
+        x(:) = gr%m%x(ip, :) - x_atom(:)
+        r = sqrt(sum(x(:)**2))
+        ! Note that as the s%user_def is in input units, we have to convert
+        ! the units back and forth
+        x(:) = x(:)/units_inp%length%factor      ! convert from a.u. to input units
+        r = r / units_inp%length%factor 
+        do i = 1, 3
+          x(i) = x(i) - Delta/units_inp%length%factor
+          call loct_parse_expression(pot_re, pot_im,           &
+               x(1), x(2), x(3), r, time_, s%user_def)
+          l1 = pot_re * units_inp%energy%factor     ! convert from input units to a.u.
+          
+          x(i) = x(i) + M_TWO*Delta/units_inp%length%factor
+          call loct_parse_expression(pot_re, pot_im,           &
+               x(1), x(2), x(3), r, time_, s%user_def)
+          l2 = pot_re * units_inp%energy%factor     ! convert from input units to a.u.
+          
+          gv(ip, i) = (l2 - l1)/(M_TWO*Delta)
+        end do
       end do
 
     case(SPEC_POINT, SPEC_JELLI)
       l1 = s%Z/(M_TWO*s%jradius**3)
 
-      if(r <= s%jradius) then
-        gv(:) = l1*x(:)
-      else
-        gv(:) = s%Z*x(:)/r**3
-      end if
+      do ip = 1, gr%m%np
+        x(:) = gr%m%x(ip, :) - x_atom(:)
+        r = sqrt(sum(x(:)**2))
+        if(r <= s%jradius) then
+          gv(ip, 1:3) = l1*x(1:3)
+        else
+          gv(ip, 1:3) = s%Z*x(1:3)/r**3
+        end if
+      end do
 
     case(SPEC_PS_PSF, SPEC_PS_HGH, SPEC_PS_CPI, SPEC_PS_FHI, SPEC_PS_UPF)
-      gv(:) = M_ZERO
-      if(r>CNST(0.00001)) then
-        dvl_r = loct_splint(s%ps%dvl, r)
-        gv(:) = -dvl_r*x(:)/r
+
+      if (dg_add_localization_density(gr%dgrid)) then
+        
+        ALLOCATE(grho(NP_PART, MAX_DIM), NP_PART*MAX_DIM)
+        
+        call specie_get_gdensity(s, x_atom, gr, grho)
+
+        do i = 1, NDIM
+          call dpoisson_solve(gr, gv(:, i), grho(:, i))
+        end do
+
+        deallocate(grho)
+
+      else 
+
+        gv(1:gr%m%np, 1:3) = M_ZERO
+      
       end if
+      
+
+      do ip = 1, gr%m%np
+
+        x(:) = gr%m%x(ip, :) - x_atom(:)
+        r = sqrt(sum(x(:)**2))
+        if(r>CNST(1e-5)) then
+          if (dg_add_localization_density(gr%dgrid)) then 
+            dvl_r = loct_splint(s%ps%dvll, r)
+          else 
+            dvl_r = loct_splint(s%ps%dvl, r)
+          end if
+          gv(ip, 1:3) = gv(ip, 1:3) -dvl_r*x(1:3)/r
+        end if
+
+      end do
 
     case(SPEC_ALL_E)
-      gv(:)=M_ZERO
+      gv(1:gr%m%np, 1:3) = M_ZERO
         
     end select
 
   end subroutine specie_get_glocal
 
-  subroutine specie_get_g2local(s, gr, x_atom, x_grid, g2v, time)
+  subroutine specie_get_g2local(s, gr, x_atom, g2v, time)
     type(specie_t),  intent(in) :: s
     type(grid_t),    intent(in) :: gr
     FLOAT,           intent(in) :: x_atom(MAX_DIM)
-    FLOAT,           intent(in) :: x_grid(MAX_DIM)
-    FLOAT,          intent(out) :: g2v(:,:)
+    FLOAT,          intent(out) :: g2v(:, :, :)
     FLOAT, optional, intent(in) :: time
 
     FLOAT, parameter :: Delta = CNST(1e-4)
     FLOAT :: x(MAX_DIM), r, dvl_rr, d2vl_r
-    integer :: ii, jj
+    integer :: ii, jj, ip
 
-    x(:) = x_grid(:) - x_atom(:)
-    r = sqrt(sum(x(:)**2))
 
     select case(s%type)
     case(SPEC_PS_PSF, SPEC_PS_HGH, SPEC_PS_CPI, SPEC_PS_FHI, SPEC_PS_UPF)
-      g2v(:,:) = M_ZERO
-      if(r>CNST(0.00001)) then
-        dvl_rr = loct_splint(s%ps%dvl,r)/r
-        d2vl_r = loct_splint(s%ps%d2vl, r)
 
-        do ii= 1, 3
-          do jj = 1, 3
-            g2v(ii, jj) = ddelta(ii, jj)*dvl_rr  + x(ii)*x(jj)/(r*r)*(d2vl_r - dvl_rr)
+      do ip = 1, gr%m%np
+        x(:) = gr%m%x(ip, :) - x_atom(:)
+        r = sqrt(sum(x(:)**2))
+
+        if(r>CNST(0.00001)) then
+          dvl_rr = loct_splint(s%ps%dvl,r)/r
+          d2vl_r = loct_splint(s%ps%d2vl, r)
+          
+          do ii= 1, 3
+            do jj = 1, 3
+              g2v(ip, ii, jj) = ddelta(ii, jj)*dvl_rr  + x(ii)*x(jj)/(r*r)*(d2vl_r - dvl_rr)
+            end do
           end do
-        end do
-        
-      end if
-      
+          
+        end if
+      end do
+
     case default
       write(message(1),'(a)')    'Second derivative of the potential not implemented.'
       call write_fatal(1)

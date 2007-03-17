@@ -43,6 +43,7 @@ module double_grid_m
        double_grid_apply_local,     &
        double_grid_apply_non_local, &
        dg_add_localization_density, &
+       dg_get_density_correction,   &
        dg_get_potential_correction, &
        dg_filter_potential,         &
        dg_get_hmax
@@ -52,7 +53,6 @@ module double_grid_m
      FLOAT   :: h_fine(MAX_DIM)
      integer :: nn
      integer :: loc_function
-     type(loct_spline_t) :: rho_corr
      logical :: use_double_grid
      logical :: filter
 
@@ -129,38 +129,14 @@ contains
       call loct_parse_int(check_inp('LocalizationDensity'), F_NONE, this%loc_function)
     end if
 
-    call functions_init()
     
     call init_data()
-
-    contains
-
-      subroutine functions_init()
-        
-        integer :: ii
-        FLOAT :: dr, r(1:nn), rho(1:nn)
-
-        dr = rmax/(nn-M_ONE)
-        
-        r(1) = M_ZERO
-        do ii = 1, nn
-          rho(ii) = M_ONE/(sigma*sqrt(M_TWO*M_PI))**3*exp(-M_HALF*r(ii)**2/sigma**2)
-          if ( ii /= nn ) r(ii+1) = r(ii) + dr
-        end do
-
-        call loct_spline_init(this%rho_corr)
-        
-        call loct_spline_fit(nn, r, rho, this%rho_corr)
-
-      end subroutine functions_init
 
   end subroutine double_grid_init
 
   subroutine double_grid_end(this)
     type(double_grid_t), intent(inout) :: this
  
-        call loct_spline_end(this%rho_corr)
-
   end subroutine double_grid_end
 
   subroutine double_grid_apply_local(this, s, m, x_atom, vl)
@@ -229,7 +205,6 @@ contains
     end if
 
   end subroutine double_grid_apply_local
-
 
   subroutine double_grid_apply_non_local(this, s, m, x_atom, ns, jxyz, l, lm, ic, vnl)
     type(double_grid_t),    intent(in)     :: this
@@ -338,6 +313,26 @@ contains
     call loct_spline_fit(nn, r, pot, vlc)
 
   end subroutine dg_get_potential_correction
+
+  subroutine dg_get_density_correction(this, rc)
+    type(double_grid_t), intent(in) :: this
+    type(loct_spline_t), intent(out) :: rc
+
+    integer :: ii
+    FLOAT :: dr, r(1:nn), rho(1:nn)
+
+    dr = rmax/(nn-M_ONE)
+    
+    r(1) = M_ZERO
+    do ii = 1, nn
+      rho(ii) = M_ONE/(sigma*sqrt(M_TWO*M_PI))**3*exp(-M_HALF*r(ii)**2/sigma**2)
+      if ( ii /= nn ) r(ii+1) = r(ii) + dr
+    end do
+    
+    call loct_spline_fit(nn, r, rho, rc)
+
+  end subroutine dg_get_density_correction
+
 
   logical function dg_filter_potential(this)
     type(double_grid_t), intent(in) :: this

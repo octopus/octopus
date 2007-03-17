@@ -738,9 +738,8 @@ contains
       nn = CNST(10.0)/dr
       r = M_ZERO
       do ii = 1, nn
-        write(iunit, '(5f12.6)') r, loct_splint(s%ps%vl, r),  &
+        write(iunit, '(4f12.6)') r, loct_splint(s%ps%vl, r),  &
              -s%z_val*loct_splint(pot_corr, r), &
-             -s%z_val*loct_splint(gr%dgrid%rho_corr, r), &
              loct_splint(s%ps%vll, r)
         r = r + dr
       end do
@@ -917,7 +916,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine epot_forces(gr, geo, ep, st, t)
-    type(grid_t), target, intent(in) :: gr
+    type(grid_t), target, intent(inout) :: gr
     type(geometry_t), intent(inout)  :: geo
     type(epot_t),     intent(in)     :: ep
     type(states_t),   intent(in)     :: st
@@ -1065,20 +1064,21 @@ contains
     ! ---------------------------------------------------------
     subroutine local_RS()
       FLOAT :: r
-      FLOAT, allocatable :: force(:,:)
+      FLOAT, allocatable :: force(:,:), grho(:,:), gpot(:)
       integer  :: i, j, k, ns
-      FLOAT :: x(1:MAX_DIM), gv(1:MAX_DIM)
+      FLOAT :: x(1:MAX_DIM)
       
       ns = min(2, st%d%nspin)
 
       ALLOCATE(force(NP, MAX_DIM), NP*MAX_DIM)
+
       do i = 1, geo%natoms
         atm => geo%atom(i)
 
+        call specie_get_glocal(atm%spec, gr, atm%x, force)
+
         do j = 1, NP
-          call mesh_r(gr%m, j, r, x=x, a=atm%x)
-          call specie_get_glocal(atm%spec, gr, atm%x, gr%m%x(j, :), gv)
-          force(j,1:NDIM) = sum(st%rho(j, 1:ns))*gv(1:NDIM)
+          force(j, 1:NDIM) = sum(st%rho(j, 1:ns))*force(j, 1:NDIM)
         end do
 
         do k = 1, NDIM
@@ -1087,6 +1087,7 @@ contains
       end do
 
       deallocate(force)
+
     end subroutine local_RS
 
 

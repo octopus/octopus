@@ -68,11 +68,11 @@ contains
 
     type(phonons_t) :: ph
 
-    integer :: iatom, ip, idir, jatom, jdir, idim, ik
+    integer :: iatom, idir, jatom, jdir, idim, ik
 
     FLOAT, allocatable :: dv(:, :, :), d2v(:, :, :, :)
 
-    FLOAT :: x(1:MAX_DIM), r, total_mass, factor
+    FLOAT :: total_mass, factor
 
     FLOAT, allocatable :: tmp(:)
 
@@ -109,14 +109,8 @@ contains
 
       !first derivative
 
-      !the local part of the pseudo
-      do ip = 1, sys%NP
-        call mesh_r(sys%gr%m, ip, r, x=x, a=sys%geo%atom(iatom)%x)
-        call specie_get_glocal(sys%geo%atom(iatom)%spec, sys%gr, &
-             sys%geo%atom(iatom)%x, sys%gr%m%x(ip,:), dv(ip, 1:sys%NDIM, iatom))
-        call specie_get_g2local(sys%geo%atom(iatom)%spec, sys%gr, &
-             sys%geo%atom(iatom)%x, sys%gr%m%x(ip,:), d2v(ip, 1:sys%NDIM, 1:sys%NDIM, iatom))
-      end do
+      call specie_get_glocal(sys%geo%atom(iatom)%spec, sys%gr, sys%geo%atom(iatom)%x, dv(:, :, iatom))
+      call specie_get_g2local(sys%geo%atom(iatom)%spec, sys%gr, sys%geo%atom(iatom)%x, d2v(:, :, :, iatom))
       
       !the non-local part: tarea para la casa
     end  do

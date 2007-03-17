@@ -74,6 +74,7 @@ module ps_m
 
     type(loct_spline_t) :: vl         ! local part
     type(loct_spline_t) :: vll
+    type(loct_spline_t) :: dvll
     type(loct_spline_t) :: vlocalized ! The localized part of the local part :)
     type(loct_spline_t) :: vlocal_f   ! localized part of local potential
                                       ! in Fourier space (for periodic)
