@@ -74,7 +74,7 @@ contains
     call mesh_init_stage_1(gr%sb, gr%m, geo, gr%cv, gr%f_der%n_ghost)
     call mesh_init_stage_2(gr%sb, gr%m, geo, gr%cv)
 
-    call double_grid_init(gr%dgrid, gr%m, gr%sb%dim)
+    call double_grid_init(gr%dgrid, gr%m)
 
     call pop_sub()
   end subroutine grid_init_stage_1

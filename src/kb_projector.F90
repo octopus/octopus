@@ -95,25 +95,31 @@ contains
     ALLOCATE(kb_p%dp(n_s, 3, n_c), n_s*3*n_c)
     ALLOCATE(kb_p%e (n_c),         n_c)
     
-    do i = 1, n_c
-      call double_grid_apply_non_local(gr%dgrid, a%spec, gr%m, a%x, n_s, jxyz, l, lm, i, kb_p%p(:, i))
-    end do
+    if (gr%sb%periodic_dim == 0) then 
 
-    do j = 1, kb_p%n_s
+      do i = 1, n_c
+        call double_grid_apply_non_local(gr%dgrid, a%spec, gr%m, a%x, n_s, jxyz, l, lm, i, &
+             kb_p%p(:, i), kb_p%dp(:,:,i))
+      end do
 
-      do k = 1, 3**gr%sb%periodic_dim
-        x_in(:) = gr%m%x(jxyz(j), :) - gr%sb%shift(k,:)
-        x(:) = x_in(:) - a%x
-        r = sqrt(sum(x*x))
-        if (r > a%spec%ps%rc_max + gr%m%h(1)) cycle
+    else 
 
-        do i = 1, n_c
-          call specie_real_nl_projector(a%spec, gr, a%x, x_in, l, lm, i, v, dv)
-          if (gr%sb%periodic_dim > 0) kb_p%p(j, i) = v
-          kb_p%dp(j, :, i) = dv
+      do j = 1, kb_p%n_s
+        do k = 1, 3**gr%sb%periodic_dim
+          x_in(:) = gr%m%x(jxyz(j), :) - gr%sb%shift(k,:)
+          x(:) = x_in(:) - a%x
+          r = sqrt(sum(x*x))
+          if (r > a%spec%ps%rc_max + gr%m%h(1)) cycle
+          
+          do i = 1, n_c
+            call specie_real_nl_projector(a%spec, a%x, x_in, l, lm, i, v, dv)
+            kb_p%p(j, i) = v
+            kb_p%dp(j, :, i) = dv
+          end do
         end do
       end do
-    end do
+
+    end if
 
     do i = 1, n_c
       kb_p%e(i) = a%spec%ps%h(l, i, i)

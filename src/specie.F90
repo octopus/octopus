@@ -47,7 +47,9 @@ module specie_m
     specie_get_local_fourier, &
     specie_get_nlcc,          &
     specie_get_iwf,           &
-    specie_is_ps
+    specie_is_ps,             &
+    specie_real_nl_projector, &
+    specie_nl_projector
 
 
   integer, public, parameter :: &
@@ -617,6 +619,70 @@ contains
 
   end function specie_get_local_fourier
 
+  ! ---------------------------------------------------------
+  ! This routine returns the non-local projector and its 
+  ! derivative build using real spherical harmonics
+  subroutine specie_real_nl_projector(s, x_atom, x_grid, l, lm, i, uV, duV)
+    type(specie_t),    intent(in)  :: s
+    FLOAT,             intent(in)  :: x_atom(1:MAX_DIM)
+    FLOAT,             intent(in)  :: x_grid(1:MAX_DIM)
+    integer,           intent(in)  :: l, lm, i
+    FLOAT,             intent(out) :: uV, duV(1:MAX_DIM)
+
+    FLOAT :: r, uVr0, duvr0, ylm, gylm(MAX_DIM), x(MAX_DIM)
+    FLOAT, parameter :: ylmconst = CNST(0.488602511902920) !  = sqr(3/(4*pi))
+
+    x(1:MAX_DIM) = x_grid(1:MAX_DIM) - x_atom(1:MAX_DIM)
+
+    r = sqrt(sum(x(1:MAX_DIM)**2))
+
+    uVr0  = loct_splint(s%ps%kb(l, i), r)
+    duVr0 = loct_splint(s%ps%dkb(l, i), r)
+
+    call grylmr(x(1), x(2), x(3), l, lm, ylm, gylm)
+    uv = uvr0*ylm
+    if(r >= r_small) then
+      duv(:) = duvr0 * ylm * x(:)/r + uvr0 * gylm(:)
+    else
+      if(l == 1) then
+        duv = M_ZERO
+        if(lm == -1) then
+          duv(2) = -ylmconst * duvr0
+        else if(lm == 0) then
+          duv(3) =  ylmconst * duvr0
+        else if(lm == 1) then
+          duv(1) = -ylmconst * duvr0
+        end if
+      else
+        duv = M_ZERO
+      end if
+    end if
+
+  end subroutine specie_real_nl_projector
+
+  ! ---------------------------------------------------------
+  ! This routine returns the non-local projector build using 
+  ! spherical harmonics
+  subroutine specie_nl_projector(s, x_atom, x_grid, l, lm, i, uV)
+    type(specie_t),    intent(in)  :: s
+    FLOAT,             intent(in)  :: x_atom(1:MAX_DIM)
+    FLOAT,             intent(in)  :: x_grid(1:MAX_DIM)
+    integer,           intent(in)  :: l, lm, i
+    CMPLX,             intent(out) :: uV
+
+    FLOAT :: r, uVr0, x(MAX_DIM)
+    CMPLX :: ylm
+
+    x(1:MAX_DIM) = x_grid(1:MAX_DIM) - x_atom(1:MAX_DIM)
+
+    r = sqrt(sum(x(1:MAX_DIM)**2))
+
+    uVr0 = loct_splint(s%ps%kb(l, i), r)
+
+    call ylmr(x(1), x(2), x(3), l, lm, ylm)
+    uv = uvr0*ylm
+
+  end subroutine specie_nl_projector
 
   ! ---------------------------------------------------------
   FLOAT function specie_get_nlcc(s, x) result(l)

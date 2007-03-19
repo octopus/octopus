@@ -54,9 +54,7 @@ module specie_pot_m
     specie_get_gdensity,      &
     specie_get_local,         &
     specie_get_glocal,        &
-    specie_get_g2local,       &
-    specie_real_nl_projector, &
-    specie_nl_projector
+    specie_get_g2local
 
 
   integer, parameter :: INITRHO_PARAMAGNETIC  = 1, &
@@ -699,7 +697,7 @@ contains
 
     FLOAT, parameter :: Delta = CNST(1e-4)
     FLOAT :: x(MAX_DIM), r, l1, l2, pot_re, pot_im, time_, dvl_r
-    FLOAT, allocatable :: grho(:, :)
+    FLOAT, allocatable :: grho(:, :), gpot(:)
     integer :: i, ip
 
     gv    = M_ZERO
@@ -746,26 +744,7 @@ contains
       end do
 
     case(SPEC_PS_PSF, SPEC_PS_HGH, SPEC_PS_CPI, SPEC_PS_FHI, SPEC_PS_UPF)
-
-      if (dg_add_localization_density(gr%dgrid)) then
-        
-        ALLOCATE(grho(NP_PART, MAX_DIM), NP_PART*MAX_DIM)
-        
-        call specie_get_gdensity(s, x_atom, gr, grho)
-
-        do i = 1, NDIM
-          call dpoisson_solve(gr, gv(:, i), grho(:, i))
-        end do
-
-        deallocate(grho)
-
-      else 
-
-        gv(1:gr%m%np, 1:3) = M_ZERO
-      
-      end if
-      
-
+#if 0
       do ip = 1, gr%m%np
 
         x(:) = gr%m%x(ip, :) - x_atom(:)
@@ -776,10 +755,33 @@ contains
           else 
             dvl_r = loct_splint(s%ps%dvl, r)
           end if
-          gv(ip, 1:3) = gv(ip, 1:3) -dvl_r*x(1:3)/r
+          gv(ip, 1:3) = -dvl_r*x(1:3)/r
+        else 
+          gv(ip, 1:3) = M_ZERO
         end if
 
       end do
+
+#else 
+      call double_grid_apply_glocal(gr%dgrid, s, gr%m, x_atom, gv(:, :))
+#endif 
+
+      if (dg_add_localization_density(gr%dgrid)) then
+        
+        ALLOCATE(grho(NP, MAX_DIM), NP*MAX_DIM)
+        ALLOCATE(gpot(NP_PART), NP_PART)
+        
+        call specie_get_gdensity(s, x_atom, gr, grho)
+
+        do i = 1, NDIM
+          call dpoisson_solve(gr, gpot(:), grho(:, i))
+          gv(1:gr%m%np, i) = gv(1:gr%m%np, i) + gpot(1:gr%m%np)
+        end do
+
+        deallocate(grho)
+        deallocate(gpot)
+
+      end if
 
     case(SPEC_ALL_E)
       gv(1:gr%m%np, 1:3) = M_ZERO
@@ -827,72 +829,5 @@ contains
     end select
     
   end subroutine specie_get_g2local
-
-  ! ---------------------------------------------------------
-  ! This routine returns the non-local projector and its 
-  ! derivative build using real spherical harmonics
-  subroutine specie_real_nl_projector(s, gr, x_atom, x_grid, l, lm, i, uV, duV)
-    type(specie_t),    intent(in)  :: s
-    type(grid_t),      intent(in)  :: gr
-    FLOAT,             intent(in)  :: x_atom(1:MAX_DIM)
-    FLOAT,             intent(in)  :: x_grid(1:MAX_DIM)
-    integer,           intent(in)  :: l, lm, i
-    FLOAT,             intent(out) :: uV, duV(1:MAX_DIM)
-
-    FLOAT :: r, uVr0, duvr0, ylm, gylm(MAX_DIM), x(MAX_DIM)
-    FLOAT, parameter :: ylmconst = CNST(0.488602511902920) !  = sqr(3/(4*pi))
-
-    x(1:MAX_DIM) = x_grid(1:MAX_DIM) - x_atom(1:MAX_DIM)
-
-    r = sqrt(sum(x(1:MAX_DIM)**2))
-
-    uVr0  = loct_splint(s%ps%kb(l, i), r)
-    duVr0 = loct_splint(s%ps%dkb(l, i), r)
-
-    call grylmr(x(1), x(2), x(3), l, lm, ylm, gylm)
-    uv = uvr0*ylm
-    if(r >= r_small) then
-      duv(:) = duvr0 * ylm * x(:)/r + uvr0 * gylm(:)
-    else
-      if(l == 1) then
-        duv = M_ZERO
-        if(lm == -1) then
-          duv(2) = -ylmconst * duvr0
-        else if(lm == 0) then
-          duv(3) =  ylmconst * duvr0
-        else if(lm == 1) then
-          duv(1) = -ylmconst * duvr0
-        end if
-      else
-        duv = M_ZERO
-      end if
-    end if
-
-  end subroutine specie_real_nl_projector
-
-  ! ---------------------------------------------------------
-  ! This routine returns the non-local projector build using 
-  ! spherical harmonics
-  subroutine specie_nl_projector(s, gr, x_atom, x_grid, l, lm, i, uV)
-    type(specie_t),    intent(in)  :: s
-    type(grid_t),      intent(in)  :: gr
-    FLOAT,             intent(in)  :: x_atom(1:MAX_DIM)
-    FLOAT,             intent(in)  :: x_grid(1:MAX_DIM)
-    integer,           intent(in)  :: l, lm, i
-    CMPLX,             intent(out) :: uV
-
-    FLOAT :: r, uVr0, x(MAX_DIM)
-    CMPLX :: ylm
-
-    x(1:MAX_DIM) = x_grid(1:MAX_DIM) - x_atom(1:MAX_DIM)
-
-    r = sqrt(sum(x(1:MAX_DIM)**2))
-
-    uVr0 = loct_splint(s%ps%kb(l, i), r)
-
-    call ylmr(x(1), x(2), x(3), l, lm, ylm)
-    uv = uvr0*ylm
-
-  end subroutine specie_nl_projector
 
 end module specie_pot_m

@@ -27,6 +27,8 @@ module double_grid_m
   use math_m
   use mesh_m
   use messages_m
+  use functions_m
+  use mesh_function_m
   use lib_oct_m
   use lib_oct_gsl_spline_m
   use lib_oct_parser_m
@@ -41,6 +43,7 @@ module double_grid_m
        double_grid_init, &
        double_grid_end,  &
        double_grid_apply_local,     &
+       double_grid_apply_glocal,    &
        double_grid_apply_non_local, &
        dg_add_localization_density, &
        dg_get_density_correction,   &
@@ -72,10 +75,9 @@ module double_grid_m
   
 contains
   
-  subroutine double_grid_init(this, m, dim)
+  subroutine double_grid_init(this, m)
     type(double_grid_t), intent(out) :: this
     type(mesh_t),        intent(in)  :: m
-    integer,             intent(in)  :: dim
 
     this%nn = 1
     this%h_fine(1:MAX_DIM) = m%h(1:MAX_DIM)/M_THREE
@@ -149,10 +151,12 @@ contains
     FLOAT, allocatable :: vv(:,:,:)
 
     type(loct_spline_t), pointer  :: ps_spline
+    type(loct_spline_t)  :: ft
     FLOAT :: r
     integer :: ip
     integer :: ii, jj, kk, idx(1:3)
     integer :: iw, ipnb, idx_ip(1:3)
+    
 
     if(dg_add_localization_density(this)) then 
       ps_spline => s%ps%vll
@@ -160,14 +164,27 @@ contains
       ps_spline => s%ps%vl
     end if
 
-    if (.not. this%use_double_grid) then 
-      
-      do ip = 1, m%np
-        r = sqrt(sum( (m%x(ip, :) - x_atom(:))**2 ))
-        vl(ip) = loct_splint(ps_spline, r)
-      end do
-      
-    else
+
+    write(message(1),'(a)')         'Info: Integral of the local part of the pseudopotential'
+    call write_info(1)
+
+    if(dg_add_localization_density(this)) then
+      call loct_spline_init(ft)
+      call loct_spline_3dft(ps_spline, ft, CNST(1.0))
+      write(message(1),'(a, f14.6)')  '      exact       = ', loct_splint(ft, CNST(0.0))
+      call write_info(1)
+      call loct_spline_end(ft)  
+    end if
+
+    do ip = 1, m%np
+      r = sqrt(sum( (m%x(ip, :) - x_atom(:))**2 ))
+      vl(ip) = loct_splint(ps_spline, r)
+    end do
+
+    write(message(1),'(a, f14.6)')  '      coarse grid = ', dmf_integrate(m, vl)
+    call write_info(1)
+
+    if (this%use_double_grid) then 
 
       ALLOCATE(vv(-this%nn:this%nn, -this%nn:this%nn, -this%nn:this%nn), (2*this%nn+1)**3 )
 
@@ -200,13 +217,94 @@ contains
 
       vl(1:m%np) = vl(1:m%np) / CNST(27.0)
 
+      write(message(1),'(a, f14.6)')  '      double grid = ', dmf_integrate(m, vl)
+      call write_info(1)
+
       deallocate(vv)
 
     end if
 
   end subroutine double_grid_apply_local
 
-  subroutine double_grid_apply_non_local(this, s, m, x_atom, ns, jxyz, l, lm, ic, vnl)
+  subroutine double_grid_apply_glocal(this, s, m, x_atom, dvl)
+    type(double_grid_t),    intent(in)    :: this
+    type(specie_t), target, intent(in)    :: s
+     type(mesh_t),          intent(in)    :: m
+    FLOAT,                  intent(in)    :: x_atom(1:MAX_DIM)
+    FLOAT,                  intent(out)   :: dvl(:, :)
+    
+    FLOAT, allocatable :: vv(:,:,:,:)
+
+    type(loct_spline_t), pointer  :: ps_spline
+    FLOAT :: r, x(1:3)
+    integer :: ip
+    integer :: ii, jj, kk, idx(1:3)
+    integer :: iw, ipnb, idx_ip(1:3)
+    
+
+    if(dg_add_localization_density(this)) then 
+      ps_spline => s%ps%dvll
+    else
+      ps_spline => s%ps%dvl
+    end if
+
+    if (.not. this%use_double_grid) then 
+      
+      do ip = 1, m%np
+        x(1:3) = m%x(ip, 1:3) - x_atom(1:3)
+        r = sqrt(sum(x(1:3)**2))
+        if ( r > CNST(1e-7) ) then 
+          dvl(ip, 1:3) = -loct_splint(ps_spline, r)*x(1:3)/r
+        else 
+          dvl(ip, 1:3) = M_ZERO
+        end if
+      end do
+ 
+    else
+
+      ALLOCATE(vv(-this%nn:this%nn, -this%nn:this%nn, -this%nn:this%nn, 1:3), (2*this%nn+1)**3*3 )
+
+      dvl(1:m%np, 1:3) = M_ZERO
+
+      do ip = 1, m%np
+        
+        do ii = -this%nn, this%nn
+          do jj = -this%nn, this%nn
+            do kk = -this%nn, this%nn
+              
+              idx = (/ii, jj, kk/)
+              
+              x(1:3) = m%x(ip, 1:3) - x_atom(1:3)
+              r = sqrt(sum(x(1:3)**2))
+              if ( r > CNST(1e-7) ) then 
+                vv(ii, jj, kk, 1:3) = -loct_splint(ps_spline, r) * x(1:3)/r
+              else
+                vv(ii, jj, kk, 1:3) = M_ZERO
+              end if
+
+            end do
+          end do
+        end do
+        
+        do iw = 1, nw
+          idx_ip(1:3) = m%Lxyz(ip, 1:3) + idx_coarse(iw, 1:3)
+          ipnb = m%Lxyz_inv( idx_ip(1), idx_ip(2), idx_ip(3) )
+          if ( ipnb <= m%np ) then 
+            dvl(ipnb, 1:3) = dvl(ipnb, 1:3) + weight(iw) * vv(idx_fine(iw, 1), idx_fine(iw, 2), idx_fine(iw, 3), 1:3)
+          end if
+        end do
+        
+      end do
+
+      dvl(1:m%np, 1:3) = dvl(1:m%np, 1:3) / CNST(27.0)
+
+      deallocate(vv)
+
+    end if
+
+  end subroutine double_grid_apply_glocal
+
+  subroutine double_grid_apply_non_local(this, s, m, x_atom, ns, jxyz, l, lm, ic, vnl, dvnl)
     type(double_grid_t),    intent(in)     :: this
     type(specie_t), target, intent(in)  :: s
     type(mesh_t),           intent(in)  :: m
@@ -217,8 +315,9 @@ contains
     integer,                intent(in)  :: lm
     integer,                intent(in)  :: ic
     FLOAT,                  intent(out) :: vnl(:)
+    FLOAT,                  intent(out) :: dvnl(:, :)
     
-    FLOAT, allocatable :: vv(:,:,:), jxyz_inv(:)
+    FLOAT, allocatable :: vv(:,:,:,:), jxyz_inv(:)
 
     type(loct_spline_t), pointer  :: ps_spline
     FLOAT :: r, ylm, gylm(MAX_DIM), x(MAX_DIM)
@@ -230,10 +329,7 @@ contains
     if (.not. this%use_double_grid) then 
 
       do is = 1, ns
-        x(:) = m%x(jxyz(is), :) - x_atom(:)
-        r = sqrt(sum( (x(:))**2 ))
-        call grylmr(x(1), x(2), x(3), l, lm, ylm, gylm)
-        vnl(is) = loct_splint(ps_spline, r) * ylm
+        call specie_real_nl_projector(s, x_atom, m%x(jxyz(is), :), l, lm, ic, vnl(is), dvnl(is, :))
       end do
 
     else
@@ -245,9 +341,10 @@ contains
        jxyz_inv(jxyz(is)) = is
       end do
 
-      ALLOCATE(vv(-this%nn:this%nn, -this%nn:this%nn, -this%nn:this%nn), (2*this%nn+1)**3 )
+      ALLOCATE(vv(-this%nn:this%nn, -this%nn:this%nn, -this%nn:this%nn, 0:3), (2*this%nn+1)**3*4)
 
       vnl(1:ns) = M_ZERO
+      dvnl(1:ns, 1:3) = M_ZERO
 
       do is = 1, ns
         
@@ -256,10 +353,8 @@ contains
             do kk = -this%nn, this%nn
               
               idx = (/ii, jj, kk/)
-              x(1:3) = m%x(jxyz(is), 1:3) + this%h_fine(1:3)*idx(1:3) - x_atom(1:3)
-              call grylmr(x(1), x(2), x(3), l, lm, ylm, gylm)
-              r = sqrt(sum( x(1:3)**2 ))
-              vv(ii, jj, kk) = loct_splint(ps_spline, r) * ylm
+              x(1:3) = m%x(jxyz(is), 1:3) + this%h_fine(1:3)*idx(1:3)
+              call specie_real_nl_projector(s, x_atom, x, l, lm, ic, vv(ii, jj, kk, 0), vv(ii, jj, kk, 1:3))
               
             end do
           end do
@@ -269,13 +364,16 @@ contains
           idx_ip(1:3) = m%Lxyz(jxyz(is), 1:3) + idx_coarse(iw, 1:3)
           isnb = jxyz_inv(m%Lxyz_inv( idx_ip(1), idx_ip(2), idx_ip(3) ))
           if ( isnb /= 0 ) then 
-            vnl(isnb) = vnl(isnb) + weight(iw) * vv( idx_fine(iw, 1), idx_fine(iw, 2), idx_fine(iw, 3) )
+            vnl(isnb) = vnl(isnb) + weight(iw) * vv(idx_fine(iw, 1), idx_fine(iw, 2), idx_fine(iw, 3), 0)
+            dvnl(isnb, 1:3) = dvnl(isnb, 1:3) + &
+                 weight(iw) * vv(idx_fine(iw, 1), idx_fine(iw, 2), idx_fine(iw, 3), 1:3)
           end if
         end do
         
       end do
 
       vnl(1:ns) = vnl(1:ns) / CNST(27.0)
+      dvnl(1:ns, 1:3) = dvnl(1:ns, 1:3) / CNST(27.0)
 
       deallocate(vv)
       deallocate(jxyz_inv)
