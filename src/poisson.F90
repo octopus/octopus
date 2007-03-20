@@ -353,7 +353,7 @@ contains
       call correct_rho(corrector, gr%m, rho, rho_corrected, vh_correction)
       call poisson_fft(gr%m, pot, rho_corrected, average_to_zero = .true.)
 
-      pot = pot + vh_correction
+      pot(1:NP) = pot(1:NP) + vh_correction(1:NP)
       deallocate(rho_corrected, vh_correction)
 
     case(ISF)
