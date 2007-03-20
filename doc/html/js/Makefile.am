@@ -17,8 +17,8 @@
 ## Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
 ## 02111-1307, USA.
 ##
-## $Id$
+## $Id: Makefile.am 2593 2006-11-20 10:58:15Z marques $
 
-tm2dir = $(pkgdatadir)/recipes/it
+docdir = $(pkgdatadir)/doc/vars
 
-dist_tm2_DATA = polpo_galiziana.txt
+dist_doc_DATA = ftiens4.js ua.js

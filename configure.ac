@@ -102,30 +102,19 @@ case $enable_mpi in
     ;;
 esac
 
-dnl build/install python bits unless --disable-python is used
-dnl set temporarily to default to not enabling.
-AC_ARG_ENABLE([python],
-	      AS_HELP_STRING([--disable-python], [don't build/install python components]),
-	      [ac_cv_build_python=$enableval],
-	      [ac_cv_build_python=yes])
-if test $ac_cv_build_python = yes; then
-  AC_CONFIG_SUBDIRS(python)
-fi
-AM_CONDITIONAL([ENABLE_PYTHON], [test $ac_cv_build_python = yes])
-
 dnl build/install perl bits unless --disable-perl is used
 AC_ARG_ENABLE([perl],
 	      AS_HELP_STRING([--disable-perl], [don't build/install perl components]),
 	      [ac_cv_build_perl=$enableval],
 	      [ac_cv_build_perl=yes])
-if test $ac_cv_build_perl = yes; then
+if test "x$ac_cv_build_perl" = "xyes"; then
   AC_PATH_PROG([PERL], [perl], [], [])
   if test -z "$PERL" ; then
      AC_MSG_WARN([perl not found. Disabling perl parts])
      ac_cv_build_perl="no"
   fi
 fi
-AM_CONDITIONAL([ENABLE_PERL], [test $ac_cv_build_perl = yes])
+AM_CONDITIONAL([ENABLE_PERL], [test x"$ac_cv_build_perl" = x"yes"])
 
 
 dnl try to find out what is the default FORTRAN 90 compiler
@@ -263,11 +252,12 @@ fi
 
 dnl now I run configure for the internal libraries
 AC_CONFIG_SUBDIRS([libstring_f])
-CPPFLAGS="$CPPFLAGS -I../libstring_f"
 
 AC_CONFIG_SUBDIRS([libxc])
 AX_F90_MODULE_FLAG
-FCFLAGS="$FCFLAGS ${ax_f90_modflag}../libxc/src/ ${ax_f90_modflag}../external_libs/qshep"
+F90_MODULE_FLAG=$ax_f90_modflag
+AC_SUBST([F90_MODULE_FLAG])
+
 
 # This is certainly wrong, but I don't know
 # how to do it right
@@ -289,6 +279,9 @@ AC_CONFIG_FILES([Makefile
   doc/Makefile
   doc/pdf/Makefile
   doc/html/Makefile
+  doc/html/icons/Makefile
+  doc/html/js/Makefile
+  doc/html/vars/Makefile
   share/Makefile
   share/PP/Makefile
   share/PP/PSF/Makefile
@@ -306,6 +299,6 @@ AC_CONFIG_FILES([Makefile
   testsuite/finite_systems_3d/Makefile 
   testsuite/periodic_systems_1d/Makefile
 ])
+AC_CONFIG_FILES([testsuite/oct-run_testsuite], [chmod +x testsuite/oct-run_testsuite])
 
 AC_OUTPUT
-

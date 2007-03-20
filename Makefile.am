@@ -21,24 +21,21 @@
 
 ACLOCAL_AMFLAGS = -I m4
 
-if ENABLE_PYTHON
-  PYTHON_DIR = python
-endif
-
 if ENABLE_PERL
   PERL_DIR = perl
 endif
 
 SUBDIRS =        \
 	external_libs libstring_f liboct_parser liboct libxc \
-	src doc share testsuite $(PYTHON_DIR) $(PERL_DIR)
+	src share doc testsuite $(PERL_DIR)
 
 EXTRA_DIST =     \
-	TODO build/*.pl build/*.in debian/*
+	TODO build/mk_varinfo.pl build/var2html.pl build/octopus.spec.in \
+	debian/changelog debian/control debian/copyright debian/dirs     \
+	debian/info debian/README.Debian debian/rules
 
 DISTCLEANFILES = \
 	config.log config.status build/octopus.spec
-
 
 RPM_DIR = $(HOME)/software/rpm
 DEB_DIR = deb-work

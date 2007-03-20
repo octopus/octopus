@@ -1,20 +1,63 @@
 #!/usr/bin/perl
 
-if(!-d 'src' && !-d 'share'){
-  print stderr "Please run this script from the octopus main directory\n";
-  exit 1;
+use Getopt::Std;
+
+getopts "hs:b:";
+
+if($opt_h) {
+    print <<"EndOfUsage";
+
+Usage: mk_varinfo.pl [-b DIR] [-s DIR] [-h]
+
+    -b    The top level build tree directory, . if omitted
+    -s    The top level source tree directory, . if omited
+    -h    This help message
+
+EndOfUsage
+
+    exit 0;
 }
 
-opendir(DIR, 'src');
-@F90 = grep { /\.F90$/ && -f "src/$_" } readdir(DIR);
+$top_srcdir = ($opt_s ? $opt_s : ".");
+$top_builddir = ($opt_b ? $opt_b : ".");
+
+$src = "$top_srcdir/src";
+$share = "$top_builddir/share";
+
+if(!-d $src && !-d $share) {
+    print stderr <<"EndOfErrorMsg";
+
+The src and share directory could not be found. Please run
+this script from the octopus toplevel directory or set -s and
+-b options appropriately.
+
+EndOfErrorMsg
+
+    exit 1;
+}
+
+opendir(DIR, $src);
+@F90 = grep { /\.F90$/ && -f "$src/$_" } readdir(DIR);
 closedir DIR;
 
-open(OUT_text, ">share/varinfo");
-open(OUT_orig, ">share/varinfo_orig");
+# Abort with warning if no *.F90 files were found.
+if($#F90 < 0) {
+    print stderr <<"EndOfWarning";
+
+Warning: No *.F90 files found. Probably, the source directory
+was not set correctly.
+
+EndOfWarning
+
+   exit 2;
+}
+
+open(OUT_text, ">$share/varinfo");
+open(OUT_orig, ">$share/varinfo_orig");
 
 %opt = ();
 foreach $F90file (@F90){
-  open(IN, "<src/$F90file");
+  open(IN, "<$src/$F90file");
   while($_=<IN>){
     if(/!%Variable\s+(\S+)/i){
       $var = $1;
@@ -85,7 +128,7 @@ sub put_opt{
 # reads in share/variables.local, and then prints %opt to share/variables
 sub print_opt{
   # first read in variables.local file
-  open(IN, "<share/variables.local");
+  open(IN, "<$share/variables.local");
   while($_=<IN>){
     if(/^\s*(\S+)\s*=\s*(\S+)/){
       put_opt($1, $2);
@@ -94,7 +137,7 @@ sub print_opt{
   close(IN);
 
   # now print all variables for octopus
-  open(OUT, ">share/variables");
+  open(OUT, ">$share/variables");
   my $key;
   foreach $key (sort(keys %opt)) {
     print OUT $key, " = ", $opt{"$key"}, "\n";

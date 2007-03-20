@@ -25,25 +25,27 @@ SUBDIRS = \
 
 bin_SCRIPTS = oct-run_regression_test.pl oct-run_testsuite
 
-sharedir = $(pkgdatadir)/testsuite
+EXTRA_DIST = oct-run_regression_test.pl oct-run_testsuite.in
 
-EXTRA_DIST = oct-run_regression_test.pl oct-run_testsuite
-
-check: 
-	@./oct-run_testsuite -l -s | tee rlog
+installcheck-local:
+	@$(bindir)/oct-run_testsuite -c -s | tee rlog
 	@echo -e "\033[32;1mPassed: `grep OK rlog | wc -l` / `grep '\[ ' rlog | wc -l` \033[0m"
 	@if [ `grep FAIL rlog | wc -l` != "0"  ] ; \
 	 then echo -e "\033[31;1mFailed: `grep FAIL rlog | wc -l` / `grep '\[ ' rlog | wc -l` \033[0m" ; \
 	 else echo -e "\033[32;1m\nEverything seems to be OK \n\033[0m" ; fi
+	@rm -f rlog
 
+# This target works only after octopus has been installed because the data in
+# $(pkgdatadir)/share is required.
 check-full:
-	@./oct-run_testsuite -l -f | tee rlog
+	@$(srcdir)/oct-run_testsuite -c -d $(srcdir) -l -f | tee rlog
 	@echo -e "\033[32;1mPassed: `grep OK rlog | wc -l` / `grep '\[ ' rlog | wc -l` \033[0m"
 	@if [ `grep FAIL rlog | wc -l` != "0"  ] ; \
 	 then echo -e "\033[31;1mFailed: `grep FAIL rlog | wc -l` / `grep '\[ ' rlog | wc -l` \033[0m" ; \
 	 else echo -e "\033[32;1m\nEverything seems to be OK \n\033[0m" ; fi
+	@rm -f rlog
 
 clean-local:
 	-rm -rf /tmp/octopus.* 
 
-.PHONY: regression_test check clean 
+.PHONY: check-full installcheck-local clean clean-local

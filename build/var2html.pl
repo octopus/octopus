@@ -1,19 +1,48 @@
 #!/usr/bin/perl
 
-# configuration
-$out_dir = "doc/html/vars";
+use Getopt::Std;
 
-if(! -f 'share/varinfo_orig'){
-  print stderr "Please run this script from the octopus main directory\n";
-  exit;
+getopts "hs:b:";
+
+if($opt_h) {
+    print <<"EndOfUsage";
+
+Usage: var2html.pl [-b DIR] [-h]
+
+    -b    The top level build tree directory, . if omitted
+    -h    This help message
+
+EndOfUsage
+
+    exit 0;
 }
+
+$top_srcdir = ($opt_s ? $opt_s : ".");
+$top_builddir = ($opt_b ? $opt_b : ".");
+
+$doc = "$top_builddir/doc";
+$share = "$top_builddir/share";
+
+if(!-f "$share/varinfo_orig") {
+    print stderr <<"EndOfErrorMsg";
+
+The src and share directory could not be found. Please run
+this script from the octopus toplevel directory or set -s and
+-b options appropriately.
+
+EndOfErrorMsg
+
+    exit 1;
+}
+
+# configuration
+$out_dir = "$doc/html/vars";
+
 
 read_varinfo();   # generates %vars
 sort_variables(); # generates @sorted
 
 # make html pages
-`rm -rf $out_dir`;
-mkdir("$out_dir");
 print_index();
 print_alpha();
 print_vars();
@@ -24,7 +53,7 @@ sub read_varinfo(){
   my $key, $arg;
 
   # let us parse the varinfo file
-  open(IN, '<share/varinfo_orig');
+  open(IN, '<$share/varinfo_orig');
   $thisvar = "";
   $thisfield = "";
   while($l = <IN>){
@@ -267,7 +296,7 @@ sub print_vars(){
 sub print_texi(){
   my $i, $k, $sect, $new_sect;
 
-  open(OUT, ">doc/variables.texi");
+  open(OUT, ">$doc/variables.texi");
   print OUT "\@node Input Variables,,,
 \@chapter Input Variables
 

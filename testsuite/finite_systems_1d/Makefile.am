@@ -21,6 +21,26 @@
 
 sharedir = $(pkgdatadir)/testsuite/finite_systems_1d
 
-dist_share_DATA = *.test *.inp
+dist_share_DATA = \
+	01-hydrogen.01-ground_state.inp \
+	01-hydrogen.test \
+	02-neon_mpi.01-ground_state-kli_par_domains.inp \
+	02-neon_mpi.02-td_calc-kli_par_states.inp \
+	02-neon_mpi.test \
+	03-asym_doublewell.01-ground_state.inp \
+	03-asym_doublewell.02-oct_run.inp \
+	03-asym_doublewell.test \
+	04-box.01-ground_state.inp \
+	04-box.02-oct_long.inp \
+	04-box.03-oct_long.inp \
+	04-box.04-oct_long.inp \
+	04-box.05-oct_local.inp \
+	04-box_oct_long.test \
+	05-adw.01-ground_state.inp \
+	05-adw.02-filter_fixed.inp \
+	05-adw.03-filter_indirect.inp \
+	05-adw_oct_features.test \
+	06-eigen_evolution.01-ground_state.inp \
+	06-eigen_evolution.test
 
-CLEANFILES = *~
+CLEANFILES = *~ *.bak

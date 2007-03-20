@@ -1,4 +1,23 @@
-# $Id$
+## Process this file with automake to produce Makefile.in
+
+## Copyright (C) 2002 M. Marques, A. Castro, A. Rubio, G. Bertsch
+##
+## This program is free software; you can redistribute it and/or modify
+## it under the terms of the GNU General Public License as published by
+## the Free Software Foundation; either version 2, or (at your option)
+## any later version.
+##
+## This program is distributed in the hope that it will be useful,
+## but WITHOUT ANY WARRANTY; without even the implied warranty of
+## MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+## GNU General Public License for more details.
+##
+## You should have received a copy of the GNU General Public License
+## along with this program; if not, write to the Free Software
+## Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
+## 02111-1307, USA.
+##
+## $Id$
 
 EXTRA_PROGRAMS = oct-cross-section oct-rsf oct-harmonic-spectrum \
                  oct-broad oct-ph oct-xyz-anim oct-center-geom
@@ -58,7 +77,8 @@ noinst_HEADERS = \
 	kb_projector_inc.F90 hgh_projector_inc.F90 epot_inc.F90 \
 	xc_OEP_inc.F90 h_inc.F90 \
 	eigen_trlan.F90 preconditioners_inc.F90 \
-	eigen_inc.F90 eigen_cg_inc.F90 eigen_plan_inc.F90 eigen_arpack_inc.F90 eigen_evolution_inc.F90 \
+	eigen_inc.F90 eigen_cg_inc.F90 eigen_plan_inc.F90 \
+	eigen_arpack_inc.F90 eigen_evolution_inc.F90 \
 	lcao_inc.F90 crystal.F90 restart_inc.F90 states_inc.F90 states_kpoints.F90 \
 	pes_rc.F90 pes_mask.F90 \
 	td_init.F90 td_calc.F90\
@@ -89,7 +109,7 @@ if COMPILE_LIBNBC
 endif
 
 octopus_LDADD = @LIBS_FFT@ @LIBS_TRLAN@ @LIBS_ARPACK@ @LIBS_SPARSKIT@ \
-  @LIBS_NETCDF@ @LIBS_MPI@ $(core_LIBS) $(external_LIBS) @LIBS_LAPACK@ @LIBS_BLAS@
+  @LIBS_NETCDF@ @LIBS_MPI@ $(core_LIBS) $(external_LIBS)
 
 # now the utility programs
 oct_cross_section_SOURCES = $(basic_SRCS) spectrum.F90 cross_section.F90
@@ -113,9 +133,13 @@ oct_ph_LDADD =  $(core_LIBS) $(external_LIBS)
 oct_center_geom_SOURCES = $(core_SRCS) xyz_adjust.F90 centergeom.F90
 oct_center_geom_LDADD = $(octopus_LDADD)
 
-oct_test_SOURCES = $(core_SRCS) lasers.F90 rkb_projector.F90 kb_projector.F90 hgh_projector.F90 epot.F90 h.F90 preconditioners.F90 linear_solver.F90 linear_response.F90 restart.F90 xc_OEP.F90 v_ks.F90 \
+oct_test_SOURCES = $(core_SRCS) lasers.F90 rkb_projector.F90 kb_projector.F90 \
+	hgh_projector.F90 epot.F90 h.F90 preconditioners.F90 linear_solver.F90 \
+	linear_response.F90 restart.F90 xc_OEP.F90 v_ks.F90 \
 	systm.F90 test.F90
 oct_test_LDADD = $(octopus_LDADD)
+
+AM_FCFLAGS = @F90_MODULE_FLAG@$(top_builddir)/external_libs/qshep
 
 # ctags
 CTAGS=ctags-exuberant -e
@@ -141,7 +165,7 @@ CTAGS=ctags-exuberant -e
 
 # then we actually compile _oct.f90 files and cleanup
 %.o: %_oct.f90
-	@FC@ @FCFLAGS@ @FCFLAGS_NETCDF@ -c @FCFLAGS_f90@ -o $@ $*_oct.f90
+	@FC@ @FCFLAGS@ @FCFLAGS_NETCDF@ $(AM_FCFLAGS) -c @FCFLAGS_f90@ -o $@ $*_oct.f90
 	@rm -f $*_oct.f90
 
 # how to compile global.F90 (have to define some extra variables here)
@@ -152,12 +176,12 @@ global.o: global.F90
 	@FCCPP@ @CPPFLAGS@ -I. -DSHARE_OCTOPUS='"${pkgdatadir}"' -DLATEST_SVN='"${LATEST_SVN}"' \
 		-DOCTOPUS_VERSION='"${VERSION}"' -DBUILD_TIME='"${DATE}"' -DFC='"${FC}"' \
 		-DFCFLAGS='"${FCFLAGS} ${FCFLAGS_f90}"' $< > $*_oct.f90
-	@FC@ @FCFLAGS@ -c @FCFLAGS_f90@ -o $@ $*_oct.f90
+	@FC@ @FCFLAGS@ $(AM_FCFLAGS) -c @FCFLAGS_f90@ -o $@ $*_oct.f90
 	@rm -f $*_oct.f90
 
 # cleaning
 CLEANFILES = *~ *.bak *.mod *.il *.d *.pc* ifc* *_oct.f90 config_F90.h
-DISTCLEANFILES = Makefile.in dirs.h
+DISTCLEANFILES = dirs.h
 
 
 # how to generate config_F90.h

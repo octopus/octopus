@@ -1,21 +1,43 @@
-# $Id$
+## Process this file with automake to produce Makefile.in
+
+## Copyright (C) 2002 M. Marques, A. Castro, A. Rubio, G. Bertsch
+##
+## This program is free software; you can redistribute it and/or modify
+## it under the terms of the GNU General Public License as published by
+## the Free Software Foundation; either version 2, or (at your option)
+## any later version.
+##
+## This program is distributed in the hope that it will be useful,
+## but WITHOUT ANY WARRANTY; without even the implied warranty of
+## MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+## GNU General Public License for more details.
+##
+## You should have received a copy of the GNU General Public License
+## along with this program; if not, write to the Free Software
+## Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
+## 02111-1307, USA.
+##
+## $Id$
 
 SUBDIRS = pdf html
 
 man_MANS = octopus.1 oct-atomic_occupations.1 oct-broad.1 oct-center-geom.1 oct-cross-section.1 \
-        oct-display_partitions.1 oct-harmonic-spectrum.1 oct-ph.1 oct-rsf.1 oct-run_periodic_table.1 \
-        oct-run_regression_test.pl.1 oct-run_testsuite.1 oct-xyz-anim.1
+        oct-display_partitions.1 oct-harmonic-spectrum.1 oct-ph.1 oct-rsf.1 \
+	oct-run_periodic_table.1 oct-run_regression_test.pl.1 oct-run_testsuite.1 oct-xyz-anim.1
 
-EXTRA_DIST = update.el *.pod img/*.eps img/*.jpg
+EXTRA_DIST = \
+	$(man_MANS:.1=.pod) \
+	update.el           \
+	img/cosine.eps      \
+	img/cover.ps        \
+	img/gaussian.eps    \
+	img/octosex.eps     \
+	img/octosex.jpg     \
+	img/ramp.eps
 
-CLEANFILES = *~ *.bak variables.texi
+CLEANFILES = *~ *.bak variables.texi $(man_MANS)
 
 #octopus.1: octopus.pod
 #	pod2man -c "Octopus Documentation" -s 1 octopus.pod > octopus.1
 .pod.1:
 	pod2man -c "octopus documentation" -s 1 $< > $@
-
-../share/varinfo:
-	(cd ../share; $(MAKE) varinfo)
-
-
