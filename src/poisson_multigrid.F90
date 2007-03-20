@@ -216,8 +216,8 @@ contains
     ALLOCATE(vh_correction(gr%m%np), gr%m%np)
 
     call correct_rho(this%corrector, gr%m, rho, rho_corrected, vh_correction)
-    rho_corrected = - M_FOUR*M_PI*rho_corrected
-    pot = pot - vh_correction
+    rho_corrected(1:NP) = - M_FOUR*M_PI*rho_corrected(1:NP)
+    pot(1:NP) = pot(1:NP) - vh_correction(1:NP)
 
     call gridhier_init(phi, gr%mgrid, add_points_for_boundaries=.true.)
     call gridhier_init(phi_ini, gr%mgrid, add_points_for_boundaries=.true.)
@@ -226,7 +226,7 @@ contains
 
     phi(0)%p(1:gr%m%np) = pot(1:gr%m%np)
     phi(0)%p(gr%m%np+1:gr%m%np_part) = M_ZERO
-    tau(0)%p(:) = rho_corrected(:)
+    tau(0)%p(1:gr%m%np) = rho_corrected(1:gr%m%np)
 
     cl = gr%mgrid%n_levels
 

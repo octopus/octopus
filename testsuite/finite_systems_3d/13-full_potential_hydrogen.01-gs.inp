@@ -17,7 +17,3 @@ NonInteractingElectrons = yes
 TypeOfMixing = linear
 Mixing = 1.0
 EigenSolverMaxIter = 300
-
-PoissonSolver=multigrid
-
-DebugLevel=1

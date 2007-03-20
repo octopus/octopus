@@ -517,11 +517,7 @@ contains
     type(grid_t),       target, intent(in)  :: gr
     FLOAT,                      intent(out) :: rho(:, :)
 
-    logical :: conv
-    integer :: dim
-    FLOAT   :: x(1:MAX_DIM+1), chi0(MAX_DIM), startval(MAX_DIM + 1)
-    FLOAT   :: delta, alpha, beta
-    FLOAT   :: r, correction
+    FLOAT   :: x(1:MAX_DIM), r
     integer :: ip
     type(loct_spline_t) :: rho_corr, drho_corr
 
@@ -696,7 +692,7 @@ contains
     FLOAT, optional, intent(in) :: time
 
     FLOAT, parameter :: Delta = CNST(1e-4)
-    FLOAT :: x(MAX_DIM), r, l1, l2, pot_re, pot_im, time_, dvl_r
+    FLOAT :: x(MAX_DIM), r, l1, l2, pot_re, pot_im, time_
     FLOAT, allocatable :: grho(:, :), gpot(:)
     integer :: i, ip
 

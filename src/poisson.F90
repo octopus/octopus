@@ -322,21 +322,21 @@ contains
         ALLOCATE(vh_correction(gr%m%np), gr%m%np)
         potp = M_ZERO; rhop = M_ZERO; rho_corrected = M_ZERO; vh_correction = M_ZERO
         call correct_rho(corrector, gr%m, rho, rho_corrected, vh_correction)
-        pot = pot - vh_correction
+        pot(1:NP) = pot(1:NP) - vh_correction(1:NP)
         call dmf_interpolate(gr%m, hartree_integrator%grid%m, full_interpolation = .false., u = rho_corrected, f = rhop)
         call dmf_interpolate(gr%m, hartree_integrator%grid%m, full_interpolation = .false., u = pot, f = potp)
         call poisson_cg2(hartree_integrator%grid%m, hartree_integrator%grid%f_der%der_discr, potp, rhop)
         call dmf_interpolate(hartree_integrator%grid%m, gr%m, full_interpolation = .false., u = potp, f = pot)
-        pot = pot + vh_correction
+        pot(1:NP) = pot(1:NP) + vh_correction(1:NP)
         deallocate(rho_corrected, vh_correction)
         deallocate(potp, rhop)
       else
         ALLOCATE(rho_corrected(gr%m%np), gr%m%np)
         ALLOCATE(vh_correction(gr%m%np), gr%m%np)
         call correct_rho(corrector, gr%m, rho, rho_corrected, vh_correction)
-        pot = pot - vh_correction
+        pot(1:NP) = pot(1:NP) - vh_correction(1:NP)
         call poisson_cg2(gr%m, gr%f_der%der_discr, pot, rho_corrected)
-        pot = pot + vh_correction
+        pot(1:NP) = pot(1:NP) + vh_correction(1:NP)
         deallocate(rho_corrected, vh_correction)
       end if
 

@@ -131,7 +131,10 @@ contains
       call loct_parse_int(check_inp('LocalizationDensity'), F_NONE, this%loc_function)
     end if
 
-    
+    idx_fine(1:nw, 1:3) = 0
+    idx_coarse(1:nw, 1:3) = 0
+    weight(1:nw) = M_ZERO
+
     call init_data()
 
   end subroutine double_grid_init
@@ -320,7 +323,7 @@ contains
     FLOAT, allocatable :: vv(:,:,:,:), jxyz_inv(:)
 
     type(loct_spline_t), pointer  :: ps_spline
-    FLOAT :: r, ylm, gylm(MAX_DIM), x(MAX_DIM)
+    FLOAT :: x(MAX_DIM)
     integer :: is, iw, isnb, idx_ip(1:MAX_DIM)
     integer :: ii, jj, kk, idx(1:3)
 
