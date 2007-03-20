@@ -1,0 +1,21 @@
+# -*- coding: utf-8 mode: shell-script -*-
+# $Id: 13-full_potential_hydrogen.01-gs.inp 2743 2007-03-12 22:42:13Z xavier $
+
+%Coordinates
+ 'H_f' | 0 | 0 | 0
+%
+%Species 
+ 'H_f' | 1.00794 | spec_all_e | 1
+%
+LCAOStart = no
+Radius = 8.0
+Spacing = 0.4
+fromScratch = yes
+
+NonInteractingElectrons = yes
+
+TypeOfMixing = linear
+Mixing = 1.0
+EigenSolverMaxIter = 300
+
+PoissonSolver=multigrid
