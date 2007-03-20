@@ -58,6 +58,7 @@ module td_write_m
 
 
   type td_write_t
+    private
     C_POINTER :: out_multip
     C_POINTER :: out_coords
     C_POINTER :: out_populations
@@ -221,7 +222,7 @@ contains
       if(w%gs_st%d%ispin == SPINORS) then
         ALLOCATE(w%gs_st%mag(w%gs_st%nst, w%gs_st%d%nik, 2), w%gs_st%nst*w%gs_st%d%nik*2)
       end if
-      call states_allocate_wfns(w%gs_st, gr%m)
+      call states_allocate_wfns(w%gs_st, gr%m, M_CMPLX)
       w%gs_st%node(:)  = 0
       call restart_read(trim(tmpdir)//'restart_gs', w%gs_st, gr, geo, ierr)
       if(ierr.ne.0.and.ierr.ne.(w%gs_st%st_end-w%gs_st%st_start+1)*w%gs_st%d%nik*w%gs_st%d%dim) then
