@@ -37,22 +37,23 @@ EXTRA_DIST =     \
 DISTCLEANFILES = \
 	config.log config.status build/octopus.spec
 
-RPM_DIR = $(HOME)/software/rpm
 DEB_DIR = deb-work
 
 check-full:
 	$(MAKE) -C testsuite check-full
 
 rpm: dist
-	mv -f $(PACKAGE)-$(VERSION).tar.gz $(RPM_DIR)/SOURCES/
-	rpmbuild --clean -ba build/$(PACKAGE).spec
+	@topdir=`rpmbuild --showrc | grep ': *_topdir' | cut -f 2`; \
+	mv -f $(PACKAGE)-$(VERSION).tar.gz $$topdir/SOURCES; \
+	cp build/$(PACKAGE).spec $$topdir/SPECS; \
+	rpmbuild -ba $$topdir/SPECS/$(PACKAGE).spec; \
+	echo "-------------------------------------------------------------"; \
+	echo "  RPMs are built, and are located under:"; \
+	echo "       $$topdir/RPMS/<arch>"; \
+	echo "       $$topdir/SRPMS"; \
+	echo "-------------------------------------------------------------"
 #	scp $(RPM_DIR)/RPMS/*/octopus*.rpm \
 		marques@nautilus.fis.uc.pt:/server/www/tddft.org/programs/octopus/download/
-	@echo "-------------------------------------------------------------"
-	@echo "  RPMs are built, and are located under:"
-	@echo "       $(RPM_DIR)/RPMS/<arch>"
-	@echo "       $(RPM_DIR)/SRPMS"
-	@echo "-------------------------------------------------------------"
 
 deb: dist
 	rm -rf $(DEB_DIR)

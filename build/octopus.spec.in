@@ -11,17 +11,20 @@
 #
 # RPM.  To build, use the command: rpm --clean -ba @PACKAGE@.spec
 #
-# Alternatively, you can just use 'make rpm' (as root).
+# Alternatively, you can just use 'make rpm'.
 #
 Name: @PACKAGE@
 Summary: real-space, real-time, TDDFT code
 Version: @VERSION@
 Release: 1
+Provides: %{name}
 License: GPL 2.0
-Group: Programs
-BuildRoot: %{_tmppath}/%{name}-buildroot
-Source: http://www.tddft.org/programs/octopus/download/@PACKAGE@-@VERSION@.tar.gz
+Group: Applications/Scientific
+Prefix: /usr
+BuildRoot: %{_tmppath}/%{name}-%{version}-buildroot
+Source: http://www.tddft.org/programs/octopus/download/%{name}-%{version}.tar.gz
 URL: http://www.tddft.org/programs/octopus
+
 %description
 octopus is a computer package aimed at the simulation of the electron-ion 
 dynamics of finite systems, both in one and three dimensions, under the 
@@ -40,20 +43,55 @@ of a variety of systems, from small clusters to medium sized quantum dots.
 rm -rf $RPM_BUILD_ROOT
 %setup -q
 
+# The installation is also performed in the %%build stage because the
+# code has to be configured twice, with and without MPI support, and
+# cleaned in between.
 %build
-
 %configure \
-  FC="@FC@" FCFLAGS="@FCFLAGS@" CFLAGS="@CFLAGS@" \
-  LDFLAGS="@LDFLAGS@" LDFCFLAGS="@LDFCFLAGS@" \
-  LIBS_BLAS="@LIBS_BLAS@" LIBS_LAPACK="@LIBS_LAPACK@" \
-  --with-netcdf
+  FC="@FC@" \
+  FCFLAGS="@FCFLAGS@" \
+  CFLAGS="@CFLAGS@" \
+  CPPFLAGS="@CPPFLAGS@" \
+  LDFLAGS="@LDFLAGS@" \
+  LIBS_BLAS="@LIBS_BLAS@" \
+  LIBS_LAPACK="@LIBS_LAPACK@" \
+  LIBS_FFT="@LIBS_FFT@" \
+  GSL_CFLAGS="@GSL_CFLAGS@" \
+  GSL_CONFIG="@GSL_CONFIG@" \
+  GSL_LIBS="@GSL_LIBS@" \
+  --with-sparskit="@LIBS_SPARSKIT@" \
+  --with-arpack="@LIBS_ARPACK@" \
+  --with-netcdf="@LIBS_NETCDF@" \
+  --enable-mpi
 
 make
+
+make install DESTDIR=${RPM_BUILD_ROOT}
+
+make clean
+
+%configure \
+  FC="@FC@" \
+  FCFLAGS="@FCFLAGS@" \
+  CFLAGS="@CFLAGS@" \
+  CPPFLAGS="@CPPFLAGS@" \
+  LDFLAGS="@LDFLAGS@" \
+  LIBS_BLAS="@LIBS_BLAS@" \
+  LIBS_LAPACK="@LIBS_LAPACK@" \
+  LIBS_FFT="@LIBS_FFT@" \
+  GSL_CFLAGS="@GSL_CFLAGS@" \
+  GSL_CONFIG="@GSL_CONFIG@" \
+  GSL_LIBS="@GSL_LIBS@" \
+  --with-sparskit="@LIBS_SPARSKIT@" \
+  --with-arpack="@LIBS_ARPACK@" \
+  --with-netcdf="@LIBS_NETCDF@"
+
+make
+
 (cd doc; make octopus.ps; gzip octopus.ps)
 
-%install
+make install DESTDIR=${RPM_BUILD_ROOT}
 
-%makeinstall
 
 %clean
 rm -rf ${RPM_BUILD_ROOT}
@@ -61,7 +99,6 @@ rm -rf ${RPM_BUILD_ROOT}
 %files
 %defattr(-,root,root,0755)
 %doc README NEWS COPYING AUTHORS doc/octopus.ps.* doc/pdf/*.pdf
-%doc %{_infodir}/octopus*
 %{_bindir}/*
 %{_datadir}/octopus/*
 %{_mandir}/man1/*
