@@ -20,7 +20,7 @@
 
 #include "global.h"
 
-module wave_matching_m
+module td_transport_m
   use datasets_m
   use messages_m
 
@@ -28,17 +28,17 @@ module wave_matching_m
 
   private
   public :: &
-    wave_matching_run
+    td_transport_run
 
 
 contains
 
   ! ---------------------------------------------------------
-  subroutine wave_matching_run()
+  subroutine td_transport_run()
 !!$    type(system_t)       :: sys
 !!$    type(hamiltonian_t)  :: h
 
-    call push_sub('wave_matching.wave_matching_run')
+    call push_sub('td_transport.td_transport_run')
 
     call check_params()
 
@@ -82,7 +82,7 @@ contains
 
     end subroutine check_params
 
-  end subroutine wave_matching_run
+  end subroutine td_transport_run
 
 
-end module wave_matching_m
+end module td_transport_m

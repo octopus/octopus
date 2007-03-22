@@ -47,7 +47,7 @@ module run_prog_m
   use units_m
   use unocc_m
   use vdw_m
-  use wave_matching_m
+  use td_transport_m
 
   implicit none
 
@@ -67,7 +67,7 @@ module run_prog_m
     M_OPT_CONTROL        =   7,  &
     M_LR_POL             =   8,  &
     M_CASIDA             =   9,  &
-    M_WAVE_MATCHING      =  10,  &
+    M_TD_TRANSPORT       =  10,  &
     M_VDW                =  11,  &
     M_PHONONS_LR         =  12,  &
     M_BO_MD              =  98,  &
@@ -120,8 +120,8 @@ contains
       call opt_control_run(sys, h)
     case(M_CASIDA)
       call casida_run(sys, h, fromScratch)
-    case(M_WAVE_MATCHING)
-      call wave_matching_run()
+    case(M_TD_TRANSPORT)
+      call td_transport_run()
     case(M_PULPO_A_FEIRA)
       call pulpo_print()
     end select
