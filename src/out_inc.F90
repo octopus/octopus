@@ -316,6 +316,8 @@ contains
          call transpose3(x, im%RS)
          call ncdf_error('nf90_get_var', status, file, ierr)
        end if
+    else
+       im%RS = M_ZERO
     end if
 #else
     if(status == NF90_NOERR) then
