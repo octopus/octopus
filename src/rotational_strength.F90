@@ -15,7 +15,6 @@
 !! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
 !! 02111-1307, USA.
 !!
-!! -*- coding: utf-8 mode: f90 -*-
 !! $Id$
 
 #include "global.h"
@@ -63,3 +62,8 @@ program rotational_strength
   call parser_end()
   call global_end()
 end program rotational_strength
+
+!! Local Variables:
+!! mode: f90
+!! coding: utf-8
+!! End:

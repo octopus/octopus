@@ -15,7 +15,6 @@
 !! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
 !! 02111-1307, USA.
 !!
-!! -*- coding: utf-8 mode: f90 -*-
 !! $Id$
 
 ! ---------------------------------------------------------
@@ -464,3 +463,8 @@ subroutine X(f_l2)(sb, f_der, f, l2f, ghost_update)
   deallocate(gf, ggf)
   call pop_sub()
 end subroutine X(f_l2)
+
+!! Local Variables:
+!! mode: f90
+!! coding: utf-8
+!! End:

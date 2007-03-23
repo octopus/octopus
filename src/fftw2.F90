@@ -15,7 +15,6 @@
 !! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
 !! 02111-1307, USA.
 !!
-!! -*- coding: utf-8 mode: f90 -*-
 !! $Id$
 
 ! /* Note: in fftw2, the routines in single and double precision have the
@@ -348,3 +347,8 @@ contains
   end function pad_feq
 
 end module fft_m
+
+!! Local Variables:
+!! mode: f90
+!! coding: utf-8
+!! End:

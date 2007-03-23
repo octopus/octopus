@@ -15,7 +15,6 @@
 !! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
 !! 02111-1307, USA.
 !!
-!! -*- coding: utf-8 mode: f90 -*-
 !! $Id$
 
 
@@ -85,3 +84,8 @@ subroutine X(two_body) (gr, st)
 
   call io_close(iunit)
 end subroutine X(two_body)
+
+!! Local Variables:
+!! mode: f90
+!! coding: utf-8
+!! End:

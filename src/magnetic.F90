@@ -15,7 +15,6 @@
 !! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
 !! 02111-1307, USA.
 !!
-!! -*- coding: utf-8 mode: f90 -*-
 !! $Id: states.F90 2515 2006-10-24 17:13:30Z acastro $
 
 #include "global.h"
@@ -190,3 +189,8 @@ contains
 
 
 end module magnetic_m
+
+!! Local Variables:
+!! mode: f90
+!! coding: utf-8
+!! End:

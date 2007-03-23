@@ -15,7 +15,6 @@
 !! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
 !! 02111-1307, USA.
 !!
-!! -*- coding: utf-8 mode: f90 -*-
 !! $Id: em_resp.F90 2647 2007-01-09 18:02:46Z lorenzen $
 
 #include "global.h"
@@ -220,3 +219,8 @@ contains
 #include "sternheimer_inc.F90"
 
 end module sternheimer_m
+
+!! Local Variables:
+!! mode: f90
+!! coding: utf-8
+!! End:

@@ -15,7 +15,6 @@
 !! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
 !! 02111-1307, USA.
 !!
-!! -*- coding: utf-8 mode: f90 -*-
 !! $Id: states_inc.F90 2361 2006-08-12 20:24:24Z appel $
 
 
@@ -253,3 +252,8 @@ subroutine X(calculate_matrix)(m, ik, st1, st2, a)
 
   call pop_sub()
 end subroutine X(calculate_matrix)
+
+!! Local Variables:
+!! mode: f90
+!! coding: utf-8
+!! End:

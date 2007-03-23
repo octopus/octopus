@@ -15,7 +15,6 @@
 !! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
 !! 02111-1307, USA.
 !!
-!! -*- coding: utf-8 mode: f90 -*-
 !! $Id$
 
 
@@ -80,3 +79,8 @@ subroutine X(eigen_diagon_subspace) (gr, st, h, diff)
   deallocate(f, h_subspace, vec)
 
 end subroutine X(eigen_diagon_subspace) 
+
+!! Local Variables:
+!! mode: f90
+!! coding: utf-8
+!! End:

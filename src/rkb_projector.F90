@@ -15,7 +15,6 @@
 !! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
 !! 02111-1307, USA.
 !!
-!! -*- coding: utf-8 mode: f90 -*-
 !! $Id: epot.F90 2648 2007-01-09 19:08:10Z lorenzen $
 
 #include "global.h"
@@ -263,3 +262,8 @@ contains
   end function rkb_dproject
 
 end module rkb_projector_m
+
+!! Local Variables:
+!! mode: f90
+!! coding: utf-8
+!! End:

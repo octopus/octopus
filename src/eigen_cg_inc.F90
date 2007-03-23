@@ -15,7 +15,6 @@
 !! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
 !! 02111-1307, USA.
 !!
-!! -*- coding: utf-8 mode: f90 -*-
 !! $Id$
 
 ! ---------------------------------------------------------
@@ -399,3 +398,8 @@ subroutine X(eigen_solver_cg2_new) (gr, st, h, tol, niter, converged, diff, reor
 
   call pop_sub()
 end subroutine X(eigen_solver_cg2_new)
+
+!! Local Variables:
+!! mode: f90
+!! coding: utf-8
+!! End:

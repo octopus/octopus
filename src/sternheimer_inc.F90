@@ -15,7 +15,6 @@
 !! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
 !! 02111-1307, USA.
 !!
-!! -*- coding: utf-8 mode: f90 -*-
 !! $Id: em_resp_inc.F90 2663 2007-01-25 09:04:29Z lorenzen $
 
 
@@ -296,3 +295,8 @@ subroutine X(sternheimer_calc_hvar)(this, sys, h, lr, nsigma, vext, hvar)
   call pop_sub()
 
 end subroutine X(sternheimer_calc_hvar)
+
+!! Local Variables:
+!! mode: f90
+!! coding: utf-8
+!! End:

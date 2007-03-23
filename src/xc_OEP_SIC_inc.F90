@@ -15,7 +15,6 @@
 !! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
 !! 02111-1307, USA.
 !!
-!! -*- coding: utf-8 mode: f90 -*-
 !! $Id$
 
 ! ---------------------------------------------------------
@@ -88,3 +87,8 @@ subroutine X(oep_sic) (xcs, gr, st, is, oep, ex, ec)
   call pop_sub()
   call profiling_out(C_PROFILING_XC_SIC)
 end subroutine X(oep_sic)
+
+!! Local Variables:
+!! mode: f90
+!! coding: utf-8
+!! End:

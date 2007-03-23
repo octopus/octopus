@@ -15,7 +15,6 @@
 !! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
 !! 02111-1307, USA.
 !!
-!! -*- coding: utf-8 mode: f90 -*-
 !! $Id$
 
 #include "global.h"
@@ -160,3 +159,8 @@ contains
   end function check_inp
 
 end module datasets_m
+
+!! Local Variables:
+!! mode: f90
+!! coding: utf-8
+!! End:

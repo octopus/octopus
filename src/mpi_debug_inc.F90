@@ -15,7 +15,6 @@
 !! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
 !! 02111-1307, USA.
 !!
-!! -*- coding: utf-8 mode: f90 -*-
 !! $Id$
 
 ! ---------------------------------------------------------
@@ -132,3 +131,8 @@ subroutine TS(MPI_Allreduce)(sendbuf, recvbuf, count, datatype, op, &
   call MPI_Debug_OUT(comm, C_MPI_ALLREDUCE)
 
 end subroutine TS(MPI_Allreduce)
+
+!! Local Variables:
+!! mode: f90
+!! coding: utf-8
+!! End:

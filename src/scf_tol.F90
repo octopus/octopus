@@ -15,7 +15,6 @@
 !! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
 !! 02111-1307, USA.
 !!
-!! -*- coding: utf-8 mode: f90 -*-
 !! $Id: linear_response.F90 2647 2007-01-09 18:02:46Z lorenzen $
 
 #include "global.h"
@@ -181,3 +180,8 @@ contains
   end subroutine scf_tol_end
 
 end module scf_tol_m
+
+!! Local Variables:
+!! mode: f90
+!! coding: utf-8
+!! End:

@@ -15,7 +15,6 @@
 !! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
 !! 02111-1307, USA.
 !!
-!! -*- coding: utf-8 mode: f90 -*-
 !! $Id$
 
 
@@ -111,3 +110,8 @@ subroutine X(restart_read_lr_rho)(lr, gr, nspin, restart_dir, rho_tag, ierr)
 
 end subroutine X(restart_read_lr_rho)
 
+
+!! Local Variables:
+!! mode: f90
+!! coding: utf-8
+!! End:

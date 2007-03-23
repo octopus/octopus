@@ -15,7 +15,6 @@
 !! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
 !! 02111-1307, USA.
 !!
-!! -*- coding: utf-8 mode: f90 -*-
 !! $Id$
 
 #if defined(SINGLE_PRECISION)
@@ -427,3 +426,8 @@ subroutine zsvd_inverse(n, a, threshold)
 
   deallocate(sg_values, vt, u)
 end subroutine zsvd_inverse
+
+!! Local Variables:
+!! mode: f90
+!! coding: utf-8
+!! End:

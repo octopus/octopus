@@ -375,3 +375,8 @@
  weight(         124 ) = CNST(   2.00000000000000      ) / CNST(   27.00000     )
  weight(         125 ) = CNST(   1.00000000000000      ) / CNST(   27.00000     )
  end subroutine init_data
+
+!! Local Variables:
+!! mode: f90
+!! coding: utf-8
+!! End:

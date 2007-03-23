@@ -15,7 +15,6 @@
 !! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
 !! 02111-1307, USA.
 !!
-!! -*- coding: utf-8 mode: f90 -*-
 !! $Id: poisson.F90 2544 2006-11-03 17:41:04Z xavier $
 
 #include "global.h"
@@ -192,3 +191,8 @@ contains
   end subroutine poisson_isf_end
 
 end module poisson_isf_m
+
+!! Local Variables:
+!! mode: f90
+!! coding: utf-8
+!! End:

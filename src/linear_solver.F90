@@ -15,7 +15,6 @@
 !! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
 !! 02111-1307, USA.
 !!
-!! -*- coding: utf-8 mode: f90 -*-
 !! $Id: linear_response.F90 2647 2007-01-09 18:02:46Z lorenzen $
 
 #include "global.h"
@@ -222,3 +221,8 @@ contains
 #include "linear_solver_inc.F90"
 
 end module linear_solver_m
+
+!! Local Variables:
+!! mode: f90
+!! coding: utf-8
+!! End:

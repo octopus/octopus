@@ -47,3 +47,8 @@ end subroutine xc_oep_kernel_init
 #include "xc_OEP_kernel_inc.F90"
 
 end module xc_oep_kernel_m
+
+!! Local Variables:
+!! mode: f90
+!! coding: utf-8
+!! End:

@@ -1,4 +1,3 @@
-!! -*- coding: utf-8 mode: f90 -*-
 !! $Id$
 
 
@@ -1530,3 +1529,8 @@
       end subroutine rlv
 
       end module crystal_m
+
+!! Local Variables:
+!! mode: f90
+!! coding: utf-8
+!! End:

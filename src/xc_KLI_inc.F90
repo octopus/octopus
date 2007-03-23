@@ -15,7 +15,6 @@
 !! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
 !! 02111-1307, USA.
 !!
-!! -*- coding: utf-8 mode: f90 -*-
 !! $Id$
 
 ! ---------------------------------------------------------
@@ -159,3 +158,8 @@ subroutine X(xc_KLI_solve) (m, st, is, oep)
   call profiling_out(C_PROFILING_XC_KLI)
 end subroutine X(xc_KLI_solve)
 
+
+!! Local Variables:
+!! mode: f90
+!! coding: utf-8
+!! End:

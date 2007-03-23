@@ -15,7 +15,6 @@
 !! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
 !! 02111-1307, USA.
 !!
-!! -*- coding: utf-8 mode: f90 -*-
 !! $Id: em_resp.F90 2686 2007-02-03 22:10:51Z xavier $
 
 #include "global.h"
@@ -359,3 +358,8 @@ contains
   end function phn_wfs_tag
 
 end module phonons_lr_m
+
+!! Local Variables:
+!! mode: f90
+!! coding: utf-8
+!! End:

@@ -15,7 +15,6 @@
 !! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
 !! 02111-1307, USA.
 !!
-!! -*- coding: utf-8 mode: f90 -*-
 !! $Id$
 
 
@@ -209,3 +208,8 @@ subroutine X(bi_conjugate_gradients)(np, x, b, op, opt, dotp, iter, residue, thr
 
   call pop_sub()
 end subroutine X(bi_conjugate_gradients)
+
+!! Local Variables:
+!! mode: f90
+!! coding: utf-8
+!! End:

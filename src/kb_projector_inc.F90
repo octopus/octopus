@@ -15,7 +15,6 @@
 !! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
 !! 02111-1307, USA.
 !!
-!! -*- coding: utf-8 mode: f90 -*-
 !! $Id: epot.F90 2648 2007-01-09 19:08:10Z lorenzen $
 
 
@@ -123,3 +122,8 @@ function X(kb_dproject)(mesh, kb_p, dim, psi, phases) result(res)
 #endif
 
 end function X(kb_dproject)
+
+!! Local Variables:
+!! mode: f90
+!! coding: utf-8
+!! End:

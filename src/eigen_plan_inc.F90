@@ -15,7 +15,6 @@
 !! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
 !! 02111-1307, USA.
 !!
-!! -*- coding: utf-8 mode: f90 -*-
 !! $Id$
 
 !! This subroutine implements the preconditioned Lanczos eigensolver as
@@ -327,3 +326,8 @@ contains
   end subroutine residual
 
 end subroutine X(eigen_solver_plan)
+
+!! Local Variables:
+!! mode: f90
+!! coding: utf-8
+!! End:

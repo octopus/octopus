@@ -15,7 +15,6 @@
 !! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
 !! 02111-1307, USA.
 !!
-!! -*- coding: utf-8 mode: f90 -*-
 !! $Id$
 
 ! ---------------------------------------------------------
@@ -460,3 +459,8 @@ logical function in_wigner_seitz_cell(k_point, klat) result(in_cell)
 
   call pop_sub()
 end function in_wigner_seitz_cell
+
+!! Local Variables:
+!! mode: f90
+!! coding: utf-8
+!! End:

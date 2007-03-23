@@ -15,7 +15,6 @@
 !! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
 !! 02111-1307, USA.
 !!
-!! -*- coding: utf-8 mode: f90 -*-
 !! $Id$
 
 
@@ -208,3 +207,8 @@ contains
 #endif
 
 end module mpi_debug_m
+
+!! Local Variables:
+!! mode: f90
+!! coding: utf-8
+!! End:

@@ -15,7 +15,6 @@
 !! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
 !! 02111-1307, USA.
 !!
-!! -*- coding: utf-8 mode: f90 -*-
 !! $Id: specie.F90 2711 2007-02-13 17:36:18Z xavier $
 
 #include "global.h"
@@ -456,3 +455,8 @@ contains
 #include "double_grid_data.F90"
 
 end module double_grid_m
+
+!! Local Variables:
+!! mode: f90
+!! coding: utf-8
+!! End:

@@ -15,7 +15,6 @@
 !! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
 !! 02111-1307, USA.
 !!
-!! -*- coding: utf-8 mode: f90 -*-
 !! $Id$
 
 #define R_TINTEGER  1
@@ -32,3 +31,8 @@
 #define R_AIMAG(x)  (M_ZERO)
 
 #define TS(x)       TSI_ ## x
+
+!! Local Variables:
+!! mode: f90
+!! coding: utf-8
+!! End:

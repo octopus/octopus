@@ -15,7 +15,6 @@
 !! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
 !! 02111-1307, USA.
 !!
-!! -*- coding: utf-8 mode: f90 -*-
 !! $Id$
 
 #include "global.h"
@@ -54,3 +53,8 @@ program phonon_spectrum
   call global_end()
 
 end program phonon_spectrum
+
+!! Local Variables:
+!! mode: f90
+!! coding: utf-8
+!! End:

@@ -15,13 +15,11 @@
 !! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
 !! 02111-1307, USA.
 !!
-!! -*- coding: utf-8 mode: f90 -*-
 !! $Id$
 
 #include "global.h"
 
 module td_transport_m
-  use datasets_m
   use messages_m
 
   implicit none
@@ -35,54 +33,17 @@ contains
 
   ! ---------------------------------------------------------
   subroutine td_transport_run()
-!!$    type(system_t)       :: sys
-!!$    type(hamiltonian_t)  :: h
-
     call push_sub('td_transport.td_transport_run')
 
-    call check_params()
+    message(1) = 'Time dependent quantum transport not yet implemented.'
+    call write_fatal(1)
 
     call pop_sub()
-
-
-  contains
-
-    ! ---------------------------------------------------------
-    subroutine check_params()
-
-      if( current_dataset-1 .lt. 1 ) then
-        message(1) = 'Error: Missing left neighbor'
-        message(2) = 'Please correct your input file'
-        call write_fatal(2)
-      end if
-
-      if( current_dataset+1 .gt. no_datasets ) then
-        message(1) = 'Error: Missing right neighbor'
-        message(2) = 'Please correct your input file'
-        call write_fatal(2)
-      end if
-
-      if( dataset_runmode(current_dataset-1) .eq. 10 ) then
-        message(1) = 'Error: Left neighbor cannot be in runmode wave_matching'
-        message(2) = 'Please correct your input file'
-        call write_fatal(2)
-      end if
-
-      if( dataset_runmode(current_dataset+1) .eq. 10 ) then
-        message(1) = 'Error: Right neighbor cannot be in runmode wave_matching'
-        message(2) = 'Please correct your input file'
-        call write_fatal(2)
-      end if
-
-      message(1) = 'Info: Starting Wave-Matching'
-      message(2) = 'Info: We are                    : '//dataset_label(current_dataset)
-      message(3) = 'Info: Our left neighbor is      : '//dataset_label(current_dataset-1)
-      message(4) = 'Info: And our right neighbor is : '//dataset_label(current_dataset+1)
-      call write_info(4, stress=.true.)
-
-    end subroutine check_params
-
   end subroutine td_transport_run
-
-
 end module td_transport_m
+
+
+!! Local Variables:
+!! mode: f90
+!! coding: utf-8
+!! End:

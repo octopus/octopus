@@ -52,3 +52,8 @@ subroutine X(xc_oep_kernel_calc)(sys, h, lr, nsigma, fxcn)
   deallocate(r, s, t)
 
 end subroutine X(xc_oep_kernel_calc)
+
+!! Local Variables:
+!! mode: f90
+!! coding: utf-8
+!! End:

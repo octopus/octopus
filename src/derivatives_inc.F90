@@ -15,7 +15,6 @@
 !! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
 !! 02111-1307, USA.
 !!
-!! -*- coding: utf-8 mode: f90 -*-
 !! $Id$
 
 ! This module calculates the derivatives (gradients, laplacians, etc.) 
@@ -236,3 +235,8 @@ subroutine X(zero_bc)(m, f)
 
   call pop_sub()
 end subroutine X(zero_bc)
+
+!! Local Variables:
+!! mode: f90
+!! coding: utf-8
+!! End:
