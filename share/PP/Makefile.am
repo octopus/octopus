@@ -23,3 +23,23 @@ SUBDIRS = PSF HGH
 
 ppdir = $(pkgdatadir)/PP
 dist_pp_DATA = defaults
+
+
+# In order to get `make check' working with a `VPATH' build (e. g. to use
+# the `distcheck' target) the pseudopotential files have to be accessible
+# in the build tree.
+check:
+	@for f in $(dist_pp_DATA); do \
+	  if [ ! -e $$f -o $$f -ot $(srcdir)/$$f ]; then \
+	    cp $(srcdir)/$$f $$f; \
+	  fi \
+	done
+
+check-full: check
+
+clean-local:
+	@if [ "$(builddir)" != "$(srcdir)" ]; then \
+	  rm -f $(dist_pp_DATA); \
+	fi
+
+.PHONY: check check-full

@@ -4,6 +4,7 @@
 
 use Getopt::Std;
 use File::Basename;
+use Fcntl ':mode';
 
 
 sub usage {
@@ -212,6 +213,10 @@ foreach my $octopus_exe (@executables){
      if( -f $input_file ) {
        print "\n\nUsing input file : $input_file \n";
        system("cp $input_file $workdir/inp");
+       # Ensure, that the input file is writable so that it can
+       # be overwritten by the next test.
+       $mode = (stat "$workdir/inp")[2];
+       chmod $mode|S_IWUSR, "$workdir/inp";
      } else {
        die "could not find input file: $input_file\n";
      }

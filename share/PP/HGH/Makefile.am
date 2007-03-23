@@ -150,3 +150,23 @@ dist_hgh_DATA = \
 	Zn_sc.hgh \
 	Zr.hgh \
 	Zr_sc.hgh
+
+
+# In order to get `make check' working with a `VPATH' build (e. g. to use
+# the `distcheck' target) the pseudopotential files have to be accessible
+# in the build tree.
+check:
+	@for f in $(dist_hgh_DATA); do \
+	  if [ ! -e $$f -o $$f -ot $(srcdir)/$$f ]; then \
+	    cp $(srcdir)/$$f $$f; \
+	  fi \
+	done
+
+check-full: check
+
+clean-local:
+	@if [ "$(builddir)" != "$(srcdir)" ]; then \
+	  rm -f $(dist_hgh_DATA); \
+	fi
+
+.PHONY: check check-full

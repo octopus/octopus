@@ -19,9 +19,9 @@
 ##
 ## $Id$
 
-tm2dir = $(pkgdatadir)/PP/PSF
+psfdir = $(pkgdatadir)/PP/PSF
 
-dist_tm2_DATA = \
+dist_psf_DATA = \
 	Ar.psf \
 	As.psf \
 	Au.psf \
@@ -39,3 +39,23 @@ dist_tm2_DATA = \
 	S.psf \
 	Ti.psf \
 	Xe.psf
+
+
+# In order to get `make check' working with a `VPATH' build (e. g. to use
+# the `distcheck' target) the pseudopotential files have to be accessible
+# in the build tree.
+check:
+	@for f in $(dist_psf_DATA); do \
+	  if [ ! -e $$f -o $$f -ot $(srcdir)/$$f ]; then \
+	    cp $(srcdir)/$$f $$f; \
+	  fi \
+	done
+
+check-full: check
+
+clean-local:
+	@if [ "$(builddir)" != "$(srcdir)" ]; then \
+	  rm -f $(dist_psf_DATA); \
+	fi
+
+.PHONY: check check-full
