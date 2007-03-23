@@ -133,11 +133,11 @@ contains
     ! Get epoch time at node startup, just after the barrier to synchronize nodes first.
     call loct_gettimeofday(s_epoch_sec, s_epoch_usec)
 
-    ! Get the environment variable OCTOPUS_INSTALL_DIR, that overrides SHARE_OCTOPUS/share/octopus
-    call loct_getenv("OCTOPUS_ROOT", share)
+    ! Get the environment variable OCTOPUS_SHARE that overrides SHARE_OCTOPUS/share/octopus.
+    call loct_getenv("OCTOPUS_SHARE", share)
 
     if(share.ne."") then
-      conf%share = trim(share)//'/share/octopus'
+      conf%share = trim(share)
     else
       conf%share = SHARE_OCTOPUS
     end if
