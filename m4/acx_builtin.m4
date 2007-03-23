@@ -1,4 +1,4 @@
-dnl This macros check for the presence of builtin compiler macros
+dnl These macros check for the presence of builtin compiler macros
 
 AC_DEFUN([ACX_C_BUILTIN_EXPECT],[
     AC_MSG_CHECKING(for __builtin_expect)
@@ -21,8 +21,6 @@ AC_DEFUN([ACX_C_BUILTIN_EXPECT],[
 ])
 
 
-
-
 AC_DEFUN([ACX_C_BUILTIN_PREFETCH],[
     AC_MSG_CHECKING(for __builtin_prefetch)
     AC_LANG(C)
@@ -42,5 +40,3 @@ AC_DEFUN([ACX_C_BUILTIN_PREFETCH],[
         AC_MSG_RESULT(no)
       ])
 ])
-
-

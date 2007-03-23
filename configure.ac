@@ -42,7 +42,6 @@ AC_PROG_CC
 # optimizations extensions supported by the compiler
 AC_C_INLINE
 AC_C_RESTRICT
-ACX_C_BUILTIN_EXPECT
 ACX_C_BUILTIN_PREFETCH
 ACX_GCC_VECTORS
 

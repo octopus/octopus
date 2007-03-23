@@ -25,12 +25,9 @@
 #define CACHELINE 64 
 #define UNROLL    6
 
-/* If the __builtin_expect and __builtin_prefetch are not present (which
-   should have be caught by the configure script, one needs  to define
-   dummy preprocessor macros */
-#if !defined(HAVE_BUILTIN_EXPECT)
-#define __builtin_expect(a, b) (a)
-#endif
+/* If __builtin_prefetch is not present (which should have been caught
+   by the configure script) one needs to define dummy a preprocessor
+   macro. */
 #if !defined(HAVE_BUILTIN_PREFETCH)
 #define __builtin_prefetch(a, b, c)
 #endif
