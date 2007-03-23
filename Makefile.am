@@ -30,7 +30,7 @@ SUBDIRS =        \
 	src share doc testsuite $(PERL_DIR)
 
 EXTRA_DIST =     \
-	TODO build/mk_varinfo.pl build/var2html.pl build/octopus.spec.in \
+	TODO build/mk_varinfo.pl build/var2html.pl build/octopus.spec.in build/svn_release_number.sh \
 	debian/changelog debian/control debian/copyright debian/dirs     \
 	debian/info debian/README.Debian debian/rules
 
