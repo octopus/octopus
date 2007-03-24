@@ -165,7 +165,7 @@ check:
 check-full: check
 
 clean-local:
-	@if [ "$(builddir)" != "$(srcdir)" ]; then \
+	@if [ -n "$(builddir)" -a "$(builddir)" != "$(srcdir)" ]; then \
 	  rm -f $(dist_hgh_DATA); \
 	fi
 
