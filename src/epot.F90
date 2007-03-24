@@ -230,13 +230,17 @@ contains
     !%Section Hamiltonian
     !%Description
     !% A static constant magnetic field may be added to the usual Hamiltonian,
-    !% by setting the block StaticMagneticField. Atomic units will be assumed
-    !% always for its magnitude, regardless of the unit system specified.
+    !% by setting the block StaticMagneticField. 
     !% The three possible components of the block (which should only have one
     !% line) are the three components of the magnetic field vector. Note that
     !% if you are running the code in 1D mode this will not work, and if you
     !% are running the code in 2D mode the magnetic field will have to be in
     !% the z-direction, so that the first two columns should be zero.
+    !%
+    !% The magnetic field should always be entered in atomic units, regardless
+    !% of the "Units" variable. Note that we use the "Gaussian" system
+    !% meaning 1 au[B] = 1.7152553 * 10^7 gauss, which corresponds to
+    !% 1.7152553 * 10^3 Tesla.
     !%End
     nullify(ep%B_field, ep%A_static)
     if(loct_parse_block(check_inp('StaticMagneticField'), blk)==0) then
