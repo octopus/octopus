@@ -31,6 +31,8 @@ dist_share_DATA = \
 	02-fock-darwin.test \
 	03-helium_atom.01-ground_state.inp \
 	03-helium_atom.02-ground_state.inp \
-	03-helium_atom.test
+	03-helium_atom.test \
+	04-biot_savert.01-gs.inp \
+	04-biot_savart.test \
 
 CLEANFILES = *~ *.bak

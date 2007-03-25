@@ -179,7 +179,10 @@ contains
     do i = 1, NDIM
       call dpoisson_solve(gr, a_ind(:, i), j(:, i, 1))
     end do
-    a_ind = a_ind / P_C
+    ! This minus sign is introduced here because the current that has been used
+    ! before is the "number current density", and not the "charge current density",
+    ! and therefore there is a minus sign missing (electrons are negative charges...)
+    a_ind = - a_ind / P_C
 
     call df_curl (gr%f_der, a_ind, b_ind)
 

@@ -1,0 +1,31 @@
+# -*- coding: utf-8 mode: shell-script -*-
+# $Id: oct-run_regression_test.pl 2423 2006-09-24 21:25:52Z acastro $
+
+Test     : 04-biot_savart.test
+Author   : Alberto
+Date     : 25.03.07
+Arch     : Linux appartment 2.6.18-4-686 #1 SMP Wed Feb 21 16:06:54 UTC 2007 i686 GNU/Linux
+Release  : 2.2.0pre1
+Programs : octopus
+Runtime  : long-run
+Enabled  : Yes
+
+# The code calculates the Lz=1 state of one electron sitting in a
+# potential circular ring. The result is a uniform electronic ring
+# circulating through the ring. The code then calculates the current
+# flow for this ring (this is the first number matched below).
+#
+# Then, the Biot-Savart law is applied to calculate the magnetic field 
+# at the center of the ring. If we imagine an infinitely thin loop, the 
+# Biot-Savart law predicts a magnetic field of (2*pi*I)/(c*R), where
+# I is the current flow, c is the velocity of light, and R is the radius
+# of the ring.
+#
+# The current for the model described in the input file is 0.01787 au,
+# and the radius of the ring is 3. Therefore, the predicted magnetic field
+# is 0.0002731 au, quite close to the value produced by the test.
+
+Input: 04-biot_savart.01-gs.inp
+
+Match ; Current flow ; grep '# Flow =' static/current-flow ; \s*-0.1787d*
+Match ; Magnetic Field at loop center ; grep '^  0.0000' static/Bind_z.x\=0\,z\=0 ; \s*2.78154d*
