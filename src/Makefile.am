@@ -43,6 +43,7 @@ core_SRCS = $(basic_SRCS) \
 	stencil_star.F90 stencil_variational.F90 stencil_cube.F90 stencil_starplus.F90 derivatives.F90 \
 	cf.F90 mf.F90 f.F90 \
 	out.F90  \
+	operate.F90 \
 	multigrid.F90 \
 	double_grid.F90 \
 	grid.F90 \
@@ -253,6 +254,7 @@ mpi_debug.o: global.h mpi_debug_inc.F90
 profiling.o: global.h
 nl_operator.o: global.h
 ode_solver.o: global.h ode_solver_inc.F90
+operate.f90: global.h
 opt_control.o: global.h
 out.o: global.h out_inc.F90
 par_vec.o: global.h par_vec_inc.F90

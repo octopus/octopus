@@ -175,3 +175,25 @@ AC_DEFUN([ACX_FC_USES_MALLOC], [
         AC_MSG_RESULT([no])
     fi
 ]) #ACX_FC_USES_MALLOC
+
+dnl This macros checks for the presence of SSE2 support in the compiler
+AC_DEFUN([ACX_C_SSE2],[
+    AC_MSG_CHECKING(for sse2 support)
+    AC_LANG(C)
+    AC_TRY_COMPILE(
+      [
+        #ifndef __SSE2__
+	#error NO_SSE2
+	#endif
+      ],
+      [
+      ],     
+      [
+        AC_MSG_RESULT(yes)
+        AC_DEFINE(HAVE_C_SSE2, 1,
+                  [Define if the compiler supports sse2 instructions])
+      ],
+      [
+        AC_MSG_RESULT(no)
+      ])
+])

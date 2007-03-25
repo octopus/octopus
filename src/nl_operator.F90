@@ -19,6 +19,12 @@
 
 #include "global.h"
 
+#if defined(HAVE_GCC_VECTORS) && defined(HAVE_C_SSE2) && defined(HAVE_EMMINTRIN_H) && defined(FC_USES_MALLOC)
+#if defined(HAVE_16_BYTES_ALIGNED_MALLOC) || defined(HAVE_POSIX_MEMALIGN)
+#define USE_SSE2
+#endif
+#endif
+
 module nl_operator_m
   use datasets_m
   use global_m
@@ -70,7 +76,14 @@ module nl_operator_m
     module procedure nl_operator_equal
   end interface
 
-  integer :: op_function = -1
+  integer, parameter ::   &
+       OP_FORTRAN=0,      &
+       OP_FORTRAN_OPT=1,  &
+       OP_C=3,            &
+       OP_SSE=4
+
+  integer :: dop_function = -1
+  integer :: zop_function = -1
 
 contains
 
@@ -87,21 +100,52 @@ contains
     op%n  = n
     ALLOCATE(op%stencil(3, n), 3*n)
 
-    !%Variable OperateFunction
+    !%Variable OperateDouble
     !%Type integer
     !%Default c
     !%Section Mesh
     !%Description
-    !% Which function use to apply the operators over the grid. This
+    !% Which function use to apply non-local operators over the grid. This
     !% is the function where octopus spends most of time.
     !%Option fortran 0
+    !% The standard plain fortran function.
+    !%Option fortran_opt 1
     !% The standard plain fortran function.
     !%Option c 3
     !% The C version, using data prefetch directives and unrolled by hand.
     !%End
 
-    if ( op_function == - 1) then
-      call loct_parse_int(check_inp('OperateFunction'), 3, op_function)
+    !%Variable OperateComplex
+    !%Type integer
+    !%Default c
+    !%Section Mesh
+    !%Description
+    !% Which function use to apply non-local operators over the grid. This
+    !% is the function where octopus spends most of time.
+    !%Option fortran 0
+    !% The standard plain fortran function.
+    !%Option fortran_opt 1
+    !% The standard plain fortran function.
+    !%Option c 3
+    !% The C version, using data prefetch directives and unrolled by hand.
+    !%Option sse 4
+    !% The C version, using data prefetch directives and unrolled by hand.
+    !%End
+
+    if ( dop_function == - 1) then
+      call loct_parse_int(check_inp('OperateDouble'), OP_C, dop_function)
+    end if
+
+    if ( zop_function == - 1) then
+#ifdef USE_SSE2
+      call loct_parse_int(check_inp('OperateComplex'), OP_SSE, zop_function)
+#else
+      call loct_parse_int(check_inp('OperateComplex'), OP_C, zop_function)
+      if (zop_function == OP_SSE) then 
+        message(1) = 'Error: SSE is not available.'
+        call write_error(1)
+      end if
+#endif
     end if
 
     call pop_sub()
@@ -831,23 +875,26 @@ contains
     nn = op%n
     if(op%const_w) then
 
-      if (op_function == 0) then 
+      select case(dop_function)
+      case(OP_C)
+        call doperate_c(op%np, nn, op%w_re(1, 1), op%i(1,1), fi(1), fo(1))
+      case(OP_FORTRAN)
         do ii = 1, op%np
           fo(ii) = sum(op%w_re(1:nn, 1)  * fi(op%i(1:nn, ii)))
         end do
-      else
+      case(OP_FORTRAN_OPT)
         call doperate(op%np, nn, op%w_re(1, 1), op%i(1,1), fi(1), fo(1))
-      end if
-
+      end select
     else
       do ii = 1, op%np
         fo(ii) = sum(op%w_re(1:nn, ii) * fi(op%i(1:nn, ii)))
       end do
     end if
+    
     do ii = op%np + 1, size(fo)
       fo(ii) = M_ZERO
     end do
-
+    
     call pop_sub()
     call profiling_out(C_PROFILING_NL_OPERATOR)
   end subroutine dnl_operator_operate
@@ -891,14 +938,21 @@ contains
       end if
     else
       if(op%const_w) then
-
-        if(op_function == 0) then 
+        
+        select case(zop_function)
+#ifdef USE_SSE2
+        case(OP_SSE)
+          call zoperate_sse(op%np, nn, op%w_re(1, 1), op%i(1,1), fi(1), fo(1))
+#endif
+        case(OP_FORTRAN)
           do ii = 1, op%np
             fo(ii) = sum(op%w_re(1:nn, 1)  * fi(op%i(1:nn, ii)))
           end do
-        else
+        case(OP_FORTRAN_OPT)
           call zoperate(op%np, nn, op%w_re(1, 1), op%i(1,1), fi(1), fo(1))
-        end if
+        case(OP_C)
+          call zoperate_c(op%np, nn, op%w_re(1, 1), op%i(1,1), fi(1), fo(1))
+        end select
 
       else
         do ii = 1, op%np
@@ -906,10 +960,11 @@ contains
         end do
       end if
     end if
+
     do ii = op%np + 1, size(fo)
       fo(ii) = M_ZERO
     end do
-
+    
     call pop_sub()
     call profiling_out(C_PROFILING_NL_OPERATOR)
   end subroutine znl_operator_operate

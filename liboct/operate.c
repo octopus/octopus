@@ -34,7 +34,7 @@
 
 #include "operate_vec.c"
 
-void FC_FUNC(doperate,DOPERATE)(const int * opnp, 
+void FC_FUNC_(doperate_c,DOPERATE_C)(const int * opnp, 
 				const int * opn, 
 				const double * restrict w, 
 				const int * opi, 
@@ -81,15 +81,13 @@ void FC_FUNC(doperate,DOPERATE)(const int * opnp,
 
 }
 
-#ifndef USE_VECTORS
-
 typedef struct {
   double re;
   double im;
 } comp;
 
 
-void FC_FUNC(zoperate,ZOPERATE)(const int * opnp, 
+void FC_FUNC_(zoperate_c,ZOPERATE_C)(const int * opnp, 
 				const int * opn, 
 				const double * restrict w, 
 				const int * opi, 
@@ -142,4 +140,4 @@ void FC_FUNC(zoperate,ZOPERATE)(const int * opnp,
     fo[i].im = a.im;
   }
 }
-#endif
+

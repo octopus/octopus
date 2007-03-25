@@ -22,7 +22,7 @@
 
 #include <config.h>
 
-#if defined(HAVE_GCC_VECTORS) && defined(__SSE2__) && defined(HAVE_EMMINTRIN_H) && defined(FC_USES_MALLOC)
+#if defined(HAVE_GCC_VECTORS) && defined(HAVE_C_SSE2) && defined(HAVE_EMMINTRIN_H) && defined(FC_USES_MALLOC)
 
 #if defined(HAVE_16_BYTES_ALIGNED_MALLOC)
 
@@ -39,10 +39,10 @@
 
 #endif /* HAVE_GCC_VECTORS && __SSE2__ && HAVE_EMMINTRIN_H && FC_USES_MALLOC */
 
+#define _XOPEN_SOURCE 600
 #include <stdlib.h>
 
 #if defined(USE_FAKE_MALLOC)
-#define _XOPEN_SOURCE 600
 #include <errno.h>
 
 /* 
@@ -75,7 +75,7 @@ typedef double v2df __attribute__ ((vector_size (16)));
 (vec) = _mm_loadl_pd((vec), (a)); \
 (vec) = _mm_loadh_pd((vec), (b));
 
-void FC_FUNC(zoperate,ZOPERATE)(const int * opnp, 
+void FC_FUNC_(zoperate_sse,ZOPERATE_SSE)(const int * opnp, 
 				const int * opn, 
 				const double * restrict w, 
 				const int * opi, 
