@@ -50,3 +50,8 @@ Mixing = 1.0
 -130 | 130
 %
 
+CalculateSelfInducedMagneticField = yes
+
+Output = potential
+OutputHow = axis_y
+
