@@ -143,7 +143,7 @@ contains
       call loct_parse_int(check_inp('OperateComplex'), OP_C, zop_function)
       if (zop_function == OP_SSE) then 
         message(1) = 'Error: SSE is not available.'
-        call write_error(1)
+        call write_fatal(1)
       end if
 #endif
     end if

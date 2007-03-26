@@ -425,6 +425,8 @@ contains
 
     ex = exp( M_HALF*(g*p%rc(l))**2 )
 
+    projectorg = M_ZERO
+
     select case(l)
     case(0)
       select case(i)
