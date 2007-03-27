@@ -34,6 +34,7 @@
 #include <gsl/gsl_randist.h>
 #include <gsl/gsl_spline.h>
 #include <gsl/gsl_chebyshev.h>
+#include <gsl/gsl_multimin.h>
 
 
 /* ---------------------- Interface to GSL functions ------------------------ */
@@ -239,6 +240,113 @@ double FC_FUNC_(oct_spline_eval_der2, OCT_SPLINE_EVAL_DER2)
      (double *x, void **spl, void **acc)
 {
   return gsl_spline_eval_deriv2((gsl_spline *)(*spl), *x, (gsl_interp_accel *)(*acc));
+}
+
+
+double my_f (const gsl_vector *v, void *params)
+{
+  double val;
+  double *x, *gradient;
+  int i, dim, getgrad;
+  void (*para)(int*, double*, double*, int*, double*) = params;
+
+  dim = v->size;
+  x = (double *)malloc(dim*sizeof(double));
+
+  for(i=0; i<dim; i++) x[i] = gsl_vector_get(v, i);
+  getgrad = 0;
+  para(&dim, x, &val, &getgrad, gradient);
+
+  free(x);
+  return val;
+}
+
+     /* The gradient of f, df = (df/dx, df/dy). */
+void my_df (const gsl_vector *v, void *params,
+            gsl_vector *df)
+{
+  double val;
+  double *x, *gradient;
+  int i, dim, getgrad;
+  void (*para)(int*, double*, double*, int*, double*) = params;
+
+  dim = v->size;
+  x = (double *)malloc(dim*sizeof(double));
+  gradient = (double *)malloc(dim*sizeof(double));
+
+  for(i=0; i<dim; i++) x[i] = gsl_vector_get(v, i);
+  getgrad = 1;
+  para(&dim, x, &val, &getgrad, gradient);
+  for(i=0; i<dim; i++) gsl_vector_set(df, i, gradient[i]);
+
+  free(x); free(gradient);
+}
+
+/* Compute both f and df together. */
+void my_fdf (const gsl_vector *x, void *params,
+             double *f, gsl_vector *df)
+{
+  *f = my_f(x, params);
+  my_df(x, params, df);
+}
+
+double FC_FUNC_(oct_minimize, OCT_MINIMIZE)
+     (int *dim, double *point, double *step, double *tol, void *f)
+{
+
+  size_t iter = 0;
+  int status;
+  double return_value;
+  int i;
+
+  const gsl_multimin_fdfminimizer_type *T;
+  gsl_multimin_fdfminimizer *s;
+  gsl_vector *x;
+  gsl_multimin_function_fdf my_func;
+
+  my_func.f = &my_f;
+  my_func.df = &my_df;
+  my_func.fdf = &my_fdf;
+  my_func.n = *dim;
+  my_func.params = f;
+
+  /* Starting point */
+  x = gsl_vector_alloc (*dim);
+  for(i=0; i<*dim; i++) gsl_vector_set (x, i, point[i]);
+
+  T = gsl_multimin_fdfminimizer_conjugate_fr;
+  s = gsl_multimin_fdfminimizer_alloc (T, *dim);
+
+  gsl_multimin_fdfminimizer_set (s, &my_func, x, *step, *tol);
+
+  do
+    {
+      iter++;
+      status = gsl_multimin_fdfminimizer_iterate (s);
+
+      if (status) break;
+
+      status = gsl_multimin_test_gradient (s->gradient, 1e-3);
+
+      if (status == GSL_SUCCESS)
+        printf ("Minimum found at:\n");
+
+      printf ("%5d %.5f %.5f %10.5f\n", iter,
+               gsl_vector_get (s->x, 0),
+               gsl_vector_get (s->x, 1),
+               s->f);
+
+      }
+  while (status == GSL_CONTINUE && iter < 100);
+
+  for(i=0; i<2; i++) point[i] = gsl_vector_get(s->x, i);
+
+  return_value = s->f;
+
+  gsl_multimin_fdfminimizer_free (s);
+  gsl_vector_free (x);
+
+  return return_value;
 }
 
 

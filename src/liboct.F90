@@ -59,7 +59,8 @@ module lib_oct_m
     loct_fft_optimize,       &
     loct_isinstringlist,     &
     loct_progress_bar,       &
-    loct_printRecipe
+    loct_printRecipe,        &
+    loct_minimize
 
 #if defined(HAVE_GDLIB)
   public ::                    &
@@ -299,6 +300,25 @@ module lib_oct_m
       real(8),   intent(in) :: sigma
     end function oct_ran_gaussian
     module procedure oct_ran_gaussian4
+  end interface
+
+  interface loct_minimize
+    function oct_minimize(dim, x, step, tol, f)
+      real(8) :: oct_minimize
+      integer, intent(in) :: dim
+      real(8), intent(inout) :: x
+      real(8), intent(in) :: step
+      real(8), intent(in) :: tol
+      interface
+        subroutine f(n, x, val, getgrad, grad)
+          integer, intent(in) :: n
+          real(8), intent(in) :: x(n)
+          real(8), intent(out) :: val
+          integer, intent(in)  :: getgrad
+          real(8), intent(out) :: grad(n)
+        end subroutine f
+      end interface
+    end function oct_minimize
   end interface
 
   ! ---------------------------------------------------------
