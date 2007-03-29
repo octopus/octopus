@@ -741,9 +741,13 @@ contains
       nn = CNST(10.0)/dr
       r = M_ZERO
       do ii = 1, nn
-        write(iunit, '(4f12.6)') r, loct_splint(s%ps%vl, r),  &
-             -s%z_val*loct_splint(pot_corr, r), &
-             loct_splint(s%ps%vll, r)
+        write(iunit, '(4f12.6)', advance='no') r, loct_splint(s%ps%vl, r),  &
+             -s%z_val*loct_splint(pot_corr, r)
+        if(dg_add_localization_density(gr%dgrid)) then
+          write(iunit,'(f12.6)') loct_splint(s%ps%vll, r)
+        else
+          write(iunit,*)
+        end if
         r = r + dr
       end do
 
