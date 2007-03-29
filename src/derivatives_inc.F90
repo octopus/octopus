@@ -153,7 +153,7 @@ subroutine X(derivatives_curl)(der, f, curl, ghost_update)
   logical, optional, intent(in)    :: ghost_update
 
   R_TYPE, allocatable :: tmp(:)
-  integer             :: i
+  integer             :: i, np
 
   call push_sub('derivatives_inc.Xderivatives_div')
 
@@ -176,31 +176,32 @@ subroutine X(derivatives_curl)(der, f, curl, ghost_update)
     end do
   end if
 
-  ALLOCATE(tmp(der%m%np), der%m%np)
+  ALLOCATE(tmp(der%m%np_part), der%m%np_part)
 
   curl(:,:) = R_TOTYPE(M_ZERO)
+  np = der%m%np
 
   select case(der%m%sb%dim)
   case(3)
     call X(nl_operator_operate) (der%grad(3), f(:,1), tmp, ghost_update=ghost_update)
-    curl(:,2) = curl(:,2) + tmp(:)
+    curl(1:np,2) = curl(1:np,2) + tmp(1:np)
     call X(nl_operator_operate) (der%grad(2), f(:,1), tmp, ghost_update=ghost_update)
-    curl(:,3) = curl(:,3) - tmp(:)
+    curl(1:np,3) = curl(1:np,3) - tmp(1:np)
 
     call X(nl_operator_operate) (der%grad(3), f(:,2), tmp, ghost_update=ghost_update)
-    curl(:,1) = curl(:,1) - tmp(:)
+    curl(1:np,1) = curl(:,1) - tmp(1:np)
     call X(nl_operator_operate) (der%grad(1), f(:,2), tmp, ghost_update=ghost_update)
-    curl(:,3) = curl(:,3) + tmp(:)
+    curl(1:np,3) = curl(1:np,3) + tmp(1:np)
 
     call X(nl_operator_operate) (der%grad(2), f(:,3), tmp, ghost_update=ghost_update)
-    curl(:,1) = curl(:,1) + tmp(:)
+    curl(1:np,1) = curl(1:np,1) + tmp(1:np)
     call X(nl_operator_operate) (der%grad(1), f(:,3), tmp, ghost_update=ghost_update)
-    curl(:,2) = curl(:,2) - tmp(:)
+    curl(1:np,2) = curl(1:np,2) - tmp(1:np)
   case(2)
     call X(nl_operator_operate) (der%grad(2), f(:,1), tmp, ghost_update=ghost_update)
-    curl(:,1) = curl(:,1) - tmp(:)
+    curl(1:np,1) = curl(1:np,1) - tmp(1:np)
     call X(nl_operator_operate) (der%grad(1), f(:,2), tmp, ghost_update=ghost_update)
-    curl(:,1) = curl(:,1) + tmp(:)
+    curl(1:np,1) = curl(1:np,1) + tmp(1:np)
   end select
 
   deallocate(tmp)
