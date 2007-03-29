@@ -210,7 +210,7 @@ subroutine X(mf_interpolate) (mesh_in, mesh_out, full_interpolation, u, f)
   R_TYPE,       intent(in)    :: u(:)    ! u(mesh_in%np_global)
   R_TYPE,       intent(out)   :: f(:)    ! f(mesh%np)
 
-  FLOAT :: px, py, pz
+  FLOAT :: p(MAX_DIM)
   integer :: ix, iy, iz
   R_TYPE, allocatable :: f_global(:)
   integer :: i, j, k
@@ -224,19 +224,19 @@ subroutine X(mf_interpolate) (mesh_in, mesh_out, full_interpolation, u, f)
     case(2)
       call init_qshep(interp, mesh_in%np_global, u, mesh_in%x(:, 1), mesh_in%x(:, 2))
       do i = 1, mesh_out%np
-        px = mesh_out%x(i, 1)
-        py = mesh_out%x(i, 2)
-        f(i) = qshep_interpolate(interp, u, px, py)
+        p(1) = mesh_out%x(i, 1)
+        p(2) = mesh_out%x(i, 2)
+        f(i) = qshep_interpolate(interp, u, p(1:2))
       end do
       call kill_qshep(interp)
     case(3)
       call init_qshep(interp, mesh_in%np_global, u, &
                       mesh_in%x(:, 1), mesh_in%x(:, 2), mesh_in%x(:, 3))
       do i = 1, mesh_out%np
-        px = mesh_out%x(i, 1)
-        py = mesh_out%x(i, 2)
-        pz = mesh_out%x(i, 3)
-        f(i) = qshep_interpolate(interp, u, px, py, pz)
+        p(1) = mesh_out%x(i, 1)
+        p(2) = mesh_out%x(i, 2)
+        p(3) = mesh_out%x(i, 3)
+        f(i) = qshep_interpolate(interp, u, p)
       end do
       call kill_qshep(interp)
     case(1)
@@ -291,7 +291,7 @@ subroutine X(mf_interpolate_on_plane)(mesh, plane, f, f_in_plane)
 
   integer :: i, j
   R_TYPE, allocatable :: f_global(:)
-  FLOAT :: px, py, pz
+  FLOAT :: p(MAX_DIM)
   type(qshep_t) :: interp
 
   call push_sub('mf_inc.Xmf_interpolate_on_plane')
@@ -308,10 +308,10 @@ subroutine X(mf_interpolate_on_plane)(mesh, plane, f, f_in_plane)
 
   do i = plane%nu, plane%mu
     do j = plane%nv, plane%mv
-      px = plane%origin(1) + i*plane%spacing * plane%u(1) + j * plane%spacing * plane%v(1)
-      py = plane%origin(2) + i*plane%spacing * plane%u(2) + j * plane%spacing * plane%v(2)
-      pz = plane%origin(3) + i*plane%spacing * plane%u(3) + j * plane%spacing * plane%v(3)
-      f_in_plane(i, j) = qshep_interpolate(interp, f_global, px, py, pz)
+      p(1) = plane%origin(1) + i*plane%spacing * plane%u(1) + j * plane%spacing * plane%v(1)
+      p(2) = plane%origin(2) + i*plane%spacing * plane%u(2) + j * plane%spacing * plane%v(2)
+      p(3) = plane%origin(3) + i*plane%spacing * plane%u(3) + j * plane%spacing * plane%v(3)
+      f_in_plane(i, j) = qshep_interpolate(interp, f_global, p)
     end do
   end do
 
@@ -334,7 +334,7 @@ subroutine X(mf_interpolate_on_line)(mesh, line, f, f_in_line)
 
   integer :: i
   R_TYPE, allocatable :: f_global(:)
-  FLOAT :: px, py
+  FLOAT :: p(MAX_DIM)
   type(qshep_t) :: interp
   
   call push_sub('mf_inc.Xmf_interpolate_on_line')
@@ -348,9 +348,9 @@ subroutine X(mf_interpolate_on_line)(mesh, line, f, f_in_line)
 
   call init_qshep(interp, mesh%np_global, f_global, mesh%x(1:mesh%np_global, 1), mesh%x(1:mesh%np_global, 2))
   do i = line%nu, line%mu
-    px = line%origin(1) + i*line%spacing * line%u(1)
-    py = line%origin(2) + i*line%spacing * line%u(2)
-    f_in_line(i) = qshep_interpolate(interp, f_global, px, py)
+    p(1) = line%origin(1) + i*line%spacing * line%u(1)
+    p(2) = line%origin(2) + i*line%spacing * line%u(2)
+    f_in_line(i) = qshep_interpolate(interp, f_global, p(1:2))
   end do
   call kill_qshep(interp)
 

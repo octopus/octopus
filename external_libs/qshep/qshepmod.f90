@@ -122,73 +122,92 @@ module qshepmod_m
   end subroutine init_qshepr
 
 
-  real(8) function qshep_interpolater(interp, f, px, py, pz) result(v)
+  real(8) function qshep_interpolater(interp, f, p, gf) result(v)
     type(qshepr_t), intent(in) :: interp
     real(8), intent(in) :: f(:)
-    real(8), intent(in) :: px, py
-    real(8), optional, intent(in) :: pz
+    real(8), intent(in) :: p(:)
+    real(8), optional, intent(inout) :: gf(:)
 
+    integer :: ier
     real(8), external :: qs2val, qs3val
 
     select case(interp%dim)
     case(2)
-      v = qs2val ( px, py, interp%npoints, interp%x, interp%y, &
-                   f, interp%nr, interp%lcell(:, :, 1), interp%lnext, interp%xmin, &
-                   interp%ymin, interp%dx, interp%dy, interp%rmax, interp%rsq, interp%a )
+      if(present(gf)) then
+        call qs2grd( p(1), p(2), interp%npoints, interp%x, interp%y, &
+                     f, interp%nr, interp%lcell(:, :, 1), interp%lnext, interp%xmin, &
+                     interp%ymin, interp%dx, interp%dy, interp%rmax, interp%rsq, interp%a, &
+                     v, gf(1), gf(2), ier) 
+      else
+        v = qs2val ( p(1), p(2), interp%npoints, interp%x, interp%y, &
+                     f, interp%nr, interp%lcell(:, :, 1), interp%lnext, interp%xmin, &
+                     interp%ymin, interp%dx, interp%dy, interp%rmax, interp%rsq, interp%a) 
+      endif
     case(3)
-      v = qs3val ( px, py, pz, interp%npoints, interp%x, interp%y, interp%z, &
-                   f, interp%nr, interp%lcell, interp%lnext, interp%xyzmin, &
-                   interp%xyzdel, interp%rmax, interp%rsq, interp%a )
+      if(present(gf)) then
+        call qs3grd( p(1), p(2), p(3), interp%npoints, interp%x, interp%y, interp%z, &
+                     f, interp%nr, interp%lcell, interp%lnext, interp%xyzmin, &
+                     interp%xyzdel, interp%rmax, interp%rsq, interp%a , &
+                     v, gf(1), gf(2), gf(3), ier)
+      else
+        v = qs3val ( p(1), p(2), p(3), interp%npoints, interp%x, interp%y, interp%z, &
+                     f, interp%nr, interp%lcell, interp%lnext, interp%xyzmin, &
+                     interp%xyzdel, interp%rmax, interp%rsq, interp%a )
+      end if
     end select
 
   end function qshep_interpolater
 
-  real(8) function dqshep_interpolate(interp, f, px, py, pz) result(v)
+
+  real(8) function dqshep_interpolate(interp, f, p, gf) result(v)
     type(qshep_t), intent(in) :: interp
     real(8), intent(in) :: f(:)
-    real(8), intent(in) :: px, py
-    real(8), optional, intent(in) :: pz
-
-    if(present(pz)) then
-      v = qshep_interpolater(interp%re, f, px, py, pz)
+    real(8), intent(in) :: p(:)
+    real(8), optional, intent(inout) :: gf(:)
+    if(present(gf)) then
+      v = qshep_interpolater(interp%re, f, p, gf)
     else
-      v = qshep_interpolater(interp%re, f, px, py)
+      v = qshep_interpolater(interp%re, f, p)
     end if
-
   end function dqshep_interpolate
 
-  complex(8) function zqshep_interpolate(interp, f, px, py, pz) result(v)
+
+  complex(8) function zqshep_interpolate(interp, f, p, gf) result(v)
     type(qshep_t), intent(in) :: interp
     complex(8), intent(in) :: f(:)
-    real(8), intent(in) :: px, py
-    real(8), optional, intent(in) :: pz
-
-    if(present(pz)) then
-      v = cmplx(qshep_interpolater(interp%re, real(f), px, py, pz), &
-               qshep_interpolater(interp%im, aimag(f), px, py, pz), 8)
+    real(8), intent(in) :: p(:)
+    complex(8), optional, intent(inout) :: gf(:)
+    integer :: i
+    real(8), allocatable :: rgf(:), igf(:)
+    if(present(gf)) then
+      allocate(rgf(size(gf)))
+      allocate(igf(size(gf)))
+      v = cmplx(qshep_interpolater(interp%re, real(f), p, rgf ), &
+                qshep_interpolater(interp%im, aimag(f), p, igf ), 8) 
+      do i = 1, size(gf)
+        gf(i) = cmplx( rgf(i), igf(i), 8)
+      end do
+      deallocate(rgf, igf)
     else
-      v = cmplx(qshep_interpolater(interp%re, real(f), px, py), &
-               qshep_interpolater(interp%im, aimag(f), px, py), 8)
+      v = cmplx(qshep_interpolater(interp%re, real(f), p ), &
+                qshep_interpolater(interp%im, aimag(f), p ), 8) 
     end if
-
   end function zqshep_interpolate
+
 
   subroutine kill_qshep(interp)
     type(qshep_t), intent(inout) :: interp
-
     call kill_qshepr(interp%re)
     if(interp%kind == 1) call kill_qshepr(interp%im)
-
   end subroutine kill_qshep
+
 
   subroutine kill_qshepr(interp)
     type(qshepr_t), intent(inout) :: interp
-
     if(associated(interp%lcell)) then
       nullify(interp%lcell, interp%lnext, interp%rsq, interp%a, interp%x, interp%y)
       if(interp%dim .eq. 3) nullify(interp%z)
     end if
-
   end subroutine kill_qshepr
 
 end module qshepmod_m
