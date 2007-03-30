@@ -31,6 +31,8 @@ module elf_m
   use messages_m
   use mpi_m
   use states_m
+  use basins_m
+  use output_m
 
   implicit none
 
@@ -228,6 +230,7 @@ contains
     end select
 
     deallocate(rho, kappa)
+
     call pop_sub()
   end subroutine elf_calc
 

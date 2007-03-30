@@ -66,7 +66,7 @@ contains
     type(lr_t) :: lr(MAX_DIM, 1)
     type(sternheimer_t)     :: sh
 
-    integer :: dir, i, iunit, gauss_start
+    integer :: dir, i, iunit, gauss_start, ndir
     CMPLX :: omega
     FLOAT :: domega, pol, c3, c6, cat
 
@@ -133,6 +133,8 @@ contains
 
     ! --------------------------------------------------------------------
     subroutine input()
+      integer :: equiv_axis
+
       !%Variable vdW_npoints
       !%Type integer
       !%Section Linear Response::Polarizabilities
@@ -141,6 +143,15 @@ contains
       !% van der Waals coefficients
       !%End
       call  loct_parse_int(check_inp('vdW_npoints'), 6, gaus_leg_n)
+
+      ! TODO: symmetry stuff should be general
+      call loct_parse_int(check_inp('TDPolarizationEquivAxis'), 0, equiv_axis)
+
+      select case(equiv_axis)
+      case(3);      ndir = 1
+      case(2);      ndir = min(2, sys%NDIM)
+      case default; ndir = min(3, sys%NDIM)
+      end select
 
     end subroutine input
 
@@ -198,7 +209,7 @@ contains
       call write_info(1)
       call system_h_setup(sys, h)
 
-      do dir = 1, sys%NDIM
+      do dir = 1, ndir
         call lr_init(lr(dir,1))
         call lr_allocate(lr(dir,1), sys%st, sys%gr%m)
 
@@ -226,7 +237,7 @@ contains
 
       CMPLX :: alpha(1:MAX_DIM, 1:MAX_DIM)
 
-      do dir = 1, sys%NDIM
+      do dir = 1, ndir
         write(message(1), '(a,i1,a,f7.3)') 'Info: Calculating response for direction ', dir, &
           ' and imaginary frequency ', aimag(omega)/units_out%energy%factor
         call write_info(1)   
@@ -235,12 +246,16 @@ contains
              RESTART_DIR, em_rho_tag(real(omega),dir), em_wfs_tag(dir,1))
       end do
 
-      call zlr_calc_polarizability(sys, lr(:,:), alpha(:,:))
+      call zlr_calc_polarizability(sys, lr(:,:), alpha(:,:), ndir)
 
       get_pol = M_ZERO
-      do dir = 1, sys%NDIM
+      do dir = 1, ndir
         get_pol = get_pol + alpha(dir, dir)
       end do
+      do dir = ndir+1, sys%NDIM
+        get_pol = get_pol + alpha(ndir, ndir)
+      end do
+
       get_pol = get_pol / real(sys%NDIM)
 
     end function get_pol

@@ -59,11 +59,12 @@ module output_m
     output_geometry   =    16,    &
     output_current    =    32,    &
     output_ELF        =    64,    &
-    output_ELF_FS     =   128,    &
-    output_ksdipole   =   256,    &
-    output_pol_density=   512,    &
-    output_r          =  1024,    &
-    output_ked        =  2056
+    output_ELF_basins =   128,    &
+    output_ELF_FS     =   256,    &
+    output_ksdipole   =   512,    &
+    output_pol_density=  1024,    &
+    output_r          =  2048,    &
+    output_ked        =  4096
 
   integer, parameter, public ::   &
     output_axis_x     =     1,    &
@@ -152,6 +153,9 @@ contains
     !%Option ELF 64
     !% Prints out the electron localization function, ELF. The output file is called
     !% "elf-i", where i stands for the spin channel.
+    !%Option ELF_basins 64
+    !% Prints out the basins of attraction of the ELF. The output file is called
+    !% "elf_basins-i", where i stands for the spin channel.
     !%Option ELF_FS 128
     !% Prints the electron localization function in Fourier space. The output file is called
     !% "elf_FS-i", where i stands for the spin channel. (EXPERIMENTAL)

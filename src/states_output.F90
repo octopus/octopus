@@ -20,6 +20,7 @@
 #include "global.h"
 
 module states_output_m
+  use basins_m
   use elf_m
   use global_m
   use grid_m
@@ -125,45 +126,7 @@ contains
       deallocate(dtmp)
     end if
 
-    if(NDIM .ne. 1) then ! If it is a one-dimensiona problem, the ELF calculation will not work.
-      if(  iand(outp%what, output_elf).ne.0  ) then ! First, ELF in real space.
-        select case(st%d%ispin)
-          case(UNPOLARIZED)
-            ALLOCATE(elf(1:gr%m%np, 1),gr%m%np)
-            call elf_calc(st, gr, elf)
-            write(fname, '(a)') 'elf_rs'
-            call doutput_function(outp%how, dir, trim(fname), gr%m, gr%sb, &
-              elf(:,1), M_ONE, ierr, is_tmp = .false.)
-            deallocate(elf)
-
-          case(SPIN_POLARIZED, SPINORS)
-            ALLOCATE(elf(1:gr%m%np, 3), 3*gr%m%np)
-            call elf_calc(st, gr, elf)
-            write(fname, '(a)') 'elf_rs'
-            call doutput_function(outp%how, dir, trim(fname), gr%m, gr%sb, &
-              elf(:, 3), M_ONE, ierr, is_tmp = .false.)
-            do is = 1, 2
-              write(fname, '(a,a,i1)') 'elf_rs', '-', is
-              call doutput_function(outp%how, dir, trim(fname), gr%m, gr%sb, &
-                elf(:, is), M_ONE, ierr, is_tmp = .false.)
-            end do
-            deallocate(elf)
-        end select
-      end if
-
-#if defined(HAVE_FFT)
-      if(  iand(outp%what, output_elf_fs).ne.0  ) then ! Second, ELF in Fourier space.
-        ALLOCATE(elf(1:gr%m%np,1:st%d%nspin),gr%m%np*st%d%nspin)
-        call elf_calc_fs(st, gr, elf)
-        do is = 1, st%d%nspin
-          write(fname, '(a,a,i1)') 'elf_fs', '-', is
-          call doutput_function(outp%how, dir, trim(fname), gr%m, gr%sb, &
-            elf(:,is), M_ONE, ierr, is_tmp = .false.)
-        end do
-        deallocate(elf)
-      end if
-#endif
-    end if
+    call out_elf()
 
     if(iand(outp%what, output_ked).ne.0) then
       ALLOCATE(elf(gr%m%np, st%d%nspin),gr%m%np*st%d%nspin)
@@ -203,6 +166,75 @@ contains
     end if
 
     call pop_sub()
+
+  contains
+    ! ---------------------------------------------------------
+    subroutine out_elf()
+      FLOAT, allocatable :: elf(:,:)
+      type(basins_t) :: basins
+      integer :: imax, iunit
+
+      ! If it is a one-dimensional problem, the ELF calculation will not work.
+      if(NDIM .eq. 1) return
+
+      if(iand(outp%what, output_elf).ne.0 .or. iand(outp%what, output_elf_basins).ne.0) then
+        imax = 1
+        if(st%d%ispin.ne.UNPOLARIZED) imax = 3
+
+        ALLOCATE(elf(1:NP, imax), NP*imax)
+        call elf_calc(st, gr, elf)
+      end if
+
+      ! output ELF in real space
+      if(iand(outp%what, output_elf).ne.0) then
+        write(fname, '(a)') 'elf_rs'
+        call doutput_function(outp%how, dir, trim(fname), gr%m, gr%sb, &
+           elf(:,imax), M_ONE, ierr, is_tmp = .false.)
+
+        if(st%d%ispin.ne.UNPOLARIZED) then
+          do is = 1, 2
+            write(fname, '(a,a,i1)') 'elf_rs', '-', is
+            call doutput_function(outp%how, dir, trim(fname), gr%m, gr%sb, &
+               elf(:, is), M_ONE, ierr, is_tmp = .false.)
+          end do
+        end if
+      end if
+
+      if(iand(outp%what, output_elf_basins).ne.0) then
+        call basins_init(basins, gr%m)
+        call basins_analyze(basins, gr%m, elf(:,1), CNST(0.01))
+
+        write(fname, '(a)') 'elf_rs_basins'
+        call doutput_function(outp%how, dir, trim(fname), gr%m, gr%sb, &
+           real(basins%map, REAL_PRECISION), M_ONE, ierr, is_tmp = .false.)
+        
+        write(fname,'(2a)') trim(dir), '/elf_rs_basins.info'
+        iunit = io_open(file = fname, action = 'write')
+        call basins_write(basins, gr%m, iunit)
+        call io_close(iunit)
+
+        call basins_end(basins)
+      end if
+
+      ! clean up
+      if(iand(outp%what, output_elf).ne.0 .or. iand(outp%what, output_elf_basins).ne.0) then
+        deallocate(elf)
+      end if
+
+#if defined(HAVE_FFT)
+      if(  iand(outp%what, output_elf_fs).ne.0  ) then ! Second, ELF in Fourier space.
+        ALLOCATE(elf(1:gr%m%np,1:st%d%nspin),gr%m%np*st%d%nspin)
+        call elf_calc_fs(st, gr, elf)
+        do is = 1, st%d%nspin
+          write(fname, '(a,a,i1)') 'elf_fs', '-', is
+          call doutput_function(outp%how, dir, trim(fname), gr%m, gr%sb, &
+            elf(:,is), M_ONE, ierr, is_tmp = .false.)
+        end do
+        deallocate(elf)
+      end if
+#endif
+    end subroutine out_elf
+
   end subroutine states_output
 
 

@@ -41,7 +41,7 @@ core_SRCS = $(basic_SRCS) \
 	curv_gygi.F90 curv_briggs.F90 curv_modine.F90 curvlinear.F90 \
 	fft.F90 mesh_lib.F90 par_vec.F90 mesh.F90 scalar_mesh.F90 nl_operator.F90 \
 	stencil_star.F90 stencil_variational.F90 stencil_cube.F90 stencil_starplus.F90 derivatives.F90 \
-	cf.F90 mf.F90 f.F90 \
+	cf.F90 mf.F90 f.F90 basins.F90 \
 	out.F90  \
 	operate.F90 \
 	multigrid.F90 \

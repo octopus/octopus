@@ -239,12 +239,13 @@ end subroutine X(lr_calc_elf)
 
 
 ! ---------------------------------------------------------
-subroutine X(lr_calc_polarizability)(sys, lr, zpol)
+subroutine X(lr_calc_polarizability)(sys, lr, zpol, ndir)
   type(system_t), target, intent(inout) :: sys
   type(lr_t),             intent(inout) :: lr(:,:)
   CMPLX,                  intent(out)   :: zpol(1:MAX_DIM, 1:MAX_DIM)
+  integer, optional,      intent(in)    :: ndir
 
-  integer :: dir1, dir2, j
+  integer :: dir1, dir2, j, ndir_
   CMPLX :: zpol_tmp(1:MAX_DIM, 1:MAX_DIM)
   CMPLX, allocatable  :: dl_rho_tot(:), tmp(:)
 
@@ -252,8 +253,11 @@ subroutine X(lr_calc_polarizability)(sys, lr, zpol)
   ALLOCATE(tmp(1:sys%gr%m%np), sys%gr%m%np)
 
   zpol_tmp = M_ZERO
+
+  ndir_ = sys%NDIM
+  if(present(ndir)) ndir_ = ndir
   
-  do dir1 = 1, sys%gr%sb%dim
+  do dir1 = 1, ndir
 
     ! sum dl_rho for all spin components
     do j = 1, sys%gr%m%np
@@ -270,10 +274,14 @@ subroutine X(lr_calc_polarizability)(sys, lr, zpol)
   deallocate(dl_rho_tot, tmp)
 
   ! symmetrize
-  do dir1 = 1, sys%gr%sb%dim
-    do dir2 = 1, sys%gr%sb%dim
-      zpol(dir1, dir2) = M_HALF*(zpol_tmp(dir1, dir2) + zpol_tmp(dir2, dir1))
-    end do
+  do dir1 = 1, ndir
+    if(ndir == sys%gr%sb%dim) then
+      do dir2 = 1, sys%gr%sb%dim
+        zpol(dir1, dir2) = M_HALF*(zpol_tmp(dir1, dir2) + zpol_tmp(dir2, dir1))
+      end do
+    else
+      zpol(dir1, :) = zpol_tmp(dir1, :)
+    end if
   end do
 
 end subroutine X(lr_calc_polarizability)

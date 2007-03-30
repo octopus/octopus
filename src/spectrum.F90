@@ -260,7 +260,15 @@ contains
     call messages_print_var_option(stdout, 'TDDeltaStrengthMode', k%delta_strength_mode)
 
     ! Find out how many equivalent axis we have...
-    ! WARNING: TODO: document this variable.
+    !%Variable TDPolarizationEquivAxis
+    !%Type integer
+    !%Default 0
+    !%Section Time Dependent::Linear Response
+    !%Description
+    !% Defines how many of the %TDPolarization axis are equivalent. This information can then
+    !% be used by oct-cross-section to rebuild the full polarizability tensor just from the
+    !% first 3-TDPolarizationEquivAxis directions.
+    !%End
     call loct_parse_int(check_inp('TDPolarizationEquivAxis'), 0, k%pol_equiv_axis)
 
     
