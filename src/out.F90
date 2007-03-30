@@ -153,22 +153,22 @@ contains
     !%Option ELF 64
     !% Prints out the electron localization function, ELF. The output file is called
     !% "elf-i", where i stands for the spin channel.
-    !%Option ELF_basins 64
+    !%Option ELF_basins 128
     !% Prints out the basins of attraction of the ELF. The output file is called
     !% "elf_basins-i", where i stands for the spin channel.
-    !%Option ELF_FS 128
+    !%Option ELF_FS 256
     !% Prints the electron localization function in Fourier space. The output file is called
     !% "elf_FS-i", where i stands for the spin channel. (EXPERIMENTAL)
-    !%Option ksdipole 256
+    !%Option ksdipole 512
     !% Prints out the dipole matrix elements between Kohn-Sham states (or just the single 
     !% particle states, in independent electrons mode).
-    !%Option pol_density 512
+    !%Option pol_density 1024
     !% Prints out the density of dipole moment. For pol and pol_lr modules, 
     !% prints the density of polarizability.
-    !%Option mesh_r 1024
+    !%Option mesh_r 2048
     !% Prints out the values of the coordinates over the grid. Files
     !% will be in the 'status/' directory.
-    !%Option kinetic_energy_density 2048
+    !%Option kinetic_energy_density 4096
     !% Prints out the kinetic energy density, defined as:
     !%
     !% <math>\tau_\sigma(\vec{r}) = \sum_{i=1}^{N_\sigma} 

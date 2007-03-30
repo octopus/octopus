@@ -31,8 +31,6 @@ module elf_m
   use messages_m
   use mpi_m
   use states_m
-  use basins_m
-  use output_m
 
   implicit none
 
