@@ -461,7 +461,7 @@ end subroutine multkernel
 
 
  	subroutine switch_upcorn(nfft,n2,lot,n1,lzt,zt,zw)
-	implicit real*8 (a-h,o-z)
+	implicit real(8) (a-h,o-z)
         integer :: lot, n1, n2, lzt, j, nfft, i
 	dimension zw(2,lot,n2),zt(2,lzt,n1)
 ! WARNING: Assuming that high frequencies are in the corners 
@@ -486,7 +486,7 @@ end subroutine multkernel
 
         
  	subroutine mpiswitch_upcorn(j3,nfft,Jp2stb,J2stb,lot,n1,md2,nd3,nproc,zmpi1,zw)
-	implicit real*8 (a-h,o-z)
+	implicit real(8) (a-h,o-z)
         integer :: n1, nd2, nd3, nproc, lot, mfft, jp2, jp2stb, j2
         integer :: j2stb, nfft, i1, j3, md2
         
@@ -517,7 +517,7 @@ end subroutine multkernel
 	end subroutine mpiswitch_upcorn
 
         subroutine halfill_upcorn(md1,md3,lot,nfft,n3,zf,zw)
-	implicit real*8 (a-h,o-z)
+	implicit real(8) (a-h,o-z)
         integer :: lot, n3, md1, md3, i3, i1, nfft
 	dimension zw(2,lot,n3/2),zf(md1,md3)
 ! WARNING: Assuming that high frequencies are in the corners 
@@ -697,7 +697,7 @@ end subroutine unscramble_pack
 
 
  	subroutine unswitch_downcorn(nfft,n2,lot,n1,lzt,zw,zt)
-	implicit real*8 (a-h,o-z)
+	implicit real(8) (a-h,o-z)
         integer :: lot, n2, lzt, n1, j, nfft, i
 	dimension zw(2,lot,n2),zt(2,lzt,n1)
 ! WARNING: Assuming that high frequencies are in the corners 
@@ -714,7 +714,7 @@ end subroutine unscramble_pack
 
 
  	subroutine unmpiswitch_downcorn(j3,nfft,Jp2stf,J2stf,lot,n1,md2,nd3,nproc,zw,zmpi1)
-	implicit real*8 (a-h,o-z)
+	implicit real(8) (a-h,o-z)
         integer :: n1, md2, nproc, nd3, lot, mfft, i1, j3
         integer :: jp2, j2, nfft, jp2stf, j2stf
         dimension zmpi1(2,n1/2,md2/nproc,nd3/nproc,nproc),zw(2,lot,n1)

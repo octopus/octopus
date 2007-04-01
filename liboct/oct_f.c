@@ -260,7 +260,7 @@ int FC_FUNC_(oct_getmem, OCT_GETMEM)
   static size_t pagesize = 0;
   FILE *f;
   int pid;
-  long mem;
+  unsigned long mem;
   char s[256];
   
   if(pagesize == 0)

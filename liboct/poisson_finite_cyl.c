@@ -72,7 +72,7 @@ static double int_aux(int index, double kx, double kr, double x0, double r0, int
   /*variables*/
   double result, error;
   double xinf = 100.0/r0;
-  struct parameters params = {kx, kr, x0, r0, index};
+  struct parameters params;
 
   /*pass the given parameters to program*/
   const size_t wrk_size = 5000;
@@ -89,6 +89,13 @@ static double int_aux(int index, double kx, double kr, double x0, double r0, int
 
   /*create the function*/
   gsl_function F;
+
+  params.kx = kx;
+  params.kr = kr;
+  params.x0 = x0;
+  params.r0 = r0;
+  params.index = index;
+
   F.params = &params;
       
   /*select the integration method*/

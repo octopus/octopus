@@ -199,7 +199,7 @@ contains
           end do
         end if
       end if
-
+#if 0 
       if(iand(outp%what, output_elf_basins).ne.0) then
         call basins_init(basins, gr%m)
         call basins_analyze(basins, gr%m, elf(:,1), CNST(0.01))
@@ -215,7 +215,7 @@ contains
 
         call basins_end(basins)
       end if
-
+#endif
       ! clean up
       if(iand(outp%what, output_elf).ne.0 .or. iand(outp%what, output_elf_basins).ne.0) then
         deallocate(elf)

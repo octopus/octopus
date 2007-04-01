@@ -160,9 +160,9 @@ subroutine par_psolver_kernel(n01,n02,n03,nd1,nd2,nd3, &
  !Arguments
  integer, intent(in)  :: n01,n02,n03,iproc,nproc
  integer, intent(inout) :: nd1,nd2,nd3
- real*8, intent(in) :: hgrid
- real*8, intent(in), dimension(nd1,nd2,nd3/nproc) :: kernelLOC
- real*8, intent(inout), dimension(n01,n02,n03) :: rhopot
+ real(kind=8), intent(in) :: hgrid
+ real(kind=8), intent(in), dimension(nd1,nd2,nd3/nproc) :: kernelLOC
+ real(kind=8), intent(inout), dimension(n01,n02,n03) :: rhopot
  integer, intent(in) :: comm
  !Local variables
  integer :: m1,m2,m3,n1,n2,n3,md1,md2,md3
@@ -330,8 +330,8 @@ subroutine enterdensity(rhopot,m1,m2,m3,md1,md2,md3,iproc,nproc,zf)
 
  !Arguments
  integer, intent(in) :: m1,m2,m3,md1,md2,md3,iproc,nproc
- real*8, dimension(0:md1-1,0:md3-1,0:md2/nproc-1), intent(out) :: zf
- real*8, dimension(0:m1-1,0:m3-1,0:m2-1), intent(in) :: rhopot
+ real(8), dimension(0:md1-1,0:md3-1,0:md2/nproc-1), intent(out) :: zf
+ real(8), dimension(0:m1-1,0:m3-1,0:m2-1), intent(in) :: rhopot
  !Local Variables
  integer :: j1,j2,j3,jp2
 

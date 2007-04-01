@@ -1512,7 +1512,6 @@
          call DNCHBV(mx,sgn*t_step,wsp(ih),mh,wsp(iexph),wsp(ifree+mx)) 
       endif 
                                                                         
-  402 continue 
 !                                                                       
 !---  error estimate ...                                                
 !                                                                       
@@ -1893,7 +1892,6 @@
          wsp(iexph) = 1.0d0 
          call DNCHBV(mx,sgn*t_step,wsp(ih),mh,wsp(iexph),wsp(ifree+mx)) 
       endif 
-  402 continue 
 !                                                                       
 !---  error estimate ...                                                
 !                                                                       
@@ -2279,7 +2277,6 @@
          wsp(iexph) = ONE 
          call ZNCHBV(mx,sgn*t_step,wsp(ih),mh,wsp(iexph),wsp(ifree+mx)) 
       endif 
-  402 continue 
 !                                                                       
 !---  error estimate ...                                                
 !                                                                       
@@ -2668,7 +2665,6 @@
          call ZNCHBV(mx,sgn*t_step,wsp(ih),mh,wsp(iexph),wsp(ifree+mx)) 
       endif 
                                                                         
-  402 continue 
 !                                                                       
 !---  error estimate ...                                                
 !                                                                       

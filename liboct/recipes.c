@@ -31,62 +31,62 @@
 #include "string_f.h"
 
 void FC_FUNC_(oct_printrecipe, OCT_PRINTRECIPE)
-		 (STR_F_TYPE _dir, STR_F_TYPE filename STR_ARG2)
+  (STR_F_TYPE _dir, STR_F_TYPE filename STR_ARG2)
 {
 
 #if HAVE_SCANDIR && HAVE_ALPHASORT
   char *lang, *tmp, dir[512];
-	struct dirent **namelist;
-	int i, n;
+  struct dirent **namelist;
+  int i, n;
 
-	/* get language */
-	lang = getenv("LANG");
-	if(lang == NULL) lang = "en";
+  /* get language */
+  lang = getenv("LANG");
+  if(lang == NULL) lang = "en";
 
-	/* convert directory from Fortran to C string */
-	tmp = TO_C_STR1(_dir);
-	strcpy(dir, tmp);
-	free(tmp);
+  /* convert directory from Fortran to C string */
+  tmp = TO_C_STR1(_dir);
+  strcpy(dir, tmp);
+  free(tmp);
 
-	strcat(dir, "/recipes");
+  strcat(dir, "/recipes");
 
-	/* check out if lang dir exists */
-	n = scandir(dir, &namelist, 0, alphasort);
-	if (n < 0){
-		printf("Directory does not exist: %s", dir);
-		return;
-	}
+  /* check out if lang dir exists */
+  n = scandir(dir, &namelist, 0, alphasort);
+  if (n < 0){
+    printf("Directory does not exist: %s", dir);
+    return;
+  }
 
-	for(i=0; i<n; i++)
-		if(strncmp(lang, namelist[i]->d_name, 2) == 0){
-			strcat(dir, "/");
-			strcat(dir, namelist[i]->d_name);
-			break;
-		}
+  for(i=0; i<n; i++)
+    if(strncmp(lang, namelist[i]->d_name, 2) == 0){
+      strcat(dir, "/");
+      strcat(dir, namelist[i]->d_name);
+      break;
+    }
 
-	if(i == n)
-		strcat(dir, "/en"); /* default */
+  if(i == n)
+    strcat(dir, "/en"); /* default */
 
-	/* clean up */
-	for(i=0; i<n; i++)
-		free(namelist[i]);
-	free(namelist);
+  /* clean up */
+  for(i=0; i<n; i++)
+    free(namelist[i]);
+  free(namelist);
 
-	/* now we read the recipes */
-	n = scandir(dir, &namelist, 0, alphasort);
+  /* now we read the recipes */
+  n = scandir(dir, &namelist, 0, alphasort);
 	
-	/* initialize random numbers */
-	srand((unsigned int)time(NULL));
-	i = (int) ((double) (n-3 + 1.0) * (rand()/(RAND_MAX + 1.0)));
+  /* initialize random numbers */
+  srand((unsigned int)time(NULL));
+  i = (int) ((double) (n-3 + 1.0) * (rand()/(RAND_MAX + 1.0)));
 
-	strcat(dir, "/");
-	strcat(dir, namelist[i+2]->d_name); /* skip ./ and ../ */
+  strcat(dir, "/");
+  strcat(dir, namelist[i+2]->d_name); /* skip ./ and ../ */
 
-	/* clean up again */
-	for(i=0; i<n; i++)
-		free(namelist[i]);
-	free(namelist);
+  /* clean up again */
+  for(i=0; i<n; i++)
+    free(namelist[i]);
+  free(namelist);
 
-	TO_F_STR2(dir, filename);
+  TO_F_STR2(dir, filename);
 #endif
 }

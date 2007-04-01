@@ -246,7 +246,7 @@ void sym_output_table()
     printf("%s", ptr->name);
     switch(ptr->type){
     case S_CMPLX:
-      printf(" = (%lf,%lf)\n", GSL_REAL(ptr->value.c), GSL_IMAG(ptr->value.c));
+      printf(" = (%f,%f)\n", GSL_REAL(ptr->value.c), GSL_IMAG(ptr->value.c));
       break;
     case S_STR:
       printf(" = \"%s\"\n", ptr->value.str);
