@@ -256,9 +256,8 @@ subroutine X(lr_calc_polarizability)(sys, lr, zpol, ndir)
 
   ndir_ = sys%NDIM
   if(present(ndir)) ndir_ = ndir
-  
-  do dir1 = 1, ndir
 
+  do dir1 = 1, ndir_
     ! sum dl_rho for all spin components
     do j = 1, sys%gr%m%np
       dl_rho_tot(j) = sum(lr(dir1, 1)%X(dl_rho)(j, 1:sys%st%d%nspin))
@@ -268,14 +267,13 @@ subroutine X(lr_calc_polarizability)(sys, lr, zpol, ndir)
       tmp(1:sys%gr%m%np) = sys%gr%m%x(1:sys%gr%m%np, dir2) * dl_rho_tot(1:sys%gr%m%np)
       zpol_tmp(dir1, dir2) = zpol_tmp(dir1, dir2) - zmf_integrate(sys%gr%m, tmp)
     end do
-    
   end do
-  
+
   deallocate(dl_rho_tot, tmp)
 
   ! symmetrize
-  do dir1 = 1, ndir
-    if(ndir == sys%gr%sb%dim) then
+  do dir1 = 1, ndir_
+    if(ndir_ == sys%gr%sb%dim) then
       do dir2 = 1, sys%gr%sb%dim
         zpol(dir1, dir2) = M_HALF*(zpol_tmp(dir1, dir2) + zpol_tmp(dir2, dir1))
       end do
