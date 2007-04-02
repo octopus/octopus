@@ -65,7 +65,7 @@ module states_m
     states_write_current_flow,        &
     states_spin_channel,              &
     states_calc_dens,                 &
-    states_calc_paramagnetic_current, &
+    states_paramagnetic_current,      &
     kpoints_write_info,               &
     wfs_are_complex,                  &
     wfs_are_real,                     &
@@ -1661,7 +1661,7 @@ contains
 
     end select
 
-    call states_calc_paramagnetic_current(gr, st, st%j)
+    call states_paramagnetic_current(gr, st, st%j)
 
     ALLOCATE(j(NP, MAX_DIM), NP*MAX_DIM)
 
@@ -1799,7 +1799,7 @@ contains
 
   ! ---------------------------------------------------------
   ! This routine (obviously) assumes complex wave-functions
-  subroutine states_calc_paramagnetic_current(gr, st, jp)
+  subroutine states_paramagnetic_current(gr, st, jp)
     type(grid_t),   intent(inout) :: gr
     type(states_t), intent(inout) :: st
     FLOAT,          intent(out)   :: jp(:,:,:)  ! (NP, NDIM, st%d%nspin)
@@ -1810,7 +1810,7 @@ contains
     FLOAT, allocatable :: red(:,:,:)
 #endif
 
-    call push_sub('magnetic.calc_paramagnetic_current')
+    call push_sub('states.states_paramagnetic_current')
 
     ASSERT(st%d%wfs_type == M_CMPLX)
 
@@ -1867,7 +1867,7 @@ contains
 #endif
 
     call pop_sub()
-  end subroutine states_calc_paramagnetic_current
+  end subroutine states_paramagnetic_current
 
 #include "states_kpoints.F90"
 
