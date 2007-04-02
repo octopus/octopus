@@ -382,7 +382,7 @@ subroutine X(f_angular_momentum)(sb, f_der, f, lf, ghost_update)
   call X(f_gradient)(sb, f_der, f, gf, ghost_update=ghost_update)
 
   do i = 1, f_der%m%np
-    x = f_der%m%x(i,:)
+    x(1:sb%dim) = f_der%m%x(i,1:sb%dim)
     select case(sb%dim)
     case(3)
       lf(i, 1) = (x(2)*gf(i, 3) - x(3)*gf(i, 2))
