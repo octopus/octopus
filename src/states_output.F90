@@ -202,7 +202,7 @@ contains
 
       if(iand(outp%what, output_elf_basins).ne.0) then
         call basins_init(basins, gr%m)
-        call basins_analyze(basins, gr%m, elf(:,1), CNST(0.01))
+        call basins_analyze(basins, gr%m, st%d%nspin, elf(:,1), st%rho, CNST(0.01))
 
         write(fname, '(a)') 'elf_rs_basins'
         call doutput_function(outp%how, dir, trim(fname), gr%m, gr%sb, &

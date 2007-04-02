@@ -43,6 +43,8 @@ module basins_m
     integer, pointer :: position(:)
     FLOAT,   pointer :: value(:)
     FLOAT,   pointer :: volume(:)
+
+    FLOAT,   pointer :: population(:)
   end type basins_t
 
 contains
@@ -69,16 +71,19 @@ contains
       deallocate(this%position); nullify(this%position)
       deallocate(this%value);    nullify(this%value)
       deallocate(this%volume);   nullify(this%volume)
+      deallocate(this%population);   nullify(this%population)
     end if
 
   end subroutine basins_end
 
 
   !----------------------------------------------------------------
-  subroutine basins_analyze(this, mesh, f, threshold)
+  subroutine basins_analyze(this, mesh, nspin, f, rho, threshold)
     type(basins_t), intent(inout) :: this
     type(mesh_t),   intent(in)    :: mesh
+    integer,        intent(in)    :: nspin
     FLOAT,          intent(in)    :: f(:)
+    FLOAT,          intent(in)    :: rho(:, :)
     FLOAT,          intent(in)    :: threshold
 
     integer :: jj, kk, xmax, ymax, zmax
@@ -194,9 +199,12 @@ contains
       ALLOCATE(this%value(this%number),    this%number)
       ALLOCATE(this%volume(this%number),   this%number)
 
+      ALLOCATE(this%population(this%number),   this%number)
+
       this%position(:) = -1
       this%value(:)    = M_ZERO
       this%volume(:)   = M_ZERO
+      this%population(:)   = M_ZERO
       do ii = 1, this%number
         ii_max = -1
         f_max  = -huge(M_ZERO)
@@ -208,6 +216,7 @@ contains
             f_max  = f(jj)
           end if
           this%volume(ii) = this%volume(ii) + mesh%vol_pp(jj)
+          this%population(ii) = this%population(ii) + mesh%vol_pp(jj)*sum(rho(jj, :))
         end do
         
         this%position(ii) = ii_max
@@ -238,6 +247,7 @@ contains
          mesh%x(this%position(ii), 3), ')'
       write(iunit, '(a,f12.6)') '  val = ', this%value(ii)
       write(iunit, '(a,f12.6)') '  vol = ', this%volume(ii)
+      write(iunit, '(a,f12.6)') '  population = ', this%population(ii)
     end do
 
   end subroutine basins_write
