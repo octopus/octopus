@@ -2121,6 +2121,7 @@ contains
       call states_densities_init(target_st,  gr, sys%geo)
 
       ALLOCATE(v_old_f(NP, chi%d%nspin, 0:3), NP_PART*chi%d%nspin*(3+1))
+      v_old_f = M_ZERO
 
       ! initial laser field 
 
