@@ -166,9 +166,10 @@ contains
       ps_spline => s%ps%vl
     end if
 
-
-    write(message(1),'(a)')         'Info: Integral of the local part of the pseudopotential'
-    call write_info(1)
+    if(dg_add_localization_density(this) .or. this%use_double_grid ) then 
+      write(message(1),'(a)')         'Info: Integral of the local part of the pseudopotential'
+      call write_info(1)
+    end if
 
     if(dg_add_localization_density(this)) then
       call loct_spline_init(ft)
@@ -183,10 +184,10 @@ contains
       vl(ip) = loct_splint(ps_spline, r)
     end do
 
-    write(message(1),'(a, f14.6)')  '      coarse grid = ', dmf_integrate(m, vl)
-    call write_info(1)
-
     if (this%use_double_grid) then 
+
+      write(message(1),'(a, f14.6)')  '      coarse grid = ', dmf_integrate(m, vl)
+      call write_info(1)
 
       ALLOCATE(vv(-this%nn:this%nn, -this%nn:this%nn, -this%nn:this%nn), (2*this%nn+1)**3 )
 
