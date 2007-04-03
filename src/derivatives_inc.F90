@@ -189,7 +189,7 @@ subroutine X(derivatives_curl)(der, f, curl, ghost_update)
     curl(1:np,3) = curl(1:np,3) - tmp(1:np)
 
     call X(nl_operator_operate) (der%grad(3), f(:,2), tmp, ghost_update=ghost_update)
-    curl(1:np,1) = curl(:,1) - tmp(1:np)
+    curl(1:np,1) = curl(1:np,1) - tmp(1:np)
     call X(nl_operator_operate) (der%grad(1), f(:,2), tmp, ghost_update=ghost_update)
     curl(1:np,3) = curl(1:np,3) + tmp(1:np)
 
