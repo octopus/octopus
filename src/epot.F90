@@ -685,6 +685,7 @@ contains
               call projector_end(ep%p(i))
               call projector_build_kb_sphere(ep%p(i), sb, m, a, st)
             else
+              call projector_end(ep%p(i))
               call projector_copy_kb_sphere(ep%p(k), ep%p(i))
             end if
 

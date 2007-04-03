@@ -93,6 +93,7 @@ contains
     ALLOCATE(kb_p%p (n_s, n_c),    n_s*n_c)
     ALLOCATE(kb_p%dp(n_s, 3, n_c), n_s*3*n_c)
     ALLOCATE(kb_p%e (n_c),         n_c)
+    kb_p%p = M_ZERO; kb_p%dp = M_ZERO; kb_p%e = M_ZERO
     
     if (gr%sb%periodic_dim == 0) then 
 
