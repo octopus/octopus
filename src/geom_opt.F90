@@ -35,6 +35,8 @@ module geom_opt_m
   use units_m
   use v_ks_m
   use varinfo_m
+  use specie_pot_m
+  use lcao_m
 
   implicit none
 
@@ -63,25 +65,76 @@ contains
     type(mesh_t),     pointer :: m    ! shortcuts
     type(states_t),   pointer :: st
     type(geometry_t), pointer :: geo
-
     type(geom_opt_t) :: g_opt
-
-    integer :: i, ierr
+    integer :: i, ierr, lcao_start, lcao_start_default
     FLOAT, allocatable :: x(:)
+    type(lcao_t) :: lcao_data
 
     call init_()
 
     ! load wave-functions
+
     call restart_read(trim(tmpdir)//'restart_gs', sys%st, sys%gr, sys%geo, ierr)
     if(ierr.ne.0) then
       message(1) = "Could not load wave-functions: Starting from scratch"
       call write_warning(1)
-    end if
 
-    ! setup Hamiltonian
-    message(1) = 'Info: Setting up Hamiltonian.'
-    call write_info(1)
-    call system_h_setup(sys, h)
+      ! Randomly generate the initial wave-functions
+      call states_generate_random(sys%st, sys%gr%m)
+
+      ! We do not compute the density from the random wave-functions. 
+      ! Instead, we try to get a better guess for the density
+      call guess_density(sys%gr%m, sys%gr%sb, sys%geo, sys%st%qtot, sys%st%d%nspin, &
+           sys%st%d%spin_channels, sys%st%rho)
+
+      ! setup Hamiltonian (we do not call system_h_setup here because we do not want to
+      ! overwrite the guess density)
+      message(1) = 'Info: Setting up Hamiltonian.'
+      call write_info(1)
+      call v_ks_calc(sys%gr, sys%ks, h, sys%st, calc_eigenval=.true.) ! get potentials
+      call states_fermi(sys%st, sys%gr%m)                                ! occupations
+      call hamiltonian_energy(h, sys%gr, sys%geo, sys%st, -1)             ! total energy
+
+      lcao_start_default = LCAO_START_FULL
+      if(sys%geo%only_user_def) lcao_start_default = LCAO_START_NONE
+
+      call loct_parse_int(check_inp('LCAOStart'), lcao_start_default, lcao_start)
+      if(.not.varinfo_valid_option('LCAOStart', lcao_start)) call input_error('LCAOStart')
+      call messages_print_var_option(stdout, 'LCAOStart', lcao_start)
+
+      if (lcao_start > LCAO_START_NONE) then
+
+        lcao_data%state = 0 ! Uninitialized here.
+        call lcao_init(sys%gr, sys%geo, lcao_data, sys%st, h)
+        if(lcao_data%state == 1) then
+          write(message(1),'(a,i4,a)') 'Info: Performing initial LCAO calculation with ', &
+               lcao_data%st%nst,' orbitals.'
+          call write_info(1)
+          
+          call lcao_wf(lcao_data, sys%st, sys%gr, h)
+          call lcao_end(lcao_data, sys%st%nst)
+
+          !Just populate again the states, so that the eigenvalues are properly written
+          call states_fermi(sys%st, sys%gr%m)
+          call states_write_eigenvalues(stdout, sys%st%nst, sys%st, sys%gr%sb)
+
+          if (lcao_start == LCAO_START_FULL) then
+            ! Update the density and the Hamiltonian
+            call system_h_setup(sys, h)
+          end if
+
+        end if
+
+      end if
+
+    else
+
+      ! setup Hamiltonian
+      message(1) = 'Info: Setting up Hamiltonian.'
+      call write_info(1)
+      call system_h_setup(sys, h)
+
+    end if
 
     call scf_init(sys%gr, sys%geo, scfv, sys%st, h)
 
