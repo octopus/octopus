@@ -20,6 +20,7 @@
 #include "global.h"
 
 module geom_opt_m
+  use lib_oct_m
   use datasets_m
   use external_pot_m
   use geometry_m
@@ -54,21 +55,30 @@ module geom_opt_m
 
   end type geom_opt_t
 
+  integer, parameter ::             &
+    MINMETHOD_STEEPEST_DESCENT = 1, &
+    MINMETHOD_FR_CG            = 2
+
+
+  type(geometry_t),    pointer :: geo
+  type(hamiltonian_t), pointer :: hamilt
+  type(system_t),      pointer :: syst
+  type(scf_t)                  :: scfv
+  type(mesh_t),        pointer :: m    ! shortcuts
+  type(states_t),      pointer :: st
+
 contains
 
   ! ---------------------------------------------------------
   subroutine geom_opt_run(sys, h)
-    type(system_t), target, intent(inout) :: sys
-    type(hamiltonian_t),    intent(inout) :: h
+    type(system_t), target,      intent(inout) :: sys
+    type(hamiltonian_t), target, intent(inout) :: h
 
-    type(scf_t)               :: scfv
-    type(mesh_t),     pointer :: m    ! shortcuts
-    type(states_t),   pointer :: st
-    type(geometry_t), pointer :: geo
     type(geom_opt_t) :: g_opt
     integer :: i, ierr, lcao_start, lcao_start_default
     FLOAT, allocatable :: x(:)
     type(lcao_t) :: lcao_data
+    FLOAT :: energy
 
     call init_()
 
@@ -146,8 +156,12 @@ contains
     end do
 
     select case(g_opt%method)
-    case(1)
+    case(MINMETHOD_STEEPEST_DESCENT)
       i = steepest_descents(x)
+    case(MINMETHOD_FR_CG)
+!!$      energy = loct_minimize(3*geo%natoms, x(1), CNST(0.1), CNST(1.0e-4), calc_point)
+      energy = loct_minimize(3*geo%natoms, x(1), CNST(0.1), g_opt%tol, g_opt%max_iter, calc_point)
+      i = 0 ! WARNING: this should be output by loct_minimize!!
     end select
 
     if(i == 0) then
@@ -184,6 +198,8 @@ contains
       m   => sys%gr%m
       geo => sys%geo
       st  => sys%st
+      hamilt => h
+      syst => sys
 
       !%Variable GOMethod
       !%Type integer
@@ -193,8 +209,10 @@ contains
       !% Method by which the minimization is performed.
       !%Option steep 1
       !% simple steepest descent.
+      !%Option cg_fr 2
+      !% Fletcher-Reeves conjugate gradient algorithm
       !%End
-      call loct_parse_int(check_inp('GOMethod'), 1, g_opt%method)
+      call loct_parse_int(check_inp('GOMethod'), MINMETHOD_STEEPEST_DESCENT, g_opt%method)
       if(.not.varinfo_valid_option('GOMethod', g_opt%method)) call input_error('GOMethod')
       call messages_print_var_option(stdout, "GOMethod", g_opt%method)
 
@@ -239,41 +257,12 @@ contains
     ! ---------------------------------------------------------
     subroutine end_()
       call states_deallocate_wfns(sys%st)
+      nullify(m)
+      nullify(geo)
+      nullify(st)
+      nullify(hamilt)
+      nullify(syst)
     end subroutine end_
-
-
-    ! ---------------------------------------------------------
-    subroutine geom_calc_point(x, f, df)
-      FLOAT, intent(in)  :: x(3*geo%natoms)
-      FLOAT, intent(out) :: f, df(3*geo%natoms)
-
-      integer :: i
-
-      do i = 0, geo%natoms - 1
-        geo%atom(i+1)%x(1) = x(3*i + 1)
-        geo%atom(i+1)%x(2) = x(3*i + 2)
-        geo%atom(i+1)%x(3) = x(3*i + 3)
-      end do
-      call atom_write_xyz(".", "work-min", geo)
-
-      call epot_generate(h%ep, sys%gr, sys%geo, st, h%reltype)
-      call states_calc_dens(st, m%np, st%rho)
-      call v_ks_calc(sys%gr, sys%ks, h, st, calc_eigenval=.true.)
-      call hamiltonian_energy(h, sys%gr, sys%geo, st, -1)
-
-      ! do scf calculation
-      call scf_run(scfv, sys%gr, sys%geo, st, sys%ks, h, sys%outp)
-
-      ! store results
-      f = h%etot
-
-      do i = 0, geo%natoms - 1
-        df(3*i + 1) = - geo%atom(i+1)%f(1)
-        df(3*i + 2) = - geo%atom(i+1)%f(2)
-        df(3*i + 3) = - geo%atom(i+1)%f(3)
-      end do
-
-    end subroutine geom_calc_point
 
 
     ! ---------------------------------------------------------
@@ -282,7 +271,7 @@ contains
 
       FLOAT, allocatable :: x1(:), df(:), df1(:)
       FLOAT :: f, f1
-      integer :: iter, count
+      integer :: iter, count, getgrad
 
       ALLOCATE( x1(3*geo%natoms), 3*geo%natoms)
       ALLOCATE( df(3*geo%natoms), 3*geo%natoms)
@@ -290,14 +279,15 @@ contains
 
       count = 0
       steepest_descents = 1
+      getgrad = 1
 
       ! get initial point
-      call geom_calc_point(x, f, df)
+      call calc_point(3*geo%natoms, x, f, getgrad, df)
 
       do iter = 1, g_opt%max_iter
         x1 = x - g_opt%step * df
 
-        call geom_calc_point(x1, f1, df1)
+        call calc_point(3*geo%natoms, x1, f1, getgrad, df1)
 
         if(f1 < f) then
           f = f1; x = x1; df = df1
@@ -332,6 +322,54 @@ contains
     end function steepest_descents
 
   end subroutine geom_opt_run
+
+  subroutine calc_point(n, x, f, getgrad, df)
+    integer, intent(in) :: n
+    FLOAT, intent(in) :: x(n)
+    FLOAT, intent(out) :: f
+    integer, intent(in) :: getgrad
+    FLOAT, intent(out) :: df(n)
+
+    integer :: i
+
+    do i = 0, geo%natoms - 1
+      geo%atom(i+1)%x(1) = x(3*i + 1)
+      geo%atom(i+1)%x(2) = x(3*i + 2)
+      geo%atom(i+1)%x(3) = x(3*i + 3)
+    end do
+
+    call atom_write_xyz(".", "work-min", geo)
+
+    call epot_generate(hamilt%ep, syst%gr, syst%geo, syst%st, hamilt%reltype)
+    call states_calc_dens(st, m%np, st%rho)
+    call v_ks_calc(syst%gr, syst%ks, hamilt, st, calc_eigenval=.true.)
+    call hamiltonian_energy(hamilt, syst%gr, geo, st, -1)
+
+    ! do scf calculation
+    call scf_run(scfv, syst%gr, geo, st, syst%ks, hamilt, syst%outp)
+
+    ! store results
+    f = hamilt%etot
+
+    if(getgrad .eq. 1) then
+      do i = 0, geo%natoms - 1
+        df(3*i + 1) = -geo%atom(i+1)%f(1)
+        df(3*i + 2) = -geo%atom(i+1)%f(2)
+        df(3*i + 3) = -geo%atom(i+1)%f(3)
+      end do
+    end if
+
+
+        write(message(1),'(a)')
+        write(message(2), '(6x,2(a,f16.10))')  "Energy = ", f/units_out%energy%factor
+        call write_info(2)
+        if(getgrad .eq. 1) then
+          write(message(1),'(6x,2(a,f16.10))') "Max force = ", maxval(abs(df))/units_out%force%factor
+          call write_info(1)
+        end if
+
+  end subroutine calc_point
+
 end module geom_opt_m
 
 !! Local Variables:
