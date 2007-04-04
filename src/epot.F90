@@ -128,12 +128,16 @@ module external_pot_m
     ! The gyromagnetic ratio (-2.0 for the electron, but different if we treat
     ! *effective* electrons in a quantum dot. It affects the spin Zeeman term.
     FLOAT :: gyromagnetic_ratio
-
+    integer :: forces
   end type epot_t
 
   integer, parameter :: M_HGH = 1, &
                         M_KB  = 2, &
                         M_RKB = 3
+
+  integer, parameter :: &
+       DERIVATE_POTENTIAL = 1,      &
+       DERIVATE_WAVEFUNCTION  = 2
 
 contains
 
@@ -320,6 +324,21 @@ contains
     !%End
     call loct_parse_float(check_inp('GyromagneticRatio'), P_g, ep%gyromagnetic_ratio)
 
+    !%Variable Forces
+    !%Type integer
+    !%Default potential
+    !%Section Hamiltonian
+    !%Description
+    !% The forces can be calculated either by derivating the ionic
+    !% potential or the wavefunctions. This option selects how to
+    !% calculate them. By default the ionic potential is derived.
+    !%Option derivate_potential 1
+    !% Derivate the potential to calculate the forces.
+    !%Option derivate_wavefunctions 2
+    !% Derivate the wavefunctions to calculate the forces.
+    !%End
+    call loct_parse_int(check_inp('Forces'), DERIVATE_POTENTIAL, ep%forces)
+
     ! The projectors
     ep%nvnl = geometry_nvnl(geo)
     nullify(ep%p)
@@ -345,9 +364,7 @@ contains
     type(grid_t),      intent(in)    :: gr
     type(geometry_t),  intent(inout) :: geo
 
-#ifdef HAVE_FFT
     integer :: i
-#endif
 
     call push_sub('epot.epot_end')
 
@@ -618,8 +635,7 @@ contains
     logical :: fast_generation_
     FLOAT   :: time_
     integer :: ia, i, l, lm, k, p
-    type(specie_t), pointer :: s
-    type(atom_t),   pointer :: a
+    type(atom_t),   pointer :: atm
 #ifdef HAVE_FFT
     type(dcf_t) :: cf_loc, cf_nlcc
 #endif
@@ -658,22 +674,35 @@ contains
     ! Local.
     ep%vpsl = M_ZERO
     do ia = 1, geo%natoms
-      a => geo%atom(ia) ! shortcuts
-      s => a%spec
-      if (specie_is_ps(s) .and. conf%debug_level > 0) call debug_pseudo()
-      call build_local_part()
+      atm => geo%atom(ia) ! shortcuts
+
+      if (specie_is_ps(atm%spec) .and. conf%debug_level > 0) call debug_pseudo()
+      
+      if((.not.simul_box_is_periodic(sb)).or.geo%only_user_def) then
+        
+        call build_local_part_in_real_space(ep, gr, geo, atm, ep%vpsl, time_, st%rho_core)
+        
+#ifdef HAVE_FFT
+      else ! momentum space
+        call cf_phase_factor(sb, m, atm%x, ep%local_cf(atm%spec%index), cf_loc)
+        if(atm%spec%nlcc) then
+          call cf_phase_factor(sb, m, atm%x, ep%rhocore_cf(atm%spec%index), cf_nlcc)
+        end if
+#endif
+      end if
+      
     end do
 
     ! Nonlocal part.
     i = 1
     do ia = 1, geo%natoms
-      a => geo%atom(ia)
-      s => a%spec
-      if(s%local) cycle
+      atm => geo%atom(ia)
+
+      if(atm%spec%local) cycle
       p = 1
 
-      do l = 0, s%ps%l_max
-        if(s%ps%l_loc == l) cycle
+      do l = 0, atm%spec%ps%l_max
+        if(atm%spec%ps%l_loc == l) cycle
         do lm = -l, l
 
           if(.not.fast_generation_) then
@@ -683,7 +712,7 @@ contains
               k = i
               p = 2
               call projector_end(ep%p(i))
-              call projector_build_kb_sphere(ep%p(i), sb, m, a, st)
+              call projector_build_kb_sphere(ep%p(i), sb, m, atm, st)
             else
               call projector_end(ep%p(i))
               call projector_copy_kb_sphere(ep%p(k), ep%p(i))
@@ -691,7 +720,7 @@ contains
 
           end if
 
-          call projector_init_nl_part(ep%p(i), gr, a, reltype, l, lm)
+          call projector_init_nl_part(ep%p(i), gr, atm, reltype, l, lm)
 
           ep%p(i)%iatom = ia
           i = i + 1
@@ -736,16 +765,16 @@ contains
       call dg_get_potential_correction(gr%dgrid, pot_corr)
 
       call io_mkdir('debug/')
-      iunit = io_open('debug/pseudo-'//trim(s%label), action='write')
+      iunit = io_open('debug/pseudo-'//trim(atm%spec%label), action='write')
 
       dr = CNST(0.01)
       nn = CNST(10.0)/dr
       r = M_ZERO
       do ii = 1, nn
-        write(iunit, '(4f12.6)', advance='no') r, loct_splint(s%ps%vl, r),  &
-             -s%z_val*loct_splint(pot_corr, r)
+        write(iunit, '(4f12.6)', advance='no') r, loct_splint(atm%spec%ps%vl, r),  &
+             -atm%spec%z_val*loct_splint(pot_corr, r)
         if(dg_add_localization_density(gr%dgrid)) then
-          write(iunit,'(f12.6)') loct_splint(s%ps%vll, r)
+          write(iunit,'(f12.6)') loct_splint(atm%spec%ps%vll, r)
         else
           write(iunit,*)
         end if
@@ -760,90 +789,94 @@ contains
 
     ! ---------------------------------------------------------
     subroutine build_local_part()
-      integer :: i
-      FLOAT :: x(MAX_DIM), xx(MAX_DIM), r, pot_re, pot_im
-      FLOAT, allocatable  :: rho(:), vl(:)
 
-      type(loct_spline_t) :: pot_corr
-
-      call push_sub('epot.build_local_part')
-
-      if((.not.simul_box_is_periodic(sb)).or.geo%only_user_def) then
-        !Real space
-
-        ALLOCATE(vl(1:m%np_part), m%np_part)
-        
-        !Local potential
-        call specie_get_local(s, gr, a%x(:), vl, time_)
-        ep%vpsl(1:m%np) = ep%vpsl(1:m%np) + vl(1:m%np)
-
-        !Non-local core corrections
-        if(s%nlcc .and. specie_is_ps(s)) then
-          do i = 1, m%np
-            x(:) = m%x(i, :) - a%x(:)
-            st%rho_core(i) = st%rho_core(i) + specie_get_nlcc(s, x)
-          end do
-        end if
-        
-        !Time dependent potential
-        if(time_ > M_ZERO .and. (ep%extra_td_pot .ne. '0') ) then
-          do i = 1, m%np
-            x(:) = m%x(i, :) - a%x(:)
-            xx(:) = x(:)/units_inp%length%factor   ! convert from a.u. to input units
-            r = sqrt(sum(x(:)**2))/units_inp%length%factor
-            call loct_parse_expression(pot_re, pot_im, xx(1), xx(2), xx(3), &
-              r, time_, ep%extra_td_pot)
-            ep%vpsl(i) = ep%vpsl(i) + pot_re * units_inp%energy%factor  ! convert from input units to a.u.
-          end do
-        end if
-
-        !Local potential from density
-        if(s%has_density .or. &
-             (specie_is_ps(s) .and. dg_add_localization_density(gr%dgrid) )) then 
-
-          ALLOCATE(rho(1:m%np), m%np)
-
-          call specie_get_density(s, a%x, gr, geo, rho)
-          call dpoisson_solve(gr, vl, rho)
-          ep%vpsl(1:m%np) = ep%vpsl(1:m%np) + vl(1:m%np)
-
-          if (specie_is_ps(s)) then 
-            
-            call loct_spline_init(pot_corr)
-            call dg_get_potential_correction(gr%dgrid, pot_corr)
-            
-            !calculate the deviation from the analitcal potential
-            do i = 1, m%np
-              x(:) = m%x(i, :) - a%x(:)
-              r = sqrt(sum(x(:)**2))
-              rho(i) = vl(i) - (-s%z_val)*loct_splint(pot_corr, r)
-            end do
-            call loct_spline_end(pot_corr)
-            
-            write(message(1),'(a, e12.6)')  'Info: Deviation from analitical potential is ', abs(dmf_integrate(m, rho))
-            call write_info(1)
-
-          end if
-
-          deallocate(rho)
-
-        end if
-
-        deallocate(vl)
-
-#ifdef HAVE_FFT
-      else ! momentum space
-        call cf_phase_factor(sb, m, a%x, ep%local_cf(s%index), cf_loc)
-        if(s%nlcc) then
-          call cf_phase_factor(sb, m, a%x, ep%rhocore_cf(s%index), cf_nlcc)
-        end if
-#endif
-      end if
 
       call pop_sub()
     end subroutine build_local_part
 
   end subroutine epot_generate
+
+  subroutine build_local_part_in_real_space(ep, gr, geo, a, vpsl, time, rho_core)
+    type(epot_t),             intent(in)    :: ep
+    type(grid_t),   target,   intent(inout) :: gr
+    type(geometry_t),         intent(inout) :: geo
+    type(atom_t),             intent(inout) :: a
+    FLOAT,                    intent(inout) :: vpsl(:)
+    FLOAT,                    intent(in)    :: time
+    FLOAT, optional,          intent(inout) :: rho_core(:)
+ 
+    integer :: i
+    FLOAT :: x(MAX_DIM), xx(MAX_DIM), r, pot_re, pot_im
+    FLOAT, allocatable  :: rho(:), vl(:)
+
+    type(loct_spline_t) :: pot_corr
+
+    call push_sub('epot.build_local_part_in_real_space')
+
+
+    ALLOCATE(vl(1:NP_PART), NP_PART)
+
+    !Local potential
+    call specie_get_local(a%spec, gr, a%x(1:NDIM), vl, time)
+    vpsl(1:NP) = vpsl(1:NP) + vl(1:NP)
+
+    !Non-local core corrections
+    if(present(rho_core) .and. a%spec%nlcc .and. specie_is_ps(a%spec)) then
+      do i = 1, NP
+        x(1:NDIM) = gr%m%x(i, 1:NDIM) - a%x(1:NDIM)
+        rho_core(i) = rho_core(i) + specie_get_nlcc(a%spec, x)
+      end do
+    end if
+
+    !Time dependent potential
+    if(time > M_ZERO .and. (ep%extra_td_pot .ne. '0') ) then
+      do i = 1, NP
+        x(1:NDIM) = gr%m%x(i, 1:NDIM) - a%x(1:NDIM)
+        xx(1:NDIM) = x(1:NDIM) / units_inp%length%factor   ! convert from a.u. to input units
+        r = sqrt(sum(x(1:NDIM)**2)) / units_inp%length%factor
+        call loct_parse_expression(pot_re, pot_im, xx(1), xx(2), xx(3), &
+             r, time, ep%extra_td_pot)
+        vpsl(i) = vpsl(i) + pot_re * units_inp%energy%factor  ! convert from input units to a.u.
+      end do
+    end if
+
+    !Local potential from density
+    if(a%spec%has_density .or. &
+         (specie_is_ps(a%spec) .and. dg_add_localization_density(gr%dgrid) )) then 
+
+      ALLOCATE(rho(1:NP), NP)
+
+      call specie_get_density(a%spec, a%x, gr, geo, rho)
+      call dpoisson_solve(gr, vl, rho)
+      vpsl(1:NP) = vpsl(1:NP) + vl(1:NP)
+
+      if (specie_is_ps(a%spec)) then 
+
+        call loct_spline_init(pot_corr)
+        call dg_get_potential_correction(gr%dgrid, pot_corr)
+
+        !calculate the deviation from the analitcal potential
+        do i = 1, NP
+          x(1:NDIM) = gr%m%x(i, 1:NDIM) - a%x(1:NDIM)
+          r = sqrt(sum(x(1:NDIM)**2))
+          rho(i) = vl(i) - (-a%spec%z_val)*loct_splint(pot_corr, r)
+        end do
+        call loct_spline_end(pot_corr)
+
+        write(message(1),'(a, e12.6)')  'Info: Deviation from analitical potential is ', &
+             abs(dmf_integrate(gr%m, rho))
+        call write_info(1)
+
+      end if
+
+      deallocate(rho)
+
+    end if
+
+    deallocate(vl)
+
+    call pop_sub()
+  end subroutine build_local_part_in_real_space
 
 
   ! ---------------------------------------------------------
@@ -927,11 +960,11 @@ contains
     type(grid_t), target, intent(inout) :: gr
     type(geometry_t), intent(inout)  :: geo
     type(epot_t),     intent(in)     :: ep
-    type(states_t),   intent(in)     :: st
+    type(states_t),   intent(inout)     :: st
     FLOAT,     optional, intent(in)    :: t
 
     integer :: i, j, l, ist, ik, ivnl, ivnl_start, ivnl_end
-    FLOAT :: d, r, zi, zj, x(MAX_DIM)
+    FLOAT :: d, r, zi, zj, x(MAX_DIM), time
     type(atom_t), pointer :: atm
 
     FLOAT, allocatable :: dppsi(:, :)
@@ -942,6 +975,9 @@ contains
 #if defined(HAVE_MPI)
     FLOAT :: f(MAX_DIM)
 #endif
+
+    time = M_ZERO
+    if(present(t)) time = t
 
     call profiling_in(C_PROFILING_FORCES)
     call push_sub('epot.epot_forces')
@@ -986,7 +1022,7 @@ contains
         ik_loop: do ik = 1, st%d%nik
           st_loop: do ist = st%st_start, st%st_end
 
-            if (st%d%wfs_type == M_REAL) then
+            if (wfs_are_real(st)) then
               dz = dpsidprojectpsi(gr%m, ep%p(ivnl_start:ivnl_end), &
                    ivnl_end - ivnl_start + 1, st%d%dim, st%dpsi(:, :, ist, ik), &
                    periodic = .false., ik = ik)
@@ -1002,7 +1038,7 @@ contains
         end do ik_loop
 
       end do atm_loop
-      if (st%d%wfs_type == M_REAL) then
+      if (wfs_are_real(st)) then
         deallocate(dppsi)
       else
         deallocate(zppsi)
@@ -1072,28 +1108,91 @@ contains
     ! ---------------------------------------------------------
     subroutine local_RS()
       FLOAT :: r
-      FLOAT, allocatable :: force(:,:), grho(:,:), gpot(:)
-      integer  :: i, j, k, ns
-      FLOAT :: x(1:MAX_DIM)
+      FLOAT, allocatable :: force(:,:), tmp(:), grho(:,:)
+      CMPLX, allocatable :: zgpsi(:,:)
+      integer  :: ii, jj, idir, ns, ik, ist, idim
       
       ns = min(2, st%d%nspin)
 
       ALLOCATE(force(NP, MAX_DIM), NP*MAX_DIM)
 
-      do i = 1, geo%natoms
-        atm => geo%atom(i)
+      if( ep%forces == DERIVATE_WAVEFUNCTION ) then !calculate the gradient of the density
+        
+        ALLOCATE(grho(NP, MAX_DIM), NP*MAX_DIM)
+        
+        grho(1:NP, 1:st%d%dim) = M_ZERO
+        
+        do ik = 1, st%d%nik, st%d%nspin
+          do ist = st%st_start, st%st_end
+            do idim = 1, st%d%dim
+              
+              if (wfs_are_real(st)) then
+                
+                ! calculate the gradient of the wave-function
+                call df_gradient(gr%sb, gr%f_der, st%dpsi(:, idim, ist, ik), force)
+                
+                do idir = 1, NDIM
+                  grho(1:NP, idir) = grho(1:NP, idir) + st%d%kweights(ik)*st%occ(ist, ik) * M_TWO * &
+                       st%dpsi(1:NP, idim, ist, ik) * force(1:NP, idir)
+                end do
 
-        call specie_get_glocal(atm%spec, gr, atm%x, force)
+              else 
+                
+                ALLOCATE(zgpsi(NP, MAX_DIM), NP*MAX_DIM)
 
-        do j = 1, NP
-          force(j, 1:NDIM) = sum(st%rho(j, 1:ns))*force(j, 1:NDIM)
+                ! calculate the gradient of the wave-function
+                call zf_gradient(gr%sb, gr%f_der, st%zpsi(:, idim, ist, ik), zgpsi)
+                
+                do idir = 1, NDIM
+                  grho(1:NP, idir) = grho(1:NP, idir) + st%d%kweights(ik)*st%occ(ist, ik) * M_TWO * &
+                       real(st%zpsi(1:NP, idim, ist, ik) * zgpsi(1:NP, idir))
+                end do
+
+                deallocate(zgpsi)
+
+              end if
+              
+            end do
+          end do
         end do
+        
+      end if
 
-        do k = 1, NDIM
-          atm%f(k) = atm%f(k) - dmf_integrate(gr%m, force(:, k))
-        end do
+      do ii = 1, geo%natoms
+        atm => geo%atom(ii)
+
+        if ( ep%forces == DERIVATE_POTENTIAL .or. (.not. atm%spec%local) ) then 
+          
+          call specie_get_glocal(atm%spec, gr, atm%x, force)
+          
+          do jj = 1, NP
+            force(jj, 1:NDIM) = sum(st%rho(jj, 1:ns))*force(jj, 1:NDIM)
+          end do
+          
+          do idir = 1, NDIM
+            atm%f(idir) = atm%f(idir) - dmf_integrate(gr%m, force(:, idir))
+          end do
+
+        else  ! DERIVATE_WAVEFUNCTION
+
+          ALLOCATE(tmp(NP), NP)
+
+          tmp(1:NP) = M_ZERO
+
+          call build_local_part_in_real_space(ep, gr, geo, atm, tmp, time)
+
+          do idir = 1, NDIM
+            force(1:NP, idir) = grho(1:NP, idir) * tmp(1:NP)
+            atm%f(idir) = atm%f(idir) - dmf_integrate(gr%m, force(:, idir))
+          end do 
+
+          deallocate(tmp)
+
+        end if
+
       end do
 
+      if ( allocated(grho) ) deallocate(grho)
       deallocate(force)
 
     end subroutine local_RS
