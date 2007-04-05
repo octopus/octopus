@@ -55,3 +55,5 @@ CalculateSelfInducedMagneticField = yes
 Output = potential
 OutputHow = axis_y
 
+PoissonSolverThreshold = 1.0e-7
+
