@@ -47,6 +47,7 @@ module specie_m
     specie_get_nlcc,          &
     specie_get_iwf,           &
     specie_is_ps,             &
+    specie_is_local,          &
     specie_real_nl_projector, &
     specie_nl_projector
 
@@ -71,8 +72,6 @@ module specie_m
     FLOAT   :: z_val              ! valence charge of the species -- the total charge
                                   ! minus the core charge in the case of the pseudopotentials
     FLOAT   :: weight             ! mass, in atomic mass units (!= atomic units of mass)
-    logical :: local              ! true if the potential is local, which in this case means
-                                  ! it is *not* a pseudopotential.
 
     logical :: has_density        ! true if the specie has a electric density 
     
@@ -135,7 +134,7 @@ contains
     if (s%type /= SPEC_USDEF ) write(iunit, '(a,f15.2)') 'z      = ', s%z
     write(iunit, '(a,f15.2)') 'z_val  = ', s%z_val
     write(iunit, '(a,f15.2)') 'weight = ', s%weight
-    write(iunit, *)           'local  = ', s%local
+    write(iunit, *)           'local  = ', specie_is_local(s)
     write(iunit, '(2a)')      'usdef  = ', trim(s%user_def)
     if (s%type == SPEC_JELLI .or. s%type == SPEC_POINT) then
       write(iunit, '(a,f15.2)') 'jradius= ', s%jradius
@@ -146,7 +145,7 @@ contains
     if (s%type /= SPEC_USDEF ) write(iunit, '(a,i3)')    'lmax  = ', s%lmax
     if (s%type /= SPEC_USDEF ) write(iunit, '(a,i3)')    'lloc  = ', s%lloc
 
-    if(.not.s%local) then
+    if(specie_is_ps(s)) then
        if(in_debug_mode) call ps_debug(s%ps, trim(dirname))
     end if
 
@@ -183,7 +182,6 @@ contains
 
     call push_sub('specie.specie_read')
 
-    s%local     = .true.  ! a local potential
     s%has_density = .false. !there is no density associated
     s%nlcc      = .false. ! without non-local core corrections
     s%def_h     = -M_ONE  ! not defined
@@ -369,9 +367,6 @@ contains
 
     backspace(iunit)
 
-    ! If it is in the default file, it *has* to be a pseudopotential
-    s%local = .false.
-
     read(iunit,*) label, weight, type, z, lmax, lloc, def_h, def_rsize, alpha, beta, rcut, beta2
     def_h     = def_h     * P_ANG  ! These units are always in Angstrom
     def_rsize = def_rsize * P_ANG
@@ -440,7 +435,6 @@ contains
       read_data = 4
 
     case(SPEC_PS_PSF, SPEC_PS_HGH, SPEC_PS_CPI, SPEC_PS_FHI, SPEC_PS_UPF) ! a pseudopotential file
-      s%local = .false.
       n = loct_parse_block_cols(blk, row)
 
       call loct_parse_block_float (blk, row, 3, s%Z)
@@ -578,9 +572,9 @@ contains
     call push_sub('specie.specie_end')
 
     do i = 1, ns
-      if(s(i)%local) cycle
-
-      if(associated(s(i)%ps)) call ps_end(s(i)%ps)
+      if (specie_is_ps(s(i))) then 
+        if(associated(s(i)%ps)) call ps_end(s(i)%ps)
+      end if
     end do
 
     if(associated(s)) then ! sanity check
@@ -713,7 +707,7 @@ contains
     m = s%iwf_m(j, is)
     r2 = sum(x*x)
 
-    if(.not.s%local) then
+    if(specie_is_ps(s)) then
       phi =  loct_splint(s%ps%ur(i, is), sqrt(r2)) * loct_ylm(x(1), x(2), x(3), l, m)
     else
       phi=M_ZERO
@@ -742,7 +736,7 @@ contains
 
     call push_sub('specie.specie_iwf_fix_qn')
 
-    if(.not.s%local) then
+    if(specie_is_ps(s)) then
       do is = 1, ispin
         n = 1
         do i = 1, s%ps%conf%p
@@ -836,6 +830,17 @@ contains
          ( s%type == SPEC_PS_UPF)
     
   end function specie_is_ps
+
+  logical function specie_is_local(s)
+    type(specie_t), intent(in) :: s
+
+    specie_is_local = .true.
+      
+    if( specie_is_ps(s) ) then 
+      if ( s%ps%l_max /= 0 ) specie_is_local = .false. 
+    end if
+
+  end function specie_is_local
 
 end module specie_m
 

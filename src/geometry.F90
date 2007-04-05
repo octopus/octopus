@@ -367,7 +367,7 @@ contains
     message(1) = 'Info: filtering the potentials.'
     call write_info(1)
     do i = 1, geo%nspecies
-      if(.not.geo%specie(i)%local) call specie_filter(geo%specie(i), gmax)
+      if( specie_is_ps(geo%specie(i))) call specie_filter(geo%specie(i), gmax)
     end do
 
     call pop_sub()
@@ -435,7 +435,7 @@ contains
     geo%nlpp = .false.
     do i = 1, geo%nspecies
       geo%nlcc = (geo%nlcc.or.geo%specie(i)%nlcc)
-      geo%nlpp = (geo%nlpp.or.(.not.geo%specie(i)%local))
+      geo%nlpp = (geo%nlpp .or. specie_is_ps(geo%specie(i)))
     end do
 
     call pop_sub()
@@ -553,11 +553,12 @@ contains
     res = 0
     do ia = 1, geo%natoms
       s => geo%atom(ia)%spec
-      if(s%local) cycle
-      do l = 0, s%ps%l_max
-        if(l == s%ps%l_loc) cycle
-        res = res + 2*l + 1
-      end do
+      if(specie_is_ps(s)) then
+        do l = 0, s%ps%l_max
+          if(l == s%ps%l_loc) cycle
+          res = res + 2*l + 1
+        end do
+      end if
     end do
 
     call pop_sub()

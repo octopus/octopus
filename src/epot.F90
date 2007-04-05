@@ -698,7 +698,7 @@ contains
     do ia = 1, geo%natoms
       atm => geo%atom(ia)
 
-      if(atm%spec%local) cycle
+      if(.not. specie_is_ps(atm%spec)) cycle
       p = 1
 
       do l = 0, atm%spec%ps%l_max
@@ -997,7 +997,7 @@ contains
 
       atm_loop: do i = 1, geo%natoms
         atm => geo%atom(i)
-        if(atm%spec%local) cycle
+        if(.not. specie_is_ps(atm%spec)) cycle
 
         ASSERT(NDIM == 3)
 
@@ -1048,7 +1048,7 @@ contains
 #if defined(HAVE_MPI)
     do i = 1, geo%natoms
       atm => geo%atom(i)
-      if(atm%spec%local) cycle
+      if(specie_is_local(atm%spec)) cycle
 
       if(st%parallel_in_states) then
         call MPI_Allreduce(atm%f(1), f(1), NDIM, MPI_FLOAT, MPI_SUM, st%mpi_grp%comm, mpi_err)
@@ -1161,7 +1161,7 @@ contains
       do ii = 1, geo%natoms
         atm => geo%atom(ii)
 
-        if ( ep%forces == DERIVATE_POTENTIAL .or. (.not. atm%spec%local) ) then 
+        if ( ep%forces == DERIVATE_POTENTIAL .or. (.not. specie_is_local(atm%spec) )) then 
           
           call specie_get_glocal(atm%spec, gr, atm%x, force)
           
