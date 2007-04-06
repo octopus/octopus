@@ -53,7 +53,7 @@ sub read_varinfo(){
   my $key, $arg;
 
   # let us parse the varinfo file
-  open(IN, '<$share/varinfo_orig');
+  open(IN, "<$share/varinfo_orig");
   $thisvar = "";
   $thisfield = "";
   while($l = <IN>){
