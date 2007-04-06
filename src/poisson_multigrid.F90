@@ -269,7 +269,6 @@ contains
     end if
 
     pot(1:gr%m%np) = phi(0)%p(1:gr%m%np) + vh_correction(1:gr%m%np)
-
     deallocate(rho_corrected, vh_correction)
 
     call gridhier_end(phi,gr%mgrid)
@@ -289,18 +288,22 @@ contains
       FLOAT, pointer  :: rho(:)
       FLOAT, pointer  :: tmp(:)
       type(mesh_t), pointer :: m
+      call push_sub('poisson_multigrid.residue')
 
       m => gr%mgrid%level(l)%m
       call df_laplacian(gr%sb, gr%mgrid%level(l)%f_der, phi, tmp)
       tmp = tmp-rho
       r   = sqrt(sum((tmp(1:m%np)*m%vol_pp(1:m%np))**2))
 
+      call pop_sub()
     end function residue
 
 
     ! ---------------------------------------------------------
     subroutine vcycle_fas(fl)
       integer, intent(in) :: fl
+
+      call push_sub('poisson_multigrid.vcycle_fas')
 
       do l = fl, cl
         ! store the initial approximation
@@ -348,12 +351,15 @@ contains
         end if
       end do
 
+      call pop_sub()
     end subroutine vcycle_fas
 
 
     ! ---------------------------------------------------------
     subroutine vcycle_cs(fl)
       integer, intent(in) :: fl
+
+      call push_sub('poisson_multigrid.vcycle_cs')
 
       do l = fl, cl-1
         if(l /= fl) then
@@ -396,6 +402,7 @@ contains
         end if
       end do
 
+      call pop_sub()
     end subroutine vcycle_cs
 
   end subroutine poisson_multigrid_solver
@@ -416,6 +423,8 @@ contains
     integer :: i, n, iter, diag = 1
     FLOAT   :: point_lap, factor
     FLOAT, allocatable :: w(:), lpot(:), ldiag(:)
+
+    call push_sub('poisson_multigrid.multigrid_relax')
 
     select case(this%relaxation_method)
 
@@ -469,6 +478,7 @@ contains
 
     end select
 
+    call pop_sub()
   contains
 
     ! ---------------------------------------------------------
@@ -495,6 +505,7 @@ contains
     logical,             intent(in) :: add_points_for_boundaries
 
     integer :: cl, l
+    call push_sub('poisson_multigrid.gridhier_init')
 
     cl = mgrid%n_levels
 
@@ -503,11 +514,14 @@ contains
     do l = 0, cl
       if(add_points_for_boundaries) then
         ALLOCATE(a(l)%p(1:mgrid%level(l)%m%np_part), mgrid%level(l)%m%np_part)
+        a(l)%p(1:mgrid%level(l)%m%np_part) = M_ZERO
       else
         ALLOCATE(a(l)%p(1:mgrid%level(l)%m%np), mgrid%level(l)%m%np)
+        a(l)%p(1:mgrid%level(l)%m%np) = M_ZERO
       end if
     end do
 
+    call pop_sub()
   end subroutine gridhier_init
 
 
@@ -517,6 +531,7 @@ contains
     type(multigrid_t),      pointer :: mgrid
 
     integer :: cl, l
+    call push_sub('poisson_multigrid.gridhier_end')
 
     cl = mgrid%n_levels
 
@@ -525,6 +540,7 @@ contains
     end do
     deallocate(a)
 
+    call pop_sub()
   end subroutine gridhier_end
 
 end module poisson_multigrid_m
