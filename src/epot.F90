@@ -963,13 +963,13 @@ contains
     type(states_t),   intent(inout)     :: st
     FLOAT,     optional, intent(in)    :: t
 
-    integer :: i, j, l, ist, ik, ivnl, ivnl_start, ivnl_end
+    integer :: i, j, l, ist, ik, ivnl, ivnl_start, ivnl_end, idim, idir
     FLOAT :: d, r, zi, zj, x(MAX_DIM), time
     type(atom_t), pointer :: atm
 
-    FLOAT, allocatable :: dppsi(:, :)
+    FLOAT, allocatable :: dgpsi(:, :, :), dpgpsi(:,:)
     FLOAT :: dz(MAX_DIM)
-    CMPLX, allocatable :: zppsi(:, :)
+    CMPLX, allocatable :: zgpsi(:, :, :), zpgpsi(:,:)
     CMPLX :: zz(MAX_DIM)
 
 #if defined(HAVE_MPI)
@@ -989,10 +989,15 @@ contains
 
     if(.not.geo%only_user_def) then
       ! non-local component of the potential.
-      if (st%d%wfs_type == M_REAL) then
-        ALLOCATE(dppsi(gr%m%np, st%d%dim), gr%m%np*st%d%dim)
-      else
-        ALLOCATE(zppsi(gr%m%np, st%d%dim), gr%m%np*st%d%dim)
+
+      if ( ep%forces == DERIVATE_WAVEFUNCTION ) then 
+        if (wfs_are_real(st)) then
+          ALLOCATE(dgpsi(gr%m%np, 1:NDIM, st%d%dim), gr%m%np*NDIM*st%d%dim)
+          ALLOCATE(dpgpsi(gr%m%np, st%d%dim), gr%m%np*st%d%dim)
+        else
+          ALLOCATE(zgpsi(gr%m%np, 1:NDIM, st%d%dim), gr%m%np*NDIM*st%d%dim)
+          ALLOCATE(zpgpsi(gr%m%np, st%d%dim), gr%m%np*st%d%dim)
+        end if
       end if
 
       atm_loop: do i = 1, geo%natoms
@@ -1018,31 +1023,93 @@ contains
             exit
           end if
         end do
+        
+        select case(ep%forces)
+          
+        case(DERIVATE_POTENTIAL)
 
-        ik_loop: do ik = 1, st%d%nik
-          st_loop: do ist = st%st_start, st%st_end
+          ik_loop: do ik = 1, st%d%nik
+            st_loop: do ist = st%st_start, st%st_end
+              
+              if (wfs_are_real(st)) then
+                dz = dpsidprojectpsi(gr%m, ep%p(ivnl_start:ivnl_end), &
+                     ivnl_end - ivnl_start + 1, st%d%dim, st%dpsi(:, :, ist, ik), &
+                     periodic = .false., ik = ik)
+                atm%f = atm%f + M_TWO * st%occ(ist, ik) * dz
+              else
+                zz = zpsidprojectpsi(gr%m, ep%p(ivnl_start:ivnl_end), &
+                     ivnl_end - ivnl_start + 1, st%d%dim, st%zpsi(:, :, ist, ik), &
+                     periodic = .false., ik = ik)
+                atm%f = atm%f + M_TWO * st%occ(ist, ik) * zz
+              end if
+              
+            end do st_loop
+          end do ik_loop
+          
+        case(DERIVATE_WAVEFUNCTION)
+          do ik = 1, st%d%nik
+            do ist = st%st_start, st%st_end
+              
+              if (wfs_are_real(st)) then
+                
+                do idim = 1, st%d%dim
+                  ! calculate the gradient of the wave-function
+                  call df_gradient(gr%sb, gr%f_der, st%dpsi(:, idim, ist, ik), dgpsi(:, :, idim))
+                end do
+                
+                do idir = 1, NDIM
+                  dpgpsi = M_ZERO
+                  
+                  ! apply the projector to the gradient
+                  call dproject(gr%m, ep%p(ivnl_start:ivnl_end), ivnl_end - ivnl_start + 1, &
+                       st%d%dim, dgpsi(:, idir, :), dpgpsi, reltype = 0, periodic = .false., ik = ik)
+                  
+                  do idim = 1, st%d%dim
+                    dpgpsi(1:NP, idim) = dpgpsi(1:NP, idim) * st%dpsi(1:NP, idim, ist, ik)
+                    atm%f(idir) = atm%f(idir) - M_TWO * st%occ(ist, ik) * dmf_integrate(gr%m, dpgpsi(:, idim))
+                  end do
+                  
+                end do
+                
+              else
+                
+                do idim = 1, st%d%dim
+                  ! calculate the gradient of the wave-function
+                  call zf_gradient(gr%sb, gr%f_der, st%zpsi(:, idim, ist, ik), zgpsi(:, :, idim))
+                end do
+                
+                do idir = 1, NDIM
+                  zpgpsi = M_ZERO
+                  
+                  ! apply the projector to the gradient
+                  call zproject(gr%m, ep%p(ivnl_start:ivnl_end), ivnl_end - ivnl_start + 1, &
+                       st%d%dim, zgpsi(:, idir, :), zpgpsi, reltype = 0, periodic = .false., ik = ik)
+                  
+                  do idim = 1, st%d%dim
+                    zpgpsi(1:NP, idim) = zpgpsi(1:NP, idim) * st%zpsi(1:NP, idim, ist, ik)
+                    atm%f(idir) = atm%f(idir) - M_TWO * st%occ(ist, ik) * real(zmf_integrate(gr%m, zpgpsi(:, idim)))
+                  end do
+                  
+                end do
 
-            if (wfs_are_real(st)) then
-              dz = dpsidprojectpsi(gr%m, ep%p(ivnl_start:ivnl_end), &
-                   ivnl_end - ivnl_start + 1, st%d%dim, st%dpsi(:, :, ist, ik), &
-                   periodic = .false., ik = ik)
-              atm%f = atm%f + M_TWO * st%occ(ist, ik) * dz
-            else
-              zz = zpsidprojectpsi(gr%m, ep%p(ivnl_start:ivnl_end), &
-                   ivnl_end - ivnl_start + 1, st%d%dim, st%zpsi(:, :, ist, ik), &
-                   periodic = .false., ik = ik)
-              atm%f = atm%f + M_TWO * st%occ(ist, ik) * zz
-            end if
-            
-          end do st_loop
-        end do ik_loop
 
+              end if
+              
+            end do
+          end do
+          
+        end select
+        
       end do atm_loop
-      if (wfs_are_real(st)) then
-        deallocate(dppsi)
-      else
-        deallocate(zppsi)
+
+      if ( ep%forces == DERIVATE_WAVEFUNCTION ) then 
+        if (wfs_are_real(st)) then
+          deallocate(dgpsi, dpgpsi)
+        else
+          deallocate(zgpsi, zpgpsi)
+        end if
       end if
+
     end if
 
 #if defined(HAVE_MPI)
@@ -1107,7 +1174,6 @@ contains
 
     ! ---------------------------------------------------------
     subroutine local_RS()
-      FLOAT :: r
       FLOAT, allocatable :: force(:,:), tmp(:), grho(:,:)
       CMPLX, allocatable :: zgpsi(:,:)
       integer  :: ii, jj, idir, ns, ik, ist, idim
@@ -1161,7 +1227,9 @@ contains
       do ii = 1, geo%natoms
         atm => geo%atom(ii)
 
-        if ( ep%forces == DERIVATE_POTENTIAL .or. (.not. specie_is_local(atm%spec) )) then 
+        select case(ep%forces)
+
+        case(DERIVATE_POTENTIAL)
           
           call specie_get_glocal(atm%spec, gr, atm%x, force)
           
@@ -1173,7 +1241,7 @@ contains
             atm%f(idir) = atm%f(idir) - dmf_integrate(gr%m, force(:, idir))
           end do
 
-        else  ! DERIVATE_WAVEFUNCTION
+        case(DERIVATE_WAVEFUNCTION)
 
           ALLOCATE(tmp(NP), NP)
 
@@ -1188,7 +1256,7 @@ contains
 
           deallocate(tmp)
 
-        end if
+        end select
 
       end do
 
