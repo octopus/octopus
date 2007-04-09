@@ -80,7 +80,8 @@ module output_m
     output_gnuplot    =  1024,    &
     output_matlab     =  2048,    &
     output_meshgrid   =  4096,    &
-    boundary_points   =  8192
+    boundary_points   =  8192,    &
+    output_binary     = 16384
 
   ! doutput_kind => real variables; zoutput_kind => complex variables.
   integer, parameter, private ::  &
@@ -263,6 +264,8 @@ contains
       !% *.meshgrid.y
       !%Option boundary_points 8192
       !% This option includes the output of the mesh enlargement. Default is without.
+      !%Option binary 16384
+      !% Plain binary, new format.
       !%End
       call loct_parse_int(check_inp('OutputHow'), 0, outp%how)
       if(.not.varinfo_valid_option('OutputHow', outp%how, is_flag=.true.)) then
@@ -309,6 +312,7 @@ contains
     if(index(where, "PlaneZ").ne.0)    how = ior(how, output_plane_z)
     if(index(where, "DX").ne.0)        how = ior(how, output_dx)
     if(index(where, "Plain").ne.0)     how = ior(how, output_plain)
+    if(index(where, "Binary").ne.0)    how = ior(how, output_binary)
     if(index(where, "MeshIndex").ne.0) how = ior(how, output_mesh_index)
     if(index(where, "Gnuplot").ne.0)   how = ior(how, output_gnuplot)
 #if defined(HAVE_NETCDF)

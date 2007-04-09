@@ -36,6 +36,29 @@
 !             -4 : function in file is complex, dp.
 ! ---------------------------------------------------------
 
+#ifdef SINGLE_PRECISION 
+
+#ifdef R_TREAL
+#define out_type 0
+#endif
+
+#ifdef R_TCOMPLEX
+#define out_type 2
+#endif
+
+#else
+
+#ifdef R_TREAL
+#define out_type 1
+#endif
+
+#ifdef R_TCOMPLEX
+#define out_type 3
+#endif
+
+#endif
+
+
 subroutine X(input_function)(filename, m, f, ierr, is_tmp)
   character(len=*),  intent(in)  :: filename
   type(mesh_t),      intent(in)  :: m
@@ -133,7 +156,9 @@ subroutine X(input_function_global)(filename, m, f, ierr, is_tmp)
      call X(cf_free)(c)
 #endif
 #endif
-
+   case("obf")
+     call read_binary(m%np_global, f, out_type, ierr, filename)
+     
   case default
      ierr = 1
   end select
@@ -206,7 +231,6 @@ contains
 
     call io_close(iunit)
   end subroutine plain
-
 
   ! ---------------------------------------------------------
 #if defined(HAVE_NETCDF)
@@ -432,6 +456,7 @@ subroutine X(output_function_global) (how, dir, fname, m, sb, f, u, ierr, is_tmp
   if(iand(how, boundary_points)  .ne.0) np_max = m%np_part_global
 
   if(iand(how, output_plain)     .ne.0) call out_plain()
+  if(iand(how, output_binary)    .ne.0) call out_binary()
   if(iand(how, output_axis_x)    .ne.0) call out_axis (1, 2, 3) ! x ; y=0,z=0
   if(iand(how, output_axis_y)    .ne.0) call out_axis (2, 1, 3) ! y ; x=0,z=0
   if(iand(how, output_axis_z)    .ne.0) call out_axis (3, 1, 2) ! z ; x=0,y=0
@@ -480,6 +505,11 @@ contains
     call io_close(iunit)
 
   end subroutine out_plain
+
+  subroutine out_binary()
+    call write_binary(m%np_global, f, out_type, ierr, trim(dir)//'/'//trim(fname)//'.obf')
+
+  end subroutine out_binary
 
 
   ! ---------------------------------------------------------
@@ -848,6 +878,8 @@ contains
 #endif /*defined(HAVE_NETCDF)*/
 
 end subroutine X(output_function_global)
+
+#undef out_type
 
 !! Local Variables:
 !! mode: f90

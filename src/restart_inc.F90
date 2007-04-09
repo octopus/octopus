@@ -50,6 +50,9 @@ subroutine X(restart_read_function)(dir, filename, m, f, ierr)
   call X(input_function) (trim(dir)//'/'//trim(filename), m, f(:), ierr, is_tmp=.true.)
 
   ! if we do not succeed try NetCDF
+  if(ierr>0) call X(input_function) (trim(dir)//'/'//trim(filename)//'.obf', m, f(:), ierr, is_tmp=.true.)
+
+  ! if we do not succeed try NetCDF
   if(ierr>0) call X(input_function) (trim(dir)//'/'//trim(filename)//'.ncdf', m, f(:), ierr, is_tmp=.true.)
 
   call pop_sub()
@@ -86,7 +89,6 @@ subroutine X(restart_read_lr_rho)(lr, gr, nspin, restart_dir, rho_tag, ierr)
 
   character(len=80) :: fname
   integer :: is, s_ierr
-  FLOAT :: closest_omega
 
   ierr = 0;
   do is = 1, nspin

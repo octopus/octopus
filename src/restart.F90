@@ -63,7 +63,8 @@ module restart_m
 
   integer, parameter :: &
     RESTART_PLAIN  = 1, &
-    RESTART_NETCDF = 2
+    RESTART_NETCDF = 2, &
+    RESTART_BINARY = 3
 
   integer :: restart_format
 
@@ -94,9 +95,7 @@ contains
   ! read restart format information
   subroutine restart_init
 
-#if defined(HAVE_NETCDF)
-    integer :: i
-#endif
+    integer :: default, parsed
 
     call push_sub('restart.restart_init')
 
@@ -112,20 +111,38 @@ contains
     !% Binary (platform dependent) format
     !%Option restart_netcdf 2
     !% NetCDF (platform independent) format. This requires the NETCDF library.
+    !%Option restart_binary 3
+    !% Octopus Binary Format, the new and more flexible binary format
+    !% of Octopus. It is faster and produces smaller files than NetCDF
+    !% and it is compiler independent (in the future it will be
+    !% endianness independent).
     !%End
+
 #if defined(HAVE_NETCDF)
-    call loct_parse_int(check_inp('RestartFileFormat'), RESTART_NETCDF, i)
-    if(.not.varinfo_valid_option('RestartFileFormat', i)) call input_error('RestartFileFormat')
-    if(i == RESTART_NETCDF) then
-      restart_format = output_fill_how("NETCDF")
-    else
-      restart_format = output_fill_how("Plain")
-    end if
+    default = RESTART_NETCDF
 #else
-    restart_format = output_fill_how("Plain")
+    default = RESTART_BINARY
 #endif
 
+    call loct_parse_int(check_inp('RestartFileFormat'), default, parsed)
+#ifndef HAVE_NETCDF
+    if (parsed == RESTART_NETCDF) then 
+      write(message(1),'(a)') 'Error: Octopus was compiled without NetCDF support but'
+      write(message(2),'(a)') 'NetCDF restart files were requested.'
+      call write_fatal(2)
+    end if
+#endif
+    if(.not.varinfo_valid_option('RestartFileFormat', parsed)) call input_error('RestartFileFormat')
 
+    select case(parsed) 
+    case(RESTART_NETCDF)
+      restart_format = output_fill_how("NETCDF")
+    case(RESTART_PLAIN)
+      restart_format = output_fill_how("Plain")
+    case(RESTART_BINARY)
+      restart_format = output_fill_how("Binary")
+    end select
+    
     call pop_sub()
   end subroutine restart_init
 

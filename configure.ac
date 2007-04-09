@@ -57,6 +57,10 @@ AC_C_CONST
 AC_TYPE_PID_T
 AC_TYPE_SIZE_T
 AC_HEADER_TIME
+AC_CHECK_TYPES([uint32_t, uint64_t])
+AC_CHECK_SIZEOF(unsigned int)
+AC_CHECK_SIZEOF(unsigned long)
+AC_CHECK_SIZEOF(unsigned long long)
 
 # Checks for library functions.
 AC_FUNC_GETPGRP

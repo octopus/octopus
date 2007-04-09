@@ -386,6 +386,7 @@ contains
               call dinput_function(filename, gr%m, td%tr%v_old(1:NP, is, i), ierr)
               ! If we do not succed, try netcdf
               if(ierr > 0) call dinput_function(trim(filename)//'.ncdf', gr%m, td%tr%v_old(1:NP, is, i), ierr)
+              if(ierr > 0) call dinput_function(trim(filename)//'.obf', gr%m, td%tr%v_old(1:NP, is, i), ierr)
               if(ierr > 0) then
                 write(message(1), '(3a)') 'Unsuccesfull write of "', trim(filename), '"'
                 call write_fatal(1)
