@@ -1,12 +1,11 @@
 # -*- coding: utf-8 mode: shell-script -*-
-# $Id$
+# $Id: 12-forces.01-N2_gs.inp 2308 2006-07-29 00:56:52Z appel $
 
 DebugLevel = 0
 
 SystemName = "N2"
 
 CalculationMode = gs
-FromScratch = yes
 
 bond_length = 2.0744
 %Coordinates
@@ -32,6 +31,4 @@ EigenSolverMaxIter = 20
 
 TypeOfMixing = broyden
 
-PoissonSolver = fft_corrected
-
-Forces=derivate_potential
+Forces=derivate_wavefunctions

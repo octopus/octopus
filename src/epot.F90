@@ -963,14 +963,9 @@ contains
     type(states_t),   intent(inout)     :: st
     FLOAT,     optional, intent(in)    :: t
 
-    integer :: i, j, l, ist, ik, ivnl, ivnl_start, ivnl_end, idim, idir
+    integer :: i, j, l
     FLOAT :: d, r, zi, zj, x(MAX_DIM), time
     type(atom_t), pointer :: atm
-
-    FLOAT, allocatable :: dgpsi(:, :, :), dpgpsi(:,:)
-    FLOAT :: dz(MAX_DIM)
-    CMPLX, allocatable :: zgpsi(:, :, :), zpgpsi(:,:)
-    CMPLX :: zz(MAX_DIM)
 
 #if defined(HAVE_MPI)
     FLOAT :: f(MAX_DIM)
@@ -988,128 +983,11 @@ contains
     end do
 
     if(.not.geo%only_user_def) then
-      ! non-local component of the potential.
-
-      if ( ep%forces == DERIVATE_WAVEFUNCTION ) then 
-        if (wfs_are_real(st)) then
-          ALLOCATE(dgpsi(gr%m%np, 1:NDIM, st%d%dim), gr%m%np*NDIM*st%d%dim)
-          ALLOCATE(dpgpsi(gr%m%np, st%d%dim), gr%m%np*st%d%dim)
-        else
-          ALLOCATE(zgpsi(gr%m%np, 1:NDIM, st%d%dim), gr%m%np*NDIM*st%d%dim)
-          ALLOCATE(zpgpsi(gr%m%np, st%d%dim), gr%m%np*st%d%dim)
-        end if
+      if (wfs_are_real(st) ) then 
+        call dcalc_forces_nonlocal(gr, geo, ep, st)
+      else
+        call zcalc_forces_nonlocal(gr, geo, ep, st)
       end if
-
-      atm_loop: do i = 1, geo%natoms
-        atm => geo%atom(i)
-        if(.not. specie_is_ps(atm%spec)) cycle
-
-        ASSERT(NDIM == 3)
-
-        ! Here we learn which are the projector that correspond to atom i.
-        ! It assumes that the projectors of each atom are consecutive.
-        ivnl_start  = - 1
-        do ivnl = 1, ep%nvnl
-          if(ep%p(ivnl)%iatom .eq. i) then
-            ivnl_start = ivnl
-            exit
-          end if
-        end do
-        if(ivnl_start .eq. -1) cycle
-        ivnl_end = ep%nvnl
-        do ivnl = ivnl_start, ep%nvnl
-          if(ep%p(ivnl)%iatom .ne. i) then
-            ivnl_end = ivnl - 1
-            exit
-          end if
-        end do
-        
-        select case(ep%forces)
-          
-        case(DERIVATE_POTENTIAL)
-
-          ik_loop: do ik = 1, st%d%nik
-            st_loop: do ist = st%st_start, st%st_end
-              
-              if (wfs_are_real(st)) then
-                dz = dpsidprojectpsi(gr%m, ep%p(ivnl_start:ivnl_end), &
-                     ivnl_end - ivnl_start + 1, st%d%dim, st%dpsi(:, :, ist, ik), &
-                     periodic = .false., ik = ik)
-                atm%f = atm%f + M_TWO * st%occ(ist, ik) * dz
-              else
-                zz = zpsidprojectpsi(gr%m, ep%p(ivnl_start:ivnl_end), &
-                     ivnl_end - ivnl_start + 1, st%d%dim, st%zpsi(:, :, ist, ik), &
-                     periodic = .false., ik = ik)
-                atm%f = atm%f + M_TWO * st%occ(ist, ik) * zz
-              end if
-              
-            end do st_loop
-          end do ik_loop
-          
-        case(DERIVATE_WAVEFUNCTION)
-          do ik = 1, st%d%nik
-            do ist = st%st_start, st%st_end
-              
-              if (wfs_are_real(st)) then
-                
-                do idim = 1, st%d%dim
-                  ! calculate the gradient of the wave-function
-                  call df_gradient(gr%sb, gr%f_der, st%dpsi(:, idim, ist, ik), dgpsi(:, :, idim))
-                end do
-                
-                do idir = 1, NDIM
-                  dpgpsi = M_ZERO
-                  
-                  ! apply the projector to the gradient
-                  call dproject(gr%m, ep%p(ivnl_start:ivnl_end), ivnl_end - ivnl_start + 1, &
-                       st%d%dim, dgpsi(:, idir, :), dpgpsi, reltype = 0, periodic = .false., ik = ik)
-                  
-                  do idim = 1, st%d%dim
-                    dpgpsi(1:NP, idim) = dpgpsi(1:NP, idim) * st%dpsi(1:NP, idim, ist, ik)
-                    atm%f(idir) = atm%f(idir) - M_TWO * st%occ(ist, ik) * dmf_integrate(gr%m, dpgpsi(:, idim))
-                  end do
-                  
-                end do
-                
-              else
-                
-                do idim = 1, st%d%dim
-                  ! calculate the gradient of the wave-function
-                  call zf_gradient(gr%sb, gr%f_der, st%zpsi(:, idim, ist, ik), zgpsi(:, :, idim))
-                end do
-                
-                do idir = 1, NDIM
-                  zpgpsi = M_ZERO
-                  
-                  ! apply the projector to the gradient
-                  call zproject(gr%m, ep%p(ivnl_start:ivnl_end), ivnl_end - ivnl_start + 1, &
-                       st%d%dim, zgpsi(:, idir, :), zpgpsi, reltype = 0, periodic = .false., ik = ik)
-                  
-                  do idim = 1, st%d%dim
-                    zpgpsi(1:NP, idim) = zpgpsi(1:NP, idim) * st%zpsi(1:NP, idim, ist, ik)
-                    atm%f(idir) = atm%f(idir) - M_TWO * st%occ(ist, ik) * real(zmf_integrate(gr%m, zpgpsi(:, idim)))
-                  end do
-                  
-                end do
-
-
-              end if
-              
-            end do
-          end do
-          
-        end select
-        
-      end do atm_loop
-
-      if ( ep%forces == DERIVATE_WAVEFUNCTION ) then 
-        if (wfs_are_real(st)) then
-          deallocate(dgpsi, dpgpsi)
-        else
-          deallocate(zgpsi, zpgpsi)
-        end if
-      end if
-
     end if
 
 #if defined(HAVE_MPI)

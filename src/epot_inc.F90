@@ -164,6 +164,101 @@ function X(psidprojectpsi)(mesh, p, n_projectors, dim, psi, periodic, ik) result
   call pop_sub()
 end function X(psidprojectpsi)
 
+
+subroutine X(calc_forces_nonlocal)(gr, geo, ep, st)
+  type(grid_t), target, intent(inout) :: gr
+  type(geometry_t), intent(inout)  :: geo
+  type(epot_t),     intent(in)     :: ep
+  type(states_t),   intent(inout)     :: st
+  
+  integer :: ii, ist, ik, ivnl, ivnl_start, ivnl_end, idim, idir
+
+  R_TYPE :: zz(MAX_DIM)
+  R_TYPE, allocatable :: gpsi(:, :, :), pgpsi(:,:)
+
+  type(atom_t), pointer :: atm
+
+  if ( ep%forces == DERIVATE_WAVEFUNCTION ) then 
+    ALLOCATE(gpsi(gr%m%np, 1:NDIM, st%d%dim), gr%m%np*NDIM*st%d%dim)
+    ALLOCATE(pgpsi(gr%m%np, st%d%dim), gr%m%np*st%d%dim)
+  end if
+  
+  atm_loop: do ii = 1, geo%natoms
+    atm => geo%atom(ii)
+    if(.not. specie_is_ps(atm%spec)) cycle
+    
+    ASSERT(NDIM == 3)
+    
+    ! Here we learn which are the projector that correspond to atom i.
+    ! It assumes that the projectors of each atom are consecutive.
+    ivnl_start  = - 1
+    do ivnl = 1, ep%nvnl
+      if(ep%p(ivnl)%iatom .eq. ii) then
+        ivnl_start = ivnl
+        exit
+      end if
+    end do
+    if(ivnl_start .eq. -1) cycle
+    ivnl_end = ep%nvnl
+    do ivnl = ivnl_start, ep%nvnl
+      if(ep%p(ivnl)%iatom .ne. ii) then
+        ivnl_end = ivnl - 1
+        exit
+      end if
+    end do
+    
+    select case(ep%forces)
+      
+    case(DERIVATE_POTENTIAL)
+      
+      ik_loop: do ik = 1, st%d%nik
+        st_loop: do ist = st%st_start, st%st_end
+          
+          zz = X(psidprojectpsi)(gr%m, ep%p(ivnl_start:ivnl_end), &
+               ivnl_end - ivnl_start + 1, st%d%dim, st%X(psi)(:, :, ist, ik), &
+               periodic = .false., ik = ik)
+          atm%f(1:MAX_DIM) = atm%f(1:MAX_DIM) + M_TWO * R_REAL(st%occ(ist, ik) * zz(1:MAX_DIM))
+          
+        end do st_loop
+      end do ik_loop
+      
+    case(DERIVATE_WAVEFUNCTION)
+      do ik = 1, st%d%nik
+        do ist = st%st_start, st%st_end
+          
+          do idim = 1, st%d%dim
+            ! calculate the gradient of the wave-function
+            call X(f_gradient)(gr%sb, gr%f_der, st%X(psi)(:, idim, ist, ik), gpsi(:, :, idim))
+          end do
+            
+          do idir = 1, NDIM
+            pgpsi = M_ZERO
+            
+            ! apply the projector to the gradient
+            call X(project)(gr%m, ep%p(ivnl_start:ivnl_end), ivnl_end - ivnl_start + 1, &
+                 st%d%dim, gpsi(:, idir, :), pgpsi, reltype = 0, periodic = .false., ik = ik)
+            
+            do idim = 1, st%d%dim
+              pgpsi(1:NP, idim) = pgpsi(1:NP, idim) * st%X(psi)(1:NP, idim, ist, ik)
+              atm%f(idir) = atm%f(idir) - &
+                   R_REAL(M_TWO * st%occ(ist, ik) * X(mf_integrate)(gr%m, pgpsi(:, idim)))
+            end do
+            
+          end do
+          
+        end do
+      end do
+      
+    end select
+    
+  end do atm_loop
+  
+  if ( ep%forces == DERIVATE_WAVEFUNCTION ) then 
+    deallocate(gpsi, pgpsi)
+  end if
+  
+end subroutine X(calc_forces_nonlocal)
+
 !! Local Variables:
 !! mode: f90
 !! coding: utf-8
