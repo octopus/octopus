@@ -23,6 +23,7 @@ module poisson_corrections_m
   use derivatives_m
   use global_m
   use lib_oct_m
+  use math_m
   use mesh_function_m
   use mesh_m
   use messages_m
@@ -161,7 +162,7 @@ contains
     type(poisson_corr_t), intent(inout) :: this
     type(mesh_t), intent(in) :: m
 
-    FLOAT :: alpha, beta, gamma, ylm, r, x(MAX_DIM)
+    FLOAT :: alpha, beta, gamma, ylm, gylm(1:MAX_DIM), r, x(MAX_DIM)
     integer :: i, l, add_lm, lldfac, j, mm
 
     call push_sub('poisson_corrections.build_phi')
@@ -177,7 +178,7 @@ contains
         beta = (2**(l+2))/( alpha**(2*l+3) * sqrt(M_PI) * lldfac )
         gamma = ( sqrt(M_PI)*2**(l+3) ) / lldfac
         do mm = -l, l
-          ylm  = loct_ylm(x(1), x(2), x(3), l, mm)
+          call grylmr(x(1), x(2), x(3), l, mm, ylm, gylm)
           if(r .ne. M_ZERO) then
             this%phi(add_lm, i) = gamma * isubl( l, r/alpha) * ylm / r**(l+1)
           else
@@ -207,7 +208,7 @@ contains
     type(poisson_corr_t), intent(inout) :: this    
     type(mesh_t), intent(in) :: m
 
-    FLOAT :: ylm, r, x(MAX_DIM)
+    FLOAT :: ylm, gylm(1:MAX_DIM), r, x(MAX_DIM)
     integer :: i, l, add_lm, mm
 
     call push_sub('poisson_corrections.build_aux')
@@ -218,7 +219,7 @@ contains
       add_lm = 1
       do l = 0, this%maxl
         do mm = -l, l
-          ylm  = loct_ylm(x(1), x(2), x(3), l, mm)
+          call grylmr(x(1), x(2), x(3), l, mm, ylm, gylm)
           if(r .ne. M_ZERO) then
             this%aux(add_lm, i) = r**l*ylm
           else
@@ -268,7 +269,7 @@ contains
     FLOAT,        intent(inout) :: pot(:)  ! pot(m%np_part)
 
     integer :: i, add_lm, l, mm, bp_lower
-    FLOAT   :: x(MAX_DIM), r, s1, sa
+    FLOAT   :: x(MAX_DIM), r, s1, sa, gylm(1:MAX_DIM)
     FLOAT, allocatable :: mult(:)
 
     ALLOCATE(mult((this%maxl+1)**2), (this%maxl+1)**2)
@@ -285,7 +286,7 @@ contains
       do l = 0, this%maxl
         s1 = M_FOUR*M_PI/((M_TWO*l + M_ONE)*r**(l + 1))
         do mm = -l, l
-          sa = loct_ylm(x(1), x(2), x(3), l, mm)
+          call grylmr(x(1), x(2), x(3), l, mm, sa, gylm)
           pot(i) = pot(i) + sa * mult(add_lm) * s1
           add_lm = add_lm+1
         end do
