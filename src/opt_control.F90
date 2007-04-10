@@ -21,18 +21,29 @@
 
 module opt_control_m
   use excited_states_m
+  use datasets_m
+  use global_m
   use filter_m
+  use grid_m
   use hamiltonian_m
+  use io_m
   use lasers_m
+  use lib_oct_parser_m
+  use lib_oct_m
+  use messages_m
+  use mesh_m
   use mesh_function_m
   use output_m
   use states_m
   use states_output_m
+  use string_m
   use system_m
   use td_rti_m
   use td_write_m
   use timedep_m
+  use units_m
   use v_ks_m
+
   implicit none
 
   private

@@ -22,7 +22,6 @@
 module filter_m  
   use global_m
   use grid_m
-  !use varinfo_m
   use messages_m
   use datasets_m
   use io_m 
@@ -33,9 +32,20 @@ module filter_m
   use fft_m
 #endif
   use units_m
-  use mesh_m
 
   implicit none
+
+  private
+  
+  public ::             &
+       filter_t,        &
+       def_tdpenalty,   &
+       t_lookup,        &
+       w_lookup,        &
+       def_filter,      &
+       apply_filter,    &
+       filter_end
+
   
   type filter_t
     FLOAT :: weight       ! relative weight of filter
