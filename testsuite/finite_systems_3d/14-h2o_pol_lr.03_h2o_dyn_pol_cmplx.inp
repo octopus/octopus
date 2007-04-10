@@ -21,5 +21,5 @@ Spacing = 0.65
 %
 
 PolEta = 0.01
-PolConvAbsDens = 1e-3
+PolConvAbsDens = 1e-4
 PolLinearSolverTol = 1e-4
