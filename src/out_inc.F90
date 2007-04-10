@@ -158,6 +158,11 @@ subroutine X(input_function_global)(filename, m, f, ierr, is_tmp)
 #endif
    case("obf")
      call read_binary(m%np_global, f, out_type, ierr, filename)
+     ! I do not know what the ierr means here. It should be consistent with the values defined above,
+     ! or otherwise we may run into trouble (i.e. a negative ierr means that the function was successfully
+     ! read, but a conversion had to be done -- real to complex, single precision to double precision...)
+     ! This does not seem to be the case, so I take the precaution of converting any non-null ierr to code "2".
+     if(ierr.ne.0) ierr = 2
      
   case default
      ierr = 1
