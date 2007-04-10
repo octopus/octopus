@@ -78,11 +78,10 @@ typedef char byte;
 static const int size_of[4]={4, 8, 8, 16};
 
 inline void inf_error(const char * msg, int * ierr){
-  *ierr = errno;
 #ifdef HAVE_PERROR
   perror(msg);
 #else
-  printf("msg");
+  printf(msg);
   printf(": I/O Error.\n");
 #endif
 }
@@ -137,7 +136,7 @@ inline void init_header(header_t * h){
 }
 
 inline int check_header(header_t * h, int * correct_endianness){
-  if( strcmp("pulpo", h -> text) != 0 ) return 4;
+  if( strcmp("pulpo", h -> text) != 0 ) return 5;
   if( h -> version != 0 ) return 5;
   return 0;
 }
@@ -158,6 +157,7 @@ void FC_FUNC_(write_binary, WRITE_BINARY)
 	     S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH );
   if( fd < 0 ) {
     inf_error("octopus.write_binary", ierr);
+    *ierr = 2;
     return;
   }
   free(filename);
@@ -202,6 +202,7 @@ void FC_FUNC_(read_binary,READ_BINARY)
   fd = open(filename, O_RDONLY);
   if(fd < 0){
     inf_error("octopus.read_binary", ierr);
+    *ierr = 2;
     return;
   }
 
@@ -209,12 +210,17 @@ void FC_FUNC_(read_binary,READ_BINARY)
 
   /* read header */
   moved = read(fd, &h, sizeof(header_t));
-  
+  if ( moved != sizeof(header_t) ) { 
+    /* we couldn't read the complete header */
+    *ierr = 3;
+    return;
+  }
+
   *ierr = check_header(&h, &correct_endianness);
   if( *ierr != 0 ) return;
 
   /* check whether the sizes match */ 
-  if( h.np != *np ){ *ierr = 6; return; }
+  if( h.np != *np ){ *ierr = 4; return; }
 
   if( h.type == *output_type){
     /* format is the same, we just read */
@@ -226,6 +232,13 @@ void FC_FUNC_(read_binary,READ_BINARY)
 
   /* now read the values and close the file */
   moved = read(fd, read_f, (*np)*size_of[h.type]);
+
+  if ( moved != (*np)*size_of[h.type]) { 
+    /* we couldn't read the whole dataset */
+    *ierr = 3;
+    return;
+  }
+    
   close(fd);
 
   /* convert values if it is necessary */
@@ -235,6 +248,13 @@ void FC_FUNC_(read_binary,READ_BINARY)
 	       (multi *) (f + i*size_of[*output_type]), 
 	       h.type, *output_type);
     free(read_f);
+
+    /* set the error code according to the conversion done (see src/out_inc.F90 ) */
+    if ( h.type == type_float )          *ierr = -1;
+    if ( h.type == type_float_complex )  *ierr = -2;
+    if ( h.type == type_double )         *ierr = -3;
+    if ( h.type == type_double_complex ) *ierr = -4;
+
   }
   
 }
