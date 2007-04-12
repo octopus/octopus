@@ -981,13 +981,11 @@ contains
     do i = 1, geo%natoms
       geo%atom(i)%f = M_ZERO
     end do
-
-    if(.not.geo%only_user_def) then
-      if (wfs_are_real(st) ) then 
-        call dcalc_forces_nonlocal(gr, geo, ep, st)
-      else
-        call zcalc_forces_nonlocal(gr, geo, ep, st)
-      end if
+    
+    if (wfs_are_real(st) ) then 
+      call dcalc_forces_from_potential(gr, geo, ep, st, time)
+    else
+      call zcalc_forces_from_potential(gr, geo, ep, st, time)
     end if
 
 #if defined(HAVE_MPI)
@@ -1019,14 +1017,11 @@ contains
       end do
     end if
 
-    ! now comes the local part of the PP
-    if(.not.simul_box_is_periodic(gr%sb).or.geo%only_user_def) then ! Real space
-      call local_RS()
 #if defined(HAVE_FFT)
-    else ! Fourier space
+    if( simul_box_is_periodic(gr%sb) .and. (.not. geo%only_user_def) ) then ! fourier space
       call local_FS()
-#endif
     end if
+#endif
 
     if(present(t).and.ep%no_lasers>0) then
       call laser_field(gr%sb, ep%no_lasers, ep%lasers, t, x)
@@ -1049,100 +1044,6 @@ contains
     call profiling_out(C_PROFILING_FORCES)
 
   contains
-
-    ! ---------------------------------------------------------
-    subroutine local_RS()
-      FLOAT, allocatable :: force(:,:), tmp(:), grho(:,:)
-      CMPLX, allocatable :: zgpsi(:,:)
-      integer  :: ii, jj, idir, ns, ik, ist, idim
-      
-      ns = min(2, st%d%nspin)
-
-      ALLOCATE(force(NP, MAX_DIM), NP*MAX_DIM)
-
-      if( ep%forces == DERIVATE_WAVEFUNCTION ) then !calculate the gradient of the density
-        
-        ALLOCATE(grho(NP, MAX_DIM), NP*MAX_DIM)
-        
-        grho(1:NP, 1:st%d%dim) = M_ZERO
-        
-        do ik = 1, st%d%nik, st%d%nspin
-          do ist = st%st_start, st%st_end
-            do idim = 1, st%d%dim
-              
-              if (wfs_are_real(st)) then
-                
-                ! calculate the gradient of the wave-function
-                call df_gradient(gr%sb, gr%f_der, st%dpsi(:, idim, ist, ik), force)
-                
-                do idir = 1, NDIM
-                  grho(1:NP, idir) = grho(1:NP, idir) + st%d%kweights(ik)*st%occ(ist, ik) * M_TWO * &
-                       st%dpsi(1:NP, idim, ist, ik) * force(1:NP, idir)
-                end do
-
-              else 
-                
-                ALLOCATE(zgpsi(NP, MAX_DIM), NP*MAX_DIM)
-
-                ! calculate the gradient of the wave-function
-                call zf_gradient(gr%sb, gr%f_der, st%zpsi(:, idim, ist, ik), zgpsi)
-                
-                do idir = 1, NDIM
-                  grho(1:NP, idir) = grho(1:NP, idir) + st%d%kweights(ik)*st%occ(ist, ik) * M_TWO * &
-                       real(st%zpsi(1:NP, idim, ist, ik) * zgpsi(1:NP, idir))
-                end do
-
-                deallocate(zgpsi)
-
-              end if
-              
-            end do
-          end do
-        end do
-        
-      end if
-
-      do ii = 1, geo%natoms
-        atm => geo%atom(ii)
-
-        select case(ep%forces)
-
-        case(DERIVATE_POTENTIAL)
-          
-          call specie_get_glocal(atm%spec, gr, atm%x, force)
-          
-          do jj = 1, NP
-            force(jj, 1:NDIM) = sum(st%rho(jj, 1:ns))*force(jj, 1:NDIM)
-          end do
-          
-          do idir = 1, NDIM
-            atm%f(idir) = atm%f(idir) - dmf_integrate(gr%m, force(:, idir))
-          end do
-
-        case(DERIVATE_WAVEFUNCTION)
-
-          ALLOCATE(tmp(NP), NP)
-
-          tmp(1:NP) = M_ZERO
-
-          call build_local_part_in_real_space(ep, gr, geo, atm, tmp, time)
-
-          do idir = 1, NDIM
-            force(1:NP, idir) = grho(1:NP, idir) * tmp(1:NP)
-            atm%f(idir) = atm%f(idir) - dmf_integrate(gr%m, force(:, idir))
-          end do 
-
-          deallocate(tmp)
-
-        end select
-
-      end do
-
-      if ( allocated(grho) ) deallocate(grho)
-      deallocate(force)
-
-    end subroutine local_RS
-
 
 #ifdef HAVE_FFT
     ! ---------------------------------------------------------

@@ -694,6 +694,8 @@ contains
     FLOAT :: x(MAX_DIM), r, l1, l2, pot_re, pot_im, time_
     FLOAT, allocatable :: grho(:, :), gpot(:)
     integer :: i, ip
+    
+    call push_sub('specie_pot.specie_get_glocal')
 
     gv    = M_ZERO
 
@@ -710,7 +712,7 @@ contains
         ! the units back and forth
         x(:) = x(:)/units_inp%length%factor      ! convert from a.u. to input units
         r = r / units_inp%length%factor 
-        do i = 1, 3
+        do i = 1, NDIM
           x(i) = x(i) - Delta/units_inp%length%factor
           call loct_parse_expression(pot_re, pot_im,           &
                x(1), x(2), x(3), r, time_, s%user_def)
@@ -782,6 +784,8 @@ contains
       gv(1:gr%m%np, 1:3) = M_ZERO
         
     end select
+    
+    call pop_sub()
 
   end subroutine specie_get_glocal
 

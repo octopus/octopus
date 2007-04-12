@@ -165,51 +165,70 @@ function X(psidprojectpsi)(mesh, p, n_projectors, dim, psi, periodic, ik) result
 end function X(psidprojectpsi)
 
 
-subroutine X(calc_forces_nonlocal)(gr, geo, ep, st)
+subroutine X(calc_forces_from_potential)(gr, geo, ep, st, time)
   type(grid_t), target, intent(inout) :: gr
   type(geometry_t), intent(inout)  :: geo
   type(epot_t),     intent(in)     :: ep
   type(states_t),   intent(inout)     :: st
-  
-  integer :: ii, ist, ik, ivnl, ivnl_start, ivnl_end, idim, idir
+  FLOAT,            intent(in)     :: time
+
+  integer :: ii, ip, ist, ik, ivnl, ivnl_start, ivnl_end, idim, idir, ns
 
   R_TYPE :: zz(MAX_DIM)
   R_TYPE, allocatable :: gpsi(:, :, :), pgpsi(:,:)
+  FLOAT,  allocatable :: grho(:, :), vloc(:), force(:,:)
 
   type(atom_t), pointer :: atm
 
-  if ( ep%forces == DERIVATE_WAVEFUNCTION ) then 
-    ALLOCATE(gpsi(gr%m%np, 1:NDIM, st%d%dim), gr%m%np*NDIM*st%d%dim)
-    ALLOCATE(pgpsi(gr%m%np, st%d%dim), gr%m%np*st%d%dim)
-  end if
-  
-  atm_loop: do ii = 1, geo%natoms
-    atm => geo%atom(ii)
-    if(.not. specie_is_ps(atm%spec)) cycle
+  ALLOCATE(force(1:NP, 1:NDIM), NP*NDIM)
+
+  select case(ep%forces)
     
-    ASSERT(NDIM == 3)
+  case(DERIVATE_POTENTIAL)
     
-    ! Here we learn which are the projector that correspond to atom i.
-    ! It assumes that the projectors of each atom are consecutive.
-    ivnl_start  = - 1
-    do ivnl = 1, ep%nvnl
-      if(ep%p(ivnl)%iatom .eq. ii) then
-        ivnl_start = ivnl
-        exit
+    atm_loop: do ii = 1, geo%natoms
+      atm => geo%atom(ii)
+
+      !the local part
+
+      if(.not.simul_box_is_periodic(gr%sb).or.geo%only_user_def) then !we do it in real space
+
+        ns = min(2, st%d%nspin)
+
+        call specie_get_glocal(atm%spec, gr, atm%x, force, time)
+
+        do ip = 1, NP
+          force(ip, 1:NDIM) = sum(st%rho(ip, 1:ns))*force(ip, 1:NDIM)
+        end do
+        
+        do idir = 1, NDIM
+          atm%f(idir) = atm%f(idir) - dmf_integrate(gr%m, force(:, idir))
+        end do
+        
       end if
-    end do
-    if(ivnl_start .eq. -1) cycle
-    ivnl_end = ep%nvnl
-    do ivnl = ivnl_start, ep%nvnl
-      if(ep%p(ivnl)%iatom .ne. ii) then
-        ivnl_end = ivnl - 1
-        exit
-      end if
-    end do
-    
-    select case(ep%forces)
       
-    case(DERIVATE_POTENTIAL)
+      !the non-local part
+      if(.not. specie_is_ps(atm%spec)) cycle
+      
+      ASSERT(NDIM == 3)
+      
+      ! Here we learn which are the projector that correspond to atom i.
+      ! It assumes that the projectors of each atom are consecutive.
+      ivnl_start  = - 1
+      do ivnl = 1, ep%nvnl
+        if(ep%p(ivnl)%iatom .eq. ii) then
+          ivnl_start = ivnl
+          exit
+        end if
+      end do
+      if(ivnl_start .eq. -1) cycle
+      ivnl_end = ep%nvnl
+      do ivnl = ivnl_start, ep%nvnl
+        if(ep%p(ivnl)%iatom .ne. ii) then
+          ivnl_end = ivnl - 1
+          exit
+        end if
+      end do
       
       ik_loop: do ik = 1, st%d%nik
         st_loop: do ist = st%st_start, st%st_end
@@ -221,23 +240,46 @@ subroutine X(calc_forces_nonlocal)(gr, geo, ep, st)
           
         end do st_loop
       end do ik_loop
-      
-    case(DERIVATE_WAVEFUNCTION)
-      do ik = 1, st%d%nik
-        do ist = st%st_start, st%st_end
+    end do atm_loop
+    
+  case(DERIVATE_WAVEFUNCTION)
+
+    ALLOCATE(gpsi(gr%m%np, 1:NDIM, st%d%dim), gr%m%np*NDIM*st%d%dim)
+    ALLOCATE(pgpsi(gr%m%np, st%d%dim), gr%m%np*st%d%dim)
+    ALLOCATE(grho(NP, MAX_DIM), NP*MAX_DIM)
+    
+    grho(1:NP, 1:st%d%dim) = M_ZERO
+
+    !the non-local part
+    do ik = 1, st%d%nik
+      do ist = st%st_start, st%st_end
+        
+        ! calculate the gradient of the wave-function
+        do idim = 1, st%d%dim
+          call X(f_gradient)(gr%sb, gr%f_der, st%X(psi)(:, idim, ist, ik), gpsi(:, :, idim))
           
-          do idim = 1, st%d%dim
-            ! calculate the gradient of the wave-function
-            call X(f_gradient)(gr%sb, gr%f_der, st%X(psi)(:, idim, ist, ik), gpsi(:, :, idim))
+          !acumulate to calculate the gradient of the density
+          do idir = 1, NDIM
+            grho(1:NP, idir) = grho(1:NP, idir) + st%d%kweights(ik)*st%occ(ist, ik) * M_TWO * &
+                 R_REAL(st%X(psi)(1:NP, idim, ist, ik) * gpsi(1:NP, idir, idim))
           end do
-            
+        end do
+
+        ! iterate over the projectors
+        do ivnl = 1, ep%nvnl
+          
+          !get the atom corresponding to this projector
+          atm => geo%atom(ep%p(ivnl)%iatom)
+
           do idir = 1, NDIM
             pgpsi = M_ZERO
             
             ! apply the projector to the gradient
-            call X(project)(gr%m, ep%p(ivnl_start:ivnl_end), ivnl_end - ivnl_start + 1, &
+            call X(project)(gr%m, ep%p(ivnl:ivnl), 1, &
                  st%d%dim, gpsi(:, idir, :), pgpsi, reltype = 0, periodic = .false., ik = ik)
             
+            !multiply by the wavefunction and integrate to get the force
+            !(for the last drop of performance this could be also done locally)
             do idim = 1, st%d%dim
               pgpsi(1:NP, idim) = pgpsi(1:NP, idim) * st%X(psi)(1:NP, idim, ist, ik)
               atm%f(idir) = atm%f(idir) - &
@@ -245,19 +287,42 @@ subroutine X(calc_forces_nonlocal)(gr, geo, ep, st)
             end do
             
           end do
-          
+        
+        end do !invl
+        
+      end do
+    end do
+
+    deallocate(gpsi, pgpsi)
+
+    !now add the local part
+
+    if(.not.simul_box_is_periodic(gr%sb).or.geo%only_user_def) then !we do it in real space
+
+      ALLOCATE(vloc(1:NP), NP)
+      
+      do ii = 1, geo%natoms
+        atm => geo%atom(ii)
+        
+        vloc(1:NP) = M_ZERO
+        
+        call build_local_part_in_real_space(ep, gr, geo, atm, vloc, time)
+        
+        do idir = 1, NDIM
+          force(1:NP, idir) = grho(1:NP, idir) * vloc(1:NP)
+          atm%f(idir) = atm%f(idir) - dmf_integrate(gr%m, force(:, idir))
         end do
       end do
       
-    end select
+      deallocate(vloc)
+
+    end if
     
-  end do atm_loop
+  end select
   
-  if ( ep%forces == DERIVATE_WAVEFUNCTION ) then 
-    deallocate(gpsi, pgpsi)
-  end if
+  deallocate(force)
   
-end subroutine X(calc_forces_nonlocal)
+end subroutine X(calc_forces_from_potential)
 
 !! Local Variables:
 !! mode: f90
