@@ -165,6 +165,65 @@ function X(psidprojectpsi)(mesh, p, n_projectors, dim, psi, periodic, ik) result
 end function X(psidprojectpsi)
 
 
+R_TYPE function X(psia_project_psib)(mesh, pj, dim, psia, psib, reltype, periodic, ik) result(apb)
+  type(mesh_t),      intent(in)    :: mesh
+  type(projector_t), intent(in)    :: pj
+  integer,           intent(in)    :: dim
+  R_TYPE,            intent(in)    :: psia(:, :)  ! psia(1:mesh%np, dim)
+  R_TYPE,            intent(inout) :: psib(:, :)  ! psib(1:mesh%np, dim)
+  integer,           intent(in)    :: reltype
+  logical,           intent(in)    :: periodic
+  integer,           intent(in)    :: ik
+
+  integer ::  n_s, idim
+  R_TYPE, allocatable :: lpsi(:, :), plpsi(:,:)
+
+  call push_sub('epot_inc.psia_project_psib')
+
+  n_s = pj%n_s
+
+  ALLOCATE(lpsi(n_s, dim),  n_s*dim)
+  ALLOCATE(plpsi(n_s, dim), n_s*dim)
+  
+  do idim = 1, dim
+    lpsi(1:n_s, idim)  = psib(pj%jxyz(1:n_s), idim)*mesh%vol_pp(pj%jxyz(1:n_s))
+    if(periodic) lpsi(1:n_s, idim)  = lpsi(1:n_s, idim) * pj%phases(1:n_s, ik)
+  end do
+  
+  select case (pj%type)
+  case (M_HGH)
+    if (periodic) then
+      call X(hgh_project)(mesh, pj%hgh_p, dim, lpsi, plpsi, reltype, pj%phases(:, ik))
+    else
+      call X(hgh_project)(mesh, pj%hgh_p, dim, lpsi, plpsi, reltype)
+    end if
+  case (M_KB)
+    if (periodic) then
+      call X(kb_project)(mesh, pj%kb_p, dim, lpsi, plpsi, pj%phases(:, ik))
+    else
+      call X(kb_project)(mesh, pj%kb_p, dim, lpsi, plpsi)
+    end if
+  case (M_RKB)
+#ifdef R_TCOMPLEX
+    !This can only be aplied to complex spinor wave-functions
+    if (periodic) then
+      call rkb_project(mesh, pj%rkb_p, lpsi, plpsi, pj%phases(:, ik))
+    else
+      call rkb_project(mesh, pj%rkb_p, lpsi, plpsi)
+    end if
+#endif
+  end select
+  
+  apb = M_ZERO
+  do idim = 1, dim
+    apb = apb + &
+         sum(R_CONJ(psia(pj%jxyz(1:n_s), idim))*plpsi(1:n_s, idim)*mesh%vol_pp(pj%jxyz(1:n_s)))
+  end do
+
+  call pop_sub()
+end function X(psia_project_psib)
+
+
 subroutine X(calc_forces_from_potential)(gr, geo, ep, st, time)
   type(grid_t), target, intent(inout) :: gr
   type(geometry_t), intent(inout)  :: geo
@@ -174,6 +233,7 @@ subroutine X(calc_forces_from_potential)(gr, geo, ep, st, time)
 
   integer :: ii, ip, ist, ik, ivnl, ivnl_start, ivnl_end, idim, idir, ns
 
+  R_TYPE :: psi_proj_gpsi
   R_TYPE :: zz(MAX_DIM)
   R_TYPE, allocatable :: gpsi(:, :, :), pgpsi(:,:)
   FLOAT,  allocatable :: grho(:, :), vloc(:), force(:,:)
@@ -245,7 +305,6 @@ subroutine X(calc_forces_from_potential)(gr, geo, ep, st, time)
   case(DERIVATE_WAVEFUNCTION)
 
     ALLOCATE(gpsi(gr%m%np, 1:NDIM, st%d%dim), gr%m%np*NDIM*st%d%dim)
-    ALLOCATE(pgpsi(gr%m%np, st%d%dim), gr%m%np*st%d%dim)
     ALLOCATE(grho(NP, MAX_DIM), NP*MAX_DIM)
     
     grho(1:NP, 1:st%d%dim) = M_ZERO
@@ -258,7 +317,7 @@ subroutine X(calc_forces_from_potential)(gr, geo, ep, st, time)
         do idim = 1, st%d%dim
           call X(f_gradient)(gr%sb, gr%f_der, st%X(psi)(:, idim, ist, ik), gpsi(:, :, idim))
           
-          !acumulate to calculate the gradient of the density
+          !accumulate to calculate the gradient of the density
           do idir = 1, NDIM
             grho(1:NP, idir) = grho(1:NP, idir) + st%d%kweights(ik)*st%occ(ist, ik) * M_TWO * &
                  R_REAL(st%X(psi)(1:NP, idim, ist, ik) * gpsi(1:NP, idir, idim))
@@ -272,20 +331,12 @@ subroutine X(calc_forces_from_potential)(gr, geo, ep, st, time)
           atm => geo%atom(ep%p(ivnl)%iatom)
 
           do idir = 1, NDIM
-            pgpsi = M_ZERO
+
+            psi_proj_gpsi = X(psia_project_psib)(gr%m, ep%p(ivnl), st%d%dim, &
+                 st%X(psi)(:, :, ist, ik), gpsi(:, idir, :), reltype = 0, periodic = .false., ik = ik)
             
-            ! apply the projector to the gradient
-            call X(project)(gr%m, ep%p(ivnl:ivnl), 1, &
-                 st%d%dim, gpsi(:, idir, :), pgpsi, reltype = 0, periodic = .false., ik = ik)
-            
-            !multiply by the wavefunction and integrate to get the force
-            !(for the last drop of performance this could be also done locally)
-            do idim = 1, st%d%dim
-              pgpsi(1:NP, idim) = pgpsi(1:NP, idim) * st%X(psi)(1:NP, idim, ist, ik)
-              atm%f(idir) = atm%f(idir) - &
-                   R_REAL(M_TWO * st%occ(ist, ik) * X(mf_integrate)(gr%m, pgpsi(:, idim)))
-            end do
-            
+            atm%f(idir) = atm%f(idir) - M_TWO * st%occ(ist, ik) * R_REAL(psi_proj_gpsi)
+
           end do
         
         end do !invl
@@ -293,7 +344,7 @@ subroutine X(calc_forces_from_potential)(gr, geo, ep, st, time)
       end do
     end do
 
-    deallocate(gpsi, pgpsi)
+    deallocate(gpsi)
 
     !now add the local part
 
