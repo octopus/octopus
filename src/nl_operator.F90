@@ -34,6 +34,7 @@ module nl_operator_m
   use mesh_m
   use messages_m
   use mpi_m
+  use operate_m
   use par_vec_m
   use profiling_m
 
@@ -107,6 +108,8 @@ contains
     !%Description
     !% Which function use to apply non-local operators over the grid. This
     !% is the function where octopus spends most of time.
+    !% The oct-operator_prof script can be used to measure which function
+    !% is fastest on the current machine.
     !%Option fortran 0
     !% The standard plain fortran function.
     !%Option fortran_opt 1
@@ -122,6 +125,8 @@ contains
     !%Description
     !% Which function use to apply non-local operators over the grid. This
     !% is the function where octopus spends most of time.
+    !% The oct-operator_prof script can be used to measure which function
+    !% is fastest on the current machine.
     !%Option fortran 0
     !% The standard plain fortran function.
     !%Option fortran_opt 1
@@ -129,7 +134,8 @@ contains
     !%Option c 3
     !% The C version, using data prefetch directives and unrolled by hand.
     !%Option sse 4
-    !% The C version, using data prefetch directives and unrolled by hand.
+    !% The C version, using data prefetch directives, SSE2 instructions,
+    !% and unrolled by hand.
     !%End
 
     if ( dop_function == - 1) then
@@ -883,7 +889,7 @@ contains
           fo(ii) = sum(op%w_re(1:nn, 1)  * fi(op%i(1:nn, ii)))
         end do
       case(OP_FORTRAN_OPT)
-        call doperate(op%np, nn, op%w_re(1, 1), op%i(1,1), fi(1), fo(1))
+        call doperate(op%np, nn, op%w_re(1:nn, 1), op%i(1:nn,1:op%np), fi(1:op%np), fo(1:op%np))
       end select
     else
       do ii = 1, op%np
@@ -949,7 +955,7 @@ contains
             fo(ii) = sum(op%w_re(1:nn, 1)  * fi(op%i(1:nn, ii)))
           end do
         case(OP_FORTRAN_OPT)
-          call zoperate(op%np, nn, op%w_re(1, 1), op%i(1,1), fi(1), fo(1))
+          call zoperate(op%np, nn, op%w_re(1:nn, 1), op%i(1:nn,1:op%np), fi(1:op%np), fo(1:op%np))
         case(OP_C)
           call zoperate_c(op%np, nn, op%w_re(1, 1), op%i(1,1), fi(1), fo(1))
         end select

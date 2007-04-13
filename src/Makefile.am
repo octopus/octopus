@@ -252,7 +252,7 @@ mf.o: global.h mf_inc.F90
 mix.o: global.h mix_inc.F90
 mpi_debug.o: global.h mpi_debug_inc.F90
 profiling.o: global.h
-nl_operator.o: global.h
+nl_operator.o: global.h operate.o
 ode_solver.o: global.h ode_solver_inc.F90
 operate.f90: global.h
 opt_control.o: global.h
