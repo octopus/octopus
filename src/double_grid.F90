@@ -124,11 +124,7 @@ contains
     !% potential is erf(r)/r.
     !%End
 
-    if ( this%use_double_grid .or. this%filter ) then 
-      call loct_parse_int(check_inp('LocalizationDensity'), F_GAUSSIAN, this%loc_function)
-    else
-      call loct_parse_int(check_inp('LocalizationDensity'), F_NONE, this%loc_function)
-    end if
+    call loct_parse_int(check_inp('LocalizationDensity'), F_GAUSSIAN, this%loc_function)
 
     idx_fine(1:nw, 1:3) = 0
     idx_coarse(1:nw, 1:3) = 0

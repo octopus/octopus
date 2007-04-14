@@ -394,7 +394,7 @@ contains
     integer :: ip, pol
     FLOAT   :: grid(0:2*steps), f_re, f_im
 !    FLOAT   :: width
-    CMPLX   :: ff(NDIM,0:2*steps)
+    CMPLX   :: ff(MAX_DIM, 0:2*steps)
 
     call push_sub('filter.build_filter_')
 
