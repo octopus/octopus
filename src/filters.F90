@@ -178,7 +178,7 @@ contains
 
     integer        :: no_f, i, kk, n(3), last, first, grouplength, ii
     CMPLX          :: tmp(0:2*steps, 1, 1), tmp2(0:2*steps, 1, 1) ! Have to be three-dimensional to use the fft_m module
-    CMPLX          :: filt(NDIM, 0:2*steps)
+    CMPLX          :: filt(MAX_DIM, 0:2*steps)
     type(fft_t)    :: fft_handler
 
     call push_sub('filters.apply_filter')
@@ -216,8 +216,9 @@ contains
           end if
           ii = ii + 1
           first = i
-          last  = i + grouplength
         end do
+        !this is out of the loop as a workaround for a bug in sun studio express
+        last  = i + grouplength
 
         write(message(1),'(a,i2,a,i2)') 'Adding filters from: ',first,'to: ',last
         call write_info(1)
@@ -249,9 +250,10 @@ contains
             filt(:, :) = filt(:, :) + filter(ii)%numerical(:,:)
           end if
           first = i
-          last  = i + grouplength
           ii = ii + 1
         end do
+        !this is out of the loop as a workaround for a bug in sun studio express
+        last  = i + grouplength
         i = ii - 1
 
         write(message(1),*) 'Adding filters from: ',first,'to: ',last
@@ -383,7 +385,6 @@ contains
 
   !------------------------------------------------
   subroutine build_filter(gr, fp, steps, dt)
-    implicit none
     type(grid_t),   pointer       :: gr
     type(filter_t), intent(inout) :: fp
     integer,        intent(in)    :: steps
@@ -476,8 +477,6 @@ contains
 
   ! ---------------------------------------------------------
   subroutine t_lookup(steps,dt,tgrid)
-    implicit none
-    
     integer, intent(in)  :: steps
     FLOAT,   intent(in)  :: dt
     FLOAT,   intent(out) :: tgrid(:)
@@ -496,8 +495,6 @@ contains
 
   ! ---------------------------------------------------------
   subroutine w_lookup(steps,dt,wgrid)
-    implicit none
-   
     integer, intent(in)  :: steps
     FLOAT,   intent(in)  :: dt
     FLOAT,   intent(out) :: wgrid(:)
