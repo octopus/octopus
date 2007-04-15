@@ -20,7 +20,7 @@ Enabled  : Yes
 # calculated by the test corresponds with the value given in Eq. 14 for Z = 1,
 # that is, in atomic units, I = 1/(16*pi) = 0.01989 a.u. ( = 0.132 mA).
 #
-# The run also calculates the induced magneticc field, by making use of the
+# The run also calculates the induced magnetic field, by making use of the
 # Biot-Savart law. The value provided in the paper is 0.52 T, corresponding
 # to .00030 atomic units -- this is the second match of this test.
 #
@@ -34,5 +34,5 @@ Enabled  : Yes
 
 Input: 18-current.01-current.inp
 
-Match ; Current Flow ; grep 'Flow =' static/current-flow ; \s*0.200\d*
+Match ; Current Flow ; grep 'Flow =' static/current-flow ; \s*0.199\d*
 Match ; Magnetic Field at loop center ; grep '^  0.0000' static/Bind_z.x\=0\,z\=0 ; \s*3.08\d*
