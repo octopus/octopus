@@ -34,7 +34,6 @@ module nl_operator_m
   use mesh_m
   use messages_m
   use mpi_m
-  use operate_m
   use par_vec_m
   use profiling_m
 
@@ -112,9 +111,7 @@ contains
     !% is fastest on the current machine.
     !%Option fortran 0
     !% The standard plain fortran function.
-    !%Option fortran_opt 1
-    !% The standard plain fortran function.
-    !%Option c 3
+    !%Option c 1
     !% The C version, using data prefetch directives and unrolled by hand.
     !%End
 
@@ -129,11 +126,9 @@ contains
     !% is fastest on the current machine.
     !%Option fortran 0
     !% The standard plain fortran function.
-    !%Option fortran_opt 1
-    !% The standard plain fortran function.
-    !%Option c 3
+    !%Option c 1
     !% The C version, using data prefetch directives and unrolled by hand.
-    !%Option sse 4
+    !%Option sse 2
     !% The C version, using data prefetch directives, SSE2 instructions,
     !% and unrolled by hand.
     !%End
@@ -885,11 +880,8 @@ contains
       case(OP_C)
         call doperate_c(op%np, nn, op%w_re(1, 1), op%i(1,1), fi(1), fo(1))
       case(OP_FORTRAN)
-        do ii = 1, op%np
-          fo(ii) = sum(op%w_re(1:nn, 1)  * fi(op%i(1:nn, ii)))
-        end do
-      case(OP_FORTRAN_OPT)
-        call doperate(op%np, nn, op%w_re(1:nn, 1), op%i(1:nn,1:op%np), fi(1:op%np), fo(1:op%np))
+        call doperate(op%np, op%m%np_part, nn, &
+          op%w_re(1:nn, 1), op%i(1:nn,1:op%np), fi(1:op%m%np_part), fo(1:op%np))
       end select
     else
       do ii = 1, op%np
@@ -951,11 +943,8 @@ contains
           call zoperate_sse(op%np, nn, op%w_re(1, 1), op%i(1,1), fi(1), fo(1))
 #endif
         case(OP_FORTRAN)
-          do ii = 1, op%np
-            fo(ii) = sum(op%w_re(1:nn, 1)  * fi(op%i(1:nn, ii)))
-          end do
-        case(OP_FORTRAN_OPT)
-          call zoperate(op%np, nn, op%w_re(1:nn, 1), op%i(1:nn,1:op%np), fi(1:op%np), fo(1:op%np))
+          call zoperate(op%np, op%m%np_part, nn, &
+            op%w_re(1:nn, 1), op%i(1:nn,1:op%np), fi(1:op%m%np_part), fo(1:op%np))
         case(OP_C)
           call zoperate_c(op%np, nn, op%w_re(1, 1), op%i(1,1), fi(1), fo(1))
         end select
@@ -1065,6 +1054,47 @@ contains
     call profiling_out(C_PROFILING_NL_OPERATOR)
 
   end subroutine znl_operator_operate_diag
+
+
+  ! The next two routines are wrappers around the operator sum.
+  ! The reason for those wrappers is that, by help of the parameter
+  ! list, compilers can generate more efficient code because of they then
+  ! know the arrays not to be shaped.
+
+  ! ---------------------------------------------------------
+  subroutine doperate(np, np_part, nn, w, opi, fi, fo)
+    integer, intent(in) :: np
+    integer, intent(in) :: np_part
+    integer, intent(in) :: nn
+    FLOAT,   intent(in) :: w(1:nn)
+    integer, intent(in) :: opi(1:nn, 1:np)
+    FLOAT,   intent(in) :: fi(1:np_part)
+    FLOAT,   intent(out):: fo(1:np) 
+
+    integer :: ii
+
+    do ii = 1, np
+      fo(ii) = sum(w(1:nn)  * fi(opi(1:nn, ii)))
+    end do
+  end subroutine doperate
+
+
+  ! ---------------------------------------------------------
+  subroutine zoperate(np, np_part, nn, w, opi, fi, fo)
+    integer, intent(in) :: np
+    integer, intent(in) :: np_part
+    integer, intent(in) :: nn
+    FLOAT,   intent(in) :: w(1:nn)
+    integer, intent(in) :: opi(1:nn, 1:np)
+    CMPLX,   intent(in) :: fi(1:np_part)
+    CMPLX,   intent(out):: fo(1:np) 
+
+    integer :: ii
+
+    do ii = 1, np
+      fo(ii) = sum(w(1:nn)  * fi(opi(1:nn, ii)))
+    end do
+  end subroutine zoperate
 
 end module nl_operator_m
 
