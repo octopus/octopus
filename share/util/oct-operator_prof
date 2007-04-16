@@ -32,8 +32,8 @@ PROF_FILE="profiling.ser/profiling.000"
 real="yes"
 complex="yes"
 binary=`which octopus`
-complex_methods="fortran fortran_opt c sse"
-real_methods="fortran fortran_opt c"
+complex_methods="fortran c sse"
+real_methods="fortran c"
 
 
 # Input file for real wavefunctions (based on
