@@ -51,6 +51,8 @@ dist_share_DATA = \
 	11-sic.01-gs.inp \
 	11-sic.test \
 	12-forces.01-N2_gs.inp \
++       12-forces.02-N2_gs.inp \
++       12-forces.03-N2_gs.inp \
 	12-forces.test \
 	13-full_potential_hydrogen.01-gs.inp \
 	13-full_potential_hydrogen.02-gs-mg.inp \

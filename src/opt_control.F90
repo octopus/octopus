@@ -810,6 +810,8 @@ contains
      CMPLX               :: tgt(NP_PART)
      integer             :: jj, dim
      CMPLX               :: olap
+
+     call push_sub('opt_control.calc_inh')
      
      ! tdtarget is defined globally
      !      CMPLX               :: tdop(gr%m%np)
@@ -866,6 +868,7 @@ contains
        end do
      end if
      
+     call pop_sub()
    end subroutine calc_inh
    
 
@@ -1082,15 +1085,18 @@ contains
     subroutine calc_fluence(laserin, fluenceout)
       FLOAT, intent(in) :: laserin(:,:)
       FLOAT, intent(out):: fluenceout
-      
+      call push_sub('opt_control.calc_fluence')
+
       fluenceout = SUM(laserin**2) * abs(td%dt)/M_TWO      
 
+      call pop_sub()
     end subroutine calc_fluence
 
 
     ! ---------------------------------------------------------
     subroutine calc_J()
       FLOAT :: J2
+      call push_sub('opt_control.calc_j')
 
       call calc_fluence(laser,fluence)
       J2 = SUM(tdpenalty * laser**2) * abs(td%dt)/M_TWO
@@ -1109,6 +1115,7 @@ contains
       convergence(3,ctr_iter) = fluence
       convergence(4,ctr_iter) = tdpenalty(1,1)
 
+      call pop_sub()
     end subroutine calc_J
 
 
@@ -1169,6 +1176,8 @@ contains
       integer :: i, iunit
       FLOAT   :: wgrid(0:2*td%max_iter)
 
+      call push_sub('opt_control.write_fieldw')
+
       call w_lookup(2*td%max_iter+1,td%dt,wgrid)
 
       iunit = io_open(filename, action='write')
@@ -1177,6 +1186,7 @@ contains
       end do
       call io_close(iunit)
       
+      call pop_sub()
     end subroutine write_fieldw
 
 
@@ -1724,6 +1734,8 @@ contains
       FLOAT   :: f_re, f_im
       integer :: kk, pol
 
+      call push_sub('opt_control.build_tdshape')
+
       call t_lookup(2*steps+1,dt/real(2,REAL_PRECISION),tgrid)
       do kk=0, 2*steps
         do pol=1,NDIM
@@ -1737,6 +1749,7 @@ contains
           td_tg%tdshape(pol,kk) = f_re + M_zI*f_im
         end do
       end do
+      call pop_sub()
     end subroutine build_tdshape
     
     
@@ -2207,6 +2220,7 @@ contains
     subroutine check_faulty_runmodes()
 
       integer :: jj
+      call push_sub('opt_control.check_faulty_runmodes')
 
       ! try to avoid ill defined combinations of run modes
       ! be careful with the order !!
@@ -2274,16 +2288,19 @@ contains
         write(message(2),'(a)') "Warning: Please change input file."
         call write_fatal(2)
       end if
-      
+
+      call pop_sub()      
     end subroutine check_faulty_runmodes
 
 
     ! ---------------------------------------------------------
     subroutine end_()
+      call push_sub('opt_control.end_')
       ! TODO:: deallocate filters (if there were any)
       call filter_end(f)
 
       call td_end(td)
+      call pop_sub()
     end subroutine end_
 
   end subroutine opt_control_run

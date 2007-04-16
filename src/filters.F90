@@ -178,7 +178,7 @@ contains
 
     integer        :: no_f, i, kk, n(3), last, first, grouplength, ii
     CMPLX          :: tmp(0:2*steps, 1, 1), tmp2(0:2*steps, 1, 1) ! Have to be three-dimensional to use the fft_m module
-    CMPLX          :: filt(MAX_DIM, 0:2*steps)
+    CMPLX, allocatable :: filt(:, :)
     type(fft_t)    :: fft_handler
 
     call push_sub('filters.apply_filter')
@@ -192,6 +192,8 @@ contains
     i     = 0
     first = 0
     last  = 0
+
+    ALLOCATE(filt(gr%sb%dim, 0:2*steps), gr%sb%dim*(2*steps+1))
 
     !do i=1, no_f
     do while(i.lt.no_f )
@@ -273,6 +275,7 @@ contains
       end select
     end do
     
+    deallocate(filt)
     call fft_end(fft_handler)
     call pop_sub()
 #else
@@ -394,9 +397,11 @@ contains
     integer :: ip, pol
     FLOAT   :: grid(0:2*steps), f_re, f_im
 !    FLOAT   :: width
-    CMPLX   :: ff(MAX_DIM, 0:2*steps)
+    CMPLX, allocatable :: ff(:, :)
 
     call push_sub('filter.build_filter_')
+
+    ALLOCATE(ff(NDIM, 0:2*steps), NDIM*(2*steps+1))
 
     ff = M_z0
     select case(fp%domain)
@@ -471,6 +476,7 @@ contains
           
     fp%numerical(:,:) = ff(:,:)
     
+    deallocate(ff)
     call pop_sub()
   end subroutine build_filter
 
