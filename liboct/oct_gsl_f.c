@@ -334,15 +334,15 @@ double FC_FUNC_(oct_minimize, OCT_MINIMIZE)
       iter++;
       status = gsl_multimin_fdfminimizer_iterate (s);
 
-      grad = gsl_multimin_fdfminimizer_gradient(s);
-      for(i=0; i<*dim; i++) gsl_vector_set(absgrad, i, fabs(gsl_vector_get(grad, i)));
+      for(i=0; i<*dim; i++) point[i] = gsl_vector_get(gsl_multimin_fdfminimizer_gradient(s), i);
+      for(i=0; i<*dim; i++) gsl_vector_set(absgrad, i, fabs(point[i]));
       maxgrad = gsl_vector_max(absgrad);
+
       for(i=0; i<*dim; i++) point[i] = gsl_vector_get(gsl_multimin_fdfminimizer_x(s), i);
       return_value = gsl_multimin_fdfminimizer_minimum(s);
 
       if (status) break;
 
-      //status = gsl_multimin_test_gradient (s->gradient, *tol);
       status = (maxgrad > *tol);
       }
   while (status && iter < *maxiter);
