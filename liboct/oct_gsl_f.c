@@ -291,7 +291,7 @@ void my_fdf (const gsl_vector *x, void *params,
 }
 
 double FC_FUNC_(oct_minimize, OCT_MINIMIZE)
-     (int *dim, double *point, double *step, double *tol, int *maxiter, void *f)
+     (int*method, int *dim, double *point, double *step, double *tol, int *maxiter, void *f)
 {
 
   size_t iter = 0;
@@ -314,7 +314,13 @@ double FC_FUNC_(oct_minimize, OCT_MINIMIZE)
   x = gsl_vector_alloc (*dim);
   for(i=0; i<*dim; i++) gsl_vector_set (x, i, point[i]);
 
-  T = gsl_multimin_fdfminimizer_conjugate_fr;
+  switch(*method){
+  case 1: T = gsl_multimin_fdfminimizer_steepest_descent;
+  case 2: T = gsl_multimin_fdfminimizer_conjugate_fr;
+  case 3: T = gsl_multimin_fdfminimizer_conjugate_pr;
+  case 4: T = gsl_multimin_fdfminimizer_vector_bfgs;
+  }
+  //T = gsl_multimin_fdfminimizer_conjugate_fr;
   s = gsl_multimin_fdfminimizer_alloc (T, *dim);
 
   gsl_multimin_fdfminimizer_set (s, &my_func, x, *step, 1e-4);
@@ -332,20 +338,13 @@ double FC_FUNC_(oct_minimize, OCT_MINIMIZE)
       //      status = gsl_multimin_test_gradient (s->gradient, 1e-3);
       status = gsl_multimin_test_gradient (s->gradient, *tol);
 
-      //if (status == GSL_SUCCESS)
-      //  printf ("Minimum found at:\n");
-
-      //printf ("%5d %.5f %.5f %10.5f\n", iter,
-      //         gsl_vector_get (s->x, 0),
-      //         gsl_vector_get (s->x, 1),
-      //         s->f);
-
       }
   while (status == GSL_CONTINUE && iter < *maxiter);
 
-  for(i=0; i<2; i++) point[i] = gsl_vector_get(s->x, i);
-
-  return_value = s->f;
+  //for(i=0; i<*dim; i++) point[i] = gsl_vector_get(s->x, i);
+  for(i=0; i<*dim; i++) point[i] = gsl_vector_get(gsl_multimin_fdfminimizer_x(s), i);
+  //return_value = s->f;
+  return_value = gsl_multimin_fdfminimizer_minimum(s);
 
   gsl_multimin_fdfminimizer_free (s);
   gsl_vector_free (x);

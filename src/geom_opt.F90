@@ -57,7 +57,9 @@ module geom_opt_m
 
   integer, parameter ::             &
     MINMETHOD_STEEPEST_DESCENT = 1, &
-    MINMETHOD_FR_CG            = 2
+    MINMETHOD_FR_CG            = 2, &
+    MINMETHOD_PR_CG            = 3, &
+    MINMETHOD_BFGS             = 4
 
 
   type(geometry_t),    pointer :: geo
@@ -158,9 +160,9 @@ contains
     select case(g_opt%method)
     case(MINMETHOD_STEEPEST_DESCENT)
       i = steepest_descents(x)
-    case(MINMETHOD_FR_CG)
-!!$      energy = loct_minimize(3*geo%natoms, x(1), CNST(0.1), CNST(1.0e-4), calc_point)
-      energy = loct_minimize(3*geo%natoms, x(1), CNST(0.1), g_opt%tol, g_opt%max_iter, calc_point)
+    case(MINMETHOD_FR_CG, MINMETHOD_PR_CG, MINMETHOD_BFGS)
+!!$      energy = loct_minimize(3*geo%natoms, x(1), CNST(0.1), g_opt%tol, g_opt%max_iter, calc_point)
+      energy = loct_minimize(g_opt%method, 3*geo%natoms, x(1), g_opt%step, g_opt%tol, g_opt%max_iter, calc_point)
       i = 0 ! WARNING: this should be output by loct_minimize!!
     end select
 
@@ -210,7 +212,20 @@ contains
       !%Option steep 1
       !% simple steepest descent.
       !%Option cg_fr 2
-      !% Fletcher-Reeves conjugate gradient algorithm
+      !% Fletcher-Reeves conjugate gradient algorithm. The
+      !% conjugate gradient algorithm proceeds as a succession of line
+      !% minimizations. The sequence of search directions is used to build
+      !% up an approximation to the curvature of the function in the
+      !% neighborhood of the minimum. 
+      !%Option cg_pr 3
+      !% Polak-Ribiere conjugate gradient algorithm.
+      !%Option cg_bfgs 4
+      !% Vector Broyden-Fletcher-Goldfarb-Shanno (BFGS) conjugate gradient algorithm.
+      !% It is a quasi-Newton method which builds up an approximation to the second 
+      !% derivatives of the function f using the difference between successive gradient
+      !% vectors.  By combining the first and second derivatives the algorithm is able 
+      !% to take Newton-type steps towards the function minimum, assuming quadratic 
+      !% behavior in that region.
       !%End
       call loct_parse_int(check_inp('GOMethod'), MINMETHOD_STEEPEST_DESCENT, g_opt%method)
       if(.not.varinfo_valid_option('GOMethod', g_opt%method)) call input_error('GOMethod')
