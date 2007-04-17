@@ -296,12 +296,14 @@ double FC_FUNC_(oct_minimize, OCT_MINIMIZE)
 
   size_t iter = 0;
   int status;
-  double return_value;
+  double return_value, maxgrad;
   int i;
 
   const gsl_multimin_fdfminimizer_type *T;
   gsl_multimin_fdfminimizer *s;
   gsl_vector *x;
+  gsl_vector *grad;
+  gsl_vector *absgrad;
   gsl_multimin_function_fdf my_func;
 
   my_func.f = &my_f;
@@ -314,41 +316,39 @@ double FC_FUNC_(oct_minimize, OCT_MINIMIZE)
   x = gsl_vector_alloc (*dim);
   for(i=0; i<*dim; i++) gsl_vector_set (x, i, point[i]);
 
+  /* Allocate space for the gradient */
+  grad = gsl_vector_alloc (*dim);
+  absgrad = gsl_vector_alloc (*dim);
+
   switch(*method){
   case 1: T = gsl_multimin_fdfminimizer_steepest_descent;
   case 2: T = gsl_multimin_fdfminimizer_conjugate_fr;
   case 3: T = gsl_multimin_fdfminimizer_conjugate_pr;
   case 4: T = gsl_multimin_fdfminimizer_vector_bfgs;
   }
-  //T = gsl_multimin_fdfminimizer_conjugate_fr;
   s = gsl_multimin_fdfminimizer_alloc (T, *dim);
 
   gsl_multimin_fdfminimizer_set (s, &my_func, x, *step, 1e-4);
-
   do
     {
       iter++;
       status = gsl_multimin_fdfminimizer_iterate (s);
 
-      if (status) {
-       printf("STATUS = %d\n", status);
-       break;
+      grad = gsl_multimin_fdfminimizer_gradient(s);
+      for(i=0; i<*dim; i++) gsl_vector_set(absgrad, i, fabs(gsl_vector_get(grad, i)));
+      maxgrad = gsl_vector_max(absgrad);
+      for(i=0; i<*dim; i++) point[i] = gsl_vector_get(gsl_multimin_fdfminimizer_x(s), i);
+      return_value = gsl_multimin_fdfminimizer_minimum(s);
+
+      if (status) break;
+
+      //status = gsl_multimin_test_gradient (s->gradient, *tol);
+      status = (maxgrad > *tol);
       }
-
-      //      status = gsl_multimin_test_gradient (s->gradient, 1e-3);
-      status = gsl_multimin_test_gradient (s->gradient, *tol);
-
-      }
-  while (status == GSL_CONTINUE && iter < *maxiter);
-
-  //for(i=0; i<*dim; i++) point[i] = gsl_vector_get(s->x, i);
-  for(i=0; i<*dim; i++) point[i] = gsl_vector_get(gsl_multimin_fdfminimizer_x(s), i);
-  //return_value = s->f;
-  return_value = gsl_multimin_fdfminimizer_minimum(s);
+  while (status && iter < *maxiter);
 
   gsl_multimin_fdfminimizer_free (s);
-  gsl_vector_free (x);
-
+  gsl_vector_free (x); gsl_vector_free(grad); gsl_vector_free(absgrad);
   return return_value;
 }
 

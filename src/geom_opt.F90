@@ -50,9 +50,8 @@ module geom_opt_m
     FLOAT :: tol
     integer  :: max_iter
 
-    FLOAT :: f
-    FLOAT, pointer :: x(:), df(:)
-
+!!$    FLOAT :: f
+!!$    FLOAT, pointer :: x(:), df(:)
   end type geom_opt_t
 
   integer, parameter ::             &
@@ -157,23 +156,7 @@ contains
       x(3*i + 3) = geo%atom(i + 1)%x(3)
     end do
 
-    select case(g_opt%method)
-    case(MINMETHOD_STEEPEST_DESCENT)
-      i = steepest_descents(x)
-    case(MINMETHOD_FR_CG, MINMETHOD_PR_CG, MINMETHOD_BFGS)
-!!$      energy = loct_minimize(3*geo%natoms, x(1), CNST(0.1), g_opt%tol, g_opt%max_iter, calc_point)
-      energy = loct_minimize(g_opt%method, 3*geo%natoms, x(1), g_opt%step, g_opt%tol, g_opt%max_iter, calc_point)
-      i = 0 ! WARNING: this should be output by loct_minimize!!
-    end select
-
-    if(i == 0) then
-      message(1) = "Info: Minimum found"
-      call write_info(1)
-    else
-      message(1) = "Did not reach the minimum!"
-      message(2) = " (the geometry can make some sense though - do not dispair!)"
-      call write_warning(2)
-    end if
+    energy = loct_minimize(g_opt%method, 3*geo%natoms, x(1), g_opt%step, g_opt%tol, g_opt%max_iter, calc_point)
 
     ! print out geometry
     do i = 0, geo%natoms - 1
@@ -184,7 +167,6 @@ contains
     call atom_write_xyz(".", "min", geo)
 
     deallocate(x)
-
     call scf_end(scfv)
     call end_()
 
@@ -279,64 +261,8 @@ contains
       nullify(syst)
     end subroutine end_
 
-
-    ! ---------------------------------------------------------
-    integer function steepest_descents(x)
-      FLOAT, intent(inout) :: x(:)
-
-      FLOAT, allocatable :: x1(:), df(:), df1(:)
-      FLOAT :: f, f1
-      integer :: iter, count, getgrad
-
-      ALLOCATE( x1(3*geo%natoms), 3*geo%natoms)
-      ALLOCATE( df(3*geo%natoms), 3*geo%natoms)
-      ALLOCATE(df1(3*geo%natoms), 3*geo%natoms)
-
-      count = 0
-      steepest_descents = 1
-      getgrad = 1
-
-      ! get initial point
-      call calc_point(3*geo%natoms, x, f, getgrad, df)
-
-      do iter = 1, g_opt%max_iter
-        x1 = x - g_opt%step * df
-
-        call calc_point(3*geo%natoms, x1, f1, getgrad, df1)
-
-        if(f1 < f) then
-          f = f1; x = x1; df = df1
-          g_opt%step = 2*g_opt%step
-          count = count + 1
-
-          if(maxval(abs(df)) < g_opt%tol) then
-            steepest_descents = 0
-            exit
-          end if
-        else
-          ! try with a smaller step
-          g_opt%step = g_opt%step/2
-          count = count - 1
-        end if
-
-        if(count < -5) then
-          ! too many subdivisions
-          steepest_descents = 2
-          exit
-        end if
-
-        write(message(1), '(a,i5,a)') "Info: geom_opt (iter = ", iter, ")"
-        write(message(2), '(6x,2(a,f16.10))') "energy = ", f/units_out%energy%factor, &
-          " max force = ", maxval(abs(df))/units_out%force%factor
-        write(message(3), '(6x,2(a,f16.10))') "step   = ", g_opt%step, &
-          "       tol = ", g_opt%tol/units_out%force%factor
-        call write_info(3)
-      end do
-
-      deallocate(x1, df, df1)
-    end function steepest_descents
-
   end subroutine geom_opt_run
+
 
   subroutine calc_point(n, x, f, getgrad, df)
     integer, intent(in) :: n
