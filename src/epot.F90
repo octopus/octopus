@@ -787,13 +787,6 @@ contains
 
     end subroutine debug_pseudo
 
-    ! ---------------------------------------------------------
-    subroutine build_local_part()
-
-
-      call pop_sub()
-    end subroutine build_local_part
-
   end subroutine epot_generate
 
   subroutine build_local_part_in_real_space(ep, gr, geo, a, vpsl, time, rho_core)

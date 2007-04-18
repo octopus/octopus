@@ -235,7 +235,7 @@ subroutine X(calc_forces_from_potential)(gr, geo, ep, st, time)
 
   R_TYPE :: psi_proj_gpsi
   R_TYPE :: zz(MAX_DIM)
-  R_TYPE, allocatable :: gpsi(:, :, :), pgpsi(:,:)
+  R_TYPE, allocatable :: gpsi(:, :, :)
   FLOAT,  allocatable :: grho(:, :), vloc(:), force(:,:)
 
   type(atom_t), pointer :: atm

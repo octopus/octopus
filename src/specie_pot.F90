@@ -94,24 +94,6 @@ contains
 
       call loct_spline_end(vlc)
 
-      if ( dg_filter_potential(gr%dgrid) ) then 
-        
-        hmax = dg_get_hmax(gr%dgrid, gr%m)
-        qmax = M_PI/hmax
-        
-        write(message(1),'(a, f13.10, a, f13.10)')  'Info: hmax', hmax, ' qmax ', qmax
-        call write_info(1)
-        
-        call loct_spline_filter(this%ps%vll, fs = (/ qmax, CNST(18.0) /), rs = (/ CNST(3.0), CNST(10.0) /))
-        
-        do l = 0, this%ps%l_max
-          do k = 1, this%ps%kbc
-            call loct_spline_filter(this%ps%kb(l, k), l, fs = (/ qmax, CNST(18.0) /), rs = (/ CNST(3.0), CNST(10.0) /))
-          end do
-        end do
-        
-      end if
-      
     end if
 
     call pop_sub()

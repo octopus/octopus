@@ -49,20 +49,17 @@ module double_grid_m
        dg_add_localization_density, &
        dg_get_density_correction,   &
        dg_get_potential_correction, &
-       dg_filter_potential,         &
        dg_get_hmax
 
   type double_grid_t
      private
      FLOAT   :: h_fine(MAX_DIM)
      integer :: spacing_divisor
-     integer :: interpolation_order
      integer :: interpolation_min
      integer :: interpolation_max
      integer :: nn
      integer :: loc_function
      logical :: use_double_grid
-     logical :: filter
   end type double_grid_t
 
   FLOAT,   parameter :: rmax = CNST(30.0), sigma = CNST(0.625)
@@ -84,21 +81,15 @@ module double_grid_m
        CNST(	-4076800.0	)/CNST(	793618560.0	),& ! 4
        CNST(	3203200.0	)/CNST(	7142567040.0	)/) ! 5
 
-  FLOAT, allocatable :: cc(:,:,:)
-
 contains
   
   subroutine double_grid_init(this, m)
     type(double_grid_t), intent(out) :: this
     type(mesh_t),        intent(in)  :: m
 
-    integer :: ii, jj, kk
-
     this%spacing_divisor = 3
-    this%interpolation_order = 9
     this%interpolation_min = -4
     this%interpolation_max = 5
-
     this%nn = (this%spacing_divisor - 1)/2
     this%h_fine(1:MAX_DIM) = m%h(1:MAX_DIM)/this%spacing_divisor
    
@@ -113,16 +104,6 @@ contains
     !%End
 
     call loct_parse_logical(check_inp('DoubleGrid'), .false., this%use_double_grid)
-
-    !%Variable DoubleGridFilter
-    !%Type logical
-    !%Default no
-    !%Section Mesh
-    !%Description
-    !% When this is enabled a filter is applied to the pseudopotential.
-    !%End
-
-    call loct_parse_logical(check_inp('DoubleGridFilter'), .false., this%filter)
 
     !%Variable LocalizationDensity
     !%Type integer
@@ -162,11 +143,11 @@ contains
     FLOAT,               intent(out) :: vl(:)
     
     type(loct_spline_t), pointer  :: ps_spline
-    type(loct_spline_t)  :: ft
+
     FLOAT :: r, vv
     integer :: ip, ip2
-    integer :: ii, jj, kk, idx(1:3)
-    integer :: ll, mm, nn
+    integer :: ii, jj, kk, ll, mm, nn
+    integer :: start(1:3), pp, qq, rr
 
     if(dg_add_localization_density(this)) then 
       ps_spline => s%ps%vll
@@ -174,29 +155,12 @@ contains
       ps_spline => s%ps%vl
     end if
 
-    if(this%use_double_grid ) then 
-      write(message(1),'(a)')         'Info: Integral of the local part of the pseudopotential'
-      call write_info(1)
-    end if
-
-    if(this%use_double_grid) then
-      call loct_spline_init(ft)
-      call loct_spline_3dft(ps_spline, ft, CNST(1.0))
-      write(message(1),'(a, f14.6)')  '      exact       = ', loct_splint(ft, CNST(0.0))
-      call write_info(1)
-      call loct_spline_end(ft)  
-    end if
-
     do ip = 1, m%np
       r = sqrt(sum( (m%x(ip, :) - x_atom(:))**2 ))
       vl(ip) = loct_splint(ps_spline, r)
-!      write(12,*) r, vl(ip)
     end do
 
     if (this%use_double_grid) then 
-
-      write(message(1),'(a, f14.6)')  '      coarse grid = ', dmf_integrate(m, vl)
-      call write_info(1)
 
       vl(1:m%np) = M_ZERO
 
@@ -208,24 +172,35 @@ contains
           do jj = -this%nn, this%nn
             do kk = -this%nn, this%nn
               
-              idx = (/ ii, jj, kk /)
+              r = sqrt(sum( (m%x(ip, 1:3) + this%h_fine(1:3)*(/ ii, jj, kk /) - x_atom(1:3))**2 ))
 
-              !calculate the potential
-              r = sqrt(sum( (m%x(ip, 1:3) + this%h_fine(1:3)*idx(1:3) - x_atom(1:3))**2 ))
-              vv = loct_splint(ps_spline, r) 
-
-              !add thsi value to all the points that depend on this point
               if ( r < specie_local_cutoff_radius(s) ) then 
+
+                !calculate the potential
+                vv = loct_splint(ps_spline, r) 
+                
+                !add the value of the potential to all the points that depend on this point
+
+                start(1:3) = m%Lxyz(ip, 1:3) + this%interpolation_min * (/ ii, jj, kk /)
+
+                pp = start(1)
                 do ll = this%interpolation_min, this%interpolation_max
+
+                  qq = start(2)
                   do mm = this%interpolation_min, this%interpolation_max
+
+                    rr = start(3)
                     do nn = this%interpolation_min, this%interpolation_max
-                      
-                      idx = m%Lxyz(ip, 1:3) + (/ ii, jj, kk /)*(/ ll , mm, nn /)
-                      ip2 = m%Lxyz_inv(idx(1), idx(2), idx(3))
-                      vl(ip2) = vl(ip2) + co(ll)*co(mm)*co(nn)*vv
-                      
+
+                      ! here: (/ pp, qq, rr /) = m%Lxyz(ip, 1:3) + (/ ll*ii, mm*jj, nn*kk/)
+                      ip2 = m%Lxyz_inv(pp, qq, rr)
+                      vl(ip2) = vl(ip2) + co(nn)*co(mm)*co(ll)*vv
+
+                      rr = rr + kk
                     end do
+                    qq = qq + jj
                   end do
+                 pp = pp + ii
                 end do
                 
               end if
@@ -236,15 +211,7 @@ contains
         
       end do
 
-      !divide by the factor between the spacing of the coarse and the fine grid
       vl(1:m%np) = vl(1:m%np)/(this%spacing_divisor**3)
-      write(message(1),'(a, f14.6)')  '      double grid = ', dmf_integrate(m, vl)
-      call write_info(1)
-
-!      do ip = 1, m%np
-!        write(13,*) vl(ip)
-!      end do
-!      stop
 
     end if
 
@@ -259,11 +226,10 @@ contains
     
     type(loct_spline_t), pointer  :: ps_spline
     FLOAT :: r, x(1:3), vv(1:3)
-    integer :: ip
-    integer :: ii, jj, kk, idx(1:3)
-    integer :: iw, ipnb, idx_ip(1:3)
-    integer :: ll, mm, nn, ip2
-    
+    integer :: ip, ip2
+    integer :: ii, jj, kk, ll, mm, nn
+    integer :: start(1:3), pp, qq, rr
+
     if(dg_add_localization_density(this)) then 
       ps_spline => s%ps%dvll
     else
@@ -292,29 +258,36 @@ contains
           do jj = -this%nn, this%nn
             do kk = -this%nn, this%nn
               
-              idx = (/ ii, jj, kk /)
-
-              x(1:3) = m%x(ip, 1:3) + this%h_fine(1:3)*idx(1:3) - x_atom(1:3)
-
+              x(1:3) = m%x(ip, 1:3) + this%h_fine(1:3)*(/ ii, jj, kk /) - x_atom(1:3)
               
               r = sqrt(sum(x(1:3)**2))
+
               if ( r > CNST(1e-7) .and. r < specie_local_cutoff_radius(s) ) then 
 
                 vv(1:3) = -loct_splint(ps_spline, r)*x(1:3)/r
-                
+
+                start(1:3) = m%Lxyz(ip, 1:3) + this%interpolation_min * (/ ii, jj, kk /)
+
+                pp = start(1)
                 do ll = this%interpolation_min, this%interpolation_max
+                  
+                  qq = start(2)
                   do mm = this%interpolation_min, this%interpolation_max
+
+                    rr = start(3)
                     do nn = this%interpolation_min, this%interpolation_max
-                      
-                      idx = m%Lxyz(ip, 1:3) + (/ ii, jj, kk /)*(/ ll , mm, nn /)
-                      ip2 = m%Lxyz_inv(idx(1), idx(2), idx(3))
+
+                      ip2 = m%Lxyz_inv(pp, qq, rr)
                       dvl(ip2, 1:3) = dvl(ip2, 1:3) + co(ll)*co(mm)*co(nn)*vv(1:3)
                       
+                      rr = rr + kk
                     end do
+                    qq = qq + jj
                   end do
-                end do
-
-              end if
+                  pp = pp + ii
+               end do
+               
+             end if
 
             end do !kk
           end do !jj
@@ -344,9 +317,9 @@ contains
     FLOAT, allocatable :: jxyz_inv(:)
 
     FLOAT :: x(MAX_DIM), vv, dvv(1:MAX_DIM)
-    integer :: is, is2, idx_ip(1:MAX_DIM)
-    integer :: ii, jj, kk, idx(1:3)
-    integer :: ll, mm, nn
+    integer :: is, is2
+    integer :: ii, jj, kk, ll, mm, nn
+    integer :: start(1:3), pp, qq, rr
 
     if(.not. this%use_double_grid) then 
 
@@ -372,24 +345,33 @@ contains
           do jj = -this%nn, this%nn
             do kk = -this%nn, this%nn
               
-              idx = (/ii, jj, kk/)
-              x(1:3) = m%x(jxyz(is), 1:3) + this%h_fine(1:3) * idx(1:3)
+              x(1:3) = m%x(jxyz(is), 1:3) + this%h_fine(1:3) * (/ii, jj, kk/) 
+
               call specie_real_nl_projector(s, x_atom, x, l, lm, ic, vv, dvv(1:3))
-
+              
+              start(1:3) = m%Lxyz(jxyz(is), 1:3) + this%interpolation_min * (/ ii, jj, kk /)
+              
+              pp = start(1)
               do ll = this%interpolation_min, this%interpolation_max
+                
+                qq = start(2)
                 do mm = this%interpolation_min, this%interpolation_max
+                  
+                  rr = start(3)
                   do nn = this%interpolation_min, this%interpolation_max
-                    
-                    idx = m%Lxyz(jxyz(is), 1:3) + (/ ii, jj, kk /)*(/ ll , mm, nn /)
-                    is2 = jxyz_inv(m%Lxyz_inv(idx(1), idx(2), idx(3)))
 
-                    if(is2 > 0 ) then 
+                    is2 = jxyz_inv(m%Lxyz_inv(pp, qq, rr))
+
+                    if(is2 /= 0 ) then 
                       vnl(is2) = vnl(is2) + co(ll)*co(mm)*co(nn)*vv
                       dvnl(is2, 1:3) = dvnl(is2, 1:3) + co(ll)*co(mm)*co(nn)*dvv(1:3)
                     end if
 
+                    rr = rr + kk
                   end do
+                  qq = qq + jj
                 end do
+                pp = pp + ii
               end do
               
             end do
@@ -455,13 +437,6 @@ contains
     call loct_spline_fit(npoints, r, rho, rc)
 
   end subroutine dg_get_density_correction
-
-
-  logical function dg_filter_potential(this)
-    type(double_grid_t), intent(in) :: this
-
-    dg_filter_potential = this%filter
-  end function dg_filter_potential
 
   FLOAT function dg_get_hmax(this, mesh) result(hmax)
     type(double_grid_t), intent(in) :: this
