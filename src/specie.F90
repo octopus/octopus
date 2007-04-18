@@ -49,8 +49,8 @@ module specie_m
     specie_is_ps,             &
     specie_is_local,          &
     specie_real_nl_projector, &
-    specie_nl_projector
-
+    specie_nl_projector,      &
+    specie_local_cutoff_radius
 
   integer, public, parameter :: &
     SPEC_USDEF  = 123,          & ! user defined function
@@ -841,6 +841,13 @@ contains
     end if
 
   end function specie_is_local
+
+  FLOAT function specie_local_cutoff_radius(s)
+    type(specie_t), intent(in) :: s
+    
+    specie_local_cutoff_radius = CNST(5.0)
+    
+  end function specie_local_cutoff_radius
 
 end module specie_m
 
