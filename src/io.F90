@@ -181,7 +181,7 @@ contains
     !%Variable TmpDir
     !%Default "tmp/"
     !%Type string
-    !%Section Generalities
+    !%Section Generalities::IO
     !%Description
     !% The name of the directory where octopus stores binary information
     !% like the wave-functions.
@@ -196,7 +196,7 @@ contains
     !%Variable InputDir
     !%Default "tmp/"
     !%Type string
-    !%Section Generalities
+    !%Section Generalities::IO
     !%Description
     !% The name of the input directory where octopus should read binary information
     !% like the (re)start wave-functions.
@@ -214,7 +214,7 @@ contains
     !%Variable OutputDir
     !%Default "tmp/"
     !%Type string
-    !%Section Generalities
+    !%Section Generalities::IO
     !%Description
     !% The name of the directory where octopus will store (hopefully) converged binary 
     !% output like the (re)start wave-functions.

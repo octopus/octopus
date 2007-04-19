@@ -58,7 +58,7 @@ program oct_test
   !%Variable WhichTest
   !%Type integer
   !%Default hartree_test
-  !%Section Generalities
+  !%Section Utilities::oct-test
   !%Description
   !% Decides what kind of test should be performed.
   !%Option hartree_test 1

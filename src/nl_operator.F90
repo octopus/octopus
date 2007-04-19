@@ -103,7 +103,7 @@ contains
     !%Variable OperateDouble
     !%Type integer
     !%Default c
-    !%Section Mesh
+    !%Section Generalities::Optimization
     !%Description
     !% Which function use to apply non-local operators over the grid. This
     !% is the function where octopus spends most of time.
@@ -118,7 +118,7 @@ contains
     !%Variable OperateComplex
     !%Type integer
     !%Default c
-    !%Section Mesh
+    !%Section Generalities::Optimization
     !%Description
     !% Which function use to apply non-local operators over the grid. This
     !% is the function where octopus spends most of time.

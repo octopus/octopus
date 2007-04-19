@@ -101,7 +101,7 @@ contains
     !%Variable SpecDampMode
     !%Type integer
     !%Default polynomial
-    !%Section Utilities::Optical Spectra
+    !%Section Utilities::oct-cross-section
     !%Description
     !% Decides which damping/filtering is to be applied in order to calculate
     !% spectra by calculating a Fourier transform
@@ -121,7 +121,7 @@ contains
     !%Variable SpecTransform
     !%Type integer
     !%Default sinus
-    !%Section Utilities::Optical Spectra
+    !%Section Utilities::oct-cross-section
     !%Description
     !% Decides which transform to perform
     !%Option sinus 2
@@ -138,7 +138,7 @@ contains
     !%Variable SpecStartTime
     !%Type integer
     !%Default polynomial
-    !%Section Utilities::Optical Spectra
+    !%Section Utilities::oct-cross-section
     !%Description
     !% Processing is done for the given function in a time-window that starts at the
     !% value of this variable.
@@ -148,7 +148,7 @@ contains
     !%Variable SpecEndTime
     !%Type integer
     !%Default polynomial
-    !%Section Utilities::Optical Spectra
+    !%Section Utilities::oct-cross-section
     !%Description
     !% Processing is done for the given function in a time-window that ends at the
     !% value of this variable.
@@ -158,7 +158,7 @@ contains
     !%Variable SpecEnergyStep
     !%Type integer
     !%Default polynomial
-    !%Section Utilities::Optical Spectra
+    !%Section Utilities::oct-cross-section
     !%Description
     !% Sampling rate for the spectrum.
     !%End
@@ -169,7 +169,7 @@ contains
     !%Variable SpecMaxEnergy
     !%Type integer
     !%Default polynomial
-    !%Section Utilities::Optical Spectra
+    !%Section Utilities::oct-cross-section
     !%Description
     !% The Fourier transform is calculated for energies smaller than this value.
     !%End
@@ -179,7 +179,7 @@ contains
     !%Variable SpecDampFactor
     !%Type integer
     !%Default polynomial
-    !%Section Utilities::Optical Spectra
+    !%Section Utilities::oct-cross-section
     !%Description
     !% If <tt>SpecDampMode</tt> is set to "exp", the damping parameter of the exponential
     !% is fixed through this variable.

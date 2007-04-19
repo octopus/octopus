@@ -59,8 +59,6 @@ module eigen_solver_m
     integer :: arnoldi_vectors
     FLOAT :: imag_time
 
-    logical :: do_subspace_diag
-
     ! Stores information about how well it performed.
     FLOAT, pointer :: diff(:, :)
     integer           :: matvec
@@ -231,17 +229,6 @@ contains
     call loct_parse_int(check_inp('EigenSolverMaxIter'), max_iter_default, eigens%es_maxiter)
     if(eigens%es_maxiter < 1) call input_error('EigenSolverMaxIter')
 
-    !%Variable EigenSolverSubspaceDiag
-    !%Type logical
-    !%Default true
-    !%Section SCF::EigenSolver
-    !%Description
-    !% When true, a Rayleigh-Ritz projection is performed after the eigensolver routine. 
-    !% This is a diagonalization of the Hamiltonian in the subspace spanned by the eigenvectors 
-    !% that separates eigenvectors that have close eigenvalues.
-    !%End
-    call loct_parse_logical(check_inp('EigenSolverSubspaceDiag'), .true., eigens%do_subspace_diag)
-    
     select case(eigens%es_type)
     case(RS_PLAN, RS_CG)
       call preconditioner_init(eigens%pre, gr)
@@ -328,7 +315,7 @@ contains
              tau = eigens%imag_time)
       end select
 
-      if(eigens%do_subspace_diag) call deigen_diagon_subspace(gr, st, h)
+      call deigen_diagon_subspace(gr, st, h)
     else
       select case(eigens%es_type)
       case(RS_CG_NEW)
@@ -344,7 +331,7 @@ contains
              tau = eigens%imag_time)
       end select
 
-      if(eigens%do_subspace_diag) call zeigen_diagon_subspace(gr, st, h)
+      call zeigen_diagon_subspace(gr, st, h)
     end if
 
     eigens%matvec = maxiter
