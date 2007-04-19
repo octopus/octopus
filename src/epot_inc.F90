@@ -177,6 +177,9 @@ R_TYPE function X(psia_project_psib)(mesh, pj, dim, psia, psib, reltype, periodi
 
   integer ::  n_s, idim
   R_TYPE, allocatable :: lpsi(:, :), plpsi(:,:)
+#if defined(HAVE_MPI)
+  R_TYPE :: tmp
+#endif
 
   call push_sub('epot_inc.psia_project_psib')
 
@@ -219,6 +222,13 @@ R_TYPE function X(psia_project_psib)(mesh, pj, dim, psia, psib, reltype, periodi
     apb = apb + &
          sum(R_CONJ(psia(pj%jxyz(1:n_s), idim))*plpsi(1:n_s, idim)*mesh%vol_pp(pj%jxyz(1:n_s)))
   end do
+
+#if defined(HAVE_MPI)
+  if(mesh%parallel_in_domains) then
+    call MPI_Allreduce(apb, tmp, 1, R_MPITYPE, MPI_SUM, mesh%vp%comm, mpi_err)
+    apb = tmp
+  end if
+#endif
 
   call pop_sub()
 end function X(psia_project_psib)
