@@ -34,5 +34,5 @@ Enabled  : Yes
 
 Input: 18-current.01-current.inp
 
-Match ; Current Flow ; grep 'Flow =' static/current-flow ; \s*0.199\d*
+Match ; Current Flow ; grep 'Flow =' static/current-flow ; \s*0.200\d*
 Match ; Magnetic Field at loop center ; grep '^  0.0000' static/Bind_z.x\=0\,z\=0 ; \s*3.08\d*
