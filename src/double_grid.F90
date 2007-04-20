@@ -155,7 +155,8 @@ contains
 
                       ! here: (/ pp, qq, rr /) = m%Lxyz(ip, 1:3) + (/ ll*ii, mm*jj, nn*kk/)
                       ip2 = m%Lxyz_inv(pp, qq, rr)
-                      if(ip2 /= 0) vl(ip2) = vl(ip2) + co(nn)*co(mm)*co(ll)*vv
+                      if(ip2 > 0 .and. ip2 <= m%np) &
+                           vl(ip2) = vl(ip2) + co(nn)*co(mm)*co(ll)*vv
 
                       rr = rr + kk
                     end do
@@ -235,8 +236,10 @@ contains
                     do nn = this%interpolation_min, this%interpolation_max
 
                       ip2 = m%Lxyz_inv(pp, qq, rr)
-                      dvl(ip2, 1:3) = dvl(ip2, 1:3) + co(ll)*co(mm)*co(nn)*vv(1:3)
-                      
+                      if(ip2 > 0 .and. ip2 <= m%np) then 
+                        dvl(ip2, 1:3) = dvl(ip2, 1:3) + co(ll)*co(mm)*co(nn)*vv(1:3)
+                      end if
+
                       rr = rr + kk
                     end do
                     qq = qq + jj
