@@ -72,11 +72,7 @@ module ps_m
     integer  :: l_loc    ! which component to take as local
 
     type(loct_spline_t) :: vl         ! local part
-    type(loct_spline_t) :: vll
-    type(loct_spline_t) :: dvll
-    type(loct_spline_t) :: vlocalized ! The localized part of the local part :)
-    type(loct_spline_t) :: vlocal_f   ! localized part of local potential
-                                      ! in Fourier space (for periodic)
+    type(loct_spline_t) :: vlocal_f   ! local potential in Fourier space (for periodic)
     type(loct_spline_t) :: dvl        ! derivative of the local part
     type(loct_spline_t) :: d2vl       ! second derivative of the local part
 
@@ -89,7 +85,6 @@ module ps_m
                                          ! threshold, for points outside the
                                          ! sphere.
     FLOAT :: rc_max ! The radius of the spheres that contain the projector functions.
-    FLOAT :: a_erf ! the a constant in erf(ar)/r
 
     integer  :: kbc      ! Number of KB components (1 or 2 for TM ps, 3 for HGH)
     FLOAT, pointer :: h(:,:,:), k(:, :, :)
@@ -99,6 +94,17 @@ module ps_m
     ! NLCC
     character(len=4) :: icore
     type(loct_spline_t) :: core ! core charge
+
+
+    !LONG RANGE PART OF THE LOCAL POTENTIAL
+    
+    logical :: has_long_range
+
+    type(loct_spline_t) :: vlr         ! the long range part of the local potential
+    type(loct_spline_t) :: nlr         ! the charge density associated to the long range part
+    
+    FLOAT :: sigma_erf                 ! the a constant in erf(r/(sqrt(2)*sigma))/r
+    FLOAT :: a_erf                     ! the a constant in erf(ar)/r
 
   end type ps_t
 
@@ -120,10 +126,6 @@ contains
     type(ps_fhi_t) :: ps_fhi ! Fritz-haber pseudopotential (from abinit)
     type(ps_upf_t) :: ps_upf ! In case UPF format is used
     type(hgh_t)    :: psp    ! In case Hartwigsen-Goedecker-Hutter ps are used.
-
-    FLOAT :: r
-    FLOAT, allocatable :: y(:)
-    integer :: i
 
     call push_sub('ps.ps_init')
 
@@ -227,7 +229,6 @@ contains
     call loct_spline_init(ps%kb)
     call loct_spline_init(ps%dkb)
     call loct_spline_init(ps%vl)
-    call loct_spline_init(ps%vlocalized)
     call loct_spline_init(ps%dvl)
     call loct_spline_init(ps%d2vl)
     call loct_spline_init(ps%core)
@@ -252,20 +253,6 @@ contains
       call ps_upf_end(ps_upf)
     end select
 
-    ! Get the localized part of the pseudopotential.
-    ps%a_erf = CNST(2.0) ! This is hard-coded to a reasonable value.
-    ALLOCATE(y(ps%g%nrval), ps%g%nrval)
-    y(1) = loct_splint(ps%vl, M_ZERO) + ps%z_val*(M_TWO/sqrt(M_PI))*ps%a_erf
-    do i = 2, ps%g%nrval
-      r = ps%g%rofi(i)
-      y(i) = loct_splint(ps%vl, r) + ps%z_val*loct_erf(ps%a_erf*r)/r
-    end do
-    call loct_spline_fit(ps%g%nrval, ps%g%rofi, y, ps%vlocalized)
-
-    ! And take the Fourier transform
-    call loct_spline_3dft(ps%vlocalized, ps%vlocal_f, CNST(50.0))
-    call loct_spline_times(CNST(1.0)/(M_FOUR*M_PI), ps%vlocal_f)
-
     ! Fix the threshold to calculate the radius of the projector function localization spheres:
     !%Variable SpecieProjectorSphereThreshold
     !%Type float
@@ -287,8 +274,55 @@ contains
       CNST(0.001), ps%projectors_sphere_threshold)
     if(ps%projectors_sphere_threshold <= M_ZERO) call input_error('SpecieProjectorSphereThreshold')
 
-    deallocate(y)
+    !separate the local potential in (soft) long range and (hard) short range parts
+    call separate()
+    
     call pop_sub()
+
+  contains
+    
+      subroutine separate()
+        FLOAT, allocatable :: vsr(:), vlr(:), nlr(:)
+        FLOAT :: r
+        integer :: ii
+
+        ps%has_long_range = .true.
+
+        ps%sigma_erf = CNST(0.625) ! This is hard-coded to a reasonable value.
+        ps%a_erf = M_ONE/(ps%sigma_erf*sqrt(M_TWO))
+
+        ALLOCATE(vsr(ps%g%nrval), ps%g%nrval)
+        ALLOCATE(vlr(ps%g%nrval), ps%g%nrval)
+        ALLOCATE(nlr(ps%g%nrval), ps%g%nrval)
+        
+        vlr(1) = -ps%z_val*M_TWO/(sqrt(M_TWO*M_PI)*ps%sigma_erf)
+
+        do ii = 1, ps%g%nrval
+          r = ps%g%rofi(ii)
+          if ( ii > 1) vlr(ii) = -ps%z_val*loct_erf(r/(ps%sigma_erf*sqrt(M_TWO)))/r
+          vsr(ii) = loct_splint(ps%vl, r) - vlr(ii)
+          nlr(ii) = -ps%z_val*M_ONE/(ps%sigma_erf*sqrt(M_TWO*M_PI))**3*exp(-M_HALF*r**2/ps%sigma_erf**2)
+        end do
+        
+        call loct_spline_init(ps%vlr)
+        call loct_spline_fit(ps%g%nrval, ps%g%rofi, vlr, ps%vlr)
+
+        call loct_spline_init(ps%nlr)
+        call loct_spline_fit(ps%g%nrval, ps%g%rofi, nlr, ps%nlr)
+
+        !overwrite vl
+        call loct_spline_end(ps%vl)
+        call loct_spline_init(ps%vl)
+        call loct_spline_fit(ps%g%nrval, ps%g%rofi, vsr, ps%vl)
+
+        ! And take the Fourier transform
+        call loct_spline_3dft(ps%vl, ps%vlocal_f, CNST(50.0))
+        call loct_spline_times(CNST(1.0)/(M_FOUR*M_PI), ps%vlocal_f)
+
+        deallocate(vsr, vlr, nlr)
+
+      end subroutine separate
+
   end subroutine ps_init
 
 
@@ -344,21 +378,12 @@ contains
     type(ps_t), intent(inout) :: ps
     FLOAT, intent(in) :: gmax
     FLOAT, intent(in) :: alpha, beta, rcut, beta2
-    integer :: i, l, k
-    FLOAT :: r
+    integer :: l, k
     FLOAT, allocatable :: y(:)
 
     call push_sub('ps.ps_filter')
 
-    call loct_spline_filter(ps%vlocalized, fs = (/ alpha*gmax, CNST(100.0) /) )
-    call loct_spline_end(ps%vl)
-    ALLOCATE(y(ps%g%nrval), ps%g%nrval)
-    y(1) = loct_splint(ps%vlocalized, CNST(0.0)) - ps%z_val*(M_TWO/sqrt(M_PI))*ps%a_erf
-    do i = 2, ps%g%nrval
-      r = ps%g%rofi(i)
-      y(i) = loct_splint(ps%vlocalized, r) - ps%z_val*loct_erf(ps%a_erf*r)/r
-    end do
-    call loct_spline_fit(ps%g%nrval, ps%g%rofi, y, ps%vl)
+    call loct_spline_filter(ps%vl, fs = (/ alpha*gmax, CNST(100.0) /) )
 
     do l = 0, ps%l_max
       do k = 1, ps%kbc
@@ -437,7 +462,7 @@ contains
     call loct_spline_print(ps%dvl, dlocal_unit)
     ALLOCATE(fw(1, 1), 1*1)
     call loct_spline_init(fw(1, 1))
-    call loct_spline_3dft(ps%vlocalized, fw(1, 1), gmax = gmax)
+    call loct_spline_3dft(ps%vl, fw(1, 1), gmax = gmax)
     call loct_spline_print(fw(1, 1), localw_unit)
     call loct_spline_end(fw(1, 1))
     deallocate(fw)

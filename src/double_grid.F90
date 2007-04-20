@@ -46,10 +46,7 @@ module double_grid_m
        double_grid_apply_local,     &
        double_grid_apply_glocal,    &
        double_grid_apply_non_local, &
-       dg_add_localization_density, &
-       dg_get_density_correction,   &
-       dg_get_potential_correction, &
-       dg_get_hmax
+       double_grid_get_hmax
 
   type double_grid_t
      private
@@ -58,17 +55,9 @@ module double_grid_m
      integer :: interpolation_min
      integer :: interpolation_max
      integer :: nn
-     integer :: loc_function
      logical :: use_double_grid
   end type double_grid_t
 
-  FLOAT,   parameter :: rmax = CNST(30.0), sigma = CNST(0.625)
-  integer, parameter :: npoints = 3000
-  
-  integer, parameter :: &
-       F_NONE = 0,      &
-       F_GAUSSIAN = 1 
-  
   FLOAT, parameter :: co (-4:5) = (/ &
        CNST(	3449600.0	)/CNST(	7142567040.0	),& !-4
        CNST(	-4484480.0	)/CNST(	793618560.0	),& !-3
@@ -105,29 +94,6 @@ contains
 
     call loct_parse_logical(check_inp('DoubleGrid'), .false., this%use_double_grid)
 
-    !%Variable LocalizationDensity
-    !%Type integer
-    !%Default none
-    !%Section Mesh
-    !%Description
-    !% When a localization density is used, the local part of the
-    !% pseudopotential is separated in a localized part and a long
-    !% range term. The long range term is calculated by solving the
-    !% poisson equation of a localized charge density. This separation
-    !% is required to apply to use the double grid technique or to
-    !% apply a filter to the local part of the pseudopotential. This
-    !% variable selects which kind of function is used for the
-    !% localized charge density. By default this technique is not
-    !% used.
-    !%Option none 0 
-    !% The potential is not separated. This is the default.
-    !%Option gaussian 3
-    !% A gaussian charge distribution is used, the correspoding
-    !% potential is erf(r)/r.
-    !%End
-
-    call loct_parse_int(check_inp('LocalizationDensity'), F_GAUSSIAN, this%loc_function)
-
   end subroutine double_grid_init
 
   subroutine double_grid_end(this)
@@ -149,11 +115,7 @@ contains
     integer :: ii, jj, kk, ll, mm, nn
     integer :: start(1:3), pp, qq, rr
 
-    if(dg_add_localization_density(this)) then 
-      ps_spline => s%ps%vll
-    else
-      ps_spline => s%ps%vl
-    end if
+    ps_spline => s%ps%vl
 
     do ip = 1, m%np
       r = sqrt(sum( (m%x(ip, :) - x_atom(:))**2 ))
@@ -230,11 +192,7 @@ contains
     integer :: ii, jj, kk, ll, mm, nn
     integer :: start(1:3), pp, qq, rr
 
-    if(dg_add_localization_density(this)) then 
-      ps_spline => s%ps%dvll
-    else
-      ps_spline => s%ps%dvl
-    end if
+    ps_spline => s%ps%dvl
 
     if (.not. this%use_double_grid) then 
       
@@ -389,56 +347,7 @@ contains
 
   end subroutine double_grid_apply_non_local
 
-  logical function dg_add_localization_density(this) 
-    type(double_grid_t), intent(in) :: this
-    
-    dg_add_localization_density = ( this%loc_function /= F_NONE )
-    
-  end function dg_add_localization_density
-
-
-  subroutine dg_get_potential_correction(this, vlc)
-    type(double_grid_t), intent(in) :: this
-    type(loct_spline_t), intent(out) :: vlc
-
-    FLOAT :: dr, r(1:npoints), pot(1:npoints)
-    integer :: ii
-    
-    dr = rmax/(npoints-M_ONE)
-        
-    r(1) = M_ZERO
-
-    pot(1) = M_TWO/(sqrt(M_TWO*M_PI)*sigma)
-
-    do ii = 1, npoints
-      if ( ii /= 1 ) pot(ii) = loct_erf(r(ii)/(sigma*sqrt(M_TWO)))/r(ii)
-      if ( ii /= npoints ) r(ii+1) = r(ii) + dr
-    end do
-    
-    call loct_spline_fit(npoints, r, pot, vlc)
-
-  end subroutine dg_get_potential_correction
-
-  subroutine dg_get_density_correction(this, rc)
-    type(double_grid_t), intent(in) :: this
-    type(loct_spline_t), intent(out) :: rc
-
-    integer :: ii
-    FLOAT :: dr, r(1:npoints), rho(1:npoints)
-
-    dr = rmax/(npoints-M_ONE)
-    
-    r(1) = M_ZERO
-    do ii = 1, npoints
-      rho(ii) = M_ONE/(sigma*sqrt(M_TWO*M_PI))**3*exp(-M_HALF*r(ii)**2/sigma**2)
-      if ( ii /= npoints ) r(ii+1) = r(ii) + dr
-    end do
-    
-    call loct_spline_fit(npoints, r, rho, rc)
-
-  end subroutine dg_get_density_correction
-
-  FLOAT function dg_get_hmax(this, mesh) result(hmax)
+  FLOAT function double_grid_get_hmax(this, mesh) result(hmax)
     type(double_grid_t), intent(in) :: this
     type(mesh_t),        intent(in) :: mesh
 
@@ -448,7 +357,7 @@ contains
       hmax = maxval(mesh%h(1:MAX_DIM))
     end if
     
-  end function dg_get_hmax
+  end function double_grid_get_hmax
 
 end module double_grid_m
 

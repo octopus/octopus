@@ -74,27 +74,8 @@ contains
     type(specie_t),      intent(inout) :: this
     type(grid_t),        intent(in)    :: gr
 
-    type(loct_spline_t) :: vlc
-    integer :: l, k
-    FLOAT :: qmax, hmax
-    
     call push_sub('specie_pot.specie_pot_init')
     
-    if(dg_add_localization_density(gr%dgrid) .and. specie_is_ps(this) ) then
-
-      call loct_spline_init(vlc)
-      call dg_get_potential_correction(gr%dgrid, vlc)
-      call loct_spline_times(this%z_val, vlc)
-
-      call loct_spline_init(this%ps%vll)
-      call loct_spline_sum(vlc, this%ps%vl, this%ps%vll)
-
-      call loct_spline_init(this%ps%dvll)
-      call loct_spline_der(this%ps%vll, this%ps%dvll)
-
-      call loct_spline_end(vlc)
-
-    end if
 
     call pop_sub()
 
@@ -106,12 +87,6 @@ contains
     type(specie_t),      intent(inout) :: this
     type(grid_t),        intent(in)    :: gr
 
-    if(dg_add_localization_density(gr%dgrid) .and. specie_is_ps(this) ) then
-      
-      call loct_spline_end(this%ps%vll)
-      call loct_spline_end(this%ps%dvll)
-      
-    end if
 
   end subroutine specie_pot_end
 
@@ -414,9 +389,8 @@ contains
     integer :: dim
     FLOAT   :: x(1:MAX_DIM+1), chi0(MAX_DIM), startval(MAX_DIM + 1)
     FLOAT   :: delta, alpha, beta
-    FLOAT   :: r, correction
+    FLOAT   :: r
     integer :: ip
-    type(loct_spline_t) :: rho_corr
 
     call push_sub('specie_grid.specie_get_density')
 
@@ -424,21 +398,10 @@ contains
 
     case(SPEC_PS_PSF, SPEC_PS_HGH, SPEC_PS_CPI, SPEC_PS_FHI, SPEC_PS_UPF)
 
-      call loct_spline_init(rho_corr)
-      call dg_get_density_correction(gr%dgrid, rho_corr)
-
       do ip = 1, gr%m%np
         r = sqrt(sum((pos(1:MAX_DIM)-gr%m%x(ip, 1:MAX_DIM))**2))
-        rho(ip) = -s%z_val*loct_splint(rho_corr, r)
+        rho(ip) = loct_splint(s%ps%nlr, r)
       end do
-
-      call loct_spline_end(rho_corr)
-
-      correction = -s%z_val / dmf_integrate(gr%m, rho)
-      rho(1:gr%m%np) = correction * rho(1:gr%m%np)
-      
-      write(message(1),'(a, f13.10)')  'Info: Localization charge correction ', correction
-      call write_info(1)
 
     case(SPEC_ALL_E)
 
@@ -500,7 +463,7 @@ contains
 
     FLOAT   :: x(1:MAX_DIM), r
     integer :: ip
-    type(loct_spline_t) :: rho_corr, drho_corr
+    type(loct_spline_t) :: drho_corr
 
     call push_sub('specie_grid.specie_get_density')
 
@@ -508,20 +471,20 @@ contains
 
     case(SPEC_PS_PSF, SPEC_PS_HGH, SPEC_PS_CPI, SPEC_PS_FHI, SPEC_PS_UPF)
 
-      call loct_spline_init(rho_corr)
       call loct_spline_init(drho_corr)
-      call dg_get_density_correction(gr%dgrid, rho_corr)
-      call loct_spline_der(rho_corr, drho_corr)
+      call loct_spline_der(s%ps%nlr, drho_corr)
 
       do ip = 1, gr%m%np
         x(1:MAX_DIM) = pos(1:MAX_DIM) - gr%m%x(ip, 1:MAX_DIM)
         r = sqrt(sum(x(1:MAX_DIM)**2))
         if ( r > CNST(1e-10) ) then 
-          rho(ip, 1:MAX_DIM) = -s%z_val*loct_splint(drho_corr, r)*x(1:MAX_DIM)/r
+          rho(ip, 1:MAX_DIM) = loct_splint(drho_corr, r)*x(1:MAX_DIM)/r
         else
           rho(ip, 1:MAX_DIM) = M_ZERO
         end if
       end do
+      
+      call loct_spline_init(drho_corr)
 
     end select
 
@@ -723,29 +686,9 @@ contains
       end do
 
     case(SPEC_PS_PSF, SPEC_PS_HGH, SPEC_PS_CPI, SPEC_PS_FHI, SPEC_PS_UPF)
-#if 0
-      do ip = 1, gr%m%np
-
-        x(:) = gr%m%x(ip, :) - x_atom(:)
-        r = sqrt(sum(x(:)**2))
-        if(r>CNST(1e-5)) then
-          if (dg_add_localization_density(gr%dgrid)) then 
-            dvl_r = loct_splint(s%ps%dvll, r)
-          else 
-            dvl_r = loct_splint(s%ps%dvl, r)
-          end if
-          gv(ip, 1:3) = -dvl_r*x(1:3)/r
-        else 
-          gv(ip, 1:3) = M_ZERO
-        end if
-
-      end do
-
-#else 
       call double_grid_apply_glocal(gr%dgrid, s, gr%m, x_atom, gv(:, :))
-#endif 
 
-      if (dg_add_localization_density(gr%dgrid)) then
+      if (s%ps%has_long_range) then
         
         ALLOCATE(grho(NP, MAX_DIM), NP*MAX_DIM)
         ALLOCATE(gpot(NP_PART), NP_PART)

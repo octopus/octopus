@@ -676,8 +676,6 @@ contains
     do ia = 1, geo%natoms
       atm => geo%atom(ia) ! shortcuts
 
-      if (specie_is_ps(atm%spec) .and. conf%debug_level > 0) call debug_pseudo()
-      
       if((.not.simul_box_is_periodic(sb)).or.geo%only_user_def) then
         
         call build_local_part_in_real_space(ep, gr, geo, atm, ep%vpsl, time_, st%rho_core)
@@ -753,40 +751,6 @@ contains
     call pop_sub()
     call profiling_out(C_PROFILING_EPOT_GENERATE)
 
-  contains
-    ! ---------------------------------------------------------
-    subroutine debug_pseudo()
-      integer :: iunit, ii, nn
-      FLOAT :: r, dr
-
-      type(loct_spline_t) :: pot_corr
-      
-      call loct_spline_init(pot_corr)
-      call dg_get_potential_correction(gr%dgrid, pot_corr)
-
-      call io_mkdir('debug/')
-      iunit = io_open('debug/pseudo-'//trim(atm%spec%label), action='write')
-
-      dr = CNST(0.01)
-      nn = CNST(10.0)/dr
-      r = M_ZERO
-      do ii = 1, nn
-        write(iunit, '(4f12.6)', advance='no') r, loct_splint(atm%spec%ps%vl, r),  &
-             -atm%spec%z_val*loct_splint(pot_corr, r)
-        if(dg_add_localization_density(gr%dgrid)) then
-          write(iunit,'(f12.6)') loct_splint(atm%spec%ps%vll, r)
-        else
-          write(iunit,*)
-        end if
-        r = r + dr
-      end do
-
-      call io_close(iunit)
-      
-      call loct_spline_end(pot_corr)
-
-    end subroutine debug_pseudo
-
   end subroutine epot_generate
 
   subroutine build_local_part_in_real_space(ep, gr, geo, a, vpsl, time, rho_core)
@@ -801,8 +765,6 @@ contains
     integer :: i
     FLOAT :: x(MAX_DIM), xx(MAX_DIM), r, pot_re, pot_im
     FLOAT, allocatable  :: rho(:), vl(:)
-
-    type(loct_spline_t) :: pot_corr
 
     call push_sub('epot.build_local_part_in_real_space')
 
@@ -835,7 +797,7 @@ contains
 
     !Local potential from density
     if(a%spec%has_density .or. &
-         (specie_is_ps(a%spec) .and. dg_add_localization_density(gr%dgrid) )) then 
+         (specie_is_ps(a%spec) .and. a%spec%ps%has_long_range)) then 
 
       ALLOCATE(rho(1:NP), NP)
 
@@ -845,20 +807,12 @@ contains
 
       if (specie_is_ps(a%spec)) then 
 
-        call loct_spline_init(pot_corr)
-        call dg_get_potential_correction(gr%dgrid, pot_corr)
-
         !calculate the deviation from the analitcal potential
         do i = 1, NP
           x(1:NDIM) = gr%m%x(i, 1:NDIM) - a%x(1:NDIM)
           r = sqrt(sum(x(1:NDIM)**2))
-          rho(i) = vl(i) - (-a%spec%z_val)*loct_splint(pot_corr, r)
+          rho(i) = vl(i) - loct_splint(a%spec%ps%vlr, r)
         end do
-        call loct_spline_end(pot_corr)
-
-        write(message(1),'(a, e12.6)')  'Info: Deviation from analitical potential is ', &
-             abs(dmf_integrate(gr%m, rho))
-        call write_info(1)
 
       end if
 
