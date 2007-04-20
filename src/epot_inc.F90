@@ -317,7 +317,7 @@ subroutine X(calc_forces_from_potential)(gr, geo, ep, st, time)
     ALLOCATE(gpsi(gr%m%np, 1:NDIM, st%d%dim), gr%m%np*NDIM*st%d%dim)
     ALLOCATE(grho(NP, MAX_DIM), NP*MAX_DIM)
     
-    grho(1:NP, 1:st%d%dim) = M_ZERO
+    grho(1:NP, 1:NDIM) = M_ZERO
 
     !the non-local part
     do ik = 1, st%d%nik
