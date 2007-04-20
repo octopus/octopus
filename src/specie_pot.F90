@@ -617,7 +617,11 @@ contains
         
       case(SPEC_PS_PSF, SPEC_PS_HGH, SPEC_PS_CPI, SPEC_PS_FHI, SPEC_PS_UPF)
         call double_grid_apply_local(gr%dgrid, s, gr%m, x_atom, vl(:))
-        
+
+        if(s%ps%has_long_range .and. .not. s%has_density) then 
+          call dmf_put_radial_spline(gr%m, s%ps%vlr, x_atom, vl, add = .true.)
+        end if
+
       case(SPEC_ALL_E)
         vl(1:gr%m%np) = M_ZERO
         

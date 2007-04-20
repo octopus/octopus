@@ -22,6 +22,7 @@
 module mesh_function_m
   use global_m
   use lib_basic_alg_m
+  use lib_oct_gsl_spline_m
   use math_m
   use mesh_m
   use messages_m
@@ -49,7 +50,9 @@ module mesh_function_m
     dmf_interpolate,       &
     zmf_interpolate,       &
     mf_surface_integral,   &
-    mf_line_integral
+    mf_line_integral,      &
+    dmf_put_radial_spline, &
+    zmf_put_radial_spline
 
   interface mf_surface_integral
     module procedure dmf_surface_integral_scalar, dmf_surface_integral_vector, &

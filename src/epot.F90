@@ -320,7 +320,7 @@ contains
     !% 
     !% (ii) You are using an effective Hamiltonian, as it is the case when
     !% you calculate a 2D electron gas, in which case you have an effective
-    !% gyromagnetic factor that dependes on the material.
+    !% gyromagnetic factor that depends on the material.
     !%End
     call loct_parse_float(check_inp('GyromagneticRatio'), P_g, ep%gyromagnetic_ratio)
 
@@ -331,13 +331,13 @@ contains
     !%Description
     !% The forces can be calculated either by derivating the ionic
     !% potential or the wavefunctions. This option selects how to
-    !% calculate them. By default the ionic potential is derived.
+    !% calculate them. By default the wavefunctions are derived.
     !%Option derivate_potential 1
     !% Derivate the potential to calculate the forces.
     !%Option derivate_wavefunctions 2
     !% Derivate the wavefunctions to calculate the forces.
     !%End
-    call loct_parse_int(check_inp('Forces'), DERIVATE_POTENTIAL, ep%forces)
+    call loct_parse_int(check_inp('Forces'), DERIVATE_WAVEFUNCTION, ep%forces)
 
     ! The projectors
     ep%nvnl = geometry_nvnl(geo)
@@ -796,25 +796,13 @@ contains
     end if
 
     !Local potential from density
-    if(a%spec%has_density .or. &
-         (specie_is_ps(a%spec) .and. a%spec%ps%has_long_range)) then 
+    if(a%spec%has_density) then
 
       ALLOCATE(rho(1:NP), NP)
 
       call specie_get_density(a%spec, a%x, gr, geo, rho)
       call dpoisson_solve(gr, vl, rho)
       vpsl(1:NP) = vpsl(1:NP) + vl(1:NP)
-
-      if (specie_is_ps(a%spec)) then 
-
-        !calculate the deviation from the analitcal potential
-        do i = 1, NP
-          x(1:NDIM) = gr%m%x(i, 1:NDIM) - a%x(1:NDIM)
-          r = sqrt(sum(x(1:NDIM)**2))
-          rho(i) = vl(i) - loct_splint(a%spec%ps%vlr, r)
-        end do
-
-      end if
 
       deallocate(rho)
 

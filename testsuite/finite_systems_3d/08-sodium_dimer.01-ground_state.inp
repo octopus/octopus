@@ -11,3 +11,4 @@ fromScratch = yes
   "Na" | 0 | 0 |  1.54
 %
 
+DoubleGrid=yes

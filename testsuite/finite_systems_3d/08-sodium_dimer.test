@@ -1,7 +1,7 @@
 # -*- coding: utf-8 mode: shell-script -*-
 # $Id$
 
-Test     : Sodium
+Test     : Sodium using double grid
 Author   : Heiko Appel
 Date     : 04.05.05
 Arch     : Linux miraculix 2.6.11.6-acpi-up #1 Thu Apr 7 15:01:29 CEST 2005 i686 GNU/Linux
@@ -13,5 +13,5 @@ Enabled  : Yes
 
 Input: 08-sodium_dimer.01-ground_state.inp
 
-Match ; TotalEnergy ; grep -A 7 '^Energy:' static/info ; \s*Total\s*=\s*-0.338021
-Match ; Eigenvalues ; grep -A 2 'Eigenvalues \[' static/info | tail -1 ; \s*-0.13735\d*\s*2.0000\d* 
+Match ; TotalEnergy ; grep -A 7 '^Energy:' static/info ; \s*Total\s*=\s*-0.33791
+Match ; Eigenvalues ; grep -A 2 'Eigenvalues \[' static/info | tail -1 ; \s*-0.13732\d*\s*2.0000\d* 

@@ -466,6 +466,40 @@ R_TYPE function X(mf_line_integral_vector) (mesh, f, line) result(d)
 end function X(mf_line_integral_vector)
 
 
+! puts a spline that represents a radial function into a mesh
+subroutine X(mf_put_radial_spline)(m, spl, center, f, add)
+  type(mesh_t),        intent(in)    :: m
+  type(loct_spline_t), intent(in)    :: spl
+  FLOAT,               intent(in)    :: center(1:MAX_DIM)
+  R_TYPE,              intent(inout) :: f(:)
+  logical, optional,   intent(in)    :: add
+
+  integer :: ip
+  FLOAT :: r
+
+  logical :: add_
+
+  add_ = .false.
+
+  if(present(add)) add_ = add
+  
+  if( add_ ) then 
+
+    do ip = 1, m%np
+      r = sqrt(sum((m%x(ip, 1:MAX_DIM) - center(1:MAX_DIM))**2))
+      f(ip) = f(ip) + loct_splint(spl, r)
+    end do
+
+  else
+
+     do ip = 1, m%np
+      r = sqrt(sum((m%x(ip, 1:MAX_DIM) - center(1:MAX_DIM))**2))
+      f(ip) = loct_splint(spl, r)
+    end do
+
+  end if
+
+end subroutine X(mf_put_radial_spline)
 
 
 

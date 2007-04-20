@@ -117,12 +117,11 @@ contains
 
     ps_spline => s%ps%vl
 
-    do ip = 1, m%np
-      r = sqrt(sum( (m%x(ip, :) - x_atom(:))**2 ))
-      vl(ip) = loct_splint(ps_spline, r)
-    end do
+    if ( .not. this%use_double_grid) then 
 
-    if (this%use_double_grid) then 
+      call dmf_put_radial_spline(m, s%ps%vl, x_atom, vl)
+      
+    else
 
       vl(1:m%np) = M_ZERO
 
@@ -156,7 +155,7 @@ contains
 
                       ! here: (/ pp, qq, rr /) = m%Lxyz(ip, 1:3) + (/ ll*ii, mm*jj, nn*kk/)
                       ip2 = m%Lxyz_inv(pp, qq, rr)
-                      vl(ip2) = vl(ip2) + co(nn)*co(mm)*co(ll)*vv
+                      if(ip2 /= 0) vl(ip2) = vl(ip2) + co(nn)*co(mm)*co(ll)*vv
 
                       rr = rr + kk
                     end do
