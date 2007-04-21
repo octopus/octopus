@@ -110,7 +110,7 @@ contains
     
     type(loct_spline_t), pointer  :: ps_spline
 
-    FLOAT :: r, vv
+    FLOAT :: r2, vv
     integer :: ip, ip2
     integer :: ii, jj, kk, ll, mm, nn
     integer :: start(1:3), pp, qq, rr
@@ -133,12 +133,12 @@ contains
           do jj = -this%nn, this%nn
             do kk = -this%nn, this%nn
               
-              r = sqrt(sum( (m%x(ip, 1:3) + this%h_fine(1:3)*(/ ii, jj, kk /) - x_atom(1:3))**2 ))
+              r2 = sum( (m%x(ip, 1:3) + this%h_fine(1:3)*(/ ii, jj, kk /) - x_atom(1:3))**2 )
 
-              if ( r < specie_local_cutoff_radius(s) ) then 
+              if ( r2 < specie_local_cutoff_radius(s)**2 ) then 
 
                 !calculate the potential
-                vv = loct_splint(ps_spline, r) 
+                vv = loct_splint(ps_spline, sqrt(r2)) 
                 
                 !add the value of the potential to all the points that depend on this point
 
@@ -187,7 +187,7 @@ contains
     FLOAT,                  intent(out)   :: dvl(:, :)
     
     type(loct_spline_t), pointer  :: ps_spline
-    FLOAT :: r, x(1:3), vv(1:3)
+    FLOAT :: r, r2, x(1:3), vv(1:3)
     integer :: ip, ip2
     integer :: ii, jj, kk, ll, mm, nn
     integer :: start(1:3), pp, qq, rr
@@ -199,7 +199,7 @@ contains
       do ip = 1, m%np
         x(1:3) = m%x(ip, 1:3) - x_atom(1:3)
         r = sqrt(sum(x(1:3)**2))
-        if ( r > CNST(1e-7) ) then 
+        if ( r > CNST(1e-5) ) then 
           dvl(ip, 1:3) = -loct_splint(ps_spline, r)*x(1:3)/r
         else 
           dvl(ip, 1:3) = M_ZERO
@@ -218,11 +218,11 @@ contains
               
               x(1:3) = m%x(ip, 1:3) + this%h_fine(1:3)*(/ ii, jj, kk /) - x_atom(1:3)
               
-              r = sqrt(sum(x(1:3)**2))
+              r2 = sum(x(1:3)**2)
 
-              if ( r > CNST(1e-7) .and. r < specie_local_cutoff_radius(s) ) then 
+              if ( r2 > CNST(1e-10) .and. r2 < specie_local_cutoff_radius(s)**2 ) then 
 
-                vv(1:3) = -loct_splint(ps_spline, r)*x(1:3)/r
+                vv(1:3) = -loct_splint(ps_spline, sqrt(r2))*x(1:3)/sqrt(r2)
 
                 start(1:3) = m%Lxyz(ip, 1:3) + this%interpolation_min * (/ ii, jj, kk /)
 

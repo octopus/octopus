@@ -224,6 +224,8 @@ subroutine X(sparskit_solver_run)(sk, op, opt, sol, rhs)
   type(sparskit_solver_t), intent(inout) :: sk
   R_TYPE, intent(in)  :: rhs(:)
   R_TYPE, intent(out) :: sol(:)
+
+
 #ifdef R_TREAL
   interface
     subroutine op(x, y)
@@ -249,41 +251,167 @@ subroutine X(sparskit_solver_run)(sk, op, opt, sol, rhs)
   end interface
 #endif
 
+  integer :: iter
 
   call push_sub('sparskit_inc.Xsparskit_solver_run')
 
   ! initialize counter
   sk%used_iter = 0
 
-  select case(sk%solver_type)
-  case(SK_CG)
-    call X(sk_driver_cg)     (sk, op, opt, sol, rhs, sk_work)
-  case(SK_CGNR)                          
-    call X(sk_driver_cgnr)   (sk, op, opt, sol, rhs, sk_work)
-  case(SK_BCG)                           
-    call X(sk_driver_bcg)    (sk, op, opt, sol, rhs, sk_work)
-  case(SK_DBCG)                          
-    call X(sk_driver_dbcg)   (sk, op, opt, sol, rhs, sk_work)
-  case(SK_BCGSTAB)                       
-    call X(sk_driver_bcgstab)(sk, op, opt, sol, rhs, sk_work)
-  case(SK_TFQMR)                         
-    call X(sk_driver_tfqmr)  (sk, op, opt, sol, rhs, sk_work)
-  case(SK_FOM)                           
-    call X(sk_driver_fom)    (sk, op, opt, sol, rhs, sk_work)
-  case(SK_GMRES)                         
-    call X(sk_driver_gmres)  (sk, op, opt, sol, rhs, sk_work)
-  case(SK_FGMRES)                        
-    call X(sk_driver_fgmres) (sk, op, opt, sol, rhs, sk_work)
-  case(SK_DQGMRES)                       
-    call X(sk_driver_dqgmres)(sk, op, opt, sol, rhs, sk_work)
-  case default
-    write(message(1), '(a,i4,a)') "Input: '", sk%solver_type, &
-      "' is not a valid Sparsekit Solver"
-    message(2) = '( Sparsekit Solver =  cg | cgnr | bcg | dbcg | bcgstab | tfqmr | fom | gmres | fgmres | dqgmres )'
-    call write_fatal(2)
-  end select
+#ifdef R_TREAL
+  sk_b = rhs
+  ! initial guess
+  sk_y = sol
+#endif
+#ifdef R_TCOMPLEX
+  do iter = 1, sk%size/2
+    sk_b(iter)           = real (rhs(iter))
+    sk_b(iter + sk%size/2) = aimag(rhs(iter))
+    ! initial guess
+    sk_y(iter)           = real (sol(iter))
+    sk_y(iter + sk%size/2) = aimag(sol(iter))
+  end do
+#endif
+
+  ! Start iterative solution of the linear system
+  solver_iter: do iter = 1, sk%maxiter
+    
+    select case(sk%solver_type)
+    case(SK_CG)
+      call cg(sk%size, sk_b, sk_y, sk%ipar, sk%fpar, sk_work)
+    case(SK_CGNR)                          
+      call cgnr(sk%size, sk_b, sk_y, sk%ipar, sk%fpar, sk_work)
+    case(SK_BCG)                           
+      call bcg(sk%size, sk_b, sk_y, sk%ipar, sk%fpar, sk_work)
+    case(SK_DBCG)                          
+      call dbcg(sk%size, sk_b, sk_y, sk%ipar, sk%fpar, sk_work)
+    case(SK_BCGSTAB)                       
+      call bcgstab(sk%size, sk_b, sk_y, sk%ipar, sk%fpar, sk_work)
+    case(SK_TFQMR)                         
+      call tfqmr(sk%size, sk_b, sk_y, sk%ipar, sk%fpar, sk_work)
+    case(SK_FOM)                           
+      call fom(sk%size, sk_b, sk_y, sk%ipar, sk%fpar, sk_work)
+    case(SK_GMRES)                         
+      call gmres(sk%size, sk_b, sk_y, sk%ipar, sk%fpar, sk_work)
+    case(SK_FGMRES)                        
+      call fgmres(sk%size, sk_b, sk_y, sk%ipar, sk%fpar, sk_work)
+    case(SK_DQGMRES)                       
+      call dqgmres(sk%size, sk_b, sk_y, sk%ipar, sk%fpar, sk_work)
+    case default
+      write(message(1), '(a,i4,a)') "Input: '", sk%solver_type, &
+           "' is not a valid Sparsekit Solver"
+      message(2) = '( Sparsekit Solver =  cg | cgnr | bcg | dbcg | bcgstab | tfqmr | fom | gmres | fgmres | dqgmres )'
+      call write_fatal(2)
+    end select
+    
+    ! Evaluate reverse communication protocol
+    select case(sk%ipar(1))
+    case(1)
+#ifdef R_TREAL
+      call op(sk_work(sk%ipar(8):sk%ipar(8)+sk%size),sk_work(sk%ipar(9):sk%ipar(9)+sk%size))
+#endif
+#ifdef R_TCOMPLEX
+      call op(sk_work(sk%ipar(8):sk%ipar(8)+sk%size/2),sk_work(sk%ipar(8)+sk%size/2:sk%ipar(8)+sk%size), &
+           sk_work(sk%ipar(9):sk%ipar(9)+sk%size/2),sk_work(sk%ipar(9)+sk%size/2:sk%ipar(9)+sk%size))
+#endif
+    case(2)
+      ! call atmux(n,w(sk%ipar(8)),w(sk%ipar(9)),a,ja,ia)
+#ifdef R_TREAL
+      call opt(sk_work(sk%ipar(8):sk%ipar(8)+sk%size),sk_work(sk%ipar(9):sk%ipar(9)+sk%size))
+#endif
+#ifdef R_TCOMPLEX
+      call opt(sk_work(sk%ipar(8):sk%ipar(8)+sk%size/2),sk_work(sk%ipar(8)+sk%size/2:sk%ipar(8)+sk%size), &
+           sk_work(sk%ipar(9):sk%ipar(9)+sk%size/2),sk_work(sk%ipar(9)+sk%size/2:sk%ipar(9)+sk%size))
+#endif
+    case(3)
+      ! left preconditioner solver
+      message(1) = 'Error: Preconditioning not implemented yet.'
+      call write_fatal(1)
+    case(4)
+      ! left preconditioner transposed solve
+      message(1) = 'Error: Preconditioning not implemented yet.'
+      call write_fatal(1)
+    case(5)
+      ! right preconditioner solve
+      message(1) = 'Error: Preconditioning not implemented yet.'
+      call write_fatal(1)
+    case(6)
+      ! right preconditioner transposed solve
+      message(1) = 'Error: Preconditioning not implemented yet.'
+      call write_fatal(1)
+    case(0)
+      ! successful exit of solver
+      exit solver_iter
+    case(-1)
+!      message(1) = 'Warning: Maximum iteration number "SparskitMaxIter" exceeded.'
+!      call write_warning(1)
+      exit solver_iter
+    case(-2)
+      message(1) = 'Error: Insufficient work space.'
+      call write_fatal(1)
+    case(-3)
+      message(1) = 'Error: Anticipated break-down / divide by zero.'
+      call write_fatal(1)
+    case(-4)
+      message(1) = 'Error: "SparskitRelTolerance" and "SparskitAbsTolerance" are'
+      message(2) = '       both <= 0. Valid ranges are 0 <= SparskitRelTolerance < 1,'
+      message(3) = '       0 <= SparskitAbsTolerance.'
+      call write_fatal(3)
+    case(-9)
+      message(1) = 'Error: while trying to detect a break-down, an abnormal number is detected.'
+      call write_fatal(1)
+    case(-10)
+      message(1) = 'Error: return due to some non-numerical reasons, e.g. invalid'
+      message(2) = 'floating-point numbers etc.'
+      call write_fatal(2)
+    case default
+      message(1) = 'Error: Unknown Sparskit return value. Exiting ...'
+      call write_fatal(1)
+    end select
+
+    if(sk%iter_out > 0) then
+      if(mod(iter, sk%iter_out) == 0) then
+        write(message(1), '(a,i7)') 'Sparskit Iter: ', iter
+        call write_info(1)
+      end if
+    end if
+      
+  end do solver_iter
+
+
+
+  if(iter .gt.sk%maxiter) then
+!    message(1) = 'Warning: Maxiter reached'
+!    call write_warning(1)
+  end if
+
+  ! set back to zero to initialize the solver for the next call
+  sk%ipar(1) = 0
+  ! store the number of iterations used
+  sk%used_iter = iter - 1
+  ! reset 
+  sk%ipar(7) = 0
+
+  ! store current error norm
+  sk%residual_norm = sk%fpar(6)
+
+  ! output status info
+  if(sk%verbose) then
+    write(message(1), '(a,I5,a,E18.12)') 'Sparskit iter: ', sk%used_iter, ' residual norm: ', sk%residual_norm
+    call write_info(1)
+  end if
+
+#ifdef R_TREAL
+  sol = sk_y
+#endif
+#ifdef R_TCOMPLEX
+  do iter = 1, sk%size/2
+    sol(iter) = sk_y(iter) + M_zI*sk_y(iter+sk%size/2)
+  end do
+#endif
 
   call pop_sub
+
 end subroutine X(sparskit_solver_run)
 
 
@@ -295,59 +423,6 @@ subroutine X(sparskit_solver_end)()
 
   call pop_sub
 end subroutine X(sparskit_solver_end)
-
-
-
-#define SOLVER cg
-#define DRIVER X(sk_driver_cg)
-#include "sparskit_driver.F90"
-#undef  SOLVER
-#undef  DRIVER
-#define SOLVER cgnr
-#define DRIVER X(sk_driver_cgnr)
-#include "sparskit_driver.F90"
-#undef  SOLVER
-#undef  DRIVER
-#define SOLVER bcg
-#define DRIVER X(sk_driver_bcg)
-#include "sparskit_driver.F90"
-#undef  SOLVER
-#undef  DRIVER
-#define SOLVER dbcg
-#define DRIVER X(sk_driver_dbcg)
-#include "sparskit_driver.F90"
-#undef  SOLVER
-#undef  DRIVER
-#define SOLVER bcgstab
-#define DRIVER X(sk_driver_bcgstab)
-#include "sparskit_driver.F90"
-#undef  SOLVER
-#undef  DRIVER
-#define SOLVER tfqmr
-#define DRIVER X(sk_driver_tfqmr)
-#include "sparskit_driver.F90"
-#undef  SOLVER
-#undef  DRIVER
-#define SOLVER fom
-#define DRIVER X(sk_driver_fom)
-#include "sparskit_driver.F90"
-#undef  SOLVER
-#undef  DRIVER
-#define SOLVER gmres
-#define DRIVER X(sk_driver_gmres)
-#include "sparskit_driver.F90"
-#undef  SOLVER
-#undef  DRIVER
-#define SOLVER fgmres
-#define DRIVER X(sk_driver_fgmres)
-#include "sparskit_driver.F90"
-#undef  SOLVER
-#undef  DRIVER
-#define SOLVER dqgmres
-#define DRIVER X(sk_driver_dqgmres)
-#include "sparskit_driver.F90"
-#undef  SOLVER
-#undef  DRIVER
 
 !! Local Variables:
 !! mode: f90

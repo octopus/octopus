@@ -28,37 +28,6 @@ module sparskit_m
   implicit none
 
   private
-  public ::                      &
-    sparskit_solver_t,           &
-    dsparskit_solver_init,       &
-    dsparskit_solver_run,        &
-    dsparskit_solver_end,        &
-    zsparskit_solver_init,       &
-    zsparskit_solver_run,        &
-    zsparskit_solver_end
-
-  ! the drivers (we make them public for direct calls)
-  public ::                      &
-    dsk_driver_cg,               &
-    dsk_driver_cgnr,             &
-    dsk_driver_bcg,              &
-    dsk_driver_dbcg,             &
-    dsk_driver_bcgstab,          &
-    dsk_driver_tfqmr,            &
-    dsk_driver_fom,              &
-    dsk_driver_gmres,            &
-    dsk_driver_fgmres,           &
-    dsk_driver_dqgmres,          &
-    zsk_driver_cg,               &
-    zsk_driver_cgnr,             &
-    zsk_driver_bcg,              &
-    zsk_driver_dbcg,             &
-    zsk_driver_bcgstab,          &
-    zsk_driver_tfqmr,            &
-    zsk_driver_fom,              &
-    zsk_driver_gmres,            &
-    zsk_driver_fgmres,           &
-    zsk_driver_dqgmres
 
   integer, public, parameter ::  &
     SK_CG      =  1,             &  ! Conjugate Gradient Method
@@ -74,7 +43,18 @@ module sparskit_m
     SK_MINVAL  = SK_CG,          &
     SK_MAXVAL  = SK_DQGMRES
 
+#ifdef HAVE_SPARSKIT
+
   FLOAT, allocatable :: sk_work(:), sk_b(:), sk_y(:)
+
+  public ::                      &
+    sparskit_solver_t,           &
+    dsparskit_solver_init,       &
+    dsparskit_solver_run,        &
+    dsparskit_solver_end,        &
+    zsparskit_solver_init,       &
+    zsparskit_solver_run,        &
+    zsparskit_solver_end
 
   type sparskit_solver_t
     integer :: size                 ! size of the linear system
@@ -105,9 +85,11 @@ contains
 #include "complex.F90"
 #include "sparskit_inc.F90"
 
+#endif /* HAVE_SPARSKIT */
 
 end module sparskit_m
 
+#ifdef HAVE_SPARSKIT
 
 ! ---------------------------------------------------------
 FLOAT function distdot(n, x, ix, y, iy)
@@ -121,6 +103,8 @@ FLOAT function distdot(n, x, ix, y, iy)
   !  distdot = lalg_dot(n, x, y)
 
 end function distdot
+
+#endif /* HAVE_SPARSKIT */
 
 !! Local Variables:
 !! mode: f90

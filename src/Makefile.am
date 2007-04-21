@@ -69,7 +69,7 @@ noinst_HEADERS = \
 	global.h \
 	integer.F90 real.F90 complex.F90 undef.F90 \
 	mpi_debug_inc.F90 \
-	ode_solver_inc.F90 root_solver_inc.F90 sparskit_inc.F90 sparskit_driver.F90 \
+	ode_solver_inc.F90 root_solver_inc.F90 sparskit_inc.F90 \
 	fftw2.F90 fftw3.F90 \
 	mesh_init.F90 par_vec_inc.F90 derivatives_inc.F90 cf_inc.F90 mf_inc.F90 f_inc.F90 \
 	poisson1D.F90 poisson2D.F90 poisson3D.F90 mix_inc.F90 \
@@ -274,7 +274,7 @@ rotational_strength.o: global.h
 run.o: global.h
 scf.o: global.h
 scf_tol.o: global.h
-sparskit.o: global.h sparskit_inc.F90 sparskit_driver.F90
+sparskit.o: global.h sparskit_inc.F90
 specie.o: global.h
 specie_pot.o: global.h
 preconditioners.o: global.h preconditioners_inc.F90
