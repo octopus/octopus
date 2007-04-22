@@ -40,6 +40,7 @@ core_SRCS = $(basic_SRCS) \
 	specie.F90 xyz_file.F90 geometry.F90 simul_box.F90 \
 	curv_gygi.F90 curv_briggs.F90 curv_modine.F90 curvlinear.F90 \
 	fft.F90 mesh_lib.F90 par_vec.F90 mesh.F90 scalar_mesh.F90 nl_operator.F90 \
+	submesh.F90 \
 	stencil_star.F90 stencil_variational.F90 stencil_cube.F90 stencil_starplus.F90 derivatives.F90 \
 	cf.F90 mf.F90 f.F90 basins.F90 \
 	out.F90  \
@@ -282,6 +283,7 @@ spectrum.o: global.h
 spline.o: global.h
 states.o: global.h states_kpoints.F90 states_inc.F90
 static_pol.o: global.h
+submesh.o: global.h
 em_resp.o: global.h em_resp_inc.F90
 stencil_cube.o: global.h
 stencil_star.o: global.h

@@ -616,7 +616,7 @@ contains
         end do
         
       case(SPEC_PS_PSF, SPEC_PS_HGH, SPEC_PS_CPI, SPEC_PS_FHI, SPEC_PS_UPF)
-        call double_grid_apply_local(gr%dgrid, s, gr%m, x_atom, vl(:))
+        call double_grid_apply_local(gr%dgrid, s, gr%sb, gr%m, x_atom, vl(:))
 
         if(s%ps%has_long_range .and. .not. s%has_density) then 
           call dmf_put_radial_spline(gr%m, s%ps%vlr, x_atom, vl, add = .true.)
@@ -690,7 +690,7 @@ contains
       end do
 
     case(SPEC_PS_PSF, SPEC_PS_HGH, SPEC_PS_CPI, SPEC_PS_FHI, SPEC_PS_UPF)
-      call double_grid_apply_glocal(gr%dgrid, s, gr%m, x_atom, gv(:, :))
+      call double_grid_apply_glocal(gr%dgrid, s, gr%sb, gr%m, x_atom, gv(:, :))
 
       if (s%ps%has_long_range) then
         

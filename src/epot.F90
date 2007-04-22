@@ -45,6 +45,7 @@ module external_pot_m
   use specie_pot_m
   use geometry_m
   use states_m
+  use submesh_m
   use lasers_m
   use profiling_m
   use mpi_m
@@ -83,8 +84,8 @@ module external_pot_m
     integer :: type
     integer :: iatom
 
-    integer          :: n_s     ! number of points inside the sphere
-    integer, pointer :: jxyz(:) ! index of the points inside the sphere
+    type(submesh_t)  :: sphere
+
     integer          :: nik
     CMPLX,   pointer :: phases(:,:)
 
@@ -1022,7 +1023,6 @@ contains
 
     p%type = 0
     nullify(p%phases)
-    nullify(p%jxyz)
     nullify(p%hgh_p)
     nullify(p%kb_p)
     nullify(p%rkb_p)
@@ -1037,54 +1037,21 @@ contains
     type(atom_t),      intent(in)    :: a
     type(states_t),    intent(in)    :: st
 
-    integer :: i, j, k
-    FLOAT :: r, X(MAX_DIM)
+    integer :: j, k
+    FLOAT :: x(MAX_DIM)
 
     call push_sub('epot.projector_build_kb_sphere')
 
-    if (any(a%spec%ps%rc_max + m%h(1) >= sb%lsize(1:sb%periodic_dim))) then
-      message(1)='KB sphere is larger than the box size'
-      write(message(2),'(a,f12.6,a)')  '  rc_max+h = ', a%spec%ps%rc_max + m%h(1), ' [b]'
-      write(message(3),'(a,3f12.4,a)') '  lsize    = ', sb%lsize, ' [b]'
-      message(4)='Please change pseudopotential'
-      call write_fatal(4)
-    end if
-
-    ! Get the total number of points inside the sphere
-    j = 0
-    do k = 1, m%np
-      do i = 1, 3**sb%periodic_dim
-        call mesh_r(m, k, r, a=a%x + sb%shift(i,:))
-        if(r > a%spec%ps%rc_max + m%h(1)) cycle
-        j = j + 1
-        exit
-      end do
-    end do
-
-    p%n_s = j
-    ALLOCATE(p%jxyz(j), j)
-
-    ! Get the index of the points inside the sphere
-    j = 0
-    do k = 1, m%np
-      do i = 1, 3**sb%periodic_dim
-        call mesh_r(m, k, r, a=a%x + sb%shift(i,:))
-        ! we enlarge slightly the mesh (good for the interpolation scheme)
-        if(r > a%spec%ps%rc_max + m%h(1)) cycle
-        j = j + 1
-        p%jxyz(j) = k
-        exit
-      end do
-    end do
+    call submesh_init_sphere(p%sphere, sb, m, a%x, a%spec%ps%rc_max)
 
     ! and here the phases for the periodic systems
     if (sb%periodic_dim /= 0) then
       p%nik = st%d%nik
 
-      ALLOCATE(p%phases(p%n_s, p%nik), p%n_s*p%nik)
+      ALLOCATE(p%phases(p%sphere%ns, p%nik), p%sphere%ns*p%nik)
 
-      do j = 1, p%n_s
-        x(:) = m%x(p%jxyz(j), :)
+      do j = 1, p%sphere%ns
+        x(:) = m%x(p%sphere%jxyz(j), :)
         do k = 1, p%nik
           p%phases(j, k) = exp(M_zI*sum(st%d%kpoints(:, k)*x(:)))
         end do
@@ -1102,15 +1069,11 @@ contains
 
     call push_sub('epot.projector_copy_kb_sphere')
 
-    ASSERT(.not. associated(po%jxyz))
-
-    po%n_s = pi%n_s
-    ALLOCATE(po%jxyz(pi%n_s), pi%n_s)
-    po%jxyz = pi%jxyz
+    call submesh_copy(pi%sphere, po%sphere)
 
     if (associated(pi%phases)) then
       po%nik = pi%nik
-      ALLOCATE(po%phases(pi%n_s, pi%nik), pi%n_s*pi%nik)
+      ALLOCATE(po%phases(pi%sphere%ns, pi%nik), pi%sphere%ns*pi%nik)
       po%phases = pi%phases
     end if
 
@@ -1148,15 +1111,15 @@ contains
     case (M_HGH)
       ALLOCATE(p%hgh_p, 1)
       call hgh_projector_null(p%hgh_p)
-      call hgh_projector_init(p%hgh_p, p%n_s, p%jxyz, gr, a, l, lm)
+      call hgh_projector_init(p%hgh_p, p%sphere, gr, a, l, lm)
     case (M_KB)
       ALLOCATE(p%kb_p, 1)
       call kb_projector_null(p%kb_p)
-      call kb_projector_init(p%kb_p, p%n_s, p%jxyz, gr, a, l, lm)
+      call kb_projector_init(p%kb_p, p%sphere, gr, a, l, lm)
     case (M_RKB)
       ALLOCATE(p%rkb_p, 1)
       call rkb_projector_null(p%rkb_p)
-      call rkb_projector_init(p%rkb_p, p%n_s, p%jxyz, gr, a, l, lm)
+      call rkb_projector_init(p%rkb_p, p%sphere, gr, a, l, lm)
     end select
 
     call pop_sub()
@@ -1168,7 +1131,8 @@ contains
 
     call push_sub('epot.projector_end')
 
-    if (associated(p%jxyz)) deallocate(p%jxyz)
+
+    call submesh_end(p%sphere)
     if (associated(p%phases)) deallocate(p%phases)
     if (associated(p%hgh_p)) then
       call hgh_projector_end(p%hgh_p)

@@ -845,7 +845,7 @@ contains
   FLOAT pure function specie_local_cutoff_radius(s)
     type(specie_t), intent(in) :: s
     
-    specie_local_cutoff_radius = CNST(5.0)
+    specie_local_cutoff_radius = CNST(4.0)
     
   end function specie_local_cutoff_radius
 

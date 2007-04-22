@@ -40,14 +40,14 @@ subroutine X(project)(mesh, p, n_projectors, dim, psi, ppsi, reltype, periodic, 
   do ip = 1, n_projectors
 
     if(p(ip)%iatom .ne. k) then
-      n_s = p(ip)%n_s
+      n_s = p(ip)%sphere%ns
       if(allocated(lpsi))   deallocate(lpsi)
       if(allocated(plpsi))  deallocate(plpsi)
       ALLOCATE(lpsi(n_s, dim),  n_s*dim)
       ALLOCATE(plpsi(n_s, dim), n_s*dim)
 
       do idim = 1, dim
-        lpsi(1:n_s, idim)  = psi(p(ip)%jxyz(1:n_s), idim)*mesh%vol_pp(p(ip)%jxyz(1:n_s))
+        lpsi(1:n_s, idim)  = psi(p(ip)%sphere%jxyz(1:n_s), idim)*mesh%vol_pp(p(ip)%sphere%jxyz(1:n_s))
         if(periodic) lpsi(1:n_s, idim)  = lpsi(1:n_s, idim) * p(ip)%phases(1:n_s, ik)
       end do
 
@@ -79,7 +79,7 @@ subroutine X(project)(mesh, p, n_projectors, dim, psi, ppsi, reltype, periodic, 
     end select
 
     do idim = 1, dim
-      ppsi(p(ip)%jxyz(1:n_s), idim) = ppsi(p(ip)%jxyz(1:n_s), idim) + plpsi(1:n_s, idim)
+      ppsi(p(ip)%sphere%jxyz(1:n_s), idim) = ppsi(p(ip)%sphere%jxyz(1:n_s), idim) + plpsi(1:n_s, idim)
     end do
 
   end do
@@ -121,12 +121,12 @@ function X(psidprojectpsi)(mesh, p, n_projectors, dim, psi, periodic, ik) result
   do ip = 1, n_projectors
 
     if(p(ip)%iatom .ne. k) then
-      n_s = p(ip)%n_s
+      n_s = p(ip)%sphere%ns
       if(allocated(lpsi))  deallocate(lpsi)
       ALLOCATE( lpsi(n_s, dim), n_s*dim)
 
       do idim = 1, dim
-        lpsi(1:n_s, idim)  = psi(p(ip)%jxyz(1:n_s), idim)*mesh%vol_pp(p(ip)%jxyz(1:n_s))
+        lpsi(1:n_s, idim)  = psi(p(ip)%sphere%jxyz(1:n_s), idim)*mesh%vol_pp(p(ip)%sphere%jxyz(1:n_s))
         if(periodic) lpsi(1:n_s, idim)  = lpsi(1:n_s, idim) * p(ip)%phases(1:n_s, ik)
       end do
 
@@ -183,13 +183,13 @@ R_TYPE function X(psia_project_psib)(mesh, pj, dim, psia, psib, reltype, periodi
 
   call push_sub('epot_inc.psia_project_psib')
 
-  n_s = pj%n_s
+  n_s = pj%sphere%ns
 
   ALLOCATE(lpsi(n_s, dim),  n_s*dim)
   ALLOCATE(plpsi(n_s, dim), n_s*dim)
   
   do idim = 1, dim
-    lpsi(1:n_s, idim)  = psib(pj%jxyz(1:n_s), idim)*mesh%vol_pp(pj%jxyz(1:n_s))
+    lpsi(1:n_s, idim)  = psib(pj%sphere%jxyz(1:n_s), idim)*mesh%vol_pp(pj%sphere%jxyz(1:n_s))
     if(periodic) lpsi(1:n_s, idim)  = lpsi(1:n_s, idim) * pj%phases(1:n_s, ik)
   end do
   
@@ -220,7 +220,7 @@ R_TYPE function X(psia_project_psib)(mesh, pj, dim, psia, psib, reltype, periodi
   apb = M_ZERO
   do idim = 1, dim
     apb = apb + &
-         sum(R_CONJ(psia(pj%jxyz(1:n_s), idim))*plpsi(1:n_s, idim)*mesh%vol_pp(pj%jxyz(1:n_s)))
+         sum(R_CONJ(psia(pj%sphere%jxyz(1:n_s), idim))*plpsi(1:n_s, idim)*mesh%vol_pp(pj%sphere%jxyz(1:n_s)))
   end do
 
 #if defined(HAVE_MPI)

@@ -25,12 +25,15 @@ module rkb_projector_m
   use mesh_m
   use messages_m
   use simul_box_m
+  use submesh_m
   use ps_m
   use specie_m
   use specie_pot_m
   use geometry_m
   use mpi_m
   use mpi_debug_m
+
+  implicit none
 
   private
   public :: &
@@ -73,10 +76,9 @@ contains
   end subroutine rkb_projector_null
 
   ! ---------------------------------------------------------
-  subroutine rkb_projector_init(rkb_p, n_s, jxyz, gr, a, l, lm)
+  subroutine rkb_projector_init(rkb_p, sm, gr, a, l, lm)
     type(rkb_projector_t), intent(inout) :: rkb_p
-    integer,               intent(in)    :: n_s
-    integer,               intent(in)    :: jxyz(:)
+    type(submesh_t),       intent(in)    :: sm
     type(grid_t),          intent(in)    :: gr
     type(atom_t),          intent(in)    :: a
     integer,               intent(in)    :: l, lm
@@ -85,19 +87,19 @@ contains
     FLOAT :: v, dv(3), r, x(3), x_in(3)
     CMPLX :: zv
 
-    rkb_p%n_s = n_s
+    rkb_p%n_s = sm%ns
 
     !Allocate memory
-    ALLOCATE(rkb_p%bra(n_s, 2),        n_s*2)
-    ALLOCATE(rkb_p%ket(n_s, 2, 2, 2),  n_s*2*2*2)
-    ALLOCATE(rkb_p%p(n_s, 2),          n_s*2)
-    ALLOCATE(rkb_p%dp(n_s, 3, 2),      n_s*3*2)
+    ALLOCATE(rkb_p%bra(rkb_p%n_s, 2),        rkb_p%n_s*2)
+    ALLOCATE(rkb_p%ket(rkb_p%n_s, 2, 2, 2),  rkb_p%n_s*2*2*2)
+    ALLOCATE(rkb_p%p(rkb_p%n_s, 2),          rkb_p%n_s*2)
+    ALLOCATE(rkb_p%dp(rkb_p%n_s, 3, 2),      rkb_p%n_s*3*2)
 
     !Build projectors
     do j = 1, rkb_p%n_s
 
       do k = 1, 3**gr%sb%periodic_dim
-        x_in(:) = gr%m%x(jxyz(j), :) - gr%sb%shift(k,:)
+        x_in(:) = gr%m%x(sm%jxyz(j), :) - gr%sb%shift(k,:)
         x(:) = x_in(:) - a%x
         r = sqrt(sum(x*x))
         if (r > a%spec%ps%rc_max + gr%m%h(1)) cycle

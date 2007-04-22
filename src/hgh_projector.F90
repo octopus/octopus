@@ -28,9 +28,12 @@ module hgh_projector_m
   use ps_m
   use specie_m
   use specie_pot_m
+  use submesh_m
   use geometry_m
   use mpi_m
   use mpi_debug_m
+
+  implicit none
 
   private
   public :: &
@@ -72,10 +75,9 @@ contains
   end subroutine hgh_projector_null
 
   ! ---------------------------------------------------------
-  subroutine hgh_projector_init(hgh_p, n_s, jxyz, gr, a, l, lm)
+  subroutine hgh_projector_init(hgh_p, sm, gr, a, l, lm)
     type(hgh_projector_t), intent(inout) :: hgh_p
-    integer,               intent(in)    :: n_s
-    integer,               intent(in)    :: jxyz(:)
+    type(submesh_t),       intent(in)    :: sm
     type(grid_t),          intent(in)    :: gr
     type(atom_t),          intent(in)    :: a
     integer,               intent(in)    :: l, lm
@@ -85,15 +87,15 @@ contains
 
     call push_sub('hgh_projector.hgh_projector_init')
 
-    hgh_p%n_s = n_s
-    ALLOCATE(hgh_p%p (n_s, 3),    n_s*3)
-    ALLOCATE(hgh_p%dp(n_s, 3, 3), n_s*3*3)
-    ALLOCATE(hgh_p%lp(n_s, 3, 3), n_s*3*3)
+    hgh_p%n_s = sm%ns
+    ALLOCATE(hgh_p%p (hgh_p%n_s, 3),    hgh_p%n_s*3)
+    ALLOCATE(hgh_p%dp(hgh_p%n_s, 3, 3), hgh_p%n_s*3*3)
+    ALLOCATE(hgh_p%lp(hgh_p%n_s, 3, 3), hgh_p%n_s*3*3)
 
     do j = 1, hgh_p%n_s
 
       do k = 1, 3**gr%sb%periodic_dim
-        x_in(:) = gr%m%x(jxyz(j), :) - gr%sb%shift(k,:)
+        x_in(:) = gr%m%x(sm%jxyz(j), :) - gr%sb%shift(k,:)
         x(:) = x_in(:) - a%x
         r = sqrt(sum(x*x))
         if (r > a%spec%ps%rc_max + gr%m%h(1)) cycle

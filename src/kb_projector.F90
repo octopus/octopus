@@ -29,6 +29,7 @@ module kb_projector_m
   use ps_m
   use specie_m
   use specie_pot_m
+  use submesh_m
   use geometry_m
   use mpi_m
   use mpi_debug_m
@@ -70,10 +71,9 @@ contains
   end subroutine kb_projector_null
 
   ! ---------------------------------------------------------
-  subroutine kb_projector_init(kb_p, n_s, jxyz, gr, a, l, lm)
+  subroutine kb_projector_init(kb_p, sm, gr, a, l, lm)
     type(kb_projector_t), intent(inout) :: kb_p
-    integer,              intent(in)    :: n_s
-    integer,              intent(in)    :: jxyz(:)
+    type(submesh_t),      intent(in)    :: sm
     type(grid_t),         intent(in)    :: gr
     type(atom_t),         intent(in)    :: a
     integer,              intent(in)    :: l, lm
@@ -83,22 +83,22 @@ contains
 
     call push_sub('kb_projector.kb_projector_init')
 
-    kb_p%n_s = n_s
+    kb_p%n_s = sm%ns
     if (l == 0 .or. a%spec%ps%kbc == 1) then
       n_c = 1
     else ! we have j-dependent projectors
       n_c = 2
     end if
     kb_p%n_c = n_c
-    ALLOCATE(kb_p%p (n_s, n_c),    n_s*n_c)
-    ALLOCATE(kb_p%dp(n_s, 3, n_c), n_s*3*n_c)
+    ALLOCATE(kb_p%p (kb_p%n_s, n_c),    kb_p%n_s*n_c)
+    ALLOCATE(kb_p%dp(kb_p%n_s, 3, n_c), kb_p%n_s*3*n_c)
     ALLOCATE(kb_p%e (n_c),         n_c)
     kb_p%p = M_ZERO; kb_p%dp = M_ZERO; kb_p%e = M_ZERO
     
     if (gr%sb%periodic_dim == 0) then 
 
       do i = 1, n_c
-        call double_grid_apply_non_local(gr%dgrid, a%spec, gr%m, a%x, n_s, jxyz, l, lm, i, &
+        call double_grid_apply_non_local(gr%dgrid, a%spec, gr%m, a%x, sm, l, lm, i, &
              kb_p%p(:, i), kb_p%dp(:,:,i))
       end do
 
@@ -106,7 +106,7 @@ contains
 
       do j = 1, kb_p%n_s
         do k = 1, 3**gr%sb%periodic_dim
-          x_in(:) = gr%m%x(jxyz(j), :) - gr%sb%shift(k,:)
+          x_in(:) = gr%m%x(sm%jxyz(j), :) - gr%sb%shift(k,:)
           x(:) = x_in(:) - a%x
           r = sqrt(sum(x*x))
           if (r > a%spec%ps%rc_max + gr%m%h(1)) cycle
