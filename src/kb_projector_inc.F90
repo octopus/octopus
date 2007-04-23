@@ -38,6 +38,8 @@ subroutine X(kb_project)(mesh, kb_p, dim, psi, ppsi, phases)
   R_TYPE :: tmp
 #endif
 
+  call push_sub('kb_projector_inc.kb_project')
+
   n_s = kb_p%n_s
   ppsi = R_TOTYPE(M_ZERO)
 
@@ -63,6 +65,7 @@ subroutine X(kb_project)(mesh, kb_p, dim, psi, ppsi, phases)
     end do
   end do
 
+  call pop_sub()
 end subroutine X(kb_project)
 
 
@@ -85,6 +88,8 @@ function X(kb_dproject)(mesh, kb_p, dim, psi, phases) result(res)
   R_TYPE :: tmp
   R_TYPE :: tmp2(3)
 #endif
+
+  call push_sub('kb_projector_inc.kb_dproject')
 
   res = R_TOTYPE(M_ZERO)
   n_s = kb_p%n_s
@@ -121,6 +126,7 @@ function X(kb_dproject)(mesh, kb_p, dim, psi, phases) result(res)
   end if
 #endif
 
+  call pop_sub()
 end function X(kb_dproject)
 
 !! Local Variables:

@@ -1026,6 +1026,7 @@ contains
     nullify(p%hgh_p)
     nullify(p%kb_p)
     nullify(p%rkb_p)
+    call submesh_null(p%sphere)
 
   end subroutine projector_null
 
@@ -1130,7 +1131,6 @@ contains
     type(projector_t), intent(inout) :: p
 
     call push_sub('epot.projector_end')
-
 
     call submesh_end(p%sphere)
     if (associated(p%phases)) deallocate(p%phases)

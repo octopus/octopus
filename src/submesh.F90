@@ -30,6 +30,7 @@ module submesh_m
 
   public ::                 &
        submesh_t,           &
+       submesh_null,        &
        submesh_init_sphere, &
        submesh_copy,        &
        submesh_end
@@ -43,6 +44,16 @@ module submesh_m
   
 contains
   
+  subroutine submesh_null(sm)
+    type(submesh_t), intent(out) :: sm
+
+    sm%ns = 0
+    sm%np_part = 0
+    nullify(sm%jxyz)
+    nullify(sm%jxyz_inv)
+
+  end subroutine submesh_null
+
   subroutine submesh_init_sphere(this, sb, m, center, rc)
     type(submesh_t),   intent(out)  :: this
     type(simul_box_t), intent(in)   :: sb
@@ -118,8 +129,7 @@ contains
     type(submesh_t),   intent(in)   :: sm_in
     type(submesh_t),   intent(out)  :: sm_out
     
-    ASSERT(sm_out%ns == 0) 
-    ASSERT(sm_in%ns /= 0) 
+    ASSERT(sm_out%ns == 0)
 
     sm_out%ns = sm_in%ns
     sm_out%np_part  = sm_in%np_part

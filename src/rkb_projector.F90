@@ -87,6 +87,8 @@ contains
     FLOAT :: v, dv(3), r, x(3), x_in(3)
     CMPLX :: zv
 
+
+
     rkb_p%n_s = sm%ns
 
     !Allocate memory
@@ -177,6 +179,8 @@ contains
     CMPLX :: tmp
 #endif
 
+    call push_sub('rkb_projector.rkb_project')
+
     n_s = rkb_p%n_s
     ppsi = M_z0
 
@@ -205,6 +209,7 @@ contains
       end do
     end do
     
+    call pop_sub()
   end subroutine rkb_project
 
   !------------------------------------------------------------------------------
@@ -225,6 +230,8 @@ contains
     CMPLX :: tmp
     CMPLX :: tmp2(3)
 #endif
+
+    call push_sub('rkb_projector.rkb_dproject')
 
     res = M_z0
     n_s = rkb_p%n_s
@@ -261,6 +268,7 @@ contains
     end if
 #endif
 
+    call pop_sub()
   end function rkb_dproject
 
 end module rkb_projector_m
