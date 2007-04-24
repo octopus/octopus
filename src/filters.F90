@@ -187,13 +187,13 @@ contains
     
     call fft_init(n, fft_complex, fft_handler, optimize = .false.)
     
-    filt  = M_z0
     no_f  = size(filter)
     i     = 0
     first = 0
     last  = 0
 
     ALLOCATE(filt(gr%sb%dim, 0:2*steps), gr%sb%dim*(2*steps+1))
+    filt  = M_z0
 
     !do i=1, no_f
     do while(i.lt.no_f )
