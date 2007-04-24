@@ -24,6 +24,7 @@ sharedir = $(pkgdatadir)/testsuite/finite_systems_3d
 dist_share_DATA = \
 	01-carbon_atom.01-ground_state.inp \
 	01-carbon_atom.02-ground_state.inp \
+	01-carbon_atom.03-ground_state_double_grid.inp \
 	01-carbon_atom.test \
 	02-curvlinear_coordinates.01-gygi.inp \
 	02-curvlinear_coordinates.test \
