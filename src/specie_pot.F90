@@ -38,6 +38,7 @@ module specie_pot_m
   use root_solver_m
   use simul_box_m
   use specie_m
+  use submesh_m
   use poisson_m
   use units_m
   use varinfo_m
@@ -572,7 +573,8 @@ contains
     FLOAT :: a1, a2, Rb2 ! for jellium
     FLOAT :: xx(MAX_DIM), r, pot_re, pot_im, time_
     integer :: ip
-
+    type(submesh_t) :: sm
+    FLOAT, allocatable :: vls(:)
 
     time_ = M_ZERO
 
@@ -616,11 +618,21 @@ contains
         end do
         
       case(SPEC_PS_PSF, SPEC_PS_HGH, SPEC_PS_CPI, SPEC_PS_FHI, SPEC_PS_UPF)
-        call double_grid_apply_local(gr%dgrid, s, gr%sb, gr%m, x_atom, vl(:))
-
         if(s%ps%has_long_range .and. .not. s%has_density) then 
-          call dmf_put_radial_spline(gr%m, s%ps%vlr, x_atom, vl, add = .true.)
+          call dmf_put_radial_spline(gr%m, s%ps%vlr, x_atom, vl)
+        else 
+          vl(1:gr%m%np) = M_ZERO
         end if
+        
+        call submesh_init_sphere(sm, gr%sb, gr%m, x_atom, double_grid_get_rmax(gr%dgrid, s, gr%m) + maxval(gr%m%h(1:3)))
+
+        ALLOCATE(vls(1:sm%ns), sm%ns)
+
+        call double_grid_apply_local(gr%dgrid, s, gr%m, sm, x_atom, vls(:))
+        
+        vl(sm%jxyz(1:sm%ns)) = vl(sm%jxyz(1:sm%ns)) + vls(1:sm%ns)
+
+        call submesh_end(sm)
 
       case(SPEC_ALL_E)
         vl(1:gr%m%np) = M_ZERO
@@ -643,7 +655,9 @@ contains
     FLOAT :: x(MAX_DIM), r, l1, l2, pot_re, pot_im, time_
     FLOAT, allocatable :: grho(:, :), gpot(:)
     integer :: i, ip
-    
+    type(submesh_t) :: sm
+    FLOAT, allocatable :: dvls(:,:)
+
     call push_sub('specie_pot.specie_get_glocal')
 
     gv    = M_ZERO
@@ -690,7 +704,6 @@ contains
       end do
 
     case(SPEC_PS_PSF, SPEC_PS_HGH, SPEC_PS_CPI, SPEC_PS_FHI, SPEC_PS_UPF)
-      call double_grid_apply_glocal(gr%dgrid, s, gr%sb, gr%m, x_atom, gv(:, :))
 
       if (s%ps%has_long_range) then
         
@@ -707,7 +720,21 @@ contains
         deallocate(grho)
         deallocate(gpot)
 
+      else
+
+        gv(1:NP, 1:3) = M_ZERO
+
       end if
+
+      call submesh_init_sphere(sm, gr%sb, gr%m, x_atom, double_grid_get_rmax(gr%dgrid, s, gr%m) + maxval(gr%m%h(1:3)))
+      
+      ALLOCATE(dvls(1:sm%ns, 1:3), sm%ns*3)
+
+      call double_grid_apply_glocal(gr%dgrid, s, gr%m, sm, x_atom, dvls(:, :))
+      
+      gv(sm%jxyz(1:sm%ns), 1:3) = gv(sm%jxyz(1:sm%ns), 1:3) + dvls(1:sm%ns, 1:3)
+      
+      call submesh_end(sm)
 
     case(SPEC_ALL_E)
       gv(1:gr%m%np, 1:3) = M_ZERO

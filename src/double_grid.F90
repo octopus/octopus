@@ -48,6 +48,7 @@ module double_grid_m
        double_grid_apply_local,     &
        double_grid_apply_glocal,    &
        double_grid_apply_non_local, &
+       double_grid_get_rmax,        &
        double_grid_get_hmax
 
   type double_grid_t
@@ -103,16 +104,14 @@ contains
  
   end subroutine double_grid_end
   
-  subroutine double_grid_apply_local(this, s, sb, m, x_atom, vl)
+  subroutine double_grid_apply_local(this, s, m, sm, x_atom, vl)
     type(double_grid_t), intent(in)  :: this
     type(specie_t),      intent(in)  :: s
-    type(simul_box_t),   intent(in)  :: sb
     type(mesh_t),        intent(in)  :: m
+    type(submesh_t),     intent(in)  :: sm
     FLOAT,               intent(in)  :: x_atom(1:MAX_DIM)
     FLOAT,               intent(out) :: vl(:)
     
-    type(submesh_t) :: sphere
-
     FLOAT :: r, vv
     FLOAT, allocatable :: vls(:)
     integer :: is
@@ -124,30 +123,31 @@ contains
 
     if (.not. this%use_double_grid) then 
 
-      call dmf_put_radial_spline(m, s%ps%vl, x_atom, vl)
-      
+      do is = 1, sm%ns
+        r = sqrt(sum((m%x(sm%jxyz(is), 1:3) - x_atom(1:3))**2))
+        vl(is) = loct_splint(s%ps%vl, r)
+      end do
+
     else
 
-      call submesh_init_sphere(sphere, sb, m, x_atom, specie_local_cutoff_radius(s))
+      ALLOCATE(vls(0:sm%ns), sm%ns)
 
-      ALLOCATE(vls(0:sphere%ns), sphere%ns)
-
-      vls(0:sphere%ns) = M_ZERO
+      vls(0:sm%ns) = M_ZERO
 
       !for each grid point
-      do is = 1, sphere%ns
+      do is = 1, sm%ns
 
         !for each point in the fine mesh around the grid point
         do ii = -this%nn, this%nn
           do jj = -this%nn, this%nn
             do kk = -this%nn, this%nn
 
-              r = sqrt(sum((m%x(sphere%jxyz(is), 1:3) + this%h_fine(1:3) * (/ii, jj, kk/) - x_atom(1:3))**2))
+              r = sqrt(sum((m%x(sm%jxyz(is), 1:3) + this%h_fine(1:3) * (/ii, jj, kk/) - x_atom(1:3))**2))
 
               !calculate the potential
               vv = loct_splint(s%ps%vl, r)
 
-              start(1:3) = m%Lxyz(sphere%jxyz(is), 1:3) + this%interpolation_min * (/ii, jj, kk/)
+              start(1:3) = m%Lxyz(sm%jxyz(is), 1:3) + this%interpolation_min * (/ii, jj, kk/)
               
               pp = start(1)
               do ll = this%interpolation_min, this%interpolation_max
@@ -158,7 +158,7 @@ contains
                   rr = start(3)
                   do nn = this%interpolation_min, this%interpolation_max
                     
-                    is2 = sphere%jxyz_inv(m%Lxyz_inv(pp, qq, rr))
+                    is2 = sm%jxyz_inv(m%Lxyz_inv(pp, qq, rr))
                     vls(is2) = vls(is2) + co(ll)*co(mm)*co(nn)*vv
                     
                     rr = rr + kk
@@ -174,62 +174,55 @@ contains
         
       end do
 
-      vl(1:m%np) = M_ZERO
-      vl(sphere%jxyz(1:sphere%ns)) = vls(1:sphere%ns)/(this%spacing_divisor**3)
+      vl(1:sm%ns) = vls(1:sm%ns)/(this%spacing_divisor**3)
 
       deallocate(vls)
-      call submesh_end(sphere)
 
     end if
 
     call pop_sub()
   end subroutine double_grid_apply_local
 
-  subroutine double_grid_apply_glocal(this, s, sb, m, x_atom, dvl)
+  subroutine double_grid_apply_glocal(this, s, m, sm, x_atom, dvl)
     type(double_grid_t),    intent(in)    :: this
     type(specie_t),         intent(in)    :: s
-    type(simul_box_t),      intent(in)    :: sb
     type(mesh_t),           intent(in)    :: m
+    type(submesh_t),        intent(in)    :: sm
     FLOAT,                  intent(in)    :: x_atom(1:MAX_DIM)
     FLOAT,                  intent(out)   :: dvl(:, :)
     
     FLOAT :: r, r2, x(1:3), vv(1:3)
-    integer :: is, is2, ip
+    integer :: is, is2
     integer :: ii, jj, kk, ll, mm, nn
     integer :: start(1:3), pp, qq, rr
 
     FLOAT, allocatable :: dvs(:,:)
 
-    type(submesh_t) :: sphere
 
     if (.not. this%use_double_grid) then 
-      
-      do ip = 1, m%np
-        x(1:3) = m%x(ip, 1:3) - x_atom(1:3)
+
+      do is = 1, sm%ns
+        x(1:3) = m%x(sm%jxyz(is), 1:3) - x_atom(1:3)
         r = sqrt(sum(x(1:3)**2))
         if ( r > CNST(1e-5) ) then 
-          dvl(ip, 1:3) = -loct_splint(s%ps%dvl, r)*x(1:3)/r
-        else 
-          dvl(ip, 1:3) = M_ZERO
+          dvl(is, 1:3) = -loct_splint(s%ps%dvl, r)*x(1:3)/r
         end if
       end do
  
     else
 
-      call submesh_init_sphere(sphere, sb, m, x_atom, specie_local_cutoff_radius(s))
+      ALLOCATE(dvs(0:sm%ns, 1:3), 3*(sm%ns+1))
 
-      ALLOCATE(dvs(0:sphere%ns, 1:3), 3*(sphere%ns+1))
-
-      dvs(0:sphere%ns, 1:3) = M_ZERO
+      dvs(0:sm%ns, 1:3) = M_ZERO
 
       !for each grid point
-      do is = 1, sphere%ns
+      do is = 1, sm%ns
         
         do ii = -this%nn, this%nn
           do jj = -this%nn, this%nn
             do kk = -this%nn, this%nn
               
-              x(1:3) = m%x(sphere%jxyz(is), 1:3) + this%h_fine(1:3) * (/ii, jj, kk/) - x_atom(1:3)
+              x(1:3) = m%x(sm%jxyz(is), 1:3) + this%h_fine(1:3) * (/ii, jj, kk/) - x_atom(1:3)
 
               r2 = sum(x(1:3)**2)
 
@@ -237,7 +230,7 @@ contains
 
                 vv(1:3) = -loct_splint(s%ps%dvl, sqrt(r2))*x(1:3)/sqrt(r2)
 
-                start(1:3) = m%Lxyz(sphere%jxyz(is), 1:3) + this%interpolation_min * (/ii, jj, kk/)
+                start(1:3) = m%Lxyz(sm%jxyz(is), 1:3) + this%interpolation_min * (/ii, jj, kk/)
 
                 pp = start(1)
                 do ll = this%interpolation_min, this%interpolation_max
@@ -248,7 +241,7 @@ contains
                     rr = start(3)
                     do nn = this%interpolation_min, this%interpolation_max
 
-                      is2 = sphere%jxyz_inv(m%Lxyz_inv(pp, qq, rr))
+                      is2 = sm%jxyz_inv(m%Lxyz_inv(pp, qq, rr))
                       dvs(is2, 1:3) = dvs(is2, 1:3)  + co(ll)*co(mm)*co(nn)*vv(1:3)
                       
                       rr = rr + kk
@@ -266,8 +259,7 @@ contains
 
       end do !is
 
-      dvl(1:m%np, 1:3) = M_ZERO
-      dvl(sphere%jxyz(1:sphere%ns), 1:3) = dvs(1:sphere%ns, 1:3)/(this%spacing_divisor**3)
+      dvl(1:sm%ns, 1:3) = dvs(1:sm%ns, 1:3)/(this%spacing_divisor**3)
       
       deallocate(dvs)
 
@@ -372,6 +364,18 @@ contains
     end if
     
   end function double_grid_get_hmax
+
+  FLOAT pure function double_grid_get_rmax(this, s, m) result(rmax)
+    type(double_grid_t),     intent(in) :: this
+    type(specie_t), target,  intent(in) :: s
+    type(mesh_t),            intent(in) :: m
+    
+    rmax = loct_spline_cutoff_radius(s%ps%dvl, s%ps%projectors_sphere_threshold)
+
+    if(this%use_double_grid) then 
+      rmax = rmax + this%interpolation_max * maxval(m%h(1:3))
+    end if
+  end function double_grid_get_rmax
 
 end module double_grid_m
 

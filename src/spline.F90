@@ -240,7 +240,8 @@ module lib_oct_gsl_spline_m
     loct_spline_filter,   & ! [12]
     loct_spline_print,    & ! [13]
     loct_spline_der,      &
-    loct_spline_der2
+    loct_spline_der2,     &
+    loct_spline_cutoff_radius
 
   ! the basic spline datatype
   type loct_spline_t
@@ -300,7 +301,7 @@ module lib_oct_gsl_spline_m
       C_POINTER, intent(inout) :: spl, acc
     end subroutine oct_spline_fit
 
-    real(8) function oct_spline_eval(x, spl, acc)
+    real(8) pure function oct_spline_eval(x, spl, acc)
       real(8), intent(in) :: x
       C_POINTER, intent(in) :: spl, acc
     end function oct_spline_eval
@@ -410,14 +411,14 @@ contains
     deallocate(rofi8, ffit8)
   end subroutine spline_fit4
 
-  real(8) function splint8(spl, x)
+  real(8) pure function splint8(spl, x)
     type(loct_spline_t), intent(in) :: spl
     real(8), intent(in) :: x
 
     splint8 = oct_spline_eval(x, spl%spl, spl%acc)
   end function splint8
 
-  real(4) function splint4(spl, x)
+  real(4) pure function splint4(spl, x)
     type(loct_spline_t), intent(in) :: spl
     real(4), intent(in) :: x
 
@@ -807,6 +808,20 @@ contains
     end do
     deallocate(x, y)
   end subroutine loct_spline_print_2
+
+  real(8) pure function loct_spline_cutoff_radius(spl, threshold) result(r)
+    type(loct_spline_t), intent(in) :: spl
+    real(8),             intent(in) :: threshold
+
+    integer :: ii
+    real(8), parameter :: dx = CNST(0.01)
+    
+    do ii = 2000, 1, -1
+      r = dx*(ii-1)
+      if(abs(loct_splint(spl, r)) > threshold) exit
+    end do
+
+  end function loct_spline_cutoff_radius
 
 end module lib_oct_gsl_spline_m
 

@@ -329,26 +329,18 @@ contains
   ! ---------------------------------------------------------
   subroutine ps_getradius(ps)
     type(ps_t), intent(inout) :: ps
-    integer :: l, j, i
-    FLOAT   :: r, dx, y, threshold
+    integer :: l, j
 
     call push_sub('ps.ps_getradius')
 
     ps%rc_max = CNST(0.0)
-    dx = CNST(0.01)
-    threshold = ps%projectors_sphere_threshold
 
     do l = 0, ps%l_max
       do j = 1, ps%kbc
-        do i = 2000, 1, -1
-          r = dx*(i-1)
-          y = loct_splint(ps%kb(l, j), r)
-          if(abs(y) > threshold) exit
-        end do
-        ps%rc_max = max(ps%rc_max, r)
+        ps%rc_max = max(ps%rc_max, loct_spline_cutoff_radius(ps%kb(l, j), ps%projectors_sphere_threshold))
       end do
     end do
-
+    
     call pop_sub()
   end subroutine ps_getradius
 

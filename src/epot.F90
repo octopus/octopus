@@ -327,7 +327,7 @@ contains
 
     !%Variable Forces
     !%Type integer
-    !%Default potential
+    !%Default derivate_potential
     !%Section Hamiltonian
     !%Description
     !% The forces can be calculated either by derivating the ionic

@@ -49,8 +49,7 @@ module specie_m
     specie_is_ps,             &
     specie_is_local,          &
     specie_real_nl_projector, &
-    specie_nl_projector,      &
-    specie_local_cutoff_radius
+    specie_nl_projector
 
   integer, public, parameter :: &
     SPEC_USDEF  = 123,          & ! user defined function

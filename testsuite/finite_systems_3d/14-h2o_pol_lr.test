@@ -34,7 +34,7 @@ Match ; Polarizability XX w=0.1   ; head -2 linear/freq_0.1000/alpha | tail -1 ;
 Match ; Polarizability YY w=0.1   ; head -3 linear/freq_0.1000/alpha | tail -1 ; \s*12.
 Match ; Polarizability ZZ w=0.1   ; head -4 linear/freq_0.1000/alpha | tail -1 ; \s*29.
 
-Match ; Cross Section     w=0.1   ; grep -v \# linear/freq_0.1000/cross_section ; \s*0.689
+Match ; Cross Section     w=0.1   ; grep -v \# linear/freq_0.1000/cross_section ; \s*0.690
 
 Match ; Hyperpolarizability w=0.0 ; grep //\ y  linear/freq_0.0000/beta ; \s*0.233
 Match ; Hyperpolarizability w=0.1 ; grep //\ y linear/freq_0.1000/beta ; \s*0.867
