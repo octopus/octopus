@@ -167,7 +167,8 @@ contains
     type(states_t), intent(inout) :: st
     call push_sub('states.states_null')
 
-    nullify(st%dpsi, st%zpsi, st%rho, st%j, st%rho_core, st%eigenval, st%occ, st%mag, st%momentum, st%node)
+    nullify(st%dpsi, st%zpsi, st%rho, st%j, st%rho_core, st%eigenval)
+    nullify(st%occ, st%mag, st%momentum, st%node, st%user_def_states)
 
     nullify(st%d)
     ALLOCATE(st%d, 1)
@@ -621,7 +622,7 @@ contains
     type(states_t), intent(inout) :: stout
     type(states_t), intent(in)  :: stin
 
-    integer :: i
+    integer :: i, j, k, l
 
     call states_null(stout)
 
@@ -648,6 +649,14 @@ contains
       i = size(stin%zpsi, 1)*stin%d%dim*(stin%st_end-stin%st_start+1)*stin%d%nik
       ALLOCATE(stout%zpsi(size(stin%zpsi, 1), stin%d%dim, stin%st_start:stin%st_end, stin%d%nik), i)
       stout%zpsi = stin%zpsi
+    end if
+    if(associated(stin%user_def_states)) then
+      j = size(stin%user_def_states, 1)
+      k = size(stin%user_def_states, 2)
+      l = size(stin%user_def_states, 3)
+      i = j*k*l
+      ALLOCATE(stout%user_def_states(j, k, l), i)
+      stout%user_def_states = stin%user_def_states
     end if
     if(associated(stin%rho)) then
       i = size(stin%rho, 1)*size(stin%rho, 2)

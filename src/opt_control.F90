@@ -22,6 +22,7 @@
 module opt_control_m
   use excited_states_m
   use datasets_m
+  use varinfo_m
   use global_m
   use filter_m
   use grid_m
@@ -80,6 +81,25 @@ module opt_control_m
     oct_ftype_gauss = 1,           &
     oct_ftype_step  = 2
 
+  type oct_t
+    FLOAT :: eps
+    integer :: ctr_iter_max
+    FLOAT :: penalty
+    FLOAT, pointer :: a_penalty(:)
+    FLOAT :: targetfluence
+    logical :: mode_fixed_fluence
+    FLOAT, pointer :: tdpenalty(:, :)
+    integer :: targetmode
+    integer :: filtermode
+
+    CMPLX              :: laser_pol(MAX_DIM)
+    integer :: dof
+
+    integer :: algorithm_type
+
+    logical :: oct_double_check
+  end type oct_t
+
 
   type td_target_t
     integer :: type       ! local or state 
@@ -92,6 +112,7 @@ module opt_control_m
     
     FLOAT, pointer :: spatial(:)   ! x,y,z dependence
     CMPLX, pointer :: tdshape(:,:) ! evaluate user defined functions
+
   end type td_target_t
 
 contains
@@ -103,6 +124,7 @@ contains
     type(system_t), target, intent(inout) :: sys
     type(hamiltonian_t),    intent(inout) :: h
 
+    type(oct_t)                :: oct
     type(td_t)                 :: td
     type(grid_t),      pointer :: gr   ! some shortcuts
     type(states_t),    pointer :: st
@@ -112,15 +134,14 @@ contains
     type(td_target_t), pointer :: td_tg(:)
     type(td_write_t)           :: write_handler
 
-    CMPLX              :: laser_pol(MAX_DIM)
-    integer            :: dof, No_electrons
+    integer            :: No_electrons
     FLOAT, pointer     :: v_old_i(:,:,:), v_old_f(:,:,:)
     FLOAT, pointer     :: laser_tmp(:,:), laser(:,:)
-    FLOAT, allocatable :: tdpenalty(:,:), a_penalty(:), dens_tmp(:,:)
-    integer            :: i, ctr_iter, ctr_iter_max
-    integer            :: targetmode, filtermode, iunit
-    FLOAT              :: eps, penalty, overlap, functional, old_functional
-    FLOAT              :: fluence, u, t, targetfluence
+    FLOAT, allocatable :: dens_tmp(:,:)
+    integer            :: i, ctr_iter
+    integer            :: iunit
+    FLOAT              :: overlap, functional, old_functional
+    FLOAT              :: fluence, u, t
     FLOAT, allocatable :: convergence(:,:), field(:), td_fitness(:)
     CMPLX, allocatable :: tdtarget(:)
     
@@ -130,11 +151,10 @@ contains
 
     character(len=80)  :: filename
 
-    integer            :: istype, algorithm_type, totype
+    integer            :: istype, totype
     
     logical            :: dump_intermediate, mode_fixed_fluence
     logical            :: mode_tdpenalty, td_tg_state 
-    logical            :: oct_double_check
 
 
     call push_sub('opt_control.opt_control_run')
@@ -152,9 +172,6 @@ contains
     dump_intermediate  = .TRUE.  ! dump laser fields during iteration
                                  ! this might create a lot of data
 
-    mode_fixed_fluence = .FALSE. ! if OCTFixFluenceTo Variable is found
-                                 ! this will be set to true
-
     mode_tdpenalty     = .FALSE. ! if TD penalty is used
 
     td_tg_state        = .FALSE. ! check if state target exist
@@ -170,21 +187,21 @@ contains
     call init_()
 
     ! mode switcher
-    select case(algorithm_type)
+    select case(oct%algorithm_type)
       
     case(oct_algorithm_zbr98)    
       ! (0)  rabitz zbr98 type algorithm (states only)    
-      call scheme_ZBR98(algorithm_type) 
+      call scheme_ZBR98(oct%algorithm_type) 
 
     case(oct_algorithm_zr98)     
       ! (1)  rabitz zr98  type algorithm 
-      call scheme_ZR98(algorithm_type)  
+      call scheme_ZR98(oct%algorithm_type)  
       ! TODO: o generalize elements
       !       o time-dependent targets
       
     case(oct_algorithm_wg05)  
       ! (2) Werschnik, Gross Type: allows fixed fluence and filtering
-      call scheme_WG05(algorithm_type)  
+      call scheme_WG05(oct%algorithm_type)  
       ! (11) td targets rabitz type
       ! (12) td targets wg     type (with filter)
       
@@ -202,7 +219,7 @@ contains
     call output()
 
     ! do final test run: propagate initial state with optimal field
-    if(oct_double_check) then
+    if(oct%oct_double_check) then
       message(1) = "Info: Optimization finished...checking the field"
       call write_info(1)
       
@@ -210,7 +227,7 @@ contains
       
       call propagate_forward(psi)
 
-      if(targetmode==oct_targetmode_td) then
+      if(oct%targetmode==oct_targetmode_td) then
         overlap = SUM(td_fitness) * abs(td%dt)
         write(message(1), '(a,f14.8)') " => overlap:", overlap
         call write_info(1)
@@ -226,7 +243,7 @@ contains
     nullify(h%ep%lasers(1)%numerical)
     deallocate(laser)
     deallocate(laser_tmp)
-    
+
     deallocate(convergence)
 !! PROBLEMS WITH DEALLOCATION
     !write(6,*) 'DEBUG5'
@@ -345,28 +362,28 @@ contains
         call calc_fluence(laser_tmp, fluence)      
         
         ! filter stuff / alpha stuff
-        if (filtermode.gt.0) & 
-          call apply_filter(gr, td%max_iter, filtermode, f, laser_tmp)
+        if (oct%filtermode.gt.0) & 
+          call apply_filter(gr, td%max_iter, oct%filtermode, f, laser_tmp)
 
         ! recalc field
-        if (mode_fixed_fluence) then
+        if (oct%mode_fixed_fluence) then
           call calc_fluence(laser_tmp, fluence)      
 
           if(in_debug_mode) write (6,*) 'actual fluence', fluence
 
-          a_penalty(ctr_iter + 1) = &
-            sqrt(fluence * a_penalty(ctr_iter)**2 / targetfluence )
+          oct%a_penalty(ctr_iter + 1) = &
+            sqrt(fluence * oct%a_penalty(ctr_iter)**2 / oct%targetfluence )
 
           if(in_debug_mode) then
-            write (6,*) 'actual penalty', a_penalty(ctr_iter)
-            write (6,*) 'next penalty', a_penalty(ctr_iter + 1)
+            write (6,*) 'actual penalty', oct%a_penalty(ctr_iter)
+            write (6,*) 'next penalty', oct%a_penalty(ctr_iter + 1)
           end if
 
-          tdpenalty = a_penalty(ctr_iter + 1)
-          laser_tmp = laser_tmp * a_penalty(ctr_iter) / a_penalty(ctr_iter + 1)
+          oct%tdpenalty = oct%a_penalty(ctr_iter + 1)
+          laser_tmp = laser_tmp * oct%a_penalty(ctr_iter) / oct%a_penalty(ctr_iter + 1)
           call calc_fluence(laser_tmp, fluence)
 
-          if(in_debug_mode) write (6,*) 'renormalized', fluence, targetfluence
+          if(in_debug_mode) write (6,*) 'renormalized', fluence, oct%targetfluence
 
         end if
 
@@ -428,7 +445,7 @@ contains
         write(filename,'(a,i3.3)') 'PsiT.', ctr_iter
         call zoutput_function(sys%outp%how,'opt-control',filename,gr%m,gr%sb,psi%zpsi(:,1,1,1),M_ONE, ierr) 
         
-        if(in_debug_mode) write(6,*) 'penalty ',tdpenalty(:,2)
+        if(in_debug_mode) write(6,*) 'penalty ',oct%tdpenalty(:,2)
 
         ! iteration managament ! make own subroutine
         call iteration_manager(stoploop)
@@ -481,7 +498,7 @@ contains
       do i = 1, td%max_iter
   
         call prop_iter_fwd(i,method)
-        if(targetmode==oct_targetmode_td) &
+        if(oct%targetmode==oct_targetmode_td) &
           call calc_tdfitness(td_tg, tdtarget, td_fitness(i))     
         ! if td_target
         ! call loct_progress_bar(i-1, td%max_iter-1)
@@ -554,12 +571,12 @@ contains
       
       ! TODO:: check for STOP FILE AND delete it
 
-      if((ctr_iter .eq. ctr_iter_max).or.(eps>M_ZERO.and.abs(functional-old_functional) < eps)) then
-        if((ctr_iter .eq. ctr_iter_max)) then
+      if((ctr_iter .eq. oct%ctr_iter_max).or.(oct%eps>M_ZERO.and.abs(functional-old_functional) < oct%eps)) then
+        if((ctr_iter .eq. oct%ctr_iter_max)) then
           message(1) = "Info: Maximum number of iterations reached"
           call write_info(1)
         endif
-        if(eps > M_ZERO .and. abs(functional-old_functional) < eps ) then
+        if(oct%eps > M_ZERO .and. abs(functional-old_functional) < oct%eps ) then
           message(1) = "Info: Convergence threshold reached"
           call write_info(1)
         endif
@@ -570,10 +587,10 @@ contains
       write(message(1), '(a,i3)') 'Info: Optimal control iteration #', ctr_iter
       call write_info(1)
 
-      if(mode_fixed_fluence) then
+      if(oct%mode_fixed_fluence) then
         write(message(1), '(6x,a,f10.5,a,f10.5,a,f10.5,a,f10.5)') &
           " => J1:", overlap, "   J: " , functional,  "  I: " , fluence, &
-          " penalty: ", a_penalty(ctr_iter)
+          " penalty: ", oct%a_penalty(ctr_iter)
       else
         write(message(1), '(6x,a,f14.8,a,f20.8,a,f14.8)') &
           " => J1:", overlap, "   J: " , functional,  "  I: " , fluence
@@ -659,7 +676,7 @@ contains
     
       call push_sub('opt_control.target_calc')
 
-      if(targetmode==oct_targetmode_static) then
+      if(oct%targetmode==oct_targetmode_static) then
         if(totype.eq.oct_tg_local) then ! only zr98 and wg05
           do ik = 1, psi_i%d%nik
             do p  = psi_i%st_start, psi_i%st_end
@@ -723,7 +740,7 @@ contains
      ! psi(0) --> psi(T) 
      
      ! new electric field
-     if(targetmode==oct_targetmode_td) then
+     if(oct%targetmode==oct_targetmode_td) then
        ! psi(0) --> psi(T) with old field (for chi)
        call calc_inh(psi2,td_tg,iter,&
          td%dt,chi)
@@ -774,7 +791,7 @@ contains
      ! psi(T) --> psi(0) [laser]
      
      ! calc inh first, then update field
-     if(targetmode==oct_targetmode_td) &
+     if(oct%targetmode==oct_targetmode_td) &
        call calc_inh(psi,td_tg,iter, &
        td%dt,chi)
      ! new electric field
@@ -932,7 +949,7 @@ contains
           do dim = 1, psi_i%d%dim
             do pol=1, NDIM
               d2(pol) = d2(pol) + zmf_integrate(gr%m,&
-                conjg(chi%zpsi(:, dim, p, ik))*laser_pol(pol)&
+                conjg(chi%zpsi(:, dim, p, ik))*oct%laser_pol(pol)&
                 *gr%m%x(:,pol)*psi%zpsi(:, dim, p, ik))
             enddo
             if(method.eq.oct_algorithm_zbr98) then
@@ -951,7 +968,7 @@ contains
       !(laser_pol(1:NDIM)*(d1*d2(1:NDIM)+conjg(d1)*conjg(d2(1:NDIM)))))
       !endif
       !if((NDIM-dof).eq.0) then
-      l(1:NDIM, 2*iter) = aimag(d1*d2(1:NDIM))/tdpenalty(1:NDIM,2*iter)
+      l(1:NDIM, 2*iter) = aimag(d1*d2(1:NDIM))/oct%tdpenalty(1:NDIM,2*iter)
       !endif
       ! extrapolate to t+-dt/2
       i = int(sign(M_ONE, td%dt))
@@ -1042,7 +1059,7 @@ contains
         call td_rti_dt(sys%ks, h, gr, psi_n, td%tr, abs(i*td%dt), abs(td%dt))
 
         ! if td_target
-        if(targetmode==oct_targetmode_td) &
+        if(oct%targetmode==oct_targetmode_td) &
           call calc_tdfitness(td_tg, tdtarget, td_fitness(i))
         
         ! update
@@ -1052,7 +1069,7 @@ contains
         call hamiltonian_energy(h, sys%gr, sys%geo, psi_n, -1)
 
         ! only write in final run
-        if(oct_double_check) then
+        if(oct%oct_double_check) then
 
           write(message(1), '(i7,1x,2f14.6,f14.3, i10)') i, &
             i*td%dt       / units_out%time%factor, &
@@ -1100,8 +1117,8 @@ contains
       call push_sub('opt_control.calc_j')
 
       call calc_fluence(laser,fluence)
-      J2 = SUM(tdpenalty * laser**2) * abs(td%dt)/M_TWO
-      if(targetmode==oct_targetmode_td) then
+      J2 = SUM(oct%tdpenalty * laser**2) * abs(td%dt)/M_TWO
+      if(oct%targetmode==oct_targetmode_td) then
          ! 1/T * int(<Psi| O | Psi>)
          overlap = SUM(td_fitness) / real(td%max_iter, REAL_PRECISION) 
       else
@@ -1114,7 +1131,7 @@ contains
       convergence(1,ctr_iter) = functional
       convergence(2,ctr_iter) = overlap
       convergence(3,ctr_iter) = fluence
-      convergence(4,ctr_iter) = tdpenalty(1,1)
+      convergence(4,ctr_iter) = oct%tdpenalty(1,1)
 
       call pop_sub()
     end subroutine calc_J
@@ -1223,7 +1240,7 @@ contains
       ! header
       write(iunit, '(4(a))') '# iteration ','functional ','overlap ','penalty '
       ! data
-      do loop=1,ctr_iter_max
+      do loop=1,oct%ctr_iter_max
          write(iunit, '(i6,3f18.8,es20.10)') loop, convergence(1,loop), convergence(2,loop), &
            convergence(3,loop),convergence(4,loop)
       end do
@@ -1691,7 +1708,7 @@ contains
       !% In this example we define a narrow Gaussian which circles with radius R0 around the center. 
       !% 
       !%End
-      if((targetmode==oct_targetmode_td) &
+      if((oct%targetmode==oct_targetmode_td) &
         .AND.(loct_parse_block(check_inp('OCTTdTarget'),blk)==0)) then
         
         no_tds = loct_parse_block_n(blk)
@@ -1754,266 +1771,6 @@ contains
     end subroutine build_tdshape
     
     
-    !------------------------------------------------------
-    subroutine read_OCTparameters()
-      !read the parameters for the optimal control run     
-      integer :: kk
-
-      call push_sub('opt_control.read_OCTparameters')  
-
-      !%Variable OCTEps
-      !%Type float
-      !%Section Optimal Control
-      !%Description
-      !% Define the convergence threshold.
-      !% For the monotonically convergent scheme: If the increase of the 
-      !% target functional is less then OCTEps the iteration is stopped.
-      !% Example
-      !% OCTEps = 0.00001
-      !%End
-      call loct_parse_float(check_inp('OCTEps'), CNST(1e-3), eps)
-
-      !%Variable OCTMaxIter
-      !%Type integer
-      !%Section Optimal Control
-      !%Description
-      !% OCTMaxIter defines the maximum number of iterations.
-      !% Typical values range from 10-100.
-      !%End
-      call loct_parse_int(check_inp('OCTMaxIter'), 10, ctr_iter_max)
-      
-      if(ctr_iter_max < 0.and.eps<M_ZERO) then
-        message(1) = "OptControlMaxIter and OptControlEps can not be both <0"
-        call write_fatal(1)
-      end if
-
-      if(ctr_iter_max < 0) ctr_iter_max = huge(ctr_iter_max)
-   
-      !%Variable OCTPenalty
-      !%Type float
-      !%Section Optimal Control
-      !%Description
-      !% The variable specificies the value of the penalty factor for the 
-      !% integrated field strength (fluence). Large value - small fluence. The value is 
-      !% always positive. A transient shape can be specified using the block OCTLaserEnvelope.
-      !% In this case OCTPenalty is multiplied with time-dependent function. 
-      !% The value depends on the coupling between the states. A good start might be a 
-      !% value from 0.1 (strong fields) to 10 (weak fields). 
-      !%End
-      ALLOCATE(a_penalty(0:ctr_iter_max+1), ctr_iter_max+2)
-      call loct_parse_float(check_inp('OCTPenalty'), M_ONE, penalty)
-      ! penalty array for fixed fluence run 
-      ! the array is only interesting for the development of new algorithms
-      a_penalty = penalty
-
-      ! read in laser polarization and degress of freedom
-      call def_laserpol(laser_pol, dof)
-
-      !%Variable OCTFixFluenceTo
-      !%Type float
-      !%Section Optimal Control
-      !%Description
-      !% The algorithm tries to obtain the specified fluence for the laser field. 
-      !% This works only in conjunction with the WG05 scheme.
-      !%End
-      call loct_parse_float(check_inp('OCTFixFluenceTo'), -M_ONE, targetfluence)
-      if (targetfluence.ne.-M_ONE) &
-           mode_fixed_fluence = .TRUE.
-      
-      ! Time-dependent penalty factor
-      ! If OCTLaserEnvelope is found: td penalty is switched on
-      ALLOCATE(tdpenalty(NDIM,0:2*td%max_iter),NDIM*(2*td%max_iter+1))
-      tdpenalty = M_ONE
-      call def_tdpenalty(gr, tdpenalty, td%max_iter, td%dt, mode_tdpenalty)
-      tdpenalty = tdpenalty * penalty
-
-      if(in_debug_mode) then
-        write(filename,'(a)') 'opt-control/td_penalty'
-        call write_field(filename, tdpenalty, td%max_iter, td%dt)
-      end if
-
-      !%Variable OCTTargetMode
-      !%Type string
-      !%Section Optimal Control
-      !%Description
-      !% Option *oct_targetmode_static*  0
-      !% Static or time-independent targets
-      !% Option *oct_targetmode_td*      1
-      !% Time-dependent targets, specify block OCTTdTarget
-      !%End
-      call loct_parse_int(check_inp('OCTTargetMode'),oct_targetmode_static,targetmode)
-      
-      if((targetmode.lt.0).AND. (targetmode.gt.1)) then
-         message(1) = 'Unknown OCTTargetMode. Change to 0 (static) or 1 (td targets).'
-         call write_fatal(1)
-      end if
-       
-      !%Variable OCTFilterMode
-      !%Type integer
-      !%Section Optimal Control
-      !%Description     
-      !%End
-      call loct_parse_int(check_inp('OCTFilterMode'),0,filtermode)
-
-      if(filtermode.gt.0) then
-        call def_filter(gr, td%max_iter, td%dt, filtermode, f)
-        !! DEBUG
-        !write(6,*) 'filter defined', size(f)
-        do kk=1, size(f)
-          write(filename,'(a,i2.2)') 'opt-control/filter', kk
-          if(f(kk)%domain.eq.1) then
-            call write_fieldw(filename, real(f(kk)%numerical(:,:), REAL_PRECISION))
-          else
-            !write(6,*) f(kk)%numerical(:,0)
-            iunit = io_open(filename, action='write')
-            do i = 0, 2*td%max_iter
-              write(iunit, '(4ES30.16E4)') i*td%dt*M_HALF, f(kk)%numerical(:,i)
-            end do
-            call io_close(iunit)
-            !call write_field(filename, real(f(kk)%numerical(:,:), REAL_PRECISION), td%max_iter, td%dt)
-          end if
-          !!
-        end do
-      end if
-      
-      !%Variable OCTScheme
-      !%Type integer
-      !%Section Optimal Control
-      !%Default oct_algorithm_zbr98
-      !%Description
-      !% In order to find the optimal laser field for a given task, e.g., the excitation from an
-      !% initial state to a predefined final state at the final time, optimal control theory can 
-      !% be applied to quantum mechanics. The mathematical derivation leads a set of equations 
-      !% which require the propagation of the wavefunction and a lagrange multiplier (sometimes
-      !% comparable to a wavefunction). Several schemes have been sought to solve these control 
-      !% equations which boils down to forward and backward propagations. However, the order in
-      !% which these equations are solved makes a huge difference. Some schemes can be proven 
-      !% to increase the value of the target functional (merit function) in each step. (In 
-      !% practice this can be violated if the accuracy of the numerical time propagation is
-      !% small. Most likely in 3D.)
-      !%Option oct_algorithm_zbr98 1 
-      !% Backward-Forward-Backward scheme described in JCP 108, 1953 (1998).
-      !% Only possible if targetoperator is a projection operator
-      !% Provides the fastest and most stable convergence.
-      !% Monotonic convergence.
-      !%Option oct_algorithm_zr98  2
-      !% Forward-Backward-Forward scheme described in JCP 109,385 (1998).
-      !% Works for projection and local target operators
-      !% Convergence is stable but slower than ZBR98. 
-      !% Note that local operators show an extremely slow convergence.
-      !% Monotonic convergence.
-      !%Option oct_algorithm_wg05  3
-      !% Forward-Backward scheme described in J. Opt. B. 7 300 (2005).
-      !% Works for all kind target operators and 
-      !% can be used with all kind of filters and allows a fixed fluence.
-      !% The price is a rather instable convergence. 
-      !% If the restrictions set by the filter and fluence are reasonable, a good overlap can be 
-      !% expected with 20 iterations.
-      !% No monotonic convergence.
-      !%Option oct_algorithm_krotov 4
-      !% Yet to be implemented and tested, some people swear on it.
-      !% Described in Zhao & Rice: Optical Control of Molecules. (Appendix A)
-      !%Option oct_algorithm_mt03 5
-      !% Yet to be implemented and tested. Basically an improved and generalized scheme. 
-      !% Comparable to ZBR98/ZR98. (see JCP 118,8191 (2003))
-      !%End
-      call loct_parse_int(check_inp('OCTScheme'), oct_algorithm_zr98, algorithm_type)
-
-      !%Variable OCTDoubleCheck
-      !%Type logical
-      !%Section Optimal Control
-      !%Description 
-      !% Run a normal propagation after the optimization using the optimized field. The default is true.
-      !%End
-      call loct_parse_logical(check_inp('OCTDoubleCheck'), .TRUE., oct_double_check)
-      
-      
-      call pop_sub()
-    end subroutine read_OCTparameters
-
-
-    ! ------------------------------------------------------
-    subroutine def_laserpol(laserpol, dof)
-      ! read the parameters for the laser polarization
-      CMPLX,   intent(out) :: laserpol(MAX_DIM)
-      integer, intent(out) :: dof
-    
-      integer   :: no_blk, no_c
-      C_POINTER :: blk
-
-      call push_sub('opt_control.def_laserpol') 
-
-      !%Variable OCTPolarization
-      !%Type block
-      !%Section Optimal Control
-      !%Description
-      !% Define how many degress of freedom the laser has and how it is polarized.
-      !% The different examples below will explain this.
-      !% First of all, the syntax of each line is:
-      !%
-      !% <tt>%OCTPolarization
-      !% <br>&nbsp;&nbsp;dof | pol1 | pol2 | pol3 
-      !% <br>%</tt>
-      !% The variable defines the degress of freedom which is either 1 or 2.
-      !% pol1, pol2, pol3 define the polarization.
-      !%
-      !% Some examples:
-      !%
-      !% <tt>%OCTPolarization
-      !% <br>&nbsp;&nbsp;1 | 1 | 0 | 0 
-      !% <br>%</tt> 
-      !% Here we try to optimize the x-polarized laser.
-      !%
-      !% <tt>%OCTPolarization
-      !% <br>&nbsp;&nbsp;1 | 1 | 1 | 0 
-      !% <br>%</tt> 
-      !% The polarization is linear and lies in the x-y plane, only one laser field is optimized.
-      !%
-      !% <tt>%OCTPolarization
-      !% <br>&nbsp;&nbsp;2 | 1 | 1 | 0 
-      !% <br>%</tt> 
-      !% The polarization lies in the x-y plane, but this time two components of the laser
-      !% field are optimized. This may lead to linear, circular, or ellipitically polarized 
-      !% fields, dependening on the problem.
-      !%
-      !% <tt>%OCTPolarization
-      !% <br>&nbsp;&nbsp;1 | 1 | i | 0 
-      !% <br>%</tt> 
-      !% If we know that the answer must be a circular polarized field we can also fix it and optimize only one component.  
-      !%End
-      if(loct_parse_block(check_inp('OCTPolarization'),blk)==0) then
-        no_blk = loct_parse_block_n(blk)
-        ! TODO: for each orbital            
-        do i=1, no_blk
-          no_c = loct_parse_block_cols(blk, i-1)
-          call loct_parse_block_int(blk,i-1, 0, dof)
-          if((dof.gt.3).OR.(dof.lt.1) ) then
-            message(1) = "OCTPolarization: Choose degrees of freedom between 1 and 3."
-            call write_fatal(1)
-            
-          end if
-          call loct_parse_block_cmplx(blk,i-1, 1, laserpol(1))
-          call loct_parse_block_cmplx(blk,i-1, 2, laserpol(2))
-          call loct_parse_block_cmplx(blk,i-1, 3, laserpol(3))
-          
-        end do
-        call loct_parse_block_end(blk)
-      else
-        message(1) = 'Input: No Polarization defined and degrees of freedom defined'
-        message(2) = 'Input: Using default: x-polarized.'
-        laserpol(1) = m_z1
-        laserpol(2) = m_z0
-        laserpol(3) = m_z0
-        dof  = 1
-        call write_info(2)
-      end if
-
-      h%ep%lasers(1)%pol(:) = laserpol(:)
-
-      call pop_sub()
-    end subroutine def_laserpol
-
-
     !---------------------------------------------------------------
     subroutine init_tdtarget()
       integer             :: jj
@@ -2100,52 +1857,26 @@ contains
       ! call write_info(2)
       v_old_i => td%tr%v_old
 
-      ! now we initialize chi. This will repeat some stuff
-      call states_init(psi, gr, sys%geo)
-      call states_init(psi2, gr, sys%geo)
-      call states_init(chi, gr, sys%geo)
-      call states_init(initial_st, gr, sys%geo)
-      call states_init(target_st, gr, sys%geo)
-      
-      psi%st_start        = psi_i%st_start
-      psi%st_end          = psi_i%st_end
-      psi2%st_start       = psi_i%st_start
-      psi2%st_end         = psi_i%st_end
-      initial_st%st_start = psi_i%st_start
-      initial_st%st_end   = psi_i%st_end
-      target_st%st_start  = psi_i%st_start
-      target_st%st_end    = psi_i%st_end
-      chi%st_start        = psi_i%st_start
-      chi%st_end          = psi_i%st_end
-
-      call states_allocate_wfns(psi,        gr%m, M_CMPLX)
-      call states_allocate_wfns(psi2,       gr%m, M_CMPLX)
-      call states_allocate_wfns(chi,        gr%m, M_CMPLX)
-      call states_allocate_wfns(initial_st, gr%m, M_CMPLX)
-      call states_allocate_wfns(target_st,  gr%m, M_CMPLX)
-     
-      call states_densities_init(psi,        gr, sys%geo)
-      call states_densities_init(psi2,       gr, sys%geo)
-      call states_densities_init(chi,        gr, sys%geo)
-      call states_densities_init(initial_st, gr, sys%geo)
-      call states_densities_init(target_st,  gr, sys%geo)
-
-      ALLOCATE(v_old_f(NP, chi%d%nspin, 0:3), NP_PART*chi%d%nspin*(3+1))
-      v_old_f = M_ZERO
-
-      ! initial laser field 
+      psi = st
+      psi2 = st
+      chi = st
+      initial_st = st
+      target_st = st
 
       ! allocate memory
+      ALLOCATE(v_old_f(NP, chi%d%nspin, 0:3), NP_PART*chi%d%nspin*(3+1))
+      v_old_f = M_ZERO
       ALLOCATE(laser(NDIM, 0:2*td%max_iter), NDIM*(2*td%max_iter+1))
+      laser = M_ZERO
       ALLOCATE(laser_tmp(NDIM, 0:2*td%max_iter), NDIM*(2*td%max_iter+1))
+      laser_tmp = M_ZERO
       ALLOCATE(field(1:NDIM), NDIM)
+      field = M_ZERO
 
       ! use same laser as time-dependent run mode
       call laser_init(h%ep%no_lasers,h%ep%lasers,gr%m)
 
-      ! build one numerical laser
-      laser_tmp       = M_ZERO  
-      laser           = M_ZERO
+      !
       bestJ           = M_ZERO
       bestJ1          = M_ZERO
       bestJ_ctr_iter  = M_ZERO
@@ -2179,10 +1910,45 @@ contains
       ! initial laser definition end
 
       ! call after laser is setup ! do not change order
-      call read_OCTparameters()
+      call oct_read_inp(oct)
+      
+      ! This should be temporal
+
+      h%ep%lasers(1)%pol(:) = oct%laser_pol(:)
+
+      ALLOCATE(oct%tdpenalty(NDIM,0:2*td%max_iter),NDIM*(2*td%max_iter+1))
+      oct%tdpenalty = M_ONE
+      call def_tdpenalty(gr, oct%tdpenalty, td%max_iter, td%dt, mode_tdpenalty)
+      oct%tdpenalty = oct%tdpenalty * oct%penalty
+
+      if(in_debug_mode) then
+        write(filename,'(a)') 'opt-control/td_penalty'
+        call write_field(filename, oct%tdpenalty, td%max_iter, td%dt)
+      end if
+
+      if(oct%filtermode.gt.0) then
+        call def_filter(gr, td%max_iter, td%dt, oct%filtermode, f)
+        !! DEBUG
+        !write(6,*) 'filter defined', size(f)
+        do kk=1, size(f)
+          write(filename,'(a,i2.2)') 'opt-control/filter', kk
+          if(f(kk)%domain.eq.1) then
+            call write_fieldw(filename, real(f(kk)%numerical(:,:), REAL_PRECISION))
+          else
+            !write(6,*) f(kk)%numerical(:,0)
+            iunit = io_open(filename, action='write')
+            do i = 0, 2*td%max_iter
+              write(iunit, '(4ES30.16E4)') i*td%dt*M_HALF, f(kk)%numerical(:,i)
+            end do
+            call io_close(iunit)
+            !call write_field(filename, real(f(kk)%numerical(:,:), REAL_PRECISION), td%max_iter, td%dt)
+          end if
+          !!
+        end do
+      end if
 
       ! global fitness
-      ALLOCATE(convergence(4,0:ctr_iter_max),(ctr_iter_max+1)*4)
+      ALLOCATE(convergence(4,0:oct%ctr_iter_max),(oct%ctr_iter_max+1)*4)
 
       ! initial state
       ! target operator
@@ -2209,43 +1975,43 @@ contains
       ! be careful with the order !!
       
       ! FixedFluence and Filter only work with WG05
-      if((mode_fixed_fluence).and.(algorithm_type.ne.oct_algorithm_wg05)) then
+      if((oct%mode_fixed_fluence).and.(oct%algorithm_type.ne.oct_algorithm_wg05)) then
         write(message(1),'(a)') "Cannot optimize to a given fluence with the chosen algorithm."
         write(message(2),'(a)') "Switching to scheme WG05."         
         call write_info(2)
-        algorithm_type = oct_algorithm_wg05
+        oct%algorithm_type = oct_algorithm_wg05
       end if
       
       ! Filters work only with WG05
-      if((filtermode.gt.0).and.(algorithm_type.ne.oct_algorithm_wg05)) then
+      if((oct%filtermode.gt.0).and.(oct%algorithm_type.ne.oct_algorithm_wg05)) then
         write(message(1),'(a)') "Warning: Cannot use filters with the chosen algorithm."
         write(message(2),'(a)') "Warning: Switching to scheme WG05."
         call write_info(2)
-        algorithm_type = oct_algorithm_wg05
+        oct%algorithm_type = oct_algorithm_wg05
       end if
       
       ! tdpenalty and fixed fluence do not work !
-      if((mode_tdpenalty).AND.(mode_fixed_fluence)) then
+      if((mode_tdpenalty).AND.(oct%mode_fixed_fluence)) then
         write(message(1),'(a)') "Warning: Cannot use fixed fluence and" &
           //" td penalty."
         write(message(2),'(a)') "Warning: Disabling td penalty."
         call write_info(2)
-        tdpenalty = penalty
+        oct%tdpenalty = oct%penalty
       end if
       
       ! local targets only in ZR98 and WG05
       if((totype.eq.oct_tg_local) & 
-        .AND.(algorithm_type.eq.oct_algorithm_zbr98)) then
+        .AND.(oct%algorithm_type.eq.oct_algorithm_zbr98)) then
         write(message(1),'(a)') "Warning: Local targets work" &
           // " only with ZR98 and WG05."
         write(message(2),'(a)') "Warning: Switching to ZR98."
         call write_info(2)
-        algorithm_type = oct_algorithm_zr98
+        oct%algorithm_type = oct_algorithm_zr98
       end if
       
       ! tdtargets only in ZR98 and WG05
-      if((targetmode.eq.oct_targetmode_td) & 
-        .AND.(algorithm_type.eq.oct_algorithm_zbr98)) then
+      if((oct%targetmode.eq.oct_targetmode_td) & 
+        .AND.(oct%algorithm_type.eq.oct_algorithm_zbr98)) then
         write(message(1),'(a)') "Warning: Time-dependent targets work" &
           // " only with ZR98 and WG05."
         write(message(2),'(a)') "Warning: Please change algorithm type."
@@ -2287,6 +2053,8 @@ contains
     end subroutine end_
 
   end subroutine opt_control_run
+
+#include "opt_control_read.F90"
 
 end module opt_control_m
 
