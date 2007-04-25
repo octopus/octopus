@@ -365,7 +365,7 @@ contains
     
   end function double_grid_get_hmax
 
-  FLOAT pure function double_grid_get_rmax(this, s, m) result(rmax)
+  FLOAT function double_grid_get_rmax(this, s, m) result(rmax)
     type(double_grid_t),     intent(in) :: this
     type(specie_t), target,  intent(in) :: s
     type(mesh_t),            intent(in) :: m
