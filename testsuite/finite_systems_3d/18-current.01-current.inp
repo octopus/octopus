@@ -8,14 +8,14 @@ CalculationMode = gs
   "H" | 0 | 0 | 0 | no
 %
 
-ExtraStates = 4
+ExtraStates = 1
 
 %Occupations
 0 | 1 | 0 | 0 | 0
 %
 
 BoxShape = sphere
-Radius  = 16.0
+Radius  = 15.0
 Spacing = 0.46
 CurvMethod = curv_gygi
 CurvGygiA = 0.80
@@ -38,7 +38,7 @@ TypeOfMixing = linear
 Mixing = 1.0
 
 %StaticMagneticField
-0.0 | 0.0 | 0.1
+0.0 | 0.0 | 0.5
 %
 
 %CurrentThroughPlane
