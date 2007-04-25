@@ -167,7 +167,7 @@ contains
     type(states_t), intent(inout) :: st
     call push_sub('states.states_null')
 
-    nullify(st%dpsi, st%zpsi, st%rho, st%j, st%rho_core, st%eigenval, st%occ, st%mag)
+    nullify(st%dpsi, st%zpsi, st%rho, st%j, st%rho_core, st%eigenval, st%occ, st%mag, st%momentum, st%node)
 
     nullify(st%d)
     ALLOCATE(st%d, 1)
@@ -679,6 +679,11 @@ contains
       i = size(stin%mag, 1)*size(stin%mag, 2)*size(stin%mag, 3)
       ALLOCATE(stout%mag(size(stin%mag, 1), size(stin%mag, 2), size(stin%mag, 3)), i)
       stout%mag = stin%mag
+    end if
+    if(associated(stin%momentum)) then
+      i = size(stin%momentum, 1)*size(stin%momentum, 2)*size(stin%momentum, 3)
+      ALLOCATE(stout%momentum(size(stin%momentum, 1), size(stin%momentum, 2), size(stin%momentum, 3)), i)
+      stout%momentum = stin%momentum
     end if
     if(associated(stin%d%kpoints)) then
       i = size(stin%d%kpoints, 1)*size(stin%d%kpoints, 2)

@@ -105,7 +105,8 @@ contains
 
     type(td_t)                 :: td
     type(grid_t),      pointer :: gr   ! some shortcuts
-    type(states_t),    pointer :: st, psi_i
+    type(states_t),    pointer :: st
+    type(states_t) :: psi_i
     type(states_t)             :: chi, psi, target_st, initial_st, psi2
     type(filter_t),    pointer :: f(:)
     type(td_target_t), pointer :: td_tg(:)
@@ -2074,8 +2075,6 @@ contains
       ! prepare unit factor u for output
       u  = M_ONE/units_out%length%factor**NDIM
 
-      call output_init(sys%gr%sb, sys%outp)
-
       call td_init(gr, td, sys%st, sys%outp)
       call td_write_init(write_handler, gr, sys%st, sys%geo, (td%move_ions>0), h%ep%with_gauge_field, td%iter, td%dt)
       call states_allocate_wfns(st, gr%m, M_CMPLX)
@@ -2083,7 +2082,7 @@ contains
       ALLOCATE(dens_tmp(gr%m%np_part, st%d%nspin), gr%m%np_part*st%d%nspin) 
 
       ! psi_i is initialized in system_init
-      psi_i => st
+      psi_i = st
 
       No_electrons = SUM(psi_i%occ(1,:))
       write(message(1),'(a,i4)') 'Info: Number of electrons: ', &
@@ -2107,22 +2106,6 @@ contains
       call states_init(chi, gr, sys%geo)
       call states_init(initial_st, gr, sys%geo)
       call states_init(target_st, gr, sys%geo)
-      if(h%ep%nvnl > 0) then
-        ALLOCATE(psi%rho_core(NP_PART), NP_PART)
-        psi%rho_core(NP_PART) = psi_i%rho_core(NP_PART)  
-
-        ALLOCATE(psi2%rho_core(NP_PART), NP_PART)
-        psi2%rho_core(NP_PART) = psi_i%rho_core(NP_PART)
-
-        ALLOCATE(initial_st%rho_core(NP_PART), NP_PART)
-        initial_st%rho_core(NP_PART) = psi_i%rho_core(NP_PART)  
-        
-        ALLOCATE(chi%rho_core(NP_PART), NP_PART)
-        chi%rho_core(NP_PART) = psi_i%rho_core(NP_PART) 
-        
-        ALLOCATE(target_st%rho_core(NP_PART), NP_PART)
-        target_st%rho_core(NP_PART) = psi_i%rho_core(NP_PART)
-      end if 
       
       psi%st_start        = psi_i%st_start
       psi%st_end          = psi_i%st_end
