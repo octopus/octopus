@@ -82,20 +82,29 @@ module opt_control_m
     oct_ftype_step  = 2
 
   type oct_t
-    FLOAT :: eps
-    integer :: ctr_iter_max
-    FLOAT :: penalty
-    FLOAT, pointer :: a_penalty(:)
-    FLOAT :: targetfluence
+    FLOAT            :: eps
+    integer          :: ctr_iter_max
+
+    FLOAT            :: penalty
+    FLOAT, pointer   :: a_penalty(:)
+    FLOAT, pointer   :: tdpenalty(:, :)
+    logical          :: mode_tdpenalty
+
+    FLOAT            :: targetfluence
     logical :: mode_fixed_fluence
-    FLOAT, pointer :: tdpenalty(:, :)
     integer :: targetmode
+
     integer :: filtermode
+
+    integer :: totype
+
 
     CMPLX              :: laser_pol(MAX_DIM)
     integer :: dof
 
     integer :: algorithm_type
+
+    logical            :: td_tg_state 
 
     logical :: oct_double_check
   end type oct_t
@@ -151,10 +160,9 @@ contains
 
     character(len=80)  :: filename
 
-    integer            :: istype, totype
+    integer            :: istype
     
     logical            :: dump_intermediate, mode_fixed_fluence
-    logical            :: mode_tdpenalty, td_tg_state 
 
 
     call push_sub('opt_control.opt_control_run')
@@ -172,13 +180,14 @@ contains
     dump_intermediate  = .TRUE.  ! dump laser fields during iteration
                                  ! this might create a lot of data
 
-    mode_tdpenalty     = .FALSE. ! if TD penalty is used
+    !!!!WARNING this should not be here
+    oct%td_tg_state    = .false.
 
-    td_tg_state        = .FALSE. ! check if state target exist
+
 
     ! CHECK:: only dipole approximation in length gauge
     !         only single particle (yet)
-    if(h%gauge.ne.1) then
+    if(h%gauge.ne.LENGTH) then
       write(message(1),'(a)') "So far only length gauge is supported..."
       call write_fatal(1)
     end if
@@ -677,7 +686,7 @@ contains
       call push_sub('opt_control.target_calc')
 
       if(oct%targetmode==oct_targetmode_static) then
-        if(totype.eq.oct_tg_local) then ! only zr98 and wg05
+        if(oct%totype.eq.oct_tg_local) then ! only zr98 and wg05
           do ik = 1, psi_i%d%nik
             do p  = psi_i%st_start, psi_i%st_end
               do dim = 1, psi_i%d%dim
@@ -1138,33 +1147,6 @@ contains
 
 
     ! ---------------------------------------------------------
-    subroutine read_state(st, m, filename)
-      type(states_t),   intent(inout) :: st
-      type(mesh_t),     intent(in)  :: m
-      character(len=*), intent(in)  :: filename
-
-      integer :: ierr
-
-      call push_sub('opt_control.read_state')
-
-      call zinput_function('tmp/restart_gs/'//trim(filename), m, st%zpsi(:, 1, 1, 1), ierr, is_tmp=.TRUE.)
-      ! if we do not succeed try obf
-      if(ierr>0) call zinput_function ('tmp/restart_gs/'//trim(filename)//'.obf', &
-        m, st%zpsi(:, 1, 1, 1), ierr, is_tmp=.TRUE.)
-      ! if we do not succeed try NetCDF
-      if(ierr>0) call zinput_function('tmp/restart_gs/'//trim(filename)//'.ncdf', &
-        m, st%zpsi(:, 1, 1, 1), ierr, is_tmp=.TRUE.)
-
-      if(ierr > 0) then
-         message(1) = "Unsuccesfull read of states in 'tmp/restart_gs/" // trim(filename) // "'"
-        call write_fatal(1)
-      end if
-
-      call pop_sub()
-    end subroutine read_state
-
-    
-    ! ---------------------------------------------------------
     subroutine write_field(filename, las, steps, dt)
       integer,          intent(in) :: steps
       character(len=*), intent(in) :: filename
@@ -1275,18 +1257,6 @@ contains
       
       call push_sub('opt_control.def_istate')
 
-      ! allocate tmp_state
-      call states_init(tmp_st, gr, sys%geo) 
-      if(h%ep%nvnl > 0) then
-         ALLOCATE(tmp_st%rho_core(NP_PART), NP_PART)
-         tmp_st%rho_core(NP_PART) = psi_i%rho_core(NP_PART)
-      end if
-      tmp_st%st_start = psi_i%st_start
-      tmp_st%st_end = psi_i%st_end
-      tmp_st%d%wfs_type = M_CMPLX
-      isize = NP_PART*tmp_st%d%dim*(tmp_st%st_end-tmp_st%st_start+1)*tmp_st%d%nik
-      ALLOCATE(tmp_st%zpsi(NP_PART, tmp_st%d%dim, tmp_st%st_start:tmp_st%st_end, tmp_st%d%nik), isize)
-
       !%Variable OCTInitialState
       !%Type integer
       !%Section Optimal Control
@@ -1353,6 +1323,7 @@ contains
         !%
         !%End 
         if(loct_parse_block(check_inp('OCTInitialSuperposition'),blk)==0) then
+          tmp_st = initial_st
           no_blk = loct_parse_block_n(blk)
           ! TODO: for each orbital            
           do i=1, no_blk
@@ -1377,7 +1348,7 @@ contains
             enddo
           enddo
           !            end do
-          
+          call states_end(tmp_st)
         end if
         
       case(oct_is_userdefined) 
@@ -1452,7 +1423,7 @@ contains
       
       if (in_debug_mode) call zoutput_function(sys%outp%how, &
         'opt-control', 'istate', gr%m, gr%sb, initial_st%zpsi(:,1,1,1), u, ierr)
-      
+
       call pop_sub()
     end subroutine def_istate
     
@@ -1472,19 +1443,6 @@ contains
       character(len=1024) :: expression
 
       call push_sub('opt_control.def_toperator')
-
-      ! allocate tmp_state
-      call states_init(tmp_st, gr, sys%geo) 
-      if(h%ep%nvnl > 0) then
-         ALLOCATE(tmp_st%rho_core(NP_PART), NP_PART)
-         tmp_st%rho_core(NP_PART) = psi_i%rho_core(NP_PART)
-      end if
-
-      tmp_st%st_start = psi_i%st_start
-      tmp_st%st_end   = psi_i%st_end
-      tmp_st%d%wfs_type = M_CMPLX
-      isize = NP_PART*tmp_st%d%dim*(tmp_st%st_end-tmp_st%st_start+1)*tmp_st%d%nik
-      ALLOCATE(tmp_st%zpsi(NP_PART, tmp_st%d%dim, tmp_st%st_start:tmp_st%st_end, tmp_st%d%nik), isize)
 
       ! prepare targetoperator 
       !%Variable OCTTargetOperator
@@ -1506,8 +1464,8 @@ contains
       !%Option *oct_tg_td_local* 6
       !% Target operator is time-dependent, please specify block OCTTdTarget
       !%End
-      call loct_parse_int(check_inp('OCTTargetOperator'),oct_tg_excited, totype)
-      select case(totype)
+      call loct_parse_int(check_inp('OCTTargetOperator'),oct_tg_excited, oct%totype)
+      select case(oct%totype)
       case(oct_tg_groundstate)
         message(1) =  'Info: Using Ground State for TargetOperator'
         call write_info(1)
@@ -1555,6 +1513,7 @@ contains
         !%
         !%End
         if(loct_parse_block(check_inp('OCTTargetSuperposition'),blk)==0) then
+          tmp_st = target_st
           no_blk = loct_parse_block_n(blk)
           ! TODO: for each orbital            
           do i=1, no_blk
@@ -1579,7 +1538,7 @@ contains
             enddo
           enddo
           !            end do
-          
+          call states_end(tmp_st)
         end if
         
 
@@ -1918,7 +1877,7 @@ contains
 
       ALLOCATE(oct%tdpenalty(NDIM,0:2*td%max_iter),NDIM*(2*td%max_iter+1))
       oct%tdpenalty = M_ONE
-      call def_tdpenalty(gr, oct%tdpenalty, td%max_iter, td%dt, mode_tdpenalty)
+      call def_tdpenalty(gr, oct%tdpenalty, td%max_iter, td%dt, oct%mode_tdpenalty)
       oct%tdpenalty = oct%tdpenalty * oct%penalty
 
       if(in_debug_mode) then
@@ -1956,7 +1915,7 @@ contains
       call def_toperator()
       call init_tdtarget()
 
-      call check_faulty_runmodes()
+      call check_faulty_runmodes(oct)
 
       call zoutput_function(sys%outp%how,'opt-control','initial1',gr%m,gr%sb,initial_st%zpsi(:,1,1,1),u,ierr)
       call zoutput_function(sys%outp%how,'opt-control','target1',gr%m,gr%sb,target_st%zpsi(:,1,1,1),u,ierr) 
@@ -1965,83 +1924,6 @@ contains
     end subroutine init_
     
     
-    ! ---------------------------------------------------------
-    subroutine check_faulty_runmodes()
-
-      integer :: jj
-      call push_sub('opt_control.check_faulty_runmodes')
-
-      ! try to avoid ill defined combinations of run modes
-      ! be careful with the order !!
-      
-      ! FixedFluence and Filter only work with WG05
-      if((oct%mode_fixed_fluence).and.(oct%algorithm_type.ne.oct_algorithm_wg05)) then
-        write(message(1),'(a)') "Cannot optimize to a given fluence with the chosen algorithm."
-        write(message(2),'(a)') "Switching to scheme WG05."         
-        call write_info(2)
-        oct%algorithm_type = oct_algorithm_wg05
-      end if
-      
-      ! Filters work only with WG05
-      if((oct%filtermode.gt.0).and.(oct%algorithm_type.ne.oct_algorithm_wg05)) then
-        write(message(1),'(a)') "Warning: Cannot use filters with the chosen algorithm."
-        write(message(2),'(a)') "Warning: Switching to scheme WG05."
-        call write_info(2)
-        oct%algorithm_type = oct_algorithm_wg05
-      end if
-      
-      ! tdpenalty and fixed fluence do not work !
-      if((mode_tdpenalty).AND.(oct%mode_fixed_fluence)) then
-        write(message(1),'(a)') "Warning: Cannot use fixed fluence and" &
-          //" td penalty."
-        write(message(2),'(a)') "Warning: Disabling td penalty."
-        call write_info(2)
-        oct%tdpenalty = oct%penalty
-      end if
-      
-      ! local targets only in ZR98 and WG05
-      if((totype.eq.oct_tg_local) & 
-        .AND.(oct%algorithm_type.eq.oct_algorithm_zbr98)) then
-        write(message(1),'(a)') "Warning: Local targets work" &
-          // " only with ZR98 and WG05."
-        write(message(2),'(a)') "Warning: Switching to ZR98."
-        call write_info(2)
-        oct%algorithm_type = oct_algorithm_zr98
-      end if
-      
-      ! tdtargets only in ZR98 and WG05
-      if((oct%targetmode.eq.oct_targetmode_td) & 
-        .AND.(oct%algorithm_type.eq.oct_algorithm_zbr98)) then
-        write(message(1),'(a)') "Warning: Time-dependent targets work" &
-          // " only with ZR98 and WG05."
-        write(message(2),'(a)') "Warning: Please change algorithm type."
-        call write_fatal(2)
-      end if
-      
-      ! td target with states works only for 1 electron
-      ! TODO: HOW TO RETRIEVE NUMBER OF ELECTRONS
-      !       UNCOMMENT LAST LINES
-      if(associated(td_tg)) then
-        do jj=1, size(td_tg)
-          if(td_tg(jj)%type.eq.oct_tgtype_state) &
-            td_tg_state = .TRUE.
-        end do
-      end if
-      ! occ in states_t
-      !write(6,*) 'DEBUG: occ: ', shape(psi_i%occ), size(psi_i%occ)
-      if( (td_tg_state) .AND. (SUM(psi_i%occ(1,:)).gt.1) ) then
-      !if(td_tg_state) then
-      !     if(psi_i%occ.gt.1) then
-        write(message(1),'(a)') "Warning: Time-dependent state targets" &
-          // " work only with one electron."
-        write(message(2),'(a)') "Warning: Please change input file."
-        call write_fatal(2)
-      end if
-
-      call pop_sub()      
-    end subroutine check_faulty_runmodes
-
-
     ! ---------------------------------------------------------
     subroutine end_()
       call push_sub('opt_control.end_')

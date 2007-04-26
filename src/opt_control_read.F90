@@ -249,6 +249,109 @@
   end subroutine oct_read_laserpol
 
 
+  ! ---------------------------------------------------------
+  subroutine read_state(st, m, filename)
+    type(states_t),   intent(inout) :: st
+    type(mesh_t),     intent(in)  :: m
+    character(len=*), intent(in)  :: filename
+
+    integer :: ierr
+
+    call push_sub('opt_control.read_state')
+
+    call zinput_function('tmp/restart_gs/'//trim(filename), m, st%zpsi(:, 1, 1, 1), ierr, is_tmp=.TRUE.)
+    ! if we do not succeed try obf
+    if(ierr>0) call zinput_function ('tmp/restart_gs/'//trim(filename)//'.obf', &
+      m, st%zpsi(:, 1, 1, 1), ierr, is_tmp=.TRUE.)
+    ! if we do not succeed try NetCDF
+    if(ierr>0) call zinput_function('tmp/restart_gs/'//trim(filename)//'.ncdf', &
+      m, st%zpsi(:, 1, 1, 1), ierr, is_tmp=.TRUE.)
+
+    if(ierr > 0) then
+       message(1) = "Unsuccesfull read of states in 'tmp/restart_gs/" // trim(filename) // "'"
+      call write_fatal(1)
+    end if
+
+    call pop_sub()
+  end subroutine read_state
+
+  ! ---------------------------------------------------------
+  ! Tries to avoid ill defined combinations of run modes
+  ! be careful with the order !!
+  subroutine check_faulty_runmodes(oct)
+    type(oct_t), intent(inout) :: oct
+
+    integer :: jj
+    call push_sub('opt_control.check_faulty_runmodes')
+
+    ! FixedFluence and Filter only work with WG05
+    if((oct%mode_fixed_fluence).and.(oct%algorithm_type.ne.oct_algorithm_wg05)) then
+      write(message(1),'(a)') "Cannot optimize to a given fluence with the chosen algorithm."
+      write(message(2),'(a)') "Switching to scheme WG05."         
+      call write_info(2)
+      oct%algorithm_type = oct_algorithm_wg05
+    end if
+      
+    ! Filters work only with WG05
+    if((oct%filtermode.gt.0).and.(oct%algorithm_type.ne.oct_algorithm_wg05)) then
+      write(message(1),'(a)') "Warning: Cannot use filters with the chosen algorithm."
+      write(message(2),'(a)') "Warning: Switching to scheme WG05."
+      call write_info(2)
+      oct%algorithm_type = oct_algorithm_wg05
+    end if
+      
+    ! tdpenalty and fixed fluence do not work !
+    if((oct%mode_tdpenalty).AND.(oct%mode_fixed_fluence)) then
+      write(message(1),'(a)') "Warning: Cannot use fixed fluence and" &
+        //" td penalty."
+      write(message(2),'(a)') "Warning: Disabling td penalty."
+      call write_info(2)
+      oct%tdpenalty = oct%penalty
+    end if
+      
+    ! local targets only in ZR98 and WG05
+    if((oct%totype.eq.oct_tg_local) & 
+      .AND.(oct%algorithm_type.eq.oct_algorithm_zbr98)) then
+      write(message(1),'(a)') "Warning: Local targets work" &
+        // " only with ZR98 and WG05."
+      write(message(2),'(a)') "Warning: Switching to ZR98."
+      call write_info(2)
+      oct%algorithm_type = oct_algorithm_zr98
+    end if
+      
+    ! tdtargets only in ZR98 and WG05
+    if((oct%targetmode.eq.oct_targetmode_td) & 
+      .AND.(oct%algorithm_type.eq.oct_algorithm_zbr98)) then
+      write(message(1),'(a)') "Warning: Time-dependent targets work" &
+        // " only with ZR98 and WG05."
+      write(message(2),'(a)') "Warning: Please change algorithm type."
+      call write_fatal(2)
+    end if
+!!$      
+!!$      ! td target with states works only for 1 electron
+!!$      ! TODO: HOW TO RETRIEVE NUMBER OF ELECTRONS
+!!$      !       UNCOMMENT LAST LINES
+!!$      if(associated(td_tg)) then
+!!$        do jj=1, size(td_tg)
+!!$          if(td_tg(jj)%type.eq.oct_tgtype_state) &
+!!$            td_tg_state = .TRUE.
+!!$        end do
+!!$      end if
+!!$      ! occ in states_t
+!!$      !write(6,*) 'DEBUG: occ: ', shape(psi_i%occ), size(psi_i%occ)
+!!$      if( (td_tg_state) .AND. (SUM(psi_i%occ(1,:)).gt.1) ) then
+!!$      !if(td_tg_state) then
+!!$      !     if(psi_i%occ.gt.1) then
+!!$        write(message(1),'(a)') "Warning: Time-dependent state targets" &
+!!$          // " work only with one electron."
+!!$        write(message(2),'(a)') "Warning: Please change input file."
+!!$        call write_fatal(2)
+!!$      end if
+!!$
+      call pop_sub()      
+    end subroutine check_faulty_runmodes
+
+
 !! Local Variables:
 !! mode: f90
 !! coding: utf-8
