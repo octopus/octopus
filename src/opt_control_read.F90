@@ -91,7 +91,7 @@
     call loct_parse_float(check_inp('OCTFixFluenceTo'), -M_ONE, oct%targetfluence)
     if (oct%targetfluence.ne.-M_ONE) oct%mode_fixed_fluence = .true.
       
-    !%Variable OCTTargetMe
+    !%Variable OCTTargetMode
     !%Type integer
     !%Section Optimal Control
     !%Description
@@ -177,7 +177,7 @@
     integer   :: i, no_blk, no_c
     C_POINTER :: blk
 
-    call push_sub('opt_control.def_laserpol') 
+    call push_sub('opt_control_read.oct_read_laserpol') 
 
     !%Variable OCTPolarization
     !%Type block
