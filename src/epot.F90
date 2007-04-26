@@ -72,13 +72,23 @@ module external_pot_m
     dproject, zproject,        &
     projector_t
 
-  ! The projector data type is intended to hold the non-local part of the
-  ! pseudopotentials. The definition of the action of a projector (which is
-  ! done through the X(project) subroutine) depends on the type of the 
-  ! projector. There are three different types:
-  !  -> HGH projector
-  !  -> "normal" Kleinman-Bylander projector (no spin-orbit)
-  !  -> "relativistc" Kleinman-Bylander projector (includes spin-orbit)
+  ! an oximoronic local projector type
+  type local_t
+     FLOAT, pointer :: v(:)
+     FLOAT, pointer :: dv(:,:)
+  end type local_t
+
+  ! The projector data type is intended to hold the local and
+  ! non-local parts of the pseudopotentials. The definition of the
+  ! action of a projector (which is done through the X(project)
+  ! subroutine) depends on the type of the projector. 
+
+  ! There are four different types: 
+  ! local -> a local operator
+  ! HGH projector -> "normal"
+  ! Kleinman-Bylander projector (no spin-orbit) -> "relativistc"
+  ! Kleinman-Bylander projector (includes spin-orbit)
+
   type projector_t
     private
     integer :: type
@@ -90,10 +100,11 @@ module external_pot_m
     CMPLX,   pointer :: phases(:,:)
 
     ! Only one of the following structures should be used at once
-    ! The one to be use depends on the value of type variable
+    ! The one to be used depends on the value of type variable
     type(hgh_projector_t), pointer :: hgh_p
     type(kb_projector_t),  pointer :: kb_p
     type(rkb_projector_t), pointer :: rkb_p
+    type(local_t),         pointer :: local_p
   end type projector_t
 
   type epot_t
@@ -134,7 +145,8 @@ module external_pot_m
 
   integer, parameter :: M_HGH = 1, &
                         M_KB  = 2, &
-                        M_RKB = 3
+                        M_RKB = 3, &
+                        M_LOCAL = 4
 
   integer, parameter :: &
        DERIVATE_POTENTIAL = 1,      &

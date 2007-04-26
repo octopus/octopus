@@ -86,6 +86,7 @@ noinst_HEADERS = \
 	out_inc.F90 math_cg_inc.F90 math_inc.F90 \
 	linalg_basic_blas.F90 linalg_basic_int.F90 linalg_adv_lapack.F90 \
 	linear_response_inc.F90 linear_response_out.F90 linear_solver_inc.F90\
+	submesh_inc.F90 \
 	sternheimer_inc.F90 em_resp_inc.F90 unocc_inc.F90 casida_inc.F90 \
 	excited_states_inc.F90 xc_OEP_kernel_inc.F90 em_resp_calc_inc.F90 \
 	opt_control_read.F90
@@ -284,7 +285,7 @@ spectrum.o: global.h
 spline.o: global.h
 states.o: global.h states_kpoints.F90 states_inc.F90
 static_pol.o: global.h
-submesh.o: global.h
+submesh.o: global.h submesh_inc.F90
 em_resp.o: global.h em_resp_inc.F90
 stencil_cube.o: global.h
 stencil_star.o: global.h

@@ -22,7 +22,7 @@
 ! on the psi wavefunction. The result is summed up to ppsi
 subroutine X(project)(mesh, p, n_projectors, dim, psi, ppsi, reltype, periodic, ik)
   type(mesh_t),      intent(in)    :: mesh
-  type(projector_t), intent(in)    :: p(:)
+  type(projector_t), intent(in)    :: p(1:n_projectors)
   integer,           intent(in)    :: n_projectors
   integer,           intent(in)    :: dim
   R_TYPE,            intent(in)    :: psi(:, :)   ! psi(1:mesh%np, dim)
@@ -31,28 +31,34 @@ subroutine X(project)(mesh, p, n_projectors, dim, psi, ppsi, reltype, periodic, 
   logical,           intent(in)    :: periodic
   integer,           intent(in)    :: ik
 
-  integer :: n_s, k, ip, idim
+  integer :: n_s, ip, idim
   R_TYPE, allocatable :: lpsi(:, :), plpsi(:,:)
 
   call push_sub('epot_inc.project')
 
-  k = p(1)%iatom - 1 ! This way I make sure that k is not equal to p(1)%iatom
   do ip = 1, n_projectors
 
-    if(p(ip)%iatom .ne. k) then
-      n_s = p(ip)%sphere%ns
-      if(allocated(lpsi))   deallocate(lpsi)
-      if(allocated(plpsi))  deallocate(plpsi)
-      ALLOCATE(lpsi(n_s, dim),  n_s*dim)
-      ALLOCATE(plpsi(n_s, dim), n_s*dim)
+    n_s = p(ip)%sphere%ns
 
+    if(p(ip)%type == M_LOCAL) then
       do idim = 1, dim
-        lpsi(1:n_s, idim)  = psi(p(ip)%sphere%jxyz(1:n_s), idim)*mesh%vol_pp(p(ip)%sphere%jxyz(1:n_s))
-        if(periodic) lpsi(1:n_s, idim)  = lpsi(1:n_s, idim) * p(ip)%phases(1:n_s, ik)
+        ppsi(p(ip)%sphere%jxyz(1:n_s), idim) = ppsi(p(ip)%sphere%jxyz(1:n_s), idim) + &
+             p(ip)%local_p%v(1:n_s) * psi(p(ip)%sphere%jxyz(1:n_s), idim)
       end do
 
-      k = p(ip)%iatom
+      continue
+
     end if
+
+    if(allocated(lpsi))   deallocate(lpsi)
+    if(allocated(plpsi))  deallocate(plpsi)
+    ALLOCATE(lpsi(n_s, dim),  n_s*dim)
+    ALLOCATE(plpsi(n_s, dim), n_s*dim)
+
+    do idim = 1, dim
+      lpsi(1:n_s, idim)  = psi(p(ip)%sphere%jxyz(1:n_s), idim)*mesh%vol_pp(p(ip)%sphere%jxyz(1:n_s))
+      if(periodic) lpsi(1:n_s, idim)  = lpsi(1:n_s, idim) * p(ip)%phases(1:n_s, ik)
+    end do
 
     select case (p(ip)%type)
     case (M_HGH)
@@ -105,8 +111,9 @@ function X(psidprojectpsi)(mesh, p, n_projectors, dim, psi, periodic, ik) result
   R_TYPE :: res(3)
 
 
-  integer ::  n_s, k, ip, idim
+  integer ::  n_s, ip, idim, idir
   R_TYPE, allocatable :: lpsi(:, :)
+  FLOAT, allocatable :: f(:)
 #if defined(HAVE_MPI)
   R_TYPE :: tmp
 #endif
@@ -116,23 +123,34 @@ function X(psidprojectpsi)(mesh, p, n_projectors, dim, psi, periodic, ik) result
   res = R_TOTYPE(M_ZERO)
 
   ! index labels the atom
-  k = p(1)%iatom - 1 ! This way I make sure that k is not equal to p(1)%iatom
-
   do ip = 1, n_projectors
+    n_s = p(ip)%sphere%ns
 
-    if(p(ip)%iatom .ne. k) then
-      n_s = p(ip)%sphere%ns
-      if(allocated(lpsi))  deallocate(lpsi)
-      ALLOCATE( lpsi(n_s, dim), n_s*dim)
+    if(p(ip)%type == M_LOCAL) then 
 
-      do idim = 1, dim
-        lpsi(1:n_s, idim)  = psi(p(ip)%sphere%jxyz(1:n_s), idim)*mesh%vol_pp(p(ip)%sphere%jxyz(1:n_s))
-        if(periodic) lpsi(1:n_s, idim)  = lpsi(1:n_s, idim) * p(ip)%phases(1:n_s, ik)
+      ALLOCATE(f(1:n_s), n_s)
+
+      do idir = 1, 3
+        do idim = 1, dim
+          f(1:n_s) = abs(psi(p(ip)%sphere%jxyz(1:n_s), idim))**2 * p(ip)%local_p%dv(1:n_s, idir)
+          res(idir) = res(idir) + dsm_integrate(mesh, p(ip)%sphere, f)
+        end do
       end do
 
-      k = p(ip)%iatom
+      deallocate(f)
+
+      continue
+
     end if
 
+    if(allocated(lpsi))  deallocate(lpsi)
+    ALLOCATE( lpsi(n_s, dim), n_s*dim)
+    
+    do idim = 1, dim
+      lpsi(1:n_s, idim)  = psi(p(ip)%sphere%jxyz(1:n_s), idim)*mesh%vol_pp(p(ip)%sphere%jxyz(1:n_s))
+      if(periodic) lpsi(1:n_s, idim)  = lpsi(1:n_s, idim) * p(ip)%phases(1:n_s, ik)
+    end do
+    
     select case (p(ip)%type)
     case (M_HGH)
       if (periodic) then
@@ -188,12 +206,18 @@ R_TYPE function X(psia_project_psib)(mesh, pj, dim, psia, psib, reltype, periodi
   ALLOCATE(lpsi(n_s, dim),  n_s*dim)
   ALLOCATE(plpsi(n_s, dim), n_s*dim)
   
-  do idim = 1, dim
-    lpsi(1:n_s, idim)  = psib(pj%sphere%jxyz(1:n_s), idim)*mesh%vol_pp(pj%sphere%jxyz(1:n_s))
-    if(periodic) lpsi(1:n_s, idim)  = lpsi(1:n_s, idim) * pj%phases(1:n_s, ik)
-  end do
+  if(pj%type /= M_LOCAL) then
+    do idim = 1, dim
+      lpsi(1:n_s, idim)  = psib(pj%sphere%jxyz(1:n_s), idim)*mesh%vol_pp(pj%sphere%jxyz(1:n_s))
+      if(periodic) lpsi(1:n_s, idim)  = lpsi(1:n_s, idim) * pj%phases(1:n_s, ik)
+    end do
+  end if
   
   select case (pj%type)
+  case (M_LOCAL)
+    do idim = 1, dim
+      plpsi(1:n_s, idim) = pj%local_p%v(1:n_s) * psib(pj%sphere%jxyz(1:n_s), idim)
+    end do
   case (M_HGH)
     if (periodic) then
       call X(hgh_project)(mesh, pj%hgh_p, dim, lpsi, plpsi, reltype, pj%phases(:, ik))
@@ -219,16 +243,9 @@ R_TYPE function X(psia_project_psib)(mesh, pj, dim, psia, psib, reltype, periodi
   
   apb = M_ZERO
   do idim = 1, dim
-    apb = apb + &
-         sum(R_CONJ(psia(pj%sphere%jxyz(1:n_s), idim))*plpsi(1:n_s, idim)*mesh%vol_pp(pj%sphere%jxyz(1:n_s)))
+    plpsi(1:n_s, 1) = R_CONJ(psia(pj%sphere%jxyz(1:n_s), idim)) * plpsi(1:n_s, idim)
   end do
-
-#if defined(HAVE_MPI)
-  if(mesh%parallel_in_domains) then
-    call MPI_Allreduce(apb, tmp, 1, R_MPITYPE, MPI_SUM, mesh%vp%comm, mpi_err)
-    apb = tmp
-  end if
-#endif
+  apb = apb + X(sm_integrate)(mesh, pj%sphere, plpsi(1:n_s, 1))
 
   call pop_sub()
 end function X(psia_project_psib)

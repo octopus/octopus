@@ -33,6 +33,8 @@ module submesh_m
        submesh_null,        &
        submesh_init_sphere, &
        submesh_copy,        &
+       dsm_integrate,       &
+       zsm_integrate,       &
        submesh_end
  
   type submesh_t
@@ -141,6 +143,14 @@ contains
     sm_out%jxyz_inv(0:sm_out%np_part) = sm_in%jxyz_inv(0:sm_out%np_part)
    
   end subroutine submesh_copy
+
+#include "undef.F90"
+#include "real.F90"
+#include "submesh_inc.F90"
+
+#include "undef.F90"
+#include "complex.F90"
+#include "submesh_inc.F90"
 
 end module submesh_m
 
