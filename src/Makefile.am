@@ -254,7 +254,7 @@ mpi_debug.o: global.h mpi_debug_inc.F90
 profiling.o: global.h
 nl_operator.o: global.h
 ode_solver.o: global.h ode_solver_inc.F90
-opt_control.o: global.h
+opt_control.o: global.h opt_control_read.F90
 out.o: global.h out_inc.F90
 par_vec.o: global.h par_vec_inc.F90
 pes.o: global.h pes_rc.F90 pes_mask.F90
