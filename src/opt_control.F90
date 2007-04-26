@@ -128,8 +128,6 @@ contains
 
   ! ---------------------------------------------------------
   subroutine opt_control_run(sys, h)
-    implicit none
-
     type(system_t), target, intent(inout) :: sys
     type(hamiltonian_t),    intent(inout) :: h
 
@@ -137,13 +135,11 @@ contains
     type(td_t)                 :: td
     type(grid_t),      pointer :: gr   ! some shortcuts
     type(states_t),    pointer :: st
-    type(states_t) :: psi_i
     type(states_t)             :: chi, psi, target_st, initial_st, psi2
     type(filter_t),    pointer :: f(:)
     type(td_target_t), pointer :: td_tg(:)
     type(td_write_t)           :: write_handler
 
-    integer            :: No_electrons
     FLOAT, pointer     :: v_old_i(:,:,:), v_old_f(:,:,:)
     FLOAT, pointer     :: laser_tmp(:,:), laser(:,:)
     FLOAT, allocatable :: dens_tmp(:,:)
@@ -167,6 +163,9 @@ contains
 
     call push_sub('opt_control.opt_control_run')
 
+     ! Checks that the run is actually possible with the current settings
+    call check_runmode_constrains(sys, h)
+
     ! Initially nullify the pointers
     nullify(f)
     nullify(td_tg)
@@ -175,22 +174,12 @@ contains
     nullify(laser_tmp)
     nullify(laser)
 
-
     ! TODO: internal debug config, give some power to the user later
     dump_intermediate  = .TRUE.  ! dump laser fields during iteration
                                  ! this might create a lot of data
 
     !!!!WARNING this should not be here
     oct%td_tg_state    = .false.
-
-
-
-    ! CHECK:: only dipole approximation in length gauge
-    !         only single particle (yet)
-    if(h%gauge.ne.LENGTH) then
-      write(message(1),'(a)') "So far only length gauge is supported..."
-      call write_fatal(1)
-    end if
 
     ! initialize oct run, defines initial laser... initial state
     call init_()
@@ -259,9 +248,8 @@ contains
     !nullify(v_old_f)
     !deallocate(v_old_f)
 !! ----
-    call states_end(psi_i)
+
     call end_()
-    
     call pop_sub()
 
   contains
@@ -647,9 +635,9 @@ contains
       merit = M_ZERO
       do jj=1, size(tg)
         if(tg(jj)%type.eq.oct_tgtype_local) then
-          do ik = 1, psi_i%d%nik
-            do p  = psi_i%st_start, psi_i%st_end
-              do dim = 1, psi_i%d%dim
+          do ik = 1, psi%d%nik
+            do p  = psi%st_start, psi%st_end
+              do dim = 1, psi%d%dim
                 merit = merit + &
                   zmf_integrate(gr%m, tdtarget(:)* &
                   abs(psi%zpsi(:,dim,ik,p))**2)
@@ -657,9 +645,9 @@ contains
             end do
           end do
         else
-          do ik = 1, psi_i%d%nik
-            do p  = psi_i%st_start, psi_i%st_end
-              do dim = 1, psi_i%d%dim
+          do ik = 1, psi%d%nik
+            do p  = psi%st_start, psi%st_end
+              do dim = 1, psi%d%dim
                 merit = merit + &
                   abs(zmf_integrate(gr%m, tdtarget(:)* &
                   conjg(psi%zpsi(:,dim,ik,p))))**2
@@ -687,9 +675,9 @@ contains
 
       if(oct%targetmode==oct_targetmode_static) then
         if(oct%totype.eq.oct_tg_local) then ! only zr98 and wg05
-          do ik = 1, psi_i%d%nik
-            do p  = psi_i%st_start, psi_i%st_end
-              do dim = 1, psi_i%d%dim
+          do ik = 1, psi_in%d%nik
+            do p  = psi_in%st_start, psi_in%st_end
+              do dim = 1, psi_in%d%dim
                 ! multiply orbtials with local operator
                 ! FIXME: for multiple particles 1,1,1 -> dim,p,ik
                 chi_out%zpsi(:,dim,p,ik) = targetst%zpsi(:, 1, 1 , 1)*psi_in%zpsi(:, dim, p, ik)
@@ -697,10 +685,10 @@ contains
             end do
           end do
         else ! totype nonlocal (all other totypes)
-          do ik = 1, psi_i%d%nik
-            do p  = psi_i%st_start, psi_i%st_end
+          do ik = 1, psi_in%d%nik
+            do p  = psi_in%st_start, psi_in%st_end
               olap = M_z0
-              do dim = 1, psi_i%d%dim
+              do dim = 1, psi_in%d%dim
                 olap = olap + zmf_integrate(gr%m,conjg(targetst%zpsi(:, dim, p, ik))*psi_in%zpsi(:, dim, p, ik))
               end do
               if(method == oct_algorithm_zr98) &
@@ -866,7 +854,7 @@ contains
          call build_tdtarget(tg(jj),tgt, iter) ! tdtarget is build
          tdtarget(:) = tdtarget(:) + tgt(:) 
        end do
-       do dim=1, psi_i%d%dim
+       do dim=1, chi_n%d%dim
          chi_n%zpsi(:,dim,1,1) = chi_n%zpsi(:,dim,1,1) &
            - sign(M_ONE,dt)/real(td%max_iter)*tdtarget(:)* &
            psi_n%zpsi(:,dim,1,1)
@@ -886,7 +874,7 @@ contains
          call build_tdtarget(tg(jj), tgt, iter)
          tdtarget = tgt
          olap= m_z0
-         do dim=1, psi_i%d%dim
+         do dim=1, psi_n%d%dim
            olap = zmf_integrate(gr%m,psi_n%zpsi(:,dim,1,1)*&
              conjg(tdtarget(:)))
            chi_n%zpsi(:,dim,1,1) = chi_n%zpsi(:,dim,1,1) &
@@ -953,9 +941,9 @@ contains
       
       d1 = M_z0 
       d2 = M_z0 
-      do ik = 1, psi_i%d%nik
-        do p  = psi_i%st_start, psi_i%st_end
-          do dim = 1, psi_i%d%dim
+      do ik = 1, psi%d%nik
+        do p  = psi%st_start, psi%st_end
+          do dim = 1, psi%d%dim
             do pol=1, NDIM
               d2(pol) = d2(pol) + zmf_integrate(gr%m,&
                 conjg(chi%zpsi(:, dim, p, ik))*oct%laser_pol(pol)&
@@ -1231,12 +1219,12 @@ contains
       !   write(6,'(f14.8,f14.8)') convergence(1,loop),convergence(2,loop)
       !end do
       ! assign final wave function to psi_i
-      psi_i%zpsi = psi%zpsi
+      st%zpsi = psi%zpsi
 
 
       ! check: sth goes wrong here: if psi_i replaced by psi 
       ! probably something is ill-defined
-      call states_output(psi_i, gr, 'opt-control', sys%outp)
+      call states_output(st, gr, 'opt-control', sys%outp)
       call zoutput_function(sys%outp%how,'opt-control','target',gr%m,gr%sb,target_st%zpsi(:,1,1,1),M_ONE,ierr) 
       call zoutput_function(sys%outp%how,'opt-control','final',gr%m,gr%sb,psi%zpsi(:,1,1,1),M_ONE,ierr) 
 
@@ -1343,7 +1331,7 @@ contains
           ! normalize state
           do ik = 1, psi%d%nik
             do p  = psi%st_start, psi%st_end
-              call zstates_normalize_orbital(gr%m, psi_i%d%dim, &
+              call zstates_normalize_orbital(gr%m, initial_st%d%dim, &
                 initial_st%zpsi(:,:, p, ik))
             enddo
           enddo
@@ -1377,19 +1365,20 @@ contains
             call loct_parse_block_int(blk, ib-1, 2, inik)
             write(6,*) ' DEBUG: ', idim,inst,inik
             ! read formula strings and convert to C strings
-            do id = 1, psi_i%d%dim
-              do is = 1, psi_i%nst
-                do ik = 1, psi_i%d%nik   
+            do id = 1, initial_st%d%dim
+              do is = 1, initial_st%nst
+                do ik = 1, initial_st%d%nik   
                   
                   ! does the block entry match and is this node responsible?
                   if(.not.(id.eq.idim .and. is.eq.inst .and. ik.eq.inik    &
-                    .and. psi_i%st_start.le.is .and. psi_i%st_end.ge.is) ) cycle
+                    .and. initial_st%st_start.le.is .and. initial_st%st_end.ge.is) ) cycle
+
                   
                   ! parse formula string
                   call loct_parse_block_string(                            &
-                    blk, ib-1, 3, psi_i%user_def_states(id, is, ik))
+                    blk, ib-1, 3, initial_st%user_def_states(id, is, ik))
                   ! convert to C string
-                  call conv_to_C_string(psi_i%user_def_states(id, is, ik))
+                  call conv_to_C_string(initial_st%user_def_states(id, is, ik))
                   
                   do ip = 1, gr%m%np
                     x = gr%m%x(ip, :)
@@ -1403,7 +1392,7 @@ contains
                     initial_st%zpsi(ip, id, is, ik) = psi_re + M_zI*psi_im
                   end do
                   ! normalize orbital
-                  call zstates_normalize_orbital(gr%m, psi_i%d%dim, initial_st%zpsi(:,:, is, ik))
+                  call zstates_normalize_orbital(gr%m, initial_st%d%dim, initial_st%zpsi(:,:, is, ik))
                 end do
               end do
             enddo
@@ -1533,7 +1522,7 @@ contains
           ! normalize state
           do ik = 1, psi%d%nik
             do p  = psi%st_start, psi%st_end
-              call zstates_normalize_orbital(gr%m, psi_i%d%dim, &
+              call zstates_normalize_orbital(gr%m, target_st%d%dim, &
                 target_st%zpsi(:,:, p, ik))
             enddo
           enddo
@@ -1604,7 +1593,7 @@ contains
             end do
             
             ! normalize orbital
-            call zstates_normalize_orbital(gr%m, psi_i%d%dim, &
+            call zstates_normalize_orbital(gr%m, target_st%d%dim, &
               target_st%zpsi(:,:, 1, 1))
           end do
           call loct_parse_block_end(blk)
@@ -1797,30 +1786,14 @@ contains
 
       ALLOCATE(dens_tmp(gr%m%np_part, st%d%nspin), gr%m%np_part*st%d%nspin) 
 
-      ! psi_i is initialized in system_init
-      psi_i = st
-
-      No_electrons = SUM(psi_i%occ(1,:))
-      write(message(1),'(a,i4)') 'Info: Number of electrons: ', &
-        No_electrons
-      call write_info(1)
-
-      ! FIXME: is this check obsolete ?
-      ! psi_i never really used
-      !psi_i should have complex wavefunctions
-      if (psi_i%d%wfs_type /= M_CMPLX) then
-        message(1) = "error in init_.opt_control"
-        call write_fatal(1)
-      end if
-
-      ! call write_info(2)
       v_old_i => td%tr%v_old
 
-      psi = st
-      psi2 = st
-      chi = st
+      ! Initialize a bunch of states: initial, target, auxiliary.
+      psi        = st
+      psi2       = st
+      chi        = st
       initial_st = st
-      target_st = st
+      target_st  = st
 
       ! allocate memory
       ALLOCATE(v_old_f(NP, chi%d%nspin, 0:3), NP_PART*chi%d%nspin*(3+1))
@@ -1935,6 +1908,37 @@ contains
     end subroutine end_
 
   end subroutine opt_control_run
+
+
+  ! ---------------------------------------------------------
+  ! This subroutine just stops the run if some of the settings
+  ! are not compatible with the run mode, either because it is
+  ! meaningless, or because the run mode is still not fully
+  ! implemented.
+  !
+  ! TODO: Right now just a couple of checks are made, but there are many other constrains.
+  subroutine check_runmode_constrains(sys, h)
+    type(system_t), target, intent(in) :: sys
+    type(hamiltonian_t),    intent(in) :: h
+
+    integer :: no_electrons
+
+    ! Only dipole approximation in length gauge.
+    if(h%gauge.ne.LENGTH) then
+      write(message(1),'(a)') "So far only length gauge is supported in optimal control runs."
+      call write_fatal(1)
+    end if
+
+    ! Only single-electron calculations.
+    no_electrons = nint(sum(sys%st%occ(1,:)))
+    if(no_electrons .ne. 1) then
+      write(message(1),'(a,i4)') 'Number of electrons (currently ',no_electrons,') should be just one.'
+      write(message(2),'(a)')    'Optimal control theory for many electron systems not yet developed!'
+      call write_fatal(2)
+    end if
+
+  end subroutine check_runmode_constrains
+ 
 
 #include "opt_control_read.F90"
 
