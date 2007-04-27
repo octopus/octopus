@@ -23,6 +23,7 @@ module submesh_m
   use global_m
   use messages_m
   use mesh_m
+  use mpi_m
   use simul_box_m
 
   implicit none
@@ -66,7 +67,9 @@ contains
     FLOAT :: r
     integer :: ii, is, kk, ip
 
-    ASSERT(this%ns == 0) 
+    ASSERT(this%ns == 0)
+
+    call push_sub('submesh.submesh_init_sphere')
 
     this%np_part = m%np_part
 
@@ -114,22 +117,30 @@ contains
       this%jxyz_inv(this%jxyz(is)) = is
     end do
     
+    call pop_sub()
+
   end subroutine submesh_init_sphere
 
   subroutine submesh_end(this)
     type(submesh_t),   intent(inout)  :: this
     
+    call push_sub('submesh.submesh_end')
+
     if( this%ns /= 0 ) then
       this%ns = 0
       deallocate(this%jxyz)
       deallocate(this%jxyz_inv)
     end if
 
+    call pop_sub()
+
   end subroutine submesh_end
 
   subroutine submesh_copy(sm_in, sm_out)
     type(submesh_t),   intent(in)   :: sm_in
     type(submesh_t),   intent(out)  :: sm_out
+
+    call push_sub('submesh.submesh_copy')
     
     ASSERT(sm_out%ns == 0)
 
@@ -142,6 +153,8 @@ contains
     sm_out%jxyz(1:sm_out%ns)    = sm_in%jxyz(1:sm_in%ns)
     sm_out%jxyz_inv(0:sm_out%np_part) = sm_in%jxyz_inv(0:sm_out%np_part)
    
+    call pop_sub()
+
   end subroutine submesh_copy
 
 #include "undef.F90"

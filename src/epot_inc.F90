@@ -22,7 +22,7 @@
 ! on the psi wavefunction. The result is summed up to ppsi
 subroutine X(project)(mesh, p, n_projectors, dim, psi, ppsi, reltype, periodic, ik)
   type(mesh_t),      intent(in)    :: mesh
-  type(projector_t), intent(in)    :: p(1:n_projectors)
+  type(projector_t), intent(in)    :: p(:)
   integer,           intent(in)    :: n_projectors
   integer,           intent(in)    :: dim
   R_TYPE,            intent(in)    :: psi(:, :)   ! psi(1:mesh%np, dim)

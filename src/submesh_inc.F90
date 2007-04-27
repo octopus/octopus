@@ -29,8 +29,8 @@ R_TYPE function X(sm_integrate)(m, sm, f) result(res)
   res = sum( f(1:sm%ns) * m%vol_pp(sm%jxyz(1:sm%ns)) )
 
 #if defined(HAVE_MPI)
-  if(mesh%parallel_in_domains) then
-    call MPI_Allreduce(res, tmp, 1, R_MPITYPE, MPI_SUM, mesh%vp%comm, mpi_err)
+  if(m%parallel_in_domains) then
+    call MPI_Allreduce(res, tmp, 1, R_MPITYPE, MPI_SUM, m%vp%comm, mpi_err)
     res = tmp
   end if
 #endif
