@@ -213,6 +213,7 @@ contains
     character(len=3) :: filenum
     character(len=3) :: dirnum
     real             :: time_per_pass
+    real             :: total_time, percent
 
     if(.not.in_profiling_mode) return
 
@@ -226,6 +227,8 @@ contains
     dirnum  = 'ser'
 #endif
 
+    total_time = real(time_sec(C_PROFILING_COMPLETE_DATASET))+1e-6*real(time_usec(C_PROFILING_COMPLETE_DATASET))
+
     iunit = io_open('profiling.'//dirnum//'/profiling.'//filenum, action='write')
     if(iunit.lt.0) then
       message(1) = 'Could not write profiling results.'
@@ -233,22 +236,24 @@ contains
       call pop_sub()
       return
     end if
-    write(iunit,'(a71)') &
-      'TAG                   NUMBER OF CALLS       TOTAL TIME    TIME PER CALL'
-    write(iunit,'(a71 )') &
-      '======================================================================='
+    write(iunit,'(a80)') &
+         'TAG                   NUMBER OF CALLS       TOTAL TIME    TIME PER CALL    %TIME'
+    write(iunit,'(a80 )') &
+         '================================================================================'
     do i = 1, C_NUM_TAGS
       if(pass_in(i).eq.pass_out(i)) then
         time_per_pass = (real(time_sec(i))+1e-6*real(time_usec(i)))/ &
           real(max(pass_in(i), 1))
+        percent = 100.0*(real(time_sec(i))+1e-6*real(time_usec(i)))/total_time
+
       else
         write(iunit,'(3a,i10,a,i10)') '*** WARNING: Entries and exits for ',trim(tag_label(i)), ' do not coincide:', &
                           pass_in(i), ' .ne.', pass_out(i)
         cycle
       end if
       if(pass_in(i) .eq. 0) cycle
-      write(iunit, '(a,i20,i10,a1,i6.6,f17.7)') tag_label(i), pass_in(i), &
-        time_sec(i), '.', time_usec(i), time_per_pass
+      write(iunit, '(a,i20,i10,a1,i6.6,f17.7, f9.1)') tag_label(i), pass_in(i), &
+           time_sec(i), '.', time_usec(i), time_per_pass, percent
     end do
 
     call io_close(iunit)
