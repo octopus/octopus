@@ -542,14 +542,17 @@ contains
 
   ! ---------------------------------------------------------
   ! Returns the number of non-local operator that should be defined.
-  function geometry_nvnl(geo) result(res)
+  function geometry_nvnl(geo, nvl) result(res)
     type(geometry_t), intent(in) :: geo
     integer                      :: res
+    integer, optional, intent(out) :: nvl
 
     type(specie_t), pointer :: s
     integer :: ia, l
 
     call push_sub('geometry.geometry_nvnl')
+
+    if( present(nvl)) nvl = 0
     res = 0
     do ia = 1, geo%natoms
       s => geo%atom(ia)%spec
@@ -558,6 +561,7 @@ contains
           if(l == s%ps%l_loc) cycle
           res = res + 2*l + 1
         end do
+        if( present(nvl)) nvl = nvl + 1
       end if
     end do
 

@@ -46,7 +46,7 @@ subroutine X(project)(mesh, p, n_projectors, dim, psi, ppsi, reltype, periodic, 
              p(ip)%local_p%v(1:n_s) * psi(p(ip)%sphere%jxyz(1:n_s), idim)
       end do
 
-      continue
+      cycle
 
     end if
 
@@ -90,7 +90,8 @@ subroutine X(project)(mesh, p, n_projectors, dim, psi, ppsi, reltype, periodic, 
 
   end do
 
-  deallocate(plpsi, lpsi)
+  if(allocated(lpsi))   deallocate(lpsi)
+  if(allocated(plpsi))  deallocate(plpsi)
 
   call pop_sub()
 end subroutine X(project)
@@ -113,7 +114,6 @@ function X(psidprojectpsi)(mesh, p, n_projectors, dim, psi, periodic, ik) result
 
   integer ::  n_s, ip, idim, idir
   R_TYPE, allocatable :: lpsi(:, :)
-  FLOAT, allocatable :: f(:)
 #if defined(HAVE_MPI)
   R_TYPE :: tmp
 #endif
@@ -124,25 +124,9 @@ function X(psidprojectpsi)(mesh, p, n_projectors, dim, psi, periodic, ik) result
 
   ! index labels the atom
   do ip = 1, n_projectors
+    if(p(ip)%type == M_LOCAL) cycle
+
     n_s = p(ip)%sphere%ns
-
-    if(p(ip)%type == M_LOCAL) then 
-
-      ALLOCATE(f(1:n_s), n_s)
-
-      do idir = 1, 3
-        do idim = 1, dim
-          f(1:n_s) = abs(psi(p(ip)%sphere%jxyz(1:n_s), idim))**2 * p(ip)%local_p%dv(1:n_s, idir)
-          res(idir) = res(idir) + dsm_integrate(mesh, p(ip)%sphere, f)
-        end do
-      end do
-
-      deallocate(f)
-
-      continue
-
-    end if
-
     if(allocated(lpsi))  deallocate(lpsi)
     ALLOCATE( lpsi(n_s, dim), n_s*dim)
     
@@ -258,7 +242,7 @@ subroutine X(calc_forces_from_potential)(gr, geo, ep, st, time)
   type(states_t),   intent(inout)     :: st
   FLOAT,            intent(in)     :: time
 
-  integer :: ii, ip, ist, ik, ivnl, ivnl_start, ivnl_end, idim, idir, ns
+  integer :: ii, ip, ist, ik, ivnl, idim, idir, ns
 
   R_TYPE :: psi_proj_gpsi
   R_TYPE :: zz(MAX_DIM)
@@ -287,48 +271,34 @@ subroutine X(calc_forces_from_potential)(gr, geo, ep, st, time)
         do ip = 1, NP
           force(ip, 1:NDIM) = sum(st%rho(ip, 1:ns))*force(ip, 1:NDIM)
         end do
-        
+
         do idir = 1, NDIM
           atm%f(idir) = atm%f(idir) - dmf_integrate(gr%m, force(:, idir))
         end do
         
       end if
       
-      !the non-local part
-      if(.not. specie_is_ps(atm%spec)) cycle
-      
-      ASSERT(NDIM == 3)
-      
-      ! Here we learn which are the projector that correspond to atom i.
-      ! It assumes that the projectors of each atom are consecutive.
-      ivnl_start  = - 1
-      do ivnl = 1, ep%nvnl
-        if(ep%p(ivnl)%iatom .eq. ii) then
-          ivnl_start = ivnl
-          exit
-        end if
-      end do
-      if(ivnl_start .eq. -1) cycle
-      ivnl_end = ep%nvnl
-      do ivnl = ivnl_start, ep%nvnl
-        if(ep%p(ivnl)%iatom .ne. ii) then
-          ivnl_end = ivnl - 1
-          exit
-        end if
-      end do
-      
+    end do atm_loop
+
+    ASSERT(NDIM == 3)
+    
+    ! iterate over the projectors
+    do ivnl = 1, ep%nvnl
+
+      atm => geo%atom(ep%p(ivnl)%iatom)
+
       ik_loop: do ik = 1, st%d%nik
         st_loop: do ist = st%st_start, st%st_end
           
-          zz = X(psidprojectpsi)(gr%m, ep%p(ivnl_start:ivnl_end), &
-               ivnl_end - ivnl_start + 1, st%d%dim, st%X(psi)(:, :, ist, ik), &
+          zz = X(psidprojectpsi)(gr%m, ep%p(ivnl:ivnl), 1, st%d%dim, st%X(psi)(:, :, ist, ik), &
                periodic = .false., ik = ik)
           atm%f(1:MAX_DIM) = atm%f(1:MAX_DIM) + M_TWO * R_REAL(st%occ(ist, ik) * zz(1:MAX_DIM))
           
         end do st_loop
       end do ik_loop
-    end do atm_loop
-    
+
+    end do
+
   case(DERIVATE_WAVEFUNCTION)
 
     ALLOCATE(gpsi(gr%m%np, 1:NDIM, st%d%dim), gr%m%np*NDIM*st%d%dim)

@@ -623,16 +623,6 @@ contains
         else 
           vl(1:gr%m%np) = M_ZERO
         end if
-        
-        call submesh_init_sphere(sm, gr%sb, gr%m, x_atom, double_grid_get_rmax(gr%dgrid, s, gr%m) + maxval(gr%m%h(1:3)))
-
-        ALLOCATE(vls(1:sm%ns), sm%ns)
-
-        call double_grid_apply_local(gr%dgrid, s, gr%m, sm, x_atom, vls(:))
-        
-        vl(sm%jxyz(1:sm%ns)) = vl(sm%jxyz(1:sm%ns)) + vls(1:sm%ns)
-
-        call submesh_end(sm)
 
       case(SPEC_ALL_E)
         vl(1:gr%m%np) = M_ZERO

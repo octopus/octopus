@@ -13,6 +13,8 @@ Enabled  : Yes
 
 Input: 03-sodium_chain.01-ground_state.inp
 
+Match ; Force ; grep "1        Na"  gs_static/info  ; \s*0.0000\d*\s*0.0000\d*\s*0.0000\d*
+ 
 Match ; Bands ; grep '^   1' unocc_static/eigenvalues | tac | head -n 6 | tail -n 1 ; \s*-17.6406\d*\s*2.0000\d*
 Match ; Bands ; grep '^   1' unocc_static/eigenvalues | tac | head -n 5 | tail -n 1 ; \s*-17.5446\d*\s*2.0000\d*
 Match ; Bands ; grep '^   1' unocc_static/eigenvalues | tac | head -n 4 | tail -n 1 ; \s*-17.2575\d*\s*2.0000\d*

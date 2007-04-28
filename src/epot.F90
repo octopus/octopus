@@ -75,7 +75,6 @@ module external_pot_m
   ! an oximoronic local projector type
   type local_t
      FLOAT, pointer :: v(:)
-     FLOAT, pointer :: dv(:,:)
   end type local_t
 
   ! The projector data type is intended to hold the local and
@@ -160,7 +159,7 @@ contains
     type(grid_t), intent(in)  :: gr
     type(geometry_t), intent(inout) :: geo
 
-    integer :: i
+    integer :: i, nvl
     C_POINTER :: blk
     FLOAT, allocatable :: x(:)
 
@@ -353,7 +352,11 @@ contains
     call loct_parse_int(check_inp('Forces'), DERIVATE_WAVEFUNCTION, ep%forces)
 
     ! The projectors
-    ep%nvnl = geometry_nvnl(geo)
+    ep%nvnl = geometry_nvnl(geo, nvl)
+
+    !if not periodic add also the local potential
+    if(.not. simul_box_is_periodic(gr%sb)) ep%nvnl = ep%nvnl + nvl
+
     nullify(ep%p)
     
     if(ep%nvnl > 0) then
@@ -666,7 +669,7 @@ contains
     if (present(fast_generation)) fast_generation_ = fast_generation
     time_ = M_ZERO
     if (present(time)) time_ = time
-    
+
     ! first we assume that we need to recalculate the ion_ion energy
     geo%eii = ion_ion_energy(geo)
 
@@ -690,9 +693,9 @@ contains
       atm => geo%atom(ia) ! shortcuts
 
       if((.not.simul_box_is_periodic(sb)).or.geo%only_user_def) then
-        
+
         call build_local_part_in_real_space(ep, gr, geo, atm, ep%vpsl, time_, st%rho_core)
-        
+
 #ifdef HAVE_FFT
       else ! momentum space
         call cf_phase_factor(sb, m, atm%x, ep%local_cf(atm%spec%index), cf_loc)
@@ -701,15 +704,17 @@ contains
         end if
 #endif
       end if
-      
+
     end do
 
-    ! Nonlocal part.
+    ! the pseudo potential part.
     i = 1
     do ia = 1, geo%natoms
       atm => geo%atom(ia)
 
       if(.not. specie_is_ps(atm%spec)) cycle
+
+      !the non-local part
       p = 1
 
       do l = 0, atm%spec%ps%l_max
@@ -731,13 +736,30 @@ contains
 
           end if
 
-          call projector_init_nl_part(ep%p(i), gr, atm, reltype, l, lm)
+          call projector_init(ep%p(i), gr, atm, reltype, l, lm)
 
           ep%p(i)%iatom = ia
           i = i + 1
         end do
       end do
+
+      if(.not. simul_box_is_periodic(gr%sb)) then
+        !the local part
+        ep%p(i)%iatom = ia
+
+        call projector_end(ep%p(i))
+
+        call submesh_init_sphere(ep%p(i)%sphere, &
+             sb, m, atm%x, double_grid_get_rmax(gr%dgrid, atm%spec, m) + maxval(m%h(1:3)))
+
+        call projector_init(ep%p(i), gr, atm, force_type = M_LOCAL)
+
+        i = i + 1
+      end if
+
     end do
+
+
 
 #ifdef HAVE_FFT
     if(simul_box_is_periodic(sb).and.(.not.geo%only_user_def)) then
@@ -1038,6 +1060,7 @@ contains
     nullify(p%hgh_p)
     nullify(p%kb_p)
     nullify(p%rkb_p)
+    nullify(p%local_p)
     call submesh_null(p%sphere)
 
   end subroutine projector_null
@@ -1094,33 +1117,46 @@ contains
   end subroutine projector_copy_kb_sphere
 
   !---------------------------------------------------------
-  subroutine projector_init_nl_part(p, gr, a, reltype, l, lm)
+  subroutine projector_init(p, gr, a, reltype, l, lm, force_type)
     type(projector_t), intent(inout) :: p
     type(grid_t),      intent(in)    :: gr
     type(atom_t),      intent(in)    :: a
-    integer,           intent(in)    :: reltype
-    integer,           intent(in)    :: l, lm
+    integer, optional, intent(in)    :: reltype
+    integer, optional, intent(in)    :: l, lm
+    integer, optional, intent(in)    :: force_type
 
-    call push_sub('epot.projector_init_nl_part')
+    integer :: ns
 
-    select case (a%spec%ps%kbc)
-    case (1)
-      p%type = M_KB
-      if (reltype == 1) then
-        write(message(1),'(a,a,a)') "Spin-orbit coupling for specie ", trim(a%spec%label), " is not available."
-        call write_warning(1)
-      end if
-    case (2)
-      if (l == 0 .or. reltype == 0) then
+    call push_sub('epot.projector_init')
+
+    if(present(force_type)) then 
+      p%type = force_type
+    else 
+      select case (a%spec%ps%kbc)
+      case (1)
         p%type = M_KB
-      else
-        p%type = M_RKB
-      end if
-    case (3)
-      p%type = M_HGH
-    end select
+        if (reltype == 1) then
+          write(message(1),'(a,a,a)') "Spin-orbit coupling for specie ", trim(a%spec%label), " is not available."
+          call write_warning(1)
+        end if
+      case (2)
+        if (l == 0 .or. reltype == 0) then
+          p%type = M_KB
+        else
+          p%type = M_RKB
+        end if
+      case (3)
+        p%type = M_HGH
+      end select
+    end if
 
     select case (p%type)
+    case(M_LOCAL)
+      ns =  p%sphere%ns
+      ALLOCATE(p%local_p, 1)
+      ALLOCATE(p%local_p%v(1:ns), ns)
+      call double_grid_apply_local(gr%dgrid, a%spec, gr%m, p%sphere, a%x, p%local_p%v)
+
     case (M_HGH)
       ALLOCATE(p%hgh_p, 1)
       call hgh_projector_null(p%hgh_p)
@@ -1136,7 +1172,7 @@ contains
     end select
 
     call pop_sub()
-  end subroutine projector_init_nl_part
+  end subroutine projector_init
 
   !---------------------------------------------------------
   subroutine projector_end(p)
@@ -1158,7 +1194,12 @@ contains
       call rkb_projector_end(p%rkb_p)
       deallocate(p%rkb_p)
     end if
-
+    if (associated(p%local_p)) then
+      if(associated(p%local_p%v)) then 
+        deallocate(p%local_p%v)
+      end if
+      deallocate(p%local_p)
+    end if
     call pop_sub()
   end subroutine projector_end
 
