@@ -84,28 +84,19 @@ module opt_control_m
   type oct_t
     FLOAT            :: eps
     integer          :: ctr_iter_max
-
     FLOAT            :: penalty
     FLOAT, pointer   :: a_penalty(:)
     FLOAT, pointer   :: tdpenalty(:, :)
     logical          :: mode_tdpenalty
-
     FLOAT            :: targetfluence
     logical :: mode_fixed_fluence
     integer :: targetmode
-
     integer :: filtermode
-
     integer :: totype
-
-
     CMPLX              :: laser_pol(MAX_DIM)
     integer :: dof
-
     integer :: algorithm_type
-
     logical            :: td_tg_state 
-
     logical :: oct_double_check
   end type oct_t
 
@@ -296,7 +287,7 @@ contains
         
         if(dump_intermediate) then
           write(filename,'(a,i3.3)') 'opt-control/b_laser.', ctr_iter
-          call write_field(filename, laser_tmp, td%max_iter, td%dt)
+          call write_field(filename, td%max_iter, NDIM, laser_tmp, td%dt)
         end if
         
         ! forward propagation
@@ -309,7 +300,7 @@ contains
         
         if(dump_intermediate) then
           write(filename,'(a,i3.3)') 'opt-control/laser.', ctr_iter
-          call write_field(filename, laser, td%max_iter, td%dt)
+          call write_field(filename, td%max_iter, NDIM, laser, td%dt)
         end if
         
       end do ctr_loop
@@ -356,7 +347,7 @@ contains
         if (stoploop)  exit ctr_loop
         
         call bwd_step(method)
-        call calc_fluence(laser_tmp, fluence)      
+        fluence = laser_fluence(laser_tmp, td%dt)
         
         ! filter stuff / alpha stuff
         if (oct%filtermode.gt.0) & 
@@ -364,7 +355,7 @@ contains
 
         ! recalc field
         if (oct%mode_fixed_fluence) then
-          call calc_fluence(laser_tmp, fluence)      
+          fluence = laser_fluence(laser_tmp, td%dt)
 
           if(in_debug_mode) write (6,*) 'actual fluence', fluence
 
@@ -378,7 +369,7 @@ contains
 
           oct%tdpenalty = oct%a_penalty(ctr_iter + 1)
           laser_tmp = laser_tmp * oct%a_penalty(ctr_iter) / oct%a_penalty(ctr_iter + 1)
-          call calc_fluence(laser_tmp, fluence)
+          fluence = laser_fluence(laser_tmp, td%dt)
 
           if(in_debug_mode) write (6,*) 'renormalized', fluence, oct%targetfluence
 
@@ -388,7 +379,7 @@ contains
         
         ! dump here: since the fwd_step is missing
         write(filename,'(a,i3.3)') 'opt-control/laser.', ctr_iter
-        call write_field(filename, laser, td%max_iter, td%dt)   
+        call write_field(filename, td%max_iter, NDIM, laser, td%dt)   
         
       end do ctr_loop
 
@@ -504,7 +495,7 @@ contains
       ! dump new laser field
       if(dump_intermediate) then
         write(filename,'(a,i3.3)') 'opt-control/laser.', ctr_iter
-        call write_field(filename, laser, td%max_iter, td%dt)
+        call write_field(filename, td%max_iter, NDIM, laser, td%dt)
       endif
       
       call pop_sub()
@@ -544,7 +535,7 @@ contains
       ! dump new laser field
       if(dump_intermediate) then
         write(filename,'(a,i3.3)') 'opt-control/b_laser.', ctr_iter
-        call write_field(filename, laser_tmp, td%max_iter, td%dt)
+        call write_field(filename, td%max_iter, NDIM, laser_tmp, td%dt)
       end if
 
       call pop_sub()
@@ -602,7 +593,7 @@ contains
         bestJ_ctr_iter = ctr_iter
         ! dump to disc
         write(filename,'(a)') 'opt-control/laser.bestJ'
-        call write_field(filename, laser, td%max_iter, td%dt)
+        call write_field(filename, td%max_iter, NDIM, laser, td%dt)
       end if
       
       ! store field with best J1
@@ -613,7 +604,7 @@ contains
         bestJ1_ctr_iter = ctr_iter
         ! dump to disc
         write(filename,'(a)') 'opt-control/laser.bestJ1'
-        call write_field(filename, laser, td%max_iter, td%dt)
+        call write_field(filename, td%max_iter, NDIM, laser, td%dt)
       end if
       
       ctr_iter = ctr_iter + 1
@@ -1097,23 +1088,11 @@ contains
 
 
     ! ---------------------------------------------------------
-    subroutine calc_fluence(laserin, fluenceout)
-      FLOAT, intent(in) :: laserin(:,:)
-      FLOAT, intent(out):: fluenceout
-      call push_sub('opt_control.calc_fluence')
-
-      fluenceout = SUM(laserin**2) * abs(td%dt)/M_TWO      
-
-      call pop_sub()
-    end subroutine calc_fluence
-
-
-    ! ---------------------------------------------------------
     subroutine calc_J()
       FLOAT :: J2
       call push_sub('opt_control.calc_j')
 
-      call calc_fluence(laser,fluence)
+      fluence = laser_fluence(laser, td%dt)
       J2 = SUM(oct%tdpenalty * laser**2) * abs(td%dt)/M_TWO
       if(oct%targetmode==oct_targetmode_td) then
          ! 1/T * int(<Psi| O | Psi>)
@@ -1132,50 +1111,6 @@ contains
 
       call pop_sub()
     end subroutine calc_J
-
-
-    ! ---------------------------------------------------------
-    subroutine write_field(filename, las, steps, dt)
-      integer,          intent(in) :: steps
-      character(len=*), intent(in) :: filename
-      FLOAT,            intent(in) :: las(1:NDIM,0:2*steps), dt ! ndim, step
-      integer :: i, iunit
-      FLOAT   :: tgrid(0:2*steps)
-
-      call push_sub('opt_control.write_field')
-      
-      call t_lookup(2*steps+1,dt/real(2,REAL_PRECISION),tgrid)
-      iunit = io_open(filename, action='write')
-      do i = 0, 2*steps, 2
-         write(iunit, '(4es30.16e4)') tgrid(i), las(:, i)
-      end do
-      call io_close(iunit)
-
-      call pop_sub()
-    end subroutine write_field
-
-
-    ! ---------------------------------------------------------
-    subroutine write_fieldw(filename, las)
-      ! in w=(2pi f) space
-      character(len=*), intent(in) :: filename
-      FLOAT,            intent(in) :: las(1:NDIM,0:2*td%max_iter)
-    
-      integer :: i, iunit
-      FLOAT   :: wgrid(0:2*td%max_iter)
-
-      call push_sub('opt_control.write_fieldw')
-
-      call w_lookup(2*td%max_iter+1,td%dt,wgrid)
-
-      iunit = io_open(filename, action='write')
-      do i = 0, 2*td%max_iter
-         write(iunit, '(4es30.16e4)') wgrid(i), las(:, i)
-      end do
-      call io_close(iunit)
-      
-      call pop_sub()
-    end subroutine write_fieldw
 
 
     ! ---------------------------------------------------------
@@ -1824,7 +1759,7 @@ contains
         end do
       enddo
       write(filename,'(a)') 'opt-control/initial_laser.1'
-      call write_field(filename, laser, td%max_iter, td%dt)
+      call write_field(filename, td%max_iter, NDIM, laser, td%dt)
       ! - deallocate multiple lasers
       call laser_end(h%ep%no_lasers,h%ep%lasers)
       ! - NOW: allocate just one laser for optimal control
@@ -1836,7 +1771,7 @@ contains
       h%ep%lasers(1)%numerical => laser   
       h%ep%lasers(1)%numerical => laser_tmp
       write(filename,'(a)') 'opt-control/initial_laser.2'
-      call write_field(filename, laser, td%max_iter, td%dt)
+      call write_field(filename, td%max_iter, NDIM, laser, td%dt)
       write(message(1),'(a,f14.8)') 'Input: Fluence of Initial laser ', sum(laser**2)*abs(td%dt)
       call write_info(1)
       ! initial laser definition end
@@ -1855,7 +1790,7 @@ contains
 
       if(in_debug_mode) then
         write(filename,'(a)') 'opt-control/td_penalty'
-        call write_field(filename, oct%tdpenalty, td%max_iter, td%dt)
+        call write_field(filename, td%max_iter, NDIM, oct%tdpenalty, td%dt)
       end if
 
       if(oct%filtermode.gt.0) then
@@ -1865,7 +1800,7 @@ contains
         do kk=1, size(f)
           write(filename,'(a,i2.2)') 'opt-control/filter', kk
           if(f(kk)%domain.eq.1) then
-            call write_fieldw(filename, real(f(kk)%numerical(:,:), REAL_PRECISION))
+            call write_fieldw(filename, NDIM, td%max_iter, real(f(kk)%numerical(:,:), REAL_PRECISION), td%dt)
           else
             !write(6,*) f(kk)%numerical(:,0)
             iunit = io_open(filename, action='write')
@@ -1941,6 +1876,7 @@ contains
  
 
 #include "opt_control_read.F90"
+#include "opt_control_aux.F90"
 
 end module opt_control_m
 
