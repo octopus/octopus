@@ -83,6 +83,72 @@
     call pop_sub()
   end subroutine write_fieldw
 
+
+
+  ! ---------------------------------------------------------
+  ! calculate chi = \hat{O} psi
+  ! do loop <target_st|Psi> for all States
+  subroutine target_calc(oct, method, gr, targetst, psi_in, chi_out)
+    type(oct_t),       intent(in)  :: oct
+    integer,           intent(in)  :: method
+    type(grid_t),      intent(in)  :: gr
+    type(states_t),    intent(in)  :: targetst, psi_in
+    type(states_t),    intent(inout) :: chi_out
+    
+    CMPLX   :: olap
+    integer :: ik, p, dim
+  
+    call push_sub('opt_control.target_calc')
+
+    if(oct%targetmode==oct_targetmode_static) then
+      if(oct%totype.eq.oct_tg_local) then ! only zr98 and wg05
+        do ik = 1, psi_in%d%nik
+          do p  = psi_in%st_start, psi_in%st_end
+            do dim = 1, psi_in%d%dim
+              ! multiply orbtials with local operator
+              ! FIXME: for multiple particles 1,1,1 -> dim,p,ik
+              chi_out%zpsi(:,dim,p,ik) = targetst%zpsi(:, 1, 1 , 1)*psi_in%zpsi(:, dim, p, ik)
+            end do
+          end do
+        end do
+      else ! totype nonlocal (all other totypes)
+        do ik = 1, psi_in%d%nik
+          do p  = psi_in%st_start, psi_in%st_end
+            olap = zstates_dotp(gr%m, targetst%d%dim, targetst%zpsi(:, :, p, ik), &
+                                                      psi_in%zpsi(:, :, p, ik))
+            if(method == oct_algorithm_zr98) &
+              chi_out%zpsi(:,:,p,ik) = olap*targetst%zpsi(:, :, p, ik)
+            if(method == oct_algorithm_zbr98) then
+              chi_out%zpsi(:,:,p,ik) = targetst%zpsi(:, :, p, ik)
+            end if
+            if(method == oct_algorithm_wg05) &
+              chi_out%zpsi(:,:,p,ik) = olap*targetst%zpsi(:, :, p, ik)
+          end do
+        end do
+      end if
+    else
+      ! time-dependent target
+      message(1) = 'Info: Time-dependent Target selected'
+      call write_info(1)
+      chi_out%zpsi = M_z0
+    end if
+
+!      do ik = 1, psi%d%nik
+!        do p  = psi%st_start, psi%st_end
+!          olap = M_z0     
+!          olap = zstates_dotp(gr%m, psi_in%d%dim,  targetst%zpsi(:,:, p, ik), psi_in%zpsi(:,:, p, ik))
+!          if(method == 'ZR98') &
+!            chi_out%zpsi(:,:,p,ik) = olap*targetst%zpsi(:,:,p,ik)
+!          if(method == 'ZBR98') &
+!            chi_out%zpsi(:,:,p,ik) = targetst%zpsi(:,:,p,ik)
+!          if(method == 'WG05') &
+!            chi_out%zpsi(:,:,p,ik) = olap*targetst%zpsi(:,:,p,ik)
+!        end do
+!      end do
+      
+    call pop_sub()
+  end subroutine target_calc
+
 !! Local Variables:
 !! mode: f90
 !! coding: utf-8

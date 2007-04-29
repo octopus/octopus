@@ -163,6 +163,49 @@
     !% Run a normal propagation after the optimization using the optimized field.
     !%End
     call loct_parse_logical(check_inp('OCTDoubleCheck'), .TRUE., oct%oct_double_check)
+
+    !%Variable OCTInitialState
+    !%Type integer
+    !%Section Optimal Control
+    !%Default 1
+    !%Description
+    !% The string OCTInitialState describes the initial state of the quantum system
+    !% Possible arguments are:
+    !%Option oct_is_groundstate 1
+    !% start in the ground state 
+    !%Option oct_is_excited 2
+    !% start in the excited state given by OCTISnumber
+    !% (ordered by energy)
+    !%Option oct_is_superposition 3
+    !% start in a superposition of states defined by the block OCTISsuperposition)
+    !%Option oct_is_userdefined 4
+    !% start in a userdefined state 
+    !%End
+    call loct_parse_int(check_inp('OCTInitialState'), oct_is_groundstate, oct%istype)
+    if(.not.varinfo_valid_option('OCTInitialState', oct%istype)) call input_error('OCTInitialState')    
+
+    !%Variable OCTTargetOperator
+    !%Type integer
+    !%Section Optimal Control
+    !%Default 2
+    !%Description
+    !% The string OCTTargetOperator describes the initial state of the quantum system
+    !% Possible arguments are:
+    !%Option oct_tg_groundstate 1 
+    !% Targetoperator is a projection operator on the ground state
+    !%Option oct_tg_excited 2
+    !% Targetoperator is a projection operator on the excited state given by OCTTOnumber
+    !%Option oct_tg_superposition 3
+    !% Targetoperator is a projection operator on a superposition of states defined by the block OCTTOsuperposition)
+    !%Option oct_tg_userdefined 4
+    !% Targetoperator is a projection operator on a user defined state
+    !%Option oct_tg_local 5
+    !% Targetoperator is a local operator. Specify the shape and position within the block OCTLocalTarget.
+    !%Option oct_tg_td_local 6
+    !% Target operator is time-dependent, please specify block OCTTdTarget
+    !%End
+    call loct_parse_int(check_inp('OCTTargetOperator'),oct_tg_excited, oct%totype)
+    if(.not.varinfo_valid_option('OCTTargetOperator', oct%totype)) call input_error('OCTTargetOperator')    
       
     call pop_sub()
   end subroutine oct_read_inp
@@ -348,8 +391,9 @@
 !!$        call write_fatal(2)
 !!$      end if
 !!$
-      call pop_sub()      
-    end subroutine check_faulty_runmodes
+
+    call pop_sub()      
+  end subroutine check_faulty_runmodes
 
 
 !! Local Variables:

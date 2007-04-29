@@ -1,0 +1,371 @@
+!! Copyright (C) 2002-2006 M. Marques, A. Castro, A. Rubio, G. Bertsch
+!!
+!! This program is free software; you can redistribute it and/or modify
+!! it under the terms of the GNU General Public License as published by
+!! the Free Software Foundation; either version 2, or (at your option)
+!! any later version.
+!!
+!! This program is distributed in the hope that it will be useful,
+!! but WITHOUT ANY WARRANTY; without even the implied warranty of
+!! MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+!! GNU General Public License for more details.
+!!
+!! You should have received a copy of the GNU General Public License
+!! along with this program; if not, write to the Free Software
+!! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
+!! 02111-1307, USA.
+!!
+!! $Id: opt_control.F90 2870 2007-04-28 06:26:47Z acastro $
+
+#include "global.h"
+
+  ! ---------------------------------------------------------
+  !
+  subroutine def_istate(oct, gr, outp, initial_state)
+    type(oct_t), intent(in)       :: oct
+    type(grid_t), intent(in)      :: gr
+    type(output_t), intent(in)    :: outp
+    type(states_t), intent(inout) :: initial_state
+
+    integer           :: i, kk, no_c, state, no_blk
+    C_POINTER         :: blk
+    integer           :: p, ik, ib, idim, inst, inik
+    integer           :: id ,is, ip, ierr, no_states, isize
+    character(len=10) :: fname
+    type(states_t)    :: tmp_st 
+    FLOAT             :: x(MAX_DIM), r, psi_re, psi_im
+    CMPLX             :: c_weight
+    
+    call push_sub('opt_control.def_istate')
+
+    select case(oct%istype)
+    case(oct_is_groundstate) 
+      message(1) =  'Info: Using Ground State for InitialState'
+      call write_info(1)
+      ! TODO: more particles
+      call read_state(initial_state, gr%m, "0000000001")      
+    case(oct_is_excited)  
+      message(1) =  'Info: Using Excited State for InitialState'
+      call write_info(1)
+
+      !%Variable OCTTargetStateNumber
+      !%Type integer
+      !%Section Optimal Control
+      !%Description
+      !% Specify the target state, ordered by energy
+      !% 1 corresponds to the ground state
+      !% default is 2
+      !%End
+      call loct_parse_int(check_inp('OCTInitialStateNumber'), 2, state)
+      
+      write(fname,'(i10.10)') state
+      call read_state(initial_state, gr%m, fname)
+    case(oct_is_superposition)   
+      message(1) =  'Info: Using Superposition of States for InitialState'
+      call write_info(1)
+
+      !%Variable OCTInitialSuperposition
+      !%Type block
+      !%Section Optimal Control
+      !%Description
+      !% The syntax of each line is, then:
+      !%
+      !% <tt>%OCTInitialSuperposition
+      !% <br>&nbsp;&nbsp;state1 | weight1 | state2 | weight2 | ... 
+      !% <br>%</tt>
+      !%
+      !% Note that weight can be complex, to produce current carrying superpositions.
+      !% Example:
+      !%
+      !% <tt>%OCTInitialSuperposition
+      !% <br>&nbsp;&nbsp;1 | 1 | 2 | -1 | ... 
+      !% <br>%</tt>
+      !%
+      !%End 
+      if(loct_parse_block(check_inp('OCTInitialSuperposition'),blk)==0) then
+        tmp_st = initial_state
+        no_blk = loct_parse_block_n(blk)
+        ! TODO: for each orbital            
+        do i=1, no_blk
+          ! The structure of the block is:
+          ! domain | function_type | center | width | weight 
+          no_c = loct_parse_block_cols(blk, i-1)
+          initial_state%zpsi(:,:,i,1) = M_z0
+          do kk=1, no_c, 2
+            call loct_parse_block_int(blk, i-1, kk-1, state)
+            call loct_parse_block_cmplx(blk, i-1, kk, c_weight)
+            write(fname,'(i10.10)') state
+            !write(6,*) 'pars ', state, c_weight
+            call read_state(tmp_st, gr%m, fname)
+            initial_state%zpsi(:,:,1,1) = initial_state%zpsi(:,:,1,1) + c_weight * tmp_st%zpsi(:,:,1,1)
+          enddo
+        end do
+        ! normalize state
+        do ik = 1, initial_state%d%nik
+          do p  = initial_state%st_start, initial_state%st_end
+            call zstates_normalize_orbital(gr%m, initial_state%d%dim, &
+              initial_state%zpsi(:,:, p, ik))
+          enddo
+        enddo
+        !            end do
+        call states_end(tmp_st)
+      end if
+      
+    case(oct_is_userdefined) 
+      message(1) =  'Info: Building userdefined InitialState'
+      call write_info(1)
+      
+      !%Variable OCTInitialUserdefined
+      !%Type block
+      !%Section Optimal Control
+      !%Description
+      !% 
+      !% Example:
+      !%
+      !% <tt>%UserDefinedStates
+      !% <br>&nbsp;&nbsp; 1 | 1 | 1 |  "exp(-r^2)*exp(-i*0.2*x)"
+      !% <br>%</tt>
+      !%  
+      !%End
+      if(loct_parse_block(check_inp('OCTInitialUserdefined'),blk)==0) then
+        
+        no_states = loct_parse_block_n(blk)
+        do ib = 1, no_states
+          write(6,*) 'HELLO USERDEF' 
+          call loct_parse_block_int(blk, ib-1, 0, idim)
+          call loct_parse_block_int(blk, ib-1, 1, inst)
+          call loct_parse_block_int(blk, ib-1, 2, inik)
+          write(6,*) ' DEBUG: ', idim,inst,inik
+          ! read formula strings and convert to C strings
+          do id = 1, initial_state%d%dim
+            do is = 1, initial_state%nst
+              do ik = 1, initial_state%d%nik   
+                
+                ! does the block entry match and is this node responsible?
+                if(.not.(id.eq.idim .and. is.eq.inst .and. ik.eq.inik    &
+                  .and. initial_state%st_start.le.is .and. initial_state%st_end.ge.is) ) cycle
+                
+                ! parse formula string
+                call loct_parse_block_string(                            &
+                  blk, ib-1, 3, initial_state%user_def_states(id, is, ik))
+                ! convert to C string
+                call conv_to_C_string(initial_state%user_def_states(id, is, ik))
+                
+                do ip = 1, gr%m%np
+                  x = gr%m%x(ip, :)
+                  r = sqrt(sum(x(:)**2))
+                  
+                  ! parse user defined expressions
+                  call loct_parse_expression(psi_re, psi_im,             &
+                    x(1), x(2), x(3), r, M_ZERO, initial_state%user_def_states(id, is, ik))
+                  ! fill state
+                  !write(6,*) psi_re, psi_im
+                  initial_state%zpsi(ip, id, is, ik) = psi_re + M_zI*psi_im
+                end do
+                ! normalize orbital
+                call zstates_normalize_orbital(gr%m, initial_state%d%dim, initial_state%zpsi(:,:, is, ik))
+              end do
+            end do
+          enddo
+        end do
+        call loct_parse_block_end(blk)
+        call zoutput_function(outp%how,'opt-control','is_userdef', gr%m, gr%sb, &
+                              initial_state%zpsi(:,1,1,1), M_ONE/units_out%length%factor**NDIM ,ierr)
+      else
+        message(1) = '"UserDefinedStates" has to be specified as block.'
+        call write_fatal(1)
+      end if
+      
+    case default
+      write(message(1),'(a)') "No valid initial state defined."
+      write(message(2),'(a)') "Choosing the ground state."
+      call write_info(2)
+    end select
+    
+    if (in_debug_mode) call zoutput_function(outp%how, &
+      'opt-control', 'istate', gr%m, gr%sb, initial_state%zpsi(:,1,1,1), &
+       M_ONE/units_out%length%factor**NDIM, ierr)
+
+    call pop_sub()
+  end subroutine def_istate
+
+
+  ! ----------------------------------------------------------------------
+  subroutine def_toperator(oct, gr, outp, target_state)
+    type(oct_t), intent(in)       :: oct
+    type(grid_t), intent(in)      :: gr
+    type(output_t), intent(in)    :: outp
+    type(states_t), intent(inout) :: target_state
+
+    integer           :: i, no_c, state
+    C_POINTER         :: blk
+    integer           :: ierr, isize
+    character(len=10) :: fname
+    integer           :: ik, ib
+    integer           :: no_states, kk, p, ip
+    integer           :: no_blk
+    FLOAT             :: x(MAX_DIM), r, psi_re, psi_im
+    CMPLX             :: c_weight      
+    type(states_t)    :: tmp_st
+    character(len=1024) :: expression
+
+    call push_sub('opt_control.def_toperator')
+
+    select case(oct%totype)
+    case(oct_tg_groundstate)
+      message(1) =  'Info: Using Ground State for TargetOperator'
+      call write_info(1)
+      ! Target State is ground state
+      ! rarely used: photo association
+      ! maybe other cooling stuff
+      ! TODO: expand to many particles
+      call read_state(target_state, gr%m, "0000000001")
+      
+    case(oct_tg_excited) 
+      message(1) =  'Info: Using Excited State for TargetOperator'
+      call write_info(1)
+
+      ! read in excited state
+      !%Variable OCTTargetStateNumber
+      !%Type integer
+      !%Section Optimal Control
+      !%Description
+      !% Specify the target state, ordered by energy
+      !% 1 corresponds to the ground state
+      !% Default is 2
+      !%End
+      call loct_parse_int(check_inp('OCTTargetStateNumber'), 2, state)
+      write(fname,'(i10.10)') state
+      call read_state(target_state, gr%m, fname)
+    case(oct_tg_superposition)  
+      message(1) =  'Info: Using Superposition of States for TargetOperator'
+      call write_info(1)
+
+      !%Variable OCTTargetSuperposition
+      !%Type block
+      !%Section Optimal Control
+      !%Description
+      !% The syntax of each line is, then:
+      !%
+      !% <tt>%OCTTargetSuperposition
+      !% <br>&nbsp;&nbsp;state1 | weight1 | state2 | weight2 | ... 
+      !% <br>%</tt>
+      !% 
+      !% Example:
+      !%
+      !% <tt>%OCTTargetSuperposition
+      !% <br>&nbsp;&nbsp;1 | 1 | 2 | -1 | ... 
+      !% <br>%</tt>
+      !%
+      !%End
+      if(loct_parse_block(check_inp('OCTTargetSuperposition'),blk)==0) then
+        tmp_st = target_state
+        no_blk = loct_parse_block_n(blk)
+        ! TODO: for each orbital            
+        do i=1, no_blk
+          ! The structure of the block is:
+          ! domain | function_type | center | width | weight 
+          no_c = loct_parse_block_cols(blk, i-1)
+          target_state%zpsi(:,:,i,1) = M_z0
+          do kk=1, no_c, 2
+            call loct_parse_block_int(blk, i-1, kk-1, state)
+            call loct_parse_block_cmplx(blk, i-1, kk, c_weight)
+            write(fname,'(i10.10)') state
+            !write(6,*) 'pars ', state, c_weight
+            call read_state(tmp_st, gr%m, fname)
+            target_state%zpsi(:,:,1,1) = target_state%zpsi(:,:,1,1) + c_weight * tmp_st%zpsi(:,:,1,1)
+          enddo
+        end do
+        ! normalize state
+        do ik = 1, target_state%d%nik
+          do p  = target_state%st_start, target_state%st_end
+            call zstates_normalize_orbital(gr%m, target_state%d%dim, target_state%zpsi(:,:, p, ik))
+          enddo
+        enddo
+        !            end do
+        call states_end(tmp_st)
+      end if
+      
+
+    case(oct_tg_userdefined) 
+      message(1) =  'Info: Using userdefined state for Targetoperator'
+      call write_info(1)
+      !%Variable OCTInitialUserdefined
+      !%Type block
+      !%Section Optimal Control
+      !%Description
+      !% 
+      !% Example:
+      !%
+      !% <tt>%UserDefinedStates
+      !% <br>&nbsp;&nbsp; 1 | 1 | 1 |  "exp(-r^2)*exp(-i*0.2*x)"
+      !% <br>%</tt>
+      !%  
+      !%End
+    case(oct_tg_local) 
+      message(1) =  'Info: Using Local Target'
+      call write_info(1)
+      !%Variable OCTLocalTarget
+      !%Type block
+      !%Section Optimal Control
+      !%Description
+      !% This block defines the shape and position of the local target operator. 
+      !% It is possible to define several local operators which are then summed up.
+      !% The syntax of each line is, then:
+      !%
+      !% <tt>%OCTLocalTarget
+      !% <br>&nbsp;&nbsp; "exp(-r^2)*exp(-i*0.2*x)"
+      !% <br>%</tt>
+      !%  
+      !% Example
+      !%
+      !% <tt>%OCTLocalTarget
+      !% <br>&nbsp;&nbsp; "exp(-r^2)*exp(-i*0.2*x)"
+      !% <br>%</tt>
+      !%
+      !%End
+      ! parse input
+      
+      if(loct_parse_block(check_inp('OCTLocalTarget'),blk)==0) then
+        no_states = loct_parse_block_n(blk)
+        target_state%zpsi(:, 1, 1, 1) = m_z0
+
+        do ib = 1, no_states
+          ! parse formula string
+          call loct_parse_block_string(blk, ib-1, 0, expression)
+          ! convert to C string
+          call conv_to_C_string(expression)
+          
+          do ip = 1, gr%m%np
+            x = gr%m%x(ip, :)
+            r = sqrt(sum(x(:)**2))
+            
+            ! parse user defined expressions
+            call loct_parse_expression(psi_re, psi_im, &
+              x(1), x(2), x(3), r, M_ZERO, expression)
+            
+            ! fill state
+            target_state%zpsi(ip, 1, 1, 1) = target_state%zpsi(ip, 1, 1, 1) &
+              + psi_re + M_zI*psi_im
+          end do
+          
+          ! normalize orbital
+          call zstates_normalize_orbital(gr%m, target_state%d%dim, &
+            target_state%zpsi(:,:, 1, 1))
+        end do
+        call loct_parse_block_end(blk)
+        call zoutput_function(outp%how,'opt-control', 'tg_local', &
+                              gr%m, gr%sb, target_state%zpsi(:,1,1,1), M_ONE/units_out%length%factor**NDIM, ierr)
+      else
+        message(1) = '"OCTLocalTarget" has to be specified as block.'
+        call write_fatal(1)
+      end if
+    case(oct_tg_td_local)
+      target_state%zpsi(:,1,1,1) = M_z0
+    case default
+      write(message(1),'(a)') "Target Operator not properly defined."
+      call write_fatal(1)
+    end select
+    
+    call pop_sub()
+  end subroutine def_toperator

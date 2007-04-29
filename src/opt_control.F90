@@ -98,6 +98,7 @@ module opt_control_m
     integer :: algorithm_type
     logical            :: td_tg_state 
     logical :: oct_double_check
+    integer :: istype
   end type oct_t
 
 
@@ -138,7 +139,7 @@ contains
     integer            :: iunit
     FLOAT              :: overlap, functional, old_functional
     FLOAT              :: fluence, u, t
-    FLOAT, allocatable :: convergence(:,:), field(:), td_fitness(:)
+    FLOAT, allocatable :: convergence(:,:), td_fitness(:)
     CMPLX, allocatable :: tdtarget(:)
     
     FLOAT              :: bestJ, bestJ1, bestJ_fluence, bestJ1_fluence
@@ -147,8 +148,6 @@ contains
 
     character(len=80)  :: filename
 
-    integer            :: istype
-    
     logical            :: dump_intermediate, mode_fixed_fluence
 
 
@@ -177,27 +176,21 @@ contains
 
     ! mode switcher
     select case(oct%algorithm_type)
-      
-    case(oct_algorithm_zbr98)    
-      ! (0)  rabitz zbr98 type algorithm (states only)    
-      call scheme_ZBR98(oct%algorithm_type) 
+    case(oct_algorithm_zbr98)  ! Rabitz zbr98 type algorithm (states only)    
+      call scheme_zbr98
 
-    case(oct_algorithm_zr98)     
-      ! (1)  rabitz zr98  type algorithm 
-      call scheme_ZR98(oct%algorithm_type)  
+    case(oct_algorithm_zr98) ! Rabitz zr98  type algorithm 
+      call scheme_zr98
       ! TODO: o generalize elements
       !       o time-dependent targets
       
-    case(oct_algorithm_wg05)  
-      ! (2) Werschnik, Gross Type: allows fixed fluence and filtering
-      call scheme_WG05(oct%algorithm_type)  
-      ! (11) td targets rabitz type
-      ! (12) td targets wg     type (with filter)
+    case(oct_algorithm_wg05)  ! Werschnik, Gross Type: allows fixed fluence and filtering
+      call scheme_wg05
       
     ! TODO: Krotov scheme
     ! MT03 scheme: with additional parameters
    
-    case DEFAULT
+    case default
       write(message(1),'(a)') "Unknown choice of OCT algorithm."
       write(message(2),'(a)') "Choose: ZR98, ZBR98, WG05 ."
       call write_fatal(2)
@@ -212,7 +205,7 @@ contains
       message(1) = "Info: Optimization finished...checking the field"
       call write_info(1)
       
-      call states_copy(psi, initial_st)
+      psi = initial_st
       
       call propagate_forward(psi)
 
@@ -247,8 +240,7 @@ contains
 
     
     ! ---------------------------------------------------------
-    subroutine scheme_zr98(method)
-      integer, intent(in) :: method
+    subroutine scheme_zr98
       
       integer :: ierr
       logical :: stoploop
@@ -263,7 +255,7 @@ contains
       message(1) = "Info: Initial forward propagation"
       call write_info(1)
 
-      call states_copy(psi, initial_st)
+      psi = initial_st
       call propagate_forward(psi) 
       
       if(in_debug_mode) call zoutput_function(sys%outp%how, &
@@ -278,12 +270,12 @@ contains
         ! check for stop file and delete file
         
         ! define target state
-        call target_calc(method, target_st, psi, chi) ! defines chi
+        call target_calc(oct, oct_algorithm_zr98, gr, target_st, psi, chi) ! defines chi
         
         call iteration_manager(stoploop)
         if (stoploop)  exit ctr_loop
         
-        call bwd_step(method)
+        call bwd_step(oct_algorithm_zr98)
         
         if(dump_intermediate) then
           write(filename,'(a,i3.3)') 'opt-control/b_laser.', ctr_iter
@@ -291,10 +283,10 @@ contains
         end if
         
         ! forward propagation
-        call states_copy(psi, initial_st)
-        call states_copy(psi2, initial_st) ! for td target
+        psi = initial_st
+        psi2 = initial_st
         call zoutput_function(sys%outp%how,'opt-control','last_bwd',gr%m,gr%sb,psi%zpsi(:,1,1,1),M_ONE,ierr)
-        call fwd_step(method)
+        call fwd_step(oct_algorithm_zr98)
         write(filename,'(a,i3.3)') 'PsiT.', ctr_iter
         call zoutput_function(sys%outp%how,'opt-control',filename,gr%m,gr%sb,psi%zpsi(:,1,1,1),M_ONE,ierr)
         
@@ -310,8 +302,7 @@ contains
     
 
     !---------------------------------------
-    subroutine scheme_wg05(method)
-      integer, intent(in) :: method
+    subroutine scheme_wg05
       
       integer :: ierr
       logical :: stoploop
@@ -332,7 +323,7 @@ contains
         message(1) = "Info: Initial forward propagation"
         call write_info(1)
         
-        call states_copy(psi, initial_st)
+        psi = initial_st
         call propagate_forward(psi) 
         
         if(in_debug_mode) then
@@ -341,12 +332,12 @@ contains
         end if
 
         ! define target state
-        call target_calc(method,target_st,psi,chi) ! defines chi
+        call target_calc(oct, oct_algorithm_wg05, gr, target_st, psi, chi) ! defines chi
         
         call iteration_manager(stoploop)
         if (stoploop)  exit ctr_loop
         
-        call bwd_step(method)
+        call bwd_step(oct_algorithm_wg05)
         fluence = laser_fluence(laser_tmp, td%dt)
         
         ! filter stuff / alpha stuff
@@ -388,8 +379,7 @@ contains
 
  
     ! ---------------------------------------------------------
-    subroutine scheme_zbr98(method)
-      integer, intent(in)   :: method
+    subroutine scheme_zbr98!(method)
 
       integer :: ierr
       logical :: stoploop
@@ -405,7 +395,7 @@ contains
       message(1) = "Info: Initial backward propagation"
       call write_info(1)
       
-      call target_calc(method, target_st, psi, chi)
+      call target_calc(oct, oct_algorithm_zbr98, gr, target_st, psi, chi)
       call propagate_backward(chi) 
 
       if(in_debug_mode) call zoutput_function(sys%outp%how, &
@@ -421,9 +411,9 @@ contains
         call write_info(1)
         
         ! forward propagation
-        call states_copy(psi, initial_st)  
+        psi = initial_st
         
-        call fwd_step(method)
+        call fwd_step(oct_algorithm_zbr98)
 
         if(in_debug_mode) then
           write(6,*) 'norm', zstates_dotp(gr%m, psi%d%dim,  psi%zpsi(:,:, 1, 1), psi%zpsi(:,:, 1, 1))
@@ -440,8 +430,8 @@ contains
         if (stoploop)  exit ctr_loop
         
          ! and now backward
-        call target_calc(method,target_st,psi,chi)
-        call bwd_step(method)
+        call target_calc(oct, oct_algorithm_zbr98, gr, target_st, psi, chi)
+        call bwd_step(oct_algorithm_zbr98)
         call zoutput_function(sys%outp%how,'opt-control','last_bwd',gr%m,gr%sb,psi%zpsi(:,1,1,1),M_ONE, ierr) 
         
       end do ctr_loop
@@ -651,71 +641,7 @@ contains
       call pop_sub()
     end subroutine calc_tdfitness
 
-    ! ---------------------------------------------------------
-    ! calculate chi = \hat{O} psi
-    ! do loop <target_st|Psi> for all States
-    subroutine target_calc(method, targetst, psi_in, chi_out)
-      integer,           intent(in)  :: method
-      type(states_t),    intent(in)  :: targetst, psi_in
-      type(states_t),    intent(inout) :: chi_out
-      
-      CMPLX   :: olap
-      integer :: ik, p, dim
-    
-      call push_sub('opt_control.target_calc')
 
-      if(oct%targetmode==oct_targetmode_static) then
-        if(oct%totype.eq.oct_tg_local) then ! only zr98 and wg05
-          do ik = 1, psi_in%d%nik
-            do p  = psi_in%st_start, psi_in%st_end
-              do dim = 1, psi_in%d%dim
-                ! multiply orbtials with local operator
-                ! FIXME: for multiple particles 1,1,1 -> dim,p,ik
-                chi_out%zpsi(:,dim,p,ik) = targetst%zpsi(:, 1, 1 , 1)*psi_in%zpsi(:, dim, p, ik)
-              end do
-            end do
-          end do
-        else ! totype nonlocal (all other totypes)
-          do ik = 1, psi_in%d%nik
-            do p  = psi_in%st_start, psi_in%st_end
-              olap = M_z0
-              do dim = 1, psi_in%d%dim
-                olap = olap + zmf_integrate(gr%m,conjg(targetst%zpsi(:, dim, p, ik))*psi_in%zpsi(:, dim, p, ik))
-              end do
-              if(method == oct_algorithm_zr98) &
-                chi_out%zpsi(:,:,p,ik) = olap*targetst%zpsi(:, :, p, ik)
-              if(method == oct_algorithm_zbr98) then
-                chi_out%zpsi(:,:,p,ik) = targetst%zpsi(:, :, p, ik)
-              end if
-              if(method == oct_algorithm_wg05) &
-                chi_out%zpsi(:,:,p,ik) = olap*targetst%zpsi(:, :, p, ik)
-            end do
-          end do
-        end if
-      else
-        ! time-dependent target
-        message(1) = 'Info: Time-dependent Target selected'
-        call write_info(1)
-        chi_out%zpsi = M_z0
-      end if
-
-!      do ik = 1, psi%d%nik
-!        do p  = psi%st_start, psi%st_end
-!          olap = M_z0     
-!          olap = zstates_dotp(gr%m, psi_in%d%dim,  targetst%zpsi(:,:, p, ik), psi_in%zpsi(:,:, p, ik))
-!          if(method == 'ZR98') &
-!            chi_out%zpsi(:,:,p,ik) = olap*targetst%zpsi(:,:,p,ik)
-!          if(method == 'ZBR98') &
-!            chi_out%zpsi(:,:,p,ik) = targetst%zpsi(:,:,p,ik)
-!          if(method == 'WG05') &
-!            chi_out%zpsi(:,:,p,ik) = olap*targetst%zpsi(:,:,p,ik)
-!        end do
-!      end do
-      
-      call pop_sub()
-   end subroutine target_calc
-
-   
    ! ---------------------------------------------------------
    subroutine prop_iter_fwd(iter,method)
      integer, intent(in) :: method
@@ -1076,7 +1002,6 @@ contains
 
         end if
 
-        ! call loct_progress_bar(i-1, td%max_iter-1)
       end do
       
       call zoutput_function(sys%outp%how,'opt-control','last_fwd',gr%m,gr%sb,psi_n%zpsi(:,1,1,1),M_ONE, ierr) 
@@ -1167,385 +1092,50 @@ contains
     end subroutine output
 
 
-    !------------------------------------------------------------------------
-    subroutine def_istate()
-      integer           :: kk, no_c, state, no_blk
-      C_POINTER         :: blk
-      integer           :: p, ik, ib, idim, inst, inik
-      integer           :: id ,is, ip, ierr, no_states, isize
-      character(len=10) :: fname
-      type(states_t)    :: tmp_st 
-      FLOAT             :: x(MAX_DIM), r, psi_re, psi_im
-      CMPLX             :: c_weight
-      
-      call push_sub('opt_control.def_istate')
+    !----------------------------------------------------------
+    subroutine build_tdshape(td_tg, steps, dt)
+      type(td_target_t), intent(inout) :: td_tg
+      integer,           intent(in)    :: steps
+      FLOAT,             intent(in)    :: dt
 
-      !%Variable OCTInitialState
-      !%Type integer
-      !%Section Optimal Control
-      !%Description
-      !% The string OCTInitialState describes the initial state of the quantum system
-      !% Possible arguments are:
-      !%Option oct_is_groundstate 1
-      !% start in the ground state 
-      !%Option oct_is_excited 2
-      !% start in the excited state given by OCTISnumber
-      !% (ordered by energy)
-      !%Option oct_is_superposition 3
-      !% start in a superposition of states defined by the block OCTISsuperposition)
-      !%Option oct_is_userdefined 4
-      !% start in a userdefined state 
-      !%End
+      FLOAT   :: tgrid(0:2*steps)
+      FLOAT   :: f_re, f_im
+      integer :: kk, pol
 
-      ! parse input
-      call loct_parse_int(check_inp('OCTInitialState'), oct_is_groundstate, istype)
-     
-      ! make it work for single particle
-      select case(istype)
-      case(oct_is_groundstate) 
-        message(1) =  'Info: Using Ground State for InitialState'
-        call write_info(1)
-        ! TODO: more particles
-        call read_state(initial_st, gr%m, "0000000001")      
-      case(oct_is_excited)  
-        message(1) =  'Info: Using Excited State for InitialState'
-        call write_info(1)
+      call push_sub('opt_control.build_tdshape')
 
-        !%Variable OCTTargetStateNumber
-        !%Type integer
-        !%Section Optimal Control
-        !%Description
-        !% Specify the target state, ordered by energy
-        !% 1 corresponds to the ground state
-        !% default is 2
-        !%End
-        call loct_parse_int(check_inp('OCTInitialStateNumber'), 2, state)
-        
-        write(fname,'(i10.10)') state
-        call read_state(initial_st, gr%m, fname)
-      case(oct_is_superposition)   
-        message(1) =  'Info: Using Superposition of States for InitialState'
-        call write_info(1)
-
-        !%Variable OCTInitialSuperposition
-        !%Type block
-        !%Section Optimal Control
-        !%Description
-        !% The syntax of each line is, then:
-        !%
-        !% <tt>%OCTInitialSuperposition
-        !% <br>&nbsp;&nbsp;state1 | weight1 | state2 | weight2 | ... 
-        !% <br>%</tt>
-        !%
-        !% Note that weight can be complex, to produce current carrying superpositions.
-        !% Example:
-        !%
-        !% <tt>%OCTInitialSuperposition
-        !% <br>&nbsp;&nbsp;1 | 1 | 2 | -1 | ... 
-        !% <br>%</tt>
-        !%
-        !%End 
-        if(loct_parse_block(check_inp('OCTInitialSuperposition'),blk)==0) then
-          tmp_st = initial_st
-          no_blk = loct_parse_block_n(blk)
-          ! TODO: for each orbital            
-          do i=1, no_blk
-            ! The structure of the block is:
-            ! domain | function_type | center | width | weight 
-            no_c = loct_parse_block_cols(blk, i-1)
-            initial_st%zpsi(:,:,i,1) = M_z0
-            do kk=1, no_c, 2
-              call loct_parse_block_int(blk, i-1, kk-1, state)
-              call loct_parse_block_cmplx(blk, i-1, kk, c_weight)
-              write(fname,'(i10.10)') state
-              !write(6,*) 'pars ', state, c_weight
-              call read_state(tmp_st, gr%m, fname)
-              initial_st%zpsi(:,:,1,1) = initial_st%zpsi(:,:,1,1) + c_weight * tmp_st%zpsi(:,:,1,1)
-            enddo
-          end do
-          ! normalize state
-          do ik = 1, psi%d%nik
-            do p  = psi%st_start, psi%st_end
-              call zstates_normalize_orbital(gr%m, initial_st%d%dim, &
-                initial_st%zpsi(:,:, p, ik))
-            enddo
-          enddo
-          !            end do
-          call states_end(tmp_st)
-        end if
-        
-      case(oct_is_userdefined) 
-        message(1) =  'Info: Building userdefined InitialState'
-        call write_info(1)
-        
-        !%Variable OCTInitialUserdefined
-        !%Type block
-        !%Section Optimal Control
-        !%Description
-        !% 
-        !% Example:
-        !%
-        !% <tt>%UserDefinedStates
-        !% <br>&nbsp;&nbsp; 1 | 1 | 1 |  "exp(-r^2)*exp(-i*0.2*x)"
-        !% <br>%</tt>
-        !%  
-        !%End
-        if(loct_parse_block(check_inp('OCTInitialUserdefined'),blk)==0) then
-          
-          no_states = loct_parse_block_n(blk)
-          do ib = 1, no_states
-            write(6,*) 'HELLO USERDEF' 
-            call loct_parse_block_int(blk, ib-1, 0, idim)
-            call loct_parse_block_int(blk, ib-1, 1, inst)
-            call loct_parse_block_int(blk, ib-1, 2, inik)
-            write(6,*) ' DEBUG: ', idim,inst,inik
-            ! read formula strings and convert to C strings
-            do id = 1, initial_st%d%dim
-              do is = 1, initial_st%nst
-                do ik = 1, initial_st%d%nik   
-                  
-                  ! does the block entry match and is this node responsible?
-                  if(.not.(id.eq.idim .and. is.eq.inst .and. ik.eq.inik    &
-                    .and. initial_st%st_start.le.is .and. initial_st%st_end.ge.is) ) cycle
-
-                  
-                  ! parse formula string
-                  call loct_parse_block_string(                            &
-                    blk, ib-1, 3, initial_st%user_def_states(id, is, ik))
-                  ! convert to C string
-                  call conv_to_C_string(initial_st%user_def_states(id, is, ik))
-                  
-                  do ip = 1, gr%m%np
-                    x = gr%m%x(ip, :)
-                    r = sqrt(sum(x(:)**2))
-                    
-                    ! parse user defined expressions
-                    call loct_parse_expression(psi_re, psi_im,             &
-                      x(1), x(2), x(3), r, M_ZERO, initial_st%user_def_states(id, is, ik))
-                    ! fill state
-                    !write(6,*) psi_re, psi_im
-                    initial_st%zpsi(ip, id, is, ik) = psi_re + M_zI*psi_im
-                  end do
-                  ! normalize orbital
-                  call zstates_normalize_orbital(gr%m, initial_st%d%dim, initial_st%zpsi(:,:, is, ik))
-                end do
-              end do
-            enddo
-          end do
-          call loct_parse_block_end(blk)
-          call zoutput_function(sys%outp%how,'opt-control','is_userdef',gr%m,gr%sb,initial_st%zpsi(:,1,1,1),u,ierr)
-        else
-          message(1) = '"UserDefinedStates" has to be specified as block.'
-          call write_fatal(1)
-        end if
-        
-      case default
-        write(message(1),'(a)') "No valid initial state defined."
-        write(message(2),'(a)') "Choosing the ground state."
-        call write_info(2)
-      end select
-      
-      if (in_debug_mode) call zoutput_function(sys%outp%how, &
-        'opt-control', 'istate', gr%m, gr%sb, initial_st%zpsi(:,1,1,1), u, ierr)
-
+      call t_lookup(2*steps+1,dt/real(2,REAL_PRECISION),tgrid)
+      do kk=0, 2*steps
+        do pol=1,NDIM
+          f_re = M_ZERO
+          f_im = M_ZERO
+          !call loct_parse_expression(f_re, f_im, "t", tgrid(kk), &
+          !     td_tg%expression(pol))
+          call loct_parse_expression(f_re, f_im, & 	
+            M_ZERO, M_ZERO, M_ZERO, M_ZERO, tgrid(kk), &
+            td_tg%expression(pol)) 
+          td_tg%tdshape(pol,kk) = f_re + M_zI*f_im
+        end do
+      end do
       call pop_sub()
-    end subroutine def_istate
+    end subroutine build_tdshape
     
+    
+    !---------------------------------------------------------------
+    subroutine init_tdtarget(td_tg)
+      type(td_target_t), pointer :: td_tg(:)
 
-    ! ----------------------------------------------------------------------
-    subroutine def_toperator()
-      integer           :: no_tds, no_c, state
+
+      integer             :: jj
+      FLOAT               :: mxloc(MAX_DIM)
+      integer             :: tt, pos(1)
+      FLOAT               :: t
+      CMPLX               :: tgt(NP_PART)
+
+      integer :: no_c, no_tds, pol
       C_POINTER         :: blk
-      integer           :: ierr, isize
-      character(len=10) :: fname
-      integer           :: ik, ib
-      integer           :: no_states, kk, p, ip
-      integer           :: no_blk, pol
-      FLOAT             :: x(MAX_DIM), r, psi_re, psi_im
-      CMPLX             :: c_weight      
-      type(states_t)    :: tmp_st
-      character(len=1024) :: expression
 
-      call push_sub('opt_control.def_toperator')
-
-      ! prepare targetoperator 
-      !%Variable OCTTargetOperator
-      !%Type integer
-      !%Section Optimal Control
-      !%Description
-      !% The string OCTTargetOperator describes the initial state of the quantum system
-      !% Possible arguments are:
-      !%Option *oct_tg_groundstate* 1 
-      !% Targetoperator is a projection operator on the ground state
-      !%Option *oct_tg_excited* 2
-      !% Targetoperator is a projection operator on the excited state given by OCTTOnumber
-      !%Option *oct_tg_superposition* 3
-      !% Targetoperator is a projection operator on a superposition of states defined by the block OCTTOsuperposition)
-      !%Option *oct_tg_userdefined* 4
-      !% Targetoperator is a projection operator on a user defined state
-      !%Option *oct_tg_local* 5
-      !% Targetoperator is a local operator. Specify the shape and position within the block OCTLocalTarget.
-      !%Option *oct_tg_td_local* 6
-      !% Target operator is time-dependent, please specify block OCTTdTarget
-      !%End
-      call loct_parse_int(check_inp('OCTTargetOperator'),oct_tg_excited, oct%totype)
-      select case(oct%totype)
-      case(oct_tg_groundstate)
-        message(1) =  'Info: Using Ground State for TargetOperator'
-        call write_info(1)
-        ! Target State is ground state
-        ! rarely used: photo association
-        ! maybe other cooling stuff
-        ! TODO: expand to many particles
-        call read_state(target_st, gr%m, "0000000001")
-        
-      case(oct_tg_excited) 
-        message(1) =  'Info: Using Excited State for TargetOperator'
-        call write_info(1)
-
-        ! read in excited state
-        !%Variable OCTTargetStateNumber
-        !%Type integer
-        !%Section Optimal Control
-        !%Description
-        !% Specify the target state, ordered by energy
-        !% 1 corresponds to the ground state
-        !% Default is 2
-        !%End
-        call loct_parse_int(check_inp('OCTTargetStateNumber'), 2, state)
-        write(fname,'(i10.10)') state
-        call read_state(target_st, gr%m, fname)
-      case(oct_tg_superposition)  
-        message(1) =  'Info: Using Superposition of States for TargetOperator'
-        call write_info(1)
-
-        !%Variable OCTTargetSuperposition
-        !%Type block
-        !%Section Optimal Control
-        !%Description
-        !% The syntax of each line is, then:
-        !%
-        !% <tt>%OCTTargetSuperposition
-        !% <br>&nbsp;&nbsp;state1 | weight1 | state2 | weight2 | ... 
-        !% <br>%</tt>
-        !% 
-        !% Example:
-        !%
-        !% <tt>%OCTTargetSuperposition
-        !% <br>&nbsp;&nbsp;1 | 1 | 2 | -1 | ... 
-        !% <br>%</tt>
-        !%
-        !%End
-        if(loct_parse_block(check_inp('OCTTargetSuperposition'),blk)==0) then
-          tmp_st = target_st
-          no_blk = loct_parse_block_n(blk)
-          ! TODO: for each orbital            
-          do i=1, no_blk
-            ! The structure of the block is:
-            ! domain | function_type | center | width | weight 
-            no_c = loct_parse_block_cols(blk, i-1)
-            target_st%zpsi(:,:,i,1) = M_z0
-            do kk=1, no_c, 2
-              call loct_parse_block_int(blk, i-1, kk-1, state)
-              call loct_parse_block_cmplx(blk, i-1, kk, c_weight)
-              write(fname,'(i10.10)') state
-              !write(6,*) 'pars ', state, c_weight
-              call read_state(tmp_st, gr%m, fname)
-              target_st%zpsi(:,:,1,1) = target_st%zpsi(:,:,1,1) + c_weight * tmp_st%zpsi(:,:,1,1)
-            enddo
-          end do
-          ! normalize state
-          do ik = 1, psi%d%nik
-            do p  = psi%st_start, psi%st_end
-              call zstates_normalize_orbital(gr%m, target_st%d%dim, &
-                target_st%zpsi(:,:, p, ik))
-            enddo
-          enddo
-          !            end do
-          call states_end(tmp_st)
-        end if
-        
-
-      case(oct_tg_userdefined) 
-        message(1) =  'Info: Using userdefined state for Targetoperator'
-        call write_info(1)
-        !%Variable OCTInitialUserdefined
-        !%Type block
-        !%Section Optimal Control
-        !%Description
-        !% 
-        !% Example:
-        !%
-        !% <tt>%UserDefinedStates
-        !% <br>&nbsp;&nbsp; 1 | 1 | 1 |  "exp(-r^2)*exp(-i*0.2*x)"
-        !% <br>%</tt>
-        !%  
-        !%End
-      case(oct_tg_local) 
-        message(1) =  'Info: Using Local Target'
-        call write_info(1)
-        !%Variable OCTLocalTarget
-        !%Type block
-        !%Section Optimal Control
-        !%Description
-        !% This block defines the shape and position of the local target operator. 
-        !% It is possible to define several local operators which are then summed up.
-        !% The syntax of each line is, then:
-        !%
-        !% <tt>%OCTLocalTarget
-        !% <br>&nbsp;&nbsp; "exp(-r^2)*exp(-i*0.2*x)"
-        !% <br>%</tt>
-        !%  
-        !% Example
-        !%
-        !% <tt>%OCTLocalTarget
-        !% <br>&nbsp;&nbsp; "exp(-r^2)*exp(-i*0.2*x)"
-        !% <br>%</tt>
-        !%
-        !%End
-        ! parse input
-        
-        if(loct_parse_block(check_inp('OCTLocalTarget'),blk)==0) then
-          no_states = loct_parse_block_n(blk)
-          target_st%zpsi(:, 1, 1, 1) = m_z0
-          do ib = 1, no_states
-            ! parse formula string
-            call loct_parse_block_string(blk, ib-1, 0, expression)
-            ! convert to C string
-            call conv_to_C_string(expression)
-            
-            do ip = 1, gr%m%np
-              x = gr%m%x(ip, :)
-              r = sqrt(sum(x(:)**2))
-              
-              ! parse user defined expressions
-              call loct_parse_expression(psi_re, psi_im, &
-                x(1), x(2), x(3), r, M_ZERO, expression)
-              
-              ! fill state
-              target_st%zpsi(ip, 1, 1, 1) = target_st%zpsi(ip, 1, 1, 1) &
-                + psi_re + M_zI*psi_im
-            end do
-            
-            ! normalize orbital
-            call zstates_normalize_orbital(gr%m, target_st%d%dim, &
-              target_st%zpsi(:,:, 1, 1))
-          end do
-          call loct_parse_block_end(blk)
-          call zoutput_function(sys%outp%how,'opt-control','tg_local',&
-            gr%m,gr%sb,target_st%zpsi(:,1,1,1),u,ierr)
-        else
-          message(1) = '"OCTLocalTarget" has to be specified as block.'
-          call write_fatal(1)
-        end if
-      case(oct_tg_td_local)
-        target_st%zpsi(:,1,1,1) = m_z0
-        
-      case default
-        write(message(1),'(a)') "Target Operator not properly defined."
-        call write_fatal(1)
-      end select
-      
+      call push_sub('opt_control.init_tdtarget')
 
       !%Variable OCTTdTarget
       !%Type block
@@ -1591,9 +1181,10 @@ contains
       !% In this example we define a narrow Gaussian which circles with radius R0 around the center. 
       !% 
       !%End
+      no_tds = 0
       if((oct%targetmode==oct_targetmode_td) &
-        .AND.(loct_parse_block(check_inp('OCTTdTarget'),blk)==0)) then
-        
+          .AND.(loct_parse_block(check_inp('OCTTdTarget'),blk)==0)) then
+
         no_tds = loct_parse_block_n(blk)
         ALLOCATE(td_tg(no_tds), no_tds)
         do i=1, no_tds
@@ -1620,51 +1211,9 @@ contains
         
       end if
       ! calc norm, give warning when to small
-      
-      call pop_sub()
-    end subroutine def_toperator
-
-
-    !----------------------------------------------------------
-    subroutine build_tdshape(td_tg, steps, dt)
-      type(td_target_t), intent(inout) :: td_tg
-      integer,           intent(in)    :: steps
-      FLOAT,             intent(in)    :: dt
-
-      FLOAT   :: tgrid(0:2*steps)
-      FLOAT   :: f_re, f_im
-      integer :: kk, pol
-
-      call push_sub('opt_control.build_tdshape')
-
-      call t_lookup(2*steps+1,dt/real(2,REAL_PRECISION),tgrid)
-      do kk=0, 2*steps
-        do pol=1,NDIM
-          f_re = M_ZERO
-          f_im = M_ZERO
-          !call loct_parse_expression(f_re, f_im, "t", tgrid(kk), &
-          !     td_tg%expression(pol))
-          call loct_parse_expression(f_re, f_im, & 	
-            M_ZERO, M_ZERO, M_ZERO, M_ZERO, tgrid(kk), &
-            td_tg%expression(pol)) 
-          td_tg%tdshape(pol,kk) = f_re + M_zI*f_im
-        end do
-      end do
-      call pop_sub()
-    end subroutine build_tdshape
-    
-    
-    !---------------------------------------------------------------
-    subroutine init_tdtarget()
-      integer             :: jj
-      FLOAT               :: mxloc(MAX_DIM)
-      integer             :: tt, pos(1)
-      FLOAT               :: t
-      CMPLX               :: tgt(NP_PART)
-      call push_sub('opt_control.init_tdtarget')
-
-      if(.not.associated(td_tg)) then
-         call pop_sub(); return
+  
+      if(no_tds.eq.0) then
+        call pop_sub(); return
       end if
 
       ! td target fitness
@@ -1704,6 +1253,7 @@ contains
     ! ---------------------------------------------------------
     subroutine init_()
       integer :: ierr, kk, jj
+      FLOAT, allocatable :: field(:)
 
       call push_sub('opt_control.init')  
 
@@ -1774,6 +1324,7 @@ contains
       call write_field(filename, td%max_iter, NDIM, laser, td%dt)
       write(message(1),'(a,f14.8)') 'Input: Fluence of Initial laser ', sum(laser**2)*abs(td%dt)
       call write_info(1)
+      deallocate(field)
       ! initial laser definition end
 
       ! call after laser is setup ! do not change order
@@ -1819,14 +1370,14 @@ contains
 
       ! initial state
       ! target operator
-      call def_istate()
-      call def_toperator()
-      call init_tdtarget()
+      call def_istate(oct, gr, sys%outp, initial_st)
+      call def_toperator(oct, gr, sys%outp, target_st)
+      call init_tdtarget(td_tg)
 
       call check_faulty_runmodes(oct)
 
-      call zoutput_function(sys%outp%how,'opt-control','initial1',gr%m,gr%sb,initial_st%zpsi(:,1,1,1),u,ierr)
-      call zoutput_function(sys%outp%how,'opt-control','target1',gr%m,gr%sb,target_st%zpsi(:,1,1,1),u,ierr) 
+      call zoutput_function(sys%outp%how,'opt-control','initial1', gr%m, gr%sb, initial_st%zpsi(:,1,1,1), u, ierr)
+      call zoutput_function(sys%outp%how,'opt-control','target1', gr%m, gr%sb, target_st%zpsi(:,1,1,1), u, ierr) 
 
       call pop_sub()
     end subroutine init_
@@ -1873,10 +1424,11 @@ contains
     end if
 
   end subroutine check_runmode_constrains
- 
+
 
 #include "opt_control_read.F90"
 #include "opt_control_aux.F90"
+#include "opt_control_defstates.F90"
 
 end module opt_control_m
 
