@@ -131,7 +131,6 @@ contains
     type(filter_t),    pointer :: f(:)
     type(td_target_t), pointer :: td_tg(:)
 
-    FLOAT, pointer     :: v_old_i(:,:,:), v_old_f(:,:,:)
     FLOAT, pointer     :: laser_tmp(:,:), laser(:,:)
     FLOAT, allocatable :: dens_tmp(:,:)
     integer            :: i, ctr_iter
@@ -158,8 +157,6 @@ contains
     ! Initially nullify the pointers
     nullify(f)
     nullify(td_tg)
-    nullify(v_old_i)
-    nullify(v_old_f)
     nullify(laser_tmp)
     nullify(laser)
 
@@ -194,7 +191,9 @@ contains
       
       psi = initial_st
       
-      call propagate_forward(oct, sys, h, td, laser, v_old_i, v_old_f, td_tg, tdtarget, td_fitness, psi, write_iter = .true.)
+      call propagate_forward(oct, sys, h, td, laser, &
+                             td_tg, tdtarget, td_fitness, psi, write_iter = .true.)
+
 
       if(oct%targetmode==oct_targetmode_td) then
         overlap = SUM(td_fitness) * abs(td%dt)
@@ -208,19 +207,13 @@ contains
     end if
 
     ! clean up
-    td%tr%v_old => v_old_i
     nullify(h%ep%lasers(1)%numerical)
     deallocate(laser)
     deallocate(laser_tmp)
-
     deallocate(convergence)
-!! PROBLEMS WITH DEALLOCATION
-    !write(6,*) 'DEBUG5'
-    !nullify(v_old_f)
-    !deallocate(v_old_f)
-!! ----
+    call filter_end(f)
+    call td_end(td)
 
-    call end_()
     call pop_sub()
 
   contains
@@ -243,7 +236,7 @@ contains
       call write_info(1)
 
       psi = initial_st
-      call propagate_forward(oct, sys, h, td, laser, v_old_i, v_old_f, td_tg, tdtarget, td_fitness, psi) 
+      call propagate_forward(oct, sys, h, td, laser, td_tg, tdtarget, td_fitness, psi) 
       
       if(in_debug_mode) call zoutput_function(sys%outp%how, &
         'opt-control', 'prop1', gr%m, gr%sb, psi%zpsi(:,1,1,1), M_ONE, ierr)
@@ -311,7 +304,7 @@ contains
         call write_info(1)
         
         psi = initial_st
-        call propagate_forward(oct, sys, h, td, laser, v_old_i, v_old_f, td_tg, tdtarget, td_fitness, psi) 
+        call propagate_forward(oct, sys, h, td, laser, td_tg, tdtarget, td_fitness, psi) 
         
         if(in_debug_mode) then
           write(filename,'(a,i3.3)') 'PsiT.', ctr_iter
@@ -383,7 +376,7 @@ contains
       call write_info(1)
       
       call target_calc(oct, gr, target_st, psi, chi)
-      call propagate_backward(sys, h, td, laser, v_old_i, v_old_f, chi)
+      call propagate_backward(sys, h, td, laser, chi)
 
       if(in_debug_mode) call zoutput_function(sys%outp%how, &
         'opt-control', 'initial_propZBR98', gr%m, gr%sb, chi%zpsi(:,1,1,1), M_ONE, ierr)
@@ -442,17 +435,7 @@ contains
       psi%rho = dens_tmp
 
       call v_ks_calc(gr, sys%ks, h, psi, calc_eigenval=.true.)
-      do i = 1, st%d%nspin
-        v_old_i(:, i, 2) = h%vhxc(:, i)
-      end do
-      v_old_i(:, :, 3) = v_old_i(:, :, 2)
-
-      ! new:
-      v_old_i(:, :, 0) = v_old_i(:, :, 2)
-      v_old_i(:, :, 1) = v_old_i(:, :, 2)
-      do i = 1, 3
-        v_old_f(:,:,i) = v_old_f(:,:,0) ! this one comes from the previous propagation
-      end do
+      call td_rti_run_zero_iter(h, td%tr)
 
       message(1) = "Info: Propagating forward"
       call write_info(1)
@@ -489,14 +472,7 @@ contains
       call states_calc_dens(chi, NP_PART, dens_tmp)
       chi%rho = dens_tmp
       call v_ks_calc(gr, sys%ks, h, chi, calc_eigenval=.true.)
-      do i = 1, st%d%nspin
-        v_old_f(:, i, 2) = h%vhxc(:, i)
-      end do
-      v_old_f(:, :, 3) = v_old_f(:, :, 2)
-      
-      do i = 2, 3
-        v_old_i(:,:,i) = v_old_i(:,:,1) ! this one comes the previous propagation
-      end do
+      call td_rti_run_zero_iter(h, td%tr)
 
       message(1) = "Info: Propagating backward"
       call write_info(1)
@@ -609,7 +585,6 @@ contains
          td%dt,chi)
        ! psi2
        h%ep%lasers(1)%numerical => laser_tmp
-       td%tr%v_old => v_old_i
        h%ep%lasers(1)%numerical => laser
        call states_calc_dens(psi2, NP_PART, dens_tmp)
        psi2%rho = dens_tmp
@@ -620,7 +595,6 @@ contains
      call update_field(iter-1, laser, method)
      
      ! chi
-     td%tr%v_old => v_old_f
      h%ep%lasers(1)%numerical => laser_tmp
      call states_calc_dens(chi, NP_PART, dens_tmp)
      chi%rho = dens_tmp
@@ -628,7 +602,6 @@ contains
      call td_rti_dt(sys%ks, h, gr, chi, td%tr, abs(iter*td%dt), abs(td%dt))
      
      ! psi
-     td%tr%v_old => v_old_i
      h%ep%lasers(1)%numerical => laser
      call states_calc_dens(psi, NP_PART, dens_tmp)
      psi%rho = dens_tmp
@@ -661,7 +634,6 @@ contains
      call update_field(iter+1, laser_tmp, method)!, tdpenalty(:,iter*2))
           
      ! chi
-     td%tr%v_old => v_old_f
      h%ep%lasers(1)%numerical => laser_tmp   
      call states_calc_dens(chi, NP_PART, dens_tmp)
      chi%rho = dens_tmp
@@ -669,7 +641,6 @@ contains
      call td_rti_dt(sys%ks, h, gr, chi, td%tr, abs(iter*td%dt),     td%dt )
      
      ! psi
-     td%tr%v_old => v_old_i
      h%ep%lasers(1)%numerical => laser
      call states_calc_dens(psi, NP_PART, dens_tmp)
      psi%rho = dens_tmp
@@ -1103,8 +1074,6 @@ contains
 
       ALLOCATE(dens_tmp(gr%m%np_part, st%d%nspin), gr%m%np_part*st%d%nspin) 
 
-      v_old_i => td%tr%v_old
-
       ! Initialize a bunch of states: initial, target, auxiliary.
       psi        = st
       psi2       = st
@@ -1113,8 +1082,6 @@ contains
       target_st  = st
 
       ! allocate memory
-      ALLOCATE(v_old_f(NP, chi%d%nspin, 0:3), NP_PART*chi%d%nspin*(3+1))
-      v_old_f = M_ZERO
       ALLOCATE(laser(NDIM, 0:2*td%max_iter), NDIM*(2*td%max_iter+1))
       laser = M_ZERO
       ALLOCATE(laser_tmp(NDIM, 0:2*td%max_iter), NDIM*(2*td%max_iter+1))
@@ -1217,16 +1184,6 @@ contains
     end subroutine init_
     
     
-    ! ---------------------------------------------------------
-    subroutine end_()
-      call push_sub('opt_control.end_')
-      ! TODO:: deallocate filters (if there were any)
-      call filter_end(f)
-
-      call td_end(td)
-      call pop_sub()
-    end subroutine end_
-
   end subroutine opt_control_run
 
 

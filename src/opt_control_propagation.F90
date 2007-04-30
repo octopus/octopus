@@ -21,14 +21,12 @@
 
 
   ! ---------------------------------------------------------
-  subroutine propagate_forward(oct, sys, h, td, laser, v_old_i, v_old_f, &
-                               td_tg, tdtarget, td_fitness, psi_n, write_iter)
+  subroutine propagate_forward(oct, sys, h, td, laser, td_tg, tdtarget, td_fitness, psi_n, write_iter)
     type(oct_t),         intent(in)    :: oct
     type(system_t),      intent(inout) :: sys
     type(hamiltonian_t), intent(inout) :: h
     type(td_t),          intent(inout) :: td
     FLOAT, pointer                     :: laser(:, :)
-    FLOAT, pointer                     :: v_old_i(:, :, :), v_old_f(:, :, :)
     type(td_target_t), pointer         :: td_tg(:)
     CMPLX, intent(in)                  :: tdtarget(:)
     FLOAT, intent(out)                 :: td_fitness(:)
@@ -62,17 +60,10 @@
     call states_calc_dens(psi_n, NP_PART, dens)
     psi_n%rho = dens
     call v_ks_calc(gr, sys%ks, h, psi_n, calc_eigenval=.true.)
-    ! setup start of the propagation
-    do i = 1, psi_n%d%nspin
-      v_old_i(:, i, 2) = h%vhxc(:, i)
-    end do
-    v_old_f(:, :, 3) = v_old_i(:, :, 2)
+    call td_rti_run_zero_iter(h, td%tr)
 
     h%ep%lasers(1)%numerical => laser
-    td%tr%v_old => v_old_i
-
     h%ep%lasers(1)%dt = td%dt      
-    !call loct_progress_bar(-1, td%max_iter-1)
 
     ii = 1
 
@@ -122,12 +113,11 @@
 
 
   ! ---------------------------------------------------------
-  subroutine propagate_backward(sys, h, td, laser, v_old_i, v_old_f, psi_n) ! give initial chi and laser
+  subroutine propagate_backward(sys, h, td, laser, psi_n) ! give initial chi and laser
     type(system_t),      intent(inout) :: sys
     type(hamiltonian_t), intent(inout) :: h
     type(td_t),          intent(inout) :: td
     FLOAT, pointer                     :: laser(:, :)
-    FLOAT, pointer                     :: v_old_i(:, :, :), v_old_f(:, :, :)
     type(states_t), intent(inout)      :: psi_n
 
     integer :: i
@@ -147,16 +137,9 @@
     call states_calc_dens(psi_n, NP_PART, dens)
     psi_n%rho = dens
     call v_ks_calc(gr, sys%ks, h, psi_n, calc_eigenval=.true.)
-
-    ! setup start of the propagation
-    do i = 1, psi_n%d%nspin
-      v_old_f(:, i, 2) = h%vhxc(:, i)
-    end do
-    v_old_f(:, :, 3) = v_old_f(:, :, 2)
+    call td_rti_run_zero_iter(h, td%tr)
 
     h%ep%lasers(1)%numerical => laser
-    td%tr%v_old => v_old_f
-
     td%dt = -td%dt
     h%ep%lasers(1)%dt = td%dt
 
