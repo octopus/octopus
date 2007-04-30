@@ -130,7 +130,6 @@ contains
     type(states_t)             :: chi, psi, target_st, initial_st, psi2
     type(filter_t),    pointer :: f(:)
     type(td_target_t), pointer :: td_tg(:)
-    type(td_write_t)           :: write_handler
 
     FLOAT, pointer     :: v_old_i(:,:,:), v_old_f(:,:,:)
     FLOAT, pointer     :: laser_tmp(:,:), laser(:,:)
@@ -138,7 +137,7 @@ contains
     integer            :: i, ctr_iter
     integer            :: iunit
     FLOAT              :: overlap, functional, old_functional
-    FLOAT              :: fluence, u, t
+    FLOAT              :: fluence, t
     FLOAT, allocatable :: convergence(:,:), td_fitness(:)
     CMPLX, allocatable :: tdtarget(:)
     
@@ -176,25 +175,13 @@ contains
 
     ! mode switcher
     select case(oct%algorithm_type)
-    case(oct_algorithm_zbr98)  ! Rabitz zbr98 type algorithm (states only)    
-      call scheme_zbr98
-
-    case(oct_algorithm_zr98) ! Rabitz zr98  type algorithm 
-      call scheme_zr98
-      ! TODO: o generalize elements
-      !       o time-dependent targets
-      
-    case(oct_algorithm_wg05)  ! Werschnik, Gross Type: allows fixed fluence and filtering
-      call scheme_wg05
-      
-    ! TODO: Krotov scheme
-    ! MT03 scheme: with additional parameters
-   
+      case(oct_algorithm_zbr98) ;  call scheme_zbr98
+      case(oct_algorithm_zr98)  ;  call scheme_zr98
+      case(oct_algorithm_wg05)  ;  call scheme_wg05
     case default
-      write(message(1),'(a)') "Unknown choice of OCT algorithm."
-      write(message(2),'(a)') "Choose: ZR98, ZBR98, WG05 ."
+      write(message(1),'(a)') "The OCT algorithm has not been implemented yet."
+      write(message(2),'(a)') "Choose: ZR98, ZBR98, WG05."
       call write_fatal(2)
-      
     end select
     
     ! output: States, Lasers, Convergence
@@ -207,7 +194,7 @@ contains
       
       psi = initial_st
       
-      call propagate_forward(psi)
+      call propagate_forward(oct, sys, h, td, laser, v_old_i, v_old_f, td_tg, tdtarget, td_fitness, psi, write_iter = .true.)
 
       if(oct%targetmode==oct_targetmode_td) then
         overlap = SUM(td_fitness) * abs(td%dt)
@@ -256,7 +243,7 @@ contains
       call write_info(1)
 
       psi = initial_st
-      call propagate_forward(psi) 
+      call propagate_forward(oct, sys, h, td, laser, v_old_i, v_old_f, td_tg, tdtarget, td_fitness, psi) 
       
       if(in_debug_mode) call zoutput_function(sys%outp%how, &
         'opt-control', 'prop1', gr%m, gr%sb, psi%zpsi(:,1,1,1), M_ONE, ierr)
@@ -270,7 +257,7 @@ contains
         ! check for stop file and delete file
         
         ! define target state
-        call target_calc(oct, oct_algorithm_zr98, gr, target_st, psi, chi) ! defines chi
+        call target_calc(oct, gr, target_st, psi, chi) ! defines chi
         
         call iteration_manager(stoploop)
         if (stoploop)  exit ctr_loop
@@ -324,7 +311,7 @@ contains
         call write_info(1)
         
         psi = initial_st
-        call propagate_forward(psi) 
+        call propagate_forward(oct, sys, h, td, laser, v_old_i, v_old_f, td_tg, tdtarget, td_fitness, psi) 
         
         if(in_debug_mode) then
           write(filename,'(a,i3.3)') 'PsiT.', ctr_iter
@@ -332,7 +319,7 @@ contains
         end if
 
         ! define target state
-        call target_calc(oct, oct_algorithm_wg05, gr, target_st, psi, chi) ! defines chi
+        call target_calc(oct, gr, target_st, psi, chi) ! defines chi
         
         call iteration_manager(stoploop)
         if (stoploop)  exit ctr_loop
@@ -395,8 +382,8 @@ contains
       message(1) = "Info: Initial backward propagation"
       call write_info(1)
       
-      call target_calc(oct, oct_algorithm_zbr98, gr, target_st, psi, chi)
-      call propagate_backward(chi) 
+      call target_calc(oct, gr, target_st, psi, chi)
+      call propagate_backward(sys, h, td, laser, v_old_i, v_old_f, chi)
 
       if(in_debug_mode) call zoutput_function(sys%outp%how, &
         'opt-control', 'initial_propZBR98', gr%m, gr%sb, chi%zpsi(:,1,1,1), M_ONE, ierr)
@@ -430,7 +417,7 @@ contains
         if (stoploop)  exit ctr_loop
         
          ! and now backward
-        call target_calc(oct, oct_algorithm_zbr98, gr, target_st, psi, chi)
+        call target_calc(oct, gr, target_st, psi, chi)
         call bwd_step(oct_algorithm_zbr98)
         call zoutput_function(sys%outp%how,'opt-control','last_bwd',gr%m,gr%sb,psi%zpsi(:,1,1,1),M_ONE, ierr) 
         
@@ -477,7 +464,7 @@ contains
   
         call prop_iter_fwd(i,method)
         if(oct%targetmode==oct_targetmode_td) &
-          call calc_tdfitness(td_tg, tdtarget, td_fitness(i))     
+          call calc_tdfitness(td_tg, gr, psi, tdtarget, td_fitness(i))     
         ! if td_target
         ! call loct_progress_bar(i-1, td%max_iter-1)
       end do
@@ -602,45 +589,7 @@ contains
       
       call pop_sub()
     end subroutine iteration_manager
-
     
-    ! ---------------------------------------------------------
-    subroutine calc_tdfitness(tg, tdtarget, merit)
-      type(td_target_t), intent(in) :: tg(:)
-      CMPLX,             intent(in) :: tdtarget(:)
-      FLOAT,             intent(out):: merit
-      integer             :: jj, ik, p, dim
-
-      call push_sub('opt_control.calc_tdfitness')
-
-      merit = M_ZERO
-      do jj=1, size(tg)
-        if(tg(jj)%type.eq.oct_tgtype_local) then
-          do ik = 1, psi%d%nik
-            do p  = psi%st_start, psi%st_end
-              do dim = 1, psi%d%dim
-                merit = merit + &
-                  zmf_integrate(gr%m, tdtarget(:)* &
-                  abs(psi%zpsi(:,dim,ik,p))**2)
-              end do
-            end do
-          end do
-        else
-          do ik = 1, psi%d%nik
-            do p  = psi%st_start, psi%st_end
-              do dim = 1, psi%d%dim
-                merit = merit + &
-                  abs(zmf_integrate(gr%m, tdtarget(:)* &
-                  conjg(psi%zpsi(:,dim,ik,p))))**2
-              end do
-            end do
-          end do
-        end if
-      end do
-
-      call pop_sub()
-    end subroutine calc_tdfitness
-
 
    ! ---------------------------------------------------------
    subroutine prop_iter_fwd(iter,method)
@@ -899,120 +848,6 @@ contains
 
 
     ! ---------------------------------------------------------
-    subroutine propagate_backward(psi_n) ! give initial chi and laser
-      type(states_t), intent(inout)  :: psi_n
-      call push_sub('opt_control.propagate_backward')
-      
-      message(1) = "Info: Backward propagating Chi"
-      call write_info(1)
-      ! setup the hamiltonian
-      call states_calc_dens(psi_n, NP_PART, dens_tmp)
-      psi_n%rho = dens_tmp
-      call v_ks_calc(gr, sys%ks, h, psi_n, calc_eigenval=.true.)
-
-      ! setup start of the propagation
-      do i = 1, st%d%nspin
-        v_old_f(:, i, 2) = h%vhxc(:, i)
-      end do
-      v_old_f(:, :, 3) = v_old_f(:, :, 2)
-
-      h%ep%lasers(1)%numerical => laser
-      td%tr%v_old => v_old_f
-
-      td%dt = -td%dt
-      h%ep%lasers(1)%dt = td%dt
-
-      do i = td%max_iter-1, 0, -1
-        ! time iterate wavefunctions
-        call td_rti_dt(sys%ks, h, gr, psi_n, td%tr, abs(i*td%dt), td%dt)
-        ! update
-        call states_calc_dens(psi_n, NP_PART, dens_tmp)
-        psi_n%rho = dens_tmp
-        call v_ks_calc(gr, sys%ks, h, psi_n, calc_eigenval=.true.)
-        
-      end do
-      td%dt = -td%dt
-      
-      call pop_sub()
-    end subroutine propagate_backward
-
-
-    ! ---------------------------------------------------------
-    subroutine propagate_forward(psi_n) ! give initial psi and laser
-      type(states_t), intent(inout)  :: psi_n
-
-      integer :: ierr, ii
-      FLOAT   :: etime
-
-      call push_sub('opt_control.propagate_forward')
-
-      message(1) = "Info: Forward propagating Psi"
-      call write_info(1)
-
-      ! setup the hamiltonian
-      call states_calc_dens(psi_n, NP_PART, dens_tmp)
-      psi_n%rho = dens_tmp
-      call v_ks_calc(gr, sys%ks, h, psi_n, calc_eigenval=.true.)
-      ! setup start of the propagation
-      do i = 1, st%d%nspin
-        v_old_i(:, i, 2) = h%vhxc(:, i)
-      end do
-      v_old_f(:, :, 3) = v_old_i(:, :, 2)
-
-      h%ep%lasers(1)%numerical => laser
-      td%tr%v_old => v_old_i
-
-      h%ep%lasers(1)%dt = td%dt      
-      !call loct_progress_bar(-1, td%max_iter-1)
-
-      ii = 1
-
-      etime = loct_clock()
-      do i = 1, td%max_iter 
-        ! time iterate wavefunctions
-        call td_rti_dt(sys%ks, h, gr, psi_n, td%tr, abs(i*td%dt), abs(td%dt))
-
-        ! if td_target
-        if(oct%targetmode==oct_targetmode_td) &
-          call calc_tdfitness(td_tg, tdtarget, td_fitness(i))
-        
-        ! update
-        call states_calc_dens(psi_n, NP_PART, dens_tmp)
-        psi_n%rho = dens_tmp
-        call v_ks_calc(gr, sys%ks, h, psi_n, calc_eigenval=.true.)
-        call hamiltonian_energy(h, sys%gr, sys%geo, psi_n, -1)
-
-        ! only write in final run
-        if(oct%oct_double_check) then
-
-          write(message(1), '(i7,1x,2f14.6,f14.3, i10)') i, &
-            i*td%dt       / units_out%time%factor, &
-            (h%etot + sys%geo%kinetic_energy) / units_out%energy%factor, &
-            loct_clock() - etime
-          call write_info(1)
-          etime = loct_clock()
-
-          ii = ii + 1 
-          if(ii==sys%outp%iter+1 .or. i == td%max_iter) then ! output 
-            if(i == td%max_iter) sys%outp%iter = ii - 1 
-            ii = 1 
-            call td_write_iter(write_handler, gr, psi_n, h, sys%geo, td%kick, td%dt, i)
-            call td_write_data(write_handler, gr, psi_n, h, sys%outp, sys%geo, td%dt, i) 
-          end if
-
-        end if
-
-      end do
-      
-      call zoutput_function(sys%outp%how,'opt-control','last_fwd',gr%m,gr%sb,psi_n%zpsi(:,1,1,1),M_ONE, ierr) 
-      
-      message(1) = ""
-      call write_info(1)
-      call pop_sub()
-    end subroutine propagate_forward
-
-
-    ! ---------------------------------------------------------
     subroutine calc_J()
       FLOAT :: J2
       call push_sub('opt_control.calc_j')
@@ -1258,15 +1093,12 @@ contains
       call push_sub('opt_control.init')  
 
       call io_mkdir('opt-control')
+
       ! some shortcuts
       gr  => sys%gr
       st  => sys%st
 
-      ! prepare unit factor u for output
-      u  = M_ONE/units_out%length%factor**NDIM
-
       call td_init(gr, td, sys%st, sys%outp)
-      call td_write_init(write_handler, gr, sys%st, sys%geo, (td%move_ions>0), h%ep%with_gauge_field, td%iter, td%dt)
       call states_allocate_wfns(st, gr%m, M_CMPLX)
 
       ALLOCATE(dens_tmp(gr%m%np_part, st%d%nspin), gr%m%np_part*st%d%nspin) 
@@ -1376,8 +1208,10 @@ contains
 
       call check_faulty_runmodes(oct)
 
-      call zoutput_function(sys%outp%how,'opt-control','initial1', gr%m, gr%sb, initial_st%zpsi(:,1,1,1), u, ierr)
-      call zoutput_function(sys%outp%how,'opt-control','target1', gr%m, gr%sb, target_st%zpsi(:,1,1,1), u, ierr) 
+      call zoutput_function(sys%outp%how,'opt-control','initial1', gr%m, gr%sb, initial_st%zpsi(:,1,1,1), &
+                            M_ONE/units_out%length%factor**NDIM, ierr)
+      call zoutput_function(sys%outp%how,'opt-control','target1', gr%m, gr%sb, target_st%zpsi(:,1,1,1), &
+                            M_ONE/units_out%length%factor**NDIM, ierr) 
 
       call pop_sub()
     end subroutine init_
@@ -1429,6 +1263,7 @@ contains
 #include "opt_control_read.F90"
 #include "opt_control_aux.F90"
 #include "opt_control_defstates.F90"
+#include "opt_control_propagation.F90"
 
 end module opt_control_m
 

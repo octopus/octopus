@@ -89,7 +89,8 @@ noinst_HEADERS = \
 	submesh_inc.F90 \
 	sternheimer_inc.F90 em_resp_inc.F90 unocc_inc.F90 casida_inc.F90 \
 	excited_states_inc.F90 xc_OEP_kernel_inc.F90 em_resp_calc_inc.F90 \
-	opt_control_read.F90 opt_control_aux.F90 opt_control_defstates.F90
+	opt_control_read.F90 opt_control_aux.F90 opt_control_defstates.F90 \
+	opt_control_propagation.F90
 
 core_LIBS = @LIBS_LAPACK@ @LIBS_BLAS@ \
   ../liboct/liboct.a \
@@ -255,7 +256,7 @@ mpi_debug.o: global.h mpi_debug_inc.F90
 profiling.o: global.h
 nl_operator.o: global.h
 ode_solver.o: global.h ode_solver_inc.F90
-opt_control.o: global.h opt_control_read.F90 opt_control_aux.F90 opt_control_defstates.F90
+opt_control.o: global.h opt_control_read.F90 opt_control_aux.F90 opt_control_defstates.F90 opt_control_propagation.F90
 out.o: global.h out_inc.F90
 par_vec.o: global.h par_vec_inc.F90
 pes.o: global.h pes_rc.F90 pes_mask.F90

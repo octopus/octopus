@@ -88,9 +88,8 @@
   ! ---------------------------------------------------------
   ! calculate chi = \hat{O} psi
   ! do loop <target_st|Psi> for all States
-  subroutine target_calc(oct, method, gr, targetst, psi_in, chi_out)
+  subroutine target_calc(oct, gr, targetst, psi_in, chi_out)
     type(oct_t),       intent(in)  :: oct
-    integer,           intent(in)  :: method
     type(grid_t),      intent(in)  :: gr
     type(states_t),    intent(in)  :: targetst, psi_in
     type(states_t),    intent(inout) :: chi_out
@@ -116,12 +115,12 @@
           do p  = psi_in%st_start, psi_in%st_end
             olap = zstates_dotp(gr%m, targetst%d%dim, targetst%zpsi(:, :, p, ik), &
                                                       psi_in%zpsi(:, :, p, ik))
-            if(method == oct_algorithm_zr98) &
+            if(oct%algorithm_type == oct_algorithm_zr98) &
               chi_out%zpsi(:,:,p,ik) = olap*targetst%zpsi(:, :, p, ik)
-            if(method == oct_algorithm_zbr98) then
+            if(oct%algorithm_type == oct_algorithm_zbr98) then
               chi_out%zpsi(:,:,p,ik) = targetst%zpsi(:, :, p, ik)
             end if
-            if(method == oct_algorithm_wg05) &
+            if(oct%algorithm_type == oct_algorithm_wg05) &
               chi_out%zpsi(:,:,p,ik) = olap*targetst%zpsi(:, :, p, ik)
           end do
         end do
@@ -148,6 +147,46 @@
       
     call pop_sub()
   end subroutine target_calc
+
+
+  ! ---------------------------------------------------------
+  subroutine calc_tdfitness(tg, gr, psi, tdtarget, merit)
+    type(td_target_t), intent(in) :: tg(:)
+    type(grid_t),      intent(in) :: gr
+    type(states_t),    intent(in) :: psi
+    CMPLX,             intent(in) :: tdtarget(:)
+    FLOAT,             intent(out):: merit
+    integer             :: jj, ik, p, dim
+
+    call push_sub('opt_control.calc_tdfitness')
+
+    merit = M_ZERO
+    do jj=1, size(tg)
+      if(tg(jj)%type.eq.oct_tgtype_local) then
+        do ik = 1, psi%d%nik
+          do p  = psi%st_start, psi%st_end
+            do dim = 1, psi%d%dim
+              merit = merit + &
+                zmf_integrate(gr%m, tdtarget(:)* &
+                abs(psi%zpsi(:,dim,ik,p))**2)
+            end do
+          end do
+        end do
+      else
+        do ik = 1, psi%d%nik
+          do p  = psi%st_start, psi%st_end
+            do dim = 1, psi%d%dim
+              merit = merit + &
+                abs(zmf_integrate(gr%m, tdtarget(:)* &
+                conjg(psi%zpsi(:,dim,ik,p))))**2
+            end do
+          end do
+        end do
+      end if
+    end do
+
+    call pop_sub()
+  end subroutine calc_tdfitness
 
 !! Local Variables:
 !! mode: f90
