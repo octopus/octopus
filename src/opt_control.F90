@@ -99,6 +99,7 @@ module opt_control_m
     logical            :: td_tg_state 
     logical :: oct_double_check
     integer :: istype
+    logical :: dump_intermediate
   end type oct_t
 
 
@@ -116,6 +117,17 @@ module opt_control_m
 
   end type td_target_t
 
+  type oct_iterator_t
+    integer            :: ctr_iter
+    FLOAT              :: functional, old_functional
+    FLOAT              :: fluence
+    FLOAT              :: overlap
+    FLOAT, pointer     :: convergence(:,:)
+    FLOAT              :: bestJ, bestJ1, bestJ_fluence, bestJ1_fluence
+    FLOAT              :: bestJ_J1, bestJ1_J
+    integer            :: bestJ_ctr_iter, bestJ1_ctr_iter
+  end type oct_iterator_t
+
 contains
 
   ! ---------------------------------------------------------
@@ -124,48 +136,23 @@ contains
     type(hamiltonian_t),    intent(inout) :: h
 
     type(oct_t)                :: oct
+    type(oct_iterator_t)       :: iterator
     type(td_t)                 :: td
     type(grid_t),      pointer :: gr   ! some shortcuts
     type(states_t),    pointer :: st
     type(states_t)             :: chi, psi, target_st, initial_st, psi2
     type(filter_t),    pointer :: f(:)
     type(td_target_t), pointer :: td_tg(:)
-
     FLOAT, pointer     :: laser_tmp(:,:), laser(:,:)
     FLOAT, allocatable :: dens_tmp(:,:)
-    integer            :: i, ctr_iter
-    integer            :: iunit
-    FLOAT              :: overlap, functional, old_functional
-    FLOAT              :: fluence, t
-    FLOAT, allocatable :: convergence(:,:), td_fitness(:)
+    FLOAT, allocatable :: td_fitness(:)
     CMPLX, allocatable :: tdtarget(:)
-    
-    FLOAT              :: bestJ, bestJ1, bestJ_fluence, bestJ1_fluence
-    FLOAT              :: bestJ_J1, bestJ1_J
-    integer            :: bestJ_ctr_iter, bestJ1_ctr_iter
-
     character(len=80)  :: filename
-
-    logical            :: dump_intermediate, mode_fixed_fluence
-
 
     call push_sub('opt_control.opt_control_run')
 
-     ! Checks that the run is actually possible with the current settings
+    ! Checks that the run is actually possible with the current settings
     call check_runmode_constrains(sys, h)
-
-    ! Initially nullify the pointers
-    nullify(f)
-    nullify(td_tg)
-    nullify(laser_tmp)
-    nullify(laser)
-
-    ! TODO: internal debug config, give some power to the user later
-    dump_intermediate  = .TRUE.  ! dump laser fields during iteration
-                                 ! this might create a lot of data
-
-    !!!!WARNING this should not be here
-    oct%td_tg_state    = .false.
 
     ! initialize oct run, defines initial laser... initial state
     call init_()
@@ -185,35 +172,16 @@ contains
     call output()
 
     ! do final test run: propagate initial state with optimal field
-    if(oct%oct_double_check) then
-      message(1) = "Info: Optimization finished...checking the field"
-      call write_info(1)
-      
-      psi = initial_st
-      
-      call propagate_forward(oct, sys, h, td, laser, &
-                             td_tg, tdtarget, td_fitness, psi, write_iter = .true.)
-
-
-      if(oct%targetmode==oct_targetmode_td) then
-        overlap = SUM(td_fitness) * abs(td%dt)
-        write(message(1), '(a,f14.8)') " => overlap:", overlap
-        call write_info(1)
-      else
-        overlap = abs(zstates_mpdotp(gr%m, psi, target_st))
-        write(message(1), '(6x,a,f14.8)') " => overlap:", overlap
-        call write_info(1)
-      end if
-    end if
+    call oct_finalcheck(oct, initial_st, target_st, sys, h, td, laser, td_tg, tdtarget)
 
     ! clean up
     nullify(h%ep%lasers(1)%numerical)
+    call laser_end(1, h%ep%lasers)
     deallocate(laser)
     deallocate(laser_tmp)
-    deallocate(convergence)
+    call oct_iterator_end(iterator)
     call filter_end(f)
     call td_end(td)
-
     call pop_sub()
 
   contains
@@ -221,9 +189,9 @@ contains
     
     ! ---------------------------------------------------------
     subroutine scheme_zr98
-      
       integer :: ierr
       logical :: stoploop
+
      
       call push_sub('opt_control.scheme_ZR98')
 
@@ -242,8 +210,8 @@ contains
         'opt-control', 'prop1', gr%m, gr%sb, psi%zpsi(:,1,1,1), M_ONE, ierr)
         
       call zoutput_function(sys%outp%how,'opt-control','zr98_istate1',gr%m,gr%sb,initial_st%zpsi(:,1,1,1),M_ONE,ierr)
-      old_functional = -CNST(1e10)
-      ctr_iter = 0
+
+      call oct_iterator_init(iterator, oct)
       
       ctr_loop: do
         
@@ -252,13 +220,13 @@ contains
         ! define target state
         call target_calc(oct, gr, target_st, psi, chi) ! defines chi
         
-        call iteration_manager(stoploop)
+        call iteration_manager(stoploop, oct, iterator)
         if (stoploop)  exit ctr_loop
         
         call bwd_step(oct_algorithm_zr98)
         
-        if(dump_intermediate) then
-          write(filename,'(a,i3.3)') 'opt-control/b_laser.', ctr_iter
+        if(oct%dump_intermediate) then
+          write(filename,'(a,i3.3)') 'opt-control/b_laser.', iterator%ctr_iter
           call write_field(filename, td%max_iter, NDIM, laser_tmp, td%dt)
         end if
         
@@ -267,11 +235,11 @@ contains
         psi2 = initial_st
         call zoutput_function(sys%outp%how,'opt-control','last_bwd',gr%m,gr%sb,psi%zpsi(:,1,1,1),M_ONE,ierr)
         call fwd_step(oct_algorithm_zr98)
-        write(filename,'(a,i3.3)') 'PsiT.', ctr_iter
+        write(filename,'(a,i3.3)') 'PsiT.', iterator%ctr_iter
         call zoutput_function(sys%outp%how,'opt-control',filename,gr%m,gr%sb,psi%zpsi(:,1,1,1),M_ONE,ierr)
         
-        if(dump_intermediate) then
-          write(filename,'(a,i3.3)') 'opt-control/laser.', ctr_iter
+        if(oct%dump_intermediate) then
+          write(filename,'(a,i3.3)') 'opt-control/laser.', iterator%ctr_iter
           call write_field(filename, td%max_iter, NDIM, laser, td%dt)
         end if
         
@@ -283,7 +251,6 @@ contains
 
     !---------------------------------------
     subroutine scheme_wg05
-      
       integer :: ierr
       logical :: stoploop
 
@@ -294,8 +261,7 @@ contains
       message(1) = "Info: Starting OCT iteration using scheme: WG05"
       call write_info(1)
       
-      old_functional = -CNST(1e10)
-      ctr_iter = 0
+      call oct_iterator_init(iterator, oct)
 
       ctr_loop: do
          
@@ -307,18 +273,19 @@ contains
         call propagate_forward(oct, sys, h, td, laser, td_tg, tdtarget, td_fitness, psi) 
         
         if(in_debug_mode) then
-          write(filename,'(a,i3.3)') 'PsiT.', ctr_iter
+          write(filename,'(a,i3.3)') 'PsiT.', iterator%ctr_iter
           call zoutput_function(sys%outp%how,'opt-control',filename,gr%m,gr%sb,psi%zpsi(:,1,1,1),M_ONE,ierr)
         end if
 
         ! define target state
         call target_calc(oct, gr, target_st, psi, chi) ! defines chi
         
-        call iteration_manager(stoploop)
+        call iteration_manager(stoploop, oct, iterator)
         if (stoploop)  exit ctr_loop
         
         call bwd_step(oct_algorithm_wg05)
-        fluence = laser_fluence(laser_tmp, td%dt)
+        !!!WARNING: this probably shoudl not be here?
+        iterator%fluence = laser_fluence(laser_tmp, td%dt)
         
         ! filter stuff / alpha stuff
         if (oct%filtermode.gt.0) & 
@@ -326,30 +293,30 @@ contains
 
         ! recalc field
         if (oct%mode_fixed_fluence) then
-          fluence = laser_fluence(laser_tmp, td%dt)
+          !!!WARNING: this probably shoudl not be here?
+          iterator%fluence = laser_fluence(laser_tmp, td%dt)
+          if(in_debug_mode) write (6,*) 'actual fluence', iterator%fluence
 
-          if(in_debug_mode) write (6,*) 'actual fluence', fluence
-
-          oct%a_penalty(ctr_iter + 1) = &
-            sqrt(fluence * oct%a_penalty(ctr_iter)**2 / oct%targetfluence )
+          oct%a_penalty(iterator%ctr_iter + 1) = &
+            sqrt(iterator%fluence * oct%a_penalty(iterator%ctr_iter)**2 / oct%targetfluence )
 
           if(in_debug_mode) then
-            write (6,*) 'actual penalty', oct%a_penalty(ctr_iter)
-            write (6,*) 'next penalty', oct%a_penalty(ctr_iter + 1)
+            write (6,*) 'actual penalty', oct%a_penalty(iterator%ctr_iter)
+            write (6,*) 'next penalty', oct%a_penalty(iterator%ctr_iter + 1)
           end if
 
-          oct%tdpenalty = oct%a_penalty(ctr_iter + 1)
-          laser_tmp = laser_tmp * oct%a_penalty(ctr_iter) / oct%a_penalty(ctr_iter + 1)
-          fluence = laser_fluence(laser_tmp, td%dt)
+          oct%tdpenalty = oct%a_penalty(iterator%ctr_iter + 1)
+          laser_tmp = laser_tmp * oct%a_penalty(iterator%ctr_iter) / oct%a_penalty(iterator%ctr_iter + 1)
+          iterator%fluence = laser_fluence(laser_tmp, td%dt)
 
-          if(in_debug_mode) write (6,*) 'renormalized', fluence, oct%targetfluence
+          if(in_debug_mode) write (6,*) 'renormalized', iterator%fluence, oct%targetfluence
 
         end if
 
         laser = laser_tmp
         
         ! dump here: since the fwd_step is missing
-        write(filename,'(a,i3.3)') 'opt-control/laser.', ctr_iter
+        write(filename,'(a,i3.3)') 'opt-control/laser.', iterator%ctr_iter
         call write_field(filename, td%max_iter, NDIM, laser, td%dt)   
         
       end do ctr_loop
@@ -360,7 +327,6 @@ contains
  
     ! ---------------------------------------------------------
     subroutine scheme_zbr98!(method)
-
       integer :: ierr
       logical :: stoploop
       
@@ -381,8 +347,7 @@ contains
       if(in_debug_mode) call zoutput_function(sys%outp%how, &
         'opt-control', 'initial_propZBR98', gr%m, gr%sb, chi%zpsi(:,1,1,1), M_ONE, ierr)
 
-      old_functional = -CNST(1e10)
-      ctr_iter = 0
+      call oct_iterator_init(iterator, oct)
 
       ctr_loop: do
 
@@ -400,13 +365,13 @@ contains
           write(6,*) 'norm', zstates_dotp(gr%m, psi%d%dim,  chi%zpsi(:,:, 1, 1), chi%zpsi(:,:, 1, 1))
         end if
 
-        write(filename,'(a,i3.3)') 'PsiT.', ctr_iter
+        write(filename,'(a,i3.3)') 'PsiT.', iterator%ctr_iter
         call zoutput_function(sys%outp%how,'opt-control',filename,gr%m,gr%sb,psi%zpsi(:,1,1,1),M_ONE, ierr) 
         
         if(in_debug_mode) write(6,*) 'penalty ',oct%tdpenalty(:,2)
 
         ! iteration managament ! make own subroutine
-        call iteration_manager(stoploop)
+        call iteration_manager(stoploop, oct, iterator)
         if (stoploop)  exit ctr_loop
         
          ! and now backward
@@ -423,6 +388,7 @@ contains
     ! ----------------------------------------------------------
     subroutine fwd_step(method)
       integer, intent(in) :: method
+      integer :: i
 
       call push_sub('opt_control.fwd_step')
       
@@ -453,8 +419,8 @@ contains
       end do
       
       ! dump new laser field
-      if(dump_intermediate) then
-        write(filename,'(a,i3.3)') 'opt-control/laser.', ctr_iter
+      if(oct%dump_intermediate) then
+        write(filename,'(a,i3.3)') 'opt-control/laser.', iterator%ctr_iter
         call write_field(filename, td%max_iter, NDIM, laser, td%dt)
       endif
       
@@ -465,6 +431,7 @@ contains
     ! --------------------------------------------------------
     subroutine bwd_step(method) 
       integer, intent(in) :: method
+      integer :: i
 
       call push_sub('opt_control.bwd_step')
 
@@ -486,8 +453,8 @@ contains
       td%dt = -td%dt
 
       ! dump new laser field
-      if(dump_intermediate) then
-        write(filename,'(a,i3.3)') 'opt-control/b_laser.', ctr_iter
+      if(oct%dump_intermediate) then
+        write(filename,'(a,i3.3)') 'opt-control/b_laser.', iterator%ctr_iter
         call write_field(filename, td%max_iter, NDIM, laser_tmp, td%dt)
       end if
 
@@ -496,28 +463,35 @@ contains
 
 
     ! ---------------------------------------------------------
-    subroutine iteration_manager(stoploop)
-      logical, intent(out) :: stoploop
+    subroutine iteration_manager(stoploop, oct, iterator)
+      logical, intent(out)                :: stoploop
+      type(oct_t), intent(in)             :: oct
+      type(oct_iterator_t), intent(inout) :: iterator
 
       call push_sub('opt_control.iteration_manager')
       
       stoploop = .false.
-      ! calculate overlap 
-      message(1) = "Info: Calculate overlap"
-      call write_info(1)
-      call calc_J() ! psi mit target_st
+
+      call calc_J(oct, iterator)
+
+      iterator%convergence(1,iterator%ctr_iter) = iterator%functional
+      iterator%convergence(2,iterator%ctr_iter) = iterator%overlap
+      iterator%convergence(3,iterator%ctr_iter) = iterator%fluence
+      iterator%convergence(4,iterator%ctr_iter) = oct%tdpenalty(1,1)
       
       message(1) = "Info: Loop control"
       call write_info(1)
       
       ! TODO:: check for STOP FILE AND delete it
 
-      if((ctr_iter .eq. oct%ctr_iter_max).or.(oct%eps>M_ZERO.and.abs(functional-old_functional) < oct%eps)) then
-        if((ctr_iter .eq. oct%ctr_iter_max)) then
+      if((iterator%ctr_iter .eq. oct%ctr_iter_max) .or. &
+         (oct%eps>M_ZERO.and.abs(iterator%functional-iterator%old_functional) < oct%eps)) then
+
+        if((iterator%ctr_iter .eq. oct%ctr_iter_max)) then
           message(1) = "Info: Maximum number of iterations reached"
           call write_info(1)
         endif
-        if(oct%eps > M_ZERO .and. abs(functional-old_functional) < oct%eps ) then
+        if(oct%eps > M_ZERO .and. abs(iterator%functional-iterator%old_functional) < oct%eps ) then
           message(1) = "Info: Convergence threshold reached"
           call write_info(1)
         endif
@@ -525,43 +499,43 @@ contains
         stoploop = .TRUE.
       end if
 
-      write(message(1), '(a,i3)') 'Info: Optimal control iteration #', ctr_iter
+      write(message(1), '(a,i3)') 'Info: Optimal control iteration #', iterator%ctr_iter
       call write_info(1)
 
       if(oct%mode_fixed_fluence) then
         write(message(1), '(6x,a,f10.5,a,f10.5,a,f10.5,a,f10.5)') &
-          " => J1:", overlap, "   J: " , functional,  "  I: " , fluence, &
-          " penalty: ", oct%a_penalty(ctr_iter)
+          " => J1:", iterator%overlap, "   J: " , iterator%functional,  "  I: " , iterator%fluence, &
+          " penalty: ", oct%a_penalty(iterator%ctr_iter)
       else
         write(message(1), '(6x,a,f14.8,a,f20.8,a,f14.8)') &
-          " => J1:", overlap, "   J: " , functional,  "  I: " , fluence
+          " => J1:", iterator%overlap, "   J: " , iterator%functional,  "  I: " , iterator%fluence
       end if
       call write_info(1)
 
       ! store field with best J
-      if(functional.gt.bestJ) then
-        bestJ          = functional
-        bestJ_J1       = overlap
-        bestJ_fluence  = fluence
-        bestJ_ctr_iter = ctr_iter
+      if(iterator%functional > iterator%bestJ) then
+        iterator%bestJ          = iterator%functional
+        iterator%bestJ_J1       = iterator%overlap
+        iterator%bestJ_fluence  = iterator%fluence
+        iterator%bestJ_ctr_iter = iterator%ctr_iter
         ! dump to disc
         write(filename,'(a)') 'opt-control/laser.bestJ'
         call write_field(filename, td%max_iter, NDIM, laser, td%dt)
       end if
-      
+
       ! store field with best J1
-      if(overlap.gt.bestJ1) then
-        bestJ1          = overlap
-        bestJ1_J        = functional
-        bestJ1_fluence  = fluence       
-        bestJ1_ctr_iter = ctr_iter
+      if(iterator%overlap > iterator%bestJ1) then
+        iterator%bestJ1          = iterator%overlap
+        iterator%bestJ1_J        = iterator%functional
+        iterator%bestJ1_fluence  = iterator%fluence       
+        iterator%bestJ1_ctr_iter = iterator%ctr_iter
         ! dump to disc
         write(filename,'(a)') 'opt-control/laser.bestJ1'
         call write_field(filename, td%max_iter, NDIM, laser, td%dt)
       end if
-      
-      ctr_iter = ctr_iter + 1
-      old_functional = functional
+
+      iterator%ctr_iter = iterator%ctr_iter + 1
+      iterator%old_functional = iterator%functional
       
       call pop_sub()
     end subroutine iteration_manager
@@ -819,26 +793,23 @@ contains
 
 
     ! ---------------------------------------------------------
-    subroutine calc_J()
+    subroutine calc_J(oct, iterator)
+      type(oct_t), intent(in)             :: oct
+      type(oct_iterator_t), intent(inout) :: iterator
       FLOAT :: J2
       call push_sub('opt_control.calc_j')
 
-      fluence = laser_fluence(laser, td%dt)
+      iterator%fluence = laser_fluence(laser, td%dt)
       J2 = SUM(oct%tdpenalty * laser**2) * abs(td%dt)/M_TWO
       if(oct%targetmode==oct_targetmode_td) then
          ! 1/T * int(<Psi| O | Psi>)
-         overlap = SUM(td_fitness) / real(td%max_iter, REAL_PRECISION) 
+         iterator%overlap = SUM(td_fitness) / real(td%max_iter, REAL_PRECISION) 
       else
-        overlap = abs(zstates_mpdotp(gr%m, psi, target_st))
-        write(message(1), '(6x,a,f14.8)') " => overlap:", overlap
+        iterator%overlap = abs(zstates_mpdotp(gr%m, psi, target_st))
+        write(message(1), '(6x,a,f14.8)') " => overlap:", iterator%overlap
         call write_info(1)
       end if
-      functional = overlap - J2
-
-      convergence(1,ctr_iter) = functional
-      convergence(2,ctr_iter) = overlap
-      convergence(3,ctr_iter) = fluence
-      convergence(4,ctr_iter) = oct%tdpenalty(1,1)
+      iterator%functional = iterator%overlap - J2
 
       call pop_sub()
     end subroutine calc_J
@@ -851,21 +822,21 @@ contains
       call push_sub('opt_control.output')
       
       iunit = io_open('opt-control/info', action='write')
-      write(iunit, '(a,i4)')    'Total Iterations = ', ctr_iter
-      write(iunit, '(a,f14.8)') 'Last Overlap    = ', overlap
-      write(iunit, '(a,f14.8)') 'Last Functional = ', functional
+      write(iunit, '(a,i4)')    'Total Iterations = ', iterator%ctr_iter
+      write(iunit, '(a,f14.8)') 'Last Overlap    = ', iterator%overlap
+      write(iunit, '(a,f14.8)') 'Last Functional = ', iterator%functional
       write(iunit, '(a)') 
       write(iunit, '(a)')       'Best value of functional'
-      write(iunit, '(a,i4)')    'Iteration  = ', bestJ_ctr_iter
-      write(iunit, '(a,f14.8)') 'Overlap    = ', bestJ_J1
-      write(iunit, '(a,f14.8)') 'Functional = ', bestJ
-      write(iunit, '(a,f14.8)') 'Fluence = ',    bestJ_fluence
+      write(iunit, '(a,i4)')    'Iteration  = ', iterator%bestJ_ctr_iter
+      write(iunit, '(a,f14.8)') 'Overlap    = ', iterator%bestJ_J1
+      write(iunit, '(a,f14.8)') 'Functional = ', iterator%bestJ
+      write(iunit, '(a,f14.8)') 'Fluence = ',    iterator%bestJ_fluence
       write(iunit, '(a)') 
       write(iunit, '(a)')       'Best value of target functional'
-      write(iunit, '(a,i4)')    'Iteration  = ', bestJ1_ctr_iter
-      write(iunit, '(a,f14.8)') 'Overlap    = ', bestJ1
-      write(iunit, '(a,es18.8)') 'Functional = ', bestJ1_J
-      write(iunit, '(a,f14.8)') 'Fluence = ',    bestJ1_fluence
+      write(iunit, '(a,i4)')    'Iteration  = ', iterator%bestJ1_ctr_iter
+      write(iunit, '(a,f14.8)') 'Overlap    = ', iterator%bestJ1
+      write(iunit, '(a,es18.8)') 'Functional = ', iterator%bestJ1_J
+      write(iunit, '(a,f14.8)') 'Fluence = ',    iterator%bestJ1_fluence
       call io_close(iunit)
       message(1) = "Info: Output States"
       call write_info(1)
@@ -877,22 +848,14 @@ contains
       write(iunit, '(4(a))') '# iteration ','functional ','overlap ','penalty '
       ! data
       do loop=1,oct%ctr_iter_max
-         write(iunit, '(i6,3f18.8,es20.10)') loop, convergence(1,loop), convergence(2,loop), &
-           convergence(3,loop),convergence(4,loop)
+         write(iunit, '(i6,3f18.8,es20.10)') loop, iterator%convergence(1,loop), iterator%convergence(2,loop), &
+           iterator%convergence(3,loop), iterator%convergence(4,loop)
       end do
       call io_close(iunit)
-      !do loop=1,ctr_iter_max
-      !   write(6,'(f14.8,f14.8)') convergence(1,loop),convergence(2,loop)
-      !end do
-      ! assign final wave function to psi_i
-      st%zpsi = psi%zpsi
 
-
-      ! check: sth goes wrong here: if psi_i replaced by psi 
-      ! probably something is ill-defined
-      call states_output(st, gr, 'opt-control', sys%outp)
-      call zoutput_function(sys%outp%how,'opt-control','target',gr%m,gr%sb,target_st%zpsi(:,1,1,1),M_ONE,ierr) 
-      call zoutput_function(sys%outp%how,'opt-control','final',gr%m,gr%sb,psi%zpsi(:,1,1,1),M_ONE,ierr) 
+      call states_output(psi, gr, 'opt-control', sys%outp)
+      call zoutput_function(sys%outp%how, 'opt-control', 'target', gr%m, gr%sb, target_st%zpsi(:,1,1,1), M_ONE, ierr) 
+      call zoutput_function(sys%outp%how, 'opt-control', 'final', gr%m, gr%sb, psi%zpsi(:,1,1,1), M_ONE, ierr) 
 
       call pop_sub()
     end subroutine output
@@ -931,8 +894,7 @@ contains
     subroutine init_tdtarget(td_tg)
       type(td_target_t), pointer :: td_tg(:)
 
-
-      integer             :: jj
+      integer             :: i, jj, iunit
       FLOAT               :: mxloc(MAX_DIM)
       integer             :: tt, pos(1)
       FLOAT               :: t
@@ -1058,12 +1020,19 @@ contains
 
     ! ---------------------------------------------------------
     subroutine init_()
-      integer :: ierr, kk, jj
+      integer :: ierr, kk, jj, iunit, i
       FLOAT, allocatable :: field(:)
+      FLOAT :: t
 
       call push_sub('opt_control.init')  
 
       call io_mkdir('opt-control')
+
+      ! Initially nullify the pointers
+      nullify(f)
+      nullify(td_tg)
+      nullify(laser_tmp)
+      nullify(laser)
 
       ! some shortcuts
       gr  => sys%gr
@@ -1090,14 +1059,9 @@ contains
       field = M_ZERO
 
       ! use same laser as time-dependent run mode
-      call laser_init(h%ep%no_lasers,h%ep%lasers,gr%m)
+      call laser_init(h%ep%no_lasers, h%ep%lasers,gr%m)
 
       !
-      bestJ           = M_ZERO
-      bestJ1          = M_ZERO
-      bestJ_ctr_iter  = M_ZERO
-      bestJ1_ctr_iter = M_ZERO
-
       do jj = 0, 2*td%max_iter
         t = td%dt*(jj-1)/M_TWO
         !i = int(abs(M_TWO*t/l(1)%dt) + M_HALF)
@@ -1164,9 +1128,6 @@ contains
         end do
       end if
 
-      ! global fitness
-      ALLOCATE(convergence(4,0:oct%ctr_iter_max),(oct%ctr_iter_max+1)*4)
-
       ! initial state
       ! target operator
       call def_istate(oct, gr, sys%outp, initial_st)
@@ -1221,6 +1182,8 @@ contains
 #include "opt_control_aux.F90"
 #include "opt_control_defstates.F90"
 #include "opt_control_propagation.F90"
+#include "opt_control_finalcheck.F90"
+#include "opt_control_iter.F90"
 
 end module opt_control_m
 

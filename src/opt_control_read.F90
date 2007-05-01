@@ -164,6 +164,20 @@
     !%End
     call loct_parse_logical(check_inp('OCTDoubleCheck'), .TRUE., oct%oct_double_check)
 
+
+    !%Variable OCTDumpIntermediate
+    !%Type logical
+    !%Section Optimal Control
+    !%Default true
+    !%Description 
+    !% Writes to disk some data during the OCT algorithm at intermediate steps.
+    !% This is rather technical and it should be considered only for debugging
+    !% purposes. Nevertheless, since the whole OCT infrastructure is at a very
+    !% preliminary developing stage, it is set to true by default
+    !%End
+    call loct_parse_logical(check_inp('OCTDumpIntermediate'), .true., oct%dump_intermediate)
+
+
     !%Variable OCTInitialState
     !%Type integer
     !%Section Optimal Control
