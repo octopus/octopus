@@ -36,6 +36,39 @@
 
 
   ! ---------------------------------------------------------
+  ! Gets the J2 functional (which is the fluence, but weighted
+  ! by a penalty function.
+  ! ---------------------------------------------------------
+  FLOAT function j2_functional(oct, laser, dt) result(j2)
+    type(oct_t), intent(in) :: oct
+    FLOAT, intent(in)       :: laser(:,:)
+    FLOAT, intent(in)       :: dt
+    j2 = SUM(oct%tdpenalty * laser**2) * abs(dt)/M_TWO
+  end function j2_functional
+
+
+  ! ---------------------------------------------------------
+  FLOAT function overlap_function(oct, m, td_fitness, max_iter, psi, target_st)
+    type(oct_t), intent(in)    :: oct
+    type(mesh_t), intent(in)   :: m
+    FLOAT, intent(in)          :: td_fitness(:)
+    integer, intent(in)        :: max_iter
+    type(states_t), intent(in) :: psi, target_st
+
+    call push_sub('opt_control.overlap_function')
+
+    if(oct%targetmode==oct_targetmode_td) then
+       ! 1/T * int(<Psi| O | Psi>)
+       overlap_function = SUM(td_fitness) / real(max_iter, REAL_PRECISION) 
+    else
+      overlap_function = abs(zstates_mpdotp(m, psi, target_st))
+    end if
+
+    call pop_sub()
+  end function overlap_function
+
+
+  ! ---------------------------------------------------------
   subroutine write_field(filename, steps, n_dim, las, dt)
     character(len=*), intent(in) :: filename
     integer,          intent(in) :: steps
