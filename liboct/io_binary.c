@@ -201,7 +201,6 @@ void FC_FUNC_(read_binary,READ_BINARY)
   filename = TO_C_STR1(fname);
   fd = open(filename, O_RDONLY);
   if(fd < 0){
-    inf_error("octopus.read_binary", ierr);
     *ierr = 2;
     return;
   }
