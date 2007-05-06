@@ -257,6 +257,8 @@ contains
         ALLOCATE(h%a_ind(NP_PART, 2), NP_PART*2)
         ALLOCATE(h%b_ind(NP_PART, 1), NP_PART)
       end select
+    else
+      nullify(h%a_ind, h%b_ind)
     end if
 
     !%Variable TDGauge
