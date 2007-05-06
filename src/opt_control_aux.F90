@@ -69,29 +69,6 @@
 
 
   ! ---------------------------------------------------------
-  subroutine write_field(filename, steps, n_dim, las, dt)
-    character(len=*), intent(in) :: filename
-    integer,          intent(in) :: steps
-    integer,          intent(in) :: n_dim
-    FLOAT,            intent(in) :: las(1:n_dim,0:2*steps)
-    FLOAT,            intent(in) :: dt
-    integer :: i, iunit
-    FLOAT   :: tgrid(0:2*steps)
-
-    call push_sub('opt_control.write_field')
-    
-    call t_lookup(2*steps+1,dt/CNST(2.0),tgrid)
-    iunit = io_open(filename, action='write')
-    do i = 0, 2*steps, 2
-       write(iunit, '(4es30.16e4)') tgrid(i), las(:, i)
-    end do
-    call io_close(iunit)
-
-    call pop_sub()
-  end subroutine write_field
-
-
-  ! ---------------------------------------------------------
   subroutine write_fieldw(filename, ndim, steps, las, dt)
     ! in w=(2pi f) space
     character(len=*), intent(in) :: filename

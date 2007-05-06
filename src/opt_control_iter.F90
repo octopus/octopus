@@ -123,7 +123,7 @@
       iterator%bestJ_ctr_iter = iterator%ctr_iter
       ! dump to disc
       write(filename,'(a)') 'opt-control/laser.bestJ'
-      call write_field(filename, td%max_iter, NDIM, laser, td%dt)
+      call parameters_write(filename, td%max_iter, NDIM, laser, td%dt)
     end if
 
     ! store field with best J1
@@ -134,7 +134,7 @@
       iterator%bestJ1_ctr_iter = iterator%ctr_iter
       ! dump to disc
       write(filename,'(a)') 'opt-control/laser.bestJ1'
-      call write_field(filename, td%max_iter, NDIM, laser, td%dt)
+      call parameters_write(filename, td%max_iter, NDIM, laser, td%dt)
     end if
 
     iterator%ctr_iter = iterator%ctr_iter + 1

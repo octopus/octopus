@@ -91,7 +91,7 @@ noinst_HEADERS = \
 	excited_states_inc.F90 xc_OEP_kernel_inc.F90 em_resp_calc_inc.F90 \
 	opt_control_read.F90 opt_control_aux.F90 opt_control_defstates.F90 \
 	opt_control_propagation.F90 opt_control_finalcheck.F90 opt_control_iter.F90 \
-	opt_control_output.F90
+	opt_control_output.F90 opt_control_parameters.F90
 
 core_LIBS = @LIBS_LAPACK@ @LIBS_BLAS@ \
   ../liboct/liboct.a \
@@ -259,7 +259,7 @@ nl_operator.o: global.h
 ode_solver.o: global.h ode_solver_inc.F90
 opt_control.o: global.h opt_control_read.F90 opt_control_aux.F90 opt_control_defstates.F90 \
                opt_control_propagation.F90 opt_control_finalcheck.F90 opt_control_iter.F90 \
-               opt_control_output.F90
+               opt_control_output.F90 opt_control_parameters.F90
 out.o: global.h out_inc.F90
 par_vec.o: global.h par_vec_inc.F90
 pes.o: global.h pes_rc.F90 pes_mask.F90
