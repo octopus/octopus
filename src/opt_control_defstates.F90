@@ -21,13 +21,13 @@
 
   ! ---------------------------------------------------------
   !
-  subroutine def_istate(oct, gr, outp, initial_state)
+  subroutine def_istate(oct, gr, geo, initial_state)
     type(oct_t), intent(in)       :: oct
     type(grid_t), intent(in)      :: gr
-    type(output_t), intent(in)    :: outp
+    type(geometry_t), intent(in)  :: geo
     type(states_t), intent(inout) :: initial_state
 
-    integer           :: i, kk, no_c, state, no_blk
+    integer           :: i, kk, no_c, state, no_blk, kpoints, nst, dim
     C_POINTER         :: blk
     integer           :: p, ik, ib, idim, inst, inik
     integer           :: id ,is, ip, ierr, no_states, isize
@@ -42,8 +42,8 @@
     case(oct_is_groundstate) 
       message(1) =  'Info: Using Ground State for InitialState'
       call write_info(1)
-      ! TODO: more particles
-      call read_state(initial_state, gr%m, "0000000001")      
+      call restart_read(trim(tmpdir)//'restart_gs', initial_state, gr, geo, ierr)
+
     case(oct_is_excited)  
       message(1) =  'Info: Using Excited State for InitialState'
       call write_info(1)
@@ -51,15 +51,33 @@
       !%Variable OCTTargetStateNumber
       !%Type integer
       !%Section Optimal Control
+      !%Default 2
       !%Description
       !% Specify the target state, ordered by energy
-      !% 1 corresponds to the ground state
-      !% default is 2
       !%End
       call loct_parse_int(check_inp('OCTInitialStateNumber'), 2, state)
+
+      !TODO: The following lines of code do not look too clear, and will probably break easily.
+      !They should also be isolated and taken away, since they are repeated in several places.
+      tmp_st = initial_state
+      call restart_look(trim(tmpdir)//'restart_gs', gr%m, kpoints, dim, nst, ierr)
+      tmp_st%nst    = nst
+      tmp_st%st_end = nst
+      deallocate(tmp_st%eigenval)
+      deallocate(tmp_st%occ)
+      call states_allocate_wfns(tmp_st, gr%m)
+      ALLOCATE(tmp_st%eigenval(tmp_st%nst, tmp_st%d%nik), tmp_st%nst*tmp_st%d%nik)
+      ALLOCATE(tmp_st%occ(tmp_st%nst, tmp_st%d%nik), tmp_st%nst*tmp_st%d%nik)
+      if(tmp_st%d%ispin == SPINORS) then
+        ALLOCATE(tmp_st%mag(tmp_st%nst, tmp_st%d%nik, 2), tmp_st%nst*tmp_st%d%nik*2)
+        tmp_st%mag = M_ZERO
+      end if
+      tmp_st%eigenval = huge(REAL_PRECISION)
+      tmp_st%occ      = M_ZERO
+      call restart_read(trim(tmpdir)//'restart_gs', tmp_st, gr, geo, ierr)
       
-      write(fname,'(i10.10)') state
-      call read_state(initial_state, gr%m, fname)
+      initial_state%zpsi(:, :, 1, 1) = tmp_st%zpsi(:, :, state, 1)
+
     case(oct_is_superposition)   
       message(1) =  'Info: Using Superposition of States for InitialState'
       call write_info(1)
@@ -83,9 +101,27 @@
       !%
       !%End 
       if(loct_parse_block(check_inp('OCTInitialSuperposition'),blk)==0) then
+
         tmp_st = initial_state
+        call restart_look(trim(tmpdir)//'restart_gs', gr%m, kpoints, dim, nst, ierr)
+        tmp_st%nst    = nst
+        tmp_st%st_end = nst
+        deallocate(tmp_st%eigenval)
+        deallocate(tmp_st%occ)
+        call states_allocate_wfns(tmp_st, gr%m)
+        ALLOCATE(tmp_st%eigenval(tmp_st%nst, tmp_st%d%nik), tmp_st%nst*tmp_st%d%nik)
+        ALLOCATE(tmp_st%occ(tmp_st%nst, tmp_st%d%nik), tmp_st%nst*tmp_st%d%nik)
+        if(tmp_st%d%ispin == SPINORS) then
+          ALLOCATE(tmp_st%mag(tmp_st%nst, tmp_st%d%nik, 2), tmp_st%nst*tmp_st%d%nik*2)
+          tmp_st%mag = M_ZERO
+        end if
+        tmp_st%eigenval = huge(REAL_PRECISION)
+        tmp_st%occ      = M_ZERO
+        call restart_read(trim(tmpdir)//'restart_gs', tmp_st, gr, geo, ierr)
+
+
         no_blk = loct_parse_block_n(blk)
-        ! TODO: for each orbital            
+        ! TODO: One should check that the states requested are actually present in tmp_st   
         do i=1, no_blk
           ! The structure of the block is:
           ! domain | function_type | center | width | weight 
@@ -94,12 +130,11 @@
           do kk=1, no_c, 2
             call loct_parse_block_int(blk, i-1, kk-1, state)
             call loct_parse_block_cmplx(blk, i-1, kk, c_weight)
-            write(fname,'(i10.10)') state
-            !write(6,*) 'pars ', state, c_weight
-            call read_state(tmp_st, gr%m, fname)
-            initial_state%zpsi(:,:,1,1) = initial_state%zpsi(:,:,1,1) + c_weight * tmp_st%zpsi(:,:,1,1)
+            initial_state%zpsi(:,:,1,1) = initial_state%zpsi(:,:,1,1) + c_weight * tmp_st%zpsi(:,:,state,1)
           enddo
         end do
+        call states_end(tmp_st)
+
         ! normalize state
         do ik = 1, initial_state%d%nik
           do p  = initial_state%st_start, initial_state%st_end
@@ -107,8 +142,7 @@
               initial_state%zpsi(:,:, p, ik))
           enddo
         enddo
-        !            end do
-        call states_end(tmp_st)
+
       end if
       
     case(oct_is_userdefined) 
@@ -169,8 +203,6 @@
           enddo
         end do
         call loct_parse_block_end(blk)
-        call zoutput_function(outp%how,'opt-control','is_userdef', gr%m, gr%sb, &
-                              initial_state%zpsi(:,1,1,1), M_ONE/units_out%length%factor**NDIM ,ierr)
       else
         message(1) = '"UserDefinedStates" has to be specified as block.'
         call write_fatal(1)
@@ -182,32 +214,26 @@
       call write_info(2)
     end select
     
-    if (in_debug_mode) call zoutput_function(outp%how, &
-      'opt-control', 'istate', gr%m, gr%sb, initial_state%zpsi(:,1,1,1), &
-       M_ONE/units_out%length%factor**NDIM, ierr)
-
     call pop_sub()
   end subroutine def_istate
 
 
   ! ----------------------------------------------------------------------
-  subroutine def_toperator(oct, gr, outp, target_state)
+  subroutine def_toperator(oct, gr, geo, target_state)
     type(oct_t), intent(in)       :: oct
     type(grid_t), intent(in)      :: gr
-    type(output_t), intent(in)    :: outp
+    type(geometry_t), intent(in)  :: geo
     type(states_t), intent(inout) :: target_state
 
-    integer           :: i, no_c, state
+    integer           :: i, kpoints, dim, nst, no_c, state, ierr, isize, ik, ib, &
+                         no_states, kk, p, ip, no_blk
     C_POINTER         :: blk
-    integer           :: ierr, isize
-    character(len=10) :: fname
-    integer           :: ik, ib
-    integer           :: no_states, kk, p, ip
-    integer           :: no_blk
     FLOAT             :: x(MAX_DIM), r, psi_re, psi_im
     CMPLX             :: c_weight      
     type(states_t)    :: tmp_st
     character(len=1024) :: expression
+    character(len=10) :: fname
+
 
     call push_sub('opt_control.def_toperator')
 
@@ -215,28 +241,42 @@
     case(oct_tg_groundstate)
       message(1) =  'Info: Using Ground State for TargetOperator'
       call write_info(1)
-      ! Target State is ground state
-      ! rarely used: photo association
-      ! maybe other cooling stuff
-      ! TODO: expand to many particles
-      call read_state(target_state, gr%m, "0000000001")
+      call restart_read(trim(tmpdir)//'restart_gs', target_state, gr, geo, ierr)
       
     case(oct_tg_excited) 
       message(1) =  'Info: Using Excited State for TargetOperator'
       call write_info(1)
 
-      ! read in excited state
       !%Variable OCTTargetStateNumber
       !%Type integer
       !%Section Optimal Control
+      !%Default 2
       !%Description
-      !% Specify the target state, ordered by energy
-      !% 1 corresponds to the ground state
-      !% Default is 2
+      !% Specify the target state, ordered by energy.
       !%End
       call loct_parse_int(check_inp('OCTTargetStateNumber'), 2, state)
-      write(fname,'(i10.10)') state
-      call read_state(target_state, gr%m, fname)
+
+      !TODO: The following lines of code do not look too clear, and will probably break easily.
+      tmp_st = target_state
+      call restart_look(trim(tmpdir)//'restart_gs', gr%m, kpoints, dim, nst, ierr)
+      tmp_st%nst    = nst
+      tmp_st%st_end = nst
+      deallocate(tmp_st%eigenval)
+      deallocate(tmp_st%occ)
+      call states_allocate_wfns(tmp_st, gr%m)
+      ALLOCATE(tmp_st%eigenval(tmp_st%nst, tmp_st%d%nik), tmp_st%nst*tmp_st%d%nik)
+      ALLOCATE(tmp_st%occ(tmp_st%nst, tmp_st%d%nik), tmp_st%nst*tmp_st%d%nik)
+      if(tmp_st%d%ispin == SPINORS) then
+        ALLOCATE(tmp_st%mag(tmp_st%nst, tmp_st%d%nik, 2), tmp_st%nst*tmp_st%d%nik*2)
+        tmp_st%mag = M_ZERO
+      end if
+      tmp_st%eigenval = huge(REAL_PRECISION)
+      tmp_st%occ      = M_ZERO
+      call restart_read(trim(tmpdir)//'restart_gs', tmp_st, gr, geo, ierr)
+
+      target_state%zpsi(:, :, 1, 1) = tmp_st%zpsi(:, :, state, 1)
+      call states_end(tmp_st)
+
     case(oct_tg_superposition)  
       message(1) =  'Info: Using Superposition of States for TargetOperator'
       call write_info(1)
@@ -259,7 +299,24 @@
       !%
       !%End
       if(loct_parse_block(check_inp('OCTTargetSuperposition'),blk)==0) then
+
         tmp_st = target_state
+        call restart_look(trim(tmpdir)//'restart_gs', gr%m, kpoints, dim, nst, ierr)
+        tmp_st%nst    = nst
+        tmp_st%st_end = nst
+        deallocate(tmp_st%eigenval)
+        deallocate(tmp_st%occ)
+        call states_allocate_wfns(tmp_st, gr%m)
+        ALLOCATE(tmp_st%eigenval(tmp_st%nst, tmp_st%d%nik), tmp_st%nst*tmp_st%d%nik)
+        ALLOCATE(tmp_st%occ(tmp_st%nst, tmp_st%d%nik), tmp_st%nst*tmp_st%d%nik)
+        if(tmp_st%d%ispin == SPINORS) then
+          ALLOCATE(tmp_st%mag(tmp_st%nst, tmp_st%d%nik, 2), tmp_st%nst*tmp_st%d%nik*2)
+          tmp_st%mag = M_ZERO
+        end if
+        tmp_st%eigenval = huge(REAL_PRECISION)
+        tmp_st%occ      = M_ZERO
+        call restart_read(trim(tmpdir)//'restart_gs', tmp_st, gr, geo, ierr)
+
         no_blk = loct_parse_block_n(blk)
         ! TODO: for each orbital            
         do i=1, no_blk
@@ -270,20 +327,18 @@
           do kk=1, no_c, 2
             call loct_parse_block_int(blk, i-1, kk-1, state)
             call loct_parse_block_cmplx(blk, i-1, kk, c_weight)
-            write(fname,'(i10.10)') state
-            !write(6,*) 'pars ', state, c_weight
-            call read_state(tmp_st, gr%m, fname)
-            target_state%zpsi(:,:,1,1) = target_state%zpsi(:,:,1,1) + c_weight * tmp_st%zpsi(:,:,1,1)
+            target_state%zpsi(:, :, 1, 1) = target_state%zpsi(:, :, 1, 1) + c_weight * tmp_st%zpsi(:, :, state, 1)
           enddo
         end do
+        call states_end(tmp_st)
+
         ! normalize state
         do ik = 1, target_state%d%nik
           do p  = target_state%st_start, target_state%st_end
             call zstates_normalize_orbital(gr%m, target_state%d%dim, target_state%zpsi(:,:, p, ik))
           enddo
         enddo
-        !            end do
-        call states_end(tmp_st)
+
       end if
       
 
@@ -302,7 +357,9 @@
       !% <br>%</tt>
       !%  
       !%End
+
     case(oct_tg_local) 
+
       message(1) =  'Info: Using Local Target'
       call write_info(1)
       !%Variable OCTLocalTarget
@@ -354,14 +411,14 @@
             target_state%zpsi(:,:, 1, 1))
         end do
         call loct_parse_block_end(blk)
-        call zoutput_function(outp%how,'opt-control', 'tg_local', &
-                              gr%m, gr%sb, target_state%zpsi(:,1,1,1), M_ONE/units_out%length%factor**NDIM, ierr)
       else
         message(1) = '"OCTLocalTarget" has to be specified as block.'
         call write_fatal(1)
       end if
+
     case(oct_tg_td_local)
       target_state%zpsi(:,1,1,1) = M_z0
+
     case default
       write(message(1),'(a)') "Target Operator not properly defined."
       call write_fatal(1)

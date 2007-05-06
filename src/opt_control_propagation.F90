@@ -21,12 +21,11 @@
 
 
   ! ---------------------------------------------------------
-  subroutine propagate_forward(oct, sys, h, td, laser, td_tg, tdtarget, td_fitness, psi_n, write_iter)
+  subroutine propagate_forward(oct, sys, h, td, td_tg, tdtarget, td_fitness, psi_n, write_iter)
     type(oct_t),         intent(in)    :: oct
     type(system_t),      intent(inout) :: sys
     type(hamiltonian_t), intent(inout) :: h
     type(td_t),          intent(inout) :: td
-    FLOAT, pointer                     :: laser(:, :)
     type(td_target_t), pointer         :: td_tg(:)
     CMPLX, intent(in)                  :: tdtarget(:)
     FLOAT, intent(out)                 :: td_fitness(:)
@@ -61,9 +60,6 @@
     psi_n%rho = dens
     call v_ks_calc(gr, sys%ks, h, psi_n, calc_eigenval=.true.)
     call td_rti_run_zero_iter(h, td%tr)
-
-    h%ep%lasers(1)%numerical => laser
-    h%ep%lasers(1)%dt = td%dt      
 
     ii = 1
 
@@ -104,8 +100,6 @@
 
     end do
     
-    call zoutput_function(sys%outp%how, 'opt-control', 'last_fwd', gr%m, gr%sb, psi_n%zpsi(:,1,1,1), M_ONE, ierr) 
-    
     if(write_iter_) call td_write_end(write_handler)
     deallocate(dens)
     call pop_sub()
@@ -113,11 +107,10 @@
 
 
   ! ---------------------------------------------------------
-  subroutine propagate_backward(sys, h, td, laser, psi_n) ! give initial chi and laser
+  subroutine propagate_backward(sys, h, td, psi_n)
     type(system_t),      intent(inout) :: sys
     type(hamiltonian_t), intent(inout) :: h
     type(td_t),          intent(inout) :: td
-    FLOAT, pointer                     :: laser(:, :)
     type(states_t), intent(inout)      :: psi_n
 
     integer :: i
@@ -139,10 +132,8 @@
     call v_ks_calc(gr, sys%ks, h, psi_n, calc_eigenval=.true.)
     call td_rti_run_zero_iter(h, td%tr)
 
-    h%ep%lasers(1)%numerical => laser
     td%dt = -td%dt
     h%ep%lasers(1)%dt = td%dt
-
     do i = td%max_iter-1, 0, -1
       ! time iterate wavefunctions
       call td_rti_dt(sys%ks, h, gr, psi_n, td%tr, abs(i*td%dt), td%dt)

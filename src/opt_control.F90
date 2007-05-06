@@ -35,6 +35,7 @@ module opt_control_m
   use mesh_m
   use mesh_function_m
   use output_m
+  use geometry_m
   use states_m
   use states_output_m
   use string_m
@@ -45,6 +46,7 @@ module opt_control_m
   use units_m
   use v_ks_m
   use external_pot_m
+  use restart_m
 
   implicit none
 
@@ -171,12 +173,12 @@ contains
     ! Output some info to stdout
     call output(oct, iterator)
 
-    call states_output(psi, gr, 'opt-control', sys%outp)
-    call zoutput_function(sys%outp%how, 'opt-control', 'target', gr%m, gr%sb, target_st%zpsi(:,1,1,1), M_ONE, ierr) 
-    call zoutput_function(sys%outp%how, 'opt-control', 'final', gr%m, gr%sb, psi%zpsi(:,1,1,1), M_ONE, ierr) 
+    call states_output(target_st, gr, 'opt-control/target', sys%outp)
+    call states_output(psi, gr, 'opt-control/final', sys%outp)
 
     ! do final test run: propagate initial state with optimal field
-    call oct_finalcheck(oct, initial_st, target_st, sys, h, td, par%laser, td_tg, tdtarget)
+    call parameters_to_h(par, gr, td, h%ep)
+    call oct_finalcheck(oct, initial_st, target_st, sys, h, td, td_tg, tdtarget)
 
     ! clean up
     nullify(h%ep%lasers(1)%numerical)
@@ -203,12 +205,12 @@ contains
       call write_info(1)
 
       psi = initial_st
-      call propagate_forward(oct, sys, h, td, par%laser, td_tg, tdtarget, td_fitness, psi) 
+      call parameters_to_h(par, gr, td, h%ep)
+      call propagate_forward(oct, sys, h, td, td_tg, tdtarget, td_fitness, psi) 
       
-      if(in_debug_mode) call zoutput_function(sys%outp%how, &
-        'opt-control', 'prop1', gr%m, gr%sb, psi%zpsi(:,1,1,1), M_ONE, ierr)
+      if(oct%dump_intermediate) call states_output(psi, gr, 'opt-control/prop1', sys%outp)
         
-      call zoutput_function(sys%outp%how,'opt-control','zr98_istate1',gr%m,gr%sb,initial_st%zpsi(:,1,1,1),M_ONE,ierr)
+      call states_output(initial_st, gr, 'opt-control/zr98_istate1', sys%outp)
 
       call oct_iterator_init(iterator, oct)
       
@@ -231,10 +233,10 @@ contains
         ! forward propagation
         psi = initial_st
         psi2 = initial_st
-        call zoutput_function(sys%outp%how,'opt-control','last_bwd',gr%m,gr%sb,psi%zpsi(:,1,1,1),M_ONE,ierr)
+        call states_output(psi, gr, 'opt-control/last_bwd', sys%outp)
         call fwd_step(oct_algorithm_zr98)
-        write(filename,'(a,i3.3)') 'PsiT.', iterator%ctr_iter
-        call zoutput_function(sys%outp%how,'opt-control',filename,gr%m,gr%sb,psi%zpsi(:,1,1,1),M_ONE,ierr)
+        write(filename,'(a,i3.3)') 'opt-control/PsiT.', iterator%ctr_iter
+        call states_output(psi, gr, filename, sys%outp)
         
         if(oct%dump_intermediate) then
           write(filename,'(a,i3.3)') 'opt-control/laser.', iterator%ctr_iter
@@ -265,12 +267,14 @@ contains
         call write_info(1)
         
         psi = initial_st
-        call propagate_forward(oct, sys, h, td, par%laser, td_tg, tdtarget, td_fitness, psi) 
+        call parameters_to_h(par, gr, td, h%ep)
+        call propagate_forward(oct, sys, h, td, td_tg, tdtarget, td_fitness, psi) 
         
-        if(in_debug_mode) then
-          write(filename,'(a,i3.3)') 'PsiT.', iterator%ctr_iter
-          call zoutput_function(sys%outp%how,'opt-control',filename,gr%m,gr%sb,psi%zpsi(:,1,1,1),M_ONE,ierr)
+        if(oct%dump_intermediate) then
+          write(filename,'(a,i3.3)') 'opt-control/PsiT.', iterator%ctr_iter
+          call states_output(psi, gr, 'opt-control/last_bwd', sys%outp)
         end if
+
 
         ! define target state
         call target_calc(oct, gr, target_st, psi, chi) ! defines chi
@@ -289,12 +293,11 @@ contains
         if (oct%mode_fixed_fluence) then
           !!!WARNING: this probably shoudl not be here?
           fluence = laser_fluence(par_tmp%laser, td%dt)
-          if(in_debug_mode) write (6,*) 'actual fluence', fluence
 
           oct%a_penalty(iterator%ctr_iter + 1) = &
             sqrt(fluence * oct%a_penalty(iterator%ctr_iter)**2 / oct%targetfluence )
 
-          if(in_debug_mode) then
+          if(oct%dump_intermediate) then
             write (6,*) 'actual penalty', oct%a_penalty(iterator%ctr_iter)
             write (6,*) 'next penalty', oct%a_penalty(iterator%ctr_iter + 1)
           end if
@@ -302,8 +305,6 @@ contains
           oct%tdpenalty = oct%a_penalty(iterator%ctr_iter + 1)
           par_tmp%laser = par_tmp%laser * oct%a_penalty(iterator%ctr_iter) / oct%a_penalty(iterator%ctr_iter + 1)
           fluence = laser_fluence(par_tmp%laser, td%dt)
-
-          if(in_debug_mode) write (6,*) 'renormalized', fluence, oct%targetfluence
 
         end if
 
@@ -320,7 +321,7 @@ contains
 
  
     ! ---------------------------------------------------------
-    subroutine scheme_zbr98!(method)
+    subroutine scheme_zbr98
       integer :: ierr
       call push_sub('opt_control.scheme_zbr98')
       
@@ -332,10 +333,11 @@ contains
       call write_info(1)
       
       call target_calc(oct, gr, target_st, psi, chi)
-      call propagate_backward(sys, h, td, par%laser, chi)
 
-      if(in_debug_mode) call zoutput_function(sys%outp%how, &
-        'opt-control', 'initial_propZBR98', gr%m, gr%sb, chi%zpsi(:,1,1,1), M_ONE, ierr)
+      call parameters_to_h(par, gr, td, h%ep)
+      call propagate_backward(sys, h, td, chi)
+
+      if(oct%dump_intermediate) call states_output(chi, gr, 'opt-control/initial_propZBR98', sys%outp)
 
       call oct_iterator_init(iterator, oct)
 
@@ -350,22 +352,15 @@ contains
         
         call fwd_step(oct_algorithm_zbr98)
 
-        if(in_debug_mode) then
-          write(6,*) 'norm', zstates_dotp(gr%m, psi%d%dim,  psi%zpsi(:,:, 1, 1), psi%zpsi(:,:, 1, 1))
-          write(6,*) 'norm', zstates_dotp(gr%m, psi%d%dim,  chi%zpsi(:,:, 1, 1), chi%zpsi(:,:, 1, 1))
-        end if
-
-        write(filename,'(a,i3.3)') 'PsiT.', iterator%ctr_iter
-        call zoutput_function(sys%outp%how,'opt-control',filename,gr%m,gr%sb,psi%zpsi(:,1,1,1),M_ONE, ierr) 
+        write(filename,'(a,i3.3)') 'opt-control/PsiT.', iterator%ctr_iter
+        call states_output(psi, gr, filename, sys%outp)
         
-        if(in_debug_mode) write(6,*) 'penalty ',oct%tdpenalty(:,2)
-
         if(iteration_manager(oct, gr, td_fitness, par%laser, td, psi, target_st, iterator)) exit ctr_loop
         
          ! and now backward
         call target_calc(oct, gr, target_st, psi, chi)
         call bwd_step(oct_algorithm_zbr98)
-        call zoutput_function(sys%outp%how,'opt-control','last_bwd',gr%m,gr%sb,psi%zpsi(:,1,1,1),M_ONE, ierr) 
+        call states_output(psi, gr, 'opt-control/last_bwd', sys%outp)
         
       end do ctr_loop
 
@@ -386,23 +381,17 @@ contains
       ! setup forward propagation
       call states_densities_init(psi, gr, sys%geo)
       call states_calc_dens(psi, NP_PART, dens_tmp)
-
-      ! psi%rho = M_ZERO
-
       psi%rho = dens_tmp
-
       call v_ks_calc(gr, sys%ks, h, psi, calc_eigenval=.true.)
       call td_rti_run_zero_iter(h, td%tr)
 
       message(1) = "Info: Propagating forward"
       call write_info(1)
-!      call loct_progress_bar(-1, td%max_iter-1)
 
       h%ep%lasers(1)%dt = td%dt
 
       do i = 1, td%max_iter
-  
-        call prop_iter_fwd(i,method)
+        call prop_iter_fwd(i, method)
         if(oct%targetmode==oct_targetmode_td) &
           call calc_tdfitness(td_tg, gr, psi, tdtarget, td_fitness(i))     
         ! if td_target
@@ -594,7 +583,6 @@ contains
            - sign(M_ONE,dt)/real(td%max_iter)*tdtarget(:)* &
            psi_n%zpsi(:,dim,1,1)
        enddo
-       ! call zoutput_function(sys%outp%how,'opt-control','inh',gr%m,gr%sb,tdtarget,M_ONE, ierr) 
      else 
        ! build operator 
        ! non-local td operator
@@ -920,27 +908,19 @@ contains
       call parameters_to_h(par, gr, td, h%ep)
       call parameters_to_h(par_tmp, gr, td, h%ep)
 
-!!$      write(message(1),'(a,f14.8)') 'Input: Fluence of Initial laser ', sum(par%laser**2)*abs(td%dt)
-!!$      call write_info(1)
       write(message(1),'(a,f14.8)') 'Input: Fluence of Initial laser ', laser_fluence(par%laser, td%dt)
       call write_info(1)
 
-      ! call after laser is setup ! do not change order
+      ! call after laser is setup ! do not change order?
       call oct_read_inp(oct)
       
-      ! This should be temporal
-
+      ! This should not be here?
       h%ep%lasers(1)%pol(:) = oct%laser_pol(:)
 
       ALLOCATE(oct%tdpenalty(NDIM,0:2*td%max_iter),NDIM*(2*td%max_iter+1))
       oct%tdpenalty = M_ONE
       call def_tdpenalty(gr, oct%tdpenalty, td%max_iter, td%dt, oct%mode_tdpenalty)
       oct%tdpenalty = oct%tdpenalty * oct%penalty
-
-      if(in_debug_mode) then
-        write(filename,'(a)') 'opt-control/td_penalty'
-        call parameters_write(filename, td%max_iter, NDIM, oct%tdpenalty, td%dt)
-      end if
 
       if(oct%filtermode.gt.0) then
         call def_filter(gr, td%max_iter, td%dt, oct%filtermode, f)
@@ -963,16 +943,14 @@ contains
         end do
       end if
 
-      call def_istate(oct, gr, sys%outp, initial_st)
-      call def_toperator(oct, gr, sys%outp, target_st)
+      call def_istate(oct, gr, sys%geo, initial_st)
+      call def_toperator(oct, gr, sys%geo, target_st)
       call init_tdtarget(td_tg)
 
       call check_faulty_runmodes(oct)
 
-      call zoutput_function(sys%outp%how,'opt-control','initial1', gr%m, gr%sb, initial_st%zpsi(:,1,1,1), &
-                            M_ONE/units_out%length%factor**NDIM, ierr)
-      call zoutput_function(sys%outp%how,'opt-control','target1', gr%m, gr%sb, target_st%zpsi(:,1,1,1), &
-                            M_ONE/units_out%length%factor**NDIM, ierr) 
+      call states_output(initial_st, gr, 'opt-control/initial1', sys%outp)
+      call states_output(target_st, gr, 'opt-control/target1', sys%outp)
 
       call pop_sub()
     end subroutine init_

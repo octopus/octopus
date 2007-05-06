@@ -307,32 +307,6 @@
 
 
   ! ---------------------------------------------------------
-  subroutine read_state(st, m, filename)
-    type(states_t),   intent(inout) :: st
-    type(mesh_t),     intent(in)  :: m
-    character(len=*), intent(in)  :: filename
-
-    integer :: ierr
-
-    call push_sub('opt_control.read_state')
-
-    call zinput_function('tmp/restart_gs/'//trim(filename), m, st%zpsi(:, 1, 1, 1), ierr, is_tmp=.TRUE.)
-    ! if we do not succeed try obf
-    if(ierr>0) call zinput_function ('tmp/restart_gs/'//trim(filename)//'.obf', &
-      m, st%zpsi(:, 1, 1, 1), ierr, is_tmp=.TRUE.)
-    ! if we do not succeed try NetCDF
-    if(ierr>0) call zinput_function('tmp/restart_gs/'//trim(filename)//'.ncdf', &
-      m, st%zpsi(:, 1, 1, 1), ierr, is_tmp=.TRUE.)
-
-    if(ierr > 0) then
-       message(1) = "Unsuccesfull read of states in 'tmp/restart_gs/" // trim(filename) // "'"
-      call write_fatal(1)
-    end if
-
-    call pop_sub()
-  end subroutine read_state
-
-  ! ---------------------------------------------------------
   ! Tries to avoid ill defined combinations of run modes
   ! be careful with the order !!
   subroutine check_faulty_runmodes(oct)

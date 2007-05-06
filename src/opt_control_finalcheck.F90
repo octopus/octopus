@@ -21,14 +21,13 @@
 
 
   ! ---------------------------------------------------------
-  subroutine oct_finalcheck(oct, initial_st, target_st, sys, h, td, laser, td_tg, tdtarget)
+  subroutine oct_finalcheck(oct, initial_st, target_st, sys, h, td, td_tg, tdtarget)
     type(oct_t), intent(in)            :: oct
     type(states_t), intent(in)         :: initial_st
     type(states_t), intent(in)         :: target_st
     type(system_t), intent(inout)      :: sys
     type(hamiltonian_t), intent(inout) :: h
     type(td_t), intent(inout)          :: td
-    FLOAT, pointer                     :: laser(:,:)
     type(td_target_t), pointer         :: td_tg(:)
     CMPLX, intent(in)                  :: tdtarget(:)
 
@@ -49,9 +48,8 @@
     ALLOCATE(td_fitness(0:td%max_iter), td%max_iter+1)
     psi = initial_st
     
-    call propagate_forward(oct, sys, h, td, laser, &
+    call propagate_forward(oct, sys, h, td, &
                            td_tg, tdtarget, td_fitness, psi, write_iter = .true.)
-
 
     if(oct%targetmode==oct_targetmode_td) then
       overlap = SUM(td_fitness) * abs(td%dt)
