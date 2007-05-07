@@ -65,6 +65,10 @@ module multicomm_m
   use mpi_m
   use varinfo_m
 
+#ifdef USE_OMP
+  use omp_lib
+#endif
+
   implicit none
 
   private
@@ -82,16 +86,18 @@ module multicomm_m
     P_STRATEGY_DOMAINS = 1,          & ! parallelization domains
     P_STRATEGY_STATES  = 2,          & ! parallelization in states
     P_STRATEGY_KPOINTS = 3,          & ! parallelization in kpoints
-    P_STRATEGY_OTHER   = 4             ! something else like e-h pairs
+    P_STRATEGY_OTHER   = 4,          & ! something else like e-h pairs
+    P_STRATEGY_THREADS = 5
 
-  integer,           parameter :: n_par_types = 4
+  integer,           parameter :: n_par_types = 5
   character(len=11), parameter :: par_types(0:n_par_types) = &
     (/                               &
     "serial     ",                   &
     "par_domains",                   &
     "par_states ",                   &
     "par_kpoints",                   &
-    "par_other  "                    &
+    "par_other  ",                   &
+    "par_threads"                    &
     /)
 
   type multicomm_tree_t_pointer
@@ -210,6 +216,8 @@ contains
       !% Octopus will run parallel in k-points/spin.
       !%Option par_other   8
       !% Run-mode dependent. For example, in casida it means parallelization in e-h pairs
+      !%Option par_threads   16
+      !% Octopus will run in several threads.
       !%End
 
       if(mpi_world%size > 1) then
@@ -256,6 +264,15 @@ contains
       end if
       call write_info(1)
 
+#ifdef USE_OMP
+!$omp parallel
+!$omp master
+      write(message(1), '(a,i2,a)') "Octopus will use ", omp_get_num_threads(), " threads."
+!$omp end master
+!$omp end parallel
+      call write_info(1)
+#endif
+      
     end subroutine strategy
 
 
