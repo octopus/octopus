@@ -85,11 +85,6 @@ module opt_control_m
     oct_ftype_step  = 2
 
   type oct_t
-    FLOAT            :: eps
-    integer          :: ctr_iter_max
-    FLOAT            :: penalty
-    FLOAT, pointer   :: a_penalty(:)
-    FLOAT, pointer   :: tdpenalty(:, :)
     logical          :: mode_tdpenalty
     FLOAT            :: targetfluence
     logical :: mode_fixed_fluence
@@ -116,6 +111,8 @@ module opt_control_m
   end type td_target_t
 
   type oct_iterator_t
+    FLOAT              :: eps
+    integer            :: ctr_iter_max
     integer            :: ctr_iter
     FLOAT              :: functional
     FLOAT              :: old_functional
@@ -130,6 +127,13 @@ module opt_control_m
     FLOAT, pointer :: laser(:, :)
   end type oct_control_parameters_t
 
+  type oct_penalty_t 
+    logical          :: mode_tdpenalty
+    FLOAT            :: penalty
+    FLOAT, pointer   :: a_penalty(:)
+    FLOAT, pointer   :: tdpenalty(:, :)
+  end type oct_penalty_t
+
 contains
 
   ! ---------------------------------------------------------
@@ -138,6 +142,7 @@ contains
     type(hamiltonian_t),    intent(inout) :: h
 
     type(oct_t)                :: oct
+    type(oct_penalty_t)        :: penalty
     type(oct_iterator_t)       :: iterator
     type(td_t)                 :: td
     type(grid_t),      pointer :: gr   ! some shortcuts
@@ -212,8 +217,6 @@ contains
         
       call states_output(initial_st, gr, 'opt-control/zr98_istate1', sys%outp)
 
-      call oct_iterator_init(iterator, oct)
-      
       ctr_loop: do
         
         ! check for stop file and delete file
@@ -221,7 +224,7 @@ contains
         ! define target state
         call target_calc(oct, gr, target_st, psi, chi) ! defines chi
         
-        if(iteration_manager(oct, gr, td_fitness, par%laser, td, psi, target_st, iterator)) exit ctr_loop
+        if(iteration_manager(oct, penalty, gr, td_fitness, par%laser, td, psi, target_st, iterator)) exit ctr_loop
         
         call bwd_step(oct_algorithm_zr98)
         
@@ -258,8 +261,6 @@ contains
       message(1) = "Info: Starting OCT iteration using scheme: WG05"
       call write_info(1)
       
-      call oct_iterator_init(iterator, oct)
-
       ctr_loop: do
          
         ! first propagate chi to ti
@@ -279,7 +280,7 @@ contains
         ! define target state
         call target_calc(oct, gr, target_st, psi, chi) ! defines chi
         
-        if(iteration_manager(oct, gr, td_fitness, par%laser, td, psi, target_st, iterator)) exit ctr_loop
+        if(iteration_manager(oct, penalty, gr, td_fitness, par%laser, td, psi, target_st, iterator)) exit ctr_loop
         
         call bwd_step(oct_algorithm_wg05)
         !!!WARNING: this probably shoudl not be here?
@@ -294,16 +295,16 @@ contains
           !!!WARNING: this probably shoudl not be here?
           fluence = laser_fluence(par_tmp%laser, td%dt)
 
-          oct%a_penalty(iterator%ctr_iter + 1) = &
-            sqrt(fluence * oct%a_penalty(iterator%ctr_iter)**2 / oct%targetfluence )
+          penalty%a_penalty(iterator%ctr_iter + 1) = &
+            sqrt(fluence * penalty%a_penalty(iterator%ctr_iter)**2 / oct%targetfluence )
 
           if(oct%dump_intermediate) then
-            write (6,*) 'actual penalty', oct%a_penalty(iterator%ctr_iter)
-            write (6,*) 'next penalty', oct%a_penalty(iterator%ctr_iter + 1)
+            write (6,*) 'actual penalty', penalty%a_penalty(iterator%ctr_iter)
+            write (6,*) 'next penalty', penalty%a_penalty(iterator%ctr_iter + 1)
           end if
-
-          oct%tdpenalty = oct%a_penalty(iterator%ctr_iter + 1)
-          par_tmp%laser = par_tmp%laser * oct%a_penalty(iterator%ctr_iter) / oct%a_penalty(iterator%ctr_iter + 1)
+          penalty%tdpenalty = penalty%a_penalty(iterator%ctr_iter + 1)
+          par_tmp%laser = par_tmp%laser * penalty%a_penalty(iterator%ctr_iter) &
+                          / penalty%a_penalty(iterator%ctr_iter + 1)
           fluence = laser_fluence(par_tmp%laser, td%dt)
 
         end if
@@ -339,8 +340,6 @@ contains
 
       if(oct%dump_intermediate) call states_output(chi, gr, 'opt-control/initial_propZBR98', sys%outp)
 
-      call oct_iterator_init(iterator, oct)
-
       ctr_loop: do
 
         ! check for stop file and delete file
@@ -355,7 +354,7 @@ contains
         write(filename,'(a,i3.3)') 'opt-control/PsiT.', iterator%ctr_iter
         call states_output(psi, gr, filename, sys%outp)
         
-        if(iteration_manager(oct, gr, td_fitness, par%laser, td, psi, target_st, iterator)) exit ctr_loop
+        if(iteration_manager(oct, penalty, gr, td_fitness, par%laser, td, psi, target_st, iterator)) exit ctr_loop
         
          ! and now backward
         call target_calc(oct, gr, target_st, psi, chi)
@@ -473,7 +472,7 @@ contains
        call td_rti_dt(sys%ks, h, gr, psi2, td%tr, abs(iter*td%dt), abs(td%dt))
      end if
      
-     call update_field(iter-1, par%laser, method)
+     call update_field(oct, penalty, iter-1, par, gr, td, psi, chi)
      
      ! chi
      call  parameters_to_h(par_tmp, gr, td, h%ep)
@@ -517,7 +516,7 @@ contains
        call calc_inh(psi,td_tg,iter, &
        td%dt,chi)
      ! new electric field
-     call update_field(iter+1, par_tmp%laser, method)!, tdpenalty(:,iter*2))
+     call update_field(oct, penalty, iter+1, par_tmp, gr, td, psi, chi)
           
      ! chi
      call parameters_to_h(par_tmp, gr, td, h%ep)
@@ -645,66 +644,6 @@ contains
      
       call pop_sub()
     end subroutine build_tdtarget
-
-
-    ! ---------------------------------------------------------
-    subroutine update_field(iter, l, method)
-      integer, intent(in)      :: iter
-      FLOAT,   intent(inout)   :: l(1:NDIM,0:2*td%max_iter)
-      integer, intent(in)      :: method
-      
-      CMPLX :: d1
-      CMPLX :: d2(NDIM)
-      integer :: ik, p, dim, i, pol
-
-      CMPLX, allocatable :: rpsi(:, :)
-      
-      call push_sub('opt_control.update_field')
-      
-      ! case SWITCH
-      ! check dipole moment function - > velocity gauge
-
-      ALLOCATE(rpsi(gr%m%np_part, psi%d%dim), gr%m%np_part*psi%d%dim)
-
-      ! TODO This should be a product between Slater determinants if we want
-      ! to make it work for many-particle systems.      
-      d2 = M_z0 
-      do ik = 1, psi%d%nik
-        do p  = psi%st_start, psi%st_end
-          do pol = 1, NDIM
-            do dim = 1, psi%d%dim
-              rpsi(:, dim) = psi%zpsi(:, dim, p, ik)*oct%laser_pol(pol)*gr%m%x(:, pol)
-            end do
-            d2(pol) = zstates_dotp(gr%m, psi%d%dim, chi%zpsi(:, :, p, ik), rpsi)
-          end do
-        end do
-      end do
-      deallocate(rpsi)
-
-      d1 = M_z1
-      if(method.eq.oct_algorithm_zbr98) d1 = zstates_mpdotp(gr%m, psi, chi)
- 
-
-      ! Q: How to distinguish between the cases ?
-      !if((NDIM-dof).eq.1) then
-      !l(1:NDIM, 2*iter) = M_ONE/tdpenalty(1:NDIM,2*iter)*real(m_z1/(m_z2*m_zI) * &
-      !(laser_pol(1:NDIM)*(d1*d2(1:NDIM)+conjg(d1)*conjg(d2(1:NDIM)))))
-      !endif
-      !if((NDIM-dof).eq.0) then
-      l(1:NDIM, 2*iter) = aimag(d1*d2(1:NDIM))/oct%tdpenalty(1:NDIM,2*iter)
-      !endif
-      ! extrapolate to t+-dt/2
-      i = int(sign(M_ONE, td%dt))
-      if(iter==0.or.iter==td%max_iter) then
-        l(1:NDIM, 2*iter+  i) = l(1:NDIM, 2*iter)
-        l(1:NDIM, 2*iter+2*i) = l(1:NDIM, 2*iter)
-      else
-        l(1:NDIM, 2*iter+  i) = M_HALF*(M_THREE*l(1:NDIM, 2*iter) -       l(1:NDIM, 2*iter-2*i))
-        l(1:NDIM, 2*iter+2*i) = M_HALF*( M_FOUR*l(1:NDIM, 2*iter) - M_TWO*l(1:NDIM, 2*iter-2*i))
-      end if
-
-      call pop_sub()
-    end subroutine update_field
 
 
     !----------------------------------------------------------
@@ -866,10 +805,7 @@ contains
 
     ! ---------------------------------------------------------
     subroutine init_()
-      integer :: ierr, kk, jj, iunit, i
-      FLOAT, allocatable :: field(:)
-      FLOAT :: t
-
+      integer :: kk, jj, iunit, i
       call push_sub('opt_control.init')  
 
       call io_mkdir('opt-control')
@@ -920,10 +856,10 @@ contains
       ! This should not be here?
       h%ep%lasers(1)%pol(:) = oct%laser_pol(:)
 
-      ALLOCATE(oct%tdpenalty(NDIM,0:2*td%max_iter),NDIM*(2*td%max_iter+1))
-      oct%tdpenalty = M_ONE
-      call def_tdpenalty(gr, oct%tdpenalty, td%max_iter, td%dt, oct%mode_tdpenalty)
-      oct%tdpenalty = oct%tdpenalty * oct%penalty
+      call oct_iterator_init(iterator, oct)
+
+      call penalty_init(penalty, oct, gr, td%max_iter, iterator%ctr_iter_max, td%dt)
+      oct%mode_tdpenalty = penalty%mode_tdpenalty
 
       if(oct%filtermode.gt.0) then
         call def_filter(gr, td%max_iter, td%dt, oct%filtermode, f)
@@ -1000,6 +936,7 @@ contains
 #include "opt_control_iter.F90"
 #include "opt_control_output.F90"
 #include "opt_control_parameters.F90"
+#include "opt_control_penalty.F90"
 
 end module opt_control_m
 

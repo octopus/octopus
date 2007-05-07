@@ -114,6 +114,65 @@
   end subroutine parameters_write
 
 
+  ! ---------------------------------------------------------
+  subroutine update_field(oct, penalty, iter, cp, gr, td, psi, chi)
+    type(oct_t), intent(in)    :: oct
+    type(oct_penalty_t), intent(in) :: penalty
+    integer, intent(in)        :: iter
+    type(oct_control_parameters_t), intent(inout) :: cp
+    type(grid_t), intent(in)   :: gr
+    type(td_t), intent(in)     :: td
+    type(states_t), intent(in) :: psi
+    type(states_t), intent(in) :: chi
+    
+    CMPLX :: d1
+    CMPLX :: d2(NDIM)
+    integer :: ik, p, dim, i, pol
 
+    CMPLX, allocatable :: rpsi(:, :)
+    
+    call push_sub('opt_control.update_field')
+    
+    ! case SWITCH
+    ! check dipole moment function - > velocity gauge
 
-  
+    ALLOCATE(rpsi(gr%m%np_part, psi%d%dim), gr%m%np_part*psi%d%dim)
+
+    ! TODO This should be a product between Slater determinants if we want
+    ! to make it work for many-particle systems.      
+    d2 = M_z0 
+    do ik = 1, psi%d%nik
+      do p  = psi%st_start, psi%st_end
+        do pol = 1, NDIM
+          do dim = 1, psi%d%dim
+            rpsi(:, dim) = psi%zpsi(:, dim, p, ik)*oct%laser_pol(pol)*gr%m%x(:, pol)
+          end do
+          d2(pol) = zstates_dotp(gr%m, psi%d%dim, chi%zpsi(:, :, p, ik), rpsi)
+        end do
+      end do
+    end do
+    deallocate(rpsi)
+
+    d1 = M_z1
+    if(oct%algorithm_type .eq. oct_algorithm_zbr98) d1 = zstates_mpdotp(gr%m, psi, chi)
+
+    ! Q: How to distinguish between the cases ?
+    !if((NDIM-dof).eq.1) then
+    !l(1:NDIM, 2*iter) = M_ONE/tdpenalty(1:NDIM,2*iter)*real(m_z1/(m_z2*m_zI) * &
+    !(laser_pol(1:NDIM)*(d1*d2(1:NDIM)+conjg(d1)*conjg(d2(1:NDIM)))))
+    !endif
+    !if((NDIM-dof).eq.0) then
+    cp%laser(1:NDIM, 2*iter) = aimag(d1*d2(1:NDIM))/penalty%tdpenalty(1:NDIM,2*iter)
+    !endif
+    ! extrapolate to t+-dt/2
+    i = int(sign(M_ONE, td%dt))
+    if(iter==0.or.iter==td%max_iter) then
+      cp%laser(1:NDIM, 2*iter+  i) = cp%laser(1:NDIM, 2*iter)
+      cp%laser(1:NDIM, 2*iter+2*i) = cp%laser(1:NDIM, 2*iter)
+    else
+      cp%laser(1:NDIM, 2*iter+  i) = M_HALF*(M_THREE*cp%laser(1:NDIM, 2*iter) -       cp%laser(1:NDIM, 2*iter-2*i))
+      cp%laser(1:NDIM, 2*iter+2*i) = M_HALF*( M_FOUR*cp%laser(1:NDIM, 2*iter) - M_TWO*cp%laser(1:NDIM, 2*iter-2*i))
+    end if
+
+    call pop_sub()
+  end subroutine update_field

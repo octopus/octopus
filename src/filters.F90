@@ -43,6 +43,7 @@ module filter_m
        t_lookup,        &
        w_lookup,        &
        def_filter,      &
+       build_filter,    &
        apply_filter,    &
        filter_end
 
@@ -63,7 +64,7 @@ module filter_m
     timefreq = 1,                 &
     phase    = 2 
   
-  integer, parameter, private  :: &
+  integer, parameter, public  :: &
     filter_freq = 1,              &
     filter_time = 2,              &
     filter_phase= 3
@@ -100,18 +101,6 @@ contains
     call push_sub('filters.def_tdpenalty')
     mode_tdpenalty = .FALSE.
 
-    !%Variable OCTLaserEnvelope
-    !%Type block
-    !%Section Optimal Control
-    !%Description
-    !% Often a predefined time-dependent envelope on the laser field is required. 
-    !% This can be achieved by making the penalty factor time-dependent. 
-    !% Here, you may specify the required time dependent envelope.
-    !% The code allows for more than one enevelope, all of them will be added together and can weighted against each other. 
-    !% It is possible to choose different envelopes for different polarization directions. 
-    !% The block is similar to the time filter.
-    !%End
-        
     if (loct_parse_block(check_inp('OCTLaserEnvelope'), blk)==0) then
       no_lines = loct_parse_block_n(blk)
       ALLOCATE(tdp(no_lines), no_lines)

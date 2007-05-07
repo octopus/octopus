@@ -55,15 +55,11 @@
     ! header
     write(iunit, '(4(a))') '# iteration ','functional ','overlap ','penalty '
     ! data
-    do loop=1,oct%ctr_iter_max
+    do loop = 1, iterator%ctr_iter_max
        write(iunit, '(i6,3f18.8,es20.10)') loop, iterator%convergence(1,loop), iterator%convergence(2,loop), &
          iterator%convergence(3,loop), iterator%convergence(4,loop)
     end do
     call io_close(iunit)
-
-!!$    call states_output(psi, gr, 'opt-control', sys%outp)
-!!$    call zoutput_function(sys%outp%how, 'opt-control', 'target', gr%m, gr%sb, target_st%zpsi(:,1,1,1), M_ONE, ierr) 
-!!$    call zoutput_function(sys%outp%how, 'opt-control', 'final', gr%m, gr%sb, psi%zpsi(:,1,1,1), M_ONE, ierr) 
 
     call pop_sub()
   end subroutine output

@@ -29,53 +29,6 @@
 
     call push_sub('opt_control_read.oct_read_inp')  
 
-    !%Variable OCTEps
-    !%Type float
-    !%Section Optimal Control
-    !%Default 0.001
-    !%Description
-    !% Define the convergence threshold.
-    !% For the monotonically convergent scheme: If the increase of the 
-    !% target functional is less then OCTEps the iteration is stopped.
-    !% Example
-    !% OCTEps = 0.00001
-    !%End
-    call loct_parse_float(check_inp('OCTEps'), CNST(1.0e-3), oct%eps)
-
-    !%Variable OCTMaxIter
-    !%Type integer
-    !%Section Optimal Control
-    !%Default 10
-    !%Description
-    !% OCTMaxIter defines the maximum number of iterations.
-    !% Typical values range from 10-100.
-    !%End
-    call loct_parse_int(check_inp('OCTMaxIter'), 10, oct%ctr_iter_max)
-      
-    if( oct%ctr_iter_max < 0 .and. oct%eps < M_ZERO ) then
-      message(1) = "OptControlMaxIter and OptControlEps can not be both <0"
-      call write_fatal(1)
-    end if
-    if(oct%ctr_iter_max < 0) oct%ctr_iter_max = huge(oct%ctr_iter_max)
-   
-    !%Variable OCTPenalty
-    !%Type float
-    !%Section Optimal Control
-    !%Default 1.0
-    !%Description
-    !% The variable specificies the value of the penalty factor for the 
-    !% integrated field strength (fluence). Large value - small fluence. The value is 
-    !% always positive. A transient shape can be specified using the block OCTLaserEnvelope.
-    !% In this case OCTPenalty is multiplied with time-dependent function. 
-    !% The value depends on the coupling between the states. A good start might be a 
-    !% value from 0.1 (strong fields) to 10 (weak fields). 
-    !%End
-    ALLOCATE(oct%a_penalty(0:oct%ctr_iter_max+1), oct%ctr_iter_max+2)
-    call loct_parse_float(check_inp('OCTPenalty'), M_ONE, oct%penalty)
-    ! penalty array for fixed fluence run 
-    ! the array is only interesting for the development of new algorithms
-    oct%a_penalty = oct%penalty
-
     ! read in laser polarization and degress of freedom
     call oct_read_laserpol(oct%laser_pol, oct%dof)
 
@@ -333,11 +286,8 @@
       
     ! tdpenalty and fixed fluence do not work !
     if((oct%mode_tdpenalty).AND.(oct%mode_fixed_fluence)) then
-      write(message(1),'(a)') "Warning: Cannot use fixed fluence and" &
-        //" td penalty."
-      write(message(2),'(a)') "Warning: Disabling td penalty."
-      call write_info(2)
-      oct%tdpenalty = oct%penalty
+      write(message(1),'(a)') "Warning: Cannot use fixed fluence and td penalty."
+      call write_fatal(1)
     end if
       
     ! local targets only in ZR98 and WG05

@@ -27,10 +27,39 @@
 
     call push_sub('opt_control_iter.oct_iter_init')
 
+    !%Variable OCTEps
+    !%Type float
+    !%Section Optimal Control
+    !%Default 0.001
+    !%Description
+    !% Define the convergence threshold.
+    !% For the monotonically convergent scheme: If the increase of the 
+    !% target functional is less then OCTEps the iteration is stopped.
+    !% Example
+    !% OCTEps = 0.00001
+    !%End
+    call loct_parse_float(check_inp('OCTEps'), CNST(1.0e-3), iterator%eps)
+
+    !%Variable OCTMaxIter
+    !%Type integer
+    !%Section Optimal Control
+    !%Default 10
+    !%Description
+    !% OCTMaxIter defines the maximum number of iterations.
+    !% Typical values range from 10-100.
+    !%End
+    call loct_parse_int(check_inp('OCTMaxIter'), 10, iterator%ctr_iter_max)
+
+    if( iterator%ctr_iter_max < 0 .and. iterator%eps < M_ZERO ) then
+      message(1) = "OptControlMaxIter and OptControlEps can not be both <0"
+      call write_fatal(1)
+    end if
+    if(iterator%ctr_iter_max < 0) iterator%ctr_iter_max = huge(iterator%ctr_iter_max)
+
     iterator%old_functional = -CNST(1e10)
     iterator%ctr_iter       = 0
 
-    ALLOCATE(iterator%convergence(4,0:oct%ctr_iter_max),(oct%ctr_iter_max+1)*4)
+    ALLOCATE(iterator%convergence(4,0:iterator%ctr_iter_max),(iterator%ctr_iter_max+1)*4)
 
     iterator%bestJ           = M_ZERO
     iterator%bestJ1          = M_ZERO
@@ -55,8 +84,9 @@
 
 
   ! ---------------------------------------------------------
-  logical function iteration_manager(oct, gr, td_fitness, laser, td, psi, target_st, iterator) result(stoploop)
+  logical function iteration_manager(oct, penalty, gr, td_fitness, laser, td, psi, target_st, iterator) result(stoploop)
     type(oct_t), intent(in)             :: oct
+    type(oct_penalty_t), intent(in)     :: penalty
     type(grid_t), intent(in)            :: gr
     FLOAT, intent(in)                   :: td_fitness(:)
     FLOAT, intent(in)                   :: laser(:,:)
@@ -73,28 +103,29 @@
     stoploop = .false.
 
     iterator%overlap = overlap_function(oct, gr%m, td_fitness, td%max_iter, psi, target_st)
-    iterator%functional = iterator%overlap - j2_functional(oct, laser, td%dt)
+    iterator%functional = iterator%overlap - j2_functional(oct, penalty, laser, td%dt)
 
     fluence = laser_fluence(laser, td%dt)
 
     iterator%convergence(1,iterator%ctr_iter) = iterator%functional
     iterator%convergence(2,iterator%ctr_iter) = iterator%overlap
     iterator%convergence(3,iterator%ctr_iter) = fluence
-    iterator%convergence(4,iterator%ctr_iter) = oct%tdpenalty(1,1)
+    iterator%convergence(4,iterator%ctr_iter) = penalty%tdpenalty(1,1)
     
     message(1) = "Info: Loop control"
     call write_info(1)
     
     ! TODO:: check for STOP FILE AND delete it
 
-    if((iterator%ctr_iter .eq. oct%ctr_iter_max) .or. &
-       (oct%eps>M_ZERO.and.abs(iterator%functional-iterator%old_functional) < oct%eps)) then
+    if((iterator%ctr_iter .eq. iterator%ctr_iter_max) .or. &
+       (iterator%eps>M_ZERO.and.abs(iterator%functional-iterator%old_functional) < iterator%eps)) then
 
-      if((iterator%ctr_iter .eq. oct%ctr_iter_max)) then
+      if((iterator%ctr_iter .eq. iterator%ctr_iter_max)) then
         message(1) = "Info: Maximum number of iterations reached"
         call write_info(1)
       endif
-      if(oct%eps > M_ZERO .and. abs(iterator%functional-iterator%old_functional) < oct%eps ) then
+
+      if(iterator%eps > M_ZERO .and. abs(iterator%functional-iterator%old_functional) < iterator%eps ) then
         message(1) = "Info: Convergence threshold reached"
         call write_info(1)
       endif
@@ -108,7 +139,7 @@
     if(oct%mode_fixed_fluence) then
       write(message(1), '(6x,a,f10.5,a,f10.5,a,f10.5,a,f10.5)') &
         " => J1:", iterator%overlap, "   J: " , iterator%functional,  "  I: " , fluence, &
-        " penalty: ", oct%a_penalty(iterator%ctr_iter)
+        " penalty: ", penalty%a_penalty(iterator%ctr_iter)
     else
       write(message(1), '(6x,a,f14.8,a,f20.8,a,f14.8)') &
         " => J1:", iterator%overlap, "   J: " , iterator%functional,  "  I: " , fluence

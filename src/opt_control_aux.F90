@@ -39,11 +39,12 @@
   ! Gets the J2 functional (which is the fluence, but weighted
   ! by a penalty function.
   ! ---------------------------------------------------------
-  FLOAT function j2_functional(oct, laser, dt) result(j2)
-    type(oct_t), intent(in) :: oct
+  FLOAT function j2_functional(oct, penalty, laser, dt) result(j2)
+    type(oct_t), intent(in)         :: oct
+    type(oct_penalty_t), intent(in) :: penalty
     FLOAT, intent(in)       :: laser(:,:)
     FLOAT, intent(in)       :: dt
-    j2 = SUM(oct%tdpenalty * laser**2) * abs(dt)/M_TWO
+    j2 = SUM(penalty%tdpenalty * laser**2) * abs(dt)/M_TWO
   end function j2_functional
 
 
