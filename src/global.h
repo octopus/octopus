@@ -74,7 +74,3 @@
 #  define PREC(x)   	 d ## x
 #  define CNST(x)   	 x ## _8
 #endif
-
-#ifndef USE_OMP
-#define $omp no_omp
-#endif

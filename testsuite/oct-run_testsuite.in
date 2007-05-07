@@ -169,8 +169,10 @@ testsuite_end=$(date +%s)
 timediff_sec=$[ testsuite_end - testsuite_start ]
 
 rm -rf oct-header
-# time calculation stays correct if $timediff_sec < 24h
-RUNTIME="Total run-time of the testsuite: $(date +%H:%M:%S -d "00:00:00 + $timediff_sec sec")" 
+RUNTIME="Total run-time of the testsuite: \
+$(printf '%02d:%02d:%02d' $[timediff_sec / 3600] \
+$[(timediff_sec % 3600) / 60 ] $[timediff_sec % 60])"
+
 # save runtime for mail header
 echo $RUNTIME > oct-header
 echo "" >> oct-header
