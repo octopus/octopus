@@ -506,12 +506,12 @@ contains
         end do
       end do
     end do
-    write(out_file, *)
+    write(out_file, '(1x)')
     write(out_file, '(a1,a20)', advance = 'no') '#', str_center('['//trim(units_out%energy%abbrev) // ']', 20)
     do i = 1, 2+nspin*9
       write(out_file, '(a20)', advance = 'no')  str_center('['//trim(units_out%length%abbrev) //'^2]', 20)
     end do
-    write(out_file,*)
+    write(out_file, '(1x)')
 
     do i = 0, energy_steps
       average = M_ZERO
@@ -530,7 +530,7 @@ contains
       do j = 1, nspin
         write(out_file,'(9e20.8)', advance = 'no') sigma(1:3, 1:3, i, j)
       end do
-      write(out_file,'(a)', advance = 'yes')
+      write(out_file, '(1x)')
     end do
 
     deallocate(sigma, sigmap, sigmau, sigmav, sigmaw, p, ip)
@@ -684,7 +684,7 @@ contains
     do i = 1, nspin
       write(out_file, '(a20)', advance = 'no') str_center('[1/'//trim(units_out%energy%abbrev) //']',20)
     end do
-    write(out_file,'(1x)')
+    write(out_file, '(1x)')
 
     do i = 0, no_e
       write(out_file,'(e20.8)', advance = 'no') i*s%energy_step / units_out%energy%factor
@@ -894,7 +894,7 @@ contains
 
       ! should output units, etc...
       do i = 0, sh%no_e
-        write(iunit,'(5e15.6)') i*s%energy_step / units_out%energy%factor, &
+        write(iunit, '(5e15.6)') i*s%energy_step / units_out%energy%factor, &
           sh%sp(i) * units_out%energy%factor
       end do
       call io_close(iunit)
@@ -958,7 +958,7 @@ contains
 
       ! should output units, etc...
       do i = 0, sh%no_e
-        write(iunit,'(5e15.6)') i*s%energy_step / units_out%energy%factor, &
+        write(iunit, '(5e15.6)') i*s%energy_step / units_out%energy%factor, &
           sh%sp(i) * units_out%energy%factor
       end do
       call io_close(iunit)
