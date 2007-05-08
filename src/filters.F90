@@ -45,6 +45,7 @@ module filter_m
        def_filter,      &
        build_filter,    &
        apply_filter,    &
+       filter_write,    &
        filter_end
 
   
@@ -514,6 +515,44 @@ contains
 
 
   ! ----------------------------------------------------------------
+  subroutine filter_write(f, ndim, dt, max_iter)
+    type(filter_t), pointer :: f(:)
+    integer, intent(in)     :: ndim
+    FLOAT, intent(in)       :: dt
+    integer, intent(in)     :: max_iter
+
+    integer :: kk, no_f, iunit, i
+    character(len=80) :: filename
+
+    call push_sub('filters.filter_write')
+
+    if(.not.associated(f)) then
+      call pop_sub(); return
+    endif
+    no_f = size(f)
+    if(no_f .eq. 0) then
+      call pop_sub(); return
+    end if
+
+    do kk=1, size(f)
+       write(filename,'(a,i2.2)') 'opt-control/filter', kk
+       if(f(kk)%domain.eq.1) then
+         call write_fieldw(filename, ndim, max_iter, real(f(kk)%numerical(:,:), REAL_PRECISION), dt)
+       else
+         !write(6,*) f(kk)%numerical(:,0)
+         iunit = io_open(filename, action='write')
+         do i = 0, 2*max_iter
+           write(iunit, '(4ES30.16E4)') i*dt*M_HALF, f(kk)%numerical(:,i)
+         end do
+         call io_close(iunit)
+       end if
+    end do
+
+    call pop_sub()
+  end subroutine filter_write
+
+
+  ! ----------------------------------------------------------------
   subroutine filter_end(f)
     type(filter_t), pointer    :: f(:)
 
@@ -540,6 +579,32 @@ contains
 
     call pop_sub()
   end subroutine filter_end
+
+
+  ! ---------------------------------------------------------
+  subroutine write_fieldw(filename, ndim, steps, las, dt)
+    ! in w=(2pi f) space
+    character(len=*), intent(in) :: filename
+    integer,          intent(in) :: ndim
+    integer,          intent(in) :: steps
+    FLOAT,            intent(in) :: las(1:ndim,0:2*steps)
+    FLOAT,            intent(in) :: dt
+  
+    integer :: i, iunit
+    FLOAT   :: wgrid(0:2*steps)
+
+    call push_sub('opt_control.write_fieldw')
+
+    call w_lookup(2*steps+1, dt, wgrid)
+
+    iunit = io_open(filename, action='write')
+    do i = 0, 2*steps
+       write(iunit, '(4es30.16e4)') wgrid(i), las(:, i)
+    end do
+    call io_close(iunit)
+    
+    call pop_sub()
+  end subroutine write_fieldw
 
 end module filter_m
 

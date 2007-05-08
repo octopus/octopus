@@ -25,17 +25,19 @@
     type(td_t),   intent(in) :: td
     call push_sub('opt_control_parameters.parameters_init')
 
-    ALLOCATE(cp%laser(NDIM, 0:2*td%max_iter), NDIM*(2*td%max_iter))
+    cp%no_parameters = NDIM
+    cp%dt = td%dt
+    cp%ntiter = 2*td%max_iter
+    ALLOCATE(cp%laser(cp%no_parameters, 0:cp%ntiter), (cp%ntiter+1)*cp%no_parameters))
     cp%laser(:, :) = M_ZERO
 
   end subroutine parameters_init
 
 
   ! ---------------------------------------------------------
-  subroutine parameters_set(cp, gr, td, ep)
+  subroutine parameters_set(cp, gr, ep)
     type(oct_control_parameters_t), intent(inout) :: cp
     type(grid_t), intent(in) :: gr
-    type(td_t),   intent(in) :: td
     type(epot_t), intent(in) :: ep
 
     integer :: jj, kk
@@ -47,14 +49,13 @@
     ALLOCATE(field(1:NDIM), NDIM)
     cp%laser = M_ZERO;
 
-      do jj = 0, 2*td%max_iter
-        t = td%dt*(jj-1)/M_TWO
-        !i = int(abs(M_TWO*t/l(1)%dt) + M_HALF)
-        do kk=1, ep%no_lasers
-          call laser_field(gr%sb, ep%no_lasers, ep%lasers, t, field)
-          cp%laser(:,jj) = cp%laser(:,jj) + field(:)
-        end do
-      enddo
+    do jj = 0, cp%ntiter
+      t = cp%dt*(jj-1)/M_TWO
+      do kk=1, ep%no_lasers
+        call laser_field(gr%sb, ep%no_lasers, ep%lasers, t, field)
+        cp%laser(:,jj) = cp%laser(:,jj) + field(:)
+      end do
+    enddo
 
     deallocate(field)
     call pop_sub()
@@ -90,24 +91,24 @@
 
 
   ! ---------------------------------------------------------
-  subroutine parameters_write(filename, steps, n_dim, las, dt)
+  subroutine parameters_write(filename, cp)
     character(len=*), intent(in) :: filename
-    integer,          intent(in) :: steps
-    integer,          intent(in) :: n_dim
-    FLOAT,            intent(in) :: las(1:n_dim,0:2*steps)
-    FLOAT,            intent(in) :: dt
+    type(oct_control_parameters_t), intent(in) :: cp
+
     integer :: i, iunit
-    FLOAT   :: tgrid(0:2*steps)
+    FLOAT, allocatable   :: tgrid(:)
 
     call push_sub('opt_control_parameters.parameters_write')
     
-    call t_lookup(2*steps+1,dt/CNST(2.0),tgrid)
+    ALLOCATE(tgrid(0:cp%ntiter), cp%ntiter+1)
+    call t_lookup(cp%ntiter+1, cp%dt/CNST(2.0), tgrid)
     iunit = io_open(filename, action='write')
-    do i = 0, 2*steps, 2
-       write(iunit, '(4es30.16e4)') tgrid(i), las(:, i)
+    do i = 0, cp%ntiter, 2
+       write(iunit, '(4es30.16e4)') tgrid(i), cp%laser(:, i)
     end do
     call io_close(iunit)
 
+    deallocate(tgrid)
     call pop_sub()
   end subroutine parameters_write
 

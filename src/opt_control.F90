@@ -85,7 +85,6 @@ module opt_control_m
     oct_ftype_step  = 2
 
   type oct_t
-    logical          :: mode_tdpenalty
     FLOAT            :: targetfluence
     logical :: mode_fixed_fluence
     integer :: targetmode
@@ -131,6 +130,9 @@ module opt_control_m
   end type oct_iterator_t
 
   type oct_control_parameters_t
+    integer :: no_parameters
+    FLOAT   :: dt
+    integer :: ntiter
     FLOAT, pointer :: laser(:, :)
   end type oct_control_parameters_t
 
@@ -230,13 +232,13 @@ contains
         ! define target state
         call target_calc(oct, gr, target_st, psi, chi) ! defines chi
         
-        if(iteration_manager(oct, penalty, gr, tdt%td_fitness, par%laser, td, psi, target_st, iterator)) exit ctr_loop
+        if(iteration_manager(oct, penalty, gr, tdt%td_fitness, par, td, psi, target_st, iterator)) exit ctr_loop
         
         call bwd_step(oct_algorithm_zr98)
         
         if(oct%dump_intermediate) then
           write(filename,'(a,i3.3)') 'opt-control/b_laser.', iterator%ctr_iter
-          call parameters_write(filename, td%max_iter, NDIM, par_tmp%laser, td%dt)
+          call parameters_write(filename, par_tmp)
         end if
         
         ! forward propagation
@@ -249,7 +251,7 @@ contains
         
         if(oct%dump_intermediate) then
           write(filename,'(a,i3.3)') 'opt-control/laser.', iterator%ctr_iter
-          call parameters_write(filename, td%max_iter, NDIM, par%laser, td%dt)
+          call parameters_write(filename, par)
         end if
         
       end do ctr_loop
@@ -286,7 +288,7 @@ contains
         ! define target state
         call target_calc(oct, gr, target_st, psi, chi) ! defines chi
         
-        if(iteration_manager(oct, penalty, gr, tdt%td_fitness, par%laser, td, psi, target_st, iterator)) exit ctr_loop
+        if(iteration_manager(oct, penalty, gr, tdt%td_fitness, par, td, psi, target_st, iterator)) exit ctr_loop
         
         call bwd_step(oct_algorithm_wg05)
         !!!WARNING: this probably shoudl not be here?
@@ -319,7 +321,7 @@ contains
         
         ! dump here: since the fwd_step is missing
         write(filename,'(a,i3.3)') 'opt-control/laser.', iterator%ctr_iter
-        call parameters_write(filename, td%max_iter, NDIM, par_tmp%laser, td%dt)   
+        call parameters_write(filename, par_tmp)
         
       end do ctr_loop
 
@@ -360,7 +362,7 @@ contains
         write(filename,'(a,i3.3)') 'opt-control/PsiT.', iterator%ctr_iter
         call states_output(psi, gr, filename, sys%outp)
         
-        if(iteration_manager(oct, penalty, gr, tdt%td_fitness, par%laser, td, psi, target_st, iterator)) exit ctr_loop
+        if(iteration_manager(oct, penalty, gr, tdt%td_fitness, par, td, psi, target_st, iterator)) exit ctr_loop
         
          ! and now backward
         call target_calc(oct, gr, target_st, psi, chi)
@@ -407,7 +409,7 @@ contains
       ! dump new laser field
       if(oct%dump_intermediate) then
         write(filename,'(a,i3.3)') 'opt-control/laser.', iterator%ctr_iter
-        call parameters_write(filename, td%max_iter, NDIM, par%laser, td%dt)
+        call parameters_write(filename, par)
       endif
 
       deallocate(dens_tmp)      
@@ -444,7 +446,7 @@ contains
       ! dump new laser field
       if(oct%dump_intermediate) then
         write(filename,'(a,i3.3)') 'opt-control/b_laser.', iterator%ctr_iter
-        call parameters_write(filename, td%max_iter, NDIM, par_tmp%laser, td%dt)
+        call parameters_write(filename, par_tmp)
       end if
 
       deallocate(dens_tmp)
@@ -550,9 +552,6 @@ contains
 
       call io_mkdir('opt-control')
 
-      ! Initially nullify the pointers
-      nullify(f)
-
       ! some shortcuts
       gr  => sys%gr
       st  => sys%st
@@ -571,9 +570,9 @@ contains
       call parameters_init(par_tmp, gr, td)
 
       ! Initial guess for the laser: read from the input file.
-      call laser_init(h%ep%no_lasers, h%ep%lasers,gr%m)
-      call parameters_set(par, gr, td, h%ep)
-      call parameters_write('opt-control/initial_laser.1', td%max_iter, NDIM, par%laser, td%dt)
+      call laser_init(h%ep%no_lasers, h%ep%lasers, gr%m)
+      call parameters_set(par, gr, h%ep)
+      call parameters_write('opt-control/initial_laser.1', par)
       call laser_end(h%ep%no_lasers, h%ep%lasers)
 
       ! - NOW: allocate just one laser for optimal control
@@ -598,34 +597,18 @@ contains
       call oct_iterator_init(iterator, oct)
 
       call penalty_init(penalty, oct, gr, td%max_iter, iterator%ctr_iter_max, td%dt)
-      oct%mode_tdpenalty = penalty%mode_tdpenalty
 
       if(oct%filtermode.gt.0) then
+        nullify(f)
         call def_filter(gr, td%max_iter, td%dt, oct%filtermode, f)
-        !! DEBUG
-        !write(6,*) 'filter defined', size(f)
-        do kk=1, size(f)
-          write(filename,'(a,i2.2)') 'opt-control/filter', kk
-          if(f(kk)%domain.eq.1) then
-            call write_fieldw(filename, NDIM, td%max_iter, real(f(kk)%numerical(:,:), REAL_PRECISION), td%dt)
-          else
-            !write(6,*) f(kk)%numerical(:,0)
-            iunit = io_open(filename, action='write')
-            do i = 0, 2*td%max_iter
-              write(iunit, '(4ES30.16E4)') i*td%dt*M_HALF, f(kk)%numerical(:,i)
-            end do
-            call io_close(iunit)
-            !call write_field(filename, real(f(kk)%numerical(:,:), REAL_PRECISION), td%max_iter, td%dt)
-          end if
-          !!
-        end do
+        call filter_write(f, NDIM, td%dt, td%max_iter)
       end if
 
       call def_istate(oct, gr, sys%geo, initial_st)
       call def_toperator(oct, gr, sys%geo, target_st)
       call tdtargetset_init(oct, gr, td, tdt)
 
-      call check_faulty_runmodes(oct)
+      call check_faulty_runmodes(oct, penalty)
 
       call states_output(initial_st, gr, 'opt-control/initial1', sys%outp)
       call states_output(target_st, gr, 'opt-control/target1', sys%outp)

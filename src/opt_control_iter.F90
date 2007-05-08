@@ -82,12 +82,12 @@
 
 
   ! ---------------------------------------------------------
-  logical function iteration_manager(oct, penalty, gr, td_fitness, laser, td, psi, target_st, iterator) result(stoploop)
+  logical function iteration_manager(oct, penalty, gr, td_fitness, par, td, psi, target_st, iterator) result(stoploop)
     type(oct_t), intent(in)             :: oct
     type(oct_penalty_t), intent(in)     :: penalty
     type(grid_t), intent(in)            :: gr
     FLOAT, intent(in)                   :: td_fitness(:)
-    FLOAT, intent(in)                   :: laser(:,:)
+    type(oct_control_parameters_t), intent(in)  :: par
     type(td_t), intent(in)              :: td
     type(states_t), intent(in)          :: psi
     type(states_t), intent(in)          :: target_st
@@ -101,9 +101,9 @@
     stoploop = .false.
 
     iterator%overlap = overlap_function(oct, gr%m, td_fitness, td%max_iter, psi, target_st)
-    iterator%functional = iterator%overlap - j2_functional(oct, penalty, laser, td%dt)
+    iterator%functional = iterator%overlap - j2_functional(oct, penalty, par%laser, td%dt)
 
-    fluence = laser_fluence(laser, td%dt)
+    fluence = laser_fluence(par%laser, td%dt)
 
     iterator%convergence(1,iterator%ctr_iter) = iterator%functional
     iterator%convergence(2,iterator%ctr_iter) = iterator%overlap
@@ -152,7 +152,7 @@
       iterator%bestJ_ctr_iter = iterator%ctr_iter
       ! dump to disc
       write(filename,'(a)') 'opt-control/laser.bestJ'
-      call parameters_write(filename, td%max_iter, NDIM, laser, td%dt)
+      call parameters_write(filename, par)
     end if
 
     ! store field with best J1
@@ -163,7 +163,7 @@
       iterator%bestJ1_ctr_iter = iterator%ctr_iter
       ! dump to disc
       write(filename,'(a)') 'opt-control/laser.bestJ1'
-      call parameters_write(filename, td%max_iter, NDIM, laser, td%dt)
+      call parameters_write(filename, par)
     end if
 
     iterator%ctr_iter = iterator%ctr_iter + 1
