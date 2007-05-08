@@ -87,33 +87,37 @@
     if((oct%targetmode==oct_targetmode_td) &
         .AND.(loct_parse_block(check_inp('OCTTdTarget'),blk)==0)) then
 
-      tdt%no_tdtargets = no_tds
-      ALLOCATE(tdt%tdtg(no_tds), no_tds)
-      do i=1, no_tds
-        do pol=1, MAX_DIM
-          tdt%tdtg(i)%expression(pol) = " "
+      no_tds = loct_parse_block_n(blk)
+      if(no_tds > 0) then
+        tdt%no_tdtargets = no_tds
+        ALLOCATE(tdt%tdtg(no_tds), no_tds)
+        do i=1, no_tds
+          do pol=1, MAX_DIM
+            tdt%tdtg(i)%expression(pol) = " "
+          end do
+          ! The structure of the block is:
+          ! domain | function_type | center | width | weight 
+          no_c = loct_parse_block_cols(blk, i-1)
+          !td_tg(i)%type = oct_tgtype_local
+          call loct_parse_block_int(blk, i-1, 0, tdt%tdtg(i)%type)
+          call loct_parse_block_int(blk, i-1, 1, tdt%tdtg(i)%ftype)
+          call loct_parse_block_float(blk, i-1, 2, tdt%tdtg(i)%width)
+          call loct_parse_block_float(blk, i-1, 3, tdt%tdtg(i)%weight)
+          do pol=1, NDIM
+            call loct_parse_block_string(blk, i-1, 3+pol, tdt%tdtg(i)%expression(pol))
+          end do
+          !
+          ALLOCATE(tdt%tdtg(i)%tdshape(NDIM,0:2*td%max_iter), NDIM*(2*td%max_iter+1))
+          call build_tdshape(tdt%tdtg(i), gr, td%max_iter, td%dt)
         end do
-        ! The structure of the block is:
-        ! domain | function_type | center | width | weight 
-        no_c = loct_parse_block_cols(blk, i-1)
-        !td_tg(i)%type = oct_tgtype_local
-        call loct_parse_block_int(blk, i-1, 0, tdt%tdtg(i)%type)
-        call loct_parse_block_int(blk, i-1, 1, tdt%tdtg(i)%ftype)
-        call loct_parse_block_float(blk, i-1, 2, tdt%tdtg(i)%width)
-        call loct_parse_block_float(blk, i-1, 3, tdt%tdtg(i)%weight)
-        do pol=1, NDIM
-          call loct_parse_block_string(blk, i-1, 3+pol, tdt%tdtg(i)%expression(pol))
-        end do
-        !
-        ALLOCATE(tdt%tdtg(i)%tdshape(NDIM,0:2*td%max_iter), NDIM*(2*td%max_iter+1))
-        call build_tdshape(tdt%tdtg(i), gr, td%max_iter, td%dt)
-        
-      end do
+
+      end if
       
     end if
     ! calc norm, give warning when to small
 
     if(no_tds.eq.0) then
+      nullify(tdt%td_fitness); nullify(tdt%tdtarget); nullify(tdt%tdtg)
       call pop_sub(); return
     end if
 
@@ -155,12 +159,15 @@
     integer :: i
     call push_sub('opt_control_tdtarget.tdtargetset_end')
 
-    deallocate(tdt%tdtarget); nullify(tdt%tdtarget)
-    deallocate(tdt%td_fitness); nullify(tdt%td_fitness)
     do i = 1, tdt%no_tdtargets
       call tdtarget_end(tdt%tdtg(i))
     end do
-    deallocate(tdt%tdtg); nullify(tdt%tdtg)
+    if(tdt%no_tdtargets > 0) then 
+      deallocate(tdt%tdtg); nullify(tdt%tdtg)
+      deallocate(tdt%tdtarget); nullify(tdt%tdtarget)
+      deallocate(tdt%td_fitness); nullify(tdt%td_fitness)
+    end if
+
   end subroutine tdtargetset_end
 
 
