@@ -37,6 +37,7 @@ module lasers_m
   public ::                       &
     laser_t,                      &
     laser_init,                   &
+    laser_init_numerical,         &
     laser_end,                    &
     laser_write_info,             &
     laser_field,                  &
@@ -86,6 +87,25 @@ module lasers_m
 
 contains
 
+
+  ! ---------------------------------------------------------
+  ! Initializes a set of lasers l to hold one laser described
+  ! by the "numerical" array.
+  subroutine laser_init_numerical(dt, max_iter, dimensions, no_l, lasers)
+    FLOAT, intent(in) :: dt
+    integer, intent(in) :: max_iter
+    integer, intent(in) :: dimensions
+    integer,     intent(out) :: no_l
+    type(laser_t), pointer   :: lasers(:)
+
+    no_l = 1
+    ALLOCATE(lasers(1), 1)
+    lasers(1)%envelope = ENVELOPE_NUMERICAL
+    lasers(1)%dt = dt
+
+    ALLOCATE(lasers(1)%numerical(dimensions, 0:2*max_iter), dimensions*(2*max_iter+1))
+
+  end subroutine laser_init_numerical
 
   ! ---------------------------------------------------------
   subroutine laser_init(no_l, l, m)

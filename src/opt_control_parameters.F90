@@ -73,8 +73,7 @@
 
     call push_sub('opt_control_paramters.parameters_to_h')
 
-    ! TODO Probably is this better if this was not a pointer?
-    ep%lasers(1)%numerical => cp%laser
+    ep%lasers(1)%numerical = cp%laser
     ep%lasers(1)%pol(:) = cp%laser_pol(:)
 
     call pop_sub()
@@ -178,3 +177,86 @@
 
     call pop_sub()
   end subroutine update_field
+
+
+  ! ---------------------------------------------------------
+  subroutine oct_read_laserpol(laserpol, dof)
+    ! read the parameters for the laser polarization
+    CMPLX,   intent(out) :: laserpol(MAX_DIM)
+    integer, intent(out) :: dof
+  
+    integer   :: i, no_blk, no_c
+    C_POINTER :: blk
+
+    call push_sub('opt_control_parameters.oct_read_laserpol') 
+
+    !%Variable OCTPolarization
+    !%Type block
+    !%Section Optimal Control
+    !%Description
+    !% Define how many degress of freedom the laser has and how it is polarized.
+    !% The different examples below will explain this.
+    !% First of all, the syntax of each line is:
+    !%
+    !% <tt>%OCTPolarization
+    !% <br>&nbsp;&nbsp;dof | pol1 | pol2 | pol3 
+    !% <br>%</tt>
+    !% The variable defines the degress of freedom which is either 1 or 2.
+    !% pol1, pol2, pol3 define the polarization.
+    !%
+    !% Some examples:
+    !%
+    !% <tt>%OCTPolarization
+    !% <br>&nbsp;&nbsp;1 | 1 | 0 | 0 
+    !% <br>%</tt> 
+    !% Here we try to optimize the x-polarized laser.
+    !%
+    !% <tt>%OCTPolarization
+    !% <br>&nbsp;&nbsp;1 | 1 | 1 | 0 
+    !% <br>%</tt> 
+    !% The polarization is linear and lies in the x-y plane, only one laser field is optimized.
+    !%
+    !% <tt>%OCTPolarization
+    !% <br>&nbsp;&nbsp;2 | 1 | 1 | 0 
+    !% <br>%</tt> 
+    !% The polarization lies in the x-y plane, but this time two components of the laser
+    !% field are optimized. This may lead to linear, circular, or ellipitically polarized 
+    !% fields, dependening on the problem.
+    !%
+    !% <tt>%OCTPolarization
+    !% <br>&nbsp;&nbsp;1 | 1 | i | 0 
+    !% <br>%</tt> 
+    !% If we know that the answer must be a circular polarized field we can also fix it 
+    !% and optimize only one component.  
+    !%End
+    if(loct_parse_block(check_inp('OCTPolarization'),blk)==0) then
+      no_blk = loct_parse_block_n(blk)
+      ! TODO: for each orbital            
+      do i=1, no_blk
+        no_c = loct_parse_block_cols(blk, i-1)
+        call loct_parse_block_int(blk,i-1, 0, dof)
+        if((dof.gt.3).OR.(dof.lt.1) ) then
+          message(1) = "OCTPolarization: Choose degrees of freedom between 1 and 3."
+          call write_fatal(1)
+          
+        end if
+        call loct_parse_block_cmplx(blk,i-1, 1, laserpol(1))
+        call loct_parse_block_cmplx(blk,i-1, 2, laserpol(2))
+        call loct_parse_block_cmplx(blk,i-1, 3, laserpol(3))
+        
+      end do
+      call loct_parse_block_end(blk)
+    else
+      message(1) = 'Input: No Polarization defined and degrees of freedom defined'
+      message(2) = 'Input: Using default: x-polarized.'
+      laserpol(1) = m_z1
+      laserpol(2) = m_z0
+      laserpol(3) = m_z0
+      dof  = 1
+      call write_info(2)
+    end if
+
+    call pop_sub()
+  end subroutine oct_read_laserpol
+
+

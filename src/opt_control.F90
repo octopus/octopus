@@ -169,8 +169,59 @@ contains
     ! Checks that the run is actually possible with the current settings
     call check_runmode_constrains(sys, h)
 
-    ! initialize oct run, defines initial laser... initial state
-    call init_()
+    call io_mkdir('opt-control')
+
+    ! some shortcuts
+    gr  => sys%gr
+    st  => sys%st
+
+    call td_init(gr, td, sys%st, sys%outp)
+    call states_allocate_wfns(st, gr%m, M_CMPLX)
+
+    ! Initialize a bunch of states: initial, target, auxiliary.
+    psi        = st
+    psi2       = st
+    chi        = st
+    initial_st = st
+    target_st  = st
+
+    call oct_read_inp(oct)
+
+    call parameters_init(par, gr, td)
+    call parameters_init(par_tmp, gr, td)
+
+    ! Initial guess for the laser: read from the input file.
+    call laser_init(h%ep%no_lasers, h%ep%lasers, gr%m)
+    call parameters_set(par, gr, h%ep)
+    call parameters_write('opt-control/initial_laser.1', par)
+    call laser_end(h%ep%no_lasers, h%ep%lasers)
+
+    ! Allocate just one laser for optimal control
+    call laser_init_numerical(td%dt, td%max_iter, NDIM, h%ep%no_lasers, h%ep%lasers)
+
+    call parameters_to_h(par, gr, td, h%ep)
+
+    write(message(1),'(a,f14.8)') 'Input: Fluence of Initial laser ', laser_fluence(par%laser, td%dt)
+    call write_info(1)
+
+    call oct_iterator_init(iterator, oct)
+
+    call penalty_init(penalty, oct, gr, td%max_iter, iterator%ctr_iter_max, td%dt)
+
+    if(oct%filtermode.gt.0) then
+      nullify(f)
+      call def_filter(gr, td%max_iter, td%dt, oct%filtermode, f)
+      call filter_write(f, NDIM, td%dt, td%max_iter)
+    end if
+
+    call def_istate(oct, gr, sys%geo, initial_st)
+    call def_toperator(oct, gr, sys%geo, target_st)
+    call tdtargetset_init(oct, gr, td, tdt)
+
+    call check_faulty_runmodes(oct, penalty)
+
+    call states_output(initial_st, gr, 'opt-control/initial1', sys%outp)
+    call states_output(target_st, gr, 'opt-control/target1', sys%outp)
 
     ! mode switcher
     select case(oct%algorithm_type)
@@ -183,9 +234,8 @@ contains
       call write_fatal(2)
     end select
     
-    ! Output some info to stdout
+    ! Some informative output.
     call output(oct, iterator)
-
     call states_output(target_st, gr, 'opt-control/target', sys%outp)
     call states_output(psi, gr, 'opt-control/final', sys%outp)
 
@@ -546,73 +596,6 @@ contains
       call pop_sub()
     end subroutine prop_iter_bwd
  
-    ! ---------------------------------------------------------
-    subroutine init_()
-      integer :: kk, jj, iunit, i
-      call push_sub('opt_control.init')  
-
-      call io_mkdir('opt-control')
-
-      ! some shortcuts
-      gr  => sys%gr
-      st  => sys%st
-
-      call td_init(gr, td, sys%st, sys%outp)
-      call states_allocate_wfns(st, gr%m, M_CMPLX)
-
-      ! Initialize a bunch of states: initial, target, auxiliary.
-      psi        = st
-      psi2       = st
-      chi        = st
-      initial_st = st
-      target_st  = st
-
-      call oct_read_inp(oct)
-
-      call parameters_init(par, gr, td)
-      call parameters_init(par_tmp, gr, td)
-
-      ! Initial guess for the laser: read from the input file.
-      call laser_init(h%ep%no_lasers, h%ep%lasers, gr%m)
-      call parameters_set(par, gr, h%ep)
-      call parameters_write('opt-control/initial_laser.1', par)
-      call laser_end(h%ep%no_lasers, h%ep%lasers)
-
-      ! - NOW: allocate just one laser for optimal control
-      h%ep%no_lasers = 1
-      ALLOCATE(h%ep%lasers(1), 1)
-      ! ALLOCATE(h%ep%lasers(1)%numerical(1:NDIM,0:2*td%max_iter),NDIM*(2*td%max_iter +1) )
-      h%ep%lasers(1)%envelope = 99 ! internal type
-      h%ep%lasers(1)%dt = td%dt
-
-      call parameters_to_h(par, gr, td, h%ep)
-      call parameters_to_h(par_tmp, gr, td, h%ep)
-
-      write(message(1),'(a,f14.8)') 'Input: Fluence of Initial laser ', laser_fluence(par%laser, td%dt)
-      call write_info(1)
-
-      call oct_iterator_init(iterator, oct)
-
-      call penalty_init(penalty, oct, gr, td%max_iter, iterator%ctr_iter_max, td%dt)
-
-      if(oct%filtermode.gt.0) then
-        nullify(f)
-        call def_filter(gr, td%max_iter, td%dt, oct%filtermode, f)
-        call filter_write(f, NDIM, td%dt, td%max_iter)
-      end if
-
-      call def_istate(oct, gr, sys%geo, initial_st)
-      call def_toperator(oct, gr, sys%geo, target_st)
-      call tdtargetset_init(oct, gr, td, tdt)
-
-      call check_faulty_runmodes(oct, penalty)
-
-      call states_output(initial_st, gr, 'opt-control/initial1', sys%outp)
-      call states_output(target_st, gr, 'opt-control/target1', sys%outp)
-
-      call pop_sub()
-    end subroutine init_
-    
   end subroutine opt_control_run
 
 
