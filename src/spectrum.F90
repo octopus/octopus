@@ -517,11 +517,11 @@ contains
       average = M_ZERO
       anisotropy = M_ZERO
       do j = 1, nspin
-        average = average + M_THIRD* ( sigma(1, 1, i, 1) + sigma(2, 2, i, 1) + sigma(3, 3, i, 1) )
-        sigmap(:, :, i, 1) = matmul(sigma(:, :, i, 1),sigma(:, :, i, 1))
+        average = average + M_THIRD* ( sigma(1, 1, i, j) + sigma(2, 2, i, j) + sigma(3, 3, i, j) )
+        sigmap(:, :, i, j) = matmul(sigma(:, :, i, j), sigma(:, :, i, j))
         anisotropy = anisotropy + &
-          M_THIRD * ( M_THREE * (sigmap(1, 1, i, 1) + sigmap(2, 2, i, 1) + sigmap(3, 3, i, 1)) - &
-          (sigma(1, 1, i, 1) + sigma(2, 2, i, 1) + sigma(3, 3, i, 1))**2 )
+          M_THIRD * ( M_THREE * (sigmap(1, 1, i, j) + sigmap(2, 2, i, j) + sigmap(3, 3, i, j)) - &
+          (sigma(1, 1, i, j) + sigma(2, 2, i, j) + sigma(3, 3, i, j))**2 )
       end do
       ! Note that the cross section elements do not have to be transformed to the proper units, since
       ! they have been read from the "cross_section_vector.x", that are already in the proper units.
