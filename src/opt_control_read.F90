@@ -27,9 +27,6 @@
 
     call push_sub('opt_control_read.oct_read_inp')  
 
-    ! read in laser polarization and degress of freedom
-    call oct_read_laserpol(oct%laser_pol, oct%dof)
-
     !%Variable OCTFixFluenceTo
     !%Type float
     !%Section Optimal Control
@@ -171,7 +168,7 @@
     !%End
     call loct_parse_int(check_inp('OCTTargetOperator'),oct_tg_excited, oct%totype)
     if(.not.varinfo_valid_option('OCTTargetOperator', oct%totype)) call input_error('OCTTargetOperator')    
-      
+
     call pop_sub()
   end subroutine oct_read_inp
 

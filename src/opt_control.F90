@@ -85,13 +85,11 @@ module opt_control_m
     oct_ftype_step  = 2
 
   type oct_t
-    FLOAT            :: targetfluence
+    FLOAT   :: targetfluence
     logical :: mode_fixed_fluence
     integer :: targetmode
     integer :: filtermode
     integer :: totype
-    CMPLX   :: laser_pol(MAX_DIM)
-    integer :: dof
     integer :: algorithm_type
     logical :: td_tg_state 
     logical :: oct_double_check
@@ -134,6 +132,9 @@ module opt_control_m
     FLOAT   :: dt
     integer :: ntiter
     FLOAT, pointer :: laser(:, :)
+
+    CMPLX   :: laser_pol(MAX_DIM)
+    integer :: laser_dof
   end type oct_control_parameters_t
 
   type oct_penalty_t 
@@ -566,6 +567,8 @@ contains
       initial_st = st
       target_st  = st
 
+      call oct_read_inp(oct)
+
       call parameters_init(par, gr, td)
       call parameters_init(par_tmp, gr, td)
 
@@ -587,12 +590,6 @@ contains
 
       write(message(1),'(a,f14.8)') 'Input: Fluence of Initial laser ', laser_fluence(par%laser, td%dt)
       call write_info(1)
-
-      ! call after laser is setup ! do not change order?
-      call oct_read_inp(oct)
-      
-      ! This should not be here?
-      h%ep%lasers(1)%pol(:) = oct%laser_pol(:)
 
       call oct_iterator_init(iterator, oct)
 

@@ -31,6 +31,8 @@
     ALLOCATE(cp%laser(cp%no_parameters, 0:cp%ntiter), (cp%ntiter+1)*cp%no_parameters))
     cp%laser(:, :) = M_ZERO
 
+    call oct_read_laserpol(cp%laser_pol, cp%laser_dof)
+
   end subroutine parameters_init
 
 
@@ -73,6 +75,7 @@
 
     ! TODO Probably is this better if this was not a pointer?
     ep%lasers(1)%numerical => cp%laser
+    ep%lasers(1)%pol(:) = cp%laser_pol(:)
 
     call pop_sub()
   end subroutine parameters_to_h
@@ -144,7 +147,7 @@
       do p  = psi%st_start, psi%st_end
         do pol = 1, NDIM
           do dim = 1, psi%d%dim
-            rpsi(:, dim) = psi%zpsi(:, dim, p, ik)*oct%laser_pol(pol)*gr%m%x(:, pol)
+            rpsi(:, dim) = psi%zpsi(:, dim, p, ik)*cp%laser_pol(pol)*gr%m%x(:, pol)
           end do
           d2(pol) = zstates_dotp(gr%m, psi%d%dim, chi%zpsi(:, :, p, ik), rpsi)
         end do
