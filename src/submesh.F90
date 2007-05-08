@@ -36,6 +36,9 @@ module submesh_m
        submesh_copy,        &
        dsm_integrate,       &
        zsm_integrate,       &
+       ddsm_integrate_prod,  &
+       zdsm_integrate_prod,  &
+       zzsm_integrate_prod,  &
        submesh_end
  
   type submesh_t
@@ -156,6 +159,27 @@ contains
     call pop_sub()
 
   end subroutine submesh_copy
+
+CMPLX function zzsm_integrate_prod(m, sm, f, g) result(res)
+  type(mesh_t),    intent(in) :: m
+  type(submesh_t), intent(in) :: sm
+  CMPLX,           intent(in) :: f(:)
+  CMPLX,           intent(in) :: g(:)
+  
+#if defined(HAVE_MPI)
+  R_TYPE :: tmp
+#endif
+
+  res = sum( f(1:sm%ns) * g(1:sm%ns) * m%vol_pp(sm%jxyz(1:sm%ns)) )
+
+#if defined(HAVE_MPI)
+  if(m%parallel_in_domains) then
+    call MPI_Allreduce(res, tmp, 1, R_MPITYPE, MPI_SUM, m%vp%comm, mpi_err)
+    res = tmp
+  end if
+#endif
+
+end function zzsm_integrate_prod
 
 #include "undef.F90"
 #include "real.F90"

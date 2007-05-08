@@ -56,30 +56,30 @@ subroutine X(project)(mesh, p, n_projectors, dim, psi, ppsi, reltype, periodic, 
     ALLOCATE(plpsi(n_s, dim), n_s*dim)
 
     do idim = 1, dim
-      lpsi(1:n_s, idim)  = psi(p(ip)%sphere%jxyz(1:n_s), idim)*mesh%vol_pp(p(ip)%sphere%jxyz(1:n_s))
+      lpsi(1:n_s, idim)  = psi(p(ip)%sphere%jxyz(1:n_s), idim)
       if(periodic) lpsi(1:n_s, idim)  = lpsi(1:n_s, idim) * p(ip)%phases(1:n_s, ik)
     end do
 
     select case (p(ip)%type)
     case (M_HGH)
       if (periodic) then
-        call X(hgh_project)(mesh, p(ip)%hgh_p, dim, lpsi, plpsi, reltype, p(ip)%phases(:, ik))
+        call X(hgh_project)(mesh, p(ip)%sphere, p(ip)%hgh_p, dim, lpsi, plpsi, reltype, p(ip)%phases(:, ik))
       else
-        call X(hgh_project)(mesh, p(ip)%hgh_p, dim, lpsi, plpsi, reltype)
+        call X(hgh_project)(mesh, p(ip)%sphere, p(ip)%hgh_p, dim, lpsi, plpsi, reltype)
       end if
     case (M_KB)
       if (periodic) then
-        call X(kb_project)(mesh, p(ip)%kb_p, dim, lpsi, plpsi, p(ip)%phases(:, ik))
+        call X(kb_project)(mesh, p(ip)%sphere, p(ip)%kb_p, dim, lpsi, plpsi, p(ip)%phases(:, ik))
       else
-        call X(kb_project)(mesh, p(ip)%kb_p, dim, lpsi, plpsi)
+        call X(kb_project)(mesh, p(ip)%sphere, p(ip)%kb_p, dim, lpsi, plpsi)
       end if
     case (M_RKB)
 #ifdef R_TCOMPLEX
       !This can only be aplied to complex spinor wave-functions
       if (periodic) then
-        call rkb_project(mesh, p(ip)%rkb_p, lpsi, plpsi, p(ip)%phases(:, ik))
+        call rkb_project(mesh, p(ip)%sphere, p(ip)%rkb_p, lpsi, plpsi, p(ip)%phases(:, ik))
       else
-        call rkb_project(mesh, p(ip)%rkb_p, lpsi, plpsi)
+        call rkb_project(mesh, p(ip)%sphere, p(ip)%rkb_p, lpsi, plpsi)
       end if
 #endif
     end select
@@ -114,9 +114,6 @@ function X(psidprojectpsi)(mesh, p, n_projectors, dim, psi, periodic, ik) result
 
   integer ::  n_s, ip, idim, idir
   R_TYPE, allocatable :: lpsi(:, :)
-#if defined(HAVE_MPI)
-  R_TYPE :: tmp
-#endif
 
   call push_sub('epot_inc.psidprojectpsi')
 
@@ -131,30 +128,30 @@ function X(psidprojectpsi)(mesh, p, n_projectors, dim, psi, periodic, ik) result
     ALLOCATE( lpsi(n_s, dim), n_s*dim)
     
     do idim = 1, dim
-      lpsi(1:n_s, idim)  = psi(p(ip)%sphere%jxyz(1:n_s), idim)*mesh%vol_pp(p(ip)%sphere%jxyz(1:n_s))
+      lpsi(1:n_s, idim)  = psi(p(ip)%sphere%jxyz(1:n_s), idim)
       if(periodic) lpsi(1:n_s, idim)  = lpsi(1:n_s, idim) * p(ip)%phases(1:n_s, ik)
     end do
     
     select case (p(ip)%type)
     case (M_HGH)
       if (periodic) then
-        res = res + X(hgh_dproject)(mesh, p(ip)%hgh_p, dim, lpsi, p(ip)%phases(:, ik))
+        res = res + X(hgh_dproject)(mesh, p(ip)%sphere, p(ip)%hgh_p, dim, lpsi, p(ip)%phases(:, ik))
       else
-        res = res + X(hgh_dproject)(mesh, p(ip)%hgh_p, dim, lpsi)
+        res = res + X(hgh_dproject)(mesh, p(ip)%sphere, p(ip)%hgh_p, dim, lpsi)
       end if
     case (M_KB)
       if (periodic) then
-        res = res + X(kb_dproject)(mesh, p(ip)%kb_p, dim, lpsi, p(ip)%phases(:, ik))
+        res = res + X(kb_dproject)(mesh, p(ip)%sphere, p(ip)%kb_p, dim, lpsi, p(ip)%phases(:, ik))
       else
-        res = res + X(kb_dproject)(mesh, p(ip)%kb_p, dim, lpsi)
+        res = res + X(kb_dproject)(mesh, p(ip)%sphere, p(ip)%kb_p, dim, lpsi)
       end if
     case (M_RKB)
 #ifdef R_TCOMPLEX
       !This can only be aplied to complex spinor wave-functions
       if (periodic) then
-        res = res + rkb_dproject(mesh, p(ip)%rkb_p, lpsi, p(ip)%phases(:, ik))
+        res = res + rkb_dproject(mesh, p(ip)%sphere, p(ip)%rkb_p, lpsi, p(ip)%phases(:, ik))
       else
-        res = res + rkb_dproject(mesh, p(ip)%rkb_p, lpsi)
+        res = res + rkb_dproject(mesh, p(ip)%sphere, p(ip)%rkb_p, lpsi)
       end if
 #endif
     end select
@@ -179,9 +176,6 @@ R_TYPE function X(psia_project_psib)(mesh, pj, dim, psia, psib, reltype, periodi
 
   integer ::  n_s, idim
   R_TYPE, allocatable :: lpsi(:, :), plpsi(:,:)
-#if defined(HAVE_MPI)
-  R_TYPE :: tmp
-#endif
 
   call push_sub('epot_inc.psia_project_psib')
 
@@ -192,7 +186,7 @@ R_TYPE function X(psia_project_psib)(mesh, pj, dim, psia, psib, reltype, periodi
   
   if(pj%type /= M_LOCAL) then
     do idim = 1, dim
-      lpsi(1:n_s, idim)  = psib(pj%sphere%jxyz(1:n_s), idim)*mesh%vol_pp(pj%sphere%jxyz(1:n_s))
+      lpsi(1:n_s, idim)  = psib(pj%sphere%jxyz(1:n_s), idim)
       if(periodic) lpsi(1:n_s, idim)  = lpsi(1:n_s, idim) * pj%phases(1:n_s, ik)
     end do
   end if
@@ -204,23 +198,23 @@ R_TYPE function X(psia_project_psib)(mesh, pj, dim, psia, psib, reltype, periodi
     end do
   case (M_HGH)
     if (periodic) then
-      call X(hgh_project)(mesh, pj%hgh_p, dim, lpsi, plpsi, reltype, pj%phases(:, ik))
+      call X(hgh_project)(mesh, pj%sphere, pj%hgh_p, dim, lpsi, plpsi, reltype, pj%phases(:, ik))
     else
-      call X(hgh_project)(mesh, pj%hgh_p, dim, lpsi, plpsi, reltype)
+      call X(hgh_project)(mesh, pj%sphere, pj%hgh_p, dim, lpsi, plpsi, reltype)
     end if
   case (M_KB)
     if (periodic) then
-      call X(kb_project)(mesh, pj%kb_p, dim, lpsi, plpsi, pj%phases(:, ik))
+      call X(kb_project)(mesh, pj%sphere, pj%kb_p, dim, lpsi, plpsi, pj%phases(:, ik))
     else
-      call X(kb_project)(mesh, pj%kb_p, dim, lpsi, plpsi)
+      call X(kb_project)(mesh, pj%sphere, pj%kb_p, dim, lpsi, plpsi)
     end if
   case (M_RKB)
 #ifdef R_TCOMPLEX
     !This can only be aplied to complex spinor wave-functions
     if (periodic) then
-      call rkb_project(mesh, pj%rkb_p, lpsi, plpsi, pj%phases(:, ik))
+      call rkb_project(mesh, pj%sphere, pj%rkb_p, lpsi, plpsi, pj%phases(:, ik))
     else
-      call rkb_project(mesh, pj%rkb_p, lpsi, plpsi)
+      call rkb_project(mesh, pj%sphere, pj%rkb_p, lpsi, plpsi)
     end if
 #endif
   end select

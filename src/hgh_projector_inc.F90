@@ -27,8 +27,9 @@
 ! If including the spin-orbit coupling there is another term to be added to ppsi:
 ! \sum_{ij}^3\sum{k}^3 p%k(i,j) |hgh_p%p(:, i)><hgh_p%lp(:, k, j)|\hat{S(k)}|psi>
 !------------------------------------------------------------------------------
-subroutine X(hgh_project)(mesh, hgh_p, dim, psi, ppsi, reltype, phases)
+subroutine X(hgh_project)(mesh, sm, hgh_p, dim, psi, ppsi, reltype, phases)
   type(mesh_t),          intent(in)  :: mesh
+  type(submesh_t),       intent(in)  :: sm
   type(hgh_projector_t), intent(in)  :: hgh_p
   integer,               intent(in)  :: dim
   R_TYPE,                intent(in)  :: psi(:, :)  ! psi(hgh%n_s, dim)
@@ -41,9 +42,6 @@ subroutine X(hgh_project)(mesh, hgh_p, dim, psi, ppsi, reltype, phases)
 #ifdef R_TCOMPLEX
   CMPLX, allocatable :: lp_psi(:, :, :)
 #endif
-#if defined(HAVE_MPI)
-  R_TYPE :: tmp
-#endif
 
   n_s = hgh_p%n_s
   ppsi = R_TOTYPE(M_ZERO)
@@ -51,14 +49,8 @@ subroutine X(hgh_project)(mesh, hgh_p, dim, psi, ppsi, reltype, phases)
   do idim = 1, dim
     do j = 1, 3
       if (all(hgh_p%h(:, j) == M_ZERO)) cycle
-      uvpsi = sum(psi(1:n_s, idim)*hgh_p%p(1:n_s, j))
+      uvpsi = X(dsm_integrate_prod)(mesh, sm, psi(1:n_s, idim), hgh_p%p(1:n_s, j))
 
-#if defined(HAVE_MPI)
-      if(mesh%parallel_in_domains) then
-        call MPI_Allreduce(uvpsi, tmp, 1, R_MPITYPE, MPI_SUM, mesh%vp%comm, mpi_err)
-        uvpsi = tmp
-      end if
-#endif
       do i = 1, 3
         if (hgh_p%h(i, j) == M_ZERO) cycle
         if (present(phases)) then
@@ -84,13 +76,7 @@ subroutine X(hgh_project)(mesh, hgh_p, dim, psi, ppsi, reltype, phases)
       do k = 1, 3
         do j = 1, 3
           if (all(hgh_p%k(:, j) == M_ZERO)) cycle
-          uvpsi = sum(psi(1:n_s, idim)*hgh_p%lp(1:n_s, k, j))
-#if defined(HAVE_MPI)
-          if(mesh%parallel_in_domains) then
-            call MPI_Allreduce(uvpsi, tmp, 1, R_MPITYPE, MPI_SUM, mesh%vp%comm, mpi_err)
-            uvpsi = tmp
-          end if
-#endif
+          uvpsi = zdsm_integrate_prod(mesh, sm, psi(1:n_s, idim), hgh_p%lp(1:n_s, k, j))
           
           do i = 1, 3
             if (hgh_p%k(i, j) == M_ZERO) cycle
@@ -122,8 +108,9 @@ end subroutine X(hgh_project)
 !  \sum_{ij}^3\sum{k}^3 p%h(i,j) <psi|hgh_p%dp(:, k, i)><hgh_p%p(:, j)|psi>
 ! Here the spin-orbit coupling will always be ignored.
 !------------------------------------------------------------------------------
-function X(hgh_dproject)(mesh, hgh_p, dim, psi, phases) result(res)
-  type(mesh_t),          intent(in)    :: mesh
+function X(hgh_dproject)(mesh, sm, hgh_p, dim, psi, phases) result(res)
+  type(mesh_t),          intent(in) :: mesh
+  type(submesh_t),       intent(in) :: sm
   type(hgh_projector_t), intent(in) :: hgh_p
   integer,               intent(in) :: dim
   R_TYPE,                intent(in) :: psi(:, :)  ! psi(hgh%n_s, dim)
@@ -133,10 +120,6 @@ function X(hgh_dproject)(mesh, hgh_p, dim, psi, phases) result(res)
   integer :: n_s, i, j, k, idim
   R_TYPE :: uvpsi
   R_TYPE, allocatable :: ppsi(:)
-#if defined(HAVE_MPI)
-  R_TYPE :: tmp
-  R_TYPE :: tmp2(3)
-#endif
 
   res = R_TOTYPE(M_ZERO)
   n_s = hgh_p%n_s
@@ -145,13 +128,8 @@ function X(hgh_dproject)(mesh, hgh_p, dim, psi, phases) result(res)
   do idim = 1, dim
     do j = 1, 3
       if (all(hgh_p%h(:, j) == M_ZERO)) cycle
-      uvpsi = sum(psi(1:n_s, idim)*hgh_p%p(1:n_s, j))
-#if defined(HAVE_MPI)
-      if(mesh%parallel_in_domains) then
-        call MPI_Allreduce(uvpsi, tmp, 1, R_MPITYPE, MPI_SUM, mesh%vp%comm, mpi_err)
-        uvpsi = tmp
-      end if
-#endif
+      uvpsi = X(dsm_integrate_prod)(mesh, sm, psi(1:n_s, idim), hgh_p%p(1:n_s, j))
+
       do i = 1, 3
         if (hgh_p%h(i, j) == M_ZERO) cycle
         do k = 1, 3
@@ -160,20 +138,14 @@ function X(hgh_dproject)(mesh, hgh_p, dim, psi, phases) result(res)
           else
             ppsi(1:n_s) = hgh_p%h(i, j) * uvpsi * hgh_p%dp(1:n_s, k, i)
           end if
-          res(k) = res(k) + sum(R_CONJ(psi(1:n_s, idim)) * ppsi(1:n_s))
+          ppsi(1:n_s) = R_CONJ(psi(1:n_s, idim)) * ppsi(1:n_s)
+          res(k) = res(k) + X(sm_integrate)(mesh, sm, ppsi(1:n_s))
         end do
       end do
     end do
   end do
 
   deallocate(ppsi)
-
-#if defined(HAVE_MPI)
-  if(mesh%parallel_in_domains) then
-    call MPI_Allreduce(res(1), tmp2(1), 3, R_MPITYPE, MPI_SUM, mesh%vp%comm, mpi_err)
-    res = tmp2
-  end if
-#endif
 
 end function X(hgh_dproject)
 

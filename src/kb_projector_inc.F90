@@ -24,8 +24,9 @@
 ! \hat{kb_p} |psi> = \sum_{i}^kb_p%n_c p%e(i) |kb_p%p(:, i)><kb_p%p(:, i)|psi>
 ! The result is summed up to ppsi.
 !------------------------------------------------------------------------------
-subroutine X(kb_project)(mesh, kb_p, dim, psi, ppsi, phases)
+subroutine X(kb_project)(mesh, sm, kb_p, dim, psi, ppsi, phases)
   type(mesh_t),         intent(in)  :: mesh
+  type(submesh_t),      intent(in)  :: sm
   type(kb_projector_t), intent(in)  :: kb_p
   integer,              intent(in)  :: dim
   R_TYPE,               intent(in)  :: psi(:, :)  ! psi(kb%n_s, dim)
@@ -34,9 +35,6 @@ subroutine X(kb_project)(mesh, kb_p, dim, psi, ppsi, phases)
 
   integer :: i, idim, n_s
   R_TYPE :: uvpsi
-#if defined(HAVE_MPI)
-  R_TYPE :: tmp
-#endif
 
   call push_sub('kb_projector_inc.kb_project')
 
@@ -46,14 +44,7 @@ subroutine X(kb_project)(mesh, kb_p, dim, psi, ppsi, phases)
   do idim = 1, dim
     do i = 1, kb_p%n_c
       if (kb_p%e(i) == M_ZERO) cycle
-      uvpsi = sum(psi(1:n_s, idim)*kb_p%p(1:n_s, i))
-
-#if defined(HAVE_MPI)
-      if(mesh%parallel_in_domains) then
-        call MPI_Allreduce(uvpsi, tmp, 1, R_MPITYPE, MPI_SUM, mesh%vp%comm, mpi_err)
-        uvpsi = tmp
-      end if
-#endif
+      uvpsi = X(dsm_integrate_prod)(mesh, sm, psi(1:n_s, idim), kb_p%p(1:n_s, i))
 
       if (present(phases)) then
         ppsi(1:n_s, idim) = ppsi(1:n_s, idim) + &
@@ -73,8 +64,9 @@ end subroutine X(kb_project)
 ! X(kb_dproject) calculates:
 !  \sum_{i}^kb_p%n_c\sum{k}^3 p%e(i) <psi|kb_p%dp(:, k, i)><kb_p%p(:, i)|psi>
 !------------------------------------------------------------------------------
-function X(kb_dproject)(mesh, kb_p, dim, psi, phases) result(res)
-  type(mesh_t),         intent(in)    :: mesh
+function X(kb_dproject)(mesh, sm, kb_p, dim, psi, phases) result(res)
+  type(mesh_t),         intent(in) :: mesh
+  type(submesh_t),      intent(in) :: sm
   type(kb_projector_t), intent(in) :: kb_p
   integer,              intent(in) :: dim
   R_TYPE,               intent(in) :: psi(:, :)  ! psi(kb%n_s, dim)
@@ -84,10 +76,6 @@ function X(kb_dproject)(mesh, kb_p, dim, psi, phases) result(res)
   integer :: n_s, i, k, idim
   R_TYPE :: uvpsi
   R_TYPE, allocatable :: ppsi(:)
-#if defined(HAVE_MPI)
-  R_TYPE :: tmp
-  R_TYPE :: tmp2(3)
-#endif
 
   call push_sub('kb_projector_inc.kb_dproject')
 
@@ -98,13 +86,7 @@ function X(kb_dproject)(mesh, kb_p, dim, psi, phases) result(res)
   do idim = 1, dim
     do i = 1, kb_p%n_c
       if (kb_p%e(i) == M_ZERO) cycle
-      uvpsi = sum(psi(1:n_s, idim)*kb_p%p(1:n_s, i))
-#if defined(HAVE_MPI)
-      if(mesh%parallel_in_domains) then
-        call MPI_Allreduce(uvpsi, tmp, 1, R_MPITYPE, MPI_SUM, mesh%vp%comm, mpi_err)
-        uvpsi = tmp
-      end if
-#endif
+      uvpsi = X(dsm_integrate_prod)(mesh, sm, psi(1:n_s, idim), kb_p%p(1:n_s, i))
 
       do k = 1, 3
         if (present(phases)) then
@@ -112,19 +94,13 @@ function X(kb_dproject)(mesh, kb_p, dim, psi, phases) result(res)
         else
           ppsi(1:n_s) = kb_p%e(i) * uvpsi * kb_p%dp(1:n_s, k, i)
         end if
-        res(k) = res(k) + sum(R_CONJ(psi(1:n_s, idim)) * ppsi(1:n_s))
+        ppsi(1:n_s) = R_CONJ(psi(1:n_s, idim)) * ppsi(1:n_s)
+        res(k) = res(k) + X(sm_integrate)(mesh, sm, ppsi)
       end do
     end do
   end do
 
   deallocate(ppsi)
-
-#if defined(HAVE_MPI)
-  if(mesh%parallel_in_domains) then
-    call MPI_Allreduce(res(1), tmp2(1), 3, R_MPITYPE, MPI_SUM, mesh%vp%comm, mpi_err)
-    res = tmp2
-  end if
-#endif
 
   call pop_sub()
 end function X(kb_dproject)

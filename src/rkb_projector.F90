@@ -166,8 +166,9 @@ contains
   end subroutine rkb_projector_end
 
   ! ---------------------------------------------------------
-  subroutine rkb_project(mesh, rkb_p, psi, ppsi, phases)
+  subroutine rkb_project(mesh, sm, rkb_p, psi, ppsi, phases)
     type(mesh_t),          intent(in)  :: mesh
+    type(submesh_t),       intent(in)  :: sm
     type(rkb_projector_t), intent(in)  :: rkb_p
     CMPLX,                 intent(in)  :: psi(:, :)  ! psi(kb%n_s, 2)
     CMPLX,                 intent(out) :: ppsi(:, :) ! ppsi(kb%n_s, 2)
@@ -175,9 +176,6 @@ contains
 
     integer :: j, idim, jdim, n_s
     CMPLX :: uvpsi
-#if defined(HAVE_MPI)
-    CMPLX :: tmp
-#endif
 
     call push_sub('rkb_projector.rkb_project')
 
@@ -187,14 +185,7 @@ contains
     do idim = 1, 2   
       do j = 1, 2
         if (all(rkb_p%f(j, :, idim) == M_ZERO)) cycle
-        uvpsi = sum(psi(1:n_s, idim)*rkb_p%bra(1:n_s, j))
-
-#if defined(HAVE_MPI)
-        if(mesh%parallel_in_domains) then
-          call MPI_Allreduce(uvpsi, tmp, 1, MPI_CMPLX, MPI_SUM, mesh%vp%comm, mpi_err)
-          uvpsi = tmp
-        end if
-#endif
+        uvpsi = zzsm_integrate_prod(mesh, sm, psi(1:n_s, idim), rkb_p%bra(1:n_s, j))
 
         do jdim = 1, 2
           if (rkb_p%f(j, jdim, idim) == M_ZERO) cycle
@@ -216,8 +207,9 @@ contains
   ! X(kb_dproject) calculates:
   !  \sum_{i}^3\sum{k}^3 p%e(i) <psi|rkb_p%dp(:, k, i)><rkb_p%p(:, i)|psi>
   !------------------------------------------------------------------------------
-  function rkb_dproject(mesh, rkb_p, psi, phases) result(res)
+  function rkb_dproject(mesh, sm, rkb_p, psi, phases) result(res)
     type(mesh_t),          intent(in) :: mesh
+    type(submesh_t),       intent(in) :: sm
     type(rkb_projector_t), intent(in) :: rkb_p
     CMPLX,                 intent(in) :: psi(:, :) ! psi(rkb%n_s, 2)
     CMPLX, optional,       intent(in) :: phases(:)
@@ -226,10 +218,6 @@ contains
     integer :: n_s, i, k, idim
     CMPLX :: uvpsi
     CMPLX, allocatable :: ppsi(:)
-#if defined(HAVE_MPI)
-    CMPLX :: tmp
-    CMPLX :: tmp2(3)
-#endif
 
     call push_sub('rkb_projector.rkb_dproject')
 
@@ -240,33 +228,21 @@ contains
     do idim = 1, 2
       do i = 1, 2
         if (rkb_p%e(i) == M_ZERO) cycle
-        uvpsi = sum(psi(1:n_s, idim)*rkb_p%p(1:n_s, i))
-#if defined(HAVE_MPI)
-        if(mesh%parallel_in_domains) then
-          call MPI_Allreduce(uvpsi, tmp, 1, MPI_CMPLX, MPI_SUM, mesh%vp%comm, mpi_err)
-          uvpsi = tmp
-        end if
-#endif
-        
+        uvpsi = zdsm_integrate_prod(mesh, sm, psi(1:n_s, idim), rkb_p%p(1:n_s, i))
+
         do k = 1, 3
           if (present(phases)) then
             ppsi(1:n_s) = rkb_p%e(i) * uvpsi * rkb_p%dp(1:n_s, k, i) * conjg(phases(1:n_s))
           else
             ppsi(1:n_s) = rkb_p%e(i) * uvpsi * rkb_p%dp(1:n_s, k, i)
           end if
-          res(k) = res(k) + sum(conjg(psi(1:n_s, idim)) * ppsi(1:n_s))
+          ppsi(1:n_s) = conjg(psi(1:n_s, idim)) * ppsi(1:n_s) 
+          res(k) = res(k) + zsm_integrate(mesh, sm, ppsi(1:n_s))
         end do
       end do
     end do
 
     deallocate(ppsi)
-
-#if defined(HAVE_MPI)
-    if(mesh%parallel_in_domains) then
-      call MPI_Allreduce(res(1), tmp2(1), 3, MPI_CMPLX, MPI_SUM, mesh%vp%comm, mpi_err)
-      res = tmp2
-    end if
-#endif
 
     call pop_sub()
   end function rkb_dproject
