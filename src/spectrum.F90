@@ -676,7 +676,7 @@ contains
       write(header_string,'(a18,i1,a1)') 'StrengthFunction(', j, ')'
       write(out_file, '(a20)', advance = 'no') str_center(trim(header_string), 20)
     end do
-    write(out_file, *)
+    write(out_file, '(1x)')
     write(out_file, '(a1,a20)', advance = 'no') '#', str_center('['//trim(units_out%energy%abbrev) // ']', 20)
     do i = 1, nspin*3
       write(out_file, '(a20)', advance = 'no') str_center('['//trim(units_out%length%abbrev) //'^2]', 20)
@@ -684,7 +684,7 @@ contains
     do i = 1, nspin
       write(out_file, '(a20)', advance = 'no') str_center('[1/'//trim(units_out%energy%abbrev) //']',20)
     end do
-    write(out_file,*)
+    write(out_file,'(1x)')
 
     do i = 0, no_e
       write(out_file,'(e20.8)', advance = 'no') i*s%energy_step / units_out%energy%factor
@@ -694,7 +694,7 @@ contains
       do j = 1, nspin
         write(out_file,'(e20.8)', advance = 'no') sf(i, j) * units_out%energy%factor
       end do
-      write(out_file, *)
+      write(out_file, '(1x)')
     end do
 
     deallocate(dipole, sigma)
