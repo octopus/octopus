@@ -17,8 +17,6 @@
 !!
 !! $Id: opt_control.F90 2870 2007-04-28 06:26:47Z acastro $
 
-#include "global.h"
-
 
   ! ---------------------------------------------------------
   subroutine penalty_init(penalty, oct, gr, steps, ctr_iter_max, dt)
@@ -51,7 +49,6 @@
     ! penalty array for fixed fluence run 
     ! the array is only interesting for the development of new algorithms
 
-!!$    _ALLOCATE(penalty%a_penalty(0:oct%ctr_iter_max+1), oct%ctr_iter_max+2)
     ALLOCATE(penalty%a_penalty(0:ctr_iter_max+1), ctr_iter_max+2)
     penalty%a_penalty = penalty%penalty
     ALLOCATE(penalty%tdpenalty(NDIM, 0:2*steps), NDIM*(2*steps+1))
@@ -126,3 +123,8 @@
 
     call pop_sub()
   end subroutine penalty_init
+
+!! Local Variables:
+!! mode: f90
+!! coding: utf-8
+!! End:

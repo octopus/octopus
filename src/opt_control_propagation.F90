@@ -17,18 +17,14 @@
 !!
 !! $Id: opt_control.F90 2873 2007-04-29 22:05:29Z acastro $
 
-#include "global.h"
-
 
   ! ---------------------------------------------------------
-  subroutine propagate_forward(oct, sys, h, td, td_tg, tdtarget, td_fitness, psi_n, write_iter)
+  subroutine propagate_forward(oct, sys, h, td, tdt, psi_n, write_iter)
     type(oct_t),         intent(in)    :: oct
     type(system_t),      intent(inout) :: sys
     type(hamiltonian_t), intent(inout) :: h
     type(td_t),          intent(inout) :: td
-    type(td_target_t), pointer         :: td_tg(:)
-    CMPLX, intent(in)                  :: tdtarget(:)
-    FLOAT, intent(out)                 :: td_fitness(:)
+    type(td_target_set_t), intent(inout)  :: tdt
     type(states_t),      intent(inout) :: psi_n
     logical, optional, intent(in)      :: write_iter
 
@@ -70,7 +66,7 @@
 
       ! if td_target
       if(oct%targetmode==oct_targetmode_td) &
-        call calc_tdfitness(td_tg, gr, psi_n, tdtarget, td_fitness(i))
+        call calc_tdfitness(tdt, gr, psi_n, tdt%td_fitness(i))
       
       ! update
       call states_calc_dens(psi_n, NP_PART, dens)

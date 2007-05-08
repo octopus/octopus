@@ -17,8 +17,6 @@
 !!
 !! $Id: opt_control.F90 2862 2007-04-25 23:34:20Z acastro $
 
-#include "global.h"
-
 
   ! ---------------------------------------------------------
   subroutine oct_read_inp(oct)

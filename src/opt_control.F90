@@ -110,6 +110,13 @@ module opt_control_m
     CMPLX, pointer :: tdshape(:,:) ! evaluate user defined functions
   end type td_target_t
 
+  type td_target_set_t
+    integer :: no_tdtargets
+    type(td_target_t), pointer :: tdtg(:)
+    FLOAT, pointer :: td_fitness(:)
+    CMPLX, pointer :: tdtarget(:)
+  end type td_target_set_t
+
   type oct_iterator_t
     FLOAT              :: eps
     integer            :: ctr_iter_max
@@ -149,10 +156,8 @@ contains
     type(states_t),    pointer :: st
     type(states_t)             :: chi, psi, target_st, initial_st, psi2
     type(filter_t),    pointer :: f(:)
-    type(td_target_t), pointer :: td_tg(:)
+    type(td_target_set_t)      :: tdt
     type(oct_control_parameters_t) :: par, par_tmp
-    FLOAT, allocatable :: td_fitness(:)
-    CMPLX, allocatable :: tdtarget(:)
     integer :: ierr
     character(len=80)  :: filename
 
@@ -183,13 +188,14 @@ contains
 
     ! do final test run: propagate initial state with optimal field
     call parameters_to_h(par, gr, td, h%ep)
-    call oct_finalcheck(oct, initial_st, target_st, sys, h, td, td_tg, tdtarget)
+    call oct_finalcheck(oct, initial_st, target_st, sys, h, td, tdt)
 
     ! clean up
     nullify(h%ep%lasers(1)%numerical)
     call parameters_end(par)
     call parameters_end(par_tmp)
     call oct_iterator_end(iterator)
+    call tdtargetset_end(tdt)
     call filter_end(f)
     call td_end(td)
     call pop_sub()
@@ -211,7 +217,7 @@ contains
 
       psi = initial_st
       call parameters_to_h(par, gr, td, h%ep)
-      call propagate_forward(oct, sys, h, td, td_tg, tdtarget, td_fitness, psi) 
+      call propagate_forward(oct, sys, h, td, tdt, psi) 
       
       if(oct%dump_intermediate) call states_output(psi, gr, 'opt-control/prop1', sys%outp)
         
@@ -224,7 +230,7 @@ contains
         ! define target state
         call target_calc(oct, gr, target_st, psi, chi) ! defines chi
         
-        if(iteration_manager(oct, penalty, gr, td_fitness, par%laser, td, psi, target_st, iterator)) exit ctr_loop
+        if(iteration_manager(oct, penalty, gr, tdt%td_fitness, par%laser, td, psi, target_st, iterator)) exit ctr_loop
         
         call bwd_step(oct_algorithm_zr98)
         
@@ -269,7 +275,7 @@ contains
         
         psi = initial_st
         call parameters_to_h(par, gr, td, h%ep)
-        call propagate_forward(oct, sys, h, td, td_tg, tdtarget, td_fitness, psi) 
+        call propagate_forward(oct, sys, h, td, tdt, psi) 
         
         if(oct%dump_intermediate) then
           write(filename,'(a,i3.3)') 'opt-control/PsiT.', iterator%ctr_iter
@@ -280,7 +286,7 @@ contains
         ! define target state
         call target_calc(oct, gr, target_st, psi, chi) ! defines chi
         
-        if(iteration_manager(oct, penalty, gr, td_fitness, par%laser, td, psi, target_st, iterator)) exit ctr_loop
+        if(iteration_manager(oct, penalty, gr, tdt%td_fitness, par%laser, td, psi, target_st, iterator)) exit ctr_loop
         
         call bwd_step(oct_algorithm_wg05)
         !!!WARNING: this probably shoudl not be here?
@@ -354,7 +360,7 @@ contains
         write(filename,'(a,i3.3)') 'opt-control/PsiT.', iterator%ctr_iter
         call states_output(psi, gr, filename, sys%outp)
         
-        if(iteration_manager(oct, penalty, gr, td_fitness, par%laser, td, psi, target_st, iterator)) exit ctr_loop
+        if(iteration_manager(oct, penalty, gr, tdt%td_fitness, par%laser, td, psi, target_st, iterator)) exit ctr_loop
         
          ! and now backward
         call target_calc(oct, gr, target_st, psi, chi)
@@ -392,7 +398,8 @@ contains
       do i = 1, td%max_iter
         call prop_iter_fwd(i, method)
         if(oct%targetmode==oct_targetmode_td) &
-          call calc_tdfitness(td_tg, gr, psi, tdtarget, td_fitness(i))     
+          call calc_tdfitness(tdt, gr, psi, tdt%td_fitness(i))     
+
         ! if td_target
         ! call loct_progress_bar(i-1, td%max_iter-1)
       end do
@@ -445,364 +452,97 @@ contains
     end subroutine bwd_step
 
 
-   ! ---------------------------------------------------------
-   subroutine prop_iter_fwd(iter,method)
-     integer, intent(in) :: method
-     integer,           intent(in) :: iter
-     FLOAT, allocatable :: dens_tmp(:,:)
-     
-     call push_sub('opt_control.prop_iter_fwd')
-
-     ALLOCATE(dens_tmp(gr%m%np_part, st%d%nspin), gr%m%np_part*st%d%nspin) 
-     
-     ! chi(0) --> chi(T) [laser_tmp]
-     !         |------------laser     
-     ! psi(0) --> psi(T) 
-     
-     ! new electric field
-     if(oct%targetmode==oct_targetmode_td) then
-       ! psi(0) --> psi(T) with old field (for chi)
-       call calc_inh(psi2,td_tg,iter,&
-         td%dt,chi)
-       ! psi2
-       call  parameters_to_h(par, gr, td, h%ep)
-       call states_calc_dens(psi2, NP_PART, dens_tmp)
-       psi2%rho = dens_tmp
-       call v_ks_calc(gr, sys%ks, h, psi2, calc_eigenval=.true.)
-       call td_rti_dt(sys%ks, h, gr, psi2, td%tr, abs(iter*td%dt), abs(td%dt))
-     end if
-     
-     call update_field(oct, penalty, iter-1, par, gr, td, psi, chi)
-     
-     ! chi
-     call  parameters_to_h(par_tmp, gr, td, h%ep)
-     call states_calc_dens(chi, NP_PART, dens_tmp)
-     chi%rho = dens_tmp
-     call v_ks_calc(gr, sys%ks, h, chi, calc_eigenval=.true.) 
-     call td_rti_dt(sys%ks, h, gr, chi, td%tr, abs(iter*td%dt), abs(td%dt))
-     
-     ! psi
-     call  parameters_to_h(par, gr, td, h%ep)
-     call states_calc_dens(psi, NP_PART, dens_tmp)
-     psi%rho = dens_tmp
-     call v_ks_calc(gr, sys%ks, h, psi, calc_eigenval=.true.)
-     call td_rti_dt(sys%ks, h, gr, psi, td%tr, abs(iter*td%dt), abs(td%dt))
-     ! write(6,*) iter, psi%zpsi(45:50,1,1,1)
-     ! write(6,*) laser(2*iter,1)
-
-     deallocate(dens_tmp)     
-     call pop_sub()
-   end subroutine prop_iter_fwd
-   
-   
-   ! ---------------------------------------------------------
-   ! do backward propagation step with update of field
-   ! works for time-independent and td targets
-   subroutine prop_iter_bwd(iter, method)
-     integer, intent(in) :: iter
-     integer, intent(in) :: method
-     FLOAT, allocatable :: dens_tmp(:,:)
-     
-     call push_sub('opt_control.prop_iter_bwd')
-
-     ALLOCATE(dens_tmp(gr%m%np_part, st%d%nspin), gr%m%np_part*st%d%nspin) 
-
-     ! chi(T) --> chi(0)
-     !         |------------laser_tmp
-     ! psi(T) --> psi(0) [laser]
-     
-     ! calc inh first, then update field
-     if(oct%targetmode==oct_targetmode_td) &
-       call calc_inh(psi,td_tg,iter, &
-       td%dt,chi)
-     ! new electric field
-     call update_field(oct, penalty, iter+1, par_tmp, gr, td, psi, chi)
-          
-     ! chi
-     call parameters_to_h(par_tmp, gr, td, h%ep)
-     call states_calc_dens(chi, NP_PART, dens_tmp)
-     chi%rho = dens_tmp
-     call v_ks_calc(gr, sys%ks, h, chi, calc_eigenval=.true.)
-     call td_rti_dt(sys%ks, h, gr, chi, td%tr, abs(iter*td%dt),     td%dt )
-     
-     ! psi
-     call  parameters_to_h(par, gr, td, h%ep)
-     call states_calc_dens(psi, NP_PART, dens_tmp)
-     psi%rho = dens_tmp
-     call v_ks_calc(gr, sys%ks, h, psi, calc_eigenval=.true.)
-     call td_rti_dt(sys%ks, h, gr, psi, td%tr, abs(iter*td%dt),     td%dt )
-
-     deallocate(dens_tmp)     
-     call pop_sub()
-   end subroutine prop_iter_bwd
-   
-   
-   ! ---------------------------------------------------------------
-   subroutine calc_inh(psi_n, tg, iter, dt, chi_n)
-     FLOAT,           intent(in)     :: dt
-     integer,         intent(in)     :: iter
-     type(states_t),  intent(in)     :: psi_n
-     type(states_t),  intent(inout)  :: chi_n
-     type(td_target_t), intent(in)   :: tg(:)
-     
-     CMPLX               :: tgt(NP_PART)
-     integer             :: jj, dim
-     CMPLX               :: olap
-
-     call push_sub('opt_control.calc_inh')
-     
-     ! tdtarget is defined globally
-     !      CMPLX               :: tdop(gr%m%np)
-     
-     ! distinguish between local and wavefunction td target
-     ! TODO: change to right dimensions
-     !       build target operator
-     
-     ! FIXME: more flexibility when defining multiple target operators
-     ! usually one has only one specie of operators, i.e., only local or only non-local, 
-     ! when mixing these, this routine has to be improved.
-     if(tg(1)%type.eq.oct_tgtype_local) then
-       ! local td operator
-       ! build operator
-       !do ip = 1, gr%m%np
-       !   x = gr%m%x(ip, :)
-       !   r = sqrt(sum(x(:)**2))
-       
-       !   call loct_parse_expression(psi_re, psi_im, &
-       !        x(1), x(2), x(3), r, tt, td_tg(jj)%expression)
-       
-       !   ! need tdtarget for fitness calculation
-       ! tdtarget(:) = (psi_re+m_zI*psi_im)
-       do jj=1, size(tg)       
-         call build_tdtarget(tg(jj),tgt, iter) ! tdtarget is build
-         tdtarget(:) = tdtarget(:) + tgt(:) 
-       end do
-       do dim=1, chi_n%d%dim
-         chi_n%zpsi(:,dim,1,1) = chi_n%zpsi(:,dim,1,1) &
-           - sign(M_ONE,dt)/real(td%max_iter)*tdtarget(:)* &
-           psi_n%zpsi(:,dim,1,1)
-       enddo
-     else 
-       ! build operator 
-       ! non-local td operator
-       !do ip = 1, gr%m%np
-       !   x = gr%m%x(ip, :)
-       !   r = sqrt(sum(x(:)**2))
-       !   call loct_parse_expression(psi_re, psi_im, &
-       !        x(1), x(2), x(3), r, tt, td_tg(jj)%expression)
-       !   tdtarget(ip) = (psi_re+m_zI*psi_im)  
-       ! need tdtarget for fitness calculation
-       do jj=1, size(tg) 
-         call build_tdtarget(tg(jj), tgt, iter)
-         tdtarget = tgt
-         olap= m_z0
-         do dim=1, psi_n%d%dim
-           olap = zmf_integrate(gr%m,psi_n%zpsi(:,dim,1,1)*&
-             conjg(tdtarget(:)))
-           chi_n%zpsi(:,dim,1,1) = chi_n%zpsi(:,dim,1,1) &
-             - sign(M_ONE,dt)/real(td%max_iter)*olap*tdtarget(:)
-         end do
-       end do
-     end if
-     
-     call pop_sub()
-   end subroutine calc_inh
-   
-
-   ! ---------------------------------------------------------
-   subroutine build_tdtarget(tdtg, tgt, iter)
-     type(td_target_t), intent(in)   :: tdtg
-     integer,           intent(in)   :: iter
-     CMPLX  ,           intent(out)  :: tgt(:)
-
-     integer :: pol
-     call push_sub('opt_control.build_tdtarget')
-     
-     select case(tdtg%ftype)
-     case(1)
-       ! gauss
-       ! Product x = gr%m%x(ip, :) 
-       tgt = M_ONE
-       do pol=1, NDIM
-         tgt = tgt * exp( - (gr%m%x(:, pol) - &
-           real(tdtg%tdshape(pol,iter),REAL_PRECISION ))**2/(M_TWO*tdtg%width**2))
-       enddo
-       
-       !case(2)
-       ! tgt = M-zero
-       !   ! step
-       !   Nwidth = tg(jj)%width
-       !   Nwmin  = tg(jj)%numerical
-       !   Nwmax  = 
-       !   do kk=1,  gr%m%np  tg(jj)%width  tg(jj)%tdshape
-       !   
-       !   end do
-     case default
-       message(1)="Unknown TD Target Operator: Choose Gaussian(1) or Step(2)"
-       call write_fatal(1)
-     end select
-     
-      call pop_sub()
-    end subroutine build_tdtarget
-
-
-    !----------------------------------------------------------
-    subroutine build_tdshape(td_tg, steps, dt)
-      type(td_target_t), intent(inout) :: td_tg
-      integer,           intent(in)    :: steps
-      FLOAT,             intent(in)    :: dt
-
-      FLOAT   :: tgrid(0:2*steps)
-      FLOAT   :: f_re, f_im
-      integer :: kk, pol
-
-      call push_sub('opt_control.build_tdshape')
-
-      call t_lookup(2*steps+1,dt/real(2,REAL_PRECISION),tgrid)
-      do kk=0, 2*steps
-        do pol=1,NDIM
-          f_re = M_ZERO
-          f_im = M_ZERO
-          !call loct_parse_expression(f_re, f_im, "t", tgrid(kk), &
-          !     td_tg%expression(pol))
-          call loct_parse_expression(f_re, f_im, & 	
-            M_ZERO, M_ZERO, M_ZERO, M_ZERO, tgrid(kk), &
-            td_tg%expression(pol)) 
-          td_tg%tdshape(pol,kk) = f_re + M_zI*f_im
-        end do
-      end do
-      call pop_sub()
-    end subroutine build_tdshape
-    
-    
-    !---------------------------------------------------------------
-    subroutine init_tdtarget(td_tg)
-      type(td_target_t), pointer :: td_tg(:)
-
-      integer             :: i, jj, iunit
-      FLOAT               :: mxloc(MAX_DIM)
-      integer             :: tt, pos(1)
-      FLOAT               :: t
-      CMPLX               :: tgt(NP_PART)
-
-      integer :: no_c, no_tds, pol
-      C_POINTER         :: blk
-
-      call push_sub('opt_control.init_tdtarget')
-
-      !%Variable OCTTdTarget
-      !%Type block
-      !%Section Optimal Control
-      !%Description
-      !% octopus features also time-dependent targets, i.e., one wants to optimize a laser 
-      !% field that achieves a predefined time-dependent target. An example, could be the 
-      !% evolution of occupation numbers in time. A time-dependent target consists of two 
-      !% parts, i.e., the operator itself (a projection or a local operator) and its 
-      !% time-dependence. Both are specified in one row of the block. You may enter as many 
-      !% rows as you like. For time-dependent occupation targets OCTOPUS takes care of the 
-      !% normalization.
-      !% 
-      !% The structure of the block is as follows:
-      !%
-      !% <tt>%OCTTdTarget
-      !% <br>&nbsp;&nbsp;type | ftype | width | weight | g_x(t) | g_y(t) | g_z(t) 
-      !% <br>%</tt>
-      !%  
-      !% Type:
-      !% Choose betweem local and state target. 
-      !% *oct_tgtype_local*
-      !% *oct_tgtype_state*
-      !%
-      !% Ftype: 
-      !% Spatial function of target operator.
-      !% *oct_ftype_gauss*
-      !%
-      !% width:
-      !% width of the Gaussian 
-      !%
-      !% weight:
-      !% If multiple operators ae defined weight the importance between them
-      !% g_x(t), g_y(t), g_z(t):
-      !% describe the time-dependence
-      !% 
-      !% Example: 
-      !% R0=1.0
-      !% <tt>%OCTTdTarget
-      !% <br>&nbsp;&nbsp;oct_tgtype_local | oct_ftype_gauss | 20 | 1 | "R0*sin(1.0*t)" | "R0*cos(1.0*t)" | "0"
-      !% <br>%</tt>
-      !% 
-      !% In this example we define a narrow Gaussian which circles with radius R0 around the center. 
-      !% 
-      !%End
-      no_tds = 0
-      if((oct%targetmode==oct_targetmode_td) &
-          .AND.(loct_parse_block(check_inp('OCTTdTarget'),blk)==0)) then
-
-        no_tds = loct_parse_block_n(blk)
-        ALLOCATE(td_tg(no_tds), no_tds)
-        do i=1, no_tds
-          do pol=1, MAX_DIM
-            td_tg(i)%expression(pol) = " "
-          end do
-          ! The structure of the block is:
-          ! domain | function_type | center | width | weight 
-          no_c = loct_parse_block_cols(blk, i-1)
-          !td_tg(i)%type = oct_tgtype_local
-          call loct_parse_block_int(blk, i-1, 0, td_tg(i)%type)
-          call loct_parse_block_int(blk, i-1, 1, td_tg(i)%ftype)
-          call loct_parse_block_float(blk, i-1, 2, td_tg(i)%width)
-          call loct_parse_block_float(blk, i-1, 3, td_tg(i)%weight)
-          do pol=1, NDIM
-            call loct_parse_block_string(blk, i-1, 3+pol, &
-              td_tg(i)%expression(pol))
-          end do
-          !
-          ALLOCATE(td_tg(i)%tdshape(NDIM,0:2*td%max_iter), NDIM*(2*td%max_iter+1))
-          call build_tdshape(td_tg(i), td%max_iter, td%dt)
-          
-        end do
-        
+    ! ---------------------------------------------------------
+    subroutine prop_iter_fwd(iter,method)
+      integer, intent(in) :: method
+      integer,           intent(in) :: iter
+      FLOAT, allocatable :: dens_tmp(:,:)
+      
+      call push_sub('opt_control.prop_iter_fwd')
+ 
+      ALLOCATE(dens_tmp(gr%m%np_part, st%d%nspin), gr%m%np_part*st%d%nspin) 
+      
+      ! chi(0) --> chi(T) [laser_tmp]
+      !         |------------laser     
+      ! psi(0) --> psi(T) 
+      
+      ! new electric field
+      if(oct%targetmode==oct_targetmode_td) then
+        ! psi(0) --> psi(T) with old field (for chi)
+        call calc_inh(psi2, gr, tdt, iter, td%max_iter, td%dt, chi)
+        ! psi2
+        call parameters_to_h(par, gr, td, h%ep)
+        call states_calc_dens(psi2, NP_PART, dens_tmp)
+        psi2%rho = dens_tmp
+        call v_ks_calc(gr, sys%ks, h, psi2, calc_eigenval=.true.)
+        call td_rti_dt(sys%ks, h, gr, psi2, td%tr, abs(iter*td%dt), abs(td%dt))
       end if
-      ! calc norm, give warning when to small
-  
-      if(no_tds.eq.0) then
-        call pop_sub(); return
-      end if
+      
+      call update_field(oct, penalty, iter-1, par, gr, td, psi, chi)
+      
+      ! chi
+      call  parameters_to_h(par_tmp, gr, td, h%ep)
+      call states_calc_dens(chi, NP_PART, dens_tmp)
+      chi%rho = dens_tmp
+      call v_ks_calc(gr, sys%ks, h, chi, calc_eigenval=.true.) 
+      call td_rti_dt(sys%ks, h, gr, chi, td%tr, abs(iter*td%dt), abs(td%dt))
+      
+      ! psi
+      call  parameters_to_h(par, gr, td, h%ep)
+      call states_calc_dens(psi, NP_PART, dens_tmp)
+      psi%rho = dens_tmp
+      call v_ks_calc(gr, sys%ks, h, psi, calc_eigenval=.true.)
+      call td_rti_dt(sys%ks, h, gr, psi, td%tr, abs(iter*td%dt), abs(td%dt))
+      ! write(6,*) iter, psi%zpsi(45:50,1,1,1)
+      ! write(6,*) laser(2*iter,1)
 
-      ! td target fitness
-      ALLOCATE(td_fitness(0:td%max_iter), td%max_iter+1)
-      td_fitness = M_ZERO
-      ! to avoid double parsing and build up tdtarget array
-      ALLOCATE(tdtarget(1:NP_PART), NP_PART)
-      tdtarget   = M_z0
-
-      ! generate some output to analyse the defined target
-      do jj=1, size(td_tg)
-         write(message(1),'(a,i2.2)') 'Info: Dumping td target ', jj
-         call write_info(1)
-         write(filename,'(a,i2.2)') 'opt-control/td_target_',jj
-         iunit = io_open(filename, action='write')
-         ! build target_function and calc inhomogeneity
-         do tt=0, td%max_iter, 20 
-            t = real(tt,REAL_PRECISION)*td%dt
-            !write(6,*) tt, trim(td_tg(jj)%expression(1))
-            !write(6,*) tt, trim(td_tg(jj)%expression(2))
-            !write(6,*) tt, trim(td_tg(jj)%expression(3))
-            call build_tdtarget(td_tg(jj),tgt,tt)
-            tdtarget = tgt
-            pos = maxloc(abs(tdtarget))
-            !write(6,*) pos
-            mxloc(:) = gr%m%x(pos(1),:) 
-            !write(6,*) mxloc
-            write(iunit, '(4es30.16e4)') t, mxloc, td_tg(jj)%tdshape(1,tt)
-         end do
-         close(iunit)
-      end do
-    
+      deallocate(dens_tmp)     
       call pop_sub()
-    end subroutine init_tdtarget
-
-
+    end subroutine prop_iter_fwd
+   
+   
+    ! ---------------------------------------------------------
+    ! do backward propagation step with update of field
+    ! works for time-independent and td targets
+    subroutine prop_iter_bwd(iter, method)
+      integer, intent(in) :: iter
+      integer, intent(in) :: method
+      FLOAT, allocatable :: dens_tmp(:,:)
+      
+      call push_sub('opt_control.prop_iter_bwd')
+ 
+      ALLOCATE(dens_tmp(gr%m%np_part, st%d%nspin), gr%m%np_part*st%d%nspin) 
+ 
+      ! chi(T) --> chi(0)
+      !         |------------laser_tmp
+      ! psi(T) --> psi(0) [laser]
+      
+      ! calc inh first, then update field
+      if(oct%targetmode==oct_targetmode_td) then
+        call calc_inh(psi, gr, tdt, iter, td%max_iter, td%dt, chi)
+      end if
+ 
+      ! new electric field
+      call update_field(oct, penalty, iter+1, par_tmp, gr, td, psi, chi)
+           
+      ! chi
+      call parameters_to_h(par_tmp, gr, td, h%ep)
+      call states_calc_dens(chi, NP_PART, dens_tmp)
+      chi%rho = dens_tmp
+      call v_ks_calc(gr, sys%ks, h, chi, calc_eigenval=.true.)
+      call td_rti_dt(sys%ks, h, gr, chi, td%tr, abs(iter*td%dt),     td%dt )
+      
+      ! psi
+      call  parameters_to_h(par, gr, td, h%ep)
+      call states_calc_dens(psi, NP_PART, dens_tmp)
+      psi%rho = dens_tmp
+      call v_ks_calc(gr, sys%ks, h, psi, calc_eigenval=.true.)
+      call td_rti_dt(sys%ks, h, gr, psi, td%tr, abs(iter*td%dt),     td%dt )
+ 
+      deallocate(dens_tmp)     
+      call pop_sub()
+    end subroutine prop_iter_bwd
+ 
     ! ---------------------------------------------------------
     subroutine init_()
       integer :: kk, jj, iunit, i
@@ -812,7 +552,6 @@ contains
 
       ! Initially nullify the pointers
       nullify(f)
-      nullify(td_tg)
 
       ! some shortcuts
       gr  => sys%gr
@@ -884,7 +623,7 @@ contains
 
       call def_istate(oct, gr, sys%geo, initial_st)
       call def_toperator(oct, gr, sys%geo, target_st)
-      call init_tdtarget(td_tg)
+      call tdtargetset_init(oct, gr, td, tdt)
 
       call check_faulty_runmodes(oct)
 
@@ -893,7 +632,6 @@ contains
 
       call pop_sub()
     end subroutine init_
-    
     
   end subroutine opt_control_run
 
@@ -927,7 +665,6 @@ contains
 
   end subroutine check_runmode_constrains
 
-
 #include "opt_control_read.F90"
 #include "opt_control_aux.F90"
 #include "opt_control_defstates.F90"
@@ -937,6 +674,7 @@ contains
 #include "opt_control_output.F90"
 #include "opt_control_parameters.F90"
 #include "opt_control_penalty.F90"
+#include "opt_control_tdtarget.F90"
 
 end module opt_control_m
 

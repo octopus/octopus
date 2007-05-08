@@ -17,7 +17,6 @@
 !!
 !! $Id: opt_control.F90 2868 2007-04-26 17:11:47Z acastro $
 
-#include "global.h"
 
   ! ---------------------------------------------------------
   ! Gets the fluence of the laser field, defined as:
@@ -161,24 +160,23 @@
 
 
   ! ---------------------------------------------------------
-  subroutine calc_tdfitness(tg, gr, psi, tdtarget, merit)
-    type(td_target_t), intent(in) :: tg(:)
+  subroutine calc_tdfitness(tdt, gr, psi, merit)
+    type(td_target_set_t), intent(inout) :: tdt
     type(grid_t),      intent(in) :: gr
     type(states_t),    intent(in) :: psi
-    CMPLX,             intent(in) :: tdtarget(:)
     FLOAT,             intent(out):: merit
     integer             :: jj, ik, p, dim
 
     call push_sub('opt_control.calc_tdfitness')
 
     merit = M_ZERO
-    do jj=1, size(tg)
-      if(tg(jj)%type.eq.oct_tgtype_local) then
+    do jj = 1, tdt%no_tdtargets
+      if(tdt%tdtg(jj)%type.eq.oct_tgtype_local) then
         do ik = 1, psi%d%nik
           do p  = psi%st_start, psi%st_end
             do dim = 1, psi%d%dim
               merit = merit + &
-                zmf_integrate(gr%m, tdtarget(:)* &
+                zmf_integrate(gr%m, tdt%tdtarget(:)* &
                 abs(psi%zpsi(:,dim,ik,p))**2)
             end do
           end do
@@ -188,7 +186,7 @@
           do p  = psi%st_start, psi%st_end
             do dim = 1, psi%d%dim
               merit = merit + &
-                abs(zmf_integrate(gr%m, tdtarget(:)* &
+                abs(zmf_integrate(gr%m, tdt%tdtarget(:)* &
                 conjg(psi%zpsi(:,dim,ik,p))))**2
             end do
           end do

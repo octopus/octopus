@@ -17,19 +17,16 @@
 !!
 !! $Id: opt_control.F90 2875 2007-04-30 16:54:15Z acastro $
 
-#include "global.h"
-
 
   ! ---------------------------------------------------------
-  subroutine oct_finalcheck(oct, initial_st, target_st, sys, h, td, td_tg, tdtarget)
+  subroutine oct_finalcheck(oct, initial_st, target_st, sys, h, td, tdt)
     type(oct_t), intent(in)            :: oct
     type(states_t), intent(in)         :: initial_st
     type(states_t), intent(in)         :: target_st
     type(system_t), intent(inout)      :: sys
     type(hamiltonian_t), intent(inout) :: h
     type(td_t), intent(inout)          :: td
-    type(td_target_t), pointer         :: td_tg(:)
-    CMPLX, intent(in)                  :: tdtarget(:)
+    type(td_target_set_t), intent(inout) :: tdt
 
 
     type(states_t) :: psi
@@ -48,8 +45,7 @@
     ALLOCATE(td_fitness(0:td%max_iter), td%max_iter+1)
     psi = initial_st
     
-    call propagate_forward(oct, sys, h, td, &
-                           td_tg, tdtarget, td_fitness, psi, write_iter = .true.)
+    call propagate_forward(oct, sys, h, td, tdt, psi, write_iter = .true.)
 
     if(oct%targetmode==oct_targetmode_td) then
       overlap = SUM(td_fitness) * abs(td%dt)

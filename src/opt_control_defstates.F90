@@ -17,10 +17,8 @@
 !!
 !! $Id: opt_control.F90 2870 2007-04-28 06:26:47Z acastro $
 
-#include "global.h"
 
   ! ---------------------------------------------------------
-  !
   subroutine def_istate(oct, gr, geo, initial_state)
     type(oct_t), intent(in)       :: oct
     type(grid_t), intent(in)      :: gr

@@ -17,8 +17,6 @@
 !!
 !! $Id: opt_control.F90 2870 2007-04-28 06:26:47Z acastro $
 
-#include "global.h"
-
 
   ! ---------------------------------------------------------
   subroutine parameters_init(cp, gr, td)

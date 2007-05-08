@@ -17,8 +17,6 @@
 !!
 !! $Id: opt_control.F90 2875 2007-04-30 16:54:15Z acastro $
 
-#include "global.h"
-
 
   ! ---------------------------------------------------------
   subroutine output(oct, iterator)
