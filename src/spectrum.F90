@@ -526,15 +526,15 @@ contains
     ! is characterized by having three equal eigenvalues, which leads to zero anisotropy. The
     ! more different that the eigenvalues are, the larger the anisotropy is.
     do i = 0, energy_steps
-      average = M_ZERO
-      anisotropy = M_ZERO
+
+      p = M_ZERO
       do j = 1, nspin
-        average = average + M_THIRD* ( sigma(1, 1, i, j) + sigma(2, 2, i, j) + sigma(3, 3, i, j) )
-        sigmap(:, :, i, j) = matmul(sigma(:, :, i, j), sigma(:, :, i, j))
-        anisotropy = anisotropy + &
-          M_THIRD * ( M_THREE * (sigmap(1, 1, i, j) + sigmap(2, 2, i, j) + sigmap(3, 3, i, j)) - &
-          (sigma(1, 1, i, j) + sigma(2, 2, i, j) + sigma(3, 3, i, j))**2 )
+         p(:, :) = p(:, :) + sigma(:, :, i, j)
       end do
+      average = M_THIRD * ( p(1, 1) + p(2, 2) + p(3, 3) )
+      ip = matmul(p, p)
+      anisotropy = M_THIRD * ( M_THREE * ( ip(1, 1) + ip(2, 2) + ip(3, 3) ) - (M_THREE*average)**2 )
+
       ! Note that the cross section elements do not have to be transformed to the proper units, since
       ! they have been read from the "cross_section_vector.x", that are already in the proper units.
       write(out_file,'(3e20.8)', advance = 'no') (i*s%energy_step) / units_out%energy%factor, &
