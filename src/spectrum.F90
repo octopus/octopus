@@ -513,6 +513,18 @@ contains
     end do
     write(out_file, '(1x)')
 
+    ! The anisotropy (Delta alpha) of a second rank symmetric tensor alpha (such 
+    ! as the cross section) is defined as:
+    ! 
+    ! (Delta alpha)^2 = (1/3) * ( 3*Tr(alpha^2) - (Tr(a))^2 )
+    !
+    ! The reason for this definition is that it is identically equal to:
+    !
+    ! (Delta alpha)^2 = (1/3) * ( (alpha_1-alpha_2)^2 + (alpha_1-alpha_3)^2 + (alpha_2-alpha_3)^2 )
+    !
+    ! where {alpha_1, alpha_2, alpha_3} are the eigenvalues of alpha. An "isotropic" tensor
+    ! is characterized by having three equal eigenvalues, which leads to zero anisotropy. The
+    ! more different that the eigenvalues are, the larger the anisotropy is.
     do i = 0, energy_steps
       average = M_ZERO
       anisotropy = M_ZERO
