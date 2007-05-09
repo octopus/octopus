@@ -22,7 +22,6 @@ Usage: oct-run_regression_test.pl [options]
     -s        exec suffix for the executables
     -c        create template
     -f        filename of testsuite
-    -d        working directory for the tests
     -i        print inputfile
     -p        preserve working directories
     -l        copy output log to current directory
@@ -30,6 +29,10 @@ Usage: oct-run_regression_test.pl [options]
 
 Report bugs to <appel\@physik.fu-berlin.de>.
 EndOfUsage
+
+# Option -d is ignored for the moment.
+#    -d        working directory for the tests
+
   exit 0;
 }
 
@@ -76,7 +79,9 @@ EndOfTemplate
 
 if (not @ARGV) { usage; }
 
-getopts("nlvhD:c:f:d:s:ipm");
+# Option -d is ignored for the moment.
+#getopts("nlvhD:c:f:d:s:ipm");
+getopts("nlvhD:c:f:s:ipm");
 
 # Default values
 use File::Temp qw/tempdir/;
