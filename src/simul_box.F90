@@ -398,22 +398,24 @@ contains
         !% If BoxShape is "parallelpiped", this block has to be defined in the input file. The
         !% number of columns must match the dimensionality of the calculation.
         !%End
-        if(loct_parse_block(check_inp('lsize'), blk) == 0) then
-          if(loct_parse_block_cols(blk,0) < sb%dim) call input_error('lsize')
+        if(loct_parse_block(check_inp('Lsize'), blk) == 0) then
+          if(loct_parse_block_cols(blk,0) < sb%dim) call input_error('Lsize')
           do i = 1, sb%dim
             call loct_parse_block_float(blk, 0, i-1, sb%lsize(i))
           end do
+          call loct_parse_block_end(blk)
         else
-          call loct_parse_float(check_inp('lsize'), -M_ONE, sb%lsize(1))
+          call loct_parse_float(check_inp('Lsize'), -M_ONE, sb%lsize(1))
+          if(sb%lsize(1).eq.-M_ONE) then
+            call input_error('Lsize')
+          end if
           sb%lsize(1:sb%dim) = sb%lsize(1)
         end if
         sb%lsize = sb%lsize*units_inp%length%factor
 
         do i = 1, sb%dim
-          if(def_rsize>M_ZERO.and.sb%periodic_dim<i) call check_def(def_rsize, sb%lsize(i), 'lsize')
+          if(def_rsize>M_ZERO.and.sb%periodic_dim<i) call check_def(def_rsize, sb%lsize(i), 'Lsize')
         end do
-
-        call loct_parse_block_end(blk)
       end if
 
       ! read in image for box_image
@@ -531,17 +533,17 @@ contains
       do i = 1, sb%dim
         sb%h(i) = sb%h(i)*units_inp%length%factor
         if(sb%h(i) < M_ZERO) then
-          if(def_h > M_ZERO) then
+          if(def_h > M_ZERO.and.def_h < huge(REAL_PRECISION)) then
             sb%h(i) = def_h
             write(message(1), '(a,i1,3a,f6.3)') "Info: Using default spacing(", i, &
-              ") [", trim(units_out%length%abbrev), "] = ",                 &
+              ") [", trim(units_out%length%abbrev), "] = ",                        &
               sb%h(i)/units_out%length%factor
             call write_info(1)
           else
             message(1) = 'Either:'
-            message(2) = "   *) variable 'Spacing' is not defined"
+            message(2) = "   *) variable 'Spacing' is not defined and"
+            message(4) = "      I can't find a suitable default"
             message(3) = "   *) your input for 'Spacing' is negative"
-            message(4) = "   *) I can't find a suitable default"
             call write_fatal(4)
           end if
         end if

@@ -67,7 +67,7 @@ module math_m
   ! but it seems that better for moderate numbers (around 100).
   ! Their possible interfaces are:
   !   subroutine sort(a [, ind] )
-  !     FLOAT, intent(inout) :: a(:)
+  !     FLOAT_OR_INTEGER, intent(inout) :: a(:)
   !     integer, intent(inout), optional :: ind(:)
   !     ! This routine sorts, from smallest to largest, the array a.
   !     ! If the integer array ind is present, it puts in it the indexing
@@ -84,7 +84,8 @@ module math_m
   !     ! must have the same size as a.
   !   end subroutine sort
   interface sort
-    module procedure shellsort, dshellsort1, zshellsort1, dshellsort2, zshellsort2
+    module procedure shellsort, dshellsort1, zshellsort1, &
+      dshellsort2, zshellsort2, ishellsort
   end interface
   !------------------------------------------------------------------------------
 
@@ -654,6 +655,52 @@ contains
     end do
 
   end subroutine shellsort
+
+
+  ! ---------------------------------------------------------
+  ! Shell sort for integer arrays.
+  subroutine ishellsort(a, ind)
+    integer, intent(inout)           :: a(:)
+    integer, intent(inout), optional :: ind(:)
+
+    integer :: i,j,inc,n, indi
+    FLOAT   :: v
+
+    n = size(a)
+
+    if(present(ind)) then
+      do i = 1, n
+        ind(i) = i
+      end do
+    end if
+
+    inc = 1
+    do
+      inc=3*inc+1
+      if (inc > n) exit
+    end do
+
+    do
+      inc=inc/3
+      do i=inc+1,n
+        v=a(i)
+        if(present(ind)) indi = ind(i)
+        j=i
+        do
+          if (a(j-inc) <= v) exit
+          !if (a(j-inc) >= v) exit
+          a(j)=a(j-inc)
+          if(present(ind)) ind(j) = ind(j-inc)
+          j=j-inc
+          if (j <= inc) exit
+        end do
+        a(j)=v
+        if(present(ind)) ind(j) = indi
+      end do
+      if (inc <= 1) exit
+    end do
+
+  end subroutine ishellsort
 
 
   ! ---------------------------------------------------------

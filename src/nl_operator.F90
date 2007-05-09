@@ -76,11 +76,10 @@ module nl_operator_m
     module procedure nl_operator_equal
   end interface
 
-  integer, parameter ::   &
-       OP_FORTRAN=0,      &
-       OP_FORTRAN_OPT=1,  &
-       OP_C=3,            &
-       OP_SSE=4
+  integer, parameter :: &
+       OP_FORTRAN = 0,  &
+       OP_C       = 1,  &
+       OP_SSE     = 2
 
   integer :: dop_function = -1
   integer :: zop_function = -1
