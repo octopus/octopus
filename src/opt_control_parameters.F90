@@ -28,7 +28,7 @@
     cp%no_parameters = NDIM
     cp%dt = td%dt
     cp%ntiter = 2*td%max_iter
-    ALLOCATE(cp%laser(cp%no_parameters, 0:cp%ntiter), (cp%ntiter+1)*cp%no_parameters))
+    ALLOCATE(cp%laser(cp%no_parameters, 0:cp%ntiter), (cp%ntiter+1)*cp%no_parameters)
     cp%laser(:, :) = M_ZERO
 
     call oct_read_laserpol(cp%laser_pol, cp%laser_dof)
