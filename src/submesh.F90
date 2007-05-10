@@ -167,14 +167,14 @@ contains
     CMPLX,           intent(in) :: g(:)
 
 #if defined(HAVE_MPI)
-    MPI_CMPLX :: tmp
+    CMPLX :: tmp
 #endif
 
     res = sum( f(1:sm%ns) * g(1:sm%ns) * m%vol_pp(sm%jxyz(1:sm%ns)) )
 
 #if defined(HAVE_MPI)
     if(m%parallel_in_domains) then
-      call MPI_Allreduce(res, tmp, 1, R_MPITYPE, MPI_SUM, m%vp%comm, mpi_err)
+      call MPI_Allreduce(res, tmp, 1, MPI_CMPLX, MPI_SUM, m%vp%comm, mpi_err)
       res = tmp
     end if
 #endif
