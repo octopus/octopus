@@ -192,7 +192,8 @@ contains
       ALLOCATE(w%gs_st, 1)
       call states_copy(w%gs_st, st)
       ! WARNING: should be first deallocate, then nullify?
-      nullify(w%gs_st%zpsi, w%gs_st%node, w%gs_st%occ, w%gs_st%eigenval, w%gs_st%mag)
+!!$      nullify(w%gs_st%zpsi, w%gs_st%node, w%gs_st%occ, w%gs_st%eigenval, w%gs_st%mag)
+      nullify(w%gs_st%zpsi, w%gs_st%node, w%gs_st%occ, w%gs_st%eigenval)
       call restart_look (trim(tmpdir)//'restart_gs', gr%m, i, i, w%gs_st%nst, ierr)
 
       w%gs_st%st_start = 1
@@ -219,7 +220,7 @@ contains
       ALLOCATE(w%gs_st%momentum(3, w%gs_st%nst, w%gs_st%d%nik), 3*w%gs_st%nst*w%gs_st%d%nik)
       ALLOCATE(w%gs_st%node(w%gs_st%nst), w%gs_st%nst)
       if(w%gs_st%d%ispin == SPINORS) then
-        ALLOCATE(w%gs_st%mag(w%gs_st%nst, w%gs_st%d%nik, 2), w%gs_st%nst*w%gs_st%d%nik*2)
+        ALLOCATE(w%gs_st%spin(3, w%gs_st%nst, w%gs_st%d%nik), w%gs_st%nst*w%gs_st%d%nik*3)
       end if
       call states_allocate_wfns(w%gs_st, gr%m, M_CMPLX)
       w%gs_st%node(:)  = 0

@@ -67,8 +67,8 @@
       ALLOCATE(tmp_st%eigenval(tmp_st%nst, tmp_st%d%nik), tmp_st%nst*tmp_st%d%nik)
       ALLOCATE(tmp_st%occ(tmp_st%nst, tmp_st%d%nik), tmp_st%nst*tmp_st%d%nik)
       if(tmp_st%d%ispin == SPINORS) then
-        ALLOCATE(tmp_st%mag(tmp_st%nst, tmp_st%d%nik, 2), tmp_st%nst*tmp_st%d%nik*2)
-        tmp_st%mag = M_ZERO
+        ALLOCATE(tmp_st%spin(3, tmp_st%nst, tmp_st%d%nik), tmp_st%nst*tmp_st%d%nik*3)
+        tmp_st%spin = M_ZERO
       end if
       tmp_st%eigenval = huge(REAL_PRECISION)
       tmp_st%occ      = M_ZERO
@@ -110,8 +110,8 @@
         ALLOCATE(tmp_st%eigenval(tmp_st%nst, tmp_st%d%nik), tmp_st%nst*tmp_st%d%nik)
         ALLOCATE(tmp_st%occ(tmp_st%nst, tmp_st%d%nik), tmp_st%nst*tmp_st%d%nik)
         if(tmp_st%d%ispin == SPINORS) then
-          ALLOCATE(tmp_st%mag(tmp_st%nst, tmp_st%d%nik, 2), tmp_st%nst*tmp_st%d%nik*2)
-          tmp_st%mag = M_ZERO
+          ALLOCATE(tmp_st%spin(3, tmp_st%nst, tmp_st%d%nik), 3*tmp_st%nst*tmp_st%d%nik)
+          tmp_st%spin = M_ZERO
         end if
         tmp_st%eigenval = huge(REAL_PRECISION)
         tmp_st%occ      = M_ZERO
@@ -265,8 +265,8 @@
       ALLOCATE(tmp_st%eigenval(tmp_st%nst, tmp_st%d%nik), tmp_st%nst*tmp_st%d%nik)
       ALLOCATE(tmp_st%occ(tmp_st%nst, tmp_st%d%nik), tmp_st%nst*tmp_st%d%nik)
       if(tmp_st%d%ispin == SPINORS) then
-        ALLOCATE(tmp_st%mag(tmp_st%nst, tmp_st%d%nik, 2), tmp_st%nst*tmp_st%d%nik*2)
-        tmp_st%mag = M_ZERO
+        ALLOCATE(tmp_st%spin(3, tmp_st%nst, tmp_st%d%nik), tmp_st%nst*tmp_st%d%nik*3)
+        tmp_st%spin = M_ZERO
       end if
       tmp_st%eigenval = huge(REAL_PRECISION)
       tmp_st%occ      = M_ZERO
@@ -308,8 +308,8 @@
         ALLOCATE(tmp_st%eigenval(tmp_st%nst, tmp_st%d%nik), tmp_st%nst*tmp_st%d%nik)
         ALLOCATE(tmp_st%occ(tmp_st%nst, tmp_st%d%nik), tmp_st%nst*tmp_st%d%nik)
         if(tmp_st%d%ispin == SPINORS) then
-          ALLOCATE(tmp_st%mag(tmp_st%nst, tmp_st%d%nik, 2), tmp_st%nst*tmp_st%d%nik*2)
-          tmp_st%mag = M_ZERO
+          ALLOCATE(tmp_st%spin(3, tmp_st%nst, tmp_st%d%nik), tmp_st%nst*tmp_st%d%nik*3)
+          tmp_st%spin = M_ZERO
         end if
         tmp_st%eigenval = huge(REAL_PRECISION)
         tmp_st%occ      = M_ZERO

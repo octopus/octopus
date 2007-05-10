@@ -110,8 +110,8 @@ contains
     ALLOCATE(sys%st%occ(sys%st%nst, sys%st%d%nik), sys%st%nst*sys%st%d%nik)
 
     if(sys%st%d%ispin == SPINORS) then
-      ALLOCATE(sys%st%mag(sys%st%nst, sys%st%d%nik, 2), sys%st%nst*sys%st%d%nik*2)
-      sys%st%mag = M_ZERO
+      ALLOCATE(sys%st%spin(3, sys%st%nst, sys%st%d%nik), sys%st%nst*sys%st%d%nik*3)
+      sys%st%spin = M_ZERO
     end if
     sys%st%eigenval = huge(REAL_PRECISION)
     sys%st%occ      = M_ZERO

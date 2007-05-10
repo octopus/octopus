@@ -663,10 +663,6 @@ contains
               if(st%d%ispin == SPINORS) oplus = M_ZERO; ominus = M_ZERO
             else
               o = st%occ(j, ik+is)
-              if(st%d%ispin == SPINORS) then
-                oplus  = st%mag(j, ik+is, 1)
-                ominus = st%mag(j, ik+is, 2)
-              end if
             end if
 
             if(is.eq.0) cspin = 'up'
@@ -674,13 +670,8 @@ contains
             if(st%d%ispin.eq.UNPOLARIZED.or.st%d%ispin.eq.SPINORS) cspin = '--'
 
             write(tmp_str(1), '(i4,3x,a2)') j, trim(cspin)
-            if(st%d%ispin == SPINORS) then
-              write(tmp_str(2), '(1x,4f12.6,4x,f5.2,a1,f5.2)') &
-                ang(j, ik, 1:3), ang2(j, ik), oplus, '/', ominus
-            else
-              write(tmp_str(2), '(1x,4f12.6,3x,f12.6)') &
+            write(tmp_str(2), '(1x,4f12.6,3x,f12.6)') &
                 ang(j, ik+is, 1:3), ang2(j, ik+is), o
-            end if
             message(1) = trim(tmp_str(1))//trim(tmp_str(2))
             call write_info(1, iunit)
           end do
@@ -707,7 +698,7 @@ contains
 
       integer :: ik, j, is, ns, iunit2
       character(len=80) cspin
-      FLOAT :: o, oplus, ominus
+      FLOAT :: o
 
       call push_sub('scf.write_momentum')   
 
@@ -739,26 +730,16 @@ contains
 
             if(j > st%nst) then
               o = M_ZERO
-              if(st%d%ispin == SPINORS) oplus = M_ZERO; ominus = M_ZERO
             else
               o = st%occ(j, ik+is)
-              if(st%d%ispin == SPINORS) then
-                oplus  = st%mag(j, ik+is, 1)
-                ominus = st%mag(j, ik+is, 2)
-              end if
             end if
             
             if(is.eq.0) cspin = 'up'
             if(is.eq.1) cspin = 'dn'
             if(st%d%ispin.eq.UNPOLARIZED.or.st%d%ispin.eq.SPINORS) cspin = '--'
 
-            if(st%d%ispin == SPINORS) then
-              write(message(1), '(i4,3x,a2,1x,3f12.6,4x,f5.2,a1,f5.2)') &
-                j, trim(cspin), st%momentum(:, j, ik), oplus, '/', ominus              
-            else
-              write(message(1), '(i4,3x,a2,1x,3f12.6,3x,f12.6)')        &
+            write(message(1), '(i4,3x,a2,1x,3f12.6,3x,f12.6)')        &
                 j, trim(cspin), st%momentum(:, j, ik), o
-            end if
             call write_info(1, iunit)
 
           end do

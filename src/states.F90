@@ -111,7 +111,7 @@ module states_m
     FLOAT, pointer :: eigenval(:,:) ! obviously the eigenvalues
     logical        :: fixed_occ     ! should the occupation numbers be fixed?
     FLOAT, pointer :: occ(:,:)      ! the occupation numbers
-    FLOAT, pointer :: mag(:, :, :)
+    FLOAT, pointer :: spin(:, :, :)
     FLOAT, pointer :: momentum(:, :, :)
 
     FLOAT :: qtot                   ! (-) The total charge in the system (used in Fermi)
@@ -168,7 +168,7 @@ contains
     call push_sub('states.states_null')
 
     nullify(st%dpsi, st%zpsi, st%rho, st%j, st%rho_core, st%eigenval)
-    nullify(st%occ, st%mag, st%momentum, st%node, st%user_def_states)
+    nullify(st%occ, st%spin, st%momentum, st%node, st%user_def_states)
 
     nullify(st%d)
     ALLOCATE(st%d, 1)
@@ -317,7 +317,7 @@ contains
     ! allocate space for formula strings that define user defined states
     ALLOCATE(st%user_def_states(st%d%dim, st%nst, st%d%nik), st%d%dim*st%nst*st%d%nik)
     if(st%d%ispin == SPINORS) then
-      ALLOCATE(st%mag(st%nst, st%d%nik, 2), st%nst*st%d%nik*2)
+      ALLOCATE(st%spin(3, st%nst, st%d%nik), st%nst*st%d%nik*3)
     end if
 
     ! initially we mark all 'formulas' as undefined
@@ -684,10 +684,10 @@ contains
       ALLOCATE(stout%occ(size(stin%occ, 1), size(stin%occ, 2)), i)
       stout%occ = stin%occ
     end if
-    if(associated(stin%mag)) then
-      i = size(stin%mag, 1)*size(stin%mag, 2)*size(stin%mag, 3)
-      ALLOCATE(stout%mag(size(stin%mag, 1), size(stin%mag, 2), size(stin%mag, 3)), i)
-      stout%mag = stin%mag
+    if(associated(stin%spin)) then
+      i = size(stin%spin, 1)*size(stin%spin, 2)*size(stin%spin, 3)
+      ALLOCATE(stout%spin(size(stin%spin, 1), size(stin%spin, 2), size(stin%spin, 3)), i)
+      stout%spin = stin%spin
     end if
     if(associated(stin%momentum)) then
       i = size(stin%momentum, 1)*size(stin%momentum, 2)*size(stin%momentum, 3)
@@ -733,8 +733,8 @@ contains
       nullify(st%rho_core)
     end if
 
-    if(st%d%ispin==SPINORS .and. associated(st%mag)) then
-      deallocate(st%mag); nullify(st%mag)
+    if(st%d%ispin==SPINORS .and. associated(st%spin)) then
+      deallocate(st%spin); nullify(st%spin)
     end if
 
     if(associated(st%dpsi)) then
@@ -893,11 +893,10 @@ contains
         do ik = 1, st%d%nik
           do ie = 1, st%nst
             if (st%d%wfs_type == M_REAL) then
-              st%mag(ie, ik, 1) = dmf_nrm2(m, st%dpsi(1:m%np, 1, ie, ik))**2 * st%occ(ie, ik)
-              st%mag(ie, ik, 2) = dmf_nrm2(m, st%dpsi(1:m%np, 2, ie, ik))**2 * st%occ(ie, ik)
+              write(message(1),'(a)') 'Internal error in states_fermi'
+              call write_fatal(1)
             else
-              st%mag(ie, ik, 1) = zmf_nrm2(m, st%zpsi(1:m%np, 1, ie, ik))**2 * st%occ(ie, ik)
-              st%mag(ie, ik, 2) = zmf_nrm2(m, st%zpsi(1:m%np, 2, ie, ik))**2 * st%occ(ie, ik)
+              st%spin(1:3, ie, ik) = state_spin(m, st%zpsi(:, :, ie, ik))
             end if
           end do
         end do
@@ -927,13 +926,7 @@ contains
       if(st%d%ispin == SPINORS) then
         do ik = 1, st%d%nik
           do ie = 1, st%nst
-            if (st%d%wfs_type == M_REAL) then
-              st%mag(ie, ik, 1) = dmf_nrm2(m, st%dpsi(1:m%np, 1, ie, ik))**2 * st%occ(ie, ik)
-              st%mag(ie, ik, 2) = dmf_nrm2(m, st%dpsi(1:m%np, 2, ie, ik))**2 * st%occ(ie, ik)
-            else
-              st%mag(ie, ik, 1) = zmf_nrm2(m, st%zpsi(1:m%np, 1, ie, ik))**2 * st%occ(ie, ik)
-              st%mag(ie, ik, 2) = zmf_nrm2(m, st%zpsi(1:m%np, 2, ie, ik))**2 * st%occ(ie, ik)
-            end if
+            st%spin(1:3, ie, ik) = state_spin(m, st%zpsi(:, :, ie, ik))
           end do
         end do
       end if
@@ -987,13 +980,7 @@ contains
     if(st%d%ispin == SPINORS) then
       do ik = 1, st%d%nik
         do ie = 1, st%nst
-          if (st%d%wfs_type == M_REAL) then
-            st%mag(ie, ik, 1) = dmf_nrm2(m, st%dpsi(1:m%np, 1, ie, ik))**2 * st%occ(ie, ik)
-            st%mag(ie, ik, 2) = dmf_nrm2(m, st%dpsi(1:m%np, 2, ie, ik))**2 * st%occ(ie, ik)
-          else
-            st%mag(ie, ik, 1) = zmf_nrm2(m, st%zpsi(1:m%np, 1, ie, ik))**2 * st%occ(ie, ik)
-            st%mag(ie, ik, 2) = zmf_nrm2(m, st%zpsi(1:m%np, 2, ie, ik))**2 * st%occ(ie, ik)
-          end if
+          st%spin(1:3, ie, ik) = state_spin(m, st%zpsi(:, :, ie, ik))
         end do
       end do
     end if
@@ -1043,7 +1030,7 @@ contains
     FLOAT,             intent(in), optional :: error(nst, st%d%nik)
 
     integer ik, j, ns, is
-    FLOAT :: o, oplus, ominus
+    FLOAT :: o
     character(len=80) tmp_str(MAX_DIM), cspin
 
     call push_sub('states.states_write_eigenvalues')
@@ -1070,11 +1057,21 @@ contains
       end if
 
       if(present(error)) then
-        write(message(1), '(a4,1x,a5,1x,a12,4x,a12,1x,a10)')   &
-          '#st',' Spin',' Eigenvalue', 'Occupation ', 'Error'
+        if(st%d%ispin .eq. SPINORS) then
+          write(message(1), '(a4,1x,a5,1x,a12,1x,a12,2x,a4,4x,a4,4x,a4,5x,a5)')   &
+            '#st',' Spin',' Eigenvalue', 'Occupation ', '<Sx>', '<Sy>', '<Sz>', 'Error'
+        else
+          write(message(1), '(a4,1x,a5,1x,a12,4x,a12,1x,a10)')   &
+            '#st',' Spin',' Eigenvalue', 'Occupation ', 'Error'
+        end if
       else
-        write(message(1), '(a4,1x,a5,1x,a12,4x,a12,1x)')       &
-          '#st',' Spin',' Eigenvalue', 'Occupation '
+        if(st%d%ispin .eq. SPINORS) then
+          write(message(1), '(a4,1x,a5,1x,a12,1x,a12,2x,a4,4x,a4,4x,a4)')   &
+            '#st',' Spin',' Eigenvalue', 'Occupation ', '<Sx>', '<Sy>', '<Sz>'
+        else
+          write(message(1), '(a4,1x,a5,1x,a12,4x,a12,1x)')       &
+            '#st',' Spin',' Eigenvalue', 'Occupation '
+        end if
       end if
       call write_info(1, iunit)
 
@@ -1082,13 +1079,8 @@ contains
         do is = 0, ns-1
           if(j > st%nst) then
             o = M_ZERO
-            if(st%d%ispin == SPINORS) oplus = M_ZERO; ominus = M_ZERO
           else
             o = st%occ(j, ik+is)
-            if(st%d%ispin == SPINORS) then
-              oplus  = st%mag(j, ik+is, 1)
-              ominus = st%mag(j, ik+is, 2)
-            end if
           end if
 
           if(is.eq.0) cspin = 'up'
@@ -1098,8 +1090,8 @@ contains
           write(tmp_str(1), '(i4,3x,a2)') j, trim(cspin)
           if(simul_box_is_periodic(sb)) then
             if(st%d%ispin == SPINORS) then
-              write(tmp_str(2), '(1x,f12.6,3x,f5.2,a1,f5.2)') &
-                (st%eigenval(j, ik)-st%ef)/units_out%energy%factor, oplus, '/', ominus
+              write(tmp_str(2), '(1x,f12.6,3x,4f5.2)') &
+                (st%eigenval(j, ik)-st%ef)/units_out%energy%factor, o, st%spin(1:3, j, ik)
               if(present(error)) write(tmp_str(3), '(a7,es7.1,a1)')'      (', error(j, ik+is), ')'
             else
               write(tmp_str(2), '(1x,f12.6,3x,f12.6)') &
@@ -1108,9 +1100,9 @@ contains
             end if
           else
             if(st%d%ispin == SPINORS) then
-              write(tmp_str(2), '(1x,f12.6,3x,f5.2,a1,f5.2)') &
-                st%eigenval(j, ik)/units_out%energy%factor, oplus, '/', ominus
-              if(present(error)) write(tmp_str(3), '(a7,es7.1,a1)')'      (', error(j, ik+is), ')'
+              write(tmp_str(2), '(1x,f12.6,5x,f5.2,3x,3f8.4)') &
+                st%eigenval(j, ik)/units_out%energy%factor, o, st%spin(1:3, j, ik)
+              if(present(error)) write(tmp_str(3), '(a3,es7.1,a1)')'  (', error(j, ik+is), ')'
             else
               write(tmp_str(2), '(1x,f12.6,3x,f12.6)') &
                 st%eigenval(j, ik+is)/units_out%energy%factor, o
@@ -1882,6 +1874,28 @@ contains
 
     call pop_sub()
   end subroutine states_paramagnetic_current
+
+
+  ! ---------------------------------------------------------
+  function state_spin(m, f1) result(s)
+    FLOAT, dimension(3) :: s
+    type(mesh_t), intent(in) :: m
+    CMPLX,  intent(in) :: f1(:, :)
+
+    CMPLX :: z
+
+    call push_sub('states.zstate_spin')
+
+    z = zmf_dotp(m, f1(:, 1) , f1(:, 2))
+
+    s(1) = M_TWO * z
+    s(2) = M_TWO * aimag(z)
+    s(3) = zmf_dotp(m, f1(:, 1), f1(:, 1)) - zmf_dotp(m, f1(:, 2), f1(:, 2))
+    s = s * M_HALF ! spin is half the sigma matrix.
+
+    call pop_sub()
+  end function state_spin
+
 
 #include "states_kpoints.F90"
 

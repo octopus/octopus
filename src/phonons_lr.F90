@@ -317,8 +317,8 @@ contains
     ALLOCATE(st%occ(st%nst, st%d%nik), st%nst*st%d%nik)
 
     if(st%d%ispin == SPINORS) then
-      ALLOCATE(st%mag(st%nst, st%d%nik, 2), st%nst*st%d%nik*2)
-      st%mag = M_ZERO
+      ALLOCATE(st%spin(3, st%nst, st%d%nik), st%nst*st%d%nik*3)
+      st%spin = M_ZERO
     end if
     st%eigenval = huge(REAL_PRECISION)
     st%occ      = M_ZERO
