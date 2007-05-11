@@ -49,7 +49,7 @@ module restart_m
     restart_write,      &
     restart_read,       &
     restart_format,     &
-    restart_look,       &
+    restart_look_and_read,   &
     drestart_write_function, &
     zrestart_write_function, &
     drestart_read_function, &
@@ -148,55 +148,44 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine restart_look (dir, m, kpoints, dim, nst, ierr)
-    character(len=*), intent(in) :: dir
-    type(mesh_t),     intent(in) :: m
-    integer,         intent(out) :: kpoints, dim, nst, ierr
+  subroutine restart_look_and_read(dir, st, gr, geo, ierr)
+    character(len=*),  intent(in)  :: dir
+    type(states_t), intent(inout)  :: st
+    type(grid_t),      intent(in)  :: gr
+    type(geometry_t),  intent(in)  :: geo
+    integer,           intent(out) :: ierr
 
-    character(len=256) :: line
-    character(len=12)  :: filename
-    character(len=1)   :: char
-    integer :: iunit, iunit2, err, i, ist, idim, ik
-    FLOAT :: occ, eigenval
+    integer :: kpoints, dim, nst, j
 
-    call push_sub('restart.restart_look')
+    call push_sub('restart.restart_look_and_read')
 
-    ierr = 0
-    iunit  = io_open(trim(dir)//'/wfns', action='read', status='old', die=.false., is_tmp = .true., grp = m%mpi_grp)
-    if(iunit < 0) then
-      ierr = -1
-      return
-    end if
-    iunit2 = io_open(trim(dir)//'/occs', action='read', status='old', die=.false., is_tmp = .true., grp = m%mpi_grp)
-    if(iunit2 < 0) then
-      call io_close(iunit, grp = m%mpi_grp)
-      ierr = -1
-      return
+    call states_look(trim(tmpdir)//'restart_gs', gr%m, kpoints, dim, nst, j)
+    if(j.ne.0) then
+      ierr = j
+      call pop_sub(); return
     end if
 
-    ! Skip two lines.
-    call iopar_read(m%mpi_grp, iunit, line, err); call iopar_read(m%mpi_grp, iunit, line, err)
-    call iopar_read(m%mpi_grp, iunit2, line, err); call iopar_read(m%mpi_grp, iunit2, line, err)
+    st%nst    = nst
+    st%st_end = nst
+    deallocate(st%eigenval, st%occ)
 
-    kpoints = 1
-    dim = 1
-    nst = 1
-    do
-      call iopar_read(m%mpi_grp, iunit, line, i)
-      read(line, '(a)') char
-      if(i.ne.0.or.char=='%') exit
-      read(line, *) ik, char, ist, char, idim, char, filename
-      if(ik > kpoints) kpoints = ik
-      if(idim == 2)    dim     = 2
-      if(ist>nst)      nst     = ist
-      call iopar_read(m%mpi_grp, iunit2, line, err)
-      read(line, *) occ, char, eigenval
-    end do
+    call states_allocate_wfns(st, gr%m)
 
-    call io_close(iunit, grp = m%mpi_grp)
-    call io_close(iunit2, grp = m%mpi_grp)
+    ALLOCATE(st%eigenval(st%nst, st%d%nik), st%nst*st%d%nik)
+    ALLOCATE(st%occ(st%nst, st%d%nik), st%nst*st%d%nik)
+
+    if(st%d%ispin == SPINORS) then
+      ALLOCATE(st%spin(3, st%nst, st%d%nik), st%nst*st%d%nik*3)
+      st%spin = M_ZERO
+    end if
+    st%eigenval = huge(REAL_PRECISION)
+    st%occ      = M_ZERO
+
+    call restart_read(trim(tmpdir)//'restart_gs', st, gr, geo, ierr)
+
     call pop_sub()
-  end subroutine restart_look
+  end subroutine restart_look_and_read
+
 
   ! ---------------------------------------------------------
   subroutine restart_write(dir, st, gr, ierr, iter, lr)

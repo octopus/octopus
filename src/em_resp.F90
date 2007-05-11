@@ -453,7 +453,7 @@ contains
 
     call push_sub('em_resp.read_wfs')
 
-    call restart_look(trim(tmpdir)//'restart_gs', gr%m, kpoints, dim, nst, ierr)
+    call states_look(trim(tmpdir)//'restart_gs', gr%m, kpoints, dim, nst, ierr)
 
     if(ierr.ne.0) then
       message(1) = 'Could not properly read wave-functions from "'//trim(tmpdir)//'restart_gs".'

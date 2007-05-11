@@ -58,22 +58,11 @@
       !TODO: The following lines of code do not look too clear, and will probably break easily.
       !They should also be isolated and taken away, since they are repeated in several places.
       tmp_st = initial_state
-      call restart_look(trim(tmpdir)//'restart_gs', gr%m, kpoints, dim, nst, ierr)
-      tmp_st%nst    = nst
-      tmp_st%st_end = nst
-      deallocate(tmp_st%eigenval)
-      deallocate(tmp_st%occ)
-      call states_allocate_wfns(tmp_st, gr%m)
-      ALLOCATE(tmp_st%eigenval(tmp_st%nst, tmp_st%d%nik), tmp_st%nst*tmp_st%d%nik)
-      ALLOCATE(tmp_st%occ(tmp_st%nst, tmp_st%d%nik), tmp_st%nst*tmp_st%d%nik)
-      if(tmp_st%d%ispin == SPINORS) then
-        ALLOCATE(tmp_st%spin(3, tmp_st%nst, tmp_st%d%nik), tmp_st%nst*tmp_st%d%nik*3)
-        tmp_st%spin = M_ZERO
+      call restart_look_and_read(trim(tmpdir)//'restart_gs', tmp_st, gr, geo, ierr)
+      if(ierr.ne.0) then
+        write(message(1),'(a)') 'Could not read ground-state wavefunctions from '//trim(tmpdir)//'restart_gs.'
+        call write_fatal(1)
       end if
-      tmp_st%eigenval = huge(REAL_PRECISION)
-      tmp_st%occ      = M_ZERO
-      call restart_read(trim(tmpdir)//'restart_gs', tmp_st, gr, geo, ierr)
-      
       initial_state%zpsi(:, :, 1, 1) = tmp_st%zpsi(:, :, state, 1)
 
     case(oct_is_superposition)   
@@ -101,22 +90,11 @@
       if(loct_parse_block(check_inp('OCTInitialSuperposition'),blk)==0) then
 
         tmp_st = initial_state
-        call restart_look(trim(tmpdir)//'restart_gs', gr%m, kpoints, dim, nst, ierr)
-        tmp_st%nst    = nst
-        tmp_st%st_end = nst
-        deallocate(tmp_st%eigenval)
-        deallocate(tmp_st%occ)
-        call states_allocate_wfns(tmp_st, gr%m)
-        ALLOCATE(tmp_st%eigenval(tmp_st%nst, tmp_st%d%nik), tmp_st%nst*tmp_st%d%nik)
-        ALLOCATE(tmp_st%occ(tmp_st%nst, tmp_st%d%nik), tmp_st%nst*tmp_st%d%nik)
-        if(tmp_st%d%ispin == SPINORS) then
-          ALLOCATE(tmp_st%spin(3, tmp_st%nst, tmp_st%d%nik), 3*tmp_st%nst*tmp_st%d%nik)
-          tmp_st%spin = M_ZERO
+        call restart_look_and_read(trim(tmpdir)//'restart_gs', tmp_st, gr, geo, ierr)
+        if(ierr.ne.0) then
+          write(message(1),'(a)') 'Could not read ground-state wavefunctions from '//trim(tmpdir)//'restart_gs.'
+          call write_fatal(1)
         end if
-        tmp_st%eigenval = huge(REAL_PRECISION)
-        tmp_st%occ      = M_ZERO
-        call restart_read(trim(tmpdir)//'restart_gs', tmp_st, gr, geo, ierr)
-
 
         no_blk = loct_parse_block_n(blk)
         ! TODO: One should check that the states requested are actually present in tmp_st   
@@ -240,6 +218,10 @@
       message(1) =  'Info: Using Ground State for TargetOperator'
       call write_info(1)
       call restart_read(trim(tmpdir)//'restart_gs', target_state, gr, geo, ierr)
+      if(ierr.ne.0) then
+        write(message(1),'(a)') 'Could not read ground-state wavefunctions from '//trim(tmpdir)//'restart_gs.'
+        call write_fatal(1)
+      end if
       
     case(oct_tg_excited) 
       message(1) =  'Info: Using Excited State for TargetOperator'
@@ -256,21 +238,11 @@
 
       !TODO: The following lines of code do not look too clear, and will probably break easily.
       tmp_st = target_state
-      call restart_look(trim(tmpdir)//'restart_gs', gr%m, kpoints, dim, nst, ierr)
-      tmp_st%nst    = nst
-      tmp_st%st_end = nst
-      deallocate(tmp_st%eigenval)
-      deallocate(tmp_st%occ)
-      call states_allocate_wfns(tmp_st, gr%m)
-      ALLOCATE(tmp_st%eigenval(tmp_st%nst, tmp_st%d%nik), tmp_st%nst*tmp_st%d%nik)
-      ALLOCATE(tmp_st%occ(tmp_st%nst, tmp_st%d%nik), tmp_st%nst*tmp_st%d%nik)
-      if(tmp_st%d%ispin == SPINORS) then
-        ALLOCATE(tmp_st%spin(3, tmp_st%nst, tmp_st%d%nik), tmp_st%nst*tmp_st%d%nik*3)
-        tmp_st%spin = M_ZERO
+      call restart_look_and_read(trim(tmpdir)//'restart_gs', tmp_st, gr, geo, ierr)
+      if(ierr.ne.0) then
+        write(message(1),'(a)') 'Could not read ground-state wavefunctions from '//trim(tmpdir)//'restart_gs.'
+        call write_fatal(1)
       end if
-      tmp_st%eigenval = huge(REAL_PRECISION)
-      tmp_st%occ      = M_ZERO
-      call restart_read(trim(tmpdir)//'restart_gs', tmp_st, gr, geo, ierr)
 
       target_state%zpsi(:, :, 1, 1) = tmp_st%zpsi(:, :, state, 1)
       call states_end(tmp_st)
@@ -299,21 +271,11 @@
       if(loct_parse_block(check_inp('OCTTargetSuperposition'),blk)==0) then
 
         tmp_st = target_state
-        call restart_look(trim(tmpdir)//'restart_gs', gr%m, kpoints, dim, nst, ierr)
-        tmp_st%nst    = nst
-        tmp_st%st_end = nst
-        deallocate(tmp_st%eigenval)
-        deallocate(tmp_st%occ)
-        call states_allocate_wfns(tmp_st, gr%m)
-        ALLOCATE(tmp_st%eigenval(tmp_st%nst, tmp_st%d%nik), tmp_st%nst*tmp_st%d%nik)
-        ALLOCATE(tmp_st%occ(tmp_st%nst, tmp_st%d%nik), tmp_st%nst*tmp_st%d%nik)
-        if(tmp_st%d%ispin == SPINORS) then
-          ALLOCATE(tmp_st%spin(3, tmp_st%nst, tmp_st%d%nik), tmp_st%nst*tmp_st%d%nik*3)
-          tmp_st%spin = M_ZERO
+        call restart_look_and_read(trim(tmpdir)//'restart_gs', tmp_st, gr, geo, ierr)
+        if(ierr.ne.0) then
+          write(message(1),'(a)') 'Could not read ground-state wavefunctions from '//trim(tmpdir)//'restart_gs.'
+          call write_fatal(1)
         end if
-        tmp_st%eigenval = huge(REAL_PRECISION)
-        tmp_st%occ      = M_ZERO
-        call restart_read(trim(tmpdir)//'restart_gs', tmp_st, gr, geo, ierr)
 
         no_blk = loct_parse_block_n(blk)
         ! TODO: for each orbital            

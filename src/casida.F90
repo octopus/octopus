@@ -89,34 +89,7 @@ contains
     message(1) = 'Info: Starting linear response calculation.'
     call write_info(1)
 
-    call restart_look(trim(tmpdir)//'restart_gs', sys%gr%m, kpoints, dim, nst, ierr)
-    if(ierr.ne.0) then
-      message(1) = 'Could not properly read wave-functions from "'//trim(tmpdir)//'restart_gs".'
-      call write_fatal(1)
-    end if
-
-    if(sys%st%d%ispin == SPINORS) then
-      message(1) = 'Linear response TDDFT ("Casida" mode) is not implemented for spinors-DFT.'
-      call write_fatal(1)
-    end if
-
-    sys%st%nst    = nst
-    sys%st%st_end = nst
-    deallocate(sys%st%eigenval, sys%st%occ)
-
-    call states_allocate_wfns(sys%st, sys%gr%m)
-
-    ALLOCATE(sys%st%eigenval(sys%st%nst, sys%st%d%nik), sys%st%nst*sys%st%d%nik)
-    ALLOCATE(sys%st%occ(sys%st%nst, sys%st%d%nik), sys%st%nst*sys%st%d%nik)
-
-    if(sys%st%d%ispin == SPINORS) then
-      ALLOCATE(sys%st%spin(3, sys%st%nst, sys%st%d%nik), sys%st%nst*sys%st%d%nik*3)
-      sys%st%spin = M_ZERO
-    end if
-    sys%st%eigenval = huge(REAL_PRECISION)
-    sys%st%occ      = M_ZERO
-
-    call restart_read(trim(tmpdir)//'restart_gs', sys%st, sys%gr, sys%geo, ierr)
+    call restart_look_and_read(trim(tmpdir)//'restart_gs', sys%st, sys%gr, sys%geo, ierr)
     if(ierr.ne.0) then
       message(1) = 'Could not properly read wave-functions from "'//trim(tmpdir)//'restart_gs".'
       call write_fatal(1)

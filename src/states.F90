@@ -47,6 +47,7 @@ module states_m
     states_t,                         &
     states_dim_t,                     &
     states_init,                      &
+    states_look,                      &
     states_read_user_def_orbitals,    &
     states_densities_init,            &
     states_allocate_wfns,             &
@@ -1895,6 +1896,61 @@ contains
 
     call pop_sub()
   end function state_spin
+
+
+  ! ---------------------------------------------------------
+  ! Reads the state stored in directory "dir", and finds out
+  ! the kpoints, dim, and nst contained in it.
+  ! ---------------------------------------------------------
+  subroutine states_look (dir, m, kpoints, dim, nst, ierr)
+    character(len=*), intent(in) :: dir
+    type(mesh_t),     intent(in) :: m
+    integer,         intent(out) :: kpoints, dim, nst, ierr
+
+    character(len=256) :: line
+    character(len=12)  :: filename
+    character(len=1)   :: char
+    integer :: iunit, iunit2, err, i, ist, idim, ik
+    FLOAT :: occ, eigenval
+
+    call push_sub('states.states_look')
+
+    ierr = 0
+    iunit  = io_open(trim(dir)//'/wfns', action='read', status='old', die=.false., is_tmp = .true., grp = m%mpi_grp)
+    if(iunit < 0) then
+      ierr = -1
+      return
+    end if
+    iunit2 = io_open(trim(dir)//'/occs', action='read', status='old', die=.false., is_tmp = .true., grp = m%mpi_grp)
+    if(iunit2 < 0) then
+      call io_close(iunit, grp = m%mpi_grp)
+      ierr = -1
+      return
+    end if
+
+    ! Skip two lines.
+    call iopar_read(m%mpi_grp, iunit, line, err); call iopar_read(m%mpi_grp, iunit, line, err)
+    call iopar_read(m%mpi_grp, iunit2, line, err); call iopar_read(m%mpi_grp, iunit2, line, err)
+
+    kpoints = 1
+    dim = 1
+    nst = 1
+    do
+      call iopar_read(m%mpi_grp, iunit, line, i)
+      read(line, '(a)') char
+      if(i.ne.0.or.char=='%') exit
+      read(line, *) ik, char, ist, char, idim, char, filename
+      if(ik > kpoints) kpoints = ik
+      if(idim == 2)    dim     = 2
+      if(ist>nst)      nst     = ist
+      call iopar_read(m%mpi_grp, iunit2, line, err)
+      read(line, *) occ, char, eigenval
+    end do
+
+    call io_close(iunit, grp = m%mpi_grp)
+    call io_close(iunit2, grp = m%mpi_grp)
+    call pop_sub()
+  end subroutine states_look
 
 
 #include "states_kpoints.F90"
