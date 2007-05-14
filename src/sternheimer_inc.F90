@@ -25,19 +25,20 @@
 !--------------------------------------------------------------
 
 subroutine X(sternheimer_solve)(&
-     this, sys, h, lr, nsigma, omega, vext, & 
+     this, sys, h, lr, nsigma, omega, & 
      restart_dir, rho_tag, wfs_tag, &
-     have_restart_rho)
+     have_restart_rho, vext, vext_psi)
   type(sternheimer_t),    intent(inout) :: this
   type(system_t), target, intent(inout) :: sys
   type(hamiltonian_t),    intent(inout) :: h
   type(lr_t),             intent(inout) :: lr(:) 
   integer,                intent(in)    :: nsigma 
   R_TYPE,                 intent(in)    :: omega
-  FLOAT,                  intent(in)    :: vext(:)
   character(len=*),       intent(in)    :: restart_dir
   character(len=*),       intent(in)    :: rho_tag
   character(len=*),       intent(in)    :: wfs_tag
+  FLOAT,  optional,       intent(in)    :: vext(:)
+  R_TYPE, optional,       intent(in)    :: vext_psi(:,:,:,:)
   logical,      optional, intent(in)    :: have_restart_rho
 
 
@@ -60,7 +61,8 @@ subroutine X(sternheimer_solve)(&
   call push_sub('static_pol_lr.get_response_e')
 
   ASSERT( nsigma==1 .or. nsigma ==2 )
-  
+  ASSERT( math_xor(present(vext), present(vext_psi)) )
+
   m => sys%gr%m
   st => sys%st
   
@@ -105,7 +107,17 @@ subroutine X(sternheimer_solve)(&
 
     dl_rhoin(1:m%np, 1:st%d%nspin, 1) = lr(1)%X(dl_rho)(1:m%np, 1:st%d%nspin)
 
-    call X(sternheimer_calc_hvar)(this, sys, h, lr, nsigma, vext, hvar)
+    do sigma = 1, nsigma
+      do ik = 1, st%d%nspin
+        if(present(vext)) then 
+          hvar(1:m%np, ik, sigma) = vext(1:m%np)
+        else
+          hvar(1:m%np, ik, sigma) = M_ZERO
+        end if
+      end do
+    end do
+
+    call X(sternheimer_calc_hvar)(this, sys, h, lr, nsigma, hvar)
 
     do ik = 1, st%d%nspin
       !now calculate response for each state
@@ -115,6 +127,10 @@ subroutine X(sternheimer_solve)(&
           
           !calculate the RHS of the Sternheimer eq
           Y(1:m%np, 1, sigma) = -hvar(1:m%np, ik, sigma)*st%X(psi)(1:m%np, 1, ist, ik)
+
+          if(present(vext_psi)) then
+            Y(1:m%np, 1, sigma) = Y(1:m%np, 1, sigma) - vext_psi(1:m%np, 1, ist, ik)
+          end if
 
           !and project it into the unoccupied states
           if(this%orth_response) then 
@@ -235,13 +251,12 @@ subroutine X(sternheimer_solve)(&
 
 end subroutine X(sternheimer_solve)
 
-subroutine X(sternheimer_calc_hvar)(this, sys, h, lr, nsigma, vext, hvar)
+subroutine X(sternheimer_calc_hvar)(this, sys, h, lr, nsigma, hvar)
   type(sternheimer_t),    intent(inout) :: this
   type(system_t), target, intent(inout) :: sys
   type(hamiltonian_t), target, intent(inout) :: h
   type(lr_t),             intent(inout) :: lr(:) 
   integer,                intent(in)    :: nsigma 
-  FLOAT,                  intent(in)    :: vext(:)
   R_TYPE,                 intent(out)   :: hvar(:,:,:)
 
   R_TYPE, allocatable :: tmp(:), hartree(:)
@@ -267,19 +282,14 @@ subroutine X(sternheimer_calc_hvar)(this, sys, h, lr, nsigma, vext, hvar)
 
   do ik = 1, sys%st%d%nspin
     
-    !* Vext
-    hvar(1:np, ik, 1) = vext(1:np)
-    
     !* hartree
-    if (this%add_hartree) hvar(1:np, ik, 1) = hvar(1:np, ik, 1) &
-         + hartree(1:np)
+    if (this%add_hartree) hvar(1:np, ik, 1) = hvar(1:np, ik, 1) + hartree(1:np)
     
     !* fxc
     if(this%add_fxc) then
       if(.not. this%oep_kernel) then 
         do ik2 = 1, sys%st%d%nspin
-          hvar(1:np, ik, 1) = hvar(1:np, ik, 1) + &
-               this%fxc(1:np, ik, ik2)*lr(1)%X(dl_rho)(1:np, ik2)
+          hvar(1:np, ik, 1) = hvar(1:np, ik, 1) + this%fxc(1:np, ik, ik2)*lr(1)%X(dl_rho)(1:np, ik2)
         end do
       else
         call X(xc_oep_kernel_calc)(sys, h,lr, nsigma, hartree(:))

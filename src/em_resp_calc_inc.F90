@@ -328,9 +328,14 @@ subroutine X(lr_calc_beta) (sh, sys, h, lr, beta)
   do ifreq = 1, 3
     do idir = 1, ndim
       do idim = 1, sys%st%d%dim
-        
-        call X(sternheimer_calc_hvar)(sh, sys, h, lr(idir, :, ifreq), 2, sys%gr%m%x(:, idir), &
-             hvar(:, :, :, idim, idir, ifreq))
+
+        do isigma = 1, 2
+          do ispin = 1, sys%st%d%nspin
+            hvar(1:np, ispin, isigma, idim, idir, ifreq) = sys%gr%m%x(1:np, idir)
+          end do
+        end do
+
+        call X(sternheimer_calc_hvar)(sh, sys, h, lr(idir, :, ifreq), 2, hvar(:, :, :, idim, idir, ifreq))
         
       end do !idim
     end do !idir

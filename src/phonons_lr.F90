@@ -119,8 +119,8 @@ contains
     do iatom = 1, sys%geo%natoms
       do idir = 1, sys%NDIM
 
-        call dsternheimer_solve(sh, sys, h, lr, 1, M_ZERO, dv(1:sys%NP, idir, iatom), &
-             RESTART_DIR, phn_rho_tag(iatom, idir), phn_wfs_tag(iatom, idir))
+        call dsternheimer_solve(sh, sys, h, lr, 1, M_ZERO, RESTART_DIR, phn_rho_tag(iatom, idir), phn_wfs_tag(iatom, idir), &
+             vext= dv(1:sys%NP, idir, iatom))
 
         do jatom = 1, sys%geo%natoms
           do jdir = 1, sys%NDIM

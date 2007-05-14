@@ -58,6 +58,7 @@ module math_m
     math_divisors,              &
     set_app_threshold,          &
     operator(.app.),            &
+    math_xor,                   &
     ddelta
 
 
@@ -748,6 +749,15 @@ contains
     end if
 
   end function ddelta
+
+  logical function math_xor(a, b)
+    logical, intent(in) :: a
+    logical, intent(in) :: b
+    
+    math_xor = ( a .or. b )
+    if ( a .and. b ) math_xor = .false.
+    
+  end function math_xor
 
 #include "undef.F90"
 #include "complex.F90"

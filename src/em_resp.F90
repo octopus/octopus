@@ -245,15 +245,17 @@ contains
             if (wfs_are_complex(sys%st)) then 
               call zsternheimer_solve(sh, sys, h, em_vars%lr(dir, :, ifactor), 2 , &
                    em_vars%freq_factor(ifactor)*em_vars%omega(iomega) + M_zI * em_vars%eta, &
-                   sys%gr%m%x(:, dir), RESTART_DIR,&
+                   RESTART_DIR,&
                    em_rho_tag(em_vars%freq_factor(ifactor)*em_vars%omega(iomega), dir),&
-                   em_wfs_tag(dir, ifactor), have_restart_rho=(ierr==0))
+                   em_wfs_tag(dir, ifactor), have_restart_rho=(ierr==0),&
+                   vext = sys%gr%m%x(:, dir))
             else
               call dsternheimer_solve(sh, sys, h, em_vars%lr(dir, :, ifactor), 2 , &
                    em_vars%freq_factor(ifactor)*em_vars%omega(iomega), &
-                   sys%gr%m%x(:, dir), RESTART_DIR,&
+                   RESTART_DIR,&
                    em_rho_tag(em_vars%freq_factor(ifactor)*em_vars%omega(iomega), dir),&
-                   em_wfs_tag(dir, ifactor), have_restart_rho=(ierr==0))
+                   em_wfs_tag(dir, ifactor), have_restart_rho=(ierr==0), &
+                   vext = sys%gr%m%x(:, dir))
             end if
             
             em_vars%ok(ifactor) = em_vars%ok(ifactor) .and. sternheimer_has_converged(sh)

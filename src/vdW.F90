@@ -242,8 +242,8 @@ contains
           ' and imaginary frequency ', aimag(omega)/units_out%energy%factor
         call write_info(1)   
 
-        call zsternheimer_solve(sh, sys, h, lr(dir, :), 1,  omega, sys%gr%m%x(:,dir), &
-             RESTART_DIR, em_rho_tag(real(omega),dir), em_wfs_tag(dir,1))
+        call zsternheimer_solve(sh, sys, h, lr(dir, :), 1,  omega, &
+             RESTART_DIR, em_rho_tag(real(omega),dir), em_wfs_tag(dir,1), vext=sys%gr%m%x(:,dir))
       end do
 
       call zlr_calc_polarizability(sys, lr(:,:), alpha(:,:), ndir)
