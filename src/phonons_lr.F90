@@ -109,7 +109,8 @@ contains
             tmp(1:sys%NP) = M_ZERO
 
             do ik = 1, sys%st%d%nspin
-              tmp(1:sys%NP) = tmp(1:sys%NP) + perturbation%dHdR(1:sys%NP, jdir, jatom)*lr(1)%ddl_rho(1:sys%NP, ik)
+              tmp(1:sys%NP) = tmp(1:sys%NP) + perturbation%dHdR(1:sys%NP, jdir, jatom)* &
+                lr(1)%ddl_rho(1:sys%NP, ik)
             end do
 
             ph%dm(phonons_index(ph, iatom, idir), phonons_index(ph, jatom, jdir)) = &
@@ -243,7 +244,8 @@ contains
                 
                 tmp(1:sys%NP) = M_ZERO
                 do ik = 1, sys%st%d%nspin
-                  tmp(1:sys%NP) = tmp(1:sys%NP) + perturbation%d2HdR2(1:sys%NP, idir, jdir, iatom)*sys%st%rho(1:sys%NP, ik)
+                  tmp(1:sys%NP) = tmp(1:sys%NP) + &
+                    perturbation%d2HdR2(1:sys%NP, idir, jdir, iatom)*sys%st%rho(1:sys%NP, ik)
                 end do
                
                 ac = ac + dmf_integrate(sys%gr%m, tmp(:))

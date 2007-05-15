@@ -324,8 +324,8 @@ subroutine X(lr_calc_susceptibility)(sys, lr, perturbation, chi_para, chi_dia)
 
           ! now the diamagnetic term
           if(dir1 == dir2) then
-            aux1(1:sys%NP) = sys%gr%m%x(1:sys%NP, 1)**2 + sys%gr%m%x(1:sys%NP, 2)**2 + sys%gr%m%x(1:sys%NP, 3)**2  &
-               - sys%gr%m%x(1:sys%NP, dir1)**2
+            aux1(1:sys%NP) = sys%gr%m%x(1:sys%NP, 1)**2 + sys%gr%m%x(1:sys%NP, 2)**2 + &
+              sys%gr%m%x(1:sys%NP, 3)**2 - sys%gr%m%x(1:sys%NP, dir1)**2
           else
             aux1(1:sys%NP) = - sys%gr%m%x(1:sys%NP, dir1) * sys%gr%m%x(1:sys%NP, dir2)
           end if
