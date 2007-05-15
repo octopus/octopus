@@ -25,22 +25,19 @@
 !--------------------------------------------------------------
 
 subroutine X(sternheimer_solve)(&
-     this, sys, h, lr, nsigma, omega, & 
-     restart_dir, rho_tag, wfs_tag, &
-     have_restart_rho, vext, vext_psi)
+     this, sys, h, lr, nsigma, omega, perturbation, & 
+     restart_dir, rho_tag, wfs_tag, have_restart_rho)
   type(sternheimer_t),    intent(inout) :: this
   type(system_t), target, intent(inout) :: sys
   type(hamiltonian_t),    intent(inout) :: h
   type(lr_t),             intent(inout) :: lr(:) 
   integer,                intent(in)    :: nsigma 
   R_TYPE,                 intent(in)    :: omega
+  type(resp_pert_t),      intent(in)    :: perturbation
   character(len=*),       intent(in)    :: restart_dir
   character(len=*),       intent(in)    :: rho_tag
   character(len=*),       intent(in)    :: wfs_tag
-  FLOAT,  optional,       intent(in)    :: vext(:)
-  R_TYPE, optional,       intent(in)    :: vext_psi(:,:,:,:)
   logical,      optional, intent(in)    :: have_restart_rho
-
 
   FLOAT :: dpsimod
   integer :: iter, sigma, ik, ist, err
@@ -58,10 +55,9 @@ subroutine X(sternheimer_solve)(&
 
   character(len=100) :: dirname
 
-  call push_sub('static_pol_lr.get_response_e')
+  call push_sub('sternheimer.sternheimer_solve')
 
   ASSERT( nsigma==1 .or. nsigma ==2 )
-  ASSERT( math_xor(present(vext), present(vext_psi)) )
 
   m => sys%gr%m
   st => sys%st
@@ -106,17 +102,6 @@ subroutine X(sternheimer_solve)(&
     call write_info(2)
 
     dl_rhoin(1:m%np, 1:st%d%nspin, 1) = lr(1)%X(dl_rho)(1:m%np, 1:st%d%nspin)
-
-    do sigma = 1, nsigma
-      do ik = 1, st%d%nspin
-        if(present(vext)) then 
-          hvar(1:m%np, ik, sigma) = vext(1:m%np)
-        else
-          hvar(1:m%np, ik, sigma) = M_ZERO
-        end if
-      end do
-    end do
-
     call X(sternheimer_calc_hvar)(this, sys, h, lr, nsigma, hvar)
 
     do ik = 1, st%d%nspin
@@ -126,11 +111,9 @@ subroutine X(sternheimer_solve)(&
           if(st%occ(ist, ik) <= lr_min_occ) cycle
           
           !calculate the RHS of the Sternheimer eq
-          Y(1:m%np, 1, sigma) = -hvar(1:m%np, ik, sigma)*st%X(psi)(1:m%np, 1, ist, ik)
-
-          if(present(vext_psi)) then
-            Y(1:m%np, 1, sigma) = Y(1:m%np, 1, sigma) - vext_psi(1:m%np, 1, ist, ik)
-          end if
+          Y(:, 1, sigma) = R_TOTYPE(M_ZERO)
+          call X(resp_pert_apply) (perturbation, sys%gr, st%X(psi)(:, 1, ist, ik), Y(:, 1, sigma))
+          Y(1:m%np, 1, sigma) = -Y(1:m%np, 1, sigma) - hvar(1:m%np, ik, sigma)*st%X(psi)(1:m%np, 1, ist, ik)
 
           !and project it into the unoccupied states
           if(this%orth_response) then 
@@ -157,8 +140,9 @@ subroutine X(sternheimer_solve)(&
           ! iterations and residual of the linear solver
           tmp(1:m%np) = R_ABS(lr(sigma)%X(dl_psi)(1:m%np, 1, ist, ik))**2
           dpsimod = X(mf_integrate)(m, tmp)
+
           write(message(1), '(i4, f20.6, i5, e20.6)') &
-               (3-2*sigma)*ist, dpsimod, this%solver%iter, this%solver%abs_psi 
+               (3 - 2*sigma)*ist, dpsimod, this%solver%iter, this%solver%abs_psi 
           call write_info(1)
 
           total_iter=total_iter + this%solver%iter
@@ -282,6 +266,9 @@ subroutine X(sternheimer_calc_hvar)(this, sys, h, lr, nsigma, hvar)
 
   do ik = 1, sys%st%d%nspin
     
+    !* initialize
+    hvar(1:np, ik, 1) = M_ZERO
+
     !* hartree
     if (this%add_hartree) hvar(1:np, ik, 1) = hvar(1:np, ik, 1) + hartree(1:np)
     

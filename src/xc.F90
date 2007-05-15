@@ -166,7 +166,7 @@ contains
     subroutine parse()
       integer :: val, default
 
-      ! the first 3 digits of the numer indicate the X functional and
+      ! the first 3 digits of the number indicate the X functional and
       ! the next 3 the C functional.
 
       default = XC_LDA_X

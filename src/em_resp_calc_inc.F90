@@ -86,7 +86,7 @@ subroutine X(lr_calc_elf)(st, gr, lr, lr_m)
     gdl_rho = M_ZERO
 
     
-    !first we calculate the denisities and its gradients, this could
+    !first we calculate the densities and its gradients, this could
     !be done directly, but it is less precise numerically
     do ik = is, st%d%nik, st%d%nspin
       do ist = 1, st%nst
@@ -286,11 +286,76 @@ end subroutine X(lr_calc_polarizability)
 
 
 ! ---------------------------------------------------------
-subroutine X(lr_calc_beta) (sh, sys, h, lr, beta)
+subroutine X(lr_calc_susceptibility)(sys, lr, perturbation, chi_para, chi_dia)
+  type(system_t), target, intent(inout) :: sys
+  type(lr_t),             intent(inout) :: lr(:,:)
+  type(resp_pert_t),      intent(inout) :: perturbation
+  CMPLX,                  intent(out)   :: chi_para(:,:), chi_dia(:,:)
+
+  integer :: ik, ist, dir1, dir2, j
+  CMPLX :: d, trace
+  CMPLX, allocatable  :: aux1(:), aux2(:)
+
+  call push_sub('em_resp_calc_inc.lr_calc_susceptibility')
+
+  ALLOCATE(aux1(1:sys%NP), sys%NP)
+  ALLOCATE(aux2(1:sys%NP), sys%NP)
+
+  chi_para = M_ZERO
+  chi_dia  = M_ZERO
+
+  do ik = 1, sys%st%d%nik
+    do ist  = sys%st%st_start, sys%st%st_end
+      d = sys%st%d%kweights(ik)*sys%st%occ(ist, ik)
+
+      do dir1 = 1, sys%gr%sb%dim
+        call resp_pert_setup_dir(perturbation, dir1)
+
+        do dir2 = 1, sys%gr%sb%dim
+
+          ! first the paramagnetic term
+          call zresp_pert_apply(perturbation, sys%gr, lr(dir2, 1)%zdl_psi(:, 1, ist, ik), aux1)
+          aux2(1:sys%NP) = sys%st%X(psi)(1:sys%NP, 1, ist, ik)
+          chi_para(dir1, dir2) = chi_para(dir1, dir2) + d*zmf_dotp(sys%gr%m, aux2, aux1)
+
+          ! I guess that the following term is equal to the previous one...
+          call zresp_pert_apply(perturbation, sys%gr, sys%st%zpsi(:, 1, ist, ik), aux1)
+          chi_para(dir1, dir2) = chi_para(dir1, dir2) + d*zmf_dotp(sys%gr%m, lr(dir2, 1)%zdl_psi(:, 1, ist, ik), aux1)
+
+          ! now the diamagnetic term
+          if(dir1 == dir2) then
+            aux1(1:sys%NP) = sys%gr%m%x(1:sys%NP, 1)**2 + sys%gr%m%x(1:sys%NP, 2)**2 + sys%gr%m%x(1:sys%NP, 3)**2  &
+               - sys%gr%m%x(1:sys%NP, dir1)**2
+          else
+            aux1(1:sys%NP) = - sys%gr%m%x(1:sys%NP, dir1) * sys%gr%m%x(1:sys%NP, dir2)
+          end if
+
+          aux1(1:sys%NP) = aux1(1:sys%NP) * sys%st%X(psi)(1:sys%NP, 1, ist, ik)
+          aux2(1:sys%NP) = sys%st%X(psi)(1:sys%NP, 1, ist, ik)
+          chi_dia(dir1, dir2) = chi_dia(dir1, dir2) + d*zmf_dotp(sys%gr%m, aux2, aux1) / M_FOUR
+        end do
+      end do
+    end do
+  end do
+
+  deallocate(aux1)
+  deallocate(aux2)
+
+  chi_para(:,:) = -chi_para(:,:)/P_C**2
+  chi_dia (:,:) = -chi_dia (:,:)/P_C**2
+
+  call pop_sub()
+
+end subroutine X(lr_calc_susceptibility)
+
+
+! ---------------------------------------------------------
+subroutine X(lr_calc_beta) (sh, sys, h, lr, perturbation, beta)
   type(sternheimer_t), intent(inout) :: sh
   type(system_t),      intent(inout) :: sys
   type(hamiltonian_t), intent(inout) :: h
   type(lr_t),          intent(inout) :: lr(:,:,:)
+  type(resp_pert_t),   intent(inout) :: perturbation
   CMPLX,               intent(out)   :: beta(1:MAX_DIM, 1:MAX_DIM, 1:MAX_DIM)
 
   integer :: ifreq, isigma, idim, ispin, ispin2, np, ndim, idir, ist
@@ -302,7 +367,7 @@ subroutine X(lr_calc_beta) (sh, sys, h, lr, beta)
   R_TYPE :: prod
 
   R_TYPE, allocatable :: hvar(:, :, :, :, :, :)
-  R_TYPE, allocatable :: tmp(:)
+  R_TYPE, allocatable :: tmp(:), tmp2(:)
   FLOAT,  allocatable :: kxc(:,:,:,:)
   R_TYPE, allocatable :: hpol_density(:)
 
@@ -319,24 +384,15 @@ subroutine X(lr_calc_beta) (sh, sys, h, lr, beta)
   kxc(:,:,:,:) = M_ZERO
   call xc_get_kxc(sys%ks%xc, sys%gr%m, sys%st%rho, sys%st%d%ispin, kxc)
 
-
   ALLOCATE(tmp(1:np), np)
+  ALLOCATE(tmp2(1:np), np)
   ALLOCATE(hvar(1:np, 1:sys%st%d%nspin, 1:2, 1:sys%st%d%dim, 1:ndim, 1:3), np*sys%st%d%nspin*2*sys%st%d%dim*ndim*3)
   ALLOCATE(hpol_density(1:np), np)
-
 
   do ifreq = 1, 3
     do idir = 1, ndim
       do idim = 1, sys%st%d%dim
-
-        do isigma = 1, 2
-          do ispin = 1, sys%st%d%nspin
-            hvar(1:np, ispin, isigma, idim, idir, ifreq) = sys%gr%m%x(1:np, idir)
-          end do
-        end do
-
         call X(sternheimer_calc_hvar)(sh, sys, h, lr(idir, :, ifreq), 2, hvar(:, :, :, idim, idir, ifreq))
-        
       end do !idim
     end do !idir
   end do !ifreq
@@ -371,21 +427,28 @@ subroutine X(lr_calc_beta) (sh, sys, h, lr, beta)
 
                   if( sys%st%occ(ist, ik) > lr_min_occ ) then 
 
+                    call resp_pert_setup_dir(perturbation, u(2))
+                    call X(resp_pert_apply) (perturbation, sys%gr, lr(u(3), isigma, w(3))%X(dl_psi)(1:np, idim, ist, ispin), tmp2)
+                    tmp2(1:np) = tmp2(1:np) + R_REAL(hvar(1:np, ispin, isigma, idim, u(2), w(2) )) &
+                       * lr(u(3), isigma, w(3))%X(dl_psi)(1:np, idim, ist, ispin)
+
                     hpol_density(1:np) = hpol_density(1:np) &
                          + sys%st%d%kweights(ik)*sys%st%occ(ist, ik) &
                          * R_CONJ(lr(u(1), op_sigma, w(1))%X(dl_psi)(1:np, 1, ist, ispin)) &
-                         * R_REAL(hvar(1:np, ispin, isigma, idim, u(2), w(2) )) &
-                         * lr(u(3), isigma, w(3))%X(dl_psi)(1:np, idim, ist, ispin)
+                         * tmp2(1:np)
 
                     do ispin2 = 1, sys%st%d%nspin
                       do ist2 = 1, sys%st%nst
                         do idim2 = 1, sys%st%d%dim
                           if( sys%st%occ(ist2, ik) > lr_min_occ ) then 
 
-                            tmp(1:np)= &
-                                 R_CONJ(sys%st%X(psi)(1:np, idim2, ist2, ispin2)) * &
-                                 R_REAL(hvar(1:np, ispin2, isigma, idim2, u(2), w(2))) * &
-                                 sys%st%X(psi)(1:np, idim, ist, ispin)
+                            call resp_pert_setup_dir(perturbation, u(2))
+                            call X(resp_pert_apply)(perturbation, sys%gr, sys%st%X(psi)(1:np, idim, ist, ispin), tmp2)
+                            tmp2(1:np) = tmp2(1:np) + R_REAL(hvar(1:np, ispin2, isigma, idim2, u(2), w(2))) * &
+                               sys%st%X(psi)(1:np, idim, ist, ispin)
+
+                            tmp(1:np) = &
+                               R_CONJ(sys%st%X(psi)(1:np, idim2, ist2, ispin2)) * tmp2(1:np)
 
                             prod = X(mf_integrate)(sys%gr%m, tmp(1:np))
 
@@ -429,6 +492,7 @@ subroutine X(lr_calc_beta) (sh, sys, h, lr, beta)
 
   deallocate(hpol_density)
   deallocate(tmp)
+  deallocate(tmp2)
   deallocate(hvar)
 
   call pop_sub()

@@ -118,11 +118,7 @@ contains
     !% endianness independent).
     !%End
 
-#if defined(HAVE_NETCDF)
-    default = RESTART_NETCDF
-#else
     default = RESTART_BINARY
-#endif
 
     call loct_parse_int(check_inp('RestartFileFormat'), default, parsed)
 #ifndef HAVE_NETCDF

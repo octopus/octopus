@@ -23,6 +23,7 @@
 module pol_lr_m
   use datasets_m
   use em_resp_calc_m
+  use functions_m
   use geometry_m
   use global_m
   use grid_m
@@ -37,6 +38,7 @@ module pol_lr_m
   use messages_m
   use mix_m
   use output_m
+  use resp_pert_m
   use restart_m
   use states_m
   use sternheimer_m
@@ -49,12 +51,18 @@ module pol_lr_m
 
   private
   public :: &
-       pol_lr_run
+       pol_lr_run       
 
   public :: &
     read_wfs
 
+  integer, parameter ::         &
+     PERTURBATION_ELECTRIC = 1, &
+     PERTURBATION_MAGNETIC = 2
+
   type em_resp_t
+    type(resp_pert_t) :: perturbation
+
     integer :: nsigma ! 1: consider only positive values of the frequency
                       ! 2: consider both positive and negative
     integer :: nfactor! 1: only one frequency needed
@@ -62,13 +70,16 @@ module pol_lr_m
     integer :: nomega ! number of frequencies to consider
 
     FLOAT :: eta                     ! small imaginary part to add to the frequency
-    FLOAT :: freq_factor(1:MAX_DIM)  !
+    FLOAT :: freq_factor(MAX_DIM)    !
     FLOAT,      pointer :: omega(:)  ! the frequencies to consider
     type(lr_t), pointer :: lr(:,:,:) ! linear response for (NDIM, nsigma, nomega)
 
     logical :: calc_hyperpol
-    CMPLX   :: alpha(1:MAX_DIM, 1:MAX_DIM, 1:3)          ! the linear polarizability
-    CMPLX   :: beta(1:MAX_DIM, 1:MAX_DIM, 1:MAX_DIM)     ! first hyperpolarizability
+    CMPLX   :: alpha(MAX_DIM, MAX_DIM, 3)        ! the linear polarizability
+    CMPLX   :: beta (MAX_DIM, MAX_DIM, MAX_DIM)  ! first hyperpolarizability
+
+    CMPLX   :: chi_para(MAX_DIM, MAX_DIM, 3)     ! The paramagnetic part of the susceptibility
+    CMPLX   :: chi_dia (MAX_DIM, MAX_DIM, 3)     ! The diamagnetic  part of the susceptibility
 
     logical :: ok(1:3)
   end type em_resp_t
@@ -103,7 +114,8 @@ contains
     em_vars%nfactor = 1
     if(em_vars%calc_hyperpol) em_vars%nfactor=3
 
-    complex_response = (em_vars%eta /= M_ZERO ) .or. wfs_are_complex(sys%st)
+    complex_response = (em_vars%eta /= M_ZERO ) .or. wfs_are_complex(sys%st) &
+       .or. (em_vars%perturbation%resp_type == RESP_PERTURBATION_MAGNETIC)
 
     ALLOCATE(em_vars%lr(1:NDIM, 1:em_vars%nsigma, 1:em_vars%nfactor), NDIM*em_vars%nsigma*em_vars%nfactor)
 
@@ -242,20 +254,20 @@ contains
 
             end if ! .not. fromscratch
             
+
+            call resp_pert_setup_dir(em_vars%perturbation, dir)
             if (wfs_are_complex(sys%st)) then 
               call zsternheimer_solve(sh, sys, h, em_vars%lr(dir, :, ifactor), 2 , &
-                   em_vars%freq_factor(ifactor)*em_vars%omega(iomega) + M_zI * em_vars%eta, &
-                   RESTART_DIR,&
-                   em_rho_tag(em_vars%freq_factor(ifactor)*em_vars%omega(iomega), dir),&
-                   em_wfs_tag(dir, ifactor), have_restart_rho=(ierr==0),&
-                   vext = sys%gr%m%x(:, dir))
+                 em_vars%freq_factor(ifactor)*em_vars%omega(iomega) + M_zI * em_vars%eta, &
+                 em_vars%perturbation, RESTART_DIR,&
+                 em_rho_tag(em_vars%freq_factor(ifactor)*em_vars%omega(iomega), dir),&
+                 em_wfs_tag(dir, ifactor), have_restart_rho=(ierr==0))
             else
               call dsternheimer_solve(sh, sys, h, em_vars%lr(dir, :, ifactor), 2 , &
-                   em_vars%freq_factor(ifactor)*em_vars%omega(iomega), &
-                   RESTART_DIR,&
-                   em_rho_tag(em_vars%freq_factor(ifactor)*em_vars%omega(iomega), dir),&
-                   em_wfs_tag(dir, ifactor), have_restart_rho=(ierr==0), &
-                   vext = sys%gr%m%x(:, dir))
+                 em_vars%freq_factor(ifactor)*em_vars%omega(iomega), &
+                 em_vars%perturbation, RESTART_DIR,&
+                 em_rho_tag(em_vars%freq_factor(ifactor)*em_vars%omega(iomega), dir),&
+                 em_wfs_tag(dir, ifactor), have_restart_rho=(ierr==0))
             end if
             
             em_vars%ok(ifactor) = em_vars%ok(ifactor) .and. sternheimer_has_converged(sh)
@@ -265,28 +277,40 @@ contains
         end do ! dir
       end do ! ifactor
       
-      
-      !calculate polarizability
-      do ifactor = 1, em_vars%nfactor
-        if(wfs_are_complex(sys%st)) then 
-          call zlr_calc_polarizability(sys, em_vars%lr(:,:, ifactor), em_vars%alpha(:,:, ifactor))
-        else
-          call dlr_calc_polarizability(sys, em_vars%lr(:,:, ifactor), em_vars%alpha(:,:, ifactor))
-        end if          
-      end do
+      if(em_vars%perturbation%resp_type == RESP_PERTURBATION_ELECTRIC) then
+        ! calculate polarizability
+        do ifactor = 1, em_vars%nfactor
+          if(wfs_are_complex(sys%st)) then 
+            call zlr_calc_polarizability(sys, em_vars%lr(:,:, ifactor), em_vars%alpha(:,:, ifactor))
+          else
+            call dlr_calc_polarizability(sys, em_vars%lr(:,:, ifactor), em_vars%alpha(:,:, ifactor))
+          end if
+        end do
         
-      !calculate hyperpolarizability
-      if(em_vars%calc_hyperpol) then           
-        if(wfs_are_complex(sys%st)) then 
-          call zlr_calc_beta(sh, sys, h, em_vars%lr(:,:,:), em_vars%beta)
-        else
-          call dlr_calc_beta(sh, sys, h, em_vars%lr(:,:,:), em_vars%beta)
+        ! calculate hyperpolarizability
+        if(em_vars%calc_hyperpol) then
+          if(wfs_are_complex(sys%st)) then
+            call zlr_calc_beta(sh, sys, h, em_vars%lr(:,:,:), em_vars%perturbation, em_vars%beta)
+          else
+            call dlr_calc_beta(sh, sys, h, em_vars%lr(:,:,:), em_vars%perturbation, em_vars%beta)
+          end if
         end if
-      end if
       
+      else if(em_vars%perturbation%resp_type == RESP_PERTURBATION_MAGNETIC) then
+        do ifactor = 1, em_vars%nfactor
+          if(wfs_are_complex(sys%st)) then 
+            call zlr_calc_susceptibility(sys, em_vars%lr(:,:, ifactor), em_vars%perturbation, &
+               em_vars%chi_para(:,:, ifactor), em_vars%chi_dia(:,:, ifactor))
+          else
+            call dlr_calc_susceptibility(sys, em_vars%lr(:,:, ifactor), em_vars%perturbation, &
+               em_vars%chi_para(:,:, ifactor), em_vars%chi_dia(:,:, ifactor))
+          end if
+        end do
+      end if
+
       call em_resp_output(sys%st, sys%gr, sys%outp, em_vars, iomega)
 
-    end do ! nomega
+    end do
 
     do dir = 1, ndim
       do sigma = 1, em_vars%nsigma
@@ -297,6 +321,7 @@ contains
     end do
 
     call sternheimer_end(sh)
+    call resp_pert_end(em_vars%perturbation)
 
     deallocate(em_vars%omega, em_vars%lr)
     call states_deallocate_wfns(sys%st)
@@ -388,25 +413,30 @@ contains
       call loct_parse_float(check_inp('PolEta'), M_ZERO, em_vars%eta)
       em_vars%eta = em_vars%eta * units_inp%energy%factor
 
-      !%Variable PolHyper
-      !%Type block
-      !%Section Linear Response::Polarizabilities
-      !%Description
-      !% This blocks describes the multiples of the frequency used for
-      !% the dynamic hyperpolarizability.
-      !%End
+      ! reset the values of these variables
+      em_vars%calc_hyperpol = .false.
+      em_vars%freq_factor(1:MAX_DIM) = M_ONE
 
-      if (loct_parse_block(check_inp('PolHyper'), blk) == 0) then 
-        call loct_parse_block_float(blk, 0, 0, em_vars%freq_factor(1))
-        call loct_parse_block_float(blk, 0, 1, em_vars%freq_factor(2))
-        call loct_parse_block_float(blk, 0, 2, em_vars%freq_factor(3))
+      call resp_pert_init(em_vars%perturbation, sys%gr, sys%geo)
 
-        call loct_parse_block_end(blk)
+      if(em_vars%perturbation%resp_type == PERTURBATION_ELECTRIC) then
+        !%Variable PolHyper
+        !%Type block
+        !%Section Linear Response::Polarizabilities
+        !%Description
+        !% This blocks describes the multiples of the frequency used for
+        !% the dynamic hyperpolarizability.
+        !%End
 
-        em_vars%calc_hyperpol = .true.
-      else
-        em_vars%calc_hyperpol = .false.
-        em_vars%freq_factor(1:MAX_DIM) = M_ONE
+        if (loct_parse_block(check_inp('PolHyper'), blk) == 0) then 
+          call loct_parse_block_float(blk, 0, 0, em_vars%freq_factor(1))
+          call loct_parse_block_float(blk, 0, 1, em_vars%freq_factor(2))
+          call loct_parse_block_float(blk, 0, 2, em_vars%freq_factor(3))
+          
+          call loct_parse_block_end(blk)
+
+          em_vars%calc_hyperpol = .true.
+        end if
       end if
 
       call pop_sub()
@@ -417,11 +447,17 @@ contains
     ! ---------------------------------------------------------
     subroutine info()
 
-      if(em_vars%calc_hyperpol) then 
-        write(message(1),'(a)') 'Linear Reponse First Order Hyperpolarizabilities'
-        call messages_print_stress(stdout, trim(message(1)))
-      else 
-        write(message(1),'(a)') 'Linear Reponse Polarizabilities'
+      call resp_pert_info(em_vars%perturbation, stdout)
+      if(em_vars%perturbation%resp_type == RESP_PERTURBATION_ELECTRIC) then
+        if(em_vars%calc_hyperpol) then 
+          write(message(1),'(a)') 'Linear Reponse First Order Hyperpolarizabilities'
+          call messages_print_stress(stdout, trim(message(1)))
+        else 
+          write(message(1),'(a)') 'Linear Reponse Polarizabilities'
+          call messages_print_stress(stdout, trim(message(1)))
+        end if
+      else
+        write(message(1),'(a)') 'Magnetic susceptibilities'
         call messages_print_stress(stdout, trim(message(1)))
       end if
 
@@ -510,8 +546,13 @@ contains
            em_vars%freq_factor(ifactor)*em_vars%omega(iomega)/units_out%energy%factor))
       call io_mkdir(trim(dirname))
 
-      call out_polarizability()
-      if(em_vars%calc_hyperpol) call out_hyperpolarizability()
+      if(em_vars%perturbation%resp_type == RESP_PERTURBATION_ELECTRIC) then
+        call out_polarizability()
+        if(em_vars%calc_hyperpol) call out_hyperpolarizability()
+      else if(em_vars%perturbation%resp_type == RESP_PERTURBATION_MAGNETIC) then
+        call out_susceptibility()
+      end if
+
       call out_projections()
 
       write(dirname, '(a, a)') 'linear/freq_',trim(freq2str(&
@@ -554,7 +595,6 @@ contains
     ! ---------------------------------------------------------
     subroutine out_polarizability()
       FLOAT :: cross(MAX_DIM, MAX_DIM), crossp(MAX_DIM, MAX_DIM)
-      FLOAT :: msp
       FLOAT :: average, anisotropy
       integer :: j
 
@@ -566,19 +606,9 @@ contains
       if(NDIM.ne.1) write(iunit, '(a,i1)', advance='no') '^', NDIM
       write(iunit, '(a)') ']'
 
-
-      msp = M_ZERO
-      do j = 1, NDIM
-        write(iunit, '(3f12.6)') real(em_vars%alpha(j, 1:NDIM, ifactor)) / units_out%length%factor**NDIM
-        msp = msp + real(em_vars%alpha(j, j, ifactor))
-      end do
-      msp = msp / M_THREE
-
-      write(iunit, '(a, f12.6)')  'Mean static polarizability', msp &
-        / units_out%length%factor**NDIM
+      call out_tensor(iunit, em_vars%alpha(:,:, ifactor), units_out%length%factor**NDIM)
 
       call io_close(iunit)
-
 
       ! CROSS SECTION (THE COMPLEX PART OF POLARIZABILITY)
       if( wfs_are_complex(st)) then 
@@ -604,6 +634,63 @@ contains
       end if
 
     end subroutine out_polarizability
+
+
+    ! ---------------------------------------------------------
+    subroutine out_susceptibility()
+      iunit = io_open(trim(dirname)//'/susceptibility', action='write')
+
+      if (.not.em_vars%ok(ifactor)) write(iunit, '(a)') "# WARNING: not converged"
+
+      write(iunit, '(2a)') '# Paramagnetic contribution to the susceptibility tensor [ppm a.u.]'
+      call out_tensor(iunit, em_vars%chi_para(:,:, ifactor), CNST(1e-6))
+      write(iunit, '(1x)')
+
+      write(iunit, '(2a)') '# Diamagnetic contribution to the susceptibility tensor [ppm a.u.]'
+      call out_tensor(iunit, em_vars%chi_dia(:,:, ifactor), CNST(1e-6))
+      write(iunit, '(1x)')
+
+      write(iunit, '(2a)') '# Total susceptibility tensor [ppm a.u.]'
+      call out_tensor(iunit, em_vars%chi_para(:,:, ifactor) + em_vars%chi_dia(:,:, ifactor), CNST(1e-6))
+      write(iunit, '(1x)')
+
+      write(iunit, '(a)') hyphens
+
+      write(iunit, '(2a)') '# Paramagnetic contribution to the susceptibility tensor [ppm cgs / mol]'
+      call out_tensor(iunit, em_vars%chi_para(:,:, ifactor), M_ONE/CNST(8.9238878e-2)*CNST(1e-6))
+      write(iunit, '(1x)')
+
+      write(iunit, '(2a)') '# Diamagnetic contribution to the susceptibility tensor [ppm cgs / mol]'
+      call out_tensor(iunit, em_vars%chi_dia(:,:, ifactor), M_ONE/CNST(8.9238878e-2)*CNST(1e-6))
+      write(iunit, '(1x)')
+
+      write(iunit, '(2a)') '# Total susceptibility tensor [ppm cgs / mol]'
+      call out_tensor(iunit, em_vars%chi_para(:,:, ifactor) + em_vars%chi_dia(:,:, ifactor), M_ONE/CNST(8.9238878e-2)*CNST(1e-6))
+      write(iunit, '(1x)')
+
+      call io_close(iunit)      
+    end subroutine out_susceptibility
+
+
+    ! ---------------------------------------------------------
+    subroutine out_tensor(iunit, tensor, factor)
+      integer, intent(in) :: iunit
+      CMPLX,   intent(in) :: tensor(:,:)
+      FLOAT,   intent(in) :: factor
+
+      FLOAT :: trace
+      integer :: j
+
+      trace = M_z0
+      do j = 1, NDIM
+        write(iunit, '(3f12.6)') real(tensor(j, 1:NDIM)) / factor
+        trace = trace + real(tensor(j, j))
+      end do
+      trace = trace / M_THREE
+
+      write(iunit, '(a, f12.6)')  'Isotropic average', trace / factor
+      
+    end subroutine out_tensor
 
 
     ! ---------------------------------------------------------
@@ -772,6 +859,7 @@ contains
     end subroutine out_wavefunctions
 
   end subroutine em_resp_output
+
   
 #include "undef.F90"
 #include "complex.F90"

@@ -49,7 +49,7 @@ subroutine X(restart_read_function)(dir, filename, m, f, ierr)
   ! try first to load plain binary files
   call X(input_function) (trim(dir)//'/'//trim(filename), m, f(:), ierr, is_tmp=.true.)
 
-  ! if we do not succeed try NetCDF
+  ! if we do not succeed try Binary
   if(ierr>0) call X(input_function) (trim(dir)//'/'//trim(filename)//'.obf', m, f(:), ierr, is_tmp=.true.)
 
   ! if we do not succeed try NetCDF

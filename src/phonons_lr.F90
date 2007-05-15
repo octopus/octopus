@@ -38,9 +38,9 @@ module phonons_lr_m
   use messages_m
   use output_m
   use phonons_m
+  use resp_pert_m
   use restart_m
   use specie_m
-  use specie_pot_m
   use states_m
   use sternheimer_m
   use string_m
@@ -61,18 +61,13 @@ contains
     type(hamiltonian_t),    intent(inout) :: h
     logical,                intent(inout) :: fromScratch
 
-    type(sternheimer_t)     :: sh
-
-    type(lr_t) :: lr(1:1)
-
-    type(phonons_t) :: ph
+    type(sternheimer_t) :: sh
+    type(lr_t)          :: lr(1:1)
+    type(phonons_t)     :: ph
+    type(resp_pert_t)   :: perturbation
 
     integer :: iatom, idir, jatom, jdir, idim, ik
-
-    FLOAT, allocatable :: dv(:, :, :), d2v(:, :, :, :)
-
     FLOAT :: total_mass, factor
-
     FLOAT, allocatable :: tmp(:)
 
 
@@ -81,46 +76,31 @@ contains
     call push_sub('phonons_lr.phonons_lr_run')
 
     call parse_input()
-
     call read_wfs(sys%st, sys%gr, sys%geo, .false.)
 
     message(1) = 'Info: Setting up Hamiltonian for linear response'
     call write_info(1)
 
     call system_h_setup(sys, h)
-
     call sternheimer_init(sh, sys, h, "Phn")
-
     call phonons_init(ph, sys)
 
     call lr_init(lr(1))
     call lr_allocate(lr(1), sys%st, sys%gr%m)
-
-    ALLOCATE(dv(1:sys%NP_PART, 1:sys%NDIM, sys%geo%natoms), sys%NP_PART*sys%NDIM*sys%geo%natoms)
-    ALLOCATE(d2v(1:sys%NP, 1:sys%NDIM, 1:sys%NDIM, sys%geo%natoms), sys%NP*sys%NDIM*sys%NDIM*sys%geo%natoms)
+    call resp_pert_init(perturbation, RESP_PERTURBATION_DISPLACE, sys%gr, sys%geo)
 
     ALLOCATE(tmp(1:sys%NP), sys%NP)
 
     !CALCULATE
-
-    !calculate the derivative of the external potential with respect to the forces
-    do iatom = 1, sys%geo%natoms
-
-      !first derivative
-
-      call specie_get_glocal(sys%geo%atom(iatom)%spec, sys%gr, sys%geo%atom(iatom)%x, dv(:, :, iatom))
-      call specie_get_g2local(sys%geo%atom(iatom)%spec, sys%gr, sys%geo%atom(iatom)%x, d2v(:, :, :, iatom))
-      
-      !the non-local part: tarea para la casa
-    end  do
 
     call build_dm()
 
     do iatom = 1, sys%geo%natoms
       do idir = 1, sys%NDIM
 
-        call dsternheimer_solve(sh, sys, h, lr, 1, M_ZERO, RESTART_DIR, phn_rho_tag(iatom, idir), phn_wfs_tag(iatom, idir), &
-             vext= dv(1:sys%NP, idir, iatom))
+        stop
+        call dsternheimer_solve(sh, sys, h, lr, 1, M_ZERO, perturbation, &
+           RESTART_DIR, phn_rho_tag(iatom, idir), phn_wfs_tag(iatom, idir))
 
         do jatom = 1, sys%geo%natoms
           do jdir = 1, sys%NDIM
@@ -129,7 +109,7 @@ contains
             tmp(1:sys%NP) = M_ZERO
 
             do ik = 1, sys%st%d%nspin
-              tmp(1:sys%NP) = tmp(1:sys%NP) + dv(1:sys%NP, jdir, jatom)*lr(1)%ddl_rho(1:sys%NP, ik)
+              tmp(1:sys%NP) = tmp(1:sys%NP) + perturbation%dHdR(1:sys%NP, jdir, jatom)*lr(1)%ddl_rho(1:sys%NP, ik)
             end do
 
             ph%dm(phonons_index(ph, iatom, idir), phonons_index(ph, jatom, jdir)) = &
@@ -191,7 +171,7 @@ contains
 
     !DESTRUCT
 
-    deallocate(dv, d2v, tmp)
+    deallocate(tmp)
 
     call lr_dealloc(lr(1))
     
@@ -263,7 +243,7 @@ contains
                 
                 tmp(1:sys%NP) = M_ZERO
                 do ik = 1, sys%st%d%nspin
-                  tmp(1:sys%NP) = tmp(1:sys%NP) + d2v(1:sys%NP, idir, jdir, iatom)*sys%st%rho(1:sys%NP, ik)
+                  tmp(1:sys%NP) = tmp(1:sys%NP) + perturbation%d2HdR2(1:sys%NP, idir, jdir, iatom)*sys%st%rho(1:sys%NP, ik)
                 end do
                
                 ac = ac + dmf_integrate(sys%gr%m, tmp(:))

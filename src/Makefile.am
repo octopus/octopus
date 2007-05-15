@@ -62,7 +62,7 @@ octopus_SOURCES = $(core_SRCS) \
 	scf.F90 gs.F90 unocc.F90 \
 	static_pol.F90 geom_opt.F90 phonons.F90 phonons_fd.F90 \
 	td_exp_split.F90 td_exp.F90 td_rti.F90 td_write.F90 td.F90 filters.F90 opt_control.F90 \
-	casida.F90 td_transport.F90 sternheimer.F90 em_resp_calc.F90 em_resp.F90 vdW.F90 \
+	casida.F90 td_transport.F90 response_perturbations.F90 sternheimer.F90 em_resp_calc.F90 em_resp.F90 vdW.F90 \
 	phonons_lr.F90 pulpo.F90 \
 	run.F90 main.F90
 
@@ -293,6 +293,7 @@ states.o: global.h states_kpoints.F90 states_inc.F90
 static_pol.o: global.h
 submesh.o: global.h submesh_inc.F90
 em_resp.o: global.h em_resp_inc.F90
+response_perturbations_inc.F90: response_perturbations.F90
 stencil_cube.o: global.h
 stencil_star.o: global.h
 stencil_variational.o: global.h

@@ -32,6 +32,7 @@ module em_resp_calc_m
   use mesh_function_m
   use messages_m
   use poisson_m
+  use resp_pert_m
   use states_m
   use sternheimer_m
   use system_m
@@ -40,17 +41,19 @@ module em_resp_calc_m
   implicit none
 
   private
-  public ::                  &
-    lr_calc_current,         &
-    dlr_calc_elf,            &
-    zlr_calc_elf,            &
-    dlr_calc_polarizability, &
-    zlr_calc_polarizability, &
-    dlr_calc_beta,           &
-    zlr_calc_beta,           &
-    freq2str,                &
-    em_wfs_tag,              &
-    em_rho_tag
+  public ::                        &
+     lr_calc_current,              &
+     dlr_calc_elf,                 &
+     zlr_calc_elf,                 &
+     dlr_calc_polarizability,      &
+     zlr_calc_polarizability,      &
+     dlr_calc_susceptibility,      &
+     zlr_calc_susceptibility,      &
+     dlr_calc_beta,                &
+     zlr_calc_beta,                &
+     freq2str,                     &
+     em_wfs_tag,                   &
+     em_rho_tag
 
 contains
 
