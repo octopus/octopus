@@ -62,7 +62,7 @@ octopus_SOURCES = $(core_SRCS) \
 	scf.F90 gs.F90 unocc.F90 \
 	static_pol.F90 geom_opt.F90 phonons.F90 phonons_fd.F90 \
 	td_exp_split.F90 td_exp.F90 td_rti.F90 td_write.F90 td.F90 filters.F90 opt_control.F90 \
-	casida.F90 td_transport.F90 response_perturbations.F90 sternheimer.F90 em_resp_calc.F90 em_resp.F90 vdW.F90 \
+	casida.F90 td_transport.F90 resp_pert.F90 sternheimer.F90 em_resp_calc.F90 em_resp.F90 vdW.F90 \
 	phonons_lr.F90 pulpo.F90 \
 	run.F90 main.F90
 
@@ -87,7 +87,7 @@ noinst_HEADERS = \
 	linalg_basic_blas.F90 linalg_basic_int.F90 linalg_adv_lapack.F90 \
 	linear_response_inc.F90 linear_response_out.F90 linear_solver_inc.F90\
 	submesh_inc.F90 \
-	sternheimer_inc.F90 em_resp_inc.F90 unocc_inc.F90 casida_inc.F90 \
+	sternheimer_inc.F90 em_resp_inc.F90 resp_pert_inc.F90 unocc_inc.F90 casida_inc.F90 \
 	excited_states_inc.F90 xc_OEP_kernel_inc.F90 em_resp_calc_inc.F90 \
 	opt_control_read.F90 opt_control_aux.F90 opt_control_defstates.F90 \
 	opt_control_propagation.F90 opt_control_finalcheck.F90 opt_control_iter.F90 \
@@ -293,7 +293,7 @@ states.o: global.h states_kpoints.F90 states_inc.F90
 static_pol.o: global.h
 submesh.o: global.h submesh_inc.F90
 em_resp.o: global.h em_resp_inc.F90
-response_perturbations_inc.F90: response_perturbations.F90
+resp_pert_inc.F90: resp_pert.F90
 stencil_cube.o: global.h
 stencil_star.o: global.h
 stencil_variational.o: global.h
