@@ -132,7 +132,7 @@ contains
     call write_info(1)
 
     if(present(hermitian)) then 
-      if(.not. hermitian) then 
+      if(.not. hermitian) then
         call linear_solver_init(this%solver, sys%gr, prefix, def_solver=LS_BICGSTAB)
       else
         call linear_solver_init(this%solver, sys%gr, prefix, def_solver=LS_CG)

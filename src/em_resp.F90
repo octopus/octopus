@@ -110,12 +110,13 @@ contains
 
     call parse_input()
 
-    em_vars%nsigma = 2  ! positive and negative values of the frequency must be considered
     em_vars%nfactor = 1
     if(em_vars%calc_hyperpol) em_vars%nfactor=3
 
-    complex_response = (em_vars%eta /= M_ZERO ) .or. wfs_are_complex(sys%st) &
-       .or. (em_vars%perturbation%resp_type == RESP_PERTURBATION_MAGNETIC)
+    em_vars%nsigma = 1  ! positive and negative values of the frequency must be considered
+    if(em_vars%calc_hyperpol.or.em_vars%nomega > 1.or.em_vars%omega(1).ne.M_ZERO) em_vars%nsigma = 2
+
+    complex_response = (em_vars%eta /= M_ZERO ) .or. wfs_are_complex(sys%st)
 
     ALLOCATE(em_vars%lr(1:NDIM, 1:em_vars%nsigma, 1:em_vars%nfactor), NDIM*em_vars%nsigma*em_vars%nfactor)
 
@@ -126,6 +127,12 @@ contains
     message(1) = 'Info: Setting up Hamiltonian for linear response'
     call write_info(1)
     call system_h_setup(sys, h)
+    
+    ! The magnetic perturbation does not change the density
+    ! WARNING: This will probably not work if spin-orbit coupling is on
+    if(em_vars%perturbation%resp_type == RESP_PERTURBATION_MAGNETIC) then
+      h%ip_app = .true.
+    end if
 
     call sternheimer_init(sh, sys, h, "Pol", hermitian = wfs_are_real(sys%st))
 
@@ -177,15 +184,15 @@ contains
 
           have_to_calculate = .true.
           
-          !if this frequency is zero and this is not the first
-          !iteration we do not have to do anything
+          ! if this frequency is zero and this is not the first
+          ! iteration we do not have to do anything
           if( iomega > 1 .and. em_vars%freq_factor(ifactor) == M_ZERO) then 
             have_to_calculate = .false. 
           end if
             
           if(ifactor > 1) then 
 
-            !if this frequency is the same as the previous one, just copy it
+            ! if this frequency is the same as the previous one, just copy it
             if( have_to_calculate .and. &
               em_vars%freq_factor(ifactor)*em_vars%omega(iomega)==&
               em_vars%freq_factor(ifactor-1)*em_vars%omega(iomega) ) then 
@@ -197,7 +204,7 @@ contains
               
             end if
 
-            !if this frequency is minus the previous one, copy it inverted
+            ! if this frequency is minus the previous one, copy it inverted
             if( have_to_calculate .and. & 
                  em_vars%freq_factor(ifactor) == -em_vars%freq_factor(ifactor-1) ) then 
               
@@ -257,13 +264,13 @@ contains
 
             call resp_pert_setup_dir(em_vars%perturbation, dir)
             if (wfs_are_complex(sys%st)) then 
-              call zsternheimer_solve(sh, sys, h, em_vars%lr(dir, :, ifactor), 2 , &
+              call zsternheimer_solve(sh, sys, h, em_vars%lr(dir, :, ifactor), em_vars%nsigma , &
                  em_vars%freq_factor(ifactor)*em_vars%omega(iomega) + M_zI * em_vars%eta, &
                  em_vars%perturbation, RESTART_DIR,&
                  em_rho_tag(em_vars%freq_factor(ifactor)*em_vars%omega(iomega), dir),&
                  em_wfs_tag(dir, ifactor), have_restart_rho=(ierr==0))
             else
-              call dsternheimer_solve(sh, sys, h, em_vars%lr(dir, :, ifactor), 2 , &
+              call dsternheimer_solve(sh, sys, h, em_vars%lr(dir, :, ifactor), em_vars%nsigma , &
                  em_vars%freq_factor(ifactor)*em_vars%omega(iomega), &
                  em_vars%perturbation, RESTART_DIR,&
                  em_rho_tag(em_vars%freq_factor(ifactor)*em_vars%omega(iomega), dir),&

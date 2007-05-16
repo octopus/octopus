@@ -293,8 +293,8 @@ subroutine X(lr_calc_susceptibility)(sys, lr, perturbation, chi_para, chi_dia)
   CMPLX,                  intent(out)   :: chi_para(:,:), chi_dia(:,:)
 
   integer :: ik, ist, dir1, dir2, j
-  CMPLX :: d, trace
-  CMPLX, allocatable  :: aux1(:), aux2(:)
+  R_TYPE :: d, trace
+  R_TYPE, allocatable  :: aux1(:), aux2(:)
 
   call push_sub('em_resp_calc_inc.lr_calc_susceptibility')
 
@@ -314,13 +314,10 @@ subroutine X(lr_calc_susceptibility)(sys, lr, perturbation, chi_para, chi_dia)
         do dir2 = 1, sys%gr%sb%dim
 
           ! first the paramagnetic term
-          call zresp_pert_apply(perturbation, sys%gr, lr(dir2, 1)%zdl_psi(:, 1, ist, ik), aux1)
+          call X(resp_pert_apply) (perturbation, sys%gr, lr(dir2, 1)%X(dl_psi)(:, 1, ist, ik), aux1)
           aux2(1:sys%NP) = sys%st%X(psi)(1:sys%NP, 1, ist, ik)
-          chi_para(dir1, dir2) = chi_para(dir1, dir2) + d*zmf_dotp(sys%gr%m, aux2, aux1)
-
-          ! I guess that the following term is equal to the previous one...
-          call zresp_pert_apply(perturbation, sys%gr, sys%st%zpsi(:, 1, ist, ik), aux1)
-          chi_para(dir1, dir2) = chi_para(dir1, dir2) + d*zmf_dotp(sys%gr%m, lr(dir2, 1)%zdl_psi(:, 1, ist, ik), aux1)
+          trace = X(mf_dotp)(sys%gr%m, aux2, aux1)
+          chi_para(dir1, dir2) = chi_para(dir1, dir2) + d*(trace + R_CONJ(trace))
 
           ! now the diamagnetic term
           if(dir1 == dir2) then
@@ -332,7 +329,7 @@ subroutine X(lr_calc_susceptibility)(sys, lr, perturbation, chi_para, chi_dia)
 
           aux1(1:sys%NP) = aux1(1:sys%NP) * sys%st%X(psi)(1:sys%NP, 1, ist, ik)
           aux2(1:sys%NP) = sys%st%X(psi)(1:sys%NP, 1, ist, ik)
-          chi_dia(dir1, dir2) = chi_dia(dir1, dir2) + d*zmf_dotp(sys%gr%m, aux2, aux1) / M_FOUR
+          chi_dia(dir1, dir2) = chi_dia(dir1, dir2) + d*X(mf_dotp)(sys%gr%m, aux2, aux1) / M_FOUR
         end do
       end do
     end do
@@ -341,8 +338,14 @@ subroutine X(lr_calc_susceptibility)(sys, lr, perturbation, chi_para, chi_dia)
   deallocate(aux1)
   deallocate(aux2)
 
+  ! We now add the minus sign from the definition of the suceptibility (chi = -d^2 E /d B^2)
   chi_para(:,:) = -chi_para(:,:)/P_C**2
   chi_dia (:,:) = -chi_dia (:,:)/P_C**2
+
+#if defined(R_TREAL)
+  ! When using real wave-functions there is an extra factor of (-i)*(-i) = -1
+  chi_para(:,:) = -chi_para(:,:)
+#endif
 
   call pop_sub()
 
