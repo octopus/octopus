@@ -29,8 +29,8 @@ subroutine X(resp_pert_apply) (this, gr, f_in, f_out)
 
   select case(this%resp_type)
   case(RESP_PERTURBATION_ELECTRIC)
-    f_out(1:NP) = f_in(1:NP) * gr%m%x(:, this%dir)
-    
+    f_out(1:NP) = f_in(1:NP) * gr%m%x(1:NP, this%dir)
+
   case(RESP_PERTURBATION_MAGNETIC)
     ! I believe this should be NP and not NP_PART
     ALLOCATE(lf(gr%m%np_part, gr%sb%dim), gr%m%np_part*gr%sb%dim)

@@ -293,7 +293,7 @@ states.o: global.h states_kpoints.F90 states_inc.F90
 static_pol.o: global.h
 submesh.o: global.h submesh_inc.F90
 em_resp.o: global.h em_resp_inc.F90
-resp_pert_inc.F90: resp_pert.F90
+resp_pert.o: resp_pert_inc.F90
 stencil_cube.o: global.h
 stencil_star.o: global.h
 stencil_variational.o: global.h
