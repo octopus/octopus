@@ -69,7 +69,6 @@ module run_prog_m
     M_TD_TRANSPORT       =  10,  &
     M_VDW                =  11,  &
     M_PHONONS_LR         =  12,  &
-    M_BO_MD              =  98,  &
     M_PULPO_A_FEIRA      =  99
 
   type(system_t)      :: sys

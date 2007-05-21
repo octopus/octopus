@@ -18,17 +18,29 @@
 !! $Id$
 
 ! ---------------------------------------------------------
-subroutine td_init(gr, td, st, outp)
-  type(td_t),     intent(out)   :: td
-  type(grid_t),   intent(inout) :: gr
-  type(states_t), intent(inout) :: st
-  type(output_t), intent(in)    :: outp
+subroutine td_init(sys, h, td)
+  type(system_t),        intent(inout) :: sys
+  type(hamiltonian_t),   intent(inout) :: h
+  type(td_t),            intent(out)   :: td
 
   integer :: dummy
 
   call push_sub('td_init.td_init')
 
   td%iter = 0
+
+  !%Variable TDDynamics
+  !%Type integer
+  !%Default 1
+  !%Section Time Dependent::Propagation
+  !%Description
+  !% Type of dynamics.
+  !%Option ehrenfest 1
+  !% Ehrenfest dynamics
+  !%Option bo 2
+  !% Born Openheimer 
+  !%End
+  call loct_parse_int(check_inp('TDDynamics'), EHRENFEST, td%dynamics)
 
   !%Variable TDTimeStep
   !%Type float
@@ -62,12 +74,12 @@ subroutine td_init(gr, td, st, outp)
   end if
 
   ! Initialize the kick (if optical spectrum calculations are to be performed)
-  call kick_init(td%kick, st%d%nspin)
+  call kick_init(td%kick, sys%st%d%nspin)
 
   ! now the photoelectron stuff
 #if !defined(DISABLE_PES) && defined(HAVE_FFT)
   call loct_parse_int(check_inp('AbsorbingBoundaries'), 0, dummy)
-  call PES_init(td%PESv, gr%m, gr%sb, st, dummy, outp%iter)
+  call PES_init(td%PESv, sys%gr%m, sys%gr%sb, sys%st, dummy, sys%outp%iter)
 #endif
 
   !%Variable MoveIons
@@ -115,7 +127,10 @@ subroutine td_init(gr, td, st, outp)
   call loct_parse_int(check_inp('TDFastEpotGeneration'), 1, td%epot_regenerate)
   if(td%epot_regenerate < 1) td%epot_regenerate = 1
 
-  call td_rti_init(gr, st, td%tr)
+  call td_rti_init(sys%gr, sys%st, td%tr)
+  if(td%dynamics == BO)  call scf_init(sys%gr, sys%geo, td%scf, sys%st, h)
+
+  call loct_parse_float(check_inp('TDMu'), CNST(1.0), td%mu)
 
   call pop_sub()
 end subroutine td_init
@@ -132,6 +147,8 @@ subroutine td_end(td)
 #endif
   call td_rti_end(td%tr)  ! clean the evolution method
 
+  if(td%dynamics == BO) call scf_end(td%scf)
+  
   call pop_sub()
 end subroutine td_end
 

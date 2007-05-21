@@ -226,7 +226,7 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine scf_run(scf, gr, geo, st, ks, h, outp, gs_run)
+  subroutine scf_run(scf, gr, geo, st, ks, h, outp, gs_run, verbose)
     type(scf_t),         intent(inout) :: scf
     type(grid_t),        intent(inout) :: gr
     type(geometry_t),    intent(inout) :: geo
@@ -235,6 +235,7 @@ contains
     type(hamiltonian_t), intent(inout) :: h
     type(output_t),      intent(in)    :: outp
     logical, optional,   intent(in)    :: gs_run
+    logical, optional,   intent(in)    :: verbose
 
     type(lcao_t) :: lcao_data
 
@@ -244,7 +245,7 @@ contains
     FLOAT, allocatable :: vout(:,:,:), vin(:,:,:), vnew(:,:,:)
     FLOAT, allocatable :: tmp(:)
     character(len=8) :: dirname
-    logical :: finish, forced_finish, gs_run_
+    logical :: finish, forced_finish, gs_run_, verbose_
 
     call push_sub('scf.scf_run')
 
@@ -253,6 +254,9 @@ contains
     else 
       gs_run_ = .true.
     end if
+    
+    verbose_ = .true.
+    if(present(verbose)) verbose_ = verbose
 
     if(scf%lcao_restricted) then
       call lcao_init(gr, geo, lcao_data, st, h)
@@ -345,7 +349,7 @@ contains
         (scf%conv_abs_ev   > M_ZERO .and. scf%abs_ev   <= scf%conv_abs_ev)   .or. &
         (scf%conv_rel_ev   > M_ZERO .and. scf%rel_ev   <= scf%conv_rel_ev)
 
-      call scf_write_iter
+      if(verbose_) call scf_write_iter
 
       ! mixing
       select case (scf%what2mix)
@@ -377,9 +381,11 @@ contains
       end if
 
       if(finish) then
-        write(message(1), '(a, i4, a)') 'Info: SCF converged in ', iter, ' iterations'
-        write(message(2), '(a)')        '' 
-        call write_info(2)
+        if(verbose_) then
+          write(message(1), '(a, i4, a)') 'Info: SCF converged in ', iter, ' iterations'
+          write(message(2), '(a)')        '' 
+          call write_info(2)
+        end if
         if(scf%lcao_restricted) call lcao_end(lcao_data, st%nst)
         call profiling_out(C_PROFILING_SCF_CYCLE)
         exit
@@ -427,10 +433,6 @@ contains
 
     ! calculate forces
     call epot_forces(gr, geo, h%ep, st)
-
-    ! calculate momentum of KS states
-    write(message(1),'(a)') 'Info: Calculating momentum'
-    call write_info(1)
 
     if (st%d%wfs_type == M_REAL) then
       call dstates_calc_momentum(gr, st)
@@ -622,9 +624,6 @@ contains
           call write_info(1, iunit)
         end if
       end if
-
-      write(message(1),'(a)') 'Info: Calculating angular momentum'
-      call write_info(1)
 
       ALLOCATE(ang (st%st_start:st%st_end, st%d%nik, 3), (st%st_end - st%st_start + 1)*st%d%nik*3)
       ALLOCATE(ang2(st%st_start:st%st_end, st%d%nik), (st%st_end - st%st_start + 1)*st%d%nik)

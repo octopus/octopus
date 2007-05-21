@@ -34,6 +34,7 @@ module timedep_m
   use lib_oct_m
   use output_m
   use profiling_m
+  use scf_m
   use states_m
   use restart_m
   use system_m
@@ -63,8 +64,13 @@ module timedep_m
     NORMAL_VERLET   = 3,  &
     VELOCITY_VERLET = 4
 
+  integer, parameter ::   &
+       EHRENFEST = 1,  &
+       BO = 2
+  
   type td_t
     type(td_rti_t)    :: tr             ! contains the details of the time evolution
+    type(scf_t)       :: scf
     FLOAT             :: dt             ! time step
     integer           :: max_iter       ! maximum number of iterations to perform
     integer           :: iter           ! the actual iteration
@@ -72,13 +78,15 @@ module timedep_m
     ! regenerated *exactly*.
     integer           :: move_ions      ! how do we move the ions?
     logical           :: recalculate_gs ! Recalculate ground-state along the evolution.
-
+    
     ! The *kick* used in "linear response in the time domain" calculations.
     type(kick_t)   :: kick
 
 #if !defined(DISABLE_PES) && defined(HAVE_FFT)
     type(PES_t) :: PESv
 #endif
+    FLOAT             :: mu
+    integer           :: dynamics
   end type td_t
 
 
@@ -110,7 +118,7 @@ contains
     geo => sys%geo
     st  => sys%st
 
-    call td_init(gr, td, st, sys%outp)
+    call td_init(sys, h, td)
 
     call states_distribute_nodes(st, sys%mc)
     ! Alocate complex wave-functions during time-propagation
@@ -175,7 +183,13 @@ contains
       end if
       
       ! time iterate wavefunctions
-      call td_rti_dt(sys%ks, h, gr, st, td%tr, i*td%dt, td%dt)
+      select case(td%dynamics)
+      case(EHRENFEST)
+        call td_rti_dt(sys%ks, h, gr, st, td%tr, i*td%dt, td%dt / td%mu)
+      case(BO)
+        call scf_run(td%scf, sys%gr, geo, st, sys%ks, h, sys%outp, gs_run = .false., verbose=.false.)
+      end select
+
 
       ! mask function?
       call zvmask(gr, h, st)

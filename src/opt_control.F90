@@ -175,7 +175,7 @@ contains
     gr  => sys%gr
     st  => sys%st
 
-    call td_init(gr, td, sys%st, sys%outp)
+    call td_init(sys, h, td)
     call states_allocate_wfns(st, gr%m, M_CMPLX)
 
     ! Initialize a bunch of states: initial, target, auxiliary.

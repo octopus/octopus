@@ -105,8 +105,6 @@ program octopus
   !% Calculate van der Waals coefficients
   !%Option phonons_lr 12
   !% Calculation of the vibrational modes using linear response
-  !%Option bo 98
-  !% Born-Oppenheimer-like Molecular Dynamics
   !%Option recipe 99
   !% Prints out a tasty recipe
   !%End
