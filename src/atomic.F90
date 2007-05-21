@@ -384,6 +384,8 @@ contains
               GD(3,IS) = GD(3,IS) + DGIDFJ(IN) * DENS(IR+IN,IS)
            100 CONTINUE
         110 CONTINUE
+     ELSE
+        GD = M_ZERO
      ENDIF
 
      ! The xc_f90_gga routines need as input these combinations of 
