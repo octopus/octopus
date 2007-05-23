@@ -112,6 +112,7 @@ module states_m
     FLOAT, pointer :: eigenval(:,:) ! obviously the eigenvalues
     logical        :: fixed_occ     ! should the occupation numbers be fixed?
     FLOAT, pointer :: occ(:,:)      ! the occupation numbers
+    logical        :: fixed_spins   ! In spinors mode, the spin direction is set for the initial (random) orbitals.
     FLOAT, pointer :: spin(:, :, :)
     FLOAT, pointer :: momentum(:, :, :)
 
@@ -188,10 +189,8 @@ contains
     type(grid_t),      intent(in)    :: gr
     type(geometry_t),  intent(in)    :: geo
 
-
-    FLOAT :: excess_charge, r
-    integer :: nempty, i, j
-    C_POINTER :: blk
+    FLOAT :: excess_charge
+    integer :: nempty
 
     call push_sub('states.states_init')
 
@@ -324,6 +323,39 @@ contains
     ! initially we mark all 'formulas' as undefined
     st%user_def_states(1:st%d%dim, 1:st%nst, 1:st%d%nik) = 'undefined'
 
+    call states_read_initial_occs(st, excess_charge)
+    call states_read_initial_spins(st)
+
+    st%st_start = 1; st%st_end = st%nst
+    ALLOCATE(st%node(st%nst), st%nst)
+    st%node(1:st%nst) = 0
+
+    call mpi_grp_init(st%mpi_grp, -1)
+    st%parallel_in_states = .false.
+
+    nullify(st%dpsi, st%zpsi)
+
+    call pop_sub()
+  end subroutine states_init
+
+
+  ! ---------------------------------------------------------
+  ! Reads from the input file the initial occupations, if the
+  ! block "Occupations" is present. Otherwise, it makes an initial
+  ! guess for the occupations, maybe using the "ElectronicTemperature"
+  ! variable.
+  ! The resulting occupations are placed on the st%occ variable. The
+  ! boolean st%fixed_occ is also set to .true., if the occupations are
+  ! set by the user through the "Occupations" block; false otherwise.
+  subroutine states_read_initial_occs(st, excess_charge)
+    type(states_t), intent(inout) :: st
+    FLOAT, intent(in) :: excess_charge
+
+    integer :: i, j
+    C_POINTER :: blk
+    FLOAT :: r
+
+    call push_sub('states.states_read_initial_occs')
     !%Variable Occupations
     !%Type block
     !%Section States
@@ -359,6 +391,7 @@ contains
         end do
       end do
       call loct_parse_block_end(blk)
+
     else
       st%fixed_occ = .false.
 
@@ -392,17 +425,86 @@ contains
       st%el_temp = st%el_temp * units_inp%energy%factor
     end if occ_fix
 
-    st%st_start = 1; st%st_end = st%nst
-    ALLOCATE(st%node(st%nst), st%nst)
-    st%node(1:st%nst) = 0
+    call pop_sub()
+  end subroutine states_read_initial_occs
 
-    call mpi_grp_init(st%mpi_grp, -1)
-    st%parallel_in_states = .false.
 
-    nullify(st%dpsi, st%zpsi)
+  ! ---------------------------------------------------------
+  ! Reads, if present, the "InitialSpins" block. This is only
+  ! done in spinors mode; otherwise the routine does nothing. The
+  ! resulting spins are placed onto the st%spin pointer. The boolean
+  ! st%fixed_spins is set to true if (and only if) the InitialSpins
+  ! block is present.
+  subroutine states_read_initial_spins(st)
+    type(states_t), intent(inout) :: st
+    integer :: i, j
+    C_POINTER :: blk
+
+    call push_sub('states.states_read_initial_spins')
+
+    st%fixed_spins = .false.
+    if(st%d%ispin .ne. SPINORS) then
+      call pop_sub(); return
+    end if
+
+    !%Variable InitialSpins
+    !%Type block
+    !%Section States
+    !%Description
+    !% The spin character of the initial random guesses for the spinors can
+    !% be fixed by making use of this block. Note that this will not "fix" the
+    !% the spins during the calculation (this cannot be done in spinors mode, in
+    !% being able to change the spins is why the spinors mode exists in the first
+    !% place).
+    !%
+    !% This block is meaningless and ignored if the run is not in spinors mode
+    !% (i.e. SpinComponents = spinors). 
+    !%
+    !% The structure of the block is very simple: each column contains the desired
+    !% <Sx>, <Sy>, <Sz> for each spinor. If the calculation is for a periodic system
+    !% and there are more than one k point, the spins of all the k-point space are
+    !% the same.
+    !%
+    !% For example, if we have two spinors, and we want one in the Sx "down" state,
+    !% and another one in the Sx "up" state:
+    !%
+    !% <tt>%InitialSpins
+    !% <br>&nbsp;&nbsp;  0.5 | 0.0 | 0.0
+    !% <br>&nbsp;&nbsp; -0.5 | 0.0 | 0.0
+    !% <br>%</tt>
+    !%
+    !% WARNING: if the calculation is for a system described by pseudopotentials (as
+    !% opposed to using user defined potentials or model systems), this option is
+    !% meaningless since the random spinors are overwritten by the atomic orbitals.
+    !%
+    !% There are a couple of physical constrains that have to be fulfilled:
+    !%
+    !% (A) | <S_i> | <= 1/2
+    !%
+    !% (B) <S_x>^2 + <S_y>^2 + <S_z>^2 = 1/4
+    !%
+    !%End
+    spin_fix: if(loct_parse_block(check_inp('InitialSpins'), blk)==0) then
+      do i = 1, st%nst
+        do j = 1, 3
+          call loct_parse_block_float(blk, i-1, j-1, st%spin(j, i, 1))
+        end do
+        ! This checks (B).
+        if( abs(sum(st%spin(1:3, i, 1)**2) - M_FOURTH) > CNST(1.0e-6)) call input_error('InitialSpins')
+      end do
+      call loct_parse_block_end(blk)
+      ! This checks (A). In fact (A) follows from (B), so maybe this is not necessary...
+      if(any(abs(st%spin(:, :, :)) > M_HALF)) then
+        call input_error('InitialSpins')
+      end if
+      st%fixed_spins = .true.
+      do i = 2, st%d%nik
+        st%spin(:, :, i) = st%spin(:, :, 1)     
+      end do
+    end if spin_fix
 
     call pop_sub()
-  end subroutine states_init
+  end subroutine states_read_initial_spins
 
 
   ! ---------------------------------------------------------
@@ -685,6 +787,7 @@ contains
       ALLOCATE(stout%occ(size(stin%occ, 1), size(stin%occ, 2)), i)
       stout%occ = stin%occ
     end if
+    stout%fixed_spins = stin%fixed_spins
     if(associated(stin%spin)) then
       i = size(stin%spin, 1)*size(stin%spin, 2)*size(stin%spin, 3)
       ALLOCATE(stout%spin(size(stin%spin, 1), size(stin%spin, 2), size(stin%spin, 3)), i)
@@ -840,7 +943,9 @@ contains
     type(mesh_t),   intent(in)    :: m
     integer, optional, intent(in) :: ist_start_, ist_end_
 
-    integer :: ist, ik, id, ist_start, ist_end
+    integer :: ist, ik, id, ist_start, ist_end, j
+    FLOAT :: argbeta
+    CMPLX :: alpha, beta
 
     call push_sub('states.states_generate_random')
 
@@ -849,26 +954,76 @@ contains
     ist_end = st%nst
     if(present(ist_end_)) ist_end = ist_end_
 
-    do ik = 1, st%d%nik
-      do ist = ist_start, ist_end
-        do id = 1, st%d%dim
+    select case(st%d%ispin)
+    case(UNPOLARIZED, SPIN_POLARIZED)
+
+      do ik = 1, st%d%nik
+        do ist = ist_start, ist_end
           if (st%d%wfs_type == M_REAL) then
-            call dmf_random(m, st%dpsi(:, id, ist, ik))
+            call dmf_random(m, st%dpsi(:, 1, ist, ik))
           else
-            call zmf_random(m, st%zpsi(:, id, ist, ik))
+            call zmf_random(m, st%zpsi(:, 1, ist, ik))
           end if
+          st%eigenval(ist, ik) = M_ZERO
         end do
-        st%eigenval(ist, ik) = M_ZERO
       end do
-      ! Do not orthonormalize if we have parallelization in states.
-      if(.not.st%parallel_in_states) then
+
+    case(SPINORS)
+
+      ASSERT(st%d%wfs_type == M_CMPLX)
+
+      if(st%fixed_spins) then
+        do ik = 1, st%d%nik
+          do ist = ist_start, ist_end
+            call zmf_random(m, st%zpsi(:, 1, ist, ik))
+            ! In this case, the spinors are made of a spatial part times a vector [alpha beta]^T in 
+            ! spin space (i.e., same spatial part for each spin component). So (alpha, beta)
+            ! determines the spin values. The values of (alpha, beta) can be be obtained
+            ! with simple formulae from <Sx>, <Sy>, <Sz>.
+            !
+            ! Note that here we orthonormalize the orbital part. This ensures that the spinors
+            ! are untouched later in the general orthonormalization, and therefore the spin values
+            ! of each spinor remain the same.
+            do j = ist_start, ist - 1
+              st%zpsi(:, 1, ist, ik) = st%zpsi(:, 1, ist, ik) - &
+                                       zmf_dotp(m, st%zpsi(:, 1, ist, ik), st%zpsi(:, 1, j, ik)) * &
+                                       st%zpsi(:, 1, j, ik)
+            end do
+            st%zpsi(:, 1, ist, ik) = st%zpsi(:, 1, ist, ik) / zmf_nrm2(m, st%zpsi(:, 1, ist, ik))
+            st%zpsi(:, 2, ist, ik) = st%zpsi(:, 1, ist, ik)
+            alpha = cmplx(sqrt(M_HALF + st%spin(3, ist, ik)), M_ZERO, REAL_PRECISION)
+            beta  = cmplx(sqrt(M_ONE - abs(alpha)**2), M_ZERO, REAL_PRECISION)
+            if(abs(alpha) > M_ZERO) then
+              beta = cmplx(st%spin(1, ist, ik) / abs(alpha), st%spin(2, ist, ik) / abs(alpha), REAL_PRECISION)
+            end if
+            st%zpsi(:, 1, ist, ik) = alpha * st%zpsi(:, 1, ist, ik)
+            st%zpsi(:, 2, ist, ik) = beta * st%zpsi(:, 2, ist, ik)
+            st%eigenval(ist, ik) = M_ZERO
+          end do
+        end do
+      else
+        do ik = 1, st%d%nik
+          do ist = ist_start, ist_end
+            do id = 1, st%d%dim
+              call zmf_random(m, st%zpsi(:, id, ist, ik))
+            end do
+            st%eigenval(ist, ik) = M_ZERO
+          end do
+        end do
+      end if
+
+    end select
+
+    ! Do not orthonormalize if we have parallelization in states.
+    if(.not.st%parallel_in_states) then
+      do ik = 1, st%d%nik
         if (st%d%wfs_type == M_REAL) then
           call dstates_gram_schmidt(ist_end, m, st%d%dim, st%dpsi(:,:,1:ist_end,ik), start = ist_start)
         else
           call zstates_gram_schmidt(ist_end, m, st%d%dim, st%zpsi(:,:,1:ist_end,ik), start = ist_start)
         end if
-      end if
-    end do
+      end do
+    end if
 
     call pop_sub()
   end subroutine states_generate_random
