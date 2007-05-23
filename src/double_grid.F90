@@ -49,11 +49,11 @@ module double_grid_m
        double_grid_apply_glocal,    &
        double_grid_apply_non_local, &
        double_grid_get_rmax,        &
-       double_grid_get_hmax
+       double_grid_get_hmax,        &
+       double_grid_enlarge
 
   type double_grid_t
      private
-     FLOAT   :: h_fine(MAX_DIM)
      integer :: spacing_divisor
      integer :: interpolation_min
      integer :: interpolation_max
@@ -75,15 +75,13 @@ module double_grid_m
 
 contains
   
-  subroutine double_grid_init(this, m)
+  subroutine double_grid_init(this)
     type(double_grid_t), intent(out) :: this
-    type(mesh_t),        intent(in)  :: m
 
     this%spacing_divisor = 3
     this%interpolation_min = -4
     this%interpolation_max = 5
     this%nn = (this%spacing_divisor - 1)/2
-    this%h_fine(1:MAX_DIM) = m%h(1:MAX_DIM)/this%spacing_divisor
    
     !%Variable DoubleGrid
     !%Type logical
@@ -142,7 +140,7 @@ contains
           do jj = -this%nn, this%nn
             do kk = -this%nn, this%nn
 
-              r = sqrt(sum((m%x(sm%jxyz(is), 1:3) + this%h_fine(1:3) * (/ii, jj, kk/) - x_atom(1:3))**2))
+              r = sqrt(sum((m%x(sm%jxyz(is), 1:3) + m%h(1:3)/this%spacing_divisor * (/ii, jj, kk/) - x_atom(1:3))**2))
 
               !calculate the potential
               vv = loct_splint(s%ps%vl, r)
@@ -222,7 +220,7 @@ contains
           do jj = -this%nn, this%nn
             do kk = -this%nn, this%nn
               
-              x(1:3) = m%x(sm%jxyz(is), 1:3) + this%h_fine(1:3) * (/ii, jj, kk/) - x_atom(1:3)
+              x(1:3) = m%x(sm%jxyz(is), 1:3) + m%h(1:3)/this%spacing_divisor * (/ii, jj, kk/) - x_atom(1:3)
 
               r2 = sum(x(1:3)**2)
 
@@ -309,7 +307,7 @@ contains
           do jj = -this%nn, this%nn
             do kk = -this%nn, this%nn
               
-              x(1:3) = m%x(sm%jxyz(is), 1:3) + this%h_fine(1:3) * (/ii, jj, kk/) 
+              x(1:3) = m%x(sm%jxyz(is), 1:3) + m%h(1:3)/this%spacing_divisor * (/ii, jj, kk/) 
 
               call specie_real_nl_projector(s, x_atom, x, l, lm, ic, vv, dvv(1:3))
               
@@ -357,11 +355,9 @@ contains
     type(double_grid_t), intent(in) :: this
     type(mesh_t),        intent(in) :: mesh
 
-    if(this%use_double_grid) then 
-      hmax = maxval(this%h_fine(1:MAX_DIM))
-    else
-      hmax = maxval(mesh%h(1:MAX_DIM))
-    end if
+    hmax = maxval(mesh%h(1:MAX_DIM))
+      
+    if(this%use_double_grid)  hmax = hmax / this%spacing_divisor
     
   end function double_grid_get_hmax
 
@@ -375,7 +371,16 @@ contains
     if(this%use_double_grid) then 
       rmax = rmax + this%interpolation_max * maxval(m%h(1:3))
     end if
+
   end function double_grid_get_rmax
+
+  integer function double_grid_enlarge(this)
+    type(double_grid_t),     intent(in) :: this
+    
+    double_grid_enlarge = 0 
+    if(this%use_double_grid) double_grid_enlarge = this%interpolation_max * this%nn
+
+  end function double_grid_enlarge
 
 end module double_grid_m
 

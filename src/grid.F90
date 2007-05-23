@@ -69,11 +69,12 @@ contains
     ! initilize derivatives
     call f_der_init(gr%f_der, gr%sb, gr%cv%method.ne.CURV_METHOD_UNIFORM)
 
-    ! now we generate create the mesh and the derivatives
-    call mesh_init_stage_1(gr%sb, gr%m, geo, gr%cv, gr%f_der%n_ghost)
-    call mesh_init_stage_2(gr%sb, gr%m, geo, gr%cv)
+    call double_grid_init(gr%dgrid)
 
-    call double_grid_init(gr%dgrid, gr%m)
+    ! now we generate create the mesh and the derivatives
+    call mesh_init_stage_1(gr%sb, gr%m, geo, gr%cv, &
+         enlarge = max(gr%f_der%n_ghost, double_grid_enlarge(gr%dgrid)))
+    call mesh_init_stage_2(gr%sb, gr%m, geo, gr%cv)
 
     call pop_sub()
   end subroutine grid_init_stage_1
