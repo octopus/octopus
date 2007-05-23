@@ -23,6 +23,7 @@ module messages_m
   use datasets_m
   use global_m
   use lib_oct_m
+  use lib_oct_parser_m
   use mpi_m
   use string_m
   use varinfo_m
@@ -48,7 +49,8 @@ module messages_m
     pop_sub,                  &
     messages_print_stress,    &
     messages_print_var_info,  &
-    messages_print_var_option
+    messages_print_var_option,&
+    obsolete_variable
 
   character(len=256), dimension(20), public :: message    ! to be output by fatal, warning
   character(len=68),      parameter, public :: hyphens = &
@@ -618,6 +620,18 @@ contains
 
   end subroutine pop_sub
 #endif
+  
+  subroutine obsolete_variable(name, rep)
+    character(len=*), intent(in) :: name
+    character(len=*), intent(in) :: rep
+    
+    if ( loct_parse_isdef(trim(name)) /= 0 ) then 
+      write(message(1), '(a)') 'Input variable '//trim(name)//' is obsolete.'
+      write(message(2), '(a)') 'Please use variable '//trim(rep)//' instead.'
+      call write_fatal(2)
+    end if
+    
+  end subroutine obsolete_variable
 
 end module messages_m
 

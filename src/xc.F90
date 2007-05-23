@@ -262,19 +262,8 @@ contains
       c_id = val / 1000
       x_id = val - c_id*1000
 
-      call loct_parse_int(check_inp('XFunctional'), -1, val)
-      
-      if ( val /= -1 ) then 
-        message(1) = 'XFunctional variable is deprecated. Please use XCFunctional instead.'
-        call write_fatal(1)
-      end if
-
-      call loct_parse_int(check_inp('CFunctional'), -1, val)
-      
-      if ( val /= -1 ) then 
-        message(1) = 'CFunctional variable is deprecated. Please use XCFunctional instead.'
-        call write_fatal(1)
-      end if
+      call obsolete_variable('XFunctional', 'XCFunctional')
+      call obsolete_variable('CFunctional', 'XCFunctional')
 
       !%Variable XCKernel
       !%Type integer
