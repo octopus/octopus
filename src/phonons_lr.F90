@@ -87,88 +87,28 @@ contains
 
     call lr_init(lr(1))
     call lr_allocate(lr(1), sys%st, sys%gr%m)
-    call resp_pert_init(perturbation, RESP_PERTURBATION_DISPLACE, sys%gr, sys%geo)
 
     ALLOCATE(tmp(1:sys%NP), sys%NP)
 
     !CALCULATE
 
-    call build_dm()
+    call build_ionic_dm()
 
     do iatom = 1, sys%geo%natoms
       do idir = 1, sys%NDIM
 
-        stop
+        call resp_pert_init(perturbation)
+
+        call resp_pert_build_ion_displacement(perturbation, sys%gr, sys%geo, iatom, idir)
+
         call dsternheimer_solve(sh, sys, h, lr, 1, M_ZERO, perturbation, &
            RESTART_DIR, phn_rho_tag(iatom, idir), phn_wfs_tag(iatom, idir))
 
-        do jatom = 1, sys%geo%natoms
-          do jdir = 1, sys%NDIM
-            
-            !<psi|dv|dpsi> 
-            tmp(1:sys%NP) = M_ZERO
-
-            do ik = 1, sys%st%d%nspin
-              tmp(1:sys%NP) = tmp(1:sys%NP) + perturbation%dHdR(1:sys%NP, jdir, jatom)* &
-                lr(1)%ddl_rho(1:sys%NP, ik)
-            end do
-
-            ph%dm(phonons_index(ph, iatom, idir), phonons_index(ph, jatom, jdir)) = &
-                 ph%dm(phonons_index(ph, iatom, idir), phonons_index(ph, jatom, jdir)) + &
-                 dmf_integrate(sys%gr%m, tmp(:))
-
-          end do        
-        end do
+        call resp_pert_end(perturbation)
 
       end do
+
     end do
-
-    do iatom = 1, sys%geo%natoms
-      do idir = 1, sys%NDIM
-
-        do jatom = 1, sys%geo%natoms
-          do jdir = 1, sys%NDIM
-
-            print '(4i1,a,4i1, f15.4)', iatom, idir, jatom, jdir, '-', jatom, jdir, iatom, idir, &
-                 ph%dm(phonons_index(ph, iatom, idir), phonons_index(ph, jatom, jdir))- &
-                 ph%dm(phonons_index(ph, jatom, jdir), phonons_index(ph, iatom, idir))
-          end do
-        end do
-      end do
-    end do
-
-    !divide by the atomic mass, we multiply by the total mass to have
-    !reasonable numbers, later we divide the frequencies by the total mass 
-
-    total_mass = M_ZERO
-    do iatom = 1, sys%geo%natoms
-      total_mass = total_mass + sys%geo%atom(iatom)%spec%weight
-    end do
-
-    do iatom = 1, sys%geo%natoms
-      do idir = 1, sys%NDIM
-
-        do jatom = 1, sys%geo%natoms
-          do jdir = 1, sys%NDIM
-
-            factor = total_mass/sqrt(sys%geo%atom(iatom)%spec%weight * sys%geo%atom(jatom)%spec%weight)
-
-            ph%dm(phonons_index(ph, iatom, idir), phonons_index(ph, jatom, jdir)) = &
-                 ph%dm(phonons_index(ph, iatom, idir), phonons_index(ph, jatom, jdir))*&
-                 factor
-
-          end do
-        end do
-
-      end do
-    end do
-
-
-    call phonons_diagonalize_dm(ph)
-
-    ph%freq(1:ph%dim) = ph%freq(1:ph%dim)/total_mass
-    
-    call phonons_output(ph, "_lr")
 
     !DESTRUCT
 
@@ -195,7 +135,7 @@ contains
 
     end subroutine parse_input
     
-    subroutine build_dm()
+    subroutine build_ionic_dm()
       FLOAT :: ac, xi(1:MAX_DIM), xj(1:MAX_DIM), xk(1:MAX_DIM), r2
       integer :: katom
 
@@ -239,27 +179,14 @@ contains
               end if
                 
             
-              !<psi|d2v|psi>
-              if ( iatom == jatom ) then 
-                
-                tmp(1:sys%NP) = M_ZERO
-                do ik = 1, sys%st%d%nspin
-                  tmp(1:sys%NP) = tmp(1:sys%NP) + &
-                    perturbation%d2HdR2(1:sys%NP, idir, jdir, iatom)*sys%st%rho(1:sys%NP, ik)
-                end do
-               
-                ac = ac + dmf_integrate(sys%gr%m, tmp(:))
-              
-              end if
-
-              
               ph%dm(phonons_index(ph, iatom, idir), phonons_index(ph, jatom, jdir)) = ac
+
             end do
           end do
         end do
       end do
       
-    end subroutine build_dm
+    end subroutine build_ionic_dm
     
 
   end subroutine phonons_lr_run

@@ -41,28 +41,43 @@ module resp_pert_m
      resp_pert_info,      &
      resp_pert_setup_dir, &
      dresp_pert_apply,    &
-     zresp_pert_apply
-  
+     zresp_pert_apply,    &
+     resp_displ_t,        &
+     resp_pert_build_ion_displacement
+
   integer, public, parameter :: &
      RESP_PERTURBATION_ELECTRIC = 1, &
      RESP_PERTURBATION_MAGNETIC = 2, &
      RESP_PERTURBATION_DISPLACE = 3
 
+  type resp_displ_t
+    integer :: iatom
+    integer :: idir
+  end type resp_displ_t
+  
   type resp_pert_t
     integer :: resp_type
-
     integer :: dir
-    
-    FLOAT, pointer :: dHdR  (:, :, :)    ! derivative of the Hamiltonian wrt atomic displacement
-    FLOAT, pointer :: d2HdR2(:, :, :, :) ! second derivative
+    type(resp_displ_t), pointer :: ion_disp
   end type resp_pert_t
 
   interface resp_pert_init
+    module procedure resp_pert_init0
     module procedure resp_pert_init1
     module procedure resp_pert_init2
   end interface
 
 contains
+
+
+  subroutine resp_pert_init0(this)
+    type(resp_pert_t), intent(out)   :: this
+
+    nullify(this%ion_disp)
+
+  end subroutine resp_pert_init0
+
+
   ! --------------------------------------------------------------------
   subroutine resp_pert_init1(this, gr, geo)
     type(resp_pert_t), intent(out)   :: this
@@ -104,33 +119,29 @@ contains
 
     this%dir = -1
 
-    if(this%resp_type == RESP_PERTURBATION_DISPLACE) then
-      ! let us create the perturbations
-      
-      ALLOCATE(this%dHdR(NP_PART, NDIM, geo%natoms), NP_PART*NDIM*geo%natoms)
-      ALLOCATE(this%d2HdR2(NP, NDIM, NDIM, geo%natoms), NP*NDIM*NDIM*geo%natoms)
- 
-      !calculate the derivative of the external potential with respect to the forces
-      do iatom = 1, geo%natoms
-        !first derivative
-        call specie_get_glocal (geo%atom(iatom)%spec, gr, geo%atom(iatom)%x, this%dHdR  (:, :, iatom))
-        call specie_get_g2local(geo%atom(iatom)%spec, gr, geo%atom(iatom)%x, this%d2HdR2(:, :, :, iatom))
-      
-        !the non-local part: tarea para la casa
-      end  do
-    end if
-    
   end subroutine resp_pert_init2
 
+  subroutine resp_pert_build_ion_displacement(this, gr, geo, iatom, idir)
+    type(resp_pert_t), intent(out)   :: this
+    type(grid_t),      intent(inout) :: gr
+    type(geometry_t),  intent(in)    :: geo
+    integer,           intent(in)    :: iatom
+    integer,           intent(in)    :: idir
+
+    this%resp_type = RESP_PERTURBATION_DISPLACE
+
+    ALLOCATE(this%ion_disp, 1)
+    
+    this%ion_disp%iatom = iatom
+    this%ion_disp%idir = idir
+    
+  end subroutine resp_pert_build_ion_displacement
 
   ! --------------------------------------------------------------------
   subroutine resp_pert_end(this)
     type(resp_pert_t), intent(inout) :: this
-
-    if(this%resp_type == RESP_PERTURBATION_DISPLACE) then
-      deallocate(this%dHdR);   nullify(this%dHdR)
-      deallocate(this%d2HdR2); nullify(this%d2HdR2)
-    end if
+    
+    if( associated(this%ion_disp) ) deallocate(this%ion_disp)
 
   end subroutine resp_pert_end
 

@@ -17,13 +17,16 @@
 !!
 !! $Id: response.F90 2548 2006-11-06 21:42:27Z xavier $
 
-subroutine X(resp_pert_apply) (this, gr, f_in, f_out)
+subroutine X(resp_pert_apply) (this, gr, geo, f_in, f_out)
   type(resp_pert_t), intent(in)    :: this
   type(grid_t),      intent(inout) :: gr
+  type(geometry_t),  intent(in)    :: geo
   R_TYPE,            intent(inout) :: f_in(:)
   R_TYPE,            intent(out)   :: f_out(:)
 
   R_TYPE, allocatable :: lf(:,:)
+  FLOAT, allocatable :: gv(:,:)
+  type(atom_t), pointer :: atm
 
   ASSERT(this%dir.ne.-1)
 
@@ -40,6 +43,20 @@ subroutine X(resp_pert_apply) (this, gr, f_in, f_out)
     f_out(1:NP) = lf(1:NP, this%dir)/M_TWO
     
     deallocate(lf)
+
+
+  case(RESP_PERTURBATION_DISPLACE)
+
+    ALLOCATE(gv(NP, NDIM), NP*NDIM)
+
+    atm => geo%atom(this%ion_disp%iatom)
+
+    call specie_get_glocal(atm%spec, gr, atm%x, gv)
+    
+    f_out(1:NP) = gv(1:NP, this%ion_disp%idir) * f_in(1:NP)
+
+    deallocate(gv)
+    
   end select
   
 end subroutine X(resp_pert_apply)

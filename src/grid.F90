@@ -69,7 +69,7 @@ contains
     ! initilize derivatives
     call f_der_init(gr%f_der, gr%sb, gr%cv%method.ne.CURV_METHOD_UNIFORM)
 
-    call double_grid_init(gr%dgrid)
+    call double_grid_init(gr%dgrid, gr%sb)
 
     ! now we generate create the mesh and the derivatives
     call mesh_init_stage_1(gr%sb, gr%m, geo, gr%cv, &

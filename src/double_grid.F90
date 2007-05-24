@@ -75,8 +75,9 @@ module double_grid_m
 
 contains
   
-  subroutine double_grid_init(this)
+  subroutine double_grid_init(this, sb)
     type(double_grid_t), intent(out) :: this
+    type(simul_box_t),   intent(in)  :: sb
 
     this%spacing_divisor = 3
     this%interpolation_min = -4
@@ -92,8 +93,11 @@ contains
     !% increase the precision of the application of the
     !% pseudopotentials.
     !%End
-
-    call loct_parse_logical(check_inp('DoubleGrid'), .false., this%use_double_grid)
+    if (sb%dim == 3) then 
+      call loct_parse_logical(check_inp('DoubleGrid'), .false., this%use_double_grid)
+    else
+      this%use_double_grid = .false.
+    end if
 
   end subroutine double_grid_init
 
