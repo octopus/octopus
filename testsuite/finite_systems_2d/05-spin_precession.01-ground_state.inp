@@ -1,0 +1,43 @@
+DebugLevel = 0
+
+SystemName = "qd"
+CalculationMode = gs
+FromScratch = yes
+Dimensions = 2
+
+omega = 0.25
+
+%Species
+"qd" | 1.0 | user_defined | 1 | "0.5*omega^2*r^2"
+%
+
+%Coordinates
+"qd" | 0 | 0 | 0 | no
+%
+
+BoxShape = sphere
+Radius = 25.0
+Spacing = 0.5
+
+DerivativesOrder = 4
+
+NonInteractingElectrons = yes
+
+SpinComponents = spinors
+
+MaximumIter = 200
+ConvAbsDens = 1e-5
+
+# We cannot use the LCAO because otherwise the InitialSpins don't work.
+LCAOStart = no
+
+%InitialSpins
+ 0.5 |  0.0 |  0.0
+%
+
+EigenSolver = cg
+EigenSolverInitTolerance = 1e-6
+EigenSolverFinalTolerance = 1e-6
+EigenSolverMaxIter = 250
+TypeOfMixing = linear
+Mixing = 1.0

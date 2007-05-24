@@ -33,6 +33,9 @@ dist_share_DATA = \
 	03-helium_atom.02-ground_state.inp \
 	03-helium_atom.test \
 	04-biot_savart.01-gs.inp \
-	04-biot_savart.test
+	04-biot_savart.test \
+	05-spin_precession.test \
+	05-spin_precession.01-ground_state.inp \
+	05-spin_precession.02-time_propagation.inp
 
 CLEANFILES = *~ *.bak

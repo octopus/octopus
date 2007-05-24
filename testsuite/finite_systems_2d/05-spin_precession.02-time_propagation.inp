@@ -1,0 +1,55 @@
+DebugLevel = 0
+
+SystemName = "qd"
+CalculationMode = td
+FromScratch = yes
+Dimensions = 2
+
+omega = 0.25
+
+%Species
+"qd" | 1.0 | user_defined | 1 | "0.5*omega^2*r^2"
+%
+
+%Coordinates
+"qd" | 0 | 0 | 0 | no
+%
+
+BoxShape = sphere
+Radius = 25.0
+Spacing = 0.5
+
+DerivativesOrder = 4
+
+NonInteractingElectrons = yes
+
+SpinComponents = spinors
+
+
+Bz = 5.0
+%StaticMagneticField
+0 | 0 | Bz
+%
+
+
+# The Larmor frequency is given by w = (e*Bz)/(m*c), where
+# e is the electronic charge (1 in a.u.), m is the electronic
+# mass (1 in a.u.) and c is the speed of light. Therefore
+# the period of the precession is (2*pi*m*c)/(e*Bz). We run
+# until 1/4 of the period, so that <Sx> goes to zero, and 
+# <Sy> goes to 1/2.
+
+# P_c is the speed of light in atomic units.
+P_c = 137.036
+
+
+T = (1/4) * (2*pi*P_c)/Bz
+dt = 0.50
+TDMaximumIter = T/dt
+TDEvolutionMethod = aetrs
+TDExponentialMethod = lanczos
+TDExpOrder = 16
+TDTimeStep = dt
+
+OutputEvery = 25
+TDOutput = energy + multipoles + spin
