@@ -241,12 +241,17 @@ module lib_oct_gsl_spline_m
     loct_spline_print,    & ! [13]
     loct_spline_der,      &
     loct_spline_der2,     &
-    loct_spline_cutoff_radius
+    loct_spline_cutoff_radius, &
+    assignment(=)
 
   ! the basic spline datatype
   type loct_spline_t
     C_POINTER :: spl, acc
   end type loct_spline_t
+
+  interface assignment (=)
+    module procedure spline_copy
+  end interface
 
   ! Both the filling of the fuction, and the retrieval of the values
   ! may be done using single or double precision values.
@@ -388,6 +393,26 @@ contains
       end do
     end do
   end subroutine loct_spline_end_2
+
+  subroutine spline_copy(splout, splin)
+    type(loct_spline_t), intent(inout) :: splout
+    type(loct_spline_t), intent(in)    :: splin
+
+    integer :: npoints
+    real(8), allocatable :: x(:), y(:)
+
+    npoints = oct_spline_npoints(splin%spl)
+
+    ALLOCATE( x(npoints), npoints)
+    ALLOCATE( y(npoints), npoints)
+
+    call oct_spline_x(splin%spl, x(1))
+    call oct_spline_y(splout%spl, y(1))
+
+    call oct_spline_fit(npoints, x(1), y(1), splout%spl, splout%acc)
+
+    deallocate(x, y)
+  end subroutine spline_copy
 
   subroutine spline_fit8(nrc, rofi, ffit, spl)
     integer, intent(in) :: nrc

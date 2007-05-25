@@ -52,7 +52,7 @@ core_SRCS = $(basic_SRCS) \
 	crystal.F90 \
 	states.F90 magnetic.F90 elf.F90 states_output.F90 excited_states.F90 \
 	xc_functl.F90 xc.F90 scf_tol.F90 mix.F90 spectrum.F90 \
-	specie_pot.F90
+	specie_pot.F90 tdfunction.F90
 
 octopus_SOURCES = $(core_SRCS) \
 	lasers.F90 rkb_projector.F90 kb_projector.F90 hgh_projector.F90 epot.F90 \
