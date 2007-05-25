@@ -48,6 +48,7 @@ module double_grid_m
        double_grid_apply_local,     &
        double_grid_apply_glocal,    &
        double_grid_apply_non_local, &
+       double_grid_apply_gnon_local,&
        double_grid_get_rmax,        &
        double_grid_get_hmax,        &
        double_grid_enlarge
@@ -269,7 +270,7 @@ contains
 
   end subroutine double_grid_apply_glocal
 
-  subroutine double_grid_apply_non_local(this, s, m, x_atom, sm, l, lm, ic, vnl, dvnl)
+  subroutine double_grid_apply_non_local(this, s, m, x_atom, sm, l, lm, ic, vnl)
     type(double_grid_t),    intent(in)  :: this
     type(specie_t), target, intent(in)  :: s
     type(mesh_t),           intent(in)  :: m
@@ -279,7 +280,6 @@ contains
     integer,                intent(in)  :: lm
     integer,                intent(in)  :: ic
     FLOAT,                  intent(out) :: vnl(:)
-    FLOAT,                  intent(out) :: dvnl(:, :)
     
     FLOAT :: x(MAX_DIM), vv, dvv(1:MAX_DIM)
     integer :: is, ii, jj, kk, idir
@@ -287,23 +287,21 @@ contains
     integer :: start(1:3), pp, qq, rr, is2
     integer :: ll, mm, nn
     
-    FLOAT, allocatable :: vls(:), dvls(:,:)
+    FLOAT, allocatable :: vls(:)
 
     call push_sub('double_grid.double_grid_apply_local')
 
     if(.not. this%use_double_grid) then 
 
       do is = 1, sm%ns
-        call specie_real_nl_projector(s, x_atom, m%x(sm%jxyz(is), :), l, lm, ic, vnl(is), dvnl(is, :))
+        call specie_real_nl_projector(s, x_atom, m%x(sm%jxyz(is), :), l, lm, ic, vnl(is), dvv)
       end do
 
     else
       
       ALLOCATE(vls(0:sm%ns), sm%ns+1)
-      ALLOCATE(dvls(0:sm%ns, 1:3), 3*(sm%ns+1))
 
       vls(0:sm%ns) = M_ZERO
-      dvls(0:sm%ns, 1:3) = M_ZERO
       
       do is = 1, sm%ns
 
@@ -329,7 +327,6 @@ contains
                     is2 = sm%jxyz_inv(m%Lxyz_inv(pp, qq, rr))
 
                     vls(is2) = vls(is2) + co(ll)*co(mm)*co(nn)*vv
-                    dvls(is2, 1:3) = dvls(is2, 1:3) + co(ll)*co(mm)*co(nn)*dvv(1:3)
                     
                     rr = rr + kk
                   end do
@@ -345,15 +342,96 @@ contains
       end do
 
       vnl(1:sm%ns) = vls(1:sm%ns)/(this%spacing_divisor**3)
-      dvnl(1:sm%ns, 1:3) = dvls(1:sm%ns, 1:3)/(this%spacing_divisor**3)
 
-      deallocate(vls, dvls)
+      deallocate(vls)
 
     end if
 
     call pop_sub()
 
   end subroutine double_grid_apply_non_local
+
+
+  subroutine double_grid_apply_gnon_local(this, s, m, x_atom, sm, l, lm, ic, dvnl)
+    type(double_grid_t),    intent(in)  :: this
+    type(specie_t), target, intent(in)  :: s
+    type(mesh_t),           intent(in)  :: m
+    FLOAT,                  intent(in)  :: x_atom(1:MAX_DIM)
+    type(submesh_t),        intent(in)  :: sm
+    integer,                intent(in)  :: l
+    integer,                intent(in)  :: lm
+    integer,                intent(in)  :: ic
+    FLOAT,                  intent(out) :: dvnl(:, :)
+    
+    FLOAT :: x(MAX_DIM), vv, dvv(1:MAX_DIM)
+    integer :: is, ii, jj, kk, idir
+
+    integer :: start(1:3), pp, qq, rr, is2
+    integer :: ll, mm, nn
+    
+    FLOAT, allocatable :: dvls(:,:)
+
+    call push_sub('double_grid.double_grid_apply_local')
+
+    if(.not. this%use_double_grid) then 
+
+      do is = 1, sm%ns
+        call specie_real_nl_projector(s, x_atom, m%x(sm%jxyz(is), :), l, lm, ic, vv, dvnl(is, :))
+      end do
+
+    else
+      
+      ALLOCATE(dvls(0:sm%ns, 1:3), 3*(sm%ns+1))
+
+      dvls(0:sm%ns, 1:3) = M_ZERO
+      
+      do is = 1, sm%ns
+
+        do ii = -this%nn, this%nn
+          do jj = -this%nn, this%nn
+            do kk = -this%nn, this%nn
+              
+              x(1:3) = m%x(sm%jxyz(is), 1:3) + m%h(1:3)/this%spacing_divisor * (/ii, jj, kk/) 
+
+              call specie_real_nl_projector(s, x_atom, x, l, lm, ic, vv, dvv(1:3))
+              
+              start(1:3) = m%Lxyz(sm%jxyz(is), 1:3) + this%interpolation_min * (/ii, jj, kk/)
+              
+              pp = start(1)
+              do ll = this%interpolation_min, this%interpolation_max
+                
+                qq = start(2)
+                do mm = this%interpolation_min, this%interpolation_max
+                  
+                  rr = start(3)
+                  do nn = this%interpolation_min, this%interpolation_max
+                    
+                    is2 = sm%jxyz_inv(m%Lxyz_inv(pp, qq, rr))
+
+                    dvls(is2, 1:3) = dvls(is2, 1:3) + co(ll)*co(mm)*co(nn)*dvv(1:3)
+                    
+                    rr = rr + kk
+                  end do
+                  qq = qq + jj
+                end do
+                pp = pp + ii
+              end do
+              
+            end do
+          end do
+        end do
+
+      end do
+
+      dvnl(1:sm%ns, 1:3) = dvls(1:sm%ns, 1:3)/(this%spacing_divisor**3)
+
+      deallocate(dvls)
+
+    end if
+
+    call pop_sub()
+
+  end subroutine double_grid_apply_gnon_local
 
   FLOAT function double_grid_get_hmax(this, mesh) result(hmax)
     type(double_grid_t), intent(in) :: this

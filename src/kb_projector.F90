@@ -71,13 +71,14 @@ contains
   end subroutine kb_projector_null
 
   ! ---------------------------------------------------------
-  subroutine kb_projector_init(kb_p, sm, gr, a, l, lm)
+  subroutine kb_projector_init(kb_p, sm, gr, a, l, lm, gen_grads)
     type(kb_projector_t), intent(inout) :: kb_p
     type(submesh_t),      intent(in)    :: sm
     type(grid_t),         intent(in)    :: gr
     type(atom_t),         intent(in)    :: a
     integer,              intent(in)    :: l, lm
- 
+    logical,              intent(in)    :: gen_grads
+
     integer :: n_c, j, k, i
     FLOAT :: v, dv(3), r, x(3), x_in(3)
 
@@ -98,8 +99,10 @@ contains
     if (gr%sb%periodic_dim == 0) then 
 
       do i = 1, n_c
-        call double_grid_apply_non_local(gr%dgrid, a%spec, gr%m, a%x, sm, l, lm, i, &
-             kb_p%p(:, i), kb_p%dp(:,:,i))
+        call double_grid_apply_non_local(gr%dgrid, a%spec, gr%m, a%x, sm, l, lm, i, kb_p%p(:, i))
+        if (gen_grads) then
+          call double_grid_apply_gnon_local(gr%dgrid, a%spec, gr%m, a%x, sm, l, lm, i, kb_p%dp(:,:,i))
+        end if
       end do
 
     else 

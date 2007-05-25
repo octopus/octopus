@@ -70,7 +70,8 @@ module external_pot_m
     epot_laser_vector_pot,     &
     epot_forces,               &
     dproject, zproject,        &
-    projector_t
+    projector_t,               &
+    build_local_part_in_real_space
 
   ! an oximoronic local projector type
   type local_t
@@ -119,7 +120,8 @@ module external_pot_m
 #endif
     integer :: nvnl                       ! number of nonlocal operators
     type(projector_t), pointer :: p(:)    ! non-local projectors
-
+    integer, pointer :: atomproj(:,:)     ! the range of projectors
+                                          ! corresponding to an atom
     ! External e-m fields
     integer :: no_lasers                   ! number of laser pulses used
     type(laser_t), pointer :: lasers(:)    ! lasers stuff
@@ -140,6 +142,7 @@ module external_pot_m
     ! *effective* electrons in a quantum dot. It affects the spin Zeeman term.
     FLOAT :: gyromagnetic_ratio
     integer :: forces
+    logical :: gen_grads
   end type epot_t
 
   integer, parameter :: M_HGH = 1, &
@@ -351,6 +354,8 @@ contains
     !%End
     call loct_parse_int(check_inp('Forces'), DERIVATE_WAVEFUNCTION, ep%forces)
 
+    ep%gen_grads = (ep%forces == DERIVATE_POTENTIAL)
+
     ! The projectors
     ep%nvnl = geometry_nvnl(geo, nvl)
 
@@ -361,6 +366,7 @@ contains
     
     if(ep%nvnl > 0) then
       ALLOCATE(ep%p(ep%nvnl), ep%nvnl)
+      ALLOCATE(ep%atomproj(1:2, geo%natoms), 2*geo%natoms)
       do i = 1, ep%nvnl
         call projector_null(ep%p(i))
       end do
@@ -427,6 +433,7 @@ contains
     if(ep%nvnl>0) then
       ASSERT(associated(ep%p))
       deallocate(ep%p)
+      deallocate(ep%atomproj)
     end if
 
     call pop_sub()
@@ -650,7 +657,7 @@ contains
 
     logical :: fast_generation_
     FLOAT   :: time_
-    integer :: ia, i, l, lm, k, p
+    integer :: ia, l, lm, k, p, iproj
     type(atom_t),   pointer :: atm
 #ifdef HAVE_FFT
     type(dcf_t) :: cf_loc, cf_nlcc
@@ -708,7 +715,7 @@ contains
     end do
 
     ! the pseudo potential part.
-    i = 1
+    iproj = 1
     do ia = 1, geo%natoms
       atm => geo%atom(ia)
 
@@ -716,7 +723,9 @@ contains
 
       !the non-local part
       p = 1
-
+      
+      ep%atomproj(1, ia) = iproj
+      
       do l = 0, atm%spec%ps%l_max
         if(atm%spec%ps%l_loc == l) cycle
         do lm = -l, l
@@ -725,37 +734,39 @@ contains
             ! This if is a performance hack, necessary for when the ions move.
             ! For each atom, the sphere is the same, so we just calculate it once
             if(p == 1) then
-              k = i
+              k = iproj
               p = 2
-              call projector_end(ep%p(i))
-              call projector_build_kb_sphere(ep%p(i), sb, m, atm, st)
+              call projector_end(ep%p(iproj))
+              call projector_build_kb_sphere(ep%p(iproj), sb, m, atm, st)
             else
-              call projector_end(ep%p(i))
-              call projector_copy_kb_sphere(ep%p(k), ep%p(i))
+              call projector_end(ep%p(iproj))
+              call projector_copy_kb_sphere(ep%p(k), ep%p(iproj))
             end if
 
           end if
 
-          call projector_init(ep%p(i), gr, atm, reltype, l, lm)
+          call projector_init(ep%p(iproj), gr, atm, ep%gen_grads, reltype, l, lm)
 
-          ep%p(i)%iatom = ia
-          i = i + 1
+          ep%p(iproj)%iatom = ia
+          iproj = iproj + 1
         end do
       end do
 
       if(.not. simul_box_is_periodic(gr%sb)) then
         !the local part
-        ep%p(i)%iatom = ia
+        ep%p(iproj)%iatom = ia
 
-        call projector_end(ep%p(i))
+        call projector_end(ep%p(iproj))
 
-        call submesh_init_sphere(ep%p(i)%sphere, &
+        call submesh_init_sphere(ep%p(iproj)%sphere, &
              sb, m, atm%x, double_grid_get_rmax(gr%dgrid, atm%spec, m) + maxval(m%h(1:3)))
 
-        call projector_init(ep%p(i), gr, atm, force_type = M_LOCAL)
+        call projector_init(ep%p(iproj), gr, atm, ep%gen_grads, force_type = M_LOCAL)
 
-        i = i + 1
+        iproj = iproj + 1
       end if
+
+      ep%atomproj(2, ia) = iproj - 1
 
     end do
 
@@ -1117,10 +1128,11 @@ contains
   end subroutine projector_copy_kb_sphere
 
   !---------------------------------------------------------
-  subroutine projector_init(p, gr, a, reltype, l, lm, force_type)
+  subroutine projector_init(p, gr, a, gen_grads, reltype, l, lm, force_type)
     type(projector_t), intent(inout) :: p
     type(grid_t),      intent(in)    :: gr
     type(atom_t),      intent(in)    :: a
+    logical,           intent(in)    :: gen_grads
     integer, optional, intent(in)    :: reltype
     integer, optional, intent(in)    :: l, lm
     integer, optional, intent(in)    :: force_type
@@ -1164,7 +1176,7 @@ contains
     case (M_KB)
       ALLOCATE(p%kb_p, 1)
       call kb_projector_null(p%kb_p)
-      call kb_projector_init(p%kb_p, p%sphere, gr, a, l, lm)
+      call kb_projector_init(p%kb_p, p%sphere, gr, a, l, lm, gen_grads)
     case (M_RKB)
       ALLOCATE(p%rkb_p, 1)
       call rkb_projector_null(p%rkb_p)
