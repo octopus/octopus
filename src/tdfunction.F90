@@ -209,7 +209,7 @@ module tdf_m
 
   !------------------------------------------------------------
   subroutine tdf_set_numerical(f, values)
-    type(tdf_t), intent(in) :: f
+    type(tdf_t), intent(inout) :: f
     CMPLX,       intent(in) :: values(:)
     call push_sub("tdfunction.tdf_set_numerical") 
 

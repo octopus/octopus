@@ -43,7 +43,7 @@ module resp_pert_m
      dresp_pert_apply,    &
      zresp_pert_apply,    &
      resp_displ_t,        &
-     resp_pert_build_ion_displacement
+     resp_pert_build_ion_displace
 
   integer, public, parameter :: &
      RESP_PERTURBATION_ELECTRIC = 1, &
@@ -121,7 +121,7 @@ contains
 
   end subroutine resp_pert_init2
 
-  subroutine resp_pert_build_ion_displacement(this, gr, geo, iatom, idir)
+  subroutine resp_pert_build_ion_displace(this, gr, geo, iatom, idir)
     type(resp_pert_t), intent(out)   :: this
     type(grid_t),      intent(inout) :: gr
     type(geometry_t),  intent(in)    :: geo
@@ -135,7 +135,7 @@ contains
     this%ion_disp%iatom = iatom
     this%ion_disp%idir = idir
     
-  end subroutine resp_pert_build_ion_displacement
+  end subroutine resp_pert_build_ion_displace
 
   ! --------------------------------------------------------------------
   subroutine resp_pert_end(this)

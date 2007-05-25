@@ -99,7 +99,7 @@ contains
 
         call resp_pert_init(perturbation)
 
-        call resp_pert_build_ion_displacement(perturbation, sys%gr, sys%geo, iatom, idir)
+        call resp_pert_build_ion_displace(perturbation, sys%gr, sys%geo, iatom, idir)
 
         call dsternheimer_solve(sh, sys, h, lr, 1, M_ZERO, perturbation, &
            RESTART_DIR, phn_rho_tag(iatom, idir), phn_wfs_tag(iatom, idir))
