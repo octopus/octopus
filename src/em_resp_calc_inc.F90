@@ -431,7 +431,8 @@ subroutine X(lr_calc_beta) (sh, sys, h, lr, perturbation, beta)
                   if( sys%st%occ(ist, ik) > lr_min_occ ) then 
 
                     call resp_pert_setup_dir(perturbation, u(2))
-                    call X(resp_pert_apply) (perturbation, sys%gr, sys%geo, lr(u(3), isigma, w(3))%X(dl_psi)(1:np, idim, ist, ispin), tmp2)
+                    call X(resp_pert_apply) (perturbation, sys%gr, sys%geo, &
+                         lr(u(3), isigma, w(3))%X(dl_psi)(1:np, idim, ist, ispin), tmp2)
                     tmp2(1:np) = tmp2(1:np) + R_REAL(hvar(1:np, ispin, isigma, idim, u(2), w(2) )) &
                        * lr(u(3), isigma, w(3))%X(dl_psi)(1:np, idim, ist, ispin)
 
