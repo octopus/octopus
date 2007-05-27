@@ -982,9 +982,10 @@ contains
     field = field * units_inp%length%factor / units_inp%energy%factor
     call write_iter_double(out_laser, field, NDIM)
 
-    call laser_vector_field(gr%sb, h%ep%no_lasers, h%ep%lasers, iter*dt, field)
-    field = field  * units_inp%length%factor
-    call write_iter_double(out_laser, field, NDIM)
+    ! WARNING: the laser could be a vector field. This has to be fixed.
+    !call laser_vector_field(gr%sb, h%ep%no_lasers, h%ep%lasers, iter*dt, field)
+    !field = field  * units_inp%length%factor
+    !call write_iter_double(out_laser, field, NDIM)
 
     call write_iter_nl(out_laser)
 

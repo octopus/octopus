@@ -67,7 +67,6 @@ module external_pot_m
     epot_generate_gauge_field, &
     epot_laser_scalar_pot,     &
     epot_laser_field,          &
-    epot_laser_vector_pot,     &
     epot_forces,               &
     dproject, zproject,        &
     projector_t,               &
@@ -908,24 +907,13 @@ contains
     type(grid_t), intent(in) :: gr
     type(epot_t), intent(in) :: ep
     FLOAT,        intent(in) :: t
-
     FLOAT :: v(np)
+    call push_sub('epot.epot_laser_scalar_pot')
 
     call laser_potential(gr%sb, ep%no_lasers, ep%lasers, t, gr%m, v)
 
+    call pop_sub()
   end function epot_laser_scalar_pot
-
-
-  ! ---------------------------------------------------------
-  subroutine epot_laser_vector_pot(sb, ep, t, a)
-    type(simul_box_t), intent(in)  :: sb
-    type(epot_t),      intent(in)  :: ep
-    FLOAT,             intent(in)  :: t
-    FLOAT,             intent(out) :: a(sb%dim)
-
-    call laser_vector_field(sb, ep%no_lasers, ep%lasers, t, a)
-
-  end subroutine epot_laser_vector_pot
 
 
   ! ---------------------------------------------------------

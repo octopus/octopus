@@ -47,6 +47,7 @@ module opt_control_m
   use v_ks_m
   use external_pot_m
   use restart_m
+  use tdf_m
 
   implicit none
 
@@ -233,7 +234,7 @@ contains
       write(message(2),'(a)') "Choose: ZR98, ZBR98, WG05."
       call write_fatal(2)
     end select
-    
+
     ! Some informative output.
     call output(oct, iterator)
     call states_output(target_st, gr, 'opt-control/target', sys%outp)
@@ -244,7 +245,6 @@ contains
     call oct_finalcheck(oct, initial_st, target_st, sys, h, td, tdt)
 
     ! clean up
-    nullify(h%ep%lasers(1)%numerical)
     call parameters_end(par)
     call parameters_end(par_tmp)
     call oct_iterator_end(iterator)
@@ -446,8 +446,6 @@ contains
       message(1) = "Info: Propagating forward"
       call write_info(1)
 
-      h%ep%lasers(1)%dt = td%dt
-
       do i = 1, td%max_iter
         call prop_iter_fwd(i, method)
         if(oct%targetmode==oct_targetmode_td) &
@@ -487,7 +485,6 @@ contains
       call write_info(1)
       !call loct_progress_bar(td%max_iter-1, td%max_iter-1)
       td%dt = -td%dt
-      h%ep%lasers(1)%dt = td%dt
       do i = td%max_iter-1, 0, -1
         call prop_iter_bwd(i,method)
         !call loct_progress_bar(td%max_iter-1-i, td%max_iter-1)

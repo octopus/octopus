@@ -523,17 +523,10 @@ subroutine X(vlasers) (gr, h, psi, hpsi, t)
 
     case(VELOCITY)
 
-      call epot_laser_vector_pot(gr%sb, h%ep, t, a)
-      ALLOCATE(grad(NP, NDIM), NP*NDIM)
-      do idim = 1, h%d%dim
-        call X(f_gradient)(gr%sb, gr%f_der, psi(:, idim), grad)
-        do k = 1, NP
-          hpsi(k, idim) = hpsi(k, idim) - M_zI * sum(a(1:NDIM)*grad(k,:)) + &
-            sum(a**2)/M_TWO * psi(k, idim)
-        end do
-      end do
-      deallocate(grad)
+      write(message(1), '(a)') 'Velocity gauge temporarily disabled.'
+      call write_fatal(1)
     end select
+
   end if
 
   call pop_sub()

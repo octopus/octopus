@@ -30,6 +30,7 @@ module tdf_m
   use io_m
   use messages_m
   use lib_oct_gsl_spline_m
+  use units_m
 
   implicit none
 
@@ -43,6 +44,7 @@ module tdf_m
             tdf_init_numerical,   &
             tdf_set_numerical,    &
             tdf,                  &
+            tdf_write,            &
             tdf_end,              &
             assignment(=)
 
@@ -72,6 +74,10 @@ module tdf_m
     integer :: niter
     CMPLX, pointer :: val(:)
   end type tdf_t
+
+  interface tdf_set_numerical
+    module procedure tdf_set_numericalr, tdf_set_numericalc
+  end interface
 
   interface assignment (=)
     module procedure tdf_copy
@@ -200,23 +206,37 @@ module tdf_m
 
     f%mode = TDF_NUMERICAL
     f%niter = niter
-    ALLOCATE(f%val(niter), niter)
+    ! WARNING: this weird allocataion scheme should be changed in the future:
+    ALLOCATE(f%val(niter+1), niter+1)
     f%val = M_z0
+    f%dt = dt
 
     call pop_sub()
   end subroutine tdf_init_numerical
 
 
   !------------------------------------------------------------
-  subroutine tdf_set_numerical(f, values)
+  subroutine tdf_set_numericalc(f, values)
     type(tdf_t), intent(inout) :: f
     CMPLX,       intent(in) :: values(:)
     call push_sub("tdfunction.tdf_set_numerical") 
 
-    f%val(1:f%niter) = values(1:f%niter)
+    f%val(1:f%niter+1) = values(1:f%niter+1)
 
     call pop_sub()
-  end subroutine tdf_set_numerical
+  end subroutine tdf_set_numericalc
+
+
+  !------------------------------------------------------------
+  subroutine tdf_set_numericalr(f, values)
+    type(tdf_t), intent(inout) :: f
+    FLOAT,       intent(in) :: values(:)
+    call push_sub("tdfunction.tdf_set_numerical") 
+
+    f%val(1:f%niter+1) = values(1:f%niter+1)
+
+    call pop_sub()
+  end subroutine tdf_set_numericalr
 
 
 
@@ -227,8 +247,6 @@ module tdf_m
 
     FLOAT :: r
     integer :: il, iu
-
-    call push_sub('tdfunction.tdf')
 
     select case(f%mode)
 
@@ -265,12 +283,15 @@ module tdf_m
 
     case(TDF_NUMERICAL)
 
-      il = int(t/f%dt); iu = int(t/f%dt) + 1
-      y = f%val(il) + ((f%val(iu)-f%val(il))/f%dt)*(t-(il-1)*f%dt)
+      il = int(t/f%dt)+1; iu = il+1
+      if(iu>f%niter+1) then
+        y = f%val(il)
+      else
+        y = f%val(il) + ((f%val(iu)-f%val(il))/f%dt)*(t-(il-1)*f%dt)
+      end if
 
     end select
 
-    call pop_sub()
   end function tdf
 
 
@@ -311,6 +332,55 @@ module tdf_m
 
 
   !------------------------------------------------------------
+  subroutine tdf_write(f, iunit)
+    type(tdf_t), intent(in) :: f
+    integer, intent(in) :: iunit
+
+    select case(f%mode)
+    case(TDF_CW)
+      write(iunit,'(3x,a)')          'Mode: continuous wave.'
+      write(iunit,'(3x,a,f10.4,3a)') 'Frequency: ', f%omega0/units_inp%energy%factor, &
+        ' [', trim(units_inp%energy%abbrev), ']'
+      write(iunit,'(3x,a,f10.4,a)')  'Amplitude: ', f%a0, ' [a.u]'
+    case(TDF_GAUSSIAN)
+      write(iunit,'(3x,a)')          'Mode: Gaussian envelope.'
+      write(iunit,'(3x,a,f10.4,3a)') 'Frequency: ', f%omega0/units_inp%energy%factor, &
+        ' [', trim(units_inp%energy%abbrev), ']'
+      write(iunit,'(3x,a,f10.4,a)')  'Amplitude: ', f%a0, ' [a.u]'
+      write(iunit,'(3x,a,f10.4,3a)') 'Width:     ', f%tau0/units_inp%time%factor, &
+        ' [', trim(units_inp%time%abbrev), ']'
+      write(iunit,'(3x,a,f10.4,3a)') 'Middle t:  ', f%t0/units_inp%time%factor, &
+        ' [', trim(units_inp%time%abbrev), ']'
+    case(TDF_COSINOIDAL)
+      write(iunit,'(3x,a)') 'Mode: cosinoidal envelope.'
+      write(iunit,'(3x,a,f10.4,3a)') 'Frequency: ', f%omega0/units_inp%energy%factor, &
+        ' [', trim(units_inp%energy%abbrev), ']'
+      write(iunit,'(3x,a,f10.4,a)')  'Amplitude: ', f%a0, ' [a.u]'
+      write(iunit,'(3x,a,f10.4,3a)') 'Width:     ', f%tau0/units_inp%time%factor, &
+        ' [', trim(units_inp%time%abbrev), ']'
+      write(iunit,'(3x,a,f10.4,3a)') 'Middle t:  ', f%t0/units_inp%time%factor, &
+        ' [', trim(units_inp%time%abbrev), ']'
+    case(TDF_TRAPEZOIDAL)
+      write(iunit,'(3x,a)') 'Mode: trapezoidal envelope.'
+      write(iunit,'(3x,a,f10.4,3a)') 'Frequency: ', f%omega0/units_inp%energy%factor, &
+        ' [', trim(units_inp%energy%abbrev), ']'
+      write(iunit,'(3x,a,f10.4,a)')  'Amplitude: ', f%a0, ' [a.u]'
+      write(iunit,'(3x,a,f10.4,3a)') 'Width:     ', f%tau0/units_inp%time%factor, &
+        ' [', trim(units_inp%time%abbrev), ']'
+      write(iunit,'(3x,a,f10.4,3a)') 'Middle t:  ', f%t0/units_inp%time%factor, &
+        ' [', trim(units_inp%time%abbrev), ']'
+      write(iunit,'(3x,a,f10.4,3a)') 'Ramp time: ', f%tau1/units_inp%time%factor, &
+        ' [', trim(units_inp%time%abbrev), ']'
+    case(TDF_FROM_FILE)
+      write(iunit,'(3x,a)') 'Mode: time-dependent function read from file.'
+    case(TDF_NUMERICAL)
+      write(iunit,'(3x,a)') 'Mode: time-dependent function stored in a numerical array.'
+    end select
+
+  end subroutine tdf_write
+
+
+  !------------------------------------------------------------
   ! Nullifies pointers (without deallocation); sets numerical values to scalar variables.
   subroutine tdf_null(f)
     type(tdf_t), intent(inout) :: f
@@ -323,6 +393,7 @@ module tdf_m
     f%omega0 = CNST(0.0)
     f%niter  = 0
     f%mode = -1
+    nullify(f%val)
 
   end subroutine tdf_null
 

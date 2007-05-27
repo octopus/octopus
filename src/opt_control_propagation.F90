@@ -129,7 +129,6 @@
     call td_rti_run_zero_iter(h, td%tr)
 
     td%dt = -td%dt
-    h%ep%lasers(1)%dt = td%dt
     do i = td%max_iter-1, 0, -1
       ! time iterate wavefunctions
       call td_rti_dt(sys%ks, h, gr, psi_n, td%tr, abs(i*td%dt), td%dt)

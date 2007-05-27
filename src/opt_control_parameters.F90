@@ -73,7 +73,7 @@
 
     call push_sub('opt_control_paramters.parameters_to_h')
 
-    ep%lasers(1)%numerical = cp%laser
+    call tdf_set_numerical(ep%lasers(1)%f, cp%laser(1, 0:cp%ntiter))
     ep%lasers(1)%pol(:) = cp%laser_pol(:)
 
     call pop_sub()
