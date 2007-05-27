@@ -183,7 +183,17 @@ contains
 
   ! ---------------------------------------------------------
   subroutine poisson_isf_end()
+    integer :: i_cnf
+
     call push_sub('poisson_isf.poisson_isf_end')
+
+#if defined(HAVE_MPI)
+    do i_cnf = 1, n_cnf
+      deallocate(cnf(i_cnf)%kernel)
+    end do
+#else
+    deallocate(cnf(serial)%kernel)
+#endif
 
     call dcf_free(rho_cf)
 

@@ -141,6 +141,7 @@ contains
     call multicomm_end(s%mc)
 #endif
 
+    call poisson_end()
     call v_ks_end(s%ks)
 
     if(associated(s%st)) then

@@ -293,6 +293,8 @@ contains
 
     call push_sub('multigrid.multigrid_end')
 
+    deallocate(mgrid%level(0)%fine_i)
+
     do i = 1, mgrid%n_levels
       level => mgrid%level(i)
 

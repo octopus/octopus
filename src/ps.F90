@@ -504,6 +504,8 @@ contains
     call loct_spline_end(ps%core)
     call loct_spline_end(ps%vlocal_f)
 
+    call logrid_end(ps%g)
+
     deallocate(ps%kb, ps%dkb, ps%ur, ps%h, ps%k)
 
     call pop_sub()

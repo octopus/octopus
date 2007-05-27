@@ -573,7 +573,11 @@ contains
     do i = 1, ns
       if (specie_is_ps(s(i))) then 
         if(associated(s(i)%ps)) call ps_end(s(i)%ps)
+        deallocate(s(i)%ps)
       end if
+      deallocate(s(ns)%iwf_l)
+      deallocate(s(ns)%iwf_m)
+      deallocate(s(ns)%iwf_i)
     end do
 
     if(associated(s)) then ! sanity check

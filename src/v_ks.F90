@@ -67,7 +67,7 @@ contains
   subroutine v_ks_init(gr, ks, d)
     type(v_ks_t),        intent(out)   :: ks
     type(grid_t),        intent(inout) :: gr
-    type(states_dim_t),  pointer       :: d
+    type(states_dim_t),  intent(in)    :: d
 
     call push_sub('v_ks.v_ks_init');
 
@@ -139,8 +139,6 @@ contains
     if(.not.ks%ip_app) then
       call xc_oep_end(ks%oep)
       call xc_end(ks%xc)
-
-      call poisson_end()
     end if
 
     call pop_sub();

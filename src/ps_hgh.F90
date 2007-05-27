@@ -140,7 +140,10 @@ contains
   subroutine hgh_end(psp)
     type(hgh_t), intent(inout) :: psp
     call push_sub('hgh.hgh_end')
-
+    if(psp%l_max >= 0) then
+      deallocate(psp%kbr)
+      deallocate(psp%kb)
+    end if
     deallocate(psp%vlocal, psp%rphi, psp%eigen)
     nullify(psp%kb, psp%kbr)
     call logrid_end(psp%g)
@@ -154,16 +157,22 @@ contains
     type(hgh_t), intent(inout) :: psp
 
     integer :: l, i, ierr
+    FLOAT, pointer :: ptr(:)
 
     call push_sub('hgh.hgh_process')
 
+
     ! Fixes the local potential
-    psp%vlocal(1:psp%g%nrval) = vlocalr(psp%g%rofi, psp)
+    ptr => vlocalr(psp%g%rofi, psp)
+    psp%vlocal(1:psp%g%nrval) = ptr(1:psp%g%nrval)
+    deallocate(ptr)
 
     ! And the projectors
     do l = 0, psp%l_max
       do i = 1, 3
-        psp%kb(1:psp%g%nrval, l, i) = projectorr(psp%g%rofi, psp, i, l)
+        ptr => projectorr(psp%g%rofi, psp, i, l)
+        psp%kb(1:psp%g%nrval, l, i) = ptr(1:psp%g%nrval)
+        deallocate(ptr)
       end do
     end do
 

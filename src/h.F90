@@ -143,7 +143,7 @@ contains
     type(hamiltonian_t), intent(out)   :: h
     type(grid_t),        intent(inout) :: gr
     type(geometry_t),    intent(inout) :: geo
-    type(states_dim_t),  pointer       :: states_dim
+    type(states_dim_t),  intent(in), target :: states_dim
     logical,             intent(in)    :: ip_app
 
     integer :: i, j, n

@@ -386,7 +386,7 @@ contains
     type(grid_t),      intent(in)    :: gr
     type(geometry_t),  intent(inout) :: geo
 
-    integer :: i
+    integer :: i, iproj
 
     call push_sub('epot.epot_end')
 
@@ -431,6 +431,10 @@ contains
     if(associated(ep%A_gauge_ddot)) deallocate(ep%A_gauge_ddot)
 
     if(ep%nvnl>0) then
+      do iproj = 1, ep%nvnl
+        call projector_end(ep%p(iproj))
+      end do
+
       ASSERT(associated(ep%p))
       deallocate(ep%p)
       deallocate(ep%atomproj)

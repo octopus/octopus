@@ -91,9 +91,22 @@ module states_m
     zstates_angular_momentum,       &
     states_distribute_nodes
 
+  type states_dim_t
+    integer :: wfs_type             ! real (M_REAL) or complex (M_CMPLX) wavefunctions
+    integer :: dim                  ! Dimension of the state (one or two for spinors)
+    integer :: nik                  ! Number of irreducible subspaces
+    integer :: nik_axis(MAX_DIM)    ! Number of kpoints per axis
+    integer :: ispin                ! spin mode (unpolarized, spin polarized, spinors)
+    integer :: nspin                ! dimension of rho (1, 2 or 4)
+    integer :: spin_channels        ! 1 or 2, wether spin is or not considered.
+    logical :: cdft                 ! Are we using Current-DFT or not?
+    FLOAT, pointer :: kpoints(:,:)  ! obviously the kpoints
+    FLOAT, pointer :: kweights(:)   ! weights for the kpoint integrations
+  end type states_dim_t
+
   type states_t
 
-    type(states_dim_t), pointer :: d
+    type(states_dim_t) :: d
     integer :: nst                  ! Number of states in each irreducible subspace
 
     ! pointers to the wavefunctions 
@@ -130,18 +143,6 @@ module states_m
     integer, pointer :: node(:)     ! To which node belongs each state.
   end type states_t
 
-  type states_dim_t
-    integer :: wfs_type             ! real (M_REAL) or complex (M_CMPLX) wavefunctions
-    integer :: dim                  ! Dimension of the state (one or two for spinors)
-    integer :: nik                  ! Number of irreducible subspaces
-    integer :: nik_axis(MAX_DIM)    ! Number of kpoints per axis
-    integer :: ispin                ! spin mode (unpolarized, spin polarized, spinors)
-    integer :: nspin                ! dimension of rho (1, 2 or 4)
-    integer :: spin_channels        ! 1 or 2, wether spin is or not considered.
-    logical :: cdft                 ! Are we using Current-DFT or not?
-    FLOAT, pointer :: kpoints(:,:)  ! obviously the kpoints
-    FLOAT, pointer :: kweights(:)   ! weights for the kpoint integrations
-  end type states_dim_t
 
 
   ! Parameters...
@@ -171,9 +172,6 @@ contains
 
     nullify(st%dpsi, st%zpsi, st%rho, st%j, st%rho_core, st%eigenval)
     nullify(st%occ, st%spin, st%momentum, st%node, st%user_def_states)
-
-    nullify(st%d)
-    ALLOCATE(st%d, 1)
     nullify(st%d%kpoints, st%d%kweights)
 
     ! By default, calculations use real wave-functions
