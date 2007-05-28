@@ -566,18 +566,21 @@ contains
     integer,        intent(in) :: ns
     type(specie_t), pointer    :: s(:)
 
+
     integer :: i
 
     call push_sub('specie.specie_end')
 
     do i = 1, ns
       if (specie_is_ps(s(i))) then 
-        if(associated(s(i)%ps)) call ps_end(s(i)%ps)
+        if(associated(s(i)%ps)) then 
+          call ps_end(s(i)%ps)
         deallocate(s(i)%ps)
+        end if
       end if
-      deallocate(s(ns)%iwf_l)
-      deallocate(s(ns)%iwf_m)
-      deallocate(s(ns)%iwf_i)
+      deallocate(s(i)%iwf_l)
+      deallocate(s(i)%iwf_m)
+      deallocate(s(i)%iwf_i)
     end do
 
     if(associated(s)) then ! sanity check

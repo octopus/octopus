@@ -95,15 +95,12 @@ end subroutine X(ode_solver_create)
 
 
 ! ---------------------------------------------------------
-subroutine X(ode_solver_run)(os, func, startval, solutionp, solutionvec, filename)
+subroutine X(ode_solver_run)(os, func, startval, solutionp, solutionvec)
   type(ode_solver_t),      intent(inout) :: os
   R_TYPE,                     intent(in)    :: startval(:)
   ! values of the solution only at the endpoint of the interval
   R_TYPE,                     intent(out)   :: solutionp(:)
   R_TYPE, optional,           intent(out)   :: solutionvec(:,:) ! full solution for all t
-  character(len=*), optional, intent(in)    :: filename
-
-  character(len=128) :: filename_
 
   interface
     subroutine func(size, t, z, res)
@@ -117,12 +114,6 @@ subroutine X(ode_solver_run)(os, func, startval, solutionp, solutionvec, filenam
 
 
   call push_sub('ode_solver_inc.Xode_solver_run')
-
-  if (present(filename)) then
-    filename_ = trim(filename)
-  else
-    filename_ = ''
-  end if
 
   ! initialize array
   solutionp = M_ZERO

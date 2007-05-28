@@ -125,10 +125,12 @@ contains
     FLOAT,        intent(in)  :: rho(:)
     logical,      intent(in)  :: all_nodes
 
+#if defined(HAVE_MPI)
     FLOAT, allocatable :: rho_global(:)
     FLOAT, allocatable :: pot_global(:)
 
     integer :: i_cnf
+#endif
 
     call push_sub('poisson_isf.poisson_isf_solve')
 
@@ -183,7 +185,9 @@ contains
 
   ! ---------------------------------------------------------
   subroutine poisson_isf_end()
+#if defined(HAVE_MPI)
     integer :: i_cnf
+#endif
 
     call push_sub('poisson_isf.poisson_isf_end')
 

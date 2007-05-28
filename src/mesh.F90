@@ -484,7 +484,7 @@ contains
      end if
 
      if(m%parallel_in_domains) then
-       if(associated(m%x_global).and.m%vp%rank.eq.m%vp%root) then
+       if(associated(m%x_global)) then
          deallocate(m%x_global)
          nullify(m%x_global)
        end if

@@ -159,7 +159,6 @@ contains
 
   contains
     subroutine find_atom_points()
-      FLOAT :: chi(MAX_DIM), lixo(MAX_DIM)
       integer :: i, jj
 
       ! Initialize csi
