@@ -114,7 +114,7 @@ if COMPILE_LIBNBC
 endif
 
 octopus_LDADD = @LIBS_FFT@ @LIBS_TRLAN@ @LIBS_ARPACK@ @LIBS_SPARSKIT@ \
-  @LIBS_NETCDF@ @LIBS_MPI@ $(core_LIBS) $(external_LIBS) @LIBS_LAPACK@ @LIBS_BLAS@
+  @LIBS_NETCDF@ $(core_LIBS) $(external_LIBS) @LIBS_MPI@ @LIBS_LAPACK@ @LIBS_BLAS@
 
 # now the utility programs
 oct_cross_section_SOURCES = $(basic_SRCS) spectrum.F90 cross_section.F90
