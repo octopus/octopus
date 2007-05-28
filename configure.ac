@@ -263,7 +263,7 @@ AM_CONDITIONAL(COMPILE_LIBNBC, test x${HAVE_LIBNBC} = x1)
   
 dnl check for MPI
 if test x"$enable_mpi" != x"no"; then
-  ACX_MPI([], AC_MSG_WARN([could not compile an mpi test program]))
+  ACX_MPI([], AC_MSG_ERROR([could not compile an mpi test program]))
 fi
 
 dnl now I run configure for the internal libraries
