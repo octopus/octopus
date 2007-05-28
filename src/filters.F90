@@ -32,6 +32,7 @@ module filter_m
   use fft_m
 #endif
   use units_m
+  use tdf_m
 
   implicit none
 
@@ -158,11 +159,13 @@ contains
   
 
   ! ---------------------------------------------------------
-  subroutine apply_filter(gr, steps, filtermode, filter, laser_inout)  
+  subroutine apply_filter(gr, steps, filtermode, filter, f)  
     type(grid_t),     pointer      :: gr
     type(filter_t),   pointer      :: filter(:)
     integer,          intent(in)   :: filtermode, steps
-    FLOAT,            intent(inout):: laser_inout(:,:)
+    type(tdf_t), intent(inout) :: f
+
+    FLOAT, allocatable :: cfunction(:)
 
 #if defined(HAVE_FFT)
 
@@ -172,6 +175,13 @@ contains
     type(fft_t)    :: fft_handler
 
     call push_sub('filters.apply_filter')
+
+!!!!NEW
+    ALLOCATE(cfunction(0:2*steps), 2*steps+1)
+    do i = 1, 2*steps+1
+      cfunction(i-1) = tdf(f, i)
+    end do
+!!!!ENDOFNEW
 
     n(1:3) = (/ 2*steps+1, 1, 1 /)
     
@@ -218,7 +228,8 @@ contains
         i = ii - 1
         do kk=1, NDIM
           !write(6,*) 'in:', SUM(laser_inout(kk,:)**2)
-          tmp2(:, 1, 1) = cmplx(laser_inout(kk,:))
+!!$          tmp2(:, 1, 1) = cmplx(laser_inout(kk,:))
+          tmp2(:, 1, 1) = cmplx(cfunction(:))
           
           call zfft_forward(fft_handler, tmp2, tmp)
           !write(6,*) SUM(abs(tmp)**2)/real((2*steps+1), REAL_PRECISION)
@@ -226,7 +237,8 @@ contains
           tmp(:, 1, 1) = tmp(:, 1, 1)*filt(kk,:)
           call zfft_backward(fft_handler, tmp, tmp2)
           
-          laser_inout(kk,:) = real(tmp2(:, 1, 1), REAL_PRECISION)!/real((2*steps+1), REAL_PRECISION)
+!!$          laser_inout(kk,:) = real(tmp2(:, 1, 1), REAL_PRECISION)!/real((2*steps+1), REAL_PRECISION)
+          cfunction(:) = real(tmp2(:, 1, 1), REAL_PRECISION)!/real((2*steps+1), REAL_PRECISION)
           !write(6,*) 'out:', SUM(laser_inout(kk,:)**2)
           !write(6,*) SUM(laser_inout(kk,:)**2)          
         enddo
@@ -252,7 +264,8 @@ contains
         call write_info(1)
 
         do kk=1, NDIM
-          laser_inout(kk,:) = laser_inout(kk,:)*filt(kk, :)
+!!$          laser_inout(kk,:) = laser_inout(kk,:)*filt(kk, :)
+          cfunction(:) = cfunction(:)*filt(kk, :)
         enddo
         
       case(filter_phase)
@@ -264,7 +277,12 @@ contains
         call write_fatal(1)
       end select
     end do
-    
+
+    do i = 1, 2*steps+1
+      call tdf_set_numerical(f, i, cfunction(i-1))
+    end do
+
+    deallocate(cfunction)    
     deallocate(filt)
     call fft_end(fft_handler)
     call pop_sub()

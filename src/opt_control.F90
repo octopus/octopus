@@ -132,10 +132,8 @@ module opt_control_m
     integer :: no_parameters
     FLOAT   :: dt
     integer :: ntiter
-    FLOAT, pointer :: laser(:, :)
-
+    type(tdf_t), pointer :: f(:)
     CMPLX   :: laser_pol(MAX_DIM)
-    integer :: laser_dof
   end type oct_control_parameters_t
 
   type oct_penalty_t 
@@ -162,7 +160,7 @@ contains
     type(filter_t),    pointer :: f(:)
     type(td_target_set_t)      :: tdt
     type(oct_control_parameters_t) :: par, par_tmp
-    integer :: ierr
+    integer :: i, ierr
     character(len=80)  :: filename
 
     call push_sub('opt_control.opt_control_run')
@@ -188,21 +186,23 @@ contains
 
     call oct_read_inp(oct)
 
-    call parameters_init(par, gr, td)
-    call parameters_init(par_tmp, gr, td)
-
     ! Initial guess for the laser: read from the input file.
     call laser_init(h%ep%no_lasers, h%ep%lasers, gr%m)
+
+    do i = 1, h%ep%no_lasers
+      call laser_to_numerical(h%ep%lasers(i), td%dt, td%max_iter)
+    end do
+
+    call parameters_init(par, NDIM, td)
+    call parameters_init(par_tmp, NDIM, td)
+
     call parameters_set(par, gr, h%ep)
     call parameters_write('opt-control/initial_laser.1', par)
-    call laser_end(h%ep%no_lasers, h%ep%lasers)
 
-    ! Allocate just one laser for optimal control
-    call laser_init_numerical(td%dt, td%max_iter, NDIM, h%ep%no_lasers, h%ep%lasers)
-
+    ! WARNING: probably this is unnecessary?
     call parameters_to_h(par, gr, td, h%ep)
 
-    write(message(1),'(a,f14.8)') 'Input: Fluence of Initial laser ', laser_fluence(par%laser, td%dt)
+    write(message(1),'(a,f14.8)') 'Input: Fluence of Initial laser ', laser_fluence(par)
     call write_info(1)
 
     call oct_iterator_init(iterator, oct)
@@ -343,16 +343,17 @@ contains
         
         call bwd_step(oct_algorithm_wg05)
         !!!WARNING: this probably shoudl not be here?
-        fluence = laser_fluence(par_tmp%laser, td%dt)
-        
-        ! filter stuff / alpha stuff
+        fluence = laser_fluence(par_tmp)
+
+        ! WARNING: This assumes that there is only one control parameter!
+        ! WARNING: Untested.
         if (oct%filtermode.gt.0) & 
-          call apply_filter(gr, td%max_iter, oct%filtermode, f, par_tmp%laser)
+          call apply_filter(gr, td%max_iter, oct%filtermode, f, par_tmp%f(1))
 
         ! recalc field
         if (oct%mode_fixed_fluence) then
           !!!WARNING: this probably shoudl not be here?
-          fluence = laser_fluence(par_tmp%laser, td%dt)
+          fluence = laser_fluence(par_tmp)
 
           penalty%a_penalty(iterator%ctr_iter + 1) = &
             sqrt(fluence * penalty%a_penalty(iterator%ctr_iter)**2 / oct%targetfluence )
@@ -362,13 +363,14 @@ contains
             write (6,*) 'next penalty', penalty%a_penalty(iterator%ctr_iter + 1)
           end if
           penalty%tdpenalty = penalty%a_penalty(iterator%ctr_iter + 1)
-          par_tmp%laser = par_tmp%laser * penalty%a_penalty(iterator%ctr_iter) &
-                          / penalty%a_penalty(iterator%ctr_iter + 1)
-          fluence = laser_fluence(par_tmp%laser, td%dt)
 
+          call tdf_scalar_multiply( ( penalty%a_penalty(iterator%ctr_iter) / penalty%a_penalty(iterator%ctr_iter + 1) ), &
+                                    par_tmp%f(1) )
+
+          fluence = laser_fluence(par_tmp)
         end if
 
-        par%laser = par_tmp%laser
+        par%f(1) = par_tmp%f(1)
         
         ! dump here: since the fwd_step is missing
         write(filename,'(a,i3.3)') 'opt-control/laser.', iterator%ctr_iter
@@ -450,9 +452,6 @@ contains
         call prop_iter_fwd(i, method)
         if(oct%targetmode==oct_targetmode_td) &
           call calc_tdfitness(tdt, gr, psi, tdt%td_fitness(i))     
-
-        ! if td_target
-        ! call loct_progress_bar(i-1, td%max_iter-1)
       end do
       
       ! dump new laser field
@@ -527,18 +526,18 @@ contains
         call v_ks_calc(gr, sys%ks, h, psi2, calc_eigenval=.true.)
         call td_rti_dt(sys%ks, h, gr, psi2, td%tr, abs(iter*td%dt), abs(td%dt))
       end if
-      
+
       call update_field(oct, penalty, iter-1, par, gr, td, psi, chi)
       
       ! chi
-      call  parameters_to_h(par_tmp, gr, td, h%ep)
+      call parameters_to_h(par_tmp, gr, td, h%ep)
       call states_calc_dens(chi, NP_PART, dens_tmp)
       chi%rho = dens_tmp
       call v_ks_calc(gr, sys%ks, h, chi, calc_eigenval=.true.) 
       call td_rti_dt(sys%ks, h, gr, chi, td%tr, abs(iter*td%dt), abs(td%dt))
       
       ! psi
-      call  parameters_to_h(par, gr, td, h%ep)
+      call parameters_to_h(par, gr, td, h%ep)
       call states_calc_dens(psi, NP_PART, dens_tmp)
       psi%rho = dens_tmp
       call v_ks_calc(gr, sys%ks, h, psi, calc_eigenval=.true.)

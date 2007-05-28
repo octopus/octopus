@@ -44,6 +44,9 @@ module lasers_m
     laser_field,                  &
     laser_potential
 
+  public ::                       &
+    laser_to_numerical
+
   integer, parameter ::           &
     ENVELOPE_CONSTANT      =  0,  &
     ENVELOPE_GAUSSIAN      =  1,  &
@@ -85,6 +88,21 @@ contains
     end do
 
   end subroutine laser_init_numerical
+
+
+  ! ---------------------------------------------------------
+  subroutine laser_to_numerical(l, dt, max_iter)
+    type(laser_t) :: l
+    FLOAT, intent(in) :: dt
+    integer, intent(in) :: max_iter
+
+    call push_sub('lasers.laser_init')
+
+    call tdf_to_numerical(l%f, 2*max_iter, M_HALF*dt)
+
+    call pop_sub()
+  end subroutine laser_to_numerical
+
 
   ! ---------------------------------------------------------
   subroutine laser_init(no_l, l, m)
@@ -170,7 +188,11 @@ contains
         call loct_parse_block_int  (blk, i-1, 5, envelope)
         call loct_parse_block_float(blk, i-1, 6, tau0)
         call loct_parse_block_float(blk, i-1, 7, t0)
-        if(no_c>8)  call loct_parse_block_float(blk, i-1, 8, tau1)
+        if(no_c>8)  then
+          call loct_parse_block_float(blk, i-1, 8, tau1)
+        else
+          tau1 = M_ZERO
+        end if
 
         if(no_c>9) call loct_parse_block_string(blk, i-1, 9, filename1)
         if(no_c>10) call loct_parse_block_string(blk, i-1, 10, filename2)

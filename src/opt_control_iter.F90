@@ -101,9 +101,9 @@
     stoploop = .false.
 
     iterator%overlap = overlap_function(oct, gr%m, td_fitness, td%max_iter, psi, target_st)
-    iterator%functional = iterator%overlap - j2_functional(oct, penalty, par%laser, td%dt)
+    iterator%functional = iterator%overlap - j2_functional(oct, penalty, par)
 
-    fluence = laser_fluence(par%laser, td%dt)
+    fluence = laser_fluence(par)
 
     iterator%convergence(1,iterator%ctr_iter) = iterator%functional
     iterator%convergence(2,iterator%ctr_iter) = iterator%overlap

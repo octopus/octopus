@@ -43,7 +43,9 @@ module tdf_m
             tdf_init_fromfile,    &
             tdf_init_numerical,   &
             tdf_set_numerical,    &
+            tdf_to_numerical,     &
             tdf,                  &
+            tdf_scalar_multiply,  &
             tdf_write,            &
             tdf_end,              &
             assignment(=)
@@ -76,7 +78,12 @@ module tdf_m
   end type tdf_t
 
   interface tdf_set_numerical
-    module procedure tdf_set_numericalr, tdf_set_numericalc
+    module procedure tdf_set_numericalr, tdf_set_numericalc, &
+                     tdf_set_numericalr1, tdf_set_numericalc1
+  end interface
+
+  interface tdf
+    module procedure tdfi, tdft
   end interface
 
   interface assignment (=)
@@ -239,9 +246,69 @@ module tdf_m
   end subroutine tdf_set_numericalr
 
 
+  !------------------------------------------------------------
+  subroutine tdf_set_numericalc1(f, index, value)
+    type(tdf_t), intent(inout) :: f
+    integer, intent(in) :: index
+    CMPLX,       intent(in) :: value
+    f%val(index) = value
+  end subroutine tdf_set_numericalc1
+
 
   !------------------------------------------------------------
-  CMPLX function tdf(f, t) result(y)
+  subroutine tdf_set_numericalr1(f, index, value)
+    type(tdf_t), intent(inout) :: f
+    integer, intent(in) :: index
+    FLOAT,       intent(in) :: value
+    f%val(index) = value
+  end subroutine tdf_set_numericalr1
+
+
+  !------------------------------------------------------------
+  subroutine tdf_to_numerical(f, niter, dt)
+    type(tdf_t), intent(inout) :: f
+    integer, intent(in) :: niter
+    FLOAT :: dt
+
+    FLOAT :: t
+    integer :: j
+
+    if(f%mode .eq. TDF_NUMERICAL) return
+
+    ALLOCATE(f%val(niter+1), niter+1)    
+
+    do j = 1, niter + 1
+      t = (j-1)*dt
+      f%val(j) = tdf(f, t)
+    end do
+
+    f%dt = dt
+    f%niter = niter
+    f%mode = TDF_NUMERICAL
+
+  end subroutine tdf_to_numerical
+
+
+
+  !------------------------------------------------------------
+  CMPLX function tdfi(f, i) result(y)
+    type(tdf_t), intent(in) :: f
+    integer, intent(in)     :: i
+
+    ! Maybe there should be a grid for any kind of function, so
+    ! that a meaningul number is produced in any case.
+    if(f%mode.ne.TDF_NUMERICAL) then
+      y = M_z0
+      return
+    else
+      y = f%val(i)
+    end if
+    
+  end function tdfi
+
+
+  !------------------------------------------------------------
+  CMPLX function tdft(f, t) result(y)
     type(tdf_t), intent(in) :: f
     FLOAT, intent(in)       :: t
 
@@ -292,7 +359,7 @@ module tdf_m
 
     end select
 
-  end function tdf
+  end function tdft
 
 
   !------------------------------------------------------------
@@ -312,6 +379,7 @@ module tdf_m
 
 
   !------------------------------------------------------------
+  ! WARNING: this should be improved to make it more robust.
   subroutine tdf_copy(fout, fin)
     type(tdf_t), intent(inout) :: fout
     type(tdf_t), intent(in)  :: fin
@@ -327,8 +395,28 @@ module tdf_m
     if(fin%mode .eq. TDF_FROM_FILE) then
       fout%amplitude = fin%amplitude
     end if
+    if(fin%mode .eq. TDF_NUMERICAL) then
+      fout%val  = fin%val
+    end if
 
   end subroutine tdf_copy
+
+
+  !------------------------------------------------------------
+  subroutine tdf_scalar_multiply(alpha, f) 
+    FLOAT, intent(in) :: alpha
+    type(tdf_t), intent(inout) :: f
+
+    select case(f%mode)
+    case(TDF_CW, TDF_GAUSSIAN, TDF_COSINOIDAL, TDF_TRAPEZOIDAL)
+      f%a0 = alpha*f%a0
+    case(TDF_NUMERICAL)
+      f%val = alpha*f%val
+    case(TDF_FROM_FILE)
+      call loct_spline_times(alpha, f%amplitude)
+    end select
+
+  end subroutine tdf_scalar_multiply
 
 
   !------------------------------------------------------------

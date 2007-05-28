@@ -19,19 +19,23 @@
 
 
   ! ---------------------------------------------------------
-  subroutine parameters_init(cp, gr, td)
+  subroutine parameters_init(cp, no_parameters, td)
     type(oct_control_parameters_t), intent(inout) :: cp
-    type(grid_t), intent(in) :: gr
+    integer, intent(in) :: no_parameters   
     type(td_t),   intent(in) :: td
+    integer :: j
+
     call push_sub('opt_control_parameters.parameters_init')
 
-    cp%no_parameters = NDIM
+    cp%no_parameters = no_parameters
     cp%dt = td%dt
     cp%ntiter = 2*td%max_iter
-    ALLOCATE(cp%laser(cp%no_parameters, 0:cp%ntiter), (cp%ntiter+1)*cp%no_parameters)
-    cp%laser(:, :) = M_ZERO
+    ALLOCATE(cp%f(cp%no_parameters), cp%no_parameters)
+    do j = 1, cp%no_parameters
+      call tdf_init_numerical(cp%f(j), cp%ntiter, M_HALF*cp%dt)
+    end do
 
-    call oct_read_laserpol(cp%laser_pol, cp%laser_dof)
+    call oct_read_laserpol(cp%laser_pol)
 
   end subroutine parameters_init
 
@@ -42,24 +46,16 @@
     type(grid_t), intent(in) :: gr
     type(epot_t), intent(in) :: ep
 
-    integer :: jj, kk
-    FLOAT   :: t
-    FLOAT, allocatable :: field(:)
-
     call push_sub('opt_control_parameters.parameters_set')
 
-    ALLOCATE(field(1:NDIM), NDIM)
-    cp%laser = M_ZERO;
+    ! WARNING: This assumes only one laser, and only one control parameter. Obviously 
+    ! this has to be improved.
+    cp%f(1) = ep%lasers(1)%f
+    if(cp%no_parameters > 1) then
+      write(message(1),'(a)') 'Internal Error at parameters_set.'
+      call write_fatal(1)
+    end if
 
-    do jj = 0, cp%ntiter
-      t = cp%dt*(jj-1)/M_TWO
-      do kk=1, ep%no_lasers
-        call laser_field(gr%sb, ep%no_lasers, ep%lasers, t, field)
-        cp%laser(:,jj) = cp%laser(:,jj) + field(:)
-      end do
-    enddo
-
-    deallocate(field)
     call pop_sub()
   end subroutine parameters_set
 
@@ -73,7 +69,7 @@
 
     call push_sub('opt_control_paramters.parameters_to_h')
 
-    call tdf_set_numerical(ep%lasers(1)%f, cp%laser(1, 0:cp%ntiter))
+    ep%lasers(1)%f = cp%f(1)
     ep%lasers(1)%pol(:) = cp%laser_pol(:)
 
     call pop_sub()
@@ -83,10 +79,13 @@
   ! ---------------------------------------------------------
   subroutine parameters_end(cp)
     type(oct_control_parameters_t), intent(inout) :: cp
+    integer :: j
+
     call push_sub('opt_control_parameters.parameters_end')
 
-    deallocate(cp%laser)
-    nullify(cp%laser)
+    do j = 1, cp%no_parameters
+      call tdf_end(cp%f(j))
+    end do
 
     call pop_sub()
   end subroutine parameters_end
@@ -98,19 +97,17 @@
     type(oct_control_parameters_t), intent(in) :: cp
 
     integer :: i, iunit
-    FLOAT, allocatable   :: tgrid(:)
+    FLOAT :: t
 
     call push_sub('opt_control_parameters.parameters_write')
-    
-    ALLOCATE(tgrid(0:cp%ntiter), cp%ntiter+1)
-    call t_lookup(cp%ntiter+1, cp%dt/CNST(2.0), tgrid)
+
     iunit = io_open(filename, action='write')
-    do i = 0, cp%ntiter, 2
-       write(iunit, '(4es30.16e4)') tgrid(i), cp%laser(:, i)
+    do i = 1, cp%ntiter + 1
+      t = (i-1)*cp%dt*M_HALF
+      write(iunit, '(3es20.8e3)') t, tdf(cp%f(1), t)
     end do
     call io_close(iunit)
 
-    deallocate(tgrid)
     call pop_sub()
   end subroutine parameters_write
 
@@ -129,18 +126,15 @@
     CMPLX :: d1
     CMPLX :: d2(NDIM)
     integer :: ik, p, dim, i, pol
+    FLOAT :: value
 
     CMPLX, allocatable :: rpsi(:, :)
     
     call push_sub('opt_control.update_field')
     
-    ! case SWITCH
-    ! check dipole moment function - > velocity gauge
-
     ALLOCATE(rpsi(gr%m%np_part, psi%d%dim), gr%m%np_part*psi%d%dim)
 
-    ! TODO This should be a product between Slater determinants if we want
-    ! to make it work for many-particle systems.      
+    ! TODO This should be a product between Slater determinants.
     d2 = M_z0 
     do ik = 1, psi%d%nik
       do p  = psi%st_start, psi%st_end
@@ -157,22 +151,17 @@
     d1 = M_z1
     if(oct%algorithm_type .eq. oct_algorithm_zbr98) d1 = zstates_mpdotp(gr%m, psi, chi)
 
-    ! Q: How to distinguish between the cases ?
-    !if((NDIM-dof).eq.1) then
-    !l(1:NDIM, 2*iter) = M_ONE/tdpenalty(1:NDIM,2*iter)*real(m_z1/(m_z2*m_zI) * &
-    !(laser_pol(1:NDIM)*(d1*d2(1:NDIM)+conjg(d1)*conjg(d2(1:NDIM)))))
-    !endif
-    !if((NDIM-dof).eq.0) then
-    cp%laser(1:NDIM, 2*iter) = aimag(d1*d2(1:NDIM))/penalty%tdpenalty(1:NDIM,2*iter)
-    !endif
-    ! extrapolate to t+-dt/2
+    value = aimag(d1*d2(1))/penalty%tdpenalty(1, 2*iter)
+    call tdf_set_numerical(cp%f(1), 2*iter+1, value)
     i = int(sign(M_ONE, td%dt))
     if(iter==0.or.iter==td%max_iter) then
-      cp%laser(1:NDIM, 2*iter+  i) = cp%laser(1:NDIM, 2*iter)
-      cp%laser(1:NDIM, 2*iter+2*i) = cp%laser(1:NDIM, 2*iter)
+      call tdf_set_numerical(cp%f(1), 2*iter+i+1, value)
+      call tdf_set_numerical(cp%f(1), 2*iter+2*i+1, value)
     else
-      cp%laser(1:NDIM, 2*iter+  i) = M_HALF*(M_THREE*cp%laser(1:NDIM, 2*iter) -       cp%laser(1:NDIM, 2*iter-2*i))
-      cp%laser(1:NDIM, 2*iter+2*i) = M_HALF*( M_FOUR*cp%laser(1:NDIM, 2*iter) - M_TWO*cp%laser(1:NDIM, 2*iter-2*i))
+      value = M_HALF*(M_THREE*tdf(cp%f(1), 2*iter+1) - tdf(cp%f(1), 2*iter-2*i+1))
+      call tdf_set_numerical(cp%f(1), 2*iter+i+1, value)
+      value = M_HALF*( M_FOUR*tdf(cp%f(1), 2*iter+1) - M_TWO*tdf(cp%f(1), 2*iter-2*i+1))
+      call tdf_set_numerical(cp%f(1), 2*iter+2*i+1, value)
     end if
 
     call pop_sub()
@@ -180,12 +169,16 @@
 
 
   ! ---------------------------------------------------------
-  subroutine oct_read_laserpol(laserpol, dof)
+  ! WARNING: This is probably useless. The number of degrees of freedom should be 
+  ! the number of initial laser fields found in the input file. The polarizations
+  ! should be read from there. If no laser fields are found in the input file, then
+  ! some number of degrees of freedon (1) should be used, and some default
+  ! polarization (x). 
+  subroutine oct_read_laserpol(laserpol)
     ! read the parameters for the laser polarization
     CMPLX,   intent(out) :: laserpol(MAX_DIM)
-    integer, intent(out) :: dof
   
-    integer   :: i, no_blk, no_c
+    integer   :: i, no_blk, no_c, dof
     C_POINTER :: blk
 
     call push_sub('opt_control_parameters.oct_read_laserpol') 

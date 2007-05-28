@@ -23,12 +23,21 @@
   ! laser_fluence = \sum_{pol} \integrate_0^T
   !                 laserin(t, pol)^2 dt
   ! ---------------------------------------------------------
-  FLOAT function laser_fluence(laserin, dt)
-    FLOAT, intent(in) :: laserin(:,:)
-    FLOAT, intent(in) :: dt
+  FLOAT function laser_fluence(par)
+    type(oct_control_parameters_t), intent(in) :: par
+    integer :: i
+    FLOAT :: t
     call push_sub('opt_control_aux.calc_fluence')
 
-    laser_fluence = SUM(laserin**2) * abs(dt)/M_TWO      
+    ! WARNING: beware of this abs(dt)/M_TWO!!!!
+    ! WARNING: This is probably very inefficient; there should be functions in
+    ! the tdf module taken care of integrating functions.
+    laser_fluence = M_ZERO
+    do i = 1, par%ntiter+1
+      t = (i-1) * par%dt*M_HALF
+      laser_fluence = laser_fluence + abs(tdf(par%f(1), t))**2 
+    end do
+    laser_fluence = laser_fluence * par%dt*M_HALF
 
     call pop_sub()
   end function laser_fluence
@@ -38,12 +47,18 @@
   ! Gets the J2 functional (which is the fluence, but weighted
   ! by a penalty function.
   ! ---------------------------------------------------------
-  FLOAT function j2_functional(oct, penalty, laser, dt) result(j2)
+  FLOAT function j2_functional(oct, penalty, par) result(j2)
     type(oct_t), intent(in)         :: oct
     type(oct_penalty_t), intent(in) :: penalty
-    FLOAT, intent(in)       :: laser(:,:)
-    FLOAT, intent(in)       :: dt
-    j2 = SUM(penalty%tdpenalty * laser**2) * abs(dt)/M_TWO
+    integer :: i
+    FLOAT :: t
+    type(oct_control_parameters_t), intent(in) :: par
+    j2 = M_ZERO
+    do i = 1, par%ntiter + 1
+      t = (i-1) * par%dt*M_HALF
+      j2 = j2 + penalty%tdpenalty(1, i-1)*abs(tdf(par%f(1), t))**2 
+    end do
+    j2 = j2 * par%dt * M_HALF
   end function j2_functional
 
 
