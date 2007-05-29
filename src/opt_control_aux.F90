@@ -56,7 +56,7 @@
     j2 = M_ZERO
     do i = 1, par%ntiter + 1
       t = (i-1) * par%dt*M_HALF
-      j2 = j2 + penalty%tdpenalty(1, i-1)*abs(tdf(par%f(1), t))**2 
+      j2 = j2 + tdf(penalty%td_penalty(1), i)*abs(tdf(par%f(1), t))**2 
     end do
     j2 = j2 * par%dt * M_HALF
   end function j2_functional

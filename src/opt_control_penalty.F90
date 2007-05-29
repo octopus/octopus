@@ -29,8 +29,9 @@
     FLOAT,        intent(in)                   :: dt
 
     C_POINTER                :: blk
-    integer                  :: no_lines, no_col, i
+    integer                  :: no_lines, no_col, i, j
     type(filter_t),  pointer :: tdp(:)
+    FLOAT, allocatable :: tdpenalty(:)
 
     call push_sub('opt_control_penalty.penalty_init')
 
@@ -53,10 +54,9 @@
     ALLOCATE(penalty%a_penalty(0:ctr_iter_max+1), ctr_iter_max+2)
     penalty%a_penalty = penalty%penalty
 
-!!! This should be done only if there are td penalties required?
-    ALLOCATE(penalty%tdpenalty(NDIM, 0:2*steps), NDIM*(2*steps+1))
-    penalty%tdpenalty = M_ONE
-
+    !!! WARNING This should be done only if there are td penalties required?
+    ALLOCATE(tdpenalty(0:2*steps), 2*steps+1)
+    tdpenalty = M_ONE
     ALLOCATE(penalty%td_penalty(par%no_parameters), par%no_parameters)
     do i = 1, par%no_parameters
       call tdf_init_numerical(penalty%td_penalty(i), 2*steps, dt*M_HALF, initval = M_z1)
@@ -68,14 +68,12 @@
     !%Type block
     !%Section Optimal Control
     !%Description
-    !% Often a predefined time-dependent envelope on the laser field is required. 
+    !% Often a predefined time-dependent envelope on the control parameter is desired. 
     !% This can be achieved by making the penalty factor time-dependent. 
     !% Here, you may specify the required time dependent envelope.
-    !% The code allows for more than one enevelope, all of them will be added together and can 
-    !% weighted against each other. 
     !%
-    !% It is possible to choose different envelopes for different polarization directions. 
-    !% The block is similar to the time filter.
+    !% It is possible to choose different envelopes for different control parameters.
+    !% There should be one line for each control parameter.
     !%End
         
     if (loct_parse_block(check_inp('OCTLaserEnvelope'), blk)==0) then
@@ -95,13 +93,10 @@
         call conv_to_C_string(tdp(i)%expression)
         call loct_parse_block_float(blk, i-1, 1, tdp(i)%weight)
         !call loct_parse_block_int(blk, i-1, 1, tdp(i)%ftype)
-        !call loct_parse_block_float(blk, i-1, 2, tdp(i)%center)
-        !call loct_parse_block_float(blk, i-1, 3, tdp(i)%width)
         
         tdp(i)%domain = filter_time
         
-        ALLOCATE(tdp(i)%numerical(0:2*steps), 2*steps+1)
-!!$        call build_filter(gr, tdp(i), steps, dt)
+        call tdf_init_numerical(tdp(i)%f, 2*steps, M_HALF*dt)
         call build_filter(tdp(i), steps, dt)
       end do
 
@@ -109,26 +104,24 @@
         tdp(i)%weight = tdp(i)%weight/SUM(tdp(1:no_lines)%weight)
       end do
 
-      penalty%tdpenalty = M_ZERO
       do i=1,no_lines
-        
-        penalty%tdpenalty(1, :) =  penalty%tdpenalty(1, :) &
-          + tdp(i)%weight * real(tdp(i)%numerical,REAL_PRECISION)
+        tdpenalty = M_ZERO
+        do j = 1, 2*steps+1
+          tdpenalty(j-1) =  tdpenalty(j-1) + &
+            + tdp(i)%weight * real( tdf(tdp(i)%f, j) ,REAL_PRECISION)
+        end do
+        tdpenalty = M_ONE / (tdpenalty + CNST(0.0000001) )
+        call tdf_set_numerical(penalty%td_penalty(i), tdpenalty(0:2*steps))
       end do
 
-      penalty%tdpenalty = M_ONE / (penalty%tdpenalty + CNST(0.0000001) )
-      
       ! all we want to know is tdpenalty
       do i = 1, no_lines
-        if(associated(tdp(i)%numerical)) then
-          deallocate(tdp(i)%numerical) 
-          nullify(tdp(i)%numerical)
-        end if
+        call tdf_end(tdp(i)%f)
       end do
       call loct_parse_block_end(blk)
     end if
 
-    penalty%tdpenalty = penalty%tdpenalty * penalty%penalty
+    call tdf_scalar_multiply(penalty%penalty, penalty%td_penalty(1))
 
     call pop_sub()
   end subroutine penalty_init

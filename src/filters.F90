@@ -51,10 +51,8 @@ module filter_m
   
   type filter_t
     FLOAT :: weight       ! relative weight of filter
-
-    CMPLX, pointer :: numerical(:) ! (0:2*steps) store values of filter
+    type(tdf_t) :: f
     character(len=1024) :: expression
-    
     integer :: domain, ftype
   end type filter_t
 
@@ -92,7 +90,7 @@ contains
     logical,      intent(out):: mode_tdpenalty
 
     C_POINTER                :: blk
-    integer                  :: no_lines, no_col, i
+    integer                  :: no_lines, no_col, i, j
     type(filter_t),  pointer :: tdp(:)
 
     call push_sub('filters.def_tdpenalty')
@@ -118,7 +116,6 @@ contains
         
         tdp(i)%domain = filter_time
         
-        ALLOCATE(tdp(i)%numerical(0:2*steps), 2*steps+1)
         call build_filter(tdp(i), steps, dt)
       end do
 
@@ -128,17 +125,16 @@ contains
 
       tdpenalty = M_ZERO
       do i=1,no_lines
-        tdpenalty(1, :) =  tdpenalty(1, :) + tdp(i)%weight * real(tdp(i)%numerical,REAL_PRECISION)
+        do j = 1, 2*steps+1
+          tdpenalty(1, j-1) =  tdpenalty(1, j-1) + tdp(i)%weight * tdf(tdp(i)%f, j)
+        end do
       end do
 
       tdpenalty = M_ONE / (tdpenalty + real(0.0000001,REAL_PRECISION )) 
       
       ! all we want to know is tdpenalty
       do i = 1, no_lines
-        if(associated(tdp(i)%numerical)) then
-          deallocate(tdp(i)%numerical) 
-          nullify(tdp(i)%numerical)
-        end if
+        call tdf_end(tdp(i)%f)
       end do
       call loct_parse_block_end(blk)
     end if
@@ -157,9 +153,9 @@ contains
 
 #if defined(HAVE_FFT)
 
-    integer        :: no_f, i, kk, n(3), last, first, grouplength, ii
+    integer        :: no_f, i, kk, n(3), last, first, grouplength, ii, j
     CMPLX          :: tmp(0:2*steps, 1, 1), tmp2(0:2*steps, 1, 1) ! Have to be three-dimensional to use the fft_m modul
-    CMPLX, allocatable :: filt(:)
+    CMPLX, allocatable :: filt(:), numerical(:)
     type(fft_t)    :: fft_handler
 
     call push_sub('filters.apply_filter')
@@ -179,14 +175,20 @@ contains
     last  = 0
 
     ALLOCATE(filt(0:2*steps), 2*steps+1)
+    ALLOCATE(numerical(0:2*steps), 2*steps+1)
     filt  = M_z0
+    numerical = M_z0
 
     !do i=1, no_f
     do while(i.lt.no_f )
       i = i + 1
       ! decide time or freq
       write(message(1),'(a,i2)') "Info: Applying filter "         
-      call write_info(1)  
+      call write_info(1)
+
+      do j = 0, 2*steps
+        numerical(j) = tdf(filter(i)%f, j+1)
+      end do  
       
       select case(filter(i)%domain)
         
@@ -196,11 +198,13 @@ contains
         ! group filters
         ii = i + 1
         grouplength = 0
-        filt(:) = filter(i)%numerical(:)
+        filt(:) = numerical(:)
         do while(ii.lt.no_f+1) 
           if(filter(ii)%domain.eq.filter_freq) then
             grouplength = grouplength + 1
-            filt(:) = filt(:) + filter(ii)%numerical(:)
+            do j = 0, 2*steps
+              filt(j) = filt(j) + tdf(filter(ii)%f, j+1)
+            end do
           end if
           ii = ii + 1
           first = i
@@ -229,11 +233,13 @@ contains
         ! group filters
         ii = i + 1
         grouplength = 0
-        filt(:) = filter(i)%numerical(:)
+        filt(:) = numerical(:)
         do while(ii.lt.no_f+1) 
           if(filter(ii)%domain.eq.filter_time) then
             grouplength = grouplength + 1
-            filt(:) = filt(:) + filter(ii)%numerical(:)
+            do j = 0, 2*steps
+              filt(j) = filt(j) + tdf(filter(ii)%f, j+1)
+            end do
           end if
           first = i
           ii = ii + 1
@@ -331,7 +337,8 @@ contains
     !% <br>&nbsp;&nbsp;time | 1 | 0 | 0 | "exp(-80*( w + 0.1567 )^2  ) + exp(-80*( w - 0.1567 )^2  )"
     !% <br>%</tt>
     !%
-    !% Be careful that also the negative frequency component is filtered since the resulting field has to be real valued.
+    !% Be careful that also the negative frequency component is filtered since the resulting 
+    !% field has to be real valued.
     !%
     !%Option frequency_filter 1
     !% The filter is applied in the frequency domain
@@ -349,14 +356,16 @@ contains
         call loct_parse_block_int(blk, i-1, 0, f(i)%domain)
 
         ! parse formula string
-        call loct_parse_block_string(                            &
-          blk, i-1, 1, f(i)%expression)
+        call loct_parse_block_string(blk, i-1, 1, f(i)%expression)
+
         ! convert to C string
         call conv_to_C_string(f(i)%expression)
         
+        ! WARNING: One should actually read the weight?
         !call loct_parse_block_int(blk, i-1, 2, f(i)%ftype)
         !call loct_parse_block_float(blk, i-1, 5, f(i)%weight)
-        ALLOCATE(f(i)%numerical(0:2*steps), 2*steps+1)
+
+        call tdf_init_numerical(f(i)%f, 2*steps, dt*M_HALF)
         call build_filter(f(i), steps, dt)
       end do
       
@@ -443,7 +452,7 @@ contains
     !   call write_fatal(1)
     !end select
           
-    fp%numerical(:) = ff(:)
+    call tdf_set_numerical(fp%f, ff(0:2*steps))
     
     deallocate(ff)
     call pop_sub()
@@ -502,6 +511,7 @@ contains
 
     integer :: kk, no_f, iunit, i
     character(len=80) :: filename
+    CMPLX, allocatable :: numerical(:)
 
     call push_sub('filters.filter_write')
 
@@ -513,20 +523,27 @@ contains
       call pop_sub(); return
     end if
 
+    ALLOCATE(numerical(0:2*max_iter), 2*max_iter+1)
     do kk=1, size(f)
        write(filename,'(a,i2.2)') 'opt-control/filter', kk
+
+
        if(f(kk)%domain.eq.1) then
-         call write_fieldw(filename, ndim, max_iter, real(f(kk)%numerical, REAL_PRECISION), dt)
+         do i = 1, 2*max_iter+1
+           numerical(i-1) = tdf(f(kk)%f, i)
+         end do
+         call write_fieldw(filename, ndim, max_iter, real(numerical, REAL_PRECISION), dt)
        else
          !write(6,*) f(kk)%numerical(:,0)
          iunit = io_open(filename, action='write')
          do i = 0, 2*max_iter
-           write(iunit, '(4ES30.16E4)') i*dt*M_HALF, f(kk)%numerical(i)
+           write(iunit, '(4ES30.16E4)') i*dt*M_HALF, tdf(f(kk)%f, i+1)
          end do
          call io_close(iunit)
        end if
     end do
 
+    deallocate(numerical)
     call pop_sub()
   end subroutine filter_write
 
@@ -545,12 +562,7 @@ contains
     if(no_f <= 0) return
 
     do i = 1, no_f
-       
-       if(associated(f(i)%numerical)) then
-          deallocate(f(i)%numerical) 
-          nullify(f(i)%numerical)
-       end if
-       
+      call tdf_end(f(i)%f)
     end do
 
     deallocate(f)

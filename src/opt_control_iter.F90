@@ -108,7 +108,7 @@
     iterator%convergence(1,iterator%ctr_iter) = iterator%functional
     iterator%convergence(2,iterator%ctr_iter) = iterator%overlap
     iterator%convergence(3,iterator%ctr_iter) = fluence
-    iterator%convergence(4,iterator%ctr_iter) = penalty%tdpenalty(1,1)
+    iterator%convergence(4,iterator%ctr_iter) = tdf(penalty%td_penalty(1), 1)
     
     message(1) = "Info: Loop control"
     call write_info(1)

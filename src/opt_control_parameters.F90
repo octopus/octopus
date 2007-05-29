@@ -151,7 +151,7 @@
     d1 = M_z1
     if(oct%algorithm_type .eq. oct_algorithm_zbr98) d1 = zstates_mpdotp(gr%m, psi, chi)
 
-    value = aimag(d1*d2(1))/penalty%tdpenalty(1, 2*iter)
+    value = aimag(d1*d2(1))/tdf(penalty%td_penalty(1), 2*iter+1)
     call tdf_set_numerical(cp%f(1), 2*iter+1, value)
     i = int(sign(M_ONE, td%dt))
     if(iter==0.or.iter==td%max_iter) then

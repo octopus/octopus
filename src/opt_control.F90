@@ -140,7 +140,6 @@ module opt_control_m
     logical          :: mode_tdpenalty
     FLOAT            :: penalty
     FLOAT, pointer   :: a_penalty(:)
-    FLOAT, pointer   :: tdpenalty(:, :)
     type(tdf_t), pointer :: td_penalty(:)
   end type oct_penalty_t
 
@@ -212,7 +211,6 @@ contains
 
     if(oct%filtermode.gt.0) then
       nullify(f)
-!!$      call def_filter(gr, td%max_iter, td%dt, oct%filtermode, f)
       call def_filter(td%max_iter, td%dt, oct%filtermode, f)
       call filter_write(f, NDIM, td%dt, td%max_iter)
     end if
@@ -349,9 +347,7 @@ contains
 
         ! WARNING: This assumes that there is only one control parameter!
         ! WARNING: Untested.
-        if (oct%filtermode.gt.0) & 
-          call apply_filter(td%max_iter, oct%filtermode, f, par_tmp%f(1))
-!!$          call apply_filter(gr, td%max_iter, oct%filtermode, f, par_tmp%f(1))
+        if (oct%filtermode.gt.0) call apply_filter(td%max_iter, oct%filtermode, f, par_tmp%f(1))
 
         ! recalc field
         if (oct%mode_fixed_fluence) then
@@ -365,7 +361,9 @@ contains
             write (6,*) 'actual penalty', penalty%a_penalty(iterator%ctr_iter)
             write (6,*) 'next penalty', penalty%a_penalty(iterator%ctr_iter + 1)
           end if
-          penalty%tdpenalty = penalty%a_penalty(iterator%ctr_iter + 1)
+
+          !!!!!WARNING: This is a very strange statement?
+          call tdf_set_numerical(penalty%td_penalty(1), spread(penalty%a_penalty(iterator%ctr_iter + 1), 1, 2*td%max_iter+1) )
 
           call tdf_scalar_multiply( ( penalty%a_penalty(iterator%ctr_iter) / penalty%a_penalty(iterator%ctr_iter + 1) ), &
                                     par_tmp%f(1) )
