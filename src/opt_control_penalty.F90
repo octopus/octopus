@@ -107,7 +107,7 @@
       do i=1,no_lines
         tdpenalty = M_ZERO
         do j = 1, 2*steps+1
-          tdpenalty(j-1) =  tdpenalty(j-1) + &
+          tdpenalty(j-1) =  tdpenalty(j-1) &
             + tdp(i)%weight * real( tdf(tdp(i)%f, j) ,REAL_PRECISION)
         end do
         tdpenalty = M_ONE / (tdpenalty + CNST(0.0000001) )
