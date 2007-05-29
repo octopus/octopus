@@ -667,7 +667,7 @@ contains
 #endif
     type(mesh_t),      pointer :: m
     type(simul_box_t), pointer :: sb
-
+    integer, allocatable :: projl(:), projlm(:)
 
     call profiling_in(C_PROFILING_EPOT_GENERATE)
     call push_sub('epot.epot_generate')
@@ -717,6 +717,9 @@ contains
 
     end do
 
+    ALLOCATE(projl(1:ep%nvnl), ep%nvnl)
+    ALLOCATE(projlm(1:ep%nvnl), ep%nvnl)
+
     ! the pseudo potential part.
     iproj = 1
     do ia = 1, geo%natoms
@@ -748,7 +751,8 @@ contains
 
           end if
 
-          call projector_init(ep%p(iproj), gr, atm, ep%gen_grads, reltype, l, lm)
+          projl(iproj) = l
+          projlm(iproj) = lm
 
           ep%p(iproj)%iatom = ia
           iproj = iproj + 1
@@ -764,7 +768,7 @@ contains
         call submesh_init_sphere(ep%p(iproj)%sphere, &
              sb, m, atm%x, double_grid_get_rmax(gr%dgrid, atm%spec, m) + maxval(m%h(1:3)))
 
-        call projector_init(ep%p(iproj), gr, atm, ep%gen_grads, force_type = M_LOCAL)
+        projl(iproj) = -1
 
         iproj = iproj + 1
       end if
@@ -773,7 +777,17 @@ contains
 
     end do
 
+    !now initialize the projectors
 
+    do iproj = 1, ep%nvnl
+      if( projl(iproj) == -1 ) then
+        call projector_init(ep%p(iproj), gr, geo%atom(ep%p(iproj)%iatom), ep%gen_grads, force_type = M_LOCAL)
+      else
+        call projector_init(ep%p(iproj), gr, geo%atom(ep%p(iproj)%iatom), ep%gen_grads, reltype, projl(iproj), projlm(iproj))        
+      end if
+    end do
+ 
+    deallocate(projl, projlm)
 
 #ifdef HAVE_FFT
     if(simul_box_is_periodic(sb).and.(.not.geo%only_user_def)) then
