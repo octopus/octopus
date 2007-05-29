@@ -27,14 +27,12 @@ Match ; 2th state  ; grep '2   --' excited_states_static/eigenvalues ; \s*-4.827
 Input: 04-box.02-oct_long.inp
 
 # Match overlaps
-#Match ; J1 1st iteration   ; grep ' 1  ' opt-control/convergence ; \s*0.890\d*
 Match ; J1 1st iteration   ; grep ' 1  ' opt-control/convergence ; \s*0.889\d*
-#Match ; J1 2nd iteration   ; grep ' 2  ' opt-control/convergence ; \s*0.939\d*
 Match ; J1 2nd iteration   ; grep ' 2  ' opt-control/convergence ; \s*0.938\d*
-#Match ; J1 5th iteration   ; grep ' 5  ' opt-control/convergence ; \s*0.972\d*
 Match ; J1 5th iteration   ; grep ' 5  ' opt-control/convergence ; \s*0.971\d*
 Match ; J1 10th iteration  ; grep ' 10  ' opt-control/convergence ; \s*0.982\d*
-Match ; J1 15th iteration  ; grep ' 15  ' opt-control/convergence ; \s*0.985\d*
+# This match is disconnected to allow for fast tests.
+# Match ; J1 15th iteration  ; grep ' 15  ' opt-control/convergence ; \s*0.985\d*
 
 
 # Then, run the optimization for 15 iterations with a ZR98 scheme and compare the convergence.
@@ -46,7 +44,8 @@ Match ; J1 1st iteration  ; grep ' 1  ' opt-control/convergence ; \s*0.787\d*
 Match ; J1 2nd iteration  ; grep ' 2  ' opt-control/convergence ; \s*0.8\d*
 Match ; J1 5th iteration  ; grep ' 5  ' opt-control/convergence ; \s*0.933\d*
 Match ; J1 10th iteration  ; grep ' 10  ' opt-control/convergence ; \s*0.970\d*
-Match ; J1 15th iteration  ; grep ' 15  ' opt-control/convergence ; \s*0.983\d*
+# This match is disconnected to allow for fast tests.
+# Match ; J1 15th iteration  ; grep ' 15  ' opt-control/convergence ; \s*0.983\d*
 
 
 # Then, run the optimization for 15 iterations with a WG05 scheme and compare the convergence.
@@ -58,7 +57,8 @@ Match ; J1 1st  iteration  ; grep ' 1  ' opt-control/convergence ; \s*0.844\d*
 Match ; J1 2nd  iteration  ; grep ' 2  ' opt-control/convergence ; \s*0.92\d*
 Match ; J1 5th  iteration  ; grep ' 5  ' opt-control/convergence ; \s*0.99\d*
 Match ; J1 10th iteration  ; grep ' 10  ' opt-control/convergence ; \s*0.999\d*
-Match ; J1 15th iteration  ; grep ' 15  ' opt-control/convergence ; \s*0.998\d*
+# This match is disconnected to allow for fast tests.
+# Match ; J1 15th iteration  ; grep ' 15  ' opt-control/convergence ; \s*0.998\d*
 
 
 # WARNING: I deactivate the following test since it is failing, and it will take some
@@ -66,7 +66,8 @@ Match ; J1 15th iteration  ; grep ' 15  ' opt-control/convergence ; \s*0.998\d*
 
 #Input: 04-box.05-oct_local.inp
 
-# Now test local target: Maximize the density at x=-3 and use a time-dependent penalty. The convergence is much slower than for state targets.
+# Now test local target: Maximize the density at x=-3 and use a time-dependent penalty. 
+# The convergence is much slower than for state targets.
 
 # Match overlaps
 #Match ; J1 1st  iteration  ; grep ' 1  ' opt-control/convergence ; \s*0.149\d*

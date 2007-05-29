@@ -141,6 +141,7 @@ module opt_control_m
     FLOAT            :: penalty
     FLOAT, pointer   :: a_penalty(:)
     FLOAT, pointer   :: tdpenalty(:, :)
+    type(tdf_t), pointer :: td_penalty(:)
   end type oct_penalty_t
 
 contains
@@ -207,11 +208,12 @@ contains
 
     call oct_iterator_init(iterator, oct)
 
-    call penalty_init(penalty, oct, gr, td%max_iter, iterator%ctr_iter_max, td%dt)
+    call penalty_init(penalty, oct, par, gr, td%max_iter, iterator%ctr_iter_max, td%dt)
 
     if(oct%filtermode.gt.0) then
       nullify(f)
-      call def_filter(gr, td%max_iter, td%dt, oct%filtermode, f)
+!!$      call def_filter(gr, td%max_iter, td%dt, oct%filtermode, f)
+      call def_filter(td%max_iter, td%dt, oct%filtermode, f)
       call filter_write(f, NDIM, td%dt, td%max_iter)
     end if
 
@@ -348,7 +350,8 @@ contains
         ! WARNING: This assumes that there is only one control parameter!
         ! WARNING: Untested.
         if (oct%filtermode.gt.0) & 
-          call apply_filter(gr, td%max_iter, oct%filtermode, f, par_tmp%f(1))
+          call apply_filter(td%max_iter, oct%filtermode, f, par_tmp%f(1))
+!!$          call apply_filter(gr, td%max_iter, oct%filtermode, f, par_tmp%f(1))
 
         ! recalc field
         if (oct%mode_fixed_fluence) then

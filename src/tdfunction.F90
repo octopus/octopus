@@ -204,10 +204,11 @@ module tdf_m
 
 
   !------------------------------------------------------------
-  subroutine tdf_init_numerical(f, niter, dt)
+  subroutine tdf_init_numerical(f, niter, dt, initval)
     type(tdf_t), intent(inout) :: f
     integer, intent(in) :: niter
     FLOAT, intent(in)   :: dt
+    CMPLX, intent(in), optional :: initval
 
     call push_sub("tdfunction.tdf_init_numerical")
 
@@ -215,7 +216,11 @@ module tdf_m
     f%niter = niter
     ! WARNING: this weird allocataion scheme should be changed in the future:
     ALLOCATE(f%val(niter+1), niter+1)
-    f%val = M_z0
+    if(present(initval)) then
+      f%val = initval
+    else
+      f%val = M_z0
+    end if
     f%dt = dt
 
     call pop_sub()

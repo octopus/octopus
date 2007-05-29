@@ -19,13 +19,14 @@
 
 
   ! ---------------------------------------------------------
-  subroutine penalty_init(penalty, oct, gr, steps, ctr_iter_max, dt)
-    type(oct_penalty_t), intent(inout) :: penalty
-    type(oct_t), intent(in)  :: oct
-    type(grid_t), pointer    :: gr
-    integer,      intent(in) :: steps
-    integer,      intent(in) :: ctr_iter_max
-    FLOAT,        intent(in) :: dt
+  subroutine penalty_init(penalty, oct, par, gr, steps, ctr_iter_max, dt)
+    type(oct_penalty_t), intent(inout)         :: penalty
+    type(oct_t), intent(in)                    :: oct
+    type(oct_control_parameters_t), intent(in) :: par
+    type(grid_t), pointer                      :: gr
+    integer,      intent(in)                   :: steps
+    integer,      intent(in)                   :: ctr_iter_max
+    FLOAT,        intent(in)                   :: dt
 
     C_POINTER                :: blk
     integer                  :: no_lines, no_col, i
@@ -51,8 +52,15 @@
 
     ALLOCATE(penalty%a_penalty(0:ctr_iter_max+1), ctr_iter_max+2)
     penalty%a_penalty = penalty%penalty
+
+!!! This should be done only if there are td penalties required?
     ALLOCATE(penalty%tdpenalty(NDIM, 0:2*steps), NDIM*(2*steps+1))
     penalty%tdpenalty = M_ONE
+
+    ALLOCATE(penalty%td_penalty(par%no_parameters), par%no_parameters)
+    do i = 1, par%no_parameters
+      call tdf_init_numerical(penalty%td_penalty(i), 2*steps, dt*M_HALF, initval = M_z1)
+    end do
 
     penalty%mode_tdpenalty = .false.
 
@@ -63,7 +71,9 @@
     !% Often a predefined time-dependent envelope on the laser field is required. 
     !% This can be achieved by making the penalty factor time-dependent. 
     !% Here, you may specify the required time dependent envelope.
-    !% The code allows for more than one enevelope, all of them will be added together and can weighted against each other. 
+    !% The code allows for more than one enevelope, all of them will be added together and can 
+    !% weighted against each other. 
+    !%
     !% It is possible to choose different envelopes for different polarization directions. 
     !% The block is similar to the time filter.
     !%End
@@ -77,23 +87,22 @@
       ! polarization | function | weight 
       do i = 1, no_lines
         no_col = loct_parse_block_cols(blk, i-1)
-        call loct_parse_block_cmplx(blk, i-1, 0, tdp(i)%fpol(1)) 
-        call loct_parse_block_cmplx(blk, i-1, 1, tdp(i)%fpol(2))
-        call loct_parse_block_cmplx(blk, i-1, 2, tdp(i)%fpol(3))
+
         ! parse formula string
-        call loct_parse_block_string(                            &
-          blk, i-1, 3, tdp(i)%expression)  
+        call loct_parse_block_string(blk, i-1, 0, tdp(i)%expression)  
+
         ! convert to C string
         call conv_to_C_string(tdp(i)%expression)
-        call loct_parse_block_float(blk, i-1, 4, tdp(i)%weight)
+        call loct_parse_block_float(blk, i-1, 1, tdp(i)%weight)
         !call loct_parse_block_int(blk, i-1, 1, tdp(i)%ftype)
         !call loct_parse_block_float(blk, i-1, 2, tdp(i)%center)
         !call loct_parse_block_float(blk, i-1, 3, tdp(i)%width)
         
         tdp(i)%domain = filter_time
         
-        ALLOCATE(tdp(i)%numerical(NDIM,0:2*steps), NDIM*(2*steps+1))
-        call build_filter(gr, tdp(i), steps, dt)
+        ALLOCATE(tdp(i)%numerical(0:2*steps), 2*steps+1)
+!!$        call build_filter(gr, tdp(i), steps, dt)
+        call build_filter(tdp(i), steps, dt)
       end do
 
       do i = 1, no_lines      
@@ -103,7 +112,7 @@
       penalty%tdpenalty = M_ZERO
       do i=1,no_lines
         
-        penalty%tdpenalty =  penalty%tdpenalty &
+        penalty%tdpenalty(1, :) =  penalty%tdpenalty(1, :) &
           + tdp(i)%weight * real(tdp(i)%numerical,REAL_PRECISION)
       end do
 

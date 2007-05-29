@@ -31,16 +31,16 @@ Input: 05-adw.02-filter_fixed.inp
 # Match overlaps
 Match ; J1 1st  iteration  ; grep ' 1  ' opt-control/convergence ; \s*0.993\d*
 Match ; J1 2nd  iteration  ; grep ' 2  ' opt-control/convergence ; \s*0.994\d*
-Match ; J1 5th  iteration  ; grep ' 5  ' opt-control/convergence ; \s*0.995\d*
+# This match is elimiated to allow for a faster test.
+# Match ; J1 5th  iteration  ; grep ' 5  ' opt-control/convergence ; \s*0.995\d*
 
 # Now use filter and optimize indirect transition via 3rd excited state.
 
 Input: 05-adw.03-filter_indirect.inp
 
 # Match overlaps 
-# WARNING: I disconnect the last match because it gives very different results
-#          depending on the compiler, compiler flags, architecture, etc.
-# TODO: This means that some part of the algorithm is not robust enough.
 Match ; J1 1st  iteration  ; grep ' 1  ' opt-control/convergence ; \s*0.250\d*
 Match ; J1 2nd  iteration  ; grep ' 2  ' opt-control/convergence ; \s*0.552\d*
-##Match ; J1 5th  iteration  ; grep ' 5  ' opt-control/convergence ; \s*0.947\d*
+# The run stops at iter number two; however it should continue further to see that
+# the result actually converges. Apparently, however, the algorithm is unstable
+# and produces different results in different machines.

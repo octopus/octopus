@@ -23,7 +23,7 @@ TDTimeStep = dt
 
 OCTPenalty =5.0
 OCTEps   = 0.000001
-OCTMaxIter = 5
+OCTMaxIter = 2
 OCTTargetMode = 0
 OCTFilterMode = 1
 OCTFixFluenceTo = 0.08
@@ -34,12 +34,11 @@ OCTScheme  = oct_algorithm_zr98
 OCTDoubleCheck = No	
 gamma1 = 0.1
 gamma2 = 120
-#%OCTLaserEnvelope
-#  1 | 0 | 0 | "exp(-gamma1*( t - stime/4 )^2  )" | 1
-#%
+
+
 w01 = 0.1568
 %OCTFilter
-   frequency_filter | 1 | 0 | 0 | "exp(-gamma2*( w + w01 )^2  ) + exp(-gamma2*( w - w01 )^2  )" 
+   frequency_filter | "exp(-gamma2*( w + w01 )^2  ) + exp(-gamma2*( w - w01 )^2  )" 
 %
 
 
