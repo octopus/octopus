@@ -34,6 +34,7 @@ module hamiltonian_m
   use par_vec_m
   use output_m
   use profiling_m
+  use projector_m
   use simul_box_m
   use states_m
   use units_m

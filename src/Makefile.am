@@ -55,7 +55,9 @@ core_SRCS = $(basic_SRCS) \
 	specie_pot.F90 tdfunction.F90
 
 octopus_SOURCES = $(core_SRCS) \
-	lasers.F90 rkb_projector.F90 kb_projector.F90 hgh_projector.F90 epot.F90 \
+	lasers.F90 \
+	rkb_projector.F90 kb_projector.F90 hgh_projector.F90 projector.F90 \
+	epot.F90 \
 	h.F90 preconditioners.F90 linear_solver.F90 linear_response.F90 restart.F90 \
 	xc_OEP.F90 v_ks.F90 systm.F90  xc_OEP_kernel.F90\
 	eigen.F90 lcao.F90 pes.F90 \
@@ -75,7 +77,7 @@ noinst_HEADERS = \
 	mesh_init.F90 par_vec_inc.F90 derivatives_inc.F90 cf_inc.F90 mf_inc.F90 f_inc.F90 \
 	poisson1D.F90 poisson2D.F90 poisson3D.F90 mix_inc.F90 \
 	xc_vxc.F90 xc_axc.F90 xc_fxc.F90 xc_kxc.F90 xc_KLI_inc.F90 xc_OEP_x_inc.F90 xc_OEP_SIC_inc.F90 \
-	kb_projector_inc.F90 hgh_projector_inc.F90 epot_inc.F90 \
+	kb_projector_inc.F90 hgh_projector_inc.F90 projector_inc.F90 epot_inc.F90 \
 	xc_OEP_inc.F90 h_inc.F90 \
 	eigen_trlan.F90 preconditioners_inc.F90 \
 	eigen_inc.F90 eigen_cg_inc.F90 eigen_plan_inc.F90 \
@@ -139,7 +141,7 @@ oct_center_geom_SOURCES = $(core_SRCS) xyz_adjust.F90 centergeom.F90
 oct_center_geom_LDADD = $(octopus_LDADD)
 
 oct_test_SOURCES = $(core_SRCS) lasers.F90 rkb_projector.F90 kb_projector.F90 \
-	hgh_projector.F90 epot.F90 h.F90 preconditioners.F90 linear_solver.F90 \
+	hgh_projector.F90 projector.F90 epot.F90 h.F90 preconditioners.F90 linear_solver.F90 \
 	linear_response.F90 restart.F90 xc_OEP.F90 v_ks.F90 \
 	systm.F90 test.F90
 oct_test_LDADD = $(octopus_LDADD)
@@ -275,6 +277,7 @@ poisson_cg.o: global.h
 poisson_multigrid.o: global.h
 poisson_corrections.o: global.h
 poisson.o: global.h poisson1D.F90 poisson2D.F90 poisson3D.F90 poisson_multigrid.F90
+projector.o: global.h projector_inc.F90
 ps.o: global.h
 restart.o: global.h restart_inc.F90
 rkb_projector.o: global.h

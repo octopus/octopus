@@ -603,7 +603,7 @@ contains
     subroutine out_polarizability()
       FLOAT :: cross(MAX_DIM, MAX_DIM), crossp(MAX_DIM, MAX_DIM)
       FLOAT :: average, anisotropy
-      integer :: j
+      
 
       iunit = io_open(trim(dirname)//'/alpha', action='write')
 

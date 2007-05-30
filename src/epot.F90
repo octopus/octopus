@@ -52,9 +52,7 @@ module external_pot_m
   use mpi_debug_m
   use varinfo_m
   use poisson_m
-  use hgh_projector_m
-  use kb_projector_m
-  use rkb_projector_m
+  use projector_m
 
   implicit none
 
@@ -68,43 +66,8 @@ module external_pot_m
     epot_laser_scalar_pot,     &
     epot_laser_field,          &
     epot_forces,               &
-    dproject, zproject,        &
-    projector_t,               &
     build_local_part_in_real_space
 
-  ! an oximoronic local projector type
-  type local_t
-     FLOAT, pointer :: v(:)
-  end type local_t
-
-  ! The projector data type is intended to hold the local and
-  ! non-local parts of the pseudopotentials. The definition of the
-  ! action of a projector (which is done through the X(project)
-  ! subroutine) depends on the type of the projector. 
-
-  ! There are four different types: 
-  ! local -> a local operator
-  ! HGH projector -> "normal"
-  ! Kleinman-Bylander projector (no spin-orbit) -> "relativistc"
-  ! Kleinman-Bylander projector (includes spin-orbit)
-
-  type projector_t
-    private
-    integer :: type
-    integer :: iatom
-
-    type(submesh_t)  :: sphere
-
-    integer          :: nik
-    CMPLX,   pointer :: phases(:,:)
-
-    ! Only one of the following structures should be used at once
-    ! The one to be used depends on the value of type variable
-    type(hgh_projector_t), pointer :: hgh_p
-    type(kb_projector_t),  pointer :: kb_p
-    type(rkb_projector_t), pointer :: rkb_p
-    type(local_t),         pointer :: local_p
-  end type projector_t
 
   type epot_t
     ! Classic charges:
@@ -143,11 +106,6 @@ module external_pot_m
     integer :: forces
     logical :: gen_grads
   end type epot_t
-
-  integer, parameter :: M_HGH = 1, &
-                        M_KB  = 2, &
-                        M_RKB = 3, &
-                        M_LOCAL = 4
 
   integer, parameter :: &
        DERIVATE_POTENTIAL = 1,      &
@@ -1067,159 +1025,6 @@ contains
 
   end subroutine epot_forces
 
-
-  ! ---------------------------------------------------------
-  subroutine projector_null(p)
-    type(projector_t), intent(out) :: p
-
-    p%type = 0
-    nullify(p%phases)
-    nullify(p%hgh_p)
-    nullify(p%kb_p)
-    nullify(p%rkb_p)
-    nullify(p%local_p)
-    call submesh_null(p%sphere)
-
-  end subroutine projector_null
-
-  !---------------------------------------------------------
-  subroutine projector_build_kb_sphere(p, sb, m, a, st)
-    type(projector_t), intent(inout) :: p
-    type(simul_box_t), intent(in)    :: sb
-    type(mesh_t),      intent(in)    :: m
-    type(atom_t),      intent(in)    :: a
-    type(states_t),    intent(in)    :: st
-
-    integer :: j, k
-    FLOAT :: x(MAX_DIM)
-
-    call push_sub('epot.projector_build_kb_sphere')
-
-    call submesh_init_sphere(p%sphere, sb, m, a%x, a%spec%ps%rc_max)
-
-    ! and here the phases for the periodic systems
-    if (sb%periodic_dim /= 0) then
-      p%nik = st%d%nik
-
-      ALLOCATE(p%phases(p%sphere%ns, p%nik), p%sphere%ns*p%nik)
-
-      do j = 1, p%sphere%ns
-        x(:) = m%x(p%sphere%jxyz(j), :)
-        do k = 1, p%nik
-          p%phases(j, k) = exp(M_zI*sum(st%d%kpoints(:, k)*x(:)))
-        end do
-      end do
-
-    end if
-
-    call pop_sub()
-  end subroutine projector_build_kb_sphere
-
-  !---------------------------------------------------------
-  subroutine projector_copy_kb_sphere(pi, po)
-    type(projector_t), intent(in)    :: pi
-    type(projector_t), intent(inout) :: po
-
-    call push_sub('epot.projector_copy_kb_sphere')
-
-    call submesh_copy(pi%sphere, po%sphere)
-
-    if (associated(pi%phases)) then
-      po%nik = pi%nik
-      ALLOCATE(po%phases(pi%sphere%ns, pi%nik), pi%sphere%ns*pi%nik)
-      po%phases = pi%phases
-    end if
-
-    call pop_sub()
-  end subroutine projector_copy_kb_sphere
-
-  !---------------------------------------------------------
-  subroutine projector_init(p, gr, a, gen_grads, reltype, l, lm, force_type)
-    type(projector_t), intent(inout) :: p
-    type(grid_t),      intent(in)    :: gr
-    type(atom_t),      intent(in)    :: a
-    logical,           intent(in)    :: gen_grads
-    integer, optional, intent(in)    :: reltype
-    integer, optional, intent(in)    :: l, lm
-    integer, optional, intent(in)    :: force_type
-
-    integer :: ns
-
-    call push_sub('epot.projector_init')
-
-    if(present(force_type)) then 
-      p%type = force_type
-    else 
-      select case (a%spec%ps%kbc)
-      case (1)
-        p%type = M_KB
-        if (reltype == 1) then
-          write(message(1),'(a,a,a)') "Spin-orbit coupling for specie ", trim(a%spec%label), " is not available."
-          call write_warning(1)
-        end if
-      case (2)
-        if (l == 0 .or. reltype == 0) then
-          p%type = M_KB
-        else
-          p%type = M_RKB
-        end if
-      case (3)
-        p%type = M_HGH
-      end select
-    end if
-
-    select case (p%type)
-    case(M_LOCAL)
-      ns =  p%sphere%ns
-      ALLOCATE(p%local_p, 1)
-      ALLOCATE(p%local_p%v(1:ns), ns)
-      call double_grid_apply_local(gr%dgrid, a%spec, gr%m, p%sphere, a%x, p%local_p%v)
-
-    case (M_HGH)
-      ALLOCATE(p%hgh_p, 1)
-      call hgh_projector_null(p%hgh_p)
-      call hgh_projector_init(p%hgh_p, p%sphere, gr, a, l, lm)
-    case (M_KB)
-      ALLOCATE(p%kb_p, 1)
-      call kb_projector_null(p%kb_p)
-      call kb_projector_init(p%kb_p, p%sphere, gr, a, l, lm, gen_grads)
-    case (M_RKB)
-      ALLOCATE(p%rkb_p, 1)
-      call rkb_projector_null(p%rkb_p)
-      call rkb_projector_init(p%rkb_p, p%sphere, gr, a, l, lm)
-    end select
-
-    call pop_sub()
-  end subroutine projector_init
-
-  !---------------------------------------------------------
-  subroutine projector_end(p)
-    type(projector_t), intent(inout) :: p
-
-    call push_sub('epot.projector_end')
-
-    call submesh_end(p%sphere)
-    if (associated(p%phases)) deallocate(p%phases)
-    if (associated(p%hgh_p)) then
-      call hgh_projector_end(p%hgh_p)
-      deallocate(p%hgh_p)
-    end if
-    if (associated(p%kb_p)) then
-      call kb_projector_end(p%kb_p)
-      deallocate(p%kb_p)
-    end if
-    if (associated(p%rkb_p)) then
-      call rkb_projector_end(p%rkb_p)
-      deallocate(p%rkb_p)
-    end if
-    if (associated(p%local_p)) then
-      if(associated(p%local_p%v)) then 
-        deallocate(p%local_p%v)
-      end if
-      deallocate(p%local_p)
-    end if
-    call pop_sub()
-  end subroutine projector_end
 
 #include "undef.F90"
 #include "real.F90"
