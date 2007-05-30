@@ -794,8 +794,6 @@ contains
           end if
         end do
         
-        call MPI_Barrier(MPI_COMM_WORLD, mpi_err)
-        
         do iproj = 1, ep%nvnl
           call projector_broadcast(ep%p(iproj), gr, mc, geo%atom(ep%p(iproj)%iatom), ep%gen_grads, rep(iproj))
         end do
