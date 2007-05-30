@@ -33,6 +33,7 @@ module kb_projector_m
   use geometry_m
   use mpi_m
   use mpi_debug_m
+  use multicomm_m
 
   implicit none
 
@@ -41,6 +42,9 @@ module kb_projector_m
        kb_projector_t,             &
        kb_projector_null,          &
        kb_projector_init,          &
+#ifdef HAVE_MPI
+       kb_projector_broadcast,     &
+#endif
        dkb_project, zkb_project,   &
        dkb_dproject, zkb_dproject, &
        kb_projector_end
@@ -137,7 +141,58 @@ contains
 
     call pop_sub()
   end subroutine kb_projector_init
+#ifdef HAVE_MPI
+  subroutine kb_projector_broadcast(kb_p, sm, gr, mc, a, l, lm, gen_grads, root)
+    type(kb_projector_t), intent(inout) :: kb_p
+    type(submesh_t),      intent(in)    :: sm
+    type(grid_t),         intent(in)    :: gr
+    type(multicomm_t),    intent(in)    :: mc
+    type(atom_t),         intent(in)    :: a
+    integer,              intent(in)    :: l, lm
+    logical,              intent(in)    :: gen_grads
+    integer,              intent(in)    :: root
 
+    integer :: n_c, i, rank, mpi_err
+
+    call push_sub('kb_projector.kb_projector_init')
+
+    rank = mc%who_am_i(P_STRATEGY_STATES) - 1
+
+    if (root /= rank ) then
+      
+      kb_p%n_s = sm%ns
+      if (l == 0 .or. a%spec%ps%kbc == 1) then
+        n_c = 1
+      else ! we have j-dependent projectors
+        n_c = 2
+      end if
+      kb_p%n_c = n_c
+      ALLOCATE(kb_p%p (kb_p%n_s, n_c),    kb_p%n_s*n_c)
+      ALLOCATE(kb_p%dp(kb_p%n_s, 3, n_c), kb_p%n_s*3*n_c)
+      ALLOCATE(kb_p%e (n_c),         n_c)
+      
+      do i = 1, n_c
+        kb_p%e(i) = a%spec%ps%h(l, i, i)
+      end do
+      
+      if (n_c == 2) then
+        ! We need to weight the projectors.
+        ! The weights will be included in the KB energies
+        kb_p%e(1) = kb_p%e(1)*real(l+1, REAL_PRECISION)/real(2*l+1, REAL_PRECISION)
+        kb_p%e(2) = kb_p%e(2)*real(l,   REAL_PRECISION)/real(2*l+1, REAL_PRECISION)
+      end if
+
+    end if
+
+    call MPI_Bcast(kb_p%p, kb_p%n_s*kb_p%n_c, MPI_FLOAT, root, mc%group_comm(P_STRATEGY_STATES), mpi_err)
+
+    if (gen_grads) then 
+      call MPI_Bcast(kb_p%dp, kb_p%n_s*3*kb_p%n_c, MPI_FLOAT, root, mc%group_comm(P_STRATEGY_STATES), mpi_err)
+    end if
+
+    call pop_sub()
+  end subroutine kb_projector_broadcast
+#endif
   ! ---------------------------------------------------------
   subroutine kb_projector_end(kb_p)
     type(kb_projector_t), intent(inout) :: kb_p

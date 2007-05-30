@@ -132,7 +132,7 @@ contains
     if(td%move_ions > 0) then
       if(td%iter > 0) then
         call td_read_coordinates()
-        call epot_generate(h%ep, gr, geo, st, h%reltype)
+        call epot_generate(h%ep, gr, geo, sys%mc, st, h%reltype)
         geo%eii = ion_ion_energy(geo)
         h%eii = geo%eii
       end if
@@ -177,8 +177,8 @@ contains
         ! Move the ions: only half step, to obtain the external potential in the middle of the time slice.
         if( td%move_ions > 0 ) call apply_verlet_1(td%dt*M_HALF)
 	if( h%ep%with_gauge_field ) call apply_verlet_gauge_field_1(td%dt*M_HALF)
-        call epot_generate(h%ep, gr, sys%geo, st, h%reltype, time = i*td%dt, &
-                           fast_generation = .not.(mod(i, td%epot_regenerate) == 0) )
+        call epot_generate(h%ep, gr, sys%geo, sys%mc, st, h%reltype, time = i*td%dt, &
+                           fast_generation = .not.(mod(i, td%epot_regenerate) == 0))
         ! Calculate the gauge vector potential at half step
       end if
       
@@ -210,8 +210,7 @@ contains
 	  call apply_verlet_gauge_field_1(td%dt)
 	  call epot_generate_gauge_field(h%ep, gr, st)
 	end if
-        call epot_generate(h%ep, gr, sys%geo, st, h%reltype, time = i*td%dt, &
-                           fast_generation = .true. ) 
+        call epot_generate(h%ep, gr, sys%geo, sys%mc, st, h%reltype, time = i*td%dt, fast_generation=.true.)
         
 	if ( td%move_ions > 0 ) then
 	  geo%eii = ion_ion_energy(geo)

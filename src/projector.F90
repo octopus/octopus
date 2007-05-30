@@ -37,6 +37,7 @@ module projector_m
   use submesh_m
   use mpi_m
   use mpi_debug_m
+  use multicomm_m
   use varinfo_m
   use hgh_projector_m
   use kb_projector_m
@@ -51,6 +52,9 @@ module projector_m
        projector_null,            &
        projector_init,            &
        projector_build,           &
+#ifdef HAVE_MPI
+       projector_broadcast,       &
+#endif
        projector_end,             &
        projector_build_kb_sphere, &
        projector_copy_kb_sphere,  &
@@ -241,6 +245,57 @@ contains
 
     call pop_sub()
   end subroutine projector_build
+
+#ifdef HAVE_MPI
+  !---------------------------------------------------------
+  subroutine projector_broadcast(p, gr, mc, a, gen_grads, root)
+    type(projector_t), intent(inout) :: p
+    type(grid_t),      intent(in)    :: gr
+    type(multicomm_t), intent(in)    :: mc
+    type(atom_t),      intent(in)    :: a
+    logical,           intent(in)    :: gen_grads
+    integer,           intent(in)    :: root
+
+    integer :: ns, l, lm, mpi_err, rank
+
+    call push_sub('projector.projector_broadcast')
+    
+    l = p%l
+    lm = p%lm
+    rank = mc%who_am_i(P_STRATEGY_STATES) - 1
+
+    select case (p%type)
+    case(M_LOCAL)
+      ns =  p%sphere%ns
+      if ( rank /= root) then
+        ALLOCATE(p%local_p, 1)
+        ALLOCATE(p%local_p%v(1:ns), ns)
+      end if
+      call MPI_Bcast(p%local_p%v, ns, MPI_FLOAT, root, mc%group_comm(P_STRATEGY_STATES), mpi_err)
+
+    case (M_HGH)
+      if ( rank /= root) then      
+        ALLOCATE(p%hgh_p, 1)
+        call hgh_projector_null(p%hgh_p)
+        call hgh_projector_init(p%hgh_p, p%sphere, gr, a, l, lm)
+      end if
+    case (M_KB)
+      if ( rank /= root) then
+        ALLOCATE(p%kb_p, 1)
+        call kb_projector_null(p%kb_p)
+      end if
+      call kb_projector_broadcast(p%kb_p, p%sphere, gr, mc, a, l, lm, gen_grads, root)
+    case (M_RKB)
+      if ( rank /= root) then
+        ALLOCATE(p%rkb_p, 1)
+        call rkb_projector_null(p%rkb_p)
+        call rkb_projector_init(p%rkb_p, p%sphere, gr, a, l, lm)
+      end if
+    end select
+
+    call pop_sub()
+  end subroutine projector_broadcast
+#endif
 
   !---------------------------------------------------------
   subroutine projector_end(p)

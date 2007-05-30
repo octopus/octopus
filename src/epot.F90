@@ -33,6 +33,7 @@ module external_pot_m
   use mesh_function_m
   use mesh_m
   use messages_m
+  use multicomm_m
   use simul_box_m
   use units_m
 #ifdef HAVE_FFT
@@ -607,10 +608,11 @@ contains
   end subroutine epot_generate_gauge_field
   
   ! ---------------------------------------------------------
-  subroutine epot_generate(ep, gr, geo, st, reltype, time, fast_generation)
+  subroutine epot_generate(ep, gr, geo, mc, st, reltype, time, fast_generation)
     type(epot_t),      intent(inout) :: ep
     type(grid_t), target,  intent(inout) :: gr
     type(geometry_t),  intent(inout) :: geo
+    type(multicomm_t), intent(in)    :: mc
     type(states_t),    intent(inout) :: st
     integer,           intent(in)    :: reltype
     FLOAT,   optional, intent(in)    :: time
@@ -760,11 +762,49 @@ contains
   contains
 
     subroutine projector_build_all
+#ifdef HAVE_MPI
+      integer :: rank, size, ini, fin, mpi_err
+      integer, allocatable :: rep(:)
+      
+      if (.not. multicomm_strategy_is_parallel(mc, P_STRATEGY_STATES)) then
+#endif
 
-      do iproj = 1, ep%nvnl
-        call projector_build(ep%p(iproj), gr, geo%atom(ep%p(iproj)%iatom), ep%gen_grads)
-      end do
+        do iproj = 1, ep%nvnl
+          call projector_build(ep%p(iproj), gr, geo%atom(ep%p(iproj)%iatom), ep%gen_grads)
+        end do
+        
+#ifdef HAVE_MPI
+      else
+        
+        size = mc%group_sizes(P_STRATEGY_STATES)
+        
+        ALLOCATE(rep(1:ep%nvnl), ep%nvnl)
+        
+        do rank = 0, size-1
+          ini = rank * ep%nvnl / size + 1
+          fin = min((rank + 1 )* ep%nvnl / size, ep%nvnl)
+          rep(ini:fin) = rank
+        end do
+        
+        rank = mc%who_am_i(P_STRATEGY_STATES) - 1
+        
+        do iproj = 1, ep%nvnl
+          if ( rep(iproj) == rank ) then 
+            call projector_build(ep%p(iproj), gr, geo%atom(ep%p(iproj)%iatom), ep%gen_grads)
+          end if
+        end do
+        
+        call MPI_Barrier(MPI_COMM_WORLD, mpi_err)
+        
+        do iproj = 1, ep%nvnl
+          call projector_broadcast(ep%p(iproj), gr, mc, geo%atom(ep%p(iproj)%iatom), ep%gen_grads, rep(iproj))
+        end do
+        
+      deallocate(rep)
 
+    end if
+
+#endif
     end subroutine projector_build_all
 
   end subroutine epot_generate

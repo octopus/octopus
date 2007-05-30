@@ -31,6 +31,7 @@ module phonons_fd_m
   use lib_oct_parser_m
   use mesh_m
   use messages_m
+  use multicomm_m
   use output_m
   use phonons_m
   use restart_m
@@ -84,7 +85,7 @@ contains
     ph%disp = ph%disp*units_inp%length%factor
 
     ! calculate dynamical matrix
-    call get_dm(sys%gr, sys%geo, sys%st, sys%ks, h, sys%outp, ph)
+    call get_dm(sys%gr, sys%geo, sys%mc, sys%st, sys%ks, h, sys%outp, ph)
 
     call phonons_output(ph, "_fd")
     
@@ -113,9 +114,10 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine get_dm(gr, geo, st, ks, h, outp, ph)
+  subroutine get_dm(gr, geo, mc, st, ks, h, outp, ph)
     type(grid_t), target, intent(inout) :: gr
     type(geometry_t),     intent(inout) :: geo
+    type(multicomm_t),     intent(in)   :: mc
     type(states_t),       intent(inout) :: st
     type(v_ks_t),         intent(inout) :: ks
     type(hamiltonian_t),  intent(inout) :: h
@@ -145,7 +147,7 @@ contains
         geo%atom(i)%x(alpha) = geo%atom(i)%x(alpha) + ph%disp
 
         ! first force
-        call epot_generate(h%ep, gr, geo, st, h%reltype)
+        call epot_generate(h%ep, gr, geo, mc, st, h%reltype)
         call states_calc_dens(st, m%np, st%rho)
         call v_ks_calc(gr, ks, h, st, calc_eigenval=.true.)
         call hamiltonian_energy (h, gr, geo, st, -1)
@@ -157,7 +159,7 @@ contains
         geo%atom(i)%x(alpha) = geo%atom(i)%x(alpha) - M_TWO*ph%disp
 
         ! second force
-        call epot_generate(h%ep, gr, geo, st, h%reltype)
+        call epot_generate(h%ep, gr, geo, mc, st, h%reltype)
         call states_calc_dens(st, m%np, st%rho)
         call v_ks_calc(gr, ks, h, st, calc_eigenval=.true.)
         call hamiltonian_energy(h, gr, geo, st, -1)
