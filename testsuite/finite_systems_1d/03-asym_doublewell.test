@@ -27,6 +27,7 @@ Match ; 2th state  ; grep '2   --' excited_states_static/eigenvalues ; \s*-0.463
 
 Input: 03-asym_doublewell.02-oct_run.inp
 
-# No match yet
-Match ; J1 1st iteration  ; grep ' 1  ' opt-control/convergence ; \s*0.549\d*
+
+#Match ; J1 1st iteration  ; grep ' 1  ' opt-control/convergence ; \s*0.549\d*
+Match ; J1 1st iteration  ; grep ' 1  ' opt-control/convergence ; \s*0.747\d*
 

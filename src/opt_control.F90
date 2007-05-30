@@ -133,7 +133,7 @@ module opt_control_m
     FLOAT   :: dt
     integer :: ntiter
     type(tdf_t), pointer :: f(:)
-    CMPLX   :: laser_pol(MAX_DIM)
+    CMPLX, pointer  :: laser_pol(:, :)
   end type oct_control_parameters_t
 
   type oct_penalty_t 
@@ -193,21 +193,18 @@ contains
       call laser_to_numerical(h%ep%lasers(i), td%dt, td%max_iter)
     end do
 
-    call parameters_init(par, NDIM, td)
-    call parameters_init(par_tmp, NDIM, td)
-
-    call parameters_set(par, gr, h%ep)
+    call parameters_init(par, h%ep%no_lasers, td)
+    call parameters_init(par_tmp, h%ep%no_lasers, td)
+    call parameters_set(par, h%ep)
+    call parameters_set(par_tmp, h%ep)
     call parameters_write('opt-control/initial_laser.1', par)
-
-    ! WARNING: probably this is unnecessary?
-    call parameters_to_h(par, gr, td, h%ep)
 
     write(message(1),'(a,f14.8)') 'Input: Fluence of Initial laser ', laser_fluence(par)
     call write_info(1)
 
     call oct_iterator_init(iterator, oct)
 
-    call penalty_init(penalty, oct, par, gr, td%max_iter, iterator%ctr_iter_max, td%dt)
+    call penalty_init(penalty, oct, par, td%max_iter, iterator%ctr_iter_max, td%dt)
 
     if(oct%filtermode.gt.0) then
       nullify(f)
@@ -241,7 +238,7 @@ contains
     call states_output(psi, gr, 'opt-control/final', sys%outp)
 
     ! do final test run: propagate initial state with optimal field
-    call parameters_to_h(par, gr, td, h%ep)
+    call parameters_to_h(par, h%ep)
     call oct_finalcheck(oct, initial_st, target_st, sys, h, td, tdt)
 
     ! clean up
@@ -269,7 +266,7 @@ contains
       call write_info(1)
 
       psi = initial_st
-      call parameters_to_h(par, gr, td, h%ep)
+      call parameters_to_h(par, h%ep)
       call propagate_forward(oct, sys, h, td, tdt, psi) 
       
       if(oct%dump_intermediate) call states_output(psi, gr, 'opt-control/prop1', sys%outp)
@@ -327,7 +324,7 @@ contains
         call write_info(1)
         
         psi = initial_st
-        call parameters_to_h(par, gr, td, h%ep)
+        call parameters_to_h(par, h%ep)
         call propagate_forward(oct, sys, h, td, tdt, psi) 
         
         if(oct%dump_intermediate) then
@@ -397,7 +394,7 @@ contains
       
       call target_calc(oct, gr, target_st, psi, chi)
 
-      call parameters_to_h(par, gr, td, h%ep)
+      call parameters_to_h(par, h%ep)
       call propagate_backward(sys, h, td, chi)
 
       if(oct%dump_intermediate) call states_output(chi, gr, 'opt-control/initial_propZBR98', sys%outp)
@@ -521,7 +518,7 @@ contains
         ! psi(0) --> psi(T) with old field (for chi)
         call calc_inh(psi2, gr, tdt, iter, td%max_iter, td%dt, chi)
         ! psi2
-        call parameters_to_h(par, gr, td, h%ep)
+        call parameters_to_h(par, h%ep)
         call states_calc_dens(psi2, NP_PART, dens_tmp)
         psi2%rho = dens_tmp
         call v_ks_calc(gr, sys%ks, h, psi2, calc_eigenval=.true.)
@@ -531,14 +528,14 @@ contains
       call update_field(oct, penalty, iter-1, par, gr, td, psi, chi)
       
       ! chi
-      call parameters_to_h(par_tmp, gr, td, h%ep)
+      call parameters_to_h(par_tmp, h%ep)
       call states_calc_dens(chi, NP_PART, dens_tmp)
       chi%rho = dens_tmp
       call v_ks_calc(gr, sys%ks, h, chi, calc_eigenval=.true.) 
       call td_rti_dt(sys%ks, h, gr, chi, td%tr, abs(iter*td%dt), abs(td%dt))
       
       ! psi
-      call parameters_to_h(par, gr, td, h%ep)
+      call parameters_to_h(par, h%ep)
       call states_calc_dens(psi, NP_PART, dens_tmp)
       psi%rho = dens_tmp
       call v_ks_calc(gr, sys%ks, h, psi, calc_eigenval=.true.)
@@ -576,14 +573,14 @@ contains
       call update_field(oct, penalty, iter+1, par_tmp, gr, td, psi, chi)
            
       ! chi
-      call parameters_to_h(par_tmp, gr, td, h%ep)
+      call parameters_to_h(par_tmp, h%ep)
       call states_calc_dens(chi, NP_PART, dens_tmp)
       chi%rho = dens_tmp
       call v_ks_calc(gr, sys%ks, h, chi, calc_eigenval=.true.)
       call td_rti_dt(sys%ks, h, gr, chi, td%tr, abs(iter*td%dt),     td%dt )
       
       ! psi
-      call  parameters_to_h(par, gr, td, h%ep)
+      call  parameters_to_h(par, h%ep)
       call states_calc_dens(psi, NP_PART, dens_tmp)
       psi%rho = dens_tmp
       call v_ks_calc(gr, sys%ks, h, psi, calc_eigenval=.true.)

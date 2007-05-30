@@ -27,10 +27,10 @@ Match ; 2th state  ; grep '2   --' excited_states_static/eigenvalues ; \s*-4.827
 Input: 04-box.02-oct_long.inp
 
 # Match overlaps
-Match ; J1 1st iteration   ; grep ' 1  ' opt-control/convergence ; \s*0.889\d*
-Match ; J1 2nd iteration   ; grep ' 2  ' opt-control/convergence ; \s*0.938\d*
-Match ; J1 5th iteration   ; grep ' 5  ' opt-control/convergence ; \s*0.971\d*
-Match ; J1 10th iteration  ; grep ' 10  ' opt-control/convergence ; \s*0.982\d*
+Match ; J1 1st iteration   ; grep ' 1  ' opt-control/convergence ; \s*0.931\d*
+Match ; J1 2nd iteration   ; grep ' 2  ' opt-control/convergence ; \s*0.949\d*
+Match ; J1 5th iteration   ; grep ' 5  ' opt-control/convergence ; \s*0.973\d*
+Match ; J1 10th iteration  ; grep ' 10  ' opt-control/convergence ; \s*0.985\d*
 # This match is disconnected to allow for fast tests.
 # Match ; J1 15th iteration  ; grep ' 15  ' opt-control/convergence ; \s*0.985\d*
 

@@ -35,42 +35,43 @@
       call tdf_init_numerical(cp%f(j), cp%ntiter, M_HALF*cp%dt)
     end do
 
-    call oct_read_laserpol(cp%laser_pol)
+    ALLOCATE(cp%laser_pol(MAX_DIM, cp%no_parameters), MAX_DIM*cp%no_parameters)
+    cp%laser_pol = M_z0
 
+    call pop_sub()
   end subroutine parameters_init
 
 
   ! ---------------------------------------------------------
-  subroutine parameters_set(cp, gr, ep)
+  subroutine parameters_set(cp, ep)
     type(oct_control_parameters_t), intent(inout) :: cp
-    type(grid_t), intent(in) :: gr
     type(epot_t), intent(in) :: ep
+    integer :: j
 
     call push_sub('opt_control_parameters.parameters_set')
 
-    ! WARNING: This assumes only one laser, and only one control parameter. Obviously 
-    ! this has to be improved.
-    cp%f(1) = ep%lasers(1)%f
-    if(cp%no_parameters > 1) then
-      write(message(1),'(a)') 'Internal Error at parameters_set.'
-      call write_fatal(1)
-    end if
+    do j = 1, cp%no_parameters
+      cp%f(j) = ep%lasers(j)%f
+      cp%laser_pol(:, j) = ep%lasers(j)%pol(:)
+    end do
 
     call pop_sub()
   end subroutine parameters_set
 
 
   ! ---------------------------------------------------------
-  subroutine parameters_to_h(cp, gr, td, ep)
+  subroutine parameters_to_h(cp, ep)
     type(oct_control_parameters_t), intent(in) :: cp
-    type(grid_t), intent(in) :: gr
-    type(td_t),   intent(in) :: td
     type(epot_t), intent(inout) :: ep
+
+    integer :: j
 
     call push_sub('opt_control_paramters.parameters_to_h')
 
-    ep%lasers(1)%f = cp%f(1)
-    ep%lasers(1)%pol(:) = cp%laser_pol(:)
+    do j = 1, cp%no_parameters
+      ep%lasers(j)%f = cp%f(j)
+      ep%lasers(j)%pol(:) = cp%laser_pol(:, j)
+    end do
 
     call pop_sub()
   end subroutine parameters_to_h
@@ -86,6 +87,8 @@
     do j = 1, cp%no_parameters
       call tdf_end(cp%f(j))
     end do
+    deallocate(cp%f); nullify(cp%f)
+    deallocate(cp%laser_pol)
 
     call pop_sub()
   end subroutine parameters_end
@@ -140,7 +143,7 @@
       do p  = psi%st_start, psi%st_end
         do pol = 1, NDIM
           do dim = 1, psi%d%dim
-            rpsi(:, dim) = psi%zpsi(:, dim, p, ik)*cp%laser_pol(pol)*gr%m%x(:, pol)
+            rpsi(:, dim) = psi%zpsi(:, dim, p, ik)*cp%laser_pol(pol, 1)*gr%m%x(:, pol)
           end do
           d2(pol) = zstates_dotp(gr%m, psi%d%dim, chi%zpsi(:, :, p, ik), rpsi)
         end do
@@ -167,89 +170,7 @@
     call pop_sub()
   end subroutine update_field
 
-
-  ! ---------------------------------------------------------
-  ! WARNING: This is probably useless. The number of degrees of freedom should be 
-  ! the number of initial laser fields found in the input file. The polarizations
-  ! should be read from there. If no laser fields are found in the input file, then
-  ! some number of degrees of freedon (1) should be used, and some default
-  ! polarization (x). 
-  subroutine oct_read_laserpol(laserpol)
-    ! read the parameters for the laser polarization
-    CMPLX,   intent(out) :: laserpol(MAX_DIM)
-  
-    integer   :: i, no_blk, no_c, dof
-    C_POINTER :: blk
-
-    call push_sub('opt_control_parameters.oct_read_laserpol') 
-
-    !%Variable OCTPolarization
-    !%Type block
-    !%Section Optimal Control
-    !%Description
-    !% Define how many degress of freedom the laser has and how it is polarized.
-    !% The different examples below will explain this.
-    !% First of all, the syntax of each line is:
-    !%
-    !% <tt>%OCTPolarization
-    !% <br>&nbsp;&nbsp;dof | pol1 | pol2 | pol3 
-    !% <br>%</tt>
-    !% The variable defines the degress of freedom which is either 1 or 2.
-    !% pol1, pol2, pol3 define the polarization.
-    !%
-    !% Some examples:
-    !%
-    !% <tt>%OCTPolarization
-    !% <br>&nbsp;&nbsp;1 | 1 | 0 | 0 
-    !% <br>%</tt> 
-    !% Here we try to optimize the x-polarized laser.
-    !%
-    !% <tt>%OCTPolarization
-    !% <br>&nbsp;&nbsp;1 | 1 | 1 | 0 
-    !% <br>%</tt> 
-    !% The polarization is linear and lies in the x-y plane, only one laser field is optimized.
-    !%
-    !% <tt>%OCTPolarization
-    !% <br>&nbsp;&nbsp;2 | 1 | 1 | 0 
-    !% <br>%</tt> 
-    !% The polarization lies in the x-y plane, but this time two components of the laser
-    !% field are optimized. This may lead to linear, circular, or ellipitically polarized 
-    !% fields, dependening on the problem.
-    !%
-    !% <tt>%OCTPolarization
-    !% <br>&nbsp;&nbsp;1 | 1 | i | 0 
-    !% <br>%</tt> 
-    !% If we know that the answer must be a circular polarized field we can also fix it 
-    !% and optimize only one component.  
-    !%End
-    if(loct_parse_block(check_inp('OCTPolarization'),blk)==0) then
-      no_blk = loct_parse_block_n(blk)
-      ! TODO: for each orbital            
-      do i=1, no_blk
-        no_c = loct_parse_block_cols(blk, i-1)
-        call loct_parse_block_int(blk,i-1, 0, dof)
-        if((dof.gt.3).OR.(dof.lt.1) ) then
-          message(1) = "OCTPolarization: Choose degrees of freedom between 1 and 3."
-          call write_fatal(1)
-          
-        end if
-        call loct_parse_block_cmplx(blk,i-1, 1, laserpol(1))
-        call loct_parse_block_cmplx(blk,i-1, 2, laserpol(2))
-        call loct_parse_block_cmplx(blk,i-1, 3, laserpol(3))
-        
-      end do
-      call loct_parse_block_end(blk)
-    else
-      message(1) = 'Input: No Polarization defined and degrees of freedom defined'
-      message(2) = 'Input: Using default: x-polarized.'
-      laserpol(1) = m_z1
-      laserpol(2) = m_z0
-      laserpol(3) = m_z0
-      dof  = 1
-      call write_info(2)
-    end if
-
-    call pop_sub()
-  end subroutine oct_read_laserpol
-
-
+!! Local Variables:
+!! mode: f90
+!! coding: utf-8
+!! End:

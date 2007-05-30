@@ -417,41 +417,12 @@ contains
     end select
     
     
-    !select case (fp%ftype)
-    !case(filter_type_gauss)
-    !   write(message(1), '(a)') 'Info: Building Gaussian'
-    !   call write_info(1)
-    !   do kk=1, NDIM
-    !      ff(kk,:) = m_z0
-    !      ff(kk,:) =  exp(-(grid - fp%center)**2 / (M_TWO*fp%width**2))
-    !   end do
-    !   if(fp%domain.eq.filter_freq) then
-    !     do kk=1, NDIM
-    !        ff(kk,:) =  ff(kk,:) + &
-    !             exp(-(grid + fp%center)**2 / (M_TWO*fp%width**2))
-    !     end do
-    !  end if
- 
     iunit = io_open('opt-control/filtertest', action='write')
     do i = 0, steps
       write(iunit, '(4es20.12)') grid(i), ff(i)
     end do
     call io_close(iunit)
     
-    !case(filter_type_gaussFWHM)
-    !   write(message(1), '(a)') 'Info: Building Gaussian FWHM'
-    !   call write_info(1)
-    !   do kk=1, NDIM
-     !     width = sqrt((fp%width-fp%center)**2/(M_TWO*log(M_TWO)))
-    !      ff(kk,:) = exp(-(grid/M_TWO - fp%center)**2 / (M_TWO*width**2))
-    !   enddo
-  
-
-    !case default
-    !   write(message(1),'(a)') "Unknown filter function."
-    !   call write_fatal(1)
-    !end select
-          
     call tdf_set_numerical(fp%f, ff(0:2*steps))
     
     deallocate(ff)

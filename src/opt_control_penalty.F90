@@ -19,20 +19,18 @@
 
 
   ! ---------------------------------------------------------
-  subroutine penalty_init(penalty, oct, par, gr, steps, ctr_iter_max, dt)
+  subroutine penalty_init(penalty, oct, par, steps, ctr_iter_max, dt)
     type(oct_penalty_t), intent(inout)         :: penalty
     type(oct_t), intent(in)                    :: oct
     type(oct_control_parameters_t), intent(in) :: par
-    type(grid_t), pointer                      :: gr
     integer,      intent(in)                   :: steps
     integer,      intent(in)                   :: ctr_iter_max
     FLOAT,        intent(in)                   :: dt
 
+    character(len=1024)      :: expression
+    FLOAT                    :: weight, t, f_re, f_im
     C_POINTER                :: blk
-    integer                  :: no_lines, no_col, i, j
-    type(filter_t),  pointer :: tdp(:)
-    FLOAT, allocatable :: tdpenalty(:)
-
+    integer                  :: no_lines, i, j
     call push_sub('opt_control_penalty.penalty_init')
 
     !%Variable OCTPenalty
@@ -55,8 +53,6 @@
     penalty%a_penalty = penalty%penalty
 
     !!! WARNING This should be done only if there are td penalties required?
-    ALLOCATE(tdpenalty(0:2*steps), 2*steps+1)
-    tdpenalty = M_ONE
     ALLOCATE(penalty%td_penalty(par%no_parameters), par%no_parameters)
     do i = 1, par%no_parameters
       call tdf_init_numerical(penalty%td_penalty(i), 2*steps, dt*M_HALF, initval = M_z1)
@@ -78,50 +74,29 @@
         
     if (loct_parse_block(check_inp('OCTLaserEnvelope'), blk)==0) then
       no_lines = loct_parse_block_n(blk)
-      ALLOCATE(tdp(no_lines), no_lines)
+      if(no_lines .ne.par%no_parameters) call input_error('OCTLaserEnvelope')
+
       penalty%mode_tdpenalty = .true.
       
       ! The structure of the block is:
-      ! polarization | function | weight 
+      ! function | weight 
       do i = 1, no_lines
-        no_col = loct_parse_block_cols(blk, i-1)
-
-        ! parse formula string
-        call loct_parse_block_string(blk, i-1, 0, tdp(i)%expression)  
-
-        ! convert to C string
-        call conv_to_C_string(tdp(i)%expression)
-        call loct_parse_block_float(blk, i-1, 1, tdp(i)%weight)
-        !call loct_parse_block_int(blk, i-1, 1, tdp(i)%ftype)
-        
-        tdp(i)%domain = filter_time
-        
-        call tdf_init_numerical(tdp(i)%f, 2*steps, M_HALF*dt)
-        call build_filter(tdp(i), steps, dt)
-      end do
-
-      do i = 1, no_lines      
-        tdp(i)%weight = tdp(i)%weight/SUM(tdp(1:no_lines)%weight)
-      end do
-
-      do i=1,no_lines
-        tdpenalty = M_ZERO
+        call loct_parse_block_string(blk, i-1, 0, expression)  
+        call conv_to_C_string(expression)
+        call loct_parse_block_float(blk, i-1, 1, weight)
         do j = 1, 2*steps+1
-          tdpenalty(j-1) =  tdpenalty(j-1) &
-            + tdp(i)%weight * real( tdf(tdp(i)%f, j) ,REAL_PRECISION)
+          t = (j-1)*M_HALF*dt
+          call loct_parse_expression(f_re, f_im, "t", t, expression)
+          call tdf_set_numerical(penalty%td_penalty(i), j, M_ONE /(f_re + CNST(1.0e-7))  )
         end do
-        tdpenalty = M_ONE / (tdpenalty + CNST(0.0000001) )
-        call tdf_set_numerical(penalty%td_penalty(i), tdpenalty(0:2*steps))
       end do
 
-      ! all we want to know is tdpenalty
-      do i = 1, no_lines
-        call tdf_end(tdp(i)%f)
-      end do
       call loct_parse_block_end(blk)
     end if
 
-    call tdf_scalar_multiply(penalty%penalty, penalty%td_penalty(1))
+    do i = 1, par%no_parameters
+      call tdf_scalar_multiply(penalty%penalty, penalty%td_penalty(i))
+    end do
 
     call pop_sub()
   end subroutine penalty_init
