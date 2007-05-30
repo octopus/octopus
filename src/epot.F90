@@ -573,7 +573,7 @@ contains
     type(states_t),    intent(inout) :: st
     
     integer :: i, ispin
-    FLOAT :: jp(NP, NDIM, st%d%nspin), n_el, omega2, vol
+    FLOAT :: n_el, omega2, vol
 
     call push_sub('epot.epot_generate_gauge_field')
     
@@ -625,7 +625,6 @@ contains
 #endif
     type(mesh_t),      pointer :: m
     type(simul_box_t), pointer :: sb
-    integer, allocatable :: projl(:), projlm(:)
 
     call profiling_in(C_PROFILING_EPOT_GENERATE)
     call push_sub('epot.epot_generate')
@@ -675,9 +674,6 @@ contains
 
     end do
 
-    ALLOCATE(projl(1:ep%nvnl), ep%nvnl)
-    ALLOCATE(projlm(1:ep%nvnl), ep%nvnl)
-
     ! the pseudo potential part.
     iproj = 1
     do ia = 1, geo%natoms
@@ -709,8 +705,7 @@ contains
 
           end if
 
-          projl(iproj) = l
-          projlm(iproj) = lm
+          call projector_init(ep%p(iproj), atm, reltype, l, lm)
 
           ep%p(iproj)%iatom = ia
           iproj = iproj + 1
@@ -726,7 +721,7 @@ contains
         call submesh_init_sphere(ep%p(iproj)%sphere, &
              sb, m, atm%x, double_grid_get_rmax(gr%dgrid, atm%spec, m) + maxval(m%h(1:3)))
 
-        projl(iproj) = -1
+        call projector_init(ep%p(iproj), atm, force_type = M_LOCAL)
 
         iproj = iproj + 1
       end if
@@ -735,17 +730,7 @@ contains
 
     end do
 
-    !now initialize the projectors
-
-    do iproj = 1, ep%nvnl
-      if( projl(iproj) == -1 ) then
-        call projector_init(ep%p(iproj), gr, geo%atom(ep%p(iproj)%iatom), ep%gen_grads, force_type = M_LOCAL)
-      else
-        call projector_init(ep%p(iproj), gr, geo%atom(ep%p(iproj)%iatom), ep%gen_grads, reltype, projl(iproj), projlm(iproj))        
-      end if
-    end do
- 
-    deallocate(projl, projlm)
+    call projector_build_all
 
 #ifdef HAVE_FFT
     if(simul_box_is_periodic(sb).and.(.not.geo%only_user_def)) then
@@ -772,11 +757,21 @@ contains
     call pop_sub()
     call profiling_out(C_PROFILING_EPOT_GENERATE)
 
+  contains
+
+    subroutine projector_build_all
+
+      do iproj = 1, ep%nvnl
+        call projector_build(ep%p(iproj), gr, geo%atom(ep%p(iproj)%iatom), ep%gen_grads)
+      end do
+
+    end subroutine projector_build_all
+
   end subroutine epot_generate
 
   subroutine build_local_part_in_real_space(ep, gr, geo, a, vpsl, time, rho_core)
     type(epot_t),             intent(in)    :: ep
-    type(grid_t),   target,   intent(inout) :: gr
+    type(grid_t),             intent(inout) :: gr
     type(geometry_t),         intent(inout) :: geo
     type(atom_t),             intent(inout) :: a
     FLOAT,                    intent(inout) :: vpsl(:)
@@ -902,7 +897,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine epot_forces(gr, geo, ep, st, t)
-    type(grid_t), target, intent(inout) :: gr
+    type(grid_t),     intent(inout) :: gr
     type(geometry_t), intent(inout)  :: geo
     type(epot_t),     intent(in)     :: ep
     type(states_t),   intent(inout)     :: st

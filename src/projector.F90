@@ -50,6 +50,7 @@ module projector_m
        projector_t,               &
        projector_null,            &
        projector_init,            &
+       projector_build,           &
        projector_end,             &
        projector_build_kb_sphere, &
        projector_copy_kb_sphere,  &
@@ -84,6 +85,8 @@ module projector_m
   type projector_t
     integer :: type
     integer :: iatom
+    integer :: l
+    integer :: lm
 
     type(submesh_t)  :: sphere
 
@@ -165,18 +168,17 @@ contains
   end subroutine projector_copy_kb_sphere
 
   !---------------------------------------------------------
-  subroutine projector_init(p, gr, a, gen_grads, reltype, l, lm, force_type)
+  subroutine projector_init(p, a, reltype, l, lm, force_type)
     type(projector_t), intent(inout) :: p
-    type(grid_t),      intent(in)    :: gr
     type(atom_t),      intent(in)    :: a
-    logical,           intent(in)    :: gen_grads
     integer, optional, intent(in)    :: reltype
     integer, optional, intent(in)    :: l, lm
     integer, optional, intent(in)    :: force_type
 
-    integer :: ns
-
     call push_sub('projector.projector_init')
+
+    if(present(l)) p%l = l
+    if(present(lm)) p%lm = lm
 
     if(present(force_type)) then 
       p%type = force_type
@@ -198,6 +200,23 @@ contains
         p%type = M_HGH
       end select
     end if
+
+    call pop_sub()
+  end subroutine projector_init
+
+  !---------------------------------------------------------
+  subroutine projector_build(p, gr, a, gen_grads)
+    type(projector_t), intent(inout) :: p
+    type(grid_t),      intent(in)    :: gr
+    type(atom_t),      intent(in)    :: a
+    logical,           intent(in)    :: gen_grads
+
+    integer :: ns, l, lm
+
+    call push_sub('projector.projector_build')
+
+    l = p%l
+    lm = p%lm
 
     select case (p%type)
     case(M_LOCAL)
@@ -221,7 +240,7 @@ contains
     end select
 
     call pop_sub()
-  end subroutine projector_init
+  end subroutine projector_build
 
   !---------------------------------------------------------
   subroutine projector_end(p)
