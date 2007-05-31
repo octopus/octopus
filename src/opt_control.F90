@@ -621,7 +621,6 @@ contains
 #include "opt_control_iter.F90"
 #include "opt_control_output.F90"
 #include "opt_control_parameters.F90"
-#include "opt_control_penalty.F90"
 #include "opt_control_tdtarget.F90"
 
 end module opt_control_m

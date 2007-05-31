@@ -262,7 +262,7 @@ nl_operator.o: global.h
 ode_solver.o: global.h ode_solver_inc.F90
 opt_control.o: global.h opt_control_read.F90 opt_control_aux.F90 opt_control_defstates.F90 \
                opt_control_propagation.F90 opt_control_finalcheck.F90 opt_control_iter.F90 \
-               opt_control_output.F90 opt_control_parameters.F90 opt_control_penalty.F90 \
+               opt_control_output.F90 opt_control_parameters.F90 \
                opt_control_tdtarget.F90
 out.o: global.h out_inc.F90
 par_vec.o: global.h par_vec_inc.F90
