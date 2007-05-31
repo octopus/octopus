@@ -40,7 +40,7 @@ Input: 05-adw.03-filter_indirect.inp
 
 # Match overlaps 
 Match ; J1 1st  iteration  ; grep ' 1  ' opt-control/convergence ; \s*0.250\d*
-Match ; J1 2nd  iteration  ; grep ' 2  ' opt-control/convergence ; \s*0.552\d*
+Match ; J1 2nd  iteration  ; grep ' 2  ' opt-control/convergence ; \s*0.442\d*
 # The run stops at iter number two; however it should continue further to see that
 # the result actually converges. Apparently, however, the algorithm is unstable
 # and produces different results in different machines.

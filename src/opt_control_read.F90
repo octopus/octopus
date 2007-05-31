@@ -176,9 +176,8 @@
   ! ---------------------------------------------------------
   ! Tries to avoid ill defined combinations of run modes
   ! be careful with the order !!
-  subroutine check_faulty_runmodes(oct, penalty)
+  subroutine check_faulty_runmodes(oct)
     type(oct_t), intent(inout) :: oct
-    type(oct_penalty_t), intent(inout) :: penalty
 
     integer :: jj
     call push_sub('opt_control.check_faulty_runmodes')
@@ -199,11 +198,7 @@
       oct%algorithm_type = oct_algorithm_wg05
     end if
       
-    ! tdpenalty and fixed fluence do not work !
-    if((penalty%mode_tdpenalty).AND.(oct%mode_fixed_fluence)) then
-      write(message(1),'(a)') "Warning: Cannot use fixed fluence and td penalty."
-      call write_fatal(1)
-    end if
+    ! WARNING: tdpenalty and fixed fluence do not work, and this is not checked any more.
       
     ! local targets only in ZR98 and WG05
     if((oct%totype.eq.oct_tg_local) & 

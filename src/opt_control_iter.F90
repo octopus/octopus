@@ -82,9 +82,8 @@
 
 
   ! ---------------------------------------------------------
-  logical function iteration_manager(oct, penalty, gr, td_fitness, par, td, psi, target_st, iterator) result(stoploop)
+  logical function iteration_manager(oct, gr, td_fitness, par, td, psi, target_st, iterator) result(stoploop)
     type(oct_t), intent(in)             :: oct
-    type(oct_penalty_t), intent(in)     :: penalty
     type(grid_t), intent(in)            :: gr
     FLOAT, intent(in)                   :: td_fitness(:)
     type(oct_control_parameters_t), intent(in)  :: par
@@ -101,14 +100,14 @@
     stoploop = .false.
 
     iterator%overlap = overlap_function(oct, gr%m, td_fitness, td%max_iter, psi, target_st)
-    iterator%functional = iterator%overlap - j2_functional(oct, penalty, par)
+    iterator%functional = iterator%overlap - j2_functional(oct, par)
 
     fluence = laser_fluence(par)
 
     iterator%convergence(1,iterator%ctr_iter) = iterator%functional
     iterator%convergence(2,iterator%ctr_iter) = iterator%overlap
     iterator%convergence(3,iterator%ctr_iter) = fluence
-    iterator%convergence(4,iterator%ctr_iter) = tdf(penalty%td_penalty(1), 1)
+    iterator%convergence(4,iterator%ctr_iter) = tdf(par%td_penalty(1), 1)
     
     message(1) = "Info: Loop control"
     call write_info(1)
@@ -137,7 +136,7 @@
     if(oct%mode_fixed_fluence) then
       write(message(1), '(6x,a,f10.5,a,f10.5,a,f10.5,a,f10.5)') &
         " => J1:", iterator%overlap, "   J: " , iterator%functional,  "  I: " , fluence, &
-        " penalty: ", penalty%a_penalty(iterator%ctr_iter)
+        " penalty: ", par%a_penalty(iterator%ctr_iter)
     else
       write(message(1), '(6x,a,f14.8,a,f20.8,a,f14.8)') &
         " => J1:", iterator%overlap, "   J: " , iterator%functional,  "  I: " , fluence

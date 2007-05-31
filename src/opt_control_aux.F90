@@ -48,9 +48,8 @@
   ! Gets the J2 functional (which is the fluence, but weighted
   ! by a penalty function.
   ! ---------------------------------------------------------
-  FLOAT function j2_functional(oct, penalty, par) result(j2)
+  FLOAT function j2_functional(oct, par) result(j2)
     type(oct_t), intent(in)         :: oct
-    type(oct_penalty_t), intent(in) :: penalty
     integer :: i, j
     FLOAT :: t
     type(oct_control_parameters_t), intent(in) :: par
@@ -58,7 +57,7 @@
     do j = 1, par%no_parameters
       do i = 1, par%ntiter + 1
         t = (i-1) * par%dt
-        j2 = j2 + tdf(penalty%td_penalty(j), i)*abs(tdf(par%f(j), i))**2 
+        j2 = j2 + tdf(par%td_penalty(j), i)*abs(tdf(par%f(j), i))**2 
       end do
     end do
     j2 = j2 * par%dt

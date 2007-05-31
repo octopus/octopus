@@ -134,13 +134,10 @@ module opt_control_m
     integer :: ntiter
     type(tdf_t), pointer :: f(:)
     CMPLX, pointer  :: laser_pol(:, :)
-  end type oct_control_parameters_t
 
-  type oct_penalty_t 
-    logical          :: mode_tdpenalty
     FLOAT, pointer   :: a_penalty(:)
     type(tdf_t), pointer :: td_penalty(:)
-  end type oct_penalty_t
+  end type oct_control_parameters_t
 
 contains
 
@@ -150,7 +147,6 @@ contains
     type(hamiltonian_t),    intent(inout) :: h
 
     type(oct_t)                :: oct
-    type(oct_penalty_t)        :: penalty
     type(oct_iterator_t)       :: iterator
     type(td_t)                 :: td
     type(grid_t),      pointer :: gr   ! some shortcuts
@@ -192,18 +188,18 @@ contains
       call laser_to_numerical(h%ep%lasers(i), td%dt, td%max_iter)
     end do
 
+    call oct_iterator_init(iterator, oct)
+
     call parameters_init(par, h%ep%no_lasers, td)
     call parameters_init(par_tmp, h%ep%no_lasers, td)
+    call parameters_penalty_init(oct, par, iterator%ctr_iter_max)
+    call parameters_penalty_init(oct, par_tmp, iterator%ctr_iter_max)
     call parameters_set(par, h%ep)
     call parameters_set(par_tmp, h%ep)
     call parameters_write('opt-control/initial_laser', par)
 
     write(message(1),'(a,f14.8)') 'Input: Fluence of Initial laser ', laser_fluence(par)
     call write_info(1)
-
-    call oct_iterator_init(iterator, oct)
-
-    call penalty_init(penalty, oct, par, td%max_iter, iterator%ctr_iter_max, td%dt)
 
     if(oct%filtermode.gt.0) then
       nullify(f)
@@ -215,7 +211,7 @@ contains
     call def_toperator(oct, gr, sys%geo, target_st)
     call tdtargetset_init(oct, gr, td, tdt)
 
-    call check_faulty_runmodes(oct, penalty)
+    call check_faulty_runmodes(oct)
 
     call states_output(initial_st, gr, 'opt-control/initial1', sys%outp)
     call states_output(target_st, gr, 'opt-control/target1', sys%outp)
@@ -277,7 +273,7 @@ contains
          ! defines chi
         call target_calc(oct, gr, target_st, psi, chi)
         
-        if(iteration_manager(oct, penalty, gr, tdt%td_fitness, par, td, psi, target_st, iterator)) exit ctr_loop
+        if(iteration_manager(oct, gr, tdt%td_fitness, par, td, psi, target_st, iterator)) exit ctr_loop
         
         call bwd_step(oct_algorithm_zr98)
         
@@ -333,7 +329,7 @@ contains
         ! define target state
         call target_calc(oct, gr, target_st, psi, chi) ! defines chi
         
-        if(iteration_manager(oct, penalty, gr, tdt%td_fitness, par, td, psi, target_st, iterator)) exit ctr_loop
+        if(iteration_manager(oct, gr, tdt%td_fitness, par, td, psi, target_st, iterator)) exit ctr_loop
         
         call bwd_step(oct_algorithm_wg05)
         !!!WARNING: this probably shoudl not be here?
@@ -348,19 +344,18 @@ contains
           !!!WARNING: this probably shoudl not be here?
           fluence = laser_fluence(par_tmp)
 
-          penalty%a_penalty(iterator%ctr_iter + 1) = &
-            sqrt(fluence * penalty%a_penalty(iterator%ctr_iter)**2 / oct%targetfluence )
+          par%a_penalty(iterator%ctr_iter + 1) = &
+            sqrt(fluence * par%a_penalty(iterator%ctr_iter)**2 / oct%targetfluence )
 
           if(oct%dump_intermediate) then
-            write (6,*) 'actual penalty', penalty%a_penalty(iterator%ctr_iter)
-            write (6,*) 'next penalty', penalty%a_penalty(iterator%ctr_iter + 1)
+            write (6,*) 'actual penalty', par%a_penalty(iterator%ctr_iter)
+            write (6,*) 'next penalty', par%a_penalty(iterator%ctr_iter + 1)
           end if
 
           !!!!!WARNING: This is a very strange statement?
-          call tdf_set_numerical(penalty%td_penalty(1), &
-                                 spread(penalty%a_penalty(iterator%ctr_iter + 1), 1, td%max_iter+1) )
-
-          call tdf_scalar_multiply( ( penalty%a_penalty(iterator%ctr_iter) / penalty%a_penalty(iterator%ctr_iter + 1) ), &
+          call tdf_set_numerical(par%td_penalty(1), &
+                                 spread(par%a_penalty(iterator%ctr_iter + 1), 1, td%max_iter+1) )
+          call tdf_scalar_multiply( ( par%a_penalty(iterator%ctr_iter) / par%a_penalty(iterator%ctr_iter + 1) ), &
                                     par_tmp%f(1) )
 
           fluence = laser_fluence(par_tmp)
@@ -411,7 +406,7 @@ contains
         write(filename,'(a,i3.3)') 'opt-control/PsiT.', iterator%ctr_iter
         call states_output(psi, gr, filename, sys%outp)
         
-        if(iteration_manager(oct, penalty, gr, tdt%td_fitness, par, td, psi, target_st, iterator)) exit ctr_loop
+        if(iteration_manager(oct, gr, tdt%td_fitness, par, td, psi, target_st, iterator)) exit ctr_loop
         
          ! and now backward
         call target_calc(oct, gr, target_st, psi, chi)
@@ -523,7 +518,7 @@ contains
         call td_rti_dt(sys%ks, h, gr, psi2, td%tr, abs(iter*td%dt), abs(td%dt))
       end if
 
-      call update_field(oct, penalty, iter-1, par, gr, td, psi, chi)
+      call update_field(oct, iter-1, par, gr, td, psi, chi)
       
       ! chi
       call parameters_to_h(par_tmp, h%ep)
@@ -566,7 +561,7 @@ contains
       end if
  
       ! new electric field
-      call update_field(oct, penalty, iter+1, par_tmp, gr, td, psi, chi)
+      call update_field(oct, iter+1, par_tmp, gr, td, psi, chi)
            
       ! chi
       call parameters_to_h(par_tmp, h%ep)

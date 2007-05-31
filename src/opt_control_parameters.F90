@@ -116,9 +116,8 @@
 
 
   ! ---------------------------------------------------------
-  subroutine update_field(oct, penalty, iter, cp, gr, td, psi, chi)
+  subroutine update_field(oct, iter, cp, gr, td, psi, chi)
     type(oct_t), intent(in)    :: oct
-    type(oct_penalty_t), intent(in) :: penalty
     integer, intent(in)        :: iter
     type(oct_control_parameters_t), intent(inout) :: cp
     type(grid_t), intent(in)   :: gr
@@ -154,7 +153,7 @@
     d1 = M_z1
     if(oct%algorithm_type .eq. oct_algorithm_zbr98) d1 = zstates_mpdotp(gr%m, psi, chi)
 
-    value = aimag(d1*d2(1))/tdf(penalty%td_penalty(1), iter+1)
+    value = aimag(d1*d2(1))/tdf(cp%td_penalty(1), iter+1)
     call tdf_set_numerical(cp%f(1), iter+1, value)
     i = int(sign(M_ONE, td%dt))
     if(iter==0.or.iter==td%max_iter) then
@@ -166,6 +165,85 @@
 
     call pop_sub()
   end subroutine update_field
+
+
+  ! ---------------------------------------------------------
+  subroutine parameters_penalty_init(oct, par, ctr_iter_max)
+    type(oct_t), intent(in)                    :: oct
+    type(oct_control_parameters_t), intent(inout) :: par
+    integer,      intent(in)                   :: ctr_iter_max
+
+    character(len=1024)      :: expression
+    FLOAT                    :: weight, t, f_re, f_im, octpenalty, dt
+    C_POINTER                :: blk
+    integer                  :: no_lines, i, j, steps
+    call push_sub('opt_control_penalty.parameters_penalty_init')
+
+    dt = par%dt
+    steps = par%ntiter
+
+    !%Variable OCTPenalty
+    !%Type float
+    !%Section Optimal Control
+    !%Default 1.0
+    !%Description
+    !% The variable specificies the value of the penalty factor for the 
+    !% integrated field strength (fluence). Large value - small fluence. The value is 
+    !% always positive. A transient shape can be specified using the block OCTLaserEnvelope.
+    !% In this case OCTPenalty is multiplied with time-dependent function. 
+    !% The value depends on the coupling between the states. A good start might be a 
+    !% value from 0.1 (strong fields) to 10 (weak fields). 
+    !%End
+    call loct_parse_float(check_inp('OCTPenalty'), M_ONE, octpenalty)
+    ! penalty array for fixed fluence run 
+    ! the array is only interesting for the development of new algorithms
+
+    ALLOCATE(par%a_penalty(0:ctr_iter_max+1), ctr_iter_max+2)
+    par%a_penalty = octpenalty
+
+    ALLOCATE(par%td_penalty(par%no_parameters), par%no_parameters)
+    do i = 1, par%no_parameters
+      call tdf_init_numerical(par%td_penalty(i), steps, dt, initval = M_z1)
+    end do
+
+    !%Variable OCTLaserEnvelope
+    !%Type block
+    !%Section Optimal Control
+    !%Description
+    !% Often a predefined time-dependent envelope on the control parameter is desired. 
+    !% This can be achieved by making the penalty factor time-dependent. 
+    !% Here, you may specify the required time dependent envelope.
+    !%
+    !% It is possible to choose different envelopes for different control parameters.
+    !% There should be one line for each control parameter.
+    !%End
+        
+    if (loct_parse_block(check_inp('OCTLaserEnvelope'), blk)==0) then
+      no_lines = loct_parse_block_n(blk)
+      if(no_lines .ne.par%no_parameters) call input_error('OCTLaserEnvelope')
+
+      ! The structure of the block is:
+      ! function | weight 
+      do i = 1, no_lines
+        call loct_parse_block_string(blk, i-1, 0, expression)  
+        call conv_to_C_string(expression)
+        call loct_parse_block_float(blk, i-1, 1, weight)
+        do j = 1, steps+1
+          t = (j-1)*dt
+          call loct_parse_expression(f_re, f_im, "t", t, expression)
+          call tdf_set_numerical(par%td_penalty(i), j, M_ONE /(f_re + CNST(1.0e-7))  )
+        end do
+      end do
+
+      call loct_parse_block_end(blk)
+    end if
+
+    do i = 1, par%no_parameters
+      call tdf_scalar_multiply(octpenalty, par%td_penalty(i))
+    end do
+
+    call pop_sub()
+  end subroutine parameters_penalty_init
 
 !! Local Variables:
 !! mode: f90

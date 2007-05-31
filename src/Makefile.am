@@ -93,7 +93,7 @@ noinst_HEADERS = \
 	excited_states_inc.F90 xc_OEP_kernel_inc.F90 em_resp_calc_inc.F90 \
 	opt_control_read.F90 opt_control_aux.F90 opt_control_defstates.F90 \
 	opt_control_propagation.F90 opt_control_finalcheck.F90 opt_control_iter.F90 \
-	opt_control_output.F90 opt_control_parameters.F90 opt_control_penalty.F90 \
+	opt_control_output.F90 opt_control_parameters.F90 \
 	opt_control_tdtarget.F90
 
 core_LIBS = @LIBS_LAPACK@ @LIBS_BLAS@ \
