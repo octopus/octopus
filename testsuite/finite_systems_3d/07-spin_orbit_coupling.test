@@ -10,7 +10,7 @@ Programs : octopus
 Runtime  : short-run
 Enabled  : Yes
 
-Input: 07-spin_orbit_coupling.01-ground_state.inp
+Input: 07-spin_orbit_coupling.01-hgh.inp
 
 
 Match ; Eigenvalues ; grep -A 9 'Eigenvalues \[' static/info | awk '{print $3" "$7" "$4}' | sort -r | head -n 2 | tail -1 ; \s*-0.393\d*\s*0.5000\s*1.00
@@ -25,3 +25,19 @@ Match ; Eigenvalues ; grep -A 9 'Eigenvalues \[' static/info | awk '{print $3" "
 
 
 
+Input: 07-spin_orbit_coupling.02-rkb.inp
+
+Match ; Eigenvalues ; grep -A 15 'Eigenvalues \[' static/info | awk '{print $3" "$7" "$4}' | sort -r | head -n 2  | tail -1 ; \s*-6.482\d*\s*0.5000\s*1.00
+Match ; Eigenvalues ; grep -A 15 'Eigenvalues \[' static/info | awk '{print $3" "$7" "$4}' | sort -r | head -n 3  | tail -1 ; \s*-6.465\d*\s*0.5000\s*1.00
+Match ; Eigenvalues ; grep -A 15 'Eigenvalues \[' static/info | awk '{print $3" "$7" "$4}' | sort -r | head -n 4  | tail -1 ; \s*-6.461\d*\s*-0.5000\s*1.00
+Match ; Eigenvalues ; grep -A 15 'Eigenvalues \[' static/info | awk '{print $3" "$7" "$4}' | sort -r | head -n 5  | tail -1 ; \s*-6.455\d*\s*-0.5000\s*1.00
+Match ; Eigenvalues ; grep -A 15 'Eigenvalues \[' static/info | awk '{print $3" "$7" "$4}' | sort -r | head -n 6  | tail -1 ; \s*-2.198\d*\s*0.5000\s*1.00
+Match ; Eigenvalues ; grep -A 15 'Eigenvalues \[' static/info | awk '{print $3" "$7" "$4}' | sort -r | head -n 7  | tail -1 ; \s*-2.165\d*\s*-0.5000\s*1.00
+Match ; Eigenvalues ; grep -A 15 'Eigenvalues \[' static/info | awk '{print $3" "$7" "$4}' | sort -r | head -n 8  | tail -1 ; \s*-1.210\d*\s*0.4573\s*1.00
+Match ; Eigenvalues ; grep -A 15 'Eigenvalues \[' static/info | awk '{print $3" "$7" "$4}' | sort -r | head -n 9  | tail -1 ; \s*-1.195\d*\s*0.1173\s*1.00
+Match ; Eigenvalues ; grep -A 15 'Eigenvalues \[' static/info | awk '{print $3" "$7" "$4}' | sort -r | head -n 10 | tail -1 ; \s*-1.186\d*\s*0.5000\s*1.00
+Match ; Eigenvalues ; grep -A 15 'Eigenvalues \[' static/info | awk '{print $3" "$7" "$4}' | sort -r | head -n 11 | tail -1 ; \s*-1.165\d*\s*-0.1173\s*1.00
+Match ; Eigenvalues ; grep -A 15 'Eigenvalues \[' static/info | awk '{print $3" "$7" "$4}' | sort -r | head -n 12 | tail -1 ; \s*-1.156\d*\s*-0.5000\s*1.00
+Match ; Eigenvalues ; grep -A 15 'Eigenvalues \[' static/info | awk '{print $3" "$7" "$4}' | sort -r | head -n 13 | tail -1 ; \s*-1.138\d*\s*-0.4573\s*1.00
+Match ; Eigenvalues ; grep -A 15 'Eigenvalues \[' static/info | awk '{print $3" "$7" "$4}' | sort -r | head -n 14 | tail -1 ; \s*0.208\d*\s*0.5000\s*1.00
+Match ; Eigenvalues ; grep -A 15 'Eigenvalues \[' static/info | awk '{print $3" "$7" "$4}' | sort -r | head -n 15 | tail -1 ; \s*-0.026\d*\s*0.5000\s*1.00

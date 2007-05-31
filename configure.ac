@@ -302,6 +302,7 @@ AC_CONFIG_FILES([Makefile
   share/PP/Makefile
   share/PP/PSF/Makefile
   share/PP/HGH/Makefile
+  share/PP/UPF/Makefile
   share/recipes/Makefile
   share/recipes/en/Makefile
   share/recipes/es/Makefile 

@@ -527,6 +527,8 @@ contains
   subroutine geometry_end(geo)
     type(geometry_t), intent(inout) :: geo
 
+    call push_sub('geometry.geometry_end')
+
     if(associated(geo%atom)) then ! sanity check
       deallocate(geo%atom); nullify(geo%atom)
     end if
@@ -537,6 +539,7 @@ contains
 
     call specie_end(geo%nspecies, geo%specie)
 
+    call pop_sub()
   end subroutine geometry_end
 
 

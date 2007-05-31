@@ -17,19 +17,22 @@
 ## Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
 ## 02111-1307, USA.
 ##
-## $Id$
+## $Id: Makefile.am 2789 2007-03-24 12:47:37Z lorenzen $
 
-SUBDIRS = PSF HGH UPF
+upfdir = $(pkgdatadir)/PP/UPF
 
-ppdir = $(pkgdatadir)/PP
-dist_pp_DATA = defaults
+dist_upf_DATA = \
+	Cr_sc.UPF    \
+	Cr_sc_so.UPF \
+	Fe_sc.UPF    \
+	Fe_sc_so.UPF
 
 
 # In order to get `make check' working with a `VPATH' build (e. g. to use
 # the `distcheck' target) the pseudopotential files have to be accessible
 # in the build tree.
 check:
-	@for f in $(dist_pp_DATA); do \
+	@for f in $(dist_upf_DATA); do \
 	  if [ ! -e $$f -o $$f -ot $(srcdir)/$$f ]; then \
 	    cp $(srcdir)/$$f $$f; \
 	  fi \
@@ -39,7 +42,7 @@ check-full: check
 
 clean-local:
 	@if [ -n "$(builddir)" -a "$(builddir)" != "$(srcdir)" ]; then \
-	  rm -f $(dist_pp_DATA); \
+	  rm -f $(dist_upf_DATA); \
 	fi
 
 .PHONY: check check-full

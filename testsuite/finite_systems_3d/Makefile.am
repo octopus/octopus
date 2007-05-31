@@ -41,7 +41,8 @@ dist_share_DATA = \
 	06-restart.03-td_calc.inp \
 	06-restart.04-restart_td_calc.inp \
 	06-restart.test \
-	07-spin_orbit_coupling.01-ground_state.inp \
+	07-spin_orbit_coupling.01-hgh.inp \
+	07-spin_orbit_coupling.02-rkb.inp \
 	07-spin_orbit_coupling.test \
 	08-sodium_dimer.01-ground_state.inp \
 	08-sodium_dimer.test \

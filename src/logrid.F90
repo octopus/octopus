@@ -105,7 +105,10 @@ contains
   subroutine logrid_end(g)
     type(logrid_t), intent(inout) :: g
 
-    deallocate(g%rofi, g%drdi, g%s)
+    if (associated(g%rofi)) deallocate(g%rofi)
+    if (associated(g%drdi)) deallocate(g%drdi)
+    if (associated(g%s)) deallocate(g%s)
+
   end subroutine logrid_end
 
 

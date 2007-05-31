@@ -214,6 +214,7 @@ contains
       ps%l_max  = ps_upf%l_max
       ps%l_loc  = ps_upf%l_local
 
+      nullify(ps%g%drdi, ps%g%s)
       ps%g%nrval = ps_upf%np
       ALLOCATE(ps%g%rofi(ps%g%nrval), ps%g%nrval)
       ps%g%rofi = ps_upf%r
@@ -493,6 +494,7 @@ contains
     call push_sub('ps.ps_end')
 
     if(.not. associated(ps%kb)) return
+
 
     call loct_spline_end(ps%kb)
     call loct_spline_end(ps%dkb)
