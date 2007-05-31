@@ -39,7 +39,6 @@ module filter_m
   
   public ::             &
        filter_t,        &
-       def_tdpenalty,   &
        t_lookup,        &
        w_lookup,        &
        def_filter,      &
@@ -81,72 +80,12 @@ module filter_m
     sin2       = 3
   
 contains
+
   
   ! ---------------------------------------------------------
-  subroutine def_tdpenalty(tdpenalty, steps, dt, mode_tdpenalty)
-    FLOAT,        intent(out):: tdpenalty(:,:)
-    integer,      intent(in) :: steps
-    FLOAT,        intent(in) :: dt
-    logical,      intent(out):: mode_tdpenalty
-
-    C_POINTER                :: blk
-    integer                  :: no_lines, no_col, i, j
-    type(filter_t),  pointer :: tdp(:)
-
-    call push_sub('filters.def_tdpenalty')
-    mode_tdpenalty = .FALSE.
-
-    if (loct_parse_block(check_inp('OCTLaserEnvelope'), blk)==0) then
-      no_lines = loct_parse_block_n(blk)
-      ALLOCATE(tdp(no_lines), no_lines)
-      mode_tdpenalty = .TRUE.
-      
-      ! The structure of the block is:
-      ! function | weight 
-      do i = 1, no_lines
-        no_col = loct_parse_block_cols(blk, i-1)
-
-        ! parse formula string
-        call loct_parse_block_string(                            &
-          blk, i-1, 0, tdp(i)%expression)  
-        ! convert to C string
-        call conv_to_C_string(tdp(i)%expression)
-        call loct_parse_block_float(blk, i-1, 1, tdp(i)%weight)
-        !call loct_parse_block_int(blk, i-1, 1, tdp(i)%ftype)
-        
-        tdp(i)%domain = filter_time
-        
-        call build_filter(tdp(i), steps, dt)
-      end do
-
-      do i = 1, no_lines      
-        tdp(i)%weight = tdp(i)%weight/SUM(tdp(1:no_lines)%weight)
-      end do
-
-      tdpenalty = M_ZERO
-      do i=1,no_lines
-        do j = 1, 2*steps+1
-          tdpenalty(1, j-1) =  tdpenalty(1, j-1) + tdp(i)%weight * tdf(tdp(i)%f, j)
-        end do
-      end do
-
-      tdpenalty = M_ONE / (tdpenalty + real(0.0000001,REAL_PRECISION )) 
-      
-      ! all we want to know is tdpenalty
-      do i = 1, no_lines
-        call tdf_end(tdp(i)%f)
-      end do
-      call loct_parse_block_end(blk)
-    end if
-
-    call pop_sub()
-  end subroutine def_tdpenalty
-  
-
-  ! ---------------------------------------------------------
-  subroutine apply_filter(steps, filtermode, filter, f)  
+  subroutine apply_filter(steps, filter, f)  
     type(filter_t),   pointer      :: filter(:)
-    integer,          intent(in)   :: filtermode, steps
+    integer,          intent(in)   :: steps
     type(tdf_t), intent(inout) :: f
 
     FLOAT, allocatable :: cfunction(:)
@@ -154,18 +93,18 @@ contains
 #if defined(HAVE_FFT)
 
     integer        :: no_f, i, kk, n(3), last, first, grouplength, ii, j
-    CMPLX          :: tmp(0:2*steps, 1, 1), tmp2(0:2*steps, 1, 1) ! Have to be three-dimensional to use the fft_m modul
+    CMPLX          :: tmp(0:steps, 1, 1), tmp2(0:steps, 1, 1) ! Have to be three-dimensional to use the fft_m modul
     CMPLX, allocatable :: filt(:), numerical(:)
     type(fft_t)    :: fft_handler
 
     call push_sub('filters.apply_filter')
 
-    ALLOCATE(cfunction(0:2*steps), 2*steps+1)
-    do i = 1, 2*steps+1
+    ALLOCATE(cfunction(0:steps), steps+1)
+    do i = 1, steps+1
       cfunction(i-1) = tdf(f, i)
     end do
 
-    n(1:3) = (/ 2*steps+1, 1, 1 /)
+    n(1:3) = (/ steps+1, 1, 1 /)
     
     call fft_init(n, fft_complex, fft_handler, optimize = .false.)
     
@@ -174,8 +113,8 @@ contains
     first = 0
     last  = 0
 
-    ALLOCATE(filt(0:2*steps), 2*steps+1)
-    ALLOCATE(numerical(0:2*steps), 2*steps+1)
+    ALLOCATE(filt(0:steps), steps+1)
+    ALLOCATE(numerical(0:steps), steps+1)
     filt  = M_z0
     numerical = M_z0
 
@@ -186,7 +125,7 @@ contains
       write(message(1),'(a,i2)') "Info: Applying filter "         
       call write_info(1)
 
-      do j = 0, 2*steps
+      do j = 0, steps
         numerical(j) = tdf(filter(i)%f, j+1)
       end do  
       
@@ -202,7 +141,7 @@ contains
         do while(ii.lt.no_f+1) 
           if(filter(ii)%domain.eq.filter_freq) then
             grouplength = grouplength + 1
-            do j = 0, 2*steps
+            do j = 0, steps
               filt(j) = filt(j) + tdf(filter(ii)%f, j+1)
             end do
           end if
@@ -237,7 +176,7 @@ contains
         do while(ii.lt.no_f+1) 
           if(filter(ii)%domain.eq.filter_time) then
             grouplength = grouplength + 1
-            do j = 0, 2*steps
+            do j = 0, steps
               filt(j) = filt(j) + tdf(filter(ii)%f, j+1)
             end do
           end if
@@ -263,7 +202,7 @@ contains
       end select
     end do
 
-    do i = 1, 2*steps+1
+    do i = 1, steps+1
       call tdf_set_numerical(f, i, cfunction(i-1))
     end do
 
@@ -365,7 +304,7 @@ contains
         !call loct_parse_block_int(blk, i-1, 2, f(i)%ftype)
         !call loct_parse_block_float(blk, i-1, 5, f(i)%weight)
 
-        call tdf_init_numerical(f(i)%f, 2*steps, dt*M_HALF)
+        call tdf_init_numerical(f(i)%f, steps, dt)
         call build_filter(f(i), steps, dt)
       end do
       
@@ -385,27 +324,27 @@ contains
 
     integer :: i, iunit
     integer :: ip, pol
-    FLOAT   :: grid(0:2*steps), f_re, f_im
+    FLOAT   :: grid(0:steps), f_re, f_im, t
     CMPLX, allocatable :: ff(:)
 
 
     call push_sub('filter.build_filter_')
 
-    ALLOCATE(ff(0:2*steps), 2*steps+1)
+    ALLOCATE(ff(0:steps), steps+1)
 
     ff = M_z0
     select case(fp%domain)
     case(filter_time)
-      call t_lookup(2*steps+1,dt/real(2.0,REAL_PRECISION),grid)
-      do ip=0, 2*steps
-        call loct_parse_expression(f_re, f_im, "t", grid(ip), fp%expression)
+      do ip=0, steps
+        t = ip*dt
+        call loct_parse_expression(f_re, f_im, "t", t, fp%expression)
         ff(ip) = f_re + M_zI*f_im
       end do
       
     case(filter_freq)
-      call w_lookup(2*steps+1,dt,grid)
+      call w_lookup(steps+1,dt,grid)
       ff = M_z1
-      do ip=0, 2*steps
+      do ip=0, steps
         call loct_parse_expression(f_re, f_im, "w", grid(ip), fp%expression)      
         ff(ip) = f_re + M_zI*f_im
       end do
@@ -416,14 +355,7 @@ contains
       call write_fatal(2)
     end select
     
-    
-    iunit = io_open('opt-control/filtertest', action='write')
-    do i = 0, steps
-      write(iunit, '(4es20.12)') grid(i), ff(i)
-    end do
-    call io_close(iunit)
-    
-    call tdf_set_numerical(fp%f, ff(0:2*steps))
+    call tdf_set_numerical(fp%f, ff(0:steps))
     
     deallocate(ff)
     call pop_sub()
@@ -461,7 +393,7 @@ contains
 
     wgrid = M_ZERO
 
-    df = M_TWO/(real(steps,REAL_PRECISION) * dt)
+    df = M_ONE/(real(steps,REAL_PRECISION) * dt)
     do i=1, int((steps)/2)
        wgrid(i)   = real(i-1, REAL_PRECISION) * df * M_TWO * M_PI
     enddo
@@ -494,21 +426,21 @@ contains
       call pop_sub(); return
     end if
 
-    ALLOCATE(numerical(0:2*max_iter), 2*max_iter+1)
+    ALLOCATE(numerical(0:max_iter), max_iter+1)
     do kk=1, size(f)
        write(filename,'(a,i2.2)') 'opt-control/filter', kk
 
 
        if(f(kk)%domain.eq.1) then
-         do i = 1, 2*max_iter+1
+         do i = 1, max_iter+1
            numerical(i-1) = tdf(f(kk)%f, i)
          end do
          call write_fieldw(filename, ndim, max_iter, real(numerical, REAL_PRECISION), dt)
        else
          !write(6,*) f(kk)%numerical(:,0)
          iunit = io_open(filename, action='write')
-         do i = 0, 2*max_iter
-           write(iunit, '(4ES30.16E4)') i*dt*M_HALF, tdf(f(kk)%f, i+1)
+         do i = 0, max_iter
+           write(iunit, '(4ES30.16E4)') i*dt, tdf(f(kk)%f, i+1)
          end do
          call io_close(iunit)
        end if
@@ -557,10 +489,10 @@ contains
 
     call push_sub('opt_control.write_fieldw')
 
-    call w_lookup(2*steps+1, dt, wgrid)
+    call w_lookup(steps+1, dt, wgrid)
 
     iunit = io_open(filename, action='write')
-    do i = 0, 2*steps
+    do i = 0, steps
        write(iunit, '(4es30.16e4)') wgrid(i), las(i)
     end do
     call io_close(iunit)

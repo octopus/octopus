@@ -84,7 +84,7 @@ contains
     no_l = dimensions
     ALLOCATE(lasers(no_l), no_l)
     do j = 1, no_l
-      call tdf_init_numerical(lasers(j)%f, 2*max_iter, M_HALF*dt)
+      call tdf_init_numerical(lasers(j)%f, max_iter, dt)
     end do
 
   end subroutine laser_init_numerical
@@ -98,7 +98,7 @@ contains
 
     call push_sub('lasers.laser_init')
 
-    call tdf_to_numerical(l%f, 2*max_iter, M_HALF*dt)
+    call tdf_to_numerical(l%f, max_iter, dt)
 
     call pop_sub()
   end subroutine laser_to_numerical

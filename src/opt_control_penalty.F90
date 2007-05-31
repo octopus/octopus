@@ -28,7 +28,7 @@
     FLOAT,        intent(in)                   :: dt
 
     character(len=1024)      :: expression
-    FLOAT                    :: weight, t, f_re, f_im
+    FLOAT                    :: weight, t, f_re, f_im, octpenalty
     C_POINTER                :: blk
     integer                  :: no_lines, i, j
     call push_sub('opt_control_penalty.penalty_init')
@@ -45,17 +45,17 @@
     !% The value depends on the coupling between the states. A good start might be a 
     !% value from 0.1 (strong fields) to 10 (weak fields). 
     !%End
-    call loct_parse_float(check_inp('OCTPenalty'), M_ONE, penalty%penalty)
+    call loct_parse_float(check_inp('OCTPenalty'), M_ONE, octpenalty)
     ! penalty array for fixed fluence run 
     ! the array is only interesting for the development of new algorithms
 
     ALLOCATE(penalty%a_penalty(0:ctr_iter_max+1), ctr_iter_max+2)
-    penalty%a_penalty = penalty%penalty
+    penalty%a_penalty = octpenalty
 
     !!! WARNING This should be done only if there are td penalties required?
     ALLOCATE(penalty%td_penalty(par%no_parameters), par%no_parameters)
     do i = 1, par%no_parameters
-      call tdf_init_numerical(penalty%td_penalty(i), 2*steps, dt*M_HALF, initval = M_z1)
+      call tdf_init_numerical(penalty%td_penalty(i), steps, dt, initval = M_z1)
     end do
 
     penalty%mode_tdpenalty = .false.
@@ -84,8 +84,8 @@
         call loct_parse_block_string(blk, i-1, 0, expression)  
         call conv_to_C_string(expression)
         call loct_parse_block_float(blk, i-1, 1, weight)
-        do j = 1, 2*steps+1
-          t = (j-1)*M_HALF*dt
+        do j = 1, steps+1
+          t = (j-1)*dt
           call loct_parse_expression(f_re, f_im, "t", t, expression)
           call tdf_set_numerical(penalty%td_penalty(i), j, M_ONE /(f_re + CNST(1.0e-7))  )
         end do
@@ -95,7 +95,7 @@
     end if
 
     do i = 1, par%no_parameters
-      call tdf_scalar_multiply(penalty%penalty, penalty%td_penalty(i))
+      call tdf_scalar_multiply(octpenalty, penalty%td_penalty(i))
     end do
 
     call pop_sub()

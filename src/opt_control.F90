@@ -138,7 +138,6 @@ module opt_control_m
 
   type oct_penalty_t 
     logical          :: mode_tdpenalty
-    FLOAT            :: penalty
     FLOAT, pointer   :: a_penalty(:)
     type(tdf_t), pointer :: td_penalty(:)
   end type oct_penalty_t
@@ -197,7 +196,7 @@ contains
     call parameters_init(par_tmp, h%ep%no_lasers, td)
     call parameters_set(par, h%ep)
     call parameters_set(par_tmp, h%ep)
-    call parameters_write('opt-control/initial_laser.1', par)
+    call parameters_write('opt-control/initial_laser', par)
 
     write(message(1),'(a,f14.8)') 'Input: Fluence of Initial laser ', laser_fluence(par)
     call write_info(1)
@@ -275,10 +274,8 @@ contains
 
       ctr_loop: do
         
-        ! check for stop file and delete file
-        
-        ! define target state
-        call target_calc(oct, gr, target_st, psi, chi) ! defines chi
+         ! defines chi
+        call target_calc(oct, gr, target_st, psi, chi)
         
         if(iteration_manager(oct, penalty, gr, tdt%td_fitness, par, td, psi, target_st, iterator)) exit ctr_loop
         
@@ -344,7 +341,7 @@ contains
 
         ! WARNING: This assumes that there is only one control parameter!
         ! WARNING: Untested.
-        if (oct%filtermode.gt.0) call apply_filter(td%max_iter, oct%filtermode, f, par_tmp%f(1))
+        if (oct%filtermode.gt.0) call apply_filter(td%max_iter, f, par_tmp%f(1))
 
         ! recalc field
         if (oct%mode_fixed_fluence) then
@@ -360,7 +357,8 @@ contains
           end if
 
           !!!!!WARNING: This is a very strange statement?
-          call tdf_set_numerical(penalty%td_penalty(1), spread(penalty%a_penalty(iterator%ctr_iter + 1), 1, 2*td%max_iter+1) )
+          call tdf_set_numerical(penalty%td_penalty(1), &
+                                 spread(penalty%a_penalty(iterator%ctr_iter + 1), 1, td%max_iter+1) )
 
           call tdf_scalar_multiply( ( penalty%a_penalty(iterator%ctr_iter) / penalty%a_penalty(iterator%ctr_iter + 1) ), &
                                     par_tmp%f(1) )
@@ -453,10 +451,10 @@ contains
       end do
       
       ! dump new laser field
-      if(oct%dump_intermediate) then
-        write(filename,'(a,i3.3)') 'opt-control/laser.', iterator%ctr_iter
-        call parameters_write(filename, par)
-      endif
+      !if(oct%dump_intermediate) then
+      !  write(filename,'(a,i3.3)') 'opt-control/laser.', iterator%ctr_iter
+      !  call parameters_write(filename, par)
+      !endif
 
       deallocate(dens_tmp)      
       call pop_sub()
@@ -488,11 +486,11 @@ contains
       end do
       td%dt = -td%dt
 
-      ! dump new laser field
-      if(oct%dump_intermediate) then
-        write(filename,'(a,i3.3)') 'opt-control/b_laser.', iterator%ctr_iter
-        call parameters_write(filename, par_tmp)
-      end if
+      ! This is not the place to write anything.
+      !if(oct%dump_intermediate) then
+      !  write(filename,'(a,i3.3)') 'opt-control/b_laser.', iterator%ctr_iter
+      !  call parameters_write(filename, par_tmp)
+      !end if
 
       deallocate(dens_tmp)
       call pop_sub()
@@ -540,8 +538,6 @@ contains
       psi%rho = dens_tmp
       call v_ks_calc(gr, sys%ks, h, psi, calc_eigenval=.true.)
       call td_rti_dt(sys%ks, h, gr, psi, td%tr, abs(iter*td%dt), abs(td%dt))
-      ! write(6,*) iter, psi%zpsi(45:50,1,1,1)
-      ! write(6,*) laser(2*iter,1)
 
       deallocate(dens_tmp)     
       call pop_sub()

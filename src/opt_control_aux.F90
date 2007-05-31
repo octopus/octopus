@@ -25,19 +25,20 @@
   ! ---------------------------------------------------------
   FLOAT function laser_fluence(par)
     type(oct_control_parameters_t), intent(in) :: par
-    integer :: i
+    integer :: i, j
     FLOAT :: t
     call push_sub('opt_control_aux.calc_fluence')
 
-    ! WARNING: beware of this abs(dt)/M_TWO!!!!
     ! WARNING: This is probably very inefficient; there should be functions in
     ! the tdf module taken care of integrating functions.
     laser_fluence = M_ZERO
-    do i = 1, par%ntiter+1
-      t = (i-1) * par%dt*M_HALF
-      laser_fluence = laser_fluence + abs(tdf(par%f(1), t))**2 
+    do j = 1, par%no_parameters
+      do i = 1, par%ntiter+1
+        t = (i-1) * par%dt
+        laser_fluence = laser_fluence + abs(tdf(par%f(j), i))**2 
+      end do
     end do
-    laser_fluence = laser_fluence * par%dt*M_HALF
+    laser_fluence = laser_fluence * par%dt
 
     call pop_sub()
   end function laser_fluence
@@ -50,15 +51,17 @@
   FLOAT function j2_functional(oct, penalty, par) result(j2)
     type(oct_t), intent(in)         :: oct
     type(oct_penalty_t), intent(in) :: penalty
-    integer :: i
+    integer :: i, j
     FLOAT :: t
     type(oct_control_parameters_t), intent(in) :: par
     j2 = M_ZERO
-    do i = 1, par%ntiter + 1
-      t = (i-1) * par%dt*M_HALF
-      j2 = j2 + tdf(penalty%td_penalty(1), i)*abs(tdf(par%f(1), t))**2 
+    do j = 1, par%no_parameters
+      do i = 1, par%ntiter + 1
+        t = (i-1) * par%dt
+        j2 = j2 + tdf(penalty%td_penalty(j), i)*abs(tdf(par%f(j), i))**2 
+      end do
     end do
-    j2 = j2 * par%dt * M_HALF
+    j2 = j2 * par%dt
   end function j2_functional
 
 
@@ -89,18 +92,18 @@
     character(len=*), intent(in) :: filename
     integer,          intent(in) :: ndim
     integer,          intent(in) :: steps
-    FLOAT,            intent(in) :: las(1:ndim,0:2*steps)
+    FLOAT,            intent(in) :: las(1:ndim,0:steps)
     FLOAT,            intent(in) :: dt
   
     integer :: i, iunit
-    FLOAT   :: wgrid(0:2*steps)
+    FLOAT   :: wgrid(0:steps)
 
     call push_sub('opt_control.write_fieldw')
 
-    call w_lookup(2*steps+1, dt, wgrid)
+    call w_lookup(steps+1, dt, wgrid)
 
     iunit = io_open(filename, action='write')
-    do i = 0, 2*steps
+    do i = 0, steps
        write(iunit, '(4es30.16e4)') wgrid(i), las(:, i)
     end do
     call io_close(iunit)

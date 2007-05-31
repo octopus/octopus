@@ -29,10 +29,10 @@
 
     cp%no_parameters = no_parameters
     cp%dt = td%dt
-    cp%ntiter = 2*td%max_iter
+    cp%ntiter = td%max_iter
     ALLOCATE(cp%f(cp%no_parameters), cp%no_parameters)
     do j = 1, cp%no_parameters
-      call tdf_init_numerical(cp%f(j), cp%ntiter, M_HALF*cp%dt)
+      call tdf_init_numerical(cp%f(j), cp%ntiter, cp%dt)
     end do
 
     ALLOCATE(cp%laser_pol(MAX_DIM, cp%no_parameters), MAX_DIM*cp%no_parameters)
@@ -106,7 +106,7 @@
 
     iunit = io_open(filename, action='write')
     do i = 1, cp%ntiter + 1
-      t = (i-1)*cp%dt*M_HALF
+      t = (i-1)*cp%dt
       write(iunit, '(3es20.8e3)') t, tdf(cp%f(1), t)
     end do
     call io_close(iunit)
@@ -154,17 +154,14 @@
     d1 = M_z1
     if(oct%algorithm_type .eq. oct_algorithm_zbr98) d1 = zstates_mpdotp(gr%m, psi, chi)
 
-    value = aimag(d1*d2(1))/tdf(penalty%td_penalty(1), 2*iter+1)
-    call tdf_set_numerical(cp%f(1), 2*iter+1, value)
+    value = aimag(d1*d2(1))/tdf(penalty%td_penalty(1), iter+1)
+    call tdf_set_numerical(cp%f(1), iter+1, value)
     i = int(sign(M_ONE, td%dt))
     if(iter==0.or.iter==td%max_iter) then
-      call tdf_set_numerical(cp%f(1), 2*iter+i+1, value)
-      call tdf_set_numerical(cp%f(1), 2*iter+2*i+1, value)
+      call tdf_set_numerical(cp%f(1), iter+1, value)
     else
-      value = M_HALF*(M_THREE*tdf(cp%f(1), 2*iter+1) - tdf(cp%f(1), 2*iter-2*i+1))
-      call tdf_set_numerical(cp%f(1), 2*iter+i+1, value)
-      value = M_HALF*( M_FOUR*tdf(cp%f(1), 2*iter+1) - M_TWO*tdf(cp%f(1), 2*iter-2*i+1))
-      call tdf_set_numerical(cp%f(1), 2*iter+2*i+1, value)
+      value = M_HALF*( M_FOUR*tdf(cp%f(1), iter+1) - M_TWO*tdf(cp%f(1), iter-i+1))
+      call tdf_set_numerical(cp%f(1), iter+i+1, value)
     end if
 
     call pop_sub()

@@ -107,7 +107,7 @@
             call loct_parse_block_string(blk, i-1, 3+pol, tdt%tdtg(i)%expression(pol))
           end do
           !
-          ALLOCATE(tdt%tdtg(i)%tdshape(NDIM,0:2*td%max_iter), NDIM*(2*td%max_iter+1))
+          ALLOCATE(tdt%tdtg(i)%tdshape(NDIM,0:td%max_iter), NDIM*(td%max_iter+1))
           call build_tdshape(tdt%tdtg(i), gr, td%max_iter, td%dt)
         end do
 
@@ -196,10 +196,10 @@
     integer :: kk, pol
     call push_sub('opt_control_tdtarget.build_tdshape')
 
-    ALLOCATE(tgrid(0:2*steps), 2*steps+1)
-    call t_lookup(2*steps+1,dt/real(2,REAL_PRECISION),tgrid)
+    ALLOCATE(tgrid(0:steps), steps+1)
+    call t_lookup(steps+1,dt,tgrid)
 
-    do kk=0, 2*steps
+    do kk=0, steps
       do pol=1, NDIM
         f_re = M_ZERO
         f_im = M_ZERO
