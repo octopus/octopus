@@ -42,7 +42,7 @@ module submesh_m
        submesh_end
  
   type submesh_t
-     integer          :: ns = 0        ! number of points inside the submesh
+     integer          :: ns = -1        ! number of points inside the submesh
      integer          :: np_part
      integer, pointer :: jxyz(:)        ! index in the mesh of the points inside the sphere
      integer, pointer :: jxyz_inv(:)    ! and the inverse
@@ -53,7 +53,7 @@ contains
   subroutine submesh_null(sm)
     type(submesh_t), intent(out) :: sm
 
-    sm%ns = 0
+    sm%ns = -1
     sm%np_part = 0
     nullify(sm%jxyz)
     nullify(sm%jxyz_inv)
@@ -70,9 +70,9 @@ contains
     FLOAT :: r
     integer :: ii, is, kk, ip
 
-    ASSERT(this%ns == 0)
-
     call push_sub('submesh.submesh_init_sphere')
+
+    ASSERT(this%ns == -1)
 
     this%np_part = m%np_part
 
@@ -129,8 +129,8 @@ contains
     
     call push_sub('submesh.submesh_end')
 
-    if( this%ns /= 0 ) then
-      this%ns = 0
+    if( this%ns /= -1 ) then
+      this%ns = -1
       deallocate(this%jxyz)
       deallocate(this%jxyz_inv)
     end if
@@ -145,7 +145,7 @@ contains
 
     call push_sub('submesh.submesh_copy')
     
-    ASSERT(sm_out%ns == 0)
+    ASSERT(sm_out%ns == -1)
 
     sm_out%ns = sm_in%ns
     sm_out%np_part  = sm_in%np_part

@@ -620,7 +620,7 @@ contains
 
     logical :: fast_generation_
     FLOAT   :: time_
-    integer :: ia, l, lm, k, p, iproj
+    integer :: ia, l, lm, k, iproj
     type(atom_t),   pointer :: atm
 #ifdef HAVE_FFT
     type(dcf_t) :: cf_loc, cf_nlcc
@@ -683,9 +683,6 @@ contains
 
       if(.not. specie_is_ps(atm%spec)) cycle
 
-      !the non-local part
-      p = 1
-      
       ep%atomproj(1, ia) = iproj
       
       do l = 0, atm%spec%ps%l_max
@@ -693,20 +690,7 @@ contains
         do lm = -l, l
 
           call projector_end(ep%p(iproj))
-
-          if(.not.fast_generation_) then
-            ! This if is a performance hack, necessary for when the ions move.
-            ! For each atom, the sphere is the same, so we just calculate it once
-            if(p == 1) then
-              k = iproj
-              p = 2
-              call projector_build_kb_sphere(ep%p(iproj), sb, m, atm, st)
-            else
-              call projector_copy_kb_sphere(ep%p(k), ep%p(iproj))
-            end if
-
-          end if
-
+          call projector_build_kb_sphere(ep%p(iproj), sb, m, atm, st)
           call projector_init(ep%p(iproj), atm, reltype, l, lm)
 
           ep%p(iproj)%iatom = ia
@@ -720,7 +704,7 @@ contains
 
         call projector_end(ep%p(iproj))
         call submesh_init_sphere(ep%p(iproj)%sphere, &
-             sb, m, atm%x, double_grid_get_rmax(gr%dgrid, atm%spec, m) + maxval(m%h(1:3)))
+             sb, m, atm%x, double_grid_get_rmax(gr%dgrid, atm%spec, m))
         call projector_init(ep%p(iproj), atm, force_type = M_LOCAL)
 
         iproj = iproj + 1

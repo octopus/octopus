@@ -34,9 +34,9 @@ Match ; Eigenvalues ; grep -A 15 'Eigenvalues \[' static/info | awk '{print $3" 
 Match ; Eigenvalues ; grep -A 15 'Eigenvalues \[' static/info | awk '{print $3" "$7" "$4}' | sort -r | head -n 6  | tail -1 ; \s*-2.198\d*\s*0.5000\s*1.00
 Match ; Eigenvalues ; grep -A 15 'Eigenvalues \[' static/info | awk '{print $3" "$7" "$4}' | sort -r | head -n 7  | tail -1 ; \s*-2.165\d*\s*-0.5000\s*1.00
 Match ; Eigenvalues ; grep -A 15 'Eigenvalues \[' static/info | awk '{print $3" "$7" "$4}' | sort -r | head -n 8  | tail -1 ; \s*-1.210\d*\s*0.4573\s*1.00
-Match ; Eigenvalues ; grep -A 15 'Eigenvalues \[' static/info | awk '{print $3" "$7" "$4}' | sort -r | head -n 9  | tail -1 ; \s*-1.195\d*\s*0.1173\s*1.00
+Match ; Eigenvalues ; grep -A 15 'Eigenvalues \[' static/info | awk '{print $3" "$7" "$4}' | sort -r | head -n 9  | tail -1 ; \s*-1.195\d*\s*0.1195\s*1.00
 Match ; Eigenvalues ; grep -A 15 'Eigenvalues \[' static/info | awk '{print $3" "$7" "$4}' | sort -r | head -n 10 | tail -1 ; \s*-1.186\d*\s*0.5000\s*1.00
-Match ; Eigenvalues ; grep -A 15 'Eigenvalues \[' static/info | awk '{print $3" "$7" "$4}' | sort -r | head -n 11 | tail -1 ; \s*-1.165\d*\s*-0.1173\s*1.00
+Match ; Eigenvalues ; grep -A 15 'Eigenvalues \[' static/info | awk '{print $3" "$7" "$4}' | sort -r | head -n 11 | tail -1 ; \s*-1.165\d*\s*-0.1195\s*1.00
 Match ; Eigenvalues ; grep -A 15 'Eigenvalues \[' static/info | awk '{print $3" "$7" "$4}' | sort -r | head -n 12 | tail -1 ; \s*-1.156\d*\s*-0.5000\s*1.00
 Match ; Eigenvalues ; grep -A 15 'Eigenvalues \[' static/info | awk '{print $3" "$7" "$4}' | sort -r | head -n 13 | tail -1 ; \s*-1.138\d*\s*-0.4573\s*1.00
 Match ; Eigenvalues ; grep -A 15 'Eigenvalues \[' static/info | awk '{print $3" "$7" "$4}' | sort -r | head -n 14 | tail -1 ; \s*0.208\d*\s*0.5000\s*1.00

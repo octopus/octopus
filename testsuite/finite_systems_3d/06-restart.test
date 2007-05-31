@@ -23,7 +23,7 @@ Input: 06-restart.02-restart_ground_state.inp
 
 # Check if the ground state restart is OK
 Match ; Ground state restart ; grep ' up' static/info ; \s*1\s*up\s*-0.01406\d*\s*0.0000\d*
-Match ; Ground state restart ; grep ' dn' static/info ; \s*1\s*dn\s*-0.08534\d*\s*1.0000\d* 
+Match ; Ground state restart ; grep ' dn' static/info ; \s*1\s*dn\s*-0.08533\d*\s*1.0000\d* 
 
 
 
