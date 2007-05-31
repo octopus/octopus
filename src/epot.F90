@@ -692,16 +692,16 @@ contains
         if(atm%spec%ps%l_loc == l) cycle
         do lm = -l, l
 
+          call projector_end(ep%p(iproj))
+
           if(.not.fast_generation_) then
             ! This if is a performance hack, necessary for when the ions move.
             ! For each atom, the sphere is the same, so we just calculate it once
             if(p == 1) then
               k = iproj
               p = 2
-              call projector_end(ep%p(iproj))
               call projector_build_kb_sphere(ep%p(iproj), sb, m, atm, st)
             else
-              call projector_end(ep%p(iproj))
               call projector_copy_kb_sphere(ep%p(k), ep%p(iproj))
             end if
 
@@ -719,10 +719,8 @@ contains
         ep%p(iproj)%iatom = ia
 
         call projector_end(ep%p(iproj))
-
         call submesh_init_sphere(ep%p(iproj)%sphere, &
              sb, m, atm%x, double_grid_get_rmax(gr%dgrid, atm%spec, m) + maxval(m%h(1:3)))
-
         call projector_init(ep%p(iproj), atm, force_type = M_LOCAL)
 
         iproj = iproj + 1

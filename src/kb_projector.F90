@@ -55,7 +55,7 @@ module kb_projector_m
     integer          :: n_c       ! number of components per projector
     FLOAT,   pointer :: p(:,:)    ! projectors
     FLOAT,   pointer :: dp(:,:,:) ! projectors derivatives
-    FLOAT,   pointer :: e(:)      ! KB energies
+    FLOAT            :: e(2)      ! KB energies
   end type kb_projector_t
 
 
@@ -69,7 +69,6 @@ contains
 
     nullify(kb_p%p)
     nullify(kb_p%dp)
-    nullify(kb_p%e)
 
     call pop_sub()
   end subroutine kb_projector_null
@@ -95,10 +94,11 @@ contains
       n_c = 2
     end if
     kb_p%n_c = n_c
+
     ALLOCATE(kb_p%p (kb_p%n_s, n_c),    kb_p%n_s*n_c)
     ALLOCATE(kb_p%dp(kb_p%n_s, 3, n_c), kb_p%n_s*3*n_c)
-    ALLOCATE(kb_p%e (n_c),         n_c)
-    kb_p%p = M_ZERO; kb_p%dp = M_ZERO; kb_p%e = M_ZERO
+    kb_p%p = M_ZERO
+    kb_p%dp = M_ZERO
     
     if (gr%sb%periodic_dim == 0) then 
 
@@ -169,7 +169,6 @@ contains
       kb_p%n_c = n_c
       ALLOCATE(kb_p%p (kb_p%n_s, n_c),    kb_p%n_s*n_c)
       ALLOCATE(kb_p%dp(kb_p%n_s, 3, n_c), kb_p%n_s*3*n_c)
-      ALLOCATE(kb_p%e (n_c),         n_c)
       
       do i = 1, n_c
         kb_p%e(i) = a%spec%ps%h(l, i, i)
@@ -201,7 +200,6 @@ contains
 
     if (associated(kb_p%p))  deallocate(kb_p%p)
     if (associated(kb_p%dp)) deallocate(kb_p%dp)
-    if (associated(kb_p%e))  deallocate(kb_p%e)
 
     call pop_sub()
   end subroutine kb_projector_end

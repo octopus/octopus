@@ -99,10 +99,10 @@ module projector_m
 
     ! Only one of the following structures should be used at once
     ! The one to be used depends on the value of type variable
-    type(hgh_projector_t), pointer :: hgh_p
-    type(kb_projector_t),  pointer :: kb_p
-    type(rkb_projector_t), pointer :: rkb_p
-    type(local_t),         pointer :: local_p
+    type(hgh_projector_t)  :: hgh_p
+    type(kb_projector_t)   :: kb_p
+    type(rkb_projector_t)  :: rkb_p
+    type(local_t)          :: local_p
   end type projector_t
 
 contains
@@ -112,10 +112,6 @@ contains
 
     p%type = 0
     nullify(p%phases)
-    nullify(p%hgh_p)
-    nullify(p%kb_p)
-    nullify(p%rkb_p)
-    nullify(p%local_p)
     call submesh_null(p%sphere)
 
   end subroutine projector_null
@@ -223,24 +219,24 @@ contains
     lm = p%lm
 
     select case (p%type)
+
     case(M_LOCAL)
       ns =  p%sphere%ns
-      ALLOCATE(p%local_p, 1)
       ALLOCATE(p%local_p%v(1:ns), ns)
       call double_grid_apply_local(gr%dgrid, a%spec, gr%m, p%sphere, a%x, p%local_p%v)
 
     case (M_HGH)
-      ALLOCATE(p%hgh_p, 1)
       call hgh_projector_null(p%hgh_p)
       call hgh_projector_init(p%hgh_p, p%sphere, gr, a, l, lm)
+
     case (M_KB)
-      ALLOCATE(p%kb_p, 1)
       call kb_projector_null(p%kb_p)
       call kb_projector_init(p%kb_p, p%sphere, gr, a, l, lm, gen_grads)
+
     case (M_RKB)
-      ALLOCATE(p%rkb_p, 1)
       call rkb_projector_null(p%rkb_p)
       call rkb_projector_init(p%rkb_p, p%sphere, gr, a, l, lm)
+
     end select
 
     call pop_sub()
@@ -268,26 +264,22 @@ contains
     case(M_LOCAL)
       ns =  p%sphere%ns
       if ( rank /= root) then
-        ALLOCATE(p%local_p, 1)
         ALLOCATE(p%local_p%v(1:ns), ns)
       end if
       call MPI_Bcast(p%local_p%v, ns, MPI_FLOAT, root, mc%group_comm(P_STRATEGY_STATES), mpi_err)
 
     case (M_HGH)
       if ( rank /= root) then      
-        ALLOCATE(p%hgh_p, 1)
         call hgh_projector_null(p%hgh_p)
         call hgh_projector_init(p%hgh_p, p%sphere, gr, a, l, lm)
       end if
     case (M_KB)
       if ( rank /= root) then
-        ALLOCATE(p%kb_p, 1)
         call kb_projector_null(p%kb_p)
       end if
       call kb_projector_broadcast(p%kb_p, p%sphere, gr, mc, a, l, lm, gen_grads, root)
     case (M_RKB)
       if ( rank /= root) then
-        ALLOCATE(p%rkb_p, 1)
         call rkb_projector_null(p%rkb_p)
         call rkb_projector_init(p%rkb_p, p%sphere, gr, a, l, lm)
       end if
@@ -305,24 +297,20 @@ contains
 
     call submesh_end(p%sphere)
     if (associated(p%phases)) deallocate(p%phases)
-    if (associated(p%hgh_p)) then
+
+    select case(p%type)
+    case(M_LOCAL)
+      deallocate(p%local_p%v)
+    case(M_HGH)
       call hgh_projector_end(p%hgh_p)
-      deallocate(p%hgh_p)
-    end if
-    if (associated(p%kb_p)) then
+    case(M_KB)
       call kb_projector_end(p%kb_p)
-      deallocate(p%kb_p)
-    end if
-    if (associated(p%rkb_p)) then
+    case(M_RKB)
       call rkb_projector_end(p%rkb_p)
-      deallocate(p%rkb_p)
-    end if
-    if (associated(p%local_p)) then
-      if(associated(p%local_p%v)) then 
-        deallocate(p%local_p%v)
-      end if
-      deallocate(p%local_p)
-    end if
+    end select
+    
+    p%type = 0
+
     call pop_sub()
   end subroutine projector_end
 
