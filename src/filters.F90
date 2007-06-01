@@ -82,10 +82,11 @@ contains
 
     call push_sub('filters.apply_filter')
 
-    no_f = size(filter)
-    if(no_f < 1) then
+    if(.not.associated(filter)) then
       call pop_sub(); return
     end if
+
+    no_f = size(filter)
 
     ALLOCATE(cfunction(0:steps), steps+1)
     do i = 1, steps+1

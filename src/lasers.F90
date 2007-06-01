@@ -38,13 +38,10 @@ module lasers_m
   public ::                       &
     laser_t,                      &
     laser_init,                   &
-    laser_init_numerical,         &
     laser_end,                    &
     laser_write_info,             &
     laser_field,                  &
-    laser_potential
-
-  public ::                       &
+    laser_potential,              &
     laser_to_numerical
 
   integer, parameter ::           &
@@ -70,33 +67,12 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! Initializes a set of lasers l to hold one laser described
-  ! by the "numerical" array.
-  subroutine laser_init_numerical(dt, max_iter, dimensions, no_l, lasers)
-    FLOAT, intent(in) :: dt
-    integer, intent(in) :: max_iter
-    integer, intent(in) :: dimensions
-    integer,     intent(out) :: no_l
-    type(laser_t), pointer   :: lasers(:)
-
-    integer :: j
-
-    no_l = dimensions
-    ALLOCATE(lasers(no_l), no_l)
-    do j = 1, no_l
-      call tdf_init_numerical(lasers(j)%f, max_iter, dt)
-    end do
-
-  end subroutine laser_init_numerical
-
-
-  ! ---------------------------------------------------------
   subroutine laser_to_numerical(l, dt, max_iter)
     type(laser_t) :: l
     FLOAT, intent(in) :: dt
     integer, intent(in) :: max_iter
 
-    call push_sub('lasers.laser_init')
+    call push_sub('lasers.lasers_to_numerical')
 
     call tdf_to_numerical(l%f, max_iter, dt)
 

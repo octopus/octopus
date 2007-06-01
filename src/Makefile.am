@@ -63,10 +63,9 @@ octopus_SOURCES = $(core_SRCS) \
 	eigen.F90 lcao.F90 pes.F90 \
 	scf.F90 gs.F90 unocc.F90 \
 	static_pol.F90 geom_opt.F90 phonons.F90 phonons_fd.F90 \
-	td_exp_split.F90 td_exp.F90 td_rti.F90 td_write.F90 td.F90 filters.F90 opt_control.F90 \
-	casida.F90 td_transport.F90 resp_pert.F90 sternheimer.F90 em_resp_calc.F90 em_resp.F90 vdW.F90 \
-	phonons_lr.F90 pulpo.F90 \
-	run.F90 main.F90
+	td_exp_split.F90 td_exp.F90 td_rti.F90 td_write.F90 td.F90 filters.F90 opt_control_parameters.F90 \
+	opt_control.F90 casida.F90 td_transport.F90 resp_pert.F90 sternheimer.F90 em_resp_calc.F90 em_resp.F90 vdW.F90 \
+	em_resp.F90 vdW.F90 phonons_lr.F90 pulpo.F90 run.F90 main.F90
 
 noinst_HEADERS = \
 	global.h \
@@ -93,8 +92,7 @@ noinst_HEADERS = \
 	excited_states_inc.F90 xc_OEP_kernel_inc.F90 em_resp_calc_inc.F90 \
 	opt_control_read.F90 opt_control_aux.F90 opt_control_defstates.F90 \
 	opt_control_propagation.F90 opt_control_finalcheck.F90 opt_control_iter.F90 \
-	opt_control_output.F90 opt_control_parameters.F90 \
-	opt_control_tdtarget.F90
+	opt_control_output.F90 opt_control_tdtarget.F90
 
 core_LIBS = @LIBS_LAPACK@ @LIBS_BLAS@ \
   ../liboct/liboct.a \
@@ -262,8 +260,7 @@ nl_operator.o: global.h
 ode_solver.o: global.h ode_solver_inc.F90
 opt_control.o: global.h opt_control_read.F90 opt_control_aux.F90 opt_control_defstates.F90 \
                opt_control_propagation.F90 opt_control_finalcheck.F90 opt_control_iter.F90 \
-               opt_control_output.F90 opt_control_parameters.F90 \
-               opt_control_tdtarget.F90
+               opt_control_output.F90 opt_control_tdtarget.F90
 out.o: global.h out_inc.F90
 par_vec.o: global.h par_vec_inc.F90
 pes.o: global.h pes_rc.F90 pes_mask.F90

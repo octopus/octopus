@@ -17,19 +17,58 @@
 !!
 !! $Id: opt_control.F90 2870 2007-04-28 06:26:47Z acastro $
 
+#include "global.h"
+
+module opt_control_parameters_m
+  use string_m
+  use datasets_m
+  use varinfo_m
+  use global_m
+  use messages_m
+  use io_m
+  use lib_oct_parser_m
+  use lib_oct_m
+  use filter_m
+  use external_pot_m
+  use tdf_m
+
+  implicit none
+
+  private
+  public :: oct_control_parameters_t,     &
+            parameters_init,              &
+            parameters_set,               &
+            parameters_end,               &
+            parameters_to_h,              &
+            parameters_write
+
+  type oct_control_parameters_t
+    integer :: no_parameters
+    FLOAT   :: dt
+    integer :: ntiter
+    type(tdf_t), pointer :: f(:)
+    CMPLX, pointer  :: laser_pol(:, :)
+
+    FLOAT, pointer   :: a_penalty(:)
+    type(tdf_t), pointer :: td_penalty(:)
+  end type oct_control_parameters_t
+
+
+  contains
 
   ! ---------------------------------------------------------
-  subroutine parameters_init(cp, no_parameters, td)
+  subroutine parameters_init(cp, no_parameters, dt, ntiter, octiter)
     type(oct_control_parameters_t), intent(inout) :: cp
     integer, intent(in) :: no_parameters   
-    type(td_t),   intent(in) :: td
+    FLOAT, intent(in) :: dt
+    integer, intent(in) :: ntiter, octiter
     integer :: j
 
     call push_sub('opt_control_parameters.parameters_init')
 
     cp%no_parameters = no_parameters
-    cp%dt = td%dt
-    cp%ntiter = td%max_iter
+    cp%dt = dt
+    cp%ntiter = ntiter
     ALLOCATE(cp%f(cp%no_parameters), cp%no_parameters)
     do j = 1, cp%no_parameters
       call tdf_init_numerical(cp%f(j), cp%ntiter, cp%dt)
@@ -37,6 +76,8 @@
 
     ALLOCATE(cp%laser_pol(MAX_DIM, cp%no_parameters), MAX_DIM*cp%no_parameters)
     cp%laser_pol = M_z0
+
+    call parameters_penalty_init(cp, octiter)
 
     call pop_sub()
   end subroutine parameters_init
@@ -86,6 +127,7 @@
 
     do j = 1, cp%no_parameters
       call tdf_end(cp%f(j))
+      call tdf_end(cp%td_penalty(j))
     end do
     deallocate(cp%f); nullify(cp%f)
     deallocate(cp%laser_pol)
@@ -99,72 +141,29 @@
     character(len=*), intent(in) :: filename
     type(oct_control_parameters_t), intent(in) :: cp
 
-    integer :: i, iunit
+    integer :: i, j, iunit
     FLOAT :: t
+    character(len=2) :: digit
 
     call push_sub('opt_control_parameters.parameters_write')
 
-    iunit = io_open(filename, action='write')
-    do i = 1, cp%ntiter + 1
-      t = (i-1)*cp%dt
-      write(iunit, '(3es20.8e3)') t, tdf(cp%f(1), t)
+    call io_mkdir(trim(filename))
+    do j = 1, cp%no_parameters
+      if(cp%no_parameters > 1) then
+        write(digit,'(i2.2)') j
+        iunit = io_open(trim(filename)//'/cp-'//digit, action='write')
+      else
+        iunit = io_open(trim(filename)//'/cp', action='write')
+      end if
+      do i = 1, cp%ntiter + 1
+        t = (i-1)*cp%dt
+        write(iunit, '(3es20.8e3)') t, tdf(cp%f(j), t)
+      end do
+      call io_close(iunit)
     end do
-    call io_close(iunit)
 
     call pop_sub()
   end subroutine parameters_write
-
-
-  ! ---------------------------------------------------------
-  subroutine update_field(oct, iter, cp, gr, td, psi, chi)
-    type(oct_t), intent(in)    :: oct
-    integer, intent(in)        :: iter
-    type(oct_control_parameters_t), intent(inout) :: cp
-    type(grid_t), intent(in)   :: gr
-    type(td_t), intent(in)     :: td
-    type(states_t), intent(in) :: psi
-    type(states_t), intent(in) :: chi
-    
-    CMPLX :: d1
-    CMPLX :: d2(NDIM)
-    integer :: ik, p, dim, i, pol
-    FLOAT :: value
-
-    CMPLX, allocatable :: rpsi(:, :)
-    
-    call push_sub('opt_control.update_field')
-    
-    ALLOCATE(rpsi(gr%m%np_part, psi%d%dim), gr%m%np_part*psi%d%dim)
-
-    ! TODO This should be a product between Slater determinants.
-    d2 = M_z0 
-    do ik = 1, psi%d%nik
-      do p  = psi%st_start, psi%st_end
-        do pol = 1, NDIM
-          do dim = 1, psi%d%dim
-            rpsi(:, dim) = psi%zpsi(:, dim, p, ik)*cp%laser_pol(pol, 1)*gr%m%x(:, pol)
-          end do
-          d2(pol) = zstates_dotp(gr%m, psi%d%dim, chi%zpsi(:, :, p, ik), rpsi)
-        end do
-      end do
-    end do
-    deallocate(rpsi)
-
-    d1 = M_z1
-    if(oct%algorithm_type .eq. oct_algorithm_zbr98) d1 = zstates_mpdotp(gr%m, psi, chi)
-
-    value = aimag(d1*d2(1))/tdf(cp%td_penalty(1), iter+1)
-    call tdf_set_numerical(cp%f(1), iter+1, value)
-    i = int(sign(M_ONE, td%dt))
-    if(iter==0.or.iter==td%max_iter) then
-      call tdf_set_numerical(cp%f(1), iter+1, value)
-    else
-      value = M_HALF*( M_FOUR*tdf(cp%f(1), iter+1) - M_TWO*tdf(cp%f(1), iter-i+1))
-      call tdf_set_numerical(cp%f(1), iter+i+1, value)
-    end if
-
-    call pop_sub()
-  end subroutine update_field
 
 
   ! ---------------------------------------------------------
@@ -243,6 +242,8 @@
 
     call pop_sub()
   end subroutine parameters_penalty_init
+
+end module opt_control_parameters_m
 
 !! Local Variables:
 !! mode: f90

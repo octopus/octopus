@@ -48,6 +48,7 @@ module opt_control_m
   use external_pot_m
   use restart_m
   use tdf_m
+  use opt_control_parameters_m
 
   implicit none
 
@@ -127,17 +128,6 @@ module opt_control_m
     integer            :: bestJ_ctr_iter, bestJ1_ctr_iter
   end type oct_iterator_t
 
-  type oct_control_parameters_t
-    integer :: no_parameters
-    FLOAT   :: dt
-    integer :: ntiter
-    type(tdf_t), pointer :: f(:)
-    CMPLX, pointer  :: laser_pol(:, :)
-
-    FLOAT, pointer   :: a_penalty(:)
-    type(tdf_t), pointer :: td_penalty(:)
-  end type oct_control_parameters_t
-
 contains
 
   ! ---------------------------------------------------------
@@ -189,10 +179,8 @@ contains
 
     call oct_iterator_init(iterator, oct)
 
-    call parameters_init(par, h%ep%no_lasers, td)
-    call parameters_init(par_tmp, h%ep%no_lasers, td)
-    call parameters_penalty_init(par, iterator%ctr_iter_max)
-    call parameters_penalty_init(par_tmp, iterator%ctr_iter_max)
+    call parameters_init(par, h%ep%no_lasers, td%dt, td%max_iter, iterator%ctr_iter_max)
+    call parameters_init(par_tmp, h%ep%no_lasers, td%dt, td%max_iter, iterator%ctr_iter_max)
     call parameters_set(par, h%ep)
     call parameters_set(par_tmp, h%ep)
     call parameters_write('opt-control/initial_laser', par)
@@ -614,6 +602,58 @@ contains
 
   end subroutine check_runmode_constrains
 
+
+  ! ---------------------------------------------------------
+  subroutine update_field(oct, iter, cp, gr, td, psi, chi)
+    type(oct_t), intent(in)    :: oct
+    integer, intent(in)        :: iter
+    type(oct_control_parameters_t), intent(inout) :: cp
+    type(grid_t), intent(in)   :: gr
+    type(td_t), intent(in)     :: td
+    type(states_t), intent(in) :: psi
+    type(states_t), intent(in) :: chi
+    
+    CMPLX :: d1
+    CMPLX :: d2(NDIM)
+    integer :: ik, p, dim, i, pol
+    FLOAT :: value
+
+    CMPLX, allocatable :: rpsi(:, :)
+    
+    call push_sub('opt_control.update_field')
+    
+    ALLOCATE(rpsi(gr%m%np_part, psi%d%dim), gr%m%np_part*psi%d%dim)
+
+    ! TODO This should be a product between Slater determinants.
+    d2 = M_z0 
+    do ik = 1, psi%d%nik
+      do p  = psi%st_start, psi%st_end
+        do pol = 1, NDIM
+          do dim = 1, psi%d%dim
+            rpsi(:, dim) = psi%zpsi(:, dim, p, ik)*cp%laser_pol(pol, 1)*gr%m%x(:, pol)
+          end do
+          d2(pol) = zstates_dotp(gr%m, psi%d%dim, chi%zpsi(:, :, p, ik), rpsi)
+        end do
+      end do
+    end do
+    deallocate(rpsi)
+
+    d1 = M_z1
+    if(oct%algorithm_type .eq. oct_algorithm_zbr98) d1 = zstates_mpdotp(gr%m, psi, chi)
+
+    value = aimag(d1*d2(1))/tdf(cp%td_penalty(1), iter+1)
+    call tdf_set_numerical(cp%f(1), iter+1, value)
+    i = int(sign(M_ONE, td%dt))
+    if(iter==0.or.iter==td%max_iter) then
+      call tdf_set_numerical(cp%f(1), iter+1, value)
+    else
+      value = M_HALF*( M_FOUR*tdf(cp%f(1), iter+1) - M_TWO*tdf(cp%f(1), iter-i+1))
+      call tdf_set_numerical(cp%f(1), iter+i+1, value)
+    end if
+
+    call pop_sub()
+  end subroutine update_field
+
 #include "opt_control_read.F90"
 #include "opt_control_aux.F90"
 #include "opt_control_defstates.F90"
@@ -621,7 +661,6 @@ contains
 #include "opt_control_finalcheck.F90"
 #include "opt_control_iter.F90"
 #include "opt_control_output.F90"
-#include "opt_control_parameters.F90"
 #include "opt_control_tdtarget.F90"
 
 end module opt_control_m
