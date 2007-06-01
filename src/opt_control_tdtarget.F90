@@ -191,26 +191,22 @@
     integer,           intent(in)    :: steps
     FLOAT,             intent(in)    :: dt
 
-    FLOAT, allocatable :: tgrid(:)
-    FLOAT   :: f_re, f_im
+    FLOAT   :: f_re, f_im, t
     integer :: kk, pol
     call push_sub('opt_control_tdtarget.build_tdshape')
 
-    ALLOCATE(tgrid(0:steps), steps+1)
-    call t_lookup(steps+1,dt,tgrid)
-
     do kk=0, steps
+      t = (kk-1)*steps
       do pol=1, NDIM
         f_re = M_ZERO
         f_im = M_ZERO
         call loct_parse_expression(f_re, f_im, & 	
-          M_ZERO, M_ZERO, M_ZERO, M_ZERO, tgrid(kk), &
+          M_ZERO, M_ZERO, M_ZERO, M_ZERO, t, &
           tdtg%expression(pol)) 
         tdtg%tdshape(pol,kk) = f_re + M_zI*f_im
       end do
     end do
 
-    deallocate(tgrid)
     call pop_sub()
   end subroutine build_tdshape
 

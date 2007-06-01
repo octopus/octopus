@@ -39,7 +39,6 @@ module filter_m
   
   public ::             &
        filter_t,        &
-       t_lookup,        &
        w_lookup,        &
        def_filter,      &
        build_filter,    &
@@ -49,10 +48,9 @@ module filter_m
 
   
   type filter_t
-    FLOAT :: weight       ! relative weight of filter
     type(tdf_t) :: f
     character(len=1024) :: expression
-    integer :: domain, ftype
+    integer :: domain
   end type filter_t
 
   integer, parameter, private  :: &
@@ -63,21 +61,6 @@ module filter_m
     filter_freq = 1,              &
     filter_time = 2,              &
     filter_phase= 3
-  
-  integer, parameter, private  :: &
-    filter_pol_x  = 1,            &
-    filter_pol_y  = 2,            &
-    filter_pol_xy = 3
-  
-  integer, parameter, private  :: &
-    filter_type_gauss     = 1,    &
-    filter_type_gaussFWHM = 2,    &
-    filter_type_sin2      = 3
-  
-  integer, parameter, private  :: &
-    gauss      = 1,               &
-    gaussFWHM  = 2,               &
-    sin2       = 3
   
 contains
 
@@ -92,12 +75,17 @@ contains
 
 #if defined(HAVE_FFT)
 
-    integer        :: no_f, i, kk, n(3), last, first, grouplength, ii, j
+    integer        :: no_f, i, n(3), last, first, grouplength, ii, j
     CMPLX          :: tmp(0:steps, 1, 1), tmp2(0:steps, 1, 1) ! Have to be three-dimensional to use the fft_m modul
     CMPLX, allocatable :: filt(:), numerical(:)
     type(fft_t)    :: fft_handler
 
     call push_sub('filters.apply_filter')
+
+    no_f = size(filter)
+    if(no_f < 1) then
+      call pop_sub(); return
+    end if
 
     ALLOCATE(cfunction(0:steps), steps+1)
     do i = 1, steps+1
@@ -108,7 +96,6 @@ contains
     
     call fft_init(n, fft_complex, fft_handler, optimize = .false.)
     
-    no_f  = size(filter)
     i     = 0
     first = 0
     last  = 0
@@ -218,8 +205,8 @@ contains
   
   
   ! ---------------------------------------------------------
-  subroutine def_filter(steps, dt, filtermode, f)    
-    integer,          intent(in)  :: filtermode,steps 
+  subroutine def_filter(steps, dt, f)    
+    integer,          intent(in)  :: steps 
     type(filter_t),   pointer     :: f(:)
     FLOAT,            intent(in)  :: dt
 
@@ -285,7 +272,7 @@ contains
     !% The filter is applied in the time domain.
     !%End
 
-    if((filtermode==timefreq).AND.(loct_parse_block(check_inp('OCTFilter'),blk)==0)) then
+    if( loct_parse_block(check_inp('OCTFilter'),blk) == 0 ) then
       no_f = loct_parse_block_n(blk)
       ALLOCATE(f(no_f), no_f)
       do i=1, no_f
@@ -360,24 +347,6 @@ contains
     deallocate(ff)
     call pop_sub()
   end subroutine build_filter
-
-
-  ! ---------------------------------------------------------
-  subroutine t_lookup(steps, dt, tgrid)
-    integer, intent(in)  :: steps
-    FLOAT,   intent(in)  :: dt
-    FLOAT,   intent(out) :: tgrid(:)
-
-    integer  :: i
- 
-    call push_sub('filter.t_lookup_')
-
-    do i=1, steps
-       tgrid(i) = ( real(i, REAL_PRECISION) - M_HALF ) * dt 
-    enddo
-
-    call pop_sub()
-  end subroutine t_lookup
 
 
   ! ---------------------------------------------------------

@@ -51,14 +51,6 @@
     call loct_parse_int(check_inp('OCTTargetMode'), oct_targetmode_static, oct%targetmode)
     if(.not.varinfo_valid_option('OCTTargetMode', oct%targetmode)) call input_error('OCTTargetMode')
        
-    !%Variable OCTFilterMode
-    !%Type integer
-    !%Section Optimal Control
-    !%Default 0
-    !%Description     
-    !%End
-    call loct_parse_int(check_inp('OCTFilterMode'), 0, oct%filtermode)
-
     !%Variable OCTScheme
     !%Type integer
     !%Section Optimal Control
@@ -190,13 +182,7 @@
       oct%algorithm_type = oct_algorithm_wg05
     end if
       
-    ! Filters work only with WG05
-    if((oct%filtermode.gt.0).and.(oct%algorithm_type.ne.oct_algorithm_wg05)) then
-      write(message(1),'(a)') "Warning: Cannot use filters with the chosen algorithm."
-      write(message(2),'(a)') "Warning: Switching to scheme WG05."
-      call write_info(2)
-      oct%algorithm_type = oct_algorithm_wg05
-    end if
+    ! WARNING filters can only be used with WG05, and this is not checked any more.
       
     ! WARNING: tdpenalty and fixed fluence do not work, and this is not checked any more.
       

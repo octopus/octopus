@@ -89,7 +89,6 @@ module opt_control_m
     FLOAT   :: targetfluence
     logical :: mode_fixed_fluence
     integer :: targetmode
-    integer :: filtermode
     integer :: totype
     integer :: algorithm_type
     logical :: td_tg_state 
@@ -192,8 +191,8 @@ contains
 
     call parameters_init(par, h%ep%no_lasers, td)
     call parameters_init(par_tmp, h%ep%no_lasers, td)
-    call parameters_penalty_init(oct, par, iterator%ctr_iter_max)
-    call parameters_penalty_init(oct, par_tmp, iterator%ctr_iter_max)
+    call parameters_penalty_init(par, iterator%ctr_iter_max)
+    call parameters_penalty_init(par_tmp, iterator%ctr_iter_max)
     call parameters_set(par, h%ep)
     call parameters_set(par_tmp, h%ep)
     call parameters_write('opt-control/initial_laser', par)
@@ -201,11 +200,9 @@ contains
     write(message(1),'(a,f14.8)') 'Input: Fluence of Initial laser ', laser_fluence(par)
     call write_info(1)
 
-    if(oct%filtermode.gt.0) then
-      nullify(f)
-      call def_filter(td%max_iter, td%dt, oct%filtermode, f)
-      call filter_write(f, NDIM, td%dt, td%max_iter)
-    end if
+    nullify(f)
+    call def_filter(td%max_iter, td%dt, f)
+    call filter_write(f, NDIM, td%dt, td%max_iter)
 
     call def_istate(oct, gr, sys%geo, initial_st)
     call def_toperator(oct, gr, sys%geo, target_st)
@@ -303,7 +300,7 @@ contains
 
     !---------------------------------------
     subroutine scheme_wg05
-      integer :: ierr
+      integer :: ierr, j
       FLOAT :: fluence
       call push_sub('opt_control.scheme_WG05')
       
@@ -335,9 +332,10 @@ contains
         !!!WARNING: this probably shoudl not be here?
         fluence = laser_fluence(par_tmp)
 
-        ! WARNING: This assumes that there is only one control parameter!
         ! WARNING: Untested.
-        if (oct%filtermode.gt.0) call apply_filter(td%max_iter, f, par_tmp%f(1))
+        do j = 1, par_tmp%no_parameters
+          call apply_filter(td%max_iter, f, par_tmp%f(j))
+        end do
 
         ! recalc field
         if (oct%mode_fixed_fluence) then
@@ -352,16 +350,19 @@ contains
             write (6,*) 'next penalty', par%a_penalty(iterator%ctr_iter + 1)
           end if
 
-          !!!!!WARNING: This is a very strange statement?
-          call tdf_set_numerical(par%td_penalty(1), &
-                                 spread(par%a_penalty(iterator%ctr_iter + 1), 1, td%max_iter+1) )
-          call tdf_scalar_multiply( ( par%a_penalty(iterator%ctr_iter) / par%a_penalty(iterator%ctr_iter + 1) ), &
-                                    par_tmp%f(1) )
+          do j = 1, par_tmp%no_parameters
+            call tdf_set_numerical(par%td_penalty(j), &
+                                   spread(par%a_penalty(iterator%ctr_iter + 1), 1, td%max_iter+1) )
+            call tdf_scalar_multiply( ( par%a_penalty(iterator%ctr_iter) / par%a_penalty(iterator%ctr_iter + 1) ), &
+                                      par_tmp%f(j) )
+          end do
 
           fluence = laser_fluence(par_tmp)
         end if
 
-        par%f(1) = par_tmp%f(1)
+        do j = 1, par_tmp%no_parameters
+          par%f(j) = par_tmp%f(j)
+        end do
         
         ! dump here: since the fwd_step is missing
         write(filename,'(a,i3.3)') 'opt-control/laser.', iterator%ctr_iter

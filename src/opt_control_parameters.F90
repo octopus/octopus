@@ -168,8 +168,7 @@
 
 
   ! ---------------------------------------------------------
-  subroutine parameters_penalty_init(oct, par, ctr_iter_max)
-    type(oct_t), intent(in)                    :: oct
+  subroutine parameters_penalty_init(par, ctr_iter_max)
     type(oct_control_parameters_t), intent(inout) :: par
     integer,      intent(in)                   :: ctr_iter_max
 
