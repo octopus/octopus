@@ -217,7 +217,7 @@ contains
           if(rho(i, is) >= dmin) then
             select case(gr%sb%dim)
               case(3); D0 = f * rho(i, is)**(M_EIGHT/M_THREE)
-              case(2); D0 = f * rho(i, 1)**3
+              case(2); D0 = f * rho(i, is)**3
             end select
             elf(i, is) = D0*D0/(D0*D0 + kappa(i,is)**2)
           else
