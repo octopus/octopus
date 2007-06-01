@@ -64,7 +64,7 @@ octopus_SOURCES = $(core_SRCS) \
 	scf.F90 gs.F90 unocc.F90 \
 	static_pol.F90 geom_opt.F90 phonons.F90 phonons_fd.F90 \
 	td_exp_split.F90 td_exp.F90 td_rti.F90 td_write.F90 td.F90 filters.F90 opt_control_parameters.F90 \
-	opt_control.F90 casida.F90 td_transport.F90 resp_pert.F90 sternheimer.F90 em_resp_calc.F90 em_resp.F90 vdW.F90 \
+	opt_control.F90 casida.F90 td_transport.F90 resp_pert.F90 sternheimer.F90 em_resp_calc.F90  \
 	em_resp.F90 vdW.F90 phonons_lr.F90 pulpo.F90 run.F90 main.F90
 
 noinst_HEADERS = \
