@@ -123,8 +123,20 @@ contains
     integer :: i, nvl
     C_POINTER :: blk
     FLOAT, allocatable :: x(:)
+    logical :: filter
 
     call push_sub('epot.epot_init')
+
+    call loct_parse_logical(check_inp('FilterPotentials'), .false., filter)
+
+    if(filter) then
+      message(1) = 'Info: filtering the potentials.'
+      call write_info(1)
+    end if
+    
+    do i = 1, geo%nspecies
+      call specie_pot_init(geo%specie(i), gr, filter)
+    end do
 
     ! Local part of the pseudopotentials
     ALLOCATE(ep%vpsl(NP), NP)
@@ -329,10 +341,6 @@ contains
         call projector_null(ep%p(i))
       end do
     end if
-
-    do i = 1, geo%nspecies
-      call specie_pot_init(geo%specie(i), gr)
-    end do
 
     call pop_sub()
   end subroutine epot_init

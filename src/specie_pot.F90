@@ -40,6 +40,7 @@ module specie_pot_m
   use specie_m
   use submesh_m
   use poisson_m
+  use ps_m
   use units_m
   use varinfo_m
 
@@ -71,12 +72,32 @@ module specie_pot_m
 contains
 
  ! ---------------------------------------------------------
-  subroutine specie_pot_init(this, gr)
+  subroutine specie_pot_init(this, gr, filter)
     type(specie_t),      intent(inout) :: this
     type(grid_t),        intent(in)    :: gr
+    logical,             intent(in)    :: filter
+
+    character(len=256) :: dirname
 
     call push_sub('specie_pot.specie_pot_init')
     
+    if(specie_is_ps(this)) then
+      call ps_separate(this%ps, maxval(gr%m%h))
+
+      if(filter) then 
+        call ps_filter(this%ps, mesh_gcutoff(gr%m), this%alpha, this%beta, this%rcut, this%beta2)
+      end if
+
+      call ps_getradius(this%ps)
+      call ps_derivatives(this%ps)
+      
+      if(in_debug_mode) then
+        write(dirname, '(a)') 'debug/geometry'
+        call io_mkdir(dirname)
+        call specie_debug(trim(dirname), this)
+      end if
+
+    end if
 
     call pop_sub()
 

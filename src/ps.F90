@@ -42,6 +42,7 @@ module ps_m
   public ::                     &
     ps_t,                       &
     ps_init,                    &
+    ps_separate,                &
     ps_filter,                  &
     ps_getradius,               &
     ps_derivatives,             &
@@ -275,58 +276,56 @@ contains
       CNST(0.001), ps%projectors_sphere_threshold)
     if(ps%projectors_sphere_threshold <= M_ZERO) call input_error('SpecieProjectorSphereThreshold')
 
-    !separate the local potential in (soft) long range and (hard) short range parts
-    call separate()
-    
+    ps%has_long_range = .true.
+
     call pop_sub()
-
-  contains
-    
-      subroutine separate()
-        FLOAT, allocatable :: vsr(:), vlr(:), nlr(:)
-        FLOAT :: r
-        integer :: ii
-
-        ps%has_long_range = .true.
-
-        ps%sigma_erf = CNST(0.625) ! This is hard-coded to a reasonable value.
-        ps%a_erf = M_ONE/(ps%sigma_erf*sqrt(M_TWO))
-
-        ALLOCATE(vsr(ps%g%nrval), ps%g%nrval)
-        ALLOCATE(vlr(ps%g%nrval), ps%g%nrval)
-        ALLOCATE(nlr(ps%g%nrval), ps%g%nrval)
-        
-        vlr(1) = -ps%z_val*M_TWO/(sqrt(M_TWO*M_PI)*ps%sigma_erf)
-
-        do ii = 1, ps%g%nrval
-          r = ps%g%rofi(ii)
-          if ( ii > 1) vlr(ii) = -ps%z_val*loct_erf(r/(ps%sigma_erf*sqrt(M_TWO)))/r
-          vsr(ii) = loct_splint(ps%vl, r) - vlr(ii)
-          nlr(ii) = -ps%z_val*M_ONE/(ps%sigma_erf*sqrt(M_TWO*M_PI))**3*exp(-M_HALF*r**2/ps%sigma_erf**2)
-        end do
-        
-        call loct_spline_init(ps%vlr)
-        call loct_spline_fit(ps%g%nrval, ps%g%rofi, vlr, ps%vlr)
-
-        call loct_spline_init(ps%nlr)
-        call loct_spline_fit(ps%g%nrval, ps%g%rofi, nlr, ps%nlr)
-
-        !overwrite vl
-        call loct_spline_end(ps%vl)
-        call loct_spline_init(ps%vl)
-        call loct_spline_fit(ps%g%nrval, ps%g%rofi, vsr, ps%vl)
-
-        ! And take the Fourier transform
-        call loct_spline_3dft(ps%vl, ps%vlocal_f, CNST(50.0))
-        call loct_spline_times(CNST(1.0)/(M_FOUR*M_PI), ps%vlocal_f)
-
-        deallocate(vsr, vlr, nlr)
-
-      end subroutine separate
-
   end subroutine ps_init
 
+  subroutine ps_separate(ps, spacing)
+    type(ps_t),        intent(out) :: ps
+    FLOAT,             intent(in)  :: spacing
 
+    FLOAT, allocatable :: vsr(:), vlr(:), nlr(:)
+    FLOAT :: r
+    integer :: ii
+    
+    !separate the local potential in (soft) long range and (hard) short range parts
+    
+    ps%sigma_erf = CNST(0.625) ! This is hard-coded to a reasonable value.
+    ps%a_erf = M_ONE/(ps%sigma_erf*sqrt(M_TWO))
+    
+    ALLOCATE(vsr(ps%g%nrval), ps%g%nrval)
+    ALLOCATE(vlr(ps%g%nrval), ps%g%nrval)
+    ALLOCATE(nlr(ps%g%nrval), ps%g%nrval)
+    
+    vlr(1) = -ps%z_val*M_TWO/(sqrt(M_TWO*M_PI)*ps%sigma_erf)
+    
+    do ii = 1, ps%g%nrval
+      r = ps%g%rofi(ii)
+      if ( ii > 1) vlr(ii) = -ps%z_val*loct_erf(r/(ps%sigma_erf*sqrt(M_TWO)))/r
+      vsr(ii) = loct_splint(ps%vl, r) - vlr(ii)
+      nlr(ii) = -ps%z_val*M_ONE/(ps%sigma_erf*sqrt(M_TWO*M_PI))**3*exp(-M_HALF*r**2/ps%sigma_erf**2)
+    end do
+    
+    call loct_spline_init(ps%vlr)
+    call loct_spline_fit(ps%g%nrval, ps%g%rofi, vlr, ps%vlr)
+    
+    call loct_spline_init(ps%nlr)
+    call loct_spline_fit(ps%g%nrval, ps%g%rofi, nlr, ps%nlr)
+    
+    !overwrite vl
+    call loct_spline_end(ps%vl)
+    call loct_spline_init(ps%vl)
+    call loct_spline_fit(ps%g%nrval, ps%g%rofi, vsr, ps%vl)
+    
+    ! And take the Fourier transform
+    call loct_spline_3dft(ps%vl, ps%vlocal_f, CNST(50.0))
+    call loct_spline_times(CNST(1.0)/(M_FOUR*M_PI), ps%vlocal_f)
+    
+    deallocate(vsr, vlr, nlr)
+    
+  end subroutine ps_separate
+  
   ! ---------------------------------------------------------
   subroutine ps_getradius(ps)
     type(ps_t), intent(inout) :: ps

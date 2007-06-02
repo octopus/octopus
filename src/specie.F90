@@ -41,7 +41,6 @@ module specie_m
     specie_end,               &
     specie_t,                 &
     specie_debug,             &
-    specie_filter,            &
     specie_read,              &
     specie_get_local_fourier, &
     specie_get_nlcc,          &
@@ -151,23 +150,6 @@ contains
     call io_close(iunit)
     call pop_sub()
   end subroutine specie_debug
-
-
-  ! ---------------------------------------------------------
-  subroutine specie_filter(s, gmax)
-    type(specie_t), intent(inout) :: s
-    FLOAT,             intent(in) :: gmax
-
-    call push_sub('specie.specie_filter')
-
-    call ps_filter(s%ps, gmax, s%alpha, s%beta, s%rcut, s%beta2)
-    call ps_getradius(s%ps)
-    call ps_derivatives(s%ps)
-
-    call pop_sub()
-
-  end subroutine specie_filter
-
 
   ! ---------------------------------------------------------
   subroutine specie_read(s, label)
@@ -501,8 +483,6 @@ contains
       ! allocate structure
       ALLOCATE(s%ps, 1) 
       call ps_init(s%ps, s%label, s%type, s%Z, s%lmax, s%lloc, ispin)
-      call ps_getradius(s%ps)
-      call ps_derivatives(s%ps)
       s%z_val = s%ps%z_val
       s%nlcc = (s%ps%icore /= 'nc  ' )
       s%niwfs = 0
@@ -847,13 +827,6 @@ contains
     end if
 
   end function specie_is_local
-
-  FLOAT pure function specie_local_cutoff_radius(s)
-    type(specie_t), intent(in) :: s
-    
-    specie_local_cutoff_radius = CNST(4.0)
-    
-  end function specie_local_cutoff_radius
 
 end module specie_m
 

@@ -114,6 +114,8 @@ contains
 
     integer :: iatom
 
+    nullify(this%ion_disp)
+
     this%resp_type = resp_type
     if(.not.varinfo_valid_option('RespPerturbationType', this%resp_type)) call input_error('RespPerturbationType')
 

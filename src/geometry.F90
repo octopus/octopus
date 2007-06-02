@@ -43,9 +43,7 @@ module geometry_m
     geometry_init,         &
     geometry_init_xyz,     &
     geometry_init_vel,     &
-    geometry_filter,       &
     geometry_init_species, &
-    geometry_debug,        &
     geometry_nvnl,         &
     geometry_end,          &
     ion_ion_energy,        &
@@ -348,32 +346,6 @@ contains
     call pop_sub()
   end subroutine geometry_init_vel
 
-
-  ! ---------------------------------------------------------
-  subroutine geometry_filter(geo, gmax)
-    type(geometry_t), intent(inout) :: geo
-    FLOAT, intent(in) :: gmax
-    integer :: i
-    logical :: filter
-
-    call push_sub('geometry.geometry_filter')
-
-    call loct_parse_logical(check_inp('FilterPotentials'), .false., filter)
-
-    if(.not.filter) then
-      call pop_sub(); return
-    end if
-
-    message(1) = 'Info: filtering the potentials.'
-    call write_info(1)
-    do i = 1, geo%nspecies
-      if( specie_is_ps(geo%specie(i))) call specie_filter(geo%specie(i), gmax)
-    end do
-
-    call pop_sub()
-  end subroutine geometry_filter
-
-
   ! ---------------------------------------------------------
   subroutine geometry_init_species(geo)
     type(geometry_t), intent(inout) :: geo
@@ -440,31 +412,6 @@ contains
 
     call pop_sub()
   end subroutine geometry_init_species
-
-
-  ! ---------------------------------------------------------
-  subroutine geometry_debug(geo, dir)
-    type(geometry_t), intent(in) :: geo
-    character(len=*), intent(in) :: dir
-
-    character(len=256) :: dirname
-    integer :: i
-
-    call push_sub('geometry.specie_debug')
-
-    if(.not.in_debug_mode) then
-      call pop_sub(); return
-    end if
-
-    write(dirname, '(2a)') trim(dir), '/geometry'
-    call io_mkdir(dirname)
-    do i = 1, geo%nspecies
-      call specie_debug(trim(dirname), geo%specie(i))
-    end do
-
-    call pop_sub()
-  end subroutine geometry_debug
-
 
   ! ---------------------------------------------------------
   subroutine loadPDB(iunit, geo)
