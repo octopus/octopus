@@ -45,17 +45,22 @@ module varinfo_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine varinfo_print(iunit, var)
+  subroutine varinfo_print(iunit, var, ierr)
     integer,          intent(in) :: iunit
     character(len=*), intent(in) :: var
+    integer,optional, intent(out):: ierr
 
     C_POINTER :: handle, opt, name, type, section, desc
     integer :: value
     logical :: first
 
     call varinfo_getvar(var, handle)
-    if(handle == 0) return
+    if(handle == 0) then
+      if(present(ierr)) ierr = -1
+      return
+    end if
 
+    if(present(ierr)) ierr = 0
     call varinfo_getinfo(handle, name, type, section, desc)
     call print_C_string(iunit, name, "Variable: ")
     call print_C_string(iunit, type, "Type:     ")

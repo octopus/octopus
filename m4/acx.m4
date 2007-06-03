@@ -132,10 +132,10 @@ fi
 
 
 ################################################
-# Check wether the compiler accepts very long lines.
+# Check whether the compiler accepts very long lines.
 # ----------------------------------
 AC_DEFUN([ACX_LONG_FORTRAN_LINES],
-[AC_MSG_CHECKING([wether the compiler accepts very long lines])
+[AC_MSG_CHECKING([whether the compiler accepts very long lines])
 AC_COMPILE_IFELSE( AC_LANG_PROGRAM( [], [
 write(*, *) '45678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890'
  ]), 
@@ -145,11 +145,11 @@ AC_MSG_RESULT($acx_long_lines_ok)
 
 
 ################################################
-# Check wether the compiler accepts preprocessor "# line-number" lines.
+# Check whether the compiler accepts preprocessor "# line-number" lines.
 # ----------------------------------
 AC_DEFUN([ACX_F90_ACCEPTS_LINE_NUMBERS],
 [
-AC_MSG_CHECKING([wether the compiler accepts "line-number" lines cast by the preprocessor])
+AC_MSG_CHECKING([whether the compiler accepts "line-number" lines cast by the preprocessor])
 AC_COMPILE_IFELSE(
     AC_LANG_PROGRAM( [], [# 1]),
     [acx_f90_accepts_line_numbers_ok=yes; AC_DEFINE(F90_ACCEPTS_LINE_NUMBERS, 1, [compiler supports line-number lines])],
@@ -158,6 +158,24 @@ AC_MSG_RESULT($acx_f90_accepts_line_numbers_ok)
 ]
 )
 
+################################################
+# Check whether the compiler can access command line arguments
+# ----------------------------------
+AC_DEFUN([ACX_F03_COMMAND_LINE_ARGUMENTS],
+[
+AC_MSG_CHECKING([whether the compiler can read command line arguments])
+AC_COMPILE_IFELSE(
+    AC_LANG_PROGRAM( [], [
+    integer :: i
+    character(len=32) :: arg
+    i = command_argument_count()
+    call get_command_argument(0, arg)
+    ]),
+    [acx_f03_command_line_arguments=yes; AC_DEFINE(F03_COMMAND_LINE_ARGUMENTS, 1, [compiler supports Fortran 2003 command line arguments])],
+    [acx_f03_command_line_arguments=no])
+AC_MSG_RESULT($acx_f03_command_line_arguments)
+]
+)
 
 ################################################
 # Check for the presence of a given function in Fortran.

@@ -162,6 +162,9 @@ ACX_LONG_FORTRAN_LINES
 dnl check whether the Fortran 90 compiler accepts line markers cast by the preprocessor.
 ACX_F90_ACCEPTS_LINE_NUMBERS
 
+dnl check whether the compiler supports Fortran 2003 command line arguments
+ACX_F03_COMMAND_LINE_ARGUMENTS
+
 dnl Check if the Fortran 90 uses malloc(3).
 ACX_FC_USES_MALLOC
 

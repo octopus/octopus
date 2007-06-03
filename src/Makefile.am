@@ -22,7 +22,7 @@
 EXTRA_PROGRAMS = oct-cross-section oct-rsf oct-harmonic-spectrum \
                  oct-broad oct-ph oct-xyz-anim oct-center-geom
 
-bin_PROGRAMS = octopus oct-test @UTILITY_PROGRAMS@
+bin_PROGRAMS = octopus oct-test oct-help @UTILITY_PROGRAMS@
 
 basic_SRCS = liboct.F90 string.F90 varinfo.F90 mpi.F90 global.F90 liboct_parser.F90 \
 	     messages.F90 datasets.F90 io.F90 units.F90 mpi_debug.F90 profiling.F90 \
@@ -144,6 +144,9 @@ oct_test_SOURCES = $(core_SRCS) lasers.F90 rkb_projector.F90 kb_projector.F90 \
 	systm.F90 test.F90
 oct_test_LDADD = $(octopus_LDADD)
 
+oct_help_SOURCES = $(basic_SRCS) help.F90
+oct_help_LDADD =  $(core_LIBS) $(external_LIBS)
+
 AM_FCFLAGS = @F90_MODULE_FLAG@$(top_builddir)/external_libs/qshep
 
 # ctags
@@ -205,7 +208,7 @@ config_F90.h: ../config.h
 # the dependencies below by the resulting new dependencies. (For normal compilation
 # of octopus, there is absolutely no need of installing makedepf90).
 depend:
-	@makedepf90 $(core_SRCS) $(octopus_SOURCES) $(oct_cross_section_SOURCES) $(oct_rsf_SOURCES) $(oct_harmonic_spectrum_SOURCES) $(oct_xyz_anim_SOURCES) $(oct_broad_SOURCES) $(oct_ph_SOURCES) $(oct_center_geom_SOURCES) $(oct_atoms_magnet_SOURCES)
+	@makedepf90 $(core_SRCS) $(octopus_SOURCES) $(oct_cross_section_SOURCES) $(oct_rsf_SOURCES) $(oct_harmonic_spectrum_SOURCES) $(oct_xyz_anim_SOURCES) $(oct_broad_SOURCES) $(oct_ph_SOURCES) $(oct_center_geom_SOURCES) $(oct_atoms_magnet_SOURCES) $(oct_help_SOURCES)
 
 
 # Dependencies (only includes taken into account)
