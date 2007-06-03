@@ -507,27 +507,58 @@ subroutine X(vlasers) (gr, h, psi, hpsi, t)
   R_TYPE,              intent(inout) :: hpsi(:,:) ! hpsi(NP_PART, h%d%dim)
   FLOAT,               intent(in)    :: t
 
-  integer :: k, idim
-  FLOAT :: a(MAX_DIM)
-  R_TYPE, allocatable :: grad(:,:)
+  integer :: i, k, idim
+  R_TYPE, allocatable :: grad(:, :, :)
+  FLOAT, allocatable :: v(:), a_field(:)
 
   call push_sub('h_inc.Xvlasers')
 
-  if(h%ep%no_lasers > 0) then
-    select case(h%gauge)
-    case(LENGTH)
 
+  do i = 1, h%ep%no_lasers 
+    select case(h%ep%lasers(i)%field)
+    case(E_FIELD_ELECTRIC)
+
+      ALLOCATE(v(NP), NP)
+      call laser_potential(gr%sb, h%ep%lasers(i), t, gr%m, v)
       do k = 1, h%d%dim
-        hpsi(1:NP, k)= hpsi(1:NP, k) + epot_laser_scalar_pot(gr%m%np, gr, h%ep, t)*psi(1:NP, k)
+        hpsi(1:NP, k)= hpsi(1:NP, k) + v(1:NP) * psi(1:NP, k)
       end do
+      deallocate(v)
 
-    case(VELOCITY)
+    case(E_FIELD_MAGNETIC)
 
-      write(message(1), '(a)') 'Velocity gauge temporarily disabled.'
+      write(message(1), '(a)') 'Internal Error at vlasers.'
       call write_fatal(1)
-    end select
 
-  end if
+    case(E_FIELD_VECTOR_POTENTIAL)
+
+
+      ALLOCATE(grad(NP_PART, NDIM, h%d%dim), NP_PART*h%d%dim*NDIM)
+      ALLOCATE(a_field(gr%sb%dim), gr%sb%dim)
+      do idim = 1, h%d%dim
+        call X(f_gradient)(gr%sb, gr%f_der, psi(:, idim), grad(:, :, idim))
+      end do
+      call laser_field(gr%sb, h%ep%lasers(i), t, a_field)
+ 
+      do k = 1, NP
+        hpsi(k, :) = hpsi(k, :) + M_HALF*dot_product(a_field(1:NDIM), a_field(1:NDIM))*psi(k, :) / P_c**2
+      end do
+      select case(h%d%ispin)
+      case(UNPOLARIZED, SPIN_POLARIZED)
+        do k = 1, NP
+          hpsi(k, 1) = hpsi(k, 1) - M_zI*dot_product(a_field(1:NDIM), grad(k, 1:NDIM, 1)) / P_c
+        end do
+      case (SPINORS)
+        do k = 1, NP
+          do idim = 1, h%d%dim
+            hpsi(k, idim) = hpsi(k, idim) - M_zI*dot_product(a_field(1:NDIM), grad(k, 1:NDIM, idim)) / P_c
+          end do
+        end do
+      end select
+
+      deallocate(grad, a_field)
+    end select
+  end do
 
   call pop_sub()
 end subroutine X(vlasers)

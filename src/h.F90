@@ -39,6 +39,7 @@ module hamiltonian_m
   use states_m
   use units_m
   use varinfo_m
+  use lasers_m
 
   implicit none
 

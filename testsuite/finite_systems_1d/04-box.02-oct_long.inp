@@ -66,8 +66,8 @@ w = 5.0
 cycles = 4
 tau = (pi/freq)*cycles
 t0 = tau
-%TDLasers
-  1 | 0 | 0 | ampl | freq | envelope | tau | t0
+%TDExternalFields
+  electric_field | 1 | 0 | 0 | ampl | freq | envelope | tau | t0
 %
 
 Dimensions = 1

@@ -57,10 +57,11 @@ subroutine td_calc_tacc(gr, geo, st, h, acc, t)
   acc = x
 
   ! Adds the laser contribution : i<[V_laser, p]>
-  if(h%ep%no_lasers > 0) then
-    call epot_laser_field(gr%sb, h%ep, t, field)
-    acc(1:3) = acc(1:3) - st%qtot*field(1:3)
-  end if
+  ! WARNING: this ignores the possibility of non-electric td external fields.
+  do j = 1, h%ep%no_lasers
+    call laser_field(gr%sb, h%ep%lasers(j), t, field)
+    acc(1:NDIM) = acc(1:NDIM) - st%qtot*field(1:NDIM)
+  end do
 
   if(h%ep%nvnl <= 0) then
     call pop_sub()
@@ -76,10 +77,7 @@ subroutine td_calc_tacc(gr, geo, st, h, acc, t)
   do ik = 1, st%d%nik
     do ist = st%st_start, st%st_end
 
-      call zhpsi(h, gr, st%zpsi(:, :, ist, ik), hzpsi(:,:), ik)
-      do k = 1, st%d%dim
-        hzpsi(:, k) = hzpsi(:, k) + epot_laser_scalar_pot(gr%m%np, gr, h%ep, t)*st%zpsi(:, k, ist, ik)
-      end do
+      call zhpsi(h, gr, st%zpsi(:, :, ist, ik), hzpsi(:,:), ik, t)
 
       ALLOCATE(xzpsi    (NP, st%d%dim, 3), NP*st%d%dim*3)
       ALLOCATE(vnl_xzpsi(NP, st%d%dim),    NP*st%d%dim)

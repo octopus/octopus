@@ -64,8 +64,6 @@ module external_pot_m
     epot_end,                  &
     epot_generate,             &
     epot_generate_gauge_field, &
-    epot_laser_scalar_pot,     &
-    epot_laser_field,          &
     epot_forces,               &
     build_local_part_in_real_space
 
@@ -812,7 +810,6 @@ contains
 
     call push_sub('epot.build_local_part_in_real_space')
 
-
     ALLOCATE(vl(1:NP_PART), NP_PART)
 
     !Local potential
@@ -897,33 +894,6 @@ contains
 
 
   ! ---------------------------------------------------------
-  function epot_laser_scalar_pot(np, gr, ep, t) result(v)
-    integer,      intent(in) :: np
-    type(grid_t), intent(in) :: gr
-    type(epot_t), intent(in) :: ep
-    FLOAT,        intent(in) :: t
-    FLOAT :: v(np)
-    call push_sub('epot.epot_laser_scalar_pot')
-
-    call laser_potential(gr%sb, ep%no_lasers, ep%lasers, t, gr%m, v)
-
-    call pop_sub()
-  end function epot_laser_scalar_pot
-
-
-  ! ---------------------------------------------------------
-  subroutine epot_laser_field(sb, ep, t, e)
-    type(simul_box_t), intent(in)  :: sb
-    type(epot_t),      intent(in)  :: ep
-    FLOAT,             intent(in)  :: t
-    FLOAT,             intent(out) :: e(sb%dim)
-
-    call laser_field(sb, ep%no_lasers, ep%lasers, t, e)
-
-  end subroutine epot_laser_field
-
-
-  ! ---------------------------------------------------------
   subroutine epot_forces(gr, geo, ep, st, t)
     type(grid_t),     intent(inout) :: gr
     type(geometry_t), intent(inout)  :: geo
@@ -991,11 +961,21 @@ contains
     end if
 #endif
 
-    if(present(t).and.ep%no_lasers>0) then
-      call laser_field(gr%sb, ep%no_lasers, ep%lasers, t, x)
-      do i = 1, geo%natoms
-        geo%atom(i)%f(1:NDIM) = geo%atom(i)%f(1:NDIM) + &
-             geo%atom(i)%spec%Z_val * x(1:NDIM)
+    !TODO: forces due to the magnetic fields (static and time-dependent)
+    if(present(t)) then
+      do j = 1, ep%no_lasers
+        select case(ep%lasers(j)%field)
+        case(E_FIELD_ELECTRIC)
+          call laser_field(gr%sb, ep%lasers(j), t, x)
+          do i = 1, geo%natoms
+            geo%atom(i)%f(1:NDIM) = geo%atom(i)%f(1:NDIM) + &
+              geo%atom(i)%spec%Z_val * x(1:NDIM)
+          end do
+        case(E_FIELD_MAGNETIC, E_FIELD_VECTOR_POTENTIAL)
+          write(message(1),'(a)') 'The forces are currently not properly calculated if time-dependent'
+          write(message(2),'(a)') 'magnetic fields are present.'
+          call write_fatal(2)
+        end select
       end do
     end if
 
@@ -1006,7 +986,6 @@ contains
       end do
     end if
 
-    !TODO: forces due to the magnetic fields (static and time-dependent)
 
     call pop_sub()
     call profiling_out(C_PROFILING_FORCES)

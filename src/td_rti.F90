@@ -32,6 +32,7 @@ module td_rti_m
   use td_exp_split_m
   use v_ks_m
   use mesh_function_m
+  use lasers_m
 
   implicit none
 
@@ -635,9 +636,9 @@ contains
     ! ---------------------------------------------------------
     ! Magnus propagator
     subroutine td_rti6
-      integer :: j, is, ist, k
+      integer :: j, is, ist, k, i
       FLOAT :: time(2)
-      FLOAT, allocatable :: vaux(:, :, :)
+      FLOAT, allocatable :: vaux(:, :, :), pot(:)
 
       call push_sub('td_rti.td_rti6')
 
@@ -655,17 +656,22 @@ contains
       end if
 
       do j = 1, 2
-        if(h%ep%no_lasers > 0) then
-          select case(h%gauge)
-          case(1) ! length gauge
-             do is = 1, st%d%nspin
-                vaux(:, is, j) = vaux(:, is, j) + epot_laser_scalar_pot(gr%m%np, gr, h%ep, t-dt+time(j))
-             end do
-          case(2) ! velocity gauge
-            write(message(1),'(a)') 'Inconsistency in td_rti5'
-            call write_fatal(1)
+        ! WARNING: This should be carefully tested, and extended to allow for velocity-gauge laser fields.
+        do i = 1, h%ep%no_lasers
+          select case(h%ep%lasers(i)%field)
+          case(E_FIELD_ELECTRIC)
+            ALLOCATE(pot(NP), NP)
+            call laser_potential(gr%sb, h%ep%lasers(i), t-dt+time(j), gr%m, pot)
+            do is = 1, st%d%nspin
+              vaux(:, is, j) = vaux(:, is, j) + pot(:)
+            end do
+            deallocate(pot)
+          case(E_FIELD_MAGNETIC, E_FIELD_VECTOR_POTENTIAL)
+            write(message(1),'(a)') 'The Magnus propagator cannot be used with magnetic fields, or'
+            write(message(2),'(a)') 'with an electric field described in the velocity gauge.'
+            call write_fatal(2)
           end select
-        end if
+        end do
       end do
 
       tr%vmagnus(:, :, 2)  = M_HALF*(vaux(:, :, 1) + vaux(:, :, 2))

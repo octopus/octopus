@@ -56,7 +56,13 @@ module lasers_m
     SPATIAL_PART_DIPOLE    =  1,  &
     SPATIAL_PART_FROM_FILE =  2
 
+  integer, public, parameter ::           &
+    E_FIELD_ELECTRIC         =  1,  &
+    E_FIELD_MAGNETIC         =  2,  &
+    E_FIELD_VECTOR_POTENTIAL =  3
+
   type laser_t
+    integer :: field
     CMPLX :: pol(MAX_DIM) ! the polarization of the laser
     type(tdf_t) :: f
     integer  :: spatial_part
@@ -95,21 +101,30 @@ contains
 
     call push_sub('lasers.laser_init')
 
-    !%Variable TDLasers
+    call obsolete_variable("TDLasers", "TDExternalFields")
+    !%Variable TDExternalFields
     !%Type block
     !%Section Time Dependent
     !%Description
-    !% The block TDLasers describe the type and shape of time-dependent external perturbations
+    !% The block TDExternalFields describe the type and shape of time-dependent external perturbations
     !% that are applied to the system.
-    !% Each line of the block describes a laser field; this way you can actually have more
+    !%
+    !% Each line of the block describes an external field; this way you can actually have more
     !% than one laser (e.g. a "pump" and a "probe").
+    !%
     !% The syntax of each line is, then:
     !%
     !% <tt>%TDLasers
-    !% <br>&nbsp;&nbsp;nx | ny | nz | amplitude | omega | envelope | tau0 | t0 | tau1 | filename1 | filename2
+    !% <br>&nbsp;&nbsp; type | nx | ny | nz | amplitude | omega | envelope | tau0 | t0 | tau1 | filename1 | filename2
     !% <br>%</tt>
     !%
-    !% The first three (possibly complex) numbers mark the polarization direction of the
+    !% The first number of each line describes which kind of external field is described by the line:
+    !% an electric field ("electric_field"), a magnetic field ("magnetic field"), or a
+    !% vector potential "vector_potential"). This last option, in the current version, is
+    !% constant field in space, which permits to describe an electrical perturbation in the
+    !% velocity gauge.
+    !%
+    !% The next three (possibly complex) numbers mark the polarization direction of the
     !% field. The "amplitude" is obviously the amplitude of the field. The "omega" is the
     !% frequency. The "envelope" decides the shape of the enveloping function.
     !% "tau0", "t0" and "tau1" are three paramenters that decide on the
@@ -124,8 +139,6 @@ contains
     !% In order to give the spatial shape of the field in a file, the component "filename2"
     !% has to be present. If it is not present, then the laser field will be a dipolar field
     !% (which is the usual case).
-    !%
-    !% The possible options for the envelope are:
     !%
     !%Option envelope_constant 0
     !% The envelope is just the unit function. The laser is not a pulse, but a continuous wave (cw).
@@ -145,10 +158,18 @@ contains
     !%Option envelope_numerical 99
     !% The laser shape is generated internally. This option is used if the code is run in the 
     !% optimal-control mode.
+    !%Option electric_field 1
+    !% The external field is an electric field; the usual case when we want to describe a 
+    !% laser in the length gauge.
+    !%Option magnetic_field 2
+    !% The external field is a (homogeneous) time-dependent magnetic field.
+    !%Option vector_potential 3
+    !% The external field is a time-depedent homogeneous vector potential, which may describe
+    !% a laser field in the velocity gauge.
     !%End
 
     no_l = 0
-    if(loct_parse_block(check_inp('TDLasers'), blk) == 0) then
+    if(loct_parse_block(check_inp('TDExternalFields'), blk) == 0) then
       no_l = loct_parse_block_n(blk)
       ALLOCATE(l(no_l), no_l)
 
@@ -156,22 +177,23 @@ contains
       ! nx | ny | nz | amplitude | omega | envelope | tau0 | t0 | tau1 | filename1 | filename2
       do i = 1, no_l
         no_c = loct_parse_block_cols(blk, i-1)
-        call loct_parse_block_cmplx(blk, i-1, 0, l(i)%pol(1))
-        call loct_parse_block_cmplx(blk, i-1, 1, l(i)%pol(2))
-        call loct_parse_block_cmplx(blk, i-1, 2, l(i)%pol(3))
-        call loct_parse_block_float(blk, i-1, 3, a0)
-        call loct_parse_block_float(blk, i-1, 4, omega0)
-        call loct_parse_block_int  (blk, i-1, 5, envelope)
-        call loct_parse_block_float(blk, i-1, 6, tau0)
-        call loct_parse_block_float(blk, i-1, 7, t0)
-        if(no_c>8)  then
-          call loct_parse_block_float(blk, i-1, 8, tau1)
+
+        call loct_parse_block_int(blk, i-1, 0, l(i)%field)
+        call loct_parse_block_cmplx(blk, i-1, 1, l(i)%pol(1))
+        call loct_parse_block_cmplx(blk, i-1, 2, l(i)%pol(2))
+        call loct_parse_block_cmplx(blk, i-1, 3, l(i)%pol(3))
+        call loct_parse_block_float(blk, i-1, 4, a0)
+        call loct_parse_block_float(blk, i-1, 5, omega0)
+        call loct_parse_block_int  (blk, i-1, 6, envelope)
+        call loct_parse_block_float(blk, i-1, 7, tau0)
+        call loct_parse_block_float(blk, i-1, 8, t0)
+        if(no_c>9)  then
+          call loct_parse_block_float(blk, i-1, 9, tau1)
         else
           tau1 = M_ZERO
         end if
-
-        if(no_c>9) call loct_parse_block_string(blk, i-1, 9, filename1)
-        if(no_c>10) call loct_parse_block_string(blk, i-1, 10, filename2)
+        if(no_c>10) call loct_parse_block_string(blk, i-1, 10, filename1)
+        if(no_c>11) call loct_parse_block_string(blk, i-1, 11, filename2)
 
         a0     = a0 * units_inp%energy%factor / units_inp%length%factor
         omega0 = omega0 * units_inp%energy%factor
@@ -181,9 +203,9 @@ contains
 
 
         if(envelope == ENVELOPE_TRAPEZOIDAL .and. no_c < 9)  &
-             call input_error('TDLasers')
+             call input_error('TDExternalFields')
         if(envelope == ENVELOPE_FROM_FILE   .and. no_c < 10) &
-             call input_error('TDLasers')
+             call input_error('TDExternalFields')
 
         select case(envelope)
         case(ENVELOPE_CONSTANT)
@@ -272,6 +294,11 @@ contains
 
     do i = 1, no_l
       write(iunit,'(i2,a)') i,':'
+      select case(l(i)%field)
+      case(E_FIELD_ELECTRIC);   write(iunit, '(a)') '   Electric Field.'
+      case(E_FIELD_MAGNETIC);   write(iunit, '(a)') '   Magnetic Field.'
+      case(E_FIELD_VECTOR_POTENTIAL); write(iunit, '(a)') '   Potential vector.'
+      end select
       write(iunit,'(3x,a,3(a1,f7.4,a1,f7.4,a1))') 'Polarization: ', &
         '(', real(l(i)%pol(1)), ',', aimag(l(i)%pol(1)), '), ', &
         '(', real(l(i)%pol(2)), ',', aimag(l(i)%pol(2)), '), ', &
@@ -286,68 +313,55 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine laser_potential(sb, no_l, l, t, m, pot)
+  subroutine laser_potential(sb, l, t, m, pot)
     type(simul_box_t), intent(in) :: sb
-    integer,           intent(in) :: no_l
-    type(laser_t),     intent(in) :: l(no_l)
+    type(laser_t),     intent(in) :: l
     FLOAT,             intent(in) :: t
     type(mesh_t),      intent(in) :: m
-    FLOAT,            intent(out) :: pot(m%np)
+    FLOAT,            intent(out) :: pot(:)
 
     CMPLX :: amp
-    integer :: i, j, jj
+    integer :: j, jj
     FLOAT :: field(MAX_DIM)
 
     call push_sub('lasers.laser_potential')
 
-    if(no_l == 0) then
-      pot(1:m%np) = M_ZERO
-      return
-    end if
 
     pot = M_ZERO
-    do i = 1, no_l
-      amp = tdf(l(i)%f, t)
-      field(1:sb%dim) = real(amp*l(i)%pol(1:sb%dim))
+    amp = tdf(l%f, t)
+    field(1:sb%dim) = real(amp*l%pol(1:sb%dim))
 
-      if(l(i)%spatial_part == SPATIAL_PART_FROM_FILE) then
-        do j = 1, m%np
-          pot(j) = pot(j) + real(amp*l(i)%v(j))
-        end do
-      else
-        do j = 1, m%np
-          pot(j) = pot(j) + sum(field(1:sb%dim)*m%x(j,1:sb%dim))
-        end do
-      end if
-    end do
+    if(l%spatial_part == SPATIAL_PART_FROM_FILE) then
+      do j = 1, m%np
+        pot(j) = pot(j) + real(amp*l%v(j))
+      end do
+    else
+      do j = 1, m%np
+        pot(j) = pot(j) + sum(field(1:sb%dim)*m%x(j, 1:sb%dim))
+      end do
+    end if
 
     call pop_sub()
   end subroutine laser_potential
 
 
   ! ---------------------------------------------------------
-  subroutine laser_field(sb, no_l, l, t, field)
+  subroutine laser_field(sb, l, t, field)
     type(simul_box_t), intent(in) :: sb
-    integer,          intent(in)  :: no_l
-    type(laser_t),    intent(in)  :: l(no_l)
+    type(laser_t),    intent(in)  :: l
     FLOAT,            intent(in)  :: t
     FLOAT,            intent(out) :: field(sb%dim)
 
     CMPLX :: amp
     integer :: i
 
-    if(no_l == 0) then
-      field(1:sb%dim) = M_ZERO
-      return
-    end if
-
     field = M_ZERO
-    do i = 1, no_l
-      amp = tdf(l(i)%f, t)
-      field(1:sb%dim) = field(1:sb%dim) + real(amp*l(i)%pol(1:sb%dim))
-    end do
-    
+    amp = tdf(l%f, t)
+    field(1:sb%dim) = field(1:sb%dim) + real(amp*l%pol(1:sb%dim))
+
   end subroutine laser_field
+
+
 
 end module lasers_m
 

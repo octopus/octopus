@@ -933,6 +933,8 @@ contains
     FLOAT :: field(MAX_DIM)
     character(len=80) :: aux
 
+    !!!!WARNING: Currently only the first external field in h%ep is printed out.
+
     if(.not.mpi_grp_is_root(mpi_world)) return ! only first node outputs
 
     ! TODO -> confirm these stupid units, especially for the vector field
@@ -978,7 +980,7 @@ contains
 
     field = M_ZERO
 
-    call laser_field(gr%sb, h%ep%no_lasers, h%ep%lasers, iter*dt, field)
+    call laser_field(gr%sb, h%ep%lasers(1), iter*dt, field)
     field = field * units_inp%length%factor / units_inp%energy%factor
     call write_iter_double(out_laser, field, NDIM)
 

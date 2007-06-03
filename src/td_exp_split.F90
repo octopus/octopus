@@ -35,6 +35,7 @@ module td_exp_split_m
   use messages_m
   use simul_box_m
   use states_m
+  use lasers_m
 
   implicit none
 
@@ -112,7 +113,8 @@ contains
     FLOAT,               intent(in)    :: t
     CMPLX,               intent(in)    :: factor
 
-    integer :: k
+    integer :: k, i
+    FLOAT, allocatable :: pot(:)
 
     call push_sub('td_exp_split.vlpsi')
 
@@ -131,16 +133,20 @@ contains
       call write_fatal(1)
     end select
 
-    if(h%ep%no_lasers > 0) then
-      if(h%gauge /= 1) then  ! only length gauge is supported
-        message(1) = "Only the length gauge is supported in exp_vlpsi"
-        call write_fatal(1)
-      end if
+    do i = 1, h%ep%no_lasers
+      select case(h%ep%lasers(i)%field)
+      case(E_FIELD_ELECTRIC)
+        ALLOCATE(pot(NP), NP)
+        call laser_potential(gr%sb, h%ep%lasers(i), t, gr%m, pot)
+        psi(1:NP, ik) = exp( factor * pot(1:NP) ) * psi(1:NP, ik) 
+        deallocate(pot)
+      case(E_FIELD_MAGNETIC, E_FIELD_VECTOR_POTENTIAL)
+        write(message(1),'(a)') 'The split-operator scheme cannot be used with magnetic fields, or'
+        write(message(2),'(a)') 'with an electric field described in the velocity gauge.'
+        call write_fatal(2)
+      end select
+    end do
 
-      do k = 1, h%d%dim
-        psi(1:NP, k) = exp( factor*epot_laser_scalar_pot(gr%m%np, gr, h%ep, t) ) * psi(1:NP, k)
-      end do
-    end if
 
     call pop_sub()
   end subroutine zexp_vlpsi
@@ -156,10 +162,6 @@ contains
     CMPLX,               intent(in) :: factor_
     logical,             intent(in) :: order_
 
-!!$    integer :: idim, ikbc, jkbc, &
-!!$         ivnl_start, ivnl_end, step, kbc_start, kbc_end, ivnl
-!!$    CMPLX :: uvpsi, p2, ctemp
-!!$    CMPLX, allocatable :: lpsi(:), lHpsi(:)
     logical :: order
     CMPLX   :: factor
     CMPLX, allocatable :: initzpsi(:, :)
