@@ -381,7 +381,7 @@ contains
     type(specie_t), intent(inout) :: s
     integer,        intent(out) :: read_data
 
-    integer :: n, lmax, lloc
+    integer :: n
 
     call push_sub('specie.read_from_block')
 
@@ -419,12 +419,12 @@ contains
       n = loct_parse_block_cols(blk, row)
 
       call loct_parse_block_float (blk, row, 3, s%Z)
-      lmax = 2 ! default
+
       if(n>4) then
         call loct_parse_block_int (blk, row, 4, s%lmax)
         read_data = 5
       end if
-      lloc = 0 ! default
+
       if(n>5) then
         call loct_parse_block_int (blk, row, 5, s%lloc)
         read_data = 6

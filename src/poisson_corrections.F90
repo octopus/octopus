@@ -162,7 +162,7 @@ contains
     type(poisson_corr_t), intent(inout) :: this
     type(mesh_t), intent(in) :: m
 
-    FLOAT :: alpha, beta, gamma, ylm, gylm(1:MAX_DIM), r, x(MAX_DIM)
+    FLOAT :: alpha, gamma, ylm, gylm(1:MAX_DIM), r, x(MAX_DIM)
     integer :: i, l, add_lm, lldfac, j, mm
 
     call push_sub('poisson_corrections.build_phi')
@@ -175,7 +175,6 @@ contains
       add_lm = 1
       do l = 0, this%maxl
         lldfac = 1; do j = 1, 2*l+1, 2; lldfac = lldfac * j; end do
-        beta = (2**(l+2))/( alpha**(2*l+3) * sqrt(M_PI) * lldfac )
         gamma = ( sqrt(M_PI)*2**(l+3) ) / lldfac
         do mm = -l, l
           call grylmr(x(1), x(2), x(3), l, mm, ylm, gylm)

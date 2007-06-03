@@ -62,8 +62,8 @@
 
       integer  :: ipr, invers_no, jabs, jcar, neg, nx, ny, nz
       FLOAT :: volume_check, celvol, ek, ek1, ek2
-      FLOAT :: a1(3),a2(3),a3(3),am(3),      &
-               b1(3), b2(3), b3(3), ba(3),   &
+      FLOAT :: a1(3),a2(3),a3(3),    &
+               b1(3), b2(3), b3(3),  &
                rkcar(3),rkmod(3,4), sx, sy, sz
 !      FLOAT :: scale
 !      character(len=1) :: np
@@ -113,11 +113,6 @@
         b(i,:) = M_TWO*M_PI*b(i,:)
       end do
 
-      am(1) = sqrt(sum(a1(:)**2))
-      am(2) = sqrt(sum(a2(:)**2))
-      am(3) = sqrt(sum(a3(:)**2))
-
-      ba(:) = M_TWO*M_PI/am(:)
       b1(:) = b(:,1)
       b2(:) = b(:,2)
       b3(:) = b(:,3)
@@ -826,7 +821,7 @@
 !      FLOAT :: wr(3), wi(3), fv1(3), te, tt, e(3), z(3,3), canon_t(3), rdot
 !      logical :: nonsym(48)
 !      integer :: ierr, ipt, iv1(3)
-      FLOAT :: t(3)
+!      FLOAT :: t(3)
       character(len=2) :: axes(-2:2)
 !
       data axes / 'C2', 'C3', 'C4', 'C6', 'E ' /
@@ -838,7 +833,7 @@
 !       translation.
 !
             a = mtrx(oper,:,:)
-            t = tnp(48,:)
+!            t = tnp(48,:)
 !
 !       Compute determinant  and trace
 !
@@ -965,7 +960,7 @@
       FLOAT :: da, dif, eps, ts, vs
       parameter(eps=CNST(1.0e-8))    ! used to be 1.0d-8
 
-      integer :: i, il, is, isy, iu, j, k, k1, k2, k3, k4, ks, &
+      integer :: i, il, is, iu, j, k, k1, k2, k3, k4, ks, &
                  l, m, n, n1, n2, n3, nca, ni
 
       FLOAT, allocatable :: rx(:,:), rdiff(:,:,:)
@@ -1115,7 +1110,6 @@
            call write_info(4)
          end if
 
-         isy = 0
          is = 0
       else
         if(ipr == 1) then
@@ -1124,7 +1118,6 @@
            message(3) = ''
            call write_info(3)
       end if
-         isy = 1
          is = 1
       end if
 

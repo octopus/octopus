@@ -281,11 +281,10 @@ contains
     type(nl_operator_t), intent(in)  :: op
     type(nl_operator_t), intent(out) :: opt
 
-    integer :: np, i, j, index, l, k
+    integer :: i, j, index, l, k
 
     call push_sub('nl_operator.nl_operator_transpose')
 
-    np = op%np
     opt = op
     opt%w_re = M_ZERO
     if (op%cmplx_op) opt%w_im = M_ZERO
@@ -320,7 +319,7 @@ contains
     type(nl_operator_t), target, intent(out) :: opt
     type(mesh_t),        intent(in)  :: m
 
-    integer          :: np, i, j, index, l, k
+    integer          :: i, j, index, l, k
     FLOAT, pointer   :: vol_pp(:)
 
     type(nl_operator_t), pointer :: opg, opgt
@@ -347,7 +346,6 @@ contains
       vol_pp => m%vol_pp
     end if
 
-    np = m%np_global
     opgt%w_re = M_ZERO
     if (op%cmplx_op) opgt%w_im = M_ZERO
     do i = 1, m%np_global
@@ -396,14 +394,13 @@ contains
     type(nl_operator_t), target, intent(out) :: opt
     type(mesh_t),        intent(in)  :: m
 
-    integer          :: np, i, j, index, l, k
+    integer          :: i, j, index, l, k
     FLOAT, pointer   :: vol_pp(:)
 
     type(nl_operator_t), pointer :: opg, opgt
 
     call push_sub('nl_operator.nl_operator_selfadjoint')
 
-    np = op%np
     opt = op
 
     if(m%parallel_in_domains) then
@@ -424,7 +421,6 @@ contains
       vol_pp => m%vol_pp
     end if
 
-    np = m%np_global
     opgt%w_re = M_ZERO
     if (op%cmplx_op) opgt%w_im = M_ZERO
     do i = 1, m%np_global
@@ -860,13 +856,13 @@ contains
     call profiling_in(C_PROFILING_NL_OPERATOR)
     call push_sub('nl_operator.dnl_operator_operate')
 
+#if defined(HAVE_MPI)
     if(present(ghost_update)) then
       update = ghost_update
     else
       update = .true.
     end if
 
-#if defined(HAVE_MPI)
     if(op%m%parallel_in_domains.and.update) then
       call dvec_ghost_update(op%m%vp, fi)
     end if

@@ -371,7 +371,6 @@ contains
     FLOAT, intent(in) :: gmax
     FLOAT, intent(in) :: alpha, beta, rcut, beta2
     integer :: l, k
-    FLOAT, allocatable :: y(:)
 
     call push_sub('ps.ps_filter')
 
@@ -386,7 +385,6 @@ contains
 
     if(trim(ps%icore).ne.'nc') call loct_spline_filter(ps%core, fs = (/ alpha*gmax, CNST(100.0) /) )
 
-    deallocate(y)
     call pop_sub()
   end subroutine ps_filter
 
@@ -553,12 +551,11 @@ contains
     ! ---------------------------------------------------------
     subroutine get_splines()
       integer :: l, is, nrc, j
-      FLOAT, allocatable :: hato(:), derhato(:)
+      FLOAT, allocatable :: hato(:)
 
       call push_sub('ps.get_splines_hgh')
 
       ALLOCATE(   hato(psp%g%nrval), psp%g%nrval)
-      ALLOCATE(derhato(psp%g%nrval), psp%g%nrval)
 
       ! Interpolate the KB-projection functions
       do l = 0, psp%l_max

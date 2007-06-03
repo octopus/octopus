@@ -86,7 +86,7 @@ contains
     FLOAT,          intent(in)    :: rho(:, :)
     FLOAT,          intent(in)    :: threshold
 
-    integer :: jj, kk, xmax, ymax, zmax
+    integer :: jj, xmax, ymax, zmax
     integer :: cur_color, dum
 
     ASSERT(associated(this%map))

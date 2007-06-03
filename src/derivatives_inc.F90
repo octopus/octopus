@@ -53,8 +53,8 @@ end subroutine X(derivatives_laplt)
 
 ! ---------------------------------------------------------
 subroutine X(derivatives_lapl)(der, f, lapl, have_ghost_, ghost_update)
-  type(der_discr_t), target, intent(in)    :: der
-  R_TYPE, target,            intent(inout) :: f(:)     ! f(m%np_part)
+  type(der_discr_t),         intent(in)    :: der
+  R_TYPE,                    intent(inout) :: f(:)     ! f(m%np_part)
   R_TYPE,                    intent(out)   :: lapl(:)  ! lapl(m%np)
   logical, optional,         intent(in)    :: have_ghost_
   logical, optional,         intent(in)    :: ghost_update

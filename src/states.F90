@@ -942,7 +942,6 @@ contains
     integer, optional, intent(in) :: ist_start_, ist_end_
 
     integer :: ist, ik, id, ist_start, ist_end, j
-    FLOAT :: argbeta
     CMPLX :: alpha, beta
 
     call push_sub('states.states_generate_random')

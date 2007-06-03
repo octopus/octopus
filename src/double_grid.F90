@@ -272,7 +272,7 @@ contains
 
   subroutine double_grid_apply_non_local(this, s, m, x_atom, sm, l, lm, ic, vnl)
     type(double_grid_t),    intent(in)  :: this
-    type(specie_t), target, intent(in)  :: s
+    type(specie_t),         intent(in)  :: s
     type(mesh_t),           intent(in)  :: m
     FLOAT,                  intent(in)  :: x_atom(1:MAX_DIM)
     type(submesh_t),        intent(in)  :: sm
@@ -282,7 +282,7 @@ contains
     FLOAT,                  intent(out) :: vnl(:)
     
     FLOAT :: x(MAX_DIM), vv, dvv(1:MAX_DIM)
-    integer :: is, ii, jj, kk, idir
+    integer :: is, ii, jj, kk
 
     integer :: start(1:3), pp, qq, rr, is2
     integer :: ll, mm, nn
@@ -354,7 +354,7 @@ contains
 
   subroutine double_grid_apply_gnon_local(this, s, m, x_atom, sm, l, lm, ic, dvnl)
     type(double_grid_t),    intent(in)  :: this
-    type(specie_t), target, intent(in)  :: s
+    type(specie_t),         intent(in)  :: s
     type(mesh_t),           intent(in)  :: m
     FLOAT,                  intent(in)  :: x_atom(1:MAX_DIM)
     type(submesh_t),        intent(in)  :: sm
@@ -364,7 +364,7 @@ contains
     FLOAT,                  intent(out) :: dvnl(:, :)
     
     FLOAT :: x(MAX_DIM), vv, dvv(1:MAX_DIM)
-    integer :: is, ii, jj, kk, idir
+    integer :: is, ii, jj, kk
 
     integer :: start(1:3), pp, qq, rr, is2
     integer :: ll, mm, nn
@@ -445,7 +445,7 @@ contains
 
   FLOAT function double_grid_get_rmax(this, s, m) result(rmax)
     type(double_grid_t),     intent(in) :: this
-    type(specie_t), target,  intent(in) :: s
+    type(specie_t),          intent(in) :: s
     type(mesh_t),            intent(in) :: m
     
     rmax = loct_spline_cutoff_radius(s%ps%dvl, s%ps%projectors_sphere_threshold)

@@ -239,7 +239,7 @@ contains
 
   !-----------------------------------------------------------------
   subroutine zpoisson_solve(gr, pot, rho, all_nodes)
-    type(grid_t), target, intent(inout) :: gr
+    type(grid_t),         intent(inout) :: gr
     CMPLX,                intent(inout) :: pot(:)  ! pot(m%np)
     CMPLX,                intent(in)    :: rho(:)  ! rho(m%np)
     logical, optional,    intent(in)    :: all_nodes
@@ -279,7 +279,7 @@ contains
 
   !-----------------------------------------------------------------
   subroutine dpoisson_solve(gr, pot, rho, all_nodes)
-    type(grid_t), target, intent(inout) :: gr
+    type(grid_t),         intent(inout) :: gr
     FLOAT,                intent(inout) :: pot(:)    ! pot(m%np)
     FLOAT,                intent(in)    :: rho(:)    ! rho(m%np)
     logical, optional,    intent(in)    :: all_nodes ! Is the poisson solver allowed to utilise

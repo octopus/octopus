@@ -158,15 +158,7 @@ subroutine mesh_init_stage_3(mesh, geo, cv, stencil, np_stencil, mpi_grp)
   integer, optional,  intent(in)    :: np_stencil
   type(mpi_grp_t), optional,  intent(in) :: mpi_grp
 
-  integer :: np_stencil_, stencil_size
-
   call push_sub('mesh_init.mesh_init_stage_3')
-
-  ! at the moment unused.
-  if (present(stencil).and.present(np_stencil) ) then
-    np_stencil_ = np_stencil
-    stencil_size = size(stencil)
-  endif
 
   ! check if we are running in parallel in domains
   mesh%parallel_in_domains = .false.

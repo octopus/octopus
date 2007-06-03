@@ -180,7 +180,7 @@ end subroutine X(f_laplacian)
 subroutine X(f_gradient) (sb, f_der, f, grad, ghost_update)
   type(simul_box_t), intent(in)    :: sb
   type(f_der_t),     intent(inout) :: f_der
-  R_TYPE, target,    intent(inout) :: f(:)         ! f(m%np_part)
+  R_TYPE,            intent(inout) :: f(:)         ! f(m%np_part)
   R_TYPE,            intent(out)   :: grad(:,:)    ! grad(m%np, m%sb%dim)
   logical, optional, intent(in)    :: ghost_update
 
