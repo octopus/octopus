@@ -168,6 +168,8 @@ contains
     !% a laser field in the velocity gauge.
     !%End
 
+    call obsolete_variable('TDLasers', 'TDExternalFields')
+
     no_l = 0
     if(loct_parse_block(check_inp('TDExternalFields'), blk) == 0) then
       no_l = loct_parse_block_n(blk)
