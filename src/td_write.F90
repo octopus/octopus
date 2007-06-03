@@ -929,11 +929,9 @@ contains
     FLOAT,               intent(in) :: dt
     integer,             intent(in) :: iter
 
-    integer :: i
+    integer :: i, j
     FLOAT :: field(MAX_DIM)
     character(len=80) :: aux
-
-    !!!!WARNING: Currently only the first external field in h%ep is printed out.
 
     if(.not.mpi_grp_is_root(mpi_world)) return ! only first node outputs
 
@@ -947,47 +945,66 @@ contains
       call write_iter_string(out_laser, aux)
       call write_iter_nl(out_laser)
 
-      ! second line -> column names
       call write_iter_header_start(out_laser)
-      do i = 1, NDIM
-        write(aux, '(a,i1,a)') 'E(', i, ')'
-        call write_iter_header(out_laser, aux)
-      end do
-      do i = 1, NDIM
-        write(aux, '(a,i1,a)') 'A(', i, ')'
-        call write_iter_header(out_laser, aux)
+      do i = 1, h%ep%no_lasers
+        select case(h%ep%lasers(i)%field)
+        case(E_FIELD_ELECTRIC)
+          do j = 1, NDIM
+            write(aux, '(a,i1,a)') 'E(', j, ')'
+            call write_iter_header(out_laser, aux)
+          end do
+        case(E_FIELD_MAGNETIC)
+          do j = 1, NDIM
+            write(aux, '(a,i1,a)') 'B(', j, ')'
+            call write_iter_header(out_laser, aux)
+          end do
+        case(E_FIELD_VECTOR_POTENTIAL)
+          do j = 1, NDIM
+            write(aux, '(a,i1,a)') 'A(', j, ')'
+            call write_iter_header(out_laser, aux)
+          end do
+        end select
       end do
       call write_iter_nl(out_laser)
 
-      ! third line -> units
       call write_iter_string(out_laser, '#[Iter n.]')
       call write_iter_header(out_laser, '[' // trim(units_out%time%abbrev) // ']')
 
-      aux = '[' // trim(units_out%energy%abbrev) // ' / ' // trim(units_inp%length%abbrev) // ']'
-      do i = 1, NDIM
-        call write_iter_header(out_laser, aux)
-      end do
-
-      aux = '[1/' // trim(units_inp%length%abbrev) // ']'
-      do i = 1, NDIM
-        call write_iter_header(out_laser, aux)
+      ! Note that we do not print out units of E, B, or A, but rather units of e*E, e*B, e*A.
+      ! (force, force, and energy, respectively). The reason is that the units of E, B or A 
+      ! are ugly.
+      do i = 1, h%ep%no_lasers
+        select case(h%ep%lasers(i)%field)
+        case(E_FIELD_ELECTRIC, E_FIELD_MAGNETIC)
+          aux = '[' // trim(units_out%energy%abbrev) // ' / ' // trim(units_inp%length%abbrev) // ']'
+          do j = 1, NDIM
+            call write_iter_header(out_laser, aux)
+          end do
+        case(E_FIELD_VECTOR_POTENTIAL)
+          aux = '[' // trim(units_out%energy%abbrev) // ']'
+          do j = 1, NDIM
+            call write_iter_header(out_laser, aux)
+          end do
+        end select
       end do
       call write_iter_nl(out_laser)
+
       call td_write_print_header_end(out_laser)
     end if
 
     call write_iter_start(out_laser)
 
-    field = M_ZERO
-
-    call laser_field(gr%sb, h%ep%lasers(1), iter*dt, field)
-    field = field * units_inp%length%factor / units_inp%energy%factor
-    call write_iter_double(out_laser, field, NDIM)
-
-    ! WARNING: the laser could be a vector field. This has to be fixed.
-    !call laser_vector_field(gr%sb, h%ep%no_lasers, h%ep%lasers, iter*dt, field)
-    !field = field  * units_inp%length%factor
-    !call write_iter_double(out_laser, field, NDIM)
+    do i = 1, h%ep%no_lasers
+      field = M_ZERO
+      call laser_field(gr%sb, h%ep%lasers(i), iter*dt, field)
+      select case(h%ep%lasers(i)%field)
+      case(E_FIELD_ELECTRIC, E_FIELD_MAGNETIC)
+        field = field * units_inp%length%factor / units_inp%energy%factor
+      case(E_FIELD_VECTOR_POTENTIAL)
+        field = field / units_inp%energy%factor
+      end select
+      call write_iter_double(out_laser, field, NDIM)
+    end do
 
     call write_iter_nl(out_laser)
 
