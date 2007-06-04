@@ -55,24 +55,15 @@ module double_grid_m
 
   type double_grid_t
      private
+     integer :: order
+     integer :: npoints
      integer :: spacing_divisor
      integer :: interpolation_min
      integer :: interpolation_max
      integer :: nn
      logical :: use_double_grid
+     FLOAT, pointer :: co(:)
   end type double_grid_t
-
-  FLOAT, parameter :: co (-4:5) = (/ &
-       CNST(	3449600.0	)/CNST(	7142567040.0	),& !-4
-       CNST(	-4484480.0	)/CNST(	793618560.0	),& !-3
-       CNST(	6406400.0	)/CNST(	198404640.0	),& !-2
-       CNST(	-11211200.0	)/CNST(	85030560.0	),& !-1
-       CNST(	44844800.0	)/CNST(	56687040.0	),& ! 0
-       CNST(	22422400.0	)/CNST(	56687040.0	),& ! 1
-       CNST(	-8968960.0	)/CNST(	85030560.0	),& ! 2
-       CNST(	5605600.0	)/CNST(	198404640.0	),& ! 3
-       CNST(	-4076800.0	)/CNST(	793618560.0	),& ! 4
-       CNST(	3203200.0	)/CNST(	7142567040.0	)/) ! 5
 
 contains
   
@@ -81,8 +72,6 @@ contains
     type(simul_box_t),   intent(in)  :: sb
 
     this%spacing_divisor = 3
-    this%interpolation_min = -4
-    this%interpolation_max = 5
     this%nn = (this%spacing_divisor - 1)/2
    
     !%Variable DoubleGrid
@@ -100,11 +89,61 @@ contains
       this%use_double_grid = .false.
     end if
 
+    !%Variable DoubleGridOrder
+    !%Type integer 
+    !%Default 9
+    !%Section Mesh
+    !%Description
+    !% Order of the interpolation used for the Double Grid. Must be
+    !% and odd number. Low order interpolation schemes are not
+    !% recommended. The default is to use 9th order interpolation.
+    !%End
+    call loct_parse_int(check_inp('DoubleGridOrder'), 9, this%order)
+    
+    ASSERT(mod(this%order,2) == 1)
+    
+    this%interpolation_min = -this%order/2
+    this%interpolation_max =  this%order/2 + 1
+    this%npoints = this%interpolation_max - this%interpolation_min + 1
+    
+    ALLOCATE(this%co(this%interpolation_min:this%interpolation_max), this%npoints)
+
+    call calc_coefficients
+
+    contains
+
+      subroutine calc_coefficients
+        integer, allocatable :: points(:)
+        integer :: ii, jj
+
+        ALLOCATE(points(this%interpolation_min:this%interpolation_max), this%npoints)
+        
+        do ii = this%interpolation_min,  this%interpolation_max
+          points(ii) = 3 * ii - 1
+        end do
+
+        do ii = this%interpolation_min,  this%interpolation_max
+          
+          this%co(ii) = M_ONE
+          do jj = this%interpolation_min,  this%interpolation_max
+            if(ii /= jj) then
+              this%co(ii) = this%co(ii) * (dble(points(jj))/dble(points(jj) - points(ii)))
+            end if
+          end do
+
+        end do
+        
+        deallocate(points)
+        
+      end subroutine calc_coefficients
+
   end subroutine double_grid_init
 
   subroutine double_grid_end(this)
     type(double_grid_t), intent(inout) :: this
  
+    deallocate(this%co)
+
   end subroutine double_grid_end
   
   subroutine double_grid_apply_local(this, s, m, sm, x_atom, vl)
@@ -162,7 +201,7 @@ contains
                   do nn = this%interpolation_min, this%interpolation_max
                     
                     is2 = sm%jxyz_inv(m%Lxyz_inv(pp, qq, rr))
-                    vls(is2) = vls(is2) + co(ll)*co(mm)*co(nn)*vv
+                    vls(is2) = vls(is2) + this%co(ll)*this%co(mm)*this%co(nn)*vv
                     
                     rr = rr + kk
                   end do
@@ -245,7 +284,7 @@ contains
                     do nn = this%interpolation_min, this%interpolation_max
 
                       is2 = sm%jxyz_inv(m%Lxyz_inv(pp, qq, rr))
-                      dvs(is2, 1:3) = dvs(is2, 1:3)  + co(ll)*co(mm)*co(nn)*vv(1:3)
+                      dvs(is2, 1:3) = dvs(is2, 1:3)  + this%co(ll)*this%co(mm)*this%co(nn)*vv(1:3)
                       
                       rr = rr + kk
                     end do
@@ -326,7 +365,7 @@ contains
                     
                     is2 = sm%jxyz_inv(m%Lxyz_inv(pp, qq, rr))
 
-                    vls(is2) = vls(is2) + co(ll)*co(mm)*co(nn)*vv
+                    vls(is2) = vls(is2) + this%co(ll)*this%co(mm)*this%co(nn)*vv
                     
                     rr = rr + kk
                   end do
@@ -408,7 +447,7 @@ contains
                     
                     is2 = sm%jxyz_inv(m%Lxyz_inv(pp, qq, rr))
 
-                    dvls(is2, 1:3) = dvls(is2, 1:3) + co(ll)*co(mm)*co(nn)*dvv(1:3)
+                    dvls(is2, 1:3) = dvls(is2, 1:3) + this%co(ll)*this%co(mm)*this%co(nn)*dvv(1:3)
                     
                     rr = rr + kk
                   end do
