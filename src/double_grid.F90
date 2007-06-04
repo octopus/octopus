@@ -487,7 +487,7 @@ contains
     type(specie_t),          intent(in) :: s
     type(mesh_t),            intent(in) :: m
     
-    rmax = loct_spline_cutoff_radius(s%ps%dvl, s%ps%projectors_sphere_threshold)
+    rmax = loct_spline_cutoff_radius(s%ps%vl, s%ps%projectors_sphere_threshold)
     if(this%use_double_grid) then 
       rmax = rmax + this%interpolation_max * maxval(m%h(1:3))
     end if
