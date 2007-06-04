@@ -114,7 +114,7 @@ contains
     !%
     !% The syntax of each line is, then:
     !%
-    !% <tt>%TDLasers
+    !% <tt>%TDExternalField
     !% <br>&nbsp;&nbsp; type | nx | ny | nz | amplitude | omega | envelope | tau0 | t0 | tau1 | filename1 | filename2
     !% <br>%</tt>
     !%
@@ -167,8 +167,6 @@ contains
     !% The external field is a time-depedent homogeneous vector potential, which may describe
     !% a laser field in the velocity gauge.
     !%End
-
-    call obsolete_variable('TDLasers', 'TDExternalFields')
 
     no_l = 0
     if(loct_parse_block(check_inp('TDExternalFields'), blk) == 0) then
