@@ -20,9 +20,9 @@
 ## $Id$
 
 EXTRA_PROGRAMS = oct-cross-section oct-rsf oct-harmonic-spectrum \
-                 oct-broad oct-ph oct-xyz-anim oct-center-geom
+                 oct-broad oct-ph oct-xyz-anim oct-center-geom oct-help
 
-bin_PROGRAMS = octopus oct-test oct-help @UTILITY_PROGRAMS@
+bin_PROGRAMS = octopus oct-test @UTILITY_PROGRAMS@
 
 basic_SRCS = liboct.F90 string.F90 varinfo.F90 mpi.F90 global.F90 liboct_parser.F90 \
 	     messages.F90 datasets.F90 io.F90 units.F90 mpi_debug.F90 profiling.F90 \
@@ -145,7 +145,7 @@ oct_test_SOURCES = $(core_SRCS) lasers.F90 rkb_projector.F90 kb_projector.F90 \
 oct_test_LDADD = $(octopus_LDADD)
 
 oct_help_SOURCES = $(basic_SRCS) help.F90
-oct_help_LDADD =  $(core_LIBS) $(external_LIBS)
+oct_help_LDADD =  $(core_LIBS)
 
 AM_FCFLAGS = @F90_MODULE_FLAG@$(top_builddir)/external_libs/qshep
 
