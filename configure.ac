@@ -71,7 +71,7 @@ AC_FUNC_VPRINTF
 AC_CHECK_FUNCS([getcwd gettimeofday mkdir pow sqrt strcasecmp strdup \
 strerror strncasecmp strndup uname tcgetpgrp scandir alphasort \
 sigaction malloc realloc opendir readdir closedir strchr strtod assert \
-posix_memalign perror])
+posix_memalign perror strcasestr])
 
 ACX_MALLOC_ALIGNMENT
 

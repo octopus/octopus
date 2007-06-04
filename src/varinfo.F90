@@ -29,6 +29,7 @@ module varinfo_m
     varinfo_init,         &
     varinfo_end,          &
     varinfo_print,        &
+    varinfo_search,       &
     varinfo_print_option, &
     varinfo_valid_option
 
@@ -166,6 +167,34 @@ contains
     end do
 
   end subroutine varinfo_print_option
+
+  ! ---------------------------------------------------------
+  subroutine varinfo_search(iunit, var, ierr)
+    integer,          intent(in) :: iunit
+    character(len=*), intent(in) :: var
+    integer,optional, intent(out):: ierr
+    
+    C_POINTER :: handle, opt, name, type, section, desc
+    integer :: value
+    logical :: first
+    
+    handle = 0
+    if(present(ierr)) ierr = -1
+    do 
+      call varinfo_search_var(var, handle)
+
+      if(handle /= 0) then 
+        if(present(ierr)) ierr = 0
+      else
+        exit
+      end if
+
+      call varinfo_getinfo(handle, name, type, section, desc)
+      call print_C_string(iunit, name, "")
+      
+    end do
+      
+  end subroutine varinfo_search
 
 end module varinfo_m
 

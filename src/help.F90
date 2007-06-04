@@ -71,9 +71,14 @@ program oct_help
 
   case("search")
 
-    message(1) = "Searches for a variable name (not implemented)"
-    message(2) = "Usage: oct-help search variable_name"
-    call write_info(2)
+    if (argc >= 2) then
+      call get_command_argument(2, varname)
+      call varinfo_search(stdout, trim(varname), ierr)
+    else
+      message(1) = "Searches for variable names that contains a certain string"
+      message(2) = "Usage: oct-help search string"
+      call write_info(2)
+    end if
 
   end select
     

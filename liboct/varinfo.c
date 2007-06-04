@@ -280,3 +280,60 @@ void FC_FUNC_(varinfo_opt_getinfo, VARINFO_OPT_GETINFO)
       *value = 0;
   }
 }
+
+/* --------------------------------------------------------- 
+
+This function searches for a substring in the name of a variable, if
+var is set to NULL it starts from the beginning of the list, if it is
+different from NULL it asumes is the result of a previous search and
+it starts searching from that point. It returns NULL if nothing is
+found.
+
+ --------------------------------------------------------- */
+
+#ifndef HAVE_STRCASESTR
+char *strcasestr( char * haystack, char * needle );
+#endif
+
+void FC_FUNC_(varinfo_search_var, VARINFO_SEARCH_VAR)
+  (STR_F_TYPE name, var_type **var STR_ARG1)
+{
+  char *name_c;
+  var_type *lvar;
+  
+  if ( *var == NULL ) lvar = vars;
+  else lvar = (*var) -> next;
+  
+  name_c = TO_C_STR1(name);
+  for(; (lvar!=NULL) && (strcasestr(lvar->name, name_c)==0); lvar=lvar->next);
+  free(name_c);
+
+  *var = lvar;
+}
+
+#ifndef HAVE_STRCASESTR
+char *strcasestr( char * haystack, char * needle )
+{
+  char *s1;
+  char *s2;
+  char *ptr;
+  
+  s1 = strdup(haystack);
+  s2 = strdup(needle);
+  
+  for ( ptr = s1; *ptr != '\0'; ptr++ ) *ptr = tolower( *ptr );
+  
+  for ( ptr = s2; *ptr != '\0'; ptr++ ) *ptr = tolower( *ptr );
+  
+  ptr = strstr( s1, s2 );
+  
+  if ( ptr == (char *)NULL )
+    return (char *)NULL;
+  else
+    return haystack + (ptr - s1);
+  
+  free(s1);
+  free(s2);
+  
+}
+#endif
