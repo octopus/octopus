@@ -55,13 +55,12 @@ gamma2 = 80
 
 ampl = 0.06
 freq = 0.157
-envelope = 0
 w = 5.0
 cycles = 4
 tau = (pi/freq)*cycles
 t0 = tau
 %TDExternalFields
-  electric_field | 1 | 0 | 0 | ampl | freq | envelope | tau | t0
+  electric_field | 1 | 0 | 0 | envelope_constant | ampl | freq
 %
 
 Dimensions = 1

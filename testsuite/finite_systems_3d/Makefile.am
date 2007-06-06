@@ -71,6 +71,10 @@ dist_share_DATA = \
 	17-vdw_sternheimer.02-vdw.inp \
 	17-vdw_sternheimer.test \
 	18-current.01-current.inp \
-	18-current.test
+	18-current.test \
+	19-laser.test \
+	19-laser.01-ground_state.inp \
+	19-laser.02-length_gauge.inp \
+	19-laser.03-velocity_gauge.inp
 
 CLEANFILES = *~ *.bak

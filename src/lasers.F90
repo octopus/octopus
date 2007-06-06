@@ -52,10 +52,6 @@ module lasers_m
     ENVELOPE_FROM_FILE     = 10,  &
     ENVELOPE_NUMERICAL     = 99
  
-  integer, parameter ::           &
-    SPATIAL_PART_DIPOLE    =  1,  &
-    SPATIAL_PART_FROM_FILE =  2
-
   integer, public, parameter ::           &
     E_FIELD_ELECTRIC         =  1,  &
     E_FIELD_MAGNETIC         =  2,  &
@@ -66,7 +62,7 @@ module lasers_m
     CMPLX :: pol(MAX_DIM) ! the polarization of the laser
     type(tdf_t) :: f
     integer  :: spatial_part
-    FLOAT, pointer :: v(:) ! the spatial part.
+!!$    FLOAT, pointer :: v(:) ! the spatial part.
   end type laser_t
 
 contains
@@ -93,7 +89,7 @@ contains
     type(mesh_t), intent(in) :: m
 
     C_POINTER         :: blk
-    integer           :: i, no_c, ierr
+    integer           :: i, ierr
     character(len=50) :: filename1, filename2
 
     integer :: envelope
@@ -176,36 +172,47 @@ contains
       ! The structure of the block is:
       ! nx | ny | nz | amplitude | omega | envelope | tau0 | t0 | tau1 | filename1 | filename2
       do i = 1, no_l
-        no_c = loct_parse_block_cols(blk, i-1)
+        a0 = M_ZERO; omega0 = M_ZERO; tau0 = M_ZERO; t0 = M_ZERO; tau1 = M_ZERO
 
         call loct_parse_block_int(blk, i-1, 0, l(i)%field)
         call loct_parse_block_cmplx(blk, i-1, 1, l(i)%pol(1))
         call loct_parse_block_cmplx(blk, i-1, 2, l(i)%pol(2))
         call loct_parse_block_cmplx(blk, i-1, 3, l(i)%pol(3))
-        call loct_parse_block_float(blk, i-1, 4, a0)
-        call loct_parse_block_float(blk, i-1, 5, omega0)
-        call loct_parse_block_int  (blk, i-1, 6, envelope)
-        call loct_parse_block_float(blk, i-1, 7, tau0)
-        call loct_parse_block_float(blk, i-1, 8, t0)
-        if(no_c>9)  then
+
+        call loct_parse_block_int  (blk, i-1, 4, envelope)
+
+        select case(envelope)
+        case(ENVELOPE_CONSTANT)
+          call loct_parse_block_float(blk, i-1, 5, a0)
+          call loct_parse_block_float(blk, i-1, 6, omega0)
+        case(ENVELOPE_GAUSSIAN)
+          call loct_parse_block_float(blk, i-1, 5, a0)
+          call loct_parse_block_float(blk, i-1, 6, omega0)
+          call loct_parse_block_float(blk, i-1, 7, tau0)
+          call loct_parse_block_float(blk, i-1, 8, t0)
+        case(ENVELOPE_COSINOIDAL)
+          call loct_parse_block_float(blk, i-1, 5, a0)
+          call loct_parse_block_float(blk, i-1, 6, omega0)
+          call loct_parse_block_float(blk, i-1, 7, tau0)
+          call loct_parse_block_float(blk, i-1, 8, t0)
+        case(ENVELOPE_TRAPEZOIDAL)
+          call loct_parse_block_float(blk, i-1, 5, a0)
+          call loct_parse_block_float(blk, i-1, 6, omega0)
+          call loct_parse_block_float(blk, i-1, 7, tau0)
+          call loct_parse_block_float(blk, i-1, 8, t0)
           call loct_parse_block_float(blk, i-1, 9, tau1)
-        else
-          tau1 = M_ZERO
-        end if
-        if(no_c>10) call loct_parse_block_string(blk, i-1, 10, filename1)
-        if(no_c>11) call loct_parse_block_string(blk, i-1, 11, filename2)
+        case(ENVELOPE_FROM_FILE)
+          call loct_parse_block_string(blk, i-1, 10, filename1)
+        case(ENVELOPE_NUMERICAL) ! This should be envelope_from_formula
+        case default
+          call input_error('TDExternalFieldsd')
+        end select
 
         a0     = a0 * units_inp%energy%factor / units_inp%length%factor
         omega0 = omega0 * units_inp%energy%factor
         tau0 = tau0 * units_inp%time%factor
         t0   = t0   * units_inp%time%factor
         tau1 = tau1 * units_inp%time%factor
-
-
-        if(envelope == ENVELOPE_TRAPEZOIDAL .and. no_c < 9)  &
-             call input_error('TDExternalFields')
-        if(envelope == ENVELOPE_FROM_FILE   .and. no_c < 10) &
-             call input_error('TDExternalFields')
 
         select case(envelope)
         case(ENVELOPE_CONSTANT)
@@ -223,12 +230,6 @@ contains
           call write_fatal(1)
         end select
 
-        if(no_c>10) l(i)%spatial_part = SPATIAL_PART_FROM_FILE
-
-        if(l(i)%spatial_part == SPATIAL_PART_FROM_FILE) &
-             call get_spatial_part_from_file(l(i), trim(filename2))
-
-        ! normalize polarization
         l(i)%pol(:) = l(i)%pol(:)/sqrt(sum(abs(l(i)%pol(:))**2))
 
       end do
@@ -237,27 +238,6 @@ contains
     end if
 
     call pop_sub()
-
-  contains
-
-
-    ! ---------------------------------------------------------
-    subroutine get_spatial_part_from_file(l, filename)
-      type(laser_t), intent(inout) :: l
-      character(len=*), intent(in) :: filename
-
-      integer :: ierr
-
-      ALLOCATE(l%v(m%np), m%np)
-      call dinput_function(filename, m, l%v(:), ierr)
-      if(ierr < 0) then
-        write(message(1),'(a)') "Could not read the external field spatial part."
-        write(message(2),'(a)') "Expected in file '"//trim(filename)//"'"
-        call write_fatal(2)
-      end if
-
-    end subroutine get_spatial_part_from_file
-
 
   end subroutine laser_init
 
@@ -274,9 +254,6 @@ contains
     if(no_l > 0) then
       do i = 1, no_l
         call tdf_end(l(i)%f)
-        if(l(i)%spatial_part == SPATIAL_PART_FROM_FILE) then
-          deallocate(l(i)%v); nullify(l(i)%v)
-        end if
       end do
       deallocate(l); nullify(l)
     end if
@@ -304,9 +281,6 @@ contains
         '(', real(l(i)%pol(2)), ',', aimag(l(i)%pol(2)), '), ', &
         '(', real(l(i)%pol(3)), ',', aimag(l(i)%pol(3)), ')'
       call tdf_write(l(i)%f, iunit)
-      if(l(i)%spatial_part == SPATIAL_PART_FROM_FILE) then
-        write(iunit,'(3x,a)') 'The spatial part of the field is read from a file.'
-      end if
     end do
 
   end subroutine laser_write_info
@@ -331,15 +305,9 @@ contains
     amp = tdf(l%f, t)
     field(1:sb%dim) = real(amp*l%pol(1:sb%dim))
 
-    if(l%spatial_part == SPATIAL_PART_FROM_FILE) then
-      do j = 1, m%np
-        pot(j) = pot(j) + real(amp*l%v(j))
-      end do
-    else
-      do j = 1, m%np
-        pot(j) = pot(j) + sum(field(1:sb%dim)*m%x(j, 1:sb%dim))
-      end do
-    end if
+    do j = 1, m%np
+      pot(j) = pot(j) + sum(field(1:sb%dim)*m%x(j, 1:sb%dim))
+    end do
 
     call pop_sub()
   end subroutine laser_potential

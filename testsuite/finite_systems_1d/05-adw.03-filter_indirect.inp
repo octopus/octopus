@@ -49,13 +49,12 @@ w13 = 0.8580
 
 ampl = 0.1
 freq1 = 0.1
-envelope = 0
 w1 = 5.0
 cycles = 4
 tau = (pi/freq1)*cycles
 t0 = tau
 %TDExternalFields
-  electric_field | 1 | 0 | 0 | ampl | freq1 | envelope | tau | t0
+  electric_field | 1 | 0 | 0 | envelope_constant | ampl | freq1
 %
 
 Dimensions = 1

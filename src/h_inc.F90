@@ -20,10 +20,11 @@
 
 ! ---------------------------------------------------------
 ! calculates the eigenvalues of the real orbitals
-subroutine X(hamiltonian_eigenval)(h, gr, st)
+subroutine X(hamiltonian_eigenval)(h, gr, st, t)
   type(hamiltonian_t), intent(inout) :: h
   type(grid_t) ,       intent(inout) :: gr
   type(states_t),      intent(inout) :: st
+  FLOAT, intent(in), optional :: t
 
   R_TYPE, allocatable :: Hpsi(:,:)
   R_TYPE :: e
@@ -34,7 +35,11 @@ subroutine X(hamiltonian_eigenval)(h, gr, st)
 
   do ik = 1, st%d%nik
     do ist = st%st_start, st%st_end
-      call X(hpsi) (h, gr, st%X(psi)(:, :, ist, ik), hpsi, ik)
+      if(present(t)) then
+        call X(hpsi) (h, gr, st%X(psi)(:, :, ist, ik), hpsi, ik, t)
+      else
+        call X(hpsi) (h, gr, st%X(psi)(:, :, ist, ik), hpsi, ik)
+      end if
       e = X(states_dotp)(gr%m, st%d%dim, st%X(psi)(:, :, ist, ik), Hpsi)
       st%eigenval(ist, ik) = R_REAL(e)
     end do
@@ -508,58 +513,70 @@ subroutine X(vlasers) (gr, h, psi, hpsi, t)
   FLOAT,               intent(in)    :: t
 
   integer :: i, k, idim
+  logical :: electric_field, vector_potential
   R_TYPE, allocatable :: grad(:, :, :)
-  FLOAT, allocatable :: v(:), a_field(:)
+  FLOAT, allocatable :: v(:), pot(:), a_field(:), a_field_prime(:)
 
   call push_sub('h_inc.Xvlasers')
 
+  ALLOCATE(v(NP), NP)
+  ALLOCATE(pot(NP), NP)
+  ALLOCATE(grad(NP_PART, NDIM, h%d%dim), NP_PART*h%d%dim*NDIM)
+  ALLOCATE(a_field(gr%sb%dim), gr%sb%dim)
+  ALLOCATE(a_field_prime(gr%sb%dim), gr%sb%dim)
+  pot = M_ZERO
+  v = M_ZERO
+  grad = R_TOTYPE(M_ZERO)
+  a_field = M_ZERO
+  electric_field = .false.
+  vector_potential = .false.
 
-  do i = 1, h%ep%no_lasers 
+  do i = 1, h%ep%no_lasers
     select case(h%ep%lasers(i)%field)
     case(E_FIELD_ELECTRIC)
-
-      ALLOCATE(v(NP), NP)
-      call laser_potential(gr%sb, h%ep%lasers(i), t, gr%m, v)
-      do k = 1, h%d%dim
-        hpsi(1:NP, k)= hpsi(1:NP, k) + v(1:NP) * psi(1:NP, k)
-      end do
-      deallocate(v)
-
+      call laser_potential(gr%sb, h%ep%lasers(i), t, gr%m, pot)
+      v = v + pot
+      electric_field = .true.
     case(E_FIELD_MAGNETIC)
-
       write(message(1), '(a)') 'Internal Error at vlasers.'
       call write_fatal(1)
-
     case(E_FIELD_VECTOR_POTENTIAL)
-
-
-      ALLOCATE(grad(NP_PART, NDIM, h%d%dim), NP_PART*h%d%dim*NDIM)
-      ALLOCATE(a_field(gr%sb%dim), gr%sb%dim)
-      do idim = 1, h%d%dim
-        call X(f_gradient)(gr%sb, gr%f_der, psi(:, idim), grad(:, :, idim))
-      end do
-      call laser_field(gr%sb, h%ep%lasers(i), t, a_field)
- 
-      do k = 1, NP
-        hpsi(k, :) = hpsi(k, :) + M_HALF*dot_product(a_field(1:NDIM), a_field(1:NDIM))*psi(k, :) / P_c**2
-      end do
-      select case(h%d%ispin)
-      case(UNPOLARIZED, SPIN_POLARIZED)
-        do k = 1, NP
-          hpsi(k, 1) = hpsi(k, 1) - M_zI*dot_product(a_field(1:NDIM), grad(k, 1:NDIM, 1)) / P_c
-        end do
-      case (SPINORS)
-        do k = 1, NP
-          do idim = 1, h%d%dim
-            hpsi(k, idim) = hpsi(k, idim) - M_zI*dot_product(a_field(1:NDIM), grad(k, 1:NDIM, idim)) / P_c
-          end do
-        end do
-      end select
-
-      deallocate(grad, a_field)
-    end select
+      call laser_field(gr%sb, h%ep%lasers(i), t, a_field_prime)
+      a_field = a_field + a_field_prime
+      vector_potential = .true.
+   end select
   end do
 
+  if(electric_field) then
+    do k = 1, h%d%dim
+      hpsi(1:NP, k)= hpsi(1:NP, k) + v(1:NP) * psi(1:NP, k)
+    end do
+  end if
+
+  if(vector_potential) then
+    do idim = 1, h%d%dim
+      call X(f_gradient)(gr%sb, gr%f_der, psi(:, idim), grad(:, :, idim))
+    end do
+
+    do k = 1, NP
+      hpsi(k, :) = hpsi(k, :) + M_HALF*dot_product(a_field(1:NDIM), a_field(1:NDIM))*psi(k, :) / P_c**2
+    end do
+
+    select case(h%d%ispin)
+    case(UNPOLARIZED, SPIN_POLARIZED)
+      do k = 1, NP
+        hpsi(k, 1) = hpsi(k, 1) - M_zI*dot_product(a_field(1:NDIM), grad(k, 1:NDIM, 1)) / P_c
+      end do
+    case (SPINORS)
+      do k = 1, NP
+        do idim = 1, h%d%dim
+          hpsi(k, idim) = hpsi(k, idim) - M_zI*dot_product(a_field(1:NDIM), grad(k, 1:NDIM, idim)) / P_c
+        end do
+      end do
+    end select
+  end if
+
+  deallocate(v, pot, a_field, a_field_prime, grad)
   call pop_sub()
 end subroutine X(vlasers)
 
