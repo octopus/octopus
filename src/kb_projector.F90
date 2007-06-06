@@ -82,7 +82,7 @@ contains
     integer,              intent(in)    :: l, lm
     logical,              intent(in)    :: gen_grads
 
-    integer :: n_c, j, k, i
+    integer :: n_c, j, k, ic
     FLOAT :: v, dv(3), r, x(3), x_in(3)
 
     call push_sub('kb_projector.kb_projector_init')
@@ -102,10 +102,10 @@ contains
     
     if (gr%sb%periodic_dim == 0) then 
 
-      do i = 1, n_c
-        call double_grid_apply_non_local(gr%dgrid, a%spec, gr%m, a%x, sm, l, lm, i, kb_p%p(:, i))
+      do ic = 1, n_c
+        call double_grid_apply_non_local(gr%dgrid, a%spec, gr%m, sm, a%x, kb_p%p(:, ic), l, lm, ic)
         if (gen_grads) then
-          call double_grid_apply_gnon_local(gr%dgrid, a%spec, gr%m, a%x, sm, l, lm, i, kb_p%dp(:,:,i))
+          call double_grid_apply_gnon_local(gr%dgrid, a%spec, gr%m, sm, a%x, kb_p%dp(:,:,ic), l, lm, ic)
         end if
       end do
 
@@ -118,18 +118,18 @@ contains
           r = sqrt(sum(x*x))
           if (r > a%spec%ps%rc_max + gr%m%h(1)) cycle
           
-          do i = 1, n_c
-            call specie_real_nl_projector(a%spec, a%x, x_in, l, lm, i, v, dv)
-            kb_p%p(j, i) = v
-            kb_p%dp(j, :, i) = dv
+          do ic = 1, n_c
+            call specie_real_nl_projector(a%spec, a%x, x_in, l, lm, ic, v, dv)
+            kb_p%p(j, ic) = v
+            kb_p%dp(j, :, ic) = dv
           end do
         end do
       end do
 
     end if
 
-    do i = 1, n_c
-      kb_p%e(i) = a%spec%ps%h(l, i, i)
+    do ic = 1, n_c
+      kb_p%e(ic) = a%spec%ps%h(l, ic, ic)
     end do
 
     if (n_c == 2) then

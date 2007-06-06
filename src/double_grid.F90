@@ -146,332 +146,6 @@ contains
 
   end subroutine double_grid_end
   
-  subroutine double_grid_apply_local(this, s, m, sm, x_atom, vl)
-    type(double_grid_t), intent(in)  :: this
-    type(specie_t),      intent(in)  :: s
-    type(mesh_t),        intent(in)  :: m
-    type(submesh_t),     intent(in)  :: sm
-    FLOAT,               intent(in)  :: x_atom(1:MAX_DIM)
-    FLOAT,               intent(out) :: vl(:)
-    
-    FLOAT :: r, vv
-    FLOAT, allocatable :: vls(:)
-    integer :: is
-    integer :: ii, jj, kk
-    integer :: start(1:3), pp, qq, rr, is2
-    integer :: ll, mm, nn
-
-    call push_sub('double_grid.double_grid_apply_local')
-
-    if (.not. this%use_double_grid) then 
-
-      do is = 1, sm%ns
-        r = sqrt(sum((m%x(sm%jxyz(is), 1:3) - x_atom(1:3))**2))
-        vl(is) = loct_splint(s%ps%vl, r)
-      end do
-
-    else
-
-      ALLOCATE(vls(0:sm%ns), sm%ns)
-
-      vls(0:sm%ns) = M_ZERO
-
-      !for each grid point
-      do is = 1, sm%ns
-
-        !for each point in the fine mesh around the grid point
-        do ii = -this%nn, this%nn
-          do jj = -this%nn, this%nn
-            do kk = -this%nn, this%nn
-
-              r = sqrt(sum((m%x(sm%jxyz(is), 1:3) + m%h(1:3)/this%spacing_divisor * (/ii, jj, kk/) - x_atom(1:3))**2))
-
-              !calculate the potential
-              vv = loct_splint(s%ps%vl, r)
-
-              start(1:3) = m%Lxyz(sm%jxyz(is), 1:3) + this%interpolation_min * (/ii, jj, kk/)
-              
-              pp = start(1)
-              do ll = this%interpolation_min, this%interpolation_max
-                
-                qq = start(2)
-                do mm = this%interpolation_min, this%interpolation_max
-                  
-                  rr = start(3)
-                  do nn = this%interpolation_min, this%interpolation_max
-                    
-                    is2 = sm%jxyz_inv(m%Lxyz_inv(pp, qq, rr))
-                    vls(is2) = vls(is2) + this%co(ll)*this%co(mm)*this%co(nn)*vv
-                    
-                    rr = rr + kk
-                  end do
-                  qq = qq + jj
-                end do
-                pp = pp + ii
-              end do
-
-            end do
-          end do
-        end do
-        
-      end do
-
-      vl(1:sm%ns) = vls(1:sm%ns)/(this%spacing_divisor**3)
-
-      deallocate(vls)
-
-    end if
-
-    call pop_sub()
-  end subroutine double_grid_apply_local
-
-  subroutine double_grid_apply_glocal(this, s, m, sm, x_atom, dvl)
-    type(double_grid_t),    intent(in)    :: this
-    type(specie_t),         intent(in)    :: s
-    type(mesh_t),           intent(in)    :: m
-    type(submesh_t),        intent(in)    :: sm
-    FLOAT,                  intent(in)    :: x_atom(1:MAX_DIM)
-    FLOAT,                  intent(out)   :: dvl(:, :)
-    
-    FLOAT :: r, r2, x(1:3), vv(1:3)
-    integer :: is, is2
-    integer :: ii, jj, kk, ll, mm, nn
-    integer :: start(1:3), pp, qq, rr
-
-    FLOAT, allocatable :: dvs(:,:)
-
-
-    if (.not. this%use_double_grid) then 
-
-      do is = 1, sm%ns
-        x(1:3) = m%x(sm%jxyz(is), 1:3) - x_atom(1:3)
-        r = sqrt(sum(x(1:3)**2))
-        if ( r > CNST(1e-5) ) then 
-          dvl(is, 1:3) = -loct_splint(s%ps%dvl, r)*x(1:3)/r
-        end if
-      end do
- 
-    else
-
-      ALLOCATE(dvs(0:sm%ns, 1:3), 3*(sm%ns+1))
-
-      dvs(0:sm%ns, 1:3) = M_ZERO
-
-      !for each grid point
-      do is = 1, sm%ns
-        
-        do ii = -this%nn, this%nn
-          do jj = -this%nn, this%nn
-            do kk = -this%nn, this%nn
-              
-              x(1:3) = m%x(sm%jxyz(is), 1:3) + m%h(1:3)/this%spacing_divisor * (/ii, jj, kk/) - x_atom(1:3)
-
-              r2 = sum(x(1:3)**2)
-
-              if ( r > CNST(1e-7)) then 
-
-                vv(1:3) = -loct_splint(s%ps%dvl, sqrt(r2))*x(1:3)/sqrt(r2)
-
-                start(1:3) = m%Lxyz(sm%jxyz(is), 1:3) + this%interpolation_min * (/ii, jj, kk/)
-
-                pp = start(1)
-                do ll = this%interpolation_min, this%interpolation_max
-                  
-                  qq = start(2)
-                  do mm = this%interpolation_min, this%interpolation_max
-
-                    rr = start(3)
-                    do nn = this%interpolation_min, this%interpolation_max
-
-                      is2 = sm%jxyz_inv(m%Lxyz_inv(pp, qq, rr))
-                      dvs(is2, 1:3) = dvs(is2, 1:3)  + this%co(ll)*this%co(mm)*this%co(nn)*vv(1:3)
-                      
-                      rr = rr + kk
-                    end do
-                    qq = qq + jj
-                  end do
-                  pp = pp + ii
-               end do
-               
-             end if
-
-            end do !kk
-          end do !jj
-        end do !ii
-
-      end do !is
-
-      dvl(1:sm%ns, 1:3) = dvs(1:sm%ns, 1:3)/(this%spacing_divisor**3)
-      
-      deallocate(dvs)
-
-    end if
-
-  end subroutine double_grid_apply_glocal
-
-  subroutine double_grid_apply_non_local(this, s, m, x_atom, sm, l, lm, ic, vnl)
-    type(double_grid_t),    intent(in)  :: this
-    type(specie_t),         intent(in)  :: s
-    type(mesh_t),           intent(in)  :: m
-    FLOAT,                  intent(in)  :: x_atom(1:MAX_DIM)
-    type(submesh_t),        intent(in)  :: sm
-    integer,                intent(in)  :: l
-    integer,                intent(in)  :: lm
-    integer,                intent(in)  :: ic
-    FLOAT,                  intent(out) :: vnl(:)
-    
-    FLOAT :: x(MAX_DIM), vv, dvv(1:MAX_DIM)
-    integer :: is, ii, jj, kk
-
-    integer :: start(1:3), pp, qq, rr, is2
-    integer :: ll, mm, nn
-    
-    FLOAT, allocatable :: vls(:)
-
-    call push_sub('double_grid.double_grid_apply_local')
-
-    if(.not. this%use_double_grid) then 
-
-      do is = 1, sm%ns
-        call specie_real_nl_projector(s, x_atom, m%x(sm%jxyz(is), :), l, lm, ic, vnl(is), dvv)
-      end do
-
-    else
-      
-      ALLOCATE(vls(0:sm%ns), sm%ns+1)
-
-      vls(0:sm%ns) = M_ZERO
-      
-      do is = 1, sm%ns
-
-        do ii = -this%nn, this%nn
-          do jj = -this%nn, this%nn
-            do kk = -this%nn, this%nn
-              
-              x(1:3) = m%x(sm%jxyz(is), 1:3) + m%h(1:3)/this%spacing_divisor * (/ii, jj, kk/) 
-
-              call specie_real_nl_projector(s, x_atom, x, l, lm, ic, vv, dvv(1:3))
-              
-              start(1:3) = m%Lxyz(sm%jxyz(is), 1:3) + this%interpolation_min * (/ii, jj, kk/)
-              
-              pp = start(1)
-              do ll = this%interpolation_min, this%interpolation_max
-                
-                qq = start(2)
-                do mm = this%interpolation_min, this%interpolation_max
-                  
-                  rr = start(3)
-                  do nn = this%interpolation_min, this%interpolation_max
-                    
-                    is2 = sm%jxyz_inv(m%Lxyz_inv(pp, qq, rr))
-
-                    vls(is2) = vls(is2) + this%co(ll)*this%co(mm)*this%co(nn)*vv
-                    
-                    rr = rr + kk
-                  end do
-                  qq = qq + jj
-                end do
-                pp = pp + ii
-              end do
-              
-            end do
-          end do
-        end do
-
-      end do
-
-      vnl(1:sm%ns) = vls(1:sm%ns)/(this%spacing_divisor**3)
-
-      deallocate(vls)
-
-    end if
-
-    call pop_sub()
-
-  end subroutine double_grid_apply_non_local
-
-
-  subroutine double_grid_apply_gnon_local(this, s, m, x_atom, sm, l, lm, ic, dvnl)
-    type(double_grid_t),    intent(in)  :: this
-    type(specie_t),         intent(in)  :: s
-    type(mesh_t),           intent(in)  :: m
-    FLOAT,                  intent(in)  :: x_atom(1:MAX_DIM)
-    type(submesh_t),        intent(in)  :: sm
-    integer,                intent(in)  :: l
-    integer,                intent(in)  :: lm
-    integer,                intent(in)  :: ic
-    FLOAT,                  intent(out) :: dvnl(:, :)
-    
-    FLOAT :: x(MAX_DIM), vv, dvv(1:MAX_DIM)
-    integer :: is, ii, jj, kk
-
-    integer :: start(1:3), pp, qq, rr, is2
-    integer :: ll, mm, nn
-    
-    FLOAT, allocatable :: dvls(:,:)
-
-    call push_sub('double_grid.double_grid_apply_local')
-
-    if(.not. this%use_double_grid) then 
-
-      do is = 1, sm%ns
-        call specie_real_nl_projector(s, x_atom, m%x(sm%jxyz(is), :), l, lm, ic, vv, dvnl(is, :))
-      end do
-
-    else
-      
-      ALLOCATE(dvls(0:sm%ns, 1:3), 3*(sm%ns+1))
-
-      dvls(0:sm%ns, 1:3) = M_ZERO
-      
-      do is = 1, sm%ns
-
-        do ii = -this%nn, this%nn
-          do jj = -this%nn, this%nn
-            do kk = -this%nn, this%nn
-              
-              x(1:3) = m%x(sm%jxyz(is), 1:3) + m%h(1:3)/this%spacing_divisor * (/ii, jj, kk/) 
-
-              call specie_real_nl_projector(s, x_atom, x, l, lm, ic, vv, dvv(1:3))
-              
-              start(1:3) = m%Lxyz(sm%jxyz(is), 1:3) + this%interpolation_min * (/ii, jj, kk/)
-              
-              pp = start(1)
-              do ll = this%interpolation_min, this%interpolation_max
-                
-                qq = start(2)
-                do mm = this%interpolation_min, this%interpolation_max
-                  
-                  rr = start(3)
-                  do nn = this%interpolation_min, this%interpolation_max
-                    
-                    is2 = sm%jxyz_inv(m%Lxyz_inv(pp, qq, rr))
-
-                    dvls(is2, 1:3) = dvls(is2, 1:3) + this%co(ll)*this%co(mm)*this%co(nn)*dvv(1:3)
-                    
-                    rr = rr + kk
-                  end do
-                  qq = qq + jj
-                end do
-                pp = pp + ii
-              end do
-              
-            end do
-          end do
-        end do
-
-      end do
-
-      dvnl(1:sm%ns, 1:3) = dvls(1:sm%ns, 1:3)/(this%spacing_divisor**3)
-
-      deallocate(dvls)
-
-    end if
-
-    call pop_sub()
-
-  end subroutine double_grid_apply_gnon_local
-
   FLOAT function double_grid_get_hmax(this, mesh) result(hmax)
     type(double_grid_t), intent(in) :: this
     type(mesh_t),        intent(in) :: mesh
@@ -501,6 +175,39 @@ contains
     if(this%use_double_grid) double_grid_enlarge = this%interpolation_max * this%nn
 
   end function double_grid_enlarge
+
+#define double_grid_apply double_grid_apply_local
+#define calc_pot(vv) vv = loct_splint(s%ps%vl, r)
+
+#include "double_grid_apply.F90"
+
+#undef calc_pot
+#undef double_grid_apply
+
+#define double_grid_apply double_grid_apply_glocal
+#define calc_pot(vv) if (r > CNST(1e-5)) then; vv = -loct_splint(s%ps%dvl, r)*x/r ; else; vv = M_ZERO ; end if
+#define DG_VECTORIAL
+
+#include "double_grid_apply.F90"
+
+#undef calc_pot
+#undef DG_VECTORIAL
+#undef double_grid_apply
+
+#define double_grid_apply double_grid_apply_non_local
+#define calc_pot(vv) call specie_real_nl_projector(s, x_atom, m%x(sm%jxyz(is), :), l, lm, ic, vv, tmp)
+
+#include "double_grid_apply.F90"
+
+#undef calc_pot
+#undef DG_VECTORIAL
+#undef double_grid_apply
+
+#define double_grid_apply double_grid_apply_gnon_local
+#define DG_VECTORIAL
+#define calc_pot(vv) call specie_real_nl_projector(s, x_atom, m%x(sm%jxyz(is), :), l, lm, ic, tmp, vv)
+
+#include "double_grid_apply.F90"
 
 end module double_grid_m
 

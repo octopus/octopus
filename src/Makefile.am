@@ -74,6 +74,7 @@ noinst_HEADERS = \
 	ode_solver_inc.F90 root_solver_inc.F90 sparskit_inc.F90 \
 	fftw2.F90 fftw3.F90 \
 	mesh_init.F90 par_vec_inc.F90 derivatives_inc.F90 cf_inc.F90 mf_inc.F90 f_inc.F90 \
+	double_grid_apply.F90 \
 	poisson1D.F90 poisson2D.F90 poisson3D.F90 mix_inc.F90 \
 	xc_vxc.F90 xc_axc.F90 xc_fxc.F90 xc_kxc.F90 xc_KLI_inc.F90 xc_OEP_x_inc.F90 xc_OEP_SIC_inc.F90 \
 	kb_projector_inc.F90 hgh_projector_inc.F90 projector_inc.F90 epot_inc.F90 \
@@ -224,7 +225,7 @@ curv_gygi.o: global.h
 curvlinear.o: global.h
 curv_modine.o: global.h
 derivatives.o: global.h derivatives_inc.F90
-double_grid.o: global.h
+double_grid.o: global.h double_grid_apply.F90
 eigen.o: global.h eigen_inc.F90 eigen_cg_inc.F90 eigen_trlan.F90 eigen_plan_inc.F90 eigen_arpack_inc.F90 eigen_evolution_inc.F90
 sternheimer.o: global.h sternheimer_inc.F90
 em_resp_calc.o: global.h em_resp_calc_inc.F90
