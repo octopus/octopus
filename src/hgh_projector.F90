@@ -101,7 +101,7 @@ contains
         if (r > a%spec%ps%rc_max + gr%m%h(1)) cycle
 
         do i = 1, 3
-          call specie_real_nl_projector(a%spec, a%x, x_in, l, lm, i, v, dv(1:3))
+          call specie_real_nl_projector(a%spec, x, l, lm, i, v, dv(1:3))
           hgh_p%p(j, i) = v
           hgh_p%dp(j, :, i) = dv(:)
           hgh_p%lp(j, 1, i) = x(2)*dv(3) - x(3)*dv(2)

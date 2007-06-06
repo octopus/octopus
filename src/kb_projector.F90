@@ -119,7 +119,7 @@ contains
           if (r > a%spec%ps%rc_max + gr%m%h(1)) cycle
           
           do ic = 1, n_c
-            call specie_real_nl_projector(a%spec, a%x, x_in, l, lm, ic, v, dv)
+            call specie_real_nl_projector(a%spec, x, l, lm, ic, v, dv)
             kb_p%p(j, ic) = v
             kb_p%dp(j, :, ic) = dv
           end do

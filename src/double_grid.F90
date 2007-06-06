@@ -195,7 +195,7 @@ contains
 #undef double_grid_apply
 
 #define double_grid_apply double_grid_apply_non_local
-#define calc_pot(vv) call specie_real_nl_projector(s, x_atom, m%x(sm%jxyz(is), :), l, lm, ic, vv, tmp)
+#define calc_pot(vv) call specie_real_nl_projector(s, x, l, lm, ic, vv, tmp)
 
 #include "double_grid_apply.F90"
 
@@ -205,7 +205,7 @@ contains
 
 #define double_grid_apply double_grid_apply_gnon_local
 #define DG_VECTORIAL
-#define calc_pot(vv) call specie_real_nl_projector(s, x_atom, m%x(sm%jxyz(is), :), l, lm, ic, tmp, vv)
+#define calc_pot(vv) call specie_real_nl_projector(s, x, l, lm, ic, tmp, vv)
 
 #include "double_grid_apply.F90"
 

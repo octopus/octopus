@@ -108,25 +108,25 @@ contains
 
         ! i runs over j=l+1/2 and j=l-1/2
         do i = 1, 2
-          call specie_nl_projector(a%spec, a%x, x_in, l, lm, i, zv)
+          call specie_nl_projector(a%spec, x, l, lm, i, zv)
           rkb_p%bra(j, i) = conjg(zv)
 
           rkb_p%ket(j, i, 1, 1) = zv
           rkb_p%ket(j, i, 2, 2) = zv
           if (lm /= l) then
-            call specie_nl_projector(a%spec, a%x, x_in, l, lm+1, i, zv)
+            call specie_nl_projector(a%spec, x, l, lm+1, i, zv)
             rkb_p%ket(j, i, 2, 1) = zv
           else
             rkb_p%ket(j, i, 2, 1) = M_z0
           end if
           if (lm /= -l) then
-            call specie_nl_projector(a%spec, a%x, x_in, l, lm-1, i, zv)
+            call specie_nl_projector(a%spec, x, l, lm-1, i, zv)
             rkb_p%ket(j, i, 1, 2) = zv
           else
             rkb_p%ket(j, i, 1, 2) = M_z0
           end if
 
-          call specie_real_nl_projector(a%spec, a%x, x_in, l, lm, i, v, dv)
+          call specie_real_nl_projector(a%spec, x, l, lm, i, v, dv)
           rkb_p%p(j, i) = v
           rkb_p%dp(j, :, i) = dv
         end do

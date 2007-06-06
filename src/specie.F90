@@ -601,17 +601,14 @@ contains
   ! ---------------------------------------------------------
   ! This routine returns the non-local projector and its 
   ! derivative build using real spherical harmonics
-  subroutine specie_real_nl_projector(s, x_atom, x_grid, l, lm, i, uV, duV)
+  subroutine specie_real_nl_projector(s, x, l, lm, i, uV, duV)
     type(specie_t),    intent(in)  :: s
-    FLOAT,             intent(in)  :: x_atom(1:MAX_DIM)
-    FLOAT,             intent(in)  :: x_grid(1:MAX_DIM)
+    FLOAT,             intent(in)  :: x(1:MAX_DIM)
     integer,           intent(in)  :: l, lm, i
     FLOAT,             intent(out) :: uV, duV(1:MAX_DIM)
 
-    FLOAT :: r, uVr0, duvr0, ylm, gylm(MAX_DIM), x(MAX_DIM)
+    FLOAT :: r, uVr0, duvr0, ylm, gylm(MAX_DIM)
     FLOAT, parameter :: ylmconst = CNST(0.488602511902920) !  = sqr(3/(4*pi))
-
-    x(1:MAX_DIM) = x_grid(1:MAX_DIM) - x_atom(1:MAX_DIM)
 
     r = sqrt(sum(x(1:MAX_DIM)**2))
 
@@ -642,17 +639,14 @@ contains
   ! ---------------------------------------------------------
   ! This routine returns the non-local projector build using 
   ! spherical harmonics
-  subroutine specie_nl_projector(s, x_atom, x_grid, l, lm, i, uV)
+  subroutine specie_nl_projector(s, x, l, lm, i, uV)
     type(specie_t),    intent(in)  :: s
-    FLOAT,             intent(in)  :: x_atom(1:MAX_DIM)
-    FLOAT,             intent(in)  :: x_grid(1:MAX_DIM)
+    FLOAT,             intent(in)  :: x(1:MAX_DIM)
     integer,           intent(in)  :: l, lm, i
     CMPLX,             intent(out) :: uV
 
-    FLOAT :: r, uVr0, x(MAX_DIM)
+    FLOAT :: r, uVr0
     CMPLX :: ylm
-
-    x(1:MAX_DIM) = x_grid(1:MAX_DIM) - x_atom(1:MAX_DIM)
 
     r = sqrt(sum(x(1:MAX_DIM)**2))
 
