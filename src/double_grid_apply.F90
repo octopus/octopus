@@ -40,15 +40,13 @@ subroutine double_grid_apply (this, s, m, sm, x_atom, vl, l, lm, ic)
   integer, optional,      intent(in)    :: lm
   integer, optional,      intent(in)    :: ic
 
-
-
   FLOAT :: r, x(1:3)
 #ifndef DG_VECTORIAL
   FLOAT :: vv, tmp(1:3)
 #else 
   FLOAT :: vv(1:3), tmp
 #endif
-  integer :: is, is2
+  integer :: is, is2, ip
   integer :: ii, jj, kk, ll, mm, nn
   integer :: start(1:3), pp, qq, rr
 
@@ -58,7 +56,12 @@ subroutine double_grid_apply (this, s, m, sm, x_atom, vl, l, lm, ic)
   FLOAT, allocatable :: vs(:,:)
 #endif
 
-  if (.not. this%use_double_grid) then 
+#ifdef HAVE_MPI
+  integer :: rank
+  rank = m%mpi_grp%rank + 1
+#endif
+ 
+ if (.not. this%use_double_grid) then 
 
     do is = 1, sm%ns
       x(1:3) = m%x(sm%jxyz(is), 1:3) - x_atom(1:3)
@@ -73,7 +76,7 @@ subroutine double_grid_apply (this, s, m, sm, x_atom, vl, l, lm, ic)
     vs = M_ZERO
 
     !for each grid point
-    do is = 1, sm%ns
+    do is = 1, sm%ns_part
 
       do ii = -this%nn, this%nn
         do jj = -this%nn, this%nn
@@ -84,7 +87,26 @@ subroutine double_grid_apply (this, s, m, sm, x_atom, vl, l, lm, ic)
 
             calc_pot(vv)
 
-            start(1:3) = m%Lxyz(sm%jxyz(is), 1:3) + this%interpolation_min * (/ii, jj, kk/)
+            ip = sm%jxyz(is)
+#ifdef HAVE_MPI                    
+            if (m%parallel_in_domains) then
+              !map the local point to a global point
+              if (ip <= m%np) then
+                !inner points
+                ip = ip - 1 + m%vp%xlocal(rank)
+                ip = m%vp%local(ip)
+              else if (ip <= m%np + m%vp%np_ghost(rank)) then
+                !ghost points
+                ip = ip - 1 - m%np + m%vp%xghost(rank) 
+                ip = m%vp%ghost(ip)
+              else
+                !boundary points
+                ip = ip - 1 - m%np - m%vp%xghost(rank) + m%vp%xbndry(rank) 
+                ip = m%vp%bndry(ip)
+              end if
+            end if
+#endif
+            start(1:3) = m%Lxyz(ip, 1:3) + this%interpolation_min * (/ii, jj, kk/)
             
             pp = start(1)
             do ll = this%interpolation_min, this%interpolation_max
@@ -95,7 +117,12 @@ subroutine double_grid_apply (this, s, m, sm, x_atom, vl, l, lm, ic)
                 rr = start(3)
                 do nn = this%interpolation_min, this%interpolation_max
 
-                    is2 = sm%jxyz_inv(m%Lxyz_inv(pp, qq, rr))
+                    ip = m%Lxyz_inv(pp, qq, rr)
+#ifdef HAVE_MPI      
+                    !map the global point to a local point
+                    if (m%parallel_in_domains) ip = m%vp%global(ip, rank)
+#endif
+                    is2 = sm%jxyz_inv(ip)
                     vs(is2 SECIND) = vs(is2 SECIND)  + this%co(ll)*this%co(mm)*this%co(nn)*vv
 
                     rr = rr + kk
