@@ -990,9 +990,10 @@ contains
     call pop_sub()
     call profiling_out(C_PROFILING_FORCES)
 
+#ifdef HAVE_FFT
+
   contains
 
-#ifdef HAVE_FFT
     ! ---------------------------------------------------------
     subroutine local_FS()
       type(dcf_t) :: cf_for

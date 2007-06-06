@@ -68,7 +68,7 @@ subroutine double_grid_apply (this, s, m, sm, x_atom, vl, l, lm, ic)
 
   else
 
-    ALLOCATE(vs(0:sm%ns SECIND), VECDIM*(sm%ns+1))
+    ALLOCATE(vs(0:sm%ns_part SECIND), VECDIM*(sm%ns_part+1))
 
     vs = M_ZERO
 

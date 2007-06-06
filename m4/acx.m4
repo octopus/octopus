@@ -164,7 +164,7 @@ AC_MSG_RESULT($acx_f90_accepts_line_numbers_ok)
 AC_DEFUN([ACX_F03_COMMAND_LINE_ARGUMENTS],
 [
 AC_MSG_CHECKING([whether the compiler can read command line arguments])
-AC_COMPILE_IFELSE(
+AC_LINK_IFELSE(
     AC_LANG_PROGRAM( [], [
     integer :: i
     character(len=32) :: arg
