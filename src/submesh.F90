@@ -43,6 +43,7 @@ module submesh_m
  
   type submesh_t
      integer          :: ns = -1        ! number of points inside the submesh
+     integer          :: ns_part        ! number of points inside the submesh including ghost points
      integer          :: np_part
      integer, pointer :: jxyz(:)        ! index in the mesh of the points inside the sphere
      integer, pointer :: jxyz_inv(:)    ! and the inverse
@@ -72,8 +73,6 @@ contains
 
     call push_sub('submesh.submesh_init_sphere')
 
-    ASSERT(this%ns == -1)
-
     this%np_part = m%np_part
 
     if (any(rc + m%h(1) >= sb%lsize(1:sb%periodic_dim))) then
@@ -86,21 +85,23 @@ contains
 
     ! Get the total number of points inside the sphere
     is = 0
-    do ip = 1, m%np
+    do ip = 1, m%np_part
       do ii = 1, 3**sb%periodic_dim
         call mesh_r(m, ip, r, a=center(:) + sb%shift(ii,:))
         if(r > rc + m%h(1)) cycle
         is = is + 1
         exit
       end do
+      if (ip == m%np) this%ns = is
     end do
 
-    this%ns = is
-    ALLOCATE(this%jxyz(this%ns), this%ns)
+    this%ns_part = is
+
+    ALLOCATE(this%jxyz(this%ns_part), this%ns_part)
 
     ! Get the index of the points inside the sphere
     is = 0
-    do kk = 1, m%np
+    do kk = 1, m%np_part
       do ii = 1, 3**sb%periodic_dim
         call mesh_r(m, kk, r, a=center + sb%shift(ii,:))
         ! we enlarge slightly the mesh (good for the interpolation scheme)
@@ -112,11 +113,11 @@ contains
     end do
 
     !build the inverse of jxyz, points not in the sphere go to 0
-    ALLOCATE(this%jxyz_inv(0:m%np_part), m%np_part+1)
+    ALLOCATE(this%jxyz_inv(0:this%np_part), this%np_part+1)
 
-    this%jxyz_inv(0:m%np_part) = 0
+    this%jxyz_inv(0:this%np_part) = 0
 
-    do is = 1, this%ns
+    do is = 1, this%ns_part
       this%jxyz_inv(this%jxyz(is)) = is
     end do
     
@@ -148,12 +149,13 @@ contains
     ASSERT(sm_out%ns == -1)
 
     sm_out%ns = sm_in%ns
+    sm_out%ns_part = sm_in%ns_part
     sm_out%np_part  = sm_in%np_part
     
-    ALLOCATE(sm_out%jxyz(1:sm_out%ns), sm_out%ns)
+    ALLOCATE(sm_out%jxyz(1:sm_out%ns_part), sm_out%ns_part)
     ALLOCATE(sm_out%jxyz_inv(0:sm_out%np_part), sm_out%np_part+1)
     
-    sm_out%jxyz(1:sm_out%ns)    = sm_in%jxyz(1:sm_in%ns)
+    sm_out%jxyz(1:sm_out%ns_part)    = sm_in%jxyz(1:sm_in%ns_part)
     sm_out%jxyz_inv(0:sm_out%np_part) = sm_in%jxyz_inv(0:sm_out%np_part)
    
     call pop_sub()
