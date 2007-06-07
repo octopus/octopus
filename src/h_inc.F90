@@ -78,7 +78,7 @@ subroutine X(hpsi) (h, gr, psi, hpsi, ik, t, E)
 
     call X(vlpsi)(h, gr%m, psi, hpsi, ik)
     if(h%ep%nvnl > 0) call X(vnlpsi)(h, gr, psi, hpsi, ik)
-    if(present(t)) call X(vlasers)(gr, h, psi, hpsi, t)
+    if(present(t)) call X(vlasers)(gr, h, psi, hpsi, ik, t)
 
     call X(kinetic_wait)(h)
     call X(kinetic_calculate)(h, gr, psi, hpsi, ik)
@@ -87,7 +87,7 @@ subroutine X(hpsi) (h, gr, psi, hpsi, ik, t, E)
     call X(kinetic)(h, gr, psi, hpsi, ik)
     call X(vlpsi)(h, gr%m, psi, hpsi, ik)
     if(h%ep%nvnl > 0) call X(vnlpsi)(h, gr, psi, hpsi, ik)
-    if(present(t)) call X(vlasers)(gr, h, psi, hpsi, t)
+    if(present(t)) call X(vlasers)(gr, h, psi, hpsi, ik, t)
 #if defined(HAVE_LIBNBC)
   end if
 #endif
@@ -505,17 +505,19 @@ end subroutine X(vexternal)
 
 
 ! ---------------------------------------------------------
-subroutine X(vlasers) (gr, h, psi, hpsi, t)
+subroutine X(vlasers) (gr, h, psi, hpsi, ik, t)
   type(grid_t),        intent(inout) :: gr
   type(hamiltonian_t), intent(in)    :: h
   R_TYPE,              intent(inout) :: psi(:,:)  ! psi(NP_PART, h%d%dim)
   R_TYPE,              intent(inout) :: hpsi(:,:) ! hpsi(NP_PART, h%d%dim)
+  integer,             intent(in)    :: ik
   FLOAT,               intent(in)    :: t
 
   integer :: i, k, idim
-  logical :: electric_field, vector_potential
-  R_TYPE, allocatable :: grad(:, :, :)
-  FLOAT, allocatable :: v(:), pot(:), a_field(:), a_field_prime(:)
+  logical :: electric_field, vector_potential, magnetic_field
+  R_TYPE, allocatable :: grad(:, :, :), lhpsi(:, :)
+  FLOAT, allocatable :: v(:), pot(:), a_field(:), a_field_prime(:), &
+                        a(:, :), a_prime(:, :), b(:), b_prime(:)
 
   call push_sub('h_inc.Xvlasers')
 
@@ -524,12 +526,19 @@ subroutine X(vlasers) (gr, h, psi, hpsi, t)
   ALLOCATE(grad(NP_PART, NDIM, h%d%dim), NP_PART*h%d%dim*NDIM)
   ALLOCATE(a_field(gr%sb%dim), gr%sb%dim)
   ALLOCATE(a_field_prime(gr%sb%dim), gr%sb%dim)
+  ALLOCATE(b(gr%sb%dim), gr%sb%dim)
+  ALLOCATE(b_prime(gr%sb%dim), gr%sb%dim)
+  ALLOCATE(a(NP_PART, NDIM), NP_PART*NDIM)
+  ALLOCATE(a_prime(NP_PART, NDIM), NP_PART*NDIM)
   pot = M_ZERO
   v = M_ZERO
   grad = R_TOTYPE(M_ZERO)
   a_field = M_ZERO
+  a = M_ZERO
+  a_prime = M_ZERO
   electric_field = .false.
   vector_potential = .false.
+  magnetic_field = .false.
 
   do i = 1, h%ep%no_lasers
     select case(h%ep%lasers(i)%field)
@@ -538,8 +547,11 @@ subroutine X(vlasers) (gr, h, psi, hpsi, t)
       v = v + pot
       electric_field = .true.
     case(E_FIELD_MAGNETIC)
-      write(message(1), '(a)') 'Internal Error at vlasers.'
-      call write_fatal(1)
+      call laser_vector_potential(h%ep%lasers(i), t, gr%m, a_prime)
+      a = a + a_prime
+      call laser_field(gr%sb, h%ep%lasers(i), t, b_prime)
+      b = b + b_prime
+      magnetic_field = .true.
     case(E_FIELD_VECTOR_POTENTIAL)
       call laser_field(gr%sb, h%ep%lasers(i), t, a_field_prime)
       a_field = a_field + a_field_prime
@@ -551,6 +563,47 @@ subroutine X(vlasers) (gr, h, psi, hpsi, t)
     do k = 1, h%d%dim
       hpsi(1:NP, k)= hpsi(1:NP, k) + v(1:NP) * psi(1:NP, k)
     end do
+  end if
+
+  if(magnetic_field) then
+    do idim = 1, h%d%dim
+      call X(f_gradient)(gr%sb, gr%f_der, psi(:, idim), grad(:, :, idim))
+    end do
+
+    do k = 1, NP
+      hpsi(k, :) = hpsi(k, :) + M_HALF*dot_product(a(k, 1:NDIM), a(k, 1:NDIM))*psi(k, :) / P_c**2
+    end do
+
+    select case(h%d%ispin)
+    case(UNPOLARIZED, SPIN_POLARIZED)
+      do k = 1, NP
+        hpsi(k, 1) = hpsi(k, 1) - M_zI*dot_product(a(k, 1:NDIM), grad(k, 1:NDIM, 1)) / P_c
+      end do
+    case (SPINORS)
+      do k = 1, NP
+        do idim = 1, h%d%dim
+          hpsi(k, idim) = hpsi(k, idim) - M_zI*dot_product(a(k, 1:NDIM), grad(k, 1:NDIM, idim)) / P_c
+        end do
+      end do
+    end select
+
+    ALLOCATE(lhpsi(NP, h%d%dim), NP*h%d%dim)
+    select case (h%d%ispin)
+    case (SPIN_POLARIZED)
+      if(modulo(ik+1, 2) == 0) then ! we have a spin down
+        lhpsi(1:NP, 1) = - M_HALF/P_C*sqrt(dot_product(b, b))*psi(1:NP, 1)
+      else
+        lhpsi(1:NP, 1) = + M_HALF/P_C*sqrt(dot_product(b, b))*psi(1:NP, 1)
+      end if
+    case (SPINORS)
+      lhpsi(1:NP, 1) = M_HALF/P_C*( b(3)*psi(1:NP, 1) &
+                                 + (b(1) - M_zI*b(2))*psi(1:NP, 2))
+      lhpsi(1:NP, 2) = M_HALF/P_C*(-b(3)*psi(1:NP, 2) &
+                                 + (b(1) + M_zI*b(2))*psi(1:NP, 1))
+    end select
+    hpsi(1:NP, :) = hpsi(1:NP, :) + (h%ep%gyromagnetic_ratio * M_HALF) * lhpsi(1:NP, :)
+    deallocate(lhpsi)
+
   end if
 
   if(vector_potential) then
@@ -576,7 +629,7 @@ subroutine X(vlasers) (gr, h, psi, hpsi, t)
     end select
   end if
 
-  deallocate(v, pot, a_field, a_field_prime, grad)
+  deallocate(v, pot, a_field, a_field_prime, grad, a, a_prime, b, b_prime)
   call pop_sub()
 end subroutine X(vlasers)
 

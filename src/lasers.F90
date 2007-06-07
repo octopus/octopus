@@ -42,6 +42,7 @@ module lasers_m
     laser_write_info,             &
     laser_field,                  &
     laser_potential,              &
+    laser_vector_potential,       &
     laser_to_numerical
 
   integer, parameter ::           &
@@ -61,8 +62,8 @@ module lasers_m
     integer :: field
     CMPLX :: pol(MAX_DIM) ! the polarization of the laser
     type(tdf_t) :: f
-    integer  :: spatial_part
-!!$    FLOAT, pointer :: v(:) ! the spatial part.
+
+    FLOAT, pointer :: a(:, :)
   end type laser_t
 
 contains
@@ -89,11 +90,10 @@ contains
     type(mesh_t), intent(in) :: m
 
     C_POINTER         :: blk
-    integer           :: i, ierr
+    integer           :: i, j, ierr, envelope
     character(len=50) :: filename1, filename2
-
-    integer :: envelope
     FLOAT :: a0, omega0, t0, tau0, tau1
+    FLOAT, allocatable :: x(:)
 
     call push_sub('lasers.laser_init')
 
@@ -232,6 +232,27 @@ contains
 
         l(i)%pol(:) = l(i)%pol(:)/sqrt(sum(abs(l(i)%pol(:))**2))
 
+        select case(l(i)%field)
+
+        case(E_FIELD_MAGNETIC)
+          ALLOCATE(l(i)%a(m%np_part, m%sb%dim), m%np*m%sb%dim)
+          l(i)%a = M_ZERO
+          ALLOCATE(x(m%sb%dim), m%sb%dim)
+          do j = 1, m%np
+            x(1:m%sb%dim) = m%x(j, 1:m%sb%dim)
+            select case(m%sb%dim)
+            case(2)
+              l(i)%a(j, :) = (/x(2), -x(1)/)
+            case(3)
+              l(i)%a(j, :) = (/ x(2)*l(i)%pol(3) - x(3)*l(i)%pol(2), &
+                                x(3)*l(i)%pol(1) - x(1)*l(i)%pol(3), &
+                                x(1)*l(i)%pol(2) - x(2)*l(i)%pol(1)  /)
+            end select
+          enddo
+          deallocate(x)
+
+        end select
+
       end do
 
       call loct_parse_block_end(blk)
@@ -254,6 +275,10 @@ contains
     if(no_l > 0) then
       do i = 1, no_l
         call tdf_end(l(i)%f)
+        select case(l(i)%field)
+        case(E_FIELD_MAGNETIC)
+          deallocate(l(i)%a); nullify(l(i)%a)
+        end select
       end do
       deallocate(l); nullify(l)
     end if
@@ -311,6 +336,21 @@ contains
 
     call pop_sub()
   end subroutine laser_potential
+
+
+  ! ---------------------------------------------------------
+  subroutine laser_vector_potential(l, t, m, a)
+    type(laser_t),     intent(in) :: l
+    FLOAT,             intent(in) :: t
+    type(mesh_t),      intent(in) :: m
+    FLOAT,            intent(out) :: a(:, :)
+
+    call push_sub('lasers.laser_vector_potential')
+
+    a = l%a * tdf(l%f, t)
+
+    call pop_sub()
+  end subroutine laser_vector_potential
 
 
   ! ---------------------------------------------------------
