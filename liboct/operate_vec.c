@@ -19,6 +19,7 @@
  $Id: operate.c 2146 2006-05-23 17:36:00Z xavier $
 */
 
+#include <stdio.h>
 
 #include <config.h>
 
@@ -82,12 +83,19 @@ void FC_FUNC_(zoperate_sse,ZOPERATE_SSE)(const int * opnp,
 				const v2df * fi, 
 				v2df * restrict fo){
 
+  /* GCC 3.x requires these variables to be declared static to have the proper alignment */
+#if __GNUC__ <= 3
+#define register static
+#endif
+
   register v2df a  __attribute__ ((__aligned__ (16)));
   register v2df b  __attribute__ ((__aligned__ (16)));
   register v2df c  __attribute__ ((__aligned__ (16)));
   register v2df d  __attribute__ ((__aligned__ (16)));
   register v2df e  __attribute__ ((__aligned__ (16)));
   register v2df f  __attribute__ ((__aligned__ (16)));
+
+#undef register
 
   const int n  = opn[0];
   const int np = opnp[0];
