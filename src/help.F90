@@ -17,7 +17,7 @@
 !!
 !! $Id: help.F90 $
 
-#include <global.h>
+#include "global.h"
 
 program oct_help
   
