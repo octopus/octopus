@@ -19,15 +19,28 @@
 
 #include "global.h"
 
+#if FC_COMMAND_LINE_ARGUMENTS == 77
+#define command_argument_count iargc
+#define get_command_argument getarg
+#endif
+
 program oct_help
   
   use global_m
   use messages_m
   use varinfo_m
 
+#ifdef FC_COMMAND_LINE_MODULE
+  use FC_COMMAND_LINE_MODULE
+#endif
+
   implicit none
-  
-#ifndef F03_COMMAND_LINE_ARGUMENTS
+
+#ifdef FC_COMMAND_LINE_INCLUDE
+include FC_COMMAND_LINE_INCLUDE
+#endif
+
+#ifndef FC_COMMAND_LINE_ARGUMENTS
 
   message(1) = "Your fortran compiler doesn't support command line arguments,"
   message(2) = "the oct-help command is not available."
@@ -42,7 +55,7 @@ program oct_help
   call global_init()
 
   argc = command_argument_count()
-  
+
   if( argc == 0 ) then
     message(1) = "Usage: oct-test { show | search } variable_name" 
     call write_info(1)

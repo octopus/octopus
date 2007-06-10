@@ -159,21 +159,73 @@ AC_MSG_RESULT($acx_f90_accepts_line_numbers_ok)
 )
 
 ################################################
-# Check whether the compiler can access command line arguments
+# Check how to access command line arguments
 # ----------------------------------
-AC_DEFUN([ACX_F03_COMMAND_LINE_ARGUMENTS],
+
+AC_DEFUN([ACX_FC_COMMAND_LINE_ARGUMENTS],
 [
-AC_MSG_CHECKING([whether the compiler can read command line arguments])
+AC_MSG_CHECKING([how to access command line arguments])
+
+#try Fortran 2003 API first
+
 AC_LINK_IFELSE(
     AC_LANG_PROGRAM( [], [
+    implicit none
     integer :: i
     character(len=32) :: arg
     i = command_argument_count()
     call get_command_argument(0, arg)
     ]),
-    [acx_f03_command_line_arguments=yes; AC_DEFINE(F03_COMMAND_LINE_ARGUMENTS, 1, [compiler supports Fortran 2003 command line arguments])],
-    [acx_f03_command_line_arguments=no])
-AC_MSG_RESULT($acx_f03_command_line_arguments)
+    [acx_command_line_arguments="fortran 2003"
+     AC_DEFINE(FC_COMMAND_LINE_ARGUMENTS, 2003, [compiler supports Fortran 2003 command line arguments])],
+    [acx_command_line_arguments=none])
+
+if test "$acx_command_line_arguments" == "none" ; then
+
+#Fortran 77
+
+#some compilers require a module or include
+#                         NAS        NAG          DEC    PGI
+acx_command_line_modules="nas_system f90_unix_env dfport lib3f.h"
+
+for acx_command_line_module in "fortran 77" $acx_command_line_modules ; do
+
+if test "$acx_command_line_module" != "fortran 77" ; then
+acx_cl_usemodule="use "$acx_command_line_module
+fi
+
+if test "$acx_command_line_module" == "lib3f.h" ; then
+acx_cl_usemodule=""
+acx_cl_includeheader="include 'lib3f.h'"
+fi
+
+
+AC_LINK_IFELSE(
+    AC_LANG_PROGRAM( [], [
+    $acx_cl_usemodule
+    implicit none
+    $acx_cl_includeheader
+
+    integer :: i
+    character(len=32) :: arg
+    i = iargc()
+    call getarg(0, arg)
+    ]),
+    [
+    acx_command_line_arguments="$acx_command_line_module"
+    AC_DEFINE(FC_COMMAND_LINE_ARGUMENTS, 77, [compiler supports Fortran 77 command line arguments])
+    if test "$acx_command_line_module" != "fortran 77" ; then
+        if test "$acx_command_line_module" != "lib3f.h" ; then
+	AC_DEFINE_UNQUOTED(FC_COMMAND_LINE_MODULE, $acx_command_line_module, [module required to get command line arguments])
+	else
+	AC_DEFINE_UNQUOTED(FC_COMMAND_LINE_INCLUDE, "$acx_command_line_module", [include required to get command line arguments])
+	fi
+    fi
+    ]
+    ,[])
+done
+fi
+AC_MSG_RESULT($acx_command_line_arguments)
 ]
 )
 
