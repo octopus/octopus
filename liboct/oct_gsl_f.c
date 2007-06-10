@@ -34,6 +34,7 @@
 #include <gsl/gsl_randist.h>
 #include <gsl/gsl_spline.h>
 #include <gsl/gsl_chebyshev.h>
+#include <gsl/gsl_min.h>
 #include <gsl/gsl_multimin.h>
 
 
@@ -352,6 +353,65 @@ double FC_FUNC_(oct_minimize, OCT_MINIMIZE)
   return return_value;
 }
 
+double fn1 (double x, void *params)
+{
+  void (*f)(double*, double*) = params;
+  double fx;
+  f(&x, &fx);
+  return fx;
+}
+
+void FC_FUNC_(oct_1dminimize, OCT_1DMINIMIZE)(double *a, double *b, double *m, void *f, int *status)
+{
+  int iter = 0;
+  int max_iter = 100;
+  const gsl_min_fminimizer_type *T;
+  gsl_min_fminimizer *s;
+  gsl_function F;
+  int ierr, j, sign;
+  double minimum;
+
+  F.function = &fn1;
+  F.params = f;
+
+  /* First we need to find a proper guess point */
+  j = 1;
+  sign = 1;
+  minimum = *m;
+  while( (fn1(*a, f) < fn1(*m, f)) || (fn1(*b, f) < fn1(*m, f) ) ){
+    *m = minimum + sign*((*b-*a)/10.0)*j;
+    if( (*m<*a+0.0001) || (*m>*b-0.0001) ){
+      *status = -1;
+      return;
+      }
+    sign = -sign;
+    j++;
+  }
+
+
+  T = gsl_min_fminimizer_brent;
+  s = gsl_min_fminimizer_alloc (T);
+
+  ierr = gsl_min_fminimizer_set (s, &F, *m, *a, *b);
+
+  do
+    {
+      iter++;
+      *status = gsl_min_fminimizer_iterate (s);
+
+      *m = gsl_min_fminimizer_x_minimum (s);
+      *a = gsl_min_fminimizer_x_lower (s);
+      *b = gsl_min_fminimizer_x_upper (s);
+
+      *status = gsl_min_test_interval (*a, *b, 0.00001, 0.0);
+
+      /*if (*status == GSL_SUCCESS) printf ("Converged:\n");*/
+      /*printf ("%5d [%.7f, %.7f] %.7f \n", iter, *a, *b,*m);*/
+    }
+  while (*status == GSL_CONTINUE && iter < max_iter);
+  gsl_min_fminimizer_free(s);
+
+}
 
 /* Chebyshev Approximations */
 /*

@@ -60,6 +60,7 @@ module lib_oct_m
     loct_isinstringlist,     &
     loct_progress_bar,       &
     loct_printRecipe,        &
+    loct_1dminimize,         &
     loct_minimize
 
 #if defined(HAVE_GDLIB)
@@ -302,6 +303,18 @@ module lib_oct_m
     module procedure oct_ran_gaussian4
   end interface
 
+  interface loct_1dminimize
+    subroutine oct_1dminimize(a, b, m, f, status)
+      real(8) :: a, b, m
+      interface
+        subroutine f(x, fx)
+          real(8) :: x, fx
+        end subroutine f
+      end interface
+      integer :: status
+    end subroutine oct_1dminimize
+  end interface
+
   interface loct_minimize
     function oct_minimize(method, dim, x, step, tol, maxiter, f)
       real(8) :: oct_minimize
@@ -322,6 +335,7 @@ module lib_oct_m
       end interface
     end function oct_minimize
   end interface
+
 
   ! ---------------------------------------------------------
   ! System information (time, memory, sysname)
