@@ -350,6 +350,7 @@ contains
     integer,      intent(in)    :: in_file(:)
 
     character(len=20) :: header_string
+    character(len=3)  :: file_units
     integer :: nspin, energy_steps, i, is, j, equiv_axis, n_files, k
     FLOAT, allocatable :: sigma(:, :, :, :), sigmap(:, :, :, :), sigmau(:, :, :),  &
       sigmav(:, :, :), sigmaw(:, :, :), p(:, :), ip(:, :)
@@ -561,12 +562,13 @@ contains
     FLOAT   :: dt, dump, x, w, ewsum, polsum
     type(kick_t) :: kick
     FLOAT, allocatable :: dipole(:, :, :), sigma(:, :, :), dumpa(:), sf(:, :)
+    type(unit_system_t) :: file_units
 
     call push_sub('spectrum.spectrum_cross_section')
 
     ! This function gives us back the unit connected to the "multipoles" file, the header information,
     ! the number of time steps, and the time step.
-    call spectrum_mult_info(in_file, nspin, kick, time_steps, dt, lmax=lmax)
+    call spectrum_mult_info(in_file, nspin, kick, time_steps, dt, file_units, lmax=lmax)
 
     ! Now we cannot process files that do not contain the dipole, or that contain more than the dipole.
     if(lmax.ne.1) then
@@ -591,7 +593,7 @@ contains
           dump, dipole(1:3, i, 3), dump, dipole(1:3, i, 4)
       end select
 
-      dipole(1:3, i, :) = dipole(1:3, i, :) * units_out%length%factor
+      dipole(1:3, i, :) = dipole(1:3, i, :) * file_units%length%factor
     end do
     ! Now substract the initial dipole.
     do i = time_steps, 0, -1
@@ -727,10 +729,11 @@ contains
     CMPLX, pointer :: sp(:)
     FLOAT, allocatable :: dumpa(:)
     FLOAT, allocatable :: angular(:, :)
+    type(unit_system_t) :: file_units
 
     call push_sub('spectrum_rotatory_strength')
 
-    call spectrum_mult_info(in_file, nspin, kick, time_steps, dt)
+    call spectrum_mult_info(in_file, nspin, kick, time_steps, dt, file_units)
     call spectrum_fix_time_limits(time_steps, dt, s%start_time, s%end_time, is, ie, ntiter)
 
     ! load dipole from file
@@ -837,13 +840,14 @@ contains
     FLOAT, allocatable :: d(:,:)
     CMPLX :: c
     CMPLX, allocatable :: dipole(:), ddipole(:)
+    type(unit_system_t) :: file_units
 
     call io_assign(iunit)
     iunit = io_open('multipoles', action='read', status='old', die=.false.)
     if(iunit < 0) then
       iunit = io_open('td.general/multipoles', action='read', status='old')
     end if
-    call spectrum_mult_info(iunit, nspin, kick, time_steps, dt, lmax=lmax)
+    call spectrum_mult_info(iunit, nspin, kick, time_steps, dt, file_units, lmax=lmax)
     call spectrum_fix_time_limits(time_steps, dt, s%start_time, s%end_time, is, ie, ntiter)
 
     call io_skip_header(iunit)
@@ -980,16 +984,19 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine spectrum_mult_info(iunit, nspin, kick, time_steps, dt, lmax)
+  subroutine spectrum_mult_info(iunit, nspin, kick, time_steps, dt, file_units, lmax)
     integer,           intent(in)  :: iunit
     integer,           intent(out) :: nspin
     type(kick_t),      intent(out) :: kick
     integer,           intent(out) :: time_steps
     FLOAT,             intent(out) :: dt
+    type(unit_system_t), intent(out) :: file_units
     integer, optional, intent(out) :: lmax
 
-    integer :: j
+    integer :: i, j
     FLOAT :: t1, t2, dummy
+    character(len=100) :: line
+    character(len=3)   :: units_string
 
     call push_sub('spectrum.spectrum_mult_info')
 
@@ -1006,7 +1013,17 @@ contains
     read(iunit, '(15x,f18.12)')  kick%delta_strength
     read(iunit, '(15x,i2)')      kick%pol_equiv_axis
     read(iunit, '(15x,3f18.12)') kick%wprime(1:3)
+    read(iunit, '(a)')           line
+    read(iunit, '(a)')           line
     call io_skip_header(iunit)
+
+    ! Figure out about the units of the file
+    i = index(line,'eV')
+    if(i.ne.0) then
+      call units_get(file_units, 'eVA')
+    else
+      call units_get(file_units, 'a.u')
+    end if
 
     ! count number of time_steps
     time_steps = 0
@@ -1017,7 +1034,7 @@ contains
       if(time_steps == 2) t2 = dummy
     end do
 100 continue
-    dt = (t2 - t1) * units_out%time%factor ! units_out is OK
+    dt = (t2 - t1) * file_units%time%factor ! units_out is OK
     time_steps = time_steps - 1
 
     if(time_steps < 3) then
@@ -1031,11 +1048,11 @@ contains
 
   ! ---------------------------------------------------------
   subroutine spectrum_cross_section_info(iunit, nspin, kick, energy_steps, dw)
-    integer, intent(in)  :: iunit
-    integer, intent(out) :: nspin
-    type(kick_t), intent(out) :: kick
-    integer, intent(out) :: energy_steps
-    FLOAT,   intent(out) :: dw
+    integer, intent(in)           :: iunit
+    integer, intent(out)          :: nspin
+    type(kick_t), intent(out)     :: kick
+    integer, intent(out)          :: energy_steps
+    FLOAT,   intent(out)          :: dw
 
     FLOAT :: dummy, e1, e2
 

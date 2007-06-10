@@ -50,6 +50,7 @@ module units_m
     unit_t,           &
     unit_system_t,    &
     units_init,       &
+    units_get,        &
     units_inp,        &
     units_out
 
@@ -128,30 +129,28 @@ contains
       cout = c(1:3)
     end if
 
-
-    call get_units(units_inp, cinp)
-    call get_units(units_out, cout)
+    call units_get(units_inp, cinp)
+    call units_get(units_out, cout)
 
     call pop_sub()
 
-  contains
-
-    ! ---------------------------------------------------------
-    subroutine get_units(u, c)
-      type(unit_system_t), intent(out) :: u
-      character(len=3) :: c
-
-      select case(c)
-      case ("a.u")
-        call units_atomic(u)
-      case ("eVA")
-        call units_eV_Ang(u)
-      case default
-        call input_error('Units')
-      end select
-    end subroutine get_units
-
   end subroutine units_init
+
+  ! ---------------------------------------------------------
+  subroutine units_get(u, c)
+    type(unit_system_t), intent(out) :: u
+    character(len=3) :: c
+
+    select case(c)
+    case ("a.u")
+      call units_atomic(u)
+    case ("eVA")
+      call units_eV_Ang(u)
+    case default
+      call input_error('Units')
+    end select
+  end subroutine units_get
+
 
   ! these routines output the unit conversions factors, defined by
   ! [a.u.] = <input>*u.unit

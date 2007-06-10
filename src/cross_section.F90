@@ -34,6 +34,7 @@ program cross_section
   integer :: in_file(3), out_file(3), eq_axis, nspin, lmax, time_steps
   logical :: calculate_tensor
   type(spec_t) :: s
+  type(unit_system_t) :: file_units
 
   ! Initialize stuff
   call global_init()
@@ -103,7 +104,7 @@ program cross_section
         call write_info(4)
         
         ! OK, so we only have one file. Now we have to see what it has inside.
-        call spectrum_mult_info(in_file(1), nspin, kick, time_steps, dt, lmax=lmax)
+        call spectrum_mult_info(in_file(1), nspin, kick, time_steps, dt, file_units, lmax=lmax)
         eq_axis = kick%pol_equiv_axis
         if(eq_axis == 3) then
           calculate_tensor = .true.
@@ -137,7 +138,7 @@ program cross_section
           call write_fatal(2)
         end if
         
-        call spectrum_mult_info(in_file(1), nspin, kick, time_steps, dt, lmax=lmax)
+        call spectrum_mult_info(in_file(1), nspin, kick, time_steps, dt, file_units, lmax=lmax)
         eq_axis = kick%pol_equiv_axis
         
         if(eq_axis == 3) then
