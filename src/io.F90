@@ -57,12 +57,28 @@ module io_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine io_init()
+  ! If the argument defaults is present and set to true, then the routine
+  ! will not try to read anything from the inp file, but set everything
+  ! to the defaults values.
+  subroutine io_init(defaults)
+    logical, optional, intent(in) :: defaults
     character(len=128) :: filename
     character(len=256) :: node_hook
     logical :: file_exists, mpi_debug_hook
     integer :: sec, usec
 
+
+    if(present(defaults)) then
+      if(defaults) then
+        lun_is_free(min_lun:max_lun)=.true.
+        stdin = 5
+        stdout = 6
+        stderr = 0
+        work_dir = '.'
+        flush_messages = .false.
+        return
+      end if
+    end if
 
     lun_is_free(min_lun:max_lun)=.true.
 

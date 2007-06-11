@@ -57,14 +57,14 @@ void oscillator_strength_help(){
 /* FUNCTIONS TO BE USED BY THE PROGRAM oct-oscillator-strength */
 
 void FC_FUNC_(getopt_oscillator_strength, GETOPT_OSCILLATOR_STRENGTH)
-  (double *omega, STR_F_TYPE filename, double *searchinterval STR_ARG1)
+  (double *omega, STR_F_TYPE filename, STR_F_TYPE filename2, double *searchinterval, int *order STR_ARG2)
 {
   int c;
 
   if(argc==1) oscillator_strength_help();
 
   while (1) {
-    c = getopt(argc, argv, "hf:s:");
+    c = getopt(argc, argv, "hf:g:s:2");
     if (c == -1) break;
     switch (c) {
 
@@ -76,8 +76,16 @@ void FC_FUNC_(getopt_oscillator_strength, GETOPT_OSCILLATOR_STRENGTH)
       TO_F_STR1(optarg, filename);
       break;
 
+    case 'g':
+      TO_F_STR1(optarg, filename2);
+      break;
+
     case 's':
       *searchinterval = (double)atof(optarg);
+      break;
+
+    case '2':
+      *order = 2;
       break;
 
     case '?':

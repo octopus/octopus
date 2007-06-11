@@ -74,10 +74,11 @@ module command_line_m
       integer :: i
       character(len=*) :: argstring
     end subroutine set_clarg
-    subroutine getopt_oscillator_strength(omega, filename, searchinterval)
+    subroutine getopt_oscillator_strength(omega, file1, file2, searchinterval, order)
       real(8) :: omega
-      character(len=*) :: filename
+      character(len=*) :: file1, file2
       real(8) :: searchinterval
+      integer :: order
     end subroutine getopt_oscillator_strength
   end interface
 
