@@ -122,7 +122,7 @@ octopus_LDADD = @LIBS_FFT@ @LIBS_TRLAN@ @LIBS_ARPACK@ @LIBS_SPARSKIT@ \
 oct_cross_section_SOURCES = $(basic_SRCS) spectrum.F90 cross_section.F90
 oct_cross_section_LDADD   = @LIBS_LAPACK@ @LIBS_BLAS@ $(core_LIBS) $(external_LIBS)
 
-oct_oscillator_strength_SOURCES = getopt_f.c getopt.F90 $(basic_SRCS) spectrum.F90 oscillator_strength.F90
+oct_oscillator_strength_SOURCES = getopt_f.c command_line.F90 $(basic_SRCS) spectrum.F90 oscillator_strength.F90
 oct_oscillator_strength_LDADD   = @LIBS_LAPACK@ @LIBS_BLAS@ $(core_LIBS) $(external_LIBS)
 
 oct_rsf_SOURCES = $(basic_SRCS) spectrum.F90 rotational_strength.F90
@@ -149,7 +149,7 @@ oct_test_SOURCES = $(core_SRCS) lasers.F90 rkb_projector.F90 kb_projector.F90 \
 	systm.F90 test.F90
 oct_test_LDADD = $(octopus_LDADD)
 
-oct_help_SOURCES = $(basic_SRCS) help.F90
+oct_help_SOURCES = getopt_f.c command_line.F90 $(basic_SRCS) help.F90
 oct_help_LDADD =  $(core_LIBS)
 
 AM_FCFLAGS = @F90_MODULE_FLAG@$(top_builddir)/external_libs/qshep

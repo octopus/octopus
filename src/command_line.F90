@@ -19,7 +19,8 @@
 
 #include "global.h"
 
-module getopt_m
+module command_line_m
+
 #ifdef FC_COMMAND_LINE_MODULE
   use FC_COMMAND_LINE_MODULE
 #endif
@@ -27,13 +28,43 @@ module getopt_m
   implicit none
 
 #ifdef FC_COMMAND_LINE_INCLUDE
-include FC_COMMAND_LINE_INCLUDE
+  include FC_COMMAND_LINE_INCLUDE
 #endif
 
   private
   public :: getopt_init,                &
-            getopt_oscillator_strength
+            getopt_oscillator_strength, &
+            command_line_is_available
 
+#if FC_COMMAND_LINE_ARGUMENTS != 2003
+  public :: command_argument_count, get_command_argument
+#endif
+
+! If Fortran 2003 interface to command line arguments is not
+! available, define it using an interface over Fortran 77 API
+#if FC_COMMAND_LINE_ARGUMENTS == 77
+
+  interface command_argument_count
+#ifdef FC_COMMAND_LINE_EXTERNAL
+     integer function iargc() 
+     end function iargc
+#else
+     module procedure iargc
+#endif
+  end interface
+
+  interface get_command_argument
+#ifdef FC_COMMAND_LINE_EXTERNAL
+     subroutine getarg(c, a)
+       integer :: c
+       character(len=*) :: a
+     end subroutine getarg
+#else
+     module procedure getarg
+#endif
+  end interface
+  
+#endif /* FC_COMMAND_LINE_ARGUMENTS == 77 */
 
   interface 
     subroutine set_number_clarg(argc)
@@ -50,9 +81,15 @@ include FC_COMMAND_LINE_INCLUDE
     end subroutine getopt_oscillator_strength
   end interface
 
-
   contains
 
+    pure logical function command_line_is_available()
+#ifdef FC_COMMAND_LINE_ARGUMENTS
+      command_line_is_available = .true.
+#else
+      command_line_is_available = .false.
+#endif
+    end function command_line_is_available
 
   subroutine getopt_init(ierr)
     integer, intent(out) :: ierr
@@ -74,8 +111,24 @@ include FC_COMMAND_LINE_INCLUDE
   end subroutine getopt_init
 
 
+!if there is no way to access command line, define some dummy
+!functions to avoid problems when linking
 
-end module getopt_m
+#ifndef FC_COMMAND_LINE_ARGUMENTS
+
+  integer function command_argument_count() 
+    command_argument_count = -1
+  end function command_argument_count
+
+  subroutine get_command_argument(c, a)
+    integer,          intent(in)     :: c
+    character(len=*), intent(out)    :: a
+    a = "not implemented"
+  end subroutine get_command_argument
+
+#endif
+
+end module command_line_m
 
 
 

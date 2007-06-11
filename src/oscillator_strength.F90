@@ -29,7 +29,6 @@ module oscillator_strength_m
   use units_m
   use spectrum_m
   use lib_oct_m
-  use getopt_m
 
   implicit none
 
@@ -66,7 +65,7 @@ program oscillator_strength
   use units_m
   use spectrum_m
   use lib_oct_m
-  use getopt_m
+  use command_line_m
   use oscillator_strength_m
 
   implicit none
