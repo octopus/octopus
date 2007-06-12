@@ -143,13 +143,26 @@ program oscillator_strength
   total_time = dt*time_steps
   power = power / (M_ONE - sin(M_TWO*omega*total_time)/(M_TWO*omega*total_time))
 
-  write(*, '(a,f14.8,a)') 'omega    = ', omega / units_inp%energy%factor, &
-                          ' '//trim(units_inp%energy%abbrev)
-  write(*, '(a,f14.8,a)') 'C(omega) = ', power / units_out%length%factor**2, &
-                          ' '//trim(units_inp%length%abbrev)//'^2'
-  write(*, '(a,f14.8,a)') '<0|P|I>  = ', sqrt(abs(power)) / units_inp%length%factor, &
-                          ' '//trim(units_inp%length%abbrev)
-  write(*, '(a,f14.8)')   'f[O->I]  = ', M_TWO*omega*power
+  select case(order)
+  case(1)
+    write(*, '(a,f12.8,a,f12.8,a)') 'omega    = ', omega / units_inp%energy%factor, &
+                                    ' '//trim(units_inp%energy%abbrev)//' = ',      &
+                                    omega, ' Ha'
+    write(*, '(a,f12.8,a,f12.8,a)') 'C(omega) = ', power / units_out%length%factor**2, &
+                                    ' '//trim(units_inp%length%abbrev)//'^2 =',        &
+                                    power, ' b^2'
+    write(*, '(a,f12.8,a,f12.8,a)') '<0|P|I>  = ', sqrt(abs(power)) / units_inp%length%factor, &
+                                    ' '//trim(units_inp%length%abbrev)//' = ',                 &
+                                    sqrt(abs(power)),' b'
+    write(*, '(a,f12.8)')   'f[O->I]  = ', M_TWO*omega*power
+  case(2)
+    write(*, '(a,f12.8,a,f12.8,a)') 'omega    = ', omega / units_inp%energy%factor, &
+                                    ' '//trim(units_inp%energy%abbrev)//' = ',      &
+                                    omega, ' Ha'
+    write(*, '(a,f12.8,a,f12.8,a)') 'C(omega) = ', power / units_out%length%factor**3, &
+                                    ' '//trim(units_inp%length%abbrev)//'^3 = ',       &
+                                    power, ' b^3'
+  end select
 
   deallocate(ot)
   call io_end()
@@ -164,7 +177,6 @@ program oscillator_strength
       FLOAT, allocatable :: dipole(:, :, :)
       
       in_file(1) = io_open(trim(file1), action='read', status='old', die=.false.)
-      if(in_file(1) < 0) in_file(1) = io_open('td.general/'//trim(file1), action='read', status='old', die=.false.)
       if(in_file(1) >= 0) then
         call spectrum_mult_info(in_file(1), nspin, kick, time_steps, dt, units_inp, lmax=lmax)
         ! This should not be like this.
@@ -176,7 +188,6 @@ program oscillator_strength
 
       if( (mode.eq.FIRST_ORDER_TWO_FILES) .or. (mode.eq.SECOND_ORDER) ) then
         in_file(2) = io_open(trim(file2), action='read', status='old', die=.false.)
-        if(in_file(2) < 0) in_file(2) = io_open('td.general/'//trim(file2), action='read', status='old', die=.false.)
         if(in_file(2) >= 0) then
         else
           write(message(1),'(a)') 'File '//trim(file2)//' not found.'
