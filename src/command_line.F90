@@ -42,10 +42,10 @@ module command_line_m
 
 ! If Fortran 2003 interface to command line arguments is not
 ! available, define it using an interface over Fortran 77 API
-#if FC_COMMAND_LINE_ARGUMENTS == 77
+#if FC_COMMAND_LINE_ARGUMENTS == 77 && ! defined(FC_COMMAND_LINE_INTRINSIC)
 
   interface command_argument_count
-#ifdef FC_COMMAND_LINE_EXTERNAL
+#ifdef FC_COMMAND_LINE_IMPLICIT
      integer function iargc() 
      end function iargc
 #else
@@ -54,7 +54,7 @@ module command_line_m
   end interface
 
   interface get_command_argument
-#ifdef FC_COMMAND_LINE_EXTERNAL
+#ifdef FC_COMMAND_LINE_IMPLICIT
      subroutine getarg(c, a)
        integer :: c
        character(len=*) :: a
@@ -115,16 +115,20 @@ module command_line_m
 !if there is no way to access command line, define some dummy
 !functions to avoid problems when linking
 
-#ifndef FC_COMMAND_LINE_ARGUMENTS
+#if defined(FC_COMMAND_LINE_INTRINSIC) || ! defined(FC_COMMAND_LINE_ARGUMENTS)
 
-  integer function command_argument_count() 
-    command_argument_count = -1
+  integer function command_argument_count()
+#if defined(FC_COMMAND_LINE_INTRINSIC)
+    command_argument_count = iargc()
+#endif
   end function command_argument_count
 
   subroutine get_command_argument(c, a)
     integer,          intent(in)     :: c
     character(len=*), intent(out)    :: a
-    a = "not implemented"
+#if defined(FC_COMMAND_LINE_INTRINSIC)
+    call getarg(c, a)
+#endif
   end subroutine get_command_argument
 
 #endif

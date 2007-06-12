@@ -45,20 +45,20 @@ if test "$acx_command_line_arguments" == "none" ; then
 #Fortran 77
 
 #some compilers require a module or include
-#                         NAS        NAG          DEC?   PGI
-acx_command_line_modules="nas_system f90_unix_env dfport lib3f.h"
+#                                   NAS        NAG          DEC?   PGI
+acx_command_line_sources="intrinsic nas_system f90_unix_env dfport lib3f.h"
 
-for acx_command_line_module in "fortran 77" $acx_command_line_modules ; do
+for acx_command_line_source in $acx_command_line_sources
+do
 
-if test "$acx_command_line_module" != "fortran 77" ; then
-acx_cl_usemodule="use "$acx_command_line_module
-fi
-
-if test "$acx_command_line_module" == "lib3f.h" ; then
 acx_cl_usemodule=""
-acx_cl_includeheader="include 'lib3f.h'"
-fi
+acx_cl_includeheader=""
 
+case $acx_command_line_source in 
+     intrinsic) ;;
+     lib3f.h)   acx_cl_includeheader="include 'lib3f.h'" ;;
+     *)         acx_cl_usemodule="use "$acx_command_line_source ;;
+esac
 
 AC_LINK_IFELSE(
     AC_LANG_PROGRAM( [], [
@@ -72,23 +72,28 @@ AC_LINK_IFELSE(
     call getarg(0, arg)
     ]),
     [
-    acx_command_line_arguments="$acx_command_line_module"
     AC_DEFINE(FC_COMMAND_LINE_ARGUMENTS, 77, [compiler supports command line arguments])
-    if test "$acx_command_line_module" != "fortran 77" ; then
-        if test "$acx_command_line_module" != "lib3f.h" ; then
-	AC_DEFINE_UNQUOTED(FC_COMMAND_LINE_MODULE, $acx_command_line_module, [module required to get command line arguments])
-	else
-	AC_DEFINE_UNQUOTED(FC_COMMAND_LINE_INCLUDE, "$acx_command_line_module", [include required to get command line arguments])
-	fi
-    fi
-    ]
-    ,[])
+    acx_command_line_arguments=$acx_command_line_source
+    AC_MSG_RESULT(fortran 77 $acx_command_line_arguments)
+    break
+    ],[])
 done
+
+case $acx_command_line_arguments in
+     none)      ;;
+     intrinsic)
+     AC_DEFINE(FC_COMMAND_LINE_INTRINSIC, 1, [iargc and getarg are intrinsic]);;
+     lib3f.h)   
+     AC_DEFINE_UNQUOTED(FC_COMMAND_LINE_INCLUDE, '$acx_command_line_arguments', [iargc and getarg are defined in a include file]);;
+     *)
+     AC_DEFINE_UNQUOTED(FC_COMMAND_LINE_MODULE, $acx_command_line_arguments, [iargc and getar are defined in a module]);;
+esac
+
 fi
 
 if test "$acx_command_line_arguments" == "none" ; then
 
-#last resource, external
+#last resource, implicit
 AC_LINK_IFELSE(
     AC_LANG_PROGRAM( [], [
 
@@ -112,14 +117,12 @@ AC_LINK_IFELSE(
     call getarg(0, arg) 
     ]),
     [
-    acx_command_line_arguments=external
-    AC_DEFINE(FC_COMMAND_LINE_ARGUMENTS, 77, [compiler supports command line arguments])
-    AC_DEFINE(FC_COMMAND_LINE_EXTERNAL, 1, [iargc and getarg are external and must be declared])
+    acx_command_line_arguments=implicit
+    AC_DEFINE(FC_COMMAND_LINE_IMPLICIT, 1, [iargc and getarg are implicit, we have to declare them])
+    AC_MSG_RESULT(fortran 77 $acx_command_line_arguments)
     ]
     ,[])
 fi
-
-AC_MSG_RESULT($acx_command_line_arguments)
 
 if test "$acx_command_line_arguments" == "none" ; then
     AC_MSG_WARN([Could not find how to access command line from Fortran.
