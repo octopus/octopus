@@ -152,8 +152,6 @@ module lib_basic_alg_m
 
 contains
 
-#if defined(HAVE_BLAS)
-
 #  define TYPE 1
 #  include "linalg_basic_blas.F90"
 #  undef TYPE
@@ -169,26 +167,6 @@ contains
 #  define TYPE 4
 #  include "linalg_basic_blas.F90"
 #  undef TYPE
-
-#else
-
-#  define TYPE 1
-#  include "linalg_basic_int.F90"
-#  undef TYPE
-
-#  define TYPE 2
-#  include "linalg_basic_int.F90"
-#  undef TYPE
-
-#  define TYPE 3
-#  include "linalg_basic_int.F90"
-#  undef TYPE
-
-#  define TYPE 4
-#  include "linalg_basic_int.F90"
-#  undef TYPE
-
-#endif
 
 end module lib_basic_alg_m
 

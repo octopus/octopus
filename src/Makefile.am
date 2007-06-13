@@ -87,7 +87,7 @@ noinst_HEADERS = \
 	pes_rc.F90 pes_mask.F90 \
 	td_init.F90 td_calc.F90\
 	out_inc.F90 math_cg_inc.F90 math_inc.F90 \
-	linalg_basic_blas.F90 linalg_basic_int.F90 linalg_adv_lapack.F90 \
+	linalg_basic_blas.F90 linalg_adv_lapack.F90 \
 	linear_response_inc.F90 linear_response_out.F90 linear_solver_inc.F90\
 	submesh_inc.F90 \
 	sternheimer_inc.F90 em_resp_inc.F90 resp_pert_inc.F90 unocc_inc.F90 casida_inc.F90 \
@@ -254,7 +254,7 @@ liboct.o: global.h
 liboct_parser.o: global.h
 libxc.o: global.h
 linalg_adv.o: global.h linalg_adv_lapack.F90
-linalg_basic.o: global.h linalg_basic_blas.F90 linalg_basic_int.F90
+linalg_basic.o: global.h linalg_basic_blas.F90
 linear_solver.o: global.h linear_solver_inc.F90
 linear_response.o: global.h linear_response_inc.F90 linear_response_out.F90
 logrid.o: global.h
