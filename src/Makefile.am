@@ -31,7 +31,7 @@ basic_SRCS = liboct.F90 string.F90 varinfo.F90 mpi.F90 global.F90 liboct_parser.
 
 core_SRCS = $(basic_SRCS) \
 	ode_solver.F90 root_solver.F90 spline.F90 sparskit.F90 \
-	libxc.F90 logrid.F90 periodic_table.F90 atomic.F90 \
+	logrid.F90 periodic_table.F90 atomic.F90 \
 	ps_in_grid.F90 \
 	ps_psf_file.F90 ps_psf.F90  \
 	ps_cpi_file.F90 ps_cpi.F90 \
@@ -152,7 +152,7 @@ oct_test_LDADD = $(octopus_LDADD)
 oct_help_SOURCES = getopt_f.c command_line.F90 $(basic_SRCS) help.F90
 oct_help_LDADD =  $(core_LIBS)
 
-AM_FCFLAGS = @F90_MODULE_FLAG@$(top_builddir)/external_libs/qshep
+AM_FCFLAGS = @F90_MODULE_FLAG@$(top_builddir)/libxc/src/ @F90_MODULE_FLAG@$(top_builddir)/external_libs/qshep
 
 AM_CPPFLAGS = -I$(top_srcdir)/libstring_f
 
@@ -252,7 +252,6 @@ lasers.o: global.h
 lcao.o: global.h lcao_inc.F90
 liboct.o: global.h
 liboct_parser.o: global.h
-libxc.o: global.h
 linalg_adv.o: global.h linalg_adv_lapack.F90
 linalg_basic.o: global.h linalg_basic_blas.F90
 linear_solver.o: global.h linear_solver_inc.F90

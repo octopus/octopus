@@ -23,7 +23,7 @@ module xc_functl_m
   use datasets_m
   use global_m
   use lib_oct_parser_m
-  use lib_xc_m
+  use libxc
   use messages_m
 
   implicit none
@@ -49,8 +49,8 @@ module xc_functl_m
 
     integer   :: spin_channels     ! XC_UNPOLARIZED | XC_POLARIZED
 
-    C_POINTER :: conf              ! the pointer used to cad the library
-    C_POINTER :: info              ! information about the functional
+    type(xc_func) :: conf              ! the pointer used to cad the library
+    type(xc_info) :: info              ! information about the functional
   end type xc_functl_t
 
 contains

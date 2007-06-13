@@ -26,7 +26,7 @@ module xc_OEP_m
   use hamiltonian_m
   use lib_adv_alg_m
   use lib_oct_parser_m
-  use lib_xc_m
+  use libxc
   use linear_response_m
   use linear_solver_m
   use mesh_function_m

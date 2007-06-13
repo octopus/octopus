@@ -25,7 +25,7 @@ module v_ks_m
   use grid_m
   use hamiltonian_m
   use lib_oct_parser_m
-  use lib_xc_m
+  use libxc
   use mesh_function_m
   use messages_m
   use mpi_m

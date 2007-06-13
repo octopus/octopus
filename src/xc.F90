@@ -26,7 +26,7 @@ module xc_m
   use grid_m
   use lib_basic_alg_m
   use lib_oct_parser_m
-  use lib_xc_m
+  use libxc
   use mesh_function_m
   use mesh_m
   use messages_m

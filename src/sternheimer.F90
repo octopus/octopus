@@ -27,7 +27,7 @@ module sternheimer_m
   use io_m
   use lib_basic_alg_m
   use lib_oct_parser_m
-  use lib_xc_m
+  use libxc
   use linear_solver_m
   use linear_response_m
   use math_m

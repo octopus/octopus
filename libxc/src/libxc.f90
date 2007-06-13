@@ -17,13 +17,30 @@
 !!
 !! $Id$
 
-#include "global.h"
+module xc_types
 
-module lib_xc_m
+  type :: xc_func
+     private
+     integer, pointer :: func
+  end type xc_func
+
+  type :: xc_info
+     private
+     integer, pointer :: info
+  end type xc_info
+
+end module xc_types
+
+module libxc
+  
+  use xc_types
+
   implicit none
 
   private
   public ::                         &
+    xc_func,                            &
+    xc_info,                            &
     xc_f90_info_number,                 &
     xc_f90_info_kind,                   &
     xc_f90_info_name,                   &
@@ -122,24 +139,29 @@ module lib_xc_m
   ! info
   interface
     integer function xc_f90_info_number(info)
-      C_POINTER, intent(in) :: info
+      use xc_types
+      type(xc_info), intent(in) :: info
     end function xc_f90_info_number
-
+    
     integer function xc_f90_info_kind(info)
-      C_POINTER, intent(in) :: info
+      use xc_types
+      type(xc_info), intent(in) :: info
     end function xc_f90_info_kind
 
     subroutine xc_f90_info_name(info, s)
-      C_POINTER, intent(in)  :: info
+      use xc_types
+      type(xc_info),         intent(in)  :: info
       character(len=*),      intent(out) :: s
     end subroutine xc_f90_info_name
 
     integer function xc_f90_info_family(info)
-      C_POINTER, intent(in)  :: info
+      use xc_types
+      type(xc_info), intent(in)  :: info
     end function xc_f90_info_family
 
     subroutine xc_f90_info_refs(info, n, s)
-      C_POINTER, intent(in)    :: info
+      use xc_types
+      type(xc_info),         intent(in)    :: info
       integer,               intent(inout) :: n
       character(len=*),      intent(out)   :: s
     end subroutine xc_f90_info_refs
@@ -149,6 +171,7 @@ module lib_xc_m
   ! functionals
   interface
     integer function xc_f90_family_from_id(id)
+      use xc_types
       integer, intent(in) :: id
     end function xc_f90_family_from_id
   end interface
@@ -157,53 +180,60 @@ module lib_xc_m
   ! We will use the same public interface (xc_lda_init) for the three C procedures
   interface xc_f90_lda_init
     subroutine xc_f90_lda_init_(p, info, functional, nspin)
-      C_POINTER, intent(out) :: p
-      C_POINTER, intent(out) :: info
+      use xc_types
+      type(xc_func),         intent(out) :: p
+      type(xc_info),         intent(out) :: info
       integer,               intent(in)  :: functional
       integer,               intent(in)  :: nspin
     end subroutine xc_f90_lda_init_
 
     subroutine xc_f90_lda_x_init(p, info, functional, nspin, dim, irel)
-      C_POINTER, intent(out) :: p
-      C_POINTER, intent(out) :: info
-      integer,   intent(in)  :: functional
-      integer,   intent(in)  :: nspin  ! XC_UNPOLARIZED or XC_POLARIZED
-      integer,   intent(in)  :: dim    ! 2 or 3 dimensions
-      integer,   intent(in)  :: irel   ! XC_NON_RELATIVISTIC or XC_RELATIVISTIC
+      use xc_types
+      type(xc_func), intent(out) :: p
+      type(xc_info), intent(out) :: info
+      integer,       intent(in)  :: functional
+      integer,       intent(in)  :: nspin  ! XC_UNPOLARIZED or XC_POLARIZED
+      integer,       intent(in)  :: dim    ! 2 or 3 dimensions
+      integer,       intent(in)  :: irel   ! XC_NON_RELATIVISTIC or XC_RELATIVISTIC
     end subroutine xc_f90_lda_x_init
 
     subroutine xc_f90_lda_c_xalpha_init(p, info, functional, nspin, dim, alpha)
-      C_POINTER, intent(out) :: p
-      C_POINTER, intent(out) :: info
-      integer,   intent(in)  :: functional
-      integer,   intent(in)  :: nspin  ! XC_UNPOLARIZED or XC_POLARIZED
-      integer,   intent(in)  :: dim    ! 2 or 3 dimensions
-      FLOAT,     intent(in)  :: alpha  ! Ec = alpha Ex
+      use xc_types
+      type(xc_func), intent(out) :: p
+      type(xc_info), intent(out) :: info
+      integer,       intent(in)  :: functional
+      integer,       intent(in)  :: nspin  ! XC_UNPOLARIZED or XC_POLARIZED
+      integer,       intent(in)  :: dim    ! 2 or 3 dimensions
+      real(8),       intent(in)  :: alpha  ! Ec = alpha Ex
     end subroutine xc_f90_lda_c_xalpha_init
   end interface
 
   interface
     subroutine xc_f90_lda_end(p)
-      C_POINTER, intent(inout) :: p
+      use xc_types
+      type(xc_func), intent(inout) :: p
     end subroutine xc_f90_lda_end
 
     subroutine xc_f90_lda(p, rho, e, v)
-      C_POINTER, intent(in)  :: p
-      FLOAT,     intent(in)  :: rho   ! rho(nspin) the density
-      FLOAT,     intent(out) :: e     ! the energy per unit particle
-      FLOAT,     intent(out) :: v     ! v(nspin) the potential
+      use xc_types
+      type(xc_func), intent(in)  :: p
+      real(8),       intent(in)  :: rho   ! rho(nspin) the density
+      real(8),       intent(out) :: e     ! the energy per unit particle
+      real(8),       intent(out) :: v     ! v(nspin) the potential
     end subroutine xc_f90_lda
 
     subroutine xc_f90_lda_fxc(p, rho, fxc)
-      C_POINTER, intent(in)  :: p
-      FLOAT,     intent(in)  :: rho   ! rho(nspin) the density
-      FLOAT,     intent(out) :: fxc   ! v(nspin,nspin) the xc kernel
+      use xc_types
+      type(xc_func), intent(in)  :: p
+      real(8),       intent(in)  :: rho   ! rho(nspin) the density
+      real(8),       intent(out) :: fxc   ! v(nspin,nspin) the xc kernel
     end subroutine xc_f90_lda_fxc
 
     subroutine xc_f90_lda_kxc(p, rho, kxc)
-      C_POINTER, intent(in)  :: p
-      FLOAT,     intent(in)  :: rho   ! rho(nspin) the density
-      FLOAT,     intent(out) :: kxc
+      use xc_types
+      type(xc_func), intent(in)  :: p
+      real(8),       intent(in)  :: rho   ! rho(nspin) the density
+      real(8),       intent(out) :: kxc
     end subroutine xc_f90_lda_kxc
 
   end interface
@@ -212,45 +242,50 @@ module lib_xc_m
   ! We will use the same public procedure for the two C procedures.
   interface xc_f90_gga_init
     subroutine xc_f90_gga_init_(p, info, functional, nspin)
-      C_POINTER, intent(out) :: p
-      C_POINTER, intent(out) :: info
+      use xc_types
+      type(xc_func), intent(out) :: p
+      type(xc_info), intent(out) :: info
       integer,   intent(in)  :: functional
       integer,   intent(in)  :: nspin
     end subroutine xc_f90_gga_init_
 
     subroutine xc_f90_gga_lb_init(p, info, functional, nspin, modified, threshold)
-      C_POINTER, intent(out) :: p
-      C_POINTER, intent(out) :: info
-      integer,   intent(in)  :: functional
-      integer,   intent(in)  :: nspin
-      integer,   intent(in)  :: modified
-      FLOAT,     intent(in)  :: threshold
+      use xc_types
+      type(xc_func), intent(out) :: p
+      type(xc_info), intent(out) :: info
+      integer,       intent(in)  :: functional
+      integer,       intent(in)  :: nspin
+      integer,       intent(in)  :: modified
+      real(8),       intent(in)  :: threshold
     end subroutine xc_f90_gga_lb_init
   end interface
 
   interface
     subroutine xc_f90_gga_end(p)
-      C_POINTER, intent(inout) :: p
+      use xc_types
+      type(xc_func), intent(inout) :: p
     end subroutine xc_f90_gga_end
 
     subroutine xc_f90_gga(p, rho, grho, e, dedd, dedgd)
-      C_POINTER, intent(in)  :: p
-      FLOAT,     intent(in)  :: rho   ! rho(nspin) the density
-      FLOAT,     intent(in)  :: grho  ! grho(3,nspin) the gradient of the density
-      FLOAT,     intent(out) :: e     ! the energy per unit particle
-      FLOAT,     intent(out) :: dedd  ! dedd(nspin) the derivative of the energy
+      use xc_types
+      type(xc_func), intent(in)  :: p
+      real(8),       intent(in)  :: rho   ! rho(nspin) the density
+      real(8),       intent(in)  :: grho  ! grho(3,nspin) the gradient of the density
+      real(8),       intent(out) :: e     ! the energy per unit particle
+      real(8),       intent(out) :: dedd  ! dedd(nspin) the derivative of the energy
       ! in terms of the density
-      FLOAT,     intent(out) :: dedgd ! and in terms of the gradient of the density
+      real(8),       intent(out) :: dedgd ! and in terms of the gradient of the density
     end subroutine xc_f90_gga
 
     subroutine xc_f90_gga_lb(p, rho, grho, r, ip, qtot, dedd)
-      C_POINTER, intent(in)  :: p
-      FLOAT,     intent(in)  :: rho   ! rho(nspin) the density
-      FLOAT,     intent(in)  :: grho  ! grho(3,nspin) the gradient of the density
-      FLOAT,     intent(in)  :: r     ! distance from center of finite system
-      FLOAT,     intent(in)  :: ip    ! ionization potential
-      FLOAT,     intent(in)  :: qtot  ! total charge
-      FLOAT,     intent(out) :: dedd
+      use xc_types
+      type(xc_func), intent(in)  :: p
+      real(8),       intent(in)  :: rho   ! rho(nspin) the density
+      real(8),       intent(in)  :: grho  ! grho(3,nspin) the gradient of the density
+      real(8),       intent(in)  :: r     ! distance from center of finite system
+      real(8),       intent(in)  :: ip    ! ionization potential
+      real(8),       intent(in)  :: qtot  ! total charge
+      real(8),       intent(out) :: dedd
     end subroutine xc_f90_gga_lb
   end interface
 
@@ -258,50 +293,55 @@ module lib_xc_m
   ! the meta-GGAs
   interface
     subroutine xc_f90_mgga_init(p, info, functional, nspin)
-      C_POINTER, intent(out) :: p
-      C_POINTER, intent(out) :: info
-      integer,   intent(in)  :: functional
-      integer,   intent(in)  :: nspin
+      use xc_types
+      type(xc_func), intent(out) :: p
+      type(xc_info), intent(out) :: info
+      integer,       intent(in)  :: functional
+      integer,       intent(in)  :: nspin
     end subroutine xc_f90_mgga_init
 
     subroutine xc_f90_mgga_end(p)
-      C_POINTER, intent(inout) :: p
+      use xc_types
+      type(xc_func), intent(inout) :: p
     end subroutine xc_f90_mgga_end
 
     subroutine xc_f90_mgga(p, rho, grho, tau, e, dedd, dedgd, dedtau)
-      C_POINTER, intent(in)  :: p
-      FLOAT,     intent(in)  :: rho   ! rho(nspin) the density
-      FLOAT,     intent(in)  :: grho  ! grho(3,nspin) the gradient of the density
-      FLOAT,     intent(in)  :: tau   ! tau(nspin) the kinetic energy density
-      FLOAT,     intent(out) :: e     ! the energy per unit particle
-      FLOAT,     intent(out) :: dedd  ! dedd(nspin) the derivative of the energy
+      use xc_types
+      type(xc_func), intent(in)  :: p
+      real(8),       intent(in)  :: rho   ! rho(nspin) the density
+      real(8),       intent(in)  :: grho  ! grho(3,nspin) the gradient of the density
+      real(8),       intent(in)  :: tau   ! tau(nspin) the kinetic energy density
+      real(8),       intent(out) :: e     ! the energy per unit particle
+      real(8),       intent(out) :: dedd  ! dedd(nspin) the derivative of the energy
       ! in terms of the density
-      FLOAT,     intent(out) :: dedgd ! in terms of the gradient of the density
-      FLOAT,     intent(out) :: dedtau! and in terms of tau
+      real(8),       intent(out) :: dedgd ! in terms of the gradient of the density
+      real(8),       intent(out) :: dedtau! and in terms of tau
     end subroutine xc_f90_mgga
   end interface
 
   ! the LCAs
   interface
     subroutine xc_f90_lca_init(p, info, functional, nspin)
-      C_POINTER, intent(out) :: p
-      C_POINTER, intent(out) :: info
-      integer,   intent(in)  :: functional
-      integer,   intent(in)  :: nspin
+      use xc_types
+      type(xc_func), intent(out) :: p
+      type(xc_info), intent(out) :: info
+      integer,       intent(in)  :: functional
+      integer,       intent(in)  :: nspin
     end subroutine xc_f90_lca_init
 
     subroutine xc_f90_lca(p, rho, v, e, dedd, dedv)
-      C_POINTER, intent(in)  :: p
-      FLOAT,     intent(in)  :: rho   ! rho(nspin) the density
-      FLOAT,     intent(in)  :: v     ! v(3,nspin) the vorticity
-      FLOAT,     intent(out) :: e     ! the energy per unit particle
-      FLOAT,     intent(out) :: dedd  ! dedd(nspin) the derivative of the energy
+      use xc_types
+      type(xc_func), intent(in)  :: p
+      real(8),       intent(in)  :: rho   ! rho(nspin) the density
+      real(8),       intent(in)  :: v     ! v(3,nspin) the vorticity
+      real(8),       intent(out) :: e     ! the energy per unit particle
+      real(8),       intent(out) :: dedd  ! dedd(nspin) the derivative of the energy
       ! in terms of the density
-      FLOAT,     intent(out) :: dedv  ! and in terms of the vorticity
+      real(8),       intent(out) :: dedv  ! and in terms of the vorticity
     end subroutine xc_f90_lca
   end interface
 
-end module lib_xc_m
+end module libxc
 
 !! Local Variables:
 !! mode: f90
