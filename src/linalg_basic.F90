@@ -72,6 +72,7 @@ module lib_basic_alg_m
     module procedure scal_2_4
     module procedure scal_3_4
     module procedure scal_4_4
+    module procedure scal_5_4
   end interface
 
   interface lalg_axpy
@@ -91,6 +92,7 @@ module lib_basic_alg_m
     module procedure axpy_2_4
     module procedure axpy_3_4
     module procedure axpy_4_4
+    module procedure axpy_5_4
   end interface
 
   interface lalg_copy

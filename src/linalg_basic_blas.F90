@@ -119,6 +119,17 @@ subroutine FNAME(scal_4)(n1, n2, n3, n4, da, dx)
 
 end subroutine FNAME(scal_4)
 
+#if TYPE == 4
+subroutine FNAME(scal_5)(n1, da, dx)
+  integer, intent(in)    :: n1
+  TYPE2,   intent(in)    :: da
+  TYPE1,   intent(inout) :: dx(:)
+
+  call blas_scal(n1, da, dx(1))
+
+end subroutine FNAME(scal_5)
+#endif
+
 ! ------------------------------------------------------------------
 ! constant times a vector plus a vector
 ! ------------------------------------------------------------------
@@ -162,6 +173,18 @@ subroutine FNAME(axpy_4)(n1, n2, n3, n4, da, dx, dy)
   call blas_axpy(n1*n2*n3*n4, da, dx(1,1,1,1), 1, dy(1,1,1,1), 1)
 
 end subroutine FNAME(axpy_4)
+
+#if TYPE == 4
+subroutine FNAME(axpy_5)(n1, da, dx, dy)
+  integer, intent(in)    :: n1
+  TYPE2,   intent(in)    :: da
+  TYPE1,   intent(in)    :: dx(1:n1)
+  TYPE1,   intent(inout) :: dy(1:n1)
+
+  call blas_axpy(n1, da, dx(1), dy(1))
+
+end subroutine FNAME(axpy_5)
+#endif
 
 ! ------------------------------------------------------------------
 ! Copies a vector x, to a vector y

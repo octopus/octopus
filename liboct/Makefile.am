@@ -25,7 +25,8 @@ liboct_a_SOURCES = recipes.c ylm.c varia.c \
 	oct_f.c oct_gsl_f.c oct_gdlib_f.c  \
 	write_iter.c varinfo.c poisson_finite_cyl.c \
 	io_binary.c \
-	signals.c operate.c
+	signals.c operate.c \
+	dablas.c
 AM_CPPFLAGS = -I$(top_srcdir)/liboct_parser -I$(top_srcdir)/external_libs/metis-4.0 \
 	-I$(top_srcdir)/libstring_f
 AM_CFLAGS = @GD_CFLAGS@

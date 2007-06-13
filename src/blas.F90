@@ -78,6 +78,12 @@ module blas_m
       complex(8), intent(in)    :: da
       complex(8), intent(inout) :: dx ! dx(n)
     end subroutine zscal
+
+    subroutine dazscal(n, da, dx)
+      integer,    intent(in)    :: n
+      real(8),    intent(in)    :: da
+      complex(8), intent(inout) :: dx ! dx(n)
+    end subroutine dazscal
   end interface
 
   ! ----------------- axpy ------------------
@@ -105,6 +111,13 @@ module blas_m
       complex(8), intent(in)    :: da, dx ! dx(n)
       complex(8), intent(inout) :: dy     ! dy(n)
     end subroutine zaxpy
+
+    subroutine dazaxpy (n, da, dx, dy)
+      integer,    intent(in)    :: n
+      real(8),    intent(in)    :: da
+      complex(8), intent(in)    :: dx     ! dx(n)
+      complex(8), intent(inout) :: dy     ! dy(n)
+    end subroutine dazaxpy
   end interface
 
   ! ----------------- copy ------------------
