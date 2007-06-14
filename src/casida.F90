@@ -565,16 +565,16 @@ contains
       ALLOCATE(rho_j(m%np), m%np)
 
       if (st%d%wfs_type == M_REAL) then
-        rho_i(:) =  st%dpsi(1:m%np, 1, i, sigma) * st%dpsi(1:m%np, 1, a, sigma)
-        rho_j(:) =  st%dpsi(1:m%np, 1, j, mu) * st%dpsi(1:m%np, 1, b, mu)
+        rho_i(1:m%np) =  st%dpsi(1:m%np, 1, i, sigma) * st%dpsi(1:m%np, 1, a, sigma)
+        rho_j(1:m%np) =  st%dpsi(1:m%np, 1, j, mu) * st%dpsi(1:m%np, 1, b, mu)
       else
-        rho_i(:) =  st%zpsi(1:m%np, 1, i, sigma) * conjg(st%zpsi(1:m%np, 1, a, sigma))
-        rho_j(:) =  conjg(st%zpsi(1:m%np, 1, j, mu)) * st%zpsi(1:m%np, 1, b, mu)
+        rho_i(1:m%np) =  st%zpsi(1:m%np, 1, i, sigma) * conjg(st%zpsi(1:m%np, 1, a, sigma))
+        rho_j(1:m%np) =  conjg(st%zpsi(1:m%np, 1, j, mu)) * st%zpsi(1:m%np, 1, b, mu)
       end if
 
       !  first the Hartree part (only works for real wfs...)
       if( j.ne.j_old  .or.   b.ne.b_old   .or.  mu.ne.mu_old) then
-        pot = M_ZERO
+        pot(1:m%np) = M_ZERO
         if( (.not.h%ip_app) ) call dpoisson_solve(sys%gr, pot, rho_j, all_nodes=.false.)
       end if
 

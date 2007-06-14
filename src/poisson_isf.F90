@@ -47,12 +47,12 @@ module poisson_isf_m
 
   ! Indices for the cnf array
   integer, parameter :: serial = 1
-  integer, parameter :: world = 1
-  integer, parameter :: domain = 2
-  integer, parameter :: n_cnf = 2
+  integer, parameter :: world = 2
+  integer, parameter :: domain = 3
+  integer, parameter :: n_cnf = 3
 
   type(dcf_t)                  :: rho_cf
-  type(isf_cnf_t)              :: cnf(1:2)
+  type(isf_cnf_t)              :: cnf(1:3)
   integer, parameter           :: order_scaling_function = 8 
 
 contains
@@ -71,6 +71,20 @@ contains
 
     call dcf_new(m%l, rho_cf)
 
+    ! The serial version is always needed (as used, e.g., in the casida runmode)
+    call calculate_dimensions(rho_cf%n(1), rho_cf%n(2), rho_cf%n(3), &
+      cnf(serial)%nfft1, cnf(serial)%nfft2, cnf(serial)%nfft3)
+
+    n1 = cnf(serial)%nfft1/2 + 1
+    n2 = cnf(serial)%nfft2/2 + 1
+    n3 = cnf(serial)%nfft3/2 + 1
+
+    ALLOCATE(cnf(serial)%kernel(n1, n2, n3), n1*n2*n3)
+
+    call build_kernel(rho_cf%n(1), rho_cf%n(2), rho_cf%n(3),   &
+      cnf(serial)%nfft1, cnf(serial)%nfft2, cnf(serial)%nfft3, &
+      m%h(1), order_scaling_function, cnf(serial)%kernel)
+
 #if defined(HAVE_MPI)
     ! Allocate to configurations. The initialisation, especially the kernel,
     ! depends on the number of nodes used for the calculations. To avoid
@@ -82,7 +96,7 @@ contains
     ! Build the kernel for all configurations. At the moment, this is
     ! solving the poisson equation with all nodes (i_cnf == world) and
     ! with the domain nodes only (i_cnf == domain).
-    do i_cnf = 1, n_cnf
+    do i_cnf = 2, n_cnf
       call par_calculate_dimensions(rho_cf%n(1), rho_cf%n(2), rho_cf%n(3),         &
         m1, m2, m3, n1, n2, n3, md1, md2, md3, cnf(i_cnf)%nfft1, cnf(i_cnf)%nfft2, &
         cnf(i_cnf)%nfft3, cnf(i_cnf)%mpi_grp%size)
@@ -100,19 +114,6 @@ contains
       cnf(i_cnf)%mpi_grp%rank, cnf(i_cnf)%mpi_grp%size, cnf(i_cnf)%mpi_grp%comm, &
       cnf(i_cnf)%kernel)
     end do
-#else
-    call calculate_dimensions(rho_cf%n(1), rho_cf%n(2), rho_cf%n(3), &
-      cnf(serial)%nfft1, cnf(serial)%nfft2, cnf(serial)%nfft3)
-
-    n1 = cnf(serial)%nfft1/2 + 1
-    n2 = cnf(serial)%nfft2/2 + 1
-    n3 = cnf(serial)%nfft3/2 + 1
-
-    ALLOCATE(cnf(serial)%kernel(n1, n2, n3), n1*n2*n3)
-
-    call build_kernel(rho_cf%n(1), rho_cf%n(2), rho_cf%n(3),   &
-      cnf(serial)%nfft1, cnf(serial)%nfft2, cnf(serial)%nfft3, &
-      m%h(1), order_scaling_function, cnf(serial)%kernel)
 #endif
 
     call pop_sub()
@@ -125,11 +126,10 @@ contains
     FLOAT,        intent(in)  :: rho(:)
     logical,      intent(in)  :: all_nodes
 
+    integer :: i_cnf
 #if defined(HAVE_MPI)
     FLOAT, allocatable :: rho_global(:)
     FLOAT, allocatable :: pot_global(:)
-
-    integer :: i_cnf
 #endif
 
     call push_sub('poisson_isf.poisson_isf_solve')
@@ -151,22 +151,26 @@ contains
       call dmf2cf(m, rho, rho_cf)
     end if
 
-#if defined(HAVE_MPI)
     ! Choose configuration.
+    i_cnf = serial
     if(all_nodes) then
       i_cnf = world
-    else
+    else if(m%parallel_in_domains) then
       i_cnf = domain
     end if
-    call par_psolver_kernel(rho_cf%n(1), rho_cf%n(2), rho_cf%n(3), &
-      cnf(i_cnf)%nfft1, cnf(i_cnf)%nfft2, cnf(i_cnf)%nfft3,  &
-      m%h(1), cnf(i_cnf)%kernel, rho_cf%RS,                      &
-      cnf(i_cnf)%mpi_grp%rank, cnf(i_cnf)%mpi_grp%size, cnf(i_cnf)%mpi_grp%comm)
-#else   
-    call psolver_kernel(rho_cf%n(1), rho_cf%n(2), rho_cf%n(3),    &
-      cnf(serial)%nfft1, cnf(serial)%nfft2, cnf(serial)%nfft3, &
-      m%h(1), cnf(serial)%kernel, rho_cf%RS)
+
+    if(i_cnf == serial) then
+      call psolver_kernel(rho_cf%n(1), rho_cf%n(2), rho_cf%n(3),    &
+        cnf(serial)%nfft1, cnf(serial)%nfft2, cnf(serial)%nfft3, &
+        m%h(1), cnf(serial)%kernel, rho_cf%RS)
+ #if defined(HAVE_MPI)
+    else
+      call par_psolver_kernel(rho_cf%n(1), rho_cf%n(2), rho_cf%n(3), &
+        cnf(i_cnf)%nfft1, cnf(i_cnf)%nfft2, cnf(i_cnf)%nfft3,  &
+        m%h(1), cnf(i_cnf)%kernel, rho_cf%RS,                      &
+        cnf(i_cnf)%mpi_grp%rank, cnf(i_cnf)%mpi_grp%size, cnf(i_cnf)%mpi_grp%comm)
 #endif
+    endif
 
     if(m%parallel_in_domains) then
 #if defined(HAVE_MPI)
