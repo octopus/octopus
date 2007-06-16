@@ -1,14 +1,14 @@
 # -*- coding: utf-8 mode: shell-script -*-
 # $Id$
 
-Test     : 1D Asymmetric Double Well
-Author   : Jan Werschnik
-Date     : 20.06.06
-Arch     : Linux 
-Release  : 2.2.0pre1
-Programs : octopus
-Runtime  : long-run
-Enabled  : Yes
+Test       : 1D Asymmetric Double Well
+Author     : Jan Werschnik
+Date       : 20.06.06
+Arch       : Linux 
+Release    : 2.2.0pre1
+Programs   : octopus
+TestGroups : long-run
+Enabled    : Yes
 
 # The test ensures a number features of the optimal control implementation in octopus.
 # 

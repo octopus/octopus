@@ -1,14 +1,14 @@
 # -*- coding: utf-8 mode: shell-script -*-
 # $Id: oct-run_regression_test.pl 2423 2006-09-24 21:25:52Z acastro $
 
-Test     : 04-biot_savart.test
-Author   : Alberto
-Date     : 25.03.07
-Arch     : Linux appartment 2.6.18-4-686 #1 SMP Wed Feb 21 16:06:54 UTC 2007 i686 GNU/Linux
-Release  : 2.2.0pre1
-Programs : octopus
-Runtime  : long-run
-Enabled  : Yes
+Test       : 04-biot_savart.test
+Author     : Alberto
+Date       : 25.03.07
+Arch       : Linux appartment 2.6.18-4-686 #1 SMP Wed Feb 21 16:06:54 UTC 2007 i686 GNU/Linux
+Release    : 2.2.0pre1
+Programs   : octopus
+TestGroups : long-run
+Enabled    : Yes
 
 # The code calculates the Lz=1 state of one electron sitting in a
 # potential circular ring. The result is a uniform electronic ring

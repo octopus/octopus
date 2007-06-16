@@ -1,14 +1,14 @@
 # -*- coding: utf-8 mode: shell-script -*-
 # $Id$
 
-Test     : 1D Box
-Author   : Jan Werschnik
-Date     : 12.06.06
-Arch     : Linux 
-Release  : 2.2.0pre1
-Programs : octopus
-Runtime  : long-run
-Enabled  : Yes
+Test       : 1D Box
+Author     : Jan Werschnik
+Date       : 12.06.06
+Arch       : Linux 
+Release    : 2.2.0pre1
+Programs   : octopus
+TestGroups : long-run
+Enabled    : Yes
 
 # The test ensures the optimal control algorithm ZR98/WG05. It calculates the optimal laser field that transfers the ground-state to the first excited state. 
 # 

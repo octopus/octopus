@@ -16,7 +16,7 @@ This script is one of the B<octopus> utilities.
 
 This script can be used to generate and run the B<octopus> regression tests.
 
-The man pages of octopus and of the auxiliary octopus
+The man pages of Octopus and of the auxiliary Octopus
 sub-programs (oct-something) are not intended to contain the
 documentation of the programs, but only their basic
 description. For where to find more documentation, see the
@@ -36,9 +36,13 @@ Run in verbose mode. Useful for debugging the script.
 
 Show a brief summary of command line options.
 
-=item B<-e> I<file>
+=item B<-D> I<DIR>
 
-Specify the name of the Octopus executable. The default is B<octopus>.
+Directory where to look for the Octopus executables.
+
+=item B<-s> I<SUFFIX>
+
+Suffix to append to the base executable name.
 
 =item B<-c> I<file>
 
@@ -49,23 +53,27 @@ create a new regression test.
 
 This option specifies the input file for a regression test.
 
-=item B<-d> I<directory>
-
-Use I<directory> as working directory. The default is a randomly generated directory in /tmp.
-
 =item B<-i>
 
-Print content of the octopus inputfile which is used for the current test to stdout.
+Print content of the Octopus inputfile which is used for the current test to stdout.
 
 =item B<-p>
 
 Preserve working directory. Don't clean up the temporary working directory after the run.
 
+=item B<-l>
+
+Copy outout log to current working directory.
+
+=item B<-m>
+
+Run matches only (assumes there are work directories present).
+
 =back 
 
 =head1 EXAMPLES
 
-To create a template for a regression test run e.g.
+To create a template for a regression test run e. g.
 
 	oct-run_regression_test.pl -c finite_systems_3d/sodium.test
 
@@ -80,7 +88,7 @@ of this run and to print out the input file
 
 Run a MPI test with a local directory as working directory
 
-	oct-run_regression_test.pl -d./tmp -f benzene.test -e `pwd`/../src/octopus-mpi
+	oct-run_regression_test.pl -f benzene.test -D $PWD/../src -s _mpi
 
 =head1 AUTHOR
 
@@ -94,9 +102,11 @@ Report bugs to <appel@physik.fu-berlin.de>.
 
 Copyright (C) 2005 H. Appel.
 
-This  is free software; see the source for copying conditions.  There is NO warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+This is free software; see the source for copying conditions.  There
+is NO warranty; not even for MERCHANTABILITY or FITNESS FOR A
+PARTICULAR PURPOSE.
 
 =head1 SEE ALSO
 
-The largest source of documentation is expected to be at the octopus wiki: S<http://www.tddft.org/programs/octopus/wiki/>.
-
+The largest source of documentation is expected to be at the Octopus
+wiki: S<http://www.tddft.org/programs/octopus/wiki/>.

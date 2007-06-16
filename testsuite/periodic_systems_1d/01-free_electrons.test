@@ -1,14 +1,14 @@
 # -*- coding: utf-8 mode: shell-script -*-
 # $Id$
 
-Test     : Free Electron Bands in 1D
-Author   : Carlo + Heiko
-Date     : 16.06.05
-Arch     : Linux n11 2.6.11.6-smp-1 #1 SMP Mon Apr 11 20:30:44 CEST 2005 i686 GNU/Linux
-Release  : 2.2.0pre1
-Programs : octopus
-Runtime  : short-run
-Enabled  : Yes
+Test       : Free Electron Bands in 1D
+Author     : Carlo + Heiko
+Date       : 16.06.05
+Arch       : Linux n11 2.6.11.6-smp-1 #1 SMP Mon Apr 11 20:30:44 CEST 2005 i686 GNU/Linux
+Release    : 2.2.0pre1
+Programs   : octopus
+TestGroups : short-run
+Enabled    : Yes
 
 Input: 01-free_electrons.01-ground_state.inp
 

@@ -1,13 +1,13 @@
 # -*- coding: utf-8 mode: shell-script -*-
 # $Id$
-Test     : Carbon
-Author   : Alberto
-Date     : 02.03.06
-Arch     : Linux g38 2.6.14-desktop-2 #1 SMP PREEMPT Sun Nov 20 20:45:48 CET 2005 i686 GNU/Linux
-Release  : 2.2.0pre1
-Programs : octopus
-Runtime  : long-run
-Enabled  : Yes
+Test       : Carbon
+Author     : Alberto
+Date       : 02.03.06
+Arch       : Linux g38 2.6.14-desktop-2 #1 SMP PREEMPT Sun Nov 20 20:45:48 CET 2005 i686 GNU/Linux
+Release    : 2.2.0pre1
+Programs   : octopus
+TestGroups : long-run
+Enabled    : Yes
 
 # The purpose of this test is making sure that spin-polarized
 # calculations work.

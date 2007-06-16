@@ -1,0 +1,12 @@
+			      TestGroups
+			      ==========
+
+This file list all test groups with a short description that are
+currently present in the Octopus testsuite. This is intended as a
+reference to avoid a jungle of groups.
+
+
+Group tag       Description
+------------------------------------------------------------------------
+short-run       Formerly known as -s flag.
+long-run        Matches all test.

@@ -1,22 +1,22 @@
 =head1 NAME
 
-oct-run_testsuite - Script to run the octopus testsuite.
+oct-run_testsuite - Script to run the B<octopus> testsuite.
 
 =head1 SYNOPSIS
 
 =over
 
-=item B<oct-run_testsuite> [ option ]... 
+=item B<oct-run_testsuite> [option]...
 
 =back
 
 =head1 DESCRIPTION
 
-This script is one of the B<octopus> utilities. 
+This script is one of the B<octopus> utilities.
 
-This script runs the octopus testsuite.
+This script runs the Octopus testsuite.
 
-The man pages of octopus and of the auxiliary octopus
+The man pages of Octopus and of the auxiliary Octopus
 sub-programs (oct-something) are not intended to contain the
 documentation of the programs, but only their basic
 description. For where to find more documentation, see the
@@ -32,25 +32,45 @@ Prints out a short help message.
 
 Run in dry mode (show what would be executed).
 
-=item B<-f>
+=item B<-g> I<LIST>
 
-Run full testsuite.
+Comma separated list of test groups to run. If not present, all tests
+are run.
 
-=item B<-l> 
+=item B<-q>
+
+Query testfiles belonging to groups given with B<-g> option. No tests
+are performed.
+
+=item B<-d> I<DIR>
+
+Directory where to look for the testsuite.
+
+=item B<-l>
 
 Local run.
 
-=item B<-p> prefix
+=item B<-e> I<SUFFIX>
 
-Installation prefix [default: /usr]
+Suffix to append to the Octopus executable file name.
 
-=item B<-m> address
+=item B<-p> I<PREFIX>
 
-Mail report to address
+Installation prefix [default: /usr].
 
-=back 
+=item B<-w>
 
-=head1 EXAMPLES
+Run without MPI (parallel) tests.
+
+=item B<-c>
+
+Clean up all .log files after the testuite run.
+
+=item B<-m> I<ADDRESS>
+
+Mail report to address.
+
+=back
 
 =head1 AUTHOR
 
@@ -64,9 +84,11 @@ Report bugs to <appel@physik.fu-berlin.de>.
 
 Copyright (C) 2005 H. Appel.
 
-This  is free software; see the source for copying conditions.  There is NO warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+This is free software; see the source for copying conditions.  There
+is NO warranty; not even for MERCHANTABILITY or FITNESS FOR A
+PARTICULAR PURPOSE.
 
 =head1 SEE ALSO
 
-The largest source of documentation is expected to be at the octopus wiki: S<http://www.tddft.org/programs/octopus/wiki/>.
-
+The largest source of documentation is expected to be at the Octopus
+wiki: S<http://www.tddft.org/programs/octopus/wiki/>.

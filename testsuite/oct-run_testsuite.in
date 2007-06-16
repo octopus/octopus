@@ -1,21 +1,40 @@
 #!/bin/bash
 #
+# Copyright (C) 2005-2006 Heiko Appel
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2, or (at your option)
+# any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
+# 02111-1307, USA.
+#
 # $Id: oct-run_testsuite 2730 2007-02-28 20:57:45Z xavier $
 
-# Paths
+
+# Paths.
 prefix=@prefix@
 pkgdatadir=@datadir@/@PACKAGE@
 testsuite="$pkgdatadir/testsuite"
 
-# Arch
-arch=${MACHTYPE%-pc-linux-gnu}
+# Architecture.
+arch=`echo "$MACHTYPE" | awk -F- '{print $1}'`
 
 # Failure reporting.
 failed_tests=0
 total_tests=0
 failure_report=""
 
-# Usage
+
+# Usage.
 function usage() {
     cat <<EOF
 
@@ -25,15 +44,15 @@ Usage: oct-run_testsuite [options]
     
      -h            this message
      -n            dry run mode (show what would be executed)
-     -s            run short testsuite
-     -f            run full testsuite
-     -d            directory where to look for the testsuite
+     -g LIST       comma separated list of test groups to run
+     -q            query testfiles for the given groups (no tests are run)
+     -d DIR        directory where to look for the testsuite
      -l            local run
-     -e            exec suffix for octopus executable
-     -p            installation prefix [default: /usr]
+     -e SUFFIX     exec suffix for octopus executable
+     -p PREFIX     installation prefix [default: /usr]
      -w            without MPI tests (do not run parallel tests)
      -c            delete all .log files after the run
-     -m address    mail report to address
+     -m ADDRESS    mail report to address
 
 Report bugs to <appel@physik.fu-berlin.de>.
 EOF
@@ -41,24 +60,36 @@ EOF
 }
 
 
-# Dry run ...
+# Dry run...
 function CMD {
     [ "$dry_run" -o "$verbose" ] && echo -e "\033[32m$@\033[0m";
     [ ! "$dry_run" ] && eval "$@";
 }
 
 
-# Run all tests
+# Find tests to run. Takes as argument the string passed to the
+# -g command line option.
+function find_tests() {
+    groups="$1"
+    if [ -n "$groups" ]; then
+	groups_pat=`echo "$groups" | sed 's/ *, */|/'`
+	groups_pat="^TestGroups *:.*($groups_pat)"
+    else # No groups given defaults to all tests.
+	groups_pat="."
+    fi
+    testfiles=`find $testsuite -name "*.test" | \
+	xargs grep -E "$groups_pat" | \
+	awk -F: '{print $1}' | sort -u`
+    echo "$testfiles"
+}
+
+
+# Run all tests. Takes as first argument a list of testfile names.
 function run_testsuite() {
 
-if [ -n "$directory" ]; then
-    testsuite="$directory"
-else
-    [ "$local_run" == "yes" ] && testsuite=$(pwd)
-fi
+tests="$1"
 
-for y in $(find $testsuite -name "*.test" | xargs grep $match | awk -F: '{print $1}' | sort -u); do
-    echo $y
+for y in $tests; do
     total_tests=$((total_tests + 1))
     ybase=`basename $y`
     xybase=${ybase%.test}
@@ -94,12 +125,16 @@ done
 }
 
 
-# Send report via mail
+# Send report via mail.
+# Arguments:
+# $1 : list of testfile names that have been run,
+# $2 : e-mail address to send report to.
 function mail_report() {
 
+tests="$1"
 datestamp=$(date +"%Y-%m-%d")
 
-for y in $(find $testsuite -name "*.test" | xargs grep $match | awk -F: '{print $1}' | sort -u); do
+for y in $tests; do
     ybase=`basename $y`
     xybase=${ybase%.test}
     failed_tests=$(grep FAIL ${xybase}.log | wc -l) 
@@ -107,84 +142,116 @@ for y in $(find $testsuite -name "*.test" | xargs grep $match | awk -F: '{print 
     if [ $failed_tests -gt 0 ]; then
 	echo "Found: $failed_tests"
 	echo "Mailing report to: $mailaddr"
-	cat oct-header ${xybase}.log ${xybase}.out.log | mutt -s "[oct-run_testsuite on $arch] daily report - $datestamp" $mailaddr
+	cat oct-header ${xybase}.log ${xybase}.out.log | \
+	    mutt -s "[oct-run_testsuite on $arch] daily report - $datestamp" $mailaddr
     fi
 done
 }
 
 
-# show usage info if no args at all
+# Show usage info if no args at all.
 [ "$#" -eq 0 ] && usage;
 
 
-# some defaults
-match="short-run"
+# Parse command line.
+
+# Some defaults settings.
+query="no"
 send_mail="no"
 cleanup="no"
+test_groups=""
 
-while getopts "hnlsfwp:e:m:d:c" opt ; do
+while getopts "hnlwp:e:m:d:cg:q" opt ; do
     case "$opt" in
         h) usage;;
         n) echo="echo"; dry_run="yes";; 
         p) prefix="$OPTARG"; testsuite=$prefix/share/octopus/testsuite;;
         e) exec_suffix="$OPTARG";;
         l) local_run="yes";;
-        s) match="short-run";;
-        f) match="long-run";;
+	g) test_groups="$OPTARG";;
+	q) query="yes";;
         w) run_in_parallel="no";;
         m) mailaddr="$OPTARG"; send_mail="yes";;
 	d) directory="$OPTARG";;
 	c) cleanup="yes";;
-        ?) echo "Error parsing arguments"; exit 1 ;;
+        ?) echo "Error parsing arguments"; exit 1;;
     esac
 done
 shift $[ OPTIND - 1 ]
 
 
-# for now the long-run matches everything
-[ "${match}" == "long-run" ] && match=.
+# Find testfiles.
+if [ -n "$directory" ]; then
+    testsuite="$directory"
+else
+    [ "$local_run" == "yes" ] && testsuite=$(pwd)
+fi
 
-    
-# get epoch seconds at testsuite start
-testsuite_start=$(date +%s) 
-
-
-# run testsuite
-run_testsuite $match
+testfiles=`find_tests "$test_groups"`
 
 
-# Failure reporting to STDOUT.
-if [ $failed_tests -gt 0 ]; then
-    echo -e "\033[31m ***** $failed_tests out of $total_tests testfiles failed *****\033[0m"
-    echo
-    echo "    testfile                                          # failed testcases"
-    echo "    --------------------------------------------------------------------"
-    echo -e "$failure_report"
-    echo -e "\n"
-fi    
+# Query mode? If so, list files and exit.
+if [ "$query" == "yes" ]; then
+    echo "Testfiles for groups $test_groups:"
+    echo ""
+    for f in $testfiles; do
+	echo ${f##$testsuite/}
+    done
+    exit 0
+fi
 
 
-# get epoch seconds after we are done and compute time difference
-testsuite_end=$(date +%s) 
-timediff_sec=$[ testsuite_end - testsuite_start ]
+# No testfiles found, abort.
+if [ -z "$testfiles" ]; then
+    echo "No testfiles for group(s) $test_groups found."
+    # This is also mailed, if -m is present (this is to prevent
+    # errorneous cron-jobs and the like).
+    if [ "$send_mail" == "yes" ]; then
+	datestamp=`date +"%Y-%m-%d"`
+	echo "No testfiles for group(s) $test_groups found." | \
+	    mutt -s "[oct-run_testsuite on $arch] daily report - $datestamp" $mailaddr
+    fi
 
-rm -rf oct-header
-RUNTIME="Total run-time of the testsuite: \
-$(printf '%02d:%02d:%02d' $[timediff_sec / 3600] \
-$[(timediff_sec % 3600) / 60 ] $[timediff_sec % 60])"
+# Otherwise, start the whole machinery.
+else
+    # Get epoch seconds at testsuite start.
+    testsuite_start=$(date +%s) 
 
-# save runtime for mail header
-echo $RUNTIME > oct-header
-echo "" >> oct-header
+    # Run testsuite.
+    run_testsuite "$testfiles"
 
-# and print also to the screen
-echo $RUNTIME
-echo ""
+    # Failure reporting to STDOUT.
+    if [ $failed_tests -gt 0 ]; then
+	echo -e "\033[31m ***** $failed_tests out of $total_tests testfiles failed *****\033[0m"
+	echo
+	echo "    testfile                                          # failed testcases"
+	echo "    --------------------------------------------------------------------"
+	echo -e "$failure_report"
+	echo -e "\n"
+    fi
 
-    
-# should we send a mail report?
-[ "${send_mail}" == "yes" ] && mail_report $match $mailaddr
+    # Get epoch seconds after we are done and compute time difference.
+    testsuite_end=$(date +%s)
+    timediff_sec=$[ testsuite_end - testsuite_start ]
+
+    rm -rf oct-header
+    RUNTIME="Total run-time of the testsuite: \
+    $(printf '%02d:%02d:%02d' $[timediff_sec / 3600] \
+    $[(timediff_sec % 3600) / 60 ] $[timediff_sec % 60])"
+
+    # Save runtime for mail header.
+    echo $RUNTIME > oct-header
+    echo "" >> oct-header
+
+    # And print also to the screen.
+    echo $RUNTIME
+    echo ""
+
+        
+    # Should we send a mail report?
+    [ "${send_mail}" == "yes" ] && mail_report "$testfiles" "$mailaddr"
 
 
-# clean up
-[ "$cleanup" == "yes" ] && rm -f *.log oct-header stamp build-stamp
+    # Clean up.
+    [ "$cleanup" == "yes" ] && rm -f *.log oct-header stamp build-stamp
+fi

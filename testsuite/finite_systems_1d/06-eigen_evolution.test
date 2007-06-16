@@ -1,14 +1,14 @@
 # -*- coding: utf-8 mode: shell-script -*-
 # $Id: oct-run_regression_test.pl 2423 2006-09-24 21:25:52Z acastro $
 
-Test     : Eigensolver - Imaginary time propagation
-Author   : Heiko
-Date     : 15.10.06
-Arch     : Linux n10 2.6.16.25-smp-1 #1 SMP Sat Jul 15 19:00:56 CEST 2006 x86_64 GNU/Linux
-Release  : 2.2.0pre1
-Programs : octopus
-Runtime  : short-run
-Enabled  : Yes
+Test       : Eigensolver - Imaginary time propagation
+Author     : Heiko
+Date       : 15.10.06
+Arch       : Linux n10 2.6.16.25-smp-1 #1 SMP Sat Jul 15 19:00:56 CEST 2006 x86_64 GNU/Linux
+Release    : 2.2.0pre1
+Programs   : octopus
+TestGroups : short-run
+Enabled    : Yes
 
 Input: 06-eigen_evolution.01-ground_state.inp
 

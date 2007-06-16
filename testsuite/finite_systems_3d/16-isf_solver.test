@@ -1,14 +1,14 @@
 # -*- coding: utf-8 mode: shell-script -*-
 # $Id: 05-multigrid_solver.test 2392 2006-08-23 20:50:36Z appel $
 
-Test     : ISF Poisson Solver
-Author   : Xavier Andrade
-Date     : 18.10.05
-Arch     : Linux bizet 2.6.8-2-686 #1 Thu May 19 17:53:30 JST 2005 i686 GNU/Linux
-Release  : 2.2.0pre1
-Programs : octopus
-Runtime  : short-run
-Enabled  : Yes
+Test       : ISF Poisson Solver
+Author     : Xavier Andrade
+Date       : 18.10.05
+Arch       : Linux bizet 2.6.8-2-686 #1 Thu May 19 17:53:30 JST 2005 i686 GNU/Linux
+Release    : 2.2.0pre1
+Programs   : octopus
+TestGroups : short-run
+Enabled    : Yes
 
 Input: 16-isf_solver.01-ground_state.inp
 
