@@ -61,7 +61,13 @@ void FC_FUNC_(doperate_c,DOPERATE_C)(const int * opnp,
   mfi   = fi - 1;
   nm2   = n - UNROLL + 1;
 
+#pragma omp parallel for private(a, index, j)
   for(i = 0; i < np; i++) {
+
+#ifdef HAVE_C_OMP
+    index = opi + n*i;
+#endif
+
     a = w[0] * mfi[*index++];
 
     for(j = 1; j < nm2; j += UNROLL) {
@@ -113,7 +119,13 @@ void FC_FUNC_(zoperate_c,ZOPERATE_C)(const int * opnp,
   mfi   = fi - 1;
   nm2   = n - UNROLL + 1;
 
-  for(i = 0; i < np ; i++) {
+#pragma omp parallel for private(a, index, j)
+  for(i = 0; i < np; i++) {
+
+#ifdef HAVE_C_OMP
+    index = opi + n*i;
+#endif
+
     a.re = w[0] * mfi[*index  ].re;
     a.im = w[0] * mfi[*index++].im;
 

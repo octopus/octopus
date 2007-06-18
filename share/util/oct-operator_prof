@@ -45,29 +45,13 @@ CalculationMode = gs\n\
 fromScratch = yes\n\
 units = \"eVA\"\n\
 %Coordinates\n\
-\"C\" | 0 | 0 | 0\n\
+\"H\" | 0 | 0 | 0\n\
 %\n\
-%Species\n\
-\"C\" | 12.0107000 | spec_ps_psf | 6 | 1 | 1\n\
-%\n\
-spacing = 0.19\n\
+spacing = 0.10\n\
 radius = 5.0\n\
-SpinComponents = polarized\n\
-ExtraStates = 2\n\
-%Occupations\n\
-1 | 2/3 | 2/3 | 2/3\n\
-1 | 0 | 0 | 0\n\
-%\n\
-XCFunctional = lda_x + lda_c_pz\n\
-EigenSolver = cg\n\
-EigenSolverInitTolerance = 1e-2\n\
-EigenSolverFinalTolerance = 1e-5\n\
-EigenSolverFinalToleranceIteration = 6\n\
-EigenSolverMaxIter = 25\n\
-TypeOfMixing = broyden\n\
-MaximumIter = 4\n\
-PoissonSolver = fft_corrected\n"
-
+LCAOStart=no\n\
+MaximumIter = 2\n\
+NonInteractingElectrons=yes\n"
 
 # Input file for complex wavefunctions (based on
 # finite_systems_3d/07-spin_orbit_coupling.01-ground_state.inp).
@@ -78,7 +62,7 @@ CalculationMode = gs\n\
 fromScratch = yes\n\
 BoxShape = sphere\n\
 Radius  = 5.0\n\
-Spacing = 0.5\n\
+Spacing = 0.2\n\
 %Species\n\
 \"Pb\" | 207.2 | spec_ps_hgh | 82 | 0 | 0\n\
 %\n\
@@ -87,14 +71,11 @@ Spacing = 0.5\n\
 %\n\
 SpinComponents = non_collinear\n\
 RelativisticCorrection = spin_orbit\n\
-ExtraStates = 4\n\
-%Occupations\n\
-1.0 | 1.0 | 1/3 | 1/3 | 1/3 | 1/3 | 1/3 | 1/3\n\
-%\n\
-MaximumIter = 8\n\
-Eigensolver = plan\n\
-EigenSolverInitTolerance = 1e-5\n"
-
+ExcessCharge=3\n\
+MaximumIter = 2\n\
+LCAOStart=no\n\
+EigenSolverInitTolerance = 1e-5\n\
+NonInteractingElectrons=yes\n"
 
 function abort {
     echo $1 > /dev/stderr

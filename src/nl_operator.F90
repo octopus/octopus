@@ -1067,10 +1067,11 @@ contains
     FLOAT,   intent(out):: fo(1:np) 
 
     integer :: ii
-
+!$omp parallel do firstprivate(w)
     do ii = 1, np
       fo(ii) = sum(w(1:nn)  * fi(opi(1:nn, ii)))
     end do
+!$omp end parallel do
   end subroutine doperate
 
 
@@ -1085,10 +1086,11 @@ contains
     CMPLX,   intent(out):: fo(1:np) 
 
     integer :: ii
-
+!$omp parallel do firstprivate(w)
     do ii = 1, np
       fo(ii) = sum(w(1:nn)  * fi(opi(1:nn, ii)))
     end do
+!$omp end parallel do
   end subroutine zoperate
 
 end module nl_operator_m

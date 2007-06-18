@@ -105,39 +105,52 @@ void FC_FUNC_(zoperate_sse,ZOPERATE_SSE)(const int * opnp,
 
   v2df * restrict vw;
 
-  vw = malloc(n*16);
+#pragma omp parallel private(a, b, c, d, e, f, index, i, j, vw)
+  {
 
-  for(j = 0; j < n ; j++) {
-    set_vec(vw[j], w+j, w+j);
-  }
+    vw = malloc(n*16);
 
-  for(i = 0; i < np ; i++) {
-    
-    a = vw[0] * fi[index[0]-1];
-    b = _mm_setzero_pd();
-    c = _mm_setzero_pd();
-    d = _mm_setzero_pd();
-    e = _mm_setzero_pd();
-    f = _mm_setzero_pd();
-
-    for(j = 1; j < nm2; j += UNROLL){
-      a += vw[j  ] * fi[index[j+0]-1];
-      b += vw[j+1] * fi[index[j+1]-1];
-      c += vw[j+2] * fi[index[j+2]-1];
-      d += vw[j+3] * fi[index[j+3]-1];
-      e += vw[j+4] * fi[index[j+4]-1];
-      f += vw[j+5] * fi[index[j+5]-1];
+    for(j = 0; j < n ; j++) {
+      set_vec(vw[j], w+j, w+j);
     }
     
-    for(; j < n; j++) a += vw[j] * fi[index[j]-1];
-    
-    index += n;
 
-    fo[i] = a + b + c + d + e + f;
+#pragma omp for
+    for(i = 0; i < np; i++) {
+
+#ifdef HAVE_C_OMP
+      index = opi + n*i;
+#endif
+
+      a = vw[0] * fi[index[0]-1];
+      b = _mm_setzero_pd();
+      c = _mm_setzero_pd();
+      d = _mm_setzero_pd();
+      e = _mm_setzero_pd();
+      f = _mm_setzero_pd();
+
+      for(j = 1; j < nm2; j += UNROLL){
+	a += vw[j  ] * fi[index[j+0]-1];
+	b += vw[j+1] * fi[index[j+1]-1];
+	c += vw[j+2] * fi[index[j+2]-1];
+	d += vw[j+3] * fi[index[j+3]-1];
+	e += vw[j+4] * fi[index[j+4]-1];
+	f += vw[j+5] * fi[index[j+5]-1];
+      }
     
+      for(; j < n; j++) a += vw[j] * fi[index[j]-1];
+
+#ifndef HAVE_C_OMP    
+      index += n;
+#endif
+
+      fo[i] = a + b + c + d + e + f;
+    
+    }
+
+    free(vw);
+
   }
-  
-  free(vw);
 
 }
 #endif /* USE_VECTORS */
