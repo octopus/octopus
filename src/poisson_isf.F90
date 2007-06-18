@@ -155,7 +155,6 @@ contains
     i_cnf = serial
 
 #if defined(HAVE_MPI)
-#warning this has to be fixed, i_cnf never takes the value 'serial'
     if(all_nodes) then
       i_cnf = world
     else if(m%parallel_in_domains) then
