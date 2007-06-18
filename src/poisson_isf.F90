@@ -153,11 +153,19 @@ contains
 
     ! Choose configuration.
     i_cnf = serial
+
+#if defined(HAVE_MPI)
+#warning this has to be fixed, i_cnf never takes the value 'serial'
     if(all_nodes) then
       i_cnf = world
     else if(m%parallel_in_domains) then
       i_cnf = domain
     end if
+#endif
+
+#if !defined(HAVE_MPI)
+    ASSERT(i_cnf == serial)
+#endif
 
     if(i_cnf == serial) then
       call psolver_kernel(rho_cf%n(1), rho_cf%n(2), rho_cf%n(3),    &
