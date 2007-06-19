@@ -87,8 +87,9 @@ program oscillator_strength
 
   implicit none
 
-  integer :: in_file(3), i, lmax, ierr, nspin, order
-  FLOAT :: omega, power, leftbound, rightbound, search_interval, total_time
+  integer :: in_file(3), i, lmax, ierr, nspin, order, nfrequencies
+  FLOAT :: omega, power, leftbound, rightbound, search_interval, &
+           total_time, dw, w, aw, min_aw, min_w, omega_orig
   character(len=100) :: file1, file2
 
   ! Reads the information passed through the command line options (if available).
@@ -103,6 +104,7 @@ program oscillator_strength
   omega = CNST(0.1)
   search_interval = CNST(0.01)
   order = 1
+  nfrequencies = 1000
   call getopt_oscillator_strength(omega, file1, file2, search_interval, order)
 
   if(trim(file2).ne."") then
@@ -132,7 +134,21 @@ program oscillator_strength
   leftbound = omega - search_interval
   rightbound = omega + search_interval
 
-  call loct_1dminimize(leftbound, rightbound, omega, ft, ierr)
+  dw = (rightbound-leftbound) / (nfrequencies - 1)
+  min_w = omega
+  min_aw = M_ZERO
+  do i = 1, nfrequencies
+    w = leftbound + (i-1)*dw
+    call ft(w, aw)
+    if(aw < min_aw) then
+      min_aw = aw
+      min_w = w
+    end if
+  end do
+
+  omega_orig = omega
+  omega = min_w
+  call loct_1dminimize(min_w - 2*dw, min_w + 2*dw, omega, ft, ierr)
   if(ierr.ne.0) then
     write(0,'(a)') 'Could not find a maximum.'
     stop
@@ -154,7 +170,12 @@ program oscillator_strength
     write(*, '(a,f12.8,a,f12.8,a)') '<0|P|I>  = ', sqrt(abs(power)) / units_inp%length%factor, &
                                     ' '//trim(units_inp%length%abbrev)//' = ',                 &
                                     sqrt(abs(power)),' b'
-    write(*, '(a,f12.8)')   'f[O->I]  = ', M_TWO*omega*power
+    write(*, '(a,f12.8)')           'f[O->I]  = ', M_TWO*omega*power
+    write(*, '(a)')
+    write(*, '(a,f12.8,a,f12.8,a)') '   Search interval = [', leftbound / units_inp%energy%factor, ',', &
+                                                              rightbound / units_inp%energy%factor, ']'
+    write(*, '(a,f12.4,a)')         '   Search discretization = ', dw / units_inp%energy%factor, &
+                                    ' '//trim(units_inp%energy%abbrev)
   case(2)
     write(*, '(a,f12.8,a,f12.8,a)') 'omega    = ', omega / units_inp%energy%factor, &
                                     ' '//trim(units_inp%energy%abbrev)//' = ',      &
@@ -162,6 +183,9 @@ program oscillator_strength
     write(*, '(a,f12.8,a,f12.8,a)') 'C(omega) = ', power / units_out%length%factor**3, &
                                     ' '//trim(units_inp%length%abbrev)//'^3 = ',       &
                                     power, ' b^3'
+    write(*, '(a)')
+    write(*, '(a,f12.8,a,f12.8,a)') '   Search interval = [', leftbound / units_inp%energy%factor, ',', &
+                                                              rightbound / units_inp%energy%factor, ']'
   end select
 
   deallocate(ot)

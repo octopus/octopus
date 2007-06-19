@@ -368,26 +368,10 @@ void FC_FUNC_(oct_1dminimize, OCT_1DMINIMIZE)(double *a, double *b, double *m, v
   const gsl_min_fminimizer_type *T;
   gsl_min_fminimizer *s;
   gsl_function F;
-  int ierr, j, sign;
-  double minimum;
+  int ierr;
 
   F.function = &fn1;
   F.params = f;
-
-  /* First we need to find a proper guess point */
-  j = 1;
-  sign = 1;
-  minimum = *m;
-  while( (fn1(*a, f) < fn1(*m, f)) || (fn1(*b, f) < fn1(*m, f) ) ){
-    *m = minimum + sign*((*b-*a)/10.0)*j;
-    if( (*m<*a+0.0001) || (*m>*b-0.0001) ){
-      *status = -1;
-      return;
-      }
-    sign = -sign;
-    j++;
-  }
-
 
   T = gsl_min_fminimizer_brent;
   s = gsl_min_fminimizer_alloc (T);
