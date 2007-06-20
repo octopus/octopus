@@ -34,8 +34,8 @@ SpinComponents = polarized
 
 ExtraStates = 2
 %Occupations
-1 | 2/3 | 2/3 | 2/3
-1 | 0 | 0 | 0
+ 2/3 | 2/3 | 2/3
+ 0 | 0 | 0
 %
 
 XCFunctional = lda_x + lda_c_pz

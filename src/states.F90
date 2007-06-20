@@ -349,7 +349,7 @@ contains
     type(states_t), intent(inout) :: st
     FLOAT, intent(in) :: excess_charge
 
-    integer :: i, j
+    integer :: i, j, ncols
     C_POINTER :: blk
     FLOAT :: r
 
@@ -365,8 +365,11 @@ contains
     !% <br>&nbsp;&nbsp;2.0 | 2.0 | 2.0 | 2.0 | 2.0
     !% <br>%</tt>
     !%
-    !% would fix the occupations of the five states to <i>2.0</i>. There must be
-    !% as many columns as states in the calculation. If <tt>SpinComponents == polarized</tt>
+    !% would fix the occupations of the five states to <i>2.0</i>. There must be,
+    !% at most, as many columns as states in the calculation. If there are less columns
+    !% than states, then the code will assume that the user is indicating the occupations
+    !% of the uppermost states, assigning maximum occupation (i.e. 2 for spin-unpolarized
+    !% calculations, 1 otherwise) to the lower states. If <tt>SpinComponents == polarized</tt>
     !% this block should contain two lines, one for each spin channel.
     !% This variable is very useful when dealing with highly symmetric small systems
     !% (like an open shell atom), for it allows us to fix the occupation numbers
@@ -378,14 +381,46 @@ contains
     !% <br>%Occupations
     !% <br>&nbsp;&nbsp;2 | 2/3 | 2/3 | 2/3
     !% <br>%</tt>
+    !%
+    !% If you want the calculation to be spin-polarized (which makes more sense), you could do:
+    !%
+    !% <tt>ExtraStates = 2
+    !% <br>%Occupations
+    !% <br>&nbsp;&nbsp; 1/3 | 1/3 | 1/3
+    !% <br>&nbsp;&nbsp; 0   |   0 |   0
+    !% <br>%</tt>
+    !%
+    !% Note that in this case the first state is absent; the code will calculate four states
+    !% (two because there are four electrons, plus two because ExtraStates = 2), and since
+    !% it finds only three columns, it will occupy the first state with one electron for each
+    !% of the spin options.
     !%End
+
+
+
     occ_fix: if(loct_parse_block(check_inp('Occupations'), blk)==0) then
       ! read in occupations
       st%fixed_occ = .true.
 
+      ! Reads the number of columns in the first row. This assumes that all rows
+      ! have the same column number; otherwise the code will stop with an error.
+      ncols = loct_parse_block_cols(blk, 0)
+      if(ncols > st%nst) then
+        call input_error("Occupations")
+      end if
+      ! Now we fill al the "missing" states with the maximum occupation.
       do i = 1, st%d%nik
-        do j = 1, st%nst
-          call loct_parse_block_float(blk, i-1, j-1, st%occ(j, i))
+        do j = 1, st%nst - ncols
+          if(st%d%ispin == UNPOLARIZED) then
+            st%occ(j, i) = M_TWO
+          else
+            st%occ(j, i) = M_ONE
+          end if
+        end do
+      end do
+      do i = 1, st%d%nik
+        do j = st%nst - ncols + 1, st%nst 
+          call loct_parse_block_float(blk, i-1, j-1-(st%nst-ncols), st%occ(j, i))
         end do
       end do
       call loct_parse_block_end(blk)

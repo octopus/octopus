@@ -11,7 +11,7 @@ CalculationMode = gs
 ExtraStates = 1
 
 %Occupations
-0 | 1 | 0 | 0 | 0
+0 | 1 
 %
 
 BoxShape = sphere
