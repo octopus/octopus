@@ -341,9 +341,10 @@ contains
     FLOAT, intent(in)  :: in(:, :, :)
     FLOAT, intent(out) :: out(:, :, :)
     integer :: ix, iy, iz
-    do ix = 1, size(in, 1)
-      do iy = 1, size(in, 2)
-        do iz = 1, size(in, 3)
+
+    do ix = lbound(in, 1), ubound(in, 1)
+      do iy = lbound(in, 2), ubound(in, 2)
+        do iz = lbound(in, 3), ubound(in, 3)
           out(iz, iy, ix) = in(ix, iy, iz)
         end do
       end do
