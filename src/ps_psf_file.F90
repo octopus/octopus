@@ -136,7 +136,7 @@ contains
         read(unit) l, (psf%vso(i, nup), i=2, psf%nr)
       end if
 
-      if(l /= nup) then
+      if( (l /= nup) .and. (psf%irel.eq.'rel') ) then
         message(1) = 'Unexpected angular momentum'
         message(2) = 'Pseudopotential should be ordered by increasing l'
         call write_warning(2)
