@@ -18,12 +18,11 @@
 !! $Id$
 
 !------------------------------------------------------------------------------
-! X(project) calculates the action of the sum of the projectors p(1:n_projectors)
-! on the psi wavefunction. The result is summed up to ppsi
-subroutine X(project)(mesh, p, n_projectors, dim, psi, ppsi, reltype, periodic, ik)
+! X(project_psi) calculates the action of a projector on the psi wavefunction.
+! The result is summed up to ppsi
+subroutine X(project_psi)(mesh, pj, dim, psi, ppsi, reltype, periodic, ik)
   type(mesh_t),      intent(in)    :: mesh
-  type(projector_t), intent(in)    :: p(:)
-  integer,           intent(in)    :: n_projectors
+  type(projector_t), intent(in)    :: pj
   integer,           intent(in)    :: dim
   R_TYPE,            intent(in)    :: psi(:, :)   ! psi(1:mesh%np, dim)
   R_TYPE,            intent(inout) :: ppsi(:, :)  ! ppsi(1:mesh%np, dim)
@@ -31,71 +30,134 @@ subroutine X(project)(mesh, p, n_projectors, dim, psi, ppsi, reltype, periodic, 
   logical,           intent(in)    :: periodic
   integer,           intent(in)    :: ik
 
-  integer :: n_s, ip, idim
+  integer :: n_s, idim
   R_TYPE, allocatable :: lpsi(:, :), plpsi(:,:)
 
   call push_sub('projector_inc.project')
 
-  do ip = 1, n_projectors
+  n_s = pj%sphere%ns
+  
+  ALLOCATE(lpsi(n_s, dim),  n_s*dim)
+  ALLOCATE(plpsi(n_s, dim), n_s*dim)
+  
+  do idim = 1, dim
+    lpsi(1:n_s, idim)  = psi(pj%sphere%jxyz(1:n_s), idim)
+  end do
 
-    n_s = p(ip)%sphere%ns
+  call X(project_sphere)(mesh, pj, dim, lpsi, plpsi, reltype, periodic, ik)
 
-    if(p(ip)%type == M_LOCAL) then
-      do idim = 1, dim
-        ppsi(p(ip)%sphere%jxyz(1:n_s), idim) = ppsi(p(ip)%sphere%jxyz(1:n_s), idim) + &
-             p(ip)%local_p%v(1:n_s) * psi(p(ip)%sphere%jxyz(1:n_s), idim)
-      end do
-
-      cycle
-
-    end if
-
-    if(allocated(lpsi))   deallocate(lpsi)
-    if(allocated(plpsi))  deallocate(plpsi)
-    ALLOCATE(lpsi(n_s, dim),  n_s*dim)
-    ALLOCATE(plpsi(n_s, dim), n_s*dim)
-
-    do idim = 1, dim
-      lpsi(1:n_s, idim)  = psi(p(ip)%sphere%jxyz(1:n_s), idim)
-      if(periodic) lpsi(1:n_s, idim)  = lpsi(1:n_s, idim) * p(ip)%phases(1:n_s, ik)
-    end do
-
-    select case (p(ip)%type)
-    case (M_HGH)
-      if (periodic) then
-        call X(hgh_project)(mesh, p(ip)%sphere, p(ip)%hgh_p, dim, lpsi, plpsi, reltype, p(ip)%phases(:, ik))
-      else
-        call X(hgh_project)(mesh, p(ip)%sphere, p(ip)%hgh_p, dim, lpsi, plpsi, reltype)
-      end if
-    case (M_KB)
-      if (periodic) then
-        call X(kb_project)(mesh, p(ip)%sphere, p(ip)%kb_p, dim, lpsi, plpsi, p(ip)%phases(:, ik))
-      else
-        call X(kb_project)(mesh, p(ip)%sphere, p(ip)%kb_p, dim, lpsi, plpsi)
-      end if
-    case (M_RKB)
-#ifdef R_TCOMPLEX
-      !This can only be aplied to complex spinor wave-functions
-      if (periodic) then
-        call rkb_project(mesh, p(ip)%sphere, p(ip)%rkb_p, lpsi, plpsi, p(ip)%phases(:, ik))
-      else
-        call rkb_project(mesh, p(ip)%sphere, p(ip)%rkb_p, lpsi, plpsi)
-      end if
-#endif
-    end select
-
-    do idim = 1, dim
-      ppsi(p(ip)%sphere%jxyz(1:n_s), idim) = ppsi(p(ip)%sphere%jxyz(1:n_s), idim) + plpsi(1:n_s, idim)
-    end do
-
+  do idim = 1, dim
+    ppsi(pj%sphere%jxyz(1:n_s), idim) = ppsi(pj%sphere%jxyz(1:n_s), idim) + plpsi(1:n_s, idim)
   end do
 
   if(allocated(lpsi))   deallocate(lpsi)
   if(allocated(plpsi))  deallocate(plpsi)
 
   call pop_sub()
-end subroutine X(project)
+end subroutine X(project_psi)
 
+!------------------------------------------------------------------------------
+! X(psia_project_psib) calculates <psia|projector|psib>
+R_TYPE function X(psia_project_psib)(mesh, pj, dim, psia, psib, reltype, periodic, ik) result(apb)
+  type(mesh_t),      intent(in)    :: mesh
+  type(projector_t), intent(in)    :: pj
+  integer,           intent(in)    :: dim
+  R_TYPE,            intent(in)    :: psia(:, :)  ! psia(1:mesh%np, dim)
+  R_TYPE,            intent(inout) :: psib(:, :)  ! psib(1:mesh%np, dim)
+  integer,           intent(in)    :: reltype
+  logical,           intent(in)    :: periodic
+  integer,           intent(in)    :: ik
+
+  integer ::  n_s, idim
+  R_TYPE, allocatable :: lpsi(:, :), plpsi(:,:)
+
+  call push_sub('projector_inc.psia_project_psib')
+
+  n_s = pj%sphere%ns
+
+  ALLOCATE(lpsi(n_s, dim),  n_s*dim)
+  ALLOCATE(plpsi(n_s, dim), n_s*dim)
+  
+  do idim = 1, dim
+    lpsi(1:n_s, idim)  = psib(pj%sphere%jxyz(1:n_s), idim)
+  end do
+
+  call X(project_sphere)(mesh, pj, dim, lpsi, plpsi, reltype, periodic, ik)
+
+  apb = M_ZERO
+  do idim = 1, dim
+    plpsi(1:n_s, 1) = R_CONJ(psia(pj%sphere%jxyz(1:n_s), idim)) * plpsi(1:n_s, idim)
+  end do
+  apb = apb + X(sm_integrate)(mesh, pj%sphere, plpsi(1:n_s, 1))
+
+  deallocate(lpsi, plpsi)
+
+  call pop_sub()
+end function X(psia_project_psib)
+
+subroutine X(project_sphere)(mesh, pj, dim, psi, ppsi, reltype, periodic, ik)
+  type(mesh_t),      intent(in)    :: mesh
+  type(projector_t), intent(in)    :: pj
+  integer,           intent(in)    :: dim
+  R_TYPE,            intent(in)    :: psi(:, :)   ! psi(1:n_s, dim)
+  R_TYPE,            intent(inout) :: ppsi(:, :)  ! ppsi(1:n_s, dim)
+  integer,           intent(in)    :: reltype
+  logical,           intent(in)    :: periodic
+  integer,           intent(in)    :: ik
+
+  integer :: n_s, idim
+  R_TYPE, allocatable :: ph_psi(:, :)
+
+  call push_sub('projector_inc.project')
+
+  n_s = pj%sphere%ns
+
+  if(pj%type == M_LOCAL) then
+
+    do idim = 1, dim
+      ppsi(1:n_s, idim) = pj%local_p%v(1:n_s) * psi(1:n_s, idim)
+    end do
+
+  else
+
+    if (periodic) then
+      ALLOCATE(ph_psi(n_s, dim),  n_s*dim)
+
+      do idim = 1, dim
+        ph_psi(1:n_s, idim)  = psi(1:n_s, idim) * pj%phases(1:n_s, ik)
+      end do
+    end if
+
+    select case (pj%type)
+    case (M_HGH)
+      if (periodic) then
+        call X(hgh_project)(mesh, pj%sphere, pj%hgh_p, dim, ph_psi, ppsi, reltype, pj%phases(:, ik))
+      else
+        call X(hgh_project)(mesh, pj%sphere, pj%hgh_p, dim, psi, ppsi, reltype)
+      end if
+    case (M_KB)
+      if (periodic) then
+        call X(kb_project)(mesh, pj%sphere, pj%kb_p, dim, ph_psi, ppsi, pj%phases(:, ik))
+      else
+        call X(kb_project)(mesh, pj%sphere, pj%kb_p, dim, psi, ppsi)
+      end if
+    case (M_RKB)
+#ifdef R_TCOMPLEX
+      !This can only be aplied to complex spinor wave-functions
+      if (periodic) then
+        call rkb_project(mesh, pj%sphere, pj%rkb_p, ph_psi, ppsi, pj%phases(:, ik))
+      else
+        call rkb_project(mesh, pj%sphere, pj%rkb_p, psi, ppsi)
+      end if
+#endif
+    end select
+
+  end if
+
+  if(periodic) deallocate(ph_psi)
+
+  call pop_sub()
+end subroutine X(project_sphere)
 
 !------------------------------------------------------------------------------
 ! X(psidprojectpsi) is used to calculate the contribution of the non-local part
@@ -162,71 +224,6 @@ function X(psidprojectpsi)(mesh, p, n_projectors, dim, psi, periodic, ik) result
 
   call pop_sub()
 end function X(psidprojectpsi)
-
-
-R_TYPE function X(psia_project_psib)(mesh, pj, dim, psia, psib, reltype, periodic, ik) result(apb)
-  type(mesh_t),      intent(in)    :: mesh
-  type(projector_t), intent(in)    :: pj
-  integer,           intent(in)    :: dim
-  R_TYPE,            intent(in)    :: psia(:, :)  ! psia(1:mesh%np, dim)
-  R_TYPE,            intent(inout) :: psib(:, :)  ! psib(1:mesh%np, dim)
-  integer,           intent(in)    :: reltype
-  logical,           intent(in)    :: periodic
-  integer,           intent(in)    :: ik
-
-  integer ::  n_s, idim
-  R_TYPE, allocatable :: lpsi(:, :), plpsi(:,:)
-
-  call push_sub('projector_inc.psia_project_psib')
-
-  n_s = pj%sphere%ns
-
-  ALLOCATE(lpsi(n_s, dim),  n_s*dim)
-  ALLOCATE(plpsi(n_s, dim), n_s*dim)
-  
-  if(pj%type /= M_LOCAL) then
-    do idim = 1, dim
-      lpsi(1:n_s, idim)  = psib(pj%sphere%jxyz(1:n_s), idim)
-      if(periodic) lpsi(1:n_s, idim)  = lpsi(1:n_s, idim) * pj%phases(1:n_s, ik)
-    end do
-  end if
-  
-  select case (pj%type)
-  case (M_LOCAL)
-    do idim = 1, dim
-      plpsi(1:n_s, idim) = pj%local_p%v(1:n_s) * psib(pj%sphere%jxyz(1:n_s), idim)
-    end do
-  case (M_HGH)
-    if (periodic) then
-      call X(hgh_project)(mesh, pj%sphere, pj%hgh_p, dim, lpsi, plpsi, reltype, pj%phases(:, ik))
-    else
-      call X(hgh_project)(mesh, pj%sphere, pj%hgh_p, dim, lpsi, plpsi, reltype)
-    end if
-  case (M_KB)
-    if (periodic) then
-      call X(kb_project)(mesh, pj%sphere, pj%kb_p, dim, lpsi, plpsi, pj%phases(:, ik))
-    else
-      call X(kb_project)(mesh, pj%sphere, pj%kb_p, dim, lpsi, plpsi)
-    end if
-  case (M_RKB)
-#ifdef R_TCOMPLEX
-    !This can only be aplied to complex spinor wave-functions
-    if (periodic) then
-      call rkb_project(mesh, pj%sphere, pj%rkb_p, lpsi, plpsi, pj%phases(:, ik))
-    else
-      call rkb_project(mesh, pj%sphere, pj%rkb_p, lpsi, plpsi)
-    end if
-#endif
-  end select
-  
-  apb = M_ZERO
-  do idim = 1, dim
-    plpsi(1:n_s, 1) = R_CONJ(psia(pj%sphere%jxyz(1:n_s), idim)) * plpsi(1:n_s, idim)
-  end do
-  apb = apb + X(sm_integrate)(mesh, pj%sphere, plpsi(1:n_s, 1))
-
-  call pop_sub()
-end function X(psia_project_psib)
 
 !! Local Variables:
 !! mode: f90

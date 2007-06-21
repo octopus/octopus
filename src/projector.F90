@@ -58,7 +58,8 @@ module projector_m
        projector_end,             &
        projector_build_kb_sphere, &
        projector_copy_kb_sphere,  &
-       dproject, zproject,        &
+       dproject_psi,              &
+       zproject_psi,              &
        dpsidprojectpsi,           &
        zpsidprojectpsi,           &
        dpsia_project_psib,        &
