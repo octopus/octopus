@@ -286,8 +286,9 @@ end subroutine X(lr_calc_polarizability)
 
 
 ! ---------------------------------------------------------
-subroutine X(lr_calc_susceptibility)(sys, lr, perturbation, chi_para, chi_dia)
+subroutine X(lr_calc_susceptibility)(sys, h, lr, perturbation, chi_para, chi_dia)
   type(system_t), target, intent(inout) :: sys
+  type(hamiltonian_t),    intent(inout) :: h
   type(lr_t),             intent(inout) :: lr(:,:)
   type(resp_pert_t),      intent(inout) :: perturbation
   CMPLX,                  intent(out)   :: chi_para(:,:), chi_dia(:,:)
@@ -314,7 +315,7 @@ subroutine X(lr_calc_susceptibility)(sys, lr, perturbation, chi_para, chi_dia)
         do dir2 = 1, sys%gr%sb%dim
 
           ! first the paramagnetic term
-          call X(resp_pert_apply) (perturbation, sys%gr, sys%geo, lr(dir2, 1)%X(dl_psi)(:, 1, ist, ik), aux1)
+          call X(resp_pert_apply) (perturbation, sys%gr, sys%geo, h, lr(dir2, 1)%X(dl_psi)(:, 1, ist, ik), aux1)
           aux2(1:sys%NP) = sys%st%X(psi)(1:sys%NP, 1, ist, ik)
           trace = X(mf_dotp)(sys%gr%m, aux2, aux1)
           chi_para(dir1, dir2) = chi_para(dir1, dir2) + d*(trace + R_CONJ(trace))
@@ -431,7 +432,7 @@ subroutine X(lr_calc_beta) (sh, sys, h, lr, perturbation, beta)
                   if( sys%st%occ(ist, ik) > lr_min_occ ) then 
 
                     call resp_pert_setup_dir(perturbation, u(2))
-                    call X(resp_pert_apply) (perturbation, sys%gr, sys%geo, &
+                    call X(resp_pert_apply) (perturbation, sys%gr, sys%geo, h, &
                          lr(u(3), isigma, w(3))%X(dl_psi)(1:np, idim, ist, ispin), tmp2)
                     tmp2(1:np) = tmp2(1:np) + R_REAL(hvar(1:np, ispin, isigma, idim, u(2), w(2) )) &
                        * lr(u(3), isigma, w(3))%X(dl_psi)(1:np, idim, ist, ispin)
@@ -447,7 +448,7 @@ subroutine X(lr_calc_beta) (sh, sys, h, lr, perturbation, beta)
                           if( sys%st%occ(ist2, ik) > lr_min_occ ) then 
 
                             call resp_pert_setup_dir(perturbation, u(2))
-                            call X(resp_pert_apply)(perturbation, sys%gr, sys%geo, sys%st%X(psi)(1:np, idim, ist, ispin), tmp2)
+                            call X(resp_pert_apply)(perturbation, sys%gr, sys%geo, h, sys%st%X(psi)(1:np, idim, ist, ispin), tmp2)
                             tmp2(1:np) = tmp2(1:np) + R_REAL(hvar(1:np, ispin2, isigma, idim2, u(2), w(2))) * &
                                sys%st%X(psi)(1:np, idim, ist, ispin)
 

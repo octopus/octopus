@@ -21,11 +21,14 @@
 
 module resp_pert_m
   use datasets_m
+  use external_pot_m
   use functions_m
   use geometry_m
   use global_m
   use grid_m
+  use hamiltonian_m
   use lib_oct_parser_m
+  use math_m
   use mesh_m
   use messages_m
   use specie_pot_m
@@ -50,6 +53,10 @@ module resp_pert_m
      RESP_PERTURBATION_MAGNETIC = 2, &
      RESP_PERTURBATION_DISPLACE = 3
 
+  integer, public, parameter :: &
+       GAUGE_GIPAW  = 1, &
+       GAUGE_ICL    = 2
+
   type resp_displ_t
     integer :: iatom
     integer :: idir
@@ -58,6 +65,7 @@ module resp_pert_m
   type resp_pert_t
     integer :: resp_type
     integer :: dir
+    integer :: gauge
     type(resp_displ_t), pointer :: ion_disp
   end type resp_pert_t
 
@@ -120,6 +128,8 @@ contains
     if(.not.varinfo_valid_option('RespPerturbationType', this%resp_type)) call input_error('RespPerturbationType')
 
     this%dir = -1
+
+    this%gauge = GAUGE_GIPAW
 
   end subroutine resp_pert_init2
 

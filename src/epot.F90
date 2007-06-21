@@ -65,6 +65,8 @@ module external_pot_m
     epot_generate,             &
     epot_generate_gauge_field, &
     epot_forces,               &
+    dconmut_vnl_r,             &
+    zconmut_vnl_r,             &
     build_local_part_in_real_space
 
 

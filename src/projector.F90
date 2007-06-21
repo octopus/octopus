@@ -62,6 +62,8 @@ module projector_m
        zproject_psi,              &
        dpsidprojectpsi,           &
        zpsidprojectpsi,           &
+       dproject_sphere,           &
+       zproject_sphere,           &
        dpsia_project_psib,        &
        zpsia_project_psib
 

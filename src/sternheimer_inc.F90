@@ -112,7 +112,7 @@ subroutine X(sternheimer_solve)(&
           
           !calculate the RHS of the Sternheimer eq
           Y(:, 1, sigma) = R_TOTYPE(M_ZERO)
-          call X(resp_pert_apply) (perturbation, sys%gr, sys%geo, st%X(psi)(:, 1, ist, ik), Y(:, 1, sigma))
+          call X(resp_pert_apply) (perturbation, sys%gr, sys%geo, h, st%X(psi)(:, 1, ist, ik), Y(:, 1, sigma))
           Y(1:m%np, 1, sigma) = -Y(1:m%np, 1, sigma) - hvar(1:m%np, ik, sigma)*st%X(psi)(1:m%np, 1, ist, ik)
 
           !and project it into the unoccupied states

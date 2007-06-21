@@ -59,6 +59,8 @@ module math_m
     set_app_threshold,          &
     operator(.app.),            &
     math_xor,                   &
+    dcross_product,             &
+    zcross_product,             &
     ddelta
 
 

@@ -17,16 +17,20 @@
 !!
 !! $Id: response.F90 2548 2006-11-06 21:42:27Z xavier $
 
-subroutine X(resp_pert_apply) (this, gr, geo, f_in, f_out)
+subroutine X(resp_pert_apply) (this, gr, geo, h, f_in, f_out)
   type(resp_pert_t), intent(in)    :: this
   type(grid_t),      intent(inout) :: gr
   type(geometry_t),  intent(in)    :: geo
+  type(hamiltonian_t),  intent(in) :: h
   R_TYPE,            intent(inout) :: f_in(:)
   R_TYPE,            intent(out)   :: f_out(:)
 
-  R_TYPE, allocatable :: lf(:,:)
   FLOAT, allocatable :: gv(:,:)
   type(atom_t), pointer :: atm
+
+  R_TYPE :: cross(1:MAX_DIM)
+
+  integer :: ipj, iatom, idir, ip
 
   ASSERT(this%dir.ne.-1)
 
@@ -35,15 +39,8 @@ subroutine X(resp_pert_apply) (this, gr, geo, f_in, f_out)
     f_out(1:NP) = f_in(1:NP) * gr%m%x(1:NP, this%dir)
 
   case(RESP_PERTURBATION_MAGNETIC)
-    ! I believe this should be NP and not NP_PART
-    ALLOCATE(lf(gr%m%np_part, gr%sb%dim), gr%m%np_part*gr%sb%dim)
-    
-    ! Note that we leave out the term 1/P_c
-    call X(f_angular_momentum) (gr%sb, gr%f_der, f_in, lf)
-    f_out(1:NP) = lf(1:NP, this%dir)/M_TWO
-    
-    deallocate(lf)
 
+    call magnetic
 
   case(RESP_PERTURBATION_DISPLACE)
 
@@ -52,11 +49,54 @@ subroutine X(resp_pert_apply) (this, gr, geo, f_in, f_out)
     atm => geo%atom(this%ion_disp%iatom)
 
     call specie_get_glocal(atm%spec, gr, atm%x, gv)
-    
+
     f_out(1:NP) = gv(1:NP, this%ion_disp%idir) * f_in(1:NP)
 
     deallocate(gv)
-    
+
   end select
-  
+
+contains 
+
+  subroutine magnetic
+
+    R_TYPE, allocatable :: lf(:,:), vrnl(:,:,:)
+
+    ! I believe this should be NP and not NP_PART
+    ALLOCATE(lf(gr%m%np_part, gr%sb%dim), gr%m%np_part*gr%sb%dim)
+
+    ! Note that we leave out the term 1/P_c
+    call X(f_angular_momentum) (gr%sb, gr%f_der, f_in, lf)
+    f_out(1:NP) = lf(1:NP, this%dir)/M_TWO
+
+    deallocate(lf)
+
+    select case(this%gauge)
+
+    case(GAUGE_GIPAW)
+
+      ALLOCATE(vrnl(gr%m%np_part, h%d%dim, gr%sb%dim), gr%m%np_part*h%d%dim*gr%sb%dim)
+
+      do iatom = 1, geo%natoms
+
+        do idir = 1, gr%sb%dim
+          call X(conmut_vnl_r)(gr, geo, h%ep, h%d%dim, idir, iatom, f_in, vrnl(:, :, idir), h%reltype, ik=1)
+        end do
+
+        do ip = 1, NP
+          cross = X(cross_product)(R_TOTYPE(geo%atom(iatom)%x), vrnl(ip, 1, :))
+#if !defined(R_TCOMPLEX)
+          f_out(ip) = f_out(ip) + M_HALF * cross(this%dir)
+#else
+          f_out(ip) = f_out(ip) - M_zI * M_HALF * cross(this%dir)
+#endif
+        end do
+
+      end do
+
+      deallocate(vrnl)
+
+    end select
+  end subroutine magnetic
+
 end subroutine X(resp_pert_apply)
