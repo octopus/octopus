@@ -128,12 +128,6 @@ contains
     call write_info(1)
     call system_h_setup(sys, h)
     
-    ! The magnetic perturbation does not change the density
-    ! WARNING: This will probably not work if spin-orbit coupling is on
-    if(em_vars%perturbation%resp_type == RESP_PERTURBATION_MAGNETIC) then
-      h%ip_app = .true.
-    end if
-
     call sternheimer_init(sh, sys, h, "Pol", hermitian = wfs_are_real(sys%st))
 
     do dir = 1, ndim
@@ -251,11 +245,11 @@ contains
                 
               end if
 
-              if(ierr == 0) then 
+              if(ierr == 0 .and. em_vars%nsigma == 2 ) then 
                 if (wfs_are_complex(sys%st)) then 
                   em_vars%lr(dir, 2, ifactor)%zdl_rho = conjg(em_vars%lr(dir, 1, ifactor)%zdl_rho)
                 else 
-                  em_vars%lr(dir, 2, ifactor)%zdl_rho = em_vars%lr(dir, 1, ifactor)%zdl_rho
+                  em_vars%lr(dir, 2, ifactor)%ddl_rho = em_vars%lr(dir, 1, ifactor)%ddl_rho
                 end if
               end if
 

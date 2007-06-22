@@ -28,10 +28,6 @@ subroutine X(resp_pert_apply) (this, gr, geo, h, f_in, f_out)
   FLOAT, allocatable :: gv(:,:)
   type(atom_t), pointer :: atm
 
-  R_TYPE :: cross(1:MAX_DIM)
-
-  integer :: ipj, iatom, idir, ip
-
   ASSERT(this%dir.ne.-1)
 
   select case(this%resp_type)
@@ -61,6 +57,8 @@ contains
   subroutine magnetic
 
     R_TYPE, allocatable :: lf(:,:), vrnl(:,:,:)
+    R_TYPE :: cross(1:MAX_DIM)
+    integer :: iatom, idir, ip
 
     ! I believe this should be NP and not NP_PART
     ALLOCATE(lf(gr%m%np_part, gr%sb%dim), gr%m%np_part*gr%sb%dim)
@@ -91,12 +89,109 @@ contains
           f_out(ip) = f_out(ip) - M_zI * M_HALF * cross(this%dir)
 #endif
         end do
-
+        
       end do
 
       deallocate(vrnl)
 
     end select
+
   end subroutine magnetic
 
 end subroutine X(resp_pert_apply)
+
+subroutine X(resp_pert_apply_order_2) (this, gr, geo, h, f_in, f_out)
+  type(resp_pert_t), intent(in)    :: this
+  type(grid_t),      intent(inout) :: gr
+  type(geometry_t),  intent(in)    :: geo
+  type(hamiltonian_t),  intent(in) :: h
+  R_TYPE,            intent(in)    :: f_in(:)
+  R_TYPE,            intent(out)   :: f_out(:)
+
+  select case(this%resp_type)
+  case(RESP_PERTURBATION_ELECTRIC)
+    f_out(1:NP) = R_TOTYPE(M_ZERO)
+
+  case(RESP_PERTURBATION_MAGNETIC)
+    call magnetic
+
+  end select
+
+contains
+
+  subroutine magnetic
+
+    R_TYPE, allocatable :: dnl(:,:,:), vrnl(:,:,:), xf(:)
+    R_TYPE :: cross1(1:MAX_DIM), cross2(1:MAX_DIM), bdir(1:MAX_DIM, 2)
+    FLOAT  :: rdelta
+    R_TYPE :: contr
+
+    integer :: iatom, idir, idir2, ip
+
+    do ip = 1, NP
+      rdelta = sum(gr%m%x(ip, 1:MAX_DIM)**2) * ddelta(this%dir, this%dir2)
+      f_out(ip) = CNST(0.25)*(rdelta - gr%m%x(ip, this%dir)*gr%m%x(ip, this%dir2)) * f_in(ip)
+    end do
+
+    bdir(1:MAX_DIM, 1:2) = M_ZERO
+    bdir(this%dir,  1)   = M_ONE
+    bdir(this%dir2, 2)   = M_ONE
+#if 1
+
+    select case(this%gauge)
+
+    case(GAUGE_GIPAW)
+
+      ALLOCATE(vrnl(gr%m%np_part, h%d%dim, gr%sb%dim), gr%m%np_part*h%d%dim*gr%sb%dim)
+      ALLOCATE(dnl(gr%m%np_part, gr%sb%dim, gr%sb%dim), gr%m%np_part*gr%sb%dim*gr%sb%dim)
+      ALLOCATE(xf(1:NP), NP)
+
+      do iatom = 1, geo%natoms
+
+        !calculate dnl |f> = -[x,vnl] |f>
+        do idir = 1, gr%sb%dim
+          call X(conmut_vnl_r)(gr, geo, h%ep, h%d%dim, idir, iatom, f_in, vrnl(:, :, idir), h%reltype, ik=1)
+        end do
+
+        ! -x vnl |f>
+        do idir = 1, gr%sb%dim
+          do idir2 = 1, gr%sb%dim
+            dnl(1:NP, idir, idir2) = -gr%m%x(1:NP, idir) * vrnl(1:NP, 1, idir2)
+          end do
+        end do
+
+        ! vnl x |f>
+        do idir2 = 1, gr%sb%dim
+          do idir = 1, gr%sb%dim
+            xf(1:NP) = gr%m%x(1:NP, idir) * f_in(1:NP)
+            call X(conmut_vnl_r)(gr, geo, h%ep, h%d%dim, idir2, iatom, xf, vrnl(:, :, idir2), h%reltype, ik=1)
+            dnl(1:NP, idir, idir2) = dnl(1:NP, idir, idir2) + vrnl(1:NP, 1, idir2)
+          end do
+        end do
+        
+        cross1 = X(cross_product)(bdir(:, 1), R_TOTYPE(geo%atom(iatom)%x))
+        cross2 = X(cross_product)(bdir(:, 2), R_TOTYPE(geo%atom(iatom)%x))
+
+        do ip = 1, NP
+
+          contr = M_ZERO
+          do idir = 1, gr%sb%dim
+            do idir2 = 1, gr%sb%dim
+              contr = contr + cross1(idir) * dnl(ip, idir, idir2) * cross2(idir2)
+            end do
+          end do
+
+          f_out(ip) = f_out(ip) + CNST(0.25)*contr
+
+        end do
+        
+      end do
+
+      deallocate(vrnl)
+
+    end select
+#endif
+  end subroutine magnetic
+
+
+end subroutine X(resp_pert_apply_order_2)

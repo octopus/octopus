@@ -40,6 +40,6 @@ Match ; Hyperpolarizability w=0.0 ; grep //\ y  linear/freq_0.0000/beta ; \s*0.2
 Match ; Hyperpolarizability w=0.1 ; grep //\ y linear/freq_0.1000/beta ; \s*0.867
 
 Input: 14-h2o_pol_lr.04_h2o_susc.inp
-Match; Paramagnetic susceptibility; head -5  linear/freq_0.0000/susceptibility | tail -1 ; \s*30.17
-Match; Diamagnetic susceptibility ; head -11 linear/freq_0.0000/susceptibility | tail -1 ; \s*-215.45
-Match; Total susceptibility       ; head -17 linear/freq_0.0000/susceptibility | tail -1 ; \s*-185.27
+Match; Paramagnetic susceptibility; head -5  linear/freq_0.0000/susceptibility | tail -1 ; \s*30.00
+Match; Diamagnetic susceptibility ; head -11 linear/freq_0.0000/susceptibility | tail -1 ; \s*-215.36
+Match; Total susceptibility       ; head -17 linear/freq_0.0000/susceptibility | tail -1 ; \s*-185.36

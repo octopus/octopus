@@ -310,27 +310,20 @@ subroutine X(lr_calc_susceptibility)(sys, h, lr, perturbation, chi_para, chi_dia
       d = sys%st%d%kweights(ik)*sys%st%occ(ist, ik)
 
       do dir1 = 1, sys%gr%sb%dim
-        call resp_pert_setup_dir(perturbation, dir1)
-
         do dir2 = 1, sys%gr%sb%dim
+          call resp_pert_setup_dir(perturbation, dir1, dir2)
+
+          aux2(1:sys%NP) = sys%st%X(psi)(1:sys%NP, 1, ist, ik)
 
           ! first the paramagnetic term
           call X(resp_pert_apply) (perturbation, sys%gr, sys%geo, h, lr(dir2, 1)%X(dl_psi)(:, 1, ist, ik), aux1)
-          aux2(1:sys%NP) = sys%st%X(psi)(1:sys%NP, 1, ist, ik)
           trace = X(mf_dotp)(sys%gr%m, aux2, aux1)
           chi_para(dir1, dir2) = chi_para(dir1, dir2) + d*(trace + R_CONJ(trace))
 
           ! now the diamagnetic term
-          if(dir1 == dir2) then
-            aux1(1:sys%NP) = sys%gr%m%x(1:sys%NP, 1)**2 + sys%gr%m%x(1:sys%NP, 2)**2 + &
-              sys%gr%m%x(1:sys%NP, 3)**2 - sys%gr%m%x(1:sys%NP, dir1)**2
-          else
-            aux1(1:sys%NP) = - sys%gr%m%x(1:sys%NP, dir1) * sys%gr%m%x(1:sys%NP, dir2)
-          end if
+          call X(resp_pert_apply_order_2) (perturbation, sys%gr, sys%geo, h, sys%st%X(psi)(1:sys%NP, 1, ist, ik), aux1)
+          chi_dia(dir1, dir2) = chi_dia(dir1, dir2) + d*X(mf_dotp)(sys%gr%m, aux2, aux1)
 
-          aux1(1:sys%NP) = aux1(1:sys%NP) * sys%st%X(psi)(1:sys%NP, 1, ist, ik)
-          aux2(1:sys%NP) = sys%st%X(psi)(1:sys%NP, 1, ist, ik)
-          chi_dia(dir1, dir2) = chi_dia(dir1, dir2) + d*X(mf_dotp)(sys%gr%m, aux2, aux1) / M_FOUR
         end do
       end do
     end do

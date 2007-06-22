@@ -45,6 +45,8 @@ module resp_pert_m
      resp_pert_setup_dir, &
      dresp_pert_apply,    &
      zresp_pert_apply,    &
+     dresp_pert_apply_order_2,    &
+     zresp_pert_apply_order_2,    &
      resp_displ_t,        &
      resp_pert_build_ion_displace
 
@@ -65,6 +67,7 @@ module resp_pert_m
   type resp_pert_t
     integer :: resp_type
     integer :: dir
+    integer :: dir2
     integer :: gauge
     type(resp_displ_t), pointer :: ion_disp
   end type resp_pert_t
@@ -110,6 +113,7 @@ contains
     !%End 
     call loct_parse_int(check_inp('RespPerturbationType'), RESP_PERTURBATION_ELECTRIC, ii)
     call resp_pert_init2(this, ii, gr, geo)
+
   end subroutine resp_pert_init1
 
 
@@ -129,7 +133,21 @@ contains
 
     this%dir = -1
 
-    this%gauge = GAUGE_GIPAW
+    !%Variable MagneticGaugeCorrection
+    !%Type integer
+    !%Default gipaw
+    !%Section Linear Response
+    !%Description
+    !% How to describe the coupling of electrons to the magnetic
+    !% field, that is how to handle gauge invariance. Default is
+    !% gipaw.
+    !%Option none 0
+    !% No correction
+    !%Option gipaw 1
+    !% GIPAW correction: Pickard and Mauri, PRL 91 196401 (2003).
+    !%End 
+
+    call loct_parse_int(check_inp('MagneticGaugeCorrection'), GAUGE_GIPAW, this%gauge)
 
   end subroutine resp_pert_init2
 
@@ -168,11 +186,14 @@ contains
 
 
   ! --------------------------------------------------------------------
-  subroutine resp_pert_setup_dir(this, dir)
+  subroutine resp_pert_setup_dir(this, dir, dir2)
     type(resp_pert_t), intent(inout) :: this
     integer,           intent(in)    :: dir
+    integer, optional, intent(in)    :: dir2
 
     this%dir = dir
+    if(present(dir2)) this%dir2 = dir2
+
   end subroutine resp_pert_setup_dir
 
 

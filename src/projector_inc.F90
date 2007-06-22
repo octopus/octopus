@@ -33,7 +33,7 @@ subroutine X(project_psi)(mesh, pj, dim, psi, ppsi, reltype, periodic, ik)
   integer :: n_s, idim
   R_TYPE, allocatable :: lpsi(:, :), plpsi(:,:)
 
-  call push_sub('projector_inc.project')
+  call push_sub('projector_inc.project_psi')
 
   n_s = pj%sphere%ns
   
@@ -108,7 +108,7 @@ subroutine X(project_sphere)(mesh, pj, dim, psi, ppsi, reltype, periodic, ik)
   integer :: n_s, idim
   R_TYPE, allocatable :: ph_psi(:, :)
 
-  call push_sub('projector_inc.project')
+  call push_sub('projector_inc.project_sphere')
 
   n_s = pj%sphere%ns
 

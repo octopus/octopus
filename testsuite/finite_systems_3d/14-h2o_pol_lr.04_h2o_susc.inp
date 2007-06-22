@@ -18,3 +18,4 @@ PolConvAbsDens = 1e-4
 PolLinearSolverMaxIter = 100
 PolLinearSolverInitTol = 1e-6
 PolLinearSolverTol     = 1e-6
+PolHamiltonianVariation = no
