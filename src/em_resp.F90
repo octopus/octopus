@@ -684,12 +684,12 @@ contains
 
       trace = M_z0
       do j = 1, NDIM
-        write(iunit, '(3f12.6)') real(tensor(j, 1:NDIM)) / factor
+        write(iunit, '(3f20.6)') real(tensor(j, 1:NDIM)) / factor
         trace = trace + real(tensor(j, j))
       end do
       trace = trace / M_THREE
 
-      write(iunit, '(a, f12.6)')  'Isotropic average', trace / factor
+      write(iunit, '(a, f20.6)')  'Isotropic average', trace / factor
       
     end subroutine out_tensor
 
