@@ -60,9 +60,9 @@ module multicomm_m
   use global_m
   use io_m
   use lib_oct_parser_m
-  use math_m
   use messages_m
   use mpi_m
+  use utils_m
   use varinfo_m
 
 #ifdef USE_OMP
@@ -323,7 +323,7 @@ contains
 
         ! get divisors of n
         n_divisors = 50 ! maximum number of divisors
-        call math_divisors(n, n_divisors, divisors)
+        call get_divisors(n, n_divisors, divisors)
 
         ! get the divisor of n >= f
         mc%group_sizes(k) = n

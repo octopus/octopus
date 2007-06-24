@@ -19,7 +19,7 @@
 
 AC_PREREQ(2.59)
 AC_INIT([Octopus],[2.2.0pre1],[octopus-devel@tddft.org],[octopus])
-AC_CONFIG_SRCDIR([src/global.F90])
+AC_CONFIG_SRCDIR([src/basic/global.F90])
 AC_CONFIG_AUX_DIR([build-aux])
 AM_INIT_AUTOMAKE
 
@@ -294,6 +294,8 @@ AC_CONFIG_FILES([Makefile
   liboct_parser/Makefile
   liboct/Makefile
   src/Makefile
+  src/include/Makefile
+  src/basic/Makefile
   perl/Makefile
   doc/Makefile
   doc/pdf/Makefile

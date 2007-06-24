@@ -19,15 +19,15 @@
 ##
 ## $Id$
 
+SUBDIRS = include basic
+
 EXTRA_PROGRAMS = oct-cross-section oct-rsf oct-harmonic-spectrum \
                  oct-broad oct-ph oct-xyz-anim oct-center-geom oct-help \
                  oct-oscillator-strength
 
 bin_PROGRAMS = octopus oct-test @UTILITY_PROGRAMS@
 
-basic_SRCS = liboct.F90 string.F90 varinfo.F90 mpi.F90 global.F90 liboct_parser.F90 \
-	     messages.F90 datasets.F90 io.F90 units.F90 mpi_debug.F90 profiling.F90 \
-             blas.F90 linalg_basic.F90 linalg_adv.F90 gauss_legendre.F90 math.F90 multicomm.F90 
+basic_SRCS = blas.F90 linalg_basic.F90 linalg_adv.F90 gauss_legendre.F90 math.F90
 
 core_SRCS = $(basic_SRCS) \
 	ode_solver.F90 root_solver.F90 spline.F90 sparskit.F90 \
@@ -69,9 +69,6 @@ octopus_SOURCES = $(core_SRCS) \
 	em_resp.F90 vdW.F90 phonons_lr.F90 pulpo.F90 run.F90 main.F90
 
 noinst_HEADERS = \
-	global.h \
-	integer.F90 real.F90 complex.F90 undef.F90 \
-	mpi_debug_inc.F90 \
 	ode_solver_inc.F90 root_solver_inc.F90 sparskit_inc.F90 \
 	fftw2.F90 fftw3.F90 \
 	mesh_init.F90 par_vec_inc.F90 derivatives_inc.F90 cf_inc.F90 mf_inc.F90 f_inc.F90 \
@@ -96,7 +93,9 @@ noinst_HEADERS = \
 	opt_control_propagation.F90 opt_control_finalcheck.F90 opt_control_iter.F90 \
 	opt_control_output.F90 opt_control_tdtarget.F90
 
-core_LIBS = @LIBS_LAPACK@ @LIBS_BLAS@ \
+octopus_LIBS = basic/libbasic.a
+
+core_LIBS = $(octopus_LIBS) @LIBS_LAPACK@ @LIBS_BLAS@ \
   ../liboct/liboct.a \
   ../liboct_parser/liboct_parser.a \
   ../libxc/src/libxc.a \
@@ -152,61 +151,25 @@ oct_test_LDADD = $(octopus_LDADD)
 oct_help_SOURCES = getopt_f.c command_line.F90 $(basic_SRCS) help.F90
 oct_help_LDADD =  $(core_LIBS)
 
-AM_FCFLAGS = @F90_MODULE_FLAG@$(top_builddir)/libxc/src/ @F90_MODULE_FLAG@$(top_builddir)/external_libs/qshep
+AM_FCFLAGS = \
+	@F90_MODULE_FLAG@$(srcdir)/basic \
+	@F90_MODULE_FLAG@$(top_builddir)/libxc/src/ @F90_MODULE_FLAG@$(top_builddir)/external_libs/qshep
 
-AM_CPPFLAGS = -I$(top_srcdir)/libstring_f
+AM_CPPFLAGS = -I$(srcdir)/include -I$(top_srcdir)/libstring_f
 
-# ctags
-CTAGS=ctags-exuberant -e
+include common-rules.make
 
 # if it exists include user defined Makefile.local (which is not included in the octopus package)
 -include Makefile.local
 
-# how to compile a F90 file :)
-
-# Define empty rule to override the native rule of automake (otherwise the native
-# rule will have precedence over the pattern based rules below). Could not figure out
-# how to remove .F90 from .SUFFIXES, which would be an alternative route.
-.F90.o:
-
-# compilation is a two step process: first we preprocess F90 files to generate _oct.f90 files
-%_oct.f90: %.F90
-	@@FCCPP@ @CPPFLAGS@ -I. $< > $*_oct.f90
-	@if [ "@DEBUG@" = "no" ]; then \
-		cat $*_oct.f90 | grep -v pop_sub | grep -v push_sub >$*_oct.f91; \
-		mv -f $*_oct.f91 $*_oct.f90; \
-	fi
-	@perl -pi -e 's/\\newline/\n/g; s/\\cardinal/#/g' $*_oct.f90
-
-# then we actually compile _oct.f90 files and cleanup
-%.o: %_oct.f90
-	@FC@ @FCFLAGS@ @FCFLAGS_NETCDF@ $(AM_FCFLAGS) -c @FCFLAGS_f90@ -o $@ $*_oct.f90
-	@rm -f $*_oct.f90
-
-# how to compile global.F90 (have to define some extra variables here)
-DATE := $(shell date)
-LATEST_SVN := $(shell ../build/svn_release_number.sh 2>/dev/null) 
-
-global.o: global.F90
-	@FCCPP@ @CPPFLAGS@ -I. -DSHARE_OCTOPUS='"${pkgdatadir}"' -DLATEST_SVN='"${LATEST_SVN}"' \
-		-DOCTOPUS_VERSION='"${VERSION}"' -DBUILD_TIME='"${DATE}"' -DFC='"${FC}"' \
-		-DFCFLAGS='"${FCFLAGS} ${FCFLAGS_f90}"' $< > $*_oct.f90
-	@FC@ @FCFLAGS@ $(AM_FCFLAGS) -c @FCFLAGS_f90@ -o $@ $*_oct.f90
-	@rm -f $*_oct.f90
-
 # cleaning
-CLEANFILES = *~ *.bak *.mod *.il *.d *.pc* ifc* *_oct.f90 config_F90.h
 DISTCLEANFILES = dirs.h
 
 
-# how to generate config_F90.h
-liboct_parser.F90: config_F90.h
-global.F90: config_F90.h
-global.h: config_F90.h
-config_F90.h: ../config.h
-	grep '#define' ../config.h >config_F90.h
 ../liboct/liboct.a:
 	(cd ../liboct; $(MAKE))
+basic/libbasic.a:
+	(cd basic; $(MAKE))
 
 
 # This is to generate the dependencies. It makes use of the makedepf90 program of 
@@ -219,117 +182,109 @@ depend:
 
 
 # Dependencies (only includes taken into account)
-atomic.o: global.h
-blas.o: global.h
-broad.o: global.h
-casida.o: global.h casida_inc.F90
-centergeom.o: global.h
-cf.o: global.h cf_inc.F90
-crystal.o: global.h
-curv_briggs.o: global.h
-curv_gygi.o: global.h
-curvlinear.o: global.h
-curv_modine.o: global.h
-derivatives.o: global.h derivatives_inc.F90
-double_grid.o: global.h double_grid_apply.F90
-eigen.o: global.h eigen_inc.F90 eigen_cg_inc.F90 eigen_trlan.F90 eigen_plan_inc.F90 eigen_arpack_inc.F90 eigen_evolution_inc.F90
-sternheimer.o: global.h sternheimer_inc.F90
-em_resp_calc.o: global.h em_resp_calc_inc.F90
-em_resp.o : global.h em_resp_inc.F90
-epot.o: global.h epot_inc.F90
-excited_states.o: global.h excited_states_inc.F90
-f.o: global.h f_inc.F90
-fft.o: global.h fftw2.F90 fftw3.F90
-geometry.o: global.h
-geom_opt.o: global.h
-gs.o: global.h
-h.o: global.h h_inc.F90
-hgh.o: global.h
-hgh_projector.o: global.h hgh_projector_inc.F90
-hs.o: global.h
-kb_projector.o: global.h kb_projector_inc.F90
-lasers.o: global.h
-lcao.o: global.h lcao_inc.F90
-liboct.o: global.h
-liboct_parser.o: global.h
-linalg_adv.o: global.h linalg_adv_lapack.F90
-linalg_basic.o: global.h linalg_basic_blas.F90
-linear_solver.o: global.h linear_solver_inc.F90
-linear_response.o: global.h linear_response_inc.F90 linear_response_out.F90
-logrid.o: global.h
-main.o: global.h
-math.o: global.h math_cg_inc.F90 math_inc.F90
-mesh.o: global.h mesh_init.F90
-mesh_lib.o: global.h
-mf.o: global.h mf_inc.F90
-mix.o: global.h mix_inc.F90
-mpi_debug.o: global.h mpi_debug_inc.F90
-profiling.o: global.h
-nl_operator.o: global.h
-ode_solver.o: global.h ode_solver_inc.F90
-opt_control.o: global.h opt_control_read.F90 opt_control_aux.F90 opt_control_defstates.F90 \
+atomic.o: 
+blas.o: 
+broad.o: 
+casida.o:  casida_inc.F90
+centergeom.o: 
+cf.o:  cf_inc.F90
+crystal.o: 
+curv_briggs.o: 
+curv_gygi.o: 
+curvlinear.o: 
+curv_modine.o: 
+derivatives.o:  derivatives_inc.F90
+double_grid.o:  double_grid_apply.F90
+eigen.o:  eigen_inc.F90 eigen_cg_inc.F90 eigen_trlan.F90 eigen_plan_inc.F90 eigen_arpack_inc.F90 eigen_evolution_inc.F90
+sternheimer.o:  sternheimer_inc.F90
+em_resp_calc.o:  em_resp_calc_inc.F90
+em_resp.o :  em_resp_inc.F90
+epot.o:  epot_inc.F90
+excited_states.o:  excited_states_inc.F90
+f.o:  f_inc.F90
+fft.o:  fftw2.F90 fftw3.F90
+geometry.o: 
+geom_opt.o: 
+gs.o: 
+h.o:  h_inc.F90
+hgh.o: 
+hgh_projector.o:  hgh_projector_inc.F90
+hs.o: 
+kb_projector.o:  kb_projector_inc.F90
+lasers.o: 
+lcao.o:  lcao_inc.F90
+liboct.o: 
+liboct_parser.o: 
+linalg_adv.o:  linalg_adv_lapack.F90
+linalg_basic.o:  linalg_basic_blas.F90
+linear_solver.o:  linear_solver_inc.F90
+linear_response.o:  linear_response_inc.F90 linear_response_out.F90
+logrid.o: 
+main.o: 
+math.o:  math_cg_inc.F90 math_inc.F90
+mesh.o:  mesh_init.F90
+mesh_lib.o: 
+mf.o:  mf_inc.F90
+mix.o:  mix_inc.F90
+mpi_debug.o:  mpi_debug_inc.F90
+profiling.o: 
+nl_operator.o: 
+ode_solver.o:  ode_solver_inc.F90
+opt_control.o:  opt_control_read.F90 opt_control_aux.F90 opt_control_defstates.F90 \
                opt_control_propagation.F90 opt_control_finalcheck.F90 opt_control_iter.F90 \
                opt_control_output.F90 opt_control_tdtarget.F90
-out.o: global.h out_inc.F90
-par_vec.o: global.h par_vec_inc.F90
-pes.o: global.h pes_rc.F90 pes_mask.F90
-phonons.o: global.h
-phonons_fd.o: global.h
-phonons_lr.o: global.h
-phonon_spectrum.o: global.h
-poisson_fft.o: global.h
-poisson_isf.o: global.h
-poisson_cg.o: global.h
-poisson_multigrid.o: global.h
-poisson_corrections.o: global.h
-poisson.o: global.h poisson1D.F90 poisson2D.F90 poisson3D.F90 poisson_multigrid.F90
-projector.o: global.h projector_inc.F90
-ps.o: global.h
-restart.o: global.h restart_inc.F90
-rkb_projector.o: global.h
-root_solver.o: global.h root_solver_inc.F90
-rotational_strength.o: global.h
-run.o: global.h
-scf.o: global.h
-scf_tol.o: global.h
-sparskit.o: global.h sparskit_inc.F90
-specie.o: global.h
-specie_pot.o: global.h
-preconditioners.o: global.h preconditioners_inc.F90
-spectrum.o: global.h
-spline.o: global.h
-states.o: global.h states_kpoints.F90 states_inc.F90
-static_pol.o: global.h
-submesh.o: global.h submesh_inc.F90
-em_resp.o: global.h em_resp_inc.F90
+out.o:  out_inc.F90
+par_vec.o:  par_vec_inc.F90
+pes.o:  pes_rc.F90 pes_mask.F90
+phonons.o: 
+phonons_fd.o: 
+phonons_lr.o: 
+phonon_spectrum.o: 
+poisson_fft.o: 
+poisson_isf.o: 
+poisson_cg.o: 
+poisson_multigrid.o: 
+poisson_corrections.o: 
+poisson.o:  poisson1D.F90 poisson2D.F90 poisson3D.F90 poisson_multigrid.F90
+projector.o:  projector_inc.F90
+ps.o: 
+restart.o:  restart_inc.F90
+rkb_projector.o: 
+root_solver.o:  root_solver_inc.F90
+rotational_strength.o: 
+run.o: 
+scf.o: 
+scf_tol.o: 
+sparskit.o:  sparskit_inc.F90
+specie.o: 
+specie_pot.o: 
+preconditioners.o:  preconditioners_inc.F90
+spectrum.o: 
+spline.o: 
+states.o:  states_kpoints.F90 states_inc.F90
+static_pol.o: 
+submesh.o:  submesh_inc.F90
+em_resp.o:  em_resp_inc.F90
 resp_pert.o: resp_pert_inc.F90
-stencil_cube.o: global.h
-stencil_star.o: global.h
-stencil_variational.o: global.h
-strength_function.o: global.h
-systm.o: global.h
-td_exp.o: global.h
-td_exp_split.o: global.h
-td.o: global.h td_init.F90
-td_rti.o: global.h
+stencil_cube.o: 
+stencil_star.o: 
+stencil_variational.o: 
+strength_function.o: 
+systm.o: 
+td_exp.o: 
+td_exp_split.o: 
+td.o:  td_init.F90
+td_rti.o: 
 td_write.o: td_calc.F90
-test.o: global.h
-tm.o: global.h
-units.o: global.h
-unocc.o: global.h unocc_inc.F90
-v_ks.o: global.h
-xc.o: global.h xc_vxc.F90 xc_axc.F90 xc_fxc.F90 xc_kxc.F90
-xc_functl.o: global.h
-xc_OEP.o: global.h xc_KLI_inc.F90 xc_OEP_x_inc.F90 xc_OEP_SIC_inc.F90 xc_OEP_inc.F90
-xc_OEP_kernel.o: global.h xc_OEP_kernel_inc.F90
-xyz_adjust.o: global.h
-xyzanim.o: global.h
-xyz_file.o: global.h
-
-# manually sort out a few dependencies
-varinfo.o: string.o
-global.o: global.h varinfo.o string.o
-liboct_parser.o: global.o
-datasets.o: liboct_parser.o
-messages.o: liboct.o datasets.o
-io.o: global.o liboct_parser.o datasets.o
+test.o: 
+tm.o: 
+units.o: 
+unocc.o:  unocc_inc.F90
+v_ks.o: 
+xc.o:  xc_vxc.F90 xc_axc.F90 xc_fxc.F90 xc_kxc.F90
+xc_functl.o: 
+xc_OEP.o:  xc_KLI_inc.F90 xc_OEP_x_inc.F90 xc_OEP_SIC_inc.F90 xc_OEP_inc.F90
+xc_OEP_kernel.o:  xc_OEP_kernel_inc.F90
+xyz_adjust.o: 
+xyzanim.o: 
+xyz_file.o: 
