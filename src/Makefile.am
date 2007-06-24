@@ -19,7 +19,7 @@
 ##
 ## $Id$
 
-SUBDIRS = include basic math
+SUBDIRS = include basic math species
 
 EXTRA_PROGRAMS = oct-cross-section oct-rsf oct-harmonic-spectrum \
                  oct-broad oct-ph oct-xyz-anim oct-center-geom oct-help \
@@ -28,14 +28,7 @@ EXTRA_PROGRAMS = oct-cross-section oct-rsf oct-harmonic-spectrum \
 bin_PROGRAMS = octopus oct-test @UTILITY_PROGRAMS@
 
 core_SRCS = \
-	logrid.F90 periodic_table.F90 atomic.F90 \
-	ps_in_grid.F90 \
-	ps_psf_file.F90 ps_psf.F90  \
-	ps_cpi_file.F90 ps_cpi.F90 \
-	ps_fhi_file.F90 ps_fhi.F90 \
-	ps_upf.F90 \
-	ps_hgh.F90 ps.F90 \
-	specie.F90 xyz_file.F90 geometry.F90 simul_box.F90 \
+	xyz_file.F90 geometry.F90 simul_box.F90 \
 	curv_gygi.F90 curv_briggs.F90 curv_modine.F90 curvlinear.F90 \
 	mesh_lib.F90 par_vec.F90 mesh.F90 scalar_mesh.F90 nl_operator.F90 \
 	submesh.F90 \
@@ -87,7 +80,7 @@ noinst_HEADERS = \
 	opt_control_propagation.F90 opt_control_finalcheck.F90 opt_control_iter.F90 \
 	opt_control_output.F90 opt_control_tdtarget.F90
 
-octopus_LIBS = basic/libbasic.a math/libmath.a
+octopus_LIBS = basic/libbasic.a math/libmath.a species/libspecies.a
 
 core_LIBS = $(octopus_LIBS) @LIBS_LAPACK@ @LIBS_BLAS@ \
   ../liboct/liboct.a \
@@ -146,8 +139,9 @@ oct_help_SOURCES = getopt_f.c command_line.F90 $(basic_SRCS) help.F90
 oct_help_LDADD =  $(core_LIBS)
 
 AM_FCFLAGS = \
-	@F90_MODULE_FLAG@$(srcdir)/basic \
-	@F90_MODULE_FLAG@$(srcdir)/math  \
+	@F90_MODULE_FLAG@$(srcdir)/basic   \
+	@F90_MODULE_FLAG@$(srcdir)/math    \
+	@F90_MODULE_FLAG@$(srcdir)/species \
 	@F90_MODULE_FLAG@$(top_builddir)/libxc/src/ @F90_MODULE_FLAG@$(top_builddir)/external_libs/qshep
 
 AM_CPPFLAGS = -I$(srcdir)/include -I$(top_srcdir)/libstring_f
@@ -167,6 +161,8 @@ basic/libbasic.a:
 	(cd basic; $(MAKE))
 math/libmath.a:
 	(cd math; $(MAKE))
+species/libspecies.a:
+	(cd species; $(MAKE))
 
 
 # This is to generate the dependencies. It makes use of the makedepf90 program of 

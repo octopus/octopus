@@ -24,7 +24,7 @@ noinst_LIBRARIES = libbasic.a
 libbasic_a_SOURCES = \
              liboct.F90 string.F90 varinfo.F90 mpi.F90 global.F90 liboct_parser.F90 \
 	     datasets.F90 messages.F90 io.F90 units.F90 mpi_debug.F90 profiling.F90 \
-             utils.F90 multicomm.F90
+             utils.F90 multicomm.F90 periodic_table.F90
 
 noinst_HEADERS = \
 	mpi_debug_inc.F90
