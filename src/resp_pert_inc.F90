@@ -22,7 +22,7 @@ subroutine X(resp_pert_apply) (this, gr, geo, h, f_in, f_out)
   type(grid_t),      intent(inout) :: gr
   type(geometry_t),  intent(in)    :: geo
   type(hamiltonian_t),  intent(in) :: h
-  R_TYPE,            intent(inout) :: f_in(:)
+  R_TYPE,            intent(in)    :: f_in(:)
   R_TYPE,            intent(out)   :: f_out(:)
 
   FLOAT, allocatable :: gv(:,:)
@@ -56,18 +56,21 @@ contains
 
   subroutine magnetic
 
-    R_TYPE, allocatable :: lf(:,:), vrnl(:,:,:)
+    R_TYPE, allocatable :: f_in_copy(:), lf(:,:), vrnl(:,:,:)
     R_TYPE :: cross(1:MAX_DIM)
     integer :: iatom, idir, ip
 
-    ! I believe this should be NP and not NP_PART
-    ALLOCATE(lf(gr%m%np_part, gr%sb%dim), gr%m%np_part*gr%sb%dim)
+    ALLOCATE(f_in_copy(1:NP_PART), NP_PART)
+
+    call lalg_copy(NP_PART, f_in, f_in_copy)
+    
+    ALLOCATE(lf(gr%m%np, gr%sb%dim), gr%m%np*gr%sb%dim)
 
     ! Note that we leave out the term 1/P_c
-    call X(f_angular_momentum) (gr%sb, gr%f_der, f_in, lf)
+    call X(f_angular_momentum) (gr%sb, gr%f_der, f_in_copy, lf)
     f_out(1:NP) = lf(1:NP, this%dir)/M_TWO
 
-    deallocate(lf)
+    deallocate(lf, f_in_copy)
 
     select case(this%gauge)
 
@@ -136,7 +139,6 @@ contains
     bdir(1:MAX_DIM, 1:2) = M_ZERO
     bdir(this%dir,  1)   = M_ONE
     bdir(this%dir2, 2)   = M_ONE
-#if 1
 
     select case(this%gauge)
 
@@ -190,8 +192,77 @@ contains
       deallocate(vrnl)
 
     end select
-#endif
+
   end subroutine magnetic
 
-
 end subroutine X(resp_pert_apply_order_2)
+
+subroutine X(resp_pert_expectation_density) (this, gr, geo, h, st, psia, psib, density, pert_order)
+  type(resp_pert_t),    intent(in)    :: this
+  type(grid_t),         intent(inout) :: gr
+  type(geometry_t),     intent(in)    :: geo
+  type(hamiltonian_t),  intent(in)    :: h
+  type(states_t),       intent(in)    :: st
+  R_TYPE, pointer,      intent(in)    :: psia(:, :, :, :)
+  R_TYPE, pointer,      intent(in)    :: psib(:, :, :, :)
+  R_TYPE,               intent(out)   :: density(:)
+  integer, optional,    intent(in)    :: pert_order
+ 
+  R_TYPE, allocatable :: tmp(:)
+
+  integer :: ik, ist, idim, order
+
+  ALLOCATE(tmp(1:NP), NP)
+
+  order = 1
+  if(present(pert_order)) order = pert_order
+
+  ASSERT(order == 1 .or. order == 2)
+
+  density(1:NP) = R_TOTYPE(M_ZERO)
+
+  do ik = 1, st%d%nik
+    do ist  = st%st_start, st%st_end
+      do idim = 1, st%d%dim
+
+        if(order == 1) then 
+          call X(resp_pert_apply) (this, gr, geo, h, psib(:, idim, ist, ik), tmp)
+        else
+          call X(resp_pert_apply_order_2) (this, gr, geo, h, psib(:, idim, ist, ik), tmp)
+        end if
+
+        density(1:NP) = density(1:NP) + st%d%kweights(ik)*st%occ(ist, ik)*&
+             R_CONJ(psia(1:NP, idim, ist, ik))*tmp(1:NP)
+
+      end do
+    end do
+  end do
+
+end subroutine X(resp_pert_expectation_density)
+
+R_TYPE function X(resp_pert_expectation_value) (this, gr, geo, h, st, psia, psib, pert_order) result(expval)
+  type(resp_pert_t),    intent(in)    :: this
+  type(grid_t),         intent(inout) :: gr
+  type(geometry_t),     intent(in)    :: geo
+  type(hamiltonian_t),  intent(in)    :: h
+  type(states_t),       intent(in)    :: st
+  R_TYPE, pointer,      intent(in)    :: psia(:, :, :, :)
+  R_TYPE, pointer,      intent(in)    :: psib(:, :, :, :)
+  integer, optional,    intent(in)    :: pert_order
+
+  R_TYPE, allocatable :: tmp(:)
+
+  integer :: order
+
+  order = 1
+  if(present(pert_order)) order = pert_order
+
+  ASSERT(order == 1 .or. order == 2)
+
+  ALLOCATE(tmp(1:NP), NP)
+
+  call X(resp_pert_expectation_density)(this, gr, geo, h, st, psia, psib, tmp, pert_order = order)
+
+  expval = X(mf_integrate)(gr%m, tmp)
+
+end function X(resp_pert_expectation_value)

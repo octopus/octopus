@@ -239,47 +239,28 @@ end subroutine X(lr_calc_elf)
 
 
 ! ---------------------------------------------------------
-subroutine X(lr_calc_polarizability)(sys, lr, zpol, ndir)
-  type(system_t), target, intent(inout) :: sys
+subroutine X(lr_calc_polarizability)(sys, h, lr, perturbation, zpol, ndir)
+  type(system_t),         intent(inout) :: sys
+  type(hamiltonian_t),    intent(inout) :: h
   type(lr_t),             intent(inout) :: lr(:,:)
+  type(resp_pert_t),      intent(inout) :: perturbation
   CMPLX,                  intent(out)   :: zpol(1:MAX_DIM, 1:MAX_DIM)
   integer, optional,      intent(in)    :: ndir
 
-  integer :: dir1, dir2, j, ndir_
-  CMPLX :: zpol_tmp(1:MAX_DIM, 1:MAX_DIM)
-  CMPLX, allocatable  :: dl_rho_tot(:), tmp(:)
-
-  ALLOCATE(dl_rho_tot(1:sys%gr%m%np), sys%gr%m%np)
-  ALLOCATE(tmp(1:sys%gr%m%np), sys%gr%m%np)
-
-  zpol_tmp = M_ZERO
+  integer :: dir1, dir2, ndir_
 
   ndir_ = sys%NDIM
   if(present(ndir)) ndir_ = ndir
 
   do dir1 = 1, ndir_
-    ! sum dl_rho for all spin components
-    do j = 1, sys%gr%m%np
-      dl_rho_tot(j) = sum(lr(dir1, 1)%X(dl_rho)(j, 1:sys%st%d%nspin))
-    end do
-    
     do dir2 = 1, sys%gr%sb%dim
-      tmp(1:sys%gr%m%np) = sys%gr%m%x(1:sys%gr%m%np, dir2) * dl_rho_tot(1:sys%gr%m%np)
-      zpol_tmp(dir1, dir2) = zpol_tmp(dir1, dir2) - zmf_integrate(sys%gr%m, tmp)
+
+      call resp_pert_setup_dir(perturbation, dir1, dir2)
+      
+      zpol(dir1, dir2) = &
+           -X(resp_pert_expectation_value)(perturbation,sys%gr,sys%geo,h,sys%st, sys%st%X(psi),lr(dir2, 1)%X(dl_psi))&
+           -X(resp_pert_expectation_value)(perturbation,sys%gr,sys%geo,h,sys%st, lr(dir2, 2)%X(dl_psi), sys%st%X(psi))
     end do
-  end do
-
-  deallocate(dl_rho_tot, tmp)
-
-  ! symmetrize
-  do dir1 = 1, ndir_
-    if(ndir_ == sys%gr%sb%dim) then
-      do dir2 = 1, sys%gr%sb%dim
-        zpol(dir1, dir2) = M_HALF*(zpol_tmp(dir1, dir2) + zpol_tmp(dir2, dir1))
-      end do
-    else
-      zpol(dir1, :) = zpol_tmp(dir1, :)
-    end if
   end do
 
 end subroutine X(lr_calc_polarizability)
@@ -287,50 +268,36 @@ end subroutine X(lr_calc_polarizability)
 
 ! ---------------------------------------------------------
 subroutine X(lr_calc_susceptibility)(sys, h, lr, perturbation, chi_para, chi_dia)
-  type(system_t), target, intent(inout) :: sys
+  type(system_t),         intent(inout) :: sys
   type(hamiltonian_t),    intent(inout) :: h
   type(lr_t),             intent(inout) :: lr(:,:)
   type(resp_pert_t),      intent(inout) :: perturbation
   CMPLX,                  intent(out)   :: chi_para(:,:), chi_dia(:,:)
 
   integer :: ik, ist, dir1, dir2, j
-  R_TYPE :: d, trace
-  R_TYPE, allocatable  :: aux1(:), aux2(:)
+  R_TYPE  :: trace
 
   call push_sub('em_resp_calc_inc.lr_calc_susceptibility')
-
-  ALLOCATE(aux1(1:sys%NP), sys%NP)
-  ALLOCATE(aux2(1:sys%NP), sys%NP)
 
   chi_para = M_ZERO
   chi_dia  = M_ZERO
 
-  do ik = 1, sys%st%d%nik
-    do ist  = sys%st%st_start, sys%st%st_end
-      d = sys%st%d%kweights(ik)*sys%st%occ(ist, ik)
+  do dir1 = 1, sys%gr%sb%dim
+    do dir2 = 1, sys%gr%sb%dim
 
-      do dir1 = 1, sys%gr%sb%dim
-        do dir2 = 1, sys%gr%sb%dim
-          call resp_pert_setup_dir(perturbation, dir1, dir2)
+      call resp_pert_setup_dir(perturbation, dir1, dir2)
 
-          aux2(1:sys%NP) = sys%st%X(psi)(1:sys%NP, 1, ist, ik)
+      trace = X(resp_pert_expectation_value)(perturbation, sys%gr,sys%geo,h,sys%st, sys%st%X(psi), lr(dir2, 1)%X(dl_psi))
 
-          ! first the paramagnetic term
-          call X(resp_pert_apply) (perturbation, sys%gr, sys%geo, h, lr(dir2, 1)%X(dl_psi)(:, 1, ist, ik), aux1)
-          trace = X(mf_dotp)(sys%gr%m, aux2, aux1)
-          chi_para(dir1, dir2) = chi_para(dir1, dir2) + d*(trace + R_CONJ(trace))
+      ! first the paramagnetic term 
+      chi_para(dir1, dir2) = chi_para(dir1, dir2) + trace + R_CONJ(trace)
 
-          ! now the diamagnetic term
-          call X(resp_pert_apply_order_2) (perturbation, sys%gr, sys%geo, h, sys%st%X(psi)(1:sys%NP, 1, ist, ik), aux1)
-          chi_dia(dir1, dir2) = chi_dia(dir1, dir2) + d*X(mf_dotp)(sys%gr%m, aux2, aux1)
+      chi_dia(dir1, dir2) = chi_dia(dir1, dir2) + &
+           X(resp_pert_expectation_value)(perturbation, sys%gr,sys%geo,h,sys%st, sys%st%X(psi), sys%st%X(psi), pert_order=2)
 
-        end do
-      end do
     end do
   end do
 
-  deallocate(aux1)
-  deallocate(aux2)
 
   ! We now add the minus sign from the definition of the suceptibility (chi = -d^2 E /d B^2)
   chi_para(:,:) = -chi_para(:,:)/P_C**2

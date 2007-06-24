@@ -30,8 +30,10 @@ module resp_pert_m
   use lib_oct_parser_m
   use math_m
   use mesh_m
+  use mesh_function_m
   use messages_m
   use specie_pot_m
+  use states_m
   use varinfo_m
 
   implicit none
@@ -47,6 +49,10 @@ module resp_pert_m
      zresp_pert_apply,    &
      dresp_pert_apply_order_2,    &
      zresp_pert_apply_order_2,    &
+     dresp_pert_expectation_value,&
+     zresp_pert_expectation_value,&
+     dresp_pert_expectation_density,&
+     zresp_pert_expectation_density,&
      resp_displ_t,        &
      resp_pert_build_ion_displace
 
