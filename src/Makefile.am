@@ -19,7 +19,7 @@
 ##
 ## $Id$
 
-SUBDIRS = include basic
+SUBDIRS = include basic math
 
 EXTRA_PROGRAMS = oct-cross-section oct-rsf oct-harmonic-spectrum \
                  oct-broad oct-ph oct-xyz-anim oct-center-geom oct-help \
@@ -27,10 +27,7 @@ EXTRA_PROGRAMS = oct-cross-section oct-rsf oct-harmonic-spectrum \
 
 bin_PROGRAMS = octopus oct-test @UTILITY_PROGRAMS@
 
-basic_SRCS = blas.F90 linalg_basic.F90 linalg_adv.F90 gauss_legendre.F90 math.F90
-
-core_SRCS = $(basic_SRCS) \
-	ode_solver.F90 root_solver.F90 spline.F90 sparskit.F90 \
+core_SRCS = \
 	logrid.F90 periodic_table.F90 atomic.F90 \
 	ps_in_grid.F90 \
 	ps_psf_file.F90 ps_psf.F90  \
@@ -40,7 +37,7 @@ core_SRCS = $(basic_SRCS) \
 	ps_hgh.F90 ps.F90 \
 	specie.F90 xyz_file.F90 geometry.F90 simul_box.F90 \
 	curv_gygi.F90 curv_briggs.F90 curv_modine.F90 curvlinear.F90 \
-	fft.F90 mesh_lib.F90 par_vec.F90 mesh.F90 scalar_mesh.F90 nl_operator.F90 \
+	mesh_lib.F90 par_vec.F90 mesh.F90 scalar_mesh.F90 nl_operator.F90 \
 	submesh.F90 \
 	stencil_star.F90 stencil_variational.F90 stencil_cube.F90 stencil_starplus.F90 derivatives.F90 \
 	cf.F90 mf.F90 f.F90 basins.F90 \
@@ -69,8 +66,6 @@ octopus_SOURCES = $(core_SRCS) \
 	em_resp.F90 vdW.F90 phonons_lr.F90 pulpo.F90 run.F90 main.F90
 
 noinst_HEADERS = \
-	ode_solver_inc.F90 root_solver_inc.F90 sparskit_inc.F90 \
-	fftw2.F90 fftw3.F90 \
 	mesh_init.F90 par_vec_inc.F90 derivatives_inc.F90 cf_inc.F90 mf_inc.F90 f_inc.F90 \
 	double_grid_apply.F90 \
 	poisson1D.F90 poisson2D.F90 poisson3D.F90 mix_inc.F90 \
@@ -83,8 +78,7 @@ noinst_HEADERS = \
 	lcao_inc.F90 crystal.F90 restart_inc.F90 states_inc.F90 states_kpoints.F90 \
 	pes_rc.F90 pes_mask.F90 \
 	td_init.F90 td_calc.F90\
-	out_inc.F90 math_cg_inc.F90 math_inc.F90 \
-	linalg_basic_blas.F90 linalg_adv_lapack.F90 \
+	out_inc.F90 
 	linear_response_inc.F90 linear_response_out.F90 linear_solver_inc.F90\
 	submesh_inc.F90 \
 	sternheimer_inc.F90 em_resp_inc.F90 resp_pert_inc.F90 unocc_inc.F90 casida_inc.F90 \
@@ -93,7 +87,7 @@ noinst_HEADERS = \
 	opt_control_propagation.F90 opt_control_finalcheck.F90 opt_control_iter.F90 \
 	opt_control_output.F90 opt_control_tdtarget.F90
 
-octopus_LIBS = basic/libbasic.a
+octopus_LIBS = basic/libbasic.a math/libmath.a
 
 core_LIBS = $(octopus_LIBS) @LIBS_LAPACK@ @LIBS_BLAS@ \
   ../liboct/liboct.a \
@@ -114,8 +108,8 @@ if COMPILE_LIBNBC
   external_LIBS += ../external_libs/libnbc/libnbc.a
 endif
 
-octopus_LDADD = @LIBS_FFT@ @LIBS_TRLAN@ @LIBS_ARPACK@ @LIBS_SPARSKIT@ \
-  @LIBS_NETCDF@ $(core_LIBS) $(external_LIBS) @LIBS_MPI@ @LIBS_LAPACK@ @LIBS_BLAS@
+octopus_LDADD = $(core_LIBS) @LIBS_FFT@ @LIBS_TRLAN@ @LIBS_ARPACK@ @LIBS_SPARSKIT@ \
+  @LIBS_NETCDF@ $(external_LIBS) @LIBS_MPI@ @LIBS_LAPACK@ @LIBS_BLAS@
 
 # now the utility programs
 oct_cross_section_SOURCES = $(basic_SRCS) spectrum.F90 cross_section.F90
@@ -153,6 +147,7 @@ oct_help_LDADD =  $(core_LIBS)
 
 AM_FCFLAGS = \
 	@F90_MODULE_FLAG@$(srcdir)/basic \
+	@F90_MODULE_FLAG@$(srcdir)/math  \
 	@F90_MODULE_FLAG@$(top_builddir)/libxc/src/ @F90_MODULE_FLAG@$(top_builddir)/external_libs/qshep
 
 AM_CPPFLAGS = -I$(srcdir)/include -I$(top_srcdir)/libstring_f
@@ -170,6 +165,8 @@ DISTCLEANFILES = dirs.h
 	(cd ../liboct; $(MAKE))
 basic/libbasic.a:
 	(cd basic; $(MAKE))
+math/libmath.a:
+	(cd math; $(MAKE))
 
 
 # This is to generate the dependencies. It makes use of the makedepf90 program of 
@@ -183,7 +180,6 @@ depend:
 
 # Dependencies (only includes taken into account)
 atomic.o: 
-blas.o: 
 broad.o: 
 casida.o:  casida_inc.F90
 centergeom.o: 
@@ -213,20 +209,14 @@ hs.o:
 kb_projector.o:  kb_projector_inc.F90
 lasers.o: 
 lcao.o:  lcao_inc.F90
-liboct.o: 
-liboct_parser.o: 
-linalg_adv.o:  linalg_adv_lapack.F90
-linalg_basic.o:  linalg_basic_blas.F90
 linear_solver.o:  linear_solver_inc.F90
 linear_response.o:  linear_response_inc.F90 linear_response_out.F90
 logrid.o: 
 main.o: 
-math.o:  math_cg_inc.F90 math_inc.F90
 mesh.o:  mesh_init.F90
 mesh_lib.o: 
 mf.o:  mf_inc.F90
 mix.o:  mix_inc.F90
-mpi_debug.o:  mpi_debug_inc.F90
 profiling.o: 
 nl_operator.o: 
 ode_solver.o:  ode_solver_inc.F90
@@ -255,7 +245,6 @@ rotational_strength.o:
 run.o: 
 scf.o: 
 scf_tol.o: 
-sparskit.o:  sparskit_inc.F90
 specie.o: 
 specie_pot.o: 
 preconditioners.o:  preconditioners_inc.F90

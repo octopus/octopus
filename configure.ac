@@ -296,6 +296,7 @@ AC_CONFIG_FILES([Makefile
   src/Makefile
   src/include/Makefile
   src/basic/Makefile
+  src/math/Makefile
   perl/Makefile
   doc/Makefile
   doc/pdf/Makefile
