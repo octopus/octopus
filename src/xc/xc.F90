@@ -310,10 +310,10 @@ contains
   end subroutine xc_end
 
 
-#include "xc_vxc.F90"
-#include "xc_axc.F90"
-#include "xc_fxc.F90"
-#include "xc_kxc.F90"
+#include "vxc.F90"
+#include "axc.F90"
+#include "fxc.F90"
+#include "kxc.F90"
 
 end module xc_m
 

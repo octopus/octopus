@@ -19,7 +19,7 @@
 ##
 ## $Id$
 
-SUBDIRS = include basic math species grid poisson states
+SUBDIRS = include basic math species grid poisson states xc
 
 EXTRA_PROGRAMS = oct-cross-section oct-rsf oct-harmonic-spectrum \
                  oct-broad oct-ph oct-xyz-anim oct-center-geom oct-help \
@@ -28,14 +28,14 @@ EXTRA_PROGRAMS = oct-cross-section oct-rsf oct-harmonic-spectrum \
 bin_PROGRAMS = octopus oct-test @UTILITY_PROGRAMS@
 
 core_SRCS = \
-	xc_functl.F90 xc.F90 scf_tol.F90 spectrum.F90 \
+	scf_tol.F90 spectrum.F90 \
 	specie_pot.F90 tdfunction.F90
 
 octopus_SOURCES = $(core_SRCS) \
 	lasers.F90 \
 	rkb_projector.F90 kb_projector.F90 hgh_projector.F90 projector.F90 \
 	epot.F90 \
-	h.F90 preconditioners.F90 linear_solver.F90 linear_response.F90 restart.F90 \
+	h.F90 preconditioners.F90 linear_solver.F90 \
 	xc_OEP.F90 v_ks.F90 systm.F90  xc_OEP_kernel.F90\
 	eigen.F90 lcao.F90 pes.F90 \
 	scf.F90 gs.F90 unocc.F90 \
@@ -45,16 +45,16 @@ octopus_SOURCES = $(core_SRCS) \
 	em_resp.F90 vdW.F90 phonons_lr.F90 pulpo.F90 run.F90 main.F90
 
 noinst_HEADERS = \
-	xc_vxc.F90 xc_axc.F90 xc_fxc.F90 xc_kxc.F90 xc_KLI_inc.F90 xc_OEP_x_inc.F90 xc_OEP_SIC_inc.F90 \
+	xc_KLI_inc.F90 xc_OEP_x_inc.F90 xc_OEP_SIC_inc.F90 \
 	kb_projector_inc.F90 hgh_projector_inc.F90 projector_inc.F90 epot_inc.F90 \
 	xc_OEP_inc.F90 h_inc.F90 \
 	eigen_trlan.F90 preconditioners_inc.F90 \
 	eigen_inc.F90 eigen_cg_inc.F90 eigen_plan_inc.F90 \
 	eigen_arpack_inc.F90 eigen_evolution_inc.F90 \
-	lcao_inc.F90 restart_inc.F90 \
+	lcao_inc.F90 \
 	pes_rc.F90 pes_mask.F90 \
 	td_init.F90 td_calc.F90 \
-	linear_response_inc.F90 linear_response_out.F90 linear_solver_inc.F90 \
+	linear_solver_inc.F90 \
 	sternheimer_inc.F90 em_resp_inc.F90 resp_pert_inc.F90 unocc_inc.F90 casida_inc.F90 \
 	xc_OEP_kernel_inc.F90 em_resp_calc_inc.F90 \
 	opt_control_read.F90 opt_control_aux.F90 opt_control_defstates.F90 \
@@ -62,7 +62,7 @@ noinst_HEADERS = \
 	opt_control_output.F90 opt_control_tdtarget.F90
 
 octopus_LIBS = \
-	states/libstates.a \
+	xc/libxc.a states/libstates.a \
 	poisson/libpoisson.a grid/libgrid.a species/libspecies.a math/libmath.a basic/libbasic.a
 
 core_LIBS = $(octopus_LIBS) @LIBS_LAPACK@ @LIBS_BLAS@ \
@@ -114,7 +114,7 @@ oct_center_geom_LDADD = $(octopus_LDADD)
 
 oct_test_SOURCES = $(core_SRCS) lasers.F90 rkb_projector.F90 kb_projector.F90 \
 	hgh_projector.F90 projector.F90 epot.F90 h.F90 preconditioners.F90 linear_solver.F90 \
-	linear_response.F90 restart.F90 xc_OEP.F90 v_ks.F90 \
+	xc_OEP.F90 v_ks.F90 \
 	systm.F90 test.F90
 oct_test_LDADD = $(octopus_LDADD)
 
@@ -128,6 +128,7 @@ AM_FCFLAGS = \
 	@F90_MODULE_FLAG@$(top_builddir)/src/grid    \
 	@F90_MODULE_FLAG@$(top_builddir)/src/poisson \
 	@F90_MODULE_FLAG@$(top_builddir)/src/states  \
+	@F90_MODULE_FLAG@$(top_builddir)/src/xc      \
 	@F90_MODULE_FLAG@$(top_builddir)/libxc/src   \
 	@F90_MODULE_FLAG@$(top_builddir)/external_libs/qshep
 
@@ -166,19 +167,16 @@ hgh_projector.o:  hgh_projector_inc.F90
 kb_projector.o:  kb_projector_inc.F90
 lcao.o:  lcao_inc.F90
 linear_solver.o:  linear_solver_inc.F90
-linear_response.o:  linear_response_inc.F90 linear_response_out.F90
 opt_control.o:  opt_control_read.F90 opt_control_aux.F90 opt_control_defstates.F90 \
                opt_control_propagation.F90 opt_control_finalcheck.F90 opt_control_iter.F90 \
                opt_control_output.F90 opt_control_tdtarget.F90
 pes.o:  pes_rc.F90 pes_mask.F90
 projector.o:  projector_inc.F90
-restart.o:  restart_inc.F90
 preconditioners.o:  preconditioners_inc.F90
 em_resp.o:  em_resp_inc.F90
 resp_pert.o: resp_pert_inc.F90
 td.o:  td_init.F90
 td_write.o: td_calc.F90
 unocc.o:  unocc_inc.F90
-xc.o:  xc_vxc.F90 xc_axc.F90 xc_fxc.F90 xc_kxc.F90
 xc_OEP.o:  xc_KLI_inc.F90 xc_OEP_x_inc.F90 xc_OEP_SIC_inc.F90 xc_OEP_inc.F90
 xc_OEP_kernel.o:  xc_OEP_kernel_inc.F90

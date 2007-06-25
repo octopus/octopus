@@ -23,17 +23,14 @@ module linear_response_m
   use datasets_m
   use global_m
   use grid_m
-  use hamiltonian_m
   use lib_basic_alg_m
   use lib_oct_m
   use lib_oct_parser_m
   use mesh_m
   use messages_m
   use output_m
-  use preconditioners_m
   use states_m
   use units_m
-  use xc_m
 
   implicit none
 
