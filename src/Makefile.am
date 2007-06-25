@@ -19,7 +19,7 @@
 ##
 ## $Id$
 
-SUBDIRS = include basic math species
+SUBDIRS = include basic math species grid
 
 EXTRA_PROGRAMS = oct-cross-section oct-rsf oct-harmonic-spectrum \
                  oct-broad oct-ph oct-xyz-anim oct-center-geom oct-help \
@@ -28,16 +28,6 @@ EXTRA_PROGRAMS = oct-cross-section oct-rsf oct-harmonic-spectrum \
 bin_PROGRAMS = octopus oct-test @UTILITY_PROGRAMS@
 
 core_SRCS = \
-	xyz_file.F90 geometry.F90 simul_box.F90 \
-	curv_gygi.F90 curv_briggs.F90 curv_modine.F90 curvlinear.F90 \
-	mesh_lib.F90 par_vec.F90 mesh.F90 scalar_mesh.F90 nl_operator.F90 \
-	submesh.F90 \
-	stencil_star.F90 stencil_variational.F90 stencil_cube.F90 stencil_starplus.F90 derivatives.F90 \
-	cf.F90 mf.F90 f.F90 basins.F90 \
-	out.F90  \
-	multigrid.F90 \
-	double_grid.F90 \
-	grid.F90 \
 	poisson_isf.F90 poisson_fft.F90 \
 	poisson_corrections.F90 poisson_cg.F90 poisson_multigrid.F90 poisson.F90 \
 	crystal.F90 \
@@ -59,8 +49,6 @@ octopus_SOURCES = $(core_SRCS) \
 	em_resp.F90 vdW.F90 phonons_lr.F90 pulpo.F90 run.F90 main.F90
 
 noinst_HEADERS = \
-	mesh_init.F90 par_vec_inc.F90 derivatives_inc.F90 cf_inc.F90 mf_inc.F90 f_inc.F90 \
-	double_grid_apply.F90 \
 	poisson1D.F90 poisson2D.F90 poisson3D.F90 mix_inc.F90 \
 	xc_vxc.F90 xc_axc.F90 xc_fxc.F90 xc_kxc.F90 xc_KLI_inc.F90 xc_OEP_x_inc.F90 xc_OEP_SIC_inc.F90 \
 	kb_projector_inc.F90 hgh_projector_inc.F90 projector_inc.F90 epot_inc.F90 \
@@ -71,16 +59,15 @@ noinst_HEADERS = \
 	lcao_inc.F90 crystal.F90 restart_inc.F90 states_inc.F90 states_kpoints.F90 \
 	pes_rc.F90 pes_mask.F90 \
 	td_init.F90 td_calc.F90\
-	out_inc.F90 
 	linear_response_inc.F90 linear_response_out.F90 linear_solver_inc.F90\
-	submesh_inc.F90 \
 	sternheimer_inc.F90 em_resp_inc.F90 resp_pert_inc.F90 unocc_inc.F90 casida_inc.F90 \
 	excited_states_inc.F90 xc_OEP_kernel_inc.F90 em_resp_calc_inc.F90 \
 	opt_control_read.F90 opt_control_aux.F90 opt_control_defstates.F90 \
 	opt_control_propagation.F90 opt_control_finalcheck.F90 opt_control_iter.F90 \
 	opt_control_output.F90 opt_control_tdtarget.F90
 
-octopus_LIBS = basic/libbasic.a math/libmath.a species/libspecies.a
+octopus_LIBS = \
+	grid/libgrid.a species/libspecies.a math/libmath.a basic/libbasic.a
 
 core_LIBS = $(octopus_LIBS) @LIBS_LAPACK@ @LIBS_BLAS@ \
   ../liboct/liboct.a \
@@ -126,7 +113,7 @@ oct_broad_LDADD =  $(core_LIBS) $(external_LIBS)
 oct_ph_SOURCES = $(basic_SRCS) phonon_spectrum.F90
 oct_ph_LDADD =  $(core_LIBS) $(external_LIBS)
 
-oct_center_geom_SOURCES = $(core_SRCS) xyz_adjust.F90 centergeom.F90
+oct_center_geom_SOURCES = $(core_SRCS) centergeom.F90
 oct_center_geom_LDADD = $(octopus_LDADD)
 
 oct_test_SOURCES = $(core_SRCS) lasers.F90 rkb_projector.F90 kb_projector.F90 \
@@ -142,7 +129,9 @@ AM_FCFLAGS = \
 	@F90_MODULE_FLAG@$(srcdir)/basic   \
 	@F90_MODULE_FLAG@$(srcdir)/math    \
 	@F90_MODULE_FLAG@$(srcdir)/species \
-	@F90_MODULE_FLAG@$(top_builddir)/libxc/src/ @F90_MODULE_FLAG@$(top_builddir)/external_libs/qshep
+	@F90_MODULE_FLAG@$(srcdir)/grid \
+	@F90_MODULE_FLAG@$(top_builddir)/libxc/src/ \
+	@F90_MODULE_FLAG@$(top_builddir)/external_libs/qshep
 
 AM_CPPFLAGS = -I$(srcdir)/include -I$(top_srcdir)/libstring_f
 
@@ -175,101 +164,35 @@ depend:
 
 
 # Dependencies (only includes taken into account)
-atomic.o: 
-broad.o: 
 casida.o:  casida_inc.F90
-centergeom.o: 
-cf.o:  cf_inc.F90
-crystal.o: 
-curv_briggs.o: 
-curv_gygi.o: 
-curvlinear.o: 
-curv_modine.o: 
-derivatives.o:  derivatives_inc.F90
-double_grid.o:  double_grid_apply.F90
 eigen.o:  eigen_inc.F90 eigen_cg_inc.F90 eigen_trlan.F90 eigen_plan_inc.F90 eigen_arpack_inc.F90 eigen_evolution_inc.F90
 sternheimer.o:  sternheimer_inc.F90
 em_resp_calc.o:  em_resp_calc_inc.F90
 em_resp.o :  em_resp_inc.F90
 epot.o:  epot_inc.F90
 excited_states.o:  excited_states_inc.F90
-f.o:  f_inc.F90
 fft.o:  fftw2.F90 fftw3.F90
-geometry.o: 
-geom_opt.o: 
-gs.o: 
 h.o:  h_inc.F90
-hgh.o: 
 hgh_projector.o:  hgh_projector_inc.F90
-hs.o: 
 kb_projector.o:  kb_projector_inc.F90
-lasers.o: 
 lcao.o:  lcao_inc.F90
 linear_solver.o:  linear_solver_inc.F90
 linear_response.o:  linear_response_inc.F90 linear_response_out.F90
-logrid.o: 
-main.o: 
-mesh.o:  mesh_init.F90
-mesh_lib.o: 
-mf.o:  mf_inc.F90
 mix.o:  mix_inc.F90
-profiling.o: 
-nl_operator.o: 
-ode_solver.o:  ode_solver_inc.F90
 opt_control.o:  opt_control_read.F90 opt_control_aux.F90 opt_control_defstates.F90 \
                opt_control_propagation.F90 opt_control_finalcheck.F90 opt_control_iter.F90 \
                opt_control_output.F90 opt_control_tdtarget.F90
-out.o:  out_inc.F90
-par_vec.o:  par_vec_inc.F90
 pes.o:  pes_rc.F90 pes_mask.F90
-phonons.o: 
-phonons_fd.o: 
-phonons_lr.o: 
-phonon_spectrum.o: 
-poisson_fft.o: 
-poisson_isf.o: 
-poisson_cg.o: 
-poisson_multigrid.o: 
-poisson_corrections.o: 
 poisson.o:  poisson1D.F90 poisson2D.F90 poisson3D.F90 poisson_multigrid.F90
 projector.o:  projector_inc.F90
-ps.o: 
 restart.o:  restart_inc.F90
-rkb_projector.o: 
-root_solver.o:  root_solver_inc.F90
-rotational_strength.o: 
-run.o: 
-scf.o: 
-scf_tol.o: 
-specie.o: 
-specie_pot.o: 
 preconditioners.o:  preconditioners_inc.F90
-spectrum.o: 
-spline.o: 
 states.o:  states_kpoints.F90 states_inc.F90
-static_pol.o: 
-submesh.o:  submesh_inc.F90
 em_resp.o:  em_resp_inc.F90
 resp_pert.o: resp_pert_inc.F90
-stencil_cube.o: 
-stencil_star.o: 
-stencil_variational.o: 
-strength_function.o: 
-systm.o: 
-td_exp.o: 
-td_exp_split.o: 
 td.o:  td_init.F90
-td_rti.o: 
 td_write.o: td_calc.F90
-test.o: 
-tm.o: 
-units.o: 
 unocc.o:  unocc_inc.F90
-v_ks.o: 
 xc.o:  xc_vxc.F90 xc_axc.F90 xc_fxc.F90 xc_kxc.F90
-xc_functl.o: 
 xc_OEP.o:  xc_KLI_inc.F90 xc_OEP_x_inc.F90 xc_OEP_SIC_inc.F90 xc_OEP_inc.F90
 xc_OEP_kernel.o:  xc_OEP_kernel_inc.F90
-xyz_adjust.o: 
-xyzanim.o: 
-xyz_file.o: 

@@ -178,11 +178,11 @@ contains
 
 #include "undef.F90"
 #include "real.F90"
-#include "cf_inc.F90"
+#include "cube_function_inc.F90"
 
 #include "undef.F90"
 #include "complex.F90"
-#include "cf_inc.F90"
+#include "cube_function_inc.F90"
 
 end module cube_function_m
 

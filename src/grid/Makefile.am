@@ -19,24 +19,38 @@
 ##
 ## $Id: Makefile.am 2995 2007-06-13 17:49:22Z xavier $
 
-noinst_LIBRARIES = libspecies.a
+noinst_LIBRARIES = libgrid.a
 
-libspecies_a_SOURCES = \
-	logrid.F90 atomic.F90 ps_in_grid.F90 ps_psf_file.F90 ps_psf.F90  \
-	ps_cpi_file.F90 ps_cpi.F90 ps_fhi_file.F90 ps_fhi.F90 \
-	ps_upf.F90 ps_hgh.F90 ps.F90 specie.F90 \
-	xyz_file.F90 geometry.F90 xyz_adjust.F90
+libgrid_a_SOURCES = \
+	simul_box.F90 curv_gygi.F90 curv_briggs.F90 curv_modine.F90 curvlinear.F90 \
+	mesh_lib.F90 par_vec.F90 mesh.F90 scalar_mesh.F90 nl_operator.F90 \
+	submesh.F90 stencil_star.F90 stencil_variational.F90 stencil_cube.F90 \
+	stencil_starplus.F90 derivatives.F90 cube_function.F90 mesh_function.F90 \
+	functions.F90 basins.F90 out.F90 multigrid.F90 double_grid.F90 grid.F90
 
-noinst_HEADERS =
-
+noinst_HEADERS = \
+	mesh_init.F90 par_vec_inc.F90 derivatives_inc.F90 cube_function_inc.F90 \
+	mesh_function_inc.F90 functions_inc.F90 double_grid_apply.F90 \
+	submesh_inc.F90 out_inc.F90
 
 AM_CPPFLAGS = -I$(srcdir)/../include
 AM_FCFLAGS = \
 	@F90_MODULE_FLAG@$(srcdir)/../basic \
 	@F90_MODULE_FLAG@$(srcdir)/../math  \
-	@F90_MODULE_FLAG@$(top_builddir)/libxc/src/
+	@F90_MODULE_FLAG@$(srcdir)/../species \
+	@F90_MODULE_FLAG@$(top_builddir)/external_libs/qshep
 
 include $(srcdir)/../common-rules.make
 
 depend:
 	@makedepf90 $(libspecies_a_SRCS)
+
+cube_functions.o:  cube_functions_inc.F90
+derivatives.o:  derivatives_inc.F90
+double_grid.o:  double_grid_apply.F90
+functions.o: functions_inc.F90
+mesh.o:  mesh_init.F90
+mesh_function.o:  mesh_function_inc.F90
+out.o:  out_inc.F90
+par_vec.o:  par_vec_inc.F90
+submesh.o:  submesh_inc.F90

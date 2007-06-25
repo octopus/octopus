@@ -1,7 +1,7 @@
 #!/usr/bin/perl
 
 use Getopt::Std;
-
+use File::Find;
 getopts "hs:b:";
 
 if($opt_h) {
@@ -36,9 +36,9 @@ EndOfErrorMsg
     exit 1;
 }
 
-opendir(DIR, $src);
-@F90 = grep { /\.F90$/ && -f "$src/$_" } readdir(DIR);
-closedir DIR;
+# get all files named *.F90 recursively
+@F90 = ();
+finddepth (sub{ push @F90, $File::Find::name if /\.F90$/ }, "$src");
 
 # Abort with warning if no *.F90 files were found.
 if($#F90 < 0) {
@@ -57,7 +57,7 @@ open(OUT_orig, ">$share/varinfo_orig");
 
 %opt = ();
 foreach $F90file (@F90){
-  open(IN, "<$src/$F90file");
+  open(IN, "<$F90file");
   while($_=<IN>){
     if(/!%Variable\s+(\S+)/i){
       $var = $1;

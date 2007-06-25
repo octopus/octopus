@@ -298,6 +298,7 @@ AC_CONFIG_FILES([Makefile
   src/basic/Makefile
   src/math/Makefile
   src/species/Makefile
+  src/grid/Makefile
   perl/Makefile
   doc/Makefile
   doc/pdf/Makefile

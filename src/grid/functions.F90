@@ -211,11 +211,11 @@ contains
 
 #include "undef.F90"
 #include "real.F90"
-#include "f_inc.F90"
+#include "functions_inc.F90"
 
 #include "undef.F90"
 #include "complex.F90"
-#include "f_inc.F90"
+#include "functions_inc.F90"
 
 end module functions_m
 
