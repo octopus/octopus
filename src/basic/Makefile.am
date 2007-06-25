@@ -24,12 +24,10 @@ noinst_LIBRARIES = libbasic.a
 libbasic_a_SOURCES = \
              liboct.F90 string.F90 varinfo.F90 mpi.F90 global.F90 liboct_parser.F90 \
 	     datasets.F90 messages.F90 io.F90 units.F90 mpi_debug.F90 profiling.F90 \
-             utils.F90 multicomm.F90 periodic_table.F90
+             utils.F90 multicomm.F90 periodic_table.F90 getopt_f.c command_line.F90
 
 noinst_HEADERS = \
 	mpi_debug_inc.F90
-
-AM_CPPFLAGS = -I$(srcdir)/../include -I$(top_builddir)/src/include
 
 include $(srcdir)/../common-rules.make
 
@@ -51,6 +49,6 @@ global.o: global.F90
 # the dependencies below by the resulting new dependencies. (For normal compilation
 # of octopus, there is absolutely no need of installing makedepf90).
 depend:
-	@makedepf90 $(libbasic_a_SRCS)
+	@makedepf90 $(libbasic_a_SOURCES)
 
 mpi_debug.o: mpi_debug_inc.F90

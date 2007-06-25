@@ -654,14 +654,14 @@ contains
     call pop_sub()
   end subroutine update_field
 
-#include "opt_control_read.F90"
-#include "opt_control_aux.F90"
-#include "opt_control_defstates.F90"
-#include "opt_control_propagation.F90"
-#include "opt_control_finalcheck.F90"
-#include "opt_control_iter.F90"
-#include "opt_control_output.F90"
-#include "opt_control_tdtarget.F90"
+#include "read.F90"
+#include "aux.F90"
+#include "defstates.F90"
+#include "propagation.F90"
+#include "finalcheck.F90"
+#include "iter.F90"
+#include "output.F90"
+#include "tdtarget.F90"
 
 end module opt_control_m
 

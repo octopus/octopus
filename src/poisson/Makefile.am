@@ -28,17 +28,9 @@ libpoisson_a_SOURCES = \
 noinst_HEADERS = \
 	solver_1D.F90 solver_2D.F90 solver_3D.F90
 
-AM_CPPFLAGS = -I$(srcdir)/../include -I$(top_builddir)/src/include
-
-AM_FCFLAGS = \
-	@F90_MODULE_FLAG@$(top_builddir)/src/basic    \
-	@F90_MODULE_FLAG@$(top_builddir)/src/math     \
-	@F90_MODULE_FLAG@$(top_builddir)/src/species  \
-	@F90_MODULE_FLAG@$(top_builddir)/src/grid
-
 include $(srcdir)/../common-rules.make
 
 depend:
-	@makedepf90 $(libspecies_a_SRCS)
+	@makedepf90 $(libpoisson_a_SOURCES)
 
 poisson.o: solver_1D.F90 solver_2D.F90 solver_3D.F90

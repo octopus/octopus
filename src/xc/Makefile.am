@@ -27,18 +27,9 @@ libxc_a_SOURCES = \
 noinst_HEADERS = \
 	vxc.F90 axc.F90 fxc.F90 kxc.F90
 
-AM_CPPFLAGS = -I$(srcdir)/../include -I$(top_builddir)/src/include
-
-AM_FCFLAGS = \
-	@F90_MODULE_FLAG@$(top_builddir)/src/basic    \
-	@F90_MODULE_FLAG@$(top_builddir)/src/math     \
-	@F90_MODULE_FLAG@$(top_builddir)/src/grid     \
-	@F90_MODULE_FLAG@$(top_builddir)/src/states   \
-	@F90_MODULE_FLAG@$(top_builddir)/libxc/src
-
 include $(srcdir)/../common-rules.make
 
 depend:
-	@makedepf90 $(libspecies_a_SRCS)
+	@makedepf90 $(libxc_a_SOURCES)
 
 xc.o: vxc.F90 axc.F90 fxc.F90 kxc.F90

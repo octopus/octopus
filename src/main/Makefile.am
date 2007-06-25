@@ -19,23 +19,25 @@
 ##
 ## $Id: Makefile.am 2995 2007-06-13 17:49:22Z xavier $
 
-noinst_LIBRARIES = libmath.a
-
-libmath_a_SOURCES = \
-	blas.F90 linalg_basic.F90 linalg_adv.F90 gauss_legendre.F90 math.F90 \
-	ode_solver.F90 root_solver.F90 spline.F90 sparskit.F90 fft.F90
-
-noinst_HEADERS = \
-	linalg_basic_blas.F90 linalg_adv_lapack.F90 math_cg_inc.F90 math_inc.F90 \
-	ode_solver_inc.F90 root_solver_inc.F90 sparskit_inc.F90 \
-	fftw2.F90 fftw3.F90
-
 include $(srcdir)/../common-rules.make
 
-depend:
-	@makedepf90 $(libmath_a_SOURCES)
+bin_PROGRAMS = octopus oct-test
 
-linalg_adv.o: linalg_adv_lapack.F90
-linalg_basic.o: linalg_basic_blas.F90
-sparskit.o: sparskit_inc.F90
-math.o: math_cg_inc.F90 math_inc.F90
+octopus_SOURCES = \
+	unocc.F90 static_pol.F90 geom_opt.F90 phonons_fd.F90 \
+	casida.F90 pulpo.F90 run.F90 main.F90
+
+octopus_LDADD = $(all_LIBS)
+
+oct_test_SOURCES = test.F90
+oct_test_LDADD = $(all_LIBS)
+
+noinst_HEADERS = \
+	unocc_inc.F90 casida_inc.F90
+
+depend:
+	@makedepf90 $(octopus_SOURCES) $(oct_test_sources)
+
+
+casida.o:  casida_inc.F90
+unocc.o:  unocc_inc.F90

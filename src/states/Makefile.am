@@ -28,20 +28,10 @@ libstates_a_SOURCES = \
 noinst_HEADERS = \
 	excited_states_inc.F90 mix_inc.F90 states_kpoints.F90 states_inc.F90
 
-AM_CPPFLAGS = -I$(srcdir)/../include -I$(top_builddir)/src/include
-
-AM_FCFLAGS = \
-	@F90_MODULE_FLAG@$(top_builddir)/src/basic    \
-	@F90_MODULE_FLAG@$(top_builddir)/src/math     \
-	@F90_MODULE_FLAG@$(top_builddir)/src/species  \
-	@F90_MODULE_FLAG@$(top_builddir)/src/grid     \
-	@F90_MODULE_FLAG@$(top_builddir)/src/poisson  \
-	@F90_MODULE_FLAG@$(top_builddir)/src/xc
-
 include $(srcdir)/../common-rules.make
 
 depend:
-	@makedepf90 $(libspecies_a_SRCS)
+	@makedepf90 $(libstates_a_SOURCES)
 
 excited_states.o: excited_states_inc.F90
 linear_response.o: linear_response_inc.F90 linear_response_out.F90

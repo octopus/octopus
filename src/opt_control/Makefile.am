@@ -19,31 +19,20 @@
 ##
 ## $Id: Makefile.am 2995 2007-06-13 17:49:22Z xavier $
 
-noinst_LIBRARIES = libgrid.a
+noinst_LIBRARIES = libopt_control.a
 
-libgrid_a_SOURCES = \
-	simul_box.F90 curv_gygi.F90 curv_briggs.F90 curv_modine.F90 curvlinear.F90 \
-	mesh_lib.F90 par_vec.F90 mesh.F90 scalar_mesh.F90 nl_operator.F90 \
-	submesh.F90 stencil_star.F90 stencil_variational.F90 stencil_cube.F90 \
-	stencil_starplus.F90 derivatives.F90 cube_function.F90 mesh_function.F90 \
-	functions.F90 basins.F90 out.F90 multigrid.F90 double_grid.F90 grid.F90
+libopt_control_a_SOURCES = \
+	filters.F90 parameters.F90 opt_control.F90
 
 noinst_HEADERS = \
-	mesh_init.F90 par_vec_inc.F90 derivatives_inc.F90 cube_function_inc.F90 \
-	mesh_function_inc.F90 functions_inc.F90 double_grid_apply.F90 \
-	submesh_inc.F90 out_inc.F90
+	read.F90 aux.F90 defstates.F90 propagation.F90 finalcheck.F90 iter.F90 \
+	output.F90 tdtarget.F90
 
 include $(srcdir)/../common-rules.make
 
 depend:
-	@makedepf90 $(libgrid_a_SOURCES)
+	@makedepf90 $(libopt_control_a_SOURCES)
 
-cube_functions.o:  cube_functions_inc.F90
-derivatives.o:  derivatives_inc.F90
-double_grid.o:  double_grid_apply.F90
-functions.o: functions_inc.F90
-mesh.o:  mesh_init.F90
-mesh_function.o:  mesh_function_inc.F90
-out.o:  out_inc.F90
-par_vec.o:  par_vec_inc.F90
-submesh.o:  submesh_inc.F90
+
+opt_control.o: read.F90 aux.F90 defstates.F90 propagation.F90 finalcheck.F90 iter.F90 \
+	output.F90 tdtarget.F90

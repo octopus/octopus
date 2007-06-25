@@ -19,31 +19,30 @@
 ##
 ## $Id: Makefile.am 2995 2007-06-13 17:49:22Z xavier $
 
-noinst_LIBRARIES = libgrid.a
+noinst_LIBRARIES = libh_sys.a
 
-libgrid_a_SOURCES = \
-	simul_box.F90 curv_gygi.F90 curv_briggs.F90 curv_modine.F90 curvlinear.F90 \
-	mesh_lib.F90 par_vec.F90 mesh.F90 scalar_mesh.F90 nl_operator.F90 \
-	submesh.F90 stencil_star.F90 stencil_variational.F90 stencil_cube.F90 \
-	stencil_starplus.F90 derivatives.F90 cube_function.F90 mesh_function.F90 \
-	functions.F90 basins.F90 out.F90 multigrid.F90 double_grid.F90 grid.F90
+libh_sys_a_SOURCES = \
+	tdfunction.F90 lasers.F90 specie_pot.F90 \
+	rkb_projector.F90 kb_projector.F90 hgh_projector.F90 projector.F90 \
+	epot.F90 h.F90 preconditioners.F90 linear_solver.F90 \
+	scf_tol.F90 xc_OEP.F90 v_ks.F90 systm.F90 xc_OEP_kernel.F90
 
 noinst_HEADERS = \
-	mesh_init.F90 par_vec_inc.F90 derivatives_inc.F90 cube_function_inc.F90 \
-	mesh_function_inc.F90 functions_inc.F90 double_grid_apply.F90 \
-	submesh_inc.F90 out_inc.F90
+	xc_KLI_inc.F90 xc_OEP_x_inc.F90 xc_OEP_SIC_inc.F90 \
+	kb_projector_inc.F90 hgh_projector_inc.F90 projector_inc.F90 epot_inc.F90 \
+	xc_OEP_inc.F90 h_inc.F90 preconditioners_inc.F90
 
 include $(srcdir)/../common-rules.make
 
 depend:
-	@makedepf90 $(libgrid_a_SOURCES)
+	@makedepf90 $(libh_sys_a_SOURCES)
 
-cube_functions.o:  cube_functions_inc.F90
-derivatives.o:  derivatives_inc.F90
-double_grid.o:  double_grid_apply.F90
-functions.o: functions_inc.F90
-mesh.o:  mesh_init.F90
-mesh_function.o:  mesh_function_inc.F90
-out.o:  out_inc.F90
-par_vec.o:  par_vec_inc.F90
-submesh.o:  submesh_inc.F90
+epot.o: epot_inc.F90
+h.o: h_inc.F90
+hgh_projector.o: hgh_projector_inc.F90
+kb_projector.o: kb_projector_inc.F90
+linear_solver.o: linear_solver_inc.F90
+projector.o:  projector_inc.F90
+preconditioners.o: preconditioners_inc.F90
+xc_OEP.o: xc_KLI_inc.F90 xc_OEP_x_inc.F90 xc_OEP_SIC_inc.F90 xc_OEP_inc.F90
+xc_OEP_kernel.o: xc_OEP_kernel_inc.F90

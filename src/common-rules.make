@@ -1,3 +1,72 @@
+#---------------------------------------------------------------
+# include paths
+#---------------------------------------------------------------
+AM_FCFLAGS = \
+	@F90_MODULE_FLAG@$(top_builddir)/src/basic   \
+	@F90_MODULE_FLAG@$(top_builddir)/src/math    \
+	@F90_MODULE_FLAG@$(top_builddir)/src/species \
+	@F90_MODULE_FLAG@$(top_builddir)/src/grid    \
+	@F90_MODULE_FLAG@$(top_builddir)/src/poisson \
+	@F90_MODULE_FLAG@$(top_builddir)/src/states  \
+	@F90_MODULE_FLAG@$(top_builddir)/src/xc      \
+	@F90_MODULE_FLAG@$(top_builddir)/src/h_sys   \
+	@F90_MODULE_FLAG@$(top_builddir)/src/scf     \
+	@F90_MODULE_FLAG@$(top_builddir)/src/td      \
+	@F90_MODULE_FLAG@$(top_builddir)/src/opt_control \
+	@F90_MODULE_FLAG@$(top_builddir)/src/sternheimer \
+	@F90_MODULE_FLAG@$(top_builddir)/libxc/src   \
+	@F90_MODULE_FLAG@$(top_builddir)/external_libs/qshep
+
+AM_CPPFLAGS = -I$(srcdir)/include -I$(top_builddir)/src/include -I$(top_srcdir)/libstring_f
+
+
+#---------------------------------------------------------------
+# define libraries here
+#---------------------------------------------------------------
+octopus_LIBS = \
+	$(top_builddir)/src/sternheimer/libsternheimer.a \
+	$(top_builddir)/src/opt_control/libopt_control.a \
+	$(top_builddir)/src/td/libtd.a                   \
+	$(top_builddir)/src/scf/libscf.a                 \
+	$(top_builddir)/src/h_sys/libh_sys.a             \
+	$(top_builddir)/src/xc/libxc.a                   \
+	$(top_builddir)/src/states/libstates.a           \
+	$(top_builddir)/src/poisson/libpoisson.a         \
+	$(top_builddir)/src/grid/libgrid.a               \
+	$(top_builddir)/src/species/libspecies.a         \
+	$(top_builddir)/src/math/libmath.a               \
+	$(top_builddir)/src/basic/libbasic.a
+
+core_LIBS = \
+	$(octopus_LIBS) \
+	@LIBS_LAPACK@ @LIBS_BLAS@ \
+	$(top_builddir)/liboct/liboct.a \
+	$(top_builddir)/liboct_parser/liboct_parser.a \
+	$(top_builddir)/libxc/src/libxc.a \
+	-L$(top_builddir)/libstring_f -lstring_f \
+	@GSL_LIBS@ @GD_LIBS@ @FCEXTRALIBS@
+
+external_LIBS = \
+	$(top_builddir)/external_libs/expokit/libexpokit.a \
+	$(top_builddir)/external_libs/qshep/libqshep.a \
+	$(top_builddir)/external_libs/poisson_isf/libpoisson_isf.a
+
+if COMPILE_METIS
+  external_LIBS += $(top_builddir)/external_libs/metis-4.0/libmetis.a
+endif
+
+if COMPILE_LIBNBC
+  external_LIBS += $(top_builddir)/external_libs/libnbc/libnbc.a
+endif
+
+all_LIBS = $(core_LIBS) @LIBS_FFT@ @LIBS_TRLAN@ @LIBS_ARPACK@ @LIBS_SPARSKIT@ \
+  @LIBS_NETCDF@ $(external_LIBS) @LIBS_MPI@ @LIBS_LAPACK@ @LIBS_BLAS@
+
+
+#---------------------------------------------------------------
+# How to compile F90 files
+#---------------------------------------------------------------
+
 # Define empty rule to override the native rule of automake (otherwise the native
 # rule will have precedence over the pattern based rules below). Could not figure out
 # how to remove .F90 from .SUFFIXES, which would be an alternative route.
@@ -22,6 +91,12 @@ CTAGS = ctags-exuberant -e
 
 # cleaning
 CLEANFILES = *~ *.bak *.mod *.il *.d *.pc* ifc* *_oct.f90 config_F90.h
+
+#---------------------------------------------------------------
+# if it exists include user defined Makefile.local (which is not included in the octopus package)
+#---------------------------------------------------------------
+-include Makefile.local
+
 
 # Local Variables:
 # mode: Makefile

@@ -29,15 +29,7 @@ libspecies_a_SOURCES = \
 
 noinst_HEADERS =
 
-
-AM_CPPFLAGS = -I$(srcdir)/../include -I$(top_builddir)/src/include
-
-AM_FCFLAGS = \
-	@F90_MODULE_FLAG@$(top_builddir)/src/basic \
-	@F90_MODULE_FLAG@$(top_builddir)/src/math  \
-	@F90_MODULE_FLAG@$(top_builddir)/libxc/src/
-
 include $(srcdir)/../common-rules.make
 
 depend:
-	@makedepf90 $(libspecies_a_SRCS)
+	@makedepf90 $(libspecies_a_SOURCES)
