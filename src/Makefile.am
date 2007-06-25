@@ -19,7 +19,7 @@
 ##
 ## $Id$
 
-SUBDIRS = include basic math species grid
+SUBDIRS = include basic math species grid poisson
 
 EXTRA_PROGRAMS = oct-cross-section oct-rsf oct-harmonic-spectrum \
                  oct-broad oct-ph oct-xyz-anim oct-center-geom oct-help \
@@ -28,8 +28,6 @@ EXTRA_PROGRAMS = oct-cross-section oct-rsf oct-harmonic-spectrum \
 bin_PROGRAMS = octopus oct-test @UTILITY_PROGRAMS@
 
 core_SRCS = \
-	poisson_isf.F90 poisson_fft.F90 \
-	poisson_corrections.F90 poisson_cg.F90 poisson_multigrid.F90 poisson.F90 \
 	crystal.F90 \
 	states.F90 magnetic.F90 elf.F90 states_output.F90 excited_states.F90 \
 	xc_functl.F90 xc.F90 scf_tol.F90 mix.F90 spectrum.F90 \
@@ -49,8 +47,7 @@ octopus_SOURCES = $(core_SRCS) \
 	em_resp.F90 vdW.F90 phonons_lr.F90 pulpo.F90 run.F90 main.F90
 
 noinst_HEADERS = \
-	poisson1D.F90 poisson2D.F90 poisson3D.F90 mix_inc.F90 \
-	xc_vxc.F90 xc_axc.F90 xc_fxc.F90 xc_kxc.F90 xc_KLI_inc.F90 xc_OEP_x_inc.F90 xc_OEP_SIC_inc.F90 \
+	mix_inc.F90 xc_vxc.F90 xc_axc.F90 xc_fxc.F90 xc_kxc.F90 xc_KLI_inc.F90 xc_OEP_x_inc.F90 xc_OEP_SIC_inc.F90 \
 	kb_projector_inc.F90 hgh_projector_inc.F90 projector_inc.F90 epot_inc.F90 \
 	xc_OEP_inc.F90 h_inc.F90 \
 	eigen_trlan.F90 preconditioners_inc.F90 \
@@ -67,7 +64,7 @@ noinst_HEADERS = \
 	opt_control_output.F90 opt_control_tdtarget.F90
 
 octopus_LIBS = \
-	grid/libgrid.a species/libspecies.a math/libmath.a basic/libbasic.a
+	poisson/libpoisson.a grid/libgrid.a species/libspecies.a math/libmath.a basic/libbasic.a
 
 core_LIBS = $(octopus_LIBS) @LIBS_LAPACK@ @LIBS_BLAS@ \
   ../liboct/liboct.a \
@@ -130,6 +127,7 @@ AM_FCFLAGS = \
 	@F90_MODULE_FLAG@$(srcdir)/math    \
 	@F90_MODULE_FLAG@$(srcdir)/species \
 	@F90_MODULE_FLAG@$(srcdir)/grid \
+	@F90_MODULE_FLAG@$(srcdir)/poisson \
 	@F90_MODULE_FLAG@$(top_builddir)/libxc/src/ \
 	@F90_MODULE_FLAG@$(top_builddir)/external_libs/qshep
 

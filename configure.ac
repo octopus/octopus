@@ -299,6 +299,7 @@ AC_CONFIG_FILES([Makefile
   src/math/Makefile
   src/species/Makefile
   src/grid/Makefile
+  src/poisson/Makefile
   perl/Makefile
   doc/Makefile
   doc/pdf/Makefile

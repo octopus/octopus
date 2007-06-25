@@ -462,9 +462,9 @@ contains
   end subroutine poisson_test
 
 
-#include "poisson1D.F90"
-#include "poisson2D.F90"
-#include "poisson3D.F90"
+#include "solver_1D.F90"
+#include "solver_2D.F90"
+#include "solver_3D.F90"
 
 end module poisson_m
 
