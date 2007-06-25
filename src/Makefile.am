@@ -55,8 +55,8 @@ noinst_HEADERS = \
 	eigen_arpack_inc.F90 eigen_evolution_inc.F90 \
 	lcao_inc.F90 crystal.F90 restart_inc.F90 states_inc.F90 states_kpoints.F90 \
 	pes_rc.F90 pes_mask.F90 \
-	td_init.F90 td_calc.F90\
-	linear_response_inc.F90 linear_response_out.F90 linear_solver_inc.F90\
+	td_init.F90 td_calc.F90 \
+	linear_response_inc.F90 linear_response_out.F90 linear_solver_inc.F90 \
 	sternheimer_inc.F90 em_resp_inc.F90 resp_pert_inc.F90 unocc_inc.F90 casida_inc.F90 \
 	excited_states_inc.F90 xc_OEP_kernel_inc.F90 em_resp_calc_inc.F90 \
 	opt_control_read.F90 opt_control_aux.F90 opt_control_defstates.F90 \
@@ -123,15 +123,15 @@ oct_help_SOURCES = getopt_f.c command_line.F90 $(basic_SRCS) help.F90
 oct_help_LDADD =  $(core_LIBS)
 
 AM_FCFLAGS = \
-	@F90_MODULE_FLAG@$(srcdir)/basic   \
-	@F90_MODULE_FLAG@$(srcdir)/math    \
-	@F90_MODULE_FLAG@$(srcdir)/species \
-	@F90_MODULE_FLAG@$(srcdir)/grid \
-	@F90_MODULE_FLAG@$(srcdir)/poisson \
-	@F90_MODULE_FLAG@$(top_builddir)/libxc/src/ \
+	@F90_MODULE_FLAG@$(top_builddir)/src/basic \
+	@F90_MODULE_FLAG@$(top_builddir)/src/math \
+	@F90_MODULE_FLAG@$(top_builddir)/src/species \
+	@F90_MODULE_FLAG@$(top_builddir)/src/grid \
+	@F90_MODULE_FLAG@$(top_builddir)/src/poisson \
+	@F90_MODULE_FLAG@$(top_builddir)/libxc/src \
 	@F90_MODULE_FLAG@$(top_builddir)/external_libs/qshep
 
-AM_CPPFLAGS = -I$(srcdir)/include -I$(top_srcdir)/libstring_f
+AM_CPPFLAGS = -I$(srcdir)/include -I$(top_builddir)/src/include -I$(top_srcdir)/libstring_f
 
 include common-rules.make
 
@@ -144,13 +144,6 @@ DISTCLEANFILES = dirs.h
 
 ../liboct/liboct.a:
 	(cd ../liboct; $(MAKE))
-basic/libbasic.a:
-	(cd basic; $(MAKE))
-math/libmath.a:
-	(cd math; $(MAKE))
-species/libspecies.a:
-	(cd species; $(MAKE))
-
 
 # This is to generate the dependencies. It makes use of the makedepf90 program of 
 # Erik Edelmann (http://www.helsinki.fi/~eedelman/makedepf90.html). It should be run

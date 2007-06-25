@@ -28,12 +28,13 @@ libpoisson_a_SOURCES = \
 noinst_HEADERS = \
 	solver_1D.F90 solver_2D.F90 solver_3D.F90
 
-AM_CPPFLAGS = -I$(srcdir)/../include
+AM_CPPFLAGS = -I$(srcdir)/../include -I$(top_builddir)/src/include
+
 AM_FCFLAGS = \
-	@F90_MODULE_FLAG@$(srcdir)/../basic    \
-	@F90_MODULE_FLAG@$(srcdir)/../math     \
-	@F90_MODULE_FLAG@$(srcdir)/../species  \
-	@F90_MODULE_FLAG@$(srcdir)/../grid
+	@F90_MODULE_FLAG@$(top_builddir)/src/basic    \
+	@F90_MODULE_FLAG@$(top_builddir)/src/math     \
+	@F90_MODULE_FLAG@$(top_builddir)/src/species  \
+	@F90_MODULE_FLAG@$(top_builddir)/src/grid
 
 include $(srcdir)/../common-rules.make
 

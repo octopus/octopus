@@ -25,5 +25,6 @@ noinst_HEADERS = \
 include $(srcdir)/../common-rules.make
 
 global.h: config_F90.h
-config_F90.h: ../../config.h
-	grep '#define' ../../config.h >config_F90.h
+
+config_F90.h: $(top_builddir)/config.h
+	grep '#define' $^ > config_F90.h

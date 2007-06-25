@@ -30,9 +30,10 @@ noinst_HEADERS = \
 	ode_solver_inc.F90 root_solver_inc.F90 sparskit_inc.F90 \
 	fftw2.F90 fftw3.F90
 
-AM_CPPFLAGS = -I$(srcdir)/../include
+AM_CPPFLAGS = -I$(srcdir)/../include -I$(top_builddir)/src/include
+
 AM_FCFLAGS = \
-	@F90_MODULE_FLAG@$(srcdir)/../basic
+	@F90_MODULE_FLAG@$(top_builddir)/src/basic
 
 include $(srcdir)/../common-rules.make
 

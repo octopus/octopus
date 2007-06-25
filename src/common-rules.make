@@ -18,12 +18,12 @@
 	@rm -f $*_oct.f90
 
 # ctags
-CTAGS=ctags-exuberant -e
+CTAGS = ctags-exuberant -e
 
 # cleaning
 CLEANFILES = *~ *.bak *.mod *.il *.d *.pc* ifc* *_oct.f90 config_F90.h
 
-!! Local Variables:
-!! mode: Makefile
-!! coding: utf-8
-!! End:
+# Local Variables:
+# mode: Makefile
+# coding: utf-8
+# End:

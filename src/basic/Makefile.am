@@ -29,7 +29,7 @@ libbasic_a_SOURCES = \
 noinst_HEADERS = \
 	mpi_debug_inc.F90
 
-AM_CPPFLAGS = -I$(srcdir)/../include
+AM_CPPFLAGS = -I$(srcdir)/../include -I$(top_builddir)/src/include
 
 include $(srcdir)/../common-rules.make
 

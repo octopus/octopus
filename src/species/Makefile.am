@@ -30,10 +30,11 @@ libspecies_a_SOURCES = \
 noinst_HEADERS =
 
 
-AM_CPPFLAGS = -I$(srcdir)/../include
+AM_CPPFLAGS = -I$(srcdir)/../include -I$(top_builddir)/src/include
+
 AM_FCFLAGS = \
-	@F90_MODULE_FLAG@$(srcdir)/../basic \
-	@F90_MODULE_FLAG@$(srcdir)/../math  \
+	@F90_MODULE_FLAG@$(top_builddir)/src/basic \
+	@F90_MODULE_FLAG@$(top_builddir)/src/math  \
 	@F90_MODULE_FLAG@$(top_builddir)/libxc/src/
 
 include $(srcdir)/../common-rules.make
