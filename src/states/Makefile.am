@@ -19,26 +19,28 @@
 ##
 ## $Id: Makefile.am 2995 2007-06-13 17:49:22Z xavier $
 
-noinst_LIBRARIES = libpoisson.a
+noinst_LIBRARIES = libstates.a
 
-libpoisson_a_SOURCES = \
-	solver_isf.F90 solver_fft.F90 \
-	corrections.F90 conj_grad.F90 multigrid.F90 poisson.F90
+libstates_a_SOURCES = \
+	crystal.F90 states.F90 magnetic.F90 elf.F90 states_output.F90 excited_states.F90 \
+	mix.F90
 
 noinst_HEADERS = \
-	solver_1D.F90 solver_2D.F90 solver_3D.F90
+	excited_states_inc.F90 mix_inc.F90 states_kpoints.F90 states_inc.F90
 
-AM_CPPFLAGS = -I$(srcdir)/../include -I$(top_builddir)/src/include
-
+AM_CPPFLAGS = -I$(srcdir)/../include
 AM_FCFLAGS = \
 	@F90_MODULE_FLAG@$(top_builddir)/src/basic    \
 	@F90_MODULE_FLAG@$(top_builddir)/src/math     \
 	@F90_MODULE_FLAG@$(top_builddir)/src/species  \
-	@F90_MODULE_FLAG@$(top_builddir)/src/grid
+	@F90_MODULE_FLAG@$(top_builddir)/src/grid     \
+	@F90_MODULE_FLAG@$(top_builddir)/src/poisson
 
 include $(srcdir)/../common-rules.make
 
 depend:
 	@makedepf90 $(libspecies_a_SRCS)
 
-poisson.o: solver_1D.F90 solver_2D.F90 solver_3D.F90
+excited_states.o: excited_states_inc.F90
+mix.o: mix_inc.F90
+states.o: states_kpoints.F90 states_inc.F90

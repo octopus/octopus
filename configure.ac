@@ -300,6 +300,7 @@ AC_CONFIG_FILES([Makefile
   src/species/Makefile
   src/grid/Makefile
   src/poisson/Makefile
+  src/states/Makefile
   perl/Makefile
   doc/Makefile
   doc/pdf/Makefile
