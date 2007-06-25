@@ -28,7 +28,8 @@ libstates_a_SOURCES = \
 noinst_HEADERS = \
 	excited_states_inc.F90 mix_inc.F90 states_kpoints.F90 states_inc.F90
 
-AM_CPPFLAGS = -I$(srcdir)/../include
+AM_CPPFLAGS = -I$(srcdir)/../include -I$(top_builddir)/src/include
+
 AM_FCFLAGS = \
 	@F90_MODULE_FLAG@$(top_builddir)/src/basic    \
 	@F90_MODULE_FLAG@$(top_builddir)/src/math     \
