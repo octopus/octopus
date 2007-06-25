@@ -301,6 +301,7 @@ AC_CONFIG_FILES([Makefile
   src/grid/Makefile
   src/poisson/Makefile
   src/states/Makefile
+  src/xc/Makefile
   perl/Makefile
   doc/Makefile
   doc/pdf/Makefile
