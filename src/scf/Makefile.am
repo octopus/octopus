@@ -1,0 +1,38 @@
+## Process this file with automake to produce Makefile.in
+
+## Copyright (C) 2002 M. Marques, A. Castro, A. Rubio, G. Bertsch
+##
+## This program is free software; you can redistribute it and/or modify
+## it under the terms of the GNU General Public License as published by
+## the Free Software Foundation; either version 2, or (at your option)
+## any later version.
+##
+## This program is distributed in the hope that it will be useful,
+## but WITHOUT ANY WARRANTY; without even the implied warranty of
+## MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+## GNU General Public License for more details.
+##
+## You should have received a copy of the GNU General Public License
+## along with this program; if not, write to the Free Software
+## Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
+## 02111-1307, USA.
+##
+## $Id: Makefile.am 2995 2007-06-13 17:49:22Z xavier $
+
+noinst_LIBRARIES = libscf.a
+
+libscf_a_SOURCES = \
+	eigen.F90 lcao.F90 scf.F90 ground_state.F90
+
+noinst_HEADERS = \
+	eigen_trlan.F90 eigen_inc.F90 eigen_cg_inc.F90 eigen_plan_inc.F90 \
+	eigen_arpack_inc.F90 eigen_evolution_inc.F90 lcao_inc.F90
+
+include $(srcdir)/../common-rules.make
+
+depend:
+	@makedepf90 $(libscf_a_SOURCES)
+
+
+eigen.o: eigen_inc.F90 eigen_cg_inc.F90 eigen_trlan.F90 eigen_plan_inc.F90 eigen_arpack_inc.F90 eigen_evolution_inc.F90
+lcao.o: lcao_inc.F90
