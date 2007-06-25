@@ -172,9 +172,8 @@ contains
 
         do j = 1, geo%natoms
           do beta = 1, NDIM
-            ph%dm(phonons_index(ph, i, alpha), phonons_index(ph, j, beta)) = &
-              (forces0(j, beta) - forces(j, beta)) / (M_TWO*ph%disp &
-              * sqrt(geo%atom(i)%spec%weight*geo%atom(j)%spec%weight))
+            ph%dm(phn_idx(ph, i, alpha), phn_idx(ph, j, beta)) = &
+              (forces0(j, beta) - forces(j, beta)) / (M_TWO*ph%disp )
           end do
         end do
 
@@ -183,6 +182,7 @@ contains
     deallocate(forces0, forces)
     call scf_end(scf)
 
+    call phonons_normalize_dm(ph, geo)
     call phonons_diagonalize_dm(ph)
 
   end subroutine get_dm

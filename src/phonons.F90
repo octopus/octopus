@@ -46,8 +46,9 @@ module phonons_m
        phonons_t, &
        phonons_init, &
        phonons_end,  &
+       phonons_normalize_dm, &
        phonons_diagonalize_dm, &
-       phonons_index, &
+       phn_idx, &
        phonons_output
   
   type phonons_t
@@ -57,6 +58,7 @@ module phonons_m
     FLOAT, pointer :: dm(:,:), vec(:,:), freq(:)
 
     FLOAT :: disp
+    FLOAT :: total_mass
   end type phonons_t
 
 contains
@@ -66,12 +68,19 @@ contains
     type(phonons_t),     intent(out) :: ph
     type(system_t),      intent(inout) :: sys
 
+    integer :: iatom
+
     ph%ndim = sys%gr%sb%dim
     ph%natoms = sys%geo%natoms
     ph%dim = sys%geo%natoms*sys%gr%sb%dim
     ALLOCATE(ph%dm(ph%dim, ph%dim), ph%dim*ph%dim)
     ALLOCATE(ph%vec(ph%dim, ph%dim), ph%dim*ph%dim)
     ALLOCATE(ph%freq(ph%dim), ph%dim)
+
+    ph%total_mass = M_ZERO
+    do iatom = 1, sys%geo%natoms
+      ph%total_mass = ph%total_mass + sys%geo%atom(iatom)%spec%weight
+    end do
 
   end subroutine phonons_init
 
@@ -86,6 +95,33 @@ contains
   end subroutine phonons_end
 
   ! ---------------------------------------------------------
+
+  subroutine phonons_normalize_dm(ph, geo)
+    type(phonons_t),      intent(inout) :: ph
+    type(geometry_t),     intent(inout) :: geo
+
+    FLOAT :: factor
+    integer :: iatom, idir, jatom, jdir
+
+    do iatom = 1, ph%natoms
+      do idir = 1, ph%ndim
+        
+        do jatom = 1, ph%natoms
+          do jdir = 1, ph%ndim
+
+            factor = ph%total_mass/sqrt(geo%atom(iatom)%spec%weight)/sqrt(geo%atom(jatom)%spec%weight)
+            
+            ph%dm(phn_idx(ph, iatom, idir), phn_idx(ph, jatom, jdir)) = &
+                 ph%dm(phn_idx(ph, iatom, idir), phn_idx(ph, jatom, jdir)) * factor
+
+          end do
+        end do
+
+      end do
+    end do
+
+  end subroutine phonons_normalize_dm
+
   subroutine phonons_diagonalize_dm(ph)
     type(phonons_t),      intent(inout) :: ph
     
@@ -93,14 +129,16 @@ contains
     
     ! diagonalize DM
     call lalg_eigensolve(ph%dim, ph%dm, ph%vec, ph%freq)
-    
+
+    ph%freq(1:ph%dim) = ph%freq(1:ph%dim) / ph%total_mass
+
   end subroutine phonons_diagonalize_dm
 
-  integer function phonons_index(ph, iatom, idim)
+  integer function phn_idx(ph, iatom, idim)
     type(phonons_t), intent(in) :: ph
     integer,         intent(in) :: iatom, idim
-    phonons_index = (iatom-1)*ph%ndim + idim
-  end function phonons_index
+    phn_idx = (iatom-1)*ph%ndim + idim
+  end function phn_idx
 
   subroutine phonons_output(ph, suffix)
     type(phonons_t),   intent(in) :: ph
@@ -123,7 +161,7 @@ contains
           do jdir = 1, ph%ndim
             
             write(iunit, '(es14.5)', advance='no') &
-                 ph%dm(phonons_index(ph, iatom, idir), phonons_index(ph, jatom, jdir))
+                 ph%dm(phn_idx(ph, iatom, idir), phn_idx(ph, jatom, jdir))
           end do
         end do
         write(iunit, '(1x)')

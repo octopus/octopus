@@ -22,6 +22,7 @@
 
 module phonons_lr_m
   use datasets_m
+  use external_pot_m
   use functions_m
   use geometry_m
   use global_m
@@ -66,9 +67,16 @@ contains
     type(phonons_t)     :: ph
     type(resp_pert_t)   :: perturbation
 
-    integer :: iatom, idir, jatom, jdir, idim, ik
+    integer :: natoms, np, np_part, ndim
+    integer :: iatom, idir, jatom, jdir, idim, ik, nproj
     FLOAT :: total_mass, factor
-    FLOAT, allocatable :: tmp(:)
+    FLOAT, allocatable :: tmp(:,:), grho(:,:), ggrho(:,:,:), vlocal(:,:)
+    FLOAT, allocatable :: tmp2(:,:)
+
+    natoms = sys%geo%natoms
+    np = sys%NP
+    np_part = sys%NP_PART
+    ndim = sys%NDIM
 
 
     !CONSTRUCT
@@ -88,14 +96,36 @@ contains
     call lr_init(lr(1))
     call lr_allocate(lr(1), sys%st, sys%gr%m)
 
-    ALLOCATE(tmp(1:sys%NP), sys%NP)
+    ALLOCATE(vlocal(1:np, 1:natoms), np*natoms)
+    ALLOCATE(tmp(1:np_part, 1), np_part)
+    ALLOCATE(tmp2(1:np_part, 1), np_part)
+    ALLOCATE(grho(1:np_part, 1:ndim), np_part*ndim)
+    ALLOCATE(ggrho(1:np, 1:ndim, 1:ndim), np*ndim*ndim)
 
     !CALCULATE
 
+    !the local potential
+    do iatom = 1, natoms
+      call build_local_part_in_real_space(h%ep, sys%gr, sys%geo, sys%geo%atom(iatom), vlocal(:, iatom), M_ZERO)
+    end do
+
+    !the second derivative of the density
+    tmp(1:np, 1) = M_ZERO
+    do ik = 1, sys%st%d%nspin
+      tmp(1:np, 1) = sys%st%rho(1:np, ik)
+    end do
+
+    call df_gradient(sys%gr%sb, sys%gr%f_der, tmp(:,1), grho(:,:))
+    
+    do idir = 1, ndim
+      call df_gradient(sys%gr%sb, sys%gr%f_der, grho(:, idir), ggrho(:,:, idir))
+    end do
+
+    !the ionic contribution
     call build_ionic_dm()
 
-    do iatom = 1, sys%geo%natoms
-      do idir = 1, sys%NDIM
+    do iatom = 1, natoms
+      do idir = 1, ndim
 
         call resp_pert_init(perturbation)
 
@@ -106,14 +136,39 @@ contains
 
         call resp_pert_end(perturbation)
 
+        tmp(1:np, 1) = M_ZERO
+        do ik = 1, sys%st%d%nspin
+          tmp(1:np, 1) = lr(1)%ddl_rho(1:np, ik)
+        end do
+
+        call df_gradient(sys%gr%sb, sys%gr%f_der, tmp(:,1), grho(:,:))
+
+        do jatom = 1, natoms
+          do jdir = 1, ndim
+
+            tmp(1:np,1) =  ddelta(iatom, jatom) * ggrho(1:np, idir, jdir) + grho(1:np, jdir)
+
+            tmp2(1:np,1) = vlocal(1:np, jatom) * tmp(1:np, 1)
+            
+            nproj = h%ep%atomproj(2, jatom) - h%ep%atomproj(1, jatom) + 1
+
+!            ph%dm(phn_idx(ph, iatom, idir), phn_idx(ph, jatom, jdir)) = &
+!                 ph%dm(phn_idx(ph, iatom, idir), phn_idx(ph, jatom, jdir)) + dmf_integrate(sys%gr%m, tmp2(:,1))
+
+          end do
+        end do
+
       end do
 
     end do
 
+    call phonons_output(ph, "_lr")
+
     !DESTRUCT
 
     deallocate(tmp)
-
+    deallocate(grho)
+    deallocate(ggrho)
     call lr_dealloc(lr(1))
     
     call phonons_end(ph)
@@ -140,10 +195,10 @@ contains
       integer :: katom
 
 
-      do iatom = 1, sys%geo%natoms
+      do iatom = 1, natoms
         do idir = 1, sys%NDIM
           
-          do jatom = 1, sys%geo%natoms
+          do jatom = 1, natoms
             do jdir = 1, sys%NDIM         
               
               xi(1:MAX_DIM) = sys%geo%atom(iatom)%x(1:MAX_DIM)
@@ -152,7 +207,7 @@ contains
               if( iatom == jatom) then 
                 
                 ac = M_ZERO
-                do katom = 1, sys%geo%natoms
+                do katom = 1, natoms
                   if ( katom /= iatom ) then 
                     
                     xk(1:MAX_DIM) = sys%geo%atom(katom)%x(1:MAX_DIM)
@@ -179,7 +234,7 @@ contains
               end if
                 
             
-              ph%dm(phonons_index(ph, iatom, idir), phonons_index(ph, jatom, jdir)) = ac
+              ph%dm(phn_idx(ph, iatom, idir), phn_idx(ph, jatom, jdir)) = ac
 
             end do
           end do
