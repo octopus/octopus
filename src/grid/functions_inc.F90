@@ -367,7 +367,7 @@ subroutine X(f_angular_momentum)(sb, f_der, f, lf, ghost_update)
   type(simul_box_t), intent(in)    :: sb
   type(f_der_t),     intent(inout) :: f_der
   R_TYPE,            intent(inout) :: f(:)     ! f(m%np_part)
-  R_TYPE,            intent(out)   :: lf(:,:)  ! lf(m%np_part, 3) in 3D, lf(m%np_part, 1) in 2D
+  R_TYPE,            intent(out)   :: lf(:,:)  ! lf(m%np, 3) in 3D, lf(m%np, 1) in 2D
   logical, optional, intent(in)    :: ghost_update
 
   R_TYPE, allocatable :: gf(:, :)
@@ -395,9 +395,11 @@ subroutine X(f_angular_momentum)(sb, f_der, f, lf, ghost_update)
 #if defined(R_TCOMPLEX)
   select case(sb%dim)
   case(3)
-    call lalg_scal(f_der%m%np_part, 3,  -M_zI, lf)
+    do i = 1, 3
+      call lalg_scal(f_der%m%np, -M_zI, lf(:, i))
+    end do
   case(2)
-    call lalg_scal(f_der%m%np_part, 1,  -M_zI, lf)
+    call lalg_scal(f_der%m%np, -M_zI, lf(:, 1))
   end select
 #endif
 

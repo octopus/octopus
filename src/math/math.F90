@@ -746,7 +746,7 @@ contains
     APP_THRESHOLD = thr
   end subroutine set_app_threshold
   
-  FLOAT function ddelta(i, j)
+  FLOAT pure function ddelta(i, j)
     integer, intent(in) :: i
     integer, intent(in) :: j
     
