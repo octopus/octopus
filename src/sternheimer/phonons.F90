@@ -160,8 +160,8 @@ contains
         do jatom = 1, ph%natoms
           do jdir = 1, ph%ndim
             
-            write(iunit, '(es14.5)', advance='no') &
-                 ph%dm(phn_idx(ph, iatom, idir), phn_idx(ph, jatom, jdir))
+            write(iunit, '(f14.3)', advance='no') &
+                 ph%dm(phn_idx(ph, iatom, idir), phn_idx(ph, jatom, jdir)) * 219474.63 ! output cm^-1
           end do
         end do
         write(iunit, '(1x)')

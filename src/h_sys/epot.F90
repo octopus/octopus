@@ -800,7 +800,7 @@ contains
   subroutine build_local_part_in_real_space(ep, gr, geo, a, vpsl, time, rho_core)
     type(epot_t),             intent(in)    :: ep
     type(grid_t),             intent(inout) :: gr
-    type(geometry_t),         intent(inout) :: geo
+    type(geometry_t),         intent(in)    :: geo
     type(atom_t),             intent(inout) :: a
     FLOAT,                    intent(inout) :: vpsl(:)
     FLOAT,                    intent(in)    :: time

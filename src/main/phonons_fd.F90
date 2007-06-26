@@ -163,7 +163,7 @@ contains
         call states_calc_dens(st, m%np, st%rho)
         call v_ks_calc(gr, ks, h, st, calc_eigenval=.true.)
         call hamiltonian_energy(h, gr, geo, st, -1)
-        call scf_run(scf, gr, geo, st, ks, h, outp)
+        call scf_run(scf, gr, geo, st, ks, h, outp, gs_run=.false.)
         do j = 1, geo%natoms
           forces(j, :) = geo%atom(j)%f(:)
         end do
