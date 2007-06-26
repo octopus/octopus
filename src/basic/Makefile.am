@@ -31,9 +31,9 @@ noinst_HEADERS = \
 
 include $(srcdir)/../common-rules.make
 
-# how to compile global.F90 (have to define some extra variables here)
+# How to compile global.F90 (have to define some extra variables here)
 DATE := $(shell date)
-LATEST_SVN := $(shell ../build/svn_release_number.sh 2>/dev/null) 
+LATEST_SVN := $(shell $(top_srcdir)/build/svn_release_number.sh 2>/dev/null) 
 
 global.o: global.F90
 	@FCCPP@ @CPPFLAGS@ -I. $(AM_CPPFLAGS) \

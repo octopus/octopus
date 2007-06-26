@@ -1,28 +1,52 @@
-#---------------------------------------------------------------
-# include paths
-#---------------------------------------------------------------
+## Copyright (C) 2002 M. Marques, A. Castro, A. Rubio, G. Bertsch
+##
+## This program is free software; you can redistribute it and/or modify
+## it under the terms of the GNU General Public License as published by
+## the Free Software Foundation; either version 2, or (at your option)
+## any later version.
+##
+## This program is distributed in the hope that it will be useful,
+## but WITHOUT ANY WARRANTY; without even the implied warranty of
+## MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+## GNU General Public License for more details.
+##
+## You should have received a copy of the GNU General Public License
+## along with this program; if not, write to the Free Software
+## Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
+## 02111-1307, USA.
+##
+## $Id: Makefile.am 2995 2007-06-13 17:49:22Z xavier $
+
+# ---------------------------------------------------------------
+# Include paths.
+# ---------------------------------------------------------------
+
 AM_FCFLAGS = \
-	@F90_MODULE_FLAG@$(top_builddir)/src/basic   \
-	@F90_MODULE_FLAG@$(top_builddir)/src/math    \
-	@F90_MODULE_FLAG@$(top_builddir)/src/species \
-	@F90_MODULE_FLAG@$(top_builddir)/src/grid    \
-	@F90_MODULE_FLAG@$(top_builddir)/src/poisson \
-	@F90_MODULE_FLAG@$(top_builddir)/src/states  \
-	@F90_MODULE_FLAG@$(top_builddir)/src/xc      \
-	@F90_MODULE_FLAG@$(top_builddir)/src/h_sys   \
-	@F90_MODULE_FLAG@$(top_builddir)/src/scf     \
-	@F90_MODULE_FLAG@$(top_builddir)/src/td      \
+	@F90_MODULE_FLAG@$(top_builddir)/src/basic   	 \
+	@F90_MODULE_FLAG@$(top_builddir)/src/math    	 \
+	@F90_MODULE_FLAG@$(top_builddir)/src/species 	 \
+	@F90_MODULE_FLAG@$(top_builddir)/src/grid    	 \
+	@F90_MODULE_FLAG@$(top_builddir)/src/poisson 	 \
+	@F90_MODULE_FLAG@$(top_builddir)/src/states  	 \
+	@F90_MODULE_FLAG@$(top_builddir)/src/xc      	 \
+	@F90_MODULE_FLAG@$(top_builddir)/src/h_sys   	 \
+	@F90_MODULE_FLAG@$(top_builddir)/src/scf     	 \
+	@F90_MODULE_FLAG@$(top_builddir)/src/td          \
 	@F90_MODULE_FLAG@$(top_builddir)/src/opt_control \
 	@F90_MODULE_FLAG@$(top_builddir)/src/sternheimer \
-	@F90_MODULE_FLAG@$(top_builddir)/libxc/src   \
+	@F90_MODULE_FLAG@$(top_builddir)/libxc/src       \
 	@F90_MODULE_FLAG@$(top_builddir)/external_libs/qshep
 
-AM_CPPFLAGS = -I$(srcdir)/include -I$(top_builddir)/src/include -I$(top_srcdir)/libstring_f
+AM_CPPFLAGS = \
+	-I$(top_srcdir)/src/include   \
+	-I$(top_builddir)/src/include \
+	-I$(top_srcdir)/libstring_f
 
 
-#---------------------------------------------------------------
-# define libraries here
-#---------------------------------------------------------------
+# ---------------------------------------------------------------
+# Define libraries here.
+# ---------------------------------------------------------------
+
 octopus_LIBS = \
 	$(top_builddir)/src/sternheimer/libsternheimer.a \
 	$(top_builddir)/src/opt_control/libopt_control.a \
@@ -63,16 +87,17 @@ all_LIBS = $(core_LIBS) @LIBS_FFT@ @LIBS_TRLAN@ @LIBS_ARPACK@ @LIBS_SPARSKIT@ \
   @LIBS_NETCDF@ $(external_LIBS) @LIBS_MPI@ @LIBS_LAPACK@ @LIBS_BLAS@
 
 
-#---------------------------------------------------------------
-# How to compile F90 files
-#---------------------------------------------------------------
+# ---------------------------------------------------------------
+# How to compile F90 files.
+# ---------------------------------------------------------------
 
 # Define empty rule to override the native rule of automake (otherwise the native
 # rule will have precedence over the pattern based rules below). Could not figure out
 # how to remove .F90 from .SUFFIXES, which would be an alternative route.
 .F90.o:
 
-# compilation is a two step process: first we preprocess F90 files to generate _oct.f90 files
+# Compilation is a two step process: first we preprocess F90 files
+# to generate _oct.f90 files.
 %_oct.f90: %.F90
 	@FCCPP@ @CPPFLAGS@ $(AM_CPPFLAGS) -I. $< > $*_oct.f90
 	@if [ "@DEBUG@" = "no" ]; then \
@@ -81,20 +106,24 @@ all_LIBS = $(core_LIBS) @LIBS_FFT@ @LIBS_TRLAN@ @LIBS_ARPACK@ @LIBS_SPARSKIT@ \
 	fi
 	@perl -pi -e 's/\\newline/\n/g; s/\\cardinal/#/g' $*_oct.f90
 
-# then we actually compile _oct.f90 files and cleanup
+# Then we actually compile _oct.f90 files and cleanup.
 %.o: %_oct.f90
 	@FC@ @FCFLAGS@ @FCFLAGS_NETCDF@ $(AM_FCFLAGS) -c @FCFLAGS_f90@ -o $@ $*_oct.f90
 	@rm -f $*_oct.f90
 
-# ctags
+
+# ---------------------------------------------------------------
+# Miscellaneous.
+# ---------------------------------------------------------------
+
+# ctags.
 CTAGS = ctags-exuberant -e
 
-# cleaning
+# Cleaning.
 CLEANFILES = *~ *.bak *.mod *.il *.d *.pc* ifc* *_oct.f90 config_F90.h
 
-#---------------------------------------------------------------
-# if it exists include user defined Makefile.local (which is not included in the octopus package)
-#---------------------------------------------------------------
+# If it exists include user defined Makefile.local
+# (which is not included in the octopus package)
 -include Makefile.local
 
 
