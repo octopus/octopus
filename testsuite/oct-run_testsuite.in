@@ -94,7 +94,7 @@ for y in $tests; do
     ybase=`basename $y`
     xybase=${ybase%.test}
     if [ "${local_run}" == "yes" ]; then
-	bin_directory=`pwd`/../src
+	bin_directory=`pwd`/../src/main
 	runtest_directory=$testsuite
     else
 	bin_directory=$prefix/bin
