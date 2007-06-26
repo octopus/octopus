@@ -35,24 +35,14 @@ check:
 	dir=`dirname "$(top_builddir)/share"` && \
 	sharedir="`(cd \"$$dir\" 2> /dev/null && pwd || echo \"$$dir\")`/$$base" && \
 	echo $$sharedir $$dir $$base && \
-	OCTOPUS_SHARE=$$sharedir ./oct-run_testsuite -c -d $(srcdir) -l -g short-run | tee rlog
-	@echo -e "\033[32;1mPassed: `grep OK rlog | wc -l` / `grep '\[ ' rlog | wc -l` \033[0m"
-	@if [ `grep FAIL rlog | wc -l` != "0"  ] ; \
-	 then echo -e "\033[31;1mFailed: `grep FAIL rlog | wc -l` / `grep '\[ ' rlog | wc -l` \033[0m" ; \
-	 else echo -e "\033[32;1m\nEverything seems to be OK \n\033[0m" ; fi
-	@rm -f rlog
+	OCTOPUS_SHARE=$$sharedir ./oct-run_testsuite -c -d $(srcdir) -l -g short-run
 
 check-full:
 	@base=`basename "$(top_builddir)/share"` && \
 	dir=`dirname "$(top_builddir)/share"` && \
 	sharedir="`(cd \"$$dir\" 2> /dev/null && pwd || echo \"$$dir\")`/$$base" && \
 	echo $$sharedir $$dir $$base && \
-	OCTOPUS_SHARE=$$sharedir ./oct-run_testsuite -c -d $(srcdir) -l | tee rlog
-	@echo -e "\033[32;1mPassed: `grep OK rlog | wc -l` / `grep '\[ ' rlog | wc -l` \033[0m"
-	@if [ `grep FAIL rlog | wc -l` != "0"  ] ; \
-	 then echo -e "\033[31;1mFailed: `grep FAIL rlog | wc -l` / `grep '\[ ' rlog | wc -l` \033[0m" ; \
-	 else echo -e "\033[32;1m\nEverything seems to be OK \n\033[0m" ; fi
-	@rm -f rlog
+	OCTOPUS_SHARE=$$sharedir ./oct-run_testsuite -c -d $(srcdir) -l
 
 clean-local:
 	-rm -rf /tmp/octopus.* 

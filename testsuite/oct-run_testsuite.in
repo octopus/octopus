@@ -221,14 +221,19 @@ else
     run_testsuite "$testfiles"
 
     # Failure reporting to STDOUT.
+    passed_tests=$((total_tests-failed_tests))
+    echo -e "\033[32;1mPassed: $passed_tests / $total_tests\033[0m"
     if [ $failed_tests -gt 0 ]; then
-	echo -e "\033[31m ***** $failed_tests out of $total_tests testfiles failed *****\033[0m"
-	echo
+	echo -e "033[31;1mFailed: $failed_tests / $total_tests\033[0m"
 	echo "    testfile                                          # failed testcases"
 	echo "    --------------------------------------------------------------------"
 	echo -e "$failure_report"
 	echo -e "\n"
+    else
+	echo -e "\033[32;1m\nEverything seems to be OK\033[0m"
     fi
+    echo -e "\n"
+
 
     # Get epoch seconds after we are done and compute time difference.
     testsuite_end=$(date +%s)
