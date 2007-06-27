@@ -33,6 +33,7 @@ module resp_pert_m
   use mesh_m
   use mesh_function_m
   use messages_m
+  use projector_m
   use specie_pot_m
   use states_m
   use varinfo_m
@@ -46,6 +47,8 @@ module resp_pert_m
      resp_pert_end,       &
      resp_pert_info,      &
      resp_pert_setup_dir, &
+     resp_pert_setup_atom,&
+     resp_type,           &
      dresp_pert_apply,    &
      zresp_pert_apply,    &
      dresp_pert_apply_order_2,    &
@@ -53,48 +56,33 @@ module resp_pert_m
      dresp_pert_expectation_value,&
      zresp_pert_expectation_value,&
      dresp_pert_expectation_density,&
-     zresp_pert_expectation_density,&
-     resp_displ_t,        &
-     resp_pert_build_ion_displace
+     zresp_pert_expectation_density
+
 
   integer, public, parameter :: &
      RESP_PERTURBATION_ELECTRIC = 1, &
      RESP_PERTURBATION_MAGNETIC = 2, &
-     RESP_PERTURBATION_DISPLACE = 3
+     RESP_PERTURBATION_IONIC    = 3
 
   integer, public, parameter :: &
        GAUGE_GIPAW  = 1, &
        GAUGE_ICL    = 2
 
-  type resp_displ_t
-    integer :: iatom
-    integer :: idir
-  end type resp_displ_t
-  
   type resp_pert_t
+     private
     integer :: resp_type
     integer :: dir
     integer :: dir2
+    integer :: atom1, atom2
     integer :: gauge
-    type(resp_displ_t), pointer :: ion_disp
   end type resp_pert_t
 
   interface resp_pert_init
-    module procedure resp_pert_init0
     module procedure resp_pert_init1
     module procedure resp_pert_init2
   end interface
 
 contains
-
-
-  subroutine resp_pert_init0(this)
-    type(resp_pert_t), intent(out)   :: this
-
-    nullify(this%ion_disp)
-
-  end subroutine resp_pert_init0
-
 
   ! --------------------------------------------------------------------
   subroutine resp_pert_init1(this, gr, geo)
@@ -114,7 +102,7 @@ contains
     !% and hyperpolarizabilities
     !%Option magnetic 2
     !% Magnetic perturbation used to calculate magnetic susceptibilities
-    !%Option displacements 3
+    !%Option ionic 3
     !% Displacements of the ions, used to calculate phonon frequencies and
     !% electron-phonon couplings
     !%End 
@@ -131,55 +119,40 @@ contains
     type(grid_t),      intent(inout) :: gr
     type(geometry_t),  intent(in)    :: geo
 
-    integer :: iatom
-
-    nullify(this%ion_disp)
-
     this%resp_type = resp_type
     if(.not.varinfo_valid_option('RespPerturbationType', this%resp_type)) call input_error('RespPerturbationType')
 
-    this%dir = -1
+    this%dir = -1 
+    this%dir2 = -1 
+    this%atom1 = -1
+    this%atom2 = -1
 
-    !%Variable MagneticGaugeCorrection
-    !%Type integer
-    !%Default gipaw
-    !%Section Linear Response
-    !%Description
-    !% How to describe the coupling of electrons to the magnetic
-    !% field, that is how to handle gauge invariance. Default is
-    !% gipaw.
-    !%Option none 0
-    !% No correction
-    !%Option gipaw 1
-    !% GIPAW correction: Pickard and Mauri, PRL 91 196401 (2003).
-    !%End 
+    if ( this%resp_type == RESP_PERTURBATION_MAGNETIC ) then
 
-    call loct_parse_int(check_inp('MagneticGaugeCorrection'), GAUGE_GIPAW, this%gauge)
+      !%Variable MagneticGaugeCorrection
+      !%Type integer
+      !%Default gipaw
+      !%Section Linear Response
+      !%Description
+      !% How to describe the coupling of electrons to the magnetic
+      !% field, that is how to handle gauge invariance. Default is
+      !% gipaw.
+      !%Option none 0
+      !% No correction
+      !%Option gipaw 1
+      !% GIPAW correction: Pickard and Mauri, PRL 91 196401 (2003).
+      !%End 
+      
+      call loct_parse_int(check_inp('MagneticGaugeCorrection'), GAUGE_GIPAW, this%gauge)
+
+    end if
 
   end subroutine resp_pert_init2
-
-  subroutine resp_pert_build_ion_displace(this, gr, geo, iatom, idir)
-    type(resp_pert_t), intent(out)   :: this
-    type(grid_t),      intent(inout) :: gr
-    type(geometry_t),  intent(in)    :: geo
-    integer,           intent(in)    :: iatom
-    integer,           intent(in)    :: idir
-
-    this%resp_type = RESP_PERTURBATION_DISPLACE
-
-    ALLOCATE(this%ion_disp, 1)
-    
-    this%ion_disp%iatom = iatom
-    this%ion_disp%idir = idir
-    
-  end subroutine resp_pert_build_ion_displace
 
   ! --------------------------------------------------------------------
   subroutine resp_pert_end(this)
     type(resp_pert_t), intent(inout) :: this
     
-    if( associated(this%ion_disp) ) deallocate(this%ion_disp)
-
   end subroutine resp_pert_end
 
   ! --------------------------------------------------------------------
@@ -202,7 +175,23 @@ contains
     if(present(dir2)) this%dir2 = dir2
 
   end subroutine resp_pert_setup_dir
+  
+  subroutine resp_pert_setup_atom(this, iatom, iatom2)
+    type(resp_pert_t), intent(inout) :: this
+    integer,           intent(in)    :: iatom
+    integer, optional, intent(in)    :: iatom2
 
+    this%atom1 = iatom
+    if(present(iatom2)) this%atom2 = iatom2
+
+  end subroutine resp_pert_setup_atom
+
+  integer pure function resp_type(this)
+    type(resp_pert_t), intent(in) :: this
+
+    resp_type = this%resp_type
+
+  end function resp_type
 
 #include "undef.F90"
 #include "real.F90"

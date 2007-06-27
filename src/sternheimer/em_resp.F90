@@ -278,7 +278,7 @@ contains
         end do ! dir
       end do ! ifactor
       
-      if(em_vars%perturbation%resp_type == RESP_PERTURBATION_ELECTRIC) then
+      if(resp_type(em_vars%perturbation) == RESP_PERTURBATION_ELECTRIC) then
         ! calculate polarizability
         do ifactor = 1, em_vars%nfactor
           if(wfs_are_complex(sys%st)) then 
@@ -297,7 +297,7 @@ contains
           end if
         end if
       
-      else if(em_vars%perturbation%resp_type == RESP_PERTURBATION_MAGNETIC) then
+      else if(resp_type(em_vars%perturbation) == RESP_PERTURBATION_MAGNETIC) then
         do ifactor = 1, em_vars%nfactor
           if(wfs_are_complex(sys%st)) then 
             call zlr_calc_susceptibility(sys, h, em_vars%lr(:,:, ifactor), em_vars%nsigma, em_vars%perturbation, &
@@ -420,7 +420,7 @@ contains
 
       call resp_pert_init(em_vars%perturbation, sys%gr, sys%geo)
 
-      if(em_vars%perturbation%resp_type == PERTURBATION_ELECTRIC) then
+      if(resp_type(em_vars%perturbation) == PERTURBATION_ELECTRIC) then
         !%Variable PolHyper
         !%Type block
         !%Section Linear Response::Polarizabilities
@@ -449,7 +449,7 @@ contains
     subroutine info()
 
       call resp_pert_info(em_vars%perturbation, stdout)
-      if(em_vars%perturbation%resp_type == RESP_PERTURBATION_ELECTRIC) then
+      if(resp_type(em_vars%perturbation) == RESP_PERTURBATION_ELECTRIC) then
         if(em_vars%calc_hyperpol) then 
           write(message(1),'(a)') 'Linear Reponse First Order Hyperpolarizabilities'
           call messages_print_stress(stdout, trim(message(1)))
@@ -547,10 +547,10 @@ contains
            em_vars%freq_factor(ifactor)*em_vars%omega(iomega)/units_out%energy%factor))
       call io_mkdir(trim(dirname))
 
-      if(em_vars%perturbation%resp_type == RESP_PERTURBATION_ELECTRIC) then
+      if(resp_type(em_vars%perturbation) == RESP_PERTURBATION_ELECTRIC) then
         call out_polarizability()
         if(em_vars%calc_hyperpol) call out_hyperpolarizability()
-      else if(em_vars%perturbation%resp_type == RESP_PERTURBATION_MAGNETIC) then
+      else if(resp_type(em_vars%perturbation) == RESP_PERTURBATION_MAGNETIC) then
         call out_susceptibility()
       end if
 

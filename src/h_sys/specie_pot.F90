@@ -775,17 +775,20 @@ contains
         x(:) = gr%m%x(ip, :) - x_atom(:)
         r = sqrt(sum(x(:)**2))
 
-        if(r>CNST(0.00001)) then
+        if(r>CNST(1e-9)) then
           dvl_rr = loct_splint(s%ps%dvl,r)/r
-          d2vl_r = loct_splint(s%ps%d2vl, r)
-          
-          do ii= 1, 3
-            do jj = 1, 3
-              g2v(ip, ii, jj) = ddelta(ii, jj)*dvl_rr  + x(ii)*x(jj)/(r*r)*(d2vl_r - dvl_rr)
-            end do
-          end do
-          
+        else
+          dvl_rr = M_ZERO
         end if
+
+        d2vl_r = loct_splint(s%ps%d2vl, r)
+        
+        do ii= 1, 3
+          do jj = 1, 3
+            g2v(ip, ii, jj) = ddelta(ii, jj)*dvl_rr  + x(ii)*x(jj)/(r*r)*(d2vl_r - dvl_rr)
+          end do
+        end do
+
       end do
 
     case default

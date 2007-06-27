@@ -39,6 +39,7 @@ module phonons_lr_m
   use messages_m
   use output_m
   use phonons_m
+  use projector_m
   use resp_pert_m
   use restart_m
   use specie_m
@@ -58,7 +59,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine phonons_lr_run(sys, h, fromScratch)
-    type(system_t), target, intent(inout) :: sys
+    type(system_t),         intent(inout) :: sys
     type(hamiltonian_t),    intent(inout) :: h
     logical,                intent(inout) :: fromScratch
 
@@ -67,17 +68,10 @@ contains
     type(phonons_t)     :: ph
     type(resp_pert_t)   :: perturbation
 
-    integer :: natoms, np, np_part, ndim
-    integer :: iatom, idir, jatom, jdir, idim, ik, nproj
-    FLOAT :: total_mass, factor
-    FLOAT, allocatable :: tmp(:,:), grho(:,:), ggrho(:,:,:), vlocal(:,:)
-    FLOAT, allocatable :: tmp2(:,:)
+    integer :: natoms, ndim, iatom, idir, jatom, jdir
 
     natoms = sys%geo%natoms
-    np = sys%NP
-    np_part = sys%NP_PART
     ndim = sys%NDIM
-
 
     !CONSTRUCT
 
@@ -96,79 +90,49 @@ contains
     call lr_init(lr(1))
     call lr_allocate(lr(1), sys%st, sys%gr%m)
 
-    ALLOCATE(vlocal(1:np, 1:natoms), np*natoms)
-    ALLOCATE(tmp(1:np_part, 1), np_part)
-    ALLOCATE(tmp2(1:np_part, 1), np_part)
-    ALLOCATE(grho(1:np_part, 1:ndim), np_part*ndim)
-    ALLOCATE(ggrho(1:np, 1:ndim, 1:ndim), np*ndim*ndim)
-
     !CALCULATE
-
-    !the local potential
-    do iatom = 1, natoms
-      call build_local_part_in_real_space(h%ep, sys%gr, sys%geo, sys%geo%atom(iatom), vlocal(:, iatom), M_ZERO)
-    end do
-
-    !the second derivative of the density
-    tmp(1:np, 1) = M_ZERO
-    do ik = 1, sys%st%d%nspin
-      tmp(1:np, 1) = sys%st%rho(1:np, ik)
-    end do
-
-    call df_gradient(sys%gr%sb, sys%gr%f_der, tmp(:,1), grho(:,:))
-    
-    do idir = 1, ndim
-      call df_gradient(sys%gr%sb, sys%gr%f_der, grho(:, idir), ggrho(:,:, idir))
-    end do
 
     !the ionic contribution
     call build_ionic_dm()
 
+    call resp_pert_init(perturbation, RESP_PERTURBATION_IONIC, sys%gr, sys%geo)
+
     do iatom = 1, natoms
       do idir = 1, ndim
 
-        call resp_pert_init(perturbation)
-
-        call resp_pert_build_ion_displace(perturbation, sys%gr, sys%geo, iatom, idir)
+        call resp_pert_setup_atom(perturbation, iatom)
+        call resp_pert_setup_dir(perturbation, idir)
 
         call dsternheimer_solve(sh, sys, h, lr, 1, M_ZERO, perturbation, &
-           RESTART_DIR, phn_rho_tag(iatom, idir), phn_wfs_tag(iatom, idir))
+             RESTART_DIR, phn_rho_tag(iatom, idir), phn_wfs_tag(iatom, idir))
 
-        call resp_pert_end(perturbation)
-
-        tmp(1:np, 1) = M_ZERO
-        do ik = 1, sys%st%d%nspin
-          tmp(1:np, 1) = lr(1)%ddl_rho(1:np, ik)
-        end do
-
-        call df_gradient(sys%gr%sb, sys%gr%f_der, tmp(:,1), grho(:,:))
 
         do jatom = 1, natoms
           do jdir = 1, ndim
 
-            tmp(1:np,1) =  ddelta(iatom, jatom) * ggrho(1:np, idir, jdir) + grho(1:np, jdir)
+            call resp_pert_setup_atom(perturbation, jatom, iatom)
+            call resp_pert_setup_dir(perturbation, jdir, idir)
 
-            tmp2(1:np,1) = vlocal(1:np, jatom) * tmp(1:np, 1)
-            
-            nproj = h%ep%atomproj(2, jatom) - h%ep%atomproj(1, jatom) + 1
-
-!            ph%dm(phn_idx(ph, iatom, idir), phn_idx(ph, jatom, jdir)) = &
-!                 ph%dm(phn_idx(ph, iatom, idir), phn_idx(ph, jatom, jdir)) + dmf_integrate(sys%gr%m, tmp2(:,1))
-
+            ph%dm(phn_idx(ph, iatom, idir), phn_idx(ph, jatom, jdir)) &
+                 = ph%dm(phn_idx(ph, iatom, idir), phn_idx(ph, jatom, jdir))&
+                 -dresp_pert_expectation_value(perturbation,sys%gr,sys%geo,h,sys%st, lr(1)%ddl_psi, sys%st%dpsi)&
+                 -dresp_pert_expectation_value(perturbation,sys%gr,sys%geo,h,sys%st, sys%st%dpsi, lr(1)%ddl_psi)&
+                 -dresp_pert_expectation_value(perturbation,sys%gr,sys%geo,h,sys%st, sys%st%dpsi, sys%st%dpsi, pert_order = 2)
+                 
           end do
         end do
 
       end do
-
     end do
+    
+    call resp_pert_end(perturbation)
 
+    call phonons_normalize_dm(ph, sys%geo)
+    call phonons_diagonalize_dm(ph)
     call phonons_output(ph, "_lr")
 
     !DESTRUCT
 
-    deallocate(tmp)
-    deallocate(grho)
-    deallocate(ggrho)
     call lr_dealloc(lr(1))
     
     call phonons_end(ph)
@@ -194,7 +158,6 @@ contains
       FLOAT :: ac, xi(1:MAX_DIM), xj(1:MAX_DIM), xk(1:MAX_DIM), r2
       integer :: katom
 
-
       do iatom = 1, natoms
         do idir = 1, sys%NDIM
           
@@ -208,33 +171,32 @@ contains
                 
                 ac = M_ZERO
                 do katom = 1, natoms
-                  if ( katom /= iatom ) then 
-                    
-                    xk(1:MAX_DIM) = sys%geo%atom(katom)%x(1:MAX_DIM)
-                    r2 = sum((xi(1:sys%NDIM) - xk(1:sys%NDIM))**2)
-                    
-                    ac = ac + sys%geo%atom(iatom)%spec%z * sys%geo%atom(katom)%spec%z &
-                         /(r2**CNST(1.5)) *(&
-                         -ddelta(idir, jdir) + &
-                         (M_THREE*(xi(idir)-xk(idir))*(xi(jdir)-xk(jdir)))/r2 &
-                         )
-                  end if
+                  if ( katom == iatom ) cycle
+                  
+                  xk(1:MAX_DIM) = sys%geo%atom(katom)%x(1:MAX_DIM)
+                  r2 = sum((xi(1:sys%NDIM) - xk(1:sys%NDIM))**2)
+                  
+                  ac = ac + sys%geo%atom(iatom)%spec%Z_val * sys%geo%atom(katom)%spec%Z_val &
+                       /(r2**CNST(1.5)) *(&
+                       -ddelta(idir, jdir) + &
+                       (M_THREE*(xi(idir)-xk(idir))*(xi(jdir)-xk(jdir)))/r2 &
+                       )
                   
                 end do
-                
+
               else ! iatom /= jatom
                 
                 xj(1:MAX_DIM) = sys%geo%atom(jatom)%x(1:MAX_DIM)
                 
                 r2 = sum((xi(1:sys%NDIM) - xj(1:sys%NDIM))**2)
-                ac = sys%geo%atom(iatom)%spec%z * sys%geo%atom(jatom)%spec%z &
+                ac = sys%geo%atom(iatom)%spec%Z_val * sys%geo%atom(jatom)%spec%Z_val &
                      /(r2**CNST(1.5))*(&
                      ddelta(idir, jdir) - (M_THREE*(xi(idir)-xj(idir))*(xi(jdir)-xj(jdir)))/r2)
 
               end if
                 
             
-              ph%dm(phn_idx(ph, iatom, idir), phn_idx(ph, jatom, jdir)) = ac
+              ph%dm(phn_idx(ph, iatom, idir), phn_idx(ph, jatom, jdir)) = -ac
 
             end do
           end do

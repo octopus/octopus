@@ -25,12 +25,10 @@ subroutine X(resp_pert_apply) (this, gr, geo, h, f_in, f_out)
   R_TYPE,            intent(in)    :: f_in(:)
   R_TYPE,            intent(out)   :: f_out(:)
 
-  FLOAT, allocatable :: gv(:,:)
-  type(atom_t), pointer :: atm
-
   ASSERT(this%dir.ne.-1)
 
   select case(this%resp_type)
+
   case(RESP_PERTURBATION_ELECTRIC)
     f_out(1:NP) = f_in(1:NP) * gr%m%x(1:NP, this%dir)
 
@@ -38,17 +36,9 @@ subroutine X(resp_pert_apply) (this, gr, geo, h, f_in, f_out)
 
     call magnetic
 
-  case(RESP_PERTURBATION_DISPLACE)
+  case(RESP_PERTURBATION_IONIC)
 
-    ALLOCATE(gv(NP, NDIM), NP*NDIM)
-
-    atm => geo%atom(this%ion_disp%iatom)
-
-    call specie_get_glocal(atm%spec, gr, atm%x, gv)
-
-    f_out(1:NP) = gv(1:NP, this%ion_disp%idir) * f_in(1:NP)
-
-    deallocate(gv)
+    call ionic
 
   end select
 
@@ -101,6 +91,22 @@ contains
 
   end subroutine magnetic
 
+  subroutine ionic
+
+    FLOAT, allocatable :: gv(:,:)
+    integer :: iatom, idir
+
+    iatom = this%atom1
+    idir = this%dir
+
+    ALLOCATE(gv(NP, NDIM), NP*NDIM)
+    call specie_get_glocal( geo%atom(iatom)%spec, gr, geo%atom(iatom)%x, gv)
+    f_out(1:NP) = gv(1:NP, idir) * f_in(1:NP)    
+
+    deallocate(gv)
+
+  end subroutine ionic
+
 end subroutine X(resp_pert_apply)
 
 subroutine X(resp_pert_apply_order_2) (this, gr, geo, h, f_in, f_out)
@@ -112,8 +118,12 @@ subroutine X(resp_pert_apply_order_2) (this, gr, geo, h, f_in, f_out)
   R_TYPE,            intent(out)   :: f_out(:)
 
   select case(this%resp_type)
+
   case(RESP_PERTURBATION_ELECTRIC)
     f_out(1:NP) = R_TOTYPE(M_ZERO)
+
+  case(RESP_PERTURBATION_IONIC)
+    call ionic
 
   case(RESP_PERTURBATION_MAGNETIC)
     call magnetic
@@ -194,6 +204,28 @@ contains
     end select
 
   end subroutine magnetic
+
+  subroutine ionic
+
+    FLOAT,  allocatable :: g2v(:,:,:)
+    type(atom_t), pointer :: atm
+    integer :: iatom, idir, jatom, jdir
+
+    iatom = this%atom1
+    idir  = this%dir
+    jatom = this%atom2
+    jdir = this%dir2
+    atm => geo%atom(iatom)
+
+    if( jatom /= iatom ) then 
+      f_out(1:NP) = R_TOTYPE(M_ZERO)
+    else
+      ALLOCATE(g2v(NP, NDIM, NDIM), NP*NDIM**2)
+      call specie_get_g2local(atm%spec, gr, atm%x, g2v)
+      f_out(1:NP) = g2v(1:NP, idir, jdir) * f_in(1:NP)
+    end if
+
+  end subroutine ionic
 
 end subroutine X(resp_pert_apply_order_2)
 
