@@ -224,7 +224,7 @@ else
     passed_tests=$((total_tests-failed_tests))
     echo -e "\033[32;1mPassed: $passed_tests / $total_tests\033[0m"
     if [ $failed_tests -gt 0 ]; then
-	echo -e "033[31;1mFailed: $failed_tests / $total_tests\033[0m"
+	echo -e "\033[31;1mFailed: $failed_tests / $total_tests\033[0m"
 	echo "    testfile                                          # failed testcases"
 	echo "    --------------------------------------------------------------------"
 	echo -e "$failure_report"
@@ -260,3 +260,11 @@ else
     # Clean up.
     [ "$cleanup" == "yes" ] && rm -f *.log oct-header stamp build-stamp
 fi
+
+exit $failed_tests
+
+
+# Local Variables:
+# mode: shell-script
+# coding: utf-8
+# End:
