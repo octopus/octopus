@@ -53,7 +53,7 @@ subroutine X(lr_calc_elf)(st, gr, lr, lr_m)
   ALLOCATE(   elf(NP, st%d%nspin), NP*st%d%nspin)
   ALLOCATE(    de(NP, st%d%nspin), NP*st%d%nspin)
 
-  if( .not. associated(lr%X(dl_de)) ) ALLOCATE(lr%X(dl_de)(NP, st%d%nspin), NP*st%d%nspin)  
+  if( .not. associated(lr%X(dl_de)) ) ALLOCATE(lr%X(dl_de)(NP, st%d%nspin), NP*st%d%nspin) 
   if( .not. associated(lr%X(dl_elf))) ALLOCATE(lr%X(dl_elf)(NP, st%d%nspin), NP*st%d%nspin)
 
   !calculate the gs elf
@@ -267,10 +267,11 @@ end subroutine X(lr_calc_polarizability)
 
 
 ! ---------------------------------------------------------
-subroutine X(lr_calc_susceptibility)(sys, h, lr, perturbation, chi_para, chi_dia)
+subroutine X(lr_calc_susceptibility)(sys, h, lr, nsigma, perturbation, chi_para, chi_dia)
   type(system_t),         intent(inout) :: sys
   type(hamiltonian_t),    intent(inout) :: h
   type(lr_t),             intent(inout) :: lr(:,:)
+  integer,                intent(in)    :: nsigma
   type(resp_pert_t),      intent(inout) :: perturbation
   CMPLX,                  intent(out)   :: chi_para(:,:), chi_dia(:,:)
 
@@ -288,9 +289,17 @@ subroutine X(lr_calc_susceptibility)(sys, h, lr, perturbation, chi_para, chi_dia
       call resp_pert_setup_dir(perturbation, dir1, dir2)
 
       trace = X(resp_pert_expectation_value)(perturbation, sys%gr,sys%geo,h,sys%st, sys%st%X(psi), lr(dir2, 1)%X(dl_psi))
+      
+      if (nsigma == 1) then 
+        trace = trace + R_CONJ(trace)
+      else
+        trace = trace + &
+             X(resp_pert_expectation_value)(perturbation, sys%gr,sys%geo,h,sys%st, lr(dir2, 2)%X(dl_psi), sys%st%X(psi))
+      end if
+     
 
       ! first the paramagnetic term 
-      chi_para(dir1, dir2) = chi_para(dir1, dir2) + trace + R_CONJ(trace)
+      chi_para(dir1, dir2) = chi_para(dir1, dir2) + trace
 
       chi_dia(dir1, dir2) = chi_dia(dir1, dir2) + &
            X(resp_pert_expectation_value)(perturbation, sys%gr,sys%geo,h,sys%st, sys%st%X(psi), sys%st%X(psi), pert_order=2)

@@ -300,10 +300,10 @@ contains
       else if(em_vars%perturbation%resp_type == RESP_PERTURBATION_MAGNETIC) then
         do ifactor = 1, em_vars%nfactor
           if(wfs_are_complex(sys%st)) then 
-            call zlr_calc_susceptibility(sys, h, em_vars%lr(:,:, ifactor), em_vars%perturbation, &
+            call zlr_calc_susceptibility(sys, h, em_vars%lr(:,:, ifactor), em_vars%nsigma, em_vars%perturbation, &
                em_vars%chi_para(:,:, ifactor), em_vars%chi_dia(:,:, ifactor))
           else
-            call dlr_calc_susceptibility(sys, h, em_vars%lr(:,:, ifactor), em_vars%perturbation, &
+            call dlr_calc_susceptibility(sys, h, em_vars%lr(:,:, ifactor), em_vars%nsigma, em_vars%perturbation, &
                em_vars%chi_para(:,:, ifactor), em_vars%chi_dia(:,:, ifactor))
           end if
         end do
