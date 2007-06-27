@@ -164,10 +164,18 @@ AC_MSG_RESULT($acx_f90_accepts_line_numbers_ok)
 # seems to fail with some autotools versions, due to a call to some broken
 # version of AC_LANG_FUNC_LINK_TRY.
 AC_DEFUN([ACX_FORTRAN_CHECK_FUNC],
-[AC_LANG_PUSH(Fortran)dnl
-AC_TRY_LINK_FUNC($1, [AC_DEFINE_UNQUOTED(AS_TR_CPP([HAVE_$1]),1,
-  [Define if the $1 function can be called from Fortran])], [])dnl
+[
+AC_MSG_CHECKING([for $1])
+AC_LANG_PUSH(Fortran)dnl
+AC_TRY_LINK_FUNC($1, 
+[
+acx_fortran_check_func=yes
+AC_DEFINE_UNQUOTED(AS_TR_CPP([HAVE_$1]),1, [Define if the $1 function can be called from Fortran])], 
+[
+acx_fortran_check_func=no
+])dnl
 AC_LANG_POP(Fortran)dnl
+AC_MSG_RESULT($acx_fortran_check_func)
 ])
 
 
