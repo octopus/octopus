@@ -40,7 +40,7 @@ module vdw_m
   use mpi_m
   use output_m
   use poisson_m
-  use resp_pert_m
+  use pert_m
   use restart_m
   use states_m
   use sternheimer_m
@@ -237,15 +237,15 @@ contains
       CMPLX, intent(in) :: omega
 
       CMPLX             :: alpha(1:MAX_DIM, 1:MAX_DIM)
-      type(resp_pert_t) :: perturbation
+      type(pert_t) :: perturbation
 
-      call resp_pert_init(perturbation, RESP_PERTURBATION_ELECTRIC, sys%gr, sys%geo)
+      call pert_init(perturbation, PERTURBATION_ELECTRIC, sys%gr, sys%geo)
       do dir = 1, ndir
         write(message(1), '(a,i1,a,f7.3)') 'Info: Calculating response for direction ', dir, &
           ' and imaginary frequency ', aimag(omega)/units_out%energy%factor
         call write_info(1)   
 
-        call resp_pert_setup_dir(perturbation, dir)
+        call pert_setup_dir(perturbation, dir)
         call zsternheimer_solve(sh, sys, h, lr(dir, :), 1,  omega, perturbation, &
              RESTART_DIR, em_rho_tag(real(omega),dir), em_wfs_tag(dir,1))
       end do
@@ -262,7 +262,7 @@ contains
 
       get_pol = get_pol / real(sys%NDIM)
 
-      call resp_pert_end(perturbation)
+      call pert_end(perturbation)
 
     end function get_pol
 

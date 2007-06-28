@@ -17,8 +17,8 @@
 !!
 !! $Id: response.F90 2548 2006-11-06 21:42:27Z xavier $
 
-subroutine X(resp_pert_apply) (this, gr, geo, h, f_in, f_out)
-  type(resp_pert_t), intent(in)    :: this
+subroutine X(pert_apply) (this, gr, geo, h, f_in, f_out)
+  type(pert_t), intent(in)    :: this
   type(grid_t),      intent(inout) :: gr
   type(geometry_t),  intent(in)    :: geo
   type(hamiltonian_t),  intent(in) :: h
@@ -27,16 +27,16 @@ subroutine X(resp_pert_apply) (this, gr, geo, h, f_in, f_out)
 
   ASSERT(this%dir.ne.-1)
 
-  select case(this%resp_type)
+  select case(this%pert_type)
 
-  case(RESP_PERTURBATION_ELECTRIC)
+  case(PERTURBATION_ELECTRIC)
     f_out(1:NP) = f_in(1:NP) * gr%m%x(1:NP, this%dir)
 
-  case(RESP_PERTURBATION_MAGNETIC)
+  case(PERTURBATION_MAGNETIC)
 
     call magnetic
 
-  case(RESP_PERTURBATION_IONIC)
+  case(PERTURBATION_IONIC)
 
     call ionic
 
@@ -107,25 +107,25 @@ contains
 
   end subroutine ionic
 
-end subroutine X(resp_pert_apply)
+end subroutine X(pert_apply)
 
-subroutine X(resp_pert_apply_order_2) (this, gr, geo, h, f_in, f_out)
-  type(resp_pert_t), intent(in)    :: this
+subroutine X(pert_apply_order_2) (this, gr, geo, h, f_in, f_out)
+  type(pert_t), intent(in)    :: this
   type(grid_t),      intent(inout) :: gr
   type(geometry_t),  intent(in)    :: geo
   type(hamiltonian_t),  intent(in) :: h
   R_TYPE,            intent(in)    :: f_in(:)
   R_TYPE,            intent(out)   :: f_out(:)
 
-  select case(this%resp_type)
+  select case(this%pert_type)
 
-  case(RESP_PERTURBATION_ELECTRIC)
+  case(PERTURBATION_ELECTRIC)
     f_out(1:NP) = R_TOTYPE(M_ZERO)
 
-  case(RESP_PERTURBATION_IONIC)
+  case(PERTURBATION_IONIC)
     call ionic
 
-  case(RESP_PERTURBATION_MAGNETIC)
+  case(PERTURBATION_MAGNETIC)
     call magnetic
 
   end select
@@ -227,10 +227,10 @@ contains
 
   end subroutine ionic
 
-end subroutine X(resp_pert_apply_order_2)
+end subroutine X(pert_apply_order_2)
 
-subroutine X(resp_pert_expectation_density) (this, gr, geo, h, st, psia, psib, density, pert_order)
-  type(resp_pert_t),    intent(in)    :: this
+subroutine X(pert_expectation_density) (this, gr, geo, h, st, psia, psib, density, pert_order)
+  type(pert_t),    intent(in)    :: this
   type(grid_t),         intent(inout) :: gr
   type(geometry_t),     intent(in)    :: geo
   type(hamiltonian_t),  intent(in)    :: h
@@ -258,9 +258,9 @@ subroutine X(resp_pert_expectation_density) (this, gr, geo, h, st, psia, psib, d
       do idim = 1, st%d%dim
 
         if(order == 1) then 
-          call X(resp_pert_apply) (this, gr, geo, h, psib(:, idim, ist, ik), tmp)
+          call X(pert_apply) (this, gr, geo, h, psib(:, idim, ist, ik), tmp)
         else
-          call X(resp_pert_apply_order_2) (this, gr, geo, h, psib(:, idim, ist, ik), tmp)
+          call X(pert_apply_order_2) (this, gr, geo, h, psib(:, idim, ist, ik), tmp)
         end if
 
         density(1:NP) = density(1:NP) + st%d%kweights(ik)*st%occ(ist, ik)*&
@@ -270,10 +270,10 @@ subroutine X(resp_pert_expectation_density) (this, gr, geo, h, st, psia, psib, d
     end do
   end do
 
-end subroutine X(resp_pert_expectation_density)
+end subroutine X(pert_expectation_density)
 
-R_TYPE function X(resp_pert_expectation_value) (this, gr, geo, h, st, psia, psib, pert_order) result(expval)
-  type(resp_pert_t),    intent(in)    :: this
+R_TYPE function X(pert_expectation_value) (this, gr, geo, h, st, psia, psib, pert_order) result(expval)
+  type(pert_t),    intent(in)    :: this
   type(grid_t),         intent(inout) :: gr
   type(geometry_t),     intent(in)    :: geo
   type(hamiltonian_t),  intent(in)    :: h
@@ -293,8 +293,8 @@ R_TYPE function X(resp_pert_expectation_value) (this, gr, geo, h, st, psia, psib
 
   ALLOCATE(tmp(1:NP), NP)
 
-  call X(resp_pert_expectation_density)(this, gr, geo, h, st, psia, psib, tmp, pert_order = order)
+  call X(pert_expectation_density)(this, gr, geo, h, st, psia, psib, tmp, pert_order = order)
 
   expval = X(mf_integrate)(gr%m, tmp)
 
-end function X(resp_pert_expectation_value)
+end function X(pert_expectation_value)

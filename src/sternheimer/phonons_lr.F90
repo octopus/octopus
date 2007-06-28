@@ -40,7 +40,7 @@ module phonons_lr_m
   use output_m
   use phonons_m
   use projector_m
-  use resp_pert_m
+  use pert_m
   use restart_m
   use specie_m
   use states_m
@@ -66,7 +66,7 @@ contains
     type(sternheimer_t) :: sh
     type(lr_t)          :: lr(1:1)
     type(phonons_t)     :: ph
-    type(resp_pert_t)   :: perturbation
+    type(pert_t)   :: perturbation
 
     integer :: natoms, ndim, iatom, idir, jatom, jdir
 
@@ -95,13 +95,13 @@ contains
     !the ionic contribution
     call build_ionic_dm()
 
-    call resp_pert_init(perturbation, RESP_PERTURBATION_IONIC, sys%gr, sys%geo)
+    call pert_init(perturbation, PERTURBATION_IONIC, sys%gr, sys%geo)
 
     do iatom = 1, natoms
       do idir = 1, ndim
 
-        call resp_pert_setup_atom(perturbation, iatom)
-        call resp_pert_setup_dir(perturbation, idir)
+        call pert_setup_atom(perturbation, iatom)
+        call pert_setup_dir(perturbation, idir)
 
         call dsternheimer_solve(sh, sys, h, lr, 1, M_ZERO, perturbation, &
              RESTART_DIR, phn_rho_tag(iatom, idir), phn_wfs_tag(iatom, idir))
@@ -110,14 +110,14 @@ contains
         do jatom = 1, natoms
           do jdir = 1, ndim
 
-            call resp_pert_setup_atom(perturbation, jatom, iatom)
-            call resp_pert_setup_dir(perturbation, jdir, idir)
+            call pert_setup_atom(perturbation, jatom, iatom)
+            call pert_setup_dir(perturbation, jdir, idir)
 
             ph%dm(phn_idx(ph, iatom, idir), phn_idx(ph, jatom, jdir)) &
                  = ph%dm(phn_idx(ph, iatom, idir), phn_idx(ph, jatom, jdir))&
-                 -dresp_pert_expectation_value(perturbation,sys%gr,sys%geo,h,sys%st, lr(1)%ddl_psi, sys%st%dpsi)&
-                 -dresp_pert_expectation_value(perturbation,sys%gr,sys%geo,h,sys%st, sys%st%dpsi, lr(1)%ddl_psi)&
-                 -dresp_pert_expectation_value(perturbation,sys%gr,sys%geo,h,sys%st, sys%st%dpsi, sys%st%dpsi, pert_order = 2)
+                 -dpert_expectation_value(perturbation,sys%gr,sys%geo,h,sys%st, lr(1)%ddl_psi, sys%st%dpsi)&
+                 -dpert_expectation_value(perturbation,sys%gr,sys%geo,h,sys%st, sys%st%dpsi, lr(1)%ddl_psi)&
+                 -dpert_expectation_value(perturbation,sys%gr,sys%geo,h,sys%st, sys%st%dpsi, sys%st%dpsi, pert_order = 2)
                  
           end do
         end do
@@ -125,7 +125,7 @@ contains
       end do
     end do
     
-    call resp_pert_end(perturbation)
+    call pert_end(perturbation)
 
     call phonons_normalize_dm(ph, sys%geo)
     call phonons_diagonalize_dm(ph)

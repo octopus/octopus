@@ -243,7 +243,7 @@ subroutine X(lr_calc_polarizability)(sys, h, lr, perturbation, zpol, ndir)
   type(system_t),         intent(inout) :: sys
   type(hamiltonian_t),    intent(inout) :: h
   type(lr_t),             intent(inout) :: lr(:,:)
-  type(resp_pert_t),      intent(inout) :: perturbation
+  type(pert_t),      intent(inout) :: perturbation
   CMPLX,                  intent(out)   :: zpol(1:MAX_DIM, 1:MAX_DIM)
   integer, optional,      intent(in)    :: ndir
 
@@ -255,11 +255,11 @@ subroutine X(lr_calc_polarizability)(sys, h, lr, perturbation, zpol, ndir)
   do dir1 = 1, ndir_
     do dir2 = 1, sys%gr%sb%dim
 
-      call resp_pert_setup_dir(perturbation, dir1, dir2)
+      call pert_setup_dir(perturbation, dir1, dir2)
       
       zpol(dir1, dir2) = &
-           -X(resp_pert_expectation_value)(perturbation,sys%gr,sys%geo,h,sys%st, sys%st%X(psi),lr(dir2, 1)%X(dl_psi))&
-           -X(resp_pert_expectation_value)(perturbation,sys%gr,sys%geo,h,sys%st, lr(dir2, 2)%X(dl_psi), sys%st%X(psi))
+           -X(pert_expectation_value)(perturbation,sys%gr,sys%geo,h,sys%st, sys%st%X(psi),lr(dir2, 1)%X(dl_psi))&
+           -X(pert_expectation_value)(perturbation,sys%gr,sys%geo,h,sys%st, lr(dir2, 2)%X(dl_psi), sys%st%X(psi))
     end do
   end do
 
@@ -272,7 +272,7 @@ subroutine X(lr_calc_susceptibility)(sys, h, lr, nsigma, perturbation, chi_para,
   type(hamiltonian_t),    intent(inout) :: h
   type(lr_t),             intent(inout) :: lr(:,:)
   integer,                intent(in)    :: nsigma
-  type(resp_pert_t),      intent(inout) :: perturbation
+  type(pert_t),      intent(inout) :: perturbation
   CMPLX,                  intent(out)   :: chi_para(:,:), chi_dia(:,:)
 
   integer :: ik, ist, dir1, dir2, j
@@ -286,15 +286,15 @@ subroutine X(lr_calc_susceptibility)(sys, h, lr, nsigma, perturbation, chi_para,
   do dir1 = 1, sys%gr%sb%dim
     do dir2 = 1, sys%gr%sb%dim
 
-      call resp_pert_setup_dir(perturbation, dir1, dir2)
+      call pert_setup_dir(perturbation, dir1, dir2)
 
-      trace = X(resp_pert_expectation_value)(perturbation, sys%gr,sys%geo,h,sys%st, sys%st%X(psi), lr(dir2, 1)%X(dl_psi))
+      trace = X(pert_expectation_value)(perturbation, sys%gr,sys%geo,h,sys%st, sys%st%X(psi), lr(dir2, 1)%X(dl_psi))
       
       if (nsigma == 1) then 
         trace = trace + R_CONJ(trace)
       else
         trace = trace + &
-             X(resp_pert_expectation_value)(perturbation, sys%gr,sys%geo,h,sys%st, lr(dir2, 2)%X(dl_psi), sys%st%X(psi))
+             X(pert_expectation_value)(perturbation, sys%gr,sys%geo,h,sys%st, lr(dir2, 2)%X(dl_psi), sys%st%X(psi))
       end if
      
 
@@ -302,7 +302,7 @@ subroutine X(lr_calc_susceptibility)(sys, h, lr, nsigma, perturbation, chi_para,
       chi_para(dir1, dir2) = chi_para(dir1, dir2) + trace
 
       chi_dia(dir1, dir2) = chi_dia(dir1, dir2) + &
-           X(resp_pert_expectation_value)(perturbation, sys%gr,sys%geo,h,sys%st, sys%st%X(psi), sys%st%X(psi), pert_order=2)
+           X(pert_expectation_value)(perturbation, sys%gr,sys%geo,h,sys%st, sys%st%X(psi), sys%st%X(psi), pert_order=2)
 
     end do
   end do
@@ -328,7 +328,7 @@ subroutine X(lr_calc_beta) (sh, sys, h, lr, perturbation, beta)
   type(system_t),      intent(inout) :: sys
   type(hamiltonian_t), intent(inout) :: h
   type(lr_t),          intent(inout) :: lr(:,:,:)
-  type(resp_pert_t),   intent(inout) :: perturbation
+  type(pert_t),   intent(inout) :: perturbation
   CMPLX,               intent(out)   :: beta(1:MAX_DIM, 1:MAX_DIM, 1:MAX_DIM)
 
   integer :: ifreq, isigma, idim, ispin, ispin2, np, ndim, idir, ist
@@ -400,8 +400,8 @@ subroutine X(lr_calc_beta) (sh, sys, h, lr, perturbation, beta)
 
                   if( sys%st%occ(ist, ik) > lr_min_occ ) then 
 
-                    call resp_pert_setup_dir(perturbation, u(2))
-                    call X(resp_pert_apply) (perturbation, sys%gr, sys%geo, h, &
+                    call pert_setup_dir(perturbation, u(2))
+                    call X(pert_apply) (perturbation, sys%gr, sys%geo, h, &
                          lr(u(3), isigma, w(3))%X(dl_psi)(1:np, idim, ist, ispin), tmp2)
                     tmp2(1:np) = tmp2(1:np) + R_REAL(hvar(1:np, ispin, isigma, idim, u(2), w(2) )) &
                        * lr(u(3), isigma, w(3))%X(dl_psi)(1:np, idim, ist, ispin)
@@ -416,8 +416,8 @@ subroutine X(lr_calc_beta) (sh, sys, h, lr, perturbation, beta)
                         do idim2 = 1, sys%st%d%dim
                           if( sys%st%occ(ist2, ik) > lr_min_occ ) then 
 
-                            call resp_pert_setup_dir(perturbation, u(2))
-                            call X(resp_pert_apply)(perturbation, sys%gr, sys%geo, h, sys%st%X(psi)(1:np, idim, ist, ispin), tmp2)
+                            call pert_setup_dir(perturbation, u(2))
+                            call X(pert_apply)(perturbation, sys%gr, sys%geo, h, sys%st%X(psi)(1:np, idim, ist, ispin), tmp2)
                             tmp2(1:np) = tmp2(1:np) + R_REAL(hvar(1:np, ispin2, isigma, idim2, u(2), w(2))) * &
                                sys%st%X(psi)(1:np, idim, ist, ispin)
 

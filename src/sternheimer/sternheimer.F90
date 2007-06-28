@@ -37,7 +37,7 @@ module sternheimer_m
   use mix_m
   use output_m
   use poisson_m
-  use resp_pert_m
+  use pert_m
   use restart_m
   use scf_tol_m
   use states_m

@@ -25,12 +25,13 @@ libh_sys_a_SOURCES = \
 	tdfunction.F90 lasers.F90 specie_pot.F90 \
 	rkb_projector.F90 kb_projector.F90 hgh_projector.F90 projector.F90 \
 	epot.F90 h.F90 preconditioners.F90 linear_solver.F90 \
-	scf_tol.F90 xc_OEP.F90 v_ks.F90 systm.F90 xc_OEP_kernel.F90
+	scf_tol.F90 xc_OEP.F90 v_ks.F90 systm.F90 xc_OEP_kernel.F90 \
+	pert.F90
 
 noinst_HEADERS = \
 	xc_KLI_inc.F90 xc_OEP_x_inc.F90 xc_OEP_SIC_inc.F90 \
 	kb_projector_inc.F90 hgh_projector_inc.F90 projector_inc.F90 epot_inc.F90 \
-	xc_OEP_inc.F90 h_inc.F90 preconditioners_inc.F90
+	xc_OEP_inc.F90 h_inc.F90 preconditioners_inc.F90 pert_inc.F90
 
 include $(srcdir)/../common-rules.make
 
@@ -46,3 +47,4 @@ projector.o:  projector_inc.F90
 preconditioners.o: preconditioners_inc.F90
 xc_OEP.o: xc_KLI_inc.F90 xc_OEP_x_inc.F90 xc_OEP_SIC_inc.F90 xc_OEP_inc.F90
 xc_OEP_kernel.o: xc_OEP_kernel_inc.F90
+pert.o: pert_inc.F90

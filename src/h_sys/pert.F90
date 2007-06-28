@@ -19,7 +19,7 @@
 
 #include "global.h"
 
-module resp_pert_m
+module pert_m
   use datasets_m
   use external_pot_m
   use functions_m
@@ -42,51 +42,51 @@ module resp_pert_m
 
   private
   public ::               &
-     resp_pert_t,         &
-     resp_pert_init,      &
-     resp_pert_end,       &
-     resp_pert_info,      &
-     resp_pert_setup_dir, &
-     resp_pert_setup_atom,&
-     resp_type,           &
-     dresp_pert_apply,    &
-     zresp_pert_apply,    &
-     dresp_pert_apply_order_2,    &
-     zresp_pert_apply_order_2,    &
-     dresp_pert_expectation_value,&
-     zresp_pert_expectation_value,&
-     dresp_pert_expectation_density,&
-     zresp_pert_expectation_density
+     pert_t,         &
+     pert_init,      &
+     pert_end,       &
+     pert_info,      &
+     pert_setup_dir, &
+     pert_setup_atom,&
+     pert_type,      &
+     dpert_apply,    &
+     zpert_apply,    &
+     dpert_apply_order_2,    &
+     zpert_apply_order_2,    &
+     dpert_expectation_value,&
+     zpert_expectation_value,&
+     dpert_expectation_density,&
+     zpert_expectation_density
 
 
   integer, public, parameter :: &
-     RESP_PERTURBATION_ELECTRIC = 1, &
-     RESP_PERTURBATION_MAGNETIC = 2, &
-     RESP_PERTURBATION_IONIC    = 3
+     PERTURBATION_ELECTRIC = 1, &
+     PERTURBATION_MAGNETIC = 2, &
+     PERTURBATION_IONIC    = 3
 
   integer, public, parameter :: &
        GAUGE_GIPAW  = 1, &
        GAUGE_ICL    = 2
 
-  type resp_pert_t
+  type pert_t
      private
-    integer :: resp_type
+    integer :: pert_type
     integer :: dir
     integer :: dir2
     integer :: atom1, atom2
     integer :: gauge
-  end type resp_pert_t
+  end type pert_t
 
-  interface resp_pert_init
-    module procedure resp_pert_init1
-    module procedure resp_pert_init2
+  interface pert_init
+    module procedure pert_init1
+    module procedure pert_init2
   end interface
 
 contains
 
   ! --------------------------------------------------------------------
-  subroutine resp_pert_init1(this, gr, geo)
-    type(resp_pert_t), intent(out)   :: this
+  subroutine pert_init1(this, gr, geo)
+    type(pert_t), intent(out)   :: this
     type(grid_t),      intent(inout) :: gr
     type(geometry_t),  intent(in)    :: geo
 
@@ -106,28 +106,28 @@ contains
     !% Displacements of the ions, used to calculate phonon frequencies and
     !% electron-phonon couplings
     !%End 
-    call loct_parse_int(check_inp('RespPerturbationType'), RESP_PERTURBATION_ELECTRIC, ii)
-    call resp_pert_init2(this, ii, gr, geo)
+    call loct_parse_int(check_inp('RespPerturbationType'), PERTURBATION_ELECTRIC, ii)
+    call pert_init2(this, ii, gr, geo)
 
-  end subroutine resp_pert_init1
+  end subroutine pert_init1
 
 
   ! --------------------------------------------------------------------
-  subroutine resp_pert_init2(this, resp_type, gr, geo)
-    type(resp_pert_t), intent(out)   :: this
-    integer,           intent(in)    :: resp_type
+  subroutine pert_init2(this, pert_type, gr, geo)
+    type(pert_t), intent(out)   :: this
+    integer,           intent(in)    :: pert_type
     type(grid_t),      intent(inout) :: gr
     type(geometry_t),  intent(in)    :: geo
 
-    this%resp_type = resp_type
-    if(.not.varinfo_valid_option('RespPerturbationType', this%resp_type)) call input_error('RespPerturbationType')
+    this%pert_type = pert_type
+    if(.not.varinfo_valid_option('RespPerturbationType', this%pert_type)) call input_error('RespPerturbationType')
 
     this%dir = -1 
     this%dir2 = -1 
     this%atom1 = -1
     this%atom2 = -1
 
-    if ( this%resp_type == RESP_PERTURBATION_MAGNETIC ) then
+    if ( this%pert_type == PERTURBATION_MAGNETIC ) then
 
       !%Variable MagneticGaugeCorrection
       !%Type integer
@@ -147,58 +147,58 @@ contains
 
     end if
 
-  end subroutine resp_pert_init2
+  end subroutine pert_init2
 
   ! --------------------------------------------------------------------
-  subroutine resp_pert_end(this)
-    type(resp_pert_t), intent(inout) :: this
+  subroutine pert_end(this)
+    type(pert_t), intent(inout) :: this
     
-  end subroutine resp_pert_end
+  end subroutine pert_end
 
   ! --------------------------------------------------------------------
-  subroutine resp_pert_info(this, unit)
-    type(resp_pert_t), intent(in) :: this
+  subroutine pert_info(this, unit)
+    type(pert_t), intent(in) :: this
     integer,           intent(in) :: unit
 
-    call messages_print_var_option(stdout, 'RespPerturbationType', this%resp_type)
+    call messages_print_var_option(stdout, 'RespPerturbationType', this%pert_type)
    
-  end subroutine resp_pert_info
+  end subroutine pert_info
 
 
   ! --------------------------------------------------------------------
-  subroutine resp_pert_setup_dir(this, dir, dir2)
-    type(resp_pert_t), intent(inout) :: this
+  subroutine pert_setup_dir(this, dir, dir2)
+    type(pert_t), intent(inout) :: this
     integer,           intent(in)    :: dir
     integer, optional, intent(in)    :: dir2
 
     this%dir = dir
     if(present(dir2)) this%dir2 = dir2
 
-  end subroutine resp_pert_setup_dir
+  end subroutine pert_setup_dir
   
-  subroutine resp_pert_setup_atom(this, iatom, iatom2)
-    type(resp_pert_t), intent(inout) :: this
+  subroutine pert_setup_atom(this, iatom, iatom2)
+    type(pert_t), intent(inout) :: this
     integer,           intent(in)    :: iatom
     integer, optional, intent(in)    :: iatom2
 
     this%atom1 = iatom
     if(present(iatom2)) this%atom2 = iatom2
 
-  end subroutine resp_pert_setup_atom
+  end subroutine pert_setup_atom
 
-  integer pure function resp_type(this)
-    type(resp_pert_t), intent(in) :: this
+  integer pure function pert_type(this)
+    type(pert_t), intent(in) :: this
 
-    resp_type = this%resp_type
+    pert_type = this%pert_type
 
-  end function resp_type
+  end function pert_type
 
 #include "undef.F90"
 #include "real.F90"
-#include "resp_pert_inc.F90"
+#include "pert_inc.F90"
 
 #include "undef.F90"
 #include "complex.F90"
-#include "resp_pert_inc.F90"
+#include "pert_inc.F90"
 
-end module resp_pert_m
+end module pert_m

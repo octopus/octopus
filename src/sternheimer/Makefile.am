@@ -22,11 +22,11 @@
 noinst_LIBRARIES = libsternheimer.a
 
 libsternheimer_a_SOURCES = \
-	resp_pert.F90 sternheimer.F90 em_resp_calc.F90 em_resp.F90 vdW.F90 \
+	sternheimer.F90 em_resp_calc.F90 em_resp.F90 vdW.F90 \
 	phonons.F90 phonons_lr.F90
 
 noinst_HEADERS = \
-	sternheimer_inc.F90 em_resp_inc.F90 resp_pert_inc.F90 em_resp_calc_inc.F90
+	sternheimer_inc.F90 em_resp_inc.F90 em_resp_calc_inc.F90
 
 include $(srcdir)/../common-rules.make
 
@@ -37,4 +37,3 @@ depend:
 sternheimer.o: sternheimer_inc.F90
 em_resp_calc.o: em_resp_calc_inc.F90
 em_resp.o : em_resp_inc.F90
-resp_pert.o: resp_pert_inc.F90

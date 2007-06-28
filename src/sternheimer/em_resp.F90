@@ -38,7 +38,7 @@ module pol_lr_m
   use messages_m
   use mix_m
   use output_m
-  use resp_pert_m
+  use pert_m
   use restart_m
   use states_m
   use sternheimer_m
@@ -56,12 +56,8 @@ module pol_lr_m
   public :: &
     read_wfs
 
-  integer, parameter ::         &
-     PERTURBATION_ELECTRIC = 1, &
-     PERTURBATION_MAGNETIC = 2
-
   type em_resp_t
-    type(resp_pert_t) :: perturbation
+    type(pert_t) :: perturbation
 
     integer :: nsigma ! 1: consider only positive values of the frequency
                       ! 2: consider both positive and negative
@@ -256,7 +252,7 @@ contains
             end if ! .not. fromscratch
             
 
-            call resp_pert_setup_dir(em_vars%perturbation, dir)
+            call pert_setup_dir(em_vars%perturbation, dir)
             if (wfs_are_complex(sys%st)) then 
               call zsternheimer_solve(sh, sys, h, em_vars%lr(dir, :, ifactor), em_vars%nsigma , &
                  em_vars%freq_factor(ifactor)*em_vars%omega(iomega) + M_zI * em_vars%eta, &
@@ -278,7 +274,7 @@ contains
         end do ! dir
       end do ! ifactor
       
-      if(resp_type(em_vars%perturbation) == RESP_PERTURBATION_ELECTRIC) then
+      if(pert_type(em_vars%perturbation) == PERTURBATION_ELECTRIC) then
         ! calculate polarizability
         do ifactor = 1, em_vars%nfactor
           if(wfs_are_complex(sys%st)) then 
@@ -297,7 +293,7 @@ contains
           end if
         end if
       
-      else if(resp_type(em_vars%perturbation) == RESP_PERTURBATION_MAGNETIC) then
+      else if(pert_type(em_vars%perturbation) == PERTURBATION_MAGNETIC) then
         do ifactor = 1, em_vars%nfactor
           if(wfs_are_complex(sys%st)) then 
             call zlr_calc_susceptibility(sys, h, em_vars%lr(:,:, ifactor), em_vars%nsigma, em_vars%perturbation, &
@@ -322,7 +318,7 @@ contains
     end do
 
     call sternheimer_end(sh)
-    call resp_pert_end(em_vars%perturbation)
+    call pert_end(em_vars%perturbation)
 
     deallocate(em_vars%omega, em_vars%lr)
     call states_deallocate_wfns(sys%st)
@@ -418,9 +414,9 @@ contains
       em_vars%calc_hyperpol = .false.
       em_vars%freq_factor(1:MAX_DIM) = M_ONE
 
-      call resp_pert_init(em_vars%perturbation, sys%gr, sys%geo)
+      call pert_init(em_vars%perturbation, sys%gr, sys%geo)
 
-      if(resp_type(em_vars%perturbation) == PERTURBATION_ELECTRIC) then
+      if(pert_type(em_vars%perturbation) == PERTURBATION_ELECTRIC) then
         !%Variable PolHyper
         !%Type block
         !%Section Linear Response::Polarizabilities
@@ -448,8 +444,8 @@ contains
     ! ---------------------------------------------------------
     subroutine info()
 
-      call resp_pert_info(em_vars%perturbation, stdout)
-      if(resp_type(em_vars%perturbation) == RESP_PERTURBATION_ELECTRIC) then
+      call pert_info(em_vars%perturbation, stdout)
+      if(pert_type(em_vars%perturbation) == PERTURBATION_ELECTRIC) then
         if(em_vars%calc_hyperpol) then 
           write(message(1),'(a)') 'Linear Reponse First Order Hyperpolarizabilities'
           call messages_print_stress(stdout, trim(message(1)))
@@ -547,10 +543,10 @@ contains
            em_vars%freq_factor(ifactor)*em_vars%omega(iomega)/units_out%energy%factor))
       call io_mkdir(trim(dirname))
 
-      if(resp_type(em_vars%perturbation) == RESP_PERTURBATION_ELECTRIC) then
+      if(pert_type(em_vars%perturbation) == PERTURBATION_ELECTRIC) then
         call out_polarizability()
         if(em_vars%calc_hyperpol) call out_hyperpolarizability()
-      else if(resp_type(em_vars%perturbation) == RESP_PERTURBATION_MAGNETIC) then
+      else if(pert_type(em_vars%perturbation) == PERTURBATION_MAGNETIC) then
         call out_susceptibility()
       end if
 

@@ -33,7 +33,7 @@ subroutine X(sternheimer_solve)(&
   type(lr_t),             intent(inout) :: lr(:) 
   integer,                intent(in)    :: nsigma 
   R_TYPE,                 intent(in)    :: omega
-  type(resp_pert_t),      intent(in)    :: perturbation
+  type(pert_t),      intent(in)    :: perturbation
   character(len=*),       intent(in)    :: restart_dir
   character(len=*),       intent(in)    :: rho_tag
   character(len=*),       intent(in)    :: wfs_tag
@@ -112,7 +112,7 @@ subroutine X(sternheimer_solve)(&
           
           !calculate the RHS of the Sternheimer eq
           Y(:, 1, sigma) = R_TOTYPE(M_ZERO)
-          call X(resp_pert_apply) (perturbation, sys%gr, sys%geo, h, st%X(psi)(:, 1, ist, ik), Y(:, 1, sigma))
+          call X(pert_apply) (perturbation, sys%gr, sys%geo, h, st%X(psi)(:, 1, ist, ik), Y(:, 1, sigma))
           Y(1:m%np, 1, sigma) = -Y(1:m%np, 1, sigma) - hvar(1:m%np, ik, sigma)*st%X(psi)(1:m%np, 1, ist, ik)
 
           !and project it into the unoccupied states
