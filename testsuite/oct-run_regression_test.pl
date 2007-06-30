@@ -331,7 +331,7 @@ foreach my $octopus_exe (@executables){
 	 print "$name: \t [ $color_start{green}  OK  $color_end{green} ] \n";
          $test_succeded = 1;
      } else {
-	 print "$name: \t [ $color_start{red} $color_end{red} ] \n";
+	 print "$name: \t [ $color_start{red} FAIL $color_end{red} ] \n";
          $test_succeded = 0;
 	 $failures++;
      }
