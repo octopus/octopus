@@ -43,7 +43,7 @@ check-full:
 	$(MAKE) -C testsuite check-full
 
 rpm: dist
-	@topdir=`rpmbuild --showrc | grep ': *_topdir' | cut -f 2`; \
+	@topdir=`rpmbuild --showrc | @GREP@ ': *_topdir' | cut -f 2`; \
 	mv -f $(PACKAGE)-$(VERSION).tar.gz $$topdir/SOURCES; \
 	cp build/$(PACKAGE).spec $$topdir/SPECS; \
 	rpmbuild -ba $$topdir/SPECS/$(PACKAGE).spec; \

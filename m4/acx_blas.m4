@@ -4,6 +4,7 @@ dnl
 AC_DEFUN([ACX_BLAS], [
 AC_PREREQ(2.50)
 AC_REQUIRE([AC_FC_LIBRARY_LDFLAGS])
+AC_LANG([Fortran])
 acx_blas_ok=no
 
 dnl Get fortran linker names of BLAS functions to check for.

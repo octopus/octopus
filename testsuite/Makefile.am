@@ -34,14 +34,12 @@ check:
 	@base=`basename "$(top_builddir)/share"` && \
 	dir=`dirname "$(top_builddir)/share"` && \
 	sharedir="`(cd \"$$dir\" 2> /dev/null && pwd || echo \"$$dir\")`/$$base" && \
-	echo $$sharedir $$dir $$base && \
 	OCTOPUS_SHARE=$$sharedir ./oct-run_testsuite -c -d $(srcdir) -l -g short-run
 
 check-full:
 	@base=`basename "$(top_builddir)/share"` && \
 	dir=`dirname "$(top_builddir)/share"` && \
 	sharedir="`(cd \"$$dir\" 2> /dev/null && pwd || echo \"$$dir\")`/$$base" && \
-	echo $$sharedir $$dir $$base && \
 	OCTOPUS_SHARE=$$sharedir ./oct-run_testsuite -c -d $(srcdir) -l
 
 clean-local:

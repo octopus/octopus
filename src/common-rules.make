@@ -62,17 +62,17 @@ octopus_LIBS = \
 	$(top_builddir)/src/basic/libbasic.a
 
 core_LIBS = \
-	$(octopus_LIBS) \
-	@LIBS_LAPACK@ @LIBS_BLAS@ \
-	$(top_builddir)/liboct/liboct.a \
+	$(octopus_LIBS)                               \
+	@LIBS_LAPACK@ @LIBS_BLAS@                     \
+	$(top_builddir)/liboct/liboct.a               \
 	$(top_builddir)/liboct_parser/liboct_parser.a \
-	$(top_builddir)/libxc/src/libxc.a \
-	-L$(top_builddir)/libstring_f -lstring_f \
+	$(top_builddir)/libxc/src/libxc.a             \
+	-L$(top_builddir)/libstring_f -lstring_f      \
 	@GSL_LIBS@ @GD_LIBS@ @FCEXTRALIBS@
 
 external_LIBS = \
 	$(top_builddir)/external_libs/expokit/libexpokit.a \
-	$(top_builddir)/external_libs/qshep/libqshep.a \
+	$(top_builddir)/external_libs/qshep/libqshep.a     \
 	$(top_builddir)/external_libs/poisson_isf/libpoisson_isf.a
 
 if COMPILE_METIS
@@ -91,25 +91,33 @@ all_LIBS = $(core_LIBS) @LIBS_FFT@ @LIBS_TRLAN@ @LIBS_ARPACK@ @LIBS_SPARSKIT@ \
 # How to compile F90 files.
 # ---------------------------------------------------------------
 
-# Define empty rule to override the native rule of automake (otherwise the native
-# rule will have precedence over the pattern based rules below). Could not figure out
-# how to remove .F90 from .SUFFIXES, which would be an alternative route.
-.F90.o:
+SUFFIXES = _oct.f90 .F90 .o
 
 # Compilation is a two step process: first we preprocess F90 files
-# to generate _oct.f90 files.
-%_oct.f90: %.F90
+# to generate _oct.f90 files. Then, we compiler this _oct.f90 into
+# an object file and delete the intermediate file.
+.F90.o:
 	@FCCPP@ @CPPFLAGS@ $(AM_CPPFLAGS) -I. $< > $*_oct.f90
 	@if [ "@DEBUG@" = "no" ]; then \
-		cat $*_oct.f90 | grep -v pop_sub | grep -v push_sub >$*_oct.f91; \
+		cat $*_oct.f90 | grep -v pop_sub | \
+			grep -v push_sub >$*_oct.f91; \
 		mv -f $*_oct.f91 $*_oct.f90; \
 	fi
 	@perl -pi -e 's/\\newline/\n/g; s/\\cardinal/#/g' $*_oct.f90
-
-# Then we actually compile _oct.f90 files and cleanup.
-%.o: %_oct.f90
 	@FC@ @FCFLAGS@ @FCFLAGS_NETCDF@ $(AM_FCFLAGS) -c @FCFLAGS_f90@ -o $@ $*_oct.f90
 	@rm -f $*_oct.f90
+
+# This rule is basically to create a _oct.f90 file by hand for
+# debugging purposes. It is identical to the first part of
+# the .F90.o rule.
+.F90_oct.f90:
+	@FCCPP@ @CPPFLAGS@ $(AM_CPPFLAGS) -I. $< > $*_oct.f90
+	@if [ "@DEBUG@" = "no" ]; then \
+		cat $*_oct.f90 | grep -v pop_sub | \
+			grep -v push_sub >$*_oct.f91; \
+		mv -f $*_oct.f91 $*_oct.f90; \
+	fi
+	@perl -pi -e 's/\\newline/\n/g; s/\\cardinal/#/g' $*_oct.f90
 
 
 # ---------------------------------------------------------------
@@ -121,10 +129,6 @@ CTAGS = ctags-exuberant -e
 
 # Cleaning.
 CLEANFILES = *~ *.bak *.mod *.il *.d *.pc* ifc* *_oct.f90 config_F90.h
-
-# If it exists include user defined Makefile.local
-# (which is not included in the octopus package)
--include Makefile.local
 
 
 # Local Variables:

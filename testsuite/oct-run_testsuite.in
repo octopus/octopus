@@ -80,7 +80,7 @@ function find_tests() {
 	groups_pat="."
     fi
     testfiles=`find $testsuite -name "*.test" | \
-	xargs grep -E "$groups_pat" | \
+	xargs @EGREP@ "$groups_pat" | \
 	awk -F: '{print $1}' | sort -u`
     echo "$testfiles"
 }
@@ -144,7 +144,7 @@ datestamp=$(date +"%Y-%m-%d")
 for y in $tests; do
     ybase=`basename $y`
     xybase=${ybase%.test}
-    failed_tests=$(grep FAIL ${xybase}.log | wc -l) 
+    failed_tests=$(@GREP@ FAIL ${xybase}.log | wc -l) 
     echo "Checking for failed tests: ${xybase}.log"
     if [ $failed_tests -gt 0 ]; then
 	echo "Found: $failed_tests"

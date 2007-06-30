@@ -22,32 +22,35 @@
 noinst_LIBRARIES = libbasic.a
 
 libbasic_a_SOURCES = \
-             liboct.F90 string.F90 varinfo.F90 mpi.F90 global.F90 liboct_parser.F90 \
-	     datasets.F90 messages.F90 io.F90 units.F90 mpi_debug.F90 profiling.F90 \
-             utils.F90 multicomm.F90 periodic_table.F90 getopt_f.c command_line.F90
+	liboct.F90 string.F90 varinfo.F90 mpi.F90 global.F90 \
+	liboct_parser.F90 datasets.F90 messages.F90 io.F90   \
+	units.F90 mpi_debug.F90 profiling.F90 utils.F90      \
+	multicomm.F90 periodic_table.F90 getopt_f.c command_line.F90
 
 noinst_HEADERS = \
 	mpi_debug_inc.F90
 
 include $(srcdir)/../common-rules.make
 
-# How to compile global.F90 (have to define some extra variables here)
-DATE := $(shell date)
-LATEST_SVN := $(shell $(top_srcdir)/build/svn_release_number.sh 2>/dev/null) 
-
+# How to compile global.F90 (have to define some extra variables here).
 global.o: global.F90
+	rev="`$(SHELL) $(top_srcdir)/build/svn_release_number.sh 2> /dev/null`"; \
 	@FCCPP@ @CPPFLAGS@ -I. $(AM_CPPFLAGS) \
-	        -DSHARE_OCTOPUS='"${pkgdatadir}"' -DLATEST_SVN='"${LATEST_SVN}"' \
-		-DOCTOPUS_VERSION='"${VERSION}"' -DBUILD_TIME='"${DATE}"' -DFC='"${FC}"' \
-		-DFCFLAGS='"${FCFLAGS} ${FCFLAGS_f90}"' $< > $*_oct.f90
+	        -DSHARE_OCTOPUS='"$(pkgdatadir)"' \
+		-DLATEST_SVN="'$$rev'" \
+		-DOCTOPUS_VERSION='"$(VERSION)"' \
+		-DBUILD_TIME="'`date`'" -DFC='"$(FC)"' \
+		-DFCFLAGS='"$(FCFLAGS) $(FCFLAGS_f90)"' $< > $*_oct.f90
 	@FC@ @FCFLAGS@ $(AM_FCFLAGS) -c @FCFLAGS_f90@ -o $@ $*_oct.f90
 	@rm -f $*_oct.f90
 
-# This is to generate the dependencies. It makes use of the makedepf90 program of 
-# Erik Edelmann (http://www.helsinki.fi/~eedelman/makedepf90.html). It should be run
-# from time to time (just typing make depend within the src directory), substituting
-# the dependencies below by the resulting new dependencies. (For normal compilation
-# of octopus, there is absolutely no need of installing makedepf90).
+# This is to generate the dependencies. It makes use of the makedepf90
+# program of Erik Edelmann
+# (http://www.helsinki.fi/~eedelman/makedepf90.html). It should be run
+# from time to time (just typing make depend within the src
+# directory), substituting the dependencies below by the resulting new
+# dependencies. (For normal compilation of octopus, there is
+# absolutely no need of installing makedepf90).
 depend:
 	@makedepf90 $(libbasic_a_SOURCES)
 
