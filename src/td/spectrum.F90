@@ -44,7 +44,9 @@ module spectrum_m
     spectrum_hs_from_mult,         &
     spectrum_hs_from_acc,          &
     spectrum_mult_info,            &
-    kick_init
+    kick_init,                     &
+    kick_write,                    &
+    kick_read
 
   integer, public, parameter ::    &
     SPECTRUM_DAMP_NONE       = 0,  &
@@ -194,6 +196,46 @@ contains
 
     call pop_sub()
   end subroutine spectrum_init
+
+
+  ! ---------------------------------------------------------
+  subroutine kick_write(k, iunit)
+    type(kick_t), intent(in) :: k
+    integer,      intent(in) :: iunit
+
+    call push_sub('spectrum.kick_write')
+
+    write(iunit, '(a15,3f18.12)') '# pol(1)       ', k%pol(1:3, 1)
+    write(iunit, '(a15,3f18.12)') '# pol(2)       ', k%pol(1:3, 2)
+    write(iunit, '(a15,3f18.12)') '# pol(3)       ', k%pol(1:3, 3)
+    write(iunit, '(a15,i1)')      '# direction    ', k%pol_dir
+    write(iunit, '(a15,i1)')      '# kick mode    ', k%delta_strength_mode
+    write(iunit, '(a15,f18.12)')  '# kick strength', k%delta_strength
+    write(iunit, '(a15,i1)')      '# Equiv. axis  ', k%pol_equiv_axis
+    write(iunit, '(a15,3f18.12)') '# wprime       ', k%wprime(1:3)
+
+    call pop_sub()
+  end subroutine kick_write
+
+
+  ! ---------------------------------------------------------
+  subroutine kick_read(k, iunit)
+    type(kick_t), intent(inout) :: k
+    integer,      intent(in) :: iunit
+
+    call push_sub('spectrum.kick_read')
+
+    read(iunit, '(15x,3f18.12)') k%pol(1:3, 1)
+    read(iunit, '(15x,3f18.12)') k%pol(1:3, 2)
+    read(iunit, '(15x,3f18.12)') k%pol(1:3, 3)
+    read(iunit, '(15x,i2)')      k%pol_dir
+    read(iunit, '(15x,i2)')      k%delta_strength_mode
+    read(iunit, '(15x,f18.12)')  k%delta_strength
+    read(iunit, '(15x,i2)')      k%pol_equiv_axis
+    read(iunit, '(15x,3f18.12)') k%wprime(1:3)
+
+    call pop_sub()
+  end subroutine kick_read
 
 
   ! ---------------------------------------------------------
@@ -489,13 +531,14 @@ contains
 
     ! Finally, write down the result
     write(out_file, '(a15,i2)')      '# nspin        ', nspin
-    write(out_file, '(a15,3f18.12)') '# pol(1)       ', kick%pol(1:3, 1)
-    write(out_file, '(a15,3f18.12)') '# pol(2)       ', kick%pol(1:3, 2)
-    write(out_file, '(a15,3f18.12)') '# pol(3)       ', kick%pol(1:3, 3)
-    write(out_file, '(a15,i1)')      '# kick mode    ', kick%delta_strength_mode
-    write(out_file, '(a15,f18.12)')  '# kick strength', kick%delta_strength
-    write(out_file, '(a15,i1)')      '# Equiv. axis  ', kick%pol_equiv_axis
-    write(out_file, '(a15,3f18.12)') '# wprime       ', kick%wprime(1:3)
+    call kick_write(kick, out_file)
+!!$    write(out_file, '(a15,3f18.12)') '# pol(1)       ', kick%pol(1:3, 1)
+!!$    write(out_file, '(a15,3f18.12)') '# pol(2)       ', kick%pol(1:3, 2)
+!!$    write(out_file, '(a15,3f18.12)') '# pol(3)       ', kick%pol(1:3, 3)
+!!$    write(out_file, '(a15,i1)')      '# kick mode    ', kick%delta_strength_mode
+!!$    write(out_file, '(a15,f18.12)')  '# kick strength', kick%delta_strength
+!!$    write(out_file, '(a15,i1)')      '# Equiv. axis  ', kick%pol_equiv_axis
+!!$    write(out_file, '(a15,3f18.12)') '# wprime       ', kick%wprime(1:3)
     write(out_file, '(a1, a20)', advance = 'no') '#', str_center("Energy", 20)
     write(out_file, '(a20)', advance = 'no') str_center("(1/3)*Tr[sigma]", 20)
     write(out_file, '(a20)', advance = 'no') str_center("Anisotropy[sigma]", 20)
@@ -658,14 +701,15 @@ contains
     ewsum = ewsum * s%energy_step; polsum = polsum * s%energy_step
 
     write(out_file, '(a15,i2)')      '# nspin        ', nspin
-    write(out_file, '(a15,3f18.12)') '# pol(1)       ', kick%pol(1:3, 1)
-    write(out_file, '(a15,3f18.12)') '# pol(2)       ', kick%pol(1:3, 2)
-    write(out_file, '(a15,3f18.12)') '# pol(3)       ', kick%pol(1:3, 3)
-    write(out_file, '(a15,i1)')      '# direction    ', kick%pol_dir
-    write(out_file, '(a15,i1)')      '# kick mode    ', kick%delta_strength_mode
-    write(out_file, '(a15,f18.12)')  '# kick strength', kick%delta_strength
-    write(out_file, '(a15,i1)')      '# Equiv. axis  ', kick%pol_equiv_axis
-    write(out_file, '(a15,3f18.12)') '# wprime       ', kick%wprime(1:3)
+    call kick_write(kick, out_file)
+!!$    write(out_file, '(a15,3f18.12)') '# pol(1)       ', kick%pol(1:3, 1)
+!!$    write(out_file, '(a15,3f18.12)') '# pol(2)       ', kick%pol(1:3, 2)
+!!$    write(out_file, '(a15,3f18.12)') '# pol(3)       ', kick%pol(1:3, 3)
+!!$    write(out_file, '(a15,i1)')      '# direction    ', kick%pol_dir
+!!$    write(out_file, '(a15,i1)')      '# kick mode    ', kick%delta_strength_mode
+!!$    write(out_file, '(a15,f18.12)')  '# kick strength', kick%delta_strength
+!!$    write(out_file, '(a15,i1)')      '# Equiv. axis  ', kick%pol_equiv_axis
+!!$    write(out_file, '(a15,3f18.12)') '# wprime       ', kick%wprime(1:3)
     write(out_file, '(a)') '#%'
     write(out_file, '(a,i8)')    '# Number of time steps = ', time_steps
     write(out_file, '(a,i4)')    '# SpecDampMode         = ', s%damp
@@ -806,14 +850,15 @@ contains
 
     ! Output to file
     write(out_file, '(a15,i2)')      '# nspin        ', nspin
-    write(out_file, '(a15,3f18.12)') '# pol(1)       ', kick%pol(1:3, 1)
-    write(out_file, '(a15,3f18.12)') '# pol(2)       ', kick%pol(1:3, 2)
-    write(out_file, '(a15,3f18.12)') '# pol(3)       ', kick%pol(1:3, 3)
-    write(out_file, '(a15,i1)')      '# direction    ', kick%pol_dir
-    write(out_file, '(a15,i1)')      '# kick mode    ', kick%delta_strength_mode
-    write(out_file, '(a15,f18.12)')  '# kick strength', kick%delta_strength
-    write(out_file, '(a15,i1)')      '# Equiv. axis  ', kick%pol_equiv_axis
-    write(out_file, '(a15,3f18.12)') '# wprime       ', kick%wprime(1:3)
+!!$    write(out_file, '(a15,3f18.12)') '# pol(1)       ', kick%pol(1:3, 1)
+!!$    write(out_file, '(a15,3f18.12)') '# pol(2)       ', kick%pol(1:3, 2)
+!!$    write(out_file, '(a15,3f18.12)') '# pol(3)       ', kick%pol(1:3, 3)
+!!$    write(out_file, '(a15,i1)')      '# direction    ', kick%pol_dir
+!!$    write(out_file, '(a15,i1)')      '# kick mode    ', kick%delta_strength_mode
+!!$    write(out_file, '(a15,f18.12)')  '# kick strength', kick%delta_strength
+!!$    write(out_file, '(a15,i1)')      '# Equiv. axis  ', kick%pol_equiv_axis
+!!$    write(out_file, '(a15,3f18.12)') '# wprime       ', kick%wprime(1:3)
+    call kick_write(kick, out_file)
     write(out_file, '(a1,a20,a20,a20)') '#', str_center("Energy", 20), str_center("R", 20), str_center("Re[beta]", 20)
     write(out_file, '(a1,a20,a20,a20)') '#', str_center('['//trim(units_out%energy%abbrev) // ']', 20), &
          str_center('['//trim(units_out%length%abbrev) //'^3]', 20), &
@@ -1005,14 +1050,15 @@ contains
     if(present(lmax)) then
       read(iunit, '(15x,i2)')      lmax
     end if
-    read(iunit, '(15x,3f18.12)') kick%pol(1:3, 1)
-    read(iunit, '(15x,3f18.12)') kick%pol(1:3, 2)
-    read(iunit, '(15x,3f18.12)') kick%pol(1:3, 3)
-    read(iunit, '(15x,i2)')      kick%pol_dir
-    read(iunit, '(15x,i2)')      kick%delta_strength_mode
-    read(iunit, '(15x,f18.12)')  kick%delta_strength
-    read(iunit, '(15x,i2)')      kick%pol_equiv_axis
-    read(iunit, '(15x,3f18.12)') kick%wprime(1:3)
+!!$    read(iunit, '(15x,3f18.12)') kick%pol(1:3, 1)
+!!$    read(iunit, '(15x,3f18.12)') kick%pol(1:3, 2)
+!!$    read(iunit, '(15x,3f18.12)') kick%pol(1:3, 3)
+!!$    read(iunit, '(15x,i2)')      kick%pol_dir
+!!$    read(iunit, '(15x,i2)')      kick%delta_strength_mode
+!!$    read(iunit, '(15x,f18.12)')  kick%delta_strength
+!!$    read(iunit, '(15x,i2)')      kick%pol_equiv_axis
+!!$    read(iunit, '(15x,3f18.12)') kick%wprime(1:3)
+    call kick_read(kick, iunit)
     read(iunit, '(a)')           line
     read(iunit, '(a)')           line
     call io_skip_header(iunit)
@@ -1060,14 +1106,15 @@ contains
 
     ! read in number of spin components
     read(iunit, '(15x,i2)')      nspin
-    read(iunit, '(15x,3f18.12)') kick%pol(1:3, 1)
-    read(iunit, '(15x,3f18.12)') kick%pol(1:3, 2)
-    read(iunit, '(15x,3f18.12)') kick%pol(1:3, 3)
-    read(iunit, '(15x,i2)')      kick%pol_dir
-    read(iunit, '(15x,i2)')      kick%delta_strength_mode
-    read(iunit, '(15x,f18.12)')  kick%delta_strength
-    read(iunit, '(15x,i2)')      kick%pol_equiv_axis
-    read(iunit, '(15x,3f18.12)') kick%wprime(1:3)
+!!$    read(iunit, '(15x,3f18.12)') kick%pol(1:3, 1)
+!!$    read(iunit, '(15x,3f18.12)') kick%pol(1:3, 2)
+!!$    read(iunit, '(15x,3f18.12)') kick%pol(1:3, 3)
+!!$    read(iunit, '(15x,i2)')      kick%pol_dir
+!!$    read(iunit, '(15x,i2)')      kick%delta_strength_mode
+!!$    read(iunit, '(15x,f18.12)')  kick%delta_strength
+!!$    read(iunit, '(15x,i2)')      kick%pol_equiv_axis
+!!$    read(iunit, '(15x,3f18.12)') kick%wprime(1:3)
+    call kick_read(kick, iunit)
     call io_skip_header(iunit)
 
     ! count number of time_steps

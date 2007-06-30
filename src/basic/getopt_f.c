@@ -42,10 +42,23 @@ void FC_FUNC_(set_clarg, SET_CLARG)(int *i, STR_F_TYPE arg STR_ARG1)
 
 void oscillator_strength_help(){
   printf("Usage: oct-oscillator_strength [OPTIONS] w\n");
+  printf("\n");
   printf("Options:\n");
   printf("  -h              Print this help and exits.\n");
+  printf("  -m <mode>       Select the run mode: .\n");
   printf("  -f <file>       Name of the 'multipoles' file to process.\n");
+  printf("  -g <file>       Name of the second 'multipoles' file to be processed,\n");
+  printf("                    if applicable.\n");
   printf("  -s <dw>         Limits of the search interval: [w-dw,w+dw]\n");
+  printf("  -n <N>          Number of frequencies in which the search interval\n");
+  printf("                    is discretized (default 1000)\n");
+  printf("  -o <o>          Process, or generate, the o-th order response.\n");
+  printf("  -t <time>       The signal analysis will be done by integrating in the \n");
+  printf("                    time interval [0, <time>]. If this argument is absent,\n");
+  printf("                    it makes use of all the time-window present in the multipoles\n");
+  printf("                    files.\n");
+  printf("  -p              Prints out a file with the reesulting transformation.\n");
+  printf("                    The file will be called 'omega'.\n");
   exit(-1);
 }
 
@@ -57,19 +70,27 @@ void oscillator_strength_help(){
 /* FUNCTIONS TO BE USED BY THE PROGRAM oct-oscillator-strength */
 
 void FC_FUNC_(getopt_oscillator_strength, GETOPT_OSCILLATOR_STRENGTH)
-  (double *omega, STR_F_TYPE filename, STR_F_TYPE filename2, double *searchinterval, int *order STR_ARG2)
+  (int *mode, double *omega, STR_F_TYPE filename, STR_F_TYPE filename2, 
+   double *searchinterval, int *order, int *nfrequencies, double *time, 
+   int *print_omega_file STR_ARG2)
 {
   int c;
 
-  if(argc==1) oscillator_strength_help();
+  /* This line would be present if we wanted to make the omega a 
+     mandatory argument. But for the moment I think it should not be mandatory.
+     if(argc==1) oscillator_strength_help(); */
 
   while (1) {
-    c = getopt(argc, argv, "hf:g:s:2");
+    c = getopt(argc, argv, "hm:f:g:s:o:n:t:p");
     if (c == -1) break;
     switch (c) {
 
     case 'h':
       oscillator_strength_help();
+      break;
+
+    case 'm':
+      *mode = (int)atoi(optarg);
       break;
 
     case 'f':
@@ -84,8 +105,20 @@ void FC_FUNC_(getopt_oscillator_strength, GETOPT_OSCILLATOR_STRENGTH)
       *searchinterval = (double)atof(optarg);
       break;
 
-    case '2':
-      *order = 2;
+    case 'o':
+      *order = (int)atoi(optarg);
+      break;
+
+    case 'n':
+      *nfrequencies = (int)atoi(optarg);
+      break;
+
+    case 't':
+      *time = (double)atof(optarg);
+      break;
+
+    case 'p':
+      *print_omega_file = 1;
       break;
 
     case '?':
