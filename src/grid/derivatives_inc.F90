@@ -101,7 +101,6 @@ subroutine X(derivatives_grad)(der, f, grad, ghost_update)
     call X(zero_bc)(der%m, f)
   end if
 
-  grad(:,:) = R_TOTYPE(M_ZERO)
   do i = 1, der%m%sb%dim
     call X(nl_operator_operate) (der%grad(i), f, grad(:,i), ghost_update=ghost_update)
   end do
@@ -128,7 +127,6 @@ subroutine X(derivatives_oper)(op, der, f, opf, ghost_update)
     call X(zero_bc)(der%m, f)
   end if
 
-  opf(:) = R_TOTYPE(M_ZERO)
   call X(nl_operator_operate) (op, f, opf, ghost_update=ghost_update)
 
   call pop_sub()

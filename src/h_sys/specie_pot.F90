@@ -54,9 +54,7 @@ module specie_pot_m
     specie_get_density,       & 
     specie_get_gdensity,      &
     specie_get_local,         &
-    specie_get_glocal,        &
-    specie_get_g2local
-
+    specie_get_glocal
 
   integer, parameter :: INITRHO_PARAMAGNETIC  = 1, &
                         INITRHO_FERROMAGNETIC = 2, &
@@ -755,49 +753,6 @@ contains
     call pop_sub()
 
   end subroutine specie_get_glocal
-
-  subroutine specie_get_g2local(s, gr, x_atom, g2v, time)
-    type(specie_t),  intent(in) :: s
-    type(grid_t),    intent(in) :: gr
-    FLOAT,           intent(in) :: x_atom(MAX_DIM)
-    FLOAT,          intent(out) :: g2v(:, :, :)
-    FLOAT, optional, intent(in) :: time
-
-    FLOAT, parameter :: Delta = CNST(1e-4)
-    FLOAT :: x(MAX_DIM), r, dvl_rr, d2vl_r
-    integer :: ii, jj, ip
-
-
-    select case(s%type)
-    case(SPEC_PS_PSF, SPEC_PS_HGH, SPEC_PS_CPI, SPEC_PS_FHI, SPEC_PS_UPF)
-
-      do ip = 1, gr%m%np
-        x(:) = gr%m%x(ip, :) - x_atom(:)
-        r = sqrt(sum(x(:)**2))
-
-        if(r>CNST(1e-9)) then
-          dvl_rr = loct_splint(s%ps%dvl,r)/r
-        else
-          dvl_rr = M_ZERO
-        end if
-
-        d2vl_r = loct_splint(s%ps%d2vl, r)
-        
-        do ii= 1, 3
-          do jj = 1, 3
-            g2v(ip, ii, jj) = ddelta(ii, jj)*dvl_rr  + x(ii)*x(jj)/(r*r)*(d2vl_r - dvl_rr)
-          end do
-        end do
-
-      end do
-
-    case default
-      write(message(1),'(a)')    'Second derivative of the potential not implemented.'
-      call write_fatal(1)
-      
-    end select
-    
-  end subroutine specie_get_g2local
 
 end module specie_pot_m
 
