@@ -93,17 +93,40 @@ contains
 
   subroutine ionic
 
-    FLOAT, allocatable :: gv(:,:)
+    R_TYPE, allocatable :: grad(:,:), fin(:, :), fout(:, :)
+    FLOAT,  allocatable :: vloc(:)
+    type(atom_t), pointer :: atm
+    integer :: ipj
+
     integer :: iatom, idir
 
     iatom = this%atom1
     idir = this%dir
+    atm => geo%atom(iatom)
 
-    ALLOCATE(gv(NP, NDIM), NP*NDIM)
-    call specie_get_glocal( geo%atom(iatom)%spec, gr, geo%atom(iatom)%x, gv)
-    f_out(1:NP) = gv(1:NP, idir) * f_in(1:NP)    
+    ALLOCATE(vloc(1:NP), NP_PART)
+    vloc(1:NP) = M_ZERO
+    call build_local_part_in_real_space(h%ep, gr, geo, atm, vloc, CNST(0.0))
 
-    deallocate(gv)
+    ALLOCATE(fin(1:NP_PART, 1), NP_PART)
+    call lalg_copy(NP, f_in, fin(:, 1))    
+
+    !d^T v |f>
+    ALLOCATE(fout(1:NP_PART, 1), NP_PART)
+    fout(1:NP, 1) = vloc(1:NP) * fin(1:NP, 1)
+    do ipj = h%ep%atomproj(1, iatom), h%ep%atomproj(2, iatom)
+      call X(project_psi)(gr%m, h%ep%p(ipj), 1, fin, fout, 0, .false., ik=1)
+    end do
+    call X(derivatives_oper)(this%gradt(idir), gr%f_der%der_discr, fout(:,1), f_out)
+
+    !v d |f>
+    ALLOCATE(grad(1:NP, 1), NP)
+    call X(derivatives_oper)(gr%f_der%der_discr%grad(idir), gr%f_der%der_discr, fin(:,1), grad(:,1))
+    fout(1:NP, 1) = vloc(1:NP) * grad(1:NP, 1)
+    do ipj = h%ep%atomproj(1, iatom), h%ep%atomproj(2, iatom)
+      call X(project_psi)(gr%m, h%ep%p(ipj), 1, grad, fout, 0, .false., ik=1)
+    end do
+    f_out(1:NP) = f_out(1:NP) + fout(1:NP, 1)
 
   end subroutine ionic
 
@@ -207,23 +230,69 @@ contains
 
   subroutine ionic
 
-    FLOAT,  allocatable :: g2v(:,:,:)
+    R_TYPE, allocatable :: fin(:, :)
+    R_TYPE, allocatable :: tmp1(:, :), tmp2(:,:)
+    FLOAT,  allocatable :: vloc(:)
     type(atom_t), pointer :: atm
+    integer :: ipj
+
     integer :: iatom, idir, jatom, jdir
 
     iatom = this%atom1
-    idir  = this%dir
+    idir = this%dir
     jatom = this%atom2
     jdir = this%dir2
     atm => geo%atom(iatom)
 
-    if( jatom /= iatom ) then 
+    if (iatom /= jatom) then 
       f_out(1:NP) = R_TOTYPE(M_ZERO)
-    else
-      ALLOCATE(g2v(NP, NDIM, NDIM), NP*NDIM**2)
-      call specie_get_g2local(atm%spec, gr, atm%x, g2v)
-      f_out(1:NP) = g2v(1:NP, idir, jdir) * f_in(1:NP)
+      return
     end if
+
+    ALLOCATE(fin(1:NP_PART, 1), NP_PART)
+    ALLOCATE(tmp1(1:NP_PART, 1), NP_PART)
+    ALLOCATE(tmp2(1:NP_PART, 1), NP_PART)
+    ALLOCATE(vloc(1:NP), NP)
+
+    vloc(1:NP) = M_ZERO
+    call build_local_part_in_real_space(h%ep, gr, geo, atm, vloc, CNST(0.0))
+
+    call lalg_copy(NP, f_in, fin(:, 1))    
+
+    !di^T dj^T v |f>
+    tmp1(1:NP, 1) = vloc(1:NP) * fin(1:NP, 1)
+    do ipj = h%ep%atomproj(1, iatom), h%ep%atomproj(2, iatom)
+      call X(project_psi)(gr%m, h%ep%p(ipj), 1, fin, tmp1, 0, .false., ik=1)
+    end do    
+    call X(derivatives_oper)(this%gradt(idir), gr%f_der%der_discr, tmp1(:,1), tmp2(:,1))
+    call X(derivatives_oper)(this%gradt(jdir), gr%f_der%der_discr, tmp2(:,1), f_out)
+
+    !di^T v dj |f>
+    call X(derivatives_oper)(gr%f_der%der_discr%grad(jdir), gr%f_der%der_discr, fin(:,1), tmp1(:,1))
+    tmp2(1:NP, 1) = vloc(1:NP) * tmp1(1:NP, 1)
+    do ipj = h%ep%atomproj(1, iatom), h%ep%atomproj(2, iatom)
+      call X(project_psi)(gr%m, h%ep%p(ipj), 1, tmp1, tmp2, 0, .false., ik=1)
+    end do    
+    call X(derivatives_oper)(this%gradt(idir), gr%f_der%der_discr, tmp2(:,1), tmp1(:,1))
+    f_out(1:NP) = f_out(1:NP) + tmp1(1:NP, 1)
+
+    !dj^T v di |f>
+    call X(derivatives_oper)(gr%f_der%der_discr%grad(idir), gr%f_der%der_discr, fin(:,1), tmp1(:,1))
+    tmp2(1:NP, 1) = vloc(1:NP) * tmp1(1:NP, 1)
+    do ipj = h%ep%atomproj(1, iatom), h%ep%atomproj(2, iatom)
+      call X(project_psi)(gr%m, h%ep%p(ipj), 1, tmp1, tmp2, 0, .false., ik=1)
+    end do    
+    call X(derivatives_oper)(this%gradt(jdir), gr%f_der%der_discr, tmp2(:,1), tmp1(:,1))
+    f_out(1:NP) = f_out(1:NP) + tmp1(1:NP, 1)
+
+    !v di dj |f>
+    call X(derivatives_oper)(gr%f_der%der_discr%grad(idir), gr%f_der%der_discr, fin(:,1), tmp1(:,1))
+    call X(derivatives_oper)(gr%f_der%der_discr%grad(jdir), gr%f_der%der_discr, tmp1(:,1), tmp2(:,1))
+    tmp1(1:NP, 1) = vloc(1:NP) * tmp2(1:NP, 1)
+    do ipj = h%ep%atomproj(1, iatom), h%ep%atomproj(2, iatom)
+      call X(project_psi)(gr%m, h%ep%p(ipj), 1, tmp2, tmp1, 0, .false., ik=1)
+    end do
+    f_out(1:NP) = f_out(1:NP) + tmp1(1:NP, 1)
 
   end subroutine ionic
 
@@ -239,7 +308,7 @@ subroutine X(pert_expectation_density) (this, gr, geo, h, st, psia, psib, densit
   R_TYPE,               pointer       :: psib(:, :, :, :)
   R_TYPE,               intent(out)   :: density(:)
   integer, optional,    intent(in)    :: pert_order
- 
+
   R_TYPE, allocatable :: tmp(:)
 
   integer :: ik, ist, idim, order

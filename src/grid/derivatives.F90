@@ -46,11 +46,13 @@ module derivatives_m
     derivatives_lapl_diag,  &
     dderivatives_laplt,     &
     dderivatives_grad,      &
+    dderivatives_oper,      &
     dderivatives_div,       &
     dderivatives_curl,      &
     zderivatives_lapl,      &
     zderivatives_laplt,     &
     zderivatives_grad,      &
+    zderivatives_oper,      &
     zderivatives_div,       &
     zderivatives_curl
 

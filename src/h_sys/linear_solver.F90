@@ -187,6 +187,9 @@ contains
   subroutine linear_solver_end(this)
     type(linear_solver_t), intent(inout) :: this
     this%solver = -1
+
+    call preconditioner_end(this%pre)
+
   end subroutine linear_solver_end
 
   integer function linear_solver_ops_per_iter(this) result(n)

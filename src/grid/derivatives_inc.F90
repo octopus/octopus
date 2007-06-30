@@ -109,6 +109,31 @@ subroutine X(derivatives_grad)(der, f, grad, ghost_update)
   call pop_sub()
 end subroutine X(derivatives_grad)
 
+! ---------------------------------------------------------
+subroutine X(derivatives_oper)(op, der, f, opf, ghost_update)
+  type(nl_operator_t), intent(in)    :: op
+  type(der_discr_t),   intent(in)    :: der
+  R_TYPE, target,      intent(inout) :: f(:)       ! f(m%np_part)
+  R_TYPE,              intent(out)   :: opf(:)     ! opf(m%np)
+  logical, optional,   intent(in)    :: ghost_update
+
+  integer :: i
+
+  call push_sub('derivatives_inc.Xderivatives_grad')
+  
+  ASSERT(ubound(f,   DIM=1) == der%m%np_part)
+  ASSERT(ubound(opf, DIM=1) >= der%m%np)
+
+  if(der%zero_bc) then
+    call X(zero_bc)(der%m, f)
+  end if
+
+  opf(:) = R_TOTYPE(M_ZERO)
+  call X(nl_operator_operate) (op, f, opf, ghost_update=ghost_update)
+
+  call pop_sub()
+end subroutine X(derivatives_oper)
+
 
 ! ---------------------------------------------------------
 subroutine X(derivatives_div)(der, f, div, ghost_update)
