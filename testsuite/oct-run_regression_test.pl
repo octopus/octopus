@@ -44,6 +44,11 @@ Usage: oct-run_regression_test.pl [options]
     -l        copy output log to current directory
     -m        run matches only (assumes there are work directories)
 
+Exit codes:
+    0         all tests passed
+    255       test skipped
+    1..254    number of test failures
+
 Report bugs to <appel\@physik.fu-berlin.de>.
 EndOfUsage
 
@@ -180,7 +185,7 @@ if( @executables == 0 ){
  print "$color_start{blue} ***** $test{\"name\"} ***** $color_end{blue} \n\n";
  print "$color_start{red}No valid executable$color_end{red} found for $opt_f\n";
  print "Skipping ... \n\n";
- exit 1;
+ exit 255;
 }
 
 
@@ -269,7 +274,7 @@ foreach my $octopus_exe (@executables){
 	     system("cd $workdir; $mpirun -np $np $octopus_exe_suffix > out 2>&1");
 	   } else {
 	     print "No mpirun found: Skipping parallel test \n";
-	     exit 1;
+	     exit 255;
 	   }
 	 } else {
 	   print "Executing: cd $workdir; $octopus_exe_suffix > out 2>&1 \n";
