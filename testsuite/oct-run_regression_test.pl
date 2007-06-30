@@ -94,6 +94,17 @@ EndOfTemplate
   exit 0;
 }
 
+# Check, if STDOUT is a terminal. If not, not ANSI sequences are
+# emitted.
+if(-t STDOUT) {
+    $color_start{blue}="\033[34m";
+    $color_end{blue}="\033[0m";
+    $color_start{red}="\033[31m";
+    $color_end{red}="\033[0m";
+    $color_start{green}="\033[32m";
+    $color_end{green}="\033[0m";
+}
+
 if (not @ARGV) { usage; }
 
 # Option -d is ignored for the moment.
@@ -137,6 +148,7 @@ chomp($mpirun);
 # default number of processors for MPI runs is 2
 $np = 2;
 
+
 # Figure out which are the executables to test
 open(TESTSUITE, "<".$opt_f ) or die "cannot open testsuite file\n";
 my @executables;
@@ -165,8 +177,8 @@ close(TESTSUITE);
 
 # Die if not suitable executable was found.
 if( @executables == 0 ){
- print "\033[34m ***** $test{\"name\"} ***** \033[0m \n\n";
- print "\033[31mNo valid executable\033[0m found for $opt_f\n";
+ print "$color_start{blue} ***** $test{\"name\"} ***** $color_end{blue} \n\n";
+ print "$color_start{red}No valid executable$color_end{red} found for $opt_f\n";
  print "Skipping ... \n\n";
  exit 1;
 }
@@ -206,7 +218,7 @@ foreach my $octopus_exe (@executables){
   if ( $_ =~ /^Test\s*:\s*(.*)\s*$/) {
    $test{"name"} = $1;
    if(!$opt_i) {
-    print "\033[34m ***** $test{\"name\"} ***** \033[0m \n\n";
+    print "$color_start{blue} ***** $test{\"name\"} ***** $color_end{blue} \n\n";
     print "Using workdir    : $workdir \n";
     print "Using executable : $octopus_exe\n";
     print "Using test file  : $opt_f \n";
@@ -221,7 +233,6 @@ foreach my $octopus_exe (@executables){
    $test{"enabled"} = $enabled;
   }
 
-
   # Running this regression test if it is enabled
   if ( $enabled eq "Yes" ) {
 
@@ -232,6 +243,7 @@ foreach my $octopus_exe (@executables){
    if ( $_ =~ /^Input\s*:\s*(.*)\s*$/) {
      $input_base = $1;
      $input_file = dirname($opt_f) . "/" . $input_base;
+
      if( -f $input_file ) {
        print "\n\nUsing input file : $input_file \n";
        system("cp $input_file $workdir/inp");
@@ -242,6 +254,7 @@ foreach my $octopus_exe (@executables){
      } else {
        die "could not find input file: $input_file\n";
      }
+
 
      if ( !$opt_m ) {
        if ( !$opt_n ) {
@@ -269,6 +282,7 @@ foreach my $octopus_exe (@executables){
        }
        $test{"run"} = 1;
      }
+
      # copy all files of this run to archive directory with the name of the
      # current input file
      mkdir "$workdir/$input_base";
@@ -314,10 +328,10 @@ foreach my $octopus_exe (@executables){
      close(SCRIPT);
 
      if ( $lineout =~ /$regexp/ ) {
-	 print "$name: \t [ \033[32m  OK  \033[0m ] \n";
+	 print "$name: \t [ $color_start{green}  OK  $color_end{green} ] \n";
          $test_succeded = 1;
      } else {
-	 print "$name: \t [ \033[31m FAIL \033[0m ] \n";
+	 print "$name: \t [ $color_start{red} $color_end{red} ] \n";
          $test_succeded = 0;
 	 $failures++;
      }
