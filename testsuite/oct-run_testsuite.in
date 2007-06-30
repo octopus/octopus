@@ -62,7 +62,7 @@ EOF
 
 # Dry run...
 function CMD {
-    [ "$dry_run" -o "$verbose" ] && echo -e "\033[32m$@\033[0m";
+    [ "$dry_run" -o "$verbose" ] && echo -e "$@";
     [ ! "$dry_run" ] && eval "$@";
 }
 
@@ -222,15 +222,15 @@ else
 
     # Failure reporting to STDOUT.
     passed_tests=$((total_tests-failed_tests))
-    echo -e "\033[32;1mPassed: $passed_tests / $total_tests\033[0m"
+    echo -e "Passed: $passed_tests / $total_tests"
     if [ $failed_tests -gt 0 ]; then
-	echo -e "\033[31;1mFailed: $failed_tests / $total_tests\033[0m"
+	echo -e "Failed: $failed_tests / $total_tests"
 	echo "    testfile                                          # failed testcases"
 	echo "    --------------------------------------------------------------------"
 	echo -e "$failure_report"
 	echo -e "\n"
     else
-	echo -e "\033[32;1m\nEverything seems to be OK\033[0m"
+	echo -e "\nEverything seems to be OK"
     fi
     echo -e "\n"
 
