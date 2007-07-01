@@ -74,11 +74,10 @@ module command_line_m
       integer :: i
       character(len=*) :: argstring
     end subroutine set_clarg
-    subroutine getopt_oscillator_strength(mode, omega, file1, file2, searchinterval, &
+    subroutine getopt_oscillator_strength(mode, omega, searchinterval, &
                                           order, nfrequencies, time, print_omega_file)
       integer :: mode
       real(8) :: omega
-      character(len=*) :: file1, file2
       real(8) :: searchinterval
       integer :: order, nfrequencies
       real(8) :: time

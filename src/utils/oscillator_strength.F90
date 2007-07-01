@@ -53,20 +53,11 @@ module oscillator_strength_m
       FLOAT :: x
       power = M_ZERO
 
-      select case(mode)
-      case(FIRST_ORDER_ONE_FILE, FIRST_ORDER_TWO_FILES)
         do j = 0, time_steps
           x = sin(omega*j*dt)
           power = power + x*ot(j)
         end do
-        power = - ( power*dt / (-kick%delta_strength) ) / (dt*time_steps)
-      case(SECOND_ORDER)
-        do j = 0, time_steps
-          x = cos(omega*j*dt)
-          power = power + x*ot(j)
-        end do
-        power =  - ( power*dt / (-kick%delta_strength**2) ) / (dt*time_steps)
-      end select
+        power = power*dt / (dt*time_steps)
 
     end subroutine ft
 
@@ -88,13 +79,10 @@ program oscillator_strength
 
   implicit none
 
-  integer :: in_file(3), i, lmax, ierr, nspin, order, nfrequencies, print_omega_file, run_mode
-  FLOAT :: omega, power, leftbound, rightbound, search_interval, &
-           total_time, dw, w, aw, min_aw, min_w, omega_orig, final_time
-  FLOAT, allocatable :: warray(:), tarray(:)
-  character(len=100) :: file1, file2
+  integer :: run_mode, order, nfrequencies, iprint_omega_file, nspin, ierr
+  FLOAT :: omega, search_interval, final_time
 
-  integer, parameter :: ANALYZE_SIGNAL           = 1, &
+  integer, parameter :: ANALYZE_NTHORDER_SIGNAL           = 1, &
                         GENERATE_NTHORDER_SIGNAL = 2
 
   ! Reads the information passed through the command line options (if available).
@@ -106,19 +94,17 @@ program oscillator_strength
   end if
 
   ! Set the default values
-  run_mode = ANALYZE_SIGNAL
-  file1 = "ot"
-  file2 = ""
+  run_mode = ANALYZE_NTHORDER_SIGNAL
   omega = - M_ONE
   search_interval = - M_ONE
   order = 1
   nfrequencies = 1000
   final_time = - M_ONE
-  print_omega_file = 0
+  iprint_omega_file = 0
 
   ! Get the parameters from the command line.
-  call getopt_oscillator_strength(run_mode, omega, file1, file2, search_interval, &
-                                  order, nfrequencies, final_time, print_omega_file)
+  call getopt_oscillator_strength(run_mode, omega, search_interval, &
+                                  order, nfrequencies, final_time, iprint_omega_file)
 
   ! Initialize stuff
   call global_init()
@@ -129,63 +115,82 @@ program oscillator_strength
      call io_mkdir('debug')
   end if
 
-
   select case(run_mode)
   case(GENERATE_NTHORDER_SIGNAL)
     call generate_signal(order)
-    stop
-  case(ANALYZE_SIGNAL)
+  case(ANALYZE_NTHORDER_SIGNAL)
+    call analyze_signal(order, omega, search_interval, final_time, nfrequencies, iprint_omega_file)
   case default
   end select
 
+  call io_end()
+  call datasets_end()
+  call global_end()
+end program oscillator_strength
 
-  if(trim(file2).ne."") then
-    if(order.eq.1) then
-      mode = FIRST_ORDER_TWO_FILES
-    else
-      mode = SECOND_ORDER
-    end if
-  elseif(order.eq.2) then
-    message(1) = 'In order to get the second order response, the program needs two files.'
-    call write_fatal(1)
-  end if
 
-  if(trim(file1).eq.'ot') then
-    call read_ot()
-  else
-    call read_multipoles()
-  end if
+! ---------------------------------------------------------
+subroutine analyze_signal(order, omega, search_interval, final_time, nfrequencies, iprint_omega_file)
+  use global_m
+  use messages_m
+  use datasets_m
+  use lib_oct_m
+  use lib_oct_parser_m
+  use io_m
+  use units_m
+  use spectrum_m
+  use lib_adv_alg_m
+  use oscillator_strength_m
 
+  implicit none
+
+  integer, intent(in)    :: order
+  FLOAT,   intent(inout) :: omega
+  FLOAT,   intent(inout) :: search_interval
+  FLOAT,   intent(inout) :: final_time
+  integer, intent(inout) :: nfrequencies
+  integer, intent(inout) :: iprint_omega_file
+
+  FLOAT :: total_time, leftbound, rightbound, dw, min_w, min_aw, w, aw, omega_orig, power
+  FLOAT, allocatable :: warray(:), tarray(:)
+  integer :: nspin, i, ierr
+  type(unit_system_t) :: units
+
+  call read_ot(nspin, units)
 
   if(omega > M_ZERO) then
-    omega = omega * units_inp%energy%factor
+    omega = omega * units%energy%factor
   else
     omega = M_HALF
   end if
+
   if(search_interval > M_ZERO) then
-    search_interval = search_interval * units_inp%energy%factor
+    search_interval = search_interval * units%energy%factor
   else
     search_interval = M_HALF
   end if
+
   if(final_time > M_ZERO) then
-    total_time = final_time * units_inp%time%factor
+    total_time = final_time * units%time%factor
     if(total_time > dt*time_steps) then
       total_time = dt*time_steps
       write(0, '(a)')        '* WARNING: The reqeusted total time to process is larger than the time'
       write(0, '(a)')        '*          available in the input file.'
-      write(0, '(a,f8.4,a)') '           The time has been adjusted to ', total_time / units_inp%time%factor, &
-                           units_inp%time%abbrev
+      write(0, '(a,f8.4,a)') '           The time has been adjusted to ', total_time / units%time%factor, &
+                           units%time%abbrev
     end if
     time_steps = int(total_time / dt)
     total_time = time_steps * dt
   else
     total_time = dt*time_steps
   end if
+
   leftbound = omega - search_interval
   rightbound = omega + search_interval
 
   ALLOCATE(warray(nfrequencies), nfrequencies)
   ALLOCATE(tarray(nfrequencies), nfrequencies)
+  warray = M_ZERO; tarray = M_ZERO
   dw = (rightbound-leftbound) / (nfrequencies - 1)
   min_w = omega
   min_aw = M_ZERO
@@ -200,7 +205,7 @@ program oscillator_strength
     end if
   end do
 
-  if(print_omega_file .eq. 1) call print_file()
+  if(iprint_omega_file .eq. 1) call print_omega_file(units, nspin, nfrequencies, warray, tarray)
 
   omega_orig = omega
   omega = min_w
@@ -208,10 +213,10 @@ program oscillator_strength
   if(ierr.ne.0) then
     write(0,'(a)') 'Could not find a maximum.'
     write(0,'(a)')
-    write(0, '(a,f12.8,a,f12.8,a)') '   Search interval = [', leftbound / units_inp%energy%factor, ',', &
-                                                              rightbound / units_inp%energy%factor, ']'
-    write(0, '(a,f12.4,a)')         '   Search discretization = ', dw / units_inp%energy%factor, &
-                                    ' '//trim(units_inp%energy%abbrev)
+    write(0, '(a,f12.8,a,f12.8,a)') '   Search interval = [', leftbound / units%energy%factor, ',', &
+                                                              rightbound / units%energy%factor, ']'
+    write(0, '(a,f12.4,a)')         '   Search discretization = ', dw / units%energy%factor, &
+                                    ' '//trim(units%energy%abbrev)
     stop
   end if
 
@@ -219,215 +224,43 @@ program oscillator_strength
   power = -power
   power = power / (M_ONE - sin(M_TWO*omega*total_time)/(M_TWO*omega*total_time))
 
-!!$  call write_ot()
-  call write_ot(nspin, time_steps, dt, kick, units_inp, ot)
-
   select case(order)
   case(1)
-    write(*, '(a,f12.8,a,f12.8,a)') 'omega    = ', omega / units_inp%energy%factor, &
-                                    ' '//trim(units_inp%energy%abbrev)//' = ',      &
+    write(*, '(a,f12.8,a,f12.8,a)') 'omega    = ', omega / units%energy%factor, &
+                                    ' '//trim(units%energy%abbrev)//' = ',      &
                                     omega, ' Ha'
-    write(*, '(a,f12.8,a,f12.8,a)') 'C(omega) = ', power / units_inp%length%factor**2, &
-                                    ' '//trim(units_inp%length%abbrev)//'^2 =',        &
+    write(*, '(a,f12.8,a,f12.8,a)') 'C(omega) = ', power / units%length%factor**2, &
+                                    ' '//trim(units%length%abbrev)//'^2 =',        &
                                     power, ' b^2'
-    write(*, '(a,f12.8,a,f12.8,a)') '<0|P|I>  = ', sqrt(abs(power)) / units_inp%length%factor, &
-                                    ' '//trim(units_inp%length%abbrev)//' = ',                 &
+    write(*, '(a,f12.8,a,f12.8,a)') '<0|P|I>  = ', sqrt(abs(power)) / units%length%factor, &
+                                    ' '//trim(units%length%abbrev)//' = ',                 &
                                     sqrt(abs(power)),' b'
     write(*, '(a,f12.8)')           'f[O->I]  = ', M_TWO*omega*power
     write(*, '(a)')
-    write(*, '(a,f12.8,a,f12.8,a)') '   Search interval = [', leftbound / units_inp%energy%factor, ',', &
-                                                              rightbound / units_inp%energy%factor, ']'
-    write(*, '(a,f12.4,a)')         '   Search discretization = ', dw / units_inp%energy%factor, &
-                                    ' '//trim(units_inp%energy%abbrev)
+    write(*, '(a,f12.8,a,f12.8,a)') '   Search interval = [', leftbound / units%energy%factor, ',', &
+                                                              rightbound / units%energy%factor, ']'
+    write(*, '(a,f12.4,a)')         '   Search discretization = ', dw / units%energy%factor, &
+                                    ' '//trim(units%energy%abbrev)
   case(2)
-    write(*, '(a,f12.8,a,f12.8,a)') 'omega    = ', omega / units_inp%energy%factor, &
-                                    ' '//trim(units_inp%energy%abbrev)//' = ',      &
+    write(*, '(a,f12.8,a,f12.8,a)') 'omega    = ', omega / units%energy%factor, &
+                                    ' '//trim(units%energy%abbrev)//' = ',      &
                                     omega, ' Ha'
-    write(*, '(a,f12.8,a,f12.8,a)') 'C(omega) = ', power / units_inp%length%factor**3, &
-                                    ' '//trim(units_inp%length%abbrev)//'^3 = ',       &
+    write(*, '(a,f12.8,a,f12.8,a)') 'C(omega) = ', power / units%length%factor**3, &
+                                    ' '//trim(units%length%abbrev)//'^3 = ',       &
                                     power, ' b^3'
     write(*, '(a)')
-    write(*, '(a,f12.8,a,f12.8,a)') '   Search interval = [', leftbound / units_inp%energy%factor, ',', &
-                                                              rightbound / units_inp%energy%factor, ']'
+    write(*, '(a,f12.8,a,f12.8,a)') '   Search interval = [', leftbound / units%energy%factor, ',', &
+                                                              rightbound / units%energy%factor, ']'
   end select
 
+  call modify_ot(nspin, time_steps, dt, kick, units, ot, omega, sqrt(abs(power)))
+
   deallocate(ot)
-  call io_end()
-  call datasets_end()
-  call global_end()
 
-  contains
+end subroutine analyze_signal
 
 
-    ! ---------------------------------------------------------
-    subroutine read_multipoles
-      FLOAT :: dump
-      integer :: j, isp
-      FLOAT, allocatable :: dipole(:, :, :)
-
-      in_file(1) = io_open(trim(file1), action='read', status='old', die=.false.)
-      if(in_file(1) >= 0) then
-        call spectrum_mult_info(in_file(1), nspin, kick, time_steps, dt, units_inp, lmax=lmax)
-        ! This should not be like this.
-        call units_get(units_out, 'eVA')
-      else
-        write(message(1),'(a)') 'File '//trim(file1)//' not found.'
-        call write_fatal(1)
-      end if
-
-      if( (mode.eq.FIRST_ORDER_TWO_FILES) .or. (mode.eq.SECOND_ORDER) ) then
-        in_file(2) = io_open(trim(file2), action='read', status='old', die=.false.)
-        if(in_file(2) >= 0) then
-        else
-          write(message(1),'(a)') 'File '//trim(file2)//' not found.'
-          call write_fatal(1)
-        end if
-      end if
-
-      ! Read the dipole.
-      ALLOCATE(dipole(3, 0:time_steps, nspin), 3*(time_steps+1)*nspin)
-      ALLOCATE(ot(0:time_steps), time_steps+1)
-
-      call io_skip_header(in_file(1))
-      do i = 0, time_steps
-        select case(nspin)
-        case(1)
-          read(in_file(1), *) j, dump, dump, dipole(1:3, i, 1)
-        case(2)
-          read(in_file(1), *) j, dump, dump, dipole(1:3, i, 1), dump, dipole(1:3, i, 2)
-        case(4)
-          read(in_file(1), *) j, dump, dump, dipole(1:3, i, 1), dump, dipole(1:3, i, 2), &
-            dump, dipole(1:3, i, 3), dump, dipole(1:3, i, 4)
-        end select
-  
-        dipole(1:3, i, :) = dipole(1:3, i, :) * units_inp%length%factor
-      end do
-      ! Now substract the initial dipole.
-      do i = time_steps, 0, -1
-        dipole(:, i, :) = dipole(:, i, :) - dipole(:, 0, :)
-      end do
-      do i = 0, time_steps
-        ot(i) = M_ZERO
-        do isp = 1, nspin
-          ot(i) = ot(i) + sum(dipole(1:3, i, isp) * kick%pol(1:3,kick%pol_dir))
-        end do
-      end do
-
-      if( (mode.eq.FIRST_ORDER_TWO_FILES) .or. (mode.eq.SECOND_ORDER) ) then
-        call io_skip_header(in_file(2))
-        do i = 0, time_steps
-          select case(nspin)
-          case(1)
-            read(in_file(2), *) j, dump, dump, dipole(1:3, i, 1)
-          case(2)
-            read(in_file(2), *) j, dump, dump, dipole(1:3, i, 1), dump, dipole(1:3, i, 2)
-          case(4)
-            read(in_file(2), *) j, dump, dump, dipole(1:3, i, 1), dump, dipole(1:3, i, 2), &
-              dump, dipole(1:3, i, 3), dump, dipole(1:3, i, 4)
-          end select
-    
-          dipole(1:3, i, :) = dipole(1:3, i, :) * units_inp%length%factor
-        end do
-        ! Now substract the initial dipole.
-        do i = time_steps, 0, -1
-          dipole(:, i, :) = dipole(:, i, :) - dipole(:, 0, :)
-        end do
-        do i = 0, time_steps
-          do isp = 1, nspin
-            if(mode.eq.FIRST_ORDER_TWO_FILES) then
-              ot(i) = ot(i) - sum(dipole(1:3, i, isp) * kick%pol(1:3,kick%pol_dir))
-            else
-              ot(i) = ot(i) + sum(dipole(1:3, i, isp) * kick%pol(1:3,kick%pol_dir))
-            end if
-          end do
-        end do
-        ot = M_HALF*ot
-
-      end if
-
-      deallocate(dipole)
-    end subroutine read_multipoles
-
-
-    ! ---------------------------------------------------------
-    subroutine read_ot
-      integer :: iunit, i
-      character(len=100) :: line
-      FLOAT :: dummy, t1, t2
-
-      iunit = io_open('ot', action='read', status='old')
-      if(iunit .eq. 0) then
-        write(message(1),'(a)') 'A file called ot should be present and was not found.'
-        call write_fatal(1)
-      end if
-
-      read(iunit, '(15x,i2)') nspin
-      call kick_read(kick, iunit)
-      read(iunit, '(a)')  line
-      read(iunit, '(a)')  line
-      call io_skip_header(iunit)
-
-      ! Figure out about the units of the file
-      i = index(line,'eV')
-      if(i.ne.0) then
-        call units_get(units_inp, 'eVA')
-      else
-        call units_get(units_inp, 'a.u')
-      end if
-      ! This should not be like this.
-      call units_get(units_out, 'eVA')
-
-      ! count number of time_steps
-      time_steps = 0
-      do
-        read(iunit, *, end=100) dummy
-        time_steps = time_steps + 1
-        if(time_steps == 1) t1 = dummy
-        if(time_steps == 2) t2 = dummy
-      end do
-      100 continue
-      dt = (t2 - t1) * units_inp%time%factor ! units_out is OK
-
-      call io_skip_header(iunit)
-
-      ALLOCATE(ot(0:time_steps), time_steps+1)
-
-      do i = 0, time_steps-1
-        read(iunit, *) dummy, ot(i)
-        ot(i) = ot(i) * units_inp%length%factor
-      end do
-
-    end subroutine read_ot
-
-
-    ! ---------------------------------------------------------
-    subroutine print_file
-      integer :: iunit, i
-      character(len=20) :: header_string
-
-      iunit = io_open('omega', action='write', status='replace')
-
-      write(iunit, '(a15,i2)')      '# nspin        ', nspin
-      call kick_write(kick, iunit)
-      write(iunit, '(a)') '#%'
-      write(iunit, '(a1,a20)', advance = 'no') '#', str_center("omega", 20)
-      write(header_string,'(a)') 'F(omega)'
-      write(iunit, '(a20)', advance = 'yes') str_center(trim(header_string), 20)
-      write(iunit, '(a1,a20)', advance = 'no') '#', str_center('['//trim(units_inp%energy%abbrev) // ']', 20)
-      ! Here we should print the units of the transform.
-      write(iunit, '(a)', advance = 'yes')
-
-      do i = 1, nfrequencies
-        write(iunit,'(2e20.8)') warray(i) / units_inp%energy%factor, &
-                                tarray(i)
-      end do
-
-      call io_close(iunit)
-    end subroutine print_file
-
-end program oscillator_strength
-
-
+! ---------------------------------------------------------
 subroutine generate_signal(order)
   use global_m
   use messages_m
@@ -490,8 +323,8 @@ subroutine generate_signal(order)
 
   ! Get the basic info from the first file
   call spectrum_mult_info(iunit(1), nspin, kick, time_steps, dt, units, lmax=lmax)
-  lambda = kick%delta_strength
-  q(1) = 1.0_8
+  lambda = abs(kick%delta_strength)
+  q(1) = kick%delta_strength / lambda
 
   do j = 2, nfiles
     call spectrum_mult_info(iunit(j), nspin, kick, time_steps, dt, units, lmax=lmax)
@@ -539,6 +372,8 @@ subroutine generate_signal(order)
 
   end do
 
+  ot = ot / lambda**order
+
   call write_ot(nspin, time_steps, dt, kick, units, ot(0:time_steps))
 
   ! Close files and exit.
@@ -547,6 +382,54 @@ subroutine generate_signal(order)
   end do
   deallocate(iunit, q, mu, qq, c, ot, multipole)
 end subroutine generate_signal
+
+
+! ---------------------------------------------------------
+subroutine modify_ot(nspin, time_steps, dt, kick, units, ot, omega, cij)
+  use global_m
+  use io_m
+  use units_m
+  use spectrum_m
+  use string_m
+
+  implicit none
+
+  integer,             intent(in) :: nspin, time_steps
+  FLOAT,               intent(in) :: dt
+  type(kick_t),        intent(in) :: kick
+  type(unit_system_t), intent(in) :: units
+  FLOAT,               intent(in) :: ot(0:time_steps)
+  FLOAT,               intent(in) :: omega
+  FLOAT,               intent(in) :: cij
+
+  integer :: iunit, i
+  character(len=20) :: header_string
+  FLOAT :: modot
+
+  iunit = io_open('ot.mod', action='write', status='replace')
+
+  write(iunit, '(a15,i2)')      '# nspin        ', nspin
+  call kick_write(kick, iunit)
+
+  ! Units
+  write(iunit,'(a1)', advance = 'no') '#'
+  write(iunit,'(a20)', advance = 'no') str_center('t', 19)
+  write(iunit,'(a20)', advance = 'yes') str_center('<O>(t)', 20)
+  write(iunit,'(a1)', advance = 'no') '#'
+  write(header_string, '(a)') '['//trim(units%time%abbrev)//']'
+  write(iunit,'(a20)', advance = 'no')  str_center(trim(header_string), 19)
+  write(header_string, '(a)') '['//trim(units%length%abbrev)//']'
+  write(iunit,'(a20)', advance = 'yes')  str_center(trim(header_string), 20)
+
+  write(0, *) 'A', omega, (abs(cij)**2), kick%delta_strength
+
+  do i = 0, time_steps
+    modot = ot(i) + M_TWO * abs(cij)**2 * sin(omega*i*dt)
+    write(iunit, '(3e20.8)') i*dt / units%time%factor, modot / units%length%factor, ot(i) / units%length%factor
+  end do
+
+  call io_close(iunit)
+end subroutine modify_ot
 
 
 ! ---------------------------------------------------------
@@ -588,8 +471,112 @@ subroutine write_ot(nspin, time_steps, dt, kick, units, ot)
   end do
 
   call io_close(iunit)
-
 end subroutine write_ot
+
+
+! ---------------------------------------------------------
+subroutine read_ot(nspin, units)!, ot)
+  use global_m
+  use io_m
+  use messages_m
+  use datasets_m
+  use units_m
+  use spectrum_m
+  use string_m
+  use oscillator_strength_m
+
+  implicit none
+
+  integer, intent(out) :: nspin
+
+  type(unit_system_t), intent(inout) :: units
+
+  integer :: iunit, i
+  character(len=100) :: line
+  FLOAT :: dummy, t1, t2
+
+  iunit = io_open('ot', action='read', status='old')
+  if(iunit .eq. 0) then
+    write(message(1),'(a)') 'A file called ot should be present and was not found.'
+    call write_fatal(1)
+  end if
+
+  read(iunit, '(15x,i2)') nspin
+  call kick_read(kick, iunit)
+  read(iunit, '(a)')  line
+  read(iunit, '(a)')  line
+  call io_skip_header(iunit)
+
+  ! Figure out about the units of the file
+  i = index(line,'eV')
+  call units_get(units, 'eVA')
+
+  ! count number of time_steps
+  time_steps = 0
+  do
+    read(iunit, *, end=100) dummy
+    time_steps = time_steps + 1
+    if(time_steps == 1) t1 = dummy
+    if(time_steps == 2) t2 = dummy
+  end do
+  100 continue
+  dt = (t2 - t1) * units%time%factor ! units_out is OK
+
+  call io_skip_header(iunit)
+
+  ALLOCATE(ot(0:time_steps), time_steps+1)
+
+  do i = 0, time_steps-1
+    read(iunit, *) dummy, ot(i)
+    ot(i) = ot(i) * units%length%factor
+  end do
+
+end subroutine read_ot
+
+
+! ---------------------------------------------------------
+subroutine print_omega_file(units, nspin, nfrequencies, warray, tarray)
+  use global_m
+  use messages_m
+  use datasets_m
+  use lib_oct_m
+  use lib_oct_parser_m
+  use io_m
+  use units_m
+  use spectrum_m
+  use lib_adv_alg_m
+  use oscillator_strength_m
+
+  implicit none
+
+  type(unit_system_t), intent(in) :: units
+  integer, intent(in)             :: nspin
+  integer, intent(in)             :: nfrequencies
+  FLOAT, intent(in)               :: warray(nfrequencies), tarray(nfrequencies)
+
+  integer :: iunit, i
+  character(len=20) :: header_string
+
+  iunit = io_open('omega', action='write', status='replace')
+
+  write(iunit, '(a15,i2)')      '# nspin        ', nspin
+  call kick_write(kick, iunit)
+  write(iunit, '(a)') '#%'
+  write(iunit, '(a1,a20)', advance = 'no') '#', str_center("omega", 20)
+  write(header_string,'(a)') 'F(omega)'
+  write(iunit, '(a20)', advance = 'yes') str_center(trim(header_string), 20)
+  write(iunit, '(a1,a20)', advance = 'no') '#', str_center('['//trim(units%energy%abbrev) // ']', 20)
+  ! Here we should print the units of the transform.
+  write(iunit, '(a)', advance = 'yes')
+
+  write(0, *) size(warray), size(tarray)
+  do i = 1, nfrequencies
+    write(iunit,'(2e20.8)') warray(i) / units%energy%factor, &
+                            tarray(i)
+  end do
+
+  call io_close(iunit)
+end subroutine print_omega_file
 
 
 !! Local Variables:

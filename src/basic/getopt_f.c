@@ -46,9 +46,6 @@ void oscillator_strength_help(){
   printf("Options:\n");
   printf("  -h              Print this help and exits.\n");
   printf("  -m <mode>       Select the run mode: .\n");
-  printf("  -f <file>       Name of the 'multipoles' file to process.\n");
-  printf("  -g <file>       Name of the second 'multipoles' file to be processed,\n");
-  printf("                    if applicable.\n");
   printf("  -s <dw>         Limits of the search interval: [w-dw,w+dw]\n");
   printf("  -n <N>          Number of frequencies in which the search interval\n");
   printf("                    is discretized (default 1000)\n");
@@ -70,9 +67,8 @@ void oscillator_strength_help(){
 /* FUNCTIONS TO BE USED BY THE PROGRAM oct-oscillator-strength */
 
 void FC_FUNC_(getopt_oscillator_strength, GETOPT_OSCILLATOR_STRENGTH)
-  (int *mode, double *omega, STR_F_TYPE filename, STR_F_TYPE filename2, 
-   double *searchinterval, int *order, int *nfrequencies, double *time, 
-   int *print_omega_file STR_ARG2)
+  (int *mode, double *omega, double *searchinterval, int *order, 
+   int *nfrequencies, double *time, int *print_omega_file)
 {
   int c;
 
@@ -81,7 +77,7 @@ void FC_FUNC_(getopt_oscillator_strength, GETOPT_OSCILLATOR_STRENGTH)
      if(argc==1) oscillator_strength_help(); */
 
   while (1) {
-    c = getopt(argc, argv, "hm:f:g:s:o:n:t:p");
+    c = getopt(argc, argv, "hm:s:o:n:t:p");
     if (c == -1) break;
     switch (c) {
 
@@ -91,14 +87,6 @@ void FC_FUNC_(getopt_oscillator_strength, GETOPT_OSCILLATOR_STRENGTH)
 
     case 'm':
       *mode = (int)atoi(optarg);
-      break;
-
-    case 'f':
-      TO_F_STR1(optarg, filename);
-      break;
-
-    case 'g':
-      TO_F_STR1(optarg, filename2);
       break;
 
     case 's':
