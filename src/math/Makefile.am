@@ -22,7 +22,7 @@
 noinst_LIBRARIES = libmath.a
 
 libmath_a_SOURCES = \
-	blas.F90 linalg_basic.F90 linalg_adv.F90 gauss_legendre.F90 math.F90 \
+	blas.F90 dablas.c linalg_basic.F90 linalg_adv.F90 gauss_legendre.F90 math.F90 \
 	ode_solver.F90 root_solver.F90 spline.F90 sparskit.F90 fft.F90
 
 noinst_HEADERS = \
