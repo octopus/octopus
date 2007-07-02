@@ -47,6 +47,7 @@ void oscillator_strength_help(){
   printf("  -h              Print this help and exits.\n");
   printf("  -m <mode>       Select the run mode: .\n");
   printf("  -s <dw>         Limits of the search interval: [w-dw,w+dw]\n");
+  printf("  -r <r>          Number of resonances to search for.\n");
   printf("  -n <N>          Number of frequencies in which the search interval\n");
   printf("                    is discretized (default 1000)\n");
   printf("  -o <o>          Process, or generate, the o-th order response.\n");
@@ -68,7 +69,8 @@ void oscillator_strength_help(){
 
 void FC_FUNC_(getopt_oscillator_strength, GETOPT_OSCILLATOR_STRENGTH)
   (int *mode, double *omega, double *searchinterval, int *order, 
-   int *nfrequencies, double *time, int *print_omega_file)
+   int *nresonances, int *nfrequencies, double *time, int *print_omega_file, 
+   STR_F_TYPE ffile STR_ARG1)
 {
   int c;
 
@@ -77,7 +79,7 @@ void FC_FUNC_(getopt_oscillator_strength, GETOPT_OSCILLATOR_STRENGTH)
      if(argc==1) oscillator_strength_help(); */
 
   while (1) {
-    c = getopt(argc, argv, "hm:s:o:n:t:p");
+    c = getopt(argc, argv, "hm:s:o:r:n:t:pf:");
     if (c == -1) break;
     switch (c) {
 
@@ -97,6 +99,10 @@ void FC_FUNC_(getopt_oscillator_strength, GETOPT_OSCILLATOR_STRENGTH)
       *order = (int)atoi(optarg);
       break;
 
+    case 'r':
+      *nresonances = (int)atoi(optarg);
+      break;
+
     case 'n':
       *nfrequencies = (int)atoi(optarg);
       break;
@@ -107,6 +113,10 @@ void FC_FUNC_(getopt_oscillator_strength, GETOPT_OSCILLATOR_STRENGTH)
 
     case 'p':
       *print_omega_file = 1;
+      break;
+
+    case 'f':
+      TO_F_STR1(optarg, ffile);
       break;
 
     case '?':
