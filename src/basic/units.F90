@@ -42,6 +42,7 @@ module units_m
   use global_m
   use lib_oct_parser_m
   use messages_m
+  use io_m
 
   implicit none
 
@@ -52,7 +53,8 @@ module units_m
     units_init,       &
     units_get,        &
     units_inp,        &
-    units_out
+    units_out,        &
+    units_from_file
 
   type unit_t
     FLOAT :: factor
@@ -74,6 +76,7 @@ module units_m
 
 
 contains
+
 
   ! ---------------------------------------------------------
   subroutine units_init()
@@ -222,6 +225,49 @@ contains
     u%acceleration%name   = "Angstrom times (electron volt over h bar) squared"
     u%acceleration%factor = u%length%factor/u%time%factor**2
   end subroutine units_eV_Ang
+
+
+  ! ---------------------------------------------------------
+  ! This is a very primitive procedure that attempts to find out
+  ! which units were used to write one octopus file, be it a
+  ! "multipoles", a "cross_section_tensor", etc. 
+  ! TODO: although it seems to work in most cases, it is obviously
+  ! a very weak code.
+  ! ---------------------------------------------------------
+  subroutine units_from_file(u, fname, ierr)
+    type(unit_system_t), intent(inout) :: u
+    character(len=*),    intent(in)    :: fname
+    integer,             intent(inout) :: ierr
+
+    integer            :: iunit, ios, i
+    character(len=256) :: line
+
+    call push_sub('units.units_from_file')
+
+    iunit = io_open(file = trim(fname), action = 'read', status = 'old', die = .false.)
+    if(iunit < 0) then
+      ierr = -2
+      call pop_sub(); return
+    end if
+
+    ierr = 0
+    do
+      read(iunit, '(a)', iostat = ios) line
+      if(ios.ne.0) exit
+      if(index(line,'[A]').ne.0  .or.  index(line,'eV').ne.0) then
+        call units_get(u, 'eVA')
+        call pop_sub(); return
+      elseif(index(line,'[b]').ne.0) then
+        call units_get(u, 'a.u')
+        call pop_sub(); return
+      end if
+    end do
+
+    ierr = -1
+
+    call pop_sub()
+  end subroutine units_from_file
+
 
 end module units_m
 

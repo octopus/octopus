@@ -76,7 +76,7 @@ module command_line_m
     end subroutine set_clarg
     subroutine getopt_oscillator_strength(mode, omega, searchinterval, &
                                           order, nresonances, nfrequencies, time, &
-                                          print_omega_file, file)
+                                          file)
       integer :: mode
       real(8) :: omega
       real(8) :: searchinterval

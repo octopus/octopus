@@ -36,12 +36,13 @@ module oscillator_strength_m
   integer, parameter :: SINE_TRANSFORM   = 1, &
                         COSINE_TRANSFORM = 2
 
-  FLOAT, allocatable :: ot(:)
-  type(kick_t)       :: kick
-  integer            :: time_steps
-  FLOAT              :: total_time
-  integer            :: mode
-  FLOAT              :: dt
+  type(unit_system_t) :: units
+  FLOAT, allocatable  :: ot(:)
+  type(kick_t)        :: kick
+  integer             :: time_steps
+  FLOAT               :: total_time
+  integer             :: mode
+  FLOAT               :: dt
 
   contains
 
@@ -92,11 +93,12 @@ program oscillator_strength
 
   implicit none
 
-  integer :: run_mode, order, nfrequencies, iprint_omega_file, nspin, ierr, nresonances
+  integer :: run_mode, order, nfrequencies, nspin, ierr, nresonances
   FLOAT :: omega, search_interval, final_time
   integer, parameter :: ANALYZE_NTHORDER_SIGNAL           = 1, &
                         GENERATE_NTHORDER_SIGNAL          = 2, &
-                        READ_RESONANCES_FROM_FILE         = 3
+                        READ_RESONANCES_FROM_FILE         = 3, &
+                        GENERATE_OMEGA_FILE               = 4
   character(len=100) :: ffile
 
   ! Reads the information passed through the command line options (if available).
@@ -108,20 +110,19 @@ program oscillator_strength
   end if
 
   ! Set the default values
-  run_mode = ANALYZE_NTHORDER_SIGNAL
-  omega = - M_ONE
+  run_mode        = ANALYZE_NTHORDER_SIGNAL
+  omega           = - M_ONE
   search_interval = - M_ONE
-  order = 1
-  nfrequencies = 1000
-  final_time = - M_ONE
-  iprint_omega_file = 0
-  nresonances = 1
-  ffile = ""
+  order           = 1
+  nfrequencies    = 1000
+  final_time      = - M_ONE
+  nresonances     = 1
+  ffile           = ""
 
   ! Get the parameters from the command line.
   call getopt_oscillator_strength(run_mode, omega, search_interval,             &
                                   order, nresonances, nfrequencies, final_time, &
-                                  iprint_omega_file, ffile)
+                                  ffile)
 
   ! Initialize stuff
   call global_init()
@@ -136,9 +137,11 @@ program oscillator_strength
   case(GENERATE_NTHORDER_SIGNAL)
     call generate_signal(order)
   case(ANALYZE_NTHORDER_SIGNAL)
-    call analyze_signal(order, omega, search_interval, final_time, nresonances, nfrequencies, iprint_omega_file)
+    call analyze_signal(order, omega, search_interval, final_time, nresonances, nfrequencies)
   case(READ_RESONANCES_FROM_FILE)
-    call read_resonances_file(order)
+    call read_resonances_file(order, ffile, search_interval, final_time, nfrequencies)
+  case(GENERATE_OMEGA_FILE)
+    call print_omega_file(omega, search_interval, final_time, nfrequencies)
   case default
   end select
 
@@ -146,10 +149,11 @@ program oscillator_strength
   call datasets_end()
   call global_end()
 end program oscillator_strength
+! ---------------------------------------------------------
 
 
 ! ---------------------------------------------------------
-subroutine read_resonances_file(order, ffile)
+subroutine read_resonances_file(order, ffile, search_interval, final_time, nfrequencies)
   use global_m
   use messages_m
   use datasets_m
@@ -165,9 +169,13 @@ subroutine read_resonances_file(order, ffile)
 
   integer, intent(inout)       :: order
   character(len=*), intent(in) :: ffile
+  FLOAT,   intent(inout)       :: search_interval
+  FLOAT,   intent(in)          :: final_time
+  integer, intent(in)          :: nfrequencies
 
-  FLOAT :: dummy
-  integer :: iunit, nresonances, ios, i, j, k
+  FLOAT :: dummy, leftbound, rightbound, w, power, dw
+  integer :: iunit, nresonances, ios, i, j, k, npairs, nspin, order_in_file, nw_substracted, ierr
+  logical :: file_exists
   FLOAT, allocatable :: wij(:), omega(:), cij(:)
 
   if(order.ne.2) then
@@ -175,6 +183,22 @@ subroutine read_resonances_file(order, ffile)
     write(message(2),'(a)') 'second order response.'
     call write_fatal(2)
   end if
+
+  ! First, let us check that the file "ot" exists.
+  inquire(file="ot", exist  = file_exists)
+  if(.not.file_exists) then
+    write(message(1),'(a)') "Could not find 'ot' file."
+    call write_fatal(1)
+  end if
+
+  ! Now, we should find out which units the file "ot" has.
+  call units_from_file(units, "ot", ierr)
+  if(ierr.ne.0) then
+    write(message(1),'(a)') "Could not retrieve units in the 'ot' file."
+    call write_fatal(1)
+  end if
+
+  mode = COSINE_TRANSFORM
 
   iunit = io_open(trim(ffile), action='read', status='old', die=.false.)
   if(iunit.eq.0) then
@@ -191,9 +215,11 @@ subroutine read_resonances_file(order, ffile)
     nresonances = nresonances + 1
   end do
 
+  npairs = (nresonances*(nresonances-1))/2
+
   ALLOCATE(omega(nresonances), nresonances)
   ALLOCATE(cij(nresonances), nresonances)
-  ALLOCATE(wij((nresonances*(nresonances+1))/2), (nresonances*(nresonances+1))/2)
+  ALLOCATE(wij(npairs), npairs)
 
   call io_skip_header(iunit)
   do i = 1, nresonances
@@ -207,16 +233,60 @@ subroutine read_resonances_file(order, ffile)
       k = k + 1
     end do
   end do
- 
-  
 
+  if(search_interval > M_ZERO) then
+    search_interval = search_interval * units%energy%factor
+  else
+    search_interval = M_HALF
+  end if
+
+  call read_ot(nspin, order_in_file, nw_substracted)
+
+  if(order_in_file.ne.order) then
+    write(message(1), '(a)') 'Internal error in analyze_signal'
+    call write_fatal(1)
+  end if
+
+  if(final_time > M_ZERO) then
+    total_time = final_time * units%time%factor
+    if(total_time > dt*time_steps) then
+      total_time = dt*time_steps
+      write(0, '(a)')        '* WARNING: The requested total time to process is larger than the time'
+      write(0, '(a)')        '*          available in the input file.'
+      write(0, '(a,f8.4,a)') '           The time has been adjusted to ', total_time / units%time%factor, &
+                             units%time%abbrev
+    end if
+    time_steps = int(total_time / dt)
+    total_time = time_steps * dt
+  else
+    total_time = dt*time_steps
+  end if
+
+  dw = (rightbound-leftbound) / (nfrequencies - 1)
+
+  ! First, substract zero resonance...
+  w = M_ZERO
+  call resonance_second_order(w, power, nw_substracted, dw, leftbound, rightbound)
+  call modify_ot(time_steps, dt, order, ot, omega, sqrt(abs(power)))
+  nw_substracted = nw_substracted + 1
+
+  ! Then, get all the others...
+  do k = 1, npairs
+    leftbound = wij(k) - search_interval
+    rightbound = wij(k) + search_interval
+    call find_resonance(wij(k), leftbound, rightbound, nfrequencies)
+    call resonance_second_order(wij(k), power, nw_substracted, dw, leftbound, rightbound)
+    call modify_ot(time_steps, dt, order, ot, wij(k), sqrt(abs(power)))
+  end do
+ 
   deallocate(wij, cij, omega)
   call io_close(iunit)
 end subroutine read_resonances_file
+! ---------------------------------------------------------
 
 
 ! ---------------------------------------------------------
-subroutine analyze_signal(order, omega, search_interval, final_time, nresonances, nfrequencies, iprint_omega_file)
+subroutine analyze_signal(order, omega, search_interval, final_time, nresonances, nfrequencies)
   use global_m
   use messages_m
   use datasets_m
@@ -236,12 +306,24 @@ subroutine analyze_signal(order, omega, search_interval, final_time, nresonances
   FLOAT,   intent(inout) :: final_time
   integer, intent(inout) :: nresonances
   integer, intent(inout) :: nfrequencies
-  integer, intent(inout) :: iprint_omega_file
 
-  FLOAT :: leftbound, rightbound, dw, min_w, min_aw, w, aw, omega_orig, power
-  FLOAT, allocatable :: warray(:), tarray(:)
+  FLOAT :: leftbound, rightbound, dw, power
   integer :: nspin, i, ierr, order_in_file, nw_substracted
-  type(unit_system_t) :: units
+  logical :: file_exists
+
+  ! First, let us check that the file "ot" exists.
+  inquire(file="ot", exist  = file_exists)
+  if(.not.file_exists) then
+    write(message(1),'(a)') "Could not find 'ot' file."
+    call write_fatal(1)
+  end if
+
+  ! Now, we should find out which units the file "ot" has.
+  call units_from_file(units, "ot", ierr)
+  if(ierr.ne.0) then
+    write(message(1),'(a)') "Could not retrieve units in the 'ot' file."
+    call write_fatal(1)
+  end if
 
   if(omega > M_ZERO) then
     omega = omega * units%energy%factor
@@ -258,95 +340,127 @@ subroutine analyze_signal(order, omega, search_interval, final_time, nresonances
   leftbound = omega - search_interval
   rightbound = omega + search_interval
 
-  ALLOCATE(warray(nfrequencies), nfrequencies)
-  ALLOCATE(tarray(nfrequencies), nfrequencies)
+  call read_ot(nspin, order_in_file, nw_substracted)
 
+  if(order_in_file.ne.order) then
+    write(message(1), '(a)') 'Internal error in analyze_signal'
+    call write_fatal(1)
+  end if
+
+  if(mod(order, 2).eq.1) then
+    mode = SINE_TRANSFORM
+  else
+    mode = COSINE_TRANSFORM
+  end if
+
+  if(final_time > M_ZERO) then
+    total_time = final_time * units%time%factor
+    if(total_time > dt*time_steps) then
+      total_time = dt*time_steps
+      write(0, '(a)')        '* WARNING: The requested total time to process is larger than the time'
+      write(0, '(a)')        '*          available in the input file.'
+      write(0, '(a,f8.4,a)') '           The time has been adjusted to ', total_time / units%time%factor, &
+                         units%time%abbrev
+    end if
+    time_steps = int(total_time / dt)
+    total_time = time_steps * dt
+  else
+    total_time = dt*time_steps
+  end if
+
+  dw = (rightbound-leftbound) / (nfrequencies - 1)
 
   do
-
-    call read_ot(nspin, order_in_file, units, nw_substracted)
-
-    if(order_in_file.ne.order) then
-      write(message(1), '(a)') 'Internal error in analyze_signal'
-      call write_fatal(1)
-    end if
-
-    if(mod(order, 2).eq.1) then
-      mode = SINE_TRANSFORM
-    else
-      mode = COSINE_TRANSFORM
-    end if
-
     if(nw_substracted >= nresonances) exit
-
-    if(final_time > M_ZERO) then
-      total_time = final_time * units%time%factor
-      if(total_time > dt*time_steps) then
-        total_time = dt*time_steps
-        write(0, '(a)')        '* WARNING: The requested total time to process is larger than the time'
-        write(0, '(a)')        '*          available in the input file.'
-        write(0, '(a,f8.4,a)') '           The time has been adjusted to ', total_time / units%time%factor, &
-                           units%time%abbrev
-      end if
-      time_steps = int(total_time / dt)
-      total_time = time_steps * dt
-    else
-      total_time = dt*time_steps
-    end if
-
-    warray = M_ZERO; tarray = M_ZERO
-    dw = (rightbound-leftbound) / (nfrequencies - 1)
-    min_w = omega
-    min_aw = M_ZERO
-    do i = 1, nfrequencies
-      w = leftbound + (i-1)*dw
-      warray(i) = w
-      call ft(w, aw)
-      write(0, *) 'A', w, aw
-      tarray(i) = -aw
-      if(aw < min_aw) then
-        min_aw = aw
-        min_w = w
-      end if
-    end do
-
-    if(iprint_omega_file .eq. 1) call print_omega_file(units, nspin, nfrequencies, warray, tarray)
 
     if(mode == COSINE_TRANSFORM .and. nw_substracted == 0) then
       omega = M_ZERO
     else
-      omega_orig = omega
-      omega = min_w
-      call loct_1dminimize(min_w - 2*dw, min_w + 2*dw, omega, ft, ierr)
-      if(ierr.ne.0) then
-        write(message(1),'(a)') 'Could not find a maximum.'
-        write(message(2),'(a)')
-        write(message(3), '(a,f12.8,a,f12.8,a)') '   Search interval = [', leftbound / units%energy%factor, ',', &
-                                                              rightbound / units%energy%factor, ']'
-        write(message(4), '(a,f12.4,a)')         '   Search discretization = ', dw / units%energy%factor, &
-                                    ' '//trim(units%energy%abbrev)
-        call write_fatal(4)
-      end if
+      call find_resonance(omega, leftbound, rightbound, nfrequencies)
     end if
 
     select case(order)
     case(1)
-      call resonance_first_order(omega, power, units, nw_substracted, dw, leftbound, rightbound)
+      call resonance_first_order(omega, power, nw_substracted, dw, leftbound, rightbound)
     case(2)
-      call resonance_second_order(omega, power, units, nw_substracted, dw, leftbound, rightbound)
+      call resonance_second_order(omega, power, nw_substracted, dw, leftbound, rightbound)
     end select
 
-    call modify_ot(nspin, time_steps, dt, kick, units, order, ot, nw_substracted + 1, omega, sqrt(abs(power)))
-    deallocate(ot)
+    call modify_ot(time_steps, dt, order, ot, omega, sqrt(abs(power)))
 
+    nw_substracted = nw_substracted + 1
   end do
 
-
+  deallocate(ot)
 end subroutine analyze_signal
+! ---------------------------------------------------------
 
 
 ! ---------------------------------------------------------
-subroutine resonance_first_order(omega, power, units, nw_substracted, dw, leftbound, rightbound)
+! TODO This subroutine should be simplified.
+subroutine find_resonance(omega, leftbound, rightbound, nfrequencies)
+  use global_m
+  use messages_m
+  use datasets_m
+  use lib_oct_m
+  use lib_oct_parser_m
+  use io_m
+  use units_m
+  use spectrum_m
+  use oscillator_strength_m
+
+  implicit none
+
+  FLOAT, intent(inout) :: omega
+  FLOAT, intent(in)    :: leftbound, rightbound
+  integer, intent(in)  :: nfrequencies
+
+  integer :: i, ierr
+  FLOAT :: dw, w, aw, min_aw, min_w, omega_orig
+  FLOAT, allocatable :: warray(:), tarray(:)
+
+  ALLOCATE(warray(nfrequencies), nfrequencies)
+  ALLOCATE(tarray(nfrequencies), nfrequencies)
+
+  warray = M_ZERO; tarray = M_ZERO
+  dw = (rightbound-leftbound) / (nfrequencies - 1)
+  do i = 1, nfrequencies
+    w = leftbound + (i-1)*dw
+    warray(i) = w
+    call ft(w, aw)
+    tarray(i) = -aw
+  end do
+
+  min_w = omega
+  min_aw = M_ZERO
+  do i = 1, nfrequencies
+    w = leftbound + (i-1)*dw
+    if(-tarray(i) < min_aw) then
+      min_aw = -tarray(i)
+      min_w = w
+    end if
+  end do
+
+  omega_orig = omega
+  omega = min_w
+  call loct_1dminimize(min_w - 2*dw, min_w + 2*dw, omega, ft, ierr)
+  if(ierr.ne.0) then
+    write(message(1),'(a)') 'Could not find a maximum.'
+    write(message(2),'(a)')
+    write(message(3), '(a,f12.8,a,f12.8,a)') '   Search interval = [', leftbound / units%energy%factor, ',', &
+                                                          rightbound / units%energy%factor, ']'
+    write(message(4), '(a,f12.4,a)')         '   Search discretization = ', dw / units%energy%factor, &
+                                ' '//trim(units%energy%abbrev)
+    call write_fatal(4)
+  end if
+
+  deallocate(warray, tarray)
+end subroutine find_resonance
+! ---------------------------------------------------------
+
+
+! ---------------------------------------------------------
+subroutine resonance_first_order(omega, power, nw_substracted, dw, leftbound, rightbound)
   use global_m
   use messages_m
   use datasets_m
@@ -361,9 +475,9 @@ subroutine resonance_first_order(omega, power, units, nw_substracted, dw, leftbo
 
   FLOAT, intent(in)               :: omega
   FLOAT, intent(out)              :: power
-  type(unit_system_t), intent(in) :: units
   integer, intent(in)             :: nw_substracted
   FLOAT, intent(in)               :: dw, leftbound, rightbound
+
 
   call ft(omega, power)
   power = -power
@@ -396,10 +510,11 @@ subroutine resonance_first_order(omega, power, units, nw_substracted, dw, leftbo
 
 
 end subroutine resonance_first_order
+! ---------------------------------------------------------
 
 
 ! ---------------------------------------------------------
-subroutine resonance_second_order(omega, power, units, nw_substracted, dw, leftbound, rightbound)
+subroutine resonance_second_order(omega, power, nw_substracted, dw, leftbound, rightbound)
   use global_m
   use messages_m
   use datasets_m
@@ -414,7 +529,6 @@ subroutine resonance_second_order(omega, power, units, nw_substracted, dw, leftb
 
   FLOAT, intent(in)               :: omega
   FLOAT, intent(out)              :: power
-  type(unit_system_t), intent(in) :: units
   integer, intent(in)             :: nw_substracted
   FLOAT, intent(in)               :: dw, leftbound, rightbound
 
@@ -442,6 +556,7 @@ subroutine resonance_second_order(omega, power, units, nw_substracted, dw, leftb
   write(*, '(a)')
 
 end subroutine resonance_second_order
+! ---------------------------------------------------------
 
 
 ! ---------------------------------------------------------
@@ -566,10 +681,11 @@ subroutine generate_signal(order)
   end do
   deallocate(iunit, q, mu, qq, c, ot, multipole)
 end subroutine generate_signal
+! ---------------------------------------------------------
 
 
 ! ---------------------------------------------------------
-subroutine modify_ot(nspin, time_steps, dt, kick, units, order, ot, nw_substracted, omega, cij)
+subroutine modify_ot(time_steps, dt, order, ot, omega, cij)
   use global_m
   use io_m
   use units_m
@@ -578,53 +694,28 @@ subroutine modify_ot(nspin, time_steps, dt, kick, units, order, ot, nw_substract
 
   implicit none
 
-  integer,             intent(in) :: nspin, time_steps
-  FLOAT,               intent(in) :: dt
-  type(kick_t),        intent(in) :: kick
-  type(unit_system_t), intent(in) :: units
-  integer,             intent(in) :: order
-  FLOAT,               intent(in) :: ot(0:time_steps)
-  integer,             intent(in) :: nw_substracted
-  FLOAT,               intent(in) :: omega
-  FLOAT,               intent(in) :: cij
+  integer,             intent(in)    :: time_steps
+  FLOAT,               intent(in)    :: dt
+  integer,             intent(in)    :: order
+  FLOAT,               intent(inout) :: ot(0:time_steps)
+  FLOAT,               intent(in)    :: omega
+  FLOAT,               intent(in)    :: cij
 
-  integer :: iunit, i
-  character(len=20) :: header_string
-  FLOAT :: modot
-
-  iunit = io_open('ot', action='write', status='replace')
-
-
-  write(iunit, '(a15,i2)')      '# nspin        ', nspin
-  write(iunit, '(a15,i2)')      '# Order        ', order
-  write(iunit, '(a28,i2)')      '# Frequencies substracted = ', nw_substracted
-  call kick_write(kick, iunit)
-
-  ! Units
-  write(iunit,'(a1)', advance = 'no') '#'
-  write(iunit,'(a20)', advance = 'no') str_center('t', 19)
-  write(iunit,'(a20)', advance = 'yes') str_center('<O>(t)', 20)
-  write(iunit,'(a1)', advance = 'no') '#'
-  write(header_string, '(a)') '['//trim(units%time%abbrev)//']'
-  write(iunit,'(a20)', advance = 'no')  str_center(trim(header_string), 19)
-  write(header_string, '(a)') '['//trim(units%length%abbrev)//']'
-  write(iunit,'(a20)', advance = 'yes')  str_center(trim(header_string), 20)
+  integer :: i
 
   select case(mod(order, 2))
   case(1)
     do i = 0, time_steps
-      modot = ot(i) + M_TWO * abs(cij)**2 * sin(omega*i*dt)
-      write(iunit, '(2e20.8)') i*dt / units%time%factor, modot / units%length%factor
+      ot(i) = ot(i) + M_TWO * abs(cij)**2 * sin(omega*i*dt)
     end do
   case(0)
     do i = 0, time_steps
-      modot = ot(i) - abs(cij)**2 * cos(omega*i*dt)
-      write(iunit, '(2e20.8)') i*dt / units%time%factor, modot / units%length%factor
+      ot(i) = ot(i) - abs(cij)**2 * cos(omega*i*dt)
     end do
   end select
 
-  call io_close(iunit)
 end subroutine modify_ot
+! ---------------------------------------------------------
 
 
 ! ---------------------------------------------------------
@@ -673,7 +764,7 @@ end subroutine write_ot
 
 
 ! ---------------------------------------------------------
-subroutine read_ot(nspin, order, units, nw_substracted)
+subroutine read_ot(nspin, order, nw_substracted)
   use global_m
   use io_m
   use messages_m
@@ -687,7 +778,6 @@ subroutine read_ot(nspin, order, units, nw_substracted)
 
   integer, intent(out) :: nspin
   integer, intent(out) :: order
-  type(unit_system_t), intent(inout) :: units
   integer, intent(out) :: nw_substracted
 
   integer :: iunit, i
@@ -736,7 +826,7 @@ end subroutine read_ot
 
 
 ! ---------------------------------------------------------
-subroutine print_omega_file(units, nspin, nfrequencies, warray, tarray)
+subroutine print_omega_file(omega, search_interval, final_time, nfrequencies)
   use global_m
   use messages_m
   use datasets_m
@@ -750,16 +840,82 @@ subroutine print_omega_file(units, nspin, nfrequencies, warray, tarray)
 
   implicit none
 
-  type(unit_system_t), intent(in) :: units
-  integer, intent(in)             :: nspin
-  integer, intent(in)             :: nfrequencies
-  FLOAT, intent(in)               :: warray(nfrequencies), tarray(nfrequencies)
+  FLOAT,   intent(inout) :: omega
+  FLOAT,   intent(inout) :: search_interval
+  FLOAT,   intent(inout) :: final_time
+  integer, intent(inout) :: nfrequencies
 
-  integer :: iunit, i
+  integer :: iunit, i, ierr, nspin, order, nw_substracted
+  logical :: file_exists
   character(len=20) :: header_string
+  FLOAT, allocatable :: warray(:), tarray(:)
+  FLOAT :: leftbound, rightbound, dw, power, w, aw
+
+  ! First, let us check that the file "ot" exists.
+  inquire(file="ot", exist  = file_exists)
+  if(.not.file_exists) then
+    write(message(1),'(a)') "Could not find 'ot' file."
+    call write_fatal(1)
+  end if
+
+  ! Now, we should find out which units the file "ot" has.
+  call units_from_file(units, "ot", ierr)
+  if(ierr.ne.0) then
+    write(message(1),'(a)') "Could not retrieve units in the 'ot' file."
+    call write_fatal(1)
+  end if
+
+  if(omega > M_ZERO) then
+    omega = omega * units%energy%factor
+  else
+    omega = M_HALF
+  end if
+
+  if(search_interval > M_ZERO) then
+    search_interval = search_interval * units%energy%factor
+  else
+    search_interval = M_HALF
+  end if
+
+  leftbound = omega - search_interval
+  rightbound = omega + search_interval
+
+  ALLOCATE(warray(nfrequencies), nfrequencies)
+  ALLOCATE(tarray(nfrequencies), nfrequencies)
+
+  call read_ot(nspin, order, nw_substracted)
+
+  if(mod(order, 2).eq.1) then
+    mode = SINE_TRANSFORM
+  else
+    mode = COSINE_TRANSFORM
+  end if
+
+  if(final_time > M_ZERO) then
+    total_time = final_time * units%time%factor
+    if(total_time > dt*time_steps) then
+      total_time = dt*time_steps
+      write(0, '(a)')        '* WARNING: The requested total time to process is larger than the time'
+      write(0, '(a)')        '*          available in the input file.'
+      write(0, '(a,f8.4,a)') '           The time has been adjusted to ', total_time / units%time%factor, &
+                         units%time%abbrev
+    end if
+    time_steps = int(total_time / dt)
+    total_time = time_steps * dt
+  else
+    total_time = dt*time_steps
+  end if
+
+  warray = M_ZERO; tarray = M_ZERO
+  dw = (rightbound-leftbound) / (nfrequencies - 1)
+  do i = 1, nfrequencies
+    w = leftbound + (i-1)*dw
+    warray(i) = w
+    call ft(w, aw)
+    tarray(i) = -aw
+  end do
 
   iunit = io_open('omega', action='write', status='replace')
-
   write(iunit, '(a15,i2)')      '# nspin        ', nspin
   call kick_write(kick, iunit)
   write(iunit, '(a)') '#%'
@@ -775,8 +931,9 @@ subroutine print_omega_file(units, nspin, nfrequencies, warray, tarray)
                             tarray(i)
   end do
 
-  call io_close(iunit)
+  deallocate(warray, tarray)
 end subroutine print_omega_file
+! ---------------------------------------------------------
 
 
 !! Local Variables:

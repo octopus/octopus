@@ -55,8 +55,6 @@ void oscillator_strength_help(){
   printf("                    time interval [0, <time>]. If this argument is absent,\n");
   printf("                    it makes use of all the time-window present in the multipoles\n");
   printf("                    files.\n");
-  printf("  -p              Prints out a file with the reesulting transformation.\n");
-  printf("                    The file will be called 'omega'.\n");
   exit(-1);
 }
 
@@ -69,7 +67,7 @@ void oscillator_strength_help(){
 
 void FC_FUNC_(getopt_oscillator_strength, GETOPT_OSCILLATOR_STRENGTH)
   (int *mode, double *omega, double *searchinterval, int *order, 
-   int *nresonances, int *nfrequencies, double *time, int *print_omega_file, 
+   int *nresonances, int *nfrequencies, double *time, 
    STR_F_TYPE ffile STR_ARG1)
 {
   int c;
@@ -79,7 +77,7 @@ void FC_FUNC_(getopt_oscillator_strength, GETOPT_OSCILLATOR_STRENGTH)
      if(argc==1) oscillator_strength_help(); */
 
   while (1) {
-    c = getopt(argc, argv, "hm:s:o:r:n:t:pf:");
+    c = getopt(argc, argv, "hm:s:o:r:n:t:f:");
     if (c == -1) break;
     switch (c) {
 
@@ -109,10 +107,6 @@ void FC_FUNC_(getopt_oscillator_strength, GETOPT_OSCILLATOR_STRENGTH)
 
     case 't':
       *time = (double)atof(optarg);
-      break;
-
-    case 'p':
-      *print_omega_file = 1;
       break;
 
     case 'f':
