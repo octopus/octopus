@@ -33,6 +33,8 @@ libpoisson_isf_a_SOURCES =   \
 
 nodist_libpoisson_isf_a_SOURCES = config_F90.h
 
+AM_FCFLAGS = @F90_MODULE_FLAG@$(srcdir)
+
 # How to compile an f90 file :)
 .f90.o:
 	@FC@ @FCFLAGS@ -c @FCFLAGS_f90@ -o $@ $<
