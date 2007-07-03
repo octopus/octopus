@@ -48,6 +48,7 @@ module timedep_m
   use spectrum_m
   use mpi_m
   use varinfo_m
+  use math_m
 
   implicit none
 
@@ -481,6 +482,9 @@ contains
       type(kick_t), intent(in) :: k
       integer :: i
       CMPLX   :: c(2), kick
+      FLOAT   :: ylm, gylm(3), r
+      FLOAT   :: x(MAX_DIM)
+      FLOAT, allocatable :: kick_function(:)
 
       call push_sub('td.apply_delta_field')
 
@@ -488,6 +492,19 @@ contains
       ! psi(delta t) = psi(t) exp(i k x)
       delta_strength: if(k%delta_strength .ne. M_ZERO) then
 
+        ALLOCATE(kick_function(NP), NP)
+        if(k%l> 0) then
+          do i = 1, NP
+            call mesh_r(gr%m, i, r, x = x)
+            call grylmr(x(1), x(2), x(3), k%l, k%m, ylm, gylm)
+            kick_function(i) = r**k%l * ylm
+          end do
+        else
+          do i = 1, NP
+            kick_function(i) = sum(gr%m%x(i, 1:NDIM)*k%pol(1:NDIM, k%pol_dir))
+          end do
+        end if
+        
         write(message(1),'(a,f11.6)')  'Info: Applying delta kick: k = ', k%delta_strength
         select case (k%delta_strength_mode)
         case (KICK_DENSITY_MODE)
@@ -499,7 +516,7 @@ contains
         end select
         call write_info(2)
         do i = 1, NP
-          kick = M_zI * k%delta_strength * sum(gr%m%x(i, 1:NDIM)*k%pol(1:NDIM, k%pol_dir))
+          kick = M_zI * k%delta_strength * kick_function(i)
 
           select case (k%delta_strength_mode)
           case (KICK_DENSITY_MODE)
@@ -544,6 +561,7 @@ contains
           end do
         end if
 
+        deallocate(kick_function)
       end if delta_strength
 
       call pop_sub()

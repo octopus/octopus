@@ -75,12 +75,15 @@ module spectrum_m
   end type spec_t
 
   type kick_t
-    FLOAT             :: pol(3, 3)
-    integer           :: pol_dir
     integer           :: delta_strength_mode
     FLOAT             :: delta_strength
+    ! In case we use a normal dipole kick:
+    FLOAT             :: pol(3, 3)
+    integer           :: pol_dir
     integer           :: pol_equiv_axis
     FLOAT             :: wprime(3)
+    ! In case we have a general multipolar kick
+    integer           :: l, m
   end type kick_t
 
   type spec_sh_t
@@ -244,7 +247,7 @@ contains
     integer,      intent(in)  :: nspin
 
     C_POINTER :: blk
-    integer :: n, i, j
+    integer :: n_rows, n_columns, i, j
 
     call push_sub('spectrum.kick_init')
 
@@ -269,6 +272,8 @@ contains
       k%pol(1:3, 3) = (/ M_ZERO, M_ZERO, M_ONE /)
       k%pol_dir = 0
       k%wprime = M_ZERO
+      k%l = 0
+      k%m = 0
       call pop_sub()
       return
     end if
@@ -300,6 +305,33 @@ contains
       call input_error('TDDeltaStrengthMode')
     end select
     call messages_print_var_option(stdout, 'TDDeltaStrengthMode', k%delta_strength_mode)
+
+
+    !%Variable TDKickFunction
+    !%Type block
+    !%Section Time Dependent::Linear Response
+    !%Description
+    !% If the block TDKickFunction is present in the input file, the kick function to
+    !% be applied at time zero of the time-propagation will not be a "dipole" function
+    !% (i.e. phi => exp(i*k*z)phi), but a general multipole in the form r^l * Y_{lm}(r).
+    !%
+    !% The block TDKickFunction shall only contain one line, with two columns that shall
+    !% be of integer type: those two integers will be the (l,m) pair that defines the
+    !% multipole.
+    !%
+    !% This feature allows to calculate quadrupole, octupole, etc., response functions.
+    !%End
+    if(loct_parse_block(check_inp('TDKickFunction'), blk)==0) then
+      n_rows = loct_parse_block_n(blk)
+      if(n_rows > 1) call input_error('TDKickFunction')
+      call loct_parse_block_int(blk, 0, 0, k%l)
+      call loct_parse_block_int(blk, 0, 1, k%m)
+      if( (k%l < 0) .or. (abs(k%m) > abs(k%l)) ) call input_error('TDkickFunction')
+    else
+      k%l = 0
+      k%m = 0
+    end if
+    
 
     ! Find out how many equivalent axis we have...
     !%Variable TDPolarizationEquivAxis
@@ -350,14 +382,14 @@ contains
     !%End
     k%pol(:, :) = M_ZERO
     if(loct_parse_block(check_inp('TDPolarization'), blk)==0) then
-      n = loct_parse_block_n(blk)
-      do j = 1, n
+      n_rows = loct_parse_block_n(blk)
+      do j = 1, n_rows
         do i = 1, 3
           call loct_parse_block_float(blk, j-1, i-1, k%pol(i, j))
         end do
       end do
-      if(n<3) k%pol(1:3, 3) = (/ M_ZERO, M_ZERO, M_ONE /)
-      if(n<2) k%pol(1:3, 2) = (/ M_ZERO, M_ONE, M_ZERO /)
+      if(n_rows<3) k%pol(1:3, 3) = (/ M_ZERO, M_ZERO, M_ONE /)
+      if(n_rows<2) k%pol(1:3, 2) = (/ M_ZERO, M_ONE, M_ZERO /)
       call loct_parse_block_end(blk)
     else
       ! Here the symmetry of the system should be analized, and the polarization
