@@ -518,60 +518,6 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine td_write_kick_info(out, st, kick, lmax)
-    C_POINTER,         intent(in) :: out
-    type(states_t),    intent(in) :: st
-    type(kick_t),      intent(in) :: kick
-    integer, optional, intent(in) :: lmax
-
-    character(len=120) :: aux
-
-    write(aux, '(a15,i2)')      '# nspin        ', st%d%nspin
-    call write_iter_string(out, aux)
-    call write_iter_nl(out)
-
-    if(present(lmax)) then
-      write(aux, '(a15,i2)')      '# lmax         ', lmax
-      call write_iter_string(out, aux)
-      call write_iter_nl(out)
-    end if
-
-    write(aux, '(a15,3f18.12)') '# pol(1)       ', kick%pol(1:3, 1)
-    call write_iter_string(out, aux)
-    call write_iter_nl(out)
-
-    write(aux, '(a15,3f18.12)') '# pol(2)       ', kick%pol(1:3, 2)
-    call write_iter_string(out, aux)
-    call write_iter_nl(out)
-
-    write(aux, '(a15,3f18.12)') '# pol(3)       ', kick%pol(1:3, 3)
-    call write_iter_string(out, aux)
-    call write_iter_nl(out)
-
-    write(aux, '(a15,i2)')      '# direction    ', kick%pol_dir
-    call write_iter_string(out, aux)
-    call write_iter_nl(out)
-
-    write(aux, '(a15,i2)')      '# kick mode    ', kick%delta_strength_mode
-    call write_iter_string(out, aux)
-    call write_iter_nl(out)
-    
-    write(aux, '(a15,f18.12)')  '# kick strength', kick%delta_strength
-    call write_iter_string(out, aux)
-    call write_iter_nl(out)
-
-    write(aux, '(a15,i2)')      '# Equiv. axis  ', kick%pol_equiv_axis
-    call write_iter_string(out, aux)
-    call write_iter_nl(out)
-
-    write(aux, '(a15,3f18.12)') '# wprime       ', kick%wprime(1:3)
-    call write_iter_string(out, aux)
-    call write_iter_nl(out)
-
-  end subroutine td_write_kick_info
-
-
-  ! ---------------------------------------------------------
   subroutine td_write_angular(out_angular, gr, st, kick, iter)
     C_POINTER,      intent(in) :: out_angular
     type(grid_t),   intent(inout) :: gr
@@ -602,7 +548,12 @@ contains
 
       if(iter ==0) then
         call td_write_print_header_init(out_angular)
-        call td_write_kick_info(out_angular, st, kick)
+
+        write(aux, '(a15,i2)')      '# nspin        ', st%d%nspin
+        call write_iter_string(out_angular, aux)
+        call write_iter_nl(out_angular)
+
+        call kick_write(kick, out = out_angular)
 
         !second line -> columns name
         call write_iter_header_start(out_angular)
@@ -654,7 +605,16 @@ contains
 
     if(mpi_grp_is_root(mpi_world).and.iter == 0) then
       call td_write_print_header_init(out_multip)
-      call td_write_kick_info(out_multip, st, kick, lmax)
+
+      write(aux, '(a15,i2)')      '# nspin        ', st%d%nspin
+      call write_iter_string(out_multip, aux)
+      call write_iter_nl(out_multip)
+
+      write(aux, '(a15,i2)')      '# lmax         ', lmax
+      call write_iter_string(out_multip, aux)
+      call write_iter_nl(out_multip)
+
+      call kick_write(kick, out = out_multip)
 
       call write_iter_header_start(out_multip)
 
@@ -1140,7 +1100,12 @@ contains
     if(iter == 0) then
       if(mpi_grp_is_root(mpi_world)) then
         call td_write_print_header_init(out_proj)
-        call td_write_kick_info(out_proj, st, kick)
+
+        write(aux, '(a15,i2)')      '# nspin        ', st%d%nspin
+        call write_iter_string(out_proj, aux)
+        call write_iter_nl(out_proj)
+
+        call kick_write(kick, out = out_proj)
 
         call write_iter_string(out_proj, "#%")
         call write_iter_nl(out_proj)
