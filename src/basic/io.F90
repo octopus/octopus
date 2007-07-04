@@ -547,7 +547,7 @@ contains
     call loct_rm_status_files(current_label)
 
     ! create empty status file 
-    iunit = io_open('status/'//trim(current_label)//'oct-status-'//trim(status), &
+    iunit = io_open('exec/'//trim(current_label)//'oct-status-'//trim(status), &
       action='write', status='unknown', is_tmp=.true.)
     call io_close(iunit)
 

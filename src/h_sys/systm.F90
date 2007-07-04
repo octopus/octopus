@@ -120,7 +120,7 @@ contains
         
         do i=1, sys%NDIM
           write(fname, '(a,i1)') 'r-', i
-          call doutput_function(sys%outp%how, 'status/', fname, sys%gr%m, sys%gr%sb, sys%gr%m%x(:,i), u, ierr)
+          call doutput_function(sys%outp%how, 'exec/', fname, sys%gr%m, sys%gr%sb, sys%gr%m%x(:,i), u, ierr)
         end do
         
       end if

@@ -487,9 +487,9 @@ contains
   subroutine loct_rm_status_files(current_label)
     character(len=*), intent(in) :: current_label
 
-    call loct_rm('status/'//trim(current_label)//'oct-status-running')
-    call loct_rm('status/'//trim(current_label)//'oct-status-finished')
-    call loct_rm('status/'//trim(current_label)//'oct-status-aborted')
+    call loct_rm('exec/'//trim(current_label)//'oct-status-running')
+    call loct_rm('exec/'//trim(current_label)//'oct-status-finished')
+    call loct_rm('exec/'//trim(current_label)//'oct-status-aborted')
 
   end subroutine loct_rm_status_files
 

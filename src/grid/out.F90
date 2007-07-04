@@ -168,7 +168,7 @@ contains
     !% prints the density of polarizability.
     !%Option mesh_r 2048
     !% Prints out the values of the coordinates over the grid. Files
-    !% will be in the 'status/' directory.
+    !% will be in the 'exec/' directory.
     !%Option kinetic_energy_density 4096
     !% Prints out the kinetic energy density, defined as:
     !%
