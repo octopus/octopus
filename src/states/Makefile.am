@@ -26,7 +26,8 @@ libstates_a_SOURCES = \
 	mix.F90 linear_response.F90 restart.F90
 
 noinst_HEADERS = \
-	excited_states_inc.F90 mix_inc.F90 states_kpoints.F90 states_inc.F90
+	excited_states_inc.F90 mix_inc.F90 states_kpoints.F90 states_inc.F90 \
+	linear_response_inc.F90 linear_response_out.F90 restart_inc.F90
 
 include $(srcdir)/../common-rules.make
 

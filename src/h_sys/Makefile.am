@@ -29,9 +29,10 @@ libh_sys_a_SOURCES = \
 	pert.F90
 
 noinst_HEADERS = \
-	xc_KLI_inc.F90 xc_OEP_x_inc.F90 xc_OEP_SIC_inc.F90 \
+	xc_KLI_inc.F90 xc_OEP_x_inc.F90 xc_OEP_SIC_inc.F90 xc_OEP_kernel_inc.F90 \
 	kb_projector_inc.F90 hgh_projector_inc.F90 projector_inc.F90 epot_inc.F90 \
-	xc_OEP_inc.F90 h_inc.F90 preconditioners_inc.F90 pert_inc.F90
+	xc_OEP_inc.F90 h_inc.F90 preconditioners_inc.F90 pert_inc.F90 \
+	linear_solver_inc.F90
 
 include $(srcdir)/../common-rules.make
 
