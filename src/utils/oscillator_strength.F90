@@ -36,6 +36,7 @@ module oscillator_strength_m
   integer, parameter :: SINE_TRANSFORM   = 1, &
                         COSINE_TRANSFORM = 2
 
+  integer             :: observable(2)
   type(unit_system_t) :: units
   FLOAT, allocatable  :: ot(:)
   type(kick_t)        :: kick
@@ -93,7 +94,7 @@ program oscillator_strength
 
   implicit none
 
-  integer :: run_mode, order, nfrequencies, nspin, ierr, nresonances
+  integer :: run_mode, order, nfrequencies, nspin, ierr, nresonances, l, m
   FLOAT :: omega, search_interval, final_time
   integer, parameter :: ANALYZE_NTHORDER_SIGNAL           = 1, &
                         GENERATE_NTHORDER_SIGNAL          = 2, &
@@ -117,12 +118,18 @@ program oscillator_strength
   nfrequencies    = 1000
   final_time      = - M_ONE
   nresonances     = 1
+  observable(1)   = -1
+  observable(2)   = 0
   ffile           = ""
 
   ! Get the parameters from the command line.
   call getopt_oscillator_strength(run_mode, omega, search_interval,             &
                                   order, nresonances, nfrequencies, final_time, &
-                                  ffile)
+                                  observable(1), observable(2), ffile)
+
+!!$  write(0, *) 'l = ', observable(1)
+!!$  write(0, *) 'm = ', observable(2)
+!!$  stop
 
   ! Initialize stuff
   call global_init()
@@ -135,7 +142,7 @@ program oscillator_strength
 
   select case(run_mode)
   case(GENERATE_NTHORDER_SIGNAL)
-    call generate_signal(order)
+    call generate_signal(order, observable)
   case(ANALYZE_NTHORDER_SIGNAL)
     call analyze_signal(order, omega, search_interval, final_time, nresonances, nfrequencies)
   case(READ_RESONANCES_FROM_FILE)
@@ -560,7 +567,7 @@ end subroutine resonance_second_order
 
 
 ! ---------------------------------------------------------
-subroutine generate_signal(order)
+subroutine generate_signal(order, observable)
   use global_m
   use messages_m
   use datasets_m
@@ -574,9 +581,10 @@ subroutine generate_signal(order)
   implicit none
 
   integer, intent(in) :: order
+  integer, intent(in) :: observable(2)
 
   logical :: file_exists
-  integer :: i, j, nspin, time_steps, lmax, nfiles, k, isp
+  integer :: i, j, nspin, time_steps, lmax, nfiles, k, isp, add_lm, l, m
   integer, allocatable :: iunit(:)
   FLOAT :: dt, lambda, det, dump, o0
   FLOAT, allocatable :: q(:), mu(:), qq(:, :), c(:)
@@ -660,10 +668,31 @@ subroutine generate_signal(order)
       end select
       multipole(1:3, i, :) = multipole(1:3, i, :) * units%length%factor
 
-      dump = M_ZERO
-      do isp = 1, nspin
-        dump = dump + sum(multipole(1:3, i, isp) * kick%pol(1:3,kick%pol_dir))
-      end do
+      select case(observable(1))
+      case(-1)
+        dump = M_ZERO
+        do isp = 1, nspin
+          dump = dump + sum(multipole(1:3, i, isp) * kick%pol(1:3,kick%pol_dir))
+        end do
+      case(0)
+        dump = M_ZERO
+        do isp = 1, nspin
+          dump = dump + multipole(observable(2), i, isp) 
+        end do
+      case default
+        add_lm = 1
+        lcycle: do l = 1, observable(1)
+          mcycle: do m = -l, l
+            add_lm = add_lm + 1
+            if(observable(1).eq.l .and. observable(2).eq.2) exit lcycle
+          end do mcycle
+        end do lcycle
+        dump = M_ZERO
+        do isp = 1, nspin
+          dump = dump + multipole(add_lm, i, isp)
+        end do
+      end select
+
       if(i == 0) o0 = dump
 
       ot(i) = ot(i) + mu(j)*(dump - o0)
@@ -673,7 +702,7 @@ subroutine generate_signal(order)
 
   ot = ot / lambda**order
 
-  call write_ot(nspin, time_steps, dt, kick, units, order, ot(0:time_steps))
+  call write_ot(nspin, time_steps, dt, kick, units, order, ot(0:time_steps), observable)
 
   ! Close files and exit.
   do j = 1, nfiles
@@ -719,7 +748,7 @@ end subroutine modify_ot
 
 
 ! ---------------------------------------------------------
-subroutine write_ot(nspin, time_steps, dt, kick, units, order, ot)
+subroutine write_ot(nspin, time_steps, dt, kick, units, order, ot, observable)
   use global_m
   use io_m
   use units_m
@@ -734,6 +763,7 @@ subroutine write_ot(nspin, time_steps, dt, kick, units, order, ot)
   type(unit_system_t), intent(in) :: units
   integer,             intent(in) :: order
   FLOAT,               intent(in) :: ot(0:time_steps)
+  integer,             intent(in) :: observable(2)
 
   integer :: iunit, i
   character(len=20) :: header_string
@@ -743,6 +773,18 @@ subroutine write_ot(nspin, time_steps, dt, kick, units, order, ot)
   write(iunit, '(a15,i2)')      '# nspin        ', nspin
   write(iunit, '(a15,i2)')      '# Order        ', order
   write(iunit, '(a28,i2)')      '# Frequencies substracted = ', 0
+  select case(observable(1))
+  case(-1)
+    write(iunit,'(a)') '# Observable operator = kick operator'
+  case(0)
+    select case(observable(2))
+    case(1); write(iunit,'(a)') '# O = x'
+    case(2); write(iunit,'(a)') '# O = y'
+    case(3); write(iunit,'(a)') '# O = z'
+    end select
+  case default
+    write(iunit, '(a12,i1,a1,i2,a1)') '# (l, m) = (', observable(1),',',observable(2),')'
+  end select
   call kick_write(kick, iunit)
 
   ! Units
@@ -782,6 +824,7 @@ subroutine read_ot(nspin, order, nw_substracted)
 
   integer :: iunit, i
   character(len=100) :: line
+  character(len=12)  :: dummychar
   FLOAT :: dummy, t1, t2
 
   iunit = io_open('ot', action='read', status='old')
@@ -793,6 +836,28 @@ subroutine read_ot(nspin, order, nw_substracted)
   read(iunit, '(15x,i2)') nspin
   read(iunit, '(15x,i2)') order
   read(iunit, '(28x,i2)') nw_substracted
+  read(iunit, '(a)')      line
+
+  i = index(line, 'Observable')
+  if(index(line, 'Observable').ne.0) then
+    observable(1) = -1
+  elseif(index(line, '# O =').ne.0) then
+    observable(1) = 0
+    if(index(line,'x').ne.0) then
+      observable(2) = 1
+    elseif(index(line,'y').ne.0) then
+      observable(2) = 2
+    elseif(index(line,'z').ne.0) then
+      observable(2) = 3
+    end if
+  elseif(index(line, '# (l, m) = ').ne.0) then
+    read(line,'(a12,i1,a1,i2,a1)') dummychar(1:12), observable(1), dummychar(1:1), observable(2), dummychar(1:1)
+  else
+    write(message(1),'(a)') 'Problem reading ot file: could not figure out the shape'
+    write(message(2),'(a)') 'of the observation operator.'
+    call write_fatal(2)
+  end if
+
   call kick_read(kick, iunit)
   read(iunit, '(a)')  line
   read(iunit, '(a)')  line
