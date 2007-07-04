@@ -305,13 +305,14 @@ module lib_oct_m
 
   interface loct_1dminimize
     subroutine oct_1dminimize(a, b, m, f, status)
-      real(8) :: a, b, m
+      real(8), intent(in) :: a, b, m
       interface
         subroutine f(x, fx)
-          real(8) :: x, fx
+          real(8), intent(in) :: x
+          real(8), intent(out) :: fx
         end subroutine f
       end interface
-      integer :: status
+      integer, intent(inout) :: status
     end subroutine oct_1dminimize
   end interface
 
