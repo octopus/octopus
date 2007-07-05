@@ -30,6 +30,8 @@ module states_output_m
   use messages_m
   use output_m
   use states_m
+  use mesh_m
+  use math_m
   use units_m
 
   private
@@ -147,20 +149,19 @@ contains
     end if
 
     if(iand(outp%what, output_ksdipole).ne.0) then
-      ! The files will be called dir/dipole.k.d, where d will be the
-      ! direction ("x", "y" or "z"), and k is the k-point -- this may
-      ! also mean the spin subspace in spin-polarized calculations.
-      do idim = 1, gr%sb%dim
-        do ik = 1, st%d%nik
-          select case(idim)
-            case(1); write(fname,'(i3.3,a2)') ik, '.x'
-            case(2); write(fname,'(i3.3,a2)') ik, '.y'
-            case(3); write(fname,'(i3.3,a2)') ik, '.z'
-          end select
-          write(fname,'(a)') trim(dir)//'/dipole.'//trim(adjustl(fname))
-          iunit = io_open(file = fname, action = 'write')
-          call states_write_dipole_matrix(st, gr, idim, ik, iunit)
-          call io_close(iunit)
+      ! The files will be called matrix_elements.x. The content of each file
+      ! should be clear from the header of each file.
+      id = 1
+      do ik = 1, st%d%nik
+        do l = 1, outp%ksmultipoles
+          do m = -l, l
+            write(fname,'(i4)') id
+            write(fname,'(a)') trim(dir)//'/matrix_elements.'//trim(adjustl(fname))
+            iunit = io_open(file = fname, action = 'write')
+            call states_write_multipole_matrix(st, gr, l, m, ik, iunit)
+            call io_close(iunit)
+            id = id + 1
+          end do
         end do
       end do
     end if
@@ -239,26 +240,40 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! Prints out the dipole matrix elements between KS states.
+  ! Prints out the multipole matrix elements between KS states.
   ! It prints the states to the file opened in iunit.
-  ! It prints the dipole moment in the direction "k", for
+  ! It prints the (l,m) multipole moment, for
   ! the Kohn-Sham states in the irreducible subspace ik.
   ! ---------------------------------------------------------
-  subroutine states_write_dipole_matrix(st, gr, k, ik, iunit)
+  subroutine states_write_multipole_matrix(st, gr, l, m, ik, iunit)
     type(states_t), intent(in) :: st
     type(grid_t), intent(in) :: gr
-    integer, intent(in) :: k, ik, iunit
+    integer, intent(in) :: l, m, ik, iunit
 
-    integer :: ii, jj
-    FLOAT, allocatable :: dipole(:, :)
-    CMPLX :: dip_element
+    integer :: ii, jj, i
+    FLOAT, allocatable :: multipole(:, :)
+    CMPLX :: multip_element
+    FLOAT :: r, x(MAX_DIM), ylm, gylm(3)
 
-    call push_sub('states.states_write_dipole_matrix')
+    call push_sub('states.states_write_multipole_matrix')
 
-    ALLOCATE(dipole(gr%m%np_part, st%d%dim), gr%m%np_part)
-    dipole = M_ZERO
+    write(iunit, fmt = '(a)') '# Multipole matrix elements file: <Phi_i | r**l * Y_{lm}(theta,phi) | Phi_j>' 
+    write(iunit, fmt = '(a,i2,a,i2)') '# l =', l, '; m =', m
+    write(iunit, fmt = '(a,i4)')      '# ik =', ik
+    if(l>1) then
+      write(iunit, fmt = '(a,i1)') '# Units = ['//trim(units_out%length%abbrev)//']^',l
+    else
+      write(iunit, fmt = '(a)')    '# Units = ['//trim(units_out%length%abbrev)//']'
+    end if
+
+    ALLOCATE(multipole(gr%m%np_part, st%d%dim), gr%m%np_part)
+    multipole = M_ZERO
     do ii = 1, st%d%dim
-      dipole(1:gr%m%np, ii) = gr%m%x(1:gr%m%np, k)
+      do i = 1, NP
+        call mesh_r(gr%m, i, r, x = x)
+        call grylmr(x(1), x(2), x(3), l, m, ylm, gylm)
+        multipole(i, ii) = r**l * ylm
+      end do
     end do
 
     do ii = 1, st%nst
@@ -266,21 +281,23 @@ contains
         if (st%d%wfs_type == M_REAL) then 
           write(iunit,fmt = '(f20.10)', advance = 'no') dstates_dotp(gr%m, st%d%dim, &
             st%dpsi(:, :, ii, 1), &
-            st%dpsi(:, :, jj, 1) * dipole(:, :))
+            st%dpsi(:, :, jj, 1) * multipole(:, :)) / units_out%length%factor**l
+
         else
-          dip_element = zstates_dotp(gr%m, st%d%dim, &
+          multip_element = zstates_dotp(gr%m, st%d%dim, &
             st%zpsi(:, :, ii, 1), &
-            st%zpsi(:, :, jj, 1) * dipole(:, :))
+            st%zpsi(:, :, jj, 1) * multipole(:, :)) / units_out%length%factor**l
+
           write(iunit,fmt = '(f20.12,a1,f20.12,3x)', advance = 'no') &
-            real(dip_element, REAL_PRECISION), ',', aimag(dip_element)
+            real(multip_element, REAL_PRECISION), ',', aimag(multip_element)
         end if
         if(jj==st%nst) write(iunit, '(a)') 
       end do
     end do
 
-    deallocate(dipole)
+    deallocate(multipole)
     call pop_sub()
-  end subroutine states_write_dipole_matrix
+  end subroutine states_write_multipole_matrix
 
 end module states_output_m
 

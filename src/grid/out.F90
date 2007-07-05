@@ -97,13 +97,17 @@ module output_m
     index2label(3) = (/ 're ', 'im ', 'abs' /)
 
   type output_t
+    ! General output variables:
     integer :: what
     integer :: how               ! how to output
 
-    integer :: iter              ! output every iter
+    ! This variables fine-tune the output for some of the possible output options:
+    integer :: iter ! output every iter
     logical :: duringscf
-
-    character(len=80) :: wfs_list
+    character(len=80) :: wfs_list  ! If output_wfs, this list decides which wavefunctions to print.
+    integer :: ksmultipoles ! If output_ksdipole, this number sets up which matrix elements will
+                            ! be printed: e.g. if ksmultipoles = 3, the dipole, quadrupole and 
+                            ! octopole matrix elements (between Kohn-Sham or single-particle orbitals).
   end type output_t
 
 
@@ -161,8 +165,10 @@ contains
     !% Prints the electron localization function in Fourier space. The output file is called
     !% "elf_FS-i", where i stands for the spin channel. (EXPERIMENTAL)
     !%Option ksdipole 512
-    !% Prints out the dipole matrix elements between Kohn-Sham states (or just the single 
-    !% particle states, in independent electrons mode).
+    !% Prints out the multipole matrix elements between Kohn-Sham states (or just the single 
+    !% particle states, in independent electrons mode). Note that regardless of the name
+    !% ("ksdipole"), the program may print higher order multipoles (the order can be
+    !% set with the variable OuputMatrixElementsL.
     !%Option pol_density 1024
     !% Prints out the density of dipole moment. For pol and pol_lr modules, 
     !% prints the density of polarizability.
@@ -200,6 +206,21 @@ contains
       !% five states, "2,3" to print the second and the third state, etc.
       !%End
       call loct_parse_string(check_inp('OutputWfsNumber'), "1-1024", outp%wfs_list)
+    end if
+
+    if(iand(outp%what, output_ksdipole).ne.0) then
+      !%Variable OuputMatrixElementsL
+      !%Type integer
+      !%Default 1
+      !%Section Output
+      !%Description
+      !% If Ouput contains ksdipole, then this variable decides which matrix
+      !% elements are printed out: e.g., if OuputMatrixElementsL = 1, then the
+      !% program will plot three files, matrix_elements.x (x=1,2,3), containing
+      !% respectively the (1,-1), (1,0) and (1,1) multipole matrix elements
+      !% between Kohn-Sham states.
+      !%End
+      call loct_parse_int(check_inp('OutputMatrixElementsL'), 1, outp%ksmultipoles)
     end if
 
     outp%how = 0
