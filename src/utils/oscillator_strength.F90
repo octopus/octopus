@@ -584,14 +584,15 @@ subroutine generate_signal(order, observable)
   integer, intent(in) :: observable(2)
 
   logical :: file_exists
-  integer :: i, j, nspin, time_steps, lmax, nfiles, k, isp, add_lm, l, m
+  integer :: i, j, nspin, time_steps, lmax, nfiles, k, isp, add_lm, l, m, max_add_lm
   integer, allocatable :: iunit(:)
-  FLOAT :: dt, lambda, det, dump, o0
+  FLOAT :: dt, lambda, det, dump, o0, conversion_factor
   FLOAT, allocatable :: q(:), mu(:), qq(:, :), c(:)
   character(len=20) :: filename
   type(kick_t) :: kick
   type(unit_system_t) :: units
   FLOAT, allocatable :: multipole(:, :, :), ot(:)
+
 
   ! Find out how many files do we have
   nfiles = 0
@@ -630,6 +631,7 @@ subroutine generate_signal(order, observable)
 
   ! Get the basic info from the first file
   call spectrum_mult_info(iunit(1), nspin, kick, time_steps, dt, units, lmax=lmax)
+
   lambda = abs(kick%delta_strength)
   q(1) = kick%delta_strength / lambda
 
@@ -648,7 +650,15 @@ subroutine generate_signal(order, observable)
 
   mu = matmul(qq, c)
 
-  ALLOCATE(multipole(3, 0:time_steps, nspin), 2*(time_steps+1)*nspin)
+  if(kick%l > 0) then
+    max_add_lm = (kick%l+1)**2-1
+    ALLOCATE(multipole(max_add_lm, 0:time_steps, nspin), 2*(time_steps+1)*nspin)
+    conversion_factor = units%length%factor ** kick%l
+  else
+    max_add_lm = 3
+    ALLOCATE(multipole(3, 0:time_steps, nspin), 2*(time_steps+1)*nspin)
+    conversion_factor = units%length%factor
+  end if
   ALLOCATE(ot(0:time_steps), time_steps+1)
   multipole = M_ZERO
   ot = M_ZERO
@@ -659,21 +669,37 @@ subroutine generate_signal(order, observable)
     do i = 0, time_steps
       select case(nspin)
       case(1)
-        read(iunit(j), *) k, dump, dump, multipole(1:3, i, 1)
+        read(iunit(j), *) k, dump, dump, (multipole(add_lm, i, 1), add_lm = 1, max_add_lm)
       case(2)
-        read(iunit(j), *) k, dump, dump, multipole(1:3, i, 1), dump, multipole(1:3, i, 2)
+        read(iunit(j), *) k, dump, dump, (multipole(add_lm, i, 1), add_lm = 1, max_add_lm), &
+                          dump, (multipole(add_lm, i, 2), add_lm = 1, max_add_lm)
       case(4)
-        read(iunit(j), *) k, dump, dump, multipole(1:3, i, 1), dump, multipole(1:3, i, 2), &
-          dump, multipole(1:3, i, 3), dump, multipole(1:3, i, 4)
+        read(iunit(j), *) k, dump, dump, (multipole(add_lm, i, 1), add_lm = 1, max_add_lm), &
+                          dump, (multipole(add_lm, i, 2), add_lm = 1, max_add_lm), &
+                          dump, (multipole(add_lm, i, 3), add_lm = 1, max_add_lm), &
+                          dump, (multipole(add_lm, i, 4), add_lm = 1, max_add_lm)
       end select
-      multipole(1:3, i, :) = multipole(1:3, i, :) * units%length%factor
+      multipole(1:3, i, :) = multipole(1:3, i, :) * conversion_factor
 
       select case(observable(1))
       case(-1)
         dump = M_ZERO
-        do isp = 1, nspin
-          dump = dump + sum(multipole(1:3, i, isp) * kick%pol(1:3,kick%pol_dir))
-        end do
+        if(kick%l > 0) then
+          add_lm = 1
+          lcycle1: do l = 1, kick%l
+            mcycle1: do m = -l, l
+              if(kick%l.eq.l .and. kick%m.eq.m) exit lcycle1
+              add_lm = add_lm + 1
+            end do mcycle1
+          end do lcycle1
+          do isp = 1, nspin
+            dump = dump + multipole(add_lm, i, isp)
+          end do
+        else
+          do isp = 1, nspin
+            dump = dump + sum(multipole(1:3, i, isp) * kick%pol(1:3,kick%pol_dir))
+          end do
+        end if
       case(0)
         dump = M_ZERO
         do isp = 1, nspin
@@ -681,12 +707,12 @@ subroutine generate_signal(order, observable)
         end do
       case default
         add_lm = 1
-        lcycle: do l = 1, observable(1)
-          mcycle: do m = -l, l
+        lcycle2: do l = 1, observable(1)
+          mcycle2: do m = -l, l
             add_lm = add_lm + 1
-            if(observable(1).eq.l .and. observable(2).eq.2) exit lcycle
-          end do mcycle
-        end do lcycle
+            if(observable(1).eq.l .and. observable(2).eq.2) exit lcycle2
+          end do mcycle2
+        end do lcycle2
         dump = M_ZERO
         do isp = 1, nspin
           dump = dump + multipole(add_lm, i, isp)
@@ -767,6 +793,7 @@ subroutine write_ot(nspin, time_steps, dt, kick, units, order, ot, observable)
 
   integer :: iunit, i
   character(len=20) :: header_string
+  FLOAT :: conversion_factor
 
   iunit = io_open('ot', action='write', status='replace')
 
@@ -775,14 +802,21 @@ subroutine write_ot(nspin, time_steps, dt, kick, units, order, ot, observable)
   write(iunit, '(a28,i2)')      '# Frequencies substracted = ', 0
   select case(observable(1))
   case(-1)
-    write(iunit,'(a)') '# Observable operator = kick operator'
+    write(iunit,'(a)') '# Observable operator = kick operator', kick%l
+    if(kick%l > 0 ) then
+      conversion_factor = units%length%factor ** kick%l
+    else
+      conversion_factor = units%length%factor
+    end if
   case(0)
     select case(observable(2))
     case(1); write(iunit,'(a)') '# O = x'
     case(2); write(iunit,'(a)') '# O = y'
     case(3); write(iunit,'(a)') '# O = z'
     end select
+    conversion_factor = units%length%factor
   case default
+    conversion_factor = units%length%factor ** observable(1)
     write(iunit, '(a12,i1,a1,i2,a1)') '# (l, m) = (', observable(1),',',observable(2),')'
   end select
   call kick_write(kick, iunit)
@@ -798,7 +832,7 @@ subroutine write_ot(nspin, time_steps, dt, kick, units, order, ot, observable)
   write(iunit,'(a20)', advance = 'yes')  str_center(trim(header_string), 20)
 
   do i = 0, time_steps
-    write(iunit, '(2e20.8)') i*dt / units%time%factor, ot(i) / units%length%factor
+    write(iunit, '(2e20.8)') i*dt / units%time%factor, ot(i) / conversion_factor
   end do
 
   call io_close(iunit)

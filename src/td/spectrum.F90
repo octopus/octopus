@@ -268,16 +268,17 @@ contains
     integer,      intent(in) :: iunit
 
     integer :: ios
+    character(len=100) :: line
 
     call push_sub('spectrum.kick_read')
 
     read(iunit, '(15x,i2)')      k%delta_strength_mode
     read(iunit, '(15x,f18.12)')  k%delta_strength
-    read(iunit, '(15x,3f18.12)', iostat = ios) k%pol(1:3, 1)
-    if(ios.ne.0) then
-      backspace(iunit)
-      read(iunit, '(a15,2i3)') k%l, k%m
+    read(iunit, '(a)') line
+    if(index(line,'multipole').ne.0) then
+      read(line, '("# multipole    ",2i3)') k%l, k%m
     else
+      read(iunit, '(15x,3f18.12)') k%pol(1:3, 1)
       read(iunit, '(15x,3f18.12)') k%pol(1:3, 2)
       read(iunit, '(15x,3f18.12)') k%pol(1:3, 3)
       read(iunit, '(15x,i2)')      k%pol_dir
