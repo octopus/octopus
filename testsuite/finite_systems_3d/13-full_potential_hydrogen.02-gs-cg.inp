@@ -18,4 +18,4 @@ TypeOfMixing = linear
 Mixing = 1.0
 EigenSolverMaxIter = 300
 
-PoissonSolver=multigrid
+PoissonSolver=cg_corrected

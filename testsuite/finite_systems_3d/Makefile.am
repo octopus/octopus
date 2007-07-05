@@ -57,7 +57,7 @@ dist_share_DATA = \
         12-forces.03-N2_gs.inp \
 	12-forces.test \
 	13-full_potential_hydrogen.01-gs.inp \
-	13-full_potential_hydrogen.02-gs-mg.inp \
+	13-full_potential_hydrogen.02-gs-cg.inp \
 	13-full_potential_hydrogen.test \
 	14-h2o_pol_lr.01_h2o_gs.inp \
 	14-h2o_pol_lr.02_h2o_dyn_pol.inp \

@@ -14,7 +14,7 @@ Input: 13-full_potential_hydrogen.01-gs.inp
 
 Match ; TotalEnergy ; grep -A 7 '^Energy:' static/info ; \s*Total\s*=\s*-0.498
 
-Input: 13-full_potential_hydrogen.02-gs-mg.inp
+Input: 13-full_potential_hydrogen.02-gs-cg.inp
 
 Match ; TotalEnergy ; grep -A 7 '^Energy:' static/info ; \s*Total\s*=\s*-0.501
 
