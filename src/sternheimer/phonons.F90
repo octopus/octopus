@@ -29,6 +29,7 @@ module phonons_m
   use messages_m
   use output_m
   use system_m
+  use units_m
 
   implicit none
 
@@ -153,7 +154,7 @@ contains
           do jdir = 1, ph%ndim
             
             write(iunit, '(f14.3)', advance='no') &
-                 ph%dm(phn_idx(ph, iatom, idir), phn_idx(ph, jatom, jdir)) * 219474.63 ! output cm^-1
+                 ph%dm(phn_idx(ph, iatom, idir), phn_idx(ph, jatom, jdir)) * hartree_to_cm_inv ! output cm^-1
           end do
         end do
         write(iunit, '(1x)')
@@ -165,7 +166,7 @@ contains
     ! output phonon frequencies and eigenvectors
     iunit = io_open('phonons/freq'//trim(suffix), action='write')
     do i = 1, ph%dim
-      write(iunit, *) i, sqrt(abs(ph%freq(i))) * 219474.63 ! output cm^-1
+      write(iunit, *) i, sqrt(abs(ph%freq(i))) * hartree_to_cm_inv ! output cm^-1
     end do
     call io_close(iunit)
 

@@ -22,7 +22,7 @@
 include $(srcdir)/../common-rules.make
 
 EXTRA_PROGRAMS = oct-cross-section oct-rsf oct-harmonic-spectrum \
-                 oct-broad oct-ph oct-xyz-anim oct-center-geom oct-help \
+                 oct-broad oct-vibrational oct-xyz-anim oct-center-geom oct-help \
                  oct-oscillator-strength
 
 bin_PROGRAMS = @UTILITY_PROGRAMS@
@@ -45,8 +45,8 @@ oct_xyz_anim_LDADD   = $(all_LIBS)
 oct_broad_SOURCES = broad.F90
 oct_broad_LDADD =  $(core_LIBS) $(external_LIBS)
 
-oct_ph_SOURCES = phonon_spectrum.F90
-oct_ph_LDADD =  $(core_LIBS) $(external_LIBS)
+oct_vibrational_SOURCES = phonon_spectrum.F90
+oct_vibrational_LDADD =  $(core_LIBS) $(external_LIBS)
 
 oct_center_geom_SOURCES = centergeom.F90
 oct_center_geom_LDADD = $(all_LIBS)
@@ -55,4 +55,4 @@ oct_help_SOURCES = help.F90
 oct_help_LDADD =  $(core_LIBS)
 
 depend:
-	@makedepf90 $(core_SRCS) $(oct_cross_section_SOURCES) $(oct_rsf_SOURCES) $(oct_harmonic_spectrum_SOURCES) $(oct_xyz_anim_SOURCES) $(oct_broad_SOURCES) $(oct_ph_SOURCES) $(oct_center_geom_SOURCES) $(oct_atoms_magnet_SOURCES) $(oct_help_SOURCES)
+	@makedepf90 $(core_SRCS) $(oct_cross_section_SOURCES) $(oct_rsf_SOURCES) $(oct_harmonic_spectrum_SOURCES) $(oct_xyz_anim_SOURCES) $(oct_broad_SOURCES) $(oct_vibrational_SOURCES) $(oct_center_geom_SOURCES) $(oct_atoms_magnet_SOURCES) $(oct_help_SOURCES)

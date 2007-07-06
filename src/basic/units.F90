@@ -73,7 +73,8 @@ module units_m
   end type unit_system_t
 
   type(unit_system_t) :: units_inp, units_out
-
+  
+  FLOAT, parameter, public :: hartree_to_cm_inv = 219474.63
 
 contains
 
