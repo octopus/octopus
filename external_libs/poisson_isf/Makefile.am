@@ -37,12 +37,12 @@ AM_FCFLAGS = @F90_MODULE_FLAG@$(srcdir)
 
 # How to compile an f90 file :)
 .f90.o:
-	@FC@ @FCFLAGS@ -c @FCFLAGS_f90@ -o $@ $<
+	$(FCCOMPILE) -c @FCFLAGS_f90@ -o $@ $<
 
 # How to compile an F90 file :)
 .F90.o:
 	@@FCCPP@ @CPPFLAGS@ -I. $< > $*_oct.f90
-	@FC@ @FCFLAGS@ -c @FCFLAGS_f90@ -o $@ $*_oct.f90
+	$(FCCOMPILE) -c @FCFLAGS_f90@ -o $@ $*_oct.f90
 	@rm -f $*_oct.f90
 
 scaling_function.o: lazy_100.inc  lazy_14.inc  \
