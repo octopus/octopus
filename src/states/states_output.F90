@@ -271,7 +271,7 @@ contains
     do ii = 1, st%d%dim
       do i = 1, NP
         call mesh_r(gr%m, i, r, x = x)
-        call grylmr(x(1), x(2), x(3), l, m, ylm, gylm)
+        ylm = loct_ylm(x(1), x(2), x(3), l, m)
         multipole(i, ii) = r**l * ylm
       end do
     end do

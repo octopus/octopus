@@ -37,6 +37,7 @@ module oscillator_strength_m
                         COSINE_TRANSFORM = 2
 
   integer             :: observable(2)
+  FLOAT               :: conversion_factor
   type(unit_system_t) :: units
   FLOAT, allocatable  :: ot(:)
   type(kick_t)        :: kick
@@ -126,10 +127,6 @@ program oscillator_strength
   call getopt_oscillator_strength(run_mode, omega, search_interval,             &
                                   order, nresonances, nfrequencies, final_time, &
                                   observable(1), observable(2), ffile)
-
-!!$  write(0, *) 'l = ', observable(1)
-!!$  write(0, *) 'm = ', observable(2)
-!!$  stop
 
   ! Initialize stuff
   call global_init()
@@ -802,7 +799,7 @@ subroutine write_ot(nspin, time_steps, dt, kick, units, order, ot, observable)
   write(iunit, '(a28,i2)')      '# Frequencies substracted = ', 0
   select case(observable(1))
   case(-1)
-    write(iunit,'(a)') '# Observable operator = kick operator', kick%l
+    write(iunit,'(a)') '# Observable operator = kick operator'
     if(kick%l > 0 ) then
       conversion_factor = units%length%factor ** kick%l
     else
@@ -856,7 +853,7 @@ subroutine read_ot(nspin, order, nw_substracted)
   integer, intent(out) :: order
   integer, intent(out) :: nw_substracted
 
-  integer :: iunit, i
+  integer :: iunit, i, ierr
   character(len=100) :: line
   character(len=12)  :: dummychar
   FLOAT :: dummy, t1, t2
@@ -898,8 +895,25 @@ subroutine read_ot(nspin, order, nw_substracted)
   call io_skip_header(iunit)
 
   ! Figure out about the units of the file
-  i = index(line,'eV')
-  call units_get(units, 'eVA')
+  call units_from_file(units, "ot", ierr)
+  if(ierr.ne.0) then
+    write(message(1), '(a)') 'Could not figure out the units in file "ot".'
+    call write_fatal(1)
+  end if
+
+  select case(observable(1))
+  case(-1)
+    if(kick%l > 0) then
+      conversion_factor = units%length%factor**kick%l
+    else
+      conversion_factor = units%length%factor
+    end if
+  case(0)
+    conversion_factor = units%length%factor
+  case default
+    conversion_factor = units%length%factor**observable(1)
+  end select
+
 
   ! count number of time_steps
   time_steps = 0
