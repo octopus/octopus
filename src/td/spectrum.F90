@@ -278,6 +278,7 @@ contains
     if(index(line,'multipole').ne.0) then
       read(line, '("# multipole    ",2i3)') k%l, k%m
     else
+      backspace(iunit)
       read(iunit, '(15x,3f18.12)') k%pol(1:3, 1)
       read(iunit, '(15x,3f18.12)') k%pol(1:3, 2)
       read(iunit, '(15x,3f18.12)') k%pol(1:3, 3)

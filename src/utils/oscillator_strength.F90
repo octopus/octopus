@@ -583,7 +583,7 @@ subroutine generate_signal(order, observable)
   logical :: file_exists
   integer :: i, j, nspin, time_steps, lmax, nfiles, k, isp, add_lm, l, m, max_add_lm
   integer, allocatable :: iunit(:)
-  FLOAT :: dt, lambda, det, dump, o0, conversion_factor
+  FLOAT :: dt, lambda, det, dump, o0, conversion_factor, lequalonefactor
   FLOAT, allocatable :: q(:), mu(:), qq(:, :), c(:)
   character(len=20) :: filename
   type(kick_t) :: kick
@@ -689,8 +689,19 @@ subroutine generate_signal(order, observable)
               add_lm = add_lm + 1
             end do mcycle1
           end do lcycle1
+          ! The multipoles file treats differently the l=1 case.
+          if(kick%l == 1) then
+            lequalonefactor = sqrt(CNST(3.0)/(M_FOUR*M_Pi))
+            select case(kick%m)
+            case(-1); add_lm = 1
+            case(0);  add_lm = 3
+            case(1);  add_lm = 2
+            end select
+          else
+            lequalonefactor = M_ONE
+          end if
           do isp = 1, nspin
-            dump = dump + multipole(add_lm, i, isp)
+            dump = dump + lequalonefactor * multipole(add_lm, i, isp)
           end do
         else
           do isp = 1, nspin
@@ -719,6 +730,7 @@ subroutine generate_signal(order, observable)
       if(i == 0) o0 = dump
 
       ot(i) = ot(i) + mu(j)*(dump - o0)
+
     end do
 
   end do
