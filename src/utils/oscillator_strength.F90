@@ -926,7 +926,6 @@ subroutine read_ot(nspin, order, nw_substracted)
     conversion_factor = units%length%factor**observable(1)
   end select
 
-
   ! count number of time_steps
   time_steps = 0
   do
@@ -944,7 +943,7 @@ subroutine read_ot(nspin, order, nw_substracted)
 
   do i = 0, time_steps-1
     read(iunit, *) dummy, ot(i)
-    ot(i) = ot(i) * units%length%factor
+    ot(i) = ot(i) * conversion_factor
   end do
 
 end subroutine read_ot
