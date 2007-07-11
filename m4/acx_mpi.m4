@@ -41,7 +41,7 @@ call MPI_Init(ierr)
   if test "$HAVE_MPIF_H" = 1; then
     AC_DEFINE(MPI_H, 1, [have mpi Fortran header file])
   else
-    AC_MSG_WARN([Could not find neither the mpi module or mpif.h.])
+    AC_MSG_ERROR([Could not find neither the mpi module or mpif.h.])
   fi
 fi
 
