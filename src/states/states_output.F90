@@ -34,6 +34,8 @@ module states_output_m
   use math_m
   use units_m
 
+  implicit none
+
   private
   public ::                         &
     states_output
@@ -47,7 +49,7 @@ contains
     character(len=*), intent(in)    :: dir
     type(output_t),   intent(in)    :: outp
 
-    integer :: ik, ist, idim, is, id, ierr, iunit
+    integer :: ik, ist, idim, is, id, ierr, iunit, l, m
     character(len=80) :: fname
     FLOAT :: u
     FLOAT, allocatable :: dtmp(:), elf(:,:)
