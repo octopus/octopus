@@ -519,26 +519,15 @@ subroutine X(vlasers) (gr, h, psi, hpsi, ik, t)
   integer :: i, k, idim
   logical :: electric_field, vector_potential, magnetic_field
   R_TYPE, allocatable :: grad(:, :, :), lhpsi(:, :)
-  FLOAT, allocatable :: v(:), pot(:), a_field(:), a_field_prime(:), &
-                        a(:, :), a_prime(:, :), b(:), b_prime(:)
+
+  FLOAT :: a_field(1:MAX_DIM), a_field_prime(1:MAX_DIM), b(1:MAX_DIM), b_prime(1:MAX_DIM)
+
+  FLOAT, allocatable :: v(:), pot(:), a(:, :), a_prime(:, :)
 
   call push_sub('h_inc.Xvlasers')
 
-  ALLOCATE(v(NP), NP)
-  ALLOCATE(pot(NP), NP)
-  ALLOCATE(grad(NP_PART, NDIM, h%d%dim), NP_PART*h%d%dim*NDIM)
-  ALLOCATE(a_field(gr%sb%dim), gr%sb%dim)
-  ALLOCATE(a_field_prime(gr%sb%dim), gr%sb%dim)
-  ALLOCATE(b(gr%sb%dim), gr%sb%dim)
-  ALLOCATE(b_prime(gr%sb%dim), gr%sb%dim)
-  ALLOCATE(a(NP_PART, NDIM), NP_PART*NDIM)
-  ALLOCATE(a_prime(NP_PART, NDIM), NP_PART*NDIM)
-  pot = M_ZERO
-  v = M_ZERO
-  grad = R_TOTYPE(M_ZERO)
   a_field = M_ZERO
-  a = M_ZERO
-  a_prime = M_ZERO
+
   electric_field = .false.
   vector_potential = .false.
   magnetic_field = .false.
@@ -546,29 +535,50 @@ subroutine X(vlasers) (gr, h, psi, hpsi, ik, t)
   do i = 1, h%ep%no_lasers
     select case(h%ep%lasers(i)%field)
     case(E_FIELD_ELECTRIC)
+      if(.not. allocated(v)) then 
+        ALLOCATE(v(NP), NP)
+        v = M_ZERO
+        ALLOCATE(pot(NP), NP)
+        pot = M_ZERO
+      end if
+
       call laser_potential(gr%sb, h%ep%lasers(i), t, gr%m, pot)
       v = v + pot
       electric_field = .true.
+
     case(E_FIELD_MAGNETIC)
+      if(.not. allocated(a)) then 
+        ALLOCATE(a(NP_PART, NDIM), NP_PART*NDIM)
+        a = M_ZERO
+        ALLOCATE(a_prime(NP_PART, NDIM), NP_PART*NDIM)
+        a_prime = M_ZERO
+      end if
+
       call laser_vector_potential(h%ep%lasers(i), t, gr%m, a_prime)
       a = a + a_prime
       call laser_field(gr%sb, h%ep%lasers(i), t, b_prime)
       b = b + b_prime
       magnetic_field = .true.
+
     case(E_FIELD_VECTOR_POTENTIAL)
       call laser_field(gr%sb, h%ep%lasers(i), t, a_field_prime)
       a_field = a_field + a_field_prime
       vector_potential = .true.
-   end select
+
+    end select
+
   end do
 
   if(electric_field) then
     do k = 1, h%d%dim
       hpsi(1:NP, k)= hpsi(1:NP, k) + v(1:NP) * psi(1:NP, k)
     end do
+    deallocate(v, pot)
   end if
 
   if(magnetic_field) then
+    ALLOCATE(grad(NP_PART, NDIM, h%d%dim), NP_PART*h%d%dim*NDIM)
+
     do idim = 1, h%d%dim
       call X(f_gradient)(gr%sb, gr%f_der, psi(:, idim), grad(:, :, idim))
     end do
@@ -600,16 +610,19 @@ subroutine X(vlasers) (gr, h, psi, hpsi, ik, t)
       end if
     case (SPINORS)
       lhpsi(1:NP, 1) = M_HALF/P_C*( b(3)*psi(1:NP, 1) &
-                                 + (b(1) - M_zI*b(2))*psi(1:NP, 2))
+           + (b(1) - M_zI*b(2))*psi(1:NP, 2))
       lhpsi(1:NP, 2) = M_HALF/P_C*(-b(3)*psi(1:NP, 2) &
-                                 + (b(1) + M_zI*b(2))*psi(1:NP, 1))
+           + (b(1) + M_zI*b(2))*psi(1:NP, 1))
     end select
     hpsi(1:NP, :) = hpsi(1:NP, :) + (h%ep%gyromagnetic_ratio * M_HALF) * lhpsi(1:NP, :)
     deallocate(lhpsi)
-
+    deallocate(grad)
+    deallocate(a, a_prime)
   end if
 
   if(vector_potential) then
+    ALLOCATE(grad(NP_PART, NDIM, h%d%dim), NP_PART*h%d%dim*NDIM)
+
     do idim = 1, h%d%dim
       call X(f_gradient)(gr%sb, gr%f_der, psi(:, idim), grad(:, :, idim))
     end do
@@ -630,9 +643,9 @@ subroutine X(vlasers) (gr, h, psi, hpsi, ik, t)
         end do
       end do
     end select
+    deallocate(grad)
   end if
 
-  deallocate(v, pot, a_field, a_field_prime, grad, a, a_prime, b, b_prime)
   call pop_sub()
 end subroutine X(vlasers)
 

@@ -68,8 +68,8 @@ contains
     FLOAT,             intent(in)   :: center(1:MAX_DIM)
     FLOAT,             intent(in)   :: rc
     
-    FLOAT :: r
-    integer :: ii, is, kk, ip
+    FLOAT :: r2
+    integer :: ii, is, ip
 
     call push_sub('submesh.submesh_init_sphere')
 
@@ -87,8 +87,8 @@ contains
     is = 0
     do ip = 1, m%np_part
       do ii = 1, 3**sb%periodic_dim
-        call mesh_r(m, ip, r, a=center(:) + sb%shift(ii,:))
-        if(r > rc + m%h(1)) cycle
+        r2 = sum((m%x(ip, 1:MAX_DIM) - center(1:MAX_DIM) + sb%shift(ii, 1:MAX_DIM))**2)
+        if(r2 > (rc + m%h(1))**2 ) cycle
         is = is + 1
         exit
       end do
@@ -101,13 +101,13 @@ contains
 
     ! Get the index of the points inside the sphere
     is = 0
-    do kk = 1, m%np_part
+    do ip = 1, m%np_part
       do ii = 1, 3**sb%periodic_dim
-        call mesh_r(m, kk, r, a=center + sb%shift(ii,:))
+        r2 = sum((m%x(ip, 1:MAX_DIM) - center(1:MAX_DIM) + sb%shift(ii, 1:MAX_DIM))**2)
         ! we enlarge slightly the mesh (good for the interpolation scheme)
-        if(r > rc + m%h(1)) cycle
+        if(r2 > (rc + m%h(1))**2 ) cycle
         is = is + 1
-        this%jxyz(is) = kk
+        this%jxyz(is) = ip
         exit
       end do
     end do
