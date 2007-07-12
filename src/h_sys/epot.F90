@@ -106,6 +106,9 @@ module external_pot_m
     FLOAT :: gyromagnetic_ratio
     integer :: forces
     logical :: gen_grads
+#ifdef HAVE_MPI
+    logical :: parallel_generate
+#endif
   end type epot_t
 
   integer, parameter :: &
@@ -317,6 +320,8 @@ contains
     !% The forces can be calculated either by derivating the ionic
     !% potential or the wavefunctions. This option selects how to
     !% calculate them. By default the wavefunctions are derived.
+    !% Note: The option derivate_potential is deprecated and will be
+    !% eliminated soon.
     !%Option derivate_potential 1
     !% Derivate the potential to calculate the forces.
     !%Option derivate_wavefunctions 2
@@ -325,6 +330,20 @@ contains
     call loct_parse_int(check_inp('Forces'), DERIVATE_WAVEFUNCTION, ep%forces)
 
     ep%gen_grads = (ep%forces == DERIVATE_POTENTIAL)
+
+#ifdef HAVE_MPI
+    !%Variable ParallelPotentialGeneration
+    !%Type logical
+    !%Default false
+    !%Section Generalities::Parallel
+    !%Description
+    !% If <tt>true</tt> and parallelization in states is used, the
+    !% generation of the potential it is done in parallel. This is
+    !% still expertimental so it is disabled dy default.
+    !%End
+
+    call loct_parse_logical(check_inp('ParallelPotentialGeneration'), .false., ep%parallel_generate)
+#endif
 
     ! The projectors
     ep%nvnl = geometry_nvnl(geo, nvl)
@@ -756,7 +775,7 @@ contains
       integer :: rank, size, ini, fin, mpi_err
       integer, allocatable :: rep(:)
       
-      if (.not. multicomm_strategy_is_parallel(mc, P_STRATEGY_STATES)) then
+      if (.not. (ep%parallel_generate .and. multicomm_strategy_is_parallel(mc, P_STRATEGY_STATES))) then
 #endif
 
         do iproj = 1, ep%nvnl
