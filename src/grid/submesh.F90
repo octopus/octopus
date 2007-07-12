@@ -83,6 +83,10 @@ contains
       call write_fatal(4)
     end if
 
+    !build the inverse of jxyz, points not in the sphere go to 0
+    ALLOCATE(this%jxyz_inv(0:this%np_part), this%np_part+1)
+    this%jxyz_inv(0:this%np_part) = 0
+
     ! Get the total number of points inside the sphere
     is = 0
     do ip = 1, m%np_part
@@ -90,6 +94,7 @@ contains
         r2 = sum((m%x(ip, 1:MAX_DIM) - center(1:MAX_DIM) + sb%shift(ii, 1:MAX_DIM))**2)
         if(r2 > (rc + m%h(1))**2 ) cycle
         is = is + 1
+        this%jxyz_inv(ip) = is
         exit
       end do
       if (ip == m%np) this%ns = is
@@ -100,27 +105,10 @@ contains
     ALLOCATE(this%jxyz(this%ns_part), this%ns_part)
 
     ! Get the index of the points inside the sphere
-    is = 0
     do ip = 1, m%np_part
-      do ii = 1, 3**sb%periodic_dim
-        r2 = sum((m%x(ip, 1:MAX_DIM) - center(1:MAX_DIM) + sb%shift(ii, 1:MAX_DIM))**2)
-        ! we enlarge slightly the mesh (good for the interpolation scheme)
-        if(r2 > (rc + m%h(1))**2 ) cycle
-        is = is + 1
-        this%jxyz(is) = ip
-        exit
-      end do
+      if( this%jxyz_inv(ip) /= 0 ) this%jxyz(this%jxyz_inv(ip)) = ip
     end do
 
-    !build the inverse of jxyz, points not in the sphere go to 0
-    ALLOCATE(this%jxyz_inv(0:this%np_part), this%np_part+1)
-
-    this%jxyz_inv(0:this%np_part) = 0
-
-    do is = 1, this%ns_part
-      this%jxyz_inv(this%jxyz(is)) = is
-    end do
-    
     call pop_sub()
 
   end subroutine submesh_init_sphere

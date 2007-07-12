@@ -635,7 +635,7 @@ contains
   end subroutine epot_generate_gauge_field
   
   ! ---------------------------------------------------------
-  subroutine epot_generate(ep, gr, geo, mc, st, reltype, time, fast_generation)
+  subroutine epot_generate(ep, gr, geo, mc, st, reltype, time)
     type(epot_t),      intent(inout) :: ep
     type(grid_t), target,  intent(inout) :: gr
     type(geometry_t),  intent(inout) :: geo
@@ -643,9 +643,7 @@ contains
     type(states_t),    intent(inout) :: st
     integer,           intent(in)    :: reltype
     FLOAT,   optional, intent(in)    :: time
-    logical, optional, intent(in)    :: fast_generation
 
-    logical :: fast_generation_
     FLOAT   :: time_
     integer :: ia, l, lm, k, iproj
     type(atom_t),   pointer :: atm
@@ -654,6 +652,7 @@ contains
 #endif
     type(mesh_t),      pointer :: m
     type(simul_box_t), pointer :: sb
+    type(submesh_t)  :: nl_sphere
 
     call profiling_in(C_PROFILING_EPOT_GENERATE)
     call push_sub('epot.epot_generate')
@@ -661,8 +660,6 @@ contains
     sb  => gr%sb
     m   => gr%m
 
-    fast_generation_ = .false.
-    if (present(fast_generation)) fast_generation_ = fast_generation
     time_ = M_ZERO
     if (present(time)) time_ = time
 
@@ -712,18 +709,23 @@ contains
 
       ep%atomproj(1, ia) = iproj
       
+      call submesh_init_sphere(nl_sphere, sb, m, atm%x, atm%spec%ps%rc_max)
+
       do l = 0, atm%spec%ps%l_max
         if(atm%spec%ps%l_loc == l) cycle
         do lm = -l, l
 
           call projector_end(ep%p(iproj))
-          call projector_build_kb_sphere(ep%p(iproj), sb, m, atm, st)
+          call submesh_copy(nl_sphere, ep%p(iproj)%sphere)
+          if(simul_box_is_periodic(sb)) call projector_init_phases(ep%p(iproj), sb, m, atm, st)
           call projector_init(ep%p(iproj), atm, reltype, l, lm)
 
           ep%p(iproj)%iatom = ia
           iproj = iproj + 1
         end do
       end do
+
+      call submesh_end(nl_sphere)
 
       if(.not. simul_box_is_periodic(gr%sb)) then
         !the local part

@@ -56,8 +56,7 @@ module projector_m
        projector_broadcast,       &
 #endif
        projector_end,             &
-       projector_build_kb_sphere, &
-       projector_copy_kb_sphere,  &
+       projector_init_phases,     &
        dproject_psi,              &
        zproject_psi,              &
        dpsidprojectpsi,           &
@@ -120,7 +119,7 @@ contains
   end subroutine projector_null
 
   !---------------------------------------------------------
-  subroutine projector_build_kb_sphere(p, sb, m, a, st)
+  subroutine projector_init_phases(p, sb, m, a, st)
     type(projector_t), intent(inout) :: p
     type(simul_box_t), intent(in)    :: sb
     type(mesh_t),      intent(in)    :: m
@@ -131,8 +130,6 @@ contains
     FLOAT :: x(MAX_DIM)
 
     call push_sub('projector.projector_build_kb_sphere')
-
-    call submesh_init_sphere(p%sphere, sb, m, a%x, a%spec%ps%rc_max)
 
     ! and here the phases for the periodic systems
     if (sb%periodic_dim /= 0) then
@@ -150,25 +147,7 @@ contains
     end if
 
     call pop_sub()
-  end subroutine projector_build_kb_sphere
-
-  !---------------------------------------------------------
-  subroutine projector_copy_kb_sphere(pi, po)
-    type(projector_t), intent(in)    :: pi
-    type(projector_t), intent(inout) :: po
-
-    call push_sub('projector.projector_copy_kb_sphere')
-
-    call submesh_copy(pi%sphere, po%sphere)
-
-    if (associated(pi%phases)) then
-      po%nik = pi%nik
-      ALLOCATE(po%phases(pi%sphere%ns, pi%nik), pi%sphere%ns*pi%nik)
-      po%phases = pi%phases
-    end if
-
-    call pop_sub()
-  end subroutine projector_copy_kb_sphere
+  end subroutine projector_init_phases
 
   !---------------------------------------------------------
   subroutine projector_init(p, a, reltype, l, lm, force_type)
