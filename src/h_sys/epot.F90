@@ -950,15 +950,13 @@ contains
     end if
 
 #if defined(HAVE_MPI)
-    do i = 1, geo%natoms
-      atm => geo%atom(i)
-      if(specie_is_local(atm%spec)) cycle
-
-      if(st%parallel_in_states) then
+    if(st%parallel_in_states) then
+      do i = 1, geo%natoms
+        atm => geo%atom(i)
         call MPI_Allreduce(atm%f(1), f(1), NDIM, MPI_FLOAT, MPI_SUM, st%mpi_grp%comm, mpi_err)
         atm%f = f
-      end if
-    end do
+      end do
+    end if
 #endif
 
     if(.not.geo%only_user_def) then ! exclude user defined species for the moment
