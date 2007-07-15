@@ -63,7 +63,12 @@ subroutine X(eigen_solver_cg2) (gr, st, h, pre, tol, niter, converged, diff, reo
   ALLOCATE(   g0(NP_PART, st%d%dim), NP_PART*st%d%dim)
   ALLOCATE(   cg(NP_PART, st%d%dim), NP_PART*st%d%dim)
 
-  cg(1:NP_PART, 1:st%d%dim)=M_ZERO
+  do idim = 1, st%d%dim
+    !$omp parallel workshare
+    cg(1:NP, idim) = R_TOTYPE(M_ZERO)
+    cg(NP+1:NP_PART, idim) = R_TOTYPE(M_ZERO)
+    !$omp end parallel workshare
+  end do
 
   ! Set the diff to zero, since it is intent(out)
   if(present(diff)) then 
@@ -93,8 +98,7 @@ subroutine X(eigen_solver_cg2) (gr, st, h, pre, tol, niter, converged, diff, reo
       end if
 
       ! Orthogonalize starting eigenfunctions to those already calculated...
-      call X(states_gram_schmidt)(p, gr%m, st%d%dim, &
-        st%X(psi)(:, 1:st%d%dim, 1:p, ik), start=p)
+      call X(states_gram_schmidt)(p, gr%m, st%d%dim, st%X(psi)(:, 1:st%d%dim, 1:p, ik), start=p)
 
       ! Calculate starting gradient: |hpsi> = H|psi>
       call X(Hpsi)(h, gr, st%X(psi)(:,:, p, ik) , h_psi, ik)
@@ -147,8 +151,10 @@ subroutine X(eigen_solver_cg2) (gr, st, h, pre, tol, niter, converged, diff, reo
           !gamma = gg/gg0        ! (Fletcher-Reeves)
           gamma = (gg - gg1)/gg0   ! (Polack-Ribiere)
           gg0 = gg
-          cg(1:NP, 1:st%d%dim) = gamma*cg(1:NP, 1:st%d%dim)
-          cg(1:NP, 1:st%d%dim) = cg(1:NP, 1:st%d%dim) + g(1:NP, 1:st%d%dim)
+
+          !$omp parallel workshare
+          cg(1:NP, 1:st%d%dim) = gamma*cg(1:NP, 1:st%d%dim) + g(1:NP, 1:st%d%dim)
+          !$omp end parallel workshare
 
           norma = gamma*cg0*sin(theta)
 
@@ -181,18 +187,13 @@ subroutine X(eigen_solver_cg2) (gr, st, h, pre, tol, niter, converged, diff, reo
         ! Upgrade psi...
         a0 = cos(theta)
         b0 = sin(theta)/cg0
-        ! This does the sum: st%X(psi)(:, :, p, ik) = a0*st%X(psi)(:, :, p, ik) + b0*cg(:, :)
-        ! It can crash in Intel compiler version 8 otherwise.
-        do j = 1, st%d%dim
-          call lalg_scal(NP, a0, st%X(psi)(:, j, p, ik))
-          call lalg_axpy(NP, b0, cg(:, j), st%X(psi)(:, j, p, ik))
-        end do
 
-        ! Calculate H|psi>
+        !$omp parallel workshare
+        st%X(psi)(1:NP, 1:st%d%dim, p, ik) = a0*st%X(psi)(1:NP, 1:st%d%dim, p, ik) + b0*cg(1:NP, 1:st%d%dim)
         h_psi(1:NP, 1:st%d%dim) = a0*h_psi(1:NP, 1:st%d%dim) + b0*ppsi(1:NP, 1:st%d%dim)
+        !$omp end parallel workshare
 
-        res = X(states_residue)(gr%m, st%d%dim, h_psi, st%eigenval(p, ik), &
-          st%X(psi)(:, :, p, ik))
+        res = X(states_residue)(gr%m, st%d%dim, h_psi, st%eigenval(p, ik), st%X(psi)(:, :, p, ik))
         ! Test convergence.
         if(res < tol) then
           conv = conv + 1

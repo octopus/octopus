@@ -248,6 +248,7 @@ contains
     ! Build lookup table op%i from stencil.
     ALLOCATE(op%i(op%n, np), op%n*np)
 
+    !$omp parallel do private(j, p1)
     do i = 1, np
       if(m%parallel_in_domains) then
         ! When running in parallel, get global number of
@@ -271,6 +272,7 @@ contains
 
       end do
     end do
+    !$omp end parallel do
 
     call pop_sub()
   end subroutine nl_operator_build
@@ -884,9 +886,11 @@ contains
       end do
     end if
     
+    !$omp parallel do
     do ii = op%np + 1, size(fo)
       fo(ii) = M_ZERO
     end do
+    !$omp end parallel do
     
     call pop_sub()
     call profiling_out(C_PROFILING_NL_OPERATOR)
@@ -951,10 +955,12 @@ contains
       end if
     end if
 
+    !$omp parallel do
     do ii = op%np + 1, size(fo)
       fo(ii) = M_ZERO
     end do
-    
+    !$omp end parallel do
+
     call pop_sub()
     call profiling_out(C_PROFILING_NL_OPERATOR)
   end subroutine znl_operator_operate
@@ -1067,11 +1073,11 @@ contains
     FLOAT,   intent(out):: fo(1:np) 
 
     integer :: ii
-!$omp parallel do firstprivate(w)
+    !$omp parallel do
     do ii = 1, np
       fo(ii) = sum(w(1:nn)  * fi(opi(1:nn, ii)))
     end do
-!$omp end parallel do
+    !$omp end parallel do
   end subroutine doperate
 
 
@@ -1086,11 +1092,11 @@ contains
     CMPLX,   intent(out):: fo(1:np) 
 
     integer :: ii
-!$omp parallel do firstprivate(w)
+    !$omp parallel do
     do ii = 1, np
       fo(ii) = sum(w(1:nn)  * fi(opi(1:nn, ii)))
     end do
-!$omp end parallel do
+    !$omp end parallel do
   end subroutine zoperate
 
 end module nl_operator_m

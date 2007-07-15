@@ -28,6 +28,7 @@ subroutine X(eigen_diagon_subspace) (gr, st, h, diff)
 
   R_TYPE, allocatable :: h_subspace(:,:), vec(:,:), f(:,:,:)
   integer :: ik, i, j
+  FLOAT :: nrm2
 
   ALLOCATE(h_subspace(st%nst, st%nst), st%nst*st%nst)
   ALLOCATE(vec(st%nst, st%nst), st%nst*st%nst)
@@ -50,18 +51,30 @@ subroutine X(eigen_diagon_subspace) (gr, st, h, diff)
     call lalg_eigensolve(st%nst, h_subspace, vec, st%eigenval(:, ik))
 
     !the new states are the given by the eigenvectors of the matrix
+    !$omp parallel workshare
     f(1:NP,1:st%d%dim,1:st%nst) = st%X(psi)(1:NP,1:st%d%dim,1:st%nst, ik)
+    !$omp end parallel workshare
+
     do i = 1, st%nst
       ! build new state
+      !$omp parallel workshare
       st%X(psi)(1:NP,1:st%d%dim, i, ik) = vec(i, i)*st%X(psi)(1:NP,1:st%d%dim, i, ik)
+      !$omp end parallel workshare
+
       do j = 1, st%nst
-        if(i.ne.j) st%X(psi)(1:NP,1:st%d%dim,i, ik) = st%X(psi)(1:NP,1:st%d%dim,i, ik) & 
-             + vec(j, i)*f(1:NP,1:st%d%dim,j)
+        if(i.ne.j) then 
+          !$omp parallel workshare
+          st%X(psi)(1:NP,1:st%d%dim,i, ik) = st%X(psi)(1:NP,1:st%d%dim,i, ik) & 
+               + vec(j, i)*f(1:NP,1:st%d%dim,j)
+          !$omp end parallel workshare
+        end if
       end do
 
       ! renormalize
-      st%X(psi)(1:NP,1:st%d%dim, i, ik) = &
-           st%X(psi)(1:NP,1:st%d%dim, i, ik)/X(states_nrm2)(gr%m, st%d%dim, st%X(psi)(:,:, i, ik))
+      nrm2 = X(states_nrm2)(gr%m, st%d%dim, st%X(psi)(:,:, i, ik))
+      !$omp parallel workshare
+      st%X(psi)(1:NP,1:st%d%dim, i, ik) = st%X(psi)(1:NP,1:st%d%dim, i, ik)/nrm2
+      !$omp end parallel workshare
     end do
 
     !recalculate the residue

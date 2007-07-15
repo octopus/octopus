@@ -143,7 +143,9 @@ contains
 
     ! Local part of the pseudopotentials
     ALLOCATE(ep%vpsl(NP), NP)
-    ep%vpsl = M_ZERO
+    !$omp parallel workshare
+    ep%vpsl(1:NP) = M_ZERO
+    !$omp end parallel workshare
 
 #if defined(HAVE_FFT)
     ! should we calculate the local pseudopotentials in Fourier space?
@@ -837,7 +839,9 @@ contains
 
     !Local potential
     call specie_get_local(a%spec, gr, a%x(1:NDIM), vl, time)
+    !$omp parallel workshare
     vpsl(1:NP) = vpsl(1:NP) + vl(1:NP)
+    !$omp end parallel workshare
 
     !Non-local core corrections
     if(present(rho_core) .and. a%spec%nlcc .and. specie_is_ps(a%spec)) then

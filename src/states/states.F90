@@ -548,7 +548,7 @@ contains
     type(mesh_t),    intent(in)    :: m
     integer, optional, intent(in) :: wfs_type
 
-    integer :: n
+    integer :: n, ik, ist, idim
 
     call push_sub('states.states_allocate_wfns')
 
@@ -560,10 +560,32 @@ contains
     n = m%np_part * st%d%dim * (st%st_end-st%st_start+1) * st%d%nik
     if (st%d%wfs_type == M_REAL) then
       ALLOCATE(st%dpsi(m%np_part, st%d%dim, st%st_start:st%st_end, st%d%nik), n)
-      st%dpsi = M_ZERO
+
+      do ik = 1, st%d%nik
+        do ist = st%st_start, st%st_end
+          do idim = 1, st%d%dim
+            !$omp parallel workshare
+            st%dpsi(1:m%np, idim, ist, ik) = M_ZERO
+            st%dpsi(m%np+1:m%np_part, idim, ist, ik) = M_ZERO
+            !$omp end parallel workshare
+          end do
+        end do
+      end do
+
     else
       ALLOCATE(st%zpsi(m%np_part, st%d%dim, st%st_start:st%st_end, st%d%nik), n)
-      st%zpsi = M_Z0
+
+      do ik = 1, st%d%nik
+        do ist = st%st_start, st%st_end
+          do idim = 1, st%d%dim
+            !$omp parallel workshare
+            st%zpsi(1:m%np, idim, ist, ik) = M_Z0
+            st%zpsi(m%np+1:m%np_part, idim, ist, ik) = M_Z0
+            !$omp end parallel workshare
+          end do
+        end do
+      end do
+
     end if
 
     call pop_sub()

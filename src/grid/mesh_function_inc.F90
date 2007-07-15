@@ -34,7 +34,9 @@ R_TYPE function X(mf_integrate) (mesh, f) result(d)
     ASSERT(.false.)
 #endif
   else
+    !$omp parallel workshare
     d = sum(f(1:mesh%np)*mesh%vol_pp(1:mesh%np))
+    !$omp end parallel workshare
   end if
 
   call pop_sub()
@@ -485,17 +487,21 @@ subroutine X(mf_put_radial_spline)(m, spl, center, f, add)
   
   if( add_ ) then 
 
+    !$omp parallel do private(r)
     do ip = 1, m%np
       r = sqrt(sum((m%x(ip, 1:MAX_DIM) - center(1:MAX_DIM))**2))
       f(ip) = f(ip) + loct_splint(spl, r)
     end do
+    !$omp end parallel do
 
   else
 
+    !$omp parallel do private(r)
      do ip = 1, m%np
       r = sqrt(sum((m%x(ip, 1:MAX_DIM) - center(1:MAX_DIM))**2))
       f(ip) = loct_splint(spl, r)
     end do
+    !$omp end parallel do
 
   end if
 

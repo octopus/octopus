@@ -255,7 +255,10 @@ subroutine X(zero_bc)(m, f)
     bndry_start = m%np+1
     bndry_end   = m%np_part
   end if
+
+  !$omp parallel workshare
   f(bndry_start:bndry_end) = R_TOTYPE(M_ZERO)
+  !$omp end parallel workshare
 
   call pop_sub()
 end subroutine X(zero_bc)

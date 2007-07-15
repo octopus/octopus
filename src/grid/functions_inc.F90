@@ -34,8 +34,12 @@ subroutine X(mf2cf) (m, mf, cf)
   ASSERT(associated(cf%RS))
 
   c(:)  =  cf%n(:)/2 + 1
-  cf%RS =  M_ZERO
 
+  !$omp parallel workshare
+  cf%RS =  M_ZERO
+  !$omp end parallel workshare
+
+  !$omp parallel do private(ix, iy, iz)
   do i = 1, m%np_global
     ix = m%Lxyz(i, 1) + c(1)
     iy = m%Lxyz(i, 2) + c(2)
@@ -43,6 +47,7 @@ subroutine X(mf2cf) (m, mf, cf)
 
     cf%RS(ix, iy, iz) = mf(i)
   end do
+  !$omp end parallel do
 
 end subroutine X(mf2cf)
 
@@ -59,12 +64,14 @@ subroutine X(cf2mf) (m, cf, mf)
 
   c(:) =  cf%n(:)/2 + 1
 
+  !$omp parallel do private(ix, iy, iz)
   do i = 1, m%np_global
     ix = m%Lxyz(i, 1) + c(1)
     iy = m%Lxyz(i, 2) + c(2)
     iz = m%Lxyz(i, 3) + c(3)
     mf(i) = cf%RS(ix, iy, iz)
   end do
+  !$omp end parallel do
 
 end subroutine X(cf2mf)
 

@@ -446,7 +446,9 @@ subroutine X(vlpsi) (h, m, psi, hpsi, ik)
 
   select case(h%d%ispin)
   case(UNPOLARIZED)
+    !$omp parallel workshare
     hpsi(1:m%np, 1) = hpsi(1:m%np, 1) + (h%vhxc(1:m%np, 1) + h%ep%vpsl(1:m%np))*psi(1:m%np, 1)
+    !$omp end parallel workshare
   case(SPIN_POLARIZED)
     if(modulo(ik+1, 2) == 0) then ! we have a spin down
       hpsi(1:m%np, 1) = hpsi(1:m%np, 1) + (h%vhxc(1:m%np, 1) + h%ep%vpsl(1:m%np))*psi(1:m%np, 1)

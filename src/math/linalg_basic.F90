@@ -21,7 +21,9 @@
 
 module lib_basic_alg_m
   use blas_m
-
+#ifdef USE_OMP
+  use omp_lib
+#endif
   implicit none
 
   private
@@ -151,6 +153,23 @@ module lib_basic_alg_m
   end interface
 
 contains
+
+#ifdef USE_OMP
+  subroutine divide_range(nn, rank, size, ini, nn_loc)
+    integer, intent(in)    :: nn
+    integer, intent(in)    :: rank
+    integer, intent(in)    :: size
+    integer, intent(out)   :: ini
+    integer, intent(out)   :: nn_loc
+    
+    nn_loc = nn / size + 1
+    ini = nn_loc * rank
+    nn_loc = min(nn - ini, nn_loc)
+
+    ini = ini + 1
+
+  end subroutine divide_range
+#endif
 
 #  define TYPE 1
 #  include "linalg_basic_blas.F90"

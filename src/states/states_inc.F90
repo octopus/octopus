@@ -144,7 +144,9 @@ subroutine X(states_normalize_orbital)(m, dim, psi)
   norm = sqrt(norm)
 
   do idim = 1, dim
+    !$omp parallel workshare
     psi(1:m%np, idim) = psi(1:m%np, idim)/norm
+    !$omp end parallel workshare
   end do
 
   call pop_sub()
@@ -185,7 +187,9 @@ FLOAT function X(states_residue)(m, dim, hf, e, f) result(r)
 
   ALLOCATE(res(m%np_part, dim), m%np_part*dim)
 
+  !$omp parallel workshare
   res(1:m%np, 1:dim) = hf(1:m%np, 1:dim) - e*f(1:m%np, 1:dim)
+  !$omp end parallel workshare
 
   r = X(states_nrm2)(m, dim, res)
   deallocate(res)

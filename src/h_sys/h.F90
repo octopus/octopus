@@ -148,7 +148,7 @@ contains
     type(states_dim_t),  intent(in), target :: states_dim
     logical,             intent(in)    :: ip_app
 
-    integer :: i, j, n
+    integer :: i, j, n, ispin
     FLOAT :: d(MAX_DIM)
 
     call push_sub('h.hamiltonian_init')
@@ -176,9 +176,19 @@ contains
     ALLOCATE(h%vhartree(NP),        NP)
     ALLOCATE(h%vxc(NP, h%d%nspin), NP*h%d%nspin)
     ALLOCATE(h%vhxc(NP, h%d%nspin), NP*h%d%nspin)
-    h%vhartree = M_ZERO
-    h%vhxc = M_ZERO
-    h%vxc = M_ZERO
+
+    !$omp parallel workshare
+    h%vhartree(1:NP) = M_ZERO
+    !$omp end parallel workshare
+
+    do ispin = 1, h%d%nspin
+      !$omp parallel workshare
+      h%vhxc(1:NP, ispin) = M_ZERO
+      h%vxc(1:NP, ispin) = M_ZERO
+      !$omp end parallel workshare
+    end do
+
+
     if (h%d%cdft) then
       ALLOCATE(h%axc(NP, NDIM, h%d%nspin), NP*NDIM*h%d%nspin)
       h%axc = M_ZERO

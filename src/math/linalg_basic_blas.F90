@@ -88,7 +88,16 @@ subroutine FNAME(scal_1)(n1, da, dx)
   TYPE1,   intent(in)    :: da
   TYPE1,   intent(inout) :: dx(1:n1)
 
+#ifdef USE_OMP
+  integer :: nn_loc, ini
+
+!$omp parallel private(ini, nn_loc)
+  call divide_range(n1, omp_get_thread_num(), omp_get_num_threads(), ini, nn_loc)
+  call blas_scal(nn_loc, da, dx(ini), 1)
+!$omp end parallel
+#else
   call blas_scal(n1, da, dx(1), 1)
+#endif
 
 end subroutine FNAME(scal_1)
 
@@ -140,7 +149,16 @@ subroutine FNAME(axpy_1)(n1, da, dx, dy)
   TYPE1,   intent(in)    :: dx(1:n1)
   TYPE1,   intent(inout) :: dy(1:n1)
 
+#ifdef USE_OMP
+  integer :: nn_loc, ini
+
+!$omp parallel private(ini, nn_loc)
+  call divide_range(n1, omp_get_thread_num(), omp_get_num_threads(), ini, nn_loc)
+  call blas_axpy(nn_loc, da, dx(ini), 1, dy(ini), 1)
+!$omp end parallel
+#else
   call blas_axpy(n1, da, dx(1), 1, dy(1), 1)
+#endif
 
 end subroutine FNAME(axpy_1)
 
@@ -181,8 +199,17 @@ subroutine FNAME(axpy_5)(n1, da, dx, dy)
   TYPE1,   intent(in)    :: dx(1:n1)
   TYPE1,   intent(inout) :: dy(1:n1)
 
+#ifdef USE_OMP
+  integer :: ini, nn_loc
+  
+  !$omp parallel private(ini, nn_loc)
+  call divide_range(n1, omp_get_thread_num(), omp_get_num_threads(), ini, nn_loc)
+  call blas_axpy(nn_loc, da, dx(ini), dy(ini))
+  !$omp end parallel
+#else
   call blas_axpy(n1, da, dx(1), dy(1))
-
+#endif
+  
 end subroutine FNAME(axpy_5)
 #endif
 
@@ -195,7 +222,16 @@ subroutine FNAME(copy_1)(n1, dx, dy)
   TYPE1,   intent(in)  :: dx(:)
   TYPE1,   intent(out) :: dy(:)
 
+#ifdef USE_OMP
+  integer :: ini, nn_loc
+
+  !$omp parallel private(ini, nn_loc)
+  call divide_range(n1, omp_get_thread_num(), omp_get_num_threads(), ini, nn_loc)
+  call blas_copy(nn_loc, dx(ini), 1, dy(ini), 1)
+  !$omp end parallel
+#else
   call blas_copy(n1, dx(1), 1, dy(1), 1)
+#endif
 
 end subroutine FNAME(copy_1)
 
@@ -234,7 +270,24 @@ TYPE1 function FNAME(dot) (n, dx, dy) result(dot)
   integer, intent(in) :: n
   TYPE1,   intent(in) :: dx(:), dy(:)
 
+#ifdef USE_OMP
+  TYPE1   :: dot_loc
+  integer :: nn_loc, ini
+  
+  dot = CNST(0.0)
+
+  !$omp parallel private(ini, nn_loc, dot_loc)
+  call divide_range(n, omp_get_thread_num(), omp_get_num_threads(), ini, nn_loc)
+  dot_loc = blas_dot(nn_loc, dx(ini), 1, dy(ini), 1)
+
+  !$omp atomic
+  dot = dot + dot_loc
+
+  !$omp end parallel
+
+#else
   dot = blas_dot(n, dx(1), 1, dy(1), 1)
+#endif
 
 end function FNAME(dot)
 
@@ -246,7 +299,23 @@ TYPE2 function FNAME(nrm2)(n, dx) result(nrm2)
   integer, intent(in) :: n
   TYPE1,   intent(in) :: dx(:)
 
+#ifdef USE_OMP
+  TYPE1   :: nrm2_loc
+  integer :: nn_loc, ini
+  
+  nrm2 = CNST(0.0)
+
+  !$omp parallel private(ini, nn_loc, nrm2_loc)
+  call divide_range(n, omp_get_thread_num(), omp_get_num_threads(), ini, nn_loc)
+  nrm2_loc = blas_nrm2(nn_loc, dx(ini), 1)
+
+  !$omp atomic
+  nrm2 = nrm2 + nrm2_loc
+
+  !$omp end parallel
+#else
   nrm2 = blas_nrm2(n, dx(1), 1)
+#endif
 
 end function FNAME(nrm2)
 

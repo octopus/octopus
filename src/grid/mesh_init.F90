@@ -189,7 +189,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine create_x_Lxyz()
-    integer :: il, ix, iy, iz
+    integer :: il, ix, iy, iz, ip
 
     ALLOCATE(mesh%Lxyz(mesh%np_part_global, 3), mesh%np_part_global*3)
     if(mesh%parallel_in_domains) then
@@ -199,6 +199,22 @@ contains
     else
       ! When running parallel, x is computed later.
       ALLOCATE(mesh%x(mesh%np_part_global, 3), mesh%np_part_global*3)
+
+#ifdef USE_OMP
+      !$omp parallel 
+      !$omp do
+      do ip = 1, mesh%np_global
+        mesh%x(ip, 1:3) = M_ZERO
+      end do
+      !$omp end do nowait
+      !$omp do
+      do ip = mesh%np_global+1, mesh%np_part_global
+        mesh%x(ip, 1:3) = M_ZERO
+      end do
+      !$omp end do
+      !$omp end parallel
+#endif
+
       ! This is a bit ugly: x_global is needed in out_in
       ! but in the serial case it is the same as x
       mesh%x_global => mesh%x
@@ -308,7 +324,10 @@ contains
     call push_sub('mesh_init.mesh_get_vol_pp')
 
     ALLOCATE(mesh%vol_pp(mesh%np_part), mesh%np_part)
+
+    !$omp parallel workshare
     mesh%vol_pp(:) = product(mesh%h(1:sb%dim))
+    !$omp end parallel workshare
 
     if(mesh%parallel_in_domains) then
 #if defined(HAVE_MPI)

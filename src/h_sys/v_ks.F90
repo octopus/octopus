@@ -184,7 +184,9 @@ contains
 
     h%epot     = M_ZERO
     h%ehartree = M_ZERO
+    !$omp parallel workshare
     h%vhxc     = M_ZERO
+    !$omp end parallel workshare
     if(h%d%cdft) h%axc = M_ZERO
 
     ! check if we should introduce the amaldi SIC correction
@@ -194,8 +196,17 @@ contains
     ! No Hartree or xc if independent electrons
     if((.not.ks%ip_app).and.(amaldi_factor>M_ZERO)) then
       call v_hartree()
+
+      !$omp parallel workshare
       h%vhxc(1:NP, 1) = h%vhxc(1:NP, 1) + h%vhartree(1:NP)
-      if(h%d%ispin > UNPOLARIZED) h%vhxc(1:NP, 2) = h%vhxc(1:NP, 2) + h%vhartree(1:NP)
+      !$omp end parallel workshare
+
+      if(h%d%ispin > UNPOLARIZED) then
+        !$omp parallel workshare
+        h%vhxc(1:NP, 2) = h%vhxc(1:NP, 2) + h%vhartree(1:NP)
+        !$omp end parallel workshare
+      end if
+
       call v_a_xc()
     end if
 
@@ -226,9 +237,13 @@ contains
       ALLOCATE(rho(NP), NP)
 
       ! calculate the total density
+      !$omp parallel workshare
       rho(1:NP) = st%rho(1:NP, 1)
+      !$omp end parallel workshare
       do is = 2, h%d%spin_channels
+        !$omp parallel workshare
         rho(1:NP) = rho(1:NP) + st%rho(1:NP, is)
+        !$omp end parallel workshare
       end do
 
       ! Amaldi correction
@@ -286,9 +301,16 @@ contains
       end if
 
       ! Get vxc, by substracting the Hartree term.
+      !$omp parallel workshare
       h%vxc = h%vhxc
       h%vxc(1:NP, 1) = h%vxc(1:NP, 1) - h%vhartree(1:NP)
-      if(h%d%ispin > UNPOLARIZED) h%vxc(1:NP, 2) = h%vxc(1:NP, 2) - h%vhartree(1:NP)
+      !$omp end parallel workshare
+
+      if(h%d%ispin > UNPOLARIZED) then 
+        !$omp parallel workshare
+        h%vxc(1:NP, 2) = h%vxc(1:NP, 2) - h%vhartree(1:NP)
+        !$omp end parallel workshare
+      end if
 
       ! Now we calculate Int[n vxc] = h%epot
       select case(h%d%ispin)
