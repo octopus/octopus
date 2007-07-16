@@ -53,7 +53,7 @@ Usage: oct-run_testsuite [options]
      -e SUFFIX     exec suffix for octopus executable
      -p PREFIX     installation prefix [default: /usr]
      -w            without MPI tests (do not run parallel tests)
-     -c            delete all .log files after the run
+     -c            delete all .log files and work directories after the run
      -m ADDRESS    mail report to address
 
 Report bugs to <appel@physik.fu-berlin.de>.
@@ -91,6 +91,13 @@ function run_testsuite() {
 
 tests="$1"
 
+# Check for preserve working directories flag.
+if [ "$cleanup" == "yes" ]; then
+    preserve_opt=""
+else
+    preserve_opt="-p"
+fi
+
 for y in $tests; do
     total_tests=$((total_tests + 1))
     ybase=`basename $y`
@@ -109,7 +116,7 @@ for y in $tests; do
     fi
     if [ -d "${bin_directory}" ]; then
 	CMD $runtest_directory/oct-run_regression_test.pl -l \
-	    -p $suffix_opt -D $bin_directory -f $y | \
+	    $preserve_opt $suffix_opt -D $bin_directory -f $y | \
 	    tee ${xybase}.log
 	# Look for failed/passed/skipped testcases and add
 	# to failure summary.
