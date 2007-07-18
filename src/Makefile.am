@@ -20,7 +20,6 @@
 ## $Id$
 
 SUBDIRS = include basic math species grid poisson states \
-	xc h_sys scf td opt_control sternheimer main utils
-
+	xc h_sys scf td opt_control sternheimer transport main utils
 
 

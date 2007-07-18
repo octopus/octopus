@@ -48,8 +48,9 @@ module stencil_variational_m
   implicit none
 
   private
-  public :: &
-    stencil_variational_coeff_lapl
+  public ::                         &
+    stencil_variational_coeff_lapl, &
+    stencil_variational_extent
 
 contains
 
@@ -129,6 +130,26 @@ contains
     call pop_sub()
   end subroutine stencil_variational_coeff_lapl
 
+
+  ! ---------------------------------------------------------
+  ! Returns maximum extension of the stencil in spatial direction
+  ! dir = 1, 2, 3 for a given discretization order.
+  integer function stencil_variational_extent(dir, order)
+    integer, intent(in) :: dir
+    integer, intent(in) :: order
+
+    integer :: extent
+
+    call push_sub('stencil_variational.stencil_variational_extent')
+
+    extent = 0
+    if(dir.ge.1.or.dir.le.3) then
+      extent = order
+    end if
+    stencil_variational_extent = extent
+
+    call pop_sub()
+  end function stencil_variational_extent
 end module stencil_variational_m
 
 !! Local Variables:

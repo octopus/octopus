@@ -32,6 +32,7 @@ AM_FCFLAGS = \
 	@F90_MODULE_FLAG@$(top_builddir)/src/h_sys   	 \
 	@F90_MODULE_FLAG@$(top_builddir)/src/scf     	 \
 	@F90_MODULE_FLAG@$(top_builddir)/src/td          \
+	@F90_MODULE_FLAG@$(top_builddir)/src/transport   \
 	@F90_MODULE_FLAG@$(top_builddir)/src/opt_control \
 	@F90_MODULE_FLAG@$(top_builddir)/src/sternheimer \
 	@F90_MODULE_FLAG@$(top_builddir)/libxc/src       \
@@ -51,6 +52,7 @@ octopus_LIBS = \
 	$(top_builddir)/src/sternheimer/libsternheimer.a \
 	$(top_builddir)/src/opt_control/libopt_control.a \
 	$(top_builddir)/src/td/libtd.a                   \
+	$(top_builddir)/src/transport/libtransport.a     \
 	$(top_builddir)/src/scf/libscf.a                 \
 	$(top_builddir)/src/h_sys/libh_sys.a             \
 	$(top_builddir)/src/xc/libxc.a                   \

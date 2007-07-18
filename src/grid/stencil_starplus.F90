@@ -25,6 +25,7 @@ module stencil_starplus_m
   private
   public ::                     &
     stencil_starplus_size_lapl, &
+    stencil_starplus_extent,    &
     stencil_starplus_get_lapl,  &
     stencil_starplus_pol_lapl,  &
     stencil_starplus_size_grad, &
@@ -46,6 +47,31 @@ contains
 
     call pop_sub()
   end function stencil_starplus_size_lapl
+
+
+  ! ---------------------------------------------------------
+  ! Returns maximum extension of the stencil in spatial direction
+  ! dir = 1, 2, 3 for a given discretization order.
+  integer function stencil_starplus_extent(dir, order)
+    integer, intent(in) :: dir
+    integer, intent(in) :: order
+
+    integer :: extent
+
+    call push_sub('stencil_starplus.stencil_starplus_extent')
+
+    extent = 0
+    if(dir.ge.1.or.dir.le.3) then
+      if(order.le.2) then
+        extent = 2
+      else
+        extent = order
+      end if
+    end if
+    stencil_starplus_extent = extent
+
+    call pop_sub()
+  end function stencil_starplus_extent
 
 
   ! ---------------------------------------------------------

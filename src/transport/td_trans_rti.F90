@@ -1,4 +1,4 @@
-!! Copyright (C) 2005-2006 Heiko Appel
+!! Copyright (C) 2002-2006 M. Marques, A. Castro, A. Rubio, G. Bertsch
 !!
 !! This program is free software; you can redistribute it and/or modify
 !! it under the terms of the GNU General Public License as published by
@@ -15,33 +15,23 @@
 !! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
 !! 02111-1307, USA.
 !!
-!! $Id$
+!! $Id: td_transport.F90 3030 2007-06-25 16:45:05Z marques $
+
+! Modified Crank-Nicholson propagator with source and memory term.
 
 #include "global.h"
 
-module td_transport_m
-  use messages_m
+module td_trans_rti_m
+  use global_m
 
   implicit none
 
   private
-  public :: &
-    td_transport_run
-
+  !public ::           &
 
 contains
 
-  ! ---------------------------------------------------------
-  subroutine td_transport_run()
-    call push_sub('td_transport.td_transport_run')
-
-    message(1) = 'Time dependent quantum transport not yet implemented.'
-    call write_fatal(1)
-
-    call pop_sub()
-  end subroutine td_transport_run
-end module td_transport_m
-
+end module td_trans_rti_m
 
 !! Local Variables:
 !! mode: f90

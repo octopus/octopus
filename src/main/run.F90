@@ -56,21 +56,6 @@ module run_prog_m
     run,                         &
     run_end
 
-  integer, public, parameter ::  &
-    M_GS                 =   1,  &
-    M_UNOCC              =   2,  &
-    M_TD                 =   3,  &
-    M_FD_STATIC_POL      =   4,  &
-    M_GEOM_OPT           =   5,  &
-    M_PHONONS            =   6,  &
-    M_OPT_CONTROL        =   7,  &
-    M_LR_POL             =   8,  &
-    M_CASIDA             =   9,  &
-    M_TD_TRANSPORT       =  10,  &
-    M_VDW                =  11,  &
-    M_PHONONS_LR         =  12,  &
-    M_PULPO_A_FEIRA      =  99
-
   type(system_t)      :: sys
   type(hamiltonian_t) :: h
 
@@ -119,7 +104,7 @@ contains
     case(M_CASIDA)
       call casida_run(sys, h, fromScratch)
     case(M_TD_TRANSPORT)
-      call td_transport_run()
+      call td_transport_run(sys, h, fromScratch)
     case(M_PULPO_A_FEIRA)
       call pulpo_print()
     end select

@@ -96,15 +96,22 @@ contains
       write(msg, '(a,1x,a)') '*', trim(message(i))
       call flush_msg(stderr, msg)
     end do
-    call flush_msg(stderr, shyphens)
 
-    write(msg, '(a)') '* Stack: '
-    call flush_msg(stderr, msg, 'no')
-    do i = 1, no_sub_stack
-      write(msg, '(a,a)') ' > ', trim(sub_stack(i))
+    ! We only dump the stack in debug mode because subroutine invocations
+    ! are only recorded in debug mode (via push_sub/pop_sub). Otherwise,
+    ! it is a bit confusing that the stack seems to be empty.
+    if(in_debug_mode) then
+      call flush_msg(stderr, shyphens)
+
+      write(msg, '(a)') '* Stack: '
       call flush_msg(stderr, msg, 'no')
-    end do
-    call flush_msg(stderr, " ")
+      do i = 1, no_sub_stack
+        write(msg, '(a,a)') ' > ', trim(sub_stack(i))
+        call flush_msg(stderr, msg, 'no')
+      end do
+      call flush_msg(stderr, " ")
+    end if
+
     call messages_print_stress(stderr)
 
     if(flush_messages.and.mpi_grp_is_root(mpi_world)) then

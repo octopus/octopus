@@ -305,6 +305,7 @@ AC_CONFIG_FILES([Makefile
   src/h_sys/Makefile
   src/scf/Makefile
   src/td/Makefile
+  src/transport/Makefile
   src/opt_control/Makefile
   src/sternheimer/Makefile
   src/main/Makefile

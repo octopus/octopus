@@ -35,23 +35,24 @@ module mesh_m
   implicit none
 
   private
-  public ::            &
-    mesh_t,            &
-    mesh_plane_t,      &
-    mesh_line_t,       &
-    mesh_init_stage_1, &
-    mesh_init_stage_2, &
-    mesh_init_stage_3, &
-    mesh_dump,         &
-    mesh_lxyz_dump,    &
-    mesh_end,          &
-    mesh_double_box,   &
-    mesh_inborder,     &
-    mesh_r,            &
-    mesh_gcutoff,      &
-    mesh_write_info,   &
-    mesh_nearest_point,&
-    translate_point,   &
+  public ::                    &
+    mesh_t,                    &
+    mesh_plane_t,              &
+    mesh_line_t,               &
+    mesh_init_stage_1,         &
+    mesh_init_stage_2,         &
+    mesh_init_stage_3,         &
+    mesh_dump,                 &
+    mesh_lxyz_dump,            &
+    mesh_end,                  &
+    mesh_double_box,           &
+    mesh_inborder,             &
+    mesh_r,                    &
+    mesh_gcutoff,              &
+    mesh_write_info,           &
+    mesh_nearest_point,        &
+    mesh_subset_indices,       &
+    translate_point,           &
     translate_by_asympt_ucell, &
     scatt_box_index
 
@@ -221,7 +222,7 @@ contains
   end subroutine mesh_r
 
 
-  !/*---------------------------------------------------------------------
+  !---------------------------------------------------------------------
   ! Finds out if a given point of a mesh belongs to the "border" of the
   ! mesh. A point belongs to the border of the mesh if it is too close
   ! to any of the walls of the mesh. The criterium is set by input
@@ -237,7 +238,7 @@ contains
   ! width : the width of the border.
   !
   ! So, if n>0, the point is in the border.
-  ! ----------------------------------------------------------------------*/
+  ! ----------------------------------------------------------------------
   subroutine mesh_inborder(m, i, n, d, width)
     type(mesh_t), intent(in)  :: m
     integer,      intent(in)  :: i
@@ -282,13 +283,13 @@ contains
    end subroutine mesh_inborder
 
 
-   !/*---------------------------------------------------------------------
+   !---------------------------------------------------------------------
    ! Returns the index of the point which is nearest to a given vector
    ! position pos. Variable dmin will hold, on exit, the distance between
    ! pos and this nearest mesh point. rankmin will be zero, if the mesh is
    ! not partitioned, and the rank of the processor which holds the point
    ! ind if the mesh is partitioned.
-   ! ----------------------------------------------------------------------*/
+   ! ----------------------------------------------------------------------
    integer function mesh_nearest_point(mesh, pos, dmin, rankmin) result(ind)
      type(mesh_t), intent(in)  :: mesh
      FLOAT,        intent(in)  :: pos(MAX_DIM)
@@ -427,7 +428,7 @@ contains
 
 
    ! --------------------------------------------------------------
-   ! mesgh_gcutoff returns the "natural" band limitation of the
+   ! mesh_gcutoff returns the "natural" band limitation of the
    ! grid m, in terms of the maximum G vector. For a cubic regular
    ! grid of spacing h is M_PI/h.
    ! --------------------------------------------------------------
@@ -470,6 +471,78 @@ contains
 
      call pop_sub()
    end subroutine mesh_Lxyz_dump
+
+
+   ! --------------------------------------------------------------
+   ! Extracts the point numbers of a rectangular subset spanned
+   ! by the two corner points from and to.
+   subroutine mesh_subset_indices(mesh, from, to, indices)
+     type(mesh_t), intent(in)  :: mesh
+     integer,      intent(in)  :: from(3)
+     integer,      intent(in)  :: to(3)
+     integer,      intent(out) :: indices(:)
+
+     integer :: lb(3) ! Lower bound of indices.
+     integer :: ub(3) ! Upper bound of indices.
+
+     integer :: ix, iy, iz, i
+
+     call push_sub('mesh.mesh_subset_indices')
+
+     ! In debug mode, check for valid indices in from, to first.
+     if(in_debug_mode) then
+       if(.not.index_valid(mesh, from).or..not.index_valid(mesh, to)) then
+         message(1) = 'Failed assertion:'
+         message(2) = 'mesh.mesh_subset_indices has been passed points outside the box:'
+         message(3) = ''
+         write(message (4), '(a, i6, a, i6, a, i6, a)') &
+           '  from = (', from(1), ', ', from(2), ', ', from(3), ')'
+         write(message(5), '(a, i6, a, i6, a, i6, a)') & 
+           '  to   = (', to(1), ', ', to(2), ', ', to(3), ')'
+         call write_fatal(5)
+       end if
+     end if
+
+     lb = min(from, to)
+     ub = max(from, to)
+
+     i = 1
+     do ix = lb(1), ub(1)
+       do iy = lb(2), ub(2)
+         do iz = lb(3), ub(3)
+           indices(i) = mesh%Lxyz_inv(ix, iy, iz)
+           i          = i+1
+         end do
+       end do
+     end do
+     
+     call pop_sub()
+   end subroutine mesh_subset_indices
+
+
+   ! --------------------------------------------------------------
+   ! Checks if the (x, y, z) indices of point are valid, i. e.
+   ! inside the dimensions of the simulation box.
+   logical function index_valid(mesh, point)
+     type(mesh_t) :: mesh
+     integer      :: point(3)
+
+     integer :: i
+     logical :: valid
+
+     call push_sub('mesh.index_valid')
+
+     valid = .true.
+     do i = 1, 3
+       if(point(i).lt.mesh%nr(1, i).or.point(i).gt.mesh%nr(2, i)) then
+         valid = .false.
+       end if
+     end do
+     
+     index_valid = valid
+       
+     call pop_sub()
+   end function index_valid
    
    
    ! --------------------------------------------------------------

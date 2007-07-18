@@ -24,6 +24,7 @@ module states_m
   use datasets_m
   use functions_m
   use geometry_m
+  use global_m
   use grid_m
   use io_m
   use lib_basic_alg_m
@@ -208,8 +209,7 @@ contains
     !%Option polarized 2
     !%Option spin_polarized 2
     !% Spin unrestricted, also know as spin-DFT, SDFT. This mode will double the number of wave
-    !% functions will double the number of wave-functions necessary for a spin-unpolarised
-    !% calculation.
+    !% functions necessary for a spin-unpolarised calculation.
     !%Option non_collinear 3
     !%Option spinors 3
     !% The spin-orbitals are two-component spinors. This effectively allows the spin-density to
@@ -307,6 +307,10 @@ contains
     ! Periodic systems require complex wave-functions
     if(simul_box_is_periodic(gr%sb)) st%d%wfs_type = M_CMPLX
 
+    ! Transport calculations require complex wave-functions.
+    if(calc_mode.eq.M_TD_TRANSPORT) then
+      st%d%wfs_type = M_CMPLX
+    end if
 
     ! we now allocate some arrays
     ALLOCATE(st%occ     (st%nst, st%d%nik),      st%nst*st%d%nik)

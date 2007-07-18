@@ -27,6 +27,7 @@ module stencil_cube_m
   private
   public ::                        &
     stencil_cube_size_lapl,        &
+    stencil_cube_extent,           &
     stencil_cube_get_lapl,         &
     stencil_cube_polynomials_lapl, &
     stencil_cube_size_grad,        &
@@ -47,6 +48,27 @@ contains
 
     call pop_sub()
   end function stencil_cube_size_lapl
+
+
+  ! ---------------------------------------------------------
+  ! Returns maximum extension of the stencil in spatial direction
+  ! dir = 1, 2, 3 for a given discretization order.
+  integer function stencil_cube_extent(dir, order)
+    integer, intent(in) :: dir
+    integer, intent(in) :: order
+
+    integer :: extent
+
+    call push_sub('stencil_cube.stencil_cube_extent')
+
+    extent = 0
+    if(dir.ge.1.or.dir.le.3) then
+      extent = order
+    end if
+    stencil_cube_extent = extent
+
+    call pop_sub()
+  end function stencil_cube_extent
 
 
   ! ---------------------------------------------------------

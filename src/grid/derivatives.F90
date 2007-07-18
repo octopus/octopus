@@ -54,7 +54,8 @@ module derivatives_m
     zderivatives_grad,      &
     zderivatives_oper,      &
     zderivatives_div,       &
-    zderivatives_curl
+    zderivatives_curl,      &
+    stencil_extent
 
   integer, parameter ::     &
     DER_BC_ZERO_F    = 0,   &  ! function is zero at the boundaries
@@ -85,7 +86,7 @@ module derivatives_m
     type(nl_operator_t), pointer :: lapl   ! these are just shortcuts for op
     type(nl_operator_t), pointer :: grad(:)
 
-    type(nl_operator_t) :: laplt ! The transponse of the Laplacian.
+    type(nl_operator_t) :: laplt ! The transpose of the Laplacian.
   end type der_discr_t
 
 
@@ -139,6 +140,26 @@ contains
       call loct_parse_float(check_inp('DerivativesLaplacianFilter'), M_ONE, der%lapl_cutoff)
     end if
 
+    !%Variable DerivativesOrder
+    !%Type integer
+    !%Default 4
+    !%Section Mesh::Derivatives
+    !%Description
+    !% This variable gives the dicretization order for the approximation of
+    !% the differential operators. This means, basically, that
+    !% <tt>DerivativesOrder</tt> points are used in each positive/negative
+    !% spatial direction, e. g. <tt>DerivativesOrder = 1</tt> would give
+    !% the well-known three-point-formula in 1D.
+    !% The number of points actually used for the Laplacian
+    !% depends on the stencil used:
+    !%
+    !% <tt>stencil_star</tt>: 2*<tt>DerivativesOrder</tt>*dim+1
+    !%
+    !% <tt>stencil_cube</tt>: (2*<tt>DerivativesOrder</tt>+1)^dim
+    !%
+    !% <tt>stencil_starplus</tt>: 2*<tt>DerivativesOrder</tt>+1+n with n being 12
+    !% in 2D and 44 in 3D.
+    !%End
     call loct_parse_int(check_inp('DerivativesOrder'), 4, der%order)
 
     ! construct lapl and grad structures
@@ -191,6 +212,30 @@ contains
 
     call pop_sub()
   end subroutine derivatives_end
+
+
+  ! ---------------------------------------------------------
+  ! Returns maximum extension of the stencil in spatial direction
+  ! dir = 1, 2, 3 for a given derivative der.
+  integer function stencil_extent(der, dir)
+    type(der_discr_t), intent(in) :: der
+    integer,           intent(in) :: dir
+
+    call push_sub('derivatives.stencil_extent')
+
+    select case(der%stencil_type)
+      case(DER_STAR)
+        stencil_extent = stencil_star_extent(dir, der%order)
+      case(DER_VARIATIONAL)
+        stencil_extent = stencil_variational_extent(dir, der%order)
+      case(DER_CUBE)
+        stencil_extent = stencil_cube_extent(dir, der%order)
+      case(DER_STARPLUS)
+        stencil_extent = stencil_cube_extent(dir, der%order)
+      end select
+      
+    call pop_sub()
+  end function stencil_extent
 
 
   ! ---------------------------------------------------------

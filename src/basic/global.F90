@@ -95,8 +95,24 @@ module global_m
   FLOAT, public, parameter :: P_c   =  CNST(137.036)
   FLOAT, public, parameter :: P_g   =  CNST(2.0023193043768)   ! Electron gyromagnetic ratio
 
-  integer, public  :: calc_mode
   integer, public  :: calc_dim
+
+  ! Calculation mode and its possible values.
+  integer, public  :: calc_mode
+  integer, public, parameter ::  &
+    M_GS                 =   1,  &
+    M_UNOCC              =   2,  &
+    M_TD                 =   3,  &
+    M_FD_STATIC_POL      =   4,  &
+    M_GEOM_OPT           =   5,  &
+    M_PHONONS            =   6,  &
+    M_OPT_CONTROL        =   7,  &
+    M_LR_POL             =   8,  &
+    M_CASIDA             =   9,  &
+    M_TD_TRANSPORT       =  10,  &
+    M_VDW                =  11,  &
+    M_PHONONS_LR         =  12,  &
+    M_PULPO_A_FEIRA      =  99
 
   ! the standard input and output
   integer, public :: stderr, stdin, stdout

@@ -19,21 +19,15 @@
 ##
 ## $Id: Makefile.am 2995 2007-06-13 17:49:22Z xavier $
 
-noinst_LIBRARIES = libtd.a
+noinst_LIBRARIES = libtransport.a
 
-libtd_a_SOURCES = \
-	pes.F90 spectrum.F90 \
-	td_exp_split.F90 td_exp.F90 td_rti.F90 td_write.F90 td.F90
-
-noinst_HEADERS = \
-	pes_rc.F90 pes_mask.F90 td_init.F90 td_calc.F90
+libtransport_a_SOURCES = \
+	td_transport.F90 td_trans_mem.F90 td_trans_intf.F90
 
 include $(srcdir)/../common-rules.make
 
 depend:
-	@makedepf90 $(libtd_a_SOURCES)
+	@makedepf90 $(libtransport_a_SOURCES)
 
-
-pes.o:  pes_rc.F90 pes_mask.F90
-td.o:  td_init.F90
-td_write.o: td_calc.F90
+td_transport.o: td_trans_mem.o td_trans_intf.o
+td_trans_mem.o: td_trans_intf.o
