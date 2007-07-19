@@ -37,6 +37,7 @@ dist_doc_DATA =     \
 	States.html \
 	System.html \
 	Time_Dependent.html \
+	Transport.html \
 	Unoccupied_States.html \
 	Utilities.html
 
