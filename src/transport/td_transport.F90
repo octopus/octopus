@@ -66,7 +66,7 @@ contains
     type(hamiltonian_t), intent(in)  :: h
     type(system_t),      intent(in)  :: sys
 
-    integer :: inp_int
+    integer :: inp_int, allocsize
     logical :: file_exists
 
     call push_sub('td_transport.td_transport_init')
@@ -152,7 +152,8 @@ contains
     call intface_init(sys%gr, trans%intface)
     call memory_init(trans%intface, trans%delta, trans%max_iter, &
       sys%gr%f_der%der_discr%lapl, trans%mem_coeff)
-    ALLOCATE(trans%st_intface(trans%intface%np, sys%st%st_end-sys%st%st_start, trans%max_iter, NLEADS), trans%intface%np*(sys%st%st_start-sys%st%st_end)*trans%max_iter*NLEADS)
+    allocsize = trans%intface%np*(sys%st%st_start-sys%st%st_end)*trans%max_iter*NLEADS
+    ALLOCATE(trans%st_intface(trans%intface%np, sys%st%st_end-sys%st%st_start, trans%max_iter, NLEADS), allocsize)
     call cn_src_mem_init(sys%gr)
 
     call pop_sub()

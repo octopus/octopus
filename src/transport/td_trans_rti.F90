@@ -36,6 +36,8 @@ module td_trans_rti_m
 
   implicit none
 
+#ifdef HAVE_SPARSKIT
+
   private
   public ::          &
     cn_src_mem_init, &
@@ -266,7 +268,10 @@ contains
 
     call pop_sub()
   end subroutine skopt
-  end module td_trans_rti_m
+
+#endif
+
+end module td_trans_rti_m
 
 
 !! Local Variables:
