@@ -22,12 +22,13 @@
 noinst_LIBRARIES = libtransport.a
 
 libtransport_a_SOURCES = \
-	td_transport.F90 td_trans_mem.F90 td_trans_intf.F90
+	td_transport.F90 td_trans_mem.F90 td_trans_intf.F90 td_trans_rti.F90
 
 include $(srcdir)/../common-rules.make
 
 depend:
 	@makedepf90 $(libtransport_a_SOURCES)
 
-td_transport.o: td_trans_mem.o td_trans_intf.o
+td_transport.o: td_trans_mem.o td_trans_intf.o td_trans_rti.o
 td_trans_mem.o: td_trans_intf.o
+td_trans_rti.o: td_trans_intf.o

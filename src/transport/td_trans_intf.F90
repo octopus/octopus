@@ -25,6 +25,7 @@ module td_trans_intf_m
   use derivatives_m
   use global_m
   use grid_m
+  use lib_basic_alg_m
   use math_m
   use mesh_m
   use messages_m
@@ -37,6 +38,8 @@ module td_trans_intf_m
     intface_init,  &
     intface_end,   &
     intface_index, &
+    get_intf_wf,   &
+    put_intf_wf,   &
     member_of_intface
   
   integer, parameter, public :: &
@@ -166,6 +169,42 @@ contains
 
 
   ! ---------------------------------------------------------
+  ! Get wave function points for interface of lead il.
+  ! intf_wf must be of dimension intf%np.
+  subroutine get_intf_wf(intf, il, zpsi, intf_wf)
+    type(intface_t), intent(in)  :: intf
+    integer,         intent(in)  :: il
+    CMPLX,           intent(in)  :: zpsi(:, :)
+    CMPLX,           intent(out) :: intf_wf(:)
+
+    call push_sub('td_trans_intf.get_intf_wf')
+
+    call lalg_copy(intf%np, &
+      zpsi(intf%index_range(1, il):intf%index_range(2, il), 1), intf_wf)
+
+    call pop_sub()
+  end subroutine get_intf_wf
+
+
+  ! ---------------------------------------------------------
+  ! Put wave function points for interface of lead il.
+  ! intf_wf must be of dimension intf%np.
+  subroutine put_intf_wf(intf, il, intf_wf, zpsi)
+    type(intface_t), intent(in)     :: intf
+    integer,         intent(in)     :: il
+    CMPLX,           intent(in)     :: intf_wf(:)
+    CMPLX,           intent(inout)  :: zpsi(:, :)
+
+    call push_sub('td_trans_intf.put_intf_wf')
+
+    call lalg_copy(intf%np, &
+      intf_wf, zpsi(intf%index_range(1, il):intf%index_range(2, il), 1))
+
+    call pop_sub()
+  end subroutine put_intf_wf
+
+
+  ! ---------------------------------------------------------
   ! Free memory.
   subroutine intface_end(intface)
     type(intface_t), intent(inout) :: intface
@@ -176,7 +215,7 @@ contains
       deallocate(intface%index)
       nullify(intface%index)
     end if
-    
+
     call pop_sub()
   end subroutine intface_end
 end module td_trans_intf_m

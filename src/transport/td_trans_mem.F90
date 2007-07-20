@@ -85,6 +85,7 @@ contains
     ALLOCATE(h_im(intface%np, intface%np), intface%np**2)
 
     ! Get iteration parameters from input file.
+
     !%Variable TDTransMemTol
     !%Type float
     !%Default 1e-8
@@ -125,7 +126,7 @@ contains
 
     message(1) = 'Info: Coefficients for memory term calculated.'
     call write_info(1)
-
+    
     call write_coeffs()
 
     deallocate(h_re, h_im)

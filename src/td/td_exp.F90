@@ -39,11 +39,11 @@ module td_exp_m
     td_exp_end,             &
     td_exp_dt
 
-  integer, parameter ::     &
-    SPLIT_OPERATOR     = 0, &
-    SUZUKI_TROTTER     = 1, &
-    LANCZOS_EXPANSION  = 2, &
-    TAYLOR             = 3, &
+  integer, public, parameter :: &
+    SPLIT_OPERATOR     = 0,     &
+    SUZUKI_TROTTER     = 1,     &
+    LANCZOS_EXPANSION  = 2,     &
+    TAYLOR             = 3,     &
     CHEBYSHEV          = 4
 
   type td_exp_t

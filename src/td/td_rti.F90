@@ -47,13 +47,13 @@ module td_rti_m
     td_zopt
 
   integer, parameter ::       &
-    SPLIT_OPERATOR       = 0, &
-    SUZUKI_TROTTER       = 1, &
-    REVERSAL             = 2, &
-    APP_REVERSAL         = 3, &
-    EXPONENTIAL_MIDPOINT = 4, &
-    CRANK_NICHOLSON      = 5, &
-    MAGNUS               = 6
+    PROP_SPLIT_OPERATOR       = 0, &
+    PROP_SUZUKI_TROTTER       = 1, &
+    PROP_REVERSAL             = 2, &
+    PROP_APP_REVERSAL         = 3, &
+    PROP_EXPONENTIAL_MIDPOINT = 4, &
+    PROP_CRANK_NICHOLSON      = 5, &
+    PROP_MAGNUS               = 6
 
   FLOAT, parameter :: scf_threshold = CNST(1.0e-3)
 
@@ -205,7 +205,7 @@ contains
     !% It is still in a experimental state; we are not yet sure of when it is
     !% advantageous.
     !%End
-    call loct_parse_int(check_inp('TDEvolutionMethod'), REVERSAL, tr%method)
+    call loct_parse_int(check_inp('TDEvolutionMethod'), PROP_REVERSAL, tr%method)
     if(.not.varinfo_valid_option('TDEVolutionMethod', tr%method)) call input_error('TDEvolutionMethod')
 
 #if !defined(HAVE_FFT)
@@ -218,17 +218,17 @@ contains
 
     select case(tr%method)
 #if defined(HAVE_FFT)
-    case(SPLIT_OPERATOR)
+    case(PROP_SPLIT_OPERATOR)
       call zcf_new(gr%m%l, tr%cf)
       call zcf_fft_init(tr%cf, gr%sb)
-    case(SUZUKI_TROTTER)
+    case(PROP_SUZUKI_TROTTER)
       call zcf_new(gr%m%l, tr%cf)
       call zcf_fft_init(tr%cf, gr%sb)
 #endif
-    case(REVERSAL)
-    case(APP_REVERSAL)
-    case(EXPONENTIAL_MIDPOINT)
-    case(CRANK_NICHOLSON)   
+    case(PROP_REVERSAL)
+    case(PROP_APP_REVERSAL)
+    case(PROP_EXPONENTIAL_MIDPOINT)
+    case(PROP_CRANK_NICHOLSON)   
 #ifdef HAVE_SPARSKIT
       ALLOCATE(tdsk, 1)
       call zsparskit_solver_init(NP, tdsk)
@@ -239,7 +239,7 @@ contains
       message(3) = 'Try to use a different propagation scheme or recompile with sparskit support.'
       call write_fatal(3)
 #endif
-    case(MAGNUS)
+    case(PROP_MAGNUS)
       ALLOCATE(tr%vmagnus(NP, st%d%nspin, 2), NP*st%d%nspin*2)
     case default
       call input_error('TDEvolutionMethod')
@@ -264,15 +264,15 @@ contains
     nullify(tr%v_old)
 
     select case(tr%method)
-    case(MAGNUS)
+    case(PROP_MAGNUS)
       ASSERT(associated(tr%vmagnus))
       deallocate(tr%vmagnus); nullify(tr%vmagnus)
-    case(CRANK_NICHOLSON) 
+    case(PROP_CRANK_NICHOLSON) 
 #ifdef HAVE_SPARSKIT
       call zsparskit_solver_end()
       deallocate(zpsi_tmp)
 #endif
-    case(SUZUKI_TROTTER, SPLIT_OPERATOR)
+    case(PROP_SUZUKI_TROTTER, PROP_SPLIT_OPERATOR)
       call zcf_free(tr%cf)
     end select
     
@@ -323,14 +323,14 @@ contains
     call dextrapolate(2, NP, st%d%nspin, tr%v_old(:, :, 1:3), tr%v_old(:, :, 0), dt, dt)
     select case(tr%method)
 #if defined(HAVE_FFT)
-    case(SPLIT_OPERATOR);       call td_rti0
-    case(SUZUKI_TROTTER);       call td_rti1
+    case(PROP_SPLIT_OPERATOR);       call td_rti0
+    case(PROP_SUZUKI_TROTTER);       call td_rti1
 #endif
-    case(REVERSAL);             call td_rti2
-    case(APP_REVERSAL);         call td_rti3
-    case(EXPONENTIAL_MIDPOINT); call td_rti4
-    case(CRANK_NICHOLSON);      call td_rti5
-    case(MAGNUS);               call td_rti6
+    case(PROP_REVERSAL);             call td_rti2
+    case(PROP_APP_REVERSAL);         call td_rti3
+    case(PROP_EXPONENTIAL_MIDPOINT); call td_rti4
+    case(PROP_CRANK_NICHOLSON);      call td_rti5
+    case(PROP_MAGNUS);               call td_rti6
     end select
 
     if(self_consistent) then
@@ -356,14 +356,14 @@ contains
         st%zpsi = zpsi1
         select case(tr%method)
 #if defined(HAVE_FFT)
-        case(SPLIT_OPERATOR);       call td_rti0
-        case(SUZUKI_TROTTER);       call td_rti1
+        case(PROP_SPLIT_OPERATOR);       call td_rti0
+        case(PROP_SUZUKI_TROTTER);       call td_rti1
 #endif
-        case(REVERSAL);             call td_rti2
-        case(APP_REVERSAL);         call td_rti3
-        case(EXPONENTIAL_MIDPOINT); call td_rti4
-        case(CRANK_NICHOLSON);      call td_rti5
-        case(MAGNUS);               call td_rti6
+        case(PROP_REVERSAL);             call td_rti2
+        case(PROP_APP_REVERSAL);         call td_rti3
+        case(PROP_EXPONENTIAL_MIDPOINT); call td_rti4
+        case(PROP_CRANK_NICHOLSON);      call td_rti5
+        case(PROP_MAGNUS);               call td_rti6
         end select
       end do
 

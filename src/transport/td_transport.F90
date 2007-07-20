@@ -29,9 +29,11 @@ module td_transport_m
   use messages_m
   use lib_oct_parser_m
   use simul_box_m
+  use states_m
   use system_m
   use td_trans_mem_m
   use td_trans_intf_m
+  use td_trans_rti_m
   use units_m
   use varinfo_m
 
@@ -100,7 +102,8 @@ contains
     ! features:
     !   *) only non-interacting electrons work for now,
     !   *) the only simulation box permitted is the parallel epiped,
-    !   *) the time evolution method cannot be chosen freely.
+    !   *) the time evolution method cannot be chosen freely,
+    !   *) only spin unpolarized calculations possible.
     if(.not.sys%ks%ip_app) then
       message(1) = 'Transport calculations for interacting electrons are'
       message(2) = 'not yet possible. Please include'
@@ -129,6 +132,16 @@ contains
       call write_fatal(5)
     end if
 
+    if(sys%st%d%ispin.ne.UNPOLARIZED) then
+      message(1) = 'Only spin unpolarized transport calculations are possible.'
+      message(2) = 'Set'
+      message(3) = ''
+      message(4) = '  SpinComponents = unpolarized'
+      message(5) = ''
+      message(6) = 'in your input file or remove the SpinComponents line entirely.'
+      call write_fatal(6)
+    end if
+
     ! Create output directory.
     inquire(file='transport', exist=file_exists)
     if(.not.file_exists) then
@@ -139,6 +152,8 @@ contains
     call intface_init(sys%gr, trans%intface)
     call memory_init(trans%intface, trans%delta, trans%max_iter, &
       sys%gr%f_der%der_discr%lapl, trans%mem_coeff)
+    ALLOCATE(trans%st_intface(trans%intface%np, sys%st%st_end-sys%st%st_start, trans%max_iter, NLEADS), trans%intface%np*(sys%st%st_start-sys%st%st_end)*trans%max_iter*NLEADS)
+    call cn_src_mem_init(sys%gr)
 
     call pop_sub()
   end subroutine td_transport_init
@@ -188,8 +203,11 @@ contains
 
     call td_transport_write_info(trans, sys, stdout)
 
-    message(1) = 'Time dependent quantum transport not yet implemented.'
-    call write_fatal(1)
+    ! Do the propagation.
+
+
+!     message(1) = 'Time dependent quantum transport not yet implemented.'
+!     call write_fatal(1)
 
     call td_transport_end(trans)
 
@@ -206,6 +224,12 @@ contains
 
     call intface_end(trans%intface)
     call memory_end(trans%mem_coeff)
+    call cn_src_mem_end()
+
+    if(associated(trans%st_intface)) then
+      deallocate(trans%st_intface)
+      nullify(trans%st_intface)
+    end if
 
     call pop_sub()
   end subroutine td_transport_end
