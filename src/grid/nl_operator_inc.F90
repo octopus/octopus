@@ -60,7 +60,7 @@ subroutine X(operate_olu)(np, np_part, nn, w, opi, fi, fo)
 #define DEPTH 12
 #endif
 
-  !$omp parallel do private(kk, a0, a1, a2, a3, a4, a5 a6, a7, a8, a9, aa, ab)
+  !$omp parallel do private(kk, a0, a1, a2, a3, a4, a5, a6, a7, a8, a9, aa, ab) lastprivate(ii)
   do ii = 1, (np - DEPTH + 1), DEPTH
     
     a0 = w(1) * fi(opi(1, ii  ))
@@ -112,7 +112,7 @@ subroutine X(operate_olu)(np, np_part, nn, w, opi, fi, fo)
 
   end do
   !$omp end parallel do
-  
+
   do jj = ii, np
     fo(jj) = sum(w(1:nn)  * fi(opi(1:nn, jj)))
   end do

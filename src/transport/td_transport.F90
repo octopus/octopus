@@ -154,7 +154,9 @@ contains
       sys%gr%f_der%der_discr%lapl, trans%mem_coeff)
     allocsize = trans%intface%np*(sys%st%st_start-sys%st%st_end)*trans%max_iter*NLEADS
     ALLOCATE(trans%st_intface(trans%intface%np, sys%st%st_end-sys%st%st_start, trans%max_iter, NLEADS), allocsize)
+#ifdef HAVE_SPARSKIT
     call cn_src_mem_init(sys%gr)
+#endif
 
     call pop_sub()
   end subroutine td_transport_init
@@ -225,8 +227,9 @@ contains
 
     call intface_end(trans%intface)
     call memory_end(trans%mem_coeff)
+#ifdef HAVE_SPARSKIT
     call cn_src_mem_end()
-
+#endif
     if(associated(trans%st_intface)) then
       deallocate(trans%st_intface)
       nullify(trans%st_intface)
