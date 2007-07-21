@@ -87,6 +87,68 @@ void FC_FUNC_(doperate_c,DOPERATE_C)(const int * opnp,
 
 }
 
+void FC_FUNC_(doperate_olu_c,DOPERATE_OLU_C)(const int * opnp, 
+					 const int * opn, 
+					 const double * restrict w, 
+					 const int * opi, 
+					 const double * fi, 
+					 double * restrict fo){
+
+  const int n = opn[0];
+  const int np = opnp[0];
+
+  int i, j, nm2;
+  const double * restrict mfi = fi - 1;
+
+  for(i = 0; i < (np - 8 + 1); i += 8) {
+    const int * restrict index0 = opi + n*i    ; 
+    const int * restrict index1 = opi + n*i+n  ;
+    const int * restrict index2 = opi + n*i+n*2;
+    const int * restrict index3 = opi + n*i+n*3;
+    const int * restrict index4 = opi + n*i+n*4; 
+    const int * restrict index5 = opi + n*i+n*5; 
+    const int * restrict index6 = opi + n*i+n*6;
+    const int * restrict index7 = opi + n*i+n*7;
+
+    double register a0 = w[0] * mfi[index0[0]];
+    double register a1 = w[0] * mfi[index1[0]];
+    double register a2 = w[0] * mfi[index2[0]];
+    double register a3 = w[0] * mfi[index3[0]];
+    double register a4 = w[0] * mfi[index4[0]];
+    double register a5 = w[0] * mfi[index5[0]];
+    double register a6 = w[0] * mfi[index6[0]];
+    double register a7 = w[0] * mfi[index7[0]];
+
+    for(j=1; j < n; j++) {
+      a0 += w[j] * mfi[index0[j]];
+      a1 += w[j] * mfi[index1[j]];
+      a2 += w[j] * mfi[index2[j]];
+      a3 += w[j] * mfi[index3[j]];
+      a4 += w[j] * mfi[index4[j]];
+      a5 += w[j] * mfi[index5[j]];
+      a6 += w[j] * mfi[index6[j]];
+      a7 += w[j] * mfi[index7[j]];
+    }
+    
+    fo[i  ] = a0;
+    fo[i+1] = a1;
+    fo[i+2] = a2;
+    fo[i+3] = a3;
+    fo[i+4] = a4;
+    fo[i+5] = a5;
+    fo[i+6] = a6;
+    fo[i+7] = a7;
+  }
+
+  for(; i < np; i++) {
+    const int * restrict index; 
+    index = opi + n*i;
+    fo[i] = 0.0;
+    for(j=0; j < n; j++) fo[i] += w[j] * mfi[index[j]];
+  }
+
+}
+
 typedef struct {
   double re;
   double im;

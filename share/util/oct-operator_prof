@@ -32,8 +32,8 @@ PROF_FILE="profiling.ser/profiling.000"
 real="yes"
 complex="yes"
 binary=`which octopus`
-complex_methods="fortran c sse"
-real_methods="fortran c"
+complex_methods="fortran c sse olu"
+real_methods="fortran c olu olu_c"
 
 
 # Input file for real wavefunctions (based on
@@ -159,7 +159,7 @@ function profile {
     output=""
 
     for m in $methods; do
-	temp=`mktemp -t -d oct_prof.XXXXXX || abort "Could not create temporary directory"`
+	temp=`mktemp -d /tmp/oct_prof.XXXXXX || abort "Could not create temporary directory"`
 	echo -e "$input" | sed "s/METHOD/$m/" > "$temp/inp"
 	
 	cd "$temp"

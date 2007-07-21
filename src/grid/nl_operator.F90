@@ -79,7 +79,9 @@ module nl_operator_m
   integer, parameter :: &
        OP_FORTRAN = 0,  &
        OP_C       = 1,  &
-       OP_SSE     = 2
+       OP_SSE     = 2,  &
+       OP_OLU     = 3,  &
+       OP_OLU_C   = 4
 
   integer :: dop_function = -1
   integer :: zop_function = -1
@@ -91,6 +93,8 @@ contains
   subroutine nl_operator_init(op, n)
     type(nl_operator_t), intent(out) :: op
     integer,             intent(in)  :: n
+
+    integer :: default
 
     ASSERT(n  > 0)
 
@@ -104,14 +108,28 @@ contains
     !%Default c
     !%Section Generalities::Optimization
     !%Description
-    !% Which function use to apply non-local operators over the grid. This
-    !% is the function where octopus spends most of time.
-    !% The oct-operator_prof script can be used to measure which function
-    !% is fastest on the current machine.
+    !% This variable selects the subroutine used to apply non-local
+    !% operators over the grid for real functions. As Octopus spends
+    !% most of the computing time in this routine, it is important to
+    !% choose the optimal one for your hardware, this can be done with
+    !% the oct-operator_prof utility.  The performance of each routine
+    !% depends on the hardware and on the C and Fortran compilers
+    !% used.  The default value changes according to the options
+    !% available and the platform.
     !%Option fortran 0
     !% The standard plain fortran function.
     !%Option c 1
-    !% The C version, using data prefetch directives and unrolled by hand.
+    !% The C version of the plain function, using data prefetch
+    !% directives and unrolled by hand. This is the default unless
+    !% noted otherwise.
+    !%Option olu 3
+    !% Outer Loop Unrolling, in this case the non-local operator is
+    !% applied to several points at once, allowing for more
+    !% independent instructions to be available. In general this is
+    !% the best option for wide processors with lots of
+    !% registers. This is the default on Itanium.
+    !%Option olu_c 4
+    !% The same Outer Loop Unrolling but implemented in C.
     !%End
 
     !%Variable OperateComplex
@@ -119,33 +137,58 @@ contains
     !%Default c
     !%Section Generalities::Optimization
     !%Description
-    !% Which function use to apply non-local operators over the grid. This
-    !% is the function where octopus spends most of time.
-    !% The oct-operator_prof script can be used to measure which function
-    !% is fastest on the current machine.
+    !% This variable selects the subroutine used to apply non-local
+    !% operators over the grid for complex functions. As Octopus
+    !% spends most of the computing time in this routine, it is
+    !% important to choose the optimal one for your hardware, this can
+    !% be done with the oct-operator_prof utility.  The performance of
+    !% each routine depends on the hardware and on the C and Fortran
+    !% compilers used.  The default value changes according to the
+    !% options available and the platform.
     !%Option fortran 0
     !% The standard plain fortran function.
     !%Option c 1
-    !% The C version, using data prefetch directives and unrolled by hand.
+    !% The C version, using data prefetch directives and unrolled by
+    !% hand. This is the default unless noted otherwise.
     !%Option sse 2
-    !% The C version, using data prefetch directives, SSE2 instructions,
-    !% and unrolled by hand.
+    !% This function is implemented using sse2 instructions through
+    !% compiler gcc directives. If it is available, this is the
+    !% default.
+    !%Option olu 3
+    !% Outer Loop Unrolling, in this case the non-local operator is
+    !% applied to several points at once, allowing for more
+    !% independent instructions to be available. In general this is
+    !% the best option for wide processors with lots of
+    !% registers. This is the default on Itanium.
+    !%Option olu_c 4
+    !% The same Outer Loop Unrolling but implemented in C.
     !%End
 
     if ( dop_function == - 1) then
-      call loct_parse_int(check_inp('OperateDouble'), OP_C, dop_function)
+      default = OP_C
+#if defined(_M_IA64) || defined(__ia64__)
+      default = OP_OLU
+#endif
+      call loct_parse_int(check_inp('OperateDouble'), default, dop_function)
     end if
 
     if ( zop_function == - 1) then
+      default = OP_C
+#if defined(_M_IA64) || defined(__ia64__)
+      default = OP_OLU
+#endif
 #ifdef USE_SSE2
-      call loct_parse_int(check_inp('OperateComplex'), OP_SSE, zop_function)
-#else
-      call loct_parse_int(check_inp('OperateComplex'), OP_C, zop_function)
+      default = OP_SSE
+#endif
+      call loct_parse_int(check_inp('OperateComplex'), default, zop_function)
+
+#ifndef USE_SSE2
       if (zop_function == OP_SSE) then 
         message(1) = 'Error: SSE is not available.'
         call write_fatal(1)
       end if
 #endif
+
     end if
 
     call pop_sub()
@@ -876,9 +919,14 @@ contains
       select case(dop_function)
       case(OP_C)
         call doperate_c(op%np, nn, op%w_re(1, 1), op%i(1,1), fi(1), fo(1))
+      case(OP_OLU_C)
+        call doperate_olu_c(op%np, nn, op%w_re(1, 1), op%i(1,1), fi(1), fo(1))
       case(OP_FORTRAN)
         call doperate(op%np, op%m%np_part, nn, &
           op%w_re(1:nn, 1), op%i(1:nn,1:op%np), fi(1:op%m%np_part), fo(1:op%np))
+      case(OP_OLU)
+        call doperate_olu(op%np, op%m%np_part, nn, &
+             op%w_re(1:nn, 1), op%i(1:nn,1:op%np), fi(1:op%m%np_part), fo(1:op%np))
       end select
     else
       do ii = 1, op%np
@@ -943,6 +991,9 @@ contains
 #endif
         case(OP_FORTRAN)
           call zoperate(op%np, op%m%np_part, nn, &
+            op%w_re(1:nn, 1), op%i(1:nn,1:op%np), fi(1:op%m%np_part), fo(1:op%np))
+        case(OP_OLU)
+          call zoperate_olu(op%np, op%m%np_part, nn, &
             op%w_re(1:nn, 1), op%i(1:nn,1:op%np), fi(1:op%m%np_part), fo(1:op%np))
         case(OP_C)
           call zoperate_c(op%np, nn, op%w_re(1, 1), op%i(1,1), fi(1), fo(1))
@@ -1057,47 +1108,13 @@ contains
   end subroutine znl_operator_operate_diag
 
 
-  ! The next two routines are wrappers around the operator sum.
-  ! The reason for those wrappers is that, by help of the parameter
-  ! list, compilers can generate more efficient code because of they then
-  ! know the arrays not to be shaped.
+#include "undef.F90"
+#include "real.F90"
+#include "nl_operator_inc.F90"
 
-  ! ---------------------------------------------------------
-  subroutine doperate(np, np_part, nn, w, opi, fi, fo)
-    integer, intent(in) :: np
-    integer, intent(in) :: np_part
-    integer, intent(in) :: nn
-    FLOAT,   intent(in) :: w(1:nn)
-    integer, intent(in) :: opi(1:nn, 1:np)
-    FLOAT,   intent(in) :: fi(1:np_part)
-    FLOAT,   intent(out):: fo(1:np) 
-
-    integer :: ii
-    !$omp parallel do
-    do ii = 1, np
-      fo(ii) = sum(w(1:nn)  * fi(opi(1:nn, ii)))
-    end do
-    !$omp end parallel do
-  end subroutine doperate
-
-
-  ! ---------------------------------------------------------
-  subroutine zoperate(np, np_part, nn, w, opi, fi, fo)
-    integer, intent(in) :: np
-    integer, intent(in) :: np_part
-    integer, intent(in) :: nn
-    FLOAT,   intent(in) :: w(1:nn)
-    integer, intent(in) :: opi(1:nn, 1:np)
-    CMPLX,   intent(in) :: fi(1:np_part)
-    CMPLX,   intent(out):: fo(1:np) 
-
-    integer :: ii
-    !$omp parallel do
-    do ii = 1, np
-      fo(ii) = sum(w(1:nn)  * fi(opi(1:nn, ii)))
-    end do
-    !$omp end parallel do
-  end subroutine zoperate
+#include "undef.F90"
+#include "complex.F90"
+#include "nl_operator_inc.F90"
 
 end module nl_operator_m
 

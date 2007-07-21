@@ -31,7 +31,7 @@ libgrid_a_SOURCES = \
 noinst_HEADERS = \
 	mesh_init.F90 par_vec_inc.F90 derivatives_inc.F90 cube_function_inc.F90 \
 	mesh_function_inc.F90 functions_inc.F90 double_grid_apply.F90 \
-	submesh_inc.F90 out_inc.F90 operate_vec.c
+	submesh_inc.F90 out_inc.F90 operate_vec.c nl_operator_inc.F90
 
 include $(srcdir)/../common-rules.make
 
@@ -48,3 +48,4 @@ out.o:  out_inc.F90
 par_vec.o:  par_vec_inc.F90
 submesh.o:  submesh_inc.F90
 operate.c:  operate_vec.c
+nl_operator.o: nl_operator_inc.F90
