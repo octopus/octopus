@@ -76,6 +76,7 @@ typedef char byte;
 #define type_double_complex 3
 
 static const int size_of[4]={4, 8, 8, 16};
+static const int base_size_of[4]={4, 8, 4, 8};
 
 inline void inf_error(const char * msg, int * ierr){
 #ifdef HAVE_PERROR
@@ -91,6 +92,17 @@ typedef union {
   double d[2];
 } multi;
 
+/* A very basic endian conversion routine, this can be improved a lot,
+   but it is not necessary, as restart files are converted at most
+   once per run */
+
+void endian_convert (const int size, char * a){
+  char tmp[8];
+  int ii;
+
+  for(ii = 0; ii < size; ii++) tmp[ii] = a[ii];
+  for(ii = 0; ii < size; ii++) a[ii] = tmp[size - 1 - ii];
+}
 
 static void convert ( multi * in, multi * out, int t_in, int t_out);
 
@@ -138,6 +150,38 @@ inline void init_header(header_t * h){
 inline int check_header(header_t * h, int * correct_endianness){
   if( strcmp("pulpo", h -> text) != 0 ) return 5;
   if( h -> version != 0 ) return 5;
+
+  /* Check the endianness of integer values and fix header
+     components */
+
+  if(h -> one_32 != 1) {
+    endian_convert(4, (char *) &(h -> one_32));
+    if( h -> one_32 != 1 ) return 5;
+    endian_convert(4, (char *) &(h -> type));
+  }
+
+  if(h -> one_64 != 1) {
+    endian_convert(8, (char *) &(h -> one_64));
+    if( h -> one_64 != 1 ) return 5;
+    endian_convert(8, (char *) &(h -> np));
+  }
+
+  /* Check the endianness of floating point values  */
+  *correct_endianness = 0;
+  if ( base_size_of[h -> type] == 4 ) {
+    if(h -> one_f != 1.0) {
+      endian_convert(4, (char *) &(h -> one_f));
+      if(h -> one_f != 1.0) return 5;
+      *correct_endianness = 1;
+    }
+  } else {
+    if(h -> one_d != 1.0) {
+      endian_convert(8, (char *) &(h -> one_d));
+      if(h -> one_d != 1.0) return 5;
+      *correct_endianness = 1;
+    }
+  }
+
   return 0;
 }
 
@@ -239,6 +283,13 @@ void FC_FUNC_(read_binary,READ_BINARY)
   }
     
   close(fd);
+
+  /* convert endianness */
+  
+  if(correct_endianness) {
+    for(i=0; i < (*np)*size_of[h.type] ; i+=base_size_of[h.type]) 
+      endian_convert(base_size_of[h.type], (char *) (read_f + i));
+  }
 
   /* convert values if it is necessary */
   if( h.type != *output_type ){
