@@ -111,7 +111,6 @@ contains
     type(nl_operator_t), intent(out) :: op
     integer,             intent(in)  :: n
     character(len=*),   intent(in)  :: label
-    integer :: default
 
     ASSERT(n  > 0)
 
@@ -324,7 +323,7 @@ contains
       ALLOCATE(opg, 1)
       ALLOCATE(opgt, 1)
       call nl_operator_allgather(op, opg)
-      call nl_operator_init(opgt, op%n)
+      call nl_operator_init(opgt, op%n, op%label)
       call nl_operator_equal(opgt, opg)
       ALLOCATE(vol_pp(m%np_global), m%np_global)
       call dvec_allgather(m%vp, vol_pp, m%vol_pp)
@@ -399,7 +398,7 @@ contains
       ALLOCATE(opg, 1)
       ALLOCATE(opgt, 1)
       call nl_operator_allgather(op, opg)
-      call nl_operator_init(opgt, op%n)
+      call nl_operator_init(opgt, op%n, op%label)
       opgt = opg
       ALLOCATE(vol_pp(m%np_global), m%np_global)
       call dvec_allgather(m%vp, vol_pp, m%vol_pp)
@@ -512,7 +511,7 @@ contains
 
     call push_sub('nl_operator.nl_operator_scatter')
 
-    call nl_operator_init(op, opg%n)
+    call nl_operator_init(op, opg%n, op%label)
     call nl_operator_build(opg%m, op, opg%m%np, opg%const_w, opg%cmplx_op)
 
     do i = 1, opg%n
@@ -582,7 +581,7 @@ contains
 
     call push_sub('nl_operator.nl_operator_common_copy')
 
-    call nl_operator_init(opg, op%n)
+    call nl_operator_init(opg, op%n, op%label)
     ALLOCATE(opg%i(op%n, op%m%np_global), op%n*op%m%np_global)
     if(op%const_w) then
       ALLOCATE(opg%w_re(op%n, 1), op%n*1)

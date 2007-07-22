@@ -101,7 +101,7 @@ subroutine X(nl_operator_tune)(op)
     write (iunit, '(2a, f8.1, a)') marker, op_function_name(method), flops(method)/CNST(1e6), ' MFlops'
   end do
 
-  write(iunit, '(a)'), " "
+  write(iunit, '(a)') " "
 
   call io_close(iunit)
 
