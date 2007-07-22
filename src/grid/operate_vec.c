@@ -153,4 +153,63 @@ void FC_FUNC_(zoperate_sse,ZOPERATE_SSE)(const int * opnp,
   }
 
 }
+
+
+void FC_FUNC_(doperate_sse,DOPERATE_SSE)(const int * opnp, 
+					 const int * opn, 
+					 const double * restrict w, 
+					 const int * opi, 
+					 const double * fi, 
+					 double * restrict fo){
+
+  const int n = opn[0];
+  const int np = opnp[0];
+
+  int i, j, nm2;
+  const double * restrict mfi;
+  v2df * restrict vw;
+
+  mfi   = fi - 1;
+
+  {
+
+    vw = malloc(n*16);
+    
+    for(j = 0; j < n ; j++) {
+      set_vec(vw[j], w+j, w+j);
+    }
+    
+    for(i = 0; i < (np-2+1); i+=2) {
+      const int * restrict index0 = opi + n*i; 
+      const int * restrict index1 = opi + n*i+n; 
+
+      register v2df a  __attribute__ ((__aligned__ (16)));
+      register v2df c  __attribute__ ((__aligned__ (16)));
+      
+      set_vec(c, mfi+index0[0], mfi+index1[0]);
+      a = vw[0] * c;
+      
+      for(j=1; j < n; j++) {
+	set_vec(c, mfi+index0[j], mfi + index1[j]);
+	a += vw[j] * c;
+      }
+
+      _mm_storeu_pd(fo+i, a);
+
+    }
+
+    free(vw);
+    
+    for(; i < np; i++) {
+      const int * restrict index; 
+      index = opi + n*i;
+      fo[i] = 0.0;
+      for(j=0; j < n; j++) fo[i] += w[j] * mfi[index[j]];
+    }
+
+  }
+  
+}
+
+
 #endif /* USE_VECTORS */

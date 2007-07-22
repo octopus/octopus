@@ -259,7 +259,7 @@ contains
     end select
 
     ! initialize nl operator
-    call nl_operator_init(der%lapl, n)
+    call nl_operator_init(der%lapl, n, "Laplacian")
 
     ! create stencil
     select case(der%stencil_type)
@@ -299,6 +299,7 @@ contains
     type(der_discr_t), intent(inout) :: der
 
     integer :: i, n
+    character :: dirchar
 
     call push_sub('derivatives.derivatives_get_stencil_grad')
 
@@ -316,7 +317,10 @@ contains
 
     ! initialize nl operator
     do i = 1, der%dim
-      call nl_operator_init(der%grad(i), n)
+      if(i == 1) dirchar = 'X'
+      if(i == 2) dirchar = 'Y'
+      if(i == 3) dirchar = 'Z'
+      call nl_operator_init(der%grad(i), n, "Gradient "//dirchar)
 
       ! create stencil
       select case(der%stencil_type)
@@ -421,14 +425,14 @@ contains
       ! Here the Laplacian is forced to be self-adjoint, and the gradient to be skew-selfadjoint
       if(m%use_curvlinear) then
         do i = 1, der%dim
-          call nl_operator_init(auxop, der%grad(i)%n)
+          call nl_operator_init(auxop, der%grad(i)%n, "auxop")
           auxop%stencil = der%grad(i)%stencil
           call nl_operator_build(m, auxop, der%m%np, const_w = const_w_, cmplx_op = cmplx_op_)
           call nl_operator_skewadjoint(der%grad(i), auxop, der%m)
           call nl_operator_equal(der%grad(i), auxop)
           call nl_operator_end(auxop)
         end do
-        call nl_operator_init(auxop, der%lapl%n)
+        call nl_operator_init(auxop, der%lapl%n, "auxop")
         auxop%stencil = der%lapl%stencil
         call nl_operator_build(m, auxop, der%m%np, const_w = const_w_, cmplx_op = cmplx_op_)
         call nl_operator_selfadjoint(der%lapl, auxop, der%m)

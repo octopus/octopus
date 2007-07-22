@@ -94,7 +94,7 @@ contains
     select case(this%which)
     case(PRE_SMOOTHING)
       ! the smoothing has a star stencil like the laplacian
-      call nl_operator_init(this%op, 2*NDIM + 1)
+      call nl_operator_init(this%op, 2*NDIM + 1, "Preconditioner")
       call stencil_star_get_lapl(NDIM, 1, this%op%stencil)
       call nl_operator_build(gr%m, this%op, NP, const_w = .true.)
       

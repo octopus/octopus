@@ -29,6 +29,7 @@ module nl_operator_m
   use datasets_m
   use global_m
   use io_m
+  use lib_oct_m
   use lib_oct_parser_m
   use mesh_lib_m
   use mesh_m
@@ -70,6 +71,12 @@ module nl_operator_m
 
     logical               :: const_w   ! are the weights independent of index i
     logical               :: cmplx_op  ! .true. if we have also imaginary weights
+
+    integer :: dfunction
+    integer :: zfunction
+
+    character(len=40) :: label
+
   end type nl_operator_t
 
   interface assignment (=)
@@ -83,17 +90,27 @@ module nl_operator_m
        OP_OLU     = 3,  &
        OP_OLU_C   = 4
 
-  integer :: dop_function = -1
-  integer :: zop_function = -1
+  logical :: initialized = .false.
 
 contains
-
+  
+  character(len=8) function op_function_name(id) result(str)
+    integer, intent(in) :: id
+    
+    str = 'none'
+    if(id == OP_FORTRAN) str = 'Fortran'
+    if(id == OP_C)       str = 'C'
+    if(id == OP_SSE)     str = 'SSE'
+    if(id == OP_OLU)     str = 'OLU'
+    if(id == OP_OLU_C)   str = 'OLU C'
+    
+  end function op_function_name
 
   ! ---------------------------------------------------------
-  subroutine nl_operator_init(op, n)
+  subroutine nl_operator_init(op, n, label)
     type(nl_operator_t), intent(out) :: op
     integer,             intent(in)  :: n
-
+    character(len=*),   intent(in)  :: label
     integer :: default
 
     ASSERT(n  > 0)
@@ -103,93 +120,7 @@ contains
     op%n  = n
     ALLOCATE(op%stencil(3, n), 3*n)
 
-    !%Variable OperateDouble
-    !%Type integer
-    !%Default c
-    !%Section Generalities::Optimization
-    !%Description
-    !% This variable selects the subroutine used to apply non-local
-    !% operators over the grid for real functions. As Octopus spends
-    !% most of the computing time in this routine, it is important to
-    !% choose the optimal one for your hardware, this can be done with
-    !% the oct-operator_prof utility.  The performance of each routine
-    !% depends on the hardware and on the C and Fortran compilers
-    !% used.  The default value changes according to the options
-    !% available and the platform.
-    !%Option fortran 0
-    !% The standard plain fortran function.
-    !%Option c 1
-    !% The C version of the plain function, using data prefetch
-    !% directives and unrolled by hand. This is the default unless
-    !% noted otherwise.
-    !%Option olu 3
-    !% Outer Loop Unrolling, in this case the non-local operator is
-    !% applied to several points at once, allowing for more
-    !% independent instructions to be available. In general this is
-    !% the best option for wide processors with lots of
-    !% registers. This is the default on Itanium.
-    !%Option olu_c 4
-    !% The same Outer Loop Unrolling but implemented in C.
-    !%End
-
-    !%Variable OperateComplex
-    !%Type integer
-    !%Default c
-    !%Section Generalities::Optimization
-    !%Description
-    !% This variable selects the subroutine used to apply non-local
-    !% operators over the grid for complex functions. As Octopus
-    !% spends most of the computing time in this routine, it is
-    !% important to choose the optimal one for your hardware, this can
-    !% be done with the oct-operator_prof utility.  The performance of
-    !% each routine depends on the hardware and on the C and Fortran
-    !% compilers used.  The default value changes according to the
-    !% options available and the platform.
-    !%Option fortran 0
-    !% The standard plain fortran function.
-    !%Option c 1
-    !% The C version, using data prefetch directives and unrolled by
-    !% hand. This is the default unless noted otherwise.
-    !%Option sse 2
-    !% This function is implemented using sse2 instructions through
-    !% compiler gcc directives. If it is available, this is the
-    !% default.
-    !%Option olu 3
-    !% Outer Loop Unrolling, in this case the non-local operator is
-    !% applied to several points at once, allowing for more
-    !% independent instructions to be available. In general this is
-    !% the best option for wide processors with lots of
-    !% registers. This is the default on Itanium.
-    !%Option olu_c 4
-    !% The same Outer Loop Unrolling but implemented in C.
-    !%End
-
-    if ( dop_function == - 1) then
-      default = OP_C
-#if defined(_M_IA64) || defined(__ia64__)
-      default = OP_OLU
-#endif
-      call loct_parse_int(check_inp('OperateDouble'), default, dop_function)
-    end if
-
-    if ( zop_function == - 1) then
-      default = OP_C
-#if defined(_M_IA64) || defined(__ia64__)
-      default = OP_OLU
-#endif
-#ifdef USE_SSE2
-      default = OP_SSE
-#endif
-      call loct_parse_int(check_inp('OperateComplex'), default, zop_function)
-
-#ifndef USE_SSE2
-      if (zop_function == OP_SSE) then 
-        message(1) = 'Error: SSE is not available.'
-        call write_fatal(1)
-      end if
-#endif
-
-    end if
+    op%label = label
 
     call pop_sub()
   end subroutine nl_operator_init
@@ -202,7 +133,10 @@ contains
 
     call push_sub('nl_operator.nl_operator_equal')
 
-    call nl_operator_init(opo, opi%n)
+    call nl_operator_init(opo, opi%n, opi%label)
+
+    opo%dfunction = opi%dfunction
+    opo%zfunction = opi%zfunction
 
     opo%np       =  opi%np
     opo%m        => opi%m
@@ -317,6 +251,12 @@ contains
     end do
     !$omp end parallel do
 
+
+    if(op%const_w .and. .not. op%cmplx_op) then
+      call dnl_operator_tune(op)
+      call znl_operator_tune(op)
+    end if
+
     call pop_sub()
   end subroutine nl_operator_build
 
@@ -331,6 +271,7 @@ contains
     call push_sub('nl_operator.nl_operator_transpose')
 
     opt = op
+    opt%label = trim(op%label)//' transposed'
     opt%w_re = M_ZERO
     if (op%cmplx_op) opt%w_im = M_ZERO
     do i = 1, op%np
@@ -352,6 +293,11 @@ contains
         end if
       end do
     end do
+
+    if(opt%const_w .and. .not. opt%cmplx_op) then
+      call dnl_operator_tune(opt)
+      call znl_operator_tune(opt)
+    end if
 
     call pop_sub()
   end subroutine nl_operator_transpose
@@ -916,9 +862,13 @@ contains
     nn = op%n
     if(op%const_w) then
 
-      select case(dop_function)
+      select case(op%dfunction)
       case(OP_C)
         call doperate_c(op%np, nn, op%w_re(1, 1), op%i(1,1), fi(1), fo(1))
+#ifdef USE_SSE2
+      case(OP_SSE)
+        call doperate_sse(op%np, nn, op%w_re(1, 1), op%i(1,1), fi(1), fo(1))
+#endif
       case(OP_OLU_C)
         call doperate_olu_c(op%np, nn, op%w_re(1, 1), op%i(1,1), fi(1), fo(1))
       case(OP_FORTRAN)
@@ -984,7 +934,7 @@ contains
     else
       if(op%const_w) then
         
-        select case(zop_function)
+        select case(op%zfunction)
 #ifdef USE_SSE2
         case(OP_SSE)
           call zoperate_sse(op%np, nn, op%w_re(1, 1), op%i(1,1), fi(1), fo(1))

@@ -23,6 +23,92 @@
 ! know the arrays not to be shaped.
 !
 ! ---------------------------------------------------------
+
+subroutine X(nl_operator_tune)(op)
+  type(nl_operator_t), intent(inout) :: op
+  
+
+  R_TYPE, allocatable :: in(:), out(:)
+  FLOAT :: noperations, flops(OP_FORTRAN:OP_OLU_C), itime, ftime
+  integer :: method, ii, reps, iunit
+  character(len=2) :: marker
+
+  call push_sub('nl_operator_inc.Xnl_operator_tune')
+  
+  !count the total number of floating point operations  
+
+#ifdef R_TCOMPLEX
+  noperations =  op%m%np * op%n * M_FOUR
+#else
+  noperations =  op%m%np * op%n * M_TWO
+#endif
+  
+  !measure performance of each function
+  ALLOCATE(in(1:op%m%np_part), op%m%np_part)
+  in(1:op%m%np_part) = M_ZERO
+  ALLOCATE(out(1:op%m%np), op%m%np)
+  
+  flops = M_ZERO
+
+  do method = OP_FORTRAN, OP_OLU_C
+
+    !skip methods that are not available
+#ifdef R_TCOMPLEX
+    if (method == OP_OLU_C) cycle
+#endif
+
+#if !defined(USE_SSE2)
+    if (method == OP_SSE)  cycle
+#endif
+
+    op%X(function) = method
+
+    reps = 10
+
+    itime = loct_clock()
+    do ii = 1, reps
+      call X(nl_operator_operate)(op, in, out, ghost_update = .false.)
+    end do
+    ftime = loct_clock()
+
+    flops(method) = noperations * reps / (ftime - itime) 
+    
+  end do
+  
+  !choose the best method
+  op%X(function) = OP_FORTRAN
+  do method = OP_FORTRAN + 1, OP_OLU_C
+    if(flops(method) > flops(op%X(function))) op%X(function) = method
+  end do
+
+  !print to file
+  if(.not. initialized) call loct_rm('exec/nl_operator_prof')
+  initialized = .true.
+
+  iunit = io_open('exec/nl_operator_prof', action='write', position='append', is_tmp = .true.)
+
+#ifdef R_TCOMPLEX
+  write (iunit, '(3a)')   'Operator       = ', trim(op%label), " complex"
+#else
+  write (iunit, '(3a)')   'Operator       = ', trim(op%label), " real"
+#endif
+  write (iunit, '(a,i8)') 'Stencil points = ', op%n
+  write (iunit, '(a,i8)') 'Grid points    = ', op%m%np
+
+  do method = OP_FORTRAN, OP_OLU_C
+    marker = '  '
+    if(method == op%X(function)) marker = '* '
+    write (iunit, '(2a, f8.1, a)') marker, op_function_name(method), flops(method)/CNST(1e6), ' MFlops'
+  end do
+
+  write(iunit, '(a)'), " "
+
+  call io_close(iunit)
+
+  call pop_sub()
+
+end subroutine X(nl_operator_tune)
+
 subroutine X(operate)(np, np_part, nn, w, opi, fi, fo)
   integer, intent(in) :: np
   integer, intent(in) :: np_part
