@@ -63,7 +63,9 @@ module oscillator_strength_m
           x = sin(omega*j*dt)
           power = power + x*ot(j)
         end do
-        power = power*dt / (dt*time_steps)
+        ! The function should be *minus* the sine Fourier transform, since this
+        ! is the function to be minimized.
+        power = - power*dt / (dt*time_steps)
 
       case(COSINE_TRANSFORM)
 
@@ -71,7 +73,7 @@ module oscillator_strength_m
           x = cos(omega*j*dt)
           power = power + x*ot(j)
         end do
-        power = power*dt / (dt*time_steps)
+        power = - power*dt / (dt*time_steps)
 
       end select
 
@@ -432,15 +434,15 @@ subroutine find_resonance(omega, leftbound, rightbound, nfrequencies)
     w = leftbound + (i-1)*dw
     warray(i) = w
     call ft(w, aw)
-    tarray(i) = -aw
+    tarray(i) = aw
   end do
 
   min_w = omega
   min_aw = M_ZERO
   do i = 1, nfrequencies
     w = leftbound + (i-1)*dw
-    if(-tarray(i) < min_aw) then
-      min_aw = -tarray(i)
+    if(tarray(i) < min_aw) then
+      min_aw = tarray(i)
       min_w = w
     end if
   end do
@@ -482,9 +484,9 @@ subroutine resonance_first_order(omega, power, nw_substracted, dw, leftbound, ri
   integer, intent(in)             :: nw_substracted
   FLOAT, intent(in)               :: dw, leftbound, rightbound
 
-
   call ft(omega, power)
   power = -power
+
   select case(mode)
   case(SINE_TRANSFORM)
     power = power / (M_ONE - sin(M_TWO*omega*total_time)/(M_TWO*omega*total_time))
@@ -590,7 +592,6 @@ subroutine generate_signal(order, observable)
   type(unit_system_t) :: units
   FLOAT, allocatable :: multipole(:, :, :), ot(:)
 
-
   ! Find out how many files do we have
   nfiles = 0
   do
@@ -676,7 +677,11 @@ subroutine generate_signal(order, observable)
                           dump, (multipole(add_lm, i, 3), add_lm = 1, max_add_lm), &
                           dump, (multipole(add_lm, i, 4), add_lm = 1, max_add_lm)
       end select
-      multipole(1:3, i, :) = multipole(1:3, i, :) * conversion_factor
+      multipole(1:max_add_lm, i, :) = multipole(1:max_add_lm, i, :) * conversion_factor
+
+      ! The dipole is treated differently in the multipoles file: first of all, 
+      ! the program should have printed *minus* the dipole operator.
+      multipole(1:3, i, :) = - multipole(1:3, i, :)
 
       select case(observable(1))
       case(-1)
@@ -689,7 +694,8 @@ subroutine generate_signal(order, observable)
               add_lm = add_lm + 1
             end do mcycle1
           end do lcycle1
-          ! The multipoles file treats differently the l=1 case.
+          ! The multipoles file treats differently the l=1 case: it prints the "cartesian"
+          ! dipole, instead of the "spherical" dipole. The difference is just a constant.
           if(kick%l == 1) then
             lequalonefactor = sqrt(CNST(3.0)/(M_FOUR*M_Pi))
             select case(kick%m)
@@ -770,7 +776,7 @@ subroutine modify_ot(time_steps, dt, order, ot, omega, cij)
   select case(mod(order, 2))
   case(1)
     do i = 0, time_steps
-      ot(i) = ot(i) + M_TWO * abs(cij)**2 * sin(omega*i*dt)
+      ot(i) = ot(i) - M_TWO * abs(cij)**2 * sin(omega*i*dt)
     end do
   case(0)
     do i = 0, time_steps
