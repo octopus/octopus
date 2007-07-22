@@ -205,12 +205,6 @@ void FC_FUNC_(oct_metis_part_graph_vkway, OCT_METIS_PART_GRAPH_VKWAY)
 #endif
 
 /* ------------------------------ some stuff  -------------------------------- */
-double FC_FUNC_(oct_clock, OCT_CLOCK)
-  ()
-{
-  return (double) clock()/CLOCKS_PER_SEC;
-}
-
 void FC_FUNC_(oct_gettimeofday, OCT_GETTIMEOFDAY)
   (int *sec, int *usec)
 {
@@ -236,6 +230,18 @@ void FC_FUNC_(oct_gettimeofday, OCT_GETTIMEOFDAY)
 #else
   *sec  = 0;
   *usec = 0; 
+#endif
+}
+
+double FC_FUNC_(oct_clock, OCT_CLOCK)
+  ()
+{
+#ifdef HAVE_GETTIMEOFDAY
+  int sec, usec;
+  FC_FUNC_(oct_gettimeofday, OCT_GETTIMEOFDAY) (&sec, &usec);
+  return sec + 1.0e-6*usec;
+#else
+  return (double) clock()/CLOCKS_PER_SEC;
 #endif
 }
 
