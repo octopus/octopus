@@ -504,7 +504,7 @@ contains
         call states_calc_dens(psi2, NP_PART, dens_tmp)
         psi2%rho = dens_tmp
         call v_ks_calc(gr, sys%ks, h, psi2, calc_eigenval=.true.)
-        call td_rti_dt(sys%ks, h, gr, psi2, td%tr, abs(iter*td%dt), abs(td%dt))
+        call td_rti_dt(sys%ks, h, gr, psi2, td%tr, abs(iter*td%dt), abs(td%dt), td%max_iter)
       end if
 
       call update_field(oct, iter-1, par, gr, td, psi, chi)
@@ -513,15 +513,15 @@ contains
       call parameters_to_h(par_tmp, h%ep)
       call states_calc_dens(chi, NP_PART, dens_tmp)
       chi%rho = dens_tmp
-      call v_ks_calc(gr, sys%ks, h, chi, calc_eigenval=.true.) 
-      call td_rti_dt(sys%ks, h, gr, chi, td%tr, abs(iter*td%dt), abs(td%dt))
+      call v_ks_calc(gr, sys%ks, h, chi, calc_eigenval=.true.)
+      call td_rti_dt(sys%ks, h, gr, chi, td%tr, abs(iter*td%dt), abs(td%dt), td%max_iter)
       
       ! psi
       call parameters_to_h(par, h%ep)
       call states_calc_dens(psi, NP_PART, dens_tmp)
       psi%rho = dens_tmp
       call v_ks_calc(gr, sys%ks, h, psi, calc_eigenval=.true.)
-      call td_rti_dt(sys%ks, h, gr, psi, td%tr, abs(iter*td%dt), abs(td%dt))
+      call td_rti_dt(sys%ks, h, gr, psi, td%tr, abs(iter*td%dt), abs(td%dt), td%max_iter)
 
       deallocate(dens_tmp)     
       call pop_sub()
@@ -557,14 +557,14 @@ contains
       call states_calc_dens(chi, NP_PART, dens_tmp)
       chi%rho = dens_tmp
       call v_ks_calc(gr, sys%ks, h, chi, calc_eigenval=.true.)
-      call td_rti_dt(sys%ks, h, gr, chi, td%tr, abs(iter*td%dt),     td%dt )
+      call td_rti_dt(sys%ks, h, gr, chi, td%tr, abs(iter*td%dt), td%dt, td%max_iter)
       
       ! psi
       call  parameters_to_h(par, h%ep)
       call states_calc_dens(psi, NP_PART, dens_tmp)
       psi%rho = dens_tmp
       call v_ks_calc(gr, sys%ks, h, psi, calc_eigenval=.true.)
-      call td_rti_dt(sys%ks, h, gr, psi, td%tr, abs(iter*td%dt),     td%dt )
+      call td_rti_dt(sys%ks, h, gr, psi, td%tr, abs(iter*td%dt), td%dt, td%max_iter)
  
       deallocate(dens_tmp)     
       call pop_sub()

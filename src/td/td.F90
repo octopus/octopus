@@ -66,9 +66,9 @@ module timedep_m
     NORMAL_VERLET   = 3,  &
     VELOCITY_VERLET = 4
 
-  integer, parameter ::   &
-       EHRENFEST = 1,  &
-       BO = 2
+  integer, parameter :: &
+       EHRENFEST = 1,   &
+       BO        = 2
   
   type td_t
     type(td_rti_t)    :: tr             ! contains the details of the time evolution
@@ -82,10 +82,10 @@ module timedep_m
     logical           :: recalculate_gs ! Recalculate ground-state along the evolution.
     
     ! The *kick* used in "linear response in the time domain" calculations.
-    type(kick_t)   :: kick
+    type(kick_t)      :: kick
 
 #if !defined(DISABLE_PES) && defined(HAVE_FFT)
-    type(PES_t) :: PESv
+    type(PES_t)       :: PESv
 #endif
     FLOAT             :: mu
     integer           :: dynamics
@@ -187,7 +187,7 @@ contains
       ! time iterate wavefunctions
       select case(td%dynamics)
       case(EHRENFEST)
-        call td_rti_dt(sys%ks, h, gr, st, td%tr, i*td%dt, td%dt / td%mu)
+        call td_rti_dt(sys%ks, h, gr, st, td%tr, i*td%dt, td%dt / td%mu, td%max_iter)
       case(BO)
         call scf_run(td%scf, sys%gr, geo, st, sys%ks, h, sys%outp, gs_run = .false., verbose=.false.)
       end select

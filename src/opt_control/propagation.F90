@@ -62,7 +62,7 @@
     etime = loct_clock()
     do i = 1, td%max_iter 
       ! time iterate wavefunctions
-      call td_rti_dt(sys%ks, h, gr, psi_n, td%tr, abs(i*td%dt), abs(td%dt))
+      call td_rti_dt(sys%ks, h, gr, psi_n, td%tr, abs(i*td%dt), abs(td%dt), td%max_iter)
 
       ! if td_target
       if(oct%targetmode==oct_targetmode_td) &
@@ -131,7 +131,7 @@
     td%dt = -td%dt
     do i = td%max_iter-1, 0, -1
       ! time iterate wavefunctions
-      call td_rti_dt(sys%ks, h, gr, psi_n, td%tr, abs(i*td%dt), td%dt)
+      call td_rti_dt(sys%ks, h, gr, psi_n, td%tr, abs(i*td%dt), td%dt, td%max_iter)
       ! update
       call states_calc_dens(psi_n, NP_PART, dens)
       psi_n%rho = dens

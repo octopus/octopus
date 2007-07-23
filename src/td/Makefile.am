@@ -23,7 +23,8 @@ noinst_LIBRARIES = libtd.a
 
 libtd_a_SOURCES = \
 	pes.F90 spectrum.F90 \
-	td_exp_split.F90 td_exp.F90 td_rti.F90 td_write.F90 td.F90
+	td_exp_split.F90 td_exp.F90 td_rti.F90 td_write.F90 td.F90 \
+	td_transport.F90 td_trans_rti.F90 td_trans_intf.F90 td_trans_mem.F90
 
 noinst_HEADERS = \
 	pes_rc.F90 pes_mask.F90 td_init.F90 td_calc.F90
@@ -37,3 +38,7 @@ depend:
 pes.o:  pes_rc.F90 pes_mask.F90
 td.o:  td_init.F90
 td_write.o: td_calc.F90
+td_transport: td.o
+td_trans_mem.o: td_trans_intf.o
+td_trans_rti.o: td_trans_intf.o td_trans_mem.o
+td_rti.o: td_trans_rti.o

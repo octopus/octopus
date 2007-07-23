@@ -30,6 +30,7 @@ module td_rti_m
   use sparskit_m
   use td_exp_m
   use td_exp_split_m
+  use td_trans_rti_m
   use v_ks_m
   use mesh_function_m
   use lasers_m
@@ -46,25 +47,26 @@ module td_rti_m
     td_zop,                   &
     td_zopt
 
-  integer, parameter ::       &
-    PROP_SPLIT_OPERATOR       = 0, &
-    PROP_SUZUKI_TROTTER       = 1, &
-    PROP_REVERSAL             = 2, &
-    PROP_APP_REVERSAL         = 3, &
-    PROP_EXPONENTIAL_MIDPOINT = 4, &
-    PROP_CRANK_NICHOLSON      = 5, &
-    PROP_MAGNUS               = 6
+  integer, public, parameter ::       &
+    PROP_SPLIT_OPERATOR          = 0, &
+    PROP_SUZUKI_TROTTER          = 1, &
+    PROP_REVERSAL                = 2, &
+    PROP_APP_REVERSAL            = 3, &
+    PROP_EXPONENTIAL_MIDPOINT    = 4, &
+    PROP_CRANK_NICHOLSON         = 5, &
+    PROP_MAGNUS                  = 6, &
+    PROP_CRANK_NICHOLSON_SRC_MEM = 7
 
   FLOAT, parameter :: scf_threshold = CNST(1.0e-3)
 
   type td_rti_t
-    integer        :: method  ! which evolution method to use
-    type(td_exp_t) :: te      ! how to apply the propagator (e^{-i H \Delta t})
+    integer           :: method         ! Which evolution method to use.
+    type(td_exp_t)    :: te             ! How to apply the propagator (e^{-i H \Delta t}).
+    FLOAT, pointer    :: v_old(:, :, :) ! Storage of the KS potential of previous iterations.
 
-    FLOAT, pointer :: v_old(:, :, :)   ! storage of the KS potential of previous iterations
-    FLOAT, pointer :: vmagnus(:, :, :) ! auxiliary function to store the Magnus potentials.
-
-    type(zcf_t) :: cf                  ! auxiliary cube for split operator methods
+    FLOAT, pointer    :: vmagnus(:, :, :) ! Auxiliary function to store the Magnus potentials.
+    type(zcf_t)       :: cf               ! Auxiliary cube for split operator methods.
+    type(transport_t) :: trans            ! For transport calculations: leads, memory
   end type td_rti_t
 
 #ifdef HAVE_SPARSKIT
@@ -80,10 +82,12 @@ module td_rti_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine td_rti_init(gr, st, tr)
+  subroutine td_rti_init(gr, st, tr, dt, max_iter)
     type(grid_t),   intent(in)    :: gr
     type(states_t), intent(in)    :: st
     type(td_rti_t), intent(inout) :: tr
+    FLOAT,          intent(in)    :: dt
+    integer,        intent(in)    :: max_iter
 
     !%Variable TDEvolutionMethod
     !%Type integer
@@ -204,6 +208,9 @@ contains
     !% dealing with problem with very high-frequency time dependence.
     !% It is still in a experimental state; we are not yet sure of when it is
     !% advantageous.
+    !%Option crank_nicholson_src_mem 7
+    !% Crank-Nicholson propagator with source and memory term for transport
+    !% calculations.
     !%End
     call loct_parse_int(check_inp('TDEvolutionMethod'), PROP_REVERSAL, tr%method)
     if(.not.varinfo_valid_option('TDEVolutionMethod', tr%method)) call input_error('TDEvolutionMethod')
@@ -228,7 +235,7 @@ contains
     case(PROP_REVERSAL)
     case(PROP_APP_REVERSAL)
     case(PROP_EXPONENTIAL_MIDPOINT)
-    case(PROP_CRANK_NICHOLSON)   
+    case(PROP_CRANK_NICHOLSON)
 #ifdef HAVE_SPARSKIT
       ALLOCATE(tdsk, 1)
       call zsparskit_solver_init(NP, tdsk)
@@ -241,16 +248,24 @@ contains
 #endif
     case(PROP_MAGNUS)
       ALLOCATE(tr%vmagnus(NP, st%d%nspin, 2), NP*st%d%nspin*2)
+    case(PROP_CRANK_NICHOLSON_SRC_MEM)
+#ifdef HAVE_SPARSKIT
+      call cn_src_mem_init(st, gr, tr%trans, dt, max_iter)
+#else
+      message(1) = 'Octopus was not compiled with support for the sparskit library. This'
+      message(2) = 'library is required if the transprt Crank-Nicholson propagator is selected.'
+      message(3) = 'You have to recompile Octopus with sparskit support.'
+      call write_fatal(3)
+#endif
     case default
       call input_error('TDEvolutionMethod')
     end select
     call messages_print_var_option(stdout, 'TDEvolutionMethod', tr%method)
 
-    ! allocate memory to store the old KS potentials
+    ! Allocate memory to store the old KS potentials
     ALLOCATE(tr%v_old(NP, st%d%nspin, 0:3), NP*st%d%nspin*(3+1))
     tr%v_old(:, :, :) = M_ZERO
     call td_exp_init(gr, tr%te)             ! initialize propagator
-
   end subroutine td_rti_init
 
 
@@ -267,13 +282,15 @@ contains
     case(PROP_MAGNUS)
       ASSERT(associated(tr%vmagnus))
       deallocate(tr%vmagnus); nullify(tr%vmagnus)
-    case(PROP_CRANK_NICHOLSON) 
+    case(PROP_CRANK_NICHOLSON)
 #ifdef HAVE_SPARSKIT
       call zsparskit_solver_end()
       deallocate(zpsi_tmp)
 #endif
     case(PROP_SUZUKI_TROTTER, PROP_SPLIT_OPERATOR)
       call zcf_free(tr%cf)
+    case(PROP_CRANK_NICHOLSON_SRC_MEM)
+      call cn_src_mem_end(tr%trans)
     end select
     
     call td_exp_end(tr%te)       ! clean propagator method
@@ -288,18 +305,18 @@ contains
     tr%v_old(:, :, 2) = h%vhxc(:, :)
     tr%v_old(:, :, 3) = h%vhxc(:, :)
     tr%v_old(:, :, 1) = h%vhxc(:, :)
-
   end subroutine td_rti_run_zero_iter
 
 
   ! ---------------------------------------------------------
-  subroutine td_rti_dt(ks, h, gr, st, tr, t, dt)
+  subroutine td_rti_dt(ks, h, gr, st, tr, t, dt, max_iter)
     type(v_ks_t),                intent(inout) :: ks
     type(hamiltonian_t), target, intent(inout) :: h
     type(grid_t),        target, intent(inout) :: gr
     type(states_t),      target, intent(inout) :: st
     type(td_rti_t),      target, intent(inout) :: tr
-    FLOAT,                          intent(in) :: t, dt
+    FLOAT,                       intent(in)    :: t, dt
+    integer,                     intent(in)    :: max_iter
 
     integer :: is, iter
     FLOAT   :: d, d_max
@@ -323,14 +340,15 @@ contains
     call dextrapolate(2, NP, st%d%nspin, tr%v_old(:, :, 1:3), tr%v_old(:, :, 0), dt, dt)
     select case(tr%method)
 #if defined(HAVE_FFT)
-    case(PROP_SPLIT_OPERATOR);       call td_rti0
-    case(PROP_SUZUKI_TROTTER);       call td_rti1
+    case(PROP_SPLIT_OPERATOR);          call td_rti0
+    case(PROP_SUZUKI_TROTTER);          call td_rti1
 #endif
-    case(PROP_REVERSAL);             call td_rti2
-    case(PROP_APP_REVERSAL);         call td_rti3
-    case(PROP_EXPONENTIAL_MIDPOINT); call td_rti4
-    case(PROP_CRANK_NICHOLSON);      call td_rti5
-    case(PROP_MAGNUS);               call td_rti6
+    case(PROP_REVERSAL);                call td_rti2
+    case(PROP_APP_REVERSAL);            call td_rti3
+    case(PROP_EXPONENTIAL_MIDPOINT);    call td_rti4
+    case(PROP_CRANK_NICHOLSON);         call td_rti5
+    case(PROP_MAGNUS);                  call td_rti6
+    case(PROP_CRANK_NICHOLSON_SRC_MEM); call td_rti7
     end select
 
     if(self_consistent) then
@@ -356,14 +374,15 @@ contains
         st%zpsi = zpsi1
         select case(tr%method)
 #if defined(HAVE_FFT)
-        case(PROP_SPLIT_OPERATOR);       call td_rti0
-        case(PROP_SUZUKI_TROTTER);       call td_rti1
+        case(PROP_SPLIT_OPERATOR);          call td_rti0
+        case(PROP_SUZUKI_TROTTER);          call td_rti1
 #endif
-        case(PROP_REVERSAL);             call td_rti2
-        case(PROP_APP_REVERSAL);         call td_rti3
-        case(PROP_EXPONENTIAL_MIDPOINT); call td_rti4
-        case(PROP_CRANK_NICHOLSON);      call td_rti5
-        case(PROP_MAGNUS);               call td_rti6
+        case(PROP_REVERSAL);                call td_rti2
+        case(PROP_APP_REVERSAL);            call td_rti3
+        case(PROP_EXPONENTIAL_MIDPOINT);    call td_rti4
+        case(PROP_CRANK_NICHOLSON);         call td_rti5
+        case(PROP_MAGNUS);                  call td_rti6
+        case(PROP_CRANK_NICHOLSON_SRC_MEM); call td_rti7
         end select
       end do
 
@@ -688,6 +707,17 @@ contains
       call pop_sub()
     end subroutine td_rti6
 
+
+    ! ---------------------------------------------------------
+    ! Crank-Nicholson scheme with source and memory term.
+    subroutine td_rti7()
+      call push_sub('td_rti.td_rti7')
+      
+      call cn_src_mem_dt(tr%trans%intface, tr%trans%mem_coeff, tr%trans%st_intface, &
+        ks, h, st, gr, dt, t, max_iter)
+
+      call pop_sub()
+    end subroutine td_rti7
   end subroutine td_rti_dt
 
 
@@ -709,7 +739,7 @@ contains
 #endif    
     call pop_sub()
   end subroutine td_zop
-  
+
 
   ! ---------------------------------------------------------
   ! Transpose of H (called e.g. by bi-conjugate gradient solver)
@@ -734,6 +764,7 @@ contains
   end subroutine td_zopt
 
 end module td_rti_m
+
 
 !! Local Variables:
 !! mode: f90

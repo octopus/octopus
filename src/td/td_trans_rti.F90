@@ -30,56 +30,92 @@ module td_trans_rti_m
   use sparskit_m
   use states_m
   use td_exp_m
-  use td_rti_m
+  use td_trans_mem_m
   use td_trans_intf_m
   use v_ks_m
 
   implicit none
 
-#ifdef HAVE_SPARSKIT
-
   private
   public ::          &
     cn_src_mem_init, &
-    cn_src_mem_end
+    cn_src_mem_end,  &
+    cn_src_mem_dt,   &
+    transport_t
 
-  type(sparskit_solver_t), pointer :: tdsk
-  type(td_exp_t)                   :: matr_exp
-  CMPLX, allocatable               :: zpsi_tmp(:, :)
+  type transport_t
+    CMPLX, pointer   :: mem_coeff(:, :, :, :) ! i, j, t, il
 
+    type(intface_t)  :: intface
+
+    CMPLX, pointer   :: st_intface(:, :, :, :)
+  end type transport_t
+
+  type(td_exp_t)          :: matr_exp
+  CMPLX, allocatable      :: zpsi_tmp(:, :)
+
+#if defined(HAVE_SPARSKIT)
+  type(sparskit_solver_t)      :: tdsk
   type(hamiltonian_t), pointer :: h_p
   type(grid_t), pointer        :: gr_p
   CMPLX, pointer               :: mem_p(:, :, :, :)
   type(intface_t), pointer     :: intf_p
   FLOAT                        :: dt_op, t_op
   integer                      :: ik_op
+#endif
 
 contains
 
   ! ---------------------------------------------------------
   ! Initialize propagator.
-  subroutine cn_src_mem_init(gr)
-    type(grid_t), intent(in) :: gr
+  subroutine cn_src_mem_init(st, gr, trans, dt, max_iter)
+    type(states_t),    intent(in)  :: st
+    type(grid_t),      intent(in)  :: gr
+    type(transport_t), intent(out) :: trans
+    FLOAT,             intent(in)  :: dt
+    integer,           intent(in)  :: max_iter
+
+    integer :: allocsize
 
     call push_sub('td_trans_rti.cn_src_mem_init')
 
+#if defined(HAVE_SPARSKIT)
     call zsparskit_solver_init(NP, tdsk)
-
-    ! Set up the matrix exponential to calculate 1-i\Delta t/2 H with
-    ! first order Taylor expansion (like in Crank-Nicholson in td_rti.td_rti_dt).
+#endif
     matr_exp%exp_method = TAYLOR
-    matr_exp%exp_order  = 1
+    matr_exp%exp_order = 1
 
+
+    call intface_init(gr, trans%intface)
+    call memory_init(trans%intface, dt/M_TWO, max_iter, &
+      gr%f_der%der_discr%lapl, trans%mem_coeff)
+
+    ! Allocate memory for the interface wave functions.
+    allocsize = trans%intface%np*(st%st_start-st%st_end+1)*max_iter*NLEADS
+    ALLOCATE(trans%st_intface(trans%intface%np, st%st_end-st%st_start+1, max_iter, NLEADS), allocsize)
+    trans%st_intface = M_ZERO
+      
     call pop_sub()
   end subroutine cn_src_mem_init
 
 
   ! ---------------------------------------------------------
   ! Finish propagator.
-  subroutine cn_src_mem_end()
+  subroutine cn_src_mem_end(trans)
+    type(transport_t), intent(inout) :: trans
+
     call push_sub('td_trans_rti.cn_src_mem_end')
 
+#if defined(HAVE_SPARSKIT)
     call zsparskit_solver_end()
+#endif
+    if(associated(trans%st_intface)) then
+      deallocate(trans%st_intface)
+      nullify(trans%st_intface)
+    end if
+
+    call intface_end(trans%intface)
+    call memory_end(trans%mem_coeff)
 
     call pop_sub()
   end subroutine cn_src_mem_end
@@ -107,6 +143,7 @@ contains
 
     ALLOCATE(zpsi_tmp(NP_PART, st%d%ispin), NP_PART*st%d%ispin)
 
+#if defined(HAVE_SPARSKIT)
     ! Set pointers to communicate with operators for sparskit solver.
     h_p    => h
     gr_p   => gr
@@ -114,6 +151,7 @@ contains
     intf_p => intf
     dt_op  =  dt
     t_op   =  t
+#endif
 
     n = t/dt
 
@@ -151,8 +189,10 @@ contains
     ! 4. Solve linear system (1 + i \Delta H_{eff}) zpsi_tmp = st%zpsi.
     do ik = 1, st%d%nik
       do ist = st%st_start, st%st_end
+#if defined(HAVE_SPARSKIT)        
         ik_op = ik
         call zsparskit_solver_run(tdsk, skop, skopt, zpsi_tmp(:, 1), st%zpsi(:, 1, ist, ik))
+#endif
         call lalg_copy(NP, zpsi_tmp(:, 1), st%zpsi(:, 1, ist, ik))
       end do
     end do
@@ -160,7 +200,6 @@ contains
     deallocate(zpsi_tmp)
 
     call pop_sub()
-
   end subroutine cn_src_mem_dt
 
 
@@ -224,7 +263,9 @@ contains
 
     call pop_sub()
   end subroutine apply_mem
+
   
+#if defined(HAVE_SPARSKIT)
   ! ---------------------------------------------------------
   ! Operator for sparskit solver: 1 + i \Delta H_{eff}
   subroutine skop(xre, xim, yre, yim)
@@ -268,9 +309,7 @@ contains
 
     call pop_sub()
   end subroutine skopt
-
 #endif
-
 end module td_trans_rti_m
 
 

@@ -17,7 +17,7 @@
 !!
 !! $Id: td_transport.F90 3030 2007-06-25 16:45:05Z marques $
 
-! Calculation of the memory coefficients for the modiefied Crank-Nicholson propgator.
+! Calculation of the memory coefficients for the modified Crank-Nicholson propgator.
 
 #include "global.h"
 
@@ -69,11 +69,11 @@ contains
   ! Allocate (machine) memory for the memory coefficents and
   ! calculate them.
   subroutine memory_init(intface, delta, max_iter, op, coeff)
-    type(intface_t),     intent(in)  :: intface
-    FLOAT,               intent(in)  :: delta
-    integer,             intent(in)  :: max_iter
-    type(nl_operator_t), intent(in)  :: op
-    CMPLX,               pointer     :: coeff(:, :, :, :)
+    type(intface_t),     intent(in) :: intface
+    FLOAT,               intent(in) :: delta
+    integer,             intent(in) :: max_iter
+    type(nl_operator_t), intent(in) :: op
+    CMPLX,               pointer    :: coeff(:, :, :, :)
 
     integer            :: il
     FLOAT, allocatable :: h_re(:, :), h_im(:, :)
@@ -475,7 +475,6 @@ contains
 
     call pop_sub()
   end subroutine write_coeffs
-
 
 
   ! ---------------------------------------------------------

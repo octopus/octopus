@@ -127,7 +127,7 @@ subroutine td_init(sys, h, td)
   call loct_parse_int(check_inp('TDFastEpotGeneration'), 1, td%epot_regenerate)
   if(td%epot_regenerate < 1) td%epot_regenerate = 1
 
-  call td_rti_init(sys%gr, sys%st, td%tr)
+  call td_rti_init(sys%gr, sys%st, td%tr, td%dt, td%max_iter)
   if(td%dynamics == BO)  call scf_init(sys%gr, sys%geo, td%scf, sys%st, h)
 
   call loct_parse_float(check_inp('TDMu'), CNST(1.0), td%mu)
