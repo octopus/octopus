@@ -48,10 +48,41 @@ module oscillator_strength_m
 
   contains
 
+    ! ---------------------------------------------------------
     subroutine ft(omega, power)
       FLOAT, intent(in)   :: omega
       FLOAT, intent(out)  :: power
-      integer :: i, j
+      integer :: j
+      FLOAT :: x
+      power = M_ZERO
+
+      select case(mode)
+
+      case(SINE_TRANSFORM)
+
+        do j = 0, time_steps
+          x = sin(omega*j*dt)
+          power = power + x*ot(j)
+        end do
+        power = power*dt / (dt*time_steps)
+
+      case(COSINE_TRANSFORM)
+
+        do j = 0, time_steps
+          x = cos(omega*j*dt)
+          power = power + x*ot(j)
+        end do
+        power = power*dt / (dt*time_steps)
+
+      end select
+
+    end subroutine ft
+
+    ! ---------------------------------------------------------
+    subroutine ft2(omega, power)
+      FLOAT, intent(in)   :: omega
+      FLOAT, intent(out)  :: power
+      integer :: j
       FLOAT :: x
       power = M_ZERO
 
@@ -65,7 +96,7 @@ module oscillator_strength_m
         end do
         ! The function should be *minus* the sine Fourier transform, since this
         ! is the function to be minimized.
-        power = - power*dt / (dt*time_steps)
+        power = - (power*dt / (dt*time_steps))**2
 
       case(COSINE_TRANSFORM)
 
@@ -73,15 +104,19 @@ module oscillator_strength_m
           x = cos(omega*j*dt)
           power = power + x*ot(j)
         end do
-        power = - power*dt / (dt*time_steps)
+        power = - (power*dt / (dt*time_steps))**2
 
       end select
 
-    end subroutine ft
+    end subroutine ft2
 
 end module oscillator_strength_m
 
 
+
+! ---------------------------------------------------------
+! ---------------------------------------------------------
+! ---------------------------------------------------------
 program oscillator_strength
   use global_m
   use messages_m
@@ -182,7 +217,7 @@ subroutine read_resonances_file(order, ffile, search_interval, final_time, nfreq
   FLOAT :: dummy, leftbound, rightbound, w, power, dw
   integer :: iunit, nresonances, ios, i, j, k, npairs, nspin, order_in_file, nw_substracted, ierr
   logical :: file_exists
-  FLOAT, allocatable :: wij(:), omega(:), cij(:)
+  FLOAT, allocatable :: wij(:), omega(:), c0i(:)
 
   if(order.ne.2) then
     write(message(1),'(a)') 'The run mode #3 is only compatible with the analysis of the'
@@ -224,12 +259,12 @@ subroutine read_resonances_file(order, ffile, search_interval, final_time, nfreq
   npairs = (nresonances*(nresonances-1))/2
 
   ALLOCATE(omega(nresonances), nresonances)
-  ALLOCATE(cij(nresonances), nresonances)
+  ALLOCATE(c0i(nresonances), nresonances)
   ALLOCATE(wij(npairs), npairs)
 
   call io_skip_header(iunit)
   do i = 1, nresonances
-    read(iunit, *) omega(i), cij(i)
+    read(iunit, *) omega(i), c0i(i)
   end do
 
   k = 1
@@ -249,8 +284,9 @@ subroutine read_resonances_file(order, ffile, search_interval, final_time, nfreq
   call read_ot(nspin, order_in_file, nw_substracted)
 
   if(order_in_file.ne.order) then
-    write(message(1), '(a)') 'Internal error in analyze_signal'
-    call write_fatal(1)
+    write(message(1), '(a)') 'Error: The ot file should contain the second order response'
+    write(message(2), '(a)') '       in this run mode.'
+    call write_fatal(2)
   end if
 
   if(final_time > M_ZERO) then
@@ -272,20 +308,25 @@ subroutine read_resonances_file(order, ffile, search_interval, final_time, nfreq
 
   ! First, substract zero resonance...
   w = M_ZERO
-  call resonance_second_order(w, power, nw_substracted, dw, leftbound, rightbound)
-  call modify_ot(time_steps, dt, order, ot, omega, sqrt(abs(power)))
+  call resonance_second_order(w, power, nw_substracted, dw, leftbound, rightbound, M_ZERO, M_ZERO)
+  call modify_ot(time_steps, dt, order, ot, omega, power)
   nw_substracted = nw_substracted + 1
 
   ! Then, get all the others...
-  do k = 1, npairs
-    leftbound = wij(k) - search_interval
-    rightbound = wij(k) + search_interval
-    call find_resonance(wij(k), leftbound, rightbound, nfrequencies)
-    call resonance_second_order(wij(k), power, nw_substracted, dw, leftbound, rightbound)
-    call modify_ot(time_steps, dt, order, ot, wij(k), sqrt(abs(power)))
+  k = 1
+  do i = 1, nresonances
+    do j = i + 1, nresonances
+      leftbound = wij(k) - search_interval
+      rightbound = wij(k) + search_interval
+      call find_resonance(wij(k), leftbound, rightbound, nfrequencies)
+      call resonance_second_order(wij(k), power, nw_substracted, dw, leftbound, rightbound, c0i(i), c0i(j))
+      call modify_ot(time_steps, dt, order, ot, wij(k), power)
+      nw_substracted = nw_substracted + 1
+      k = k + 1
+    end do
   end do
  
-  deallocate(wij, cij, omega)
+  deallocate(wij, c0i, omega)
   call io_close(iunit)
 end subroutine read_resonances_file
 ! ---------------------------------------------------------
@@ -392,7 +433,7 @@ subroutine analyze_signal(order, omega, search_interval, final_time, nresonances
       call resonance_second_order(omega, power, nw_substracted, dw, leftbound, rightbound)
     end select
 
-    call modify_ot(time_steps, dt, order, ot, omega, sqrt(abs(power)))
+    call modify_ot(time_steps, dt, order, ot, omega, power)
 
     nw_substracted = nw_substracted + 1
   end do
@@ -433,7 +474,7 @@ subroutine find_resonance(omega, leftbound, rightbound, nfrequencies)
   do i = 1, nfrequencies
     w = leftbound + (i-1)*dw
     warray(i) = w
-    call ft(w, aw)
+    call ft2(w, aw)
     tarray(i) = aw
   end do
 
@@ -449,7 +490,7 @@ subroutine find_resonance(omega, leftbound, rightbound, nfrequencies)
 
   omega_orig = omega
   omega = min_w
-  call loct_1dminimize(min_w - 2*dw, min_w + 2*dw, omega, ft, ierr)
+  call loct_1dminimize(min_w - 2*dw, min_w + 2*dw, omega, ft2, ierr)
   if(ierr.ne.0) then
     write(message(1),'(a)') 'Could not find a maximum.'
     write(message(2),'(a)')
@@ -485,7 +526,6 @@ subroutine resonance_first_order(omega, power, nw_substracted, dw, leftbound, ri
   FLOAT, intent(in)               :: dw, leftbound, rightbound
 
   call ft(omega, power)
-  power = -power
 
   select case(mode)
   case(SINE_TRANSFORM)
@@ -520,7 +560,7 @@ end subroutine resonance_first_order
 
 
 ! ---------------------------------------------------------
-subroutine resonance_second_order(omega, power, nw_substracted, dw, leftbound, rightbound)
+subroutine resonance_second_order(omega, power, nw_substracted, dw, leftbound, rightbound, c01, c02)
   use global_m
   use messages_m
   use datasets_m
@@ -537,14 +577,15 @@ subroutine resonance_second_order(omega, power, nw_substracted, dw, leftbound, r
   FLOAT, intent(out)              :: power
   integer, intent(in)             :: nw_substracted
   FLOAT, intent(in)               :: dw, leftbound, rightbound
+  FLOAT, intent(in)               :: c01, c02
 
   call ft(omega, power)
-  power = -power
   select case(mode)
   case(SINE_TRANSFORM)
     power = power / (M_ONE - sin(M_TWO*omega*total_time)/(M_TWO*omega*total_time))
   case(COSINE_TRANSFORM)
-    ! WARNING: Something should go here.
+    ! WARNING: Maybe this is not correct... CHECK.
+!!$    power = power / (M_ONE - sin(M_TWO*omega*total_time)/(M_TWO*omega*total_time))
   end select
 
   write(*, '(a)')                 '******************************************************************'
@@ -555,6 +596,11 @@ subroutine resonance_second_order(omega, power, nw_substracted, dw, leftbound, r
   write(*, '(a,f12.8,a,f12.8,a)') 'C(omega) = ', power / units%length%factor**3, &
                                   ' '//trim(units%length%abbrev)//'^3 = ',       &
                                   power, ' b^3'
+
+  if(c01*c02 .ne. M_ZERO) then
+    write(*, '(a,f12.8)')         '    C(omega)/(C0i*C0j) = ', power / (c01 * c02)
+  end if
+
   write(*, '(a)')
   write(*, '(a,f12.8,a,f12.8,a)') '   Search interval = [', leftbound / units%energy%factor, ',', &
                                                             rightbound / units%energy%factor, ']'
@@ -755,7 +801,7 @@ end subroutine generate_signal
 
 
 ! ---------------------------------------------------------
-subroutine modify_ot(time_steps, dt, order, ot, omega, cij)
+subroutine modify_ot(time_steps, dt, order, ot, omega, power)
   use global_m
   use io_m
   use units_m
@@ -769,19 +815,25 @@ subroutine modify_ot(time_steps, dt, order, ot, omega, cij)
   integer,             intent(in)    :: order
   FLOAT,               intent(inout) :: ot(0:time_steps)
   FLOAT,               intent(in)    :: omega
-  FLOAT,               intent(in)    :: cij
+  FLOAT,               intent(in)    :: power
 
   integer :: i
 
   select case(mod(order, 2))
   case(1)
     do i = 0, time_steps
-      ot(i) = ot(i) - M_TWO * abs(cij)**2 * sin(omega*i*dt)
+      ot(i) = ot(i) - M_TWO * power * sin(omega*i*dt)
     end do
   case(0)
-    do i = 0, time_steps
-      ot(i) = ot(i) - abs(cij)**2 * cos(omega*i*dt)
-    end do
+    if(omega .eq. M_ZERO) then
+      do i = 0, time_steps
+        ot(i) = ot(i) - power * cos(omega*i*dt)
+      end do
+    else
+      do i = 0, time_steps
+        ot(i) = ot(i) - M_TWO * power * cos(omega*i*dt)
+      end do
+    end if
   end select
 
 end subroutine modify_ot
@@ -1042,7 +1094,7 @@ subroutine print_omega_file(omega, search_interval, final_time, nfrequencies)
     w = leftbound + (i-1)*dw
     warray(i) = w
     call ft(w, aw)
-    tarray(i) = -aw
+    tarray(i) = aw
   end do
 
   iunit = io_open('omega', action='write', status='replace')

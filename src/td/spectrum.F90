@@ -316,7 +316,7 @@ contains
     ! units are 1/length
     k%delta_strength = k%delta_strength / units_inp%length%factor
 
-    if(k%delta_strength <= M_ZERO) then
+    if(abs(k%delta_strength) == M_ZERO) then
       k%delta_strength_mode = 0
       k%pol_equiv_axis = 0
       k%pol(1:3, 1) = (/ M_ONE, M_ZERO, M_ZERO /)
