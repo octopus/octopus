@@ -308,13 +308,13 @@ contains
     !%Default 0.0
     !%Section Time Dependent::Linear Response
     !%Description
-    !% When no laser is applied, a delta (in time) electric field with
-    !% strength <tt>TDDeltaStrength</tt> is applied. This is used to calculate
-    !% the linear optical spectra.
+    !% When no laser is applied, a delta (in time) perturbation with
+    !% strength <tt>TDDeltaStrength</tt> can be applied. This is used to 
+    !% calculate, e.g. the linear optical spectra.
+    !%
+    !% Note that the "strength" here described is adimensional.
     !%End
     call loct_parse_float(check_inp('TDDeltaStrength'), M_ZERO, k%delta_strength)
-    ! units are 1/length
-    k%delta_strength = k%delta_strength / units_inp%length%factor
 
     if(abs(k%delta_strength) == M_ZERO) then
       k%delta_strength_mode = 0

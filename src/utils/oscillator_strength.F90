@@ -584,8 +584,12 @@ subroutine resonance_second_order(omega, power, nw_substracted, dw, leftbound, r
   case(SINE_TRANSFORM)
     power = power / (M_ONE - sin(M_TWO*omega*total_time)/(M_TWO*omega*total_time))
   case(COSINE_TRANSFORM)
-    ! WARNING: Maybe this is not correct... CHECK.
-!!$    power = power / (M_ONE - sin(M_TWO*omega*total_time)/(M_TWO*omega*total_time))
+    ! WARNING: there is some difference between the omega=0 case and the rest.
+    if(omega.ne.M_ZERO) then
+      power = power / (M_ONE + sin(M_TWO*omega*total_time)/(M_TWO*omega*total_time))
+    else
+      power = power / M_TWO
+    end if
   end select
 
   write(*, '(a)')                 '******************************************************************'
@@ -766,11 +770,11 @@ subroutine generate_signal(order, observable)
           dump = dump + multipole(observable(2), i, isp) 
         end do
       case default
-        add_lm = 1
+        add_lm = 0
         lcycle2: do l = 1, observable(1)
           mcycle2: do m = -l, l
             add_lm = add_lm + 1
-            if(observable(1).eq.l .and. observable(2).eq.2) exit lcycle2
+            if(observable(1).eq.l .and. observable(2).eq.m) exit lcycle2
           end do mcycle2
         end do lcycle2
         dump = M_ZERO
