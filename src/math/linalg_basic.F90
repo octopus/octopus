@@ -35,7 +35,8 @@ module lib_basic_alg_m
     lalg_dot,  &
     lalg_nrm2, &
     lalg_gemv, &
-    lalg_gemm
+    lalg_gemm, &
+    lalg_gemmt
 
 
   interface lalg_swap
@@ -139,6 +140,17 @@ module lib_basic_alg_m
     module procedure gemm_2_2
     module procedure gemm_2_3
     module procedure gemm_2_4
+  end interface
+
+  interface lalg_gemmt
+    module procedure gemmt_1_1
+    module procedure gemmt_1_2
+    module procedure gemmt_1_3
+    module procedure gemmt_1_4
+    module procedure gemmt_2_1
+    module procedure gemmt_2_2
+    module procedure gemmt_2_3
+    module procedure gemmt_2_4
   end interface
 
   interface lalg_gemv

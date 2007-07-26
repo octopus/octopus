@@ -349,6 +349,30 @@ subroutine FNAME(gemm_2)(m, n, k, alpha, a, b, beta, c)
 
 end subroutine FNAME(gemm_2)
 
+! The same as above with matrix a being stored in transposed order.
+
+subroutine FNAME(gemmt_1)(m, n, k, alpha, a, b, beta, c)
+  integer, intent(in)    :: m, n, k
+  TYPE1,   intent(in)    :: alpha, beta
+  TYPE1,   intent(in)    :: a(:,:)  ! a(m, k)
+  TYPE1,   intent(in)    :: b(:,:)  ! b(k, n)
+  TYPE1,   intent(inout) :: c(:,:)  ! c(m, n)
+
+  call blas_gemm('T', 'N', m, n, k, alpha, a(1,1), m, b(1,1), k, beta, c(1,1), m)
+
+end subroutine FNAME(gemmt_1)
+
+subroutine FNAME(gemmt_2)(m, n, k, alpha, a, b, beta, c)
+  integer, intent(in)    :: m, n, k
+  TYPE1,   intent(in)    :: alpha, beta
+  TYPE1,   intent(in)    :: a(:, :, :)  ! a(m, k)
+  TYPE1,   intent(in)    :: b(:, :)     ! b(k, n)
+  TYPE1,   intent(inout) :: c(:, :, :)  ! c(m, n)
+
+  call blas_gemm('T', 'N', m, n, k, alpha, a(1, 1, 1), m, b(1, 1), k, beta, c(1, 1, 1), m)
+
+end subroutine FNAME(gemmt_2)
+
 ! ------------------------------------------------------------------
 ! matrix-vector multiplication plus vector
 ! ------------------------------------------------------------------
