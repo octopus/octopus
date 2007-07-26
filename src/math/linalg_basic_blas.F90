@@ -358,7 +358,7 @@ subroutine FNAME(gemmt_1)(m, n, k, alpha, a, b, beta, c)
   TYPE1,   intent(in)    :: b(:,:)  ! b(k, n)
   TYPE1,   intent(inout) :: c(:,:)  ! c(m, n)
 
-  call blas_gemm('T', 'N', m, n, k, alpha, a(1,1), m, b(1,1), k, beta, c(1,1), m)
+  call blas_gemm('T', 'N', m, n, k, alpha, a(1,1), k, b(1,1), k, beta, c(1,1), m)
 
 end subroutine FNAME(gemmt_1)
 
@@ -369,7 +369,7 @@ subroutine FNAME(gemmt_2)(m, n, k, alpha, a, b, beta, c)
   TYPE1,   intent(in)    :: b(:, :)     ! b(k, n)
   TYPE1,   intent(inout) :: c(:, :, :)  ! c(m, n)
 
-  call blas_gemm('T', 'N', m, n, k, alpha, a(1, 1, 1), m, b(1, 1), k, beta, c(1, 1, 1), m)
+  call blas_gemm('T', 'N', m, n, k, alpha, a(1, 1, 1), k, b(1, 1), k, beta, c(1, 1, 1), m)
 
 end subroutine FNAME(gemmt_2)
 
