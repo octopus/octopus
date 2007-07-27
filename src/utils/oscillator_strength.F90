@@ -36,6 +36,12 @@ module oscillator_strength_m
   integer, parameter :: SINE_TRANSFORM   = 1, &
                         COSINE_TRANSFORM = 2
 
+  type local_operator_t
+    integer :: n_multipoles
+    integer, pointer :: l(:), m(:)
+    FLOAT, allocatable :: weight(:)
+  end type local_operator_t
+
   integer             :: observable(2)
   FLOAT               :: conversion_factor
   type(unit_system_t) :: units
@@ -47,6 +53,7 @@ module oscillator_strength_m
   FLOAT               :: dt
 
   contains
+
 
     ! ---------------------------------------------------------
     subroutine ft(omega, power)
@@ -77,6 +84,7 @@ module oscillator_strength_m
       end select
 
     end subroutine ft
+
 
     ! ---------------------------------------------------------
     subroutine ft2(omega, power)
@@ -109,6 +117,26 @@ module oscillator_strength_m
       end select
 
     end subroutine ft2
+
+
+    ! ---------------------------------------------------------
+    subroutine local_operator_copy(o, i)
+      type(local_operator_t), intent(inout) :: o
+      type(local_operator_t), intent(inout) :: i
+      integer :: j
+
+      o%n_multipoles = i%n_multipoles
+      ALLOCATE(o%l(o%n_multipoles), o%n_multipoles)
+      ALLOCATE(o%m(o%n_multipoles), o%n_multipoles)
+      ALLOCATE(o%weight(o%n_multipoles), o%n_multipoles)
+
+      do j = 1, o%n_multipoles
+        o%l(j) = i%l(j)
+        o%m(j) = i%m(j)
+        o%weight(j) = i%weight(j)
+      end do
+
+    end subroutine local_operator_copy
 
 end module oscillator_strength_m
 
@@ -586,7 +614,9 @@ subroutine resonance_second_order(omega, power, nw_substracted, dw, leftbound, r
   case(COSINE_TRANSFORM)
     ! WARNING: there is some difference between the omega=0 case and the rest.
     if(omega.ne.M_ZERO) then
+      write(0, *) power, total_time
       power = power / (M_ONE + sin(M_TWO*omega*total_time)/(M_TWO*omega*total_time))
+      write(0, *) power
     else
       power = power / M_TWO
     end if
@@ -627,6 +657,9 @@ subroutine generate_signal(order, observable)
   use spectrum_m
   use lib_adv_alg_m
 
+  use oscillator_strength_m, only : local_operator_t, &
+                                    local_operator_copy
+
   implicit none
 
   integer, intent(in) :: order
@@ -640,7 +673,9 @@ subroutine generate_signal(order, observable)
   character(len=20) :: filename
   type(kick_t) :: kick
   type(unit_system_t) :: units
-  FLOAT, allocatable :: multipole(:, :, :), ot(:)
+  FLOAT, allocatable :: multipole(:, :, :), ot(:), dipole(:, :)
+  type(local_operator_t) :: kick_operator
+  type(local_operator_t) :: obs
 
   ! Find out how many files do we have
   nfiles = 0
@@ -680,6 +715,68 @@ subroutine generate_signal(order, observable)
   ! Get the basic info from the first file
   call spectrum_mult_info(iunit(1), nspin, kick, time_steps, dt, units, lmax=lmax)
 
+  ! Sets the kick operator...
+  if(kick%n_multipoles > 0) then
+    kick_operator%n_multipoles = kick%n_multipoles
+    ALLOCATE(kick_operator%l(kick_operator%n_multipoles), kick_operator%n_multipoles)
+    ALLOCATE(kick_operator%m(kick_operator%n_multipoles), kick_operator%n_multipoles)
+    ALLOCATE(kick_operator%weight(kick_operator%n_multipoles), kick_operator%n_multipoles)
+    do i = 1, kick_operator%n_multipoles
+      kick_operator%l(i) = kick%l(i)
+      kick_operator%m(i) = kick%m(i)
+      kick_operator%weight(i) = kick%weight(i)
+    end do
+  else
+    kick_operator%n_multipoles = 3
+    ALLOCATE(kick_operator%l(kick_operator%n_multipoles), kick_operator%n_multipoles)
+    ALLOCATE(kick_operator%m(kick_operator%n_multipoles), kick_operator%n_multipoles)
+    ALLOCATE(kick_operator%weight(kick_operator%n_multipoles), kick_operator%n_multipoles)
+    kick_operator%l(1:3) = 1
+    kick_operator%m(1) = -1
+    kick_operator%m(2) =  0
+    kick_operator%m(3) =  1
+    ! WARNING: not sure if m = -1 => y, and m = 1 => x. What is the convention?
+    kick_operator%weight(1) = -sqrt((M_FOUR*M_PI)/M_THREE) * kick%pol(2, kick%pol_dir)
+    kick_operator%weight(2) = sqrt((M_FOUR*M_PI)/M_THREE) * kick%pol(3, kick%pol_dir)
+    kick_operator%weight(3) = -sqrt((M_FOUR*M_PI)/M_THREE) * kick%pol(1, kick%pol_dir)
+  end if
+
+  ! Sets the observation operator
+  select case(observable(1))
+    case(-1)
+      ! This means that the "observabation operator" should be equal 
+      ! to the "perturbation operator", i.e., the kick.
+      call local_operator_copy(obs, kick_operator)
+    case(0)
+      ! This means that the observable is the dipole operator; observable(2) determines
+      ! if it is x, y or z.
+      obs%n_multipoles = 1
+      ALLOCATE(obs%l(1), 1)
+      ALLOCATE(obs%m(1), 1)
+      ALLOCATE(obs%weight(1), 1)
+      obs%l(1) = 1
+      select case(observable(2))
+        case(1)
+          obs%m(1) = -1
+          obs%weight(1) = -sqrt((M_FOUR*M_PI)/M_THREE)
+        case(2)
+          obs%m(1) =  1
+          obs%weight(1) = sqrt((M_FOUR*M_PI)/M_THREE)
+        case(3)
+          obs%m(1) =  0
+          obs%weight(1) = -sqrt((M_FOUR*M_PI)/M_THREE)
+      end select
+    case default
+      ! This means that the observation operator is (l,m) = (observable(1), observable(2))
+      obs%n_multipoles = 1
+      ALLOCATE(obs%l(1), 1)
+      ALLOCATE(obs%m(1), 1)
+      ALLOCATE(obs%weight(1), 1)
+      obs%weight(1) = M_ONE
+      obs%l(1) = observable(1)
+      obs%m(1) = observable(2)
+  end select
+
   lambda = abs(kick%delta_strength)
   q(1) = kick%delta_strength / lambda
 
@@ -698,10 +795,12 @@ subroutine generate_signal(order, observable)
 
   mu = matmul(qq, c)
 
-  if(kick%l > 0) then
-    max_add_lm = (kick%l+1)**2-1
+  if(kick%n_multipoles > 0) then
+    lmax = maxval(kick%l(1:obs%n_multipoles))
+    max_add_lm = (lmax+1)**2-1
     ALLOCATE(multipole(max_add_lm, 0:time_steps, nspin), 2*(time_steps+1)*nspin)
-    conversion_factor = units%length%factor ** kick%l
+    ! The units have nothing to do with the perturbing kick??
+    conversion_factor = units%length%factor ** kick%l(1)
   else
     max_add_lm = 3
     ALLOCATE(multipole(3, 0:time_steps, nspin), 2*(time_steps+1)*nspin)
@@ -710,6 +809,8 @@ subroutine generate_signal(order, observable)
   ALLOCATE(ot(0:time_steps), time_steps+1)
   multipole = M_ZERO
   ot = M_ZERO
+
+  ALLOCATE(dipole(3, nspin), 3*nspin)
 
   do j = 1, nfiles
     call io_skip_header(iunit(j))
@@ -731,62 +832,28 @@ subroutine generate_signal(order, observable)
 
       ! The dipole is treated differently in the multipoles file: first of all, 
       ! the program should have printed *minus* the dipole operator.
-      multipole(1:3, i, :) = - multipole(1:3, i, :)
+      dipole(1:3, 1:nspin) = - multipole(1:3, i, 1:nspin)
+      ! And then it contains the "cartesian" dipole, opposed to the spherical dipole:
+      multipole(1, i, 1:nspin) = -sqrt(M_THREE/(M_FOUR*M_PI)) * dipole(2, 1:nspin)
+      multipole(2, i, 1:nspin) =  sqrt(M_THREE/(M_FOUR*M_PI)) * dipole(3, 1:nspin)
+      multipole(3, i, 1:nspin) = -sqrt(M_THREE/(M_FOUR*M_PI)) * dipole(1, 1:nspin)
 
-      select case(observable(1))
-      case(-1)
-        dump = M_ZERO
-        if(kick%l > 0) then
-          add_lm = 1
-          lcycle1: do l = 1, kick%l
-            mcycle1: do m = -l, l
-              if(kick%l.eq.l .and. kick%m.eq.m) exit lcycle1
-              add_lm = add_lm + 1
-            end do mcycle1
-          end do lcycle1
-          ! The multipoles file treats differently the l=1 case: it prints the "cartesian"
-          ! dipole, instead of the "spherical" dipole. The difference is just a constant.
-          if(kick%l == 1) then
-            lequalonefactor = sqrt(CNST(3.0)/(M_FOUR*M_Pi))
-            select case(kick%m)
-            case(-1); add_lm = 1
-            case(0);  add_lm = 3
-            case(1);  add_lm = 2
-            end select
-          else
-            lequalonefactor = M_ONE
-          end if
-          do isp = 1, nspin
-            dump = dump + lequalonefactor * multipole(add_lm, i, isp)
-          end do
-        else
-          do isp = 1, nspin
-            dump = dump + sum(multipole(1:3, i, isp) * kick%pol(1:3,kick%pol_dir))
-          end do
-        end if
-      case(0)
-        dump = M_ZERO
-        do isp = 1, nspin
-          dump = dump + multipole(observable(2), i, isp) 
-        end do
-      case default
-        add_lm = 0
-        lcycle2: do l = 1, observable(1)
-          mcycle2: do m = -l, l
+      dump = M_ZERO
+      do k = 1, obs%n_multipoles
+        add_lm = 1; l = 1
+        lcycle: do
+          do m = -l, l
+            if(l == obs%l(k) .and. m == obs%m(k)) exit lcycle
             add_lm = add_lm + 1
-            if(observable(1).eq.l .and. observable(2).eq.m) exit lcycle2
-          end do mcycle2
-        end do lcycle2
-        dump = M_ZERO
-        do isp = 1, nspin
-          dump = dump + multipole(add_lm, i, isp)
-        end do
-      end select
+          end do
+          l = l + 1
+        end do lcycle
+        ! Warning: it should not add the nspin components?
+        dump = dump + obs%weight(k) * sum(multipole(add_lm, i, 1:nspin))
+      end do
 
       if(i == 0) o0 = dump
-
       ot(i) = ot(i) + mu(j)*(dump - o0)
-
     end do
 
   end do
@@ -799,7 +866,7 @@ subroutine generate_signal(order, observable)
   do j = 1, nfiles
     call io_close(iunit(j))
   end do
-  deallocate(iunit, q, mu, qq, c, ot, multipole)
+  deallocate(iunit, q, mu, qq, c, ot, multipole, dipole)
 end subroutine generate_signal
 ! ---------------------------------------------------------
 
@@ -874,8 +941,8 @@ subroutine write_ot(nspin, time_steps, dt, kick, units, order, ot, observable)
   select case(observable(1))
   case(-1)
     write(iunit,'(a)') '# Observable operator = kick operator'
-    if(kick%l > 0 ) then
-      conversion_factor = units%length%factor ** kick%l
+    if(kick%n_multipoles > 0 ) then
+      conversion_factor = units%length%factor ** kick%l(1)
     else
       conversion_factor = units%length%factor
     end if
@@ -977,8 +1044,8 @@ subroutine read_ot(nspin, order, nw_substracted)
 
   select case(observable(1))
   case(-1)
-    if(kick%l > 0) then
-      conversion_factor = units%length%factor**kick%l
+    if(kick%n_multipoles > 0) then
+      conversion_factor = units%length%factor**kick%l(1)
     else
       conversion_factor = units%length%factor
     end if

@@ -481,7 +481,7 @@ contains
     ! where E_0 = - k \hbar / e
     subroutine apply_delta_field(k)
       type(kick_t), intent(in) :: k
-      integer :: i
+      integer :: i, j
       CMPLX   :: c(2), kick
       FLOAT   :: ylm, gylm(3), r
       FLOAT   :: x(MAX_DIM)
@@ -494,11 +494,14 @@ contains
       delta_strength: if(k%delta_strength .ne. M_ZERO) then
 
         ALLOCATE(kick_function(NP), NP)
-        if(k%l> 0) then
-          do i = 1, NP
-            call mesh_r(gr%m, i, r, x = x)
-            ylm = loct_ylm(x(1), x(2), x(3), k%l, k%m)
-            kick_function(i) = r**k%l * ylm
+        if(k%n_multipoles > 0) then
+          kick_function = M_ZERO
+          do j = 1, k%n_multipoles
+            do i = 1, NP
+              call mesh_r(gr%m, i, r, x = x)
+              ylm = loct_ylm(x(1), x(2), x(3), k%l(j), k%m(j))
+              kick_function(i) = kick_function(i) + k%weight(j) * (r**k%l(j)) * ylm 
+            end do
           end do
         else
           do i = 1, NP

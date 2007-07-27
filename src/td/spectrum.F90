@@ -83,7 +83,15 @@ module spectrum_m
     integer           :: pol_equiv_axis
     FLOAT             :: wprime(3)
     ! In case we have a general multipolar kick
-    integer           :: l, m
+    ! The form of this "kick" will be (atomic units):
+    ! V(\vec{r}) = sum_{i=1}^{n_multipoles} 
+    !                 weight(i) * (e^2 / a_0^(l+1)) * r^l(i) * Y_{l(i),m(i)} (\vec{r})
+    ! which has units of energy; if we include the time-dependence (delta function):
+    ! V(\vec{r}) = sum_{i=1}^{n_multipoles} 
+    !                 weight(i) * (\hbar / a_0^l) * r^l(i) * Y_{l(i),m(i)} (\vec{r}) * \delta(t)
+    integer           :: n_multipoles
+    integer, pointer  :: l(:), m(:)
+    FLOAT, pointer    :: weight(:)
   end type kick_t
 
   type spec_sh_t
@@ -207,6 +215,7 @@ contains
     integer,   optional,  intent(in) :: iunit
     C_POINTER, optional,  intent(in) :: out
 
+    integer :: i
     character(len=120) :: aux
 
     call push_sub('spectrum.kick_write')
@@ -214,8 +223,11 @@ contains
     if(present(iunit)) then
       write(iunit, '(a15,i1)')      '# kick mode    ', k%delta_strength_mode
       write(iunit, '(a15,f18.12)')  '# kick strength', k%delta_strength
-      if(k%l > 0) then
-        write(iunit, '(a15,2i3)')     '# multipole    ', k%l, k%m
+      if(k%n_multipoles > 0) then
+        write(iunit, '(a15,i3)')      '# N multipoles ', k%n_multipoles
+        do i = 1, k%n_multipoles
+          write(iunit, '(a15,2i3,f18.12)')     '# multipole    ', k%l(i), k%m(i), k%weight(i)
+        end do
       else
         write(iunit, '(a15,3f18.12)') '# pol(1)       ', k%pol(1:3, 1)
         write(iunit, '(a15,3f18.12)') '# pol(2)       ', k%pol(1:3, 2)
@@ -232,10 +244,15 @@ contains
       write(aux, '(a15,f18.12)')  '# kick strength', k%delta_strength
       call write_iter_string(out, aux)
       call write_iter_nl(out)
-      if(k%l > 0) then
-        write(aux, '(a15,2i3)') '# multipole    ', k%l, k%m
+      if(k%n_multipoles > 0) then
+        write(aux, '(a15,i3)')      '# N multipoles ', k%n_multipoles
         call write_iter_string(out, aux)
         call write_iter_nl(out)
+        do i = 1, k%n_multipoles
+          write(aux, '(a15,2i3,f18.12)') '# multipole    ', k%l(i), k%m(i), k%weight(i)
+          call write_iter_string(out, aux)
+          call write_iter_nl(out)
+        end do
       else
         write(aux, '(a15,3f18.12)') '# pol(1)       ', k%pol(1:3, 1)
         call write_iter_string(out, aux)
@@ -267,7 +284,7 @@ contains
     type(kick_t), intent(inout) :: k
     integer,      intent(in) :: iunit
 
-    integer :: ios
+    integer :: ios, i
     character(len=100) :: line
 
     call push_sub('spectrum.kick_read')
@@ -276,7 +293,13 @@ contains
     read(iunit, '(15x,f18.12)')  k%delta_strength
     read(iunit, '(a)') line
     if(index(line,'multipole').ne.0) then
-      read(line, '("# multipole    ",2i3)') k%l, k%m
+      read(line, '("# N multipoles ",i3)') k%n_multipoles
+      ALLOCATE(k%l(k%n_multipoles), k%n_multipoles)
+      ALLOCATE(k%m(k%n_multipoles), k%n_multipoles)
+      ALLOCATE(k%weight(k%n_multipoles), k%n_multipoles)
+      do i = 1, k%n_multipoles
+        read(iunit, '("# multipole    ",2i3,f18.12)') k%l(i), k%m(i), k%weight(i)
+      end do
     else
       backspace(iunit)
       read(iunit, '(15x,3f18.12)') k%pol(1:3, 1)
@@ -324,8 +347,10 @@ contains
       k%pol(1:3, 3) = (/ M_ZERO, M_ZERO, M_ONE /)
       k%pol_dir = 0
       k%wprime = M_ZERO
-      k%l = 0
-      k%m = 0
+      k%n_multipoles = 0
+      nullify(k%l)
+      nullify(k%m)
+      nullify(k%weight)
       call pop_sub()
       return
     end if
@@ -375,13 +400,21 @@ contains
     !%End
     if(loct_parse_block(check_inp('TDKickFunction'), blk)==0) then
       n_rows = loct_parse_block_n(blk)
-      if(n_rows > 1) call input_error('TDKickFunction')
-      call loct_parse_block_int(blk, 0, 0, k%l)
-      call loct_parse_block_int(blk, 0, 1, k%m)
-      if( (k%l < 0) .or. (abs(k%m) > abs(k%l)) ) call input_error('TDkickFunction')
+      k%n_multipoles = n_rows
+      ALLOCATE(k%l(n_rows), n_rows)
+      ALLOCATE(k%m(n_rows), n_rows)
+      ALLOCATE(k%weight(n_rows), n_rows)
+      do i = 1, n_rows
+        call loct_parse_block_int(blk, i-1, 0, k%l(i))
+        call loct_parse_block_int(blk, i-1, 1, k%m(i))
+        call loct_parse_block_float(blk, i-1, 2, k%weight(i))
+        if( (k%l(i) < 0) .or. (abs(k%m(i)) > abs(k%l(i))) ) call input_error('TDkickFunction')
+      end do
     else
-      k%l = 0
-      k%m = 0
+      k%n_multipoles = 0
+      nullify(k%l)
+      nullify(k%m)
+      nullify(k%weight)
     end if
     
 
