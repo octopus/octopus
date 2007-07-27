@@ -208,7 +208,7 @@ foreach my $octopus_exe (@executables){
  $mscript = "$workdir/clean.sh";
  open(SCRIPT, ">$mscript") or die "could not create script file\n";
  print SCRIPT "#\!/bin/bash\n\n";
- print SCRIPT "rm -rf tmp static status *_tmp *_static out.oct out ds* td.* \n";
+ print SCRIPT "rm -rf tmp static exec *_tmp *_static out.oct out ds* td.* \n";
  close(SCRIPT);
  chmod 0755, $mscript;
 
@@ -328,7 +328,10 @@ foreach my $octopus_exe (@executables){
      print SCRIPT "echo ", "="x60, "[ $name - pre command ] \n";
      print SCRIPT "$pre_command\n";
      print SCRIPT "echo ", "-"x60, "[ $name - regular expression ] \n";
-     print SCRIPT "echo $regexp\n";
+     print SCRIPT "echo '$regexp'\n";
+     print SCRIPT "export LINE=`$pre_command`\n";
+     print SCRIPT 'perl -e \'print "Match: ".($ENV{LINE} =~ m/'.$regexp
+                 .'/?"OK":"FAILED")."\n"\''."\n";
      print SCRIPT "echo;echo\n";
      close(SCRIPT);
 
