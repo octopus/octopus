@@ -71,6 +71,10 @@ void oscillator_strength_help(){
   printf("                    o If the -O option is not given in the command line, then\n");
   printf("                      the observation operator O will be the same as the\n");
   printf("                      perturbation operator that defines the initial kick.\n");
+  printf("  -f <file>       This is the file where the frequencies needed in run mode\n");
+  printf("                  3 are stored.\n");
+  printf("  -d <gamma>      gamma is the damping factor used in the SOS formulae that");
+  printf("                  produce (hyper)-polarizabilities.");
   printf("  -s <dw>         Limits of the search interval: [w-dw,w+dw]\n");
   printf("  -r <r>          Number of resonances to search for.\n");
   printf("  -n <N>          Number of frequencies in which the search interval\n");
@@ -92,7 +96,7 @@ void oscillator_strength_help(){
 
 void FC_FUNC_(getopt_oscillator_strength, GETOPT_OSCILLATOR_STRENGTH)
   (int *mode, double *omega, double *searchinterval, int *order, 
-   int *nresonances, int *nfrequencies, double *time, int *l, int *m, 
+   int *nresonances, int *nfrequencies, double *time, int *l, int *m, double *damping,
    STR_F_TYPE ffile STR_ARG1)
 {
   int c;
@@ -102,7 +106,7 @@ void FC_FUNC_(getopt_oscillator_strength, GETOPT_OSCILLATOR_STRENGTH)
      if(argc==1) oscillator_strength_help(); */
 
   while (1) {
-    c = getopt(argc, argv, "hm:s:k:O:r:n:t:f:");
+    c = getopt(argc, argv, "hm:s:k:O:r:n:t:d:f:");
     if (c == -1) break;
     switch (c) {
 
@@ -159,6 +163,10 @@ void FC_FUNC_(getopt_oscillator_strength, GETOPT_OSCILLATOR_STRENGTH)
 
     case 'f':
       TO_F_STR1(optarg, ffile);
+      break;
+
+    case 'd':
+      *damping = (double)atof(optarg);
       break;
 
     case '?':

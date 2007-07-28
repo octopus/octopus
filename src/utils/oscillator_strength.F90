@@ -161,7 +161,7 @@ program oscillator_strength
   implicit none
 
   integer :: run_mode, order, nfrequencies, nspin, ierr, nresonances, l, m
-  FLOAT :: omega, search_interval, final_time
+  FLOAT :: omega, search_interval, final_time, damping
   integer, parameter :: ANALYZE_NTHORDER_SIGNAL           = 1, &
                         GENERATE_NTHORDER_SIGNAL          = 2, &
                         READ_RESONANCES_FROM_FILE         = 3, &
@@ -187,11 +187,12 @@ program oscillator_strength
   observable(1)   = -1
   observable(2)   = 0
   ffile           = ""
+  damping         = CNST(0.1)/CNST(27.2114) ! This is the usual damping factor used in the literature.
 
   ! Get the parameters from the command line.
   call getopt_oscillator_strength(run_mode, omega, search_interval,             &
                                   order, nresonances, nfrequencies, final_time, &
-                                  observable(1), observable(2), ffile)
+                                  observable(1), observable(2), damping, ffile)
 
   ! Initialize stuff
   call global_init()
@@ -206,7 +207,7 @@ program oscillator_strength
   case(GENERATE_NTHORDER_SIGNAL)
     call generate_signal(order, observable)
   case(ANALYZE_NTHORDER_SIGNAL)
-    call analyze_signal(order, omega, search_interval, final_time, nresonances, nfrequencies)
+    call analyze_signal(order, omega, search_interval, final_time, nresonances, nfrequencies, damping)
   case(READ_RESONANCES_FROM_FILE)
     call read_resonances_file(order, ffile, search_interval, final_time, nfrequencies)
   case(GENERATE_OMEGA_FILE)
@@ -361,7 +362,7 @@ end subroutine read_resonances_file
 
 
 ! ---------------------------------------------------------
-subroutine analyze_signal(order, omega, search_interval, final_time, nresonances, nfrequencies)
+subroutine analyze_signal(order, omega, search_interval, final_time, nresonances, nfrequencies, damping)
   use global_m
   use messages_m
   use datasets_m
@@ -381,10 +382,16 @@ subroutine analyze_signal(order, omega, search_interval, final_time, nresonances
   FLOAT,   intent(inout) :: final_time
   integer, intent(inout) :: nresonances
   integer, intent(inout) :: nfrequencies
+  FLOAT,   intent(in)    :: damping
 
   FLOAT :: leftbound, rightbound, dw, power
+  FLOAT, allocatable :: w(:), c0I2(:)
   integer :: nspin, i, ierr, order_in_file, nw_substracted
   logical :: file_exists
+
+  !!!!WARNING this should go away
+  FLOAT :: e
+  integer :: j
 
   ! First, let us check that the file "ot" exists.
   inquire(file="ot", exist  = file_exists)
@@ -445,6 +452,12 @@ subroutine analyze_signal(order, omega, search_interval, final_time, nresonances
 
   dw = (rightbound-leftbound) / (nfrequencies - 1)
 
+  ALLOCATE(w(nresonances), nresonances)
+  ALLOCATE(c0I2(nresonances), nresonances)
+  w = M_ZERO
+  c0I2 = M_ZERO
+
+  i = 1
   do
     if(nw_substracted >= nresonances) exit
 
@@ -458,16 +471,72 @@ subroutine analyze_signal(order, omega, search_interval, final_time, nresonances
     case(1)
       call resonance_first_order(omega, power, nw_substracted, dw, leftbound, rightbound)
     case(2)
-      call resonance_second_order(omega, power, nw_substracted, dw, leftbound, rightbound)
+      call resonance_second_order(omega, power, nw_substracted, dw, leftbound, rightbound, M_ZERO, M_ZERO)
     end select
+
+    w(i) = omega
+    c0I2(i) = power
 
     call modify_ot(time_steps, dt, order, ot, omega, power)
 
     nw_substracted = nw_substracted + 1
+    i = i + 1
   end do
 
-  deallocate(ot)
+  select case(order)
+    case(1)
+      call write_polarizability(nfrequencies, nresonances, dw, w, c0I2, damping)
+  end select
+
+  deallocate(ot, w, c0I2)
 end subroutine analyze_signal
+! ---------------------------------------------------------
+
+
+! ---------------------------------------------------------
+! Implements the SOS formula of the polarizability, and writes
+! down to the "polarizability" file the real and imaginary part
+! of the dynamical polarizability.
+! ---------------------------------------------------------
+subroutine write_polarizability(nfrequencies, nresonances, dw, w, c0I2, gamma)
+  use global_m
+  use messages_m
+  use datasets_m
+  use io_m
+
+  implicit none
+
+  integer, intent(in) :: nfrequencies, nresonances
+  FLOAT, intent(in)   :: dw
+  FLOAT, intent(in)   :: w(nresonances), c0I2(nresonances)
+  FLOAT, intent(in)   :: gamma
+
+  integer :: iunit, i, j
+  FLOAT :: e
+  CMPLX :: pol
+
+  iunit = io_open('polarizability', status='replace', action = 'write', die=.false.)
+  write(iunit, '(a)') '# Polarizability file. Generated using the SOS formula with the followind data:'
+  write(iunit, '(a)') '#'
+
+  do i = 1, nresonances
+    write(iunit, '(a1,3e20.12)') '#', w(i), sqrt(abs(c0I2(i))), c0I2(i)
+  end do
+
+  write(iunit, '(a10,f12.6)') '# Gamma = ', gamma
+  write(iunit, '(a)')         '#'
+
+  do i = 1, nfrequencies
+    e = (i-1)*dw
+    pol = M_z0
+    do j = 1, nresonances
+      pol = pol + c0I2(j) * ( M_ONE/(w(j)- e - M_zI*gamma) + M_ONE/(w(j) + e + M_zI*gamma )  )
+    end do
+    write(iunit, '(3e20.12)') e, pol
+  end do 
+
+  call io_close(iunit)
+end subroutine write_polarizability
 ! ---------------------------------------------------------
 
 
@@ -614,9 +683,7 @@ subroutine resonance_second_order(omega, power, nw_substracted, dw, leftbound, r
   case(COSINE_TRANSFORM)
     ! WARNING: there is some difference between the omega=0 case and the rest.
     if(omega.ne.M_ZERO) then
-      write(0, *) power, total_time
       power = power / (M_ONE + sin(M_TWO*omega*total_time)/(M_TWO*omega*total_time))
-      write(0, *) power
     else
       power = power / M_TWO
     end if
