@@ -24,6 +24,10 @@ module ps_psf_file_m
   use messages_m
   use ps_in_grid_m
 
+  implicit none
+
+  private
+
   public ::                &
     ps_psf_file_t,          &
     ps_psf_file_read,       &

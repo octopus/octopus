@@ -26,6 +26,8 @@ module ps_cpi_file_m
 
   implicit none
 
+  private
+
   public ::                &
     ps_cpi_file_t,          &
     ps_cpi_file_read,       &

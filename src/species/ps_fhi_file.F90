@@ -25,6 +25,8 @@ module ps_fhi_file_m
 
   implicit none
 
+  private
+
   public ::                 &
     ps_fhi_file_t,          &
     ps_fhi_file_read
