@@ -265,9 +265,9 @@ subroutine X(mf_interpolate) (mesh_in, mesh_out, full_interpolation, u, f)
       j = mesh_in%lxyz_inv(ix, iy, iz)
 
       if(mesh_in%parallel_in_domains) then
-        if(j <= mesh_in%np_global) f(i) = f_global(j)
+        if(j > 0 .and. j <= mesh_in%np_global) f(i) = f_global(j)
       else
-        if(j <= mesh_in%np_global) f(i) = u(j)
+        if(j > 0 .and. j <= mesh_in%np_global) f(i) = u(j)
       end if
     end do
 
