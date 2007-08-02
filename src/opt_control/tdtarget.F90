@@ -17,12 +17,54 @@
 !!
 !! $Id: opt_control.F90 2870 2007-04-28 06:26:47Z acastro $
 
+#include "global.h"
+
+module opt_control_tdtarget_m
+  use datasets_m
+  use varinfo_m
+  use messages_m
+  use lib_oct_parser_m
+  use lib_oct_m
+  use io_m
+  use global_m
+  use grid_m
+  use mesh_function_m
+  use states_m
+  use hamiltonian_m
+  use timedep_m
+  use td_write_m
+
+  private
+  public :: td_target_t,      &
+            td_target_set_t,  &
+            tdtargetset_init, &
+            tdtargetset_end,  &
+            calc_inh
+
+  type td_target_t
+    integer :: type       ! local or state 
+    FLOAT   :: par 
+    FLOAT   :: width      ! width parameter
+    FLOAT   :: weight     ! relative weight of filter
+    character(len=1024) :: expression(MAX_DIM) ! expression of user def func
+    integer             :: ftype               ! which function: gaussian etc
+    CMPLX, pointer :: tdshape(:,:) ! evaluate user defined functions
+  end type td_target_t
+
+  type td_target_set_t
+    integer :: no_tdtargets
+    type(td_target_t), pointer :: tdtg(:)
+    FLOAT, pointer :: td_fitness(:)
+    CMPLX, pointer :: tdtarget(:)
+  end type td_target_set_t
+
+  contains
 
   !----------------------------------------------------------
   ! 
   !----------------------------------------------------------
-  subroutine tdtargetset_init(oct, gr, td, tdt)
-    type(oct_t),       intent(in) :: oct
+  subroutine tdtargetset_init(targetmode, gr, td, tdt)
+    integer, intent(in) :: targetmode
     type(grid_t),      intent(in) :: gr
     type(td_t),        intent(in) :: td
     type(td_target_set_t), intent(inout) :: tdt
@@ -84,7 +126,7 @@
     !% 
     !%End
     no_tds = 0
-    if((oct%targetmode==oct_targetmode_td) &
+    if((targetmode==oct_targetmode_td) &
         .AND.(loct_parse_block(check_inp('OCTTdTarget'),blk)==0)) then
 
       no_tds = loct_parse_block_n(blk)
@@ -321,6 +363,8 @@
     call pop_sub()
   end subroutine calc_inh
 
+
+end module opt_control_tdtarget_m
 
 !! Local Variables:
 !! mode: f90

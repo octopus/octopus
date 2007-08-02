@@ -45,7 +45,7 @@
     ALLOCATE(td_fitness(0:td%max_iter), td%max_iter+1)
     psi = initial_st
     
-    call propagate_forward(oct, sys, h, td, tdt, psi, write_iter = .true.)
+    call propagate_forward(oct%targetmode, sys, h, td, tdt, psi, write_iter = .true.)
 
     if(oct%targetmode==oct_targetmode_td) then
       overlap = SUM(td_fitness) * abs(td%dt)

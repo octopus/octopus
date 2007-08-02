@@ -22,7 +22,8 @@
 noinst_LIBRARIES = libopt_control.a
 
 libopt_control_a_SOURCES = \
-	filters.F90 parameters.F90 opt_control.F90
+	opt_control_constants.F90 filters.F90 parameters.F90 tdtarget.F90 \
+        propagation.F90 opt_control.F90
 
 noinst_HEADERS = \
 	read.F90 aux.F90 defstates.F90 propagation.F90 finalcheck.F90 iter.F90 \
@@ -35,4 +36,4 @@ depend:
 
 
 opt_control.o: read.F90 aux.F90 defstates.F90 propagation.F90 finalcheck.F90 iter.F90 \
-	output.F90 tdtarget.F90
+	output.F90 tdtarget.F90 opt_control_constants.F90

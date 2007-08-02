@@ -176,44 +176,6 @@
   end subroutine target_calc
 
 
-  ! ---------------------------------------------------------
-  subroutine calc_tdfitness(tdt, gr, psi, merit)
-    type(td_target_set_t), intent(inout) :: tdt
-    type(grid_t),      intent(in) :: gr
-    type(states_t),    intent(in) :: psi
-    FLOAT,             intent(out):: merit
-    integer             :: jj, ik, p, dim
-
-    call push_sub('opt_control.calc_tdfitness')
-
-    merit = M_ZERO
-    do jj = 1, tdt%no_tdtargets
-      if(tdt%tdtg(jj)%type.eq.oct_tgtype_local) then
-        do ik = 1, psi%d%nik
-          do p  = psi%st_start, psi%st_end
-            do dim = 1, psi%d%dim
-              merit = merit + &
-                zmf_integrate(gr%m, tdt%tdtarget(:)* &
-                abs(psi%zpsi(:,dim,ik,p))**2)
-            end do
-          end do
-        end do
-      else
-        do ik = 1, psi%d%nik
-          do p  = psi%st_start, psi%st_end
-            do dim = 1, psi%d%dim
-              merit = merit + &
-                abs(zmf_integrate(gr%m, tdt%tdtarget(:)* &
-                conjg(psi%zpsi(:,dim,ik,p))))**2
-            end do
-          end do
-        end do
-      end if
-    end do
-
-    call pop_sub()
-  end subroutine calc_tdfitness
-
 !! Local Variables:
 !! mode: f90
 !! coding: utf-8

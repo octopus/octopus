@@ -48,43 +48,15 @@ module opt_control_m
   use external_pot_m
   use restart_m
   use tdf_m
+  use opt_control_constants_m
+  use opt_control_tdtarget_m
+  use opt_control_propagation_m
   use opt_control_parameters_m
 
   implicit none
 
   private
   public :: opt_control_run
-
-  integer, parameter, private  ::  &
-    oct_is_groundstate   = 1,      &
-    oct_is_excited       = 2,      &
-    oct_is_superposition = 3,      &
-    oct_is_userdefined   = 4         
-    
-  integer, parameter, private  ::  &
-    oct_tg_groundstate   = 1,      &
-    oct_tg_excited       = 2,      &
-    oct_tg_superposition = 3,      &
-    oct_tg_userdefined   = 4,      &
-    oct_tg_local         = 5,      &        
-    oct_tg_td_local      = 6   
-
-  integer, parameter, private  ::  &
-    oct_algorithm_zbr98 = 1,       &
-    oct_algorithm_zr98  = 2,       &
-    oct_algorithm_wg05  = 3       
- 
-  integer, parameter, private  ::  &
-    oct_targetmode_static = 0,     &
-    oct_targetmode_td     = 1
-  
-  integer, parameter, private  ::  &
-    oct_tgtype_state = 1,          &
-    oct_tgtype_local = 2
-  
-  integer, parameter, private  ::  &
-    oct_ftype_gauss = 1,           &
-    oct_ftype_step  = 2
 
   type oct_t
     FLOAT   :: targetfluence
@@ -97,23 +69,6 @@ module opt_control_m
     integer :: istype
     logical :: dump_intermediate
   end type oct_t
-
-  type td_target_t
-    integer :: type       ! local or state 
-    FLOAT   :: par 
-    FLOAT   :: width      ! width parameter
-    FLOAT   :: weight     ! relative weight of filter
-    character(len=1024) :: expression(MAX_DIM) ! expression of user def func
-    integer             :: ftype               ! which function: gaussian etc
-    CMPLX, pointer :: tdshape(:,:) ! evaluate user defined functions
-  end type td_target_t
-
-  type td_target_set_t
-    integer :: no_tdtargets
-    type(td_target_t), pointer :: tdtg(:)
-    FLOAT, pointer :: td_fitness(:)
-    CMPLX, pointer :: tdtarget(:)
-  end type td_target_set_t
 
   type oct_iterator_t
     FLOAT              :: eps
@@ -140,7 +95,7 @@ contains
     type(td_t)                 :: td
     type(grid_t),      pointer :: gr   ! some shortcuts
     type(states_t),    pointer :: st
-    type(states_t)             :: chi, psi, target_st, initial_st, psi2
+    type(states_t)             :: chi, psi, target_st, initial_st
     type(filter_t),    pointer :: f(:)
     type(td_target_set_t)      :: tdt
     type(oct_control_parameters_t) :: par, par_tmp
@@ -161,9 +116,8 @@ contains
     call td_init(sys, h, td)
     call states_allocate_wfns(st, gr%m, M_CMPLX)
 
-    ! Initialize a bunch of states: initial, target, auxiliary.
+    ! Initialize a bunch of states: initial, target, chi.
     psi        = st
-    psi2       = st
     chi        = st
     initial_st = st
     target_st  = st
@@ -194,7 +148,7 @@ contains
 
     call def_istate(oct, gr, sys%geo, initial_st)
     call def_toperator(oct, gr, sys%geo, target_st)
-    call tdtargetset_init(oct, gr, td, tdt)
+    call tdtargetset_init(oct%targetmode, gr, td, tdt)
 
     call check_faulty_runmodes(oct)
 
@@ -247,7 +201,7 @@ contains
 
       psi = initial_st
       call parameters_to_h(par, h%ep)
-      call propagate_forward(oct, sys, h, td, tdt, psi) 
+      call propagate_forward(oct%targetmode, sys, h, td, tdt, psi) 
       
       if(oct%dump_intermediate) call states_output(psi, gr, 'opt-control/prop1', sys%outp)
         
@@ -260,7 +214,7 @@ contains
         
         if(iteration_manager(oct, gr, tdt%td_fitness, par, td, psi, target_st, iterator)) exit ctr_loop
         
-        call bwd_step(oct_algorithm_zr98)
+        call bwd_step(oct_algorithm_zr98, oct%targetmode, sys, td, h, tdt, par, par_tmp, chi, psi)
         
         if(oct%dump_intermediate) then
           write(filename,'(a,i3.3)') 'opt-control/b_laser.', iterator%ctr_iter
@@ -269,9 +223,8 @@ contains
         
         ! forward propagation
         psi = initial_st
-        psi2 = initial_st
         call states_output(psi, gr, 'opt-control/last_bwd', sys%outp)
-        call fwd_step(oct_algorithm_zr98)
+        call fwd_step(oct_algorithm_zr98, oct%targetmode, sys, td, h, tdt, par, par_tmp, chi, psi)
         write(filename,'(a,i3.3)') 'opt-control/PsiT.', iterator%ctr_iter
         call states_output(psi, gr, filename, sys%outp)
         
@@ -303,7 +256,7 @@ contains
         
         psi = initial_st
         call parameters_to_h(par, h%ep)
-        call propagate_forward(oct, sys, h, td, tdt, psi) 
+        call propagate_forward(oct%targetmode, sys, h, td, tdt, psi) 
         
         if(oct%dump_intermediate) then
           write(filename,'(a,i3.3)') 'opt-control/PsiT.', iterator%ctr_iter
@@ -316,7 +269,7 @@ contains
         
         if(iteration_manager(oct, gr, tdt%td_fitness, par, td, psi, target_st, iterator)) exit ctr_loop
         
-        call bwd_step(oct_algorithm_wg05)
+        call bwd_step(oct_algorithm_wg05, oct%targetmode, sys, td, h, tdt, par, par_tmp, chi, psi)
         !!!WARNING: this probably shoudl not be here?
         fluence = laser_fluence(par_tmp)
 
@@ -389,8 +342,7 @@ contains
         
         ! forward propagation
         psi = initial_st
-        
-        call fwd_step(oct_algorithm_zbr98)
+        call fwd_step(oct_algorithm_zbr98, oct%targetmode, sys, td, h, tdt, par, par_tmp, chi, psi)
 
         write(filename,'(a,i3.3)') 'opt-control/PsiT.', iterator%ctr_iter
         call states_output(psi, gr, filename, sys%outp)
@@ -399,7 +351,7 @@ contains
         
          ! and now backward
         call target_calc(oct, gr, target_st, psi, chi)
-        call bwd_step(oct_algorithm_zbr98)
+        call bwd_step(oct_algorithm_zbr98, oct%targetmode, sys, td, h, tdt, par, par_tmp, chi, psi)
         call states_output(psi, gr, 'opt-control/last_bwd', sys%outp)
         
       end do ctr_loop
@@ -407,168 +359,6 @@ contains
       call pop_sub()
     end subroutine scheme_zbr98
 
-
-    ! ----------------------------------------------------------
-    subroutine fwd_step(method)
-      integer, intent(in) :: method
-      integer :: i
-      FLOAT, allocatable :: dens_tmp(:,:)
-
-      call push_sub('opt_control.fwd_step')
-
-      ALLOCATE(dens_tmp(gr%m%np_part, st%d%nspin), gr%m%np_part*st%d%nspin) 
-      
-      ! setup forward propagation
-      call states_densities_init(psi, gr, sys%geo)
-      call states_calc_dens(psi, NP_PART, dens_tmp)
-      psi%rho = dens_tmp
-      call v_ks_calc(gr, sys%ks, h, psi, calc_eigenval=.true.)
-      call td_rti_run_zero_iter(h, td%tr)
-
-      message(1) = "Info: Propagating forward"
-      call write_info(1)
-
-      do i = 1, td%max_iter
-        call prop_iter_fwd(i, method)
-        if(oct%targetmode==oct_targetmode_td) &
-          call calc_tdfitness(tdt, gr, psi, tdt%td_fitness(i))     
-      end do
-      
-      ! dump new laser field
-      !if(oct%dump_intermediate) then
-      !  write(filename,'(a,i3.3)') 'opt-control/laser.', iterator%ctr_iter
-      !  call parameters_write(filename, par)
-      !endif
-
-      deallocate(dens_tmp)      
-      call pop_sub()
-    end subroutine fwd_step
-    
-    
-    ! --------------------------------------------------------
-    subroutine bwd_step(method) 
-      integer, intent(in) :: method
-      integer :: i
-      FLOAT, allocatable :: dens_tmp(:,:)
-
-      call push_sub('opt_control.bwd_step')
-
-      ALLOCATE(dens_tmp(gr%m%np_part, st%d%nspin), gr%m%np_part*st%d%nspin) 
-      ! setup backward propagation
-      call states_calc_dens(chi, NP_PART, dens_tmp)
-      chi%rho = dens_tmp
-      call v_ks_calc(gr, sys%ks, h, chi, calc_eigenval=.true.)
-      call td_rti_run_zero_iter(h, td%tr)
-
-      message(1) = "Info: Propagating backward"
-      call write_info(1)
-      !call loct_progress_bar(td%max_iter-1, td%max_iter-1)
-      td%dt = -td%dt
-      do i = td%max_iter-1, 0, -1
-        call prop_iter_bwd(i,method)
-        !call loct_progress_bar(td%max_iter-1-i, td%max_iter-1)
-      end do
-      td%dt = -td%dt
-
-      ! This is not the place to write anything.
-      !if(oct%dump_intermediate) then
-      !  write(filename,'(a,i3.3)') 'opt-control/b_laser.', iterator%ctr_iter
-      !  call parameters_write(filename, par_tmp)
-      !end if
-
-      deallocate(dens_tmp)
-      call pop_sub()
-    end subroutine bwd_step
-
-
-    ! ---------------------------------------------------------
-    subroutine prop_iter_fwd(iter,method)
-      integer, intent(in) :: method
-      integer,           intent(in) :: iter
-      FLOAT, allocatable :: dens_tmp(:,:)
-      
-      call push_sub('opt_control.prop_iter_fwd')
- 
-      ALLOCATE(dens_tmp(gr%m%np_part, st%d%nspin), gr%m%np_part*st%d%nspin) 
-      
-      ! chi(0) --> chi(T) [laser_tmp]
-      !         |------------laser     
-      ! psi(0) --> psi(T) 
-      
-      ! new electric field
-      if(oct%targetmode==oct_targetmode_td) then
-        ! psi(0) --> psi(T) with old field (for chi)
-        call calc_inh(psi2, gr, tdt, iter, td%max_iter, td%dt, chi)
-        ! psi2
-        call parameters_to_h(par, h%ep)
-        call states_calc_dens(psi2, NP_PART, dens_tmp)
-        psi2%rho = dens_tmp
-        call v_ks_calc(gr, sys%ks, h, psi2, calc_eigenval=.true.)
-        call td_rti_dt(sys%ks, h, gr, psi2, td%tr, abs(iter*td%dt), abs(td%dt), td%max_iter)
-      end if
-
-      call update_field(oct, iter-1, par, gr, td, psi, chi)
-      
-      ! chi
-      call parameters_to_h(par_tmp, h%ep)
-      call states_calc_dens(chi, NP_PART, dens_tmp)
-      chi%rho = dens_tmp
-      call v_ks_calc(gr, sys%ks, h, chi, calc_eigenval=.true.)
-      call td_rti_dt(sys%ks, h, gr, chi, td%tr, abs(iter*td%dt), abs(td%dt), td%max_iter)
-      
-      ! psi
-      call parameters_to_h(par, h%ep)
-      call states_calc_dens(psi, NP_PART, dens_tmp)
-      psi%rho = dens_tmp
-      call v_ks_calc(gr, sys%ks, h, psi, calc_eigenval=.true.)
-      call td_rti_dt(sys%ks, h, gr, psi, td%tr, abs(iter*td%dt), abs(td%dt), td%max_iter)
-
-      deallocate(dens_tmp)     
-      call pop_sub()
-    end subroutine prop_iter_fwd
-   
-   
-    ! ---------------------------------------------------------
-    ! do backward propagation step with update of field
-    ! works for time-independent and td targets
-    subroutine prop_iter_bwd(iter, method)
-      integer, intent(in) :: iter
-      integer, intent(in) :: method
-      FLOAT, allocatable :: dens_tmp(:,:)
-      
-      call push_sub('opt_control.prop_iter_bwd')
- 
-      ALLOCATE(dens_tmp(gr%m%np_part, st%d%nspin), gr%m%np_part*st%d%nspin) 
- 
-      ! chi(T) --> chi(0)
-      !         |------------laser_tmp
-      ! psi(T) --> psi(0) [laser]
-      
-      ! calc inh first, then update field
-      if(oct%targetmode==oct_targetmode_td) then
-        call calc_inh(psi, gr, tdt, iter, td%max_iter, td%dt, chi)
-      end if
- 
-      ! new electric field
-      call update_field(oct, iter+1, par_tmp, gr, td, psi, chi)
-           
-      ! chi
-      call parameters_to_h(par_tmp, h%ep)
-      call states_calc_dens(chi, NP_PART, dens_tmp)
-      chi%rho = dens_tmp
-      call v_ks_calc(gr, sys%ks, h, chi, calc_eigenval=.true.)
-      call td_rti_dt(sys%ks, h, gr, chi, td%tr, abs(iter*td%dt), td%dt, td%max_iter)
-      
-      ! psi
-      call  parameters_to_h(par, h%ep)
-      call states_calc_dens(psi, NP_PART, dens_tmp)
-      psi%rho = dens_tmp
-      call v_ks_calc(gr, sys%ks, h, psi, calc_eigenval=.true.)
-      call td_rti_dt(sys%ks, h, gr, psi, td%tr, abs(iter*td%dt), td%dt, td%max_iter)
- 
-      deallocate(dens_tmp)     
-      call pop_sub()
-    end subroutine prop_iter_bwd
  
   end subroutine opt_control_run
 
@@ -602,66 +392,12 @@ contains
 
   end subroutine check_runmode_constrains
 
-
-  ! ---------------------------------------------------------
-  subroutine update_field(oct, iter, cp, gr, td, psi, chi)
-    type(oct_t), intent(in)    :: oct
-    integer, intent(in)        :: iter
-    type(oct_control_parameters_t), intent(inout) :: cp
-    type(grid_t), intent(in)   :: gr
-    type(td_t), intent(in)     :: td
-    type(states_t), intent(in) :: psi
-    type(states_t), intent(in) :: chi
-    
-    CMPLX :: d1
-    CMPLX :: d2(NDIM)
-    integer :: ik, p, dim, i, pol
-    FLOAT :: value
-
-    CMPLX, allocatable :: rpsi(:, :)
-    
-    call push_sub('opt_control.update_field')
-    
-    ALLOCATE(rpsi(gr%m%np_part, psi%d%dim), gr%m%np_part*psi%d%dim)
-
-    ! TODO This should be a product between Slater determinants.
-    d2 = M_z0 
-    do ik = 1, psi%d%nik
-      do p  = psi%st_start, psi%st_end
-        do pol = 1, NDIM
-          do dim = 1, psi%d%dim
-            rpsi(:, dim) = psi%zpsi(:, dim, p, ik)*cp%laser_pol(pol, 1)*gr%m%x(:, pol)
-          end do
-          d2(pol) = zstates_dotp(gr%m, psi%d%dim, chi%zpsi(:, :, p, ik), rpsi)
-        end do
-      end do
-    end do
-    deallocate(rpsi)
-
-    d1 = M_z1
-    if(oct%algorithm_type .eq. oct_algorithm_zbr98) d1 = zstates_mpdotp(gr%m, psi, chi)
-
-    value = aimag(d1*d2(1))/tdf(cp%td_penalty(1), iter+1)
-    call tdf_set_numerical(cp%f(1), iter+1, value)
-    i = int(sign(M_ONE, td%dt))
-    if(iter==0.or.iter==td%max_iter) then
-      call tdf_set_numerical(cp%f(1), iter+1, value)
-    else
-      value = M_HALF*( M_FOUR*tdf(cp%f(1), iter+1) - M_TWO*tdf(cp%f(1), iter-i+1))
-      call tdf_set_numerical(cp%f(1), iter+i+1, value)
-    end if
-
-    call pop_sub()
-  end subroutine update_field
-
 #include "read.F90"
 #include "aux.F90"
 #include "defstates.F90"
-#include "propagation.F90"
 #include "finalcheck.F90"
 #include "iter.F90"
 #include "output.F90"
-#include "tdtarget.F90"
 
 end module opt_control_m
 
