@@ -40,7 +40,10 @@ module opt_control_parameters_m
             parameters_set,               &
             parameters_end,               &
             parameters_to_h,              &
-            parameters_write
+            parameters_write,             &
+            laser_fluence,                &
+            j2_functional
+
 
   type oct_control_parameters_t
     integer :: no_parameters
@@ -242,6 +245,53 @@ module opt_control_parameters_m
 
     call pop_sub()
   end subroutine parameters_penalty_init
+
+
+  ! ---------------------------------------------------------
+  ! Gets the fluence of the laser field, defined as:
+  ! laser_fluence = \sum_{pol} \integrate_0^T
+  !                 laserin(t, pol)^2 dt
+  ! ---------------------------------------------------------
+  FLOAT function laser_fluence(par)
+    type(oct_control_parameters_t), intent(in) :: par
+    integer :: i, j
+    FLOAT :: t
+    call push_sub('opt_control_aux.calc_fluence')
+
+    ! WARNING: This is probably very inefficient; there should be functions in
+    ! the tdf module taken care of integrating functions.
+    laser_fluence = M_ZERO
+    do j = 1, par%no_parameters
+      do i = 1, par%ntiter+1
+        t = (i-1) * par%dt
+        laser_fluence = laser_fluence + abs(tdf(par%f(j), i))**2 
+      end do
+    end do
+    laser_fluence = laser_fluence * par%dt
+
+    call pop_sub()
+  end function laser_fluence
+
+
+  ! ---------------------------------------------------------
+  ! Gets the J2 functional (which is the fluence, but weighted
+  ! by a penalty function.
+  ! ---------------------------------------------------------
+  FLOAT function j2_functional(par) result(j2)
+    type(oct_control_parameters_t), intent(in) :: par
+
+    integer :: i, j
+    FLOAT :: t
+    j2 = M_ZERO
+    do j = 1, par%no_parameters
+      do i = 1, par%ntiter + 1
+        t = (i-1) * par%dt
+        j2 = j2 + tdf(par%td_penalty(j), i)*abs(tdf(par%f(j), i))**2 
+      end do
+    end do
+    j2 = j2 * par%dt
+  end function j2_functional
+
 
 end module opt_control_parameters_m
 

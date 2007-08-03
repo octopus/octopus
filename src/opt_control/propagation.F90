@@ -41,17 +41,21 @@ module opt_control_propagation_m
   use v_ks_m
   use tdf_m
 
+  implicit none
+
   private
   public :: propagate_forward,  &
             propagate_backward, &
             fwd_step,           &
-            bwd_step,           &
-            calc_tdfitness,     &
-            update_field
-
+            bwd_step
 
   contains
 
+  ! ---------------------------------------------------------
+  ! Performs a full propagation of state psi_n, with the laser
+  ! field specified in hamiltonian h. If write_iter is present
+  ! and is set to .true., writes down through the td_write
+  ! module.
   ! ---------------------------------------------------------
   subroutine propagate_forward(targetmode, sys, h, td, tdt, psi_n, write_iter)
     integer, intent(in) :: targetmode
@@ -137,6 +141,9 @@ module opt_control_propagation_m
 
 
   ! ---------------------------------------------------------
+  ! Performs a full bacward propagation of state psi_n, with the
+  ! external fields specified in hamiltonian h.
+  ! ---------------------------------------------------------
   subroutine propagate_backward(sys, h, td, psi_n)
     type(system_t),      intent(inout) :: sys
     type(hamiltonian_t), intent(inout) :: h
@@ -179,68 +186,19 @@ module opt_control_propagation_m
   end subroutine propagate_backward
 
 
-
-  ! ---------------------------------------------------------
-  ! chi(0) --> chi(T) [laser_tmp]
-  !         |------------laser     
-  ! psi(0) --> psi(T) 
-  ! ---------------------------------------------------------
-  subroutine prop_iter_fwd(iter, method, targetmode, gr, ks, h, tdt, td, par, par_tmp, psi, chi, psi2)
-    integer,           intent(in) :: iter
-    integer, intent(in) :: method
-    integer, intent(in) :: targetmode
-    type(grid_t), intent(inout) :: gr
-    type(v_ks_t), intent(inout) :: ks
-    type(hamiltonian_t), intent(inout) :: h
-    type(td_target_set_t), intent(inout)  :: tdt
-    type(td_t), intent(inout) :: td
-    type(oct_control_parameters_t), intent(inout) :: par, par_tmp
-    type(states_t), intent(inout) :: psi, chi, psi2
-
-
-    FLOAT, allocatable :: dens_tmp(:,:)
-    integer :: nspin
-    
-    call push_sub('opt_control.prop_iter_fwd')
-
-    nspin = psi%d%nspin
-
-    ALLOCATE(dens_tmp(NP_PART, nspin), NP_PART*nspin) 
-
-    ! new electric field
-    if(targetmode==oct_targetmode_td) then
-      ! psi(0) --> psi(T) with old field (for chi)
-      call calc_inh(psi2, gr, tdt, iter, td%max_iter, td%dt, chi)
-      ! psi2
-      call parameters_to_h(par, h%ep)
-      call states_calc_dens(psi2, NP_PART, dens_tmp)
-      psi2%rho = dens_tmp
-      call v_ks_calc(gr, ks, h, psi2, calc_eigenval=.true.)
-      call td_rti_dt(ks, h, gr, psi2, td%tr, abs(iter*td%dt), abs(td%dt), td%max_iter)
-    end if
-
-    call update_field(method, iter-1, par, gr, td, psi, chi)
-    
-    ! chi
-    call parameters_to_h(par_tmp, h%ep)
-    call states_calc_dens(chi, NP_PART, dens_tmp)
-    chi%rho = dens_tmp
-    call v_ks_calc(gr, ks, h, chi, calc_eigenval=.true.)
-    call td_rti_dt(ks, h, gr, chi, td%tr, abs(iter*td%dt), abs(td%dt), td%max_iter)
-    
-    ! psi
-    call parameters_to_h(par, h%ep)
-    call states_calc_dens(psi, NP_PART, dens_tmp)
-    psi%rho = dens_tmp
-    call v_ks_calc(gr, ks, h, psi, calc_eigenval=.true.)
-    call td_rti_dt(ks, h, gr, psi, td%tr, abs(iter*td%dt), abs(td%dt), td%max_iter)
-
-    deallocate(dens_tmp)     
-    call pop_sub()
-  end subroutine prop_iter_fwd
-
-
-  ! ----------------------------------------------------------
+  ! /*---------------------------------------------------------
+  ! Performs a forward propagation on the state psi and on the
+  ! lagrange-multiplier state chi. It also updates the control
+  ! parameter par,  according to the following scheme:
+  ! 
+  ! |chi> --> U[par_tmp](T, 0)|chi>
+  ! par = par[|psi>, |chi>]
+  ! |psi> --> U[par](T, 0)|psi>
+  !
+  ! Note that the control parameters "par" are updated "on the
+  ! fly", so that the propagation of psi is performed with the
+  ! "new" parameters.
+  ! */--------------------------------------------------------
   subroutine fwd_step(method, targetmode, sys, td, h, tdt, par, par_tmp, chi, psi)
     integer, intent(in)                           :: method
     integer, intent(in)                           :: targetmode
@@ -248,21 +206,20 @@ module opt_control_propagation_m
     type(td_t), intent(inout)                     :: td
     type(hamiltonian_t), intent(inout)            :: h
     type(td_target_set_t), intent(inout)          :: tdt
-    type(oct_control_parameters_t), intent(inout) :: par, par_tmp
+    type(oct_control_parameters_t), intent(inout) :: par
+    type(oct_control_parameters_t), intent(in)    :: par_tmp
     type(states_t), intent(inout)                 :: chi
     type(states_t), intent(inout)                 :: psi
 
     integer :: i, nspin
     FLOAT, allocatable :: dens_tmp(:,:)
     type(states_t) :: psi2
-
     type(grid_t), pointer :: gr
 
     call push_sub('opt_control.fwd_step')
 
     gr => sys%gr
     nspin = psi%d%nspin
-
     ALLOCATE(dens_tmp(NP_PART, nspin), NP_PART*nspin) 
 
     psi2 = psi
@@ -278,8 +235,22 @@ module opt_control_propagation_m
     call write_info(1)
 
     do i = 1, td%max_iter
-      call prop_iter_fwd(i, method, targetmode, gr, sys%ks, h, tdt, td, par, par_tmp, psi, chi, psi2)
+
+      if(targetmode==oct_targetmode_td) then
+        call calc_inh(psi2, gr, tdt, i, td%max_iter, td%dt, chi)
+        call parameters_to_h(par, h%ep)
+        call states_calc_dens(psi2, NP_PART, dens_tmp)
+        psi2%rho = dens_tmp
+        call v_ks_calc(gr, sys%ks, h, psi2, calc_eigenval=.true.)
+        call td_rti_dt(sys%ks, h, gr, psi2, td%tr, abs(i*td%dt), abs(td%dt), td%max_iter)
+      end if
+
+      call update_field(method, i-1, par, gr, td, psi, chi)
+      call prop_iter_fwd(i, gr, sys%ks, h, td, par_tmp, chi)
+      call prop_iter_fwd(i, gr, sys%ks, h, td, par, psi)
+
       if(targetmode==oct_targetmode_td) call calc_tdfitness(tdt, gr, psi, tdt%td_fitness(i))     
+
     end do
 
     call states_end(psi2)
@@ -289,6 +260,45 @@ module opt_control_propagation_m
   end subroutine fwd_step
 
 
+  ! ----------------------------------------------------------
+  ! Performs one step of forward propagation.
+  ! ----------------------------------------------------------
+  subroutine prop_iter_fwd(iter, gr, ks, h, td, par, st)
+    integer, intent(in)                        :: iter
+    type(grid_t), intent(inout)                :: gr
+    type(v_ks_t), intent(inout)                :: ks
+    type(hamiltonian_t), intent(inout)         :: h
+    type(td_t), intent(inout)                  :: td
+    type(oct_control_parameters_t), intent(in) :: par
+    type(states_t), intent(inout)              :: st
+
+    FLOAT, allocatable :: dens_tmp(:,:)
+    integer :: nspin
+    
+    call push_sub('opt_control.prop_iter_fwd_')
+
+    nspin = st%d%nspin
+    ALLOCATE(dens_tmp(NP_PART, nspin), NP_PART*nspin) 
+
+    call parameters_to_h(par, h%ep)
+    call states_calc_dens(st, NP_PART, dens_tmp)
+    st%rho = dens_tmp
+    call v_ks_calc(gr, ks, h, st, calc_eigenval=.true.)
+    call td_rti_dt(ks, h, gr, st, td%tr, abs(iter*td%dt), abs(td%dt), td%max_iter)
+
+    deallocatE(dens_tmp)
+    call pop_sub()
+  end subroutine prop_iter_fwd
+
+
+  ! --------------------------------------------------------
+  ! Performs a forward propagation on the state psi and on the
+  ! lagrange-multiplier state chi, according to the following
+  ! scheme:
+  !
+  ! |psi> --> U[par](0, T)|psi>
+  ! par_tmp = par_tmp[|psi>, |chi>]
+  ! |chi> --> U[par_tmp](0, T)|chi>
   ! --------------------------------------------------------
   subroutine bwd_step(method, targetmode, sys, td, h, tdt, par, par_tmp, chi, psi) 
     integer, intent(in) :: method
@@ -297,7 +307,8 @@ module opt_control_propagation_m
     type(td_t), intent(inout)                     :: td
     type(hamiltonian_t), intent(inout)            :: h
     type(td_target_set_t), intent(inout)          :: tdt
-    type(oct_control_parameters_t), intent(inout) :: par, par_tmp
+    type(oct_control_parameters_t), intent(in)    :: par
+    type(oct_control_parameters_t), intent(inout) :: par_tmp
     type(states_t), intent(inout)                 :: chi
     type(states_t), intent(inout)                 :: psi
 
@@ -306,6 +317,9 @@ module opt_control_propagation_m
     type(grid_t), pointer :: gr
 
     call push_sub('opt_control.bwd_step')
+
+    message(1) = "Info: Propagating backward"
+    call write_info(1)
 
     gr => sys%gr
     nspin = psi%d%nspin
@@ -318,12 +332,12 @@ module opt_control_propagation_m
     call v_ks_calc(gr, sys%ks, h, chi, calc_eigenval=.true.)
     call td_rti_run_zero_iter(h, td%tr)
 
-    message(1) = "Info: Propagating backward"
-    call write_info(1)
-
     td%dt = -td%dt
     do i = td%max_iter-1, 0, -1
-      call prop_iter_bwd(i, method, targetmode, gr, sys%ks, h, tdt, td, par, par_tmp, psi, chi)
+      if(targetmode==oct_targetmode_td) call calc_inh(psi, gr, tdt, i, td%max_iter, td%dt, chi)
+      call update_field(method, i+1, par_tmp, gr, td, psi, chi)
+      call prop_iter_bwd(i, gr, sys%ks, h, td, par_tmp, chi)
+      call prop_iter_bwd(i, gr, sys%ks, h, td, par, psi)
     end do
     td%dt = -td%dt
 
@@ -332,57 +346,35 @@ module opt_control_propagation_m
   end subroutine bwd_step
 
 
-  ! ---------------------------------------------------------
-  ! do backward propagation step with update of field
-  ! works for time-independent and td targets
-  ! chi(T) --> chi(0)
-  !         |------------laser_tmp
-  ! psi(T) --> psi(0) [laser]
-  ! ---------------------------------------------------------
-  subroutine prop_iter_bwd(iter, method, targetmode, gr, ks, h, tdt, td, par, par_tmp, psi, chi)
+  ! ----------------------------------------------------------
+  ! Performs one step of forward propagation.
+  ! ----------------------------------------------------------
+  subroutine prop_iter_bwd(iter, gr, ks, h, td, par, st)
     integer, intent(in) :: iter
-    integer, intent(in) :: method
-    integer, intent(in) :: targetmode
     type(grid_t), intent(inout) :: gr
     type(v_ks_t), intent(inout) :: ks
     type(hamiltonian_t), intent(inout) :: h
-    type(td_target_set_t), intent(inout)  :: tdt
     type(td_t), intent(inout) :: td
-    type(oct_control_parameters_t), intent(inout) :: par, par_tmp
-    type(states_t), intent(inout) :: psi, chi
+    type(oct_control_parameters_t), intent(in) :: par
+    type(states_t), intent(inout) :: st
+
     FLOAT, allocatable :: dens_tmp(:,:)
 
     integer :: nspin
     
     call push_sub('opt_control.prop_iter_bwd')
 
-    nspin = psi%d%nspin
+    nspin = st%d%nspin
 
     ALLOCATE(dens_tmp(NP_PART, nspin), NP_PART*nspin) 
-     
-    ! calc inh first, then update field
-    if(targetmode==oct_targetmode_td) then
-      call calc_inh(psi, gr, tdt, iter, td%max_iter, td%dt, chi)
-    end if
 
-    ! new electric field
-    call update_field(method, iter+1, par_tmp, gr, td, psi, chi)
-         
-    ! chi
-    call parameters_to_h(par_tmp, h%ep)
-    call states_calc_dens(chi, NP_PART, dens_tmp)
-    chi%rho = dens_tmp
-    call v_ks_calc(gr, ks, h, chi, calc_eigenval=.true.)
-    call td_rti_dt(ks, h, gr, chi, td%tr, abs(iter*td%dt), td%dt, td%max_iter)
-    
-    ! psi
-    call  parameters_to_h(par, h%ep)
-    call states_calc_dens(psi, NP_PART, dens_tmp)
-    psi%rho = dens_tmp
-    call v_ks_calc(gr, ks, h, psi, calc_eigenval=.true.)
-    call td_rti_dt(ks, h, gr, psi, td%tr, abs(iter*td%dt), td%dt, td%max_iter)
+    call parameters_to_h(par, h%ep)
+    call states_calc_dens(st, NP_PART, dens_tmp)
+    st%rho = dens_tmp
+    call v_ks_calc(gr, ks, h, st, calc_eigenval=.true.)
+    call td_rti_dt(ks, h, gr, st, td%tr, abs(iter*td%dt), td%dt, td%max_iter)
 
-    deallocate(dens_tmp)     
+    deallocate(dens_tmp)
     call pop_sub()
   end subroutine prop_iter_bwd
 
@@ -426,6 +418,9 @@ module opt_control_propagation_m
   end subroutine calc_tdfitness
 
 
+  ! ---------------------------------------------------------
+  ! Calculates the value of the control parameters at iteration
+  ! iter, from the state psi and the Lagrange-multiplier chi.
   ! ---------------------------------------------------------
   subroutine update_field(algorithm_type, iter, cp, gr, td, psi, chi)
     integer, intent(in) :: algorithm_type

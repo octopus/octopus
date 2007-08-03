@@ -182,6 +182,14 @@ contains
     call tdtargetset_end(tdt)
     call filter_end(f)
     call td_end(td)
+
+    nullify(gr)
+    nullify(st)
+    call states_end(psi)
+    call states_end(chi)
+    call states_end(initial_st)
+    call states_end(target_st)
+   
     call pop_sub()
 
   contains
@@ -205,8 +213,6 @@ contains
       
       if(oct%dump_intermediate) call states_output(psi, gr, 'opt-control/prop1', sys%outp)
         
-      call states_output(initial_st, gr, 'opt-control/zr98_istate1', sys%outp)
-
       ctr_loop: do
         
          ! defines chi

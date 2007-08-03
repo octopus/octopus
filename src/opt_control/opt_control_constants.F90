@@ -21,6 +21,8 @@
 
 module opt_control_constants_m
 
+  implicit none
+
   integer, parameter ::  &
     oct_is_groundstate   = 1,      &
     oct_is_excited       = 2,      &

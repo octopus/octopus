@@ -33,6 +33,9 @@ module opt_control_tdtarget_m
   use hamiltonian_m
   use timedep_m
   use td_write_m
+  use opt_control_constants_m
+
+  implicit none
 
   private
   public :: td_target_t,      &
@@ -307,10 +310,6 @@ module opt_control_tdtarget_m
 
     call push_sub('opt_control_tdtarget.calc_inh')
     
-    ! tdtarget is defined globally
-    !      CMPLX               :: tdop(gr%m%np)
-    
-    ! distinguish between local and wavefunction td target
     ! TODO: change to right dimensions
     !       build target operator
     
@@ -318,17 +317,6 @@ module opt_control_tdtarget_m
     ! usually one has only one specie of operators, i.e., only local or only non-local, 
     ! when mixing these, this routine has to be improved.
     if(tdt%tdtg(1)%type.eq.oct_tgtype_local) then
-      ! local td operator
-      ! build operator
-      !do ip = 1, gr%m%np
-      !   x = gr%m%x(ip, :)
-      !   r = sqrt(sum(x(:)**2))
-      
-      !   call loct_parse_expression(psi_re, psi_im, &
-      !        x(1), x(2), x(3), r, tt, td_tg(jj)%expression)
-      
-      !   ! need tdtarget for fitness calculation
-      ! tdtarget(:) = (psi_re+m_zI*psi_im)
       do jj = 1, tdt%no_tdtargets
         call build_tdtarget(tdt%tdtg(jj), gr, tgt, iter) ! tdtarget is build
         tdt%tdtarget(:) = tdt%tdtarget(:) + tgt(:) 
@@ -339,15 +327,6 @@ module opt_control_tdtarget_m
           psi_n%zpsi(:,dim,1,1)
       enddo
     else 
-      ! build operator 
-      ! non-local td operator
-      !do ip = 1, gr%m%np
-      !   x = gr%m%x(ip, :)
-      !   r = sqrt(sum(x(:)**2))
-      !   call loct_parse_expression(psi_re, psi_im, &
-      !        x(1), x(2), x(3), r, tt, td_tg(jj)%expression)
-      !   tdtarget(ip) = (psi_re+m_zI*psi_im)  
-      ! need tdtarget for fitness calculation
       do jj = 1, tdt%no_tdtargets
         call build_tdtarget(tdt%tdtg(jj), gr, tgt, iter)
         tdt%tdtarget = tgt
