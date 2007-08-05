@@ -187,7 +187,8 @@ contains
     
     do ifreq = 1, max_freq
       ww = dw * ifreq
-      write(unit = iunit, iostat = ierr, fmt = *) ww*hartree_to_cm_inv, real(vafft(ifreq)), aimag(vafft(ifreq))
+      write(unit = iunit, iostat = ierr, fmt = '(4e20.10)') &
+           ww*hartree_to_cm_inv, abs(vafft(ifreq)), real(vafft(ifreq)), aimag(vafft(ifreq))
     end do
 
     call io_close(iunit)
