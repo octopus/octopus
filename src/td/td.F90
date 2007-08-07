@@ -381,10 +381,12 @@ contains
 
     ! ---------------------------------------------------------
     subroutine init_wfs()
-      integer :: i, is, ierr
+      integer :: i, is, ierr, ist, jst
       character(len=50) :: filename
       FLOAT :: x
       logical :: only_userdef_istates
+      C_POINTER :: blk
+      CMPLX, allocatable :: rotation_matrix(:, :)
 
       if(.not.fromScratch) then
         call restart_read(trim(tmpdir)//'restart_td', st, gr, geo, ierr, td%iter)
@@ -439,6 +441,41 @@ contains
         ! overwrites orbitals that were read from restart_gs 
         if(loct_parse_isdef(check_inp('UserDefinedStates')).ne.0) then
           call states_read_user_def_orbitals(gr%m, st)
+        end if
+
+        !%Variable RotateStates
+        !%Type block
+        !%Default no
+        !%Section States
+        !%Description
+        !% Before starting the td calculation, the initial states (that are
+        !% read from the tmp/restart_gs directory, which should have been
+        !% generated in a previous ground state calculation) can be "rotated"
+        !% among themselves. The block RotateStates gives the rotation matrix
+        !% to be used. It should be a square matrix of complex numbers, and
+        !% the dimension of this matrix should coincide with the number of states
+        !% present in the calculation.
+        !%
+        !% The matrix should be unitary, and *the code will not check this*.
+        !%
+        !% Each line provides the coefficients of the new states, in terms of
+        !% the old ones.
+        !%End
+        if(loct_parse_isdef(check_inp('RotateStates')).ne.0) then
+          if(loct_parse_block(check_inp('RotateStates'), blk) == 0) then
+            ALLOCATE(rotation_matrix(st%nst, st%nst), st%nst*st%nst)
+            do ist = 1, st%nst
+              do jst = 1, st%nst
+                call loct_parse_block_cmplx(blk, ist-1, jst-1, rotation_matrix(ist, jst))
+              end do
+            end do
+            call rotate_states(gr%m, st, rotation_matrix)
+            deallocate(rotation_matrix)
+          else
+            message(1) = '"RotateStates" has to be specified as block.'
+            call write_info(1)
+            call input_error('RotateStates')
+          end if
         end if
       end if
 

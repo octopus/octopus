@@ -111,7 +111,7 @@ contains
     !% The syntax of each line is, then:
     !%
     !% <tt>%TDExternalField
-    !% <br>&nbsp;&nbsp; type | nx | ny | nz | amplitude | omega | envelope | tau0 | t0 | tau1 | filename1 | filename2
+    !% <br>&nbsp;&nbsp; type | nx | ny | nz | envelope | amplitude | omega | tau0 | t0 | tau1 | filename1 | filename2
     !% <br>%</tt>
     !%
     !% The first number of each line describes which kind of external field is described by the line:
@@ -235,6 +235,8 @@ contains
         select case(l(i)%field)
 
         case(E_FIELD_MAGNETIC)
+          ! WARNING: note that for the moment we are ignoring the possibility of a complex
+          ! polarizability vector for the td magnetic field case.
           ALLOCATE(l(i)%a(m%np_part, m%sb%dim), m%np*m%sb%dim)
           l(i)%a = M_ZERO
           ALLOCATE(x(m%sb%dim), m%sb%dim)
@@ -242,13 +244,14 @@ contains
             x(1:m%sb%dim) = m%x(j, 1:m%sb%dim)
             select case(m%sb%dim)
             case(2)
-              l(i)%a(j, :) = (/x(2), -x(1)/)
+              l(i)%a(j, :) = (/x(2), -x(1)/) * sign(CNST(1.0), real(l(i)%pol(3), REAL_PRECISION))
             case(3)
               l(i)%a(j, :) = (/ x(2)*l(i)%pol(3) - x(3)*l(i)%pol(2), &
                                 x(3)*l(i)%pol(1) - x(1)*l(i)%pol(3), &
                                 x(1)*l(i)%pol(2) - x(2)*l(i)%pol(1)  /)
             end select
           enddo
+          l(i)%a = -M_HALF * l(i)%a 
           deallocate(x)
 
         end select

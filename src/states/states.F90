@@ -72,6 +72,7 @@ module states_m
     wfs_are_complex,                  &
     wfs_are_real,                     &
     states_dump,                      &
+    rotate_states,                    &
     assignment(=)
 
 
@@ -612,6 +613,40 @@ contains
     
     call pop_sub()
   end subroutine states_deallocate_wfns
+
+  ! ---------------------------------------------------------
+  ! This routine rotates the orbitals of state "st", according
+  ! to the (unitary) rotation matrix "u".
+  !
+  ! Each row of u contains the coefficients of the new orbitals
+  ! in terms of tne old ones.
+  ! ---------------------------------------------------------
+  subroutine rotate_states(mesh, st, u)
+    type(mesh_t),      intent(in) :: mesh
+    type(states_t), intent(inout) :: st    
+    CMPLX, intent(in)             :: u(:, :)
+
+    integer :: ik, idim, ist, jst
+    type(states_t) :: stin
+
+    call push_sub('states.rotate_states')
+
+    stin = st
+    if(st%d%wfs_type == M_REAL) then
+      do ik = 1, st%d%nik
+        call lalg_gemm(mesh%np_part*st%d%dim, st%nst, st%nst, M_ONE, stin%dpsi(:, :, :, ik), &
+                       transpose(real(u(:, :), REAL_PRECISION)), M_ZERO, st%dpsi(:, :, :, ik))
+      end do
+    else
+      do ik = 1, st%d%nik
+        call lalg_gemm(mesh%np_part*st%d%dim, st%nst, st%nst, M_z1, stin%zpsi(:, :, :, ik), &
+                       transpose(u(:, :)), M_z0, st%zpsi(:, :, :, ik))
+      end do
+    end if
+
+    call states_end(stin)
+    call pop_sub()
+  end subroutine rotate_states
 
 
   ! ---------------------------------------------------------

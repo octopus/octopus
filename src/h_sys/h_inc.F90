@@ -589,6 +589,18 @@ subroutine X(vlasers) (gr, h, psi, hpsi, ik, t)
       hpsi(k, :) = hpsi(k, :) + M_HALF*dot_product(a(k, 1:NDIM), a(k, 1:NDIM))*psi(k, :) / P_c**2
     end do
 
+!!!NEW
+    ! If there is a static magnetic field, its associated vector potential is coupled with
+    ! the time-dependent one defined as a "laser" (ideally one should just add them all and
+    ! do the calculation only once...). Note that h%ep%a_static already has been divided
+    ! by P_c, and therefore here we only divide by P_c, and not P_c**2.
+    if(associated(h%ep%a_static)) then
+      do k = 1, NP
+        hpsi(k, :) = hpsi(k, :) + dot_product(a(k, 1:NDIM), h%ep%a_static(k, 1:NDIM))*psi(k, :) / P_c
+      end do
+    end if
+!!!ENDOFNEW
+
     select case(h%d%ispin)
     case(UNPOLARIZED, SPIN_POLARIZED)
       do k = 1, NP
@@ -602,22 +614,27 @@ subroutine X(vlasers) (gr, h, psi, hpsi, ik, t)
       end do
     end select
 
-    ALLOCATE(lhpsi(NP, h%d%dim), NP*h%d%dim)
+
     select case (h%d%ispin)
     case (SPIN_POLARIZED)
+      ALLOCATE(lhpsi(NP, h%d%dim), NP*h%d%dim)
       if(modulo(ik+1, 2) == 0) then ! we have a spin down
         lhpsi(1:NP, 1) = - M_HALF/P_C*sqrt(dot_product(b, b))*psi(1:NP, 1)
       else
         lhpsi(1:NP, 1) = + M_HALF/P_C*sqrt(dot_product(b, b))*psi(1:NP, 1)
       end if
+      hpsi(1:NP, :) = hpsi(1:NP, :) + (h%ep%gyromagnetic_ratio * M_HALF) * lhpsi(1:NP, :)
+      deallocate(lhpsi)
     case (SPINORS)
+      ALLOCATE(lhpsi(NP, h%d%dim), NP*h%d%dim)
       lhpsi(1:NP, 1) = M_HALF/P_C*( b(3)*psi(1:NP, 1) &
            + (b(1) - M_zI*b(2))*psi(1:NP, 2))
       lhpsi(1:NP, 2) = M_HALF/P_C*(-b(3)*psi(1:NP, 2) &
            + (b(1) + M_zI*b(2))*psi(1:NP, 1))
+      hpsi(1:NP, :) = hpsi(1:NP, :) + (h%ep%gyromagnetic_ratio * M_HALF) * lhpsi(1:NP, :)
+      deallocate(lhpsi)
     end select
-    hpsi(1:NP, :) = hpsi(1:NP, :) + (h%ep%gyromagnetic_ratio * M_HALF) * lhpsi(1:NP, :)
-    deallocate(lhpsi)
+
     deallocate(grad)
     deallocate(a, a_prime)
   end if
