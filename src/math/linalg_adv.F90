@@ -26,14 +26,21 @@ module lib_adv_alg_m
   implicit none
 
   private
-  public ::                     &
-    lalg_geneigensolve,         &
-    lalg_eigensolve,            &
-    lalg_determinant,           &
-    lalg_inverter,              &
-    lalg_linsyssolve,           &
-    lalg_singular_value_decomp, &
-    lalg_svd_inverse
+  public ::                       &
+    lalg_cholesky,                &
+    lalg_geneigensolve,           &
+    lalg_eigensolve,              &
+    lalg_determinant,             &
+    lalg_inverter,                &
+    lalg_linsyssolve,             &
+    lalg_singular_value_decomp,   &
+    lalg_svd_inverse,             &
+    lalg_invert_upper_triangular, &
+    lalg_lowest_geneigensolve
+
+  interface lalg_cholesky
+    module procedure dcholesky, zcholesky
+  end interface
 
   interface lalg_geneigensolve
     module procedure dgeneigensolve, zgeneigensolve
@@ -65,6 +72,13 @@ module lib_adv_alg_m
     module procedure zsvd_inverse
   end interface
 
+  interface lalg_invert_upper_triangular
+    module procedure dinvert_upper_triangular, zinvert_upper_triangular
+  end interface
+  
+  interface lalg_lowest_geneigensolve
+    module procedure dlowest_geneigensolve, zlowest_geneigensolve
+  end interface
 contains
 
 #ifdef HAVE_LAPACK

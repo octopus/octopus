@@ -39,6 +39,7 @@
 #define xFNAME(x,y) yFNAME(x,y)
 #define yFNAME(x,y) x ## _ ## y
 
+
 ! ------------------------------------------------------------------
 ! BLAS level I
 ! ------------------------------------------------------------------
@@ -324,57 +325,7 @@ end function FNAME(nrm2)
 ! ------------------------------------------------------------------
 
 ! ------------------------------------------------------------------
-! matrix-matrix multiplication plus matrix
-! ------------------------------------------------------------------
-
-subroutine FNAME(gemm_1)(m, n, k, alpha, a, b, beta, c)
-  integer, intent(in)    :: m, n, k
-  TYPE1,   intent(in)    :: alpha, beta
-  TYPE1,   intent(in)    :: a(:,:)  ! a(m, k)
-  TYPE1,   intent(in)    :: b(:,:)  ! b(k, n)
-  TYPE1,   intent(inout) :: c(:,:)  ! c(m, n)
-
-  call blas_gemm('N', 'N', m, n, k, alpha, a(1,1), m, b(1,1), k, beta, c(1,1), m)
-
-end subroutine FNAME(gemm_1)
-
-subroutine FNAME(gemm_2)(m, n, k, alpha, a, b, beta, c)
-  integer, intent(in)    :: m, n, k
-  TYPE1,   intent(in)    :: alpha, beta
-  TYPE1,   intent(in)    :: a(:, :, :)  ! a(m, k)
-  TYPE1,   intent(in)    :: b(:, :)     ! b(k, n)
-  TYPE1,   intent(inout) :: c(:, :, :)  ! c(m, n)
-
-  call blas_gemm('N', 'N', m, n, k, alpha, a(1, 1, 1), m, b(1, 1), k, beta, c(1, 1, 1), m)
-
-end subroutine FNAME(gemm_2)
-
-! The same as above with matrix a being stored in transposed order.
-
-subroutine FNAME(gemmt_1)(m, n, k, alpha, a, b, beta, c)
-  integer, intent(in)    :: m, n, k
-  TYPE1,   intent(in)    :: alpha, beta
-  TYPE1,   intent(in)    :: a(:,:)  ! a(m, k)
-  TYPE1,   intent(in)    :: b(:,:)  ! b(k, n)
-  TYPE1,   intent(inout) :: c(:,:)  ! c(m, n)
-
-  call blas_gemm('T', 'N', m, n, k, alpha, a(1,1), k, b(1,1), k, beta, c(1,1), m)
-
-end subroutine FNAME(gemmt_1)
-
-subroutine FNAME(gemmt_2)(m, n, k, alpha, a, b, beta, c)
-  integer, intent(in)    :: m, n, k
-  TYPE1,   intent(in)    :: alpha, beta
-  TYPE1,   intent(in)    :: a(:, :, :)  ! a(m, k)
-  TYPE1,   intent(in)    :: b(:, :)     ! b(k, n)
-  TYPE1,   intent(inout) :: c(:, :, :)  ! c(m, n)
-
-  call blas_gemm('T', 'N', m, n, k, alpha, a(1, 1, 1), k, b(1, 1), k, beta, c(1, 1, 1), m)
-
-end subroutine FNAME(gemmt_2)
-
-! ------------------------------------------------------------------
-! matrix-vector multiplication plus vector
+! Matrix-vector multiplication plus vector.
 ! ------------------------------------------------------------------
 
 subroutine FNAME(gemv_1)(m, n, alpha, a, x, beta, y)
@@ -399,6 +350,143 @@ subroutine FNAME(gemv_2)(m1, m2, n, alpha, a, x, beta, y)
 
 end subroutine FNAME(gemv_2)
 
+
+! ------------------------------------------------------------------
+! BLAS level III
+! ------------------------------------------------------------------
+
+! ------------------------------------------------------------------
+! Matrix-matrix multiplication plus matrix.
+! ------------------------------------------------------------------
+
+subroutine FNAME(gemm_1)(m, n, k, alpha, a, b, beta, c)
+  integer, intent(in)    :: m, n, k
+  TYPE1,   intent(in)    :: alpha, beta
+  TYPE1,   intent(in)    :: a(:,:)  ! a(m, k)
+  TYPE1,   intent(in)    :: b(:,:)  ! b(k, n)
+  TYPE1,   intent(inout) :: c(:,:)  ! c(m, n)
+
+  call blas_gemm('N', 'N', m, n, k, alpha, a(1, 1), m, b(1, 1), k, beta, c(1, 1), m)
+
+end subroutine FNAME(gemm_1)
+
+subroutine FNAME(gemm_2)(m, n, k, alpha, a, b, beta, c)
+  integer, intent(in)    :: m, n, k
+  TYPE1,   intent(in)    :: alpha, beta
+  TYPE1,   intent(in)    :: a(:, :, :)  ! a(m, k)
+  TYPE1,   intent(in)    :: b(:, :)     ! b(k, n)
+  TYPE1,   intent(inout) :: c(:, :, :)  ! c(m, n)
+
+  call blas_gemm('N', 'N', m, n, k, alpha, a(1, 1, 1), m, b(1, 1), k, beta, c(1, 1, 1), m)
+
+end subroutine FNAME(gemm_2)
+
+! The same as above with matrix a being stored in transposed order.
+
+subroutine FNAME(gemmt_1)(m, n, k, alpha, a, b, beta, c)
+  integer, intent(in)    :: m, n, k
+  TYPE1,   intent(in)    :: alpha, beta
+  TYPE1,   intent(in)    :: a(:,:)  ! a(m, k)
+  TYPE1,   intent(in)    :: b(:,:)  ! b(k, n)
+  TYPE1,   intent(inout) :: c(:,:)  ! c(m, n)
+
+  call blas_gemm('T', 'N', m, n, k, alpha, a(1, 1), k, b(1, 1), k, beta, c(1, 1), m)
+end subroutine FNAME(gemmt_1)
+
+subroutine FNAME(gemmt_2)(m, n, k, alpha, a, b, beta, c)
+  integer, intent(in)    :: m, n, k
+  TYPE1,   intent(in)    :: alpha, beta
+  TYPE1,   intent(in)    :: a(:, :, :)  ! a(m, k)
+  TYPE1,   intent(in)    :: b(:, :)     ! b(k, n)
+  TYPE1,   intent(inout) :: c(:, :, :)  ! c(m, n)
+
+  call blas_gemm('T', 'N', m, n, k, alpha, a(1, 1, 1), k, b(1, 1), k, beta, c(1, 1, 1), m)
+end subroutine FNAME(gemmt_2)
+
+! The following matrix multiplications all expect upper triangular matrices for a.
+! For real matrices, a = a^T, for complex matrices a = a^H.
+
+subroutine FNAME(hemm_1)(m, n, side, alpha, a, b, beta, c)
+  integer,      intent(in)    :: m, n
+  character(1), intent(in)    :: side
+  TYPE1,        intent(in)    :: alpha, beta, a(:, :), b(:, :)
+  TYPE1,        intent(inout) :: c(:, :)
+
+  integer :: lda
+
+  select case(side)
+    case('L', 'l')
+      lda = max(1, m)
+    case('R', 'r')
+      lda = max(1, n)
+  end select
+
+  call blas_hemm(side, 'U', m, n, alpha, a(1, 1), lda, b(1, 1), m, beta, c(1, 1), m)
+end subroutine FNAME(hemm_1)
+
+subroutine FNAME(hemm_2)(m, n, side, alpha, a, b, beta, c)
+  integer,      intent(in)    :: m, n
+  character(1), intent(in)    :: side
+  TYPE1,        intent(in)    :: alpha, beta, a(:, :, :), b(:, :)
+  TYPE1,        intent(inout) :: c(:, :, :)
+
+  integer :: lda
+
+  select case(side)
+    case('L', 'l')
+      lda = max(1, m)
+    case('R', 'r')
+      lda = max(1, n)
+  end select
+
+  call blas_hemm(side, 'U', m, n, alpha, a(1, 1, 1), lda, b(1, 1), m, beta, c(1, 1, 1), m)
+end subroutine FNAME(hemm_2)
+
+! Expects upper triangular matrix for c.
+
+subroutine FNAME(herk_1)(n, k, trans, alpha, a, beta, c)
+  integer,      intent(in)    :: n, k
+  character(1), intent(in)    :: trans                ! 'N', 'C'
+  TYPE1,        intent(in)    :: alpha, a(:, :), beta
+  TYPE1,        intent(inout) :: c(:, :)              ! c(n, n)
+
+  integer :: lda
+
+  select case(trans)
+    case('N', 'n')
+      lda = max(1, n)
+    case('C', 'c', 'T', 't')
+      lda = max(1, k)
+  end select
+
+  call blas_herk('U', trans, n, k, alpha, a(1, 1), lda, beta, c(1, 1), n)
+end subroutine FNAME(herk_1)
+
+
+! ------------------------------------------------------------------
+! Matrix-matrix multiplication.
+! ------------------------------------------------------------------
+
+subroutine FNAME(trmm_1)(m, n, side, alpha, a, b)
+  integer,      intent(in)    :: m, n
+  character(1), intent(in)    :: side
+  TYPE1,        intent(in)    :: alpha
+  TYPE1,        intent(in)    :: a(:, :) ! a(m, m), upper triangular matrix.
+  TYPE1,        intent(inout) :: b(:, :) ! b(m, n).
+
+  integer :: lda
+
+  select case(side)
+    case('L', 'l')
+      lda = max(1, m)
+    case('R', 'r')
+      lda = max(1, n)
+  end select
+      
+  call blas_trmm(side, 'U', 'N', 'N', m, n, alpha, a(1, 1), lda, b(1, 1), m)
+end subroutine FNAME(trmm_1)
+
+
 ! ------------------------------------------------------------------
 ! Clean up preprocessor directives
 ! ------------------------------------------------------------------
@@ -410,6 +498,7 @@ end subroutine FNAME(gemv_2)
 #undef FNAME
 #undef xFNAME
 #undef yFNAME
+
 
 !! Local Variables:
 !! mode: f90

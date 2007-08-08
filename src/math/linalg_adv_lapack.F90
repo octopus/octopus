@@ -25,6 +25,78 @@
 #  define ZLAPACK(x) z ## x
 #endif
 
+! ---------------------------------------------------------
+! Auxialiary functions.
+FLOAT function sfmin()
+  interface
+    FLOAT function DLAPACK(lamch)(cmach)
+      character(1), intent(in) :: cmach
+    end function DLAPACK(lamch)
+  end interface
+  
+  sfmin = DLAPACK(lamch)('S')
+end function sfmin
+
+  
+! ---------------------------------------------------------
+! Compute the Cholesky decomposition of real symmetric positive definite
+! matrix a, dim(a) = n x n. On return a = u^T u with u upper triangular
+! matrix.
+subroutine dcholesky(n, a)
+  integer, intent(in)    :: n
+  FLOAT,   intent(inout) :: a(:, :)
+
+  interface
+    subroutine DLAPACK(potrf)(uplo, n, a, lda, info)
+      character(1), intent(in)    :: uplo
+      integer,      intent(in)    :: n
+      FLOAT,        intent(inout) :: a
+      integer,      intent(in)    :: lda
+      integer,      intent(out)   :: info
+    end subroutine DLAPACK(potrf)
+  end interface
+  
+  integer :: info
+
+  call DLAPACK(potrf)('U', n, a(1, 1), n, info)
+
+  if(info.ne.0) then
+    write(message(1), '(a,i5)') 'In dcholesky, LAPACK Xpotrf returned error message ', info
+    call write_fatal(1)
+  end if
+end subroutine dcholesky
+
+
+! ---------------------------------------------------------
+! Compute the Cholesky decomposition of a complex Hermitian positive definite
+! matrix a, dim(a) = n x n. On return a = u^+ u with u upper triangular
+! matrix.
+subroutine zcholesky(n, a)
+  integer, intent(in)    :: n
+  CMPLX,   intent(inout) :: a(:, :)
+
+  interface
+    subroutine ZLAPACK(potrf)(uplo, n, a, lda, info)
+      character(1), intent(in)    :: uplo
+      integer,      intent(in)    :: n
+      CMPLX,        intent(inout) :: a
+      integer,      intent(in)    :: lda
+      integer,      intent(out)   :: info
+    end subroutine ZLAPACK(potrf)
+  end interface
+  
+  integer :: info
+
+  call ZLAPACK(potrf)('U', n, a(1, 1), n, info)
+
+  if(info.ne.0) then
+    write(message(1), '(a,i5)') 'In zcholesky, LAPACK Xpotrf returned error message ', info
+    call write_fatal(1)
+  end if
+end subroutine zcholesky
+
+
+! ---------------------------------------------------------
 ! computes all the eigenvalues and the eigenvectors of a real
 ! generalized symmetric-definite eigenproblem, of the form  A*x=(lambda)*B*x
 ! A*Bx=(lambda)*x,  or B*A*x=(lambda)*x.
@@ -62,6 +134,8 @@ subroutine dgeneigensolve(n, a, b, e)
 
 end subroutine dgeneigensolve
 
+
+! ---------------------------------------------------------
 ! computes all the eigenvalues and the eigenvectors of a complex
 ! generalized Hermitian-definite eigenproblem, of the form  A*x=(lambda)*B*x,
 ! A*Bx=(lambda)*x,  or B*A*x=(lambda)*x.
@@ -99,9 +173,102 @@ subroutine zgeneigensolve(n, a, b, e)
     write(message(1),'(a,i5)') 'In dgeneigensolve, LAPACK dhegv returned error message ', info
     call write_fatal(1)
   end if
-
 end subroutine zgeneigensolve
 
+
+! ---------------------------------------------------------
+! Computes the k lowest eigenvalues and the eigenvectors of a real
+! generalized symmetric-definite eigenproblem, of the form  A*x=(lambda)*B*x.
+! Here A and B are assumed to be symmetric and B is also positive definite.
+subroutine dlowest_geneigensolve(k, n, a, b, e, v)
+  integer, intent(in)  :: k, n
+  FLOAT,   intent(in)  :: a(n,n)
+  FLOAT,   intent(in)  :: b(n,n)
+  FLOAT,   intent(out) :: e(n)
+  FLOAT,   intent(out) :: v(n, k)
+
+  interface
+    subroutine DLAPACK(sygvx)(itype, jobz, range, uplo, n, a, lda, b, ldb, &
+      vl, vu, il, iu, abstol, m, w, z, ldz, work, lwork, iwork, ifail, info)
+      integer,      intent(in)  :: itype, n, lda, ldb, il, iu, ldz, lwork
+      character(1), intent(in)  :: jobz, range, uplo
+      integer,      intent(out) :: m, iwork, ifail, info
+      FLOAT,        intent(in)  :: vl, vu, abstol
+      FLOAT,        intent(in)  :: a, b
+      FLOAT,        intent(out) :: w, z, work
+    end subroutine DLAPACK(sygvx)
+  end interface
+  
+  integer            :: m, iwork(5*n), ifail(n), info, lwork
+  FLOAT              :: abstol
+  FLOAT, allocatable :: work(:)
+  
+  abstol = 2*sfmin()
+  lwork  = max(1, 8*n)
+
+  ALLOCATE(work(lwork), lwork)
+
+  call DLAPACK(sygvx)(1, 'V', 'I', 'U', n, a(1, 1), n, b(1, 1), n, M_ZERO, M_ZERO, &
+    1, k, abstol, m, e(1), v(1, 1), n, work(1), lwork , iwork(1), ifail(1), info)
+
+  deallocate(work)
+
+  if(info.ne.0) then
+    write(message(1),'(a,i5)') &
+      'In dlowest_geneigensolve, LAPACK Xsygvx returned error message ', info
+    call write_fatal(1)
+  end if
+end subroutine dlowest_geneigensolve
+
+
+! ---------------------------------------------------------
+! Computes the k lowest eigenvalues and the eigenvectors of a complex
+! generalized Hermitian-definite eigenproblem, of the form  A*x=(lambda)*B*x.
+! Here A and B are assumed to be Hermitian and B is also positive definite.
+subroutine zlowest_geneigensolve(k, n, a, b, e, v)
+  integer, intent(in)  :: k, n
+  CMPLX,   intent(in)  :: a(n,n)
+  CMPLX,   intent(in)  :: b(n,n)
+  FLOAT,   intent(out) :: e(n)
+  CMPLX,   intent(out) :: v(n, k)
+
+  integer            :: m, iwork(5*n), ifail(n), info, lwork
+  FLOAT              :: abstol
+  FLOAT              :: rwork(7*n)
+  CMPLX, allocatable :: work(:)
+
+  interface
+    subroutine ZLAPACK(hegvx)(itype, jobz, range, uplo, n, a, lda, b, ldb, &
+      vl, vu, il, iu, abstol, m, w, z, ldz, work, lwork, rwork, iwork, ifail, info)
+      integer,      intent(in)    :: itype, n, lda, ldb, il, iu, ldz, lwork
+      character(1), intent(in)    :: jobz, range, uplo
+      integer,      intent(out)   :: m, iwork, ifail, info
+      FLOAT,        intent(in)    :: vl, vu, abstol
+      FLOAT,        intent(out)   :: w, rwork
+      CMPLX,        intent(in)    :: a, b
+      CMPLX,        intent(out)   :: z, work
+    end subroutine ZLAPACK(hegvx)
+  end interface
+  
+  abstol = 2*sfmin()
+  lwork  = max(1, 2*n-1)
+
+  ALLOCATE(work(lwork), lwork)
+
+  call ZLAPACK(hegvx)(1, 'V', 'I', 'U', n, a(1, 1), n, b(1, 1), n, M_ZERO, M_ZERO, &
+    1, k, abstol, m, e(1), v(1, 1), n, work(1), lwork, rwork(1), iwork(1), ifail(1), info)
+
+  deallocate(work)
+
+  if(info.ne.0) then
+    write(message(1),'(a,i5)') &
+      'In zlowest_geneigensolve, LAPACK Xhegvx returned error message ', info
+    call write_fatal(1)
+  end if
+end subroutine zlowest_geneigensolve
+
+
+! ---------------------------------------------------------
 ! computes all eigenvalues and eigenvectors of a real symmetric square matrix A.
 subroutine deigensolve(n, a, b, e)
   integer, intent(in)  :: n
@@ -134,6 +301,8 @@ subroutine deigensolve(n, a, b, e)
 
 end subroutine deigensolve
 
+
+! ---------------------------------------------------------
 ! computes all eigenvalues and eigenvectors of a complex Hermitian square matrix A.
 subroutine zeigensolve(n, a, b, e)
   integer, intent(in)  :: n
@@ -170,6 +339,7 @@ subroutine zeigensolve(n, a, b, e)
 end subroutine zeigensolve
 
 
+! ---------------------------------------------------------
 ! Invert a real symmetric square matrix a
 FLOAT function ddeterminant(n, a, invert) result(d)
   integer, intent(in)           :: n
@@ -229,7 +399,8 @@ FLOAT function ddeterminant(n, a, invert) result(d)
 end function ddeterminant
 
 
-! Invert a real symmetric square matrix a
+! ---------------------------------------------------------
+! Invert a complex Hermitian square matrix a
 CMPLX function zdeterminant(n, a, invert) result(d)
   integer, intent(in)           :: n
   CMPLX,   intent(inout)        :: a(n,n)
@@ -288,6 +459,7 @@ CMPLX function zdeterminant(n, a, invert) result(d)
 end function zdeterminant
 
 
+! ---------------------------------------------------------
 ! compute the solution to a real system of linear equations A*X = B,
 !  where A is an N-by-N matrix and X and B are N-by-NRHS matrices.
 subroutine dlinsyssolve(n, nhrs, a, b, x)
@@ -338,6 +510,7 @@ subroutine dlinsyssolve(n, nhrs, a, b, x)
 end subroutine dlinsyssolve
 
 
+! ---------------------------------------------------------
 ! computes the singular value decomposition of a complex NxN matrix a(:,:)
 subroutine zsingular_value_decomp(n, a, u, vt, sg_values)
   integer, intent(in)    :: n
@@ -385,6 +558,7 @@ subroutine zsingular_value_decomp(n, a, u, vt, sg_values)
 end subroutine zsingular_value_decomp
 
 
+! ---------------------------------------------------------
 ! computes inverse of a complex NxN matrix a(:,:) using the SVD decomposition 
 subroutine zsvd_inverse(n, a, threshold)
   integer, intent(in)           :: n
@@ -426,6 +600,67 @@ subroutine zsvd_inverse(n, a, threshold)
 
   deallocate(sg_values, vt, u)
 end subroutine zsvd_inverse
+
+
+! ---------------------------------------------------------
+! Calculate the inverse of a real upper triangular matrix (in
+! unpacked storage).
+subroutine dinvert_upper_triangular(n, a)
+  integer, intent(in)    :: n
+  FLOAT,   intent(inout) :: a(n, n)
+
+  integer :: info
+
+  interface
+    subroutine DLAPACK(trtri)(uplo, diag, n, a, lda, info)
+      character(1), intent(in)    :: uplo
+      character(1), intent(in)    :: diag
+      integer,      intent(in)    :: n
+      FLOAT,        intent(inout) :: a
+      integer,      intent(in)    :: lda
+      integer,      intent(out)   :: info
+    end subroutine DLAPACK(trtri)
+  end interface
+  
+  call DLAPACK(trtri)('U', 'N', n, a(1, 1), n, info)
+
+  if(info.ne.0) then
+    write(message(1), '(a,i5)') &
+      'In dinvert_upper_triangular, LAPACK Xtrtri returned error message ', info
+    call write_fatal(1)
+  end if
+end subroutine dinvert_upper_triangular
+
+
+! ---------------------------------------------------------
+! Calculate the inverse of a real upper triangular matrix (in
+! unpacked storage).
+subroutine zinvert_upper_triangular(n, a)
+  integer, intent(in)    :: n
+  CMPLX,   intent(inout) :: a(n, n)
+
+  integer :: info
+
+  interface
+    subroutine ZLAPACK(trtri)(uplo, diag, n, a, lda, info)
+      character(1), intent(in)    :: uplo
+      character(1), intent(in)    :: diag
+      integer,      intent(in)    :: n
+      CMPLX,        intent(inout) :: a
+      integer,      intent(in)    :: lda
+      integer,      intent(out)   :: info
+    end subroutine ZLAPACK(trtri)
+  end interface
+  
+  call ZLAPACK(trtri)('U', 'N', n, a(1, 1), n, info)
+
+  if(info.ne.0) then
+    write(message(1), '(a,i5)') &
+      'In zinvert_upper_triangular, LAPACK Xtrtri returned error message ', info
+    call write_fatal(1)
+  end if
+end subroutine zinvert_upper_triangular
+
 
 !! Local Variables:
 !! mode: f90

@@ -27,7 +27,7 @@ module blas_m
   implicit none
 
   ! ---------------------------------------------------------------------
-  ! Level 1
+  ! BLAS level I
   ! ---------------------------------------------------------------------
 
   ! ----------------- swap ------------------
@@ -193,8 +193,53 @@ module blas_m
     end function dznrm2
   end interface
 
+
   ! ------------------------------------------------------------------
   ! BLAS level II
+  ! ------------------------------------------------------------------
+
+  ! ----------------- gemv ------------------
+  interface blas_gemv
+    subroutine sgemv(trans, m, n, alpha, a, lda, x, incx, beta, y, incy)
+      character(1), intent(in)    :: trans
+      integer,      intent(in)    :: m, n, lda, incx, incy
+      real(4),      intent(in)    :: alpha, beta
+      real(4),      intent(in)    :: a ! a(lda,n)
+      real(4),      intent(in)    :: x ! x(:)
+      real(4),      intent(inout) :: y ! y(:)
+    end subroutine sgemv
+
+    subroutine dgemv(trans, m, n, alpha, a, lda, x, incx, beta, y, incy)
+      character(1), intent(in)    :: trans
+      integer,      intent(in)    :: m, n, lda, incx, incy
+      real(8),      intent(in)    :: alpha, beta
+      real(8),      intent(in)    :: a ! a(lda,n)
+      real(8),      intent(in)    :: x ! x(:)
+      real(8),      intent(inout) :: y ! y(:)
+    end subroutine dgemv
+
+    subroutine cgemv(trans, m, n, alpha, a, lda, x, incx, beta, y, incy)
+      character(1), intent(in)    :: trans
+      integer,      intent(in)    :: m, n, lda, incx, incy
+      complex(4),   intent(in)    :: alpha, beta
+      complex(4),   intent(in)    :: a ! a(lda,n)
+      complex(4),   intent(in)    :: x ! x(:)
+      complex(4),   intent(inout) :: y ! y(:)
+    end subroutine cgemv
+
+    subroutine zgemv(trans, m, n, alpha, a, lda, x, incx, beta, y, incy)
+      character(1), intent(in)    :: trans
+      integer,      intent(in)    :: m, n, lda, incx, incy
+      complex(8),   intent(in)    :: alpha, beta
+      complex(8),   intent(in)    :: a ! a(lda,n)
+      complex(8),   intent(in)    :: x ! x(:)
+      complex(8),   intent(inout) :: y ! y(:)
+    end subroutine zgemv
+  end interface
+
+
+  ! ------------------------------------------------------------------
+  ! BLAS level III
   ! ------------------------------------------------------------------
 
   ! ----------------- gemm ------------------
@@ -236,46 +281,100 @@ module blas_m
     end subroutine zgemm
   end interface
 
-  ! ----------------- gemv ------------------
-  interface blas_gemv
-    subroutine sgemv(trans, m, n, alpha, a, lda, x, incx, beta, y, incy)
-      character(1), intent(in)    :: trans
-      integer,      intent(in)    :: m, n, lda, incx, incy
-      real(4),      intent(in)    :: alpha, beta
-      real(4),      intent(in)    :: a ! a(lda,n)
-      real(4),      intent(in)    :: x ! x(:)
-      real(4),      intent(inout) :: y ! y(:)
-    end subroutine sgemv
+  ! ----------------- trmm ------------------
+  interface blas_trmm
+    subroutine strmm(side, uplo, transa, diag, m, n, alpha, a, lda, b, ldb)
+      character(1), intent(in)    :: side, uplo, transa, diag
+      integer,      intent(in)    :: m, n, lda, ldb
+      real(4),      intent(in)    :: a, alpha
+      real(4),      intent(inout) :: b
+    end subroutine strmm
 
-    subroutine dgemv(trans, m, n, alpha, a, lda, x, incx, beta, y, incy)
-      character(1), intent(in)    :: trans
-      integer,      intent(in)    :: m, n, lda, incx, incy
-      real(8),      intent(in)    :: alpha, beta
-      real(8),      intent(in)    :: a ! a(lda,n)
-      real(8),      intent(in)    :: x ! x(:)
-      real(8),      intent(inout) :: y ! y(:)
-    end subroutine dgemv
+    subroutine dtrmm(side, uplo, transa, diag, m, n, alpha, a, lda, b, ldb)
+      character(1), intent(in)    :: side, uplo, transa, diag
+      integer,      intent(in)    :: m, n, lda, ldb
+      real(8),      intent(in)    :: a, alpha
+      real(8),      intent(inout) :: b
+    end subroutine dtrmm
 
-    subroutine cgemv(trans, m, n, alpha, a, lda, x, incx, beta, y, incy)
-      character(1), intent(in)    :: trans
-      integer,      intent(in)    :: m, n, lda, incx, incy
-      complex(4),   intent(in)    :: alpha, beta
-      complex(4),   intent(in)    :: a ! a(lda,n)
-      complex(4),   intent(in)    :: x ! x(:)
-      complex(4),   intent(inout) :: y ! y(:)
-    end subroutine cgemv
+    subroutine ctrmm(side, uplo, transa, diag, m, n, alpha, a, lda, b, ldb)
+      character(1), intent(in)    :: side, uplo, transa, diag
+      integer,      intent(in)    :: m, n, lda, ldb
+      complex(4),   intent(in)    :: a, alpha
+      complex(4),   intent(inout) :: b
+    end subroutine ctrmm
 
-    subroutine zgemv(trans, m, n, alpha, a, lda, x, incx, beta, y, incy)
-      character(1), intent(in)    :: trans
-      integer,      intent(in)    :: m, n, lda, incx, incy
-      complex(8),   intent(in)    :: alpha, beta
-      complex(8),   intent(in)    :: a ! a(lda,n)
-      complex(8),   intent(in)    :: x ! x(:)
-      complex(8),   intent(inout) :: y ! y(:)
-    end subroutine zgemv
+    subroutine ztrmm(side, uplo, transa, diag, m, n, alpha, a, lda, b, ldb)
+      character(1), intent(in)    :: side, uplo, transa, diag
+      integer,      intent(in)    :: m, n, lda, ldb
+      complex(8),   intent(in)    :: a, alpha
+      complex(8),   intent(inout) :: b
+    end subroutine ztrmm
   end interface
 
+  ! ----------------- symm, hemm ------------------
+  interface blas_hemm
+    subroutine ssymm(side, uplo, m, n, alpha, a, lda, b, ldb, beta, c, ldc)
+      character(1), intent(in)    :: side, uplo
+      integer,      intent(in)    :: m, n, lda, ldb, ldc
+      real(4),      intent(in)    :: alpha, beta, a, b
+      real(4),      intent(inout) :: c
+    end subroutine ssymm
+
+    subroutine dsymm(side, uplo, m, n, alpha, a, lda, b, ldb, beta, c, ldc)
+      character(1), intent(in)    :: side, uplo
+      integer,      intent(in)    :: m, n, lda, ldb, ldc
+      real(8),      intent(in)    :: alpha, beta, a, b
+      real(8),      intent(inout) :: c
+    end subroutine dsymm
+
+    subroutine csymm(side, uplo, m, n, alpha, a, lda, b, ldb, beta, c, ldc)
+      character(1), intent(in)    :: side, uplo
+      integer,      intent(in)    :: m, n, lda, ldb, ldc
+      complex(4),   intent(in)    :: alpha, beta, a, b
+      complex(4),   intent(inout) :: c
+    end subroutine csymm
+
+    subroutine zsymm(side, uplo, m, n, alpha, a, lda, b, ldb, beta, c, ldc)
+      character(1), intent(in)    :: side, uplo
+      integer,      intent(in)    :: m, n, lda, ldb, ldc
+      complex(8),   intent(in)    :: alpha, beta, a, b
+      complex(8),   intent(inout) :: c
+    end subroutine zsymm
+  end interface
+
+  ! ----------------- syrk, herk ------------------
+  interface blas_herk
+    subroutine ssyrk(uplo, trans, n, k, alpha, a, lda, beta, c, ldc)
+      character(1), intent(in)    :: uplo, trans
+      integer,      intent(in)    :: n, k, lda, ldc
+      real(4),      intent(in)    :: alpha, beta, a
+      real(4),      intent(inout) :: c
+    end subroutine ssyrk
+
+    subroutine dsyrk(uplo, trans, n, k, alpha, a, lda, beta, c, ldc)
+      character(1), intent(in)    :: uplo, trans
+      integer,      intent(in)    :: n, k, lda, ldc
+      real(8),      intent(in)    :: alpha, beta, a
+      real(8),      intent(inout) :: c
+    end subroutine dsyrk
+
+    subroutine cherk(uplo, trans, n, k, alpha, a, lda, beta, c, ldc)
+      character(1), intent(in)    :: uplo, trans
+      integer,      intent(in)    :: n, k, lda, ldc
+      complex(4),   intent(in)    :: alpha, beta, a
+      complex(4),   intent(inout) :: c
+    end subroutine cherk
+
+    subroutine zherk(uplo, trans, n, k, alpha, a, lda, beta, c, ldc)
+      character(1), intent(in)    :: uplo, trans
+      integer,      intent(in)    :: n, k, lda, ldc
+      complex(8),   intent(in)    :: alpha, beta, a
+      complex(8),   intent(inout) :: c
+    end subroutine zherk
+  end interface
 end module blas_m
+
 
 !! Local Variables:
 !! mode: f90

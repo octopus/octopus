@@ -27,16 +27,19 @@ module lib_basic_alg_m
   implicit none
 
   private
-  public ::    &
-    lalg_swap, &
-    lalg_scal, &
-    lalg_axpy, &
-    lalg_copy, &
-    lalg_dot,  &
-    lalg_nrm2, &
-    lalg_gemv, &
-    lalg_gemm, &
-    lalg_gemmt
+  public ::     &
+    lalg_swap,  &
+    lalg_scal,  &
+    lalg_axpy,  &
+    lalg_copy,  &
+    lalg_dot,   &
+    lalg_nrm2,  &
+    lalg_gemv,  &
+    lalg_gemm,  &
+    lalg_gemmt, &
+    lalg_trmm,  &
+    lalg_hemm,  &
+    lalg_herk
 
 
   interface lalg_swap
@@ -153,6 +156,31 @@ module lib_basic_alg_m
     module procedure gemmt_2_4
   end interface
 
+  interface lalg_trmm
+    module procedure trmm_1_1
+    module procedure trmm_1_2
+    module procedure trmm_1_3
+    module procedure trmm_1_4
+  end interface
+
+  interface lalg_hemm
+    module procedure hemm_1_1
+    module procedure hemm_1_2
+    module procedure hemm_1_3
+    module procedure hemm_1_4
+    module procedure hemm_2_1
+    module procedure hemm_2_2
+    module procedure hemm_2_3
+    module procedure hemm_2_4
+  end interface
+
+  interface lalg_herk
+    module procedure herk_1_1
+    module procedure herk_1_2
+    module procedure herk_1_3
+    module procedure herk_1_4
+  end interface
+  
   interface lalg_gemv
     module procedure gemv_1_1
     module procedure gemv_1_2
@@ -200,6 +228,7 @@ contains
 #  undef TYPE
 
 end module lib_basic_alg_m
+
 
 !! Local Variables:
 !! mode: f90
