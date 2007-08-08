@@ -26,13 +26,15 @@ libscf_a_SOURCES = \
 
 noinst_HEADERS = \
 	eigen_trlan.F90 eigen_inc.F90 eigen_cg_inc.F90 eigen_plan_inc.F90 \
-	eigen_arpack_inc.F90 eigen_evolution_inc.F90 lcao_inc.F90
+	eigen_arpack_inc.F90 eigen_evolution_inc.F90 eigen_lobpcg_inc.F90 \
+	lcao_inc.F90
 
 include $(srcdir)/../common-rules.make
 
 depend:
 	@makedepf90 $(libscf_a_SOURCES)
 
-
-eigen.o: eigen_inc.F90 eigen_cg_inc.F90 eigen_trlan.F90 eigen_plan_inc.F90 eigen_arpack_inc.F90 eigen_evolution_inc.F90
+eigen.o: eigen_inc.F90 eigen_cg_inc.F90 eigen_trlan.F90 \
+	eigen_plan_inc.F90 eigen_arpack_inc.F90 \
+	eigen_evolution_inc.F90 eigen_lobpcg_inc.F90
 lcao.o: lcao_inc.F90

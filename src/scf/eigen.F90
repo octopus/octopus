@@ -28,6 +28,7 @@ module eigen_solver_m
   use lib_basic_alg_m
   use lib_oct_parser_m
   use math_m
+  use mesh_m
   use mesh_function_m
   use messages_m
   use preconditioners_m
@@ -51,25 +52,25 @@ module eigen_solver_m
   type eigen_solver_t
     integer :: es_type    ! which eigen solver to use
 
-    FLOAT :: init_tol
-    FLOAT :: final_tol
-    integer  :: final_tol_iter
-    integer  :: es_maxiter
+    FLOAT   :: init_tol
+    FLOAT   :: final_tol
+    integer :: final_tol_iter
+    integer :: es_maxiter
 
     integer :: arnoldi_vectors
-    FLOAT :: imag_time
+    FLOAT   :: imag_time
 
     ! Stores information about how well it performed.
     FLOAT, pointer :: diff(:, :)
-    integer           :: matvec
-    integer           :: converged
+    integer        :: matvec
+    integer        :: converged
 
-    ! stores information about the preconditioning
+    ! Stores information about the preconditioning.
     type(preconditioner_t) :: pre
   end type eigen_solver_t
 
 
-#ifdef HAVE_TRLAN
+#if defined(HAVE_TRLAN)
   integer, parameter :: RS_LANCZOS = 1
 #endif
   integer, parameter :: RS_PLAN    = 11
@@ -82,9 +83,10 @@ module eigen_solver_m
   integer, parameter :: RS_CG      = 5
   integer, parameter :: RS_CG_NEW  = 6
   integer, parameter :: EVOLUTION  = 7
+  integer, parameter :: LOBPCG     = 8
 
   ! For the TRLan package
-#ifdef HAVE_TRLAN
+#if defined(HAVE_TRLAN)
   integer                      :: ik_trlan
   type(hamiltonian_t), pointer :: h_trlan
   type(mesh_t),        pointer :: m_trlan
@@ -127,6 +129,8 @@ contains
     !% A rewritting of the cg option, that will eventually substitute it.
     !%Option evolution 7
     !% Propagation in imaginary time
+    !%Option lobpcg 8
+    !% Locally optimal block preconditioned conjugate gradient algorithm.
     !%End
     call loct_parse_int(check_inp('EigenSolver'), RS_CG, eigens%es_type)
 
@@ -180,6 +184,7 @@ contains
       !%End
       call loct_parse_float(check_inp('EigenSolverImaginaryTime'), M_ONE, eigens%imag_time)
       if(eigens%imag_time <= M_ZERO) call input_error('EigenSolverImaginaryTime')
+    case(LOBPCG)
     case default
       call input_error('EigenSolver')
     end select
@@ -230,7 +235,7 @@ contains
     if(eigens%es_maxiter < 1) call input_error('EigenSolverMaxIter')
 
     select case(eigens%es_type)
-    case(RS_PLAN, RS_CG)
+    case(RS_PLAN, RS_CG, LOBPCG)
       call preconditioner_init(eigens%pre, gr)
     end select
 
@@ -250,7 +255,7 @@ contains
     type(eigen_solver_t), intent(inout) :: eigens
 
     select case(eigens%es_type)
-    case(RS_PLAN,RS_CG)
+    case(RS_PLAN, RS_CG, LOBPCG)
       call preconditioner_end(eigens%pre)
     end select
 
@@ -313,6 +318,9 @@ contains
       case(EVOLUTION)
         call deigen_solver_evolution(gr, st, h, tol, maxiter, eigens%converged, eigens%diff, &
              tau = eigens%imag_time)
+      case(LOBPCG)
+        call deigen_solver_lobpcg(gr, st, h, eigens%pre, tol, maxiter, eigens%converged, &
+          eigens%diff)
       end select
 
       call deigen_diagon_subspace(gr, st, h)
@@ -329,6 +337,9 @@ contains
       case(EVOLUTION)
         call zeigen_solver_evolution(gr, st, h, tol, maxiter, eigens%converged, eigens%diff, &
              tau = eigens%imag_time)
+      case(LOBPCG)
+       call zeigen_solver_lobpcg(gr, st, h, eigens%pre, tol, maxiter, eigens%converged, &
+         eigens%diff)
       end select
 
       call zeigen_diagon_subspace(gr, st, h)
@@ -361,6 +372,7 @@ contains
 #include "eigen_cg_inc.F90"
 #include "eigen_plan_inc.F90"
 #include "eigen_evolution_inc.F90"
+#include "eigen_lobpcg_inc.F90"
 
 
 #include "undef.F90"
@@ -369,8 +381,10 @@ contains
 #include "eigen_cg_inc.F90"
 #include "eigen_plan_inc.F90"
 #include "eigen_evolution_inc.F90"
+#include "eigen_lobpcg_inc.F90"
 
 end module eigen_solver_m
+
 
 !! Local Variables:
 !! mode: f90
