@@ -24,7 +24,7 @@
     type(geometry_t), intent(in)  :: geo
     type(states_t), intent(inout) :: initial_state
 
-    integer           :: i, kk, no_c, state, no_blk, kpoints, nst, dim
+    integer           :: i, kk, no_c, state, no_blk, kpoints, nst, dim, ist, jst
     C_POINTER         :: blk
     integer           :: p, ik, ib, idim, inst, inik
     integer           :: id ,is, ip, ierr, no_states, isize
@@ -32,6 +32,7 @@
     type(states_t)    :: tmp_st 
     FLOAT             :: x(MAX_DIM), r, psi_re, psi_im
     CMPLX             :: c_weight
+    CMPLX, allocatable :: rotation_matrix(:, :)
     integer           :: istype
     
     call push_sub('opt_control.def_istate')
@@ -83,58 +84,47 @@
       message(1) =  'Info: Using Superposition of States for InitialState'
       call write_info(1)
 
-      !%Variable OCTInitialSuperposition
+
+      !%Variable OCTInitialTransformStates
       !%Type block
-      !%Section Optimal Control
+      !%Default no
+      !%Section OptimalControl
       !%Description
-      !% The syntax of each line is, then:
-      !%
-      !% <tt>%OCTInitialSuperposition
-      !% <br>&nbsp;&nbsp;state1 | weight1 | state2 | weight2 | ... 
-      !% <br>%</tt>
-      !%
-      !% Note that weight can be complex, to produce current carrying superpositions.
-      !% Example:
-      !%
-      !% <tt>%OCTInitialSuperposition
-      !% <br>&nbsp;&nbsp;1 | 1 | 2 | -1 | ... 
-      !% <br>%</tt>
-      !%
-      !%End 
-      if(loct_parse_block(check_inp('OCTInitialSuperposition'),blk)==0) then
-
-        tmp_st = initial_state
-        call restart_look_and_read(trim(tmpdir)//'restart_gs', tmp_st, gr, geo, ierr)
-        if(ierr.ne.0) then
-          write(message(1),'(a)') 'Could not read ground-state wavefunctions from '//trim(tmpdir)//'restart_gs.'
-          call write_fatal(1)
+      !% If OCTInitialState = oct_is-superposition, you must specify one
+      !% OCTInitialTransformStates block, in order to specify which linear
+      !% combination of the states present in "tmp/restart_gs" is used to
+      !% create the initial state.
+      !% 
+      !% The syntax is equivalent to the one used for the TransformStates
+      !% block.
+      !%End
+      if(loct_parse_isdef(check_inp('OCTInitialTransformStates')).ne.0) then
+        if(loct_parse_block(check_inp('OCTInitialTransformStates'), blk) == 0) then
+          tmp_st = initial_state
+          deallocate(tmp_st%zpsi)
+          call restart_look_and_read("tmp", tmp_st, gr, geo, ierr)
+          ALLOCATE(rotation_matrix(initial_state%nst, tmp_st%nst), initial_state%nst*tmp_st%nst)
+          do ist = 1, initial_state%nst
+            do jst = 1, tmp_st%nst
+              call loct_parse_block_cmplx(blk, ist-1, jst-1, rotation_matrix(ist, jst))
+            end do
+          end do
+          call rotate_states(gr%m, initial_state, tmp_st, rotation_matrix)
+          deallocate(rotation_matrix)
+          call states_end(tmp_st)
+        else
+          message(1) = '"OCTInitialTransformStates" has to be specified as block.'
+          call write_info(1)
+          call input_error('OCTInitialTransformStates')
         end if
-
-        no_blk = loct_parse_block_n(blk)
-        ! TODO: One should check that the states requested are actually present in tmp_st   
-        do i=1, no_blk
-          ! The structure of the block is:
-          ! domain | function_type | center | width | weight 
-          no_c = loct_parse_block_cols(blk, i-1)
-          initial_state%zpsi(:,:,i,1) = M_z0
-          do kk=1, no_c, 2
-            call loct_parse_block_int(blk, i-1, kk-1, state)
-            call loct_parse_block_cmplx(blk, i-1, kk, c_weight)
-            initial_state%zpsi(:,:,1,1) = initial_state%zpsi(:,:,1,1) + c_weight * tmp_st%zpsi(:,:,state,1)
-          enddo
-        end do
-        call states_end(tmp_st)
-
-        ! normalize state
-        do ik = 1, initial_state%d%nik
-          do p  = initial_state%st_start, initial_state%st_end
-            call zstates_normalize_orbital(gr%m, initial_state%d%dim, &
-              initial_state%zpsi(:,:, p, ik))
-          enddo
-        enddo
-
+      else
+        message(1) = 'Error: if "OCTInitialState = oct_is_superposition", then you must'
+        message(2) = 'supply one "OCTInitialTransformStates" block to create the superposition.'
+        call write_info(2)
+        call input_error('OCTInitialTransformStates')
       end if
-      
+
+
     case(oct_is_userdefined) 
       message(1) =  'Info: Building userdefined InitialState'
       call write_info(1)
@@ -216,10 +206,11 @@
     type(states_t), intent(inout) :: target_state
 
     integer           :: i, kpoints, dim, nst, no_c, state, ierr, isize, ik, ib, &
-                         no_states, kk, p, ip, no_blk
+                         no_states, kk, p, ip, no_blk, ist, jst
     C_POINTER         :: blk
     FLOAT             :: x(MAX_DIM), r, psi_re, psi_im
-    CMPLX             :: c_weight      
+    CMPLX             :: c_weight
+    CMPLX, allocatable :: rotation_matrix(:, :)
     type(states_t)    :: tmp_st
     character(len=1024) :: expression
     character(len=10) :: fname
@@ -262,57 +253,47 @@
       call states_end(tmp_st)
 
     case(oct_tg_superposition)  
+
       message(1) =  'Info: Using Superposition of States for TargetOperator'
       call write_info(1)
 
-      !%Variable OCTTargetSuperposition
+      !%Variable OCTTargetTransformStates
       !%Type block
-      !%Section Optimal Control
+      !%Default no
+      !%Section OptimalControl
       !%Description
-      !% The syntax of each line is, then:
-      !%
-      !% <tt>%OCTTargetSuperposition
-      !% <br>&nbsp;&nbsp;state1 | weight1 | state2 | weight2 | ... 
-      !% <br>%</tt>
+      !% If OCTTargetOperator = oct_tg_superposition, you must specify one
+      !% OCTTargetTransformStates block, in order to specify which linear
+      !% combination of the states present in "tmp/restart_gs" is used to
+      !% create the target state.
       !% 
-      !% Example:
-      !%
-      !% <tt>%OCTTargetSuperposition
-      !% <br>&nbsp;&nbsp;1 | 1 | 2 | -1 | ... 
-      !% <br>%</tt>
-      !%
+      !% The syntax is equivalent to the one used for the TransformStates
+      !% block.
       !%End
-      if(loct_parse_block(check_inp('OCTTargetSuperposition'),blk)==0) then
-
-        tmp_st = target_state
-        call restart_look_and_read(trim(tmpdir)//'restart_gs', tmp_st, gr, geo, ierr)
-        if(ierr.ne.0) then
-          write(message(1),'(a)') 'Could not read ground-state wavefunctions from '//trim(tmpdir)//'restart_gs.'
-          call write_fatal(1)
+      if(loct_parse_isdef(check_inp('OCTTargetTransformStates')).ne.0) then
+        if(loct_parse_block(check_inp('OCTTargetTransformStates'), blk) == 0) then
+          tmp_st = target_state
+          deallocate(tmp_st%zpsi)
+          call restart_look_and_read("tmp", tmp_st, gr, geo, ierr)
+          ALLOCATE(rotation_matrix(target_state%nst, tmp_st%nst), target_state%nst*tmp_st%nst)
+          do ist = 1, target_state%nst
+            do jst = 1, tmp_st%nst
+              call loct_parse_block_cmplx(blk, ist-1, jst-1, rotation_matrix(ist, jst))
+            end do
+          end do
+          call rotate_states(gr%m, target_state, tmp_st, rotation_matrix)
+          deallocate(rotation_matrix)
+          call states_end(tmp_st)
+        else
+          message(1) = '"OCTTargetTransformStates" has to be specified as block.'
+          call write_info(1)
+          call input_error('OCTTargetTransformStates')
         end if
-
-        no_blk = loct_parse_block_n(blk)
-        ! TODO: for each orbital            
-        do i=1, no_blk
-          ! The structure of the block is:
-          ! domain | function_type | center | width | weight 
-          no_c = loct_parse_block_cols(blk, i-1)
-          target_state%zpsi(:,:,i,1) = M_z0
-          do kk=1, no_c, 2
-            call loct_parse_block_int(blk, i-1, kk-1, state)
-            call loct_parse_block_cmplx(blk, i-1, kk, c_weight)
-            target_state%zpsi(:, :, 1, 1) = target_state%zpsi(:, :, 1, 1) + c_weight * tmp_st%zpsi(:, :, state, 1)
-          enddo
-        end do
-        call states_end(tmp_st)
-
-        ! normalize state
-        do ik = 1, target_state%d%nik
-          do p  = target_state%st_start, target_state%st_end
-            call zstates_normalize_orbital(gr%m, target_state%d%dim, target_state%zpsi(:,:, p, ik))
-          enddo
-        enddo
-
+      else
+        message(1) = 'Error: if "OCTTargetOperator = oct_tg_superposition", then you must'
+        message(2) = 'supply one "OCTTargetTransformStates" block to create the superposition.'
+        call write_info(2)
+        call input_error('OCTTargetTransformStates')
       end if
       
 

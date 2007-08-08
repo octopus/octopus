@@ -1,0 +1,27 @@
+# -*- coding: utf-8 mode: shell-script -*-
+# $Id: 03-asym_doublewell.test 2999 2007-06-16 12:56:04Z lorenzen $
+
+Test       : Symmetric Double Well
+Author     : Jan
+Date       : 19.05.06
+Arch       : Linux 
+Release    : 2.2.0pre1
+Programs   : octopus
+TestGroups : long-run
+Enabled    : Yes
+
+# The test ensures the optimal control algorithm ZBR98. 
+# It calculates the optimal laser field that transfers one particle
+# localized in one particle well to other.
+# 
+
+
+# Ground state and unoccupied states
+Input: 07-sym_doublewell.01-ground_state.inp
+Input: 07-sym_doublewell.02-unocc.inp
+Match ; 2th state  ; grep '2   --' static/eigenvalues ; \s*-0.5258
+
+# Then, run the optimization.
+Input: 07-sym_doublewell.03-oct.inp
+Match ; J1 1st iteration  ; grep ' 1  ' opt-control/convergence ; \s*0.9885\d*
+

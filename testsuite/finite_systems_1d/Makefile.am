@@ -41,6 +41,10 @@ dist_share_DATA = \
 	05-adw.03-filter_indirect.inp \
 	05-adw_oct_features.test \
 	06-eigen_evolution.01-ground_state.inp \
-	06-eigen_evolution.test
+	06-eigen_evolution.test \
+	07-sym_doublewell.test \
+	07-sym_doublewell.01-ground_state.inp \
+	07-sym_doublewell.02-unocc.inp \
+	07-sym_doublewell.03-oct.inp
 
 CLEANFILES = *~ *.bak

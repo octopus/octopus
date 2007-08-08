@@ -1,0 +1,90 @@
+# -*- coding: utf-8 mode: shell-script -*-
+# $Id: 03-asym_doublewell.02-oct_run.inp 2979 2007-06-06 23:29:44Z acastro $
+
+DebugLevel = 0
+Dimensions = 1
+fromScratch = yes
+
+CalculationMode = opt_control
+
+
+# ------------------
+# Grid
+# ------------------
+BoxShape = sphere
+Spacing = 0.22
+Radius =  8.0
+
+
+# ------------------
+# System
+# ------------------
+%Species
+"doublewell" | 1 | user_defined | 1 | "1/64*(x)^4-1/4*(x)^2"
+%
+
+%Coordinates
+"doublewell" | 0 | 0 | 0
+%
+
+NonInteractingElectrons = yes
+
+
+# ------------------
+# TD RUN Parameters
+# ------------------
+
+#stime  = 100.0
+stime = 500.0
+dt = 0.1
+TDEvolutionMethod = etrs
+TDExponentialMethod = lanczos
+TDExpOrder = 20
+TDLanczosTol = 1.0e-5
+TDMaximumIter = stime/dt
+TDTimeStep = dt
+
+
+# --------------
+# OCT parameters
+# --------------
+
+OCTPenalty =1.0
+OCTEps   = 0.000001
+OCTMaxIter = 1
+OCTTargetMode = oct_targetmode_static
+OCTFilterMode = no
+
+OCTInitialState = oct_is_superposition
+%OCTInitialTransformStates
+1/sqrt(2) |  1/sqrt(2)
+%
+
+OCTTargetOperator = oct_tg_superposition
+%OCTTargetTransformStates
+1/sqrt(2) | -1/sqrt(2)
+%
+
+OCTScheme  = oct_algorithm_zbr98
+OCTDoubleCheck = no
+
+
+#----------------------------
+# Laser field = Initial guess
+#-----------------------------
+
+
+ampl = 0.1
+freq = 0.1
+envelope = envelope_constant
+%TDExternalFields
+  electric_field | 1 | 0 | 0 | envelope | ampl | freq 
+%
+
+#----------------------------
+# Output
+#-----------------------------
+
+Output = potential + density + wfs
+OutputHow = axis_x
+TDOutput = laser + td_occup 

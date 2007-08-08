@@ -386,6 +386,7 @@ contains
       FLOAT :: x
       logical :: only_userdef_istates
       C_POINTER :: blk
+      type(states_t) :: stin
       CMPLX, allocatable :: rotation_matrix(:, :)
 
       if(.not.fromScratch) then
@@ -443,40 +444,50 @@ contains
           call states_read_user_def_orbitals(gr%m, st)
         end if
 
-        !%Variable RotateStates
+        !%Variable TransformStates
         !%Type block
         !%Default no
         !%Section States
         !%Description
         !% Before starting the td calculation, the initial states (that are
         !% read from the tmp/restart_gs directory, which should have been
-        !% generated in a previous ground state calculation) can be "rotated"
-        !% among themselves. The block RotateStates gives the rotation matrix
-        !% to be used. It should be a square matrix of complex numbers, and
-        !% the dimension of this matrix should coincide with the number of states
-        !% present in the calculation.
+        !% generated in a previous ground state calculation) can be "transformed"
+        !% among themselves. The block TransformStates gives the transformation matrix
+        !% to be used. The number of rows of the matrix should equal the number
+        !% of the states present in the time-dependent calculation (the independent
+        !% spin and k-point subspaces are all transformed equally); the number of
+        !% columns should be equal to the number of states present in the
+        !% tmp/restart_gs directory. This number may be different: for example,
+        !% one could have run previously in "unocc" mode in order to obtain unoccupied
+        !% Kohn-Sham states, and therefore tmp/restart_gs will contain more states.
+        !% These states can be used in the transformation.
         !%
-        !% The matrix should be unitary, and *the code will not check this*.
+        !% Note that the code will not check the orthormality of the new states!
         !%
         !% Each line provides the coefficients of the new states, in terms of
         !% the old ones.
         !%End
-        if(loct_parse_isdef(check_inp('RotateStates')).ne.0) then
-          if(loct_parse_block(check_inp('RotateStates'), blk) == 0) then
-            ALLOCATE(rotation_matrix(st%nst, st%nst), st%nst*st%nst)
+        if(loct_parse_isdef(check_inp('TransformStates')).ne.0) then
+          if(loct_parse_block(check_inp('TransformStates'), blk) == 0) then
+            stin = st
+            deallocate(stin%zpsi)
+            call restart_look_and_read("tmp", stin, gr, sys%geo, ierr)
+            ALLOCATE(rotation_matrix(st%nst, stin%nst), st%nst*stin%nst)
             do ist = 1, st%nst
-              do jst = 1, st%nst
+              do jst = 1, stin%nst
                 call loct_parse_block_cmplx(blk, ist-1, jst-1, rotation_matrix(ist, jst))
               end do
             end do
-            call rotate_states(gr%m, st, rotation_matrix)
+            call rotate_states(gr%m, st, stin, rotation_matrix)
             deallocate(rotation_matrix)
+            call states_end(stin)
           else
-            message(1) = '"RotateStates" has to be specified as block.'
+            message(1) = '"TransformStates" has to be specified as block.'
             call write_info(1)
-            call input_error('RotateStates')
+            call input_error('TransformStates')
           end if
         end if
+
       end if
 
       if(fromScratch) call modify_occs()

@@ -151,8 +151,8 @@ contains
 
     call check_faulty_runmodes(oct)
 
-    call states_output(initial_st, gr, 'opt-control/initial1', sys%outp)
-    call states_output(target_st, gr, 'opt-control/target1', sys%outp)
+    call states_output(initial_st, gr, 'opt-control/initial', sys%outp)
+    call states_output(target_st, gr, 'opt-control/target', sys%outp)
 
     ! mode switcher
     select case(oct%algorithm_type)
@@ -167,7 +167,6 @@ contains
 
     ! Some informative output.
     call output(oct, iterator)
-    call states_output(target_st, gr, 'opt-control/target', sys%outp)
     call states_output(psi, gr, 'opt-control/final', sys%outp)
 
     ! do final test run: propagate initial state with optimal field
