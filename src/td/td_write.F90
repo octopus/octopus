@@ -956,7 +956,7 @@ contains
 
     do i = 1, h%ep%no_lasers
       field = M_ZERO
-      call laser_field(gr%sb, h%ep%lasers(i), iter*dt, field)
+      call laser_field(gr%sb, h%ep%lasers(i), field, iter*dt)
       select case(h%ep%lasers(i)%field)
       case(E_FIELD_ELECTRIC, E_FIELD_MAGNETIC)
         field = field * units_inp%length%factor / units_inp%energy%factor

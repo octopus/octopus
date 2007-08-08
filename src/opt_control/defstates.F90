@@ -19,8 +19,7 @@
 
 
   ! ---------------------------------------------------------
-  subroutine def_istate(oct, gr, geo, initial_state)
-    type(oct_t), intent(in)       :: oct
+  subroutine def_istate(gr, geo, initial_state)
     type(grid_t), intent(in)      :: gr
     type(geometry_t), intent(in)  :: geo
     type(states_t), intent(inout) :: initial_state
@@ -33,10 +32,32 @@
     type(states_t)    :: tmp_st 
     FLOAT             :: x(MAX_DIM), r, psi_re, psi_im
     CMPLX             :: c_weight
+    integer           :: istype
     
     call push_sub('opt_control.def_istate')
 
-    select case(oct%istype)
+
+    !%Variable OCTInitialState
+    !%Type integer
+    !%Section Optimal Control
+    !%Default 1
+    !%Description
+    !% The string OCTInitialState describes the initial state of the quantum system
+    !% Possible arguments are:
+    !%Option oct_is_groundstate 1
+    !% start in the ground state 
+    !%Option oct_is_excited 2
+    !% start in the excited state given by OCTISnumber
+    !% (ordered by energy)
+    !%Option oct_is_superposition 3
+    !% start in a superposition of states defined by the block OCTISsuperposition)
+    !%Option oct_is_userdefined 4
+    !% start in a userdefined state 
+    !%End
+    call loct_parse_int(check_inp('OCTInitialState'), oct_is_groundstate, istype)
+    if(.not.varinfo_valid_option('OCTInitialState', istype)) call input_error('OCTInitialState')    
+
+    select case(istype)
     case(oct_is_groundstate) 
       message(1) =  'Info: Using Ground State for InitialState'
       call write_info(1)
@@ -46,13 +67,6 @@
       message(1) =  'Info: Using Excited State for InitialState'
       call write_info(1)
 
-      !%Variable OCTTargetStateNumber
-      !%Type integer
-      !%Section Optimal Control
-      !%Default 2
-      !%Description
-      !% Specify the target state, ordered by energy
-      !%End
       call loct_parse_int(check_inp('OCTInitialStateNumber'), 2, state)
 
       !TODO: The following lines of code do not look too clear, and will probably break easily.

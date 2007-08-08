@@ -117,27 +117,6 @@
     !%End
     call loct_parse_logical(check_inp('OCTDumpIntermediate'), .true., oct%dump_intermediate)
 
-
-    !%Variable OCTInitialState
-    !%Type integer
-    !%Section Optimal Control
-    !%Default 1
-    !%Description
-    !% The string OCTInitialState describes the initial state of the quantum system
-    !% Possible arguments are:
-    !%Option oct_is_groundstate 1
-    !% start in the ground state 
-    !%Option oct_is_excited 2
-    !% start in the excited state given by OCTISnumber
-    !% (ordered by energy)
-    !%Option oct_is_superposition 3
-    !% start in a superposition of states defined by the block OCTISsuperposition)
-    !%Option oct_is_userdefined 4
-    !% start in a userdefined state 
-    !%End
-    call loct_parse_int(check_inp('OCTInitialState'), oct_is_groundstate, oct%istype)
-    if(.not.varinfo_valid_option('OCTInitialState', oct%istype)) call input_error('OCTInitialState')    
-
     !%Variable OCTTargetOperator
     !%Type integer
     !%Section Optimal Control

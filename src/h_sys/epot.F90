@@ -991,7 +991,7 @@ contains
       do j = 1, ep%no_lasers
         select case(ep%lasers(j)%field)
         case(E_FIELD_ELECTRIC)
-          call laser_field(gr%sb, ep%lasers(j), t, x)
+          call laser_field(gr%sb, ep%lasers(j), x, t)
           do i = 1, geo%natoms
             geo%atom(i)%f(1:NDIM) = geo%atom(i)%f(1:NDIM) + &
               geo%atom(i)%spec%Z_val * x(1:NDIM)

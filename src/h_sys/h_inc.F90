@@ -510,13 +510,14 @@ end subroutine X(vexternal)
 
 
 ! ---------------------------------------------------------
-subroutine X(vlasers) (gr, h, psi, hpsi, ik, t)
+subroutine X(vlasers) (gr, h, psi, hpsi, ik, t, laser_number)
   type(grid_t),        intent(inout) :: gr
   type(hamiltonian_t), intent(in)    :: h
   R_TYPE,              intent(inout) :: psi(:,:)  ! psi(NP_PART, h%d%dim)
   R_TYPE,              intent(inout) :: hpsi(:,:) ! hpsi(NP_PART, h%d%dim)
   integer,             intent(in)    :: ik
-  FLOAT,               intent(in)    :: t
+  FLOAT, optional,     intent(in)    :: t
+  integer, optional,   intent(in)    :: laser_number
 
   integer :: i, k, idim
   logical :: electric_field, vector_potential, magnetic_field
@@ -535,6 +536,11 @@ subroutine X(vlasers) (gr, h, psi, hpsi, ik, t)
   magnetic_field = .false.
 
   do i = 1, h%ep%no_lasers
+
+    if(present(laser_number)) then
+      if(i.ne.laser_number) cycle
+    end if
+
     select case(h%ep%lasers(i)%field)
     case(E_FIELD_ELECTRIC)
       if(.not. allocated(v)) then 
@@ -544,7 +550,11 @@ subroutine X(vlasers) (gr, h, psi, hpsi, ik, t)
         pot = M_ZERO
       end if
 
-      call laser_potential(gr%sb, h%ep%lasers(i), t, gr%m, pot)
+      if(present(t)) then
+        call laser_potential(gr%sb, h%ep%lasers(i), gr%m, pot, t)
+      else
+        call laser_potential(gr%sb, h%ep%lasers(i), gr%m, pot)
+      end if
       v = v + pot
       electric_field = .true.
 
@@ -556,14 +566,26 @@ subroutine X(vlasers) (gr, h, psi, hpsi, ik, t)
         a_prime = M_ZERO
       end if
 
-      call laser_vector_potential(h%ep%lasers(i), t, gr%m, a_prime)
+      if(present(t)) then
+        call laser_vector_potential(h%ep%lasers(i), gr%m, a_prime, t)
+      else
+        call laser_vector_potential(h%ep%lasers(i), gr%m, a_prime)
+      end if
       a = a + a_prime
-      call laser_field(gr%sb, h%ep%lasers(i), t, b_prime)
+      if(present(t)) then
+        call laser_field(gr%sb, h%ep%lasers(i), b_prime, t)
+      else 
+        call laser_field(gr%sb, h%ep%lasers(i), b_prime)
+      end if
       b = b + b_prime
       magnetic_field = .true.
 
     case(E_FIELD_VECTOR_POTENTIAL)
-      call laser_field(gr%sb, h%ep%lasers(i), t, a_field_prime)
+      if(present(t)) then
+        call laser_field(gr%sb, h%ep%lasers(i), a_field_prime, t)
+      else
+        call laser_field(gr%sb, h%ep%lasers(i), a_field_prime)
+      end if
       a_field = a_field + a_field_prime
       vector_potential = .true.
 

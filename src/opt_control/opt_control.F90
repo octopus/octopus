@@ -66,7 +66,6 @@ module opt_control_m
     integer :: algorithm_type
     logical :: td_tg_state 
     logical :: oct_double_check
-    integer :: istype
     logical :: dump_intermediate
   end type oct_t
 
@@ -146,7 +145,7 @@ contains
     call def_filter(td%max_iter, td%dt, f)
     call filter_write(f, NDIM, td%dt, td%max_iter)
 
-    call def_istate(oct, gr, sys%geo, initial_st)
+    call def_istate(gr, sys%geo, initial_st)
     call def_toperator(oct, gr, sys%geo, target_st)
     call tdtargetset_init(oct%targetmode, gr, td, tdt)
 

@@ -315,12 +315,12 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine laser_potential(sb, l, t, m, pot)
+  subroutine laser_potential(sb, l, m, pot, t)
     type(simul_box_t), intent(in) :: sb
     type(laser_t),     intent(in) :: l
-    FLOAT,             intent(in) :: t
     type(mesh_t),      intent(in) :: m
     FLOAT,            intent(out) :: pot(:)
+    FLOAT, optional,   intent(in) :: t
 
     CMPLX :: amp
     integer :: j, jj
@@ -328,9 +328,12 @@ contains
 
     call push_sub('lasers.laser_potential')
 
-
     pot = M_ZERO
-    amp = tdf(l%f, t)
+    if(present(t)) then
+      amp = tdf(l%f, t)
+    else
+      amp = M_z1
+    end if
     field(1:sb%dim) = real(amp*l%pol(1:sb%dim))
 
     do j = 1, m%np
@@ -342,32 +345,41 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine laser_vector_potential(l, t, m, a)
+  subroutine laser_vector_potential(l, m, a, t)
     type(laser_t),     intent(in) :: l
-    FLOAT,             intent(in) :: t
     type(mesh_t),      intent(in) :: m
     FLOAT,            intent(out) :: a(:, :)
+    FLOAT, optional,   intent(in) :: t
 
     call push_sub('lasers.laser_vector_potential')
 
-    a = l%a * tdf(l%f, t)
+    if(present(t)) then
+      a = l%a * tdf(l%f, t)
+    else
+      a = l%a
+    end if
 
     call pop_sub()
   end subroutine laser_vector_potential
 
 
   ! ---------------------------------------------------------
-  subroutine laser_field(sb, l, t, field)
+  subroutine laser_field(sb, l, field, t)
     type(simul_box_t), intent(in) :: sb
     type(laser_t),    intent(in)  :: l
-    FLOAT,            intent(in)  :: t
     FLOAT,            intent(out) :: field(sb%dim)
+    FLOAT, optional,  intent(in)  :: t
+
 
     CMPLX :: amp
     integer :: i
 
     field = M_ZERO
-    amp = tdf(l%f, t)
+    if(present(t)) then
+      amp = tdf(l%f, t)
+    else
+      amp = M_z1
+    end if
     field(1:sb%dim) = field(1:sb%dim) + real(amp*l%pol(1:sb%dim))
 
   end subroutine laser_field

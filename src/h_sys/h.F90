@@ -64,7 +64,8 @@ module hamiltonian_m
     zvnlpsi,               &
     zmagnus,               &
     zkinetic,              &
-    zvmask
+    zvmask,                &
+    zvlasers
 
   type hamiltonian_t
     ! The Hamiltonian must know what are the "dimensions" of the spaces,

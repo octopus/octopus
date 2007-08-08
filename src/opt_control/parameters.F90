@@ -50,7 +50,6 @@ module opt_control_parameters_m
     FLOAT   :: dt
     integer :: ntiter
     type(tdf_t), pointer :: f(:)
-    CMPLX, pointer  :: laser_pol(:, :)
 
     FLOAT, pointer   :: a_penalty(:)
     type(tdf_t), pointer :: td_penalty(:)
@@ -77,9 +76,6 @@ module opt_control_parameters_m
       call tdf_init_numerical(cp%f(j), cp%ntiter, cp%dt)
     end do
 
-    ALLOCATE(cp%laser_pol(MAX_DIM, cp%no_parameters), MAX_DIM*cp%no_parameters)
-    cp%laser_pol = M_z0
-
     call parameters_penalty_init(cp, octiter)
 
     call pop_sub()
@@ -96,7 +92,6 @@ module opt_control_parameters_m
 
     do j = 1, cp%no_parameters
       cp%f(j) = ep%lasers(j)%f
-      cp%laser_pol(:, j) = ep%lasers(j)%pol(:)
     end do
 
     call pop_sub()
@@ -114,7 +109,6 @@ module opt_control_parameters_m
 
     do j = 1, cp%no_parameters
       ep%lasers(j)%f = cp%f(j)
-      ep%lasers(j)%pol(:) = cp%laser_pol(:, j)
     end do
 
     call pop_sub()
@@ -133,7 +127,6 @@ module opt_control_parameters_m
       call tdf_end(cp%td_penalty(j))
     end do
     deallocate(cp%f); nullify(cp%f)
-    deallocate(cp%laser_pol)
 
     call pop_sub()
   end subroutine parameters_end

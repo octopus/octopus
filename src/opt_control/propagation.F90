@@ -245,7 +245,7 @@ module opt_control_propagation_m
         call td_rti_dt(sys%ks, h, gr, psi2, td%tr, abs(i*td%dt), abs(td%dt), td%max_iter)
       end if
 
-      call update_field(method, i-1, par, gr, td, psi, chi)
+      call update_field(method, i-1, par, gr, td, h, psi, chi)
       call prop_iter_fwd(i, gr, sys%ks, h, td, par_tmp, chi)
       call prop_iter_fwd(i, gr, sys%ks, h, td, par, psi)
 
@@ -335,7 +335,7 @@ module opt_control_propagation_m
     td%dt = -td%dt
     do i = td%max_iter-1, 0, -1
       if(targetmode==oct_targetmode_td) call calc_inh(psi, gr, tdt, i, td%max_iter, td%dt, chi)
-      call update_field(method, i+1, par_tmp, gr, td, psi, chi)
+      call update_field(method, i+1, par_tmp, gr, td, h, psi, chi)
       call prop_iter_bwd(i, gr, sys%ks, h, td, par_tmp, chi)
       call prop_iter_bwd(i, gr, sys%ks, h, td, par, psi)
     end do
@@ -422,18 +422,19 @@ module opt_control_propagation_m
   ! Calculates the value of the control parameters at iteration
   ! iter, from the state psi and the Lagrange-multiplier chi.
   ! ---------------------------------------------------------
-  subroutine update_field(algorithm_type, iter, cp, gr, td, psi, chi)
+  subroutine update_field(algorithm_type, iter, cp, gr, td, h, psi, chi)
     integer, intent(in) :: algorithm_type
     integer, intent(in)        :: iter
     type(oct_control_parameters_t), intent(inout) :: cp
-    type(grid_t), intent(in)   :: gr
+    type(grid_t), intent(inout)   :: gr
     type(td_t), intent(in)     :: td
-    type(states_t), intent(in) :: psi
-    type(states_t), intent(in) :: chi
+    type(hamiltonian_t), intent(in) :: h
+    type(states_t), intent(inout) :: psi
+    type(states_t), intent(inout) :: chi
     
     CMPLX :: d1
-    CMPLX :: d2(NDIM)
-    integer :: ik, p, dim, i, pol
+    CMPLX, allocatable  :: d2(:)
+    integer :: ik, p, dim, i, j
     FLOAT :: value
 
     CMPLX, allocatable :: rpsi(:, :)
@@ -441,34 +442,33 @@ module opt_control_propagation_m
     call push_sub('opt_control.update_field')
     
     ALLOCATE(rpsi(gr%m%np_part, psi%d%dim), gr%m%np_part*psi%d%dim)
+    ALLOCATE(d2(cp%no_parameters), cp%no_parameters)
 
     ! TODO This should be a product between Slater determinants.
-    d2 = M_z0 
-    do ik = 1, psi%d%nik
-      do p  = psi%st_start, psi%st_end
-        do pol = 1, NDIM
-          do dim = 1, psi%d%dim
-            rpsi(:, dim) = psi%zpsi(:, dim, p, ik)*cp%laser_pol(pol, 1)*gr%m%x(:, pol)
-          end do
-          d2(pol) = zstates_dotp(gr%m, psi%d%dim, chi%zpsi(:, :, p, ik), rpsi)
-        end do
-      end do
+    do j = 1, cp%no_parameters
+      ik = 1
+      p  = 1
+      rpsi = M_z0
+      call zvlasers(gr, h, psi%zpsi(:, :, p, ik), rpsi, ik, laser_number = j)
+      d2(j) = zstates_dotp(gr%m, psi%d%dim, chi%zpsi(:, :, p, ik), rpsi)
     end do
-    deallocate(rpsi)
 
     d1 = M_z1
     if(algorithm_type .eq. oct_algorithm_zbr98) d1 = zstates_mpdotp(gr%m, psi, chi)
 
-    value = aimag(d1*d2(1))/tdf(cp%td_penalty(1), iter+1)
-    call tdf_set_numerical(cp%f(1), iter+1, value)
-    i = int(sign(M_ONE, td%dt))
-    if(iter==0.or.iter==td%max_iter) then
-      call tdf_set_numerical(cp%f(1), iter+1, value)
-    else
-      value = M_HALF*( M_FOUR*tdf(cp%f(1), iter+1) - M_TWO*tdf(cp%f(1), iter-i+1))
-      call tdf_set_numerical(cp%f(1), iter+i+1, value)
-    end if
+    do j = 1, cp%no_parameters
+      value = aimag(d1*d2(j))/tdf(cp%td_penalty(j), iter+1)
+      call tdf_set_numerical(cp%f(j), iter+1, value)
+      i = int(sign(M_ONE, td%dt))
+      if(iter==0.or.iter==td%max_iter) then
+        call tdf_set_numerical(cp%f(j), iter+1, value)
+      else
+        value = M_HALF*( M_FOUR*tdf(cp%f(j), iter+1) - M_TWO*tdf(cp%f(j), iter-i+1))
+        call tdf_set_numerical(cp%f(j), iter+i+1, value)
+      end if
+    end do
 
+    deallocate(rpsi, d2)
     call pop_sub()
   end subroutine update_field
 

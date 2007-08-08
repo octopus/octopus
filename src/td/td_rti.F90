@@ -680,7 +680,7 @@ contains
           select case(h%ep%lasers(i)%field)
           case(E_FIELD_ELECTRIC)
             ALLOCATE(pot(NP), NP)
-            call laser_potential(gr%sb, h%ep%lasers(i), t-dt+time(j), gr%m, pot)
+            call laser_potential(gr%sb, h%ep%lasers(i), gr%m, pot, t-dt+time(j))
             do is = 1, st%d%nspin
               vaux(:, is, j) = vaux(:, is, j) + pot(:)
             end do

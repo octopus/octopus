@@ -137,7 +137,7 @@ contains
       select case(h%ep%lasers(i)%field)
       case(E_FIELD_ELECTRIC)
         ALLOCATE(pot(NP), NP)
-        call laser_potential(gr%sb, h%ep%lasers(i), t, gr%m, pot)
+        call laser_potential(gr%sb, h%ep%lasers(i), gr%m, pot, t)
         psi(1:NP, ik) = exp( factor * pot(1:NP) ) * psi(1:NP, ik) 
         deallocate(pot)
       case(E_FIELD_MAGNETIC, E_FIELD_VECTOR_POTENTIAL)
