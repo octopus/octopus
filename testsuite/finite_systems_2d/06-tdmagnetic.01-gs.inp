@@ -1,0 +1,46 @@
+DebugLevel = 0
+
+SystemName = "dqd"
+CalculationMode = gs
+FromScratch = yes
+Dimensions = 2
+
+omega0 = 1.0
+dist = 3.0
+%Species
+"qd" | 1.0 | user_defined | 1 | "0.5*omega0*min((x-dist/2)^2+y^2,(x+dist/2)^2+y^2-0.02)"
+%
+
+NumberUnoccStates = 1
+
+%Coordinates
+"qd" | 0 | 0 | 0 | no
+%
+
+BoxShape = sphere
+Radius = 9.5
+Spacing = 0.23
+
+DerivativesOrder = 4
+
+NonInteractingElectrons = yes
+
+MaximumIter = 2
+ConvAbsDens = 1e-5
+LCAOStart = lcao_none
+
+EigenSolver = plan
+EigenSolverInitTolerance = 1e-6
+EigenSolverFinalTolerance = 1e-6
+EigenSolverMaxIter = 5000
+TypeOfMixing = linear
+Mixing = 1.0
+
+magfield = 3.0
+
+# P_c is the speed of light in atomic units.
+P_c = 137.036
+%StaticMagneticField
+0 | 0 | magfield*P_c
+%
+

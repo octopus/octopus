@@ -1,0 +1,58 @@
+DebugLevel = 0
+
+SystemName = "dqd"
+CalculationMode = td
+FromScratch = yes
+Dimensions = 2
+
+omega0 = 1.0
+dist = 3.0
+
+%Species
+"qd" | 1.0 | user_defined | 1 | "0.5*omega0*min((x-dist/2)^2+y^2,(x+dist/2)^2+y^2)"
+%
+
+%Coordinates
+"qd" | 0 | 0 | 0 | no
+%
+
+BoxShape = sphere
+Radius = 9.5
+Spacing = 0.23
+
+DerivativesOrder = 4
+NonInteractingElectrons = yes
+
+magfield = 3.0
+
+# P_c is the speed of light in atomic units.
+P_c = 137.036
+%StaticMagneticField
+0 | 0 | magfield*P_c
+%
+
+%TDExternalFields
+magnetic_field | 0 | 0 |  -1 | envelope_trapezoidal |   P_c*1.15 | 0.0 | 150 | 100 | 25
+%
+
+Output = wfs
+OutputHow = axis_x
+TDOutput = energy + laser + td_occup + multipoles
+
+# In order to replicate the results of Popsueve et al. [J. Phys.: Condens. Matter 19, 196204 (2007)],
+# one should put T=200 -- at T=200 the total population transfer is produced. For the test we
+# will put T=20 to make it shorter.
+T = 20
+dt = 0.05
+TDMaximumIter = T/dt
+TDEvolutionMethod = etrs
+TDExponentialMethod = lanczos
+TDExpOrder = 20
+TDTimeStep = dt
+
+OutputEvery = 200
+
+AbsorbingBoundaries = no
+
+MoveIons = no
+

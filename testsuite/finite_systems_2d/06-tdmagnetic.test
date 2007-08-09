@@ -1,0 +1,64 @@
+# -*- coding: utf-8 mode: shell-script -*-
+# $Id
+
+Test       : 06-tdmagnetic.test
+Author     : Alberto
+Date       : 24.05.07
+Arch       : Linux g38 2.6.14-desktop-10 #1 SMP PREEMPT Sat Jul 15 18:57:27 CEST 2006 i686 GNU/Linux
+Release    : 2.2.0
+Programs   : octopus
+TestGroups : long-run
+Enabled    : Yes
+
+# This test demonstrates the possibility of using time-dependent
+# magnetic fields (the test works on a 2D system, in principle one could
+# use time-dependent magnetic fields both in 2D and in 3D).
+#
+# The calculation replicates the results given by Popsueva et al.
+# [J. Phys.: Condens. Matter 19, 196204 (2007)]. The idea is to
+# induce the transfer of one particle, initially localized in one 
+# quantum dot, to a neighboring identical quantum dot, by fast
+# switching of a time-dependent magnetic field.
+#
+# In order to prepare the initial state one should make a linear
+# combination of the two approximately degenerate states (gerade 
+# and ungerade) that lie lower in energy. However, since the states
+# are complex this linear combination is just a sum, and one needs
+# to multiply by a global phase that cannot be predicted -- one
+# should look at the results of the gs and unocc calculation and
+# apply it by hand [See below for the exact way to do this]
+#
+# Therefore we apply an approximate procedure: in the gs and unocc
+# calculation, we have a small disymmetry between the two quantum
+# dots, enough to localize the states in one or the other well.
+# The time-propagation is then performed with the symmetric
+# potential.
+
+Input: 06-tdmagnetic.01-gs.inp
+Input: 06-tdmagnetic.02-unocc.inp
+
+Input: 06-tdmagnetic.03-td.inp
+
+Match ; <X>(T),<Y>(T) ; tail -1 td.general/multipoles ; \s*400\s*2.00\d*e\+01\s*1.00\d*e\+00\s*1.448209\d*e\+00\s*-1.10555
+
+
+# In order to do the "exact" calculation with perfectly symmetric
+# quantum dots, one should :
+# (1) Do the gs and unocc calculations removing the small
+# disymmetry.
+# (2) Calculate the ratio of the imaginary to the real part, in the
+# x-axis (which should be a constant) for both the ground (r1) and
+# the first excited state (r2). Calculate theta1 = atan(r1) and
+# theta2 = atan(r2).
+# (3) Add the following lines to the time-dependent run input file:
+#
+#kappa = 1.0/sqrt(2.0)
+#%TransformStates
+#kappa*exp(-i*atan(theta1)) | kappa*exp(-i*atan(theta2))
+#kappa*exp(-i*atan(theta1)) | -kappa*exp(-i*atan(theta2))
+#%
+#
+# This transformation should create an initial state localized on one
+# of the potential wells.
+#
+
