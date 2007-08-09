@@ -23,4 +23,4 @@ RelativisticCorrection = spin_orbit
 MaximumIter = 2
 Eigensolver = cg
 EigenSolverInitTolerance = 1e-5
-
+EigenSolverMaxIter = 100

@@ -26,6 +26,6 @@ ExtraStates = 4
 %
 
 MaximumIter = 2
-Eigensolver = plan
-EigenSolverInitTolerance = 1e-5
+EigenSolverInitTolerance = 1e-6
+EigenSolverMaxIter = 100
 
