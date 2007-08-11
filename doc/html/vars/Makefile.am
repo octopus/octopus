@@ -39,7 +39,8 @@ dist_doc_DATA =     \
 	Time_Dependent.html \
 	Transport.html \
 	Unoccupied_States.html \
-	Utilities.html
+	Utilities.html \
+	OptimalControl.html
 
 CLEANFILES = $(dist_doc_DATA)
 
