@@ -128,7 +128,8 @@ module opt_control_tdtarget_m
     !% In this example we define a narrow Gaussian which circles with radius R0 around the center. 
     !% 
     !%End
-    no_tds = 0
+    no_tds           = 0
+    tdt%no_tdtargets = no_tds
     if((targetmode==oct_targetmode_td) &
         .AND.(loct_parse_block(check_inp('OCTTdTarget'),blk)==0)) then
 
