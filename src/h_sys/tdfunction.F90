@@ -339,16 +339,19 @@ module tdf_m
       y = f%a0 * r * exp(M_zI * (f%omega0*t))
 
     case(TDF_TRAPEZOIDAL)
-
       if(t > f%t0-f%tau0/M_TWO-f%tau1 .and. t <= f%t0-f%tau0/M_TWO) then
         r = (t - (f%t0 - f%tau0/M_TWO - f%tau1))/f%tau1
+        write(*, *) '1'
       elseif(t>f%t0-f%tau0/M_TWO .and. t <=f%t0+f%tau0/M_TWO) then
         r = M_ONE
+        write(*, *) '2'
       elseif(t>f%t0+f%tau0/M_TWO .and. t <=f%t0+f%tau0/M_TWO+f%tau1) then
         r = (f%t0 + f%tau0/M_TWO + f%tau1 - t)/f%tau1
+        write(*, *) '3'
+      else
+        r = M_ZERO
       end if
       y = f%a0 * r * exp(M_zI * (f%omega0*t))
-
     case(TDF_FROM_FILE)
 
       y = loct_splint(f%amplitude, t)
