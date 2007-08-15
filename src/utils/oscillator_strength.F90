@@ -39,7 +39,7 @@ module oscillator_strength_m
   type local_operator_t
     integer :: n_multipoles
     integer, pointer :: l(:), m(:)
-    FLOAT, allocatable :: weight(:)
+    FLOAT,   pointer :: weight(:)
   end type local_operator_t
 
   integer             :: observable(2)
