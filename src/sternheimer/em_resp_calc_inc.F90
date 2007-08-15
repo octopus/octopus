@@ -239,11 +239,12 @@ end subroutine X(lr_calc_elf)
 
 
 ! ---------------------------------------------------------
-subroutine X(lr_calc_polarizability)(sys, h, lr, perturbation, zpol, ndir)
+subroutine X(lr_calc_polarizability)(sys, h, lr, nsigma, perturbation, zpol, ndir)
   type(system_t),         intent(inout) :: sys
   type(hamiltonian_t),    intent(inout) :: h
   type(lr_t),             intent(inout) :: lr(:,:)
-  type(pert_t),      intent(inout) :: perturbation
+  integer,                intent(in)    :: nsigma
+  type(pert_t),           intent(inout) :: perturbation
   CMPLX,                  intent(out)   :: zpol(1:MAX_DIM, 1:MAX_DIM)
   integer, optional,      intent(in)    :: ndir
 
@@ -254,12 +255,17 @@ subroutine X(lr_calc_polarizability)(sys, h, lr, perturbation, zpol, ndir)
 
   do dir1 = 1, ndir_
     do dir2 = 1, sys%gr%sb%dim
-
       call pert_setup_dir(perturbation, dir1, dir2)
-      
       zpol(dir1, dir2) = &
-           -X(pert_expectation_value)(perturbation,sys%gr,sys%geo,h,sys%st, sys%st%X(psi),lr(dir2, 1)%X(dl_psi))&
-           -X(pert_expectation_value)(perturbation,sys%gr,sys%geo,h,sys%st, lr(dir2, 2)%X(dl_psi), sys%st%X(psi))
+          -X(pert_expectation_value)(perturbation,sys%gr,sys%geo,h,sys%st, sys%st%X(psi), lr(dir2, 1)%X(dl_psi))
+
+      if(nsigma == 1) then
+        ! either purely real or purely imaginary frequency
+        zpol(dir1, dir2) = zpol(dir1, dir2) + R_CONJ(zpol(dir1, dir2))
+      else
+        zpol(dir1, dir2) = zpol(dir1, dir2) &
+            -X(pert_expectation_value)(perturbation,sys%gr,sys%geo,h,sys%st, lr(dir2, 2)%X(dl_psi), sys%st%X(psi))
+      end if
     end do
   end do
 
@@ -272,7 +278,7 @@ subroutine X(lr_calc_susceptibility)(sys, h, lr, nsigma, perturbation, chi_para,
   type(hamiltonian_t),    intent(inout) :: h
   type(lr_t),             intent(inout) :: lr(:,:)
   integer,                intent(in)    :: nsigma
-  type(pert_t),      intent(inout) :: perturbation
+  type(pert_t),           intent(inout) :: perturbation
   CMPLX,                  intent(out)   :: chi_para(:,:), chi_dia(:,:)
 
   integer :: ik, ist, dir1, dir2, j

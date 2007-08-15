@@ -110,6 +110,7 @@ contains
     !% electron-phonon couplings
     !%End 
     call loct_parse_int(check_inp('RespPerturbationType'), PERTURBATION_ELECTRIC, ii)
+
     call pert_init2(this, ii, gr, geo)
 
   end subroutine pert_init1
@@ -148,9 +149,13 @@ contains
       !% No correction
       !%Option gipaw 1
       !% GIPAW correction: Pickard and Mauri, PRL 91 196401 (2003).
+      !%Option icl 2
+      !% ICL correction: Ismail-Beigi, Chang, and Louie, PRL 87, 097402 (2001).
       !%End 
       
       call loct_parse_int(check_inp('MagneticGaugeCorrection'), GAUGE_GIPAW, this%gauge)
+      if(.not.varinfo_valid_option('MagneticGaugeCorrection', this%gauge)) &
+           call input_error('MagneticGaugeCorrection')
 
     end if
 
@@ -228,3 +233,8 @@ contains
 #include "pert_inc.F90"
 
 end module pert_m
+
+!! Local Variables:
+!! mode: f90
+!! coding: utf-8
+!! End:

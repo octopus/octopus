@@ -33,18 +33,16 @@ subroutine X(pert_apply) (this, gr, geo, h, f_in, f_out)
     f_out(1:NP) = f_in(1:NP) * gr%m%x(1:NP, this%dir)
 
   case(PERTURBATION_MAGNETIC)
-
-    call magnetic
+    call magnetic()
 
   case(PERTURBATION_IONIC)
-
-    call ionic
+    call ionic()
 
   end select
 
 contains 
 
-  subroutine magnetic
+  subroutine magnetic()
 
     R_TYPE, allocatable :: f_in_copy(:), lf(:,:), vrnl(:,:,:)
     R_TYPE :: cross(1:MAX_DIM)
@@ -58,38 +56,39 @@ contains
 
     ! Note that we leave out the term 1/P_c
     call X(f_angular_momentum) (gr%sb, gr%f_der, f_in_copy, lf)
-    f_out(1:NP) = lf(1:NP, this%dir)/M_TWO
+    f_out(1:NP) = M_HALF * lf(1:NP, this%dir)
 
     deallocate(lf, f_in_copy)
 
-    select case(this%gauge)
-
-    case(GAUGE_GIPAW)
-
+    if(this%gauge==GAUGE_GIPAW .or. this%gauge==GAUGE_ICL) then
       ALLOCATE(vrnl(gr%m%np_part, h%d%dim, gr%sb%dim), gr%m%np_part*h%d%dim*gr%sb%dim)
 
       do iatom = 1, geo%natoms
-
         do idir = 1, gr%sb%dim
           call X(conmut_vnl_r)(gr, geo, h%ep, h%d%dim, idir, iatom, f_in, vrnl(:, :, idir), h%reltype, ik=1)
         end do
 
         do ip = 1, NP
-          cross = X(cross_product)(R_TOTYPE(geo%atom(iatom)%x), vrnl(ip, 1, :))
+          select case(this%gauge)
+          case(GAUGE_GIPAW)
+            cross = X(cross_product)(R_TOTYPE(geo%atom(iatom)%x), vrnl(ip, 1, :))
+          case(GAUGE_ICL)
+            cross = X(cross_product)(R_TOTYPE(gr%m%x(ip, :)), vrnl(ip, 1, :))
+          end select
+
 #if !defined(R_TCOMPLEX)
-          f_out(ip) = f_out(ip) + M_HALF * cross(this%dir)
+          f_out(ip) = f_out(ip) +        M_HALF * cross(this%dir)
 #else
           f_out(ip) = f_out(ip) - M_zI * M_HALF * cross(this%dir)
 #endif
         end do
-        
       end do
 
       deallocate(vrnl)
-
-    end select
+    end if
 
   end subroutine magnetic
+
 
   subroutine ionic
 
@@ -132,6 +131,7 @@ contains
 
 end subroutine X(pert_apply)
 
+
 subroutine X(pert_apply_order_2) (this, gr, geo, h, f_in, f_out)
   type(pert_t), intent(in)    :: this
   type(grid_t),      intent(inout) :: gr
@@ -166,7 +166,7 @@ contains
 
     do ip = 1, NP
       rdelta = sum(gr%m%x(ip, 1:MAX_DIM)**2) * ddelta(this%dir, this%dir2)
-      f_out(ip) = CNST(0.25)*(rdelta - gr%m%x(ip, this%dir)*gr%m%x(ip, this%dir2)) * f_in(ip)
+      f_out(ip) = M_FOURTH*(rdelta - gr%m%x(ip, this%dir)*gr%m%x(ip, this%dir2)) * f_in(ip)
     end do
 
     bdir(1:MAX_DIM, 1:2) = M_ZERO
@@ -216,10 +216,10 @@ contains
             end do
           end do
 
-          f_out(ip) = f_out(ip) + CNST(0.25)*contr
+          f_out(ip) = f_out(ip) + M_FOURTH*contr
 
         end do
-        
+    
       end do
 
       deallocate(vrnl)
@@ -298,6 +298,7 @@ contains
 
 end subroutine X(pert_apply_order_2)
 
+
 subroutine X(pert_expectation_density) (this, gr, geo, h, st, psia, psib, density, pert_order)
   type(pert_t),    intent(in)    :: this
   type(grid_t),         intent(inout) :: gr
@@ -317,7 +318,6 @@ subroutine X(pert_expectation_density) (this, gr, geo, h, st, psia, psib, densit
 
   order = 1
   if(present(pert_order)) order = pert_order
-
   ASSERT(order == 1 .or. order == 2)
 
   density(1:NP) = R_TOTYPE(M_ZERO)
@@ -340,6 +340,7 @@ subroutine X(pert_expectation_density) (this, gr, geo, h, st, psia, psib, densit
   end do
 
 end subroutine X(pert_expectation_density)
+
 
 R_TYPE function X(pert_expectation_value) (this, gr, geo, h, st, psia, psib, pert_order) result(expval)
   type(pert_t),    intent(in)    :: this
@@ -367,3 +368,8 @@ R_TYPE function X(pert_expectation_value) (this, gr, geo, h, st, psia, psib, per
   expval = X(mf_integrate)(gr%m, tmp)
 
 end function X(pert_expectation_value)
+
+!! Local Variables:
+!! mode: f90
+!! coding: utf-8
+!! End:

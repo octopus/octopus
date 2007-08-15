@@ -202,22 +202,19 @@ subroutine X(conmut_vnl_r)(gr, geo, ep, dim, idir, iatom, psi, cpsi, reltype, ik
       lpsi(1:n_s, idim) = psi(jxyz(1:n_s))
     end do
 
-    !x V_nl |psi>
+    ! x V_nl |psi>
     call X(project_sphere)(gr%m, ep%p(ipj), dim, lpsi, xplpsi, reltype, periodic, ik)
-
     do idim = 1, dim
       xplpsi(1:n_s, idim) = gr%m%x(jxyz(1:n_s), idir) * xplpsi(1:n_s, idim)
     end do
     
-    !V_nl x |psi>
-
+    ! V_nl x |psi>
     do idim = 1, dim
       lpsi(1:n_s, idim) = gr%m%x(jxyz(1:n_s), idir) * lpsi(1:n_s, idim)
     end do
-
     call X(project_sphere)(gr%m, ep%p(ipj), dim, lpsi, pxlpsi, reltype, periodic, ik)
 
-    !|cpsi> = x V_nl |psi> - V_nl x |psi> 
+    ! |cpsi> = x V_nl |psi> - V_nl x |psi> 
     do idim = 1, dim
       cpsi(jxyz(1:n_s), idim) = cpsi(jxyz(1:n_s), idim) + xplpsi(1:n_s, idim) - pxlpsi(1:n_s, idim)
     end do

@@ -278,9 +278,11 @@ contains
         ! calculate polarizability
         do ifactor = 1, em_vars%nfactor
           if(wfs_are_complex(sys%st)) then 
-            call zlr_calc_polarizability(sys, h, em_vars%lr(:,:, ifactor), em_vars%perturbation, em_vars%alpha(:,:, ifactor))
+            call zlr_calc_polarizability(sys, h, em_vars%lr(:,:, ifactor), em_vars%nsigma, &
+                em_vars%perturbation, em_vars%alpha(:,:, ifactor))
           else
-            call dlr_calc_polarizability(sys, h, em_vars%lr(:,:, ifactor),  em_vars%perturbation, em_vars%alpha(:,:, ifactor))
+            call dlr_calc_polarizability(sys, h, em_vars%lr(:,:, ifactor), em_vars%nsigma, &
+                em_vars%perturbation, em_vars%alpha(:,:, ifactor))
           end if
         end do
         
