@@ -381,7 +381,7 @@ subroutine FNAME(gemm_2)(m, n, k, alpha, a, b, beta, c)
 
 end subroutine FNAME(gemm_2)
 
-! The same as above with matrix a being stored in transposed order.
+! The same as above but with (Hermitian) transposed of a.
 
 subroutine FNAME(gemmt_1)(m, n, k, alpha, a, b, beta, c)
   integer, intent(in)    :: m, n, k
@@ -390,7 +390,7 @@ subroutine FNAME(gemmt_1)(m, n, k, alpha, a, b, beta, c)
   TYPE1,   intent(in)    :: b(:,:)  ! b(k, n)
   TYPE1,   intent(inout) :: c(:,:)  ! c(m, n)
 
-  call blas_gemm('T', 'N', m, n, k, alpha, a(1, 1), k, b(1, 1), k, beta, c(1, 1), m)
+  call blas_gemm('C', 'N', m, n, k, alpha, a(1, 1), k, b(1, 1), k, beta, c(1, 1), m)
 end subroutine FNAME(gemmt_1)
 
 subroutine FNAME(gemmt_2)(m, n, k, alpha, a, b, beta, c)
@@ -400,7 +400,7 @@ subroutine FNAME(gemmt_2)(m, n, k, alpha, a, b, beta, c)
   TYPE1,   intent(in)    :: b(:, :)     ! b(k, n)
   TYPE1,   intent(inout) :: c(:, :, :)  ! c(m, n)
 
-  call blas_gemm('T', 'N', m, n, k, alpha, a(1, 1, 1), k, b(1, 1), k, beta, c(1, 1, 1), m)
+  call blas_gemm('C', 'N', m, n, k, alpha, a(1, 1, 1), k, b(1, 1), k, beta, c(1, 1, 1), m)
 end subroutine FNAME(gemmt_2)
 
 ! The following matrix multiplications all expect upper triangular matrices for a.
@@ -443,14 +443,15 @@ subroutine FNAME(hemm_2)(m, n, side, alpha, a, b, beta, c)
 end subroutine FNAME(hemm_2)
 
 ! Expects upper triangular matrix for c.
-
+! trans = 'N' => C <- alpha*A*A^H + beta*C
+! trans = 'C' => C <- alpha*A^H*A + beta*C
 subroutine FNAME(herk_1)(n, k, trans, alpha, a, beta, c)
   integer,      intent(in)    :: n, k
   character(1), intent(in)    :: trans                ! 'N', 'C'
   TYPE1,        intent(in)    :: alpha, a(:, :), beta
   TYPE1,        intent(inout) :: c(:, :)              ! c(n, n)
 
-  integer :: lda
+  integer :: lda, i, j
 
   select case(trans)
     case('N', 'n')
@@ -460,6 +461,17 @@ subroutine FNAME(herk_1)(n, k, trans, alpha, a, beta, c)
   end select
 
   call blas_herk('U', trans, n, k, alpha, a(1, 1), lda, beta, c(1, 1), n)
+
+  ! Fill lower triangular matrix.
+  do i = 2, n
+    do j = 1, i-1
+#if TYPE == 3 || TYPE == 4
+      c(i, j) = conjg(c(j, i))
+#else
+      c(i, j) = c(j, i)
+#endif
+    end do
+  end do
 end subroutine FNAME(herk_1)
 
 
