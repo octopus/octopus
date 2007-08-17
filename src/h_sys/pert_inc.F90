@@ -17,6 +17,7 @@
 !!
 !! $Id: response.F90 2548 2006-11-06 21:42:27Z xavier $
 
+! --------------------------------------------------------------------------
 subroutine X(pert_apply) (this, gr, geo, h, f_in, f_out)
   type(pert_t), intent(in)    :: this
   type(grid_t),      intent(inout) :: gr
@@ -42,8 +43,8 @@ subroutine X(pert_apply) (this, gr, geo, h, f_in, f_out)
 
 contains 
 
+  ! --------------------------------------------------------------------------
   subroutine magnetic()
-
     R_TYPE, allocatable :: f_in_copy(:), lf(:,:), vrnl(:,:,:)
     R_TYPE :: cross(1:MAX_DIM)
     integer :: iatom, idir, ip
@@ -90,8 +91,8 @@ contains
   end subroutine magnetic
 
 
-  subroutine ionic
-
+  ! --------------------------------------------------------------------------
+  subroutine ionic()
     R_TYPE, allocatable :: grad(:,:), fin(:, :), fout(:, :)
     FLOAT,  allocatable :: vloc(:)
     type(atom_t), pointer :: atm
@@ -132,6 +133,7 @@ contains
 end subroutine X(pert_apply)
 
 
+! --------------------------------------------------------------------------
 subroutine X(pert_apply_order_2) (this, gr, geo, h, f_in, f_out)
   type(pert_t), intent(in)    :: this
   type(grid_t),      intent(inout) :: gr
@@ -144,20 +146,16 @@ subroutine X(pert_apply_order_2) (this, gr, geo, h, f_in, f_out)
 
   case(PERTURBATION_ELECTRIC)
     f_out(1:NP) = R_TOTYPE(M_ZERO)
-
   case(PERTURBATION_IONIC)
-    call ionic
-
+    call ionic()
   case(PERTURBATION_MAGNETIC)
-    call magnetic
-
+    call magnetic()
   end select
 
 contains
 
-  subroutine magnetic
-
-    R_TYPE, allocatable :: dnl(:,:,:), vrnl(:,:,:), xf(:)
+  subroutine magnetic()
+    R_TYPE, allocatable :: f_in2(:,:), dnl(:,:), vrnl(:,:), xf(:)
     R_TYPE :: cross1(1:MAX_DIM), cross2(1:MAX_DIM), bdir(1:MAX_DIM, 2)
     FLOAT  :: rdelta
     R_TYPE :: contr
@@ -169,62 +167,69 @@ contains
       f_out(ip) = M_FOURTH*(rdelta - gr%m%x(ip, this%dir)*gr%m%x(ip, this%dir2)) * f_in(ip)
     end do
 
-    bdir(1:MAX_DIM, 1:2) = M_ZERO
-    bdir(this%dir,  1)   = M_ONE
-    bdir(this%dir2, 2)   = M_ONE
+    ! gauge correction
+    apply_gauge: if(this%gauge==GAUGE_GIPAW .or. this%gauge==GAUGE_ICL) then
+      bdir(1:MAX_DIM, 1:2) = M_ZERO
+      bdir(this%dir,  1)   = M_ONE
+      bdir(this%dir2, 2)   = M_ONE
 
-    select case(this%gauge)
+      ALLOCATE(f_in2(NP_PART, NDIM), NP_PART*NDIM)
+      ALLOCATE(vrnl(NP_PART, h%d%dim), NP_PART*h%d%dim)
+      ALLOCATE(dnl(NP, NDIM), NP*NDIM)
+      ALLOCATE(xf(NP), NP)
 
-    case(GAUGE_GIPAW)
+      f_in2(NP:NP_PART,:) = R_TOTYPE(M_ZERO)
+      atoms: do iatom = 1, geo%natoms
 
-      ALLOCATE(vrnl(gr%m%np_part, h%d%dim, gr%sb%dim), gr%m%np_part*h%d%dim*gr%sb%dim)
-      ALLOCATE(dnl(gr%m%np_part, gr%sb%dim, gr%sb%dim), gr%m%np_part*gr%sb%dim*gr%sb%dim)
-      ALLOCATE(xf(1:NP), NP)
+        ! This calculates f_in2 = (B x r) f_in
+        do ip = 1, NP
+          select case(this%gauge)
+          case(GAUGE_GIPAW)
+            cross1 = X(cross_product)(bdir(:, 2), R_TOTYPE(geo%atom(iatom)%x))
+          case(GAUGE_ICL)
+            cross1 = X(cross_product)(bdir(:, 2), R_TOTYPE(gr%m%x(ip, :)))
+          end select
 
-      do iatom = 1, geo%natoms
-
-        !calculate dnl |f> = -[x,vnl] |f>
-        do idir = 1, gr%sb%dim
-          call X(conmut_vnl_r)(gr, geo, h%ep, h%d%dim, idir, iatom, f_in, vrnl(:, :, idir), h%reltype, ik=1)
+          f_in2(ip, 1:gr%sb%dim) = cross1(1:gr%sb%dim) * f_in(ip)
         end do
 
-        ! -x vnl |f>
+        ! let us now get sum_beta Dnl f_in2
+        dnl(1:NP, 1:NDIM) = R_TOTYPE(M_ZERO)
         do idir = 1, gr%sb%dim
           do idir2 = 1, gr%sb%dim
-            dnl(1:NP, idir, idir2) = -gr%m%x(1:NP, idir) * vrnl(1:NP, 1, idir2)
-          end do
-        end do
+            !calculate dnl |f_in2> = -[x,vnl] |f_in2>
+            call X(conmut_vnl_r)(gr, geo, h%ep, h%d%dim, idir2, iatom, f_in2(:, idir2), vrnl(:, :), h%reltype, ik=1)
 
-        ! vnl x |f>
-        do idir2 = 1, gr%sb%dim
-          do idir = 1, gr%sb%dim
-            xf(1:NP) = gr%m%x(1:NP, idir) * f_in(1:NP)
-            call X(conmut_vnl_r)(gr, geo, h%ep, h%d%dim, idir2, iatom, xf, vrnl(:, :, idir2), h%reltype, ik=1)
-            dnl(1:NP, idir, idir2) = dnl(1:NP, idir, idir2) + vrnl(1:NP, 1, idir2)
+            ! -x vnl |f>
+            dnl(1:NP, idir) = dnl(1:NP, idir) - gr%m%x(1:NP, idir) * vrnl(1:NP, 1)
+
+            ! vnl x |f>
+            xf(1:NP) = gr%m%x(1:NP, idir) * f_in2(1:NP, idir2)
+            call X(conmut_vnl_r)(gr, geo, h%ep, h%d%dim, idir2, iatom, xf, vrnl(:, :), h%reltype, ik=1)
+
+            dnl(1:NP, idir) = dnl(1:NP, idir) + vrnl(1:NP, 1)
           end do
         end do
-        
-        cross1 = X(cross_product)(bdir(:, 1), R_TOTYPE(geo%atom(iatom)%x))
-        cross2 = X(cross_product)(bdir(:, 2), R_TOTYPE(geo%atom(iatom)%x))
 
         do ip = 1, NP
+          select case(this%gauge)
+          case(GAUGE_GIPAW)
+            cross1 = X(cross_product)(bdir(:, 1), R_TOTYPE(geo%atom(iatom)%x))
+          case(GAUGE_ICL)
+            cross1 = X(cross_product)(bdir(:, 1), R_TOTYPE(gr%m%x(ip, :)))
+          end select
 
           contr = M_ZERO
           do idir = 1, gr%sb%dim
-            do idir2 = 1, gr%sb%dim
-              contr = contr + cross1(idir) * dnl(ip, idir, idir2) * cross2(idir2)
-            end do
+            contr = contr + cross1(idir)*dnl(ip, idir)
           end do
-
           f_out(ip) = f_out(ip) + M_FOURTH*contr
-
         end do
-    
-      end do
 
-      deallocate(vrnl)
+      end do atoms
 
-    end select
+      deallocate(f_in2, vrnl, dnl, xf)
+    end if apply_gauge
 
   end subroutine magnetic
 

@@ -151,7 +151,7 @@ contains
       !% GIPAW correction: Pickard and Mauri, PRL 91 196401 (2003).
       !%Option icl 2
       !% ICL correction: Ismail-Beigi, Chang, and Louie, PRL 87, 097402 (2001).
-      !%End 
+      !%End
       
       call loct_parse_int(check_inp('MagneticGaugeCorrection'), GAUGE_GIPAW, this%gauge)
       if(.not.varinfo_valid_option('MagneticGaugeCorrection', this%gauge)) &

@@ -286,6 +286,9 @@ subroutine X(lr_calc_susceptibility)(sys, h, lr, nsigma, perturbation, chi_para,
 
   call push_sub('em_resp_calc_inc.lr_calc_susceptibility')
 
+  message(1) = "Info: Calculating magnetic susceptibility"
+  call write_info(1)
+
   chi_para = M_ZERO
   chi_dia  = M_ZERO
 
@@ -303,7 +306,6 @@ subroutine X(lr_calc_susceptibility)(sys, h, lr, nsigma, perturbation, chi_para,
              X(pert_expectation_value)(perturbation, sys%gr,sys%geo,h,sys%st, lr(dir2, 2)%X(dl_psi), sys%st%X(psi))
       end if
      
-
       ! first the paramagnetic term 
       chi_para(dir1, dir2) = chi_para(dir1, dir2) + trace
 
