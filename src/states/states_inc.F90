@@ -19,6 +19,143 @@
 
 
 ! ---------------------------------------------------------
+! Multiplication of two blocks of states:
+! res <- psi1(idx1)^T * psi2(idx2).
+subroutine X(states_blockt_mul)(mesh, dim, psi1, psi2, res, idx1, idx2)
+  type(mesh_t),      intent(in)  :: mesh
+  integer,           intent(in)  :: dim
+  R_TYPE,            intent(in)  :: psi1(:, :, :)
+  R_TYPE,            intent(in)  :: psi2(:, :, :)
+  R_TYPE,            intent(out) :: res(:, :)
+  integer, optional, intent(in)  :: idx1(:)
+  integer, optional, intent(in)  :: idx2(:)
+
+  integer              :: i, j, idim
+  integer              :: m, n
+  integer, allocatable :: idx1_(:), idx2_(:)
+
+  call push_sub('states_inc.Xstates_block_mul')
+
+  if(present(idx1)) then
+    m = ubound(idx1, 1)
+    ALLOCATE(idx1_(m), m)
+    idx1_ = idx1
+  else
+    m = ubound(psi1, 3)
+    ALLOCATE(idx1_(m), m)
+    do i = 1, m
+      idx1_(i) = i
+    end do
+  end if
+  if(present(idx2)) then
+    n = ubound(idx2, 1)
+    ALLOCATE(idx2_(n), n)
+    idx2_ = idx2
+  else
+    n = ubound(psi2, 3)
+    ALLOCATE(idx2_(n), n)
+    do i = 1, n
+      idx2_(i) = i
+    end do
+  end if
+
+  ! FIXME: does not work with domain parallelization.
+  do i = 1, m
+    do j = 1, n
+      res(i, j) = R_TOTYPE(M_ZERO)
+      do idim = 1, dim
+        res(idx1_(i), idx2_(j)) = res(idx1_(i), idx2_(j)) + &
+          lalg_dot(mesh%np, psi1(:, idim, idx1_(i)), psi2(:, idim, idx2_(j)))
+      end do
+    end do
+  end do
+
+  deallocate(idx1_, idx2_)
+
+  call pop_sub()
+end subroutine X(states_blockt_mul)
+
+
+! ---------------------------------------------------------
+! Multiplication of block of states by matrix:
+! res <- psi(idxp) * matr(idxm).
+subroutine X(states_block_matr_mul)(mesh, dim, psi, matr, res, idxp, idxm)
+  type(mesh_t),      intent(in)  :: mesh
+  integer,           intent(in)  :: dim
+  R_TYPE,            intent(in)  :: psi(:, :, :)
+  R_TYPE,            intent(in)  :: matr(:, :)
+  R_TYPE,            intent(out) :: res(:, :, :)
+  integer, optional, intent(in)  :: idxp(:)
+  integer, optional, intent(in)  :: idxm(:)
+
+  call push_sub('states_inc.X(states_block_matr)')
+
+  call X(states_block_matr_mul_add)(mesh, dim, R_TOTYPE(M_ONE), psi, matr, &
+    R_TOTYPE(M_ZERO), res, idxp, idxm)
+
+  call pop_sub()
+end subroutine X(states_block_matr_mul)
+
+
+! ---------------------------------------------------------
+! Multiplication of block of states by matrix plus block of states:
+! res <- alpha * psi(idxp) * matr(idxm) + beta * res.
+subroutine X(states_block_matr_mul_add)(mesh, dim, alpha, psi, matr, beta, res, idxp, idxm)
+  type(mesh_t),      intent(in)  :: mesh
+  integer,           intent(in)  :: dim
+  R_TYPE,            intent(in)  :: alpha
+  R_TYPE,            intent(in)  :: psi(:, :, :)
+  R_TYPE,            intent(in)  :: matr(:, :)
+  R_TYPE,            intent(in)  :: beta
+  R_TYPE,            intent(out) :: res(:, :, :)
+  integer, optional, intent(in)  :: idxp(:)
+  integer, optional, intent(in)  :: idxm(:)
+
+  integer              :: m, n, i, j, idim
+  integer, allocatable :: idxp_(:), idxm_(:)
+
+  call push_sub('states_inc.X(states_block_matr)')
+
+  if(present(idxp)) then
+    m = ubound(idxp, 1)
+    ALLOCATE(idxp_(m), m)
+    idxp_ = idxp
+  else
+    m = ubound(psi, 3)
+    ALLOCATE(idxp_(m), m)
+    do i = 1, m
+      idxp_(i) = i
+    end do
+  end if
+  if(present(idxm)) then
+    n = ubound(idxm, 1)
+    ALLOCATE(idxm_(n), n)
+    idxm_ = idxm
+  else
+    n = ubound(matr, 2)
+    ALLOCATE(idxm_(n), n)
+    do i = 1, n
+      idxm_(i) = i
+    end do
+  end if
+
+  ! FIXME: does not work with domain parallelization.  
+  do i = 1, mesh%np
+    do j = 1, n
+      do idim = 1, dim
+        res(i, idim, j) = alpha*sum(psi(i, idim, idxp_)*matr(:, idxm_(j))) + &
+          beta*res(i, idim, j)
+      end do
+    end do
+  end do
+  
+  deallocate(idxp_, idxm_)
+
+  call pop_sub()
+end subroutine X(states_block_matr_mul_add)
+
+
+! ---------------------------------------------------------
 ! Orthonormalizes nst orbital in mesh m
 subroutine X(states_gram_schmidt1)(nst, m, dim, psi, start)
   integer,           intent(in)    :: nst, dim
@@ -216,7 +353,7 @@ subroutine X(states_calc_momentum)(gr, st)
   R_TYPE, allocatable :: grad(:,:,:)  
 
   call push_sub('states_inc.Xstates_calc_momentum')
-  
+
   ALLOCATE(grad(NP, st%d%dim, NDIM), NP*st%d%dim*NDIM)
 
   do ik = 1, st%d%nik
@@ -227,7 +364,7 @@ subroutine X(states_calc_momentum)(gr, st)
         call X(f_gradient)(gr%sb, gr%f_der, &
           st%X(psi)(1:NP_PART, idim, ist, ik), grad(1:NP, idim, 1:NDIM))
       end do
-      
+
       do i = 1, NDIM
         ! since the expectation value of the momentum operator is real
         ! for square integrable wfns this integral should be purely imaginary 
@@ -248,11 +385,11 @@ subroutine X(states_calc_momentum)(gr, st)
       ! since st%X(psi) contains only u_k
       do i = 1, gr%sb%periodic_dim
         st%momentum(i, ist, ik) = st%momentum(i, ist, ik) + st%d%kpoints(i, ik)
-      end do      
-      
+      end do
+
     end do
   end do
-  
+
   deallocate(grad)
 
   call pop_sub()

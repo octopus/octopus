@@ -49,7 +49,7 @@
     integer :: nep           ! Number of eigenpairs.
     integer :: nst           ! Number of eigenstates (i. e. the blocksize).
     integer :: ik, ist
-    integer :: j, k, maxiter
+    integer :: i, j, k, maxiter
     integer :: conv
     logical :: verbose_
 
@@ -107,13 +107,13 @@
     end if
 
     ALLOCATE(diffs(nst, st%d%nik), nep)
-    ALLOCATE(tmp(NP_PART, st%d%dim, nst), NP_PART*nst)
+    ALLOCATE(tmp(NP_PART, st%d%dim, nst), NP_PART*st%d%dim*nst)
     ALLOCATE(nst_tmp(nst, nst), nst**2)
-    ALLOCATE(res(NP_PART, st%d%dim, nst), NP_PART*nst)
-    ALLOCATE(h_res(NP_PART, st%d%dim, nst), NP_PART*nst)
-    ALLOCATE(dir(NP_PART, st%d%dim, nst), NP_PART*nst)
-    ALLOCATE(h_dir(NP_PART, st%d%dim, nst), NP_PART*nst)
-    ALLOCATE(h_psi(NP_PART, st%d%dim, nst), NP_PART*nst)
+    ALLOCATE(res(NP_PART, st%d%dim, nst), NP_PART*st%d%dim*nst)
+    ALLOCATE(h_res(NP_PART, st%d%dim, nst), NP_PART*st%d%dim*nst)
+    ALLOCATE(dir(NP_PART, st%d%dim, nst), NP_PART*st%d%dim*nst)
+    ALLOCATE(h_dir(NP_PART, st%d%dim, nst), NP_PART*st%d%dim*nst)
+    ALLOCATE(h_psi(NP_PART, st%d%dim, nst), NP_PART*st%d%dim*nst)
     ALLOCATE(gram_block(nst, nst), nst**2)
     ALLOCATE(ritz_val(nst), nst)
     ALLOCATE(ritz_psi(nst, nst), nst**2)
@@ -128,26 +128,24 @@
       psi => st%X(psi)(:, :, :, ik)
 
       ! Orthonormalize initial vectors.
-      call X(lobpcg_orth)(st%d%wfs_type, nst, np, psi)
+      call X(lobpcg_orth)(gr%m, st%d%dim, st%d%wfs_type, nst, np, psi)
 
       ! Get initial Ritz-values and -vectors.
       do ist = 1, nst
         call X(hpsi)(h, gr, psi(:, :, ist), h_psi(:, :, ist), ik)
       end do
-      call lalg_gemmt(nst, nst, np, R_TOTYPE(M_ONE), psi(:, :, 1), &
-        h_psi(:, :, 1), R_TOTYPE(M_ZERO), gram_block)
+
+      call X(states_blockt_mul)(gr%m, st%d%dim, psi, h_psi, gram_block)
 
       call X(lobpcg_conj)(st%d%wfs_type, nst, nst, gram_block)
 
       ALLOCATE(ritz_vec(nst, nst), nst**2)
       call lalg_eigensolve(nst, gram_block, ritz_vec, eval(:, ik))
 
-      call lalg_gemm(np, nst, nst, R_TOTYPE(M_ONE), psi(:, :, 1), &
-        ritz_vec, R_TOTYPE(M_ZERO), tmp(:, :, 1))
+      call X(states_block_matr_mul)(gr%m, st%d%dim, psi, ritz_vec, tmp)
       call lalg_copy(np*nst, tmp(:, 1, 1), psi(:, 1, 1))
 
-      call lalg_gemm(np, nst, nst, R_TOTYPE(M_ONE), h_psi(:, :, 1), ritz_vec, &
-        R_TOTYPE(M_ZERO), tmp(:, :, 1))
+      call X(states_block_matr_mul)(gr%m, st%d%dim, h_psi, ritz_vec, tmp)
       call lalg_copy(np*nst, tmp(:, 1, 1), h_psi(:, 1, 1))
       deallocate(ritz_vec)
 
@@ -175,10 +173,10 @@
       call lalg_copy(np*nst, tmp(:, 1, 1), res(:, 1, 1))
 
       ! Make residuals orthogonal to eigenstates.
-      call X(lobpcg_orth_res)(nst, np, psi, res, tmp)
+      call X(lobpcg_orth_res)(gr%m, st%d%dim, psi, res, tmp)
 
       ! Orthonormalize residuals.
-      call X(lobpcg_orth)(st%d%wfs_type, nst, np, res)
+      call X(lobpcg_orth)(gr%m, st%d%dim, st%d%wfs_type, nst, np, res)
 
       ! Apply Hamiltonian to residuals.
       do ist = 1, nst
@@ -198,15 +196,11 @@
       end do
 
       ! (1, 2)-block: (H |psi>)^T res.
-      call lalg_gemmt(nst, nst, np, R_TOTYPE(M_ONE), h_psi(:, :, 1), &
-        res(:, :, 1), R_TOTYPE(M_ZERO), gram_block)
-      gram_h(1:nst, nst+1:2*nst) = gram_block
+      call X(states_blockt_mul)(gr%m, st%d%dim, h_psi, res, gram_h(1:nst, nst+1:2*nst))
 
       ! (2, 2)-block: res^T (H res).
-      call lalg_gemmt(nst, nst, np, R_TOTYPE(M_ONE), res(:, :, 1), h_res(:, :, 1), &
-        R_TOTYPE(M_ZERO), gram_block)
-      call X(lobpcg_conj)(st%d%wfs_type, nst, nst, gram_block)
-      gram_h(nst+1:2*nst, nst+1:2*nst) = gram_block
+      call X(states_blockt_mul)(gr%m, st%d%dim, res, h_res, gram_h(nst+1:2*nst, nst+1:2*nst))
+      call X(lobpcg_conj)(st%d%wfs_type, nst, nst, gram_h(nst+1:2*nst, nst+1:2*nst))
 
       ! gram_i matrix.
       gram_i(1:nst, 1:nst) = R_TOTYPE(M_ZERO)
@@ -217,9 +211,7 @@
       end do
 
       ! (1, 2)-block: <psi| res.
-      call lalg_gemmt(nst, nst, np, R_TOTYPE(M_ONE), psi(:, :, 1), &
-        res(:, :, 1), R_TOTYPE(M_ZERO), gram_block)
-      gram_i(1:nst, nst+1:2*nst) = gram_block
+      call X(states_blockt_mul)(gr%m, st%d%dim, psi, res, gram_i(1:nst, nst+1:2*nst))
 
       call lalg_lowest_geneigensolve(nst, 2*nst, gram_h, gram_i, ritz_val, ritz_vec)
 
@@ -227,19 +219,16 @@
       ritz_res = ritz_vec(nst+1:2*nst, 1:nst)
 
       ! Calculate new conjugate directions.
-      call lalg_gemm(np, nst, nst, R_TOTYPE(M_ONE), res(:, :, 1), &
-        ritz_res, R_TOTYPE(M_ZERO), dir(:, :, 1))
-      call lalg_gemm(np, nst, nst, R_TOTYPE(M_ONE), h_res(:, :, 1), &
-        ritz_res, R_TOTYPE(M_ZERO), h_dir(:, :, 1))
+      call X(states_block_matr_mul)(gr%m, st%d%dim, res, ritz_res, dir)
+      call X(states_block_matr_mul)(gr%m, st%d%dim, h_res, ritz_res, h_dir)
 
       ! Calculate new eigenstates and update H |psi>
-      call lalg_gemm(np, nst, nst, R_TOTYPE(M_ONE), psi(:, :, 1), ritz_psi, &
-        R_TOTYPE(M_ZERO), tmp(:, :, 1))
+      call X(states_block_matr_mul)(gr%m, st%d%dim, psi, ritz_psi, tmp)
       call lalg_copy(np*nst, tmp(:, 1, 1), psi(:, 1, 1))
+
       call lalg_axpy(np*nst, R_TOTYPE(M_ONE), dir(:, 1, 1), psi(:, 1, 1))
 
-      call lalg_gemm(np, nst, nst, R_TOTYPE(M_ONE), h_psi(:, :, 1), ritz_psi, &
-        R_TOTYPE(M_ZERO), tmp(:, :, 1))
+      call X(states_block_matr_mul)(gr%m, st%d%dim, h_psi, ritz_psi, tmp)
       call lalg_copy(np*nst, tmp(:, 1, 1), h_psi(:, 1, 1))
       call lalg_axpy(np*nst, R_TOTYPE(M_ONE), h_dir(:, 1, 1), h_psi(:, 1, 1))
 
@@ -268,13 +257,12 @@
         call lalg_copy(np*nst, tmp(:, 1, 1), res(:, 1, 1))
 
         ! Make residuals orthogonal to eigenstates.
-        call lalg_gemmt(nst, nst, np, R_TOTYPE(M_ONE), psi(:, :, 1), &
-          res(:, :, 1), R_TOTYPE(M_ZERO), tmp(:, :, 1))
-        call lalg_gemm(np, nst, nst, -R_TOTYPE(M_ONE), psi(:, :, 1), &
-          tmp(:, :, 1), R_TOTYPE(M_ONE), res(:, :, 1))
+        call X(states_blockt_mul)(gr%m, st%d%dim, psi, res, nst_tmp)
+        call X(states_block_matr_mul_add)(gr%m, st%d%dim, -R_TOTYPE(M_ONE), psi, &
+          nst_tmp, R_TOTYPE(M_ONE), res)
 
         ! Orthonormalize residuals.
-        call X(lobpcg_orth)(st%d%wfs_type, nst, np, res)
+        call X(lobpcg_orth)(gr%m, st%d%dim, st%d%wfs_type, nst, np, res)
 
         ! Apply Hamiltonian to residual.
         do ist = 1, nst
@@ -284,12 +272,21 @@
         ! Orthonormalize conjugate directions.
         ! Since h_dir also has to be modified (to avoid a full calculation of
         ! H dir with the new dir), we cannot use lobpcg_orth at this point.
-        call lalg_herk(nst, np, 'C', R_TOTYPE(M_ONE), dir(:, :, 1), R_TOTYPE(M_ZERO), nst_tmp)
+        !call lalg_herk(nst, np, 'C', R_TOTYPE(M_ONE), dir(:, :, 1), R_TOTYPE(M_ZERO), nst_tmp)
+        call X(states_blockt_mul)(gr%m, st%d%dim, dir, dir, nst_tmp)
         call X(lobpcg_conj)(st%d%wfs_type, nst, nst, nst_tmp)
         call lalg_cholesky(nst, nst_tmp)
         call lalg_invert_upper_triangular(nst, nst_tmp)
-        call lalg_trmm(np, nst, 'R', R_TOTYPE(M_ONE), nst_tmp, dir(:, :, 1))
-        call lalg_trmm(np, nst, 'R', R_TOTYPE(M_ONE), nst_tmp, h_dir(:, :, 1))
+        ! Fill lower triangle of nst_tmp with zeros.
+        do i = 2, nst
+          do j = 1, i-1
+            nst_tmp(i, j) = R_TOTYPE(M_ZERO)
+          end do
+        end do
+        call X(states_block_matr_mul)(gr%m, st%d%dim, dir, nst_tmp, tmp)
+        call lalg_copy(np*nst, tmp(:, 1, 1), dir(:, 1, 1))
+        call X(states_block_matr_mul)(gr%m, st%d%dim, h_dir, nst_tmp, tmp)
+        call lalg_copy(np*nst, tmp(:, 1, 1), h_dir(:, 1, 1))
 
         ! Rayleigh-Ritz procedure.
         ! gram_h matrix.
@@ -300,31 +297,21 @@
         end do
 
         ! (1, 2)-block: (H |psi>)^T res.
-        call lalg_gemmt(nst, nst, np, R_TOTYPE(M_ONE), h_psi(:, :, 1), &
-          res(:, :, 1), R_TOTYPE(M_ZERO), gram_block)
-        gram_h(1:nst, nst+1:2*nst) = gram_block
+        call X(states_blockt_mul)(gr%m, st%d%dim, h_psi, res, gram_h(1:nst, nst+1:2*nst))
 
         ! (1, 3)-block: (H |psi>)^T dir.
-        call lalg_gemmt(nst, nst, np, R_TOTYPE(M_ONE), h_psi(:, :, 1), &
-          dir(:, :, 1), R_TOTYPE(M_ZERO), gram_block)
-        gram_h(1:nst, 2*nst+1:3*nst) = gram_block
+        call X(states_blockt_mul)(gr%m, st%d%dim, h_psi, dir, gram_h(1:nst, 2*nst+1:3*nst))
 
         ! (2, 2)-block: res^T (H res).
-        call lalg_gemmt(nst, nst, np, R_TOTYPE(M_ONE), res(:, :, 1), &
-          h_res(:, :, 1), R_TOTYPE(M_ZERO), gram_block)
-        call X(lobpcg_conj)(st%d%wfs_type, nst, nst, gram_block)
-        gram_h(nst+1:2*nst, nst+1:2*nst) = gram_block
+        call X(states_blockt_mul)(gr%m, st%d%dim, res, h_res, gram_h(nst+1:2*nst, nst+1:2*nst))
+        call X(lobpcg_conj)(st%d%wfs_type, nst, nst, gram_h(nst+1:2*nst, nst+1:2*nst))
 
         ! (2, 3)-block: (H res)^T dir.
-        call lalg_gemmt(nst, nst, np, R_TOTYPE(M_ONE), h_res(:, :, 1), &
-          dir(:, :, 1), R_TOTYPE(M_ZERO), gram_block)
-        gram_h(nst+1:2*nst, 2*nst+1:3*nst) = gram_block
+        call X(states_blockt_mul)(gr%m, st%d%dim, h_res, dir, gram_h(nst+1:2*nst, 2*nst+1:3*nst))
 
         ! (3, 3)-block: dir^T (H dir)
-        call lalg_gemmt(nst, nst, np, R_TOTYPE(M_ONE), dir(:, :, 1), &
-          h_dir(:, :, 1), R_TOTYPE(M_ZERO), gram_block)
-        call X(lobpcg_conj)(st%d%wfs_type, nst, nst, gram_block)
-        gram_h(2*nst+1:3*nst, 2*nst+1:3*nst) = gram_block
+        call X(states_blockt_mul)(gr%m, st%d%dim, dir, h_dir, gram_h(2*nst+1:3*nst, 2*nst+1:3*nst))
+        call X(lobpcg_conj)(st%d%wfs_type, nst, nst, gram_h(2*nst+1:3*nst, 2*nst+1:3*nst))
 
         ! gram_i matrix.
         gram_i = R_TOTYPE(M_ZERO)
@@ -334,19 +321,13 @@
         end do
 
         ! (1, 2)-block: <psi| res.
-        call lalg_gemmt(nst, nst, np, R_TOTYPE(M_ONE), psi(:, :, 1), &
-          res(:, :, 1), R_TOTYPE(M_ZERO), gram_block)
-        gram_i(1:nst, nst+1:2*nst) = gram_block
+        call X(states_blockt_mul)(gr%m, st%d%dim, psi, res, gram_i(1:nst, nst+1:2*nst))
 
         ! (1, 3)-block: <psi| dir.
-        call lalg_gemmt(nst, nst, np, R_TOTYPE(M_ONE), psi(:, :, 1), &
-          dir(:, :, 1), R_TOTYPE(M_ZERO), gram_block)
-        gram_i(1:nst, 2*nst+1:3*nst) = gram_block
+        call X(states_blockt_mul)(gr%m, st%d%dim, psi, dir, gram_i(1:nst, 2*nst+1:3*nst))
 
         ! (2, 3)-block: res^T dir.
-        call lalg_gemmt(nst, nst, np, R_TOTYPE(M_ONE), res(:, :, 1), &
-          dir(:, :, 1), R_TOTYPE(M_ZERO), gram_block)
-        gram_i(nst+1:2*nst, 2*nst+1:3*nst) = gram_block
+        call X(states_blockt_mul)(gr%m, st%d%dim, res, dir, gram_i(nst+1:2*nst, 2*nst+1:3*nst))
 
         call lalg_lowest_geneigensolve(nst, 3*nst, gram_h, gram_i, ritz_val, ritz_vec)
 
@@ -357,26 +338,22 @@
         ! Calculate new conjugate directions:
         ! dir <- dir ritz_dir + res ritz_res
         ! h_dir <- (H res) ritz_res + (H dir) ritz_dir
-        call lalg_gemm(np, nst, nst, R_TOTYPE(M_ONE), dir(:, :, 1), ritz_dir, &
-          R_TOTYPE(M_ZERO), tmp(:, :, 1))
+        call X(states_block_matr_mul)(gr%m, st%d%dim, dir, ritz_dir, tmp)
         call lalg_copy(np*nst, tmp(:, 1, 1), dir(:, 1, 1))
-        call lalg_gemm(np, nst, nst, R_TOTYPE(M_ONE), res(:, :, 1), ritz_res, &
-          R_TOTYPE(M_ONE), dir(:, :, 1))
-        call lalg_gemm(np, nst, nst, R_TOTYPE(M_ONE), h_dir(:, :, 1), ritz_dir, &
-          R_TOTYPE(M_ZERO), tmp(:, :, 1))
+        call X(states_block_matr_mul_add)(gr%m, st%d%dim, R_TOTYPE(M_ONE), &
+          res, ritz_res, R_TOTYPE(M_ONE), dir)
+        call X(states_block_matr_mul)(gr%m, st%d%dim, h_dir, ritz_dir, tmp)
         call lalg_copy(np*nst, tmp(:, 1, 1), h_dir(:, 1, 1))
-        call lalg_gemm(np, nst, nst, R_TOTYPE(M_ONE), h_res(:, :, 1), ritz_res, &
-          R_TOTYPE(M_ONE), h_dir(:, :, 1))
+        call X(states_block_matr_mul_add)(gr%m, st%d%dim, R_TOTYPE(M_ONE), &
+          h_res, ritz_res, R_TOTYPE(M_ONE), h_dir)
 
         ! Calculate new eigenstates:
         ! |psi> <- |psi> ritz_psi + dir
         ! h_psi <- (H |psi>) ritz_psi + H dir
-        call lalg_gemm(np, nst, nst, R_TOTYPE(M_ONE), psi(:, :, 1), ritz_psi, &
-          R_TOTYPE(M_ZERO), tmp(:, :, 1))
+        call X(states_block_matr_mul)(gr%m, st%d%dim, psi, ritz_psi, tmp)
         call lalg_copy(np*nst, tmp(:, 1, 1), psi(:, 1, 1))
         call lalg_axpy(np*nst, R_TOTYPE(M_ONE), dir(:, 1, 1), psi(:, 1, 1))
-        call lalg_gemm(np, nst, nst, R_TOTYPE(M_ONE), h_psi(:, :, 1), ritz_psi, &
-          R_TOTYPE(M_ZERO), tmp(:, :, 1))
+        call X(states_block_matr_mul)(gr%m, st%d%dim, h_psi, ritz_psi, tmp)
         call lalg_copy(np*nst, tmp(:, 1, 1), h_psi(:, 1, 1))
         call lalg_axpy(np*nst, R_TOTYPE(M_ONE), h_dir(:, 1, 1), h_psi(:, 1, 1))
 
@@ -456,7 +433,6 @@
       end if
     end do
 
-    write(*, *) 'CONV', diff
     X(lobpcg_converged) = conv
 
     call pop_sub()
@@ -465,21 +441,31 @@
 
   ! ---------------------------------------------------------
   ! Orthonormalize the column vectors of vs.
-  subroutine X(lobpcg_orth)(wfs_type, nst, np, vs)
-    integer, intent(in)    :: wfs_type
-    integer, intent(in)    :: nst
-    integer, intent(in)    :: np
-    R_TYPE,  intent(inout) :: vs(:, :, :)
+  subroutine X(lobpcg_orth)(m, dim, wfs_type, nst, np, vs)
+    type(mesh_t), intent(in)    :: m
+    integer,      intent(in)    :: dim
+    integer,      intent(in)    :: wfs_type
+    integer,      intent(in)    :: nst
+    integer,      intent(in)    :: np
+    R_TYPE,       intent(inout) :: vs(:, :, :)
 
-    R_TYPE  :: vv(nst, nst)
+    integer :: i, j
+    R_TYPE  :: vv(nst, nst), tmp(m%np_part, dim, nst)
 
     call push_sub('eigen_lobpcg_inc.Xlobpcg_orth')
 
-    call lalg_herk(nst, np, 'C', R_TOTYPE(M_ONE), vs(:, :, 1), R_TOTYPE(M_ZERO), vv)
+    call X(states_blockt_mul)(m, dim, vs, vs, vv)
     call X(lobpcg_conj)(wfs_type, nst, nst, vv)
     call lalg_cholesky(nst, vv)
     call lalg_invert_upper_triangular(nst, vv)
-    call lalg_trmm(np, nst, 'R', R_TOTYPE(M_ONE), vv, vs(:, :, 1))
+    ! Fill lower triangle of nst_tmp with zeros.
+    do i = 2, nst
+      do j = 1, i-1
+        vv(i, j) = R_TOTYPE(M_ZERO)
+      end do
+    end do
+    call X(states_block_matr_mul)(m, dim, vs, vv, tmp)
+    call lalg_copy(np*nst, tmp(:, 1, 1), vs(:, 1, 1))
 
     call pop_sub()
   end subroutine X(lobpcg_orth)
@@ -487,19 +473,18 @@
 
   ! ---------------------------------------------------------
   ! Make residuals orthogonal to eigenstates.
-  subroutine X(lobpcg_orth_res)(nst, np, psi, res, tmp)
-    integer, intent(in)    :: nst
-    integer, intent(in)    :: np
-    R_TYPE,  intent(in)    :: psi(:, :, :)
-    R_TYPE,  intent(inout) :: res(:, :, :)
-    R_TYPE,  intent(inout) :: tmp(:, :, :)
+  subroutine X(lobpcg_orth_res)(m, dim, psi, res, tmp)
+    type(mesh_t), intent(in)    :: m
+    integer,      intent(in)    :: dim
+    R_TYPE,       intent(in)    :: psi(:, :, :)
+    R_TYPE,       intent(inout) :: res(:, :, :)
+    R_TYPE,       intent(inout) :: tmp(:, :, :)
 
     call push_sub('eigen_lobpcg_inc.Xlobpcg_orth_res')
 
-    call lalg_gemmt(nst, nst, np, R_TOTYPE(M_ONE), psi(:, :, 1), &
-      res(:, :, 1), R_TOTYPE(M_ZERO), tmp(:, :, 1))
-    call lalg_gemm(np, nst, nst, -R_TOTYPE(M_ONE), psi(:, :, 1), &
-      tmp(:, :, 1), R_TOTYPE(M_ONE), res(:, :, 1))
+    call X(states_blockt_mul)(m, dim, psi, res, tmp(:, 1, :))
+    call X(states_block_matr_mul_add)(m, dim, -R_TOTYPE(M_ONE), psi, &
+      tmp(:, 1, :), R_TOTYPE(M_ONE), res)
 
     call pop_sub()
   end subroutine X(lobpcg_orth_res)

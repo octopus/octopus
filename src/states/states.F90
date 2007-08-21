@@ -77,6 +77,12 @@ module states_m
 
 
   public ::                         &
+    dstates_blockt_mul,             &
+    zstates_blockt_mul,             &
+    dstates_block_matr_mul,         &
+    zstates_block_matr_mul,         &
+    dstates_block_matr_mul_add,     &
+    zstates_block_matr_mul_add,     &
     dstates_gram_schmidt,           &
     zstates_gram_schmidt,           &
     dstates_dotp,                   &
@@ -127,7 +133,8 @@ module states_m
     FLOAT, pointer :: eigenval(:,:) ! obviously the eigenvalues
     logical        :: fixed_occ     ! should the occupation numbers be fixed?
     FLOAT, pointer :: occ(:,:)      ! the occupation numbers
-    logical        :: fixed_spins   ! In spinors mode, the spin direction is set for the initial (random) orbitals.
+    logical        :: fixed_spins   ! In spinors mode, the spin direction is set
+                                    ! for the initial (random) orbitals.
     FLOAT, pointer :: spin(:, :, :)
     FLOAT, pointer :: momentum(:, :, :)
 
@@ -139,7 +146,7 @@ module states_m
 
     ! This is stuff needed for the parallelization in states
     logical :: parallel_in_states   ! am I parallel in states?
-    type(mpi_grp_t) :: mpi_grp   ! the MPI group related to the parallelization in states
+    type(mpi_grp_t) :: mpi_grp      ! the MPI group related to the parallelization in states
 
     integer :: st_start, st_end     ! needed for some parallel parts
     integer, pointer :: node(:)     ! To which node belongs each state.
