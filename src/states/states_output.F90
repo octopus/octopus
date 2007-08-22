@@ -76,6 +76,7 @@ contains
             dtmp(:), u, ierr, is_tmp = .false.)
         end do
       end do
+      deallocate(dtmp)
     end if
 
     if( (iand(outp%what, output_current).ne.0) .and. (st%d%wfs_type == M_CMPLX) ) then
