@@ -68,6 +68,9 @@ module states_m
     states_spin_channel,              &
     states_calc_dens,                 &
     states_paramagnetic_current,      &
+    states_blockt_mul,                &
+    states_block_matr_mul,            &
+    states_block_matr_mul_add,        &
     kpoints_write_info,               &
     wfs_are_complex,                  &
     wfs_are_real,                     &
@@ -77,12 +80,6 @@ module states_m
 
 
   public ::                         &
-    dstates_blockt_mul,             &
-    zstates_blockt_mul,             &
-    dstates_block_matr_mul,         &
-    zstates_block_matr_mul,         &
-    dstates_block_matr_mul_add,     &
-    zstates_block_matr_mul_add,     &
     dstates_gram_schmidt,           &
     zstates_gram_schmidt,           &
     dstates_dotp,                   &
@@ -172,6 +169,18 @@ module states_m
     module procedure zstates_gram_schmidt1, zstates_gram_schmidt2
   end interface
 
+  interface states_blockt_mul
+    module procedure dstates_blockt_mul, zstates_blockt_mul
+  end interface
+
+  interface states_block_matr_mul
+    module procedure dstates_block_matr_mul, zstates_block_matr_mul
+  end interface
+
+  interface states_block_matr_mul_add
+    module procedure dstates_block_matr_mul_add, zstates_block_matr_mul_add
+  end interface
+  
 contains
 
   ! ---------------------------------------------------------

@@ -22,9 +22,12 @@
 
 #include "global.h"
 
+! Index set of unconverged eigenvectors.
+#define UC uc(1:nuc)
+
   ! ---------------------------------------------------------
-  ! Locally optimal block preconditioned conjugate gradients. For
-  ! details, see:
+  ! Locally optimal block preconditioned conjugate gradient algorithm.
+  ! For details, see:
   !
   ! A. Knyazev. Toward the Optimal Preconditioned Eigensolver: Locally
   ! Optimal Block Preconditioned Conjugate Gradient Method. SIAM
@@ -51,11 +54,12 @@
     integer :: ik, ist
     integer :: i, j, k, maxiter
     integer :: conv
+    integer :: nuc, uc(st%nst)
     logical :: verbose_
 
     FLOAT,  allocatable :: diffs(:, :)
     R_TYPE, allocatable :: tmp(:, :, :)     ! Temporary storage of wavefunction size.
-    R_TYPE, allocatable :: nst_tmp(:, :)    ! Temporary storage of Gram block size.
+    R_TYPE, allocatable :: nuc_tmp(:, :)    ! Temporary storage of Gram block size.
     R_TYPE, allocatable :: res(:, :, :)     ! Residuals.
     R_TYPE, allocatable :: h_res(:, :, :)   ! H res.
     R_TYPE, allocatable :: dir(:, :, :)     ! Conjugate directions.
@@ -79,7 +83,7 @@
     ! (because we do things like <psi|psi>).
     if(gr%m%parallel_in_domains) then
       message(1) = 'The LOBPCG eigenvsolver cannot be used with domain parallelization'
-      message(2) = 'at the moment. Choose another eigensolver.'
+      message(2) = 'at the moment. Choose a different eigensolver.'
       call write_fatal(3)
     end if
 
@@ -108,7 +112,6 @@
 
     ALLOCATE(diffs(nst, st%d%nik), nep)
     ALLOCATE(tmp(NP_PART, st%d%dim, nst), NP_PART*st%d%dim*nst)
-    ALLOCATE(nst_tmp(nst, nst), nst**2)
     ALLOCATE(res(NP_PART, st%d%dim, nst), NP_PART*st%d%dim*nst)
     ALLOCATE(h_res(NP_PART, st%d%dim, nst), NP_PART*st%d%dim*nst)
     ALLOCATE(dir(NP_PART, st%d%dim, nst), NP_PART*st%d%dim*nst)
@@ -116,36 +119,44 @@
     ALLOCATE(h_psi(NP_PART, st%d%dim, nst), NP_PART*st%d%dim*nst)
     ALLOCATE(gram_block(nst, nst), nst**2)
     ALLOCATE(ritz_val(nst), nst)
-    ALLOCATE(ritz_psi(nst, nst), nst**2)
-    ALLOCATE(ritz_dir(nst, nst), nst**2)
-    ALLOCATE(ritz_res(nst, nst), nst**2)
 
     maxiter = niter
     niter   = 0
 
     k_loop: do ik = 1, st%d%nik
+      ! At the beginning, all eigenvectors are considered unconverged.
+      nuc = nst
+      do ist = 1, nst
+        uc(ist) = ist
+      end do
+
       ! Set pointer to current block, so we can drop the k index in the following.
       psi => st%X(psi)(:, :, :, ik)
 
       ! Orthonormalize initial vectors.
-      call X(lobpcg_orth)(gr%m, st%d%dim, st%d%wfs_type, nst, np, psi)
+      call X(lobpcg_orth)(gr%m, st%d%dim, st%d%wfs_type, nst, np, psi, nuc, uc)
 
       ! Get initial Ritz-values and -vectors.
       do ist = 1, nst
         call X(hpsi)(h, gr, psi(:, :, ist), h_psi(:, :, ist), ik)
       end do
 
-      call X(states_blockt_mul)(gr%m, st%d%dim, psi, h_psi, gram_block)
-
+write(*, *) '**1'
+      call states_blockt_mul(gr%m, st%d%dim, psi, h_psi, gram_block)
+write(*, *) '**1_'
       call X(lobpcg_conj)(st%d%wfs_type, nst, nst, gram_block)
 
       ALLOCATE(ritz_vec(nst, nst), nst**2)
       call lalg_eigensolve(nst, gram_block, ritz_vec, eval(:, ik))
 
-      call X(states_block_matr_mul)(gr%m, st%d%dim, psi, ritz_vec, tmp)
+write(*, *) '**2'
+      call states_block_matr_mul(gr%m, st%d%dim, psi, ritz_vec, tmp)
+write(*, *) '**2_'
       call lalg_copy(np*nst, tmp(:, 1, 1), psi(:, 1, 1))
 
-      call X(states_block_matr_mul)(gr%m, st%d%dim, h_psi, ritz_vec, tmp)
+write(*, *) '**3'
+      call states_block_matr_mul(gr%m, st%d%dim, h_psi, ritz_vec, tmp)
+write(*, *) '**3_'
       call lalg_copy(np*nst, tmp(:, 1, 1), h_psi(:, 1, 1))
       deallocate(ritz_vec)
 
@@ -156,7 +167,9 @@
       call X(lobpcg_res)(nst, ik, np, h_psi, psi, eval, res)
 
       ! Check for convergence.
-      conv = X(lobpcg_converged)(nst, ik, gr%m, st%d%dim, tol, res, diffs)
+      call X(lobpcg_unconv_ev)(ik, gr%m, st%d%dim, tol, res, diffs, nuc, uc)
+      conv = nst-nuc
+
       if(conv.eq.nst) then
         if(present(diff)) then
           diff = diffs
@@ -167,26 +180,34 @@
       end if
 
       ! Apply preconditioner.
-      do ist = 1, nst
+      do i = 1, nuc
+        ist = uc(i)
         call X(preconditioner_apply)(pre, gr, h, res(:, :, ist), tmp(:, :, ist))
+        call lalg_copy(np, tmp(:, 1, ist), res(:, 1, ist))
       end do
-      call lalg_copy(np*nst, tmp(:, 1, 1), res(:, 1, 1))
 
       ! Make residuals orthogonal to eigenstates.
-      call X(lobpcg_orth_res)(gr%m, st%d%dim, psi, res, tmp)
+      call X(lobpcg_orth_res)(nst, gr%m, st%d%dim, psi, res, nuc, uc)
 
       ! Orthonormalize residuals.
-      call X(lobpcg_orth)(gr%m, st%d%dim, st%d%wfs_type, nst, np, res)
+write(*, *) '**4'
+      call X(lobpcg_orth)(gr%m, st%d%dim, st%d%wfs_type, nst, np, res, nuc, uc)
+write(*, *) '**4_'
 
       ! Apply Hamiltonian to residuals.
-      do ist = 1, nst
+      do i = 1, nuc
+        ist = uc(i)
         call X(hpsi)(h, gr, res(:, :, ist), h_res(:, :, ist), ik)
       end do
+      niter = niter+nuc
 
       ! Rayleigh-Ritz procedure.
-      ALLOCATE(gram_h(2*nst, 2*nst), (2*nst)**2)
-      ALLOCATE(gram_i(2*nst, 2*nst), (2*nst)**2)
-      ALLOCATE(ritz_vec(2*nst, nst), 2*nst**2)
+      ALLOCATE(ritz_psi(nst, nst), nst**2)
+      ALLOCATE(ritz_dir(nuc, nst), nst*nuc)
+      ALLOCATE(ritz_res(nuc, nst), nst*nuc)
+      ALLOCATE(gram_h(nst+nuc, nst+nuc), (nst+nuc)**2)
+      ALLOCATE(gram_i(nst+nuc, nst+nuc), (nst+nuc)**2)
+      ALLOCATE(ritz_vec(nst+nuc, nst), (nst+nuc)*nst)
 
       ! gram_h matrix.
       gram_h(1:nst, 1:nst) = R_TOTYPE(M_ZERO)
@@ -196,47 +217,60 @@
       end do
 
       ! (1, 2)-block: (H |psi>)^T res.
-      call X(states_blockt_mul)(gr%m, st%d%dim, h_psi, res, gram_h(1:nst, nst+1:2*nst))
+write(*, *) '**5'
+      call states_blockt_mul(gr%m, st%d%dim, h_psi, res, gram_h(1:nst, nst+1:nst+nuc), idx2=UC)
+write(*, *) '**5_'
 
       ! (2, 2)-block: res^T (H res).
-      call X(states_blockt_mul)(gr%m, st%d%dim, res, h_res, gram_h(nst+1:2*nst, nst+1:2*nst))
-      call X(lobpcg_conj)(st%d%wfs_type, nst, nst, gram_h(nst+1:2*nst, nst+1:2*nst))
+write(*, *) '**7'
+      call states_blockt_mul(gr%m, st%d%dim, res, h_res, &
+        gram_h(nst+1:nst+nuc, nst+1:nst+nuc), idx1=UC, idx2=UC)
+write(*, *) '**7_'
+      call X(lobpcg_conj)(st%d%wfs_type, nuc, nuc, gram_h(nst+1:nst+nuc, nst+1:nst+nuc))
 
       ! gram_i matrix.
-      gram_i(1:nst, 1:nst) = R_TOTYPE(M_ZERO)
+      gram_i(1:nst, 1:nst)                 = R_TOTYPE(M_ZERO)
+      gram_i(nst+1:nst+nuc, nst+1:nst+nuc) = R_TOTYPE(M_ZERO)
 
       ! Unit matrices on diagonal blocks.
-      do j = 1, 2*nst
+      do j = 1, nst+nuc
         gram_i(j, j) = 1
       end do
 
       ! (1, 2)-block: <psi| res.
-      call X(states_blockt_mul)(gr%m, st%d%dim, psi, res, gram_i(1:nst, nst+1:2*nst))
+write(*, *) '**8'
+      call states_blockt_mul(gr%m, st%d%dim, psi, res, gram_i(1:nst, nst+1:nst+nuc), idx2=UC)
+write(*, *) '**8_'
 
-      call lalg_lowest_geneigensolve(nst, 2*nst, gram_h, gram_i, ritz_val, ritz_vec)
+      call lalg_lowest_geneigensolve(nst, nst+nuc, gram_h, gram_i, ritz_val, ritz_vec)
 
       ritz_psi = ritz_vec(1:nst, 1:nst)
-      ritz_res = ritz_vec(nst+1:2*nst, 1:nst)
+      ritz_res = ritz_vec(nst+1:nst+nuc, 1:nst)
 
       ! Calculate new conjugate directions.
-      call X(states_block_matr_mul)(gr%m, st%d%dim, res, ritz_res, dir)
-      call X(states_block_matr_mul)(gr%m, st%d%dim, h_res, ritz_res, h_dir)
+write(*, *) '**9'
+      call states_block_matr_mul(gr%m, st%d%dim, res, ritz_res, dir, idxp=UC)
+write(*, *) '**9_'
+write(*, *) '**10'
+      call states_block_matr_mul(gr%m, st%d%dim, h_res, ritz_res, h_dir, idxp=UC)
+write(*, *) '**10_'
 
       ! Calculate new eigenstates and update H |psi>
-      call X(states_block_matr_mul)(gr%m, st%d%dim, psi, ritz_psi, tmp)
+write(*, *) '**11'
+      call states_block_matr_mul(gr%m, st%d%dim, psi, ritz_psi, tmp)
+write(*, *) '**11_'
       call lalg_copy(np*nst, tmp(:, 1, 1), psi(:, 1, 1))
 
       call lalg_axpy(np*nst, R_TOTYPE(M_ONE), dir(:, 1, 1), psi(:, 1, 1))
 
-      call X(states_block_matr_mul)(gr%m, st%d%dim, h_psi, ritz_psi, tmp)
+write(*, *) '**12'
+      call states_block_matr_mul(gr%m, st%d%dim, h_psi, ritz_psi, tmp)
+write(*, *) '**12_'
       call lalg_copy(np*nst, tmp(:, 1, 1), h_psi(:, 1, 1))
       call lalg_axpy(np*nst, R_TOTYPE(M_ONE), h_dir(:, 1, 1), h_psi(:, 1, 1))
 
-      ! Allocate space for bigger Gram matrices in next iterations.
-      deallocate(ritz_vec, gram_h, gram_i)
-      ALLOCATE(ritz_vec(3*nst, nst), 3*nst**2)
-      ALLOCATE(gram_h(3*nst, 3*nst), (3*nst)**2)
-      ALLOCATE(gram_i(3*nst, 3*nst), (3*nst)**2)
+      ! Gram matrices have to be reallocated later (because nuc changes).
+      deallocate(ritz_vec, gram_h, gram_i, ritz_psi, ritz_res, ritz_dir)
 
       ! Copy new eigenvalues.
       call lalg_copy(nst, ritz_val, eval(:, ik))
@@ -246,47 +280,60 @@
         call X(lobpcg_res)(nst, ik, np, h_psi, psi, eval, res)
 
         ! Check for convergence.
-        if(X(lobpcg_converged)(nst, ik, gr%m, st%d%dim, tol, res, diffs).eq.nst) then
+        call X(lobpcg_unconv_ev)(ik, gr%m, st%d%dim, tol, res, diffs, nuc, uc)
+        if(nuc.eq.0) then
           exit iter
         end if
 
+        ALLOCATE(nuc_tmp(nuc, nuc), nuc**2)
+        ALLOCATE(ritz_psi(nst, nst), nst**2)
+        ALLOCATE(ritz_dir(nuc, nst), nst*nuc)
+        ALLOCATE(ritz_res(nuc, nst), nst*nuc)
+        ! Allocate space for Gram matrices in this iterations.
+        ALLOCATE(ritz_vec(nst+2*nuc, nst), nst**2+2*nst*nuc)
+        ALLOCATE(gram_h(nst+2*nuc, nst+2*nuc), (nst+2*nuc)**2)
+        ALLOCATE(gram_i(nst+2*nuc, nst+2*nuc), (nst+2*nuc)**2)
+
         ! Apply the preconditioner.
-        do ist = 1, nst
+        do i = 1, nuc
+          ist = uc(i)
           call X(preconditioner_apply)(pre, gr, h, res(:, :, ist), tmp(:, :, ist))
+          call lalg_copy(np, tmp(:, 1, ist), res(:, 1, ist))
         end do
-        call lalg_copy(np*nst, tmp(:, 1, 1), res(:, 1, 1))
 
         ! Make residuals orthogonal to eigenstates.
-        call X(states_blockt_mul)(gr%m, st%d%dim, psi, res, nst_tmp)
-        call X(states_block_matr_mul_add)(gr%m, st%d%dim, -R_TOTYPE(M_ONE), psi, &
-          nst_tmp, R_TOTYPE(M_ONE), res)
+        call X(lobpcg_orth_res)(nst, gr%m, st%d%dim, psi, res, nuc, uc)
 
         ! Orthonormalize residuals.
-        call X(lobpcg_orth)(gr%m, st%d%dim, st%d%wfs_type, nst, np, res)
+        call X(lobpcg_orth)(gr%m, st%d%dim, st%d%wfs_type, nst, np, res, nuc, uc)
 
         ! Apply Hamiltonian to residual.
-        do ist = 1, nst
+        do i = 1, nuc
+          ist = uc(i)
           call X(hpsi)(h, gr, res(:, :, ist), h_res(:, :, ist), ik)
         end do
+        niter = niter+nuc
 
         ! Orthonormalize conjugate directions.
         ! Since h_dir also has to be modified (to avoid a full calculation of
         ! H dir with the new dir), we cannot use lobpcg_orth at this point.
         !call lalg_herk(nst, np, 'C', R_TOTYPE(M_ONE), dir(:, :, 1), R_TOTYPE(M_ZERO), nst_tmp)
-        call X(states_blockt_mul)(gr%m, st%d%dim, dir, dir, nst_tmp)
-        call X(lobpcg_conj)(st%d%wfs_type, nst, nst, nst_tmp)
-        call lalg_cholesky(nst, nst_tmp)
-        call lalg_invert_upper_triangular(nst, nst_tmp)
-        ! Fill lower triangle of nst_tmp with zeros.
-        do i = 2, nst
-          do j = 1, i-1
-            nst_tmp(i, j) = R_TOTYPE(M_ZERO)
-          end do
+        call states_blockt_mul(gr%m, st%d%dim, dir, dir, nuc_tmp, idx1=UC, idx2=UC)
+        call X(lobpcg_conj)(st%d%wfs_type, nuc, nuc, nuc_tmp)
+        call lalg_cholesky(nuc, nuc_tmp)
+        call lalg_invert_upper_triangular(nuc, nuc_tmp)
+        ! Fill lower triangle of nuc_tmp with zeros.
+        do i = 2, nuc
+          nuc_tmp(i, 1:i-1) = R_TOTYPE(M_ZERO)
         end do
-        call X(states_block_matr_mul)(gr%m, st%d%dim, dir, nst_tmp, tmp)
-        call lalg_copy(np*nst, tmp(:, 1, 1), dir(:, 1, 1))
-        call X(states_block_matr_mul)(gr%m, st%d%dim, h_dir, nst_tmp, tmp)
-        call lalg_copy(np*nst, tmp(:, 1, 1), h_dir(:, 1, 1))
+        call states_block_matr_mul(gr%m, st%d%dim, dir, nuc_tmp, tmp, idxp=UC, idxr=UC)
+        do i = 1, nuc
+          call lalg_copy(np, tmp(:, 1, uc(i)), dir(:, 1, uc(i)))
+        end do
+        call states_block_matr_mul(gr%m, st%d%dim, h_dir, nuc_tmp, tmp, idxp=UC, idxr=UC)
+        do i = 1, nuc
+          call lalg_copy(np, tmp(:, 1, uc(i)), h_dir(:, 1, uc(i)))
+        end do
 
         ! Rayleigh-Ritz procedure.
         ! gram_h matrix.
@@ -297,65 +344,75 @@
         end do
 
         ! (1, 2)-block: (H |psi>)^T res.
-        call X(states_blockt_mul)(gr%m, st%d%dim, h_psi, res, gram_h(1:nst, nst+1:2*nst))
+        call states_blockt_mul(gr%m, st%d%dim, h_psi, res, gram_h(1:nst, nst+1:nst+nuc), idx2=UC)
 
         ! (1, 3)-block: (H |psi>)^T dir.
-        call X(states_blockt_mul)(gr%m, st%d%dim, h_psi, dir, gram_h(1:nst, 2*nst+1:3*nst))
+        call states_blockt_mul(gr%m, st%d%dim, h_psi, dir, &
+          gram_h(1:nst, nst+nuc+1:nst+2*nuc), idx2=UC)
 
         ! (2, 2)-block: res^T (H res).
-        call X(states_blockt_mul)(gr%m, st%d%dim, res, h_res, gram_h(nst+1:2*nst, nst+1:2*nst))
-        call X(lobpcg_conj)(st%d%wfs_type, nst, nst, gram_h(nst+1:2*nst, nst+1:2*nst))
+        call states_blockt_mul(gr%m, st%d%dim, res, h_res, &
+          gram_h(nst+1:nst+nuc, nst+1:nst+nuc), idx1=UC, idx2=UC)
+        call X(lobpcg_conj)(st%d%wfs_type, nuc, nuc, gram_h(nst+1:nst+nuc, nst+1:nst+nuc))
 
         ! (2, 3)-block: (H res)^T dir.
-        call X(states_blockt_mul)(gr%m, st%d%dim, h_res, dir, gram_h(nst+1:2*nst, 2*nst+1:3*nst))
+        call states_blockt_mul(gr%m, st%d%dim, h_res, dir, &
+          gram_h(nst+1:nst+nuc, nst+nuc+1:nst+2*nuc), idx1=UC, idx2=UC)
 
         ! (3, 3)-block: dir^T (H dir)
-        call X(states_blockt_mul)(gr%m, st%d%dim, dir, h_dir, gram_h(2*nst+1:3*nst, 2*nst+1:3*nst))
-        call X(lobpcg_conj)(st%d%wfs_type, nst, nst, gram_h(2*nst+1:3*nst, 2*nst+1:3*nst))
+        call states_blockt_mul(gr%m, st%d%dim, dir, h_dir, &
+          gram_h(nst+nuc+1:nst+2*nuc, nst+nuc+1:nst+2*nuc), idx1=UC, idx2=UC)
+        call X(lobpcg_conj)(st%d%wfs_type, nuc, nuc, &
+          gram_h(nst+nuc+1:nst+2*nuc, nst+nuc+1:nst+2*nuc))
 
         ! gram_i matrix.
         gram_i = R_TOTYPE(M_ZERO)
         ! Unit matrices on diagonal blocks.
-        do j = 1, 3*nst
+        do j = 1, nst+2*nuc
           gram_i(j, j) = 1
         end do
 
         ! (1, 2)-block: <psi| res.
-        call X(states_blockt_mul)(gr%m, st%d%dim, psi, res, gram_i(1:nst, nst+1:2*nst))
+        call states_blockt_mul(gr%m, st%d%dim, psi, res, gram_i(1:nst, nst+1:nst+nuc), idx2=UC)
 
         ! (1, 3)-block: <psi| dir.
-        call X(states_blockt_mul)(gr%m, st%d%dim, psi, dir, gram_i(1:nst, 2*nst+1:3*nst))
+        call states_blockt_mul(gr%m, st%d%dim, psi, dir, &
+          gram_i(1:nst, nst+nuc+1:nst+2*nuc), idx2=UC)
 
-        ! (2, 3)-block: res^T dir.
-        call X(states_blockt_mul)(gr%m, st%d%dim, res, dir, gram_i(nst+1:2*nst, 2*nst+1:3*nst))
+        ! (2, 3)-block: res^T dir
+        call states_blockt_mul(gr%m, st%d%dim, res, dir, &
+          gram_i(nst+1:nst+nuc, nst+nuc+1:nst+2*nuc), idx1=UC, idx2=UC)
 
-        call lalg_lowest_geneigensolve(nst, 3*nst, gram_h, gram_i, ritz_val, ritz_vec)
+        call lalg_lowest_geneigensolve(nst, nst+2*nuc, gram_h, gram_i, ritz_val, ritz_vec)
 
         ritz_psi = ritz_vec(1:nst, 1:nst)
-        ritz_res = ritz_vec(nst+1:2*nst, 1:nst)
-        ritz_dir = ritz_vec(2*nst+1:3*nst, 1:nst)
+        ritz_res = ritz_vec(nst+1:nst+nuc, 1:nst)
+        ritz_dir = ritz_vec(nst+nuc+1:nst+2*nuc, 1:nst)
 
         ! Calculate new conjugate directions:
         ! dir <- dir ritz_dir + res ritz_res
         ! h_dir <- (H res) ritz_res + (H dir) ritz_dir
-        call X(states_block_matr_mul)(gr%m, st%d%dim, dir, ritz_dir, tmp)
+        call states_block_matr_mul(gr%m, st%d%dim, dir, ritz_dir, tmp, idxp=UC)
         call lalg_copy(np*nst, tmp(:, 1, 1), dir(:, 1, 1))
-        call X(states_block_matr_mul_add)(gr%m, st%d%dim, R_TOTYPE(M_ONE), &
-          res, ritz_res, R_TOTYPE(M_ONE), dir)
-        call X(states_block_matr_mul)(gr%m, st%d%dim, h_dir, ritz_dir, tmp)
+        call states_block_matr_mul_add(gr%m, st%d%dim, R_TOTYPE(M_ONE), &
+          res, ritz_res, R_TOTYPE(M_ONE), dir, idxp=UC)
+        call states_block_matr_mul(gr%m, st%d%dim, h_dir, ritz_dir, tmp, idxp=UC)
         call lalg_copy(np*nst, tmp(:, 1, 1), h_dir(:, 1, 1))
-        call X(states_block_matr_mul_add)(gr%m, st%d%dim, R_TOTYPE(M_ONE), &
-          h_res, ritz_res, R_TOTYPE(M_ONE), h_dir)
+        call states_block_matr_mul_add(gr%m, st%d%dim, R_TOTYPE(M_ONE), &
+          h_res, ritz_res, R_TOTYPE(M_ONE), h_dir, idxp=UC)
 
         ! Calculate new eigenstates:
         ! |psi> <- |psi> ritz_psi + dir
         ! h_psi <- (H |psi>) ritz_psi + H dir
-        call X(states_block_matr_mul)(gr%m, st%d%dim, psi, ritz_psi, tmp)
+        call states_block_matr_mul(gr%m, st%d%dim, psi, ritz_psi, tmp)
         call lalg_copy(np*nst, tmp(:, 1, 1), psi(:, 1, 1))
         call lalg_axpy(np*nst, R_TOTYPE(M_ONE), dir(:, 1, 1), psi(:, 1, 1))
-        call X(states_block_matr_mul)(gr%m, st%d%dim, h_psi, ritz_psi, tmp)
+        call states_block_matr_mul(gr%m, st%d%dim, h_psi, ritz_psi, tmp)
         call lalg_copy(np*nst, tmp(:, 1, 1), h_psi(:, 1, 1))
         call lalg_axpy(np*nst, R_TOTYPE(M_ONE), h_dir(:, 1, 1), h_psi(:, 1, 1))
+
+        ! Gram matrices have to be reallocated later (because nuc changes).
+        deallocate(nuc_tmp, ritz_vec, gram_h, gram_i, ritz_psi, ritz_res, ritz_dir)
 
         ! Copy new eigenvalues.
         call lalg_copy(nst, ritz_val, eval(:, ik))
@@ -366,18 +423,15 @@
       if(k.ge.maxiter) then
         call X(lobpcg_res)(nst, ik, np, h_psi, psi, eval, res)
       end if
-      conv = X(lobpcg_converged)(nst, ik, gr%m, st%d%dim, tol, res, diffs)
+      call X(lobpcg_unconv_ev)(ik, gr%m, st%d%dim, tol, res, diffs, nuc, uc)
+      conv = nst-nuc
       if(present(diff)) then
         diff = diffs
       end if
       converged = converged + conv
-      niter     = niter+k-1
-
-      deallocate(ritz_vec, gram_h, gram_i)
     end do k_loop
 
-    deallocate(tmp, nst_tmp, res, h_res, dir, h_dir, h_psi, &
-      gram_block, ritz_val, ritz_psi, ritz_dir, ritz_res, diffs)
+    deallocate(tmp, res, h_res, dir, h_dir, h_psi, gram_block, ritz_val, diffs)
 
     if(verbose_) call messages_print_stress(stdout)
 
@@ -396,17 +450,57 @@
     FLOAT,   intent(in)    :: eval(:, :)
     R_TYPE,  intent(inout) :: res(:, :, :)
 
-    integer :: ist
+    integer :: i
 
     call push_sub('eigen_lobpcg_inc.Xlobpcg_res')
 
-    do ist = 1, nst
-      call lalg_copy(np, h_psi(:, 1, ist), res(:, 1, ist))
-      call lalg_axpy(np, -eval(ist, ik), psi(:, 1, ist), res(:, 1, ist))
+    do i = 1, nst
+      call lalg_copy(np, h_psi(:, 1, i), res(:, 1, i))
+      call lalg_axpy(np, -eval(i, ik), psi(:, 1, i), res(:, 1, i))
     end do
 
     call pop_sub()
   end subroutine X(lobpcg_res)
+
+
+  ! ---------------------------------------------------------
+  ! Recalculate set of unconverged eigenvectors.
+  subroutine X(lobpcg_unconv_ev)(ik, m, dim, tol, res, diff, nuc, uc)
+    integer,      intent(in)    :: ik
+    type(mesh_t), intent(in)    :: m
+    integer,      intent(in)    :: dim
+    FLOAT,        intent(in)    :: tol
+    R_TYPE,       intent(in)    :: res(:, :, :)
+    FLOAT,        intent(inout) :: diff(:, :)
+    integer,      intent(inout) :: nuc
+    integer,      intent(inout) :: uc(:)
+
+    integer :: i, ist, j, new_nuc
+    integer :: new_uc(nuc)
+
+    call push_sub('eigen_lobpcg_inc.Xlobpcg_unconv_ev')
+
+    j       = 1
+    new_nuc = 0
+    do i = 1, nuc
+      ist = uc(i)
+      diff(ist, ik) = X(states_nrm2)(m, dim, res(:, :, ist))
+      if(diff(ist, ik).ge.tol) then
+        new_uc(j) = ist
+        new_nuc   = new_nuc+1
+        j         = j+1
+        write(*, *) 'UNCONVERGED EV', ist, diff(ist, ik), tol
+      else
+        write(*, *) '  CONVERGED EV', ist, diff(ist, ik), tol
+      end if
+    end do
+    nuc       = new_nuc
+    uc(1:nuc) = new_uc(1:nuc)
+
+    write(*, *) 'UNCONVERGED EV:', uc(1:nuc)
+
+    call pop_sub()
+  end subroutine X(lobpcg_unconv_ev)
 
 
   ! ---------------------------------------------------------
@@ -422,7 +516,7 @@
 
     integer :: ist, conv
 
-    call push_sub('eigen_lobpcg_inc.lobpcg_converged')
+    call push_sub('eigen_lobpcg_inc.Xlobpcg_converged')
 
     conv = 0
 
@@ -441,31 +535,35 @@
 
   ! ---------------------------------------------------------
   ! Orthonormalize the column vectors of vs.
-  subroutine X(lobpcg_orth)(m, dim, wfs_type, nst, np, vs)
+  subroutine X(lobpcg_orth)(m, dim, wfs_type, nst, np, vs, nuc, uc)
     type(mesh_t), intent(in)    :: m
     integer,      intent(in)    :: dim
     integer,      intent(in)    :: wfs_type
     integer,      intent(in)    :: nst
     integer,      intent(in)    :: np
     R_TYPE,       intent(inout) :: vs(:, :, :)
+    integer,      intent(in)    :: nuc
+    integer,      intent(in)    :: uc(:)
 
-    integer :: i, j
-    R_TYPE  :: vv(nst, nst), tmp(m%np_part, dim, nst)
+    integer :: i
+
+    R_TYPE  :: vv(nuc, nuc), tmp(m%np_part, dim, nst)
 
     call push_sub('eigen_lobpcg_inc.Xlobpcg_orth')
 
-    call X(states_blockt_mul)(m, dim, vs, vs, vv)
-    call X(lobpcg_conj)(wfs_type, nst, nst, vv)
-    call lalg_cholesky(nst, vv)
-    call lalg_invert_upper_triangular(nst, vv)
-    ! Fill lower triangle of nst_tmp with zeros.
-    do i = 2, nst
-      do j = 1, i-1
-        vv(i, j) = R_TOTYPE(M_ZERO)
-      end do
+    call states_blockt_mul(m, dim, vs, vs, vv, idx1=UC, idx2=UC)
+    call X(lobpcg_conj)(wfs_type, nuc, nuc, vv)
+    call X(write_matrix)(nuc, nuc, vv)
+    call lalg_cholesky(nuc, vv)
+    call lalg_invert_upper_triangular(nuc, vv)
+    ! Fill lower triangle of vv with zeros.
+    do i = 2, nuc
+      vv(i, 1:i-1) = R_TOTYPE(M_ZERO)
     end do
-    call X(states_block_matr_mul)(m, dim, vs, vv, tmp)
-    call lalg_copy(np*nst, tmp(:, 1, 1), vs(:, 1, 1))
+    call states_block_matr_mul(m, dim, vs, vv, tmp, idxp=UC, idxr=UC)
+    do i = 1, nuc
+      call lalg_copy(np, tmp(:, 1, uc(i)), vs(:, 1, uc(i)))
+    end do
 
     call pop_sub()
   end subroutine X(lobpcg_orth)
@@ -473,18 +571,22 @@
 
   ! ---------------------------------------------------------
   ! Make residuals orthogonal to eigenstates.
-  subroutine X(lobpcg_orth_res)(m, dim, psi, res, tmp)
+  subroutine X(lobpcg_orth_res)(nst, m, dim, psi, res, nuc, uc)
+    integer,      intent(in)    :: nst
     type(mesh_t), intent(in)    :: m
     integer,      intent(in)    :: dim
     R_TYPE,       intent(in)    :: psi(:, :, :)
     R_TYPE,       intent(inout) :: res(:, :, :)
-    R_TYPE,       intent(inout) :: tmp(:, :, :)
+    integer,      intent(in)    :: nuc
+    integer,      intent(in)    :: uc(:)
+
+    R_TYPE :: tmp(nst, nuc)
 
     call push_sub('eigen_lobpcg_inc.Xlobpcg_orth_res')
 
-    call X(states_blockt_mul)(m, dim, psi, res, tmp(:, 1, :))
-    call X(states_block_matr_mul_add)(m, dim, -R_TOTYPE(M_ONE), psi, &
-      tmp(:, 1, :), R_TOTYPE(M_ONE), res)
+    call states_blockt_mul(m, dim, psi, res, tmp, idx2=UC)
+    call states_block_matr_mul_add(m, dim, -R_TOTYPE(M_ONE), psi, &
+      tmp, R_TOTYPE(M_ONE), res, idxr=UC)
 
     call pop_sub()
   end subroutine X(lobpcg_orth_res)
@@ -533,7 +635,7 @@
       do j = 1, n
         write(outp, fmt) trim(outp), real(a(i, j)), '+i', aimag(a(i, j)), '  '
       end do
-      write(*, '(a)') trim(outp)
+      write(23, '(a)') trim(outp)
     end do
   end subroutine zwrite_matrix
 
@@ -541,14 +643,14 @@
     integer, intent(in) :: m, n
     FLOAT,   intent(in) :: a(:, :)
 
-    integer   :: i, j
+    integer   :: i
     character(len=20) :: fmt
 
     write(fmt, *) n
-    fmt = '('//trim(fmt)//'f12.3)'
+    fmt = '('//trim(fmt)//'f20.8)'
 
     do i = 1, m
-      write(*, fmt) real(a(i, :))
+      write(23, fmt) real(a(i, :))
     end do
   end subroutine dwrite_matrix
   ! Debug ^^.

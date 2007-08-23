@@ -34,7 +34,7 @@ subroutine X(states_blockt_mul)(mesh, dim, psi1, psi2, res, idx1, idx2)
   integer              :: m, n
   integer, allocatable :: idx1_(:), idx2_(:)
 
-  call push_sub('states_inc.Xstates_block_mul')
+  call push_sub('states_inc.Xstates_blockt_mul')
 
   if(present(idx1)) then
     m = ubound(idx1, 1)
@@ -64,7 +64,7 @@ subroutine X(states_blockt_mul)(mesh, dim, psi1, psi2, res, idx1, idx2)
     do j = 1, n
       res(i, j) = R_TOTYPE(M_ZERO)
       do idim = 1, dim
-        res(idx1_(i), idx2_(j)) = res(idx1_(i), idx2_(j)) + &
+        res(i, j) = res(i, j) + &
           lalg_dot(mesh%np, psi1(:, idim, idx1_(i)), psi2(:, idim, idx2_(j)))
       end do
     end do
@@ -78,20 +78,19 @@ end subroutine X(states_blockt_mul)
 
 ! ---------------------------------------------------------
 ! Multiplication of block of states by matrix:
-! res <- psi(idxp) * matr(idxm).
-subroutine X(states_block_matr_mul)(mesh, dim, psi, matr, res, idxp, idxm)
+! res <- psi(idxp) * matr.
+subroutine X(states_block_matr_mul)(mesh, dim, psi, matr, res, idxp, idxr)
   type(mesh_t),      intent(in)  :: mesh
   integer,           intent(in)  :: dim
   R_TYPE,            intent(in)  :: psi(:, :, :)
   R_TYPE,            intent(in)  :: matr(:, :)
   R_TYPE,            intent(out) :: res(:, :, :)
-  integer, optional, intent(in)  :: idxp(:)
-  integer, optional, intent(in)  :: idxm(:)
+  integer, optional, intent(in)  :: idxp(:), idxr(:)
 
-  call push_sub('states_inc.X(states_block_matr)')
+  call push_sub('states_inc.Xstates_block_matr_mul')
 
   call X(states_block_matr_mul_add)(mesh, dim, R_TOTYPE(M_ONE), psi, matr, &
-    R_TOTYPE(M_ZERO), res, idxp, idxm)
+    R_TOTYPE(M_ZERO), res, idxp, idxr)
 
   call pop_sub()
 end subroutine X(states_block_matr_mul)
@@ -99,8 +98,8 @@ end subroutine X(states_block_matr_mul)
 
 ! ---------------------------------------------------------
 ! Multiplication of block of states by matrix plus block of states:
-! res <- alpha * psi(idxp) * matr(idxm) + beta * res.
-subroutine X(states_block_matr_mul_add)(mesh, dim, alpha, psi, matr, beta, res, idxp, idxm)
+! res <- alpha * psi(idx) * matr + beta * res.
+subroutine X(states_block_matr_mul_add)(mesh, dim, alpha, psi, matr, beta, res, idxp, idxr)
   type(mesh_t),      intent(in)  :: mesh
   integer,           intent(in)  :: dim
   R_TYPE,            intent(in)  :: alpha
@@ -108,13 +107,12 @@ subroutine X(states_block_matr_mul_add)(mesh, dim, alpha, psi, matr, beta, res, 
   R_TYPE,            intent(in)  :: matr(:, :)
   R_TYPE,            intent(in)  :: beta
   R_TYPE,            intent(out) :: res(:, :, :)
-  integer, optional, intent(in)  :: idxp(:)
-  integer, optional, intent(in)  :: idxm(:)
+  integer, optional, intent(in)  :: idxp(:), idxr(:)
 
-  integer              :: m, n, i, j, idim
-  integer, allocatable :: idxp_(:), idxm_(:)
+  integer              :: l, m, n, i, j, idim
+  integer, allocatable :: idxp_(:), idxr_(:)
 
-  call push_sub('states_inc.X(states_block_matr)')
+  call push_sub('states_inc.Xstates_block_matr_add')
 
   if(present(idxp)) then
     m = ubound(idxp, 1)
@@ -127,29 +125,41 @@ subroutine X(states_block_matr_mul_add)(mesh, dim, alpha, psi, matr, beta, res, 
       idxp_(i) = i
     end do
   end if
-  if(present(idxm)) then
-    n = ubound(idxm, 1)
-    ALLOCATE(idxm_(n), n)
-    idxm_ = idxm
+  if(present(idxr)) then
+    n = ubound(idxr, 1)
+    ALLOCATE(idxr_(n), n)
+    idxr_ = idxr
   else
-    n = ubound(matr, 2)
-    ALLOCATE(idxm_(n), n)
+    n = ubound(psi, 3)
+    ALLOCATE(idxr_(n), n)
     do i = 1, n
-      idxm_(i) = i
+      idxr_(i) = i
     end do
   end if
 
+  l = ubound(matr, 2)
+
   ! FIXME: does not work with domain parallelization.  
-  do i = 1, mesh%np
-    do j = 1, n
-      do idim = 1, dim
-        res(i, idim, j) = alpha*sum(psi(i, idim, idxp_)*matr(:, idxm_(j))) + &
-          beta*res(i, idim, j)
+  if(beta.eq.R_TOTYPE(M_ZERO)) then
+    do i = 1, mesh%np
+      do j = 1, l
+        do idim = 1, dim
+          res(i, idim, idxr_(j)) = alpha*sum(psi(i, idim, idxp_)*matr(1:m, j))
+        end do
       end do
     end do
-  end do
+  else
+    do i = 1, mesh%np
+      do j = 1, l
+        do idim = 1, dim
+          res(i, idim, idxr_(j)) = alpha*sum(psi(i, idim, idxp_)*matr(1:m, j)) + &
+            beta*res(i, idim, idxr_(j))
+        end do
+      end do
+    end do
+  end if
   
-  deallocate(idxp_, idxm_)
+  deallocate(idxp_, idxr_)
 
   call pop_sub()
 end subroutine X(states_block_matr_mul_add)

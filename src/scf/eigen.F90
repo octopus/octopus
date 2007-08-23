@@ -83,7 +83,7 @@ module eigen_solver_m
   integer, parameter :: RS_CG      = 5
   integer, parameter :: RS_CG_NEW  = 6
   integer, parameter :: EVOLUTION  = 7
-  integer, parameter :: LOBPCG     = 8
+  integer, parameter :: RS_LOBPCG  = 8
 
   ! For the TRLan package
 #if defined(HAVE_TRLAN)
@@ -116,21 +116,24 @@ contains
     !% Decides the eigensolver that obtains the lowest eigenvalues
     !% and eigenfunctions of the Kohn-Sham Hamiltonian.
     !%Option cg 5
-    !% Conjugate-gradients algorithm
+    !% Conjugate-gradients algorithm.
     !%Option trlan 1
     !% Lanczos scheme. Requires the TRLan package.
     !%Option plan 11
     !% Preconditioned Lanczos scheme.
     !%Option arpack 3
-    !% Implicitly Restarted Arnoldi Method. Requires the ARPACK package
+    !% Implicitly Restarted Arnoldi Method. Requires the ARPACK package.
     !%Option jdqz 5
-    !% Jacobi-Davidson scheme. Requires the JDQZ package
+    !% Jacobi-Davidson scheme. Requires the JDQZ package.
     !%Option cg_new 6
-    !% A rewritting of the cg option, that will eventually substitute it.
+    !% A rewriting of the cg option, that will eventually substitute it.
     !%Option evolution 7
-    !% Propagation in imaginary time
+    !% Propagation in imaginary time.
     !%Option lobpcg 8
-    !% Locally optimal block preconditioned conjugate gradient algorithm.
+    !% Locally optimal block preconditioned conjugate gradient algorithm,
+    !% see: A. Knyazev. Toward the Optimal Preconditioned Eigensolver: Locally
+    !% Optimal Block Preconditioned Conjugate Gradient Method. SIAM
+    !% Journal on Scientific Computing, 23(2):517­541, 2001.
     !%End
     call loct_parse_int(check_inp('EigenSolver'), RS_CG, eigens%es_type)
 
@@ -184,7 +187,7 @@ contains
       !%End
       call loct_parse_float(check_inp('EigenSolverImaginaryTime'), M_ONE, eigens%imag_time)
       if(eigens%imag_time <= M_ZERO) call input_error('EigenSolverImaginaryTime')
-    case(LOBPCG)
+    case(RS_LOBPCG)
     case default
       call input_error('EigenSolver')
     end select
@@ -235,7 +238,7 @@ contains
     if(eigens%es_maxiter < 1) call input_error('EigenSolverMaxIter')
 
     select case(eigens%es_type)
-    case(RS_PLAN, RS_CG, LOBPCG)
+    case(RS_PLAN, RS_CG, RS_LOBPCG)
       call preconditioner_init(eigens%pre, gr)
     end select
 
@@ -255,7 +258,7 @@ contains
     type(eigen_solver_t), intent(inout) :: eigens
 
     select case(eigens%es_type)
-    case(RS_PLAN, RS_CG, LOBPCG)
+    case(RS_PLAN, RS_CG, RS_LOBPCG)
       call preconditioner_end(eigens%pre)
     end select
 
@@ -318,7 +321,7 @@ contains
       case(EVOLUTION)
         call deigen_solver_evolution(gr, st, h, tol, maxiter, eigens%converged, eigens%diff, &
              tau = eigens%imag_time)
-      case(LOBPCG)
+      case(RS_LOBPCG)
         call deigen_solver_lobpcg(gr, st, h, eigens%pre, tol, maxiter, eigens%converged, &
           eigens%diff)
       end select
@@ -337,7 +340,7 @@ contains
       case(EVOLUTION)
         call zeigen_solver_evolution(gr, st, h, tol, maxiter, eigens%converged, eigens%diff, &
              tau = eigens%imag_time)
-      case(LOBPCG)
+      case(RS_LOBPCG)
        call zeigen_solver_lobpcg(gr, st, h, eigens%pre, tol, maxiter, eigens%converged, &
          eigens%diff)
       end select
@@ -367,7 +370,7 @@ contains
 
 
 #include "undef.F90"
-#include "real.F90"
+#include "complex.F90"
 #include "eigen_inc.F90"
 #include "eigen_cg_inc.F90"
 #include "eigen_plan_inc.F90"
@@ -376,7 +379,7 @@ contains
 
 
 #include "undef.F90"
-#include "complex.F90"
+#include "real.F90"
 #include "eigen_inc.F90"
 #include "eigen_cg_inc.F90"
 #include "eigen_plan_inc.F90"
