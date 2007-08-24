@@ -387,10 +387,12 @@ contains
     end if
 
     ! Only single-electron calculations.
-    no_electrons = nint(sum(sys%st%occ(1,:)))
+    ! WARNING: maybe this should check that we really have occupation one for one of the spin-orbitals,
+    ! and occupation zero for all the others. Otherwise the algorithms are bound to fail.
+    no_electrons = nint(sum(sys%st%occ(:, :)))
     if(no_electrons .ne. 1) then
-      write(message(1),'(a,i4)') 'Number of electrons (currently ',no_electrons,') should be just one.'
-      write(message(2),'(a)')    'Optimal control theory for many electron systems not yet developed!'
+      write(message(1),'(a,i4,a)') 'Number of electrons (currently ',no_electrons,') should be just one.'
+      write(message(2),'(a)')      'Optimal control theory for many electron systems not yet developed!'
       call write_fatal(2)
     end if
 
