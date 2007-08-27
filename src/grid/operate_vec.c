@@ -166,7 +166,7 @@ void FC_FUNC_(doperate_sse,DOPERATE_SSE)(const int * opnp,
     
     for(j = 0; j < n ; j++) vw[j] =_mm_set1_pd(w[j]);
     
-    for(i = 0; i < (np-4+1); i+=4) {
+    for(i = 0; i < (np-2+1); i+=2) {
       const int * restrict index0 = opi + n*i;
       const int * restrict index1 = opi + n*i+n;
 
