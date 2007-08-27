@@ -105,17 +105,12 @@ void FC_FUNC_(zoperate_sse,ZOPERATE_SSE)(const int * opnp,
 
     vw = malloc(n*16);
 
-    for(j = 0; j < n ; j++) {
-      vw[j] =_mm_set1_pd(w[j]);
-    }
-    
+    for(j = 0; j < n ; j++) vw[j] =_mm_set1_pd(w[j]);
 
 #pragma omp for
     for(i = 0; i < np; i++) {
 
-#ifdef HAVE_C_OMP
       index = opi + n*i;
-#endif
 
       a = _mm_mul_pd(vw[0], fi[index[0]-1]);
       b = _mm_setzero_pd();
@@ -135,9 +130,6 @@ void FC_FUNC_(zoperate_sse,ZOPERATE_SSE)(const int * opnp,
     
       for(; j < n; j++) a = _mm_add_pd(a, _mm_mul_pd(vw[j], fi[index[j]-1]));
 
-#ifndef HAVE_C_OMP    
-      index += n;
-#endif
       a = _mm_add_pd(a, b);
       c = _mm_add_pd(c, d);
       e = _mm_add_pd(e, f);
@@ -172,31 +164,27 @@ void FC_FUNC_(doperate_sse,DOPERATE_SSE)(const int * opnp,
 
     vw = malloc(n*16);
     
-    for(j = 0; j < n ; j++) {
-      vw[j] =_mm_set1_pd(w[j]);
-    }
+    for(j = 0; j < n ; j++) vw[j] =_mm_set1_pd(w[j]);
     
-    for(i = 0; i < (np-2+1); i+=2) {
-      const int * restrict index0 = opi + n*i; 
-      const int * restrict index1 = opi + n*i+n; 
+    for(i = 0; i < (np-4+1); i+=4) {
+      const int * restrict index0 = opi + n*i;
+      const int * restrict index1 = opi + n*i+n;
 
       register __m128d a  __attribute__ ((__aligned__ (16)));
-      register __m128d c  __attribute__ ((__aligned__ (16)));
-      
-      c = _mm_setr_pd(mfi[index0[0]], mfi[index1[0]]);
-      a = _mm_mul_pd(vw[0], c);
-      
-      for(j=1; j < n; j++) {
-	c = _mm_setr_pd(mfi[index0[j]], mfi[index1[j]]);
-	a = _mm_add_pd(a, _mm_mul_pd(vw[j], c));
+
+      a = _mm_mul_pd(vw[0], _mm_setr_pd(mfi[index0[0]], mfi[index1[0]]) );
+
+      for(j = 1; j < n; j++) {
+	a = _mm_add_pd(a, _mm_mul_pd(vw[j], _mm_setr_pd(mfi[index0[j]], mfi[index1[j]]) ) );
       }
+      
+      _mm_storeu_pd(fo+i  , a);
 
-      _mm_storeu_pd(fo+i, a);
-
-      // This sequence is recommended for the Pentium 4 instead of _mm_storeu_pd:
-      //      _mm_store_sd(fo+i, a);
-      //      _mm_unpackhi_pd(a, a);
-      //      _mm_store_sd(fo+i+1, a);
+      /* This sequence is recommended for the Pentium 4 instead of _mm_storeu_pd:
+            _mm_store_sd(fo+i, a);
+            _mm_unpackhi_pd(a, a);
+            _mm_store_sd(fo+i+1, a);
+      */
       
     }
 
