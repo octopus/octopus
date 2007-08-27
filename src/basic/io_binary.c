@@ -147,7 +147,7 @@ inline void init_header(header_t * h){
   for(i=0;i<5;i++) h -> extra[i] = 0;
 }
 
-inline int check_header(header_t * h, int * correct_endianness){
+static inline int check_header(header_t * h, int * correct_endianness){
   if( strcmp("pulpo", h -> text) != 0 ) return 5;
   if( h -> version != 0 ) return 5;
 

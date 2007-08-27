@@ -1,27 +1,3 @@
-dnl This macros checks for the presence of GCC style vectorial expressions.
-AC_DEFUN([ACX_GCC_VECTORS],[
-    AC_MSG_CHECKING(for gcc style vectorial expressions)
-    AC_LANG(C)
-    AC_TRY_RUN(
-      [
-        typedef double v2df __attribute__ ((vector_size (16)));
-        main() { 
-        v2df a, b, c;
-        a = a + b*c; 
-        return (sizeof(v2df) == 16) ? 0 : 1;
-        }
-      ],
-      [
-        AC_MSG_RESULT(yes)
-        AC_DEFINE(HAVE_GCC_VECTORS, 1,
-                  [Define if the compiler supports gcc vectorial expressions])
-      ],
-      [
-        AC_MSG_RESULT(no)
-      ])
-])
-
-
 dnl A test, if malloc(3) returns addresses that are multiples of 16.
 AC_DEFUN([ACX_MALLOC_ALIGNMENT], [
     AC_MSG_CHECKING(if malloc aligns memory to 16 byte boundaries)

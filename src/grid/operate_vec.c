@@ -23,7 +23,7 @@
 
 #include <config.h>
 
-#if defined(HAVE_GCC_VECTORS) && defined(HAVE_C_SSE2) && defined(HAVE_EMMINTRIN_H) && defined(FC_USES_MALLOC)
+#if defined(HAVE_C_SSE2) && defined(HAVE_EMMINTRIN_H) && defined(FC_USES_MALLOC)
 
 #if defined(HAVE_16_BYTES_ALIGNED_MALLOC)
 
@@ -68,32 +68,27 @@ void * malloc (size_t size){
 
 
 #if defined(USE_VECTORS)
-typedef double v2df __attribute__ ((vector_size (16)));
 
 #include <emmintrin.h>
-
-#define set_vec(vec, a, b) \
-(vec) = _mm_loadl_pd((vec), (a)); \
-(vec) = _mm_loadh_pd((vec), (b));
 
 void FC_FUNC_(zoperate_sse,ZOPERATE_SSE)(const int * opnp, 
 				const int * opn, 
 				const double * restrict w, 
 				const int * opi, 
-				const v2df * fi, 
-				v2df * restrict fo){
+				const __m128d * fi, 
+				__m128d * restrict fo){
 
   /* GCC 3.x requires these variables to be declared static to have the proper alignment */
 #if __GNUC__ <= 3
 #define register static
 #endif
 
-  register v2df a  __attribute__ ((__aligned__ (16)));
-  register v2df b  __attribute__ ((__aligned__ (16)));
-  register v2df c  __attribute__ ((__aligned__ (16)));
-  register v2df d  __attribute__ ((__aligned__ (16)));
-  register v2df e  __attribute__ ((__aligned__ (16)));
-  register v2df f  __attribute__ ((__aligned__ (16)));
+  register __m128d a  __attribute__ ((__aligned__ (16)));
+  register __m128d b  __attribute__ ((__aligned__ (16)));
+  register __m128d c  __attribute__ ((__aligned__ (16)));
+  register __m128d d  __attribute__ ((__aligned__ (16)));
+  register __m128d e  __attribute__ ((__aligned__ (16)));
+  register __m128d f  __attribute__ ((__aligned__ (16)));
 
 #undef register
 
@@ -103,7 +98,7 @@ void FC_FUNC_(zoperate_sse,ZOPERATE_SSE)(const int * opnp,
   const int nm2  = n - UNROLL + 1;
   int i, j;
 
-  v2df * restrict vw;
+  __m128d * restrict vw;
 
 #pragma omp parallel private(a, b, c, d, e, f, index, i, j, vw)
   {
@@ -111,7 +106,7 @@ void FC_FUNC_(zoperate_sse,ZOPERATE_SSE)(const int * opnp,
     vw = malloc(n*16);
 
     for(j = 0; j < n ; j++) {
-      set_vec(vw[j], w+j, w+j);
+      vw[j] =_mm_set1_pd(w[j]);
     }
     
 
@@ -122,7 +117,7 @@ void FC_FUNC_(zoperate_sse,ZOPERATE_SSE)(const int * opnp,
       index = opi + n*i;
 #endif
 
-      a = vw[0] * fi[index[0]-1];
+      a = _mm_mul_pd(vw[0], fi[index[0]-1]);
       b = _mm_setzero_pd();
       c = _mm_setzero_pd();
       d = _mm_setzero_pd();
@@ -130,22 +125,25 @@ void FC_FUNC_(zoperate_sse,ZOPERATE_SSE)(const int * opnp,
       f = _mm_setzero_pd();
 
       for(j = 1; j < nm2; j += UNROLL){
-	a += vw[j  ] * fi[index[j+0]-1];
-	b += vw[j+1] * fi[index[j+1]-1];
-	c += vw[j+2] * fi[index[j+2]-1];
-	d += vw[j+3] * fi[index[j+3]-1];
-	e += vw[j+4] * fi[index[j+4]-1];
-	f += vw[j+5] * fi[index[j+5]-1];
+        a = _mm_add_pd(a, _mm_mul_pd(vw[j  ], fi[index[j+0]-1]));
+        b = _mm_add_pd(b, _mm_mul_pd(vw[j+1], fi[index[j+1]-1]));
+	c = _mm_add_pd(c, _mm_mul_pd(vw[j+2], fi[index[j+2]-1]));
+        d = _mm_add_pd(d, _mm_mul_pd(vw[j+3], fi[index[j+3]-1]));
+        e = _mm_add_pd(e, _mm_mul_pd(vw[j+4], fi[index[j+4]-1]));
+        f = _mm_add_pd(f, _mm_mul_pd(vw[j+5], fi[index[j+5]-1]));
       }
     
-      for(; j < n; j++) a += vw[j] * fi[index[j]-1];
+      for(; j < n; j++) a = _mm_add_pd(a, _mm_mul_pd(vw[j], fi[index[j]-1]));
 
 #ifndef HAVE_C_OMP    
       index += n;
 #endif
+      a = _mm_add_pd(a, b);
+      c = _mm_add_pd(c, d);
+      e = _mm_add_pd(e, f);
+      a = _mm_add_pd(a, c);
+      fo[i] = _mm_add_pd(a, e);
 
-      fo[i] = a + b + c + d + e + f;
-    
     }
 
     free(vw);
@@ -153,7 +151,6 @@ void FC_FUNC_(zoperate_sse,ZOPERATE_SSE)(const int * opnp,
   }
 
 }
-
 
 void FC_FUNC_(doperate_sse,DOPERATE_SSE)(const int * opnp, 
 					 const int * opn, 
@@ -167,7 +164,7 @@ void FC_FUNC_(doperate_sse,DOPERATE_SSE)(const int * opnp,
 
   int i, j, nm2;
   const double * restrict mfi;
-  v2df * restrict vw;
+  __m128d * restrict vw;
 
   mfi   = fi - 1;
 
@@ -176,26 +173,31 @@ void FC_FUNC_(doperate_sse,DOPERATE_SSE)(const int * opnp,
     vw = malloc(n*16);
     
     for(j = 0; j < n ; j++) {
-      set_vec(vw[j], w+j, w+j);
+      vw[j] =_mm_set1_pd(w[j]);
     }
     
     for(i = 0; i < (np-2+1); i+=2) {
       const int * restrict index0 = opi + n*i; 
       const int * restrict index1 = opi + n*i+n; 
 
-      register v2df a  __attribute__ ((__aligned__ (16)));
-      register v2df c  __attribute__ ((__aligned__ (16)));
+      register __m128d a  __attribute__ ((__aligned__ (16)));
+      register __m128d c  __attribute__ ((__aligned__ (16)));
       
-      set_vec(c, mfi+index0[0], mfi+index1[0]);
-      a = vw[0] * c;
+      c = _mm_setr_pd(mfi[index0[0]], mfi[index1[0]]);
+      a = _mm_mul_pd(vw[0], c);
       
       for(j=1; j < n; j++) {
-	set_vec(c, mfi+index0[j], mfi + index1[j]);
-	a += vw[j] * c;
+	c = _mm_setr_pd(mfi[index0[j]], mfi[index1[j]]);
+	a = _mm_add_pd(a, _mm_mul_pd(vw[j], c));
       }
 
       _mm_storeu_pd(fo+i, a);
 
+      // This sequence is recommended for the Pentium 4 instead of _mm_storeu_pd:
+      //      _mm_store_sd(fo+i, a);
+      //      _mm_unpackhi_pd(a, a);
+      //      _mm_store_sd(fo+i+1, a);
+      
     }
 
     free(vw);
