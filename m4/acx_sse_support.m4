@@ -158,7 +158,7 @@ AC_DEFUN([ACX_C_SSE2],[
     AC_LANG(C)
     AC_TRY_COMPILE(
       [
-        #ifndef __SSE2__
+        #if !defined(__SSE2__) && !defined(__amd64__) && !defined(__x86_64__)
 	#error NO_SSE2
 	#endif
       ],

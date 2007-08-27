@@ -171,13 +171,15 @@ void FC_FUNC_(doperate_sse,DOPERATE_SSE)(const int * opnp,
       const int * restrict index1 = opi + n*i+n;
 
       register __m128d a  __attribute__ ((__aligned__ (16)));
+      register __m128d c  __attribute__ ((__aligned__ (16)));
 
       a = _mm_mul_pd(vw[0], _mm_setr_pd(mfi[index0[0]], mfi[index1[0]]) );
 
       for(j = 1; j < n; j++) {
-	a = _mm_add_pd(a, _mm_mul_pd(vw[j], _mm_setr_pd(mfi[index0[j]], mfi[index1[j]]) ) );
+	c = _mm_setr_pd(mfi[index0[j]], mfi[index1[j]]);
+	a = _mm_add_pd(a, _mm_mul_pd(vw[j], c));
       }
-      
+
       _mm_storeu_pd(fo+i  , a);
 
       /* This sequence is recommended for the Pentium 4 instead of _mm_storeu_pd:
