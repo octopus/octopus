@@ -62,6 +62,7 @@ dist_share_DATA = \
 	14-h2o_pol_lr.01_h2o_gs.inp \
 	14-h2o_pol_lr.02_h2o_dyn_pol.inp \
 	14-h2o_pol_lr.03_h2o_dyn_pol_cmplx.inp \
+	14-h2o_pol_lr.04_h2o_susc.inp \
 	14-h2o_pol_lr.test \
 	15-hartree.01-rectangular.inp \
 	15-hartree.test \
