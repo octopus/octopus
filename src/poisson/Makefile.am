@@ -22,7 +22,7 @@
 noinst_LIBRARIES = libpoisson.a
 
 libpoisson_a_SOURCES = \
-	solver_isf.F90 solver_fft.F90 \
+	poisson_finite_cyl.c cutoffs.F90 solver_isf.F90 solver_fft.F90 \
 	corrections.F90 conj_grad.F90 multigrid.F90 poisson.F90
 
 noinst_HEADERS = \

@@ -5,10 +5,19 @@
 #include <gsl/gsl_errno.h>
 #include <assert.h>
 
-struct parameters { double kx; double kr; double x0; double r0; int index; }; 
+#include <config.h>
 
-/* the index is the tipe of integral this is necessary cause dependent of the value of k the */
-/* integral needs to be performed in several ways*/
+struct parameters
+{ 
+  double kx; 
+  double kr; 
+  double x0; 
+  double r0; 
+  int index; 
+}; 
+
+/* the index is the type of integral. This is necessary because depending of the value of k the
+   the integral needs to be performed in different ways */
 #define PFC_F_0   0
 #define PFC_F_KX  1
 #define PFC_F_KR  2
@@ -16,7 +25,8 @@ struct parameters { double kx; double kr; double x0; double r0; int index; };
 static const double tol = 1e-7;
 static double zero = 1e-100;
 
-static double f(double w, void *p) {
+static double f(double w, void *p)
+{
   struct parameters *params = (struct parameters *)p;
   const double  kx = (params->kx);
   double  kr = (params->kr);
@@ -38,7 +48,9 @@ static double f(double w, void *p) {
   return result;
 }
 
-static double f_kx_zero(double w, void *p) {
+
+static double f_kx_zero(double w, void *p)
+{
   struct parameters *params = (struct parameters *)p;
   double  kr = (params->kr);
   double  x0 = (params->x0);
@@ -52,7 +64,8 @@ static double f_kx_zero(double w, void *p) {
 }
 
 
-static double f_kr_zero(double w, void *p) {
+static double f_kr_zero(double w, void *p)
+{
   struct parameters *params = (struct parameters *)p;
   double  kx = (params->kx);
   double  r0 = (params->r0);
@@ -63,11 +76,9 @@ static double f_kr_zero(double w, void *p) {
 }
 
 
-static double int_aux(int index, double kx, double kr, double x0, double r0, int which_int) {
-
-#ifdef HAVE_ASSERT
+static double int_aux(int index, double kx, double kr, double x0, double r0, int which_int)
+{
   assert(which_int == PFC_F_0 || which_int == PFC_F_KR || which_int == PFC_F_KX);
-#endif 
 
   /*variables*/
   double result, error;
@@ -145,4 +156,11 @@ double poisson_finite_cylinder(double kx, double kr, double x0,double r0) {
   
   /* the 1/(4pi) factor is due to the factor on the poissonsolver3d (end)*/
   return result/(4.0*M_PI);
+}
+
+/* --------------------- Interface to Fortran ---------------------- */
+double FC_FUNC_(c_poisson_cutoff_finite_cylinder, C_POISSON_CUTOFF_FINITE_CYLINDER)
+  (double *gx, double *gperp, double *xsize, double *rsize)
+{
+  return poisson_finite_cylinder(*gx, *gperp, *xsize, *rsize);
 }
