@@ -208,13 +208,14 @@ contains
     end if
 
     r = sqrt(x*x + y*y + z*z)
-    dx = x/r; dy = y/r; dz = z/r
 
     ! if r=0, direction is undefined => make ylm=0 except for l=0
     if (r == M_ZERO) then
       ylm = M_z0
       return
     end if
+
+    dx = x/r; dy = y/r; dz = z/r
 
     ! get the associated Legendre polynomial (including the normalization factor)
     plm = loct_legendre_sphplm(li, abs(mi), dz)
