@@ -65,9 +65,9 @@ contains
 
     if(.not.fromScratch) then
       ! load wave-functions
-      call restart_read(trim(tmpdir)//'restart_gs', sys%st, sys%gr, sys%geo, ierr)
+      call restart_read(trim(tmpdir)//'gs', sys%st, sys%gr, sys%geo, ierr)
       if(ierr.ne.0) then
-        message(1) = "Could not load wave-functions from '"//trim(tmpdir)//"restart_gs'"
+        message(1) = "Could not load wave-functions from '"//trim(tmpdir)//"gs'"
         message(2) = "Starting from scratch!"
         call write_warning(2)
         fromScratch = .true.

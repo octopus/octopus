@@ -279,7 +279,7 @@ contains
           call messages_print_stress(stdout, 'Recalculating the ground state.')
           fromScratch = .false.
           call ground_state_run(sys, h, fromScratch)
-          call restart_read(trim(tmpdir)//'restart_td', st, gr, geo, ierr, i)
+          call restart_read(trim(tmpdir)//'td', st, gr, geo, ierr, i)
           call messages_print_stress(stdout, "Time-Dependent simulation proceeds")
           write(message(1), '(a7,1x,a14,a14,a17)') 'Iter ', 'Time ', 'Energy ', 'Elapsed Time '
           call write_info(1)
@@ -390,9 +390,9 @@ contains
       CMPLX, allocatable :: rotation_matrix(:, :)
 
       if(.not.fromScratch) then
-        call restart_read(trim(tmpdir)//'restart_td', st, gr, geo, ierr, td%iter)
+        call restart_read(trim(tmpdir)//'td', st, gr, geo, ierr, td%iter)
         if(ierr.ne.0) then
-          message(1) = "Could not load "//trim(tmpdir)//"restart_td: Starting from scratch"
+          message(1) = "Could not load "//trim(tmpdir)//"td: Starting from scratch"
           call write_warning(1)
 
           fromScratch = .true.
@@ -400,7 +400,7 @@ contains
           ! read potential from previous interactions
           do i = 1, 2
             do is = 1, st%d%nspin
-              write(filename,'(a,i2.2,i3.3)') trim(tmpdir)//'restart_td/vprev_', i, is
+              write(filename,'(a,i2.2,i3.3)') trim(tmpdir)//'td/vprev_', i, is
               call dinput_function(filename, gr%m, td%tr%v_old(1:NP, is, i), ierr)
               ! If we do not succed, try netcdf
               if(ierr > 0) call dinput_function(trim(filename)//'.ncdf', gr%m, td%tr%v_old(1:NP, is, i), ierr)
@@ -429,9 +429,9 @@ contains
         call loct_parse_logical(check_inp('OnlyUserDefinedInitialStates'), .false., only_userdef_istates)
 
         if(.not. only_userdef_istates) then
-          call restart_read(trim(tmpdir)//'restart_gs', st, gr, geo, ierr)
+          call restart_read(trim(tmpdir)//'gs', st, gr, geo, ierr)
           if(ierr.ne.0) then
-            message(1) = "Could not read KS orbitals from '"//trim(tmpdir)//"restart_gs'"
+            message(1) = "Could not read KS orbitals from '"//trim(tmpdir)//"gs'"
             message(2) = "Please run a ground-state calculation first!"
             call write_fatal(2)
           end if
@@ -439,7 +439,7 @@ contains
 
         ! check if we should deploy user defined wavefunctions. 
         ! according to the settings in the input file the routine 
-        ! overwrites orbitals that were read from restart_gs 
+        ! overwrites orbitals that were read from restart/gs 
         if(loct_parse_isdef(check_inp('UserDefinedStates')).ne.0) then
           call states_read_user_def_orbitals(gr%m, st)
         end if
@@ -450,16 +450,16 @@ contains
         !%Section States
         !%Description
         !% Before starting the td calculation, the initial states (that are
-        !% read from the restart/restart_gs directory, which should have been
+        !% read from the restart/gs directory, which should have been
         !% generated in a previous ground state calculation) can be "transformed"
         !% among themselves. The block TransformStates gives the transformation matrix
         !% to be used. The number of rows of the matrix should equal the number
         !% of the states present in the time-dependent calculation (the independent
         !% spin and k-point subspaces are all transformed equally); the number of
         !% columns should be equal to the number of states present in the
-        !% restart/restart_gs directory. This number may be different: for example,
+        !% restart/gs directory. This number may be different: for example,
         !% one could have run previously in "unocc" mode in order to obtain unoccupied
-        !% Kohn-Sham states, and therefore restart/restart_gs will contain more states.
+        !% Kohn-Sham states, and therefore restart/gs will contain more states.
         !% These states can be used in the transformation.
         !%
         !% Note that the code will not check the orthormality of the new states!
@@ -703,9 +703,9 @@ contains
       call push_sub('td.td_save_restart')
 
       ! first write resume file
-      call restart_write(trim(tmpdir)//'restart_td', st, gr, ierr, iter)
+      call restart_write(trim(tmpdir)//'td', st, gr, ierr, iter)
       if(ierr.ne.0) then
-        message(1) = 'Unsuccesfull write of "'//trim(tmpdir)//'restart_td"'
+        message(1) = 'Unsuccesfull write of "'//trim(tmpdir)//'td"'
         call write_fatal(1)
       end if
 
@@ -714,7 +714,7 @@ contains
         do i = 1, 2
           do is = 1, st%d%nspin
             write(filename,'(a6,i2.2,i3.3)') 'vprev_', i, is
-            call doutput_function(restart_format, trim(tmpdir)//"restart_td", &
+            call doutput_function(restart_format, trim(tmpdir)//"td", &
               filename, gr%m, gr%sb, td%tr%v_old(1:NP, is, i), M_ONE, ierr, is_tmp = .true.)
             if(ierr.ne.0) then
               write(message(1), '(3a)') 'Unsuccesfull write of "', trim(filename), '"'

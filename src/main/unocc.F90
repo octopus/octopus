@@ -67,15 +67,15 @@ contains
     occupied_states = sys%st%nst
     call init_(sys%gr%m, sys%st)
 
-    call restart_read (trim(tmpdir)//'restart_gs', sys%st, sys%gr, sys%geo, ierr)
+    call restart_read (trim(tmpdir)//'gs', sys%st, sys%gr, sys%geo, ierr)
     if( (ierr .ne. 0)  .and.  (ierr < occupied_states) ) then
-      message(1) = "Not all the occupied KS orbitals could be read from '"//trim(tmpdir)//"restart_gs'"
+      message(1) = "Not all the occupied KS orbitals could be read from '"//trim(tmpdir)//"gs'"
       message(2) = "Please run a ground-state calculation first!"
       call write_fatal(2)
     end if
 
     if(ierr.ne.0) then
-      message(1) = "Info:  Could not load all wave-functions from '"//trim(tmpdir)//"restart_gs'"
+      message(1) = "Info:  Could not load all wave-functions from '"//trim(tmpdir)//"gs'"
       call write_info(1)
     end if
 
@@ -144,9 +144,9 @@ contains
     call eigen_solver_run(eigens, sys%gr, sys%st, h, 1, converged, verbose = .true.)
 
     ! write restart information.
-    call restart_write (trim(tmpdir)//'restart_gs', sys%st, sys%gr, ierr)
+    call restart_write (trim(tmpdir)//'gs', sys%st, sys%gr, ierr)
     if(ierr.ne.0) then
-      message(1) = 'Unsuccesfull write of "'//trim(tmpdir)//'restart_gs"'
+      message(1) = 'Unsuccesfull write of "'//trim(tmpdir)//'gs"'
       call write_fatal(1)
     end if
 

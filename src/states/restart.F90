@@ -155,7 +155,7 @@ contains
 
     call push_sub('restart.restart_look_and_read')
 
-    call states_look(trim(tmpdir)//'restart_gs', gr%m, kpoints, dim, nst, j)
+    call states_look(trim(tmpdir)//'gs', gr%m, kpoints, dim, nst, j)
     if(j.ne.0) then
       ierr = j
       call pop_sub(); return
@@ -177,7 +177,7 @@ contains
     st%eigenval = huge(REAL_PRECISION)
     st%occ      = M_ZERO
 
-    call restart_read(trim(tmpdir)//'restart_gs', st, gr, geo, ierr)
+    call restart_read(trim(tmpdir)//'gs', st, gr, geo, ierr)
 
     call pop_sub()
   end subroutine restart_look_and_read
@@ -538,12 +538,12 @@ contains
 
       if(mesh_change) then
         if(.not.full_interpolation) then
-          write(message(1),'(a)') 'The functions stored in "restart/restart_gs" were obtained with' 
+          write(message(1),'(a)') 'The functions stored in "restart/gs" were obtained with' 
           write(message(2),'(a)') 'a different simulation box. The possible missing regions will be'
           write(message(3),'(a)') 'padded with zeros.'
           call write_info(3)
         else
-          write(message(1),'(a)') 'The functions stored in "restart/restart_gs" were obtained with' 
+          write(message(1),'(a)') 'The functions stored in "restart/gs" were obtained with' 
           write(message(2),'(a)') 'a different mesh. The values of the functions for the current'
           write(message(3),'(a)') 'calculations will be interpolated/extrapolated.'
           call write_info(3)

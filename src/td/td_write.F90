@@ -194,7 +194,7 @@ contains
       ! WARNING: should be first deallocate, then nullify?
 !!$      nullify(w%gs_st%zpsi, w%gs_st%node, w%gs_st%occ, w%gs_st%eigenval, w%gs_st%mag)
       nullify(w%gs_st%zpsi, w%gs_st%node, w%gs_st%occ, w%gs_st%eigenval)
-      call states_look (trim(tmpdir)//'restart_gs', gr%m, i, i, w%gs_st%nst, ierr)
+      call states_look (trim(tmpdir)//'gs', gr%m, i, i, w%gs_st%nst, ierr)
 
       w%gs_st%st_start = 1
       if(w%out_populations == 0) then ! do only this when not calculating populations
@@ -224,9 +224,9 @@ contains
       end if
       call states_allocate_wfns(w%gs_st, gr%m, M_CMPLX)
       w%gs_st%node(:)  = 0
-      call restart_read(trim(tmpdir)//'restart_gs', w%gs_st, gr, geo, ierr)
+      call restart_read(trim(tmpdir)//'gs', w%gs_st, gr, geo, ierr)
       if(ierr.ne.0.and.ierr.ne.(w%gs_st%st_end-w%gs_st%st_start+1)*w%gs_st%d%nik*w%gs_st%d%dim) then
-        message(1) = "Could not load "//trim(tmpdir)//"restart_gs"
+        message(1) = "Could not load "//trim(tmpdir)//"gs"
         call write_fatal(1)
       end if
     end if

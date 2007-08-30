@@ -62,7 +62,7 @@
     case(oct_is_groundstate) 
       message(1) =  'Info: Using Ground State for InitialState'
       call write_info(1)
-      call restart_read(trim(tmpdir)//'restart_gs', initial_state, gr, geo, ierr)
+      call restart_read(trim(tmpdir)//'gs', initial_state, gr, geo, ierr)
 
     case(oct_is_excited)  
       message(1) =  'Info: Using Excited State for InitialState'
@@ -73,9 +73,9 @@
       !TODO: The following lines of code do not look too clear, and will probably break easily.
       !They should also be isolated and taken away, since they are repeated in several places.
       tmp_st = initial_state
-      call restart_look_and_read(trim(tmpdir)//'restart_gs', tmp_st, gr, geo, ierr)
+      call restart_look_and_read(trim(tmpdir)//'gs', tmp_st, gr, geo, ierr)
       if(ierr.ne.0) then
-        write(message(1),'(a)') 'Could not read ground-state wavefunctions from '//trim(tmpdir)//'restart_gs.'
+        write(message(1),'(a)') 'Could not read ground-state wavefunctions from '//trim(tmpdir)//'gs.'
         call write_fatal(1)
       end if
       initial_state%zpsi(:, :, 1, 1) = tmp_st%zpsi(:, :, state, 1)
@@ -92,7 +92,7 @@
       !%Description
       !% If OCTInitialState = oct_is-superposition, you must specify one
       !% OCTInitialTransformStates block, in order to specify which linear
-      !% combination of the states present in "restart/restart_gs" is used to
+      !% combination of the states present in "restart/gs" is used to
       !% create the initial state.
       !% 
       !% The syntax is equivalent to the one used for the TransformStates
@@ -222,9 +222,9 @@
     case(oct_tg_groundstate)
       message(1) =  'Info: Using Ground State for TargetOperator'
       call write_info(1)
-      call restart_read(trim(tmpdir)//'restart_gs', target_state, gr, geo, ierr)
+      call restart_read(trim(tmpdir)//'gs', target_state, gr, geo, ierr)
       if(ierr.ne.0) then
-        write(message(1),'(a)') 'Could not read ground-state wavefunctions from '//trim(tmpdir)//'restart_gs.'
+        write(message(1),'(a)') 'Could not read ground-state wavefunctions from '//trim(tmpdir)//'gs.'
         call write_fatal(1)
       end if
       
@@ -243,9 +243,9 @@
 
       !TODO: The following lines of code do not look too clear, and will probably break easily.
       tmp_st = target_state
-      call restart_look_and_read(trim(tmpdir)//'restart_gs', tmp_st, gr, geo, ierr)
+      call restart_look_and_read(trim(tmpdir)//'gs', tmp_st, gr, geo, ierr)
       if(ierr.ne.0) then
-        write(message(1),'(a)') 'Could not read ground-state wavefunctions from '//trim(tmpdir)//'restart_gs.'
+        write(message(1),'(a)') 'Could not read ground-state wavefunctions from '//trim(tmpdir)//'gs.'
         call write_fatal(1)
       end if
 
@@ -264,7 +264,7 @@
       !%Description
       !% If OCTTargetOperator = oct_tg_superposition, you must specify one
       !% OCTTargetTransformStates block, in order to specify which linear
-      !% combination of the states present in "restart/restart_gs" is used to
+      !% combination of the states present in "restart/gs" is used to
       !% create the target state.
       !% 
       !% The syntax is equivalent to the one used for the TransformStates

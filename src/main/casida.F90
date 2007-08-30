@@ -89,9 +89,9 @@ contains
     message(1) = 'Info: Starting linear response calculation.'
     call write_info(1)
 
-    call restart_look_and_read(trim(tmpdir)//'restart_gs', sys%st, sys%gr, sys%geo, ierr)
+    call restart_look_and_read(trim(tmpdir)//'gs', sys%st, sys%gr, sys%geo, ierr)
     if(ierr.ne.0) then
-      message(1) = 'Could not properly read wave-functions from "'//trim(tmpdir)//'restart_gs".'
+      message(1) = 'Could not properly read wave-functions from "'//trim(tmpdir)//'gs".'
       call write_fatal(1)
     end if
 
@@ -164,7 +164,7 @@ contains
     ! Initialize structure
     call casida_type_init(cas, sys%gr%sb%dim, sys%st%d%nspin, sys%mc)
 
-    if(fromScratch) call loct_rm(trim(tmpdir)//'restart_casida')
+    if(fromScratch) call loct_rm(trim(tmpdir)//'casida')
 
     ! First, print the differences between KS eigenvalues (first approximation to the
     ! excitation energies, or rather, to the DOS.
@@ -361,7 +361,7 @@ contains
       if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(-1, cas%n_pairs)
 
       ! file to save matrix elements
-      iunit = io_open(trim(tmpdir)//'restart_casida', action='write', position='append', is_tmp=.true.)
+      iunit = io_open(trim(tmpdir)//'casida', action='write', position='append', is_tmp=.true.)
 
       do ia = 1, cas%n_pairs
         cas%w(ia) = st%eigenval(cas%pair(ia)%a, cas%pair(ia)%sigma) - &
@@ -456,7 +456,7 @@ contains
         if(mpi_grp_is_root(mpi_world)) write(stdout, '(1x)')
 
         ! complete the matrix and output the restart file
-        iunit = io_open(trim(tmpdir)//'restart_casida', action='write', position='append', is_tmp=.true.)
+        iunit = io_open(trim(tmpdir)//'casida', action='write', position='append', is_tmp=.true.)
         do ia = 1, cas%n_pairs
           p => cas%pair(ia)
           temp = st%eigenval(p%a, p%sigma) - st%eigenval(p%i, p%sigma)
@@ -595,7 +595,7 @@ contains
 
       call push_sub('casida.load_saved')
 
-      iunit = io_open(trim(tmpdir)//'restart_casida', action='read', status='old', die=.false., is_tmp=.true.)
+      iunit = io_open(trim(tmpdir)//'casida', action='read', status='old', die=.false., is_tmp=.true.)
       if( iunit <= 0) return
 
       do

@@ -18,7 +18,7 @@
 !! $Id: em_resp.F90 2647 2007-01-09 18:02:46Z lorenzen $
 
 #include "global.h"
-#define RESTART_DIR "restart_pol_lr/"
+#define RESTART_DIR "pol_lr/"
 
 module vdw_m
   use datasets_m

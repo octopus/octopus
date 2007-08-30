@@ -231,7 +231,7 @@ contains
         sb%scattering_box = .true.
             
         ! open file with information on the mesh of the asymptotic cell
-        iunit = io_open('asymptotic_cell/restart_gs/mesh', action='read', status='old', die=.false., is_tmp=.true.)
+        iunit = io_open('asymptotic_cell/gs/mesh', action='read', status='old', die=.false., is_tmp=.true.)
 
         if (iunit < 0) then
           message(1) = 'Error: Could not read directory asymptotic_cell. Please provide a tmp'
@@ -244,7 +244,7 @@ contains
         do i = 1, 5
           read(iunit, fmt=*, iostat=ierr) 
           if(ierr.ne.0) then
-            message(1) = 'Error: An error occurred while reading asymptotic_cell/restart_gs/mesh.'
+            message(1) = 'Error: An error occurred while reading asymptotic_cell/gs/mesh.'
             call write_fatal(1)
           end if
         end do
@@ -270,7 +270,7 @@ contains
         call io_close(iunit)
 
         ! read Lxyz array of asymptotic cell
-        iunit = io_open('asymptotic_cell/restart_gs/Lxyz', action='read', status='old', die=.false., is_tmp=.true.)
+        iunit = io_open('asymptotic_cell/gs/Lxyz', action='read', status='old', die=.false., is_tmp=.true.)
 
         ALLOCATE(sb%asympt_uc_Lxyz(sb%asympt_uc_np, 3), sb%asympt_uc_np*3)
 

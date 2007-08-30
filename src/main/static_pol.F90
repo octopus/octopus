@@ -68,9 +68,9 @@ contains
     call init_()
 
     ! load wave-functions
-    call restart_read(trim(tmpdir)//'restart_gs', sys%st, gr, sys%geo, ierr)
+    call restart_read(trim(tmpdir)//'gs', sys%st, gr, sys%geo, ierr)
     if(ierr.ne.0) then
-      message(1) = "Could not read KS orbitals from '"//trim(tmpdir)//"restart_gs'"
+      message(1) = "Could not read KS orbitals from '"//trim(tmpdir)//"gs'"
       message(2) = "Please run a ground-state calculation first!"
       call write_fatal(2)
     end if
