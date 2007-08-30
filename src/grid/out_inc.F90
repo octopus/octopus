@@ -22,13 +22,13 @@
 ! may be a "plain" file (no extension), or a netcdf file ".ncdf" extension.
 ! On output, ierr signals how everything went:
 ! ierr > 0 => Error. The function f was not read:
-!              1 : illegal filename (must have no extension, ".obf" or ".ncdf" extension.
+!              1 : illegal filename (must have ".obf" or ".ncdf" extension).
 !              2 : file could not be succesfully opened.
 !              3 : file opened, but error reading.
 !              4 : The number of points/mesh dimensions do not coincide.
 !              5 : Format or NetCDF error (one or several warnings are emitted)
 ! ierr = 0 => Success.
-! ierr < 0 => Success, but some kind of type conversion was necessary. The
+! ierr < 0 => Success, but some kind of type conversion was necessary. The value
 !             of ierr is then:
 !             -1 : function in file is real, sp.
 !             -2 : function in file is complex, sp.
@@ -137,8 +137,6 @@ subroutine X(input_function_global)(filename, m, f, ierr, is_tmp)
   ! -4 for complex, single, -8 for real, double
 
   select case(trim(io_get_extension(filename)))
-  case("")
-     call plain()
 #if defined(HAVE_NETCDF)
   case("ncdf")
 #if defined(R_TCOMPLEX)
@@ -166,74 +164,9 @@ subroutine X(input_function_global)(filename, m, f, ierr, is_tmp)
   call pop_sub()
   call profiling_out(C_PROFILING_DISK_ACCESS)
 
-contains
-
-
-  ! ---------------------------------------------------------
-  subroutine plain()
-    integer                 :: file_np
-    real(4),    allocatable :: rs(:)
-    real(8),    allocatable :: rd(:)
-    complex(4), allocatable :: cs(:)
-    complex(8), allocatable :: cd(:)
-
-    iunit = io_open(filename, action='read', status='old', form='unformatted', die=.false., is_tmp=is_tmp)
-
-    if(iunit< 0) then
-      ierr = 2
-      return
-    end if
-   
-    read(unit = iunit, iostat = i) file_kind, file_np
-    if(i.ne.0) then
-      ierr = 3
-    else if (file_np .ne. m%np_global) then
-      ierr = 4
-    end if
-    
-    if(ierr==0) then
-      if(file_kind == function_kind) then
-        read(unit = iunit) f(1:m%np_global)
-        
-      else ! Adequate conversions....
-        select case(file_kind)
-        case(doutput_kind*4) ! Real, single precision
-          ALLOCATE(rs(m%np_global), m%np_global)
-          read(unit = iunit) rs(1:m%np_global)
-          f(1:m%np_global) = rs(1:m%np_global)
-          deallocate(rs)
-          ierr = -1
-
-        case(zoutput_kind*4) ! Complex, single precision
-          ALLOCATE(cs(m%np_global), m%np_global)
-          read(unit = iunit) cs(1:m%np_global)
-          f(1:m%np_global) = cs(1:m%np_global)
-          deallocate(cs)
-          ierr = -2
-
-        case(doutput_kind*8) ! Real, double precision
-          ALLOCATE(rd(m%np_global), m%np_global)
-          read(unit = iunit) rd(1:m%np_global)
-          f(1:m%np_global) = rd(1:m%np_global)
-          deallocate(rd)
-          ierr = -3
-
-        case(zoutput_kind*8) ! Complex, double precision
-          ALLOCATE(cd(m%np_global), m%np_global)
-          read(unit = iunit) cd(1:m%np_global)
-          f(1:m%np_global) = cd(1:m%np_global)
-          deallocate(cd)
-          ierr = -4
-          
-        end select
-      end if
-    end if
-
-    call io_close(iunit)
-  end subroutine plain
-
-  ! ---------------------------------------------------------
 #if defined(HAVE_NETCDF)
+
+contains
 
   ! ---------------------------------------------------------
   subroutine read_netcdf()

@@ -62,7 +62,6 @@ module restart_m
   
 
   integer, parameter :: &
-    RESTART_PLAIN  = 1, &
     RESTART_NETCDF = 2, &
     RESTART_BINARY = 3
 
@@ -105,17 +104,13 @@ contains
     !%Section Generalities::IO
     !%Description
     !% Determines in which format the restart files should be written. The default
-    !% is netcdf files (restart_netcdf) if the executable was compiled with netcdf 
-    !% libraries; otherwise the default is plain binary format.
-    !%Option restart_plain 1
-    !% Binary (platform dependent) format
+    !% is binary files (restart_binary).
     !%Option restart_netcdf 2
     !% NetCDF (platform independent) format. This requires the NETCDF library.
     !%Option restart_binary 3
     !% Octopus Binary Format, the new and more flexible binary format
     !% of Octopus. It is faster and produces smaller files than NetCDF
-    !% and it is compiler independent (in the future it will be
-    !% endianness independent).
+    !% and it is platform independent.
     !%End
 
     default = RESTART_BINARY
@@ -133,8 +128,6 @@ contains
     select case(parsed) 
     case(RESTART_NETCDF)
       restart_format = output_fill_how("NETCDF")
-    case(RESTART_PLAIN)
-      restart_format = output_fill_how("Plain")
     case(RESTART_BINARY)
       restart_format = output_fill_how("Binary")
     end select
