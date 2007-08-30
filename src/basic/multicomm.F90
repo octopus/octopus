@@ -86,18 +86,16 @@ module multicomm_m
     P_STRATEGY_DOMAINS = 1,          & ! parallelization domains
     P_STRATEGY_STATES  = 2,          & ! parallelization in states
     P_STRATEGY_KPOINTS = 3,          & ! parallelization in kpoints
-    P_STRATEGY_OTHER   = 4,          & ! something else like e-h pairs
-    P_STRATEGY_THREADS = 5
+    P_STRATEGY_OTHER   = 4             ! something else like e-h pairs
 
-  integer,           parameter :: n_par_types = 5
+  integer,           parameter :: n_par_types = 4
   character(len=11), parameter :: par_types(0:n_par_types) = &
     (/                               &
     "serial     ",                   &
     "par_domains",                   &
     "par_states ",                   &
     "par_kpoints",                   &
-    "par_other  ",                   &
-    "par_threads"                    &
+    "par_other  "                    &
     /)
 
   type multicomm_tree_t_pointer
