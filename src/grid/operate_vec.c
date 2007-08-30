@@ -131,8 +131,8 @@ void FC_FUNC_(zoperate_sse,ZOPERATE_SSE)(const int * opnp,
       for(; j < n; j++) a = _mm_add_pd(a, _mm_mul_pd(vw[j], fi[index[j]-1]));
 
       a = _mm_add_pd(a, b);
-      c = _mm_add_pd(c, d);
-      e = _mm_add_pd(e, f);
+      a = _mm_add_pd(a, d);
+      a = _mm_add_pd(a, f);
       a = _mm_add_pd(a, c);
       fo[i] = _mm_add_pd(a, e);
 

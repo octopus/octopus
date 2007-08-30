@@ -130,6 +130,8 @@ module multicomm_m
     integer, pointer :: who_am_i(:)    ! the path to get to my processor in the tree
     integer, pointer :: group_comm(:)  ! communicators I belong to
     integer, pointer :: group_root(:)  ! root node for each communicator
+    
+    integer :: nthreads
   end type multicomm_t
 
 
@@ -156,6 +158,12 @@ contains
     call messages_print_stress(stdout, "Parallelization")
 
     call strategy()
+
+    if (mc%nthreads > 1) then
+      write(message(1),'(a, i3)') 'Info: Number of threads ', mc%nthreads
+      call write_info(1)
+    end if
+
     if(mc%par_strategy.ne.P_STRATEGY_SERIAL) then
       ALLOCATE(mc%group_sizes(mc%n_index), mc%n_index)
       mc%group_sizes(:) = 1
@@ -216,8 +224,6 @@ contains
       !% Octopus will run parallel in k-points/spin.
       !%Option par_other   8
       !% Run-mode dependent. For example, in casida it means parallelization in e-h pairs
-      !%Option par_threads   16
-      !% Octopus will run in several threads.
       !%End
 
       if(mpi_world%size > 1) then
@@ -257,22 +263,22 @@ contains
         mc%par_strategy = P_STRATEGY_SERIAL
       end if
 
-      if(mc%par_strategy == P_STRATEGY_SERIAL) then
+      mc%nthreads = 1
+#ifdef USE_OMP
+      !$omp parallel
+      !$omp master
+      mc%nthreads = omp_get_num_threads()
+      !$omp end master
+      !$omp end parallel
+#endif
+
+      if(mc%par_strategy == P_STRATEGY_SERIAL .and. mc%nthreads == 1) then
         message(1) = "Octopus will run in *serial*"
       else
         message(1) = "Octopus will run in *parallel*"
       end if
       call write_info(1)
 
-#ifdef USE_OMP
-!$omp parallel
-!$omp master
-      write(message(1), '(a,i2,a)') "Octopus will use ", omp_get_num_threads(), " threads."
-!$omp end master
-!$omp end parallel
-      call write_info(1)
-#endif
-      
     end subroutine strategy
 
 
