@@ -450,16 +450,16 @@ contains
         !%Section States
         !%Description
         !% Before starting the td calculation, the initial states (that are
-        !% read from the tmp/restart_gs directory, which should have been
+        !% read from the restart/restart_gs directory, which should have been
         !% generated in a previous ground state calculation) can be "transformed"
         !% among themselves. The block TransformStates gives the transformation matrix
         !% to be used. The number of rows of the matrix should equal the number
         !% of the states present in the time-dependent calculation (the independent
         !% spin and k-point subspaces are all transformed equally); the number of
         !% columns should be equal to the number of states present in the
-        !% tmp/restart_gs directory. This number may be different: for example,
+        !% restart/restart_gs directory. This number may be different: for example,
         !% one could have run previously in "unocc" mode in order to obtain unoccupied
-        !% Kohn-Sham states, and therefore tmp/restart_gs will contain more states.
+        !% Kohn-Sham states, and therefore restart/restart_gs will contain more states.
         !% These states can be used in the transformation.
         !%
         !% Note that the code will not check the orthormality of the new states!

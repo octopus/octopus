@@ -538,12 +538,12 @@ contains
 
       if(mesh_change) then
         if(.not.full_interpolation) then
-          write(message(1),'(a)') 'The functions stored in "tmp/restart_gs" were obtained with' 
+          write(message(1),'(a)') 'The functions stored in "restart/restart_gs" were obtained with' 
           write(message(2),'(a)') 'a different simulation box. The possible missing regions will be'
           write(message(3),'(a)') 'padded with zeros.'
           call write_info(3)
         else
-          write(message(1),'(a)') 'The functions stored in "tmp/restart_gs" were obtained with' 
+          write(message(1),'(a)') 'The functions stored in "restart/restart_gs" were obtained with' 
           write(message(2),'(a)') 'a different mesh. The values of the functions for the current'
           write(message(3),'(a)') 'calculations will be interpolated/extrapolated.'
           call write_info(3)

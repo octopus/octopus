@@ -195,14 +195,14 @@ contains
 
     ! create temporary dir (we will need it)
     !%Variable TmpDir
-    !%Default "tmp/"
+    !%Default "restart/"
     !%Type string
     !%Section Generalities::IO
     !%Description
     !% The name of the directory where octopus stores binary information
     !% like the wave-functions.
     !%End
-    call loct_parse_string('TmpDir', 'tmp/', tmpdir)
+    call loct_parse_string('TmpDir', 'restart/', tmpdir)
     call io_mkdir(tmpdir, is_tmp=.true.)
 
     ! create static directory
@@ -210,7 +210,7 @@ contains
 
     ! restarts from scratch will be done from here
     !%Variable InputDir
-    !%Default "tmp/"
+    !%Default "restart/"
     !%Type string
     !%Section Generalities::IO
     !%Description
@@ -219,7 +219,7 @@ contains
     !%End
 
     ! disabled for the moment
-    ! call loct_parse_string('InputDir', 'tmp/', inputdir)  ! Note: the default is tmp/ (legacy behaviour)
+    ! call loct_parse_string('InputDir', 'restart/', inputdir)  ! Note: the default is restart/ (legacy behaviour)
     ! call loct_stat(ierr, inputdir)
     ! if (ierr == -1) then
     !  write(message(1),'(a,a)') 'Could not find input directory: ', trim(inputdir)
@@ -228,7 +228,7 @@ contains
 
     ! create directory for final (converged) output
     !%Variable OutputDir
-    !%Default "tmp/"
+    !%Default "restart/"
     !%Type string
     !%Section Generalities::IO
     !%Description
@@ -237,7 +237,7 @@ contains
     !%End
 
     ! disabled for the moment
-    ! call loct_parse_string('OutputDir', 'tmp/', outputdir) ! Again tmp/ as default (legacy behaviour)
+    ! call loct_parse_string('OutputDir', 'restart/', outputdir) ! Again restart/ as default (legacy behaviour)
     ! call io_mkdir(outputdir)
 
     ! create debug directory if in debugging mode

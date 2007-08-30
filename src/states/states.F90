@@ -1790,8 +1790,8 @@ contains
 
     if(mpi_grp_is_root(mpi_world)) then
 
-      ! write matrix to "tmp/restart_gs" directory
-      iunit = io_open('tmp/restart_gs/degeneracy_matrix', action='write', is_tmp = .true.)    
+      ! write matrix to "restart/restart_gs" directory
+      iunit = io_open(trim(tmpdir)//'restart_gs/degeneracy_matrix', action='write', is_tmp = .true.)
 
       write(iunit, '(a)') '# index  kx ky kz  eigenvalue  degeneracy matrix'
 
@@ -1802,8 +1802,8 @@ contains
     
       call io_close(iunit)
     
-      ! write index vectors to "tmp/restart_gs" directory
-      iunit = io_open('tmp/restart_gs/index_vectors', action='write', is_tmp = .true.)    
+      ! write index vectors to "restart/restart_gs" directory
+      iunit = io_open(trim(tmpdir)//'restart_gs/index_vectors', action='write', is_tmp = .true.)    
       
       write(iunit, '(a)') '# index  sindex  eindex1 eindex2'
 

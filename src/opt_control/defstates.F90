@@ -92,7 +92,7 @@
       !%Description
       !% If OCTInitialState = oct_is-superposition, you must specify one
       !% OCTInitialTransformStates block, in order to specify which linear
-      !% combination of the states present in "tmp/restart_gs" is used to
+      !% combination of the states present in "restart/restart_gs" is used to
       !% create the initial state.
       !% 
       !% The syntax is equivalent to the one used for the TransformStates
@@ -264,7 +264,7 @@
       !%Description
       !% If OCTTargetOperator = oct_tg_superposition, you must specify one
       !% OCTTargetTransformStates block, in order to specify which linear
-      !% combination of the states present in "tmp/restart_gs" is used to
+      !% combination of the states present in "restart/restart_gs" is used to
       !% create the target state.
       !% 
       !% The syntax is equivalent to the one used for the TransformStates
