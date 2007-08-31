@@ -92,20 +92,20 @@
     type(states_t), intent(in)          :: target_st
     type(oct_iterator_t), intent(inout) :: iterator
 
-    FLOAT :: fluence
+    FLOAT :: fluence, overlap, jfunctional
     character(len=80)  :: filename
 
     call push_sub('opt_control.iteration_manager')
     
     stoploop = .false.
 
-    iterator%overlap = overlap_function(oct, gr%m, td_fitness, td%max_iter, psi, target_st)
-    iterator%functional = iterator%overlap - j2_functional(par)
+    overlap = overlap_function(oct, gr%m, td_fitness, td%max_iter, psi, target_st)
+    jfunctional = overlap - j2_functional(par)
 
     fluence = laser_fluence(par)
 
-    iterator%convergence(1,iterator%ctr_iter) = iterator%functional
-    iterator%convergence(2,iterator%ctr_iter) = iterator%overlap
+    iterator%convergence(1,iterator%ctr_iter) = jfunctional
+    iterator%convergence(2,iterator%ctr_iter) = overlap
     iterator%convergence(3,iterator%ctr_iter) = fluence
     iterator%convergence(4,iterator%ctr_iter) = tdf(par%td_penalty(1), 1)
     
@@ -115,14 +115,15 @@
     ! TODO:: check for STOP FILE AND delete it
 
     if((iterator%ctr_iter .eq. iterator%ctr_iter_max) .or. &
-       (iterator%eps>M_ZERO.and.abs(iterator%functional-iterator%old_functional) < iterator%eps)) then
+       (iterator%eps>M_ZERO.and.abs(jfunctional-iterator%old_functional) < iterator%eps)) then
+
 
       if((iterator%ctr_iter .eq. iterator%ctr_iter_max)) then
         message(1) = "Info: Maximum number of iterations reached"
         call write_info(1)
       endif
 
-      if(iterator%eps > M_ZERO .and. abs(iterator%functional-iterator%old_functional) < iterator%eps ) then
+      if(iterator%eps > M_ZERO .and. abs(jfunctional-iterator%old_functional) < iterator%eps ) then
         message(1) = "Info: Convergence threshold reached"
         call write_info(1)
       endif
@@ -135,18 +136,18 @@
 
     if(oct%mode_fixed_fluence) then
       write(message(1), '(6x,a,f10.5,a,f10.5,a,f10.5,a,f10.5)') &
-        " => J1:", iterator%overlap, "   J: " , iterator%functional,  "  I: " , fluence, &
-        " penalty: ", par%a_penalty(iterator%ctr_iter)
+        " => J1:", overlap, "   J: " , jfunctional,  "  I: " , fluence, &
+        " penalty: ", real(tdf(par%td_penalty(1), 1), REAL_PRECISION)
     else
       write(message(1), '(6x,a,f14.8,a,f20.8,a,f14.8)') &
-        " => J1:", iterator%overlap, "   J: " , iterator%functional,  "  I: " , fluence
+        " => J1:", overlap, "   J: " , jfunctional,  "  I: " , fluence
     end if
     call write_info(1)
 
     ! store field with best J
-    if(iterator%functional > iterator%bestJ) then
-      iterator%bestJ          = iterator%functional
-      iterator%bestJ_J1       = iterator%overlap
+    if(jfunctional > iterator%bestJ) then
+      iterator%bestJ          = jfunctional
+      iterator%bestJ_J1       = overlap
       iterator%bestJ_fluence  = fluence
       iterator%bestJ_ctr_iter = iterator%ctr_iter
       ! dump to disc
@@ -155,9 +156,9 @@
     end if
 
     ! store field with best J1
-    if(iterator%overlap > iterator%bestJ1) then
-      iterator%bestJ1          = iterator%overlap
-      iterator%bestJ1_J        = iterator%functional
+    if(overlap > iterator%bestJ1) then
+      iterator%bestJ1          = overlap
+      iterator%bestJ1_J        = jfunctional
       iterator%bestJ1_fluence  = fluence       
       iterator%bestJ1_ctr_iter = iterator%ctr_iter
       ! dump to disc
@@ -166,7 +167,7 @@
     end if
 
     iterator%ctr_iter = iterator%ctr_iter + 1
-    iterator%old_functional = iterator%functional
+    iterator%old_functional = jfunctional
     
     call pop_sub()
   end function iteration_manager

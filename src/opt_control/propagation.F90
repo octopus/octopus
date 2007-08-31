@@ -433,7 +433,7 @@ module opt_control_propagation_m
     type(states_t), intent(inout) :: chi
     
     CMPLX :: d1
-    CMPLX, allocatable  :: d2(:)
+    CMPLX, allocatable  :: d2(:), dq(:)
     integer :: ik, p, dim, i, j
     FLOAT :: value
 
@@ -443,21 +443,26 @@ module opt_control_propagation_m
     
     ALLOCATE(rpsi(gr%m%np_part, psi%d%dim), gr%m%np_part*psi%d%dim)
     ALLOCATE(d2(cp%no_parameters), cp%no_parameters)
+    ALLOCATE(dq(cp%no_parameters), cp%no_parameters)
 
     ! TODO This should be a product between Slater determinants.
     do j = 1, cp%no_parameters
       ik = 1
       p  = 1
       rpsi = M_z0
-      call zvlasers(gr, h, psi%zpsi(:, :, p, ik), rpsi, ik, laser_number = j)
+      call zvlaser_operator_linear(gr, h, psi%zpsi(:, :, p, ik), rpsi, ik, laser_number = j)
       d2(j) = zstates_dotp(gr%m, psi%d%dim, chi%zpsi(:, :, p, ik), rpsi)
+
+      rpsi = M_z0
+      call zvlaser_operator_quadratic(gr, h, psi%zpsi(:, :, p, ik), rpsi, ik, laser_number = j)
+      dq(j) = zstates_dotp(gr%m, psi%d%dim, chi%zpsi(:, :, p, ik), rpsi)
     end do
 
     d1 = M_z1
     if(algorithm_type .eq. oct_algorithm_zbr98) d1 = zstates_mpdotp(gr%m, psi, chi)
 
     do j = 1, cp%no_parameters
-      value = aimag(d1*d2(j))/tdf(cp%td_penalty(j), iter+1)
+      value = aimag(d1*d2(j)) / ( tdf(cp%td_penalty(j), iter+1) - M_TWO*aimag(dq(j)) ) 
       call tdf_set_numerical(cp%f(j), iter+1, value)
       i = int(sign(M_ONE, td%dt))
       if(iter==0.or.iter==td%max_iter) then
@@ -468,7 +473,7 @@ module opt_control_propagation_m
       end if
     end do
 
-    deallocate(rpsi, d2)
+    deallocate(rpsi, d2, dq)
     call pop_sub()
   end subroutine update_field
 

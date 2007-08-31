@@ -510,14 +510,216 @@ end subroutine X(vexternal)
 
 
 ! ---------------------------------------------------------
-subroutine X(vlasers) (gr, h, psi, hpsi, ik, t, laser_number)
+subroutine X(vlaser_operator_quadratic) (gr, h, psi, hpsi, ik, laser_number)
   type(grid_t),        intent(inout) :: gr
   type(hamiltonian_t), intent(in)    :: h
   R_TYPE,              intent(inout) :: psi(:,:)  ! psi(NP_PART, h%d%dim)
   R_TYPE,              intent(inout) :: hpsi(:,:) ! hpsi(NP_PART, h%d%dim)
   integer,             intent(in)    :: ik
-  FLOAT, optional,     intent(in)    :: t
-  integer, optional,   intent(in)    :: laser_number
+  integer,             intent(in)    :: laser_number
+
+  integer :: i, k, idim
+  logical :: electric_field, vector_potential, magnetic_field
+
+  FLOAT :: a_field(1:MAX_DIM), a_field_prime(1:MAX_DIM), b(1:MAX_DIM), b_prime(1:MAX_DIM)
+  FLOAT, allocatable :: a(:, :), a_prime(:, :)
+
+  call push_sub('h_inc.Xvlasers')
+
+  a_field = M_ZERO
+
+  electric_field = .false.
+  vector_potential = .false.
+  magnetic_field = .false.
+  i = laser_number
+
+  select case(h%ep%lasers(i)%field)
+  case(E_FIELD_ELECTRIC) ! do nothing
+  case(E_FIELD_MAGNETIC)
+    if(.not. allocated(a)) then 
+      ALLOCATE(a(NP_PART, NDIM), NP_PART*NDIM)
+      a = M_ZERO
+      ALLOCATE(a_prime(NP_PART, NDIM), NP_PART*NDIM)
+      a_prime = M_ZERO
+    end if
+    call laser_vector_potential(h%ep%lasers(i), gr%m, a_prime)
+    a = a + a_prime
+    call laser_field(gr%sb, h%ep%lasers(i), b_prime)
+    b = b + b_prime
+    magnetic_field = .true.
+  case(E_FIELD_VECTOR_POTENTIAL)
+    call laser_field(gr%sb, h%ep%lasers(i), a_field_prime)
+    a_field = a_field + a_field_prime
+    vector_potential = .true.
+  end select
+
+  if(magnetic_field) then
+    do k = 1, NP
+      hpsi(k, :) = hpsi(k, :) + M_HALF*dot_product(a(k, 1:NDIM), a(k, 1:NDIM))*psi(k, :) / P_c**2
+    end do
+    deallocate(a, a_prime)
+  end if
+  if(vector_potential) then
+    do k = 1, NP
+      hpsi(k, :) = hpsi(k, :) + M_HALF*dot_product(a_field(1:NDIM), a_field(1:NDIM))*psi(k, :) / P_c**2
+    end do
+  end if
+
+  call pop_sub()
+end subroutine X(vlaser_operator_quadratic)
+
+
+! ---------------------------------------------------------
+subroutine X(vlaser_operator_linear) (gr, h, psi, hpsi, ik, laser_number)
+  type(grid_t),        intent(inout) :: gr
+  type(hamiltonian_t), intent(in)    :: h
+  R_TYPE,              intent(inout) :: psi(:,:)  ! psi(NP_PART, h%d%dim)
+  R_TYPE,              intent(inout) :: hpsi(:,:) ! hpsi(NP_PART, h%d%dim)
+  integer,             intent(in)    :: ik
+  integer,             intent(in)    :: laser_number
+
+  integer :: i, k, idim
+  logical :: electric_field, vector_potential, magnetic_field
+  R_TYPE, allocatable :: grad(:, :, :), lhpsi(:, :)
+
+  FLOAT :: a_field(1:MAX_DIM), a_field_prime(1:MAX_DIM), b(1:MAX_DIM), b_prime(1:MAX_DIM)
+
+  FLOAT, allocatable :: v(:), pot(:), a(:, :), a_prime(:, :)
+
+  call push_sub('h_inc.Xvlasers')
+
+  a_field = M_ZERO
+
+  electric_field = .false.
+  vector_potential = .false.
+  magnetic_field = .false.
+  i = laser_number
+
+  select case(h%ep%lasers(i)%field)
+  case(E_FIELD_ELECTRIC)
+    if(.not. allocated(v)) then 
+      ALLOCATE(v(NP), NP)
+      v = M_ZERO
+      ALLOCATE(pot(NP), NP)
+      pot = M_ZERO
+    end if
+    call laser_potential(gr%sb, h%ep%lasers(i), gr%m, pot)
+    v = v + pot
+    electric_field = .true.
+  case(E_FIELD_MAGNETIC)
+    if(.not. allocated(a)) then 
+      ALLOCATE(a(NP_PART, NDIM), NP_PART*NDIM)
+      a = M_ZERO
+      ALLOCATE(a_prime(NP_PART, NDIM), NP_PART*NDIM)
+      a_prime = M_ZERO
+    end if
+    call laser_vector_potential(h%ep%lasers(i), gr%m, a_prime)
+    a = a + a_prime
+    call laser_field(gr%sb, h%ep%lasers(i), b_prime)
+    b = b + b_prime
+    magnetic_field = .true.
+  case(E_FIELD_VECTOR_POTENTIAL)
+    call laser_field(gr%sb, h%ep%lasers(i), a_field_prime)
+    a_field = a_field + a_field_prime
+    vector_potential = .true.
+  end select
+
+  if(electric_field) then
+    do k = 1, h%d%dim
+      hpsi(1:NP, k)= hpsi(1:NP, k) + v(1:NP) * psi(1:NP, k)
+    end do
+    deallocate(v, pot)
+  end if
+
+  if(magnetic_field) then
+    ALLOCATE(grad(NP_PART, NDIM, h%d%dim), NP_PART*h%d%dim*NDIM)
+
+    do idim = 1, h%d%dim
+      call X(f_gradient)(gr%sb, gr%f_der, psi(:, idim), grad(:, :, idim))
+    end do
+
+    ! If there is a static magnetic field, its associated vector potential is coupled with
+    ! the time-dependent one defined as a "laser" (ideally one should just add them all and
+    ! do the calculation only once...). Note that h%ep%a_static already has been divided
+    ! by P_c, and therefore here we only divide by P_c, and not P_c**2.
+    if(associated(h%ep%a_static)) then
+      do k = 1, NP
+        hpsi(k, :) = hpsi(k, :) + dot_product(a(k, 1:NDIM), h%ep%a_static(k, 1:NDIM))*psi(k, :) / P_c
+      end do
+    end if
+
+    select case(h%d%ispin)
+    case(UNPOLARIZED, SPIN_POLARIZED)
+      do k = 1, NP
+        hpsi(k, 1) = hpsi(k, 1) - M_zI*dot_product(a(k, 1:NDIM), grad(k, 1:NDIM, 1)) / P_c
+      end do
+    case (SPINORS)
+      do k = 1, NP
+        do idim = 1, h%d%dim
+          hpsi(k, idim) = hpsi(k, idim) - M_zI*dot_product(a(k, 1:NDIM), grad(k, 1:NDIM, idim)) / P_c
+        end do
+      end do
+    end select
+
+
+    select case (h%d%ispin)
+    case (SPIN_POLARIZED)
+      ALLOCATE(lhpsi(NP, h%d%dim), NP*h%d%dim)
+      if(modulo(ik+1, 2) == 0) then ! we have a spin down
+        lhpsi(1:NP, 1) = - M_HALF/P_C*sqrt(dot_product(b, b))*psi(1:NP, 1)
+      else
+        lhpsi(1:NP, 1) = + M_HALF/P_C*sqrt(dot_product(b, b))*psi(1:NP, 1)
+      end if
+      hpsi(1:NP, :) = hpsi(1:NP, :) + (h%ep%gyromagnetic_ratio * M_HALF) * lhpsi(1:NP, :)
+      deallocate(lhpsi)
+    case (SPINORS)
+      ALLOCATE(lhpsi(NP, h%d%dim), NP*h%d%dim)
+      lhpsi(1:NP, 1) = M_HALF/P_C*( b(3)*psi(1:NP, 1) &
+           + (b(1) - M_zI*b(2))*psi(1:NP, 2))
+      lhpsi(1:NP, 2) = M_HALF/P_C*(-b(3)*psi(1:NP, 2) &
+           + (b(1) + M_zI*b(2))*psi(1:NP, 1))
+      hpsi(1:NP, :) = hpsi(1:NP, :) + (h%ep%gyromagnetic_ratio * M_HALF) * lhpsi(1:NP, :)
+      deallocate(lhpsi)
+    end select
+
+    deallocate(grad)
+    deallocate(a, a_prime)
+  end if
+
+  if(vector_potential) then
+    ALLOCATE(grad(NP_PART, NDIM, h%d%dim), NP_PART*h%d%dim*NDIM)
+
+    do idim = 1, h%d%dim
+      call X(f_gradient)(gr%sb, gr%f_der, psi(:, idim), grad(:, :, idim))
+    end do
+
+    select case(h%d%ispin)
+    case(UNPOLARIZED, SPIN_POLARIZED)
+      do k = 1, NP
+        hpsi(k, 1) = hpsi(k, 1) - M_zI*dot_product(a_field(1:NDIM), grad(k, 1:NDIM, 1)) / P_c
+      end do
+    case (SPINORS)
+      do k = 1, NP
+        do idim = 1, h%d%dim
+          hpsi(k, idim) = hpsi(k, idim) - M_zI*dot_product(a_field(1:NDIM), grad(k, 1:NDIM, idim)) / P_c
+        end do
+      end do
+    end select
+    deallocate(grad)
+  end if
+
+  call pop_sub()
+end subroutine X(vlaser_operator_linear)
+
+
+! ---------------------------------------------------------
+subroutine X(vlasers) (gr, h, psi, hpsi, ik, t)
+  type(grid_t),        intent(inout) :: gr
+  type(hamiltonian_t), intent(in)    :: h
+  R_TYPE,              intent(inout) :: psi(:,:)  ! psi(NP_PART, h%d%dim)
+  R_TYPE,              intent(inout) :: hpsi(:,:) ! hpsi(NP_PART, h%d%dim)
+  integer,             intent(in)    :: ik
+  FLOAT, optional                    :: t
 
   integer :: i, k, idim
   logical :: electric_field, vector_potential, magnetic_field
@@ -537,10 +739,6 @@ subroutine X(vlasers) (gr, h, psi, hpsi, ik, t, laser_number)
 
   do i = 1, h%ep%no_lasers
 
-    if(present(laser_number)) then
-      if(i.ne.laser_number) cycle
-    end if
-
     select case(h%ep%lasers(i)%field)
     case(E_FIELD_ELECTRIC)
       if(.not. allocated(v)) then 
@@ -549,12 +747,7 @@ subroutine X(vlasers) (gr, h, psi, hpsi, ik, t, laser_number)
         ALLOCATE(pot(NP), NP)
         pot = M_ZERO
       end if
-
-      if(present(t)) then
-        call laser_potential(gr%sb, h%ep%lasers(i), gr%m, pot, t)
-      else
-        call laser_potential(gr%sb, h%ep%lasers(i), gr%m, pot)
-      end if
+      call laser_potential(gr%sb, h%ep%lasers(i), gr%m, pot, t)
       v = v + pot
       electric_field = .true.
 
@@ -566,11 +759,7 @@ subroutine X(vlasers) (gr, h, psi, hpsi, ik, t, laser_number)
         a_prime = M_ZERO
       end if
 
-      if(present(t)) then
-        call laser_vector_potential(h%ep%lasers(i), gr%m, a_prime, t)
-      else
-        call laser_vector_potential(h%ep%lasers(i), gr%m, a_prime)
-      end if
+      call laser_vector_potential(h%ep%lasers(i), gr%m, a_prime, t)
       a = a + a_prime
       if(present(t)) then
         call laser_field(gr%sb, h%ep%lasers(i), b_prime, t)
@@ -581,11 +770,7 @@ subroutine X(vlasers) (gr, h, psi, hpsi, ik, t, laser_number)
       magnetic_field = .true.
 
     case(E_FIELD_VECTOR_POTENTIAL)
-      if(present(t)) then
-        call laser_field(gr%sb, h%ep%lasers(i), a_field_prime, t)
-      else
-        call laser_field(gr%sb, h%ep%lasers(i), a_field_prime)
-      end if
+      call laser_field(gr%sb, h%ep%lasers(i), a_field_prime, t)
       a_field = a_field + a_field_prime
       vector_potential = .true.
 
@@ -611,7 +796,6 @@ subroutine X(vlasers) (gr, h, psi, hpsi, ik, t, laser_number)
       hpsi(k, :) = hpsi(k, :) + M_HALF*dot_product(a(k, 1:NDIM), a(k, 1:NDIM))*psi(k, :) / P_c**2
     end do
 
-!!!NEW
     ! If there is a static magnetic field, its associated vector potential is coupled with
     ! the time-dependent one defined as a "laser" (ideally one should just add them all and
     ! do the calculation only once...). Note that h%ep%a_static already has been divided
@@ -621,7 +805,6 @@ subroutine X(vlasers) (gr, h, psi, hpsi, ik, t, laser_number)
         hpsi(k, :) = hpsi(k, :) + dot_product(a(k, 1:NDIM), h%ep%a_static(k, 1:NDIM))*psi(k, :) / P_c
       end do
     end if
-!!!ENDOFNEW
 
     select case(h%d%ispin)
     case(UNPOLARIZED, SPIN_POLARIZED)

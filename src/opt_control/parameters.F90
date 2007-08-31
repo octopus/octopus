@@ -50,8 +50,6 @@ module opt_control_parameters_m
     FLOAT   :: dt
     integer :: ntiter
     type(tdf_t), pointer :: f(:)
-
-    FLOAT, pointer   :: a_penalty(:)
     type(tdf_t), pointer :: td_penalty(:)
   end type oct_control_parameters_t
 
@@ -189,11 +187,6 @@ module opt_control_parameters_m
     !% value from 0.1 (strong fields) to 10 (weak fields). 
     !%End
     call loct_parse_float(check_inp('OCTPenalty'), M_ONE, octpenalty)
-    ! penalty array for fixed fluence run 
-    ! the array is only interesting for the development of new algorithms
-
-    ALLOCATE(par%a_penalty(0:ctr_iter_max+1), ctr_iter_max+2)
-    par%a_penalty = octpenalty
 
     ALLOCATE(par%td_penalty(par%no_parameters), par%no_parameters)
     do i = 1, par%no_parameters

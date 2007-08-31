@@ -29,8 +29,6 @@
     
     iunit = io_open('opt-control/info', action='write')
     write(iunit, '(a,i4)')    'Total Iterations = ', iterator%ctr_iter
-    write(iunit, '(a,f14.8)') 'Last Overlap    = ', iterator%overlap
-    write(iunit, '(a,f14.8)') 'Last Functional = ', iterator%functional
     write(iunit, '(a)') 
     write(iunit, '(a)')       'Best value of functional'
     write(iunit, '(a,i4)')    'Iteration  = ', iterator%bestJ_ctr_iter

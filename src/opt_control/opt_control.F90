@@ -73,9 +73,7 @@ module opt_control_m
     FLOAT              :: eps
     integer            :: ctr_iter_max
     integer            :: ctr_iter
-    FLOAT              :: functional
     FLOAT              :: old_functional
-    FLOAT              :: overlap
     FLOAT, pointer     :: convergence(:,:)
     FLOAT              :: bestJ, bestJ1, bestJ_fluence, bestJ1_fluence
     FLOAT              :: bestJ_J1, bestJ1_J
@@ -246,7 +244,7 @@ contains
     !---------------------------------------
     subroutine scheme_wg05
       integer :: ierr, j
-      FLOAT :: fluence
+      FLOAT :: fluence, new_penalty, old_penalty
       call push_sub('opt_control.scheme_WG05')
       
       message(1) = "Info: Starting OCT iteration using scheme: WG05"
@@ -284,25 +282,21 @@ contains
 
         ! recalc field
         if (oct%mode_fixed_fluence) then
-          !!!WARNING: this probably shoudl not be here?
           fluence = laser_fluence(par_tmp)
-
-          par%a_penalty(iterator%ctr_iter + 1) = &
-            sqrt(fluence * par%a_penalty(iterator%ctr_iter)**2 / oct%targetfluence )
+          old_penalty = tdf(par%td_penalty(1), 1)
+          new_penalty = sqrt( fluence * old_penalty**2 / oct%targetfluence )
 
           if(oct%dump_intermediate) then
-            write (6,*) 'actual penalty', par%a_penalty(iterator%ctr_iter)
-            write (6,*) 'next penalty', par%a_penalty(iterator%ctr_iter + 1)
+            write(message(1), '(a,e15.6)') 'current penalty =', old_penalty
+            write(message(2), '(a,e15.6)') 'new penalty     =', new_penalty
+            call write_info(2)
           end if
 
           do j = 1, par_tmp%no_parameters
             call tdf_set_numerical(par%td_penalty(j), &
-                                   spread(par%a_penalty(iterator%ctr_iter + 1), 1, td%max_iter+1) )
-            call tdf_scalar_multiply( ( par%a_penalty(iterator%ctr_iter) / par%a_penalty(iterator%ctr_iter + 1) ), &
-                                      par_tmp%f(j) )
+                                   spread(new_penalty, 1, td%max_iter+1) )
+            call tdf_scalar_multiply( old_penalty / new_penalty , par_tmp%f(j) )
           end do
-
-          fluence = laser_fluence(par_tmp)
         end if
 
         do j = 1, par_tmp%no_parameters
