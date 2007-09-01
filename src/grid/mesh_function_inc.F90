@@ -86,23 +86,45 @@ R_TYPE function X(mf_dotp)(mesh, f1, f2) result(dotp)
 
 end function X(mf_dotp)
 
-
 ! ---------------------------------------------------------
-! this function returns the norm of a vector
-FLOAT function X(mf_nrm2)(m, f) result(nrm2)
-  type(mesh_t), intent(in) :: m
+! this function returns the the norm of a vector
+FLOAT function X(mf_nrm2)(mesh, f) result(nrm2)
+  type(mesh_t), intent(in) :: mesh
   R_TYPE,       intent(in) :: f(:)
+
+  R_TYPE, allocatable :: l(:)
+  R_TYPE              :: nrm2_tmp
 
   call profiling_in(C_PROFILING_MF_NRM2)
   call push_sub('mf_inc.Xmf_nrm2')
 
-  nrm2 = sqrt(X(mf_dotp) (m, f, f))
+  ! This is not implemented via vec_integrate
+  ! because BLAS is much faster.
+  if(mesh%use_curvlinear) then
+    ALLOCATE(l(mesh%np), mesh%np)
+    l(1:mesh%np) = f(1:mesh%np) * sqrt(mesh%vol_pp(1:mesh%np))
+    nrm2_tmp = lalg_nrm2(mesh%np, l)
+    deallocate(l)
+  else
+    nrm2_tmp = lalg_nrm2(mesh%np, f) * sqrt(mesh%vol_pp(1))
+  end if
+
+  if(mesh%parallel_in_domains) then
+#if defined(HAVE_MPI)
+    call profiling_in(C_PROFILING_MF_NRM2_ALLREDUCE)
+    call MPI_Allreduce(nrm2_tmp, nrm2, 1, R_MPITYPE, MPI_SUM, mesh%vp%comm, mpi_err)
+    call profiling_out(C_PROFILING_MF_NRM2_ALLREDUCE)
+#else
+    ASSERT(.false.)
+#endif
+  else
+    nrm2 = nrm2_tmp
+  end if
 
   call pop_sub()
   call profiling_out(C_PROFILING_MF_NRM2)
 
 end function X(mf_nrm2)
-
 
 ! ---------------------------------------------------------
 ! This function calculates the x_i moment of the function f
