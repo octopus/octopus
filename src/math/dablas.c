@@ -23,10 +23,22 @@
 #include <config.h>
 
 /* declare blas functions */
+void FC_FUNC(sscal, SSCAL)(const int * n, const float  * a, const float  * x, const int * incx);
 void FC_FUNC(dscal, DSCAL)(const int * n, const double * a, const double * x, const int * incx);
+void FC_FUNC(saxpy, SAXPY)(const int * n, const float  * a, const float  * x, const int * incx, float  * y, const int * incy);
 void FC_FUNC(daxpy, DAXPY)(const int * n, const double * a, const double * x, const int * incx, double * y, const int * incy);
 
 /* interface to apply blas with a real constant over complex vectors */
+
+void FC_FUNC(sazscal, SAZSCAL)(const int * n, 
+			       const float * restrict a,
+			       float * restrict x){
+  
+  const int twon = 2*n[0];
+  const int one = 1;
+  
+  FC_FUNC(sscal, SSCAL)(&twon, a, x, &one);
+}
 
 void FC_FUNC(dazscal, DAZSCAL)(const int * n, 
 			       const double * restrict a,
@@ -47,5 +59,17 @@ void FC_FUNC(dazaxpy, DAZAXPY)(const int * n,
   const int one = 1;
 
   FC_FUNC(daxpy, DAXPY)(&twon, a, x, &one, y, &one);
+
+}
+
+void FC_FUNC(sazaxpy, SAZAXPY)(const int * n, 
+			       const float * restrict a,
+			       const float * restrict x,
+			       float * restrict y){
+
+  const int twon = 2*n[0];
+  const int one = 1;
+
+  FC_FUNC(saxpy, SAXPY)(&twon, a, x, &one, y, &one);
 
 }

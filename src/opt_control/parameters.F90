@@ -166,7 +166,8 @@ module opt_control_parameters_m
     integer,      intent(in)                   :: ctr_iter_max
 
     character(len=1024)      :: expression
-    FLOAT                    :: weight, t, f_re, f_im, octpenalty, dt
+    FLOAT                    :: weight, t, octpenalty, dt
+    real(8)                  :: f_re, f_im
     C_POINTER                :: blk
     integer                  :: no_lines, i, j, steps
     call push_sub('opt_control_penalty.parameters_penalty_init')
@@ -217,8 +218,8 @@ module opt_control_parameters_m
         call loct_parse_block_float(blk, i-1, 1, weight)
         do j = 1, steps+1
           t = (j-1)*dt
-          call loct_parse_expression(f_re, f_im, "t", t, expression)
-          call tdf_set_numerical(par%td_penalty(i), j, M_ONE /(f_re + CNST(1.0e-7))  )
+          call loct_parse_expression(f_re, f_im, "t", real(t, 8), expression)
+          call tdf_set_numerical(par%td_penalty(i), j, TOFLOAT(M_ONE /(f_re + CNST(1.0e-7)))  )
         end do
       end do
 

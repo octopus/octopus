@@ -312,7 +312,8 @@ contains
 
     integer :: i, iunit
     integer :: ip, pol
-    FLOAT   :: grid(0:steps), f_re, f_im, t
+    real(8) :: f_re, f_im
+    FLOAT   :: grid(0:steps), m, t
     CMPLX, allocatable :: ff(:)
 
 
@@ -325,7 +326,7 @@ contains
     case(filter_time)
       do ip=0, steps
         t = ip*dt
-        call loct_parse_expression(f_re, f_im, "t", t, fp%expression)
+        call loct_parse_expression(f_re, f_im, "t", real(t, 8), fp%expression)
         ff(ip) = f_re + M_zI*f_im
       end do
       
@@ -333,7 +334,7 @@ contains
       call w_lookup(steps+1,dt,grid)
       ff = M_z1
       do ip=0, steps
-        call loct_parse_expression(f_re, f_im, "w", grid(ip), fp%expression)      
+        call loct_parse_expression(f_re, f_im, "w", real(grid(ip), 8), fp%expression)      
         ff(ip) = f_re + M_zI*f_im
       end do
       

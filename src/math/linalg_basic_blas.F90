@@ -129,7 +129,7 @@ subroutine FNAME(scal_4)(n1, n2, n3, n4, da, dx)
 
 end subroutine FNAME(scal_4)
 
-#if TYPE == 4
+#if TYPE == 3 || TYPE == 4
 subroutine FNAME(scal_5)(n1, da, dx)
   integer, intent(in)    :: n1
   TYPE2,   intent(in)    :: da
@@ -193,7 +193,7 @@ subroutine FNAME(axpy_4)(n1, n2, n3, n4, da, dx, dy)
 
 end subroutine FNAME(axpy_4)
 
-#if TYPE == 4
+#if TYPE == 3 || TYPE == 4
 subroutine FNAME(axpy_5)(n1, da, dx, dy)
   integer, intent(in)    :: n1
   TYPE2,   intent(in)    :: da

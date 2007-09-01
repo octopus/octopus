@@ -77,7 +77,7 @@ contains
 
     type(geom_opt_t) :: g_opt
     integer :: i, ierr, lcao_start, lcao_start_default
-    FLOAT, allocatable :: x(:)
+    real(8), allocatable :: x(:)
     type(lcao_t) :: lcao_data
     FLOAT :: energy
 
@@ -156,7 +156,8 @@ contains
       x(3*i + 3) = geo%atom(i + 1)%x(3)
     end do
 
-    energy = loct_minimize(g_opt%method, 3*geo%natoms, x(1), g_opt%step, g_opt%tol, g_opt%max_iter, calc_point)
+    energy = loct_minimize(g_opt%method, 3*geo%natoms, x(1), &
+         real(g_opt%step, 8), real(g_opt%tol, 8), g_opt%max_iter, calc_point)
 
     ! print out geometry
     do i = 0, geo%natoms - 1
@@ -265,11 +266,11 @@ contains
 
 
   subroutine calc_point(n, x, f, getgrad, df)
-    integer, intent(in) :: n
-    FLOAT, intent(in) :: x(n)
-    FLOAT, intent(out) :: f
-    integer, intent(in) :: getgrad
-    FLOAT, intent(out) :: df(n)
+    integer, intent(in)  :: n
+    real(8), intent(in)  :: x(n)
+    real(8), intent(out) :: f
+    integer, intent(in)  :: getgrad
+    real(8), intent(out) :: df(n)
 
     integer :: i
 
