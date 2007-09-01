@@ -265,7 +265,7 @@ contains
 
   logical :: GGA
   integer :: IN, IN1, IN2, IR, IS, JN
-  FLOAT :: AUX(MAXR), D(NSPIN), DECDD(NSPIN), DECDGD(3,NSPIN),             &
+  REAL_DOUBLE :: AUX(MAXR), D(NSPIN), DECDD(NSPIN), DECDGD(3,NSPIN),             &
      DEXDD(NSPIN), DEXDGD(3,NSPIN),                                  &
      DGDM(-NN:NN), DGIDFJ(-NN:NN), DRDM, DVOL,                       &
      EPSC, EPSX, F1, F2, GD(3,NSPIN), sigma(3), vxsigma(3), vcsigma(3)

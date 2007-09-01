@@ -20,6 +20,7 @@
 #define R_TCOMPLEX 1
 
 #define R_TYPE      CMPLX
+#define R_DOUBLE    complex(8)
 #define R_MPITYPE   MPI_CMPLX
 #define R_TOTYPE(x) cmplx(x, M_ZERO, REAL_PRECISION)
 

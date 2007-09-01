@@ -359,11 +359,13 @@ contains
   ! ---------------------------------------------------------
   subroutine oct_parse_expression4(re, im, x4, y4, z4, r4, t4, pot)
     real(4), intent(in)  :: x4, y4, z4, r4, t4
-    real(8), intent(out) :: re, im
+    real(4), intent(out) :: re, im
     character(len=*), intent(in) :: pot
-
-    call oct_parse_expression(re, im, real(x4, 8), real(y4, 8), &
-      real(z4, 8), real(r4, 8), real(t4, 8), pot)
+    real(8) :: re8, im8
+    call oct_parse_expression(re8, im8, real(x4, 8), real(y4, 8), &
+         real(z4, 8), real(r4, 8), real(t4, 8), pot)
+    re = real(re8, 4)
+    im = real(im8, 4)
   end subroutine oct_parse_expression4
 
   subroutine oct_parse_expression14(re, im, c, x, string)

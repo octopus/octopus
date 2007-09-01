@@ -477,7 +477,7 @@ contains
   end subroutine loct_spline_sum
 
   subroutine loct_spline_times(a, spl)
-    real(8), intent(in) :: a
+    FLOAT,               intent(in)     :: a
     type(loct_spline_t), intent(inout)  :: spl
 
     integer :: npoints, i
@@ -540,7 +540,7 @@ contains
   subroutine loct_spline_3dft(spl, splw, gmax)
     type(loct_spline_t), intent(in)    :: spl
     type(loct_spline_t), intent(inout) :: splw
-    real(8), intent(in), optional :: gmax
+    FLOAT, optional,     intent(in)    :: gmax
 
     type(loct_spline_t) :: aux
     real(8) :: g, dg
@@ -602,7 +602,7 @@ contains
     type(loct_spline_t), intent(in)    :: spl
     type(loct_spline_t), intent(inout) :: splw
     integer, intent(in) :: l
-    real(8), intent(in), optional :: gmax
+    FLOAT,   optional,   intent(in)    :: gmax
 
     type(loct_spline_t) :: aux
     real(8) :: g, dg
@@ -654,7 +654,7 @@ contains
 
   subroutine loct_spline_cut(spl, cutoff, beta)
     type(loct_spline_t), intent(inout) :: spl
-    real(8), intent(in) :: cutoff, beta
+    FLOAT,                  intent(in) :: cutoff, beta
 
     integer :: npoints, i
     real(8), allocatable :: x(:), y(:)
@@ -676,8 +676,8 @@ contains
 
   subroutine loct_spline_filter_ft(spl, fs, rs)
     type(loct_spline_t), intent(inout) :: spl
-    real(8), intent(in), optional :: fs(2)
-    real(8), intent(in), optional :: rs(2)
+    FLOAT, optional,     intent(in)    :: fs(2)
+    FLOAT, optional,     intent(in)    :: rs(2)
 
     type(loct_spline_t) :: splw
 
@@ -686,7 +686,7 @@ contains
       call loct_spline_3dft(spl, splw, CNST(2.0)*fs(1))
       call loct_spline_cut(splw, fs(1), fs(2))
       call loct_spline_3dft(splw, spl)
-      call loct_spline_times(CNST(1.0)/(CNST(2.0)*M_PI)**3, spl)
+      call loct_spline_times(TOFLOAT(CNST(1.0)/(CNST(2.0)*M_PI)**3), spl)
       call loct_spline_end(splw)
     end if
     if(present(rs)) then
@@ -698,8 +698,8 @@ contains
   subroutine loct_spline_filter_bessel(spl, l, fs, rs)
     type(loct_spline_t), intent(inout) :: spl
     integer, intent(in) :: l
-    real(8), intent(in), optional :: fs(2)
-    real(8), intent(in), optional :: rs(2)
+    FLOAT, intent(in), optional :: fs(2)
+    FLOAT, intent(in), optional :: rs(2)
 
     type(loct_spline_t) :: splw
 
@@ -834,12 +834,12 @@ contains
     deallocate(x, y)
   end subroutine loct_spline_print_2
 
-  real(8) function loct_spline_cutoff_radius(spl, threshold) result(r)
+  FLOAT function loct_spline_cutoff_radius(spl, threshold) result(r)
     type(loct_spline_t), intent(in) :: spl
-    real(8),             intent(in) :: threshold
+    FLOAT,               intent(in) :: threshold
 
     integer :: ii
-    real(8), parameter :: dx = CNST(0.01)
+    FLOAT, parameter :: dx = CNST(0.01)
     
     do ii = 2000, 1, -1
       r = dx*(ii-1)

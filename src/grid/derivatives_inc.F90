@@ -116,8 +116,6 @@ subroutine X(derivatives_oper)(op, der, f, opf, ghost_update)
   R_TYPE,              intent(out)   :: opf(:)     ! opf(m%np)
   logical, optional,   intent(in)    :: ghost_update
 
-  integer :: i
-
   call push_sub('derivatives_inc.Xderivatives_grad')
   
   ASSERT(ubound(f,   DIM=1) == der%m%np_part)

@@ -41,10 +41,19 @@ module poisson_cutoffs_m
     real(8) function c_poisson_cutoff_finite_cylinder(gx, gperp, xsize, rsize)
       real(8), intent(in) :: gx, gperp, rsize, xsize
     end function c_poisson_cutoff_finite_cylinder
+    module procedure poisson_cutoff_finite_cylinder4
   end interface
   
 contains
 
+  real(4) function poisson_cutoff_finite_cylinder4(gx, gperp, xsize, rsize)
+    real(4), intent(in) :: gx, gperp, rsize, xsize
+    real(8) :: res8
+    
+    res8 = c_poisson_cutoff_finite_cylinder(real(gx, 8), real(gperp, 8), real(xsize, 8), real(rsize, 8))
+    poisson_cutoff_finite_cylinder4 = real(r8, 4)
+  end function poisson_cutoff_finite_cylinder4
+  
   ! ---------------------------------------------------------
   FLOAT function poisson_cutoff_sphere(x, r) result(cutoff)
     FLOAT, intent(in) ::  x, r

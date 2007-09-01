@@ -32,6 +32,7 @@
 #undef X
 #undef TS
 #undef R_TYPE
+#undef R_DOUBLE
 #undef R_MPITYPE
 #undef R_TOTYPE
 

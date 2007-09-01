@@ -207,44 +207,58 @@ end subroutine X(mf_partial_integrate)
 
 ! ---------------------------------------------------------
 subroutine X(mf_interpolate) (mesh_in, mesh_out, full_interpolation, u, f)
-  type(mesh_t), intent(in)    :: mesh_in, mesh_out
-  logical,      intent(in)    :: full_interpolation
-  R_TYPE,       intent(in)    :: u(:)    ! u(mesh_in%np_global)
-  R_TYPE,       intent(out)   :: f(:)    ! f(mesh%np)
+  type(mesh_t),         intent(in)  :: mesh_in, mesh_out
+  logical,              intent(in)  :: full_interpolation
+  R_TYPE, target,       intent(in)  :: u(:)    ! u(mesh_in%np_global)
+  R_TYPE,               intent(out) :: f(:)    ! f(mesh%np)
 
-  FLOAT :: p(MAX_DIM)
+  real(8) :: p(MAX_DIM)
   integer :: ix, iy, iz
   R_TYPE, allocatable :: f_global(:)
+  R_DOUBLE, pointer :: ru(:)
   integer :: i, j, k
   type(qshep_t) :: interp
+  real(8), pointer :: rx(:, :)
 
   call push_sub('mf_inc.Xmf_interpolate')
 
   if(full_interpolation) then
 
+#ifdef SINGLE_PRECISION
+    ALLOCATE(rx(1:ubound(mesh_in%x, DIM=1), 1:MAX_DIM), ubound(mesh_in%x, DIM=1)*MAX_DIM)
+    rx = mesh_in%x
+    ALLOCATE(ru(1:ubound(u, DIM=1)), ubound(u, DIM=1))
+    ru = u
+#else
+    rx => mesh_in%x
+    ru => u
+#endif
+
     select case(mesh_in%sb%dim)
     case(2)
-      call init_qshep(interp, mesh_in%np_global, u, mesh_in%x(:, 1), mesh_in%x(:, 2))
+      call init_qshep(interp, mesh_in%np_global, ru, rx(:, 1), rx(:, 2))
       do i = 1, mesh_out%np
         p(1) = mesh_out%x(i, 1)
         p(2) = mesh_out%x(i, 2)
-        f(i) = qshep_interpolate(interp, u, p(1:2))
+        f(i) = qshep_interpolate(interp, ru, p(1:2))
       end do
       call kill_qshep(interp)
     case(3)
-      call init_qshep(interp, mesh_in%np_global, u, &
-                      mesh_in%x(:, 1), mesh_in%x(:, 2), mesh_in%x(:, 3))
+      call init_qshep(interp, mesh_in%np_global, ru, rx(:, 1), rx(:, 2), rx(:, 3))
       do i = 1, mesh_out%np
         p(1) = mesh_out%x(i, 1)
         p(2) = mesh_out%x(i, 2)
         p(3) = mesh_out%x(i, 3)
-        f(i) = qshep_interpolate(interp, u, p)
+        f(i) = qshep_interpolate(interp, ru, p)
       end do
       call kill_qshep(interp)
     case(1)
       stop 'Believe it or not, cannot do 1D interpolation, only 2D or 3D.'
     end select
-  
+#ifdef SINGLE_PRECISION
+    deallocate(rx)
+    deallocate(ru)
+#endif
   else
 
     if(mesh_in%parallel_in_domains) then
@@ -292,11 +306,19 @@ subroutine X(mf_interpolate_on_plane)(mesh, plane, f, f_in_plane)
   R_TYPE,             intent(out) :: f_in_plane(plane%nu:plane%mu, plane%nv:plane%mv)
 
   integer :: i, j
-  R_TYPE, allocatable :: f_global(:)
-  FLOAT :: p(MAX_DIM)
+  R_DOUBLE, allocatable :: f_global(:)
+  real(8) :: p(MAX_DIM)
   type(qshep_t) :: interp
+  real(8), pointer :: rx(:, :)
 
   call push_sub('mf_inc.Xmf_interpolate_on_plane')
+
+#ifdef SINGLE_PRECISION
+    ALLOCATE(rx(1:ubound(mesh%x, DIM=1), 1:MAX_DIM), ubound(mesh%x, DIM=1)*MAX_DIM)
+    rx = mesh%x
+#else
+    rx => mesh%x
+#endif
 
   ALLOCATE(f_global(mesh%np_global), mesh%np_global)
 #if defined HAVE_MPI
@@ -305,8 +327,7 @@ subroutine X(mf_interpolate_on_plane)(mesh, plane, f, f_in_plane)
   f_global(1:mesh%np_global) = f(1:mesh%np_global)
 #endif
 
-  call init_qshep(interp, mesh%np_global, f_global, mesh%x(1:mesh%np_global, 1), &
-                  mesh%x(1:mesh%np_global, 2), mesh%x(1:mesh%np_global, 3) )
+  call init_qshep(interp, mesh%np_global, f_global, rx(:, 1), rx(:, 2), rx(:, 3) )
 
   do i = plane%nu, plane%mu
     do j = plane%nv, plane%mv
@@ -318,7 +339,9 @@ subroutine X(mf_interpolate_on_plane)(mesh, plane, f, f_in_plane)
   end do
 
   call kill_qshep(interp)
-
+#ifdef SINGLE_PRECISION
+    deallocate(rx)
+#endif
   deallocate(f_global)
   call pop_sub()
 end subroutine X(mf_interpolate_on_plane)
@@ -335,11 +358,19 @@ subroutine X(mf_interpolate_on_line)(mesh, line, f, f_in_line)
   R_TYPE,             intent(out) :: f_in_line(line%nu:line%mu)
 
   integer :: i
-  R_TYPE, allocatable :: f_global(:)
-  FLOAT :: p(MAX_DIM)
+  R_DOUBLE, allocatable :: f_global(:)
+  real(8) :: p(MAX_DIM)
   type(qshep_t) :: interp
-  
+  real(8), pointer :: rx(:, :)
+
   call push_sub('mf_inc.Xmf_interpolate_on_line')
+
+#ifdef SINGLE_PRECISION
+    ALLOCATE(rx(1:ubound(mesh%x, DIM=1), 1:MAX_DIM), ubound(mesh%x, DIM=1)*MAX_DIM)
+    rx = mesh%x
+#else
+    rx => mesh%x
+#endif
 
   ALLOCATE(f_global(mesh%np_global), mesh%np_global)
 #if defined HAVE_MPI
@@ -348,7 +379,7 @@ subroutine X(mf_interpolate_on_line)(mesh, line, f, f_in_line)
   f_global(1:mesh%np_global) = f(1:mesh%np_global)
 #endif
 
-  call init_qshep(interp, mesh%np_global, f_global, mesh%x(1:mesh%np_global, 1), mesh%x(1:mesh%np_global, 2))
+  call init_qshep(interp, mesh%np_global, f_global, rx(:, 1), rx(:, 2))
   do i = line%nu, line%mu
     p(1) = line%origin(1) + i*line%spacing * line%u(1)
     p(2) = line%origin(2) + i*line%spacing * line%u(2)
@@ -357,7 +388,9 @@ subroutine X(mf_interpolate_on_line)(mesh, line, f, f_in_line)
   call kill_qshep(interp)
 
   deallocate(f_global)
-
+#ifdef SINGLE_PRECISION
+    deallocate(rx)
+#endif
   call pop_sub()
 end subroutine X(mf_interpolate_on_line)
 
