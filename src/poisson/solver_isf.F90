@@ -40,7 +40,7 @@ module poisson_isf_m
   ! Datatype to store kernel values to solve poisson equation
   ! on different communicators (configurations).
   type isf_cnf_t
-    FLOAT, pointer  :: kernel(:, :, :)
+    real(8), pointer  :: kernel(:, :, :)
     integer         :: nfft1, nfft2, nfft3
     type(mpi_grp_t) :: mpi_grp
   end type isf_cnf_t
@@ -55,7 +55,31 @@ module poisson_isf_m
   type(isf_cnf_t)              :: cnf(1:3)
   integer, parameter           :: order_scaling_function = 8 
 
+  ! Interface to the poisson solver calls
+  interface
+
+    subroutine build_kernel(n01,n02,n03,nfft1,nfft2,nfft3,hgrid,itype_scf,karrayout)
+      integer, intent(in)       :: n01,n02,n03,nfft1,nfft2,nfft3,itype_scf
+      real(kind=8), intent(in)  :: hgrid
+      real(kind=8), dimension(nfft1/2+1,nfft2/2+1,nfft3/2+1), intent(out) :: karrayout
+    end subroutine build_kernel
+
+    subroutine calculate_dimensions(n01,n02,n03,nfft1,nfft2,nfft3)
+      integer, intent(in)  :: n01,n02,n03
+      integer, intent(out) :: nfft1,nfft2,nfft3
+    end subroutine calculate_dimensions
+
+    subroutine psolver_kernel(n01,n02,n03,nfft1,nfft2,nfft3, hgrid,karray,rhopot)
+      integer, intent(in)    :: n01,n02,n03,nfft1,nfft2,nfft3
+      real(8), intent(in)    :: hgrid
+      real(8), intent(in), dimension(nfft1/2+1,nfft2/2+1,nfft3/2+1) :: karray
+      real(8), intent(inout), dimension(n01,n02,n03) :: rhopot
+    end subroutine psolver_kernel
+
+  end interface
+
 contains
+
   ! ---------------------------------------------------------
   subroutine poisson_isf_init(m)
     type(mesh_t), intent(in) :: m
@@ -83,7 +107,7 @@ contains
 
     call build_kernel(rho_cf%n(1), rho_cf%n(2), rho_cf%n(3),   &
       cnf(serial)%nfft1, cnf(serial)%nfft2, cnf(serial)%nfft3, &
-      m%h(1), order_scaling_function, cnf(serial)%kernel)
+      real(m%h(1), 8), order_scaling_function, cnf(serial)%kernel)
 
 #if defined(HAVE_MPI)
     ! Allocate to configurations. The initialisation, especially the kernel,
@@ -131,6 +155,7 @@ contains
     FLOAT, allocatable :: rho_global(:)
     FLOAT, allocatable :: pot_global(:)
 #endif
+    real(8), pointer :: rhop(:,:,:)
 
     call push_sub('poisson_isf.poisson_isf_solve')
 
@@ -167,14 +192,28 @@ contains
 #endif
 
     if(i_cnf == serial) then
+
+#ifdef SINGLE_PRECISION
+      ALLOCATE(rhop(rho_cf%n(1), rho_cf%n(2), rho_cf%n(3)), product(rho_cf%n(1:3)))
+      rhop = rho_cf%RS
+#else
+      rhop => rho_cf%RS
+#endif
+
       call psolver_kernel(rho_cf%n(1), rho_cf%n(2), rho_cf%n(3),    &
         cnf(serial)%nfft1, cnf(serial)%nfft2, cnf(serial)%nfft3, &
-        m%h(1), cnf(serial)%kernel, rho_cf%RS)
- #if defined(HAVE_MPI)
+        real(m%h(1), 8), cnf(serial)%kernel, rhop)
+
+#ifdef SINGLE_PRECISION
+      rho_cf%RS = rhop
+      deallocate(rhop)
+#endif
+
+#if defined(HAVE_MPI)
     else
       call par_psolver_kernel(rho_cf%n(1), rho_cf%n(2), rho_cf%n(3), &
         cnf(i_cnf)%nfft1, cnf(i_cnf)%nfft2, cnf(i_cnf)%nfft3,  &
-        m%h(1), cnf(i_cnf)%kernel, rho_cf%RS,                      &
+        real(m%h(1), 8), cnf(i_cnf)%kernel, rho_cf%RS,                      &
         cnf(i_cnf)%mpi_grp%rank, cnf(i_cnf)%mpi_grp%size, cnf(i_cnf)%mpi_grp%comm)
 #endif
     endif

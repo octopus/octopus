@@ -32,30 +32,28 @@
 #define __builtin_prefetch(a, b, c)
 #endif
 
+#ifdef SINGLE_PRECISION
+typedef float ffloat;
+#else
+typedef double ffloat;
+#endif
+
 #include "operate_vec.c"
 
 void FC_FUNC_(doperate_c,DOPERATE_C)(const int * opnp, 
-				const int * opn, 
-				const double * restrict w, 
-				const int * opi, 
-				const double * fi, 
-				double * restrict fo){
+				     const int * opn, 
+				     const ffloat * restrict w, 
+				     const int * opi, 
+				     const ffloat * fi, 
+				     ffloat * restrict fo){
 
   const int n = opn[0];
   const int np = opnp[0];
 
   int i, j, nm2;
   const int * restrict index;
-  const double * restrict mfi;
-  register double a;
-
-  /* this instructs the compiler to brings the array w into the cache
-     and keep it there */
-  __builtin_prefetch (w, 0, 3);
-  __builtin_prefetch (w + CACHELINE/8, 0, 3);
-#if CACHELINE < 128
-  __builtin_prefetch (w + 2*CACHELINE/8, 0, 3);
-#endif
+  const ffloat * restrict mfi;
+  register ffloat a;
 
   index = opi;
   mfi   = fi - 1;
@@ -89,16 +87,16 @@ void FC_FUNC_(doperate_c,DOPERATE_C)(const int * opnp,
 
 void FC_FUNC_(doperate_olu_c,DOPERATE_OLU_C)(const int * opnp, 
 					 const int * opn, 
-					 const double * restrict w, 
+					 const ffloat * restrict w, 
 					 const int * opi, 
-					 const double * fi, 
-					 double * restrict fo){
+					 const ffloat * fi, 
+					 ffloat * restrict fo){
 
   const int n = opn[0];
   const int np = opnp[0];
 
   int i, j, nm2;
-  const double * restrict mfi = fi - 1;
+  const ffloat * restrict mfi = fi - 1;
 
   for(i = 0; i < (np - 8 + 1); i += 8) {
     const int * restrict index0 = opi + n*i    ; 
@@ -110,14 +108,14 @@ void FC_FUNC_(doperate_olu_c,DOPERATE_OLU_C)(const int * opnp,
     const int * restrict index6 = opi + n*i+n*6;
     const int * restrict index7 = opi + n*i+n*7;
 
-    double register a0 = w[0] * mfi[index0[0]];
-    double register a1 = w[0] * mfi[index1[0]];
-    double register a2 = w[0] * mfi[index2[0]];
-    double register a3 = w[0] * mfi[index3[0]];
-    double register a4 = w[0] * mfi[index4[0]];
-    double register a5 = w[0] * mfi[index5[0]];
-    double register a6 = w[0] * mfi[index6[0]];
-    double register a7 = w[0] * mfi[index7[0]];
+    ffloat register a0 = w[0] * mfi[index0[0]];
+    ffloat register a1 = w[0] * mfi[index1[0]];
+    ffloat register a2 = w[0] * mfi[index2[0]];
+    ffloat register a3 = w[0] * mfi[index3[0]];
+    ffloat register a4 = w[0] * mfi[index4[0]];
+    ffloat register a5 = w[0] * mfi[index5[0]];
+    ffloat register a6 = w[0] * mfi[index6[0]];
+    ffloat register a7 = w[0] * mfi[index7[0]];
 
     for(j=1; j < n; j++) {
       a0 += w[j] * mfi[index0[j]];
@@ -150,14 +148,14 @@ void FC_FUNC_(doperate_olu_c,DOPERATE_OLU_C)(const int * opnp,
 }
 
 typedef struct {
-  double re;
-  double im;
+  ffloat re;
+  ffloat im;
 } comp;
 
 
 void FC_FUNC_(zoperate_c,ZOPERATE_C)(const int * opnp, 
 				const int * opn, 
-				const double * restrict w, 
+				const ffloat * restrict w, 
 				const int * opi, 
 				const comp * fi, 
 				comp * restrict fo){
@@ -170,12 +168,6 @@ void FC_FUNC_(zoperate_c,ZOPERATE_C)(const int * opnp,
   const int * restrict index;
   const comp * restrict mfi;
   register comp a;
-
-  __builtin_prefetch (w, 0, 3);
-  __builtin_prefetch (w + CACHELINE/8, 0, 3);
-#if CACHELINE < 128
-  __builtin_prefetch (w + 2*CACHELINE/8, 0, 3);
-#endif
 
   index = opi;
   mfi   = fi - 1;

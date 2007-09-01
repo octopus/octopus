@@ -23,7 +23,7 @@
 
 #include <config.h>
 
-#if defined(HAVE_C_SSE2) && defined(HAVE_EMMINTRIN_H) && defined(FC_USES_MALLOC)
+#if defined(HAVE_C_SSE2) && defined(HAVE_EMMINTRIN_H) && defined(FC_USES_MALLOC) && !defined(SINGLE_PRECISION)
 
 #if defined(HAVE_16_BYTES_ALIGNED_MALLOC)
 
