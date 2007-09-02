@@ -68,7 +68,7 @@ module opt_control_propagation_m
 
     integer :: ierr, ii, i
     logical :: write_iter_ = .false.
-    FLOAT   :: etime
+    real(8) :: etime
     FLOAT, allocatable :: dens(:,:)
     type(grid_t),  pointer :: gr
     type(td_write_t)           :: write_handler

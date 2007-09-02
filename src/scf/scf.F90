@@ -240,7 +240,8 @@ contains
     type(lcao_t) :: lcao_data
 
     integer :: iter, is, idim, nspin, dim, err
-    FLOAT :: evsum_out, evsum_in, etime
+    FLOAT :: evsum_out, evsum_in
+    real(8) :: etime
     FLOAT, allocatable :: rhoout(:,:,:), rhoin(:,:,:), rhonew(:,:,:)
     FLOAT, allocatable :: vout(:,:,:), vin(:,:,:), vnew(:,:,:)
     FLOAT, allocatable :: tmp(:)

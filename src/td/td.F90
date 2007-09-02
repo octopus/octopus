@@ -107,7 +107,7 @@ contains
     type(geometry_t), pointer :: geo
     logical                   :: stopping
     integer                   :: i, ii, j, ik, ierr
-    FLOAT                     :: etime
+    real(8)                   :: etime
     type(atom_t), allocatable :: atom1(:)
     FLOAT, allocatable        :: A_gauge_tmp(:)
     FLOAT, allocatable        :: A_gauge_dot_tmp(:)

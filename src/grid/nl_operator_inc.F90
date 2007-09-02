@@ -29,7 +29,7 @@ subroutine X(nl_operator_tune)(op)
   
 
   R_TYPE, allocatable :: in(:), out(:)
-  FLOAT :: noperations, flops(OP_FORTRAN:OP_OLU_C), itime, ftime
+  real(8) :: noperations, flops(OP_FORTRAN:OP_OLU_C), itime, ftime
   integer :: method, ii, reps, iunit
   character(len=2) :: marker
 
