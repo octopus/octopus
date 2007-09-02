@@ -34,4 +34,7 @@ gsl_complex gsl_complex_cabs  (gsl_complex a);
 gsl_complex gsl_complex_cabs2 (gsl_complex a);
 gsl_complex gsl_complex_clogabs (gsl_complex a);
 
+/* error function */
+gsl_complex gsl_complex_erf(gsl_complex a);
+
 #endif /* __GSL_USERDEF_H__ */

@@ -30,7 +30,7 @@
 
     if(oct%targetmode==oct_targetmode_td) then
        ! 1/T * int(<Psi| O | Psi>)
-       overlap_function = SUM(td_fitness) / real(max_iter, REAL_PRECISION) 
+       overlap_function = sum(td_fitness) / real(max_iter, REAL_PRECISION) 
     else
       overlap_function = abs(zstates_mpdotp(m, psi, target_st))
     end if
@@ -91,11 +91,10 @@
             end do
           end do
         end do
-      else ! totype nonlocal (all other totypes)
+      else ! totype nonlocal 
+        olap = zstates_mpdotp(gr%m, targetst, psi_in)
         do ik = 1, psi_in%d%nik
           do p  = psi_in%st_start, psi_in%st_end
-            olap = zstates_dotp(gr%m, targetst%d%dim, targetst%zpsi(:, :, p, ik), &
-                                                      psi_in%zpsi(:, :, p, ik))
             if(oct%algorithm_type == oct_algorithm_zr98) &
               chi_out%zpsi(:,:,p,ik) = olap*targetst%zpsi(:, :, p, ik)
             if(oct%algorithm_type == oct_algorithm_zbr98) then
@@ -112,19 +111,6 @@
       call write_info(1)
       chi_out%zpsi = M_z0
     end if
-
-!      do ik = 1, psi%d%nik
-!        do p  = psi%st_start, psi%st_end
-!          olap = M_z0     
-!          olap = zstates_dotp(gr%m, psi_in%d%dim,  targetst%zpsi(:,:, p, ik), psi_in%zpsi(:,:, p, ik))
-!          if(method == 'ZR98') &
-!            chi_out%zpsi(:,:,p,ik) = olap*targetst%zpsi(:,:,p,ik)
-!          if(method == 'ZBR98') &
-!            chi_out%zpsi(:,:,p,ik) = targetst%zpsi(:,:,p,ik)
-!          if(method == 'WG05') &
-!            chi_out%zpsi(:,:,p,ik) = olap*targetst%zpsi(:,:,p,ik)
-!        end do
-!      end do
       
     call pop_sub()
   end subroutine target_calc

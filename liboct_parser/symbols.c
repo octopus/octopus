@@ -151,6 +151,8 @@ static struct init_fntc arith_fncts[] = {
   {"min", gsl_complex_min_real},
   {"max", gsl_complex_max_real},
 
+  {"erf", gsl_complex_erf}, 
+
   {0, 0}
 };
 

@@ -20,6 +20,7 @@
 */
 
 #include <gsl/gsl_complex_math.h>
+#include <gsl/gsl_sf_erf.h>
 
 
 /* ------------------------------------------------------ */
@@ -103,6 +104,16 @@ gsl_complex gsl_complex_clogabs (gsl_complex a)
   gsl_complex z;
 
 	GSL_SET_COMPLEX (&z, gsl_complex_logabs(a), 0);
+
+  return z;
+}
+
+/* ------------------------------------------------------ */
+gsl_complex gsl_complex_erf (gsl_complex a)
+{        
+  gsl_complex z;
+
+	GSL_SET_COMPLEX (&z, gsl_sf_erf(GSL_REAL(a)), 0);
 
   return z;
 }

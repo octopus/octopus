@@ -79,6 +79,7 @@
         call write_fatal(1)
       end if
       initial_state%zpsi(:, :, 1, 1) = tmp_st%zpsi(:, :, state, 1)
+      call states_end(tmp_st)
 
     case(oct_is_superposition)   
       message(1) =  'Info: Using Superposition of States for InitialState'
