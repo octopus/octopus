@@ -431,31 +431,42 @@ module opt_control_propagation_m
     type(hamiltonian_t), intent(in) :: h
     type(states_t), intent(inout) :: psi
     type(states_t), intent(inout) :: chi
+
+    type(states_t) :: oppsi
     
     CMPLX :: d1
     CMPLX, allocatable  :: d2(:), dq(:)
     integer :: ik, p, dim, i, j
     FLOAT :: value
 
-    CMPLX, allocatable :: rpsi(:, :)
-    
     call push_sub('opt_control.update_field')
     
-    ALLOCATE(rpsi(gr%m%np_part, psi%d%dim), gr%m%np_part*psi%d%dim)
     ALLOCATE(d2(cp%no_parameters), cp%no_parameters)
     ALLOCATE(dq(cp%no_parameters), cp%no_parameters)
 
-    ! TODO This should be a product between Slater determinants.
     do j = 1, cp%no_parameters
-      ik = 1
-      p  = 1
-      rpsi = M_z0
-      call zvlaser_operator_linear(gr, h, psi%zpsi(:, :, p, ik), rpsi, ik, laser_number = j)
-      d2(j) = zstates_dotp(gr%m, psi%d%dim, chi%zpsi(:, :, p, ik), rpsi)
+      oppsi = psi
+      do ik = 1, psi%d%nik
+        do p = 1, psi%nst
+          oppsi%zpsi(:, :, p, ik) = M_z0
+          call zvlaser_operator_linear(gr, h, psi%zpsi(:, :, p, ik), &
+                                       oppsi%zpsi(:, :, p, ik), ik, laser_number = j)
+        end do
+      end do
+      d2(j) = zstates_mpmatrixelement(gr%m, chi, psi, oppsi)
+      call states_end(oppsi)
 
-      rpsi = M_z0
-      call zvlaser_operator_quadratic(gr, h, psi%zpsi(:, :, p, ik), rpsi, ik, laser_number = j)
-      dq(j) = zstates_dotp(gr%m, psi%d%dim, chi%zpsi(:, :, p, ik), rpsi)
+      ! The quadratic part should only be computed if necessary.
+      oppsi = psi
+      do ik = 1, psi%d%nik
+        do p = 1, psi%nst
+          oppsi%zpsi(:, :, p, ik) = M_z0
+          call zvlaser_operator_quadratic(gr, h, psi%zpsi(:, :, p, ik), &
+                                       oppsi%zpsi(:, :, p, ik), ik, laser_number = j)
+        end do
+      end do
+      dq(j) = zstates_mpmatrixelement(gr%m, chi, psi, oppsi)
+      call states_end(oppsi)
     end do
 
     d1 = M_z1
@@ -473,7 +484,7 @@ module opt_control_propagation_m
       end if
     end do
 
-    deallocate(rpsi, d2, dq)
+    deallocate(d2, dq)
     call pop_sub()
   end subroutine update_field
 

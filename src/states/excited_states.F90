@@ -42,12 +42,26 @@ module excited_states_m
     dcalculate_matrix,              &
     zcalculate_matrix
 
+  public ::                         &
+    zstates_mpmatrixelement,        &
+    dstates_mpmatrixelement
+    
+
+
   interface dstates_mpdotp
     module procedure dstates_mpdotp_g, dstates_mpdotp_x
   end interface
 
   interface zstates_mpdotp
     module procedure zstates_mpdotp_g, zstates_mpdotp_x
+  end interface
+
+  interface dstates_mpmatrixelement
+    module procedure dstates_mpmatrixelement_g
+  end interface
+
+  interface zstates_mpmatrixelement
+    module procedure zstates_mpmatrixelement_g
   end interface
 
   type states_pair_t

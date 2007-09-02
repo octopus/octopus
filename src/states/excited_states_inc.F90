@@ -66,6 +66,165 @@ R_TYPE function X(states_mpdotp_x)(m, excited_state, st, mat) result(dotp)
   call pop_sub()
 end function X(states_mpdotp_x)
 
+! -------------------------------------------------------------
+! Returns <st1 | O | st2>, where both st1 and st2 are Slater
+! determinants represented by states_t st1 and st2. O is a
+! one-body operator.
+!
+! The auxiliary Slater determinant opst2 is formed by the
+! orbitals that result of applying operator O on each of the
+! spin-orbitals of st2.
+!
+! The routine directly applies Lowdin's formula [P.-O. Lowdin,
+! Phys. Rev. 97, 1474; Eq. 49].
+! -------------------------------------------------------------
+R_TYPE function X(states_mpmatrixelement_g)(m, st1, st2, opst2) result(st1opst2)
+  type(mesh_t),     intent(in) :: m
+  type(states_t),   intent(in) :: st1, st2, opst2
+
+  integer :: ispin, nik, nst, ik, i1, j1, k1, i2, j2, k2, i, j
+  integer, allocatable :: filled1(:), filled2(:), &
+                          partially_filled1(:), partially_filled2(:), &
+                          half_filled1(:), half_filled2(:)
+  R_TYPE, allocatable :: overlap_mat(:, :), op_mat(:, :)
+  R_TYPE, allocatable :: b(:, :), c(:, :)
+  R_TYPE :: z
+
+  call push_sub('excited_states_inc.Xstates_mpmatrixelement_g')
+
+  ! This should go away whenever the subroutine is ready.
+  st1opst2 = R_TOTYPE(M_ONE)
+
+  ispin = st1%d%ispin
+  ASSERT(ispin.eq.st2%d%ispin)
+  nik   = st1%d%nik
+  ASSERT(nik.eq.st2%d%nik)
+  ! Can only consider the number of states of the state that comes with less states.
+  nst = min(st1%nst, st2%nst)
+
+  ALLOCATE(overlap_mat(st1%nst, st2%nst), st1%nst*st2%nst)
+  ALLOCATE(op_mat(st1%nst, st2%nst), st1%nst*st2%nst)
+
+  ALLOCATE(filled1(nst), nst)
+  ALLOCATE(filled2(nst), nst)
+  ALLOCATE(partially_filled1(nst), nst)
+  ALLOCATE(partially_filled2(nst), nst)
+  ALLOCATE(half_filled1(nst), nst)
+  ALLOCATE(half_filled2(nst), nst)
+
+  select case(ispin)
+  case(UNPOLARIZED)
+
+    do ik = 1, nik
+
+      call X(calculate_matrix)(m, ik, st1, st2, overlap_mat)
+      call X(calculate_matrix)(m, ik, st1, opst2, op_mat)
+
+      call occupied_states(st1, ik, i1, j1, k1, filled1, partially_filled1, half_filled1)
+      call occupied_states(st2, ik, i2, j2, k2, filled2, partially_filled2, half_filled2)
+      if( (j1 > 0) .or. (j2 > 0) ) then
+        message(1) = 'Cannot calcualte many-body dot products with partially occupied orbitals'
+        call write_fatal(1)
+      end if
+      if(  (i1 .ne. i2)  .or.  (k1 .ne. k2) ) then
+        message(1) = 'Internal Error: different number of occupied states in states_mpdotp'
+        call write_fatal(1)
+      end if
+
+      ALLOCATE(b(i1+k1, i1+k1), (i1+k1)*(i1+k1))
+      ALLOCATE(c(i1+k1, i1+k1), (i1+k1)*(i1+k1))
+      do i = 1, i1
+        do j = 1, i1
+          b(i, j) = op_mat(filled1(i), filled2(j))
+          c(i, j) = overlap_mat(filled1(i), filled2(j))
+        end do
+        do j = i1 + 1, i1 + k1
+          b(i, j) = op_mat(filled1(i), half_filled2(j))
+          c(i, j) = overlap_mat(filled1(i), half_filled2(j))
+        end do
+      end do
+      do i = i1 + 1, i1 + k1
+        do j = 1, i1
+          b(i, j) = op_mat(half_filled1(i), filled2(j))
+          c(i, j) = overlap_mat(half_filled1(i), filled2(j))
+        end do
+        do j = i1 + 1, i1 + k1
+          b(i, j) = op_mat(half_filled1(i), half_filled2(j))
+          c(i, j) = overlap_mat(half_filled1(i), half_filled2(j))
+        end do
+      end do
+
+      ! Get the matrix of cofactors.
+      z = lalg_determinant(i1+k1, c, invert = .true.)
+      c = z * transpose(c)
+
+      ! And now, apply Lowdin's formula.
+      z = M_ZERO
+      do i = 1, i1 + k1
+        do j = 1, i1 + k1
+           z = z + b(i, j) * c(i, j) * (-1)**(i+j)
+        end do
+      end do
+
+      st1opst2 = st1opst2 * z ** st1%d%kweights(ik)
+
+    end do
+
+  case(SPIN_POLARIZED, SPINORS)
+    do ik = 1, nik
+
+      call X(calculate_matrix) (m, ik, st1, st2, overlap_mat)
+      call X(calculate_matrix) (m, ik, st1, opst2, op_mat)
+
+      call occupied_states(st1, ik, i1, j1, k1, filled1, partially_filled1, half_filled1)
+      call occupied_states(st2, ik, i2, j2, k2, filled2, partially_filled2, half_filled2)
+      if( (j1 > 0) .or. (j2 > 0) ) then
+        message(1) = 'Cannot calculate many-body dot products with partially occupied orbitals'
+        call write_fatal(1)
+      end if
+      if(  (i1 .ne. i2)  .or.  (k1 .ne. k2) ) then
+        message(1) = 'Internal Error: different number of occupied states in states_mpdotp'
+        call write_fatal(1)
+      end if
+
+      if(i1 > 0) then
+        ALLOCATE(b(i1, i1), i1*i1)
+        ALLOCATE(c(i1, i1), i1*i1)
+        do i = 1, i1
+          do j = 1, i1
+            b(i, j) = op_mat(filled1(i), filled2(j))
+            c(i, j) = overlap_mat(filled1(i), filled2(j))
+          end do
+        end do
+
+        ! Get the matrix of cofactors.
+        z = lalg_determinant(i1, c, invert = .true.)
+        c = z * transpose(c)
+
+        ! And now, apply Lowdin's formula.
+        z = M_ZERO
+        do i = 1, i1
+          do j = 1, i1
+             z = z + b(i, j) * c(i, j) * (-1)**(i+j)
+          end do
+        end do
+
+        st1opst2 = st1opst2 * z ** st1%d%kweights(ik)
+
+        deallocate(b, c)
+      end if
+
+    end do
+  end select  
+
+
+  deallocate(overlap_mat, op_mat)
+  deallocate(filled1, filled2)
+  deallocate(partially_filled1, partially_filled2)
+  deallocate(half_filled1, half_filled2)
+  call pop_sub()
+end function X(states_mpmatrixelement_g)
+
 
 ! -------------------------------------------------------------
 ! Returns the dot product of two many-body states st1 and st2.
@@ -80,7 +239,7 @@ R_TYPE function X(states_mpdotp_g)(m, st1, st2, mat) result(dotp)
   integer, allocatable :: filled1(:), filled2(:), partially_filled1(:), partially_filled2(:), &
                           half_filled1(:), half_filled2(:)
   R_TYPE, allocatable :: a(:, :), b(:, :)
-  call push_sub('states_inc.Xstates_mpdotp')
+  call push_sub('excited_states_inc.Xstates_mpdotp')
 
   ispin = st1%d%ispin
   ASSERT(ispin.eq.st2%d%ispin)
@@ -111,7 +270,7 @@ R_TYPE function X(states_mpdotp_g)(m, st1, st2, mat) result(dotp)
       call occupied_states(st1, ik, i1, j1, k1, filled1, partially_filled1, half_filled1)
       call occupied_states(st2, ik, i2, j2, k2, filled2, partially_filled2, half_filled2)
       if( (j1 > 0) .or. (j2 > 0) ) then
-        message(1) = 'Cannot calcualte many-body dot products with partially occupied orbitals'
+        message(1) = 'Cannot calculate many-body dot products with partially occupied orbitals'
         call write_fatal(1)
       end if
       if(  (i1 .ne. i2)  .or.  (k1 .ne. k2) ) then
@@ -155,7 +314,7 @@ R_TYPE function X(states_mpdotp_g)(m, st1, st2, mat) result(dotp)
       call occupied_states(st1, ik, i1, j1, k1, filled1, partially_filled1, half_filled1)
       call occupied_states(st2, ik, i2, j2, k2, filled2, partially_filled2, half_filled2)
       if( (j1 > 0) .or. (j2 > 0) ) then
-        message(1) = 'Cannot calcualte many-body dot products with partially occupied orbitals'
+        message(1) = 'Cannot calculate many-body dot products with partially occupied orbitals'
         call write_fatal(1)
       end if
       if(i1 .ne. i2) then
@@ -179,6 +338,9 @@ R_TYPE function X(states_mpdotp_g)(m, st1, st2, mat) result(dotp)
   end select
 
   deallocate(a)
+  deallocate(filled1, filled2)
+  deallocate(partially_filled1, partially_filled2)
+  deallocate(half_filled1, half_filled2)
   call pop_sub()
 end function X(states_mpdotp_g)
 
