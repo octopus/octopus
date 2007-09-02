@@ -13,14 +13,14 @@ Enabled    : Yes
 Input: 07-spin_orbit_coupling.01-hgh.inp
 
 
-Match ; Eigenvalues ; grep -A 9 'Eigenvalues \[' static/info | awk '{print $3" "$7" "$4}' | head -n  3 | tail -1 ; \s*-0.391\d*\s*-0.50\d*\s*1.00
-Match ; Eigenvalues ; grep -A 9 'Eigenvalues \[' static/info | awk '{print $3" "$7" "$4}' | head -n  4 | tail -1 ; \s*-0.391\d*\s*0.50\d*\s*1.00
-Match ; Eigenvalues ; grep -A 9 'Eigenvalues \[' static/info | awk '{print $3" "$7" "$4}' | head -n  5 | tail -1 ; \s*-0.094\d*\s*-0.16\d*\s*0.33
-Match ; Eigenvalues ; grep -A 9 'Eigenvalues \[' static/info | awk '{print $3" "$7" "$4}' | head -n  6 | tail -1 ; \s*-0.094\d*\s*0.16\d*\s*0.33
-Match ; Eigenvalues ; grep -A 9 'Eigenvalues \[' static/info | awk '{print $3" "$7" "$4}' | head -n  7 | tail -1 ; \s*-0.015\d*\s*-0.16\d*\s*0.33
-Match ; Eigenvalues ; grep -A 9 'Eigenvalues \[' static/info | awk '{print $3" "$7" "$4}' | head -n  8 | tail -1 ; \s*-0.015\d*\s*0.16\d*\s*0.33
-Match ; Eigenvalues ; grep -A 9 'Eigenvalues \[' static/info | awk '{print $3" "$7" "$4}' | head -n  9 | tail -1 ; \s*-0.015\d*\s*-0.50\d*\s*0.33
-Match ; Eigenvalues ; grep -A 9 'Eigenvalues \[' static/info | awk '{print $3" "$7" "$4}' | head -n 10 | tail -1 ; \s*-0.015\d*\s*0.50\d*\s*0.33
+Match ; Eigenvalues ; grep -A 9 'Eigenvalues \[' static/info | awk '{print $3" "$7" "$4}' | head -n  3 | tail -1 ; \s*-0.362\d*\s*0.50\d*\s*1.00
+Match ; Eigenvalues ; grep -A 9 'Eigenvalues \[' static/info | awk '{print $3" "$7" "$4}' | head -n  4 | tail -1 ; \s*-0.362\d*\s*-0.50\d*\s*1.00
+Match ; Eigenvalues ; grep -A 9 'Eigenvalues \[' static/info | awk '{print $3" "$7" "$4}' | head -n  5 | tail -1 ; \s*-0.068\d*\s*-?0.16\d*\s*0.33
+Match ; Eigenvalues ; grep -A 9 'Eigenvalues \[' static/info | awk '{print $3" "$7" "$4}' | head -n  6 | tail -1 ; \s*-0.068\d*\s*-?0.16\d*\s*0.33
+Match ; Eigenvalues ; grep -A 9 'Eigenvalues \[' static/info | awk '{print $3" "$7" "$4}' | head -n  7 | tail -1 ; \s*0.0075\d*\s*-?0.50\d*\s*0.33
+Match ; Eigenvalues ; grep -A 9 'Eigenvalues \[' static/info | awk '{print $3" "$7" "$4}' | head -n  8 | tail -1 ; \s*0.0075\d*\s*-?0.50\d*\s*0.33
+Match ; Eigenvalues ; grep -A 9 'Eigenvalues \[' static/info | awk '{print $3" "$7" "$4}' | head -n  9 | tail -1 ; \s*0.0075\d*\s*-?0.16\d*\s*0.33
+Match ; Eigenvalues ; grep -A 9 'Eigenvalues \[' static/info | awk '{print $3" "$7" "$4}' | head -n 10 | tail -1 ; \s*0.0075\d*\s*-?0.16\d*\s*0.33
 
 
 

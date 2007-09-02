@@ -332,13 +332,12 @@ contains
       ALLOCATE(tmp(NP), NP)
       do is = 1, nspin
         do idim = 1, dim
-          tmp = (rhoin(1:NP, idim, is) - rhoout(1:NP, idim, is))**2
+          tmp = abs(rhoin(1:NP, idim, is) - rhoout(1:NP, idim, is))
           scf%abs_dens = scf%abs_dens + dmf_integrate(gr%m, tmp)
         end do
       end do
       deallocate(tmp)
 
-      scf%abs_dens = sqrt(scf%abs_dens)
       scf%rel_dens = scf%abs_dens / st%qtot
       scf%abs_ev = abs(evsum_out - evsum_in)
       scf%rel_ev = scf%abs_ev / abs(evsum_out)

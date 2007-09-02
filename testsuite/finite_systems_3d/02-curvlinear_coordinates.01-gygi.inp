@@ -15,7 +15,7 @@ CalculationMode = gs
 
 BoxShape = sphere
 Radius  = 7.0
-Spacing = 0.48
+Spacing = 0.47
 CurvMethod = curv_gygi
 CurvGygiA = 0.80
 

@@ -328,17 +328,23 @@ FLOAT function X(states_residue)(m, dim, hf, e, f) result(r)
   R_TYPE,            intent(in)  :: hf(:,:), f(:,:)
   FLOAT,             intent(in)  :: e
 
-  R_TYPE, allocatable :: res(:,:)
+  FLOAT, allocatable :: res(:,:)
+  integer :: idim
 
   call push_sub('states_inc.Xstates_residue')
 
   ALLOCATE(res(m%np_part, dim), m%np_part*dim)
 
   !$omp parallel workshare
-  res(1:m%np, 1:dim) = hf(1:m%np, 1:dim) - e*f(1:m%np, 1:dim)
+  res(1:m%np, 1:dim) = abs(hf(1:m%np, 1:dim) - e*f(1:m%np, 1:dim))
   !$omp end parallel workshare
 
-  r = X(states_nrm2)(m, dim, res)
+
+  r = M_ZERO
+  do idim = 1, dim
+    r = r + dmf_integrate(m, res(:, idim))
+  end do
+
   deallocate(res)
 
   call pop_sub()
