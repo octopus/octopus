@@ -54,8 +54,11 @@ OCTMaxIter = 1
 OCTTargetMode = oct_targetmode_static
 OCTFilterMode = no
 OCTInitialState = oct_is_groundstate
-OCTTargetOperator = oct_tg_excited
-OCTTargetStateNumber = 2
+OCTTargetOperator = oct_tg_gstransformation
+%OCTTargetTransformStates
+0 | 1
+%
+
 OCTScheme  = oct_algorithm_zbr98
 OCTDoubleCheck = no
 
@@ -72,9 +75,6 @@ w = 5.0
 cycles = 4
 tau = (pi/freq)*cycles
 t0 = tau
-#%TDExternalFields
-#  electric_field | 1 | 0 | 0 | ampl | freq | envelope | tau | t0
-#%
 %TDExternalFields
   electric_field | 1 | 0 | 0 | envelope | ampl | freq 
 %

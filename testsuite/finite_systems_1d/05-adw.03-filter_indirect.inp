@@ -24,12 +24,15 @@ TDTimeStep = dt
 OCTPenalty =5.0
 OCTEps   = 0.000001
 OCTMaxIter = 2
-OCTTargetMode = 0
+OCTTargetMode = oct_targetmode_static
 OCTFilterMode = 1
 OCTFixFluenceTo = 0.32
-OCTInitialState = 1
-OCTTargetOperator = 2
-OCTTargetStateNumber = 2
+OCTInitialState = oct_is_groundstate
+OCTTargetOperator = oct_tg_gstransformation
+%OCTTargetTransformStates
+0 | 1
+%
+
 OCTScheme  = oct_algorithm_wg05
 OCTDoubleCheck = No	
 gamma1 = 0.1

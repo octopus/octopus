@@ -24,18 +24,18 @@ module opt_control_constants_m
   implicit none
 
   integer, parameter ::  &
-    oct_is_groundstate   = 1,      &
-    oct_is_excited       = 2,      &
-    oct_is_superposition = 3,      &
-    oct_is_userdefined   = 4         
+    oct_is_groundstate      = 1,      &
+    oct_is_excited          = 2,      &
+    oct_is_gstransformation = 3,      &
+    oct_is_userdefined      = 4         
     
   integer, parameter ::  &
-    oct_tg_groundstate   = 1,      &
-    oct_tg_excited       = 2,      &
-    oct_tg_superposition = 3,      &
-    oct_tg_userdefined   = 4,      &
-    oct_tg_local         = 5,      &        
-    oct_tg_td_local      = 6   
+    oct_tg_groundstate      = 1,      &
+    oct_tg_excited          = 2,      &
+    oct_tg_gstransformation = 3,      &
+    oct_tg_userdefined      = 4,      &
+    oct_tg_local            = 5,      &        
+    oct_tg_td_local         = 6   
 
   integer, parameter ::  &
     oct_algorithm_zbr98 = 1,       &

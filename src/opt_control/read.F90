@@ -127,9 +127,10 @@
     !%Option oct_tg_groundstate 1 
     !% Targetoperator is a projection operator on the ground state
     !%Option oct_tg_excited 2
-    !% Targetoperator is a projection operator on the excited state given by OCTTOnumber
-    !%Option oct_tg_superposition 3
-    !% Targetoperator is a projection operator on a superposition of states defined by the block OCTTOsuperposition)
+    !% Currently not in use.
+    !%Option oct_tg_gstransformation 3
+    !% Targetoperator is a projection operator on a transformation of the ground state 
+    !% orbitals defined by the block OCTTargetTransformStates
     !%Option oct_tg_userdefined 4
     !% Targetoperator is a projection operator on a user defined state
     !%Option oct_tg_local 5

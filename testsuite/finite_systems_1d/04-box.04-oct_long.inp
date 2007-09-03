@@ -1,19 +1,7 @@
 # -*- coding: utf-8 mode: shell-script -*-
 # $Id$
 
-#DebugLevel = 10
-
-#%CalculationMode
-#gs               | unocc   
-#"ground_state"   | "excited"           
-#1                | 2                 
-#%
-
 CalculationMode = opt_control
-#CalculationMode = td
-#CalculationMode = unocc
-#CalculationMode = gs
-
 
 # ------------------
 # TD RUN Parameters
@@ -24,8 +12,6 @@ dt = 0.01
 TDEvolutionMethod = aetrs
 TDExponentialMethod = taylor
 TDExponentialOrder = 4
-#TDExponentialMethod = lanczos
-#TDExponentialOrder = 30
 TDLanczosTol = 5.0e-5
 TDMaximumIter = stime/dt
 TDTimeStep = dt
@@ -39,10 +25,11 @@ OCTPenalty =1.0
 OCTEps   = 0.000001
 OCTMaxIter = 10
 OCTTargetMode = 0
-#OCTFixFluenceTo = 0.05
-OCTInitialState = 1
-OCTTargetOperator = 2
-OCTTargetStateNumber = 2
+OCTInitialState = oct_is_groundstate
+OCTTargetOperator = oct_tg_gstransformation
+%OCTTargetTransformStates
+0 | 1
+%
 OCTScheme  = oct_algorithm_wg05
 OCTDoubleCheck = No	
 gamma1 = 0.1

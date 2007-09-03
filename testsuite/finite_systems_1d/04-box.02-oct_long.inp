@@ -1,19 +1,7 @@
 # -*- coding: utf-8 mode: shell-script -*-
 # $Id$
 
-#DebugLevel = 10
-
-#%CalculationMode
-#gs               | unocc   
-#"ground_state"   | "excited"           
-#1                | 2                 
-#%
-
 CalculationMode = opt_control
-#CalculationMode = td
-#CalculationMode = unocc
-#CalculationMode = gs
-
 
 # ------------------
 # TD RUN Parameters
@@ -24,8 +12,6 @@ dt = 0.01
 TDEvolutionMethod = aetrs
 TDExponentialMethod = taylor
 TDExponentialOrder = 4
-#TDExponentialMethod = lanczos
-#TDExponentialOrder = 30
 TDLanczosTol = 5.0e-5
 TDMaximumIter = stime/dt
 TDTimeStep = dt
@@ -38,22 +24,26 @@ TDTimeStep = dt
 OCTPenalty =1.0
 OCTEps   = 0.000001
 OCTMaxIter = 10
-OCTTargetMode = 0
+OCTTargetMode = oct_targetmode_static
 OCTFilterMode = 0
-#OCTFixFluenceTo = 0.05
-OCTInitialState = 1
-OCTTargetOperator = 2
-OCTTargetStateNumber = 2
+OCTInitialState = oct_is_groundstate
+OCTTargetOperator = oct_tg_gstransformation
+#%OCTTargetTransformStates
+#0 | 1 | 0 | 0 | 0 | 0
+#%
+%OCTTargetTransformStates
+0 | 1
+%
+
+
 OCTScheme  = oct_algorithm_zbr98
 OCTDoubleCheck = No	
 gamma1 = 0.1
 gamma2 = 80
 
 %OCTFilter
-#   time_filter | 1 | 0 | 0 | "exp(-gamma1*( t - stime/4 )^2  ) + exp(-gamma1*( t - 3*stime/4 )^2  )"
-   frequency_filter | "exp(-gamma2*( w + 0.1567 )^2  ) + exp(-gamma2*( w - 0.1567 )^2  )"
+frequency_filter | "exp(-gamma2*( w + 0.1567 )^2  ) + exp(-gamma2*( w - 0.1567 )^2  )"
 %
-
 
 #----------------------------
 # Laser field = Initial guess

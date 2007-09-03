@@ -48,10 +48,10 @@
     !%Option oct_is_groundstate 1
     !% start in the ground state 
     !%Option oct_is_excited 2
-    !% start in the excited state given by OCTISnumber
-    !% (ordered by energy)
-    !%Option oct_is_superposition 3
-    !% start in a superposition of states defined by the block OCTISsuperposition)
+    !% Currently not in use.
+    !%Option oct_is_gstransformation 3
+    !% start in a transformation of the ground-state orbitals, as defined in the
+    !% block OCTInitialTransformStates
     !%Option oct_is_userdefined 4
     !% start in a userdefined state 
     !%End
@@ -65,23 +65,12 @@
       call restart_read(trim(tmpdir)//'gs', initial_state, gr, geo, ierr)
 
     case(oct_is_excited)  
-      message(1) =  'Info: Using Excited State for InitialState'
-      call write_info(1)
+      message(1) = 'Error: using an excited state as the starting state for an '
+      message(2) = 'optimal control run is not possible yet.'
+      message(3) = 'Try using "OCTInitialState = oct_is_transformation" instead.'
+      call write_fatal(3)
 
-      call loct_parse_int(check_inp('OCTInitialStateNumber'), 2, state)
-
-      !TODO: The following lines of code do not look too clear, and will probably break easily.
-      !They should also be isolated and taken away, since they are repeated in several places.
-      tmp_st = initial_state
-      call restart_look_and_read(trim(tmpdir)//'gs', tmp_st, gr, geo, ierr)
-      if(ierr.ne.0) then
-        write(message(1),'(a)') 'Could not read ground-state wavefunctions from '//trim(tmpdir)//'gs.'
-        call write_fatal(1)
-      end if
-      initial_state%zpsi(:, :, 1, 1) = tmp_st%zpsi(:, :, state, 1)
-      call states_end(tmp_st)
-
-    case(oct_is_superposition)   
+    case(oct_is_gstransformation)   
       message(1) =  'Info: Using Superposition of States for InitialState'
       call write_info(1)
 
@@ -91,7 +80,7 @@
       !%Default no
       !%Section OptimalControl
       !%Description
-      !% If OCTInitialState = oct_is-superposition, you must specify one
+      !% If OCTInitialState = oct_is_gstransformation, you must specify one
       !% OCTInitialTransformStates block, in order to specify which linear
       !% combination of the states present in "restart/gs" is used to
       !% create the initial state.
@@ -105,8 +94,9 @@
           deallocate(tmp_st%zpsi)
           call restart_look_and_read("tmp", tmp_st, gr, geo, ierr)
           ALLOCATE(rotation_matrix(initial_state%nst, tmp_st%nst), initial_state%nst*tmp_st%nst)
+          rotation_matrix = M_z0
           do ist = 1, initial_state%nst
-            do jst = 1, tmp_st%nst
+            do jst = 1, loct_parse_block_cols(blk, ist-1)
               call loct_parse_block_cmplx(blk, ist-1, jst-1, rotation_matrix(ist, jst))
             end do
           end do
@@ -119,8 +109,8 @@
           call input_error('OCTInitialTransformStates')
         end if
       else
-        message(1) = 'Error: if "OCTInitialState = oct_is_superposition", then you must'
-        message(2) = 'supply one "OCTInitialTransformStates" block to create the superposition.'
+        message(1) = 'Error: if "OCTInitialState = oct_is_gstransformation", then you must'
+        message(2) = 'supply one "OCTInitialTransformStates" block to define the transformation.'
         call write_info(2)
         call input_error('OCTInitialTransformStates')
       end if
@@ -230,30 +220,12 @@
       end if
       
     case(oct_tg_excited) 
-      message(1) =  'Info: Using Excited State for TargetOperator'
-      call write_info(1)
+      message(1) = 'Error: using an excited state as the target state for an '
+      message(2) = 'optimal control run is not possible yet.'
+      message(3) = 'Try using "OCTInitialState = oct_is_transformation" instead.'
+      call write_fatal(3)
 
-      !%Variable OCTTargetStateNumber
-      !%Type integer
-      !%Section Optimal Control
-      !%Default 2
-      !%Description
-      !% Specify the target state, ordered by energy.
-      !%End
-      call loct_parse_int(check_inp('OCTTargetStateNumber'), 2, state)
-
-      !TODO: The following lines of code do not look too clear, and will probably break easily.
-      tmp_st = target_state
-      call restart_look_and_read(trim(tmpdir)//'gs', tmp_st, gr, geo, ierr)
-      if(ierr.ne.0) then
-        write(message(1),'(a)') 'Could not read ground-state wavefunctions from '//trim(tmpdir)//'gs.'
-        call write_fatal(1)
-      end if
-
-      target_state%zpsi(:, :, 1, 1) = tmp_st%zpsi(:, :, state, 1)
-      call states_end(tmp_st)
-
-    case(oct_tg_superposition)  
+    case(oct_tg_gstransformation)  
 
       message(1) =  'Info: Using Superposition of States for TargetOperator'
       call write_info(1)
@@ -263,7 +235,7 @@
       !%Default no
       !%Section OptimalControl
       !%Description
-      !% If OCTTargetOperator = oct_tg_superposition, you must specify one
+      !% If OCTTargetOperator = oct_tg_gstransformation, you must specify one
       !% OCTTargetTransformStates block, in order to specify which linear
       !% combination of the states present in "restart/gs" is used to
       !% create the target state.
@@ -277,8 +249,9 @@
           deallocate(tmp_st%zpsi)
           call restart_look_and_read("tmp", tmp_st, gr, geo, ierr)
           ALLOCATE(rotation_matrix(target_state%nst, tmp_st%nst), target_state%nst*tmp_st%nst)
+          rotation_matrix = M_z0
           do ist = 1, target_state%nst
-            do jst = 1, tmp_st%nst
+            do jst = 1, loct_parse_block_cols(blk, ist-1)
               call loct_parse_block_cmplx(blk, ist-1, jst-1, rotation_matrix(ist, jst))
             end do
           end do

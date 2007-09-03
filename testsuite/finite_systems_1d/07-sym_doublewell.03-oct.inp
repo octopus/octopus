@@ -55,12 +55,12 @@ OCTMaxIter = 1
 OCTTargetMode = oct_targetmode_static
 OCTFilterMode = no
 
-OCTInitialState = oct_is_superposition
+OCTInitialState = oct_is_gstransformation
 %OCTInitialTransformStates
 1/sqrt(2) |  1/sqrt(2)
 %
 
-OCTTargetOperator = oct_tg_superposition
+OCTTargetOperator = oct_tg_gstransformation
 %OCTTargetTransformStates
 1/sqrt(2) | -1/sqrt(2)
 %
