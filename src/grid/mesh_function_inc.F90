@@ -93,7 +93,7 @@ FLOAT function X(mf_nrm2)(mesh, f) result(nrm2)
   R_TYPE,       intent(in) :: f(:)
 
   R_TYPE, allocatable :: l(:)
-  R_TYPE              :: nrm2_tmp
+  FLOAT               :: nrm2_tmp
 
   call profiling_in(C_PROFILING_MF_NRM2)
   call push_sub('mf_inc.Xmf_nrm2')
@@ -111,9 +111,11 @@ FLOAT function X(mf_nrm2)(mesh, f) result(nrm2)
 
   if(mesh%parallel_in_domains) then
 #if defined(HAVE_MPI)
+    nrm2_tmp = nrm2_tmp**2
     call profiling_in(C_PROFILING_MF_DOTP_ALLREDUCE)
-    call MPI_Allreduce(nrm2_tmp, nrm2, 1, R_MPITYPE, MPI_SUM, mesh%vp%comm, mpi_err)
+    call MPI_Allreduce(nrm2_tmp, nrm2, 1, MPI_FLOAT, MPI_SUM, mesh%vp%comm, mpi_err)
     call profiling_out(C_PROFILING_MF_DOTP_ALLREDUCE)
+    nrm2 = sqrt(nrm2)
 #else
     ASSERT(.false.)
 #endif
