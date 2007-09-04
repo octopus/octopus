@@ -34,8 +34,8 @@ subroutine X(eigen_solver_cg2) (gr, st, h, pre, tol, niter, converged, diff, reo
   R_TYPE, allocatable :: h_psi(:,:), g(:,:), g0(:,:), &
     cg(:,:), ppsi(:,:)
 
-  R_TYPE :: es(2), a0, b0, gg, gg0, gg1, gamma, theta, norma
-  FLOAT :: cg0, e0, res
+  R_DOUBLE :: es(2), a0, b0, gg, gg0, gg1, gamma, theta, norma
+  real(8) :: cg0, e0, res
   integer  :: ik, moved, p, j, iter, maxter, conv, conv_, idim, ns
   logical  :: reord = .true., verbose_
 
@@ -119,7 +119,7 @@ subroutine X(eigen_solver_cg2) (gr, st, h, pre, tol, niter, converged, diff, reo
 
         !this does: g(1:NP, 1:st%d%dim) = g(1:NP, 1:st%d%dim) - es(1)*ppsi(1:NP, 1:st%d%dim)
         do idim = 1, st%d%dim
-          call lalg_axpy(NP, -es(1), ppsi(:, idim), g(:, idim))
+          call lalg_axpy(NP, R_TOPREC(-es(1)), ppsi(:, idim), g(:, idim))
         end do
 
         ! Orthogonalize to lowest eigenvalues (already calculated)
@@ -160,7 +160,7 @@ subroutine X(eigen_solver_cg2) (gr, st, h, pre, tol, niter, converged, diff, reo
 
           !this does: cg(1:NP, 1:st%d%dim) = cg(1:NP, 1:st%d%dim) - norma * st%X(psi)(1:NP, 1:st%d%dim, p, ik)
           do idim = 1, st%d%dim 
-            call lalg_axpy(NP, -norma, st%X(psi)(:, idim, p, ik), cg(:, idim))
+            call lalg_axpy(NP, R_TOPREC(-norma), st%X(psi)(:, idim, p, ik), cg(:, idim))
           end do
         end if
 

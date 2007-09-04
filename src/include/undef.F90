@@ -35,6 +35,7 @@
 #undef R_DOUBLE
 #undef R_MPITYPE
 #undef R_TOTYPE
+#undef R_TOPREC
 
 #undef R_ABS
 #undef R_CONJ

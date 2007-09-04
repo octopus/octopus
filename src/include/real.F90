@@ -23,6 +23,7 @@
 #define R_DOUBLE    real(8)
 #define R_MPITYPE   MPI_FLOAT
 #define R_TOTYPE(x) real(x, REAL_PRECISION)
+#define R_TOPREC(x) real(x, REAL_PRECISION)
 
 #define R_ABS(x)    abs(x)
 #define R_CONJ(x)   (x)
