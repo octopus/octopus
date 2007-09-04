@@ -130,9 +130,9 @@ module lib_basic_alg_m
   end interface
 
   interface lalg_nrm2
-    module procedure nrm2_1
+    module procedure nrm2_mp_r
     module procedure nrm2_2
-    module procedure nrm2_3
+    module procedure nrm2_mp_c
     module procedure nrm2_4
   end interface
 
@@ -228,6 +228,8 @@ contains
 #  define TYPE 4
 #  include "linalg_basic_blas.F90"
 #  undef TYPE
+
+#include "linalg_basic_mp.F90"
 
 end module lib_basic_alg_m
 

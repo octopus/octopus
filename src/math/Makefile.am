@@ -28,7 +28,7 @@ libmath_a_SOURCES = \
 noinst_HEADERS = \
 	linalg_basic_blas.F90 linalg_adv_lapack.F90 math_cg_inc.F90 math_inc.F90 \
 	ode_solver_inc.F90 root_solver_inc.F90 sparskit_inc.F90 \
-	fftw2.F90 fftw3.F90
+	fftw2.F90 fftw3.F90 linalg_basic_mp.F90
 
 include $(srcdir)/../common-rules.make
 
@@ -36,6 +36,6 @@ depend:
 	@makedepf90 $(libmath_a_SOURCES)
 
 linalg_adv.o: linalg_adv_lapack.F90
-linalg_basic.o: linalg_basic_blas.F90
+linalg_basic.o: linalg_basic_blas.F90 linalg_basic_mp.F90
 sparskit.o: sparskit_inc.F90
 math.o: math_cg_inc.F90 math_inc.F90
