@@ -114,7 +114,6 @@ contains
     call states_allocate_wfns(st, gr%m, M_CMPLX)
 
     ! Initialize a bunch of states: initial, target, chi.
-    psi        = st
     chi        = st
     initial_st = st
     target_st  = st
@@ -151,6 +150,9 @@ contains
 
     call states_output(initial_st, gr, 'opt-control/initial', sys%outp)
     call states_output(target_st, gr, 'opt-control/target', sys%outp)
+
+    ! psi is the "working state".
+    psi = initial_st
 
     ! mode switcher
     select case(oct%algorithm_type)
@@ -207,7 +209,8 @@ contains
       call parameters_to_h(par, h%ep)
       call propagate_forward(oct%targetmode, sys, h, td, tdt, psi) 
       
-      if(oct%dump_intermediate) call states_output(psi, gr, 'opt-control/prop1', sys%outp)
+      ! Maybe we should print here a PsiT.000?
+      !if(oct%dump_intermediate) call states_output(psi, gr, 'opt-control/prop1', sys%outp)
         
       ctr_loop: do
         
@@ -218,14 +221,7 @@ contains
         
         call bwd_step(oct_algorithm_zr98, oct%targetmode, sys, td, h, tdt, par, par_tmp, chi, psi)
         
-        if(oct%dump_intermediate) then
-          write(filename,'(a,i3.3)') 'opt-control/b_laser.', iterator%ctr_iter
-          call parameters_write(filename, par_tmp)
-        end if
-        
         ! forward propagation
-        psi = initial_st
-        call states_output(psi, gr, 'opt-control/last_bwd', sys%outp)
         call fwd_step(oct_algorithm_zr98, oct%targetmode, sys, td, h, tdt, par, par_tmp, chi, psi)
         write(filename,'(a,i3.3)') 'opt-control/PsiT.', iterator%ctr_iter
         call states_output(psi, gr, filename, sys%outp)
@@ -262,7 +258,7 @@ contains
         
         if(oct%dump_intermediate) then
           write(filename,'(a,i3.3)') 'opt-control/PsiT.', iterator%ctr_iter
-          call states_output(psi, gr, 'opt-control/last_bwd', sys%outp)
+          call states_output(psi, gr, trim(filename), sys%outp)
         end if
 
 
@@ -330,7 +326,9 @@ contains
       call parameters_to_h(par, h%ep)
       call propagate_backward(sys, h, td, chi)
 
-      if(oct%dump_intermediate) call states_output(chi, gr, 'opt-control/initial_propZBR98', sys%outp)
+      ! Maybe we should print here the backwards propagated chi, for debugging purposes.
+      !if(oct%dump_intermediate) &
+      !   call states_output(chi, gr, 'opt-control/initial_propZBR98', sys%outp)
 
       ctr_loop: do
 
@@ -339,7 +337,6 @@ contains
         call write_info(1)
         
         ! forward propagation
-        psi = initial_st
         call fwd_step(oct_algorithm_zbr98, oct%targetmode, sys, td, h, tdt, par, par_tmp, chi, psi)
 
         write(filename,'(a,i3.3)') 'opt-control/PsiT.', iterator%ctr_iter
@@ -350,7 +347,6 @@ contains
          ! and now backward
         call target_calc(oct, gr, target_st, psi, chi)
         call bwd_step(oct_algorithm_zbr98, oct%targetmode, sys, td, h, tdt, par, par_tmp, chi, psi)
-        call states_output(psi, gr, 'opt-control/last_bwd', sys%outp)
         
       end do ctr_loop
 
