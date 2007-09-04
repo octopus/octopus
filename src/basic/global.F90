@@ -82,6 +82,8 @@ module global_m
   CMPLX, public, parameter :: M_z2I       = (CNST(0.0), CNST(2.0))
   CMPLX, public, parameter :: M_zI        = (CNST(0.0), CNST(1.0))
 
+  FLOAT, public, parameter :: M_EPSILON   =  epsilon(M_ONE)
+  FLOAT, public, parameter :: M_HUGE      =  huge(M_ONE)
 
   ! some physical constants
   FLOAT, public, parameter :: P_Ang =  M_ONE / CNST(0.529177)

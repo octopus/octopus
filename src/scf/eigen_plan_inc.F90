@@ -64,8 +64,6 @@ subroutine X(eigen_solver_plan) (gr, st, hamilt, pre, tol, niter, converged, dif
   ! Some hard coded parameters.
   integer, parameter  :: winsiz = 5  ! window size, number of eigenvalues computed simultaneously
   integer, parameter  :: krylov = 15 ! The Krylov subspace size.
-  FLOAT,   parameter  :: eps    = CNST(1e-15)
-
 
   call push_sub('eigen_plan.eigen_solver_plan')
 
@@ -166,7 +164,7 @@ subroutine X(eigen_solver_plan) (gr, st, hamilt, pre, tol, niter, converged, dif
             end do
           end do
           x = X(states_nrm2)(gr%m, dim, v(:, :, i))
-          if(x .le. eps) then
+          if(x .le. M_EPSILON) then
             call X(mf_random)(gr%m, v(:, 1, i))
           else
             do idim = 1, dim

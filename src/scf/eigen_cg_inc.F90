@@ -132,7 +132,7 @@ subroutine X(eigen_solver_cg2) (gr, st, h, pre, tol, niter, converged, diff, reo
         call  X(preconditioner_apply)(pre, gr, h, g(:,:), g0(:,:))
 
         gg = X(states_dotp) (gr%m, st%d%dim, g, g0)
-        if( abs(gg) < CNST(1.0e-15) ) then
+        if( abs(gg) < M_EPSILON ) then
           conv = conv + 1
           st%eigenval(p, ik) = es(1)
           res = sqrt(abs(gg))

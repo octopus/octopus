@@ -167,7 +167,7 @@ contains
 
     do is = 1, nspin
        do ir = 1, g%nrval
-          if(rho(ir, is) < CNST(1.0e-15)) rho(ir, is) = M_ZERO
+          if(rho(ir, is) < M_EPSILON) rho(ir, is) = M_ZERO
        end do
     end do
 
