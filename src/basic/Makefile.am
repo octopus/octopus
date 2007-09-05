@@ -42,6 +42,10 @@ global.o: global.F90
 		-DOCTOPUS_VERSION='"$(VERSION)"' \
 		-DBUILD_TIME="'`date`'" -DFC='"$(FC)"' \
 		-DFCFLAGS='"$(FCFLAGS) $(FCFLAGS_f90)"' $< > $*_oct.f90
+	@if [ "@F90_ACCEPTS_LINE_NUMBERS@" = "no" ]; then \
+		grep -v "^#" $*_oct.f90 > $*_oct.f91; \
+		mv -f $*_oct.f91 $*_oct.f90; \
+	fi
 	@FC@ @FCFLAGS@ $(AM_FCFLAGS) -c @FCFLAGS_f90@ -o $@ $*_oct.f90
 	@rm -f $*_oct.f90
 

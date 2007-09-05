@@ -104,6 +104,10 @@ SUFFIXES = _oct.f90 .F90 .o
 		mv -f $*_oct.f91 $*_oct.f90; \
 	fi
 	@perl -pi -e 's/\\newline/\n/g; s/\\cardinal/#/g' $*_oct.f90
+	@if [ "@F90_ACCEPTS_LINE_NUMBERS@" = "no" ]; then \
+		grep -v "^#" $*_oct.f90 > $*_oct.f91; \
+		mv -f $*_oct.f91 $*_oct.f90; \
+	fi
 	@FC@ @FCFLAGS@ @FCFLAGS_NETCDF@ $(AM_FCFLAGS) -c @FCFLAGS_f90@ -o $@ $*_oct.f90
 	@rm -f $*_oct.f90
 

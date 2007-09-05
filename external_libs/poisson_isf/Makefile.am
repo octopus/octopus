@@ -41,7 +41,12 @@ AM_FCFLAGS = @F90_MODULE_FLAG@$(srcdir)
 
 # How to compile an F90 file :)
 .F90.o:
-	@@FCCPP@ @CPPFLAGS@ -I. $< > $*_oct.f90
+	$(FCCPP) $(CPPFLAGS) -I. $< > $*_oct.f90
+	@perl -pi -e 's/\\newline/\n/g; s/\\cardinal/#/g' $*_oct.f90
+	@if [ "@F90_ACCEPTS_LINE_NUMBERS@" = "no" ]; then \
+		grep -v "^#" $*_oct.f90 > $*_oct.f91; \
+		mv -f $*_oct.f91 $*_oct.f90; \
+	fi
 	$(FCCOMPILE) -c @FCFLAGS_f90@ -o $@ $*_oct.f90
 	@rm -f $*_oct.f90
 
