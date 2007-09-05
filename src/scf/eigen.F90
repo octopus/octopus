@@ -323,7 +323,7 @@ contains
              tau = eigens%imag_time)
       case(RS_LOBPCG)
         call deigen_solver_lobpcg(gr, st, h, eigens%pre, tol, maxiter, eigens%converged, &
-          eigens%diff)
+          eigens%diff, verbose = verbose_)
       end select
 
       call deigen_diagon_subspace(gr, st, h)
@@ -342,7 +342,7 @@ contains
              tau = eigens%imag_time)
       case(RS_LOBPCG)
        call zeigen_solver_lobpcg(gr, st, h, eigens%pre, tol, maxiter, eigens%converged, &
-         eigens%diff)
+         eigens%diff, verbose = verbose_)
       end select
 
       call zeigen_diagon_subspace(gr, st, h)

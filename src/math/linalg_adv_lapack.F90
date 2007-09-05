@@ -204,12 +204,18 @@ subroutine dlowest_geneigensolve(k, n, a, b, e, v)
   FLOAT, allocatable :: work(:)
   
   abstol = 2*sfmin()
-  lwork  = max(1, 8*n)
+
+  ! Work size query.
+  ALLOCATE(work(1), 1)
+  call DLAPACK(sygvx)(1, 'V', 'I', 'U', n, a(1, 1), n, b(1, 1), n, M_ZERO, M_ZERO, &
+    1, k, abstol, m, e(1), v(1, 1), n, work(1), -1, iwork(1), ifail(1), info)
+  lwork = int(work(1))
+  deallocate(work)
 
   ALLOCATE(work(lwork), lwork)
 
   call DLAPACK(sygvx)(1, 'V', 'I', 'U', n, a(1, 1), n, b(1, 1), n, M_ZERO, M_ZERO, &
-    1, k, abstol, m, e(1), v(1, 1), n, work(1), lwork , iwork(1), ifail(1), info)
+    1, k, abstol, m, e(1), v(1, 1), n, work(1), lwork, iwork(1), ifail(1), info)
 
   deallocate(work)
 
@@ -251,7 +257,14 @@ subroutine zlowest_geneigensolve(k, n, a, b, e, v)
   end interface
   
   abstol = 2*sfmin()
-  lwork  = max(1, 2*n-1)
+
+  ! Work size query.
+  ALLOCATE(work(1), 1)
+  call ZLAPACK(hegvx)(1, 'V', 'I', 'U', n, a(1, 1), n, b(1, 1), n, M_ZERO, M_ZERO, &
+    1, k, abstol, m, e(1), v(1, 1), n, work(1), -1, rwork(1), iwork(1), ifail(1), info)
+  lwork = int(real(work(1)))
+  deallocate(work)
+
 
   ALLOCATE(work(lwork), lwork)
 
