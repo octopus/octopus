@@ -75,7 +75,7 @@ end function X(states_mpdotp_x)
 ! orbitals that result of applying operator O on each of the
 ! spin-orbitals of st2.
 !
-! The routine directly applies Lowdin's formula [P.-O. Lowdin,
+! The routine directly applies Lowdin`s formula [P.-O. Lowdin,
 ! Phys. Rev. 97, 1474; Eq. 49].
 ! -------------------------------------------------------------
 R_TYPE function X(states_mpmatrixelement_g)(m, st1, st2, opst2) result(st1opst2)
@@ -158,7 +158,7 @@ R_TYPE function X(states_mpmatrixelement_g)(m, st1, st2, opst2) result(st1opst2)
       z = lalg_determinant(i1+k1, c, invert = .true.)
       c = z * transpose(c)
 
-      ! And now, apply Lowdin's formula.
+      ! And now, apply Lowdin`s formula.
       z = M_ZERO
       do i = 1, i1 + k1
         do j = 1, i1 + k1
@@ -201,7 +201,7 @@ R_TYPE function X(states_mpmatrixelement_g)(m, st1, st2, opst2) result(st1opst2)
         z = lalg_determinant(i1, c, invert = .true.)
         c = z * transpose(c)
 
-        ! And now, apply Lowdin's formula.
+        ! And now, apply Lowdin`s formula.
         z = M_ZERO
         do i = 1, i1
           do j = 1, i1
