@@ -127,7 +127,7 @@ contains
     integer :: i, l
     FLOAT   :: x
 
-    call push_sub('psf.build_valconf')
+    call push_sub('ps_psf.build_valconf')
 
     call valconf_null(conf)
     conf%symbol = psf_file%namatm
@@ -205,7 +205,7 @@ contains
     type(ps_psf_t), intent(inout) :: ps_psf
     integer,       intent(in)    :: lmax, lloc
 
-    call push_sub('psf.psf_process')
+    call push_sub('ps_psf.psf_process')
 
     ! get the pseudoatomic eigenfunctions
     ALLOCATE(ps_psf%eigen(ps_psf%psf_file%npotd, 3), ps_psf%psf_file%npotd*3)
@@ -248,14 +248,13 @@ contains
     integer :: iter, ir, is, l, nnode, nprin, ierr !, irel
     FLOAT :: vtot, diff, a2b4
     FLOAT, allocatable :: ve(:, :), rho(:, :), prev(:, :)
-    FLOAT, parameter :: tol = CNST(1.0e-10)
 
     ! These variables are in double precision, no matter if single precision version of
     ! octopus is compiled, because they are passed to egofv.
     REAL_DOUBLE :: e, z, dr, rmax
     REAL_DOUBLE, allocatable :: s(:), hato(:), gg(:), y(:)
 
-    call push_sub('psf.solve_schroedinger')
+    call push_sub('ps_psf.solve_schroedinger')
 
     ! Let us be a bit informative.
     message(1) = '      Calculating atomic pseudo-eigenfunctions for specie ' // psf_file%namatm // '....'
@@ -386,7 +385,7 @@ contains
           diff = diff + sqrt( sum(g%drdi(:) * (rho(:, is) - prev(:, is))**2) )
         end do
 
-        if(diff < tol) exit self_consistent
+        if(diff < M_EPSILON*CNST(1e2)) exit self_consistent
         if(iter>1) rho = 0.5*rho + 0.5*prev
 
         !write(message(1),'(a,i4,a,e10.2)') '      Iter =', iter, '; Diff =', diff
@@ -421,7 +420,7 @@ contains
     REAL_DOUBLE :: z, e, dr, rmax
     REAL_DOUBLE, allocatable :: hato(:), s(:), gg(:), y(:)
 
-    call push_sub('psf.ghost_analysis')
+    call push_sub('ps_psf.ghost_analysis')
 
     ALLOCATE(ve    (g%nrval), g%nrval)
     ALLOCATE(s     (g%nrval), g%nrval)

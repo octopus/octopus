@@ -6,24 +6,24 @@ Author     : Carlo + Heiko
 Date       : 16.06.05
 Arch       : Linux n11 2.6.11.6-smp-1 #1 SMP Mon Apr 11 20:30:44 CEST 2005 i686 GNU/Linux
 Release    : 2.2.0pre1
-Programs   : octopus
+Programs   : octopus; octopus_single
 TestGroups : short-run
 Enabled    : Yes
 
 Input: 02-cosine_potential.01-ground_state.inp
 
 # 1st Band
-Match ; Bands ; grep '^   1' unoccstatic/eigenvalues | tac | head -n 6 | tail -n 1 ; \s*-0.133002\d*\s*2.0000\d*
-Match ; Bands ; grep '^   1' unoccstatic/eigenvalues | tac | head -n 5 | tail -n 1 ; \s*-0.133000\d*\s*2.0000\d*
-Match ; Bands ; grep '^   1' unoccstatic/eigenvalues | tac | head -n 4 | tail -n 1 ; \s*-0.132996\d*\s*2.0000\d*
-Match ; Bands ; grep '^   1' unoccstatic/eigenvalues | tac | head -n 3 | tail -n 1 ; \s*-0.132992\d*\s*2.0000\d*
-Match ; Bands ; grep '^   1' unoccstatic/eigenvalues | tac | head -n 2 | tail -n 1 ; \s*-0.132988\d*\s*2.0000\d*
-Match ; Bands ; grep '^   1' unoccstatic/eigenvalues | tac | head -n 1 | tail -n 1 ; \s*-0.132986\d*\s*2.0000\d*
+Match ; Bands ; grep '^   1' unoccstatic/eigenvalues | tac | head -n 6 | tail -n 1 ; \s*-0.13300\d*\s*2.0000\d*
+Match ; Bands ; grep '^   1' unoccstatic/eigenvalues | tac | head -n 5 | tail -n 1 ; \s*-0.13300\d*\s*2.0000\d*
+Match ; Bands ; grep '^   1' unoccstatic/eigenvalues | tac | head -n 4 | tail -n 1 ; \s*-0.13299\d*\s*2.0000\d*
+Match ; Bands ; grep '^   1' unoccstatic/eigenvalues | tac | head -n 3 | tail -n 1 ; \s*-0.13299\d*\s*2.0000\d*
+Match ; Bands ; grep '^   1' unoccstatic/eigenvalues | tac | head -n 2 | tail -n 1 ; \s*-0.13298\d*\s*2.0000\d*
+Match ; Bands ; grep '^   1' unoccstatic/eigenvalues | tac | head -n 1 | tail -n 1 ; \s*-0.13298\d*\s*2.0000\d*
 
 # 2nd Band
-Match ; Bands ; grep '^   2' unoccstatic/eigenvalues | tac | head -n 6 | tail -n 1 ; \s*-0.006033\d*\s*0.0000\d*
-Match ; Bands ; grep '^   2' unoccstatic/eigenvalues | tac | head -n 5 | tail -n 1 ; \s*-0.006086\d*\s*0.0000\d*
-Match ; Bands ; grep '^   2' unoccstatic/eigenvalues | tac | head -n 4 | tail -n 1 ; \s*-0.006223\d*\s*0.0000\d*
-Match ; Bands ; grep '^   2' unoccstatic/eigenvalues | tac | head -n 3 | tail -n 1 ; \s*-0.006391\d*\s*0.0000\d*
-Match ; Bands ; grep '^   2' unoccstatic/eigenvalues | tac | head -n 2 | tail -n 1 ; \s*-0.006526\d*\s*0.0000\d*
-Match ; Bands ; grep '^   2' unoccstatic/eigenvalues | tac | head -n 1 | tail -n 1 ; \s*-0.006577\d*\s*0.0000\d*
+Match ; Bands ; grep '^   2' unoccstatic/eigenvalues | tac | head -n 6 | tail -n 1 ; \s*-0.00603\d*\s*0.0000\d*
+Match ; Bands ; grep '^   2' unoccstatic/eigenvalues | tac | head -n 5 | tail -n 1 ; \s*-0.00608\d*\s*0.0000\d*
+Match ; Bands ; grep '^   2' unoccstatic/eigenvalues | tac | head -n 4 | tail -n 1 ; \s*-0.00622\d*\s*0.0000\d*
+Match ; Bands ; grep '^   2' unoccstatic/eigenvalues | tac | head -n 3 | tail -n 1 ; \s*-0.00639\d*\s*0.0000\d*
+Match ; Bands ; grep '^   2' unoccstatic/eigenvalues | tac | head -n 2 | tail -n 1 ; \s*-0.00652\d*\s*0.0000\d*
+Match ; Bands ; grep '^   2' unoccstatic/eigenvalues | tac | head -n 1 | tail -n 1 ; \s*-0.00657\d*\s*0.0000\d*

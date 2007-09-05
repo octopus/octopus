@@ -124,13 +124,23 @@ module lib_oct_m
     subroutine write_iter_double_1(out, d, n)
       C_POINTER :: out
       integer   :: n
-      FLOAT     :: d
+      real(8)   :: d
     end subroutine write_iter_double_1
     subroutine write_iter_double_n(out, d, n)
       C_POINTER :: out
       integer   :: n
-      FLOAT     :: d(n)
+      real(8)   :: d(n)
     end subroutine write_iter_double_n
+    subroutine write_iter_float_1(out, d, n)
+      C_POINTER :: out
+      integer   :: n
+      real(4)   :: d
+    end subroutine write_iter_float_1
+    subroutine write_iter_float_n(out, d, n)
+      C_POINTER :: out
+      integer   :: n
+      real(4)   :: d(n)
+    end subroutine write_iter_float_n
   end interface
   interface write_iter_int
     subroutine write_iter_int_1(out, i, n)

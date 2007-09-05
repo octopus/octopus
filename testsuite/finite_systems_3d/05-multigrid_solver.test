@@ -6,7 +6,7 @@ Author     : Xavier Andrade
 Date       : 18.10.05
 Arch       : Linux bizet 2.6.8-2-686 #1 Thu May 19 17:53:30 JST 2005 i686 GNU/Linux
 Release    : 2.2.0pre1
-Programs   : octopus
+Programs   : octopus; octopus_single
 TestGroups : short-run
 Enabled    : Yes
 
@@ -14,4 +14,4 @@ Input: 05-multigrid_solver.01-ground_state.inp
 
 Match ; Levels ; grep 'Multigrid levels:' out ; \s*Multigrid\s*levels:\s*3
 Match ; TotalEnergy ; grep -A 7 '^Energy:' static/info ; \s*Total\s*=\s*-0.3379
-Match ; Eigenvalues ; grep -A 2 'Eigenvalues \[' static/info | tail -1 ; \s*-0.13733\d*\s*2.0000\d* 
+Match ; Eigenvalues ; grep -A 2 'Eigenvalues \[' static/info | tail -1 ; \s*-0.1373\d*\s*2.0000\d* 

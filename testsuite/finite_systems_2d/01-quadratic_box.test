@@ -6,7 +6,7 @@ Author     : Alberto Castro
 Date       : 09.11.05
 Arch       : Linux g38 2.6.13.2-smp-1 #1 SMP Wed Sep 28 17:13:12 CEST 2005 i686 GNU/Linux
 Release    : 2.2.0pre1
-Programs   : octopus
+Programs   : octopus; octopus_single
 TestGroups : short-run
 Enabled    : Yes
 
@@ -33,7 +33,7 @@ Match ; Eigenvalue with Hartree interaction ; grep -A 2 'Eigenvalues \[' static/
 
 Input : 01-quadratic_box.03-hartree+xc.inp
 
-Match ; Eigenvalue with Hartree, exchange, and correlation ; grep -A 2 'Eigenvalues \[' static/info | tail -1 ; \s*2.7394\d*\s*2.0000\d*
+Match ; Eigenvalue with Hartree, exchange, and correlation ; grep -A 2 'Eigenvalues \[' static/info | tail -1 ; \s*2.739\d*\s*2.0000\d*
 Match ; Total energy ; grep -A 7 '^Energy:' static/info ; \s*Total\s*=\s*3.35400 
 
 

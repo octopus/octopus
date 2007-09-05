@@ -14,4 +14,4 @@ Enabled    : Yes
 Input: 08-sodium_dimer.01-ground_state.inp
 
 Match ; TotalEnergy ; grep -A 7 '^Energy:' static/info ; \s*Total\s*=\s*-0.33791
-Match ; Eigenvalues ; grep -A 2 'Eigenvalues \[' static/info | tail -1 ; \s*-0.13732\d*\s*2.0000\d* 
+Match ; Eigenvalues ; grep -A 2 'Eigenvalues \[' static/info | tail -1 ; \s*-0.1373\d*\s*2.0000\d* 
