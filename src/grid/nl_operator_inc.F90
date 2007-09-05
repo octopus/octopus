@@ -29,7 +29,7 @@ subroutine X(nl_operator_tune)(op)
   
 
   R_TYPE, allocatable :: in(:), out(:)
-  real(8) :: noperations, flops(OP_FORTRAN:OP_OLU_C), itime, ftime
+  real(8) :: noperations, flops(OP_MIN:OP_MAX), itime, ftime
   integer :: method, ii, reps, iunit
   character(len=2) :: marker
 
@@ -50,7 +50,7 @@ subroutine X(nl_operator_tune)(op)
   
   flops = M_ZERO
 
-  do method = OP_FORTRAN, OP_OLU_C
+  do method = OP_MIN, OP_MAX
 
     !skip methods that are not available
 #ifdef R_TCOMPLEX
@@ -76,8 +76,8 @@ subroutine X(nl_operator_tune)(op)
   end do
   
   !choose the best method
-  op%X(function) = OP_FORTRAN
-  do method = OP_FORTRAN + 1, OP_OLU_C
+  op%X(function) = OP_MIN
+  do method = OP_MIN + 1, OP_MAX
     if(flops(method) > flops(op%X(function))) op%X(function) = method
   end do
 
@@ -95,7 +95,7 @@ subroutine X(nl_operator_tune)(op)
   write (iunit, '(a,i8)') 'Stencil points = ', op%n
   write (iunit, '(a,i8)') 'Grid points    = ', op%m%np
 
-  do method = OP_FORTRAN, OP_OLU_C
+  do method = OP_MIN, OP_MAX
     marker = '  '
     if(method == op%X(function)) marker = '* '
     write (iunit, '(2a, f8.1, a)') marker, op_function_name(method), flops(method)/CNST(1e6), ' MFlops'
@@ -136,14 +136,17 @@ subroutine X(operate_olu)(np, np_part, nn, w, opi, fi, fo)
   integer, intent(in) :: opi(1:nn, 1:np)
   R_TYPE,  intent(in) :: fi(1:np_part)
   R_TYPE,  intent(out):: fo(1:np) 
-  
-  integer :: ii, jj, kk
-  R_TYPE :: a0, a1, a2, a3, a4, a5, a6, a7, a8, a9, aa, ab
 
 #ifdef R_TCOMPLEX
 #define DEPTH 6
 #else
 #define DEPTH 12
+#endif
+  
+  integer :: ii, jj, kk
+  R_TYPE :: a0, a1, a2, a3, a4, a5
+#if DEPTH > 6
+  R_TYPE :: a6, a7, a8, a9, aa, ab
 #endif
 
   !$omp parallel do private(kk, a0, a1, a2, a3, a4, a5, a6, a7, a8, a9, aa, ab) lastprivate(ii)

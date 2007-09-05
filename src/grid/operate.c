@@ -38,6 +38,18 @@ typedef float ffloat;
 typedef double ffloat;
 #endif
 
+typedef struct {
+  ffloat re;
+  ffloat im;
+} comp;
+
+void FC_FUNC_(zoperate_c,ZOPERATE_C)(const int * opnp, 
+				     const int * opn, 
+				     const ffloat * restrict w, 
+				     const int * opi, 
+				     const comp * fi, 
+				     comp * restrict fo);
+
 #include "operate_vec.c"
 
 void FC_FUNC_(doperate_c,DOPERATE_C)(const int * opnp, 
@@ -147,11 +159,6 @@ void FC_FUNC_(doperate_olu_c,DOPERATE_OLU_C)(const int * opnp,
 
 }
 
-typedef struct {
-  ffloat re;
-  ffloat im;
-} comp;
-
 
 void FC_FUNC_(zoperate_c,ZOPERATE_C)(const int * opnp, 
 				const int * opn, 
@@ -207,3 +214,75 @@ void FC_FUNC_(zoperate_c,ZOPERATE_C)(const int * opnp,
   }
 }
 
+void FC_FUNC_(doperate_ri,DOPERATE_RI)(const int * opnp, 
+				       const int * opn, 
+				       const ffloat * restrict w, 
+				       const int * opnri,
+				       const int * opri,
+				       const int * rimap_inv,
+				       const ffloat * fi, 
+				       ffloat * restrict fo){
+
+  const int n = opn[0];
+  const int np = opnp[0];
+  const int nri = opnri[0];
+
+  int l, i, j, nm2;
+  const int * restrict index;
+  const ffloat * restrict mfi;
+  register ffloat a;
+  const ffloat * restrict ffi[30];
+
+  i = 0;
+  for (l = 0; l < nri ; l++) {
+    index = opri + n * l;
+    for(j = 0; j < n ; j++) ffi[j] = fi + index[j];
+    for (; i < rimap_inv[l]; i++){
+      a = 0.0;
+      for(j = 0; j < n; j++) a += w[j] * ffi[j][i];
+      fo[i] = a;
+    }
+  }
+
+}
+
+void FC_FUNC_(zoperate_ri,ZOPERATE_RI)(const int * opnp, 
+				       const int * opn, 
+				       const ffloat * restrict w, 
+				       const int * opnri,
+				       const int * opri,
+				       const int * rimap_inv,
+				       const comp * fi, 
+				       comp * restrict fo){
+
+  const int n = opn[0];
+  const int np = opnp[0];
+  const int nri = opnri[0];
+
+  int l, i, j, nm2;
+  const int * restrict index;
+  const comp * restrict mfi;
+  comp a;
+
+  mfi   = fi - 1;
+
+  i = 0;
+  for (l = 0; l < nri ; l++) {
+    index = opri + n * l;
+    for (; i < rimap_inv[l]; i++){
+      mfi = fi + i;
+      
+      a.re = 0.0;
+      a.im = 0.0;
+      
+      for(j = 0; j < n; j++) {
+	a.re += w[j] * mfi[index[j]].re;
+	a.im += w[j] * mfi[index[j]].im;
+      }
+      fo[i].re = a.re;
+      fo[i].im = a.im;
+    }
+
+  }
+
+}

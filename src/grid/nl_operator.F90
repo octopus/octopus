@@ -77,6 +77,12 @@ module nl_operator_m
 
     character(len=40) :: label
 
+    !the compressed index of grid points
+    integer :: nri
+    integer, pointer :: ri(:,:)
+    integer, pointer :: rimap(:)
+    integer, pointer :: rimap_inv(:)
+
   end type nl_operator_t
 
   interface assignment (=)
@@ -88,8 +94,12 @@ module nl_operator_m
        OP_C       = 1,  &
        OP_SSE     = 2,  &
        OP_OLU     = 3,  &
-       OP_OLU_C   = 4
+       OP_OLU_C   = 4,  &
+       OP_RI      = 5,  &
+       OP_MIN     = OP_FORTRAN, &
+       OP_MAX     = OP_RI
 
+  
   logical :: initialized = .false.
 
 contains
@@ -103,6 +113,7 @@ contains
     if(id == OP_SSE)     str = 'SSE'
     if(id == OP_OLU)     str = 'OLU'
     if(id == OP_OLU_C)   str = 'OLU C'
+    if(id == OP_RI)      str = 'RI'
     
   end function op_function_name
 
@@ -250,6 +261,7 @@ contains
     end do
     !$omp end parallel do
 
+    call generate_ri()
 
     if(op%const_w .and. .not. op%cmplx_op) then
       call dnl_operator_tune(op)
@@ -257,6 +269,47 @@ contains
     end if
 
     call pop_sub()
+
+    contains
+
+      subroutine generate_ri()
+        integer :: jj, current
+        integer, allocatable :: st(:)
+        
+        ALLOCATE(st(1:op%n), op%n)
+
+        op%nri = 1
+        do jj = 2, m%np
+          st(1:op%n) = (op%i(1:op%n, jj) - jj) - (op%i(1:op%n, jj - 1) - (jj - 1))
+          if(maxval(abs(st)) > 0 ) op%nri = op%nri + 1
+        end do
+
+        ALLOCATE(op%ri(1:op%n, op%nri), op%n*op%nri)
+        ALLOCATE(op%rimap(1:op%np), op%np)
+        ALLOCATE(op%rimap_inv(1:op%nri), op%nri)
+
+        current = 1
+        op%ri(1:op%n, current) = op%i(1:op%n, 1) - 1
+        op%rimap(1) = current
+        
+        do jj = 2, m%np
+          st(1:op%n) = op%i(1:op%n, jj) - jj
+          
+          !if the stencil representation is different
+          if(maxval(abs(st - op%ri(1:op%n, current))) > 0 ) then 
+            current = current + 1
+            op%ri(1:op%n, current) = st
+          end if
+
+          op%rimap(jj) = current
+        end do
+
+        do jj = 1, op%np
+          op%rimap_inv(op%rimap(jj)) = jj
+        end do
+
+      end subroutine generate_ri
+
   end subroutine nl_operator_build
 
 
@@ -827,6 +880,8 @@ contains
       deallocate(op%w_im)
     end if
 
+    deallocate(op%ri, op%rimap, op%rimap_inv)
+
     call pop_sub()
   end subroutine nl_operator_end
 
@@ -876,6 +931,8 @@ contains
       case(OP_OLU)
         call doperate_olu(op%np, op%m%np_part, nn, &
              op%w_re(1:nn, 1), op%i(1:nn,1:op%np), fi(1:op%m%np_part), fo(1:op%np))
+      case(OP_RI)
+        call doperate_ri(op%np, nn, op%w_re(1, 1), op%nri, op%ri(1,1), op%rimap_inv(1), fi(1), fo(1))
       end select
     else
       do ii = 1, op%np
@@ -946,6 +1003,8 @@ contains
             op%w_re(1:nn, 1), op%i(1:nn,1:op%np), fi(1:op%m%np_part), fo(1:op%np))
         case(OP_C)
           call zoperate_c(op%np, nn, op%w_re(1, 1), op%i(1,1), fi(1), fo(1))
+        case(OP_RI)
+          call zoperate_ri(op%np, nn, op%w_re(1, 1), op%nri, op%ri(1,1), op%rimap_inv(1), fi(1), fo(1))
         end select
 
       else
