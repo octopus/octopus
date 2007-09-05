@@ -145,7 +145,7 @@ subroutine X(operate_olu)(np, np_part, nn, w, opi, fi, fo)
   
   integer :: ii, jj, kk
   R_TYPE :: a0, a1, a2, a3, a4, a5
-#if DEPTH > 6
+#if DEPTH > 6 || USE_OMP
   R_TYPE :: a6, a7, a8, a9, aa, ab
 #endif
 

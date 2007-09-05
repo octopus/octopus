@@ -125,6 +125,15 @@ module math_m
     module procedure zapproximate_equal_3
   end interface
 
+  interface hypot
+    real(8) function hypotd(x, y)
+      real(8) :: x, y
+    end function hypotd
+    real(4) function hypotf(x, y)
+      real(4) :: x, y
+    end function hypotf
+  end interface
+  
 contains
 
   ! ---------------------------------------------------------

@@ -194,6 +194,17 @@ module lib_basic_alg_m
     module procedure gemv_2_4
   end interface
 
+#ifdef USE_OMP
+  interface hypot
+    real(8) function hypotd(x, y)
+      real(8) :: x, y
+    end function hypotd
+    real(4) function hypotf(x, y)
+      real(4) :: x, y
+    end function hypotf
+  end interface
+#endif
+
 contains
 
 #ifdef USE_OMP

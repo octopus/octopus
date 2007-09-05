@@ -301,7 +301,7 @@ TYPE2 function FNAME(nrm2)(n, dx) result(nrm2)
   TYPE1,   intent(in) :: dx(:)
 
 #ifdef USE_OMP
-  TYPE1   :: nrm2_loc
+  TYPE2   :: nrm2_loc
   integer :: nn_loc, ini
   
   nrm2 = CNST(0.0)
@@ -310,10 +310,12 @@ TYPE2 function FNAME(nrm2)(n, dx) result(nrm2)
   call divide_range(n, omp_get_thread_num(), omp_get_num_threads(), ini, nn_loc)
   nrm2_loc = blas_nrm2(nn_loc, dx(ini), 1)
 
-  !$omp atomic
-  nrm2 = nrm2 + nrm2_loc
+  !$omp critical
+  nrm2 = hypot(nrm2, nrm2_loc)
+  !$omp end critical
 
   !$omp end parallel
+  
 #else
   nrm2 = blas_nrm2(n, dx(1), 1)
 #endif
