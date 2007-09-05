@@ -207,7 +207,7 @@ contains
     integer :: ia, is, gmd_opt, i
     integer, save :: iseed = 321
     C_POINTER :: blk
-    FLOAT :: r, rnd, phi, theta, mag(MAX_DIM)
+    FLOAT :: r, rnd, phi, theta, mag(MAX_DIM), lmag, n1, n2
     FLOAT, allocatable :: atom_rho(:,:)
 
     call push_sub('specie_pot.guess_density')
@@ -305,9 +305,9 @@ contains
       !% This option is only used when <tt>GuessMagnetDensity</tt> is set to 
       !% <tt>user_defined</tt>. It provides a direction for each atoms magnetization 
       !% vector when building the guess density. In order to do that the user should
-      !% specify the coordinates of a vector that has the desired direction. The norm 
-      !% of the vector is ignored. Note that it is necessaty to maintain the 
-      !% ordering in which the species were defined in the coordinates specifications.
+      !% specify the coordinates of a vector that has the desired direction and norm.
+      !% Note that it is necessaty to maintain the ordering in which the species
+      !% were defined in the coordinates specifications.
       !%
       !% For spin-polarized calculations the vectors should have only one component and
       !% for non-collinear spin calculations they should have three components.
@@ -324,10 +324,49 @@ contains
 
       ALLOCATE(atom_rho(m%np, 2), m%np*2)
       do ia = 1, geo%natoms
-        call atom_density(m, sb, geo%atom(ia), 2, atom_rho)
-
+        !Read from AtomsMagnetDirection block 
         if (nspin == 2) then
           call loct_parse_block_float(blk, ia-1, 0, mag(1))
+          lmag = abs(mag(1))
+        elseif (nspin == 4) then
+          do i = 1, 3
+            call loct_parse_block_float(blk, ia-1, i-1, mag(i))
+            if (abs(mag(i)) < CNST(1.0e-20)) mag(i) = M_ZERO
+          end do
+          lmag = sqrt(dot_product(mag, mag))
+        end if
+
+        !Get atomic density
+        call atom_density(m, sb, geo%atom(ia), 2, atom_rho)
+
+        !Scale magnetization density
+        n1 = dmf_integrate(m, atom_rho(:, 1))
+        n2 = dmf_integrate(m, atom_rho(:, 2))
+        if (lmag > n1 + n2) then
+          mag = mag*(n1 + n2)/lmag
+          lmag = n1 + n2
+        elseif (lmag == M_ZERO) then
+          if (n1 - n2 == M_ZERO) then
+            rho(1:m%np, 1:2) = rho(1:m%np, 1:2) + atom_rho(1:m%np, 1:2)
+          else
+            atom_rho(:, 1) = (atom_rho(:, 1) + atom_rho(:, 2))/M_TWO
+            rho(1:m%np, 1) = rho(1:m%np, 1) + atom_rho(1:m%np, 1)
+            rho(1:m%np, 2) = rho(1:m%np, 2) + atom_rho(1:m%np, 1)
+          end if
+          cycle
+        end if
+        if (n1 - n2 /= lmag .and. n2 /= M_ZERO) then
+          if (n1 - n2 < lmag) then
+            atom_rho(:, 1) = atom_rho(:, 1) + (lmag - n1 + n2)/M_TWO/n2*atom_rho(:, 2)
+            atom_rho(:, 2) = (n1 + n2 - lmag)/M_TWO/n2*atom_rho(:, 2)
+          elseif (n1 - n2 > lmag) then
+            atom_rho(:, 2) = atom_rho(:, 2) + (n1 - n2 - lmag)/M_TWO/n1*atom_rho(:, 1)
+            atom_rho(:, 1) = (lmag + n1 + n2)/M_TWO/n1*atom_rho(:, 1)
+          end if
+        end if
+
+        !Rotate magnetization density
+        if (nspin == 2) then
           if (mag(1) > M_ZERO) then
             rho(1:m%np, 1:2) = rho(1:m%np, 1:2) + atom_rho(1:m%np, 1:2)
           else
@@ -336,12 +375,7 @@ contains
           end if
 
         elseif (nspin == 4) then
-          do i = 1, 3
-            call loct_parse_block_float(blk, ia-1, i-1, mag(i))
-            if (abs(mag(i)) < CNST(1.0e-20)) mag(i) = M_ZERO
-          end do
-
-          theta = acos(mag(3)/sqrt(dot_product(mag, mag)))
+          theta = acos(mag(3)/lmag)
           if (mag(1) == M_ZERO) then
             if (mag(2) == M_ZERO) then
               phi = M_ZERO
@@ -352,9 +386,9 @@ contains
             end if
           else
             if (mag(2) < M_ZERO) then
-              phi = M_TWO*M_PI - acos(mag(1)/sin(theta)/sqrt(dot_product(mag, mag)))
+              phi = M_TWO*M_PI - acos(mag(1)/sin(theta)/lmag)
             elseif (mag(2) >= M_ZERO) then
-              phi = acos(mag(1)/sin(theta)/sqrt(dot_product(mag, mag)))
+              phi = acos(mag(1)/sin(theta)/lmag)
             end if
           end if
 
