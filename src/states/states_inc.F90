@@ -34,6 +34,7 @@ subroutine X(states_blockt_mul)(mesh, dim, psi1, psi2, res, idx1, idx2)
   integer              :: m, n
   integer, allocatable :: idx1_(:), idx2_(:)
 
+  call profiling_in(C_PROFILING_LOBPCG_BLOCKT)
   call push_sub('states_inc.Xstates_blockt_mul')
 
   if(present(idx1)) then
@@ -73,6 +74,7 @@ subroutine X(states_blockt_mul)(mesh, dim, psi1, psi2, res, idx1, idx2)
   deallocate(idx1_, idx2_)
 
   call pop_sub()
+  call profiling_out(C_PROFILING_LOBPCG_BLOCKT)
 end subroutine X(states_blockt_mul)
 
 
@@ -109,9 +111,11 @@ subroutine X(states_block_matr_mul_add)(mesh, dim, alpha, psi, matr, beta, res, 
   R_TYPE,            intent(out) :: res(:, :, :)
   integer, optional, intent(in)  :: idxp(:), idxr(:)
 
-  integer              :: l, m, n, i, j, idim
+  R_TYPE               :: tmp
+  integer              :: l, m, n, i, j, k, idim, stat
   integer, allocatable :: idxp_(:), idxr_(:)
 
+  call profiling_in(C_PROFILING_LOBPCG_BLOCK_MATR)
   call push_sub('states_inc.Xstates_block_matr_add')
 
   if(present(idxp)) then
@@ -141,27 +145,37 @@ subroutine X(states_block_matr_mul_add)(mesh, dim, alpha, psi, matr, beta, res, 
 
   ! FIXME: does not work with domain parallelization.  
   if(beta.eq.R_TOTYPE(M_ZERO)) then
-    do i = 1, mesh%np
-      do j = 1, l
-        do idim = 1, dim
-          res(i, idim, idxr_(j)) = alpha*sum(psi(i, idim, idxp_)*matr(1:m, j))
+    call profiling_in(C_PROFILING_LOBPCG_LOOP)
+    do j = 1, l
+      do idim = 1, dim
+        do i = 1, mesh%np
+          res(i, idim, idxr_(j)) = R_TOTYPE(M_ZERO)
+          do k = 1, m
+            res(i, idim, idxr_(j)) = res(i, idim, idxr_(j)) + psi(i, idim, idxp_(k))*matr(k, j)
+          end do
+          res(i, idim, idxr_(j)) = alpha*res(i, idim, idxr_(j))
         end do
       end do
     end do
+    call profiling_out(C_PROFILING_LOBPCG_LOOP)
   else
-    do i = 1, mesh%np
-      do j = 1, l
-        do idim = 1, dim
-          res(i, idim, idxr_(j)) = alpha*sum(psi(i, idim, idxp_)*matr(1:m, j)) + &
-            beta*res(i, idim, idxr_(j))
+    call profiling_in(C_PROFILING_LOBPCG_LOOP)
+    do j = 1, l
+      do idim = 1, dim
+        do i = 1, mesh%np
+          tmp = R_TOTYPE(M_ZERO)
+          do k = 1, m
+            res(i, idim, idxr_(j)) = res(i, idim, idxr_(j)) + psi(i, idim, idxp_(k))*matr(k, j)
+          end do
+          res(i, idim, idxr_(j)) = alpha*tmp + beta*res(i, idim, idxr_(j))
         end do
       end do
     end do
+    call profiling_out(C_PROFILING_LOBPCG_LOOP)
   end if
-  
-  deallocate(idxp_, idxr_)
 
   call pop_sub()
+  call profiling_out(C_PROFILING_LOBPCG_BLOCK_MATR)
 end subroutine X(states_block_matr_mul_add)
 
 

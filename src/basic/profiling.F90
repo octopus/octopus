@@ -56,7 +56,7 @@ module profiling_m
 
   integer, parameter ::                 & 
     C_TAG_LENGTH = 17,                  &  ! Max. number of characters of tag label.
-    C_NUM_TAGS   = 31                      ! Number of tags.
+    C_NUM_TAGS   = 38                      ! Number of tags.
 
   integer ::                            &
     pass_in(C_NUM_TAGS)           =  0, &
@@ -97,7 +97,14 @@ module profiling_m
     C_PROFILING_LCAO_INIT         = 28, &
     C_PROFILING_FORCES            = 29, &
     C_PROFILING_EPOT_GENERATE     = 30, &
-    C_PROFILING_ELEC_PROPAGATOR   = 31
+    C_PROFILING_ELEC_PROPAGATOR   = 31, &
+    C_PROFILING_LOBPCG_BLOCKT     = 32, &
+    C_PROFILING_LOBPCG_BLOCK_MATR = 33, &
+    C_PROFILING_LOBPCG_ESOLVE     = 34, &
+    C_PROFILING_LOBPCG_CHOL       = 35, &
+    C_PROFILING_LOBPCG_INV        = 36, &
+    C_PROFILING_LOBPCG_COPY       = 37, &
+    C_PROFILING_LOBPCG_LOOP       = 38
 
   character(len=C_TAG_LENGTH), dimension(C_NUM_TAGS) :: tag_label = &
     (/                                  &
@@ -131,7 +138,14 @@ module profiling_m
     'LCAO_INIT        ',                &
     'FORCES           ',                &
     'EPOT_GENERATE    ',                &
-    'ELEC_PROPAGATOR  '                 &
+    'ELEC_PROPAGATOR  ',                &
+    'LOBPCG_BLOCKT    ',                &
+    'LOBPCG_BLOCK_MATR',                &
+    'LOBPCG_ESOLVE    ',                &
+    'LOBPCG_CHOL      ',                &
+    'LOBPCG_INV       ',                &
+    'LOBPCG_COPY      ',                &
+    'LOBPCG_LOOP      '                 &
     /)
 
 contains

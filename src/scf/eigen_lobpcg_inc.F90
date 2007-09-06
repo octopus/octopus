@@ -140,7 +140,6 @@
 
       ! Orthonormalize initial vectors.
       call X(lobpcg_orth)(gr%m, st%d%dim, st%d%wfs_type, nst, np, psi, nuc, uc)
-
       ! Get initial Ritz-values and -vectors.
       do ist = 1, nst
         call X(hpsi)(h, gr, psi(:, :, ist), h_psi(:, :, ist), ik)
@@ -248,7 +247,9 @@
       ! (1, 2)-block: <psi| res.
       call states_blockt_mul(gr%m, st%d%dim, psi, res, gram_i(1:nst, nst+1:nst+nuc), idx2=UC)
 
+      call profiling_in(C_PROFILING_LOBPCG_ESOLVE)
       call lalg_lowest_geneigensolve(nst, nst+nuc, gram_h, gram_i, ritz_val, ritz_vec)
+      call profiling_out(C_PROFILING_LOBPCG_ESOLVE)
 
       ritz_psi = ritz_vec(1:nst, 1:nst)
       ritz_res = ritz_vec(nst+1:nst+nuc, 1:nst)
@@ -319,8 +320,12 @@
         !call lalg_herk(nst, np, 'C', R_TOTYPE(M_ONE), dir(:, :, 1), R_TOTYPE(M_ZERO), nst_tmp)
         call states_blockt_mul(gr%m, st%d%dim, dir, dir, nuc_tmp, idx1=UC, idx2=UC)
         call X(lobpcg_conj)(st%d%wfs_type, nuc, nuc, nuc_tmp)
+        call profiling_in(C_PROFILING_LOBPCG_CHOL)
         call lalg_cholesky(nuc, nuc_tmp)
+        call profiling_out(C_PROFILING_LOBPCG_CHOL)
+        call profiling_in(C_PROFILING_LOBPCG_INV)
         call lalg_invert_upper_triangular(nuc, nuc_tmp)
+        call profiling_out(C_PROFILING_LOBPCG_INV)
         ! Fill lower triangle of nuc_tmp with zeros.
         do i = 2, nuc
           nuc_tmp(i, 1:i-1) = R_TOTYPE(M_ZERO)
@@ -400,7 +405,9 @@
         call states_blockt_mul(gr%m, st%d%dim, res, dir, &
           gram_i(nst+1:nst+nuc, nst+nuc+1:nst+2*nuc), idx1=UC, idx2=UC)
 
+        call profiling_in(C_PROFILING_LOBPCG_ESOLVE)
         call lalg_lowest_geneigensolve(nst, nst+2*nuc, gram_h, gram_i, ritz_val, ritz_vec)
+        call profiling_out(C_PROFILING_LOBPCG_ESOLVE)
 
         ritz_psi = ritz_vec(1:nst, 1:nst)
         ritz_res = ritz_vec(nst+1:nst+nuc, 1:nst)
@@ -617,17 +624,23 @@
     integer,      intent(in)    :: nuc
     integer,      intent(in)    :: uc(:)
 
-    integer :: i
-
-    R_TYPE  :: vv(nuc, nuc), tmp(m%np_part, dim, nst)
+    integer             :: i
+    R_TYPE              :: vv(nuc, nuc)
+    R_TYPE, allocatable :: tmp(:, :, :)
 
     call push_sub('eigen_lobpcg_inc.Xlobpcg_orth')
+
+    ALLOCATE(tmp(m%np_part, dim, nst), m%np_part*dim*nst)
 
     call states_blockt_mul(m, dim, vs, vs, vv, idx1=UC, idx2=UC)
     call X(lobpcg_conj)(wfs_type, nuc, nuc, vv)
     call X(write_matrix)(nuc, nuc, vv)
+    call profiling_in(C_PROFILING_LOBPCG_CHOL)
     call lalg_cholesky(nuc, vv)
+    call profiling_out(C_PROFILING_LOBPCG_CHOL)
+    call profiling_in(C_PROFILING_LOBPCG_INV)
     call lalg_invert_upper_triangular(nuc, vv)
+    call profiling_out(C_PROFILING_LOBPCG_INV)
     ! Fill lower triangle of vv with zeros.
     do i = 2, nuc
       vv(i, 1:i-1) = R_TOTYPE(M_ZERO)
@@ -636,6 +649,8 @@
     do i = 1, nuc
       call lalg_copy(np, tmp(:, 1, uc(i)), vs(:, 1, uc(i)))
     end do
+
+    deallocate(tmp)
 
     call pop_sub()
   end subroutine X(lobpcg_orth)
