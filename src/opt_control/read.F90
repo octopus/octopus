@@ -118,30 +118,6 @@
     !%End
     call loct_parse_logical(check_inp('OCTDumpIntermediate'), .true., oct%dump_intermediate)
 
-    !%Variable OCTTargetOperator
-    !%Type integer
-    !%Section Optimal Control
-    !%Default 2
-    !%Description
-    !% The string OCTTargetOperator describes the initial state of the quantum system
-    !% Possible arguments are:
-    !%Option oct_tg_groundstate 1 
-    !% Targetoperator is a projection operator on the ground state
-    !%Option oct_tg_excited 2
-    !% Currently not in use.
-    !%Option oct_tg_gstransformation 3
-    !% Targetoperator is a projection operator on a transformation of the ground state 
-    !% orbitals defined by the block OCTTargetTransformStates
-    !%Option oct_tg_userdefined 4
-    !% Targetoperator is a projection operator on a user defined state
-    !%Option oct_tg_local 5
-    !% Targetoperator is a local operator. Specify the shape and position within the block OCTLocalTarget.
-    !%Option oct_tg_td_local 6
-    !% Target operator is time-dependent, please specify block OCTTdTarget
-    !%End
-    call loct_parse_int(check_inp('OCTTargetOperator'),oct_tg_excited, oct%totype)
-    if(.not.varinfo_valid_option('OCTTargetOperator', oct%totype)) call input_error('OCTTargetOperator')    
-
     call pop_sub()
   end subroutine oct_read_inp
 
@@ -168,14 +144,8 @@
     ! WARNING: tdpenalty and fixed fluence do not work, and this is not checked any more.
       
     ! local targets only in ZR98 and WG05
-    if((oct%totype.eq.oct_tg_local) & 
-      .AND.(oct%algorithm_type.eq.oct_algorithm_zbr98)) then
-      write(message(1),'(a)') "Warning: Local targets work" &
-        // " only with ZR98 and WG05."
-      write(message(2),'(a)') "Warning: Switching to ZR98."
-      call write_info(2)
-      oct%algorithm_type = oct_algorithm_zr98
-    end if
+    ! WARNING local target can only be used with ZR98 and WG95, and that test
+    ! has been disconnected.
       
     ! tdtargets only in ZR98 and WG05
     if((oct%targetmode.eq.oct_targetmode_td) & 

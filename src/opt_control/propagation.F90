@@ -98,7 +98,7 @@ module opt_control_propagation_m
     ii = 1
 
     etime = loct_clock()
-    do i = 1, td%max_iter 
+    do i = 1, td%max_iter
       ! time iterate wavefunctions
       call td_rti_dt(sys%ks, h, gr, psi_n, td%tr, abs(i*td%dt), abs(td%dt), td%max_iter)
 
@@ -133,7 +133,7 @@ module opt_control_propagation_m
       end if
 
     end do
-    
+
     if(write_iter_) call td_write_end(write_handler)
     deallocate(dens)
     call pop_sub()
@@ -254,8 +254,10 @@ module opt_control_propagation_m
     end do
 
     call states_end(psi2)
+
     nullify(gr)
-    deallocate(dens_tmp)      
+    deallocate(dens_tmp) 
+     
     call pop_sub()
   end subroutine fwd_step
 

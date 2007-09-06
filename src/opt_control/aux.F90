@@ -69,10 +69,12 @@
   ! ---------------------------------------------------------
   ! calculate chi = \hat{O} psi
   ! do loop <target_st|Psi> for all States
-  subroutine target_calc(oct, gr, targetst, psi_in, chi_out)
+  subroutine target_calc(oct, gr, target, psi_in, chi_out)
     type(oct_t),       intent(in)  :: oct
     type(grid_t),      intent(in)  :: gr
-    type(states_t),    intent(in)  :: targetst, psi_in
+    type(states_t),    intent(in)  :: psi_in
+    type(target_t),    intent(in)  :: target
+
     type(states_t),    intent(inout) :: chi_out
     
     CMPLX   :: olap
@@ -81,27 +83,27 @@
     call push_sub('opt_control.target_calc')
 
     if(oct%targetmode==oct_targetmode_static) then
-      if(oct%totype.eq.oct_tg_local) then ! only zr98 and wg05
+      if(target%totype.eq.oct_tg_local) then ! only zr98 and wg05
         do ik = 1, psi_in%d%nik
           do p  = psi_in%st_start, psi_in%st_end
             do dim = 1, psi_in%d%dim
               ! multiply orbtials with local operator
               ! FIXME: for multiple particles 1,1,1 -> dim,p,ik
-              chi_out%zpsi(:,dim,p,ik) = targetst%zpsi(:, 1, 1 , 1)*psi_in%zpsi(:, dim, p, ik)
+              chi_out%zpsi(:,dim,p,ik) = target%st%zpsi(:, 1, 1 , 1)*psi_in%zpsi(:, dim, p, ik)
             end do
           end do
         end do
       else ! totype nonlocal 
-        olap = zstates_mpdotp(gr%m, targetst, psi_in)
+        olap = zstates_mpdotp(gr%m, target%st, psi_in)
         do ik = 1, psi_in%d%nik
           do p  = psi_in%st_start, psi_in%st_end
             if(oct%algorithm_type == oct_algorithm_zr98) &
-              chi_out%zpsi(:,:,p,ik) = olap*targetst%zpsi(:, :, p, ik)
+              chi_out%zpsi(:,:,p,ik) = olap*target%st%zpsi(:, :, p, ik)
             if(oct%algorithm_type == oct_algorithm_zbr98) then
-              chi_out%zpsi(:,:,p,ik) = targetst%zpsi(:, :, p, ik)
+              chi_out%zpsi(:,:,p,ik) = target%st%zpsi(:, :, p, ik)
             end if
             if(oct%algorithm_type == oct_algorithm_wg05) &
-              chi_out%zpsi(:,:,p,ik) = olap*targetst%zpsi(:, :, p, ik)
+              chi_out%zpsi(:,:,p,ik) = olap*target%st%zpsi(:, :, p, ik)
           end do
         end do
       end if

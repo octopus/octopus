@@ -52,6 +52,7 @@ module opt_control_m
   use opt_control_tdtarget_m
   use opt_control_propagation_m
   use opt_control_parameters_m
+  use opt_control_target_m
 
   implicit none
 
@@ -62,9 +63,7 @@ module opt_control_m
     FLOAT   :: targetfluence
     logical :: mode_fixed_fluence
     integer :: targetmode
-    integer :: totype
     integer :: algorithm_type
-    logical :: td_tg_state 
     logical :: oct_double_check
     logical :: dump_intermediate
   end type oct_t
@@ -92,7 +91,8 @@ contains
     type(td_t)                 :: td
     type(grid_t),      pointer :: gr   ! some shortcuts
     type(states_t),    pointer :: st
-    type(states_t)             :: chi, psi, target_st, initial_st
+    type(states_t)             :: chi, psi, initial_st
+    type(target_t)             :: target
     type(filter_t),    pointer :: f(:)
     type(td_target_set_t)      :: tdt
     type(oct_control_parameters_t) :: par, par_tmp
@@ -114,9 +114,8 @@ contains
     call states_allocate_wfns(st, gr%m, M_CMPLX)
 
     ! Initialize a bunch of states: initial, target, chi.
-    chi        = st
-    initial_st = st
-    target_st  = st
+    call states_copy(chi, st)
+    call states_copy(initial_st, st)
 
     call oct_read_inp(oct)
 
@@ -143,13 +142,14 @@ contains
     call filter_write(f, NDIM, td%dt, td%max_iter)
 
     call def_istate(gr, sys%geo, initial_st)
-    call def_toperator(oct, gr, sys%geo, target_st)
+    call target_init(gr, sys%geo, sys%st, target)
+
     call tdtargetset_init(oct%targetmode, gr, td, tdt)
 
     call check_faulty_runmodes(oct)
 
     call states_output(initial_st, gr, 'opt-control/initial', sys%outp)
-    call states_output(target_st, gr, 'opt-control/target', sys%outp)
+    call states_output(target%st, gr, 'opt-control/target', sys%outp)
 
     ! psi is the "working state".
     psi = initial_st
@@ -171,7 +171,7 @@ contains
 
     ! do final test run: propagate initial state with optimal field
     call parameters_to_h(par, h%ep)
-    call oct_finalcheck(oct, initial_st, target_st, sys, h, td, tdt)
+    call oct_finalcheck(oct, initial_st, target%st, sys, h, td, tdt)
 
     ! clean up
     call parameters_end(par)
@@ -186,7 +186,7 @@ contains
     call states_end(psi)
     call states_end(chi)
     call states_end(initial_st)
-    call states_end(target_st)
+    call target_end(target)
    
     call pop_sub()
 
@@ -215,9 +215,9 @@ contains
       ctr_loop: do
         
          ! defines chi
-        call target_calc(oct, gr, target_st, psi, chi)
+        call target_calc(oct, gr, target, psi, chi)
         
-        if(iteration_manager(oct, gr, tdt%td_fitness, par, td, psi, target_st, iterator)) &
+        if(iteration_manager(oct, gr, tdt%td_fitness, par, td, psi, target%st, iterator)) &
           exit ctr_loop
         
         call bwd_step(oct_algorithm_zr98, oct%targetmode, sys, td, h, tdt, par, par_tmp, chi, psi)
@@ -247,7 +247,7 @@ contains
       call write_info(1)
       
       ctr_loop: do
-         
+
         call parameters_to_h(par, h%ep)
         call propagate_forward(oct%targetmode, sys, h, td, tdt, psi) 
 
@@ -256,11 +256,10 @@ contains
         write(filename,'(a,i3.3)') 'opt-control/laser.', iterator%ctr_iter
         call parameters_write(filename, par)
 
-
         ! define target state
-        call target_calc(oct, gr, target_st, psi, chi) ! defines chi
+        call target_calc(oct, gr, target, psi, chi)
         
-        if(iteration_manager(oct, gr, tdt%td_fitness, par, td, psi, target_st, iterator)) &
+        if(iteration_manager(oct, gr, tdt%td_fitness, par, td, psi, target%st, iterator)) &
           exit ctr_loop
         
         call bwd_step(oct_algorithm_wg05, oct%targetmode, sys, td, h, tdt, par, par_tmp, chi, psi)
@@ -311,7 +310,7 @@ contains
       message(1) = "Info: Initial backward propagation"
       call write_info(1)
       
-      call target_calc(oct, gr, target_st, psi, chi)
+      call target_calc(oct, gr, target, psi, chi)
 
       call parameters_to_h(par, h%ep)
       call propagate_backward(sys, h, td, chi)
@@ -329,11 +328,11 @@ contains
         write(filename,'(a,i3.3)') 'opt-control/laser.', iterator%ctr_iter
         call parameters_write(filename, par)
         
-        if(iteration_manager(oct, gr, tdt%td_fitness, par, td, psi, target_st, iterator)) &
+        if(iteration_manager(oct, gr, tdt%td_fitness, par, td, psi, target%st, iterator)) &
           exit ctr_loop
         
          ! and now backward
-        call target_calc(oct, gr, target_st, psi, chi)
+        call target_calc(oct, gr, target, psi, chi)
         call bwd_step(oct_algorithm_zbr98, oct%targetmode, sys, td, h, tdt, par, par_tmp, chi, psi)
         
       end do ctr_loop
