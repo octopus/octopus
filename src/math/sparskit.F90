@@ -99,8 +99,11 @@ FLOAT function distdot(n, x, ix, y, iy)
   integer, intent(in) :: n, ix, iy
   FLOAT,   intent(in) :: x, y
 
+#ifdef SINGLE_PRECISION
+  distdot = sdot(n, x, ix, y, iy)
+#else
   distdot = ddot(n, x, ix, y, iy)
-  !  distdot = lalg_dot(n, x, y)
+#endif
 
 end function distdot
 
