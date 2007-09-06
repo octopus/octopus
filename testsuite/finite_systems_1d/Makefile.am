@@ -29,6 +29,7 @@ dist_share_DATA = \
 	02-neon_mpi.test \
 	03-asym_doublewell.01-ground_state.inp \
 	03-asym_doublewell.02-oct_run.inp \
+	03-asym_doublewell.03-oct_run.inp \
 	03-asym_doublewell.test \
 	04-box.01-ground_state.inp \
 	04-box.02-oct_long.inp \

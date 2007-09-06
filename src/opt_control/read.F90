@@ -113,7 +113,8 @@
     !% Writes to disk some data during the OCT algorithm at intermediate steps.
     !% This is rather technical and it should be considered only for debugging
     !% purposes. Nevertheless, since the whole OCT infrastructure is at a very
-    !% preliminary developing stage, it is set to true by default
+    !% preliminary developing stage, it is set to true by default, and in fact
+    !% all the intermediate information is printed always.
     !%End
     call loct_parse_logical(check_inp('OCTDumpIntermediate'), .true., oct%dump_intermediate)
 

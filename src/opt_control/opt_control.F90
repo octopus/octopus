@@ -210,26 +210,26 @@ contains
       call propagate_forward(oct%targetmode, sys, h, td, tdt, psi) 
       
       ! Maybe we should print here a PsiT.000?
-      !if(oct%dump_intermediate) call states_output(psi, gr, 'opt-control/prop1', sys%outp)
+      !call states_output(psi, gr, 'opt-control/prop1', sys%outp)
         
       ctr_loop: do
         
          ! defines chi
         call target_calc(oct, gr, target_st, psi, chi)
         
-        if(iteration_manager(oct, gr, tdt%td_fitness, par, td, psi, target_st, iterator)) exit ctr_loop
+        if(iteration_manager(oct, gr, tdt%td_fitness, par, td, psi, target_st, iterator)) &
+          exit ctr_loop
         
         call bwd_step(oct_algorithm_zr98, oct%targetmode, sys, td, h, tdt, par, par_tmp, chi, psi)
         
         ! forward propagation
         call fwd_step(oct_algorithm_zr98, oct%targetmode, sys, td, h, tdt, par, par_tmp, chi, psi)
+
+        ! Print state and laser after the forward propagation.
         write(filename,'(a,i3.3)') 'opt-control/PsiT.', iterator%ctr_iter
         call states_output(psi, gr, filename, sys%outp)
-        
-        if(oct%dump_intermediate) then
-          write(filename,'(a,i3.3)') 'opt-control/laser.', iterator%ctr_iter
-          call parameters_write(filename, par)
-        end if
+        write(filename,'(a,i3.3)') 'opt-control/laser.', iterator%ctr_iter
+        call parameters_write(filename, par)
         
       end do ctr_loop
       
@@ -248,24 +248,20 @@ contains
       
       ctr_loop: do
          
-        ! first propagate chi to ti
-        message(1) = "Info: Initial forward propagation"
-        call write_info(1)
-        
-        psi = initial_st
         call parameters_to_h(par, h%ep)
         call propagate_forward(oct%targetmode, sys, h, td, tdt, psi) 
-        
-        if(oct%dump_intermediate) then
-          write(filename,'(a,i3.3)') 'opt-control/PsiT.', iterator%ctr_iter
-          call states_output(psi, gr, trim(filename), sys%outp)
-        end if
+
+        write(filename,'(a,i3.3)') 'opt-control/PsiT.', iterator%ctr_iter
+        call states_output(psi, gr, trim(filename), sys%outp)
+        write(filename,'(a,i3.3)') 'opt-control/laser.', iterator%ctr_iter
+        call parameters_write(filename, par)
 
 
         ! define target state
         call target_calc(oct, gr, target_st, psi, chi) ! defines chi
         
-        if(iteration_manager(oct, gr, tdt%td_fitness, par, td, psi, target_st, iterator)) exit ctr_loop
+        if(iteration_manager(oct, gr, tdt%td_fitness, par, td, psi, target_st, iterator)) &
+          exit ctr_loop
         
         call bwd_step(oct_algorithm_wg05, oct%targetmode, sys, td, h, tdt, par, par_tmp, chi, psi)
         !!!WARNING: this probably shoudl not be here?
@@ -282,11 +278,9 @@ contains
           old_penalty = tdf(par%td_penalty(1), 1)
           new_penalty = sqrt( fluence * old_penalty**2 / oct%targetfluence )
 
-          if(oct%dump_intermediate) then
-            write(message(1), '(a,e15.6)') 'current penalty =', old_penalty
-            write(message(2), '(a,e15.6)') 'new penalty     =', new_penalty
-            call write_info(2)
-          end if
+          write(message(1), '(a,e15.6)') 'current penalty =', old_penalty
+          write(message(2), '(a,e15.6)') 'new penalty     =', new_penalty
+          call write_info(2)
 
           do j = 1, par_tmp%no_parameters
             call tdf_set_numerical(par%td_penalty(j), &
@@ -298,10 +292,6 @@ contains
         do j = 1, par_tmp%no_parameters
           par%f(j) = par_tmp%f(j)
         end do
-        
-        ! dump here: since the fwd_step is missing
-        write(filename,'(a,i3.3)') 'opt-control/laser.', iterator%ctr_iter
-        call parameters_write(filename, par_tmp)
         
       end do ctr_loop
 
@@ -327,22 +317,20 @@ contains
       call propagate_backward(sys, h, td, chi)
 
       ! Maybe we should print here the backwards propagated chi, for debugging purposes.
-      !if(oct%dump_intermediate) &
-      !   call states_output(chi, gr, 'opt-control/initial_propZBR98', sys%outp)
+      !call states_output(chi, gr, 'opt-control/initial_propZBR98', sys%outp)
 
       ctr_loop: do
 
-        ! check for stop file and delete file
-        message(1) = "Info: Setup forward"
-        call write_info(1)
-        
         ! forward propagation
         call fwd_step(oct_algorithm_zbr98, oct%targetmode, sys, td, h, tdt, par, par_tmp, chi, psi)
 
         write(filename,'(a,i3.3)') 'opt-control/PsiT.', iterator%ctr_iter
         call states_output(psi, gr, filename, sys%outp)
+        write(filename,'(a,i3.3)') 'opt-control/laser.', iterator%ctr_iter
+        call parameters_write(filename, par)
         
-        if(iteration_manager(oct, gr, tdt%td_fitness, par, td, psi, target_st, iterator)) exit ctr_loop
+        if(iteration_manager(oct, gr, tdt%td_fitness, par, td, psi, target_st, iterator)) &
+          exit ctr_loop
         
          ! and now backward
         call target_calc(oct, gr, target_st, psi, chi)
