@@ -260,7 +260,9 @@
       call states_block_matr_mul(gr%m, st%d%dim, psi, ritz_psi, tmp)
       call lalg_copy(np*nst, tmp(:, 1, 1), psi(:, 1, 1))
 
-      call lalg_axpy(np*nst, R_TOTYPE(M_ONE), dir(:, 1, 1), psi(:, 1, 1))
+      do ist = 1, nst ! Leave this loop, otherwise xlf90 crashes.
+        call lalg_axpy(np, R_TOTYPE(M_ONE), dir(:, 1, ist), psi(:, 1, ist))
+      end do
 
       call states_block_matr_mul(gr%m, st%d%dim, h_psi, ritz_psi, tmp)
       call lalg_copy(np*nst, tmp(:, 1, 1), h_psi(:, 1, 1))
@@ -424,7 +426,9 @@
         ! h_psi <- (H |psi>) ritz_psi + H dir
         call states_block_matr_mul(gr%m, st%d%dim, psi, ritz_psi, tmp)
         call lalg_copy(np*nst, tmp(:, 1, 1), psi(:, 1, 1))
-        call lalg_axpy(np*nst, R_TOTYPE(M_ONE), dir(:, 1, 1), psi(:, 1, 1))
+        do ist = 1, nst ! Leave this loop, otherwise xlf90 crashes.
+          call lalg_axpy(np, R_TOTYPE(M_ONE), dir(:, 1, ist), psi(:, 1, ist))
+        end do
         call states_block_matr_mul(gr%m, st%d%dim, h_psi, ritz_psi, tmp)
         call lalg_copy(np*nst, tmp(:, 1, 1), h_psi(:, 1, 1))
         call lalg_axpy(np*nst, R_TOTYPE(M_ONE), h_dir(:, 1, 1), h_psi(:, 1, 1))
@@ -684,61 +688,25 @@
     integer, intent(in)    :: n
     R_TYPE,  intent(inout) :: a(:, :)
 
-    integer :: i, j
-    R_TYPE  :: at(n, m)
+    integer             :: i, j
+    R_TYPE, allocatable :: at(:, :)
 
     call push_sub('eigen_lobpcg_inc.Xlobpcg_conj')
 
+    ! FIXME: this routien should work without temporary at(:, :).
     if(wfs_type.eq.M_CMPLX) then
+      ALLOCATE(at(n, m), n*m)
       do i = 1, m
         do j = 1, n
           at(j, i) = R_CONJ(a(i, j))
         end do
       end do
       a = (a + at)/R_TOTYPE(M_TWO)
+      deallocate(at)
     end if
 
     call pop_sub()
   end subroutine X(lobpcg_conj)
-
-
-#ifdef R_TREAL
-  ! Debug vv.
-  subroutine zwrite_matrix(m, n, a)
-    integer, intent(in) :: m, n
-    CMPLX,   intent(in) :: a(:, :)
-
-    integer   :: i, j
-    character(len=20) :: fmt
-    character(len=500) :: outp
-
-    fmt = '(a,f10.3,a,f10.3,a)'
-
-    do i = 1, m
-      outp = ''
-      do j = 1, n
-        write(outp, fmt) trim(outp), real(a(i, j)), '+i', aimag(a(i, j)), '  '
-      end do
-      write(23, '(a)') trim(outp)
-    end do
-  end subroutine zwrite_matrix
-
-  subroutine dwrite_matrix(m, n, a)
-    integer, intent(in) :: m, n
-    FLOAT,   intent(in) :: a(:, :)
-
-    integer   :: i
-    character(len=20) :: fmt
-
-    write(fmt, *) n
-    fmt = '('//trim(fmt)//'f20.8)'
-
-    do i = 1, m
-      write(23, fmt) real(a(i, :))
-    end do
-  end subroutine dwrite_matrix
-  ! Debug ^^.
-#endif
 
 
 !! Local Variables:
