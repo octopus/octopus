@@ -48,7 +48,9 @@ ACX_C_SSE2
 # Checks for header files.
 AC_HEADER_DIRENT
 AC_HEADER_STDC
-AC_CHECK_HEADERS([fcntl.h float.h locale.h malloc.h stddef.h stdlib.h string.h strings.h sys/ioctl.h sys/time.h termios.h unistd.h signal.h emmintrin.h errno.h])
+AC_CHECK_HEADERS([fcntl.h float.h locale.h malloc.h stddef.h stdlib.h \
+string.h strings.h sys/ioctl.h sys/time.h termios.h unistd.h signal.h \
+errno.h xmmintrin.h emmintrin.h])
 AC_FUNC_ALLOCA
 
 # Checks for typedefs, structures, and compiler characteristics.

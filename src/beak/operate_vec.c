@@ -23,49 +23,7 @@
 
 #include <config.h>
 
-#if defined(HAVE_C_SSE2) && defined(HAVE_EMMINTRIN_H) && defined(FC_USES_MALLOC)
-
-#if defined(HAVE_16_BYTES_ALIGNED_MALLOC)
-
-#define USE_VECTORS
-
-#else /* not HAVE_16_BYTES_ALIGNED_MALLOC */
-
-#if defined(HAVE_POSIX_MEMALIGN)
-#define USE_VECTORS
-#define USE_FAKE_MALLOC
-#endif
-
-#endif /* HAVE_16_BYTES_ALIGNED_MALLOC */
-
-#endif /* HAVE_GCC_VECTORS && __SSE2__ && HAVE_EMMINTRIN_H && FC_USES_MALLOC */
-
-#define _XOPEN_SOURCE 600
-#include <stdlib.h>
-
-#if defined(USE_FAKE_MALLOC)
-#include <errno.h>
-
-/* 
-Override calls to malloc with calls to posix_memalign. 
-
-Not the most elegant thing in the world, but it appears that most x86
-Fortran compilers can't be instructed to align allocated memory to a
-16 bytes boundary as required by SSE.
-*/
-
-void * malloc (size_t size){
-  int err;
-  void * ptr;
-  err = posix_memalign((void *) &ptr, 16, size);
-  if( err == 0 ) return ptr;
-  else {
-    errno = ENOMEM;
-    return NULL;
-  }
-}
-#endif /* USE_FAKE_MALLOC */
-
+#include "beak.h"
 
 #if defined(USE_VECTORS)
 
@@ -97,7 +55,7 @@ void FC_FUNC_(zoperate_sse,ZOPERATE_SSE)(const int * opnp,
   const int n  = opn[0];
   const int np = opnp[0];
   const int * restrict index = opi;
-  const int nm2  = n - UNROLL + 1;
+  const int nm2  = n - 6 + 1;
   int i, j;
 
   __m128d * restrict vw;
@@ -121,7 +79,7 @@ void FC_FUNC_(zoperate_sse,ZOPERATE_SSE)(const int * opnp,
       e = _mm_setzero_pd();
       f = _mm_setzero_pd();
 
-      for(j = 1; j < nm2; j += UNROLL){
+      for(j = 1; j < nm2; j += 6){
         a = _mm_add_pd(a, _mm_mul_pd(vw[j  ], fi[index[j+0]-1]));
         b = _mm_add_pd(b, _mm_mul_pd(vw[j+1], fi[index[j+1]-1]));
 	c = _mm_add_pd(c, _mm_mul_pd(vw[j+2], fi[index[j+2]-1]));

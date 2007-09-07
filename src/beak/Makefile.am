@@ -21,13 +21,17 @@
 
 noinst_LIBRARIES = libbeak.a
 
-libbeak_a_SOURCES = operate.c
+libbeak_a_SOURCES = operate.c operate_vec.c beak_utils.c operate_olu.c operate_ri.c
 
-noinst_HEADERS = operate_vec.c
+noinst_HEADERS = beak.h
 
 include $(srcdir)/../common-rules.make
 
 depend:
 	@makedepf90 $(libbeak_a_SOURCES)
 
-operate.c:  operate_vec.c
+beak_utils.c:  beak.h
+operate.c:     beak.h
+operate_olu.c: beak.h
+operate_ri.c:  beak.h
+operate_vec.c: beak.h

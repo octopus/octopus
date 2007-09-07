@@ -445,7 +445,7 @@ double FC_FUNC(oct_hypotd, OCT_HYPOTD)
   return hypot(*x, *y);
 }
 
-float FC_FUNC(oct_ghypotf, OCT_HYPOTF)
+float FC_FUNC(oct_hypotf, OCT_HYPOTF)
   (float *x, float *y)
 {
   return hypotf(*x, *y);
