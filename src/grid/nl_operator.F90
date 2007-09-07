@@ -127,6 +127,8 @@ contains
 
     call push_sub('nl_operator.nl_operator_init')
 
+    nullify(op%m, op%i, op%w_re, op%w_im, op%ri, op%rimap, op%rimap_inv)
+
     op%n  = n
     ALLOCATE(op%stencil(3, n), 3*n)
 
@@ -874,13 +876,36 @@ contains
 
     call push_sub('nl_operator.nl_operator_end')
 
-    deallocate(op%i, op%w_re, op%stencil)
-
-    if (op%cmplx_op) then
-      deallocate(op%w_im)
+    if(associated(op%i)) then
+      deallocate(op%i)
+      nullify(op%i)
     end if
-
-    deallocate(op%ri, op%rimap, op%rimap_inv)
+    if(associated(op%w_re)) then
+      deallocate(op%w_re)
+      nullify(op%w_re)
+    end if
+    if(associated(op%stencil)) then
+      deallocate(op%stencil)
+      nullify(op%stencil)
+    end if
+    if (op%cmplx_op) then
+      if(associated(op%w_im)) then
+        deallocate(op%w_im)
+        nullify(op%w_im)
+      end if
+    end if
+    if(associated(op%ri)) then
+      deallocate(op%ri)
+      nullify(op%ri)
+    end if
+    if(associated(op%rimap)) then
+      deallocate(op%rimap)
+      nullify(op%rimap)
+    end if
+    if(associated(op%rimap_inv)) then
+      deallocate(op%rimap_inv)
+      nullify(op%rimap_inv)
+    end if
 
     call pop_sub()
   end subroutine nl_operator_end
