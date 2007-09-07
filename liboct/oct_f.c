@@ -439,13 +439,13 @@ void FC_FUNC_(oct_search_file_lr, OCT_SEARCH_FILE_LR)
 
 }
 
-double FC_FUNC(hypotd, HYPOTD)
+double FC_FUNC(oct_hypotd, OCT_HYPOTD)
   (double *x, double *y)
 {
   return hypot(*x, *y);
 }
 
-float FC_FUNC(hypotf, HYPOTF)
+float FC_FUNC(oct_ghypotf, OCT_HYPOTF)
   (float *x, float *y)
 {
   return hypotf(*x, *y);

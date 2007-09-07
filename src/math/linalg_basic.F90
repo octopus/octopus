@@ -196,12 +196,12 @@ module lib_basic_alg_m
 
 #ifdef USE_OMP
   interface hypot
-    real(8) function hypotd(x, y)
+    real(8) function oct_hypotd(x, y)
       real(8) :: x, y
-    end function hypotd
-    real(4) function hypotf(x, y)
+    end function oct_hypotd
+    real(4) function oct_hypotf(x, y)
       real(4) :: x, y
-    end function hypotf
+    end function oct_hypotf
   end interface
 #endif
 
