@@ -23,7 +23,7 @@ noinst_LIBRARIES = libgrid.a
 
 libgrid_a_SOURCES = \
 	simul_box.F90 curv_gygi.F90 curv_briggs.F90 curv_modine.F90 curvlinear.F90 \
-	mesh_lib.F90 par_vec.F90 mesh.F90 scalar_mesh.F90 operate.c nl_operator.F90 \
+	mesh_lib.F90 par_vec.F90 mesh.F90 scalar_mesh.F90 nl_operator.F90 \
 	submesh.F90 stencil_star.F90 stencil_variational.F90 stencil_cube.F90 \
 	stencil_starplus.F90 derivatives.F90 cube_function.F90 mesh_function.F90 \
 	functions.F90 basins.F90 out.F90 multigrid.F90 double_grid.F90 grid.F90
@@ -31,7 +31,7 @@ libgrid_a_SOURCES = \
 noinst_HEADERS = \
 	mesh_init.F90 par_vec_inc.F90 derivatives_inc.F90 cube_function_inc.F90 \
 	mesh_function_inc.F90 functions_inc.F90 double_grid_apply.F90 \
-	submesh_inc.F90 out_inc.F90 operate_vec.c nl_operator_inc.F90
+	submesh_inc.F90 out_inc.F90 nl_operator_inc.F90
 
 include $(srcdir)/../common-rules.make
 
@@ -47,5 +47,4 @@ mesh_function.o:  mesh_function_inc.F90
 out.o:  out_inc.F90
 par_vec.o:  par_vec_inc.F90
 submesh.o:  submesh_inc.F90
-operate.c:  operate_vec.c
 nl_operator.o: nl_operator_inc.F90

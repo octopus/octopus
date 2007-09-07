@@ -17,9 +17,17 @@
 ## Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
 ## 02111-1307, USA.
 ##
-## $Id$
+## $Id: Makefile.am 2995 2007-06-13 17:49:22Z xavier $
 
-SUBDIRS = include basic math beak species grid poisson states \
-	xc h_sys scf td opt_control sternheimer main utils
+noinst_LIBRARIES = libbeak.a
 
+libbeak_a_SOURCES = operate.c
 
+noinst_HEADERS = operate_vec.c
+
+include $(srcdir)/../common-rules.make
+
+depend:
+	@makedepf90 $(libbeak_a_SOURCES)
+
+operate.c:  operate_vec.c
