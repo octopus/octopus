@@ -159,6 +159,7 @@
       call lalg_copy(np*nst, tmp(:, 1, 1), h_psi(:, 1, 1))
       deallocate(ritz_vec)
 
+
       ! First iteration is special because Gram matrices are smaller than in
       ! following iterations.
 
@@ -184,9 +185,6 @@
         call X(preconditioner_apply)(pre, gr, h, res(:, :, ist), tmp(:, :, ist))
         call lalg_copy(np, tmp(:, 1, ist), res(:, 1, ist))
       end do
-
-      ! Make residuals orthogonal to eigenstates.
-      call X(lobpcg_orth_res)(nst, gr%m, st%d%dim, psi, res, nuc, uc)
 
       ! Orthonormalize residuals.
       call X(lobpcg_orth)(gr%m, st%d%dim, st%d%wfs_type, nst, np, res, nuc, uc)
@@ -301,9 +299,6 @@
           call lalg_copy(np, tmp(:, 1, ist), res(:, 1, ist))
         end do
 
-        ! Make residuals orthogonal to eigenstates.
-        call X(lobpcg_orth_res)(nst, gr%m, st%d%dim, psi, res, nuc, uc)
-
         ! Orthonormalize residuals.
         call X(lobpcg_orth)(gr%m, st%d%dim, st%d%wfs_type, nst, np, res, nuc, uc)
 
@@ -317,7 +312,6 @@
         ! Orthonormalize conjugate directions.
         ! Since h_dir also has to be modified (to avoid a full calculation of
         ! H dir with the new dir), we cannot use lobpcg_orth at this point.
-        !call lalg_herk(nst, np, 'C', R_TOTYPE(M_ONE), dir(:, :, 1), R_TOTYPE(M_ZERO), nst_tmp)
         call states_blockt_mul(gr%m, st%d%dim, dir, dir, nuc_tmp, idx1=UC, idx2=UC)
         call X(lobpcg_conj)(st%d%wfs_type, nuc, nuc, nuc_tmp)
         call profiling_in(C_PROFILING_LOBPCG_CHOL)
@@ -538,7 +532,7 @@
     integer,      intent(inout) :: nuc
     integer,      intent(inout) :: uc(:)
 
-    integer :: i, ist, j, new_nuc
+    integer :: i, ist, idim, j, new_nuc
     integer :: new_uc(nuc)
 
     call push_sub('eigen_lobpcg_inc.Xlobpcg_unconv_ev')
@@ -547,20 +541,20 @@
     new_nuc = 0
     do i = 1, nuc
       ist = uc(i)
-      diff(ist, ik) = X(states_nrm2)(m, dim, res(:, :, ist))
+      diff(ist, ik) = M_ZERO
+      do idim = 1, dim
+        diff(ist, ik) = diff(ist, ik) + lalg_nrm2(m%np, res(:, idim, ist))
+      end do
+
       if(diff(ist, ik).ge.tol) then
         new_uc(j) = ist
         new_nuc   = new_nuc+1
         j         = j+1
-        ! write(*, *) 'UNCONVERGED EV', ist, diff(ist, ik), tol
       else
-        ! write(*, *) '  CONVERGED EV', ist, diff(ist, ik), tol
       end if
     end do
     nuc       = new_nuc
     uc(1:nuc) = new_uc(1:nuc)
-
-    ! write(*, *) 'UNCONVERGED EV:', uc(1:nuc)
 
     call pop_sub()
   end subroutine X(lobpcg_unconv_ev)
@@ -593,14 +587,18 @@
     R_TYPE,       intent(in)  :: res(:, :, :)
     FLOAT,        intent(out) :: diff(:, :)
 
-    integer :: ist, conv
+    integer :: ist, idim, conv
 
     call push_sub('eigen_lobpcg_inc.Xlobpcg_converged')
 
     conv = 0
 
     do ist = 1, nst
-      diff(ist, ik) = X(states_nrm2)(m, dim, res(:, :, ist))
+      diff(ist, ik) = M_ZERO
+      do idim = 1, dim
+        diff(ist, ik) = diff(ist, ik) + lalg_nrm2(m%np, res(:, idim, ist))
+      end do
+      ! diff(ist, ik) = X(states_nrm2)(m, dim, res(:, :, ist))
       if(diff(ist, ik).lt.tol) then
         conv = conv + 1
       end if
@@ -634,7 +632,6 @@
 
     call states_blockt_mul(m, dim, vs, vs, vv, idx1=UC, idx2=UC)
     call X(lobpcg_conj)(wfs_type, nuc, nuc, vv)
-    call X(write_matrix)(nuc, nuc, vv)
     call profiling_in(C_PROFILING_LOBPCG_CHOL)
     call lalg_cholesky(nuc, vv)
     call profiling_out(C_PROFILING_LOBPCG_CHOL)
