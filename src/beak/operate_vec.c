@@ -245,7 +245,8 @@ void FC_FUNC_(zoperate_sse,ZOPERATE_SSE)(const int * opnp,
     aligned_free(vw);
 
   }
-#endif
+
 }
+#endif
 
 #endif
