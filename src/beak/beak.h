@@ -42,6 +42,19 @@ typedef struct {
   ffloat im;
 } comp;
 
+/* These constants have to match the definition in
+   src/grid/nl_operator.F90 */
+
+#define OP_FORTRAN 0
+#define OP_C       1
+#define OP_SSE     2
+#define OP_OLU     3
+#define OP_OLU_C   4
+#define OP_RI      5
+
+#define M_REAL     1
+#define M_CMPLX    2
+
 void FC_FUNC_(zoperate_c,ZOPERATE_C)(const int * opnp, 
 				     const int * opn, 
 				     const ffloat * restrict w, 
@@ -49,22 +62,67 @@ void FC_FUNC_(zoperate_c,ZOPERATE_C)(const int * opnp,
 				     const comp * fi, 
 				     comp * restrict fo);
 
-#if defined(HAVE_C_SSE2) && defined(HAVE_EMMINTRIN_H) && defined(FC_USES_MALLOC)
+/* HERE WE DETECT THE PROCESSOR TYPE AND VECTORIAL CAPABILITIES */
 
-#if defined(HAVE_16_BYTES_ALIGNED_MALLOC)
-
-#define USE_VECTORS
-
-#else /* not HAVE_16_BYTES_ALIGNED_MALLOC */
-
-#if defined(HAVE_POSIX_MEMALIGN)
-#define USE_VECTORS
-#define USE_FAKE_MALLOC
+/* If this is a x86_64 machine we always can use vectors */
+#if defined (__amd64__) || defined(__x86_64__)
+# define OCT_AMD64
+# define USE_VECTORS
 #endif
 
-#endif /* HAVE_16_BYTES_ALIGNED_MALLOC */
-
-#endif /* HAVE_GCC_VECTORS && __SSE2__ && HAVE_EMMINTRIN_H && FC_USES_MALLOC */
-
-
+/* Itanium only has single precision (SSE) */
+#if defined (__ia64__) || defined(__ia64) || defined(_M_IA64)
+# define OCT_ITANIUM
+# if defined(SINGLE_PRECISION) && defined(HAVE_XMMINTRIN_H)
+#  define USE_VECTORS
+# endif
 #endif
+
+/* x86 is the most complex case */
+#if defined(__i386__) || defined(__i386) || defined(_M_IX86) || defined(_X86_)
+# define OCT_X86
+
+# if defined(SINGLE_PRECISION)
+
+/* we only need sse */
+#  if defined (__SSE__) || defined(__SSE2__) || defined(HAVE_XMMINTRIN_H)
+#   define USE_VECTORS
+#  endif
+
+# else /* DOUBLE_PRECISION */
+
+/* we need SSE2 and aligned memory */
+#  if defined(__SSE2__) && defined(HAVE_EMMINTRIN_H) && defined(FC_USES_MALLOC)
+#   if defined(HAVE_16_BYTES_ALIGNED_MALLOC)
+#    define USE_VECTORS
+#   else /* not HAVE_16_BYTES_ALIGNED_MALLOC */
+#    if defined(HAVE_POSIX_MEMALIGN)
+#     define USE_VECTORS
+#     define USE_FAKE_MALLOC
+#    endif
+#   endif
+#  endif
+
+# endif
+#endif /* x86 */
+
+#if defined(OCT_AMD64) || defined(OCT_ITANIUM)
+# define aligned_malloc(ptr, size) (ptr) = malloc((size))
+# define aligned_free(ptr)         free(ptr)
+#endif
+
+#if defined(OCT_X86) && defined(USE_VECTORS)
+# ifdef HAVE_POSIX_MEMALIGN
+#  define _XOPEN_SOURCE 600
+#  include <stdlib.h>
+#  define aligned_malloc(ptr, size) posix_memalign((void *) & (ptr), 16, (size))
+#  define aligned_free(ptr)         free((ptr))
+# elif HAVE__MM_MALLOC || HAVE__MM_FREE
+#  define aligned_malloc(ptr, size) (ptr) = _mm_malloc((size), 16)
+#  define aligned_free(ptr)         _mm_free((ptr))
+# else
+#  error Aligned malloc not available
+# endif
+#endif
+
+#endif /* OCTOPUS_BEAK_H */

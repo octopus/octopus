@@ -54,13 +54,10 @@ subroutine X(nl_operator_tune)(op)
 
     !skip methods that are not available
 #ifdef R_TCOMPLEX
-    if (method == OP_OLU_C) cycle
+    if (op_is_available(method, M_CMPLX) == 0) cycle
+#else
+    if (op_is_available(method, M_REAL)  == 0) cycle
 #endif
-
-#if !defined(USE_SSE2)
-    if (method == OP_SSE)  cycle
-#endif
-
     op%X(function) = method
 
     reps = 10

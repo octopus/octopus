@@ -43,7 +43,6 @@ AC_PROG_CC
 AC_C_INLINE
 AC_C_RESTRICT
 ACX_C_BUILTIN_PREFETCH
-ACX_C_SSE2
 
 # Checks for header files.
 AC_HEADER_DIRENT
@@ -72,7 +71,7 @@ AC_FUNC_VPRINTF
 AC_CHECK_FUNCS([getcwd gettimeofday mkdir pow sqrt strcasecmp strdup \
 strerror strncasecmp strndup uname tcgetpgrp scandir alphasort \
 sigaction malloc realloc opendir readdir closedir strchr strtod assert \
-posix_memalign perror strcasestr])
+posix_memalign _mm_malloc _mm_free perror strcasestr])
 
 ACX_MALLOC_ALIGNMENT
 

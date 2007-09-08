@@ -51,3 +51,19 @@ void * malloc (size_t size){
 }
 
 #endif /* USE_FAKE_MALLOC */
+
+int FC_FUNC_(op_is_available, OP_IS_AVAILABLE)
+  (int * opid, int * type){
+  int result = 1;
+  
+  if( *opid == OP_OLU_C && *type == M_CMPLX) result = 0;
+
+#if !defined(USE_VECTORS)
+  if( *opid == OP_SSE  ) result = 0;
+#elif defined(SINGLE_PRECISION)
+  if( *opid == OP_SSE   && *type == M_CMPLX ) result = 0;
+#endif
+
+  return result;
+}
+

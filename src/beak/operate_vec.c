@@ -25,11 +25,147 @@
 
 #include "beak.h"
 
-#if defined(USE_VECTORS)
+#if defined(SINGLE_PRECISION)
 
-#include <emmintrin.h>
+#if defined(HAVE_XMMINTRIN_H)
+# include <xmmintrin.h>
+#endif
 
-#ifndef SINGLE_PRECISION
+void FC_FUNC_(doperate_sse,DOPERATE_SSE)(const int * opnp, 
+					 const int * opn, 
+					 const float * restrict w, 
+					 const int * opi, 
+					 const float * fi, 
+					 float * restrict fo){
+
+#if !defined(USE_VECTORS)
+  fprintf(stderr, "Not available: this is a bug.\n");
+  exit(1);
+#else
+
+  const int n = opn[0];
+  const int np = opnp[0];
+
+  int i, j, nm2;
+  const float * restrict mfi;
+  __m128 * restrict vw;
+
+  mfi   = fi - 1;
+
+  {
+
+    aligned_malloc(vw, n*16);
+    for(j = 0; j < n ; j++) vw[j] =_mm_set1_ps(w[j]);
+    
+    for(i = 0; i < (np-4+1); i+=4) {
+      const int * restrict index0 = opi + n*i;
+      const int * restrict index1 = opi + n*(i+1);
+      const int * restrict index2 = opi + n*(i+2);
+      const int * restrict index3 = opi + n*(i+3);
+
+      register __m128 a  __attribute__ ((__aligned__ (16)));
+      register __m128 c  __attribute__ ((__aligned__ (16)));
+
+      a = _mm_mul_ps(vw[0], _mm_setr_ps(mfi[index0[0]], mfi[index1[0]], mfi[index2[0]], mfi[index3[0]]));
+
+      for(j = 1; j < n; j++) {
+	c = _mm_setr_ps(mfi[index0[j]], mfi[index1[j]], mfi[index2[j]], mfi[index3[j]]);
+	a = _mm_add_ps(a, _mm_mul_ps(vw[j], c));
+      }
+
+      _mm_storeu_ps(fo+i, a);
+
+    }
+    aligned_free(vw);
+    
+    for(; i < np; i++) {
+      const int * restrict index; 
+      index = opi + n*i;
+      fo[i] = 0.0;
+      for(j=0; j < n; j++) fo[i] += w[j] * mfi[index[j]];
+    }
+
+  }
+
+#endif
+
+}
+
+void FC_FUNC_(zoperate_sse,ZOPERATE_SSE)(const int * opnp, 
+					 const int * opn, 
+					 const float * restrict w, 
+					 const int * opi, 
+					 const float * fi, 
+					 float * restrict fo){
+
+  fprintf(stderr, "Not available: this is a bug.\n");
+  exit(1);
+
+}
+
+
+#else /* DOUBLE PRECISION */
+
+#if defined(HAVE_EMMINTRIN_H)
+# include <emmintrin.h>
+#endif
+
+void FC_FUNC_(doperate_sse,DOPERATE_SSE)(const int * opnp, 
+					 const int * opn, 
+					 const double * restrict w, 
+					 const int * opi, 
+					 const double * fi, 
+					 double * restrict fo){
+
+#if !defined(USE_VECTORS)
+  fprintf(stderr, "Not available: this is a bug.\n");
+  exit(1);
+#else
+  const int n = opn[0];
+  const int np = opnp[0];
+
+  int i, j, nm2;
+  const double * restrict mfi;
+  __m128d * restrict vw;
+
+  mfi   = fi - 1;
+
+  {
+    aligned_malloc(vw, n*16);
+    
+    for(j = 0; j < n ; j++) vw[j] =_mm_set1_pd(w[j]);
+    
+    for(i = 0; i < (np-2+1); i+=2) {
+      const int * restrict index0 = opi + n*i;
+      const int * restrict index1 = opi + n*i+n;
+
+      register __m128d a  __attribute__ ((__aligned__ (16)));
+      register __m128d c  __attribute__ ((__aligned__ (16)));
+
+      a = _mm_mul_pd(vw[0], _mm_setr_pd(mfi[index0[0]], mfi[index1[0]]) );
+
+      for(j = 1; j < n; j++) {
+	c = _mm_setr_pd(mfi[index0[j]], mfi[index1[j]]);
+	a = _mm_add_pd(a, _mm_mul_pd(vw[j], c));
+      }
+
+      _mm_storeu_pd(fo+i  , a);
+
+    }
+
+    aligned_free(vw);
+    
+    for(; i < np; i++) {
+      const int * restrict index; 
+      index = opi + n*i;
+      fo[i] = 0.0;
+      for(j=0; j < n; j++) fo[i] += w[j] * mfi[index[j]];
+    }
+
+  }
+#endif  
+}
+
 
 void FC_FUNC_(zoperate_sse,ZOPERATE_SSE)(const int * opnp, 
 				const int * opn, 
@@ -37,6 +173,10 @@ void FC_FUNC_(zoperate_sse,ZOPERATE_SSE)(const int * opnp,
 				const int * opi, 
 				const __m128d * fi, 
 				__m128d * restrict fo){
+#if !defined(USE_VECTORS)
+  fprintf(stderr, "Not available: this is a bug.\n");
+  exit(1);
+#else
 
   /* GCC 3.x requires these variables to be declared static to have the proper alignment */
 #if __GNUC__ <= 3
@@ -63,7 +203,7 @@ void FC_FUNC_(zoperate_sse,ZOPERATE_SSE)(const int * opnp,
 #pragma omp parallel private(a, b, c, d, e, f, index, i, j, vw)
   {
 
-    vw = malloc(n*16);
+    aligned_malloc(vw, n*16);
 
     for(j = 0; j < n ; j++) vw[j] =_mm_set1_pd(w[j]);
 
@@ -98,138 +238,10 @@ void FC_FUNC_(zoperate_sse,ZOPERATE_SSE)(const int * opnp,
 
     }
 
-    free(vw);
+    aligned_free(vw);
 
   }
-
-}
-
-#else
-
-void FC_FUNC_(zoperate_sse,ZOPERATE_SSE)(const int * opnp, 
-					 const int * opn, 
-					 const float * restrict w, 
-					 const int * opi, 
-					 const float * fi, 
-					 float * restrict fo){
-
-  FC_FUNC_(zoperate_c,ZOPERATE_C)(opnp, opn, w, opi, fi, fo);
+#endif
 }
 
 #endif
-
-#ifndef SINGLE_PRECISION
-
-void FC_FUNC_(doperate_sse,DOPERATE_SSE)(const int * opnp, 
-					 const int * opn, 
-					 const double * restrict w, 
-					 const int * opi, 
-					 const double * fi, 
-					 double * restrict fo){
-
-  const int n = opn[0];
-  const int np = opnp[0];
-
-  int i, j, nm2;
-  const double * restrict mfi;
-  __m128d * restrict vw;
-
-  mfi   = fi - 1;
-
-  {
-
-    vw = malloc(n*16);
-    
-    for(j = 0; j < n ; j++) vw[j] =_mm_set1_pd(w[j]);
-    
-    for(i = 0; i < (np-2+1); i+=2) {
-      const int * restrict index0 = opi + n*i;
-      const int * restrict index1 = opi + n*i+n;
-
-      register __m128d a  __attribute__ ((__aligned__ (16)));
-      register __m128d c  __attribute__ ((__aligned__ (16)));
-
-      a = _mm_mul_pd(vw[0], _mm_setr_pd(mfi[index0[0]], mfi[index1[0]]) );
-
-      for(j = 1; j < n; j++) {
-	c = _mm_setr_pd(mfi[index0[j]], mfi[index1[j]]);
-	a = _mm_add_pd(a, _mm_mul_pd(vw[j], c));
-      }
-
-      _mm_storeu_pd(fo+i  , a);
-
-    }
-
-    free(vw);
-    
-    for(; i < np; i++) {
-      const int * restrict index; 
-      index = opi + n*i;
-      fo[i] = 0.0;
-      for(j=0; j < n; j++) fo[i] += w[j] * mfi[index[j]];
-    }
-
-  }
-  
-}
-
-#else
-
-void FC_FUNC_(doperate_sse,DOPERATE_SSE)(const int * opnp, 
-					 const int * opn, 
-					 const float * restrict w, 
-					 const int * opi, 
-					 const float * fi, 
-					 float * restrict fo){
-
-  const int n = opn[0];
-  const int np = opnp[0];
-
-  int i, j, nm2;
-  const float * restrict mfi;
-  __m128 * restrict vw;
-
-  mfi   = fi - 1;
-
-  {
-
-    vw = malloc(n*16);
-    
-    for(j = 0; j < n ; j++) vw[j] =_mm_set1_ps(w[j]);
-    
-    for(i = 0; i < (np-4+1); i+=4) {
-      const int * restrict index0 = opi + n*i;
-      const int * restrict index1 = opi + n*(i+1);
-      const int * restrict index2 = opi + n*(i+2);
-      const int * restrict index3 = opi + n*(i+3);
-
-      register __m128 a  __attribute__ ((__aligned__ (16)));
-      register __m128 c  __attribute__ ((__aligned__ (16)));
-
-      a = _mm_mul_ps(vw[0], _mm_setr_ps(mfi[index0[0]], mfi[index1[0]], mfi[index2[0]], mfi[index3[0]]));
-
-      for(j = 1; j < n; j++) {
-	c = _mm_setr_ps(mfi[index0[j]], mfi[index1[j]], mfi[index2[j]], mfi[index3[j]]);
-	a = _mm_add_ps(a, _mm_mul_ps(vw[j], c));
-      }
-
-      _mm_storeu_ps(fo+i, a);
-
-    }
-
-    free(vw);
-    
-    for(; i < np; i++) {
-      const int * restrict index; 
-      index = opi + n*i;
-      fo[i] = 0.0;
-      for(j=0; j < n; j++) fo[i] += w[j] * mfi[index[j]];
-    }
-
-  }
-  
-}
-
-#endif
-
-#endif /* USE_VECTORS */

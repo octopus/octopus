@@ -19,12 +19,6 @@
 
 #include "global.h"
 
-#if defined(HAVE_C_SSE2) && defined(HAVE_EMMINTRIN_H) && defined(FC_USES_MALLOC)
-#if defined(HAVE_16_BYTES_ALIGNED_MALLOC) || defined(HAVE_POSIX_MEMALIGN)
-#define USE_SSE2
-#endif
-#endif
-
 module nl_operator_m
   use datasets_m
   use global_m
@@ -101,6 +95,12 @@ module nl_operator_m
 
   
   logical :: initialized = .false.
+
+  interface
+    integer function op_is_available(opid, type)
+      integer, intent(in) :: opid, type
+    end function op_is_available
+  end interface
 
 contains
   
@@ -944,10 +944,8 @@ contains
       select case(op%dfunction)
       case(OP_C)
         call doperate_c(op%np, nn, op%w_re(1, 1), op%i(1,1), fi(1), fo(1))
-#ifdef USE_SSE2
       case(OP_SSE)
         call doperate_sse(op%np, nn, op%w_re(1, 1), op%i(1,1), fi(1), fo(1))
-#endif
       case(OP_OLU_C)
         call doperate_olu_c(op%np, nn, op%w_re(1, 1), op%i(1,1), fi(1), fo(1))
       case(OP_FORTRAN)
@@ -1016,10 +1014,8 @@ contains
       if(op%const_w) then
         
         select case(op%zfunction)
-#ifdef USE_SSE2
         case(OP_SSE)
           call zoperate_sse(op%np, nn, op%w_re(1, 1), op%i(1,1), fi(1), fo(1))
-#endif
         case(OP_FORTRAN)
           call zoperate(op%np, op%m%np_part, nn, &
             op%w_re(1:nn, 1), op%i(1:nn,1:op%np), fi(1:op%m%np_part), fo(1:op%np))
