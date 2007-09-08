@@ -166,6 +166,14 @@ void FC_FUNC_(doperate_sse,DOPERATE_SSE)(const int * opnp,
 #endif  
 }
 
+#if !defined(USE_VECTORS)
+
+void FC_FUNC_(zoperate_sse,ZOPERATE_SSE)(){
+  fprintf(stderr, "Not available: this is a bug.\n");
+  exit(1);
+}
+
+#else
 
 void FC_FUNC_(zoperate_sse,ZOPERATE_SSE)(const int * opnp, 
 				const int * opn, 
@@ -173,10 +181,6 @@ void FC_FUNC_(zoperate_sse,ZOPERATE_SSE)(const int * opnp,
 				const int * opi, 
 				const __m128d * fi, 
 				__m128d * restrict fo){
-#if !defined(USE_VECTORS)
-  fprintf(stderr, "Not available: this is a bug.\n");
-  exit(1);
-#else
 
   /* GCC 3.x requires these variables to be declared static to have the proper alignment */
 #if __GNUC__ <= 3
