@@ -28,9 +28,6 @@ OCTTargetMode = oct_targetmode_static
 OCTFilterMode = 0
 OCTInitialState = oct_is_groundstate
 OCTTargetOperator = oct_tg_gstransformation
-#%OCTTargetTransformStates
-#0 | 1 | 0 | 0 | 0 | 0
-#%
 %OCTTargetTransformStates
 0 | 1
 %
@@ -40,10 +37,6 @@ OCTScheme  = oct_algorithm_zbr98
 OCTDoubleCheck = No	
 gamma1 = 0.1
 gamma2 = 80
-
-%OCTFilter
-frequency_filter | "exp(-gamma2*( w + 0.1567 )^2  ) + exp(-gamma2*( w - 0.1567 )^2  )"
-%
 
 #----------------------------
 # Laser field = Initial guess

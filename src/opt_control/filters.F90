@@ -71,12 +71,10 @@ contains
     integer,          intent(in)   :: steps
     type(tdf_t), intent(inout) :: f
 
-    FLOAT, allocatable :: cfunction(:)
-
 #if defined(HAVE_FFT)
-
     integer        :: no_f, i, n(3), last, first, grouplength, ii, j
-    CMPLX          :: tmp(0:steps, 1, 1), tmp2(0:steps, 1, 1) ! Have to be three-dimensional to use the fft_m modul
+    FLOAT, allocatable :: cfunction(:)
+    CMPLX, allocatable :: tmp(:, :, :), tmp2(:, :, :)
     CMPLX, allocatable :: filt(:), numerical(:)
     type(fft_t)    :: fft_handler
 
@@ -88,33 +86,35 @@ contains
 
     no_f = size(filter)
 
-    ALLOCATE(cfunction(0:steps), steps+1)
+    ALLOCATE(cfunction(steps+1), steps+1)
+    ALLOCATE(tmp(steps+1, 1, 1), steps+1)
+    ALLOCATE(tmp2(steps+1, 1, 1), steps+1)
+    ALLOCATE(filt(steps+1), steps+1)
+    ALLOCATE(numerical(steps+1), steps+1)
+
     do i = 1, steps+1
-      cfunction(i-1) = tdf(f, i)
+      cfunction(i) = tdf(f, i)
     end do
 
     n(1:3) = (/ steps+1, 1, 1 /)
-    
     call fft_init(n, fft_complex, fft_handler, optimize = .false.)
     
     i     = 0
     first = 0
     last  = 0
-
-    ALLOCATE(filt(0:steps), steps+1)
-    ALLOCATE(numerical(0:steps), steps+1)
     filt  = M_z0
     numerical = M_z0
 
     !do i=1, no_f
     do while(i.lt.no_f )
+
       i = i + 1
       ! decide time or freq
       write(message(1),'(a,i2)') "Info: Applying filter "         
       call write_info(1)
 
       do j = 0, steps
-        numerical(j) = tdf(filter(i)%f, j+1)
+        numerical(j+1) = tdf(filter(i)%f, j+1)
       end do  
       
       select case(filter(i)%domain)
@@ -130,7 +130,7 @@ contains
           if(filter(ii)%domain.eq.filter_freq) then
             grouplength = grouplength + 1
             do j = 0, steps
-              filt(j) = filt(j) + tdf(filter(ii)%f, j+1)
+              filt(j+1) = filt(j+1) + tdf(filter(ii)%f, j+1)
             end do
           end if
           ii = ii + 1
@@ -165,7 +165,7 @@ contains
           if(filter(ii)%domain.eq.filter_time) then
             grouplength = grouplength + 1
             do j = 0, steps
-              filt(j) = filt(j) + tdf(filter(ii)%f, j+1)
+              filt(j+1) = filt(j+1) + tdf(filter(ii)%f, j+1)
             end do
           end if
           first = i
@@ -191,11 +191,10 @@ contains
     end do
 
     do i = 1, steps+1
-      call tdf_set_numerical(f, i, cfunction(i-1))
+      call tdf_set_numerical(f, i, cfunction(i))
     end do
 
-    deallocate(cfunction)    
-    deallocate(filt)
+    deallocate(filt, cfunction, tmp, tmp2, numerical)
     call fft_end(fft_handler)
     call pop_sub()
 #else
@@ -225,10 +224,11 @@ contains
     !% that are applied to the optimized laser field in each iteration.
     !% The filter forces the laser field to obtain the given form in frequency space.
     !% Each line of the block describes a filter; this way you can actually have more
-    !% than one filter function (e.g. a filter in time and two in frequency space). The filters are 
-    !% applied in the given order, i.e., first the filter specified by the first line is applied, then 
-    !% second line. This order is important if the filters are conjugated, like time and frequency. 
-    !% If they are conjugated the second filter can lift the action of the first one. Use with care.
+    !% than one filter function (e.g. a filter in time and two in frequency space). 
+    !% The filters are applied in the given order, i.e., first the filter specified 
+    !% by the first line is applied, then second line. This order is important if 
+    !% the filters are conjugated, like time and frequency. If they are conjugated 
+    !% the second filter can lift the action of the first one. Use with care.
     !% The syntax of each line is, then:
     !%
     !% <tt>%OCTFilter
@@ -316,10 +316,9 @@ contains
     FLOAT   :: grid(0:steps), m, t
     CMPLX, allocatable :: ff(:)
 
-
     call push_sub('filter.build_filter_')
 
-    ALLOCATE(ff(0:steps), steps+1)
+    ALLOCATE(ff(steps+1), steps+1)
 
     ff = M_z0
     select case(fp%domain)
@@ -327,15 +326,15 @@ contains
       do ip=0, steps
         t = ip*dt
         call loct_parse_expression(f_re, f_im, "t", real(t, 8), fp%expression)
-        ff(ip) = f_re + M_zI*f_im
+        ff(ip+1) = f_re + M_zI*f_im
       end do
       
     case(filter_freq)
       call w_lookup(steps+1,dt,grid)
       ff = M_z1
       do ip=0, steps
-        call loct_parse_expression(f_re, f_im, "w", real(grid(ip), 8), fp%expression)      
-        ff(ip) = f_re + M_zI*f_im
+        call loct_parse_expression(f_re, f_im, "w", real(grid(ip), 8), fp%expression)
+        ff(ip+1) = f_re + M_zI*f_im
       end do
       
     case default
@@ -344,7 +343,7 @@ contains
       call write_fatal(2)
     end select
     
-    call tdf_set_numerical(fp%f, ff(0:steps))
+    call tdf_set_numerical(fp%f, ff)
     
     deallocate(ff)
     call pop_sub()

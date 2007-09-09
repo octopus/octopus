@@ -49,11 +49,16 @@
     ! dump convergence: J,P,fluence,penalty
     iunit = io_open('opt-control/convergence', action='write')
     ! header
-    write(iunit, '(4(a))') '# iteration ','functional ','overlap ','penalty '
+    write(iunit, '(4(a))') '# iteration', '  J[Psi,chi,epsilon]', &
+                                          '            J_1[Psi]', &
+                                          '        J_2[epsilon]'
+    write(iunit, '(a)') &
+     '#######################################################################'
+
     ! data
     do loop = 1, iterator%ctr_iter_max
-       write(iunit, '(i6,3f18.8,es20.10)') loop, iterator%convergence(1,loop), iterator%convergence(2,loop), &
-         iterator%convergence(3,loop), iterator%convergence(4,loop)
+       write(iunit, '(i11,3f20.8)') loop, iterator%convergence(1,loop), &
+         iterator%convergence(2,loop), iterator%convergence(3,loop)
     end do
     call io_close(iunit)
 

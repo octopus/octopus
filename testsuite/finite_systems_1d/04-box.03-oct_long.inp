@@ -33,13 +33,6 @@ OCTTargetOperator = oct_tg_gstransformation
 %
 OCTScheme  = oct_algorithm_zr98
 OCTDoubleCheck = No	
-gamma1 = 0.1
-gamma2 = 80
-
-%OCTFilter
-frequency_filter | "exp(-gamma2*( w + 0.1567 )^2  ) + exp(-gamma2*( w - 0.1567 )^2  )"
-%
-
 
 #----------------------------
 # Laser field = Initial guess

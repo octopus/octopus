@@ -82,7 +82,8 @@
 
 
   ! ---------------------------------------------------------
-  logical function iteration_manager(oct, gr, td_fitness, par, td, psi, target_st, iterator) result(stoploop)
+  logical function iteration_manager(oct, gr, td_fitness, par, &
+                                     td, psi, target_st, iterator) result(stoploop)
     type(oct_t), intent(in)             :: oct
     type(grid_t), intent(in)            :: gr
     FLOAT, intent(in)                   :: td_fitness(:)
@@ -92,31 +93,25 @@
     type(states_t), intent(in)          :: target_st
     type(oct_iterator_t), intent(inout) :: iterator
 
-    FLOAT :: fluence, overlap, jfunctional
+    FLOAT :: fluence, overlap, jfunctional, j2
     character(len=80)  :: filename
 
     call push_sub('opt_control.iteration_manager')
     
     stoploop = .false.
 
-    overlap = overlap_function(oct, gr%m, td_fitness, td%max_iter, psi, target_st)
-    jfunctional = overlap - j2_functional(par)
-
+    overlap = j1(oct, gr%m, td_fitness, td%max_iter, psi, target_st)
     fluence = laser_fluence(par)
+    j2 = j2_functional(par)
+    jfunctional = overlap - j2
 
     iterator%convergence(1,iterator%ctr_iter) = jfunctional
     iterator%convergence(2,iterator%ctr_iter) = overlap
-    iterator%convergence(3,iterator%ctr_iter) = fluence
+    iterator%convergence(3,iterator%ctr_iter) = j2
     iterator%convergence(4,iterator%ctr_iter) = tdf(par%td_penalty(1), 1)
     
-    message(1) = "Info: Loop control"
-    call write_info(1)
-    
-    ! TODO:: check for STOP FILE AND delete it
-
     if((iterator%ctr_iter .eq. iterator%ctr_iter_max) .or. &
        (iterator%eps>M_ZERO.and.abs(jfunctional-iterator%old_functional) < iterator%eps)) then
-
 
       if((iterator%ctr_iter .eq. iterator%ctr_iter_max)) then
         message(1) = "Info: Maximum number of iterations reached"
@@ -131,18 +126,23 @@
       stoploop = .TRUE.
     end if
 
-    write(message(1), '(a,i3)') 'Info: Optimal control iteration #', iterator%ctr_iter
-    call write_info(1)
+    write(message(1), '(a,i3)') 'Optimal control iteration #', iterator%ctr_iter
+    call messages_print_stress(stdout, trim(message(1)))
 
     if(oct%mode_fixed_fluence) then
-      write(message(1), '(6x,a,f10.5,a,f10.5,a,f10.5,a,f10.5)') &
-        " => J1:", overlap, "   J: " , jfunctional,  "  I: " , fluence, &
-        " penalty: ", real(tdf(par%td_penalty(1), 1), REAL_PRECISION)
+      write(message(1), '(6x,a,f10.5)') " => J1       = ", overlap
+      write(message(2), '(6x,a,f10.5)') " => J        = ", jfunctional
+      write(message(3), '(6x,a,f10.5)') " => Fluence  = ", fluence
+      write(message(4), '(6x,a,f10.5)') " => penalty  = ", &
+            real(tdf(par%td_penalty(1), 1), REAL_PRECISION)
+      call write_info(4)
     else
-      write(message(1), '(6x,a,f14.8,a,f20.8,a,f14.8)') &
-        " => J1:", overlap, "   J: " , jfunctional,  "  I: " , fluence
+      write(message(1), '(6x,a,f10.5)') " => J1       = ", overlap
+      write(message(2), '(6x,a,f10.5)') " => J        = ", jfunctional
+      write(message(3), '(6x,a,f10.5)') " => Fluence  = ", fluence
+      call write_info(3)
     end if
-    call write_info(1)
+    call messages_print_stress(stdout)
 
     ! store field with best J
     if(jfunctional > iterator%bestJ) then

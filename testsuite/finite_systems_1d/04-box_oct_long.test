@@ -27,12 +27,10 @@ Match ; 2th state  ; grep '2   --' excited_states_static/eigenvalues ; \s*-4.827
 Input: 04-box.02-oct_long.inp
 
 # Match overlaps
-Match ; J1 1st iteration   ; grep ' 1  ' opt-control/convergence ; \s*0.931\d*
-Match ; J1 2nd iteration   ; grep ' 2  ' opt-control/convergence ; \s*0.949\d*
-Match ; J1 5th iteration   ; grep ' 5  ' opt-control/convergence ; \s*0.973\d*
-Match ; J1 10th iteration  ; grep ' 10  ' opt-control/convergence ; \s*0.985\d*
-# This match is disconnected to allow for fast tests.
-# Match ; J1 15th iteration  ; grep ' 15  ' opt-control/convergence ; \s*0.985\d*
+Match ; J1 1st iteration   ; grep ' 1  ' opt-control/convergence ; \s*0.868\d*
+Match ; J1 2nd iteration   ; grep ' 2  ' opt-control/convergence ; \s*0.902\d*
+Match ; J1 5th iteration   ; grep ' 5  ' opt-control/convergence ; \s*0.948\d*
+Match ; J1 10th iteration  ; grep ' 10  ' opt-control/convergence ; \s*0.971\d*
 
 
 # Then, run the optimization for 15 iterations with a ZR98 scheme and compare the convergence.
@@ -40,12 +38,10 @@ Match ; J1 10th iteration  ; grep ' 10  ' opt-control/convergence ; \s*0.985\d*
 Input: 04-box.03-oct_long.inp
 
 # Match overlaps
-Match ; J1 1st iteration  ; grep ' 1  ' opt-control/convergence ; \s*0.787\d*
-Match ; J1 2nd iteration  ; grep ' 2  ' opt-control/convergence ; \s*0.8\d*
-Match ; J1 5th iteration  ; grep ' 5  ' opt-control/convergence ; \s*0.933\d*
-Match ; J1 10th iteration  ; grep ' 10  ' opt-control/convergence ; \s*0.970\d*
-# This match is disconnected to allow for fast tests.
-# Match ; J1 15th iteration  ; grep ' 15  ' opt-control/convergence ; \s*0.983\d*
+Match ; J1 1st iteration  ; grep ' 1  ' opt-control/convergence ; \s*0.620\d*
+Match ; J1 2nd iteration  ; grep ' 2  ' opt-control/convergence ; \s*0.739\d*
+Match ; J1 5th iteration  ; grep ' 5  ' opt-control/convergence ; \s*0.871\d*
+Match ; J1 10th iteration  ; grep ' 10  ' opt-control/convergence ; \s*0.942\d*
 
 
 # Then, run the optimization for 15 iterations with a WG05 scheme and compare the convergence.
@@ -53,12 +49,10 @@ Match ; J1 10th iteration  ; grep ' 10  ' opt-control/convergence ; \s*0.970\d*
 Input: 04-box.04-oct_long.inp
 
 # Match overlaps
-Match ; J1 1st  iteration  ; grep ' 1  ' opt-control/convergence ; \s*0.845\d*
-Match ; J1 2nd  iteration  ; grep ' 2  ' opt-control/convergence ; \s*0.92\d*
-Match ; J1 5th  iteration  ; grep ' 5  ' opt-control/convergence ; \s*0.99\d*
-Match ; J1 10th iteration  ; grep ' 10  ' opt-control/convergence ; \s*0.999\d*
-# This match is disconnected to allow for fast tests.
-# Match ; J1 15th iteration  ; grep ' 15  ' opt-control/convergence ; \s*0.998\d*
+Match ; J1 1st  iteration  ; grep ' 1  ' opt-control/convergence ; \s*0.714\d*
+Match ; J1 2nd  iteration  ; grep ' 2  ' opt-control/convergence ; \s*0.851\d*
+Match ; J1 5th  iteration  ; grep ' 5  ' opt-control/convergence ; \s*0.986\d*
+Match ; J1 10th iteration  ; grep ' 10  ' opt-control/convergence ; \s*0.998\d*
 
 
 # WARNING: I deactivate the following test since it is failing, and it will take some

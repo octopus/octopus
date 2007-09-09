@@ -19,7 +19,12 @@
 
 
   ! ---------------------------------------------------------
-  FLOAT function overlap_function(oct, m, td_fitness, max_iter, psi, target_st)
+  ! Calculates the J1 functional, i.e.:
+  ! <Psi(T)|\hat{O}|Psi(T) in the time-independent
+  ! case, or else \int_0^T dt <Psi(t)|\hat{O}(t)|Psi(t) in 
+  ! the time-dependent case.
+  ! ---------------------------------------------------------
+  FLOAT function j1(oct, m, td_fitness, max_iter, psi, target_st)
     type(oct_t), intent(in)    :: oct
     type(mesh_t), intent(in)   :: m
     FLOAT, intent(in)          :: td_fitness(:)
@@ -30,40 +35,13 @@
 
     if(oct%targetmode==oct_targetmode_td) then
        ! 1/T * int(<Psi| O | Psi>)
-       overlap_function = sum(td_fitness) / real(max_iter, REAL_PRECISION) 
+       j1 = sum(td_fitness) / real(max_iter, REAL_PRECISION) 
     else
-      overlap_function = abs(zstates_mpdotp(m, psi, target_st))
+      j1 = abs(zstates_mpdotp(m, psi, target_st))**2
     end if
 
     call pop_sub()
-  end function overlap_function
-
-
-  ! ---------------------------------------------------------
-  subroutine write_fieldw(filename, ndim, steps, las, dt)
-    ! in w=(2pi f) space
-    character(len=*), intent(in) :: filename
-    integer,          intent(in) :: ndim
-    integer,          intent(in) :: steps
-    FLOAT,            intent(in) :: las(1:ndim,0:steps)
-    FLOAT,            intent(in) :: dt
-  
-    integer :: i, iunit
-    FLOAT   :: wgrid(0:steps)
-
-    call push_sub('opt_control.write_fieldw')
-
-    call w_lookup(steps+1, dt, wgrid)
-
-    iunit = io_open(filename, action='write')
-    do i = 0, steps
-       write(iunit, '(4es30.16e4)') wgrid(i), las(:, i)
-    end do
-    call io_close(iunit)
-    
-    call pop_sub()
-  end subroutine write_fieldw
-
+  end function j1
 
 
   ! ---------------------------------------------------------
@@ -87,8 +65,6 @@
         do ik = 1, psi_in%d%nik
           do p  = psi_in%st_start, psi_in%st_end
             do dim = 1, psi_in%d%dim
-              ! multiply orbtials with local operator
-              ! FIXME: for multiple particles 1,1,1 -> dim,p,ik
               chi_out%zpsi(:,dim,p,ik) = target%st%zpsi(:, 1, 1 , 1)*psi_in%zpsi(:, dim, p, ik)
             end do
           end do
