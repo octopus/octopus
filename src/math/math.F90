@@ -564,7 +564,7 @@ contains
     integer, intent(inout)           :: a(:)
     integer, intent(inout), optional :: ind(:)
 
-    integer :: i,j,inc,n, indi
+    integer :: i,j,inc,n, indi, indj
     FLOAT   :: v
 
     n = size(a)
@@ -591,7 +591,11 @@ contains
           if (a(j-inc) <= v) exit
           !if (a(j-inc) >= v) exit
           a(j)=a(j-inc)
-          if(present(ind)) ind(j) = ind(j-inc)
+          !workaround to a bug in itanium ifort
+          !if(present(ind)) ind(j) = ind(j-inc)
+          if(present(ind)) indj = ind(j-inc)
+          if(present(ind)) ind(j) = indj
+
           j=j-inc
           if (j <= inc) exit
         end do
