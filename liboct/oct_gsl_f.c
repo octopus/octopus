@@ -326,6 +326,7 @@ double FC_FUNC_(oct_minimize, OCT_MINIMIZE)
   case 2: T = gsl_multimin_fdfminimizer_conjugate_fr;
   case 3: T = gsl_multimin_fdfminimizer_conjugate_pr;
   case 4: T = gsl_multimin_fdfminimizer_vector_bfgs;
+  case 5: T = gsl_multimin_fdfminimizer_vector_bfgs2;
   }
   s = gsl_multimin_fdfminimizer_alloc (T, *dim);
 
