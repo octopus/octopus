@@ -27,9 +27,10 @@
 /* If __builtin_prefetch is not present (which should have been caught
    by the configure script) one needs to define dummy a preprocessor
    macro. */
+/*
 #if !defined(HAVE_BUILTIN_PREFETCH)
 #define __builtin_prefetch(a, b, c)
-#endif
+#endif*/
 
 #ifdef SINGLE_PRECISION
 typedef float ffloat;
@@ -49,18 +50,13 @@ typedef struct {
 #define OP_C       1
 #define OP_SSE     2
 #define OP_OLU     3
-#define OP_OLU_C   4
-#define OP_RI      5
+#define OP_RI      4
+#define OP_RI_VEC  5
 
 #define M_REAL     1
 #define M_CMPLX    2
 
-void FC_FUNC_(zoperate_c,ZOPERATE_C)(const int * opnp, 
-				     const int * opn, 
-				     const ffloat * restrict w, 
-				     const int * opi, 
-				     const comp * fi, 
-				     comp * restrict fo);
+#define MAX_OP_N   100
 
 /* HERE WE DETECT THE PROCESSOR TYPE AND VECTORIAL CAPABILITIES */
 

@@ -27,7 +27,6 @@
 subroutine X(nl_operator_tune)(op)
   type(nl_operator_t), intent(inout) :: op
   
-
   R_TYPE, allocatable :: in(:), out(:)
   real(8) :: noperations, flops(OP_MIN:OP_MAX), itime, ftime
   integer :: method, ii, reps, iunit
@@ -93,6 +92,11 @@ subroutine X(nl_operator_tune)(op)
   write (iunit, '(a,i8)') 'Grid points    = ', op%m%np
 
   do method = OP_MIN, OP_MAX
+#ifdef R_TCOMPLEX
+    if (op_is_available(method, M_CMPLX) == 0) cycle
+#else
+    if (op_is_available(method, M_REAL)  == 0) cycle
+#endif
     marker = '  '
     if(method == op%X(function)) marker = '* '
     write (iunit, '(2a, f8.1, a)') marker, op_function_name(method), flops(method)/CNST(1e6), ' MFlops'

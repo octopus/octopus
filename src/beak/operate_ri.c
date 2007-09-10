@@ -45,7 +45,7 @@ void FC_FUNC_(doperate_ri,DOPERATE_RI)(const int * opnp,
   const int * restrict index1;
   register ffloat a0, a1, a2, a3;
   register ffloat a4, a5, a6, a7;
-  const ffloat * restrict ffi[30];
+  const ffloat * ffi[30];
 
   i = 0;
   for (l = 0; l < nri ; l++) {
@@ -113,8 +113,9 @@ void FC_FUNC_(zoperate_ri,ZOPERATE_RI)(const int * opnp,
   int l, i, j, nm2;
   const int * restrict index;
   const int * restrict index1;
-  const comp * restrict ffi[30];
-  comp a0, a1, a2, a3;
+  const comp * ffi[30];
+  register ffloat a0, a1, a2, a3;
+  register ffloat a4, a5, a6, a7;
 
   i = 0;
   for (l = 0; l < nri ; l++) {
@@ -130,42 +131,42 @@ void FC_FUNC_(zoperate_ri,ZOPERATE_RI)(const int * opnp,
     }
 
     for (; i < (rimap_inv[l] - 4 + 1) ; i+=4){
-      a0.re = a1.re = a2.re = a3.re = 0.0;
-      a0.im = a1.im = a2.im = a3.im = 0.0;
+      a0 = a1 = a2 = a3 = 0.0;
+      a4 = a5 = a6 = a7 = 0.0;
       
       for(j = 0; j < n; j++) {
-	a0.re += w[j] * ffi[j][i+0].re;
-	a0.im += w[j] * ffi[j][i+0].im;
-	a1.re += w[j] * ffi[j][i+1].re;
-	a1.im += w[j] * ffi[j][i+1].im;
-	a2.re += w[j] * ffi[j][i+2].re;
-	a2.im += w[j] * ffi[j][i+2].im;
-	a3.re += w[j] * ffi[j][i+3].re;
-	a3.im += w[j] * ffi[j][i+3].im;
+	a0 += w[j] * ffi[j][i+0].re;
+	a1 += w[j] * ffi[j][i+0].im;
+	a2 += w[j] * ffi[j][i+1].re;
+	a3 += w[j] * ffi[j][i+1].im;
+	a4 += w[j] * ffi[j][i+2].re;
+	a5 += w[j] * ffi[j][i+2].im;
+	a6 += w[j] * ffi[j][i+3].re;
+	a7 += w[j] * ffi[j][i+3].im;
       }
-      fo[i  ].re = a0.re;
-      fo[i  ].im = a0.im;
-      fo[i+1].re = a1.re;
-      fo[i+1].im = a1.im;
-      fo[i+2].re = a2.re;
-      fo[i+2].im = a2.im;
-      fo[i+3].re = a3.re;
-      fo[i+3].im = a3.im;
+      fo[i  ].re = a0;
+      fo[i  ].im = a1;
+      fo[i+1].re = a2;
+      fo[i+1].im = a3;
+      fo[i+2].re = a4;
+      fo[i+2].im = a5;
+      fo[i+3].re = a6;
+      fo[i+3].im = a7;
 
     }
 
     for (; i < rimap_inv[l]; i++){
       
-      a0.re = 0.0;
-      a0.im = 0.0;
+      a0 = 0.0;
+      a1 = 0.0;
 
       for(j = 0; j < n; j++) {
-	a0.re += w[j] * ffi[j][i].re;
-	a0.im += w[j] * ffi[j][i].im;
+	a0 += w[j] * ffi[j][i].re;
+	a1 += w[j] * ffi[j][i].im;
       }
 
-      fo[i].re = a0.re;
-      fo[i].im = a0.im;
+      fo[i].re = a0;
+      fo[i].im = a1;
     }
 
   }
