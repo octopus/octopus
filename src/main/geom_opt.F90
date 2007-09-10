@@ -47,7 +47,8 @@ module geom_opt_m
   type geom_opt_t
     integer  :: method
     FLOAT :: step
-    FLOAT :: tol
+    FLOAT :: tolgrad
+    FLOAT :: toldr
     integer  :: max_iter
 
 !!$    FLOAT :: f
@@ -67,6 +68,8 @@ module geom_opt_m
   type(scf_t)                  :: scfv
   type(mesh_t),        pointer :: m    ! shortcuts
   type(states_t),      pointer :: st
+
+  integer                      :: geom_iter
 
 contains
 
@@ -149,6 +152,8 @@ contains
 
     call scf_init(sys%gr, sys%geo, scfv, sys%st, h)
 
+    geom_iter = 0 
+
     ALLOCATE(x(3*geo%natoms), 3*geo%natoms)
     do i = 0, geo%natoms - 1
       x(3*i + 1) = geo%atom(i + 1)%x(1)
@@ -157,7 +162,7 @@ contains
     end do
 
     energy = loct_minimize(g_opt%method, 3*geo%natoms, x(1), &
-         real(g_opt%step, 8), real(g_opt%tol, 8), g_opt%max_iter, calc_point)
+         real(g_opt%step, 8), real(g_opt%tolgrad, 8), real(g_opt%toldr, 8), g_opt%max_iter, calc_point)
 
     ! print out geometry
     do i = 0, geo%natoms - 1
@@ -213,6 +218,7 @@ contains
       !% The bfgs2 version of this minimizer is the most efficient version available, 
       !% and is a faithful implementation of the line minimization scheme described in 
       !% Fletcher's _Practical Methods of Optimization_, Algorithms 2.6.2 and 2.6.4.
+
       !%End
       call loct_parse_int(check_inp('GOMethod'), MINMETHOD_STEEPEST_DESCENT, g_opt%method)
       if(.not.varinfo_valid_option('GOMethod', g_opt%method)) call input_error('GOMethod')
@@ -225,9 +231,22 @@ contains
       !%Description
       !% Convergence criterium to stop the minimization. In units of force; minimization
       !% is stopped when all forces on ions are smaller.
+      !% Used in conjunction with GOMinimumMove. If GOTolerance = 0, this criterium is ignored.
       !%End
-      call loct_parse_float(check_inp('GOTolerance'), CNST(0.0001)/units_inp%force%factor, g_opt%tol)
-      g_opt%tol = g_opt%tol*units_inp%force%factor
+      call loct_parse_float(check_inp('GOTolerance'), CNST(0.0001)/units_inp%force%factor, g_opt%tolgrad)
+      g_opt%tolgrad = g_opt%tolgrad*units_inp%force%factor
+      
+      !%Variable GOMinimumMove
+      !%Type float
+      !%Default 0.0 a.u.
+      !%Section Geometry Optimization
+      !%Description
+      !% Convergence criterium to stop the minimization. In units of length; minimization
+      !% is stopped when all species coordinates change less than GOMinimumMove.
+      !% Used in conjunction with GOTolerance. If GOMinimumMove = 0, this criterium is ignored.
+      !%End
+      call loct_parse_float(check_inp('GOMinimumMove'), CNST(0.0)/units_inp%length%factor, g_opt%toldr)
+      g_opt%toldr = g_opt%toldr*units_inp%length%factor
       
       !%Variable GOStep
       !%Type float
@@ -277,6 +296,7 @@ contains
     real(8), intent(out) :: df(n)
 
     integer :: i
+    character(len=256) :: c_geom_iter, title
 
     do i = 0, geo%natoms - 1
       geo%atom(i+1)%x(1) = x(3*i + 1)
@@ -305,6 +325,10 @@ contains
       end do
     end if
 
+    write(c_geom_iter, '(a,i4.4)') "go.", geom_iter
+    write(title, '(f16.10)') f/units_out%energy%factor
+    call atom_write_xyz("geom", trim(c_geom_iter), geo, trim(title))
+    geom_iter = geom_iter + 1
 
         write(message(1),'(a)')
         write(message(2), '(6x,2(a,f16.10))')  "Energy = ", f/units_out%energy%factor

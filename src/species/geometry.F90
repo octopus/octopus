@@ -645,9 +645,10 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine atom_write_xyz(dir, fname, geo)
+  subroutine atom_write_xyz(dir, fname, geo, movie)
     character(len=*),    intent(in) :: dir, fname
     type(geometry_t),    intent(in) :: geo
+    character(len=*),    intent(in), optional :: movie
 
     integer i, iunit
 
@@ -657,7 +658,11 @@ contains
     iunit = io_open(trim(dir)//'/'//trim(fname)//'.xyz', action='write')
 
     write(iunit, '(i4)') geo%natoms
-    write(iunit, '(1x)')
+    if (present(movie)) then
+      write(iunit, '(1x,a)') movie
+    else
+      write(iunit, '(1x)')
+    endif
     do i = 1, geo%natoms
       write(iunit, '(6x,a,2x,3f12.6)') geo%atom(i)%label, geo%atom(i)%x(:)/units_out%length%factor
     end do

@@ -292,19 +292,20 @@ void my_fdf (const gsl_vector *x, void *params,
 }
 
 double FC_FUNC_(oct_minimize, OCT_MINIMIZE)
-     (int*method, int *dim, double *point, double *step, double *tol, int *maxiter, void *f)
+     (int*method, int *dim, double *point, double *step, double *tolgrad, double *toldr, int *maxiter, void *f)
 {
 
   size_t iter = 0;
   int status;
-  double return_value, maxgrad;
+  double return_value, maxgrad, maxdr;
   int i;
+  double oldpoint[*dim];
 
   const gsl_multimin_fdfminimizer_type *T;
   gsl_multimin_fdfminimizer *s;
   gsl_vector *x;
   gsl_vector *grad;
-  gsl_vector *absgrad;
+  gsl_vector *absgrad, *absdr;
   gsl_multimin_function_fdf my_func;
 
   my_func.f = &my_f;
@@ -320,6 +321,7 @@ double FC_FUNC_(oct_minimize, OCT_MINIMIZE)
   /* Allocate space for the gradient */
   grad = gsl_vector_alloc (*dim);
   absgrad = gsl_vector_alloc (*dim);
+  absdr = gsl_vector_alloc (*dim);
 
   switch(*method){
   case 1: T = gsl_multimin_fdfminimizer_steepest_descent;
@@ -342,15 +344,20 @@ double FC_FUNC_(oct_minimize, OCT_MINIMIZE)
 
       for(i=0; i<*dim; i++) point[i] = gsl_vector_get(gsl_multimin_fdfminimizer_x(s), i);
       return_value = gsl_multimin_fdfminimizer_minimum(s);
+      if (iter>1) {
+        for(i=0; i<*dim; i++) gsl_vector_set(absdr, i, fabs(point[i]-oldpoint[i]));
+        maxdr = gsl_vector_max(absdr);
+      }
+      for(i=0; i<*dim; i++) oldpoint[i] = point[i];
 
       if (status) break;
 
-      status = (maxgrad > *tol);
+      status = ( (maxgrad > *tolgrad) && (maxdr > *toldr) );
       }
   while (status && iter < *maxiter);
 
   gsl_multimin_fdfminimizer_free (s);
-  gsl_vector_free (x); gsl_vector_free(grad); gsl_vector_free(absgrad);
+  gsl_vector_free (x); gsl_vector_free(grad); gsl_vector_free(absgrad); gsl_vector_free(absdr);
   return return_value;
 }
 
