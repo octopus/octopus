@@ -83,14 +83,14 @@
 
   ! ---------------------------------------------------------
   logical function iteration_manager(oct, gr, td_fitness, par, &
-                                     td, psi, target_st, iterator) result(stoploop)
+                                     td, psi, target, iterator) result(stoploop)
     type(oct_t), intent(in)             :: oct
     type(grid_t), intent(in)            :: gr
     FLOAT, intent(in)                   :: td_fitness(:)
     type(oct_control_parameters_t), intent(in)  :: par
     type(td_t), intent(in)              :: td
     type(states_t), intent(in)          :: psi
-    type(states_t), intent(in)          :: target_st
+    type(target_t), intent(in)          :: target
     type(oct_iterator_t), intent(inout) :: iterator
 
     FLOAT :: fluence, overlap, jfunctional, j2
@@ -100,7 +100,7 @@
     
     stoploop = .false.
 
-    overlap = j1(oct, gr%m, td_fitness, td%max_iter, psi, target_st)
+    overlap = j1(oct, gr%m, td_fitness, td%max_iter, psi, target)
     fluence = laser_fluence(par)
     j2 = j2_functional(par)
     jfunctional = overlap - j2

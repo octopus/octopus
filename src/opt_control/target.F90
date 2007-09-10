@@ -30,8 +30,11 @@ module opt_control_target_m
   use string_m
   use states_m
   use grid_m
+  use output_m
   use geometry_m
+  use states_output_m
   use mesh_m
+  use mesh_function_m
   use restart_m
   use opt_control_constants_m
 
@@ -40,14 +43,37 @@ module opt_control_target_m
   private
   public :: target_t,    &
             target_init, &
-            target_end
+            target_end,  &
+            target_output
 
   type target_t
     integer :: totype
     type(states_t) :: st
+    FLOAT, pointer :: rho(:)
   end type target_t
 
   contains
+
+  ! ----------------------------------------------------------------------
+  subroutine target_output(gr, dir, outp, target)
+    type(grid_t), intent(inout)   :: gr
+    character(len=*), intent(in)  :: dir
+    type(output_t),   intent(in)  :: outp
+    type(target_t), intent(inout) :: target
+
+    integer :: ierr
+    call push_sub('target.target_output')
+
+    select case(target%totype)
+    case(oct_tg_local)
+      call doutput_function(outp%how, trim(dir), 'local_target', gr%m, gr%sb, &
+        target%rho, M_ONE, ierr, is_tmp = .false.)
+    case default
+      call states_output(target%st, gr, trim(dir), outp)
+    end select
+
+    call pop_sub()
+  end subroutine target_output
 
   ! ----------------------------------------------------------------------
   subroutine target_init(gr, geo, stin, target)
@@ -66,8 +92,7 @@ module opt_control_target_m
     character(len=1024) :: expression
     character(len=10) :: fname
 
-
-    call push_sub('opt_control.def_toperator')
+    call push_sub('target.target_init')
 
     !%Variable OCTTargetOperator
     !%Type integer
@@ -177,60 +202,37 @@ module opt_control_target_m
 
       message(1) =  'Info: Using Local Target'
       call write_info(1)
+
       !%Variable OCTLocalTarget
-      !%Type block
+      !%Type string
       !%Section Optimal Control
       !%Description
-      !% This block defines the shape and position of the local target operator. 
-      !% It is possible to define several local operators which are then summed up.
-      !% The syntax of each line is, then:
-      !%
-      !% <tt>%OCTLocalTarget
-      !% <br>&nbsp;&nbsp; "exp(-r^2)*exp(-i*0.2*x)"
-      !% <br>%</tt>
-      !%  
-      !% Example
-      !%
-      !% <tt>%OCTLocalTarget
-      !% <br>&nbsp;&nbsp; "exp(-r^2)*exp(-i*0.2*x)"
-      !% <br>%</tt>
-      !%
+      !% If OCTTargetOperator = oct_tg_local, then one must supply the target density
+      !% that should be searched for. This one can do by supplying a string through
+      !% the variable OCTLocalTarget.
       !%End
-      ! parse input
-      
-      if(loct_parse_block(check_inp('OCTLocalTarget'),blk)==0) then
-        no_states = loct_parse_block_n(blk)
-        target%st%zpsi(:, 1, 1, 1) = m_z0
-
-        do ib = 1, no_states
-          ! parse formula string
-          call loct_parse_block_string(blk, ib-1, 0, expression)
-          ! convert to C string
-          call conv_to_C_string(expression)
-          
-          do ip = 1, gr%m%np
-            x = gr%m%x(ip, :)
-            r = sqrt(sum(x(:)**2))
-            
-            ! parse user defined expressions
-            call loct_parse_expression(psi_re, psi_im, &
-              x(1), x(2), x(3), r, M_ZERO, expression)
-            
-            ! fill state
-            target%st%zpsi(ip, 1, 1, 1) = target%st%zpsi(ip, 1, 1, 1) &
-              + psi_re + M_zI*psi_im
-          end do
-          
-          ! normalize orbital
-          call zstates_normalize_orbital(gr%m, target%st%d%dim, &
-            target%st%zpsi(:,:, 1, 1))
+      if(loct_parse_isdef('OCTLocalTarget').ne.0) then
+        ALLOCATE(target%rho(NP), NP)
+        target%rho = M_ZERO
+        call loct_parse_string('OCTLocalTarget', "0", expression)
+        call conv_to_C_string(expression)
+        do ip = 1, NP
+          call mesh_r(gr%m, ip, r, x = x)
+          ! parse user defined expression
+          call loct_parse_expression(psi_re, psi_im, &
+            x(1), x(2), x(3), r, M_ZERO, expression)
+          target%rho(ip) = psi_re
         end do
-        call loct_parse_block_end(blk)
+        ! Normalize
+        r = dmf_integrate(gr%m, target%rho)
+        !call lalg_scal(NP, M_ONE/r, target%rho)
+        target%rho = target%rho/r
       else
-        message(1) = '"OCTLocalTarget" has to be specified as block.'
-        call write_fatal(1)
+        message(1) = 'If OCTTargetOperator = oct_tg_local, then you must give the shape'
+        message(2) = 'of this target in variable "OCTLocalTarget"'
+        call write_fatal(2)
       end if
-
+      
     case(oct_tg_td_local)
       target%st%zpsi(:,1,1,1) = M_z0
 
@@ -248,6 +250,10 @@ module opt_control_target_m
     call push_sub('target.target_end')
 
     call states_end(target%st)
+    if(target%totype.eq.oct_tg_local) then
+      deallocate(target%rho)
+      nullify(target%rho)
+    end if
 
     call pop_sub()
   end subroutine target_end

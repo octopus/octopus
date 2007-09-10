@@ -1,0 +1,84 @@
+# -*- coding: utf-8 mode: shell-script -*-
+# $Id: 03-asym_doublewell.02-oct_run.inp 3162 2007-09-03 11:38:24Z acastro $
+
+DebugLevel = 0
+Dimensions = 1
+fromScratch = yes
+
+CalculationMode = opt_control
+
+
+# ------------------
+# Grid
+# ------------------
+BoxShape = sphere
+Spacing = 0.1
+Radius =  8.0
+
+
+# ------------------
+# System
+# ------------------
+%Species
+"ADW1D" | 1 | user_defined | 1 | "1/64*(x)^4-1/4*(x)^2+1/256*(x)^3"
+%
+
+%Coordinates
+"ADW1D" | 0 | 0 | 0
+%
+
+NonInteractingElectrons = yes
+
+
+# ------------------
+# TD RUN Parameters
+# ------------------
+
+stime  = 200.0
+dt = 0.01
+TDEvolutionMethod = aetrs
+TDExponentialMethod = taylor
+TDExponentialOrder = 4
+TDLanczosTol = 5.0e-5
+TDMaximumIter = stime/dt
+TDTimeStep = dt
+
+
+# --------------
+# OCT parameters
+# --------------
+
+OCTPenalty = 0.2
+OCTMaxIter = 2
+OCTTargetMode = oct_targetmode_static
+OCTFilterMode = no
+OCTInitialState = oct_is_groundstate
+OCTTargetOperator = oct_tg_local
+OCTLocalTarget = "exp(-(x-1)^2)"
+
+OCTScheme  = oct_algorithm_zr98
+OCTDoubleCheck = no
+
+#----------------------------
+# Laser field = Initial guess
+#-----------------------------
+
+
+ampl = 0.06
+freq = 0.157
+envelope = envelope_constant
+w = 5.0
+cycles = 4
+tau = (pi/freq)*cycles
+t0 = tau
+%TDExternalFields
+  electric_field | 1 | 0 | 0 | envelope | ampl | freq 
+%
+
+
+#----------------------------
+# Output
+#-----------------------------
+
+Output = density
+OutputHow = axis_x

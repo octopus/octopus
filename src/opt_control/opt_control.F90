@@ -149,7 +149,7 @@ contains
     call check_faulty_runmodes(oct)
 
     call states_output(initial_st, gr, 'opt-control/initial', sys%outp)
-    call states_output(target%st, gr, 'opt-control/target', sys%outp)
+    call target_output(gr, 'opt-control/target', sys%outp, target)
 
     ! psi is the "working state".
     psi = initial_st
@@ -214,10 +214,9 @@ contains
         
       ctr_loop: do
         
-         ! defines chi
-        call target_calc(oct, gr, target, psi, chi)
+        call calc_chi(oct, gr, target, psi, chi)
         
-        if(iteration_manager(oct, gr, tdt%td_fitness, par, td, psi, target%st, iterator)) &
+        if(iteration_manager(oct, gr, tdt%td_fitness, par, td, psi, target, iterator)) &
           exit ctr_loop
         
         call bwd_step(oct_algorithm_zr98, oct%targetmode, sys, td, h, tdt, par, par_tmp, chi, psi)
@@ -256,10 +255,9 @@ contains
         write(filename,'(a,i3.3)') 'opt-control/laser.', iterator%ctr_iter
         call parameters_write(filename, par)
 
-        ! define target state
-        call target_calc(oct, gr, target, psi, chi)
+        call calc_chi(oct, gr, target, psi, chi)
         
-        if(iteration_manager(oct, gr, tdt%td_fitness, par, td, psi, target%st, iterator)) &
+        if(iteration_manager(oct, gr, tdt%td_fitness, par, td, psi, target, iterator)) &
           exit ctr_loop
         
         call bwd_step(oct_algorithm_wg05, oct%targetmode, sys, td, h, tdt, par, par_tmp, chi, psi)
@@ -310,7 +308,7 @@ contains
       message(1) = "Info: Initial backward propagation"
       call write_info(1)
       
-      call target_calc(oct, gr, target, psi, chi)
+      call calc_chi(oct, gr, target, psi, chi)
 
       call parameters_to_h(par, h%ep)
       call propagate_backward(sys, h, td, chi)
@@ -328,11 +326,11 @@ contains
         write(filename,'(a,i3.3)') 'opt-control/laser.', iterator%ctr_iter
         call parameters_write(filename, par)
         
-        if(iteration_manager(oct, gr, tdt%td_fitness, par, td, psi, target%st, iterator)) &
+        if(iteration_manager(oct, gr, tdt%td_fitness, par, td, psi, target, iterator)) &
           exit ctr_loop
         
          ! and now backward
-        call target_calc(oct, gr, target, psi, chi)
+        call calc_chi(oct, gr, target, psi, chi)
         call bwd_step(oct_algorithm_zbr98, oct%targetmode, sys, td, h, tdt, par, par_tmp, chi, psi)
         
       end do ctr_loop

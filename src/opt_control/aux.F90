@@ -24,12 +24,16 @@
   ! case, or else \int_0^T dt <Psi(t)|\hat{O}(t)|Psi(t) in 
   ! the time-dependent case.
   ! ---------------------------------------------------------
-  FLOAT function j1(oct, m, td_fitness, max_iter, psi, target_st)
+  FLOAT function j1(oct, m, td_fitness, max_iter, psi, target)
     type(oct_t), intent(in)    :: oct
     type(mesh_t), intent(in)   :: m
     FLOAT, intent(in)          :: td_fitness(:)
     integer, intent(in)        :: max_iter
-    type(states_t), intent(in) :: psi, target_st
+    type(states_t), intent(in) :: psi
+    type(target_t), intent(in) :: target
+
+    integer :: i
+    FLOAT, allocatable :: local_function(:)
 
     call push_sub('opt_control.overlap_function')
 
@@ -37,7 +41,17 @@
        ! 1/T * int(<Psi| O | Psi>)
        j1 = sum(td_fitness) / real(max_iter, REAL_PRECISION) 
     else
-      j1 = abs(zstates_mpdotp(m, psi, target_st))**2
+      select case(target%totype)
+      case(oct_tg_local)
+        ALLOCATE(local_function(m%np), m%np)
+        do i = 1, m%np
+          local_function(i) = - ( sqrt(psi%rho(i, 1)) - sqrt(target%rho(i)) )**2
+        end do
+        j1 = dmf_integrate(m, local_function)
+        deallocate(local_function)
+      case default
+        j1 = abs(zstates_mpdotp(m, psi, target%st))**2
+      end select
     end if
 
     call pop_sub()
@@ -45,9 +59,9 @@
 
 
   ! ---------------------------------------------------------
-  ! calculate chi = \hat{O} psi
-  ! do loop <target_st|Psi> for all States
-  subroutine target_calc(oct, gr, target, psi_in, chi_out)
+  ! calculate |chi> = \hat{O} |psi>
+  ! ---------------------------------------------------------
+  subroutine calc_chi(oct, gr, target, psi_in, chi_out)
     type(oct_t),       intent(in)  :: oct
     type(grid_t),      intent(in)  :: gr
     type(states_t),    intent(in)  :: psi_in
@@ -56,16 +70,20 @@
     type(states_t),    intent(inout) :: chi_out
     
     CMPLX   :: olap
-    integer :: ik, p, dim
+    integer :: ik, p, dim, j
   
-    call push_sub('opt_control.target_calc')
+    call push_sub('opt_control.calc_chi')
 
     if(oct%targetmode==oct_targetmode_static) then
-      if(target%totype.eq.oct_tg_local) then ! only zr98 and wg05
+      if(target%totype.eq.oct_tg_local) then
         do ik = 1, psi_in%d%nik
           do p  = psi_in%st_start, psi_in%st_end
             do dim = 1, psi_in%d%dim
-              chi_out%zpsi(:,dim,p,ik) = target%st%zpsi(:, 1, 1 , 1)*psi_in%zpsi(:, dim, p, ik)
+              do j = 1, NP
+                chi_out%zpsi(j, dim, p, ik) = sqrt(target%rho(j)) * &
+                  exp( M_z1 * atan2(aimag(psi_in%zpsi(j, dim, p, ik)), &
+                                    real(psi_in%zpsi(j, dim, p, ik)  )) )
+              end do
             end do
           end do
         end do
@@ -91,7 +109,7 @@
     end if
       
     call pop_sub()
-  end subroutine target_calc
+  end subroutine calc_chi
 
 
 !! Local Variables:

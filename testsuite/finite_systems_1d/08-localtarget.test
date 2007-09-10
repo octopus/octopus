@@ -1,0 +1,36 @@
+# -*- coding: utf-8 mode: shell-script -*-
+# $Id: 03-asym_doublewell.test 3193 2007-09-09 23:14:17Z acastro $
+
+Test       : OCT with local target
+Author     : Alberto
+Date       : 07.09.07
+Arch       : Linux 
+Release    : 2.6.21
+Programs   : octopus; octopus_single
+TestGroups : long-run
+Enabled    : Yes
+
+# The test ensures that the OCT with local target works.
+# 
+# We do the following intermediate steps:
+# First, the two lowest eigenstates of the asymmetric double well,
+# V(x) = 1/64*(x)^4-1/4*(x)^2+1/256*(x)^3,
+# are calculated. 
+# A similar potential is used in Rev Mod (Haenggi, Griffoni)
+
+Input: 08-localtarget.01-gs.inp
+Match ; TotalEnergy ; grep -A 7 '^Energy:' static/info ; \s*Total\s*=\s*-0.6206
+
+# Now we calculate some unoccupied states
+Input: 08-localtarget.02-unocc.inp
+Match ; 2th state  ; grep '2   --' static/eigenvalues ; \s*-0.4638 
+
+# Then, run the optimization for two iterations and check the convergence.
+# Note that this run only converges to an almost perfect overlap with
+# the target density after a lot of iterations (e.g., if we run over
+# 100 iterations we reach J1 = -0.01156, with J1=0 implying perfect
+# overlap and J1 = -2 to overlap at all.
+Input: 08-localtarget.03-oct.inp
+Match ; J1 2nd iteration  ; grep ' 2  ' opt-control/convergence ; \s*-0.422\d*
+
+
