@@ -217,7 +217,7 @@ contains
       !%Option cg_bfgs2 5
       !% The bfgs2 version of this minimizer is the most efficient version available, 
       !% and is a faithful implementation of the line minimization scheme described in 
-      !% Fletcher's _Practical Methods of Optimization_, Algorithms 2.6.2 and 2.6.4.
+      !% Fletcher, _Practical Methods of Optimization_, Algorithms 2.6.2 and 2.6.4.
       !%End
       call loct_parse_int(check_inp('GOMethod'), MINMETHOD_STEEPEST_DESCENT, g_opt%method)
       if(.not.varinfo_valid_option('GOMethod', g_opt%method)) call input_error('GOMethod')
