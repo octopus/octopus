@@ -46,6 +46,9 @@ dist_share_DATA = \
 	07-sym_doublewell.test \
 	07-sym_doublewell.01-ground_state.inp \
 	07-sym_doublewell.02-unocc.inp \
-	07-sym_doublewell.03-oct.inp
+	07-sym_doublewell.03-oct.inp \
+	08-localtarget.test \
+	08-localtarget.01-gs.inp \
+	08-localtarget.02-oct.inp
 
 CLEANFILES = *~ *.bak

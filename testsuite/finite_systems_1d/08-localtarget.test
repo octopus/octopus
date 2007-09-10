@@ -21,16 +21,12 @@ Enabled    : Yes
 Input: 08-localtarget.01-gs.inp
 Match ; TotalEnergy ; grep -A 7 '^Energy:' static/info ; \s*Total\s*=\s*-0.6206
 
-# Now we calculate some unoccupied states
-Input: 08-localtarget.02-unocc.inp
-Match ; 2th state  ; grep '2   --' static/eigenvalues ; \s*-0.4638 
-
 # Then, run the optimization for two iterations and check the convergence.
 # Note that this run only converges to an almost perfect overlap with
 # the target density after a lot of iterations (e.g., if we run over
 # 100 iterations we reach J1 = -0.01156, with J1=0 implying perfect
 # overlap and J1 = -2 to overlap at all.
-Input: 08-localtarget.03-oct.inp
+Input: 08-localtarget.02-oct.inp
 Match ; J1 2nd iteration  ; grep ' 2  ' opt-control/convergence ; \s*-0.422\d*
 
 
