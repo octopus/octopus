@@ -1,21 +1,21 @@
-  !! Copyright (C) 2002-2006 M. Marques, A. Castro, A. Rubio, G. Bertsch
-  !!
-  !! This program is free software; you can redistribute it and/or modify
-  !! it under the terms of the GNU General Public License as published by
-  !! the Free Software Foundation; either version 2, or (at your option)
-  !! any later version.
-  !!
-  !! This program is distributed in the hope that it will be useful,
-  !! but WITHOUT ANY WARRANTY; without even the implied warranty of
-  !! MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-  !! GNU General Public License for more details.
-  !!
-  !! You should have received a copy of the GNU General Public License
-  !! along with this program; if not, write to the Free Software
-  !! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
-  !! 02111-1307, USA.
-  !!
-  !! $Id: eigen.F90 3030 2007-06-25 16:45:05Z marques $
+!! Copyright (C) 2002-2006 M. Marques, A. Castro, A. Rubio, G. Bertsch
+!!
+!! This program is free software; you can redistribute it and/or modify
+!! it under the terms of the GNU General Public License as published by
+!! the Free Software Foundation; either version 2, or (at your option)
+!! any later version.
+!!
+!! This program is distributed in the hope that it will be useful,
+!! but WITHOUT ANY WARRANTY; without even the implied warranty of
+!! MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+!! GNU General Public License for more details.
+!!
+!! You should have received a copy of the GNU General Public License
+!! along with this program; if not, write to the Free Software
+!! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
+!! 02111-1307, USA.
+!!
+!! $Id: eigen.F90 3030 2007-06-25 16:45:05Z marques $
   
   ! Implementation of the locally optimal block preconditioned conjugate
   ! gradients algorithm.
@@ -48,18 +48,25 @@
     FLOAT, optional,        intent(out)   :: diff(1:st%nst, 1:st%d%nik)
     logical, optional,      intent(in)    :: verbose
 
-    integer :: np            ! Number of points per state.
-    integer :: nep           ! Number of eigenpairs.
-    integer :: nst           ! Number of eigenstates (i. e. the blocksize).
+    integer :: np               ! Number of points per state.
+    integer :: nep              ! Number of eigenpairs.
+    integer :: nst              ! Number of eigenstates (i. e. the blocksize).
+    integer :: lnst             ! Number of local eigenstates.
     integer :: ik, ist
-    integer :: i, j, k, maxiter
-    integer :: conv
-    integer :: nuc, uc(st%nst)
+    integer :: st_start, st_end
+    integer :: i, j, k
+    integer :: conv, maxiter
+#if defined(HAVE_MPI)
+    integer :: mpi_err
+#endif
+
+    integer, target  :: nuc, uc(st%nst) ! Index set of unconverged eigenpairs.
+    integer, pointer :: lnuc, luc(:)    ! Index set of local unconverged eigenpairs.
+
     logical :: verbose_
+    logical :: explicit_gram
 
-    logical :: explicitGram
-
-    FLOAT,  allocatable :: diffs(:, :)
+    FLOAT,  allocatable :: diffs(:, :), ldiffs(:)
     R_TYPE, allocatable :: tmp(:, :, :)     ! Temporary storage of wavefunction size.
     R_TYPE, allocatable :: nuc_tmp(:, :)    ! Temporary storage of Gram block size.
     R_TYPE, allocatable :: res(:, :, :)     ! Residuals.
@@ -67,7 +74,6 @@
     R_TYPE, allocatable :: dir(:, :, :)     ! Conjugate directions.
     R_TYPE, allocatable :: h_dir(:, :, :)   ! H dir.
     R_TYPE, allocatable :: h_psi(:, :, :)   ! H |psi>.
-    R_TYPE, pointer     :: psi(:, :, :)     ! Pointer to the eigenstates.
     FLOAT, pointer      :: eval(:, :)       ! Pointer to the eigenvalues.
     R_TYPE, allocatable :: gram_h(:, :)     ! Gram matrix for Hamiltonian.
     R_TYPE, allocatable :: gram_i(:, :)     ! Gram matrix for unit matrix.
@@ -80,8 +86,8 @@
 
     call push_sub('eigen_lobpcg.Xeigen_solver_lobpcg')
 
-    ! The results with explicit Gram diagonal blocks were not better.
-    explicitGram = .false.
+    ! The results with explicit Gram diagonal blocks were not better, so it is switched of.
+    explicit_gram = .false.
 
     ! Check if LOBPCG can be run.
     ! LOBPCG does not work with domain parallelization for the moment
@@ -93,15 +99,29 @@
     end if
 
     ! Some abbreviations.
-    eval => st%eigenval
-    nep  =  st%nst * st%d%nik
-    nst  =  st%nst
-    np   =  NP_PART*st%d%dim
+    eval     => st%eigenval
+    nst      =  st%nst
+    nep      =  nst*st%d%nik
+    np       =  NP_PART*st%d%dim
+    st_start =  st%st_start
+    st_end   =  st%st_end
+
+    ! If not running parallel, the luc and lnuc just point to the global set.
+    if(st%parallel_in_states) then
+      lnst = st%st_end-st%st_start+1
+      ALLOCATE(luc(lnst), lnst)
+      ALLOCATE(lnuc, 1)
+    else
+      luc  => uc
+      lnuc => nuc
+      lnst =  nst
+    end if
 
     if(present(diff)) then
       diff = R_TOTYPE(M_ZERO)
     end if
 
+    ! Some verbose output.
     verbose_ = .false.
     if(present(verbose)) verbose_ = verbose
     if(verbose_) then
@@ -115,87 +135,106 @@
       call write_info(5)
     end if
 
+    ! FIXME: it should be possible to allocate only vectors of length NP.
     ALLOCATE(diffs(nst, st%d%nik), nep)
-    ALLOCATE(tmp(NP_PART, st%d%dim, nst), NP_PART*st%d%dim*nst)
-    ALLOCATE(res(NP_PART, st%d%dim, nst), NP_PART*st%d%dim*nst)
-    ALLOCATE(h_res(NP_PART, st%d%dim, nst), NP_PART*st%d%dim*nst)
-    ALLOCATE(dir(NP_PART, st%d%dim, nst), NP_PART*st%d%dim*nst)
-    ALLOCATE(h_dir(NP_PART, st%d%dim, nst), NP_PART*st%d%dim*nst)
-    ALLOCATE(h_psi(NP_PART, st%d%dim, nst), NP_PART*st%d%dim*nst)
+    ALLOCATE(tmp(NP_PART, st%d%dim, st_start:st_end), NP_PART*st%d%dim*lnst)
+    ALLOCATE(res(NP_PART, st%d%dim, st_start:st_end), NP_PART*st%d%dim*lnst)
+    ALLOCATE(h_res(NP_PART, st%d%dim, st_start:st_end), NP_PART*st%d%dim*lnst)
+    ALLOCATE(dir(NP_PART, st%d%dim, st_start:st_end), NP_PART*st%d%dim*lnst)
+    ALLOCATE(h_dir(NP_PART, st%d%dim, st_start:st_end), NP_PART*st%d%dim*lnst)
+    ALLOCATE(h_psi(NP_PART, st%d%dim, st_start:st_end), NP_PART*st%d%dim*lnst)
     ALLOCATE(gram_block(nst, nst), nst**2)
     ALLOCATE(ritz_val(nst), nst)
 
     maxiter = niter
     niter   = 0
 
+    ! Iterate over all k-points.
     k_loop: do ik = 1, st%d%nik
       ! At the beginning, all eigenvectors are considered unconverged.
       nuc = nst
       do ist = 1, nst
         uc(ist) = ist
       end do
-
-      ! Set pointer to current block, so we can drop the k index in the following.
-      psi => st%X(psi)(:, :, :, ik)
+      if(st%parallel_in_states) then
+        lnuc = lnst
+        do ist = 1, lnuc
+          luc(ist) = ist+st_start-1
+        end do
+      end if
 
       ! Orthonormalize initial vectors.
-      call X(lobpcg_orth)(gr%m, st%d%dim, st%d%wfs_type, nst, np, psi, nuc, uc)
-      ! Get initial Ritz-values and -vectors.
-      do ist = 1, nst
-        call X(hpsi)(h, gr, psi(:, :, ist), h_psi(:, :, ist), ik)
-      end do
-      niter = niter+nst
+      call X(lobpcg_orth)(gr%m, st, st%X(psi)(:, :, :, ik), nuc, uc, lnuc, luc)
 
-      call states_blockt_mul(gr%m, st%d%dim, psi, h_psi, gram_block)
+      ! Get initial Ritz-values and -vectors.
+      do ist = st_start, st_end
+        call X(hpsi)(h, gr, st%X(psi)(:, :, ist, ik), h_psi(:, :, ist), ik)
+      end do
+      niter = niter+lnst
+
+      call states_blockt_mul(gr%m, st, st%X(psi)(:, :, :, ik), h_psi, gram_block)
       call X(lobpcg_conj)(st%d%wfs_type, nst, nst, gram_block)
 
       ALLOCATE(ritz_vec(nst, nst), nst**2)
       call lalg_eigensolve(nst, gram_block, ritz_vec, eval(:, ik))
-
-      call states_block_matr_mul(gr%m, st%d%dim, psi, ritz_vec, tmp)
-      call lalg_copy(np*nst, tmp(:, 1, 1), psi(:, 1, 1))
-
-      call states_block_matr_mul(gr%m, st%d%dim, h_psi, ritz_vec, tmp)
-      call lalg_copy(np*nst, tmp(:, 1, 1), h_psi(:, 1, 1))
+      call states_block_matr_mul(gr%m, st, st%X(psi)(:, :, :, ik), ritz_vec, tmp)
+      call lalg_copy(np*lnst, tmp(:, 1, st_start), st%X(psi)(:, 1, st_start, ik))
+      call states_block_matr_mul(gr%m, st, h_psi, ritz_vec, tmp)
+      call lalg_copy(np*lnst, tmp(:, 1, st_start), h_psi(:, 1, st_start))
       deallocate(ritz_vec)
-
 
       ! First iteration is special because Gram matrices are smaller than in
       ! following iterations.
 
       ! Calculate residuals: res(ist, ik) <- H psi(ist, ik) - eval(ist, ik) psi(ist, ik).
-      call X(lobpcg_res)(nst, ik, np, h_psi, psi, eval, res)
+      call X(lobpcg_res)(st, ik, gr%m, h_psi, st%X(psi)(:, :, :, ik), eval, res)
 
       ! Check for convergence.
-      call X(lobpcg_unconv_ev)(ik, gr%m, st%d%dim, tol, res, diffs, nuc, uc)
+      call X(lobpcg_unconv_ev)(ik, gr%m, st, tol, res, diffs, nuc, uc, lnuc, luc)
       conv = nst-nuc
 
+      ! If converged, go to the next k-point.
       if(conv.eq.nst) then
         if(present(diff)) then
+#if defined(HAVE_MPI)
+          ! Exchange differences.
+          if(st%parallel_in_states) then
+            ALLOCATE(ldiffs(lnst), lnst)
+            ldiffs = diffs(st_start:st_end, ik)
+            call lmpi_gen_alltoallv(lnst, ldiffs, i, diffs(:, ik), st%mpi_grp)
+            deallocate(ldiffs)
+          end if
+#endif
           diff = diffs
         end if
         converged = converged + conv
-        call X(lobpcg_info)(verbose_, ik, 1, nst, nuc, uc, diffs(:, ik))
+        call X(lobpcg_info)(st, verbose_, ik, 1, nuc, uc, diffs(:, ik))
         cycle k_loop
       end if
 
       ! Apply preconditioner.
-      do i = 1, nuc
-        ist = uc(i)
+      do i = 1, lnuc
+        ist = luc(i)
         call X(preconditioner_apply)(pre, gr, h, res(:, :, ist), tmp(:, :, ist))
         call lalg_copy(np, tmp(:, 1, ist), res(:, 1, ist))
       end do
 
       ! Orthonormalize residuals.
-      call X(lobpcg_orth)(gr%m, st%d%dim, st%d%wfs_type, nst, np, res, nuc, uc)
+      call X(lobpcg_orth)(gr%m, st, res, nuc, uc, lnuc, luc)
 
       ! Apply Hamiltonian to residuals.
-      do i = 1, nuc
-        ist = uc(i)
+      do i = 1, lnuc
+        ist = luc(i)
         call X(hpsi)(h, gr, res(:, :, ist), h_res(:, :, ist), ik)
       end do
-      niter = niter+nuc
+      niter = niter+lnuc
 
+      ! FIXME: as we are, after all, only solving a standard eigenvalue problem
+      ! it should be possible to do the Rayleigh-Ritz also only with a standard
+      ! eigenvalue problem. This would reduce the number of block operations by
+      ! a considerable amount (also, the LAPACK routine for a standard problem is
+      ! a bit faster, I expect). I tried this but it did not work. I made something
+      ! wrong, I guess.
       ! Rayleigh-Ritz procedure.
       ALLOCATE(ritz_psi(nst, nst), nst**2)
       ALLOCATE(ritz_dir(nuc, nst), nst*nuc)
@@ -206,8 +245,8 @@
 
       ! gram_h matrix.
       ! (1, 1)-block:
-      if(explicitGram) then
-        call states_blockt_mul(gr%m, st%d%dim, h_psi, psi, gram_h(1:nst, 1:nst))
+      if(explicit_gram) then
+        call states_blockt_mul(gr%m, st, h_psi, st%X(psi)(:, :, :, ik), gram_h(1:nst, 1:nst))
         call X(lobpcg_conj)(st%d%wfs_type, nst, nst, gram_h(1:nst, 1:nst))
       else
         ! Eigenvalues in gram_h.
@@ -217,20 +256,20 @@
         end do
       end if
 
-      ! (1, 2)-block: (H |psi>)^T res.
-      call states_blockt_mul(gr%m, st%d%dim, h_psi, res, gram_h(1:nst, nst+1:nst+nuc), idx2=UC)
+      ! (1, 2)-block: (H |psi>)^+ res.
+      call states_blockt_mul(gr%m, st, h_psi, res, gram_h(1:nst, nst+1:nst+nuc), idx2=UC)
 
-      ! (2, 2)-block: res^T (H res).
-      call states_blockt_mul(gr%m, st%d%dim, res, h_res, &
+      ! (2, 2)-block: res^+ (H res).
+      call states_blockt_mul(gr%m, st, res, h_res, &
         gram_h(nst+1:nst+nuc, nst+1:nst+nuc), idx1=UC, idx2=UC)
       call X(lobpcg_conj)(st%d%wfs_type, nuc, nuc, gram_h(nst+1:nst+nuc, nst+1:nst+nuc))
 
       ! gram_i matrix.
       ! Diagonal blocks:
-      if(explicitGram) then
-        call states_blockt_mul(gr%m, st%d%dim, psi, psi, gram_i(1:nst, 1:nst))
+      if(explicit_gram) then
+        call states_blockt_mul(gr%m, st, st%X(psi)(:, :, :, ik), st%X(psi)(:, :, :, ik), gram_i(1:nst, 1:nst))
         call X(lobpcg_conj)(st%d%wfs_type, nst, nst, gram_i(1:nst, 1:nst))
-        call states_blockt_mul(gr%m, st%d%dim, res, res, &
+        call states_blockt_mul(gr%m, st, res, res, &
           gram_i(nst+1:nst+nuc, nst+1:nst+nuc), idx1=UC, idx2=UC)
         call X(lobpcg_conj)(st%d%wfs_type, nuc, nuc, gram_i(nst+1:nst+nuc, nst+1:nst+nuc))
       else
@@ -243,7 +282,7 @@
       end if
 
       ! (1, 2)-block: <psi| res.
-      call states_blockt_mul(gr%m, st%d%dim, psi, res, gram_i(1:nst, nst+1:nst+nuc), idx2=UC)
+      call states_blockt_mul(gr%m, st, st%X(psi)(:, :, :, ik), res, gram_i(1:nst, nst+1:nst+nuc), idx2=UC)
 
       call profiling_in(C_PROFILING_LOBPCG_ESOLVE)
       call lalg_lowest_geneigensolve(nst, nst+nuc, gram_h, gram_i, ritz_val, ritz_vec)
@@ -253,20 +292,20 @@
       ritz_res = ritz_vec(nst+1:nst+nuc, 1:nst)
 
       ! Calculate new conjugate directions.
-      call states_block_matr_mul(gr%m, st%d%dim, res, ritz_res, dir, idxp=UC)
-      call states_block_matr_mul(gr%m, st%d%dim, h_res, ritz_res, h_dir, idxp=UC)
+      call states_block_matr_mul(gr%m, st, res, ritz_res, dir, idxp=UC)
+      call states_block_matr_mul(gr%m, st, h_res, ritz_res, h_dir, idxp=UC)
 
       ! Calculate new eigenstates and update H |psi>
-      call states_block_matr_mul(gr%m, st%d%dim, psi, ritz_psi, tmp)
-      call lalg_copy(np*nst, tmp(:, 1, 1), psi(:, 1, 1))
+      call states_block_matr_mul(gr%m, st, st%X(psi)(:, :, :, ik), ritz_psi, tmp)
+      call lalg_copy(np*lnst, tmp(:, 1, st_start), st%X(psi)(:, 1, st_start, ik))
 
-      do ist = 1, nst ! Leave this loop, otherwise xlf90 crashes.
-        call lalg_axpy(np, R_TOTYPE(M_ONE), dir(:, 1, ist), psi(:, 1, ist))
+      do ist = st_start, st_end ! Leave this loop, otherwise xlf90 crashes.
+        call lalg_axpy(np, R_TOTYPE(M_ONE), dir(:, 1, ist), st%X(psi)(:, 1, ist, ik))
       end do
 
-      call states_block_matr_mul(gr%m, st%d%dim, h_psi, ritz_psi, tmp)
-      call lalg_copy(np*nst, tmp(:, 1, 1), h_psi(:, 1, 1))
-      call lalg_axpy(np*nst, R_TOTYPE(M_ONE), h_dir(:, 1, 1), h_psi(:, 1, 1))
+      call states_block_matr_mul(gr%m, st, h_psi, ritz_psi, tmp)
+      call lalg_copy(np*lnst, tmp(:, 1, st_start), h_psi(:, 1, st_start))
+      call lalg_axpy(np*lnst, R_TOTYPE(M_ONE), h_dir(:, 1, st_start), h_psi(:, 1, st_start))
 
       ! Gram matrices have to be reallocated later (because nuc changes).
       deallocate(ritz_vec, gram_h, gram_i, ritz_psi, ritz_res, ritz_dir)
@@ -277,10 +316,10 @@
       ! This is the big iteration loop.
       iter: do k = 2, maxiter-1 ! One iteration was performed to get initial Ritz-vectors.
         ! Calculate residuals: res(ist, ik) <- H psi(ist, ik) - eval(ist, ik) psi(ist, ik).
-        call X(lobpcg_res)(nst, ik, np, h_psi, psi, eval, res)
+        call X(lobpcg_res)(st, ik, gr%m, h_psi, st%X(psi)(:, :, :, ik), eval, res)
 
-        ! Check for convergence.
-        call X(lobpcg_unconv_ev)(ik, gr%m, st%d%dim, tol, res, diffs, nuc, uc)
+        ! Check for convergence. If converged, quit the eigenpair iteration loop.
+        call X(lobpcg_unconv_ev)(ik, gr%m, st, tol, res, diffs, nuc, uc, lnuc, luc)
         if(nuc.eq.0) then
           exit iter
         end if
@@ -295,26 +334,26 @@
         ALLOCATE(gram_i(nst+2*nuc, nst+2*nuc), (nst+2*nuc)**2)
 
         ! Apply the preconditioner.
-        do i = 1, nuc
-          ist = uc(i)
+        do i = 1, lnuc
+          ist = luc(i)
           call X(preconditioner_apply)(pre, gr, h, res(:, :, ist), tmp(:, :, ist))
           call lalg_copy(np, tmp(:, 1, ist), res(:, 1, ist))
         end do
 
         ! Orthonormalize residuals.
-        call X(lobpcg_orth)(gr%m, st%d%dim, st%d%wfs_type, nst, np, res, nuc, uc)
+        call X(lobpcg_orth)(gr%m, st, res, nuc, uc, lnuc, luc)
 
         ! Apply Hamiltonian to residual.
-        do i = 1, nuc
-          ist = uc(i)
+        do i = 1, lnuc
+          ist = luc(i)
           call X(hpsi)(h, gr, res(:, :, ist), h_res(:, :, ist), ik)
         end do
-        niter = niter+nuc
+        niter = niter+lnuc
 
         ! Orthonormalize conjugate directions.
         ! Since h_dir also has to be modified (to avoid a full calculation of
         ! H dir with the new dir), we cannot use lobpcg_orth at this point.
-        call states_blockt_mul(gr%m, st%d%dim, dir, dir, nuc_tmp, idx1=UC, idx2=UC)
+        call states_blockt_mul(gr%m, st, dir, dir, nuc_tmp, idx1=UC, idx2=UC)
         call X(lobpcg_conj)(st%d%wfs_type, nuc, nuc, nuc_tmp)
         call profiling_in(C_PROFILING_LOBPCG_CHOL)
         call lalg_cholesky(nuc, nuc_tmp)
@@ -326,19 +365,19 @@
         do i = 2, nuc
           nuc_tmp(i, 1:i-1) = R_TOTYPE(M_ZERO)
         end do
-        call states_block_matr_mul(gr%m, st%d%dim, dir, nuc_tmp, tmp, idxp=UC, idxr=UC)
-        do i = 1, nuc
-          call lalg_copy(np, tmp(:, 1, uc(i)), dir(:, 1, uc(i)))
+        call states_block_matr_mul(gr%m, st, dir, nuc_tmp, tmp, idxp=UC, idxr=UC)
+        do i = 1, lnuc
+          call lalg_copy(np, tmp(:, 1, luc(i)), dir(:, 1, luc(i)))
         end do
-        call states_block_matr_mul(gr%m, st%d%dim, h_dir, nuc_tmp, tmp, idxp=UC, idxr=UC)
-        do i = 1, nuc
-          call lalg_copy(np, tmp(:, 1, uc(i)), h_dir(:, 1, uc(i)))
+        call states_block_matr_mul(gr%m, st, h_dir, nuc_tmp, tmp, idxp=UC, idxr=UC)
+        do i = 1, lnuc
+          call lalg_copy(np, tmp(:, 1, luc(i)), h_dir(:, 1, luc(i)))
         end do
 
         ! Rayleigh-Ritz procedure.
         ! gram_h matrix.
-        if(explicitGram) then
-          call states_blockt_mul(gr%m, st%d%dim, h_psi, psi, gram_h(1:nst, 1:nst))
+        if(explicit_gram) then
+          call states_blockt_mul(gr%m, st, h_psi, st%X(psi)(:, :, :, ik), gram_h(1:nst, 1:nst))
           call X(lobpcg_conj)(st%d%wfs_type, nst, nst, gram_h(1:nst, 1:nst))
         else
           ! (1, 1)-block: eigenvalues on diagonal.
@@ -348,37 +387,37 @@
           end do
         end if
 
-        ! (1, 2)-block: (H |psi>)^T res.
-        call states_blockt_mul(gr%m, st%d%dim, h_psi, res, gram_h(1:nst, nst+1:nst+nuc), idx2=UC)
+        ! (1, 2)-block: (H |psi>)^+ res.
+        call states_blockt_mul(gr%m, st, h_psi, res, gram_h(1:nst, nst+1:nst+nuc), idx2=UC)
 
-        ! (1, 3)-block: (H |psi>)^T dir.
-        call states_blockt_mul(gr%m, st%d%dim, h_psi, dir, &
+        ! (1, 3)-block: (H |psi>)^+ dir.
+        call states_blockt_mul(gr%m, st, h_psi, dir, &
           gram_h(1:nst, nst+nuc+1:nst+2*nuc), idx2=UC)
 
-        ! (2, 2)-block: res^T (H res).
-        call states_blockt_mul(gr%m, st%d%dim, res, h_res, &
+        ! (2, 2)-block: res^+ (H res).
+        call states_blockt_mul(gr%m, st, res, h_res, &
           gram_h(nst+1:nst+nuc, nst+1:nst+nuc), idx1=UC, idx2=UC)
         call X(lobpcg_conj)(st%d%wfs_type, nuc, nuc, gram_h(nst+1:nst+nuc, nst+1:nst+nuc))
 
-        ! (2, 3)-block: (H res)^T dir.
-        call states_blockt_mul(gr%m, st%d%dim, h_res, dir, &
+        ! (2, 3)-block: (H res)^+ dir.
+        call states_blockt_mul(gr%m, st, h_res, dir, &
           gram_h(nst+1:nst+nuc, nst+nuc+1:nst+2*nuc), idx1=UC, idx2=UC)
 
-        ! (3, 3)-block: dir^T (H dir)
-        call states_blockt_mul(gr%m, st%d%dim, dir, h_dir, &
+        ! (3, 3)-block: dir^+ (H dir)
+        call states_blockt_mul(gr%m, st, dir, h_dir, &
           gram_h(nst+nuc+1:nst+2*nuc, nst+nuc+1:nst+2*nuc), idx1=UC, idx2=UC)
         call X(lobpcg_conj)(st%d%wfs_type, nuc, nuc, &
           gram_h(nst+nuc+1:nst+2*nuc, nst+nuc+1:nst+2*nuc))
 
         ! gram_i matrix.
         ! Diagonal blocks.
-        if(explicitGram) then
-          call states_blockt_mul(gr%m, st%d%dim, psi, psi, gram_i(1:nst, 1:nst))
+        if(explicit_gram) then
+          call states_blockt_mul(gr%m, st, st%X(psi)(:, :, :, ik), st%X(psi)(:, :, :, ik), gram_i(1:nst, 1:nst))
           call X(lobpcg_conj)(st%d%wfs_type, nst, nst, gram_i(1:nst, 1:nst))
-          call states_blockt_mul(gr%m, st%d%dim, res, res, &
+          call states_blockt_mul(gr%m, st, res, res, &
             gram_i(nst+1:nst+nuc, nst+1:nst+nuc), idx1=UC, idx2=UC)
           call X(lobpcg_conj)(st%d%wfs_type, nuc, nuc, gram_i(nst+1:nst+nuc, nst+1:nst+nuc))
-          call states_blockt_mul(gr%m, st%d%dim, dir, dir, &
+          call states_blockt_mul(gr%m, st, dir, dir, &
             gram_i(nst+nuc+1:nst+2*nuc, nst+nuc+1:nst+2*nuc), idx1=UC, idx2=UC)
           call X(lobpcg_conj)(st%d%wfs_type, nuc, nuc, &
             gram_i(nst+nuc+1:nst+2*nuc, nst+nuc+1:nst+2*nuc))
@@ -391,20 +430,21 @@
         end if
 
         ! (1, 2)-block: <psi| res.
-        call states_blockt_mul(gr%m, st%d%dim, psi, res, gram_i(1:nst, nst+1:nst+nuc), idx2=UC)
+        call states_blockt_mul(gr%m, st, st%X(psi)(:, :, :, ik), res, gram_i(1:nst, nst+1:nst+nuc), idx2=UC)
 
         ! (1, 3)-block: <psi| dir.
-        call states_blockt_mul(gr%m, st%d%dim, psi, dir, &
+        call states_blockt_mul(gr%m, st, st%X(psi)(:, :, :, ik), dir, &
           gram_i(1:nst, nst+nuc+1:nst+2*nuc), idx2=UC)
 
-        ! (2, 3)-block: res^T dir
-        call states_blockt_mul(gr%m, st%d%dim, res, dir, &
+        ! (2, 3)-block: res^+ dir.
+        call states_blockt_mul(gr%m, st, res, dir, &
           gram_i(nst+1:nst+nuc, nst+nuc+1:nst+2*nuc), idx1=UC, idx2=UC)
-
         call profiling_in(C_PROFILING_LOBPCG_ESOLVE)
         call lalg_lowest_geneigensolve(nst, nst+2*nuc, gram_h, gram_i, ritz_val, ritz_vec)
         call profiling_out(C_PROFILING_LOBPCG_ESOLVE)
 
+        ! Picking out the important blocks of the Ritz-vector block.
+        ! FIXME: replace ritz_psi, ritz_res, ritz_dir by macros and save space.
         ritz_psi = ritz_vec(1:nst, 1:nst)
         ritz_res = ritz_vec(nst+1:nst+nuc, 1:nst)
         ritz_dir = ritz_vec(nst+nuc+1:nst+2*nuc, 1:nst)
@@ -412,26 +452,26 @@
         ! Calculate new conjugate directions:
         ! dir <- dir ritz_dir + res ritz_res
         ! h_dir <- (H res) ritz_res + (H dir) ritz_dir
-        call states_block_matr_mul(gr%m, st%d%dim, dir, ritz_dir, tmp, idxp=UC)
-        call lalg_copy(np*nst, tmp(:, 1, 1), dir(:, 1, 1))
-        call states_block_matr_mul_add(gr%m, st%d%dim, R_TOTYPE(M_ONE), &
+        call states_block_matr_mul(gr%m, st, dir, ritz_dir, tmp, idxp=UC)
+        call lalg_copy(np*lnst, tmp(:, 1, st_start), dir(:, 1, st_start))
+        call states_block_matr_mul_add(gr%m, st, R_TOTYPE(M_ONE), &
           res, ritz_res, R_TOTYPE(M_ONE), dir, idxp=UC)
-        call states_block_matr_mul(gr%m, st%d%dim, h_dir, ritz_dir, tmp, idxp=UC)
-        call lalg_copy(np*nst, tmp(:, 1, 1), h_dir(:, 1, 1))
-        call states_block_matr_mul_add(gr%m, st%d%dim, R_TOTYPE(M_ONE), &
+        call states_block_matr_mul(gr%m, st, h_dir, ritz_dir, tmp, idxp=UC)
+        call lalg_copy(np*lnst, tmp(:, 1, st_start), h_dir(:, 1, st_start))
+        call states_block_matr_mul_add(gr%m, st, R_TOTYPE(M_ONE), &
           h_res, ritz_res, R_TOTYPE(M_ONE), h_dir, idxp=UC)
 
         ! Calculate new eigenstates:
         ! |psi> <- |psi> ritz_psi + dir
         ! h_psi <- (H |psi>) ritz_psi + H dir
-        call states_block_matr_mul(gr%m, st%d%dim, psi, ritz_psi, tmp)
-        call lalg_copy(np*nst, tmp(:, 1, 1), psi(:, 1, 1))
-        do ist = 1, nst ! Leave this loop, otherwise xlf90 crashes.
-          call lalg_axpy(np, R_TOTYPE(M_ONE), dir(:, 1, ist), psi(:, 1, ist))
+        call states_block_matr_mul(gr%m, st, st%X(psi)(:, :, :, ik), ritz_psi, tmp)
+        call lalg_copy(np*lnst, tmp(:, 1, st_start), st%X(psi)(:, 1, st_start, ik))
+        do ist = st_start, st_end ! Leave this loop, otherwise xlf90 crashes.
+          call lalg_axpy(np, R_TOTYPE(M_ONE), dir(:, 1, ist), st%X(psi)(:, 1, ist, ik))
         end do
-        call states_block_matr_mul(gr%m, st%d%dim, h_psi, ritz_psi, tmp)
-        call lalg_copy(np*nst, tmp(:, 1, 1), h_psi(:, 1, 1))
-        call lalg_axpy(np*nst, R_TOTYPE(M_ONE), h_dir(:, 1, 1), h_psi(:, 1, 1))
+        call states_block_matr_mul(gr%m, st, h_psi, ritz_psi, tmp)
+        call lalg_copy(np*lnst, tmp(:, 1, st_start), h_psi(:, 1, st_start))
+        call lalg_axpy(np*lnst, R_TOTYPE(M_ONE), h_dir(:, 1, st_start), h_psi(:, 1, st_start))
 
         ! Gram matrices have to be reallocated later (because nuc changes).
         deallocate(nuc_tmp, ritz_vec, gram_h, gram_i, ritz_psi, ritz_res, ritz_dir)
@@ -443,20 +483,44 @@
       ! Check, which eigenvectors converged.
       ! Calculate latest residuals first if necessary.
       if(k.ge.maxiter) then
-        call X(lobpcg_res)(nst, ik, np, h_psi, psi, eval, res)
+        call X(lobpcg_res)(st, ik, gr%m, h_psi, st%X(psi)(:, :, :, ik), eval, res)
       end if
-      call X(lobpcg_unconv_ev)(ik, gr%m, st%d%dim, tol, res, diffs, nuc, uc)
+      call X(lobpcg_unconv_ev)(ik, gr%m, st, tol, res, diffs, nuc, uc, lnuc, luc)
+
       conv = nst-nuc
       if(present(diff)) then
+        ! Exchange differences.
+#if defined(HAVE_MPI)
+        if(st%parallel_in_states) then
+          ALLOCATE(ldiffs(lnst), lnst)
+          ldiffs = diffs(st_start:st_end, ik)
+          call lmpi_gen_alltoallv(lnst, ldiffs, i, diffs(:, ik), st%mpi_grp)
+          deallocate(ldiffs)
+        end if
+#endif
         diff = diffs
       end if
       converged = converged + conv
-      call X(lobpcg_info)(verbose_, ik, k, nst, nuc, uc, diffs(:, ik))
+      call X(lobpcg_info)(st, verbose_, ik, k, nuc, uc, diffs(:, ik))
     end do k_loop
+
+#if defined(HAVE_MPI)
+      ! Exchange number of matrix-vector operations.
+      if(st%parallel_in_states) then
+        i = niter
+        call MPI_Debug_In(st%mpi_grp%comm, C_MPI_ALLREDUCE)
+        call MPI_Allreduce(i, niter, 1, MPI_INTEGER, MPI_SUM, st%mpi_grp%comm, mpi_err)
+        call MPI_Debug_Out(st%mpi_grp%comm, C_MPI_ALLREDUCE)
+      end if
+#endif
 
     if(verbose_) call messages_print_stress(stdout)
 
     deallocate(tmp, res, h_res, dir, h_dir, h_psi, gram_block, ritz_val, diffs)
+
+    if(st%parallel_in_states) then
+      deallocate(luc, lnuc)
+    end if
 
     call pop_sub()
   end subroutine X(eigen_solver_lobpcg)
@@ -464,26 +528,33 @@
 
   ! ---------------------------------------------------------
   ! In verbose mode: write convergence information for k-point ik.
-  subroutine X(lobpcg_info)(verbose, ik, niter, nst, nuc, uc, diff)
-    logical, intent(in) :: verbose
-    integer, intent(in) :: ik
-    integer, intent(in) :: niter
-    integer, intent(in) :: nst
-    integer, intent(in) :: nuc
-    integer, intent(in) :: uc(:)
-    FLOAT,   intent(in) :: diff(:)
+  subroutine X(lobpcg_info)(st, verbose, ik, niter, nuc, uc, diff)
+    type(states_t), intent(in) :: st
+    logical,        intent(in) :: verbose
+    integer,        intent(in) :: ik
+    integer,        intent(in) :: niter
+    integer,        intent(in) :: nuc
+    integer,        intent(in) :: uc(:)
+    FLOAT,          intent(in) :: diff(:)
 
-    integer :: i
-    logical :: mask(nst)
+    integer :: i, niter_total
+    logical :: mask(st%nst)
 
     call push_sub('eigen_lobpcg_inc.X(lobpcg_info)')
 
     if(verbose) then
+#if defined(HAVE_MPI)
+      if(st%parallel_in_states) then
+        call MPI_Debug_In(st%mpi_grp%comm, C_MPI_ALLREDUCE)
+        call MPI_Allreduce(niter, niter_total, 1, MPI_INTEGER, MPI_SUM, st%mpi_grp%comm, mpi_err)
+        call MPI_Debug_Out(st%mpi_grp%comm, C_MPI_ALLREDUCE)
+      end if
+#endif
       call X(lobpcg_conv_mask)(nuc, uc, mask)
       write(message(1), '(a,i5,a,i5,a)') 'Result for k = ', ik, ' after ', &
-        niter, ' block iterations:'
+        niter_total, ' block iterations:'
       call write_info(1)
-      do i = 1, nst
+      do i = 1, st%nst
         if(mask(i)) then
           write(message(1), '(a,i5,a,e8.2,a)') '  Eigenstate #', i, &
             ':     converged [Res = ', diff(i), ']'
@@ -502,22 +573,23 @@
 
   ! ---------------------------------------------------------
   ! Calculate residuals: res(ist, ik) <- H psi(ist, ik) - eval(ist, ik) psi(ist, ik).
-  subroutine X(lobpcg_res)(nst, ik, np, h_psi, psi, eval, res)
-    integer, intent(in)    :: nst
-    integer, intent(in)    :: ik
-    integer, intent(in)    :: np
-    R_TYPE,  intent(in)    :: h_psi(:, :, :)
-    R_TYPE,  intent(in)    :: psi(:, :, :)
-    FLOAT,   intent(in)    :: eval(:, :)
-    R_TYPE,  intent(inout) :: res(:, :, :)
+  subroutine X(lobpcg_res)(st, ik, m, h_psi, psi, eval, res)
+    type(states_t), intent(in)    :: st
+    integer,        intent(in)    :: ik
+    type(mesh_t),   intent(in)    :: m
+    R_TYPE,         intent(in)    :: h_psi(m%np_part, st%d%dim, st%st_start:st%st_end)
+    R_TYPE,         intent(in)    :: psi(m%np_part, st%d%dim, st%st_start:st%st_end)
+    FLOAT,          intent(in)    :: eval(:, :)
+    R_TYPE,         intent(inout) :: res(m%np_part, st%d%dim, st%st_start:st%st_end)
 
-    integer :: i
+    integer :: ist, np
 
     call push_sub('eigen_lobpcg_inc.Xlobpcg_res')
 
-    do i = 1, nst
-      call lalg_copy(np, h_psi(:, 1, i), res(:, 1, i))
-      call lalg_axpy(np, -eval(i, ik), psi(:, 1, i), res(:, 1, i))
+    np = m%np_part*st%d%dim
+    do ist = st%st_start, st%st_end
+      call lalg_copy(np, h_psi(:, 1, ist), res(:, 1, ist))
+      call lalg_axpy(np, -eval(ist, ik), psi(:, 1, ist), res(:, 1, ist))
     end do
 
     call pop_sub()
@@ -526,39 +598,43 @@
 
   ! ---------------------------------------------------------
   ! Recalculate set of unconverged eigenvectors.
-  subroutine X(lobpcg_unconv_ev)(ik, m, dim, tol, res, diff, nuc, uc)
-    integer,      intent(in)    :: ik
-    type(mesh_t), intent(in)    :: m
-    integer,      intent(in)    :: dim
-    FLOAT,        intent(in)    :: tol
-    R_TYPE,       intent(in)    :: res(:, :, :)
-    FLOAT,        intent(inout) :: diff(:, :)
-    integer,      intent(inout) :: nuc
-    integer,      intent(inout) :: uc(:)
+  subroutine X(lobpcg_unconv_ev)(ik, m, st, tol, res, diff, nuc, uc, lnuc, luc)
+    integer,        intent(in)    :: ik
+    type(mesh_t),   intent(in)    :: m
+    type(states_t), intent(in)    :: st
+    FLOAT,          intent(in)    :: tol
+    R_TYPE,         intent(in)    :: res(m%np_part, st%d%dim, st%st_start:st%st_end)
+    FLOAT,          intent(inout) :: diff(:, :)
+    integer,        intent(inout) :: nuc
+    integer,        intent(inout) :: uc(:)
+    integer,        intent(inout) :: lnuc
+    integer,        intent(inout) :: luc(:)
 
-    integer :: i, ist, idim, j, new_nuc
+    integer :: i, ist, j, new_nuc
     integer :: new_uc(nuc)
 
     call push_sub('eigen_lobpcg_inc.Xlobpcg_unconv_ev')
 
     j       = 1
     new_nuc = 0
-    do i = 1, nuc
-      ist = uc(i)
-      diff(ist, ik) = M_ZERO
-      do idim = 1, dim
-        diff(ist, ik) = diff(ist, ik) + lalg_nrm2(m%np, res(:, idim, ist))
-      end do
-
+    do i = 1, lnuc
+      ist = luc(i)
+      diff(ist, ik) = X(states_nrm2)(m, st%d%dim, res(:, :, ist))
       if(diff(ist, ik).ge.tol) then
         new_uc(j) = ist
         new_nuc   = new_nuc+1
         j         = j+1
-      else
       end if
     end do
-    nuc       = new_nuc
-    uc(1:nuc) = new_uc(1:nuc)
+    lnuc        = new_nuc
+    luc(1:lnuc) = new_uc(1:lnuc)
+
+#if defined(HAVE_MPI)
+    ! Update set of unconverged vectors an all nodes.
+    if(st%parallel_in_states) then
+      call lmpi_gen_alltoallv(lnuc, luc, nuc, uc, st%mpi_grp)
+    end if
+#endif
 
     call pop_sub()
   end subroutine X(lobpcg_unconv_ev)
@@ -581,50 +657,13 @@
 
 
   ! ---------------------------------------------------------
-  ! Check for convergence.
-  integer function X(lobpcg_converged)(nst, ik, m, dim, tol, res, diff)
-    integer,      intent(in)  :: nst
-    integer,      intent(in)  :: ik
-    type(mesh_t), intent(in)  :: m
-    integer,      intent(in)  :: dim
-    FLOAT,        intent(in)  :: tol
-    R_TYPE,       intent(in)  :: res(:, :, :)
-    FLOAT,        intent(out) :: diff(:, :)
-
-    integer :: ist, idim, conv
-
-    call push_sub('eigen_lobpcg_inc.Xlobpcg_converged')
-
-    conv = 0
-
-    do ist = 1, nst
-      diff(ist, ik) = M_ZERO
-      do idim = 1, dim
-        diff(ist, ik) = diff(ist, ik) + lalg_nrm2(m%np, res(:, idim, ist))
-      end do
-      ! diff(ist, ik) = X(states_nrm2)(m, dim, res(:, :, ist))
-      if(diff(ist, ik).lt.tol) then
-        conv = conv + 1
-      end if
-    end do
-
-    X(lobpcg_converged) = conv
-
-    call pop_sub()
-  end function X(lobpcg_converged)
-
-
-  ! ---------------------------------------------------------
   ! Orthonormalize the column vectors of vs.
-  subroutine X(lobpcg_orth)(m, dim, wfs_type, nst, np, vs, nuc, uc)
-    type(mesh_t), intent(in)    :: m
-    integer,      intent(in)    :: dim
-    integer,      intent(in)    :: wfs_type
-    integer,      intent(in)    :: nst
-    integer,      intent(in)    :: np
-    R_TYPE,       intent(inout) :: vs(:, :, :)
-    integer,      intent(in)    :: nuc
-    integer,      intent(in)    :: uc(:)
+  subroutine X(lobpcg_orth)(m, st, vs, nuc, uc, lnuc, luc)
+    type(mesh_t),   intent(in)    :: m
+    type(states_t), intent(in)    :: st
+    R_TYPE,         intent(inout) :: vs(m%np_part, st%d%dim, st%st_start:st%st_end)
+    integer,        intent(in)    :: nuc, lnuc
+    integer,        intent(in)    :: uc(:), luc(:)
 
     integer             :: i
     R_TYPE              :: vv(nuc, nuc)
@@ -632,10 +671,12 @@
 
     call push_sub('eigen_lobpcg_inc.Xlobpcg_orth')
 
-    ALLOCATE(tmp(m%np_part, dim, nst), m%np_part*dim*nst)
+    ! FIXME: avoid allocation of this temporary array.
+    ALLOCATE(tmp(m%np_part, st%d%dim, st%st_start:st%st_end), m%np_part*st%d%dim*(st%st_end-st%st_start+1))
+!    tmp = R_TOTYPE(M_ZERO)
 
-    call states_blockt_mul(m, dim, vs, vs, vv, idx1=UC, idx2=UC)
-    call X(lobpcg_conj)(wfs_type, nuc, nuc, vv)
+    call states_blockt_mul(m, st, vs, vs, vv, idx1=UC, idx2=UC)
+    call X(lobpcg_conj)(st%d%wfs_type, nuc, nuc, vv)
     call profiling_in(C_PROFILING_LOBPCG_CHOL)
     call lalg_cholesky(nuc, vv)
     call profiling_out(C_PROFILING_LOBPCG_CHOL)
@@ -646,9 +687,9 @@
     do i = 2, nuc
       vv(i, 1:i-1) = R_TOTYPE(M_ZERO)
     end do
-    call states_block_matr_mul(m, dim, vs, vv, tmp, idxp=UC, idxr=UC)
-    do i = 1, nuc
-      call lalg_copy(np, tmp(:, 1, uc(i)), vs(:, 1, uc(i)))
+    call states_block_matr_mul(m, st, vs, vv, tmp, idxp=UC, idxr=UC)
+    do i = 1, lnuc
+      call lalg_copy(m%np_part*st%d%dim, tmp(:, 1, luc(i)), vs(:, 1, luc(i)))
     end do
 
     deallocate(tmp)
@@ -658,22 +699,23 @@
 
 
   ! ---------------------------------------------------------
-  ! Make residuals orthogonal to eigenstates.
-  subroutine X(lobpcg_orth_res)(nst, m, dim, psi, res, nuc, uc)
-    integer,      intent(in)    :: nst
-    type(mesh_t), intent(in)    :: m
-    integer,      intent(in)    :: dim
-    R_TYPE,       intent(in)    :: psi(:, :, :)
-    R_TYPE,       intent(inout) :: res(:, :, :)
-    integer,      intent(in)    :: nuc
-    integer,      intent(in)    :: uc(:)
+  ! Make residuals orthogonal to eigenstates (this routine seems to
+  ! be unnessecar).
+  subroutine X(lobpcg_orth_res)(nst, m, st, psi, res, nuc, uc)
+    integer,        intent(in)    :: nst
+    type(mesh_t),   intent(in)    :: m
+    type(states_t), intent(in)    :: st
+    R_TYPE,         intent(in)    :: psi(:, :, :)
+    R_TYPE,         intent(inout) :: res(:, :, :)
+    integer,        intent(in)    :: nuc
+    integer,        intent(in)    :: uc(:)
 
     R_TYPE :: tmp(nst, nuc)
 
     call push_sub('eigen_lobpcg_inc.Xlobpcg_orth_res')
 
-    call states_blockt_mul(m, dim, psi, res, tmp, idx2=UC)
-    call states_block_matr_mul_add(m, dim, -R_TOTYPE(M_ONE), psi, &
+    call states_blockt_mul(m, st, psi, res, tmp, idx2=UC)
+    call states_block_matr_mul_add(m, st, -R_TOTYPE(M_ONE), psi, &
       tmp, R_TOTYPE(M_ONE), res, idxr=UC)
 
     call pop_sub()
@@ -693,7 +735,7 @@
 
     call push_sub('eigen_lobpcg_inc.Xlobpcg_conj')
 
-    ! FIXME: this routien should work without temporary at(:, :).
+    ! FIXME: this routine should work without temporary at(:, :).
     if(wfs_type.eq.M_CMPLX) then
       ALLOCATE(at(n, m), n*m)
       do i = 1, m

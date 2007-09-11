@@ -34,6 +34,7 @@ module states_m
   use mesh_function_m
   use mesh_m
   use mpi_m
+  use mpi_debug_m
   use multicomm_m
   use output_m
   use profiling_m

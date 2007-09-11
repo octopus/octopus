@@ -20,19 +20,20 @@
 
 ! ---------------------------------------------------------
 ! Multiplication of two blocks of states:
-! res <- psi1(idx1)^T * psi2(idx2).
-subroutine X(states_blockt_mul)(mesh, dim, psi1, psi2, res, idx1, idx2)
+! res <- psi1(idx1)^+ * psi2(idx2) with the index sets idx1 and idx2.
+subroutine X(states_blockt_mul)(mesh, st, psi1, psi2, res, idx1, idx2)
   type(mesh_t),      intent(in)  :: mesh
-  integer,           intent(in)  :: dim
-  R_TYPE,            intent(in)  :: psi1(:, :, :)
-  R_TYPE,            intent(in)  :: psi2(:, :, :)
+  type(states_t),    intent(in)  :: st
+  R_TYPE, target,    intent(in)  :: psi1(mesh%np_part, st%d%dim, st%st_start:st%st_end)
+  R_TYPE, target,    intent(in)  :: psi2(mesh%np_part, st%d%dim, st%st_start:st%st_end)
   R_TYPE,            intent(out) :: res(:, :)
   integer, optional, intent(in)  :: idx1(:)
   integer, optional, intent(in)  :: idx2(:)
 
-  integer              :: i, j, idim
+  integer              :: i, j
   integer              :: m, n
   integer, allocatable :: idx1_(:), idx2_(:)
+  R_TYPE, pointer      :: blk1(:, :, :), blk2(:, :, :)
 
   call profiling_in(C_PROFILING_LOBPCG_BLOCKT)
   call push_sub('states_inc.Xstates_blockt_mul')
@@ -42,7 +43,7 @@ subroutine X(states_blockt_mul)(mesh, dim, psi1, psi2, res, idx1, idx2)
     ALLOCATE(idx1_(m), m)
     idx1_ = idx1
   else
-    m = ubound(psi1, 3)
+    m = st%nst
     ALLOCATE(idx1_(m), m)
     do i = 1, m
       idx1_(i) = i
@@ -53,25 +54,46 @@ subroutine X(states_blockt_mul)(mesh, dim, psi1, psi2, res, idx1, idx2)
     ALLOCATE(idx2_(n), n)
     idx2_ = idx2
   else
-    n = ubound(psi2, 3)
+    n = st%nst
     ALLOCATE(idx2_(n), n)
     do i = 1, n
       idx2_(i) = i
     end do
   end if
 
-  ! FIXME: does not work with domain parallelization.
+  ! FIXME: write something sensible here!
+  ! Quick and dirty parallelization. In the parallel case, we simply copy
+  ! all states to all nodes. Otherwise, we put pointers to the input blocks.
+#if defined(HAVE_MPI)
+  if(st%parallel_in_states) then
+    ! Allocate space for the blocks.
+    ALLOCATE(blk1(mesh%np_part, st%d%dim, st%nst), mesh%np_part*st%d%dim*st%nst)
+    ALLOCATE(blk2(mesh%np_part, st%d%dim, st%nst), mesh%np_part*st%d%dim*st%nst)
+
+    call X(states_gather)(mesh, st, psi1, blk1)
+    call X(states_gather)(mesh, st, psi2, blk2)
+  else
+#endif
+    blk1 => psi1
+    blk2 => psi2
+  end if
+
+  ! FIXME: for <psi|psi> and the like, the lower triangular matrix can be
+  ! calculated from the upper one: res(i, j) = conj(res(j, i)).
+  ! FIXME: This works with domain parallelization but the dotps should be blocked.
   do i = 1, m
     do j = 1, n
-      res(i, j) = R_TOTYPE(M_ZERO)
-      do idim = 1, dim
-        res(i, j) = res(i, j) + &
-          lalg_dot(mesh%np, psi1(:, idim, idx1_(i)), psi2(:, idim, idx2_(j)))
-      end do
+      res(i, j) = X(states_dotp)(mesh, st%d%dim, blk1(:, :, idx1_(i)), blk2(:, :, idx2_(j)))
     end do
   end do
 
   deallocate(idx1_, idx2_)
+
+#if defined(HAVE_MPI)
+  if(st%parallel_in_states) then
+    deallocate(blk1, blk2)
+  end if
+#endif
 
   call pop_sub()
   call profiling_out(C_PROFILING_LOBPCG_BLOCKT)
@@ -79,11 +101,12 @@ end subroutine X(states_blockt_mul)
 
 
 ! ---------------------------------------------------------
-! Multiplication of block of states by matrix:
-! res <- psi(idxp) * matr.
-subroutine X(states_block_matr_mul)(mesh, dim, psi, matr, res, idxp, idxr)
+! Multiplication of block of states with indices idxp by matrix and
+! update columns with idxr in the result.
+! res(idxr) <- psi(idxp) * matr.
+subroutine X(states_block_matr_mul)(mesh, st, psi, matr, res, idxp, idxr)
   type(mesh_t),      intent(in)  :: mesh
-  integer,           intent(in)  :: dim
+  type(states_t),    intent(in)  :: st
   R_TYPE,            intent(in)  :: psi(:, :, :)
   R_TYPE,            intent(in)  :: matr(:, :)
   R_TYPE,            intent(out) :: res(:, :, :)
@@ -91,7 +114,7 @@ subroutine X(states_block_matr_mul)(mesh, dim, psi, matr, res, idxp, idxr)
 
   call push_sub('states_inc.Xstates_block_matr_mul')
 
-  call X(states_block_matr_mul_add)(mesh, dim, R_TOTYPE(M_ONE), psi, matr, &
+  call X(states_block_matr_mul_add)(mesh, st, R_TOTYPE(M_ONE), psi, matr, &
     R_TOTYPE(M_ZERO), res, idxp, idxr)
 
   call pop_sub()
@@ -99,84 +122,150 @@ end subroutine X(states_block_matr_mul)
 
 
 ! ---------------------------------------------------------
-! Multiplication of block of states by matrix plus block of states:
-! res <- alpha * psi(idx) * matr + beta * res.
-subroutine X(states_block_matr_mul_add)(mesh, dim, alpha, psi, matr, beta, res, idxp, idxr)
-  type(mesh_t),      intent(in)  :: mesh
-  integer,           intent(in)  :: dim
-  R_TYPE,            intent(in)  :: alpha
-  R_TYPE,            intent(in)  :: psi(:, :, :)
-  R_TYPE,            intent(in)  :: matr(:, :)
-  R_TYPE,            intent(in)  :: beta
-  R_TYPE,            intent(out) :: res(:, :, :)
-  integer, optional, intent(in)  :: idxp(:), idxr(:)
+! Multiplication of block of states by matrix plus block of states
+! (with the corresponding column indices):
+! res(idxr) <- alpha * psi(idx) * matr + beta * res(idxr).
+subroutine X(states_block_matr_mul_add)(mesh, st, alpha, psi, matr, beta, res, idxp, idxr)
+  type(mesh_t),      intent(in)    :: mesh
+  type(states_t),    intent(in)    :: st
+  R_TYPE,            intent(in)    :: alpha
+  R_TYPE, target,    intent(in)    :: psi(mesh%np_part, st%d%dim, st%st_start:st%st_end)
+  R_TYPE,            intent(in)    :: matr(:, :)
+  R_TYPE,            intent(in)    :: beta
+  R_TYPE, target,    intent(inout) :: res(mesh%np_part, st%d%dim, st%st_start:st%st_end)
+  integer, optional, intent(in)    :: idxp(:), idxr(:)
 
   R_TYPE               :: tmp
-  integer              :: l, m, n, i, j, k, idim, stat
+  integer              :: res_col, psi_col, matr_col, i, j, k, idim
   integer, allocatable :: idxp_(:), idxr_(:)
+  R_TYPE, pointer      :: blkp(:, :, :), blkr(:, :, :)
 
   call profiling_in(C_PROFILING_LOBPCG_BLOCK_MATR)
   call push_sub('states_inc.Xstates_block_matr_add')
 
   if(present(idxp)) then
-    m = ubound(idxp, 1)
-    ALLOCATE(idxp_(m), m)
+    psi_col = ubound(idxp, 1)
+    ALLOCATE(idxp_(psi_col), psi_col)
     idxp_ = idxp
   else
-    m = ubound(psi, 3)
-    ALLOCATE(idxp_(m), m)
-    do i = 1, m
+    psi_col = st%nst
+    ALLOCATE(idxp_(psi_col), psi_col)
+    do i = 1, psi_col
       idxp_(i) = i
     end do
   end if
   if(present(idxr)) then
-    n = ubound(idxr, 1)
-    ALLOCATE(idxr_(n), n)
+    res_col = ubound(idxr, 1)
+    ALLOCATE(idxr_(res_col), res_col)
     idxr_ = idxr
   else
-    n = ubound(psi, 3)
-    ALLOCATE(idxr_(n), n)
-    do i = 1, n
+    res_col = st%nst
+    ALLOCATE(idxr_(res_col), res_col)
+    do i = 1, res_col
       idxr_(i) = i
     end do
   end if
 
-  l = ubound(matr, 2)
+  matr_col = ubound(matr, 2)
+
+  ! FIXME: remove this shit!
+#if defined(HAVE_MPI)
+  if(st%parallel_in_states) then
+    ! Allocate space for the block.
+    ALLOCATE(blkp(mesh%np_part, st%d%dim, st%nst), mesh%np_part*st%d%dim*st%nst)
+    ALLOCATE(blkr(mesh%np_part, st%d%dim, st%nst), mesh%np_part*st%d%dim*st%nst)
+
+    call X(states_gather)(mesh, st, res, blkr)
+    call X(states_gather)(mesh, st, psi, blkp)
+#endif
+  else
+    blkp => psi
+    blkr => res
+  end if
 
   ! FIXME: does not work with domain parallelization.  
+  ! We can shortcut for beta being zero.
   if(beta.eq.R_TOTYPE(M_ZERO)) then
     call profiling_in(C_PROFILING_LOBPCG_LOOP)
-    do j = 1, l
-      do idim = 1, dim
+    do j = 1, matr_col
+      do idim = 1, st%d%dim
         do i = 1, mesh%np
-          res(i, idim, idxr_(j)) = R_TOTYPE(M_ZERO)
-          do k = 1, m
-            res(i, idim, idxr_(j)) = res(i, idim, idxr_(j)) + psi(i, idim, idxp_(k))*matr(k, j)
+          blkr(i, idim, idxr_(j)) = R_TOTYPE(M_ZERO)
+          do k = 1, psi_col
+            blkr(i, idim, idxr_(j)) = blkr(i, idim, idxr_(j)) + blkp(i, idim, idxp_(k))*matr(k, j)
           end do
-          res(i, idim, idxr_(j)) = alpha*res(i, idim, idxr_(j))
+          blkr(i, idim, idxr_(j)) = alpha*blkr(i, idim, idxr_(j))
         end do
       end do
     end do
     call profiling_out(C_PROFILING_LOBPCG_LOOP)
+ ! The general case.
   else
     call profiling_in(C_PROFILING_LOBPCG_LOOP)
-    do j = 1, l
-      do idim = 1, dim
+    do j = 1, matr_col
+      do idim = 1, st%d%dim
         do i = 1, mesh%np
           tmp = R_TOTYPE(M_ZERO)
-          do k = 1, m
-            res(i, idim, idxr_(j)) = res(i, idim, idxr_(j)) + psi(i, idim, idxp_(k))*matr(k, j)
+          do k = 1, psi_col
+            tmp = tmp + blkp(i, idim, idxp_(k))*matr(k, j)
           end do
-          res(i, idim, idxr_(j)) = alpha*tmp + beta*res(i, idim, idxr_(j))
+          blkr(i, idim, idxr_(j)) = alpha*tmp + beta*blkr(i, idim, idxr_(j))
         end do
       end do
     end do
     call profiling_out(C_PROFILING_LOBPCG_LOOP)
   end if
 
+#if defined(HAVE_MPI)
+  if(st%parallel_in_states) then
+    ! Copy result back.
+    res(:, :, :) = blkr(:, :, st%st_start:st%st_end)
+    deallocate(blkp, blkr)
+  end if
+#endif
+
   call pop_sub()
   call profiling_out(C_PROFILING_LOBPCG_BLOCK_MATR)
 end subroutine X(states_block_matr_mul_add)
+
+
+! ---------------------------------------------------------
+! Gather all states on all nodes. out has to be of sufficient size.
+subroutine X(states_gather)(mesh, st, in, out)
+  type(states_t), intent(in)  :: st
+  type(mesh_t),   intent(in)  :: mesh
+  R_TYPE,         intent(in)  :: in(:, :, :)
+  R_TYPE,         intent(out) :: out(:, :, :)
+
+  integer              :: i, mpi_err
+  integer, allocatable :: sendcnts(:), sdispls(:), recvcnts(:), rdispls(:)
+
+  call push_sub('states_inc.Xstates_gather')
+
+#if defined(HAVE_MPI)
+  ALLOCATE(sendcnts(st%mpi_grp%size), st%mpi_grp%size)
+  ALLOCATE(sdispls(st%mpi_grp%size), st%mpi_grp%size)
+  ALLOCATE(recvcnts(st%mpi_grp%size), st%mpi_grp%size)
+  ALLOCATE(rdispls(st%mpi_grp%size), st%mpi_grp%size)
+
+  sendcnts   = mesh%np_part*st%d%dim*st%st_num(st%mpi_grp%rank)
+  sdispls    = 0
+  recvcnts   = st%st_num*mesh%np_part*st%d%dim
+  rdispls(1) = 0
+  do i = 2, st%mpi_grp%size
+    rdispls(i) = rdispls(i-1) + recvcnts(i-1)
+  end do
+
+  call MPI_Debug_In(st%mpi_grp%comm, C_MPI_ALLTOALLV)
+  call MPI_Alltoallv(in(:, 1, 1), sendcnts, sdispls, R_MPITYPE, &
+    out(:, 1, 1), recvcnts, rdispls, R_MPITYPE, st%mpi_grp%comm, mpi_err)
+  call MPI_Debug_Out(st%mpi_grp%comm, C_MPI_ALLTOALLV)
+
+  deallocate(sendcnts, sdispls, recvcnts, rdispls)
+#endif
+
+  call pop_sub()
+end subroutine X(states_gather)
 
 
 ! ---------------------------------------------------------
@@ -474,6 +563,7 @@ subroutine X(states_angular_momentum)(gr, phi, l, l2)
   deallocate(lpsi)
   call pop_sub()
 end subroutine X(states_angular_momentum)
+
 
 !! Local Variables:
 !! mode: f90
