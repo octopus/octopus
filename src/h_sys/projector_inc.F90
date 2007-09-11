@@ -86,9 +86,9 @@ R_TYPE function X(psia_project_psib)(mesh, pj, dim, psia, psib, reltype, periodi
 
   apb = M_ZERO
   do idim = 1, dim
-    plpsi(1:n_s, 1) = R_CONJ(psia(pj%sphere%jxyz(1:n_s), idim)) * plpsi(1:n_s, idim)
+    plpsi(1:n_s, idim) = R_CONJ(psia(pj%sphere%jxyz(1:n_s), idim)) * plpsi(1:n_s, idim)
+    apb = apb + X(sm_integrate)(mesh, pj%sphere, plpsi(1:n_s, idim))
   end do
-  apb = apb + X(sm_integrate)(mesh, pj%sphere, plpsi(1:n_s, 1))
 
   deallocate(lpsi, plpsi)
 
