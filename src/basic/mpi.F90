@@ -111,8 +111,8 @@ contains
     
     mpi_grp_is_root = (grp%rank == 0)
   end function mpi_grp_is_root
-
 end module mpi_m
+
 
 !! Local Variables:
 !! mode: f90
