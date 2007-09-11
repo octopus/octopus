@@ -54,13 +54,14 @@ contains
     type(hamiltonian_t), intent(inout) :: h
     logical,             intent(inout) :: fromScratch
 
-    integer :: lcao_start, lcao_start_default
+    integer      :: lcao_start, lcao_start_default
     type(lcao_t) :: lcao_data
-    type(scf_t) :: scfv
-    integer     :: ierr
+    type(scf_t)  :: scfv
+    integer      :: ierr
 
     call push_sub('gs.ground_state_run')
 
+    call states_distribute_nodes(sys%st, sys%mc)
     call states_allocate_wfns(sys%st, sys%gr%m)
 
     if(.not.fromScratch) then
@@ -82,10 +83,11 @@ contains
 
     if(fromScratch) then
       ! Randomly generate the initial wave-functions
-      call states_generate_random(sys%st, sys%gr%m)
+      call states_generate_random(sys%st, sys%gr%m, sys%st%st_start, sys%st%st_end)
 
       ! We do not compute the density from the random wave-functions. 
-      ! Instead, we try to get a better guess for the density
+      ! Instead, we try to get a better guess for the density.
+
       call guess_density(sys%gr%m, sys%gr%sb, sys%geo, sys%st%qtot, sys%st%d%nspin, &
            sys%st%d%spin_channels, sys%st%rho)
 

@@ -31,6 +31,9 @@ module eigen_solver_m
   use mesh_m
   use mesh_function_m
   use messages_m
+  use mpi_m
+  use mpi_debug_m
+  use mpi_lib_m
   use preconditioners_m
   use profiling_m
   use states_m
@@ -45,8 +48,8 @@ module eigen_solver_m
     eigen_solver_end,   &
     eigen_solver_run
 
-  private ::            &
-    dmv,                &
+  private :: &
+    dmv,     &
     zmv
 
   type eigen_solver_t
@@ -106,6 +109,8 @@ contains
     type(states_t),       intent(in)    :: st
     integer,              intent(in)    :: max_iter_default
 
+    integer :: default_es
+
     call push_sub('eigen.eigen_solver_init')
 
     !%Variable EigenSolver
@@ -135,7 +140,23 @@ contains
     !% Optimal Block Preconditioned Conjugate Gradient Method. SIAM
     !% Journal on Scientific Computing, 23(2):517­541, 2001.
     !%End
-    call loct_parse_int(check_inp('EigenSolver'), RS_CG, eigens%es_type)
+    ! When running parallel in states, LOBPCG is the default, otherwise
+    ! the conjugate gradient algorithm.
+    if(st%parallel_in_states) then
+      default_es = RS_LOBPCG
+    else
+      default_es = RS_CG
+    end if
+    call loct_parse_int(check_inp('EigenSolver'), default_es, eigens%es_type)
+
+    ! If running parallel in states the LOBPCG solver has to be chosen.
+    if(st%parallel_in_states.and.eigens%es_type.ne.RS_LOBPCG) then
+      message(1) = 'To run a ground state calculation parallel in states'
+      message(2) = 'you have to use the LOBPCG eigensolver:'
+      message(3) = ''
+      message(4) = '  EigenSolver = lobpcg'
+      call write_fatal(4)
+    end if
 
     select case(eigens%es_type)
     case(RS_CG_NEW)
@@ -264,7 +285,6 @@ contains
 
     deallocate(eigens%diff)
     nullify(eigens%diff)
-
   end subroutine eigen_solver_end
 
 
@@ -368,16 +388,6 @@ contains
 #include "eigen_trlan.F90"
 #endif
 
-
-#include "undef.F90"
-#include "complex.F90"
-#include "eigen_inc.F90"
-#include "eigen_cg_inc.F90"
-#include "eigen_plan_inc.F90"
-#include "eigen_evolution_inc.F90"
-#include "eigen_lobpcg_inc.F90"
-
-
 #include "undef.F90"
 #include "real.F90"
 #include "eigen_inc.F90"
@@ -386,6 +396,13 @@ contains
 #include "eigen_evolution_inc.F90"
 #include "eigen_lobpcg_inc.F90"
 
+#include "undef.F90"
+#include "complex.F90"
+#include "eigen_inc.F90"
+#include "eigen_cg_inc.F90"
+#include "eigen_plan_inc.F90"
+#include "eigen_evolution_inc.F90"
+#include "eigen_lobpcg_inc.F90"
 end module eigen_solver_m
 
 
