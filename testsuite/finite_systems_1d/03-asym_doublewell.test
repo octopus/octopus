@@ -24,11 +24,9 @@ Match ; 2th state  ; grep '2   --' excited_states_static/eigenvalues ; \s*-0.463
 
 # Then, run the optimization for one iteration and compare the convergence.
 Input: 03-asym_doublewell.02-oct_run.inp
-#Match ; J1 1st iteration  ; grep ' 1  ' opt-control/convergence ; \s*0.747\d*
 Match ; J1 1st iteration  ; grep ' 1  ' opt-control/convergence ; \s*0.558\d*
 
 # Now we run the same system, but with a time-dependent penalty
 Input: 03-asym_doublewell.03-oct_run.inp
-#Match ; J1 1st iteration + td penalty ; grep ' 1  ' opt-control/convergence ; \s*0.7007\d*
-Match ; J1 1st iteration + td penalty ; grep ' 1  ' opt-control/convergence ; \s*0.491\d*
+Match ; J1 1st iteration + td penalty ; grep ' 1  ' opt-control/convergence ; \s*0.490\d*
 

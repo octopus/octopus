@@ -196,6 +196,7 @@ contains
     nullify(st%dpsi, st%zpsi, st%rho, st%j, st%rho_core, st%eigenval)
     nullify(st%occ, st%spin, st%momentum, st%node, st%user_def_states)
     nullify(st%d%kpoints, st%d%kweights)
+    nullify(st%st_range, st%st_num)
 
     ! By default, calculations use real wave-functions
     st%d%wfs_type = M_REAL
@@ -854,6 +855,7 @@ contains
     stout%qtot = stin%qtot
     stout%el_temp = stin%el_temp
     stout%ef = stin%ef
+    stout%parallel_in_states = stin%parallel_in_states
     stout%st_start = stin%st_start
     stout%st_end = stin%st_end
     if(associated(stin%dpsi)) then
@@ -926,6 +928,18 @@ contains
       ALLOCATE(stout%node(size(stin%node)), i)
       stout%node = stin%node
     end if
+    call mpi_grp_copy(stout%mpi_grp, stin%mpi_grp)
+    if(associated(stin%st_range)) then
+      i = size(stin%st_range, 1)*size(stin%st_range, 2)
+      ALLOCATE(stout%st_range(2,0:stin%mpi_grp%size), i)
+      stout%st_range = stin%st_range
+    end if
+    if(associated(stin%st_num)) then
+      i = size(stin%st_num, 1)
+      ALLOCATE(stout%st_num(0:stin%mpi_grp%size), i)
+      stout%st_num = stin%st_num
+    end if
+
   end subroutine states_copy
 
 

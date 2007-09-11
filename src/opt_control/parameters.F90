@@ -166,7 +166,7 @@ module opt_control_parameters_m
     integer,      intent(in)                   :: ctr_iter_max
 
     character(len=1024)      :: expression
-    FLOAT                    :: weight, t, octpenalty, dt
+    FLOAT                    :: t, octpenalty, dt
     real(8)                  :: f_re, f_im
     C_POINTER                :: blk
     integer                  :: no_lines, i, j, steps
@@ -203,24 +203,41 @@ module opt_control_parameters_m
     !% Here, you may specify the required time dependent envelope.
     !%
     !% It is possible to choose different envelopes for different control parameters.
-    !% There should be one line for each control parameter.
+    !% There should be one line for each control parameter. Each line should
+    !% have only one element: a string with the function that defines the
+    !% *inverse* of the time-dependent penalty, which is then defined as
+    !% 1 upon this function + 1.0e-7 (to avoid possible singularities).
+    !%
+    !% The usual choices should be functions between zero and one.
+    !%
+    !% If, instead of defining a function, the string is "default", then
+    !% the program will use the function:
+    !%
+    !% <math> \frac{1}{\alpha(t)} = \frac{1}{2}( erf(t-T/20)+ erf(-(t-T+T/20)) </math>
     !%End
         
     if (loct_parse_block(check_inp('OCTLaserEnvelope'), blk)==0) then
       no_lines = loct_parse_block_n(blk)
       if(no_lines .ne.par%no_parameters) call input_error('OCTLaserEnvelope')
 
-      ! The structure of the block is:
-      ! function | weight 
       do i = 1, no_lines
-        call loct_parse_block_string(blk, i-1, 0, expression)  
-        call conv_to_C_string(expression)
-        call loct_parse_block_float(blk, i-1, 1, weight)
-        do j = 1, steps+1
-          t = (j-1)*dt
-          call loct_parse_expression(f_re, f_im, "t", real(t, 8), expression)
-          call tdf_set_numerical(par%td_penalty(i), j, TOFLOAT(M_ONE /(f_re + CNST(1.0e-7)))  )
-        end do
+        call loct_parse_block_string(blk, i-1, 0, expression)
+        if(trim(expression)=='default') then
+          do j = 1, steps + 1
+            t = (j-1)*dt
+            f_re = M_HALF * (loct_erf(t-CNST(0.05)*steps*dt) + &
+                             loct_erf(-(t-steps*dt+CNST(0.05)*steps*dt)) )
+            call tdf_set_numerical(par%td_penalty(i), j, &
+              TOFLOAT(M_ONE /(f_re + CNST(1.0e-7)))  )
+          end do
+        else
+          call conv_to_C_string(expression)
+          do j = 1, steps+1
+            t = (j-1)*dt
+            call loct_parse_expression(f_re, f_im, "t", real(t, 8), expression)
+            call tdf_set_numerical(par%td_penalty(i), j, TOFLOAT(M_ONE /(f_re + CNST(1.0e-7)))  )
+          end do
+        end if
       end do
 
       call loct_parse_block_end(blk)
