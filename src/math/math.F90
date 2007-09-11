@@ -514,7 +514,6 @@ contains
 
     integer :: i,j,inc,n, indi, indj
     FLOAT   :: v
-    logical :: present_ind
 
     n = size(a)
 
@@ -565,7 +564,7 @@ contains
     integer, intent(inout), optional :: ind(:)
 
     integer :: i,j,inc,n, indi, indj
-    FLOAT   :: v
+    integer :: v
 
     n = size(a)
 

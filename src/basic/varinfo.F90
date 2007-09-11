@@ -174,9 +174,7 @@ contains
     character(len=*), intent(in) :: var
     integer,optional, intent(out):: ierr
     
-    C_POINTER :: handle, opt, name, type, section, desc
-    integer :: value
-    logical :: first
+    C_POINTER :: handle, name, type, section, desc
     
     handle = 0
     if(present(ierr)) ierr = -1

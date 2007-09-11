@@ -136,6 +136,8 @@ void FC_FUNC_(zoperate_ri_vec,ZOPERATE_RI_VEC)(const int * opnp,
 }
 #else
 
+#include <stdlib.h>
+
 void FC_FUNC_(doperate_ri_vec,DOPERATE_RI_VEC)(){
   fprintf(stderr, "Not available: this is a bug.\n");
   exit(1);

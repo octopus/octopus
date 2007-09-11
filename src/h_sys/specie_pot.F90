@@ -435,7 +435,7 @@ contains
     type(specie_t),             intent(in)  :: s
     FLOAT,                      intent(in)  :: pos(MAX_DIM)
     type(grid_t),       target, intent(in)  :: gr
-    type(geometry_t),   target, intent(in)  :: geo
+    type(geometry_t),           intent(in)  :: geo
     FLOAT,                      intent(out) :: rho(:)
 
     type(root_solver_t) :: rs
@@ -512,7 +512,7 @@ contains
   subroutine specie_get_gdensity(s, pos, gr, rho)
     type(specie_t),             intent(in)  :: s
     FLOAT,                      intent(in)  :: pos(MAX_DIM)
-    type(grid_t),       target, intent(in)  :: gr
+    type(grid_t),               intent(in)  :: gr
     FLOAT,                      intent(out) :: rho(:, :)
 
     FLOAT   :: x(1:MAX_DIM), r
@@ -586,10 +586,10 @@ contains
     FLOAT, intent(in) :: xin(:)
 
     integer :: i, j, dim
-    FLOAT   :: r, chi(MAX_DIM), x(MAX_DIM)
+    FLOAT   :: r, chi(MAX_DIM)
 
     dim = m_p%sb%dim
-    rho_p = M_ZERO; x = M_ZERO
+    rho_p = M_ZERO
     do i = 1, m_p%np
 
       j = i
@@ -626,8 +626,6 @@ contains
     FLOAT :: a1, a2, Rb2 ! for jellium
     FLOAT :: xx(MAX_DIM), r, pot_re, pot_im, time_
     integer :: ip
-    type(submesh_t) :: sm
-    FLOAT, allocatable :: vls(:)
 
     time_ = M_ZERO
 

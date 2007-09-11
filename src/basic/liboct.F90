@@ -411,8 +411,8 @@ module lib_oct_m
   ! Varia
   interface loct_getenv
     subroutine oct_getenv(var, value)
-      character(len=*) :: var
-      character(len=*) :: value
+      character(len=*), intent(in)  :: var
+      character(len=*), intent(out) :: value
     end subroutine oct_getenv
   end interface
 

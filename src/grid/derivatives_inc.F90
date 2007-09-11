@@ -85,7 +85,7 @@ end subroutine X(derivatives_lapl)
 ! ---------------------------------------------------------
 subroutine X(derivatives_grad)(der, f, grad, ghost_update)
   type(der_discr_t), intent(in)    :: der
-  R_TYPE, target,    intent(inout) :: f(:)       ! f(m%np_part)
+  R_TYPE,            intent(inout) :: f(:)       ! f(m%np_part)
   R_TYPE,            intent(out)   :: grad(:,:)  ! grad(m%np, m%sb%dim)
   logical, optional, intent(in)    :: ghost_update
 
@@ -112,7 +112,7 @@ end subroutine X(derivatives_grad)
 subroutine X(derivatives_oper)(op, der, f, opf, ghost_update)
   type(nl_operator_t), intent(in)    :: op
   type(der_discr_t),   intent(in)    :: der
-  R_TYPE, target,      intent(inout) :: f(:)       ! f(m%np_part)
+  R_TYPE,              intent(inout) :: f(:)       ! f(m%np_part)
   R_TYPE,              intent(out)   :: opf(:)     ! opf(m%np)
   logical, optional,   intent(in)    :: ghost_update
 

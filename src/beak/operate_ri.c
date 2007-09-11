@@ -39,10 +39,9 @@ void FC_FUNC_(doperate_ri,DOPERATE_RI)(const int * opnp,
 				       ffloat * restrict fo){
 
   const int n = opn[0];
-  const int np = opnp[0];
   const int nri = opnri[0];
 
-  int l, i, j, nm2;
+  int l, i, j;
   const int * restrict index;
   const int * restrict index1;
   register ffloat a0, a1, a2, a3;
@@ -111,10 +110,9 @@ void FC_FUNC_(zoperate_ri,ZOPERATE_RI)(const int * opnp,
 				       comp * restrict fo){
 
   const int n = opn[0];
-  const int np = opnp[0];
   const int nri = opnri[0];
 
-  int l, i, j, nm2;
+  int l, i, j;
   const int * restrict index;
   const int * restrict index1;
   const comp * ffi[MAX_OP_N];

@@ -51,7 +51,7 @@ contains
     real(8) :: res8
     
     res8 = c_poisson_cutoff_finite_cylinder(real(gx, 8), real(gperp, 8), real(xsize, 8), real(rsize, 8))
-    poisson_cutoff_finite_cylinder4 = real(r8, 4)
+    poisson_cutoff_finite_cylinder4 = real(res8, 4)
   end function poisson_cutoff_finite_cylinder4
   
   ! ---------------------------------------------------------

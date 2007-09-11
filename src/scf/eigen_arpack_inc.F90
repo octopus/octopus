@@ -115,7 +115,7 @@ subroutine X(eigen_solver_arpack)(gr, st, h, tol_, niter, ncv, converged, diff)
         st%X(psi)(i, 1, j, ik) = v(i, j)/sqrt(gr%m%vol_pp(i))
       end do
       st%eigenval(j, ik) = d(j, 1)
-      if(workl(ipntr(11)+j-1)<CNST(1.0e-99)) then
+      if(workl(ipntr(11)+j-1)< M_EPSILON) then
         diff(j, ik) = M_ZERO
       else
         diff(j, ik) = workl(ipntr(11)+j-1)

@@ -234,8 +234,8 @@ contains
 
   character(len=*) :: FUNCTL, AUTHOR
   integer :: MAXR, NR, NSPIN
-  FLOAT :: DENS(MAXR,NSPIN), RMESH(MAXR), V_XC(MAXR,NSPIN)
-  FLOAT :: DC, DX, EC, EX
+  FLOAT :: DENS(MAXR,NSPIN), RMESH(MAXR)
+  FLOAT, intent(out) :: DC, DX, EC, EX, V_XC(MAXR,NSPIN)
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ! Internal parameters                                                         !

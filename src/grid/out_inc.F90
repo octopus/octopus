@@ -120,9 +120,8 @@ subroutine X(input_function_global)(filename, m, f, ierr, is_tmp)
   integer,           intent(out) :: ierr
   logical,           intent(in)  :: is_tmp
 
-  integer :: iunit, i, function_kind, file_kind
-
 #if defined(HAVE_NETCDF)
+  integer :: function_kind
   type(X(cf_t)) :: c
 #if defined(R_TCOMPLEX)
   type(dcf_t) :: re, im
@@ -133,8 +132,11 @@ subroutine X(input_function_global)(filename, m, f, ierr, is_tmp)
   call push_sub('out_inc.Xinput_function_global')
 
   ierr = 0
+
+#if defined(HAVE_NETCDF)
   function_kind = X(output_kind)*kind(f(1)) ! +4 for real, single; +8 for real, double;
   ! -4 for complex, single, -8 for real, double
+#endif
 
   select case(trim(io_get_extension(filename)))
 #if defined(HAVE_NETCDF)
@@ -172,6 +174,7 @@ contains
   subroutine read_netcdf()
     integer :: ncid, ndims, nvars, natts, status, data_id, data_im_id, pos_id, &
          dim_data_id(MAX_DIM), dim_pos_id(2), ndim(MAX_DIM), xtype
+    integer :: iunit, file_kind
     real(r4)           :: pos(2, 3)
     logical            :: function_is_complex = .false.
     character(len=512) :: file

@@ -189,7 +189,11 @@ contains
 
   ! ---------------------------------------------------------
   subroutine create_x_Lxyz()
-    integer :: il, ix, iy, iz, ip
+    integer :: il, ix, iy, iz
+
+#ifdef USE_OMP
+    integer :: ip
+#endif
 
     ALLOCATE(mesh%Lxyz(mesh%np_part_global, 3), mesh%np_part_global*3)
     if(mesh%parallel_in_domains) then

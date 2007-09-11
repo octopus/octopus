@@ -648,7 +648,7 @@ contains
     type(states_t), intent(in) :: stin
     CMPLX, intent(in)             :: u(:, :)
 
-    integer :: ik, idim, ist, jst
+    integer :: ik
 
     call push_sub('states.rotate_states')
 

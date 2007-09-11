@@ -240,7 +240,7 @@ contains
     character(len=*),    intent(in)    :: fname
     integer,             intent(inout) :: ierr
 
-    integer            :: iunit, ios, i
+    integer            :: iunit, ios
     character(len=256) :: line
 
     call push_sub('units.units_from_file')

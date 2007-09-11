@@ -923,7 +923,9 @@ contains
     logical, optional,   intent(in)    :: ghost_update
 
     integer :: ii, nn
+#if defined(HAVE_MPI)
     logical :: update
+#endif
 
     call profiling_in(C_PROFILING_NL_OPERATOR)
     call push_sub('nl_operator.dnl_operator_operate')
@@ -984,18 +986,20 @@ contains
     logical, optional,   intent(in)    :: ghost_update
 
     integer :: ii, nn
+#if defined(HAVE_MPI)
     logical :: update
+#endif
 
     call profiling_in(C_PROFILING_NL_OPERATOR)
     call push_sub('nl_operator.znl_operator_operate')
 
+#if defined(HAVE_MPI)
     if(present(ghost_update)) then
       update = ghost_update
     else
       update = .true.
     end if
 
-#if defined(HAVE_MPI)
     if(op%m%parallel_in_domains.and.update) then
       call zvec_ghost_update(op%m%vp, fi)
     end if

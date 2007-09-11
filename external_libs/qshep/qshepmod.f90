@@ -38,8 +38,8 @@ module qshepmod_m
     type(qshep_t), intent(out) :: interp
     integer, intent(in) :: npoints
     real(8), intent(in) :: f(:)
-    real(8), target :: x(:), y(:)
-    real(8), target, optional :: z(:)
+    real(8)             :: x(:), y(:)
+    real(8), optional   :: z(:)
 
     interp%kind = 0
     if(present(z)) then
@@ -54,8 +54,8 @@ module qshepmod_m
     type(qshep_t), intent(out) :: interp
     integer, intent(in) :: npoints
     complex(8), intent(in) :: f(:)
-    real(8), target :: x(:), y(:)
-    real(8), target, optional :: z(:)
+    real(8)                :: x(:), y(:)
+    real(8), optional      :: z(:)
 
     interp%kind = 1
     if(present(z)) then
