@@ -213,7 +213,7 @@ contains
     call push_sub('specie_pot.guess_density')
 
     if (spin_channels == 1) then
-      gmd_opt = 1
+      gmd_opt = INITRHO_PARAMAGNETIC
     else
       !%Variable GuessMagnetDensity
       !%Type integer
@@ -756,7 +756,7 @@ contains
         call specie_get_gdensity(s, x_atom, gr, grho)
 
         do i = 1, NDIM
-          call dpoisson_solve(gr, gpot(:), grho(:, i))
+          call dpoisson_solve(gr, gpot(1:NP), grho(1:NP, i))
           gv(1:gr%m%np, i) = gv(1:gr%m%np, i) + gpot(1:gr%m%np)
         end do
 

@@ -134,10 +134,8 @@ contains
       call system_init(sys, parallel_mask)
       call hamiltonian_init(h, sys%gr, sys%geo, sys%st%d, sys%ks%ip_app)
       call epot_generate(h%ep, sys%gr, sys%geo, sys%mc, sys%st, h%reltype)
-
       call restart_init()
     end if
-
 
   contains
 
@@ -146,6 +144,8 @@ contains
       parallel_mask = 0
       parallel_mask = ibset(parallel_mask, P_STRATEGY_DOMAINS - 1) ! all modes are parallel in domains
       select case(calc_mode)
+      case(M_GS)
+        parallel_mask = ibset(parallel_mask, P_STRATEGY_STATES - 1)
       case(M_TD)
         parallel_mask = ibset(parallel_mask, P_STRATEGY_STATES - 1)
       case(M_CASIDA)
