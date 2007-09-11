@@ -36,7 +36,8 @@ module lib_adv_alg_m
     lalg_singular_value_decomp,   &
     lalg_svd_inverse,             &
     lalg_invert_upper_triangular, &
-    lalg_lowest_geneigensolve
+    lalg_lowest_geneigensolve,    &
+    lalg_lowest_eigensolve
 
   interface lalg_cholesky
     module procedure dcholesky, zcholesky
@@ -79,6 +80,10 @@ module lib_adv_alg_m
   interface lalg_lowest_geneigensolve
     module procedure dlowest_geneigensolve, zlowest_geneigensolve
   end interface
+
+  interface lalg_lowest_eigensolve
+    module procedure dlowest_eigensolve, zlowest_eigensolve
+  end interface
 contains
 
 #ifdef HAVE_LAPACK
@@ -86,6 +91,7 @@ contains
 #endif
 
 end module lib_adv_alg_m
+
 
 !! Local Variables:
 !! mode: f90

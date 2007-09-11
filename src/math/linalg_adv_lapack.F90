@@ -26,7 +26,7 @@
 #endif
 
 ! ---------------------------------------------------------
-! Auxialiary functions.
+! Auxiliary functions.
 FLOAT function sfmin()
   interface
     FLOAT function DLAPACK(lamch)(cmach)
@@ -350,6 +350,107 @@ subroutine zeigensolve(n, a, b, e)
   deallocate(work, rwork)
 
 end subroutine zeigensolve
+
+
+! ---------------------------------------------------------
+! Computes the k lowest eigenvalues and the eigenvectors of a real
+! standard symmetric-definite eigenproblem, of the form  A*x=(lambda)*x.
+! Here A is assumed to be symmetric.
+subroutine dlowest_eigensolve(k, n, a, e, v)
+  integer, intent(in)  :: k, n
+  FLOAT,   intent(in)  :: a(n, n)
+  FLOAT,   intent(out) :: e(n)
+  FLOAT,   intent(out) :: v(n, k)
+
+  interface
+    subroutine DLAPACK(syevx)(jobz, range, uplo, n, a, lda, &
+      vl, vu, il, iu, abstol, m, w, z, ldz, work, lwork, iwork, ifail, info)
+      integer,      intent(in)  :: n, lda, il, iu, ldz, lwork
+      character(1), intent(in)  :: jobz, range, uplo
+      integer,      intent(out) :: m, iwork, ifail, info
+      FLOAT,        intent(in)  :: vl, vu, abstol
+      FLOAT,        intent(in)  :: a
+      FLOAT,        intent(out) :: w, z, work
+    end subroutine DLAPACK(syevx)
+  end interface
+  
+  integer            :: m, iwork(5*n), ifail(n), info, lwork
+  FLOAT              :: abstol
+  FLOAT, allocatable :: work(:)
+  
+  abstol = 2*sfmin()
+
+  ! Work size query.
+  ALLOCATE(work(1), 1)
+  call DLAPACK(syevx)('V', 'I', 'U', n, a(1, 1), n, M_ZERO, M_ZERO, &
+    1, k, abstol, m, e(1), v(1, 1), n, work(1), -1, iwork(1), ifail(1), info)
+  lwork = int(work(1))
+  deallocate(work)
+
+  ALLOCATE(work(lwork), lwork)
+
+  call DLAPACK(syevx)('V', 'I', 'U', n, a(1, 1), n, M_ZERO, M_ZERO, &
+    1, k, abstol, m, e(1), v(1, 1), n, work(1), lwork, iwork(1), ifail(1), info)
+
+  deallocate(work)
+
+  if(info.ne.0) then
+    write(message(1),'(a,i5)') &
+      'In dlowest_eigensolve, LAPACK Xsygvx returned error message ', info
+    call write_fatal(1)
+  end if
+end subroutine dlowest_eigensolve
+
+
+! ---------------------------------------------------------
+! Computes the k lowest eigenvalues and the eigenvectors of a complex
+! standard Hermitian-definite eigenproblem, of the form  A*x=(lambda)*x.
+! Here A is assumed to be Hermitian.
+subroutine zlowest_eigensolve(k, n, a, e, v)
+  integer, intent(in)  :: k, n
+  CMPLX,   intent(in)  :: a(n, n)
+  FLOAT,   intent(out) :: e(n)
+  CMPLX,   intent(out) :: v(n, k)
+
+  interface
+    subroutine ZLAPACK(heevx)(jobz, range, uplo, n, a, lda, &
+      vl, vu, il, iu, abstol, m, w, z, ldz, work, lwork, iwork, ifail, info)
+      integer,      intent(in)  :: n, lda, il, iu, ldz, lwork
+      character(1), intent(in)  :: jobz, range, uplo
+      integer,      intent(out) :: m, iwork, ifail, info
+      FLOAT,        intent(in)  :: vl, vu, abstol
+      FLOAT,        intent(out) :: w
+      CMPLX,        intent(in)  :: a
+      CMPLX,        intent(out) :: z, work
+    end subroutine ZLAPACK(heevx)
+  end interface
+  
+  integer            :: m, iwork(5*n), ifail(n), info, lwork
+  FLOAT              :: abstol
+  CMPLX, allocatable :: work(:)
+  
+  abstol = 2*sfmin()
+
+  ! Work size query.
+  ALLOCATE(work(1), 1)
+  call ZLAPACK(heevx)('V', 'I', 'U', n, a(1, 1), n, M_ZERO, M_ZERO, &
+    1, k, abstol, m, e(1), v(1, 1), n, work(1), -1, iwork(1), ifail(1), info)
+  lwork = int(work(1))
+  deallocate(work)
+
+  ALLOCATE(work(lwork), lwork)
+
+  call ZLAPACK(heevx)('V', 'I', 'U', n, a(1, 1), n, M_ZERO, M_ZERO, &
+    1, k, abstol, m, e(1), v(1, 1), n, work(1), lwork, iwork(1), ifail(1), info)
+
+  deallocate(work)
+
+  if(info.ne.0) then
+    write(message(1),'(a,i5)') &
+      'In zlowest_eigensolve, LAPACK Xsygvx returned error message ', info
+    call write_fatal(1)
+  end if
+end subroutine zlowest_eigensolve
 
 
 ! ---------------------------------------------------------
