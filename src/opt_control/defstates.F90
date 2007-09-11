@@ -78,7 +78,7 @@
       !%Variable OCTInitialTransformStates
       !%Type block
       !%Default no
-      !%Section OptimalControl
+      !%Section Optimal Control
       !%Description
       !% If OCTInitialState = oct_is_gstransformation, you must specify one
       !% OCTInitialTransformStates block, in order to specify which linear

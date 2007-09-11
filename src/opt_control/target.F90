@@ -144,7 +144,7 @@ module opt_control_target_m
       !%Variable OCTTargetTransformStates
       !%Type block
       !%Default no
-      !%Section OptimalControl
+      !%Section Optimal Control
       !%Description
       !% If OCTTargetOperator = oct_tg_gstransformation, you must specify one
       !% OCTTargetTransformStates block, in order to specify which linear
