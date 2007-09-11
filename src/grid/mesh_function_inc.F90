@@ -157,9 +157,10 @@ end function X(mf_moment)
 ! ---------------------------------------------------------
 ! This subroutine generates a gaussian wave-function in a
 ! random position in space
-subroutine X(mf_random)(m, f)
+subroutine X(mf_random)(m, f, seed)
   type(mesh_t), intent(in)  :: m
   R_TYPE,       intent(out) :: f(1:m%np)
+  integer, optional, intent(in) :: seed
 
   integer, save :: iseed = 123
   integer :: i
@@ -167,6 +168,9 @@ subroutine X(mf_random)(m, f)
 
   call push_sub('mf_inc.Xmf_random')
 
+  if(present(seed)) then
+    iseed = iseed + seed
+  end if
   call quickrnd(iseed, rnd)
   a(1) = M_TWO*(2*rnd - 1)
   call quickrnd(iseed, rnd)
