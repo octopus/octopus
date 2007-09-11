@@ -141,12 +141,17 @@ module states_m
     FLOAT :: el_temp                ! electronic temperature for the Fermi function
     FLOAT :: ef                     ! the fermi energy
 
-    ! This is stuff needed for the parallelization in states
-    logical :: parallel_in_states   ! am I parallel in states?
-    type(mpi_grp_t) :: mpi_grp      ! the MPI group related to the parallelization in states
-
-    integer :: st_start, st_end     ! needed for some parallel parts
-    integer, pointer :: node(:)     ! To which node belongs each state.
+    ! This is stuff needed for the parallelization in states.
+    logical          :: parallel_in_states ! Am I parallel in states?
+    type(mpi_grp_t)  :: mpi_grp            ! The MPI group related to the parallelization in states.
+    integer          :: st_start, st_end   ! Range of states processed by local node.
+    integer, pointer :: node(:)            ! To which node belongs each state.
+    integer, pointer :: st_range(:, :)     ! Node r manages states st_range(1, r) to
+                                           ! st_range(2, r) for r = 0, ..., mpi_grp%size-1,
+                                           ! i. e. st_start = st_range(1, r) and
+                                           ! st_end = st_range(2, r) on node r.
+    integer, pointer :: st_num(:)          ! Number of states on node r, i. e.
+                                           ! st_num(r) = st_num(2, r)-st_num(1, r).
   end type states_t
 
 
@@ -969,6 +974,13 @@ contains
       deallocate(st%user_def_states); nullify(st%user_def_states)
     end if
 
+    if(st%parallel_in_states) then
+      deallocate(st%st_range)
+      nullify(st%st_range)
+      deallocate(st%st_num)
+      nullify(st%st_num)
+    end if
+    
     call pop_sub()
   end subroutine states_end
 
@@ -1047,12 +1059,12 @@ contains
   ! ---------------------------------------------------------
   ! generate a hydrogen s-wavefunction around a random point
   subroutine states_generate_random(st, m, ist_start_, ist_end_)
-    type(states_t), intent(inout) :: st
-    type(mesh_t),   intent(in)    :: m
-    integer, optional, intent(in) :: ist_start_, ist_end_
+    type(states_t),    intent(inout) :: st
+    type(mesh_t),      intent(in)    :: m
+    integer, optional, intent(in)    :: ist_start_, ist_end_
 
-    integer :: ist, ik, id, ist_start, ist_end, j
-    CMPLX :: alpha, beta
+    integer :: ist, ik, id, ist_start, ist_end, j, seed
+    CMPLX   :: alpha, beta
 
     call push_sub('states.states_generate_random')
 
@@ -1061,15 +1073,21 @@ contains
     ist_end = st%nst
     if(present(ist_end_)) ist_end = ist_end_
 
+    if(st%parallel_in_states) then
+      seed = st%mpi_grp%rank
+    else
+      seed = 0
+    end if
+
     select case(st%d%ispin)
     case(UNPOLARIZED, SPIN_POLARIZED)
 
       do ik = 1, st%d%nik
         do ist = ist_start, ist_end
           if (st%d%wfs_type == M_REAL) then
-            call dmf_random(m, st%dpsi(:, 1, ist, ik))
+            call dmf_random(m, st%dpsi(:, 1, ist, ik), seed)
           else
-            call zmf_random(m, st%zpsi(:, 1, ist, ik))
+            call zmf_random(m, st%zpsi(:, 1, ist, ik), seed)
           end if
           st%eigenval(ist, ik) = M_ZERO
         end do
@@ -1981,16 +1999,17 @@ contains
     integer :: sn, sn1, r, j, k, i, ii, st_start, st_end
 #endif
 
-    ! defaults
-    st%node(:)  = 0
-    st%st_start = 1
-    st%st_end   = st%nst
+    call push_sub('states.states_distribute_nodes')
+
+    ! Defaults.
+    st%node(:)            = 0
+    st%st_start           = 1
+    st%st_end             = st%nst
     st%parallel_in_states = .false.
     call mpi_grp_init(st%mpi_grp, -1)
 
 #if defined(HAVE_MPI)
     if(multicomm_strategy_is_parallel(mc, P_STRATEGY_STATES)) then
-
       st%parallel_in_states = .true.
       call mpi_grp_init(st%mpi_grp, mc%group_comm(P_STRATEGY_STATES))
 
@@ -1999,6 +2018,9 @@ contains
         write(message(2),'(i4,a,i4,a)') st%mpi_grp%size, " processors and ", st%nst, " states."
         call write_fatal(2)
       end if
+
+      ALLOCATE(st%st_range(2, 0:st%mpi_grp%size-1), 2*st%mpi_grp%size)
+      ALLOCATE(st%st_num(0:st%mpi_grp%size-1), st%mpi_grp%size)
 
       do k = 0, st%mpi_grp%size-1
         i = st%nst / st%mpi_grp%size
@@ -2011,12 +2033,15 @@ contains
           st_end = st%nst - (st%mpi_grp%size - k - 1)*i
           st_start = st_end - i + 1
         end if
-        write(message(1),'(a,i4,a,i4,a,i4)') 'Info: Nodes in states-group ', k,&
-                                             ' will manage states', st_start, " - ", st_end
+        write(message(1),'(a,i4,a,i4,a,i4)') 'Info: Nodes in states-group ', k, &
+          ' will manage states', st_start, " - ", st_end
         call write_info(1)
+        st%st_range(1, k) = st_start
+        st%st_range(2, k) = st_end
+        st%st_num(k)      = st_end-st_start+1
         if(st%mpi_grp%rank .eq. k) then
           st%st_start = st_start
-          st%st_end = st_end
+          st%st_end   = st_end
         endif
       end do
 
@@ -2034,6 +2059,7 @@ contains
     end if
 #endif
 
+    call pop_sub()
   end subroutine states_distribute_nodes
 
 
