@@ -41,17 +41,15 @@ void FC_FUNC_(doperate_ri_vec,DOPERATE_RI_VEC)(const int * opnp,
   
   int l, i, j;
   const int * restrict index;
-  const int * restrict index1;
   __m128d vw[MAX_OP_N];
   register __m128d a0, a1, a2, a3;
-  const ffloat * restrict ffi[MAX_OP_N];
+  const ffloat * ffi[MAX_OP_N];
 
   for(j = 0; j < n ; j++) vw[j] =_mm_set1_pd(w[j]);
 
   i = 0;
   for (l = 0; l < nri ; l++) {
     index  = opri + n * l;
-    index1 = opri + n * (l+1);
 
     for(j = 0; j < n ; j++) ffi[j] = fi + index[j];
 
@@ -97,9 +95,9 @@ void FC_FUNC_(zoperate_ri_vec,ZOPERATE_RI_VEC)(const int * opnp,
 
   int l, i, j;
   const int * restrict index;
-  const __m128d * restrict ffi[MAX_OP_N];
+  const __m128d * ffi[MAX_OP_N];
   __m128d vw[MAX_OP_N];
-  __m128d a0, a1, a2, a3;
+  register __m128d a0, a1, a2, a3;
 
   for(j = 0; j < n ; j++) vw[j] =_mm_set1_pd(w[j]);
 

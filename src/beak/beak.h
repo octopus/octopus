@@ -102,23 +102,4 @@ typedef struct {
 # endif
 #endif /* x86 */
 
-#if defined(OCT_AMD64) || defined(OCT_ITANIUM)
-# define aligned_malloc(ptr, size) (ptr) = malloc((size))
-# define aligned_free(ptr)         free(ptr)
-#endif
-
-#if defined(OCT_X86) && defined(USE_VECTORS)
-# ifdef HAVE_POSIX_MEMALIGN
-#  define _XOPEN_SOURCE 600
-#  include <stdlib.h>
-#  define aligned_malloc(ptr, size) posix_memalign((void *) & (ptr), 16, (size))
-#  define aligned_free(ptr)         free((ptr))
-# elif HAVE__MM_MALLOC || HAVE__MM_FREE
-#  define aligned_malloc(ptr, size) (ptr) = _mm_malloc((size), 16)
-#  define aligned_free(ptr)         _mm_free((ptr))
-# else
-#  error Aligned malloc not available
-# endif
-#endif
-
 #endif /* OCTOPUS_BEAK_H */

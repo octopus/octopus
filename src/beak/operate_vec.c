@@ -46,15 +46,13 @@ void FC_FUNC_(doperate_sse,DOPERATE_SSE)(const int * opnp,
   const int n = opn[0];
   const int np = opnp[0];
 
-  int i, j, nm2;
+  int i, j;
   const float * restrict mfi;
-  __m128 * restrict vw;
-
+  __m128d vw[MAX_OP_N];
   mfi   = fi - 1;
 
   {
 
-    aligned_malloc(vw, n*16);
     for(j = 0; j < n ; j++) vw[j] =_mm_set1_ps(w[j]);
     
     for(i = 0; i < (np-4+1); i+=4) {
@@ -63,8 +61,7 @@ void FC_FUNC_(doperate_sse,DOPERATE_SSE)(const int * opnp,
       const int * restrict index2 = opi + n*(i+2);
       const int * restrict index3 = opi + n*(i+3);
 
-      register __m128 a  __attribute__ ((__aligned__ (16)));
-      register __m128 c  __attribute__ ((__aligned__ (16)));
+      register __m128 a, c;
 
       a = _mm_mul_ps(vw[0], _mm_setr_ps(mfi[index0[0]], mfi[index1[0]], mfi[index2[0]], mfi[index3[0]]));
 
@@ -76,7 +73,6 @@ void FC_FUNC_(doperate_sse,DOPERATE_SSE)(const int * opnp,
       _mm_storeu_ps(fo+i, a);
 
     }
-    aligned_free(vw);
     
     for(; i < np; i++) {
       const int * restrict index; 
@@ -126,21 +122,18 @@ void FC_FUNC_(doperate_sse,DOPERATE_SSE)(const int * opnp,
 
   int i, j, nm2;
   const double * restrict mfi;
-  __m128d * restrict vw;
+  __m128d vw[MAX_OP_N];
 
   mfi   = fi - 1;
 
   {
-    aligned_malloc(vw, n*16);
-    
     for(j = 0; j < n ; j++) vw[j] =_mm_set1_pd(w[j]);
     
     for(i = 0; i < (np-2+1); i+=2) {
       const int * restrict index0 = opi + n*i;
       const int * restrict index1 = opi + n*i+n;
 
-      register __m128d a  __attribute__ ((__aligned__ (16)));
-      register __m128d c  __attribute__ ((__aligned__ (16)));
+      register __m128d a, c;
 
       a = _mm_mul_pd(vw[0], _mm_setr_pd(mfi[index0[0]], mfi[index1[0]]) );
 
@@ -153,8 +146,6 @@ void FC_FUNC_(doperate_sse,DOPERATE_SSE)(const int * opnp,
 
     }
 
-    aligned_free(vw);
-    
     for(; i < np; i++) {
       const int * restrict index; 
       index = opi + n*i;
@@ -182,32 +173,16 @@ void FC_FUNC_(zoperate_sse,ZOPERATE_SSE)(const int * opnp,
 				const __m128d * fi, 
 				__m128d * restrict fo){
 
-  /* GCC 3.x requires these variables to be declared static to have the proper alignment */
-#if __GNUC__ <= 3
-#define register static
-#endif
-
-  register __m128d a  __attribute__ ((__aligned__ (16)));
-  register __m128d b  __attribute__ ((__aligned__ (16)));
-  register __m128d c  __attribute__ ((__aligned__ (16)));
-  register __m128d d  __attribute__ ((__aligned__ (16)));
-  register __m128d e  __attribute__ ((__aligned__ (16)));
-  register __m128d f  __attribute__ ((__aligned__ (16)));
-
-#undef register
-
   const int n  = opn[0];
   const int np = opnp[0];
   const int * restrict index = opi;
   const int nm2  = n - 6 + 1;
   int i, j;
-
-  __m128d * restrict vw;
+  __m128d vw[MAX_OP_N];
+  register __m128d a, b, c, d, e, f;
 
 #pragma omp parallel private(a, b, c, d, e, f, index, i, j, vw)
   {
-
-    aligned_malloc(vw, n*16);
 
     for(j = 0; j < n ; j++) vw[j] =_mm_set1_pd(w[j]);
 
@@ -241,8 +216,6 @@ void FC_FUNC_(zoperate_sse,ZOPERATE_SSE)(const int * opnp,
       fo[i] = _mm_add_pd(a, e);
 
     }
-
-    aligned_free(vw);
 
   }
 

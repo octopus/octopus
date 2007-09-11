@@ -27,6 +27,8 @@
 #include <ia64intrin.h>
 #endif
 
+#include <assert.h>
+
 void FC_FUNC_(doperate_ri,DOPERATE_RI)(const int * opnp, 
 				       const int * opn, 
 				       const ffloat * restrict w, 
@@ -45,7 +47,9 @@ void FC_FUNC_(doperate_ri,DOPERATE_RI)(const int * opnp,
   const int * restrict index1;
   register ffloat a0, a1, a2, a3;
   register ffloat a4, a5, a6, a7;
-  const ffloat * ffi[30];
+  const ffloat * ffi[MAX_OP_N];
+
+  assert(MAX_OP_N >= n);
 
   i = 0;
   for (l = 0; l < nri ; l++) {
@@ -113,7 +117,7 @@ void FC_FUNC_(zoperate_ri,ZOPERATE_RI)(const int * opnp,
   int l, i, j, nm2;
   const int * restrict index;
   const int * restrict index1;
-  const comp * ffi[30];
+  const comp * ffi[MAX_OP_N];
   register ffloat a0, a1, a2, a3;
   register ffloat a4, a5, a6, a7;
 
