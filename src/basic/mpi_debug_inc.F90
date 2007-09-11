@@ -85,6 +85,24 @@ end subroutine TS(MPI_Alltoallv)
 
 
 ! ---------------------------------------------------------
+subroutine TS(MPI_Alltoall)(sendbuf, sendcnts, sendtype, recvbuf, &
+  recvcount, recvtype, comm, ierr)
+
+  R_TYPE  :: sendbuf(:), recvbuf(:)
+  integer :: sendcnts(:), recvcount(:)
+  integer :: sendtype, recvtype, comm, ierr
+
+  call MPI_Debug_IN (comm, C_MPI_ALLTOALLV)
+
+  call MPI_Alltoall(sendbuf, sendcnts, sendtype, recvbuf, &
+    recvcount, recvtype, comm, ierr)
+
+  call MPI_Debug_OUT(comm, C_MPI_ALLTOALLV)
+
+end subroutine TS(MPI_Alltoall)
+
+
+! ---------------------------------------------------------
 subroutine TS(MPI_Allgatherv)(sendbuf, sendcnts, sendtype, recvbuf, &
   recvcount, displs, recvtype, comm, ierr)
 

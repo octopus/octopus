@@ -554,8 +554,9 @@ contains
       end if
 
       ! also write to stderr if we are node 0
-      if (mpi_grp_is_root(mpi_world)) call push_sub_write(stderr)
-      
+      if(conf%debug_level.gt.1) then
+        if (mpi_grp_is_root(mpi_world)) call push_sub_write(stderr)
+      end if
     end if
 
     return
@@ -599,7 +600,9 @@ contains
       end if
       
       ! also write to stderr if we are node 0
-      if (mpi_grp_is_root(mpi_world)) call pop_sub_write(stderr)
+      if(conf%debug_level.gt.1) then
+        if (mpi_grp_is_root(mpi_world)) call pop_sub_write(stderr)
+      end if
 
       no_sub_stack = no_sub_stack - 1
     else

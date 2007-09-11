@@ -60,4 +60,4 @@ depend:
 	@makedepf90 $(libbasic_a_SOURCES)
 
 mpi_debug.o: mpi_debug_inc.F90
-mpi_lib.o: mpi_lib_inc.F90
+mpi_lib.o: mpi_lib_inc.F90 mpi_debug.o

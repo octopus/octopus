@@ -30,37 +30,35 @@ subroutine X(lmpi_gen_alltoallv)(incount, in, outcount, out, mpi_grp)
   R_TYPE,          intent(out) :: out(:)
   type(mpi_grp_t), intent(in)  :: mpi_grp
 
-  integer                          :: i, mpi_err
-  integer, dimension(mpi_grp%size) :: sendcnts, sdispls, rdispls, rbuf
-  integer, allocatable :: recvcnts(:)
+  integer                          :: mpi_err
+  integer, dimension(mpi_grp%size) :: sendcnts, sdispls, rdispls, recvbuf, recvcnts
 
   call push_sub('mpi_lib_inc.Xlmpi_gen_alltoallv')
 
-  ALLOCATE(recvcnts(mpi_grp%size), mpi_grp%size)
-  recvcnts = 0
-  i = 1
-  sdispls = 0
-  sendcnts = 1
-  recvcnts = 1
-  rdispls(1) = 0
-  do i = 2, mpi_grp%size
-    rdispls(i) = rdispls(i-1)+recvcnts(i-1)
-  end do
+  ! Query how many elements each node has to contribute.
+  recvcnts                = 0
+  sdispls                 = 0
+  sendcnts                = 1
+  recvcnts                = 1
+  rdispls(1)              = 0
+  rdispls(2:mpi_grp%size) = rdispls(1:mpi_grp%size)+recvcnts(1:mpi_grp%size)
+  call MPI_Debug_In(mpi_grp%comm, C_MPI_ALLTOALLV)
+  call MPI_Alltoallv(incount, sendcnts, sdispls, R_MPITYPE, recvbuf, recvcnts, rdispls, &
+    R_MPITYPE, mpi_grp%comm, mpi_err)
+  call MPI_Debug_Out(mpi_grp%comm, C_MPI_ALLTOALLV)
 
-  call MPI_Alltoallv(incount, sendcnts, sdispls, R_MPITYPE, rbuf, recvcnts, rdispls, R_MPITYPE, mpi_grp%comm, mpi_err)
-  outcount = sum(rbuf)
-  recvcnts = rbuf
-  sendcnts   = incount
-  sdispls    = 0
-  rdispls(1) = 0
+  outcount = sum(recvbuf)
 
-  do i = 2, mpi_grp%size
-    rdispls(i) = rdispls(i-1) + recvcnts(i-1)
-  end do
-
+  ! Exchange the data.
+  recvcnts                = recvbuf
+  sendcnts                = incount
+  sdispls                 = 0
+  rdispls(1)              = 0
+  rdispls(2:mpi_grp%size) = rdispls(1:mpi_grp%size)+recvcnts(1:mpi_grp%size)
+  call MPI_Debug_In(mpi_grp%comm, C_MPI_ALLTOALLV)
   call MPI_Alltoallv(in, sendcnts, sdispls, R_MPITYPE, out, recvcnts, rdispls, &
     R_MPITYPE, mpi_grp%comm, mpi_err)
-  deallocate(recvcnts)
+  call MPI_Debug_Out(mpi_grp%comm, C_MPI_ALLTOALLV)
 
   call pop_sub()
 end subroutine X(lmpi_gen_alltoallv)

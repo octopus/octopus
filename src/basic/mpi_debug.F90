@@ -33,7 +33,7 @@ module mpi_debug_m
 
   public ::                      &
     MPI_Debug_Statistics,        &
-    MPI_Debug_IN, MPI_Debug_OUT
+    MPI_Debug_In, MPI_Debug_Out
 
   public ::                      &
     TSD_MPI_Barrier,             &
@@ -56,8 +56,10 @@ module mpi_debug_m
     TSD_MPI_Allreduce,           &
     TSZ_MPI_Allreduce,           &
     TSI_MPI_Allgatherv,          &
-    TSI_MPI_Allreduce
-
+    TSI_MPI_Allreduce,           &
+    TSD_MPI_Alltoall,            &
+    TSZ_MPI_Alltoall,            &
+    TSI_MPI_Alltoall
 
   integer, public, parameter ::  &
     C_MPI_BARRIER    = 1,        &
@@ -66,9 +68,10 @@ module mpi_debug_m
     C_MPI_ALLTOALLV  = 4,        &
     C_MPI_ALLGATHERV = 5,        &
     C_MPI_BCAST      = 6,        &
-    C_MPI_ALLREDUCE  = 7
+    C_MPI_ALLREDUCE  = 7,        &
+    C_MPI_ALLTOALL   = 8
 
-  character(len=15), dimension(C_MPI_ALLREDUCE), public :: mpi_rlabel = &
+  character(len=15), dimension(C_MPI_ALLTOALL), public :: mpi_rlabel = &
     (/                           &
     'MPI_BARRIER   ',            &
     'MPI_SCATTERV  ',            &
@@ -76,12 +79,13 @@ module mpi_debug_m
     'MPI_ALLTOALLV ',            &
     'MPI_ALLGATHERV',            &
     'MPI_BCAST     ',            &
-    'MPI_ALLREDUCE '             &
+    'MPI_ALLREDUCE ',            &
+    'MPI_ALLTOALL  '             &
     /)
 
-  integer, public :: call_counter(C_MPI_BARRIER:C_MPI_ALLREDUCE) = 0
-  integer, public :: sec_accum(C_MPI_BARRIER:C_MPI_ALLREDUCE)    = 0
-  integer, public :: usec_accum(C_MPI_BARRIER:C_MPI_ALLREDUCE)   = 0
+  integer, public :: call_counter(C_MPI_BARRIER:C_MPI_ALLTOALL) = 0
+  integer, public :: sec_accum(C_MPI_BARRIER:C_MPI_ALLTOALL)    = 0
+  integer, public :: usec_accum(C_MPI_BARRIER:C_MPI_ALLTOALL)   = 0
 
   integer, private :: sec_in, usec_in
 
@@ -132,12 +136,12 @@ contains
     call_counter(index) = call_counter(index) + 1
     call loct_gettimeofday(sec_in, usec_in)
     call epoch_time_diff(sec_in, usec_in)
-    write(message(1),'(a,i6,a,i6.6,a,i3.3,a,i6.6,a,i4.4,a,i6.6)') '* I ',    &
+    write(message(1),'(a,i6,a,i6.6,a,i14,a,i6.6,a,i4.4,a,i6.6)') '* I ',    &
       sec_in, '.', usec_in, ' '//trim(mpi_rlabel(index))//' - ', comm,':',   &
       call_counter(index), ' - ', sec_accum(index), '.', usec_accum(index)
     call write_debug(1)
 
-  end subroutine MPI_Debug_IN
+  end subroutine MPI_Debug_In
 
 
   ! ---------------------------------------------------------
@@ -151,7 +155,7 @@ contains
     call loct_gettimeofday(sec, usec)
     call epoch_time_diff(sec, usec)
     call mpi_time_accum(index, sec, usec, sec_diff, usec_diff)
-    write(message(1),'(a,i6,a,i6.6,a,i3.3,a,i6.6,a,i4.4,a,i6.6,a,i4.4,a,i6.6)') &
+    write(message(1),'(a,i6,a,i6.6,a,i14,a,i6.6,a,i4.4,a,i6.6,a,i4.4,a,i6.6)') &
       '* O ',                                                                   &
       sec, '.', usec, ' '//trim(mpi_rlabel(index))//' - ', comm, ':',           &
       call_counter(index), ' - ', sec_accum(index), '.', usec_accum(index),     &
