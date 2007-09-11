@@ -48,7 +48,7 @@ void FC_FUNC_(doperate_sse,DOPERATE_SSE)(const int * opnp,
 
   int i, j;
   const float * restrict mfi;
-  __m128d vw[MAX_OP_N];
+  __m128 vw[MAX_OP_N];
   mfi   = fi - 1;
 
   {
