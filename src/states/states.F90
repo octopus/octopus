@@ -31,6 +31,7 @@ module states_m
   use lib_oct_m
   use lib_oct_parser_m
   use math_m
+  use messages_m
   use mesh_function_m
   use mesh_m
   use mpi_m
@@ -40,6 +41,7 @@ module states_m
   use profiling_m
   use simul_box_m
   use string_m
+  use units_m
   use varinfo_m
 
   implicit none

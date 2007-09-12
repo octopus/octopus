@@ -61,9 +61,11 @@ subroutine X(nl_operator_tune)(op)
 
     reps = 10
 
+    print*, op_function_name(method)
+
     itime = loct_clock()
     do ii = 1, reps
-      call X(nl_operator_operate)(op, in, out, ghost_update = .false.)
+      call X(nl_operator_operate)(op, in, out, ghost_update = .true.)
     end do
     ftime = loct_clock()
 

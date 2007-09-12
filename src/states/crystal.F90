@@ -3,50 +3,39 @@
 
 #include "global.h"
 
-      module crystal_m
-
+module crystal_m
+  
   use blas_m
   use global_m
   use lib_adv_alg_m
   use messages_m
   use units_m
 
-      implicit none
+  implicit none
 
-      FLOAT, allocatable :: xk(:,:)
-      integer, allocatable :: kmap(:)
+  private
 
-      integer :: ntrans, gmtrx(48,3,3)
-      integer :: rmtrx(48,3,3)
-      FLOAT :: tnp(48,3),   &
-                  trans(3,3,48) !rotation matrices in cartesian coordinates
+  FLOAT,   allocatable :: xk(:,:)
+  integer, allocatable :: kmap(:)
+  
+  integer :: ntrans, gmtrx(48,3,3)
+  integer :: rmtrx(48,3,3)
+  FLOAT :: tnp(48,3), trans(3,3,48) !rotation matrices in cartesian coordinates
+  
+  FLOAT :: a(3,3)    ! lattice vectors in cart. coord.
+  FLOAT :: amet(3,3) ! adot(i,j) = a_i dot a_j
+  FLOAT :: b(3,3)    ! reciprocal lattice vectors
+  FLOAT :: bmet(3,3) ! b_i dot b_k for reciprocal lattice vectors
+  
+  integer ::  i, j, k, l
+  
+  FLOAT :: tnpi(3), xmt(3,3)
+  character(len=1) :: i1(3)
+  character(len=5) :: nametr(3)
 
-      FLOAT, private :: a(3,3)    ! lattice vectors in cart. coord.
-      FLOAT, private :: amet(3,3) ! adot(i,j) = a_i dot a_j
-      FLOAT, private :: b(3,3)    ! reciprocal lattice vectors
-      FLOAT, private :: bmet(3,3) ! b_i dot b_k for reciprocal lattice vectors
-
-!      FLOAT, private :: volume_check, xdum
-      integer, private ::  i, j, k, l! ,m , ierr
-
-      FLOAT :: tnpi(3), xmt(3,3)
-      character(len=1) :: i1(3)
-      character(len=5) :: nametr(3)
-
-
-!   subroutines internal to this module
-
-      private invers
-      private crystal_monkpack
-      private crystal_symgen
-      private crystal_symchk
-      private symm_ident
-      private atftmt
-      private pgl
-      private rot
-      private rlv
-
-      contains
+  public :: crystal_init
+  
+contains
 
       subroutine crystal_init(al,ntype,natom,maxnatom,coorat,    &
                               nk_axis,k_shift,nrk,nrkmax,rk,w)
@@ -1374,154 +1363,149 @@
 !
 !     ihg stands for holohedral group number.
 !
-      end subroutine pgl
-!
-      subroutine rot(r,nr)
+  end subroutine pgl
 
-      integer :: nr
-      FLOAT :: r(49,3,3)
-!     .. Local Scalars ..
-      FLOAT :: f
-      integer :: i, j, k, n, nv
-!     .. Intrinsic Functions ..
-      intrinsic sqrt
+  subroutine rot(r,nr)
 
-      do n = 1, nr
-         r(n,:,:) = M_ZERO
-       end do
+    integer :: nr
+    FLOAT :: r(49,3,3)
+    !     .. Local Scalars ..
+    FLOAT :: f
+    integer :: i, j, k, n, nv
+    !     .. Intrinsic Functions ..
 
-      if (nr <= 24) then
+    do n = 1, nr
+      r(n,:,:) = M_ZERO
+    end do
 
-!        define the generators for the rotation matrices
-!                                 --hexagonal group
-!
-         f = sqrt(M_THREE)/M_TWO
-         r(2,1,1) = M_HALF
-         r(2,1,2) = -f
-         r(2,2,1) = f
-         r(2,2,2) = M_HALF
-         r(7,1,1) = -M_HALF
-         r(7,1,2) = -f
-         r(7,2,1) = -f
-         r(7,2,2) = M_HALF
-         do 40 n = 1, 6
-            r(n,3,3) = M_ONE
-            r(n+18,3,3) = M_ONE
-            r(n+6,3,3) = -M_ONE
-            r(n+12,3,3) = -M_ONE
-   40    continue
-!
-!     generate the rest of the rotation matrices
-!
-         do i = 1, 2
-           r(1,i,i) = M_ONE
-           do j = 1, 2
-               r(6,i,j) = r(2,j,i)
-             do k = 1, 2
-                  r(3,i,j) = r(3,i,j) + r(2,i,k)*r(2,k,j)
-                  r(8,i,j) = r(8,i,j) + r(2,i,k)*r(7,k,j)
-                  r(12,i,j) = r(12,i,j) + r(7,i,k)*r(2,k,j)
-             end do
-           end do
-         end do
-         do i = 1, 2
-           do j = 1, 2
-               r(5,i,j) = r(3,j,i)
-             do k = 1, 2
-                  r(4,i,j) = r(4,i,j) + r(2,i,k)*r(3,k,j)
-                  r(9,i,j) = r(9,i,j) + r(2,i,k)*r(8,k,j)
-                  r(10,i,j) = r(10,i,j) + r(12,i,k)*r(3,k,j)
-                  r(11,i,j) = r(11,i,j) + r(12,i,k)*r(2,k,j)
-             end do
-           end do
-         end do
-!
-         do n = 1, 12
-            nv = n + 12
-           r(nv,1:2,1:2) = -r(n,1:2,1:2)
-         end do
-      else
-!
-!        define the generators for the rotation matrices
-!                                          --cubic group
-!
-         r(9,1,3) = M_ONE
-         r(9,2,1) = M_ONE
-         r(9,3,2) = M_ONE
-         r(19,1,1) = M_ONE
-         r(19,2,3) = -M_ONE
-         r(19,3,2) = M_ONE
-         do i = 1, 3
-           r(1,i,i) = M_ONE
-           do j = 1, 3
-               r(20,i,j) = r(19,j,i)
-               r(5,i,j) = r(9,j,i)
-             do k = 1, 3
-                  r(2,i,j) = r(2,i,j) + r(19,i,k)*r(19,k,j)
-                  r(16,i,j) = r(16,i,j) + r(9,i,k)*r(19,k,j)
-                  r(23,i,j) = r(23,i,j) + r(19,i,k)*r(9,k,j)
-             end do
-           end do
-         end do
-         do i = 1, 3
-           do j = 1, 3
-             do k = 1, 3
-                  r(6,i,j) = r(6,i,j) + r(2,i,k)*r(5,k,j)
-                  r(7,i,j) = r(7,i,j) + r(16,i,k)*r(23,k,j)
-                  r(8,i,j) = r(8,i,j) + r(5,i,k)*r(2,k,j)
-                  r(10,i,j) = r(10,i,j) + r(2,i,k)*r(9,k,j)
-                  r(11,i,j) = r(11,i,j) + r(9,i,k)*r(2,k,j)
-                  r(12,i,j) = r(12,i,j) + r(23,i,k)*r(16,k,j)
-                  r(14,i,j) = r(14,i,j) + r(16,i,k)*r(2,k,j)
-                  r(15,i,j) = r(15,i,j) + r(2,i,k)*r(16,k,j)
-                  r(22,i,j) = r(22,i,j) + r(23,i,k)*r(2,k,j)
-                  r(24,i,j) = r(24,i,j) + r(2,i,k)*r(23,k,j)
-             end do
-           end do
-         end do
-         do i = 1, 3
-           do j = 1, 3
-             do k = 1, 3
-                  r(3,i,j) = r(3,i,j) + r(5,i,k)*r(12,k,j)
-                  r(4,i,j) = r(4,i,j) + r(5,i,k)*r(10,k,j)
-                  r(13,i,j) = r(13,i,j) + r(23,i,k)*r(11,k,j)
-                  r(17,i,j) = r(17,i,j) + r(16,i,k)*r(12,k,j)
-                  r(18,i,j) = r(18,i,j) + r(16,i,k)*r(10,k,j)
-                  r(21,i,j) = r(21,i,j) + r(12,i,k)*r(15,k,j)
-             end do
-           end do
-         end do
-         do n = 1, 24
-            nv = n + 24
-            r(nv,:,:) = -r(n,:,:)
-         end do
-      end if
-!
-      end subroutine rot
+    if (nr <= 24) then
 
-      subroutine rlv(p,g,y,l)
+      !        define the generators for the rotation matrices
+      !                                 --hexagonal group
+      !
+      f = sqrt(M_THREE)/M_TWO
+      r(2,1,1) = M_HALF
+      r(2,1,2) = -f
+      r(2,2,1) = f
+      r(2,2,2) = M_HALF
+      r(7,1,1) = -M_HALF
+      r(7,1,2) = -f
+      r(7,2,1) = -f
+      r(7,2,2) = M_HALF
+      do n = 1, 6
+        r(n,3,3) = M_ONE
+        r(n+18,3,3) = M_ONE
+        r(n+6,3,3) = -M_ONE
+        r(n+12,3,3) = -M_ONE
+      end do
+      !
+      !     generate the rest of the rotation matrices
+      !
+      do i = 1, 2
+        r(1,i,i) = M_ONE
+        do j = 1, 2
+          r(6,i,j) = r(2,j,i)
+          do k = 1, 2
+            r(3,i,j) = r(3,i,j) + r(2,i,k)*r(2,k,j)
+            r(8,i,j) = r(8,i,j) + r(2,i,k)*r(7,k,j)
+            r(12,i,j) = r(12,i,j) + r(7,i,k)*r(2,k,j)
+          end do
+        end do
+      end do
+      do i = 1, 2
+        do j = 1, 2
+          r(5,i,j) = r(3,j,i)
+          do k = 1, 2
+            r(4,i,j) = r(4,i,j) + r(2,i,k)*r(3,k,j)
+            r(9,i,j) = r(9,i,j) + r(2,i,k)*r(8,k,j)
+            r(10,i,j) = r(10,i,j) + r(12,i,k)*r(3,k,j)
+            r(11,i,j) = r(11,i,j) + r(12,i,k)*r(2,k,j)
+          end do
+        end do
+      end do
+      !
+      do n = 1, 12
+        nv = n + 12
+        r(nv,1:2,1:2) = -r(n,1:2,1:2)
+      end do
+    else
+      !
+      !        define the generators for the rotation matrices
+      !                                          --cubic group
+      !
+      r(9,1,3) = M_ONE
+      r(9,2,1) = M_ONE
+      r(9,3,2) = M_ONE
+      r(19,1,1) = M_ONE
+      r(19,2,3) = -M_ONE
+      r(19,3,2) = M_ONE
+      do i = 1, 3
+        r(1,i,i) = M_ONE
+        do j = 1, 3
+          r(20,i,j) = r(19,j,i)
+          r(5,i,j) = r(9,j,i)
+          do k = 1, 3
+            r(2,i,j) = r(2,i,j) + r(19,i,k)*r(19,k,j)
+            r(16,i,j) = r(16,i,j) + r(9,i,k)*r(19,k,j)
+            r(23,i,j) = r(23,i,j) + r(19,i,k)*r(9,k,j)
+          end do
+        end do
+      end do
+      do i = 1, 3
+        do j = 1, 3
+          do k = 1, 3
+            r(6,i,j) = r(6,i,j) + r(2,i,k)*r(5,k,j)
+            r(7,i,j) = r(7,i,j) + r(16,i,k)*r(23,k,j)
+            r(8,i,j) = r(8,i,j) + r(5,i,k)*r(2,k,j)
+            r(10,i,j) = r(10,i,j) + r(2,i,k)*r(9,k,j)
+            r(11,i,j) = r(11,i,j) + r(9,i,k)*r(2,k,j)
+            r(12,i,j) = r(12,i,j) + r(23,i,k)*r(16,k,j)
+            r(14,i,j) = r(14,i,j) + r(16,i,k)*r(2,k,j)
+            r(15,i,j) = r(15,i,j) + r(2,i,k)*r(16,k,j)
+            r(22,i,j) = r(22,i,j) + r(23,i,k)*r(2,k,j)
+            r(24,i,j) = r(24,i,j) + r(2,i,k)*r(23,k,j)
+          end do
+        end do
+      end do
+      do i = 1, 3
+        do j = 1, 3
+          do k = 1, 3
+            r(3,i,j) = r(3,i,j) + r(5,i,k)*r(12,k,j)
+            r(4,i,j) = r(4,i,j) + r(5,i,k)*r(10,k,j)
+            r(13,i,j) = r(13,i,j) + r(23,i,k)*r(11,k,j)
+            r(17,i,j) = r(17,i,j) + r(16,i,k)*r(12,k,j)
+            r(18,i,j) = r(18,i,j) + r(16,i,k)*r(10,k,j)
+            r(21,i,j) = r(21,i,j) + r(12,i,k)*r(15,k,j)
+          end do
+        end do
+      end do
+      do n = 1, 24
+        nv = n + 24
+        r(nv,:,:) = -r(n,:,:)
+      end do
+    end if
+    !
+  end subroutine rot
 
-      implicit none
+  subroutine rlv(p,g,y,l)
 
-        FLOAT   :: g(3),  &  ! vector to be multiplied
-                        p(3,3)    ! multiplication matrix, e.g. lattice vectors
-        FLOAT   :: y(3)      ! mod(multiplied vector,lattice vector)
-        integer :: l       ! is nonzero if a lattice vector was removed
+    FLOAT   :: g(3)      ! vector to be multiplied
+    FLOAT   :: p(3,3)    ! multiplication matrix, e.g. lattice vectors
+    FLOAT   :: y(3)      ! mod(multiplied vector,lattice vector)
+    integer :: l         ! is nonzero if a lattice vector was removed
+    
+    !     subroutine rlv removes a direct lattice vector from g by
+    !     operation p, leaving the remainder in y. If a nonzero lattice
+    !     vector was removed, l is made nonzero.
+    
+    
+    y(1:3) = matmul(p(1:3,1:3),g(1:3))
+    l = sum(nint(abs(y(1:3))))
+    y(1:3) = y(1:3) - M_ONE*nint(y(1:3))
+    
+  end subroutine rlv
 
-!     subroutine rlv removes a direct lattice vector from g by
-!     operation p, leaving the remainder in y. If a nonzero lattice
-!     vector was removed, l is made nonzero.
-
-!      intrinsic :: abs, nint
-
-        y(1:3) = matmul(p(1:3,1:3),g(1:3))
-        l = sum(nint(abs(y(1:3))))
-        y(1:3) = y(1:3) - M_ONE*nint(y(1:3))
-
-      return
-      end subroutine rlv
-
-      end module crystal_m
+end module crystal_m
 
 !! Local Variables:
 !! mode: f90
