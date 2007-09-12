@@ -19,15 +19,13 @@
 
 
   ! ---------------------------------------------------------
-  subroutine oct_finalcheck(oct, initial_st, target_st, sys, h, td, tdt)
+  subroutine oct_finalcheck(oct, initial_st, target, sys, h, td)
     type(oct_t), intent(in)            :: oct
     type(states_t), intent(in)         :: initial_st
-    type(states_t), intent(in)         :: target_st
+    type(target_t), intent(inout)      :: target
     type(system_t), intent(inout)      :: sys
     type(hamiltonian_t), intent(inout) :: h
     type(td_t), intent(inout)          :: td
-    type(td_target_set_t), intent(inout) :: tdt
-
 
     type(states_t) :: psi
     FLOAT, allocatable :: td_fitness(:)
@@ -45,14 +43,14 @@
     ALLOCATE(td_fitness(0:td%max_iter), td%max_iter+1)
     psi = initial_st
     
-    call propagate_forward(oct%targetmode, sys, h, td, tdt, psi, write_iter = .true.)
+    call propagate_forward(target%targetmode, sys, h, td, target%tdt, psi, write_iter = .true.)
 
-    if(oct%targetmode==oct_targetmode_td) then
+    if(target%targetmode==oct_targetmode_td) then
       overlap = SUM(td_fitness) * abs(td%dt)
       write(message(1), '(a,f14.8)') " => overlap:", overlap
       call write_info(1)
     else
-      overlap = abs(zstates_mpdotp(sys%gr%m, psi, target_st))
+      overlap = abs(zstates_mpdotp(sys%gr%m, psi, target%st))
       write(message(1), '(6x,a,f14.8)') " => overlap:", overlap
       call write_info(1)
     end if

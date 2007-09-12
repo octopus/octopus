@@ -36,7 +36,9 @@ module opt_control_target_m
   use mesh_m
   use mesh_function_m
   use restart_m
+  use timedep_m
   use opt_control_constants_m
+  use opt_control_tdtarget_m
 
   implicit none
 
@@ -48,38 +50,22 @@ module opt_control_target_m
 
   type target_t
     integer :: totype
+    integer :: targetmode
     type(states_t) :: st
     FLOAT, pointer :: rho(:)
+    type(td_target_set_t) :: tdt
   end type target_t
 
   contains
 
   ! ----------------------------------------------------------------------
-  subroutine target_output(gr, dir, outp, target)
-    type(grid_t), intent(inout)   :: gr
-    character(len=*), intent(in)  :: dir
-    type(output_t),   intent(in)  :: outp
-    type(target_t), intent(inout) :: target
-
-    integer :: ierr
-    call push_sub('target.target_output')
-
-    select case(target%totype)
-    case(oct_tg_local)
-      call doutput_function(outp%how, trim(dir), 'local_target', gr%m, gr%sb, &
-        target%rho, M_ONE, ierr, is_tmp = .false.)
-    case default
-      call states_output(target%st, gr, trim(dir), outp)
-    end select
-
-    call pop_sub()
-  end subroutine target_output
-
-  ! ----------------------------------------------------------------------
-  subroutine target_init(gr, geo, stin, target)
+  subroutine target_init(gr, geo, stin, td, target)
     type(grid_t), intent(in)      :: gr
     type(geometry_t), intent(in)  :: geo
     type(states_t), intent(in)    :: stin
+
+    type(td_t), intent(in)        :: td
+
     type(target_t), intent(inout) :: target
 
     integer           :: i, kpoints, dim, nst, no_c, state, ierr, isize, ik, ib, &
@@ -93,6 +79,19 @@ module opt_control_target_m
     character(len=10) :: fname
 
     call push_sub('target.target_init')
+
+    !%Variable OCTTargetMode
+    !%Type integer
+    !%Section Optimal Control
+    !%Description
+    !%Option oct_targetmode_static  0
+    !% Static or time-independent targets
+    !%Option oct_targetmode_td      1
+    !% Time-dependent targets, specify block OCTTdTarget
+    !%End
+    call loct_parse_int(check_inp('OCTTargetMode'), oct_targetmode_static, target%targetmode)
+    if(.not.varinfo_valid_option('OCTTargetMode', target%targetmode)) &
+      call input_error('OCTTargetMode')
 
     !%Variable OCTTargetOperator
     !%Type integer
@@ -240,6 +239,8 @@ module opt_control_target_m
       write(message(1),'(a)') "Target Operator not properly defined."
       call write_fatal(1)
     end select
+
+    call tdtargetset_init(target%targetmode, gr, td, target%tdt)
     
     call pop_sub()
   end subroutine target_init
@@ -258,5 +259,28 @@ module opt_control_target_m
     call pop_sub()
   end subroutine target_end
 
+
+  ! ----------------------------------------------------------------------
+  subroutine target_output(gr, dir, outp, target)
+    type(grid_t), intent(inout)   :: gr
+    character(len=*), intent(in)  :: dir
+    type(output_t),   intent(in)  :: outp
+    type(target_t), intent(inout) :: target
+
+    integer :: ierr
+    call push_sub('target.target_output')
+
+    select case(target%totype)
+    case(oct_tg_local)
+      call doutput_function(outp%how, trim(dir), 'local_target', gr%m, gr%sb, &
+        target%rho, M_ONE, ierr, is_tmp = .false.)
+    case default
+      call states_output(target%st, gr, trim(dir), outp)
+    end select
+
+    call tdtargetset_end(target%tdt)
+
+    call pop_sub()
+  end subroutine target_output
 
 end module opt_control_target_m

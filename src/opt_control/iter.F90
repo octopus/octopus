@@ -59,10 +59,10 @@
 
     ALLOCATE(iterator%convergence(4,0:iterator%ctr_iter_max),(iterator%ctr_iter_max+1)*4)
 
-    iterator%bestJ           = M_ZERO
     iterator%bestJ1          = M_ZERO
-    iterator%bestJ_ctr_iter  = M_ZERO
-    iterator%bestJ1_ctr_iter = M_ZERO
+    iterator%bestJ1_fluence  = M_ZERO
+    iterator%bestJ1_J        = M_ZERO
+    iterator%bestJ1_ctr_iter = 0
 
     call pop_sub()
   end subroutine oct_iterator_init
@@ -82,11 +82,10 @@
 
 
   ! ---------------------------------------------------------
-  logical function iteration_manager(oct, gr, td_fitness, par, &
+  logical function iteration_manager(oct, gr, par, &
                                      td, psi, target, iterator) result(stoploop)
     type(oct_t), intent(in)             :: oct
     type(grid_t), intent(in)            :: gr
-    FLOAT, intent(in)                   :: td_fitness(:)
     type(oct_control_parameters_t), intent(in)  :: par
     type(td_t), intent(in)              :: td
     type(states_t), intent(in)          :: psi
@@ -100,7 +99,7 @@
     
     stoploop = .false.
 
-    overlap = j1(oct, gr%m, td_fitness, td%max_iter, psi, target)
+    overlap = j1(oct, gr%m, td%max_iter, psi, target)
     fluence = laser_fluence(par)
     j2 = j2_functional(par)
     jfunctional = overlap - j2
@@ -143,17 +142,6 @@
       call write_info(3)
     end if
     call messages_print_stress(stdout)
-
-    ! store field with best J
-    if(jfunctional > iterator%bestJ) then
-      iterator%bestJ          = jfunctional
-      iterator%bestJ_J1       = overlap
-      iterator%bestJ_fluence  = fluence
-      iterator%bestJ_ctr_iter = iterator%ctr_iter
-      ! dump to disc
-      write(filename,'(a)') 'opt-control/laser.bestJ'
-      call parameters_write(filename, par)
-    end if
 
     ! store field with best J1
     if(overlap > iterator%bestJ1) then

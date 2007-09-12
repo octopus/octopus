@@ -62,7 +62,6 @@ module opt_control_m
   type oct_t
     FLOAT   :: targetfluence
     logical :: mode_fixed_fluence
-    integer :: targetmode
     integer :: algorithm_type
     logical :: oct_double_check
     logical :: dump_intermediate
@@ -74,9 +73,8 @@ module opt_control_m
     integer            :: ctr_iter
     FLOAT              :: old_functional
     FLOAT, pointer     :: convergence(:,:)
-    FLOAT              :: bestJ, bestJ1, bestJ_fluence, bestJ1_fluence
-    FLOAT              :: bestJ_J1, bestJ1_J
-    integer            :: bestJ_ctr_iter, bestJ1_ctr_iter
+    FLOAT              :: bestJ1, bestJ1_fluence, bestJ1_J
+    integer            :: bestJ1_ctr_iter
   end type oct_iterator_t
 
 contains
@@ -94,7 +92,6 @@ contains
     type(states_t)             :: chi, psi, initial_st
     type(target_t)             :: target
     type(filter_t),    pointer :: f(:)
-    type(td_target_set_t)      :: tdt
     type(oct_control_parameters_t) :: par, par_tmp
     integer :: i, ierr
     character(len=80)  :: filename
@@ -142,9 +139,7 @@ contains
     call filter_write(f, NDIM, td%dt, td%max_iter)
 
     call def_istate(gr, sys%geo, initial_st)
-    call target_init(gr, sys%geo, sys%st, target)
-
-    call tdtargetset_init(oct%targetmode, gr, td, tdt)
+    call target_init(gr, sys%geo, sys%st, td, target)
 
     call check_faulty_runmodes(oct)
 
@@ -171,13 +166,12 @@ contains
 
     ! do final test run: propagate initial state with optimal field
     call parameters_to_h(par, h%ep)
-    call oct_finalcheck(oct, initial_st, target%st, sys, h, td, tdt)
+    call oct_finalcheck(oct, initial_st, target, sys, h, td)
 
     ! clean up
     call parameters_end(par)
     call parameters_end(par_tmp)
     call oct_iterator_end(iterator)
-    call tdtargetset_end(tdt)
     call filter_end(f)
     call td_end(td)
 
@@ -207,22 +201,22 @@ contains
 
       psi = initial_st
       call parameters_to_h(par, h%ep)
-      call propagate_forward(oct%targetmode, sys, h, td, tdt, psi) 
+      call propagate_forward(target%targetmode, sys, h, td, target%tdt, psi) 
+      write(filename,'(a,i3.3)') 'opt-control/PsiT.', iterator%ctr_iter
+      call states_output(psi, gr, filename, sys%outp)
       
-      ! Maybe we should print here a PsiT.000?
-      !call states_output(psi, gr, 'opt-control/prop1', sys%outp)
-        
       ctr_loop: do
         
         call calc_chi(oct, gr, target, psi, chi)
         
-        if(iteration_manager(oct, gr, tdt%td_fitness, par, td, psi, target, iterator)) &
-          exit ctr_loop
-        
-        call bwd_step(oct_algorithm_zr98, oct%targetmode, sys, td, h, tdt, par, par_tmp, chi, psi)
+        if(iteration_manager(oct, gr, par, td, psi, target, iterator)) exit ctr_loop
+
+        call bwd_step(oct_algorithm_zr98, &
+          target%targetmode, sys, td, h, target%tdt, par, par_tmp, chi, psi)
         
         ! forward propagation
-        call fwd_step(oct_algorithm_zr98, oct%targetmode, sys, td, h, tdt, par, par_tmp, chi, psi)
+        call fwd_step(oct_algorithm_zr98, &
+          target%targetmode, sys, td, h, target%tdt, par, par_tmp, chi, psi)
 
         ! Print state and laser after the forward propagation.
         write(filename,'(a,i3.3)') 'opt-control/PsiT.', iterator%ctr_iter
@@ -248,7 +242,7 @@ contains
       ctr_loop: do
 
         call parameters_to_h(par, h%ep)
-        call propagate_forward(oct%targetmode, sys, h, td, tdt, psi) 
+        call propagate_forward(target%targetmode, sys, h, td, target%tdt, psi) 
 
         write(filename,'(a,i3.3)') 'opt-control/PsiT.', iterator%ctr_iter
         call states_output(psi, gr, trim(filename), sys%outp)
@@ -257,12 +251,10 @@ contains
 
         call calc_chi(oct, gr, target, psi, chi)
         
-        if(iteration_manager(oct, gr, tdt%td_fitness, par, td, psi, target, iterator)) &
-          exit ctr_loop
+        if(iteration_manager(oct, gr, par, td, psi, target, iterator)) exit ctr_loop
         
-        call bwd_step(oct_algorithm_wg05, oct%targetmode, sys, td, h, tdt, par, par_tmp, chi, psi)
-        !!!WARNING: this probably shoudl not be here?
-        fluence = laser_fluence(par_tmp)
+        call bwd_step(oct_algorithm_wg05, &
+          target%targetmode, sys, td, h, target%tdt, par, par_tmp, chi, psi)
 
         ! WARNING: Untested.
         do j = 1, par_tmp%no_parameters
@@ -313,25 +305,23 @@ contains
       call parameters_to_h(par, h%ep)
       call propagate_backward(sys, h, td, chi)
 
-      ! Maybe we should print here the backwards propagated chi, for debugging purposes.
-      !call states_output(chi, gr, 'opt-control/initial_propZBR98', sys%outp)
-
       ctr_loop: do
 
         ! forward propagation
-        call fwd_step(oct_algorithm_zbr98, oct%targetmode, sys, td, h, tdt, par, par_tmp, chi, psi)
+        call fwd_step(oct_algorithm_zbr98, &
+          target%targetmode, sys, td, h, target%tdt, par, par_tmp, chi, psi)
 
         write(filename,'(a,i3.3)') 'opt-control/PsiT.', iterator%ctr_iter
         call states_output(psi, gr, filename, sys%outp)
         write(filename,'(a,i3.3)') 'opt-control/laser.', iterator%ctr_iter
         call parameters_write(filename, par)
         
-        if(iteration_manager(oct, gr, tdt%td_fitness, par, td, psi, target, iterator)) &
-          exit ctr_loop
+        if(iteration_manager(oct, gr, par, td, psi, target, iterator)) exit ctr_loop
         
          ! and now backward
         call calc_chi(oct, gr, target, psi, chi)
-        call bwd_step(oct_algorithm_zbr98, oct%targetmode, sys, td, h, tdt, par, par_tmp, chi, psi)
+        call bwd_step(oct_algorithm_zbr98, &
+          target%targetmode, sys, td, h, target%tdt, par, par_tmp, chi, psi)
         
       end do ctr_loop
 
@@ -362,12 +352,14 @@ contains
     end if
 
     ! Only single-electron calculations.
-    ! WARNING: maybe this should check that we really have occupation one for one of the spin-orbitals,
-    ! and occupation zero for all the others. Otherwise the algorithms are bound to fail.
+    ! WARNING: maybe this should check that we really have occupation one for 
+    ! one of the spin-orbitals, and occupation zero for all the others. 
+    ! Otherwise the algorithms are bound to fail.
     no_electrons = nint(sum(sys%st%occ(:, :)))
     if(no_electrons .ne. 1) then
-      write(message(1),'(a,i4,a)') 'Number of electrons (currently ',no_electrons,') should be just one.'
-      write(message(2),'(a)')      'Optimal control theory for many electron systems not yet developed!'
+      write(message(1),'(a,i4,a)') 'Number of electrons (currently ', &
+        no_electrons,') should be just one.'
+      write(message(2),'(a)') 'Optimal control theory for many electron systems not yet developed!'
       call write_fatal(2)
     end if
 

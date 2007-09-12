@@ -24,10 +24,9 @@
   ! case, or else \int_0^T dt <Psi(t)|\hat{O}(t)|Psi(t) in 
   ! the time-dependent case.
   ! ---------------------------------------------------------
-  FLOAT function j1(oct, m, td_fitness, max_iter, psi, target)
+  FLOAT function j1(oct, m, max_iter, psi, target)
     type(oct_t), intent(in)    :: oct
     type(mesh_t), intent(in)   :: m
-    FLOAT, intent(in)          :: td_fitness(:)
     integer, intent(in)        :: max_iter
     type(states_t), intent(in) :: psi
     type(target_t), intent(in) :: target
@@ -37,9 +36,9 @@
 
     call push_sub('opt_control.overlap_function')
 
-    if(oct%targetmode==oct_targetmode_td) then
+    if(target%targetmode==oct_targetmode_td) then
        ! 1/T * int(<Psi| O | Psi>)
-       j1 = sum(td_fitness) / real(max_iter, REAL_PRECISION) 
+       j1 = sum(target%tdt%td_fitness) / real(max_iter, REAL_PRECISION) 
     else
       select case(target%totype)
       case(oct_tg_local)
@@ -74,7 +73,7 @@
   
     call push_sub('opt_control.calc_chi')
 
-    if(oct%targetmode==oct_targetmode_static) then
+    if(target%targetmode==oct_targetmode_static) then
       if(target%totype.eq.oct_tg_local) then
         do ik = 1, psi_in%d%nik
           do p  = psi_in%st_start, psi_in%st_end

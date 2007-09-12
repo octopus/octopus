@@ -30,12 +30,6 @@
     iunit = io_open('opt-control/info', action='write')
     write(iunit, '(a,i4)')    'Total Iterations = ', iterator%ctr_iter
     write(iunit, '(a)') 
-    write(iunit, '(a)')       'Best value of functional'
-    write(iunit, '(a,i4)')    'Iteration  = ', iterator%bestJ_ctr_iter
-    write(iunit, '(a,f14.8)') 'Overlap    = ', iterator%bestJ_J1
-    write(iunit, '(a,f14.8)') 'Functional = ', iterator%bestJ
-    write(iunit, '(a,f14.8)') 'Fluence = ',    iterator%bestJ_fluence
-    write(iunit, '(a)') 
     write(iunit, '(a)')       'Best value of target functional'
     write(iunit, '(a,i4)')    'Iteration  = ', iterator%bestJ1_ctr_iter
     write(iunit, '(a,f14.8)') 'Overlap    = ', iterator%bestJ1

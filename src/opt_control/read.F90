@@ -39,18 +39,6 @@
     call loct_parse_float(check_inp('OCTFixFluenceTo'), -M_ONE, oct%targetfluence)
     if (oct%targetfluence.ne.-M_ONE) oct%mode_fixed_fluence = .true.
       
-    !%Variable OCTTargetMode
-    !%Type integer
-    !%Section Optimal Control
-    !%Description
-    !%Option oct_targetmode_static  0
-    !% Static or time-independent targets
-    !%Option oct_targetmode_td      1
-    !% Time-dependent targets, specify block OCTTdTarget
-    !%End
-    call loct_parse_int(check_inp('OCTTargetMode'), oct_targetmode_static, oct%targetmode)
-    if(.not.varinfo_valid_option('OCTTargetMode', oct%targetmode)) call input_error('OCTTargetMode')
-       
     !%Variable OCTScheme
     !%Type integer
     !%Section Optimal Control
@@ -148,13 +136,14 @@
     ! has been disconnected.
       
     ! tdtargets only in ZR98 and WG05
-    if((oct%targetmode.eq.oct_targetmode_td) & 
-      .AND.(oct%algorithm_type.eq.oct_algorithm_zbr98)) then
-      write(message(1),'(a)') "Warning: Time-dependent targets work" &
-        // " only with ZR98 and WG05."
-      write(message(2),'(a)') "Warning: Please change algorithm type."
-      call write_fatal(2)
-    end if
+    ! This check is disconnected.
+!!$    if((oct%targetmode.eq.oct_targetmode_td) & 
+!!$      .AND.(oct%algorithm_type.eq.oct_algorithm_zbr98)) then
+!!$      write(message(1),'(a)') "Warning: Time-dependent targets work" &
+!!$        // " only with ZR98 and WG05."
+!!$      write(message(2),'(a)') "Warning: Please change algorithm type."
+!!$      call write_fatal(2)
+!!$    end if
 
     call pop_sub()      
   end subroutine check_faulty_runmodes

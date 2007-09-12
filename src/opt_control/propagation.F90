@@ -73,7 +73,7 @@ module opt_control_propagation_m
     type(grid_t),  pointer :: gr
     type(td_write_t)           :: write_handler
 
-    call push_sub('opt_control.propagate_forward')
+    call push_sub('propagation.propagate_forward')
 
     message(1) = "Info: Forward propagating Psi"
     call write_info(1)
@@ -84,7 +84,8 @@ module opt_control_propagation_m
     gr => sys%gr
 
     if(write_iter_) then
-      call td_write_init(write_handler, gr, sys%st, sys%geo, (td%move_ions>0), h%ep%with_gauge_field, td%iter, td%dt)
+      call td_write_init(write_handler, gr, sys%st, sys%geo, &
+        (td%move_ions>0), h%ep%with_gauge_field, td%iter, td%dt)
     end if
 
     ALLOCATE(dens(NP_PART, psi_n%d%nspin), NP_PART*psi_n%d%nspin) 
@@ -103,8 +104,7 @@ module opt_control_propagation_m
       call td_rti_dt(sys%ks, h, gr, psi_n, td%tr, abs(i*td%dt), abs(td%dt), td%max_iter)
 
       ! if td_target
-      if(targetmode==oct_targetmode_td) &
-        call calc_tdfitness(tdt, gr, psi_n, tdt%td_fitness(i))
+      if(targetmode==oct_targetmode_td) call calc_tdfitness(tdt, gr, psi_n, i)
       
       ! update
       call states_calc_dens(psi_n, NP_PART, dens)
@@ -154,7 +154,7 @@ module opt_control_propagation_m
     FLOAT, allocatable :: dens(:,:)
     type(grid_t),  pointer :: gr
 
-    call push_sub('opt_control.propagate_backward')
+    call push_sub('propagation.propagate_backward')
     
     message(1) = "Info: Backward propagating Chi"
     call write_info(1)
@@ -216,7 +216,7 @@ module opt_control_propagation_m
     type(states_t) :: psi2
     type(grid_t), pointer :: gr
 
-    call push_sub('opt_control.fwd_step')
+    call push_sub('propagation.fwd_step')
 
     gr => sys%gr
     nspin = psi%d%nspin
@@ -249,7 +249,7 @@ module opt_control_propagation_m
       call prop_iter_fwd(i, gr, sys%ks, h, td, par_tmp, chi)
       call prop_iter_fwd(i, gr, sys%ks, h, td, par, psi)
 
-      if(targetmode==oct_targetmode_td) call calc_tdfitness(tdt, gr, psi, tdt%td_fitness(i))     
+      if(targetmode==oct_targetmode_td) call calc_tdfitness(tdt, gr, psi, i)     
 
     end do
 
@@ -277,7 +277,7 @@ module opt_control_propagation_m
     FLOAT, allocatable :: dens_tmp(:,:)
     integer :: nspin
     
-    call push_sub('opt_control.prop_iter_fwd_')
+    call push_sub('propagation.prop_iter_fwd_')
 
     nspin = st%d%nspin
     ALLOCATE(dens_tmp(NP_PART, nspin), NP_PART*nspin) 
@@ -318,7 +318,7 @@ module opt_control_propagation_m
     FLOAT, allocatable :: dens_tmp(:,:)
     type(grid_t), pointer :: gr
 
-    call push_sub('opt_control.bwd_step')
+    call push_sub('propagation.bwd_step')
 
     message(1) = "Info: Propagating backward"
     call write_info(1)
@@ -364,7 +364,7 @@ module opt_control_propagation_m
 
     integer :: nspin
     
-    call push_sub('opt_control.prop_iter_bwd')
+    call push_sub('propagation.prop_iter_bwd')
 
     nspin = st%d%nspin
 
@@ -382,24 +382,26 @@ module opt_control_propagation_m
 
 
   ! ---------------------------------------------------------
-  subroutine calc_tdfitness(tdt, gr, psi, merit)
+  subroutine calc_tdfitness(tdt, gr, psi, i)
     type(td_target_set_t), intent(inout) :: tdt
     type(grid_t),      intent(in) :: gr
     type(states_t),    intent(in) :: psi
-    FLOAT,             intent(out):: merit
+    integer, intent(in) :: i
+
     integer             :: jj, ik, p, dim
 
-    call push_sub('opt_control.calc_tdfitness')
+    call push_sub('propagation.calc_tdfitness')
 
-    merit = M_ZERO
+    tdt%td_fitness(i) = M_ZERO
     do jj = 1, tdt%no_tdtargets
       if(tdt%tdtg(jj)%type.eq.oct_tgtype_local) then
         do ik = 1, psi%d%nik
           do p  = psi%st_start, psi%st_end
             do dim = 1, psi%d%dim
-              merit = merit + &
+             tdt%td_fitness(i) = tdt%td_fitness(i) + &
                 zmf_integrate(gr%m, tdt%tdtarget(:)* &
                 abs(psi%zpsi(:,dim,ik,p))**2)
+
             end do
           end do
         end do
@@ -407,7 +409,7 @@ module opt_control_propagation_m
         do ik = 1, psi%d%nik
           do p  = psi%st_start, psi%st_end
             do dim = 1, psi%d%dim
-              merit = merit + &
+              tdt%td_fitness(i) = tdt%td_fitness(i) + &
                 abs(zmf_integrate(gr%m, tdt%tdtarget(:)* &
                 conjg(psi%zpsi(:,dim,ik,p))))**2
             end do
@@ -441,7 +443,7 @@ module opt_control_propagation_m
     integer :: ik, p, dim, i, j
     FLOAT :: value
 
-    call push_sub('opt_control.update_field')
+    call push_sub('propagation.update_field')
     
     ALLOCATE(d2(cp%no_parameters), cp%no_parameters)
     ALLOCATE(dq(cp%no_parameters), cp%no_parameters)
