@@ -635,7 +635,6 @@ contains
       ALLOCATE(ang2(1:st%nst, st%d%nik), st%nst*st%d%nik)
       do ik = 1, st%d%nik
         do ist = st%st_start, st%st_end
-          write(*, *) ist, st%mpi_grp%rank, st%st_start, st%st_end
           if (st%d%wfs_type == M_REAL) then
             call dstates_angular_momentum(gr, st%dpsi(:, :, ist, ik), ang(ist, ik, :), ang2(ist, ik))
           else
