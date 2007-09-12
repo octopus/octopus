@@ -64,16 +64,16 @@ subroutine X(states_blockt_mul)(mesh, st, psi1, psi2, res, idx1, idx2)
   ! FIXME: write something sensible here!
   ! Quick and dirty parallelization. In the parallel case, we simply copy
   ! all states to all nodes. Otherwise, we put pointers to the input blocks.
-#if defined(HAVE_MPI)
   if(st%parallel_in_states) then
+#if defined(HAVE_MPI)
     ! Allocate space for the blocks.
     ALLOCATE(blk1(mesh%np_part, st%d%dim, st%nst), mesh%np_part*st%d%dim*st%nst)
     ALLOCATE(blk2(mesh%np_part, st%d%dim, st%nst), mesh%np_part*st%d%dim*st%nst)
 
     call X(states_gather)(mesh, st, psi1, blk1)
     call X(states_gather)(mesh, st, psi2, blk2)
-  else
 #endif
+  else
     blk1 => psi1
     blk2 => psi2
   end if
