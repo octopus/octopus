@@ -62,10 +62,6 @@ int FC_FUNC_(op_is_available, OP_IS_AVAILABLE)
   if( *opid == OP_SSE   && *type == M_CMPLX ) result = 0;
 #endif
 
-#if defined(SINGLE_PRECISION)
-  if( *opid == OP_RI_VEC ) result = 0;
-#endif
-
   return result;
 }
 

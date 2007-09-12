@@ -24,8 +24,22 @@
 #include "beak.h"
 #include <stdio.h>
 
-#if defined(USE_VECTORS) && !defined(SINGLE_PRECISION)
+#if defined(USE_VECTORS)
 #include <emmintrin.h>
+
+#if defined(SINGLE_PRECISION)
+#define VECSIZE 4
+#define ADD   _mm_add_ps
+#define MUL   _mm_mul_ps
+#define LOAD  _mm_loadu_ps
+#define STORE _mm_storeu_ps
+#else 
+#define VECSIZE 2
+#define ADD   _mm_add_pd
+#define MUL   _mm_mul_pd
+#define LOAD  _mm_loadu_pd
+#define STORE _mm_storeu_pd
+#endif
 
 void FC_FUNC_(doperate_ri_vec,DOPERATE_RI_VEC)(const int * opnp, 
 					       const int * opn, 
@@ -41,11 +55,17 @@ void FC_FUNC_(doperate_ri_vec,DOPERATE_RI_VEC)(const int * opnp,
   
   int l, i, j;
   const int * restrict index;
-  __m128d vw[MAX_OP_N];
-  register __m128d a0, a1, a2, a3;
   const ffloat * ffi[MAX_OP_N];
 
+#ifdef SINGLE_PRECISION
+  __m128 vw[MAX_OP_N];
+  register __m128 a0, a1, a2, a3;
+  for(j = 0; j < n ; j++) vw[j] =_mm_set1_ps(w[j]);
+#else
+  __m128d vw[MAX_OP_N];
+  register __m128d a0, a1, a2, a3;
   for(j = 0; j < n ; j++) vw[j] =_mm_set1_pd(w[j]);
+#endif
 
   i = 0;
   for (l = 0; l < nri ; l++) {
@@ -53,26 +73,30 @@ void FC_FUNC_(doperate_ri_vec,DOPERATE_RI_VEC)(const int * opnp,
 
     for(j = 0; j < n ; j++) ffi[j] = fi + index[j];
 
-    for (; i < rimap_inv[l] - 8 + 1; i+=8){
+    for (; i < rimap_inv[l] - 4*VECSIZE + 1; i+=4*VECSIZE){
 
+#ifdef SINGLE_PRECISION
+      a0 = a1 = a2 = a3 = _mm_setzero_ps();
+#else
       a0 = a1 = a2 = a3 = _mm_setzero_pd();
+#endif
 
       for(j = 0; j < n; j++){
-	a0 = _mm_add_pd(a0, _mm_mul_pd(vw[j], _mm_loadu_pd(ffi[j] + i + 0)));
-	a1 = _mm_add_pd(a1, _mm_mul_pd(vw[j], _mm_loadu_pd(ffi[j] + i + 2)));
-	a2 = _mm_add_pd(a2, _mm_mul_pd(vw[j], _mm_loadu_pd(ffi[j] + i + 4)));
-	a3 = _mm_add_pd(a3, _mm_mul_pd(vw[j], _mm_loadu_pd(ffi[j] + i + 6)));
+	a0 = ADD (a0, MUL (vw[j], LOAD (ffi[j] + i            ) ));
+	a1 = ADD (a1, MUL (vw[j], LOAD (ffi[j] + i + 1*VECSIZE) ));
+	a2 = ADD (a2, MUL (vw[j], LOAD (ffi[j] + i + 2*VECSIZE) ));
+	a3 = ADD (a3, MUL (vw[j], LOAD (ffi[j] + i + 3*VECSIZE) ));
       }
 
-      _mm_storeu_pd(fo + i    , a0);
-      _mm_storeu_pd(fo + i + 2, a1);
-      _mm_storeu_pd(fo + i + 4, a2);
-      _mm_storeu_pd(fo + i + 6, a3);
+      STORE (fo + i            , a0);
+      STORE (fo + i + 1*VECSIZE, a1);
+      STORE (fo + i + 2*VECSIZE, a2);
+      STORE (fo + i + 3*VECSIZE, a3);
 
     }
 
     for (; i < rimap_inv[l]; i++){
-      register double a = 0.0;
+      register ffloat a = 0.0;
       for(j = 0; j < n; j++) a += w[j] * ffi[j][i];
       fo[i] = a;
     }
@@ -80,6 +104,68 @@ void FC_FUNC_(doperate_ri_vec,DOPERATE_RI_VEC)(const int * opnp,
   }
 
 }
+
+#ifdef SINGLE_PRECISION
+
+void FC_FUNC_(zoperate_ri_vec,ZOPERATE_RI_VEC)(const int * opnp, 
+					       const int * opn, 
+					       const ffloat * restrict w, 
+					       const int * opnri,
+					       const int * opri,
+					       const int * rimap_inv,
+					       const __m64 * fi, 
+					       __m64 * restrict fo){
+
+  const int n = opn[0];
+  const int nri = opnri[0];
+
+  int l, i, j;
+  const int * restrict index;
+  const __m64 * ffi[MAX_OP_N];
+  __m128 vw[MAX_OP_N];
+  register __m128 a0, a1, a2, a3;
+
+  for(j = 0; j < n ; j++) vw[j] =_mm_set1_ps(w[j]);
+
+  i = 0;
+  for (l = 0; l < nri ; l++) {
+    index = opri + n * l;
+
+    for(j = 0; j < n ; j++) ffi[j] = fi + index[j];
+
+    for (; i < (rimap_inv[l] - 8 + 1) ; i+=8){
+      a0 = a1 = a2 = a3 = _mm_setzero_ps();
+      
+      for(j = 0; j < n; j++) {
+	a0 = _mm_add_ps(a0, _mm_mul_ps(vw[j], _mm_loadu_ps((float *) (ffi[j]+i+0) )));
+	a1 = _mm_add_ps(a1, _mm_mul_ps(vw[j], _mm_loadu_ps((float *) (ffi[j]+i+2) )));
+	a2 = _mm_add_ps(a2, _mm_mul_ps(vw[j], _mm_loadu_ps((float *) (ffi[j]+i+4) )));
+	a3 = _mm_add_ps(a3, _mm_mul_ps(vw[j], _mm_loadu_ps((float *) (ffi[j]+i+6) )));
+      }
+
+      _mm_storeu_ps((float *) (fo+i  ), a0);
+      _mm_storeu_ps((float *) (fo+i+2), a1);
+      _mm_storeu_ps((float *) (fo+i+4), a2);
+      _mm_storeu_ps((float *) (fo+i+6), a3);
+
+    }
+
+    for (; i < rimap_inv[l]; i++){
+      
+      a0 = _mm_setzero_ps();
+      for(j = 0; j < n; j++) {
+	a1 = _mm_setzero_ps();
+	a1 = _mm_loadl_pi(a1, ffi[j] + i);
+	a0 = _mm_add_ps(a0, _mm_mul_ps(vw[j], a1));
+      }
+      _mm_storel_pi(fo+i, a0);
+    }
+
+  }
+
+}
+
+#else /* DOUBLE PRECISION */
 
 void FC_FUNC_(zoperate_ri_vec,ZOPERATE_RI_VEC)(const int * opnp, 
 					       const int * opn, 
@@ -134,6 +220,9 @@ void FC_FUNC_(zoperate_ri_vec,ZOPERATE_RI_VEC)(const int * opnp,
   }
 
 }
+
+#endif
+
 #else
 
 #include <stdlib.h>
