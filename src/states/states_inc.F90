@@ -169,8 +169,8 @@ subroutine X(states_block_matr_mul_add)(mesh, st, alpha, psi, matr, beta, res, i
   matr_col = ubound(matr, 2)
 
   ! FIXME: remove this shit!
-#if defined(HAVE_MPI)
   if(st%parallel_in_states) then
+#if defined(HAVE_MPI)
     ! Allocate space for the block.
     ALLOCATE(blkp(mesh%np_part, st%d%dim, st%nst), mesh%np_part*st%d%dim*st%nst)
     ALLOCATE(blkr(mesh%np_part, st%d%dim, st%nst), mesh%np_part*st%d%dim*st%nst)
