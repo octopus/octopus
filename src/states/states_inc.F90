@@ -21,7 +21,7 @@
 ! ---------------------------------------------------------
 ! Multiplication of two blocks of states:
 ! res <- psi1(idx1)^+ * psi2(idx2) with the index sets idx1 and idx2.
-subroutine X(states_blockt_mul)(mesh, st, psi1, psi2, res, idx1, idx2)
+subroutine X(states_blockt_mul)(mesh, st, psi1, psi2, res, idx1, idx2, symm)
   type(mesh_t),      intent(in)  :: mesh
   type(states_t),    intent(in)  :: st
   R_TYPE, target,    intent(in)  :: psi1(mesh%np_part, st%d%dim, st%st_start:st%st_end)
@@ -29,7 +29,10 @@ subroutine X(states_blockt_mul)(mesh, st, psi1, psi2, res, idx1, idx2)
   R_TYPE,            intent(out) :: res(:, :)
   integer, optional, intent(in)  :: idx1(:)
   integer, optional, intent(in)  :: idx2(:)
+  logical, optional, intent(in)  :: symm    ! Indicates if res(j, i) can be calculated as
+                                            ! res(i, j)*.
 
+  logical              :: symm_
   integer              :: i, j
   integer              :: m, n
   integer, allocatable :: idx1_(:), idx2_(:)
@@ -37,6 +40,11 @@ subroutine X(states_blockt_mul)(mesh, st, psi1, psi2, res, idx1, idx2)
 
   call profiling_in(C_PROFILING_LOBPCG_BLOCKT)
   call push_sub('states_inc.Xstates_blockt_mul')
+
+  symm_ = .false.
+  if(present(symm)) then
+    symm_ = symm
+  end if
 
   if(present(idx1)) then
     m = ubound(idx1, 1)
@@ -78,15 +86,22 @@ subroutine X(states_blockt_mul)(mesh, st, psi1, psi2, res, idx1, idx2)
     blk2 => psi2
   end if
 
-  ! FIXME: for <psi|psi> and the like, the lower triangular matrix can be
-  ! calculated from the upper one: res(i, j) = conj(res(j, i)).
   ! FIXME: This works with domain parallelization but the dotps should be blocked.
-  do i = 1, m
-    do j = 1, n
-      res(i, j) = X(states_dotp)(mesh, st%d%dim, blk1(:, :, idx1_(i)), blk2(:, :, idx2_(j)))
+  if(symm_) then
+    do i = 1, m
+      res(i, i) = X(states_dotp)(mesh, st%d%dim, blk1(:, :, idx1_(i)), blk2(:, :, idx2_(i)))
+      do j = i+1, n
+        res(i, j) = X(states_dotp)(mesh, st%d%dim, blk1(:, :, idx1_(i)), blk2(:, :, idx2_(j)))
+        res(j, i) = R_CONJ(res(i, j))
+      end do
     end do
-  end do
-
+  else
+    do i = 1, m
+      do j = 1, n
+        res(i, j) = X(states_dotp)(mesh, st%d%dim, blk1(:, :, idx1_(i)), blk2(:, :, idx2_(j)))
+      end do
+    end do
+  end if
   deallocate(idx1_, idx2_)
 
 #if defined(HAVE_MPI)
@@ -98,6 +113,45 @@ subroutine X(states_blockt_mul)(mesh, st, psi1, psi2, res, idx1, idx2)
   call pop_sub()
   call profiling_out(C_PROFILING_LOBPCG_BLOCKT)
 end subroutine X(states_blockt_mul)
+
+
+! ---------------------------------------------------------
+! Gather all states on all nodes. out has to be of sufficient size.
+subroutine X(states_gather)(mesh, st, in, out)
+  type(states_t), intent(in)  :: st
+  type(mesh_t),   intent(in)  :: mesh
+  R_TYPE,         intent(in)  :: in(:, :, :)
+  R_TYPE,         intent(out) :: out(:, :, :)
+
+  integer              :: i, mpi_err
+  integer, allocatable :: sendcnts(:), sdispls(:), recvcnts(:), rdispls(:)
+
+  call push_sub('states_inc.Xstates_gather')
+
+#if defined(HAVE_MPI)
+  ALLOCATE(sendcnts(st%mpi_grp%size), st%mpi_grp%size)
+  ALLOCATE(sdispls(st%mpi_grp%size), st%mpi_grp%size)
+  ALLOCATE(recvcnts(st%mpi_grp%size), st%mpi_grp%size)
+  ALLOCATE(rdispls(st%mpi_grp%size), st%mpi_grp%size)
+
+  sendcnts   = mesh%np_part*st%d%dim*st%st_num(st%mpi_grp%rank)
+  sdispls    = 0
+  recvcnts   = st%st_num*mesh%np_part*st%d%dim
+  rdispls(1) = 0
+  do i = 2, st%mpi_grp%size
+    rdispls(i) = rdispls(i-1) + recvcnts(i-1)
+  end do
+
+  call MPI_Debug_In(st%mpi_grp%comm, C_MPI_ALLTOALLV)
+  call MPI_Alltoallv(in(:, 1, 1), sendcnts, sdispls, R_MPITYPE, &
+    out(:, 1, 1), recvcnts, rdispls, R_MPITYPE, st%mpi_grp%comm, mpi_err)
+  call MPI_Debug_Out(st%mpi_grp%comm, C_MPI_ALLTOALLV)
+
+  deallocate(sendcnts, sdispls, recvcnts, rdispls)
+#endif
+
+  call pop_sub()
+end subroutine X(states_gather)
 
 
 ! ---------------------------------------------------------
@@ -199,6 +253,19 @@ subroutine X(states_block_matr_mul_add)(mesh, st, alpha, psi, matr, beta, res, i
       end do
     end do
     call profiling_out(C_PROFILING_LOBPCG_LOOP)
+ ! And also for alpha=beta=1.
+ else if(alpha.eq.R_TOTYPE(M_ONE).and.beta.eq.R_TOTYPE(M_ONE)) then
+    call profiling_in(C_PROFILING_LOBPCG_LOOP)
+    do j = 1, matr_col
+      do idim = 1, st%d%dim
+        do i = 1, mesh%np
+          do k = 1, psi_col
+            blkr(i, idim, idxr_(j)) = blkr(i, idim, idxr_(j)) + blkp(i, idim, idxp_(k))*matr(k, j)
+          end do
+        end do
+      end do
+    end do
+    call profiling_out(C_PROFILING_LOBPCG_LOOP)
  ! The general case.
   else
     call profiling_in(C_PROFILING_LOBPCG_LOOP)
@@ -227,45 +294,6 @@ subroutine X(states_block_matr_mul_add)(mesh, st, alpha, psi, matr, beta, res, i
   call pop_sub()
   call profiling_out(C_PROFILING_LOBPCG_BLOCK_MATR)
 end subroutine X(states_block_matr_mul_add)
-
-
-! ---------------------------------------------------------
-! Gather all states on all nodes. out has to be of sufficient size.
-subroutine X(states_gather)(mesh, st, in, out)
-  type(states_t), intent(in)  :: st
-  type(mesh_t),   intent(in)  :: mesh
-  R_TYPE,         intent(in)  :: in(:, :, :)
-  R_TYPE,         intent(out) :: out(:, :, :)
-
-  integer              :: i, mpi_err
-  integer, allocatable :: sendcnts(:), sdispls(:), recvcnts(:), rdispls(:)
-
-  call push_sub('states_inc.Xstates_gather')
-
-#if defined(HAVE_MPI)
-  ALLOCATE(sendcnts(st%mpi_grp%size), st%mpi_grp%size)
-  ALLOCATE(sdispls(st%mpi_grp%size), st%mpi_grp%size)
-  ALLOCATE(recvcnts(st%mpi_grp%size), st%mpi_grp%size)
-  ALLOCATE(rdispls(st%mpi_grp%size), st%mpi_grp%size)
-
-  sendcnts   = mesh%np_part*st%d%dim*st%st_num(st%mpi_grp%rank)
-  sdispls    = 0
-  recvcnts   = st%st_num*mesh%np_part*st%d%dim
-  rdispls(1) = 0
-  do i = 2, st%mpi_grp%size
-    rdispls(i) = rdispls(i-1) + recvcnts(i-1)
-  end do
-
-  call MPI_Debug_In(st%mpi_grp%comm, C_MPI_ALLTOALLV)
-  call MPI_Alltoallv(in(:, 1, 1), sendcnts, sdispls, R_MPITYPE, &
-    out(:, 1, 1), recvcnts, rdispls, R_MPITYPE, st%mpi_grp%comm, mpi_err)
-  call MPI_Debug_Out(st%mpi_grp%comm, C_MPI_ALLTOALLV)
-
-  deallocate(sendcnts, sdispls, recvcnts, rdispls)
-#endif
-
-  call pop_sub()
-end subroutine X(states_gather)
 
 
 ! ---------------------------------------------------------

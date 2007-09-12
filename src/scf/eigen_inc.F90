@@ -41,7 +41,7 @@ subroutine X(eigen_diagon_subspace)(gr, st, h, diff)
     do i = st%st_start, st%st_end
       call X(hpsi)(h, gr, st%X(psi)(:, :, i, ik), f(:, :, i), ik)
     end do
-    call states_blockt_mul(gr%m, st, st%X(psi)(:, :, :, ik), f, h_subspace)
+    call states_blockt_mul(gr%m, st, st%X(psi)(:, :, :, ik), f, h_subspace, symm=.true.)
     
     ! Diagonalize the hamiltonian in the subspace.
     call lalg_eigensolve(st%nst, h_subspace, vec, st%eigenval(:, ik))

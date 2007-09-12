@@ -21,7 +21,15 @@
   ! gradients algorithm.
   
   #include "global.h"
-  
+
+  ! If Fortran had subarray pointers, I would use those...
+  ! Block of ritz_vec to calculate new psi.
+  #define RITZ_PSI ritz_vec(1:nst, 1:nst)
+  ! Block of ritz_vec to calculate new dir.
+  #define RITZ_RES ritz_vec(nst+1:nst+nuc, 1:nst)
+  ! Block of ritz_vec to calculate new res.
+  #define RITZ_DIR ritz_vec(nst+nuc+1:nst+2*nuc, 1:nst)
+
   ! Index set of unconverged eigenvectors.
   #define UC uc(1:nuc)
   
@@ -80,14 +88,11 @@
     R_TYPE, allocatable :: gram_block(:, :) ! Space to construct the Gram matrix blocks.
     R_TYPE, allocatable :: ritz_vec(:, :)   ! Ritz-vectors.
     FLOAT,  allocatable :: ritz_val(:)      ! Ritz-values.
-    R_TYPE, allocatable :: ritz_psi(:, :)   ! Block of ritz_vec to calculate new psi.
-    R_TYPE, allocatable :: ritz_dir(:, :)   ! Block of ritz_vec to calculate new dir.
-    R_TYPE, allocatable :: ritz_res(:, :)   ! Block of ritz_vec to calculate new res.
 
     call push_sub('eigen_lobpcg.Xeigen_solver_lobpcg')
 
     ! The results with explicit Gram diagonal blocks were not better, so it is switched of.
-    explicit_gram = .false.
+    explicit_gram = .true.
 
     ! Check if LOBPCG can be run.
     ! LOBPCG does not work with domain parallelization for the moment
@@ -144,7 +149,7 @@
     ALLOCATE(h_dir(NP_PART, st%d%dim, st_start:st_end), NP_PART*st%d%dim*lnst)
     ALLOCATE(h_psi(NP_PART, st%d%dim, st_start:st_end), NP_PART*st%d%dim*lnst)
     ALLOCATE(gram_block(nst, nst), nst**2)
-    ALLOCATE(ritz_val(nst), nst)
+    ALLOCATE(ritz_val(3*nst), 3*nst)
 
     maxiter = niter
     niter   = 0
@@ -172,7 +177,7 @@
       end do
       niter = niter+lnst
 
-      call states_blockt_mul(gr%m, st, st%X(psi)(:, :, :, ik), h_psi, gram_block)
+      call states_blockt_mul(gr%m, st, st%X(psi)(:, :, :, ik), h_psi, gram_block, symm=.true.)
       call X(lobpcg_conj)(st%d%wfs_type, nst, nst, gram_block)
 
       ALLOCATE(ritz_vec(nst, nst), nst**2)
@@ -236,12 +241,9 @@
       ! a bit faster, I expect). I tried this but it did not work. I made something
       ! wrong, I guess.
       ! Rayleigh-Ritz procedure.
-      ALLOCATE(ritz_psi(nst, nst), nst**2)
-      ALLOCATE(ritz_dir(nuc, nst), nst*nuc)
-      ALLOCATE(ritz_res(nuc, nst), nst*nuc)
       ALLOCATE(gram_h(nst+nuc, nst+nuc), (nst+nuc)**2)
       ALLOCATE(gram_i(nst+nuc, nst+nuc), (nst+nuc)**2)
-      ALLOCATE(ritz_vec(nst+nuc, nst), (nst+nuc)*nst)
+      ALLOCATE(ritz_vec(nst+nuc, nst+nuc), (nst+nuc)**2)
 
       ! gram_h matrix.
       ! (1, 1)-block:
@@ -261,7 +263,7 @@
 
       ! (2, 2)-block: res^+ (H res).
       call states_blockt_mul(gr%m, st, res, h_res, &
-        gram_h(nst+1:nst+nuc, nst+1:nst+nuc), idx1=UC, idx2=UC)
+        gram_h(nst+1:nst+nuc, nst+1:nst+nuc), idx1=UC, idx2=UC, symm=.true.)
       call X(lobpcg_conj)(st%d%wfs_type, nuc, nuc, gram_h(nst+1:nst+nuc, nst+1:nst+nuc))
 
       ! gram_i matrix.
@@ -285,30 +287,34 @@
       call states_blockt_mul(gr%m, st, st%X(psi)(:, :, :, ik), res, gram_i(1:nst, nst+1:nst+nuc), idx2=UC)
 
       call profiling_in(C_PROFILING_LOBPCG_ESOLVE)
-      call lalg_lowest_geneigensolve(nst, nst+nuc, gram_h, gram_i, ritz_val, ritz_vec)
+
+
+      call lalg_eigensolve(nst+nuc, gram_h, ritz_vec, ritz_val)
+write(25, *) ritz_val
+
+      call lalg_geneigensolve(nst+nuc, gram_h, gram_i, ritz_val)
+write(26, *) ritz_val
+call write_fatal(0)
       call profiling_out(C_PROFILING_LOBPCG_ESOLVE)
 
-      ritz_psi = ritz_vec(1:nst, 1:nst)
-      ritz_res = ritz_vec(nst+1:nst+nuc, 1:nst)
-
       ! Calculate new conjugate directions.
-      call states_block_matr_mul(gr%m, st, res, ritz_res, dir, idxp=UC)
-      call states_block_matr_mul(gr%m, st, h_res, ritz_res, h_dir, idxp=UC)
+      call states_block_matr_mul(gr%m, st, res, RITZ_RES, dir, idxp=UC)
+      call states_block_matr_mul(gr%m, st, h_res, RITZ_RES, h_dir, idxp=UC)
 
       ! Calculate new eigenstates and update H |psi>
-      call states_block_matr_mul(gr%m, st, st%X(psi)(:, :, :, ik), ritz_psi, tmp)
+      call states_block_matr_mul(gr%m, st, st%X(psi)(:, :, :, ik), RITZ_PSI, tmp)
       call lalg_copy(np*lnst, tmp(:, 1, st_start), st%X(psi)(:, 1, st_start, ik))
 
       do ist = st_start, st_end ! Leave this loop, otherwise xlf90 crashes.
         call lalg_axpy(np, R_TOTYPE(M_ONE), dir(:, 1, ist), st%X(psi)(:, 1, ist, ik))
       end do
 
-      call states_block_matr_mul(gr%m, st, h_psi, ritz_psi, tmp)
+      call states_block_matr_mul(gr%m, st, h_psi, RITZ_PSI, tmp)
       call lalg_copy(np*lnst, tmp(:, 1, st_start), h_psi(:, 1, st_start))
       call lalg_axpy(np*lnst, R_TOTYPE(M_ONE), h_dir(:, 1, st_start), h_psi(:, 1, st_start))
 
       ! Gram matrices have to be reallocated later (because nuc changes).
-      deallocate(ritz_vec, gram_h, gram_i, ritz_psi, ritz_res, ritz_dir)
+      deallocate(ritz_vec, gram_h, gram_i) !, ritz_psi, ritz_res, ritz_dir)
 
       ! Copy new eigenvalues.
       call lalg_copy(nst, ritz_val, eval(:, ik))
@@ -325,11 +331,8 @@
         end if
 
         ALLOCATE(nuc_tmp(nuc, nuc), nuc**2)
-        ALLOCATE(ritz_psi(nst, nst), nst**2)
-        ALLOCATE(ritz_dir(nuc, nst), nst*nuc)
-        ALLOCATE(ritz_res(nuc, nst), nst*nuc)
         ! Allocate space for Gram matrices in this iterations.
-        ALLOCATE(ritz_vec(nst+2*nuc, nst), nst**2+2*nst*nuc)
+        ALLOCATE(ritz_vec(nst+2*nuc, nst+2*nuc), (nst+2*nuc)**2)
         ALLOCATE(gram_h(nst+2*nuc, nst+2*nuc), (nst+2*nuc)**2)
         ALLOCATE(gram_i(nst+2*nuc, nst+2*nuc), (nst+2*nuc)**2)
 
@@ -353,7 +356,7 @@
         ! Orthonormalize conjugate directions.
         ! Since h_dir also has to be modified (to avoid a full calculation of
         ! H dir with the new dir), we cannot use lobpcg_orth at this point.
-        call states_blockt_mul(gr%m, st, dir, dir, nuc_tmp, idx1=UC, idx2=UC)
+        call states_blockt_mul(gr%m, st, dir, dir, nuc_tmp, idx1=UC, idx2=UC, symm=.true.)
         call X(lobpcg_conj)(st%d%wfs_type, nuc, nuc, nuc_tmp)
         call profiling_in(C_PROFILING_LOBPCG_CHOL)
         call lalg_cholesky(nuc, nuc_tmp)
@@ -396,7 +399,7 @@
 
         ! (2, 2)-block: res^+ (H res).
         call states_blockt_mul(gr%m, st, res, h_res, &
-          gram_h(nst+1:nst+nuc, nst+1:nst+nuc), idx1=UC, idx2=UC)
+          gram_h(nst+1:nst+nuc, nst+1:nst+nuc), idx1=UC, idx2=UC, symm=.true.)
         call X(lobpcg_conj)(st%d%wfs_type, nuc, nuc, gram_h(nst+1:nst+nuc, nst+1:nst+nuc))
 
         ! (2, 3)-block: (H res)^+ dir.
@@ -405,7 +408,7 @@
 
         ! (3, 3)-block: dir^+ (H dir)
         call states_blockt_mul(gr%m, st, dir, h_dir, &
-          gram_h(nst+nuc+1:nst+2*nuc, nst+nuc+1:nst+2*nuc), idx1=UC, idx2=UC)
+          gram_h(nst+nuc+1:nst+2*nuc, nst+nuc+1:nst+2*nuc), idx1=UC, idx2=UC, symm=.true.)
         call X(lobpcg_conj)(st%d%wfs_type, nuc, nuc, &
           gram_h(nst+nuc+1:nst+2*nuc, nst+nuc+1:nst+2*nuc))
 
@@ -440,41 +443,37 @@
         call states_blockt_mul(gr%m, st, res, dir, &
           gram_i(nst+1:nst+nuc, nst+nuc+1:nst+2*nuc), idx1=UC, idx2=UC)
         call profiling_in(C_PROFILING_LOBPCG_ESOLVE)
-        call lalg_lowest_geneigensolve(nst, nst+2*nuc, gram_h, gram_i, ritz_val, ritz_vec)
+        call lalg_eigensolve(nst+2*nuc, gram_h, ritz_vec, ritz_val)
         call profiling_out(C_PROFILING_LOBPCG_ESOLVE)
-
-        ! Picking out the important blocks of the Ritz-vector block.
-        ! FIXME: replace ritz_psi, ritz_res, ritz_dir by macros and save space.
-        ritz_psi = ritz_vec(1:nst, 1:nst)
-        ritz_res = ritz_vec(nst+1:nst+nuc, 1:nst)
-        ritz_dir = ritz_vec(nst+nuc+1:nst+2*nuc, 1:nst)
 
         ! Calculate new conjugate directions:
         ! dir <- dir ritz_dir + res ritz_res
         ! h_dir <- (H res) ritz_res + (H dir) ritz_dir
-        call states_block_matr_mul(gr%m, st, dir, ritz_dir, tmp, idxp=UC)
+        call states_block_matr_mul(gr%m, st, dir, RITZ_DIR, tmp, idxp=UC)
         call lalg_copy(np*lnst, tmp(:, 1, st_start), dir(:, 1, st_start))
         call states_block_matr_mul_add(gr%m, st, R_TOTYPE(M_ONE), &
-          res, ritz_res, R_TOTYPE(M_ONE), dir, idxp=UC)
-        call states_block_matr_mul(gr%m, st, h_dir, ritz_dir, tmp, idxp=UC)
+          res, RITZ_RES, R_TOTYPE(M_ONE), dir, idxp=UC)
+        call states_block_matr_mul(gr%m, st, h_dir, RITZ_DIR, tmp, idxp=UC)
         call lalg_copy(np*lnst, tmp(:, 1, st_start), h_dir(:, 1, st_start))
         call states_block_matr_mul_add(gr%m, st, R_TOTYPE(M_ONE), &
-          h_res, ritz_res, R_TOTYPE(M_ONE), h_dir, idxp=UC)
+          h_res, RITZ_RES, R_TOTYPE(M_ONE), h_dir, idxp=UC)
 
         ! Calculate new eigenstates:
         ! |psi> <- |psi> ritz_psi + dir
         ! h_psi <- (H |psi>) ritz_psi + H dir
-        call states_block_matr_mul(gr%m, st, st%X(psi)(:, :, :, ik), ritz_psi, tmp)
+        call states_block_matr_mul(gr%m, st, st%X(psi)(:, :, :, ik), RITZ_PSI, tmp)
         call lalg_copy(np*lnst, tmp(:, 1, st_start), st%X(psi)(:, 1, st_start, ik))
         do ist = st_start, st_end ! Leave this loop, otherwise xlf90 crashes.
           call lalg_axpy(np, R_TOTYPE(M_ONE), dir(:, 1, ist), st%X(psi)(:, 1, ist, ik))
         end do
-        call states_block_matr_mul(gr%m, st, h_psi, ritz_psi, tmp)
+        call states_block_matr_mul(gr%m, st, h_psi, RITZ_PSI, tmp)
         call lalg_copy(np*lnst, tmp(:, 1, st_start), h_psi(:, 1, st_start))
         call lalg_axpy(np*lnst, R_TOTYPE(M_ONE), h_dir(:, 1, st_start), h_psi(:, 1, st_start))
 
         ! Gram matrices have to be reallocated later (because nuc changes).
-        deallocate(nuc_tmp, ritz_vec, gram_h, gram_i, ritz_psi, ritz_res, ritz_dir)
+        deallocate(nuc_tmp, ritz_vec, gram_h, gram_i)
+
+        !, ritz_psi, ritz_res, ritz_dir)
 
         ! Copy new eigenvalues.
         call lalg_copy(nst, ritz_val, eval(:, ik))
@@ -673,9 +672,8 @@
 
     ! FIXME: avoid allocation of this temporary array.
     ALLOCATE(tmp(m%np_part, st%d%dim, st%st_start:st%st_end), m%np_part*st%d%dim*(st%st_end-st%st_start+1))
-!    tmp = R_TOTYPE(M_ZERO)
 
-    call states_blockt_mul(m, st, vs, vs, vv, idx1=UC, idx2=UC)
+    call states_blockt_mul(m, st, vs, vs, vv, idx1=UC, idx2=UC, symm=.true.)
     call X(lobpcg_conj)(st%d%wfs_type, nuc, nuc, vv)
     call profiling_in(C_PROFILING_LOBPCG_CHOL)
     call lalg_cholesky(nuc, vv)
