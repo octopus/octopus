@@ -69,8 +69,6 @@ module geom_opt_m
   type(mesh_t),        pointer :: m    ! shortcuts
   type(states_t),      pointer :: st
 
-  integer                      :: geom_iter
-
 contains
 
   ! ---------------------------------------------------------
@@ -152,8 +150,7 @@ contains
 
     call scf_init(sys%gr, sys%geo, scfv, sys%st, h)
 
-    geom_iter = 0 
-
+    !Initial point
     ALLOCATE(x(3*geo%natoms), 3*geo%natoms)
     do i = 0, geo%natoms - 1
       x(3*i + 1) = geo%atom(i + 1)%x(1)
@@ -161,8 +158,10 @@ contains
       x(3*i + 3) = geo%atom(i + 1)%x(3)
     end do
 
-    energy = loct_minimize(g_opt%method, 3*geo%natoms, x(1), &
-         real(g_opt%step, 8), real(g_opt%tolgrad, 8), real(g_opt%toldr, 8), g_opt%max_iter, calc_point)
+    !Minimize
+    energy = loct_minimize(g_opt%method, 3*geo%natoms, x(1), real(g_opt%step, 8),&
+         real(g_opt%tolgrad, 8), real(g_opt%toldr, 8), g_opt%max_iter, &
+         calc_point, write_iter_info)
 
     ! print out geometry
     do i = 0, geo%natoms - 1
@@ -293,9 +292,10 @@ contains
     real(8), intent(out) :: f
     integer, intent(in)  :: getgrad
     real(8), intent(out) :: df(n)
-
+    
     integer :: i
-    character(len=256) :: c_geom_iter, title
+
+    call push_sub("geom_opt.calc_point")
 
     do i = 0, geo%natoms - 1
       geo%atom(i+1)%x(1) = x(3*i + 1)
@@ -303,7 +303,7 @@ contains
       geo%atom(i+1)%x(3) = x(3*i + 3)
     end do
 
-    call atom_write_xyz(".", "work-min", geo)
+    call atom_write_xyz(".", "work-geom", geo)
 
     call epot_generate(hamilt%ep, syst%gr, syst%geo, syst%mc, syst%st, hamilt%reltype)
     call states_calc_dens(st, m%np, st%rho)
@@ -324,20 +324,44 @@ contains
       end do
     end if
 
-    write(c_geom_iter, '(a,i4.4)') "go.", geom_iter
-    write(title, '(f16.10)') f/units_out%energy%factor
-    call atom_write_xyz("geom", trim(c_geom_iter), geo, trim(title))
-    geom_iter = geom_iter + 1
-
-        write(message(1),'(a)')
-        write(message(2), '(6x,2(a,f16.10))')  "Energy = ", f/units_out%energy%factor
-        call write_info(2)
-        if(getgrad .eq. 1) then
-          write(message(1),'(6x,2(a,f16.10))') "Max force = ", maxval(abs(df))/units_out%force%factor
-          call write_info(1)
-        end if
-
+    call pop_sub()
   end subroutine calc_point
+
+  subroutine write_iter_info(geom_iter, n, energy, maxdx, maxdf, x)
+    integer, intent(in) :: geom_iter, n
+    real(8), intent(in) :: energy, maxdx, maxdf
+    real(8), intent(in) :: x(n)
+
+    integer :: i
+    character(len=256) :: c_geom_iter, title
+
+    call push_sub("geom_opt.write_iter_info")
+    
+    write(c_geom_iter, '(a,i4.4)') "go.", geom_iter
+    write(title, '(f16.10)') energy/units_out%energy%factor
+    call atom_write_xyz("geom", trim(c_geom_iter), geo, trim(title))
+
+    do i = 0, geo%natoms - 1
+      geo%atom(i+1)%x(1) = x(3*i + 1)
+      geo%atom(i+1)%x(2) = x(3*i + 2)
+      geo%atom(i+1)%x(3) = x(3*i + 3)
+    end do
+
+    message(1) = ""
+    message(2) = ""
+    message(3) = "++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
+    write(message(4),'("+++++++++++++++++++++ MINIMIZATION ITER #: ",I4," ++++++++++++++++++++++")') geom_iter
+    write(message(5), '(2x,2(a,f16.10))') "Energy    = ", energy/units_out%energy%factor
+    write(message(6),'(2X,2(a,f16.10))')  "Max force = ", maxdf/units_out%force%factor
+    write(message(7),'(2X,2(a,f16.10))')  "Max dr    = ", maxdx/units_out%length%factor
+    message(8) = message(3)
+    message(9) = message(3)
+    message(10) = ""
+    message(11) = ""
+    call write_info(11)
+
+    call pop_sub()
+  end subroutine write_iter_info
 
 end module geom_opt_m
 
