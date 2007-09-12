@@ -61,7 +61,11 @@ subroutine X(nl_operator_tune)(op)
 
     reps = 10
 
-    print*, op_function_name(method)
+    if(in_debug_mode) then
+      write(message(1), '(a,a)') 'Info: Profiling non local operator implementation: ', &
+        op_function_name(method)
+      call write_info(1)
+    end if
 
     itime = loct_clock()
     do ii = 1, reps

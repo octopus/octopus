@@ -96,7 +96,7 @@
 
     ! Check if LOBPCG can be run.
     ! LOBPCG does not work with domain parallelization for the moment
-    ! (because we do things like <psi|psi>).
+    ! (because we do things like <psi|A).
     if(gr%m%parallel_in_domains) then
       message(1) = 'The LOBPCG eigenvsolver cannot be used with domain parallelization'
       message(2) = 'at the moment. Choose a different eigensolver.'
@@ -169,7 +169,7 @@
       end if
 
       ! Orthonormalize initial vectors.
-      call X(lobpcg_orth)(gr%m, st, st%X(psi)(:, :, :, ik), nuc, uc, lnuc, luc)
+      call X(lobpcg_orth)(gr%m, st, st%X(psi)(:, :, :, ik), nuc, uc, lnuc, luc, tmp)
 
       ! Get initial Ritz-values and -vectors.
       do ist = st_start, st_end
@@ -178,7 +178,7 @@
       niter = niter+lnst
 
       call states_blockt_mul(gr%m, st, st%X(psi)(:, :, :, ik), h_psi, gram_block, symm=.true.)
-      call X(lobpcg_conj)(st%d%wfs_type, nst, nst, gram_block)
+      call X(lobpcg_symm)(st%d%wfs_type, nst, nst, gram_block)
 
       ALLOCATE(ritz_vec(nst, nst), nst**2)
       call lalg_eigensolve(nst, gram_block, ritz_vec, eval(:, ik))
@@ -225,7 +225,7 @@
       end do
 
       ! Orthonormalize residuals.
-      call X(lobpcg_orth)(gr%m, st, res, nuc, uc, lnuc, luc)
+      call X(lobpcg_orth)(gr%m, st, res, nuc, uc, lnuc, luc, tmp)
 
       ! Apply Hamiltonian to residuals.
       do i = 1, lnuc
@@ -234,12 +234,6 @@
       end do
       niter = niter+lnuc
 
-      ! FIXME: as we are, after all, only solving a standard eigenvalue problem
-      ! it should be possible to do the Rayleigh-Ritz also only with a standard
-      ! eigenvalue problem. This would reduce the number of block operations by
-      ! a considerable amount (also, the LAPACK routine for a standard problem is
-      ! a bit faster, I expect). I tried this but it did not work. I made something
-      ! wrong, I guess.
       ! Rayleigh-Ritz procedure.
       ALLOCATE(gram_h(nst+nuc, nst+nuc), (nst+nuc)**2)
       ALLOCATE(gram_i(nst+nuc, nst+nuc), (nst+nuc)**2)
@@ -249,7 +243,7 @@
       ! (1, 1)-block:
       if(explicit_gram) then
         call states_blockt_mul(gr%m, st, h_psi, st%X(psi)(:, :, :, ik), gram_h(1:nst, 1:nst))
-        call X(lobpcg_conj)(st%d%wfs_type, nst, nst, gram_h(1:nst, 1:nst))
+        call X(lobpcg_symm)(st%d%wfs_type, nst, nst, gram_h(1:nst, 1:nst))
       else
         ! Eigenvalues in gram_h.
         gram_h(1:nst, 1:nst) = R_TOTYPE(M_ZERO)
@@ -264,16 +258,16 @@
       ! (2, 2)-block: res^+ (H res).
       call states_blockt_mul(gr%m, st, res, h_res, &
         gram_h(nst+1:nst+nuc, nst+1:nst+nuc), idx1=UC, idx2=UC, symm=.true.)
-      call X(lobpcg_conj)(st%d%wfs_type, nuc, nuc, gram_h(nst+1:nst+nuc, nst+1:nst+nuc))
+      call X(lobpcg_symm)(st%d%wfs_type, nuc, nuc, gram_h(nst+1:nst+nuc, nst+1:nst+nuc))
 
       ! gram_i matrix.
       ! Diagonal blocks:
       if(explicit_gram) then
         call states_blockt_mul(gr%m, st, st%X(psi)(:, :, :, ik), st%X(psi)(:, :, :, ik), gram_i(1:nst, 1:nst))
-        call X(lobpcg_conj)(st%d%wfs_type, nst, nst, gram_i(1:nst, 1:nst))
+        call X(lobpcg_symm)(st%d%wfs_type, nst, nst, gram_i(1:nst, 1:nst))
         call states_blockt_mul(gr%m, st, res, res, &
           gram_i(nst+1:nst+nuc, nst+1:nst+nuc), idx1=UC, idx2=UC)
-        call X(lobpcg_conj)(st%d%wfs_type, nuc, nuc, gram_i(nst+1:nst+nuc, nst+1:nst+nuc))
+        call X(lobpcg_symm)(st%d%wfs_type, nuc, nuc, gram_i(nst+1:nst+nuc, nst+1:nst+nuc))
       else
         ! Unit matrices on diagonal blocks.
         gram_i(1:nst, 1:nst)                 = R_TOTYPE(M_ZERO)
@@ -337,7 +331,7 @@
         end do
 
         ! Orthonormalize residuals.
-        call X(lobpcg_orth)(gr%m, st, res, nuc, uc, lnuc, luc)
+        call X(lobpcg_orth)(gr%m, st, res, nuc, uc, lnuc, luc, tmp)
 
         ! Apply Hamiltonian to residual.
         do i = 1, lnuc
@@ -350,7 +344,7 @@
         ! Since h_dir also has to be modified (to avoid a full calculation of
         ! H dir with the new dir), we cannot use lobpcg_orth at this point.
         call states_blockt_mul(gr%m, st, dir, dir, nuc_tmp, idx1=UC, idx2=UC, symm=.true.)
-        call X(lobpcg_conj)(st%d%wfs_type, nuc, nuc, nuc_tmp)
+        call X(lobpcg_symm)(st%d%wfs_type, nuc, nuc, nuc_tmp)
         call profiling_in(C_PROFILING_LOBPCG_CHOL)
         call lalg_cholesky(nuc, nuc_tmp)
         call profiling_out(C_PROFILING_LOBPCG_CHOL)
@@ -374,7 +368,7 @@
         ! gram_h matrix.
         if(explicit_gram) then
           call states_blockt_mul(gr%m, st, h_psi, st%X(psi)(:, :, :, ik), gram_h(1:nst, 1:nst))
-          call X(lobpcg_conj)(st%d%wfs_type, nst, nst, gram_h(1:nst, 1:nst))
+          call X(lobpcg_symm)(st%d%wfs_type, nst, nst, gram_h(1:nst, 1:nst))
         else
           ! (1, 1)-block: eigenvalues on diagonal.
           gram_h(1:nst, 1:nst) = R_TOTYPE(M_ZERO)
@@ -393,7 +387,7 @@
         ! (2, 2)-block: res^+ (H res).
         call states_blockt_mul(gr%m, st, res, h_res, &
           gram_h(nst+1:nst+nuc, nst+1:nst+nuc), idx1=UC, idx2=UC, symm=.true.)
-        call X(lobpcg_conj)(st%d%wfs_type, nuc, nuc, gram_h(nst+1:nst+nuc, nst+1:nst+nuc))
+        call X(lobpcg_symm)(st%d%wfs_type, nuc, nuc, gram_h(nst+1:nst+nuc, nst+1:nst+nuc))
 
         ! (2, 3)-block: (H res)^+ dir.
         call states_blockt_mul(gr%m, st, h_res, dir, &
@@ -402,20 +396,20 @@
         ! (3, 3)-block: dir^+ (H dir)
         call states_blockt_mul(gr%m, st, dir, h_dir, &
           gram_h(nst+nuc+1:nst+2*nuc, nst+nuc+1:nst+2*nuc), idx1=UC, idx2=UC, symm=.true.)
-        call X(lobpcg_conj)(st%d%wfs_type, nuc, nuc, &
+        call X(lobpcg_symm)(st%d%wfs_type, nuc, nuc, &
           gram_h(nst+nuc+1:nst+2*nuc, nst+nuc+1:nst+2*nuc))
 
         ! gram_i matrix.
         ! Diagonal blocks.
         if(explicit_gram) then
           call states_blockt_mul(gr%m, st, st%X(psi)(:, :, :, ik), st%X(psi)(:, :, :, ik), gram_i(1:nst, 1:nst))
-          call X(lobpcg_conj)(st%d%wfs_type, nst, nst, gram_i(1:nst, 1:nst))
+          call X(lobpcg_symm)(st%d%wfs_type, nst, nst, gram_i(1:nst, 1:nst))
           call states_blockt_mul(gr%m, st, res, res, &
             gram_i(nst+1:nst+nuc, nst+1:nst+nuc), idx1=UC, idx2=UC)
-          call X(lobpcg_conj)(st%d%wfs_type, nuc, nuc, gram_i(nst+1:nst+nuc, nst+1:nst+nuc))
+          call X(lobpcg_symm)(st%d%wfs_type, nuc, nuc, gram_i(nst+1:nst+nuc, nst+1:nst+nuc))
           call states_blockt_mul(gr%m, st, dir, dir, &
             gram_i(nst+nuc+1:nst+2*nuc, nst+nuc+1:nst+2*nuc), idx1=UC, idx2=UC)
-          call X(lobpcg_conj)(st%d%wfs_type, nuc, nuc, &
+          call X(lobpcg_symm)(st%d%wfs_type, nuc, nuc, &
             gram_i(nst+nuc+1:nst+2*nuc, nst+nuc+1:nst+2*nuc))
         else
           ! Unit matrices on diagonal blocks.
@@ -650,24 +644,23 @@
 
   ! ---------------------------------------------------------
   ! Orthonormalize the column vectors of vs.
-  subroutine X(lobpcg_orth)(m, st, vs, nuc, uc, lnuc, luc)
+  subroutine X(lobpcg_orth)(m, st, vs, nuc, uc, lnuc, luc, tmp)
     type(mesh_t),   intent(in)    :: m
     type(states_t), intent(in)    :: st
     R_TYPE,         intent(inout) :: vs(m%np_part, st%d%dim, st%st_start:st%st_end)
     integer,        intent(in)    :: nuc, lnuc
     integer,        intent(in)    :: uc(:), luc(:)
+    R_TYPE,         intent(out)   :: tmp(m%np_part, st%d%dim, st%st_start:st%st_end)
 
     integer             :: i
-    R_TYPE              :: vv(nuc, nuc)
-    R_TYPE, allocatable :: tmp(:, :, :)
+    R_TYPE, allocatable :: vv(:, :)
 
     call push_sub('eigen_lobpcg_inc.Xlobpcg_orth')
 
-    ! FIXME: avoid allocation of this temporary array.
-    ALLOCATE(tmp(m%np_part, st%d%dim, st%st_start:st%st_end), m%np_part*st%d%dim*(st%st_end-st%st_start+1))
+    ALLOCATE(vv(nuc, nuc), nuc**2)
 
     call states_blockt_mul(m, st, vs, vs, vv, idx1=UC, idx2=UC, symm=.true.)
-    call X(lobpcg_conj)(st%d%wfs_type, nuc, nuc, vv)
+    call X(lobpcg_symm)(st%d%wfs_type, nuc, nuc, vv)
     call profiling_in(C_PROFILING_LOBPCG_CHOL)
     call lalg_cholesky(nuc, vv)
     call profiling_out(C_PROFILING_LOBPCG_CHOL)
@@ -683,7 +676,7 @@
       call lalg_copy(m%np_part*st%d%dim, tmp(:, 1, luc(i)), vs(:, 1, luc(i)))
     end do
 
-    deallocate(tmp)
+    deallocate(vv)
 
     call pop_sub()
   end subroutine X(lobpcg_orth)
@@ -691,7 +684,7 @@
 
   ! ---------------------------------------------------------
   ! Make residuals orthogonal to eigenstates (this routine seems to
-  ! be unnessecar).
+  ! be unnessecary).
   subroutine X(lobpcg_orth_res)(nst, m, st, psi, res, nuc, uc)
     integer,        intent(in)    :: nst
     type(mesh_t),   intent(in)    :: m
@@ -715,31 +708,30 @@
 
   ! ---------------------------------------------------------
   ! Calculate a <- (a + a^+)/2 (for complex wavefunctions).
-  subroutine X(lobpcg_conj)(wfs_type, m, n, a)
+  subroutine X(lobpcg_symm)(wfs_type, m, n, a)
     integer, intent(in)    :: wfs_type
     integer, intent(in)    :: m
     integer, intent(in)    :: n
     R_TYPE,  intent(inout) :: a(:, :)
 
-    integer             :: i, j
-    R_TYPE, allocatable :: at(:, :)
+    integer :: i, j
+    R_TYPE  :: tmp
 
-    call push_sub('eigen_lobpcg_inc.Xlobpcg_conj')
+    call push_sub('eigen_lobpcg_inc.Xlobpcg_symm')
 
-    ! FIXME: this routine should work without temporary at(:, :).
     if(wfs_type.eq.M_CMPLX) then
-      ALLOCATE(at(n, m), n*m)
       do i = 1, m
-        do j = 1, n
-          at(j, i) = R_CONJ(a(i, j))
+        a(i, i) = (a(i, i) + R_CONJ(a(i, i)))/R_TOTYPE(M_TWO)
+        do j = i+1, n
+          tmp = a(i, j)
+          a(i, j) = (a(i, j) + R_CONJ(a(j, i)))/R_TOTYPE(M_TWO)
+          a(j, i) = (a(j, i) + tmp)/R_TOTYPE(M_TWO)
         end do
       end do
-      a = (a + at)/R_TOTYPE(M_TWO)
-      deallocate(at)
     end if
 
     call pop_sub()
-  end subroutine X(lobpcg_conj)
+  end subroutine X(lobpcg_symm)
 
 
 !! Local Variables:
