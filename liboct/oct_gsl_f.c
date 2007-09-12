@@ -359,12 +359,12 @@ double FC_FUNC_(oct_minimize, OCT_MINIMIZE)
 
       if (status) break;
 
-      status = ( (maxgrad > *tolgrad) && (maxdr > *toldr) );
+      status = ( (maxgrad > *tolgrad) || (maxdr > *toldr) );
       }
   while (status && iter < *maxiter);
 
   gsl_multimin_fdfminimizer_free (s);
-  gsl_vector_free (x); gsl_vector_free(grad); gsl_vector_free(absgrad); gsl_vector_free(absdr);
+  gsl_vector_free (x); gsl_vector_free(absgrad); gsl_vector_free(absdr);
   return return_value;
 }
 
