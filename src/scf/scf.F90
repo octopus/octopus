@@ -38,6 +38,7 @@ module scf_m
   use messages_m
   use mix_m
   use mpi_m
+  use mpi_lib_m
   use output_m
   use profiling_m
   use restart_m
@@ -606,12 +607,16 @@ contains
 
     ! ---------------------------------------------------------
     subroutine write_angular_momentum(iunit)
-      integer,        intent(in) :: iunit
+      integer, intent(in) :: iunit
 
-      integer :: ik, ist, ns, j
-      character(len=80) tmp_str(MAX_DIM), cspin
-      FLOAT :: angular(3), lsquare, o, oplus, ominus
+      integer            :: ik, ist, ns, j
+      character(len=80)  :: tmp_str(MAX_DIM), cspin
+      FLOAT              :: angular(3), lsquare, o, oplus, ominus
       FLOAT, allocatable :: ang(:, :, :), ang2(:, :)
+#if defined(HAVE_MPI)
+      integer            :: tmp
+      FLOAT              :: lang(1:st%st_end-st%st_end+1)
+#endif
 
       call push_sub('scf.write_angular_momentum')
 
@@ -626,10 +631,11 @@ contains
         end if
       end if
 
-      ALLOCATE(ang (st%st_start:st%st_end, st%d%nik, 3), (st%st_end - st%st_start + 1)*st%d%nik*3)
-      ALLOCATE(ang2(st%st_start:st%st_end, st%d%nik), (st%st_end - st%st_start + 1)*st%d%nik)
+      ALLOCATE(ang (1:st%nst, st%d%nik, 3), st%nst*st%d%nik*3)
+      ALLOCATE(ang2(1:st%nst, st%d%nik), st%nst*st%d%nik)
       do ik = 1, st%d%nik
         do ist = st%st_start, st%st_end
+          write(*, *) ist, st%mpi_grp%rank, st%st_start, st%st_end
           if (st%d%wfs_type == M_REAL) then
             call dstates_angular_momentum(gr, st%dpsi(:, :, ist, ik), ang(ist, ik, :), ang2(ist, ik))
           else
@@ -637,10 +643,10 @@ contains
           end if
         end do
       end do
-      angular(1) =  states_eigenvalues_sum(st, ang(:, :, 1))
-      angular(2) =  states_eigenvalues_sum(st, ang(:, :, 2))
-      angular(3) =  states_eigenvalues_sum(st, ang(:, :, 3))
-      lsquare    =  states_eigenvalues_sum(st, ang2)
+      angular(1) =  states_eigenvalues_sum(st, ang(st%st_start:st%st_end, :, 1))
+      angular(2) =  states_eigenvalues_sum(st, ang(st%st_start:st%st_end, :, 2))
+      angular(3) =  states_eigenvalues_sum(st, ang(st%st_start:st%st_end, :, 3))
+      lsquare    =  states_eigenvalues_sum(st, ang2(st%st_start:st%st_end, :))
 
       do ik = 1, st%d%nik, ns
         if(st%d%nik > ns) then
@@ -651,32 +657,44 @@ contains
           call write_info(1, iunit)
         end if
 
+        ! Exchange and and ang2.
+#if defined(HAVE_MPI)
+        if(st%parallel_in_states) then
+          do j = 1, 3
+            lang = ang(st%st_start:st%st_end, ik, j)
+            call lmpi_gen_alltoallv(st%st_end-st%st_start+1, lang, tmp, ang(:, ik, j), st%mpi_grp)
+          end do
+          lang = ang2(st%st_start:st%st_end, ik)
+          call lmpi_gen_alltoallv(st%st_end-st%st_start+1, lang, tmp, ang2(:, ik), st%mpi_grp)
+        end if
+#endif
         write(message(1), '(a4,1x,a5,4a12,4x,a12,1x)')       &
           '#st',' Spin','        <Lx>', '        <Ly>', '        <Lz>', '        <L2>', 'Occupation '
         call write_info(1, iunit)
 
-        do j = 1, st%nst
-          do is = 0, ns-1
+        if(mpi_grp_is_root(mpi_world)) then
+          do j = 1, st%nst
+            do is = 0, ns-1
 
-            if(j > st%nst) then
-              o = M_ZERO
-              if(st%d%ispin == SPINORS) oplus = M_ZERO; ominus = M_ZERO
-            else
-              o = st%occ(j, ik+is)
-            end if
+              if(j > st%nst) then
+                o = M_ZERO
+                if(st%d%ispin == SPINORS) oplus = M_ZERO; ominus = M_ZERO
+              else
+                o = st%occ(j, ik+is)
+              end if
 
-            if(is.eq.0) cspin = 'up'
-            if(is.eq.1) cspin = 'dn'
-            if(st%d%ispin.eq.UNPOLARIZED.or.st%d%ispin.eq.SPINORS) cspin = '--'
+              if(is.eq.0) cspin = 'up'
+              if(is.eq.1) cspin = 'dn'
+              if(st%d%ispin.eq.UNPOLARIZED.or.st%d%ispin.eq.SPINORS) cspin = '--'
 
-            write(tmp_str(1), '(i4,3x,a2)') j, trim(cspin)
-            write(tmp_str(2), '(1x,4f12.6,3x,f12.6)') &
+              write(tmp_str(1), '(i4,3x,a2)') j, trim(cspin)
+              write(tmp_str(2), '(1x,4f12.6,3x,f12.6)') &
                 ang(j, ik+is, 1:3), ang2(j, ik+is), o
-            message(1) = trim(tmp_str(1))//trim(tmp_str(2))
-            call write_info(1, iunit)
+              message(1) = trim(tmp_str(1))//trim(tmp_str(2))
+              call write_info(1, iunit)
+            end do
           end do
-        end do
-
+        end if
         write(message(1),'(a)') ''
         call write_info(1, iunit)
 

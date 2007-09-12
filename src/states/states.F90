@@ -36,6 +36,7 @@ module states_m
   use mesh_m
   use mpi_m
   use mpi_debug_m
+  use mpi_lib_m
   use multicomm_m
   use output_m
   use profiling_m
@@ -1176,12 +1177,16 @@ contains
     type(states_t), intent(inout) :: st
     type(mesh_t),   intent(in)    :: m
 
-    ! Local variables
-    integer :: ie, ik, iter
+    ! Local variables.
+    integer            :: ie, ik, iter
     integer, parameter :: nitmax = 200
-    FLOAT :: drange, t, emin, emax, sumq
-    FLOAT, parameter :: tol = CNST(1.0e-10)
-    logical :: conv
+    FLOAT              :: drange, t, emin, emax, sumq
+    FLOAT, parameter   :: tol = CNST(1.0e-10)
+    logical            :: conv
+#if defined(HAVE_MPI)
+    integer            :: tmp
+    FLOAT              :: lspin(3, st%st_end-st%st_start+1) ! To exchange spin.
+#endif
 
     call push_sub('states.fermi')
 
@@ -1189,13 +1194,19 @@ contains
       ! Calculate magnetizations...
       if(st%d%ispin == SPINORS) then
         do ik = 1, st%d%nik
-          do ie = 1, st%nst
+          do ie = st%st_start, st%st_end
             if (st%d%wfs_type == M_REAL) then
               write(message(1),'(a)') 'Internal error in states_fermi'
               call write_fatal(1)
             else
               st%spin(1:3, ie, ik) = state_spin(m, st%zpsi(:, :, ie, ik))
             end if
+#if defined(HAVE_MPI)
+          if(st%parallel_in_states) then
+            lspin = st%spin(1:3, st%st_start:st%st_end, ik)
+            call lmpi_gen_alltoallv(3*(st%st_end-st%st_start+1), lspin(:, 1), tmp, st%spin(:, 1, ik), st%mpi_grp)
+          end if
+#endif
           end do
         end do
       end if
@@ -1223,9 +1234,15 @@ contains
       ! Calculate magnetizations...
       if(st%d%ispin == SPINORS) then
         do ik = 1, st%d%nik
-          do ie = 1, st%nst
+          do ie = st%st_start, st%st_end
             st%spin(1:3, ie, ik) = state_spin(m, st%zpsi(:, :, ie, ik))
           end do
+#if defined(HAVE_MPI)
+          if(st%parallel_in_states) then
+            lspin = st%spin(1:3, st%st_start:st%st_end, ik)
+            call lmpi_gen_alltoallv(3*(st%st_end-st%st_start+1), lspin(:, 1), tmp, st%spin(:, 1, ik), st%mpi_grp)
+          end if
+#endif
         end do
       end if
       call pop_sub()
@@ -1249,7 +1266,7 @@ contains
       sumq  = M_ZERO
 
       do ik = 1, st%d%nik
-        do ie =1, st%nst
+        do ie = 1, st%nst
           sumq = sumq + st%d%kweights(ik)/st%d%spin_channels * & !st%d%nspin * &
             stepf((st%eigenval(ie, ik) - st%ef)/t)
         end do
@@ -1277,9 +1294,15 @@ contains
     ! Calculate magnetizations...
     if(st%d%ispin == SPINORS) then
       do ik = 1, st%d%nik
-        do ie = 1, st%nst
+        do ie = st%st_start, st%st_end
           st%spin(1:3, ie, ik) = state_spin(m, st%zpsi(:, :, ie, ik))
         end do
+#if defined(HAVE_MPI)
+        if(st%parallel_in_states) then
+          lspin = st%spin(1:3, st%st_start:st%st_end, ik)
+          call lmpi_gen_alltoallv(3*(st%st_end-st%st_start+1), lspin(:, 1), tmp, st%spin(:, 1, ik), st%mpi_grp)
+        end if
+#endif
       end do
     end if
 
@@ -1292,7 +1315,7 @@ contains
   function states_eigenvalues_sum(st, x) result(e)
     type(states_t), intent(in)  :: st
     FLOAT                       :: e
-    FLOAT, optional, intent(in) :: x(:, :)
+    FLOAT, optional, intent(in) :: x(st%st_start:st%st_end, 1:st%d%nik)
 
     integer :: ik
 #ifdef HAVE_MPI

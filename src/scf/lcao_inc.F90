@@ -152,7 +152,7 @@ subroutine X(lcao_wf) (lcao_data, st, gr, h, start)
   type(hamiltonian_t), intent(in)    :: h
   integer,             intent(in)    :: start
 
-  integer :: dim, nst, ik, n1, n2, idim, norbs
+  integer :: dim, nst, ik, n1, n2, idim, norbs, lcao_start
   R_TYPE, allocatable :: hpsi(:,:)
   FLOAT, allocatable :: ev(:)
 
@@ -183,14 +183,27 @@ subroutine X(lcao_wf) (lcao_data, st, gr, h, start)
     call lalg_geneigensolve(norbs, lcao_data%X(hamilt) (1:norbs, 1:norbs, ik), &
          lcao_data%X(s) (1:norbs, 1:norbs, ik), ev)
 
+    if(st%parallel_in_states) then
+      if(st%st_start.le.start) then
+        lcao_start = start
+      else
+        lcao_start = st%st_start
+      end if
+    else
+      lcao_start = start
+    end if
+
     do n1 = start, nst
       st%eigenval(n1, ik) = ev(n1)
+    end do
+
+    do n1 = lcao_start, st%st_end
       st%X(psi)(1:NP_PART, 1:dim, n1, ik) = R_TOTYPE(M_ZERO)
     end do
     deallocate(ev)
 
     ! Change of base
-    do n1 = start, nst
+    do n1 = lcao_start, st%st_end
       do idim = 1, dim
         do n2 = 1, norbs
           call lalg_axpy(NP, lcao_data%X(hamilt) (n2, n1, ik), lcao_data%st%X(psi)(:, idim, n2, ik), &

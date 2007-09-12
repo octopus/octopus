@@ -112,7 +112,7 @@ contains
 
     if(iand(outp%what, output_wfs_sqmod).ne.0) then
       ALLOCATE(dtmp(NP_PART), NP_PART)
-      do ist = 1, st%nst
+      do ist = st%st_start, st%st_end
         if(loct_isinstringlist(ist, outp%wfs_list)) then
           do ik = 1, st%d%nik
             do idim = 1, st%d%dim

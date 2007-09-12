@@ -567,7 +567,7 @@ contains
     subroutine push_sub_write(iunit_out)
       integer,  intent(in) :: iunit_out
 
-      write(iunit_out,'(a,i6,a,i6.6,f12.6,i8, a)', advance='no') "* I ", &
+      write(iunit_out,'(a,i6,a,i6.6,f20.6,i8,a)', advance='no') "* I ", &
         sec,'.',usec, &
         loct_clock(), &
         loct_getmem(), " | "
@@ -617,7 +617,7 @@ contains
     subroutine pop_sub_write(iunit_out)
       integer, intent(in) :: iunit_out
 
-      write(iunit_out,'(a,i6,a,i6.6,f12.6,i8, a)', advance='no') "* O ", &
+      write(iunit_out,'(a,i6,a,i6.6,f20.6,i8, a)', advance='no') "* O ", &
         sec,'.',usec, &
         loct_clock()-time_stack(no_sub_stack), &
         loct_getmem(), " | "
