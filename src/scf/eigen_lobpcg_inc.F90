@@ -92,7 +92,7 @@
     call push_sub('eigen_lobpcg.Xeigen_solver_lobpcg')
 
     ! The results with explicit Gram diagonal blocks were not better, so it is switched of.
-    explicit_gram = .true.
+    explicit_gram = .false.
 
     ! Check if LOBPCG can be run.
     ! LOBPCG does not work with domain parallelization for the moment
@@ -149,7 +149,7 @@
     ALLOCATE(h_dir(NP_PART, st%d%dim, st_start:st_end), NP_PART*st%d%dim*lnst)
     ALLOCATE(h_psi(NP_PART, st%d%dim, st_start:st_end), NP_PART*st%d%dim*lnst)
     ALLOCATE(gram_block(nst, nst), nst**2)
-    ALLOCATE(ritz_val(3*nst), 3*nst)
+    ALLOCATE(ritz_val(nst), nst)
 
     maxiter = niter
     niter   = 0
@@ -243,7 +243,7 @@
       ! Rayleigh-Ritz procedure.
       ALLOCATE(gram_h(nst+nuc, nst+nuc), (nst+nuc)**2)
       ALLOCATE(gram_i(nst+nuc, nst+nuc), (nst+nuc)**2)
-      ALLOCATE(ritz_vec(nst+nuc, nst+nuc), (nst+nuc)**2)
+      ALLOCATE(ritz_vec(nst+nuc, nst), (nst+nuc)*nst)
 
       ! gram_h matrix.
       ! (1, 1)-block:
@@ -287,14 +287,7 @@
       call states_blockt_mul(gr%m, st, st%X(psi)(:, :, :, ik), res, gram_i(1:nst, nst+1:nst+nuc), idx2=UC)
 
       call profiling_in(C_PROFILING_LOBPCG_ESOLVE)
-
-
-      call lalg_eigensolve(nst+nuc, gram_h, ritz_vec, ritz_val)
-write(25, *) ritz_val
-
-      call lalg_geneigensolve(nst+nuc, gram_h, gram_i, ritz_val)
-write(26, *) ritz_val
-call write_fatal(0)
+      call lalg_lowest_geneigensolve(nst, nst+nuc, gram_h, gram_i, ritz_val, ritz_vec)
       call profiling_out(C_PROFILING_LOBPCG_ESOLVE)
 
       ! Calculate new conjugate directions.
@@ -332,7 +325,7 @@ call write_fatal(0)
 
         ALLOCATE(nuc_tmp(nuc, nuc), nuc**2)
         ! Allocate space for Gram matrices in this iterations.
-        ALLOCATE(ritz_vec(nst+2*nuc, nst+2*nuc), (nst+2*nuc)**2)
+        ALLOCATE(ritz_vec(nst+2*nuc, nst), nst**2+2*nst*nuc)
         ALLOCATE(gram_h(nst+2*nuc, nst+2*nuc), (nst+2*nuc)**2)
         ALLOCATE(gram_i(nst+2*nuc, nst+2*nuc), (nst+2*nuc)**2)
 
@@ -443,7 +436,7 @@ call write_fatal(0)
         call states_blockt_mul(gr%m, st, res, dir, &
           gram_i(nst+1:nst+nuc, nst+nuc+1:nst+2*nuc), idx1=UC, idx2=UC)
         call profiling_in(C_PROFILING_LOBPCG_ESOLVE)
-        call lalg_eigensolve(nst+2*nuc, gram_h, ritz_vec, ritz_val)
+        call lalg_lowest_geneigensolve(nst, nst+2*nuc, gram_h, gram_i, ritz_val, ritz_vec)
         call profiling_out(C_PROFILING_LOBPCG_ESOLVE)
 
         ! Calculate new conjugate directions:
