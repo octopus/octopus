@@ -57,6 +57,7 @@ module math_m
     math_xor,                   &
     dcross_product,             &
     zcross_product,             &
+    hypot,                      &
     ddelta
 
 

@@ -42,7 +42,8 @@ subroutine X(sternheimer_solve)(&
   FLOAT :: dpsimod
   integer :: iter, sigma, ik, ist, err
   R_TYPE, allocatable :: dl_rhoin(:, :, :), dl_rhonew(:, :, :), dl_rhotmp(:, :, :)
-  R_TYPE, allocatable :: Y(:, :, :), hvar(:, :, :), tmp(:)
+  R_TYPE, allocatable :: Y(:, :, :), hvar(:, :, :)
+  R_DOUBLE, allocatable :: tmp(:)
   FLOAT  :: abs_dens
   R_TYPE :: omega_sigma
 
@@ -138,8 +139,7 @@ subroutine X(sternheimer_solve)(&
 
           ! print the norm of the variations, and the number of
           ! iterations and residual of the linear solver
-          tmp(1:m%np) = R_ABS(lr(sigma)%X(dl_psi)(1:m%np, 1, ist, ik))**2
-          dpsimod = X(mf_integrate)(m, tmp)
+          dpsimod = lalg_nrm2(m%np, lr(sigma)%X(dl_psi)(1:m%np, 1, ist, ik))
 
           write(message(1), '(i4, f20.6, i5, e20.6)') &
                (3 - 2*sigma)*ist, dpsimod, this%solver%iter, this%solver%abs_psi 
@@ -179,12 +179,9 @@ subroutine X(sternheimer_solve)(&
     abs_dens =  M_ZERO
 
     do ik = 1, st%d%nspin
-      tmp(:) = R_REAL(dl_rhoin(:, ik, 1) - dl_rhotmp(:, ik, 1))**2 &
-           + M_zI*R_AIMAG(dl_rhoin(:,ik, 1) - dl_rhotmp(:, ik, 1))**2
-      abs_dens = abs_dens + abs(X(mf_integrate)(m, tmp))
+      tmp(1:m%np) = dl_rhoin(1:m%np, ik, 1) - dl_rhotmp(1:m%np, ik, 1)
+      abs_dens = hypot(abs_dens, lalg_nrm2(m%np, tmp))
     end do
-
-    abs_dens = sqrt(abs_dens)
 
     write(message(1), '(a, e20.6)') "SCF Residual ", abs_dens
 
