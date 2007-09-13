@@ -25,7 +25,8 @@ dist_upf_DATA = \
 	Cr_sc.UPF    \
 	Cr_sc_so.UPF \
 	Fe_sc.UPF    \
-	Fe_sc_so.UPF
+	Fe_sc_so.UPF \
+        Xe.UPF
 
 
 # In order to get `make check' working with a `VPATH' build (e. g. to use

@@ -1,26 +1,42 @@
 # -*- coding: utf-8 mode: shell-script -*-
-# $Id: 07-spin_orbit_coupling.02-rkb.inp 2655 2007-01-19 17:38:16Z xavier $
+# $Id: 07-spin_orbit_coupling.01-ground_state.inp 2655 2007-01-19 17:38:16Z xavier $
 
 DebugLevel = 0
+
+Units = "eVA"
 
 CalculationMode = gs
 fromScratch = yes
 
-BoxShape = sphere
+BoxShape = minimum
 Radius  = 5.0
-Spacing = 0.4
+Spacing = 0.35
 
 %Species
-"Cr_sc_so" | 51.996 | spec_ps_upf | 24 | 0 | 0
+  "Xe"  | 131.29 | spec_ps_upf | 54 | 2 | 1
 %
+
 %Coordinates
-  "Cr_sc_so" | 0 | 0 | 0.0
+  "Xe" | -1.5 | 0 | 0 | no
+  "Xe" |  1.5 | 0 | 0 | no
 %
+ExcessCharge = 1
 
 SpinComponents = non_collinear
 RelativisticCorrection = spin_orbit
 
 MaximumIter = 2
-Eigensolver = cg
-EigenSolverInitTolerance = 1e-5
-EigenSolverMaxIter = 100
+EigenSolver = cg
+EigenSolverInitTolerance = 1e-3
+EigenSolverFinalTolerance = 1e-5
+EigenSolverFinalToleranceIteration = 2
+EigenSolverMaxIter = 2000
+
+GuessMagnetDensity = user_defined
+%AtomsMagnetDirection
+ 0.0 | 0.0 | 1.0 
+ 0.0 | 0.0 | 1.0
+%
+
+Forces = derivate_wavefunctions
+
