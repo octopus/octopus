@@ -488,12 +488,14 @@ contains
       s%niwfs = 0
       do i = 1, s%ps%conf%p
         l = s%ps%conf%l(i)
-        ! The next commented line assumed that we only want the shells 
-        ! that had some occupation. I am not sure of what is best, for 
-        ! the moment I will assume that we will use all the shells, so 
-        ! that the LCAO basis will be larger. 
-        ! if(sum(s%ps%conf%occ(i, :)).ne.M_ZERO) s%niwfs = s%niwfs + (2*l+1)
-        s%niwfs = s%niwfs + (2*l+1)
+
+        ! the input pseudo determines the maximum l we use
+        if(l <= s%lmax) s%niwfs = s%niwfs + (2*l+1)
+
+        ! Another choice would be to use only the occupied atomic states,
+        ! usually yielding a slightly smaller basis. To use this strategy
+        ! uncomment the following line
+        !if(sum(s%ps%conf%occ(i, :)).ne.M_ZERO) s%niwfs = s%niwfs + (2*l+1)
       end do
 
     case(SPEC_USDEF)
@@ -506,6 +508,7 @@ contains
       s%omega = sqrt( abs(M_TWO / CNST(1.0e-4) * pot_re ))
       ! To avoid problems with constant potentials.
       if(s%omega <= M_ZERO) s%omega = CNST(0.1) 
+
     case(SPEC_JELLI, SPEC_POINT)
       write(message(1),'(a,a,a)')    'Specie "',trim(s%label),'" is a jellium sphere / approximated point particle.'
       write(message(2),'(a,f11.6)')  '   Valence charge = ', s%z_val
@@ -721,6 +724,10 @@ contains
         n = 1
         do i = 1, s%ps%conf%p
           l = s%ps%conf%l(i)
+
+          ! the input pseudo determines the maximum l we use
+          if(l > s%lmax) cycle
+
           do m = -l, l
             s%iwf_i(n, is) = i
             s%iwf_l(n, is) = l
@@ -730,6 +737,7 @@ contains
         end do
       end do
     else
+
       select case(calc_dim)
       case(1)
         do is = 1, ispin
@@ -739,6 +747,7 @@ contains
             s%iwf_m(i, is) = 0
           end do
         end do
+
       case(2)
         do is = 1, ispin
           i = 1; n1 = 1; n2 = 1
@@ -747,17 +756,21 @@ contains
             s%iwf_l(i, is) = n2
             s%iwf_m(i, is) = 0
             i = i + 1; if(i>s%niwfs) exit
+
             s%iwf_i(i, is) = n1+1
             s%iwf_l(i, is) = n2
             s%iwf_m(i, is) = 0
             i = i + 1; if(i>s%niwfs) exit
+
             s%iwf_i(i, is) = n1
             s%iwf_l(i, is) = n2+1
             s%iwf_m(i, is) = 0
             i = i + 1; if(i>s%niwfs) exit
+
             n1 = n1 + 1; n2 = n2 + 1
           end do
         end do
+
       case(3)
         do is = 1, ispin
           i = 1; n1 = 1; n2 = 1; n3 = 1
@@ -766,30 +779,37 @@ contains
             s%iwf_l(i, is) = n2
             s%iwf_m(i, is) = n3
             i = i + 1; if(i>s%niwfs) exit
+
             s%iwf_i(i, is) = n1+1
             s%iwf_l(i, is) = n2
             s%iwf_m(i, is) = n3
             i = i + 1; if(i>s%niwfs) exit
+
             s%iwf_i(i, is) = n1
             s%iwf_l(i, is) = n2+1
             s%iwf_m(i, is) = 0
             i = i + 1; if(i>s%niwfs) exit
+
             s%iwf_i(i, is) = n1
             s%iwf_l(i, is) = n2
             s%iwf_m(i, is) = n3+1
             i = i + 1; if(i>s%niwfs) exit
+
             s%iwf_i(i, is) = n1+1
             s%iwf_l(i, is) = n2+1
             s%iwf_m(i, is) = n3
             i = i + 1; if(i>s%niwfs) exit
+
             s%iwf_i(i, is) = n1+1
             s%iwf_l(i, is) = n2
             s%iwf_m(i, is) = n3+1
             i = i + 1; if(i>s%niwfs) exit
+
             s%iwf_i(i, is) = n1
             s%iwf_l(i, is) = n2+1
             s%iwf_m(i, is) = n3+1
             i = i + 1; if(i>s%niwfs) exit
+
             n1 = n1 + 1; n2 = n2 + 1; n3 = n3 + 1
           end do
         end do

@@ -77,6 +77,7 @@ subroutine X(lcao_initial_wf) (n, m, geo, psi, ispin, ik, err)
           call pop_sub()
           return
         end if
+
         i = i + 1
       end do
     end do
@@ -106,7 +107,7 @@ subroutine X(lcao_init) (lcao_data, gr, geo, h, norbs)
     do n = 1, st%nst
       call X(lcao_initial_wf) (n, gr%m, geo, st%X(psi)(:, :, n, ik), st%d%ispin, ik, ierr)
       if(ierr.ne.0) then
-        write(message(1),'(a)') 'Internal error in lcao_wf.'
+        write(message(1),'(a)') 'Internal error in lcao_wf'
         call write_fatal(1)
       end if
     end do
@@ -159,7 +160,6 @@ subroutine X(lcao_wf) (lcao_data, st, gr, h, start)
   call push_sub('lcao_inc.Xlcao_wf')
 
   norbs = lcao_data%st%nst
-!  np = NP
   dim = st%d%dim
   nst = st%nst
 
@@ -171,7 +171,7 @@ subroutine X(lcao_wf) (lcao_data, st, gr, h, start)
       call X(vlpsi) (h, gr%m, lcao_data%st%X(psi)(:,:, n1, ik), hpsi(:,:), ik)
       if (h%ep%nvnl > 0) call X(vnlpsi) (h, gr, lcao_data%st%X(psi)(:,:, n1, ik), hpsi(:,:), ik)
       do n2 = n1, lcao_data%st%nst
-        lcao_data%X(v) (n1, n2, ik) = X(states_dotp)(gr%m, dim, hpsi, lcao_data%st%X(psi)(1:, : ,n2, ik))
+        lcao_data%X(v) (n1, n2, ik) = X(states_dotp)(gr%m, dim, hpsi, lcao_data%st%X(psi)(:, : ,n2, ik))
         lcao_data%X(hamilt) (n1, n2, ik) = lcao_data%X(k) (n1, n2, ik) + lcao_data%X(v) (n1 , n2, ik)
         lcao_data%X(hamilt) (n2, n1, ik) = R_CONJ(lcao_data%X(hamilt) (n1, n2, ik))
       end do

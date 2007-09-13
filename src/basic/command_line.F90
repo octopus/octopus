@@ -127,6 +127,8 @@ module command_line_m
   integer function command_argument_count()
 #if defined(FC_COMMAND_LINE_INTRINSIC)
     command_argument_count = iargc()
+#else
+    command_argument_count = 0
 #endif
   end function command_argument_count
 
