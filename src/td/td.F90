@@ -76,8 +76,6 @@ module timedep_m
     FLOAT             :: dt             ! time step
     integer           :: max_iter       ! maximum number of iterations to perform
     integer           :: iter           ! the actual iteration
-    integer           :: epot_regenerate! Every epot_regenerate, the external potential
-    ! regenerated *exactly*.
     integer           :: move_ions      ! how do we move the ions?
     logical           :: recalculate_gs ! Recalculate ground-state along the evolution.
     
