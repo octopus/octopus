@@ -296,7 +296,7 @@ double FC_FUNC_(oct_minimize, OCT_MINIMIZE)
 {
   size_t iter = 0;
   int status;
-  double return_value, maxgrad, maxdr;
+  double return_value, maxgrad, maxdr, characteristic_size;
   int i;
   double oldpoint[*dim], grad[*dim];
 
@@ -327,11 +327,12 @@ double FC_FUNC_(oct_minimize, OCT_MINIMIZE)
   case 2: T = gsl_multimin_fdfminimizer_conjugate_fr;
   case 3: T = gsl_multimin_fdfminimizer_conjugate_pr;
   case 4: T = gsl_multimin_fdfminimizer_vector_bfgs;
-    //  case 5: T = gsl_multimin_fdfminimizer_vector_bfgs2;
+  case 5: T = gsl_multimin_fdfminimizer_vector_bfgs2;
+  case 6: T = gsl_multimin_fminimizer_nmsimplex;
   }
   s = gsl_multimin_fdfminimizer_alloc (T, *dim);
 
-  gsl_multimin_fdfminimizer_set (s, &my_func, x, *step, 1e-4);
+  gsl_multimin_fdfminimizer_set (s, &my_func, x, *step, 0.1);
   do
     {
       iter++;
@@ -359,8 +360,12 @@ double FC_FUNC_(oct_minimize, OCT_MINIMIZE)
 
       if (status) break;
 
-      status = ( (maxgrad > *tolgrad) || (maxdr > *toldr) );
-      }
+      if ( gsl_multimin_fdfminimizer_name (s) == "nmsimplex" ) {
+        characteristic_size = gsl_multimin_fminimizer_size (s);
+        status = gsl_multimin_test_size (characteristic_size, *toldr);
+      } 
+      else status = ( (maxgrad > *tolgrad) || (maxdr > *toldr) );
+    }
   while (status && iter < *maxiter);
 
   gsl_multimin_fdfminimizer_free (s);

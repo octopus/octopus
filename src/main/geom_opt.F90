@@ -59,7 +59,9 @@ module geom_opt_m
     MINMETHOD_STEEPEST_DESCENT = 1, &
     MINMETHOD_FR_CG            = 2, &
     MINMETHOD_PR_CG            = 3, &
-    MINMETHOD_BFGS             = 4
+    MINMETHOD_BFGS             = 4, &
+    MINMETHOD_BFGS2            = 5, &
+    MINMETHOD_SIMPLEX          = 6
 
 
   type(geometry_t),    pointer :: geo
@@ -217,6 +219,8 @@ contains
       !% The bfgs2 version of this minimizer is the most efficient version available, 
       !% and is a faithful implementation of the line minimization scheme described in 
       !% Fletcher, _Practical Methods of Optimization_, Algorithms 2.6.2 and 2.6.4.
+      !%Option simplex 6
+      !% This is the Simplex algorithm of Nelder and Mead.
       !%End
       call loct_parse_int(check_inp('GOMethod'), MINMETHOD_STEEPEST_DESCENT, g_opt%method)
       if(.not.varinfo_valid_option('GOMethod', g_opt%method)) call input_error('GOMethod')
@@ -224,7 +228,7 @@ contains
 
       !%Variable GOTolerance
       !%Type float
-      !%Default 0.0001 a.u.
+      !%Default 0.01 a.u.
       !%Section Geometry Optimization
       !%Description
       !% Convergence criterium to stop the minimization. In units of force; minimization
