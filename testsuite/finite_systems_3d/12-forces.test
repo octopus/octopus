@@ -27,4 +27,4 @@ Match ; Force        ; grep -A 2 '^Forces on' static/info | tail -1 ; \s*0.00873
 Input: 12-forces.03-N2_gs.inp
 
 Match ; Total Energy ; grep -A 7 '^Energy:' static/info ; \s*Total\s*=\s*-19.452
-Match ; Force        ; grep -A 2 '^Forces on' static/info | tail -1 ; \s*-2.6635\d*
+Match ; Force        ; grep -A 2 '^Forces on' static/info | tail -1 ; \s*-2.663\d*
