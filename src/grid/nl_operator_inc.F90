@@ -32,6 +32,11 @@ subroutine X(nl_operator_tune)(op)
   integer :: method, ii, reps, iunit
   character(len=2) :: marker
 
+#ifdef HAVE_MPI
+  integer :: ierr
+  real(8) :: global_flops(OP_MIN:OP_MAX)
+#endif
+
   call push_sub('nl_operator_inc.Xnl_operator_tune')
   
   !count the total number of floating point operations  
@@ -40,7 +45,7 @@ subroutine X(nl_operator_tune)(op)
   noperations =  op%m%np * op%n * M_FOUR
 #else
   noperations =  op%m%np * op%n * M_TWO
-#endif
+#endif 
   
   !measure performance of each function
   ALLOCATE(in(1:op%m%np_part), op%m%np_part)
@@ -71,17 +76,25 @@ subroutine X(nl_operator_tune)(op)
     do ii = 1, reps
       call X(nl_operator_operate)(op, in, out, ghost_update = .true.)
     end do
+#ifdef HAVE_MPI
+    call MPI_Barrier(MPI_COMM_WORLD, ierr)
+#endif
     ftime = loct_clock()
 
     flops(method) = noperations * reps / (ftime - itime) 
     
   end do
-  
+
   !choose the best method
   op%X(function) = OP_MIN
   do method = OP_MIN + 1, OP_MAX
     if(flops(method) > flops(op%X(function))) op%X(function) = method
   end do
+
+#ifdef HAVE_MPI
+      call MPI_Allreduce(flops, global_flops, OP_MAX-OP_MIN+1, MPI_DOUBLE_PRECISION, MPI_SUM, MPI_COMM_WORLD, ierr)
+      flops = global_flops
+#endif
 
   !print to file
   if(.not. initialized) call loct_rm('exec/nl_operator_prof')
