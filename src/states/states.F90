@@ -356,7 +356,9 @@ contains
     call states_read_initial_occs(st, excess_charge)
     call states_read_initial_spins(st)
 
-    st%st_start = 1; st%st_end = st%nst
+    st%st_start = 1
+    st%st_end = st%nst
+    st%lnst = st%nst
     ALLOCATE(st%node(st%nst), st%nst)
     st%node(1:st%nst) = 0
 
@@ -861,6 +863,7 @@ contains
     stout%el_temp = stin%el_temp
     stout%ef = stin%ef
     stout%parallel_in_states = stin%parallel_in_states
+    stout%lnst = stin%lnst
     stout%st_start = stin%st_start
     stout%st_end = stin%st_end
     if(associated(stin%dpsi)) then
@@ -2049,6 +2052,7 @@ contains
     st%node(:)            = 0
     st%st_start           = 1
     st%st_end             = st%nst
+    st%lnst               = st%nst
     st%parallel_in_states = .false.
     call mpi_grp_init(st%mpi_grp, -1)
 
