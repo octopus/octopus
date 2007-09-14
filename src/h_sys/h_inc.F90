@@ -975,7 +975,6 @@ FLOAT function X(electronic_kinetic_energy)(h, gr, st) result(t0)
       tpsi = R_TOTYPE(M_ZERO)
       call X(kinetic) (h, gr, st%X(psi)(:, :, ist, ik), tpsi, ik)
       t(ist, ik) = X(states_dotp)(gr%m, st%d%dim, st%X(psi)(:, :, ist, ik), tpsi)
-write(*, *) 'IST', ist, 'IK', ik, t(ist, ik), 'NODE', st%mpi_grp%rank
     end do
   end do
 
