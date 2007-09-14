@@ -1343,7 +1343,7 @@ contains
     end if
 #endif
 
-    cal pop_sub()
+    call pop_sub()
   end function states_eigenvalues_sum
 
 
