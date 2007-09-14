@@ -44,7 +44,7 @@ subroutine X(sternheimer_solve)(&
   R_TYPE, allocatable :: dl_rhoin(:, :, :), dl_rhonew(:, :, :), dl_rhotmp(:, :, :)
   R_TYPE, allocatable :: Y(:, :, :), hvar(:, :, :)
   R_DOUBLE, allocatable :: tmp(:)
-  FLOAT  :: abs_dens
+  real(8):: abs_dens
   R_TYPE :: omega_sigma
 
   logical :: conv_last, conv
@@ -211,7 +211,7 @@ subroutine X(sternheimer_solve)(&
       lr(1)%X(dl_rho)(1:m%np, 1:st%d%nspin) = dl_rhonew(1:m%np, 1:st%d%nspin, 1)
       if(nsigma == 2) lr(2)%X(dl_rho)(1:m%np, 1:st%d%nspin) = R_CONJ(dl_rhonew(1:m%np, 1:st%d%nspin, 1))
 
-      this%solver%tol = scf_tol_step(this%scftol, iter, abs_dens)
+      this%solver%tol = scf_tol_step(this%scftol, iter, TOFLOAT(abs_dens))
 
     end if
     
