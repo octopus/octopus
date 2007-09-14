@@ -394,14 +394,13 @@ contains
 #include "eigen_inc.F90"
 #include "eigen_plan_inc.F90"
 #include "eigen_evolution_inc.F90"
-#include "eigen_lobpcg_inc.F90"
+
 
 #include "undef.F90"
 #include "complex.F90"
 #include "eigen_inc.F90"
 #include "eigen_plan_inc.F90"
 #include "eigen_evolution_inc.F90"
-#include "eigen_lobpcg_inc.F90"
 end module eigen_solver_m
 
 

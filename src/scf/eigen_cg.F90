@@ -32,6 +32,7 @@ module eigen_cg_m
   use mpi_debug_m
   use mpi_lib_m
   use preconditioners_m
+  use profiling_m
   use states_m
   use units_m
 
@@ -42,16 +43,20 @@ module eigen_cg_m
     deigen_solver_cg2,       &
     zeigen_solver_cg2,       &
     deigen_solver_cg2_new,   &
-    zeigen_solver_cg2_new
+    zeigen_solver_cg2_new,   &
+    deigen_solver_lobpcg,    &
+    zeigen_solver_lobpcg
   
   contains
 
 #include "real.F90"
 #include "eigen_cg_inc.F90"
+#include "eigen_lobpcg_inc.F90"
 
 #include "undef.F90"
 #include "complex.F90"
 #include "eigen_cg_inc.F90"
+#include "eigen_lobpcg_inc.F90"
 end module eigen_cg_m
 
 
