@@ -38,6 +38,7 @@ module opt_control_propagation_m
   use opt_control_constants_m
   use opt_control_tdtarget_m
   use opt_control_parameters_m
+  use lasers_m
   use v_ks_m
   use tdf_m
 
@@ -93,7 +94,7 @@ module opt_control_propagation_m
     ! setup the hamiltonian
     call states_calc_dens(psi_n, NP_PART, dens)
     psi_n%rho = dens
-    call v_ks_calc(gr, sys%ks, h, psi_n, calc_eigenval=.true.)
+    call v_ks_calc(gr, sys%ks, h, psi_n)
     call td_rti_run_zero_iter(h, td%tr)
 
     ii = 1
@@ -109,7 +110,7 @@ module opt_control_propagation_m
       ! update
       call states_calc_dens(psi_n, NP_PART, dens)
       psi_n%rho = dens
-      call v_ks_calc(gr, sys%ks, h, psi_n, calc_eigenval=.true.)
+      call v_ks_calc(gr, sys%ks, h, psi_n)
       call hamiltonian_energy(h, sys%gr, sys%geo, psi_n, -1)
 
       ! only write in final run
@@ -166,7 +167,7 @@ module opt_control_propagation_m
     ! setup the hamiltonian
     call states_calc_dens(psi_n, NP_PART, dens)
     psi_n%rho = dens
-    call v_ks_calc(gr, sys%ks, h, psi_n, calc_eigenval=.true.)
+    call v_ks_calc(gr, sys%ks, h, psi_n)!, calc_eigenval=.true.)
     call td_rti_run_zero_iter(h, td%tr)
 
     td%dt = -td%dt
@@ -176,7 +177,7 @@ module opt_control_propagation_m
       ! update
       call states_calc_dens(psi_n, NP_PART, dens)
       psi_n%rho = dens
-      call v_ks_calc(gr, sys%ks, h, psi_n, calc_eigenval=.true.)
+      call v_ks_calc(gr, sys%ks, h, psi_n)!, calc_eigenval=.true.)
       
     end do
     td%dt = -td%dt
@@ -228,7 +229,7 @@ module opt_control_propagation_m
     call states_densities_init(psi, gr, sys%geo)
     call states_calc_dens(psi, NP_PART, dens_tmp)
     psi%rho = dens_tmp
-    call v_ks_calc(gr, sys%ks, h, psi, calc_eigenval=.true.)
+    call v_ks_calc(gr, sys%ks, h, psi)!, calc_eigenval=.true.)
     call td_rti_run_zero_iter(h, td%tr)
 
     message(1) = "Info: Propagating forward"
@@ -241,7 +242,7 @@ module opt_control_propagation_m
         call parameters_to_h(par, h%ep)
         call states_calc_dens(psi2, NP_PART, dens_tmp)
         psi2%rho = dens_tmp
-        call v_ks_calc(gr, sys%ks, h, psi2, calc_eigenval=.true.)
+        call v_ks_calc(gr, sys%ks, h, psi2)!, calc_eigenval=.true.)
         call td_rti_dt(sys%ks, h, gr, psi2, td%tr, abs(i*td%dt), abs(td%dt), td%max_iter)
       end if
 
@@ -285,7 +286,7 @@ module opt_control_propagation_m
     call parameters_to_h(par, h%ep)
     call states_calc_dens(st, NP_PART, dens_tmp)
     st%rho = dens_tmp
-    call v_ks_calc(gr, ks, h, st, calc_eigenval=.true.)
+    call v_ks_calc(gr, ks, h, st)
     call td_rti_dt(ks, h, gr, st, td%tr, abs(iter*td%dt), abs(td%dt), td%max_iter)
 
     deallocatE(dens_tmp)
@@ -331,7 +332,7 @@ module opt_control_propagation_m
     ! setup backward propagation
     call states_calc_dens(chi, NP_PART, dens_tmp)
     chi%rho = dens_tmp
-    call v_ks_calc(gr, sys%ks, h, chi, calc_eigenval=.true.)
+    call v_ks_calc(gr, sys%ks, h, chi)
     call td_rti_run_zero_iter(h, td%tr)
 
     td%dt = -td%dt
@@ -373,7 +374,7 @@ module opt_control_propagation_m
     call parameters_to_h(par, h%ep)
     call states_calc_dens(st, NP_PART, dens_tmp)
     st%rho = dens_tmp
-    call v_ks_calc(gr, ks, h, st, calc_eigenval=.true.)
+    call v_ks_calc(gr, ks, h, st)
     call td_rti_dt(ks, h, gr, st, td%tr, abs(iter*td%dt), td%dt, td%max_iter)
 
     deallocate(dens_tmp)
@@ -461,16 +462,20 @@ module opt_control_propagation_m
       call states_end(oppsi)
 
       ! The quadratic part should only be computed if necessary.
-      oppsi = psi
-      do ik = 1, psi%d%nik
-        do p = 1, psi%nst
-          oppsi%zpsi(:, :, p, ik) = M_z0
-          call zvlaser_operator_quadratic(gr, h, psi%zpsi(:, :, p, ik), &
-                                       oppsi%zpsi(:, :, p, ik), ik, laser_number = j)
+      if(h%ep%lasers(j)%field.eq.E_FIELD_MAGNETIC ) then
+        oppsi = psi
+        do ik = 1, psi%d%nik
+          do p = 1, psi%nst
+            oppsi%zpsi(:, :, p, ik) = M_z0
+            call zvlaser_operator_quadratic(gr, h, psi%zpsi(:, :, p, ik), &
+                                         oppsi%zpsi(:, :, p, ik), ik, laser_number = j)
+          end do
         end do
-      end do
-      dq(j) = zstates_mpmatrixelement(gr%m, chi, psi, oppsi)
-      call states_end(oppsi)
+        dq(j) = zstates_mpmatrixelement(gr%m, chi, psi, oppsi)
+        call states_end(oppsi)
+      else
+        dq(j) = M_z0
+      end if
     end do
 
     d1 = M_z1
