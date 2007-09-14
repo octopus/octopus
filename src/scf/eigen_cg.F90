@@ -24,6 +24,7 @@ module eigen_cg_m
   use grid_m
   use hamiltonian_m
   use lib_basic_alg_m
+  use lib_adv_alg_m
   use math_m
   use mesh_m
   use mesh_function_m
