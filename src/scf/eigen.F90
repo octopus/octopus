@@ -21,6 +21,7 @@
 
 module eigen_solver_m
   use datasets_m
+  use eigen_cg_m
   use global_m
   use grid_m
   use hamiltonian_m
@@ -391,7 +392,6 @@ contains
 #include "undef.F90"
 #include "real.F90"
 #include "eigen_inc.F90"
-#include "eigen_cg_inc.F90"
 #include "eigen_plan_inc.F90"
 #include "eigen_evolution_inc.F90"
 #include "eigen_lobpcg_inc.F90"
@@ -399,7 +399,6 @@ contains
 #include "undef.F90"
 #include "complex.F90"
 #include "eigen_inc.F90"
-#include "eigen_cg_inc.F90"
 #include "eigen_plan_inc.F90"
 #include "eigen_evolution_inc.F90"
 #include "eigen_lobpcg_inc.F90"
