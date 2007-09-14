@@ -967,7 +967,7 @@ FLOAT function X(electronic_kinetic_energy)(h, gr, st) result(t0)
   call push_sub('h.electronic_kinetic_energy')
 
   ALLOCATE(tpsi(NP_PART, st%d%dim), NP_PART*st%d%dim)
-  ALLOCATE(t(st%nst, st%d%nik), st%nst*st%d%nik)
+  ALLOCATE(t(st%st_start:st%st_end, st%d%nik), st%nst*st%d%nik)
   t = M_ZERO
 
   do ik = 1, st%d%nik
@@ -975,6 +975,7 @@ FLOAT function X(electronic_kinetic_energy)(h, gr, st) result(t0)
       tpsi = R_TOTYPE(M_ZERO)
       call X(kinetic) (h, gr, st%X(psi)(:, :, ist, ik), tpsi, ik)
       t(ist, ik) = X(states_dotp)(gr%m, st%d%dim, st%X(psi)(:, :, ist, ik), tpsi)
+write(*, *) 'IST', ist, 'IK', ik, t(ist, ik), 'NODE', st%mpi_grp%rank
     end do
   end do
 
@@ -998,7 +999,7 @@ FLOAT function X(electronic_external_energy)(h, gr, st) result(v)
   call push_sub('h.electronic_external_energy')
 
   ALLOCATE(vpsi(NP_PART, st%d%dim), NP_PART*st%d%dim)
-  ALLOCATE(t(st%nst, st%d%nik), st%nst*st%d%nik)
+  ALLOCATE(t(st%st_start:st%st_end, st%d%nik), st%nst*st%d%nik)
   t = M_ZERO
 
   do ik = 1, st%d%nik

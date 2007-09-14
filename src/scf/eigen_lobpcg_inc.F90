@@ -113,7 +113,7 @@
 
     ! If not running parallel, the luc and lnuc just point to the global set.
     if(st%parallel_in_states) then
-      lnst = st%st_end-st%st_start+1
+      lnst = st%lnst
       ALLOCATE(luc(lnst), lnst)
       ALLOCATE(lnuc, 1)
     else

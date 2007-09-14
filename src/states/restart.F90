@@ -367,7 +367,7 @@ contains
     call read_previous_mesh()
 
     ! now we really start
-    ALLOCATE(filled(st%d%dim, st%st_start:st%st_end, st%d%nik), st%d%dim*(st%st_end-st%st_start+1)*st%d%nik)
+    ALLOCATE(filled(st%d%dim, st%st_start:st%st_end, st%d%nik), st%d%dim*st%lnst*st%d%nik)
     filled = .false.
 
     ! Skip two lines.

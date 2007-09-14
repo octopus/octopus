@@ -28,13 +28,13 @@ subroutine X(eigen_diagon_subspace)(gr, st, h, diff)
 
   R_TYPE, allocatable :: h_subspace(:,:), vec(:,:), f(:,:,:)
   integer             :: i, ik, tmp
-  FLOAT               :: nrm2, ldiff(st%st_end-st%st_start+1)
+  FLOAT               :: nrm2, ldiff(st%lnst)
 
   call push_sub('eigen_inc.Xeigen_diagon_subspace')
 
   ALLOCATE(h_subspace(st%nst, st%nst), st%nst*st%nst)
   ALLOCATE(vec(st%nst, st%nst), st%nst*st%nst)
-  ALLOCATE(f(NP_PART, st%d%dim, st%st_start:st%st_end), NP_PART*st%d%dim*(st%st_end-st%st_start+1))
+  ALLOCATE(f(NP_PART, st%d%dim, st%st_start:st%st_end), NP_PART*st%d%dim*st%lnst)
 
   ik_loop: do ik = 1, st%d%nik
     ! Calculate the matrix representation of the Hamiltonian in the subspace <psi|H|psi>.
@@ -72,7 +72,7 @@ subroutine X(eigen_diagon_subspace)(gr, st, h, diff)
 #if defined(HAVE_MPI)
       if(st%parallel_in_states) then
         ldiff = diff(st%st_start:st%st_end, ik)
-        call lmpi_gen_alltoallv(st%st_end-st%st_start+1, ldiff, tmp, diff(:, ik), st%mpi_grp)
+        call lmpi_gen_alltoallv(st%lnst, ldiff, tmp, diff(:, ik), st%mpi_grp)
       end if
 #endif
     end if

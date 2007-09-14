@@ -92,7 +92,7 @@ contains
 
     ! Allocate memory for the interface wave functions.
     allocsize = trans%intface%np*(st%st_start-st%st_end+1)*max_iter*NLEADS
-    ALLOCATE(trans%st_intface(trans%intface%np, st%st_end-st%st_start+1, max_iter, NLEADS), allocsize)
+    ALLOCATE(trans%st_intface(trans%intface%np, st%lnst, max_iter, NLEADS), allocsize)
     trans%st_intface = M_ZERO
       
     call pop_sub()

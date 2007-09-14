@@ -489,9 +489,13 @@ subroutine X(states_calc_momentum)(gr, st)
   type(grid_t),   intent(inout) :: gr
   type(states_t), intent(inout) :: st
 
-  integer :: idim, ist, ik, i
+  integer             :: idim, ist, ik, i
   CMPLX               :: expect_val_p
   R_TYPE, allocatable :: grad(:,:,:)  
+#if defined(HAVE_MPI)
+  integer             :: tmp
+  FLOAT               :: lmomentum(NDIM, st%lnst)
+#endif
 
   call push_sub('states_inc.Xstates_calc_momentum')
 
@@ -527,8 +531,16 @@ subroutine X(states_calc_momentum)(gr, st)
       do i = 1, gr%sb%periodic_dim
         st%momentum(i, ist, ik) = st%momentum(i, ist, ik) + st%d%kpoints(i, ik)
       end do
-
     end do
+
+    ! Exchange momenta in the state parallel case.
+#if defined(HAVE_MPI)
+    if(st%parallel_in_states) then
+      lmomentum = st%momentum(:, st%st_start:st%st_end, ik)
+      call lmpi_gen_alltoallv(NDIM*st%lnst, lmomentum(:, 1), tmp, &
+        st%momentum(:, 1, ik), st%mpi_grp)
+    end if
+#endif
   end do
 
   deallocate(grad)

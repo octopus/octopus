@@ -33,7 +33,7 @@ subroutine PES_mask_init(v, m, sb, st)
   call fft_init(m%l, fft_complex, v%fft, optimize = .not.simul_box_is_periodic(sb))
 
   ! setup arrays to be used
-  i = m%l(1)*m%l(2)*m%l(3)*(st%st_end-st%st_start+1)*st%d%nik
+  i = m%l(1)*m%l(2)*m%l(3)*st%lnst*st%d%nik
   ALLOCATE(v%k(m%l(1), m%l(2), m%l(3), st%d%dim, st%st_start:st%st_end, st%d%nik), i*st%d%dim)
   ALLOCATE(v%r(m%l(1), m%l(2), m%l(3),           st%st_start:st%st_end, st%d%nik), i)
 
@@ -131,8 +131,8 @@ subroutine PES_mask_output(v, m, st, file)
   integer,  parameter :: n = 600, ar_n = 90
   FLOAT, parameter :: step = CNST(0.005)
 
-  ALLOCATE( spis(n,    st%st_start:st%st_end, st%d%nik),    n*(st%st_end-st%st_start+1)*st%d%nik)
-  ALLOCATE(arpis(ar_n, st%st_start:st%st_end, st%d%nik), ar_n*(st%st_end-st%st_start+1)*st%d%nik)
+  ALLOCATE( spis(n,    st%st_start:st%st_end, st%d%nik),    n*st%lnst*st%d%nik)
+  ALLOCATE(arpis(ar_n, st%st_start:st%st_end, st%d%nik), ar_n*st%lnst*st%d%nik)
   ALLOCATE(npoints(n),       n)
   ALLOCATE(ar_npoints(ar_n), ar_n)
   spis = M_ZERO; arpis = M_ZERO

@@ -330,7 +330,7 @@ contains
     self_consistent = .false.
     if(t<3*dt .and. (.not.h%ip_app)) then
       self_consistent = .true.
-      ALLOCATE(zpsi1(NP_PART, st%d%dim, st%st_start:st%st_end, st%d%nik), NP_PART*st%d%dim*(st%st_end-st%st_start+1)*st%d%nik)
+      ALLOCATE(zpsi1(NP_PART, st%d%dim, st%st_start:st%st_end, st%d%nik), NP_PART*st%d%dim*st%lnst*st%d%nik)
       zpsi1 = st%zpsi
     end if
 
@@ -473,7 +473,7 @@ contains
       call push_sub('td_rti.td_rti2')
 
       if(.not.h%ip_app) then
-        ALLOCATE(zpsi1(NP_PART, st%d%dim, st%st_start:st%st_end, st%d%nik), NP_PART*(st%st_end-st%st_start+1)*st%d%nik)
+        ALLOCATE(zpsi1(NP_PART, st%d%dim, st%st_start:st%st_end, st%d%nik), NP_PART*st%lnst*st%d%nik)
         zpsi1 = st%zpsi ! store zpsi
 
         ALLOCATE(vhxc_t1(NP, st%d%nspin), NP*st%d%nspin)
@@ -573,7 +573,7 @@ contains
 
       call push_sub('td_rti.td_rti5')
 
-      isize = NP_PART*(st%st_end-st%st_start+1)*st%d%nik*st%d%dim
+      isize = NP_PART*st%lnst*st%d%nik*st%d%dim
       ALLOCATE(zpsi_rhs_corr(NP_PART, 1:st%d%dim, st%st_start:st%st_end, 1:st%d%nik), isize)
 
       zpsi_rhs_corr = st%zpsi ! store zpsi for corrector step

@@ -148,6 +148,7 @@ module states_m
     ! This is stuff needed for the parallelization in states.
     logical          :: parallel_in_states ! Am I parallel in states?
     type(mpi_grp_t)  :: mpi_grp            ! The MPI group related to the parallelization in states.
+    integer          :: lnst               ! Number of states on local node.
     integer          :: st_start, st_end   ! Range of states processed by local node.
     integer, pointer :: node(:)            ! To which node belongs each state.
     integer, pointer :: st_range(:, :)     ! Node r manages states st_range(1, r) to
@@ -588,7 +589,7 @@ contains
       st%d%wfs_type = wfs_type
     end if
 
-    n = m%np_part * st%d%dim * (st%st_end-st%st_start+1) * st%d%nik
+    n = m%np_part * st%d%dim * st%lnst * st%d%nik
     if (st%d%wfs_type == M_REAL) then
       ALLOCATE(st%dpsi(m%np_part, st%d%dim, st%st_start:st%st_end, st%d%nik), n)
 
@@ -1185,7 +1186,7 @@ contains
     logical            :: conv
 #if defined(HAVE_MPI)
     integer            :: tmp
-    FLOAT              :: lspin(3, st%st_end-st%st_start+1) ! To exchange spin.
+    FLOAT              :: lspin(3, st%lnst) ! To exchange spin.
 #endif
 
     call push_sub('states.fermi')
@@ -1204,7 +1205,7 @@ contains
 #if defined(HAVE_MPI)
           if(st%parallel_in_states) then
             lspin = st%spin(1:3, st%st_start:st%st_end, ik)
-            call lmpi_gen_alltoallv(3*(st%st_end-st%st_start+1), lspin(:, 1), tmp, st%spin(:, 1, ik), st%mpi_grp)
+            call lmpi_gen_alltoallv(3*st%lnst, lspin(:, 1), tmp, st%spin(:, 1, ik), st%mpi_grp)
           end if
 #endif
           end do
@@ -1240,7 +1241,7 @@ contains
 #if defined(HAVE_MPI)
           if(st%parallel_in_states) then
             lspin = st%spin(1:3, st%st_start:st%st_end, ik)
-            call lmpi_gen_alltoallv(3*(st%st_end-st%st_start+1), lspin(:, 1), tmp, st%spin(:, 1, ik), st%mpi_grp)
+            call lmpi_gen_alltoallv(3*st%lnst, lspin(:, 1), tmp, st%spin(:, 1, ik), st%mpi_grp)
           end if
 #endif
         end do
@@ -1300,7 +1301,7 @@ contains
 #if defined(HAVE_MPI)
         if(st%parallel_in_states) then
           lspin = st%spin(1:3, st%st_start:st%st_end, ik)
-          call lmpi_gen_alltoallv(3*(st%st_end-st%st_start+1), lspin(:, 1), tmp, st%spin(:, 1, ik), st%mpi_grp)
+          call lmpi_gen_alltoallv(3*st%lnst, lspin(:, 1), tmp, st%spin(:, 1, ik), st%mpi_grp)
         end if
 #endif
       end do
@@ -1319,8 +1320,10 @@ contains
 
     integer :: ik
 #ifdef HAVE_MPI
-    FLOAT :: s
+    FLOAT   :: s
 #endif
+
+    call push_sub('states.states_eigenvalues_sum')
 
     e = M_ZERO
     do ik = 1, st%d%nik
@@ -1340,6 +1343,7 @@ contains
     end if
 #endif
 
+    cal pop_sub()
   end function states_eigenvalues_sum
 
 
@@ -2082,6 +2086,7 @@ contains
         if(st%mpi_grp%rank .eq. k) then
           st%st_start = st_start
           st%st_end   = st_end
+          st%lnst     = st_end-st_start+1
         endif
       end do
 

@@ -51,7 +51,7 @@ subroutine X(xc_oep_calc)(oep, xcs, apply_sic_pz, gr, h, st, vxc, ex, ec)
   ! initialize oep structure
   ALLOCATE(oep%eigen_type (st%nst), st%nst)
   ALLOCATE(oep%eigen_index(st%nst), st%nst)
-  ALLOCATE(oep%X(lxc)(NP, st%st_start:st%st_end), NP*(st%st_end-st%st_start+1))
+  ALLOCATE(oep%X(lxc)(NP, st%st_start:st%st_end), NP*st%lnst)
   ALLOCATE(oep%uxc_bar    (st%nst), st%nst)
 
   ! this part handles the (pure) orbital functionals

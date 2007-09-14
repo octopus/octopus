@@ -65,7 +65,7 @@ subroutine PES_rc_init(v, m, st, save_iter)
 
   call loct_parse_block_end(blk)
 
-  i = v%npoints*st%d%dim*(st%st_end-st%st_start+1)*st%d%nik*save_iter
+  i = v%npoints*st%d%dim*st%lnst*st%d%nik*save_iter
   ALLOCATE(v%wf(v%npoints, st%d%dim, st%st_start:st%st_end, st%d%nik, save_iter), i)
 end subroutine PES_rc_init
 
