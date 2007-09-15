@@ -52,6 +52,11 @@ void FC_FUNC_(doperate_ri,DOPERATE_RI)(const int * opnp,
 
   i = 0;
   for (l = 0; l < nri ; l++) {
+
+#ifdef USE_OMP
+    i = rimap_inv[l];
+#endif
+
     index  = opri + n * l;
     index1 = opri + n * (l+1);
 
@@ -59,11 +64,11 @@ void FC_FUNC_(doperate_ri,DOPERATE_RI)(const int * opnp,
       ffi[j] = fi + index[j];
       /* prefecth */
 #if defined(OCT_ITANIUM) && defined(HAVE_IA64INTRIN_H)
-      __lfetch(3, fi + rimap_inv[l] + index1[j]);
+      __lfetch(3, fi + rimap_inv[l+1] + index1[j]);
 #endif
     }
 
-    for (; i < rimap_inv[l] - 8 + 1; i+=8){
+    for (; i < rimap_inv[l+1] - 8 + 1; i+=8){
       a0 = a1 = a2 = a3 = 0.0;
       a4 = a5 = a6 = a7 = 0.0;
       for(j = 0; j < n; j++){
@@ -90,7 +95,7 @@ void FC_FUNC_(doperate_ri,DOPERATE_RI)(const int * opnp,
 
     }
     
-    for (; i < rimap_inv[l]; i++){
+    for (; i < rimap_inv[l+1]; i++){
       a0 = 0.0;
       for(j = 0; j < n; j++) a0 += w[j] * ffi[j][i];
       fo[i] = a0;
@@ -121,6 +126,11 @@ void FC_FUNC_(zoperate_ri,ZOPERATE_RI)(const int * opnp,
 
   i = 0;
   for (l = 0; l < nri ; l++) {
+
+#ifdef USE_OMP
+    i = rimap_inv[l];
+#endif
+
     index = opri + n * l;
     index1= opri + n * (l+1);
 
@@ -128,11 +138,11 @@ void FC_FUNC_(zoperate_ri,ZOPERATE_RI)(const int * opnp,
       ffi[j] = fi + index[j];
       /* prefetch */
 #if defined(OCT_ITANIUM) && defined(HAVE_IA64INTRIN_H)
-      __lfetch(3, fi + rimap_inv[l] + index1[j]);
+      __lfetch(3, fi + rimap_inv[l+1] + index1[j]);
 #endif
     }
 
-    for (; i < (rimap_inv[l] - 4 + 1) ; i+=4){
+    for (; i < (rimap_inv[l+1] - 4 + 1) ; i+=4){
       a0 = a1 = a2 = a3 = 0.0;
       a4 = a5 = a6 = a7 = 0.0;
       
@@ -157,7 +167,7 @@ void FC_FUNC_(zoperate_ri,ZOPERATE_RI)(const int * opnp,
 
     }
 
-    for (; i < rimap_inv[l]; i++){
+    for (; i < rimap_inv[l+1]; i++){
       
       a0 = 0.0;
       a1 = 0.0;

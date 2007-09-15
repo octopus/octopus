@@ -289,7 +289,20 @@ contains
 
         ALLOCATE(op%ri(1:op%n, op%nri), op%n*op%nri)
         ALLOCATE(op%rimap(1:op%np), op%np)
-        ALLOCATE(op%rimap_inv(1:op%nri+1), op%nri+1)
+        ALLOCATE(op%rimap_inv(0:op%nri+1), op%nri+2)
+        
+        op%rimap_inv(0) = 0
+        
+#ifdef USE_OMP
+        !when in OpenMP initialize the array in parallel, so pages
+        !are touched first in the corresponding node
+        !$omp parallel do
+        do jj = 1, op%nri
+          op%ri(1:op%n, jj) = 0
+          op%rimap_inv(jj)  = 0
+        end do
+        !$omp end parallel do
+#endif
 
         current = 1
         op%ri(1:op%n, current) = op%i(1:op%n, 1) - 1
@@ -957,9 +970,9 @@ contains
         call doperate_olu(op%np, op%m%np_part, nn, &
              op%w_re(1:nn, 1), op%i(1:nn,1:op%np), fi(1:op%m%np_part), fo(1:op%np))
       case(OP_RI)
-        call doperate_ri(op%np, nn, op%w_re(1, 1), op%nri, op%ri(1,1), op%rimap_inv(1), fi(1), fo(1))
+        call doperate_ri(op%np, nn, op%w_re(1, 1), op%nri, op%ri(1,1), op%rimap_inv(0), fi(1), fo(1))
       case(OP_RI_VEC)
-        call doperate_ri_vec(op%np, nn, op%w_re(1, 1), op%nri, op%ri(1,1), op%rimap_inv(1), fi(1), fo(1))
+        call doperate_ri_vec(op%np, nn, op%w_re(1, 1), op%nri, op%ri(1,1), op%rimap_inv(0), fi(1), fo(1))
       end select
     else
       do ii = 1, op%np
@@ -1031,9 +1044,9 @@ contains
         case(OP_C)
           call zoperate_c(op%np, nn, op%w_re(1, 1), op%i(1,1), fi(1), fo(1))
         case(OP_RI)
-          call zoperate_ri(op%np, nn, op%w_re(1, 1), op%nri, op%ri(1,1), op%rimap_inv(1), fi(1), fo(1))
+          call zoperate_ri(op%np, nn, op%w_re(1, 1), op%nri, op%ri(1,1), op%rimap_inv(0), fi(1), fo(1))
         case(OP_RI_VEC)
-          call zoperate_ri_vec(op%np, nn, op%w_re(1, 1), op%nri, op%ri(1,1), op%rimap_inv(1), fi(1), fo(1))
+          call zoperate_ri_vec(op%np, nn, op%w_re(1, 1), op%nri, op%ri(1,1), op%rimap_inv(0), fi(1), fo(1))
         end select
 
       else

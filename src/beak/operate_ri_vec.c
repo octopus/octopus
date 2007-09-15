@@ -69,11 +69,16 @@ void FC_FUNC_(doperate_ri_vec,DOPERATE_RI_VEC)(const int * opnp,
 
   i = 0;
   for (l = 0; l < nri ; l++) {
+
+#ifdef USE_OMP
+    i = rimap_inv[l];
+#endif
+
     index  = opri + n * l;
 
     for(j = 0; j < n ; j++) ffi[j] = fi + index[j];
 
-    for (; i < rimap_inv[l] - 4*VECSIZE + 1; i+=4*VECSIZE){
+    for (; i < rimap_inv[l+1] - 4*VECSIZE + 1; i+=4*VECSIZE){
 
 #ifdef SINGLE_PRECISION
       a0 = a1 = a2 = a3 = _mm_setzero_ps();
@@ -95,7 +100,7 @@ void FC_FUNC_(doperate_ri_vec,DOPERATE_RI_VEC)(const int * opnp,
 
     }
 
-    for (; i < rimap_inv[l]; i++){
+    for (; i < rimap_inv[l+1]; i++){
       register ffloat a = 0.0;
       for(j = 0; j < n; j++) a += w[j] * ffi[j][i];
       fo[i] = a;
@@ -129,11 +134,16 @@ void FC_FUNC_(zoperate_ri_vec,ZOPERATE_RI_VEC)(const int * opnp,
 
   i = 0;
   for (l = 0; l < nri ; l++) {
+
+#ifdef USE_OMP
+    i = rimap_inv[l];
+#endif
+
     index = opri + n * l;
 
     for(j = 0; j < n ; j++) ffi[j] = fi + index[j];
 
-    for (; i < (rimap_inv[l] - 8 + 1) ; i+=8){
+    for (; i < (rimap_inv[l+1] - 8 + 1) ; i+=8){
       a0 = a1 = a2 = a3 = _mm_setzero_ps();
       
       for(j = 0; j < n; j++) {
@@ -150,7 +160,7 @@ void FC_FUNC_(zoperate_ri_vec,ZOPERATE_RI_VEC)(const int * opnp,
 
     }
 
-    for (; i < rimap_inv[l]; i++){
+    for (; i < rimap_inv[l+1]; i++){
       
       a0 = _mm_setzero_ps();
       for(j = 0; j < n; j++) {
@@ -189,11 +199,16 @@ void FC_FUNC_(zoperate_ri_vec,ZOPERATE_RI_VEC)(const int * opnp,
 
   i = 0;
   for (l = 0; l < nri ; l++) {
+
+#ifdef USE_OMP
+    i = rimap_inv[l];
+#endif
+
     index = opri + n * l;
 
     for(j = 0; j < n ; j++) ffi[j] = fi + index[j];
 
-    for (; i < (rimap_inv[l] - 4 + 1) ; i+=4){
+    for (; i < (rimap_inv[l+1] - 4 + 1) ; i+=4){
       a0 = a1 = a2 = a3 = _mm_setzero_pd();
       
       for(j = 0; j < n; j++) {
@@ -208,7 +223,7 @@ void FC_FUNC_(zoperate_ri_vec,ZOPERATE_RI_VEC)(const int * opnp,
       fo[i+3] = a3;
     }
 
-    for (; i < rimap_inv[l]; i++){
+    for (; i < rimap_inv[l+1]; i++){
       
       a0 = _mm_setzero_pd();
       for(j = 0; j < n; j++) {
