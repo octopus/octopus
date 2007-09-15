@@ -48,7 +48,7 @@ void FC_FUNC_(doperate_sse,DOPERATE_SSE)(const int * opnp,
 
   int i, j;
   const float * restrict mfi;
-  __m128 vw[MAX_OP_N];
+  static __m128 vw[MAX_OP_N];
   mfi   = fi - 1;
 
   {
@@ -122,7 +122,7 @@ void FC_FUNC_(doperate_sse,DOPERATE_SSE)(const int * opnp,
 
   int i, j, nm2;
   const double * restrict mfi;
-  __m128d vw[MAX_OP_N];
+  static __m128d vw[MAX_OP_N];
 
   mfi   = fi - 1;
 
@@ -178,7 +178,7 @@ void FC_FUNC_(zoperate_sse,ZOPERATE_SSE)(const int * opnp,
   const int * restrict index = opi;
   const int nm2  = n - 6 + 1;
   int i, j;
-  __m128d vw[MAX_OP_N];
+  static __m128d vw[MAX_OP_N];
   register __m128d a, b, c, d, e, f;
 
 #pragma omp parallel private(a, b, c, d, e, f, index, i, j, vw)

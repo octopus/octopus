@@ -58,11 +58,11 @@ void FC_FUNC_(doperate_ri_vec,DOPERATE_RI_VEC)(const int * opnp,
   const ffloat * ffi[MAX_OP_N];
 
 #ifdef SINGLE_PRECISION
-  __m128 vw[MAX_OP_N];
+  static __m128 vw[MAX_OP_N];
   register __m128 a0, a1, a2, a3;
   for(j = 0; j < n ; j++) vw[j] =_mm_set1_ps(w[j]);
 #else
-  __m128d vw[MAX_OP_N];
+  static __m128d vw[MAX_OP_N];
   register __m128d a0, a1, a2, a3;
   for(j = 0; j < n ; j++) vw[j] =_mm_set1_pd(w[j]);
 #endif
@@ -122,7 +122,7 @@ void FC_FUNC_(zoperate_ri_vec,ZOPERATE_RI_VEC)(const int * opnp,
   int l, i, j;
   const int * restrict index;
   const __m64 * ffi[MAX_OP_N];
-  __m128 vw[MAX_OP_N];
+  static __m128 vw[MAX_OP_N];
   register __m128 a0, a1, a2, a3;
 
   for(j = 0; j < n ; j++) vw[j] =_mm_set1_ps(w[j]);
@@ -182,7 +182,7 @@ void FC_FUNC_(zoperate_ri_vec,ZOPERATE_RI_VEC)(const int * opnp,
   int l, i, j;
   const int * restrict index;
   const __m128d * ffi[MAX_OP_N];
-  __m128d vw[MAX_OP_N];
+  static __m128d vw[MAX_OP_N];
   register __m128d a0, a1, a2, a3;
 
   for(j = 0; j < n ; j++) vw[j] =_mm_set1_pd(w[j]);

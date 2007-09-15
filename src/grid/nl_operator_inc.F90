@@ -67,7 +67,12 @@ subroutine X(nl_operator_tune)(op)
     reps = 10
 
     if(in_debug_mode) then
-      write(message(1), '(a,a)') 'Info: Profiling non local operator implementation: ', &
+      write(message(1), '(5a)') 'Info: Profiling non local operator: ', trim(op%label), ' - ', &
+#ifdef R_TCOMPLEX
+           'complex - ', &
+#else
+           'real - ', &
+#endif           
         op_function_name(method)
       call write_info(1)
     end if
