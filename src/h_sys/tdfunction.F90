@@ -50,7 +50,6 @@ module tdf_m
             tdf_end,              &
             assignment(=)
 
-
   integer, parameter ::      &
     TDF_CW            =  0,  &
     TDF_GAUSSIAN      =  1,  &
@@ -404,6 +403,8 @@ module tdf_m
       fout%amplitude = fin%amplitude
     end if
     if(fin%mode .eq. TDF_NUMERICAL) then
+      nullify(fout%val)
+      ALLOCATE(fout%val(fout%niter+1), fout%niter+1)
       fout%val  = fin%val
     end if
 

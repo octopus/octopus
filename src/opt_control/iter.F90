@@ -19,9 +19,10 @@
 
 
   ! ---------------------------------------------------------
-  subroutine oct_iterator_init(iterator, oct)
-    type(oct_iterator_t), intent(inout) :: iterator
-    type(oct_t), intent(in)             :: oct
+  subroutine oct_iterator_init(iterator, oct, par)
+    type(oct_iterator_t), intent(inout)        :: iterator
+    type(oct_t), intent(in)                    :: oct
+    type(oct_control_parameters_t), intent(in) :: par
 
     call push_sub('opt_control_iter.oct_iter_init')
 
@@ -63,6 +64,8 @@
     iterator%bestJ1_fluence  = M_ZERO
     iterator%bestJ1_J        = M_ZERO
     iterator%bestJ1_ctr_iter = 0
+
+    call parameters_copy(iterator%best_par, par)
 
     call pop_sub()
   end subroutine oct_iterator_init
@@ -151,6 +154,8 @@
       iterator%bestJ1_ctr_iter = iterator%ctr_iter
       ! dump to disc
       write(filename,'(a)') 'opt-control/laser.bestJ1'
+      call parameters_end(iterator%best_par)
+      call parameters_copy(iterator%best_par, par)
       call parameters_write(filename, par)
     end if
 

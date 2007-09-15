@@ -19,17 +19,17 @@
 
 
   ! ---------------------------------------------------------
-  subroutine oct_finalcheck(oct, initial_st, target, sys, h, td)
+  subroutine oct_finalcheck(oct, initial_st, target, par, sys, h, td)
     type(oct_t), intent(in)            :: oct
     type(states_t), intent(in)         :: initial_st
     type(target_t), intent(inout)      :: target
     type(system_t), intent(inout)      :: sys
+    type(oct_control_parameters_t), intent(inout) :: par
     type(hamiltonian_t), intent(inout) :: h
     type(td_t), intent(inout)          :: td
 
     type(states_t) :: psi
-    FLOAT, allocatable :: td_fitness(:)
-    FLOAT :: overlap
+    FLOAT :: overlap, jfunctional, fluence, j2
 
     call push_sub('opt_control_finalcheck.oct_finalcheck')
 
@@ -37,26 +37,34 @@
       call pop_sub(); return
     end if
 
-    message(1) = "Info: Optimization finished...checking the field"
-    call write_info(1)
-    
-    ALLOCATE(td_fitness(0:td%max_iter), td%max_iter+1)
     psi = initial_st
     
+    call parameters_to_h(par, h%ep)
     call propagate_forward(target%targetmode, sys, h, td, target%tdt, psi, write_iter = .true.)
 
-    if(target%targetmode==oct_targetmode_td) then
-      overlap = SUM(td_fitness) * abs(td%dt)
-      write(message(1), '(a,f14.8)') " => overlap:", overlap
-      call write_info(1)
+    overlap = j1(oct, sys%gr%m, td%max_iter, psi, target)
+    fluence = laser_fluence(par)
+    j2 = j2_functional(par)
+    jfunctional = overlap - j2
+
+    write(message(1), '(a)') 'Final propagation with the best field'
+    call messages_print_stress(stdout, trim(message(1)))
+    if(oct%mode_fixed_fluence) then
+      write(message(1), '(6x,a,f10.5)') " => J1       = ", overlap
+      write(message(2), '(6x,a,f10.5)') " => J        = ", jfunctional
+      write(message(3), '(6x,a,f10.5)') " => Fluence  = ", fluence
+      write(message(4), '(6x,a,f10.5)') " => penalty  = ", &
+            real(tdf(par%td_penalty(1), 1), REAL_PRECISION)
+      call write_info(4)
     else
-      overlap = abs(zstates_mpdotp(sys%gr%m, psi, target%st))
-      write(message(1), '(6x,a,f14.8)') " => overlap:", overlap
-      call write_info(1)
+      write(message(1), '(6x,a,f10.5)') " => J1       = ", overlap
+      write(message(2), '(6x,a,f10.5)') " => J        = ", jfunctional
+      write(message(3), '(6x,a,f10.5)') " => Fluence  = ", fluence
+      call write_info(3)
     end if
+    call messages_print_stress(stdout)
 
     call states_end(psi)
-    deallocate(td_fitness)
     call pop_sub()
   end subroutine oct_finalcheck
 

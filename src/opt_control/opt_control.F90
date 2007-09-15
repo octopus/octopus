@@ -75,6 +75,7 @@ module opt_control_m
     FLOAT, pointer     :: convergence(:,:)
     FLOAT              :: bestJ1, bestJ1_fluence, bestJ1_J
     integer            :: bestJ1_ctr_iter
+    type(oct_control_parameters_t) :: best_par
   end type oct_iterator_t
 
 contains
@@ -123,13 +124,12 @@ contains
       call laser_to_numerical(h%ep%lasers(i), td%dt, td%max_iter)
     end do
 
-    call oct_iterator_init(iterator, oct)
-
-    call parameters_init(par, h%ep%no_lasers, td%dt, td%max_iter, iterator%ctr_iter_max)
-    call parameters_init(par_tmp, h%ep%no_lasers, td%dt, td%max_iter, iterator%ctr_iter_max)
+    call parameters_init(par, h%ep%no_lasers, td%dt, td%max_iter)
     call parameters_set(par, h%ep)
-    call parameters_set(par_tmp, h%ep)
     call parameters_write('opt-control/initial_laser', par)
+    call parameters_copy(par_tmp, par)
+
+    call oct_iterator_init(iterator, oct, par)
 
     write(message(1),'(a,f14.8)') 'Input: Fluence of Initial laser ', laser_fluence(par)
     call write_info(1)
@@ -165,8 +165,7 @@ contains
     call states_output(psi, gr, 'opt-control/final', sys%outp)
 
     ! do final test run: propagate initial state with optimal field
-    call parameters_to_h(par, h%ep)
-    call oct_finalcheck(oct, initial_st, target, sys, h, td)
+    call oct_finalcheck(oct, initial_st, target, iterator%best_par, sys, h, td)
 
     ! clean up
     call parameters_end(par)
@@ -215,6 +214,8 @@ contains
           target%targetmode, sys, td, h, target%tdt, par, par_tmp, chi, psi)
         
         ! forward propagation
+        call states_end(psi)
+        call states_copy(psi, initial_st)
         call fwd_step(oct_algorithm_zr98, &
           target%targetmode, sys, td, h, target%tdt, par, par_tmp, chi, psi)
 
@@ -241,6 +242,8 @@ contains
       
       ctr_loop: do
 
+        call states_end(psi)
+        call states_copy(psi, initial_st)
         call parameters_to_h(par, h%ep)
         call propagate_forward(target%targetmode, sys, h, td, target%tdt, psi) 
 
@@ -308,6 +311,8 @@ contains
       ctr_loop: do
 
         ! forward propagation
+        call states_end(psi)
+        call states_copy(psi, initial_st)
         call fwd_step(oct_algorithm_zbr98, &
           target%targetmode, sys, td, h, target%tdt, par, par_tmp, chi, psi)
 

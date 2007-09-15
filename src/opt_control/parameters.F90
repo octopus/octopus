@@ -39,6 +39,7 @@ module opt_control_parameters_m
             parameters_init,              &
             parameters_set,               &
             parameters_end,               &
+            parameters_copy,              &
             parameters_to_h,              &
             parameters_write,             &
             laser_fluence,                &
@@ -57,11 +58,11 @@ module opt_control_parameters_m
   contains
 
   ! ---------------------------------------------------------
-  subroutine parameters_init(cp, no_parameters, dt, ntiter, octiter)
+  subroutine parameters_init(cp, no_parameters, dt, ntiter)
     type(oct_control_parameters_t), intent(inout) :: cp
     integer, intent(in) :: no_parameters   
     FLOAT, intent(in) :: dt
-    integer, intent(in) :: ntiter, octiter
+    integer, intent(in) :: ntiter
     integer :: j
 
     call push_sub('opt_control_parameters.parameters_init')
@@ -74,7 +75,7 @@ module opt_control_parameters_m
       call tdf_init_numerical(cp%f(j), cp%ntiter, cp%dt)
     end do
 
-    call parameters_penalty_init(cp, octiter)
+    call parameters_penalty_init(cp)!, octiter)
 
     call pop_sub()
   end subroutine parameters_init
@@ -89,6 +90,7 @@ module opt_control_parameters_m
     call push_sub('opt_control_parameters.parameters_set')
 
     do j = 1, cp%no_parameters
+      call tdf_end(cp%f(j))
       cp%f(j) = ep%lasers(j)%f
     end do
 
@@ -106,6 +108,7 @@ module opt_control_parameters_m
     call push_sub('opt_control_paramters.parameters_to_h')
 
     do j = 1, cp%no_parameters
+      call tdf_end(ep%lasers(j)%f)
       ep%lasers(j)%f = cp%f(j)
     end do
 
@@ -124,7 +127,8 @@ module opt_control_parameters_m
       call tdf_end(cp%f(j))
       call tdf_end(cp%td_penalty(j))
     end do
-    deallocate(cp%f); nullify(cp%f)
+    deallocate(cp%f)
+    nullify(cp%f)
 
     call pop_sub()
   end subroutine parameters_end
@@ -161,9 +165,8 @@ module opt_control_parameters_m
 
 
   ! ---------------------------------------------------------
-  subroutine parameters_penalty_init(par, ctr_iter_max)
+  subroutine parameters_penalty_init(par)
     type(oct_control_parameters_t), intent(inout) :: par
-    integer,      intent(in)                   :: ctr_iter_max
 
     character(len=1024)      :: expression
     FLOAT                    :: t, octpenalty, dt
@@ -296,6 +299,24 @@ module opt_control_parameters_m
     j2 = j2 * par%dt
   end function j2_functional
 
+
+  ! ---------------------------------------------------------
+  subroutine parameters_copy(cp_out, cp_in)
+    type(oct_control_parameters_t), intent(inout) :: cp_out
+    type(oct_control_parameters_t), intent(in)    :: cp_in
+    integer :: j
+
+    cp_out%no_parameters = cp_in%no_parameters
+    cp_out%dt = cp_in%dt
+    cp_out%ntiter = cp_in%ntiter
+    ALLOCATE(cp_out%f(cp_out%no_parameters), cp_out%no_parameters)
+    ALLOCATE(cp_out%td_penalty(cp_out%no_parameters), cp_out%no_parameters)
+    do j = 1, cp_in%no_parameters
+      cp_out%f(j) = cp_in%f(j)
+      cp_out%td_penalty(j) = cp_in%td_penalty(j)
+    end do
+
+  end subroutine parameters_copy
 
 end module opt_control_parameters_m
 

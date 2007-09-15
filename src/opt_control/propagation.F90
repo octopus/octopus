@@ -69,7 +69,6 @@ module opt_control_propagation_m
 
     integer :: ierr, ii, i
     logical :: write_iter_ = .false.
-    real(8) :: etime
     FLOAT, allocatable :: dens(:,:)
     type(grid_t),  pointer :: gr
     type(td_write_t)           :: write_handler
@@ -99,7 +98,6 @@ module opt_control_propagation_m
 
     ii = 1
 
-    etime = loct_clock()
     do i = 1, td%max_iter
       ! time iterate wavefunctions
       call td_rti_dt(sys%ks, h, gr, psi_n, td%tr, abs(i*td%dt), abs(td%dt), td%max_iter)
@@ -115,14 +113,6 @@ module opt_control_propagation_m
 
       ! only write in final run
       if(write_iter_) then
-
-        write(message(1), '(i7,1x,2f14.6,f14.3, i10)') i, &
-          i*td%dt       / units_out%time%factor, &
-          (h%etot + sys%geo%kinetic_energy) / units_out%energy%factor, &
-          loct_clock() - etime
-        call write_info(1)
-        etime = loct_clock()
-
         ii = ii + 1 
         if(ii==sys%outp%iter+1 .or. i == td%max_iter) then ! output 
           if(i == td%max_iter) sys%outp%iter = ii - 1 
@@ -130,7 +120,6 @@ module opt_control_propagation_m
           call td_write_iter(write_handler, gr, psi_n, h, sys%geo, td%kick, td%dt, i)
           call td_write_data(write_handler, gr, psi_n, h, sys%outp, sys%geo, td%dt, i) 
         end if
-
       end if
 
     end do
