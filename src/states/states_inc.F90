@@ -117,6 +117,7 @@ end subroutine X(states_blockt_mul)
 
 ! ---------------------------------------------------------
 ! Gather all states on all nodes. out has to be of sufficient size.
+#if defined(HAVE_MPI)
 subroutine X(states_gather)(mesh, st, in, out)
   type(states_t), intent(in)  :: st
   type(mesh_t),   intent(in)  :: mesh
@@ -128,7 +129,6 @@ subroutine X(states_gather)(mesh, st, in, out)
 
   call push_sub('states_inc.Xstates_gather')
 
-#if defined(HAVE_MPI)
   ALLOCATE(sendcnts(st%mpi_grp%size), st%mpi_grp%size)
   ALLOCATE(sdispls(st%mpi_grp%size), st%mpi_grp%size)
   ALLOCATE(recvcnts(st%mpi_grp%size), st%mpi_grp%size)
@@ -148,10 +148,10 @@ subroutine X(states_gather)(mesh, st, in, out)
   call MPI_Debug_Out(st%mpi_grp%comm, C_MPI_ALLTOALLV)
 
   deallocate(sendcnts, sdispls, recvcnts, rdispls)
-#endif
 
   call pop_sub()
 end subroutine X(states_gather)
+#endif
 
 
 ! ---------------------------------------------------------
@@ -190,12 +190,14 @@ subroutine X(states_block_matr_mul_add)(mesh, st, alpha, psi, matr, beta, res, x
   integer, optional, intent(in)    :: xpsi(:), xres(:)
 
   integer              :: res_col, psi_col, matr_col, i, j, k, idim
+  R_TYPE               :: tmp
+  integer, allocatable :: xpsi_(:), xres_(:)
+#if defined(HAVE_MPI)
   integer              :: rank, size, node, ist, round, to, from, matr_row_offset, matr_col_offset
   integer              :: req, stat(MPI_STATUS_SIZE)
-  integer, allocatable :: xpsi_(:), xres_(:)
   integer, allocatable :: xpsi_count(:), xres_count(:), xpsi_node(:, :), xres_node(:, :)
-  R_TYPE               :: tmp
   R_TYPE, allocatable  :: buf(:, :, :), newblock(:, :, :)
+#endif
 
   call profiling_in(C_PROFILING_LOBPCG_BLOCK_MATR)
   call push_sub('states_inc.Xstates_block_matr_add')
@@ -399,7 +401,9 @@ subroutine X(states_block_matr_mul_add)(mesh, st, alpha, psi, matr, beta, res, x
   end if
 
   if(st%parallel_in_states) then
+#if defined(HAVE_MPI)
     deallocate(xpsi_count, xres_count, xpsi_node, xres_node)
+#endif
   end if
 
   deallocate(xpsi_, xres_)
