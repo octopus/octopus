@@ -285,8 +285,8 @@
       call profiling_out(C_PROFILING_LOBPCG_ESOLVE)
 
       ! Calculate new conjugate directions.
-      call states_block_matr_mul(gr%m, st, res, RITZ_RES, dir, idxp=UC)
-      call states_block_matr_mul(gr%m, st, h_res, RITZ_RES, h_dir, idxp=UC)
+      call states_block_matr_mul(gr%m, st, res, RITZ_RES, dir, xpsi=UC)
+      call states_block_matr_mul(gr%m, st, h_res, RITZ_RES, h_dir, xpsi=UC)
 
       ! Calculate new eigenstates and update H |psi>
       call states_block_matr_mul(gr%m, st, st%X(psi)(:, :, :, ik), RITZ_PSI, tmp)
@@ -355,11 +355,11 @@
         do i = 2, nuc
           nuc_tmp(i, 1:i-1) = R_TOTYPE(M_ZERO)
         end do
-        call states_block_matr_mul(gr%m, st, dir, nuc_tmp, tmp, idxp=UC, idxr=UC)
+        call states_block_matr_mul(gr%m, st, dir, nuc_tmp, tmp, xpsi=UC, xres=UC)
         do i = 1, lnuc
           call lalg_copy(np, tmp(:, 1, luc(i)), dir(:, 1, luc(i)))
         end do
-        call states_block_matr_mul(gr%m, st, h_dir, nuc_tmp, tmp, idxp=UC, idxr=UC)
+        call states_block_matr_mul(gr%m, st, h_dir, nuc_tmp, tmp, xpsi=UC, xres=UC)
         do i = 1, lnuc
           call lalg_copy(np, tmp(:, 1, luc(i)), h_dir(:, 1, luc(i)))
         end do
@@ -436,14 +436,14 @@
         ! Calculate new conjugate directions:
         ! dir <- dir ritz_dir + res ritz_res
         ! h_dir <- (H res) ritz_res + (H dir) ritz_dir
-        call states_block_matr_mul(gr%m, st, dir, RITZ_DIR, tmp, idxp=UC)
+        call states_block_matr_mul(gr%m, st, dir, RITZ_DIR, tmp, xpsi=UC)
         call lalg_copy(np*lnst, tmp(:, 1, st_start), dir(:, 1, st_start))
         call states_block_matr_mul_add(gr%m, st, R_TOTYPE(M_ONE), &
-          res, RITZ_RES, R_TOTYPE(M_ONE), dir, idxp=UC)
-        call states_block_matr_mul(gr%m, st, h_dir, RITZ_DIR, tmp, idxp=UC)
+          res, RITZ_RES, R_TOTYPE(M_ONE), dir, xpsi=UC)
+        call states_block_matr_mul(gr%m, st, h_dir, RITZ_DIR, tmp, xpsi=UC)
         call lalg_copy(np*lnst, tmp(:, 1, st_start), h_dir(:, 1, st_start))
         call states_block_matr_mul_add(gr%m, st, R_TOTYPE(M_ONE), &
-          h_res, RITZ_RES, R_TOTYPE(M_ONE), h_dir, idxp=UC)
+          h_res, RITZ_RES, R_TOTYPE(M_ONE), h_dir, xpsi=UC)
 
         ! Calculate new eigenstates:
         ! |psi> <- |psi> ritz_psi + dir
@@ -671,7 +671,7 @@
     do i = 2, nuc
       vv(i, 1:i-1) = R_TOTYPE(M_ZERO)
     end do
-    call states_block_matr_mul(m, st, vs, vv, tmp, idxp=UC, idxr=UC)
+    call states_block_matr_mul(m, st, vs, vv, tmp, xpsi=UC, xres=UC)
     do i = 1, lnuc
       call lalg_copy(m%np_part*st%d%dim, tmp(:, 1, luc(i)), vs(:, 1, luc(i)))
     end do
@@ -700,7 +700,7 @@
 
     call states_blockt_mul(m, st, psi, res, tmp, idx2=UC)
     call states_block_matr_mul_add(m, st, -R_TOTYPE(M_ONE), psi, &
-      tmp, R_TOTYPE(M_ONE), res, idxr=UC)
+      tmp, R_TOTYPE(M_ONE), res, xres=UC)
 
     call pop_sub()
   end subroutine X(lobpcg_orth_res)

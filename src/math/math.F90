@@ -58,7 +58,8 @@ module math_m
     dcross_product,             &
     zcross_product,             &
     hypot,                      &
-    ddelta
+    ddelta,                     &
+    member
 
 
   !------------------------------------------------------------------------------
@@ -662,6 +663,31 @@ contains
     if ( a .and. b ) math_xor = .false.
     
   end function math_xor
+
+
+  ! ---------------------------------------------------------
+  ! Considers a(1:ubound(a, 1)) as an integer set and checks
+  ! if n is a member of it.
+  logical function member(n, a)
+    integer, intent(in) :: n
+    integer, intent(in) :: a(:)
+
+    integer :: i
+
+    call push_sub('states_inc.member')
+
+    member = .false.
+
+    do i = 1, ubound(a, 1)
+      if(a(i).eq.n) then
+        member = .true.
+        exit
+      end if
+    end do
+
+    call pop_sub()
+  end function member
+
 
 #include "undef.F90"
 #include "complex.F90"
