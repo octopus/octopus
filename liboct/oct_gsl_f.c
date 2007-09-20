@@ -284,12 +284,25 @@ void my_df (const gsl_vector *v, void *params,
 }
 
 /* Compute both f and df together. */
-void my_fdf (const gsl_vector *x, void *params,
+void my_fdf (const gsl_vector *v, void *params,
              double *f, gsl_vector *df)
 {
-  *f = my_f(x, params);
-  my_df(x, params, df);
-}
+  double val;
+  double *x, *gradient;
+  int i, dim, getgrad;
+  void (*para)(int*, double*, double*, int*, double*) = params;
+
+  dim = v->size;
+  x = (double *)malloc(dim*sizeof(double));
+  gradient = (double *)malloc(dim*sizeof(double));
+
+  for(i=0; i<dim; i++) x[i] = gsl_vector_get(v, i);
+  getgrad = 1;
+  para(&dim, x, f, &getgrad, gradient);
+  for(i=0; i<dim; i++) gsl_vector_set(df, i, gradient[i]);
+
+  free(x); free(gradient);
+  }
 
 double FC_FUNC_(oct_minimize, OCT_MINIMIZE)
      (int*method, int *dim, double *point, double *step, double *tolgrad, double *toldr, int *maxiter, void *f, void *write_info)
@@ -361,8 +374,8 @@ double FC_FUNC_(oct_minimize, OCT_MINIMIZE)
       if (status) break;
 
       if ( gsl_multimin_fdfminimizer_name (s) == "nmsimplex" ) {
-        characteristic_size = gsl_multimin_fminimizer_size (s);
-        status = gsl_multimin_test_size (characteristic_size, *toldr);
+	characteristic_size = gsl_multimin_fminimizer_size (s);
+	status = gsl_multimin_test_size (characteristic_size, *toldr);
       } 
       else status = ( (maxgrad > *tolgrad) || (maxdr > *toldr) );
     }
