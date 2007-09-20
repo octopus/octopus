@@ -30,36 +30,32 @@ subroutine X(lmpi_gen_alltoallv)(incount, in, outcount, out, mpi_grp)
   R_TYPE,          intent(out) :: out(:)
   type(mpi_grp_t), intent(in)  :: mpi_grp
 
-  integer                          :: mpi_err
-  integer, dimension(mpi_grp%size) :: sendcnts, sdispls, sendbuf, rdispls, recvbuf, recvcnts
+  integer                          :: mpi_err, i
+  integer, dimension(mpi_grp%size) :: rdispls, recvbuf, recvcnts
 
   call push_sub('mpi_lib_inc.Xlmpi_gen_alltoallv')
 
   ! Query how many elements each node has to contribute.
-  sendbuf                 = incount
-  recvcnts                = 0
-  sdispls                 = 0
-  sendcnts                = 1
-  recvcnts                = 1
-  rdispls(1)              = 0
-  rdispls(2:mpi_grp%size) = rdispls(1:mpi_grp%size)+recvcnts(1:mpi_grp%size)
-  call MPI_Debug_In(mpi_grp%comm, C_MPI_ALLTOALLV)
-  call MPI_Alltoallv(sendbuf, sendcnts, sdispls, R_MPITYPE, recvbuf, recvcnts, rdispls, &
-    R_MPITYPE, mpi_grp%comm, mpi_err)
-  call MPI_Debug_Out(mpi_grp%comm, C_MPI_ALLTOALLV)
+  call MPI_Debug_In(mpi_grp%comm, C_MPI_ALLGATHER)
+  call MPI_Allgather(incount, 1, MPI_INTEGER, recvbuf, 1, MPI_INTEGER, mpi_grp%comm, mpi_err)
+  call MPI_Debug_Out(mpi_grp%comm, C_MPI_ALLGATHER)
 
   outcount = sum(recvbuf)
 
   ! Exchange the data.
-  recvcnts                = recvbuf
-  sendcnts                = incount
-  sdispls                 = 0
-  rdispls(1)              = 0
-  rdispls(2:mpi_grp%size) = rdispls(1:mpi_grp%size)+recvcnts(1:mpi_grp%size)
-  call MPI_Debug_In(mpi_grp%comm, C_MPI_ALLTOALLV)
-  call MPI_Alltoallv(in, sendcnts, sdispls, R_MPITYPE, out, recvcnts, rdispls, &
-    R_MPITYPE, mpi_grp%comm, mpi_err)
-  call MPI_Debug_Out(mpi_grp%comm, C_MPI_ALLTOALLV)
+  recvcnts = recvbuf
+  rdispls(1) = 0
+  ! Never try to implement the following loop as a vector assignment like
+  ! (caution: wrong code!):
+  ! rdispls(2:mpi_grp%size) = rdispls(1:mpi_grp%size-1)+recvcnts(1:mpi_grp%size-1)
+  ! (Took me an hour to find the mistake...)
+  do i = 2, mpi_grp%size
+    rdispls(i) = rdispls(i-1)+recvcnts(i-1)
+  end do
+
+  call MPI_Debug_In(mpi_grp%comm, C_MPI_ALLGATHERV)
+  call MPI_Allgatherv(in, incount, R_MPITYPE, out, recvcnts, rdispls, R_MPITYPE, mpi_grp%comm, mpi_err)
+  call MPI_Debug_Out(mpi_grp%comm, C_MPI_ALLGATHERV)
 
   call pop_sub()
 end subroutine X(lmpi_gen_alltoallv)

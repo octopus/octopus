@@ -69,9 +69,10 @@ module mpi_debug_m
     C_MPI_ALLGATHERV = 5,        &
     C_MPI_BCAST      = 6,        &
     C_MPI_ALLREDUCE  = 7,        &
-    C_MPI_ALLTOALL   = 8
+    C_MPI_ALLTOALL   = 8,        &
+    C_MPI_ALLGATHER  = 9
 
-  character(len=15), dimension(C_MPI_ALLTOALL), public :: mpi_rlabel = &
+  character(len=15), dimension(C_MPI_ALLGATHER), public :: mpi_rlabel = &
     (/                           &
     'MPI_BARRIER   ',            &
     'MPI_SCATTERV  ',            &
@@ -80,12 +81,13 @@ module mpi_debug_m
     'MPI_ALLGATHERV',            &
     'MPI_BCAST     ',            &
     'MPI_ALLREDUCE ',            &
-    'MPI_ALLTOALL  '             &
+    'MPI_ALLTOALL  ',            &
+    'MPI_ALLGATHER '             &
     /)
 
-  integer, public :: call_counter(C_MPI_BARRIER:C_MPI_ALLTOALL) = 0
-  integer, public :: sec_accum(C_MPI_BARRIER:C_MPI_ALLTOALL)    = 0
-  integer, public :: usec_accum(C_MPI_BARRIER:C_MPI_ALLTOALL)   = 0
+  integer, public :: call_counter(C_MPI_BARRIER:C_MPI_ALLGATHER) = 0
+  integer, public :: sec_accum(C_MPI_BARRIER:C_MPI_ALLGATHER)    = 0
+  integer, public :: usec_accum(C_MPI_BARRIER:C_MPI_ALLGATHER)   = 0
 
   integer, private :: sec_in, usec_in
 
@@ -100,7 +102,7 @@ contains
   subroutine MPI_Debug_Statistics()
 
     integer :: j
-    integer :: usec_call(C_MPI_BARRIER:C_MPI_ALLREDUCE)
+    integer :: usec_call(C_MPI_BARRIER:C_MPI_ALLGATHER)
 
     if(.not.in_debug_mode) return
 
