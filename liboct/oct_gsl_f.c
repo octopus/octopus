@@ -373,9 +373,9 @@ double FC_FUNC_(oct_minimize, OCT_MINIMIZE)
 
       if (status) break;
 
-      if ( gsl_multimin_fdfminimizer_name (s) == "nmsimplex" ) {
-	characteristic_size = gsl_multimin_fminimizer_size (s);
-	status = gsl_multimin_test_size (characteristic_size, *toldr);
+      if ( *method == 6 ) {
+        characteristic_size = gsl_multimin_fminimizer_size (s);
+        status = (characteristic_size > *toldr);
       } 
       else status = ( (maxgrad > *tolgrad) || (maxdr > *toldr) );
     }
