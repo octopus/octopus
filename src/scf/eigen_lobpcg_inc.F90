@@ -178,7 +178,6 @@
       niter = niter+lnst
 
       call states_blockt_mul(gr%m, st, st%X(psi)(:, :, :, ik), h_psi, gram_block, symm=.true.)
-      call X(lobpcg_symm)(st%d%wfs_type, nst, nst, gram_block)
 
       ALLOCATE(ritz_vec(nst, nst), nst**2)
       call lalg_eigensolve(nst, gram_block, ritz_vec, eval(:, ik))
@@ -243,7 +242,6 @@
       ! (1, 1)-block:
       if(explicit_gram) then
         call states_blockt_mul(gr%m, st, h_psi, st%X(psi)(:, :, :, ik), gram_h(1:nst, 1:nst))
-        call X(lobpcg_symm)(st%d%wfs_type, nst, nst, gram_h(1:nst, 1:nst))
       else
         ! Eigenvalues in gram_h.
         gram_h(1:nst, 1:nst) = R_TOTYPE(M_ZERO)
@@ -258,16 +256,13 @@
       ! (2, 2)-block: res^+ (H res).
       call states_blockt_mul(gr%m, st, res, h_res, &
         gram_h(nst+1:nst+nuc, nst+1:nst+nuc), idx1=UC, idx2=UC, symm=.true.)
-      call X(lobpcg_symm)(st%d%wfs_type, nuc, nuc, gram_h(nst+1:nst+nuc, nst+1:nst+nuc))
 
       ! gram_i matrix.
       ! Diagonal blocks:
       if(explicit_gram) then
         call states_blockt_mul(gr%m, st, st%X(psi)(:, :, :, ik), st%X(psi)(:, :, :, ik), gram_i(1:nst, 1:nst))
-        call X(lobpcg_symm)(st%d%wfs_type, nst, nst, gram_i(1:nst, 1:nst))
         call states_blockt_mul(gr%m, st, res, res, &
           gram_i(nst+1:nst+nuc, nst+1:nst+nuc), idx1=UC, idx2=UC)
-        call X(lobpcg_symm)(st%d%wfs_type, nuc, nuc, gram_i(nst+1:nst+nuc, nst+1:nst+nuc))
       else
         ! Unit matrices on diagonal blocks.
         gram_i(1:nst, 1:nst)                 = R_TOTYPE(M_ZERO)
@@ -344,7 +339,6 @@
         ! Since h_dir also has to be modified (to avoid a full calculation of
         ! H dir with the new dir), we cannot use lobpcg_orth at this point.
         call states_blockt_mul(gr%m, st, dir, dir, nuc_tmp, idx1=UC, idx2=UC, symm=.true.)
-        call X(lobpcg_symm)(st%d%wfs_type, nuc, nuc, nuc_tmp)
         call profiling_in(C_PROFILING_LOBPCG_CHOL)
         call lalg_cholesky(nuc, nuc_tmp)
         call profiling_out(C_PROFILING_LOBPCG_CHOL)
@@ -368,7 +362,6 @@
         ! gram_h matrix.
         if(explicit_gram) then
           call states_blockt_mul(gr%m, st, h_psi, st%X(psi)(:, :, :, ik), gram_h(1:nst, 1:nst))
-          call X(lobpcg_symm)(st%d%wfs_type, nst, nst, gram_h(1:nst, 1:nst))
         else
           ! (1, 1)-block: eigenvalues on diagonal.
           gram_h(1:nst, 1:nst) = R_TOTYPE(M_ZERO)
@@ -387,7 +380,6 @@
         ! (2, 2)-block: res^+ (H res).
         call states_blockt_mul(gr%m, st, res, h_res, &
           gram_h(nst+1:nst+nuc, nst+1:nst+nuc), idx1=UC, idx2=UC, symm=.true.)
-        call X(lobpcg_symm)(st%d%wfs_type, nuc, nuc, gram_h(nst+1:nst+nuc, nst+1:nst+nuc))
 
         ! (2, 3)-block: (H res)^+ dir.
         call states_blockt_mul(gr%m, st, h_res, dir, &
@@ -396,21 +388,15 @@
         ! (3, 3)-block: dir^+ (H dir)
         call states_blockt_mul(gr%m, st, dir, h_dir, &
           gram_h(nst+nuc+1:nst+2*nuc, nst+nuc+1:nst+2*nuc), idx1=UC, idx2=UC, symm=.true.)
-        call X(lobpcg_symm)(st%d%wfs_type, nuc, nuc, &
-          gram_h(nst+nuc+1:nst+2*nuc, nst+nuc+1:nst+2*nuc))
 
         ! gram_i matrix.
         ! Diagonal blocks.
         if(explicit_gram) then
           call states_blockt_mul(gr%m, st, st%X(psi)(:, :, :, ik), st%X(psi)(:, :, :, ik), gram_i(1:nst, 1:nst))
-          call X(lobpcg_symm)(st%d%wfs_type, nst, nst, gram_i(1:nst, 1:nst))
           call states_blockt_mul(gr%m, st, res, res, &
             gram_i(nst+1:nst+nuc, nst+1:nst+nuc), idx1=UC, idx2=UC)
-          call X(lobpcg_symm)(st%d%wfs_type, nuc, nuc, gram_i(nst+1:nst+nuc, nst+1:nst+nuc))
           call states_blockt_mul(gr%m, st, dir, dir, &
             gram_i(nst+nuc+1:nst+2*nuc, nst+nuc+1:nst+2*nuc), idx1=UC, idx2=UC)
-          call X(lobpcg_symm)(st%d%wfs_type, nuc, nuc, &
-            gram_i(nst+nuc+1:nst+2*nuc, nst+nuc+1:nst+2*nuc))
         else
           ! Unit matrices on diagonal blocks.
           gram_i = R_TOTYPE(M_ZERO)
@@ -660,7 +646,6 @@
     ALLOCATE(vv(nuc, nuc), nuc**2)
 
     call states_blockt_mul(m, st, vs, vs, vv, idx1=UC, idx2=UC, symm=.true.)
-    call X(lobpcg_symm)(st%d%wfs_type, nuc, nuc, vv)
     call profiling_in(C_PROFILING_LOBPCG_CHOL)
     call lalg_cholesky(nuc, vv)
     call profiling_out(C_PROFILING_LOBPCG_CHOL)
@@ -704,34 +689,6 @@
 
     call pop_sub()
   end subroutine X(lobpcg_orth_res)
-
-
-  ! ---------------------------------------------------------
-  ! Calculate a <- (a + a^+)/2 (for complex wavefunctions).
-  subroutine X(lobpcg_symm)(wfs_type, m, n, a)
-    integer, intent(in)    :: wfs_type
-    integer, intent(in)    :: m
-    integer, intent(in)    :: n
-    R_TYPE,  intent(inout) :: a(:, :)
-
-    integer :: i, j
-    R_TYPE  :: tmp
-
-    call push_sub('eigen_lobpcg_inc.Xlobpcg_symm')
-
-    if(wfs_type.eq.M_CMPLX) then
-      do i = 1, m
-        a(i, i) = (a(i, i) + R_CONJ(a(i, i)))/R_TOTYPE(M_TWO)
-        do j = i+1, n
-          tmp = a(i, j)
-          a(i, j) = (a(i, j) + R_CONJ(a(j, i)))/R_TOTYPE(M_TWO)
-          a(j, i) = (a(j, i) + tmp)/R_TOTYPE(M_TWO)
-        end do
-      end do
-    end if
-
-    call pop_sub()
-  end subroutine X(lobpcg_symm)
 
 
 !! Local Variables:
