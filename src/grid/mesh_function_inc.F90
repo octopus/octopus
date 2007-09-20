@@ -47,15 +47,22 @@ end function X(mf_integrate)
 
 ! ---------------------------------------------------------
 ! this function returns the dot product between two vectors
-R_TYPE function X(mf_dotp)(mesh, f1, f2) result(dotp)
-  type(mesh_t), intent(in) :: mesh
-  R_TYPE,       intent(in) :: f1(:), f2(:)
+R_TYPE function X(mf_dotp)(mesh, f1, f2, reduce) result(dotp)
+  type(mesh_t),      intent(in) :: mesh
+  R_TYPE,            intent(in) :: f1(:), f2(:)
+  logical, optional, intent(in) :: reduce
 
   R_TYPE, allocatable :: l(:)
   R_TYPE              :: dotp_tmp
+  logical             :: reduce_
 
   call profiling_in(C_PROFILING_MF_DOTP)
   call push_sub('mf_inc.Xmf_dotp')
+
+  reduce_ = .true.
+  if(present(reduce)) then
+    reduce_ = reduce
+  end if
 
   ! This is not implemented via vec_integrate
   ! because BLAS is much faster.
@@ -68,7 +75,7 @@ R_TYPE function X(mf_dotp)(mesh, f1, f2) result(dotp)
     dotp_tmp = lalg_dot(mesh%np, f1(:),  f2(:))*mesh%vol_pp(1)
   end if
 
-  if(mesh%parallel_in_domains) then
+  if(mesh%parallel_in_domains.and.reduce_) then
 #if defined(HAVE_MPI)
     call profiling_in(C_PROFILING_MF_DOTP_ALLREDUCE)
     call MPI_Allreduce(dotp_tmp, dotp, 1, R_MPITYPE, &
