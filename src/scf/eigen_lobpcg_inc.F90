@@ -64,9 +64,6 @@
     integer :: st_start, st_end
     integer :: i, j, k
     integer :: conv, maxiter
-#if defined(HAVE_MPI)
-    integer :: mpi_err
-#endif
 
     integer, target  :: nuc, uc(st%nst) ! Index set of unconverged eigenpairs.
     integer, pointer :: lnuc, luc(:)    ! Index set of local unconverged eigenpairs.
@@ -74,7 +71,7 @@
     logical :: verbose_
     logical :: explicit_gram
 
-    FLOAT,  allocatable :: diffs(:, :), ldiffs(:)
+    FLOAT,  allocatable :: diffs(:, :)
     R_TYPE, allocatable :: tmp(:, :, :)     ! Temporary storage of wavefunction size.
     R_TYPE, allocatable :: nuc_tmp(:, :)    ! Temporary storage of Gram block size.
     R_TYPE, allocatable :: res(:, :, :)     ! Residuals.
@@ -88,6 +85,9 @@
     R_TYPE, allocatable :: gram_block(:, :) ! Space to construct the Gram matrix blocks.
     R_TYPE, allocatable :: ritz_vec(:, :)   ! Ritz-vectors.
     FLOAT,  allocatable :: ritz_val(:)      ! Ritz-values.
+#if defined(HAVE_MPI)
+    FLOAT, allocatable  :: ldiffs(:)
+#endif
 
     call push_sub('eigen_lobpcg.Xeigen_solver_lobpcg')
 
@@ -521,6 +521,8 @@
         call MPI_Allreduce(niter, niter_total, 1, MPI_INTEGER, MPI_SUM, st%mpi_grp%comm, mpi_err)
         call MPI_Debug_Out(st%mpi_grp%comm, C_MPI_ALLREDUCE)
       end if
+#else
+      niter_total = niter
 #endif
       call X(lobpcg_conv_mask)(nuc, uc, mask)
       write(message(1), '(a,i5,a,i5,a)') 'Result for k = ', ik, ' after ', &
@@ -606,6 +608,8 @@
     if(st%parallel_in_states) then
       call lmpi_gen_alltoallv(lnuc, luc, nuc, uc, st%mpi_grp)
     end if
+#else
+    uc = uc ! Avoid unused variable warning.
 #endif
 
     call pop_sub()

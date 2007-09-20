@@ -27,8 +27,12 @@ subroutine X(eigen_diagon_subspace)(gr, st, h, diff)
   FLOAT, optional,     intent(out)   :: diff(1:st%nst,1:st%d%nik)
 
   R_TYPE, allocatable :: h_subspace(:,:), vec(:,:), f(:,:,:)
-  integer             :: i, ik, tmp
-  FLOAT               :: nrm2, ldiff(st%lnst)
+  integer             :: i, ik
+  FLOAT               :: nrm2
+#if defined(HAVE_MPI)
+  integer             :: tmp
+  FLOAT               :: ldiff(st%lnst)
+#endif
 
   call push_sub('eigen_inc.Xeigen_diagon_subspace')
 

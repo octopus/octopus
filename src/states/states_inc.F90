@@ -216,10 +216,12 @@ subroutine X(states_blockt_mul)(mesh, st, psi1, psi2, res, xpsi1, xpsi2, symm)
   ! saving latency overhead.
   ! FIXME: test this!
   if(mesh%parallel_in_domains) then
+#if defined(HAVE_MPI)
     ALLOCATE(res_tmp(psi1_col, psi2_col), psi1_col*psi2_col)
     call MPI_Allreduce(res, res_tmp, psi1_col*psi2_col, R_MPITYPE, MPI_SUM, mesh%mpi_grp%comm, mpi_err)
     call lalg_copy(psi1_col*psi2_col, res_tmp(:, 1), res(:, 1))
     deallocate(res_tmp)
+#endif
   end if
 
   call pop_sub()
