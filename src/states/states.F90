@@ -2300,13 +2300,16 @@ contains
 #include "undef.F90"
 #include "real.F90"
 #include "states_inc.F90"
+#include "states_block_inc.F90"
 
 #include "undef.F90"
 #include "complex.F90"
 #include "states_inc.F90"
+#include "states_block_inc.F90"
 #include "undef.F90"
 
 end module states_m
+
 
 !! Local Variables:
 !! mode: f90
