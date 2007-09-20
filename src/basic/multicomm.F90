@@ -771,7 +771,7 @@ contains
         p = 0
       else
         ! I never know when to use which remainder function, but here
-        ! it has to be the modulo one. Don't change that!
+        ! it has to be the modulo one. Do not change that!
         p = modulo(2*r-i+1, 2*m-1)+1
       end if
     end function get_partner_even
