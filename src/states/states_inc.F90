@@ -20,22 +20,22 @@
 
 ! ---------------------------------------------------------
 ! Multiplication of two blocks of states:
-! res <- psi1(idx1)^+ * psi2(idx2) with the index sets idx1 and idx2.
-subroutine X(states_blockt_mul)(mesh, st, psi1, psi2, res, idx1, idx2, symm)
+! res <- psi1(xpsi1)^+ * psi2(xpsi2) with the index sets xpsi1 and xpsi2.
+subroutine X(states_blockt_mul)(mesh, st, psi1, psi2, res, xpsi1, xpsi2, symm)
   type(mesh_t),      intent(in)  :: mesh
   type(states_t),    intent(in)  :: st
   R_TYPE, target,    intent(in)  :: psi1(mesh%np_part, st%d%dim, st%st_start:st%st_end)
   R_TYPE, target,    intent(in)  :: psi2(mesh%np_part, st%d%dim, st%st_start:st%st_end)
   R_TYPE,            intent(out) :: res(:, :)
-  integer, optional, intent(in)  :: idx1(:)
-  integer, optional, intent(in)  :: idx2(:)
+  integer, optional, intent(in)  :: xpsi1(:)
+  integer, optional, intent(in)  :: xpsi2(:)
   logical, optional, intent(in)  :: symm    ! Indicates if res(j, i) can be calculated as
                                             ! res(i, j)*.
 
   logical              :: symm_
   integer              :: i, j
   integer              :: m, n
-  integer, allocatable :: idx1_(:), idx2_(:)
+  integer, allocatable :: xpsi1_(:), xpsi2_(:)
   R_TYPE, pointer      :: blk1(:, :, :), blk2(:, :, :)
 
   call profiling_in(C_PROFILING_LOBPCG_BLOCKT)
@@ -46,26 +46,26 @@ subroutine X(states_blockt_mul)(mesh, st, psi1, psi2, res, idx1, idx2, symm)
     symm_ = symm
   end if
 
-  if(present(idx1)) then
-    m = ubound(idx1, 1)
-    ALLOCATE(idx1_(m), m)
-    idx1_ = idx1
+  if(present(xpsi1)) then
+    m = ubound(xpsi1, 1)
+    ALLOCATE(xpsi1_(m), m)
+    xpsi1_ = xpsi1
   else
     m = st%nst
-    ALLOCATE(idx1_(m), m)
+    ALLOCATE(xpsi1_(m), m)
     do i = 1, m
-      idx1_(i) = i
+      xpsi1_(i) = i
     end do
   end if
-  if(present(idx2)) then
-    n = ubound(idx2, 1)
-    ALLOCATE(idx2_(n), n)
-    idx2_ = idx2
+  if(present(xpsi2)) then
+    n = ubound(xpsi2, 1)
+    ALLOCATE(xpsi2_(n), n)
+    xpsi2_ = xpsi2
   else
     n = st%nst
-    ALLOCATE(idx2_(n), n)
+    ALLOCATE(xpsi2_(n), n)
     do i = 1, n
-      idx2_(i) = i
+      xpsi2_(i) = i
     end do
   end if
 
@@ -80,35 +80,48 @@ subroutine X(states_blockt_mul)(mesh, st, psi1, psi2, res, idx1, idx2, symm)
 
     call X(states_gather)(mesh, st, psi1, blk1)
     call X(states_gather)(mesh, st, psi2, blk2)
-#endif
-  else
-    blk1 => psi1
-    blk2 => psi2
-  end if
 
-  ! FIXME: This works with domain parallelization but the dotps should be blocked.
-  if(symm_) then
-    do i = 1, m
-      res(i, i) = X(states_dotp)(mesh, st%d%dim, blk1(:, :, idx1_(i)), blk2(:, :, idx2_(i)))
-      do j = i+1, n
-        res(i, j) = X(states_dotp)(mesh, st%d%dim, blk1(:, :, idx1_(i)), blk2(:, :, idx2_(j)))
-        res(j, i) = R_CONJ(res(i, j))
+    if(symm_) then
+      do i = 1, m
+        res(i, i) = X(states_dotp)(mesh, st%d%dim, blk1(:, :, xpsi1_(i)), blk2(:, :, xpsi2_(i)))
+        do j = i+1, n
+          res(i, j) = X(states_dotp)(mesh, st%d%dim, blk1(:, :, xpsi1_(i)), blk2(:, :, xpsi2_(j)))
+          res(j, i) = R_CONJ(res(i, j))
+        end do
       end do
-    end do
-  else
-    do i = 1, m
-      do j = 1, n
-        res(i, j) = X(states_dotp)(mesh, st%d%dim, blk1(:, :, idx1_(i)), blk2(:, :, idx2_(j)))
+    else
+      do i = 1, m
+        do j = 1, n
+          res(i, j) = X(states_dotp)(mesh, st%d%dim, blk1(:, :, xpsi1_(i)), blk2(:, :, xpsi2_(j)))
+        end do
       end do
-    end do
-  end if
-  deallocate(idx1_, idx2_)
+    end if
 
-#if defined(HAVE_MPI)
-  if(st%parallel_in_states) then
     deallocate(blk1, blk2)
-  end if
+#else
+    message(1) = 'Running gs parallel in states without MPI. This is a bug!'
+    call write_fatal(1)
 #endif
+  else
+    ! FIXME: This works with domain parallelization but the dotps should be blocked.
+    if(symm_) then
+      do i = 1, m
+        res(i, i) = X(states_dotp)(mesh, st%d%dim, psi1(:, :, xpsi1_(i)), psi2(:, :, xpsi2_(i)))
+        do j = i+1, n
+          res(i, j) = X(states_dotp)(mesh, st%d%dim, psi1(:, :, xpsi1_(i)), psi2(:, :, xpsi2_(j)))
+          res(j, i) = R_CONJ(res(i, j))
+        end do
+      end do
+    else
+      do i = 1, m
+        do j = 1, n
+          res(i, j) = X(states_dotp)(mesh, st%d%dim, psi1(:, :, xpsi1_(i)), psi2(:, :, xpsi2_(j)))
+        end do
+      end do
+    end if
+  end if
+
+  deallocate(xpsi1_, xpsi2_)
 
   call pop_sub()
   call profiling_out(C_PROFILING_LOBPCG_BLOCKT)

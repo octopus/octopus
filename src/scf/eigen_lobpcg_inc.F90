@@ -251,18 +251,18 @@
       end if
 
       ! (1, 2)-block: (H |psi>)^+ res.
-      call states_blockt_mul(gr%m, st, h_psi, res, gram_h(1:nst, nst+1:nst+nuc), idx2=UC)
+      call states_blockt_mul(gr%m, st, h_psi, res, gram_h(1:nst, nst+1:nst+nuc), xpsi2=UC)
 
       ! (2, 2)-block: res^+ (H res).
       call states_blockt_mul(gr%m, st, res, h_res, &
-        gram_h(nst+1:nst+nuc, nst+1:nst+nuc), idx1=UC, idx2=UC, symm=.true.)
+        gram_h(nst+1:nst+nuc, nst+1:nst+nuc), xpsi1=UC, xpsi2=UC, symm=.true.)
 
       ! gram_i matrix.
       ! Diagonal blocks:
       if(explicit_gram) then
         call states_blockt_mul(gr%m, st, st%X(psi)(:, :, :, ik), st%X(psi)(:, :, :, ik), gram_i(1:nst, 1:nst))
         call states_blockt_mul(gr%m, st, res, res, &
-          gram_i(nst+1:nst+nuc, nst+1:nst+nuc), idx1=UC, idx2=UC)
+          gram_i(nst+1:nst+nuc, nst+1:nst+nuc), xpsi1=UC, xpsi2=UC)
       else
         ! Unit matrices on diagonal blocks.
         gram_i(1:nst, 1:nst)                 = R_TOTYPE(M_ZERO)
@@ -273,7 +273,7 @@
       end if
 
       ! (1, 2)-block: <psi| res.
-      call states_blockt_mul(gr%m, st, st%X(psi)(:, :, :, ik), res, gram_i(1:nst, nst+1:nst+nuc), idx2=UC)
+      call states_blockt_mul(gr%m, st, st%X(psi)(:, :, :, ik), res, gram_i(1:nst, nst+1:nst+nuc), xpsi2=UC)
 
       call profiling_in(C_PROFILING_LOBPCG_ESOLVE)
       call lalg_lowest_geneigensolve(nst, nst+nuc, gram_h, gram_i, ritz_val, ritz_vec)
@@ -338,7 +338,7 @@
         ! Orthonormalize conjugate directions.
         ! Since h_dir also has to be modified (to avoid a full calculation of
         ! H dir with the new dir), we cannot use lobpcg_orth at this point.
-        call states_blockt_mul(gr%m, st, dir, dir, nuc_tmp, idx1=UC, idx2=UC, symm=.true.)
+        call states_blockt_mul(gr%m, st, dir, dir, nuc_tmp, xpsi1=UC, xpsi2=UC, symm=.true.)
         call profiling_in(C_PROFILING_LOBPCG_CHOL)
         call lalg_cholesky(nuc, nuc_tmp)
         call profiling_out(C_PROFILING_LOBPCG_CHOL)
@@ -371,32 +371,32 @@
         end if
 
         ! (1, 2)-block: (H |psi>)^+ res.
-        call states_blockt_mul(gr%m, st, h_psi, res, gram_h(1:nst, nst+1:nst+nuc), idx2=UC)
+        call states_blockt_mul(gr%m, st, h_psi, res, gram_h(1:nst, nst+1:nst+nuc), xpsi2=UC)
 
         ! (1, 3)-block: (H |psi>)^+ dir.
         call states_blockt_mul(gr%m, st, h_psi, dir, &
-          gram_h(1:nst, nst+nuc+1:nst+2*nuc), idx2=UC)
+          gram_h(1:nst, nst+nuc+1:nst+2*nuc), xpsi2=UC)
 
         ! (2, 2)-block: res^+ (H res).
         call states_blockt_mul(gr%m, st, res, h_res, &
-          gram_h(nst+1:nst+nuc, nst+1:nst+nuc), idx1=UC, idx2=UC, symm=.true.)
+          gram_h(nst+1:nst+nuc, nst+1:nst+nuc), xpsi1=UC, xpsi2=UC, symm=.true.)
 
         ! (2, 3)-block: (H res)^+ dir.
         call states_blockt_mul(gr%m, st, h_res, dir, &
-          gram_h(nst+1:nst+nuc, nst+nuc+1:nst+2*nuc), idx1=UC, idx2=UC)
+          gram_h(nst+1:nst+nuc, nst+nuc+1:nst+2*nuc), xpsi1=UC, xpsi2=UC)
 
         ! (3, 3)-block: dir^+ (H dir)
         call states_blockt_mul(gr%m, st, dir, h_dir, &
-          gram_h(nst+nuc+1:nst+2*nuc, nst+nuc+1:nst+2*nuc), idx1=UC, idx2=UC, symm=.true.)
+          gram_h(nst+nuc+1:nst+2*nuc, nst+nuc+1:nst+2*nuc), xpsi1=UC, xpsi2=UC, symm=.true.)
 
         ! gram_i matrix.
         ! Diagonal blocks.
         if(explicit_gram) then
           call states_blockt_mul(gr%m, st, st%X(psi)(:, :, :, ik), st%X(psi)(:, :, :, ik), gram_i(1:nst, 1:nst))
           call states_blockt_mul(gr%m, st, res, res, &
-            gram_i(nst+1:nst+nuc, nst+1:nst+nuc), idx1=UC, idx2=UC)
+            gram_i(nst+1:nst+nuc, nst+1:nst+nuc), xpsi1=UC, xpsi2=UC)
           call states_blockt_mul(gr%m, st, dir, dir, &
-            gram_i(nst+nuc+1:nst+2*nuc, nst+nuc+1:nst+2*nuc), idx1=UC, idx2=UC)
+            gram_i(nst+nuc+1:nst+2*nuc, nst+nuc+1:nst+2*nuc), xpsi1=UC, xpsi2=UC)
         else
           ! Unit matrices on diagonal blocks.
           gram_i = R_TOTYPE(M_ZERO)
@@ -406,15 +406,15 @@
         end if
 
         ! (1, 2)-block: <psi| res.
-        call states_blockt_mul(gr%m, st, st%X(psi)(:, :, :, ik), res, gram_i(1:nst, nst+1:nst+nuc), idx2=UC)
+        call states_blockt_mul(gr%m, st, st%X(psi)(:, :, :, ik), res, gram_i(1:nst, nst+1:nst+nuc), xpsi2=UC)
 
         ! (1, 3)-block: <psi| dir.
         call states_blockt_mul(gr%m, st, st%X(psi)(:, :, :, ik), dir, &
-          gram_i(1:nst, nst+nuc+1:nst+2*nuc), idx2=UC)
+          gram_i(1:nst, nst+nuc+1:nst+2*nuc), xpsi2=UC)
 
         ! (2, 3)-block: res^+ dir.
         call states_blockt_mul(gr%m, st, res, dir, &
-          gram_i(nst+1:nst+nuc, nst+nuc+1:nst+2*nuc), idx1=UC, idx2=UC)
+          gram_i(nst+1:nst+nuc, nst+nuc+1:nst+2*nuc), xpsi1=UC, xpsi2=UC)
         call profiling_in(C_PROFILING_LOBPCG_ESOLVE)
         call lalg_lowest_geneigensolve(nst, nst+2*nuc, gram_h, gram_i, ritz_val, ritz_vec)
         call profiling_out(C_PROFILING_LOBPCG_ESOLVE)
@@ -645,7 +645,7 @@
 
     ALLOCATE(vv(nuc, nuc), nuc**2)
 
-    call states_blockt_mul(m, st, vs, vs, vv, idx1=UC, idx2=UC, symm=.true.)
+    call states_blockt_mul(m, st, vs, vs, vv, xpsi1=UC, xpsi2=UC, symm=.true.)
     call profiling_in(C_PROFILING_LOBPCG_CHOL)
     call lalg_cholesky(nuc, vv)
     call profiling_out(C_PROFILING_LOBPCG_CHOL)
@@ -683,7 +683,7 @@
 
     call push_sub('eigen_lobpcg_inc.Xlobpcg_orth_res')
 
-    call states_blockt_mul(m, st, psi, res, tmp, idx2=UC)
+    call states_blockt_mul(m, st, psi, res, tmp, xpsi2=UC)
     call states_block_matr_mul_add(m, st, -R_TOTYPE(M_ONE), psi, &
       tmp, R_TOTYPE(M_ONE), res, xres=UC)
 

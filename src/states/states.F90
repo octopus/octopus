@@ -114,7 +114,6 @@ module states_m
   end type states_dim_t
 
   type states_t
-
     type(states_dim_t) :: d
     integer :: nst                  ! Number of states in each irreducible subspace
 
@@ -146,17 +145,18 @@ module states_m
     FLOAT :: ef                     ! the fermi energy
 
     ! This is stuff needed for the parallelization in states.
-    logical          :: parallel_in_states ! Am I parallel in states?
-    type(mpi_grp_t)  :: mpi_grp            ! The MPI group related to the parallelization in states.
-    integer          :: lnst               ! Number of states on local node.
-    integer          :: st_start, st_end   ! Range of states processed by local node.
-    integer, pointer :: node(:)            ! To which node belongs each state.
-    integer, pointer :: st_range(:, :)     ! Node r manages states st_range(1, r) to
-                                           ! st_range(2, r) for r = 0, ..., mpi_grp%size-1,
-                                           ! i. e. st_start = st_range(1, r) and
-                                           ! st_end = st_range(2, r) on node r.
-    integer, pointer :: st_num(:)          ! Number of states on node r, i. e.
-                                           ! st_num(r) = st_num(2, r)-st_num(1, r).
+    logical                     :: parallel_in_states ! Am I parallel in states?
+    type(mpi_grp_t)             :: mpi_grp            ! The MPI group related to the parallelization in states.
+    integer                     :: lnst               ! Number of states on local node.
+    integer                     :: st_start, st_end   ! Range of states processed by local node.
+    integer, pointer            :: node(:)            ! To which node belongs each state.
+    integer, pointer            :: st_range(:, :)     ! Node r manages states st_range(1, r) to
+                                                      ! st_range(2, r) for r = 0, ..., mpi_grp%size-1,
+                                                      ! i. e. st_start = st_range(1, r) and
+                                                      ! st_end = st_range(2, r) on node r.
+    integer, pointer            :: st_num(:)          ! Number of states on node r, i. e.
+                                                      ! st_num(r) = st_num(2, r)-st_num(1, r).
+    type(multicomm_all_pairs_t) :: ap                 ! All-pairs schedule.
   end type states_t
 
 
@@ -1001,6 +1001,10 @@ contains
       nullify(st%st_range)
       deallocate(st%st_num)
       nullify(st%st_num)
+      deallocate(st%ap%comms)
+      nullify(st%ap%comms)
+      deallocate(st%ap%schedule)
+      nullify(st%ap%schedule)
     end if
     
     call pop_sub()
@@ -2060,6 +2064,7 @@ contains
     if(multicomm_strategy_is_parallel(mc, P_STRATEGY_STATES)) then
       st%parallel_in_states = .true.
       call mpi_grp_init(st%mpi_grp, mc%group_comm(P_STRATEGY_STATES))
+      call create_all_pairs(st%mpi_grp, st%ap)
 
       if(st%nst < st%mpi_grp%size) then
         message(1) = "Have more processors than necessary"

@@ -55,15 +55,15 @@
 ! You can use the routine multicomm_strategy_is_parallel to know if a certain
 ! index is parallelized.
 
-module multicomm_m
-  use datasets_m
-  use global_m
-  use io_m
-  use lib_oct_parser_m
-  use messages_m
-  use mpi_m
-  use utils_m
-  use varinfo_m
+  module multicomm_m
+    use datasets_m
+    use global_m
+    use io_m
+    use lib_oct_parser_m
+    use messages_m
+    use mpi_m
+    use utils_m
+    use varinfo_m
 
 #ifdef USE_OMP
   use omp_lib
@@ -77,8 +77,10 @@ module multicomm_m
     multicomm_t,                     &
     multicomm_tree_t,                &
     multicomm_tree_t_pointer,        &
+    multicomm_all_pairs_t,           &
     multicomm_init, multicomm_end,   &
-    multicomm_strategy_is_parallel
+    multicomm_strategy_is_parallel,  &
+    create_all_pairs
 
   ! possible parallelization strategies
   integer, public, parameter ::      &
@@ -132,6 +134,13 @@ module multicomm_m
     integer :: nthreads
   end type multicomm_t
 
+  ! An all-pairs communication schedule for a given group.
+  type multicomm_all_pairs_t
+    type(mpi_grp_t)  :: grp            ! Schedule for this group.
+    integer          :: rounds         ! This many comm. rounds.
+    integer, pointer :: schedule(:, :) ! This is the schedule.
+    integer, pointer :: comms(:, :)    ! Those are the communicators laid out as schedule.
+  end type multicomm_all_pairs_t
 
 contains
 
@@ -668,7 +677,122 @@ contains
     r = iand(mc%par_strategy, 2**(level-1)).ne.0
   end function multicomm_strategy_is_parallel
 
+
+  ! ---------------------------------------------------------
+  ! This routine uses the one-factorization (or near-one-factorization
+  ! of a complete graph to construct an all-pair communication
+  ! schedule (cf. Wang, X., Blum, E. K., Parker, D. S., and Massey,
+  ! D. 1997. The dance party problem and its application to collective
+  ! communication in computer networks. Parallel Comput. 23, 8
+  ! (Aug. 1997), 1141-1156.
+  subroutine create_all_pairs(mpi_grp, ap)
+    type(mpi_grp_t),             intent(in)  :: mpi_grp
+    type(multicomm_all_pairs_t), intent(out) :: ap
+
+    integer              :: size, rounds, ranks(2), ir, in
+    integer              :: parent_grp, pair_grp, pair_comm
+    logical, allocatable :: mask(:, :)
+
+    call push_sub('multicomm.create_all_pairs')
+
+    ap%grp = mpi_grp
+    size   = mpi_grp%size
+
+    ! Number of rounds.
+    if(mod(size, 2).eq.0) then
+      rounds = size-1
+    else
+      rounds = size
+    end if
+    ap%rounds = rounds
+
+    ! Calculate schedule.
+    ALLOCATE(ap%schedule(0:size-1, rounds), size*rounds)
+    do ir = 1, rounds
+      do in = 0, size-1
+        ap%schedule(in, ir) = get_partner(in+1, ir)-1
+      end do
+    end do
+    ! Create the communicators.
+    ALLOCATE(ap%comms(0:size-1, rounds), size*rounds)
+    ALLOCATE(mask(0:size-1, rounds), size*rounds)
+    mask = .false.
+    call MPI_Comm_group(mpi_grp%comm, parent_grp, mpi_err)
+    do ir = 1, rounds
+      do in = 0, size-1
+        ! If the communicator has not been created already, do it now.
+        if(.not.mask(in, ir)) then
+          if(ap%schedule(in, ir).eq.in) then ! Idle this round.
+            ap%comms(in, ir) = MPI_COMM_NULL
+          else
+            ! Set it as created.
+            mask(in, ir)                  = .true.
+            mask(ap%schedule(in, ir), ir) = .true.
+            ! Create the group.
+            ranks(1)                      = in
+            ranks(2)                      = ap%schedule(in, ir)
+            call MPI_Group_incl(parent_grp, 2, ranks, pair_grp, mpi_err)
+            ! Transform into a communicator and copy it to both locations
+            ! in the schedule.
+            call MPI_Comm_create(mpi_grp%comm, pair_grp, pair_comm, mpi_err)
+            ap%comms(in, ir)                  = pair_comm
+            ap%comms(ap%schedule(in, ir), ir) = pair_comm
+          end if
+        end if
+      end do
+    end do
+
+    deallocate(mask)
+    call pop_sub()
+
+  contains
+
+    ! Those are from the paper cited above.
+    integer function get_partner(in, ir)
+      integer, intent(in) :: in, ir
+
+      if(mod(size, 2).eq.0) then
+        get_partner = get_partner_even(size, in-1, ir-1) + 1
+      else
+        get_partner = get_partner_odd(size, in-1, ir-1) + 1
+      end if
+    end function get_partner
+
+    integer function get_partner_even(size, i, r) result(p)
+      integer, intent(in) :: size, i, r
+
+      integer :: m
+
+      m = size/2
+
+      if(i.eq.0) then
+        p = r+1
+      elseif(i.eq.r+1) then
+        p = 0
+      else
+        ! I never know when to use which remainder function, but here
+        ! it has to be the modulo one. Don't change that!
+        p = modulo(2*r-i+1, 2*m-1)+1
+      end if
+    end function get_partner_even
+
+    integer function get_partner_odd(size, i, r) result(p)
+      integer, intent(in) :: size, i, r
+
+      integer :: m
+
+      m = (size+1)/2
+
+      p = get_partner_even(size+1, i, r)
+
+      if(p.eq.2*m-1) then
+        p = i
+      end if
+    end function get_partner_odd
+
+  end subroutine create_all_pairs
 end module multicomm_m
+
 
 !! Local Variables:
 !! mode: f90
