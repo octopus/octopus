@@ -688,7 +688,7 @@ contains
   subroutine create_all_pairs(mpi_grp, ap)
     type(mpi_grp_t),             intent(in)  :: mpi_grp
     type(multicomm_all_pairs_t), intent(out) :: ap
-
+#if defined(HAVE_MPI)
     integer              :: size, rounds, ranks(2), ir, in
     integer              :: parent_grp, pair_grp, pair_comm
     logical, allocatable :: mask(:, :)
@@ -789,7 +789,7 @@ contains
         p = i
       end if
     end function get_partner_odd
-
+#endif
   end subroutine create_all_pairs
 end module multicomm_m
 
