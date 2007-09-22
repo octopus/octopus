@@ -1,5 +1,5 @@
 /*
- Copyright (C) 2002 M. Marques, A. Castro, A. Rubio, G. Bertsch
+ Copyright (C) 2002 M. Marques, A. Castro, A. Rubio, G. Bertsch, M. Oliveira
 
  This program is free software; you can redistribute it and/or modify
  it under the terms of the GNU General Public License as published by
@@ -24,6 +24,7 @@
 #include <stdio.h>
 #include <math.h>
 
+#include <gsl/gsl_errno.h>
 #include <gsl/gsl_math.h>
 #include <gsl/gsl_sf.h>
 #include <gsl/gsl_vector.h>
@@ -37,6 +38,7 @@
 #include <gsl/gsl_min.h>
 #include <gsl/gsl_multimin.h>
 
+#include "string_f.h"
 
 /* ---------------------- Interface to GSL functions ------------------------ */
 
@@ -287,7 +289,6 @@ void my_df (const gsl_vector *v, void *params,
 void my_fdf (const gsl_vector *v, void *params,
              double *f, gsl_vector *df)
 {
-  double val;
   double *x, *gradient;
   int i, dim, getgrad;
   void (*para)(int*, double*, double*, int*, double*) = params;
@@ -302,14 +303,14 @@ void my_fdf (const gsl_vector *v, void *params,
   for(i=0; i<dim; i++) gsl_vector_set(df, i, gradient[i]);
 
   free(x); free(gradient);
-  }
+}
 
-double FC_FUNC_(oct_minimize, OCT_MINIMIZE)
-     (int*method, int *dim, double *point, double *step, double *tolgrad, double *toldr, int *maxiter, void *f, void *write_info)
+int FC_FUNC_(oct_minimize, OCT_MINIMIZE)
+     (int*method, int *dim, double *point, double *step, double *tolgrad, double *toldr, int *maxiter, void *f, void *write_info, double *minimum)
 {
-  size_t iter = 0;
+  int iter = 0;
   int status;
-  double return_value, maxgrad, maxdr, characteristic_size;
+  double maxgrad, maxdr;
   int i;
   double oldpoint[*dim], grad[*dim];
 
@@ -341,8 +342,8 @@ double FC_FUNC_(oct_minimize, OCT_MINIMIZE)
   case 3: T = gsl_multimin_fdfminimizer_conjugate_pr;
   case 4: T = gsl_multimin_fdfminimizer_vector_bfgs;
   case 5: T = gsl_multimin_fdfminimizer_vector_bfgs2;
-  case 6: T = gsl_multimin_fminimizer_nmsimplex;
   }
+
   s = gsl_multimin_fdfminimizer_alloc (T, *dim);
 
   gsl_multimin_fdfminimizer_set (s, &my_func, x, *step, 0.1);
@@ -355,7 +356,7 @@ double FC_FUNC_(oct_minimize, OCT_MINIMIZE)
       status = gsl_multimin_fdfminimizer_iterate (s);
 
       //Get current minimum, point and gradient
-      return_value = gsl_multimin_fdfminimizer_minimum(s);
+      *minimum = gsl_multimin_fdfminimizer_minimum(s);
       for(i=0; i<*dim; i++) point[i] = gsl_vector_get(gsl_multimin_fdfminimizer_x(s), i);
       for(i=0; i<*dim; i++) grad[i] = gsl_vector_get(gsl_multimin_fdfminimizer_gradient(s), i);
 
@@ -366,24 +367,31 @@ double FC_FUNC_(oct_minimize, OCT_MINIMIZE)
       maxgrad = gsl_vector_max(absgrad);
 
       //Print information
-      print_info(&iter, dim, &return_value, &maxdr, &maxgrad, point);
+      print_info(&iter, dim, minimum, &maxdr, &maxgrad, point);
       
       //Store infomation for next iteration
       for(i=0; i<*dim; i++) oldpoint[i] = point[i];
 
-      if (status) break;
+      if (status)
+        break;
 
-      if ( *method == 6 ) {
-        characteristic_size = gsl_multimin_fminimizer_size (s);
-        status = (characteristic_size > *toldr);
-      } 
-      else status = ( (maxgrad > *tolgrad) || (maxdr > *toldr) );
+      if ( (maxgrad <= *tolgrad) || (maxdr <= *toldr) ) status = GSL_SUCCESS;
     }
-  while (status && iter < *maxiter);
+  while (status == GSL_CONTINUE && iter <= *maxiter);
 
   gsl_multimin_fdfminimizer_free (s);
   gsl_vector_free (x); gsl_vector_free(absgrad); gsl_vector_free(absdr);
-  return return_value;
+
+  return status;
+}
+
+void FC_FUNC_(oct_strerror, OCT_STRERROR)
+     (int *err, STR_F_TYPE res STR_ARG1)
+{
+  char *c;
+
+  c = gsl_strerror(*err);
+  TO_F_STR1(c, res);
 }
 
 double fn1 (double x, void *params)

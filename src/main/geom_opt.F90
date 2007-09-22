@@ -1,4 +1,4 @@
-!! Copyright (C) 2002-2006 M. Marques, A. Castro, A. Rubio, G. Bertsch
+!! Copyright (C) 2002-2007 M. Marques, A. Castro, A. Rubio, G. Bertsch, M. Oliveira
 !!
 !! This program is free software; you can redistribute it and/or modify
 !! it under the terms of the GNU General Public License as published by
@@ -161,9 +161,14 @@ contains
     end do
 
     !Minimize
-    energy = loct_minimize(g_opt%method, 3*geo%natoms, x(1), real(g_opt%step, 8),&
+    ierr = loct_minimize(g_opt%method, 3*geo%natoms, x(1), real(g_opt%step, 8),&
          real(g_opt%tolgrad, 8), real(g_opt%toldr, 8), g_opt%max_iter, &
-         calc_point, write_iter_info)
+         calc_point, write_iter_info, energy)
+    if (ierr /= 0) then
+      message(1) = "Error occurred during the GSL minimization procedure:"
+      call loct_strerror(ierr, message(2))
+      call write_fatal(2)
+    end if
 
     ! print out geometry
     do i = 0, geo%natoms - 1

@@ -1,4 +1,4 @@
-!! Copyright (C) 2002-2006 M. Marques, A. Castro, A. Rubio, G. Bertsch
+!! Copyright (C) 2002-2006 M. Marques, A. Castro, A. Rubio, G. Bertsch, M. Oliveira
 !!
 !! This program is free software; you can redistribute it and/or modify
 !! it under the terms of the GNU General Public License as published by
@@ -60,7 +60,8 @@ module lib_oct_m
     loct_progress_bar,       &
     loct_printRecipe,        &
     loct_1dminimize,         &
-    loct_minimize
+    loct_minimize,           &
+    loct_strerror
 
 #if defined(HAVE_GDLIB)
   public ::                    &
@@ -319,8 +320,8 @@ module lib_oct_m
   end interface
 
   interface loct_minimize
-    function oct_minimize(method, dim, x, step, tolgrad, toldr, maxiter, f, write_iter_info)
-      real(8) :: oct_minimize
+    function oct_minimize(method, dim, x, step, tolgrad, toldr, maxiter, f, write_iter_info, minimum)
+      integer :: oct_minimize
       integer, intent(in) :: method
       integer, intent(in) :: dim
       real(8), intent(inout) :: x
@@ -328,6 +329,7 @@ module lib_oct_m
       integer, intent(in) :: maxiter
       real(8), intent(in) :: tolgrad
       real(8), intent(in) :: toldr
+      real(8), intent(in) :: minimum
       interface
         subroutine f(n, x, val, getgrad, grad)
           integer, intent(in) :: n
@@ -348,6 +350,12 @@ module lib_oct_m
     end function oct_minimize
   end interface
 
+  interface loct_strerror
+    subroutine oct_strerror(errno, res)
+      integer, intent(in) :: errno
+      character(len=*), intent(out)  :: res
+    end subroutine oct_strerror
+  end interface
 
   ! ---------------------------------------------------------
   ! System information (time, memory, sysname)
