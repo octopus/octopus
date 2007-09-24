@@ -37,8 +37,6 @@ module linear_solver_m
   private
 
   integer, public, parameter ::&
-       LS_HX_FIXED = 11, & 
-       LS_HX = 10,       &
        LS_CG = 5,        &
        LS_BICGSTAB = 3
 
@@ -85,19 +83,6 @@ contains
     !% consistent linear equation where the operator is the Kohn-Sham
     !% hamiltonian with a complex shift. This variable selects which
     !% method to use in order to solve this linear equation.
-    !%Option hx 10
-    !% This solver aproximates the solution of the non-hermitian
-    !% equation by a power series in terms of the inverse of the
-    !% hamiltonian. Each term implies solving a hermitian linear equation by
-    !% conjugated gradients.
-    !% Altough this might sound inefficient, the hermitian equations
-    !% to solve are better conditioned than the original, so this can be more
-    !% efficient than a non-hermitian solver.
-    !% This version of the solvers apply the number of terms in the
-    !% series as needed to be under the tolerance required.
-    !%Option hx_fixed 11
-    !% This is the same prevoius solver, but only two steps of the
-    !% series are applied.
     !%Option cg 5
     !% Conjugated gradients. This is the fastest solver but does not
     !% work when an imaginary shift is added. This is the default.
@@ -110,7 +95,7 @@ contains
     if(present(def_solver)) then
       call loct_parse_int  (check_inp(trim(prefix)//"LinearSolver"), def_solver, fsolver)
     else 
-      call loct_parse_int  (check_inp(trim(prefix)//"LinearSolver"), LS_CG, fsolver)
+      call loct_parse_int  (check_inp(trim(prefix)//"LinearSolver"), LS_BICGSTAB, fsolver)
     end if
 
     !the last 2 digits select the linear solver
@@ -167,12 +152,6 @@ contains
       case(LS_BICGSTAB)
         message(1)='Linear Solver: Biconjugated Gradients Stabilized'
 
-      case(LS_HX_FIXED)
-        message(1)='Linear Solver: Fixed Hermitian Expansion'
-
-      case(LS_HX)
-        message(1)='Linear Solver: Hermitian Expansion'
-
     end select
 
     call write_info(1)
@@ -198,10 +177,6 @@ contains
     select case(this%solver)
       
     case(LS_CG)
-      n = 1
-    case(LS_HX_FIXED)
-      n = 1
-    case(LS_HX)
       n = 1
     case(LS_BICGSTAB)
       n = 2

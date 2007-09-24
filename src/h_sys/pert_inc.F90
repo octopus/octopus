@@ -117,7 +117,7 @@ contains
     do ipj = h%ep%atomproj(1, iatom), h%ep%atomproj(2, iatom)
       call X(project_psi)(gr%m, h%ep%p(ipj), 1, fin, fout, 0, .false., ik=1)
     end do
-    call X(derivatives_oper)(this%gradt(idir), gr%f_der%der_discr, fout(:,1), f_out)
+    call X(derivatives_oper)(gr%f_der%der_discr%grad(idir), gr%f_der%der_discr, fout(:,1), f_out)
 
     !v d |f>
     ALLOCATE(grad(1:NP, 1), NP)
@@ -126,7 +126,7 @@ contains
     do ipj = h%ep%atomproj(1, iatom), h%ep%atomproj(2, iatom)
       call X(project_psi)(gr%m, h%ep%p(ipj), 1, grad, fout, 0, .false., ik=1)
     end do
-    f_out(1:NP) = f_out(1:NP) + fout(1:NP, 1)
+    f_out(1:NP) = -f_out(1:NP) + fout(1:NP, 1)
 
   end subroutine ionic
 
