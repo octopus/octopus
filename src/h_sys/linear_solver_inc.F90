@@ -146,36 +146,47 @@ subroutine X(ls_solver_bicgstab) (ls, h, gr, st, ik, x, y, omega)
   ALLOCATE( s(NP_PART, st%d%dim), NP_PART*st%d%dim)
   ALLOCATE(Hp(NP, st%d%dim),      NP     *st%d%dim)
   ALLOCATE(Hs(NP, st%d%dim),      NP     *st%d%dim)
-
-  p=R_TOTYPE(M_ZERO)
-  s=R_TOTYPE(M_ZERO)
+  !$omp parallel workshare
+  r = R_TOTYPE(M_ZERO)
+  p = R_TOTYPE(M_ZERO)
+  s = R_TOTYPE(M_ZERO)
+  rs = R_TOTYPE(M_ZERO)
+  Hp = R_TOTYPE(M_ZERO)
+  Hs = R_TOTYPE(M_ZERO)
+  !$omp end parallel workshare
 
   ! this will store the preconditioned functions
   ALLOCATE( phat(NP_PART, st%d%dim), NP_PART*st%d%dim)
   ALLOCATE( shat(NP_PART, st%d%dim), NP_PART*st%d%dim)
-  phat=R_TOTYPE(M_ZERO)
-  shat=R_TOTYPE(M_ZERO)
+  !$omp parallel workshare
+  phat = R_TOTYPE(M_ZERO)
+  shat = R_TOTYPE(M_ZERO)
+  !$omp end parallel workshare
 
   ! Initial residue
   call X(Hpsi)(h, gr, x, Hp, ik)
+  !$omp parallel workshare
   r(1:NP,1:st%d%dim) = y(1:NP,1:st%d%dim) - ( Hp(1:NP,1:st%d%dim) + omega*x(1:NP,1:st%d%dim) )
   rs(1:NP,1:st%d%dim) = r(1:NP,1:st%d%dim)
+  !$omp end parallel workshare
 
   conv_last = .false.
 
   do iter = 1, ls%max_iter
 
-
     rho_1 = X(states_dotp) (gr%m, st%d%dim, rs, r)
-    
+
     if( abs(rho_1) < M_EPSILON ) exit
 
-    if( iter == 1 ) then 
+    if( iter == 1 ) then
+      !$omp parallel workshare
       p(1:NP,1:st%d%dim) = r(1:NP,1:st%d%dim)
+      !$omp end parallel workshare
     else
       beta = rho_1/rho_2*alpha/w
-      p(1:NP,1:st%d%dim) = r(1:NP,1:st%d%dim) + &
-           beta * (p(1:NP,1:st%d%dim) - w*Hp(1:NP,1:st%d%dim))
+      !$omp parallel workshare
+      p(1:NP,1:st%d%dim) = r(1:NP,1:st%d%dim) + beta * (p(1:NP,1:st%d%dim) - w*Hp(1:NP,1:st%d%dim))
+      !$omp end parallel workshare
     end if
 
     ! preconditioning 
@@ -188,13 +199,17 @@ subroutine X(ls_solver_bicgstab) (ls, h, gr, st, ik, x, y, omega)
     end do
     
     alpha = rho_1/X(states_dotp) (gr%m, st%d%dim, rs, Hp)
-    
+
+    !$omp parallel workshare    
     s(1:NP,1:st%d%dim) = r(1:NP,1:st%d%dim) - alpha * Hp(1:NP,1:st%d%dim)
+    !$omp end parallel workshare
 
-    gamma = abs(X(states_dotp) (gr%m, st%d%dim, s, s))
+    gamma = X(states_nrm2) (gr%m, st%d%dim, s)
 
-    if( gamma < ls%tol**2 ) then 
+    if( gamma < ls%tol ) then
+      !$omp parallel workshare
       x(1:NP,1:st%d%dim) = x(1:NP,1:st%d%dim) + alpha*phat(1:NP,1:st%d%dim)
+      !$omp end parallel workshare
       exit
     end if
 
@@ -208,15 +223,16 @@ subroutine X(ls_solver_bicgstab) (ls, h, gr, st, ik, x, y, omega)
 
     w = X(states_dotp) (gr%m, st%d%dim, Hs, s) / X(states_dotp) (gr%m, st%d%dim, Hs, Hs)
 
-    x(1:NP,1:st%d%dim) = x(1:NP,1:st%d%dim) &
-      + alpha*phat(1:NP,1:st%d%dim) + w*shat(1:NP,1:st%d%dim)
+    !$omp parallel workshare
+    x(1:NP,1:st%d%dim) = x(1:NP,1:st%d%dim) + alpha*phat(1:NP,1:st%d%dim) + w*shat(1:NP,1:st%d%dim)
 
     r(1:NP,1:st%d%dim) = s(1:NP,1:st%d%dim) - w * Hs(1:NP,1:st%d%dim)
+    !$omp end parallel workshare
 
     rho_2=rho_1
 
-    gamma = abs(X(states_dotp) (gr%m, st%d%dim, r, r))
-    conv = (gamma < ls%tol**2)
+    gamma = X(states_nrm2) (gr%m, st%d%dim, r)
+    conv = (gamma < ls%tol)
 
     if( conv .and. conv_last ) then 
       exit
@@ -228,7 +244,7 @@ subroutine X(ls_solver_bicgstab) (ls, h, gr, st, ik, x, y, omega)
   end do
     
   ls%iter = iter
-  ls%abs_psi=sqrt(gamma)
+  ls%abs_psi = gamma
 
   deallocate(r, p, Hp, s, rs, Hs)
   deallocate(phat, shat)
