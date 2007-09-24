@@ -33,7 +33,7 @@ subroutine X(nl_operator_tune)(op)
   character(len=2) :: marker
 
 #ifdef HAVE_MPI
-  integer :: ierr
+  integer :: ierr, rank
   real(8) :: global_flops(OP_MIN:OP_MAX)
 #endif
 
@@ -101,34 +101,42 @@ subroutine X(nl_operator_tune)(op)
       flops = global_flops
 #endif
 
-  !print to file
-  if(.not. initialized) call loct_rm('exec/nl_operator_prof')
-  initialized = .true.
-
-  iunit = io_open('exec/nl_operator_prof', action='write', position='append', is_tmp = .true.)
-
-#ifdef R_TCOMPLEX
-  write (iunit, '(3a)')   'Operator       = ', trim(op%label), " complex"
-#else
-  write (iunit, '(3a)')   'Operator       = ', trim(op%label), " real"
+#ifdef HAVE_MPI      
+  call MPI_Comm_rank(MPI_COMM_WORLD, rank, ierr)
+  if(rank == 0) then
 #endif
-  write (iunit, '(a,i8)') 'Stencil points = ', op%n
-  write (iunit, '(a,i8)') 'Grid points    = ', op%m%np
-
-  do method = OP_MIN, OP_MAX
+    !print to file
+    if(.not. initialized) call loct_rm('exec/nl_operator_prof')
+    initialized = .true.
+    
+    iunit = io_open('exec/nl_operator_prof', action='write', position='append', is_tmp = .true.)
+    
 #ifdef R_TCOMPLEX
-    if (op_is_available(method, M_CMPLX) == 0) cycle
+    write (iunit, '(3a)')   'Operator       = ', trim(op%label), " complex"
 #else
-    if (op_is_available(method, M_REAL)  == 0) cycle
+    write (iunit, '(3a)')   'Operator       = ', trim(op%label), " real"
 #endif
-    marker = '  '
-    if(method == op%X(function)) marker = '* '
-    write (iunit, '(2a, f8.1, a)') marker, op_function_name(method), flops(method)/CNST(1e6), ' MFlops'
-  end do
-
-  write(iunit, '(a)') " "
-
-  call io_close(iunit)
+    write (iunit, '(a,i8)') 'Stencil points = ', op%n
+    write (iunit, '(a,i8)') 'Grid points    = ', op%m%np
+    
+    do method = OP_MIN, OP_MAX
+#ifdef R_TCOMPLEX
+      if (op_is_available(method, M_CMPLX) == 0) cycle
+#else
+      if (op_is_available(method, M_REAL)  == 0) cycle
+#endif
+      marker = '  '
+      if(method == op%X(function)) marker = '* '
+      write (iunit, '(2a, f8.1, a)') marker, op_function_name(method), flops(method)/CNST(1e6), ' MFlops'
+    end do
+    
+    write(iunit, '(a)') " "
+    
+    call io_close(iunit)
+    
+#ifdef HAVE_MPI      
+  end if
+#endif
 
   call pop_sub()
 
