@@ -223,11 +223,8 @@ subroutine X(ls_solver_bicgstab) (ls, h, gr, st, ik, x, y, omega)
     end if
     conv_last = conv
 
-    if( w == M_ZERO ) then
-      message(1)="w == MZERO"
-      call write_fatal(1)
-    end if
-        
+    if( abs(w) < M_EPSILON ) exit
+
   end do
     
   ls%iter = iter

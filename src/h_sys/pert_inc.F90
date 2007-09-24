@@ -269,8 +269,8 @@ contains
     do ipj = h%ep%atomproj(1, iatom), h%ep%atomproj(2, iatom)
       call X(project_psi)(gr%m, h%ep%p(ipj), 1, fin, tmp1, 0, .false., ik=1)
     end do    
-    call X(derivatives_oper)(this%gradt(idir), gr%f_der%der_discr, tmp1(:,1), tmp2(:,1))
-    call X(derivatives_oper)(this%gradt(jdir), gr%f_der%der_discr, tmp2(:,1), f_out)
+    call X(derivatives_oper)(gr%f_der%der_discr%grad(idir), gr%f_der%der_discr, tmp1(:,1), tmp2(:,1))
+    call X(derivatives_oper)(gr%f_der%der_discr%grad(jdir), gr%f_der%der_discr, tmp2(:,1), f_out)
 
     !di^T v dj |f>
     call X(derivatives_oper)(gr%f_der%der_discr%grad(jdir), gr%f_der%der_discr, fin(:,1), tmp1(:,1))
@@ -278,8 +278,8 @@ contains
     do ipj = h%ep%atomproj(1, iatom), h%ep%atomproj(2, iatom)
       call X(project_psi)(gr%m, h%ep%p(ipj), 1, tmp1, tmp2, 0, .false., ik=1)
     end do    
-    call X(derivatives_oper)(this%gradt(idir), gr%f_der%der_discr, tmp2(:,1), tmp1(:,1))
-    f_out(1:NP) = f_out(1:NP) + tmp1(1:NP, 1)
+    call X(derivatives_oper)(gr%f_der%der_discr%grad(idir), gr%f_der%der_discr, tmp2(:,1), tmp1(:,1))
+    f_out(1:NP) = f_out(1:NP) - tmp1(1:NP, 1)
 
     !dj^T v di |f>
     call X(derivatives_oper)(gr%f_der%der_discr%grad(idir), gr%f_der%der_discr, fin(:,1), tmp1(:,1))
@@ -287,8 +287,8 @@ contains
     do ipj = h%ep%atomproj(1, iatom), h%ep%atomproj(2, iatom)
       call X(project_psi)(gr%m, h%ep%p(ipj), 1, tmp1, tmp2, 0, .false., ik=1)
     end do    
-    call X(derivatives_oper)(this%gradt(jdir), gr%f_der%der_discr, tmp2(:,1), tmp1(:,1))
-    f_out(1:NP) = f_out(1:NP) + tmp1(1:NP, 1)
+    call X(derivatives_oper)(gr%f_der%der_discr%grad(jdir), gr%f_der%der_discr, tmp2(:,1), tmp1(:,1))
+    f_out(1:NP) = f_out(1:NP) - tmp1(1:NP, 1)
 
     !v di dj |f>
     call X(derivatives_oper)(gr%f_der%der_discr%grad(idir), gr%f_der%der_discr, fin(:,1), tmp1(:,1))

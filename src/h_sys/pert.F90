@@ -77,7 +77,6 @@ module pert_m
     integer :: dir2
     integer :: atom1, atom2
     integer :: gauge
-    type(nl_operator_t), pointer :: gradt(:)
   end type pert_t
 
   interface pert_init
@@ -159,15 +158,6 @@ contains
 
     end if
 
-    if ( this%pert_type == PERTURBATION_IONIC ) then
-      
-      ALLOCATE(this%gradt(1:NDIM), NDIM)
-      do idir = 1, NDIM
-        call nl_operator_transpose(gr%f_der%der_discr%grad(idir), this%gradt(idir))
-      end do
-
-    end if
-
     call pop_sub()
 
   end subroutine pert_init2
@@ -176,13 +166,6 @@ contains
   subroutine pert_end(this)
     type(pert_t), intent(inout) :: this
     integer :: idir
-
-    if ( this%pert_type == PERTURBATION_IONIC ) then
-      do idir = 1, ubound(this%gradt, DIM=1)
-        call nl_operator_end(this%gradt(idir))
-      end do
-      deallocate(this%gradt)
-    end if
 
   end subroutine pert_end
 
