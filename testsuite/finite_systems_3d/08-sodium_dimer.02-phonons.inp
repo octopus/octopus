@@ -3,7 +3,7 @@
 
 DebugLevel = 0
 
-CalculationMode = gs
+CalculationMode = phonons_lr
 fromScratch = yes
 
 dist = 2.77
