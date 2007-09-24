@@ -175,6 +175,8 @@ contains
     if (opi%cmplx_op) then
       opo%w_im  = opi%w_im
     end if
+    
+    call nl_operator_generate_ri(opo)
 
     call pop_sub()
   end subroutine nl_operator_equal
@@ -264,7 +266,7 @@ contains
     end do
     !$omp end parallel do
 
-    call generate_ri()
+    call nl_operator_generate_ri(op)
 
     if(op%const_w .and. .not. op%cmplx_op) then
       call dnl_operator_tune(op)
@@ -273,61 +275,60 @@ contains
 
     call pop_sub()
 
-    contains
+  end subroutine nl_operator_build
 
-      subroutine generate_ri()
-        integer :: jj, current
-        integer, allocatable :: st(:)
-        
-        ALLOCATE(st(1:op%n), op%n)
+  subroutine nl_operator_generate_ri(op)
+    type(nl_operator_t),  intent(inout) :: op
+    integer :: jj, current
+    integer, allocatable :: st(:)
 
-        op%nri = 1
-        do jj = 2, m%np
-          st(1:op%n) = (op%i(1:op%n, jj) - jj) - (op%i(1:op%n, jj - 1) - (jj - 1))
-          if(maxval(abs(st)) > 0 ) op%nri = op%nri + 1
-        end do
+    ALLOCATE(st(1:op%n), op%n)
 
-        ALLOCATE(op%ri(1:op%n, op%nri), op%n*op%nri)
-        ALLOCATE(op%rimap(1:op%np), op%np)
-        ALLOCATE(op%rimap_inv(0:op%nri+1), op%nri+2)
-        
-        op%rimap_inv(0) = 0
-        
+    op%nri = 1
+    do jj = 2, op%np
+      st(1:op%n) = (op%i(1:op%n, jj) - jj) - (op%i(1:op%n, jj - 1) - (jj - 1))
+      if(maxval(abs(st)) > 0 ) op%nri = op%nri + 1
+    end do
+
+    ALLOCATE(op%ri(1:op%n, op%nri), op%n*op%nri)
+    ALLOCATE(op%rimap(1:op%np), op%np)
+    ALLOCATE(op%rimap_inv(0:op%nri+1), op%nri+2)
+
+    op%rimap_inv(0) = 0
+
 #ifdef USE_OMP
-        !when in OpenMP initialize the array in parallel, so pages
-        !are touched first in the corresponding node
-        !$omp parallel do
-        do jj = 1, op%nri
-          op%ri(1:op%n, jj) = 0
-          op%rimap_inv(jj)  = 0
-        end do
-        !$omp end parallel do
+    !when in OpenMP initialize the array in parallel, so pages
+    !are touched first in the corresponding node
+    !$omp parallel do
+    do jj = 1, op%nri
+      op%ri(1:op%n, jj) = 0
+      op%rimap_inv(jj)  = 0
+    end do
+    !$omp end parallel do
 #endif
 
-        current = 1
-        op%ri(1:op%n, current) = op%i(1:op%n, 1) - 1
-        op%rimap(1) = current
-        
-        do jj = 2, m%np
-          st(1:op%n) = op%i(1:op%n, jj) - jj
-          
-          !if the stencil representation is different
-          if(maxval(abs(st - op%ri(1:op%n, current))) > 0 ) then 
-            current = current + 1
-            op%ri(1:op%n, current) = st
-          end if
+    current = 1
+    op%ri(1:op%n, current) = op%i(1:op%n, 1) - 1
+    op%rimap(1) = current
 
-          op%rimap(jj) = current
-        end do
+    do jj = 2, op%np
+      st(1:op%n) = op%i(1:op%n, jj) - jj
 
-        do jj = 1, op%np
-          op%rimap_inv(op%rimap(jj)) = jj
-        end do
-        op%rimap_inv(op%nri + 1) = op%np
+      !if the stencil representation is different
+      if(maxval(abs(st - op%ri(1:op%n, current))) > 0 ) then 
+        current = current + 1
+        op%ri(1:op%n, current) = st
+      end if
 
-      end subroutine generate_ri
+      op%rimap(jj) = current
+    end do
 
-  end subroutine nl_operator_build
+    do jj = 1, op%np
+      op%rimap_inv(op%rimap(jj)) = jj
+    end do
+    op%rimap_inv(op%nri + 1) = op%np
+
+  end subroutine nl_operator_generate_ri
 
 
   ! ---------------------------------------------------------
@@ -362,6 +363,8 @@ contains
         end if
       end do
     end do
+
+    call nl_operator_generate_ri(opt)
 
     if(opt%const_w .and. .not. opt%cmplx_op) then
       call dnl_operator_tune(opt)
