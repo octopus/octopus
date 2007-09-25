@@ -40,7 +40,7 @@
     psi = initial_st
     
     call parameters_to_h(par, h%ep)
-    call propagate_forward(target%targetmode, sys, h, td, target%tdt, psi, write_iter = .true.)
+    call propagate_forward(sys, h, td, target, psi, write_iter = .true.)
 
     overlap = j1(oct, sys%gr%m, td%max_iter, psi, target)
     fluence = laser_fluence(par)

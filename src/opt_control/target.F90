@@ -43,17 +43,23 @@ module opt_control_target_m
   implicit none
 
   private
-  public :: target_t,    &
-            target_init, &
-            target_end,  &
-            target_output
+  public :: target_t,       &
+            target_init,    &
+            target_end,     &
+            target_output,  &
+            calc_tdfitness, &
+            calc_inh
 
   type target_t
     integer :: totype
     integer :: targetmode
     type(states_t) :: st
     FLOAT, pointer :: rho(:)
-    type(td_target_set_t) :: tdt
+
+    integer :: no_tdtargets
+    FLOAT, pointer :: td_fitness(:)
+    CMPLX, pointer :: tdtarget(:)
+    type(td_target_t), pointer :: tdtg(:)
   end type target_t
 
   contains
@@ -63,20 +69,15 @@ module opt_control_target_m
     type(grid_t), intent(in)      :: gr
     type(geometry_t), intent(in)  :: geo
     type(states_t), intent(in)    :: stin
-
     type(td_t), intent(in)        :: td
-
     type(target_t), intent(inout) :: target
 
-    integer           :: i, kpoints, dim, nst, no_c, state, ierr, isize, ik, ib, &
-                         no_states, kk, p, ip, no_blk, ist, jst
+    integer           :: i, nst, ierr, ik, ib, p, ip, ist, jst
     C_POINTER         :: blk
     FLOAT             :: x(MAX_DIM), r, psi_re, psi_im
-    CMPLX             :: c_weight
     CMPLX, allocatable :: rotation_matrix(:, :)
     type(states_t)    :: tmp_st
     character(len=1024) :: expression
-    character(len=10) :: fname
 
     call push_sub('target.target_init')
 
@@ -240,7 +241,13 @@ module opt_control_target_m
       call write_fatal(1)
     end select
 
-    call tdtargetset_init(target%targetmode, gr, td, target%tdt)
+    call tdtargetset_init(target, gr, td)
+
+    if(target%no_tdtargets.eq.0) then
+      nullify(target%td_fitness)
+    else
+      ALLOCATE(target%td_fitness(0:td%max_iter), td%max_iter+1)
+    end if
     
     call pop_sub()
   end subroutine target_init
@@ -248,6 +255,8 @@ module opt_control_target_m
 
   subroutine target_end(target)
     type(target_t), intent(inout) :: target
+    integer :: i
+
     call push_sub('target.target_end')
 
     call states_end(target%st)
@@ -255,6 +264,18 @@ module opt_control_target_m
       deallocate(target%rho)
       nullify(target%rho)
     end if
+    if(associated(target%td_fitness)) then
+      deallocate(target%td_fitness); nullify(target%td_fitness)
+    end if
+
+    do i = 1, target%no_tdtargets
+      call tdtarget_end(target%tdtg(i))
+    end do
+    if(target%no_tdtargets > 0) then 
+      deallocate(target%tdtg); nullify(target%tdtg)
+      deallocate(target%tdtarget); nullify(target%tdtarget)
+    end if
+    target%no_tdtargets = 0
 
     call pop_sub()
   end subroutine target_end
@@ -278,9 +299,230 @@ module opt_control_target_m
       call states_output(target%st, gr, trim(dir), outp)
     end select
 
-    call tdtargetset_end(target%tdt)
-
     call pop_sub()
   end subroutine target_output
+
+
+
+  ! ---------------------------------------------------------
+  subroutine calc_tdfitness(target, gr, psi, i)
+    type(target_t), intent(inout) :: target
+    type(grid_t),      intent(in) :: gr
+    type(states_t),    intent(in) :: psi
+    integer, intent(in) :: i
+
+    integer             :: jj, ik, p, dim
+
+    call push_sub('target.calc_tdfitness')
+
+    target%td_fitness(i) = M_ZERO
+    do jj = 1, target%no_tdtargets
+      if(target%tdtg(jj)%type.eq.oct_tgtype_local) then
+        do ik = 1, psi%d%nik
+          do p  = psi%st_start, psi%st_end
+            do dim = 1, psi%d%dim
+             target%td_fitness(i) = target%td_fitness(i) + &
+                zmf_integrate(gr%m, target%tdtarget(:)* &
+                abs(psi%zpsi(:,dim,ik,p))**2)
+            end do
+          end do
+        end do
+      else
+        do ik = 1, psi%d%nik
+          do p  = psi%st_start, psi%st_end
+            do dim = 1, psi%d%dim
+              target%td_fitness(i) = target%td_fitness(i) + &
+                abs(zmf_integrate(gr%m, target%tdtarget(:)* &
+                conjg(psi%zpsi(:,dim,ik,p))))**2
+
+            end do
+          end do
+        end do
+      end if
+    end do
+
+    call pop_sub()
+  end subroutine calc_tdfitness
+
+
+  ! ---------------------------------------------------------------
+  subroutine calc_inh(psi_n, gr, target, iter, max_iter, dt, chi_n)
+    type(states_t),    intent(in)        :: psi_n
+    type(grid_t),      intent(in)        :: gr
+    type(target_t),    intent(inout)     :: target
+    integer,           intent(in)        :: iter
+    integer,           intent(in)        :: max_iter
+    FLOAT,             intent(in)        :: dt
+    type(states_t),    intent(inout)     :: chi_n
+    
+    CMPLX               :: tgt(NP_PART)
+    integer             :: jj, dim
+    CMPLX               :: olap
+
+    call push_sub('target.calc_inh')
+    
+    ! TODO: change to right dimensions
+    !       build target operator
+    
+    ! FIXME: more flexibility when defining multiple target operators
+    ! usually one has only one specie of operators, i.e., only local or only non-local, 
+    ! when mixing these, this routine has to be improved.
+    if(target%tdtg(1)%type.eq.oct_tgtype_local) then
+      do jj = 1, target%no_tdtargets
+        call build_tdtarget(target%tdtg(jj), gr, tgt, iter) ! tdtarget is build
+        target%tdtarget(:) = target%tdtarget(:) + tgt(:) 
+      end do
+      do dim=1, chi_n%d%dim
+        chi_n%zpsi(:,dim,1,1) = chi_n%zpsi(:,dim,1,1) &
+          - sign(M_ONE,dt)/real(max_iter)*target%tdtarget(:)* &
+          psi_n%zpsi(:,dim,1,1)
+      enddo
+    else 
+      do jj = 1, target%no_tdtargets
+        call build_tdtarget(target%tdtg(jj), gr, tgt, iter)
+        target%tdtarget = tgt
+        olap= m_z0
+        do dim=1, psi_n%d%dim
+          olap = zmf_integrate(gr%m, psi_n%zpsi(:,dim,1,1) * conjg(target%tdtarget(:)))
+          chi_n%zpsi(:,dim,1,1) = chi_n%zpsi(:,dim,1,1) &
+            - sign(M_ONE,dt)/real(max_iter)*olap*target%tdtarget(:)
+        end do
+      end do
+    end if
+    
+    call pop_sub()
+  end subroutine calc_inh
+
+
+  !----------------------------------------------------------
+  ! 
+  !----------------------------------------------------------
+  subroutine tdtargetset_init(target, gr, td)
+    type(target_t), intent(inout) :: target
+    type(grid_t),      intent(in) :: gr
+    type(td_t),        intent(in) :: td
+
+    integer             :: i, jj, iunit
+    FLOAT               :: mxloc(MAX_DIM)
+    integer             :: tt, pos(1)
+    FLOAT               :: t
+    CMPLX               :: tgt(NP_PART)
+    character(len=80)  :: filename
+
+    integer :: no_c, no_tds, pol
+    C_POINTER         :: blk
+
+    call push_sub('opt_control_tdtarget.tdtargetset_init')
+
+    !%Variable OCTTdTarget
+    !%Type block
+    !%Section Optimal Control
+    !%Description
+    !% octopus features also time-dependent targets, i.e., one wants to optimize a laser 
+    !% field that achieves a predefined time-dependent target. An example, could be the 
+    !% evolution of occupation numbers in time. A time-dependent target consists of two 
+    !% parts, i.e., the operator itself (a projection or a local operator) and its 
+    !% time-dependence. Both are specified in one row of the block. You may enter as many 
+    !% rows as you like. For time-dependent occupation targets OCTOPUS takes care of the 
+    !% normalization.
+    !% 
+    !% The structure of the block is as follows:
+    !%
+    !% <tt>%OCTTdTarget
+    !% <br>&nbsp;&nbsp;type | ftype | width | weight | g_x(t) | g_y(t) | g_z(t) 
+    !% <br>%</tt>
+    !%  
+    !% Type:
+    !% Choose betweem local and state target. 
+    !% *oct_tgtype_local*
+    !% *oct_tgtype_state*
+    !%
+    !% Ftype: 
+    !% Spatial function of target operator.
+    !% *oct_ftype_gauss*
+    !%
+    !% width:
+    !% width of the Gaussian 
+    !%
+    !% weight:
+    !% If multiple operators ae defined weight the importance between them
+    !% g_x(t), g_y(t), g_z(t):
+    !% describe the time-dependence
+    !% 
+    !% Example: 
+    !% R0=1.0
+    !% <tt>%OCTTdTarget
+    !% <br>&nbsp;&nbsp;oct_tgtype_local | oct_ftype_gauss | 20 | 1 | "R0*sin(1.0*t)" | "R0*cos(1.0*t)" | "0"
+    !% <br>%</tt>
+    !% 
+    !% In this example we define a narrow Gaussian which circles with radius R0 around the center. 
+    !% 
+    !%End
+    no_tds           = 0
+    target%no_tdtargets = no_tds
+    if((target%targetmode==oct_targetmode_td) &
+        .AND.(loct_parse_block(check_inp('OCTTdTarget'),blk)==0)) then
+
+      no_tds = loct_parse_block_n(blk)
+      if(no_tds > 0) then
+        target%no_tdtargets = no_tds
+        ALLOCATE(target%tdtg(no_tds), no_tds)
+        do i=1, no_tds
+          do pol=1, MAX_DIM
+            target%tdtg(i)%expression(pol) = " "
+          end do
+          ! The structure of the block is:
+          ! domain | function_type | center | width | weight 
+          no_c = loct_parse_block_cols(blk, i-1)
+          !td_tg(i)%type = oct_tgtype_local
+          call loct_parse_block_int(blk, i-1, 0, target%tdtg(i)%type)
+          call loct_parse_block_int(blk, i-1, 1, target%tdtg(i)%ftype)
+          call loct_parse_block_float(blk, i-1, 2, target%tdtg(i)%width)
+          call loct_parse_block_float(blk, i-1, 3, target%tdtg(i)%weight)
+
+          do pol=1, NDIM
+            call loct_parse_block_string(blk, i-1, 3+pol, target%tdtg(i)%expression(pol))
+          end do
+          !
+          ALLOCATE(target%tdtg(i)%tdshape(NDIM,0:td%max_iter), NDIM*(td%max_iter+1))
+          call build_tdshape(target%tdtg(i), gr, td%max_iter, td%dt)
+        end do
+
+      end if
+      
+    end if
+    ! calc norm, give warning when to small
+
+    if(no_tds.eq.0) then
+      nullify(target%tdtarget)
+      nullify(target%tdtg)
+      call pop_sub(); return
+    end if
+
+    ! td target fitness
+    ! to avoid double parsing and build up tdtarget array
+    ALLOCATE(target%tdtarget(1:NP_PART), NP_PART)
+    target%tdtarget   = M_z0
+
+    ! generate some output to analyse the defined target
+    do jj=1, target%no_tdtargets
+       write(message(1),'(a,i2.2)') 'Info: Dumping td target ', jj
+       call write_info(1)
+       write(filename,'(a,i2.2)') 'opt-control/td_target_',jj
+       iunit = io_open(filename, action='write')
+       ! build target_function and calc inhomogeneity
+       do tt=0, td%max_iter, 20 
+          t = real(tt,REAL_PRECISION)*td%dt
+          call build_tdtarget(target%tdtg(jj), gr, tgt, tt)
+          target%tdtarget = tgt
+          pos = maxloc(abs(target%tdtarget))
+          mxloc(:) = gr%m%x(pos(1),:) 
+       end do
+       close(iunit)
+    end do
+  
+    call pop_sub()
+  end subroutine tdtargetset_init
+
 
 end module opt_control_target_m

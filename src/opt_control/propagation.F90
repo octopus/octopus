@@ -36,7 +36,7 @@ module opt_control_propagation_m
   use td_rti_m
   use td_write_m
   use opt_control_constants_m
-  use opt_control_tdtarget_m
+  use opt_control_target_m
   use opt_control_parameters_m
   use lasers_m
   use v_ks_m
@@ -58,12 +58,11 @@ module opt_control_propagation_m
   ! and is set to .true., writes down through the td_write
   ! module.
   ! ---------------------------------------------------------
-  subroutine propagate_forward(targetmode, sys, h, td, tdt, psi_n, write_iter)
-    integer, intent(in) :: targetmode
+  subroutine propagate_forward(sys, h, td, target, psi_n, write_iter)
     type(system_t),      intent(inout) :: sys
     type(hamiltonian_t), intent(inout) :: h
     type(td_t),          intent(inout) :: td
-    type(td_target_set_t), intent(inout)  :: tdt
+    type(target_t),      intent(inout) :: target
     type(states_t),      intent(inout) :: psi_n
     logical, optional, intent(in)      :: write_iter
 
@@ -103,7 +102,7 @@ module opt_control_propagation_m
       call td_rti_dt(sys%ks, h, gr, psi_n, td%tr, abs(i*td%dt), abs(td%dt), td%max_iter)
 
       ! if td_target
-      if(targetmode==oct_targetmode_td) call calc_tdfitness(tdt, gr, psi_n, i)
+      if(target%targetmode==oct_targetmode_td) call calc_tdfitness(target, gr, psi_n, i)
       
       ! update
       call states_calc_dens(psi_n, NP_PART, dens)
@@ -189,13 +188,12 @@ module opt_control_propagation_m
   ! fly", so that the propagation of psi is performed with the
   ! "new" parameters.
   ! */--------------------------------------------------------
-  subroutine fwd_step(method, targetmode, sys, td, h, tdt, par, par_tmp, chi, psi)
+  subroutine fwd_step(method, sys, td, h, target, par, par_tmp, chi, psi)
     integer, intent(in)                           :: method
-    integer, intent(in)                           :: targetmode
     type(system_t), intent(inout)                 :: sys
     type(td_t), intent(inout)                     :: td
     type(hamiltonian_t), intent(inout)            :: h
-    type(td_target_set_t), intent(inout)          :: tdt
+    type(target_t), intent(inout)          :: target
     type(oct_control_parameters_t), intent(inout) :: par
     type(oct_control_parameters_t), intent(in)    :: par_tmp
     type(states_t), intent(inout)                 :: chi
@@ -226,8 +224,8 @@ module opt_control_propagation_m
 
     do i = 1, td%max_iter
 
-      if(targetmode==oct_targetmode_td) then
-        call calc_inh(psi2, gr, tdt, i, td%max_iter, td%dt, chi)
+      if(target%targetmode==oct_targetmode_td) then
+        call calc_inh(psi2, gr, target, i, td%max_iter, td%dt, chi)
         call parameters_to_h(par, h%ep)
         call states_calc_dens(psi2, NP_PART, dens_tmp)
         psi2%rho = dens_tmp
@@ -239,7 +237,7 @@ module opt_control_propagation_m
       call prop_iter_fwd(i, gr, sys%ks, h, td, par_tmp, chi)
       call prop_iter_fwd(i, gr, sys%ks, h, td, par, psi)
 
-      if(targetmode==oct_targetmode_td) call calc_tdfitness(tdt, gr, psi, i)     
+      if(target%targetmode==oct_targetmode_td) call calc_tdfitness(target, gr, psi, i) 
 
     end do
 
@@ -292,13 +290,12 @@ module opt_control_propagation_m
   ! par_tmp = par_tmp[|psi>, |chi>]
   ! |chi> --> U[par_tmp](0, T)|chi>
   ! --------------------------------------------------------
-  subroutine bwd_step(method, targetmode, sys, td, h, tdt, par, par_tmp, chi, psi) 
+  subroutine bwd_step(method, sys, td, h, target, par, par_tmp, chi, psi) 
     integer, intent(in) :: method
-    integer, intent(in) :: targetmode
     type(system_t), intent(inout) :: sys
     type(td_t), intent(inout)                     :: td
     type(hamiltonian_t), intent(inout)            :: h
-    type(td_target_set_t), intent(inout)          :: tdt
+    type(target_t), intent(inout)          :: target
     type(oct_control_parameters_t), intent(in)    :: par
     type(oct_control_parameters_t), intent(inout) :: par_tmp
     type(states_t), intent(inout)                 :: chi
@@ -326,7 +323,8 @@ module opt_control_propagation_m
 
     td%dt = -td%dt
     do i = td%max_iter-1, 0, -1
-      if(targetmode==oct_targetmode_td) call calc_inh(psi, gr, tdt, i, td%max_iter, td%dt, chi)
+      if(target%targetmode==oct_targetmode_td) &
+        call calc_inh(psi, gr, target, i, td%max_iter, td%dt, chi)
       call update_field(method, i+1, par_tmp, gr, td, h, psi, chi)
       call prop_iter_bwd(i, gr, sys%ks, h, td, par_tmp, chi)
       call prop_iter_bwd(i, gr, sys%ks, h, td, par, psi)
@@ -369,47 +367,6 @@ module opt_control_propagation_m
     deallocate(dens_tmp)
     call pop_sub()
   end subroutine prop_iter_bwd
-
-
-  ! ---------------------------------------------------------
-  subroutine calc_tdfitness(tdt, gr, psi, i)
-    type(td_target_set_t), intent(inout) :: tdt
-    type(grid_t),      intent(in) :: gr
-    type(states_t),    intent(in) :: psi
-    integer, intent(in) :: i
-
-    integer             :: jj, ik, p, dim
-
-    call push_sub('propagation.calc_tdfitness')
-
-    tdt%td_fitness(i) = M_ZERO
-    do jj = 1, tdt%no_tdtargets
-      if(tdt%tdtg(jj)%type.eq.oct_tgtype_local) then
-        do ik = 1, psi%d%nik
-          do p  = psi%st_start, psi%st_end
-            do dim = 1, psi%d%dim
-             tdt%td_fitness(i) = tdt%td_fitness(i) + &
-                zmf_integrate(gr%m, tdt%tdtarget(:)* &
-                abs(psi%zpsi(:,dim,ik,p))**2)
-
-            end do
-          end do
-        end do
-      else
-        do ik = 1, psi%d%nik
-          do p  = psi%st_start, psi%st_end
-            do dim = 1, psi%d%dim
-              tdt%td_fitness(i) = tdt%td_fitness(i) + &
-                abs(zmf_integrate(gr%m, tdt%tdtarget(:)* &
-                conjg(psi%zpsi(:,dim,ik,p))))**2
-            end do
-          end do
-        end do
-      end if
-    end do
-
-    call pop_sub()
-  end subroutine calc_tdfitness
 
 
   ! ---------------------------------------------------------

@@ -49,7 +49,6 @@ module opt_control_m
   use restart_m
   use tdf_m
   use opt_control_constants_m
-  use opt_control_tdtarget_m
   use opt_control_propagation_m
   use opt_control_parameters_m
   use opt_control_target_m
@@ -200,7 +199,7 @@ contains
 
       psi = initial_st
       call parameters_to_h(par, h%ep)
-      call propagate_forward(target%targetmode, sys, h, td, target%tdt, psi) 
+      call propagate_forward(sys, h, td, target, psi) 
       write(filename,'(a,i3.3)') 'opt-control/PsiT.', iterator%ctr_iter
       call states_output(psi, gr, filename, sys%outp)
       
@@ -211,13 +210,14 @@ contains
         if(iteration_manager(oct, gr, par, td, psi, target, iterator)) exit ctr_loop
 
         call bwd_step(oct_algorithm_zr98, &
-          target%targetmode, sys, td, h, target%tdt, par, par_tmp, chi, psi)
+          sys, td, h, target, par, par_tmp, chi, psi)
         
         ! forward propagation
         call states_end(psi)
         call states_copy(psi, initial_st)
         call fwd_step(oct_algorithm_zr98, &
-          target%targetmode, sys, td, h, target%tdt, par, par_tmp, chi, psi)
+          sys, td, h, target, par, par_tmp, chi, psi)
+
 
         ! Print state and laser after the forward propagation.
         write(filename,'(a,i3.3)') 'opt-control/PsiT.', iterator%ctr_iter
@@ -245,7 +245,7 @@ contains
         call states_end(psi)
         call states_copy(psi, initial_st)
         call parameters_to_h(par, h%ep)
-        call propagate_forward(target%targetmode, sys, h, td, target%tdt, psi) 
+        call propagate_forward(sys, h, td, target, psi) 
 
         write(filename,'(a,i3.3)') 'opt-control/PsiT.', iterator%ctr_iter
         call states_output(psi, gr, trim(filename), sys%outp)
@@ -256,8 +256,7 @@ contains
         
         if(iteration_manager(oct, gr, par, td, psi, target, iterator)) exit ctr_loop
         
-        call bwd_step(oct_algorithm_wg05, &
-          target%targetmode, sys, td, h, target%tdt, par, par_tmp, chi, psi)
+        call bwd_step(oct_algorithm_wg05, sys, td, h, target, par, par_tmp, chi, psi)
 
         ! WARNING: Untested.
         do j = 1, par_tmp%no_parameters
@@ -313,8 +312,7 @@ contains
         ! forward propagation
         call states_end(psi)
         call states_copy(psi, initial_st)
-        call fwd_step(oct_algorithm_zbr98, &
-          target%targetmode, sys, td, h, target%tdt, par, par_tmp, chi, psi)
+        call fwd_step(oct_algorithm_zbr98, sys, td, h, target, par, par_tmp, chi, psi)
 
         write(filename,'(a,i3.3)') 'opt-control/PsiT.', iterator%ctr_iter
         call states_output(psi, gr, filename, sys%outp)
@@ -325,8 +323,7 @@ contains
         
          ! and now backward
         call calc_chi(oct, gr, target, psi, chi)
-        call bwd_step(oct_algorithm_zbr98, &
-          target%targetmode, sys, td, h, target%tdt, par, par_tmp, chi, psi)
+        call bwd_step(oct_algorithm_zbr98, sys, td, h, target, par, par_tmp, chi, psi)
         
       end do ctr_loop
 

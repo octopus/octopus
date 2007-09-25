@@ -38,7 +38,7 @@
 
     if(target%targetmode==oct_targetmode_td) then
        ! 1/T * int(<Psi| O | Psi>)
-       j1 = sum(target%tdt%td_fitness) / real(max_iter, REAL_PRECISION) 
+       j1 = sum(target%td_fitness) / real(max_iter, REAL_PRECISION) 
     else
       select case(target%totype)
       case(oct_tg_local)
