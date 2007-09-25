@@ -87,12 +87,9 @@ module nl_operator_m
   integer, parameter :: &
        OP_FORTRAN = 0,  &
        OP_C       = 1,  &
-       OP_SSE     = 2,  &
-       OP_OLU     = 3,  &
-       OP_RI      = 4,  &
-       OP_RI_VEC  = 5,  &
+       OP_VEC     = 2,  &
        OP_MIN     = OP_FORTRAN, &
-       OP_MAX     = OP_RI_VEC
+       OP_MAX     = OP_VEC
 
   
   logical :: initialized = .false.
@@ -111,10 +108,7 @@ contains
     str = 'none'
     if(id == OP_FORTRAN) str = 'Fortran'
     if(id == OP_C)       str = 'C'
-    if(id == OP_SSE)     str = 'SSE'
-    if(id == OP_OLU)     str = 'OLU'
-    if(id == OP_RI)      str = 'RI'
-    if(id == OP_RI_VEC)  str = 'RI VEC'
+    if(id == OP_VEC)     str = 'Vector'
     
   end function op_function_name
 
@@ -962,19 +956,11 @@ contains
     if(op%const_w) then
 
       select case(op%dfunction)
-      case(OP_C)
-        call doperate_c(op%np, nn, op%w_re(1, 1), op%i(1,1), fi(1), fo(1))
-      case(OP_SSE)
-        call doperate_sse(op%np, nn, op%w_re(1, 1), op%i(1,1), fi(1), fo(1))
       case(OP_FORTRAN)
-        call doperate(op%np, op%m%np_part, nn, &
-          op%w_re(1:nn, 1), op%i(1:nn,1:op%np), fi(1:op%m%np_part), fo(1:op%np))
-      case(OP_OLU)
-        call doperate_olu(op%np, op%m%np_part, nn, &
-             op%w_re(1:nn, 1), op%i(1:nn,1:op%np), fi(1:op%m%np_part), fo(1:op%np))
-      case(OP_RI)
+        call doperate(op%np, op%m%np_part, nn, op%nri, op%w_re, op%ri, op%rimap_inv, fi, fo)
+      case(OP_C)
         call doperate_ri(op%np, nn, op%w_re(1, 1), op%nri, op%ri(1,1), op%rimap_inv(0), fi(1), fo(1))
-      case(OP_RI_VEC)
+      case(OP_VEC)
         call doperate_ri_vec(op%np, nn, op%w_re(1, 1), op%nri, op%ri(1,1), op%rimap_inv(0), fi(1), fo(1))
       end select
     else
@@ -1036,19 +1022,11 @@ contains
       if(op%const_w) then
         
         select case(op%zfunction)
-        case(OP_SSE)
-          call zoperate_sse(op%np, nn, op%w_re(1, 1), op%i(1,1), fi(1), fo(1))
         case(OP_FORTRAN)
-          call zoperate(op%np, op%m%np_part, nn, &
-            op%w_re(1:nn, 1), op%i(1:nn,1:op%np), fi(1:op%m%np_part), fo(1:op%np))
-        case(OP_OLU)
-          call zoperate_olu(op%np, op%m%np_part, nn, &
-            op%w_re(1:nn, 1), op%i(1:nn,1:op%np), fi(1:op%m%np_part), fo(1:op%np))
+          call zoperate(op%np, op%m%np_part, nn, op%nri, op%w_re, op%ri, op%rimap_inv, fi, fo)
         case(OP_C)
-          call zoperate_c(op%np, nn, op%w_re(1, 1), op%i(1,1), fi(1), fo(1))
-        case(OP_RI)
           call zoperate_ri(op%np, nn, op%w_re(1, 1), op%nri, op%ri(1,1), op%rimap_inv(0), fi(1), fo(1))
-        case(OP_RI_VEC)
+        case(OP_VEC)
           call zoperate_ri_vec(op%np, nn, op%w_re(1, 1), op%nri, op%ri(1,1), op%rimap_inv(0), fi(1), fo(1))
         end select
 

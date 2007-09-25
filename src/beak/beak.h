@@ -48,10 +48,7 @@ typedef struct {
 
 #define OP_FORTRAN 0
 #define OP_C       1
-#define OP_SSE     2
-#define OP_OLU     3
-#define OP_RI      4
-#define OP_RI_VEC  5
+#define OP_VEC     2
 
 #define M_REAL     1
 #define M_CMPLX    2

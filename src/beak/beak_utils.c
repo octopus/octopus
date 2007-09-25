@@ -57,9 +57,7 @@ int FC_FUNC_(op_is_available, OP_IS_AVAILABLE)
   int result = 1;
   
 #if !defined(USE_VECTORS)
-  if( *opid == OP_SSE  || *opid == OP_RI_VEC ) result = 0;
-#elif defined(SINGLE_PRECISION)
-  if( *opid == OP_SSE   && *type == M_CMPLX ) result = 0;
+  if( *opid == OP_VEC ) result = 0;
 #endif
 
   return result;

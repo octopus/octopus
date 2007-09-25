@@ -21,7 +21,7 @@
 
 noinst_LIBRARIES = libbeak.a
 
-libbeak_a_SOURCES = operate.c operate_vec.c beak_utils.c operate_ri.c operate_ri_vec.c
+libbeak_a_SOURCES = beak_utils.c operate_ri.c operate_ri_vec.c
 
 noinst_HEADERS = beak.h
 
@@ -31,7 +31,5 @@ depend:
 	@makedepf90 $(libbeak_a_SOURCES)
 
 beak_utils.c:  beak.h
-operate.c:     beak.h
 operate_ri.c:  beak.h
-operate_vec.c: beak.h
 operate_ri_vec.c: beak.h
