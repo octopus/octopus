@@ -29,7 +29,7 @@ AC_DEFUN([ACX_C_BUILTIN_PREFETCH],[
           int * f;
       ],
       [
-          __builtin_prefetch(f, 3);
+          __builtin_prefetch(f, 0, 3);
       ],
       [
         AC_MSG_RESULT(yes)

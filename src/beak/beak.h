@@ -25,12 +25,12 @@
 #include <config.h>
 
 /* If __builtin_prefetch is not present (which should have been caught
-   by the configure script) one needs to define dummy a preprocessor
+   by the configure script) one needs to define a dummy preprocessor
    macro. */
-/*
+
 #if !defined(HAVE_BUILTIN_PREFETCH)
 #define __builtin_prefetch(a, b, c)
-#endif*/
+#endif
 
 #ifdef SINGLE_PRECISION
 typedef float ffloat;
