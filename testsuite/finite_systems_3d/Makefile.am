@@ -45,6 +45,7 @@ dist_share_DATA = \
 	07-spin_orbit_coupling.02-rkb.inp \
 	07-spin_orbit_coupling.test \
 	08-sodium_dimer.01-ground_state.inp \
+	08-sodium_dimer.02-phonons.inp \
 	08-sodium_dimer.test \
 	09-spinors.01-ground_state.inp \
 	09-spinors.test \
