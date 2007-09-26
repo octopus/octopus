@@ -126,7 +126,7 @@ contains
         xmax = sqrt((temp(2)*db(2)/2)**2 + (temp(3)*db(3)/2)**2)
         do k = 1, ngp
           x(k) = (k-1)*(xmax/(ngp-1))
-          y(k) = poisson_cutoff_finite_cylinder(gx, x(k), M_TWO*gr%m%sb%xsize, M_TWO*gr%m%sb%rsize)
+          y(k) = poisson_cutoff_fin_cylinder(gx, x(k), M_TWO*gr%m%sb%xsize, M_TWO*gr%m%sb%rsize)
         end do
         call loct_spline_fit(ngp, x, y, cylinder_cutoff_f)
       end if
@@ -145,7 +145,7 @@ contains
                 case(FFT_CYL)
                    gperp = sqrt((temp(2)*ixx(2))**2+(temp(3)*ixx(3))**2)
                    if (gr%sb%periodic_dim==1) then
-                     fft_Coulb_FS(ix, iy, iz) = poisson_cutoff_infinite_cylinder(abs(gx), gperp, r_c)/modg2
+                     fft_Coulb_FS(ix, iy, iz) = poisson_cutoff_inf_cylinder(abs(gx), gperp, r_c)/modg2
 
                    else if (gr%sb%periodic_dim==0) then
                      gy = temp(2)*ixx(2)
@@ -181,9 +181,8 @@ contains
                 case (FFT_CYL)
                   if (gr%sb%periodic_dim == 1) then
                     fft_Coulb_FS(ix, iy, iz) = -(M_HALF*log(r_c) - M_FOURTH)*r_c**2
-
                   else if (gr%sb%periodic_dim == 0) then
-                    fft_Coulb_FS(ix, iy, iz) = poisson_cutoff_finite_cylinder(M_ZERO, M_ZERO, &
+                    fft_Coulb_FS(ix, iy, iz) = poisson_cutoff_fin_cylinder(M_ZERO, M_ZERO, &
                          M_TWO*gr%m%sb%xsize, M_TWO*gr%m%sb%rsize)
                   end if
 

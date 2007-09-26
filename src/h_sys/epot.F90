@@ -544,7 +544,7 @@ contains
               case(1)
                 gx = abs(temp(1)*ixx(1))
                 gperp = sqrt((temp(2)*ixx(2))**2 + (temp(3)*ixx(3))**2)
-                cf%FS(ix, iy, iz) = tmp*poisson_cutoff_infinite_cylinder(gx, gperp, r_0)
+                cf%FS(ix, iy, iz) = tmp*poisson_cutoff_inf_cylinder(gx, gperp, r_0)
 
               case(2)
                 gz = abs(temp(3)*ixx(3))

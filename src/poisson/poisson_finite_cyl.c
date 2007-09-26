@@ -159,7 +159,7 @@ double poisson_finite_cylinder(double kx, double kr, double x0,double r0) {
 }
 
 /* --------------------- Interface to Fortran ---------------------- */
-double FC_FUNC_(c_poisson_cutoff_finite_cylinder, C_POISSON_CUTOFF_FINITE_CYLINDER)
+double FC_FUNC_(c_poisson_cutoff_fin_cylinder, C_POISSON_CUTOFF_FIN_CYLINDER)
   (double *gx, double *gperp, double *xsize, double *rsize)
 {
   return poisson_finite_cylinder(*gx, *gperp, *xsize, *rsize);

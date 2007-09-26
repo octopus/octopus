@@ -76,7 +76,8 @@ module profiling_m
     C_PROFILING_VEC_INTEGRATE     =  7, &
     C_PROFILING_SCF_CYCLE         =  8, &
     C_PROFILING_MF_DOTP_ALLREDUCE =  9, &
-    C_PROFILING_HPSI              = 10, &
+    C_PROFILING_HPSI              = 10
+  integer, parameter, public ::         &
     C_PROFILING_KINETIC           = 11, &
     C_PROFILING_VLPSI             = 12, &
     C_PROFILING_VNLPSI            = 13, &
@@ -86,7 +87,8 @@ module profiling_m
     C_PROFILING_XC_OEP            = 17, &
     C_PROFILING_XC_EXX            = 18, &
     C_PROFILING_XC_SIC            = 19, &
-    C_PROFILING_XC_KLI            = 20, &
+    C_PROFILING_XC_KLI            = 20
+  integer, parameter, public ::         &
     C_PROFILING_XC_OEP_FULL       = 21, &
     C_PROFILING_TIME_STEP         = 22, &
     C_PROFILING_GRAM_SCHMIDT1     = 23, &
@@ -96,7 +98,8 @@ module profiling_m
     C_PROFILING_LCAO              = 27, &
     C_PROFILING_LCAO_INIT         = 28, &
     C_PROFILING_FORCES            = 29, &
-    C_PROFILING_EPOT_GENERATE     = 30, &
+    C_PROFILING_EPOT_GENERATE     = 30
+  integer, parameter, public ::         &
     C_PROFILING_ELEC_PROPAGATOR   = 31, &
     C_PROFILING_LOBPCG_BLOCKT     = 32, &
     C_PROFILING_LOBPCG_BLOCK_MATR = 33, &
@@ -106,47 +109,8 @@ module profiling_m
     C_PROFILING_LOBPCG_COPY       = 37, &
     C_PROFILING_LOBPCG_LOOP       = 38
 
-  character(len=C_TAG_LENGTH), dimension(C_NUM_TAGS) :: tag_label = &
-    (/                                  &
-    'COMPLETE_DATASET ',                &
-    'MF_INTEGRATE     ',                &
-    'MF_DOTP          ',                &
-    'MF_NRM2          ',                &
-    'NL_OPERATOR      ',                &
-    'GHOST_UPDATE     ',                &
-    'VEC_INTEGRATE    ',                &
-    'SCF_CYCLE        ',                &
-    'MF_DOTP_ALLREDUCE',                &
-    'HPSI             ',                &
-    'KINETIC          ',                &
-    'VLPSI            ',                &
-    'VNLPSI           ',                &
-    'POISSON_SOLVE    ',                &
-    'XC               ',                &
-    'XC_LOCAL         ',                &
-    'XC_OEP           ',                &
-    'XC_EXX           ',                &
-    'XC_SIC           ',                &
-    'XC_KLI           ',                &
-    'XC_OEP_FULL      ',                &
-    'TIME_STEP        ',                &
-    'GRAM_SCHMIDT1    ',                &
-    'GRAM_SCHMIDT2    ',                &
-    'EIGEN_SOLVER     ',                &
-    'DISK_ACCESS      ',                &
-    'LCAO             ',                &
-    'LCAO_INIT        ',                &
-    'FORCES           ',                &
-    'EPOT_GENERATE    ',                &
-    'ELEC_PROPAGATOR  ',                &
-    'LOBPCG_BLOCKT    ',                &
-    'LOBPCG_BLOCK_MATR',                &
-    'LOBPCG_ESOLVE    ',                &
-    'LOBPCG_CHOL      ',                &
-    'LOBPCG_INV       ',                &
-    'LOBPCG_COPY      ',                &
-    'LOBPCG_LOOP      '                 &
-    /)
+  character(len=C_TAG_LENGTH), dimension(C_NUM_TAGS) :: tag_label 
+
 
 contains
 
@@ -157,6 +121,46 @@ contains
 #if defined(HAVE_MPI)
     character(len=3) :: dirnum
 #endif
+
+    tag_label(1)  = 'COMPLETE_DATASET '
+    tag_label(2)  = 'MF_INTEGRATE     '
+    tag_label(3)  = 'MF_DOTP          '
+    tag_label(4)  = 'MF_NRM2          '
+    tag_label(5)  = 'NL_OPERATOR      '
+    tag_label(6)  = 'GHOST_UPDATE     '
+    tag_label(7)  = 'VEC_INTEGRATE    '
+    tag_label(8)  = 'SCF_CYCLE        '
+    tag_label(9)  = 'MF_DOTP_ALLREDUCE'
+    tag_label(10) = 'HPSI             '
+    tag_label(11) = 'KINETIC          '
+    tag_label(12) = 'VLPSI            '
+    tag_label(13) = 'VNLPSI           '
+    tag_label(14) = 'POISSON_SOLVE    '
+    tag_label(15) = 'XC               '
+    tag_label(16) = 'XC_LOCAL         '
+    tag_label(17) = 'XC_OEP           '
+    tag_label(18) = 'XC_EXX           '
+    tag_label(19) = 'XC_SIC           '
+    tag_label(20) = 'XC_KLI           '
+    tag_label(21) = 'XC_OEP_FULL      '
+    tag_label(22) = 'TIME_STEP        '
+    tag_label(23) = 'GRAM_SCHMIDT1    '
+    tag_label(24) = 'GRAM_SCHMIDT2    '
+    tag_label(25) = 'EIGEN_SOLVER     '
+    tag_label(26) = 'DISK_ACCESS      '
+    tag_label(27) = 'LCAO             '
+    tag_label(28) = 'LCAO_INIT        '
+    tag_label(29) = 'FORCES           '
+    tag_label(30) = 'EPOT_GENERATE    '
+    tag_label(31) = 'ELEC_PROPAGATOR  '
+    tag_label(32) = 'LOBPCG_BLOCKT    '
+    tag_label(33) = 'LOBPCG_BLOCK_MATR'
+    tag_label(34) = 'LOBPCG_ESOLVE    '
+    tag_label(35) = 'LOBPCG_CHOL      '
+    tag_label(36) = 'LOBPCG_INV       '
+    tag_label(37) = 'LOBPCG_COPY      '
+    tag_label(38) = 'LOBPCG_LOOP      '
+
 
     if(.not.in_profiling_mode) return
 

@@ -127,7 +127,6 @@ contains
   ! predictor-corrector scheme.
   subroutine cn_src_mem_dt(intf, mem, st_intf, ks, h, st, gr, dt, t, max_iter)
     type(intface_t), target,     intent(in)    :: intf
-    CMPLX, target,               intent(in)    :: mem(intf%np, intf%np, 0:max_iter, NLEADS)
     CMPLX,                       intent(inout) :: st_intf(:, :, :, :)
     type(v_ks_t),                intent(in)    :: ks
     type(hamiltonian_t), target, intent(inout) :: h
@@ -136,6 +135,8 @@ contains
     FLOAT,                       intent(in)    :: dt
     FLOAT,                       intent(in)    :: t
     integer,                     intent(in)    :: max_iter
+    CMPLX, target,               intent(in)    :: mem(intf%np, intf%np, 0:max_iter, NLEADS)
+
 
     integer :: ik, ist, il, it, n
 

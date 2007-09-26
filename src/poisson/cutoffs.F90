@@ -30,29 +30,29 @@ module poisson_cutoffs_m
   implicit none
 
   private
-  public ::                            &
-    poisson_cutoff_sphere,             &
-    poisson_cutoff_infinite_cylinder,  &
-    poisson_cutoff_finite_cylinder,    &
-    poisson_cutoff_slab,               &
+  public ::                       &
+    poisson_cutoff_sphere,        &
+    poisson_cutoff_inf_cylinder,  &
+    poisson_cutoff_fin_cylinder,  &
+    poisson_cutoff_slab,          &
     besselint
 
-  interface poisson_cutoff_finite_cylinder
-    real(8) function c_poisson_cutoff_finite_cylinder(gx, gperp, xsize, rsize)
+  interface poisson_cutoff_fin_cylinder
+    real(8) function c_poisson_cutoff_fin_cylinder(gx, gperp, xsize, rsize)
       real(8), intent(in) :: gx, gperp, rsize, xsize
-    end function c_poisson_cutoff_finite_cylinder
-    module procedure poisson_cutoff_finite_cylinder4
+    end function c_poisson_cutoff_fin_cylinder
+    module procedure poisson_cutoff_fin_cylinder4
   end interface
   
 contains
 
-  real(4) function poisson_cutoff_finite_cylinder4(gx, gperp, xsize, rsize)
+  real(4) function poisson_cutoff_fin_cylinder4(gx, gperp, xsize, rsize)
     real(4), intent(in) :: gx, gperp, rsize, xsize
     real(8) :: res8
     
-    res8 = c_poisson_cutoff_finite_cylinder(real(gx, 8), real(gperp, 8), real(xsize, 8), real(rsize, 8))
-    poisson_cutoff_finite_cylinder4 = real(res8, 4)
-  end function poisson_cutoff_finite_cylinder4
+    res8 = c_poisson_cutoff_fin_cylinder(real(gx, 8), real(gperp, 8), real(xsize, 8), real(rsize, 8))
+    poisson_cutoff_fin_cylinder4 = real(res8, 4)
+  end function poisson_cutoff_fin_cylinder4
   
   ! ---------------------------------------------------------
   FLOAT function poisson_cutoff_sphere(x, r) result(cutoff)
@@ -64,7 +64,7 @@ contains
 
 
   ! ---------------------------------------------------------
-  FLOAT function poisson_cutoff_infinite_cylinder(x, p, rmax) result(cutoff)
+  FLOAT function poisson_cutoff_inf_cylinder(x, p, rmax) result(cutoff)
     FLOAT, intent(in) ::  x, p, rmax
 
     integer :: j
@@ -89,7 +89,7 @@ contains
         - x*rmax*loct_bessel_j0(p*rmax)*loct_bessel_k1(x*rmax)
     end if
 
-  end function poisson_cutoff_infinite_cylinder
+  end function poisson_cutoff_inf_cylinder
 
 
   ! ---------------------------------------------------------
