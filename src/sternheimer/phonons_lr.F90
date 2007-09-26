@@ -66,9 +66,11 @@ contains
     type(sternheimer_t) :: sh
     type(lr_t)          :: lr(1:1)
     type(phonons_t)     :: ph
-    type(pert_t)   :: perturbation
+    type(pert_t)        :: perturbation, dipole
 
-    integer :: natoms, ndim, iatom, idir, jatom, jdir
+    integer :: natoms, ndim, iatom, idir, jatom, jdir, imat, jmat, iunit
+    FLOAT, allocatable   :: infrared(:,:)
+    FLOAT :: lir(1:MAX_DIM+1)
 
     natoms = sys%geo%natoms
     ndim = sys%NDIM
@@ -90,15 +92,20 @@ contains
     call lr_init(lr(1))
     call lr_allocate(lr(1), sys%st, sys%gr%m)
 
+    ALLOCATE(infrared(natoms*ndim, ndim), natoms*ndim**2)
+
     !CALCULATE
 
     !the ionic contribution
     call build_ionic_dm()
 
     call pert_init(perturbation, PERTURBATION_IONIC, sys%gr, sys%geo)
+    call pert_init(dipole, PERTURBATION_ELECTRIC, sys%gr, sys%geo)
 
     do iatom = 1, natoms
       do idir = 1, ndim
+
+        imat = phn_idx(ph, iatom, idir)
 
         call pert_setup_atom(perturbation, iatom)
         call pert_setup_dir(perturbation, idir)
@@ -109,29 +116,62 @@ contains
 
         do jatom = 1, natoms
           do jdir = 1, ndim
+            
+            jmat = phn_idx(ph, jatom, jdir)
 
             call pert_setup_atom(perturbation, jatom, iatom)
             call pert_setup_dir(perturbation, jdir, idir)
 
-            ph%dm(phn_idx(ph, iatom, idir), phn_idx(ph, jatom, jdir)) &
-                 = ph%dm(phn_idx(ph, iatom, idir), phn_idx(ph, jatom, jdir))&
+            ph%dm(imat, jmat) = ph%dm(imat, jmat) &
                  -dpert_expectation_value(perturbation,sys%gr,sys%geo,h,sys%st, lr(1)%ddl_psi, sys%st%dpsi)&
                  -dpert_expectation_value(perturbation,sys%gr,sys%geo,h,sys%st, sys%st%dpsi, lr(1)%ddl_psi)&
                  -dpert_expectation_value(perturbation,sys%gr,sys%geo,h,sys%st, sys%st%dpsi, sys%st%dpsi, pert_order = 2)
-                 
+                     
           end do
+        end do
+        
+        do jdir = 1, ndim
+          call pert_setup_dir(dipole, jdir)
+          infrared(imat, jdir) = &
+               dpert_expectation_value(dipole, sys%gr, sys%geo, h, sys%st, lr(1)%ddl_psi, sys%st%dpsi) + &
+               dpert_expectation_value(dipole, sys%gr, sys%geo, h, sys%st, sys%st%dpsi, lr(1)%ddl_psi)
         end do
 
       end do
     end do
     
     call pert_end(perturbation)
+    call pert_end(dipole)
 
     call phonons_normalize_dm(ph, sys%geo)
     call phonons_diagonalize_dm(ph)
     call phonons_output(ph, "_lr")
 
+    !calculate infrared intensities
+
+    iunit = io_open('phonons/infrared', action='write')
+
+    write(iunit, '(a)') '#   freq [cm^-1]     <x>           <y>           <z>           average'
+
+    do iatom = 1, natoms
+      do idir = 1, ndim
+        
+        imat = phn_idx(ph, iatom, idir)
+
+         do jdir = 1, ndim
+           lir(jdir) = dot_product(infrared(:, jdir), ph%vec(:, imat))
+         end do
+         lir(ndim+1) = sqrt(sum(lir(1:ndim)**2))
+         
+         write(iunit, '(5f14.5)') sqrt(abs(ph%freq(imat)))*hartree_to_cm_inv, lir(1:ndim+1)
+      end do
+    end do
+
+    call io_close(iunit)
+
     !DESTRUCT
+
+    deallocate(infrared)
 
     call lr_dealloc(lr(1))
     
