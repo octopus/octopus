@@ -224,7 +224,7 @@ dnl check for GSL
 AC_LANG_PUSH(C)
 LIBS="${acx_save_libs}"
 
-AM_PATH_GSL([1.0], 
+AM_PATH_GSL([1.9], 
   [CFLAGS="$CFLAGS $GSL_CFLAGS"], 
   AC_MSG_ERROR([could not find required gsl library]))
 
