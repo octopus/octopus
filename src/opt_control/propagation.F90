@@ -386,38 +386,42 @@ module opt_control_propagation_m
     type(states_t) :: oppsi
     
     CMPLX :: d1
-    CMPLX, allocatable  :: d2(:), dq(:)
+    CMPLX, allocatable  :: dl(:), dq(:)
     integer :: ik, p, dim, i, j
     FLOAT :: value
 
     call push_sub('propagation.update_field')
     
-    ALLOCATE(d2(cp%no_parameters), cp%no_parameters)
+    ALLOCATE(dl(cp%no_parameters), cp%no_parameters)
     ALLOCATE(dq(cp%no_parameters), cp%no_parameters)
 
     do j = 1, cp%no_parameters
       oppsi = psi
+      dl(j) = M_z0
       do ik = 1, psi%d%nik
         do p = 1, psi%nst
           oppsi%zpsi(:, :, p, ik) = M_z0
           call zvlaser_operator_linear(gr, h, psi%zpsi(:, :, p, ik), &
                                        oppsi%zpsi(:, :, p, ik), ik, laser_number = j)
+          dl(j) = dl(j) + psi%occ(p, ik) * zstates_dotp(gr%m, psi%d%dim, chi%zpsi(:, :, p, ik), &
+            oppsi%zpsi(:, :, p, ik))
         end do
       end do
-      d2(j) = zstates_mpmatrixelement(gr%m, chi, psi, oppsi)
       call states_end(oppsi)
 
       ! The quadratic part should only be computed if necessary.
       if(h%ep%lasers(j)%field.eq.E_FIELD_MAGNETIC ) then
         oppsi = psi
+        dq(j) = M_z0
         do ik = 1, psi%d%nik
           do p = 1, psi%nst
             oppsi%zpsi(:, :, p, ik) = M_z0
             call zvlaser_operator_quadratic(gr, h, psi%zpsi(:, :, p, ik), &
                                          oppsi%zpsi(:, :, p, ik), ik, laser_number = j)
+            dq(j) = dq(j) + psi%occ(p, ik) * zstates_dotp(gr%m, psi%d%dim, chi%zpsi(:, :, p, ik), &
+              oppsi%zpsi(:, :, p, ik))
           end do
         end do
-        dq(j) = zstates_mpmatrixelement(gr%m, chi, psi, oppsi)
         call states_end(oppsi)
       else
         dq(j) = M_z0
@@ -428,7 +432,7 @@ module opt_control_propagation_m
     if(algorithm_type .eq. oct_algorithm_zbr98) d1 = zstates_mpdotp(gr%m, psi, chi)
 
     do j = 1, cp%no_parameters
-      value = aimag(d1*d2(j)) / ( tdf(cp%td_penalty(j), iter+1) - M_TWO*aimag(dq(j)) ) 
+      value = aimag(d1*dl(j)) / ( tdf(cp%td_penalty(j), iter+1) - M_TWO*aimag(dq(j)) ) 
       call tdf_set_numerical(cp%f(j), iter+1, value)
       i = int(sign(M_ONE, td%dt))
       if(iter==0.or.iter==td%max_iter) then
@@ -439,7 +443,7 @@ module opt_control_propagation_m
       end if
     end do
 
-    deallocate(d2, dq)
+    deallocate(dl, dq)
     call pop_sub()
   end subroutine update_field
 
