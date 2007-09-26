@@ -82,7 +82,7 @@ contains
     integer :: i, ierr, lcao_start, lcao_start_default
     real(8), allocatable :: x(:)
     type(lcao_t) :: lcao_data
-    FLOAT :: energy
+    real(8) :: energy
 
     call init_()
 
