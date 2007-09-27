@@ -43,7 +43,7 @@ subroutine X(sternheimer_solve)(&
   integer :: iter, sigma, ik, ist, err
   R_TYPE, allocatable :: dl_rhoin(:, :, :), dl_rhonew(:, :, :), dl_rhotmp(:, :, :)
   R_TYPE, allocatable :: Y(:, :, :), hvar(:, :, :)
-  R_DOUBLE, allocatable :: tmp(:)
+  R_TYPE, allocatable :: tmp(:)
   real(8):: abs_dens
   R_TYPE :: omega_sigma
 
@@ -180,7 +180,7 @@ subroutine X(sternheimer_solve)(&
 
     do ik = 1, st%d%nspin
       tmp(1:m%np) = dl_rhoin(1:m%np, ik, 1) - dl_rhotmp(1:m%np, ik, 1)
-      abs_dens = hypot(abs_dens, X(mf_nrm2)(m, tmp))
+      abs_dens = hypot(abs_dens, real(X(mf_nrm2)(m, tmp),8))
     end do
 
     write(message(1), '(a, e20.6)') "SCF Residual ", abs_dens
