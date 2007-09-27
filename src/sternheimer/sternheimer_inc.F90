@@ -139,7 +139,7 @@ subroutine X(sternheimer_solve)(&
 
           ! print the norm of the variations, and the number of
           ! iterations and residual of the linear solver
-          dpsimod = lalg_nrm2(m%np, lr(sigma)%X(dl_psi)(1:m%np, 1, ist, ik))
+          dpsimod = X(mf_nrm2)(m, lr(sigma)%X(dl_psi)(1:m%np, 1, ist, ik))
 
           write(message(1), '(i4, f20.6, i5, e20.6)') &
                (3 - 2*sigma)*ist, dpsimod, this%solver%iter, this%solver%abs_psi 
@@ -180,7 +180,7 @@ subroutine X(sternheimer_solve)(&
 
     do ik = 1, st%d%nspin
       tmp(1:m%np) = dl_rhoin(1:m%np, ik, 1) - dl_rhotmp(1:m%np, ik, 1)
-      abs_dens = hypot(abs_dens, lalg_nrm2(m%np, tmp))
+      abs_dens = hypot(abs_dens, X(mf_nrm2)(m, tmp))
     end do
 
     write(message(1), '(a, e20.6)') "SCF Residual ", abs_dens
