@@ -33,3 +33,5 @@ EigenSolverMaxIter = 20
 TypeOfMixing = broyden
 
 Forces=derivate_wavefunctions
+
+ParallelizationStrategy=par_domains

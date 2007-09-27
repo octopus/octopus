@@ -35,3 +35,5 @@ TypeOfMixing = broyden
 PoissonSolver = fft_corrected
 
 Forces=derivate_potential
+
+ParallelizationStrategy=par_domains
