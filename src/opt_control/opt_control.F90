@@ -48,6 +48,7 @@ module opt_control_m
   use external_pot_m
   use restart_m
   use tdf_m
+  use mix_m
   use opt_control_constants_m
   use opt_control_propagation_m
   use opt_control_parameters_m
@@ -62,6 +63,7 @@ module opt_control_m
     FLOAT   :: targetfluence
     logical :: mode_fixed_fluence
     integer :: algorithm_type
+    logical :: use_mixing
     logical :: oct_double_check
     logical :: dump_intermediate
   end type oct_t
@@ -96,6 +98,7 @@ contains
     integer :: i, ierr
     character(len=80)  :: filename
 
+
     call push_sub('opt_control.opt_control_run')
 
     ! Checks that the run is actually possible with the current settings
@@ -127,6 +130,8 @@ contains
     call parameters_set(par, h%ep)
     call parameters_write('opt-control/initial_laser', par)
     call parameters_copy(par_tmp, par)
+
+    call mix_init(parameters_mix, td%max_iter + 1, par%no_parameters, 1)
 
     call oct_iterator_init(iterator, oct, par)
 
@@ -184,41 +189,52 @@ contains
 
   contains
 
-    
+
     ! ---------------------------------------------------------
     subroutine scheme_zr98
       integer :: ierr
+      type(oct_control_parameters_t) :: par_new, par_prev
       call push_sub('opt_control.scheme_ZR98')
 
       message(1) = "Info: Starting Optimal Control Run  using Scheme: ZR98"
       call write_info(1)
       
-      ! first propagate chi to ti
-      message(1) = "Info: Initial forward propagation"
-      call write_info(1)
-
-      psi = initial_st
-      call parameters_to_h(par, h%ep)
-      call propagate_forward(sys, h, td, target, psi) 
-      write(filename,'(a,i3.3)') 'opt-control/PsiT.', iterator%ctr_iter
-      call states_output(psi, gr, filename, sys%outp)
+      if(oct%use_mixing) then
+        call parameters_copy(par_new, par)
+        call parameters_copy(par_prev, par)
+      else
+        psi = initial_st
+        call parameters_to_h(par, h%ep)
+        call propagate_forward(sys, h, td, target, psi) 
+        write(filename,'(a,i3.3)') 'opt-control/PsiT.', iterator%ctr_iter
+        call states_output(psi, gr, filename, sys%outp)
+      end if
       
       ctr_loop: do
+        if(oct%use_mixing) call parameters_copy(par_prev, par)
+
+        if(oct%use_mixing) then
+          call states_end(psi)
+          psi = initial_st
+          call parameters_to_h(par, h%ep)
+          call propagate_forward(sys, h, td, target, psi)
+        end if
+
+        if(iteration_manager(oct, gr, par, td, psi, target, iterator)) exit ctr_loop
         
         call calc_chi(oct, gr, target, psi, chi)
-        
-        if(iteration_manager(oct, gr, par, td, psi, target, iterator)) exit ctr_loop
-
-        call bwd_step(oct_algorithm_zr98, &
-          sys, td, h, target, par, par_tmp, chi, psi)
+        call bwd_step(oct_algorithm_zr98, sys, td, h, target, par, par_tmp, chi, psi)
         
         ! forward propagation
         call states_end(psi)
         call states_copy(psi, initial_st)
-        call fwd_step(oct_algorithm_zr98, &
-          sys, td, h, target, par, par_tmp, chi, psi)
+        call fwd_step(oct_algorithm_zr98, sys, td, h, target, par, par_tmp, chi, psi)
 
-
+        if(oct%use_mixing) then
+          call parameters_mixing(iterator%ctr_iter, par_prev, par, par_new)
+          call parameters_copy(par, par_new)
+        end if
+ 
         ! Print state and laser after the forward propagation.
         write(filename,'(a,i3.3)') 'opt-control/PsiT.', iterator%ctr_iter
         call states_output(psi, gr, filename, sys%outp)
@@ -226,7 +242,11 @@ contains
         call parameters_write(filename, par)
         
       end do ctr_loop
-      
+
+      if(oct%use_mixing) then
+        call parameters_end(par_new)
+        call parameters_end(par_prev)
+      end if
       call pop_sub()
     end subroutine scheme_zr98
     
@@ -288,26 +308,34 @@ contains
 
       call pop_sub()
     end subroutine scheme_wg05
-
  
+
     ! ---------------------------------------------------------
     subroutine scheme_zbr98
       integer :: ierr
+      type(oct_control_parameters_t) :: par_new, par_prev
       call push_sub('opt_control.scheme_zbr98')
       
       message(1) = "Info: Starting OCT iteration using scheme: ZBR98"
       call write_info(1)
-      
-      ! first propagate chi to T
-      message(1) = "Info: Initial backward propagation"
-      call write_info(1)
-      
-      call calc_chi(oct, gr, target, psi, chi)
 
-      call parameters_to_h(par, h%ep)
-      call propagate_backward(sys, h, td, chi)
+      if(oct%use_mixing) then      
+        call parameters_copy(par_new, par_tmp)
+        call parameters_copy(par_prev, par_tmp)
+      else
+        call calc_chi(oct, gr, target, psi, chi)
+        call parameters_to_h(par, h%ep)
+        call propagate_backward(sys, h, td, chi)
+      end if
 
       ctr_loop: do
+        if(oct%use_mixing) call parameters_copy(par_prev, par_tmp)
+
+        if(oct%use_mixing) then
+          call calc_chi(oct, gr, target, psi, chi)
+          call parameters_to_h(par_tmp, h%ep)
+          call propagate_backward(sys, h, td, chi)
+        end if
 
         ! forward propagation
         call states_end(psi)
@@ -320,13 +348,22 @@ contains
         call parameters_write(filename, par)
         
         if(iteration_manager(oct, gr, par, td, psi, target, iterator)) exit ctr_loop
-        
-         ! and now backward
+
+        ! and now backward
         call calc_chi(oct, gr, target, psi, chi)
         call bwd_step(oct_algorithm_zbr98, sys, td, h, target, par, par_tmp, chi, psi)
-        
+
+        if(oct%use_mixing) then
+          call parameters_mixing(iterator%ctr_iter, par_prev, par_tmp, par_new)
+          call parameters_copy(par_tmp, par_new)
+        end if
+
       end do ctr_loop
 
+      if(oct%use_mixing) then
+        call parameters_end(par_new)
+        call parameters_end(par_prev)
+      end if
       call pop_sub()
     end subroutine scheme_zbr98
 

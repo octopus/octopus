@@ -46,6 +46,20 @@ end function X(mf_integrate)
 
 
 ! ---------------------------------------------------------
+! This function returns the dot product between two vectors,
+! but using the mesh_aux defined as a global object in this
+! module. This way it can be called by external libraries,
+! passing only the two vectors. First, one has to 
+! make sure that mesh_aux is pointint to some defined
+! mesh data structure, by calling mesh_init_mesh_aux.
+! ---------------------------------------------------------
+R_TYPE function X(mf_dotp_aux)(f1, f2) result(dotp)
+  R_TYPE,            intent(in) :: f1(:), f2(:)
+  dotp = X(mf_dotp)(mesh_aux, f1, f2)
+end function X(mf_dotp_aux)
+
+
+! ---------------------------------------------------------
 ! this function returns the dot product between two vectors
 R_TYPE function X(mf_dotp)(mesh, f1, f2, reduce) result(dotp)
   type(mesh_t),      intent(in) :: mesh

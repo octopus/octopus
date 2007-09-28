@@ -25,8 +25,6 @@ module mix_m
   use lib_adv_alg_m
   use lib_basic_alg_m
   use lib_oct_parser_m
-  use mesh_function_m
-  use mesh_m
   use messages_m
   use varinfo_m
 
@@ -53,6 +51,8 @@ module mix_m
 
     integer :: ns               ! number of steps used to extrapolate the new vector
 
+    integer :: d1, d2, d3
+
     FLOAT, pointer :: ddf(:, :, :, :)
     FLOAT, pointer :: ddv(:, :, :, :)
     FLOAT, pointer :: df_old(:, :, :)
@@ -69,10 +69,9 @@ module mix_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine mix_init(smix, m, d2, d3, def_, func_type)
+  subroutine mix_init(smix, d1, d2, d3, def_, func_type)
     type(mix_t),       intent(out) :: smix
-    type(mesh_t),      intent(in)  :: m
-    integer,           intent(in)  :: d2, d3
+    integer,           intent(in)  :: d1, d2, d3
     integer, optional, intent(in)  :: def_
     integer, optional, intent(in)  :: func_type
 
@@ -146,34 +145,39 @@ contains
     nullify(smix%zf_old)
     nullify(smix%zvin_old)
 
+    smix%d1 = d1
+    smix%d2 = d2
+    smix%d3 = d3
+
     select case (smix%type_of_mixing)
     case (MIX_GRPULAY)
       if(func_type_ == M_REAL ) then 
-        ALLOCATE(smix%ddf(m%np, d2, d3, smix%ns + 1), m%np*d2*d3*(smix%ns + 1))
-        ALLOCATE(smix%dvin_old(m%np, d2, d3),         m%np*d2*d3)
-        ALLOCATE(smix%ddv(m%np, d2, d3, smix%ns + 1), m%np*d2*d3*(smix%ns + 1))
-        ALLOCATE(smix%df_old(m%np, d2, d3),           m%np*d2*d3)
+        ALLOCATE(smix%ddf(d1, d2, d3, smix%ns + 1), d1*d2*d3*(smix%ns + 1))
+        ALLOCATE(smix%dvin_old(d1, d2, d3),         d1*d2*d3)
+        ALLOCATE(smix%ddv(d1, d2, d3, smix%ns + 1), d1*d2*d3*(smix%ns + 1))
+        ALLOCATE(smix%df_old(d1, d2, d3),           d1*d2*d3)
+
         smix%ddf = M_ZERO; smix%ddv = M_ZERO; smix%dvin_old = M_ZERO; smix%df_old = M_ZERO
       else
-        ALLOCATE(smix%zdf(m%np, d2, d3, smix%ns + 1), m%np*d2*d3*(smix%ns + 1))
-        ALLOCATE(smix%zvin_old(m%np, d2, d3),         m%np*d2*d3)
-        ALLOCATE(smix%zdv(m%np, d2, d3, smix%ns + 1), m%np*d2*d3*(smix%ns + 1))
-        ALLOCATE(smix%zf_old(m%np, d2, d3),           m%np*d2*d3)
+        ALLOCATE(smix%zdf(d1, d2, d3, smix%ns + 1), d1*d2*d3*(smix%ns + 1))
+        ALLOCATE(smix%zvin_old(d1, d2, d3),         d1*d2*d3)
+        ALLOCATE(smix%zdv(d1, d2, d3, smix%ns + 1), d1*d2*d3*(smix%ns + 1))
+        ALLOCATE(smix%zf_old(d1, d2, d3),           d1*d2*d3)
         smix%zdf = M_z0; smix%zdv = M_z0; smix%zvin_old = M_z0; smix%zf_old = M_z0
       end if
 
     case (MIX_BROYDEN)
       if(func_type_ == M_REAL ) then 
-        ALLOCATE(smix%ddf(m%np, d2, d3, smix%ns), m%np*d2*d3*smix%ns)
-        ALLOCATE(smix%dvin_old(m%np, d2, d3),     m%np*d2*d3)
-        ALLOCATE(smix%ddv(m%np, d2, d3, smix%ns), m%np*d2*d3*smix%ns)
-        ALLOCATE(smix%df_old(m%np, d2, d3),       m%np*d2*d3)
+        ALLOCATE(smix%ddf(d1, d2, d3, smix%ns), d1*d2*d3*smix%ns)
+        ALLOCATE(smix%dvin_old(d1, d2, d3),     d1*d2*d3)
+        ALLOCATE(smix%ddv(d1, d2, d3, smix%ns), d1*d2*d3*smix%ns)
+        ALLOCATE(smix%df_old(d1, d2, d3),       d1*d2*d3)
         smix%ddf = M_ZERO; smix%ddv = M_ZERO; smix%dvin_old = M_ZERO; smix%df_old = M_ZERO
       else
-        ALLOCATE(smix%zdf(m%np, d2, d3, smix%ns), m%np*d2*d3*smix%ns)
-        ALLOCATE(smix%zvin_old(m%np, d2, d3),     m%np*d2*d3)
-        ALLOCATE(smix%zdv(m%np, d2, d3, smix%ns), m%np*d2*d3*smix%ns)
-        ALLOCATE(smix%zf_old(m%np, d2, d3),       m%np*d2*d3)
+        ALLOCATE(smix%zdf(d1, d2, d3, smix%ns), d1*d2*d3*smix%ns)
+        ALLOCATE(smix%zvin_old(d1, d2, d3),     d1*d2*d3)
+        ALLOCATE(smix%zdv(d1, d2, d3, smix%ns), d1*d2*d3*smix%ns)
+        ALLOCATE(smix%zf_old(d1, d2, d3),       d1*d2*d3)
         smix%zdf = M_z0; smix%zdv = M_z0; smix%zvin_old = M_z0; smix%zf_old = M_z0
       end if
 

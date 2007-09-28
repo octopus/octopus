@@ -90,8 +90,20 @@
     !%Description 
     !% Run a normal propagation after the optimization using the optimized field.
     !%End
-    call loct_parse_logical(check_inp('OCTDoubleCheck'), .TRUE., oct%oct_double_check)
+    call loct_parse_logical(check_inp('OCTDoubleCheck'), .true., oct%oct_double_check)
 
+    !%Variable OCTMixing
+    !%Type logical
+    !%Section Optimal Control
+    !%Default false
+    !%Description 
+    !% Use mixing algorithms to create the input fields in the iterative OCT schemes.
+    !%
+    !% WARNING: Very experimental.
+    !%
+    !% WARNING: The oct_algorithm_wg05 scheme is not affected by this.
+    !%End
+    call loct_parse_logical(check_inp('OCTMixing'), .false., oct%use_mixing)
 
     !%Variable OCTDumpIntermediate
     !%Type logical

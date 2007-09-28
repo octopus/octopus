@@ -74,9 +74,6 @@ module opt_control_propagation_m
 
     call push_sub('propagation.propagate_forward')
 
-    message(1) = "Info: Forward propagating Psi"
-    call write_info(1)
-
     write_iter_ = .false.
     if(present(write_iter)) write_iter_ = write_iter
 

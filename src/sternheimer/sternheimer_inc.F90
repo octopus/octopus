@@ -63,7 +63,8 @@ subroutine X(sternheimer_solve)(&
   m => sys%gr%m
   st => sys%st
   
-  call mix_init(this%mixer, sys%gr%m, sys%st%d%nspin, 1, func_type=sys%st%d%wfs_type)
+  call mix_init(this%mixer, sys%gr%m%np, sys%st%d%nspin, 1, func_type=sys%st%d%wfs_type)
+  call mesh_init_mesh_aux(sys%gr%m)
   
   ALLOCATE(tmp(m%np),m%np)
   ALLOCATE(Y(m%np, 1, nsigma), m%np*1*nsigma)
@@ -174,7 +175,7 @@ subroutine X(sternheimer_solve)(&
 
     dl_rhotmp(1:m%np, 1:st%d%nspin, 1) = lr(1)%X(dl_rho)(1:m%np, 1:st%d%nspin)
 
-    call X(mixing)(this%mixer, m, iter, st%d%nspin, 1, dl_rhoin, dl_rhotmp, dl_rhonew)
+    call X(mixing)(this%mixer, iter, dl_rhoin, dl_rhotmp, dl_rhonew, X(mf_dotp_aux))
 
     abs_dens =  M_ZERO
 
@@ -287,8 +288,8 @@ subroutine X(sternheimer_calc_hvar)(this, sys, h, lr, nsigma, hvar)
   if (this%add_hartree) deallocate(hartree)
 
   call pop_sub()
-
 end subroutine X(sternheimer_calc_hvar)
+
 
 !! Local Variables:
 !! mode: f90

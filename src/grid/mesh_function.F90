@@ -52,7 +52,10 @@ module mesh_function_m
     mf_surface_integral,   &
     mf_line_integral,      &
     dmf_put_radial_spline, &
-    zmf_put_radial_spline
+    zmf_put_radial_spline, &
+    dmf_dotp_aux,          &
+    zmf_dotp_aux,          &
+    mesh_init_mesh_aux
 
   interface mf_surface_integral
     module procedure dmf_surface_integral_scalar, dmf_surface_integral_vector, &
@@ -64,7 +67,14 @@ module mesh_function_m
                      zmf_line_integral_scalar, zmf_line_integral_vector
   end interface
 
+  type(mesh_t), pointer :: mesh_aux
+
 contains
+
+  subroutine mesh_init_mesh_aux(m)
+    type(mesh_t), target :: m
+    mesh_aux => m
+  end subroutine mesh_init_mesh_aux
 
 #include "undef.F90"
 #include "real.F90"

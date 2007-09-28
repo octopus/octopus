@@ -20,12 +20,17 @@
 #include "global.h"
 
 ! ---------------------------------------------------------
-subroutine X(mixing)(smix, m, iter, d2, d3, vin, vout, vnew)
+subroutine X(mixing)(smix, iter, vin, vout, vnew, dotp)
   type(mix_t),  intent(inout) :: smix
-  type(mesh_t), intent(in)    :: m
-  integer,      intent(in)    :: iter, d2, d3
+  integer,      intent(in)    :: iter
   R_TYPE,       intent(in)    :: vin(:, :, :), vout(:, :, :)
   R_TYPE,       intent(out)   :: vnew(:, :, :)
+  interface
+    R_TYPE function dotp(x, y) result(res)
+      R_TYPE, intent(in) :: x(:)
+      R_TYPE, intent(in) :: y(:)
+    end function dotp
+  end interface
   
   call push_sub('mix_inc.Xmixing')
   
@@ -33,13 +38,13 @@ subroutine X(mixing)(smix, m, iter, d2, d3, vin, vout, vnew)
   
   select case (smix%type_of_mixing)
   case (MIX_LINEAR)
-    call X(mixing_linear)(smix%alpha, m, d2, d3, vin, vout, vnew)
+    call X(mixing_linear)(smix%alpha, smix%d1, smix%d2, smix%d3, vin, vout, vnew)
     
   case (MIX_BROYDEN)
-    call X(mixing_broyden)(smix, m, d2, d3, vin, vout, vnew, iter)
+    call X(mixing_broyden)(smix, vin, vout, vnew, iter, dotp)
     
   case (MIX_GRPULAY)
-    call X(mixing_grpulay)(smix, m, d2, d3, vin, vout, vnew, iter)
+    call X(mixing_grpulay)(smix, vin, vout, vnew, iter, dotp)
     
   end select
   
@@ -48,52 +53,60 @@ end subroutine X(mixing)
 
 
 ! ---------------------------------------------------------
-subroutine X(mixing_linear)(alpha, m, d2, d3, vin, vout, vnew)
+subroutine X(mixing_linear)(alpha, d1, d2, d3, vin, vout, vnew)
   FLOAT,        intent(in) :: alpha
-  type(mesh_t), intent(in) :: m
-  integer,      intent(in) :: d2, d3
+  integer,      intent(in) :: d1, d2, d3
   R_TYPE,       intent(in) :: vin(:, :, :), vout(:, :, :)
   R_TYPE,       intent(out):: vnew(:, :, :)
 
   call push_sub('mix_inc.Xmixing_linear')
   
-  vnew(1:m%np, 1:d2, 1:d3) = vin(1:m%np, 1:d2, 1:d3)*(M_ONE - alpha) + alpha*vout(1:m%np, 1:d2, 1:d3)
+  vnew(1:d1, 1:d2, 1:d3) = vin(1:d1, 1:d2, 1:d3)*(M_ONE - alpha) + alpha*vout(1:d1, 1:d2, 1:d3)
   
   call pop_sub()
 end subroutine X(mixing_linear)
 
 
 ! ---------------------------------------------------------
-subroutine X(mixing_broyden)(smix, m, d2, d3, vin, vout, vnew, iter)
+subroutine X(mixing_broyden)(smix, vin, vout, vnew, iter, dotp)
   type(mix_t), intent(inout) :: smix
-  type(mesh_t),   intent(in) :: m
-  integer,        intent(in) :: d2, d3, iter
   R_TYPE,         intent(in) :: vin(:, :, :), vout(:, :, :)
   R_TYPE,         intent(out):: vnew(:, :, :)
+  integer,        intent(in) :: iter
+  interface
+    R_TYPE function dotp(x, y) result(res)
+      R_TYPE, intent(in) :: x(:)
+      R_TYPE, intent(in) :: y(:)
+    end function dotp
+  end interface
 
-  integer :: ipos, iter_used, i, j
+  integer :: ipos, iter_used, i, j, d1, d2, d3
   R_TYPE :: gamma
   R_TYPE, allocatable :: f(:, :, :)
 
   call push_sub('mix_inc.Xmixing_broyden')
+
+  d1 = smix%d1
+  d2 = smix%d2
+  d3 = smix%d3
   
-  ALLOCATE(f(m%np, d2, d3), m%np*d2*d3)
+  ALLOCATE(f(d1, d2, d3), d1*d2*d3)
   
-  f(1:m%np, 1:d2, 1:d3) = vout(1:m%np, 1:d2, 1:d3) - vin(1:m%np, 1:d2, 1:d3)
+  f(1:d1, 1:d2, 1:d3) = vout(1:d1, 1:d2, 1:d3) - vin(1:d1, 1:d2, 1:d3)
   if(iter > 1) then
     ! Store df and dv from current iteration
     ipos = mod(smix%last_ipos, smix%ns) + 1
     
-    call lalg_copy(m%np, d2, d3, f(:, :, :), smix%X(df)(:, :, :, ipos))
-    call lalg_copy(m%np, d2, d3, vin(:, :, :), smix%X(dv)(:, :, :, ipos))
-    call lalg_axpy(m%np, d2, d3, R_TOTYPE(-M_ONE), smix%X(f_old)(:, :, :),   smix%X(df)(:, :, :, ipos))
-    call lalg_axpy(m%np, d2, d3, R_TOTYPE(-M_ONE), smix%X(vin_old)(:, :, :), smix%X(dv)(:, :, :, ipos))
+    call lalg_copy(d1, d2, d3, f(:, :, :), smix%X(df)(:, :, :, ipos))
+    call lalg_copy(d1, d2, d3, vin(:, :, :), smix%X(dv)(:, :, :, ipos))
+    call lalg_axpy(d1, d2, d3, R_TOTYPE(-M_ONE), smix%X(f_old)(:, :, :),   smix%X(df)(:, :, :, ipos))
+    call lalg_axpy(d1, d2, d3, R_TOTYPE(-M_ONE), smix%X(vin_old)(:, :, :), smix%X(dv)(:, :, :, ipos))
 
     
     gamma = M_ZERO
     do i = 1, d2
       do j = 1, d3
-        gamma = gamma + X(mf_integrate)(m, smix%X(df)(:, i, j, ipos)*smix%X(df)(:, i, j, ipos))
+        gamma = gamma + dotp(smix%X(df)(:, i, j, ipos), smix%X(df)(:, i, j, ipos))
       end do
     end do
     gamma = sqrt(gamma)
@@ -103,21 +116,21 @@ subroutine X(mixing_broyden)(smix, m, d2, d3, vin, vout, vnew, iter)
     else
       gamma = M_ONE
     end if
-    call lalg_scal(m%np, d2, d3, gamma, smix%X(df)(:, :, :, ipos))
-    call lalg_scal(m%np, d2, d3, gamma, smix%X(dv)(:, :, :, ipos))
+    call lalg_scal(d1, d2, d3, gamma, smix%X(df)(:, :, :, ipos))
+    call lalg_scal(d1, d2, d3, gamma, smix%X(dv)(:, :, :, ipos))
     
     smix%last_ipos = ipos
   end if
   
   ! Store residual and vin for next iteration
-  smix%X(vin_old)(1:m%np, 1:d2, 1:d3) = vin(1:m%np, 1:d2, 1:d3)
-  smix%X(f_old)  (1:m%np, 1:d2, 1:d3) = f  (1:m%np, 1:d2, 1:d3)
+  smix%X(vin_old)(1:d1, 1:d2, 1:d3) = vin(1:d1, 1:d2, 1:d3)
+  smix%X(f_old)  (1:d1, 1:d2, 1:d3) = f  (1:d1, 1:d2, 1:d3)
   
   ! extrapolate new vector
   iter_used = min(iter - 1, smix%ns)
-  call X(broyden_extrapolation)(smix%alpha, m, d2, d3, vin, vnew, iter_used, f, &
-       smix%X(df)(1:m%np, 1:d2, 1:d3, 1:iter_used), &
-       smix%X(dv)(1:m%np, 1:d2, 1:d3, 1:iter_used))
+  call X(broyden_extrapolation)(smix%alpha, d1, d2, d3, vin, vnew, iter_used, f, &
+       smix%X(df)(1:d1, 1:d2, 1:d3, 1:iter_used), &
+       smix%X(dv)(1:d1, 1:d2, 1:d3, 1:iter_used), dotp)
   
   deallocate(f)
   
@@ -126,13 +139,18 @@ end subroutine X(mixing_broyden)
 
 
 ! ---------------------------------------------------------
-subroutine X(broyden_extrapolation)(alpha, m, d2, d3, vin, vnew, iter_used, f, df, dv)
+subroutine X(broyden_extrapolation)(alpha, d1, d2, d3, vin, vnew, iter_used, f, df, dv, dotp)
   FLOAT,    intent(in)       :: alpha
-  type(mesh_t), intent(in)   :: m
-  integer,  intent(in)       :: d2, d3, iter_used
+  integer,  intent(in)       :: d1, d2, d3, iter_used
   R_TYPE,   intent(in)       :: vin(:, :, :), f(:, :, :)
   R_TYPE,   intent(in)       :: df(:, :, :, :), dv(:, :, :, :)
   R_TYPE,   intent(out)      :: vnew(:, :, :)
+  interface
+    R_TYPE function dotp(x, y) result(res)
+      R_TYPE, intent(in) :: x(:)
+      R_TYPE, intent(in) :: y(:)
+    end function dotp
+  end interface
   
   FLOAT, parameter :: w0 = CNST(0.01)
   integer  :: i, j, k, l
@@ -147,7 +165,7 @@ subroutine X(broyden_extrapolation)(alpha, m, d2, d3, vin, vnew, iter_used, f, d
 
   if (iter_used == 0) then
     ! linear mixing...
-    vnew(1:m%np, 1:d2, 1:d3) = vin(1:m%np, 1:d2, 1:d3) + alpha*f(1:m%np, 1:d2, 1:d3)
+    vnew(1:d1, 1:d2, 1:d3) = vin(1:d1, 1:d2, 1:d3) + alpha*f(1:d1, 1:d2, 1:d3)
     call pop_sub()
     return
   end if
@@ -161,7 +179,7 @@ subroutine X(broyden_extrapolation)(alpha, m, d2, d3, vin, vnew, iter_used, f, d
       beta(i, j) = M_ZERO
       do k = 1, d2
         do l = 1, d3
-          beta(i, j) = beta(i, j) + w(i)*w(j)*X(mf_integrate)(m, df(:, k, l, j)*df(:, k, l, i))
+          beta(i, j) = beta(i, j) + w(i)*w(j)*dotp(df(:, k, l, j), df(:, k, l, i))
         end do
       end do
       beta(j, i) = beta(i, j)
@@ -176,14 +194,14 @@ subroutine X(broyden_extrapolation)(alpha, m, d2, d3, vin, vnew, iter_used, f, d
     work(i) = M_ZERO
     do k = 1, d2
       do l = 1, d3
-        work(i) = work(i) + X(mf_integrate)(m, df(:, k, l, i)*f(:, k, l))
+        work(i) = work(i) + dotp(df(:, k, l, i), f(:, k, l))
       end do
     end do
   end do
   
   
   ! linear mixing term
-  vnew(1:m%np, 1:d2, 1:d3) = vin(1:m%np, 1:d2, 1:d3) + alpha*f(1:m%np, 1:d2, 1:d3)
+  vnew(1:d1, 1:d2, 1:d3) = vin(1:d1, 1:d2, 1:d3) + alpha*f(1:d1, 1:d2, 1:d3)
   
   ! other terms
   do i = 1, iter_used
@@ -191,8 +209,8 @@ subroutine X(broyden_extrapolation)(alpha, m, d2, d3, vin, vnew, iter_used, f, d
     do j = 1, iter_used
       gamma = gamma + beta(j, i)*w(j)*work(j)
     end do
-    vnew(1:m%np, 1:d2, 1:d3) = vnew(1:m%np, 1:d2, 1:d3) - w(i)*gamma*(alpha*df(1:m%np, 1:d2, 1:d3, i) + &
-        dv(1:m%np, 1:d2, 1:d3, i))
+    vnew(1:d1, 1:d2, 1:d3) = vnew(1:d1, 1:d2, 1:d3) - w(i)*gamma*(alpha*df(1:d1, 1:d2, 1:d3, i) + &
+        dv(1:d1, 1:d2, 1:d3, i))
   end do
   
   deallocate(beta, work, w)
@@ -204,21 +222,30 @@ end subroutine X(broyden_extrapolation)
 ! ---------------------------------------------------------
 ! Guaranteed-reduction Pulay
 ! ---------------------------------------------------------
-subroutine X(mixing_grpulay)(smix, m, d2, d3, vin, vout, vnew, iter)
+subroutine X(mixing_grpulay)(smix, vin, vout, vnew, iter, dotp)
   type(mix_t), intent(inout) :: smix
-  type(mesh_t), intent(in)   :: m
-  integer,      intent(in)   :: d2, d3
   integer,      intent(in)   :: iter
   R_TYPE,        intent(in)   :: vin(:, :, :), vout(:, :, :)
   R_TYPE,        intent(out)  :: vnew(:, :, :)
+  interface
+    R_TYPE function dotp(x, y) result(res)
+      R_TYPE, intent(in) :: x(:)
+      R_TYPE, intent(in) :: y(:)
+    end function dotp
+  end interface
   
+  integer :: d1, d2, d3
   integer :: ipos, iter_used
   R_TYPE, allocatable :: f(:, :, :)
     
   call push_sub('mix_inc.Xmixing_grpulay')
+
+  d1 = smix%d1
+  d2 = smix%d2
+  d3 = smix%d3
   
-  ALLOCATE(f(m%np, d2, d3), m%np*d2*d3)
-  f(1:m%np, 1:d2, 1:d3) = vout(1:m%np, 1:d2, 1:d3) - vin(1:m%np, 1:d2, 1:d3)
+  ALLOCATE(f(d1, d2, d3), d1*d2*d3)
+  f(1:d1, 1:d2, 1:d3) = vout(1:d1, 1:d2, 1:d3) - vin(1:d1, 1:d2, 1:d3)
   
   ! we only extrapolate a new vector every two iterations
   select case (mod(iter, 2_i4))
@@ -226,10 +253,10 @@ subroutine X(mixing_grpulay)(smix, m, d2, d3, vin, vout, vnew, iter)
     ! Store df and dv from current iteration
     if (iter > 1) then
       ipos = smix%last_ipos
-      call lalg_copy(m%np, d2, d3, f(:, :, :), smix%X(df)(:, :, :, ipos))
-      call lalg_copy(m%np, d2, d3, vin(:, :, :), smix%X(dv)(:, :, :, ipos))
-      call lalg_axpy(m%np, d2, d3, R_TOTYPE(-M_ONE), smix%X(f_old)(:, :, :), smix%X(df)(:, :, :, ipos))
-      call lalg_axpy(m%np, d2, d3, R_TOTYPE(-M_ONE), smix%X(vin_old)(:, :, :), smix%X(dv)(:, :, :, ipos))
+      call lalg_copy(d1, d2, d3, f(:, :, :), smix%X(df)(:, :, :, ipos))
+      call lalg_copy(d1, d2, d3, vin(:, :, :), smix%X(dv)(:, :, :, ipos))
+      call lalg_axpy(d1, d2, d3, R_TOTYPE(-M_ONE), smix%X(f_old)(:, :, :), smix%X(df)(:, :, :, ipos))
+      call lalg_axpy(d1, d2, d3, R_TOTYPE(-M_ONE), smix%X(vin_old)(:, :, :), smix%X(dv)(:, :, :, ipos))
     end if
     
     ! Store residual and vin for next extrapolation
@@ -242,18 +269,19 @@ subroutine X(mixing_grpulay)(smix, m, d2, d3, vin, vout, vnew, iter)
     ! Store df and dv from current iteration in arrays df and dv so that we can use them_m
     ! for the extrapolation. Next iterations they will be lost.
     ipos = mod(smix%last_ipos, smix%ns + 1) + 1
-    call lalg_copy(m%np, d2, d3, f(:, :, :), smix%X(df)(:, :, :, ipos))
-    call lalg_copy(m%np, d2, d3, vin(:, :, :), smix%X(dv)(:, :, :, ipos))
-    call lalg_axpy(m%np, d2, d3, R_TOTYPE(-M_ONE), smix%X(f_old)(:, :, :), smix%X(df)(:, :, :, ipos))
-    call lalg_axpy(m%np, d2, d3, R_TOTYPE(-M_ONE), smix%X(vin_old)(:, :, :), smix%X(dv)(:, :, :, ipos))
+    call lalg_copy(d1, d2, d3, f(:, :, :), smix%X(df)(:, :, :, ipos))
+    call lalg_copy(d1, d2, d3, vin(:, :, :), smix%X(dv)(:, :, :, ipos))
+    call lalg_axpy(d1, d2, d3, R_TOTYPE(-M_ONE), smix%X(f_old)(:, :, :), smix%X(df)(:, :, :, ipos))
+    call lalg_axpy(d1, d2, d3, R_TOTYPE(-M_ONE), smix%X(vin_old)(:, :, :), smix%X(dv)(:, :, :, ipos))
     
     smix%last_ipos = ipos
     
     ! extrapotate new vector
     iter_used = min(iter/2, smix%ns + 1)
-    call X(pulay_extrapolation)(m, d2, d3, vin, vout, vnew, iter_used, f, &
-         smix%X(df)(1:m%np, 1:d2, 1:d3, 1:iter_used), &
-         smix%X(dv)(1:m%np, 1:d2, 1:d3, 1:iter_used))
+    call X(pulay_extrapolation)(d1, d2, d3, vin, vout, vnew, iter_used, f, &
+         smix%X(df)(1:d1, 1:d2, 1:d3, 1:iter_used), &
+         smix%X(dv)(1:d1, 1:d2, 1:d3, 1:iter_used), dotp)
+
   end select
   
   deallocate(f)
@@ -263,12 +291,17 @@ end subroutine X(mixing_grpulay)
 
 
 ! ---------------------------------------------------------
-subroutine X(pulay_extrapolation)(m, d2, d3, vin, vout, vnew, iter_used, f, df, dv)
-  type(mesh_t), intent(in) :: m
-  integer, intent(in) :: d2, d3
+subroutine X(pulay_extrapolation)(d1, d2, d3, vin, vout, vnew, iter_used, f, df, dv, dotp)
+  integer, intent(in) :: d1, d2, d3
   integer, intent(in)   :: iter_used
   R_TYPE,  intent(in)  :: vin(:, :, :), vout(:, :, :), f(:, :, :), df(:, :, :, :), dv(:, :, :, :)
   R_TYPE,  intent(out) :: vnew(:, :, :)
+  interface
+    R_TYPE function dotp(x, y) result(res)
+      R_TYPE, intent(in) :: x(:)
+      R_TYPE, intent(in) :: y(:)
+    end function dotp
+  end interface
   
   integer :: i, j, k, l
   R_TYPE :: alpha
@@ -285,7 +318,7 @@ subroutine X(pulay_extrapolation)(m, d2, d3, vin, vout, vnew, iter_used, f, df, 
       a(i, j) = M_ZERO
       do k = 1, d2
         do l = 1, d3
-          a(i, j) = a(i, j) + X(mf_integrate)(m, df(:, k, l, j)*df(:, k, l, i))
+          a(i, j) = a(i, j) + dotp(df(:, k, l, j), df(:, k, l, i))
         end do
       end do
       a(j, i) = a(i, j)
@@ -293,7 +326,7 @@ subroutine X(pulay_extrapolation)(m, d2, d3, vin, vout, vnew, iter_used, f, df, 
     a(i, i) = M_ZERO
     do k = 1, d2
       do l = 1, d3
-        a(i, i) = a(i, i) + X(mf_integrate)(m, df(:, k, l, i)*df(:, k, l, i))
+        a(i, i) = a(i, i) + dotp(df(:, k, l, i), df(:, k, l, i))
       end do
     end do
   end do
@@ -313,7 +346,7 @@ subroutine X(pulay_extrapolation)(m, d2, d3, vin, vout, vnew, iter_used, f, df, 
     do j = 1,iter_used
       do k = 1, d2
         do l = 1, d3
-          alpha = alpha - a(i, j)*X(mf_integrate)(m, df(:, k, l, j)*f(:, k, l))
+          alpha = alpha - a(i, j) * dotp(df(:, k, l, j), f(:, k, l))
         end do
       end do
     end do

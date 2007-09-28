@@ -83,7 +83,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine scf_init(gr, geo, scf, st, h)
-    type(grid_t),        intent(inout) :: gr
+    type(grid_t), target, intent(inout) :: gr
     type(geometry_t),    intent(in)    :: geo
     type(scf_t),         intent(inout) :: scf
     type(states_t),      intent(in)    :: st
@@ -183,7 +183,8 @@ contains
     ! Handle mixing now...
     dim = 1
     if (h%d%cdft) dim = 1 + NDIM
-    call mix_init(scf%smix, gr%m, dim, st%d%nspin)
+    call mix_init(scf%smix, gr%m%np, dim, st%d%nspin)
+    call mesh_init_mesh_aux(gr%m)
 
     ! now the eigen solver stuff
     call eigen_solver_init(gr, scf%eigens, st, 25)
@@ -357,13 +358,13 @@ contains
       select case (scf%what2mix)
       case (MIXDENS)
         ! mix input and output densities and compute new potential
-        call dmixing(scf%smix, gr%m, iter, dim, nspin, rhoin, rhoout, rhonew)
+        call dmixing(scf%smix, iter, rhoin, rhoout, rhonew, dmf_dotp_aux)
         st%rho(1:NP,1:nspin) = rhonew(1:NP, 1, 1:nspin)
         if (h%d%cdft) st%j(1:NP,1:NDIM,1:nspin) = rhonew(1:NP, 2:dim, 1:nspin)
         call v_ks_calc(gr, ks, h, st)
       case (MIXPOT)
         ! mix input and output potentials
-        call dmixing(scf%smix, gr%m, iter, dim, nspin, vin, vout, vnew)
+        call dmixing(scf%smix, iter, vin, vout, vnew, dmf_dotp_aux)
         h%vhxc(1:NP, 1:nspin) = vnew(1:NP, 1, 1:nspin)
         if (h%d%cdft) h%axc(1:NP, 1:NDIM, 1:nspin) = vnew(1:NP, 2:dim, 1:nspin)
       end select

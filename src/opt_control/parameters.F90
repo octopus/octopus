@@ -31,6 +31,8 @@ module opt_control_parameters_m
   use filter_m
   use external_pot_m
   use tdf_m
+  use mesh_m
+  use mix_m
 
   implicit none
 
@@ -42,9 +44,9 @@ module opt_control_parameters_m
             parameters_copy,              &
             parameters_to_h,              &
             parameters_write,             &
+            parameters_mixing,            &
             laser_fluence,                &
             j2_functional
-
 
   type oct_control_parameters_t
     integer :: no_parameters
@@ -52,10 +54,51 @@ module opt_control_parameters_m
     integer :: ntiter
     type(tdf_t), pointer :: f(:)
     type(tdf_t), pointer :: td_penalty(:)
+
   end type oct_control_parameters_t
 
+  type(mix_t), public :: parameters_mix
 
   contains
+
+  ! ---------------------------------------------------------
+  subroutine parameters_mixing(iter, par_in, par_out, par_new)
+    integer, intent(in) :: iter
+    type(oct_control_parameters_t), intent(in) :: par_in, par_out
+    type(oct_control_parameters_t), intent(inout) :: par_new
+
+    integer :: i, j
+    FLOAT, allocatable :: e_in(:, :, :), e_out(:, :, :), e_new(:, :, :)
+
+    ALLOCATE(e_in (par_in%ntiter+1, par_in%no_parameters, 1), (par_in%ntiter+1)*par_in%no_parameters)
+    ALLOCATE(e_out(par_in%ntiter+1, par_in%no_parameters, 1), (par_in%ntiter+1)*par_in%no_parameters)
+    ALLOCATE(e_new(par_in%ntiter+1, par_in%no_parameters, 1), (par_in%ntiter+1)*par_in%no_parameters)
+
+    do i = 1, par_in%no_parameters
+      do j = 1, par_in%ntiter + 1
+        e_in (j, i, 1) = tdf(par_in%f(i), j)
+        e_out(j, i, 1) = tdf(par_out%f(i), j)
+      end do
+    end do
+    e_new = M_ZERO
+
+    call dmixing(parameters_mix, iter, e_in, e_out, e_new, dotp)
+
+    do i = 1, par_out%no_parameters
+      call tdf_set_numerical(par_new%f(i), e_new(:, i, 1))
+    end do
+
+    deallocate(e_in, e_out, e_new)
+  end subroutine parameters_mixing
+
+
+  ! ---------------------------------------------------------
+  FLOAT function dotp(x, y) result(res)
+    FLOAT, intent(in) :: x(:)
+    FLOAT, intent(in) :: y(:)
+    res = sum(x(:)*y(:))
+  end function dotp
+
 
   ! ---------------------------------------------------------
   subroutine parameters_init(cp, no_parameters, dt, ntiter)
@@ -75,7 +118,7 @@ module opt_control_parameters_m
       call tdf_init_numerical(cp%f(j), cp%ntiter, cp%dt)
     end do
 
-    call parameters_penalty_init(cp)!, octiter)
+    call parameters_penalty_init(cp)
 
     call pop_sub()
   end subroutine parameters_init
