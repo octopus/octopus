@@ -376,6 +376,7 @@ int FC_FUNC_(oct_minimize, OCT_MINIMIZE)
         break;
 
       if ( (maxgrad <= *tolgrad) || (maxdr <= *toldr) ) status = GSL_SUCCESS;
+      else status = GSL_CONTINUE;
     }
   while (status == GSL_CONTINUE && iter <= *maxiter);
 
