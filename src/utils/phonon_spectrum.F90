@@ -22,20 +22,31 @@
 program phonon_spectrum
   use global_m
   use geometry_m
+  use math_m
   use messages_m
   use datasets_m
   use io_m
   use lib_oct_parser_m
   use units_m
+  use varinfo_m
 
   implicit none
 
+  integer, parameter :: SPEC_VIBRATIONAL = 1, SPEC_INFRARED = 2
+  
+  integer :: mode
+
   integer :: iunit, ierr, ii, jj, iter, read_iter, max_iter, ini_iter, end_iter
   FLOAT :: start_time, end_time
-  FLOAT, allocatable :: vini(:,:), vaf(:), time(:)
-  CMPLX, allocatable :: vafft(:)
+  FLOAT, allocatable :: vaf(:), time(:), dipole(:,:)
+  CMPLX, allocatable :: ftvaf(:), ftdipole(:,:)
   type(geometry_t) :: geo 
-
+  
+  FLOAT :: ww, av, irtotal
+  FLOAT, parameter :: dw = 1.0/hartree_to_cm_inv
+  integer :: ifreq, idir
+  integer, parameter :: max_freq = 10000
+  
   ! Initialize stuff
   call global_init()
   call parser_init()
@@ -46,152 +57,260 @@ program phonon_spectrum
   end if
   call units_init()
 
-  call geometry_init(geo)
-
-  !These variables are documented somewhere else
+  !These variables are documented in src/td/spectrum.F90
   call loct_parse_int(check_inp('TDMaximumIter'), 1500, max_iter)
   call loct_parse_float(check_inp('SpecStartTime'),  M_ZERO, start_time)
   call loct_parse_float(check_inp('SpecEndTime'),  -M_ONE, end_time)
 
+
+  !%Variable SpecVibrational
+  !%Type integer
+  !%Default vibrational
+  !%Section Utilities::oct-vibrational
+  !%Description
+  !% This variable select the kind of spectrum that will be
+  !% calculated from a molecular dynamics run.
+  !%Option vibrational 1
+  !% Vibrational spectrum from the velocity autocorrelation function.
+  !%Option infrared    2
+  !% Infrared spectrum obtained from the dipole moment.
+  !%End
+  call loct_parse_int  (check_inp('SpecVibrational'), SPEC_VIBRATIONAL, mode)
+  if(.not.varinfo_valid_option('SpecVibrational', mode)) call input_error('SpecVibrational')
+
   if (end_time < M_ZERO) end_time = huge(REAL_PRECISION)
 
-  ALLOCATE(vini(1:3, geo%natoms), 3*geo%natoms)
-  ALLOCATE(vaf(0:max_iter),  max_iter-ini_iter)
-  ALLOCATE(time(0:max_iter), max_iter-ini_iter + 2)
+  ALLOCATE(time(0:max_iter+1), max_iter-ini_iter + 2)
   
-  ! Opens the coordinates files.
-  iunit = io_open('td.general/coordinates', action='read')
+  select case(mode)
+    case(SPEC_VIBRATIONAL) 
 
-  call io_skip_header(iunit)
+      call geometry_init(geo)
 
-  ini_iter = -1
-  iter = 0
-  do while(.true.)
+      ALLOCATE(vaf(0:max_iter),  max_iter+1)
 
-    read(unit = iunit, iostat = ierr, fmt = *) read_iter, time(iter), &
-         ((geo%atom(ii)%x(jj), jj = 1, 3), ii = 1, geo%natoms),&
-         ((geo%atom(ii)%v(jj), jj = 1, 3), ii = 1, geo%natoms)
+      call read_vaf(vaf)
 
-    if (ierr /= 0) then 
-      iter = iter - 1 !last iteration is not valid
-      exit
-    end if
-
-    ASSERT(iter == read_iter)
-
-    if (time(iter) >= end_time) exit
-
-    if (time(iter) >= start_time) then
-
-      if(ini_iter == -1) then 
-        ini_iter = iter
-        do ii = 1, geo%natoms
-          vini(1:3, ii) = geo%atom(ii)%v(1:3)
-        end do
+      av = maxval(abs(vaf(ini_iter:end_iter)))
+      
+      if( av < CNST(1e-12)) then 
+        write (message(1), '(a)') "Error: Velocity autocorrelaion function is zero"
+        call write_fatal(1)
       end if
+      
+      vaf(ini_iter:end_iter) = vaf(ini_iter:end_iter)/av
+      
+      ALLOCATE(ftvaf(1:max_freq), max_freq)
+    
+      call fourier(vaf, ftvaf)
 
-      !calculate the vaf
-      vaf(iter) = M_ZERO
-      do ii = 1, geo%natoms
-        vaf(iter) = vaf(iter) + sum(geo%atom(ii)%v(1:3) * vini(1:3, ii))
+      !print the vaf
+      iunit = io_open('td.general/velocity_autocorrelation', action='write')
+      
+      do jj = ini_iter, end_iter
+        write(unit = iunit, iostat = ierr, fmt = *) time(jj), vaf(jj)
       end do
       
-    end if
+      ! print again to see the matching
+      do jj = ini_iter, end_iter
+        write(unit = iunit, iostat = ierr, fmt = *) (time(end_iter)-time(ini_iter)) + time(jj), vaf(jj)
+      end do
+      
+      call io_close(iunit)
+      
+      !and print the spectrum
+      iunit = io_open('td.general/vibrational_spectrum', action='write')
+      
+      do ifreq = 1, max_freq
+        ww = dw * ifreq
+        write(unit = iunit, iostat = ierr, fmt = '(4e20.10)') &
+             ww*hartree_to_cm_inv, abs(ftvaf(ifreq)), real(ftvaf(ifreq)), aimag(ftvaf(ifreq))
+      end do
+      
+      call io_close(iunit)
+      
+      deallocate(vaf, ftvaf)
 
-    iter = iter + 1
-  end do
+      call geometry_end(geo)
 
-  call io_close(iunit)
+    case(SPEC_INFRARED)
 
-  if(ini_iter == 0 ) ini_iter = 1
-  end_iter = iter - 1
+      ALLOCATE(dipole(0:max_iter+1, 1:3),  3*(max_iter+2))
 
-  write (message(1), '(a)') "Read velocities from 'td.general/coordinates'"
-  call write_info(1)
+      call read_dipole(dipole)
 
-  call fourier
+      ALLOCATE(ftdipole(1:max_freq, 1:3), 3*max_freq)
 
-  call geometry_end(geo)
+      do idir = 1, 3
+        call fourier(dipole(:, idir), ftdipole(:, idir))
+      end do
+
+      !and print the spectrum
+      iunit = io_open('td.general/infrared', action='write')
+      
+      do ifreq = 1, max_freq
+        ww = dw * ifreq
+        irtotal = sqrt(sum( abs(ftdipole(ifreq, 1:3))**2 ))
+        write(unit = iunit, iostat = ierr, fmt = '(5e20.10)') &
+             ww*hartree_to_cm_inv, irtotal, abs(ftdipole(ifreq, 1:3))
+      end do
+      call io_close(iunit)
+
+  end select
+  
+  deallocate(time)
+
   call io_end()
   call datasets_end()
   call parser_end()
   call global_end()
-  
+
 contains
+
+  subroutine read_vaf(vaf)
+    FLOAT, intent(out) :: vaf(0:)
+
+    FLOAT, allocatable :: vini(:,:)
+
+    ALLOCATE(vini(1:3, geo%natoms), 3*geo%natoms)
+
+    ! Opens the coordinates files.
+    iunit = io_open('td.general/coordinates', action='read')
+
+    call io_skip_header(iunit)
+
+    ini_iter = -1
+    iter = 0
+    do while(.true.)
+
+      read(unit = iunit, iostat = ierr, fmt = *) read_iter, time(iter), &
+           ((geo%atom(ii)%x(jj), jj = 1, 3), ii = 1, geo%natoms),&
+           ((geo%atom(ii)%v(jj), jj = 1, 3), ii = 1, geo%natoms)
+
+      if (ierr /= 0) then 
+        iter = iter - 1 !last iteration is not valid
+        exit
+      end if
+
+      ASSERT(iter == read_iter)
+
+      if (time(iter) >= end_time) exit
+
+      if (time(iter) >= start_time) then
+
+        if(ini_iter == -1) then 
+          ini_iter = iter
+          do ii = 1, geo%natoms
+            vini(1:3, ii) = geo%atom(ii)%v(1:3)
+          end do
+        end if
+
+        !calculate the vaf
+        vaf(iter) = M_ZERO
+        do ii = 1, geo%natoms
+          vaf(iter) = vaf(iter) + sum(geo%atom(ii)%v(1:3) * vini(1:3, ii))
+        end do
+
+      end if
+
+      iter = iter + 1
+    end do
+
+    call io_close(iunit)
+
+    if(ini_iter == 0 ) ini_iter = 1
+    end_iter = iter - 1
+
+    write (message(1), '(a)') "Read velocities from 'td.general/coordinates'"
+    call write_info(1)
+    
+    deallocate(vini)
+
+  end subroutine read_vaf
+
+  subroutine read_dipole(dipole)
+    FLOAT,   intent(out)   :: dipole(0:, :)
+
+    FLOAT :: charge
+
+    ! Opens the coordinates files.
+    iunit = io_open('td.general/multipoles', action='read')
+
+    call io_skip_header(iunit)
+
+    ini_iter = -1
+    iter = 0
+    do while(.true.)
+
+      read(unit = iunit, iostat = ierr, fmt = *) read_iter, time(iter), &
+           charge, dipole(iter, 1), dipole(iter, 2), dipole(iter, 3)
+
+      if (ierr /= 0) then 
+        iter = iter - 1 !last iteration is not valid
+        exit
+      end if
+
+      ASSERT(iter == read_iter)
+
+      if (time(iter) >= end_time) exit
+
+      if (time(iter) >= start_time .and. ini_iter == -1) then 
+          ini_iter = iter
+      end if
+
+      iter = iter + 1
+    end do
+
+    call io_close(iunit)
+
+    if(ini_iter == 0 ) ini_iter = 1
+    end_iter = iter - 1
+
+    write (message(1), '(a)') "Read dipole moment from 'td.general/multipoles'"
+    call write_info(1)
+  end subroutine read_dipole
   
-  subroutine fourier
+  subroutine fourier(fi, ftfi)
+    FLOAT, intent(inout)  :: fi(:)
+    CMPLX, intent(out)    :: ftfi(:)
+
     FLOAT :: ww, av
-    FLOAT, parameter :: dw = 1.0/hartree_to_cm_inv
-    integer, parameter :: max_freq = 10000
     integer :: ifreq, count
-
-    ALLOCATE(vafft(1:max_freq), max_freq)
-
-    av = maxval(abs(vaf(ini_iter:end_iter)))
-
-    if( av < CNST(1e-12)) then 
-      write (message(1), '(a)') "Error: Velocity autocorrelation function is zero"
-      call write_fatal(1)
-    end if
-
-    vaf(ini_iter:end_iter) = vaf(ini_iter:end_iter)/av
 
     !apply an envelope
     do jj = ini_iter, end_iter
-      vaf(jj) = vaf(jj) * sin((time(jj)-time(ini_iter+1))*M_PI/(time(end_iter)-time(ini_iter)))
+      fi(jj) = fi(jj) * sin((time(jj)-time(ini_iter+1))*M_PI/(time(end_iter)-time(ini_iter)))
     end do
 
     !remove the dc component
     av = M_ZERO
     count = 0
     do jj = ini_iter, end_iter
-      av = av + vaf(jj) * M_HALF*(time(jj+1)-time(jj-1))
+      av = av + fi(jj) * M_HALF*(time(jj+1)-time(jj-1))
       count = count + 1
     end do
     
     do jj = ini_iter, end_iter
-      vaf(jj) = vaf(jj) - av/(M_HALF*(time(jj+1)-time(jj-1))*count)
+      fi(jj) = fi(jj) - av/(M_HALF*(time(jj+1)-time(jj-1))*count)
     end do
 
-    iunit = io_open('td.general/velocity_autocorrelation', action='write')
-
-    do jj = ini_iter, end_iter
-      write(unit = iunit, iostat = ierr, fmt = *) time(jj), vaf(jj)
-    end do
-
-    !print again to see the matching
-    do jj = ini_iter, end_iter
-      write(unit = iunit, iostat = ierr, fmt = *) (time(end_iter)-time(ini_iter)) + time(jj), vaf(jj)
-    end do
-
-    call io_close(iunit)
-
-    write (message(1), '(a)') "Taking the fourier transform of the velocity autocorrelation function"
+    write (message(1), '(a)') "Taking the fourier transform."
     call write_info(1)
 
     !now calculate the FT
     !$omp parallel do private(ww, jj)
     do ifreq = 1, max_freq
       ww = dw * ifreq
-      vafft(ifreq) = M_ZERO
+      ftfi(ifreq) = M_ZERO
       do jj = ini_iter, end_iter
-        vafft(ifreq) = vafft(ifreq) + &
-             exp(M_zI * ww * time(jj) * units_out%time%factor) * vaf(jj)*M_HALF*(time(jj+1)-time(jj-1))
+        ftfi(ifreq) = ftfi(ifreq) + &
+             exp(M_zI * ww * time(jj) * units_out%time%factor) * fi(jj)*M_HALF*(time(jj+1)-time(jj-1))
       end do
     end do
+    !$omp end parallel do
 
     write (message(1), '(a)') "Done."
     call write_info(1)
-
-    iunit = io_open('td.general/vibrational_spectrum', action='write')
-    
-    do ifreq = 1, max_freq
-      ww = dw * ifreq
-      write(unit = iunit, iostat = ierr, fmt = '(4e20.10)') &
-           ww*hartree_to_cm_inv, abs(vafft(ifreq)), real(vafft(ifreq)), aimag(vafft(ifreq))
-    end do
-
-    call io_close(iunit)
 
   end subroutine fourier
 
