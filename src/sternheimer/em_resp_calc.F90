@@ -133,19 +133,21 @@ contains
     FLOAT, intent(in) :: w
 
     write(str, '(f11.4)') w
-    str=trim(adjustl(str))
+    str = trim(adjustl(str))
 
   end function freq2str
 
   character(len=100) function em_rho_tag(w, dir) result(str)
     FLOAT, intent(in) :: w
     integer, intent(in) :: dir
+    character(len=12) :: str_tmp
 
     !this function has to be consistent with oct_search_file_lr in liboct/oct_f.c
 
     call push_sub('em_resp_calc.em_rho_tag')
 
-    write(str, '(a,i1)') 'rho_'//trim(freq2str(w))//'_', dir
+    str_tmp = freq2str(w)
+    write(str, '(3a,i1)') 'rho_', trim(str_tmp), '_', dir
 
     call pop_sub()
 

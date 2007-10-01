@@ -93,7 +93,7 @@ contains
     type(sternheimer_t)     :: sh
 
     integer :: sigma, ndim, i, dir, ierr, iomega, ifactor
-    character(len=80) :: dirname
+    character(len=100) :: dirname, str_tmp
     logical :: complex_response, have_to_calculate
 
     FLOAT :: closest_omega
@@ -135,7 +135,8 @@ contains
 
           ! load wave-functions
           if(.not.fromScratch) then
-            write(dirname,'(a, i1)') RESTART_DIR//trim(em_wfs_tag(dir,ifactor))//'_', sigma
+            str_tmp =  em_wfs_tag(dir, ifactor)
+            write(dirname,'(3a, i1)') RESTART_DIR, trim(str_tmp), '_', sigma
             call restart_read(trim(tmpdir)//dirname, sys%st, sys%gr, sys%geo, &
               ierr, lr=em_vars%lr(dir, sigma, ifactor))
 
@@ -167,9 +168,9 @@ contains
 
           ierr = 0
 
-          write(message(1), '(a,i1,a)') 'Info: Calculating response for direction ', dir, &
-               ' and frequency '//&
-               trim(freq2str(em_vars%freq_factor(ifactor)*em_vars%omega(iomega)/units_out%energy%factor))
+          str_tmp = freq2str(em_vars%freq_factor(ifactor)*em_vars%omega(iomega)/units_out%energy%factor)
+          write(message(1), '(a,i1,2a)') 'Info: Calculating response for direction ', dir, &
+            ' and frequency ' , trim(str_tmp)
           call write_info(1)
 
           have_to_calculate = .true.
@@ -538,11 +539,11 @@ contains
     integer,         intent(in)    :: iomega
     
     integer :: iunit, ifactor
-    character(len=80) :: dirname
+    character(len=80) :: dirname, str_tmp
 
     do ifactor = 1, em_vars%nfactor
-      write(dirname, '(a, a)') 'linear/freq_', trim(freq2str(&
-           em_vars%freq_factor(ifactor)*em_vars%omega(iomega)/units_out%energy%factor))
+      str_tmp = freq2str(em_vars%freq_factor(ifactor)*em_vars%omega(iomega)/units_out%energy%factor)
+      write(dirname, '(a, a)') 'linear/freq_', trim(str_tmp)
       call io_mkdir(trim(dirname))
 
       if(pert_type(em_vars%perturbation) == PERTURBATION_ELECTRIC) then
@@ -554,8 +555,8 @@ contains
 
       call out_projections()
 
-      write(dirname, '(a, a)') 'linear/freq_',trim(freq2str(&
-           em_vars%omega(iomega)/units_out%energy%factor))
+      str_tmp = freq2str(em_vars%omega(iomega)/units_out%energy%factor)
+      write(dirname, '(a, a)') 'linear/freq_', trim(str_tmp)
       call io_mkdir(dirname)
       call out_wavefunctions()
     end do
