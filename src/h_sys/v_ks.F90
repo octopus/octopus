@@ -184,10 +184,6 @@ contains
 
     h%epot     = M_ZERO
     h%ehartree = M_ZERO
-    !$omp parallel workshare
-    h%vhxc     = M_ZERO
-    !$omp end parallel workshare
-    if(h%d%cdft) h%axc = M_ZERO
 
     ! check if we should introduce the amaldi SIC correction
     amaldi_factor = M_ONE
@@ -198,18 +194,27 @@ contains
       call v_hartree()
 
       !$omp parallel workshare
-      h%vhxc(1:NP, 1) = h%vhxc(1:NP, 1) + h%vhartree(1:NP)
+      h%vxc      = M_ZERO
+      !$omp end parallel workshare
+      if(h%d%cdft) h%axc = M_ZERO
+      call v_a_xc()
+
+      !$omp parallel workshare
+      h%vhxc(1:NP, 1) = h%vxc(1:NP, 1) + h%vhartree(1:NP)
       !$omp end parallel workshare
 
       if(h%d%ispin > UNPOLARIZED) then
         !$omp parallel workshare
-        h%vhxc(1:NP, 2) = h%vhxc(1:NP, 2) + h%vhartree(1:NP)
+        h%vhxc(1:NP, 2) = h%vxc(1:NP, 2) + h%vhartree(1:NP)
         !$omp end parallel workshare
       end if
 
-      call v_a_xc()
+    else
+      !$omp parallel workshare
+      h%vhxc     = M_ZERO
+      !$omp end parallel workshare
     end if
-
+    
     ! Calculate the potential vector induced by the electronic current
     ! WARNING: calculating the self-induced magnetic field here only makes
     ! sense if it is going to be used in the Hamiltonian, which does not happen
@@ -281,12 +286,12 @@ contains
       ! Amaldi correction
       if(ks%sic_type == sic_amaldi) rho(1:NP,:) = amaldi_factor*rho(1:NP,:)
 
-      ! Get the *local* xc term, which is added in h%vhxc to the Hartree term.
+      ! Get the *local* xc term
       if(h%d%cdft) then
-        call xc_get_vxc_and_axc(gr, ks%xc, rho, st%j, st%d%ispin, h%vhxc, h%axc, &
+        call xc_get_vxc_and_axc(gr, ks%xc, rho, st%j, st%d%ispin, h%vxc, h%axc, &
              h%ex, h%ec, h%exc_j, -minval(st%eigenval(st%nst, :)), st%qtot)
       else
-        call xc_get_vxc(gr, ks%xc, rho, st%d%ispin, h%vhxc, h%ex, h%ec, &
+        call xc_get_vxc(gr, ks%xc, rho, st%d%ispin, h%vxc, h%ex, h%ec, &
              -minval(st%eigenval(st%nst, :)), st%qtot)
       end if
       deallocate(rho)
@@ -294,22 +299,10 @@ contains
       ! The OEP family has to handle specially
       if (st%d%wfs_type == M_REAL) then
         call dxc_oep_calc(ks%oep, ks%xc, (ks%sic_type==sic_pz),  &
-             gr, h, st, h%vhxc, h%ex, h%ec)
+             gr, h, st, h%vxc, h%ex, h%ec)
       else
         call zxc_oep_calc(ks%oep, ks%xc, (ks%sic_type==sic_pz),  &
-             gr, h, st, h%vhxc, h%ex, h%ec)
-      end if
-
-      ! Get vxc, by substracting the Hartree term.
-      !$omp parallel workshare
-      h%vxc = h%vhxc
-      h%vxc(1:NP, 1) = h%vxc(1:NP, 1) - h%vhartree(1:NP)
-      !$omp end parallel workshare
-
-      if(h%d%ispin > UNPOLARIZED) then 
-        !$omp parallel workshare
-        h%vxc(1:NP, 2) = h%vxc(1:NP, 2) - h%vhartree(1:NP)
-        !$omp end parallel workshare
+             gr, h, st, h%vxc, h%ex, h%ec)
       end if
 
       ! Now we calculate Int[n vxc] = h%epot
