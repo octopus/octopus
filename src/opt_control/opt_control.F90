@@ -131,9 +131,9 @@ contains
     call parameters_write('opt-control/initial_laser', par)
     call parameters_copy(par_tmp, par)
 
-    call mix_init(parameters_mix, td%max_iter + 1, par%no_parameters, 1)
-
     call oct_iterator_init(iterator, oct, par)
+
+    if(oct%use_mixing) call mix_init(parameters_mix, td%max_iter + 1, par%no_parameters, 1)
 
     write(message(1),'(a,f14.8)') 'Input: Fluence of Initial laser ', laser_fluence(par)
     call write_info(1)
@@ -175,6 +175,7 @@ contains
     call parameters_end(par)
     call parameters_end(par_tmp)
     call oct_iterator_end(iterator)
+    if(oct%use_mixing) call mix_end(parameters_mix)
     call filter_end(f)
     call td_end(td)
 
@@ -221,6 +222,7 @@ contains
         end if
 
         if(iteration_manager(oct, gr, par, td, psi, target, iterator)) exit ctr_loop
+        if(clean_stop()) exit ctr_loop
         
         call calc_chi(oct, gr, target, psi, chi)
         call bwd_step(oct_algorithm_zr98, sys, td, h, target, par, par_tmp, chi, psi)
@@ -275,6 +277,7 @@ contains
         call calc_chi(oct, gr, target, psi, chi)
         
         if(iteration_manager(oct, gr, par, td, psi, target, iterator)) exit ctr_loop
+        if(clean_stop()) exit ctr_loop
         
         call bwd_step(oct_algorithm_wg05, sys, td, h, target, par, par_tmp, chi, psi)
 
@@ -348,6 +351,7 @@ contains
         call parameters_write(filename, par)
         
         if(iteration_manager(oct, gr, par, td, psi, target, iterator)) exit ctr_loop
+        if(clean_stop()) exit ctr_loop
 
         ! and now backward
         call calc_chi(oct, gr, target, psi, chi)

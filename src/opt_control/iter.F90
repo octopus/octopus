@@ -59,6 +59,7 @@
     iterator%ctr_iter       = 0
 
     ALLOCATE(iterator%convergence(4,0:iterator%ctr_iter_max),(iterator%ctr_iter_max+1)*4)
+    iterator%convergence = M_ZERO
 
     iterator%bestJ1          = M_ZERO
     iterator%bestJ1_fluence  = M_ZERO
