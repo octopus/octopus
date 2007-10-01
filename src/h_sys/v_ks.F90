@@ -199,6 +199,8 @@ contains
       if(h%d%cdft) h%axc = M_ZERO
       call v_a_xc()
 
+      ! Build Hartree + xc potential
+
       !$omp parallel workshare
       h%vhxc(1:NP, 1) = h%vxc(1:NP, 1) + h%vhartree(1:NP)
       !$omp end parallel workshare
@@ -207,6 +209,12 @@ contains
         !$omp parallel workshare
         h%vhxc(1:NP, 2) = h%vxc(1:NP, 2) + h%vhartree(1:NP)
         !$omp end parallel workshare
+      end if
+
+      if(h%d%ispin == SPINORS) then
+        !$omp parallel workshare
+        h%vhxc(1:NP, 3:4) = h%vxc(1:NP, 3:4)
+        !$omp end parallel workshare        
       end if
 
     else
