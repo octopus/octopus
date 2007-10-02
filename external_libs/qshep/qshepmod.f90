@@ -108,15 +108,20 @@ module qshepmod_m
       call qshep2 ( npoints, x, y, f, interp%nq, interp%nw, interp%nr, interp%lcell(:, :, 1), &
                     interp%lnext, interp%xmin, interp%ymin, interp%dx, interp%dy, &
                     interp%rmax, interp%rsq, interp%a, ier )
-      interp%x => x
-      interp%y => y
+      allocate(interp%x(npoints))
+      allocate(interp%y(npoints))
+      interp%x = x
+      interp%y = y
     case(3)
       call qshep3 ( npoints, x, y, z, f, interp%nq, interp%nw, interp%nr, interp%lcell, &
                     interp%lnext, interp%xyzmin, interp%xyzdel, interp%rmax, interp%rsq, &
                     interp%a, ier )
-      interp%x => x
-      interp%y => y
-      interp%z => z
+      allocate(interp%x(npoints))
+      allocate(interp%y(npoints))
+      allocate(interp%z(npoints))
+      interp%x = x
+      interp%y = y
+      interp%z = z
     end select
 
   end subroutine init_qshepr
@@ -205,8 +210,12 @@ module qshepmod_m
   subroutine kill_qshepr(interp)
     type(qshepr_t), intent(inout) :: interp
     if(associated(interp%lcell)) then
+      deallocate(interp%lcell, interp%lnext, interp%rsq, interp%a, interp%x, interp%y)
       nullify(interp%lcell, interp%lnext, interp%rsq, interp%a, interp%x, interp%y)
-      if(interp%dim .eq. 3) nullify(interp%z)
+      if(interp%dim .eq. 3) then
+         deallocate(interp%z)
+         nullify(interp%z)
+      end if
     end if
   end subroutine kill_qshepr
 
