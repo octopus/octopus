@@ -126,7 +126,7 @@ contains
 
         h%ep%vpsl(1:NP) = vpsl_save(1:NP) + (-1)**k*gr%m%x(1:NP, i)*e_field
 
-        call scf_run(scfv, sys%gr, sys%geo, st, sys%ks, h, sys%outp, gs_run=.false.)
+        call scf_run(scfv, sys%gr, sys%geo, st, sys%ks, h, sys%outp, gs_run=.false., verbosity = VERB_COMPACT)
 
         trrho = M_ZERO
         do is = 1, st%d%spin_channels

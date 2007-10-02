@@ -60,9 +60,7 @@ module geom_opt_m
     MINMETHOD_FR_CG            = 2, &
     MINMETHOD_PR_CG            = 3, &
     MINMETHOD_BFGS             = 4, &
-    MINMETHOD_BFGS2            = 5, &
-    MINMETHOD_SIMPLEX          = 6
-
+    MINMETHOD_BFGS2            = 5
 
   type(geometry_t),    pointer :: geo
   type(hamiltonian_t), pointer :: hamilt
@@ -224,8 +222,6 @@ contains
       !% The bfgs2 version of this minimizer is the most efficient version available, 
       !% and is a faithful implementation of the line minimization scheme described in 
       !% Fletcher, _Practical Methods of Optimization_, Algorithms 2.6.2 and 2.6.4.
-      !%Option simplex 6
-      !% This is the Simplex algorithm of Nelder and Mead.
       !%End
       call loct_parse_int(check_inp('GOMethod'), MINMETHOD_STEEPEST_DESCENT, g_opt%method)
       if(.not.varinfo_valid_option('GOMethod', g_opt%method)) call input_error('GOMethod')
@@ -320,7 +316,7 @@ contains
     call hamiltonian_energy(hamilt, syst%gr, geo, st, -1)
 
     ! do scf calculation
-    call scf_run(scfv, syst%gr, geo, st, syst%ks, hamilt, syst%outp)
+    call scf_run(scfv, syst%gr, geo, st, syst%ks, hamilt, syst%outp, verbosity = VERB_COMPACT)
 
     ! store results
     f = hamilt%etot

@@ -62,6 +62,11 @@ module scf_m
     MIXPOT  = 1,        &
     MIXDENS = 2
 
+  integer, public, parameter :: &
+    VERB_NO      = 0,   &
+    VERB_COMPACT = 1,   &
+    VERB_FULL    = 3
+  
   type scf_t      ! some variables used for the scf cycle
     integer :: max_iter   ! maximum number of scf iterations
 
@@ -228,7 +233,7 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine scf_run(scf, gr, geo, st, ks, h, outp, gs_run, verbose)
+  subroutine scf_run(scf, gr, geo, st, ks, h, outp, gs_run, verbosity)
     type(scf_t),         intent(inout) :: scf
     type(grid_t),        intent(inout) :: gr
     type(geometry_t),    intent(inout) :: geo
@@ -237,18 +242,19 @@ contains
     type(hamiltonian_t), intent(inout) :: h
     type(output_t),      intent(in)    :: outp
     logical, optional,   intent(in)    :: gs_run
-    logical, optional,   intent(in)    :: verbose
+    integer, optional,   intent(in)    :: verbosity 
 
     type(lcao_t) :: lcao_data
 
     integer :: iter, is, idim, nspin, dim, err
     FLOAT :: evsum_out, evsum_in
-    real(8) :: etime
+    real(8) :: etime, itime
     FLOAT, allocatable :: rhoout(:,:,:), rhoin(:,:,:), rhonew(:,:,:)
     FLOAT, allocatable :: vout(:,:,:), vin(:,:,:), vnew(:,:,:)
     FLOAT, allocatable :: tmp(:)
     character(len=8) :: dirname
-    logical :: finish, forced_finish, gs_run_, verbose_
+    logical :: finish, forced_finish, gs_run_
+    integer :: verbosity_
 
     call push_sub('scf.scf_run')
 
@@ -258,8 +264,8 @@ contains
       gs_run_ = .true.
     end if
     
-    verbose_ = .true.
-    if(present(verbose)) verbose_ = verbose
+    verbosity_ = VERB_FULL
+    if(present(verbosity)) verbosity_ = verbosity
 
     if(scf%lcao_restricted) then
       call lcao_init(gr, geo, lcao_data, st, h)
@@ -296,11 +302,15 @@ contains
     end if
     evsum_in = states_eigenvalues_sum(st)
 
+    if ( verbosity_ == VERB_COMPACT ) then
+      write(message(1),'(a)') 'Info: Starting SCF iteration'
+      call write_info(1)
+    end if
+
     ! SCF cycle
+    itime = loct_clock()
     do iter = 1, scf%max_iter
       call profiling_in(C_PROFILING_SCF_CYCLE)
-
-      etime = loct_clock()
 
       if(scf%lcao_restricted) then
         call lcao_wf(lcao_data, st, gr, h)
@@ -352,7 +362,9 @@ contains
         (scf%conv_abs_ev   > M_ZERO .and. scf%abs_ev   <= scf%conv_abs_ev)   .or. &
         (scf%conv_rel_ev   > M_ZERO .and. scf%rel_ev   <= scf%conv_rel_ev)
 
-      if(verbose_) call scf_write_iter
+      etime = loct_clock() - itime
+      itime = etime + itime
+      call scf_write_iter
 
       ! mixing
       select case (scf%what2mix)
@@ -384,7 +396,7 @@ contains
       end if
 
       if(finish) then
-        if(verbose_) then
+        if(verbosity_ >= VERB_COMPACT) then
           write(message(1), '(a, i4, a)') 'Info: SCF converged in ', iter, ' iterations'
           write(message(2), '(a)')        '' 
           call write_info(2)
@@ -471,33 +483,46 @@ contains
 
       call push_sub('scf.scf_write_iter')
 
-      write(str, '(a,i5)') 'SCF CYCLE ITER #' ,iter
-      call messages_print_stress(stdout, trim(str))
+      if ( verbosity_ == VERB_FULL ) then
 
-      write(message(1),'(a,es15.8,2(a,es9.2))') ' etot = ', h%etot/units_out%energy%factor, &
-        ' abs_ev   = ', scf%abs_ev/units_out%energy%factor, ' rel_ev   = ', scf%rel_ev
-      write(message(2),'(23x,2(a,es9.2))') &
-        ' abs_dens = ', scf%abs_dens, ' rel_dens = ', scf%rel_dens
-      call write_info(2)
+        write(str, '(a,i5)') 'SCF CYCLE ITER #' ,iter
+        call messages_print_stress(stdout, trim(str))
 
-      if(.not.scf%lcao_restricted) then
-        write(message(1),'(a,i6)') 'Matrix vector products: ', scf%eigens%matvec
-        write(message(2),'(a,i6)') 'Converged eigenvectors: ', scf%eigens%converged
+        write(message(1),'(a,es15.8,2(a,es9.2))') ' etot = ', h%etot/units_out%energy%factor, &
+             ' abs_ev   = ', scf%abs_ev/units_out%energy%factor, ' rel_ev   = ', scf%rel_ev
+        write(message(2),'(23x,2(a,es9.2))') &
+             ' abs_dens = ', scf%abs_dens, ' rel_dens = ', scf%rel_dens
         call write_info(2)
-        call states_write_eigenvalues(stdout, st%nst, st, gr%sb, scf%eigens%diff)
-      else
-        call states_write_eigenvalues(stdout, st%nst, st, gr%sb)
+
+        if(.not.scf%lcao_restricted) then
+          write(message(1),'(a,i6)') 'Matrix vector products: ', scf%eigens%matvec
+          write(message(2),'(a,i6)') 'Converged eigenvectors: ', scf%eigens%converged
+          call write_info(2)
+          call states_write_eigenvalues(stdout, st%nst, st, gr%sb, scf%eigens%diff)
+        else
+          call states_write_eigenvalues(stdout, st%nst, st, gr%sb)
+        end if
+
+        if(st%d%ispin > UNPOLARIZED) then
+          call write_magnetic_moments(stdout, gr%m, st)
+        end if
+
+        write(message(1),'(a)') ''
+        write(message(2),'(a,f14.2)') 'Elapsed time for SCF step:', etime
+        call write_info(2)
+
+        call messages_print_stress(stdout)
+        
       end if
 
-      if(st%d%ispin > UNPOLARIZED) then
-        call write_magnetic_moments(stdout, gr%m, st)
+      if ( verbosity_ == VERB_COMPACT ) then
+        write(message(1),'(a,i4,a,es15.8, a,es9.2, a, f7.1, a)') &
+             'iter ', iter, &
+             ' : etot ', h%etot/units_out%energy%factor, &
+             ' : abs_dens', scf%abs_dens, &
+             ' : etime ', etime, 's'
+        call write_info(1)
       end if
-
-      write(message(1),'(a)') ''
-      write(message(2),'(a,f14.2)') 'Elapsed time for SCF step:', loct_clock() - etime
-      call write_info(2)      
-
-      call messages_print_stress(stdout)
 
       call pop_sub()
     end subroutine scf_write_iter
