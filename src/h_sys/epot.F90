@@ -104,16 +104,11 @@ module external_pot_m
     ! The gyromagnetic ratio (-2.0 for the electron, but different if we treat
     ! *effective* electrons in a quantum dot. It affects the spin Zeeman term.
     FLOAT :: gyromagnetic_ratio
-    integer :: forces
     logical :: gen_grads
 #ifdef HAVE_MPI
     logical :: parallel_generate
 #endif
   end type epot_t
-
-  integer, parameter :: &
-       DERIVATE_POTENTIAL = 1,      &
-       DERIVATE_WAVEFUNCTION  = 2
 
 contains
 
@@ -314,24 +309,7 @@ contains
     !%End
     call loct_parse_float(check_inp('GyromagneticRatio'), P_g, ep%gyromagnetic_ratio)
 
-    !%Variable Forces
-    !%Type integer
-    !%Default derivate_potential
-    !%Section Hamiltonian
-    !%Description
-    !% The forces can be calculated either by derivating the ionic
-    !% potential or the wavefunctions. This option selects how to
-    !% calculate them. By default the wavefunctions are derived.
-    !% Note: The option derivate_potential is deprecated and will be
-    !% eliminated soon.
-    !%Option derivate_potential 1
-    !% Derivate the potential to calculate the forces.
-    !%Option derivate_wavefunctions 2
-    !% Derivate the wavefunctions to calculate the forces.
-    !%End
-    call loct_parse_int(check_inp('Forces'), DERIVATE_WAVEFUNCTION, ep%forces)
-
-    ep%gen_grads = (ep%forces == DERIVATE_POTENTIAL)
+    ep%gen_grads = .false.
 
 #ifdef HAVE_MPI
     !%Variable ParallelPotentialGeneration

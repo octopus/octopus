@@ -34,132 +34,81 @@ subroutine X(calc_forces_from_potential)(gr, geo, ep, st, time)
   type(atom_t), pointer :: atm
 
   ALLOCATE(force(1:NP, 1:NDIM), NP*NDIM)
+  ALLOCATE(gpsi(gr%m%np, 1:NDIM, st%d%dim), gr%m%np*NDIM*st%d%dim)
+  ALLOCATE(grho(NP, MAX_DIM), NP*MAX_DIM)
 
-  select case(ep%forces)
-    
-  case(DERIVATE_POTENTIAL)
-    
-    atm_loop: do ii = 1, geo%natoms
-      atm => geo%atom(ii)
+  !$omp parallel workshare
+  grho(1:NP, 1:NDIM) = M_ZERO
+  !$omp end parallel workshare    
 
-      !the local part
+  !the non-local part
+  do ik = 1, st%d%nik
+    do ist = st%st_start, st%st_end
 
-      if(.not.simul_box_is_periodic(gr%sb).or.geo%only_user_def) then !we do it in real space
+      ! calculate the gradient of the wave-function
+      do idim = 1, st%d%dim
+        call X(f_gradient)(gr%sb, gr%f_der, st%X(psi)(:, idim, ist, ik), gpsi(:, :, idim))
 
-        ns = min(2, st%d%nspin)
-
-        call specie_get_glocal(atm%spec, gr, atm%x, force, time)
-
-        do ip = 1, NP
-          force(ip, 1:NDIM) = sum(st%rho(ip, 1:ns))*force(ip, 1:NDIM)
-        end do
-
-        do idir = 1, NDIM
-          atm%f(idir) = atm%f(idir) - dmf_integrate(gr%m, force(:, idir))
-        end do
-        
-      end if
-      
-    end do atm_loop
-
-    ASSERT(NDIM == 3)
-    
-    ! iterate over the projectors
-    do ivnl = 1, ep%nvnl
-
-      atm => geo%atom(ep%p(ivnl)%iatom)
-
-      ik_loop: do ik = 1, st%d%nik
-        st_loop: do ist = st%st_start, st%st_end
-          
-          zz = X(psidprojectpsi)(gr%m, ep%p(ivnl:ivnl), 1, st%d%dim, st%X(psi)(:, :, ist, ik), &
-               periodic = .false., ik = ik)
-          atm%f(1:MAX_DIM) = atm%f(1:MAX_DIM) + M_TWO * R_REAL(st%occ(ist, ik) * zz(1:MAX_DIM))
-          
-        end do st_loop
-      end do ik_loop
-
-    end do
-
-  case(DERIVATE_WAVEFUNCTION)
-
-    ALLOCATE(gpsi(gr%m%np, 1:NDIM, st%d%dim), gr%m%np*NDIM*st%d%dim)
-    ALLOCATE(grho(NP, MAX_DIM), NP*MAX_DIM)
-
-    !$omp parallel workshare
-    grho(1:NP, 1:NDIM) = M_ZERO
-    !$omp end parallel workshare    
-
-    !the non-local part
-    do ik = 1, st%d%nik
-      do ist = st%st_start, st%st_end
-        
-        ! calculate the gradient of the wave-function
-        do idim = 1, st%d%dim
-          call X(f_gradient)(gr%sb, gr%f_der, st%X(psi)(:, idim, ist, ik), gpsi(:, :, idim))
-          
-          !accumulate to calculate the gradient of the density
-          do idir = 1, NDIM
-            !$omp parallel workshare
-            grho(1:NP, idir) = grho(1:NP, idir) + st%d%kweights(ik)*st%occ(ist, ik) * M_TWO * &
-                 R_REAL(st%X(psi)(1:NP, idim, ist, ik) * R_CONJ(gpsi(1:NP, idir, idim)))
-            !$omp end parallel workshare
-          end do
-        end do
-
-        ! iterate over the projectors
-        do ivnl = 1, ep%nvnl
-          
-          !get the atom corresponding to this projector
-          atm => geo%atom(ep%p(ivnl)%iatom)
-
-          do idir = 1, NDIM
-
-            psi_proj_gpsi = X(psia_project_psib)(gr%m, ep%p(ivnl), st%d%dim, &
-                 st%X(psi)(:, :, ist, ik), gpsi(:, idir, :), reltype = 0, periodic = .false., ik = ik)
-            
-            atm%f(idir) = atm%f(idir) - M_TWO * st%occ(ist, ik) * R_REAL(psi_proj_gpsi)
-
-          end do
-        
-        end do !invl
-        
-      end do
-    end do
-
-    deallocate(gpsi)
-
-    !now add the local part
-
-    if(.not.simul_box_is_periodic(gr%sb).or.geo%only_user_def) then !we do it in real space
-
-      ALLOCATE(vloc(1:NP), NP)
-      
-      do ii = 1, geo%natoms
-        atm => geo%atom(ii)
-
-        !$omp parallel workshare
-        vloc(1:NP) = M_ZERO
-        !$omp end parallel workshare
-
-        call build_local_part_in_real_space(ep, gr, geo, atm, vloc, time)
-        
+        !accumulate to calculate the gradient of the density
         do idir = 1, NDIM
           !$omp parallel workshare
-          force(1:NP, idir) = grho(1:NP, idir) * vloc(1:NP)
+          grho(1:NP, idir) = grho(1:NP, idir) + st%d%kweights(ik)*st%occ(ist, ik) * M_TWO * &
+               R_REAL(st%X(psi)(1:NP, idim, ist, ik) * R_CONJ(gpsi(1:NP, idir, idim)))
           !$omp end parallel workshare
-          atm%f(idir) = atm%f(idir) - dmf_integrate(gr%m, force(:, idir))
         end do
       end do
-      
-      deallocate(vloc)
 
-    end if
-    
-  end select
-  
+      ! iterate over the projectors
+      do ivnl = 1, ep%nvnl
+
+        !get the atom corresponding to this projector
+        atm => geo%atom(ep%p(ivnl)%iatom)
+
+        do idir = 1, NDIM
+
+          psi_proj_gpsi = X(psia_project_psib)(gr%m, ep%p(ivnl), st%d%dim, &
+               st%X(psi)(:, :, ist, ik), gpsi(:, idir, :), reltype = 0, periodic = .false., ik = ik)
+
+          atm%f(idir) = atm%f(idir) - M_TWO * st%occ(ist, ik) * R_REAL(psi_proj_gpsi)
+
+        end do
+
+      end do !invl
+
+    end do
+  end do
+
+  deallocate(gpsi)
+
+  !now add the local part
+
+  if(.not.simul_box_is_periodic(gr%sb).or.geo%only_user_def) then !we do it in real space
+
+    ALLOCATE(vloc(1:NP), NP)
+
+    do ii = 1, geo%natoms
+      atm => geo%atom(ii)
+
+      !$omp parallel workshare
+      vloc(1:NP) = M_ZERO
+      !$omp end parallel workshare
+
+      call build_local_part_in_real_space(ep, gr, geo, atm, vloc, time)
+
+      do idir = 1, NDIM
+        !$omp parallel workshare
+        force(1:NP, idir) = grho(1:NP, idir) * vloc(1:NP)
+        !$omp end parallel workshare
+        atm%f(idir) = atm%f(idir) - dmf_integrate(gr%m, force(:, idir))
+      end do
+    end do
+
+    deallocate(vloc)
+
+  end if
+
   deallocate(force)
-  
+
 end subroutine X(calc_forces_from_potential)
 
 !This function calculates |cpsi> = [x,V_nl] |psi>

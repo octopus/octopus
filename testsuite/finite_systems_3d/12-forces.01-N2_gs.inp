@@ -8,7 +8,7 @@ SystemName = "N2"
 CalculationMode = gs
 FromScratch = yes
 
-bond_length = 2.0744
+bond_length = 2.7
 %Coordinates
 "N" |  -bond_length/2 |  0.0 |  0.0 | no
 "N" |   bond_length/2 |  0.0 |  0.0 | no
@@ -33,7 +33,5 @@ EigenSolverMaxIter = 20
 TypeOfMixing = broyden
 
 PoissonSolver = fft_corrected
-
-Forces=derivate_potential
 
 ParallelizationStrategy=par_domains
