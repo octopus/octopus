@@ -102,53 +102,6 @@ subroutine X(hgh_project)(mesh, sm, hgh_p, dim, psi, ppsi, reltype, phases)
 
 end subroutine X(hgh_project)
 
-
-!------------------------------------------------------------------------------
-! X(hgh_dproject) calculates:
-!  \sum_{ij}^3\sum{k}^3 p%h(i,j) <psi|hgh_p%dp(:, k, i)><hgh_p%p(:, j)|psi>
-! Here the spin-orbit coupling will always be ignored.
-!------------------------------------------------------------------------------
-function X(hgh_dproject)(mesh, sm, hgh_p, dim, psi, phases) result(res)
-  type(mesh_t),          intent(in) :: mesh
-  type(submesh_t),       intent(in) :: sm
-  type(hgh_projector_t), intent(in) :: hgh_p
-  integer,               intent(in) :: dim
-  R_TYPE,                intent(in) :: psi(:, :)  ! psi(hgh%n_s, dim)
-  CMPLX, optional,       intent(in) :: phases(:)
-  R_TYPE :: res(3)
-
-  integer :: n_s, i, j, k, idim
-  R_TYPE :: uvpsi
-  R_TYPE, allocatable :: ppsi(:)
-
-  res = R_TOTYPE(M_ZERO)
-  n_s = hgh_p%n_s
-  ALLOCATE(ppsi(n_s), n_s)
-
-  do idim = 1, dim
-    do j = 1, 3
-      if (all(hgh_p%h(:, j) == M_ZERO)) cycle
-      uvpsi = X(dsm_integrate_prod)(mesh, sm, psi(1:n_s, idim), hgh_p%p(1:n_s, j))
-
-      do i = 1, 3
-        if (hgh_p%h(i, j) == M_ZERO) cycle
-        do k = 1, 3
-          if (present(phases)) then
-            ppsi(1:n_s) = hgh_p%h(i, j) * uvpsi * hgh_p%dp(1:n_s, k, i) * R_CONJ(phases(1:n_s))
-          else
-            ppsi(1:n_s) = hgh_p%h(i, j) * uvpsi * hgh_p%dp(1:n_s, k, i)
-          end if
-          ppsi(1:n_s) = R_CONJ(psi(1:n_s, idim)) * ppsi(1:n_s)
-          res(k) = res(k) + X(sm_integrate)(mesh, sm, ppsi(1:n_s))
-        end do
-      end do
-    end do
-  end do
-
-  deallocate(ppsi)
-
-end function X(hgh_dproject)
-
 !! Local Variables:
 !! mode: f90
 !! coding: utf-8

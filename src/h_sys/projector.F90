@@ -59,8 +59,6 @@ module projector_m
        projector_init_phases,     &
        dproject_psi,              &
        zproject_psi,              &
-       dpsidprojectpsi,           &
-       zpsidprojectpsi,           &
        dproject_sphere,           &
        zproject_sphere,           &
        dpsia_project_psib,        &

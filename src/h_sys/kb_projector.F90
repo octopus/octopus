@@ -46,7 +46,6 @@ module kb_projector_m
        kb_projector_broadcast,     &
 #endif
        dkb_project, zkb_project,   &
-       dkb_dproject, zkb_dproject, &
        kb_projector_end
 
   type kb_projector_t
@@ -54,7 +53,6 @@ module kb_projector_m
     integer          :: n_s       ! number of points inside the sphere
     integer          :: n_c       ! number of components per projector
     FLOAT,   pointer :: p(:,:)    ! projectors
-    FLOAT,   pointer :: dp(:,:,:) ! projectors derivatives
     FLOAT            :: e(2)      ! KB energies
   end type kb_projector_t
 
@@ -68,7 +66,6 @@ contains
     call push_sub('kb_projector.kb_projector_null')
 
     nullify(kb_p%p)
-    nullify(kb_p%dp)
 
     call pop_sub()
   end subroutine kb_projector_null
@@ -96,17 +93,12 @@ contains
     kb_p%n_c = n_c
 
     ALLOCATE(kb_p%p (kb_p%n_s, n_c),    kb_p%n_s*n_c)
-    ALLOCATE(kb_p%dp(kb_p%n_s, 3, n_c), kb_p%n_s*3*n_c)
     kb_p%p = M_ZERO
-    kb_p%dp = M_ZERO
     
     if (gr%sb%periodic_dim == 0) then 
 
       do ic = 1, n_c
         call double_grid_apply_non_local(gr%dgrid, a%spec, gr%m, sm, a%x, kb_p%p(:, ic), l, lm, ic)
-        if (gen_grads) then
-          call double_grid_apply_gnon_local(gr%dgrid, a%spec, gr%m, sm, a%x, kb_p%dp(:,:,ic), l, lm, ic)
-        end if
       end do
 
     else 
@@ -121,7 +113,6 @@ contains
           do ic = 1, n_c
             call specie_real_nl_projector(a%spec, x, l, lm, ic, v, dv)
             kb_p%p(j, ic) = v
-            kb_p%dp(j, :, ic) = dv
           end do
         end do
       end do
@@ -168,7 +159,6 @@ contains
       end if
       kb_p%n_c = n_c
       ALLOCATE(kb_p%p (kb_p%n_s, n_c),    kb_p%n_s*n_c)
-      ALLOCATE(kb_p%dp(kb_p%n_s, 3, n_c), kb_p%n_s*3*n_c)
       
       do i = 1, n_c
         kb_p%e(i) = a%spec%ps%h(l, i, i)
@@ -185,10 +175,6 @@ contains
 
     call MPI_Bcast(kb_p%p, kb_p%n_s*kb_p%n_c, MPI_FLOAT, root, mc%group_comm(P_STRATEGY_STATES), mpi_err)
 
-    if (gen_grads) then 
-      call MPI_Bcast(kb_p%dp, kb_p%n_s*3*kb_p%n_c, MPI_FLOAT, root, mc%group_comm(P_STRATEGY_STATES), mpi_err)
-    end if
-
     call pop_sub()
   end subroutine kb_projector_broadcast
 #endif
@@ -199,7 +185,6 @@ contains
     call push_sub('kb_projector.kb_projector_end')
 
     if (associated(kb_p%p))  deallocate(kb_p%p)
-    if (associated(kb_p%dp)) deallocate(kb_p%dp)
 
     call pop_sub()
   end subroutine kb_projector_end

@@ -60,51 +60,6 @@ subroutine X(kb_project)(mesh, sm, kb_p, dim, psi, ppsi, phases)
 end subroutine X(kb_project)
 
 
-!------------------------------------------------------------------------------
-! X(kb_dproject) calculates:
-!  \sum_{i}^kb_p%n_c\sum{k}^3 p%e(i) <psi|kb_p%dp(:, k, i)><kb_p%p(:, i)|psi>
-!------------------------------------------------------------------------------
-function X(kb_dproject)(mesh, sm, kb_p, dim, psi, phases) result(res)
-  type(mesh_t),         intent(in) :: mesh
-  type(submesh_t),      intent(in) :: sm
-  type(kb_projector_t), intent(in) :: kb_p
-  integer,              intent(in) :: dim
-  R_TYPE,               intent(in) :: psi(:, :)  ! psi(kb%n_s, dim)
-  CMPLX, optional,      intent(in) :: phases(:)
-  R_TYPE :: res(3)
-
-  integer :: n_s, i, k, idim
-  R_TYPE :: uvpsi
-  R_TYPE, allocatable :: ppsi(:)
-
-  call push_sub('kb_projector_inc.kb_dproject')
-
-  res = R_TOTYPE(M_ZERO)
-  n_s = kb_p%n_s
-  ALLOCATE(ppsi(n_s), n_s)
-
-  do idim = 1, dim
-    do i = 1, kb_p%n_c
-      if (kb_p%e(i) == M_ZERO) cycle
-      uvpsi = X(dsm_integrate_prod)(mesh, sm, psi(1:n_s, idim), kb_p%p(1:n_s, i))
-
-      do k = 1, 3
-        if (present(phases)) then
-          ppsi(1:n_s) = kb_p%e(i) * uvpsi * kb_p%dp(1:n_s, k, i) * R_CONJ(phases(1:n_s))
-        else
-          ppsi(1:n_s) = kb_p%e(i) * uvpsi * kb_p%dp(1:n_s, k, i)
-        end if
-        ppsi(1:n_s) = R_CONJ(psi(1:n_s, idim)) * ppsi(1:n_s)
-        res(k) = res(k) + X(sm_integrate)(mesh, sm, ppsi)
-      end do
-    end do
-  end do
-
-  deallocate(ppsi)
-
-  call pop_sub()
-end function X(kb_dproject)
-
 !! Local Variables:
 !! mode: f90
 !! coding: utf-8

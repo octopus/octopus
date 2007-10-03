@@ -41,7 +41,6 @@ module hgh_projector_m
        hgh_projector_null,           &
        hgh_projector_init,           &
        dhgh_project, zhgh_project,   &
-       dhgh_dproject, zhgh_dproject, &
        hgh_projector_end
 
   
@@ -50,7 +49,6 @@ module hgh_projector_m
     private
     integer        :: n_s         ! number of points inside the sphere
     FLOAT, pointer :: p(:, :)     ! projectors
-    FLOAT, pointer :: dp(:, :, :) ! projectors derivatives
     FLOAT, pointer :: lp(:, :, :) ! angular momentum times projectors
     FLOAT          :: h(3, 3)     ! parameters
     FLOAT          :: k(3, 3)     ! spin-orbit parameters
@@ -66,7 +64,6 @@ contains
     call push_sub('hgh_projector.hgh_projector_null')
 
     nullify(hgh_p%p)
-    nullify(hgh_p%dp)
     nullify(hgh_p%lp)
     hgh_p%h = M_ZERO
     hgh_p%k = M_ZERO
@@ -89,7 +86,6 @@ contains
 
     hgh_p%n_s = sm%ns
     ALLOCATE(hgh_p%p (hgh_p%n_s, 3),    hgh_p%n_s*3)
-    ALLOCATE(hgh_p%dp(hgh_p%n_s, 3, 3), hgh_p%n_s*3*3)
     ALLOCATE(hgh_p%lp(hgh_p%n_s, 3, 3), hgh_p%n_s*3*3)
 
     do j = 1, hgh_p%n_s
@@ -103,7 +99,6 @@ contains
         do i = 1, 3
           call specie_real_nl_projector(a%spec, x, l, lm, i, v, dv(1:3))
           hgh_p%p(j, i) = v
-          hgh_p%dp(j, :, i) = dv(:)
           hgh_p%lp(j, 1, i) = x(2)*dv(3) - x(3)*dv(2)
           hgh_p%lp(j, 2, i) = x(3)*dv(1) - x(1)*dv(3)
           hgh_p%lp(j, 3, i) = x(1)*dv(2) - x(2)*dv(1)
@@ -124,7 +119,6 @@ contains
     call push_sub('hgh_projector.hgh_projector_end')
 
     if (associated(hgh_p%p))      deallocate(hgh_p%p)
-    if (associated(hgh_p%dp))     deallocate(hgh_p%dp)
     if (associated(hgh_p%lp))   deallocate(hgh_p%lp)
 
     call pop_sub()
