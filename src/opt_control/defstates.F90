@@ -184,6 +184,8 @@
       write(message(2),'(a)') "Choosing the ground state."
       call write_info(2)
     end select
+
+    call states_calc_dens(initial_state, NP_PART, initial_state%rho)
     
     call pop_sub()
   end subroutine def_istate

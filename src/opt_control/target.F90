@@ -180,28 +180,16 @@ module opt_control_target_m
         call write_info(2)
         call input_error('OCTTargetTransformStates')
       end if
-      
 
     case(oct_tg_userdefined) 
-      message(1) =  'Info: Using userdefined state for Targetoperator'
-      call write_info(1)
-      !%Variable OCTInitialUserdefined
-      !%Type block
-      !%Section Optimal Control
-      !%Description
-      !% 
-      !% Example:
-      !%
-      !% <tt>%UserDefinedStates
-      !% <br>&nbsp;&nbsp; 1 | 1 | 1 |  "exp(-r^2)*exp(-i*0.2*x)"
-      !% <br>%</tt>
-      !%  
-      !%End
+      message(1) =  'Error: Option oct_tg_userdefined is disabled in this version'
+      call write_fatal(1)
 
     case(oct_tg_local) 
 
       message(1) =  'Info: Using Local Target'
       call write_info(1)
+
 
       !%Variable OCTLocalTarget
       !%Type string
@@ -211,30 +199,79 @@ module opt_control_target_m
       !% that should be searched for. This one can do by supplying a string through
       !% the variable OCTLocalTarget.
       !%End
+
+
+      !%Variable OCTTargetDensityState
+      !%Type block
+      !%Default no
+      !%Section Optimal Control
+      !%Description
+      !% If OCTTargetOperator = oct_tg_local, and OCTLocalTarget = "OCTTargetDensityState",
+      !% you must specify one OCTTargetDensityState block, in order to specify which linear
+      !% combination of the states present in "restart/gs" is used to
+      !% create the target density.
+      !%
+      !% The syntax is equivalent to the one used for the TransformStates
+      !% block.
+      !%End
+
       if(loct_parse_isdef('OCTLocalTarget').ne.0) then
         ALLOCATE(target%rho(NP), NP)
         target%rho = M_ZERO
         call loct_parse_string('OCTLocalTarget', "0", expression)
-        call conv_to_C_string(expression)
-        do ip = 1, NP
-          call mesh_r(gr%m, ip, r, x = x)
-          ! parse user defined expression
-          call loct_parse_expression(psi_re, psi_im, &
-            x(1), x(2), x(3), r, M_ZERO, expression)
-          target%rho(ip) = psi_re
-        end do
-        ! Normalize
-        r = dmf_integrate(gr%m, target%rho)
-        !call lalg_scal(NP, M_ONE/r, target%rho)
-        target%rho = target%rho/r
+
+
+        if(trim(expression).eq.'OCTTargetDensityState') then
+
+          if(loct_parse_block(check_inp('OCTTargetDensityState'), blk) == 0) then
+            tmp_st = target%st
+            deallocate(tmp_st%zpsi)
+            call restart_look_and_read("tmp", tmp_st, gr, geo, ierr)
+            ALLOCATE(rotation_matrix(target%st%nst, tmp_st%nst), target%st%nst*tmp_st%nst)
+            rotation_matrix = M_z0
+            do ist = 1, target%st%nst
+              do jst = 1, loct_parse_block_cols(blk, ist-1)
+                call loct_parse_block_cmplx(blk, ist-1, jst-1, rotation_matrix(ist, jst))
+              end do
+            end do
+            call rotate_states(gr%m, target%st, tmp_st, rotation_matrix)
+            deallocate(rotation_matrix)
+            call states_calc_dens(target%st, NP_PART, target%st%rho)
+            do ip = 1, NP
+              target%rho(ip) = sum(target%st%rho(ip, 1:target%st%d%spin_channels))
+            end do
+            call states_end(tmp_st)
+          else
+            message(1) = '"OCTTargetDensityState" has to be specified as block.'
+            call write_info(1)
+            call input_error('OCTTargetTransformStates')
+          end if
+
+        else
+
+          call conv_to_C_string(expression)
+          do ip = 1, NP
+            call mesh_r(gr%m, ip, r, x = x)
+            ! parse user defined expression
+            call loct_parse_expression(psi_re, psi_im, &
+              x(1), x(2), x(3), r, M_ZERO, expression)
+            target%rho(ip) = psi_re
+          end do
+          ! Normalize
+          r = dmf_integrate(gr%m, target%rho)
+          !call lalg_scal(NP, M_ONE/r, target%rho)
+          target%rho = target%rho/r
+        end if
+
       else
         message(1) = 'If OCTTargetOperator = oct_tg_local, then you must give the shape'
         message(2) = 'of this target in variable "OCTLocalTarget"'
         call write_fatal(2)
       end if
-      
+
     case(oct_tg_td_local)
-      target%st%zpsi(:,1,1,1) = M_z0
+      message(1) =  'Error: Option oct_tg_td_local is disabled in this version'
+      call write_fatal(1)
 
     case default
       write(message(1),'(a)') "Target Operator not properly defined."
