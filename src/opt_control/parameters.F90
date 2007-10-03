@@ -43,6 +43,7 @@ module opt_control_parameters_m
             parameters_end,               &
             parameters_copy,              &
             parameters_to_h,              &
+            parameters_to_h_val,          &
             parameters_write,             &
             parameters_mixing,            &
             laser_fluence,                &
@@ -145,18 +146,26 @@ module opt_control_parameters_m
   subroutine parameters_to_h(cp, ep)
     type(oct_control_parameters_t), intent(in) :: cp
     type(epot_t), intent(inout) :: ep
-
     integer :: j
-
     call push_sub('opt_control_paramters.parameters_to_h')
-
     do j = 1, cp%no_parameters
       call tdf_end(ep%lasers(j)%f)
       ep%lasers(j)%f = cp%f(j)
     end do
-
     call pop_sub()
   end subroutine parameters_to_h
+
+
+  ! ---------------------------------------------------------
+  subroutine parameters_to_h_val(cp, ep, val)
+    type(oct_control_parameters_t), intent(in) :: cp
+    type(epot_t), intent(inout) :: ep
+    integer, intent(in) :: val
+    integer :: j
+    do j = 1, cp%no_parameters
+        call tdf_set_numerical(ep%lasers(j)%f, val, tdf(cp%f(j), val))
+    end do
+  end subroutine parameters_to_h_val
 
 
   ! ---------------------------------------------------------

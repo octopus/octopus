@@ -317,6 +317,11 @@ contains
     subroutine scheme_zbr98
       integer :: ierr
       type(oct_control_parameters_t) :: par_new, par_prev
+
+!!!!DEBUG
+      FLOAT :: etime
+!!!!ENDOFDEBUG
+
       call push_sub('opt_control.scheme_zbr98')
       
       message(1) = "Info: Starting OCT iteration using scheme: ZBR98"
@@ -328,7 +333,10 @@ contains
       else
         call calc_chi(oct, gr, target, psi, chi)
         call parameters_to_h(par, h%ep)
+        etime =  loct_clock()
         call propagate_backward(sys, h, td, chi)
+        etime = loct_clock() - etime
+        write(0, *) 'PROPAGATE_BACKWARD OUTPUT', etime
       end if
 
       ctr_loop: do
@@ -343,7 +351,10 @@ contains
         ! forward propagation
         call states_end(psi)
         call states_copy(psi, initial_st)
+        etime = loct_clock()
         call fwd_step(oct_algorithm_zbr98, sys, td, h, target, par, par_tmp, chi, psi)
+        etime = loct_clock() - etime
+        write(0, *) 'FWD_STEP OUTPUT', etime
 
         write(filename,'(a,i3.3)') 'opt-control/PsiT.', iterator%ctr_iter
         call states_output(psi, gr, filename, sys%outp)
@@ -355,7 +366,10 @@ contains
 
         ! and now backward
         call calc_chi(oct, gr, target, psi, chi)
+        etime = loct_clock()
         call bwd_step(oct_algorithm_zbr98, sys, td, h, target, par, par_tmp, chi, psi)
+        etime = loct_clock() - etime
+        write(0, *) 'BWD_STEP OUTPUT', etime
 
         if(oct%use_mixing) then
           call parameters_mixing(iterator%ctr_iter, par_prev, par_tmp, par_new)

@@ -68,7 +68,6 @@ module opt_control_propagation_m
 
     integer :: ierr, ii, i
     logical :: write_iter_ = .false.
-    FLOAT, allocatable :: dens(:,:)
     type(grid_t),  pointer :: gr
     type(td_write_t)           :: write_handler
 
@@ -84,16 +83,12 @@ module opt_control_propagation_m
         (td%move_ions>0), h%ep%with_gauge_field, td%iter, td%dt)
     end if
 
-    ALLOCATE(dens(NP_PART, psi_n%d%nspin), NP_PART*psi_n%d%nspin) 
-
     ! setup the hamiltonian
-    call states_calc_dens(psi_n, NP_PART, dens)
-    psi_n%rho = dens
+    call states_calc_dens(psi_n, NP_PART, psi_n%rho)
     call v_ks_calc(gr, sys%ks, h, psi_n)
     call td_rti_run_zero_iter(h, td%tr)
 
     ii = 1
-
     do i = 1, td%max_iter
       ! time iterate wavefunctions
       call td_rti_dt(sys%ks, h, gr, psi_n, td%tr, abs(i*td%dt), abs(td%dt), td%max_iter)
@@ -102,8 +97,7 @@ module opt_control_propagation_m
       if(target%targetmode==oct_targetmode_td) call calc_tdfitness(target, gr, psi_n, i)
       
       ! update
-      call states_calc_dens(psi_n, NP_PART, dens)
-      psi_n%rho = dens
+      call states_calc_dens(psi_n, NP_PART, psi_n%rho)
       call v_ks_calc(gr, sys%ks, h, psi_n)
       call hamiltonian_energy(h, sys%gr, sys%geo, psi_n, -1)
 
@@ -117,11 +111,9 @@ module opt_control_propagation_m
           call td_write_data(write_handler, gr, psi_n, h, sys%outp, sys%geo, td%dt, i) 
         end if
       end if
-
     end do
 
     if(write_iter_) call td_write_end(write_handler)
-    deallocate(dens)
     call pop_sub()
   end subroutine propagate_forward
 
@@ -137,7 +129,6 @@ module opt_control_propagation_m
     type(states_t), intent(inout)      :: psi_n
 
     integer :: i
-    FLOAT, allocatable :: dens(:,:)
     type(grid_t),  pointer :: gr
 
     call push_sub('propagation.propagate_backward')
@@ -147,12 +138,9 @@ module opt_control_propagation_m
 
     gr => sys%gr
 
-    ALLOCATE(dens(NP_PART, psi_n%d%nspin), NP_PART*psi_n%d%nspin) 
-
     ! setup the hamiltonian
-    call states_calc_dens(psi_n, NP_PART, dens)
-    psi_n%rho = dens
-    call v_ks_calc(gr, sys%ks, h, psi_n)!, calc_eigenval=.true.)
+    call states_calc_dens(psi_n, NP_PART, psi_n%rho)
+    call v_ks_calc(gr, sys%ks, h, psi_n)
     call td_rti_run_zero_iter(h, td%tr)
 
     td%dt = -td%dt
@@ -160,14 +148,11 @@ module opt_control_propagation_m
       ! time iterate wavefunctions
       call td_rti_dt(sys%ks, h, gr, psi_n, td%tr, abs(i*td%dt), td%dt, td%max_iter)
       ! update
-      call states_calc_dens(psi_n, NP_PART, dens)
-      psi_n%rho = dens
-      call v_ks_calc(gr, sys%ks, h, psi_n)!, calc_eigenval=.true.)
-      
+      call states_calc_dens(psi_n, NP_PART, psi_n%rho)
+      call v_ks_calc(gr, sys%ks, h, psi_n)
     end do
     td%dt = -td%dt
     
-    deallocate(dens)
     call pop_sub()
   end subroutine propagate_backward
 
@@ -196,24 +181,19 @@ module opt_control_propagation_m
     type(states_t), intent(inout)                 :: chi
     type(states_t), intent(inout)                 :: psi
 
-    integer :: i, nspin
-    FLOAT, allocatable :: dens_tmp(:,:)
+    integer :: i
     type(states_t) :: psi2
     type(grid_t), pointer :: gr
 
     call push_sub('propagation.fwd_step')
 
     gr => sys%gr
-    nspin = psi%d%nspin
-    ALLOCATE(dens_tmp(NP_PART, nspin), NP_PART*nspin) 
-
     psi2 = psi
     
     ! setup forward propagation
     call states_densities_init(psi, gr, sys%geo)
-    call states_calc_dens(psi, NP_PART, dens_tmp)
-    psi%rho = dens_tmp
-    call v_ks_calc(gr, sys%ks, h, psi)!, calc_eigenval=.true.)
+    call states_calc_dens(psi, NP_PART, psi%rho)
+    call v_ks_calc(gr, sys%ks, h, psi)
     call td_rti_run_zero_iter(h, td%tr)
 
     message(1) = "Info: Propagating forward"
@@ -224,62 +204,30 @@ module opt_control_propagation_m
       if(target%targetmode==oct_targetmode_td) then
         call calc_inh(psi2, gr, target, i, td%max_iter, td%dt, chi)
         call parameters_to_h(par, h%ep)
-        call states_calc_dens(psi2, NP_PART, dens_tmp)
-        psi2%rho = dens_tmp
-        call v_ks_calc(gr, sys%ks, h, psi2)!, calc_eigenval=.true.)
+        call states_calc_dens(psi2, NP_PART, psi2%rho)
+        call v_ks_calc(gr, sys%ks, h, psi2)
         call td_rti_dt(sys%ks, h, gr, psi2, td%tr, abs(i*td%dt), abs(td%dt), td%max_iter)
       end if
 
       call update_field(method, i-1, par, gr, td, h, psi, chi)
-      call prop_iter_fwd(i, gr, sys%ks, h, td, par_tmp, chi)
-      call prop_iter_fwd(i, gr, sys%ks, h, td, par, psi)
+      call prop_iter(i, gr, sys%ks, h, td, par_tmp, chi)
+      call prop_iter(i, gr, sys%ks, h, td, par, psi)
 
       if(target%targetmode==oct_targetmode_td) call calc_tdfitness(target, gr, psi, i) 
 
     end do
 
-    call states_end(psi2)
+    call states_calc_dens(psi, NP_PART, psi%rho)
+    call v_ks_calc(gr, sys%ks, h, psi)
 
+    call states_end(psi2)
     nullify(gr)
-    deallocate(dens_tmp) 
-     
     call pop_sub()
   end subroutine fwd_step
 
 
-  ! ----------------------------------------------------------
-  ! Performs one step of forward propagation.
-  ! ----------------------------------------------------------
-  subroutine prop_iter_fwd(iter, gr, ks, h, td, par, st)
-    integer, intent(in)                        :: iter
-    type(grid_t), intent(inout)                :: gr
-    type(v_ks_t), intent(inout)                :: ks
-    type(hamiltonian_t), intent(inout)         :: h
-    type(td_t), intent(inout)                  :: td
-    type(oct_control_parameters_t), intent(in) :: par
-    type(states_t), intent(inout)              :: st
-
-    FLOAT, allocatable :: dens_tmp(:,:)
-    integer :: nspin
-    
-    call push_sub('propagation.prop_iter_fwd_')
-
-    nspin = st%d%nspin
-    ALLOCATE(dens_tmp(NP_PART, nspin), NP_PART*nspin) 
-
-    call parameters_to_h(par, h%ep)
-    call states_calc_dens(st, NP_PART, dens_tmp)
-    st%rho = dens_tmp
-    call v_ks_calc(gr, ks, h, st)
-    call td_rti_dt(ks, h, gr, st, td%tr, abs(iter*td%dt), abs(td%dt), td%max_iter)
-
-    deallocatE(dens_tmp)
-    call pop_sub()
-  end subroutine prop_iter_fwd
-
-
   ! --------------------------------------------------------
-  ! Performs a forward propagation on the state psi and on the
+  ! Performs a backward propagation on the state psi and on the
   ! lagrange-multiplier state chi, according to the following
   ! scheme:
   !
@@ -298,8 +246,7 @@ module opt_control_propagation_m
     type(states_t), intent(inout)                 :: chi
     type(states_t), intent(inout)                 :: psi
 
-    integer :: i, nspin
-    FLOAT, allocatable :: dens_tmp(:,:)
+    integer :: i
     type(grid_t), pointer :: gr
 
     call push_sub('propagation.bwd_step')
@@ -308,13 +255,8 @@ module opt_control_propagation_m
     call write_info(1)
 
     gr => sys%gr
-    nspin = psi%d%nspin
 
-    ALLOCATE(dens_tmp(NP_PART, nspin), NP_PART*nspin) 
-
-    ! setup backward propagation
-    call states_calc_dens(chi, NP_PART, dens_tmp)
-    chi%rho = dens_tmp
+    call states_calc_dens(chi, NP_PART, chi%rho)
     call v_ks_calc(gr, sys%ks, h, chi)
     call td_rti_run_zero_iter(h, td%tr)
 
@@ -323,12 +265,15 @@ module opt_control_propagation_m
       if(target%targetmode==oct_targetmode_td) &
         call calc_inh(psi, gr, target, i, td%max_iter, td%dt, chi)
       call update_field(method, i+1, par_tmp, gr, td, h, psi, chi)
-      call prop_iter_bwd(i, gr, sys%ks, h, td, par_tmp, chi)
-      call prop_iter_bwd(i, gr, sys%ks, h, td, par, psi)
+      call prop_iter(i, gr, sys%ks, h, td, par_tmp, chi)
+      call prop_iter(i, gr, sys%ks, h, td, par, psi)
     end do
     td%dt = -td%dt
 
-    deallocate(dens_tmp)
+    call states_calc_dens(psi, NP_PART, psi%rho)
+    call v_ks_calc(gr, sys%ks, h, psi)
+    call states_calc_dens(chi, NP_PART, chi%rho)
+
     call pop_sub()
   end subroutine bwd_step
 
@@ -336,34 +281,31 @@ module opt_control_propagation_m
   ! ----------------------------------------------------------
   ! Performs one step of forward propagation.
   ! ----------------------------------------------------------
-  subroutine prop_iter_bwd(iter, gr, ks, h, td, par, st)
-    integer, intent(in) :: iter
-    type(grid_t), intent(inout) :: gr
-    type(v_ks_t), intent(inout) :: ks
-    type(hamiltonian_t), intent(inout) :: h
-    type(td_t), intent(inout) :: td
+  subroutine prop_iter(iter, gr, ks, h, td, par, st)
+    integer, intent(in)                        :: iter
+    type(grid_t), intent(inout)                :: gr
+    type(v_ks_t), intent(inout)                :: ks
+    type(hamiltonian_t), intent(inout)         :: h
+    type(td_t), intent(inout)                  :: td
     type(oct_control_parameters_t), intent(in) :: par
-    type(states_t), intent(inout) :: st
+    type(states_t), intent(inout)              :: st
 
-    FLOAT, allocatable :: dens_tmp(:,:)
+    integer :: j
+    call push_sub('propagation.prop_iter')
 
-    integer :: nspin
-    
-    call push_sub('propagation.prop_iter_bwd')
-
-    nspin = st%d%nspin
-
-    ALLOCATE(dens_tmp(NP_PART, nspin), NP_PART*nspin) 
-
-    call parameters_to_h(par, h%ep)
-    call states_calc_dens(st, NP_PART, dens_tmp)
-    st%rho = dens_tmp
-    call v_ks_calc(gr, ks, h, st)
+    do j = iter - 2, iter + 2
+      if(j >= 0 .and. j<=td%max_iter) then
+        call parameters_to_h_val(par, h%ep, j+1)
+      end if
+    end do
+    if(.not.h%ip_app) then
+      call states_calc_dens(st, NP_PART, st%rho)
+      call v_ks_calc(gr, ks, h, st)
+    end if
     call td_rti_dt(ks, h, gr, st, td%tr, abs(iter*td%dt), td%dt, td%max_iter)
 
-    deallocate(dens_tmp)
     call pop_sub()
-  end subroutine prop_iter_bwd
+  end subroutine prop_iter
 
 
   ! ---------------------------------------------------------
