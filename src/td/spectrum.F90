@@ -237,7 +237,7 @@ contains
         write(iunit, '(a15,3f18.12)') '# wprime       ', k%wprime(1:3)
       end if
 
-    elseif(present(out)) then
+    else if(present(out)) then
       write(aux, '(a15,i2)')      '# kick mode    ', k%delta_strength_mode
       call write_iter_string(out, aux)
       call write_iter_nl(out)
@@ -301,15 +301,17 @@ contains
         read(iunit, '("# multipole    ",2i3,f18.12)') k%l(i), k%m(i), k%weight(i)
       end do
     else
+      k%n_multipoles = 0
+      nullify(k%l)
+      nullify(k%m)
       backspace(iunit)
+
       read(iunit, '(15x,3f18.12)') k%pol(1:3, 1)
       read(iunit, '(15x,3f18.12)') k%pol(1:3, 2)
       read(iunit, '(15x,3f18.12)') k%pol(1:3, 3)
       read(iunit, '(15x,i2)')      k%pol_dir
       read(iunit, '(15x,i2)')      k%pol_equiv_axis
       read(iunit, '(15x,3f18.12)') k%wprime(1:3)
-      k%l = 0
-      k%m = 0
     end if
 
     call pop_sub()
