@@ -24,8 +24,7 @@
   ! case, or else \int_0^T dt <Psi(t)|\hat{O}(t)|Psi(t) in 
   ! the time-dependent case.
   ! ---------------------------------------------------------
-  FLOAT function j1(oct, m, max_iter, psi, target)
-    type(oct_t), intent(in)    :: oct
+  FLOAT function j1(m, max_iter, psi, target)
     type(mesh_t), intent(in)   :: m
     integer, intent(in)        :: max_iter
     type(states_t), intent(in) :: psi
@@ -69,24 +68,55 @@
     type(states_t),    intent(inout) :: chi_out
     
     CMPLX   :: olap
-    integer :: ik, p, dim, j
+    integer :: ik, p, dim, j, no_electrons
   
     call push_sub('opt_control.calc_chi')
 
-    if(target%targetmode==oct_targetmode_static) then
-      if(target%totype.eq.oct_tg_local) then
-        do ik = 1, psi_in%d%nik
+    no_electrons = -nint(psi_in%val_charge)
+
+    if(target%targetmode == oct_targetmode_td) then
+      message(1) = 'Info: Time-dependent Target selected'
+      call write_info(1)
+      chi_out%zpsi = M_z0
+      call pop_sub()
+      return
+    end if
+
+
+    select case(target%totype)
+
+    case(oct_tg_local)
+
+      select case(psi_in%d%ispin)
+      case(UNPOLARIZED)
+
+        ASSERT(psi_in%d%nik.eq.1)
+
+        if(no_electrons .eq. 1) then
+          do j = 1, NP
+            chi_out%zpsi(j, 1, 1, 1) = sqrt(target%rho(j)) * &
+              exp( M_z1 * atan2(aimag(psi_in%zpsi(j, 1, 1, 1)), &
+                                real(psi_in%zpsi(j, 1, 1, 1)  )) )
+          end do
+        else
           do p  = psi_in%st_start, psi_in%st_end
-            do dim = 1, psi_in%d%dim
-              do j = 1, NP
-                chi_out%zpsi(j, dim, p, ik) = sqrt(target%rho(j)) * &
-                  exp( M_z1 * atan2(aimag(psi_in%zpsi(j, dim, p, ik)), &
-                                    real(psi_in%zpsi(j, dim, p, ik)  )) )
-              end do
+            do j = 1, NP_PART
+              if(psi_in%rho(j, 1) > CNST(1.0e-8)) then
+                chi_out%zpsi(j, 1, p, 1) = sqrt(target%rho(j)/psi_in%rho(j, 1)) * &
+                  psi_in%zpsi(j, 1, p, 1)
+              else
+                chi_out%zpsi(j, 1, p, 1) = M_ZERO!sqrt(target%rho(j))
+              end if
             end do
           end do
-        end do
-      else ! totype nonlocal 
+        end if
+
+      case(SPIN_POLARIZED)
+      case(SPINORS)
+      end select
+
+    case default
+
         olap = zstates_mpdotp(gr%m, target%st, psi_in)
         do ik = 1, psi_in%d%nik
           do p  = psi_in%st_start, psi_in%st_end
@@ -99,13 +129,9 @@
               chi_out%zpsi(:,:,p,ik) = olap*target%st%zpsi(:, :, p, ik)
           end do
         end do
-      end if
-    else
-      ! time-dependent target
-      message(1) = 'Info: Time-dependent Target selected'
-      call write_info(1)
-      chi_out%zpsi = M_z0
-    end if
+
+    end select
+
       
     call pop_sub()
   end subroutine calc_chi

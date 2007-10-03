@@ -19,9 +19,8 @@
 
 
   ! ---------------------------------------------------------
-  subroutine oct_iterator_init(iterator, oct, par)
+  subroutine oct_iterator_init(iterator, par)
     type(oct_iterator_t), intent(inout)        :: iterator
-    type(oct_t), intent(in)                    :: oct
     type(oct_control_parameters_t), intent(in) :: par
 
     call push_sub('opt_control_iter.oct_iter_init')
@@ -103,7 +102,7 @@
     
     stoploop = .false.
 
-    overlap = j1(oct, gr%m, td%max_iter, psi, target)
+    overlap = j1(gr%m, td%max_iter, psi, target)
     fluence = laser_fluence(par)
     j2 = j2_functional(par)
     jfunctional = overlap - j2

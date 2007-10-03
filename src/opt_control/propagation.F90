@@ -66,7 +66,7 @@ module opt_control_propagation_m
     type(states_t),      intent(inout) :: psi_n
     logical, optional, intent(in)      :: write_iter
 
-    integer :: ierr, ii, i
+    integer :: ii, i
     logical :: write_iter_ = .false.
     type(grid_t),  pointer :: gr
     type(td_write_t)           :: write_handler
@@ -256,8 +256,8 @@ module opt_control_propagation_m
 
     gr => sys%gr
 
-    call states_calc_dens(chi, NP_PART, chi%rho)
-    call v_ks_calc(gr, sys%ks, h, chi)
+    call states_calc_dens(psi, NP_PART, psi%rho)
+    call v_ks_calc(gr, sys%ks, h, psi)
     call td_rti_run_zero_iter(h, td%tr)
 
     td%dt = -td%dt
@@ -326,7 +326,7 @@ module opt_control_propagation_m
     
     CMPLX :: d1
     CMPLX, allocatable  :: dl(:), dq(:)
-    integer :: ik, p, dim, i, j
+    integer :: ik, p, i, j
     FLOAT :: value
 
     call push_sub('propagation.update_field')

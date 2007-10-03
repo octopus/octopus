@@ -19,8 +19,7 @@
 
 
   ! ---------------------------------------------------------
-  subroutine output(oct, iterator)
-    type(oct_t), intent(in)          :: oct
+  subroutine output(iterator)
     type(oct_iterator_t), intent(in) :: iterator
 
     integer :: iunit, loop, ierr

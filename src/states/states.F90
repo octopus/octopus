@@ -860,6 +860,7 @@ contains
     stout%d%cdft = stin%d%cdft
     stout%nst           = stin%nst
     stout%qtot = stin%qtot
+    stout%val_charge = stin%val_charge
     stout%el_temp = stin%el_temp
     stout%ef = stin%ef
     stout%parallel_in_states = stin%parallel_in_states
