@@ -52,9 +52,7 @@ module specie_pot_m
     specie_pot_init,          &
     specie_pot_end,           &
     specie_get_density,       & 
-    specie_get_gdensity,      &
-    specie_get_local,         &
-    specie_get_glocal
+    specie_get_local
 
   integer, parameter :: INITRHO_PARAMAGNETIC  = 1, &
                         INITRHO_FERROMAGNETIC = 2, &
@@ -509,44 +507,6 @@ contains
     call pop_sub()
   end subroutine specie_get_density
 
-  subroutine specie_get_gdensity(s, pos, gr, rho)
-    type(specie_t),             intent(in)  :: s
-    FLOAT,                      intent(in)  :: pos(MAX_DIM)
-    type(grid_t),               intent(in)  :: gr
-    FLOAT,                      intent(out) :: rho(:, :)
-
-    FLOAT   :: x(1:MAX_DIM), r
-    integer :: ip
-    type(loct_spline_t) :: drho_corr
-
-    call push_sub('specie_grid.specie_get_density')
-
-    select case(s%type)
-
-    case(SPEC_PS_PSF, SPEC_PS_HGH, SPEC_PS_CPI, SPEC_PS_FHI, SPEC_PS_UPF)
-
-      call loct_spline_init(drho_corr)
-      call loct_spline_der(s%ps%nlr, drho_corr)
-
-      do ip = 1, gr%m%np
-        x(1:MAX_DIM) = pos(1:MAX_DIM) - gr%m%x(ip, 1:MAX_DIM)
-        r = sqrt(sum(x(1:MAX_DIM)**2))
-        if ( r > CNST(1e-10) ) then 
-          rho(ip, 1:MAX_DIM) = loct_splint(drho_corr, r)*x(1:MAX_DIM)/r
-        else
-          rho(ip, 1:MAX_DIM) = M_ZERO
-        end if
-      end do
-      
-      call loct_spline_init(drho_corr)
-
-    end select
-
-    call pop_sub()
-  end subroutine specie_get_gdensity
-
-
-  ! ---------------------------------------------------------
   subroutine func(xin, f, jacobian)
     FLOAT :: xin(:), f(:), jacobian(:,:)
 
@@ -681,110 +641,6 @@ contains
       end select
       
   end subroutine specie_get_local
-
-  ! ---------------------------------------------------------
-  ! returns the gradient of the external potential
-  ! ---------------------------------------------------------
-  subroutine specie_get_glocal(s, gr, x_atom, gv, time)
-    type(specie_t),  intent(in) :: s
-    type(grid_t),    intent(inout) :: gr
-    FLOAT,           intent(in) :: x_atom(MAX_DIM)
-    FLOAT,          intent(out) :: gv(:, :)
-    FLOAT, optional, intent(in) :: time
-
-    FLOAT, parameter :: Delta = CNST(1e-4)
-    FLOAT :: x(MAX_DIM), r, l1, l2, pot_re, pot_im, time_
-    FLOAT, allocatable :: grho(:, :), gpot(:)
-    integer :: i, ip
-    type(submesh_t) :: sm
-    FLOAT, allocatable :: dvls(:,:)
-
-    call push_sub('specie_pot.specie_get_glocal')
-
-    gv    = M_ZERO
-
-    time_ = M_ZERO
-    if (present(time)) time_ = time
-
-    select case(s%type)
-    case(SPEC_USDEF)
-
-      do ip = 1, gr%m%np
-        x(:) = gr%m%x(ip, :) - x_atom(:)
-        r = sqrt(sum(x(:)**2))
-        ! Note that as the s%user_def is in input units, we have to convert
-        ! the units back and forth
-        x(:) = x(:)/units_inp%length%factor      ! convert from a.u. to input units
-        r = r / units_inp%length%factor 
-        do i = 1, NDIM
-          x(i) = x(i) - Delta/units_inp%length%factor
-          call loct_parse_expression(pot_re, pot_im,           &
-               x(1), x(2), x(3), r, time_, s%user_def)
-          l1 = pot_re * units_inp%energy%factor     ! convert from input units to a.u.
-          
-          x(i) = x(i) + M_TWO*Delta/units_inp%length%factor
-          call loct_parse_expression(pot_re, pot_im,           &
-               x(1), x(2), x(3), r, time_, s%user_def)
-          l2 = pot_re * units_inp%energy%factor     ! convert from input units to a.u.
-          
-          gv(ip, i) = (l2 - l1)/(M_TWO*Delta)
-        end do
-      end do
-
-    case(SPEC_POINT, SPEC_JELLI)
-      l1 = s%Z/(M_TWO*s%jradius**3)
-
-      do ip = 1, gr%m%np
-        x(:) = gr%m%x(ip, :) - x_atom(:)
-        r = sqrt(sum(x(:)**2))
-        if(r <= s%jradius) then
-          gv(ip, 1:3) = l1*x(1:3)
-        else
-          gv(ip, 1:3) = s%Z*x(1:3)/r**3
-        end if
-      end do
-
-    case(SPEC_PS_PSF, SPEC_PS_HGH, SPEC_PS_CPI, SPEC_PS_FHI, SPEC_PS_UPF)
-
-      if (s%ps%has_long_range) then
-        
-        ALLOCATE(grho(NP, MAX_DIM), NP*MAX_DIM)
-        ALLOCATE(gpot(NP_PART), NP_PART)
-        
-        call specie_get_gdensity(s, x_atom, gr, grho)
-
-        do i = 1, NDIM
-          call dpoisson_solve(gr, gpot(1:NP), grho(1:NP, i))
-          gv(1:gr%m%np, i) = gv(1:gr%m%np, i) + gpot(1:gr%m%np)
-        end do
-
-        deallocate(grho)
-        deallocate(gpot)
-
-      else
-
-        gv(1:NP, 1:3) = M_ZERO
-
-      end if
-
-      call submesh_init_sphere(sm, gr%sb, gr%m, x_atom, double_grid_get_rmax(gr%dgrid, s, gr%m) + maxval(gr%m%h(1:3)))
-      
-      ALLOCATE(dvls(1:sm%ns, 1:3), sm%ns*3)
-
-      call double_grid_apply_glocal(gr%dgrid, s, gr%m, sm, x_atom, dvls(:, :))
-      
-      gv(sm%jxyz(1:sm%ns), 1:3) = gv(sm%jxyz(1:sm%ns), 1:3) + dvls(1:sm%ns, 1:3)
-      
-      call submesh_end(sm)
-
-    case(SPEC_ALL_E)
-      gv(1:gr%m%np, 1:3) = M_ZERO
-        
-    end select
-    
-    call pop_sub()
-
-  end subroutine specie_get_glocal
 
 end module specie_pot_m
 

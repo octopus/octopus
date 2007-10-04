@@ -46,9 +46,7 @@ module double_grid_m
        double_grid_init, &
        double_grid_end,  &
        double_grid_apply_local,     &
-       double_grid_apply_glocal,    &
        double_grid_apply_non_local, &
-       double_grid_apply_gnon_local,&
        double_grid_get_rmax,        &
        double_grid_get_hmax,        &
        double_grid_enlarge
@@ -184,28 +182,8 @@ contains
 #undef calc_pot
 #undef double_grid_apply
 
-#define double_grid_apply double_grid_apply_glocal
-#define calc_pot(vv) if (r > CNST(1e-5)) then; vv = -loct_splint(s%ps%dvl, r)*x/r ; else; vv = M_ZERO ; end if
-#define DG_VECTORIAL
-
-#include "double_grid_apply.F90"
-
-#undef calc_pot
-#undef DG_VECTORIAL
-#undef double_grid_apply
-
 #define double_grid_apply double_grid_apply_non_local
 #define calc_pot(vv) call specie_real_nl_projector(s, x, l, lm, ic, vv, tmp)
-
-#include "double_grid_apply.F90"
-
-#undef calc_pot
-#undef DG_VECTORIAL
-#undef double_grid_apply
-
-#define double_grid_apply double_grid_apply_gnon_local
-#define DG_VECTORIAL
-#define calc_pot(vv) call specie_real_nl_projector(s, x, l, lm, ic, tmp, vv)
 
 #include "double_grid_apply.F90"
 
