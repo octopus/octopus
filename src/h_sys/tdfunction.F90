@@ -31,6 +31,9 @@ module tdf_m
   use messages_m
   use lib_oct_gsl_spline_m
   use units_m
+#if defined(HAVE_FFT)
+  use fft_m
+#endif
 
   implicit none
 
@@ -46,7 +49,12 @@ module tdf_m
             tdf_to_numerical,     &
             tdf,                  &
             tdf_scalar_multiply,  &
+            tdf_fft_forward,      &
+            tdf_fft_backward,     &
+            tdf_fourier_grid,     &
             tdf_write,            &
+            tdf_niter,            &
+            tdf_dt,               &
             tdf_end,              &
             assignment(=)
 
@@ -90,6 +98,21 @@ module tdf_m
   end interface
 
   contains
+
+
+  !------------------------------------------------------------
+  integer function tdf_niter(f)
+    type(tdf_t), intent(in) :: f
+    tdf_niter = f%niter
+  end function tdf_niter
+
+
+  !------------------------------------------------------------
+  FLOAT function tdf_dt(f)
+    type(tdf_t), intent(in) :: f
+    tdf_dt = f%dt
+  end function tdf_dt
+
 
   !------------------------------------------------------------
   subroutine tdf_init_cw(f, a0, omega0)
@@ -224,6 +247,80 @@ module tdf_m
 
     call pop_sub()
   end subroutine tdf_init_numerical
+
+
+  !------------------------------------------------------------
+  subroutine tdf_fourier_grid(f, wgrid)
+    type(tdf_t), intent(in) :: f
+    FLOAT, intent(inout)    :: wgrid(:)
+    integer :: i, steps
+    FLOAT   :: df
+
+    wgrid = M_ZERO
+    steps = f%niter + 1
+
+    df = M_ONE/(real(steps, REAL_PRECISION) * f%dt)
+    do i = 1, int((steps)/2)
+       wgrid(i)   = real(i-1, REAL_PRECISION) * df * M_TWO * M_PI
+    enddo
+    do i = int((steps)/2), f%niter-1 
+       wgrid(i+1) = real(i-steps, REAL_PRECISION) * df * M_TWO * M_PI
+    enddo   
+
+  end subroutine tdf_fourier_grid
+
+
+  !------------------------------------------------------------
+  subroutine tdf_fft_forward(f)
+    type(tdf_t), intent(inout) :: f
+    integer :: steps, n(3)
+    type(fft_t)    :: fft_handler
+    CMPLX, allocatable :: tmp(:, :, :), tmp2(:, :, :)
+
+#if defined(HAVE_FFT)
+    steps = f%niter
+    ALLOCATE(tmp(steps+1, 1, 1), steps+1)
+    ALLOCATE(tmp2(steps+1, 1, 1), steps+1)
+
+    n(1:3) = (/ steps+1, 1, 1 /)
+    call fft_init(n, fft_complex, fft_handler, optimize = .false.)
+    tmp2(:, 1, 1) = f%val(:)
+    call zfft_forward(fft_handler, tmp2, tmp)
+    f%val(:) = tmp(:, 1, 1)
+    deallocate(tmp, tmp2)
+    call fft_end(fft_handler)
+#else
+    write(message(1),'(a)') "Internal error in filters.apply_filter"
+    call write_fatal(1)
+#endif
+
+  end subroutine tdf_fft_forward
+
+  !------------------------------------------------------------
+  subroutine tdf_fft_backward(f)
+    type(tdf_t), intent(inout) :: f
+    integer :: steps, n(3)
+    type(fft_t)    :: fft_handler
+    CMPLX, allocatable :: tmp(:, :, :), tmp2(:, :, :)
+
+#if defined(HAVE_FFT)
+    steps = f%niter
+    ALLOCATE(tmp(steps+1, 1, 1), steps+1)
+    ALLOCATE(tmp2(steps+1, 1, 1), steps+1)
+
+    n(1:3) = (/ steps+1, 1, 1 /)
+    call fft_init(n, fft_complex, fft_handler, optimize = .false.)
+    tmp2(:, 1, 1) = f%val(:)
+    call zfft_backward(fft_handler, tmp2, tmp)
+    f%val(:) = tmp(:, 1, 1)
+    deallocate(tmp, tmp2)
+    call fft_end(fft_handler)
+#else
+    write(message(1),'(a)') "Internal error in filters.apply_filter"
+    call write_fatal(1)
+#endif
+
+  end subroutine tdf_fft_backward
 
 
   !------------------------------------------------------------

@@ -128,7 +128,7 @@
       stoploop = .TRUE.
     end if
 
-    write(message(1), '(a,i3)') 'Optimal control iteration #', iterator%ctr_iter
+    write(message(1), '(a,i5)') 'Optimal control iteration #', iterator%ctr_iter
     call messages_print_stress(stdout, trim(message(1)))
 
     if(oct%mode_fixed_fluence) then
@@ -156,7 +156,7 @@
       write(filename,'(a)') 'opt-control/laser.bestJ1'
       call parameters_end(iterator%best_par)
       call parameters_copy(iterator%best_par, par)
-      call parameters_write(filename, par)
+      call parameters_write(filename, par, fourier = .true.)
     end if
 
     iterator%ctr_iter = iterator%ctr_iter + 1

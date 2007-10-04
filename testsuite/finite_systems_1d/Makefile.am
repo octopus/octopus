@@ -35,7 +35,6 @@ dist_share_DATA = \
 	04-box.02-oct_long.inp \
 	04-box.03-oct_long.inp \
 	04-box.04-oct_long.inp \
-	04-box.05-oct_local.inp \
 	04-box_oct_long.test \
 	05-adw.01-ground_state.inp \
 	05-adw.02-filter_fixed.inp \

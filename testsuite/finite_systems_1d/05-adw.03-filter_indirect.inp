@@ -40,9 +40,13 @@ gamma2 = 160
 
 w03 = 1.0147
 w13 = 0.8580
+#%OCTFilter
+#   frequency_filter | "exp(-gamma2*( w + w03 )^2  ) + exp(-gamma2*( w - w03 )^2  )" 
+#   frequency_filter | "exp(-gamma2*( w + w13 )^2  ) + exp(-gamma2*( w - w13 )^2  )"
+#%
+
 %OCTFilter
-   frequency_filter | "exp(-gamma2*( w + w03 )^2  ) + exp(-gamma2*( w - w03 )^2  )" 
-   frequency_filter | "exp(-gamma2*( w + w13 )^2  ) + exp(-gamma2*( w - w13 )^2  )"
+frequency_filter | "exp(-gamma2*( w + w03 )^2  ) + exp(-gamma2*( w - w03 )^2  ) + exp(-gamma2*( w + w13 )^2  ) + exp(-gamma2*( w - w13 )^2 )" 
 %
 
 

@@ -93,7 +93,7 @@ contains
     type(states_t),    pointer :: st
     type(states_t)             :: chi, psi, initial_st
     type(target_t)             :: target
-    type(filter_t),    pointer :: f(:)
+    type(filter_t)             :: filter
     type(oct_control_parameters_t) :: par, par_tmp
     integer :: i, ierr
     character(len=80)  :: filename
@@ -138,9 +138,8 @@ contains
     write(message(1),'(a,f14.8)') 'Input: Fluence of Initial laser ', laser_fluence(par)
     call write_info(1)
 
-    nullify(f)
-    call def_filter(td%max_iter, td%dt, f)
-    call filter_write(f, NDIM, td%dt, td%max_iter)
+    call filter_init(td%max_iter, td%dt, filter)
+    call filter_write(filter)
 
     call def_istate(gr, sys%geo, initial_st)
     call target_init(gr, sys%geo, sys%st, td, target)
@@ -176,7 +175,7 @@ contains
     call parameters_end(par_tmp)
     call oct_iterator_end(iterator)
     if(oct%use_mixing) call mix_end(parameters_mix)
-    call filter_end(f)
+    call filter_end(filter)
     call td_end(td)
 
     nullify(gr)
@@ -225,10 +224,6 @@ contains
         if(clean_stop()) exit ctr_loop
         
         call calc_chi(oct, gr, target, psi, chi)
-!!!!DEBUG
-        call states_calc_dens(chi, NP_PART, chi%rho)
-        call states_output(chi, gr, 'opt-control/chi', sys%outp)
-!!!!ENDOFDEBUG
         call bwd_step(oct_algorithm_zr98, sys, td, h, target, par, par_tmp, chi, psi)
         
         ! forward propagation
@@ -261,8 +256,9 @@ contains
     subroutine scheme_wg05
       integer :: ierr, j
       FLOAT :: fluence, new_penalty, old_penalty
+
       call push_sub('opt_control.scheme_WG05')
-      
+
       message(1) = "Info: Starting OCT iteration using scheme: WG05"
       call write_info(1)
       
@@ -287,7 +283,7 @@ contains
 
         ! WARNING: Untested.
         do j = 1, par_tmp%no_parameters
-          call apply_filter(td%max_iter, f, par_tmp%f(j))
+          call filter_apply(par_tmp%f(j), filter)
         end do
 
         ! recalc field

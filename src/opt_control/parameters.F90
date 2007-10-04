@@ -187,12 +187,15 @@ module opt_control_parameters_m
 
 
   ! ---------------------------------------------------------
-  subroutine parameters_write(filename, cp)
+  subroutine parameters_write(filename, cp, fourier)
     character(len=*), intent(in) :: filename
     type(oct_control_parameters_t), intent(in) :: cp
+    logical, optional, intent(in) :: fourier
 
+    type(tdf_t) :: g
     integer :: i, j, iunit
     FLOAT :: t
+    FLOAT, allocatable :: wgrid(:)
     character(len=2) :: digit
 
     call push_sub('opt_control_parameters.parameters_write')
@@ -211,6 +214,29 @@ module opt_control_parameters_m
       end do
       call io_close(iunit)
     end do
+
+    if(present(fourier)) then
+    if(fourier) then
+      do j = 1, cp%no_parameters
+        if(cp%no_parameters > 1) then
+          write(digit,'(i2.2)') j
+          iunit = io_open(trim(filename)//'/cpw-'//digit, action='write')
+        else
+          iunit = io_open(trim(filename)//'/cpw', action='write')
+        end if
+        g = cp%f(j)
+        call tdf_fft_forward(g)
+        ALLOCATE(wgrid(0:cp%ntiter), cp%ntiter+1)
+        call tdf_fourier_grid(g, wgrid)
+        do i = 0, cp%ntiter
+          write(iunit, '(3es30.16e4)') wgrid(i), tdf(g, i+1)
+        end do
+        deallocate(wgrid)
+        call tdf_end(g)
+        call io_close(iunit)
+      end do
+    end if
+    end if
 
     call pop_sub()
   end subroutine parameters_write
