@@ -271,7 +271,7 @@ contains
       if(filter%domain(kk) .eq. filter_freq) then
         iunit = io_open(filename, action='write')
         ALLOCATE(wgrid(0:max_iter), max_iter+1)
-        call tdf_fourier_grid(filter%f(kk), wgrid)1
+        call tdf_fourier_grid(filter%f(kk), wgrid)
         do i = 0, max_iter
           write(iunit, '(3es30.16e4)') wgrid(i), tdf(filter%f(kk), i+1)
         end do
