@@ -150,6 +150,7 @@ contains
     opo%np       =  opi%np
     opo%m        => opi%m
     opo%cmplx_op =  opi%cmplx_op
+    opo%nri      =  opi%nri
     opo%stencil(1:3, 1:opo%n) = opi%stencil(1:3, 1:opi%n)
     ALLOCATE(opo%i(opi%n, opi%np), opi%n*opi%np)
 
@@ -165,14 +166,23 @@ contains
       end if
     end if
 
+    ALLOCATE(opo%ri(1:opo%n, opo%nri), opo%n*opo%nri)
+    ALLOCATE(opo%rimap(1:opo%np), opo%np)
+    ALLOCATE(opo%rimap_inv(0:opo%nri+1), opo%nri+2)
+
     opo%const_w = opi%const_w
     opo%i       = opi%i
     opo%w_re    = opi%w_re
     if (opi%cmplx_op) then
       opo%w_im  = opi%w_im
     end if
+
+    opo%ri = opi%ri
+    opo%rimap = opo%rimap
+    opo%rimap_inv = opo%rimap_inv
     
-    call nl_operator_generate_ri(opo)
+    opo%dfunction = opi%dfunction
+    opo%zfunction = opi%zfunction
 
     call pop_sub()
   end subroutine nl_operator_equal
@@ -186,7 +196,9 @@ contains
     logical, optional,    intent(in)    :: const_w  ! are the weights constant (independent of the point)
     logical, optional,    intent(in)    :: cmplx_op ! do we have complex weights?
 
-    integer :: i, j, p1(MAX_DIM)
+    integer :: ii, jj, p1(MAX_DIM), time, current
+    integer, allocatable :: st1(:), st2(:)
+    logical :: init_opi
 
     call push_sub('nl_operator.nl_operator_build')
 
@@ -222,114 +234,102 @@ contains
     if (op%cmplx_op) op%w_im = M_ZERO
 
     ! store center point of the stencil
-    do i = 1, op%n
+    do ii = 1, op%n
       if(                              & 
-        op%stencil(1, i) .eq. 0 .and.  &
-        op%stencil(2, i) .eq. 0 .and.  &
-        op%stencil(3, i) .eq. 0        &
+        op%stencil(1, ii) .eq. 0 .and.  &
+        op%stencil(2, ii) .eq. 0 .and.  &
+        op%stencil(3, ii) .eq. 0        &
         ) then
-        op%stencil_center = i
+        op%stencil_center = ii
         exit
       end if
     end do
 
     ! Build lookup table op%i from stencil.
-    ALLOCATE(op%i(op%n, np), op%n*np)
+    if(.not. op%const_w .or. op%cmplx_op) then 
+      ALLOCATE(op%i(op%n, np), op%n*np)
+    end if
+    ALLOCATE(st1(1:op%n), op%n)
+    ALLOCATE(st2(1:op%n), op%n)
 
-    !$omp parallel do private(j, p1)
-    do i = 1, np
-      if(m%parallel_in_domains) then
-        ! When running in parallel, get global number of
-        ! point i.
-        p1(:) = m%Lxyz(m%vp%local(m%vp%xlocal(m%vp%partno)+i-1), :)
-      else
-        p1(:) = m%Lxyz(i, :)
-      end if
+    op%nri = 0
 
-      do j = 1, op%n
-        ! Get global index of p1 plus current stencil point.
-        op%i(j, i) = mesh_index(m%sb%dim, m%sb%periodic_dim, m%nr,    &
-          m%Lxyz_inv, p1(:) + op%stencil(:, j))
-
+    do time = 1, 2
+      st2 = 0
+      init_opi = time == 2 .and. (.not. op%const_w .or. op%cmplx_op)
+      do ii = 1, np
         if(m%parallel_in_domains) then
-          ! When running parallel, translate this global
-          ! number back to a local number.
-
-          op%i(j, i) = m%vp%global(op%i(j, i), m%vp%partno)
+          ! When running in parallel, get global number of
+          ! point ii.
+          p1(:) = m%Lxyz(m%vp%local(m%vp%xlocal(m%vp%partno)+ii-1), :)
+        else
+          p1(:) = m%Lxyz(ii, :)
         end if
 
+        do jj = 1, op%n
+          ! Get global index of p1 plus current stencil point.
+          if (init_opi) op%i(jj, ii) = mesh_index(m%sb%dim, m%sb%periodic_dim, m%nr,    &
+               m%Lxyz_inv, p1(:) + op%stencil(:, jj))
+          st1(jj) = mesh_index(m%sb%dim, m%sb%periodic_dim, m%nr, m%Lxyz_inv, p1(:) + op%stencil(:, jj))
+          
+          if(m%parallel_in_domains) then
+            ! When running parallel, translate this global
+            ! number back to a local number.
+            
+            if(init_opi) op%i(jj, ii) = m%vp%global(op%i(jj, ii), m%vp%partno)
+            st1(jj) = m%vp%global(st1(jj), m%vp%partno)
+          end if
+          
+          st1(jj) = st1(jj) - ii
+
+        end do
+
+        ! if the stencil changes
+        if ( maxval(abs(st1 - st2)) > 0 ) then 
+          !store it
+          st2 = st1
+          
+          !first time, just count
+          if ( time == 1 ) op%nri = op%nri + 1
+          
+          !second time, store
+          if( time == 2 ) then
+            current = current + 1
+            op%ri(1:op%n, current) = st1(1:op%n)
+          end if
+        end if
+
+        if(time == 2) op%rimap(ii) = current
+
       end do
-    end do
-    !$omp end parallel do
 
-    call nl_operator_generate_ri(op)
-
-    if(op%const_w .and. .not. op%cmplx_op) then
-      call dnl_operator_tune(op)
-      call znl_operator_tune(op)
-      
-      deallocate(op%i)
-      nullify(op%i)
-
-    end if
-
-    call pop_sub()
-
-  end subroutine nl_operator_build
-
-  subroutine nl_operator_generate_ri(op)
-    type(nl_operator_t),  intent(inout) :: op
-    integer :: jj, current
-    integer, allocatable :: st(:)
-
-    ALLOCATE(st(1:op%n), op%n)
-
-    op%nri = 1
-    do jj = 2, op%np
-      st(1:op%n) = (op%i(1:op%n, jj) - jj) - (op%i(1:op%n, jj - 1) - (jj - 1))
-      if(maxval(abs(st)) > 0 ) op%nri = op%nri + 1
-    end do
-
-    ALLOCATE(op%ri(1:op%n, op%nri), op%n*op%nri)
-    ALLOCATE(op%rimap(1:op%np), op%np)
-    ALLOCATE(op%rimap_inv(0:op%nri+1), op%nri+2)
-
-    op%rimap_inv(0) = 0
-
-#ifdef USE_OMP
-    !when in OpenMP initialize the array in parallel, so pages
-    !are touched first in the corresponding node
-    !$omp parallel do
-    do jj = 1, op%nri
-      op%ri(1:op%n, jj) = 0
-      op%rimap_inv(jj)  = 0
-    end do
-    !$omp end parallel do
-#endif
-
-    current = 1
-    op%ri(1:op%n, current) = op%i(1:op%n, 1) - 1
-    op%rimap(1) = current
-
-    do jj = 2, op%np
-      st(1:op%n) = op%i(1:op%n, jj) - jj
-
-      !if the stencil representation is different
-      if(maxval(abs(st - op%ri(1:op%n, current))) > 0 ) then 
-        current = current + 1
-        op%ri(1:op%n, current) = st
+      !after counting, allocate
+      if (time == 1 ) then 
+        ALLOCATE(op%ri(1:op%n, op%nri), op%n*op%nri)
+        ALLOCATE(op%rimap(1:op%np), op%np)
+        ALLOCATE(op%rimap_inv(0:op%nri+1), op%nri+2)
+        current = 0
       end if
 
-      op%rimap(jj) = current
     end do
 
+    !the inverse mapping
+    op%rimap_inv(0) = 0
     do jj = 1, op%np
       op%rimap_inv(op%rimap(jj)) = jj
     end do
     op%rimap_inv(op%nri + 1) = op%np
 
-  end subroutine nl_operator_generate_ri
+    deallocate(st1, st2)
 
+    if(op%const_w .and. .not. op%cmplx_op) then
+      call dnl_operator_tune(op)
+      call znl_operator_tune(op)
+    end if
+
+    call pop_sub()
+
+  end subroutine nl_operator_build
 
   ! ---------------------------------------------------------
   subroutine nl_operator_transpose(op, opt)
@@ -366,8 +366,6 @@ contains
       end do
     end do
 
-    call nl_operator_generate_ri(opt)
-
     if(opt%const_w .and. .not. opt%cmplx_op) then
       call dnl_operator_tune(opt)
       call znl_operator_tune(opt)
@@ -375,7 +373,6 @@ contains
 
     call pop_sub()
   end subroutine nl_operator_transpose
-
 
   ! ---------------------------------------------------------
   ! opt has to be initialised and built.
