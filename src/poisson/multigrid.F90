@@ -479,10 +479,8 @@ contains
     end select
 
     call pop_sub()
-  contains
 
   end subroutine multigrid_relax
-
 
   ! ---------------------------------------------------------
   subroutine gridhier_init(a, mgrid, add_points_for_boundaries)

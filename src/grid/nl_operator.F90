@@ -703,7 +703,7 @@ contains
 
     call push_sub('nl_operator.nl_operator_translate_indices')
 
-    ASSERT(associated(op%i))
+    ASSERT(associated(opg%i))
 
     do i = 1, opg%n
       do j = 1, opg%m%np_global
