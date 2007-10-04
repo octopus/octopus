@@ -429,17 +429,17 @@ contains
     select case(this%relaxation_method)
 
     case(GAUSS_SEIDEL)
-      call search_diagonal()
+      factor = CNST(-1.0)/LAP%w_re(LAP%stencil_center,1)*this%relax_factor;
 
       n=LAP%n
 
       ALLOCATE(w(1:n), n)
-
+      
       if(LAP%const_w) then
         call lalg_copy(n, LAP%w_re(1:n, 1), w)
         do t = 0, steps
           do i = 1, m%np, 1
-            point_lap = sum(w(1:n)*pot(LAP%i(1:n,i)))
+            point_lap = sum( w(1:n)*pot(i + LAP%ri(1:n, LAP%rimap(i) )) )
             pot(i) = pot(i)+factor*(point_lap-rho(i))
           end do
         end do
@@ -447,7 +447,7 @@ contains
         do t = 0, steps
           do i = 1, m%np
             point_lap = sum(LAP%w_re(1:n,i)*pot(LAP%i(1:n,i)))
-            pot(i) = pot(i) - CNST(0.7)/LAP%w_re(diag,i)*(point_lap-rho(i))
+            pot(i) = pot(i) - CNST(0.7)/LAP%w_re(LAP%stencil_center,i)*(point_lap-rho(i))
           end do
         end do
       end if
@@ -480,20 +480,6 @@ contains
 
     call pop_sub()
   contains
-
-    ! ---------------------------------------------------------
-    subroutine search_diagonal()
-      do i = 1, LAP%n
-        if( 1 == LAP%i(i,1)) then
-          diag = i
-          if(LAP%const_w) then
-            factor = CNST(-1.0)/LAP%w_re(i,1)*this%relax_factor;
-          end if
-          exit
-        end if
-      end do
-    end subroutine search_diagonal
-
 
   end subroutine multigrid_relax
 

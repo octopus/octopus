@@ -140,6 +140,8 @@ contains
 
     call push_sub('nl_operator.nl_operator_equal')
 
+    ASSERT(associated(opi%i))
+
     call nl_operator_init(opo, opi%n, opi%label)
 
     opo%dfunction = opi%dfunction
@@ -265,6 +267,10 @@ contains
     if(op%const_w .and. .not. op%cmplx_op) then
       call dnl_operator_tune(op)
       call znl_operator_tune(op)
+      
+      deallocate(op%i)
+      nullify(op%i)
+
     end if
 
     call pop_sub()
@@ -334,6 +340,8 @@ contains
 
     call push_sub('nl_operator.nl_operator_transpose')
 
+    ASSERT(associated(op%i))
+
     opt = op
     opt%label = trim(op%label)//' transposed'
     opt%w_re = M_ZERO
@@ -382,6 +390,8 @@ contains
     type(nl_operator_t), pointer :: opg, opgt
 
     call push_sub('nl_operator.nl_operator_skewadjoint')
+
+    ASSERT(associated(op%i))
 
     opt = op
 
@@ -458,6 +468,8 @@ contains
 
     call push_sub('nl_operator.nl_operator_selfadjoint')
 
+    ASSERT(associated(op%i))
+
     opt = op
 
     if(m%parallel_in_domains) then
@@ -532,6 +544,8 @@ contains
     integer :: i
 
     call push_sub('nl_operator.nl_operator_gather')
+
+    ASSERT(associated(op%i))
 
     ! If root node, copy elements of op to opg that
     ! are independent from the partitions, i. e. everything
@@ -689,6 +703,8 @@ contains
 
     call push_sub('nl_operator.nl_operator_translate_indices')
 
+    ASSERT(associated(op%i))
+
     do i = 1, opg%n
       do j = 1, opg%m%np_global
         il = opg%m%vp%np_local(opg%m%vp%part(j))
@@ -737,6 +753,8 @@ contains
     integer          :: i, j, k, index
 
     type(nl_operator_t), pointer :: opg
+
+    ASSERT(associated(op%i))
 
     call push_sub('nl_operator.nl_operator_op_to_matrix')
 
@@ -787,6 +805,8 @@ contains
 
     call push_sub('nl_operator.nl_operator_matrix_to_op')
 
+    ASSERT(associated(op_ref%i))
+
     op = op_ref
     do i = 1, op%np
       do j = 1, op%n
@@ -817,6 +837,8 @@ contains
     FLOAT, allocatable :: a(:, :)
 
     call push_sub('nl_operator.nl_operator_write')
+
+    ASSERT(associated(op%i))
 
     if(mpi_grp_is_root(op%m%mpi_grp)) then
       ALLOCATE(a(op%m%np_global, op%m%np_global), op%m%np_global*op%m%np_global)
@@ -850,7 +872,6 @@ contains
   ! ---------------------------------------------------------
   ! Same as nl_operator_write but transposed matrix.
   subroutine nl_operatorT_write(op, unit)
-
     type(nl_operator_t), intent(in) :: op
     integer, intent(in)                :: unit
 
@@ -858,6 +879,8 @@ contains
     FLOAT, allocatable :: a(:, :)
 
     call push_sub('nl_operator.nl_operator_write')
+
+    ASSERT(associated(op%i))
 
     if(mpi_grp_is_root(op%m%mpi_grp)) then
       ALLOCATE(a(op%m%np_global, op%m%np_global), op%m%np_global*op%m%np_global)
@@ -1060,20 +1083,10 @@ contains
 
     nn = op%n
     if(op%const_w) then
-      do ii = 1, nn
-        if( 1 == op%i(ii,1) ) then
-          fo(1:op%np) = op%w_re(ii, 1)
-          exit
-        end if
-      end do
+      fo(1:op%np) = op%w_re(op%stencil_center, 1)
     else
       do ii = 1, op%np
-        do jj = 1, nn
-          if( ii == op%i(jj,ii) ) then
-            fo(ii) = op%w_re(jj, ii)
-            exit
-          end if
-        end do
+        fo(ii) = op%w_re(op%stencil_center, ii)
       end do
     end if
 
