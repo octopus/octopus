@@ -30,10 +30,14 @@ subroutine X(lmpi_gen_alltoallv)(incount, in, outcount, out, mpi_grp)
   R_TYPE,          intent(out) :: out(:)
   type(mpi_grp_t), intent(in)  :: mpi_grp
 
-  integer                          :: mpi_err, i
-  integer, dimension(mpi_grp%size) :: rdispls, recvbuf, recvcnts
+  integer              :: mpi_err, i
+  integer, allocatable :: rdispls(:), recvbuf(:), recvcnts(:)
 
   call push_sub('mpi_lib_inc.Xlmpi_gen_alltoallv')
+
+  ALLOCATE(rdispls(mpi_grp%size), mpi_grp%size)
+  ALLOCATE(recvbuf(mpi_grp%size), mpi_grp%size)
+  ALLOCATE(recvcnts(mpi_grp%size), mpi_grp%size)
 
   ! Query how many elements each node has to contribute.
   call MPI_Debug_In(mpi_grp%comm, C_MPI_ALLGATHER)
@@ -56,6 +60,8 @@ subroutine X(lmpi_gen_alltoallv)(incount, in, outcount, out, mpi_grp)
   call MPI_Debug_In(mpi_grp%comm, C_MPI_ALLGATHERV)
   call MPI_Allgatherv(in, incount, R_MPITYPE, out, recvcnts, rdispls, R_MPITYPE, mpi_grp%comm, mpi_err)
   call MPI_Debug_Out(mpi_grp%comm, C_MPI_ALLGATHERV)
+
+  deallocate(rdispls, recvbuf, recvcnts)
 
   call pop_sub()
 end subroutine X(lmpi_gen_alltoallv)
