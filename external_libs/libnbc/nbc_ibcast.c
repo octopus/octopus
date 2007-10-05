@@ -7,43 +7,113 @@
  */
 #include "nbc.h"
 
-/* simple linear MPI_Ibcast */
-int NBC_Ibcast_lin(void *buffer, int count, MPI_Datatype datatype, int root, MPI_Comm comm, NBC_Handle* handle) {
-  int rank, p, peer, res;
+/* fortran bindings */
+#include "nbc_fortran.h"
+
+static __inline__ int bcast_sched_binomial(int rank, int p, int root, NBC_Schedule *schedule, void *buffer, int count, MPI_Datatype datatype);
+static __inline__ int bcast_sched_linear(int rank, int p, int root, NBC_Schedule *schedule, void *buffer, int count, MPI_Datatype datatype);
+static __inline__ int bcast_sched_chain(int rank, int p, int root, NBC_Schedule *schedule, void *buffer, int count, MPI_Datatype datatype, int fragsize, int size);
+
+#ifdef NBC_CACHE_SCHEDULE
+/* tree comparison function for schedule cache */
+int NBC_Bcast_args_compare(NBC_Bcast_args *a, NBC_Bcast_args *b, void *param) {
+
+	if( (a->buffer == b->buffer) && 
+      (a->count == b->count) && 
+      (a->datatype == b->datatype) &&
+      (a->root == b->root) ) {
+    return  0;
+  }
+	if( a->buffer < b->buffer ) {	
+    return -1;
+	}
+	return +1;
+}
+#endif
+
+int NBC_Ibcast(void *buffer, int count, MPI_Datatype datatype, int root, MPI_Comm comm, NBC_Handle* handle) {
+  int rank, p, res, size, segsize;
   NBC_Schedule *schedule;
+#ifdef NBC_CACHE_SCHEDULE
+  NBC_Bcast_args *args, *found, search;
+#endif
+  enum { NBC_BCAST_LINEAR, NBC_BCAST_BINOMIAL, NBC_BCAST_CHAIN } alg;
   
+  res = NBC_Init_handle(handle, comm);
+  if(res != NBC_OK) { printf("Error in NBC_Init_handle(%i)\n", res); return res; }
   res = MPI_Comm_rank(comm, &rank);
   if (MPI_SUCCESS != res) { printf("MPI Error in MPI_Comm_rank() (%i)\n", res); return res; }
   res = MPI_Comm_size(comm, &p);
   if (MPI_SUCCESS != res) { printf("MPI Error in MPI_Comm_rank() (%i)\n", res); return res; }
-
-  schedule = malloc(sizeof(NBC_Schedule));
-  if (NULL == schedule) { printf("Error in malloc() (%i)\n", res); return res; }
-
-  handle->tmpbuf=NULL;
+  res = MPI_Type_size(datatype, &size);
+  if (MPI_SUCCESS != res) { printf("MPI Error in MPI_Type_size() (%i)\n", res); return res; }
   
-  res = NBC_Sched_create(schedule);
-  if(res != NBC_OK) { printf("Error in NBC_Sched_create (%i)\n", res); return res; }
-
-  /* send to all others */
-  if(rank == root) {
-    for (peer=0; peer<p;peer++) {
-      if(peer != root) {
-        /* send msg to peer */
-        res = NBC_Sched_send(buffer, count, datatype, peer, schedule);
-        if (NBC_OK != res) { printf("Error in NBC_Sched_send() (%i)\n", res); return res; }
-      }
-    }
+  segsize = 16384;
+  /* algorithm selection */
+  if(p <= 4) {
+    alg = NBC_BCAST_LINEAR;
+  } else if(size*count < 65536) {
+    alg = NBC_BCAST_BINOMIAL;
+  } else if(size*count < 524288) {
+    alg = NBC_BCAST_CHAIN;
+    segsize = 16384/2;
   } else {
-    /* recv msg from root */
-    res = NBC_Sched_recv(buffer, count, datatype, root, schedule);
-    if (NBC_OK != res) { printf("Error in NBC_Sched_recv() (%i)\n", res); return res; }
+    alg = NBC_BCAST_CHAIN;
+    segsize = 65536/2;
   }
   
-  res = NBC_Sched_commit(schedule);
-  if (NBC_OK != res) { printf("Error in NBC_Sched_commit() (%i)\n", res); return res; }
+  handle->tmpbuf=NULL;
+
+#ifdef NBC_CACHE_SCHEDULE
+  /* search schedule in communicator specific tree */
+  search.buffer=buffer;
+  search.count=count;
+  search.datatype=datatype;
+  search.root=root;
+  found = hb_tree_search(handle->comminfo->NBC_Dict[NBC_BCAST], &search);
+  if(found == NULL) {
+#endif
+    schedule = malloc(sizeof(NBC_Schedule));
+    
+    res = NBC_Sched_create(schedule);
+    if(res != NBC_OK) { printf("Error in NBC_Sched_create, res = %i\n", res); return res; }
+
+    switch(alg) {
+      case NBC_BCAST_LINEAR:
+        res = bcast_sched_linear(rank, p, root, schedule, buffer, count, datatype);
+        break;
+      case NBC_BCAST_BINOMIAL:
+        res = bcast_sched_binomial(rank, p, root, schedule, buffer, count, datatype);
+        break;
+      case NBC_BCAST_CHAIN:
+        res = bcast_sched_chain(rank, p, root, schedule, buffer, count, datatype, segsize, size);
+        break;
+    }
+    if (NBC_OK != res) { printf("Error in Schedule creation() (%i)\n", res); return res; }
+    
+    res = NBC_Sched_commit(schedule);
+    if (NBC_OK != res) { printf("Error in NBC_Sched_commit() (%i)\n", res); return res; }
+#ifdef NBC_CACHE_SCHEDULE
+    /* save schedule to tree */
+    args = malloc(sizeof(NBC_Bcast_args));
+    args->buffer=buffer;
+    args->count=count;
+    args->datatype=datatype;
+    args->root=root;
+    args->schedule=schedule;
+	  res = hb_tree_insert (handle->comminfo->NBC_Dict[NBC_BCAST], args, args, 0);
+    if(res != 0) printf("error in dict_insert() (%i)\n", res);
+    /* increase number of elements for A2A */
+    if(++handle->comminfo->NBC_Dict_size[NBC_BCAST] > NBC_SCHED_DICT_UPPER) {
+      NBC_SchedCache_dictwipe(handle->comminfo->NBC_Dict[NBC_BCAST], &handle->comminfo->NBC_Dict_size[NBC_BCAST]);
+    }
+  } else {
+    /* found schedule */
+    schedule=found->schedule;
+  }
+#endif
   
-  res = NBC_Start(handle, comm, schedule);
+  res = NBC_Start(handle, schedule);
   if (NBC_OK != res) { printf("Error in NBC_Start() (%i)\n", res); return res; }
   
   return NBC_OK;
@@ -74,22 +144,9 @@ int NBC_Ibcast_lin(void *buffer, int count, MPI_Datatype datatype, int root, MPI
   if (vrank == 0) rank = root; \
   if (vrank == root) rank = 0; \
 }
-int NBC_Ibcast(void *buffer, int count, MPI_Datatype datatype, int root, MPI_Comm comm, NBC_Handle* handle) {
-  int vrank, peer, rank, maxr, p, r, res;
-  NBC_Schedule *schedule;
+static __inline__ int bcast_sched_binomial(int rank, int p, int root, NBC_Schedule *schedule, void *buffer, int count, MPI_Datatype datatype) {
+  int maxr, vrank, peer, r, res;
   
-  res = MPI_Comm_rank(comm, &rank);
-  if (MPI_SUCCESS != res) { printf("MPI Error in MPI_Comm_rank() (%i)\n", res); return res; }
-  res = MPI_Comm_size(comm, &p);
-  if (MPI_SUCCESS != res) { printf("MPI Error in MPI_Comm_rank() (%i)\n", res); return res; }
-  
-  schedule = malloc(sizeof(NBC_Schedule));
-  
-  handle->tmpbuf=NULL;
-
-  res = NBC_Sched_create(schedule);
-  if(res != NBC_OK) { printf("Error in NBC_Sched_create, res = %i\n", res); return res; }
-
   maxr = (int)ceil((log(p)/LOG2));
 
   RANK2VRANK(rank, vrank, root);
@@ -99,7 +156,7 @@ int NBC_Ibcast(void *buffer, int count, MPI_Datatype datatype, int root, MPI_Com
     for(r=0; r<maxr; r++) {
       if((vrank >= (1<<r)) && (vrank < (1<<(r+1)))) {
         VRANK2RANK(peer, vrank-(1<<r), root);
-        res = NBC_Sched_recv(buffer, count, datatype, peer, schedule);
+        res = NBC_Sched_recv(buffer, false, count, datatype, peer, schedule);
         if (NBC_OK != res) { printf("Error in NBC_Sched_recv() (%i)\n", res); return res; }
       }
     }
@@ -111,16 +168,95 @@ int NBC_Ibcast(void *buffer, int count, MPI_Datatype datatype, int root, MPI_Com
   for(r=0; r<maxr; r++) {
     if(((vrank + (1<<r) < p) && (vrank < (1<<r))) || (vrank == 0)) {
       VRANK2RANK(peer, vrank+(1<<r), root);
-      res = NBC_Sched_send(buffer, count, datatype, peer, schedule);
+      res = NBC_Sched_send(buffer, false, count, datatype, peer, schedule);
       if (NBC_OK != res) { printf("Error in NBC_Sched_send() (%i)\n", res); return res; }
     }
   }
-  
-  res = NBC_Sched_commit(schedule);
-  if (NBC_OK != res) { printf("Error in NBC_Sched_commit() (%i)\n", res); return res; }
-  
-  res = NBC_Start(handle, comm, schedule);
-  if (NBC_OK != res) { printf("Error in NBC_Start() (%i)\n", res); return res; }
+
+  return NBC_OK;
+}
+
+/* simple linear MPI_Ibcast */
+static __inline__ int bcast_sched_linear(int rank, int p, int root, NBC_Schedule *schedule, void *buffer, int count, MPI_Datatype datatype) {
+  int peer, res;  
+
+  /* send to all others */
+  if(rank == root) {
+    for (peer=0; peer<p;peer++) {
+      if(peer != root) {
+        /* send msg to peer */
+        res = NBC_Sched_send(buffer, false, count, datatype, peer, schedule);
+        if (NBC_OK != res) { printf("Error in NBC_Sched_send() (%i)\n", res); return res; }
+      }
+    }
+  } else {
+    /* recv msg from root */
+    res = NBC_Sched_recv(buffer, false, count, datatype, root, schedule);
+    if (NBC_OK != res) { printf("Error in NBC_Sched_recv() (%i)\n", res); return res; }
+  }
   
   return NBC_OK;
+}
+
+/* simple chained MPI_Ibcast */
+static __inline__ int bcast_sched_chain(int rank, int p, int root, NBC_Schedule *schedule, void *buffer, int count, MPI_Datatype datatype, int fragsize, int size) {
+  int res, vrank, rpeer, speer, numfrag, fragnum, fragcount, thiscount;
+  MPI_Aint ext;
+  char *buf;
+
+  RANK2VRANK(rank, vrank, root);
+  VRANK2RANK(rpeer, vrank-1, root);
+  VRANK2RANK(speer, vrank+1, root);
+  res = MPI_Type_extent(datatype, &ext);
+  if (MPI_SUCCESS != res) { printf("MPI Error in MPI_Type_extent() (%i)\n", res); return res; }
+  
+  if(count == 0) return NBC_OK;
+
+  numfrag = count*size/fragsize;
+  if((count*size)%fragsize != 0) numfrag++;
+  fragcount = count/numfrag;
+  //if(!rank) printf("numfrag: %i, count: %i, size: %i, fragcount: %i\n", numfrag, count, size, fragcount);
+  
+  for(fragnum = 0; fragnum < numfrag; fragnum++) {
+    buf = (char*)buffer+fragnum*fragcount*ext;
+    thiscount = fragcount;
+    if(fragnum == numfrag-1) {
+      /* last fragment may not be full */
+      thiscount = count-fragcount*fragnum;
+    }
+
+    /* root does not receive */
+    if(vrank != 0) {
+      res = NBC_Sched_recv(buf, false, thiscount, datatype, rpeer, schedule);
+      if (NBC_OK != res) { printf("Error in NBC_Sched_recv() (%i)\n", res); return res; }
+      res = NBC_Sched_barrier(schedule);
+    }
+
+    /* last rank does not send */
+    if(vrank != p-1) {
+      res = NBC_Sched_send(buf, false, thiscount, datatype, speer, schedule);
+      if (NBC_OK != res) { printf("Error in NBC_Sched_send() (%i)\n", res); return res; }
+      /* this barrier here seems awaward but isn't!!!! */
+      if(vrank == 0) res = NBC_Sched_barrier(schedule);
+    }
+  }
+  
+  return NBC_OK;
+}
+
+/* Fortran bindings */
+void NBC_F77_FUNC_(nbc_ibcast,NBC_IBCAST)(void *buf, int *count, int *datatype, int *root, int *fcomm, int *fhandle, int *ierr)  {
+  MPI_Datatype dtype;
+  MPI_Comm comm;
+  NBC_Handle *handle;
+
+  /* this is the only MPI-2 we need :-( */
+  dtype = MPI_Type_f2c(*datatype);
+  comm = MPI_Comm_f2c(*fcomm);
+
+  /* create a new handle in handle table */
+  NBC_Create_fortran_handle(fhandle, &handle);
+
+  /* call NBC function */
+  *ierr = NBC_Ibcast(buf, *count, dtype, *root, comm, handle);
 }

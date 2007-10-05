@@ -7,6 +7,13 @@
  */
 #include "nbc.h"
 
+/* fortran bindings */
+#include "nbc_fortran.h"
+
+/* an alltoallv schedule can not be cached easily because the contents
+ * ot the recvcounts array may change, so a comparison of the address
+ * would not be sufficient ... we simply do not cache it */
+
 /* simple linear Alltoallv */
 int NBC_Ialltoallv(void* sendbuf, int *sendcounts, int *sdispls,
     MPI_Datatype sendtype, void* recvbuf, int *recvcounts, int *rdispls,
@@ -15,8 +22,12 @@ int NBC_Ialltoallv(void* sendbuf, int *sendcounts, int *sdispls,
   int rank, p, res, i;
   MPI_Aint sndext, rcvext;
   NBC_Schedule *schedule;
-  char *rbuf, *sbuf;
+  char *rbuf, *sbuf, inplace;
   
+  NBC_IN_PLACE(sendbuf, recvbuf, inplace);
+  
+  res = NBC_Init_handle(handle, comm);
+  if(res != NBC_OK) { printf("Error in NBC_Init_handle(%i)\n", res); return res; }
   res = MPI_Comm_rank(comm, &rank);
   if (MPI_SUCCESS != res) { printf("MPI Error in MPI_Comm_rank() (%i)\n", res); return res; }
   res= MPI_Comm_size(comm, &p);
@@ -35,10 +46,9 @@ int NBC_Ialltoallv(void* sendbuf, int *sendcounts, int *sdispls,
   if(res != NBC_OK) { printf("Error in NBC_Sched_create (%i)\n", res); return res; }
 
   /* copy data to receivbuffer */
-  if((sendcounts[rank] != 0)) {
+  if((sendcounts[rank] != 0) && !inplace) {
     rbuf = ((char *) recvbuf) + (rdispls[rank] * rcvext);
     sbuf = ((char *) sendbuf) + (sdispls[rank] * sndext);
-    /* memcpy(rbuf, sbuf, sendcounts[rank]*sndext); */
     res = NBC_Copy(sbuf, sendcounts[rank], sendtype, rbuf, recvcounts[rank], recvtype, comm);
     if (NBC_OK != res) { printf("Error in NBC_Copy() (%i)\n", res); return res; }
   }
@@ -47,11 +57,11 @@ int NBC_Ialltoallv(void* sendbuf, int *sendcounts, int *sdispls,
     if (i == rank) { continue; }
     /* post all sends */
     sbuf = ((char *) sendbuf) + (sdispls[i] * sndext);
-    res = NBC_Sched_send(sbuf, sendcounts[i], sendtype, i, schedule);
+    res = NBC_Sched_send(sbuf, false, sendcounts[i], sendtype, i, schedule);
     if (NBC_OK != res) { printf("Error in NBC_Sched_send() (%i)\n", res); return res; }
     /* post all receives */
     rbuf = ((char *) recvbuf) + (rdispls[i] * rcvext);
-    res = NBC_Sched_recv(rbuf, recvcounts[i], recvtype, i, schedule);
+    res = NBC_Sched_recv(rbuf, false, recvcounts[i], recvtype, i, schedule);
     if (NBC_OK != res) { printf("Error in NBC_Sched_recv() (%i)\n", res); return res; }
   }
 
@@ -60,8 +70,28 @@ int NBC_Ialltoallv(void* sendbuf, int *sendcounts, int *sdispls,
   res = NBC_Sched_commit(schedule);
   if (NBC_OK != res) { printf("Error in NBC_Sched_commit() (%i)\n", res); return res; }
 
-  res = NBC_Start(handle, comm, schedule);
+  res = NBC_Start(handle, schedule);
   if (NBC_OK != res) { printf("Error in NBC_Start() (%i)\n", res); return res; }
   
   return NBC_OK;
+}
+
+
+/* Fortran bindings */
+void NBC_F77_FUNC_(nbc_ialltoallv,NBC_IALLTOALLV)(void *sendbuf, int *sendcounts, int *sdispls, int *sendtype,
+    void *recvbuf, int *recvcounts, int *rdispls, int *recvtype, int *fcomm, int *fhandle, int *ierr)  {
+  MPI_Datatype rtype, stype;
+  MPI_Comm comm;
+  NBC_Handle *handle;
+
+  /* this is the only MPI-2 we need :-( */
+  rtype = MPI_Type_f2c(*recvtype);
+  stype = MPI_Type_f2c(*sendtype);
+  comm = MPI_Comm_f2c(*fcomm);
+
+  /* create a new handle in handle table */
+  NBC_Create_fortran_handle(fhandle, &handle);
+
+  /* call NBC function */
+  *ierr = NBC_Ialltoallv(sendbuf, sendcounts, sdispls, stype, recvbuf, recvcounts, rdispls, rtype, comm, handle);
 }

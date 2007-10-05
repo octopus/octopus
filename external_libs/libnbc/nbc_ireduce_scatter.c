@@ -7,6 +7,13 @@
  */
 #include "nbc.h"
 
+/* fortran bindings */
+#include "nbc_fortran.h"
+
+/* an reduce_csttare schedule can not be cached easily because the contents
+ * ot the recvcounts array may change, so a comparison of the address
+ * would not be sufficient ... we simply do not cache it */
+
 /* binomial reduce to rank 0 followed by a linear scatter ...
  *
  * Algorithm:
@@ -22,10 +29,13 @@
 int NBC_Ireduce_scatter(void* sendbuf, void* recvbuf, int *recvcounts, MPI_Datatype datatype, MPI_Op op, MPI_Comm comm, NBC_Handle* handle) {
   int peer, rank, maxr, p, r, res, count, offset, firstred;
   MPI_Aint ext;
-  char *redbuf, *sbuf;
+  char *redbuf, *sbuf, inplace;
   NBC_Schedule *schedule;
   
+  NBC_IN_PLACE(sendbuf, recvbuf, inplace);
 
+  res = NBC_Init_handle(handle, comm);
+  if(res != NBC_OK) { printf("Error in NBC_Init_handle(%i)\n", res); return res; }
   res = MPI_Comm_rank(comm, &rank);
   if (MPI_SUCCESS != res) { printf("MPI Error in MPI_Comm_rank() (%i)\n", res); return res; }
   res = MPI_Comm_size(comm, &p);
@@ -50,7 +60,7 @@ int NBC_Ireduce_scatter(void* sendbuf, void* recvbuf, int *recvcounts, MPI_Datat
   redbuf = ((char*)handle->tmpbuf)+(ext*count);
 
   /* copy data to redbuf if we only have a single node */
-  if(p==1) {
+  if((p==1) && !inplace) {
     res = NBC_Copy(sendbuf, count, datatype, redbuf, count, datatype, comm);
     if (NBC_OK != res) { printf("Error in NBC_Copy() (%i)\n", res); return res; }
   }
@@ -61,18 +71,18 @@ int NBC_Ireduce_scatter(void* sendbuf, void* recvbuf, int *recvcounts, MPI_Datat
       /* we have to receive this round */
       peer = rank + (1<<(r-1));
       if(peer<p) {
-        res = NBC_Sched_recv(handle->tmpbuf, count, datatype, peer, schedule);
+        res = NBC_Sched_recv(0, true, count, datatype, peer, schedule);
         if (NBC_OK != res) { free(handle->tmpbuf); printf("Error in NBC_Sched_recv() (%i)\n", res); return res; }
         /* we have to wait until we have the data */
         res = NBC_Sched_barrier(schedule);
         if (NBC_OK != res) { free(handle->tmpbuf); printf("Error in NBC_Sched_barrier() (%i)\n", res); return res; }
         if(firstred) {
           /* take reduce data from the sendbuf in the first round -> save copy */
-          res = NBC_Sched_op(redbuf, sendbuf, handle->tmpbuf, count, datatype, op, schedule);
+          res = NBC_Sched_op(redbuf-(unsigned long)handle->tmpbuf, true, sendbuf, false, 0, true, count, datatype, op, schedule);
           firstred = 0;
         } else {
           /* perform the reduce in my local buffer */
-          res = NBC_Sched_op(redbuf, redbuf, handle->tmpbuf, count, datatype, op, schedule);
+          res = NBC_Sched_op(redbuf-(unsigned long)handle->tmpbuf, true, redbuf-(unsigned long)handle->tmpbuf, true, 0, true, count, datatype, op, schedule);
         }
         if (NBC_OK != res) { free(handle->tmpbuf); printf("Error in NBC_Sched_op() (%i)\n", res); return res; }
         /* this cannot be done until handle->tmpbuf is unused :-( */
@@ -84,10 +94,10 @@ int NBC_Ireduce_scatter(void* sendbuf, void* recvbuf, int *recvcounts, MPI_Datat
       peer = rank - (1<<(r-1));
       if(firstred) {
         /* we have to send the senbuf */
-        res = NBC_Sched_send(sendbuf, count, datatype, peer, schedule);
+        res = NBC_Sched_send(sendbuf, false, count, datatype, peer, schedule);
       } else {
         /* we send an already reduced value from redbuf */
-        res = NBC_Sched_send(redbuf, count, datatype, peer, schedule);
+        res = NBC_Sched_send(redbuf-(unsigned long)handle->tmpbuf, true, count, datatype, peer, schedule);
       }
       if (NBC_OK != res) { free(handle->tmpbuf); printf("Error in NBC_Sched_send() (%i)\n", res); return res; }
       /* leave the game */
@@ -100,7 +110,7 @@ int NBC_Ireduce_scatter(void* sendbuf, void* recvbuf, int *recvcounts, MPI_Datat
 
   /* rank 0 is root and sends - all others receive */
   if(rank != 0) {
-    res = NBC_Sched_recv(recvbuf, recvcounts[rank], datatype, 0, schedule);
+    res = NBC_Sched_recv(recvbuf, false, recvcounts[rank], datatype, 0, schedule);
    if (NBC_OK != res) { free(handle->tmpbuf); printf("Error in NBC_Sched_recv() (%i)\n", res); return res; }
   }
 
@@ -110,10 +120,10 @@ int NBC_Ireduce_scatter(void* sendbuf, void* recvbuf, int *recvcounts, MPI_Datat
       offset += recvcounts[r-1];
       sbuf = ((char *)redbuf) + (offset*ext);
       /* root sends the right buffer to the right receiver */
-      res = NBC_Sched_send(sbuf, recvcounts[r], datatype, r, schedule);
+      res = NBC_Sched_send(sbuf-(unsigned long)handle->tmpbuf, true, recvcounts[r], datatype, r, schedule);
       if (NBC_OK != res) { free(handle->tmpbuf); printf("Error in NBC_Sched_send() (%i)\n", res); return res; }
     }
-    res = NBC_Sched_copy(redbuf, recvcounts[0], datatype, recvbuf, recvcounts[0], datatype, schedule);
+    res = NBC_Sched_copy(redbuf-(unsigned long)handle->tmpbuf, true, recvcounts[0], datatype, recvbuf, false, recvcounts[0], datatype, schedule);
     if (NBC_OK != res) { free(handle->tmpbuf); printf("Error in NBC_Sched_copy() (%i)\n", res); return res; }
   }
 
@@ -122,7 +132,7 @@ int NBC_Ireduce_scatter(void* sendbuf, void* recvbuf, int *recvcounts, MPI_Datat
   res = NBC_Sched_commit(schedule);
   if (NBC_OK != res) { free(handle->tmpbuf); printf("Error in NBC_Sched_commit() (%i)\n", res); return res; }
   
-  res = NBC_Start(handle, comm, schedule);
+  res = NBC_Start(handle, schedule);
   if (NBC_OK != res) { free(handle->tmpbuf); printf("Error in NBC_Start() (%i)\n", res); return res; }
   
   /* tmpbuf is freed with the handle */
@@ -130,3 +140,21 @@ int NBC_Ireduce_scatter(void* sendbuf, void* recvbuf, int *recvcounts, MPI_Datat
 }
 
 
+/* Fortran bindings */
+void NBC_F77_FUNC_(nbc_ireduce_scatter,NBC_IREDUCE_SCATTER)(void *sendbuf, void *recvbuf, int *recvcounts, int *datatype, int *fop, int *fcomm, int *fhandle, int *ierr)  {
+  MPI_Datatype dtype;
+  MPI_Comm comm;
+  MPI_Op op;
+  NBC_Handle *handle;
+
+  /* this is the only MPI-2 we need :-( */
+  dtype = MPI_Type_f2c(*datatype);
+  comm = MPI_Comm_f2c(*fcomm);
+  op = MPI_Op_f2c(*fop);
+
+  /* create a new handle in handle table */
+  NBC_Create_fortran_handle(fhandle, &handle);
+
+  /* call NBC function */
+  *ierr = NBC_Ireduce_scatter(sendbuf, recvbuf, recvcounts, dtype, op, comm, handle);
+}

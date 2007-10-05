@@ -1,5 +1,9 @@
-Building LibNBC:
-- set the right MPI-c Compilerwrapper in the Makefile (default: mpicc)
+Building LibNBC with C Bindings only:
+- set the right MPI Compilerwrapper in the Makefile (default: mpicc)
+- build libnbc.a with 'make'
+
+Building LibNBC with Fortran Bindings:
+- requires cmake: 'cmake .'
 - build libnbc.a with 'make'
 
 Linking Programs with LibNBC:
@@ -9,4 +13,4 @@ Linking Programs with LibNBC:
 Further Information and examples:
 - http://www.unixer.de/NBC
 
-SVN Version: r60
+SVN Version: r149

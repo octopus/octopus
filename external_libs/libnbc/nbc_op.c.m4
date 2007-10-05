@@ -96,7 +96,7 @@ define(m4_ARG3_$2, `*(((m4_CTYPE_$2*)buf3) + i)')dnl
         m4_OP_$1(_$2) 
       }
     }')dnl
-dnl ###############################################
+dnl ############################################### MINLOC and MAXLOC
 define(m4_LOCIF, `if(op == $1) {
       for(i=0; i<count; i++) {
         typedef struct {
@@ -118,6 +118,40 @@ define(m4_ARG3_RANK, ptr3->rank)dnl
         m4_OP_$1 
       }  
     }')dnl
+dnl ############################################### complex numbers MPI_SUM (Fortran only)
+define(m4_COMPSUMIF, `if(op == MPI_SUM) {
+      for(i=0; i<count; i++) {
+        typedef struct {
+          m4_CTYPE1_$1 real;
+          m4_CTYPE1_$1 imag;
+        } m4_CTYPE2_$1;
+        m4_CTYPE2_$1 *ptr1, *ptr2, *ptr3;
+                            
+        ptr1 = ((m4_CTYPE2_$1*)buf1) + i;
+        ptr2 = ((m4_CTYPE2_$1*)buf2) + i;
+        ptr3 = ((m4_CTYPE2_$1*)buf3) + i;
+
+        ptr3->real = ptr2->real + ptr1->real; 
+        ptr3->imag = ptr2->imag + ptr1->imag; 
+      }  
+  }')dnl
+dnl ############################################### complex numbers MPI_PROD (Fortran only)
+define(m4_COMPPRODIF, `if(op == MPI_PROD) {
+      for(i=0; i<count; i++) {
+        typedef struct {
+          m4_CTYPE1_$1 real;
+          m4_CTYPE1_$1 imag;
+        } m4_CTYPE2_$1;
+        m4_CTYPE2_$1 *ptr1, *ptr2, *ptr3;
+
+        ptr1 = ((m4_CTYPE2_$1*)buf1) + i;
+        ptr2 = ((m4_CTYPE2_$1*)buf2) + i;
+        ptr3 = ((m4_CTYPE2_$1*)buf3) + i;
+
+        ptr3->real = ptr1->real * ptr2->real - ptr1->imag * ptr2->imag; 
+        ptr3->imag = ptr1->real * ptr2->imag + ptr1->imag * ptr2->real; 
+      }  
+  }')dnl
 dnl ########################################################## 
 define(m4_TYPE, `if(type == $1) { 
     m4_OPTYPE_$1($1) 
@@ -127,6 +161,13 @@ dnl
 dnl
 dnl ####### MPI_INT ########
 define(m4_OPTYPE_MPI_INT, `define(m4_CTYPE_$1, `int')dnl
+m4_IF(MPI_MIN, $1) else m4_IF(MPI_MAX, $1) else dnl
+m4_IF(MPI_SUM, $1) else m4_IF(MPI_PROD, $1) else m4_IF(MPI_LAND, $1) else dnl
+m4_IF(MPI_BAND, $1) else m4_IF(MPI_LOR, $1) else m4_IF(MPI_BOR, $1) else dnl
+m4_IF(MPI_LXOR, $1) else m4_IF(MPI_BXOR, $1) else return NBC_OP_NOT_SUPPORTED;')dnl
+dnl
+dnl ####### MPI_INTEGER ########
+define(m4_OPTYPE_MPI_INTEGER, `define(m4_CTYPE_$1, `int')dnl
 m4_IF(MPI_MIN, $1) else m4_IF(MPI_MAX, $1) else dnl
 m4_IF(MPI_SUM, $1) else m4_IF(MPI_PROD, $1) else m4_IF(MPI_LAND, $1) else dnl
 m4_IF(MPI_BAND, $1) else m4_IF(MPI_LOR, $1) else m4_IF(MPI_BOR, $1) else dnl
@@ -172,8 +213,18 @@ define(m4_OPTYPE_MPI_FLOAT, `define(m4_CTYPE_$1, `float')dnl
 m4_IF(MPI_MIN, $1) else m4_IF(MPI_MAX, $1) else dnl
 m4_IF(MPI_SUM, $1) else m4_IF(MPI_PROD, $1) else return NBC_OP_NOT_SUPPORTED;')dnl
 dnl
+dnl ####### MPI_REAL ########
+define(m4_OPTYPE_MPI_REAL, `define(m4_CTYPE_$1, `float')dnl
+m4_IF(MPI_MIN, $1) else m4_IF(MPI_MAX, $1) else dnl
+m4_IF(MPI_SUM, $1) else m4_IF(MPI_PROD, $1) else return NBC_OP_NOT_SUPPORTED;')dnl
+dnl
 dnl ####### MPI_DOUBLE ########
 define(m4_OPTYPE_MPI_DOUBLE, `define(m4_CTYPE_$1, `double')dnl
+m4_IF(MPI_MIN, $1) else m4_IF(MPI_MAX, $1) else dnl
+m4_IF(MPI_SUM, $1) else m4_IF(MPI_PROD, $1) else return NBC_OP_NOT_SUPPORTED;')dnl
+dnl
+dnl ####### MPI_DOUBLE_PRECISION ########
+define(m4_OPTYPE_MPI_DOUBLE_PRECISION, `define(m4_CTYPE_$1, `double')dnl
 m4_IF(MPI_MIN, $1) else m4_IF(MPI_MAX, $1) else dnl
 m4_IF(MPI_SUM, $1) else m4_IF(MPI_PROD, $1) else return NBC_OP_NOT_SUPPORTED;')dnl
 dnl
@@ -186,6 +237,18 @@ dnl ####### MPI_BYTE ########
 define(m4_OPTYPE_MPI_BYTE, `define(m4_CTYPE_$1, `char')dnl
 m4_IF(MPI_BAND, $1) else m4_IF(MPI_BOR, $1) else dnl
 m4_IF(MPI_BXOR, $1) else return NBC_OP_NOT_SUPPORTED;')dnl
+dnl
+dnl ####### MPI_COMPLEX ########
+define(m4_OPTYPE_MPI_COMPLEX, `define(m4_CTYPE1_$1, `float')define(m4_CTYPE2_$1, `floatcplx')dnl
+m4_COMPSUMIF($1) else m4_COMPPRODIF($1) else return NBC_OP_NOT_SUPPORTED;')dnl
+dnl
+dnl ####### MPI_DOUBLE_COMPLEX ########
+define(m4_OPTYPE_MPI_DOUBLE_COMPLEX, `define(m4_CTYPE1_$1, `double')define(m4_CTYPE2_$1, `doublecplx')dnl
+m4_COMPSUMIF($1) else m4_COMPPRODIF($1) else return NBC_OP_NOT_SUPPORTED;')dnl
+dnl
+dnl ####### MPI_LOGICAL ########
+define(m4_OPTYPE_MPI_LOGICAL, `define(m4_CTYPE_$1, `char')dnl
+m4_IF(MPI_LAND, $1) else m4_IF(MPI_LOR, $1) else m4_IF(MPI_LXOR, $1) return NBC_OP_NOT_SUPPORTED;')dnl
 dnl
 dnl ####### MPI_FLOAT_INT ########
 define(m4_OPTYPE_MPI_FLOAT_INT, `define(m4_CTYPE1_$1, `float')define(m4_CTYPE2_$1, `int')define(m4_CTYPE3_$1, `float_int')dnl
@@ -222,13 +285,16 @@ int NBC_Operation(void *buf3, void *buf1, void *buf2, MPI_Op op, MPI_Datatype ty
   int i;
      
   m4_TYPE(MPI_INT) else dnl
+m4_TYPE(MPI_INTEGER) else dnl
 m4_TYPE(MPI_LONG) else dnl
 m4_TYPE(MPI_SHORT) else dnl
 m4_TYPE(MPI_UNSIGNED) else dnl
 m4_TYPE(MPI_UNSIGNED_LONG) else dnl
 m4_TYPE(MPI_UNSIGNED_SHORT) else dnl
 m4_TYPE(MPI_FLOAT) else dnl
+m4_TYPE(MPI_REAL) else dnl
 m4_TYPE(MPI_DOUBLE) else dnl
+m4_TYPE(MPI_DOUBLE_PRECISION) else dnl
 m4_TYPE(MPI_LONG_DOUBLE) else dnl
 m4_TYPE(MPI_BYTE) else dnl
 m4_TYPE(MPI_FLOAT_INT) else dnl
@@ -237,8 +303,10 @@ m4_TYPE(MPI_LONG_INT) else dnl
 m4_TYPE(MPI_2INT) else dnl
 m4_TYPE(MPI_SHORT_INT) else dnl
 m4_TYPE(MPI_LONG_DOUBLE_INT) else dnl
+m4_TYPE(MPI_LOGICAL) else dnl
+m4_TYPE(MPI_COMPLEX) else dnl
+m4_TYPE(MPI_DOUBLE_COMPLEX) else dnl
 return NBC_DATATYPE_NOT_SUPPORTED;
   
   return NBC_OK;
 }
-
