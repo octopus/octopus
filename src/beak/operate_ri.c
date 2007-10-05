@@ -23,11 +23,12 @@
 #include <config.h>
 #include "beak.h"
 
-#if defined(HAVE_IA64INTRIN_H)
-#include <ia64intrin.h>
-#endif
-
 #include <assert.h>
+
+#ifndef OCT_ITANIUM
+void FC_FUNC_(doperate_as, DOPERATE_AS)(void){
+}
+#endif
 
 void FC_FUNC_(doperate_ri,DOPERATE_RI)(const int * opnp, 
 				       const int * opn, 
@@ -64,8 +65,8 @@ void FC_FUNC_(doperate_ri,DOPERATE_RI)(const int * opnp,
     for(j = 0; j < n ; j++) {
       ffi[j] = fi + index[j];
       /* prefecth */
-#if defined(OCT_ITANIUM) && defined(HAVE_IA64INTRIN_H)
-      __lfetch(3, fi + rimap_inv[l+1] + index1[j]);
+#if defined(OCT_ITANIUM)
+      __builtin_prefetch(fi + rimap_inv[l+1] + index1[j], 0, 3);
 #endif
     }
 
@@ -139,8 +140,8 @@ void FC_FUNC_(zoperate_ri,ZOPERATE_RI)(const int * opnp,
     for(j = 0; j < n ; j++) {
       ffi[j] = fi + index[j];
       /* prefetch */
-#if defined(OCT_ITANIUM) && defined(HAVE_IA64INTRIN_H)
-      __lfetch(3, fi + rimap_inv[l+1] + index1[j]);
+#if defined(OCT_ITANIUM)
+      __builtin_prefetch(fi + rimap_inv[l+1] + index1[j], 0, 3);
 #endif
     }
 

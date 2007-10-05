@@ -88,8 +88,9 @@ module nl_operator_m
        OP_FORTRAN = 0,  &
        OP_C       = 1,  &
        OP_VEC     = 2,  &
+       OP_AS      = 3,  &
        OP_MIN     = OP_FORTRAN, &
-       OP_MAX     = OP_VEC
+       OP_MAX     = OP_AS
 
   
   logical :: initialized = .false.
@@ -109,6 +110,7 @@ contains
     if(id == OP_FORTRAN) str = 'Fortran'
     if(id == OP_C)       str = 'C'
     if(id == OP_VEC)     str = 'Vector'
+    if(id == OP_AS)      str = 'AS'
     
   end function op_function_name
 
@@ -982,6 +984,8 @@ contains
         call doperate_ri(op%np, nn, op%w_re(1, 1), op%nri, op%ri(1,1), op%rimap_inv(0), fi(1), fo(1))
       case(OP_VEC)
         call doperate_ri_vec(op%np, nn, op%w_re(1, 1), op%nri, op%ri(1,1), op%rimap_inv(0), fi(1), fo(1))
+      case(OP_AS)
+        call doperate_as(nn, op%w_re(1, 1), op%nri, op%ri(1,1), op%rimap_inv(0), fi(1), fo(1))
       end select
     else
       do ii = 1, op%np

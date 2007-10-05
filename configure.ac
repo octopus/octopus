@@ -37,6 +37,7 @@ AC_PROG_LN_S
 AC_PROG_MAKE_SET
 AC_PROG_RANLIB
 AC_PROG_YACC
+AM_PROG_AS
 AC_PROG_CC
 
 # optimizations extensions supported by the compiler
@@ -49,7 +50,7 @@ AC_HEADER_DIRENT
 AC_HEADER_STDC
 AC_CHECK_HEADERS([fcntl.h float.h locale.h malloc.h stddef.h stdlib.h \
 string.h strings.h sys/ioctl.h sys/time.h termios.h unistd.h signal.h \
-errno.h xmmintrin.h emmintrin.h ia64intrin.h])
+errno.h xmmintrin.h emmintrin.h])
 AC_FUNC_ALLOCA
 
 # Checks for typedefs, structures, and compiler characteristics.

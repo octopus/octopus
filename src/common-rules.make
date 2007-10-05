@@ -43,6 +43,8 @@ AM_CPPFLAGS = \
 	-I$(top_builddir)/src/include \
 	-I$(top_srcdir)/libstring_f
 
+AM_CCASFLAGS = \
+	-I$(top_builddir)/
 
 # ---------------------------------------------------------------
 # Define libraries here.
