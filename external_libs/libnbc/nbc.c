@@ -649,7 +649,7 @@ int NBC_Init_handle(NBC_Handle *handle, MPI_Comm comm) {
   return NBC_OK;
 }
 
-__inline__ NBC_Comminfo* NBC_Init_comm(MPI_Comm comm) {
+NBC_Comminfo* NBC_Init_comm(MPI_Comm comm) {
 #ifndef OMPI_COMPONENT
   int res;
 #endif
