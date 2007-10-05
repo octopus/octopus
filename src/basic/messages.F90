@@ -373,10 +373,25 @@ contains
 
     if(.not.mpi_grp_is_root(mpi_world)) return
 
+    if(flush_messages) then
+      open(unit=iunit_out, file='messages.stdout', &
+        action='write', position='append')
+    end if
+
     if(present(pre)) then
       call varinfo_print_option(iunit, var, option, pre)
+      if(flush_messages) then
+        call varinfo_print_option(iunit_out, var, option, pre)
+      end if
     else
       call varinfo_print_option(iunit, var, option)
+      if(flush_messages) then
+        call varinfo_print_option(iunit_out, var, option, pre)
+      end if
+    end if
+
+    if(flush_messages) then
+      close(iunit_out)
     end if
   end subroutine messages_print_var_option
 
@@ -447,7 +462,7 @@ contains
     if(present(adv)) adv_ = adv
 
     write(iunit, '(a)', advance=trim(adv_)) trim(str)
-    if(flush_messages) then
+    if(flush_messages.and.mpi_grp_is_root(mpi_world)) then
       if(iunit.eq.stderr) write(iunit_err, '(a)', advance=trim(adv_)) trim(str)
       if(iunit.eq.stdout) write(iunit_out, '(a)', advance=trim(adv_)) trim(str)
     end if
