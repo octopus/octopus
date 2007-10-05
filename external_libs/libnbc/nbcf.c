@@ -22,12 +22,6 @@ void FC_FUNC_(nbcf_ibcast, NBCF_IBCAST)
   *ierr = NBC_Ibcast(buffer, *count, *datatype, *root, *comm, *handle);
 }
 
-void FC_FUNC_(nbcf_ibcast_lin, NBCF_IBCAST_LIN)
-     (void *buffer, int *count, int *datatype, int *root,
-      int *comm, NBC_Handle **handle, int *ierr) {
-  *ierr = NBC_Ibcast_lin(buffer, *count, *datatype, *root, *comm, *handle);
-}
-
 void FC_FUNC_(nbcf_ialltoallv, NBCF_IALLTOALLV)
      (void *sendbuf, int *sendcounts, int *sdispls, int *sendtype,
       void *recvbuf, int *recvcounts, int *rdispls, int *recvtype,

@@ -1,50 +1,52 @@
-sources = \
-					dict.c \
-					hb_tree.c \
-					nbc.c \
-					nbc_iallgather.c \
-					nbc_iallgatherv.c \
-					nbc_iallreduce.c \
-					nbc_ialltoall.c \
-					nbc_ialltoallv.c \
-					nbc_ibarrier.c \
-					nbc_ibcast.c \
-					nbc_igather.c \
-					nbc_igatherv.c \
-					nbc_ireduce.c \
-					nbc_ireduce_scatter.c \
-					nbc_iscan.c \
-					nbc_iscatter.c \
-					nbc_iscatterv.c \
-					nbc_op.c \
-					ompi_component.c \
-					ompi_component.h \
-					dict.h \
-					dict_private.h \
-					hb_tree.h \
-					nbc.h
+## Process this file with automake to produce Makefile.in
 
-# Make the output library in this directory, and name it either
-# mca_<type>_<name>.la (for DSO builds) or libmca_<type>_<name>.la
-# (for static builds).
+## Copyright (C) 2002 M. Marques, A. Castro, A. Rubio, G. Bertsch
+##
+## This program is free software; you can redistribute it and/or modify
+## it under the terms of the GNU General Public License as published by
+## the Free Software Foundation; either version 2, or (at your option)
+## any later version.
+##
+## This program is distributed in the hope that it will be useful,
+## but WITHOUT ANY WARRANTY; without even the implied warranty of
+## MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+## GNU General Public License for more details.
+##
+## You should have received a copy of the GNU General Public License
+## along with this program; if not, write to the Free Software
+## Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
+## 02111-1307, USA.
+##
+## $Id: Makefile.am 2593 2006-11-20 10:58:15Z marques $
 
-if OMPI_BUILD_coll_libnbc_DSO
-component_noinst =
-component_install = mca_coll_libnbc.la
-else
-component_noinst = libmca_coll_libnbc.la
-component_install =
+if COMPILE_LIBNBC
+  noinst_LIBRARIES = libnbc.a
 endif
 
-mcacomponentdir = $(libdir)/openmpi
-mcacomponent_LTLIBRARIES = $(component_install)
-mca_coll_libnbc_la_SOURCES = $(sources)
-mca_coll_libnbc_la_LDFLAGS = -module -avoid-version
-mca_coll_libnbc_la_LIBADD = \
-        $(top_ompi_builddir)/ompi/libmpi.la \
-        $(top_ompi_builddir)/orte/liborte.la \
-        $(top_ompi_builddir)/opal/libopal.la
+libnbc_a_SOURCES = \
+	nbc.h \
+	nbc.c \
+	nbc_iallgather.c \
+	nbc_iallgatherv.c \
+	nbc_iallreduce.c \
+	nbc_ialltoall.c \
+	nbc_ialltoallv.c \
+	nbc_ibarrier.c \
+	nbc_ibcast.c \
+	nbc_igather.c \
+	nbc_igatherv.c \
+	nbc_ireduce.c \
+	nbc_ireduce_scatter.c \
+	nbc_iscan.c \
+	nbc_iscatter.c \
+	nbc_iscatterv.c \
+	nbc_op.c \
+	nbc_fortran.h \
+	nbc_fortran.c \
+	hb_tree.h \
+	hb_tree.c \
+	dict.h \
+	dict.c \
+	nbcf.c
 
-noinst_LTLIBRARIES = $(component_noinst)
-libmca_coll_libnbc_la_SOURCES =$(sources)
-libmca_coll_libnbc_la_LDFLAGS = -module -avoid-version
+CLEANFILES = *~ *.bak
