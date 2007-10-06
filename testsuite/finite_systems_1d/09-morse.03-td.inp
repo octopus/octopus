@@ -1,0 +1,118 @@
+SystemName = "Morse-OH"
+
+CalculationMode = td
+Units = "a.u"
+FromScratch = yes
+
+NumberUnoccStates = 6
+
+Dimensions = 1
+
+
+# The Morse potential is given by:
+# V(r) = D{exp[-beta*(r-r0)]-1}**2 - D
+# where, for the OH case:
+# 
+D = 0.1994
+beta = 1.189
+r0 = 1.821
+# The atomic masses are:
+mH = 1.00794
+mO = 15.9994
+mu = 0.948204436
+# mu is the reduced mass (mH*mO)/(mH+mO).
+# The harmonic frequency is:
+omega = beta*sqrt(2*D/mu)
+# The numerical value of this energy is 0.0180604424 Ha
+#
+# The eigenenergies of this system are given by:
+#
+# E[nu] = -D + \hbar* [ omega*(nu+0.5) - Delta*(nu+0.5)^2 ] 
+# 
+# where Delta is the anharmocity constant:
+Delta = omega^2 / (4*D)
+# The numerical value is .00040895133 Ha
+#
+# Therefore, the eigenenergies are given by:
+#
+# vu = 0: E[0] = -0.190472 Ha
+# vu = 0: E[1] = -0.1732294768 Ha
+# vu = 0: E[2] = -0.1568048397 Ha
+# vu = 0: E[3] = -0.1411981 Ha
+# vu = 0: E[4] = -0.12640927 Ha
+# vu = 0: E[5] = -0.11243834 Ha
+# vu = 0: E[6] = -0.0992853178 Ha
+
+# This transforms the reduced mass from "atomic mass units" to the "atomic unit of mass".
+K = mu * 1822.8885
+
+ParticleMass = K
+
+%Species
+"morse" | 1 | user_defined | 1 | "D*(exp(-beta*(x-r0))-1)^2 - D"
+%
+
+%Coordinates
+"morse" | -r0 | 0 | 0 | no
+%
+
+BoxShape = sphere
+Radius  = 2.0
+Spacing = 0.01
+
+NonInteractingElectrons = yes
+
+TDOutput = energy + laser + multipoles + td_occup
+
+picosecond = 41341.373
+
+# The whole run should go up to 1 picosecond, but in order to have a short
+# test we only do a small fraction of that.
+T = picosecond/100
+dt = 0.25
+TDMaximumIter = T/dt
+TDEvolutionMethod = aetrs
+TDExponentialMethod = lanczos
+TDExpOrder = 20
+TDLanczosTol = 1.0e-5
+TDTimeStep = dt
+
+OutputEvery = 10000
+
+AbsorbingBoundaries = no
+ABWidth = 3.0
+ABHeight = -4.0
+
+#mu0 = 3.088
+
+# The parameters, according to the bibliography, are:
+# mu0 = 7.85 debye / angstrom = 1.634 atomiccharge
+# xp = 0.6 Angstrom
+
+# This should correspond to [Jakubetz et al, Chem. Phys. Lett. 165, 100 (1990)],
+# Fig 1a, except for a factor of 0.529177 in the amplitude of the laser field that
+# I don't understand.
+# (Maybe it is a mistake in their paper?)
+
+mu0 = 1.634
+#mu0 = 3.088
+#mu0 = 0.64290417
+xp = 0.6 / 0.529177
+
+# omega0 = E(6)-E(0)
+#omega0 = (-0.0992853178 - (-0.190472))/6
+
+# omega0 = 3332.44 cm^(-1)
+omega0 = 0.015183714
+
+#amp = 442.42 megavolt / cm
+amp = 0.086037
+
+
+#%TDExternalFields
+#scalar_potential | "amp*mu0*(x+r0)*exp(-(x+r0)/xp)" | envelope_fromexpr | "sin(pi*t/T)^2*cos(omega0*t)"
+#%
+
+%TDExternalFields
+scalar_potential | "amp*mu0*(x+r0)*exp(-(x+r0)/xp)" | envelope_fromexpr | "sin(pi*t/picosecond)^2*cos(omega0*t)"
+%

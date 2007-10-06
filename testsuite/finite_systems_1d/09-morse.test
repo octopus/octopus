@@ -1,0 +1,33 @@
+# -*- coding: utf-8 mode: shell-script -*-
+# $Id: oct-run_regression_test.pl 2423 2006-09-24 21:25:52Z acastro $
+
+Test       : 09-morse.test
+Author     : Alberto
+Date       : 06.10.07
+Arch       : Linux alberto-laptop 2.6.22-13-generic
+Release    : 2.2.0pre1
+Programs   : octopus
+TestGroups : short-run
+Enabled    : Yes
+
+# This test replicates one of the calculations reported in the paper:
+# [G. K. Paramonov, Chem. Phys. 177, 169 (1993)]
+#
+# The calculation corresponds with the ones presented in Fig. 1
+# (panels C and D).
+#
+# It consists of the calculation of the evolution of the nuclear wavepacket
+# of an OH bond in a water molecule, modeled with the Morse potential.
+
+Input: 09-morse.01-gs.inp
+Input: 09-morse.02-unocc.inp
+
+Match ; 'E[nu=0]' ; grep ' 1   -- ' static/eigenvalues ; \s*1\s*--\s*-0.190472
+Match ; 'E[nu=1]' ; grep ' 2   -- ' static/eigenvalues ; \s*2\s*--\s*-0.173229
+Match ; 'E[nu=2]' ; grep ' 3   -- ' static/eigenvalues ; \s*3\s*--\s*-0.156805
+Match ; 'E[nu=6]' ; grep ' 7   -- ' static/eigenvalues ; \s*7\s*--\s*-0.099285
+
+Input: 09-morse.03-td.inp
+
+Match ; '<Psi(T)|Psi(0)>' ; tail -n 1 td.general/projections ; \s*1654\s*4.135\d*e\+02\s*-9.76044
+

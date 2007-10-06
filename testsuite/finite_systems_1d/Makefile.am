@@ -48,6 +48,10 @@ dist_share_DATA = \
 	07-sym_doublewell.03-oct.inp \
 	08-localtarget.test \
 	08-localtarget.01-gs.inp \
-	08-localtarget.02-oct.inp
+	08-localtarget.02-oct.inp \
+	09-morse.test \
+	09-morse.01-gs.inp \
+	09-morse.02-unocc.inp \
+	09-morse.03-td.inp 
 
 CLEANFILES = *~ *.bak
