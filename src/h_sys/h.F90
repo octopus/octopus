@@ -120,6 +120,9 @@ module hamiltonian_m
     ! Kinetic Cutoff
     FLOAT :: cutoff
 
+    ! Mass of the particle (in most cases, mass = 1, electron mass)
+    FLOAT :: mass
+
 #if defined(HAVE_LIBNBC)
     ! NBC_Handles for the calculation of the kinetic energy in parallel.
     C_POINTER, pointer :: handles(:)
@@ -362,6 +365,20 @@ contains
       write(message(2),'(a)')        '      (only if DerivativesSpace = 1 is set)'
       call write_info(2)
     end if
+
+    ! Mass of the particle.
+    ! It should be almost always one (electron mass).
+    !%Variable ParticleMass
+    !%Type float
+    !%Default 1.0
+    !%Section Hamiltonian
+    !%Description 
+    !% It is possible to make calculations for a particle with a mass
+    !% different from one (atomic unit of mass, or mass of the electron).
+    !% This is useful to describe non-electronic systems, of for
+    !% esoteric purposes.
+    !%End
+    call loct_parse_float(check_inp('ParticleMass'), M_ONE, h%mass)
 
     call pop_sub()
   end subroutine hamiltonian_init

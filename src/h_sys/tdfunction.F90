@@ -29,6 +29,7 @@ module tdf_m
   use global_m
   use io_m
   use messages_m
+  use lib_oct_parser_m
   use lib_oct_gsl_spline_m
   use units_m
 #if defined(HAVE_FFT)
@@ -44,6 +45,7 @@ module tdf_m
             tdf_init_cosinoidal,  &
             tdf_init_trapezoidal, &
             tdf_init_fromfile,    &
+            tdf_init_fromexpr,    &
             tdf_init_numerical,   &
             tdf_set_numerical,    &
             tdf_to_numerical,     &
@@ -64,7 +66,8 @@ module tdf_m
     TDF_COSINOIDAL    =  2,  &
     TDF_TRAPEZOIDAL   =  3,  &
     TDF_FROM_FILE     = 10,  &
-    TDF_NUMERICAL     = 99
+    TDF_NUMERICAL     = 99,  &
+    TDF_FROMEXPR      = 100
 
   type tdf_t
     private
@@ -78,6 +81,8 @@ module tdf_m
     FLOAT   :: omega0
 
     type(loct_spline_t) :: amplitude
+
+    character(len=200) :: expression
 
     FLOAT   :: dt     ! the time-discretization value.
     integer :: niter
@@ -179,6 +184,20 @@ module tdf_m
 
     call pop_sub()
   end subroutine tdf_init_trapezoidal
+
+
+  !------------------------------------------------------------
+  subroutine tdf_init_fromexpr(f, expression)
+    type(tdf_t), intent(inout)   :: f
+    character(len=*), intent(in) :: expression
+
+    call push_sub('tdfunction.tdf_init_fromexpr')
+
+    f%mode = TDF_FROMEXPR
+    f%expression = trim(expression)
+    
+    call pop_sub()
+  end subroutine tdf_init_fromexpr
 
 
   !------------------------------------------------------------
@@ -413,7 +432,7 @@ module tdf_m
     type(tdf_t), intent(in) :: f
     FLOAT, intent(in)       :: t
 
-    FLOAT :: r
+    FLOAT :: r, fre, fim
     integer :: il, iu
 
     select case(f%mode)
@@ -437,13 +456,10 @@ module tdf_m
     case(TDF_TRAPEZOIDAL)
       if(t > f%t0-f%tau0/M_TWO-f%tau1 .and. t <= f%t0-f%tau0/M_TWO) then
         r = (t - (f%t0 - f%tau0/M_TWO - f%tau1))/f%tau1
-        write(*, *) '1'
       elseif(t>f%t0-f%tau0/M_TWO .and. t <=f%t0+f%tau0/M_TWO) then
         r = M_ONE
-        write(*, *) '2'
       elseif(t>f%t0+f%tau0/M_TWO .and. t <=f%t0+f%tau0/M_TWO+f%tau1) then
         r = (f%t0 + f%tau0/M_TWO + f%tau1 - t)/f%tau1
-        write(*, *) '3'
       else
         r = M_ZERO
       end if
@@ -460,6 +476,10 @@ module tdf_m
       else
         y = f%val(il) + ((f%val(iu)-f%val(il))/f%dt)*(t-(il-1)*f%dt)
       end if
+
+    case(TDF_FROMEXPR)
+      call loct_parse_expression(fre, fim, 't', t, f%expression)
+      y = cmplx(fre, fim)
 
     end select
 

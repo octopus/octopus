@@ -895,6 +895,8 @@ contains
 
     if(.not.mpi_grp_is_root(mpi_world)) return ! only first node outputs
 
+    call push_sub('td_write.td_write_laser')
+
     ! TODO -> confirm these stupid units, especially for the vector field
     if(iter == 0) then
       call td_write_print_header_init(out_laser)
@@ -968,6 +970,7 @@ contains
 
     call write_iter_nl(out_laser)
 
+    call pop_sub()
   end subroutine td_write_laser
 
 

@@ -977,7 +977,7 @@ contains
             geo%atom(i)%f(1:NDIM) = geo%atom(i)%f(1:NDIM) + &
               geo%atom(i)%spec%Z_val * x(1:NDIM)
           end do
-        case(E_FIELD_MAGNETIC, E_FIELD_VECTOR_POTENTIAL)
+        case(E_FIELD_MAGNETIC, E_FIELD_VECTOR_POTENTIAL, E_FIELD_SCALAR_POTENTIAL)
           write(message(1),'(a)') 'The forces are currently not properly calculated if time-dependent'
           write(message(2),'(a)') 'magnetic fields are present.'
           call write_fatal(2)

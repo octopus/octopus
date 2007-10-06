@@ -290,7 +290,7 @@ subroutine X(kinetic_calculate) (h, gr, psi, hpsi, ik)
     do idim = 1, h%d%dim
       call X(f_laplacian) (gr%sb, gr%f_der, psi(:, idim), lapl(:, idim), &
         cutoff_ = M_TWO*h%cutoff, ghost_update=.false.)
-      call lalg_axpy(NP, -M_HALF, lapl(:, idim), hpsi(:, idim))
+      call lalg_axpy(NP, -M_HALF/h%mass, lapl(:, idim), hpsi(:, idim))
     end do
   end if
 
@@ -740,6 +740,13 @@ subroutine X(vlasers) (gr, h, psi, hpsi, ik, t)
   do i = 1, h%ep%no_lasers
 
     select case(h%ep%lasers(i)%field)
+    case(E_FIELD_SCALAR_POTENTIAL)
+      if(.not. allocated(v)) then 
+        ALLOCATE(v(NP), NP)
+        v = M_ZERO
+      end if
+      call laser_potential(gr%sb, h%ep%lasers(i), gr%m, v, t)
+      electric_field = .true.
     case(E_FIELD_ELECTRIC)
       if(.not. allocated(v)) then 
         ALLOCATE(v(NP), NP)
@@ -750,6 +757,7 @@ subroutine X(vlasers) (gr, h, psi, hpsi, ik, t)
       call laser_potential(gr%sb, h%ep%lasers(i), gr%m, pot, t)
       v = v + pot
       electric_field = .true.
+      deallocate(pot)
 
     case(E_FIELD_MAGNETIC)
       if(.not. allocated(a)) then 
@@ -782,7 +790,7 @@ subroutine X(vlasers) (gr, h, psi, hpsi, ik, t)
     do k = 1, h%d%dim
       hpsi(1:NP, k)= hpsi(1:NP, k) + v(1:NP) * psi(1:NP, k)
     end do
-    deallocate(v, pot)
+    deallocate(v)
   end if
 
   if(magnetic_field) then
