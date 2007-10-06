@@ -958,6 +958,7 @@ contains
 #if defined(HAVE_MPI)
     logical :: update
 #endif
+    real(8) :: ws(100)
 
     call profiling_in(C_PROFILING_NL_OPERATOR)
     call push_sub('nl_operator.dnl_operator_operate')
@@ -985,7 +986,7 @@ contains
       case(OP_VEC)
         call doperate_ri_vec(op%np, nn, op%w_re(1, 1), op%nri, op%ri(1,1), op%rimap_inv(0), fi(1), fo(1))
       case(OP_AS)
-        call doperate_as(nn, op%w_re(1, 1), op%nri, op%ri(1,1), op%rimap_inv(0), fi(1), fo(1))
+        call doperate_as(nn, op%w_re(1, 1), op%nri, op%ri(1,1), op%rimap_inv(0), fi(1), fo(1), ws(1))
       end select
     else
       do ii = 1, op%np
