@@ -26,9 +26,8 @@
 .global FC_FUNC_(doperate_as, DOPERATE_AS)#
 .proc FC_FUNC_(doperate_as, DOPERATE_AS)#
 FC_FUNC_(doperate_as, DOPERATE_AS):
-.prologue
-alloc r3 = ar.pfs, 8, 60, 0, 8
-.body
+
+alloc r3 = ar.pfs, 8, 60, 0, 16
 //save LC
 mov r2 = ar.lc
 
@@ -65,14 +64,12 @@ mov ARG_WS = r39
 #define RILL r78
 #define WS r79
 #define WS2 r80
+#define MAXUNRII r81
 
 mov LL = r0
-mov II = r0
+mov II = r0;;
+lfetch.nt1 [ARG_WW]
 
-lfetch [ARG_WS]
-lfetch [ARG_RI]
-
-;;
 .loop_NR:
 adds LL = 1, LL;;
 cmp4.ne p2,p3 = LL, NR;;
@@ -85,24 +82,130 @@ LDI MAXII = [ARG_RM];;
 //calculate WS[1:NN] = FI + II + ARG_RI[1:NN, LL]
 mov RILL = ARG_RI
 mov WS = ARG_WS
-adds r90 = -1, NN;;
-mov ar.lc = r90
+adds r35 = -1, NN
+mov ar.ec = 5 + 1
+mov pr.rot = 1 << 16;;
+mov ar.lc = r35
 
 .loop_NN1:
-LDI r91 = [RILL], 4;;
-sxt4 r91 = r91;;
-shladd r91 = r91, FSHIFT, ARG_FI;;
-shladd r91 = II, FSHIFT, r91;;
-st8 [WS] = r91, 8
-br.cloop.sptk.few .loop_NN1
-.loop_II:
-;;
+(p16) LDI r38 = [RILL], 4
+(p17) sxt4 r39 = r39
+(p18) shladd r40 = r40, FSHIFT, ARG_FI
+(p19) shladd r41 = II, FSHIFT, r41
+(p20) st8 [WS] = r42, 8
+br.ctop.sptk.few .loop_NN1
+clrrrb;;
+
+// FIRST, THE UNROLLED LOOP IN II
+#define UNROLL 8
+adds MAXUNRII = -UNROLL + 1, MAXII
+
+//check whether we have to do at least one iteration
+cmp.ge p6,p0 = II, MAXUNRII     // if (II > MAXUNRII) 
+(p6) br.cond.dpnt.few .loop_II  // goto rolled loop
+
+.loop_II_unrolled:
+mov WS = ARG_WS;;
+ld8 r33 = [WS],8 //load WS[0] in advance
 adds r90 = -1, NN
+mov WW = ARG_WW
+mov WS2 = ARG_WS
+adds II = UNROLL, II
+adds r41 = FSIZE, r33
+mov f81 = f33;;
+mov ar.lc = r90
+mov ar.ec = 4 + 1
+mov pr.rot = 1 << 16
+
+//initialize accumulators
 mov f8 = f0
+mov f9 = f0
+mov f10 = f0
+mov f11 = f0
+mov f12 = f0
+mov f13 = f0
+mov f14 = f0
+mov f15 = f0;;
+
+//inner loop in K
+.loop_NN2:
+
+//cycle 1
+(p16) ld8.s r32 = [WS],8 //load WS[K+1] 
+(p16) ldfd f40 = [r33], FSIZE*2
+(p20) fma.d f8 = f37,f44, f8
+
+(p16) ldfd f33 = [WW], FSIZE
+(p16) ldfd f45 = [r41], FSIZE*2
+(p20) fma.d f9 = f37,f49, f9
+
+//cycle 2
+(p16) ldfd f50 = [r33], FSIZE*2
+(p20) fma.d f10 = f37,f54, f10
+
+(p16) adds r40 = FSIZE, r32
+(p16) ldfd f55 = [r41], FSIZE*2
+(p20) fma.d f11 = f37,f59, f11
+
+ //cycle 3
+(p17) st8 [WS2] = r34, 8 //store the incremented value of WS[K] for the next iteration
+(p16) ldfd f60 = [r33], FSIZE*2
+(p20) fma.d f12 = f37,f64, f12
+
+(p16) ldfd f65 = [r41], FSIZE*2
+(p20) fma.d f13 = f37,f69, f13
+
+//cycle 4
+(p16) ldfd f70 = [r33], FSIZE*2
+(p20) fma.d f14 = f37,f74, f14
+
+(p16) ldfd f75 = [r41], FSIZE*2
+(p20) fma.d f15 = f37,f79, f15
+br.ctop.dptk.few .loop_NN2
+
+//create pointers for storing
+adds r32 = FSIZE,   ARG_FO
+adds r33 = FSIZE*2, ARG_FO
+adds r34 = FSIZE*3, ARG_FO
+adds r35 = FSIZE*4, ARG_FO
+adds r36 = FSIZE*5, ARG_FO
+adds r37 = FSIZE*6, ARG_FO
+adds r38 = FSIZE*7, ARG_FO;;
+
+//store
+stfd.nta [ARG_FO] = f8, FSIZE*8
+stfd.nta [r32]    = f9
+stfd.nta [r33]    = f10
+stfd.nta [r34]    = f11
+stfd.nta [r35]    = f12
+stfd.nta [r36]    = f13
+stfd.nta [r37]    = f14
+stfd.nta [r38]    = f15
+
+//check the value of II
+cmp4.lt p4,p0 = II, MAXUNRII
+//reset register rotation
+clrrrb;;
+
+//iterate over II
+(p4) br.cond.dptk.few .loop_II_unrolled
+
+
+// NOW WE HANDLE THE REST
+.loop_II:
+
+//check the value of II
+cmp4.lt p4,p5 = II, MAXII;;
+
+//and go to end if we are already finished
+(p5) br.cond.dpnt.few .end_II
+
+adds r90 = -1, NN
 mov WW = ARG_WW
 mov WS = ARG_WS
 mov WS2 = ARG_WS
 adds II = 1, II;;
+
 mov ar.lc = r90
 mov ar.ec = 7 + 1
 mov pr.rot = 1 << 16
@@ -116,16 +219,13 @@ mov f36 = f0
 
 ;;
 //inner loop
-.loop_NN2:
-.mmf
+.loop_NN3:
 (p16) ld8 r32 = [WS],8
 (p16) ldfd f50 = [WW], FSIZE
 (p23) fma.d f39 = f57,f67, f43
-.mmb
 (p17) ldfd f61 = [r33], FSIZE
 (p18) st8 [WS2] = r34, 8
-br.ctop.sptk.few .loop_NN2
-nop.i 0
+br.ctop.sptk.few .loop_NN3
 ;;
 //reduce accumulators
 fadd.d f40 = f40, f41
@@ -133,23 +233,21 @@ fadd.d f42 = f42, f43;;
 fadd.d f8 = f40, f42;;
 //store
 stfd.nta [ARG_FO] = f8, FSIZE
-//check the value of II
-cmp4.ne p4,p0 = II, MAXII
+
 //reset register rotation
 clrrrb;;
-
 //iterate over II
 (p4) br.cond.sptk.few .loop_II
 
+.end_II:
+
 //increment ARG_RI in NN
 shladd ARG_RI = NN, ISHIFT, ARG_RI
-lfetch [ARG_RI]
 //Close the loop in LL
 (p2) br.cond.sptk.few .loop_NR
 
-;;
 //restore LC
-mov   ar.lc = r2
+mov ar.lc = r2
 
 br.ret.sptk.many b0
 .endp FC_FUNC_(doperate_as, DOPERATE_AS)#
