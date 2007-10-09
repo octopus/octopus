@@ -34,8 +34,8 @@ module opt_control_constants_m
     oct_tg_excited          = 2,      &
     oct_tg_gstransformation = 3,      &
     oct_tg_userdefined      = 4,      &
-    oct_tg_local            = 5,      &        
-    oct_tg_td_local         = 6   
+    oct_tg_density          = 5,      &        
+    oct_tg_local            = 6   
 
   integer, parameter ::  &
     oct_algorithm_zbr98 = 1,       &

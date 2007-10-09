@@ -110,10 +110,10 @@ module opt_control_target_m
     !% orbitals defined by the block OCTTargetTransformStates
     !%Option oct_tg_userdefined 4
     !% Targetoperator is a projection operator on a user defined state
-    !%Option oct_tg_local 5
-    !% Targetoperator is a local operator. Specify the shape and position within the block OCTLocalTarget.
-    !%Option oct_tg_td_local 6
-    !% Target operator is time-dependent, please specify block OCTTdTarget
+    !%Option oct_tg_density 5
+    !% Targetoperator is a given density.
+    !%Option oct_tg_local 6
+    !% Target operator is a local operator.
     !%End
     call loct_parse_int(check_inp('OCTTargetOperator'),oct_tg_excited, target%totype)
     if(.not.varinfo_valid_option('OCTTargetOperator', target%totype)) call input_error('OCTTargetOperator')    
@@ -185,13 +185,13 @@ module opt_control_target_m
       message(1) =  'Error: Option oct_tg_userdefined is disabled in this version'
       call write_fatal(1)
 
-    case(oct_tg_local) 
+    case(oct_tg_density) 
 
-      message(1) =  'Info: Using Local Target'
+      message(1) =  'Info: Target is a density.'
       call write_info(1)
 
 
-      !%Variable OCTLocalTarget
+      !%Variable OCTTargetDensity
       !%Type string
       !%Section Optimal Control
       !%Description
@@ -201,12 +201,12 @@ module opt_control_target_m
       !%End
 
 
-      !%Variable OCTTargetDensityState
+      !%Variable OCTTargetDensityFromState
       !%Type block
       !%Default no
       !%Section Optimal Control
       !%Description
-      !% If OCTTargetOperator = oct_tg_local, and OCTLocalTarget = "OCTTargetDensityState",
+      !% If OCTTargetOperator = oct_tg_local, and OCTLocalTarget = "OCTTargetDensityFromState",
       !% you must specify one OCTTargetDensityState block, in order to specify which linear
       !% combination of the states present in "restart/gs" is used to
       !% create the target density.
@@ -215,15 +215,15 @@ module opt_control_target_m
       !% block.
       !%End
 
-      if(loct_parse_isdef('OCTLocalTarget').ne.0) then
+      if(loct_parse_isdef('OCTTargetDensity').ne.0) then
         ALLOCATE(target%rho(NP), NP)
         target%rho = M_ZERO
-        call loct_parse_string('OCTLocalTarget', "0", expression)
+        call loct_parse_string('OCTTargetDensity', "0", expression)
 
 
-        if(trim(expression).eq.'OCTTargetDensityState') then
+        if(trim(expression).eq.'OCTTargetDensityFromState') then
 
-          if(loct_parse_block(check_inp('OCTTargetDensityState'), blk) == 0) then
+          if(loct_parse_block(check_inp('OCTTargetDensityFromState'), blk) == 0) then
             tmp_st = target%st
             deallocate(tmp_st%zpsi)
             call restart_look_and_read("tmp", tmp_st, gr, geo, ierr)
@@ -264,14 +264,38 @@ module opt_control_target_m
         end if
 
       else
-        message(1) = 'If OCTTargetOperator = oct_tg_local, then you must give the shape'
-        message(2) = 'of this target in variable "OCTLocalTarget"'
+        message(1) = 'If OCTTargetOperator = oct_tg_density, then you must give the shape'
+        message(2) = 'of this target in variable "OCTTargetDensity"'
         call write_fatal(2)
       end if
 
-    case(oct_tg_td_local)
-      message(1) =  'Error: Option oct_tg_td_local is disabled in this version'
-      call write_fatal(1)
+    case(oct_tg_local)
+      !%Variable OCTTargetLocal
+      !%Type string
+      !%Section Optimal Control
+      !%Description
+      !% If OCTTargetOperator = oct_tg_local, then one must supply the target density
+      !% that should be searched for. This one can do by supplying a string through
+      !% the variable OCTLocalTarget.
+      !%End
+
+      if(loct_parse_isdef('OCTTargetLocal').ne.0) then
+        ALLOCATE(target%rho(NP), NP)
+        target%rho = M_ZERO
+        call loct_parse_string('OCTTargetLocal', "0", expression)
+        call conv_to_C_string(expression)
+        do ip = 1, NP
+          call mesh_r(gr%m, ip, r, x = x)
+          ! parse user defined expression
+          call loct_parse_expression(psi_re, psi_im, &
+            x(1), x(2), x(3), r, M_ZERO, expression)
+          target%rho(ip) = psi_re
+        end do
+      else
+        message(1) = 'If OCTTargetOperator = oct_tg_local, then you must give the shape'
+        message(2) = 'of this target in variable "OCTTargetLocal"'
+        call write_fatal(2)
+      end if
 
     case default
       write(message(1),'(a)') "Target Operator not properly defined."
@@ -297,7 +321,7 @@ module opt_control_target_m
     call push_sub('target.target_end')
 
     call states_end(target%st)
-    if(target%totype.eq.oct_tg_local) then
+    if(target%totype .eq. oct_tg_local .or. target%totype .eq. oct_tg_density) then
       deallocate(target%rho)
       nullify(target%rho)
     end if
@@ -331,6 +355,9 @@ module opt_control_target_m
     select case(target%totype)
     case(oct_tg_local)
       call doutput_function(outp%how, trim(dir), 'local_target', gr%m, gr%sb, &
+        target%rho, M_ONE, ierr, is_tmp = .false.)
+    case(oct_tg_density)
+      call doutput_function(outp%how, trim(dir), 'density_target', gr%m, gr%sb, &
         target%rho, M_ONE, ierr, is_tmp = .false.)
     case default
       call states_output(target%st, gr, trim(dir), outp)

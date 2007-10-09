@@ -30,8 +30,9 @@
     type(states_t), intent(in) :: psi
     type(target_t), intent(in) :: target
 
-    integer :: i
+    integer :: i, p, j
     FLOAT, allocatable :: local_function(:)
+    CMPLX, allocatable :: opsi(:, :)
 
     call push_sub('opt_control.overlap_function')
 
@@ -40,15 +41,38 @@
        j1 = sum(target%td_fitness) / real(max_iter, REAL_PRECISION) 
     else
       select case(target%totype)
-      case(oct_tg_local)
+      case(oct_tg_density)
+
         ALLOCATE(local_function(m%np), m%np)
         do i = 1, m%np
           local_function(i) = - ( sqrt(psi%rho(i, 1)) - sqrt(target%rho(i)) )**2
         end do
         j1 = dmf_integrate(m, local_function)
         deallocate(local_function)
+
+      case(oct_tg_local)
+
+        select case(psi%d%ispin)
+        case(UNPOLARIZED)
+          ASSERT(psi%d%nik.eq.1)
+          ALLOCATE(opsi(m%np_part, 1), m%np_part)
+          j1 = M_ZERO
+          do p  = psi%st_start, psi%st_end
+            do j = 1, m%np
+              opsi(j, 1) = target%rho(j) * psi%zpsi(j, 1, p, 1)
+            end do
+            j1 = j1 + zstates_dotp(m, psi%d%dim, psi%zpsi(:, :, p, 1), opsi(:, :))
+            write(0, *) 'b', j1
+          end do
+          deallocate(opsi)
+        case(SPIN_POLARIZED); stop 'Error'
+        case(SPINORS);        stop 'Error'
+        end select
+
       case default
+
         j1 = abs(zstates_mpdotp(m, psi, target%st))**2
+
       end select
     end if
 
@@ -85,7 +109,7 @@
 
     select case(target%totype)
 
-    case(oct_tg_local)
+    case(oct_tg_density)
 
       select case(psi_in%d%ispin)
       case(UNPOLARIZED)
@@ -111,24 +135,38 @@
           end do
         end if
 
-      case(SPIN_POLARIZED)
-      case(SPINORS)
+      case(SPIN_POLARIZED); stop 'Error'
+      case(SPINORS);        stop 'Error'
+      end select
+
+    case(oct_tg_local)
+
+      select case(psi_in%d%ispin)
+      case(UNPOLARIZED)
+        ASSERT(psi_in%d%nik.eq.1)
+        do p  = psi_in%st_start, psi_in%st_end
+          do j = 1, NP_PART
+            chi_out%zpsi(j, 1, p, 1) = target%rho(j) * psi_in%zpsi(j, 1, p, 1)
+          end do
+        end do
+      case(SPIN_POLARIZED); stop 'Error'
+      case(SPINORS);        stop 'Error'
       end select
 
     case default
 
-        olap = zstates_mpdotp(gr%m, target%st, psi_in)
-        do ik = 1, psi_in%d%nik
-          do p  = psi_in%st_start, psi_in%st_end
-            if(oct%algorithm_type == oct_algorithm_zr98) &
-              chi_out%zpsi(:,:,p,ik) = olap*target%st%zpsi(:, :, p, ik)
-            if(oct%algorithm_type == oct_algorithm_zbr98) then
-              chi_out%zpsi(:,:,p,ik) = target%st%zpsi(:, :, p, ik)
-            end if
-            if(oct%algorithm_type == oct_algorithm_wg05) &
-              chi_out%zpsi(:,:,p,ik) = olap*target%st%zpsi(:, :, p, ik)
-          end do
+      olap = zstates_mpdotp(gr%m, target%st, psi_in)
+      do ik = 1, psi_in%d%nik
+        do p  = psi_in%st_start, psi_in%st_end
+          if(oct%algorithm_type == oct_algorithm_zr98) &
+            chi_out%zpsi(:,:,p,ik) = olap*target%st%zpsi(:, :, p, ik)
+          if(oct%algorithm_type == oct_algorithm_zbr98) then
+            chi_out%zpsi(:,:,p,ik) = target%st%zpsi(:, :, p, ik)
+          end if
+          if(oct%algorithm_type == oct_algorithm_wg05) &
+            chi_out%zpsi(:,:,p,ik) = olap*target%st%zpsi(:, :, p, ik)
         end do
+      end do
 
     end select
 

@@ -53,8 +53,8 @@ OCTMaxIter = 2
 OCTTargetMode = oct_targetmode_static
 OCTFilterMode = no
 OCTInitialState = oct_is_groundstate
-OCTTargetOperator = oct_tg_local
-OCTLocalTarget = "exp(-(x-1)^2)"
+OCTTargetOperator = oct_tg_density
+OCTTargetDensity = "exp(-(x-1)^2)"
 
 OCTScheme  = oct_algorithm_zr98
 OCTDoubleCheck = no
