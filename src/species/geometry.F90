@@ -248,11 +248,12 @@ contains
     call push_sub('geometry.geometry_init_vel')
 
     !%Variable RandomVelocityTemp
-    !%Type string
+    !%Type float
     !%Section System::Velocities
     !%Description
-    !% If this variable is present, octopus will assign random velocities to the atoms 
-    !% following a Bolzmann distribution with temperature given by RandomVelocityTemp.
+    !% If this variable is present, octopus will assign random
+    !% velocities to the atoms following a Bolzmann distribution with
+    !% temperature given by RandomVelocityTemp (in degrees Kelvin).
     !%End
 
     ! we now load the velocities, either from the temperature, from the input, or from a file
