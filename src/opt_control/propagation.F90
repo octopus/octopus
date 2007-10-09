@@ -371,7 +371,7 @@ module opt_control_propagation_m
     if(algorithm_type .eq. oct_algorithm_zbr98) d1 = zstates_mpdotp(gr%m, psi, chi)
 
     do j = 1, cp%no_parameters
-      value = aimag(d1*dl(j)) / ( tdf(cp%td_penalty(j), iter+1) - M_TWO*aimag(dq(j)) ) 
+      value = (M_ONE / cp%alpha(j)) * aimag(d1*dl(j)) / ( tdf(cp%td_penalty(j), iter+1) - M_TWO*aimag(dq(j)) ) 
       call tdf_set_numerical(cp%f(j), iter+1, value)
       i = int(sign(M_ONE, td%dt))
       if(iter==0.or.iter==td%max_iter) then

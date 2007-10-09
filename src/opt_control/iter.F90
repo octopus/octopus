@@ -110,7 +110,8 @@
     iterator%convergence(1,iterator%ctr_iter) = jfunctional
     iterator%convergence(2,iterator%ctr_iter) = overlap
     iterator%convergence(3,iterator%ctr_iter) = j2
-    iterator%convergence(4,iterator%ctr_iter) = tdf(par%td_penalty(1), 1)
+    ! WARNING: this does not consider the possibility of different alphas for different control parameters.
+    iterator%convergence(4,iterator%ctr_iter) = par%alpha(1)
     
     if((iterator%ctr_iter .eq. iterator%ctr_iter_max) .or. &
        (iterator%eps>M_ZERO.and.abs(jfunctional-iterator%old_functional) < iterator%eps)) then
@@ -135,8 +136,7 @@
       write(message(1), '(6x,a,f10.5)') " => J1       = ", overlap
       write(message(2), '(6x,a,f10.5)') " => J        = ", jfunctional
       write(message(3), '(6x,a,f10.5)') " => Fluence  = ", fluence
-      write(message(4), '(6x,a,f10.5)') " => penalty  = ", &
-            real(tdf(par%td_penalty(1), 1), REAL_PRECISION)
+      write(message(4), '(6x,a,f10.5)') " => penalty  = ", par%alpha(1)
       call write_info(4)
     else
       write(message(1), '(6x,a,f10.5)') " => J1       = ", overlap

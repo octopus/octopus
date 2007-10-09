@@ -54,8 +54,8 @@ module opt_control_parameters_m
     FLOAT   :: dt
     integer :: ntiter
     type(tdf_t), pointer :: f(:)
+    FLOAT, pointer :: alpha(:)
     type(tdf_t), pointer :: td_penalty(:)
-
   end type oct_control_parameters_t
 
   type(mix_t), public :: parameters_mix
@@ -115,6 +115,8 @@ module opt_control_parameters_m
     cp%dt = dt
     cp%ntiter = ntiter
     ALLOCATE(cp%f(cp%no_parameters), cp%no_parameters)
+    ALLOCATE(cp%alpha(cp%no_parameters), cp%no_parameters)
+    cp%alpha = M_ZERO
     do j = 1, cp%no_parameters
       call tdf_init_numerical(cp%f(j), cp%ntiter, cp%dt)
     end do
@@ -181,6 +183,8 @@ module opt_control_parameters_m
     end do
     deallocate(cp%f)
     nullify(cp%f)
+    deallocate(cp%alpha)
+    nullify(cp%alpha)
 
     call pop_sub()
   end subroutine parameters_end
@@ -269,6 +273,7 @@ module opt_control_parameters_m
     !% value from 0.1 (strong fields) to 10 (weak fields). 
     !%End
     call loct_parse_float(check_inp('OCTPenalty'), M_ONE, octpenalty)
+    par%alpha(1:par%no_parameters) = octpenalty
 
     ALLOCATE(par%td_penalty(par%no_parameters), par%no_parameters)
     do i = 1, par%no_parameters
@@ -324,10 +329,6 @@ module opt_control_parameters_m
       call loct_parse_block_end(blk)
     end if
 
-    do i = 1, par%no_parameters
-      call tdf_scalar_multiply(octpenalty, par%td_penalty(i))
-    end do
-
     call pop_sub()
   end subroutine parameters_penalty_init
 
@@ -371,7 +372,7 @@ module opt_control_parameters_m
     do j = 1, par%no_parameters
       do i = 1, par%ntiter + 1
         t = (i-1) * par%dt
-        j2 = j2 + tdf(par%td_penalty(j), i)*abs(tdf(par%f(j), i))**2 
+        j2 = j2 + par%alpha(j) * tdf(par%td_penalty(j), i)*abs(tdf(par%f(j), i))**2 
       end do
     end do
     j2 = j2 * par%dt
@@ -388,8 +389,10 @@ module opt_control_parameters_m
     cp_out%dt = cp_in%dt
     cp_out%ntiter = cp_in%ntiter
     ALLOCATE(cp_out%f(cp_out%no_parameters), cp_out%no_parameters)
+    ALLOCATE(cp_out%alpha(cp_out%no_parameters), cp_out%no_parameters)
     ALLOCATE(cp_out%td_penalty(cp_out%no_parameters), cp_out%no_parameters)
     do j = 1, cp_in%no_parameters
+      cp_out%alpha(j) = cp_in%alpha(j)
       cp_out%f(j) = cp_in%f(j)
       cp_out%td_penalty(j) = cp_in%td_penalty(j)
     end do

@@ -288,8 +288,8 @@ contains
 
         ! recalc field
         if (oct%mode_fixed_fluence) then
-          fluence = laser_fluence(par_tmp)
-          old_penalty = tdf(par%td_penalty(1), 1)
+          fluence = laser_fluence(par_tmp) 
+          old_penalty = par%alpha(1)
           new_penalty = sqrt( fluence * old_penalty**2 / oct%targetfluence )
 
           write(message(1), '(a,e15.6)') 'current penalty =', old_penalty
@@ -297,8 +297,7 @@ contains
           call write_info(2)
 
           do j = 1, par_tmp%no_parameters
-            call tdf_set_numerical(par%td_penalty(j), &
-                                   spread(new_penalty, 1, td%max_iter+1) )
+            par%alpha(1) = new_penalty
             call tdf_scalar_multiply( old_penalty / new_penalty , par_tmp%f(j) )
           end do
         end if

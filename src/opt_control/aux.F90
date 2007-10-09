@@ -62,7 +62,6 @@
               opsi(j, 1) = target%rho(j) * psi%zpsi(j, 1, p, 1)
             end do
             j1 = j1 + zstates_dotp(m, psi%d%dim, psi%zpsi(:, :, p, 1), opsi(:, :))
-            write(0, *) 'b', j1
           end do
           deallocate(opsi)
         case(SPIN_POLARIZED); stop 'Error'
