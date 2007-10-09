@@ -306,7 +306,7 @@ void my_fdf (const gsl_vector *v, void *params,
 }
 
 int FC_FUNC_(oct_minimize, OCT_MINIMIZE)
-     (int*method, int *dim, double *point, double *step, double *tolgrad, double *toldr, int *maxiter, void *f, void *write_info, double *minimum)
+     (const int *method, int *dim, double *point, double *step, double *tolgrad, double *toldr, int *maxiter, void *f, void *write_info, double *minimum)
 {
   int iter = 0;
   int status;
@@ -337,11 +337,21 @@ int FC_FUNC_(oct_minimize, OCT_MINIMIZE)
   absdr = gsl_vector_alloc (*dim);
 
   switch(*method){
-  case 1: T = gsl_multimin_fdfminimizer_steepest_descent;
-  case 2: T = gsl_multimin_fdfminimizer_conjugate_fr;
-  case 3: T = gsl_multimin_fdfminimizer_conjugate_pr;
-  case 4: T = gsl_multimin_fdfminimizer_vector_bfgs;
-  case 5: T = gsl_multimin_fdfminimizer_vector_bfgs2;
+  case 1: 
+    T = gsl_multimin_fdfminimizer_steepest_descent;
+    break;
+  case 2: 
+    T = gsl_multimin_fdfminimizer_conjugate_fr;
+    break;
+  case 3: 
+    T = gsl_multimin_fdfminimizer_conjugate_pr;
+    break;
+  case 4: 
+    T = gsl_multimin_fdfminimizer_vector_bfgs;
+    break;
+  case 5: 
+    T = gsl_multimin_fdfminimizer_vector_bfgs2;
+    break;
   }
 
   s = gsl_multimin_fdfminimizer_alloc (T, *dim);
