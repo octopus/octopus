@@ -596,6 +596,13 @@ subroutine X(vlaser_operator_linear) (gr, h, psi, hpsi, ik, laser_number)
   i = laser_number
 
   select case(h%ep%lasers(i)%field)
+  case(E_FIELD_SCALAR_POTENTIAL)
+    if(.not. allocated(v)) then 
+      ALLOCATE(v(NP), NP)
+      v = M_ZERO
+    end if
+    call laser_potential(gr%sb, h%ep%lasers(i), gr%m, v)
+    electric_field = .true.
   case(E_FIELD_ELECTRIC)
     if(.not. allocated(v)) then 
       ALLOCATE(v(NP), NP)
@@ -606,6 +613,7 @@ subroutine X(vlaser_operator_linear) (gr, h, psi, hpsi, ik, laser_number)
     call laser_potential(gr%sb, h%ep%lasers(i), gr%m, pot)
     v = v + pot
     electric_field = .true.
+    deallocate(pot)
   case(E_FIELD_MAGNETIC)
     if(.not. allocated(a)) then 
       ALLOCATE(a(NP_PART, NDIM), NP_PART*NDIM)
@@ -628,7 +636,7 @@ subroutine X(vlaser_operator_linear) (gr, h, psi, hpsi, ik, laser_number)
     do k = 1, h%d%dim
       hpsi(1:NP, k)= hpsi(1:NP, k) + v(1:NP) * psi(1:NP, k)
     end do
-    deallocate(v, pot)
+    deallocate(v)
   end if
 
   if(magnetic_field) then

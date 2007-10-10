@@ -369,12 +369,14 @@ contains
   end subroutine oct_parse_expression4
 
   subroutine oct_parse_expression14(re, im, c, x, string)
-    real(8), intent(out) :: re, im
+    real(4), intent(out) :: re, im
     character(len=*), intent(in) :: c
     real(4), intent(in) :: x
     character(len=*), intent(in) :: string
-
-    call oct_parse_expression1(re, im, c, real(x, 8), string)
+    real(8) :: re8, im8
+    call oct_parse_expression1(re8, im8, c, real(x, 8), string)
+    re = real(re8, 4)
+    im = real(im8, 4)
   end subroutine oct_parse_expression14
 
 end module lib_oct_parser_m
