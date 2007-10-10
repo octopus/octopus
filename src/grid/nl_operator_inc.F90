@@ -28,9 +28,21 @@ subroutine X(nl_operator_tune)(op)
   type(nl_operator_t), intent(inout) :: op
   
   R_TYPE, allocatable :: in(:), out(:)
-  real(8) :: noperations, flops(OP_MIN:OP_MAX), itime, ftime
+  real(8) :: noperations, flops(OP_MIN:OP_MAX), itime, ftime, bwidth(OP_MIN:OP_MAX), dvolume
   integer :: method, ii, reps, iunit
   character(len=2) :: marker
+
+#ifdef R_TCOMPLEX
+  FLOAT, parameter :: R_OPS = M_TWO
+#else
+  FLOAT, parameter :: R_OPS = M_ONE
+#endif
+
+#ifdef SINGLE_PRECISION
+  FLOAT, parameter :: R_SIZE = M_FOUR
+#else
+  FLOAT, parameter :: R_SIZE = M_EIGHT
+#endif
 
 #ifdef HAVE_MPI
   integer :: ierr, rank
@@ -40,13 +52,11 @@ subroutine X(nl_operator_tune)(op)
   call push_sub('nl_operator_inc.Xnl_operator_tune')
   
   !count the total number of floating point operations  
+  noperations =  op%m%np * op%n * M_TWO * R_OPS
 
-#ifdef R_TCOMPLEX
-  noperations =  op%m%np * op%n * M_FOUR
-#else
-  noperations =  op%m%np * op%n * M_TWO
-#endif 
-  
+  !the volume of data that has to be moved in bytes
+  dvolume = (op%m%np_part + op%m%np) * R_OPS * R_SIZE + (op%nri + 1)* op%n * M_FOUR
+
   !measure performance of each function
   ALLOCATE(in(1:op%m%np_part), op%m%np_part)
   in(1:op%m%np_part) = M_ZERO
@@ -79,7 +89,7 @@ subroutine X(nl_operator_tune)(op)
 
     itime = loct_clock()
     do ii = 1, reps
-      call X(nl_operator_operate)(op, in, out, ghost_update = .true.)
+      call X(nl_operator_operate)(op, in, out, ghost_update = .true., profile = .true.)
     end do
 #ifdef HAVE_MPI
     call MPI_Barrier(MPI_COMM_WORLD, ierr)
@@ -87,6 +97,7 @@ subroutine X(nl_operator_tune)(op)
     ftime = loct_clock()
 
     flops(method) = noperations * reps / (ftime - itime) 
+    bwidth(method) = dvolume * reps / (ftime - itime)
     
   end do
 
@@ -116,8 +127,9 @@ subroutine X(nl_operator_tune)(op)
 #else
     write (iunit, '(3a)')   'Operator       = ', trim(op%label), " real"
 #endif
-    write (iunit, '(a,i8)') 'Stencil points = ', op%n
     write (iunit, '(a,i8)') 'Grid points    = ', op%m%np
+    write (iunit, '(a,i8)') 'Stencils       = ', op%nri
+    write (iunit, '(a,i8)') 'Stencil points = ', op%n
     
     do method = OP_MIN, OP_MAX
 #ifdef R_TCOMPLEX
@@ -127,7 +139,10 @@ subroutine X(nl_operator_tune)(op)
 #endif
       marker = '  '
       if(method == op%X(function)) marker = '* '
-      write (iunit, '(2a, f8.1, a)') marker, op_function_name(method), flops(method)/CNST(1e6), ' MFlops'
+      write (iunit, '(2a, f8.1, a, f8.1, a)') &
+           marker, op_function_name(method), &
+           flops(method)/CNST(1e6), ' MFlops  ',&
+           bwidth(method)/CNST(1e6), ' MBytes/s'
     end do
     
     write(iunit, '(a)') " "

@@ -948,19 +948,24 @@ contains
   ! ---------------------------------------------------------
   ! calculates fo = op fi
   ! ---------------------------------------------------------
-  subroutine dnl_operator_operate(op, fi, fo, ghost_update)
+  subroutine dnl_operator_operate(op, fi, fo, ghost_update, profile)
     FLOAT,               intent(inout) :: fi(:)  ! fi(op%np_part)
     type(nl_operator_t), intent(in)    :: op
     FLOAT,               intent(out)   :: fo(:)  ! fo(op%np_part)
     logical, optional,   intent(in)    :: ghost_update
+    logical, optional,   intent(in)    :: profile
 
     integer :: ii, nn
 #if defined(HAVE_MPI)
     logical :: update
 #endif
+    logical :: profile_
     real(8) :: ws(100)
 
-    call profiling_in(C_PROFILING_NL_OPERATOR)
+    profile_ = .true. 
+    if(present(profile)) profile_ = profile
+
+    if(profile_) call profiling_in(C_PROFILING_NL_OPERATOR)
     call push_sub('nl_operator.dnl_operator_operate')
 
 #if defined(HAVE_MPI)
@@ -1001,23 +1006,28 @@ contains
     !$omp end parallel do
     
     call pop_sub()
-    call profiling_out(C_PROFILING_NL_OPERATOR)
+    if(profile_) call profiling_out(C_PROFILING_NL_OPERATOR)
   end subroutine dnl_operator_operate
 
 
   ! ---------------------------------------------------------
-  subroutine znl_operator_operate(op, fi, fo, ghost_update)
+  subroutine znl_operator_operate(op, fi, fo, ghost_update, profile)
     CMPLX,               intent(inout) :: fi(:)  ! fi(op%np)
     type(nl_operator_t), intent(in)    :: op
     CMPLX,               intent(out)   :: fo(:)  ! fo(op%np)
     logical, optional,   intent(in)    :: ghost_update
+    logical, optional,   intent(in)    :: profile
 
     integer :: ii, nn
 #if defined(HAVE_MPI)
     logical :: update
 #endif
+    logical :: profile_
 
-    call profiling_in(C_PROFILING_NL_OPERATOR)
+    profile_ = .true. 
+    if(present(profile)) profile_ = profile
+
+    if(profile_) call profiling_in(C_PROFILING_NL_OPERATOR)
     call push_sub('nl_operator.znl_operator_operate')
 
 #if defined(HAVE_MPI)
@@ -1069,7 +1079,7 @@ contains
     !$omp end parallel do
 
     call pop_sub()
-    call profiling_out(C_PROFILING_NL_OPERATOR)
+    if(profile_) call profiling_out(C_PROFILING_NL_OPERATOR)
   end subroutine znl_operator_operate
 
 
