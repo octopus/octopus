@@ -129,8 +129,7 @@ subroutine X(mixing_broyden)(smix, vin, vout, vnew, iter, dotp)
   ! extrapolate new vector
   iter_used = min(iter - 1, smix%ns)
   call X(broyden_extrapolation)(smix%alpha, d1, d2, d3, vin, vnew, iter_used, f, &
-       smix%X(df)(1:d1, 1:d2, 1:d3, 1:iter_used), &
-       smix%X(dv)(1:d1, 1:d2, 1:d3, 1:iter_used), dotp)
+       smix%X(df), smix%X(dv), dotp)
   
   deallocate(f)
   
