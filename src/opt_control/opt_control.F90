@@ -95,7 +95,7 @@ contains
     type(target_t)             :: target
     type(filter_t)             :: filter
     type(oct_control_parameters_t) :: par, par_tmp
-    integer :: i, ierr
+    integer :: i
     character(len=80)  :: filename
 
 
@@ -192,7 +192,6 @@ contains
 
     ! ---------------------------------------------------------
     subroutine scheme_zr98
-      integer :: ierr
       type(oct_control_parameters_t) :: par_new, par_prev
       call push_sub('opt_control.scheme_ZR98')
 
@@ -254,13 +253,18 @@ contains
 
     !---------------------------------------
     subroutine scheme_wg05
-      integer :: ierr, j
+      integer :: j
       FLOAT :: fluence, new_penalty, old_penalty
 
-      call push_sub('opt_control.scheme_WG05')
+      call push_sub('opt_control.scheme_wg05')
 
       message(1) = "Info: Starting OCT iteration using scheme: WG05"
       call write_info(1)
+
+      if (oct%mode_fixed_fluence) then
+        par%alpha(1) = (M_ONE/sqrt(oct%targetfluence)) * sqrt ( laser_fluence(par) )
+        par_tmp%alpha(1) = par%alpha(1)
+      end if
       
       ctr_loop: do
 
@@ -291,13 +295,9 @@ contains
           fluence = laser_fluence(par_tmp) 
           old_penalty = par%alpha(1)
           new_penalty = sqrt( fluence * old_penalty**2 / oct%targetfluence )
-
-          write(message(1), '(a,e15.6)') 'current penalty =', old_penalty
-          write(message(2), '(a,e15.6)') 'new penalty     =', new_penalty
-          call write_info(2)
-
           do j = 1, par_tmp%no_parameters
             par%alpha(1) = new_penalty
+            par_tmp%alpha(1) = new_penalty
             call tdf_scalar_multiply( old_penalty / new_penalty , par_tmp%f(j) )
           end do
         end if
@@ -314,7 +314,6 @@ contains
 
     ! ---------------------------------------------------------
     subroutine scheme_zbr98
-      integer :: ierr
       type(oct_control_parameters_t) :: par_new, par_prev
 
       call push_sub('opt_control.scheme_zbr98')

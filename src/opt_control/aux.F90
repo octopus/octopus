@@ -56,6 +56,7 @@
         case(UNPOLARIZED)
           ASSERT(psi%d%nik.eq.1)
           ALLOCATE(opsi(m%np_part, 1), m%np_part)
+          opsi = M_z0
           j1 = M_ZERO
           do p  = psi%st_start, psi%st_end
             do j = 1, m%np
@@ -144,7 +145,7 @@
       case(UNPOLARIZED)
         ASSERT(psi_in%d%nik.eq.1)
         do p  = psi_in%st_start, psi_in%st_end
-          do j = 1, NP_PART
+          do j = 1, NP
             chi_out%zpsi(j, 1, p, 1) = target%rho(j) * psi_in%zpsi(j, 1, p, 1)
           end do
         end do

@@ -2,8 +2,8 @@
 # $Id$
 
 Test       : 1D Asymmetric Double Well
-Author     : Jan Werschnik
-Date       : 20.06.06
+Author     : Alberto
+Date       : 10.10.07
 Arch       : Linux 
 Release    : 2.2.0pre1
 Programs   : octopus
@@ -11,34 +11,39 @@ TestGroups : long-run
 Enabled    : Yes
 
 # The test ensures a number features of the optimal control implementation in octopus.
-# 
-# We do the following intermediate steps:
-# First, the two lowest eigenstates of the asymmetric double well,
-# V(x) = 1/64*(x)^4-1/4*(x)^2+1/256*(x)^3,
-# are calculated.
-# A similar potential is used in Rev Mod (Haenggi, Griffoni)
-
+# It replicates some of the results given in:
+# J. Werschnik and E. K. U. Gross, J. Opt. B: Quantum Semiclass. Opt 7, S300 (2005).
+#
+# First, we obtain the two lowest eigenstates of the asymmetric double well:
+#
+# V(x) = 1/64*(x)^4-1/4*(x)^2+1/256*(x)^3
+#
 
 Input: 05-adw.01-ground_state.inp
-
 Match ; TotalEnergy ; grep -A 7 '^Energy:' ground_state_static/info ; \s*Total\s*=\s*-0.6206
 Match ; 2th state  ; grep '2   --' excited_states_static/eigenvalues ; \s*-0.4638
 
-# Now use filter and optimize direct transition to 1st excited state with a predefined fluence.
+# Now we run an OCT run identical (or almost, the numerical parameters
+# are slightly different) to the one described in section 5.1.1, and
+# in Fig. 2. It transfers the particle from the left well to the right
+# well, by making use of the WG05 algorithm, and with a fixed fluence.
+#
+# It runs for only two iterations (which is enough to test that the
+# implementation is working), but if it is continued it replicates
+# nicely the results given in Fig. 2.
 
 Input: 05-adw.02-filter_fixed.inp
-
-# Match overlaps
-Match ; J1 1st  iteration  ; grep ' 1  ' opt-control/convergence ; \s*0.987\d*
-Match ; J1 2nd  iteration  ; grep ' 2  ' opt-control/convergence ; \s*0.988\d*
+Match ; J1 1st  iteration  ; grep ' 1  ' opt-control/convergence ; \s*-0.2129\d*\s*0.0006
+Match ; J1 2nd  iteration  ; grep ' 2  ' opt-control/convergence ; \s*0.5336\d*\s*0.5725
 
 # Now use filter and optimize indirect transition via 3rd excited state.
+# (For the moment, disconnected)
 
-Input: 05-adw.03-filter_indirect.inp
+#Input: 05-adw.03-filter_indirect.inp
 
 # Match overlaps 
-Match ; J1 1st  iteration  ; grep ' 1  ' opt-control/convergence ; \s*0.062\d*
-Match ; J1 2nd  iteration  ; grep ' 2  ' opt-control/convergence ; \s*0.195\d*
+#Match ; J1 1st  iteration  ; grep ' 1  ' opt-control/convergence ; \s*0.062\d*
+#Match ; J1 2nd  iteration  ; grep ' 2  ' opt-control/convergence ; \s*0.195\d*
 # The run stops at iter number two; however it should continue further to see that
 # the result actually converges. Apparently, however, the algorithm is unstable
 # and produces different results in different machines.

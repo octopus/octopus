@@ -350,7 +350,7 @@ module opt_control_parameters_m
     do j = 1, par%no_parameters
       do i = 1, par%ntiter+1
         t = (i-1) * par%dt
-        laser_fluence = laser_fluence + abs(tdf(par%f(j), i))**2 
+        laser_fluence = laser_fluence + tdf(par%td_penalty(j), i) * abs(tdf(par%f(j), i))**2 
       end do
     end do
     laser_fluence = laser_fluence * par%dt
@@ -372,7 +372,7 @@ module opt_control_parameters_m
     do j = 1, par%no_parameters
       do i = 1, par%ntiter + 1
         t = (i-1) * par%dt
-        j2 = j2 + par%alpha(j) * tdf(par%td_penalty(j), i)*abs(tdf(par%f(j), i))**2 
+        j2 = j2 + par%alpha(j) * tdf(par%td_penalty(j), i) * abs(tdf(par%f(j), i))**2 
       end do
     end do
     j2 = j2 * par%dt
