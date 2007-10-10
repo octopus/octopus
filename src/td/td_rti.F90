@@ -309,6 +309,9 @@ contains
 
 
   ! ---------------------------------------------------------
+  ! Propagates st from t-dt to t.
+  ! If dt<0, it propagates *backwards* from t+|dt| to t
+  ! ---------------------------------------------------------
   subroutine td_rti_dt(ks, h, gr, st, tr, t, dt, max_iter)
     type(v_ks_t),                intent(inout) :: ks
     type(hamiltonian_t), target, intent(inout) :: h

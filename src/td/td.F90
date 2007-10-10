@@ -167,6 +167,9 @@ contains
     ii = 1
     stopping = .false.
     etime = loct_clock()
+    ! This is the time-propagation loop. It starts at t=0 and finishes
+    ! at td%max_iter*dt. The index i runs from 1 to td%max_iter, and
+    ! step "i" means propagation from (i-1)*dt to i*dt.
     propagation: do i = td%iter, td%max_iter
 
       if(clean_stop()) stopping = .true.
@@ -174,7 +177,8 @@ contains
       
 
       if( td%move_ions > 0 .or. h%ep%extra_td_pot .ne. '0' .or. h%ep%with_gauge_field) then
-        ! Move the ions: only half step, to obtain the external potential in the middle of the time slice.
+        ! Move the ions: only half step, to obtain the external potential 
+        ! in the middle of the time slice.
         if( td%move_ions > 0 ) call apply_verlet_1(td%dt*M_HALF)
 	if( h%ep%with_gauge_field ) call apply_verlet_gauge_field_1(td%dt*M_HALF)
         call epot_generate(h%ep, gr, sys%geo, sys%mc, st, h%reltype, time = i*td%dt)
@@ -187,7 +191,8 @@ contains
       case(EHRENFEST)
         call td_rti_dt(sys%ks, h, gr, st, td%tr, i*td%dt, td%dt / td%mu, td%max_iter)
       case(BO)
-        call scf_run(td%scf, sys%gr, geo, st, sys%ks, h, sys%outp, gs_run = .false., verbosity = VERB_NO)
+        call scf_run(td%scf, sys%gr, geo, st, sys%ks, h, sys%outp, &
+          gs_run = .false., verbosity = VERB_NO)
       end select
 
 

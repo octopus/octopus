@@ -34,7 +34,7 @@ Match ; 2th state  ; grep '2   --' excited_states_static/eigenvalues ; \s*-0.463
 
 Input: 05-adw.02-filter_fixed.inp
 Match ; J1 1st  iteration  ; grep ' 1  ' opt-control/convergence ; \s*-0.2129\d*\s*0.0006
-Match ; J1 2nd  iteration  ; grep ' 2  ' opt-control/convergence ; \s*0.5336\d*\s*0.5725
+Match ; J1 2nd  iteration  ; grep ' 2  ' opt-control/convergence ; \s*0.540\d*\s*0.580
 
 # Now use filter and optimize indirect transition via 3rd excited state.
 # (For the moment, disconnected)

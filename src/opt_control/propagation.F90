@@ -91,7 +91,7 @@ module opt_control_propagation_m
     ii = 1
     do i = 1, td%max_iter
       ! time iterate wavefunctions
-      call td_rti_dt(sys%ks, h, gr, psi_n, td%tr, abs(i*td%dt), abs(td%dt), td%max_iter)
+      call td_rti_dt(sys%ks, h, gr, psi_n, td%tr, i*td%dt, td%dt, td%max_iter)
 
       ! if td_target
       if(target%targetmode==oct_targetmode_td) call calc_tdfitness(target, gr, psi_n, i)
@@ -143,15 +143,11 @@ module opt_control_propagation_m
     call v_ks_calc(gr, sys%ks, h, psi_n)
     call td_rti_run_zero_iter(h, td%tr)
 
-    td%dt = -td%dt
-    do i = td%max_iter-1, 0, -1
-      ! time iterate wavefunctions
-      call td_rti_dt(sys%ks, h, gr, psi_n, td%tr, abs(i*td%dt), td%dt, td%max_iter)
-      ! update
+    do i = td%max_iter, 1, -1
+      call td_rti_dt(sys%ks, h, gr, psi_n, td%tr, (i-1)*td%dt, -td%dt, td%max_iter)
       call states_calc_dens(psi_n, NP_PART, psi_n%rho)
       call v_ks_calc(gr, sys%ks, h, psi_n)
     end do
-    td%dt = -td%dt
     
     call pop_sub()
   end subroutine propagate_backward
@@ -199,6 +195,11 @@ module opt_control_propagation_m
     message(1) = "Info: Propagating forward"
     call write_info(1)
 
+    ! This is to catch errors. Should go away.
+    do i = 1, td%max_iter + 1
+      call tdf_set_numerical(par%f(1), i, huge(M_ZERO))
+    end do
+
     do i = 1, td%max_iter
 
       if(target%targetmode==oct_targetmode_td) then
@@ -209,7 +210,7 @@ module opt_control_propagation_m
         call td_rti_dt(sys%ks, h, gr, psi2, td%tr, abs(i*td%dt), abs(td%dt), td%max_iter)
       end if
 
-      call update_field(method, i-1, par, gr, td, h, psi, chi)
+      call update_field(method, i, par, gr, td, h, psi, chi, dir = 'f')
       call prop_iter(i, gr, sys%ks, h, td, par_tmp, chi)
       call prop_iter(i, gr, sys%ks, h, td, par, psi)
 
@@ -254,6 +255,11 @@ module opt_control_propagation_m
     message(1) = "Info: Propagating backward"
     call write_info(1)
 
+    ! This is to catch errors. Should go away.
+    do i = 1, td%max_iter + 1
+      call tdf_set_numerical(par_tmp%f(1), i, huge(M_ZERO))
+    end do
+
     gr => sys%gr
 
     call states_calc_dens(psi, NP_PART, psi%rho)
@@ -261,25 +267,26 @@ module opt_control_propagation_m
     call td_rti_run_zero_iter(h, td%tr)
 
     td%dt = -td%dt
-    do i = td%max_iter-1, 0, -1
+    do i = td%max_iter, 1, -1
       if(target%targetmode==oct_targetmode_td) &
-        call calc_inh(psi, gr, target, i, td%max_iter, td%dt, chi)
-      call update_field(method, i+1, par_tmp, gr, td, h, psi, chi)
-      call prop_iter(i, gr, sys%ks, h, td, par_tmp, chi)
-      call prop_iter(i, gr, sys%ks, h, td, par, psi)
+        call calc_inh(psi, gr, target, i-1, td%max_iter, td%dt, chi)
+      call update_field(method, i, par_tmp, gr, td, h, psi, chi, dir = 'b')
+      call prop_iter(i-1, gr, sys%ks, h, td, par_tmp, chi)
+      call prop_iter(i-1, gr, sys%ks, h, td, par, psi)
     end do
     td%dt = -td%dt
 
     call states_calc_dens(psi, NP_PART, psi%rho)
     call v_ks_calc(gr, sys%ks, h, psi)
-    call states_calc_dens(chi, NP_PART, chi%rho)
 
     call pop_sub()
   end subroutine bwd_step
 
 
   ! ----------------------------------------------------------
-  ! Performs one step of forward propagation.
+  ! Performs one propagation step:
+  ! o If td%dt > 0, from iter*td%dt-td%dt to iter*td%dt
+  ! o If td%dt < 0, from iter*|td%dt|+|td%dt| to iter*|td%dt|
   ! ----------------------------------------------------------
   subroutine prop_iter(iter, gr, ks, h, td, par, st)
     integer, intent(in)                        :: iter
@@ -311,8 +318,16 @@ module opt_control_propagation_m
   ! ---------------------------------------------------------
   ! Calculates the value of the control parameters at iteration
   ! iter, from the state psi and the Lagrange-multiplier chi.
+  !
+  ! If dir = 'f', the field must be updated for a forward
+  ! propagation. In that case, the propagation step that is
+  ! going to be done moves from (iter-1)*|dt| to iter*|dt|.
+  !
+  ! If dir = 'b', the field must be updated for a backward
+  ! propagation. In taht case, the propagation step that is
+  ! going to be done moves from iter*|dt| to (iter-1)*|dt|.
   ! ---------------------------------------------------------
-  subroutine update_field(algorithm_type, iter, cp, gr, td, h, psi, chi)
+  subroutine update_field(algorithm_type, iter, cp, gr, td, h, psi, chi, dir)
     integer, intent(in) :: algorithm_type
     integer, intent(in)        :: iter
     type(oct_control_parameters_t), intent(inout) :: cp
@@ -321,12 +336,13 @@ module opt_control_propagation_m
     type(hamiltonian_t), intent(in) :: h
     type(states_t), intent(inout) :: psi
     type(states_t), intent(inout) :: chi
+    character(len=1),intent(in) :: dir
 
     type(states_t) :: oppsi
     
     CMPLX :: d1
     CMPLX, allocatable  :: dl(:), dq(:)
-    integer :: ik, p, i, j
+    integer :: ik, p, j
     FLOAT :: value
 
     call push_sub('propagation.update_field')
@@ -357,7 +373,8 @@ module opt_control_propagation_m
             oppsi%zpsi(:, :, p, ik) = M_z0
             call zvlaser_operator_quadratic(gr, h, psi%zpsi(:, :, p, ik), &
                                          oppsi%zpsi(:, :, p, ik), ik, laser_number = j)
-            dq(j) = dq(j) + psi%occ(p, ik) * zstates_dotp(gr%m, psi%d%dim, chi%zpsi(:, :, p, ik), &
+            dq(j) = dq(j) + psi%occ(p, ik) * &
+                    zstates_dotp(gr%m, psi%d%dim, chi%zpsi(:, :, p, ik), &
               oppsi%zpsi(:, :, p, ik))
           end do
         end do
@@ -370,17 +387,33 @@ module opt_control_propagation_m
     d1 = M_z1
     if(algorithm_type .eq. oct_algorithm_zbr98) d1 = zstates_mpdotp(gr%m, psi, chi)
 
-    do j = 1, cp%no_parameters
-      value = (M_ONE / cp%alpha(j)) * aimag(d1*dl(j)) / ( tdf(cp%td_penalty(j), iter+1) - M_TWO*aimag(dq(j)) ) 
-      call tdf_set_numerical(cp%f(j), iter+1, value)
-      i = int(sign(M_ONE, td%dt))
-      if(iter==0.or.iter==td%max_iter) then
-        call tdf_set_numerical(cp%f(j), iter+1, value)
-      else
-        value = M_HALF*( M_FOUR*tdf(cp%f(j), iter+1) - M_TWO*tdf(cp%f(j), iter-i+1))
-        call tdf_set_numerical(cp%f(j), iter+i+1, value)
-      end if
-    end do
+    select case(dir)
+      case('f')
+        do j = 1, cp%no_parameters
+          value = (M_ONE / cp%alpha(j)) * aimag(d1*dl(j)) / &
+           ( tdf(cp%td_penalty(j), iter) - M_TWO*aimag(dq(j)) ) 
+          call tdf_set_numerical(cp%f(j), iter, value)
+          if(iter .ne. td%max_iter + 1) then
+            call tdf_set_numerical(cp%f(j), iter+1, value)
+          end if
+        end do
+
+      case('b')
+        do j = 1, cp%no_parameters
+          value = (M_ONE / cp%alpha(j)) * aimag(d1*dl(j)) / &
+           ( tdf(cp%td_penalty(j), iter+1) - M_TWO*aimag(dq(j)) ) 
+
+          call tdf_set_numerical(cp%f(j), iter+1, value)
+          if(iter .ne. 0) then
+            call tdf_set_numerical(cp%f(j), iter, value)
+          end if
+          call tdf_set_numerical(cp%f(j), iter+1, value)
+          if(iter-1 .ne. 0) then
+            call tdf_set_numerical(cp%f(j), iter-1, value)
+          end if
+
+        end do
+    end select
 
     deallocate(dl, dq)
     call pop_sub()

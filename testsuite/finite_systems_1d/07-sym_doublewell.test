@@ -23,4 +23,4 @@ Match ; 2th state  ; grep '2   --' static/eigenvalues ; \s*-0.5258
 
 # Then, run the optimization.
 Input: 07-sym_doublewell.03-oct.inp
-Match ; J1 1st iteration  ; grep ' 1  ' opt-control/convergence ; \s*0.977\d*
+Match ; J1 1st iteration  ; grep ' 1  ' opt-control/convergence ; \s*0.976\d*
