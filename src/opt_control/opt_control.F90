@@ -59,15 +59,6 @@ module opt_control_m
   private
   public :: opt_control_run
 
-  type oct_t
-    FLOAT   :: targetfluence
-    logical :: mode_fixed_fluence
-    integer :: algorithm_type
-    logical :: use_mixing
-    logical :: oct_double_check
-    logical :: dump_intermediate
-  end type oct_t
-
   type oct_iterator_t
     FLOAT              :: eps
     integer            :: ctr_iter_max
@@ -155,12 +146,12 @@ contains
     ! mode switcher
     select case(oct%algorithm_type)
       case(oct_algorithm_zbr98) ;  call scheme_zbr98
-      case(oct_algorithm_zr98)  ;  call scheme_zr98
+      case(oct_algorithm_zr98)  ;  call scheme_mt03
       case(oct_algorithm_wg05)  ;  call scheme_wg05
+      case(oct_algorithm_mt03)  ;  call scheme_mt03
+      case(oct_algorithm_krotov);  call scheme_mt03
     case default
-      write(message(1),'(a)') "The OCT algorithm has not been implemented yet."
-      write(message(2),'(a)') "Choose: ZR98, ZBR98, WG05."
-      call write_fatal(2)
+      call input_error('OCTScheme')
     end select
 
     ! Some informative output.
@@ -193,65 +184,59 @@ contains
     ! ---------------------------------------------------------
     subroutine scheme_zr98
       type(oct_control_parameters_t) :: par_new, par_prev
-      call push_sub('opt_control.scheme_ZR98')
+      logical :: stop_loop
+      call push_sub('opt_control.scheme_zr98')
 
-      message(1) = "Info: Starting Optimal Control Run  using Scheme: ZR98"
+      message(1) = "Info: Starting OCT iteration using scheme: ZR98"
       call write_info(1)
       
-      if(oct%use_mixing) then
-        call parameters_copy(par_new, par)
-        call parameters_copy(par_prev, par)
-      else
-        psi = initial_st
-        call parameters_to_h(par, h%ep)
-        call propagate_forward(sys, h, td, target, psi) 
-        write(filename,'(a,i3.3)') 'opt-control/PsiT.', iterator%ctr_iter
-        call states_output(psi, gr, filename, sys%outp)
-      end if
-      
+      call parameters_copy(par_new, par)
       ctr_loop: do
-        if(oct%use_mixing) call parameters_copy(par_prev, par)
-
-        if(oct%use_mixing) then
-          call states_end(psi)
-          psi = initial_st
-          call parameters_to_h(par, h%ep)
-          call propagate_forward(sys, h, td, target, psi)
-        end if
-
-        if(iteration_manager(oct, gr, par, td, psi, target, iterator)) exit ctr_loop
-        if(clean_stop()) exit ctr_loop
-        
-        call calc_chi(oct, gr, target, psi, chi)
-        call bwd_step(oct_algorithm_zr98, sys, td, h, target, par, par_tmp, chi, psi)
-        
-        ! forward propagation
-        call states_end(psi)
-        call states_copy(psi, initial_st)
-        call fwd_step(oct_algorithm_zr98, sys, td, h, target, par, par_tmp, chi, psi)
-
+        call parameters_copy(par_prev, par)
+        call f_iter(oct, sys, h, td, iterator, psi, initial_st, target, par, stop_loop)
+        call iterator_write(iterator, psi, par, gr, sys%outp)
+        if(clean_stop() .or. stop_loop) exit ctr_loop
         if(oct%use_mixing) then
           call parameters_mixing(iterator%ctr_iter, par_prev, par, par_new)
           call parameters_copy(par, par_new)
         end if
- 
-        ! Print state and laser after the forward propagation.
-        write(filename,'(a,i3.3)') 'opt-control/PsiT.', iterator%ctr_iter
-        call states_output(psi, gr, filename, sys%outp)
-        write(filename,'(a,i3.3)') 'opt-control/laser.', iterator%ctr_iter
-        call parameters_write(filename, par)
-        
       end do ctr_loop
 
-      if(oct%use_mixing) then
-        call parameters_end(par_new)
-        call parameters_end(par_prev)
-      end if
+      call parameters_end(par_new)
+      call parameters_end(par_prev)
       call pop_sub()
     end subroutine scheme_zr98
-    
+    ! ---------------------------------------------------------
 
-    !---------------------------------------
+
+    ! ---------------------------------------------------------
+    subroutine scheme_mt03
+      type(oct_control_parameters_t) :: par_new, par_prev
+      logical :: stop_loop
+      call push_sub('opt_control.scheme_mt03')
+
+      message(1) = "Info: Starting OCT iteration using scheme: MT03"
+      call write_info(1)
+
+      call parameters_copy(par_new, par)
+      ctr_loop: do
+        call parameters_copy(par_prev, par)
+        call f_iter(oct, sys, h, td, iterator, psi, initial_st, target, par, stop_loop)
+        call iterator_write(iterator, psi, par, gr, sys%outp)
+        if(clean_stop() .or. stop_loop) exit ctr_loop
+        if(oct%use_mixing) then
+          call parameters_mixing(iterator%ctr_iter, par_prev, par, par_new)
+          call parameters_copy(par, par_new)
+        end if
+      end do ctr_loop
+
+      call parameters_end(par_new)
+      call parameters_end(par_prev)
+      call pop_sub()
+    end subroutine scheme_mt03
+
+
+    ! ---------------------------------------------------------
     subroutine scheme_wg05
       integer :: j
       FLOAT :: fluence, new_penalty, old_penalty
@@ -283,7 +268,7 @@ contains
         if(iteration_manager(oct, gr, par, td, psi, target, iterator)) exit ctr_loop
         if(clean_stop()) exit ctr_loop
         
-        call bwd_step(oct_algorithm_wg05, sys, td, h, target, par, par_tmp, chi, psi)
+        call bwd_step(oct, sys, td, h, target, par, par_tmp, chi, psi)
 
         ! WARNING: Untested.
         do j = 1, par_tmp%no_parameters
@@ -310,7 +295,7 @@ contains
 
       call pop_sub()
     end subroutine scheme_wg05
- 
+
 
     ! ---------------------------------------------------------
     subroutine scheme_zbr98
@@ -342,7 +327,7 @@ contains
         ! forward propagation
         call states_end(psi)
         call states_copy(psi, initial_st)
-        call fwd_step(oct_algorithm_zbr98, sys, td, h, target, par, par_tmp, chi, psi)
+        call fwd_step(oct, sys, td, h, target, par, par_tmp, chi, psi)
 
         write(filename,'(a,i3.3)') 'opt-control/PsiT.', iterator%ctr_iter
         call states_output(psi, gr, filename, sys%outp)
@@ -354,7 +339,7 @@ contains
 
         ! and now backward
         call calc_chi(oct, gr, target, psi, chi)
-        call bwd_step(oct_algorithm_zbr98, sys, td, h, target, par, par_tmp, chi, psi)
+        call bwd_step(oct, sys, td, h, target, par, par_tmp, chi, psi)
 
         if(oct%use_mixing) then
           call parameters_mixing(iterator%ctr_iter, par_prev, par_tmp, par_new)
@@ -369,9 +354,54 @@ contains
       end if
       call pop_sub()
     end subroutine scheme_zbr98
-
+    ! ---------------------------------------------------------
  
   end subroutine opt_control_run
+
+
+  ! ---------------------------------------------------------
+  subroutine f_iter(oct, sys, h, td, iterator, psi, initial_st, target, par, stop_loop)
+    type(oct_t), intent(in)       :: oct
+    type(system_t), intent(inout) :: sys
+    type(hamiltonian_t), intent(inout) :: h
+    type(td_t), intent(inout) :: td
+    type(oct_iterator_t)       :: iterator
+    type(states_t), intent(inout) :: psi
+    type(states_t), intent(in)    :: initial_st
+    type(target_t), intent(inout) :: target
+    type(oct_control_parameters_t) :: par
+    logical, intent(out) :: stop_loop
+
+    type(states_t) :: chi
+    type(oct_control_parameters_t) :: parp
+
+    call push_sub('opt_control.f_zbr98')
+
+    call parameters_copy(parp, par)
+
+    if( (iterator%ctr_iter .eq. 0) .or. oct%use_mixing) then
+      call states_end(psi)
+      psi = initial_st
+      call parameters_to_h(par, h%ep)
+      call propagate_forward(sys, h, td, target, psi)
+    end if
+
+    stop_loop = iteration_manager(oct, sys%gr, par, td, psi, target, iterator)
+
+    chi = psi
+    call calc_chi(oct, sys%gr, target, psi, chi)
+    call bwd_step(oct, sys, td, h, target, par, parp, chi, psi)
+
+    call states_end(psi)
+    call states_copy(psi, initial_st)
+    call fwd_step(oct, sys, td, h, target, par, parp, chi, psi)
+
+    call states_end(chi)
+    call parameters_end(parp)
+    call pop_sub()
+  end subroutine f_iter
+  ! ---------------------------------------------------------
+
 
 
   ! ---------------------------------------------------------

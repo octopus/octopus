@@ -166,8 +166,8 @@ module opt_control_propagation_m
   ! fly", so that the propagation of psi is performed with the
   ! "new" parameters.
   ! */--------------------------------------------------------
-  subroutine fwd_step(method, sys, td, h, target, par, par_tmp, chi, psi)
-    integer, intent(in)                           :: method
+  subroutine fwd_step(oct, sys, td, h, target, par, par_tmp, chi, psi)
+    type(oct_t), intent(in) :: oct
     type(system_t), intent(inout)                 :: sys
     type(td_t), intent(inout)                     :: td
     type(hamiltonian_t), intent(inout)            :: h
@@ -210,7 +210,7 @@ module opt_control_propagation_m
         call td_rti_dt(sys%ks, h, gr, psi2, td%tr, abs(i*td%dt), abs(td%dt), td%max_iter)
       end if
 
-      call update_field(method, i, par, gr, td, h, psi, chi, dir = 'f')
+      call update_field(oct, i, par, gr, td, h, psi, chi, par_tmp, dir = 'f')
       call prop_iter(i, gr, sys%ks, h, td, par_tmp, chi)
       call prop_iter(i, gr, sys%ks, h, td, par, psi)
 
@@ -236,8 +236,8 @@ module opt_control_propagation_m
   ! par_tmp = par_tmp[|psi>, |chi>]
   ! |chi> --> U[par_tmp](0, T)|chi>
   ! --------------------------------------------------------
-  subroutine bwd_step(method, sys, td, h, target, par, par_tmp, chi, psi) 
-    integer, intent(in) :: method
+  subroutine bwd_step(oct, sys, td, h, target, par, par_tmp, chi, psi) 
+    type(oct_t), intent(in) :: oct
     type(system_t), intent(inout) :: sys
     type(td_t), intent(inout)                     :: td
     type(hamiltonian_t), intent(inout)            :: h
@@ -270,7 +270,7 @@ module opt_control_propagation_m
     do i = td%max_iter, 1, -1
       if(target%targetmode==oct_targetmode_td) &
         call calc_inh(psi, gr, target, i-1, td%max_iter, td%dt, chi)
-      call update_field(method, i, par_tmp, gr, td, h, psi, chi, dir = 'b')
+      call update_field(oct, i, par_tmp, gr, td, h, psi, chi, par, dir = 'b')
       call prop_iter(i-1, gr, sys%ks, h, td, par_tmp, chi)
       call prop_iter(i-1, gr, sys%ks, h, td, par, psi)
     end do
@@ -326,9 +326,11 @@ module opt_control_propagation_m
   ! If dir = 'b', the field must be updated for a backward
   ! propagation. In taht case, the propagation step that is
   ! going to be done moves from iter*|dt| to (iter-1)*|dt|.
+  !
+  ! cp = (1-eta)*cpp - (eta/alpha) * <chi|V|Psi>
   ! ---------------------------------------------------------
-  subroutine update_field(algorithm_type, iter, cp, gr, td, h, psi, chi, dir)
-    integer, intent(in) :: algorithm_type
+  subroutine update_field(oct, iter, cp, gr, td, h, psi, chi, cpp, dir)
+    type(oct_t), intent(in) :: oct
     integer, intent(in)        :: iter
     type(oct_control_parameters_t), intent(inout) :: cp
     type(grid_t), intent(inout)   :: gr
@@ -336,6 +338,7 @@ module opt_control_propagation_m
     type(hamiltonian_t), intent(in) :: h
     type(states_t), intent(inout) :: psi
     type(states_t), intent(inout) :: chi
+    type(oct_control_parameters_t), intent(in) :: cpp
     character(len=1),intent(in) :: dir
 
     type(states_t) :: oppsi
@@ -385,13 +388,14 @@ module opt_control_propagation_m
     end do
 
     d1 = M_z1
-    if(algorithm_type .eq. oct_algorithm_zbr98) d1 = zstates_mpdotp(gr%m, psi, chi)
+    if(oct%algorithm_type .eq. oct_algorithm_zbr98) d1 = zstates_mpdotp(gr%m, psi, chi)
 
     select case(dir)
       case('f')
         do j = 1, cp%no_parameters
           value = (M_ONE / cp%alpha(j)) * aimag(d1*dl(j)) / &
-           ( tdf(cp%td_penalty(j), iter) - M_TWO*aimag(dq(j)) ) 
+           ( tdf(cp%td_penalty(j), iter) - M_TWO*aimag(dq(j)) )
+          value = (M_ONE - oct%eta)*tdf(cpp%f(j), iter) + oct%delta * value
           call tdf_set_numerical(cp%f(j), iter, value)
           if(iter .ne. td%max_iter + 1) then
             call tdf_set_numerical(cp%f(j), iter+1, value)
@@ -402,7 +406,7 @@ module opt_control_propagation_m
         do j = 1, cp%no_parameters
           value = (M_ONE / cp%alpha(j)) * aimag(d1*dl(j)) / &
            ( tdf(cp%td_penalty(j), iter+1) - M_TWO*aimag(dq(j)) ) 
-
+          value = (M_ONE - oct%eta)*tdf(cpp%f(j), iter+1) + oct%delta * value
           call tdf_set_numerical(cp%f(j), iter+1, value)
           if(iter .ne. 0) then
             call tdf_set_numerical(cp%f(j), iter, value)

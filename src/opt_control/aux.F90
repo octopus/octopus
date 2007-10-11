@@ -158,13 +158,12 @@
       olap = zstates_mpdotp(gr%m, target%st, psi_in)
       do ik = 1, psi_in%d%nik
         do p  = psi_in%st_start, psi_in%st_end
-          if(oct%algorithm_type == oct_algorithm_zr98) &
-            chi_out%zpsi(:,:,p,ik) = olap*target%st%zpsi(:, :, p, ik)
-          if(oct%algorithm_type == oct_algorithm_zbr98) then
-            chi_out%zpsi(:,:,p,ik) = target%st%zpsi(:, :, p, ik)
-          end if
-          if(oct%algorithm_type == oct_algorithm_wg05) &
-            chi_out%zpsi(:,:,p,ik) = olap*target%st%zpsi(:, :, p, ik)
+          select case(oct%algorithm_type)
+            case(oct_algorithm_zbr98)
+              chi_out%zpsi(:,:,p,ik) = target%st%zpsi(:, :, p, ik)
+            case default
+              chi_out%zpsi(:,:,p,ik) = olap*target%st%zpsi(:, :, p, ik)
+          end select
         end do
       end do
 

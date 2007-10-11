@@ -73,15 +73,27 @@
     !% If the restrictions set by the filter and fluence are reasonable, a good overlap can be 
     !% expected with 20 iterations.
     !% No monotonic convergence.
-    !%Option oct_algorithm_krotov 4
-    !% Yet to be implemented and tested, some people swear on it.
-    !% Described in Zhao & Rice: Optical Control of Molecules. (Appendix A)
-    !%Option oct_algorithm_mt03 5
+    !%Option oct_algorithm_mt03 4
     !% Yet to be implemented and tested. Basically an improved and generalized scheme. 
-    !% Comparable to ZBR98/ZR98. (see JCP 118,8191 (2003))
+    !% Comparable to ZBR98/ZR98. See [Y. Maday and G. Turinici, J. Chem. Phys. 118, 
+    !% 8191 (2003)].
+    !%Option oct_algorithm_krotov 5
+    !% Yet to be implemented and tested. Reported in [D. Tannor, V. Kazakov and V.
+    !% Orlov, in "Time Dependent Quantum Molecular Dynamics", edited by J. Broeckhove
+    !% and L. Lathouweres (Plenum, New York, 1992), pp. 347-360].
     !%End
     call loct_parse_int(check_inp('OCTScheme'), oct_algorithm_zr98, oct%algorithm_type)
     if(.not.varinfo_valid_option('OCTScheme', oct%algorithm_type)) call input_error('OCTScheme')
+    select case(oct%algorithm_type)
+    case(oct_algorithm_mt03)
+      oct%delta = M_TWO; oct%eta = M_ZERO
+    case(oct_algorithm_zr98)
+      oct%delta = M_ONE; oct%eta = M_ONE
+    case(oct_algorithm_krotov)
+      oct%delta = M_ONE; oct%eta = M_ZERO
+    case default
+      oct%delta = M_ONE; oct%eta = M_ONE
+    end select
 
     !%Variable OCTDoubleCheck
     !%Type logical
