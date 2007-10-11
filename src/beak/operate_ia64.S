@@ -21,6 +21,17 @@
 
 #include <config.h>
 #if defined(__ia64__) || defined(__ia64) || defined(_M_IA64)
+
+#define ISIZE 4
+#define ISHIFT 2
+#define FSIZE 8
+#define FSHIFT 3
+#define LDI ld4
+
+///////////////////////////////////////////////////////
+//    DOPERATE
+///////////////////////////////////////////////////////
+
 .text
 .align 32
 .global FC_FUNC_(doperate_as, DOPERATE_AS)#
@@ -31,11 +42,6 @@ alloc r3 = ar.pfs, 8, 60, 0, 16
 //save LC
 mov r2 = ar.lc
 
-#define ISIZE 4
-#define ISHIFT 2
-#define FSIZE 8
-#define FSHIFT 3
-#define LDI ld4
 // arguments
 
 #define NN r65
@@ -70,7 +76,7 @@ mov LL = r0
 mov II = r0;;
 lfetch.nt1 [ARG_WW]
 
-.loop_NR:
+.dloop_NR:
 adds LL = 1, LL;;
 cmp4.ne p2,p3 = LL, NR;;
 
@@ -83,36 +89,36 @@ LDI MAXII = [ARG_RM];;
 mov RILL = ARG_RI
 mov WS = ARG_WS
 adds r35 = -1, NN
-mov ar.ec = 5 + 1
+mov ar.ec = 4 + 1
 mov pr.rot = 1 << 16;;
-mov ar.lc = r35
+mov ar.lc = r35;;
 
-.loop_NN1:
+.dloop_NN1:
 (p16) LDI r38 = [RILL], 4
 (p17) sxt4 r39 = r39
 (p18) shladd r40 = r40, FSHIFT, ARG_FI
 (p19) shladd r41 = II, FSHIFT, r41
 (p20) st8 [WS] = r42, 8
-br.ctop.sptk.few .loop_NN1
+br.ctop.sptk.few .dloop_NN1
+;;
 clrrrb;;
 
 // FIRST, THE UNROLLED LOOP IN II
 #define UNROLL 8
-adds MAXUNRII = -UNROLL + 1, MAXII
+adds MAXUNRII = -UNROLL + 1, MAXII;;
 
 //check whether we have to do at least one iteration
-cmp.ge p6,p0 = II, MAXUNRII     // if (II > MAXUNRII) 
-(p6) br.cond.dpnt.few .loop_II  // goto rolled loop
+cmp.ge p6,p0 = II, MAXUNRII;;   // if (II > MAXUNRII) 
+(p6) br.cond.dpnt.few .dloop_II  // goto rolled loop
 
-.loop_II_unrolled:
+.dloop_II_unrolled:
 mov WS = ARG_WS;;
 ld8 r33 = [WS],8 //load WS[0] in advance
 adds r90 = -1, NN
 mov WW = ARG_WW
 mov WS2 = ARG_WS
-adds II = UNROLL, II
+adds II = UNROLL, II;;
 adds r41 = FSIZE, r33
-mov f81 = f33;;
 mov ar.lc = r90
 mov ar.ec = 4 + 1
 mov pr.rot = 1 << 16
@@ -128,7 +134,7 @@ mov f14 = f0
 mov f15 = f0;;
 
 //inner loop in K
-.loop_NN2:
+.dloop_NN2:
 
 //cycle 1
 (p16) ld8.s r32 = [WS],8 //load WS[K+1] 
@@ -137,7 +143,7 @@ mov f15 = f0;;
 
 (p16) ldfd f33 = [WW], FSIZE
 (p16) ldfd f45 = [r41], FSIZE*2
-(p20) fma.d f9 = f37,f49, f9
+(p20) fma.d f9 = f37,f49, f9;;
 
 //cycle 2
 (p16) ldfd f50 = [r33], FSIZE*2
@@ -161,8 +167,8 @@ mov f15 = f0;;
 
 (p16) ldfd f75 = [r41], FSIZE*2
 (p20) fma.d f15 = f37,f79, f15
-br.ctop.dptk.few .loop_NN2
-
+br.ctop.dptk.few .dloop_NN2
+;;
 //create pointers for storing
 adds r32 = FSIZE,   ARG_FO
 adds r33 = FSIZE*2, ARG_FO
@@ -188,17 +194,17 @@ cmp4.lt p4,p0 = II, MAXUNRII
 clrrrb;;
 
 //iterate over II
-(p4) br.cond.dptk.few .loop_II_unrolled
+(p4) br.cond.dptk.few .dloop_II_unrolled
 
 
 // NOW WE HANDLE THE REST
-.loop_II:
+.dloop_II:
 
 //check the value of II
 cmp4.lt p4,p5 = II, MAXII;;
 
 //and go to end if we are already finished
-(p5) br.cond.dpnt.few .end_II
+(p5) br.cond.dpnt.few .dend_II
 
 adds r90 = -1, NN
 mov WW = ARG_WW
@@ -219,13 +225,13 @@ mov f36 = f0
 
 ;;
 //inner loop
-.loop_NN3:
+.dloop_NN3:
 (p16) ld8 r32 = [WS],8
 (p16) ldfd f50 = [WW], FSIZE
 (p23) fma.d f39 = f57,f67, f43
 (p17) ldfd f61 = [r33], FSIZE
 (p18) st8 [WS2] = r34, 8
-br.ctop.sptk.few .loop_NN3
+br.ctop.sptk.few .dloop_NN3
 ;;
 //reduce accumulators
 fadd.d f40 = f40, f41
@@ -237,20 +243,310 @@ stfd.nta [ARG_FO] = f8, FSIZE
 //reset register rotation
 clrrrb;;
 //iterate over II
-(p4) br.cond.sptk.few .loop_II
+(p4) br.cond.sptk.few .dloop_II
 
-.end_II:
+.dend_II:
 
 //increment ARG_RI in NN
 shladd ARG_RI = NN, ISHIFT, ARG_RI
 //Close the loop in LL
-(p2) br.cond.sptk.few .loop_NR
+(p2) br.cond.sptk.few .dloop_NR
 
 //restore LC
 mov ar.lc = r2
 
 br.ret.sptk.many b0
 .endp FC_FUNC_(doperate_as, DOPERATE_AS)#
+
+
+
+
+///////////////////////////////////////////////////////
+//    ZOPERATE
+///////////////////////////////////////////////////////
+
+.text
+.align 32
+.global FC_FUNC_(zoperate_as, ZOPERATE_AS)#
+.proc FC_FUNC_(zoperate_as, ZOPERATE_AS)#
+FC_FUNC_(zoperate_as, ZOPERATE_AS):
+
+alloc r3 = ar.pfs, 8, 60, 0, 16
+//save LC
+mov r2 = ar.lc
+
+// arguments
+
+#define NN r65
+#define ARG_WW r66
+#define NR r67
+#define ARG_RI r68
+#define ARG_RM r69
+#define ARG_FI r70
+#define ARG_FO r71
+#define ARG_WS r72
+
+//copy or load input arguments
+ld4 NN = [r32]
+mov ARG_WW = r33
+ld4 NR = [r34]
+mov ARG_RI = r35
+mov ARG_RM = r36
+mov ARG_FI = r37
+mov ARG_FO = r38
+mov ARG_WS = r39
+
+#define LL r73
+#define II r74
+#define WW r75
+#define MAXII r77
+#define RILL r78
+#define WS r79
+#define WS2 r80
+#define MAXUNRII r81
+
+mov LL = r0
+mov II = r0;;
+lfetch.nt1 [ARG_WW]
+
+.zloop_NR:
+adds LL = 1, LL;;
+cmp4.ne p2,p3 = LL, NR;;
+
+LDI II = [ARG_RM],4;; // II = ARG_RM[LL]
+LDI MAXII = [ARG_RM];; // MAXII = ARG_RM[LL+1]
+
+//calculate WS[1:NN] = FI + II + ARG_RI[1:NN, LL]
+mov RILL = ARG_RI
+mov WS = ARG_WS
+adds r35 = -1, NN
+mov ar.ec = 4 + 1
+mov pr.rot = 1 << 16;;
+mov ar.lc = r35;;
+
+.zloop_NN1:
+(p16) LDI r38 = [RILL], 4
+(p17) sxt4 r39 = r39
+(p18) shladd r40 = r40, FSHIFT+1, ARG_FI
+(p19) shladd r41 = II, FSHIFT+1, r41
+(p20) st8 [WS] = r42, 8
+br.ctop.sptk.few .zloop_NN1
+;;
+clrrrb;;
+
+// FIRST, THE UNROLLED LOOP IN II
+#define UNROLL 8
+adds MAXUNRII = -UNROLL + 1, MAXII;;
+
+//check whether we have to do at least one iteration
+cmp.ge p6,p0 = II, MAXUNRII;;   // if (II > MAXUNRII) 
+(p6) br.cond.dpnt.few .zloop_II  // goto rolled loop
+br.cond.dpnt.few .zloop_II  // goto rolled loop
+
+.zloop_II_unrolled:
+mov WS = ARG_WS;;
+ld8 r33 = [WS],8 //load WS[0] in advance
+mov WS2 = ARG_WS
+mov WW = ARG_WW
+adds r90 = -1, NN
+adds II = UNROLL, II
+mov ar.ec = 2 + 1
+mov pr.rot = 1 << 16;;
+mov ar.lc = r90
+
+//initialize accumulators to zero
+mov f8 = f0
+mov f9 = f0
+mov f10 = f0
+mov f11 = f0
+
+mov f12 = f0
+mov f13 = f0
+mov f14 = f0
+mov f15 = f0
+
+mov f16 = f0
+mov f17 = f0
+mov f18 = f0
+mov f19 = f0
+
+mov f20 = f0
+mov f21 = f0
+mov f6 = f0
+mov f7 = f0
+;;
+
+//inner loop in K
+.zloop_NN2:
+
+//cycle 1
+(p16) ld8.s r32 = [WS],8 //load WS[K+1] 
+(p16) ldfpd f35,f38 = [r33], FSIZE*2
+(p18) fma.d f8 = f34,f37, f8
+
+(p16) ldfd f32 = [WW], FSIZE
+(p18) fma.d f9 = f34,f40, f9;;
+
+//cycle 2
+(p16) ldfpd f41,f44 = [r33], FSIZE*2
+(p18) fma.d f10 = f34,f43, f10
+
+(p17) st8 [WS2] = r34, 8 //store the incremented value of WS[K-1] for the next iteration
+(p18) fma.d f11 = f34,f46, f11;;
+
+//cycle 3
+(p16) ldfpd f47,f50 = [r33], FSIZE*2
+(p18) fma.d f12 = f34,f49, f12
+
+(p18) fma.d f13 = f34,f52, f13;;
+
+//cycle 4
+(p16) ldfpd f53,f56 = [r33], FSIZE*2
+(p18) fma.d f14 = f34,f55, f14
+
+(p18) fma.d f15 = f34,f58, f15;;
+
+ //cycle 5
+(p16) ldfpd f59,f62 = [r33], FSIZE*2
+(p18) fma.d f16 = f34,f61, f16
+
+(p18) fma.d f17 = f34,f64, f17;;
+
+ //cycle 6
+(p16) ldfpd f65,f68= [r33], FSIZE*2
+(p18) fma.d f18 = f34,f67, f18
+
+(p18) fma.d f19 = f34,f70, f19;;
+
+//cycle 7
+(p16) ldfpd f71,f74 = [r33], FSIZE*2
+(p18) fma.d f20 = f34,f73, f20
+
+(p18) fma.d f21 = f34,f76, f21;;
+
+//cycle 8
+(p16) ldfpd f77,f80 = [r33], FSIZE*2
+(p18) fma.d f6 = f34,f79, f6
+
+(p18) fma.d f7 = f34,f82, f7
+br.ctop.dptk.few .zloop_NN2
+;;
+
+//create pointers for storing
+adds r32 = FSIZE,   ARG_FO
+adds r33 = FSIZE*2, ARG_FO
+adds r34 = FSIZE*3, ARG_FO
+
+adds r35 = FSIZE*4, ARG_FO
+adds r36 = FSIZE*5, ARG_FO
+adds r37 = FSIZE*6, ARG_FO
+adds r38 = FSIZE*7, ARG_FO
+
+adds r39 = FSIZE*8, ARG_FO
+adds r40 = FSIZE*9, ARG_FO
+adds r41 = FSIZE*10, ARG_FO
+adds r42 = FSIZE*11, ARG_FO
+
+adds r43 = FSIZE*12, ARG_FO
+adds r44 = FSIZE*13, ARG_FO
+adds r45 = FSIZE*14, ARG_FO
+adds r46 = FSIZE*15, ARG_FO;;
+
+//store
+stfd.nta [ARG_FO] = f8, FSIZE*16
+stfd.nta [r32]    = f9
+stfd.nta [r33]    = f10
+stfd.nta [r34]    = f11
+
+stfd.nta [r35]    = f12
+stfd.nta [r36]    = f13
+stfd.nta [r37]    = f14
+stfd.nta [r38]    = f15
+
+stfd.nta [r39]    = f16
+stfd.nta [r40]    = f17
+stfd.nta [r41]    = f18
+stfd.nta [r42]    = f19
+
+stfd.nta [r43]    = f20
+stfd.nta [r44]    = f21
+stfd.nta [r45]    = f6
+stfd.nta [r46]    = f7
+
+//check the value of II
+cmp4.lt p4,p0 = II, MAXUNRII
+//reset register rotation
+clrrrb;;
+
+//iterate over II
+(p4) br.cond.dptk.few .zloop_II_unrolled
+
+
+// NOW WE HANDLE THE REST
+.zloop_II:
+
+//check the value of II
+cmp4.lt p4,p5 = II, MAXII;;
+
+//and go to end if we are already finished
+(p5) br.cond.dpnt.few .zend_II
+
+adds r90 = -1, NN
+mov WW = ARG_WW
+mov WS = ARG_WS
+mov WS2 = ARG_WS
+adds II = 1, II;;
+
+mov ar.lc = r90
+mov ar.ec = 8 + 1
+mov pr.rot = 1 << 16
+;;
+
+//initialize accumulators
+mov f33 = f0
+mov f34 = f0
+
+mov f36 = f0
+mov f37 = f0
+;;
+//inner loop
+.zloop_NN3:
+(p16) ld8 r32 = [WS],8
+(p16) ldfd f50 = [WW], FSIZE
+(p24) fma.d f40 = f58,f66, f42
+
+(p17) ldfpd f59,f68 = [r33], FSIZE*2
+(p24) fma.d f43 = f58,f75, f45
+(p18) st8 [WS2] = r34, 8
+br.ctop.sptk.few .zloop_NN3
+;;
+
+//reduce accumulators
+fadd.d f8 = f41, f42
+fadd.d f9 = f44, f45;;
+
+//store
+stfd.nta [ARG_FO] = f8, FSIZE;;
+stfd.nta [ARG_FO] = f9, FSIZE
+
+//reset register rotation
+clrrrb;;
+//iterate over II
+(p4) br.cond.sptk.few .zloop_II
+
+.zend_II:
+
+//increment ARG_RI in NN
+shladd ARG_RI = NN, ISHIFT, ARG_RI
+//Close the loop in LL
+(p2) br.cond.sptk.few .zloop_NR
+
+//restore LC
+mov ar.lc = r2
+;;
+
+br.ret.sptk.many b0
+.endp FC_FUNC_(zoperate_as, ZOPERATE_AS)#
 
 #endif
 

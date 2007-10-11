@@ -1022,6 +1022,7 @@ contains
 #if defined(HAVE_MPI)
     logical :: update
 #endif
+    real(8) :: ws(100)
     logical :: profile_
 
     profile_ = .true. 
@@ -1063,6 +1064,8 @@ contains
           call zoperate_ri(op%np, nn, op%w_re(1, 1), op%nri, op%ri(1,1), op%rimap_inv(0), fi(1), fo(1))
         case(OP_VEC)
           call zoperate_ri_vec(op%np, nn, op%w_re(1, 1), op%nri, op%ri(1,1), op%rimap_inv(0), fi(1), fo(1))
+        case(OP_AS)
+          call zoperate_as(nn, op%w_re(1, 1), op%nri, op%ri(1,1), op%rimap_inv(0), fi(1), fo(1), ws(1))
         end select
 
       else

@@ -60,11 +60,9 @@ int FC_FUNC_(op_is_available, OP_IS_AVAILABLE)
   if( *opid == OP_VEC ) result = 0;
 #endif
 
-#if !defined(OCT_ITANIUM)
+#if !defined(OCT_ITANIUM) || defined(SINGLE_PRECISION)
   if( *opid == OP_AS ) result = 0;
 #endif
-
-  if( *type == M_CMPLX && *opid == OP_AS ) result = 0;
 
   return result;
 }
