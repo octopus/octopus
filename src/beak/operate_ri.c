@@ -54,12 +54,7 @@ void FC_FUNC_(doperate_ri,DOPERATE_RI)(const int * opnp,
   assert(MAX_OP_N >= n);
 
   i = 0;
-#pragma omp parallel for private(i, j, index, ffi)
   for (l = 0; l < nri ; l++) {
-
-#ifdef USE_OMP
-    i = rimap_inv[l];
-#endif
 
     index  = opri + n * l;
     index1 = opri + n * (l+1);
@@ -129,12 +124,7 @@ void FC_FUNC_(zoperate_ri,ZOPERATE_RI)(const int * opnp,
   register ffloat a4, a5, a6, a7;
 
   i = 0;
-#pragma omp parallel for private(i, j, index, ffi)
   for (l = 0; l < nri ; l++) {
-
-#ifdef USE_OMP
-    i = rimap_inv[l];
-#endif
 
     index = opri + n * l;
     index1= opri + n * (l+1);

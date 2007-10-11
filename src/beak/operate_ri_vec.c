@@ -66,12 +66,7 @@ void FC_FUNC_(doperate_ri_vec,DOPERATE_RI_VEC)(const int * opnp,
 #endif
 
   i = 0;
-#pragma omp parallel for private(i, j, index, ffi)
   for (l = 0; l < nri ; l++) {
-
-#ifdef USE_OMP
-    i = rimap_inv[l];
-#endif
 
     index  = opri + n * l;
 
@@ -135,10 +130,6 @@ void FC_FUNC_(zoperate_ri_vec,ZOPERATE_RI_VEC)(const int * opnp,
   i = 0;
   for (l = 0; l < nri ; l++) {
 
-#ifdef USE_OMP
-    i = rimap_inv[l];
-#endif
-
     index = opri + n * l;
 
     for(j = 0; j < n ; j++) ffi[j] = fi + index[j];
@@ -199,12 +190,7 @@ void FC_FUNC_(zoperate_ri_vec,ZOPERATE_RI_VEC)(const int * opnp,
   for(j = 0; j < n ; j++) vw[j] =_mm_set1_pd(w[j]);
 
   i = 0;
-#pragma omp parallel for private(i, j, index, ffi)
   for (l = 0; l < nri ; l++) {
-
-#ifdef USE_OMP
-    i = rimap_inv[l];
-#endif
 
     index = opri + n * l;
 
