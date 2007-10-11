@@ -397,9 +397,8 @@ module opt_control_propagation_m
            ( tdf(cp%td_penalty(j), iter) - M_TWO*aimag(dq(j)) )
           value = (M_ONE - oct%eta)*tdf(cpp%f(j), iter) + oct%delta * value
           call tdf_set_numerical(cp%f(j), iter, value)
-          if(iter .ne. td%max_iter + 1) then
-            call tdf_set_numerical(cp%f(j), iter+1, value)
-          end if
+          if(iter+1 <= td%max_iter + 1)  call tdf_set_numerical(cp%f(j), iter+1, value)
+          if(iter+2 <= td%max_iter + 1)  call tdf_set_numerical(cp%f(j), iter+2, value)
         end do
 
       case('b')
@@ -408,14 +407,8 @@ module opt_control_propagation_m
            ( tdf(cp%td_penalty(j), iter+1) - M_TWO*aimag(dq(j)) ) 
           value = (M_ONE - oct%eta)*tdf(cpp%f(j), iter+1) + oct%delta * value
           call tdf_set_numerical(cp%f(j), iter+1, value)
-          if(iter .ne. 0) then
-            call tdf_set_numerical(cp%f(j), iter, value)
-          end if
-          call tdf_set_numerical(cp%f(j), iter+1, value)
-          if(iter-1 .ne. 0) then
-            call tdf_set_numerical(cp%f(j), iter-1, value)
-          end if
-
+          if(iter > 0) call tdf_set_numerical(cp%f(j), iter, value)
+          if(iter-1 > 0) call tdf_set_numerical(cp%f(j), iter-1, value)
         end do
     end select
 
