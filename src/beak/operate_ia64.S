@@ -341,7 +341,6 @@ adds MAXUNRII = -UNROLL + 1, MAXII;;
 //check whether we have to do at least one iteration
 cmp.ge p6,p0 = II, MAXUNRII;;   // if (II > MAXUNRII) 
 (p6) br.cond.dpnt.few .zloop_II  // goto rolled loop
-br.cond.dpnt.few .zloop_II  // goto rolled loop
 
 .zloop_II_unrolled:
 mov WS = ARG_WS;;
@@ -365,15 +364,15 @@ mov f13 = f0
 mov f14 = f0
 mov f15 = f0
 
-mov f16 = f0
-mov f17 = f0
-mov f18 = f0
-mov f19 = f0
+mov f100 = f0
+mov f102 = f0
+mov f104 = f0
+mov f106 = f0
 
-mov f20 = f0
-mov f21 = f0
-mov f6 = f0
-mov f7 = f0
+mov f108 = f0
+mov f110 = f0
+mov f112 = f0
+mov f114 = f0
 ;;
 
 //inner loop in K
@@ -408,27 +407,27 @@ mov f7 = f0
 
  //cycle 5
 (p16) ldfpd f59,f62 = [r33], FSIZE*2
-(p18) fma.d f16 = f34,f61, f16
+(p18) fma.d f101 = f34,f61, f102
 
-(p18) fma.d f17 = f34,f64, f17;;
+(p18) fma.d f103 = f34,f64, f104;;
 
  //cycle 6
 (p16) ldfpd f65,f68= [r33], FSIZE*2
-(p18) fma.d f18 = f34,f67, f18
+(p18) fma.d f105 = f34,f67, f106
 
-(p18) fma.d f19 = f34,f70, f19;;
+(p18) fma.d f107 = f34,f70, f108;;
 
 //cycle 7
 (p16) ldfpd f71,f74 = [r33], FSIZE*2
-(p18) fma.d f20 = f34,f73, f20
+(p18) fma.d f109 = f34,f73, f110
 
-(p18) fma.d f21 = f34,f76, f21;;
+(p18) fma.d f111 = f34,f76, f112;;
 
 //cycle 8
 (p16) ldfpd f77,f80 = [r33], FSIZE*2
-(p18) fma.d f6 = f34,f79, f6
+(p18) fma.d f113 = f34,f79, f114
 
-(p18) fma.d f7 = f34,f82, f7
+(p18) fma.d f115 = f34,f82, f116
 br.ctop.dptk.few .zloop_NN2
 ;;
 
@@ -463,15 +462,15 @@ stfd.nta [r36]    = f13
 stfd.nta [r37]    = f14
 stfd.nta [r38]    = f15
 
-stfd.nta [r39]    = f16
-stfd.nta [r40]    = f17
-stfd.nta [r41]    = f18
-stfd.nta [r42]    = f19
+stfd.nta [r39]    = f102
+stfd.nta [r40]    = f104
+stfd.nta [r41]    = f106
+stfd.nta [r42]    = f108
 
-stfd.nta [r43]    = f20
-stfd.nta [r44]    = f21
-stfd.nta [r45]    = f6
-stfd.nta [r46]    = f7
+stfd.nta [r43]    = f110
+stfd.nta [r44]    = f112
+stfd.nta [r45]    = f114
+stfd.nta [r46]    = f116
 
 //check the value of II
 cmp4.lt p4,p0 = II, MAXUNRII
@@ -521,13 +520,14 @@ mov f37 = f0
 br.ctop.sptk.few .zloop_NN3
 ;;
 
+adds r32 = FSIZE, ARG_FO
 //reduce accumulators
 fadd.d f8 = f41, f42
 fadd.d f9 = f44, f45;;
 
 //store
-stfd.nta [ARG_FO] = f8, FSIZE;;
-stfd.nta [ARG_FO] = f9, FSIZE
+stfd.nta [ARG_FO] = f8, FSIZE*2
+stfd.nta [r32] = f9
 
 //reset register rotation
 clrrrb;;
