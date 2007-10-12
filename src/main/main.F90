@@ -200,6 +200,7 @@ program octopus
 
     call profiling_out(C_PROFILING_COMPLETE_DATASET)
     call profiling_output()
+    call profiling_end()
 
     call print_date("Calculation ended on ")
 
