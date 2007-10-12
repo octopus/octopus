@@ -7,7 +7,7 @@ module crystal_m
   
   use blas_m
   use global_m
-  use lib_adv_alg_m
+  use lalg_adv_m
   use messages_m
   use units_m
 

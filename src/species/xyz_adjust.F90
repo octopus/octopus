@@ -24,7 +24,7 @@ module xyz_adjust_m
   use messages_m
   use datasets_m
   use geometry_m
-  use lib_adv_alg_m
+  use lalg_adv_m
   use lib_oct_parser_m
 
   implicit none

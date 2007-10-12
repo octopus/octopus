@@ -232,7 +232,7 @@ subroutine read_resonances_file(order, ffile, search_interval, final_time, nfreq
   use io_m
   use units_m
   use spectrum_m
-  use lib_adv_alg_m
+  use lalg_adv_m
   use oscillator_strength_m
 
   implicit none
@@ -371,7 +371,7 @@ subroutine analyze_signal(order, omega, search_interval, final_time, nresonances
   use io_m
   use units_m
   use spectrum_m
-  use lib_adv_alg_m
+  use lalg_adv_m
   use oscillator_strength_m
 
   implicit none
@@ -722,7 +722,7 @@ subroutine generate_signal(order, observable)
   use io_m
   use units_m
   use spectrum_m
-  use lib_adv_alg_m
+  use lalg_adv_m
 
   use oscillator_strength_m, only : local_operator_t, &
                                     local_operator_copy
@@ -1155,7 +1155,7 @@ subroutine print_omega_file(omega, search_interval, final_time, nfrequencies)
   use io_m
   use units_m
   use spectrum_m
-  use lib_adv_alg_m
+  use lalg_adv_m
   use oscillator_strength_m
 
   implicit none

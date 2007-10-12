@@ -19,7 +19,7 @@
 
 #include "global.h"
 
-module lib_basic_alg_m
+module lalg_basic_m
   use blas_m
 #ifdef USE_OMP
   use omp_lib
@@ -229,24 +229,24 @@ contains
 #endif
 
 #  define TYPE 1
-#  include "linalg_basic_blas.F90"
+#  include "lalg_basic_blas.F90"
 #  undef TYPE
 
 #  define TYPE 2
-#  include "linalg_basic_blas.F90"
+#  include "lalg_basic_blas.F90"
 #  undef TYPE
 
 #  define TYPE 3
-#  include "linalg_basic_blas.F90"
+#  include "lalg_basic_blas.F90"
 #  undef TYPE
 
 #  define TYPE 4
-#  include "linalg_basic_blas.F90"
+#  include "lalg_basic_blas.F90"
 #  undef TYPE
 
-#include "linalg_basic_mp.F90"
+#include "lalg_basic_mp.F90"
 
-end module lib_basic_alg_m
+end module lalg_basic_m
 
 
 !! Local Variables:

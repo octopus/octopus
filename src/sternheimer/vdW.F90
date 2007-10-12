@@ -28,7 +28,7 @@ module vdw_m
   use grid_m
   use hamiltonian_m
   use io_m
-  use lib_basic_alg_m
+  use lalg_basic_m
   use lib_oct_m
   use lib_oct_parser_m
   use linear_response_m

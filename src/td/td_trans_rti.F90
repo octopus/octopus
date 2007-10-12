@@ -25,7 +25,7 @@ module td_trans_rti_m
   use global_m
   use grid_m
   use hamiltonian_m
-  use lib_basic_alg_m
+  use lalg_basic_m
   use messages_m
   use sparskit_m
   use states_m

@@ -22,8 +22,8 @@
 module mix_m
   use datasets_m
   use global_m
-  use lib_adv_alg_m
-  use lib_basic_alg_m
+  use lalg_adv_m
+  use lalg_basic_m
   use lib_oct_parser_m
   use messages_m
   use varinfo_m

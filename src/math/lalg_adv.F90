@@ -19,7 +19,7 @@
 
 #include "global.h"
 
-module lib_adv_alg_m
+module lalg_adv_m
   use global_m
   use messages_m
 
@@ -87,10 +87,10 @@ module lib_adv_alg_m
 contains
 
 #ifdef HAVE_LAPACK
-#include "linalg_adv_lapack.F90"
+#include "lalg_adv_lapack.F90"
 #endif
 
-end module lib_adv_alg_m
+end module lalg_adv_m
 
 
 !! Local Variables:

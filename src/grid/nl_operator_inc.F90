@@ -49,6 +49,7 @@ subroutine X(nl_operator_tune)(op)
   real(8) :: global_flops(OP_MIN:OP_MAX)
 #endif
 
+  call profiling_in(nl_tuning_profile, "NL_OPERATOR_TUNE")
   call push_sub('nl_operator_inc.Xnl_operator_tune')
   
   !count the total number of floating point operations  
@@ -154,6 +155,7 @@ subroutine X(nl_operator_tune)(op)
 #endif
 
   call pop_sub()
+  call profiling_out(nl_tuning_profile)
 
 end subroutine X(nl_operator_tune)
 

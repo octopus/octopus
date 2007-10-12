@@ -25,7 +25,7 @@ module hamiltonian_m
   use geometry_m
   use global_m
   use grid_m
-  use lib_basic_alg_m
+  use lalg_basic_m
   use lib_oct_parser_m
   use mesh_m
   use external_pot_m

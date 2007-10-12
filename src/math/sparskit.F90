@@ -94,7 +94,7 @@ end module sparskit_m
 ! ---------------------------------------------------------
 FLOAT function distdot(n, x, ix, y, iy)
   use blas_m
-  !  use lib_basic_alg_m
+  !  use lalg_basic_m
 
   integer, intent(in) :: n, ix, iy
   FLOAT,   intent(in) :: x, y

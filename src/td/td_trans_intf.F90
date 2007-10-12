@@ -25,7 +25,7 @@ module td_trans_intf_m
   use derivatives_m
   use global_m
   use grid_m
-  use lib_basic_alg_m
+  use lalg_basic_m
   use math_m
   use mesh_m
   use messages_m

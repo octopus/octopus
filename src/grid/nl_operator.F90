@@ -101,6 +101,8 @@ module nl_operator_m
     end function op_is_available
   end interface
 
+  type(profile_t), save :: nl_operate_profile, nl_tuning_profile
+
 contains
   
   character(len=8) function op_function_name(id) result(str)
@@ -965,7 +967,7 @@ contains
     profile_ = .true. 
     if(present(profile)) profile_ = profile
 
-    if(profile_) call profiling_in(C_PROFILING_NL_OPERATOR)
+    if(profile_) call profiling_in(nl_operate_profile, "NL_OPERATOR")
     call push_sub('nl_operator.dnl_operator_operate')
 
 #if defined(HAVE_MPI)
@@ -1006,7 +1008,7 @@ contains
     !$omp end parallel do
     
     call pop_sub()
-    if(profile_) call profiling_out(C_PROFILING_NL_OPERATOR)
+    if(profile_) call profiling_out(nl_operate_profile)
   end subroutine dnl_operator_operate
 
 
@@ -1028,7 +1030,7 @@ contains
     profile_ = .true. 
     if(present(profile)) profile_ = profile
 
-    if(profile_) call profiling_in(C_PROFILING_NL_OPERATOR)
+    if(profile_) call profiling_in(nl_operate_profile, "NL_OPERATOR")
     call push_sub('nl_operator.znl_operator_operate')
 
 #if defined(HAVE_MPI)
@@ -1082,7 +1084,7 @@ contains
     !$omp end parallel do
 
     call pop_sub()
-    if(profile_) call profiling_out(C_PROFILING_NL_OPERATOR)
+    if(profile_) call profiling_out(nl_operate_profile)
   end subroutine znl_operator_operate
 
 
@@ -1093,7 +1095,6 @@ contains
 
     integer :: ii, nn, jj
 
-    call profiling_in(C_PROFILING_NL_OPERATOR)
     call push_sub('nl_operator.dnl_operator_operate_diag')
 
     nn = op%n
@@ -1106,7 +1107,6 @@ contains
     end if
 
     call pop_sub()
-    call profiling_out(C_PROFILING_NL_OPERATOR)
 
   end subroutine dnl_operator_operate_diag
 
@@ -1118,7 +1118,6 @@ contains
 
     integer :: ii, nn, jj
 
-    call profiling_in(C_PROFILING_NL_OPERATOR)
     call push_sub('nl_operator.znl_operator_operate_diag')
 
     nn = op%n
@@ -1162,7 +1161,6 @@ contains
     end if
 
     call pop_sub()
-    call profiling_out(C_PROFILING_NL_OPERATOR)
 
   end subroutine znl_operator_operate_diag
 

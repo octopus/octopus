@@ -24,7 +24,7 @@ module linear_solver_m
   use global_m
   use grid_m
   use hamiltonian_m
-  use lib_basic_alg_m
+  use lalg_basic_m
   use lib_oct_m
   use lib_oct_parser_m
   use mesh_m

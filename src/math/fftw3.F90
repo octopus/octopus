@@ -29,7 +29,7 @@ module fft_m
   use datasets_m
   use lib_oct_m
   use lib_oct_parser_m
-  use lib_basic_alg_m
+  use lalg_basic_m
 
   implicit none
 

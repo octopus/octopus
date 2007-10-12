@@ -22,7 +22,7 @@
 module derivatives_m
   use datasets_m
   use global_m
-  use lib_adv_alg_m
+  use lalg_adv_m
   use lib_oct_parser_m
   use mesh_m
   use messages_m

@@ -21,7 +21,7 @@
 
 module mesh_function_m
   use global_m
-  use lib_basic_alg_m
+  use lalg_basic_m
   use lib_oct_gsl_spline_m
   use math_m
   use mesh_m

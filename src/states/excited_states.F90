@@ -22,7 +22,7 @@
 module excited_states_m
   use global_m
   use io_m
-  use lib_adv_alg_m
+  use lalg_adv_m
   use mesh_m
   use messages_m
   use mpi_m

@@ -104,7 +104,6 @@ module profiling_m
        C_PROFILING_MF_INTEGRATE,     &
        C_PROFILING_MF_DOTP,          &
        C_PROFILING_MF_NRM2,          &
-       C_PROFILING_NL_OPERATOR,      &
        C_PROFILING_GHOST_UPDATE,     &
        C_PROFILING_VEC_INTEGRATE,    &
        C_PROFILING_SCF_CYCLE,        &
@@ -182,7 +181,6 @@ contains
       call profile_init(C_PROFILING_MF_INTEGRATE,     'MF_INTEGRATE')
       call profile_init(C_PROFILING_MF_DOTP,          'MF_DOTP')
       call profile_init(C_PROFILING_MF_NRM2,          'MF_NRM2')
-      call profile_init(C_PROFILING_NL_OPERATOR,      'NL_OPERATOR')
       call profile_init(C_PROFILING_GHOST_UPDATE,     'GHOST_UPDATE')
       call profile_init(C_PROFILING_VEC_INTEGRATE,    'VEC_INTEGRATE')
       call profile_init(C_PROFILING_SCF_CYCLE,        'SCF_CYCLE')
