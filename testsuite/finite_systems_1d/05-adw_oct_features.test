@@ -36,14 +36,12 @@ Input: 05-adw.02-filter_fixed.inp
 Match ; J1 1st  iteration  ; grep ' 1  ' opt-control/convergence ; \s*-0.2129\d*\s*0.0006
 Match ; J1 2nd  iteration  ; grep ' 2  ' opt-control/convergence ; \s*0.540\d*\s*0.580
 
-# Now use filter and optimize indirect transition via 3rd excited state.
-# (For the moment, disconnected)
+# Now use add a filter. This corresponds to the case presented in
+# Fig. 5 of the same paper. Once again, we stop at iteration #2; 
+# however if the run is continued it reproduces nicely the result 
+# given in the paper (not exactly, due probably to small numerical 
+# differences).
 
-#Input: 05-adw.03-filter_indirect.inp
-
-# Match overlaps 
-#Match ; J1 1st  iteration  ; grep ' 1  ' opt-control/convergence ; \s*0.062\d*
-#Match ; J1 2nd  iteration  ; grep ' 2  ' opt-control/convergence ; \s*0.195\d*
-# The run stops at iter number two; however it should continue further to see that
-# the result actually converges. Apparently, however, the algorithm is unstable
-# and produces different results in different machines.
+Input: 05-adw.03-filter_indirect.inp
+Match ; J1 1st  iteration  ; grep ' 1  ' opt-control/convergence ; \s*1\s*0.161\d*\s*0.1634
+Match ; J1 2nd  iteration  ; grep ' 2  ' opt-control/convergence ; \s*2\s*0.412\d*\s*0.4157

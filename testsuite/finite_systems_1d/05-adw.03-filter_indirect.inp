@@ -3,72 +3,11 @@
 
 CalculationMode = opt_control
 
-# ------------------
-# TD RUN Parameters
-# ------------------
-
-stime  = 400.0
-dt = 0.005
-TDEvolutionMethod = split
-TDExponentialMethod = taylor
-TDExponentialOrder = 4
-TDLanczosTol = 5.0e-5
-TDMaximumIter = stime/dt
-TDTimeStep = dt
-
-
-# --------------
-# OCT parameters
-# --------------
-
-OCTPenalty =5.0
-OCTEps   = 0.000001
-OCTMaxIter = 2
-OCTTargetMode = oct_targetmode_static
-OCTFilterMode = 1
-OCTFixFluenceTo = 0.32
-OCTInitialState = oct_is_groundstate
-OCTTargetOperator = oct_tg_gstransformation
-%OCTTargetTransformStates
-0 | 1
-%
-
-OCTScheme  = oct_algorithm_wg05
-OCTDoubleCheck = No	
-gamma1 = 0.1
-gamma2 = 160
-
-w03 = 1.0147
-w13 = 0.8580
-#%OCTFilter
-#   frequency_filter | "exp(-gamma2*( w + w03 )^2  ) + exp(-gamma2*( w - w03 )^2  )" 
-#   frequency_filter | "exp(-gamma2*( w + w13 )^2  ) + exp(-gamma2*( w - w13 )^2  )"
-#%
-
-%OCTFilter
-frequency_filter | "exp(-gamma2*( w + w03 )^2  ) + exp(-gamma2*( w - w03 )^2  ) + exp(-gamma2*( w + w13 )^2  ) + exp(-gamma2*( w - w13 )^2 )" 
-%
-
-
-#----------------------------
-# Laser field = Initial guess
-#-----------------------------
-
-ampl = 0.1
-freq1 = 0.1
-w1 = 5.0
-cycles = 4
-tau = (pi/freq1)*cycles
-t0 = tau
-%TDExternalFields
-  electric_field | 1 | 0 | 0 | envelope_constant | ampl | freq1
-%
-
 Dimensions = 1
 fromScratch = yes
 
 BoxShape = sphere
-Spacing = 0.1
+Spacing = 0.12
 Radius =  8.0
 
 NonInteractingElectrons = yes
@@ -83,15 +22,50 @@ NonInteractingElectrons = yes
 "AWD1D" | 0 | 0 | 0
 %
 
-EigenSolverInitTolerance = 1.0e-6
-EigenSolverFinalTolerance = 1.0e-6
-EigenSolverMaxIter = 1000
-Mixing = 1.0
-TypeOfMixing = linear
+# ------------------
+# TD RUN Parameters
+# ------------------
 
-NumberUnoccStates = 4
+stime  = 400.0
+dt = 0.004
+TDEvolutionMethod = exp_mid
+TDExponentialMethod = lanczos
+TDExponentialOrder = 20
+TDLanczosTol = 1.0e-5
+TDMaximumIter = stime/dt
+TDTimeStep = dt
 
-Output = potential + density + wfs
-OutputHow = axis_x
+# --------------
+# OCT parameters
+# --------------
 
-TDOutput = laser + td_occup 
+OCTPenalty = 0.05
+OCTEps   = -1.0
+OCTMaxIter = 2
+OCTTargetMode = oct_targetmode_static
+OCTFilterMode = no
+OCTInitialState = oct_is_groundstate
+OCTTargetOperator = oct_tg_gstransformation
+%OCTTargetTransformStates
+0 | 1
+%
+
+gamma = 500
+w0 = 0.1568
+%OCTFilter
+frequency_filter | "exp(-gamma*(w-w0)^2) + exp(-gamma*(w+w0)^2)"
+%
+
+OCTScheme  = oct_algorithm_wg05
+OCTDoubleCheck = no
+
+#----------------------------
+# Laser field = Initial guess
+#-----------------------------
+
+ampl = -0.2
+freq1 = 0.0
+%TDExternalFields
+electric_field | 1 | 0 | 0 | envelope_constant | ampl | freq1 
+%
+

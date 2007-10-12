@@ -197,31 +197,6 @@ contains
 
 
     ! ---------------------------------------------------------
-    subroutine scheme_zr98
-      type(oct_control_parameters_t) :: par_new, par_prev
-      logical :: stop_loop
-      call push_sub('opt_control.scheme_zr98')
-
-      call parameters_copy(par_new, par)
-      ctr_loop: do
-        call parameters_copy(par_prev, par)
-        call f_iter(oct, sys, h, td, iterator, psi, initial_st, target, par, stop_loop)
-        call iterator_write(iterator, psi, par, gr, sys%outp)
-        if(clean_stop() .or. stop_loop) exit ctr_loop
-        if(oct%use_mixing) then
-          call parameters_mixing(iterator%ctr_iter, par_prev, par, par_new)
-          call parameters_copy(par, par_new)
-        end if
-      end do ctr_loop
-
-      call parameters_end(par_new)
-      call parameters_end(par_prev)
-      call pop_sub()
-    end subroutine scheme_zr98
-    ! ---------------------------------------------------------
-
-
-    ! ---------------------------------------------------------
     subroutine scheme_mt03
       type(oct_control_parameters_t) :: par_new, par_prev
       logical :: stop_loop
@@ -243,62 +218,34 @@ contains
       call parameters_end(par_prev)
       call pop_sub()
     end subroutine scheme_mt03
+    ! ---------------------------------------------------------
 
 
     ! ---------------------------------------------------------
     subroutine scheme_wg05
-      integer :: j
-      FLOAT :: fluence, new_penalty, old_penalty
-
+      type(oct_control_parameters_t) :: par_new, par_prev
+      logical :: stop_loop
       call push_sub('opt_control.scheme_wg05')
 
       if (oct%mode_fixed_fluence) then
         par%alpha(1) = (M_ONE/sqrt(oct%targetfluence)) * sqrt ( laser_fluence(par) )
         par_tmp%alpha(1) = par%alpha(1)
       end if
-      
+
+      call parameters_copy(par_new, par)      
       ctr_loop: do
-
-        call states_end(psi)
-        call states_copy(psi, initial_st)
-        call parameters_to_h(par, h%ep)
-        call propagate_forward(sys, h, td, target, psi) 
-
-        write(filename,'(a,i3.3)') 'opt-control/PsiT.', iterator%ctr_iter
-        call states_output(psi, gr, trim(filename), sys%outp)
-        write(filename,'(a,i3.3)') 'opt-control/laser.', iterator%ctr_iter
-        call parameters_write(filename, par)
-
-        call calc_chi(oct, gr, target, psi, chi)
-        
-        if(iteration_manager(oct, gr, par, td, psi, target, iterator)) exit ctr_loop
-        if(clean_stop()) exit ctr_loop
-        
-        call bwd_step(oct, sys, td, h, target, par, par_tmp, chi, psi)
-
-        ! WARNING: Untested.
-        do j = 1, par_tmp%no_parameters
-          call filter_apply(par_tmp%f(j), filter)
-        end do
-
-        ! recalc field
-        if (oct%mode_fixed_fluence) then
-          fluence = laser_fluence(par_tmp) 
-          old_penalty = par%alpha(1)
-          new_penalty = sqrt( fluence * old_penalty**2 / oct%targetfluence )
-          do j = 1, par_tmp%no_parameters
-            par%alpha(1) = new_penalty
-            par_tmp%alpha(1) = new_penalty
-            call tdf_scalar_multiply( old_penalty / new_penalty , par_tmp%f(j) )
-          end do
+        call parameters_copy(par_prev, par)
+        call f_wg05(oct, sys, h, td, iterator, filter, psi, initial_st, target, par, stop_loop)
+        call iterator_write(iterator, psi, par, gr, sys%outp)
+        if(clean_stop() .or. stop_loop) exit ctr_loop
+        if(oct%use_mixing) then
+          call parameters_mixing(iterator%ctr_iter, par_prev, par, par_new)
+          call parameters_copy(par, par_new)
         end if
-
-        do j = 1, par_tmp%no_parameters
-          par%f(j) = par_tmp%f(j)
-        end do
-        
       end do ctr_loop
 
+      call parameters_end(par_new)
+      call parameters_end(par_prev)
       call pop_sub()
     end subroutine scheme_wg05
 
@@ -360,6 +307,67 @@ contains
     ! ---------------------------------------------------------
  
   end subroutine opt_control_run
+
+
+  ! ---------------------------------------------------------
+  subroutine f_wg05(oct, sys, h, td, iterator, filter, psi, initial_st, target, par, stop_loop)
+    type(oct_t), intent(in)                       :: oct
+    type(system_t), intent(inout)                 :: sys
+    type(hamiltonian_t), intent(inout)            :: h
+    type(td_t), intent(inout)                     :: td
+    type(oct_iterator_t), intent(inout)           :: iterator
+    type(filter_t), intent(inout)                 :: filter
+    type(states_t), intent(inout)                 :: psi
+    type(states_t), intent(in)                    :: initial_st
+    type(target_t), intent(inout)                 :: target
+    type(oct_control_parameters_t), intent(inout) :: par
+    logical, intent(out)                          :: stop_loop
+
+    integer :: j
+    FLOAT :: fluence, old_penalty, new_penalty
+    type(states_t) :: chi
+    type(oct_control_parameters_t) :: parp
+
+    call push_sub('opt_control.f_wg05')
+
+    call parameters_copy(parp, par)
+
+    call states_end(psi)
+    call states_copy(psi, initial_st)
+    call parameters_to_h(par, h%ep)
+    call propagate_forward(sys, h, td, target, psi)
+
+    stop_loop = iteration_manager(oct, sys%gr, par, td, psi, target, iterator)
+
+    chi = psi
+    call calc_chi(oct, sys%gr, target, psi, chi)
+    call bwd_step(oct, sys, td, h, target, par, parp, chi, psi)
+
+    do j = 1, parp%no_parameters
+      call filter_apply(parp%f(j), filter)
+    end do
+
+    ! recalc field
+    if (oct%mode_fixed_fluence) then
+      fluence = laser_fluence(parp) 
+      old_penalty = par%alpha(1)
+      new_penalty = sqrt( fluence * old_penalty**2 / oct%targetfluence )
+      do j = 1, parp%no_parameters
+        par%alpha(1) = new_penalty
+        parp%alpha(1) = new_penalty
+        call tdf_scalar_multiply( old_penalty / new_penalty , parp%f(j) )
+      end do
+    end if
+
+    do j = 1, par%no_parameters
+      par%f(j) = parp%f(j)
+    end do
+
+    call states_end(chi)
+    call parameters_end(parp)
+    call pop_sub()
+  end subroutine f_wg05
+  ! ---------------------------------------------------------
 
 
   ! ---------------------------------------------------------
