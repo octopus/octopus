@@ -60,13 +60,24 @@ module opt_control_parameters_m
 
   type(mix_t), public :: parameters_mix
 
-  contains
+contains
+
+  ! ---------------------------------------------------------
+  FLOAT function parameters_dotp(x, y) result(res)
+    FLOAT, intent(in) :: x(:)
+    FLOAT, intent(in) :: y(:)
+    
+    res = sum(x(:)*y(:))
+  end function parameters_dotp
+
 
   ! ---------------------------------------------------------
   subroutine parameters_mixing(iter, par_in, par_out, par_new)
     integer, intent(in) :: iter
     type(oct_control_parameters_t), intent(in) :: par_in, par_out
     type(oct_control_parameters_t), intent(inout) :: par_new
+
+    !FLOAT, external :: oct_control_parameters_dotp
 
     integer :: i, j
     FLOAT, allocatable :: e_in(:, :, :), e_out(:, :, :), e_new(:, :, :)
@@ -83,7 +94,7 @@ module opt_control_parameters_m
     end do
     e_new = M_ZERO
 
-    call dmixing(parameters_mix, iter, e_in, e_out, e_new, dotp)
+    call dmixing(parameters_mix, iter, e_in, e_out, e_new, parameters_dotp)
 
     do i = 1, par_out%no_parameters
       call tdf_set_numerical(par_new%f(i), e_new(:, i, 1))
@@ -91,14 +102,6 @@ module opt_control_parameters_m
 
     deallocate(e_in, e_out, e_new)
   end subroutine parameters_mixing
-
-
-  ! ---------------------------------------------------------
-  FLOAT function dotp(x, y) result(res)
-    FLOAT, intent(in) :: x(:)
-    FLOAT, intent(in) :: y(:)
-    res = sum(x(:)*y(:))
-  end function dotp
 
 
   ! ---------------------------------------------------------

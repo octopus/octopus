@@ -50,7 +50,7 @@ void to_f_str(char *c, STR_F_TYPE f);
 #define STR_ARG2     , unsigned long l1, unsigned long l2
 #define STR_ARG3     , unsigned long l1, unsigned long l2, unsigned long l3
 
-char *to_c_str(STR_F_TYPE f, unsigned long l);
-void to_f_str(char *c, STR_F_TYPE f, unsigned long l);
+char *to_c_str(const STR_F_TYPE f, unsigned long l);
+void to_f_str(const char *c, STR_F_TYPE f, unsigned long l);
 
 #endif

@@ -216,7 +216,7 @@ contains
 
         ! load wave-functions
         if(.not.fromScratch) then
-          write(dirname,'(a,i1,a)') RESTART_DIR//"wfs", dir, "_1_1"
+          write(dirname,'(a,i1,a)') RESTART_DIR//"wfs_", dir, "_1_1"
           call restart_read(trim(tmpdir)//dirname, sys%st, sys%gr, sys%geo, &
             ierr, lr=lr(dir,1))
           

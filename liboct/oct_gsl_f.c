@@ -249,7 +249,7 @@ double FC_FUNC_(oct_spline_eval_der2, OCT_SPLINE_EVAL_DER2)
 double my_f (const gsl_vector *v, void *params)
 {
   double val;
-  double *x, *gradient;
+  double *x, *gradient = NULL;
   int i, dim, getgrad;
   void (*para)(int*, double*, double*, int*, double*) = params;
 
@@ -306,7 +306,9 @@ void my_fdf (const gsl_vector *v, void *params,
 }
 
 int FC_FUNC_(oct_minimize, OCT_MINIMIZE)
-     (const int *method, int *dim, double *point, double *step, double *tolgrad, double *toldr, int *maxiter, void *f, void *write_info, double *minimum)
+     (const int *method, int *dim, double *point, double *step, 
+      double *tolgrad, double *toldr, int *maxiter, void *f, 
+      void *write_info, double *minimum)
 {
   int iter = 0;
   int status;
@@ -314,7 +316,7 @@ int FC_FUNC_(oct_minimize, OCT_MINIMIZE)
   int i;
   double oldpoint[*dim], grad[*dim];
 
-  const gsl_multimin_fdfminimizer_type *T;
+  const gsl_multimin_fdfminimizer_type *T = NULL;
   gsl_multimin_fdfminimizer *s;
   gsl_vector *x;
   gsl_vector *absgrad, *absdr;
@@ -399,7 +401,7 @@ int FC_FUNC_(oct_minimize, OCT_MINIMIZE)
 void FC_FUNC_(oct_strerror, OCT_STRERROR)
      (int *err, STR_F_TYPE res STR_ARG1)
 {
-  char *c;
+  const char *c;
 
   c = gsl_strerror(*err);
   TO_F_STR1(c, res);

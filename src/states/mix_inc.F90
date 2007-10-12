@@ -26,7 +26,7 @@ subroutine X(mixing)(smix, iter, vin, vout, vnew, dotp)
   R_TYPE,       intent(in)    :: vin(:, :, :), vout(:, :, :)
   R_TYPE,       intent(out)   :: vnew(:, :, :)
   interface
-    R_TYPE function dotp(x, y) result(res)
+    R_TYPE function dotp(x, y)
       R_TYPE, intent(in) :: x(:)
       R_TYPE, intent(in) :: y(:)
     end function dotp
