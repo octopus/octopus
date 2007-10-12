@@ -24,6 +24,8 @@ module lib_basic_alg_m
 #ifdef USE_OMP
   use omp_lib
 #endif
+  use profiling_m
+
   implicit none
 
   private
@@ -204,6 +206,8 @@ module lib_basic_alg_m
     end function oct_hypotf
   end interface
 #endif
+
+  type(profile_t), save :: axpy_profile
 
 contains
 

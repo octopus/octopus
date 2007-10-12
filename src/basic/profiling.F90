@@ -19,24 +19,6 @@
 
 #include "global.h"
 
-! Simple profiling module to count the number of
-! times code between
-! call profiling_in(tag)
-! ...
-! call profiling_out(tag)
-! is executed and how much time is consumed. The tag
-! has to be registered as constant C_PROFILING_[SOMETHING] and
-! in tag_label (C_TAG_LENGTH and C_NUM_TAG should be adjusted
-! after adding a new tag).
-! The routines maintain entry and exit counters (in profiling_in,
-! profiling_out respectively). They should be equal, otherwise
-! measurements are likely to be incorrect (e. g. because
-! of a return inside subroutine without an profiling_out).
-! loct_gettimeofday is used to get the times.
-! The results are written to .profiling.NNN/profiling.nnn
-! for every node with nnn being the node number and NNN the
-! total number of nodes.
-
 module profiling_m
 
   use global_m
@@ -284,11 +266,18 @@ contains
 
   ! ---------------------------------------------------------
   ! Increment in counter and save entry time.
-  subroutine profiling_in(this)
-    type(profile_t), target, intent(inout)   :: this
+  subroutine profiling_in(this, label)
+    type(profile_t), target, intent(inout) :: this
+    character(*), optional,  intent(in)    :: label 
+
     real(8) :: now
 
     if(.not.in_profiling_mode) return
+
+    if(.not. this%initialized) then 
+      ASSERT(present(label))
+      call profile_init(this, label)
+    end if
 
     ASSERT(.not. this%active)
     this%active = .true.

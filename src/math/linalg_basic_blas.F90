@@ -152,7 +152,11 @@ subroutine FNAME(axpy_1)(n1, da, dx, dy)
 
 #ifdef USE_OMP
   integer :: nn_loc, ini
+#endif
+  
+  call profiling_in(axpy_profile, "BLAS AXPY")
 
+#ifdef USE_OMP
 !$omp parallel private(ini, nn_loc)
   call divide_range(n1, omp_get_thread_num(), omp_get_num_threads(), ini, nn_loc)
   call blas_axpy(nn_loc, da, dx(ini), 1, dy(ini), 1)
@@ -160,6 +164,8 @@ subroutine FNAME(axpy_1)(n1, da, dx, dy)
 #else
   call blas_axpy(n1, da, dx(1), 1, dy(1), 1)
 #endif
+
+  call profiling_out(axpy_profile)
 
 end subroutine FNAME(axpy_1)
 
@@ -169,8 +175,11 @@ subroutine FNAME(axpy_2)(n1, n2, da, dx, dy)
   TYPE1,   intent(in)    :: dx(1:n1,1:n2)
   TYPE1,   intent(inout) :: dy(1:n1,1:n2)
 
+  call profiling_in(axpy_profile, "BLAS AXPY")
+
   call blas_axpy(n1*n2, da, dx(1,1), 1, dy(1,1), 1)
 
+  call profiling_out(axpy_profile)
 end subroutine FNAME(axpy_2)
 
 subroutine FNAME(axpy_3)(n1, n2, n3, da, dx, dy)
@@ -179,8 +188,11 @@ subroutine FNAME(axpy_3)(n1, n2, n3, da, dx, dy)
   TYPE1,   intent(in)    :: dx(1:n1,1:n2,1:n3)
   TYPE1,   intent(inout) :: dy(1:n1,1:n2,1:n3)
 
+  call profiling_in(axpy_profile, "BLAS AXPY")
+
   call blas_axpy(n1*n2*n3, da, dx(1,1,1), 1, dy(1,1,1), 1)
 
+  call profiling_out(axpy_profile)
 end subroutine FNAME(axpy_3)
 
 subroutine FNAME(axpy_4)(n1, n2, n3, n4, da, dx, dy)
@@ -189,7 +201,11 @@ subroutine FNAME(axpy_4)(n1, n2, n3, n4, da, dx, dy)
   TYPE1,   intent(in)    :: dx(1:n1,1:n2,1:n3,1:n4)
   TYPE1,   intent(inout) :: dy(1:n1,1:n2,1:n3,1:n4)
 
+  call profiling_in(axpy_profile, "BLAS AXPY")
+
   call blas_axpy(n1*n2*n3*n4, da, dx(1,1,1,1), 1, dy(1,1,1,1), 1)
+
+  call profiling_out(axpy_profile)
 
 end subroutine FNAME(axpy_4)
 
@@ -202,7 +218,11 @@ subroutine FNAME(axpy_5)(n1, da, dx, dy)
 
 #ifdef USE_OMP
   integer :: ini, nn_loc
-  
+#endif
+
+    call profiling_in(axpy_profile, "BLAS AXPY")
+
+#ifdef USE_OMP  
   !$omp parallel private(ini, nn_loc)
   call divide_range(n1, omp_get_thread_num(), omp_get_num_threads(), ini, nn_loc)
   call blas_axpy(nn_loc, da, dx(ini), dy(ini))
@@ -210,7 +230,9 @@ subroutine FNAME(axpy_5)(n1, da, dx, dy)
 #else
   call blas_axpy(n1, da, dx(1), dy(1))
 #endif
-  
+
+  call profiling_out(axpy_profile)
+
 end subroutine FNAME(axpy_5)
 #endif
 
