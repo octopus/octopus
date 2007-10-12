@@ -8,7 +8,7 @@ Arch       : Linux n10 2.6.16.25-smp-1 #1 SMP Sat Jul 15 19:00:56 CEST 2006 x86_
 Release    : 2.2.0pre1
 Programs   : octopus
 TestGroups : short-run
-Enabled    : Yes
+Enabled    : No
 
 Input: 06-eigen_evolution.01-ground_state.inp
 

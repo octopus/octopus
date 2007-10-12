@@ -28,6 +28,7 @@ module eigen_solver_m
   use lib_adv_alg_m
   use lib_basic_alg_m
   use lib_oct_parser_m
+  use varinfo_m
   use math_m
   use mesh_m
   use mesh_function_m
@@ -134,7 +135,7 @@ contains
     !%Option cg_new 6
     !% A rewriting of the cg option, that will eventually substitute it.
     !%Option evolution 7
-    !% Propagation in imaginary time.
+    !% Propagation in imaginary time. WARNING: Temporarily disabled.
     !%Option lobpcg 8
     !% Locally optimal block preconditioned conjugate gradient algorithm,
     !% see: A. Knyazev. Toward the Optimal Preconditioned Eigensolver: Locally
@@ -149,6 +150,13 @@ contains
       default_es = RS_CG
     end if
     call loct_parse_int(check_inp('EigenSolver'), default_es, eigens%es_type)
+    if(.not.varinfo_valid_option('EigenSolver', eigens%es_type)) call input_error('EigenSolver')
+
+    ! The evolution method is temporarily disabled
+    if(eigens%es_type.eq.EVOLUTION) then
+      message(1) = 'EigenSolver = evolution is disabled.'
+      call write_fatal(1)
+    end if
 
     ! If running parallel in states the LOBPCG solver has to be chosen.
     if(st%parallel_in_states.and.eigens%es_type.ne.RS_LOBPCG) then
