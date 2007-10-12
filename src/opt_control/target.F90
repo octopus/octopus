@@ -72,7 +72,7 @@ module opt_control_target_m
     type(td_t), intent(in)        :: td
     type(target_t), intent(inout) :: target
 
-    integer           :: i, nst, ierr, ik, ib, p, ip, ist, jst
+    integer           :: ierr, ip, ist, jst
     C_POINTER         :: blk
     FLOAT             :: x(MAX_DIM), r, psi_re, psi_im
     CMPLX, allocatable :: rotation_matrix(:, :)
@@ -244,7 +244,7 @@ module opt_control_target_m
           else
             message(1) = '"OCTTargetDensityState" has to be specified as block.'
             call write_info(1)
-            call input_error('OCTTargetTransformStates')
+            call input_error('OCTTargetDensity')
           end if
 
         else
@@ -259,8 +259,7 @@ module opt_control_target_m
           end do
           ! Normalize
           r = dmf_integrate(gr%m, target%rho)
-          !call lalg_scal(NP, M_ONE/r, target%rho)
-          target%rho = target%rho/r
+          target%rho = (-target%st%val_charge) * target%rho/r
         end if
 
       else

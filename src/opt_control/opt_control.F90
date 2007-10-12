@@ -145,11 +145,26 @@ contains
 
     ! mode switcher
     select case(oct%algorithm_type)
-      case(oct_algorithm_zbr98) ;  call scheme_zbr98
-      case(oct_algorithm_zr98)  ;  call scheme_mt03
-      case(oct_algorithm_wg05)  ;  call scheme_wg05
-      case(oct_algorithm_mt03)  ;  call scheme_mt03
-      case(oct_algorithm_krotov);  call scheme_mt03
+      case(oct_algorithm_zbr98)
+        message(1) = "Info: Starting OCT iteration using scheme: ZBR98"
+        call write_info(1)
+        call scheme_zbr98
+      case(oct_algorithm_wg05)
+        message(1) = "Info: Starting OCT iteration using scheme: WG05"
+        call write_info(1)
+        call scheme_wg05
+      case(oct_algorithm_zr98)
+        message(1) = "Info: Starting OCT iteration using scheme: ZR98"
+        call write_info(1)
+        call scheme_mt03
+      case(oct_algorithm_mt03)
+        message(1) = "Info: Starting OCT iteration using scheme: MT03"
+        call write_info(1)
+        call scheme_mt03
+      case(oct_algorithm_krotov)
+        message(1) = "Info: Starting OCT iteration using scheme: KROTOV"
+        call write_info(1)
+        call scheme_mt03
     case default
       call input_error('OCTScheme')
     end select
@@ -187,9 +202,6 @@ contains
       logical :: stop_loop
       call push_sub('opt_control.scheme_zr98')
 
-      message(1) = "Info: Starting OCT iteration using scheme: ZR98"
-      call write_info(1)
-      
       call parameters_copy(par_new, par)
       ctr_loop: do
         call parameters_copy(par_prev, par)
@@ -215,9 +227,6 @@ contains
       logical :: stop_loop
       call push_sub('opt_control.scheme_mt03')
 
-      message(1) = "Info: Starting OCT iteration using scheme: MT03"
-      call write_info(1)
-
       call parameters_copy(par_new, par)
       ctr_loop: do
         call parameters_copy(par_prev, par)
@@ -242,9 +251,6 @@ contains
       FLOAT :: fluence, new_penalty, old_penalty
 
       call push_sub('opt_control.scheme_wg05')
-
-      message(1) = "Info: Starting OCT iteration using scheme: WG05"
-      call write_info(1)
 
       if (oct%mode_fixed_fluence) then
         par%alpha(1) = (M_ONE/sqrt(oct%targetfluence)) * sqrt ( laser_fluence(par) )
@@ -303,9 +309,6 @@ contains
 
       call push_sub('opt_control.scheme_zbr98')
       
-      message(1) = "Info: Starting OCT iteration using scheme: ZBR98"
-      call write_info(1)
-
       if(oct%use_mixing) then      
         call parameters_copy(par_new, par_tmp)
         call parameters_copy(par_prev, par_tmp)
@@ -361,16 +364,16 @@ contains
 
   ! ---------------------------------------------------------
   subroutine f_iter(oct, sys, h, td, iterator, psi, initial_st, target, par, stop_loop)
-    type(oct_t), intent(in)       :: oct
-    type(system_t), intent(inout) :: sys
-    type(hamiltonian_t), intent(inout) :: h
-    type(td_t), intent(inout) :: td
-    type(oct_iterator_t)       :: iterator
-    type(states_t), intent(inout) :: psi
-    type(states_t), intent(in)    :: initial_st
-    type(target_t), intent(inout) :: target
-    type(oct_control_parameters_t) :: par
-    logical, intent(out) :: stop_loop
+    type(oct_t), intent(in)                       :: oct
+    type(system_t), intent(inout)                 :: sys
+    type(hamiltonian_t), intent(inout)            :: h
+    type(td_t), intent(inout)                     :: td
+    type(oct_iterator_t), intent(inout)           :: iterator
+    type(states_t), intent(inout)                 :: psi
+    type(states_t), intent(in)                    :: initial_st
+    type(target_t), intent(inout)                 :: target
+    type(oct_control_parameters_t), intent(inout) :: par
+    logical, intent(out)                          :: stop_loop
 
     type(states_t) :: chi
     type(oct_control_parameters_t) :: parp
