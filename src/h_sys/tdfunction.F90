@@ -293,7 +293,9 @@ module tdf_m
   subroutine tdf_fft_forward(f)
     type(tdf_t), intent(inout) :: f
     integer :: steps, n(3)
+#if defined(HAVE_FFT)
     type(fft_t)    :: fft_handler
+#endif
     CMPLX, allocatable :: tmp(:, :, :), tmp2(:, :, :)
 
 #if defined(HAVE_FFT)
@@ -319,7 +321,9 @@ module tdf_m
   subroutine tdf_fft_backward(f)
     type(tdf_t), intent(inout) :: f
     integer :: steps, n(3)
+#if defined(HAVE_FFT)
     type(fft_t)    :: fft_handler
+#endif
     CMPLX, allocatable :: tmp(:, :, :), tmp2(:, :, :)
 
 #if defined(HAVE_FFT)
