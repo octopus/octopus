@@ -41,10 +41,10 @@ Enabled    : Yes
 
 Input: 10-casida.01-N2.inp
 
-Match ; TotalEnergy    ; grep -A 7 '^Energy:' ground_state_static/info ; \s*Total\s*=\s*-19.9296\d*
-Match ; HOMO           ; grep -A 6  'Eigenvalues \[' ground_state_static/info | tail -1 ; \s*-0.3845\d*\s*2.0000\d*
-Match ; LUMO           ; grep -A 7  'Eigenvalues \[' unocc_states_static/eigenvalues | tail -1 ; \s*-0.0851\d*
-Match ; LUMO+8         ; grep -A 15 'Eigenvalues \[' unocc_states_static/eigenvalues | tail -1 ; \s*0.1531\d*
+Match ; TotalEnergy    ; sed -n '/^Energy/{n\;p\;}' ground_state_static/info ; \s*Total\s*=\s*-19.9296\d*
+Match ; HOMO           ; sed -n '/Eigenvalues \[/,$p' ground_state_static/info | head -7 | tail -1 ; \s*-0.3845\d*\s*2.0000\d*
+Match ; LUMO           ; sed -n '/Eigenvalues \[/,$p' unocc_states_static/eigenvalues | head -8 | tail -1 ; \s*-0.0851\d*
+Match ; LUMO+8         ; sed -n '/Eigenvalues \[/,$p' unocc_states_static/eigenvalues | head -15 | tail -1 ; \s*0.1531\d*
 Match ; 1st excitation ; head -n 2 lrtddft_linear/casida | tail -1 ; \s*3.3739\d*
 Match ; 2nd excitation ; head -n 4 lrtddft_linear/casida | tail -1 ; \s*3.5537\d* 
 Match ; 3rd excitation ; head -n 5 lrtddft_linear/casida | tail -1 ; \s*3.7538\d* 

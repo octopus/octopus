@@ -89,9 +89,8 @@ Input: 01-template.01-ground_state.inp
 
 # add your own matches
 #
-# Examples (of course you have to uncomment the lines :)
-# Match ; TotalEnergy ; grep -A 6 '^Energy:' static/info ; \\s*Total\\s*=\\s*-0.33802679
-# Match ; Eigenvalues ; grep -A 2 'Eigenvalues \\[' static/info | tail -1 ; \\s*-0.13735\\d*\\s*2.0000\\d*
+# Example (of course you have to uncomment the lines :)
+# Match ; TotalEnergy ; sed -n '/^Energy:/{n\;p}' static/info ; \\s*Total\\s*=\\s*-0.33802679
 EndOfTemplate
 
   close(TEMPLATE);
@@ -280,7 +279,7 @@ foreach my $octopus_exe (@executables){
 	   print "Executing: cd $workdir; $octopus_exe_suffix > out 2>&1 \n";
 	   system("cd $workdir; $octopus_exe_suffix > out 2>&1");
 	 }
-	 system("grep -B2 -A5 'Running octopus' $workdir/out > $workdir/build-stamp");
+	 system("sed -n '/Running octopus/{N;N;N;N;N;N;p}' $workdir/out > $workdir/build-stamp");
 	 print "Finished test run.\n\n"; }
        else {
 	 if(!$opt_i) { print "cd $workdir; $octopus_exe_suffix < inp > out 2>&1 \n"; }

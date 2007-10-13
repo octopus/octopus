@@ -11,7 +11,6 @@ TestGroups  : short-run
 Enabled  : Yes
 
 Input: 09-spinors.01-ground_state.inp
-
-Match ; TotalEnergy ; grep -A 1 '^Energy:' static/info | tail -1; \s*Total\s*=\s*-0.176693\d*
-Match ; Eigenvalues ; grep -A 2 'Eigenvalues \[' static/info | tail -1 ; \s*-0.08531\d*\s*1.00\s*0.1928\s*0.1928\s*0.4191
-Match ; Local Magnetic Moments ; grep -A 2 'Local Magnetic Moments' static/info | tail -1 ; \s*0.3855\d*\s*0.3855\d*\s*0.8382\d* 
+Match ; TotalEnergy ; sed -n '/^Energy/{n\;p\;}' static/info ; \s*Total\s*=\s*-0.176693\d*
+Match ; Eigenvalues ; sed -n '/Eigenvalues \[/{n\;n\;p\;}' static/info ; \s*-0.08531\d*\s*1.00\s*0.1928\s*0.1928\s*0.4191
+Match ; Local Magnetic Moments ; sed -n '/Local Magnetic Moments/{n\;n\;p}' static/info ; \s*0.3855\d*\s*0.3855\d*\s*0.8382\d* 

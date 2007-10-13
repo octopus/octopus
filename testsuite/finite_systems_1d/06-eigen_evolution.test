@@ -11,7 +11,6 @@ TestGroups : short-run
 Enabled    : No
 
 Input: 06-eigen_evolution.01-ground_state.inp
-
-Match ; TotalEnergy  ; grep -A 7 '^Energy:' static/info ; \s*Total\s*=\s*-8.63\d*
-Match ; Eigenvalue 1 ; grep -A 3 '^Eigenvalues \[H\]' static/info ; \s*1\s*--\s*-1.294\d*
-Match ; Eigenvalue 2 ; grep -A 3 '^Eigenvalues \[H\]' static/info ; \s*2\s*--\s*-1.294\d*
+Match ; TotalEnergy  ; sed -n '/^Energy/{n\;p\;}' static/info ; \s*Total\s*=\s*-8.63\d*
+Match ; Eigenvalue 1 ; sed -n '/^Eigenvalues \[H\]/{n\;n\;p\;}' static/info ; \s*1\s*--\s*-1.294\d*
+Match ; Eigenvalue 2 ; sed -n '/^Eigenvalues \[H\]/{n\;n\;n\;p\;}' static/info ; \s*2\s*--\s*-1.294\d*

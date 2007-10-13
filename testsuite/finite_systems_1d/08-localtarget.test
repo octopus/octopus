@@ -19,7 +19,7 @@ Enabled    : Yes
 # A similar potential is used in Rev Mod (Haenggi, Griffoni)
 
 Input: 08-localtarget.01-gs.inp
-Match ; TotalEnergy ; grep -A 7 '^Energy:' static/info ; \s*Total\s*=\s*-0.6206
+Match ; TotalEnergy ; sed -n '/^Energy/{n\;p\;}' static/info ; \s*Total\s*=\s*-0.6206
 
 # Then, run the optimization for two iterations and check the convergence.
 # Note that this run only converges to an almost perfect overlap with
@@ -33,7 +33,7 @@ Match ; J1 2nd iteration  ; grep ' 2  ' opt-control/convergence ; \s*-0.398\d*
 # local targets also works.
 
 Input: 08-localtarget.03-gs-mp.inp
-Match ; TotalEnergy ; grep -A 7 '^Energy:' static/info ; \s*Total\s*=\s*-2.1689
+Match ; TotalEnergy ; sed -n '/^Energy/{n\;p\;}' static/info ; \s*Total\s*=\s*-2.1689
 
 # Now once again we run for a couple of iterations and check the convergence.
 # In this case, after 25 iterations we reach J1 = -1.81234
