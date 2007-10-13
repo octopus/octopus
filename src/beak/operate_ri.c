@@ -53,7 +53,7 @@ void FC_FUNC_(doperate_ri,DOPERATE_RI)(const int * opnp,
 
   assert(MAX_OP_N >= n);
 
-  i = 0;
+  i = rimap_inv[0];
   for (l = 0; l < nri ; l++) {
 
     index  = opri + n * l;
@@ -123,7 +123,7 @@ void FC_FUNC_(zoperate_ri,ZOPERATE_RI)(const int * opnp,
   register ffloat a0, a1, a2, a3;
   register ffloat a4, a5, a6, a7;
 
-  i = 0;
+  i = rimap_inv[0];
   for (l = 0; l < nri ; l++) {
 
     index = opri + n * l;

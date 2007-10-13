@@ -171,12 +171,14 @@ subroutine X(operate)(np, np_part, nn, nri, w, ri, rimap_inv, fi, fo)
   R_TYPE,   intent(out):: fo(1:np) 
   
   integer :: ll, ii
-
+  
+  !$omp do private(ii)
   do ll = 1, nri
     do ii = rimap_inv(ll-1)+1, rimap_inv(ll)
       fo(ii) = sum(w(1:nn)  * fi(ii + ri(1:nn, ll)) )
     end do
   end do
+  !$omp end do nowait
 
 end subroutine X(operate)
 

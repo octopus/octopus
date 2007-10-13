@@ -90,13 +90,7 @@ dnl complex wave-functions in the ground-state, and in debug mode.
 dnl these are the --enable/--disable possible in octopus
 AC_ARG_ENABLE(single, AS_HELP_STRING([--enable-single], [octopus in single precision]), [SINGLE_PRECISION=1])
 AC_ARG_ENABLE(debug, AS_HELP_STRING([--disable-debug], [debug mode]), [DEBUG=${enableval}])
-AC_ARG_ENABLE(openmp, AS_HELP_STRING([--enable-openmp], [Multi-threaded parallel version using OpenMP (not implemented)]), [USE_OMP=1])
-
-if test "${USE_OMP}"; then
-AX_OPENMP(AC_DEFINE(HAVE_C_OMP, 1, [Define if the compiler supports OpenMP]),AC_MSG_WARN([C compiler does not support OpenMP]))
-CFLAGS="$CFLAGS $OPENMP_CFLAGS"
-AC_CHECK_HEADER(omp.h)
-fi
+AC_ARG_ENABLE(openmp, AS_HELP_STRING([--enable-openmp], [Multi-threaded parallel version using OpenMP (experimental)]), [USE_OMP=1])
 
 dnl the MPI has a special treatment
 AC_ARG_ENABLE(mpi, AS_HELP_STRING([--enable-mpi(=PATH)], [Parallel version]))

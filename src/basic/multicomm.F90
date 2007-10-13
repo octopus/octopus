@@ -80,6 +80,9 @@
     multicomm_all_pairs_t,           &
     multicomm_init, multicomm_end,   &
     multicomm_strategy_is_parallel,  &
+#ifdef USE_OMP
+    divide_range,                    &
+#endif
     create_all_pairs
 
   ! possible parallelization strategies
@@ -791,6 +794,28 @@ contains
     end function get_partner_odd
 #endif
   end subroutine create_all_pairs
+
+#ifdef USE_OMP
+  !---------------------------------------------------
+  ! Function to divide the range of numbers from 1 to nn
+  ! between size processors.
+  ! This is used by OpenMP parallelization
+  subroutine divide_range(nn, rank, size, ini, nn_loc)
+    integer, intent(in)    :: nn
+    integer, intent(in)    :: rank
+    integer, intent(in)    :: size
+    integer, intent(out)   :: ini
+    integer, intent(out)   :: nn_loc
+    
+    nn_loc = nn / size + 1
+    ini = nn_loc * rank
+    nn_loc = min(nn - ini, nn_loc)
+
+    ini = ini + 1
+
+  end subroutine divide_range
+#endif
+
 end module multicomm_m
 
 

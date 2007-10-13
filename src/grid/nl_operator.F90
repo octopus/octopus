@@ -29,9 +29,13 @@ module nl_operator_m
   use mesh_lib_m
   use mesh_m
   use messages_m
+  use multicomm_m
   use mpi_m
   use par_vec_m
   use profiling_m
+#ifdef USE_OMP
+  use omp_lib
+#endif
 
   implicit none
 
@@ -963,6 +967,7 @@ contains
 #endif
     logical :: profile_
     real(8) :: ws(100)
+    integer :: nri_loc, ini
 
     profile_ = .true. 
     if(present(profile)) profile_ = profile
@@ -983,29 +988,38 @@ contains
 #endif
 
     nn = op%n
+   !$omp parallel private(ini, nri_loc, ws)
     if(op%const_w) then
-
+#ifdef USE_OMP
+      call divide_range(op%nri, omp_get_thread_num(), omp_get_num_threads(), ini, nri_loc)
+#else 
+      ini = 1
+      nri_loc = op%nri
+#endif
       select case(op%dfunction)
       case(OP_FORTRAN)
         call doperate(op%np, op%m%np_part, nn, op%nri, op%w_re, op%ri, op%rimap_inv, fi, fo)
       case(OP_C)
-        call doperate_ri(op%np, nn, op%w_re(1, 1), op%nri, op%ri(1,1), op%rimap_inv(0), fi(1), fo(1))
+        call doperate_ri(op%np, nn, op%w_re(1, 1), nri_loc, op%ri(1, ini), op%rimap_inv(ini-1), fi(1), fo(1))
       case(OP_VEC)
-        call doperate_ri_vec(op%np, nn, op%w_re(1, 1), op%nri, op%ri(1,1), op%rimap_inv(0), fi(1), fo(1))
+        call doperate_ri_vec(op%np, nn, op%w_re(1, 1), nri_loc, op%ri(1, ini), op%rimap_inv(ini-1), fi(1), fo(1))
       case(OP_AS)
-        call doperate_as(nn, op%w_re(1, 1), op%nri, op%ri(1,1), op%rimap_inv(0), fi(1), fo(1), ws(1))
+        call doperate_as(nn, op%w_re(1, 1), nri_loc, op%ri(1, ini), op%rimap_inv(ini-1), fi(1), fo(1), ws(1))
       end select
     else
+      !$omp do
       do ii = 1, op%np
         fo(ii) = sum(op%w_re(1:nn, ii) * fi(op%i(1:nn, ii)))
       end do
+      !$omp end do
     end if
     
-    !$omp parallel do
+    !$omp do
     do ii = op%np + 1, size(fo)
       fo(ii) = M_ZERO
     end do
-    !$omp end parallel do
+    !$omp end do nowait
+    !$omp end parallel
     
     call pop_sub()
     if(profile_) call profiling_out(nl_operate_profile)
@@ -1026,6 +1040,7 @@ contains
 #endif
     real(8) :: ws(100)
     logical :: profile_
+    integer :: nri_loc, ini
 
     profile_ = .true. 
     if(present(profile)) profile_ = profile
@@ -1045,43 +1060,56 @@ contains
     end if
 #endif
 
+   !$omp parallel private(ini, nri_loc, ws)
     nn = op%n
     if(op%cmplx_op) then
       if(op%const_w) then
+        !$omp do
         do ii = 1, op%np
           fo(ii) = sum(cmplx(op%w_re(1:nn, 1),  op%w_im(1:nn, 1))  * fi(op%i(1:nn, ii)))
         end do
+        !$omp end do
       else
+        !$omp do
         do ii = 1, op%np
           fo(ii) = sum(cmplx(op%w_re(1:nn, ii), op%w_im(1:nn, ii)) * fi(op%i(1:nn, ii)))
         end do
+        !$omp end do
       end if
     else
       if(op%const_w) then
-        
+#ifdef USE_OMP
+        call divide_range(op%nri, omp_get_thread_num(), omp_get_num_threads(), ini, nri_loc)
+#else 
+        ini = 1
+        nri_loc = op%nri
+#endif
         select case(op%zfunction)
         case(OP_FORTRAN)
           call zoperate(op%np, op%m%np_part, nn, op%nri, op%w_re, op%ri, op%rimap_inv, fi, fo)
         case(OP_C)
-          call zoperate_ri(op%np, nn, op%w_re(1, 1), op%nri, op%ri(1,1), op%rimap_inv(0), fi(1), fo(1))
+          call zoperate_ri(op%np, nn, op%w_re(1, 1), nri_loc, op%ri(1, ini), op%rimap_inv(ini-1), fi(1), fo(1))
         case(OP_VEC)
-          call zoperate_ri_vec(op%np, nn, op%w_re(1, 1), op%nri, op%ri(1,1), op%rimap_inv(0), fi(1), fo(1))
+          call zoperate_ri_vec(op%np, nn, op%w_re(1, 1), nri_loc, op%ri(1, ini), op%rimap_inv(ini-1), fi(1), fo(1))
         case(OP_AS)
-          call zoperate_as(nn, op%w_re(1, 1), op%nri, op%ri(1,1), op%rimap_inv(0), fi(1), fo(1), ws(1))
+          call zoperate_as(nn, op%w_re(1, 1), nri_loc, op%ri(1, ini), op%rimap_inv(ini-1), fi(1), fo(1), ws(1))
         end select
 
       else
+        !$omp do
         do ii = 1, op%np
           fo(ii) = sum(op%w_re(1:nn, ii) * fi(op%i(1:nn, ii)))
         end do
+        !$omp end do
       end if
     end if
 
-    !$omp parallel do
+    !$omp do
     do ii = op%np + 1, size(fo)
       fo(ii) = M_ZERO
     end do
-    !$omp end parallel do
+    !$omp end do nowait
+    !$omp end parallel
 
     call pop_sub()
     if(profile_) call profiling_out(nl_operate_profile)
