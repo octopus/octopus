@@ -12,4 +12,4 @@ Enabled    : Yes
 
 Input: 16-isf_solver.01-ground_state.inp
 Match ; TotalEnergy ;  sed -n '/^Energy/{n\;p\;}' static/info ; \s*Total\s*=\s*-0.3379
-Match ; Eigenvalues ;  sed -n '/Eigenvalues \[/{n\;n\;p}' static/info ; \s*-0.1373\d*\s*2.0000\d* 
+Match ; Eigenvalues ;  sed -n '/Eigenvalues \[/{n\;n\;p\;}' static/info ; \s*-0.1373\d*\s*2.0000\d* 

@@ -279,7 +279,7 @@ foreach my $octopus_exe (@executables){
 	   print "Executing: cd $workdir; $octopus_exe_suffix > out 2>&1 \n";
 	   system("cd $workdir; $octopus_exe_suffix > out 2>&1");
 	 }
-	 system("sed -n '/Running octopus/{N;N;N;N;N;N;p}' $workdir/out > $workdir/build-stamp");
+	 system("sed -n '/Running octopus/{N;N;N;N;N;N;p;}' $workdir/out > $workdir/build-stamp");
 	 print "Finished test run.\n\n"; }
        else {
 	 if(!$opt_i) { print "cd $workdir; $octopus_exe_suffix < inp > out 2>&1 \n"; }
