@@ -78,8 +78,6 @@ static double f_kr_zero(double w, void *p)
 
 static double int_aux(int index, double kx, double kr, double x0, double r0, int which_int)
 {
-  assert(which_int == PFC_F_0 || which_int == PFC_F_KR || which_int == PFC_F_KX);
-
   /*variables*/
   double result, error;
   double xinf = 100.0/r0;
@@ -100,6 +98,8 @@ static double int_aux(int index, double kx, double kr, double x0, double r0, int
 
   /*create the function*/
   gsl_function F;
+
+  assert(which_int == PFC_F_0 || which_int == PFC_F_KR || which_int == PFC_F_KX);
 
   params.kx = kx;
   params.kr = kr;
