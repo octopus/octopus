@@ -20,8 +20,9 @@
 
   ! ---------------------------------------------------------
   subroutine output(iterator)
-    type(oct_iterator_t), intent(in) :: iterator
+    type(oct_iterator_t), intent(inout) :: iterator
 
+    character(len=80)  :: filename
     integer :: iunit, loop, ierr
 
     call push_sub('opt_control.output')
@@ -54,6 +55,9 @@
          iterator%convergence(2,loop), iterator%convergence(3,loop)
     end do
     call io_close(iunit)
+
+    write(filename,'(a)') 'opt-control/laser.bestJ1'
+    call parameters_write(filename, iterator%best_par, fourier = .true.)
 
     call pop_sub()
   end subroutine output

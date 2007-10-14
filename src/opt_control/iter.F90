@@ -96,7 +96,6 @@
     type(oct_iterator_t), intent(inout) :: iterator
 
     FLOAT :: fluence, overlap, jfunctional, j2
-    character(len=80)  :: filename
 
     call push_sub('opt_control.iteration_manager')
     
@@ -110,7 +109,8 @@
     iterator%convergence(1,iterator%ctr_iter) = jfunctional
     iterator%convergence(2,iterator%ctr_iter) = overlap
     iterator%convergence(3,iterator%ctr_iter) = j2
-    ! WARNING: this does not consider the possibility of different alphas for different control parameters.
+    ! WARNING: this does not consider the possibility of different 
+    ! alphas for different control parameters.
     iterator%convergence(4,iterator%ctr_iter) = par%alpha(1)
     
     if((iterator%ctr_iter .eq. iterator%ctr_iter_max) .or. &
@@ -152,11 +152,6 @@
       iterator%bestJ1_J        = jfunctional
       iterator%bestJ1_fluence  = fluence       
       iterator%bestJ1_ctr_iter = iterator%ctr_iter
-      ! dump to disc
-      write(filename,'(a)') 'opt-control/laser.bestJ1'
-      call parameters_end(iterator%best_par)
-      call parameters_copy(iterator%best_par, par)
-      call parameters_write(filename, par, fourier = .true.)
     end if
 
     iterator%ctr_iter = iterator%ctr_iter + 1

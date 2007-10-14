@@ -28,6 +28,7 @@ module opt_control_constants_m
     logical :: mode_fixed_fluence
     integer :: algorithm_type
     FLOAT   :: eta, delta  ! The parameters defined by Maday and Turinici.
+    logical :: zbr98_zero_iteration ! Needed in order to replicate the results of ZBR98.
     logical :: use_mixing
     logical :: oct_double_check
     logical :: dump_intermediate

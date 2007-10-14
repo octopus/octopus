@@ -82,13 +82,12 @@ contains
     type(td_t)                 :: td
     type(grid_t),      pointer :: gr   ! some shortcuts
     type(states_t),    pointer :: st
-    type(states_t)             :: chi, psi, initial_st
+    type(states_t)             :: psi, initial_st
     type(target_t)             :: target
     type(filter_t)             :: filter
-    type(oct_control_parameters_t) :: par, par_tmp
+    type(oct_control_parameters_t) :: par
     integer :: i
     character(len=80)  :: filename
-
 
     call push_sub('opt_control.opt_control_run')
 
@@ -104,8 +103,7 @@ contains
     call td_init(sys, h, td)
     call states_allocate_wfns(st, gr%m, M_CMPLX)
 
-    ! Initialize a bunch of states: initial, target, chi.
-    call states_copy(chi, st)
+    ! Initialize the initial state
     call states_copy(initial_st, st)
 
     call oct_read_inp(oct)
@@ -120,7 +118,6 @@ contains
     call parameters_init(par, h%ep%no_lasers, td%dt, td%max_iter)
     call parameters_set(par, h%ep)
     call parameters_write('opt-control/initial_laser', par)
-    call parameters_copy(par_tmp, par)
 
     call oct_iterator_init(iterator, par)
 
@@ -178,7 +175,6 @@ contains
 
     ! clean up
     call parameters_end(par)
-    call parameters_end(par_tmp)
     call oct_iterator_end(iterator)
     if(oct%use_mixing) call mix_end(parameters_mix)
     call filter_end(filter)
@@ -187,7 +183,6 @@ contains
     nullify(gr)
     nullify(st)
     call states_end(psi)
-    call states_end(chi)
     call states_end(initial_st)
     call target_end(target)
    
@@ -229,7 +224,6 @@ contains
 
       if (oct%mode_fixed_fluence) then
         par%alpha(1) = (M_ONE/sqrt(oct%targetfluence)) * sqrt ( laser_fluence(par) )
-        par_tmp%alpha(1) = par%alpha(1)
       end if
 
       call parameters_copy(par_new, par)      
@@ -253,61 +247,77 @@ contains
     ! ---------------------------------------------------------
     subroutine scheme_zbr98
       type(oct_control_parameters_t) :: par_new, par_prev
+      logical :: stop_loop
+
+      type(states_t) :: chi
 
       call push_sub('opt_control.scheme_zbr98')
-      
-      if(oct%use_mixing) then      
-        call parameters_copy(par_new, par_tmp)
-        call parameters_copy(par_prev, par_tmp)
-      else
-        call calc_chi(oct, gr, target, psi, chi)
-        call parameters_to_h(par, h%ep)
+
+      ! In principle, one should perform a zero iteration. However, this can
+      ! be disabled so that one gets the same results than the original
+      ! paper of ZBR98.
+      if(oct%zbr98_zero_iteration) then
+        call states_copy(chi, target%st)
         call propagate_backward(sys, h, td, chi)
+        call parameters_copy(par_new, par)
+        call fwd_step(oct, sys, td, h, target, par, par_new, chi, psi)
+        call parameters_end(par_new)
       end if
 
+      call iterator_write(iterator, psi, par, gr, sys%outp)
+      stop_loop = iteration_manager(oct, sys%gr, par, td, psi, target, iterator)
+
+      call parameters_copy(par_new, par)
       ctr_loop: do
-        if(oct%use_mixing) call parameters_copy(par_prev, par_tmp)
-
+        call parameters_copy(par_prev, par)
+        call f_zbr98(oct, sys, h, td, psi, initial_st, target, par)
+        call iterator_write(iterator, psi, par, gr, sys%outp)
+        stop_loop = iteration_manager(oct, sys%gr, par, td, psi, target, iterator)
+        if(clean_stop() .or. stop_loop) exit ctr_loop
         if(oct%use_mixing) then
-          call calc_chi(oct, gr, target, psi, chi)
-          call parameters_to_h(par_tmp, h%ep)
-          call propagate_backward(sys, h, td, chi)
+          call parameters_mixing(iterator%ctr_iter, par_prev, par, par_new)
+          call parameters_copy(par, par_new)
         end if
-
-        ! forward propagation
-        call states_end(psi)
-        call states_copy(psi, initial_st)
-        call fwd_step(oct, sys, td, h, target, par, par_tmp, chi, psi)
-
-        write(filename,'(a,i3.3)') 'opt-control/PsiT.', iterator%ctr_iter
-        call states_output(psi, gr, filename, sys%outp)
-        write(filename,'(a,i3.3)') 'opt-control/laser.', iterator%ctr_iter
-        call parameters_write(filename, par)
-        
-        if(iteration_manager(oct, gr, par, td, psi, target, iterator)) exit ctr_loop
-        if(clean_stop()) exit ctr_loop
-
-        ! and now backward
-        call calc_chi(oct, gr, target, psi, chi)
-        call bwd_step(oct, sys, td, h, target, par, par_tmp, chi, psi)
-
-        if(oct%use_mixing) then
-          call parameters_mixing(iterator%ctr_iter, par_prev, par_tmp, par_new)
-          call parameters_copy(par_tmp, par_new)
-        end if
-
       end do ctr_loop
 
-      if(oct%use_mixing) then
-        call parameters_end(par_new)
-        call parameters_end(par_prev)
-      end if
+      call parameters_end(par_new)
+      call parameters_end(par_prev)
       call pop_sub()
     end subroutine scheme_zbr98
     ! ---------------------------------------------------------
- 
+
   end subroutine opt_control_run
 
+
+  ! ---------------------------------------------------------
+  subroutine f_zbr98(oct, sys, h, td, psi, initial_st, target, par)
+    type(oct_t), intent(in)                       :: oct
+    type(system_t), intent(inout)                 :: sys
+    type(hamiltonian_t), intent(inout)            :: h
+    type(td_t), intent(inout)                     :: td
+    type(states_t), intent(inout)                 :: psi
+    type(states_t), intent(in)                    :: initial_st
+    type(target_t), intent(inout)                 :: target
+    type(oct_control_parameters_t), intent(inout) :: par
+
+    type(states_t) :: chi
+    type(oct_control_parameters_t) :: parp
+
+    call push_sub('opt_control.f_zbr98')
+
+    call parameters_copy(parp, par)
+
+    call states_copy(chi, target%st)
+    call bwd_step(oct, sys, td, h, target, par, parp, chi, psi)
+
+    call states_end(psi)
+    call states_copy(psi, initial_st)
+    call fwd_step(oct, sys, td, h, target, par, parp, chi, psi)
+
+    call states_end(chi)
+    call parameters_end(parp)
+    call pop_sub()
+  end subroutine f_zbr98
 
   ! ---------------------------------------------------------
   subroutine f_wg05(oct, sys, h, td, iterator, filter, psi, initial_st, target, par, stop_loop)

@@ -41,7 +41,7 @@ module profiling_m
     profiling_output
 
 
-  !To use the profiling module you simply have to define a profile_t
+  !/* To use the profiling module you simply have to define a profile_t
   !object and initialize it using the method profile_init (the second
   !argument is the label of the profile). Then call profiling_in and
   !profiling_out around the regions you want to profile. The objects
@@ -69,6 +69,7 @@ module profiling_m
   !static with size MAX_PROFILES, eventually it should be
   !incremented. It could be replaced by a linked list, but I don't
   !think this is necessary.
+  !*/
 
   integer, parameter ::                 & 
        LABEL_LENGTH = 17,               &  ! Max. number of characters of tag label.
