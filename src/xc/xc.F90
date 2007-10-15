@@ -27,6 +27,7 @@ module xc_m
   use lalg_basic_m
   use lib_oct_parser_m
   use libxc
+  use libxc_funcs
   use mesh_function_m
   use mesh_m
   use messages_m
@@ -322,6 +323,7 @@ contains
 #include "kxc.F90"
 
 end module xc_m
+
 
 !! Local Variables:
 !! mode: f90

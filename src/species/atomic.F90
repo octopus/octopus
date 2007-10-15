@@ -22,6 +22,7 @@
 module atomic_m
   use global_m
   use libxc
+  use libxc_funcs
   use logrid_m
   use messages_m
   use periodic_table_m
