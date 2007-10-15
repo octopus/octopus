@@ -71,27 +71,29 @@ mov ARG_WS = r39
 #define WS r79
 #define WS2 r80
 #define MAXUNRII r81
+#define NNM1 r82
+
+cmp4.le p9,p0 = NR, r0;;
+(p9) br.cond.spnt.few .dend_LL //if (ll == NR) do nothing
 
 mov LL = r0
-mov II = r0;;
+LDI II = [ARG_RM],ISIZE // II = ARG_RM[LL]
 lfetch.nt1 [ARG_WW]
+shladd ARG_FO = II,FSHIFT, ARG_FO
+adds NNM1 = -1, NN
 
 .dloop_NR:
 adds LL = 1, LL;;
 cmp4.ne p2,p3 = LL, NR;;
 
-// II = ARG_RM[LL]
-// MAXII = ARG_RM[LL+1]
-LDI II = [ARG_RM],4;;
-LDI MAXII = [ARG_RM];;
+LDI MAXII = [ARG_RM],ISIZE // MAXII = ARG_RM[LL+1]
 
 //calculate WS[1:NN] = FI + II + ARG_RI[1:NN, LL]
 mov RILL = ARG_RI
 mov WS = ARG_WS
-adds r35 = -1, NN
 mov ar.ec = 4 + 1
 mov pr.rot = 1 << 16;;
-mov ar.lc = r35;;
+mov ar.lc = NNM1;;
 
 .dloop_NN1:
 (p16) LDI r38 = [RILL], 4
@@ -114,12 +116,11 @@ cmp.ge p6,p0 = II, MAXUNRII;;   // if (II > MAXUNRII)
 .dloop_II_unrolled:
 mov WS = ARG_WS;;
 ld8 r33 = [WS],8 //load WS[0] in advance
-adds r90 = -1, NN
 mov WW = ARG_WW
 mov WS2 = ARG_WS
 adds II = UNROLL, II;;
 adds r41 = FSIZE, r33
-mov ar.lc = r90
+mov ar.lc = NNM1
 mov ar.ec = 4 + 1
 mov pr.rot = 1 << 16
 
@@ -206,13 +207,11 @@ cmp4.lt p4,p5 = II, MAXII;;
 //and go to end if we are already finished
 (p5) br.cond.dpnt.few .dend_II
 
-adds r90 = -1, NN
 mov WW = ARG_WW
 mov WS = ARG_WS
 mov WS2 = ARG_WS
-adds II = 1, II;;
-
-mov ar.lc = r90
+adds II = 1, II
+mov ar.lc = NNM1
 mov ar.ec = 7 + 1
 mov pr.rot = 1 << 16
 ;;
@@ -251,6 +250,8 @@ clrrrb;;
 shladd ARG_RI = NN, ISHIFT, ARG_RI
 //Close the loop in LL
 (p2) br.cond.sptk.few .dloop_NR
+
+.dend_LL:
 
 //restore LC
 mov ar.lc = r2
@@ -304,25 +305,29 @@ mov ARG_WS = r39
 #define WS r79
 #define WS2 r80
 #define MAXUNRII r81
+#define NNM1 r82
+
+cmp4.le p9,p0 = NR,r0;;
+(p9) br.cond.spnt.few .zend_LL //if (ll == 0) goto end
 
 mov LL = r0
-mov II = r0;;
+LDI II = [ARG_RM],ISIZE // II = ARG_RM[LL++]
 lfetch.nt1 [ARG_WW]
+shladd ARG_FO = II,FSHIFT+1, ARG_FO
+adds NNM1 = -1, NN;;
 
 .zloop_NR:
 adds LL = 1, LL;;
 cmp4.ne p2,p3 = LL, NR;;
 
-LDI II = [ARG_RM],4;; // II = ARG_RM[LL]
-LDI MAXII = [ARG_RM];; // MAXII = ARG_RM[LL+1]
+LDI MAXII = [ARG_RM],ISIZE // MAXII = ARG_RM[LL++]
 
 //calculate WS[1:NN] = FI + II + ARG_RI[1:NN, LL]
 mov RILL = ARG_RI
 mov WS = ARG_WS
-adds r35 = -1, NN
 mov ar.ec = 4 + 1
 mov pr.rot = 1 << 16;;
-mov ar.lc = r35;;
+mov ar.lc = NNM1;;
 
 .zloop_NN1:
 (p16) LDI r38 = [RILL], 4
@@ -347,11 +352,10 @@ mov WS = ARG_WS;;
 ld8 r33 = [WS],8 //load WS[0] in advance
 mov WS2 = ARG_WS
 mov WW = ARG_WW
-adds r90 = -1, NN
 adds II = UNROLL, II
 mov ar.ec = 2 + 1
 mov pr.rot = 1 << 16;;
-mov ar.lc = r90
+mov ar.lc = NNM1
 
 //initialize accumulators to zero
 mov f8 = f0
@@ -490,13 +494,11 @@ cmp4.lt p4,p5 = II, MAXII;;
 //and go to end if we are already finished
 (p5) br.cond.dpnt.few .zend_II
 
-adds r90 = -1, NN
 mov WW = ARG_WW
 mov WS = ARG_WS
 mov WS2 = ARG_WS
-adds II = 1, II;;
-
-mov ar.lc = r90
+adds II = 1, II
+mov ar.lc = NNM1
 mov ar.ec = 8 + 1
 mov pr.rot = 1 << 16
 ;;
@@ -540,6 +542,8 @@ clrrrb;;
 shladd ARG_RI = NN, ISHIFT, ARG_RI
 //Close the loop in LL
 (p2) br.cond.sptk.few .zloop_NR
+
+.zend_LL:
 
 //restore LC
 mov ar.lc = r2

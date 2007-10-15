@@ -59,15 +59,15 @@ module profiling_m
   !innermost region active. When a new profile_t is activated, it puts
   !itself as current and stores the previous current pointer as
   !parent. When it is deactivated it sets back current as its parent
-  !and substracts the time spent from the parent's self time.
+  !and substracts the time spent from the parent`s self time.
   !
-  !This scheme will fail with recursive calls, but we don't use that
-  !and I don't think we will need it.
+  !This scheme will fail with recursive calls, but we don`t use that
+  !and I don`t think we will need it.
   !
   !To be able to print the profiling results, there is an array with
   !pointers to all initialized profile_t. For simplicity this array is
   !static with size MAX_PROFILES, eventually it should be
-  !incremented. It could be replaced by a linked list, but I don't
+  !incremented. It could be replaced by a linked list, but I don`t
   !think this is necessary.
   !*/
 
