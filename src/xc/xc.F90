@@ -188,6 +188,10 @@ contains
       !% GGA: Perdew, Burke & Ernzerhof
       !%Option gga_x_pbe_r 102
       !% GGA: Perdew, Burke & Ernzerhof (revised)
+      !%Option gga_x_pbe_sol 116
+      !% GGA: Perdew, Burke & Ernzerhof (solids)
+      !%Option gga_x_rpbe 117
+      !% GGA: Hammer, Hansen & Norskov (PBE-like)
       !%Option gga_x_b86 103
       !% GGA: Becke 86 Xalpha,beta,gamma
       !%Option gga_x_b86_r 104
@@ -249,6 +253,8 @@ contains
       !% LDA: Attacalite et al functional for the 2D electron gas
       !%Option gga_c_pbe 130000
       !% GGA: Perdew, Burke & Ernzerhof correlation
+      !%Option gga_c_pbe_sol 133000
+      !% GGA: Perdew, Burke & Ernzerhof correlation (solids)
       !%Option lda_c_lyp 131000
       !% GGA: Lee, Yang, & Parr LDA
       !%Option lda_c_p86 132000
