@@ -130,7 +130,7 @@ contains
     !% Preconditioned Lanczos scheme.
     !%Option arpack 3
     !% Implicitly Restarted Arnoldi Method. Requires the ARPACK package.
-    !%Option jdqz 5
+    !%Option jdqz 4
     !% Jacobi-Davidson scheme. Requires the JDQZ package.
     !%Option cg_new 6
     !% A rewriting of the cg option, that will eventually substitute it.

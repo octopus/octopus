@@ -154,7 +154,7 @@ subroutine FNAME(axpy_1)(n1, da, dx, dy)
   integer :: nn_loc, ini
 #endif
   
-  call profiling_in(axpy_profile, "BLAS AXPY")
+  call profiling_in(axpy_profile, "BLAS_AXPY")
 
 #ifdef USE_OMP
 !$omp parallel private(ini, nn_loc)
@@ -175,7 +175,7 @@ subroutine FNAME(axpy_2)(n1, n2, da, dx, dy)
   TYPE1,   intent(in)    :: dx(1:n1,1:n2)
   TYPE1,   intent(inout) :: dy(1:n1,1:n2)
 
-  call profiling_in(axpy_profile, "BLAS AXPY")
+  call profiling_in(axpy_profile, "BLAS_AXPY")
 
   call blas_axpy(n1*n2, da, dx(1,1), 1, dy(1,1), 1)
 
@@ -188,7 +188,7 @@ subroutine FNAME(axpy_3)(n1, n2, n3, da, dx, dy)
   TYPE1,   intent(in)    :: dx(1:n1,1:n2,1:n3)
   TYPE1,   intent(inout) :: dy(1:n1,1:n2,1:n3)
 
-  call profiling_in(axpy_profile, "BLAS AXPY")
+  call profiling_in(axpy_profile, "BLAS_AXPY")
 
   call blas_axpy(n1*n2*n3, da, dx(1,1,1), 1, dy(1,1,1), 1)
 
@@ -201,7 +201,7 @@ subroutine FNAME(axpy_4)(n1, n2, n3, n4, da, dx, dy)
   TYPE1,   intent(in)    :: dx(1:n1,1:n2,1:n3,1:n4)
   TYPE1,   intent(inout) :: dy(1:n1,1:n2,1:n3,1:n4)
 
-  call profiling_in(axpy_profile, "BLAS AXPY")
+  call profiling_in(axpy_profile, "BLAS_AXPY")
 
   call blas_axpy(n1*n2*n3*n4, da, dx(1,1,1,1), 1, dy(1,1,1,1), 1)
 
@@ -220,7 +220,7 @@ subroutine FNAME(axpy_5)(n1, da, dx, dy)
   integer :: ini, nn_loc
 #endif
 
-    call profiling_in(axpy_profile, "BLAS AXPY")
+    call profiling_in(axpy_profile, "BLAS_AXPY")
 
 #ifdef USE_OMP  
   !$omp parallel private(ini, nn_loc)
