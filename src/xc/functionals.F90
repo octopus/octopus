@@ -24,7 +24,6 @@ module xc_functl_m
   use global_m
   use lib_oct_parser_m
   use libxc
-  use libxc_funcs
   use messages_m
 
   implicit none
