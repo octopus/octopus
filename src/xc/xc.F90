@@ -260,6 +260,8 @@ contains
       !% GGA: Lee, Yang, & Parr LDA
       !%Option lda_c_p86 132000
       !% GGA: Perdew 86
+      !%Option gga_c_pw91 134
+      !% GGA: Perdew & Wang 91
       !%Option mgga_c_tpss 202000
       !% MGGA (not working)
       !%End
