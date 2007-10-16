@@ -34,6 +34,7 @@ The functions in this file write and read an array to binary file.
 #include <unistd.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <assert.h>
 
 #ifdef HAVE_ERRNO_H
 #include <errno.h>
@@ -113,32 +114,32 @@ static void convert ( multi * in, multi * out, int t_in, int t_out);
 /* THE HEADER OF THE FILE */
 typedef struct {
   /* text to identify the file */
-  char text[7];
+  char text[7]; /*7 bytes*/
 
   /* version of the format */
-  uint8_t version;
+  uint8_t version; /* 8 bytes*/
 
   /* value of 1 in different formats, to recognize endianness */
-  uint32_t one_32;
-  float one_f;
-  uint64_t one_64;
-  double one_d;
+  uint32_t one_32; /*12 bytes */
+  float one_f; /* 16 bytes*/
+  uint64_t one_64; /* 24 bytes */
+  double one_d; /* 32 bytes */
 
   /* the size of the array stored */
-  uint64_t np;
+  uint64_t np; /* 40 bytes */ 
 
   /* the type of the wfs */
-  uint32_t type;
+  uint32_t type; /* 44 bytes */
 
   /* extra values for future versions*/
-  uint32_t extra[5];
+  uint32_t extra[5]; /* 64 bytes */
 
 } header_t;
 
 inline void init_header(header_t * h){
   int i;
-
   strcpy(h -> text, "pulpo");
+  h -> text[6] = 0;
   h -> version = 0;
   h -> one_32  = 1;
   h -> one_f   = 1.0;
@@ -189,10 +190,13 @@ static inline int check_header(header_t * h, int * correct_endianness){
 void FC_FUNC_(write_binary, WRITE_BINARY)
      (int * np, void * f, int * type, int * ierr, STR_F_TYPE fname STR_ARG1)
 {
-  header_t h;
+  header_t * h;
   char * filename;
   int fd;
   ssize_t moved;
+
+  h = (header_t *) malloc(sizeof(header_t));
+  assert(h != NULL);
 
   *ierr = 0;
 
@@ -207,12 +211,12 @@ void FC_FUNC_(write_binary, WRITE_BINARY)
   free(filename);
 
   /* create header */
-  init_header(&h);
-  h.np = *np;
-  h.type = *type;
+  init_header(h);
+  h->np = *np;
+  h->type = *type;
 
   /* write header */
-  moved = write(fd, &h, sizeof(header_t));
+  moved = write(fd, h, sizeof(header_t));
 
   if(moved < sizeof(header_t)){
     inf_error("octopus.write_binary", ierr);
@@ -229,13 +233,14 @@ void FC_FUNC_(write_binary, WRITE_BINARY)
 
   /* close the file */
   close(fd);
+  free(h);
 
 }
 
 void FC_FUNC_(read_binary,READ_BINARY)
      (int * np, byte * f, int * output_type, int * ierr, STR_F_TYPE fname STR_ARG1)
 {
-  header_t h;
+  header_t * h;
   char * filename;
   int fd, i;
   ssize_t moved;
@@ -251,8 +256,11 @@ void FC_FUNC_(read_binary,READ_BINARY)
 
   free(filename);
 
+  h = (header_t *) malloc(sizeof(header_t));
+  assert(h != NULL);
+
   /* read header */
-  moved = read(fd, &h, sizeof(header_t));
+  moved = read(fd, h, sizeof(header_t));
   if ( moved != sizeof(header_t) ) { 
     /* we couldn't read the complete header */
     *ierr = 3;
@@ -263,50 +271,51 @@ void FC_FUNC_(read_binary,READ_BINARY)
   if( *ierr != 0 ) return;
 
   /* check whether the sizes match */ 
-  if( h.np != *np ){ *ierr = 4; return; }
+  if( h->np != *np ){ *ierr = 4; return; }
 
-  if( h.type == *output_type){
+  if( h->type == *output_type){
     /* format is the same, we just read */
     read_f = f;
   } else {
     /*format is not the same, we store into a temporary array */
-    read_f =(byte *) malloc((*np)*size_of[h.type]);
+    read_f =(byte *) malloc((*np)*size_of[h->type]);
   }
 
   /* now read the values and close the file */
-  moved = read(fd, read_f, (*np)*size_of[h.type]);
+  moved = read(fd, read_f, (*np)*size_of[h->type]);
 
-  if ( moved != (*np)*size_of[h.type]) { 
+  if ( moved != (*np)*size_of[h->type]) { 
     /* we couldn't read the whole dataset */
     *ierr = 3;
     return;
   }
     
   close(fd);
-
+  
   /* convert endianness */
   
   if(correct_endianness) {
-    for(i=0; i < (*np)*size_of[h.type] ; i+=base_size_of[h.type]) 
-      endian_convert(base_size_of[h.type], (char *) (read_f + i));
+    for(i=0; i < (*np)*size_of[h->type] ; i+=base_size_of[h->type]) 
+      endian_convert(base_size_of[h->type], (char *) (read_f + i));
   }
 
   /* convert values if it is necessary */
-  if( h.type != *output_type ){
+  if( h->type != *output_type ){
     for(i=0; i < *np ; i++) 
-      convert( (multi *) (read_f + i*size_of[h.type]), 
+      convert( (multi *) (read_f + i*size_of[h->type]), 
 	       (multi *) (f + i*size_of[*output_type]), 
-	       h.type, *output_type);
+	       h->type, *output_type);
     free(read_f);
 
     /* set the error code according to the conversion done (see src/out_inc.F90 ) */
-    if ( h.type == type_float )          *ierr = -1;
-    if ( h.type == type_float_complex )  *ierr = -2;
-    if ( h.type == type_double )         *ierr = -3;
-    if ( h.type == type_double_complex ) *ierr = -4;
+    if ( h->type == type_float )          *ierr = -1;
+    if ( h->type == type_float_complex )  *ierr = -2;
+    if ( h->type == type_double )         *ierr = -3;
+    if ( h->type == type_double_complex ) *ierr = -4;
 
   }
   
+  free(h);
 }
 
 /*
