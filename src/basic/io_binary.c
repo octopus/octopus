@@ -267,7 +267,7 @@ void FC_FUNC_(read_binary,READ_BINARY)
     return;
   }
 
-  *ierr = check_header(&h, &correct_endianness);
+  *ierr = check_header(h, &correct_endianness);
   if( *ierr != 0 ) return;
 
   /* check whether the sizes match */ 
