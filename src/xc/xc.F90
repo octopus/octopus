@@ -217,7 +217,15 @@ contains
       !%Option gga_xc_ft97_b 115
       !% GGA: Filatov & Thiel 97 (version B)
       !%Option gga_xc_lb 160
-      !% GGA: van Leeuwen & Baerends (GGA)
+      !% GGA: van Leeuwen & Baerends (xc)
+      !%Option gga_xc_hcth_93 161
+      !% GGA: HCTH fit to 93 molecules (xc)
+      !%Option gga_xc_hcth_120 162
+      !% GGA: HCTH fit to 120 molecules (xc)
+      !%Option gga_xc_hcth_147 163
+      !% GGA: HCTH fit to 147 molecules (xc)
+      !%Option gga_xc_hcth_407 164
+      !% GGA: HCTH fit to 407 molecules (xc)
       !%Option mgga_x_tpss 201
       !% MGGA (not working)
       !%Option oep_x 401
