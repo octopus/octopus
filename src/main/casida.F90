@@ -627,7 +627,7 @@ contains
     integer, allocatable :: ind(:)
     FLOAT, allocatable :: w(:)
 
-    if(.not.mpi_grp_is_root(cas%mpi_grp)) return
+    if(.not.mpi_grp_is_root(mpi_world)) return
 
     call push_sub('casida.casida_write')
 
