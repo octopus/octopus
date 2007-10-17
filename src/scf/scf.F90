@@ -73,8 +73,8 @@ module scf_m
     FLOAT :: lmm_r
 
     ! several convergence criteria
-    FLOAT :: conv_abs_dens, conv_rel_dens, conv_abs_ev, conv_rel_ev
-    FLOAT :: abs_dens, rel_dens, abs_ev, rel_ev
+    FLOAT :: conv_abs_dens, conv_rel_dens, conv_abs_ev, conv_rel_ev, conv_abs_force, conv_rel_force
+    FLOAT :: abs_dens, rel_dens, abs_ev, rel_ev, abs_force, rel_force
 
     integer :: what2mix
     logical :: lcao_restricted
@@ -150,16 +150,39 @@ contains
     !%Description
     !% Relative convergence of the eigenvalues:
     !% <math>\epsilon = {1 \over N} \sum_{j=1}^{N_{occ}} \vert \epsilon_j^{out}-\epsilon_j^{inp}\vert</math>.
-    !% <i>N</i> is the total number of electrons. A zero value means do not use this criterion._m
+    !% <i>N</i> is the total number of electrons. A zero value means do not use this criterion.
     !%End
     call loct_parse_float(check_inp('ConvRelEv'), M_ZERO, scf%conv_rel_ev)
 
+    !%Variable ConvAbsForce
+    !%Type float
+    !%Default 0.0
+    !%Section SCF::Convergence
+    !%Description
+    !% Absolute convergence of the forces: 
+    !% maximum variation of any component of the ionic forces in consecutive iterations.
+    !% A zero value means do not use this criterion.
+    !%End
+    call loct_parse_float(check_inp('ConvAbsForce'), M_ZERO, scf%conv_abs_force)
+
+    !%Variable ConvRelForce
+    !%Type float
+    !%Default 0.0
+    !%Section SCF::Convergence
+    !%Description
+    !% Relative convergence of the forces:
+    !% absolute convergence divided by the modulus of the force on the ion where the force changes the most.
+    !% A zero value means do not use this criterion.
+    !%End
+    call loct_parse_float(check_inp('ConvRelForce'), M_ZERO, scf%conv_rel_force)
+
     if(scf%max_iter <= 0 .and. &
       scf%conv_abs_dens <= M_ZERO .and. scf%conv_rel_dens <= M_ZERO .and. &
-      scf%conv_abs_ev <= M_ZERO .and. scf%conv_rel_ev <= M_ZERO) then
+      scf%conv_abs_ev <= M_ZERO .and. scf%conv_rel_ev <= M_ZERO .and. &
+      scf%conv_abs_force <= M_ZERO .and. scf%conv_rel_force <= M_ZERO) then
       message(1) = "Input: Not all convergence criteria can be <= 0"
       message(2) = "Please set one of the following:"
-      message(3) = "MaximumIter | ConvAbsDens | ConvRelDens | ConvAbsEv | ConvRelEv"
+      message(3) = "MaximumIter | ConvAbsDens | ConvRelDens | ConvAbsEv | ConvRelEv | ConvAbsForce | ConvRelForce"
       call write_fatal(3)
     end if
 
@@ -246,12 +269,12 @@ contains
 
     type(lcao_t) :: lcao_data
 
-    integer :: iter, is, idim, nspin, dim, err
-    FLOAT :: evsum_out, evsum_in
+    integer :: iter, is, idim, iatom, nspin, dim, err
+    FLOAT :: evsum_out, evsum_in, forcetmp
     real(8) :: etime, itime
     FLOAT, allocatable :: rhoout(:,:,:), rhoin(:,:,:), rhonew(:,:,:)
     FLOAT, allocatable :: vout(:,:,:), vin(:,:,:), vnew(:,:,:)
-    FLOAT, allocatable :: tmp(:)
+    FLOAT, allocatable :: forceout(:,:), forcein(:,:), forcediff(:), tmp(:)
     character(len=8) :: dirname
     logical :: finish, forced_finish, gs_run_
     integer :: verbosity_
@@ -302,6 +325,17 @@ contains
     end if
     evsum_in = states_eigenvalues_sum(st)
 
+    ! allocate and compute forces only if they are used as convergence criteria
+    if (scf%conv_abs_force > M_ZERO .or. scf%conv_rel_force > M_ZERO) then
+      ALLOCATE(forcein(geo%natoms, NDIM), geo%natoms*NDIM)
+      ALLOCATE(forceout(geo%natoms, NDIM), geo%natoms*NDIM)
+      ALLOCATE(forcediff(NDIM), NDIM)
+      call epot_forces(gr, geo, h%ep, st)
+      do iatom = 1, geo%natoms
+        forcein(iatom,1:NDIM) = geo%atom(iatom)%f(1:NDIM)
+      end do
+    endif
+
     if ( verbosity_ == VERB_COMPACT ) then
       write(message(1),'(a)') 'Info: Starting SCF iteration'
       call write_info(1)
@@ -350,6 +384,22 @@ contains
       end do
       deallocate(tmp)
 
+      ! compute forces only if they are used as convergence criteria
+      if (scf%conv_abs_force > M_ZERO .or. scf%conv_rel_force > M_ZERO) then
+        call epot_forces(gr, geo, h%ep, st)
+        scf%abs_force = M_ZERO
+        scf%rel_force = M_ZERO
+        do iatom = 1, geo%natoms
+          forceout(iatom,1:NDIM) = geo%atom(iatom)%f(1:NDIM)
+          forcediff(1:NDIM) = abs( forceout(iatom,1:NDIM) - forcein(iatom,1:NDIM) )
+          forcetmp = maxval( forcediff )
+          if ( forcetmp > scf%abs_force ) then
+            scf%abs_force = forcetmp
+            scf%rel_force = scf%abs_force / sqrt( dot_product( forcediff, forcediff ) )
+          end if
+        end do
+      end if
+
       scf%abs_dens = sqrt(scf%abs_dens)
       scf%rel_dens = scf%abs_dens / st%qtot
       scf%abs_ev = abs(evsum_out - evsum_in)
@@ -357,10 +407,12 @@ contains
 
       ! are we finished?
       finish = &
-        (scf%conv_abs_dens > M_ZERO .and. scf%abs_dens <= scf%conv_abs_dens) .or. &
-        (scf%conv_rel_dens > M_ZERO .and. scf%rel_dens <= scf%conv_rel_dens) .or. &
-        (scf%conv_abs_ev   > M_ZERO .and. scf%abs_ev   <= scf%conv_abs_ev)   .or. &
-        (scf%conv_rel_ev   > M_ZERO .and. scf%rel_ev   <= scf%conv_rel_ev)
+        (scf%conv_abs_dens  > M_ZERO .and. scf%abs_dens  <= scf%conv_abs_dens)  .or. &
+        (scf%conv_rel_dens  > M_ZERO .and. scf%rel_dens  <= scf%conv_rel_dens)  .or. &
+        (scf%conv_abs_force > M_ZERO .and. scf%abs_force <= scf%conv_abs_force) .or. &
+        (scf%conv_rel_force > M_ZERO .and. scf%rel_force <= scf%conv_rel_force) .or. &
+        (scf%conv_abs_ev    > M_ZERO .and. scf%abs_ev    <= scf%conv_abs_ev)    .or. &
+        (scf%conv_rel_ev    > M_ZERO .and. scf%rel_ev    <= scf%conv_rel_ev)
 
       etime = loct_clock() - itime
       itime = etime + itime
@@ -420,6 +472,9 @@ contains
         if (h%d%cdft) vin(1:NP, 2:dim, 1:nspin) = h%axc(1:NP, 1:NDIM, 1:nspin)
       end if
       evsum_in = evsum_out
+      if (scf%conv_abs_force > M_ZERO .or. scf%conv_rel_force > M_ZERO) then
+        forcein(1:geo%natoms, 1:NDIM) = forceout(1:geo%natoms, 1:NDIM)
+      end if
 
       if(forced_finish) then
         call profiling_out(C_PROFILING_SCF_CYCLE)
