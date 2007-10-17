@@ -32,6 +32,7 @@ module unocc_m
   use mesh_function_m
   use mesh_m
   use messages_m
+  use mpi_m
   use poisson_m
   use restart_m
   use simul_box_m
@@ -151,18 +152,20 @@ contains
     end if
 
     ! write output file
-    call io_mkdir('static')
-    iunit = io_open('static/eigenvalues', action='write')
+    if(mpi_grp_is_root(mpi_world)) then
+      call io_mkdir('static')
+      iunit = io_open('static/eigenvalues', action='write')
 
-    if(converged) then
-      write(iunit,'(a)') 'All unoccupied states converged.'
-    else
-      write(iunit,'(a)') 'Some of the unoccupied states are not fully converged!'
+      if(converged) then
+        write(iunit,'(a)') 'All unoccupied states converged.'
+      else
+        write(iunit,'(a)') 'Some of the unoccupied states are not fully converged!'
+      end if
+      write(iunit,'(a, e17.6)') 'Criterium = ', eigens%final_tol
+      write(iunit,'(1x)')
+      call states_write_eigenvalues(iunit, sys%st%nst, sys%st, sys%gr%sb, eigens%diff)
+      call io_close(iunit)
     end if
-    write(iunit,'(a, e17.6)') 'Criterium = ', eigens%final_tol
-    write(iunit,'(1x)')
-    call states_write_eigenvalues(iunit, sys%st%nst, sys%st, sys%gr%sb, eigens%diff)
-    call io_close(iunit)
 
     ! calculate momentum of KS states
     if (sys%st%d%wfs_type == M_REAL) then
