@@ -293,7 +293,7 @@ subroutine pconvxc_off(m1,m2,m3,n1,n2,n3,nd1,nd2,nd3,md1,md2,md3,iproc,nproc,&
  !gather all the results in the same rhopot array
 !       call cpu_time(t0)
 !       call system_clock(count1,count_rate,count_max)
-      call MPI_Allgatherv(rhopot(1,1,istart+1),gather_arr(iproc,1),MPI_DOUBLE_PRECISION,rhopot,gather_arr(:,1),&
+      call MPI_Allgatherv(rhopot(:,1,istart+1),gather_arr(iproc,1),MPI_DOUBLE_PRECISION,rhopot(:, 1, 1),gather_arr(:,1),&
       gather_arr(:,2),MPI_DOUBLE_PRECISION,comm,ierr)
 !       call cpu_time(t1)
 !       call system_clock(count2,count_rate,count_max)

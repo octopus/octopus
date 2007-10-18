@@ -192,9 +192,9 @@ subroutine convolxc_off(n1,n2,n3,nd1,nd2,nd3,md1,md2,md3, &
   !input: I1,J2,j3,jp3,(Jp2)
   if (nproc.gt.1) then
      !communication scheduling
-     call MPI_Alltoall(zmpi2,n1*(md2/nproc)*(nd3/nproc), &
+     call MPI_Alltoall(zmpi2(:, 1, 1, 1),n1*(md2/nproc)*(nd3/nproc), &
           MPI_DOUBLE_PRECISION, &
-          zmpi1,n1*(md2/nproc)*(nd3/nproc), &
+          zmpi1(:, 1, 1, 1, 1),n1*(md2/nproc)*(nd3/nproc), &
           MPI_DOUBLE_PRECISION,comm,ierr)
   endif
   !output: I1,J2,j3,Jp2,(jp3)
@@ -335,9 +335,9 @@ subroutine convolxc_off(n1,n2,n3,nd1,nd2,nd3,md1,md2,md3, &
   !input: I1,J2,j3,Jp2,(jp3)
   if (nproc.gt.1) then
      !communication scheduling
-     call MPI_ALLTOALL(zmpi1,n1*(md2/nproc)*(nd3/nproc), &
+     call MPI_ALLTOALL(zmpi1(:, 1, 1, 1, 1),n1*(md2/nproc)*(nd3/nproc), &
           MPI_DOUBLE_PRECISION, &
-          zmpi2,n1*(md2/nproc)*(nd3/nproc), &
+          zmpi2(:, 1, 1, 1),n1*(md2/nproc)*(nd3/nproc), &
           MPI_DOUBLE_PRECISION,comm,ierr)
      !output: I1,J2,j3,jp3,(Jp2)
   endif
@@ -958,9 +958,9 @@ subroutine kernelfft(n1,n2,n3,nd1,nd2,nd3,nproc,iproc,zf,zr,comm)
   !input: I1,J2,j3,jp3,(Jp2)
   if (nproc.gt.1) then
      !communication scheduling
-     call MPI_ALLTOALL(zmpi2,2*n1*(nd2/nproc)*(nd3/nproc), &
+     call MPI_ALLTOALL(zmpi2(:, 1, 1, 1),2*n1*(nd2/nproc)*(nd3/nproc), &
           MPI_DOUBLE_PRECISION, &
-          zmpi1,2*n1*(nd2/nproc)*(nd3/nproc), &
+          zmpi1(:, 1, 1, 1, 1),2*n1*(nd2/nproc)*(nd3/nproc), &
           MPI_double_precision,comm,ierr)
      ! output: I1,J2,j3,Jp2,(jp3)
   endif
