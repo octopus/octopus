@@ -226,6 +226,8 @@ contains
       !% GGA: HCTH fit to 147 molecules (xc)
       !%Option gga_xc_hcth_407 164
       !% GGA: HCTH fit to 407 molecules (xc)
+      !%Option gga_xc_edf1 165
+      !% GGA: Empirical functional from Adamson, Gill, and Pople
       !%Option mgga_x_tpss 201
       !% MGGA (not working)
       !%Option oep_x 401
