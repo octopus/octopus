@@ -52,7 +52,6 @@ subroutine X(one_body) (gr, geo, st, h)
 
   do i = 1, st%nst
     do j = 1, st%nst
-!      if(j >= i) cycle
       if(st%occ(i, 1) < CNST(0.0001)) cycle
       if(st%occ(j, 1) > CNST(0.0001)) cycle
 
