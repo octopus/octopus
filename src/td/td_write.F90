@@ -37,6 +37,7 @@ module td_write_m
   use messages_m
   use mpi_m
   use output_m
+  use pert_m
   use restart_m
   use spectrum_m
   use states_m
@@ -345,7 +346,7 @@ contains
     call push_sub('td_write.td_write_iter')
 
     if(w%out_multip.ne.0)   call td_write_multipole(w%out_multip, gr, geo, st, w%lmax, kick, i)
-    if(w%out_angular.ne.0)  call td_write_angular(w%out_angular, gr, st, kick, i)
+    if(w%out_angular.ne.0)  call td_write_angular(w%out_angular, gr, geo, h, st, kick, i)
     if(w%out_spin.ne.0)     call td_write_spin(w%out_spin, gr, st, i)
     if(w%out_magnets.ne.0)  call td_write_local_magnetic_moments(w%out_magnets, gr, st, geo, w%lmm_r, i)
     if(w%out_proj.ne.0)     call td_write_proj(w%out_proj, gr, geo, st, w%gs_st, kick, i)
@@ -518,17 +519,20 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine td_write_angular(out_angular, gr, st, kick, iter)
+  subroutine td_write_angular(out_angular, gr, geo, h, st, kick, iter)
     C_POINTER,      intent(in) :: out_angular
     type(grid_t),   intent(inout) :: gr
+    type(geometry_t),   intent(inout) :: geo
+    type(hamiltonian_t), intent(inout) :: h
     type(states_t), intent(inout) :: st
     type(kick_t),   intent(in) :: kick
     integer,        intent(in) :: iter
 
-    integer :: ik, ist
+    integer :: ik, ist, idir
     character(len=130) :: aux
     FLOAT :: angular(MAX_DIM), lsquare
     FLOAT, allocatable :: ang(:, :, :), ang2(:, :)
+    type(pert_t)        :: angular_momentum
 
     call push_sub('td_write.td_write_angular')
 
@@ -539,10 +543,17 @@ contains
         call zstates_angular_momentum(gr, st%zpsi(:, :, ist, ik), ang(ist, ik, :), ang2(ist, ik))
       end do
     end do
-    angular(1) =  states_eigenvalues_sum(st, ang(1:st%nst, 1:st%d%nik, 1))
-    angular(2) =  states_eigenvalues_sum(st, ang(1:st%nst, 1:st%d%nik, 2))
-    angular(3) =  states_eigenvalues_sum(st, ang(1:st%nst, 1:st%d%nik, 3))
     lsquare    =  states_eigenvalues_sum(st, ang2(1:st%nst, 1:st%d%nik))
+
+    call pert_init(angular_momentum, PERTURBATION_MAGNETIC, gr, geo)
+
+    do idir = 1, 3
+       call pert_setup_dir(angular_momentum, idir)
+       !we have to multiply by 2, because is the perturbation returns L/2
+       angular(idir) = M_TWO * zpert_expectation_value(angular_momentum, gr, geo, h, st, st%zpsi, st%zpsi)
+    end do
+
+    call pert_end(angular_momentum)
 
     if(mpi_grp_is_root(mpi_world)) then ! Only first node outputs
 
