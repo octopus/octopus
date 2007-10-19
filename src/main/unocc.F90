@@ -3,7 +3,7 @@
 !! This program is free software; you can redistribute it and/or modify
 !! it under the terms of the GNU General Public License as published by
 !! the Free Software Foundation; either version 2, or (at your option)
-!! any later version.
+!! any %later version.
 !!
 !! This program is distributed in the hope that it will be useful,
 !! but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -22,8 +22,11 @@
 module unocc_m
   use datasets_m
   use eigen_solver_m
+  use external_pot_m
+  use functions_m
   use global_m
   use grid_m
+  use geometry_m
   use hamiltonian_m
   use io_m
   use lcao_m
@@ -32,7 +35,6 @@ module unocc_m
   use mesh_function_m
   use mesh_m
   use messages_m
-  use mpi_m
   use poisson_m
   use restart_m
   use simul_box_m
@@ -152,20 +154,18 @@ contains
     end if
 
     ! write output file
-    if(mpi_grp_is_root(mpi_world)) then
-      call io_mkdir('static')
-      iunit = io_open('static/eigenvalues', action='write')
+    call io_mkdir('static')
+    iunit = io_open('static/eigenvalues', action='write')
 
-      if(converged) then
-        write(iunit,'(a)') 'All unoccupied states converged.'
-      else
-        write(iunit,'(a)') 'Some of the unoccupied states are not fully converged!'
-      end if
-      write(iunit,'(a, e17.6)') 'Criterium = ', eigens%final_tol
-      write(iunit,'(1x)')
-      call states_write_eigenvalues(iunit, sys%st%nst, sys%st, sys%gr%sb, eigens%diff)
-      call io_close(iunit)
+    if(converged) then
+      write(iunit,'(a)') 'All unoccupied states converged.'
+    else
+      write(iunit,'(a)') 'Some of the unoccupied states are not fully converged!'
     end if
+    write(iunit,'(a, e17.6)') 'Criterium = ', eigens%final_tol
+    write(iunit,'(1x)')
+    call states_write_eigenvalues(iunit, sys%st%nst, sys%st, sys%gr%sb, eigens%diff)
+    call io_close(iunit)
 
     ! calculate momentum of KS states
     if (sys%st%d%wfs_type == M_REAL) then
@@ -191,7 +191,7 @@ contains
     !% <li><math>&lt;i|T + V_{ext}|j&gt;</math></li>
     !% <li><math>&lt;ij| 1/|r_1-r_2| |kl&gt;</math></li>
     !% </ul>
-    !% in the directory ME
+    !% in the directory matrix_elements
     !%End
     call loct_parse_logical(check_inp('WriteMatrixElements'), .false., l)
     if(l) call write_matrix_elements(sys, h)
@@ -267,10 +267,10 @@ contains
   ! ---------------------------------------------------------
   ! warning: only works for spin-unpolarized and 1 k-point
   subroutine write_matrix_elements(sys, h)
-    type(system_t), target, intent(inout) :: sys
+    type(system_t),         intent(inout) :: sys
     type(hamiltonian_t),    intent(in)    :: h
 
-    call io_mkdir("ME")
+    call io_mkdir("matrix_elements")
 
     message(1) = "Computing Matrix Elements"
     call write_info(1)
@@ -278,9 +278,9 @@ contains
     message(1) = "  :: one-body"
     call write_info(1)
     if (sys%st%d%wfs_type == M_REAL) then
-      call done_body(sys%gr%m, sys%st, h)
+      call done_body(sys%gr, sys%geo, sys%st, h)
     else
-      call zone_body(sys%gr%m, sys%st, h)
+      call zone_body(sys%gr, sys%geo, sys%st, h)
     end if
 
     message(1) = "  :: two-body"

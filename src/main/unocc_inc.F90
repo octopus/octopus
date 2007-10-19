@@ -19,28 +19,71 @@
 
 
 ! ---------------------------------------------------------
-subroutine X(one_body) (m, st, h)
-  type(mesh_t),        intent(in) :: m
-  type(states_t),      intent(in) :: st
+subroutine X(one_body) (gr, geo, st, h)
+  type(grid_t),        intent(inout) :: gr
+  type(geometry_t),    intent(in)    :: geo
+  type(states_t),      intent(inout) :: st
   type(hamiltonian_t), intent(in) :: h
 
-  integer i, j, iunit
-  R_TYPE :: me
-  
+  integer i, j, iunit, idir, iatom
+  R_TYPE :: me, exp_r, exp_g, corr
+  R_TYPE, allocatable :: gpsi(:,:), cpsi(:,:)
+
   call io_assign(iunit)
-  iunit = io_open('ME/1-body', action='write')
+  iunit = io_open('matrix_elements/1-body', action='write')
 
   do i = 1, st%nst
     do j = 1, st%nst
       if(j > i) cycle
       
-      me = st%eigenval(i,1) - X(mf_integrate) (m, R_CONJ(st%X(psi) (:, 1, i, 1)) * &
-           h%Vhxc(:, 1) * st%X(psi) (:, 1, j, 1))
+      me = st%eigenval(i,1) - X(mf_integrate) (gr%m, R_CONJ(st%X(psi) (1:NP, 1, i, 1)) * &
+           h%Vhxc(1:NP, 1) * st%X(psi) (1:NP, 1, j, 1))
 
       write(iunit, *) i, j, me
     end do
   end do
+
+  ALLOCATE(gpsi(1:NP_PART, 1:3), NP_PART*3)
+  ALLOCATE(cpsi(1:NP_PART, 1), NP_PART)
+
   
+  call io_assign(iunit)
+  iunit = io_open('matrix_elements/gauge', action='write')
+
+  do i = 1, st%nst
+    do j = 1, st%nst
+!      if(j >= i) cycle
+      if(st%occ(i, 1) < CNST(0.0001)) cycle
+      if(st%occ(j, 1) > CNST(0.0001)) cycle
+
+      call X(f_gradient)(gr%sb, gr%f_der, st%X(psi)(:, 1, j, 1), gpsi(:, :))
+       
+      do idir = 1, 3
+         exp_r = X(mf_integrate) (gr%m, R_CONJ(st%X(psi) (1:NP, 1, i, 1)) * &
+              gr%m%x(1:NP, idir) * st%X(psi) (1:NP, 1, j, 1))
+         
+         exp_g = X(mf_integrate) (gr%m, R_CONJ(st%X(psi) (1:NP, 1, i, 1)) * &
+              gpsi(1:NP, idir))
+         
+         corr = M_ZERO
+         do iatom = 1, geo%natoms
+           call X(conmut_vnl_r)(gr, geo, h%ep, 1, idir, iatom, st%X(psi)(1:NP, 1, j, 1), &
+                cpsi, h%reltype, ik=1)
+           corr = corr + X(mf_integrate) (gr%m, R_CONJ(st%X(psi) (1:NP, 1, i, 1)) * &
+                cpsi(1:NP, 1))
+         end do
+
+         me = (st%eigenval(j,1) - st%eigenval(i,1))*exp_r
+         
+         write(iunit, *) i, j, idir, me, me - (exp_g + corr)
+
+       end do
+       
+     end do
+   end do
+   
+  deallocate(gpsi)
+
   call io_close(iunit)
 end subroutine X(one_body)
 
@@ -55,10 +98,10 @@ subroutine X(two_body) (gr, st)
   R_TYPE, allocatable :: n(:), v(:)
 
   call io_assign(iunit)
-  iunit = io_open('ME/2-body', action='write')
+  iunit = io_open('matrix_elements/2-body', action='write')
 
-  ALLOCATE(n(1:gr%m%np), gr%m%np)
-  ALLOCATE(v(1:gr%m%np), gr%m%np)
+  ALLOCATE(n(1:NP), NP)
+  ALLOCATE(v(1:NP), NP)
 
   do i = 1, st%nst
     do j = 1, st%nst
@@ -73,8 +116,8 @@ subroutine X(two_body) (gr, st)
           if(l > k) cycle
           if(l > j) cycle
 
-          me = X(mf_integrate) (gr%m, v(:) * &
-                st%X(psi) (:, 1, k, 1) *R_CONJ(st%X(psi) (:, 1, l, 1)))
+          me = X(mf_integrate) (gr%m, v(1:NP) * &
+                st%X(psi) (1:NP, 1, k, 1) *R_CONJ(st%X(psi) (1:NP, 1, l, 1)))
 
           write(iunit, *) i, j, k, l, me
         end do
