@@ -258,15 +258,30 @@ contains
 
     ! we now load the velocities, either from the temperature, from the input, or from a file
     if(loct_parse_isdef(check_inp('RandomVelocityTemp')).ne.0) then
-      call loct_ran_init(random_gen_pointer)
-      call loct_parse_float(check_inp('RandomVelocityTemp'), M_ZERO, temperature)
+
+      if( mpi_grp_is_root(mpi_world)) then
+        call loct_ran_init(random_gen_pointer)
+        call loct_parse_float(check_inp('RandomVelocityTemp'), M_ZERO, temperature)
+      end if
+
       do i = 1, geo%natoms
-        sigma = sqrt( P_Kb*temperature / geo%atom(i)%spec%weight )
-        do j = 1, 3
-          geo%atom(i)%v(j) = loct_ran_gaussian(random_gen_pointer, sigma)
-        end do
+        !generate the velocities in the root node
+        if( mpi_grp_is_root(mpi_world)) then
+          sigma = sqrt( P_Kb*temperature / geo%atom(i)%spec%weight )
+          do j = 1, 3
+             geo%atom(i)%v(j) = loct_ran_gaussian(random_gen_pointer, sigma)
+          end do
+        end if
+#ifdef HAVE_MPI
+        !and send them to the others
+        call MPI_Bcast(geo%atom(i)%v, MAX_DIM, MPI_FLOAT, 0, mpi_world%comm, mpi_err)
+#endif
+
       end do
-      call loct_ran_end(random_gen_pointer)
+
+      if( mpi_grp_is_root(mpi_world)) then
+        call loct_ran_end(random_gen_pointer)
+      end if
 
       kin1 = kinetic_energy(geo)
       call cm_vel(geo, x)
