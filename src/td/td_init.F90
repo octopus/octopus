@@ -34,12 +34,14 @@ subroutine td_init(sys, h, td)
   !%Default 1
   !%Section Time Dependent::Propagation
   !%Description
-  !% Type of dynamics.
+  !% Type of dynamics to follow during a time propagation. By default
+  !% is Ehrenfest TDDFT.
   !%Option ehrenfest 1
-  !% Ehrenfest dynamics
+  !% Ehrenfest dynamics.
   !%Option bo 2
-  !% Born Openheimer 
+  !% Born Openheimer (Experimental).
   !%End
+
   call loct_parse_int(check_inp('TDDynamics'), EHRENFEST, td%dynamics)
 
   !%Variable TDTimeStep
@@ -87,24 +89,17 @@ subroutine td_init(sys, h, td)
   !%Default static_ions
   !%Section Time Dependent::Propagation
   !%Description
-  !% What kind of simulation to perform.
+  !% This variable specifies how to treat the dynamic of the ions
+  !% during a time-dependent run. By default they will remain static.
   !%Option static_ions 0
   !% Do not move the ions.
-  !%Option verlet 3
-  !% Newtonian dynamics using Verlet.
-  !%Option vel_verlet 4
-  !% Newtonian dynamics using velocity Verlet.
+  !%Option vel_verlet 1
+  !% Newtonian dynamics using the velocity Verlet integrator.
   !%End
+
   call loct_parse_int(check_inp('MoveIons'), STATIC_IONS, td%move_ions)
   if(.not.varinfo_valid_option('MoveIons', td%move_ions)) call input_error('MoveIons')
   call messages_print_var_option(stdout, 'MoveIons', td%move_ions)
-
-  if( td%move_ions .eq. NORMAL_VERLET) then
-    write(message(1),'(a)') "Normal Verlet algorithm temporarily disabled."
-    write(message(2),'(a)') "Using Velocity Verlet (MoveIons = 4) instead."
-    call write_warning(2)
-    td%move_ions = VELOCITY_VERLET
-  end if
 
   !%Variable RecalculateGSDuringEvolution
   !%Type logical

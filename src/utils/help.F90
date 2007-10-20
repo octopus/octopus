@@ -79,6 +79,11 @@ program oct_help
       call write_info(2)
     end if
 
+  case default
+    message(1) = "Unknown command: "//mode
+    message(2) = "Usage: oct-test { show | search } variable_name" 
+    call write_info(2)
+
   end select
     
   call global_end()

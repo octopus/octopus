@@ -63,8 +63,7 @@ module timedep_m
   ! Parameters.
   integer, parameter ::   &
     STATIC_IONS     = 0,  &
-    NORMAL_VERLET   = 3,  &
-    VELOCITY_VERLET = 4
+    VELOCITY_VERLET = 1
 
   integer, parameter :: &
        EHRENFEST = 1,   &
@@ -294,7 +293,6 @@ contains
     ! ---------------------------------------------------------
     subroutine init_verlet
       select case(td%move_ions)
-      case(NORMAL_VERLET) ! temporarily disabled
       case(VELOCITY_VERLET)
         ALLOCATE(atom1(geo%natoms), geo%natoms)
         atom1(1:geo%natoms) = geo%atom(1:geo%natoms)
@@ -304,7 +302,6 @@ contains
     ! ---------------------------------------------------------
     subroutine end_verlet
       select case(td%move_ions)
-      case(NORMAL_VERLET) ! temporarily disabled.
       case(VELOCITY_VERLET)
         deallocate(atom1)
       end select
@@ -314,7 +311,6 @@ contains
     subroutine apply_verlet_1(tau)
       FLOAT, intent(in) :: tau
       select case(td%move_ions)
-      case(NORMAL_VERLET) ! temporarily disabled
       case(VELOCITY_VERLET)
         atom1(1:geo%natoms) = geo%atom(1:geo%natoms)
         do j=1, geo%natoms
@@ -329,7 +325,6 @@ contains
     ! ---------------------------------------------------------
     subroutine apply_verlet_2
       select case(td%move_ions)
-      case(NORMAL_VERLET) ! temporarily disabled
       case(VELOCITY_VERLET)      
         do j = 1, geo%natoms
           if(geo%atom(j)%move) then
@@ -533,7 +528,7 @@ contains
       type(kick_t), intent(in) :: k
       integer :: i, j
       CMPLX   :: c(2), kick
-      FLOAT   :: ylm, gylm(3), r
+      FLOAT   :: ylm, r
       FLOAT   :: x(MAX_DIM)
       FLOAT, allocatable :: kick_function(:)
 
