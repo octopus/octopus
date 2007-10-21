@@ -95,7 +95,7 @@ subroutine mesh_init_stage_2(sb, mesh, geo, cv)
   mesh%x_tmp(:,:,:,:)  = M_ZERO
 
   ! We label 2 the points inside the mesh + enlargement
-
+  !$omp parallel do private(iy, iz, chi, i, j, k) if(.not. mesh%use_curvlinear)
   do ix = mesh%nr(1,1), mesh%nr(2,1)
     chi(1) = real(ix, REAL_PRECISION) * mesh%h(1) + sb%box_offset(1)
 
@@ -123,6 +123,7 @@ subroutine mesh_init_stage_2(sb, mesh, geo, cv)
       end do
     end do
   end do
+  !$omp end parallel do
 
   ! we label 1 the points inside the mesh, and we count the points
   il = 0

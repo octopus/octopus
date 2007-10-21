@@ -394,7 +394,7 @@ contains
     write(iunit, '(a)') 'ACCUMULATIVE TIME:'
     write(iunit, '(a)')
     write(iunit,'(a80)') &
-         'TAG                   NUMBER OF CALLS       TOTAL TIME    TIME PER CALL    %TIME'
+         'TAG                   NUMBER_OF_CALLS       TOTAL_TIME    TIME_PER_CALL    %TIME'
     write(iunit,'(a80 )') &
          '================================================================================'
     do ii = 1, last_profile
@@ -416,7 +416,7 @@ contains
     write(iunit, '(a)')
 
     write(iunit,'(a80)') &
-         'TAG                   NUMBER OF CALLS       TOTAL TIME    TIME PER CALL    %TIME'
+         'TAG                   NUMBER_OF_CALLS       TOTAL_TIME    TIME_PER_CALL    %TIME'
     write(iunit,'(a80 )') &
          '================================================================================'
     do ii = 1, last_profile

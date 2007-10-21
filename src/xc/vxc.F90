@@ -26,9 +26,10 @@ subroutine xc_get_vxc(gr, xcs, rho, ispin, vxc, ex, ec, ip, qtot)
   FLOAT,              intent(inout) :: vxc(:,:), ex, ec
   FLOAT,              intent(in)    :: ip, qtot
 
-  FLOAT, allocatable :: dens(:,:), dedd(:,:), l_dens(:), l_dedd(:), ex_per_vol(:), ec_per_vol(:)
-  FLOAT, allocatable :: gdens(:,:,:), dedgd(:,:,:), l_sigma(:), l_vsigma(:)
-  FLOAT, allocatable :: tau(:,:), dedtau(:,:), l_tau(:), l_dedtau(:)
+  FLOAT :: l_dens(MAX_SPIN), l_dedd(MAX_SPIN), l_sigma(3), l_vsigma(3), l_tau(MAX_SPIN), l_dedtau(MAX_SPIN)
+  FLOAT, allocatable :: dens(:,:), dedd(:,:), ex_per_vol(:), ec_per_vol(:)
+  FLOAT, allocatable :: gdens(:,:,:), dedgd(:,:,:)
+  FLOAT, allocatable :: tau(:,:), dedtau(:,:)
 
   integer :: i, ixc, spin_channels
   FLOAT   :: e, r
@@ -37,7 +38,6 @@ subroutine xc_get_vxc(gr, xcs, rho, ispin, vxc, ex, ec, ip, qtot)
   type(xc_functl_t), pointer :: functl(:)
 
   call push_sub('xc_vxc.xc_get_vxc')
-  call profiling_in(C_PROFILING_XC_LOCAL)
 
   if(ispin == UNPOLARIZED) then
     functl => xcs%functl(:, 1)
@@ -48,9 +48,10 @@ subroutine xc_get_vxc(gr, xcs, rho, ispin, vxc, ex, ec, ip, qtot)
   ! is there anything to do ?
   if(iand(xcs%family, XC_FAMILY_LDA + XC_FAMILY_GGA + XC_FAMILY_MGGA) == 0) then
     call pop_sub()
-    call profiling_out(C_PROFILING_XC_LOCAL)
     return
   end if
+
+  call profiling_in(C_PROFILING_XC_LOCAL)
 
   ! initialize a couple of handy variables
   gga           = iand(xcs%family, XC_FAMILY_GGA).ne.0
@@ -63,10 +64,11 @@ subroutine xc_get_vxc(gr, xcs, rho, ispin, vxc, ex, ec, ip, qtot)
   if(gga.or.mgga) call  gga_init()
   if(       mgga) call mgga_init()
 
+  !$omp parallel do private(l_dens, l_sigma, ixc, l_tau, l_dedd, r, e, l_vsigma)
   space_loop: do i = 1, NP
 
     ! make a local copy with the correct memory order
-    l_dens(:) = dens (i, :)
+    l_dens(1:spin_channels) = dens (i, 1:spin_channels)
     if(gga.or.mgga) then
       l_sigma(1) = sum(gdens(i, :,1)*gdens(i, :,1))
       if(ispin == SPIN_POLARIZED) then
@@ -108,13 +110,13 @@ subroutine xc_get_vxc(gr, xcs, rho, ispin, vxc, ex, ec, ip, qtot)
 
       if(functl(ixc)%id==XC_LDA_X.or.functl(ixc)%id==XC_GGA_X_PBE.or.&
         functl(ixc)%id==XC_MGGA_X_TPSS) then
-        ex_per_vol(i) = ex_per_vol(i) + sum(l_dens(:)) * e
+        ex_per_vol(i) = ex_per_vol(i) + sum(l_dens(1:spin_channels)) * e
       else
-        ec_per_vol(i) = ec_per_vol(i) + sum(l_dens(:)) * e
+        ec_per_vol(i) = ec_per_vol(i) + sum(l_dens(1:spin_channels)) * e
       end if
 
       ! store results
-      dedd(i,:) = dedd(i,:) + l_dedd(:)
+      dedd(i,1:spin_channels) = dedd(i,1:spin_channels) + l_dedd(1:spin_channels)
 
       if(functl(ixc)%family==XC_FAMILY_GGA .or. functl(ixc)%family==XC_FAMILY_MGGA) then
         dedgd(i,:,1) = dedgd(i,:,1) + M_TWO*l_vsigma(1)*gdens(i,:,1)
@@ -163,8 +165,7 @@ contains
     ALLOCATE(dedd(NP_PART, spin_channels), NP_PART*spin_channels)
     ALLOCATE(ex_per_vol(NP), NP)
     ALLOCATE(ec_per_vol(NP), NP)
-    ALLOCATE(l_dens(spin_channels), spin_channels)
-    ALLOCATE(l_dedd(spin_channels), spin_channels)
+
     dens       = M_ZERO
     dedd       = M_ZERO
     ex_per_vol = M_ZERO
@@ -172,6 +173,8 @@ contains
 
     ! get the density
     f = M_ONE/real(spin_channels, REAL_PRECISION)
+
+    !$omp parallel do private(d, dtot, dpol)
     do i = 1, NP
       d(1:spin_channels) = rho(i, 1:spin_channels)
 
@@ -189,6 +192,7 @@ contains
         dens(i, 2) = max(M_HALF*(dtot - dpol), M_ZERO)
       end select
     end do
+    !$omp end parallel do
 
   end subroutine lda_init
 
@@ -196,7 +200,7 @@ contains
   ! ---------------------------------------------------------
   ! deallocates variables allocated in lda_init
   subroutine lda_end()
-    deallocate(dens, dedd, ex_per_vol, ec_per_vol, l_dens, l_dedd)
+    deallocate(dens, dedd, ex_per_vol, ec_per_vol)
   end subroutine lda_end
 
 
@@ -239,8 +243,6 @@ contains
     ! allocate variables
     ALLOCATE(gdens(NP,      3, spin_channels), NP     *3*spin_channels)
     ALLOCATE(dedgd(NP_PART, 3, spin_channels), NP_PART*3*spin_channels)
-    ALLOCATE(l_sigma (3), 3)
-    ALLOCATE(l_vsigma(3), 3)
     gdens = M_ZERO
     dedgd = M_ZERO
 
@@ -254,7 +256,7 @@ contains
   ! ---------------------------------------------------------
   ! cleans up memory allocated in gga_init
   subroutine gga_end()
-    deallocate(gdens, dedgd, l_sigma, l_vsigma)
+    deallocate(gdens, dedgd)
   end subroutine gga_end
 
 
@@ -302,8 +304,6 @@ contains
 
     ALLOCATE(tau   (NP,      spin_channels), NP     *spin_channels)
     ALLOCATE(dedtau(NP_PART, spin_channels), NP_PART*spin_channels)
-    ALLOCATE(l_tau   (spin_channels), spin_channels)
-    ALLOCATE(l_dedtau(spin_channels), spin_channels)
     tau    = M_ZERO
     dedtau = M_ZERO
 
@@ -339,7 +339,7 @@ contains
   ! ---------------------------------------------------------
   ! clean up memory allocates in mgga_init
   subroutine mgga_end()
-    deallocate(tau, dedtau, l_tau, l_dedtau)
+    deallocate(tau, dedtau)
   end subroutine mgga_end
 
 

@@ -88,7 +88,10 @@ contains
 
     !build the inverse of jxyz, points not in the sphere go to 0
     ALLOCATE(this%jxyz_inv(0:this%np_part), this%np_part+1)
+
+    !$omp parallel workshare
     this%jxyz_inv(0:this%np_part) = 0
+    !$omp end parallel workshare
 
     ! Get the total number of points inside the sphere
     is = 0
@@ -108,9 +111,12 @@ contains
     ALLOCATE(this%jxyz(this%ns_part), this%ns_part)
 
     ! Get the index of the points inside the sphere
+    !$omp parallel do
     do ip = 1, m%np_part
       if( this%jxyz_inv(ip) /= 0 ) this%jxyz(this%jxyz_inv(ip)) = ip
     end do
+    !$omp end parallel do
+
     call profiling_out(submesh_init_prof)
     call pop_sub()
 
@@ -146,9 +152,11 @@ contains
     ALLOCATE(sm_out%jxyz(1:sm_out%ns_part), sm_out%ns_part)
     ALLOCATE(sm_out%jxyz_inv(0:sm_out%np_part), sm_out%np_part+1)
     
+    !$omp parallel workshare
     sm_out%jxyz(1:sm_out%ns_part)    = sm_in%jxyz(1:sm_in%ns_part)
     sm_out%jxyz_inv(0:sm_out%np_part) = sm_in%jxyz_inv(0:sm_out%np_part)
-   
+    !$omp end parallel workshare
+
     call pop_sub()
 
   end subroutine submesh_copy

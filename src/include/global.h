@@ -23,6 +23,7 @@
 #define NP_PART gr%m%np_part
 
 #define MAX_DIM 3
+#define MAX_SPIN 4
 #define NDIM    gr%sb%dim
 #define LAP     f_der%der_discr%lapl
 

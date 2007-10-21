@@ -221,11 +221,11 @@ contains
     FLOAT,     optional, intent(in)    :: vmagnus(NP, h%d%nspin, 2)
 
     logical :: apply_magnus
+    
+    call push_sub('td_exp.td_exp_td')
 
     apply_magnus = .false.
     if(present(vmagnus)) apply_magnus = .true.
-
-    call push_sub('td_exp.td_exp_td')
 
     select case(te%exp_method)
     case(TAYLOR);            call taylor_series
@@ -274,11 +274,6 @@ contains
       zfact = M_z1
       do idim = 1, h%d%dim
         call lalg_copy(NP, zpsi(:, idim), zpsi1(:, idim))
-#ifdef USE_OMP
-        !$omp parallel workshare
-        hzpsi1(1:NP, idim) = M_ZERO
-        !$omp end parallel workshare
-#endif
       end do
 
       do i = 1, te%exp_order
