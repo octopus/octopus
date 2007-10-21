@@ -50,9 +50,6 @@ module geom_opt_m
     FLOAT :: tolgrad
     FLOAT :: toldr
     integer  :: max_iter
-
-!!$    FLOAT :: f
-!!$    FLOAT, pointer :: x(:), df(:)
   end type geom_opt_t
 
   integer, parameter ::             &

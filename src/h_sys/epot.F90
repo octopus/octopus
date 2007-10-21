@@ -588,7 +588,7 @@ contains
 
     call push_sub('epot.epot_generate_gauge_field')
     
-    ASSERT(st%d%wfs_type == M_CMPLX)
+    ASSERT(st%wfs_type == M_CMPLX)
     
     ! Integrate the charge density
     n_el = M_ZERO

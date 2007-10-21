@@ -119,7 +119,7 @@ contains
           do idim = 1, st%d%dim
 
             ! all calculations will be done with complex wave-functions
-            if (st%d%wfs_type == M_REAL) then
+            if (st%wfs_type == M_REAL) then
               wf_psi(:) = cmplx(st%dpsi(:, idim, ist, ik), KIND=REAL_PRECISION)
             else
               wf_psi(:) = st%zpsi(:, idim, ist, ik)
@@ -259,7 +259,7 @@ contains
       s = M_ONE
     end if
  
-    if (st%d%wfs_type == M_REAL) then
+    if (st%wfs_type == M_REAL) then
       call dcf_new(gr%m%l, dcf_tmp)
       call dcf_fft_init(dcf_tmp, gr%sb)
     else
@@ -281,7 +281,7 @@ contains
         do ist = 1, st%nst
           do idim = 1, st%d%dim
             
-            if (st%d%wfs_type == M_REAL) then
+            if (st%wfs_type == M_REAL) then
               call dmf2mf_RS2FS(gr%m, st%dpsi(:, idim, ist, ik), psi_fs(:), dcf_tmp)
               call zf_gradient(gr%sb, gr%f_der, psi_fs(:), gpsi)
               do i = 1, NDIM
@@ -337,7 +337,7 @@ contains
 
     end do do_is
 
-    if (st%d%wfs_type == M_REAL) then
+    if (st%wfs_type == M_REAL) then
       call dcf_free(dcf_tmp)
     else
       call zcf_free(zcf_tmp)
@@ -423,7 +423,7 @@ contains
           do idim = 1, st%d%dim
 
             ! all calculations will be done with complex wave-functions
-            if (st%d%wfs_type == M_REAL) then
+            if (st%wfs_type == M_REAL) then
               wf_psi(:) = cmplx(st%dpsi(:, idim, ist, ik), KIND=REAL_PRECISION)
             else
               wf_psi(:) = st%zpsi(:, idim, ist, ik)

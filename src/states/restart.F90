@@ -192,13 +192,13 @@ contains
 
     call push_sub('restart.restart_write')
 
-    wfns_are_associated = (associated(st%dpsi) .and. st%d%wfs_type == M_REAL) .or. &
-         (associated(st%zpsi) .and. st%d%wfs_type == M_CMPLX)
+    wfns_are_associated = (associated(st%dpsi) .and. st%wfs_type == M_REAL) .or. &
+         (associated(st%zpsi) .and. st%wfs_type == M_CMPLX)
     ASSERT(wfns_are_associated)
 
     if(present(lr)) then 
-      lr_wfns_are_associated = (associated(lr%ddl_psi) .and. st%d%wfs_type == M_REAL) .or. &
-                (associated(lr%zdl_psi) .and. st%d%wfs_type == M_CMPLX)
+      lr_wfns_are_associated = (associated(lr%ddl_psi) .and. st%wfs_type == M_REAL) .or. &
+                (associated(lr%zdl_psi) .and. st%wfs_type == M_CMPLX)
       ASSERT(lr_wfns_are_associated)
     endif
 
@@ -250,13 +250,13 @@ contains
 
           if(st%st_start <= ist .and. st%st_end >= ist) then
             if( .not. present(lr) ) then 
-              if (st%d%wfs_type == M_REAL) then
+              if (st%wfs_type == M_REAL) then
                 call drestart_write_function(dir, filename, gr, st%dpsi(:, idim, ist, ik), err, size(st%dpsi,1))
               else
                 call zrestart_write_function(dir, filename, gr, st%zpsi(:, idim, ist, ik), err, size(st%zpsi,1))
               end if
             else
-              if (st%d%wfs_type == M_REAL) then
+              if (st%wfs_type == M_REAL) then
                 call drestart_write_function(dir, filename, gr, lr%ddl_psi(:, idim, ist, ik), err, size(st%dpsi,1))
               else
                 call zrestart_write_function(dir, filename, gr, lr%zdl_psi(:, idim, ist, ik), err, size(st%zpsi,1))
@@ -324,13 +324,13 @@ contains
     call push_sub('restart.restart_read')
 
     ! sanity check
-    boolean = (associated(st%dpsi) .and. st%d%wfs_type == M_REAL) .or. &
-              (associated(st%zpsi) .and. st%d%wfs_type == M_CMPLX)
+    boolean = (associated(st%dpsi) .and. st%wfs_type == M_REAL) .or. &
+              (associated(st%zpsi) .and. st%wfs_type == M_CMPLX)
     ASSERT(boolean)
     
     if(present(lr)) then 
-      boolean = (associated(lr%ddl_psi) .and. st%d%wfs_type == M_REAL) .or. &
-                (associated(lr%zdl_psi) .and. st%d%wfs_type == M_CMPLX)
+      boolean = (associated(lr%ddl_psi) .and. st%wfs_type == M_REAL) .or. &
+                (associated(lr%zdl_psi) .and. st%wfs_type == M_CMPLX)
       ASSERT(boolean)
     endif
 
@@ -394,13 +394,13 @@ contains
       if(ist >= st%st_start .and. ist <= st%st_end) then
         if(.not.mesh_change) then
           if( .not. present(lr) ) then 
-            if (st%d%wfs_type == M_REAL) then
+            if (st%wfs_type == M_REAL) then
               call drestart_read_function(dir, filename, gr%m, st%dpsi(:, idim, ist, ik), err)
             else
               call zrestart_read_function(dir, filename, gr%m, st%zpsi(:, idim, ist, ik), err)
             end if
           else
-            if (st%d%wfs_type == M_REAL) then
+            if (st%wfs_type == M_REAL) then
               call drestart_read_function(dir, filename, gr%m, lr%ddl_psi(:, idim, ist, ik), err)
             else
               call zrestart_read_function(dir, filename, gr%m, lr%zdl_psi(:, idim, ist, ik), err)
@@ -411,7 +411,7 @@ contains
             ierr = ierr + 1
           end if
         else
-          if (st%d%wfs_type == M_REAL) then
+          if (st%wfs_type == M_REAL) then
             call drestart_read_function(dir, filename, old_mesh, dphi, err)
             if( .not. present(lr) ) then 
               call dmf_interpolate(old_mesh, gr%m, full_interpolation, dphi, st%dpsi(:, idim, ist, ik))
@@ -481,7 +481,7 @@ contains
       call mesh_init_stage_2(old_sb, old_mesh, geo, old_cv)
       call mesh_init_stage_3(old_mesh, geo, old_cv)
 
-      if (st%d%wfs_type == M_REAL) then
+      if (st%wfs_type == M_REAL) then
         ALLOCATE(dphi(old_mesh%np_global), old_mesh%np_global)
       else
         ALLOCATE(zphi(old_mesh%np_global), old_mesh%np_global)
@@ -492,7 +492,7 @@ contains
     ! ---------------------------------------------------------
     subroutine interpolation_end
       call mesh_end(old_mesh)
-      if (st%d%wfs_type == M_REAL) then
+      if (st%wfs_type == M_REAL) then
         deallocate(dphi)
       else
         deallocate(zphi)

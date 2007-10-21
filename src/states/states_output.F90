@@ -79,7 +79,7 @@ contains
       deallocate(dtmp)
     end if
 
-    if( (iand(outp%what, output_current).ne.0) .and. (st%d%wfs_type == M_CMPLX) ) then
+    if( (iand(outp%what, output_current).ne.0) .and. (st%wfs_type == M_CMPLX) ) then
       ! calculate current first
       call states_paramagnetic_current(gr, st, st%j)
       do is = 1, st%d%nspin
@@ -97,7 +97,7 @@ contains
           do ik = 1, st%d%nik
             do idim = 1, st%d%dim
               write(fname, '(a,i3.3,a,i4.4,a,i1)') 'wf-', ik, '-', ist, '-', idim
-              if (st%d%wfs_type == M_REAL) then
+              if (st%wfs_type == M_REAL) then
                 call doutput_function(outp%how, dir, fname, gr%m, gr%sb, &
                      st%dpsi(1:, idim, ist, ik), sqrt(u), ierr, is_tmp = .false.)
               else
@@ -117,7 +117,7 @@ contains
           do ik = 1, st%d%nik
             do idim = 1, st%d%dim
               write(fname, '(a,i3.3,a,i4.4,a,i1)') 'sqm-wf-', ik, '-', ist, '-', idim
-              if (st%d%wfs_type == M_REAL) then
+              if (st%wfs_type == M_REAL) then
                 dtmp = abs(st%dpsi(:, idim, ist, ik))**2
               else
                 dtmp = abs(st%zpsi(:, idim, ist, ik))**2
@@ -281,7 +281,7 @@ contains
 
     do ii = 1, st%nst
       do jj = 1, st%nst
-        if (st%d%wfs_type == M_REAL) then 
+        if (st%wfs_type == M_REAL) then 
           write(iunit,fmt = '(f20.10)', advance = 'no') dstates_dotp(gr%m, st%d%dim, &
             st%dpsi(:, :, ii, 1), &
             st%dpsi(:, :, jj, 1) * multipole(:, :)) / units_out%length%factor**l

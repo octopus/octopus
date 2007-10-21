@@ -121,14 +121,14 @@ contains
 
     ! First, get the residues of the occupied states.
     ! These are assumed to be converged; otherwise one should do a SCF calculation.
-    if (sys%st%d%wfs_type == M_REAL) then
+    if (sys%st%wfs_type == M_REAL) then
       ALLOCATE(dh_psi(sys%gr%m%np, h%d%dim), sys%gr%m%np*h%d%dim)
     else
       ALLOCATE(zh_psi(sys%gr%m%np, h%d%dim), sys%gr%m%np*h%d%dim)
     end if
     do ik = 1, sys%st%d%nik
       do p = 1, eigens%converged
-        if (sys%st%d%wfs_type == M_REAL) then
+        if (sys%st%wfs_type == M_REAL) then
           call dHpsi(h, sys%gr, sys%st%dpsi(:,:, p, ik) , dh_psi, ik)
           eigens%diff(p, ik) = dstates_residue(sys%gr%m, sys%st%d%dim, dh_psi, sys%st%eigenval(p, ik), &
                sys%st%dpsi(:, :, p, ik))
@@ -139,7 +139,7 @@ contains
         end if
       end do
     end do
-    if (sys%st%d%wfs_type == M_REAL) then
+    if (sys%st%wfs_type == M_REAL) then
       deallocate(dh_psi)
     else
       deallocate(zh_psi)
@@ -171,7 +171,7 @@ contains
     end if
 
     ! calculate momentum of KS states
-    if (sys%st%d%wfs_type == M_REAL) then
+    if (sys%st%wfs_type == M_REAL) then
       call dstates_calc_momentum(sys%gr, sys%st)
     else
       call zstates_calc_momentum(sys%gr, sys%st)
@@ -280,7 +280,7 @@ contains
 
     message(1) = "  :: one-body"
     call write_info(1)
-    if (sys%st%d%wfs_type == M_REAL) then
+    if (sys%st%wfs_type == M_REAL) then
       call done_body(sys%gr, sys%geo, sys%st, h)
     else
       call zone_body(sys%gr, sys%geo, sys%st, h)
@@ -288,7 +288,7 @@ contains
 
     message(1) = "  :: two-body"
     call write_info(1)
-    if (sys%st%d%wfs_type == M_REAL) then
+    if (sys%st%wfs_type == M_REAL) then
       call dtwo_body(sys%gr, sys%st)
     else
       call ztwo_body(sys%gr, sys%st)

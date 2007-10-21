@@ -73,7 +73,7 @@ module hamiltonian_m
   type hamiltonian_t
     ! The Hamiltonian must know what are the "dimensions" of the spaces,
     ! in order to be able to operate on the states.
-    type(states_dim_t), pointer :: d
+    type(states_dim_t) :: d
 
     integer :: reltype            ! type of relativistic correction to use
 
@@ -148,11 +148,12 @@ module hamiltonian_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine hamiltonian_init(h, gr, geo, states_dim, ip_app)
+  subroutine hamiltonian_init(h, gr, geo, states_dim, wfs_type, ip_app)
     type(hamiltonian_t), intent(out)   :: h
     type(grid_t),        intent(inout) :: gr
     type(geometry_t),    intent(inout) :: geo
-    type(states_dim_t),  intent(in), target :: states_dim
+    type(states_dim_t),  intent(in)    :: states_dim
+    integer,             intent(out)   :: wfs_type
     logical,             intent(in)    :: ip_app
 
     integer :: i, j, n, ispin
@@ -162,7 +163,7 @@ contains
 
     ! make a couple of local copies
     h%ip_app = ip_app
-    h%d => states_dim
+    call states_dim_copy(h%d, states_dim)
 
 #if defined(HAVE_LIBNBC)
     ! Allocate NBC_Handle.
@@ -208,7 +209,7 @@ contains
 
 
     !Static magnetic field requires complex wave-functions
-    if (associated(h%ep%B_field) .or. h%ep%with_gauge_field) h%d%wfs_type = M_CMPLX
+    if (associated(h%ep%B_field) .or. h%ep%with_gauge_field) wfs_type = M_CMPLX
 
 
     !%Variable RelativisticCorrection
@@ -436,9 +437,7 @@ contains
       deallocate(h%ab_pot); nullify(h%ab_pot)
     end if
 
-    if(associated(h%d)) then
-      nullify(h%d)
-    end if
+    call states_dim_end(h%d)
 
     call pop_sub()
   end subroutine hamiltonian_end
@@ -464,7 +463,7 @@ contains
     if(present(full)) full_ = full
 
     if(full_) then
-      if(h%d%wfs_type == M_REAL) then
+      if(st%wfs_type == M_REAL) then
         h%t0     = delectronic_kinetic_energy(h, gr, st)
         h%eext   = delectronic_external_energy(h, gr, st)
       else

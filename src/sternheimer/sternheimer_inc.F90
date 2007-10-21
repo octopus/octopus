@@ -63,7 +63,7 @@ subroutine X(sternheimer_solve)(&
   m => sys%gr%m
   st => sys%st
   
-  call mix_init(this%mixer, sys%gr%m%np, sys%st%d%nspin, 1, func_type=sys%st%d%wfs_type)
+  call mix_init(this%mixer, sys%gr%m%np, sys%st%d%nspin, 1, func_type=sys%st%wfs_type)
   call mesh_init_mesh_aux(sys%gr%m)
   
   ALLOCATE(tmp(m%np),m%np)

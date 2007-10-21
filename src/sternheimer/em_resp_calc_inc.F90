@@ -60,7 +60,7 @@ subroutine X(lr_calc_elf)(st, gr, lr, lr_m)
   call elf_calc(st, gr, elf, de)
 
   !calculate current and its variation
-  if(st%d%wfs_type == M_CMPLX) then 
+  if(st%wfs_type == M_CMPLX) then 
     call calc_physical_current(gr, st, st%j)
     if(present(lr_m)) then 
       call lr_calc_current(st, gr, lr, lr_m)
@@ -189,7 +189,7 @@ subroutine X(lr_calc_elf)(st, gr, lr, lr_m)
     end do
 
     !the current term
-    if(st%d%wfs_type == M_CMPLX) then       
+    if(st%wfs_type == M_CMPLX) then       
       do i= 1, NP
         if(abs(st%rho(i, is)) >= dmin) then
           lr%X(dl_de)(i, is) = lr%X(dl_de)(i, is)                       &

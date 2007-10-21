@@ -162,7 +162,7 @@ contains
     end if
 
     ! run self consistency
-    if (sys%st%d%wfs_type == M_REAL) then
+    if (sys%st%wfs_type == M_REAL) then
       message(1) = 'Info: SCF using real wavefunctions.'
     else
       message(1) = 'Info: SCF using complex wavefunctions.'

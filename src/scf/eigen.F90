@@ -196,7 +196,7 @@ contains
         write(message(2), '(a)') 'Please provide a different EigenSolver.'
         call write_fatal(2)
       end if
-      if(st%d%wfs_type .eq. M_CMPLX) Then
+      if(st%wfs_type .eq. M_CMPLX) Then
         write(message(1), '(a)') 'The ARPACK diagonalizer does not handle complex wavefunctions (yet).'
         write(message(2), '(a)') 'Please provide a different EigenSolver.'
         call write_fatal(2)
@@ -327,7 +327,7 @@ contains
     if(present(conv)) conv = .false.
     maxiter = eigens%es_maxiter
 
-    if (st%d%wfs_type == M_REAL) then 
+    if (st%wfs_type == M_REAL) then 
       select case(eigens%es_type)
       case(RS_CG_NEW)
         call deigen_solver_cg2_new(gr, st, h, tol, maxiter, &

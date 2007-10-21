@@ -60,6 +60,8 @@ module states_m
     states_null,                      &
     states_end,                       &
     states_copy,                      &
+    states_dim_copy,                  &
+    states_dim_end,                   &
     states_generate_random,           &
     states_fermi,                     &
     states_eigenvalues_sum,           &
@@ -101,7 +103,6 @@ module states_m
     states_distribute_nodes
 
   type states_dim_t
-    integer :: wfs_type             ! real (M_REAL) or complex (M_CMPLX) wavefunctions
     integer :: dim                  ! Dimension of the state (one or two for spinors)
     integer :: nik                  ! Number of irreducible subspaces
     integer :: nik_axis(MAX_DIM)    ! Number of kpoints per axis
@@ -117,6 +118,7 @@ module states_m
     type(states_dim_t) :: d
     integer :: nst                  ! Number of states in each irreducible subspace
 
+    integer :: wfs_type             ! real (M_REAL) or complex (M_CMPLX) wavefunctions
     ! pointers to the wavefunctions 
     FLOAT, pointer :: dpsi(:,:,:,:) ! dpsi(sys%NP_PART, st%d%dim, st%nst, st%d%nik)
     CMPLX, pointer :: zpsi(:,:,:,:) ! zpsi(sys%NP_PART, st%d%dim, st%nst, st%d%nik)
@@ -204,7 +206,7 @@ contains
     nullify(st%st_range, st%st_num)
 
     ! By default, calculations use real wave-functions
-    st%d%wfs_type = M_REAL
+    st%wfs_type = M_REAL
 
     call pop_sub()
   end subroutine states_null
@@ -248,7 +250,7 @@ contains
     if(.not.varinfo_valid_option('SpinComponents', st%d%ispin)) call input_error('SpinComponents')
     call messages_print_var_option(stdout, 'SpinComponents', st%d%ispin)
     ! Use of Spinors requires complex wave-functions
-    if (st%d%ispin == SPINORS) st%d%wfs_type = M_CMPLX
+    if (st%d%ispin == SPINORS) st%wfs_type = M_CMPLX
 
 
     !%Variable ExcessCharge
@@ -319,7 +321,7 @@ contains
     call loct_parse_logical(check_inp('CurrentDFT'), .false., st%d%cdft)
     if (st%d%cdft) then
       ! Use of CDFT requires complex wave-functions
-      st%d%wfs_type = M_CMPLX
+      st%wfs_type = M_CMPLX
 
       if(st%d%ispin == SPINORS) then
         message(1) = "Sorry, Current DFT not working yet for spinors"
@@ -333,11 +335,11 @@ contains
     call states_choose_kpoints(st%d, gr%sb, geo)
 
     ! Periodic systems require complex wave-functions
-    if(simul_box_is_periodic(gr%sb)) st%d%wfs_type = M_CMPLX
+    if(simul_box_is_periodic(gr%sb)) st%wfs_type = M_CMPLX
 
     ! Transport calculations require complex wave-functions.
     if(calc_mode.eq.M_TD_TRANSPORT) then
-      st%d%wfs_type = M_CMPLX
+      st%wfs_type = M_CMPLX
     end if
 
     ! we now allocate some arrays
@@ -588,11 +590,11 @@ contains
 
     if (present(wfs_type)) then
       ASSERT(wfs_type == M_REAL .or. wfs_type == M_CMPLX)
-      st%d%wfs_type = wfs_type
+      st%wfs_type = wfs_type
     end if
 
     n = m%np_part * st%d%dim * st%lnst * st%d%nik
-    if (st%d%wfs_type == M_REAL) then
+    if (st%wfs_type == M_REAL) then
       ALLOCATE(st%dpsi(m%np_part, st%d%dim, st%st_start:st%st_end, st%d%nik), n)
 
       do ik = 1, st%d%nik
@@ -634,7 +636,7 @@ contains
 
     call push_sub('states.states_deallocate_wfns')
 
-    if (st%d%wfs_type == M_REAL) then
+    if (st%wfs_type == M_REAL) then
       deallocate(st%dpsi); nullify(st%dpsi)
     else
       deallocate(st%zpsi); nullify(st%zpsi)
@@ -660,7 +662,7 @@ contains
 
     call push_sub('states.rotate_states')
 
-    if(st%d%wfs_type == M_REAL) then
+    if(st%wfs_type == M_REAL) then
       do ik = 1, st%d%nik
         call lalg_gemm(mesh%np_part*st%d%dim, st%nst, stin%nst, M_ONE, stin%dpsi(:, :, 1:stin%nst, ik), &
                        transpose(real(u(:, :), REAL_PRECISION)), M_ZERO, st%dpsi(:, :, :, ik))
@@ -842,6 +844,49 @@ contains
 
 
   ! ---------------------------------------------------------
+  subroutine states_dim_copy(dout, din)
+    type(states_dim_t), intent(out) :: dout
+    type(states_dim_t), intent(in)  :: din
+    integer :: i
+
+    dout%dim            = din%dim
+    dout%nik            = din%nik
+    dout%nik_axis       = din%nik_axis
+    dout%ispin          = din%ispin
+    dout%nspin          = din%nspin
+    dout%spin_channels  = din%spin_channels
+    dout%cdft           = din%cdft
+    if(associated(din%kpoints)) then
+      i = size(din%kpoints, 1)*size(din%kpoints, 2)
+      ALLOCATE(dout%kpoints(size(din%kpoints, 1), size(din%kpoints, 2)), i)
+      dout%kpoints = din%kpoints
+    end if
+    if(associated(din%kweights)) then
+      i = size(din%kweights, 1)
+      ALLOCATE(dout%kweights(size(din%kweights, 1)), i)
+      dout%kweights = din%kweights
+    end if
+
+  end subroutine states_dim_copy
+  ! ---------------------------------------------------------
+
+
+
+  ! ---------------------------------------------------------
+  subroutine states_dim_end(d)
+    type(states_dim_t), intent(inout) :: d
+    if(associated(d%kpoints)) then
+      deallocate(d%kpoints); nullify(d%kpoints)
+    end if
+
+    if(associated(d%kweights)) then
+      deallocate(d%kweights); nullify(d%kweights)
+    end if
+  end subroutine states_dim_end
+
+
+
+  ! ---------------------------------------------------------
   subroutine states_copy(stout, stin)
     type(states_t), intent(inout) :: stout
     type(states_t), intent(in)  :: stin
@@ -850,14 +895,8 @@ contains
 
     call states_null(stout)
 
-    stout%d%wfs_type = stin%d%wfs_type
-    stout%d%dim = stin%d%dim
-    stout%d%nik = stin%d%nik
-    stout%d%nik_axis(1:MAX_DIM) = stout%d%nik_axis(1:MAX_DIM)
-    stout%d%ispin = stin%d%ispin
-    stout%d%nspin = stin%d%nspin
-    stout%d%spin_channels = stin%d%spin_channels
-    stout%d%cdft = stin%d%cdft
+    stout%wfs_type = stin%wfs_type
+    call states_dim_copy(stout%d, stin%d)
     stout%nst           = stin%nst
     stout%qtot = stin%qtot
     stout%val_charge = stin%val_charge
@@ -922,16 +961,6 @@ contains
       ALLOCATE(stout%momentum(size(stin%momentum, 1), size(stin%momentum, 2), size(stin%momentum, 3)), i)
       stout%momentum = stin%momentum
     end if
-    if(associated(stin%d%kpoints)) then
-      i = size(stin%d%kpoints, 1)*size(stin%d%kpoints, 2)
-      ALLOCATE(stout%d%kpoints(size(stin%d%kpoints, 1), size(stin%d%kpoints, 2)), i)
-      stout%d%kpoints = stin%d%kpoints
-    end if
-    if(associated(stin%d%kweights)) then
-      i = size(stin%d%kweights, 1)
-      ALLOCATE(stout%d%kweights(size(stin%d%kweights, 1)), i)
-      stout%d%kweights = stin%d%kweights
-    end if
     if(associated(stin%node)) then
       i = size(stin%node)
       ALLOCATE(stout%node(size(stin%node)), i)
@@ -985,13 +1014,7 @@ contains
       deallocate(st%zpsi); nullify(st%zpsi)
     end if
 
-    if(associated(st%d%kpoints)) then
-      deallocate(st%d%kpoints); nullify(st%d%kpoints)
-    end if
-
-    if(associated(st%d%kweights)) then
-      deallocate(st%d%kweights); nullify(st%d%kweights)
-    end if
+    call states_dim_end(st%d)
 
     if(associated(st%user_def_states)) then
       deallocate(st%user_def_states); nullify(st%user_def_states)
@@ -1047,7 +1070,7 @@ contains
         !$omp parallel do private(c)
         do i = 1, np
 
-          if (st%d%wfs_type == M_REAL) then
+          if (st%wfs_type == M_REAL) then
             rho(i, 1) = rho(i, 1) + st%d%kweights(ik)  *st%occ(p, ik)*abs(st%dpsi(i, 1, p, ik))**2
           else
             rho(i, 1) = rho(i, 1) + st%d%kweights(ik)  *st%occ(p, ik)*abs(st%zpsi(i, 1, p, ik))**2
@@ -1056,7 +1079,7 @@ contains
           select case(st%d%ispin)
 
           case(SPIN_POLARIZED)
-            if (st%d%wfs_type == M_REAL) then
+            if (st%wfs_type == M_REAL) then
               rho(i, 2) = rho(i, 2) + st%d%kweights(ik+1)*st%occ(p, ik+1)*abs(st%dpsi(i, 1, p, ik+1))**2
             else
               rho(i, 2) = rho(i, 2) + st%d%kweights(ik+1)*st%occ(p, ik+1)*abs(st%zpsi(i, 1, p, ik+1))**2
@@ -1119,7 +1142,7 @@ contains
 
       do ik = 1, st%d%nik
         do ist = ist_start, ist_end
-          if (st%d%wfs_type == M_REAL) then
+          if (st%wfs_type == M_REAL) then
             call dmf_random(m, st%dpsi(:, 1, ist, ik), seed)
           else
             call zmf_random(m, st%zpsi(:, 1, ist, ik), seed)
@@ -1130,7 +1153,7 @@ contains
 
     case(SPINORS)
 
-      ASSERT(st%d%wfs_type == M_CMPLX)
+      ASSERT(st%wfs_type == M_CMPLX)
 
       if(st%fixed_spins) then
         do ik = 1, st%d%nik
@@ -1177,7 +1200,7 @@ contains
     ! Do not orthonormalize if we have parallelization in states.
     if(.not.st%parallel_in_states) then
       do ik = 1, st%d%nik
-        if (st%d%wfs_type == M_REAL) then
+        if (st%wfs_type == M_REAL) then
           call dstates_gram_schmidt(ist_end, m, st%d%dim, st%dpsi(:,:,1:ist_end,ik), start = ist_start)
         else
           call zstates_gram_schmidt(ist_end, m, st%d%dim, st%zpsi(:,:,1:ist_end,ik), start = ist_start)
@@ -1212,7 +1235,7 @@ contains
       if(st%d%ispin == SPINORS) then
         do ik = 1, st%d%nik
           do ie = st%st_start, st%st_end
-            if (st%d%wfs_type == M_REAL) then
+            if (st%wfs_type == M_REAL) then
               write(message(1),'(a)') 'Internal error in states_fermi'
               call write_fatal(1)
             else
@@ -2129,14 +2152,14 @@ contains
   ! ---------------------------------------------------------
   logical function wfs_are_complex(st) result (wac)
     type(states_t),    intent(in) :: st
-    wac = (st%d%wfs_type == M_CMPLX)
+    wac = (st%wfs_type == M_CMPLX)
   end function wfs_are_complex
 
 
   ! ---------------------------------------------------------
   logical function wfs_are_real(st) result (war)
     type(states_t),    intent(in) :: st
-    war = (st%d%wfs_type == M_REAL)
+    war = (st%wfs_type == M_REAL)
   end function wfs_are_real
 
 
@@ -2170,7 +2193,7 @@ contains
 
     call push_sub('states.states_paramagnetic_current')
 
-    ASSERT(st%d%wfs_type == M_CMPLX)
+    ASSERT(st%wfs_type == M_CMPLX)
 
     if(st%d%ispin == SPIN_POLARIZED) then
       sp = 2

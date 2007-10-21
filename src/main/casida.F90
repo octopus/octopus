@@ -189,7 +189,7 @@ contains
     call casida_write(cas, 'casida')
 
     ! Calculate and write the transition matrix
-    if (sys%st%d%wfs_type == M_REAL) then
+    if (sys%st%wfs_type == M_REAL) then
       call dget_transition_densities(cas, sys, trandens)
     else
       call zget_transition_densities(cas, sys, trandens)
@@ -506,7 +506,7 @@ contains
         end do
 
         ALLOCATE(deltav(m%np), m%np)
-        if (st%d%wfs_type == M_REAL) then
+        if (st%wfs_type == M_REAL) then
           ALLOCATE(dx(cas%n_pairs), cas%n_pairs)
           do k = 1, m%sb%dim
             deltav(1:m%np) = m%x(1:m%np, k)
@@ -564,7 +564,7 @@ contains
       ALLOCATE(rho_i(m%np), m%np)
       ALLOCATE(rho_j(m%np), m%np)
 
-      if (st%d%wfs_type == M_REAL) then
+      if (st%wfs_type == M_REAL) then
         rho_i(1:m%np) =  st%dpsi(1:m%np, 1, i, sigma) * st%dpsi(1:m%np, 1, a, sigma)
         rho_j(1:m%np) =  st%dpsi(1:m%np, 1, j, mu) * st%dpsi(1:m%np, 1, b, mu)
       else

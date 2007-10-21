@@ -58,7 +58,7 @@ subroutine X(lr_output) (st, gr, lr, dir, tag, isigma, outp)
       deallocate(tmp)
     end if
 
-    if( (iand(outp%what, output_current).ne.0) .and. (st%d%wfs_type == M_CMPLX) )then
+    if( (iand(outp%what, output_current).ne.0) .and. (st%wfs_type == M_CMPLX) )then
       do is = 1, st%d%nspin
         do idim = 1, NDIM
           write(fname, '(a,i1,a,i1,a,a)') 'lr_current-', is, '-', tag, '-',  index2axis(idim)

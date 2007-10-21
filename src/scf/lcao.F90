@@ -145,9 +145,9 @@ contains
     lcao_data%st%d%dim = st%d%dim
     lcao_data%st%d%nik = st%d%nik
     lcao_data%st%d%ispin = st%d%ispin
-    call states_allocate_wfns(lcao_data%st, gr%m, st%d%wfs_type)
+    call states_allocate_wfns(lcao_data%st, gr%m, st%wfs_type)
 
-    if (lcao_data%st%d%wfs_type == M_REAL) then
+    if (lcao_data%st%wfs_type == M_REAL) then
       call dlcao_init(lcao_data, gr, geo, h, norbs)
     else
       call zlcao_init(lcao_data, gr, geo, h, norbs)
@@ -168,7 +168,7 @@ contains
 
     call push_sub('lcao.lcao_end')
 
-    wfs_type = lcao_data%st%d%wfs_type
+    wfs_type = lcao_data%st%wfs_type
 
     if(lcao_data%st%nst >= nst) then
       if(wfs_type == M_REAL) then
@@ -214,7 +214,7 @@ contains
     start_ = 1
     if(present(start)) start_ = start
 
-    if (lcao_data%st%d%wfs_type == M_REAL) then
+    if (lcao_data%st%wfs_type == M_REAL) then
       call dlcao_wf(lcao_data, st, gr, h, start_)
     else
       call zlcao_wf(lcao_data, st, gr, h, start_)

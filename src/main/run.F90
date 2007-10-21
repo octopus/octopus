@@ -130,9 +130,8 @@ contains
     if(calc_mode .ne. M_PULPO_A_FEIRA) then
       call units_init()
       call get_parallel_mask()
-
       call system_init(sys, parallel_mask)
-      call hamiltonian_init(h, sys%gr, sys%geo, sys%st%d, sys%ks%ip_app)
+      call hamiltonian_init(h, sys%gr, sys%geo, sys%st%d, sys%st%wfs_type, sys%ks%ip_app)
       call epot_generate(h%ep, sys%gr, sys%geo, sys%mc, sys%st, h%reltype)
       call restart_init()
     end if

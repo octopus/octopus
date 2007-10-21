@@ -230,7 +230,7 @@ contains
     if(h%self_induced_magnetic) call magnetic_induced(gr, st, h%a_ind, h%b_ind)
 
     if(present(calc_eigenval)) then
-      if (st%d%wfs_type == M_REAL) then
+      if (st%wfs_type == M_REAL) then
         call dhamiltonian_eigenval(h, gr, st)
       else
         call zhamiltonian_eigenval(h, gr, st)
@@ -305,7 +305,7 @@ contains
       deallocate(rho)
 
       ! The OEP family has to handle specially
-      if (st%d%wfs_type == M_REAL) then
+      if (st%wfs_type == M_REAL) then
         call dxc_oep_calc(ks%oep, ks%xc, (ks%sic_type==sic_pz),  &
              gr, h, st, h%vxc, h%ex, h%ec)
       else

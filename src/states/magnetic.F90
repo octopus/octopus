@@ -166,7 +166,7 @@ contains
 
     ! If the states are real, we should never have reached here, but
     ! just in case we return zero.
-    if(st%d%wfs_type .eq. M_REAL) then
+    if(st%wfs_type .eq. M_REAL) then
       a_ind = M_ZERO
       b_ind = M_ZERO
       call pop_sub(); return

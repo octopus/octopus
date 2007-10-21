@@ -243,7 +243,7 @@ subroutine X(states_calc_momentum)(gr, st)
 
         ! In the case of real wave functions we do not include the 
         ! -i prefactor of p = -i \nabla
-        if (st%d%wfs_type == M_REAL) then
+        if (st%wfs_type == M_REAL) then
           st%momentum(i, ist, ik) = real( expect_val_p )
         else
           st%momentum(i, ist, ik) = real( -M_zI*expect_val_p )
