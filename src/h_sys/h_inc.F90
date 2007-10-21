@@ -74,7 +74,7 @@ subroutine X(hpsi) (h, gr, psi, hpsi, ik, t, E)
 
   do idim = 1, h%d%dim
     !$omp parallel workshare
-    hpsi(1:NP, idim) = M_ZERO
+    hpsi(:, idim) = M_ZERO
     !$omp end parallel workshare
   end do
   
