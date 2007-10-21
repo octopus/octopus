@@ -41,11 +41,15 @@ module profiling_m
     profiling_output
 
 
-  !/* To use the profiling module you simply have to define a profile_t
-  !object and initialize it using the method profile_init (the second
-  !argument is the label of the profile). Then call profiling_in and
-  !profiling_out around the regions you want to profile. The objects
-  !need not be destroyed as this is done by profiling_end.
+  !/* To use the profiling module you simply have to define a
+  !profile_t object (with the save attribute). To initialize it you
+  !can use the method profile_init (the second argument is the label
+  !of the profile) or use implicit initialization, by passing the
+  !optional label argument to profiling_in. 
+  !
+  !To profile, call profiling_in and profiling_out around the regions
+  !you want to profile. The objects need not be destroyed as this is
+  !done by profiling_end.
   !
   !This module work in the following way: 
   !
@@ -98,7 +102,7 @@ module profiling_m
   
   !For the moment we will have the profiler object here, but they
   !should be moved to their respective modules.
-  !i.e. DO NOT PUT NEW PROFILES HERE UNLESS IS NECESSARY
+  !i.e. DO NOT PUT NEW PROFILES HERE
 
   type(profile_t), save, public :: &
        C_PROFILING_COMPLETE_DATASET, &
@@ -131,9 +135,7 @@ module profiling_m
        C_PROFILING_EIGEN_SOLVER,          &
        C_PROFILING_DISK_ACCESS,           &
        C_PROFILING_LCAO,                  &
-       C_PROFILING_LCAO_INIT,             &
-       C_PROFILING_FORCES,                &
-       C_PROFILING_EPOT_GENERATE
+       C_PROFILING_LCAO_INIT
 
   type(profile_t), save, public ::              &
        C_PROFILING_ELEC_PROPAGATOR,       &
@@ -205,8 +207,6 @@ contains
       call profile_init(C_PROFILING_DISK_ACCESS,      'DISK_ACCESS')
       call profile_init(C_PROFILING_LCAO,             'LCAO')
       call profile_init(C_PROFILING_LCAO_INIT,        'LCAO_INIT')
-      call profile_init(C_PROFILING_FORCES,           'FORCES')
-      call profile_init(C_PROFILING_EPOT_GENERATE,    'EPOT_GENERATE')
       call profile_init(C_PROFILING_ELEC_PROPAGATOR,  'ELEC_PROPAGATOR')
       call profile_init(C_PROFILING_LOBPCG_BLOCKT,    'LOBPCG_BLOCKT ')
       call profile_init(C_PROFILING_LOBPCG_BLOCK_MATR,'LOBPCG_BLOCK_MATR')

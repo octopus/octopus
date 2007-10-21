@@ -28,6 +28,9 @@ subroutine X(preconditioner_apply)(pre, gr, h, a, b, omega)
   
   integer :: idim
   FLOAT   :: omega_
+  type(profile_t), save :: preconditioner_prof
+
+  call profiling_in(preconditioner_prof, "PRECONDITIONER")
 
   omega_ = M_ZERO
   if(present(omega)) omega_ = omega
@@ -55,6 +58,8 @@ subroutine X(preconditioner_apply)(pre, gr, h, a, b, omega)
   case(PRE_INCOMPLETE_INVERSE)
     call incomplete_inverse()
   end select
+
+  call profiling_out(preconditioner_prof)
 
 contains
   subroutine incomplete_inverse()

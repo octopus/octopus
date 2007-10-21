@@ -29,6 +29,7 @@ module mesh_m
   use messages_m
   use mpi_m
   use par_vec_m
+  use profiling_m
   use simul_box_m
   use units_m
 
@@ -146,6 +147,7 @@ module mesh_m
     RIGHT_BOUNDARY_Z  =  6,          &
     MAX_BOUNDARY_DIM  = RIGHT_BOUNDARY_Z
 
+  type(profile_t), save :: mesh_init_prof
 
 contains
 

@@ -247,7 +247,11 @@ subroutine FNAME(copy_1)(n1, dx, dy)
 
 #ifdef USE_OMP
   integer :: ini, nn_loc
+#endif
 
+  call profiling_in(copy_profile, "BLAS_COPY")
+
+#ifdef USE_OMP
   !$omp parallel private(ini, nn_loc)
   call divide_range(n1, omp_get_thread_num(), omp_get_num_threads(), ini, nn_loc)
   call blas_copy(nn_loc, dx(ini), 1, dy(ini), 1)
@@ -256,6 +260,8 @@ subroutine FNAME(copy_1)(n1, dx, dy)
   call blas_copy(n1, dx(1), 1, dy(1), 1)
 #endif
 
+  call profiling_out(copy_profile)
+
 end subroutine FNAME(copy_1)
 
 subroutine FNAME(copy_2)(n1, n2, dx, dy)
@@ -263,7 +269,11 @@ subroutine FNAME(copy_2)(n1, n2, dx, dy)
   TYPE1,   intent(in)  :: dx(:,:)
   TYPE1,   intent(out) :: dy(:,:)
 
+  call profiling_in(copy_profile, "BLAS_COPY")
+
   call blas_copy(n1*n2, dx(1,1), 1, dy(1,1), 1)
+
+  call profiling_out(copy_profile)
 
 end subroutine FNAME(copy_2)
 
@@ -272,7 +282,11 @@ subroutine FNAME(copy_3)(n1, n2, n3, dx, dy)
   TYPE1,   intent(in)  :: dx(:,:,:)
   TYPE1,   intent(out) :: dy(:,:,:)
 
+  call profiling_in(copy_profile, "BLAS_COPY")
+
   call blas_copy (n1*n2*n3, dx(1,1,1), 1, dy(1,1,1), 1)
+
+  call profiling_out(copy_profile)
 
 end subroutine FNAME(copy_3)
 
@@ -281,7 +295,11 @@ subroutine FNAME(copy_4)(n1, n2, n3, n4, dx, dy)
   TYPE1,   intent(in)  :: dx(:,:,:,:)
   TYPE1,   intent(out) :: dy(:,:,:,:)
 
+  call profiling_in(copy_profile, "BLAS_COPY")
+
   call blas_copy (n1*n2*n3*n4, dx(1,1,1,1), 1, dy(1,1,1,1), 1)
+
+  call profiling_out(copy_profile)
 
 end subroutine FNAME(copy_4)
 

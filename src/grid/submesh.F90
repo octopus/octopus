@@ -24,6 +24,7 @@ module submesh_m
   use messages_m
   use mesh_m
   use mpi_m
+  use profiling_m
   use simul_box_m
 
   implicit none
@@ -70,8 +71,10 @@ contains
     
     FLOAT :: r2
     integer :: ii, is, ip
+    type(profile_t), save :: submesh_init_prof
 
     call push_sub('submesh.submesh_init_sphere')
+    call profiling_in(submesh_init_prof, "SUBMESH_INIT")
 
     this%np_part = m%np_part
 
@@ -108,7 +111,7 @@ contains
     do ip = 1, m%np_part
       if( this%jxyz_inv(ip) /= 0 ) this%jxyz(this%jxyz_inv(ip)) = ip
     end do
-
+    call profiling_out(submesh_init_prof)
     call pop_sub()
 
   end subroutine submesh_init_sphere

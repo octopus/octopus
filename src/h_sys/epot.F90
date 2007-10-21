@@ -636,8 +636,9 @@ contains
     type(mesh_t),      pointer :: m
     type(simul_box_t), pointer :: sb
     type(submesh_t)  :: nl_sphere
+    type(profile_t), save :: projector_build_prof, epot_generate_prof
 
-    call profiling_in(C_PROFILING_EPOT_GENERATE)
+    call profiling_in(epot_generate_prof, "EPOT_GENERATE")
     call push_sub('epot.epot_generate')
 
     sb  => gr%sb
@@ -751,7 +752,7 @@ contains
     end if
 
     call pop_sub()
-    call profiling_out(C_PROFILING_EPOT_GENERATE)
+    call profiling_out(epot_generate_prof)
 
   contains
 
@@ -759,7 +760,11 @@ contains
 #ifdef HAVE_MPI
       integer :: rank, size, ini, fin, mpi_err
       integer, allocatable :: rep(:)
+#endif
       
+      call profiling_in(projector_build_prof, "PROJECTOR_BUILD")
+
+#ifdef HAVE_MPI      
       if (.not. (ep%parallel_generate .and. multicomm_strategy_is_parallel(mc, P_STRATEGY_STATES))) then
 #endif
 
@@ -797,6 +802,7 @@ contains
     end if
 
 #endif
+    call profiling_out(projector_build_prof)
     end subroutine projector_build_all
 
   end subroutine epot_generate
@@ -920,16 +926,18 @@ contains
     integer :: i, j, l
     FLOAT :: d, r, zi, zj, x(MAX_DIM), time
     type(atom_t), pointer :: atm
+    
+    type(profile_t), save :: forces_prof
 
 #if defined(HAVE_MPI)
     FLOAT :: f(MAX_DIM)
 #endif
 
+    call profiling_in(forces_prof, "FORCES")
+    call push_sub('epot.epot_forces')
+
     time = M_ZERO
     if(present(t)) time = t
-
-    call profiling_in(C_PROFILING_FORCES)
-    call push_sub('epot.epot_forces')
 
     ! init to 0
     do i = 1, geo%natoms
@@ -1002,7 +1010,7 @@ contains
 
 
     call pop_sub()
-    call profiling_out(C_PROFILING_FORCES)
+    call profiling_out(forces_prof)
 
 #ifdef HAVE_FFT
 

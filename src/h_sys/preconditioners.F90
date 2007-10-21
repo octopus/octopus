@@ -30,6 +30,7 @@ module preconditioners_m
   use messages_m
   use nl_operator_m
   use poisson_m
+  use profiling_m
   use stencil_star_m
   use varinfo_m
 

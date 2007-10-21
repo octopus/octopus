@@ -31,6 +31,7 @@ subroutine mesh_init_stage_1(sb, mesh, geo, cv, enlarge)
   logical :: out
 
   call push_sub('mesh_init.mesh_init_stage_1')
+  call profiling_in(mesh_init_prof, "MESH_INIT")
 
   mesh%sb => sb   ! keep an internal pointer
   mesh%h  =  sb%h ! this number can change in the following
@@ -61,7 +62,7 @@ subroutine mesh_init_stage_1(sb, mesh, geo, cv, enlarge)
   end do
 
   mesh%l(:) = mesh%nr(2, :) - mesh%nr(1, :) + 1
-
+  call profiling_out(mesh_init_prof)
   call pop_sub()
 end subroutine mesh_init_stage_1
 
@@ -77,6 +78,7 @@ subroutine mesh_init_stage_2(sb, mesh, geo, cv)
   FLOAT   :: chi(MAX_DIM)
 
   call push_sub('mesh_init.mesh_init_stage_2')
+  call profiling_in(mesh_init_prof)
 
   ! enlarge mesh in the non-periodic dimensions
   mesh%nr(1,:) = mesh%nr(1,:) - mesh%enlarge(:)
@@ -140,6 +142,7 @@ subroutine mesh_init_stage_2(sb, mesh, geo, cv)
   mesh%np_part_global = il
   mesh%np_global      = ik
 
+  call profiling_out(mesh_init_prof)
   call pop_sub()
 end subroutine mesh_init_stage_2
 
@@ -159,6 +162,7 @@ subroutine mesh_init_stage_3(mesh, geo, cv, stencil, np_stencil, mpi_grp)
   type(mpi_grp_t), optional,  intent(in) :: mpi_grp
 
   call push_sub('mesh_init.mesh_init_stage_3')
+  call profiling_in(mesh_init_prof)
 
   ! check if we are running in parallel in domains
   mesh%parallel_in_domains = .false.
@@ -183,6 +187,7 @@ subroutine mesh_init_stage_3(mesh, geo, cv, stencil, np_stencil, mpi_grp)
   ! these large arrays were allocated in mesh_init_1, and are no longer needed
   deallocate(mesh%Lxyz_tmp, mesh%x_tmp)
 
+  call profiling_out(mesh_init_prof)
   call pop_sub()
 
 contains
