@@ -270,10 +270,17 @@ contains
 
       ALLOCATE(zpsi1 (NP_PART, h%d%dim), NP_PART*h%d%dim)
       ALLOCATE(hzpsi1(NP,      h%d%dim), NP     *h%d%dim)
+
       zfact = M_z1
       do idim = 1, h%d%dim
         call lalg_copy(NP, zpsi(:, idim), zpsi1(:, idim))
+#ifdef USE_OMP
+        !$omp parallel workshare
+        hzpsi1(1:NP, idim) = M_ZERO
+        !$omp end parallel workshare
+#endif
       end do
+
       do i = 1, te%exp_order
         zfact = zfact*(-M_zI*timestep)/i
         call operate(zpsi1, hzpsi1)

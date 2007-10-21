@@ -343,15 +343,15 @@ contains
     call dextrapolate(2, NP, st%d%nspin, tr%v_old(:, :, 1:3), tr%v_old(:, :, 0), dt, dt)
     select case(tr%method)
 #if defined(HAVE_FFT)
-    case(PROP_SPLIT_OPERATOR);          call td_rti0
-    case(PROP_SUZUKI_TROTTER);          call td_rti1
+    case(PROP_SPLIT_OPERATOR);          call td_split_operator
+    case(PROP_SUZUKI_TROTTER);          call td_suzuki_trotter
 #endif
-    case(PROP_REVERSAL);                call td_rti2
-    case(PROP_APP_REVERSAL);            call td_rti3
-    case(PROP_EXPONENTIAL_MIDPOINT);    call td_rti4
-    case(PROP_CRANK_NICHOLSON);         call td_rti5
-    case(PROP_MAGNUS);                  call td_rti6
-    case(PROP_CRANK_NICHOLSON_SRC_MEM); call td_rti7
+    case(PROP_REVERSAL);                call td_reversal
+    case(PROP_APP_REVERSAL);            call td_app_reversal
+    case(PROP_EXPONENTIAL_MIDPOINT);    call td_exponential_midpoint
+    case(PROP_CRANK_NICHOLSON);         call td_crank_nicholson
+    case(PROP_MAGNUS);                  call td_magnus
+    case(PROP_CRANK_NICHOLSON_SRC_MEM); call td_crank_nicholson_src_mem
     end select
 
     if(self_consistent) then
@@ -377,15 +377,15 @@ contains
         st%zpsi = zpsi1
         select case(tr%method)
 #if defined(HAVE_FFT)
-        case(PROP_SPLIT_OPERATOR);          call td_rti0
-        case(PROP_SUZUKI_TROTTER);          call td_rti1
+        case(PROP_SPLIT_OPERATOR);          call td_split_operator
+        case(PROP_SUZUKI_TROTTER);          call td_suzuki_trotter
 #endif
-        case(PROP_REVERSAL);                call td_rti2
-        case(PROP_APP_REVERSAL);            call td_rti3
-        case(PROP_EXPONENTIAL_MIDPOINT);    call td_rti4
-        case(PROP_CRANK_NICHOLSON);         call td_rti5
-        case(PROP_MAGNUS);                  call td_rti6
-        case(PROP_CRANK_NICHOLSON_SRC_MEM); call td_rti7
+        case(PROP_REVERSAL);                call td_reversal
+        case(PROP_APP_REVERSAL);            call td_app_reversal
+        case(PROP_EXPONENTIAL_MIDPOINT);    call td_exponential_midpoint
+        case(PROP_CRANK_NICHOLSON);         call td_crank_nicholson
+        case(PROP_MAGNUS);                  call td_magnus
+        case(PROP_CRANK_NICHOLSON_SRC_MEM); call td_crank_nicholson_src_mem
         end select
       end do
 
@@ -400,9 +400,9 @@ contains
 #if defined(HAVE_FFT)
     ! ---------------------------------------------------------
     ! Split operator.
-    subroutine td_rti0
+    subroutine td_split_operator
       integer :: ik, ist
-      call push_sub('td_rti.td_rti0')
+      call push_sub('td_rti.td_split_operator')
 
       do ik = 1, st%d%nik
         do ist = 1, st%nst
@@ -425,16 +425,16 @@ contains
       end do
 
       call pop_sub()
-    end subroutine td_rti0
+    end subroutine td_split_operator
 
 
     ! ---------------------------------------------------------
     ! Suzuki-Trotter.
-    subroutine td_rti1
+    subroutine td_suzuki_trotter
       FLOAT :: p, pp(5), time(5), dtime(5)
       integer :: ik, ist, k
 
-      call push_sub('td_rti.td_rti1')
+      call push_sub('td_rti.td_suzuki_trotter')
 
       p = M_ONE/(M_FOUR - M_FOUR**(M_THIRD))
       pp = (/ p, p, M_ONE-M_FOUR*p, p, p /)
@@ -462,22 +462,29 @@ contains
       end do
 
       call pop_sub()
-    end subroutine td_rti1
+    end subroutine td_suzuki_trotter
 #endif
 
 
     ! ---------------------------------------------------------
     ! Propagator with enforced time-reversal symmetry
-    subroutine td_rti2
+    subroutine td_reversal
       FLOAT, allocatable :: vhxc_t1(:,:), vhxc_t2(:,:)
       CMPLX, allocatable :: zpsi1(:,:,:,:)
-      integer :: ik, ist
+      integer :: ik, ist, idim
 
-      call push_sub('td_rti.td_rti2')
+      call push_sub('td_rti.td_reversal')
 
       if(.not.h%ip_app) then
         ALLOCATE(zpsi1(NP_PART, st%d%dim, st%st_start:st%st_end, st%d%nik), NP_PART*st%lnst*st%d%nik)
-        zpsi1 = st%zpsi ! store zpsi
+
+        do ik = 1, st%d%nik
+          do ist = st%st_start, st%st_end
+            do idim = 1, st%d%dim
+              call lalg_copy(NP, st%zpsi(:, idim, ist, ik), zpsi1(:, idim, ist, ik))
+            end do
+          end do
+        end do
 
         ALLOCATE(vhxc_t1(NP, st%d%nspin), NP*st%d%nspin)
         ALLOCATE(vhxc_t2(NP, st%d%nspin), NP*st%d%nspin)
@@ -493,7 +500,13 @@ contains
         call states_calc_dens(st, NP, st%rho)
         call v_ks_calc(gr, ks, h, st)
 
-        st%zpsi = zpsi1
+        do ik = 1, st%d%nik
+          do ist = st%st_start, st%st_end
+            do idim = 1, st%d%dim
+              call lalg_copy(NP, zpsi1(:, idim, ist, ik), st%zpsi(:, idim, ist, ik))
+            end do
+          end do
+        end do
         deallocate(zpsi1)
 
         vhxc_t2 = h%vhxc
@@ -518,15 +531,15 @@ contains
       if(.not.h%ip_app) deallocate(vhxc_t1, vhxc_t2)
 
       call pop_sub()
-    end subroutine td_rti2
+    end subroutine td_reversal
 
 
     ! ---------------------------------------------------------
     ! Propagator with approximate enforced time-reversal symmetry
-    subroutine td_rti3
+    subroutine td_app_reversal
       integer ik, ist
 
-      call push_sub('td_rti.td_rti3')
+      call push_sub('td_rti.td_app_reversal')
 
       do ik = 1, st%d%nik
         do ist = st%st_start, st%st_end
@@ -542,15 +555,15 @@ contains
       end do
 
       call pop_sub()
-    end subroutine td_rti3
+    end subroutine td_app_reversal
 
 
     ! ---------------------------------------------------------
     ! Exponential midpoint
-    subroutine td_rti4
+    subroutine td_exponential_midpoint
       integer :: ist, ik
 
-      call push_sub('td_rti.td_rti4')
+      call push_sub('td_rti.td_exponential_midpoint')
 
       if(.not.h%ip_app) then
         call dextrapolate(2, NP, st%d%nspin, tr%v_old(:, :, 0:2), h%vhxc, dt, -dt/M_TWO)
@@ -563,18 +576,18 @@ contains
       end do
 
       call pop_sub()
-    end subroutine td_rti4
+    end subroutine td_exponential_midpoint
 
 
     ! ---------------------------------------------------------
     ! Crank-Nicholson propagator
-    subroutine td_rti5
+    subroutine td_crank_nicholson
 #ifdef HAVE_SPARSKIT
       FLOAT, allocatable :: vhxc_t1(:,:), vhxc_t2(:,:)
       CMPLX, allocatable :: zpsi_rhs_pred(:,:,:,:), zpsi_rhs_corr(:,:,:,:)
       integer :: ik, ist, idim, isize
 
-      call push_sub('td_rti.td_rti5')
+      call push_sub('td_rti.td_crank_nicholson')
 
       isize = NP_PART*st%lnst*st%d%nik*st%d%dim
       ALLOCATE(zpsi_rhs_corr(NP_PART, 1:st%d%dim, st%st_start:st%st_end, 1:st%d%nik), isize)
@@ -652,17 +665,17 @@ contains
 
       call pop_sub()
 #endif
-    end subroutine td_rti5
+    end subroutine td_crank_nicholson
 
 
     ! ---------------------------------------------------------
     ! Magnus propagator
-    subroutine td_rti6
+    subroutine td_magnus
       integer :: j, is, ist, k, i
       FLOAT :: time(2)
       FLOAT, allocatable :: vaux(:, :, :), pot(:)
 
-      call push_sub('td_rti.td_rti6')
+      call push_sub('td_rti.td_magnus')
 
       ALLOCATE(vaux(NP, st%d%nspin, 2), NP*st%d%nspin*2)
 
@@ -708,19 +721,19 @@ contains
 
       deallocate(vaux)
       call pop_sub()
-    end subroutine td_rti6
+    end subroutine td_magnus
 
 
     ! ---------------------------------------------------------
     ! Crank-Nicholson scheme with source and memory term.
-    subroutine td_rti7()
-      call push_sub('td_rti.td_rti7')
+    subroutine td_crank_nicholson_src_mem()
+      call push_sub('td_rti.td_crank_nicholson_src_mem')
       
       call cn_src_mem_dt(tr%trans%intface, tr%trans%mem_coeff, tr%trans%st_intface, &
         ks, h, st, gr, dt, t, max_iter)
 
       call pop_sub()
-    end subroutine td_rti7
+    end subroutine td_crank_nicholson_src_mem
   end subroutine td_rti_dt
 
 

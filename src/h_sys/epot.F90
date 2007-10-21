@@ -817,9 +817,15 @@ contains
     call push_sub('epot.build_local_part_in_real_space')
 
     ALLOCATE(vl(1:NP_PART), NP_PART)
+#ifdef USE_OMP
+    !$omp parallel workshare
+    vl(1:NP) = M_ZERO
+    !$omp end parallel workshare
+#endif
 
     !Local potential
     call specie_get_local(a%spec, gr, a%x(1:NDIM), vl, time)
+
     !$omp parallel workshare
     vpsl(1:NP) = vpsl(1:NP) + vl(1:NP)
     !$omp end parallel workshare
@@ -851,7 +857,9 @@ contains
 
       call specie_get_density(a%spec, a%x, gr, geo, rho)
       call dpoisson_solve(gr, vl, rho)
+      !$omp parallel workshare
       vpsl(1:NP) = vpsl(1:NP) + vl(1:NP)
+      !$omp end parallel workshare
 
       deallocate(rho)
 

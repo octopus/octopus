@@ -1035,10 +1035,16 @@ contains
       sp = 1
     end if
 
-    rho = M_ZERO
+    do i = 1, st%d%nspin
+      !$omp parallel workshare
+      rho(1:np, i) = M_ZERO
+      !$omp end parallel workshare
+    end do
+
     do ik = 1, st%d%nik, sp
       do p  = st%st_start, st%st_end
 
+        !$omp parallel do private(c)
         do i = 1, np
 
           if (st%d%wfs_type == M_REAL) then
@@ -1046,6 +1052,7 @@ contains
           else
             rho(i, 1) = rho(i, 1) + st%d%kweights(ik)  *st%occ(p, ik)*abs(st%zpsi(i, 1, p, ik))**2
           end if
+
           select case(st%d%ispin)
 
           case(SPIN_POLARIZED)
@@ -1063,6 +1070,7 @@ contains
           end select
 
         end do
+        !$omp end parallel do
       end do
     end do
 
@@ -1073,7 +1081,7 @@ contains
       do i = 1, st%d%nspin
         call MPI_Allreduce(rho(1, i), reduce_rho(1), np, &
            MPI_FLOAT, MPI_SUM, st%mpi_grp%comm, mpi_err)
-        rho(1:np, i) = reduce_rho(1:np)
+        call lalg_copy(np, reduce_rho, rho(:, i))
       end do
       deallocate(reduce_rho)
     end if

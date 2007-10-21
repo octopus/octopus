@@ -56,9 +56,11 @@ subroutine X(hpsi) (h, gr, psi, hpsi, ik, t, E)
   type(grid_t),        intent(inout) :: gr
   integer,             intent(in)    :: ik
   R_TYPE,              intent(inout) :: psi(:,:)  ! psi(NP_PART, h%d%dim)
-  R_TYPE,              intent(out)   :: hpsi(:,:) ! hpsi(NP_PART, h%d%dim)
+  R_TYPE,              intent(out)   :: hpsi(:,:) ! hpsi(NP, h%d%dim)
   FLOAT, optional,     intent(in)    :: t
   FLOAT, optional,     intent(in)    :: E
+
+  integer :: idim
 
   call profiling_in(C_PROFILING_HPSI)
   call push_sub('h_inc.Xhpsi')
@@ -70,8 +72,12 @@ subroutine X(hpsi) (h, gr, psi, hpsi, ik, t, E)
     call write_fatal(1)
   end if
 
-  hpsi = R_TOTYPE(M_ZERO)
-
+  do idim = 1, h%d%dim
+    !$omp parallel workshare
+    hpsi(1:NP, idim) = M_ZERO
+    !$omp end parallel workshare
+  end do
+  
 #if defined(HAVE_LIBNBC)
   if(gr%m%parallel_in_domains) then
     call X(kinetic_prepare)(h, gr, psi)
@@ -98,7 +104,9 @@ subroutine X(hpsi) (h, gr, psi, hpsi, ik, t, E)
 
   if(present(E)) then
     ! compute (H-E) psi = hpsi
-    hpsi = hpsi - E*psi
+    do idim = 1, h%d%dim
+      call lalg_axpy(NP, E, psi(:, idim), hpsi(:, idim))
+    end do
   end if
   
   call pop_sub()
@@ -279,12 +287,6 @@ subroutine X(kinetic_calculate) (h, gr, psi, hpsi, ik)
       end do
     end do
     deallocate(grad)
-#else
-    idim = ik ! This lines sole purpose is to avoid unsed variable messages
-              ! if R_TCOMPLEX is undefined.
-    message(1) = "Real wave-function for ground state not yet implemented for polymers:"
-    message(2) = "use complex wave-functions instead."
-    call write_fatal(2)
 #endif
   else
     do idim = 1, h%d%dim
