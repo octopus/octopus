@@ -110,7 +110,7 @@ contains
     if(em_vars%calc_hyperpol) em_vars%nfactor=3
 
     em_vars%nsigma = 1  ! positive and negative values of the frequency must be considered
-    if(em_vars%calc_hyperpol.or.em_vars%nomega > 1.or.em_vars%omega(1).ne.M_ZERO) em_vars%nsigma = 2
+    if(em_vars%calc_hyperpol .or. (em_vars%nomega > 1) .or. (abs(em_vars%omega(1)) >= M_EPSILON) ) em_vars%nsigma = 2
 
     complex_response = (em_vars%eta /= M_ZERO ) .or. wfs_are_complex(sys%st)
 
@@ -308,7 +308,7 @@ contains
         end do
       end if
 
-      call em_resp_output(sys%st, sys%gr, sys%outp, em_vars, iomega)
+      call em_resp_output(sys%st, sys%gr, h, sys%geo, sys%outp, em_vars, iomega)
 
     end do
 
@@ -531,9 +531,11 @@ contains
   end subroutine read_wfs
 
   ! ---------------------------------------------------------
-  subroutine em_resp_output(st, gr, outp, em_vars, iomega)
+  subroutine em_resp_output(st, gr, h, geo, outp, em_vars, iomega)
     type(states_t),  intent(inout) :: st
     type(grid_t),    intent(inout) :: gr
+    type(hamiltonian_t),    intent(inout) :: h
+    type(geometry_t),    intent(inout) :: geo
     type(output_t),  intent(in)    :: outp
     type(em_resp_t), intent(inout) :: em_vars
     integer,         intent(in)    :: iomega
@@ -559,6 +561,8 @@ contains
       write(dirname, '(a, a)') 'linear/freq_', trim(str_tmp)
       call io_mkdir(dirname)
       call out_wavefunctions()
+
+      call out_circular_dichroism
     end do
 
   contains
@@ -857,7 +861,49 @@ contains
       end do
 
     end subroutine out_wavefunctions
+    
+    subroutine out_circular_dichroism
+      type(pert_t) :: angular_momentum
+      integer :: idir
+      CMPLX :: dic
 
+      if(wfs_are_complex(st) .and. em_vars%nsigma == 2) then       
+
+        message(1) = "Info: Calculating circular dichroism"
+        call write_info(1)
+
+        call pert_init(angular_momentum, PERTURBATION_MAGNETIC, gr, geo)
+        
+        dic = M_ZERO
+        do idir = 1, 3
+          call pert_setup_dir(angular_momentum, idir)
+          dic = dic &
+               + zpert_expectation_value(angular_momentum, gr, geo, h, st, em_vars%lr(idir, 1, ifactor)%zdl_psi, st%zpsi) &
+               - zpert_expectation_value(angular_momentum, gr, geo, h, st, em_vars%lr(idir, 2, ifactor)%zdl_psi, st%zpsi)
+        end do
+        
+        call pert_end(angular_momentum)
+        
+        dic = dic * M_zI / P_c 
+
+        iunit = io_open(trim(dirname)//'/rotatory_strength', action='write')
+
+        ! print header
+        write(iunit, '(a1,a20,a20,a20)') '#', str_center("Energy", 20), str_center("R", 20), str_center("Re[beta]", 20)
+        write(iunit, '(a1,a20,a20,a20)') '#', str_center('['//trim(units_out%energy%abbrev) // ']', 20), &
+             str_center('['//trim(units_out%length%abbrev) //'^3]', 20), &
+             str_center('['//trim(units_out%length%abbrev) //'^4]', 20)
+
+        ! print the values
+        write(iunit, '(3e20.8)') em_vars%omega(iomega), &
+             aimag(dic) / M_PI / (units_out%length%factor)**3, &
+             real(dic) * P_C/(M_THREE*em_vars%omega(iomega)) / (units_out%length%factor)**4
+        call io_close(iunit)
+        
+      end if
+
+    end subroutine out_circular_dichroism
+    
   end subroutine em_resp_output
 
   
