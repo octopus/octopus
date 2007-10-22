@@ -51,8 +51,16 @@ module v_ks_m
     sic_pz     = 2,     &  ! SIC a la Perdew Zunger (OEP way)
     sic_amaldi = 3         ! Amaldi correction term
 
+  integer, parameter ::        &
+    INDEPENDENT_PARTICLES = 1, &
+    KOHN_SHAM_DFT         = 2, &
+    HARTREE_FOCK          = 3
+
   type v_ks_t
     logical :: ip_app
+    logical :: hartree_fock
+
+    integer :: theory_level
 
     integer           :: xc_family  ! the xc stuff
     integer           :: sic_type   ! what kind of Self Interaction Correction to apply
@@ -86,15 +94,30 @@ contains
     !%End
     call loct_parse_logical(check_inp('NonInteractingElectrons'), .false., ks%ip_app)
 
+    !%Variable HartreeFock
+    !%Type logical
+    !%Default no
+    !%Section Hamiltonian
+    !%Description
+    !% 
+    !%End
+    call loct_parse_logical(check_inp('HartreeFock'), .false., ks%hartree_fock)
+
     if(ks%ip_app) then
       message(1) = 'Info: Treating the electrons as non-interacting'
       call write_info(1)
+      ks%theory_level = INDEPENDENT_PARTICLES
 
+    elseif(ks%hartree_fock) then
+      message(1) = 'Info: Hartree-Fock calculation'
+      call write_info(1)
+      ks%theory_level = HARTREE_FOCK
+      
     else
-
       ! initilize xc modules
       call xc_init(ks%xc, NDIM, d%spin_channels, d%cdft)
       ks%xc_family = ks%xc%family
+      ks%theory_level = KOHN_SHAM_DFT
 
       ! check for SIC
       if(iand(ks%xc_family, XC_FAMILY_LDA + XC_FAMILY_GGA).ne.0) then
@@ -136,10 +159,11 @@ contains
 
     call push_sub('v_ks.v_ks_end');
 
-    if(.not.ks%ip_app) then
+    select case(ks%theory_level)
+    case(KOHN_SHAM_DFT)
       call xc_oep_end(ks%oep)
       call xc_end(ks%xc)
-    end if
+    end select
 
     call pop_sub();
   end subroutine v_ks_end
@@ -153,17 +177,28 @@ contains
     call push_sub('v_ks.v_ks_write_info');
 
     if(mpi_grp_is_root(mpi_world)) then
-      call messages_print_stress(iunit, "Exchange-Correlation")
-      call xc_write_info(ks%xc, iunit)
 
-      write(iunit, '(1x)')
-      call messages_print_var_option(iunit, 'SICCorrection', ks%sic_type)
+      select case(ks%theory_level)
+      case(KOHN_SHAM_DFT)
 
-      if(iand(ks%xc_family, XC_FAMILY_OEP).ne.0) then
+        call messages_print_stress(iunit, "Exchange-Correlation")
+        call xc_write_info(ks%xc, iunit)
+
         write(iunit, '(1x)')
-        call xc_oep_write_info(ks%oep, iunit)
-      end if
-      call messages_print_stress(iunit)
+        call messages_print_var_option(iunit, 'SICCorrection', ks%sic_type)
+
+        if(iand(ks%xc_family, XC_FAMILY_OEP).ne.0) then
+          write(iunit, '(1x)')
+          call xc_oep_write_info(ks%oep, iunit)
+        end if
+        call messages_print_stress(iunit)
+
+      case(HARTREE_FOCK)
+
+      case(INDEPENDENT_PARTICLES)
+
+      end select
+
     end if
 
     call pop_sub()
@@ -189,39 +224,60 @@ contains
     amaldi_factor = M_ONE
     if(ks%sic_type == sic_amaldi) amaldi_factor = (st%qtot-1)/st%qtot
 
-    ! No Hartree or xc if independent electrons
-    if((.not.ks%ip_app).and.(amaldi_factor>M_ZERO)) then
-      call v_hartree()
 
-      !$omp parallel workshare
-      h%vxc      = M_ZERO
-      !$omp end parallel workshare
-      if(h%d%cdft) h%axc = M_ZERO
-      call v_a_xc()
+    select case(ks%theory_level)
+    case(KOHN_SHAM_DFT)
 
-      ! Build Hartree + xc potential
+      ! No Hartree or xc if independent electrons
+      if(amaldi_factor>M_ZERO) then
+        call v_hartree()
 
-      !$omp parallel workshare
-      h%vhxc(1:NP, 1) = h%vxc(1:NP, 1) + h%vhartree(1:NP)
-      !$omp end parallel workshare
-
-      if(h%d%ispin > UNPOLARIZED) then
         !$omp parallel workshare
-        h%vhxc(1:NP, 2) = h%vxc(1:NP, 2) + h%vhartree(1:NP)
+        h%vxc      = M_ZERO
         !$omp end parallel workshare
-      end if
+        if(h%d%cdft) h%axc = M_ZERO
+        call v_a_xc()
 
-      if(h%d%ispin == SPINORS) then
+        ! Build Hartree + xc potential
+
         !$omp parallel workshare
-        h%vhxc(1:NP, 3:4) = h%vxc(1:NP, 3:4)
-        !$omp end parallel workshare        
+        h%vhxc(1:NP, 1) = h%vxc(1:NP, 1) + h%vhartree(1:NP)
+        !$omp end parallel workshare
+
+        if(h%d%ispin > UNPOLARIZED) then
+          !$omp parallel workshare
+          h%vhxc(1:NP, 2) = h%vxc(1:NP, 2) + h%vhartree(1:NP)
+          !$omp end parallel workshare
+        end if
+
+        if(h%d%ispin == SPINORS) then
+          !$omp parallel workshare
+          h%vhxc(1:NP, 3:4) = h%vxc(1:NP, 3:4)
+          !$omp end parallel workshare        
+        end if
       end if
 
-    else
+    case(HARTREE_FOCK)
+
+      call v_hartree()
+      !$omp parallel workshare
+      h%vhxc(1:NP, 1) = h%vhartree(1:NP)
+      !$omp end parallel workshare
+      h%ec = M_ZERO
+
+      call states_end(h%st)
+      call states_copy(h%st, st)
+
+    case(INDEPENDENT_PARTICLES)
+
       !$omp parallel workshare
       h%vhxc     = M_ZERO
-      !$omp end parallel workshare
-    end if
+      !$omp end parallel worksharep
+      h%epot     = M_ZERO
+      h%ex       = M_ZERO
+      h%ec       = M_ZERO
+
+    end select
     
     ! Calculate the potential vector induced by the electronic current
     ! WARNING: calculating the self-induced magnetic field here only makes

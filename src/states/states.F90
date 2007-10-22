@@ -350,6 +350,8 @@ contains
     ALLOCATE(st%user_def_states(st%d%dim, st%nst, st%d%nik), st%d%dim*st%nst*st%d%nik)
     if(st%d%ispin == SPINORS) then
       ALLOCATE(st%spin(3, st%nst, st%d%nik), st%nst*st%d%nik*3)
+    else
+      nullify(st%spin)
     end if
 
     ! initially we mark all 'formulas' as undefined
@@ -849,6 +851,8 @@ contains
     type(states_dim_t), intent(in)  :: din
     integer :: i
 
+    call push_sub('states.states_dim_copy')
+
     dout%dim            = din%dim
     dout%nik            = din%nik
     dout%nik_axis       = din%nik_axis
@@ -867,6 +871,7 @@ contains
       dout%kweights = din%kweights
     end if
 
+    call pop_sub()
   end subroutine states_dim_copy
   ! ---------------------------------------------------------
 
@@ -893,6 +898,8 @@ contains
 
     integer :: i, j, k, l
 
+    call push_sub('states.states_copy')
+
     call states_null(stout)
 
     stout%wfs_type = stin%wfs_type
@@ -909,7 +916,11 @@ contains
     if(associated(stin%dpsi)) then
       i = size(stin%dpsi, 1)*stin%d%dim*(stin%st_end-stin%st_start+1)*stin%d%nik
       ALLOCATE(stout%dpsi(size(stin%dpsi, 1), stin%d%dim, stin%st_start:stin%st_end, stin%d%nik), i)
-      stout%dpsi = stin%dpsi
+      do k = 1, stin%d%nik
+        do j = stin%st_start, stin%st_end
+          stout%dpsi(:, :, j, k) = stin%dpsi(:, :, j, k)
+        end do
+      end do
     end if
     if(associated(stin%zpsi)) then
       i = size(stin%zpsi, 1)*stin%d%dim*(stin%st_end-stin%st_start+1)*stin%d%nik
@@ -932,7 +943,11 @@ contains
     if(associated(stin%j)) then
       i = size(stin%j, 1)*size(stin%j, 2)*size(stin%j, 3)
       ALLOCATE(stout%j(size(stin%j, 1), size(stin%j, 2), size(stin%j, 3)), i)
-      stout%j = stin%j
+      do j = 1, size(stin%j, 3)
+        do k = 1, size(stin%j, 2)
+          stout%j(:, k, j) = stin%j(:, k, j)
+        end do
+      end do
     end if
     if(associated(stin%rho_core)) then
       i = size(stin%rho_core, 1)
@@ -978,6 +993,7 @@ contains
       stout%st_num = stin%st_num
     end if
 
+    call pop_sub()
   end subroutine states_copy
 
 

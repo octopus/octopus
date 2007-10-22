@@ -98,6 +98,10 @@ subroutine X(hpsi) (h, gr, psi, hpsi, ik, t, E)
   end if
 #endif
 
+  if(h%theory_level .eq. HARTREE_FOCK) then
+    call X(exchange_operator)(h, gr, psi, hpsi, ik)
+  end if
+
   call X(magnetic_terms) (gr, h, psi, hpsi, ik)
   if (h%ep%with_gauge_field) call X(vgauge) (gr, h, psi, hpsi)
   if(present(t)) call X(vborders) (gr, h, psi, hpsi)
@@ -111,7 +115,57 @@ subroutine X(hpsi) (h, gr, psi, hpsi, ik, t, E)
   
   call pop_sub()
   call profiling_out(C_PROFILING_HPSI)
-end subroutine X(Hpsi)
+end subroutine X(hpsi)
+
+
+! ---------------------------------------------------------
+subroutine X(exchange_operator) (h, gr, psi, hpsi, ik)
+  type(hamiltonian_t), intent(inout) :: h
+  type(grid_t),        intent(inout) :: gr
+  R_TYPE,              intent(inout) :: psi(:,:)  ! psi(NP_PART, h%d%dim)
+  R_TYPE,              intent(inout) :: hpsi(:,:) ! hpsi(NP, h%d%dim)
+  integer,             intent(in)    :: ik
+  R_TYPE, allocatable :: rho(:), pot(:)
+  integer :: j, k
+
+  call push_sub('h_inc.Xexchange_operator')
+
+  ALLOCATE(rho(gr%m%np), gr%m%np)
+  ALLOCATE(pot(gr%m%np), gr%m%np)
+
+  select case(h%d%ispin)
+  case(UNPOLARIZED)
+    do j = 1, h%st%nst
+      pot = M_ZERO
+      do k = 1, gr%m%np
+        rho(k) = h%st%X(psi)(k, 1, j, ik) * psi(k, 1)
+      end do
+      call X(poisson_solve)(gr, pot, rho)
+      do k = 1, gr%m%np
+        hpsi(k, 1) = hpsi(k, 1) - (h%st%occ(j, ik)/M_TWO) * h%st%X(psi)(k, 1, j, ik)*pot(k)
+      end do
+    end do 
+
+  case(SPIN_POLARIZED)
+    do j = 1, h%st%nst
+      if(h%st%occ(j, ik) <= M_ZERO) cycle
+      pot = M_ZERO
+      do k = 1, gr%m%np
+        rho(k) = h%st%X(psi)(k, 1, j, ik) * psi(k, 1)
+      end do
+      call X(poisson_solve)(gr, pot, rho)
+      do k = 1, gr%m%np
+        hpsi(k, 1) = hpsi(k, 1) - h%st%occ(j, ik) * h%st%X(psi)(k, 1, j, ik)*pot(k)
+      end do
+    end do 
+
+  case(SPINORS)
+
+  end select
+
+  deallocate(rho, pot)
+  call pop_sub()
+end subroutine X(exchange_operator)
 
 
 ! ---------------------------------------------------------

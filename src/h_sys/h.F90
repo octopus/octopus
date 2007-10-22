@@ -40,6 +40,7 @@ module hamiltonian_m
   use units_m
   use varinfo_m
   use lasers_m
+  use poisson_m
 
   implicit none
 
@@ -100,6 +101,7 @@ module hamiltonian_m
              eext        ! External     V = <Phi|V|Phi> = Int[n v] (if no non-local pseudos exist)
 
     logical :: ip_app             ! independent particle approximation, or not.
+    integer :: theory_level
     ! copied from sys%ks
 
     type(epot_t) :: ep         ! handles the external potential
@@ -123,6 +125,9 @@ module hamiltonian_m
     ! Mass of the particle (in most cases, mass = 1, electron mass)
     FLOAT :: mass
 
+    ! For the Hartree Fock Hamiltonian, the Fock operator depends on the states.
+    type(states_t) :: st
+
 #if defined(HAVE_LIBNBC)
     ! NBC_Handles for the calculation of the kinetic energy in parallel.
     C_POINTER, pointer :: handles(:)
@@ -144,17 +149,22 @@ module hamiltonian_m
     IMAGINARY_ABSORBING = 1,    &
     MASK_ABSORBING      = 2
 
+  integer, parameter ::        &
+    INDEPENDENT_PARTICLES = 1, &
+    KOHN_SHAM_DFT         = 2, &
+    HARTREE_FOCK          = 3
 
 contains
 
   ! ---------------------------------------------------------
-  subroutine hamiltonian_init(h, gr, geo, states_dim, wfs_type, ip_app)
+  subroutine hamiltonian_init(h, gr, geo, states_dim, wfs_type, ip_app, theory_level)
     type(hamiltonian_t), intent(out)   :: h
     type(grid_t),        intent(inout) :: gr
     type(geometry_t),    intent(inout) :: geo
     type(states_dim_t),  intent(in)    :: states_dim
     integer,             intent(out)   :: wfs_type
     logical,             intent(in)    :: ip_app
+    integer,             intent(in)    :: theory_level
 
     integer :: i, j, n, ispin
     FLOAT :: d(MAX_DIM)
@@ -163,6 +173,7 @@ contains
 
     ! make a couple of local copies
     h%ip_app = ip_app
+    h%theory_level = theory_level
     call states_dim_copy(h%d, states_dim)
 
 #if defined(HAVE_LIBNBC)
@@ -367,8 +378,6 @@ contains
       call write_info(2)
     end if
 
-    ! Mass of the particle.
-    ! It should be almost always one (electron mass).
     !%Variable ParticleMass
     !%Type float
     !%Default 1.0
@@ -380,6 +389,8 @@ contains
     !% esoteric purposes.
     !%End
     call loct_parse_float(check_inp('ParticleMass'), M_ONE, h%mass)
+
+    call states_null(h%st)
 
     call pop_sub()
   end subroutine hamiltonian_init
@@ -462,19 +473,27 @@ contains
     full_ = .false.
     if(present(full)) full_ = full
 
-    if(full_) then
-      if(st%wfs_type == M_REAL) then
-        h%t0     = delectronic_kinetic_energy(h, gr, st)
-        h%eext   = delectronic_external_energy(h, gr, st)
-      else
-        h%t0     = zelectronic_kinetic_energy(h, gr, st)
-        h%eext   = zelectronic_external_energy(h, gr, st)
+    select case(h%theory_level)
+    case(KOHN_SHAM_DFT)
+      if(full_) then
+        if(st%wfs_type == M_REAL) then
+          h%t0     = delectronic_kinetic_energy(h, gr, st)
+          h%eext   = delectronic_external_energy(h, gr, st)
+        else
+          h%t0     = zelectronic_kinetic_energy(h, gr, st)
+          h%eext   = zelectronic_external_energy(h, gr, st)
+        end if
       end if
-    end if
-
-    h%eeigen = states_eigenvalues_sum(st)
-    h%eii    = geo%eii
-    h%etot   = h%eii + h%eeigen - h%ehartree + h%ex + h%ec - h%epot
+      h%eeigen = states_eigenvalues_sum(st)
+      h%eii    = geo%eii
+      h%etot   = h%eii + h%eeigen - h%ehartree + h%ex + h%ec - h%epot
+    case(INDEPENDENT_PARTICLES)
+      h%eeigen = states_eigenvalues_sum(st)
+      h%eii    = geo%eii
+      h%etot   = h%eii + h%eeigen
+    case(HARTREE_FOCK)
+      ! call exchange_energy
+    end select
 
     if (iunit > 0) then
       write(message(1), '(6x,a, f15.8)')'Total       = ', h%etot     / units_out%energy%factor
