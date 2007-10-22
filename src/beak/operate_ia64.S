@@ -61,7 +61,7 @@ mov ARG_RI = r35
 mov ARG_RM = r36
 mov ARG_FI = r37
 mov ARG_FO = r38
-mov ARG_WS = r39
+mov ARG_WS = r39;;
 
 #define LL r73
 #define II r74
@@ -78,7 +78,7 @@ cmp4.le p9,p0 = NR, r0;;
 
 mov LL = r0
 LDI II = [ARG_RM],ISIZE // II = ARG_RM[LL]
-lfetch.nt1 [ARG_WW]
+lfetch.nt1 [ARG_WW];;
 shladd ARG_FO = II,FSHIFT, ARG_FO
 adds NNM1 = -1, NN
 
@@ -295,7 +295,7 @@ mov ARG_RI = r35
 mov ARG_RM = r36
 mov ARG_FI = r37
 mov ARG_FO = r38
-mov ARG_WS = r39
+mov ARG_WS = r39;;
 
 #define LL r73
 #define II r74
@@ -312,7 +312,7 @@ cmp4.le p9,p0 = NR,r0;;
 
 mov LL = r0
 LDI II = [ARG_RM],ISIZE // II = ARG_RM[LL++]
-lfetch.nt1 [ARG_WW]
+lfetch.nt1 [ARG_WW];;
 shladd ARG_FO = II,FSHIFT+1, ARG_FO
 adds NNM1 = -1, NN;;
 
