@@ -80,8 +80,6 @@ subroutine build_kernel(n01,n02,n03,nfft1,nfft2,nfft3,hgrid,itype_scf,karrayout)
   
   !Half size for the half FFT
   nd1h=(nd1+1)/2
-  write(unit=*,fmt="(1x,a,i0,a)") &
-       "Build the kernel using a sum of ",n_gauss," gaussians"
   
   !Allocations
   i_allocated = 0
@@ -205,7 +203,6 @@ subroutine build_kernel(n01,n02,n03,nfft1,nfft2,nfft3,hgrid,itype_scf,karrayout)
   inkee=1
   call karrayhalf_in(n01,n02,n03,n1k,n2k,n3k,nfft1,nfft2,nfft3,nd1,nd2,nd3,&
        karrayout,karrayhalf)
-  print *,"Do a 3D HalFFT for the kernel"
   call fft(n1h,nfft2,nfft3,nd1h,nd2,nd3,karrayhalf,1,inkee)
   !Reconstruct the real kernel
   call kernel_recon(n1k,n2k,n3k,nfft1,nfft2,nfft3,nd1,nd2,nd3,&
