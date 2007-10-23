@@ -23,11 +23,12 @@
 !    (H + omega) x = y
 ! ---------------------------------------------------------
 
-subroutine X(solve_HXeY) (this, h, gr, st, ik, x, y, omega)
+subroutine X(solve_HXeY) (this, h, gr, st, ist, ik, x, y, omega)
   type(linear_solver_t), intent(inout) :: this
   type(hamiltonian_t), intent(inout) :: h
   type(grid_t),        intent(inout) :: gr
   type(states_t),      intent(in)    :: st
+  integer,             intent(in)    :: ist
   integer,             intent(in)    :: ik
   R_TYPE,              intent(inout) :: x(:,:)   ! x(NP, d%dim)
   R_TYPE,              intent(in)    :: y(:,:)   ! y(NP, d%dim)
@@ -41,8 +42,11 @@ subroutine X(solve_HXeY) (this, h, gr, st, ik, x, y, omega)
   case(LS_BICGSTAB)
     call X(ls_solver_bicgstab)(this, h, gr, st, ik, x, y, omega)
 
+  case(LS_MULTIGRID)
+    call X(ls_solver_multigrid)(this, h, gr, st, ist, ik, x, y, omega)
+
   case default 
-    message(1)="Unknown linear response solver"
+    write(message(1), '(a,i2)') "Unknown linear response solver", this%solver
     call write_fatal(1)
 
   end select
@@ -251,6 +255,53 @@ subroutine X(ls_solver_bicgstab) (ls, h, gr, st, ik, x, y, omega)
 
   call pop_sub()
 end subroutine X(ls_solver_bicgstab)
+
+subroutine X(ls_solver_multigrid) (ls, h, gr, st, ist, ik, x, y, omega)
+  type(linear_solver_t),          intent(inout) :: ls
+  type(hamiltonian_t), intent(inout) :: h
+  type(grid_t),        intent(inout) :: gr
+  type(states_t),      intent(in)    :: st
+  integer,                intent(in)    :: ist
+  integer,                intent(in)    :: ik
+  R_TYPE,                 intent(inout) :: x(:,:)   ! x(NP, st%d%dim)
+  R_TYPE,                 intent(in)    :: y(:,:)   ! y(NP, st%d%dim)
+  R_TYPE,                 intent(in)    :: omega
+
+  R_TYPE, allocatable :: diag(:,:), hx(:,:), res(:,:)
+  integer :: iter, idim
+  R_TYPE  :: proj
+
+  ALLOCATE(diag(NP, st%d%dim), NP*st%d%dim)
+  ALLOCATE(hx(NP, st%d%dim), NP*st%d%dim)
+  ALLOCATE(res(NP, st%d%dim), NP*st%d%dim)
+
+  call X(Hpsi_diag)(h, gr, diag, ik)
+
+  diag(1:NP, 1:st%d%dim) = diag(1:NP, 1:st%d%dim) + omega
+
+  do iter = 1, 10*ls%max_iter
+    call X(Hpsi)(h, gr, x, hx, ik)
+    res(1:NP, 1:st%d%dim) = hx(1:NP, 1:st%d%dim) + omega*x(1:NP, 1:st%d%dim) - y(1:NP, 1:st%d%dim)
+    ls%abs_psi = X(states_nrm2)(gr%m, st%d%dim, res)
+    if( ls%abs_psi < ls%tol) exit
+
+    if(in_debug_mode .and. mod(iter, 100) == 0 ) then 
+      write(message(1), *)  "Multigrid: iter ", iter,  ls%abs_psi, abs(X(states_dotp)(gr%m, st%d%dim, st%X(psi)(:, :, ist, ik), x))
+      call write_info(1)
+    end if
+
+    x(1:NP, 1:st%d%dim) = x(1:NP, 1:st%d%dim) - CNST(0.666666) * res(1:NP, 1:st%d%dim) / diag(1:NP, 1:st%d%dim)
+    proj = X(states_dotp)(gr%m, st%d%dim, st%X(psi)(:, :, ist, ik), x)
+
+    do idim = 1, st%d%dim
+      call lalg_axpy(NP, -proj, st%X(psi)(:, idim, ist, ik), x(:, idim))
+    end do
+
+  end do
+
+  ls%iter = iter
+
+end subroutine X(ls_solver_multigrid)
 
 !! Local Variables:
 !! mode: f90

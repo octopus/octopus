@@ -1087,6 +1087,62 @@ FLOAT function X(electronic_external_energy)(h, gr, st) result(v)
   call pop_sub()
 end function X(electronic_external_energy)
 
+! ---------------------------------------------------------
+subroutine X(hpsi_diag) (h, gr, diag, ik, t, E)
+  type(hamiltonian_t), intent(inout) :: h
+  type(grid_t),        intent(inout) :: gr
+  integer,             intent(in)    :: ik
+  R_TYPE,              intent(out)   :: diag(:,:) ! hpsi(NP, h%d%dim)
+  FLOAT, optional,     intent(in)    :: t
+  FLOAT, optional,     intent(in)    :: E
+
+  integer :: idim
+
+  R_TYPE, allocatable :: psi(:,:)
+  FLOAT, allocatable  :: ldiag(:)
+
+  call push_sub('h_inc.Xhpsi_diag')
+  
+  ALLOCATE(psi(NP, h%d%dim), NP*h%d%dim)
+  ALLOCATE(ldiag(NP), NP)
+
+  psi = M_ONE
+  diag = M_ZERO
+
+  call f_laplacian_diag(gr%sb, gr%f_der, ldiag)
+
+  do idim = 1, h%d%dim
+    diag(1:NP, idim) = -M_HALF/h%mass * ldiag(1:NP)
+  end do
+
+  call X(vlpsi)(h, gr%m, psi, diag, ik)
+  call X(vnlpsi_diag)(h, gr, psi, diag, ik)
+
+  call pop_sub()
+end subroutine X(hpsi_diag)
+
+! ---------------------------------------------------------
+subroutine X(vnlpsi_diag) (h, gr, psi, hpsi, ik)
+  type(hamiltonian_t), intent(in)    :: h
+  type(grid_t),        intent(inout) :: gr
+  R_TYPE,              intent(in)    :: psi(:,:)  ! psi(NP_PART, h%d%dim)
+  R_TYPE,              intent(inout) :: hpsi(:,:) ! hpsi(NP_PART, h%d%dim)
+  integer,             intent(in)    :: ik
+
+  integer :: ipj
+
+  call push_sub('h_inc.Xvnlpsi')
+
+  do ipj = 1, h%ep%nvnl
+    if( h%ep%p(ipj)%type == M_LOCAL) then 
+      call X(project_psi)(gr%m, h%ep%p(ipj), h%d%dim, psi, hpsi, &
+        h%reltype, periodic = simul_box_is_periodic(gr%m%sb), ik = ik)
+    end if
+  end do
+
+  call pop_sub()
+end subroutine X(vnlpsi_diag)
+
 !! Local Variables:
 !! mode: f90
 !! coding: utf-8

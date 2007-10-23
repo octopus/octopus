@@ -129,7 +129,7 @@ subroutine X(sternheimer_solve)(&
           end if
 
           !solve the Sternheimer equation
-          call X(solve_HXeY) (this%solver, h, sys%gr, sys%st, ik, lr(sigma)%X(dl_psi)(:,:, ist, ik),&
+          call X(solve_HXeY) (this%solver, h, sys%gr, sys%st, ist, ik, lr(sigma)%X(dl_psi)(:,:, ist, ik),&
                Y(:,:, sigma), -sys%st%eigenval(ist, ik) + omega_sigma)
           
           !altough the dl_psi we get should be orthogonal to psi

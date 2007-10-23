@@ -21,6 +21,7 @@
 
 module linear_solver_m
   use datasets_m
+  use functions_m
   use global_m
   use grid_m
   use hamiltonian_m
@@ -38,7 +39,8 @@ module linear_solver_m
 
   integer, public, parameter ::&
        LS_CG = 5,        &
-       LS_BICGSTAB = 3
+       LS_BICGSTAB = 3,  &
+       LS_MULTIGRID = 7
 
   public :: &
        linear_solver_t, &
@@ -90,6 +92,8 @@ contains
     !% Biconjugated gradients stabilized. This is an improved version
     !% of bcg that is faster and more stable. This is the default when
     !% complex polarizabilities are calculated.
+    !%Option multigrid 7
+    !% Multigrid solver (experimental, currently is only Gauss-Jacobi).
     !%End
 
     if(present(def_solver)) then
@@ -180,9 +184,8 @@ contains
       n = 1
     case(LS_BICGSTAB)
       n = 2
-    case default 
-      message(1)="Unknown linear response solver"
-      call write_fatal(1)
+    case (LS_MULTIGRID)
+      n = 1
     end select
   
   end function linear_solver_ops_per_iter

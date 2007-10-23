@@ -55,12 +55,14 @@ module hamiltonian_m
     dhamiltonian_eigenval, &
     zhamiltonian_eigenval, &
     dhpsi,                 &
+    dhpsi_diag,            &
     dvlpsi,                &
     dvnlpsi,               &
     dmagnus,               &
     dkinetic,              &
     dvmask,                &
     zhpsi,                 &
+    zhpsi_diag,            &
     zvlpsi,                &
     zvnlpsi,               &
     zmagnus,               &

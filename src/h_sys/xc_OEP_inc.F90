@@ -159,7 +159,7 @@ subroutine X(xc_oep_solve) (gr, h, st, is, vxc, oep)
       call X(lr_orth_vector) (gr%m, st, b, is)
 
       ! and we now solve the equation [h-eps_i] psi_i = b_i
-      call X(solve_HXeY) (oep%solver, h, gr, st, is, oep%lr%X(dl_psi)(:,:, ist, is), b, &
+      call X(solve_HXeY) (oep%solver, h, gr, st, ist, is, oep%lr%X(dl_psi)(:,:, ist, is), b, &
            R_TOTYPE(-st%eigenval(ist, is)))
       
       call X(lr_orth_vector) (gr%m, st, oep%lr%X(dl_psi)(:,:, ist, is), is)
