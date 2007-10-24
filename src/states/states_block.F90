@@ -1,0 +1,127 @@
+!! Copyright (C) 2002-2006 M. Marques, A. Castro, A. Rubio, G. Bertsch
+!!
+!! This program is free software; you can redistribute it and/or modify
+!! it under the terms of the GNU General Public License as published by
+!! the Free Software Foundation; either version 2, or (at your option)
+!! any later version.
+!!
+!! This program is distributed in the hope that it will be useful,
+!! but WITHOUT ANY WARRANTY; without even the implied warranty of
+!! MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+!! GNU General Public License for more details.
+!!
+!! You should have received a copy of the GNU General Public License
+!! along with this program; if not, write to the Free Software
+!! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
+!! 02111-1307, USA.
+!!
+!! $Id: states_inc.F90 3262 2007-09-20 21:51:21Z lorenzen $
+
+#include "global.h"
+
+! This module contains routines to multiply blocks of states by
+! blocks of states and general dense matrices.
+
+module states_block_m
+  use global_m
+  use lalg_basic_m
+  use math_m
+  use mesh_m
+  use messages_m
+  use mpi_m
+  use mpi_debug_m
+  use mpi_lib_m
+  use multicomm_m
+  use profiling_m
+  use states_m
+
+  implicit none
+
+  private
+
+  public ::                    &
+    states_blockt_mul,         &
+    states_block_matr_mul_add, &
+    states_block_matr_mul
+
+#if defined(HAVE_MPI)
+  public :: states_gather
+#endif
+
+  interface states_blockt_mul
+    module procedure dstates_blockt_mul, zstates_blockt_mul
+  end interface
+
+  interface states_block_matr_mul
+    module procedure dstates_block_matr_mul, zstates_block_matr_mul
+  end interface
+
+  interface states_block_matr_mul_add
+    module procedure dstates_block_matr_mul_add, zstates_block_matr_mul_add
+  end interface
+
+#if defined(HAVE_MPI)
+  interface states_gather
+    module procedure dstates_gather, zstates_gather
+  end interface
+#endif
+
+contains
+
+  ! ---------------------------------------------------------
+  ! From the global state number index set global_idx(1:length)
+  ! create the local sets idx(1:cnt(rank), rank), for rank=0, ..., comm_size-1
+  ! using the states distribution stored in st.
+  subroutine states_block_local_idx(st, global_idx, length, cnt, idx)
+    type(states_t), intent(in) :: st
+    integer,        intent(in) :: global_idx(:)
+    integer,        intent(in) :: length
+    integer,        pointer    :: cnt(:)
+    integer,        pointer    :: idx(:, :)
+
+    integer :: size, node, ist, i
+
+    call push_sub('states.states_block_local_idx')
+
+    size = st%mpi_grp%size
+    ALLOCATE(cnt(0:size-1), size)
+
+    ! Count the how many vectors each node has.
+    cnt = 0
+    do i = 1, length
+      cnt(st%node(global_idx(i))) = cnt(st%node(global_idx(i))) + 1
+    end do
+    ! Allocate space, it is a bit more than really required but makes the code simpler.
+    ALLOCATE(idx(maxval(cnt), 0:size-1), maxval(cnt)*size)
+
+    ! Now set up the index sets.
+    cnt = 0
+    idx = 0
+    do ist = 1, st%nst
+      node = st%node(ist)
+      ! A state ist is only included if its in the global index set.
+      if(member(ist, global_idx)) then
+        cnt(node)            = cnt(node) + 1
+        idx(cnt(node), node) = ist
+      end if
+    end do
+
+    call pop_sub()
+  end subroutine states_block_local_idx
+
+
+#include "undef.F90"
+#include "real.F90"
+#include "states_block_inc.F90"
+
+#include "undef.F90"
+#include "complex.F90"
+#include "states_block_inc.F90"
+#include "undef.F90"
+end module states_block_m
+
+
+!! Local Variables:
+!! mode: f90
+!! coding: utf-8
+!! End:

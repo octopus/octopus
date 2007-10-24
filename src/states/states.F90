@@ -35,7 +35,6 @@ module states_m
   use mesh_function_m
   use mesh_m
   use mpi_m
-  use mpi_debug_m
   use mpi_lib_m
   use multicomm_m
   use output_m
@@ -74,9 +73,6 @@ module states_m
     states_spin_channel,              &
     states_calc_dens,                 &
     states_paramagnetic_current,      &
-    states_blockt_mul,                &
-    states_block_matr_mul,            &
-    states_block_matr_mul_add,        &
     kpoints_write_info,               &
     wfs_are_complex,                  &
     wfs_are_real,                     &
@@ -180,18 +176,6 @@ module states_m
 
   interface zstates_gram_schmidt
     module procedure zstates_gram_schmidt1, zstates_gram_schmidt2
-  end interface
-
-  interface states_blockt_mul
-    module procedure dstates_blockt_mul, zstates_blockt_mul
-  end interface
-
-  interface states_block_matr_mul
-    module procedure dstates_block_matr_mul, zstates_block_matr_mul
-  end interface
-
-  interface states_block_matr_mul_add
-    module procedure dstates_block_matr_mul_add, zstates_block_matr_mul_add
   end interface
 
 contains
@@ -2342,61 +2326,15 @@ contains
     call pop_sub()
   end subroutine states_look
 
-
-  ! ---------------------------------------------------------
-  ! From the global state number index set global_idx(1:length)
-  ! create the local sets idx(1:cnt(rank), rank), for rank=0, ..., comm_size-1
-  ! using the states distribution stored in st.
-  subroutine states_block_local_idx(st, global_idx, length, cnt, idx)
-    type(states_t), intent(in) :: st
-    integer,        intent(in) :: global_idx(:)
-    integer,        intent(in) :: length
-    integer,        pointer    :: cnt(:)
-    integer,        pointer    :: idx(:, :)
-
-    integer :: size, node, ist, i
-
-    call push_sub('states.states_block_local_idx')
-
-    size = st%mpi_grp%size
-    ALLOCATE(cnt(0:size-1), size)
-
-    ! Count the how many vectors each node has.
-    cnt = 0
-    do i = 1, length
-      cnt(st%node(global_idx(i))) = cnt(st%node(global_idx(i))) + 1
-    end do
-    ! Allocate space, it is a bit more than really required but makes the code simpler.
-    ALLOCATE(idx(maxval(cnt), 0:size-1), maxval(cnt)*size)
-
-    ! Now set up the index sets.
-    cnt = 0
-    idx = 0
-    do ist = 1, st%nst
-      node = st%node(ist)
-      ! A state ist is only included if its in the global index set.
-      if(member(ist, global_idx)) then
-        cnt(node)            = cnt(node) + 1
-        idx(cnt(node), node) = ist
-      end if
-    end do
-
-    call pop_sub()
-  end subroutine states_block_local_idx
-
-
-
 #include "states_kpoints.F90"
 
 #include "undef.F90"
 #include "real.F90"
 #include "states_inc.F90"
-#include "states_block_inc.F90"
 
 #include "undef.F90"
 #include "complex.F90"
 #include "states_inc.F90"
-#include "states_block_inc.F90"
 #include "undef.F90"
 
 end module states_m

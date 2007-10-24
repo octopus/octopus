@@ -22,8 +22,8 @@
 noinst_LIBRARIES = libstates.a
 
 libstates_a_SOURCES = \
-	crystal.F90 states.F90 magnetic.F90 elf.F90 states_output.F90 excited_states.F90 \
-	mix.F90 linear_response.F90 restart.F90
+	crystal.F90 states.F90 magnetic.F90 elf.F90 states_output.F90 states_block.F90 \
+	excited_states.F90 mix.F90 linear_response.F90 restart.F90
 
 noinst_HEADERS = \
 	excited_states_inc.F90 mix_inc.F90 states_kpoints.F90 states_inc.F90 \
@@ -37,5 +37,6 @@ depend:
 excited_states.o: excited_states_inc.F90
 linear_response.o: linear_response_inc.F90 linear_response_out.F90
 mix.o: mix_inc.F90
-states.o: states_kpoints.F90 states_inc.F90 states_block_inc.F90
+states.o: states_kpoints.F90 states_inc.F90
+states_block.o: states_block_inc.F90
 restart.o: restart_inc.F90
