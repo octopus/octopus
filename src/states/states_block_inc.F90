@@ -36,14 +36,17 @@ subroutine X(states_blockt_mul)(mesh, st, psi1, psi2, res, xpsi1, xpsi2, symm)
   integer              :: i, j
   integer              :: psi1_col, psi2_col
   integer, allocatable :: xpsi1_(:), xpsi2_(:)
+  R_TYPE, allocatable  :: psi1_block(:, :, :), psi2_block(:, :, :), res_local(:, :)
 #if defined(HAVE_MPI)
-  integer              :: size, rank, node, round, partner, ist, res_col_offset, res_row_offset
+  integer              :: size, rank, node, round, ist, res_col_offset, res_row_offset
   integer, allocatable :: xpsi1_count(:), xpsi2_count(:), xpsi1_node(:, :), xpsi2_node(:, :)
-  integer              :: stat(MPI_STATUS_SIZE)
-  R_TYPE, allocatable  :: sendbuf(:, :, :), recvbuf(:, :, :), res_tmp(:, :)
+  integer              :: dst, src, k, l, recvcnt, sendcnt, left, right, max_count
+  integer              :: stats(MPI_STATUS_SIZE, 2), reqs(2)
+  R_TYPE, pointer      :: sendbuf(:, :, :), recvbuf(:, :, :), tmp_ptr(:, :, :)
+  R_TYPE, allocatable  :: res_tmp(:, :)
 #endif
 
-  call profiling_in(C_PROFILING_LOBPCG_BLOCKT)
+  call profiling_in(C_PROFILING_BLOCKT)
   call push_sub('states_inc.Xstates_blockt_mul')
 
   symm_ = .false.
@@ -123,109 +126,145 @@ subroutine X(states_blockt_mul)(mesh, st, psi1, psi2, res, xpsi1, xpsi2, symm)
     ! Has to be zero because we use an allreduce on this at the end.
     res = R_TOTYPE(M_ZERO)
 
-    ! The local part.
-    res_row_offset = sum(xpsi1_count(0:rank-1))
-    res_col_offset = sum(xpsi2_count(0:rank-1))
-    if(symm_) then
-      do i = 1, xpsi1_count(rank)
-        res(i+res_row_offset, i+res_col_offset) =                         &
-          X(states_dotp)(mesh, st%d%dim, psi1(:, :, xpsi1_node(i, rank)), &
-          psi2(:, :, xpsi2_node(i, rank)), reduce=.false.)
-        do j = i+1, xpsi2_count(rank)
-          res(i+res_row_offset, j+res_col_offset) =                         &
-            X(states_dotp)(mesh, st%d%dim, psi1(:, :, xpsi1_node(i, rank)), &
-            psi2(:, :, xpsi2_node(j, rank)), reduce=.false.)
-          res(j+res_col_offset, i+res_row_offset) = R_CONJ(res(i+res_row_offset, j+res_col_offset))
-        end do
-      end do
-    else
-      do i = 1, xpsi1_count(rank)
-        do j = 1, xpsi2_count(rank)
-          res(i+res_row_offset, j+res_col_offset) =                         &
-            X(states_dotp)(mesh, st%d%dim, psi1(:, :, xpsi1_node(i, rank)), &
-            psi2(:, :, xpsi2_node(j, rank)), reduce=.false.)
-        end do
-      end do
+    ! Compact psi1 in order to use BLAS gemm on it.
+    if(.not.mesh%use_curvlinear) then
+      ALLOCATE(psi1_block(mesh%np, st%d%dim, xpsi1_count(rank)), mesh%np*st%d%dim*xpsi1_count(rank))
+      call profiling_in(C_PROFILING_BLOCKT_CP)
+      call X(states_compactify)(st, mesh, xpsi1_node(1:xpsi1_count(rank), rank), psi1, psi1_block)
+      call profiling_out(C_PROFILING_BLOCKT_CP)
     end if
-  
-    ! The remote parts.
-    do round = 1, st%ap%rounds
-      partner = st%ap%schedule(rank, round)
 
-      if(partner.eq.rank) then ! We are idle this round.
-        ! Just do nothing.
-      else ! We are not idle.
-        ! Both nodes send psi2 to each other and then calculate one block of the
-        ! result.
-        ALLOCATE(sendbuf(mesh%np, st%d%dim, xpsi2_count(rank)), mesh%np*st%d%dim*xpsi2_count(rank))
-        ALLOCATE(recvbuf(mesh%np, st%d%dim, xpsi2_count(partner)), mesh%np*st%d%dim*xpsi2_count(partner))
+    ! Allocate send and receive buffers. For some blocks, they are oversized but
+    ! buffer reusing saves some overhead in the MPI library.
+    max_count = maxval(xpsi2_count)
+    ALLOCATE(sendbuf(mesh%np, st%d%dim, max_count), mesh%np*st%d%dim*max_count)
+    ALLOCATE(recvbuf(mesh%np, st%d%dim, max_count), mesh%np*st%d%dim*max_count)
 
-        ! Copy block to sendbuffer. This is necessaery because the vectors in the block may not
-        ! be contiguous.
-        do i = 1, xpsi2_count(rank)
-          call lalg_copy(mesh%np*st%d%dim, psi2(:, 1, xpsi2_node(i, rank)), sendbuf(:, 1, i))
-        end do
+    ! Compact the local block to send away.
+    sendcnt = xpsi2_count(rank)
+    call X(states_compactify)(st, mesh, xpsi2_node(1:xpsi2_count(rank), rank), psi2, sendbuf)
 
-        call MPI_Sendrecv(sendbuf, mesh%np*st%d%dim*xpsi2_count(rank), R_MPITYPE, partner, 12, &
-          recvbuf, mesh%np*st%d%dim*xpsi2_count(partner), R_MPITYPE, partner, 12, st%mpi_grp%comm, stat, mpi_err)
+    ! Get neighbours.
+    call MPI_Cart_shift(st%dom_st%comm, P_STRATEGY_STATES-1, -1, src, dst, mpi_err)
+    right = lmpi_translate_rank(st%dom_st%comm, st%mpi_grp%comm, src)
+    left  = lmpi_translate_rank(st%dom_st%comm, st%mpi_grp%comm, dst)
 
-        res_row_offset = sum(xpsi1_count(0:rank-1))
-        res_col_offset = sum(xpsi2_count(0:partner-1))
-        ! Do the matrix multiplication.
+    do round = 0, size-1
+      k = mod(rank+round, size)   ! The column of the block currently being calculated.
+      l = mod(rank+round+1, size) ! The column of the block currently being communicated.
+      ! In all but the first rounds we have to wait for the data to arrive and
+      ! then swap buffers.
+      if(round.gt.0) then
+        call MPI_Waitall(2, reqs, stats, mpi_err)
+        tmp_ptr => sendbuf
+        sendbuf => recvbuf
+        recvbuf => tmp_ptr
+        sendcnt =  recvcnt
+      end if
+      ! In all but the last rounds the data has to be passed on to the left neighbour, and
+      ! accordingly received from the right neighbour.
+      if(round.lt.size-1) then
+        recvcnt = xpsi2_count(l)
+        call MPI_Irecv(recvbuf, mesh%np*st%d%dim*recvcnt, R_MPITYPE, right, 0, st%mpi_grp%comm, reqs(1), mpi_err)
+        call MPI_Isend(sendbuf, mesh%np*st%d%dim*sendcnt, R_MPITYPE, left, 0,  st%mpi_grp%comm, reqs(2), mpi_err)
+      end if
+      
+      ! Do the matrix multiplication.
+      res_row_offset = sum(xpsi1_count(0:rank-1))
+      res_col_offset = sum(xpsi2_count(0:k-1))
+      if(.not.mesh%use_curvlinear) then
+        if(xpsi1_count(rank).gt.0.and.sendcnt.gt.0) then
+          ALLOCATE(res_local(xpsi1_count(rank), sendcnt), xpsi1_count(rank)*sendcnt)
+
+          call profiling_in(C_PROFILING_BLOCKT_MM)
+          call lalg_gemmt(xpsi1_count(rank), sendcnt, mesh%np*st%d%dim, R_TOTYPE(mesh%vol_pp(1)), &
+            psi1_block(:, :, 1), sendbuf(:, :, 1), R_TOTYPE(M_ZERO), res_local)
+          call profiling_out(C_PROFILING_BLOCKT_MM)
+
+          call profiling_in(C_PROFILING_BLOCKT_CP)
+          res(res_row_offset+1:res_row_offset+xpsi1_count(rank), res_col_offset+1:res_col_offset+sendcnt) = res_local
+          call profiling_out(C_PROFILING_BLOCKT_CP)
+          deallocate(res_local)
+        end if
+      else ! Curvilinear coordinates.
         do i = 1, xpsi1_count(rank)
-          do j = 1, xpsi2_count(partner)
+          do j = 1, sendcnt
             res(i+res_row_offset, j+res_col_offset) = &
-              X(states_dotp)(mesh, st%d%dim, psi1(:, :, xpsi1_node(i, rank)), recvbuf(:, :, j), reduce=.false.)
+              X(states_dotp)(mesh, st%d%dim, psi1(:, :, xpsi1_node(i, rank)), sendbuf(:, :, j), reduce=.false.)
           end do
         end do
-        deallocate(sendbuf, recvbuf)
       end if
     end do
 
+    deallocate(sendbuf, recvbuf)
+
     ! Add up all the individual blocks.
     ALLOCATE(res_tmp(psi1_col, psi2_col), psi1_col*psi2_col)
-    call MPI_Allreduce(res, res_tmp, psi1_col*psi2_col, R_MPITYPE, MPI_SUM, st%mpi_grp%comm, mpi_err)
-    ! What is the problem with this BLAS call?
-    ! call lalg_copy(psi1_col*psi2_col, res_tmp(:, 1), res(:, 1))
+    call profiling_in(C_PROFILING_BLOCKT_AR)
+    call MPI_Allreduce(res, res_tmp, psi1_col*psi2_col, R_MPITYPE, MPI_SUM, st%dom_st%comm, mpi_err)
+    call profiling_out(C_PROFILING_BLOCKT_AR)
+    call profiling_in(C_PROFILING_BLOCKT_CP)
     res = res_tmp
+    call profiling_out(C_PROFILING_BLOCKT_CP)
     deallocate(res_tmp)
+    deallocate(xpsi1_count, xpsi2_count, xpsi1_node, xpsi2_node, xpsi1_, xpsi2_)
 #else
     message(1) = 'Running gs parallel in states without MPI. This is a bug!'
     call write_fatal(1)
 #endif
   else ! No states parallelization.
-    if(symm_) then
-      do i = 1, psi1_col
-        res(i, i) = X(states_dotp)(mesh, st%d%dim, psi1(:, :, xpsi1_(i)), psi2(:, :, xpsi2_(i)), reduce=.false.)
-        do j = i+1, psi2_col
-          res(i, j) = X(states_dotp)(mesh, st%d%dim, psi1(:, :, xpsi1_(i)), psi2(:, :, xpsi2_(j)), reduce=.false.)
-          res(j, i) = R_CONJ(res(i, j))
+    if(.not.mesh%use_curvlinear) then
+      ASSERT(psi1_col.ne.0.and.psi2_col.ne.0)
+      ALLOCATE(res_local(psi1_col, psi2_col), psi1_col*psi2_col)
+      ALLOCATE(psi1_block(mesh%np, st%d%dim, psi1_col), mesh%np*st%d%dim*psi1_col)
+      ALLOCATE(psi2_block(mesh%np, st%d%dim, psi2_col), mesh%np*st%d%dim*psi2_col)
+      
+      call X(states_compactify)(st, mesh, xpsi1_(1:psi1_col), psi1, psi1_block)
+      call X(states_compactify)(st, mesh, xpsi2_(1:psi2_col), psi2, psi2_block)
+      call lalg_gemmt(psi1_col, psi2_col, mesh%np*st%d%dim, R_TOTYPE(mesh%vol_pp(1)), &
+        psi1_block(:, :, 1), psi2_block(:, :, 1), R_TOTYPE(M_ZERO), res_local)
+      ! We have to use the intermediate res_local and cannot put res directly into
+      ! lalg_gemmt because otherwise our BLAS interface screws up everything because
+      ! it puts 1s in all free indices! Cost me several headaches to figure this out.
+      ! Perhaps, one day we should write a more comfortable interface to BLAS, or at
+      ! least one that is clearer!
+      res = res_local
+      deallocate(psi1_block, psi2_block, res_local)
+    else ! Curvilinear coordinates.
+      if(symm_) then
+        do i = 1, psi1_col
+          res(i, i) = X(states_dotp)(mesh, st%d%dim, psi1(:, :, xpsi1_(i)), psi2(:, :, xpsi2_(i)), reduce=.false.)
+          do j = i+1, psi2_col
+            res(i, j) = X(states_dotp)(mesh, st%d%dim, psi1(:, :, xpsi1_(i)), psi2(:, :, xpsi2_(j)), reduce=.false.)
+            res(j, i) = R_CONJ(res(i, j))
+          end do
         end do
-      end do
-    else
-      do i = 1, psi1_col
-        do j = 1, psi2_col
-          res(i, j) = X(states_dotp)(mesh, st%d%dim, psi1(:, :, xpsi1_(i)), psi2(:, :, xpsi2_(j)), reduce=.false.)
+      else
+        do i = 1, psi1_col
+          do j = 1, psi2_col
+            res(i, j) = X(states_dotp)(mesh, st%d%dim, psi1(:, :, xpsi1_(i)), psi2(:, :, xpsi2_(j)), reduce=.false.)
+          end do
         end do
-      end do
+      end if
+    end if
+    ! This has to be done because no reduction is done in Xstates_dotp above.
+    ! Rationale: this way, all the reduce operations are done at once (hopefully)
+    ! saving latency overhead.
+    if(mesh%parallel_in_domains) then
+#if defined(HAVE_MPI)
+      ALLOCATE(res_tmp(psi1_col, psi2_col), psi1_col*psi2_col)
+      call MPI_Allreduce(res, res_tmp, psi1_col*psi2_col, R_MPITYPE, MPI_SUM, mesh%mpi_grp%comm, mpi_err)
+      res = res_tmp
+      deallocate(res_tmp)
+#else
+      message(1) = "Running parallel in domain without MPI. This is a bug!"
+      call write_fatal(1)
+#endif
     end if
   end if
-
-  ! This has to be done because no reduction is done in Xstates_dotp above.
-  ! Rationale: this way, all the reduce operations are done at once (hopefully)
-  ! saving latency overhead.
-  ! FIXME: test this!
-  if(mesh%parallel_in_domains) then
-#if defined(HAVE_MPI)
-    ALLOCATE(res_tmp(psi1_col, psi2_col), psi1_col*psi2_col)
-    call MPI_Allreduce(res, res_tmp, psi1_col*psi2_col, R_MPITYPE, MPI_SUM, mesh%mpi_grp%comm, mpi_err)
-    call lalg_copy(psi1_col*psi2_col, res_tmp(:, 1), res(:, 1))
-    deallocate(res_tmp)
-#endif
-  end if
-
+  
   call pop_sub()
-  call profiling_out(C_PROFILING_LOBPCG_BLOCKT)
+  call profiling_out(C_PROFILING_BLOCKT)
 end subroutine X(states_blockt_mul)
 
 
@@ -256,10 +295,11 @@ subroutine X(states_gather)(mesh, st, in, out)
     rdispls(i) = rdispls(i-1) + recvcnts(i-1)
   end do
 
-  call MPI_Debug_In(st%mpi_grp%comm, C_MPI_ALLTOALLV)
+  call mpi_debug_in(st%mpi_grp%comm, C_MPI_ALLTOALLV)
   call MPI_Alltoallv(in(:, 1, 1), sendcnts, sdispls, R_MPITYPE, &
     out(:, 1, 1), recvcnts, rdispls, R_MPITYPE, st%mpi_grp%comm, mpi_err)
-  call MPI_Debug_Out(st%mpi_grp%comm, C_MPI_ALLTOALLV)
+  call mpi_debug_out(st%mpi_grp%comm, C_MPI_ALLTOALLV)
+
   deallocate(sendcnts, sdispls, recvcnts, rdispls)
 
   call pop_sub()
@@ -302,17 +342,18 @@ subroutine X(states_block_matr_mul_add)(mesh, st, alpha, psi, matr, beta, res, x
   R_TYPE,            intent(inout) :: res(mesh%np_part, st%d%dim, st%st_start:st%st_end)
   integer, optional, intent(in)    :: xpsi(:), xres(:)
 
-  integer              :: res_col, psi_col, matr_col, i, j, k, idim
-  R_TYPE               :: tmp
+  integer              :: res_col, psi_col, matr_col, i
   integer, allocatable :: xpsi_(:), xres_(:)
+  R_TYPE, allocatable  :: res_block(:, :, :), matr_block(:, :), psi_block(:, :, :)
 #if defined(HAVE_MPI)
-  integer              :: rank, size, node, ist, round, to, from, matr_row_offset, matr_col_offset
-  integer              :: req, stat(MPI_STATUS_SIZE)
+  integer              :: rank, size, node, ist, round, matr_row_offset, matr_col_offset
+  integer              :: src, dst, left, right, k, l, idim, sendcnt, recvcnt, max_count
+  integer              :: stats(MPI_STATUS_SIZE, 2), reqs(2)
   integer, allocatable :: xpsi_count(:), xres_count(:), xpsi_node(:, :), xres_node(:, :)
-  R_TYPE, allocatable  :: buf(:, :, :), newblock(:, :, :)
+  R_TYPE, pointer      :: sendbuf(:, :, :), recvbuf(:, :, :), tmp_ptr(:, :, :)
 #endif
 
-  call profiling_in(C_PROFILING_LOBPCG_BLOCK_MATR)
+  call profiling_in(C_PROFILING_BLOCK_MATR)
   call push_sub('states_inc.Xstates_block_matr_add')
 
   ! Calculate gobal index sets.
@@ -361,7 +402,7 @@ subroutine X(states_block_matr_mul_add)(mesh, st, alpha, psi, matr, beta, res, x
     do i = 1, res_col
       xres_count(st%node(xres_(i))) = xres_count(st%node(xres_(i))) + 1
     end do
-    ! Allocate space, it is a bit more than really required.
+    ! Allocate space, it is a bit more than really required but makes the code simpler.
     ALLOCATE(xpsi_node(maxval(xpsi_count), 0:size-1), maxval(xpsi_count)*size)
     ALLOCATE(xres_node(maxval(xres_count), 0:size-1), maxval(xres_count)*size)
     ! Now set up the index sets.
@@ -371,7 +412,7 @@ subroutine X(states_block_matr_mul_add)(mesh, st, alpha, psi, matr, beta, res, x
     xres_node  = 0
     do ist = 1, st%nst
       node = st%node(ist)
-      ! A state ist is ony included if its in the global index set.
+      ! A state ist is only included if its in the global index set.
       if(member(ist, xpsi_)) then
         xpsi_count(node)                  = xpsi_count(node) + 1
         xpsi_node(xpsi_count(node), node) = ist
@@ -382,151 +423,173 @@ subroutine X(states_block_matr_mul_add)(mesh, st, alpha, psi, matr, beta, res, x
       end if
     end do
 
-    ! The local block. This calculates the diagonal blocks of the result.
-    matr_row_offset = sum(xpsi_count(0:rank-1))
-    matr_col_offset = sum(xres_count(0:rank-1))
-    if(beta.eq.R_TOTYPE(M_ZERO)) then
-      do j = 1, xres_count(rank)
+    ! Take care of beta first, if necessary, and compact res to res_block.
+    if(beta.ne.R_TOTYPE(M_ZERO)) then
+      call profiling_in(C_PROFILING_BLOCK_MATR_CP)
+      do i = 1, xres_count(rank)
         do idim = 1, st%d%dim
-          do i = 1, mesh%np
-            tmp = R_TOTYPE(M_ZERO)
-            do k = 1, xpsi_count(rank)
-              tmp = tmp + psi(i, idim, xpsi_node(k, rank))*matr(k+matr_row_offset, j+matr_col_offset)
-            end do
-            res(i, idim, xres_node(j, rank)) = alpha*tmp
-          end do
+          call lalg_scal(mesh%np, beta, res(:, idim, xres_node(i, rank)))
         end do
       end do
+      call profiling_out(C_PROFILING_BLOCK_MATR_CP)
     else
-      do j = 1, xres_count(rank)
-        do idim = 1, st%d%dim
-          do i = 1, mesh%np
-            tmp = R_TOTYPE(M_ZERO)
-            do k = 1, xpsi_count(rank)
-              tmp = tmp + psi(i, idim, xpsi_node(k, rank))*matr(k+matr_row_offset, j+matr_col_offset)
-            end do
-            res(i, idim, xres_node(j, rank)) = beta*res(i, idim, xres_node(j, rank)) + alpha*tmp
-          end do
-        end do
-      end do
+      res = R_TOTYPE(M_ZERO)
     end if
+    ALLOCATE(res_block(mesh%np, st%d%dim, xres_count(rank)), mesh%np*st%d%dim*xres_count(rank))
+    call profiling_in(C_PROFILING_BLOCK_MATR_CP)
+    call X(states_compactify)(st, mesh, xres_node(1:xres_count(rank), rank), res, res_block)
+    call profiling_out(C_PROFILING_BLOCK_MATR_CP)
 
-    ! The remote blocks (offdiagonal blocks).
-    ! Buffer for the blocks received from other nodes.
-    ALLOCATE(newblock(mesh%np, st%d%dim, xres_count(rank)), mesh%np*st%d%dim*xres_count(rank))
+    ! Allocate send and receive buffers. For some blocks, they are oversized but
+    ! buffer reusing saves some overhead in the MPI library.
+    max_count = maxval(xpsi_count)
+    ALLOCATE(sendbuf(mesh%np, st%d%dim, max_count), mesh%np*st%d%dim*max_count)
+    ALLOCATE(recvbuf(mesh%np, st%d%dim, max_count), mesh%np*st%d%dim*max_count)
 
-    ! Communication is done in a ring fashion: 0 sends to 1, 1 to 2, etc. in the first round,
-    ! 0 to 2, 1 to 3, etc. in the second etc. In the whole, size-1 blocks have to be
-    ! calculated, because the diagonal block has already been done.
-    do round = 1, size-1
-      to   = mod(rank + round, size)
-      from = mod(size + rank - round, size)
+    ! Compact the local block to send away.
+    sendcnt = xpsi_count(rank)
+    call profiling_in(C_PROFILING_BLOCK_MATR_CP)
+    call X(states_compactify)(st, mesh, xpsi_node(1:xpsi_count(rank), rank), psi(:, :, :), sendbuf)
+    call profiling_out(C_PROFILING_BLOCK_MATR_CP)
 
-      ! MPI_Sendrecv might be interesting here (because we do a shift).
-      ! But interleaving computation with non-blocking communication is
-      ! probably better.
-      if(xres_count(to).gt.0) then
-        matr_row_offset = sum(xpsi_count(0:rank-1))
-        matr_col_offset = sum(xres_count(0:to-1))
-        ! Allocate sendbuffer.
-        ALLOCATE(buf(mesh%np, st%d%dim, xres_count(to)), mesh%np*st%d%dim*xres_count(to))
-        do j = 1, xres_count(to)
-          do idim = 1, st%d%dim
-            do i = 1, mesh%np
-              tmp = R_TOTYPE(M_ZERO)
-              do k = 1, xpsi_count(rank)
-                tmp = tmp + psi(i, idim, xpsi_node(k, rank))*matr(k+matr_row_offset, j+matr_col_offset)
-              end do
-              buf(i, idim, j) = alpha*tmp
-            end do
-          end do
-        end do
-        ! Asynchronous send.
-        call MPI_Isend(buf, mesh%np*st%d%dim*xres_count(to), R_MPITYPE, to, 0, &
-          st%mpi_grp%comm, req, mpi_err)
+    ! Get neighbours.
+    call MPI_Cart_shift(st%dom_st%comm, P_STRATEGY_STATES-1, -1, src, dst, mpi_err)
+    right = lmpi_translate_rank(st%dom_st%comm, st%mpi_grp%comm, src)
+    left  = lmpi_translate_rank(st%dom_st%comm, st%mpi_grp%comm, dst)
+
+    do round = 0, size-1
+      k = mod(rank+round, size)   ! The column of the block currently being calculated.
+      l = mod(rank+round+1, size) ! The column of the block currently being communicated.
+      ! In all but the first rounds we have to wait for the data to arrive and
+      ! then swap buffers, i. e., what we received in the send buffer in the remainder
+      ! of this loop, a bit confusing.
+      if(round.gt.0) then
+        call MPI_Waitall(2, reqs, stats, mpi_err)
+        tmp_ptr => sendbuf
+        sendbuf => recvbuf
+        recvbuf => tmp_ptr
+        sendcnt =  recvcnt
       end if
-      ! And blocking receive. Otherwise, the addition of the new block to the
-      ! local result cannot be done.
-      if(xres_count(rank).gt.0) then
-        call MPI_Recv(newblock, mesh%np*st%d%dim*xres_count(rank), R_MPITYPE, from, 0, &
-          st%mpi_grp%comm, stat, mpi_err)
-        do i = 1, xres_count(rank)
-          call lalg_axpy(mesh%np, R_TOTYPE(M_ONE), newblock(:, 1, i), res(:, 1, xres_node(i, rank)))
-        end do
+      ! In all but the last rounds the data has to be passed on to the left neighbour, and
+      ! accordingly received from the right neighbour.
+      if(round.lt.size-1) then
+        recvcnt = xpsi_count(l)
+        call MPI_Irecv(recvbuf, mesh%np*st%d%dim*recvcnt, R_MPITYPE, right, 0, st%mpi_grp%comm, reqs(1), mpi_err)
+        call MPI_Isend(sendbuf, mesh%np*st%d%dim*sendcnt, R_MPITYPE, left, 0, st%mpi_grp%comm, reqs(2), mpi_err)
       end if
-      ! Wait for the sending to be complete.
-      if(xres_count(to).gt.0) then
-        call MPI_Wait(req, stat, mpi_err)
-        deallocate(buf)
+
+      ! Do the matrix multiplication.
+      matr_row_offset = sum(xpsi_count(0:k-1))
+      matr_col_offset = sum(xres_count(0:rank-1))
+      ALLOCATE(matr_block(xpsi_count(k), xres_count(rank)), xpsi_count(k)*xres_count(rank))
+
+      if(sendcnt.gt.0.and.xres_count(rank).gt.0) then
+        call profiling_in(C_PROFILING_BLOCK_MATR_CP)
+        matr_block = matr(matr_row_offset+1:matr_row_offset+xpsi_count(k), matr_col_offset+1:matr_col_offset+xres_count(rank))
+        call profiling_out(C_PROFILING_BLOCK_MATR_CP)
+        call profiling_in(C_PROFILING_BLOCK_MATR_MM)
+        call lalg_gemm(mesh%np*st%d%dim, xres_count(rank), sendcnt, alpha, &
+          sendbuf(:, :, 1), matr_block, R_TOTYPE(M_ONE), res_block(:, :, 1))
+        call profiling_out(C_PROFILING_BLOCK_MATR_MM)
       end if
+
+      deallocate(matr_block)
     end do
-    deallocate(newblock)
+
+    ! Copy result.
+    call profiling_in(C_PROFILING_BLOCK_MATR_CP)
+    call X(states_uncompactify)(st, mesh, xres_node(1:xres_count(rank), rank), res_block, res)
+    call profiling_out(C_PROFILING_BLOCK_MATR_CP)
+
+    deallocate(res_block)
+    deallocate(sendbuf, recvbuf)
+    deallocate(xpsi_count, xres_count, xpsi_node, xres_node)
 #else
     message(1) = 'Running gs parallel in states without MPI. This is a bug!'
     call write_fatal(1)
 #endif
   else
-    ! We can shortcut for beta being zero.
-    if(beta.eq.R_TOTYPE(M_ZERO)) then
-      call profiling_in(C_PROFILING_LOBPCG_LOOP)
-      do j = 1, matr_col
-        do idim = 1, st%d%dim
-          do i = 1, mesh%np
-            res(i, idim, xres_(j)) = R_TOTYPE(M_ZERO)
-            do k = 1, psi_col
-              res(i, idim, xres_(j)) = res(i, idim, xres_(j)) + psi(i, idim, xpsi_(k))*matr(k, j)
-            end do
-            res(i, idim, xres_(j)) = alpha*res(i, idim, xres_(j))
-          end do
-        end do
-      end do
-      call profiling_out(C_PROFILING_LOBPCG_LOOP)
-    ! And also for alpha=beta=1.
-    else if(alpha.eq.R_TOTYPE(M_ONE).and.beta.eq.R_TOTYPE(M_ONE)) then
-      call profiling_in(C_PROFILING_LOBPCG_LOOP)
-      do j = 1, matr_col
-        do idim = 1, st%d%dim
-          do i = 1, mesh%np
-            do k = 1, psi_col
-              res(i, idim, xres_(j)) = res(i, idim, xres_(j)) + psi(i, idim, xpsi_(k))*matr(k, j)
-            end do
-          end do
-        end do
-      end do
-      call profiling_out(C_PROFILING_LOBPCG_LOOP)
-    ! The general case.
-    else
-      call profiling_in(C_PROFILING_LOBPCG_LOOP)
-      do j = 1, matr_col
-        do idim = 1, st%d%dim
-          do i = 1, mesh%np
-            tmp = R_TOTYPE(M_ZERO)
-            do k = 1, psi_col
-              tmp = tmp + psi(i, idim, xpsi_(k))*matr(k, j)
-            end do
-            if(beta.eq.R_TOTYPE(M_ZERO)) then
-              res(i, idim, xres_(j)) = alpha*tmp
-            else
-              res(i, idim, xres_(j)) = alpha*tmp + beta*res(i, idim, xres_(j))
-            end if
-          end do
-        end do
-      end do
-      call profiling_out(C_PROFILING_LOBPCG_LOOP)
-    end if
-  end if
+    ALLOCATE(res_block(mesh%np, st%d%dim, res_col), mesh%np*st%d%dim*res_col)
+    call profiling_in(C_PROFILING_BLOCK_MATR_CP)
+    call X(states_compactify)(st, mesh, xres_(1:res_col), res, res_block)
+    call profiling_out(C_PROFILING_BLOCK_MATR_CP)
 
-  if(st%parallel_in_states) then
-#if defined(HAVE_MPI)
-    deallocate(xpsi_count, xres_count, xpsi_node, xres_node)
-#endif
+    ALLOCATE(psi_block(mesh%np, st%d%dim, psi_col), mesh%np*st%d%dim*psi_col)
+    call profiling_in(C_PROFILING_BLOCK_MATR_CP)
+    call X(states_compactify)(st, mesh, xpsi_(1:psi_col), psi, psi_block)
+    call profiling_out(C_PROFILING_BLOCK_MATR_CP)
+
+    ! matr_block is needed because matr may be an assumed shape array.
+    ALLOCATE(matr_block(psi_col, matr_col), psi_col*matr_col)
+    matr_block = matr
+    call lalg_gemm(mesh%np*st%d%dim, matr_col, psi_col, alpha, &
+      psi_block(:, :, 1), matr_block, beta, res_block(:, :, 1))
+    deallocate(matr_block)
+
+    ! Copy result.
+    call profiling_in(C_PROFILING_BLOCK_MATR_CP)
+    call X(states_uncompactify)(st, mesh, xres_(1:res_col), res_block, res)
+    call profiling_out(C_PROFILING_BLOCK_MATR_CP)
+    deallocate(res_block, psi_block)
   end if
 
   deallocate(xpsi_, xres_)
 
   call pop_sub()
-  call profiling_out(C_PROFILING_LOBPCG_BLOCK_MATR)
+  call profiling_out(C_PROFILING_BLOCK_MATR)
 end subroutine X(states_block_matr_mul_add)
+
+
+! ---------------------------------------------------------
+! Copy in(:, :, idx) to out out(:, :, 1:ubound(idx, 1)).
+subroutine X(states_compactify)(st, m, idx, in, out)
+  type(states_t), intent(in)  :: st
+  type(mesh_t),   intent(in)  :: m
+  integer,        intent(in)  :: idx(:)
+  R_TYPE,         intent(in)  :: in(:, :, :)
+  R_TYPE,         intent(out) :: out(:, :, :)
+
+  integer :: ist, idim, n
+
+  call push_sub('states_block_inc.X(states_compactify)')
+
+  n = ubound(idx, 1)
+
+  do ist = 1, n
+    do idim = 1, st%d%dim
+      call lalg_copy(m%np, in(:, idim, idx(ist)-st%st_start+1), out(:, idim, ist))
+    end do
+  end do
+  
+  call pop_sub()
+end subroutine X(states_compactify)
+
+
+! ---------------------------------------------------------
+! Undo the effect of X(states_compactify), i. e.
+! X(states_compactify)(st, m, idx, in, out) followed by
+! X(states_uncompactify)(st, m, idx, out, in) is identity.
+subroutine X(states_uncompactify)(st, m, idx, in, out)
+  type(states_t), intent(in)  :: st
+  type(mesh_t),   intent(in)  :: m
+  integer,        intent(in)  :: idx(:)
+  R_TYPE,         intent(in)  :: in(:, :, :)
+  R_TYPE,         intent(out) :: out(:, :, :)
+
+  integer :: ist, idim, n
+
+  call push_sub('states_block_inc.X(states_uncompactify)')
+
+  n = ubound(idx, 1)
+
+  do ist = 1, n
+    do idim = 1, st%d%dim
+      call lalg_copy(m%np, in(:, idim, ist), out(:, idim, idx(ist)-st%st_start+1))
+    end do
+  end do
+  
+  call pop_sub()
+end subroutine X(states_uncompactify)
 
 
 !! Local Variables:

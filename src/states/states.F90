@@ -149,6 +149,7 @@ module states_m
     ! This is stuff needed for the parallelization in states.
     logical                     :: parallel_in_states ! Am I parallel in states?
     type(mpi_grp_t)             :: mpi_grp            ! The MPI group related to the parallelization in states.
+    type(mpi_grp_t)             :: dom_st             ! The MPI group related to the domain-states "plane".
     integer                     :: lnst               ! Number of states on local node.
     integer                     :: st_start, st_end   ! Range of states processed by local node.
     integer, pointer            :: node(:)            ! To which node belongs each state.
@@ -192,7 +193,7 @@ module states_m
   interface states_block_matr_mul_add
     module procedure dstates_block_matr_mul_add, zstates_block_matr_mul_add
   end interface
-  
+
 contains
 
   ! ---------------------------------------------------------
@@ -643,7 +644,7 @@ contains
     else
       deallocate(st%zpsi); nullify(st%zpsi)
     end if
-    
+
     call pop_sub()
   end subroutine states_deallocate_wfns
 
@@ -757,31 +758,31 @@ contains
         do id = 1, st%d%dim
           do is = 1, st%nst
             do ik = 1, st%d%nik   
-              
+
               ! does the block entry match and is this node responsible?
               if(.not.(id.eq.idim .and. is.eq.inst .and. ik.eq.inik    &
                 .and. st%st_start.le.is .and. st%st_end.ge.is) ) cycle
-              
+
               select case(ncols)
 
               case(state_from_formula) ! if 4 colums are given we got a formula
                 ! parse formula string
                 call loct_parse_block_string(                            &
                   blk, ib-1, 3, st%user_def_states(id, is, ik))
-                
+
                 write(message(1), '(a,3i5)') 'Substituting state of orbital with k, ist, dim = ', ik, is, id
                 write(message(2), '(2a)') '  with the expression:'
                 write(message(3), '(2a)') '  ',trim(st%user_def_states(id, is, ik))
                 call write_info(3)
-                
+
                 ! convert to C string
                 call conv_to_C_string(st%user_def_states(id, is, ik))
-                
+
                 ! fill states with user defined formulas
                 do ip = 1, mesh%np
                   x = mesh%x(ip, :)
                   r = sqrt(sum(x(:)**2))
-                  
+
                   ! parse user defined expressions
                   call loct_parse_expression(psi_re, psi_im,             &
                     x(1), x(2), x(3), r, M_ZERO, st%user_def_states(id, is, ik))
@@ -808,16 +809,16 @@ contains
 
               ! normalize orbital
               call zstates_normalize_orbital(mesh, st%d%dim, st%zpsi(:,:, is, ik))
-              
+
             end do
           end do
         end do
-        
+
       end do
 
       call loct_parse_block_end(blk)
       call messages_print_stress(stdout)
-      
+
     else
       message(1) = '"UserDefinesStates" has to be specified as block.'
       call write_fatal(1)
@@ -1007,7 +1008,7 @@ contains
       deallocate(st%rho, st%occ, st%eigenval, st%momentum, st%node)
       nullify   (st%rho, st%occ, st%eigenval, st%momentum, st%node)
     end if
- 
+
     if(associated(st%j)) then
       deallocate(st%j)
       nullify(st%j)
@@ -1041,12 +1042,10 @@ contains
       nullify(st%st_range)
       deallocate(st%st_num)
       nullify(st%st_num)
-      deallocate(st%ap%comms)
-      nullify(st%ap%comms)
       deallocate(st%ap%schedule)
       nullify(st%ap%schedule)
     end if
-    
+
     call pop_sub()
   end subroutine states_end
 
@@ -1696,7 +1695,7 @@ contains
         ! write header
         write(iunit(is), '(a)') '# energy, band resolved DOS'
       end do
-      
+
       do ie = 1, epoints
         energy = emin + (ie - 1) * de
         dos(ie, ist, :) = M_ZERO
@@ -1778,7 +1777,7 @@ contains
     call push_sub('states.states_write_fermi_energy')
 
     call states_fermi(st, m)
-    
+
     iunit = io_open(trim(dir)//'/'//'bands-efermi.dat', action='write')    
 
     scale = units_out%energy%factor
@@ -1806,7 +1805,7 @@ contains
     write(message(3), '(7f12.6)')          &
       (M_ZERO, i = 1, 6),                  &
       st%ef/scale
-    
+
     write(message(4), '(7f12.6)')          &
       maxval(st%d%kpoints(1,:)),           &
       maxval(st%d%kpoints(2,:)),           &
@@ -1824,7 +1823,7 @@ contains
     iunit = io_open(trim(dir)//'/'//'total-dos-efermi.dat', action='write')    
 
     write(message(1), '(a)') '# Fermi energy in a format compatible with total-dos.dat'    
-    
+
     ! this is the maximum that tdos can reach
     maxdos = sum(st%d%kweights) * st%nst
 
@@ -1855,7 +1854,7 @@ contains
     ALLOCATE(      eindex(2, st%nst*st%d%nik), 2*st%nst*st%d%nik)
     dsize = st%nst*st%d%nik * st%nst*st%d%nik
     ALLOCATE(degeneracy_matrix(st%nst*st%d%nik, st%nst*st%d%nik), dsize)
-    
+
     ! convert double index "inst, inik" to single index "is"
     ! and keep mapping array
     is = 1
@@ -1867,7 +1866,7 @@ contains
         is = is + 1
       end do
     end do
-    
+
     ! sort eigenvalues
     call sort(eigenval_sorted, sindex)
 
@@ -1916,24 +1915,24 @@ contains
         write(iunit, '(i6,4e24.16,32767i3)') is, st%d%kpoints(:, eindex(2, sindex(is))), &
           eigenval_sorted(is), (degeneracy_matrix(is, js), js = 1, st%nst*st%d%nik)
       end do
-    
+
       call io_close(iunit)
-    
+
       ! write index vectors to "restart/gs" directory
       iunit = io_open(trim(tmpdir)//'gs/index_vectors', action='write', is_tmp = .true.)    
-      
+
       write(iunit, '(a)') '# index  sindex  eindex1 eindex2'
 
       do is = 1, st%nst*st%d%nik
         write(iunit,'(4i6)') is, sindex(is), eindex(1, sindex(is)), eindex(2, sindex(is))
       end do
-    
+
       call io_close(iunit)
     end if
 
     deallocate(eigenval_sorted, sindex, eindex)
     deallocate(degeneracy_matrix)
-    
+
     call pop_sub()
   end subroutine states_degeneracy_matrix
 
@@ -2112,53 +2111,54 @@ contains
     if(multicomm_strategy_is_parallel(mc, P_STRATEGY_STATES)) then
       st%parallel_in_states = .true.
       call mpi_grp_init(st%mpi_grp, mc%group_comm(P_STRATEGY_STATES))
-      call create_all_pairs(st%mpi_grp, st%ap)
+      call mpi_grp_init(st%dom_st, mc%dom_st_comm)
+      call multicomm_create_all_pairs(st%mpi_grp, st%ap)
 
-      if(st%nst < st%mpi_grp%size) then
-        message(1) = "Have more processors than necessary"
-        write(message(2),'(i4,a,i4,a)') st%mpi_grp%size, " processors and ", st%nst, " states."
-        call write_fatal(2)
-      end if
+     if(st%nst < st%mpi_grp%size) then
+       message(1) = "Have more processors than necessary"
+       write(message(2),'(i4,a,i4,a)') st%mpi_grp%size, " processors and ", st%nst, " states."
+       call write_fatal(2)
+     end if
 
-      ALLOCATE(st%st_range(2, 0:st%mpi_grp%size-1), 2*st%mpi_grp%size)
-      ALLOCATE(st%st_num(0:st%mpi_grp%size-1), st%mpi_grp%size)
+     ALLOCATE(st%st_range(2, 0:st%mpi_grp%size-1), 2*st%mpi_grp%size)
+     ALLOCATE(st%st_num(0:st%mpi_grp%size-1), st%mpi_grp%size)
 
-      do k = 0, st%mpi_grp%size-1
-        i = st%nst / st%mpi_grp%size
-        ii = st%nst - i*st%mpi_grp%size
-        if(ii > 0 .and. k < ii) then
-          i = i + 1
-          st_start = k*i + 1
-          st_end = st_start + i - 1
-        else
-          st_end = st%nst - (st%mpi_grp%size - k - 1)*i
-          st_start = st_end - i + 1
-        end if
-        write(message(1),'(a,i4,a,i4,a,i4)') 'Info: Nodes in states-group ', k, &
-          ' will manage states', st_start, " - ", st_end
-        call write_info(1)
-        st%st_range(1, k) = st_start
-        st%st_range(2, k) = st_end
-        st%st_num(k)      = st_end-st_start+1
-        if(st%mpi_grp%rank .eq. k) then
-          st%st_start = st_start
-          st%st_end   = st_end
-          st%lnst     = st_end-st_start+1
-        endif
-      end do
+     do k = 0, st%mpi_grp%size-1
+       i = st%nst / st%mpi_grp%size
+       ii = st%nst - i*st%mpi_grp%size
+       if(ii > 0 .and. k < ii) then
+         i = i + 1
+         st_start = k*i + 1
+         st_end = st_start + i - 1
+       else
+         st_end = st%nst - (st%mpi_grp%size - k - 1)*i
+         st_start = st_end - i + 1
+       end if
+       write(message(1),'(a,i4,a,i4,a,i4)') 'Info: Nodes in states-group ', k, &
+         ' will manage states', st_start, " - ", st_end
+       call write_info(1)
+       st%st_range(1, k) = st_start
+       st%st_range(2, k) = st_end
+       st%st_num(k)      = st_end-st_start+1
+       if(st%mpi_grp%rank .eq. k) then
+         st%st_start = st_start
+         st%st_end   = st_end
+         st%lnst     = st_end-st_start+1
+       endif
+     end do
 
-      sn  = st%nst/st%mpi_grp%size
-      sn1 = sn + 1
-      r  = mod(st%nst, st%mpi_grp%size)
-      do j = 1, r
-        st%node((j-1)*sn1+1:j*sn1) = j - 1
-      end do
-      k = sn1*r
-      call MPI_Barrier(st%mpi_grp%comm, mpi_err)
-      do j = 1, st%mpi_grp%size - r
-        st%node(k+(j-1)*sn+1:k+j*sn) = r + j - 1
-      end do
-    end if
+     sn  = st%nst/st%mpi_grp%size
+     sn1 = sn + 1
+     r  = mod(st%nst, st%mpi_grp%size)
+     do j = 1, r
+       st%node((j-1)*sn1+1:j*sn1) = j - 1
+     end do
+     k = sn1*r
+     call MPI_Barrier(st%mpi_grp%comm, mpi_err)
+     do j = 1, st%mpi_grp%size - r
+       st%node(k+(j-1)*sn+1:k+j*sn) = r + j - 1
+     end do
+   end if
 #endif
 
     call pop_sub()
