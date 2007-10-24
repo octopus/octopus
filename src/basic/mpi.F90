@@ -84,8 +84,8 @@ contains
 
     if(comm .ne. -1) then
       grp%comm = comm
-      call MPI_Comm_Rank(grp%comm, grp%rank, mpi_err)
-      call MPI_Comm_Size(grp%comm, grp%size, mpi_err)
+      call MPI_Comm_rank(grp%comm, grp%rank, mpi_err)
+      call MPI_Comm_size(grp%comm, grp%size, mpi_err)
     else
 #endif
       grp%comm = -1

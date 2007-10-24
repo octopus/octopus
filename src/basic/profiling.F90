@@ -104,51 +104,55 @@ module profiling_m
   !should be moved to their respective modules.
   !i.e. DO NOT PUT NEW PROFILES HERE
 
-  type(profile_t), save, public :: &
-       C_PROFILING_COMPLETE_DATASET, &
-       C_PROFILING_MF_INTEGRATE,     &
-       C_PROFILING_MF_DOTP,          &
-       C_PROFILING_MF_NRM2,          &
-       C_PROFILING_GHOST_UPDATE,     &
-       C_PROFILING_VEC_INTEGRATE,    &
-       C_PROFILING_SCF_CYCLE,        &
-       C_PROFILING_MF_DOTP_ALLREDUCE,&
+  type(profile_t), save, public ::    &
+       C_PROFILING_COMPLETE_DATASET,  &
+       C_PROFILING_MF_INTEGRATE,      &
+       C_PROFILING_MF_DOTP,           &
+       C_PROFILING_MF_NRM2,           &
+       C_PROFILING_GHOST_UPDATE,      &
+       C_PROFILING_VEC_INTEGRATE,     &
+       C_PROFILING_SCF_CYCLE,         &
+       C_PROFILING_MF_DOTP_ALLREDUCE, &
        C_PROFILING_HPSI
 
-  type(profile_t), save, public ::         &
-       C_PROFILING_KINETIC,          &
-       C_PROFILING_VLPSI,            &
-       C_PROFILING_VNLPSI,           &
-       C_PROFILING_POISSON_SOLVE,    &
-       C_PROFILING_XC,               &
-       C_PROFILING_XC_LOCAL,         &
-       C_PROFILING_XC_OEP,           &
-       C_PROFILING_XC_EXX,           &
-       C_PROFILING_XC_SIC,           &
+  type(profile_t), save, public :: &
+       C_PROFILING_KINETIC,        &
+       C_PROFILING_VLPSI,          &
+       C_PROFILING_VNLPSI,         &
+       C_PROFILING_POISSON_SOLVE,  &
+       C_PROFILING_XC,             &
+       C_PROFILING_XC_LOCAL,       &
+       C_PROFILING_XC_OEP,         &
+       C_PROFILING_XC_EXX,         &
+       C_PROFILING_XC_SIC,         &
        C_PROFILING_XC_KLI
 
-  type(profile_t), save, public ::              &
-       C_PROFILING_XC_OEP_FULL,           &
-       C_PROFILING_TIME_STEP,             &
-       C_PROFILING_GRAM_SCHMIDT1,         &
-       C_PROFILING_GRAM_SCHMIDT2,         &
-       C_PROFILING_EIGEN_SOLVER,          &
-       C_PROFILING_DISK_ACCESS,           &
-       C_PROFILING_LCAO,                  &
+  type(profile_t), save, public :: &
+       C_PROFILING_XC_OEP_FULL,    &
+       C_PROFILING_TIME_STEP,      &
+       C_PROFILING_GRAM_SCHMIDT1,  &
+       C_PROFILING_GRAM_SCHMIDT2,  &
+       C_PROFILING_EIGEN_SOLVER,   &
+       C_PROFILING_DISK_ACCESS,    &
+       C_PROFILING_LCAO,           &
        C_PROFILING_LCAO_INIT
 
-  type(profile_t), save, public ::              &
-       C_PROFILING_ELEC_PROPAGATOR,       &
-       C_PROFILING_LOBPCG_BLOCKT,         &
-       C_PROFILING_LOBPCG_BLOCK_MATR,     &
-       C_PROFILING_LOBPCG_ESOLVE,         &
-       C_PROFILING_LOBPCG_CHOL,           &
-       C_PROFILING_LOBPCG_INV,            &
-       C_PROFILING_LOBPCG_COPY,           &
+  type(profile_t), save, public ::    &
+       C_PROFILING_ELEC_PROPAGATOR,   &
+       C_PROFILING_BLOCKT,            &
+       C_PROFILING_BLOCKT_AR,         &
+       C_PROFILING_BLOCKT_MM,         &
+       C_PROFILING_BLOCKT_CP,         &
+       C_PROFILING_BLOCK_MATR,        &
+       C_PROFILING_BLOCK_MATR_CP,     &
+       C_PROFILING_BLOCK_MATR_MM,     &
+       C_PROFILING_LOBPCG_ESOLVE,     &
+       C_PROFILING_LOBPCG_CHOL,       &
+       C_PROFILING_LOBPCG_INV,        &
+       C_PROFILING_LOBPCG_COPY,       &
        C_PROFILING_LOBPCG_LOOP
 
 contains
-
 
   ! ---------------------------------------------------------
   ! Create profiling subdirectory.
@@ -208,8 +212,13 @@ contains
       call profile_init(C_PROFILING_LCAO,             'LCAO')
       call profile_init(C_PROFILING_LCAO_INIT,        'LCAO_INIT')
       call profile_init(C_PROFILING_ELEC_PROPAGATOR,  'ELEC_PROPAGATOR')
-      call profile_init(C_PROFILING_LOBPCG_BLOCKT,    'LOBPCG_BLOCKT ')
-      call profile_init(C_PROFILING_LOBPCG_BLOCK_MATR,'LOBPCG_BLOCK_MATR')
+      call profile_init(C_PROFILING_BLOCKT,           'BLOCKT')
+      call profile_init(C_PROFILING_BLOCKT_AR,        'BLOCKT_AR')
+      call profile_init(C_PROFILING_BLOCKT_MM,        'BLOCKT_MM')
+      call profile_init(C_PROFILING_BLOCKT_CP,        'BLOCKT_CP')
+      call profile_init(C_PROFILING_BLOCK_MATR,       'BLOCK_MATR')
+      call profile_init(C_PROFILING_BLOCK_MATR_CP,    'BLOCK_MATR_CP')
+      call profile_init(C_PROFILING_BLOCK_MATR_MM,    'BLOCK_MATR_MM')
       call profile_init(C_PROFILING_LOBPCG_ESOLVE,    'LOBPCG_ESOLVE')
       call profile_init(C_PROFILING_LOBPCG_CHOL,      'LOBPCG_CHOL')
       call profile_init(C_PROFILING_LOBPCG_INV,       'LOBPCG_INV')
@@ -439,6 +448,7 @@ contains
   end subroutine profiling_output
 
 end module profiling_m
+
 
 !! Local Variables:
 !! mode: f90

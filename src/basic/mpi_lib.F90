@@ -22,6 +22,7 @@
 #include "global.h"
 
 module mpi_lib_m
+  use global_m
   use messages_m
   use mpi_m
   use mpi_debug_m
@@ -31,8 +32,9 @@ module mpi_lib_m
   private
 
 #if defined(HAVE_MPI)
-  public :: &
-    lmpi_gen_alltoallv
+  public ::             &
+    lmpi_gen_alltoallv, &
+    lmpi_translate_rank
 
   interface lmpi_gen_alltoallv
     module procedure dlmpi_gen_alltoallv, zlmpi_gen_alltoallv, ilmpi_gen_alltoallv
@@ -42,6 +44,30 @@ module mpi_lib_m
 contains
 
 #if defined(HAVE_MPI)
+  ! ---------------------------------------------------------
+  ! Returns the rank number of the node rank in from_comm for the
+  ! to_comm communicator.
+  integer function lmpi_translate_rank(from_comm, to_comm, rank)
+    integer, intent(in) :: from_comm
+    integer, intent(in) :: to_comm
+    integer, intent(in) :: rank
+
+    integer :: from_group, to_group, from_rank(1), to_rank(1)
+
+    call push_sub('mpi_lib.lmpi_translate_rank')
+
+    call MPI_Comm_group(from_comm, from_group, mpi_err)
+    call MPI_Comm_group(to_comm, to_group, mpi_err)
+
+    from_rank(1) = rank
+    call MPI_Group_translate_ranks(from_group, 1, from_rank, to_group, to_rank, mpi_err)
+
+    lmpi_translate_rank = to_rank(1)
+
+    call pop_sub()
+  end function lmpi_translate_rank
+
+
 #include "undef.F90"
 #include "real.F90"
 #include "mpi_lib_inc.F90"

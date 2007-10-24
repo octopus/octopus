@@ -17,11 +17,8 @@
 !!
 !! $Id$
 
-
 #include "global.h"
 
-! This part regards the combined parallelization in indices
-!
 ! Given a number n_index of indices and their ranges index_range(1:n_index),
 ! we divide the n_nodes in groups and create communicators for each group.
 ! Each group is associated with one index. The min_range indicates the minimum
@@ -39,14 +36,6 @@
 ! * that space is divided in 2 domains per state,
 ! * the states are divided in 3 groups, i. e. 5 states per processor, and
 ! * the whole setting is duplicated because of the 2 kpoints.
-! One can view it as a tree (see degug/parallel_tree.dot)
-!
-!                       ------------------
-!                       /                \         <- Division in k-points (1 k-point per node)
-!                  ---------          ---------
-!                /     |    \       /     |    \   <- Division in states   (5 states per node)
-!              ----  ----  ----   ----  ----  ----
-!              /  \  /  \  /  \   /  \  /  \  /  \ <- Division in domains  (50000 points per node)
 !
 ! To perform collective operations (like a reduce), you can use the communicators
 ! provided in mc%group_comm(:). For example, to sum over states, the communicator
@@ -64,9 +53,8 @@
     use mpi_m
     use utils_m
     use varinfo_m
-
-#ifdef USE_OMP
-  use omp_lib
+#if defined(USE_OMP)
+    use omp_lib
 #endif
 
   implicit none
@@ -74,16 +62,16 @@
   private
 
   public ::                          &
-    multicomm_t,                     &
-    multicomm_tree_t,                &
-    multicomm_tree_t_pointer,        &
-    multicomm_all_pairs_t,           &
-    multicomm_init, multicomm_end,   &
-    multicomm_strategy_is_parallel,  &
-#ifdef USE_OMP
+#if defined(USE_OMP)
     divide_range,                    &
 #endif
-    create_all_pairs
+#if defined(HAVE_MPI)
+    multicomm_create_all_pairs,      &
+#endif
+    multicomm_t,                     &
+    multicomm_all_pairs_t,           &
+    multicomm_init, multicomm_end,   &
+    multicomm_strategy_is_parallel
 
   ! possible parallelization strategies
   integer, public, parameter ::      &
@@ -103,38 +91,19 @@
     "par_other  "                    &
     /)
 
-  type multicomm_tree_t_pointer
-    type(multicomm_tree_t), pointer :: p
-  end type multicomm_tree_t_pointer
-
-  type multicomm_tree_t
-    type(multicomm_tree_t_pointer), pointer :: up
-
-    integer          :: n_down
-    type(multicomm_tree_t_pointer), pointer :: down(:)
-
-    integer          :: label        ! labels this node
-    integer          :: level
-
-    integer          :: n_group
-    integer, pointer :: group(:)
-  end type multicomm_tree_t
-
   ! Stores all communicators and groups
   type multicomm_t
-    integer          :: n_node       ! Total number of nodes.
-    integer          :: n_index      ! Number of parallel indices.
+    integer          :: n_node         ! Total number of nodes.
+    integer          :: n_index        ! Number of parallel indices.
 
-    integer          :: par_strategy ! What kind of parallelization strategy should we use?
+    integer          :: par_strategy   ! What kind of parallelization strategy should we use?
 
-    integer, pointer :: group_sizes(:) ! Number of processors in each group
-    type(multicomm_tree_t), pointer :: group_tree
+    integer, pointer :: group_sizes(:) ! Number of processors in each group.
+    integer, pointer :: who_am_i(:)    ! Rank in the "line"-communicators.
+    integer, pointer :: group_comm(:)  ! "Line"-communicators I belong to.
+    integer          :: dom_st_comm    ! States-domain plane communicator.
 
-    integer, pointer :: who_am_i(:)    ! the path to get to my processor in the tree
-    integer, pointer :: group_comm(:)  ! communicators I belong to
-    integer, pointer :: group_root(:)  ! root node for each communicator
-    
-    integer :: nthreads
+    integer          :: nthreads
   end type multicomm_t
 
   ! An all-pairs communication schedule for a given group.
@@ -142,7 +111,6 @@
     type(mpi_grp_t)  :: grp            ! Schedule for this group.
     integer          :: rounds         ! This many comm. rounds.
     integer, pointer :: schedule(:, :) ! This is the schedule.
-    integer, pointer :: comms(:, :)    ! Those are the communicators laid out as schedule.
   end type multicomm_all_pairs_t
 
 contains
@@ -155,7 +123,7 @@ contains
     integer,           intent(inout):: index_range(:)
     integer,           intent(in)   :: min_range(:)
 
-    integer :: i
+    integer   :: i
     C_POINTER :: blk
 
     call push_sub('multicomm.multicomm_init')
@@ -201,14 +169,13 @@ contains
 
       ! reset
       call sanity_check()
-      call create_group_tree(mc)
+      call cart_topology_create()
       call group_comm_create()
     end if
 
     call messages_print_stress(stdout)
 
     call pop_sub()
-
 
   contains
 
@@ -233,7 +200,7 @@ contains
       !%Option par_kpoints 4
       !% Octopus will run parallel in k-points/spin.
       !%Option par_other   8
-      !% Run-mode dependent. For example, in casida it means parallelization in e-h pairs
+      !% Run-mode dependent. For example, in casida it means parallelization in e-h pairs.
       !%End
 
       if(mpi_world%size > 1) then
@@ -274,7 +241,7 @@ contains
       end if
 
       mc%nthreads = 1
-#ifdef USE_OMP
+#if defined(USE_OMP)
       !$omp parallel
       !$omp master
       mc%nthreads = omp_get_num_threads()
@@ -418,259 +385,103 @@ contains
 
 
     ! ---------------------------------------------------------
-    subroutine group_comm_create()
+    subroutine cart_topology_create()
+      integer :: new_comm
+      logical :: periodic_mask(mc%n_index)
+
+      call push_sub('multicomm.cart_topology_create')
+
 #if defined(HAVE_MPI)
-      integer :: i
-      integer, allocatable :: me(:)
+      ! The domain and states dimensions have to be periodic (2D torus)
+      ! in order to circulate matrix blocks.
+      if(multicomm_strategy_is_parallel(mc, P_STRATEGY_DOMAINS)) then
+        periodic_mask(P_STRATEGY_DOMAINS) = .true.
+      end if
+      if(multicomm_strategy_is_parallel(mc, P_STRATEGY_STATES)) then
+        periodic_mask(P_STRATEGY_STATES) = .true.
+      end if
+      ! We allow reordering of ranks, as we intent to replace the
+      ! world afterwards.
+      ! FIXME: make sure this works! World root may be someone else
+      ! afterwards!
+      call MPI_Cart_create(mpi_world%comm, mc%n_index, mc%group_sizes, periodic_mask, &
+        .true., new_comm, mpi_err)
+      ! Re-initialize the world.
+      call mpi_grp_init(mpi_world, new_comm)
+#endif
+
+      call pop_sub()
+    end subroutine cart_topology_create
+
+
+    ! ---------------------------------------------------------
+    subroutine group_comm_create()
+      logical :: dim_mask(mc%n_index)
+
+      integer :: i_strategy
+
+      call push_sub('multicomm.group_comm_create')
 
       ALLOCATE(mc%group_comm(mc%n_index), mc%n_index)
-      ALLOCATE(mc%group_root(mc%n_index), mc%n_index)
-      mc%group_comm = -1
+      ALLOCATE(mc%who_am_i(mc%n_index), mc%n_index)
 
-      ALLOCATE(me(mc%n_index), mc%n_index)
-      do i = 1, mc%n_index
-        if(.not.multicomm_strategy_is_parallel(mc, i)) cycle
-
-        me(:) = mc%who_am_i(:)
-        me(i) = 1
-        call multicomm_proc(mc, me, mc%group_root(i))
-
-        call MPI_Comm_Split(MPI_COMM_WORLD, mc%group_root(i), mpi_world%rank, &
-          mc%group_comm(i), mpi_err)
-      end do
-      deallocate(me)
+      ! The "lines" of the cartesian grid.
+      do i_strategy = 1, mc%n_index
+#if defined(HAVE_MPI)
+        if(multicomm_strategy_is_parallel(mc, i_strategy)) then
+          dim_mask             = .false.
+          dim_mask(i_strategy) = .true.
+          call MPI_Cart_sub(mpi_world%comm, dim_mask, mc%group_comm(i_strategy), mpi_err)
+          call MPI_Comm_rank(mc%group_comm(i_strategy), mc%who_am_i(i_strategy), mpi_err)
+        else
+          mc%group_comm(i_strategy) = MPI_COMM_NULL
+          mc%who_am_i(i_strategy)   = 0
+        end if
+#else
+        mc%group_comm = -1
+        mc%who_am_i   = 0
 #endif
+      end do
+
+#if defined(HAVE_MPI)
+      ! The domain-state "planes" of the grid (the ones with periodic dimensions).
+      dim_mask                     = .false.
+      dim_mask(P_STRATEGY_DOMAINS) = .true.
+      dim_mask(P_STRATEGY_STATES)  = .true.
+      call MPI_Cart_sub(mpi_world%comm, dim_mask, mc%dom_st_comm, mpi_err)
+#endif
+      call pop_sub()
     end subroutine group_comm_create
-
   end subroutine multicomm_init
-
-
-  ! ---------------------------------------------------------
-  subroutine multicomm_proc(mc, index, proc)
-    type(multicomm_t), intent(in)  :: mc
-    integer,           intent(in)  :: index(:) ! (mc%n_index)
-    integer,           intent(out) :: proc     ! the processor corresponding to that index
-
-    type(multicomm_tree_t), pointer :: p
-    integer :: i
-
-    p => mc%group_tree
-    do i = mc%n_index, 1, -1
-      if(.not.multicomm_strategy_is_parallel(mc, i)) cycle
-      ASSERT(index(i)>0.and.index(i)<=p%n_down)
-
-      p => p%down(index(i))%p
-    end do
-    proc = p%group(1)
-
-  end subroutine multicomm_proc
-
+  
 
   ! ---------------------------------------------------------
-  subroutine create_group_tree(mc)
-    type(multicomm_t), intent(inout) :: mc
+    subroutine multicomm_end(mc)
+      type(multicomm_t), intent(inout) :: mc
 
 #if defined(HAVE_MPI)
-    integer :: nodes_used, last_level, iunit, label
-    integer, allocatable :: index_run(:)
+      integer :: i
 #endif
 
-    ALLOCATE(mc%who_am_i(mc%n_index), mc%n_index)
-    mc%who_am_i = 0
-
-#if defined(HAVE_MPI)
-    ! allocate master node
-    ALLOCATE(mc%group_tree, 1)
-    nullify(mc%group_tree%up)
-
-    nodes_used = 0
-
-    ! obtain the lower_level
-    last_level = 1
-    do
-      if((last_level>mc%n_index).or.multicomm_strategy_is_parallel(mc, last_level)) exit
-      last_level = last_level + 1
-    end do
-    ASSERT(last_level <= mc%n_index)
-
-    label = 0 ! will label each node of the tree
-
-    ALLOCATE(index_run(mc%n_index), mc%n_index)
-    index_run = 0
-    call nodes_create(mc%group_tree, mc%n_index+1)
-    deallocate(index_run)
-    ASSERT(.not.all(mc%who_am_i==0))
-
-    call group_create(mc%group_tree)
-
-    ! print nodes
-    if(in_debug_mode.and.mpi_grp_is_root(mpi_world)) then
-      iunit = io_open('debug/parallel_tree.dot', action='write')
-      write(iunit, '(a)') "digraph G {"
-      write(iunit, '(a)') 'node [shape=box,style=filled];'
-      call print_dot(mc%group_tree)
-      write(iunit, *) "}"
-      call io_close(iunit)
-    end if
-
-  contains
-
-    ! ---------------------------------------------------------
-    recursive subroutine nodes_create(this, level)
-      type(multicomm_tree_t), pointer :: this
-      integer, intent(in)                :: level
-
-      integer :: i, next_level
-      type(multicomm_tree_t), pointer :: p
-
-      ! get next parallel level
-      next_level = level - 1
-      do
-        if((next_level==0).or.multicomm_strategy_is_parallel(mc, next_level)) exit
-        next_level = next_level - 1
-      end do
-
-      ! set up some variables
-      this%label  = label
-      label = label + 1
-      this%level  = level
-
-      nullify(this%down, this%group)
-      this%n_down = 0
-      this%n_group = 0
-
-      if(level == last_level) then ! last level, let us populate
-        this%n_group = 1
-        ALLOCATE(this%group(1), 1)
-        this%group(1) = nodes_used
-
-        if(nodes_used == mpi_world%rank) mc%who_am_i = index_run
-
-        nodes_used = nodes_used + 1
-
-      else if(next_level .ne. 0) then
-
-        this%n_down = mc%group_sizes(next_level)
-        ALLOCATE(this%down(this%n_down), this%n_down)
-        do i = 1, this%n_down
-          index_run(next_level) = i
-
-          ALLOCATE(this%down(i)%p, 1)
-          p => this%down(i)%p
-
-          ! initialize parent of structure
-          ALLOCATE(p%up, 1)
-          p%up%p => this ! point up to the parent
-          call nodes_create(p, next_level)
-        end do
-      end if
-
-    end subroutine nodes_create
-
-
-    ! ---------------------------------------------------------
-    recursive subroutine group_create(this)
-      type(multicomm_tree_t), pointer :: this
-
-      integer :: i
-
-      if(this%n_group.ne.0) return ! last level
-
-      ! first go through all children
-      do i = 1, this%n_down
-        call group_create(this%down(i)%p)
-      end do
-
-      ! now create group
-      this%n_group = this%n_down
-      ALLOCATE(this%group(this%n_group), this%n_group)
-      do i = 1, this%n_down
-        this%group(i) = this%down(i)%p%group(1) ! group with root nodes
-      end do
-    end subroutine group_create
-
-
-    ! ---------------------------------------------------------
-    recursive subroutine print_dot(this)
-      type(multicomm_tree_t), pointer :: this
-
-      integer :: i
-
-      write(iunit,'(i4,a)',   advance='no') this%label, ' [label="'
-      write(iunit,'(a,i4,a)', advance='no') 'level = ', this%level, '\n'
-      write(iunit,'(a)', advance='no') 'group = '
-      do i = 1, this%n_group
-        if(i.ne.1) write(iunit, '(a)', advance='no') ','
-        write(iunit, '(i4)', advance='no') this%group(i)
-      end do
-
-      write(iunit,'(a)') '"]'
-      do i = 1, this%n_down
-        write(iunit,*) this%label, "->", this%down(i)%p%label, ";"
-
-        call print_dot(this%down(i)%p)
-      end do
-    end subroutine print_dot
-#endif
-
-  end subroutine create_group_tree
-
-
-  ! ---------------------------------------------------------
-  subroutine multicomm_end(mc)
-    type(multicomm_t) :: mc
-
-#if defined(HAVE_MPI)
-    integer :: i
-
-    call push_sub('multicomm.multicomm_end')
+      call push_sub('multicomm.multicomm_end')
 
     if(mc%par_strategy.ne.P_STRATEGY_SERIAL) then
-      ! delete communicators
+#if defined(HAVE_MPI)
+      ! Delete communicators.
       do i = 1, mc%n_index
         if(.not.multicomm_strategy_is_parallel(mc, i)) cycle
-
-        call MPI_Comm_Free(mc%group_comm(i), mpi_err)
+        call MPI_Comm_free(mc%group_comm(i), mpi_err)
       end do
-
-      ! now delete the tree
-      call delete_tree(mc%group_tree)
-      deallocate(mc%group_tree)
-      nullify(mc%group_tree)
-
-      ! deallocate the rest of the arrays
-      deallocate(mc%group_sizes, mc%who_am_i, mc%group_comm, mc%group_root)
-      nullify(mc%group_sizes, mc%who_am_i, mc%group_comm, mc%group_root)
+      call MPI_Comm_free(mc%dom_st_comm, mpi_err)
+#endif
+      ! Deallocate the rest of the arrays.
+      deallocate(mc%group_sizes, mc%group_comm, mc%who_am_i)
+      nullify(mc%group_sizes, mc%group_comm, mc%who_am_i)
     end if
 
     call pop_sub()
-
-  contains
-
-    ! ---------------------------------------------------------
-    recursive subroutine delete_tree(this)
-      type(multicomm_tree_t), pointer :: this
-
-      integer :: i
-
-      deallocate(this%group)
-
-      ! delete children
-      do i = 1, this%n_down
-        call delete_tree(this%down(i)%p)
-        deallocate(this%down(i)%p)
-      end do
-
-      if(this%n_down.ne.0) then
-        deallocate(this%down)
-      end if
-
-    end subroutine delete_tree
-#else
-    deallocate(mc%group_tree, mc%group_sizes, mc%who_am_i, mc%group_comm, mc%group_root)
-    nullify(mc%group_tree, mc%group_sizes, mc%who_am_i, mc%group_comm, mc%group_root)
-#endif
   end subroutine multicomm_end
+
 
   ! ---------------------------------------------------------
   logical function multicomm_strategy_is_parallel(mc, level) result(r)
@@ -688,13 +499,13 @@ contains
   ! D. 1997. The dance party problem and its application to collective
   ! communication in computer networks. Parallel Comput. 23, 8
   ! (Aug. 1997), 1141-1156.
-  subroutine create_all_pairs(mpi_grp, ap)
+#if defined(HAVE_MPI)
+
+  subroutine multicomm_create_all_pairs(mpi_grp, ap)
     type(mpi_grp_t),             intent(in)  :: mpi_grp
     type(multicomm_all_pairs_t), intent(out) :: ap
-#if defined(HAVE_MPI)
-    integer              :: size, rounds, ranks(2), ir, in
-    integer              :: parent_grp, pair_grp, pair_comm
-    logical, allocatable :: mask(:, :)
+
+    integer :: size, rounds, ir, in
 
     call push_sub('multicomm.create_all_pairs')
 
@@ -716,36 +527,7 @@ contains
         ap%schedule(in, ir) = get_partner(in+1, ir)-1
       end do
     end do
-    ! Create the communicators.
-    ALLOCATE(ap%comms(0:size-1, rounds), size*rounds)
-    ALLOCATE(mask(0:size-1, rounds), size*rounds)
-    mask = .false.
-    call MPI_Comm_group(mpi_grp%comm, parent_grp, mpi_err)
-    do ir = 1, rounds
-      do in = 0, size-1
-        ! If the communicator has not been created already, do it now.
-        if(.not.mask(in, ir)) then
-          if(ap%schedule(in, ir).eq.in) then ! Idle this round.
-            ap%comms(in, ir) = MPI_COMM_NULL
-          else
-            ! Set it as created.
-            mask(in, ir)                  = .true.
-            mask(ap%schedule(in, ir), ir) = .true.
-            ! Create the group.
-            ranks(1)                      = in
-            ranks(2)                      = ap%schedule(in, ir)
-            call MPI_Group_incl(parent_grp, 2, ranks, pair_grp, mpi_err)
-            ! Transform into a communicator and copy it to both locations
-            ! in the schedule.
-            call MPI_Comm_create(mpi_grp%comm, pair_grp, pair_comm, mpi_err)
-            ap%comms(in, ir)                  = pair_comm
-            ap%comms(ap%schedule(in, ir), ir) = pair_comm
-          end if
-        end if
-      end do
-    end do
 
-    deallocate(mask)
     call pop_sub()
 
   contains
@@ -792,10 +574,11 @@ contains
         p = i
       end if
     end function get_partner_odd
+  end subroutine multicomm_create_all_pairs
 #endif
-  end subroutine create_all_pairs
 
-#ifdef USE_OMP
+
+#if defined(USE_OMP)
   !---------------------------------------------------
   ! Function to divide the range of numbers from 1 to nn
   ! between size processors.
@@ -815,7 +598,6 @@ contains
 
   end subroutine divide_range
 #endif
-
 end module multicomm_m
 
 
