@@ -272,7 +272,7 @@ contains
 
       !$omp parallel workshare
       h%vhxc     = M_ZERO
-      !$omp end parallel worksharep
+      !$omp end parallel workshare
       h%epot     = M_ZERO
       h%ex       = M_ZERO
       h%ec       = M_ZERO

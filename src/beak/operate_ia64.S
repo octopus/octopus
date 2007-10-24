@@ -1,4 +1,4 @@
-/*
+#if 0
  Copyright (C) 2007 X. Andrade
 
  This program is free software; you can redistribute it and/or modify
@@ -17,10 +17,10 @@
  02111-1307, USA.
 
  $Id: operate_ia64.S 2146 2006-05-23 17:36:00Z xavier $
-*/
+#endif
 
-#include <config.h>
 #if defined(__ia64__) || defined(__ia64) || defined(_M_IA64)
+#include <config.h>
 
 #define ISIZE 4
 #define ISHIFT 2

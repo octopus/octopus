@@ -26,12 +26,12 @@ subroutine xc_get_vxc(gr, xcs, rho, ispin, vxc, ex, ec, ip, qtot)
   FLOAT,              intent(inout) :: vxc(:,:), ex, ec
   FLOAT,              intent(in)    :: ip, qtot
 
-  FLOAT :: l_dens(MAX_SPIN), l_dedd(MAX_SPIN), l_sigma(3), l_vsigma(3), l_tau(MAX_SPIN), l_dedtau(MAX_SPIN)
+  FLOAT :: l_dens(MAX_SPIN), l_dedd(MAX_SPIN), l_sigma(3), l_vsigma(3), l_tau(MAX_SPIN) !, l_dedtau(MAX_SPIN)
   FLOAT, allocatable :: dens(:,:), dedd(:,:), ex_per_vol(:), ec_per_vol(:)
   FLOAT, allocatable :: gdens(:,:,:), dedgd(:,:,:)
   FLOAT, allocatable :: tau(:,:), dedtau(:,:)
 
-  integer :: i, ixc, spin_channels
+  integer :: jj, ixc, spin_channels
   FLOAT   :: e, r
   logical :: gga, mgga
 
@@ -65,18 +65,18 @@ subroutine xc_get_vxc(gr, xcs, rho, ispin, vxc, ex, ec, ip, qtot)
   if(       mgga) call mgga_init()
 
   !$omp parallel do private(l_dens, l_sigma, ixc, l_tau, l_dedd, r, e, l_vsigma)
-  space_loop: do i = 1, NP
+  space_loop: do jj = 1, NP
 
     ! make a local copy with the correct memory order
-    l_dens(1:spin_channels) = dens (i, 1:spin_channels)
+    l_dens(1:spin_channels) = dens (jj, 1:spin_channels)
     if(gga.or.mgga) then
-      l_sigma(1) = sum(gdens(i, :,1)*gdens(i, :,1))
+      l_sigma(1) = sum(gdens(jj, :,1)*gdens(jj, :,1))
       if(ispin == SPIN_POLARIZED) then
-        l_sigma(2) = sum(gdens(i, :,1)*gdens(i, :,2))
-        l_sigma(3) = sum(gdens(i, :,2)*gdens(i, :,2))
+        l_sigma(2) = sum(gdens(jj, :,1)*gdens(jj, :,2))
+        l_sigma(3) = sum(gdens(jj, :,2)*gdens(jj, :,2))
       end if
     end if
-    if(mgga) l_tau  (:)   = tau  (i, :)
+    if(mgga) l_tau  (:)   = tau  (jj, :)
 
     ! Calculate the potential/gradient density in local reference frame.
     functl_loop: do ixc = 1, 2
@@ -87,7 +87,7 @@ subroutine xc_get_vxc(gr, xcs, rho, ispin, vxc, ex, ec, ip, qtot)
 
       case(XC_FAMILY_GGA)
         if(functl(ixc)%id == XC_GGA_XC_LB) then
-          call mesh_r(gr%m, i, r)
+          call mesh_r(gr%m, jj, r)
           call xc_f90_gga_lb(functl(ixc)%conf, l_dens(1), l_sigma(1), &
              r, ip, qtot, l_dedd(1))
 
@@ -110,24 +110,24 @@ subroutine xc_get_vxc(gr, xcs, rho, ispin, vxc, ex, ec, ip, qtot)
 
       if(functl(ixc)%id==XC_LDA_X.or.functl(ixc)%id==XC_GGA_X_PBE.or.&
         functl(ixc)%id==XC_MGGA_X_TPSS) then
-        ex_per_vol(i) = ex_per_vol(i) + sum(l_dens(1:spin_channels)) * e
+        ex_per_vol(jj) = ex_per_vol(jj) + sum(l_dens(1:spin_channels)) * e
       else
-        ec_per_vol(i) = ec_per_vol(i) + sum(l_dens(1:spin_channels)) * e
+        ec_per_vol(jj) = ec_per_vol(jj) + sum(l_dens(1:spin_channels)) * e
       end if
 
       ! store results
-      dedd(i,1:spin_channels) = dedd(i,1:spin_channels) + l_dedd(1:spin_channels)
+      dedd(jj,1:spin_channels) = dedd(jj,1:spin_channels) + l_dedd(1:spin_channels)
 
       if(functl(ixc)%family==XC_FAMILY_GGA .or. functl(ixc)%family==XC_FAMILY_MGGA) then
-        dedgd(i,:,1) = dedgd(i,:,1) + M_TWO*l_vsigma(1)*gdens(i,:,1)
+        dedgd(jj,:,1) = dedgd(jj,:,1) + M_TWO*l_vsigma(1)*gdens(jj,:,1)
         if(ispin == SPIN_POLARIZED) then
-          dedgd(i,:,1) = dedgd(i,:,1) + l_vsigma(2)*gdens(i,:,2)
-          dedgd(i,:,2) = dedgd(i,:,2) + M_TWO*l_vsigma(3)*gdens(i,:,2) + l_vsigma(2)*gdens(i,:,1)
+          dedgd(jj,:,1) = dedgd(jj,:,1) + l_vsigma(2)*gdens(jj,:,2)
+          dedgd(jj,:,2) = dedgd(jj,:,2) + M_TWO*l_vsigma(3)*gdens(jj,:,2) + l_vsigma(2)*gdens(jj,:,1)
         end if
       end if
 
       if(functl(ixc)%family==XC_FAMILY_MGGA) then
-        ! dedtau(i,:)   = dedtau(i,:)   + l_dedtau(:)
+        ! dedtau(jj,:)   = dedtau(jj,:)   + l_dedtau(:)
       end if
 
     end do functl_loop
@@ -157,7 +157,7 @@ contains
   !   *) allocates density and dedd, and their local variants
   !   *) calculates the density taking into account nlcc and non-collinear spin
   subroutine lda_init()
-    integer :: i
+    integer :: ii
     FLOAT   :: d(2), f, dtot, dpol
 
     ! allocate some general arrays
@@ -175,21 +175,21 @@ contains
     f = M_ONE/real(spin_channels, REAL_PRECISION)
 
     !$omp parallel do private(d, dtot, dpol)
-    do i = 1, NP
-      d(1:spin_channels) = rho(i, 1:spin_channels)
+    do ii = 1, NP
+      d(1:spin_channels) = rho(ii, 1:spin_channels)
 
       select case(ispin)
       case(UNPOLARIZED)
-        dens(i, 1) = max(d(1), M_ZERO)
+        dens(ii, 1) = max(d(1), M_ZERO)
       case(SPIN_POLARIZED)
-        dens(i, 1) = max(d(1), M_ZERO)
-        dens(i, 2) = max(d(2), M_ZERO)
+        dens(ii, 1) = max(d(1), M_ZERO)
+        dens(ii, 2) = max(d(2), M_ZERO)
       case(SPINORS)
         dtot = d(1) + d(2)
         dpol = sqrt((d(1) - d(2))**2 + &
-          M_FOUR*(rho(i, 3)**2 + rho(i, 4)**2))
-        dens(i, 1) = max(M_HALF*(dtot + dpol), M_ZERO)
-        dens(i, 2) = max(M_HALF*(dtot - dpol), M_ZERO)
+          M_FOUR*(rho(ii, 3)**2 + rho(ii, 4)**2))
+        dens(ii, 1) = max(M_HALF*(dtot + dpol), M_ZERO)
+        dens(ii, 2) = max(M_HALF*(dtot - dpol), M_ZERO)
       end select
     end do
     !$omp end parallel do
@@ -240,6 +240,7 @@ contains
   !   *) allocates gradient of the density (gdens), dedgd, and its local variants
   !   *) calculates the gradient of the density
   subroutine gga_init()
+    integer :: ii
     ! allocate variables
     ALLOCATE(gdens(NP,      3, spin_channels), NP     *3*spin_channels)
     ALLOCATE(dedgd(NP_PART, 3, spin_channels), NP_PART*3*spin_channels)
@@ -247,8 +248,8 @@ contains
     dedgd = M_ZERO
 
     ! get gradient of the density
-    do i = 1, spin_channels
-      call df_gradient(gr%sb, gr%f_der, dens(:,i), gdens(:,:,i))
+    do ii = 1, spin_channels
+      call df_gradient(gr%sb, gr%f_der, dens(:, ii), gdens(:,:, ii))
     end do
   end subroutine gga_init
 

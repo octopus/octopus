@@ -238,10 +238,11 @@ contains
       end if
 
       res = residue(curr_l, phi(curr_l)%p, tau(curr_l)%p, err(curr_l)%p)
-
-      !if ( gr%m%use_curvlinear ) then
-      !      print *, "base level", curr_l, "iter", t, " res ", res
-      !end if
+      
+      if(in_debug_mode) then
+        write(message(1), *)"Multigrid: base level ", curr_l, " iter ", t, " res ", res
+        call write_info(1)
+      end if
 
       if(res < this%threshold) then
         if(curr_l > 0 ) then
@@ -354,59 +355,7 @@ contains
       call pop_sub()
     end subroutine vcycle_fas
 
-
-    ! ---------------------------------------------------------
-    subroutine vcycle_cs(fl)
-      integer, intent(in) :: fl
-
-      call push_sub('poisson_multigrid.vcycle_cs')
-
-      do l = fl, cl-1
-        if(l /= fl) then
-          phi(l)%p=M_ZERO
-        end if
-
-        ! presmoothing
-        call multigrid_relax(this, gr, gr%mgrid%level(l)%m,gr%mgrid%level(l)%f_der, &
-          phi(l)%p, tau(l)%p , this%presteps)
-
-        ! error calcultion
-        call df_laplacian(gr%sb, gr%mgrid%level(l)%f_der, phi(l)%p, err(l)%p);
-        err(l)%p = tau(l)%p - err(l)%p
-
-        ! transfer error to coarser grid
-        call multigrid_fine2coarse(gr%mgrid, l+1, err(l)%p, tau(l+1)%p,&
-          this%restriction_method)
-      end do
-
-      call multigrid_relax(this, gr, gr%mgrid%level(cl)%m,gr%mgrid%level(cl)%f_der, &
-        phi(cl)%p, tau(cl)%p , this%presteps)
-
-      do l = cl, fl, -1
-        ! postsmoothing
-        call multigrid_relax(this, gr, gr%mgrid%level(l)%m,gr%mgrid%level(l)%f_der, &
-          phi(l)%p, tau(l)%p , this%poststeps)
-
-        if( l /= fl ) then
-          call df_laplacian(gr%sb, gr%mgrid%level(l)%f_der, phi(l)%p, err(l)%p)
-          err(l)%p = err(l)%p - tau(l)%p
-          np  = gr%mgrid%level(l)%m%np
-          res = sqrt(sum((err(l)%p(1:np)*gr%mgrid%level(l)%m%vol_pp(1:np))**2))
-        end if
-
-        if(l/= fl) then
-          ! transfer correction to finer level
-          call multigrid_coarse2fine(gr%mgrid, l, phi(l)%p, err(l-1)%p)
-          np = gr%mgrid%level(l-1)%m%np;
-          phi(l-1)%p(1:np) = phi(l-1)%p(1:np) + err(l-1)%p(1:np);
-        end if
-      end do
-
-      call pop_sub()
-    end subroutine vcycle_cs
-
   end subroutine poisson_multigrid_solver
-
 
   ! ---------------------------------------------------------
   subroutine multigrid_relax(this, gr, m,f_der,pot,rho,steps)

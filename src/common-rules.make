@@ -98,7 +98,7 @@ all_LIBS = $(core_LIBS) @LIBS_FFT@ @LIBS_TRLAN@ @LIBS_ARPACK@ @LIBS_SPARSKIT@ \
 SUFFIXES = _oct.f90 .F90 .o .S
 
 .S.o:
-	@CPP@ @CPPFLAGS@ $(INCLUDES) $(DEFAULT_INCLUDES) $(AM_CPPFLAGS) $< > $*.s
+	@FCCPP@ @CPPFLAGS@ $(INCLUDES) $(DEFAULT_INCLUDES) $(AM_CPPFLAGS) $< > $*.s
 	@CC@ -c -o $@ $*.s
 
 # Compilation is a two step process: first we preprocess F90 files
