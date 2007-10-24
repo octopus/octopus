@@ -416,7 +416,7 @@ contains
 
     ! ---------------------------------------------------------
     subroutine group_comm_create()
-      logical :: dim_mask(mc%n_index)
+      logical :: dim_mask(n_index)
 
       integer :: i_strategy
 
