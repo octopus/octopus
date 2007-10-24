@@ -25,6 +25,7 @@
 #  define ZLAPACK(x) z ## x
 #endif
 
+
 ! ---------------------------------------------------------
 ! Auxiliary functions.
 FLOAT function sfmin()
@@ -42,9 +43,11 @@ end function sfmin
 ! Compute the Cholesky decomposition of real symmetric positive definite
 ! matrix a, dim(a) = n x n. On return a = u^T u with u upper triangular
 ! matrix.
-subroutine dcholesky(n, a)
-  integer, intent(in)    :: n
-  FLOAT,   intent(inout) :: a(:, :)
+subroutine dcholesky(n, a, bof, err_code)
+  integer,           intent(in)    :: n
+  FLOAT,             intent(inout) :: a(:, :)
+  logical, optional, intent(inout) :: bof      ! Bomb on failure.
+  integer, optional, intent(out)   :: err_code
 
   interface
     subroutine DLAPACK(potrf)(uplo, n, a, lda, info)
@@ -57,12 +60,30 @@ subroutine dcholesky(n, a)
   end interface
   
   integer :: info
+  logical :: bof_
+
+  bof_ = .true.
+  if(present(bof)) then
+    bof_ = bof
+  end if
 
   call DLAPACK(potrf)('U', n, a(1, 1), n, info)
-
   if(info.ne.0) then
-    write(message(1), '(a,i5)') 'In dcholesky, LAPACK Xpotrf returned error message ', info
-    call write_fatal(1)
+    if(bof_) then
+      write(message(1), '(a,i5)') 'In dcholesky, LAPACK Xpotrf returned error message ', info
+      call write_fatal(1)
+    else
+      if(present(bof)) then
+        bof = .true.
+      end if
+    end if
+  else
+    if(present(bof)) then
+      bof = .false.
+    end if
+  end if
+  if(present(err_code)) then
+    err_code = info
   end if
 end subroutine dcholesky
 
@@ -71,9 +92,11 @@ end subroutine dcholesky
 ! Compute the Cholesky decomposition of a complex Hermitian positive definite
 ! matrix a, dim(a) = n x n. On return a = u^+ u with u upper triangular
 ! matrix.
-subroutine zcholesky(n, a)
-  integer, intent(in)    :: n
-  CMPLX,   intent(inout) :: a(:, :)
+subroutine zcholesky(n, a, bof, err_code)
+  integer,           intent(in)    :: n
+  CMPLX,             intent(inout) :: a(:, :)
+  logical, optional, intent(inout) :: bof     ! Bomb on failure.
+  integer, optional, intent(out)   :: err_code
 
   interface
     subroutine ZLAPACK(potrf)(uplo, n, a, lda, info)
@@ -86,26 +109,47 @@ subroutine zcholesky(n, a)
   end interface
   
   integer :: info
+  logical :: bof_
+
+  bof_ = .true.
+  if(present(bof)) then
+    bof_ = bof
+  end if
 
   call ZLAPACK(potrf)('U', n, a(1, 1), n, info)
 
   if(info.ne.0) then
-    write(message(1), '(a,i5)') 'In zcholesky, LAPACK Xpotrf returned error message ', info
-    call write_fatal(1)
+    if(bof_) then
+      write(message(1), '(a,i5)') 'In zcholesky, LAPACK Xpotrf returned error message ', info
+      call write_fatal(1)
+    else
+      if(present(bof)) then
+        bof = .true.
+      end if
+    end if
+  else
+    if(present(bof)) then
+      bof = .false.
+    end if
+  end if
+  if(present(err_code)) then
+    err_code = info
   end if
 end subroutine zcholesky
 
 
 ! ---------------------------------------------------------
-! computes all the eigenvalues and the eigenvectors of a real
+! Computes all the eigenvalues and the eigenvectors of a real
 ! generalized symmetric-definite eigenproblem, of the form  A*x=(lambda)*B*x
-! A*Bx=(lambda)*x,  or B*A*x=(lambda)*x.
+! A*Bx=(lambda)*x, or B*A*x=(lambda)*x.
 ! Here A and B are assumed to be symmetric and B is also positive definite.
-subroutine dgeneigensolve(n, a, b, e)
-  integer, intent(in)    :: n
-  FLOAT,   intent(inout) :: a(n,n)
-  FLOAT,   intent(in)    :: b(n,n)
-  FLOAT,   intent(out)   :: e(n)
+subroutine dgeneigensolve(n, a, b, e, bof, err_code)
+  integer,           intent(in)    :: n
+  FLOAT,             intent(inout) :: a(n,n)
+  FLOAT,             intent(in)    :: b(n,n)
+  FLOAT,             intent(out)   :: e(n)
+  logical, optional, intent(inout) :: bof      ! Bomb on failure.
+  integer, optional, intent(out)   :: err_code
 
   interface
     subroutine DLAPACK(sygv) (itype, jobz, uplo, n, a, lda, b, ldb, w, work, lwork, info)
@@ -118,7 +162,13 @@ subroutine dgeneigensolve(n, a, b, e)
   end interface
 
   integer :: info, lwork
+  logical :: bof_
   FLOAT, allocatable :: bp(:,:), work(:)
+
+  bof_ = .true.
+  if(present(bof)) then
+    bof_ = bof
+  end if
 
   lwork = 5*n
   ALLOCATE(bp(n, n), n*n)
@@ -128,23 +178,37 @@ subroutine dgeneigensolve(n, a, b, e)
   deallocate(bp, work)
 
   if(info.ne.0) then
-    write(message(1),'(a,i5)') 'In dgeneigensolve, LAPACK dsygv returned error message ', info
-    call write_fatal(1)
+    if(bof_) then
+      write(message(1),'(a,i5)') 'In dgeneigensolve, LAPACK Xsygv returned error message ', info
+      call write_fatal(1)
+    else
+      if(present(bof)) then
+        bof = .true.
+      end if
+    end if
+  else
+    if(present(bof)) then
+      bof = .false.
+    end if
   end if
-
+  if(present(err_code)) then
+    err_code = info
+  end if
 end subroutine dgeneigensolve
 
 
 ! ---------------------------------------------------------
-! computes all the eigenvalues and the eigenvectors of a complex
+! Computes all the eigenvalues and the eigenvectors of a complex
 ! generalized Hermitian-definite eigenproblem, of the form  A*x=(lambda)*B*x,
-! A*Bx=(lambda)*x,  or B*A*x=(lambda)*x.
+! A*Bx=(lambda)*x, or B*A*x=(lambda)*x.
 ! Here A and B are assumed to be Hermitian and B is also positive definite.
-subroutine zgeneigensolve(n, a, b, e)
-  integer, intent(in)    :: n
-  CMPLX,   intent(inout) :: a(n,n)
-  CMPLX,   intent(in)    :: b(n,n)
-  FLOAT,   intent(out)   :: e(n)
+subroutine zgeneigensolve(n, a, b, e, bof, err_code)
+  integer,           intent(in)    :: n
+  CMPLX,             intent(inout) :: a(n,n)
+  CMPLX,             intent(in)    :: b(n,n)
+  FLOAT,             intent(out)   :: e(n)
+  logical, optional, intent(inout) :: bof      ! Bomb on failure.
+  integer, optional, intent(out)   :: err_code
 
   interface
     subroutine ZLAPACK(hegv) (itype, jobz, uplo, n, a, lda, b, ldb, w, work, lwork, rwork, info)
@@ -157,9 +221,15 @@ subroutine zgeneigensolve(n, a, b, e)
     end subroutine ZLAPACK(hegv)
   end interface
 
-  integer :: info, lwork
+  integer            :: info, lwork
+  logical            :: bof_
   FLOAT, allocatable :: rwork(:)
   CMPLX, allocatable :: bp(:,:), work(:)
+
+  bof_ = .true.
+  if(present(bof)) then
+    bof_ = bof
+  end if
 
   lwork = 5*n
   ALLOCATE(bp(n, n),    n*n)
@@ -170,8 +240,21 @@ subroutine zgeneigensolve(n, a, b, e)
   deallocate(bp, work, rwork)
 
   if(info.ne.0) then
-    write(message(1),'(a,i5)') 'In dgeneigensolve, LAPACK dhegv returned error message ', info
-    call write_fatal(1)
+    if(bof_) then
+      write(message(1),'(a,i5)') 'In zgeneigensolve, LAPACK Xhegv returned error message ', info
+      call write_fatal(1)
+    else
+      if(present(bof)) then
+        bof = .true.
+      end if
+    end if
+  else
+    if(present(bof)) then
+      bof = .false.
+    end if
+  end if
+  if(present(err_code)) then
+    err_code = info
   end if
 end subroutine zgeneigensolve
 
@@ -180,12 +263,14 @@ end subroutine zgeneigensolve
 ! Computes the k lowest eigenvalues and the eigenvectors of a real
 ! generalized symmetric-definite eigenproblem, of the form  A*x=(lambda)*B*x.
 ! Here A and B are assumed to be symmetric and B is also positive definite.
-subroutine dlowest_geneigensolve(k, n, a, b, e, v)
-  integer, intent(in)  :: k, n
-  FLOAT,   intent(in)  :: a(n,n)
-  FLOAT,   intent(in)  :: b(n,n)
-  FLOAT,   intent(out) :: e(n)
-  FLOAT,   intent(out) :: v(n, k)
+subroutine dlowest_geneigensolve(k, n, a, b, e, v, bof, err_code)
+  integer,           intent(in)    :: k, n
+  FLOAT,             intent(in)    :: a(n,n)
+  FLOAT,             intent(in)    :: b(n,n)
+  FLOAT,             intent(out)   :: e(n)
+  FLOAT,             intent(out)   :: v(n, k)
+  logical, optional, intent(inout) :: bof      ! Bomb on failure.
+  integer, optional, intent(out)   :: err_code
 
   interface
     subroutine DLAPACK(sygvx)(itype, jobz, range, uplo, n, a, lda, b, ldb, &
@@ -200,9 +285,15 @@ subroutine dlowest_geneigensolve(k, n, a, b, e, v)
   end interface
   
   integer            :: m, iwork(5*n), ifail(n), info, lwork
+  logical            :: bof_
   FLOAT              :: abstol
   FLOAT, allocatable :: work(:)
   
+  bof_ = .true.
+  if(present(bof)) then
+    bof_ = bof
+  end if
+
   abstol = 2*sfmin()
 
   ! Work size query.
@@ -220,9 +311,21 @@ subroutine dlowest_geneigensolve(k, n, a, b, e, v)
   deallocate(work)
 
   if(info.ne.0) then
-    write(message(1),'(a,i5)') &
-      'In dlowest_geneigensolve, LAPACK Xsygvx returned error message ', info
-    call write_fatal(1)
+    if(bof_) then
+      write(message(1),'(a,i5)') 'In dlowest_geneigensolve, LAPACK Xsygvx returned error message ', info
+      call write_fatal(1)
+    else
+      if(present(bof)) then
+        bof = .true.
+      end if
+    end if
+  else
+    if(present(bof)) then
+      bof = .false.
+    end if
+  end if
+  if(present(err_code)) then
+    err_code = info
   end if
 end subroutine dlowest_geneigensolve
 
@@ -231,17 +334,14 @@ end subroutine dlowest_geneigensolve
 ! Computes the k lowest eigenvalues and the eigenvectors of a complex
 ! generalized Hermitian-definite eigenproblem, of the form  A*x=(lambda)*B*x.
 ! Here A and B are assumed to be Hermitian and B is also positive definite.
-subroutine zlowest_geneigensolve(k, n, a, b, e, v)
-  integer, intent(in)  :: k, n
-  CMPLX,   intent(in)  :: a(n,n)
-  CMPLX,   intent(in)  :: b(n,n)
-  FLOAT,   intent(out) :: e(n)
-  CMPLX,   intent(out) :: v(n, k)
-
-  integer            :: m, iwork(5*n), ifail(n), info, lwork
-  FLOAT              :: abstol
-  FLOAT              :: rwork(7*n)
-  CMPLX, allocatable :: work(:)
+subroutine zlowest_geneigensolve(k, n, a, b, e, v, bof, err_code)
+  integer,           intent(in)    :: k, n
+  CMPLX,             intent(in)    :: a(n,n)
+  CMPLX,             intent(in)    :: b(n,n)
+  FLOAT,             intent(out)   :: e(n)
+  CMPLX,             intent(out)   :: v(n, k)
+  logical, optional, intent(inout) :: bof      ! Bomb on failure.
+  integer, optional, intent(out)   :: err_code
 
   interface
     subroutine ZLAPACK(hegvx)(itype, jobz, range, uplo, n, a, lda, b, ldb, &
@@ -255,7 +355,18 @@ subroutine zlowest_geneigensolve(k, n, a, b, e, v)
       CMPLX,        intent(out)   :: z, work
     end subroutine ZLAPACK(hegvx)
   end interface
-  
+
+  integer            :: m, iwork(5*n), ifail(n), info, lwork
+  logical            :: bof_
+  FLOAT              :: abstol
+  FLOAT              :: rwork(7*n)
+  CMPLX, allocatable :: work(:)
+
+  bof_ = .true.
+  if(present(bof)) then
+    bof_ = bof
+  end if
+
   abstol = 2*sfmin()
 
   ! Work size query.
@@ -274,20 +385,34 @@ subroutine zlowest_geneigensolve(k, n, a, b, e, v)
   deallocate(work)
 
   if(info.ne.0) then
-    write(message(1),'(a,i5)') &
-      'In zlowest_geneigensolve, LAPACK Xhegvx returned error message ', info
-    call write_fatal(1)
+    if(bof_) then
+      write(message(1),'(a,i5)') 'In zlowest_geneigensolve, LAPACK Xhegvx returned error message ', info
+      call write_fatal(1)
+    else
+      if(present(bof)) then
+        bof = .true.
+      end if
+    end if
+  else
+    if(present(bof)) then
+      bof = .false.
+    end if
+  end if
+  if(present(err_code)) then
+    err_code = info
   end if
 end subroutine zlowest_geneigensolve
 
 
 ! ---------------------------------------------------------
-! computes all eigenvalues and eigenvectors of a real symmetric square matrix A.
-subroutine deigensolve(n, a, b, e)
-  integer, intent(in)  :: n
-  FLOAT,   intent(in)  :: a(n,n)
-  FLOAT,   intent(out) :: b(n,n)
-  FLOAT,   intent(out) :: e(n)
+! Computes all eigenvalues and eigenvectors of a real symmetric square matrix A.
+subroutine deigensolve(n, a, b, e, bof, err_code)
+  integer, intent(in)              :: n
+  FLOAT,   intent(in)              :: a(n,n)
+  FLOAT,   intent(out)             :: b(n,n)
+  FLOAT,   intent(out)             :: e(n)
+  logical, optional, intent(inout) :: bof      ! Bomb on failure.
+  integer, optional, intent(out)   :: err_code
 
   interface
     subroutine DLAPACK(syev) (jobz, uplo, n, a, lda, w, work, lwork, info)
@@ -299,29 +424,50 @@ subroutine deigensolve(n, a, b, e)
     end subroutine DLAPACK(syev)
   end interface
 
-  integer :: info, lwork
+  logical            :: bof_
+  integer            :: info, lwork
   FLOAT, allocatable :: work(:)
+
+  bof_ = .true.
+  if(present(bof)) then
+    bof_ = bof
+  end if
 
   lwork = 6*n
   ALLOCATE(work(lwork), lwork)
   b = a
   call DLAPACK(syev) ('V', 'U', n, b(1,1), n, e(1), work(1), lwork, info)
-  if(info.ne.0) then
-    write(message(1),'(a,i5)') 'In deigensolve, LAPACK dsyev returned error message ', info
-    call write_fatal(1)
-  end if
   deallocate(work)
 
+  if(info.ne.0) then
+    if(bof_) then
+      write(message(1),'(a,i5)') 'In deigensolve, LAPACK Xsyev returned error message ', info
+      call write_fatal(1)
+    else
+      if(present(bof)) then
+        bof = .true.
+      end if
+    end if
+  else
+    if(present(bof)) then
+      bof = .false.
+    end if
+  end if
+  if(present(err_code)) then
+    err_code = info
+  end if
 end subroutine deigensolve
 
 
 ! ---------------------------------------------------------
-! computes all eigenvalues and eigenvectors of a complex Hermitian square matrix A.
-subroutine zeigensolve(n, a, b, e)
+! Computes all eigenvalues and eigenvectors of a complex Hermitian square matrix A.
+subroutine zeigensolve(n, a, b, e, bof, err_code)
   integer, intent(in)  :: n
   CMPLX,   intent(in)  :: a(n,n)
   CMPLX,   intent(out) :: b(n,n)
   FLOAT,   intent(out) :: e(n)
+  logical, optional, intent(inout) :: bof      ! Bomb on failure.
+  integer, optional, intent(out)   :: err_code
 
   interface
     subroutine ZLAPACK(heev) (jobz, uplo, n, a, lda, w, work, lwork, rwork, info)
@@ -334,21 +480,40 @@ subroutine zeigensolve(n, a, b, e)
     end subroutine ZLAPACK(heev)
   end interface
 
-  integer :: info, lwork
+  integer            :: info, lwork
+  logical            :: bof_
   CMPLX, allocatable :: work(:)
   FLOAT, allocatable :: rwork(:)
+
+  bof_ = .true.
+  if(present(bof)) then
+    bof_ = bof
+  end if
 
   lwork = 6*n
   ALLOCATE(work(lwork), lwork)
   ALLOCATE(rwork(max(1, 3*n-2)), max(1, 3*n-2))
   b = a
   call ZLAPACK(heev) ('V','U', n, b(1,1), n, e(1), work(1), lwork, rwork(1), info)
-  if(info.ne.0) then
-    write(message(1),'(a,i5)') 'In zeigensolve, LAPACK zheev returned error message ', info
-    call write_fatal(1)
-  end if
   deallocate(work, rwork)
 
+  if(info.ne.0) then
+    if(bof_) then
+      write(message(1),'(a,i5)') 'In zeigensolve, LAPACK Xheev returned error message ', info
+      call write_fatal(1)
+    else
+      if(present(bof)) then
+        bof = .true.
+      end if
+    end if
+  else
+    if(present(bof)) then
+      bof = .false.
+    end if
+  end if
+  if(present(err_code)) then
+    err_code = info
+  end if
 end subroutine zeigensolve
 
 
