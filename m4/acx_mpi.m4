@@ -23,25 +23,26 @@ fi
 dnl let us see if we have a mpi module
 save_ldflags="$LDFLAGS"
 AS_IF([test "$LIB_MPI"], [LDFLAGS="${LDFLAGS} -L${LIB_MPI}"])
-AC_COMPILE_IFELSE(AC_LANG_PROGRAM([], [
-use mpi
-integer :: ierr
-call MPI_Init(ierr)
-]), [HAVE_MPI_MOD=1], [HAVE_MPI_MOD=0])
 
-if test "$HAVE_MPI_MOD" = 1; then
-  AC_DEFINE(MPI_MOD, 1, [have mpi module])
-else
-  AC_COMPILE_IFELSE(AC_LANG_PROGRAM([], [
+AC_COMPILE_IFELSE(AC_LANG_PROGRAM([], [
 include 'mpif.h'
 integer :: ierr
 call MPI_Init(ierr)
-  ]), [HAVE_MPIF_H=1], [HAVE_MPIF_H=0])
+]), [HAVE_MPIF_H=1], [HAVE_MPIF_H=0])
 
-  if test "$HAVE_MPIF_H" = 1; then
-    AC_DEFINE(MPI_H, 1, [have mpi Fortran header file])
+if test "$HAVE_MPIF_H" = 1; then
+  AC_DEFINE(MPI_H, 1, [have MPI Fortran header file])
+else
+  AC_COMPILE_IFELSE(AC_LANG_PROGRAM([], [
+use mpi
+integer :: ierr
+call MPI_Init(ierr)
+  ]), [HAVE_MPI_MOD=1], [HAVE_MPI_MOD=0])
+
+  if test "$HAVE_MPI_MOD" = 1; then
+    AC_DEFINE(MPI_MOD, 1, [have mpi module])
   else
-    AC_MSG_ERROR([Could not find neither the mpi module or mpif.h.])
+    AC_MSG_ERROR([Could neither find the mpi module nor mpif.h.])
   fi
 fi
 
