@@ -90,48 +90,74 @@ contains
 
   end subroutine magnetic
 
-
-  ! --------------------------------------------------------------------------
-  subroutine ionic()
-    R_TYPE, allocatable :: grad(:,:), fin(:, :), fout(:, :)
-    FLOAT,  allocatable :: vloc(:)
-    type(atom_t), pointer :: atm
-    integer :: ipj
-
+  subroutine ionic
     integer :: iatom, idir
+    R_TYPE, allocatable  :: tmp(:)
 
-    iatom = this%atom1
-    idir = this%dir
-    atm => geo%atom(iatom)
+    ALLOCATE(tmp(1:NP), NP*1)
+    
+    f_out(1:NP) = M_ZERO
+    
+    do iatom = 1, geo%natoms
+      do idir = 1, NDIM
 
-    ALLOCATE(vloc(1:NP), NP_PART)
-    vloc(1:NP) = M_ZERO
-    call build_local_part_in_real_space(h%ep, gr, geo, atm, vloc, CNST(0.0))
+        if (this%ionic%pure_dir .and. iatom /= this%atom1 .and. idir /= this%dir) cycle
 
-    ALLOCATE(fin(1:NP_PART, 1), NP_PART)
-    call lalg_copy(NP, f_in, fin(:, 1))    
+        call X(ionic_perturbation)(this, gr, geo, h, f_in, tmp, iatom, idir)
+        
+        call lalg_axpy(NP, this%ionic%mix1(iatom, idir), tmp, f_out)
 
-    !d^T v |f>
-    ALLOCATE(fout(1:NP_PART, 1), NP_PART)
-    fout(1:NP, 1) = vloc(1:NP) * fin(1:NP, 1)
-    do ipj = h%ep%atomproj(1, iatom), h%ep%atomproj(2, iatom)
-      call X(project_psi)(gr%m, h%ep%p(ipj), 1, fin, fout, 0, .false., ik=1)
+      end do
     end do
-    call X(derivatives_oper)(gr%f_der%der_discr%grad(idir), gr%f_der%der_discr, fout(:,1), f_out)
-
-    !v d |f>
-    ALLOCATE(grad(1:NP, 1), NP)
-    call X(derivatives_oper)(gr%f_der%der_discr%grad(idir), gr%f_der%der_discr, fin(:,1), grad(:,1))
-    fout(1:NP, 1) = vloc(1:NP) * grad(1:NP, 1)
-    do ipj = h%ep%atomproj(1, iatom), h%ep%atomproj(2, iatom)
-      call X(project_psi)(gr%m, h%ep%p(ipj), 1, grad, fout, 0, .false., ik=1)
-    end do
-    f_out(1:NP) = -f_out(1:NP) + fout(1:NP, 1)
+      
+    deallocate(tmp)
 
   end subroutine ionic
 
 end subroutine X(pert_apply)
 
+  ! --------------------------------------------------------------------------
+subroutine X(ionic_perturbation)(this, gr, geo, h, f_in, f_out, iatom, idir)
+  type(pert_t),         intent(in)    :: this
+  type(grid_t),         intent(inout) :: gr
+  type(geometry_t),     intent(in)    :: geo
+  type(hamiltonian_t),  intent(in)    :: h
+  R_TYPE,               intent(in)    :: f_in(:)
+  R_TYPE,               intent(out)   :: f_out(:)
+  integer,              intent(in)    :: iatom, idir    
+
+  R_TYPE, allocatable :: grad(:,:), fin(:, :), fout(:, :)
+  FLOAT,  allocatable :: vloc(:)
+  type(atom_t), pointer :: atm
+  integer :: ipj
+
+  atm => geo%atom(iatom)
+
+  ALLOCATE(vloc(1:NP), NP)
+  vloc(1:NP) = M_ZERO
+  call build_local_part_in_real_space(h%ep, gr, geo, atm, vloc, CNST(0.0))
+
+  ALLOCATE(fin(1:NP_PART, 1), NP_PART)
+  call lalg_copy(NP, f_in, fin(:, 1))    
+
+  !d^T v |f>
+  ALLOCATE(fout(1:NP_PART, 1), NP_PART)
+  fout(1:NP, 1) = vloc(1:NP) * fin(1:NP, 1)
+  do ipj = h%ep%atomproj(1, iatom), h%ep%atomproj(2, iatom)
+    call X(project_psi)(gr%m, h%ep%p(ipj), 1, fin, fout, 0, .false., ik=1)
+  end do
+  call X(derivatives_oper)(gr%f_der%der_discr%grad(idir), gr%f_der%der_discr, fout(:,1), f_out)
+
+  !v d |f>
+  ALLOCATE(grad(1:NP, 1), NP)
+  call X(derivatives_oper)(gr%f_der%der_discr%grad(idir), gr%f_der%der_discr, fin(:,1), grad(:,1))
+  fout(1:NP, 1) = vloc(1:NP) * grad(1:NP, 1)
+  do ipj = h%ep%atomproj(1, iatom), h%ep%atomproj(2, iatom)
+    call X(project_psi)(gr%m, h%ep%p(ipj), 1, grad, fout, 0, .false., ik=1)
+  end do
+  f_out(1:NP) = -f_out(1:NP) + fout(1:NP, 1)
+
+end subroutine X(ionic_perturbation)
 
 ! --------------------------------------------------------------------------
 subroutine X(pert_apply_order_2) (this, gr, geo, h, f_in, f_out)
@@ -234,75 +260,105 @@ contains
   end subroutine magnetic
 
   subroutine ionic
-
-    R_TYPE, allocatable :: fin(:, :)
-    R_TYPE, allocatable :: tmp1(:, :), tmp2(:,:)
-    FLOAT,  allocatable :: vloc(:)
-    type(atom_t), pointer :: atm
-    integer :: ipj
-
     integer :: iatom, idir, jatom, jdir
+    R_TYPE, allocatable  :: tmp(:)
+    
+    ALLOCATE(tmp(1:NP), NP*1)
+    
+    f_out(1:NP) = M_ZERO
+    
+    do iatom = 1, geo%natoms
+      do jatom = 1, geo%natoms
+        do idir = 1, NDIM
+          do jdir = 1, NDIM
+            
+            if (this%ionic%pure_dir &
+                 .and. iatom /= this%atom1 .and. idir /= this%dir &
+                 .and. iatom /= this%atom2 .and. idir /= this%dir2) cycle
+            
+            call X(ionic_perturbation_order_2)(this, gr, geo, h, f_in, tmp, iatom, idir, jatom, jdir)
+            
+            call lalg_axpy(NP, this%ionic%mix1(iatom, idir) * this%ionic%mix2(iatom, idir), tmp, f_out)
 
-    iatom = this%atom1
-    idir = this%dir
-    jatom = this%atom2
-    jdir = this%dir2
-    atm => geo%atom(iatom)
-
-    if (iatom /= jatom) then 
-      f_out(1:NP) = R_TOTYPE(M_ZERO)
-      return
-    end if
-
-    ALLOCATE(fin(1:NP_PART, 1), NP_PART)
-    ALLOCATE(tmp1(1:NP_PART, 1), NP_PART)
-    ALLOCATE(tmp2(1:NP_PART, 1), NP_PART)
-    ALLOCATE(vloc(1:NP), NP)
-
-    vloc(1:NP) = M_ZERO
-    call build_local_part_in_real_space(h%ep, gr, geo, atm, vloc, CNST(0.0))
-
-    call lalg_copy(NP, f_in, fin(:, 1))    
-
-    !di^T dj^T v |f>
-    tmp1(1:NP, 1) = vloc(1:NP) * fin(1:NP, 1)
-    do ipj = h%ep%atomproj(1, iatom), h%ep%atomproj(2, iatom)
-      call X(project_psi)(gr%m, h%ep%p(ipj), 1, fin, tmp1, 0, .false., ik=1)
-    end do    
-    call X(derivatives_oper)(gr%f_der%der_discr%grad(idir), gr%f_der%der_discr, tmp1(:,1), tmp2(:,1))
-    call X(derivatives_oper)(gr%f_der%der_discr%grad(jdir), gr%f_der%der_discr, tmp2(:,1), f_out)
-
-    !di^T v dj |f>
-    call X(derivatives_oper)(gr%f_der%der_discr%grad(jdir), gr%f_der%der_discr, fin(:,1), tmp1(:,1))
-    tmp2(1:NP, 1) = vloc(1:NP) * tmp1(1:NP, 1)
-    do ipj = h%ep%atomproj(1, iatom), h%ep%atomproj(2, iatom)
-      call X(project_psi)(gr%m, h%ep%p(ipj), 1, tmp1, tmp2, 0, .false., ik=1)
-    end do    
-    call X(derivatives_oper)(gr%f_der%der_discr%grad(idir), gr%f_der%der_discr, tmp2(:,1), tmp1(:,1))
-    f_out(1:NP) = f_out(1:NP) - tmp1(1:NP, 1)
-
-    !dj^T v di |f>
-    call X(derivatives_oper)(gr%f_der%der_discr%grad(idir), gr%f_der%der_discr, fin(:,1), tmp1(:,1))
-    tmp2(1:NP, 1) = vloc(1:NP) * tmp1(1:NP, 1)
-    do ipj = h%ep%atomproj(1, iatom), h%ep%atomproj(2, iatom)
-      call X(project_psi)(gr%m, h%ep%p(ipj), 1, tmp1, tmp2, 0, .false., ik=1)
-    end do    
-    call X(derivatives_oper)(gr%f_der%der_discr%grad(jdir), gr%f_der%der_discr, tmp2(:,1), tmp1(:,1))
-    f_out(1:NP) = f_out(1:NP) - tmp1(1:NP, 1)
-
-    !v di dj |f>
-    call X(derivatives_oper)(gr%f_der%der_discr%grad(idir), gr%f_der%der_discr, fin(:,1), tmp1(:,1))
-    call X(derivatives_oper)(gr%f_der%der_discr%grad(jdir), gr%f_der%der_discr, tmp1(:,1), tmp2(:,1))
-    tmp1(1:NP, 1) = vloc(1:NP) * tmp2(1:NP, 1)
-    do ipj = h%ep%atomproj(1, iatom), h%ep%atomproj(2, iatom)
-      call X(project_psi)(gr%m, h%ep%p(ipj), 1, tmp2, tmp1, 0, .false., ik=1)
+          end do
+        end do
+      end do
     end do
-    f_out(1:NP) = f_out(1:NP) + tmp1(1:NP, 1)
+
+    deallocate(tmp)
 
   end subroutine ionic
 
 end subroutine X(pert_apply_order_2)
 
+subroutine X(ionic_perturbation_order_2) (this, gr, geo, h, f_in, f_out, iatom, idir, jatom, jdir)
+  type(pert_t), intent(in)    :: this
+  type(grid_t),      intent(inout) :: gr
+  type(geometry_t),  intent(in)    :: geo
+  type(hamiltonian_t),  intent(in) :: h
+  R_TYPE,            intent(in)    :: f_in(:)
+  R_TYPE,            intent(out)   :: f_out(:)
+  integer,           intent(in)    :: iatom, idir, jatom, jdir
+
+  R_TYPE, allocatable :: fin(:, :)
+  R_TYPE, allocatable :: tmp1(:, :), tmp2(:,:)
+  FLOAT,  allocatable :: vloc(:)
+  type(atom_t), pointer :: atm
+  integer :: ipj
+
+  atm => geo%atom(iatom)
+
+  if (iatom /= jatom) then 
+    f_out(1:NP) = R_TOTYPE(M_ZERO)
+    return
+  end if
+
+  ALLOCATE(fin(1:NP_PART, 1), NP_PART)
+  ALLOCATE(tmp1(1:NP_PART, 1), NP_PART)
+  ALLOCATE(tmp2(1:NP_PART, 1), NP_PART)
+  ALLOCATE(vloc(1:NP), NP)
+
+  vloc(1:NP) = M_ZERO
+  call build_local_part_in_real_space(h%ep, gr, geo, atm, vloc, CNST(0.0))
+
+  call lalg_copy(NP, f_in, fin(:, 1))    
+
+  !di^T dj^T v |f>
+  tmp1(1:NP, 1) = vloc(1:NP) * fin(1:NP, 1)
+  do ipj = h%ep%atomproj(1, iatom), h%ep%atomproj(2, iatom)
+    call X(project_psi)(gr%m, h%ep%p(ipj), 1, fin, tmp1, 0, .false., ik=1)
+  end do
+  call X(derivatives_oper)(gr%f_der%der_discr%grad(idir), gr%f_der%der_discr, tmp1(:,1), tmp2(:,1))
+  call X(derivatives_oper)(gr%f_der%der_discr%grad(jdir), gr%f_der%der_discr, tmp2(:,1), f_out)
+
+  !di^T v dj |f>
+  call X(derivatives_oper)(gr%f_der%der_discr%grad(jdir), gr%f_der%der_discr, fin(:,1), tmp1(:,1))
+  tmp2(1:NP, 1) = vloc(1:NP) * tmp1(1:NP, 1)
+  do ipj = h%ep%atomproj(1, iatom), h%ep%atomproj(2, iatom)
+    call X(project_psi)(gr%m, h%ep%p(ipj), 1, tmp1, tmp2, 0, .false., ik=1)
+  end do
+  call X(derivatives_oper)(gr%f_der%der_discr%grad(idir), gr%f_der%der_discr, tmp2(:,1), tmp1(:,1))
+  f_out(1:NP) = f_out(1:NP) - tmp1(1:NP, 1)
+
+  !dj^T v di |f>
+  call X(derivatives_oper)(gr%f_der%der_discr%grad(idir), gr%f_der%der_discr, fin(:,1), tmp1(:,1))
+  tmp2(1:NP, 1) = vloc(1:NP) * tmp1(1:NP, 1)
+  do ipj = h%ep%atomproj(1, iatom), h%ep%atomproj(2, iatom)
+    call X(project_psi)(gr%m, h%ep%p(ipj), 1, tmp1, tmp2, 0, .false., ik=1)
+  end do
+  call X(derivatives_oper)(gr%f_der%der_discr%grad(jdir), gr%f_der%der_discr, tmp2(:,1), tmp1(:,1))
+  f_out(1:NP) = f_out(1:NP) - tmp1(1:NP, 1)
+
+  !v di dj |f>
+  call X(derivatives_oper)(gr%f_der%der_discr%grad(idir), gr%f_der%der_discr, fin(:,1), tmp1(:,1))
+  call X(derivatives_oper)(gr%f_der%der_discr%grad(jdir), gr%f_der%der_discr, tmp1(:,1), tmp2(:,1))
+  tmp1(1:NP, 1) = vloc(1:NP) * tmp2(1:NP, 1)
+  do ipj = h%ep%atomproj(1, iatom), h%ep%atomproj(2, iatom)
+    call X(project_psi)(gr%m, h%ep%p(ipj), 1, tmp2, tmp1, 0, .false., ik=1)
+  end do
+  f_out(1:NP) = f_out(1:NP) + tmp1(1:NP, 1)
+
+end subroutine X(ionic_perturbation_order_2)
 
 subroutine X(pert_expectation_density) (this, gr, geo, h, st, psia, psib, density, pert_order)
   type(pert_t),    intent(in)    :: this

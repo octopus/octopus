@@ -552,8 +552,8 @@ mov ar.lc = r2
 br.ret.sptk.many b0
 .endp FC_FUNC_(zoperate_as, ZOPERATE_AS)#
 
-#endif
-
 // Local Variables:
-// mode: c
+// mode: asm
 // End:
+
+#endif

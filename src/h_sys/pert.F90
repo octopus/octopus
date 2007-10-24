@@ -70,6 +70,17 @@ module pert_m
        GAUGE_GIPAW  = 1, &
        GAUGE_ICL    = 2
 
+  type pert_ionic_t
+    private
+    !if pure_dir is .false. then the perturbation is a combination of
+    !displacements of atoms
+    logical :: pure_dir
+    !in that case these arrays are allocated
+    FLOAT, pointer :: mix1(:,:) !mix1(natoms, ndim)
+    FLOAT, pointer :: mix2(:,:)
+    !in the opposite case, atom, dir, atom2 and dir2 are used
+  end type pert_ionic_t
+
   type pert_t
      private
     integer :: pert_type
@@ -77,6 +88,7 @@ module pert_m
     integer :: dir2
     integer :: atom1, atom2
     integer :: gauge
+    type(pert_ionic_t) :: ionic
   end type pert_t
 
   interface pert_init
@@ -158,6 +170,11 @@ contains
 
     end if
 
+    if(this%pert_type == PERTURBATION_IONIC) then
+      ALLOCATE(this%ionic%mix1(geo%natoms, NDIM), geo%natoms*NDIM)
+      ALLOCATE(this%ionic%mix2(geo%natoms, NDIM), geo%natoms*NDIM)
+    end if
+
     call pop_sub()
 
   end subroutine pert_init2
@@ -167,6 +184,10 @@ contains
     type(pert_t), intent(inout) :: this
     integer :: idir
 
+    if(this%pert_type == PERTURBATION_IONIC) then
+      deallocate(this%ionic%mix1)
+      deallocate(this%ionic%mix2)
+    end if
   end subroutine pert_end
 
   ! --------------------------------------------------------------------
@@ -188,8 +209,22 @@ contains
     this%dir = dir
     if(present(dir2)) this%dir2 = dir2
 
+    if(this%pert_type == PERTURBATION_IONIC) call pert_setup_ionic_pure(this)
   end subroutine pert_setup_dir
-  
+
+  subroutine pert_setup_ionic_pure(this)
+    type(pert_t), intent(inout) :: this
+
+    this%ionic%pure_dir = .true.
+
+    this%ionic%mix1 = M_ZERO
+    this%ionic%mix2 = M_ZERO
+
+    if(this%dir  > 0 .and. this%atom1 > 0) this%ionic%mix1(this%atom1, this%dir ) = M_ONE
+    if(this%dir2 > 0 .and. this%atom2 > 0) this%ionic%mix2(this%atom2, this%dir2) = M_ONE
+
+  end subroutine pert_setup_ionic_pure
+
   subroutine pert_setup_atom(this, iatom, iatom2)
     type(pert_t), intent(inout) :: this
     integer,           intent(in)    :: iatom
@@ -198,6 +233,7 @@ contains
     this%atom1 = iatom
     if(present(iatom2)) this%atom2 = iatom2
 
+    if(this%pert_type == PERTURBATION_IONIC) call pert_setup_ionic_pure(this)
   end subroutine pert_setup_atom
 
   integer pure function pert_type(this)
