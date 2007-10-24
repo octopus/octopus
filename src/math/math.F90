@@ -59,7 +59,8 @@ module math_m
     zcross_product,             &
     hypot,                      &
     ddelta,                     &
-    member
+    member,                     &
+    make_idx_set
 
 
   !------------------------------------------------------------------------------
@@ -663,6 +664,35 @@ contains
     if ( a .and. b ) math_xor = .false.
     
   end function math_xor
+
+
+  ! ---------------------------------------------------------
+  ! Construct out(1:length) = (/1, ..., n/) if in is not present,
+  ! out(1:length) = in otherwise.
+  subroutine make_idx_set(n, in, out, length)
+    integer,           intent(in)  :: n
+    integer, optional, intent(in)  :: in(:)
+    integer,           pointer     :: out(:)
+    integer,           intent(out) :: length
+
+    integer :: i
+
+    call push_sub('math.idx_set')
+
+    if(present(in)) then
+      length = ubound(in, 1)
+      ALLOCATE(out(length), length)
+      out = in
+    else
+      length = n
+      ALLOCATE(out(length), length)
+      do i = 1, length
+        out(i) = i
+      end do
+    end if
+
+    call pop_sub()
+  end subroutine make_idx_set
 
 
   ! ---------------------------------------------------------

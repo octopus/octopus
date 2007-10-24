@@ -2343,6 +2343,49 @@ contains
   end subroutine states_look
 
 
+  ! ---------------------------------------------------------
+  ! From the global state number index set global_idx(1:length)
+  ! create the local sets idx(1:cnt(rank), rank), for rank=0, ..., comm_size-1
+  ! using the states distribution stored in st.
+  subroutine states_block_local_idx(st, global_idx, length, cnt, idx)
+    type(states_t), intent(in) :: st
+    integer,        intent(in) :: global_idx(:)
+    integer,        intent(in) :: length
+    integer,        pointer    :: cnt(:)
+    integer,        pointer    :: idx(:, :)
+
+    integer :: size, node, ist, i
+
+    call push_sub('states.states_block_local_idx')
+
+    size = st%mpi_grp%size
+    ALLOCATE(cnt(0:size-1), size)
+
+    ! Count the how many vectors each node has.
+    cnt = 0
+    do i = 1, length
+      cnt(st%node(global_idx(i))) = cnt(st%node(global_idx(i))) + 1
+    end do
+    ! Allocate space, it is a bit more than really required but makes the code simpler.
+    ALLOCATE(idx(maxval(cnt), 0:size-1), maxval(cnt)*size)
+
+    ! Now set up the index sets.
+    cnt = 0
+    idx = 0
+    do ist = 1, st%nst
+      node = st%node(ist)
+      ! A state ist is only included if its in the global index set.
+      if(member(ist, global_idx)) then
+        cnt(node)            = cnt(node) + 1
+        idx(cnt(node), node) = ist
+      end if
+    end do
+
+    call pop_sub()
+  end subroutine states_block_local_idx
+
+
+
 #include "states_kpoints.F90"
 
 #include "undef.F90"

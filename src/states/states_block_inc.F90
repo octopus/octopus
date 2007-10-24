@@ -35,13 +35,13 @@ subroutine X(states_blockt_mul)(mesh, st, psi1, psi2, res, xpsi1, xpsi2, symm)
   logical              :: symm_
   integer              :: i, j
   integer              :: psi1_col, psi2_col
-  integer, allocatable :: xpsi1_(:), xpsi2_(:)
+  integer, pointer     :: xpsi1_(:), xpsi2_(:)
   R_TYPE, allocatable  :: psi1_block(:, :, :), psi2_block(:, :, :), res_local(:, :)
 #if defined(HAVE_MPI)
-  integer              :: size, rank, node, round, ist, res_col_offset, res_row_offset
-  integer, allocatable :: xpsi1_count(:), xpsi2_count(:), xpsi1_node(:, :), xpsi2_node(:, :)
+  integer              :: size, rank, round, res_col_offset, res_row_offset
   integer              :: dst, src, k, l, recvcnt, sendcnt, left, right, max_count
   integer              :: stats(MPI_STATUS_SIZE, 2), reqs(2)
+  integer, pointer     :: xpsi1_count(:), xpsi2_count(:), xpsi1_node(:, :), xpsi2_node(:, :)
   R_TYPE, pointer      :: sendbuf(:, :, :), recvbuf(:, :, :), tmp_ptr(:, :, :)
   R_TYPE, allocatable  :: res_tmp(:, :)
 #endif
@@ -54,32 +54,13 @@ subroutine X(states_blockt_mul)(mesh, st, psi1, psi2, res, xpsi1, xpsi2, symm)
     symm_ = symm
   end if
 
-  ! Calculate index sets.
-  ! FIXME: this is the same as in Xstates_block_matr_mul_add and should be
-  ! put into an extra routine.
-  if(present(xpsi1)) then
-    psi1_col = ubound(xpsi1, 1)
-    ALLOCATE(xpsi1_(psi1_col), psi1_col)
-    xpsi1_ = xpsi1
-  else
-    psi1_col = st%nst
-    ALLOCATE(xpsi1_(psi1_col), psi1_col)
-    do i = 1, psi1_col
-      xpsi1_(i) = i
-    end do
-  end if
-  if(present(xpsi2)) then
-    psi2_col = ubound(xpsi2, 1)
-    ALLOCATE(xpsi2_(psi2_col), psi2_col)
-    xpsi2_ = xpsi2
-  else
-    psi2_col = st%nst
-    ALLOCATE(xpsi2_(psi2_col), psi2_col)
-    do i = 1, psi2_col
-      xpsi2_(i) = i
-    end do
-  end if
+  ! Calculate index sets of state block psi1 and psi2.
+  call make_idx_set(st%nst, xpsi1, xpsi1_, psi1_col)
+  call make_idx_set(st%nst, xpsi2, xpsi2_, psi2_col)
 
+  ! There is a little code duplication between the serial and parallel case
+  ! but the code is easier to understand having it separated (instead a lot of
+  ! conditionals and pointers),
   if(st%parallel_in_states) then
 #if defined(HAVE_MPI)
     ! Shortcuts.
@@ -89,39 +70,8 @@ subroutine X(states_blockt_mul)(mesh, st, psi1, psi2, res, xpsi1, xpsi2, symm)
     ! Calculate the index sets per node,
     ! xpsi1_node(1:xpsi1_count(node), node) and
     ! xpsi2_node(1:xpsi2_count(node), node) are the index sets.
-    ! FIXME: this is the same as in Xstates_block_matr_mul_add and should be
-    ! put into an extra routine.
-    ALLOCATE(xpsi1_count(0:size-1), size)
-    ALLOCATE(xpsi2_count(0:size-1), size)
-    ! Count the how many vectors each node has.
-    xpsi1_count = 0
-    xpsi2_count = 0
-    do i = 1, psi1_col
-      xpsi1_count(st%node(xpsi1_(i))) = xpsi1_count(st%node(xpsi1_(i))) + 1
-    end do
-    do i = 1, psi2_col
-      xpsi2_count(st%node(xpsi2_(i))) = xpsi2_count(st%node(xpsi2_(i))) + 1
-    end do
-    ! Allocate space, it is a bit more than really required.
-    ALLOCATE(xpsi1_node(maxval(xpsi1_count), 0:size-1), maxval(xpsi1_count)*size)
-    ALLOCATE(xpsi2_node(maxval(xpsi2_count), 0:size-1), maxval(xpsi2_count)*size)
-    ! Now set up the index sets.
-    xpsi1_count = 0
-    xpsi2_count = 0
-    xpsi1_node  = 0
-    xpsi2_node  = 0
-    do ist = 1, st%nst
-      node = st%node(ist)
-      ! A state ist is only included if its in the global index set.
-      if(member(ist, xpsi1_)) then
-        xpsi1_count(node)                   = xpsi1_count(node) + 1
-        xpsi1_node(xpsi1_count(node), node) = ist
-      end if
-      if(member(ist, xpsi2_)) then
-        xpsi2_count(node)                   = xpsi2_count(node) + 1
-        xpsi2_node(xpsi2_count(node), node) = ist
-      end if
-    end do
+    call states_block_local_idx(st, xpsi1_, psi1_col, xpsi1_count, xpsi1_node)
+    call states_block_local_idx(st, xpsi2_, psi2_col, xpsi2_count, xpsi2_node)
 
     ! Has to be zero because we use an allreduce on this at the end.
     res = R_TOTYPE(M_ZERO)
@@ -343,45 +293,26 @@ subroutine X(states_block_matr_mul_add)(mesh, st, alpha, psi, matr, beta, res, x
   integer, optional, intent(in)    :: xpsi(:), xres(:)
 
   integer              :: res_col, psi_col, matr_col, i
-  integer, allocatable :: xpsi_(:), xres_(:)
+  integer, pointer     :: xpsi_(:), xres_(:)
   R_TYPE, allocatable  :: res_block(:, :, :), matr_block(:, :), psi_block(:, :, :)
 #if defined(HAVE_MPI)
-  integer              :: rank, size, node, ist, round, matr_row_offset, matr_col_offset
+  integer              :: rank, size, round, matr_row_offset, matr_col_offset
   integer              :: src, dst, left, right, k, l, idim, sendcnt, recvcnt, max_count
   integer              :: stats(MPI_STATUS_SIZE, 2), reqs(2)
-  integer, allocatable :: xpsi_count(:), xres_count(:), xpsi_node(:, :), xres_node(:, :)
+  integer, pointer     :: xpsi_count(:), xres_count(:), xpsi_node(:, :), xres_node(:, :)
   R_TYPE, pointer      :: sendbuf(:, :, :), recvbuf(:, :, :), tmp_ptr(:, :, :)
 #endif
 
   call profiling_in(C_PROFILING_BLOCK_MATR)
   call push_sub('states_inc.Xstates_block_matr_add')
 
-  ! Calculate gobal index sets.
-  if(present(xpsi)) then
-    psi_col = ubound(xpsi, 1)
-    ALLOCATE(xpsi_(psi_col), psi_col)
-    xpsi_ = xpsi
-  else
-    psi_col = st%nst
-    ALLOCATE(xpsi_(psi_col), psi_col)
-    do i = 1, psi_col
-      xpsi_(i) = i
-    end do
-  end if
-  if(present(xres)) then
-    res_col = ubound(xres, 1)
-    ALLOCATE(xres_(res_col), res_col)
-    xres_ = xres
-  else
-    res_col = st%nst
-    ALLOCATE(xres_(res_col), res_col)
-    do i = 1, res_col
-      xres_(i) = i
-    end do
-  end if
+  ! Calculate global index sets of state block psi and res.
+  call make_idx_set(st%nst, xpsi, xpsi_, psi_col)
+  call make_idx_set(st%nst, xres, xres_, res_col)
 
-  matr_col = ubound(matr, 2)
-
+  ! There is a little code duplication between the serial and parallel case
+  ! but the code is easier to understand having it separated (instead a lot of
+  ! conditionals and pointers),
   if(st%parallel_in_states) then
 #if defined(HAVE_MPI)
     ! Shortcuts.
@@ -391,37 +322,8 @@ subroutine X(states_block_matr_mul_add)(mesh, st, alpha, psi, matr, beta, res, x
     ! Calculate the index sets per node.
     ! xpsi_node(1:xpsi_count(node), node) and
     ! xres_node(1:xres_count(node), node) are the index sets.
-    ALLOCATE(xpsi_count(0:size-1), size)
-    ALLOCATE(xres_count(0:size-1), size)
-    ! Count the how many vectors each node has.
-    xpsi_count = 0
-    xres_count = 0
-    do i = 1, psi_col
-      xpsi_count(st%node(xpsi_(i))) = xpsi_count(st%node(xpsi_(i))) + 1
-    end do
-    do i = 1, res_col
-      xres_count(st%node(xres_(i))) = xres_count(st%node(xres_(i))) + 1
-    end do
-    ! Allocate space, it is a bit more than really required but makes the code simpler.
-    ALLOCATE(xpsi_node(maxval(xpsi_count), 0:size-1), maxval(xpsi_count)*size)
-    ALLOCATE(xres_node(maxval(xres_count), 0:size-1), maxval(xres_count)*size)
-    ! Now set up the index sets.
-    xpsi_count = 0
-    xres_count = 0
-    xpsi_node  = 0
-    xres_node  = 0
-    do ist = 1, st%nst
-      node = st%node(ist)
-      ! A state ist is only included if its in the global index set.
-      if(member(ist, xpsi_)) then
-        xpsi_count(node)                  = xpsi_count(node) + 1
-        xpsi_node(xpsi_count(node), node) = ist
-      end if
-      if(member(ist, xres_)) then
-        xres_count(node)                  = xres_count(node) + 1
-        xres_node(xres_count(node), node) = ist
-      end if
-    end do
+    call states_block_local_idx(st, xpsi_, psi_col, xpsi_count, xpsi_node)
+    call states_block_local_idx(st, xres_, res_col, xres_count, xres_node)
 
     ! Take care of beta first, if necessary, and compact res to res_block.
     if(beta.ne.R_TOTYPE(M_ZERO)) then
@@ -457,6 +359,7 @@ subroutine X(states_block_matr_mul_add)(mesh, st, alpha, psi, matr, beta, res, x
     right = lmpi_translate_rank(st%dom_st%comm, st%mpi_grp%comm, src)
     left  = lmpi_translate_rank(st%dom_st%comm, st%mpi_grp%comm, dst)
 
+    ! Asynchronously left-rotate blocks of psi.
     do round = 0, size-1
       k = mod(rank+round, size)   ! The column of the block currently being calculated.
       l = mod(rank+round+1, size) ! The column of the block currently being communicated.
@@ -482,7 +385,6 @@ subroutine X(states_block_matr_mul_add)(mesh, st, alpha, psi, matr, beta, res, x
       matr_row_offset = sum(xpsi_count(0:k-1))
       matr_col_offset = sum(xres_count(0:rank-1))
       ALLOCATE(matr_block(xpsi_count(k), xres_count(rank)), xpsi_count(k)*xres_count(rank))
-
       if(sendcnt.gt.0.and.xres_count(rank).gt.0) then
         call profiling_in(C_PROFILING_BLOCK_MATR_CP)
         matr_block = matr(matr_row_offset+1:matr_row_offset+xpsi_count(k), matr_col_offset+1:matr_col_offset+xres_count(rank))
@@ -492,7 +394,6 @@ subroutine X(states_block_matr_mul_add)(mesh, st, alpha, psi, matr, beta, res, x
           sendbuf(:, :, 1), matr_block, R_TOTYPE(M_ONE), res_block(:, :, 1))
         call profiling_out(C_PROFILING_BLOCK_MATR_MM)
       end if
-
       deallocate(matr_block)
     end do
 
@@ -508,7 +409,8 @@ subroutine X(states_block_matr_mul_add)(mesh, st, alpha, psi, matr, beta, res, x
     message(1) = 'Running gs parallel in states without MPI. This is a bug!'
     call write_fatal(1)
 #endif
-  else
+  else ! No states parallelization.
+    ! Compact everything to pass it to BLAS.
     ALLOCATE(res_block(mesh%np, st%d%dim, res_col), mesh%np*st%d%dim*res_col)
     call profiling_in(C_PROFILING_BLOCK_MATR_CP)
     call X(states_compactify)(st, mesh, xres_(1:res_col), res, res_block)
