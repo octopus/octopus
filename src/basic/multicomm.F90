@@ -387,7 +387,7 @@ contains
     ! ---------------------------------------------------------
     subroutine cart_topology_create()
       integer :: new_comm
-      logical :: periodic_mask(mc%n_index)
+      logical :: periodic_mask(n_index)
 
       call push_sub('multicomm.cart_topology_create')
 
