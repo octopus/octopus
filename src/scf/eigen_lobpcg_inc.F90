@@ -19,7 +19,10 @@
   
   ! Implementation of the locally optimal block preconditioned conjugate
   ! gradients algorithm.
-  
+
+  ! FIXME: this file needs cleanup. It contains definitely too much
+  ! copy and paste.
+
   #include "global.h"
 
   ! If Fortran had subarray pointers, I would use those...
@@ -68,8 +71,11 @@
     integer, target  :: nuc, uc(st%nst) ! Index set of unconverged eigenpairs.
     integer, pointer :: lnuc, luc(:)    ! Index set of local unconverged eigenpairs.
 
-    logical :: verbose_
-    logical :: explicit_gram
+    integer           :: iunit
+    logical           :: verbose_, no_bof
+    logical           :: explicit_gram
+    character(len=3)  :: rank_number
+    character(len=10) :: file_name
 
     FLOAT,  allocatable :: diffs(:, :)
     R_TYPE, allocatable :: tmp(:, :, :)     ! Temporary storage of wavefunction size.
@@ -91,17 +97,18 @@
 
     call push_sub('eigen_lobpcg.Xeigen_solver_lobpcg')
 
+    if(in_profiling_mode.and.st%parallel_in_states) then
+      write(rank_number, '(i3.3)') st%mpi_grp%rank
+      file_name = 'num_es.'//trim(rank_number)
+      iunit = io_open(file_name, action='write', position='append')
+      if(iunit.ge.0) then
+        write(iunit, '(a,i3,a)') '=== Eigensolver started on node ', st%mpi_grp%rank, ' ==='
+        call io_close(iunit)
+      end if
+    end if
+      
     ! The results with explicit Gram diagonal blocks were not better, so it is switched of.
     explicit_gram = .false.
-
-    ! Check if LOBPCG can be run.
-    ! LOBPCG does not work with domain parallelization for the moment
-    ! (because we do things like <psi|A).
-    if(gr%m%parallel_in_domains) then
-      message(1) = 'The LOBPCG eigenvsolver cannot be used with domain parallelization'
-      message(2) = 'at the moment. Choose a different eigensolver.'
-      call write_fatal(3)
-    end if
 
     ! Some abbreviations.
     eval     => st%eigenval
@@ -169,7 +176,12 @@
       end if
 
       ! Orthonormalize initial vectors.
-      call X(lobpcg_orth)(gr%m, st, st%X(psi)(:, :, :, ik), nuc, uc, lnuc, luc, tmp)
+      no_bof = .false.
+      call X(lobpcg_orth)(gr%m, st, st%X(psi)(:, :, :, ik), nuc, uc, lnuc, luc, tmp, no_bof)
+      if(no_bof) then
+        message(1) = 'Bad problem: orthonormalization of initial vectors failed.'
+        call write_warning(1)
+      end if
 
       ! Get initial Ritz-values and -vectors.
       do ist = st_start, st_end
@@ -180,7 +192,12 @@
       call states_blockt_mul(gr%m, st, st%X(psi)(:, :, :, ik), h_psi, gram_block, symm=.true.)
 
       ALLOCATE(ritz_vec(nst, nst), nst**2)
-      call lalg_eigensolve(nst, gram_block, ritz_vec, eval(:, ik))
+      no_bof = .false.
+      call lalg_eigensolve(nst, gram_block, ritz_vec, eval(:, ik), bof=no_bof)
+      if(no_bof) then
+        message(1) = 'Bad problem: Rayleigh-Ritz procedure for initial vectors failed.'
+        call write_warning(1)
+      end if
       call states_block_matr_mul(gr%m, st, st%X(psi)(:, :, :, ik), ritz_vec, tmp)
       call lalg_copy(np*lnst, tmp(:, 1, st_start), st%X(psi)(:, 1, st_start, ik))
       call states_block_matr_mul(gr%m, st, h_psi, ritz_vec, tmp)
@@ -224,7 +241,14 @@
       end do
 
       ! Orthonormalize residuals.
-      call X(lobpcg_orth)(gr%m, st, res, nuc, uc, lnuc, luc, tmp)
+      no_bof = .false.
+      call X(lobpcg_orth)(gr%m, st, res, nuc, uc, lnuc, luc, tmp, no_bof)
+      if(no_bof) then
+        message(1) = 'Bad problem: orthonormalization of residuals failed.'
+        write(message(2), '(a)') 'in iteration #     1'
+        call write_warning(2)
+        cycle k_loop
+      end if
 
       ! Apply Hamiltonian to residuals.
       do i = 1, lnuc
@@ -275,9 +299,17 @@
       ! (1, 2)-block: <psi| res.
       call states_blockt_mul(gr%m, st, st%X(psi)(:, :, :, ik), res, gram_i(1:nst, nst+1:nst+nuc), xpsi2=UC)
 
+
+      no_bof = .false.
       call profiling_in(C_PROFILING_LOBPCG_ESOLVE)
-      call lalg_lowest_geneigensolve(nst, nst+nuc, gram_h, gram_i, ritz_val, ritz_vec)
+      call lalg_lowest_geneigensolve(nst, nst+nuc, gram_h, gram_i, ritz_val, ritz_vec, bof=no_bof)
       call profiling_out(C_PROFILING_LOBPCG_ESOLVE)
+      if(no_bof) then
+        message(1) = 'Bad problem: Rayleigh-Ritz procedure failed'
+        write(message(2), '(a)') 'in iteration #     1'
+        call write_warning(2)
+        cycle k_loop
+      end if
 
       ! Calculate new conjugate directions.
       call states_block_matr_mul(gr%m, st, res, RITZ_RES, dir, xpsi=UC)
@@ -326,7 +358,14 @@
         end do
 
         ! Orthonormalize residuals.
-        call X(lobpcg_orth)(gr%m, st, res, nuc, uc, lnuc, luc, tmp)
+        no_bof = .false.
+        call X(lobpcg_orth)(gr%m, st, res, nuc, uc, lnuc, luc, tmp, no_bof)
+        if(no_bof) then
+          message(1) = 'Bad problem: orthonormalization of residuals failed.'
+        write(message(2), '(a)') 'in iteration #     1'
+          call write_warning(2)
+          exit iter
+        end if
 
         ! Apply Hamiltonian to residual.
         do i = 1, lnuc
@@ -340,23 +379,35 @@
         ! H dir with the new dir), we cannot use lobpcg_orth at this point.
         call states_blockt_mul(gr%m, st, dir, dir, nuc_tmp, xpsi1=UC, xpsi2=UC, symm=.true.)
         call profiling_in(C_PROFILING_LOBPCG_CHOL)
-        call lalg_cholesky(nuc, nuc_tmp)
+        no_bof = .false.
+        call lalg_cholesky(nuc, nuc_tmp, bof=no_bof)
         call profiling_out(C_PROFILING_LOBPCG_CHOL)
-        call profiling_in(C_PROFILING_LOBPCG_INV)
-        call lalg_invert_upper_triangular(nuc, nuc_tmp)
-        call profiling_out(C_PROFILING_LOBPCG_INV)
-        ! Fill lower triangle of nuc_tmp with zeros.
-        do i = 2, nuc
-          nuc_tmp(i, 1:i-1) = R_TOTYPE(M_ZERO)
-        end do
-        call states_block_matr_mul(gr%m, st, dir, nuc_tmp, tmp, xpsi=UC, xres=UC)
-        do i = 1, lnuc
-          call lalg_copy(np, tmp(:, 1, luc(i)), dir(:, 1, luc(i)))
-        end do
-        call states_block_matr_mul(gr%m, st, h_dir, nuc_tmp, tmp, xpsi=UC, xres=UC)
-        do i = 1, lnuc
-          call lalg_copy(np, tmp(:, 1, luc(i)), h_dir(:, 1, luc(i)))
-        end do
+        if(no_bof) then
+          message(1) = 'Bad problem: orthonormalization of conjugate directions failed'
+          write(message(2), '(a,i6)') 'in iteration #', k
+          call write_warning(2)
+          ! Set directions to zero.
+          ! FIXME: they should not be included in the subspace at all in this case.
+          ! (the code has to be cleaned up anyway, so this can be done then).
+          dir   = R_TOTYPE(M_ZERO)
+          h_dir = R_TOTYPE(M_ZERO)
+        else
+          call profiling_in(C_PROFILING_LOBPCG_INV)
+          call lalg_invert_upper_triangular(nuc, nuc_tmp)
+          call profiling_out(C_PROFILING_LOBPCG_INV)
+          ! Fill lower triangle of nuc_tmp with zeros.
+          do i = 2, nuc
+            nuc_tmp(i, 1:i-1) = R_TOTYPE(M_ZERO)
+          end do
+          call states_block_matr_mul(gr%m, st, dir, nuc_tmp, tmp, xpsi=UC, xres=UC)
+          do i = 1, lnuc
+            call lalg_copy(np, tmp(:, 1, luc(i)), dir(:, 1, luc(i)))
+          end do
+          call states_block_matr_mul(gr%m, st, h_dir, nuc_tmp, tmp, xpsi=UC, xres=UC)
+          do i = 1, lnuc
+            call lalg_copy(np, tmp(:, 1, luc(i)), h_dir(:, 1, luc(i)))
+          end do
+        end if
 
         ! Rayleigh-Ritz procedure.
         ! gram_h matrix.
@@ -416,8 +467,14 @@
         call states_blockt_mul(gr%m, st, res, dir, &
           gram_i(nst+1:nst+nuc, nst+nuc+1:nst+2*nuc), xpsi1=UC, xpsi2=UC)
         call profiling_in(C_PROFILING_LOBPCG_ESOLVE)
-        call lalg_lowest_geneigensolve(nst, nst+2*nuc, gram_h, gram_i, ritz_val, ritz_vec)
+        call lalg_lowest_geneigensolve(nst, nst+2*nuc, gram_h, gram_i, ritz_val, ritz_vec, bof=no_bof)
         call profiling_out(C_PROFILING_LOBPCG_ESOLVE)
+        if(no_bof) then
+          message(1) = 'Bad problem: Rayleigh-Ritz procedure failed'
+          write(message(2), '(a,i6)') 'in iteration #', k
+          call write_warning(2)
+          exit iter
+        end if
 
         ! Calculate new conjugate directions:
         ! dir <- dir ritz_dir + res ritz_res
@@ -584,8 +641,10 @@
     integer,        intent(inout) :: lnuc
     integer,        intent(inout) :: luc(:)
 
-    integer :: i, ist, j, new_nuc
-    integer :: new_uc(nuc)
+    integer           :: i, ist, j, new_nuc, iunit
+    integer           :: new_uc(nuc)
+    character(len=3)  :: rank_number
+    character(len=10) :: file_name
 
     call push_sub('eigen_lobpcg_inc.Xlobpcg_unconv_ev')
 
@@ -607,6 +666,15 @@
     ! Update set of unconverged vectors an all nodes.
     if(st%parallel_in_states) then
       call lmpi_gen_alltoallv(lnuc, luc, nuc, uc, st%mpi_grp)
+      if(in_profiling_mode) then
+        write(rank_number, '(i3.3)') st%mpi_grp%rank
+        file_name = 'num_es.'//trim(rank_number)
+        iunit = io_open(file_name, action='write', position='append')
+        if(iunit.ge.0) then
+          write(iunit, '(a,i6,a,i6)') 'k = ', ik, '       nuc = ', lnuc
+          call io_close(iunit)
+        end if
+      end if
     end if
 #else
     uc = uc ! Avoid unused variable warning.
@@ -634,25 +702,30 @@
 
   ! ---------------------------------------------------------
   ! Orthonormalize the column vectors of vs.
-  subroutine X(lobpcg_orth)(m, st, vs, nuc, uc, lnuc, luc, tmp)
+  subroutine X(lobpcg_orth)(m, st, vs, nuc, uc, lnuc, luc, tmp, chol_failure)
     type(mesh_t),   intent(in)    :: m
     type(states_t), intent(in)    :: st
     R_TYPE,         intent(inout) :: vs(m%np_part, st%d%dim, st%st_start:st%st_end)
     integer,        intent(in)    :: nuc, lnuc
     integer,        intent(in)    :: uc(:), luc(:)
     R_TYPE,         intent(out)   :: tmp(m%np_part, st%d%dim, st%st_start:st%st_end)
+    logical,        intent(out)   :: chol_failure
 
     integer             :: i
     R_TYPE, allocatable :: vv(:, :)
 
     call push_sub('eigen_lobpcg_inc.Xlobpcg_orth')
 
+    chol_failure = .false.
     ALLOCATE(vv(nuc, nuc), nuc**2)
 
     call states_blockt_mul(m, st, vs, vs, vv, xpsi1=UC, xpsi2=UC, symm=.true.)
     call profiling_in(C_PROFILING_LOBPCG_CHOL)
-    call lalg_cholesky(nuc, vv)
+    call lalg_cholesky(nuc, vv, bof=chol_failure)
     call profiling_out(C_PROFILING_LOBPCG_CHOL)
+    if(chol_failure) then ! Failure in Choleksy decomposition.
+      return
+    end if
     call profiling_in(C_PROFILING_LOBPCG_INV)
     call lalg_invert_upper_triangular(nuc, vv)
     call profiling_out(C_PROFILING_LOBPCG_INV)
