@@ -67,7 +67,7 @@ subroutine X(restart_write_lr_rho)(lr, gr, nspin, restart_dir, rho_tag)
 
   call block_signals()
   do is = 1, nspin
-    write(fname, '(a,i1,a)') trim(rho_tag)//'_', is,'.'
+    write(fname, '(a,i1,a)') trim(rho_tag)//'_', is
     call X(restart_write_function)(trim(tmpdir)//trim(RESTART_DIR), fname, gr,&
          lr%X(dl_rho)(:, is), ierr, size(lr%X(dl_rho),1))
   end do
@@ -89,7 +89,7 @@ subroutine X(restart_read_lr_rho)(lr, gr, nspin, restart_dir, rho_tag, ierr)
 
   ierr = 0;
   do is = 1, nspin
-    write(fname, '(a, i1,a)') trim(rho_tag)//'_', is, '.'
+    write(fname, '(a, i1,a)') trim(rho_tag)//'_', is
     call X(restart_read_function)(trim(tmpdir)//trim(restart_dir), fname, gr%m,&
          lr%X(dl_rho)(:, is), s_ierr)
     if( s_ierr /=0 ) ierr = s_ierr;
