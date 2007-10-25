@@ -181,9 +181,13 @@ contains
 #include "undef.F90"
 #include "integer.F90"
 #include "mpi_debug_inc.F90"
+
 #else
-contains
+
   private
+
+contains
+
   subroutine this_module_is_not_empty()
     integer :: neither_is_this_subroutine
     neither_is_this_subroutine = 0

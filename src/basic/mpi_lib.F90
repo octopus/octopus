@@ -80,7 +80,7 @@ contains
 #include "integer.F90"
 #include "mpi_lib_inc.F90"
 #else
-  private
+
   subroutine this_module_is_not_empty()
     integer :: neither_is_this_subroutine
     neither_is_this_subroutine = 0
