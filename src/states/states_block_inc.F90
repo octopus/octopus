@@ -310,6 +310,8 @@ subroutine X(states_block_matr_mul_add)(mesh, st, alpha, psi, matr, beta, res, x
   call make_idx_set(st%nst, xpsi, xpsi_, psi_col)
   call make_idx_set(st%nst, xres, xres_, res_col)
 
+  matr_col = ubound(matr, 2)
+
   ! There is a little code duplication between the serial and parallel case
   ! but the code is easier to understand having it separated (instead a lot of
   ! conditionals and pointers),
