@@ -192,6 +192,8 @@ contains
       !% GGA: Perdew, Burke & Ernzerhof (solids)
       !%Option gga_x_rpbe 117
       !% GGA: Hammer, Hansen & Norskov (PBE-like)
+      !%Option gga_x_wc 118
+      !% GGA:  Wu & Cohen
       !%Option gga_x_b86 103
       !% GGA: Becke 86 Xalpha,beta,gamma
       !%Option gga_x_b86_r 104
@@ -228,6 +230,8 @@ contains
       !% GGA: HCTH fit to 407 molecules (xc)
       !%Option gga_xc_edf1 165
       !% GGA: Empirical functional from Adamson, Gill, and Pople
+      !%Option gga_xc_xlyp 166
+      !% GGA: Empirical functional from Xu and Goddard
       !%Option mgga_x_tpss 201
       !% MGGA (not working)
       !%Option oep_x 401
