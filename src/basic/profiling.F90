@@ -20,7 +20,6 @@
 #include "global.h"
 
 module profiling_m
-
   use global_m
   use io_m
   use lib_oct_m
@@ -289,8 +288,11 @@ contains
 
     ASSERT(.not. this%active)
     this%active = .true.
+#if defined(HAVE_MPI)
+    now = MPI_Wtime()
+#else
     now = loct_clock()
-    
+#endif
     if(associated(current%p)) then
       !keep a pointer to the parent
       this%parent => current%p
@@ -316,7 +318,11 @@ contains
     
     ASSERT(this%active)
     this%active = .false.
+#if defined(HAVE_MPI)
+    now = MPI_Wtime()
+#else
     now = loct_clock()
+#endif
     time_spent = now - this%entry_time
     this%total_time = this%total_time + time_spent
     this%self_time  = this%self_time + time_spent
