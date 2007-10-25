@@ -99,7 +99,6 @@ module mpi_debug_m
 
 contains
 
-
   ! ---------------------------------------------------------
   subroutine mpi_debug_statistics()
     integer :: j
@@ -183,6 +182,7 @@ contains
 #include "integer.F90"
 #include "mpi_debug_inc.F90"
 #else
+contains
   private
   subroutine this_module_is_not_empty()
     integer :: neither_is_this_subroutine
