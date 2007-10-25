@@ -22,14 +22,6 @@
 
 #include "global.h"
 
-! If Fortran had subarray pointers, I would use those...
-! Block of ritz_vec to calculate new psi.
-#define RITZ_PSI ritz_vec(1:nst, 1:nst)
-! Block of ritz_vec to calculate new dir.
-#define RITZ_RES ritz_vec(nst+1:nst+nuc, 1:nst)
-! Block of ritz_vec to calculate new res.
-#define RITZ_DIR ritz_vec(nst+nuc+1:nst+2*nuc, 1:nst)
-
 ! Index set of unconverged eigenvectors.
 #define UC uc(1:nuc)
 
@@ -78,20 +70,21 @@ subroutine X(eigen_solver_lobpcg)(gr, st, h, pre, tol, niter, converged, diff, v
   character(len=10) :: file_name
   R_TYPE            :: beta
 
-  FLOAT,  allocatable :: diffs(:, :)
-  R_TYPE, allocatable :: tmp(:, :, :)     ! Temporary storage of wavefunction size.
-  R_TYPE, allocatable :: nuc_tmp(:, :)    ! Temporary storage of Gram block size.
-  R_TYPE, allocatable :: res(:, :, :)     ! Residuals.
-  R_TYPE, allocatable :: h_res(:, :, :)   ! H res.
-  R_TYPE, allocatable :: dir(:, :, :)     ! Conjugate directions.
-  R_TYPE, allocatable :: h_dir(:, :, :)   ! H dir.
-  R_TYPE, allocatable :: h_psi(:, :, :)   ! H |psi>.
-  FLOAT, pointer      :: eval(:, :)       ! Pointer to the eigenvalues.
-  R_TYPE, allocatable :: gram_h(:, :)     ! Gram matrix for Hamiltonian.
-  R_TYPE, allocatable :: gram_i(:, :)     ! Gram matrix for unit matrix.
-  R_TYPE, allocatable :: gram_block(:, :) ! Space to construct the Gram matrix blocks.
-  R_TYPE, allocatable :: ritz_vec(:, :)   ! Ritz-vectors.
-  FLOAT,  allocatable :: ritz_val(:)      ! Ritz-values.
+  R_TYPE, pointer             :: rits_psi(:, :), ritz_res(:, :), ritz_dir(:, :)
+  FLOAT,  allocatable         :: diffs(:, :)
+  R_TYPE, allocatable         :: tmp(:, :, :)     ! Temporary storage of wavefunction size.
+  R_TYPE, allocatable         :: nuc_tmp(:, :)    ! Temporary storage of Gram block size.
+  R_TYPE, allocatable         :: res(:, :, :)     ! Residuals.
+  R_TYPE, allocatable         :: h_res(:, :, :)   ! H res.
+  R_TYPE, allocatable         :: dir(:, :, :)     ! Conjugate directions.
+  R_TYPE, allocatable         :: h_dir(:, :, :)   ! H dir.
+  R_TYPE, allocatable         :: h_psi(:, :, :)   ! H |psi>.
+  FLOAT, pointer              :: eval(:, :)       ! Pointer to the eigenvalues.
+  R_TYPE, allocatable         :: gram_h(:, :)     ! Gram matrix for Hamiltonian.
+  R_TYPE, allocatable         :: gram_i(:, :)     ! Gram matrix for unit matrix.
+  R_TYPE, allocatable         :: gram_block(:, :) ! Space to construct the Gram matrix blocks.
+  R_TYPE, allocatable, target :: ritz_vec(:, :)   ! Ritz-vectors.
+  FLOAT,  allocatable         :: ritz_val(:)      ! Ritz-values.
 #if defined(HAVE_MPI)
   FLOAT, allocatable  :: ldiffs(:)
 #endif
@@ -230,6 +223,11 @@ subroutine X(eigen_solver_lobpcg)(gr, st, h, pre, tol, niter, converged, diff, v
       ALLOCATE(ritz_vec(nst+blks*nuc, nst), nst**2+blks*nst*nuc)
       ALLOCATE(gram_h(nst+blks*nuc, nst+blks*nuc), (nst+blks*nuc)**2)
       ALLOCATE(gram_i(nst+blks*nuc, nst+blks*nuc), (nst+blks*nuc)**2)
+      rits_psi => ritz_vec(1:nst, 1:nst)
+      ritz_res => ritz_vec(nst+1:nst+nuc, 1:nst)
+      if(k.gt.1) then
+        ritz_dir => ritz_vec(nst+nuc+1:nst+2*nuc, 1:nst)
+      end if
 
       ! Apply the preconditioner.
       do i = 1, lnuc
@@ -370,28 +368,28 @@ subroutine X(eigen_solver_lobpcg)(gr, st, h, pre, tol, niter, converged, diff, v
       ! dir <- dir ritz_dir + res ritz_res
       ! h_dir <- (H res) ritz_res + (H dir) ritz_dir
       if(k.gt.1) then
-        call states_block_matr_mul(gr%m, st, dir, RITZ_DIR, tmp, xpsi=UC)
+        call states_block_matr_mul(gr%m, st, dir, ritz_dir, tmp, xpsi=UC)
         call lalg_copy(np*lnst, tmp(:, 1, st_start), dir(:, 1, st_start))
-        call states_block_matr_mul(gr%m, st, h_dir, RITZ_DIR, tmp, xpsi=UC)
+        call states_block_matr_mul(gr%m, st, h_dir, ritz_dir, tmp, xpsi=UC)
         call lalg_copy(np*lnst, tmp(:, 1, st_start), h_dir(:, 1, st_start))
         beta = R_TOTYPE(M_ONE)
       else
         beta = R_TOTYPE(M_ZERO)
       end if
       call states_block_matr_mul_add(gr%m, st, R_TOTYPE(M_ONE), &
-        res, RITZ_RES, beta, dir, xpsi=UC)
+        res, ritz_res, beta, dir, xpsi=UC)
       call states_block_matr_mul_add(gr%m, st, R_TOTYPE(M_ONE), &
-        h_res, RITZ_RES, beta, h_dir, xpsi=UC)
+        h_res, ritz_res, beta, h_dir, xpsi=UC)
 
       ! Calculate new eigenstates:
       ! |psi> <- |psi> ritz_psi + dir
       ! h_psi <- (H |psi>) ritz_psi + H dir
-      call states_block_matr_mul(gr%m, st, st%X(psi)(:, :, :, ik), RITZ_PSI, tmp)
+      call states_block_matr_mul(gr%m, st, st%X(psi)(:, :, :, ik), rits_psi, tmp)
       call lalg_copy(np*lnst, tmp(:, 1, st_start), st%X(psi)(:, 1, st_start, ik))
       do ist = st_start, st_end ! Leave this loop, otherwise xlf90 crashes.
         call lalg_axpy(np, R_TOTYPE(M_ONE), dir(:, 1, ist), st%X(psi)(:, 1, ist, ik))
       end do
-      call states_block_matr_mul(gr%m, st, h_psi, RITZ_PSI, tmp)
+      call states_block_matr_mul(gr%m, st, h_psi, rits_psi, tmp)
       call lalg_copy(np*lnst, tmp(:, 1, st_start), h_psi(:, 1, st_start))
       call lalg_axpy(np*lnst, R_TOTYPE(M_ONE), h_dir(:, 1, st_start), h_psi(:, 1, st_start))
 
@@ -558,7 +556,7 @@ subroutine X(lobpcg_unconv_ev)(ik, m, st, tol, res, diff, nuc, uc, lnuc, luc)
    lnuc        = new_nuc
    luc(1:lnuc) = new_uc(1:lnuc)
 
-if defined(HAVE_MPI)
+#if defined(HAVE_MPI)
   ! Update set of unconverged vectors an all nodes.
   if(st%parallel_in_states) then
     call lmpi_gen_alltoallv(lnuc, luc, nuc, uc, st%mpi_grp)
