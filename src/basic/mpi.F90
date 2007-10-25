@@ -31,7 +31,7 @@ module mpi_m
 
   ! some machines do not have a mpi module, but a mpi input file
 #if defined(MPI_H)
-# include "mpif.h"
+include "mpif.h"
 #endif
 
   ! This is defined even when running serial

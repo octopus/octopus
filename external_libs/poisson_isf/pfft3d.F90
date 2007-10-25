@@ -60,7 +60,7 @@ subroutine convolxc_off(n1,n2,n3,nd1,nd2,nd3,md1,md2,md3, &
 #endif
 
 #if defined(MPI_H)
-#include "mpif.h"
+include "mpif.h"
 #endif
 
   !Arguments
@@ -855,7 +855,7 @@ subroutine kernelfft(n1,n2,n3,nd1,nd2,nd3,nproc,iproc,zf,zr,comm)
   implicit none
 
 #if defined(MPI_H)
-#include "mpif.h"
+include "mpif.h"
 #endif
 
   !Arguments

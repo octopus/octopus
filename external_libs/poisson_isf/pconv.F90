@@ -221,7 +221,7 @@ subroutine pconvxc_off(m1,m2,m3,n1,n2,n3,nd1,nd2,nd3,md1,md2,md3,iproc,nproc,&
   implicit none
 
 #if defined(MPI_H)
-#include "mpif.h"
+include "mpif.h"
 #endif
 
  integer, intent(in) :: m1,m2,m3,n1,n2,n3,nd1,nd2,nd3,md1,md2,md3,iproc,nproc
