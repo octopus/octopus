@@ -455,7 +455,7 @@ subroutine X(states_compactify)(st, m, idx, in, out)
 
   integer :: ist, idim, n
 
-  call push_sub('states_block_inc.X(states_compactify)')
+  call push_sub('states_block_inc.Xstates_compactify')
 
   n = ubound(idx, 1)
 
@@ -482,7 +482,7 @@ subroutine X(states_uncompactify)(st, m, idx, in, out)
 
   integer :: ist, idim, n
 
-  call push_sub('states_block_inc.X(states_uncompactify)')
+  call push_sub('states_block_inc.Xstates_uncompactify')
 
   n = ubound(idx, 1)
 
