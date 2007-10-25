@@ -30,7 +30,11 @@
 #define R_REAL(x)   (x)
 #define R_AIMAG(x)  (M_ZERO)
 
+#if defined(DISABLE_DEBUG)
+#define TS(x)       x
+#else
 #define TS(x)       TSI_ ## x
+#endif
 
 !! Local Variables:
 !! mode: f90

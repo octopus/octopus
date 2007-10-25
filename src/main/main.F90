@@ -53,18 +53,22 @@ program octopus
 
   !%Variable DebugLevel
   !%Type integer
-  !%Default 1
+  !%Default 0
   !%Section Generalities::Debug
   !%Description
-  !% This variable decides wether or not to enter debug-mode. In debugging mode,
-  !% the program prints to standard error when it enters and exits the subroutines,
-  !% what is the memory it is using (only, for the moment being, in Linux systems),
-  !% and some other information. Useful for developers, and mandatory if you want
-  !% to send a bug report to the developers and being considered.
-  !% You have two options: (i) setting it to zero -- or less than zero, in which
-  !% case you do not run in debugging mode (this is the default), or (ii) setting
-  !% it to a positive number. In this case the entries and exits to nested subroutines
-  !% are only printed down to the level that is given in this variable.
+  !% This variable decides wether or not to enter debug-mode.
+  !% If its value is 0 (the default) Octopus does not enter debug mode.
+  !% If it is greater than 0 different amounts of additional information
+  !% is written to standard output and additional assertion checks are performed.
+  !% Level 1: moderate amount of debug output but assertion checks enabled.
+  !% Level 2: the code prints a stack trace as it enters end exits subroutines.
+  !% This is useful for developers and you should include this output when
+  !% submitting a bug report.
+  !% Level 100: the debug output is additionally written to files in the debug
+  !% directory. For each node (when running in parallel) there is a file called
+  !% debug_trace.<rank>. Writing these files slows down the code by a huge factor and
+  !% it is usually only necessary for parallel runs. In the serial case all
+  !% the information can be obtained from standard out.
   !%End
   call loct_parse_int('DebugLevel', 0, conf%debug_level)
   if(conf%debug_level>0) then

@@ -17,16 +17,16 @@
 !!
 !! $Id$
 
+
 ! ---------------------------------------------------------
 subroutine TS(MPI_Barrier)(comm, ierr)
   integer :: comm, ierr
 
-  call MPI_Debug_IN (comm, C_MPI_BARRIER)
+  call mpi_debug_in (comm, C_MPI_BARRIER)
 
   call MPI_Barrier(comm, ierr)
 
-  call MPI_Debug_OUT(comm, C_MPI_BARRIER)
-
+  call mpi_debug_out(comm, C_MPI_BARRIER)
 end subroutine TS(MPI_Barrier)
 
 
@@ -38,13 +38,12 @@ subroutine TS(MPI_Scatterv)(sendbuf, sendcnts, displs, sendtype, recvbuf, &
   integer :: sendcnts(:), displs(:)
   integer :: recvcount, sendtype, recvtype, root, comm, ierr
 
-  call MPI_Debug_IN (comm, C_MPI_SCATTERV)
+  call mpi_debug_in(comm, C_MPI_SCATTERV)
 
   call MPI_Scatterv(sendbuf, sendcnts, displs, sendtype, recvbuf, &
     recvcount, recvtype, root, comm, ierr)
 
-  call MPI_Debug_OUT(comm, C_MPI_SCATTERV)
-
+  call mpi_debug_out(comm, C_MPI_SCATTERV)
 end subroutine TS(MPI_Scatterv)
 
 
@@ -56,13 +55,12 @@ subroutine TS(MPI_Gatherv)(sendbuf, sendcnts, sendtype, recvbuf, &
   integer :: recvcount(:), displs(:)
   integer :: sendcnts, sendtype, recvtype, root, comm, ierr
 
-  call MPI_Debug_IN (comm, C_MPI_GATHERV)
+  call mpi_debug_in(comm, C_MPI_GATHERV)
 
   call MPI_Gatherv(sendbuf, sendcnts, sendtype, recvbuf, &
     recvcount, displs, recvtype, root, comm, ierr)
 
-  call MPI_Debug_OUT(comm, C_MPI_GATHERV)
-
+  call mpi_debug_out(comm, C_MPI_GATHERV)
 end subroutine TS(MPI_Gatherv)
 
 
@@ -74,13 +72,12 @@ subroutine TS(MPI_Alltoallv)(sendbuf, sendcnts, sdispls, sendtype, recvbuf, &
   integer :: sendcnts(:), sdispls(:), recvcount(:), rdispls(:)
   integer :: sendtype, recvtype, comm, ierr
 
-  call MPI_Debug_IN (comm, C_MPI_ALLTOALLV)
+  call mpi_debug_in(comm, C_MPI_ALLTOALLV)
 
   call MPI_Alltoallv(sendbuf, sendcnts, sdispls, sendtype, recvbuf, &
     recvcount, rdispls, recvtype, comm, ierr)
 
-  call MPI_Debug_OUT(comm, C_MPI_ALLTOALLV)
-
+  call mpi_debug_out(comm, C_MPI_ALLTOALLV)
 end subroutine TS(MPI_Alltoallv)
 
 
@@ -92,13 +89,12 @@ subroutine TS(MPI_Alltoall)(sendbuf, sendcnts, sendtype, recvbuf, &
   integer :: sendcnts(:), recvcount(:)
   integer :: sendtype, recvtype, comm, ierr
 
-  call MPI_Debug_IN (comm, C_MPI_ALLTOALLV)
+  call mpi_debug_in(comm, C_MPI_ALLTOALLV)
 
   call MPI_Alltoall(sendbuf, sendcnts, sendtype, recvbuf, &
     recvcount, recvtype, comm, ierr)
 
-  call MPI_Debug_OUT(comm, C_MPI_ALLTOALLV)
-
+  call mpi_debug_out(comm, C_MPI_ALLTOALLV)
 end subroutine TS(MPI_Alltoall)
 
 
@@ -110,13 +106,12 @@ subroutine TS(MPI_Allgatherv)(sendbuf, sendcnts, sendtype, recvbuf, &
   integer :: recvcount(:), displs(:)
   integer :: sendcnts, sendtype, recvtype, comm, ierr
 
-  call MPI_Debug_IN (comm, C_MPI_ALLGATHERV)
+  call mpi_debug_in(comm, C_MPI_ALLGATHERV)
 
   call MPI_Allgatherv(sendbuf, sendcnts, sendtype, recvbuf, &
     recvcount, displs, recvtype, comm, ierr)
 
-  call MPI_Debug_OUT(comm, C_MPI_ALLGATHERV)
-
+  call mpi_debug_out(comm, C_MPI_ALLGATHERV)
 end subroutine TS(MPI_Allgatherv)
 
 
@@ -125,12 +120,11 @@ subroutine TS(MPI_Bcast)(buf, cnt, sendtype, root, comm, ierr)
   R_TYPE  :: buf(:)
   integer :: cnt, sendtype, root, comm, ierr
 
-  call MPI_Debug_IN (comm, C_MPI_BCAST)
+  call mpi_debug_in(comm, C_MPI_BCAST)
 
   call MPI_Bcast(buf, cnt, sendtype, root, comm, ierr)
 
-  call MPI_Debug_OUT(comm, C_MPI_BCAST)
-
+  call mpi_debug_out(comm, C_MPI_BCAST)
 end subroutine TS(MPI_Bcast)
 
 
@@ -141,14 +135,30 @@ subroutine TS(MPI_Allreduce)(sendbuf, recvbuf, count, datatype, op, &
   R_TYPE  :: sendbuf, recvbuf
   integer :: count, datatype, op, comm, ierr
 
-  call MPI_Debug_IN (comm, C_MPI_ALLREDUCE)
+  call mpi_debug_in(comm, C_MPI_ALLREDUCE)
 
   call MPI_Allreduce(sendbuf, recvbuf, count, datatype, op, &
     comm, ierr)
 
-  call MPI_Debug_OUT(comm, C_MPI_ALLREDUCE)
-
+  call mpi_debug_out(comm, C_MPI_ALLREDUCE)
 end subroutine TS(MPI_Allreduce)
+
+
+! ---------------------------------------------------------
+subroutine TS(MPI_Allgather)(sendbuf, sendcount, sendtype, recvbuf, &
+  recvcount, recvtype, comm, ierr)
+
+  R_TYPE  :: sendbuf(:), recvbuf(:)
+  integer :: recvcount, sendcount, sendtype, recvtype, comm, ierr
+
+  call mpi_debug_in(comm, C_MPI_ALLGATHER)
+
+  call MPI_Allgather(sendbuf, sendcount, sendtype,&
+    recvbuf, recvcount, recvtype, comm, ierr)
+
+  call mpi_debug_out(comm, C_MPI_ALLGATHER)
+end subroutine TS(MPI_Allgather)
+
 
 !! Local Variables:
 !! mode: f90

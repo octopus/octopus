@@ -32,12 +32,12 @@
 
 #define X(x)        z ## x
 
-
 #if defined(DISABLE_DEBUG)
 #define TS(x)       x
 #else
 #define TS(x)       TSZ_ ## x
 #endif
+
 
 !! Local Variables:
 !! mode: f90
