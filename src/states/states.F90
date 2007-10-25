@@ -1037,7 +1037,61 @@ contains
   ! ---------------------------------------------------------
   ! Calculates the new density out the wavefunctions and
   ! occupations...
-  subroutine states_calc_dens(st, np, rho)
+  subroutine states_dens_accumulate(st, np, rho, ist)
+    type(states_t), intent(in)  :: st
+    integer,        intent(in)  :: np
+    FLOAT,          intent(out) :: rho(:,:)
+    integer,        intent(in)  :: ist
+
+    integer :: i, ik, sp
+    CMPLX   :: c
+
+#ifdef HAVE_MPI
+    FLOAT,  allocatable :: reduce_rho(:)
+#endif
+
+    call push_sub('states.states_dens_accumulate')
+
+    if(st%d%ispin == SPIN_POLARIZED) then
+      sp = 2
+    else
+      sp = 1
+    end if
+
+    do ik = 1, st%d%nik, sp
+      !$omp parallel do private(c)
+      do i = 1, np
+
+        if (st%wfs_type == M_REAL) then
+          rho(i, 1) = rho(i, 1) + st%d%kweights(ik)  *st%occ(ist, ik)*abs(st%dpsi(i, 1, ist, ik))**2
+        else
+          rho(i, 1) = rho(i, 1) + st%d%kweights(ik)  *st%occ(ist, ik)*abs(st%zpsi(i, 1, ist, ik))**2
+        end if
+
+        select case(st%d%ispin)
+
+        case(SPIN_POLARIZED)
+          if (st%wfs_type == M_REAL) then
+            rho(i, 2) = rho(i, 2) + st%d%kweights(ik+1)*st%occ(ist, ik+1)*abs(st%dpsi(i, 1, ist, ik+1))**2
+          else
+            rho(i, 2) = rho(i, 2) + st%d%kweights(ik+1)*st%occ(ist, ik+1)*abs(st%zpsi(i, 1, ist, ik+1))**2
+          end if
+        case(SPINORS) ! in this case wave-functions are always complex
+          rho(i, 2) = rho(i, 2) + st%d%kweights(ik)  *st%occ(ist, ik)*abs(st%zpsi(i, 2, ist, ik))**2
+
+          c = st%d%kweights(ik)*st%occ(ist, ik) * st%zpsi(i, 1, ist, ik) * conjg(st%zpsi(i, 2, ist, ik))
+          rho(i, 3) = rho(i, 3) + real(c, REAL_PRECISION)
+          rho(i, 4) = rho(i, 4) + aimag(c)
+        end select
+
+      end do
+      !$omp end parallel do
+    end do
+
+    call pop_sub()
+  end subroutine states_dens_accumulate
+
+  subroutine states_dens_reduce(st, np, rho)
     type(states_t), intent(in)  :: st
     integer,        intent(in)  :: np
     FLOAT,          intent(out) :: rho(:,:)
@@ -1049,52 +1103,7 @@ contains
     FLOAT,  allocatable :: reduce_rho(:)
 #endif
 
-    call push_sub('states.states_calc_dens')
-
-    if(st%d%ispin == SPIN_POLARIZED) then
-      sp = 2
-    else
-      sp = 1
-    end if
-
-    do i = 1, st%d%nspin
-      !$omp parallel workshare
-      rho(1:np, i) = M_ZERO
-      !$omp end parallel workshare
-    end do
-
-    do ik = 1, st%d%nik, sp
-      do p  = st%st_start, st%st_end
-
-        !$omp parallel do private(c)
-        do i = 1, np
-
-          if (st%wfs_type == M_REAL) then
-            rho(i, 1) = rho(i, 1) + st%d%kweights(ik)  *st%occ(p, ik)*abs(st%dpsi(i, 1, p, ik))**2
-          else
-            rho(i, 1) = rho(i, 1) + st%d%kweights(ik)  *st%occ(p, ik)*abs(st%zpsi(i, 1, p, ik))**2
-          end if
-
-          select case(st%d%ispin)
-
-          case(SPIN_POLARIZED)
-            if (st%wfs_type == M_REAL) then
-              rho(i, 2) = rho(i, 2) + st%d%kweights(ik+1)*st%occ(p, ik+1)*abs(st%dpsi(i, 1, p, ik+1))**2
-            else
-              rho(i, 2) = rho(i, 2) + st%d%kweights(ik+1)*st%occ(p, ik+1)*abs(st%zpsi(i, 1, p, ik+1))**2
-            end if
-          case(SPINORS) ! in this case wave-functions are always complex
-            rho(i, 2) = rho(i, 2) + st%d%kweights(ik)  *st%occ(p, ik)*abs(st%zpsi(i, 2, p, ik))**2
-
-            c = st%d%kweights(ik)*st%occ(p, ik) * st%zpsi(i, 1, p, ik) * conjg(st%zpsi(i, 2, p, ik))
-            rho(i, 3) = rho(i, 3) + real(c, REAL_PRECISION)
-            rho(i, 4) = rho(i, 4) + aimag(c)
-          end select
-
-        end do
-        !$omp end parallel do
-      end do
-    end do
+    call push_sub('states.states_dens_reduce')
 
 #ifdef HAVE_MPI
     ! reduce density
@@ -1102,16 +1111,43 @@ contains
       ALLOCATE(reduce_rho(1:np), np)
       do i = 1, st%d%nspin
         call MPI_Allreduce(rho(1, i), reduce_rho(1), np, &
-           MPI_FLOAT, MPI_SUM, st%mpi_grp%comm, mpi_err)
+          MPI_FLOAT, MPI_SUM, st%mpi_grp%comm, mpi_err)
         call lalg_copy(np, reduce_rho, rho(:, i))
       end do
       deallocate(reduce_rho)
     end if
 #endif
+    call pop_sub()
+  end subroutine states_dens_reduce
+
+  subroutine states_calc_dens(st, np, rho)
+    type(states_t), intent(in)  :: st
+    integer,        intent(in)  :: np
+    FLOAT,          intent(out) :: rho(:,:)
+
+    integer :: i, ik, ist, sp
+    CMPLX   :: c
+
+#ifdef HAVE_MPI
+    FLOAT,  allocatable :: reduce_rho(:)
+#endif
+
+    call push_sub('states.states_calc_dens')
+
+    do i = 1, st%d%nspin
+      !$omp parallel workshare
+      rho(1:np, i) = M_ZERO
+      !$omp end parallel workshare
+    end do
+
+    do ist = st%st_start, st%st_end
+      call states_dens_accumulate(st, np, rho, ist)
+    end do
+
+    call states_dens_reduce(st, np, rho)
 
     call pop_sub()
   end subroutine states_calc_dens
-
 
   ! ---------------------------------------------------------
   ! generate a hydrogen s-wavefunction around a random point
