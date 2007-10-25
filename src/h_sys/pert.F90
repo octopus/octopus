@@ -43,20 +43,21 @@ module pert_m
   implicit none
 
   private
-  public ::               &
-     pert_t,         &
-     pert_init,      &
-     pert_end,       &
-     pert_info,      &
-     pert_setup_dir, &
-     pert_setup_atom,&
-     pert_type,      &
-     dpert_apply,    &
-     zpert_apply,    &
-     dpert_apply_order_2,    &
-     zpert_apply_order_2,    &
-     dpert_expectation_value,&
-     zpert_expectation_value,&
+  public ::                    &
+     pert_t,                   &
+     pert_init,                &
+     pert_end,                 &
+     pert_info,                &
+     pert_setup_dir,           &
+     pert_setup_atom,          &
+     pert_setup_mixed_dir,     &
+     pert_type,                &
+     dpert_apply,              &
+     zpert_apply,              &
+     dpert_apply_order_2,      &
+     zpert_apply_order_2,      &
+     dpert_expectation_value , &
+     zpert_expectation_value,  &
      dpert_expectation_density,&
      zpert_expectation_density
 
@@ -236,6 +237,32 @@ contains
     if(this%pert_type == PERTURBATION_IONIC) call pert_setup_ionic_pure(this)
   end subroutine pert_setup_atom
 
+  subroutine pert_setup_mixed_dir(this, iatom, idir, value, jatom, jdir, valuej)
+    type(pert_t),      intent(inout) :: this
+    integer,           intent(in)    :: iatom
+    integer,           intent(in)    :: idir
+    FLOAT,             intent(in)    :: value
+    integer, optional, intent(in)    :: jatom
+    integer, optional, intent(in)    :: jdir
+    FLOAT,   optional, intent(in)    :: valuej
+    
+
+    logical :: have_dir_2
+
+    this%ionic%pure_dir = .false.
+    
+    this%ionic%mix1(iatom, idir) = value
+    
+    have_dir_2 = present(jatom) .and. present(jdir) .and. present(jatom)
+
+    if(have_dir_2) then
+      this%ionic%mix1(jatom, jdir) = valuej
+    else
+      ASSERT( .not. present(jatom) .and. .not. present(jdir) .and. present(jatom) )
+    end if
+
+  end subroutine pert_setup_mixed_dir
+    
   integer pure function pert_type(this)
     type(pert_t), intent(in) :: this
 

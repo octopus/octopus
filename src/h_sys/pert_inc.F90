@@ -260,7 +260,7 @@ contains
   end subroutine magnetic
 
   subroutine ionic
-    integer :: iatom, idir, jatom, jdir
+    integer :: iatom, idir, jdir
     R_TYPE, allocatable  :: tmp(:)
     
     ALLOCATE(tmp(1:NP), NP*1)
@@ -268,19 +268,17 @@ contains
     f_out(1:NP) = M_ZERO
     
     do iatom = 1, geo%natoms
-      do jatom = 1, geo%natoms
-        do idir = 1, NDIM
-          do jdir = 1, NDIM
-            
-            if (this%ionic%pure_dir &
-                 .and. iatom /= this%atom1 .and. idir /= this%dir &
-                 .and. iatom /= this%atom2 .and. idir /= this%dir2) cycle
-            
-            call X(ionic_perturbation_order_2)(this, gr, geo, h, f_in, tmp, iatom, idir, jatom, jdir)
-            
-            call lalg_axpy(NP, this%ionic%mix1(iatom, idir) * this%ionic%mix2(iatom, idir), tmp, f_out)
-
-          end do
+      do idir = 1, NDIM
+        do jdir = 1, NDIM
+          
+          if (this%ionic%pure_dir &
+               .and. iatom /= this%atom1 .and. idir /= this%dir &
+               .and. iatom /= this%atom2 .and. jdir /= this%dir2) cycle
+          
+          call X(ionic_perturbation_order_2)(this, gr, geo, h, f_in, tmp, iatom, idir, jdir)
+          
+          call lalg_axpy(NP, this%ionic%mix1(iatom, idir) * this%ionic%mix2(iatom, jdir), tmp, f_out)
+          
         end do
       end do
     end do
@@ -291,14 +289,14 @@ contains
 
 end subroutine X(pert_apply_order_2)
 
-subroutine X(ionic_perturbation_order_2) (this, gr, geo, h, f_in, f_out, iatom, idir, jatom, jdir)
+subroutine X(ionic_perturbation_order_2) (this, gr, geo, h, f_in, f_out, iatom, idir, jdir)
   type(pert_t), intent(in)    :: this
   type(grid_t),      intent(inout) :: gr
   type(geometry_t),  intent(in)    :: geo
   type(hamiltonian_t),  intent(in) :: h
   R_TYPE,            intent(in)    :: f_in(:)
   R_TYPE,            intent(out)   :: f_out(:)
-  integer,           intent(in)    :: iatom, idir, jatom, jdir
+  integer,           intent(in)    :: iatom, idir, jdir
 
   R_TYPE, allocatable :: fin(:, :)
   R_TYPE, allocatable :: tmp1(:, :), tmp2(:,:)
@@ -307,11 +305,6 @@ subroutine X(ionic_perturbation_order_2) (this, gr, geo, h, f_in, f_out, iatom, 
   integer :: ipj
 
   atm => geo%atom(iatom)
-
-  if (iatom /= jatom) then 
-    f_out(1:NP) = R_TOTYPE(M_ZERO)
-    return
-  end if
 
   ALLOCATE(fin(1:NP_PART, 1), NP_PART)
   ALLOCATE(tmp1(1:NP_PART, 1), NP_PART)
