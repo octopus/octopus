@@ -386,8 +386,10 @@ contains
 
     ! ---------------------------------------------------------
     subroutine cart_topology_create()
+#if defined(HAVE_MPI)
       integer :: new_comm
       logical :: periodic_mask(n_index)
+#endif
 
       call push_sub('multicomm.cart_topology_create')
 
@@ -416,8 +418,9 @@ contains
 
     ! ---------------------------------------------------------
     subroutine group_comm_create()
+#if defined(HAVE_MPI)
       logical :: dim_mask(n_index)
-
+#endif
       integer :: i_strategy
 
       call push_sub('multicomm.group_comm_create')

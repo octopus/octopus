@@ -22,7 +22,6 @@
 #include "global.h"
 
 module mpi_debug_m
-#if defined(HAVE_MPI)
   use global_m
   use lib_oct_m
   use messages_m
@@ -32,6 +31,7 @@ module mpi_debug_m
 
   private
 
+#if defined(HAVE_MPI)
   public ::               &
     mpi_debug_statistics, &
     mpi_debug_in,         &
@@ -96,9 +96,11 @@ module mpi_debug_m
   real(8), public :: sec_accum(C_NUM_MPI_ROUTINES)    = 0
 
   real(8) :: sec_in
+#endif
 
 contains
 
+#if defined(HAVE_MPI)
   ! ---------------------------------------------------------
   subroutine mpi_debug_statistics()
     integer :: j
@@ -183,11 +185,6 @@ contains
 #include "mpi_debug_inc.F90"
 
 #else
-
-  private
-
-contains
-
   subroutine this_module_is_not_empty()
     integer :: neither_is_this_subroutine
     neither_is_this_subroutine = 0
