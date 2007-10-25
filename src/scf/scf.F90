@@ -547,7 +547,14 @@ contains
              ' abs_ev   = ', scf%abs_ev/units_out%energy%factor, ' rel_ev   = ', scf%rel_ev
         write(message(2),'(23x,2(a,es9.2))') &
              ' abs_dens = ', scf%abs_dens, ' rel_dens = ', scf%rel_dens
-        call write_info(2)
+        ! write info about forces only if they are used as convergence criteria
+        if (scf%conv_abs_force > M_ZERO .or. scf%conv_rel_force > M_ZERO) then
+          write(message(3),'(23x,2(a,es9.2))') &
+               ' abs_force   = ', scf%abs_force/units_out%force%factor, ' rel_force   = ', scf%rel_force
+          call write_info(3)
+        else
+          call write_info(2)
+        end if
 
         if(.not.scf%lcao_restricted) then
           write(message(1),'(a,i6)') 'Matrix vector products: ', scf%eigens%matvec
@@ -571,11 +578,21 @@ contains
       end if
 
       if ( verbosity_ == VERB_COMPACT ) then
+        ! write info about forces only if they are used as convergence criteria
+        if (scf%conv_abs_force > M_ZERO .or. scf%conv_rel_force > M_ZERO) then
+        write(message(1),'(a,i4,a,es15.8, 2(a,es9.2), a, f7.1, a)') &
+             'iter ', iter, &
+             ' : etot ', h%etot/units_out%energy%factor, &
+             ' : abs_dens', scf%abs_dens, &
+             ' : abs_force', scf%abs_force/units_out%force%factor, &
+             ' : etime ', etime, 's'
+        else
         write(message(1),'(a,i4,a,es15.8, a,es9.2, a, f7.1, a)') &
              'iter ', iter, &
              ' : etot ', h%etot/units_out%energy%factor, &
              ' : abs_dens', scf%abs_dens, &
              ' : etime ', etime, 's'
+        end if
         call write_info(1)
       end if
 
