@@ -22,7 +22,7 @@ AC_CONFIG_SRCDIR([string_f.h])
 AM_INIT_AUTOMAKE
 
 # Installation prefix by default
-AC_PREFIX_DEFAULT([/opt/etfs])
+AC_PREFIX_DEFAULT([/opt/etsf])
 
 # who am i
 AC_CANONICAL_HOST
