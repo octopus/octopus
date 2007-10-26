@@ -207,7 +207,7 @@ contains
   ! ---------------------------------------------------------
   ! calculates the LDA part of vxc, taking into account non-collinear spin
   subroutine lda_process()
-    integer :: i
+    integer :: i, j
     FLOAT :: d(2), f, dtot, dpol, vpol
 
     f = M_ONE/real(spin_channels, REAL_PRECISION)
@@ -227,9 +227,19 @@ contains
         vxc(i, 4) = vxc(i, 4) + (dedd(i, 1) - dedd(i, 2))*rho(i, 4)/(dpol + tiny)
       end do
     elseif(ispin == SPIN_POLARIZED) then
-      vxc(1:NP, 1:2) = vxc(1:NP, 1:2) + dedd(1:NP, 1:2)
+      ! Intel's ifort 10.0 (Build 20070613) on Xeon produces a segfault on this line
+      !vxc(1:NP, 1:2) = vxc(1:NP, 1:2) + dedd(1:NP, 1:2)
+      ! but not when it is substituted by:
+      do j = 1, 2
+        do i = 1, NP
+          vxc(i, j) = vxc(i, j) + dedd(i, j)
+        end do
+      end do
     else
-      vxc(1:NP, 1) = vxc(1:NP, 1) + dedd(1:NP, 1)
+      !vxc(1:NP, 1) = vxc(1:NP, 1) + dedd(1:NP, 1)
+      do i = 1, NP
+        vxc(i, 1) = vxc(i, 1) + dedd(i, 1)
+      end do
     end if
 
   end subroutine lda_process
