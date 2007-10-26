@@ -83,7 +83,11 @@ subroutine X(hpsi) (h, gr, psi, hpsi, ik, t, E)
     call X(kinetic_prepare)(h, gr, psi)
 
     call X(vlpsi)(h, gr%m, psi, hpsi, ik)
-    if(h%ep%nvnl > 0) call X(vnlpsi)(h, gr, psi, hpsi, ik)
+    call X(kinetic_keep_going)(h)
+    if(h%ep%nvnl > 0) then
+      call X(vnlpsi)(h, gr, psi, hpsi, ik)
+      call X(kinetic_keep_going)(h)
+    end if
     if(present(t)) call X(vlasers)(gr, h, psi, hpsi, ik, t)
 
     call X(kinetic_wait)(h)
@@ -239,8 +243,9 @@ end subroutine X(magnus)
 
 
 ! ---------------------------------------------------------
+! Exchange the ghost points.
 #if defined(HAVE_MPI)
-subroutine X(kinetic_prepare) (h, gr, psi)
+subroutine X(kinetic_prepare)(h, gr, psi)
   type(hamiltonian_t), intent(in)    :: h
   type(grid_t),        intent(inout) :: gr
   R_TYPE,              intent(inout) :: psi(:,:)  ! psi(NP_PART, h%d%dim)
@@ -263,8 +268,30 @@ end subroutine X(kinetic_prepare)
 
 
 ! ---------------------------------------------------------
+! Call NBC_Test to give MPI a chance to process pending messages.
+! This improves the obverlap but is only necessary due to deficiencies
+! in MPI implementations.
 #if defined(HAVE_LIBNBC)
-subroutine X(kinetic_wait) (h)
+subroutine X(kinetic_keep_going)(h)
+  type(hamiltonian_t), intent(in) :: h
+
+  integer :: idim
+
+  call push_sub('h_inc.Xkinetic_wait')
+
+  do idim = 1, h%d%dim
+    call NBCF_Test(h%handles(idim), mpi_err)
+  end do
+
+  call pop_sub()
+end subroutine X(kinetic_keep_going)
+#endif
+
+
+! ---------------------------------------------------------
+! Wait for ghost point exchange to finish.
+#if defined(HAVE_LIBNBC)
+subroutine X(kinetic_wait)(h)
   type(hamiltonian_t), intent(in) :: h
 
   integer :: idim
