@@ -174,7 +174,7 @@ contains
       end if
     end if
 
-    ALLOCATE(opo%ri(1:opo%n, opo%nri), opo%n*opo%nri)
+    ALLOCATE(opo%ri(1:opo%n, 1:opo%nri), opo%n*opo%nri)
     ALLOCATE(opo%rimap(1:opo%np), opo%np)
     ALLOCATE(opo%rimap_inv(0:opo%nri+1), opo%nri+2)
 
@@ -185,9 +185,11 @@ contains
       opo%w_im  = opi%w_im
     end if
 
-    opo%ri = opi%ri
-    opo%rimap = opo%rimap
-    opo%rimap_inv = opo%rimap_inv
+    ASSERT(associated(opi%ri))
+
+    opo%ri(1:opi%n, 1:opi%nri)= opi%ri(1:opi%n, 1:opi%nri)
+    opo%rimap(1:opo%np) = opo%rimap(1:opo%np)
+    opo%rimap_inv(0:opo%nri+1) = opo%rimap_inv(0:opo%nri+1)
     
     opo%dfunction = opi%dfunction
     opo%zfunction = opi%zfunction
@@ -694,6 +696,7 @@ contains
     opg%stencil  =  op%stencil
     opg%cmplx_op =  op%cmplx_op
     opg%const_w  =  op%const_w
+    opg%nri      =  op%nri
     if(op%const_w) then
       opg%w_re = op%w_re
       if(op%cmplx_op) then
