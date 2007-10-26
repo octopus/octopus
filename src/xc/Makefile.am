@@ -32,4 +32,5 @@ include $(srcdir)/../common-rules.make
 depend:
 	@makedepf90 $(libxc_a_SOURCES)
 
-xc.o: vxc.F90 axc.F90 fxc.F90 kxc.F90
+functionals.o : functionals.F90 
+xc.o : xc.F90 kxc.F90 fxc.F90 axc.F90 vxc.F90 functionals.o 

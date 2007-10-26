@@ -31,6 +31,13 @@ noinst_HEADERS = \
 include $(srcdir)/../common-rules.make
 
 depend:
-	@makedepf90 $(libpoisson_a_SOURCES)
+	makedepf90 $(libpoisson_a_SOURCES)
 
-poisson.o: solver_1D.F90 solver_2D.F90 solver_3D.F90
+poisson_finite_cyl.o : poisson_finite_cyl.c 
+cutoffs.o : cutoffs.F90 
+solver_isf.o : solver_isf.F90 
+solver_fft.o : solver_fft.F90 cutoffs.o 
+corrections.o : corrections.F90 
+conj_grad.o : conj_grad.F90 corrections.o 
+multigrid.o : multigrid.F90 corrections.o 
+poisson.o : poisson.F90 solver_3D.F90 solver_2D.F90 solver_1D.F90 multigrid.o solver_fft.o solver_isf.o conj_grad.o corrections.o 

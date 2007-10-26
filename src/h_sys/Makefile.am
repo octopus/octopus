@@ -39,13 +39,20 @@ include $(srcdir)/../common-rules.make
 depend:
 	@makedepf90 $(libh_sys_a_SOURCES)
 
-epot.o: epot_inc.F90
-h.o: h_inc.F90
-hgh_projector.o: hgh_projector_inc.F90
-kb_projector.o: kb_projector_inc.F90
-linear_solver.o: linear_solver_inc.F90
-projector.o:  projector_inc.F90
-preconditioners.o: preconditioners_inc.F90
-xc_OEP.o: xc_KLI_inc.F90 xc_OEP_x_inc.F90 xc_OEP_SIC_inc.F90 xc_OEP_inc.F90
-xc_OEP_kernel.o: xc_OEP_kernel_inc.F90
-pert.o: pert_inc.F90
+tdfunction.o : tdfunction.F90 
+lasers.o : lasers.F90 tdfunction.o 
+specie_pot.o : specie_pot.F90 
+rkb_projector.o : rkb_projector.F90 specie_pot.o 
+kb_projector.o : kb_projector.F90 kb_projector_inc.F90 specie_pot.o 
+hgh_projector.o : hgh_projector.F90 hgh_projector_inc.F90 specie_pot.o 
+projector.o : projector.F90 projector_inc.F90 rkb_projector.o kb_projector.o hgh_projector.o specie_pot.o 
+epot.o : epot.F90 epot_inc.F90 projector.o lasers.o specie_pot.o 
+h.o : h.F90 h_inc.F90 lasers.o projector.o epot.o 
+preconditioners.o : preconditioners.F90 preconditioners_inc.F90 h.o 
+linear_solver.o : linear_solver.F90 linear_solver_inc.F90 preconditioners.o h.o 
+scf_tol.o : scf_tol.F90 
+xc_OEP.o : xc_OEP.F90 xc_OEP_inc.F90 xc_OEP_SIC_inc.F90 xc_OEP_x_inc.F90 xc_KLI_inc.F90 scf_tol.o linear_solver.o h.o 
+v_ks.o : v_ks.F90 xc_OEP.o h.o 
+systm.o : systm.F90 v_ks.o h.o 
+xc_OEP_kernel.o : xc_OEP_kernel.F90 xc_OEP_kernel_inc.F90 xc_OEP.o systm.o h.o 
+pert.o : pert.F90 pert_inc.F90 specie_pot.o projector.o h.o epot.o 

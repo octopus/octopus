@@ -93,8 +93,7 @@ static double int_aux(int index, double kx, double kr, double x0, double r0, int
   const double epsilon_rel = 1e-3;
 
   /*creating the workspace*/
-  gsl_integration_workspace * ws
-    = gsl_integration_workspace_alloc (wrk_size);
+  gsl_integration_workspace * ws = gsl_integration_workspace_alloc (wrk_size);
 
   /*create the function*/
   gsl_function F;

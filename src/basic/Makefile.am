@@ -59,5 +59,22 @@ global.o: global.F90
 depend:
 	@makedepf90 $(libbasic_a_SOURCES)
 
-mpi_debug.o: mpi_debug_inc.F90
-mpi_lib.o: mpi_lib_inc.F90 mpi_debug.o
+liboct.o : liboct.F90 
+string.o : string.F90 
+varinfo.o : varinfo.F90 string.o 
+mpi.o : mpi.F90 
+global.o : global.F90 mpi.o liboct.o 
+liboct_parser.o : liboct_parser.F90 mpi.o liboct.o global.o 
+datasets.o : datasets.F90 liboct_parser.o 
+messages.o : messages.F90 varinfo.o string.o mpi.o liboct_parser.o liboct.o global.o datasets.o 
+io.o : io.F90 mpi.o messages.o liboct_parser.o liboct.o global.o datasets.o 
+io_binary.o : io_binary.c 
+mpi_lib.o : mpi_lib.F90 mpi_lib_inc.F90 mpi_debug.o mpi.o messages.o global.o 
+units.o : units.F90 io.o messages.o liboct_parser.o global.o datasets.o 
+mpi_debug.o : mpi_debug.F90 mpi_debug_inc.F90 mpi.o messages.o liboct.o global.o 
+profiling.o : profiling.F90 mpi.o messages.o liboct.o io.o global.o 
+utils.o : utils.F90 messages.o global.o 
+multicomm.o : multicomm.F90 varinfo.o utils.o mpi.o messages.o liboct_parser.o io.o global.o datasets.o 
+periodic_table.o : periodic_table.F90 
+getopt_f.o : getopt_f.c 
+command_line.o : command_line.F90 
