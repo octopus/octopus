@@ -1,0 +1,32 @@
+# -*- coding: utf-8 mode: shell-script -*-
+# $Id: oct-run_regression_test.pl 2423 2006-09-24 21:25:52Z acastro $
+
+Test       : 07-hartree_fock.test
+Author     : Alberto
+Date       : 26.10.07
+Arch       : Linux g38 2.6.21-desktop-2 #1 SMP PREEMPT Tue May 8 11:54:36 CEST 2007 i686 GNU/Linux
+Release    : 2.2.0pre1
+Programs   : octopus
+TestGroups : short-run
+Enabled    : Yes
+
+# This tests the Hartree-Fock implementation. It reproduces one number
+# given in: [B. Reusch et al., Phys. Rev. B 63, 113313]. I have chose
+# a 2D calculation because of the great computational load produced by
+# Hartree-Fock calculation.
+#
+# The input file produces an unrestricted Hartree-Fock calculation for
+# a two-electron quantum-dot in an S=1 configuration. The details of
+# the calculation correspond to the first row of Table I in the
+# aforementioned paper. The units in that table are given in units of
+# "omega", and since omega in this case is 0.25 effective atomic
+# units, 1.0419 e.a.u. corresponds to 4.168, as given in the table.
+
+Input: 07-hartree_fock.01-2electrons.inp
+Match ; TotalEnergy ; sed -n '/^Energy:/{n\;p\;}' static/info ; \s*Total\s*=\s*1.0419
+
+# Results for 8 electrons quantum dots, provided in the paper, can
+# also be approximately reproduced. I do not put a test because it
+# would be too slow. In fact, the results provided by octopus are
+# lower in energy and closer to the Quantum Montecarlo numbers, which
+# could be do to the use of an underconverged basis set in the paper.

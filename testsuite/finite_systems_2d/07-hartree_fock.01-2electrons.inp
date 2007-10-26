@@ -1,0 +1,48 @@
+DebugLevel = 0
+
+SystemName = "qd"
+CalculationMode = gs
+FromScratch = yes
+Dimensions = 2
+
+lambda = 2.0
+omega = 1/lambda^2
+
+%Species
+"qd" | 1.0 | user_defined | 2 | "0.5*omega^2*r^2"
+%
+
+%Coordinates
+"qd" | 0 | 0 | 0 | no
+%
+
+ExtraStates = 1
+
+%Occupations
+1 | 1
+0 | 0
+%
+
+BoxShape = sphere
+Radius = 10.0
+Spacing = 0.2
+
+DerivativesOrder = 4
+
+HartreeFock = yes
+
+SpinComponents = spin_polarized
+
+MaximumIter = 200
+ConvRelDens = 1e-4
+LCAOStart = lcao_none
+
+EigenSolver = cg
+EigenSolverInitTolerance = 1e-5
+EigenSolverFinalTolerance = 1e-5
+EigenSolverMaxIter = 25
+TypeOfMixing = linear
+Mixing = 1.0
+
+
+
