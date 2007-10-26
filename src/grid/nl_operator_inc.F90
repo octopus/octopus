@@ -33,9 +33,11 @@ subroutine X(nl_operator_tune)(op)
   character(len=2) :: marker
 
 #ifdef R_TCOMPLEX
-  FLOAT, parameter :: R_OPS = M_TWO
+  character(len=*), parameter :: type = 'complex'
+  FLOAT, parameter            :: R_OPS = M_TWO
 #else
-  FLOAT, parameter :: R_OPS = M_ONE
+  character(len=*), parameter :: type = 'real'
+  FLOAT, parameter            :: R_OPS = M_ONE
 #endif
 
 #ifdef SINGLE_PRECISION
@@ -78,13 +80,8 @@ subroutine X(nl_operator_tune)(op)
     reps = 10
 
     if(in_debug_mode) then
-      write(message(1), '(5a)') 'Info: Profiling non local operator: ', trim(op%label), ' - ', &
-#ifdef R_TCOMPLEX // &
-           'complex - ', &
-#else // &
-           'real - ', &
-#endif           
-        op_function_name(method)
+      write(message(1), '(6a)') 'Info: Profiling non local operator: ', trim(op%label), ' - ', &
+        trim(type), ' - ', op_function_name(method)
       call write_info(1)
     end if
 
