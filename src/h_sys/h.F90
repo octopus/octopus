@@ -494,7 +494,19 @@ contains
       h%eii    = geo%eii
       h%etot   = h%eii + h%eeigen
     case(HARTREE_FOCK)
-      ! call exchange_energy
+      if(st%wfs_type == M_REAL) then
+        h%t0     = delectronic_kinetic_energy(h, gr, st)
+        h%eext   = delectronic_external_energy(h, gr, st)
+      else
+        h%t0     = zelectronic_kinetic_energy(h, gr, st)
+        h%eext   = zelectronic_external_energy(h, gr, st)
+      end if
+      h%eii = geo%eii
+      h%eeigen = states_eigenvalues_sum(st)
+      h%etot = h%eii + M_HALF * (h%eeigen + h%t0 + h%eext)
+      h%ec = M_ZERO
+      h%epot = M_ZERO
+      h%ex = h%etot - (h%eii + h%t0 + h%eext) - h%ehartree
     end select
 
     if (iunit > 0) then

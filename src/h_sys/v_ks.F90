@@ -263,6 +263,11 @@ contains
       !$omp parallel workshare
       h%vhxc(1:NP, 1) = h%vhartree(1:NP)
       !$omp end parallel workshare
+      if(h%d%ispin > UNPOLARIZED) then
+        !$omp parallel workshare
+        h%vhxc(1:NP, 2) = h%vhartree(1:NP)
+        !$omp end parallel workshare
+      end if
       h%ec = M_ZERO
 
       call states_end(h%st)
