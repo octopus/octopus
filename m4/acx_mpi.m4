@@ -8,7 +8,7 @@ LIBS="$LIBS_MPI $LIBS $FLIBS"
 dnl First, check LIBS_MPI environment variable
 if test $acx_mpi_ok = no; then
   AC_MSG_CHECKING([for MPI_init in $LIBS_MPI])
-  AC_TRY_LINK_FUNC(MPI_init, [acx_mpi_ok=yes], [])
+  AC_TRY_LINK_FUNC(MPI_Init, [acx_mpi_ok=yes], [])
   if test $acx_mpi_ok = no; then
     AC_MSG_RESULT([$acx_mpi_ok])
   else
@@ -18,32 +18,6 @@ fi
 
 if test $acx_mpi_ok = no; then
   AC_CHECK_LIB(mpi, MPI_init, [acx_mpi_ok=yes; LIBS_MPI="$LIBS_MPI -lmpi"])
-fi
-
-dnl let us see if we have a mpi module
-save_ldflags="$LDFLAGS"
-AS_IF([test "$LIB_MPI"], [LDFLAGS="${LDFLAGS} -L${LIB_MPI}"])
-
-AC_COMPILE_IFELSE(AC_LANG_PROGRAM([], [
-include 'mpif.h'
-integer :: ierr
-call MPI_Init(ierr)
-]), [HAVE_MPIF_H=1], [HAVE_MPIF_H=0])
-
-if test "$HAVE_MPIF_H" = 1; then
-  AC_DEFINE(MPI_H, 1, [have MPI Fortran header file])
-else
-  AC_COMPILE_IFELSE(AC_LANG_PROGRAM([], [
-use mpi
-integer :: ierr
-call MPI_Init(ierr)
-  ]), [HAVE_MPI_MOD=1], [HAVE_MPI_MOD=0])
-
-  if test "$HAVE_MPI_MOD" = 1; then
-    AC_DEFINE(MPI_MOD, 1, [have mpi module])
-  else
-    AC_MSG_ERROR([Could neither find the mpi module nor mpif.h.])
-  fi
 fi
 
 AC_SUBST(LIBS_MPI)
@@ -57,3 +31,34 @@ else
   $2
 fi
 ])dnl ACX_MPI
+
+AC_DEFUN([ACX_MPI_FC_MODULE], [
+dnl let us see if we have a mpi module
+AC_MSG_CHECKING([for MPI Fortran headers])
+save_ldflags="$LDFLAGS"
+AS_IF([test "$LIB_MPI"], [LDFLAGS="${LDFLAGS} -L${LIB_MPI}"])
+
+AC_COMPILE_IFELSE(AC_LANG_PROGRAM([], [
+include 'mpif.h'
+integer :: ierr
+call MPI_Init(ierr)
+]), [HAVE_MPIF_H=1], [HAVE_MPIF_H=0])
+
+if test "$HAVE_MPIF_H" = 1; then
+  AC_DEFINE(MPI_H, 1, [have MPI Fortran header file])
+  AC_MSG_RESULT([mpif.h])
+else
+  AC_COMPILE_IFELSE(AC_LANG_PROGRAM([], [
+  use mpi
+  integer	:: ierr
+  call MPI_Init(ierr)
+  ]), [HAVE_MPI_MOD=1], [HAVE_MPI_MOD=0])
+
+  if test "$HAVE_MPI_MOD" = 1; then
+    AC_DEFINE(MPI_MOD, 1, [have mpi module])
+    AC_MSG_RESULT([mpi module])
+  else
+    AC_MSG_ERROR([Could neither find the mpi module nor mpif.h.])
+  fi
+fi
+])dnl ACX_MPI_FC_MODULE
