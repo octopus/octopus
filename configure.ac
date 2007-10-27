@@ -107,6 +107,24 @@ case $enable_mpi in
     ;;
 esac
 
+dnl check for METIS
+if test x"$enable_mpi" != x"no"; then
+  ACX_METIS
+fi
+AM_CONDITIONAL(COMPILE_METIS, test x${HAVE_METIS} = x1)
+  
+dnl check for LibNBC
+if test x"$enable_mpi" != x"no"; then
+ ACX_LIBNBC
+fi
+AM_CONDITIONAL(COMPILE_LIBNBC, test x${HAVE_LIBNBC} = x1)
+
+dnl if libnbc is enabled, check for C MPI
+if test x"$acx_libnbc_ok" == x"yes"; then
+  AC_CHECK_HEADER(mpi.h,,AC_MSG_ERROR([cannot find mpi.h (required for libnbc)]))
+  ACX_MPI([], AC_MSG_ERROR([cannot call MPI from C (required for libnbc)]))
+fi
+
 dnl build/install perl bits unless --disable-perl is used
 AC_ARG_ENABLE([perl],
 	      AS_HELP_STRING([--disable-perl], [don't build/install perl components]),
@@ -246,22 +264,11 @@ ACX_ARPACK([], AC_MSG_WARN([ARPACK library not found. Will not use it]))
 
 dnl check for SPARSKIT
 ACX_SPARSKIT([], AC_MSG_WARN([SPARSKIT library not found. Will not use it]))
-
-dnl check for METIS
-if test x"$enable_mpi" != x"no"; then
-  ACX_METIS
-fi
-AM_CONDITIONAL(COMPILE_METIS, test x${HAVE_METIS} = x1)
-
-dnl check for LibNBC
-if test x"$enable_mpi" != x"no"; then
- ACX_LIBNBC
-fi
-AM_CONDITIONAL(COMPILE_LIBNBC, test x${HAVE_LIBNBC} = x1)
   
-dnl check for MPI
+dnl check for Fortran MPI support
 if test x"$enable_mpi" != x"no"; then
   ACX_MPI([], AC_MSG_ERROR([could not compile an mpi test program]))
+  ACX_MPI_FC_MODULE
 fi
 
 dnl now I run configure for the internal libraries
