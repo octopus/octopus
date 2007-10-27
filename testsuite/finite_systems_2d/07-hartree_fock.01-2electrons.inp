@@ -29,7 +29,7 @@ Spacing = 0.2
 
 DerivativesOrder = 4
 
-HartreeFock = yes
+TheoryLevel = hartree_fock
 
 SpinComponents = spin_polarized
 

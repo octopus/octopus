@@ -836,8 +836,13 @@ subroutine X(vlasers) (gr, h, psi, hpsi, ik, t)
         ALLOCATE(v(NP), NP)
         v = M_ZERO
       end if
-      call laser_potential(gr%sb, h%ep%lasers(i), gr%m, v, t)
+      ALLOCATE(pot(NP), NP)
+      pot = M_ZERO
+      call laser_potential(gr%sb, h%ep%lasers(i), gr%m, pot, t)
+      v = v + pot
       electric_field = .true.
+      deallocate(pot)
+
     case(E_FIELD_ELECTRIC)
       if(.not. allocated(v)) then 
         ALLOCATE(v(NP), NP)

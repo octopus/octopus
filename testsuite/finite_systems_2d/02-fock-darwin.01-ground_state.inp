@@ -38,7 +38,7 @@ Spacing = 0.5
 
 DerivativesOrder = 4
 
-NonInteractingElectrons = yes
+TheoryLevel = independent_particles
 
 MaximumIter = 200
 ConvAbsDens = 1e-5

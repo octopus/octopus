@@ -21,7 +21,7 @@ Radius = 9.5
 Spacing = 0.23
 
 DerivativesOrder = 4
-NonInteractingElectrons = yes
+TheoryLevel = independent_particles
 
 magfield = 3.0
 

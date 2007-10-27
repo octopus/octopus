@@ -174,8 +174,7 @@ contains
       if(clean_stop()) stopping = .true.
       call profiling_in(C_PROFILING_TIME_STEP)
       
-
-      if( td%move_ions > 0 .or. h%ep%extra_td_pot .ne. '0' .or. h%ep%with_gauge_field) then
+      if( td%move_ions > 0 .or. h%ep%with_gauge_field) then
         ! Move the ions: only half step, to obtain the external potential 
         ! in the middle of the time slice.
         if( td%move_ions > 0 ) call apply_verlet_1(td%dt*M_HALF)

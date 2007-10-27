@@ -19,7 +19,7 @@ BoxShape = sphere
 Spacing = 0.2
 Radius = 50.0
 
-NonInteractingElectrons = no
+
 XCFunctional = oep_x
 OEP_Level = oep_kli
 

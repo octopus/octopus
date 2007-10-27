@@ -43,7 +43,7 @@ ExtraStates = 1
 1 | 0 | 0
 %
 
-NonInteractingElectrons = no
+
 XCFunctional = lda_x + lda_c_amgb
 
 MaximumIter = 200

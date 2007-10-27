@@ -5,7 +5,7 @@ BoxShape = sphere
 Spacing = 0.07
 Radius = 6.0
 
-NonInteractingElectrons = yes
+TheoryLevel = independent_particles
 
 %Species
 "ring" | 1.0 | user_defined | 4 | "-20.0/cosh(10.0*(r-3.0))^2"

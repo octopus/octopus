@@ -16,7 +16,7 @@ NumberUnoccStates = 4
 ConvAbsDens = 1e-6
 
 OnlyUserDef = yes
-NonInteractingElectrons = yes
+TheoryLevel = independent_particles
 
 %Species
 "Zero" | 22.1 | user_defined | 2 | "0"

@@ -33,7 +33,7 @@ corr = -1
 Radius  = 7.0
 Spacing = 0.14
 
-NonInteractingElectrons = yes
+TheoryLevel = independent_particles
 
 EigenSolverInitTolerance = 1.0e-4
 EigenSolverFinalTolerance = 1.0e-4

@@ -20,13 +20,13 @@ BoxShape = sphere
 Spacing = 0.12
 Radius =  8.0
 
-NonInteractingElectrons = yes
+TheoryLevel = independent_particles
 
 %Species
 "AWD1D" | 1 | user_defined | 1 | "1/64*(x)^4-1/4*(x)^2+1/256*(x)^3"
 %
 
-NonInteractingElectrons = yes
+TheoryLevel = independent_particles
 
 %Coordinates
 "AWD1D" | 0 | 0 | 0

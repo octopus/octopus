@@ -60,7 +60,7 @@ BoxShape = sphere
 Radius  = 2.0
 Spacing = 0.01
 
-NonInteractingElectrons = yes
+TheoryLevel = independent_particles
 
 TDOutput = energy + laser + multipoles + td_occup
 

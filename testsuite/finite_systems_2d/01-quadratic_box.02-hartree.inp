@@ -35,7 +35,7 @@ delta | delta | delta
 
 DerivativesOrder = 1
 
-NonInteractingElectrons = no
+
 XCFunctional = no
 
 MaximumIter = 200

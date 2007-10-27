@@ -26,7 +26,7 @@ BoxShape = sphere
 Spacing = 0.5
 Radius = 100.0
 
-NonInteractingElectrons = yes
+TheoryLevel = independent_particles
 
 %Species
 "Hydrogen1D" | 1 | user_defined | 1 | "-1/sqrt(1+(x)^2)"

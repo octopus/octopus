@@ -27,7 +27,7 @@ Radius =  8.0
 "doublewell" | 0 | 0 | 0
 %
 
-NonInteractingElectrons = yes
+TheoryLevel = independent_particles
 
 
 # ------------------

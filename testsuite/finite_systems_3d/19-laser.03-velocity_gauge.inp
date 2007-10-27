@@ -17,7 +17,7 @@ Radius  = 8.0/0.529177
 Spacing = 0.3/0.529177
 
 ExcessCharge = 1
-NonInteractingElectrons = yes
+TheoryLevel = independent_particles
 
 MaximumIter = 200
 ConvAbsDens = 1e-6

@@ -12,7 +12,7 @@ Radius = 8.0
 Spacing = 0.4
 fromScratch = yes
 
-NonInteractingElectrons = yes
+TheoryLevel = independent_particles
 
 TypeOfMixing = linear
 Mixing = 1.0

@@ -97,10 +97,6 @@ module external_pot_m
     FLOAT, pointer :: A_gauge_ddot(:)      ! d^2A_gauge/dt^2
     logical :: with_gauge_field            ! true if A_gauge(:) is used
     
-    ! additional arbitrary td potential defined by formula string that will be added to the local
-    ! part of the potential
-    character(len=1024) :: extra_td_pot
-
     ! The gyromagnetic ratio (-2.0 for the electron, but different if we treat
     ! *effective* electrons in a quantum dot. It affects the spin Zeeman term.
     FLOAT :: gyromagnetic_ratio
@@ -180,14 +176,7 @@ contains
       call laser_write_info(ep%no_lasers, ep%lasers, stdout)
     end if
 
-    !%Variable UserDefinedTDPotential
-    !%Type string
-    !%Section Hamiltonian
-    !%Description
-    !% The formula string defined by this variable will be used as additional time dependent
-    !% potential (Note: this is available for all specie types, not only for user defined species)
-    !%End
-    call loct_parse_string(check_inp('UserDefinedTDPotential'), '0', ep%extra_td_pot)
+    call obsolete_variable('UserDefinedTDPotential', 'TDExternalFields')
 
     !%Variable StaticElectricField
     !%Type block
@@ -841,18 +830,6 @@ contains
       do i = 1, NP
         x(1:NDIM) = gr%m%x(i, 1:NDIM) - a%x(1:NDIM)
         rho_core(i) = rho_core(i) + specie_get_nlcc(a%spec, x)
-      end do
-    end if
-
-    !Time dependent potential
-    if(time > M_ZERO .and. (ep%extra_td_pot .ne. '0') ) then
-      do i = 1, NP
-        x(1:NDIM) = gr%m%x(i, 1:NDIM) - a%x(1:NDIM)
-        xx(1:NDIM) = x(1:NDIM) / units_inp%length%factor   ! convert from a.u. to input units
-        r = sqrt(sum(x(1:NDIM)**2)) / units_inp%length%factor
-        call loct_parse_expression(pot_re, pot_im, xx(1), xx(2), xx(3), &
-             r, time, ep%extra_td_pot)
-        vpsl(i) = vpsl(i) + pot_re * units_inp%energy%factor  ! convert from input units to a.u.
       end do
     end if
 

@@ -14,13 +14,13 @@ BoxShape = sphere
 Spacing = 0.22
 Radius =  8.0
 
-NonInteractingElectrons = yes
+TheoryLevel = independent_particles
 
 %Species
 "doublewell" | 1 | user_defined | 1 | "1/64*(x)^4-1/4*(x)^2"
 %
 
-NonInteractingElectrons = yes
+TheoryLevel = independent_particles
 
 %Coordinates
 "doublewell" | 0 | 0 | 0

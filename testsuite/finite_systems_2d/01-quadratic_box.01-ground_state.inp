@@ -34,7 +34,7 @@ delta | delta | delta
 
 DerivativesOrder = 1
 
-NonInteractingElectrons = yes
+TheoryLevel = independent_particles
 
 MaximumIter = 200
 ConvAbsDens = 1e-8

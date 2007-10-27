@@ -79,41 +79,34 @@ contains
 
     call push_sub('v_ks.v_ks_init');
 
-    !%Variable NonInteractingElectrons
-    !%Type logical
-    !%Default no
+    !%Variable TheoryLevel
+    !%Type integer
+    !%Default dft
     !%Section Hamiltonian
     !%Description
-    !% Sometimes it may be helpful to treat the electrons as non-interacting particles,
-    !% i.e., not to take into account Hartree and exchange-correlation effects between
-    !% the electrons. This variable may be used to toogle this behavior on and off
-    !%Option no 0
-    !% Electrons are treated as *interacting* particles
-    !%Option yes 1
-    !% Electrons are handled as *non-interacting* paticles
+    !% The calculations can be run with three different "theory levels": Kohn-Sham (TD)DFT
+    !% (the usual one and the default), Hartree-Fock, or independent particles.
+    !%Option independent_particles 1
+    !%Option dft 2
+    !%Option hartree_fock 3
     !%End
-    call loct_parse_logical(check_inp('NonInteractingElectrons'), .false., ks%ip_app)
+    call loct_parse_int(check_inp('TheoryLevel'), KOHN_SHAM_DFT, ks%theory_level)
+    if(.not.varinfo_valid_option('TheoryLevel', ks%theory_level)) call input_error('TheoryLevel')
+    call obsolete_variable('NonInteractingElectrons', 'TheoryLevel')
+    call obsolete_variable('HartreeFock', 'TheoryLevel')
 
-    !%Variable HartreeFock
-    !%Type logical
-    !%Default no
-    !%Section Hamiltonian
-    !%Description
-    !% 
-    !%End
-    call loct_parse_logical(check_inp('HartreeFock'), .false., ks%hartree_fock)
-
-    if(ks%ip_app) then
+    ks%ip_app = .false.
+    ks%hartree_fock = .false.
+    select case(ks%theory_level)
+    case(INDEPENDENT_PARTICLES)
+      ks%ip_app = .true.
       message(1) = 'Info: Treating the electrons as non-interacting'
       call write_info(1)
-      ks%theory_level = INDEPENDENT_PARTICLES
-
-    elseif(ks%hartree_fock) then
+    case(HARTREE_FOCK)
+      ks%hartree_fock = .true.
       message(1) = 'Info: Hartree-Fock calculation'
       call write_info(1)
-      ks%theory_level = HARTREE_FOCK
-      
-    else
+    case(KOHN_SHAM_DFT)
       ! initilize xc modules
       call xc_init(ks%xc, NDIM, d%spin_channels, d%cdft)
       ks%xc_family = ks%xc%family
@@ -147,7 +140,8 @@ contains
       call xc_oep_init(ks%oep, ks%xc_family, gr, d)
 
       call v_ks_write_info(ks, stdout)
-    end if
+
+    end select
 
     call pop_sub()
   end subroutine v_ks_init
