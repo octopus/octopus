@@ -33,6 +33,7 @@ module double_grid_m
   use lib_oct_m
   use lib_oct_gsl_spline_m
   use lib_oct_parser_m
+  use profiling_m
   use simul_box_m
   use specie_m
   use submesh_m
@@ -62,6 +63,8 @@ module double_grid_m
      logical :: use_double_grid
      FLOAT, pointer :: co(:)
   end type double_grid_t
+
+  type(profile_t), save :: double_grid_local_prof, double_grid_nonlocal_prof
 
 contains
   
@@ -174,6 +177,8 @@ contains
 
   end function double_grid_enlarge
 
+#define profiler double_grid_local_prof
+#define profiler_label "DOUBLE_GRID_LOCAL"
 #define double_grid_apply double_grid_apply_local
 #define calc_pot(vv) vv = loct_splint(s%ps%vl, r)
 
@@ -181,7 +186,11 @@ contains
 
 #undef calc_pot
 #undef double_grid_apply
+#undef profiler
+#undef profiler_label
 
+#define profiler double_grid_nonlocal_prof
+#define profiler_label "DOUBLE_GRID_NL"
 #define double_grid_apply double_grid_apply_non_local
 #define calc_pot(vv) call specie_real_nl_projector(s, x, l, lm, ic, vv, tmp)
 

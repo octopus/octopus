@@ -70,7 +70,9 @@ subroutine double_grid_apply (this, s, m, sm, x_atom, vl, l, lm, ic)
     end do
 
   else
-
+    
+    call profiling_in(profiler, profiler_label)
+    
     ALLOCATE(vs(0:sm%ns_part SECIND), VECDIM*(sm%ns_part+1))
 
     vs = M_ZERO
@@ -142,6 +144,8 @@ subroutine double_grid_apply (this, s, m, sm, x_atom, vl, l, lm, ic)
     vl(1:sm%ns SECIND) = vs(1:sm%ns SECIND)/(this%spacing_divisor**3)
 
     deallocate(vs)
+    
+    call profiling_out(profiler)
 
   end if
 
