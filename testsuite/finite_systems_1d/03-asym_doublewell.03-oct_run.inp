@@ -51,7 +51,7 @@ TDTimeStep = dt
 OCTPenalty =1.0
 OCTEps   = 0.000001
 OCTMaxIter = 1
-OCTTargetMode = oct_targetmode_static
+
 OCTFilterMode = no
 OCTInitialState = oct_is_groundstate
 OCTTargetOperator = oct_tg_gstransformation

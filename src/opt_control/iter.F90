@@ -101,7 +101,7 @@
     
     stoploop = .false.
 
-    overlap = j1(gr%m, td%max_iter, psi, target)
+    overlap = j1(gr%m, psi, target)
     fluence = laser_fluence(par)
     j2 = j2_functional(par)
     jfunctional = overlap - j2

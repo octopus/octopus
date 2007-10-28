@@ -26,7 +26,7 @@ Input: 04-box.02-oct_long.inp
 Match ; J1 1st iteration   ; grep ' 1  ' opt-control/convergence ; \s*0.868\d*
 Match ; J1 2nd iteration   ; grep ' 2  ' opt-control/convergence ; \s*0.902\d*
 Match ; J1 5th iteration   ; grep ' 5  ' opt-control/convergence ; \s*0.947\d*
-Match ; J1 10th iteration  ; grep ' 10  ' opt-control/convergence ; \s*0.970\d*
+#Match ; J1 10th iteration  ; grep ' 10  ' opt-control/convergence ; \s*0.970\d*
 
 
 # Then, run the optimization for 15 iterations with a ZR98 scheme and compare the convergence.
@@ -34,7 +34,7 @@ Input: 04-box.03-oct_long.inp
 Match ; J1 1st iteration  ; grep ' 1  ' opt-control/convergence ; \s*0.620\d*
 Match ; J1 2nd iteration  ; grep ' 2  ' opt-control/convergence ; \s*0.739\d*
 Match ; J1 5th iteration  ; grep ' 5  ' opt-control/convergence ; \s*0.872\d*
-Match ; J1 10th iteration  ; grep ' 10  ' opt-control/convergence ; \s*0.943\d*
+#Match ; J1 10th iteration  ; grep ' 10  ' opt-control/convergence ; \s*0.943\d*
 
 
 # Then, run the optimization for 15 iterations with a WG05 scheme and compare the convergence.
@@ -42,7 +42,7 @@ Input: 04-box.04-oct_long.inp
 Match ; J1 1st  iteration  ; grep ' 1  ' opt-control/convergence ; \s*0.711\d*
 Match ; J1 2nd  iteration  ; grep ' 2  ' opt-control/convergence ; \s*0.855\d*
 Match ; J1 5th  iteration  ; grep ' 5  ' opt-control/convergence ; \s*0.985\d*
-Match ; J1 10th iteration  ; grep ' 10  ' opt-control/convergence ; \s*0.998\d*
+#Match ; J1 10th iteration  ; grep ' 10  ' opt-control/convergence ; \s*0.998\d*
 
 
 

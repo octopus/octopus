@@ -46,7 +46,8 @@ module opt_control_constants_m
     oct_tg_gstransformation = 3,      &
     oct_tg_userdefined      = 4,      &
     oct_tg_density          = 5,      &        
-    oct_tg_local            = 6   
+    oct_tg_local            = 6,      &
+    oct_tg_td_local         = 7
 
   integer, parameter ::  &
     oct_algorithm_zbr98 = 1,       &
@@ -59,12 +60,4 @@ module opt_control_constants_m
     oct_targetmode_static = 0,     &
     oct_targetmode_td     = 1
   
-  integer, parameter ::  &
-    oct_tgtype_state = 1,          &
-    oct_tgtype_local = 2
-  
-  integer, parameter ::  &
-    oct_ftype_gauss = 1,           &
-    oct_ftype_step  = 2
-
 end module opt_control_constants_m

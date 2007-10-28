@@ -80,14 +80,11 @@ contains
     type(oct_t)                :: oct
     type(oct_iterator_t)       :: iterator
     type(td_t)                 :: td
-    type(grid_t),      pointer :: gr   ! some shortcuts
-    type(states_t),    pointer :: st
     type(states_t)             :: psi, initial_st
     type(target_t)             :: target
     type(filter_t)             :: filter
     type(oct_control_parameters_t) :: par
     integer :: i
-    character(len=80)  :: filename
 
     call push_sub('opt_control.opt_control_run')
 
@@ -96,20 +93,13 @@ contains
 
     call io_mkdir('opt-control')
 
-    ! some shortcuts
-    gr  => sys%gr
-    st  => sys%st
-
     call td_init(sys, h, td)
-    call states_allocate_wfns(st, gr%m, M_CMPLX)
-
-    ! Initialize the initial state
-    call states_copy(initial_st, st)
+    call states_allocate_wfns(sys%st, sys%gr%m, M_CMPLX)
 
     call oct_read_inp(oct)
 
     ! Initial guess for the laser: read from the input file.
-    call laser_init(h%ep%no_lasers, h%ep%lasers, gr%m)
+    call laser_init(h%ep%no_lasers, h%ep%lasers, sys%gr%m)
 
     do i = 1, h%ep%no_lasers
       call laser_to_numerical(h%ep%lasers(i), td%dt, td%max_iter)
@@ -123,22 +113,19 @@ contains
 
     if(oct%use_mixing) call mix_init(parameters_mix, td%max_iter + 1, par%no_parameters, 1)
 
-    write(message(1),'(a,f14.8)') 'Input: Fluence of Initial laser ', laser_fluence(par)
-    call write_info(1)
-
     call filter_init(td%max_iter, td%dt, filter)
     call filter_write(filter)
 
-    call def_istate(gr, sys%geo, initial_st)
-    call target_init(gr, sys%geo, sys%st, td, target)
+    call initial_state_init(sys%gr, sys%geo, sys%st, initial_st)
+    call target_init(sys%gr, sys%geo, sys%st, td, target)
 
     call check_faulty_runmodes(oct)
 
-    call states_output(initial_st, gr, 'opt-control/initial', sys%outp)
-    call target_output(gr, 'opt-control/target', sys%outp, target)
+    call states_output(initial_st, sys%gr, 'opt-control/initial', sys%outp)
+    call target_output(sys%gr, 'opt-control/target', sys%outp, target)
 
     ! psi is the "working state".
-    psi = initial_st
+    call states_copy(psi, initial_st)
 
     ! mode switcher
     select case(oct%algorithm_type)
@@ -168,7 +155,7 @@ contains
 
     ! Some informative output.
     call output(iterator)
-    call states_output(psi, gr, 'opt-control/final', sys%outp)
+    call states_output(psi, sys%gr, 'opt-control/final', sys%outp)
 
     ! do final test run: propagate initial state with optimal field
     call oct_finalcheck(oct, initial_st, target, iterator%best_par, sys, h, td)
@@ -179,9 +166,6 @@ contains
     if(oct%use_mixing) call mix_end(parameters_mix)
     call filter_end(filter)
     call td_end(td)
-
-    nullify(gr)
-    nullify(st)
     call states_end(psi)
     call states_end(initial_st)
     call target_end(target)
@@ -201,7 +185,7 @@ contains
       ctr_loop: do
         call parameters_copy(par_prev, par)
         call f_iter(oct, sys, h, td, iterator, psi, initial_st, target, par, stop_loop)
-        call iterator_write(iterator, psi, par, gr, sys%outp)
+        call iterator_write(iterator, psi, par, sys%gr, sys%outp)
         if(clean_stop() .or. stop_loop) exit ctr_loop
         if(oct%use_mixing) then
           call parameters_mixing(iterator%ctr_iter, par_prev, par, par_new)
@@ -230,7 +214,7 @@ contains
       ctr_loop: do
         call parameters_copy(par_prev, par)
         call f_wg05(oct, sys, h, td, iterator, filter, psi, initial_st, target, par, stop_loop)
-        call iterator_write(iterator, psi, par, gr, sys%outp)
+        call iterator_write(iterator, psi, par, sys%gr, sys%outp)
         if(clean_stop() .or. stop_loop) exit ctr_loop
         if(oct%use_mixing) then
           call parameters_mixing(iterator%ctr_iter, par_prev, par, par_new)
@@ -264,14 +248,14 @@ contains
         call parameters_end(par_new)
       end if
 
-      call iterator_write(iterator, psi, par, gr, sys%outp)
+      call iterator_write(iterator, psi, par, sys%gr, sys%outp)
       stop_loop = iteration_manager(oct, sys%gr, par, td, psi, target, iterator)
 
       call parameters_copy(par_new, par)
       ctr_loop: do
         call parameters_copy(par_prev, par)
         call f_zbr98(oct, sys, h, td, psi, initial_st, target, par)
-        call iterator_write(iterator, psi, par, gr, sys%outp)
+        call iterator_write(iterator, psi, par, sys%gr, sys%outp)
         stop_loop = iteration_manager(oct, sys%gr, par, td, psi, target, iterator)
         if(clean_stop() .or. stop_loop) exit ctr_loop
         if(oct%use_mixing) then

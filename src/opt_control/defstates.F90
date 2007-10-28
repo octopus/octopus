@@ -19,9 +19,10 @@
 
 
   ! ---------------------------------------------------------
-  subroutine def_istate(gr, geo, initial_state)
+  subroutine initial_state_init(gr, geo, st, initial_state)
     type(grid_t), intent(in)      :: gr
     type(geometry_t), intent(in)  :: geo
+    type(states_t), intent(in)    :: st
     type(states_t), intent(inout) :: initial_state
 
     integer           :: i, kk, no_c, state, no_blk, kpoints, nst, dim, ist, jst
@@ -35,7 +36,9 @@
     CMPLX, allocatable :: rotation_matrix(:, :)
     integer           :: istype
     
-    call push_sub('opt_control.def_istate')
+    call push_sub('defstates.initial_state_init')
+
+    call states_copy(initial_state, st)
 
 
     !%Variable OCTInitialState
@@ -188,6 +191,6 @@
     call states_calc_dens(initial_state, NP_PART, initial_state%rho)
     
     call pop_sub()
-  end subroutine def_istate
+  end subroutine initial_state_init
 
 

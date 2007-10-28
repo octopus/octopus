@@ -203,7 +203,7 @@ module opt_control_propagation_m
     do i = 1, td%max_iter
 
       if(target%targetmode==oct_targetmode_td) then
-        call calc_inh(psi2, gr, target, i, td%max_iter, td%dt, chi)
+        call calc_inh(psi2, gr, target, td%dt*i, chi)
         call parameters_to_h(par, h%ep)
         call states_calc_dens(psi2, NP_PART, psi2%rho)
         call v_ks_calc(gr, sys%ks, h, psi2)
@@ -269,7 +269,7 @@ module opt_control_propagation_m
     td%dt = -td%dt
     do i = td%max_iter, 1, -1
       if(target%targetmode==oct_targetmode_td) &
-        call calc_inh(psi, gr, target, i-1, td%max_iter, td%dt, chi)
+        call calc_inh(psi, gr, target, (i-1)*td%dt, chi)
       call update_field(oct, i, par_tmp, gr, td, h, psi, chi, par, dir = 'b')
       call prop_iter(i-1, gr, sys%ks, h, td, par_tmp, chi)
       call prop_iter(i-1, gr, sys%ks, h, td, par, psi)

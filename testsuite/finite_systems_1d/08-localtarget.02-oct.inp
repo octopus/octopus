@@ -50,7 +50,7 @@ TDTimeStep = dt
 
 OCTPenalty = 0.2
 OCTMaxIter = 2
-OCTTargetMode = oct_targetmode_static
+
 OCTFilterMode = no
 OCTInitialState = oct_is_groundstate
 OCTTargetOperator = oct_tg_density

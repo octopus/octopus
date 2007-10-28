@@ -22,12 +22,12 @@
 noinst_LIBRARIES = libopt_control.a
 
 libopt_control_a_SOURCES = \
-	opt_control_constants.F90 filters.F90 parameters.F90 tdtarget.F90 \
+	opt_control_constants.F90 filters.F90 parameters.F90 \
 	target.F90 propagation.F90 opt_control.F90
 
 noinst_HEADERS = \
 	read.F90 aux.F90 defstates.F90 propagation.F90 finalcheck.F90 iter.F90 \
-	output.F90 tdtarget.F90
+	output.F90 
 
 include $(srcdir)/../common-rules.make
 
@@ -38,7 +38,6 @@ depend:
 opt_control_constants.o : opt_control_constants.F90 
 filters.o : filters.F90 
 parameters.o : parameters.F90 filters.o 
-tdtarget.o : tdtarget.F90 opt_control_constants.o 
-target.o : target.F90 tdtarget.o opt_control_constants.o 
+target.o : target.F90 opt_control_constants.o 
 propagation.o : propagation.F90 parameters.o target.o opt_control_constants.o 
 opt_control.o : opt_control.F90 output.F90 iter.F90 finalcheck.F90 defstates.F90 aux.F90 read.F90 target.o parameters.o propagation.o opt_control_constants.o filters.o 

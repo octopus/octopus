@@ -208,6 +208,11 @@ contains
     call push_sub('opt_control_parameters.parameters_write')
 
     call io_mkdir(trim(filename))
+
+    iunit = io_open(trim(filename)//'/Fluence'//digit, action='write')
+    write(iunit, '(a,es20.8e3)') 'Flunce = ', laser_fluence(cp)
+    call io_close(iunit)
+
     do j = 1, cp%no_parameters
       if(cp%no_parameters > 1) then
         write(digit,'(i2.2)') j
