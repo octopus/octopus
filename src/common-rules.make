@@ -98,7 +98,7 @@ all_LIBS = $(core_LIBS) @LIBS_FFT@ @LIBS_TRLAN@ @LIBS_ARPACK@ @LIBS_SPARSKIT@ \
 SUFFIXES = _oct.f90 .F90 .o .S .s
 
 .S.o:
-	@FCCPP@ @CPPFLAGS@ $(INCLUDES) $(DEFAULT_INCLUDES) $(AM_CPPFLAGS) $< > $*.s
+	@CPP@ @CPPFLAGS@ $(INCLUDES) $(DEFAULT_INCLUDES) $(AM_CPPFLAGS) $< > $*.s
 	@CC@ -c -o $@ $*.s
 	@rm -f $*.s
 

@@ -383,9 +383,9 @@ contains
       end do
     end do
 
-    ! Write information about amount of ghost points.
-    message(1) = 'Info: Total number of ghostpoints of each node:'
-    write(message(2), '(a,100i7)') 'Info:', vp%np_ghost
+    message(1) = 'Info: Number of ghost points per node:'
+    write(message(2), '(a,f10.2,a,i7,a,i7)') &
+         'Info: Average =', sum(vp%np_ghost)/dble(p), '  Minimum =', minval(vp%np_ghost), '  Maximum =', maxval(vp%np_ghost)
     call write_info(2)
 
     if(in_debug_mode) then
