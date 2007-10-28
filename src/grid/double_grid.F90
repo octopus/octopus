@@ -38,6 +38,10 @@ module double_grid_m
   use specie_m
   use submesh_m
 
+#ifdef USE_OMP
+  use omp_lib
+#endif
+
   implicit none
   
   private

@@ -17,67 +17,64 @@
 !!
 !! $Id: specie.F90 2711 2007-02-13 17:36:18Z xavier $
 
-#ifdef DG_VECTORIAL
-#define SECIND , 1:3
-#define VECDIM 3
-#else
-#define SECIND
-#define VECDIM 1
-#endif
-
 subroutine double_grid_apply (this, s, m, sm, x_atom, vl, l, lm, ic)
   type(double_grid_t),    intent(in)    :: this
   type(specie_t),         intent(in)    :: s
   type(mesh_t),           intent(in)    :: m
   type(submesh_t),        intent(in)    :: sm
   FLOAT,                  intent(in)    :: x_atom(1:MAX_DIM)
-#ifndef DG_VECTORIAL
   FLOAT,                  intent(out)   :: vl(:)
-#else
-  FLOAT,                  intent(out)   :: vl(:, :)
-#endif
+
   integer, optional,      intent(in)    :: l
   integer, optional,      intent(in)    :: lm
   integer, optional,      intent(in)    :: ic
 
   FLOAT :: r, x(1:3)
-#ifndef DG_VECTORIAL
   FLOAT :: vv, tmp(1:3)
-#else 
-  FLOAT :: vv(1:3), tmp
-#endif
+
   integer :: is, is2, ip
   integer :: ii, jj, kk, ll, mm, nn
   integer :: start(1:3), pp, qq, rr
 
-#ifndef DG_VECTORIAL 
   FLOAT, allocatable :: vs(:)
-#else 
-  FLOAT, allocatable :: vs(:,:)
-#endif
 
 #ifdef HAVE_MPI
   integer :: rank
   rank = m%mpi_grp%rank + 1
 #endif
- 
- if (.not. this%use_double_grid) then 
 
+#ifdef USE_OMP
+  integer(kind=omp_lock_kind) :: lock
+#endif
+  
+  if (.not. this%use_double_grid) then 
+    
+    !$omp parallel do private(r, x)
     do is = 1, sm%ns
       x(1:3) = m%x(sm%jxyz(is), 1:3) - x_atom(1:3)
       r = sqrt(sum(x(1:3)**2))
-      calc_pot(vl(is SECIND))
+      calc_pot(vl(is))
     end do
-
+    !$omp end parallel do 
+    
   else
     
     call profiling_in(profiler, profiler_label)
-    
-    ALLOCATE(vs(0:sm%ns_part SECIND), VECDIM*(sm%ns_part+1))
+
+#ifdef USE_OMP
+    vl(1:sm%ns) = M_ZERO
+    call omp_init_lock(lock)
+    !$omp parallel private(vs)
+#endif
+
+    !$omp critical
+    ALLOCATE(vs(0:sm%ns_part), (sm%ns_part+1))
+    !$omp end critical
 
     vs = M_ZERO
 
     !for each grid point
+    !$omp do private(ii, jj, kk, ip, ll, mm, nn, pp, qq, rr, is2, start, vv, tmp, r, x)
     do is = 1, sm%ns_part
 
       do ii = -this%nn, this%nn
@@ -125,7 +122,7 @@ subroutine double_grid_apply (this, s, m, sm, x_atom, vl, l, lm, ic)
                     if (m%parallel_in_domains) ip = m%vp%global(ip, rank)
 #endif
                     is2 = sm%jxyz_inv(ip)
-                    vs(is2 SECIND) = vs(is2 SECIND)  + this%co(ll)*this%co(mm)*this%co(nn)*vv
+                    vs(is2) = vs(is2)  + this%co(ll)*this%co(mm)*this%co(nn)*vv
 
                     rr = rr + kk
                   end do
@@ -140,19 +137,28 @@ subroutine double_grid_apply (this, s, m, sm, x_atom, vl, l, lm, ic)
       end do !ii
 
     end do !is
+    !$omp end do nowait
 
-    vl(1:sm%ns SECIND) = vs(1:sm%ns SECIND)/(this%spacing_divisor**3)
+#ifndef USE_OMP
+    vl(1:sm%ns) = vs(1:sm%ns)/(this%spacing_divisor**3)
+#else
+    call omp_set_lock(lock)
+    vl(1:sm%ns) = vl(1:sm%ns) + vs(1:sm%ns)/(this%spacing_divisor**3)
+    call omp_unset_lock(lock)
+#endif
 
     deallocate(vs)
-    
+
+#ifdef USE_OMP
+    !$omp end parallel
+    call omp_destroy_lock(lock)
+#endif
+
     call profiling_out(profiler)
 
   end if
 
 end subroutine double_grid_apply
-
-#undef SECIND
-#undef VECDIM
 
 !! Local Variables:
 !! mode: f90
