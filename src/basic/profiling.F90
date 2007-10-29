@@ -406,51 +406,38 @@ contains
       call pop_sub()
       return
     end if
-    write(iunit, '(a)') 'ACCUMULATIVE TIME:'
-    write(iunit, '(a)')
-    write(iunit,'(a80)') &
-         'TAG                   NUMBER_OF_CALLS       TOTAL_TIME    TIME_PER_CALL    %TIME'
-    write(iunit,'(a80 )') &
-         '================================================================================'
+    write(iunit, '(2a)')                                                                   &
+      '                                                      ACCUMULATIVE TIME          ', &
+      '|                SELF TIME'
+    write(iunit, '(2a)')                                                                    &
+      '                                            -------------------------------------|', &
+      '---------------------------------------------'
+    write(iunit, '(2a)')                                                                    &
+      'TAG                   NUMBER_OF_CALLS       TOTAL_TIME    TIME_PER_CALL    %TIME |', &
+      '        TOTAL_TIME    TIME_PER_CALL    %TIME'
+    write(iunit, '(2a)')                                                                    &
+      '=================================================================================|', &
+      '============================================='
     do ii = 1, last_profile
       prof => profile_list(ii)%p
 
       if(profile_num_calls(prof) == 0) cycle
 
-      write(iunit, '(a,i20,f17.7,f17.7, f9.1)')      &
-           profile_label(prof),                            & 
-           profile_num_calls(prof),                        &
-           profile_total_time(prof),                       &
-           profile_total_time_per_call(prof),              &
-           profile_total_time(prof)/total_time*CNST(100.0)
-
-    end do
-
-    write(iunit, '(a)')
-    write(iunit, '(a)') 'SELF TIME:'
-    write(iunit, '(a)')
-
-    write(iunit,'(a80)') &
-         'TAG                   NUMBER_OF_CALLS       TOTAL_TIME    TIME_PER_CALL    %TIME'
-    write(iunit,'(a80 )') &
-         '================================================================================'
-    do ii = 1, last_profile
-      prof => profile_list(ii)%p
-
-      if(profile_num_calls(prof) == 0) cycle
-
-      write(iunit, '(a,i20,f17.7,f17.7, f9.1)')      &
-           profile_label(prof),                            & 
-           profile_num_calls(prof),                        &
-           profile_self_time(prof),                       &
-           profile_self_time_per_call(prof),              &
+      write(iunit, '(a,i20,2f17.7,f9.1,a,2f17.7,f9.1)')     &
+           profile_label(prof),                             & 
+           profile_num_calls(prof),                         &
+           profile_total_time(prof),                        &
+           profile_total_time_per_call(prof),               &
+           profile_total_time(prof)/total_time*CNST(100.0), &
+           ' | ',                                           &
+           profile_self_time(prof),                         &
+           profile_self_time_per_call(prof),                &
            profile_self_time(prof)/total_time*CNST(100.0)
-
     end do
 
     call io_close(iunit)
-    call pop_sub()
 
+    call pop_sub()
   end subroutine profiling_output
 
 end module profiling_m
