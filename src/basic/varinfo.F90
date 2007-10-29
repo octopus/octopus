@@ -57,7 +57,12 @@ contains
 
     call varinfo_getvar(var, handle)
     if(handle == 0) then
-      if(present(ierr)) ierr = -1
+      if(present(ierr)) then
+        ierr = -1
+      else
+        write(iunit, '(3a)') 'Could not find a variable named ', var, '.'
+        write(iunit, '(a)') 'You should update your variable info.'
+      end if
       return
     end if
 
