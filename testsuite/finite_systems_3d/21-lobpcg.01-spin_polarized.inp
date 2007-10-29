@@ -1,0 +1,40 @@
+# -*- coding: utf-8 mode: shell-script -*-
+# $Id$
+#
+# This input file is the same as 01-carbon_atom.01-ground_state.inp
+# except for the parallel LOBPCG in use.
+
+DebugLevel = 0
+
+ParallelizationStrategy = par_states
+
+CalculationMode = gs
+fromScratch = yes
+units = "eVA"
+
+%Coordinates
+"C" | 0 | 0 | 0
+%
+
+Spacing = 0.19
+Radius = 5.0
+
+SpinComponents = polarized
+
+ExtraStates = 2
+%Occupations
+ 2/3 | 2/3 | 2/3
+ 0 | 0 | 0
+%
+
+XCFunctional = lda_x + lda_c_pz
+
+EigenSolver = lobpcg
+EigenSolverInitTolerance = 1e-2
+EigenSolverFinalTolerance = 1e-6
+EigenSolverFinalToleranceIteration = 6
+EigenSolverMaxIter = 25
+
+TypeOfMixing = broyden
+
+PoissonSolver = fft_corrected

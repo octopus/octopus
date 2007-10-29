@@ -1,0 +1,29 @@
+# -*- coding: utf-8 mode: shell-script -*-
+# $Id$
+
+Test     : LOBPCG
+Author   : Florian
+Date     : 29.10.07
+Arch     : Linux n41 2.6.16.27-smp-1 #1 SMP Fri Jul 28 17:23:21 CEST 2006 x86_64 GNU/Linux
+Release  : 2.2.0pre1
+Programs : octopus_mpi
+Runtime  : long-run
+Enabled  : Yes
+
+# Depending on the surrounding, the LOBPCG routine takes different branches, which
+# are checked with this test:
+#   * spin-polarized.
+#   * spinors,
+#   * curvilinear coordinates,
+# The checks are only performed with the parallel LOBPCG.
+
+Input: 21-lobpcg.01-spin_polarized.inp
+
+Matches ; Eigenvalue [1up] ; sed -n '/^Eigenvalues \[/{n\;n\;p\;}'                      static/info ; \s*-14.461*\d*\s*1.0000\d*
+Matches ; Eigenvalue [1dn] ; sed -n '/^Eigenvalues \[/{n\;n\;n\;p\;}'                   static/info ; \s*-11.750*\d*\s*1.0000\d*
+Matches ; Eigenvalue [2up] ; sed -n '/^Eigenvalues \[/{n\;n\;n\;n\;p\;}'                static/info ; \s*-6.187*\d*\s*0.6666\d*
+Matches ; Eigenvalue [2dn] ; sed -n '/^Eigenvalues \[/{n\;n\;n\;n\;n\;p\;}'             static/info ; \s*-3.682*\d*\s*0.0000\d*
+Matches ; Eigenvalue [3up] ; sed -n '/^Eigenvalues \[/{n\;n\;n\;n\;n\;n\;p\;}'          static/info ; \s*-6.187*\d*\s*0.6666\d*
+Matches ; Eigenvalue [3dn] ; sed -n '/^Eigenvalues \[/{n\;n\;n\;n\;n\;n\;n\;p\;}'       static/info ; \s*-3.682*\d*\s*0.0000\d*
+Matches ; Eigenvalue [4up] ; sed -n '/^Eigenvalues \[/{n\;n\;n\;n\;n\;n\;n\;n\;p\;}'    static/info ; \s*-6.187*\d*\s*0.6666\d*
+Matches ; Eigenvalue [4dn] ; sed -n '/^Eigenvalues \[/{n\;n\;n\;n\;n\;n\;n\;n\;n\;p\;}' static/info ; \s*-3.682*\d*\s*0.0000\d*
