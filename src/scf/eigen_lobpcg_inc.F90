@@ -355,6 +355,7 @@ subroutine X(eigen_solver_lobpcg)(gr, st, h, pre, tol, niter, converged, diff, v
       end if
 
       call profiling_in(C_PROFILING_LOBPCG_ESOLVE)
+      no_bof = .false.
       call lalg_lowest_geneigensolve(nst, nst+blks*nuc, gram_h, gram_i, ritz_val, ritz_vec, bof=no_bof)
       call profiling_out(C_PROFILING_LOBPCG_ESOLVE)
       if(no_bof.and.verbose_) then
