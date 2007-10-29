@@ -71,6 +71,8 @@ module states_m
     states_degeneracy_matrix,         &
     states_write_current_flow,        &
     states_spin_channel,              &
+    states_dens_accumulate,           &
+    states_dens_reduce,               &
     states_calc_dens,                 &
     states_paramagnetic_current,      &
     kpoints_write_info,               &
@@ -1127,10 +1129,6 @@ contains
 
     integer :: i, ik, ist, sp
     CMPLX   :: c
-
-#ifdef HAVE_MPI
-    FLOAT,  allocatable :: reduce_rho(:)
-#endif
 
     call push_sub('states.states_calc_dens')
 

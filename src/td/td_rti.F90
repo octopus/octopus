@@ -28,6 +28,7 @@ module td_rti_m
   use lib_oct_parser_m
   use math_m
   use sparskit_m
+  use states_m
   use td_exp_m
   use td_exp_split_m
   use td_trans_rti_m
@@ -470,44 +471,55 @@ contains
     ! Propagator with enforced time-reversal symmetry
     subroutine td_reversal
       FLOAT, allocatable :: vhxc_t1(:,:), vhxc_t2(:,:)
-      CMPLX, allocatable :: zpsi1(:,:,:,:)
-      integer :: ik, ist, idim
+      CMPLX, allocatable :: zpsi1(:,:,:)
+      integer :: ik, ist, idim, ii
 
       call push_sub('td_rti.td_reversal')
 
       if(.not.h%ip_app) then
-        ALLOCATE(zpsi1(NP_PART, st%d%dim, st%st_start:st%st_end, st%d%nik), NP_PART*st%lnst*st%d%nik)
-
-        do ik = 1, st%d%nik
-          do ist = st%st_start, st%st_end
-            do idim = 1, st%d%dim
-              call lalg_copy(NP, st%zpsi(:, idim, ist, ik), zpsi1(:, idim, ist, ik))
-            end do
-          end do
-        end do
 
         ALLOCATE(vhxc_t1(NP, st%d%nspin), NP*st%d%nspin)
         ALLOCATE(vhxc_t2(NP, st%d%nspin), NP*st%d%nspin)
         vhxc_t1 = h%vhxc
+     
+        ALLOCATE(zpsi1(NP_PART, st%d%dim, st%d%nik), NP_PART*st%d%dim*st%d%nik)
 
-        ! propagate dt with H(t-dt)
-        do ik = 1, st%d%nik
-          do ist = st%st_start, st%st_end
-            call td_exp_dt(tr%te, gr, h, st%zpsi(:,:, ist, ik), ik, dt, t-dt)
-          end do
-        end do
+        !$omp parallel workshare
+        st%rho(1:NP, 1:st%d%nspin) = M_ZERO
+        !$omp end parallel workshare
 
-        call states_calc_dens(st, NP, st%rho)
-        call v_ks_calc(gr, ks, h, st)
-
-        do ik = 1, st%d%nik
-          do ist = st%st_start, st%st_end
+        do ist = st%st_start, st%st_end
+          
+          !save the state
+          do ik = 1, st%d%nik
             do idim = 1, st%d%dim
-              call lalg_copy(NP, zpsi1(:, idim, ist, ik), st%zpsi(:, idim, ist, ik))
+              call lalg_copy(NP, st%zpsi(:, idim, ist, ik), zpsi1(:, idim, ik))
             end do
           end do
+          
+          !propagate the state dt with H(t-dt)
+          do ik = 1, st%d%nik
+            call td_exp_dt(tr%te, gr, h, st%zpsi(:,:, ist, ik), ik, dt, t-dt)
+          end do
+          
+          !calculate the contribution to the density
+          call states_dens_accumulate(st, NP, st%rho, ist)
+          
+          !restore the saved state
+          do ik = 1, st%d%nik
+            do idim = 1, st%d%dim
+              call lalg_copy(NP, zpsi1(:, idim, ik), st%zpsi(:, idim, ist, ik))
+            end do
+          end do
+          
         end do
+
         deallocate(zpsi1)
+        
+        !terminate the calculation of the density
+        call states_dens_reduce(st, NP, st%rho)
+
+        call v_ks_calc(gr, ks, h, st)
 
         vhxc_t2 = h%vhxc
         h%vhxc = vhxc_t1
