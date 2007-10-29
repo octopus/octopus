@@ -1,0 +1,42 @@
+# -*- coding: utf-8 mode: shell-script -*-
+# $Id: oct-run_regression_test.pl 2423 2006-09-24 21:25:52Z acastro $
+
+Test     : Eigensolver
+Author   : Florian
+Date     : 29.10.07
+Arch     : Linux n41 2.6.16.27-smp-1 #1 SMP Fri Jul 28 17:23:21 CEST 2006 x86_64 GNU/Linux
+Release  : 2.2.0pre1
+Programs : octopus
+Runtime  : short-run
+Enabled  : Yes
+
+# This test checks the eigensolver lobpcg, cg, cg_new, and plan with a simple
+# SiH4.
+
+Input: 20-eigensolver.01-lobpcg.inp
+
+Match ; Eigenvalue [1st] ; sed -n '/^Eigenvalues \[/{n\;n\;p\;}'          static/info ; \s-13.449*\d*\s*2.0000\d*
+Match ; Eigenvalue [2nd] ; sed -n '/^Eigenvalues \[/{n\;n\;n\;p\;}'       static/info ; \s*-8.455\d*\s*2.0000\d*
+Match ; Eigenvalue [3rd] ; sed -n '/^Eigenvalues \[/{n\;n\;n\;n\;p\;}'    static/info ; \s*-8.455\d*\s*2.0000\d*
+Match ; Eigenvalue [4th] ; sed -n '/^Eigenvalues \[/{n\;n\;n\;n\;n\;p\;}' static/info ; \s*-8.419\d*\s*2.0000\d*
+
+Input: 20-eigensolver.02-cg.inp
+
+Match ; Eigenvalue [1st] ; sed -n '/^Eigenvalues \[/{n\;n\;p\;}'          static/info ; \s-13.449*\d*\s*2.0000\d*
+Match ; Eigenvalue [2nd] ; sed -n '/^Eigenvalues \[/{n\;n\;n\;p\;}'       static/info ; \s*-8.455\d*\s*2.0000\d*
+Match ; Eigenvalue [3rd] ; sed -n '/^Eigenvalues \[/{n\;n\;n\;n\;p\;}'    static/info ; \s*-8.455\d*\s*2.0000\d*
+Match ; Eigenvalue [4th] ; sed -n '/^Eigenvalues \[/{n\;n\;n\;n\;n\;p\;}' static/info ; \s*-8.419\d*\s*2.0000\d*
+
+Input: 20-eigensolver.03-cg_new.inp
+
+Match ; Eigenvalue [1st] ; sed -n '/^Eigenvalues \[/{n\;n\;p\;}'          static/info ; \s-13.449*\d*\s*2.0000\d*
+Match ; Eigenvalue [2nd] ; sed -n '/^Eigenvalues \[/{n\;n\;n\;p\;}'       static/info ; \s*-8.455\d*\s*2.0000\d*
+Match ; Eigenvalue [3rd] ; sed -n '/^Eigenvalues \[/{n\;n\;n\;n\;p\;}'    static/info ; \s*-8.455\d*\s*2.0000\d*
+Match ; Eigenvalue [4th] ; sed -n '/^Eigenvalues \[/{n\;n\;n\;n\;n\;p\;}' static/info ; \s*-8.419\d*\s*2.0000\d*
+
+Input: 20-eigensolver.04-plan.inp
+
+Match ; Eigenvalue [1st] ; sed -n '/^Eigenvalues \[/{n\;n\;p\;}'          static/info ; \s-13.449*\d*\s*2.0000\d*
+Match ; Eigenvalue [2nd] ; sed -n '/^Eigenvalues \[/{n\;n\;n\;p\;}'       static/info ; \s*-8.455\d*\s*2.0000\d*
+Match ; Eigenvalue [3rd] ; sed -n '/^Eigenvalues \[/{n\;n\;n\;n\;p\;}'    static/info ; \s*-8.455\d*\s*2.0000\d*
+Match ; Eigenvalue [4th] ; sed -n '/^Eigenvalues \[/{n\;n\;n\;n\;n\;p\;}' static/info ; \s*-8.419\d*\s*2.0000\d*
