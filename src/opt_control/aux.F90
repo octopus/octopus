@@ -66,6 +66,7 @@
 
     case(oct_tg_td_local)
       j1 = sum(target%td_fitness) 
+
     case default
       j1 = abs(zstates_mpdotp(m, psi, target%st))**2
     end select

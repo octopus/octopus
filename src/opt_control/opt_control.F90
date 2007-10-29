@@ -88,9 +88,6 @@ contains
 
     call push_sub('opt_control.opt_control_run')
 
-    ! Checks that the run is actually possible with the current settings
-    call check_runmode_constrains(sys, h)
-
     call io_mkdir('opt-control')
 
     call td_init(sys, h, td)
@@ -119,7 +116,7 @@ contains
     call initial_state_init(sys%gr, sys%geo, sys%st, initial_st)
     call target_init(sys%gr, sys%geo, sys%st, td, target)
 
-    call check_faulty_runmodes(oct)
+    call check_faulty_runmodes(oct, sys, h, target)
 
     call states_output(initial_st, sys%gr, 'opt-control/initial', sys%outp)
     call target_output(sys%gr, 'opt-control/target', sys%outp, target)
@@ -386,14 +383,14 @@ contains
 
     if( (iterator%ctr_iter .eq. 0) .or. oct%use_mixing) then
       call states_end(psi)
-      psi = initial_st
+      call states_copy(psi, initial_st)
       call parameters_to_h(par, h%ep)
       call propagate_forward(sys, h, td, target, psi)
     end if
 
     stop_loop = iteration_manager(oct, sys%gr, par, td, psi, target, iterator)
 
-    chi = psi
+    call states_copy(chi, psi)
     call calc_chi(oct, sys%gr, target, psi, chi)
     call bwd_step(oct, sys, td, h, target, par, parp, chi, psi)
 
@@ -407,66 +404,6 @@ contains
   end subroutine f_iter
   ! ---------------------------------------------------------
 
-
-
-  ! ---------------------------------------------------------
-  ! This subroutine just stops the run if some of the settings
-  ! are not compatible with the run mode, either because it is
-  ! meaningless, or because the run mode is still not fully
-  ! implemented.
-  !
-  ! TODO: Right now just a couple of checks are made, but there are many other constrains.
-  subroutine check_runmode_constrains(sys, h)
-    type(system_t), target, intent(in) :: sys
-    type(hamiltonian_t),    intent(in) :: h
-
-    integer :: no_electrons, n_filled, n_partially_filled, n_half_filled
-
-    ! Only dipole approximation in length gauge.
-    if(h%gauge.ne.LENGTH) then
-      write(message(1),'(a)') "So far only length gauge is supported in optimal control runs."
-      call write_fatal(1)
-    end if
-
-    ! This should check that we really have occupation one for
-    ! one of the spin-orbitals, and occupation zero for all the others.
-    ! Otherwise the algorithms are bound to fail.
-    select case(sys%st%d%ispin)
-    case(UNPOLARIZED)
-      call occupied_states(sys%st, 1, n_filled, n_partially_filled, n_half_filled)
-      no_electrons = 2*n_filled + n_half_filled
-      if(n_partially_filled > 0 ) then
-        write(message(1),'(a)') 'No partially filled orbitals are allowd in OCT calculations'
-        call write_fatal(1)
-      end if
-    case(SPIN_POLARIZED)
-      call occupied_states(sys%st, 1, n_filled, n_partially_filled, n_half_filled)
-      if(n_partially_filled > 0 .or. n_half_filled > 0) then
-        write(message(1),'(a)') 'No partially filled orbitals are allowd in OCT calculations'
-        call write_fatal(1)
-      end if
-      no_electrons = n_filled
-      call occupied_states(sys%st, 2, n_filled, n_partially_filled, n_half_filled)
-      no_electrons = n_filled + no_electrons
-      if(n_partially_filled > 0 .or. n_half_filled > 0) then
-        write(message(1),'(a)') 'No partially filled orbitals are allowd in OCT calculations'
-        call write_fatal(1)
-      end if
-    case(SPINORS)
-      call occupied_states(sys%st, 1, n_filled, n_partially_filled, n_half_filled)
-      no_electrons = n_filled
-      if(n_partially_filled > 0 .or. n_half_filled > 0) then
-        write(message(1),'(a)') 'No partially filled orbitals are allowd in OCT calculations'
-        call write_fatal(1)
-      end if
-    end select
-
-    if(abs(-sys%st%val_charge - real(no_electrons, REAL_PRECISION) ) > CNST(1.0e-8)) then
-      write(message(1), '(a)') 'Error in check_runmode_constrains'
-      call write_fatal(1)
-    end if
-
-  end subroutine check_runmode_constrains
 
 #include "read.F90"
 #include "aux.F90"

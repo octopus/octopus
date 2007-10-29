@@ -195,11 +195,6 @@ module opt_control_propagation_m
     message(1) = "Info: Propagating forward"
     call write_info(1)
 
-    ! This is to catch errors. Should go away.
-    do i = 1, td%max_iter + 1
-      call tdf_set_numerical(par%f(1), i, huge(M_ZERO))
-    end do
-
     do i = 1, td%max_iter
 
       if(target%targetmode==oct_targetmode_td) then
@@ -254,11 +249,6 @@ module opt_control_propagation_m
 
     message(1) = "Info: Propagating backward"
     call write_info(1)
-
-    ! This is to catch errors. Should go away.
-    do i = 1, td%max_iter + 1
-      call tdf_set_numerical(par_tmp%f(1), i, huge(M_ZERO))
-    end do
 
     gr => sys%gr
 

@@ -144,13 +144,60 @@
 
 
   ! ---------------------------------------------------------
-  ! Tries to avoid ill defined combinations of run modes
-  ! be careful with the order !!
-  subroutine check_faulty_runmodes(oct)
+  ! Tries to avoid ill defined combinations of run modes.
+  ! ---------------------------------------------------------
+  subroutine check_faulty_runmodes(oct, sys, h, target)
     type(oct_t), intent(inout) :: oct
+    type(system_t), target, intent(in) :: sys
+    type(hamiltonian_t),    intent(in) :: h
+    type(target_t),         intent(in) :: target
 
-    integer :: jj
-    call push_sub('opt_control.check_faulty_runmodes')
+    integer :: no_electrons, n_filled, n_partially_filled, n_half_filled, jj
+    call push_sub('read.check_faulty_runmodes')
+
+    ! Only dipole approximation in length gauge.
+    if(h%gauge.ne.LENGTH) then
+      write(message(1),'(a)') "So far only length gauge is supported in optimal control runs."
+      call write_fatal(1)
+    end if
+
+    ! This should check that we really have occupation one for
+    ! one of the spin-orbitals, and occupation zero for all the others.
+    ! Otherwise the algorithms are bound to fail.
+    select case(sys%st%d%ispin)
+    case(UNPOLARIZED)
+      call occupied_states(sys%st, 1, n_filled, n_partially_filled, n_half_filled)
+      no_electrons = 2*n_filled + n_half_filled
+      if(n_partially_filled > 0 ) then
+        write(message(1),'(a)') 'No partially filled orbitals are allowd in OCT calculations'
+        call write_fatal(1)
+      end if
+    case(SPIN_POLARIZED)
+      call occupied_states(sys%st, 1, n_filled, n_partially_filled, n_half_filled)
+      if(n_partially_filled > 0 .or. n_half_filled > 0) then
+        write(message(1),'(a)') 'No partially filled orbitals are allowd in OCT calculations'
+        call write_fatal(1)
+      end if
+      no_electrons = n_filled
+      call occupied_states(sys%st, 2, n_filled, n_partially_filled, n_half_filled)
+      no_electrons = n_filled + no_electrons
+      if(n_partially_filled > 0 .or. n_half_filled > 0) then
+        write(message(1),'(a)') 'No partially filled orbitals are allowd in OCT calculations'
+        call write_fatal(1)
+      end if
+    case(SPINORS)
+      call occupied_states(sys%st, 1, n_filled, n_partially_filled, n_half_filled)
+      no_electrons = n_filled
+      if(n_partially_filled > 0 .or. n_half_filled > 0) then
+        write(message(1),'(a)') 'No partially filled orbitals are allowd in OCT calculations'
+        call write_fatal(1)
+      end if
+    end select
+
+    if(abs(-sys%st%val_charge - real(no_electrons, REAL_PRECISION) ) > CNST(1.0e-8)) then
+      write(message(1), '(a)') 'Error in check_runmode_constrains'
+      call write_fatal(1)
+    end if
 
     ! FixedFluence and Filter only work with WG05
     if((oct%mode_fixed_fluence).and.(oct%algorithm_type.ne.oct_algorithm_wg05)) then
@@ -162,22 +209,17 @@
       
     ! WARNING filters can only be used with WG05, and this is not checked any more.
       
-    ! WARNING: tdpenalty and fixed fluence do not work, and this is not checked any more.
-      
     ! local targets only in ZR98 and WG05
-    ! WARNING local target can only be used with ZR98 and WG95, and that test
-    ! has been disconnected.
+    if(target%targetmode .eq. oct_tg_local .or. &
+       target%targetmode .eq. oct_tg_density .or. &
+       target%targetmode .eq. oct_tg_td_local) then
+      if(oct%algorithm_type .eq. oct_algorithm_zbr98) then
+        write(message(1), '(a)') 'Cannot use ZBR98 OCT scheme if the target is oct_tg_density,'
+        write(message(2), '(a)') 'oct_tg_local or oct_tg_td_local.'
+        call write_fatal(2)
+      end if
+    end if
       
-    ! tdtargets only in ZR98 and WG05
-    ! This check is disconnected.
-!!$    if((oct%targetmode.eq.oct_targetmode_td) & 
-!!$      .AND.(oct%algorithm_type.eq.oct_algorithm_zbr98)) then
-!!$      write(message(1),'(a)') "Warning: Time-dependent targets work" &
-!!$        // " only with ZR98 and WG05."
-!!$      write(message(2),'(a)') "Warning: Please change algorithm type."
-!!$      call write_fatal(2)
-!!$    end if
-
     call pop_sub()      
   end subroutine check_faulty_runmodes
 
