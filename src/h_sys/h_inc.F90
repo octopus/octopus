@@ -142,7 +142,7 @@ subroutine X(exchange_operator) (h, gr, psi, hpsi, ik)
     do j = 1, h%st%nst
       pot = M_ZERO
       do k = 1, gr%m%np
-        rho(k) = h%st%X(psi)(k, 1, j, ik) * psi(k, 1)
+        rho(k) = R_CONJ(h%st%X(psi)(k, 1, j, ik)) * psi(k, 1)
       end do
       call X(poisson_solve)(gr, pot, rho)
       do k = 1, gr%m%np
@@ -155,7 +155,7 @@ subroutine X(exchange_operator) (h, gr, psi, hpsi, ik)
       if(h%st%occ(j, ik) <= M_ZERO) cycle
       pot = M_ZERO
       do k = 1, gr%m%np
-        rho(k) = h%st%X(psi)(k, 1, j, ik) * psi(k, 1)
+        rho(k) = R_CONJ(h%st%X(psi)(k, 1, j, ik)) * psi(k, 1)
       end do
       call X(poisson_solve)(gr, pot, rho)
       do k = 1, gr%m%np
