@@ -94,7 +94,7 @@ module opt_control_propagation_m
       call td_rti_dt(sys%ks, h, gr, psi_n, td%tr, i*td%dt, td%dt, td%max_iter)
 
       ! if td_target
-      if(target%targetmode==oct_targetmode_td) call calc_tdfitness(target, gr, psi_n, i)
+      if(target%mode==oct_targetmode_td) call calc_tdfitness(target, gr, psi_n, i)
       
       ! update
       call states_calc_dens(psi_n, NP_PART, psi_n%rho)
@@ -178,13 +178,19 @@ module opt_control_propagation_m
     type(states_t), intent(inout)                 :: psi
 
     integer :: i
-    type(states_t) :: psi2
+    type(states_t) :: psi2, inh
+    type(oct_control_parameters_t) :: par_prev
     type(grid_t), pointer :: gr
 
     call push_sub('propagation.fwd_step')
 
     gr => sys%gr
-    psi2 = psi
+
+    if(target%mode == oct_targetmode_td) then
+      call states_copy(psi2, psi)
+      call states_copy(inh, psi)
+      call parameters_copy(par_prev, par)
+    end if
     
     ! setup forward propagation
     call states_densities_init(psi, gr, sys%geo)
@@ -197,26 +203,30 @@ module opt_control_propagation_m
 
     do i = 1, td%max_iter
 
-      if(target%targetmode==oct_targetmode_td) then
-        call calc_inh(psi2, gr, target, td%dt*i, chi)
-        call parameters_to_h(par, h%ep)
-        call states_calc_dens(psi2, NP_PART, psi2%rho)
-        call v_ks_calc(gr, sys%ks, h, psi2)
-        call td_rti_dt(sys%ks, h, gr, psi2, td%tr, abs(i*td%dt), abs(td%dt), td%max_iter)
+      if(target%mode == oct_targetmode_td) then
+        call calc_inh(psi2, gr, target, td%dt*i, inh)
+        call prop_iter(i, gr, sys%ks, h, td, par_prev, psi2)
+        call hamiltonian_set_inh(h, inh)
       end if
-
       call update_field(oct, i, par, gr, td, h, psi, chi, par_tmp, dir = 'f')
       call prop_iter(i, gr, sys%ks, h, td, par_tmp, chi)
+      if(target%mode == oct_targetmode_td) then
+        call hamiltonian_remove_inh(h)
+      end if
       call prop_iter(i, gr, sys%ks, h, td, par, psi)
 
-      if(target%targetmode==oct_targetmode_td) call calc_tdfitness(target, gr, psi, i) 
+      if(target%mode == oct_targetmode_td) call calc_tdfitness(target, gr, psi, i) 
 
     end do
 
     call states_calc_dens(psi, NP_PART, psi%rho)
     call v_ks_calc(gr, sys%ks, h, psi)
 
-    call states_end(psi2)
+    if(target%mode == oct_targetmode_td) then
+      call states_end(psi2)
+      call states_end(inh)
+      call parameters_end(par_prev)
+    end if
     nullify(gr)
     call pop_sub()
   end subroutine fwd_step
@@ -244,6 +254,7 @@ module opt_control_propagation_m
 
     integer :: i
     type(grid_t), pointer :: gr
+    type(states_t) :: inh
 
     call push_sub('propagation.bwd_step')
 
@@ -256,12 +267,19 @@ module opt_control_propagation_m
     call v_ks_calc(gr, sys%ks, h, psi)
     call td_rti_run_zero_iter(h, td%tr)
 
+    if(target%mode == oct_targetmode_td) call states_copy(inh, chi)
+
     td%dt = -td%dt
     do i = td%max_iter, 1, -1
-      if(target%targetmode==oct_targetmode_td) &
-        call calc_inh(psi, gr, target, (i-1)*td%dt, chi)
       call update_field(oct, i, par_tmp, gr, td, h, psi, chi, par, dir = 'b')
+      if(target%mode == oct_targetmode_td) then
+        call calc_inh(psi, gr, target, (i-1)*td%dt, inh)
+        call hamiltonian_set_inh(h, inh)
+      end if
       call prop_iter(i-1, gr, sys%ks, h, td, par_tmp, chi)
+      if(target%mode == oct_targetmode_td) then
+        call hamiltonian_remove_inh(h)
+      end if
       call prop_iter(i-1, gr, sys%ks, h, td, par, psi)
     end do
     td%dt = -td%dt
@@ -269,6 +287,7 @@ module opt_control_propagation_m
     call states_calc_dens(psi, NP_PART, psi%rho)
     call v_ks_calc(gr, sys%ks, h, psi)
 
+    call states_end(inh)
     call pop_sub()
   end subroutine bwd_step
 

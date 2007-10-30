@@ -70,7 +70,10 @@ module hamiltonian_m
     zvmask,                &
     zvlasers,              &
     zvlaser_operator_linear, &
-    zvlaser_operator_quadratic
+    zvlaser_operator_quadratic, &
+    hamiltonian_inh_term,  &
+    hamiltonian_set_inh,   &
+    hamiltonian_remove_inh
 
 
   type hamiltonian_t
@@ -129,6 +132,10 @@ module hamiltonian_m
 
     ! For the Hartree Fock Hamiltonian, the Fock operator depends on the states.
     type(states_t) :: st
+
+    ! There may be an "inhomogeneous", "source", or "forcing" term (useful for the OCT formalism)
+    logical :: inh_term
+    type(states_t), pointer :: inh_st
 
 #if defined(HAVE_LIBNBC)
     ! NBC_Handles for the calculation of the kinetic energy in parallel.
@@ -394,6 +401,8 @@ contains
 
     call states_null(h%st)
 
+    call hamiltonian_remove_inh(h)
+
     call pop_sub()
   end subroutine hamiltonian_init
 
@@ -597,6 +606,33 @@ contains
 
     call pop_sub()
   end subroutine hamiltonian_output
+
+
+  ! ---------------------------------------------------------
+  logical function hamiltonian_inh_term(h) result(inh)
+    type(hamiltonian_t), intent(in) :: h
+    inh = h%inh_term
+  end function hamiltonian_inh_term
+
+
+  ! ---------------------------------------------------------
+  subroutine hamiltonian_set_inh(h, st)
+    type(hamiltonian_t), intent(inout) :: h
+    type(states_t), target, intent(in) :: st
+    h%inh_st => st
+    h%inh_term = .true.
+  end subroutine hamiltonian_set_inh
+
+
+  ! ---------------------------------------------------------
+  subroutine hamiltonian_remove_inh(h)
+    type(hamiltonian_t), intent(inout) :: h
+    nullify(h%inh_st)
+    h%inh_term = .false.
+  end subroutine hamiltonian_remove_inh
+
+
+
 
 #include "undef.F90"
 #include "real.F90"

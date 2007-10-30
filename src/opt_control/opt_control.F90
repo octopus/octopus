@@ -116,7 +116,7 @@ contains
     call initial_state_init(sys%gr, sys%geo, sys%st, initial_st)
     call target_init(sys%gr, sys%geo, sys%st, td, target)
 
-    call check_faulty_runmodes(oct, sys, h, target)
+    call check_faulty_runmodes(oct, sys, h, target, td%tr)
 
     call states_output(initial_st, sys%gr, 'opt-control/initial', sys%outp)
     call target_output(sys%gr, 'opt-control/target', sys%outp, target)

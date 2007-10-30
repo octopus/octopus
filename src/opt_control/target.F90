@@ -50,8 +50,8 @@ module opt_control_target_m
             calc_inh
 
   type target_t
-    integer :: totype
-    integer :: targetmode
+    integer :: type
+    integer :: mode
     type(states_t) :: st
     FLOAT, pointer :: rho(:)
     FLOAT, pointer :: td_fitness(:)
@@ -98,17 +98,19 @@ module opt_control_target_m
     !% Targetoperator is a given density.
     !%Option oct_tg_local 6
     !% Target operator is a local operator.
+    !%Option oct_tg_td_local 7
+    !% Target operator is a time-dependent local operator
     !%End
-    call loct_parse_int(check_inp('OCTTargetOperator'), oct_tg_gstransformation, target%totype)
-    if(.not.varinfo_valid_option('OCTTargetOperator', target%totype)) call input_error('OCTTargetOperator')    
+    call loct_parse_int(check_inp('OCTTargetOperator'), oct_tg_gstransformation, target%type)
+    if(.not.varinfo_valid_option('OCTTargetOperator', target%type)) call input_error('OCTTargetOperator')
 
     call states_copy(target%st, stin)
 
-    select case(target%totype)
+    select case(target%type)
     case(oct_tg_groundstate)
       message(1) =  'Info: Using Ground State for TargetOperator'
       call write_info(1)
-      target%targetmode = oct_targetmode_static
+      target%mode = oct_targetmode_static
       call restart_read(trim(tmpdir)//'gs', target%st, gr, geo, ierr)
       if(ierr.ne.0) then
         write(message(1),'(a)') 'Could not read ground-state wavefunctions from '//trim(tmpdir)//'gs.'
@@ -125,7 +127,7 @@ module opt_control_target_m
 
       message(1) =  'Info: Using Superposition of States for TargetOperator'
       call write_info(1)
-      target%targetmode = oct_targetmode_static
+      target%mode = oct_targetmode_static
 
       !%Variable OCTTargetTransformStates
       !%Type block
@@ -175,7 +177,7 @@ module opt_control_target_m
 
       message(1) =  'Info: Target is a density.'
       call write_info(1)
-      target%targetmode = oct_targetmode_static
+      target%mode = oct_targetmode_static
 
       !%Variable OCTTargetDensity
       !%Type string
@@ -263,7 +265,7 @@ module opt_control_target_m
       !% that should be searched for. This one can do by supplying a string through
       !% the variable OCTLocalTarget.
       !%End
-      target%targetmode = oct_targetmode_static
+      target%mode = oct_targetmode_static
 
       if(loct_parse_isdef('OCTTargetLocal').ne.0) then
         ALLOCATE(target%rho(NP), NP)
@@ -284,7 +286,7 @@ module opt_control_target_m
       end if
 
     case(oct_tg_td_local)
-      target%targetmode = oct_targetmode_td
+      target%mode = oct_targetmode_td
       call tdtarget_init(target, gr, td)
 
     case default
@@ -305,9 +307,9 @@ module opt_control_target_m
     call push_sub('target.target_end')
 
     call states_end(target%st)
-    if(target%totype .eq. oct_tg_local .or. &
-       target%totype .eq. oct_tg_density .or. &
-       target%totype .eq. oct_tg_td_local) then
+    if(target%type .eq. oct_tg_local .or. &
+       target%type .eq. oct_tg_density .or. &
+       target%type .eq. oct_tg_td_local) then
       deallocate(target%rho)
       nullify(target%rho)
     end if
@@ -329,13 +331,13 @@ module opt_control_target_m
     integer :: ierr
     call push_sub('target.target_output')
 
-    select case(target%totype)
+    select case(target%type)
     case(oct_tg_local)
       call doutput_function(outp%how, trim(dir), 'local_target', gr%m, gr%sb, &
         target%rho, M_ONE, ierr)
     case(oct_tg_td_local)
       call tdtarget_build_tdlocal(target, gr, M_ZERO)
-      call doutput_function(outp%how, trim(dir), 'local_target', gr%m, gr%sb, &
+      call doutput_function(outp%how, trim(dir), 'td_local_target', gr%m, gr%sb, &
         target%rho, M_ONE, ierr)
     case(oct_tg_density)
       call doutput_function(outp%how, trim(dir), 'density_target', gr%m, gr%sb, &
@@ -366,7 +368,7 @@ module opt_control_target_m
 
     target%td_fitness(i) = M_ZERO
 
-    select case(target%totype)
+    select case(target%type)
     case(oct_tg_td_local)
 
       select case(psi%d%ispin)
@@ -397,27 +399,27 @@ module opt_control_target_m
 
   ! ---------------------------------------------------------------
   ! Calculates the inhomogeneous term that appears in the equation
-  ! for chi, and places it into chi_n.
+  ! for chi, and places it into inh.
   ! ---------------------------------------------------------------
-  subroutine calc_inh(psi, gr, target, t, chi)
+  subroutine calc_inh(psi, gr, target, t, inh)
     type(states_t),    intent(in)        :: psi
     type(grid_t),      intent(in)        :: gr
     type(target_t),    intent(inout)     :: target
     FLOAT,             intent(in)        :: t
-    type(states_t),    intent(inout)     :: chi
+    type(states_t),    intent(inout)     :: inh
  
     integer :: ik, ist, idim, i
     
     call push_sub('target.calc_inh')
 
-    select case(target%totype)
+    select case(target%type)
     case(oct_tg_td_local)
       call tdtarget_build_tdlocal(target, gr, t)
-      do ik = 1, chi%d%nik
-        do ist = chi%st_start, chi%st_end
-          do idim = 1, chi%d%dim
+      do ik = 1, inh%d%nik
+        do ist = inh%st_start, inh%st_end
+          do idim = 1, inh%d%dim
             do i = 1, NP
-              chi%zpsi(i, idim, ist, ik) = -M_zI * target%rho(i) * psi%zpsi(i, idim, ist, ik)
+              inh%zpsi(i, idim, ist, ik) = -M_zI * target%rho(i) * psi%zpsi(i, idim, ist, ik)
             end do
           end do
         end do
@@ -441,7 +443,6 @@ module opt_control_target_m
 
     call push_sub('target.tdtarget_init')
 
-
     !%Variable OCTTdTarget
     !%Type block
     !%Section Optimal Control
@@ -453,7 +454,7 @@ module opt_control_target_m
     !% time-dependence. 
     !%End
     if(loct_parse_block(check_inp('OCTTdTarget'),blk)==0) then
-      select case(target%totype)
+      select case(target%type)
       case(oct_tg_td_local)
         call loct_parse_block_string(blk, 0, 0, target%td_local_target)
         call conv_to_C_string(target%td_local_target)
@@ -466,12 +467,12 @@ module opt_control_target_m
       call write_fatal(1)
     end if
 
-    if(target%targetmode .eq. oct_targetmode_td ) then
+    if(target%mode .ne. oct_targetmode_td ) then
       nullify(target%td_fitness)
     else
       ALLOCATE(target%td_fitness(0:td%max_iter), td%max_iter+1)
     end if
-  
+
     call pop_sub()
   end subroutine tdtarget_init
   !----------------------------------------------------------
@@ -484,16 +485,13 @@ module opt_control_target_m
     FLOAT, intent(in)             :: t
     integer :: i
     FLOAT :: xx(MAX_DIM), r, re, im
-
     call push_sub('target.target_build_tdlocal')
-
 
     do i = 1, NP
       call mesh_r(gr%m, i, r, x = xx)
       call loct_parse_expression(re, im, xx(1), xx(2), xx(3), r, t, target%td_local_target)
       target%rho(i) = re
     end do
-
 
     call pop_sub()
   end subroutine tdtarget_build_tdlocal

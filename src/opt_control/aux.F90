@@ -35,7 +35,7 @@
 
     call push_sub('opt_control.overlap_function')
 
-    select case(target%totype)
+    select case(target%type)
     case(oct_tg_density)
 
       ALLOCATE(local_function(m%np), m%np)
@@ -93,7 +93,7 @@
 
     no_electrons = -nint(psi_in%val_charge)
 
-    select case(target%totype)
+    select case(target%type)
 
     case(oct_tg_density)
 

@@ -630,6 +630,9 @@ contains
         do ik = 1, st%d%nik
           do ist = st%st_start, st%st_end
             call td_exp_dt(tr%te, gr, h, zpsi_rhs_pred(:, :, ist, ik), ik, dt/M_TWO, t-dt)
+            if(hamiltonian_inh_term(h)) then
+              zpsi_rhs_pred(:, :, ist, ik) = zpsi_rhs_pred(:, :, ist, ik) + dt * h%inh_st%zpsi(:, :, ist, ik)
+            end if
           end do
         end do
 
@@ -657,6 +660,9 @@ contains
       do ik = 1, st%d%nik
         do ist = st%st_start, st%st_end
           call td_exp_dt(tr%te, gr, h, zpsi_rhs_corr(:, :, ist, ik), ik, dt/M_TWO, t-dt)
+          if(hamiltonian_inh_term(h)) then
+            zpsi_rhs_corr(:, :, ist, ik) = zpsi_rhs_corr(:, :, ist, ik) + dt * h%inh_st%zpsi(:, :, ist, ik)
+          end if
         end do
       end do
 

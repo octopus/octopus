@@ -146,11 +146,12 @@
   ! ---------------------------------------------------------
   ! Tries to avoid ill defined combinations of run modes.
   ! ---------------------------------------------------------
-  subroutine check_faulty_runmodes(oct, sys, h, target)
+  subroutine check_faulty_runmodes(oct, sys, h, target, tr)
     type(oct_t), intent(inout) :: oct
     type(system_t), target, intent(in) :: sys
     type(hamiltonian_t),    intent(in) :: h
     type(target_t),         intent(in) :: target
+    type(td_rti_t),         intent(in) :: tr
 
     integer :: no_electrons, n_filled, n_partially_filled, n_half_filled, jj
     call push_sub('read.check_faulty_runmodes')
@@ -210,15 +211,23 @@
     ! WARNING filters can only be used with WG05, and this is not checked any more.
       
     ! local targets only in ZR98 and WG05
-    if(target%targetmode .eq. oct_tg_local .or. &
-       target%targetmode .eq. oct_tg_density .or. &
-       target%targetmode .eq. oct_tg_td_local) then
+    if(target%type .eq. oct_tg_local .or. &
+       target%type .eq. oct_tg_density .or. &
+       target%type .eq. oct_tg_td_local) then
       if(oct%algorithm_type .eq. oct_algorithm_zbr98) then
         write(message(1), '(a)') 'Cannot use ZBR98 OCT scheme if the target is oct_tg_density,'
         write(message(2), '(a)') 'oct_tg_local or oct_tg_td_local.'
         call write_fatal(2)
       end if
     end if
+
+    if(target%type .eq. oct_tg_td_local) then
+      if(tr%method .ne. PROP_CRANK_NICHOLSON) then
+        write(message(1), '(a)') 'If OCTTargetMode = oct_tg_td_local, then you must set'
+        write(message(2), '(a)') 'TDEvolutionMethod = crank_nicholson'
+        call write_fatal(2)
+      end if
+   end if
       
     call pop_sub()      
   end subroutine check_faulty_runmodes
