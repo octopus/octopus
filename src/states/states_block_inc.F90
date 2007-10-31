@@ -157,7 +157,7 @@ subroutine X(states_blockt_mul)(mesh, st, psi1, psi2, res, xpsi1, xpsi2, symm)
     res = res_tmp
     call profiling_out(C_PROFILING_BLOCKT_CP)
     deallocate(res_tmp)
-    deallocate(xpsi1_count, xpsi2_count, xpsi1_node, xpsi2_node, xpsi1_, xpsi2_)
+    deallocate(xpsi1_count, xpsi2_count, xpsi1_node, xpsi2_node)
 #else
     message(1) = 'Running gs parallel in states without MPI. This is a bug!'
     call write_fatal(1)
@@ -212,7 +212,9 @@ subroutine X(states_blockt_mul)(mesh, st, psi1, psi2, res, xpsi1, xpsi2, symm)
 #endif
     end if
   end if
-  
+
+  deallocate(xpsi1_, xpsi2_)
+
   call pop_sub()
   call profiling_out(C_PROFILING_BLOCKT)
 end subroutine X(states_blockt_mul)
