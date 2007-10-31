@@ -77,6 +77,19 @@ dist_share_DATA = \
 	19-laser.test \
 	19-laser.01-ground_state.inp \
 	19-laser.02-length_gauge.inp \
-	19-laser.03-velocity_gauge.inp
+	19-laser.03-velocity_gauge.inp \
+	20-eigensolver.01-lobpcg.inp \
+	20-eigensolver.02-cg.inp \
+	20-eigensolver.03-cg_new.inp \
+	20-eigensolver.04-plan.inp \
+	20-eigensolver.test \
+	21-lobpcg.01-spin_polarized.inp \
+	21-lobpcg.test \
+	22-time_propagation.01-gs.inp \
+	22-time_propagation.02-td_domains.inp \
+	22-time_propagation.03-td_domains_states.inp \
+	22-time_propagation.04-td_md.inp \
+	22-time_propagation.05-td_fast_md.inp \
+	22-time_propagation.test
 
 CLEANFILES = *~ *.bak
