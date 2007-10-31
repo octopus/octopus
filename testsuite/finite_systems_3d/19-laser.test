@@ -1,14 +1,14 @@
 # -*- coding: utf-8 mode: shell-script -*-
 # $Id: oct-run_regression_test.pl 2423 2006-09-24 21:25:52Z acastro $
 
-Test     : Lasers
-Author   : Alberto
-Date     : 06.06.07
-Arch     : Linux appartment 2.6.18-4-686 
-Release  : 2.2.0pre1
-Programs : octopus
-Runtime  : short-run
-Enabled  : Yes
+Test       : Lasers
+Author     : Alberto
+Date       : 06.06.07
+Arch       : Linux appartment 2.6.18-4-686 
+Release    : 2.2.0pre1
+Programs   : octopus
+TestGroups : short-run
+Enabled    : Yes
 
 # This test obtains the electronic ground state of a Na_2^+ molecule (the
 # nuclei are not in their minimum configuration). Note that there is only
@@ -30,5 +30,3 @@ Match ; <Z>(t=0.2) ; tail -n 1 td.general/multipoles | awk '{print $2, $6}'; \s*
 Input: 19-laser.03-velocity_gauge.inp
 
 Match ; <Z>(t=0.2) ; tail -n 1 td.general/multipoles | awk '{print $2, $6}'; \s*2.0\d*e-01\s*-1.33\d*e-04
-
-
