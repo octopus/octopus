@@ -322,11 +322,11 @@ module opt_control_target_m
 
 
   ! ----------------------------------------------------------------------
-  subroutine target_output(gr, dir, outp, target)
+  subroutine target_output(target, gr, dir, outp)
+    type(target_t), intent(inout) :: target
     type(grid_t), intent(inout)   :: gr
     character(len=*), intent(in)  :: dir
     type(output_t),   intent(in)  :: outp
-    type(target_t), intent(inout) :: target
 
     integer :: ierr
     call push_sub('target.target_output')

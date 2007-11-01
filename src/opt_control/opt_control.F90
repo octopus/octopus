@@ -119,7 +119,7 @@ contains
     call check_faulty_runmodes(oct, sys, h, target, td%tr)
 
     call states_output(initial_st, sys%gr, 'opt-control/initial', sys%outp)
-    call target_output(sys%gr, 'opt-control/target', sys%outp, target)
+    call target_output(target, sys%gr, 'opt-control/target', sys%outp)
 
     ! psi is the "working state".
     call states_copy(psi, initial_st)
@@ -375,11 +375,11 @@ contains
     logical, intent(out)                          :: stop_loop
 
     type(states_t) :: chi
-    type(oct_control_parameters_t) :: parp
+    type(oct_control_parameters_t) :: par_chi
 
     call push_sub('opt_control.f_zbr98')
 
-    call parameters_copy(parp, par)
+    call parameters_copy(par_chi, par)
 
     if( (iterator%ctr_iter .eq. 0) .or. oct%use_mixing) then
       call states_end(psi)
@@ -392,14 +392,14 @@ contains
 
     call states_copy(chi, psi)
     call calc_chi(oct, sys%gr, target, psi, chi)
-    call bwd_step(oct, sys, td, h, target, par, parp, chi, psi)
+    call bwd_step(oct, sys, td, h, target, par, par_chi, chi, psi)
 
     call states_end(psi)
     call states_copy(psi, initial_st)
-    call fwd_step(oct, sys, td, h, target, par, parp, chi, psi)
+    call fwd_step(oct, sys, td, h, target, par, par_chi, chi, psi)
 
     call states_end(chi)
-    call parameters_end(parp)
+    call parameters_end(par_chi)
     call pop_sub()
   end subroutine f_iter
   ! ---------------------------------------------------------

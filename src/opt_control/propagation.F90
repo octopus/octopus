@@ -90,6 +90,7 @@ module opt_control_propagation_m
 
     ii = 1
     do i = 1, td%max_iter
+
       ! time iterate wavefunctions
       call td_rti_dt(sys%ks, h, gr, psi_n, td%tr, i*td%dt, td%dt, td%max_iter)
 
@@ -158,7 +159,7 @@ module opt_control_propagation_m
   ! lagrange-multiplier state chi. It also updates the control
   ! parameter par,  according to the following scheme:
   ! 
-  ! |chi> --> U[par_tmp](T, 0)|chi>
+  ! |chi> --> U[par_chi](T, 0)|chi>
   ! par = par[|psi>, |chi>]
   ! |psi> --> U[par](T, 0)|psi>
   !
@@ -166,14 +167,14 @@ module opt_control_propagation_m
   ! fly", so that the propagation of psi is performed with the
   ! "new" parameters.
   ! */--------------------------------------------------------
-  subroutine fwd_step(oct, sys, td, h, target, par, par_tmp, chi, psi)
+  subroutine fwd_step(oct, sys, td, h, target, par, par_chi, chi, psi)
     type(oct_t), intent(in) :: oct
     type(system_t), intent(inout)                 :: sys
     type(td_t), intent(inout)                     :: td
     type(hamiltonian_t), intent(inout)            :: h
     type(target_t), intent(inout)          :: target
     type(oct_control_parameters_t), intent(inout) :: par
-    type(oct_control_parameters_t), intent(in)    :: par_tmp
+    type(oct_control_parameters_t), intent(in)    :: par_chi
     type(states_t), intent(inout)                 :: chi
     type(states_t), intent(inout)                 :: psi
 
@@ -186,7 +187,7 @@ module opt_control_propagation_m
 
     gr => sys%gr
 
-    if(target%mode == oct_targetmode_td) then
+    if(target%mode == oct_targetmode_td .or. (.not.h%ip_app) ) then
       call states_copy(psi2, psi)
       call states_copy(inh, psi)
       call parameters_copy(par_prev, par)
@@ -203,17 +204,17 @@ module opt_control_propagation_m
 
     do i = 1, td%max_iter
 
-      if(target%mode == oct_targetmode_td) then
-        call calc_inh(psi2, gr, target, td%dt*i, inh)
-        call prop_iter(i, gr, sys%ks, h, td, par_prev, psi2)
-        call hamiltonian_set_inh(h, inh)
+      if(target%mode == oct_targetmode_td .or. (.not.h%ip_app) ) then
+        if(target%mode == oct_targetmode_td) call calc_inh(psi2, gr, target, td%dt*i, inh)
+        call update_hamiltonian_psi(i, gr, sys%ks, h, td, target, par_prev, psi2)
+        call prop_iter(i, gr, sys%ks, h, td, psi2)
       end if
-      call update_field(oct, i, par, gr, td, h, psi, chi, par_tmp, dir = 'f')
-      call prop_iter(i, gr, sys%ks, h, td, par_tmp, chi)
-      if(target%mode == oct_targetmode_td) then
-        call hamiltonian_remove_inh(h)
-      end if
-      call prop_iter(i, gr, sys%ks, h, td, par, psi)
+
+      call update_field(oct, i, par, gr, td, h, psi, chi, par_chi, dir = 'f')
+      call update_hamiltonian_chi(i, gr, sys%ks, h, td, target, par_chi, psi2, inh)
+      call prop_iter(i, gr, sys%ks, h, td, chi)
+      call update_hamiltonian_psi(i, gr, sys%ks, h, td, target, par, psi)
+      call prop_iter(i, gr, sys%ks, h, td, psi)
 
       if(target%mode == oct_targetmode_td) call calc_tdfitness(target, gr, psi, i) 
 
@@ -222,7 +223,7 @@ module opt_control_propagation_m
     call states_calc_dens(psi, NP_PART, psi%rho)
     call v_ks_calc(gr, sys%ks, h, psi)
 
-    if(target%mode == oct_targetmode_td) then
+    if(target%mode == oct_targetmode_td .or. (.not.h%ip_app) ) then
       call states_end(psi2)
       call states_end(inh)
       call parameters_end(par_prev)
@@ -238,17 +239,17 @@ module opt_control_propagation_m
   ! scheme:
   !
   ! |psi> --> U[par](0, T)|psi>
-  ! par_tmp = par_tmp[|psi>, |chi>]
-  ! |chi> --> U[par_tmp](0, T)|chi>
+  ! par_chi = par_chi[|psi>, |chi>]
+  ! |chi> --> U[par_chi](0, T)|chi>
   ! --------------------------------------------------------
-  subroutine bwd_step(oct, sys, td, h, target, par, par_tmp, chi, psi) 
+  subroutine bwd_step(oct, sys, td, h, target, par, par_chi, chi, psi) 
     type(oct_t), intent(in) :: oct
     type(system_t), intent(inout) :: sys
     type(td_t), intent(inout)                     :: td
     type(hamiltonian_t), intent(inout)            :: h
     type(target_t), intent(inout)          :: target
     type(oct_control_parameters_t), intent(in)    :: par
-    type(oct_control_parameters_t), intent(inout) :: par_tmp
+    type(oct_control_parameters_t), intent(inout) :: par_chi
     type(states_t), intent(inout)                 :: chi
     type(states_t), intent(inout)                 :: psi
 
@@ -271,16 +272,15 @@ module opt_control_propagation_m
 
     td%dt = -td%dt
     do i = td%max_iter, 1, -1
-      call update_field(oct, i, par_tmp, gr, td, h, psi, chi, par, dir = 'b')
+
+      call update_field(oct, i, par_chi, gr, td, h, psi, chi, par, dir = 'b')
       if(target%mode == oct_targetmode_td) then
         call calc_inh(psi, gr, target, (i-1)*td%dt, inh)
-        call hamiltonian_set_inh(h, inh)
       end if
-      call prop_iter(i-1, gr, sys%ks, h, td, par_tmp, chi)
-      if(target%mode == oct_targetmode_td) then
-        call hamiltonian_remove_inh(h)
-      end if
-      call prop_iter(i-1, gr, sys%ks, h, td, par, psi)
+      call update_hamiltonian_chi(i-1, gr, sys%ks, h, td, target, par_chi, psi, inh)
+      call prop_iter(i-1, gr, sys%ks, h, td, chi)
+      call update_hamiltonian_psi(i-1, gr, sys%ks, h, td, target, par, psi)
+      call prop_iter(i-1, gr, sys%ks, h, td, psi)
     end do
     td%dt = -td%dt
 
@@ -293,21 +293,66 @@ module opt_control_propagation_m
 
 
   ! ----------------------------------------------------------
-  ! Performs one propagation step:
-  ! o If td%dt > 0, from iter*td%dt-td%dt to iter*td%dt
-  ! o If td%dt < 0, from iter*|td%dt|+|td%dt| to iter*|td%dt|
+  !
   ! ----------------------------------------------------------
-  subroutine prop_iter(iter, gr, ks, h, td, par, st)
+  subroutine update_hamiltonian_chi(iter, gr, ks, h, td, target, par_chi, st, inh)
     integer, intent(in)                        :: iter
     type(grid_t), intent(inout)                :: gr
     type(v_ks_t), intent(inout)                :: ks
     type(hamiltonian_t), intent(inout)         :: h
     type(td_t), intent(inout)                  :: td
+    type(target_t), intent(in)                 :: target
+    type(oct_control_parameters_t), intent(in) :: par_chi
+    type(states_t), intent(inout)              :: st
+    type(states_t), intent(inout)              :: inh
+
+    integer :: j
+    call push_sub('propagation.update_hamiltonian_chi')
+
+    if(target%mode == oct_targetmode_td) then
+      call hamiltonian_set_inh(h, inh)
+    end if
+
+    if(.not.h%ip_app) then
+      call hamiltonian_set_oct_exchange(h, st)
+    end if
+
+    do j = iter - 2, iter + 2
+      if(j >= 0 .and. j<=td%max_iter) then
+        call parameters_to_h_val(par_chi, h%ep, j+1)
+      end if
+    end do
+    if(.not.h%ip_app) then
+      call states_calc_dens(st, NP_PART, st%rho)
+      call v_ks_calc(gr, ks, h, st)
+    end if
+
+  end subroutine update_hamiltonian_chi
+
+
+  ! ----------------------------------------------------------
+  !
+  ! ----------------------------------------------------------
+  subroutine update_hamiltonian_psi(iter, gr, ks, h, td, target, par, st)
+    integer, intent(in)                        :: iter
+    type(grid_t), intent(inout)                :: gr
+    type(v_ks_t), intent(inout)                :: ks
+    type(hamiltonian_t), intent(inout)         :: h
+    type(td_t), intent(inout)                  :: td
+    type(target_t), intent(inout)              :: target
     type(oct_control_parameters_t), intent(in) :: par
     type(states_t), intent(inout)              :: st
 
     integer :: j
-    call push_sub('propagation.prop_iter')
+    call push_sub('propagation.update_hamiltonian_psi')
+
+    if(target%mode == oct_targetmode_td) then
+      call hamiltonian_remove_inh(h)
+    end if
+
+    if(.not.h%ip_app) then
+      call hamiltonian_remove_oct_exchange(h)
+    end if
 
     do j = iter - 2, iter + 2
       if(j >= 0 .and. j<=td%max_iter) then
@@ -318,6 +363,25 @@ module opt_control_propagation_m
       call states_calc_dens(st, NP_PART, st%rho)
       call v_ks_calc(gr, ks, h, st)
     end if
+
+  end subroutine update_hamiltonian_psi
+
+
+  ! ----------------------------------------------------------
+  ! Performs one propagation step:
+  ! o If td%dt > 0, from iter*td%dt-td%dt to iter*td%dt
+  ! o If td%dt < 0, from iter*|td%dt|+|td%dt| to iter*|td%dt|
+  ! ----------------------------------------------------------
+  subroutine prop_iter(iter, gr, ks, h, td, st)
+    integer, intent(in)                        :: iter
+    type(grid_t), intent(inout)                :: gr
+    type(v_ks_t), intent(inout)                :: ks
+    type(hamiltonian_t), intent(inout)         :: h
+    type(td_t), intent(inout)                  :: td
+    type(states_t), intent(inout)              :: st
+
+    call push_sub('propagation.prop_iter')
+
     call td_rti_dt(ks, h, gr, st, td%tr, abs(iter*td%dt), td%dt, td%max_iter)
 
     call pop_sub()
