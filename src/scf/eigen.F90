@@ -57,6 +57,7 @@ module eigen_solver_m
 
   type eigen_solver_t
     integer :: es_type    ! which eigen solver to use
+    logical :: verbose    ! If true, the solver prints additional information.
 
     FLOAT   :: init_tol
     FLOAT   :: final_tol
@@ -168,6 +169,15 @@ contains
       call write_fatal(4)
     end if
 
+    !%Variable EigenSolverVerbose
+    !%Type logical
+    !%Default no
+    !%Section SCF::EigenSolver
+    !%Description
+    !% If enabled the eigensolver prints additional information.
+    !%End
+    call loct_parse_logical(check_inp('EigenSolverVerbose'), .false., eigens%verbose)
+    
     select case(eigens%es_type)
     case(RS_CG_NEW)
     case(RS_CG)
@@ -315,7 +325,7 @@ contains
     call profiling_in(C_PROFILING_EIGEN_SOLVER)
     call push_sub('eigen.eigen_solver_run')
 
-    verbose_ = .false.; if(present(verbose)) verbose_ = verbose
+    verbose_ = eigens%verbose; if(present(verbose)) verbose_ = verbose
 
     if(iter < eigens%final_tol_iter) then
       tol = log(eigens%final_tol/eigens%init_tol)/(eigens%final_tol_iter - 1)*(iter - 1) + &

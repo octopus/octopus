@@ -129,7 +129,6 @@ subroutine X(eigen_solver_lobpcg)(gr, st, h, pre, tol, niter, converged, diff, v
 
   ! Some verbose output.
   verbose_ = .false.
-  verbose_ = .true.
   if(present(verbose)) verbose_ = verbose
   if(verbose_) then
     call messages_print_stress(stdout, "LOBPCG Info")
@@ -430,9 +429,9 @@ subroutine X(eigen_solver_lobpcg)(gr, st, h, pre, tol, niter, converged, diff, v
     ! Exchange number of matrix-vector operations.
     if(st%parallel_in_states) then
       i = niter
-      call MPI_Debug_In(st%mpi_grp%comm, C_MPI_ALLREDUCE)
+      call mpi_debug_in(st%mpi_grp%comm, C_MPI_ALLREDUCE)
       call MPI_Allreduce(i, niter, 1, MPI_INTEGER, MPI_SUM, st%mpi_grp%comm, mpi_err)
-      call MPI_Debug_Out(st%mpi_grp%comm, C_MPI_ALLREDUCE)
+      call mpi_debug_out(st%mpi_grp%comm, C_MPI_ALLREDUCE)
     end if
 #endif
 
@@ -459,24 +458,15 @@ subroutine X(lobpcg_info)(st, verbose, ik, niter, nuc, uc, diff)
   integer,        intent(in) :: uc(:)
   FLOAT,          intent(in) :: diff(:)
 
-  integer :: i, niter_total
+  integer :: i
   logical :: mask(st%nst)
 
   call push_sub('eigen_lobpcg_inc.X(lobpcg_info)')
 
   if(verbose) then
-#if defined(HAVE_MPI)
-    if(st%parallel_in_states) then
-      call MPI_Debug_In(st%mpi_grp%comm, C_MPI_ALLREDUCE)
-      call MPI_Allreduce(niter, niter_total, 1, MPI_INTEGER, MPI_SUM, st%mpi_grp%comm, mpi_err)
-      call MPI_Debug_Out(st%mpi_grp%comm, C_MPI_ALLREDUCE)
-    end if
-#else
-    niter_total = niter
-#endif
     call X(lobpcg_conv_mask)(nuc, uc, mask)
     write(message(1), '(a,i5,a,i5,a)') 'Result for k = ', ik, ' after ', &
-      niter_total, ' block iterations:'
+      niter, ' block iterations:'
     call write_info(1)
     do i = 1, st%nst
       if(mask(i)) then
