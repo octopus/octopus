@@ -69,11 +69,15 @@ module hamiltonian_m
     zkinetic,              &
     zvmask,                &
     zvlasers,              &
-    zvlaser_operator_linear, &
-    zvlaser_operator_quadratic, &
-    hamiltonian_inh_term,  &
-    hamiltonian_set_inh,   &
-    hamiltonian_remove_inh
+    zvlaser_operator_linear,        &
+    zvlaser_operator_quadratic,     &
+    hamiltonian_inh_term,           &
+    hamiltonian_set_inh,            &
+    hamiltonian_remove_inh,         &
+    hamiltonian_oct_exchange,       &
+    hamiltonian_set_oct_exchange,   &
+    hamiltonian_remove_oct_exchange
+
 
 
   type hamiltonian_t
@@ -136,6 +140,11 @@ module hamiltonian_m
     ! There may be an "inhomogeneous", "source", or "forcing" term (useful for the OCT formalism)
     logical :: inh_term
     type(states_t), pointer :: inh_st
+
+    ! There may also be a exchange-like term, similar to the one necessary for time-dependent
+    ! Hartree Fock, also useful only for the OCT equations
+    logical :: oct_exchange
+    type(states_t), pointer :: oct_st
 
 #if defined(HAVE_LIBNBC)
     ! NBC_Handles for the calculation of the kinetic energy in parallel.
@@ -402,6 +411,7 @@ contains
     call states_null(h%st)
 
     call hamiltonian_remove_inh(h)
+    call hamiltonian_remove_oct_exchange(h)
 
     call pop_sub()
   end subroutine hamiltonian_init
@@ -630,6 +640,30 @@ contains
     nullify(h%inh_st)
     h%inh_term = .false.
   end subroutine hamiltonian_remove_inh
+
+
+  ! ---------------------------------------------------------
+  logical function hamiltonian_oct_exchange(h) result(oct_exchange)
+    type(hamiltonian_t), intent(in) :: h
+    oct_exchange = h%oct_exchange
+  end function hamiltonian_oct_exchange
+
+
+  ! ---------------------------------------------------------
+  subroutine hamiltonian_set_oct_exchange(h, st)
+    type(hamiltonian_t), intent(inout) :: h
+    type(states_t), target, intent(in) :: st
+    h%oct_st => st
+    h%oct_exchange = .true.
+  end subroutine hamiltonian_set_oct_exchange
+
+
+  ! ---------------------------------------------------------
+  subroutine hamiltonian_remove_oct_exchange(h)
+    type(hamiltonian_t), intent(inout) :: h
+    nullify(h%oct_st)
+    h%oct_exchange = .false.
+  end subroutine hamiltonian_remove_oct_exchange
 
 
 
