@@ -298,8 +298,7 @@ end subroutine X(magnus)
 
 
 ! ---------------------------------------------------------
-! Exchange the ghost points.
-#if defined(HAVE_MPI)
+! Exchange the ghost points and write the boundary points.
 subroutine X(kinetic_prepare)(h, gr, psi)
   type(hamiltonian_t), intent(in)    :: h
   type(grid_t),        intent(inout) :: gr
@@ -313,16 +312,19 @@ subroutine X(kinetic_prepare)(h, gr, psi)
     if(gr%f_der%der_discr%zero_bc) then
       call X(zero_bc)(gr%m, psi(:, idim))
     end if
+    if(gr%m%parallel_in_domains) then
+#if defined(HAVE_MPI)
 #if defined(HAVE_LIBNBC)
-    call X(vec_ighost_update)(gr%m%vp, psi(:, idim), h%handles(idim))
+      call X(vec_ighost_update)(gr%m%vp, psi(:, idim), h%handles(idim))
 #else
-    call X(vec_ghost_update)(gr%m%vp, psi(:, idim))
+      call X(vec_ghost_update)(gr%m%vp, psi(:, idim))
 #endif
+#endif
+    end if
   end do
 
   call pop_sub()
 end subroutine X(kinetic_prepare)
-#endif
 
 
 ! ---------------------------------------------------------
@@ -375,14 +377,12 @@ subroutine X(kinetic) (h, gr, psi, hpsi, ik)
 
   call push_sub('h_inc.Xkinetic')
 
-#if defined(HAVE_MPI)
+  call X(kinetic_prepare)(h, gr, psi)
   if(gr%m%parallel_in_domains) then
-    call X(kinetic_prepare)(h, gr, psi)
 #if defined(HAVE_LIBNBC)
     call X(kinetic_wait)(h)
 #endif
   end if
-#endif
   call X(kinetic_calculate) (h, gr, psi, hpsi, ik)
 
   call pop_sub()
