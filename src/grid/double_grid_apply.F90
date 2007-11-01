@@ -38,15 +38,10 @@ subroutine double_grid_apply (this, s, m, sm, x_atom, vl, l, lm, ic)
 
   FLOAT, allocatable :: vs(:)
 
-#ifdef HAVE_MPI
-  integer :: rank
-  rank = m%mpi_grp%rank + 1
-#endif
-
 #ifdef USE_OMP
   integer(kind=omp_lock_kind) :: lock
 #endif
-  
+
   if (.not. this%use_double_grid) then 
     
     !$omp parallel do private(r, x)
@@ -92,15 +87,15 @@ subroutine double_grid_apply (this, s, m, sm, x_atom, vl, l, lm, ic)
               !map the local point to a global point
               if (ip <= m%np) then
                 !inner points
-                ip = ip - 1 + m%vp%xlocal(rank)
+                ip = ip - 1 + m%vp%xlocal(m%vp%partno)
                 ip = m%vp%local(ip)
-              else if (ip <= m%np + m%vp%np_ghost(rank)) then
+              else if (ip <= m%np + m%vp%np_ghost(m%vp%partno)) then
                 !ghost points
-                ip = ip - 1 - m%np + m%vp%xghost(rank) 
+                ip = ip - 1 - m%np + m%vp%xghost(m%vp%partno) 
                 ip = m%vp%ghost(ip)
               else
                 !boundary points
-                ip = ip - 1 - m%np - m%vp%xghost(rank) + m%vp%xbndry(rank) 
+                ip = ip - 1 - (m%np + m%vp%np_ghost(m%vp%partno)) + m%vp%xbndry(m%vp%partno)
                 ip = m%vp%bndry(ip)
               end if
             end if
@@ -119,7 +114,7 @@ subroutine double_grid_apply (this, s, m, sm, x_atom, vl, l, lm, ic)
                     ip = m%Lxyz_inv(pp, qq, rr)
 #ifdef HAVE_MPI      
                     !map the global point to a local point
-                    if (m%parallel_in_domains) ip = m%vp%global(ip, rank)
+                    if (m%parallel_in_domains) ip = m%vp%global(ip, m%vp%partno)
 #endif
                     is2 = sm%jxyz_inv(ip)
                     vs(is2) = vs(is2)  + this%co(ll)*this%co(mm)*this%co(nn)*vv
