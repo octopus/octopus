@@ -310,6 +310,7 @@ subroutine X(kinetic_prepare)(h, gr, psi)
   call push_sub('h_inc.Xkinetic_prepare')
 
   do idim = 1, h%d%dim
+    call X(zero_bc)(gr%m, psi(:, idim))
 #if defined(HAVE_LIBNBC)
     call X(vec_ighost_update)(gr%m%vp, psi(:, idim), h%handles(idim))
 #else

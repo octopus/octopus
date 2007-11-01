@@ -21,6 +21,7 @@
 
 module hamiltonian_m
   use datasets_m
+  use derivatives_m
   use functions_m
   use geometry_m
   use global_m

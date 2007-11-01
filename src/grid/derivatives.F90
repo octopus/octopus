@@ -49,12 +49,14 @@ module derivatives_m
     dderivatives_oper,      &
     dderivatives_div,       &
     dderivatives_curl,      &
+    dzero_bc,               &
     zderivatives_lapl,      &
     zderivatives_laplt,     &
     zderivatives_grad,      &
     zderivatives_oper,      &
     zderivatives_div,       &
     zderivatives_curl,      &
+    zzero_bc,               &
     stencil_extent
 
   integer, parameter ::     &
