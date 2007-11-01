@@ -139,12 +139,13 @@ end subroutine X(cf_FS2mf)
 ! ---------------------------------------------------------
 ! Calculation of derivatives
 ! ---------------------------------------------------------
-subroutine X(f_laplacian) (sb, f_der, f, lapl, cutoff_, ghost_update)
+subroutine X(f_laplacian) (sb, f_der, f, lapl, cutoff_, have_bndry, ghost_update)
   type(simul_box_t), intent(in)    :: sb
   type(f_der_t),     intent(inout) :: f_der
   R_TYPE,            intent(inout) :: f(:)     ! f(m%np_part)
   R_TYPE,            intent(out)   :: lapl(:)  ! lapl(m%np_part)
   FLOAT, optional,   intent(in)    :: cutoff_
+  logical, optional, intent(in)    :: have_bndry
   logical, optional, intent(in)    :: ghost_update
 
   FLOAT :: cutoff
@@ -155,7 +156,7 @@ subroutine X(f_laplacian) (sb, f_der, f, lapl, cutoff_, ghost_update)
 
   select case(f_der%space)
   case(REAL_SPACE)
-    call X(derivatives_lapl) (f_der%der_discr, f, lapl, ghost_update=ghost_update)
+    call X(derivatives_lapl) (f_der%der_discr, f, lapl, have_bndry, ghost_update)
 
 #if defined(HAVE_FFT)
   case(FOURIER_SPACE)
@@ -199,7 +200,7 @@ subroutine X(f_gradient) (sb, f_der, f, grad, ghost_update)
 
   select case(f_der%space)
   case(REAL_SPACE)
-    call X(derivatives_grad) (f_der%der_discr, f, grad, ghost_update=ghost_update)
+    call X(derivatives_grad) (f_der%der_discr, f, grad, ghost_update)
 
 #if defined(HAVE_FFT)
   case(FOURIER_SPACE)
@@ -252,7 +253,7 @@ subroutine X(f_divergence) (sb, f_der, f, divf, ghost_update)
 
   select case(f_der%space)
   case(REAL_SPACE)
-    call X(derivatives_div) (f_der%der_discr, f, divf, ghost_update=ghost_update)
+    call X(derivatives_div) (f_der%der_discr, f, divf, ghost_update)
 
 #if defined(HAVE_FFT)
   case(FOURIER_SPACE)
@@ -386,7 +387,7 @@ subroutine X(f_angular_momentum)(sb, f_der, f, lf, ghost_update)
   ASSERT(sb%dim.ne.1)
 
   ALLOCATE(gf(f_der%m%np, sb%dim), f_der%m%np*sb%dim)
-  call X(f_gradient)(sb, f_der, f, gf, ghost_update=ghost_update)
+  call X(f_gradient)(sb, f_der, f, gf, ghost_update)
 
   do i = 1, f_der%m%np
     x(1:sb%dim) = f_der%m%x(i,1:sb%dim)
@@ -442,10 +443,10 @@ subroutine X(f_l2)(sb, f_der, f, l2f, ghost_update)
     ALLOCATE(gf(m%np_part, 3), m%np_part*3)
     ALLOCATE(ggf(m%np_part, 3, 3), m%np_part*3*3)
 
-    call X(f_angular_momentum)(sb, f_der, f, gf, ghost_update=ghost_update)
+    call X(f_angular_momentum)(sb, f_der, f, gf, ghost_update)
 
     do j = 1, 3
-      call X(f_angular_momentum)(sb, f_der, gf(:,j), ggf(:,:,j), ghost_update=ghost_update)
+      call X(f_angular_momentum)(sb, f_der, gf(:,j), ggf(:,:,j), ghost_update)
     end do
 
     do j = 1, sb%dim
@@ -456,8 +457,8 @@ subroutine X(f_l2)(sb, f_der, f, l2f, ghost_update)
     ALLOCATE(gf(m%np_part, 1), m%np_part)
     ALLOCATE(ggf(m%np_part, 1, 1), m%np_part)
 
-    call X(f_angular_momentum)(sb, f_der, f, gf, ghost_update=ghost_update)
-    call X(f_angular_momentum)(sb, f_der, gf(:, 1), ggf(:, :, 1), ghost_update=ghost_update)
+    call X(f_angular_momentum)(sb, f_der, f, gf, ghost_update)
+    call X(f_angular_momentum)(sb, f_der, gf(:, 1), ggf(:, :, 1), ghost_update)
 
     l2f(1:m%np) = ggf(1:m%np, 1, 1)
   end select

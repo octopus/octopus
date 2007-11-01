@@ -129,6 +129,7 @@ subroutine X(eigen_solver_lobpcg)(gr, st, h, pre, tol, niter, converged, diff, v
 
   ! Some verbose output.
   verbose_ = .false.
+  verbose_ = .true.
   if(present(verbose)) verbose_ = verbose
   if(verbose_) then
     call messages_print_stress(stdout, "LOBPCG Info")

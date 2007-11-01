@@ -310,7 +310,9 @@ subroutine X(kinetic_prepare)(h, gr, psi)
   call push_sub('h_inc.Xkinetic_prepare')
 
   do idim = 1, h%d%dim
-    call X(zero_bc)(gr%m, psi(:, idim))
+    if(gr%f_der%der_discr%zero_bc) then
+      call X(zero_bc)(gr%m, psi(:, idim))
+    end if
 #if defined(HAVE_LIBNBC)
     call X(vec_ighost_update)(gr%m%vp, psi(:, idim), h%handles(idim))
 #else
@@ -415,7 +417,7 @@ subroutine X(kinetic_calculate) (h, gr, psi, hpsi, ik)
     k2 = sum(h%d%kpoints(:, ik)**2)
     do idim = 1, h%d%dim
       call X(f_laplacian) (gr%sb, gr%f_der, psi(:, idim), lapl(:, idim), &
-        cutoff_ = M_TWO*h%cutoff, ghost_update=.false.)
+        cutoff_ = M_TWO*h%cutoff, have_bndry=.true., ghost_update=.false.)
       call X(f_gradient)  (gr%sb, gr%f_der, psi(:, idim), grad(:, :), ghost_update=.false.)
       do i = 1, NP
         hpsi(i, idim) = hpsi(i, idim) - M_HALF*(lapl(i, idim)       &
@@ -428,7 +430,7 @@ subroutine X(kinetic_calculate) (h, gr, psi, hpsi, ik)
   else
     do idim = 1, h%d%dim
       call X(f_laplacian) (gr%sb, gr%f_der, psi(:, idim), lapl(:, idim), &
-        cutoff_ = M_TWO*h%cutoff, ghost_update=.false.)
+        cutoff_ = M_TWO*h%cutoff, have_bndry=.true., ghost_update=.false.)
       call lalg_axpy(NP, -M_HALF/h%mass, lapl(:, idim), hpsi(:, idim))
     end do
   end if

@@ -25,23 +25,23 @@
 
 ! ---------------------------------------------------------
 ! The transpose of the Laplacian.
-subroutine X(derivatives_laplt)(der, f, lapl, have_ghost_)
+subroutine X(derivatives_laplt)(der, f, lapl, have_bndry)
   type(der_discr_t), intent(in)    :: der
   R_TYPE,            intent(inout) :: f(:)     ! f(m%np_part)
   R_TYPE,            intent(out)   :: lapl(:)  ! lapl(m%np)
-  logical, optional, intent(in)    :: have_ghost_
+  logical, optional, intent(in)    :: have_bndry
 
-  logical :: have_ghost
+  logical :: have_bndry_
 
   call push_sub('derivatives_inc.Xderivatives_laplt')
 
   ASSERT(ubound(f,    DIM=1) == der%m%np_part)
   ASSERT(ubound(lapl, DIM=1) >= der%m%np)
 
-  have_ghost = .false.
-  if(present(have_ghost_)) have_ghost = have_ghost_
+  have_bndry_ = .false.
+  if(present(have_bndry)) have_bndry_ = have_bndry
 
-  if(.not.have_ghost.and.der%zero_bc) then
+  if(.not.have_bndry_.and.der%zero_bc) then
     call X(zero_bc)(der%m, f)
   end if
 
@@ -52,27 +52,27 @@ end subroutine X(derivatives_laplt)
 
 
 ! ---------------------------------------------------------
-subroutine X(derivatives_lapl)(der, f, lapl, have_ghost_, ghost_update)
+subroutine X(derivatives_lapl)(der, f, lapl, have_bndry, ghost_update)
   type(der_discr_t),         intent(in)    :: der
   R_TYPE,                    intent(inout) :: f(:)     ! f(m%np_part)
   R_TYPE,                    intent(out)   :: lapl(:)  ! lapl(m%np)
-  logical, optional,         intent(in)    :: have_ghost_
+  logical, optional,         intent(in)    :: have_bndry
   logical, optional,         intent(in)    :: ghost_update
 
-  logical             :: have_ghost
+  logical :: have_bndry_
 
   call push_sub('derivatives_inc.Xderivatives_lapl')
 
   ASSERT(ubound(f,    DIM=1) == der%m%np_part)
   ASSERT(ubound(lapl, DIM=1) >= der%m%np)
 
-  have_ghost = .false.
-  if(present(have_ghost_)) have_ghost = have_ghost_
+  have_bndry_ = .false.
+  if(present(have_bndry)) have_bndry_ = have_bndry
 
   ! If the derivatives are defined with non-constant weights, then we do not
   ! need extra points.
   ! Otherwise, set the boundary points to zero (if we have zero boundary conditions).
-  if(.not.have_ghost.and.der%zero_bc) then
+  if(.not.have_bndry_.and.der%zero_bc) then
     call X(zero_bc)(der%m, f)
   end if
 
