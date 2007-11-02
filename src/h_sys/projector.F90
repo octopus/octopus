@@ -185,11 +185,10 @@ contains
   end subroutine projector_init
 
   !---------------------------------------------------------
-  subroutine projector_build(p, gr, a, gen_grads)
+  subroutine projector_build(p, gr, a)
     type(projector_t), intent(inout) :: p
     type(grid_t),      intent(in)    :: gr
     type(atom_t),      intent(in)    :: a
-    logical,           intent(in)    :: gen_grads
 
     integer :: ns, l, lm
 
@@ -211,7 +210,7 @@ contains
 
     case (M_KB)
       call kb_projector_null(p%kb_p)
-      call kb_projector_init(p%kb_p, p%sphere, gr, a, l, lm, gen_grads)
+      call kb_projector_init(p%kb_p, p%sphere, gr, a, l, lm)
 
     case (M_RKB)
       call rkb_projector_null(p%rkb_p)
@@ -224,12 +223,11 @@ contains
 
 #ifdef HAVE_MPI
   !---------------------------------------------------------
-  subroutine projector_broadcast(p, gr, mc, a, gen_grads, root)
+  subroutine projector_broadcast(p, gr, mc, a, root)
     type(projector_t), intent(inout) :: p
     type(grid_t),      intent(in)    :: gr
     type(multicomm_t), intent(in)    :: mc
     type(atom_t),      intent(in)    :: a
-    logical,           intent(in)    :: gen_grads
     integer,           intent(in)    :: root
 
     integer :: ns, l, lm, mpi_err, rank
@@ -257,7 +255,7 @@ contains
       if ( rank /= root) then
         call kb_projector_null(p%kb_p)
       end if
-      call kb_projector_broadcast(p%kb_p, p%sphere, gr, mc, a, l, lm, gen_grads, root)
+      call kb_projector_broadcast(p%kb_p, p%sphere, gr, mc, a, l, lm, root)
     case (M_RKB)
       if ( rank /= root) then
         call rkb_projector_null(p%rkb_p)

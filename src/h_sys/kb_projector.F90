@@ -71,13 +71,12 @@ contains
   end subroutine kb_projector_null
 
   ! ---------------------------------------------------------
-  subroutine kb_projector_init(kb_p, sm, gr, a, l, lm, gen_grads)
+  subroutine kb_projector_init(kb_p, sm, gr, a, l, lm)
     type(kb_projector_t), intent(inout) :: kb_p
     type(submesh_t),      intent(in)    :: sm
     type(grid_t),         intent(in)    :: gr
     type(atom_t),         intent(in)    :: a
     integer,              intent(in)    :: l, lm
-    logical,              intent(in)    :: gen_grads
 
     integer :: n_c, j, k, ic
     FLOAT :: v, dv(3), r, x(3), x_in(3)
@@ -133,14 +132,13 @@ contains
     call pop_sub()
   end subroutine kb_projector_init
 #ifdef HAVE_MPI
-  subroutine kb_projector_broadcast(kb_p, sm, gr, mc, a, l, lm, gen_grads, root)
+  subroutine kb_projector_broadcast(kb_p, sm, gr, mc, a, l, lm, root)
     type(kb_projector_t), intent(inout) :: kb_p
     type(submesh_t),      intent(in)    :: sm
     type(grid_t),         intent(in)    :: gr
     type(multicomm_t),    intent(in)    :: mc
     type(atom_t),         intent(in)    :: a
     integer,              intent(in)    :: l, lm
-    logical,              intent(in)    :: gen_grads
     integer,              intent(in)    :: root
 
     integer :: n_c, i, rank, mpi_err

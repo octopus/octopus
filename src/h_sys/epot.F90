@@ -100,7 +100,6 @@ module external_pot_m
     ! The gyromagnetic ratio (-2.0 for the electron, but different if we treat
     ! *effective* electrons in a quantum dot. It affects the spin Zeeman term.
     FLOAT :: gyromagnetic_ratio
-    logical :: gen_grads
 #ifdef HAVE_MPI
     logical :: parallel_generate
 #endif
@@ -297,8 +296,6 @@ contains
     !% gyromagnetic factor that depends on the material.
     !%End
     call loct_parse_float(check_inp('GyromagneticRatio'), P_g, ep%gyromagnetic_ratio)
-
-    ep%gen_grads = .false.
 
 #ifdef HAVE_MPI
     !%Variable ParallelPotentialGeneration
@@ -758,7 +755,7 @@ contains
 #endif
 
         do iproj = 1, ep%nvnl
-          call projector_build(ep%p(iproj), gr, geo%atom(ep%p(iproj)%iatom), ep%gen_grads)
+          call projector_build(ep%p(iproj), gr, geo%atom(ep%p(iproj)%iatom))
         end do
         
 #ifdef HAVE_MPI
@@ -778,12 +775,12 @@ contains
         
         do iproj = 1, ep%nvnl
           if ( rep(iproj) == rank ) then 
-            call projector_build(ep%p(iproj), gr, geo%atom(ep%p(iproj)%iatom), ep%gen_grads)
+            call projector_build(ep%p(iproj), gr, geo%atom(ep%p(iproj)%iatom))
           end if
         end do
         
         do iproj = 1, ep%nvnl
-          call projector_broadcast(ep%p(iproj), gr, mc, geo%atom(ep%p(iproj)%iatom), ep%gen_grads, rep(iproj))
+          call projector_broadcast(ep%p(iproj), gr, mc, geo%atom(ep%p(iproj)%iatom), rep(iproj))
         end do
         
       deallocate(rep)
