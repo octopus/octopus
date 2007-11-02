@@ -58,3 +58,5 @@ Preconditioner = no
 
 TypeOfMixing = broyden
 What2Mix = potential
+
+ParallelizationStrategy=par_domains

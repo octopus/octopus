@@ -46,5 +46,4 @@ EigenSolverMaxIter = 25
 
 TypeOfMixing = broyden
 
-#Output = density + potential
-#OutputHow = axis_x
+ParallelizationStrategy=par_domains
