@@ -266,7 +266,7 @@ end subroutine X(states_gather)
 subroutine X(states_block_matr_mul)(mesh, st, psi, matr, res, xpsi, xres)
   type(mesh_t),      intent(in)  :: mesh
   type(states_t),    intent(in)  :: st
-  R_TYPE,            intent(in)  :: psi(:, :, :)
+  R_TYPE,            intent(in)  :: psi(mesh%np_part, st%d%dim, st%st_start:st%st_end)
   R_TYPE,            intent(in)  :: matr(:, :)
   R_TYPE,            intent(out) :: res(:, :, :)
   integer, optional, intent(in)  :: xpsi(:), xres(:)

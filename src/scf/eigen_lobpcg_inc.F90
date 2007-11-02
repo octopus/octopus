@@ -70,7 +70,7 @@ subroutine X(eigen_solver_lobpcg)(gr, st, h, pre, tol, niter, converged, diff, v
   character(len=10) :: file_name
   R_TYPE            :: beta
 
-  R_TYPE, pointer             :: rits_psi(:, :), ritz_res(:, :), ritz_dir(:, :)
+  R_TYPE, pointer             :: ritz_psi(:, :), ritz_res(:, :), ritz_dir(:, :)
   FLOAT,  allocatable         :: diffs(:, :)
   R_TYPE, allocatable         :: tmp(:, :, :)     ! Temporary storage of wavefunction size.
   R_TYPE, allocatable         :: nuc_tmp(:, :)    ! Temporary storage of Gram block size.
@@ -152,6 +152,14 @@ subroutine X(eigen_solver_lobpcg)(gr, st, h, pre, tol, niter, converged, diff, v
   ALLOCATE(gram_block(nst, nst), nst**2)
   ALLOCATE(ritz_val(nst), nst)
 
+  ! Set them to zero, otherwise behaviour may be slightly nondeterminsitic.
+  tmp   = R_TOTYPE(M_ZERO)
+  res   = R_TOTYPE(M_ZERO)
+  h_res = R_TOTYPE(M_ZERO)
+  dir   = R_TOTYPE(M_ZERO)
+  h_dir = R_TOTYPE(M_ZERO)
+  h_psi = R_TOTYPE(M_ZERO)
+
   maxiter = niter
   niter   = 0
 
@@ -223,7 +231,7 @@ subroutine X(eigen_solver_lobpcg)(gr, st, h, pre, tol, niter, converged, diff, v
       ALLOCATE(ritz_vec(nst+blks*nuc, nst), nst**2+blks*nst*nuc)
       ALLOCATE(gram_h(nst+blks*nuc, nst+blks*nuc), (nst+blks*nuc)**2)
       ALLOCATE(gram_i(nst+blks*nuc, nst+blks*nuc), (nst+blks*nuc)**2)
-      rits_psi => ritz_vec(1:nst, 1:nst)
+      ritz_psi => ritz_vec(1:nst, 1:nst)
       ritz_res => ritz_vec(nst+1:nst+nuc, 1:nst)
       if(k.gt.1) then
         ritz_dir => ritz_vec(nst+nuc+1:nst+2*nuc, 1:nst)
@@ -385,12 +393,12 @@ subroutine X(eigen_solver_lobpcg)(gr, st, h, pre, tol, niter, converged, diff, v
       ! Calculate new eigenstates:
       ! |psi> <- |psi> ritz_psi + dir
       ! h_psi <- (H |psi>) ritz_psi + H dir
-      call states_block_matr_mul(gr%m, st, st%X(psi)(:, :, :, ik), rits_psi, tmp)
+      call states_block_matr_mul(gr%m, st, st%X(psi)(:, :, :, ik), ritz_psi, tmp)
       call lalg_copy(np*lnst, tmp(:, 1, st_start), st%X(psi)(:, 1, st_start, ik))
       do ist = st_start, st_end ! Leave this loop, otherwise xlf90 crashes.
         call lalg_axpy(np, R_TOTYPE(M_ONE), dir(:, 1, ist), st%X(psi)(:, 1, ist, ik))
       end do
-      call states_block_matr_mul(gr%m, st, h_psi, rits_psi, tmp)
+      call states_block_matr_mul(gr%m, st, h_psi, ritz_psi, tmp)
       call lalg_copy(np*lnst, tmp(:, 1, st_start), h_psi(:, 1, st_start))
       call lalg_axpy(np*lnst, R_TOTYPE(M_ONE), h_dir(:, 1, st_start), h_psi(:, 1, st_start))
 
