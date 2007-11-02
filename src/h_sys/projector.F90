@@ -236,7 +236,7 @@ contains
     
     l = p%l
     lm = p%lm
-    rank = mc%who_am_i(P_STRATEGY_STATES) - 1
+    rank = mc%who_am_i(P_STRATEGY_STATES)
 
     select case (p%type)
     case(M_LOCAL)
@@ -249,6 +249,7 @@ contains
     case (M_HGH)
       if ( rank /= root) then      
         call hgh_projector_null(p%hgh_p)
+        !for the moment it is not copied but initialized
         call hgh_projector_init(p%hgh_p, p%sphere, gr, a, l, lm)
       end if
     case (M_KB)
@@ -259,6 +260,7 @@ contains
     case (M_RKB)
       if ( rank /= root) then
         call rkb_projector_null(p%rkb_p)
+        !for the moment it is not copied but initialized
         call rkb_projector_init(p%rkb_p, p%sphere, gr, a, l, lm)
       end if
     end select

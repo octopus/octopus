@@ -771,7 +771,7 @@ contains
           rep(ini:fin) = rank
         end do
         
-        rank = mc%who_am_i(P_STRATEGY_STATES) - 1
+        rank = mc%who_am_i(P_STRATEGY_STATES)
         
         do iproj = 1, ep%nvnl
           if ( rep(iproj) == rank ) then 

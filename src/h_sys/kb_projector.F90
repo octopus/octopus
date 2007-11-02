@@ -145,7 +145,7 @@ contains
 
     call push_sub('kb_projector.kb_projector_init')
 
-    rank = mc%who_am_i(P_STRATEGY_STATES) - 1
+    rank = mc%who_am_i(P_STRATEGY_STATES)
 
     if (root /= rank ) then
       
