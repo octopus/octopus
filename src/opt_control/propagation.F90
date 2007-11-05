@@ -123,11 +123,11 @@ module opt_control_propagation_m
   ! Performs a full bacward propagation of state psi_n, with the
   ! external fields specified in hamiltonian h.
   ! ---------------------------------------------------------
-  subroutine propagate_backward(sys, h, td, psi_n)
+  subroutine propagate_backward(sys, h, td, psi)
     type(system_t),      intent(inout) :: sys
     type(hamiltonian_t), intent(inout) :: h
     type(td_t),          intent(inout) :: td
-    type(states_t), intent(inout)      :: psi_n
+    type(states_t), intent(inout)      :: psi
 
     integer :: i
     type(grid_t),  pointer :: gr
@@ -140,14 +140,14 @@ module opt_control_propagation_m
     gr => sys%gr
 
     ! setup the hamiltonian
-    call states_calc_dens(psi_n, NP_PART, psi_n%rho)
-    call v_ks_calc(gr, sys%ks, h, psi_n)
+    call states_calc_dens(psi, NP_PART, psi%rho)
+    call v_ks_calc(gr, sys%ks, h, psi)
     call td_rti_run_zero_iter(h, td%tr)
 
     do i = td%max_iter, 1, -1
-      call td_rti_dt(sys%ks, h, gr, psi_n, td%tr, (i-1)*td%dt, -td%dt, td%max_iter)
-      call states_calc_dens(psi_n, NP_PART, psi_n%rho)
-      call v_ks_calc(gr, sys%ks, h, psi_n)
+      call td_rti_dt(sys%ks, h, gr, psi, td%tr, (i-1)*td%dt, -td%dt, td%max_iter)
+      call states_calc_dens(psi, NP_PART, psi%rho)
+      call v_ks_calc(gr, sys%ks, h, psi)
     end do
     
     call pop_sub()
@@ -179,6 +179,7 @@ module opt_control_propagation_m
     type(states_t), intent(inout)                 :: psi
 
     integer :: i
+    logical :: aux_fwd_propagation
     type(states_t) :: psi2, inh
     type(oct_control_parameters_t) :: par_prev
     type(grid_t), pointer :: gr
@@ -186,8 +187,9 @@ module opt_control_propagation_m
     call push_sub('propagation.fwd_step')
 
     gr => sys%gr
+    aux_fwd_propagation = (target%mode == oct_targetmode_td .or. (.not.h%ip_app))
 
-    if(target%mode == oct_targetmode_td .or. (.not.h%ip_app) ) then
+    if(aux_fwd_propagation) then
       call states_copy(psi2, psi)
       call states_copy(inh, psi)
       call parameters_copy(par_prev, par)
@@ -203,21 +205,17 @@ module opt_control_propagation_m
     call write_info(1)
 
     do i = 1, td%max_iter
-
-      if(target%mode == oct_targetmode_td .or. (.not.h%ip_app) ) then
-        if(target%mode == oct_targetmode_td) call calc_inh(psi2, gr, target, td%dt*i, inh)
+      if(aux_fwd_propagation) then
+        write(71, '(a,i6.2f20.12)') 'FWD_STEP', i, zstates_dotp(gr%m, 1, chi%zpsi(:, :, 1, 1), chi%zpsi(:, :, 1, 1))
         call update_hamiltonian_psi(i, gr, sys%ks, h, td, target, par_prev, psi2)
         call prop_iter(i, gr, sys%ks, h, td, psi2)
       end if
-
       call update_field(oct, i, par, gr, td, h, psi, chi, par_chi, dir = 'f')
-      call update_hamiltonian_chi(i, gr, sys%ks, h, td, target, par_chi, psi2, inh)
+      call update_hamiltonian_chi(i, gr, sys%ks, h, td, target, par_chi, psi2)
       call prop_iter(i, gr, sys%ks, h, td, chi)
       call update_hamiltonian_psi(i, gr, sys%ks, h, td, target, par, psi)
       call prop_iter(i, gr, sys%ks, h, td, psi)
-
       if(target%mode == oct_targetmode_td) call calc_tdfitness(target, gr, psi, i) 
-
     end do
 
     call states_calc_dens(psi, NP_PART, psi%rho)
@@ -272,12 +270,9 @@ module opt_control_propagation_m
 
     td%dt = -td%dt
     do i = td%max_iter, 1, -1
-
+      write(72, '(a,i6.2f20.12)') 'FWD_STEP', i, zstates_dotp(gr%m, 1, chi%zpsi(:, :, 1, 1), chi%zpsi(:, :, 1, 1))
       call update_field(oct, i, par_chi, gr, td, h, psi, chi, par, dir = 'b')
-      if(target%mode == oct_targetmode_td) then
-        call calc_inh(psi, gr, target, (i-1)*td%dt, inh)
-      end if
-      call update_hamiltonian_chi(i-1, gr, sys%ks, h, td, target, par_chi, psi, inh)
+      call update_hamiltonian_chi(i-1, gr, sys%ks, h, td, target, par_chi, psi)
       call prop_iter(i-1, gr, sys%ks, h, td, chi)
       call update_hamiltonian_psi(i-1, gr, sys%ks, h, td, target, par, psi)
       call prop_iter(i-1, gr, sys%ks, h, td, psi)
@@ -295,21 +290,22 @@ module opt_control_propagation_m
   ! ----------------------------------------------------------
   !
   ! ----------------------------------------------------------
-  subroutine update_hamiltonian_chi(iter, gr, ks, h, td, target, par_chi, st, inh)
+  subroutine update_hamiltonian_chi(iter, gr, ks, h, td, target, par_chi, st)
     integer, intent(in)                        :: iter
     type(grid_t), intent(inout)                :: gr
     type(v_ks_t), intent(inout)                :: ks
     type(hamiltonian_t), intent(inout)         :: h
     type(td_t), intent(inout)                  :: td
-    type(target_t), intent(in)                 :: target
+    type(target_t), intent(inout)              :: target
     type(oct_control_parameters_t), intent(in) :: par_chi
     type(states_t), intent(inout)              :: st
-    type(states_t), intent(inout)              :: inh
+    type(states_t)                             :: inh
 
     integer :: j
     call push_sub('propagation.update_hamiltonian_chi')
 
     if(target%mode == oct_targetmode_td) then
+      call calc_inh(st, gr, target, td%dt*iter, inh)
       call hamiltonian_set_inh(h, inh)
     end if
 

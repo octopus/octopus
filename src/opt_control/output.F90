@@ -19,13 +19,16 @@
 
 
   ! ---------------------------------------------------------
-  subroutine output(iterator)
+  subroutine oct_output(iterator, gr, outp, final_st)
     type(oct_iterator_t), intent(inout) :: iterator
+    type(grid_t), intent(inout)         :: gr
+    type(output_t), intent(in)          :: outp
+    type(states_t), intent(inout)       :: final_st
 
     character(len=80)  :: filename
     integer :: iunit, loop, ierr
 
-    call push_sub('opt_control.output')
+    call push_sub('output.oct_output')
     
     iunit = io_open('opt-control/info', action='write')
     write(iunit, '(a,i4)')    'Total Iterations = ', iterator%ctr_iter
@@ -59,8 +62,10 @@
     write(filename,'(a)') 'opt-control/laser.bestJ1'
     call parameters_write(filename, iterator%best_par, fourier = .true.)
 
+    call states_output(final_st, gr, 'opt-control/final', outp)
+
     call pop_sub()
-  end subroutine output
+  end subroutine oct_output
 
 
 

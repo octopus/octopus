@@ -227,7 +227,15 @@
         write(message(2), '(a)') 'TDEvolutionMethod = crank_nicholson'
         call write_fatal(2)
       end if
-   end if
+    end if
+
+    if( .not.(h%ip_app) ) then
+      if( tr%method .ne. PROP_EXPONENTIAL_MIDPOINT ) then
+        write(message(1), '(a)') 'When doing QOCT with interacting electronsl, then you must set'
+        write(message(2), '(a)') 'TDEvolutionMethod = exp_mid'
+        call write_fatal(2)
+      end if
+    end if
       
     call pop_sub()      
   end subroutine check_faulty_runmodes

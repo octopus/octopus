@@ -151,8 +151,7 @@ contains
     end select
 
     ! Some informative output.
-    call output(iterator)
-    call states_output(psi, sys%gr, 'opt-control/final', sys%outp)
+    call oct_output(iterator, sys%gr, sys%outp, psi)
 
     ! do final test run: propagate initial state with optimal field
     call oct_finalcheck(oct, initial_st, target, iterator%best_par, sys, h, td)
@@ -182,7 +181,7 @@ contains
       ctr_loop: do
         call parameters_copy(par_prev, par)
         call f_iter(oct, sys, h, td, iterator, psi, initial_st, target, par, stop_loop)
-        call iterator_write(iterator, psi, par, sys%gr, sys%outp)
+        if(oct%dump_intermediate) call iterator_write(iterator, psi, par, sys%gr, sys%outp)
         if(clean_stop() .or. stop_loop) exit ctr_loop
         if(oct%use_mixing) then
           call parameters_mixing(iterator%ctr_iter, par_prev, par, par_new)
@@ -211,7 +210,7 @@ contains
       ctr_loop: do
         call parameters_copy(par_prev, par)
         call f_wg05(oct, sys, h, td, iterator, filter, psi, initial_st, target, par, stop_loop)
-        call iterator_write(iterator, psi, par, sys%gr, sys%outp)
+        if(oct%dump_intermediate) call iterator_write(iterator, psi, par, sys%gr, sys%outp)
         if(clean_stop() .or. stop_loop) exit ctr_loop
         if(oct%use_mixing) then
           call parameters_mixing(iterator%ctr_iter, par_prev, par, par_new)
@@ -245,7 +244,7 @@ contains
         call parameters_end(par_new)
       end if
 
-      call iterator_write(iterator, psi, par, sys%gr, sys%outp)
+      if(oct%dump_intermediate) call iterator_write(iterator, psi, par, sys%gr, sys%outp)
       stop_loop = iteration_manager(oct, sys%gr, par, td, psi, target, iterator)
 
       call parameters_copy(par_new, par)
