@@ -36,6 +36,7 @@ module td_exp_m
   public ::                 &
     td_exp_t,               &
     td_exp_init,            &
+    td_exp_copy,            &
     td_exp_end,             &
     td_exp_dt
 
@@ -55,6 +56,7 @@ module td_exp_m
 
 
 contains
+
 
   ! ---------------------------------------------------------
   subroutine td_exp_init(gr, te)
@@ -206,6 +208,21 @@ contains
       call zcf_free(te%cf)
     end if
   end subroutine td_exp_end
+
+
+  ! ---------------------------------------------------------
+  subroutine td_exp_copy(teo, tei)
+    type(td_exp_t), intent(inout) :: teo
+    type(td_exp_t), intent(in)    :: tei
+
+    teo%exp_method  = tei%exp_method
+    teo%lanczos_tol = tei%lanczos_tol
+    teo%exp_order   = tei%exp_order
+    if( (teo%exp_method == SPLIT_OPERATOR) .or. (teo%exp_method == SUZUKI_TROTTER) ) then
+      call zcf_new_from(teo%cf, tei%cf)
+    end if
+
+  end subroutine td_exp_copy
 
 
   ! ---------------------------------------------------------

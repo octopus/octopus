@@ -43,6 +43,7 @@ module td_rti_m
     td_rti_t,                 &
     td_rti_init,              &
     td_rti_end,               &
+    td_rti_copy,              &
     td_rti_run_zero_iter,     &
     td_rti_dt,                &
     td_zop,                   &
@@ -64,7 +65,6 @@ module td_rti_m
     integer           :: method         ! Which evolution method to use.
     type(td_exp_t)    :: te             ! How to apply the propagator (e^{-i H \Delta t}).
     FLOAT, pointer    :: v_old(:, :, :) ! Storage of the KS potential of previous iterations.
-
     FLOAT, pointer    :: vmagnus(:, :, :) ! Auxiliary function to store the Magnus potentials.
     type(zcf_t)       :: cf               ! Auxiliary cube for split operator methods.
     type(transport_t) :: trans            ! For transport calculations: leads, memory
@@ -82,6 +82,44 @@ module td_rti_m
 
 contains
 
+
+  ! ---------------------------------------------------------
+  subroutine td_rti_copy(tro, tri)
+    type(td_rti_t), intent(inout) :: tro
+    type(td_rti_t), intent(in)    :: tri
+    integer :: np, nspin
+
+    call push_sub('tr_rti.tr_rti_copy')
+
+    tro%method = tri%method
+
+    select case(tro%method)
+#if defined(HAVE_FFT)
+    case(PROP_SPLIT_OPERATOR)
+      call zcf_new_from(tro%cf, tri%cf)
+    case(PROP_SUZUKI_TROTTER)
+      call zcf_new_from(tro%cf, tri%cf)
+#endif
+    case(PROP_MAGNUS)
+      np = size(tri%vmagnus, 1)
+      nspin = size(tri%vmagnus, 2)
+      ALLOCATE(tro%vmagnus(np, nspin, 2), np*nspin*2)
+    case(PROP_CRANK_NICHOLSON_SRC_MEM)
+      message(1) = 'Internal error at td_rti_copy'
+      call write_fatal(1)
+    end select
+
+    np = size(tri%v_old, 1)
+    nspin = size(tri%v_old, 2)
+    ALLOCATE(tro%v_old(np, nspin, 0:3), np*nspin*(3+1))
+    tro%v_old(:, :, :) = M_ZERO
+
+    call td_exp_copy(tro%te, tri%te)
+
+    call pop_sub()
+  end subroutine td_rti_copy
+
+
   ! ---------------------------------------------------------
   subroutine td_rti_init(gr, st, tr, dt, max_iter)
     type(grid_t),   intent(in)    :: gr
@@ -89,6 +127,8 @@ contains
     type(td_rti_t), intent(inout) :: tr
     FLOAT,          intent(in)    :: dt
     integer,        intent(in)    :: max_iter
+
+    call push_sub('td_rti.td_rti_init')
 
     !%Variable TDEvolutionMethod
     !%Type integer
@@ -267,6 +307,8 @@ contains
     ALLOCATE(tr%v_old(NP, st%d%nspin, 0:3), NP*st%d%nspin*(3+1))
     tr%v_old(:, :, :) = M_ZERO
     call td_exp_init(gr, tr%te)             ! initialize propagator
+
+    call pop_sub()
   end subroutine td_rti_init
 
 

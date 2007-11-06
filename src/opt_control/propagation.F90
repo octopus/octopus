@@ -180,18 +180,20 @@ module opt_control_propagation_m
 
     integer :: i
     logical :: aux_fwd_propagation
-    type(states_t) :: psi2, inh
+    type(states_t) :: psi2
     type(oct_control_parameters_t) :: par_prev
     type(grid_t), pointer :: gr
+    type(td_rti_t) :: tr_chi
+    type(td_rti_t) :: tr_psi2
 
     call push_sub('propagation.fwd_step')
 
     gr => sys%gr
-    aux_fwd_propagation = (target%mode == oct_targetmode_td .or. (.not.h%ip_app))
+    call td_rti_copy(tr_chi, td%tr)
 
+    aux_fwd_propagation = (target%mode == oct_targetmode_td .or. (.not.h%ip_app))
     if(aux_fwd_propagation) then
       call states_copy(psi2, psi)
-      call states_copy(inh, psi)
       call parameters_copy(par_prev, par)
     end if
     
@@ -200,21 +202,25 @@ module opt_control_propagation_m
     call states_calc_dens(psi, NP_PART, psi%rho)
     call v_ks_calc(gr, sys%ks, h, psi)
     call td_rti_run_zero_iter(h, td%tr)
+    call td_rti_run_zero_iter(h, tr_chi)
+    if(aux_fwd_propagation) then
+      call td_rti_copy(tr_psi2, td%tr)
+      call td_rti_run_zero_iter(h, tr_psi2)
+    end if
 
     message(1) = "Info: Propagating forward"
     call write_info(1)
 
     do i = 1, td%max_iter
       if(aux_fwd_propagation) then
-        write(71, '(a,i6.2f20.12)') 'FWD_STEP', i, zstates_dotp(gr%m, 1, chi%zpsi(:, :, 1, 1), chi%zpsi(:, :, 1, 1))
         call update_hamiltonian_psi(i, gr, sys%ks, h, td, target, par_prev, psi2)
-        call prop_iter(i, gr, sys%ks, h, td, psi2)
+        call td_rti_dt(sys%ks, h, gr, psi2, tr_psi2, i*td%dt, td%dt, td%max_iter)
       end if
       call update_field(oct, i, par, gr, td, h, psi, chi, par_chi, dir = 'f')
       call update_hamiltonian_chi(i, gr, sys%ks, h, td, target, par_chi, psi2)
-      call prop_iter(i, gr, sys%ks, h, td, chi)
+      call td_rti_dt(sys%ks, h, gr, chi, tr_chi, i*td%dt, td%dt, td%max_iter)
       call update_hamiltonian_psi(i, gr, sys%ks, h, td, target, par, psi)
-      call prop_iter(i, gr, sys%ks, h, td, psi)
+      call td_rti_dt(sys%ks, h, gr, psi, td%tr, i*td%dt, td%dt, td%max_iter)
       if(target%mode == oct_targetmode_td) call calc_tdfitness(target, gr, psi, i) 
     end do
 
@@ -223,10 +229,11 @@ module opt_control_propagation_m
 
     if(target%mode == oct_targetmode_td .or. (.not.h%ip_app) ) then
       call states_end(psi2)
-      call states_end(inh)
       call parameters_end(par_prev)
     end if
-    nullify(gr)
+
+    if(aux_fwd_propagation) call td_rti_end(tr_psi2)
+    call td_rti_end(tr_chi)
     call pop_sub()
   end subroutine fwd_step
 
@@ -241,11 +248,11 @@ module opt_control_propagation_m
   ! |chi> --> U[par_chi](0, T)|chi>
   ! --------------------------------------------------------
   subroutine bwd_step(oct, sys, td, h, target, par, par_chi, chi, psi) 
-    type(oct_t), intent(in) :: oct
-    type(system_t), intent(inout) :: sys
+    type(oct_t), intent(in)                       :: oct
+    type(system_t), intent(inout)                 :: sys
     type(td_t), intent(inout)                     :: td
     type(hamiltonian_t), intent(inout)            :: h
-    type(target_t), intent(inout)          :: target
+    type(target_t), intent(inout)                 :: target
     type(oct_control_parameters_t), intent(in)    :: par
     type(oct_control_parameters_t), intent(inout) :: par_chi
     type(states_t), intent(inout)                 :: chi
@@ -253,7 +260,7 @@ module opt_control_propagation_m
 
     integer :: i
     type(grid_t), pointer :: gr
-    type(states_t) :: inh
+    type(td_rti_t) :: tr_chi
 
     call push_sub('propagation.bwd_step')
 
@@ -262,27 +269,27 @@ module opt_control_propagation_m
 
     gr => sys%gr
 
+    call td_rti_copy(tr_chi, td%tr)
+
     call states_calc_dens(psi, NP_PART, psi%rho)
     call v_ks_calc(gr, sys%ks, h, psi)
     call td_rti_run_zero_iter(h, td%tr)
-
-    if(target%mode == oct_targetmode_td) call states_copy(inh, chi)
+    call td_rti_run_zero_iter(h, tr_chi)
 
     td%dt = -td%dt
     do i = td%max_iter, 1, -1
-      write(72, '(a,i6.2f20.12)') 'FWD_STEP', i, zstates_dotp(gr%m, 1, chi%zpsi(:, :, 1, 1), chi%zpsi(:, :, 1, 1))
       call update_field(oct, i, par_chi, gr, td, h, psi, chi, par, dir = 'b')
       call update_hamiltonian_chi(i-1, gr, sys%ks, h, td, target, par_chi, psi)
-      call prop_iter(i-1, gr, sys%ks, h, td, chi)
+      call td_rti_dt(sys%ks, h, gr, chi, tr_chi, abs((i-1)*td%dt), td%dt, td%max_iter)
       call update_hamiltonian_psi(i-1, gr, sys%ks, h, td, target, par, psi)
-      call prop_iter(i-1, gr, sys%ks, h, td, psi)
+      call td_rti_dt(sys%ks, h, gr, psi, td%tr, abs((i-1)*td%dt), td%dt, td%max_iter)
     end do
     td%dt = -td%dt
 
     call states_calc_dens(psi, NP_PART, psi%rho)
     call v_ks_calc(gr, sys%ks, h, psi)
 
-    call states_end(inh)
+    call td_rti_end(tr_chi)
     call pop_sub()
   end subroutine bwd_step
 
@@ -361,27 +368,6 @@ module opt_control_propagation_m
     end if
 
   end subroutine update_hamiltonian_psi
-
-
-  ! ----------------------------------------------------------
-  ! Performs one propagation step:
-  ! o If td%dt > 0, from iter*td%dt-td%dt to iter*td%dt
-  ! o If td%dt < 0, from iter*|td%dt|+|td%dt| to iter*|td%dt|
-  ! ----------------------------------------------------------
-  subroutine prop_iter(iter, gr, ks, h, td, st)
-    integer, intent(in)                        :: iter
-    type(grid_t), intent(inout)                :: gr
-    type(v_ks_t), intent(inout)                :: ks
-    type(hamiltonian_t), intent(inout)         :: h
-    type(td_t), intent(inout)                  :: td
-    type(states_t), intent(inout)              :: st
-
-    call push_sub('propagation.prop_iter')
-
-    call td_rti_dt(ks, h, gr, st, td%tr, abs(iter*td%dt), td%dt, td%max_iter)
-
-    call pop_sub()
-  end subroutine prop_iter
 
 
   ! ---------------------------------------------------------
