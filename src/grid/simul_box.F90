@@ -24,6 +24,7 @@ module simul_box_m
   use geometry_m
   use global_m
   use io_m
+  use lalg_basic_m
   use lib_oct_m
   use lib_oct_parser_m
   use math_m
@@ -72,8 +73,9 @@ module simul_box_m
     C_POINTER           :: image    ! for the box defined through an image
     character(len=1024) :: user_def ! for the user defined box
 
-    FLOAT :: rlat(3,3)      ! lattice primitive vectors
-    FLOAT :: klat(3,3)      ! reciprocal lattice primitive vectors
+    FLOAT :: rlattice(3,3)      ! lattice primitive vectors
+    FLOAT :: klattice(3,3)      ! reciprocal lattice primitive vectors
+    FLOAT :: rcell_volume       ! the volume of the cell in real space
     FLOAT :: shift(27,3)    ! shift to equivalent positions in nearest neighbour primitive cells
 
     FLOAT :: fft_alpha      ! enlargement factor for double box
@@ -104,7 +106,6 @@ module simul_box_m
     integer :: asympt_uc_st_nik           ! states nik in the asymptotic unit cell
 
     integer :: scatt_box_central_units
-
   end type simul_box_t
 
   interface operator(.eq.)
@@ -640,15 +641,44 @@ contains
 
     !--------------------------------------------------------------
     subroutine build_lattice()
+      C_POINTER :: blk
+      FLOAT :: norm
+      integer :: idim, jdim
 
       call push_sub('simul_box.build_lattice')
-      ! build primitive vectors (only simple cubic, tetra, or orthororhombic )
-      sb%rlat = M_ZERO
-      sb%klat = M_ZERO
-      do i = 1, sb%dim
-        sb%rlat(i,i) = 2*sb%lsize(i)
-        sb%klat(i,i) = M_PI/sb%lsize(i)
+
+      !%Variable LatticeVectors
+      !%Type block
+      !%Section Mesh::Simulation Box
+      !%Description
+      !% <tt>%Spacing
+      !% <br>&nbsp;&nbsp;1.0 | 0.0 | 0.0
+      !% <br>&nbsp;&nbsp;0.0 | 1.0 | 0.0
+      !% <br>&nbsp;&nbsp;0.0 | 0.0 | 1.0
+      !% <br>%</tt>
+      !%End
+
+      sb%rlattice = M_ZERO
+      do idim = 1, MAX_DIM
+        sb%rlattice(idim, idim) = M_ONE
       end do
+
+      if (loct_parse_block(check_inp('LatticeVectors'), blk) == 0) then 
+        do idim = 1, sb%dim
+          do jdim = 1, sb%dim
+            call loct_parse_block_float(blk, idim - 1,  jdim - 1, sb%rlattice(jdim, idim))
+          end do
+        end do
+      end if
+
+      do idim = 1, sb%dim
+        norm = lalg_nrm2(sb%dim, sb%rlattice(1:sb%dim, idim))
+        do jdim = 1, sb%dim
+          sb%rlattice(jdim, idim) = sb%rlattice(jdim, idim) / norm * M_TWO * sb%lsize(idim)
+        end do
+      end do
+
+      call reciprocal_lattice(sb%rlattice, sb%klattice, sb%rcell_volume)
 
       ! build shifts to nearest neighbour primitive cells
       ii = (/0,-1,1/)
@@ -657,9 +687,9 @@ contains
       do iz = 1, 3
         do iy = 1, 3
           do ix = 1, 3
-            sb%shift(i,1)=ii(ix)*sb%rlat(1,1)
-            sb%shift(i,2)=ii(iy)*sb%rlat(2,2)
-            sb%shift(i,3)=ii(iz)*sb%rlat(3,3)
+            sb%shift(i,1)=ii(ix)*sb%rlattice(1,1)
+            sb%shift(i,2)=ii(iy)*sb%rlattice(2,2)
+            sb%shift(i,3)=ii(iz)*sb%rlattice(3,3)
             i = i + 1
           end do
         end do
@@ -670,6 +700,28 @@ contains
 
   end subroutine simul_box_init
 
+  subroutine reciprocal_lattice(rv, kv, volume)
+    FLOAT, intent(in)    :: rv(MAX_DIM, MAX_DIM)
+    FLOAT, intent(out)   :: kv(MAX_DIM, MAX_DIM)
+    FLOAT, intent(out)   :: volume
+    
+    integer :: idim
+    FLOAT :: tmp(1:MAX_DIM)
+
+ 
+    tmp = dcross_product(rv(:, 2), rv(:, 3)) 
+    volume = dot_product(rv(:, 1), tmp)
+
+    if ( volume < M_ZERO ) then 
+      message(1) = "Your lattice vectors form a left-handed system"
+      call write_fatal(1)
+    end if
+
+    kv(:, 1) = M_TWO*M_PI/volume * dcross_product(rv(:, 2), rv(:, 3))
+    kv(:, 2) = M_TWO*M_PI/volume * dcross_product(rv(:, 3), rv(:, 1))
+    kv(:, 3) = M_TWO*M_PI/volume * dcross_product(rv(:, 1), rv(:, 2))
+    
+  end subroutine reciprocal_lattice
 
   !--------------------------------------------------------------
   subroutine simul_box_end(sb)
@@ -723,21 +775,21 @@ contains
         sb%lsize(3)/units_out%length%factor, ')'
     end if
 
-    write(message(1), '(a,i1,a)') 'The octopus will run in ', sb%dim, ' dimension(s).'
-    write(message(2), '(a,i1,a)') 'The octopus will treat the system as periodic in ', &
+    write(message(1), '(a,i1,a)') '  Octopus will run in ', sb%dim, ' dimension(s).'
+    write(message(2), '(a,i1,a)') '  Octopus will treat the system as periodic in ', &
       sb%periodic_dim, ' dimension(s).'
     call write_info(2, iunit)
 
     if(sb%periodic_dim > 0) then
       write(message(1),'(1x)')
-      write(message(2),'(a,3a,a)') 'Lattice Primitive Vectors [', trim(units_out%length%abbrev), ']'
-      write(message(3),'(a,f8.3)') '    x axis ', sb%rlat(1,1)/units_out%length%factor
-      write(message(4),'(a,f8.3)') '    y axis ', sb%rlat(2,2)/units_out%length%factor
-      write(message(5),'(a,f8.3)') '    z axis ', sb%rlat(3,3) /units_out%length%factor
-      write(message(6),'(a,3a,a)') 'Reciprocal Lattice Primitive Vectors [', trim(units_out%length%abbrev), '^-1]'
-      write(message(7),'(a,f8.3)') '  k_x axis ', sb%klat(1,1)*units_out%length%factor
-      write(message(8),'(a,f8.3)') '  k_y axis ', sb%klat(2,2)*units_out%length%factor
-      write(message(9),'(a,f8.3)') '  k_z axis ', sb%klat(3,3)*units_out%length%factor
+      write(message(2),'(a,3a,a)') '  Lattice Vectors [', trim(units_out%length%abbrev), ']'
+      write(message(3),'(3f12.6)')   sb%rlattice(:,1)/units_out%length%factor
+      write(message(4),'(3f12.6)')   sb%rlattice(:,2)/units_out%length%factor
+      write(message(5),'(3f12.6)')   sb%rlattice(:,3)/units_out%length%factor
+      write(message(6),'(a,3a,a)') '  Reciprocal Lattice Vectors [', trim(units_out%length%abbrev), '^-1]'
+      write(message(7),'(3f12.6)')   sb%klattice(:,1)/units_out%length%factor
+      write(message(8),'(3f12.6)')   sb%klattice(:,2)/units_out%length%factor
+      write(message(9),'(3f12.6)')   sb%klattice(:,3)/units_out%length%factor
       call write_info(9, iunit)
     end if
 
@@ -931,8 +983,8 @@ contains
     sbout%lsize                   = sbin%lsize
     sbout%image                   = sbin%image
     sbout%user_def                = sbin%user_def
-    sbout%rlat                    = sbin%rlat
-    sbout%klat                    = sbin%klat
+    sbout%rlattice                = sbin%rlattice
+    sbout%klattice                = sbin%klattice
     sbout%shift                   = sbin%shift
     sbout%fft_alpha               = sbin%fft_alpha
     sbout%dim                     = sbin%dim

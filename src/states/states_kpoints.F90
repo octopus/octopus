@@ -183,7 +183,7 @@ subroutine states_choose_kpoints(d, sb, geo)
       ALLOCATE(d%kweights  (d%nik),   d%nik)
       d%kpoints     = M_ZERO
       d%kweights    = M_ONE
-      kmax          = (M_ONE - coi*M_HALF)*sb%klat(1,1)
+      kmax          = (M_ONE - coi*M_HALF)*sb%klattice(1,1)
       total_weight  = M_ZERO
 
       do i = 1, d%nik
@@ -218,12 +218,12 @@ subroutine states_choose_kpoints(d, sb, geo)
   end do
 
   do i = 1, sb%dim
-    coorat(:,:,i) = coorat(:,:,i) / sb%rlat(i, i) + M_HALF
+    coorat(:,:,i) = coorat(:,:,i) / sb%rlattice(i, i) + M_HALF
   end do
 
   if (full_ws_cell) then
     ! find out how many points we have inside the Wigner-Seitz cell
-    nkmax = points_inside_ws_cell(sb%periodic_dim, d%nik_axis, sb%klat) 
+    nkmax = points_inside_ws_cell(sb%periodic_dim, d%nik_axis, sb%klattice) 
 
     write(message(1), '(a,i5)' ) 'Info: Total number of k-points inside Wigner-Seitz cell:', nkmax
     call write_info(1)
@@ -232,7 +232,7 @@ subroutine states_choose_kpoints(d, sb, geo)
     ALLOCATE(kw(nkmax), nkmax)
 
     ! get kpoints
-    call get_points_in_ws_cell(sb%periodic_dim, d%nik_axis, sb%klat, kp) 
+    call get_points_in_ws_cell(sb%periodic_dim, d%nik_axis, sb%klattice, kp) 
 
     ! equal weights for all points
     nk = nkmax
@@ -243,7 +243,7 @@ subroutine states_choose_kpoints(d, sb, geo)
 
     ! choose k-points according to Monkhorst-Pack scheme
     ! all points are equal, but some are more equal than others :)
-    call crystal_init(sb%rlat, geo%nspecies, natom, geo%natoms, coorat, d%nik_axis, &
+    call crystal_init(sb%rlattice, geo%nspecies, natom, geo%natoms, coorat, d%nik_axis, &
       kshifts, nk, nkmax, kp, kw)
   end if
 
@@ -254,7 +254,7 @@ subroutine states_choose_kpoints(d, sb, geo)
     ALLOCATE(d%kpoints(3, d%nik), 3*d%nik)
     ALLOCATE(d%kweights  (d%nik),   d%nik)
     do i = 1, 3
-      d%kpoints(i,:) = kp(i,:)*sb%klat(i,i)
+      d%kpoints(i,:) = kp(i,:)*sb%klattice(i,i)
     end do
     d%kweights = kw
   case(2)
@@ -262,8 +262,8 @@ subroutine states_choose_kpoints(d, sb, geo)
     ALLOCATE(d%kpoints(3, d%nik), 3*d%nik)
     ALLOCATE(d%kweights  (d%nik),   d%nik)
     do i = 1,3
-      d%kpoints(i,::2)  = kp(i,:)*sb%klat(i,i)
-      d%kpoints(i,2::2) = kp(i,:)*sb%klat(i,i)
+      d%kpoints(i,::2)  = kp(i,:)*sb%klattice(i,i)
+      d%kpoints(i,2::2) = kp(i,:)*sb%klattice(i,i)
     end do
     d%kweights(::2)  = kw(:)
     d%kweights(2::2) = kw(:)
@@ -322,10 +322,10 @@ end subroutine kpoints_write_info
 
 
 ! ---------------------------------------------------------
-subroutine get_points_in_ws_cell(dim, nik_axis, klat, kp) 
+subroutine get_points_in_ws_cell(dim, nik_axis, klattice, kp) 
   integer, intent(in) :: dim
   integer, intent(in) :: nik_axis(:)
-  FLOAT,   intent(in) :: klat(:,:)
+  FLOAT,   intent(in) :: klattice(:,:)
   FLOAT,  intent(out) :: kp(:,:)
 
   integer :: ix, iy, iz, inik, iunit, ik(3), id
@@ -347,14 +347,14 @@ subroutine get_points_in_ws_cell(dim, nik_axis, klat, kp)
         ik = (/ ix, iy, iz /)
 
         do id = 1, dim
-          k_point(id) = -klat(id, id) + ik(id) * ( M_TWO*klat(id, id) / (nik_axis(id) - 1) ) 
+          k_point(id) = -klattice(id, id) + ik(id) * ( M_TWO*klattice(id, id) / (nik_axis(id) - 1) ) 
         end do
 
-        if (in_wigner_seitz_cell(k_point, klat)) then
+        if (in_wigner_seitz_cell(k_point, klattice)) then
           ! return a scaled point (to be compatible with crystal_init)
           kp(:, inik) = M_ZERO
           do id = 1, dim
-            kp(id, inik) = k_point(id)/klat(id, id)
+            kp(id, inik) = k_point(id)/klattice(id, id)
           end do
           write(message(1),'(i4, 6f18.12)') inik, k_point(:), kp(:, inik)
           call write_info(1, iunit)
@@ -372,10 +372,10 @@ end subroutine get_points_in_ws_cell
 
 
 ! ---------------------------------------------------------
-integer function points_inside_ws_cell(dim, nik_axis, klat) result(no_of_points)
+integer function points_inside_ws_cell(dim, nik_axis, klattice) result(no_of_points)
   integer, intent(in) :: dim
   integer, intent(in) :: nik_axis(:)
-  FLOAT,   intent(in) :: klat(:,:)
+  FLOAT,   intent(in) :: klattice(:,:)
 
   integer :: ix, iy, iz, inik, ik(3), id
   FLOAT   :: k_point(3)
@@ -394,10 +394,10 @@ integer function points_inside_ws_cell(dim, nik_axis, klat) result(no_of_points)
         ik = (/ ix, iy, iz /)
 
         do id = 1, dim
-          k_point(id) = -klat(id, id) + ik(id) * ( M_TWO*klat(id, id) / (nik_axis(id) - 1) ) 
+          k_point(id) = -klattice(id, id) + ik(id) * ( M_TWO*klattice(id, id) / (nik_axis(id) - 1) ) 
         end do
 
-        if (in_wigner_seitz_cell(k_point, klat)) inik = inik + 1
+        if (in_wigner_seitz_cell(k_point, klattice)) inik = inik + 1
 
       end do
     end do
@@ -410,9 +410,9 @@ end function points_inside_ws_cell
 
 
 ! ---------------------------------------------------------
-logical function in_wigner_seitz_cell(k_point, klat) result(in_cell)
+logical function in_wigner_seitz_cell(k_point, klattice) result(in_cell)
   FLOAT, intent(in) :: k_point(:)
-  FLOAT, intent(in) :: klat(:,:)
+  FLOAT, intent(in) :: klattice(:,:)
 
   integer, allocatable :: bragg_normal(:,:)
   integer :: ib, ws_cell_type
@@ -428,7 +428,7 @@ logical function in_wigner_seitz_cell(k_point, klat) result(in_cell)
 
   ! Warning: currently the routine allows only for cubic systems
   ! Tetragonal, orthorombic and monoclinic systems are excluded
-  asize = klat(1, 1)
+  asize = klattice(1, 1)
 
   half_dist(:) = (/               &
     asize/M_TWO,                  &  ! cube

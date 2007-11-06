@@ -1564,7 +1564,7 @@ contains
     ! define the scaling factor to output k_i/G_i, instead of k_i
     do i = 1, MAX_DIM
       factor(i) = M_ONE
-      if (sb%klat(i,i) /= M_ZERO) factor(i) = sb%klat(i,i)      
+      if (sb%klattice(i,i) /= M_ZERO) factor(i) = sb%klattice(i,i)
     end do
 
     if (gnuplot_mode) then
@@ -1803,7 +1803,7 @@ contains
     ! define the scaling factor to output k_i/G_i, instead of k_i
     do i = 1, MAX_DIM
       factor(i) = M_ONE
-      if (sb%klat(i,i) /= M_ZERO) factor(i) = sb%klat(i,i)
+      if (sb%klattice(i,i) /= M_ZERO) factor(i) = sb%klattice(i,i)
     end do
 
     ! write fermi energy in a format that can be used together 

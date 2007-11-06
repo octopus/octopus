@@ -582,13 +582,7 @@ contains
       n_el = n_el + dmf_integrate(gr%m, st%rho(1:NP,ispin))
     end do
     
-    vol = M_ONE
-    do i = 1, NDIM
-      ! This only holds for a parallelepipedal box
-      vol = vol*gr%sb%rlat(i,i)
-    end do
-    
-    omega2 = M_FOUR*M_PI*P_c*n_el/vol
+    omega2 = M_FOUR*M_PI*P_c*n_el/gr%sb%rcell_volume
     !call calc_paramagnetic_current(gr, st, jp)
     
     ! DEBUG
