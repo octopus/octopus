@@ -23,7 +23,7 @@ subroutine states_choose_kpoints(d, sb, geo)
   type(simul_box_t),  intent(in)    :: sb
   type(geometry_t),   intent(in)    :: geo
 
-  integer   :: coi, i, nkmax
+  integer   :: coi, i, nkmax, ik, idim
   C_POINTER :: blk
   FLOAT     :: total_weight, kmax
 
@@ -35,6 +35,8 @@ subroutine states_choose_kpoints(d, sb, geo)
   FLOAT, allocatable :: coorat(:,:,:)   ! coorat(i,j,k) is the k-th component (lattice coordinates)
   ! of the position of the j-th atom of type i.
   FLOAT, allocatable :: kp(:,:),kw(:)
+
+  logical :: got_kpoints
 
   call push_sub('states_kpoints.states_choose_kpoints')
 
@@ -59,26 +61,75 @@ subroutine states_choose_kpoints(d, sb, geo)
     return
   end if
 
-  !%Variable NumberKPoints
+  !%Variable KPoints
+  !%Type block
+  !%Section States
+  !%Description
+  !% This block defines an explicit set of kpoints and its weights for
+  !% a periodic system calculation. The first column are the weights
+  !% of each kpoint and the following are the components of the k
+  !% point vector, you only need to specify the components for the
+  !% periodic directions.
+  !%
+  !% <tt>%KPoints
+  !% <br>&nbsp;&nbsp;2.0 | 1 | 0 | 0
+  !% <br>%</tt>
+  !%
+  !%End
+
+  if(loct_parse_block(check_inp('KPoints'), blk) == 0) then
+
+    if (d%ispin == 2) then
+      message(1) = 'Not implemented yet.'
+      call write_fatal(1)
+    end if
+
+    !we have a block with the kpoints given explicitily
+    d%nik = loct_parse_block_n(blk)
+    write(message(1), '(a,i4,a)') 'Input: ', d%nik, ' K Points will be read from the input file'
+    call write_info(1)
+
+    ALLOCATE(d%kpoints(MAX_DIM, d%nik), MAX_DIM*d%nik)
+    ALLOCATE(d%kweights(d%nik), d%nik)
+
+    d%kpoints = M_ZERO
+
+    do ik = 1, d%nik
+      call loct_parse_block_float(blk, ik - 1, 0, d%kweights(ik))
+      do idim = 1, sb%periodic_dim
+        call loct_parse_block_float(blk, ik - 1, idim, d%kpoints(idim, ik))
+      end do
+    end do
+
+    call print_kpoints_debug
+    call pop_sub()
+    return
+  end if
+
+  !%Variable KPointsMP
   !%Type block
   !%Default 1,1,1
   !%Section States
   !%Description
   !% A triplet of integers defining the number of kpoints to be used
   !% along each direction in the reciprocal space.
-  !% The numbers refer to the whole BZ, and the actual number of kpoints
-  !% is usually reduced exploiting the symmetries of the system
+  !%
+  !% The numbers refer to the whole BZ, and the actual number of
+  !% kpoints is usually reduced exploiting the symmetries of the
+  !% system. An (optional) second row can specify a shift in the K
+  !% points.
+  !%
   !% For example, the following input samples the BZ with 100 points in the 
   !% xy plane of the reciprocal space
   !%
-  !% <tt>%NumberKPoints
+  !% <tt>%KPointsMP
   !% <br>&nbsp;&nbsp;10 | 10 | 1
   !% <br>%</tt>
   !%
   !%End
 
-  if(loct_parse_block(check_inp('NumberKPoints'), blk) .ne. 0) then
-    message(1) = 'Block "NumberKPoints" not found in input file.'
+  if(loct_parse_block(check_inp('KPointsMP'), blk) .ne. 0) then
+    message(1) = 'The system is periodic and neither the KPoints or KPointsMP blocks have been given.'
     call write_fatal(1)
   end if
 
@@ -86,30 +137,21 @@ subroutine states_choose_kpoints(d, sb, geo)
   do i = 1, sb%periodic_dim
     call loct_parse_block_int(blk, 0, i-1, d%nik_axis(i))
   end do
-  call loct_parse_block_end(blk)
   if (any(d%nik_axis < 1)) then
-    message(1) = 'Input: NumberKPoints is not valid'
-    message(2) = '(NumberKPoints >= 1)'
+    message(1) = 'Input: KPointsMP is not valid'
+    message(2) = '(KPointsMP >= 1)'
     call write_fatal(2)
   end if
   nkmax = PRODUCT(d%nik_axis)
 
-  !%Variable ShiftKpoints
-  !%Type block
-  !%Default 0.0,0.0,0.0
-  !%Section States
-  !%Description
-  !% A triplet of real numbers to shift the Monkhorst-Pack k-points grid from its default position
-  !%End
+  kshifts = M_ZERO
 
-  if(loct_parse_block(check_inp('ShiftKPoints'), blk) .ne. 0) then
-    kshifts = M_ZERO
-  else
+  if(loct_parse_block_n(blk) > 1) then ! we have a shift
     do i = 1, sb%periodic_dim
-      call loct_parse_block_float(blk, 0, i-1, kshifts(i))
+      call loct_parse_block_float(blk, 1, i-1, kshifts(i))
     end do
-    call loct_parse_block_end(blk)
   end if
+  call loct_parse_block_end(blk)
 
   !%Variable FullWignerSeitzCell
   !%Type logical
@@ -157,6 +199,7 @@ subroutine states_choose_kpoints(d, sb, geo)
         call write_fatal(1)
       end if
 
+      call print_kpoints_debug
       call pop_sub()
       return
     end if
@@ -229,7 +272,27 @@ subroutine states_choose_kpoints(d, sb, geo)
   deallocate(natom, coorat)
   deallocate(kp, kw)
 
+  call print_kpoints_debug
   call pop_sub()
+
+contains
+  subroutine print_kpoints_debug
+    integer :: iunit, ik
+
+    if(in_debug_mode) then
+      
+      iunit = io_open('debug/kpoints', action = 'write')
+      
+      do ik = 1, d%nik
+        write(iunit, '(4e30.20)') d%kweights(ik), d%kpoints(:, ik)
+      end do
+      
+      call io_close(iunit)
+
+    end if
+
+  end subroutine print_kpoints_debug
+
 end subroutine states_choose_kpoints
 
 

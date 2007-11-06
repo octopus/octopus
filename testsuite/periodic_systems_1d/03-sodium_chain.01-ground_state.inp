@@ -32,7 +32,7 @@ BoxShape = parallelepiped
  0.3 | 0.3 | 0.3
 %
 
-%NumberKPoints
+%KPointsMP
  10 | 1 | 1
 %
 
