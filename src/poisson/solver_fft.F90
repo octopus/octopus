@@ -25,6 +25,7 @@ module poisson_fft_m
   use global_m
   use lib_oct_m
   use lib_oct_parser_m
+  use math_m
   use mesh_m
   use messages_m
   use mpi_m
@@ -72,17 +73,17 @@ contains
 #if defined(HAVE_FFT)
     type(loct_spline_t) :: cylinder_cutoff_f
     FLOAT, allocatable :: x(:), y(:)
-    integer :: ix, iy, iz, ixx(MAX_DIM), db(MAX_DIM), k, ngp
+    integer :: ix, iy, iz, ixx(MAX_DIM), db(MAX_DIM), k, ngp 
     FLOAT :: temp(MAX_DIM), modg2, xmax
-    FLOAT :: gpar, gperp, gx, gy, gz, r_c
+    FLOAT :: gpar, gperp, gx, gy, gz, r_c, gg(MAX_DIM)
     FLOAT :: DELTA_R = CNST(1.0e-12)
 
     ! double the box to perform the fourier transforms
     if(poisson_solver.ne.FFT_CORRECTED) then
-       call mesh_double_box(gr%sb, gr%m, db)                 ! get dimensions of the double box
-       if (poisson_solver == FFT_SPH) db(:) = maxval(db)
+      call mesh_double_box(gr%sb, gr%m, db)                 ! get dimensions of the double box
+      if (poisson_solver == FFT_SPH) db(:) = maxval(db)
     else
-       db(:) = gr%m%l(:)
+      db(:) = gr%m%l(:)
     end if
 
     call dcf_new(db, fft_cf)    ! allocate cube function where we will perform
@@ -90,18 +91,18 @@ contains
     db = fft_cf%n               ! dimensions may have been optimized
 
     if (poisson_solver <= FFT_PLA .and. poisson_solver .ne. FFT_CORRECTED) then
-       call loct_parse_float(check_inp('PoissonCutoffRadius'),&
-            maxval(db(:)*gr%m%h(:)/M_TWO)/units_inp%length%factor , r_c)
-       r_c = r_c*units_inp%length%factor
-       write(message(1),'(3a,f12.6)')'Info: Poisson Cutoff Radius [',  &
-            trim(units_out%length%abbrev), '] = ',       &
-            r_c/units_out%length%factor
-       call write_info(1)
-       if ( r_c > maxval(db(:)*gr%m%h(:)/M_TWO) + DELTA_R) then
-          message(1) = 'Poisson cutoff radius is larger than cell size.'
-          message(2) = 'You can see electrons in next cell(s).'
-          call write_warning(2)
-       end if
+      call loct_parse_float(check_inp('PoissonCutoffRadius'),&
+        maxval(db(:)*gr%m%h(:)/M_TWO)/units_inp%length%factor , r_c)
+      r_c = r_c*units_inp%length%factor
+      write(message(1),'(3a,f12.6)')'Info: Poisson Cutoff Radius [',  &
+        trim(units_out%length%abbrev), '] = ',       &
+        r_c/units_out%length%factor
+      call write_info(1)
+      if ( r_c > maxval(db(:)*gr%m%h(:)/M_TWO) + DELTA_R) then
+        message(1) = 'Poisson cutoff radius is larger than cell size.'
+        message(2) = 'You can see electrons in next cell(s).'
+        call write_warning(2)
+      end if
     end if
 
     ! store the fourier transform of the Coulomb interaction
@@ -136,66 +137,68 @@ contains
         do iz = 1, db(3)
           ixx(3) = pad_feq(iz, db(3), .true.)
 
-             modg2 = sum((temp(:)*ixx(:))**2)
-             if(modg2 /= M_ZERO) then
-                select case(poisson_solver)
-                case(FFT_SPH)
-                   fft_Coulb_FS(ix, iy, iz) = poisson_cutoff_sphere(sqrt(modg2),r_c)/modg2
+          gg(:) = temp(:)*ixx(:)
+          modg2 = sum(gg(:)**2)
 
-                case(FFT_CYL)
-                   gperp = sqrt((temp(2)*ixx(2))**2+(temp(3)*ixx(3))**2)
-                   if (gr%sb%periodic_dim==1) then
-                     fft_Coulb_FS(ix, iy, iz) = poisson_cutoff_inf_cylinder(abs(gx), gperp, r_c)/modg2
+          if(modg2 /= M_ZERO) then
+            select case(poisson_solver)
+            case(FFT_SPH)
+              fft_Coulb_FS(ix, iy, iz) = poisson_cutoff_sphere(sqrt(modg2),r_c)/modg2
 
-                   else if (gr%sb%periodic_dim==0) then
-                     gy = temp(2)*ixx(2)
-                     gz = temp(3)*ixx(3)
-                     if ((gz >= M_ZERO) .and. (gy >= M_ZERO)) then
-                       fft_Coulb_FS(ix, iy, iz) = loct_splint(cylinder_cutoff_f, gperp)
-                     end if
-                     if ((gz >= M_ZERO) .and. (gy < M_ZERO)) then
-                       fft_Coulb_FS(ix, iy, iz) = fft_Coulb_FS(ix, -ixx(2) + 1, iz)
-                     end if
-                     if ((gz < M_ZERO) .and. (gy >= M_ZERO)) then
-                       fft_Coulb_FS(ix, iy, iz) = fft_Coulb_FS(ix, iy, -ixx(3) + 1)
-                     end if
-                     if ((gz < M_ZERO) .and. (gy < M_ZERO) ) then
-                       fft_Coulb_FS(ix, iy, iz) = fft_Coulb_FS(ix, -ixx(2) + 1, -ixx(3) + 1)
-                     end if
-                   end if
+            case(FFT_CYL)
+              gperp = hypot(gg(2), gg(3))
+              if (gr%sb%periodic_dim==1) then
+                fft_Coulb_FS(ix, iy, iz) = poisson_cutoff_inf_cylinder(abs(gx), gperp, r_c)/modg2
 
-                 case(FFT_PLA)
-                   gz = abs(temp(3)*ixx(3))
-                   gpar = sqrt((temp(1)*ixx(1))**2+(temp(2)*ixx(2))**2)
-                   fft_Coulb_FS(ix, iy, iz) = poisson_cutoff_slab(gpar,gz,r_c)/modg2
+              else if (gr%sb%periodic_dim==0) then
+                gy = gg(2)
+                gz = gg(3)
+                if ((gz >= M_ZERO) .and. (gy >= M_ZERO)) then
+                  fft_Coulb_FS(ix, iy, iz) = loct_splint(cylinder_cutoff_f, gperp)
+                end if
+                if ((gz >= M_ZERO) .and. (gy < M_ZERO)) then
+                  fft_Coulb_FS(ix, iy, iz) = fft_Coulb_FS(ix, -ixx(2) + 1, iz)
+                end if
+                if ((gz < M_ZERO) .and. (gy >= M_ZERO)) then
+                  fft_Coulb_FS(ix, iy, iz) = fft_Coulb_FS(ix, iy, -ixx(3) + 1)
+                end if
+                if ((gz < M_ZERO) .and. (gy < M_ZERO) ) then
+                  fft_Coulb_FS(ix, iy, iz) = fft_Coulb_FS(ix, -ixx(2) + 1, -ixx(3) + 1)
+                end if
+              end if
 
-                case(FFT_NOCUT, FFT_CORRECTED)
-                   fft_Coulb_FS(ix, iy, iz) = M_ONE/modg2
-                end select
+            case(FFT_PLA)
+              gz = abs(gg(3))
+              gpar = hypot(gg(1), gg(2))
+              fft_Coulb_FS(ix, iy, iz) = poisson_cutoff_slab(gpar,gz,r_c)/modg2
 
-             else
-                select case(poisson_solver)
-                case(FFT_SPH)
-                  fft_Coulb_FS(ix, iy, iz) = r_c**2/M_TWO
+            case(FFT_NOCUT, FFT_CORRECTED)
+              fft_Coulb_FS(ix, iy, iz) = M_ONE/modg2
+            end select
 
-                case (FFT_CYL)
-                  if (gr%sb%periodic_dim == 1) then
-                    fft_Coulb_FS(ix, iy, iz) = -(M_HALF*log(r_c) - M_FOURTH)*r_c**2
-                  else if (gr%sb%periodic_dim == 0) then
-                    fft_Coulb_FS(ix, iy, iz) = poisson_cutoff_fin_cylinder(M_ZERO, M_ZERO, &
-                         M_TWO*gr%m%sb%xsize, M_TWO*gr%m%sb%rsize)
-                  end if
+          else
+            select case(poisson_solver)
+            case(FFT_SPH)
+              fft_Coulb_FS(ix, iy, iz) = r_c**2/M_TWO
 
-                case(FFT_PLA)
-                  fft_Coulb_FS(ix, iy, iz) = -M_HALF*r_c**2
+            case (FFT_CYL)
+              if (gr%sb%periodic_dim == 1) then
+                fft_Coulb_FS(ix, iy, iz) = -(M_HALF*log(r_c) - M_FOURTH)*r_c**2
+              else if (gr%sb%periodic_dim == 0) then
+                fft_Coulb_FS(ix, iy, iz) = poisson_cutoff_fin_cylinder(M_ZERO, M_ZERO, &
+                  M_TWO*gr%m%sb%xsize, M_TWO*gr%m%sb%rsize)
+              end if
 
-                case (FFT_NOCUT, FFT_CORRECTED)
-                  fft_Coulb_FS(ix, iy, iz) = M_ZERO
+            case(FFT_PLA)
+              fft_Coulb_FS(ix, iy, iz) = -M_HALF*r_c**2
 
-                end select
-             end if
-          end do
-       end do
+            case (FFT_NOCUT, FFT_CORRECTED)
+              fft_Coulb_FS(ix, iy, iz) = M_ZERO
+
+            end select
+          end if
+        end do
+      end do
 
       if( (poisson_solver .eq. FFT_CYL) .and. (gr%sb%periodic_dim == 0) ) then
         call loct_spline_end(cylinder_cutoff_f)
