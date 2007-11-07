@@ -146,7 +146,7 @@ contains
 
     select case(cv%method)
     case(CURV_METHOD_UNIFORM)
-      x = chi
+      x = matmul(sb%rlattice, chi)
     case(CURV_METHOD_GYGI)
       call curv_gygi_chi2x(sb, geo, cv%gygi, chi, x)
     case(CURV_METHOD_BRIGGS)
@@ -168,7 +168,7 @@ contains
 
     select case(cv%method)
     case(CURV_METHOD_UNIFORM)
-      chi = x
+      chi = matmul(x, sb%klattice_unitary)
     case(CURV_METHOD_GYGI)
       call curv_gygi_x2chi(sb, geo, cv%gygi, x, chi)
     case(CURV_METHOD_BRIGGS, CURV_METHOD_MODINE)
@@ -192,7 +192,7 @@ contains
 
     select case(cv%method)
     case(CURV_METHOD_UNIFORM)
-      jdet = M_ONE
+      jdet = sb%volume_element
     case(CURV_METHOD_GYGI)
       call curv_gygi_jacobian(sb, geo, cv%gygi, x, dummy(1:sb%dim), Jac(1:sb%dim, 1:sb%dim))
       jdet = M_ONE/lalg_determinant(sb%dim, Jac, invert = .false.)

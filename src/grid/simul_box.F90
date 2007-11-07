@@ -74,7 +74,9 @@ module simul_box_m
     character(len=1024) :: user_def ! for the user defined box
 
     FLOAT :: rlattice(3,3)      ! lattice primitive vectors
+    FLOAT :: klattice_unitary(3,3)      ! reciprocal lattice primitive vectors
     FLOAT :: klattice(3,3)      ! reciprocal lattice primitive vectors
+    FLOAT :: volume_element     ! the volume element in real space
     FLOAT :: rcell_volume       ! the volume of the cell in real space
     FLOAT :: shift(27,3)    ! shift to equivalent positions in nearest neighbour primitive cells
 
@@ -674,11 +676,15 @@ contains
       do idim = 1, sb%dim
         norm = lalg_nrm2(sb%dim, sb%rlattice(1:sb%dim, idim))
         do jdim = 1, sb%dim
-          sb%rlattice(jdim, idim) = sb%rlattice(jdim, idim) / norm * M_TWO * sb%lsize(idim)
+          sb%rlattice(jdim, idim) = sb%rlattice(jdim, idim) / norm
         end do
       end do
 
-      call reciprocal_lattice(sb%rlattice, sb%klattice, sb%rcell_volume)
+      call reciprocal_lattice(sb%rlattice, sb%klattice_unitary, sb%volume_element)
+
+      do idim = 1, sb%dim
+        sb%klattice(:, idim) = sb%klattice_unitary(:, idim)*M_TWO*M_PI/(M_TWO*sb%lsize(idim))
+      end do
 
       ! build shifts to nearest neighbour primitive cells
       ii = (/0,-1,1/)
@@ -687,9 +693,10 @@ contains
       do iz = 1, 3
         do iy = 1, 3
           do ix = 1, 3
-            sb%shift(i,1)=ii(ix)*sb%rlattice(1,1)
-            sb%shift(i,2)=ii(iy)*sb%rlattice(2,2)
-            sb%shift(i,3)=ii(iz)*sb%rlattice(3,3)
+            sb%shift(i,:) = &
+              ii(ix)*sb%rlattice(:, 1)*M_TWO*sb%lsize(1) + &
+              ii(iy)*sb%rlattice(:, 2)*M_TWO*sb%lsize(2) + &
+              ii(iz)*sb%rlattice(:, 3)*M_TWO*sb%lsize(3)
             i = i + 1
           end do
         end do
@@ -717,9 +724,9 @@ contains
       call write_fatal(1)
     end if
 
-    kv(:, 1) = M_TWO*M_PI/volume * dcross_product(rv(:, 2), rv(:, 3))
-    kv(:, 2) = M_TWO*M_PI/volume * dcross_product(rv(:, 3), rv(:, 1))
-    kv(:, 3) = M_TWO*M_PI/volume * dcross_product(rv(:, 1), rv(:, 2))
+    kv(:, 1) = dcross_product(rv(:, 2), rv(:, 3))/volume
+    kv(:, 2) = dcross_product(rv(:, 3), rv(:, 1))/volume
+    kv(:, 3) = dcross_product(rv(:, 1), rv(:, 2))/volume
     
   end subroutine reciprocal_lattice
 
@@ -787,9 +794,9 @@ contains
       write(message(4),'(3f12.6)')   sb%rlattice(:,2)/units_out%length%factor
       write(message(5),'(3f12.6)')   sb%rlattice(:,3)/units_out%length%factor
       write(message(6),'(a,3a,a)') '  Reciprocal Lattice Vectors [', trim(units_out%length%abbrev), '^-1]'
-      write(message(7),'(3f12.6)')   sb%klattice(:,1)/units_out%length%factor
-      write(message(8),'(3f12.6)')   sb%klattice(:,2)/units_out%length%factor
-      write(message(9),'(3f12.6)')   sb%klattice(:,3)/units_out%length%factor
+      write(message(7),'(3f12.6)')   sb%klattice_unitary(:,1)/units_out%length%factor
+      write(message(8),'(3f12.6)')   sb%klattice_unitary(:,2)/units_out%length%factor
+      write(message(9),'(3f12.6)')   sb%klattice_unitary(:,3)/units_out%length%factor
       call write_info(9, iunit)
     end if
 
@@ -805,12 +812,16 @@ contains
 
     FLOAT, parameter :: DELTA = CNST(1e-12)
     FLOAT :: r, re, im, xx(MAX_DIM)
+    integer :: idim
 
 #if defined(HAVE_GDLIB)
     integer :: red, green, blue, ix, iy
 #endif
 
     xx(:) = x(:) - sb%box_offset(:)
+
+    !convert to the orthogonal space
+    xx = matmul(xx, sb%klattice_unitary)
 
     select case(sb%box_shape)
     case(SPHERE)
@@ -824,10 +835,10 @@ contains
       in_box = in_minimum()
 
     case(PARALLELEPIPED)
-      in_box =  &
-        (xx(1) >= -sb%lsize(1)-DELTA.and.xx(1) <= sb%lsize(1)+DELTA).and. &
-        (xx(2) >= -sb%lsize(2)-DELTA.and.xx(2) <= sb%lsize(2)+DELTA).and. &
-        (xx(3) >= -sb%lsize(3)-DELTA.and.xx(3) <= sb%lsize(3)+DELTA)
+      in_box = &
+        (xx(1) >= (-sb%lsize(1)-DELTA) .and. xx(1) <= sb%lsize(1)+DELTA) .and. &
+        (xx(2) >= (-sb%lsize(2)-DELTA) .and. xx(2) <= sb%lsize(2)+DELTA) .and. &
+        (xx(3) >= (-sb%lsize(3)-DELTA) .and. xx(3) <= sb%lsize(3)+DELTA)
 
 #if defined(HAVE_GDLIB)
     case(BOX_IMAGE)
@@ -985,6 +996,8 @@ contains
     sbout%user_def                = sbin%user_def
     sbout%rlattice                = sbin%rlattice
     sbout%klattice                = sbin%klattice
+    sbout%klattice_unitary        = sbin%klattice_unitary
+    sbout%volume_element          = sbin%volume_element
     sbout%shift                   = sbin%shift
     sbout%fft_alpha               = sbin%fft_alpha
     sbout%dim                     = sbin%dim

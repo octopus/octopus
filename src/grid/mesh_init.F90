@@ -46,8 +46,12 @@ subroutine mesh_init_stage_1(sb, mesh, geo, cv, enlarge)
     do while(.not.out)
       j      = j + 1
       chi(i) = j*mesh%h(i)
-      call curvlinear_chi2x(sb, geo, cv, chi(1:sb%dim), x(1:sb%dim))
-      out = (x(i) > sb%lsize(i)+CNST(1.0e-10))
+      if ( mesh%use_curvlinear ) then
+        call curvlinear_chi2x(sb, geo, cv, chi(1:sb%dim), x(1:sb%dim))
+        out = (x(i) > sb%lsize(i)+CNST(1.0e-10))
+      else
+        out = (chi(i) > sb%lsize(i)+CNST(1.0e-10))
+      end if
     end do
     mesh%nr(2, i) = j - 1
   end do
@@ -196,6 +200,7 @@ contains
   ! ---------------------------------------------------------
   subroutine create_x_Lxyz()
     integer :: il, ix, iy, iz
+    FLOAT :: chi(1:MAX_DIM)
 
 #ifdef USE_OMP
     integer :: ip

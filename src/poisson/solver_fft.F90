@@ -23,6 +23,7 @@ module poisson_fft_m
   use datasets_m
   use geometry_m
   use global_m
+  use lalg_basic_m
   use lib_oct_m
   use lib_oct_parser_m
   use math_m
@@ -73,7 +74,7 @@ contains
 #if defined(HAVE_FFT)
     type(loct_spline_t) :: cylinder_cutoff_f
     FLOAT, allocatable :: x(:), y(:)
-    integer :: ix, iy, iz, ixx(MAX_DIM), db(MAX_DIM), k, ngp 
+    integer :: ix, iy, iz, ixx(MAX_DIM), db(MAX_DIM), k, ngp, idim
     FLOAT :: temp(MAX_DIM), modg2, xmax
     FLOAT :: gpar, gperp, gx, gy, gz, r_c, gg(MAX_DIM)
     FLOAT :: DELTA_R = CNST(1.0e-12)
@@ -138,6 +139,12 @@ contains
           ixx(3) = pad_feq(iz, db(3), .true.)
 
           gg(:) = temp(:)*ixx(:)
+
+          gg(:) = matmul(gg, gr%m%sb%klattice_unitary)
+          do idim = 1, gr%m%sb%dim
+            gg(idim) = gg(idim) / lalg_nrm2(MAX_DIM, gr%m%sb%klattice_unitary(:, idim))
+          end do
+
           modg2 = sum(gg(:)**2)
 
           if(modg2 /= M_ZERO) then
