@@ -407,7 +407,7 @@ R_TYPE function X(pert_expectation_value) (this, gr, geo, h, st, psia, psib, per
   integer, optional,    intent(in)    :: pert_order
 
   R_TYPE, allocatable :: tmp(:)
-
+  R_TYPE :: expval_tmp
   integer :: order
 
   order = 1
@@ -421,6 +421,15 @@ R_TYPE function X(pert_expectation_value) (this, gr, geo, h, st, psia, psib, per
 
   expval = X(mf_integrate)(gr%m, tmp)
 
+#ifdef HAVE_MPI
+    ! reduce density
+    if(st%parallel_in_states) then
+        call MPI_Allreduce(expval, expval_tmp, 1, R_MPITYPE, MPI_SUM, st%mpi_grp%comm, mpi_err)
+        expval = expval_tmp
+    end if
+#endif
+
+  deallocate(tmp)
 end function X(pert_expectation_value)
 
 !! Local Variables:

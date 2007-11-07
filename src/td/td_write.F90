@@ -536,14 +536,14 @@ contains
 
     call push_sub('td_write.td_write_angular')
 
-    ALLOCATE(ang (st%nst, st%d%nik, 3), st%nst*st%d%nik*3)
-    ALLOCATE(ang2(st%nst, st%d%nik), st%nst*st%d%nik)
+    ALLOCATE(ang (st%st_start:st%st_end, st%d%nik, 3), st%lnst*st%d%nik*3)
+    ALLOCATE(ang2(st%st_start:st%st_end, st%d%nik), st%lnst*st%d%nik)
     do ik = 1, st%d%nik
       do ist = st%st_start, st%st_end
         call zstates_angular_momentum(gr, st%zpsi(:, :, ist, ik), ang(ist, ik, :), ang2(ist, ik))
       end do
     end do
-    lsquare    =  states_eigenvalues_sum(st, ang2(1:st%nst, 1:st%d%nik))
+    lsquare    =  states_eigenvalues_sum(st, ang2)
 
     call pert_init(angular_momentum, PERTURBATION_MAGNETIC, gr, geo)
 
