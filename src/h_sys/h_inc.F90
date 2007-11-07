@@ -889,25 +889,13 @@ subroutine X(vlasers) (gr, h, psi, hpsi, ik, t)
   do i = 1, h%ep%no_lasers
 
     select case(h%ep%lasers(i)%field)
-    case(E_FIELD_SCALAR_POTENTIAL)
+    case(E_FIELD_SCALAR_POTENTIAL, E_FIELD_ELECTRIC)
       if(.not. allocated(v)) then 
         ALLOCATE(v(NP), NP)
         v = M_ZERO
       end if
       ALLOCATE(pot(NP), NP)
       pot = M_ZERO
-      call laser_potential(gr%sb, h%ep%lasers(i), gr%m, pot, t)
-      v = v + pot
-      electric_field = .true.
-      deallocate(pot)
-
-    case(E_FIELD_ELECTRIC)
-      if(.not. allocated(v)) then 
-        ALLOCATE(v(NP), NP)
-        v = M_ZERO
-        ALLOCATE(pot(NP), NP)
-        pot = M_ZERO
-      end if
       call laser_potential(gr%sb, h%ep%lasers(i), gr%m, pot, t)
       v = v + pot
       electric_field = .true.
