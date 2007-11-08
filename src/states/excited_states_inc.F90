@@ -30,8 +30,8 @@ R_TYPE function X(states_mpdotp_x)(m, excited_state, st, mat) result(dotp)
   type(states_t),         intent(in) :: st
   R_TYPE,       optional, intent(in) :: mat(:, :, :)
 
-  integer :: i, a, sigma, j, ik
-  R_TYPE, allocatable :: mat_local(:, :, :), row(:)
+  integer :: ik, j
+  R_TYPE, allocatable :: mat_local(:, :, :)
 
   call push_sub('states_inc.Xstates_mpdotp_x')
 
@@ -40,31 +40,57 @@ R_TYPE function X(states_mpdotp_x)(m, excited_state, st, mat) result(dotp)
   ASSERT(excited_state%st%d%nik.eq.st%d%nik)
 
   ALLOCATE(mat_local(excited_state%st%nst, st%nst, st%d%nik), st%nst*excited_state%st%nst*st%d%nik)
-  ALLOCATE(row(st%nst), st%nst)
 
   if(present(mat)) then
     do ik = 1, st%d%nik
       mat_local = mat
     end do
   else 
-    do ik = 1, st%d%nik
-      call X(calculate_matrix) (m, ik, excited_state%st, st, mat_local(:, :, ik))
-    end do
+    call X(states_matrix)(m, excited_state%st, st, mat_local)
   end if
 
   do j = 1, excited_state%n_pairs
-    i     = excited_state%pair(j)%i
-    a     = excited_state%pair(j)%a
-    sigma = excited_state%pair(j)%sigma
-    row(:) = mat_local(i, :, sigma)
-    mat_local(i, :, sigma) = mat_local(a, :, sigma)
+    call X(states_matrix_swap)(mat_local, excited_state%pair(j))
     dotp = dotp + excited_state%weight(j) * X(states_mpdotp_g)(m, excited_state%st, st, mat_local) 
-    mat_local(i, :, sigma) = row(:)
+    call X(states_matrix_swap)(mat_local, excited_state%pair(j))
   end do
 
-  deallocate(mat_local, row)
+  deallocate(mat_local)
   call pop_sub()
 end function X(states_mpdotp_x)
+
+
+! -------------------------------------------------------------
+! The matrix mat should contain the dot products between two 
+! states. One of them (the one operating on the left) is an
+! excited state. The pair_t pair indicates the substitution
+! of one the occupied spin-orbitals by one unoccupied one
+! (electron-hole excitation). This routine returns then the
+! matrix that would correspond to the dot products between
+! this excited state (on the left) and the same ground state
+! (on the right)
+! -------------------------------------------------------------
+subroutine X(states_matrix_swap)(mat, pair)
+  R_TYPE,              intent(inout) :: mat(:, :, :)
+  type(states_pair_t), intent(in)    :: pair
+
+  integer :: i, a, ik
+  R_TYPE, allocatable :: row(:)
+
+  i  = pair%i
+  a  = pair%a
+  ik = pair%sigma
+
+  ALLOCATE(row(size(mat, 2)), size(mat, 2))
+
+  ! swap row
+  row(:) = mat(i, :, ik)
+  mat(i, :, ik) = mat(a, :, ik)
+  mat(a, :, ik) = mat(i, :, ik)
+
+  deallocate(row)
+end subroutine X(states_matrix_swap)
+
 
 ! -------------------------------------------------------------
 ! Returns <st1 | O | st2>, where both st1 and st2 are Slater
@@ -86,7 +112,7 @@ R_TYPE function X(states_mpmatrixelement_g)(m, st1, st2, opst2) result(st1opst2)
   integer, allocatable :: filled1(:), filled2(:), &
                           partially_filled1(:), partially_filled2(:), &
                           half_filled1(:), half_filled2(:)
-  R_TYPE, allocatable :: overlap_mat(:, :), op_mat(:, :)
+  R_TYPE, allocatable :: overlap_mat(:, :, :), op_mat(:, :, :)
   R_TYPE, allocatable :: b(:, :), c(:, :)
   R_TYPE :: z
 
@@ -102,8 +128,8 @@ R_TYPE function X(states_mpmatrixelement_g)(m, st1, st2, opst2) result(st1opst2)
   ! Can only consider the number of states of the state that comes with less states.
   nst = min(st1%nst, st2%nst)
 
-  ALLOCATE(overlap_mat(st1%nst, st2%nst), st1%nst*st2%nst)
-  ALLOCATE(op_mat(st1%nst, st2%nst), st1%nst*st2%nst)
+  ALLOCATE(overlap_mat(st1%nst, st2%nst, st1%d%nik), st1%nst*st2%nst*st1%d%nik)
+  ALLOCATE(op_mat(st1%nst, st2%nst, st1%d%nik), st1%nst*st2%nst*st1%d%nik)
 
   ALLOCATE(filled1(nst), nst)
   ALLOCATE(filled2(nst), nst)
@@ -115,15 +141,15 @@ R_TYPE function X(states_mpmatrixelement_g)(m, st1, st2, opst2) result(st1opst2)
   select case(ispin)
   case(UNPOLARIZED)
 
-    do ik = 1, nik
+    call X(states_matrix)(m, st1, st2, overlap_mat)
+    call X(states_matrix)(m, st1, opst2, op_mat)
 
-      call X(calculate_matrix)(m, ik, st1, st2, overlap_mat)
-      call X(calculate_matrix)(m, ik, st1, opst2, op_mat)
+    do ik = 1, nik
 
       call occupied_states(st1, ik, i1, j1, k1, filled1, partially_filled1, half_filled1)
       call occupied_states(st2, ik, i2, j2, k2, filled2, partially_filled2, half_filled2)
       if( (j1 > 0) .or. (j2 > 0) ) then
-        message(1) = 'Cannot calcualte many-body dot products with partially occupied orbitals'
+        message(1) = 'Cannot calculate many-body dot products with partially occupied orbitals'
         call write_fatal(1)
       end if
       if(  (i1 .ne. i2)  .or.  (k1 .ne. k2) ) then
@@ -135,22 +161,22 @@ R_TYPE function X(states_mpmatrixelement_g)(m, st1, st2, opst2) result(st1opst2)
       ALLOCATE(c(i1+k1, i1+k1), (i1+k1)*(i1+k1))
       do i = 1, i1
         do j = 1, i1
-          b(i, j) = op_mat(filled1(i), filled2(j))
-          c(i, j) = overlap_mat(filled1(i), filled2(j))
+          b(i, j) = op_mat(filled1(i), filled2(j), ik)
+          c(i, j) = overlap_mat(filled1(i), filled2(j), ik)
         end do
         do j = i1 + 1, i1 + k1
-          b(i, j) = op_mat(filled1(i), half_filled2(j))
-          c(i, j) = overlap_mat(filled1(i), half_filled2(j))
+          b(i, j) = op_mat(filled1(i), half_filled2(j), ik)
+          c(i, j) = overlap_mat(filled1(i), half_filled2(j), ik)
         end do
       end do
       do i = i1 + 1, i1 + k1
         do j = 1, i1
-          b(i, j) = op_mat(half_filled1(i), filled2(j))
-          c(i, j) = overlap_mat(half_filled1(i), filled2(j))
+          b(i, j) = op_mat(half_filled1(i), filled2(j), ik)
+          c(i, j) = overlap_mat(half_filled1(i), filled2(j), ik)
         end do
         do j = i1 + 1, i1 + k1
-          b(i, j) = op_mat(half_filled1(i), half_filled2(j))
-          c(i, j) = overlap_mat(half_filled1(i), half_filled2(j))
+          b(i, j) = op_mat(half_filled1(i), half_filled2(j), ik)
+          c(i, j) = overlap_mat(half_filled1(i), half_filled2(j), ik)
         end do
       end do
 
@@ -171,10 +197,11 @@ R_TYPE function X(states_mpmatrixelement_g)(m, st1, st2, opst2) result(st1opst2)
     end do
 
   case(SPIN_POLARIZED, SPINORS)
-    do ik = 1, nik
 
-      call X(calculate_matrix) (m, ik, st1, st2, overlap_mat)
-      call X(calculate_matrix) (m, ik, st1, opst2, op_mat)
+    call X(states_matrix) (m, st1, st2, overlap_mat)
+    call X(states_matrix) (m, st1, opst2, op_mat)
+
+    do ik = 1, nik
 
       call occupied_states(st1, ik, i1, j1, k1, filled1, partially_filled1, half_filled1)
       call occupied_states(st2, ik, i2, j2, k2, filled2, partially_filled2, half_filled2)
@@ -192,8 +219,8 @@ R_TYPE function X(states_mpmatrixelement_g)(m, st1, st2, opst2) result(st1opst2)
         ALLOCATE(c(i1, i1), i1*i1)
         do i = 1, i1
           do j = 1, i1
-            b(i, j) = op_mat(filled1(i), filled2(j))
-            c(i, j) = overlap_mat(filled1(i), filled2(j))
+            b(i, j) = op_mat(filled1(i), filled2(j), ik)
+            c(i, j) = overlap_mat(filled1(i), filled2(j), ik)
           end do
         end do
 
@@ -238,7 +265,7 @@ R_TYPE function X(states_mpdotp_g)(m, st1, st2, mat) result(dotp)
   integer :: ik, ispin, nik, nst, i1, j1, i2, j2, k1, k2, i, j
   integer, allocatable :: filled1(:), filled2(:), partially_filled1(:), partially_filled2(:), &
                           half_filled1(:), half_filled2(:)
-  R_TYPE, allocatable :: a(:, :), b(:, :)
+  R_TYPE, allocatable :: a(:, :, :), b(:, :)
   call push_sub('excited_states_inc.Xstates_mpdotp')
 
   ispin = st1%d%ispin
@@ -248,7 +275,7 @@ R_TYPE function X(states_mpdotp_g)(m, st1, st2, mat) result(dotp)
   ! Can only consider the number of states of the state that comes with less states.
   nst = min(st1%nst, st2%nst)
 
-  ALLOCATE(a(st1%nst, st2%nst), st1%nst*st2%nst)
+  ALLOCATE(a(st1%nst, st2%nst, st1%d%nik), st1%nst*st2%nst*st1%d%nik)
   dotp = M_ONE
 
   ALLOCATE(filled1(nst), nst)
@@ -260,12 +287,14 @@ R_TYPE function X(states_mpdotp_g)(m, st1, st2, mat) result(dotp)
 
   select case(ispin)
   case(UNPOLARIZED)
+
+    if(present(mat)) then
+      a(1:st1%nst, 1:st2%nst, 1:st1%d%nik) = mat(1:st1%nst, 1:st2%nst, 1:st1%d%nik)
+    else
+      call X(states_matrix) (m, st1, st2, a)
+    end if
+
     do ik = 1, nik
-      if(present(mat)) then
-        a(1:st1%nst, 1:st2%nst) = mat(1:st1%nst, 1:st2%nst, ik)
-      else
-        call X(calculate_matrix) (m, ik, st1, st2, a)
-      end if
 
       call occupied_states(st1, ik, i1, j1, k1, filled1, partially_filled1, half_filled1)
       call occupied_states(st2, ik, i2, j2, k2, filled2, partially_filled2, half_filled2)
@@ -281,18 +310,18 @@ R_TYPE function X(states_mpdotp_g)(m, st1, st2, mat) result(dotp)
       ALLOCATE(b(i1+k1, i1+k1), (i1+k1)*(i1+k1))
       do i = 1, i1
         do j = 1, i1
-          b(i, j) = a(filled1(i), filled2(j))
+          b(i, j) = a(filled1(i), filled2(j), ik)
         end do
         do j = i1 + 1, i1 + k1
-          b(i, j) = a(filled1(i), half_filled2(j))
+          b(i, j) = a(filled1(i), half_filled2(j), ik)
         end do
       end do
       do i = i1 + 1, i1 + k1
         do j = 1, i1
-          b(i, j) = a(half_filled1(i), filled2(j))
+          b(i, j) = a(half_filled1(i), filled2(j), ik)
         end do
         do j = i1 + 1, i1 + k1
-          b(i, j) = a(half_filled1(i), half_filled2(j))
+          b(i, j) = a(half_filled1(i), half_filled2(j), ik)
         end do
       end do
 
@@ -304,12 +333,6 @@ R_TYPE function X(states_mpdotp_g)(m, st1, st2, mat) result(dotp)
     end do
   case(SPIN_POLARIZED, SPINORS)
     do ik = 1, nik
-
-      if(present(mat)) then
-        a(1:st1%nst, 1:st2%nst) = mat(1:st1%nst, 1:st2%nst, ik)
-      else
-        call X(calculate_matrix) (m, ik, st1, st2, a)
-      end if
 
       call occupied_states(st1, ik, i1, j1, k1, filled1, partially_filled1, half_filled1)
       call occupied_states(st2, ik, i2, j2, k2, filled2, partially_filled2, half_filled2)
@@ -326,7 +349,7 @@ R_TYPE function X(states_mpdotp_g)(m, st1, st2, mat) result(dotp)
         ALLOCATE(b(i1, i1), i1*i1)
         do i = 1, i1
           do j = 1, i1
-            b(i, j) = a(filled1(i), filled2(j))
+            b(i, j) = a(filled1(i), filled2(j), ik)
           end do
         end do
 
@@ -344,76 +367,6 @@ R_TYPE function X(states_mpdotp_g)(m, st1, st2, mat) result(dotp)
   call pop_sub()
 end function X(states_mpdotp_g)
 
-
-! ---------------------------------------------------------
-subroutine X(calculate_matrix)(m, ik, st1, st2, a)
-  type(mesh_t),   intent(in)  :: m
-  integer,        intent(in)  :: ik
-  type(states_t), intent(in)  :: st1, st2
-  R_TYPE,         intent(out) :: a(:, :)
-
-  integer :: i, j, dim, n1, n2
-#if defined(HAVE_MPI)
-  R_TYPE, allocatable :: phi2(:, :)
-  integer :: k, l
-  integer :: status(MPI_STATUS_SIZE)
-  integer :: request
-#endif
-
-  call push_sub('states_inc.calculate_matrix')
-
-  n1 = st1%nst
-  n2 = st2%nst
-
-  dim = st1%d%dim
-#if defined(HAVE_MPI)
-  call MPI_Barrier(st1%mpi_grp%comm, mpi_err)
-  ! Each process sends the states in st2 to the rest of the processes.
-  do i = st1%st_start, st1%st_end
-    do j = 0, st1%mpi_grp%size - 1
-      if(st1%mpi_grp%rank.ne.j) then
-        call MPI_Isend(st2%X(psi)(1, 1, i, ik), st1%d%dim*m%np, R_MPITYPE, &
-          j, i, st1%mpi_grp%comm, request, mpi_err)
-      end if
-    end do
-  end do
-
-  ! Processes are received, and then the matrix elements are calculated.
-  ALLOCATE(phi2(m%np, st1%d%dim), m%np*st1%d%dim)
-  do j = 1, n2
-    l = st1%node(j)
-    if(l.ne.st1%mpi_grp%rank) then
-      call MPI_Irecv(phi2(1, 1), st1%d%dim*m%np, R_MPITYPE, l, j, st1%mpi_grp%comm, request, mpi_err)
-      call MPI_Wait(request, status, mpi_err)
-    else
-      phi2(:, :) = st2%X(psi)(:, :, j, ik)
-    end if
-    do i = st1%st_start, st1%st_end
-      a(i, j) = X(states_dotp)(m, dim, st1%X(psi)(:, :, i, ik), phi2(:, :))
-    end do
-  end do
-  deallocate(phi2)
-
-  ! Each process holds some lines of the matrix. So it is broadcasted (All processes
-  ! should get the whole matrix)
-  call MPI_Barrier(st1%mpi_grp%comm, mpi_err)
-  do i = 1, n1
-    k = st1%node(i)
-    do j = 1, n2
-      call MPI_Bcast(a(i, j), 1, R_MPITYPE, k, st1%mpi_grp%comm, mpi_err)
-    end do
-  end do
-#else
-  do i = 1, n1
-    do j = 1, n2
-      a(i, j) = X(states_dotp)(m, dim, st1%X(psi)(:, :, i, ik), &
-        st2%X(psi)(:, :, j, ik))
-    end do
-  end do
-#endif
-
-  call pop_sub()
-end subroutine X(calculate_matrix)
 
 !! Local Variables:
 !! mode: f90

@@ -98,6 +98,8 @@ module states_m
     zstates_calc_momentum,          &
     dstates_angular_momentum,       &
     zstates_angular_momentum,       &
+    dstates_matrix,                 &
+    zstates_matrix,                 &
     states_distribute_nodes
 
   type states_dim_t
@@ -912,7 +914,11 @@ contains
     if(associated(stin%zpsi)) then
       i = size(stin%zpsi, 1)*stin%d%dim*(stin%st_end-stin%st_start+1)*stin%d%nik
       ALLOCATE(stout%zpsi(size(stin%zpsi, 1), stin%d%dim, stin%st_start:stin%st_end, stin%d%nik), i)
-      stout%zpsi = stin%zpsi
+      do k = 1, stin%d%nik
+        do j = stin%st_start, stin%st_end
+          stout%zpsi(:, :, j, k) = stin%zpsi(:, :, j, k)
+        end do
+      end do
     end if
     if(associated(stin%user_def_states)) then
       j = size(stin%user_def_states, 1)
@@ -1094,9 +1100,9 @@ contains
   end subroutine states_dens_accumulate
 
   subroutine states_dens_reduce(st, np, rho)
-    type(states_t), intent(in)  :: st
-    integer,        intent(in)  :: np
-    FLOAT,          intent(out) :: rho(:,:)
+    type(states_t), intent(in)    :: st
+    integer,        intent(in)    :: np
+    FLOAT,          intent(inout) :: rho(:,:)
 
     integer :: i, ik, p, sp
     CMPLX   :: c

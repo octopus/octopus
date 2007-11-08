@@ -331,6 +331,87 @@ subroutine X(states_angular_momentum)(gr, phi, l, l2)
 end subroutine X(states_angular_momentum)
 
 
+! ---------------------------------------------------------
+subroutine X(states_matrix)(m, st1, st2, a)
+  type(mesh_t),   intent(in)  :: m
+  type(states_t), intent(in)  :: st1, st2
+  R_TYPE,         intent(out) :: a(:, :, :)
+
+  integer :: i, j, dim, n1, n2, ik
+#if defined(HAVE_MPI)
+  R_TYPE, allocatable :: phi2(:, :)
+  integer :: k, l
+  integer :: status(MPI_STATUS_SIZE)
+  integer :: request
+#endif
+
+  call push_sub('states_inc.Xstates_matrix')
+
+  n1 = st1%nst
+  n2 = st2%nst
+
+  dim = st1%d%dim
+
+  do ik = 1, st1%d%nik
+
+  if(st1%parallel_in_states) then
+
+#if defined(HAVE_MPI)
+    call MPI_Barrier(st1%mpi_grp%comm, mpi_err)
+    ! Each process sends the states in st2 to the rest of the processes.
+    do i = st1%st_start, st1%st_end
+      do j = 0, st1%mpi_grp%size - 1
+        if(st1%mpi_grp%rank.ne.j) then
+          call MPI_Isend(st2%X(psi)(1, 1, i, ik), st1%d%dim*m%np, R_MPITYPE, &
+            j, i, st1%mpi_grp%comm, request, mpi_err)
+        end if
+      end do
+    end do
+
+    ! Processes are received, and then the matrix elements are calculated.
+    ALLOCATE(phi2(m%np, st1%d%dim), m%np*st1%d%dim)
+    do j = 1, n2
+      l = st1%node(j)
+      if(l.ne.st1%mpi_grp%rank) then
+        call MPI_Irecv(phi2(1, 1), st1%d%dim*m%np, R_MPITYPE, l, j, st1%mpi_grp%comm, request, mpi_err)
+        call MPI_Wait(request, status, mpi_err)
+      else
+        phi2(:, :) = st2%X(psi)(:, :, j, ik)
+      end if
+      do i = st1%st_start, st1%st_end
+        a(i, j, ik) = X(states_dotp)(m, dim, st1%X(psi)(:, :, i, ik), phi2(:, :))
+      end do
+    end do
+    deallocate(phi2)
+
+    ! Each process holds some lines of the matrix. So it is broadcasted (All processes
+    ! should get the whole matrix)
+    call MPI_Barrier(st1%mpi_grp%comm, mpi_err)
+    do i = 1, n1
+      k = st1%node(i)
+      do j = 1, n2
+        call MPI_Bcast(a(i, j, ik), 1, R_MPITYPE, k, st1%mpi_grp%comm, mpi_err)
+      end do
+    end do
+#else
+    write(message(1), '(a)') 'Internal error at Xstates_matrix'
+    call write_fatal(1)
+#endif
+
+  else
+    do i = 1, n1
+      do j = 1, n2
+        a(i, j, ik) = X(states_dotp)(m, dim, st1%X(psi)(:, :, i, ik), st2%X(psi)(:, :, j, ik))
+      end do
+    end do
+  end if
+
+  end do
+
+  call pop_sub()
+end subroutine X(states_matrix)
+
+
 !! Local Variables:
 !! mode: f90
 !! coding: utf-8

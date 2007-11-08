@@ -39,10 +39,6 @@ module excited_states_m
     occupied_states,                &
     dstates_mpdotp,                 &
     zstates_mpdotp,                 &
-    dcalculate_matrix,              &
-    zcalculate_matrix
-
-  public ::                         &
     zstates_mpmatrixelement,        &
     dstates_mpmatrixelement
     
@@ -174,7 +170,7 @@ contains
   ! ---------------------------------------------------------
   subroutine excited_states_init(excited_state, ground_state, filename) 
     type(excited_states_t), intent(inout) :: excited_state
-    type(states_t), pointer               :: ground_state
+    type(states_t), target                :: ground_state
     character(len=*), intent(in)          :: filename
 
     integer :: iunit, nst, ispin, nik, &

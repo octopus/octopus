@@ -73,7 +73,7 @@ module td_write_m
 
     integer        :: lmax     ! maximum multipole moment to output
     FLOAT          :: lmm_r    ! radius of the sphere used to compute the local magnetic moments
-    type(states_t), pointer :: gs_st    ! The states_type where the ground state is stored, in order to
+    type(states_t) :: gs_st    ! The states_type where the ground state is stored, in order to
                                         ! calculate the projections(s) onto it.
     integer        :: n_excited_states  ! number of excited sates onto which the projections are calculated.
     type(excited_states_t), pointer :: excited_st(:) ! The excited states.
@@ -189,11 +189,8 @@ contains
     w%lmm_r = w%lmm_r * units_inp%length%factor
 
     if( (w%out_proj.ne.0)  .or.  (w%out_populations.ne.0) ) then
-      nullify(w%gs_st)
-      ALLOCATE(w%gs_st, 1)
       call states_copy(w%gs_st, st)
       ! WARNING: should be first deallocate, then nullify?
-!!$      nullify(w%gs_st%zpsi, w%gs_st%node, w%gs_st%occ, w%gs_st%eigenval, w%gs_st%mag)
       nullify(w%gs_st%zpsi, w%gs_st%node, w%gs_st%occ, w%gs_st%eigenval)
       call states_look (trim(tmpdir)//'gs', gr%m, i, i, w%gs_st%nst, ierr)
 
@@ -788,9 +785,7 @@ contains
     call push_sub('td_write.td_write_populations')
 
     ALLOCATE(dotprodmatrix(gs_st%nst, st%nst, st%d%nik), gs_st%nst*st%nst*st%d%nik)
-    do ik = 1, st%d%nik
-      call zcalculate_matrix(m, ik, gs_st, st, dotprodmatrix(:, :, ik))
-    end do
+    call zstates_matrix(m, gs_st, st, dotprodmatrix)
 
     ! all processors calculate the projection
     gsp = zstates_mpdotp(m, gs_st, st, dotprodmatrix)
