@@ -8,7 +8,7 @@ Arch       : Linux n10 2.6.11.11-smp-1 #1 SMP Sun May 29 13:49:31 CEST 2005 x86_
 Release    : 2.2.0pre1
 Programs   : octopus; octopus_single
 TestGroups : short-run
-Enabled    : Yes
+Enabled    : No
 
 
 Input: 03-sodium_chain.01-ground_state.inp

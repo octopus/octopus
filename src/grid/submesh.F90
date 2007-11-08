@@ -78,14 +78,6 @@ contains
 
     this%np_part = m%np_part
 
-    if (any(rc + m%h(1) >= sb%lsize(1:sb%periodic_dim))) then
-      message(1)='Sphere is larger than the box size'
-      write(message(2),'(a,f12.6,a)')  '  rc_max+h = ', rc + m%h(1), ' [b]'
-      write(message(3),'(a,3f12.4,a)') '  lsize    = ', sb%lsize, ' [b]'
-      message(4)='Please change pseudopotential'
-      call write_fatal(4)
-    end if
-
     !build the inverse of jxyz, points not in the sphere go to 0
     ALLOCATE(this%jxyz_inv(0:this%np_part), this%np_part+1)
 

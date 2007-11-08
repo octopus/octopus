@@ -35,10 +35,6 @@ module external_pot_m
   use multicomm_m
   use simul_box_m
   use units_m
-#ifdef HAVE_FFT
-  use fft_m
-  use cube_function_m
-#endif
   use logrid_m
   use poisson_cutoffs_m
   use ps_m
@@ -77,10 +73,6 @@ module external_pot_m
 
     ! Ions
     FLOAT,       pointer :: vpsl(:)       ! the local part of the pseudopotentials
-#ifdef HAVE_FFT
-    type(dcf_t), pointer :: local_cf(:)   ! for the local pseudopotential in Fourier space
-    type(dcf_t), pointer :: rhocore_cf(:) ! and for the core density
-#endif
     integer :: nvnl                       ! number of nonlocal operators
     type(projector_t), pointer :: p(:)    ! non-local projectors
     integer, pointer :: atomproj(:,:)     ! the range of projectors
@@ -136,14 +128,6 @@ contains
     !$omp parallel workshare
     ep%vpsl(1:NP) = M_ZERO
     !$omp end parallel workshare
-
-#if defined(HAVE_FFT)
-    ! should we calculate the local pseudopotentials in Fourier space?
-    ! This depends on wether we have periodic dimensions or not
-    if(simul_box_is_periodic(gr%sb).and.(.not.geo%only_user_def)) then
-      call epot_local_fourier_init(ep, gr%m, gr%sb, geo)
-    end if
-#endif
 
     ep%classic_pot = 0
     if(geo%ncatoms > 0) then
@@ -314,9 +298,9 @@ contains
     ! The projectors
     ep%nvnl = geometry_nvnl(geo, nvl)
 
-    !if not periodic add also the local potential
-    if(.not. simul_box_is_periodic(gr%sb)) ep%nvnl = ep%nvnl + nvl
-
+    !also the local potential
+    ep%nvnl = ep%nvnl + nvl
+    
     nullify(ep%p)
     
     if(ep%nvnl > 0) then
@@ -344,17 +328,6 @@ contains
     do i = 1, geo%nspecies
       call specie_pot_end(geo%specie(i), gr)
     end do
-
-#ifdef HAVE_FFT
-    if(simul_box_is_periodic(gr%sb).and.(.not.geo%only_user_def)) then
-      do i = 1, geo%nspecies
-        call dcf_free(ep%local_cf(i))
-        if(geo%specie(i)%nlcc) call dcf_free(ep%rhocore_cf(i))
-      end do
-      deallocate(ep%local_cf)
-      if(geo%nlcc) deallocate(ep%rhocore_cf)
-    end if
-#endif
 
     if(associated(ep%vpsl)) then
       deallocate(ep%vpsl)
@@ -394,174 +367,6 @@ contains
     call pop_sub()
 
   end subroutine epot_end
-
-
-#ifdef HAVE_FFT
-  ! ---------------------------------------------------------
-  subroutine epot_local_fourier_init(ep, m, sb, geo)
-    type(epot_t),      intent(inout) :: ep
-    type(mesh_t),      intent(in)    :: m
-    type(simul_box_t), intent(in)    :: sb
-    type(geometry_t),  intent(in)    :: geo
-
-    integer :: vlocal_cutoff
-    integer :: i, ix, iy, iz, ixx(MAX_DIM), db(MAX_DIM), c(MAX_DIM)
-    FLOAT :: x(MAX_DIM)
-    FLOAT :: gpar, gperp, gx, gz, modg
-    FLOAT :: r_0, temp(MAX_DIM), tmp, norm
-
-    type(specie_t), pointer :: s ! shortcuts
-    type(dcf_t), pointer :: cf
-
-    call push_sub('epot.epot_local_fourier_init')
-
-    !%Variable VlocalCutoff
-    !%Type integer
-    !%Default value of PeriodicDimensions
-    !%Section Hamiltonian
-    !%Description
-    !% Define which cutoff type is to be applied to the long range part of the local potential
-    !% A cutoff is used when one wants to avoid the long range interactions
-    !% among the system enclosed in the simulation box and (some of) its periodic images
-    !%Option cutoff_sphere 0
-    !% Cut off the interaction out of a sphere
-    !%Option cutoff_cylinder 1
-    !% Cut off the interaction out of a cylinder with axis parallel to the x direction
-    !%Option cutoff_slab 2
-    !% Cut off the interaction out of a slab in the xy plane
-    !%Option cutoff_none 3
-    !% Do not apply any cutoff: all the periodic images interact
-    !%End
-    call loct_parse_int(check_inp('VlocalCutoff'), sb%periodic_dim , vlocal_cutoff)
-    if(.not.varinfo_valid_option('VlocalCutoff', vlocal_cutoff)) call input_error('VlocalCutoff')
-    call messages_print_var_option(stdout, "VlocalCutoff", vlocal_cutoff)
-
-    if (vlocal_cutoff /= sb%periodic_dim) then
-      write(message(1), '(a,i1,a)')'The System is periodic in ', sb%periodic_dim, ' dimension(s),'
-      write(message(2), '(a,i1,a)')'but VlocalCutoff is set for ', vlocal_cutoff, ' dimensions.'
-      call write_warning(2)
-    end if
-
-    ALLOCATE(ep%local_cf(geo%nspecies), geo%nspecies)
-    if(geo%nlcc) ALLOCATE(ep%rhocore_cf(geo%nspecies), geo%nspecies)
-
-    specie: do i = 1, geo%nspecies
-      s  => geo%specie(i)
-      cf => ep%local_cf(i)
-
-      !%Variable VlocalCutoffRadius
-      !%Type float
-      !%Default value of the largest nonperiodic box length
-      !%Section Hamiltonian
-      !%Description
-      !% The maximum length out of which the long range part of the interaction
-      !% is cut off. 
-      !% It refers to the radius of the cylinder if VlocalCutoff = 1,
-      !% to the thickness od the slab if VlocalCutoff = 2.
-      !%End
-
-      if(i == 1) then
-        call mesh_double_box(sb, m, db)
-        call dcf_new(db, cf)    ! initialize the cube
-        call dcf_fft_init(cf, sb)   ! and initialize the ffts
-        db = cf%n               ! dimensions of the box may have been optimized, so get them
-        c(:) = db(:)/2 + 1      ! get center of double box
-        if (vlocal_cutoff == 3) then
-          r_0 = M_ZERO
-        else
-          call loct_parse_float(check_inp('VlocalCutoffRadius'),&
-            maxval(db(:)*m%h(:)/M_TWO)/units_inp%length%factor , r_0)
-          r_0 = r_0*units_inp%length%factor
-          write(message(1),'(3a,f12.6)')'Info: Vlocal Cutoff Radius [',  &
-            trim(units_out%length%abbrev), '] = ',       &
-            r_0/units_out%length%factor
-          call write_info(1)
-        end if
-      else
-        call dcf_new_from(cf, ep%local_cf(1))   ! we can just copy from the first one
-      end if
-
-      if(geo%nlcc) call dcf_new_from(ep%rhocore_cf(i), ep%local_cf(1))
-
-      call dcf_alloc_FS(cf)      ! allocate the tube in Fourier space
-
-      norm    = M_FOUR*M_PI/m%vol_pp(1)
-      temp(:) = M_TWO*M_PI/(db(:)*m%h(:))
-      cf%FS   = M_Z0
-      do ix = 1, cf%nx
-        ixx(1) = pad_feq(ix, db(1), .true.)
-        do iy = 1, db(2)
-          ixx(2) = pad_feq(iy, db(2), .true.)
-          do iz = 1, db(3)
-            ixx(3) = pad_feq(iz, db(3), .true.)
-
-            x = temp(:)*ixx(:)
-            modg = sqrt(sum((temp(:)*ixx(:))**2))
-
-            tmp = specie_get_local_fourier(sb%dim, s, x)
-            if(modg /= M_ZERO) then
-              tmp = tmp - s%z_val*exp(-(modg/(2*s%ps%a_erf))**2)/modg**2
-              select case(vlocal_cutoff)
-              case(0)
-                cf%FS(ix, iy, iz) = tmp*poisson_cutoff_sphere(modg, r_0)
-
-              case(1)
-                gx = abs(temp(1)*ixx(1))
-                gperp = sqrt((temp(2)*ixx(2))**2 + (temp(3)*ixx(3))**2)
-                cf%FS(ix, iy, iz) = tmp*poisson_cutoff_inf_cylinder(gx, gperp, r_0)
-
-              case(2)
-                gz = abs(temp(3)*ixx(3))
-                gpar = sqrt((temp(1)*ixx(1))**2 + (temp(2)*ixx(2))**2)
-                cf%FS(ix, iy, iz) = tmp*poisson_cutoff_slab(gpar, gz, r_0)
-
-              case(3)
-                cf%FS(ix, iy, iz) = tmp
-              end select
-            else
-              select case(vlocal_cutoff)
-              case(0)  ; cf%FS(ix, iy, iz) = -r_0**2/M_TWO
-              case(1,2); cf%FS(ix, iy, iz) = M_ZERO
-              case(3)  ; cf%FS(ix, iy, iz) = tmp
-              end select
-            end if
-
-            ! multiply by normalization factor and a phase shift to get the center of the box
-            ! the phase is exp(-i kR), where R denotes the center of the box
-            ! note that c is a fortran index that starts at 1
-            cf%FS(ix, iy, iz) = norm*        &
-               exp(-M_ZI*sum(x(:)*(c(:)-1)*m%h(:)))*   &
-               cf%FS(ix, iy, iz)
-          end do
-        end do
-      end do
-
-      ! now we built the non-local core corrections in momentum space
-      nlcc: if(s%nlcc) then
-        call dcf_alloc_RS(ep%rhocore_cf(i))
-
-        do ix = 1, db(1)
-          ixx(1) = ix - c(1)
-          do iy = 1, db(2)
-            ixx(2) = iy - c(2)
-            do iz = 1, db(3)
-              ixx(3) = iz - c(3)
-
-              x(:) = m%h(:)*ixx(:)
-              ep%rhocore_cf(i)%RS(ix, iy, iz) = specie_get_nlcc(s, x)
-            end do
-          end do
-        end do
-        call dcf_alloc_FS(ep%rhocore_cf(i))      ! allocate the tube in Fourier space
-        call dcf_RS2FS(ep%rhocore_cf(i))         ! Fourier transform
-        call dcf_free_RS(ep%rhocore_cf(i))       ! we do not need the real space any longer
-      end if nlcc
-
-    end do specie
-
-    call pop_sub()
-  end subroutine epot_local_fourier_init
-#endif
 
   ! ---------------------------------------------------------
   subroutine epot_generate_gauge_field(ep, gr, st)
@@ -610,9 +415,7 @@ contains
     FLOAT   :: time_
     integer :: ia, l, lm, k, iproj
     type(atom_t),   pointer :: atm
-#ifdef HAVE_FFT
-    type(dcf_t) :: cf_loc, cf_nlcc
-#endif
+
     type(mesh_t),      pointer :: m
     type(simul_box_t), pointer :: sb
     type(submesh_t)  :: nl_sphere
@@ -630,38 +433,10 @@ contains
     ! first we assume that we need to recalculate the ion_ion energy
     geo%eii = ion_ion_energy(geo)
 
-#ifdef HAVE_FFT
-    if(simul_box_is_periodic(sb).and.(.not.geo%only_user_def)) then
-      call dcf_new_from(cf_loc, ep%local_cf(1)) ! at least one specie must exist
-      call dcf_alloc_FS(cf_loc)
-      cf_loc%FS = M_z0
-
-      if(geo%nlcc) then
-        call dcf_new_from(cf_nlcc, ep%local_cf(1)) ! at least one specie must exist
-        call dcf_alloc_FS(cf_nlcc)
-        cf_nlcc%FS = M_z0
-      end if
-    end if
-#endif
-
     ! Local.
     ep%vpsl = M_ZERO
     do ia = 1, geo%natoms
-      atm => geo%atom(ia) ! shortcuts
-
-      if((.not.simul_box_is_periodic(sb)).or.geo%only_user_def) then
-
-        call build_local_part_in_real_space(ep, gr, geo, atm, ep%vpsl, time_, st%rho_core)
-
-#ifdef HAVE_FFT
-      else ! momentum space
-        call cf_phase_factor(sb, m, atm%x, ep%local_cf(atm%spec%index), cf_loc)
-        if(atm%spec%nlcc) then
-          call cf_phase_factor(sb, m, atm%x, ep%rhocore_cf(atm%spec%index), cf_nlcc)
-        end if
-#endif
-      end if
-
+      call build_local_part_in_real_space(ep, gr, geo, geo%atom(ia), ep%vpsl, time_, st%rho_core)
     end do
 
     ! the pseudo potential part.
@@ -691,41 +466,22 @@ contains
 
       call submesh_end(nl_sphere)
 
-      if(.not. simul_box_is_periodic(gr%sb)) then
-        !the local part
-        ep%p(iproj)%iatom = ia
+      !the local-localized part
+      ep%p(iproj)%iatom = ia
+      
+      call projector_end(ep%p(iproj))
+      call submesh_init_sphere(ep%p(iproj)%sphere, &
+        sb, m, atm%x, double_grid_get_rmax(gr%dgrid, atm%spec, m))
+      call projector_init(ep%p(iproj), atm, force_type = M_LOCAL)
+      if(simul_box_is_periodic(sb)) call projector_init_phases(ep%p(iproj), sb, m, atm, st)
 
-        call projector_end(ep%p(iproj))
-        call submesh_init_sphere(ep%p(iproj)%sphere, &
-             sb, m, atm%x, double_grid_get_rmax(gr%dgrid, atm%spec, m))
-        call projector_init(ep%p(iproj), atm, force_type = M_LOCAL)
-
-        iproj = iproj + 1
-      end if
-
+      iproj = iproj + 1
+      
       ep%atomproj(2, ia) = iproj - 1
 
     end do
 
     call projector_build_all
-
-#ifdef HAVE_FFT
-    if(simul_box_is_periodic(sb).and.(.not.geo%only_user_def)) then
-      ! first the potential
-      call dcf_alloc_RS(cf_loc)
-      call dcf_FS2RS(cf_loc)
-      call dcf2mf(m, cf_loc, ep%vpsl)
-      call dcf_free(cf_loc)
-
-      ! and the non-local core corrections
-      if(geo%nlcc) then
-        call dcf_alloc_RS(cf_nlcc)
-        call dcf_FS2RS(cf_nlcc)
-        call dcf2mf(m, cf_nlcc, st%rho_core)
-        call dcf_free(cf_nlcc)
-      end if
-    end if
-#endif
 
     if (ep%classic_pot > 0) then
       ep%vpsl(1:m%np) = ep%vpsl(1:m%np) + ep%vclassic(1:m%np)
@@ -809,8 +565,27 @@ contains
     !$omp end parallel workshare
 #endif
 
-    !Local potential
-    call specie_get_local(a%spec, gr, a%x(1:NDIM), vl, time)
+    !Local potential, we can get it by solving the poisson equation
+    !(for all electron of pseudopotentials in periodic systems) or
+    !directly
+
+    if(a%spec%has_density .or. (specie_is_ps(a%spec) .and. simul_box_is_periodic(gr%sb))) then
+
+      ALLOCATE(rho(1:NP), NP)
+
+      !this has to be optimized so the poisson solution is made once
+      !for all species
+      call specie_get_density(a%spec, a%x, gr, geo, rho)
+      call dpoisson_solve(gr, vl, rho)
+
+      deallocate(rho)
+
+    else
+
+      !Local potential
+      call specie_get_local(a%spec, gr, a%x(1:NDIM), vl, time)
+
+    end if
 
     !$omp parallel workshare
     vpsl(1:NP) = vpsl(1:NP) + vl(1:NP)
@@ -822,21 +597,6 @@ contains
         x(1:NDIM) = gr%m%x(i, 1:NDIM) - a%x(1:NDIM)
         rho_core(i) = rho_core(i) + specie_get_nlcc(a%spec, x)
       end do
-    end if
-
-    !Local potential from density
-    if(a%spec%has_density) then
-
-      ALLOCATE(rho(1:NP), NP)
-
-      call specie_get_density(a%spec, a%x, gr, geo, rho)
-      call dpoisson_solve(gr, vl, rho)
-      !$omp parallel workshare
-      vpsl(1:NP) = vpsl(1:NP) + vl(1:NP)
-      !$omp end parallel workshare
-
-      deallocate(rho)
-
     end if
 
     deallocate(vl)
@@ -945,12 +705,6 @@ contains
       end do
     end if
 
-#if defined(HAVE_FFT)
-    if( simul_box_is_periodic(gr%sb) .and. (.not. geo%only_user_def) ) then ! fourier space
-      call local_FS()
-    end if
-#endif
-
     !TODO: forces due to the magnetic fields (static and time-dependent)
     if(present(t)) then
       do j = 1, ep%no_lasers
@@ -979,42 +733,6 @@ contains
 
     call pop_sub()
     call profiling_out(forces_prof)
-
-#ifdef HAVE_FFT
-
-  contains
-
-    ! ---------------------------------------------------------
-    subroutine local_FS()
-      type(dcf_t) :: cf_for
-      FLOAT, allocatable :: force(:)
-      
-      ALLOCATE(force(NP), NP)
-      call dcf_new_from(cf_for, ep%local_cf(1)) ! at least one specie must exist
-      call dcf_alloc_FS(cf_for)
-      call dcf_alloc_RS(cf_for)
-
-      do i = 1, geo%natoms
-        atm => geo%atom(i)
-        do j = 1, NDIM
-          cf_for%FS = M_z0
-          call cf_phase_factor(gr%sb, gr%m, atm%x, ep%local_cf(atm%spec%index), cf_for)
-
-          call dcf_FS_grad(gr%sb, gr%m, cf_for, j)
-          call dcf_FS2RS(cf_for)
-          call dcf2mf(gr%m, cf_for, force)
-          do l = 1, st%d%nspin
-            ! FIXME: When running with partitions, vol_pp is local
-            ! to the node. It is likely, that this code need changes.
-            atm%f(j) = atm%f(j) + sum(force(1:NP)*st%rho(1:NP, l)*gr%m%vol_pp(1:NP))
-          end do
-        end do
-      end do
-
-      call dcf_free(cf_for)
-      deallocate(force)
-    end subroutine local_FS
-#endif
 
   end subroutine epot_forces
 

@@ -449,11 +449,7 @@ contains
     select case(s%type)
 
     case(SPEC_PS_PSF, SPEC_PS_HGH, SPEC_PS_CPI, SPEC_PS_FHI, SPEC_PS_UPF)
-
-      do ip = 1, gr%m%np
-        r = sqrt(sum((pos(1:MAX_DIM)-gr%m%x(ip, 1:MAX_DIM))**2))
-        rho(ip) = loct_splint(s%ps%nlr, r)
-      end do
+      call dmf_put_radial_spline(gr%m, s%ps%nlr, pos, rho)
 
     case(SPEC_ALL_E)
 
@@ -629,12 +625,8 @@ contains
         end do
         
       case(SPEC_PS_PSF, SPEC_PS_HGH, SPEC_PS_CPI, SPEC_PS_FHI, SPEC_PS_UPF)
-        if(s%ps%has_long_range .and. .not. s%has_density) then 
-          call dmf_put_radial_spline(gr%m, s%ps%vlr, x_atom, vl)
-        else 
-          vl(1:gr%m%np) = M_ZERO
-        end if
-
+        call dmf_put_radial_spline(gr%m, s%ps%vlr, x_atom, vl)
+        
       case(SPEC_ALL_E)
         vl(1:gr%m%np) = M_ZERO
         
