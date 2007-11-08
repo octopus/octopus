@@ -152,9 +152,10 @@ subroutine X(project_sphere)(mesh, pj, dim, psi, ppsi, reltype, periodic, ik)
 #endif
     end select
 
+    if(periodic) deallocate(ph_psi)
+
   end if
 
-  if(periodic) deallocate(ph_psi)
 
   call pop_sub()
 end subroutine X(project_sphere)

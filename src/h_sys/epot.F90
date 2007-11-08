@@ -566,15 +566,15 @@ contains
 #endif
 
     !Local potential, we can get it by solving the poisson equation
-    !(for all electron of pseudopotentials in periodic systems) or
-    !directly
+    !(for all electron species or pseudopotentials in periodic
+    !systems) or by applying it directly to the grid
 
     if(a%spec%has_density .or. (specie_is_ps(a%spec) .and. simul_box_is_periodic(gr%sb))) then
 
       ALLOCATE(rho(1:NP), NP)
 
       !this has to be optimized so the poisson solution is made once
-      !for all species
+      !for all species, perhaps even include it in the hartree term
       call specie_get_density(a%spec, a%x, gr, geo, rho)
       call dpoisson_solve(gr, vl, rho)
 

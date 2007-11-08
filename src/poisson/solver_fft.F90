@@ -79,6 +79,8 @@ contains
     FLOAT :: gpar, gperp, gx, gy, gz, r_c, gg(MAX_DIM)
     FLOAT :: DELTA_R = CNST(1.0e-12)
 
+    call push_sub('solver_fft.poisson_fft_build_3d')
+    
     ! double the box to perform the fourier transforms
     if(poisson_solver.ne.FFT_CORRECTED) then
       call mesh_double_box(gr%sb, gr%m, db)                 ! get dimensions of the double box
@@ -87,9 +89,14 @@ contains
       db(:) = gr%m%l(:)
     end if
 
-    call dcf_new(db, fft_cf)    ! allocate cube function where we will perform
-    call dcf_fft_init(fft_cf, gr%sb)   ! the ffts
-    db = fft_cf%n               ! dimensions may have been optimized
+    ! allocate cube function where we will perform the ffts
+    call dcf_new(db, fft_cf)
+
+    ! initialize the fft
+    call dcf_fft_init(fft_cf, gr%sb)
+
+    ! dimensions may have been optimized
+    db = fft_cf%n
 
     if (poisson_solver <= FFT_PLA .and. poisson_solver .ne. FFT_CORRECTED) then
       call loct_parse_float(check_inp('PoissonCutoffRadius'),&
@@ -219,6 +226,8 @@ contains
     if( (poisson_solver .eq. FFT_CYL) .and. (gr%sb%periodic_dim == 0) ) then
       deallocate(x, y)
     end if
+
+    call pop_sub()
 #endif
   end subroutine poisson_fft_build_3d
     
@@ -234,6 +243,7 @@ contains
     FLOAT :: DELTA_R = CNST(1.0e-12)
     FLOAT, allocatable :: x(:), y(:)
 
+    call push_sub('solver_fft.poisson_fft_build_2d')
 
     ! double the box to perform the fourier transforms
     if(poisson_solver.ne.FFT_CORRECTED) then
@@ -243,16 +253,22 @@ contains
       db(:) = gr%m%l(:)
     end if
 
-    call dcf_new(db, fft_cf)      ! allocate cube function where we will perform
-    call dcf_fft_init(fft_cf, gr%sb) ! the ffts
-    db = fft_cf%n                 ! dimensions may have been optimized
+    ! allocate cube function where we will perform the ffts
+    call dcf_new(db, fft_cf)      
+    ! initialize fft
+    call dcf_fft_init(fft_cf, gr%sb)
+    ! dimensions may have been optimized
+    db = fft_cf%n              
 
     call loct_parse_float(check_inp('PoissonCutoffRadius'),&
       maxval(db(:)*gr%m%h(:)/M_TWO)/units_inp%length%factor , r_c)
+
     r_c = r_c*units_inp%length%factor
+
     write(message(1),'(3a,f12.6)')'Info: Poisson Cutoff Radius [',  &
       trim(units_out%length%abbrev), '] = ',       &
       r_c/units_out%length%factor
+
     call write_info(1)
     if ( r_c > maxval(db(:)*gr%m%h(:)/M_TWO) + DELTA_R) then
       message(1) = 'Poisson cutoff radius is larger than cell size.'
@@ -264,6 +280,7 @@ contains
 
     ! store the fourier transform of the Coulomb interaction
     ALLOCATE(fft_Coulb_FS(fft_cf%nx, fft_cf%n(2), fft_cf%n(3)), fft_cf%nx*fft_cf%n(2)*fft_cf%n(3))
+
     fft_Coulb_FS = M_ZERO
 
     temp(:) = M_TWO*M_PI/(db(:)*gr%m%h(:))
@@ -290,6 +307,8 @@ contains
 
     deallocate(x, y)
     call loct_spline_end(besselintf)
+
+    call pop_sub()
 #endif
   end subroutine poisson_fft_build_2d
 
