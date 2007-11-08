@@ -1258,7 +1258,7 @@ contains
     logical            :: conv
 #if defined(HAVE_MPI)
     integer            :: tmp
-    FLOAT              :: lspin(3, st%lnst) ! To exchange spin.
+    FLOAT, allocatable :: lspin(:, :) ! To exchange spin.
 #endif
 
     call push_sub('states.fermi')
@@ -1274,13 +1274,15 @@ contains
             else
               st%spin(1:3, ie, ik) = state_spin(m, st%zpsi(:, :, ie, ik))
             end if
+          end do
 #if defined(HAVE_MPI)
           if(st%parallel_in_states) then
+            ALLOCATE(lspin(3, st%lnst), 3*st%lnst)
             lspin = st%spin(1:3, st%st_start:st%st_end, ik)
             call lmpi_gen_alltoallv(3*st%lnst, lspin(:, 1), tmp, st%spin(:, 1, ik), st%mpi_grp)
+            deallocate(lspin)
           end if
 #endif
-          end do
         end do
       end if
       call pop_sub()

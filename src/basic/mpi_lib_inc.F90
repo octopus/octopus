@@ -40,9 +40,9 @@ subroutine X(lmpi_gen_alltoallv)(incount, in, outcount, out, mpi_grp)
   ALLOCATE(recvcnts(mpi_grp%size), mpi_grp%size)
 
   ! Query how many elements each node has to contribute.
-  call MPI_Debug_In(mpi_grp%comm, C_MPI_ALLGATHER)
+  call mpi_debug_in(mpi_grp%comm, C_MPI_ALLGATHER)
   call MPI_Allgather(incount, 1, MPI_INTEGER, recvbuf, 1, MPI_INTEGER, mpi_grp%comm, mpi_err)
-  call MPI_Debug_Out(mpi_grp%comm, C_MPI_ALLGATHER)
+  call mpi_debug_out(mpi_grp%comm, C_MPI_ALLGATHER)
 
   outcount = sum(recvbuf)
 
@@ -57,9 +57,9 @@ subroutine X(lmpi_gen_alltoallv)(incount, in, outcount, out, mpi_grp)
     rdispls(i) = rdispls(i-1)+recvcnts(i-1)
   end do
 
-  call MPI_Debug_In(mpi_grp%comm, C_MPI_ALLGATHERV)
+  call mpi_debug_in(mpi_grp%comm, C_MPI_ALLGATHERV)
   call MPI_Allgatherv(in, incount, R_MPITYPE, out, recvcnts, rdispls, R_MPITYPE, mpi_grp%comm, mpi_err)
-  call MPI_Debug_Out(mpi_grp%comm, C_MPI_ALLGATHERV)
+  call mpi_debug_out(mpi_grp%comm, C_MPI_ALLGATHERV)
 
   deallocate(rdispls, recvbuf, recvcnts)
 
