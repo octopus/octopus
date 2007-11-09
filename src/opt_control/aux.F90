@@ -72,6 +72,7 @@
 
     case default
       j1 = abs(zstates_mpdotp(m, psi, target%st))**2
+
     end select
 
     call pop_sub()
@@ -90,8 +91,8 @@
     type(states_t),    intent(inout) :: chi_out
     
     CMPLX   :: olap, zdet
-    CMPLX, allocatable :: cI(:), dI(:), qIJ(:, :), mat(:, :, :), mat_i(:, :, :), mat_j(:, :, :)
-    integer :: ik, p, dim, k, j, no_electrons, ia, ib, n_pairs, nst
+    CMPLX, allocatable :: cI(:), dI(:), qIJ(:, :), mat(:, :, :), mat_i(:, :, :, :), mat_j(:, :, :, :)
+    integer :: ik, p, dim, k, j, no_electrons, ia, ib, n_pairs, nst, ji, jj
   
     call push_sub('opt_control.calc_chi')
 
@@ -163,15 +164,19 @@
       ALLOCATE(cI(n_pairs), n_pairs)
       ALLOCATE(dI(n_pairs), n_pairs)
       ALLOCATE(mat(target%est%st%nst, nst, psi_in%d%nik), target%est%st%nst*nst*psi_in%d%nik)
-      ALLOCATE(mat_i(target%est%st%nst, nst, psi_in%d%nik), target%est%st%nst*nst*psi_in%d%nik)
-      ALLOCATE(mat_j(target%est%st%nst, nst, psi_in%d%nik), target%est%st%nst*nst*psi_in%d%nik)
+      ALLOCATE(mat_i(target%est%st%nst, nst, psi_in%d%nik, n_pairs), target%est%st%nst*nst*psi_in%d%nik*n_pairs)
+      ALLOCATE(mat_j(target%est%st%nst, nst, psi_in%d%nik, n_pairs), target%est%st%nst*nst*psi_in%d%nik*n_pairs)
       ALLOCATE(qIJ(NP_PART, 2), NP_PART * 2)
-      do ia = 1, n_pairs
-        cI(ia) = target%est%weight(ia)
-        dI(ia) = conjg(zstates_mpdotp(gr%m, target%est, psi_in))
-      end do
 
       call zstates_matrix(gr%m, target%est%st, psi_in, mat)
+
+      do ia = 1, n_pairs
+        cI(ia) = target%est%weight(ia)
+        mat_i(:, :, :, ia) = mat(:, :, :)
+        call zstates_matrix_swap(mat_i(:, :, :, ia), target%est%pair(ia))
+        dI(ia) = conjg(lalg_determinant(nst, mat_i(1:nst, 1:nst, 1, ia), invert = .false.))
+!        dI(ia) = conjg(zstates_mpdotp(gr%m, target%est, psi_in))
+      end do
 
       select case(psi_in%d%ispin)
       case(UNPOLARIZED); stop 'Error'
@@ -182,18 +187,18 @@
         do k = chi_out%st_start, chi_out%st_end
           chi_out%zpsi(:, :, k, 1) = M_z0
           do ia = 1, n_pairs
-            mat_i = mat
-            call zstates_matrix_swap(mat_i, target%est%pair(ia))
-            zdet = lalg_inverter(nst, mat_i(1:nst, 1:nst, 1))
+            if(abs(dI(ia)) < CNST(1.0e-12)) cycle
+            zdet = lalg_inverter(nst, mat_i(1:nst, 1:nst, 1, ia))
             do ib = 1, n_pairs
-              mat_j = mat
-              call zstates_matrix_swap(mat_j, target%est%pair(ib))
-              zdet = lalg_inverter(nst, mat_j(1:nst, 1:nst, 1))
+              if(abs(dI(ib)) < CNST(1.0e-12)) cycle
+              zdet = lalg_inverter(nst, mat_i(1:nst, 1:nst, 1, ib))
               qIJ = M_z0
               do j = 1, nst
+                if(j .eq. target%est%pair(ia)%i) ji = target%est%pair(ia)%a
+                if(j .eq. target%est%pair(ib)%i) jj = target%est%pair(ia)%a
                 qIJ(:, :) = qIJ(:, :) + M_HALF * conjg(dI(ia)) * dI(ib) * &
-                  (mat_i(j, k, 1) * conjg(target%est%st%zpsi(:, :, j, 1)) +         &
-                   mat_j(j, k, 1) * target%est%st%zpsi(:, :, j, 1) )
+                  (mat_i(j, k, 1, ia) * conjg(target%est%st%zpsi(:, :, ji, 1)) +         &
+                   conjg(mat_i(j, k, 1, ib)) * target%est%st%zpsi(:, :, jj, 1) )
               end do
               call lalg_axpy(NP_PART, 2, M_z1, conjg(cI(ia)) * cI(ib) * qIJ, chi_out%zpsi(:, :, k, 1))
             end do

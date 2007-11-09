@@ -229,6 +229,14 @@
       end if
     end if
 
+    if(target%type .eq. oct_tg_excited) then
+      if(sys%st%d%ispin .eq. UNPOLARIZED) then
+        write(message(1), '(a)') 'If OCTTargetMode = oct_tg_excited, then you must run either with'
+        write(message(1), '(a)') 'SpinComponents = spin_polarized or SpinComponents = spinors.'
+        call write_fatal(2)
+      end if
+    end if
+
     if( .not.(h%ip_app) ) then
       if( tr%method .ne. PROP_EXPONENTIAL_MIDPOINT ) then
         write(message(1), '(a)') 'When doing QOCT with interacting electronsl, then you must set'

@@ -86,7 +86,7 @@ subroutine X(states_matrix_swap)(mat, pair)
   ! swap row
   row(:) = mat(i, :, ik)
   mat(i, :, ik) = mat(a, :, ik)
-  mat(a, :, ik) = mat(i, :, ik)
+  mat(a, :, ik) = row(:)
 
   deallocate(row)
 end subroutine X(states_matrix_swap)
@@ -285,14 +285,14 @@ R_TYPE function X(states_mpdotp_g)(m, st1, st2, mat) result(dotp)
   ALLOCATE(half_filled1(nst), nst)
   ALLOCATE(half_filled2(nst), nst)
 
+  if(present(mat)) then
+    a(1:st1%nst, 1:st2%nst, 1:st1%d%nik) = mat(1:st1%nst, 1:st2%nst, 1:st1%d%nik)
+  else
+    call X(states_matrix) (m, st1, st2, a)
+  end if
+
   select case(ispin)
   case(UNPOLARIZED)
-
-    if(present(mat)) then
-      a(1:st1%nst, 1:st2%nst, 1:st1%d%nik) = mat(1:st1%nst, 1:st2%nst, 1:st1%d%nik)
-    else
-      call X(states_matrix) (m, st1, st2, a)
-    end if
 
     do ik = 1, nik
 
@@ -332,6 +332,7 @@ R_TYPE function X(states_mpdotp_g)(m, st1, st2, mat) result(dotp)
 
     end do
   case(SPIN_POLARIZED, SPINORS)
+
     do ik = 1, nik
 
       call occupied_states(st1, ik, i1, j1, k1, filled1, partially_filled1, half_filled1)
