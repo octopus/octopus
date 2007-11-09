@@ -123,7 +123,7 @@ contains
   !--------------------------------------------------------------
   subroutine simul_box_init(sb, geo)
     type(simul_box_t), intent(inout) :: sb
-    type(geometry_t),  intent(in)    :: geo
+    type(geometry_t),  intent(inout) :: geo
 
     ! some local stuff
     FLOAT :: def_h, def_rsize
@@ -139,6 +139,7 @@ contains
     call adjust_scatt_box()   ! adjust parameters for a scattering calculation 
     call read_box_offset()    ! parameters defining the offset of the origin
     call build_lattice()      ! build lattice vectors
+    call adjust_geometry()    ! put all the atoms inside the box
 
     call pop_sub()
 
@@ -398,9 +399,12 @@ contains
         !%
         !% where the "size*" are half the lengths of the box in each direction.
         !%
-        !% If BoxShape is "parallelpiped", this block has to be defined in the input file. The
-        !% number of columns must match the dimensionality of the calculation.
+        !% If BoxShape is "parallelpiped", this block has to be
+        !% defined in the input file. The number of columns must match
+        !% the dimensionality of the calculation. If you want a cube
+        !% you can also set Lsize as a single variable.
         !%End
+
         if(loct_parse_block(check_inp('Lsize'), blk) == 0) then
           if(loct_parse_block_cols(blk,0) < sb%dim) call input_error('Lsize')
           do i = 1, sb%dim
@@ -705,6 +709,50 @@ contains
       call pop_sub()
     end subroutine build_lattice
 
+
+    !--------------------------------------------------------------
+    subroutine adjust_geometry
+
+      ! this function checks that the atoms are inside the box if the
+      ! system is periodic, the atoms are moved inside the box, if the
+      ! system is finite a warning is emitted.
+
+      integer :: iatom
+      FLOAT :: xx(1:MAX_DIM)
+
+      do iatom = 1, geo%natoms
+        
+        if (simul_box_is_periodic(sb)) then
+          
+          !convert the position to the orthogonal space
+          xx = matmul(geo%atom(iatom)%x, sb%klattice_unitary)
+          
+          xx(:) = xx(:)/(M_TWO*sb%lsize(:)) + 0.5
+
+          xx(1:sb%periodic_dim) = xx(1:sb%periodic_dim) - aint(xx(1:sb%periodic_dim))
+          
+          xx(:) = (xx(:) - 0.5)*M_TWO*sb%lsize(:) 
+          
+          geo%atom(iatom)%x = matmul(sb%klattice_unitary, xx)
+          
+        end if
+        
+        if ( .not. simul_box_in_box(sb, geo, geo%atom(iatom)%x) ) then
+          
+          message(1) = "An atom is outside the box."
+          if (simul_box_is_periodic(sb)) then
+            message(2) = "This is a bug."
+            call write_fatal(2)
+          else
+            call write_warning(1)
+          end if
+          
+        end if
+
+      end do
+      
+    end subroutine adjust_geometry
+
   end subroutine simul_box_init
 
   subroutine reciprocal_lattice(rv, kv, volume)
@@ -712,7 +760,6 @@ contains
     FLOAT, intent(out)   :: kv(MAX_DIM, MAX_DIM)
     FLOAT, intent(out)   :: volume
     
-    integer :: idim
     FLOAT :: tmp(1:MAX_DIM)
 
  
@@ -812,7 +859,6 @@ contains
 
     FLOAT, parameter :: DELTA = CNST(1e-12)
     FLOAT :: r, re, im, xx(MAX_DIM)
-    integer :: idim
 
 #if defined(HAVE_GDLIB)
     integer :: red, green, blue, ix, iy

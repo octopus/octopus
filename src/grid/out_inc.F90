@@ -605,9 +605,8 @@ contains
     call X(mf2cf) (m, f, c)
 
     ! the offset is different in periodic directions
-    do i = 1, sb%periodic_dim
-      offset(i)=-(c%n(i))/2 * m%h(i) / units_out%length%factor
-    end do
+    offset = -matmul(sb%rlattice, sb%lsize) / units_out%length%factor
+
     do i = sb%periodic_dim+1, 3
       offset(i)=-(c%n(i) - 1)/2 * m%h(i) / units_out%length%factor
     end do
@@ -620,15 +619,14 @@ contains
 
     write(iunit, '(a,3i7)') 'object 1 class gridpositions counts', c%n(:)
     write(iunit, '(a,3f12.6)') ' origin', offset(:)
-    write(iunit, '(a,f12.6,a)') ' delta ',m%h(1) / units_out%length%factor, '    0.000000    0.000000'
-    write(iunit, '(a,f12.6,a)') ' delta     0.000000',m%h(2) / units_out%length%factor, '    0.000000'
-    write(iunit, '(a,f12.6)') ' delta     0.000000    0.000000',m%h(3) / units_out%length%factor
-    write(iunit, '(a,3i7)') 'object 2 class gridconnections counts',c%n(:)
+    write(iunit, '(a,3f12.6)') ' delta ', m%h(1) / units_out%length%factor * sb%rlattice(:, 1)
+    write(iunit, '(a,3f12.6)') ' delta ', m%h(2) / units_out%length%factor * sb%rlattice(:, 2)
+    write(iunit, '(a,3f12.6)') ' delta ', m%h(3) / units_out%length%factor * sb%rlattice(:, 3)
+    write(iunit, '(a,3i7)') 'object 2 class gridconnections counts', c%n(:)
 #if defined(R_TREAL)
-    write(iunit, '(a,a,a)') 'object 3 class array type float rank 0 items ',nitems,' data follows'
+    write(iunit, '(a,a,a)') 'object 3 class array type float rank 0 items ', nitems, ' data follows'
 #else
-    write(iunit, '(a,a,a)') 'object 3 class array type float category complex rank 0 items ',&
-                             nitems,' data follows'
+    write(iunit, '(a,a,a)') 'object 3 class array type float category complex rank 0 items ', nitems, ' data follows'
 #endif
     do ix = 1, c%n(1)
       do iy = 1, c%n(2)
