@@ -7,7 +7,7 @@ Date       : 07.09.07
 Arch       : Linux 
 Release    : 2.6.21
 Programs   : octopus; octopus_single
-TestGroups : long-run
+TestGroups : long-run, oct
 Enabled    : Yes
 
 # The test ensures that the OCT with local target works.

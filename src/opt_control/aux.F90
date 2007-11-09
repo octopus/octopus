@@ -67,6 +67,9 @@
     case(oct_tg_td_local)
       j1 = sum(target%td_fitness) 
 
+    case(oct_tg_excited)
+      j1 = abs(zstates_mpdotp(m, target%est, psi))**2
+
     case default
       j1 = abs(zstates_mpdotp(m, psi, target%st))**2
     end select
@@ -86,8 +89,9 @@
 
     type(states_t),    intent(inout) :: chi_out
     
-    CMPLX   :: olap
-    integer :: ik, p, dim, j, no_electrons
+    CMPLX   :: olap, zdet
+    CMPLX, allocatable :: cI(:), dI(:), qIJ(:, :), mat(:, :, :), mat_i(:, :, :), mat_j(:, :, :)
+    integer :: ik, p, dim, k, j, no_electrons, ia, ib, n_pairs, nst
   
     call push_sub('opt_control.calc_chi')
 
@@ -151,6 +155,55 @@
         end do
       end do
 
+    case(oct_tg_excited) 
+
+      n_pairs = target%est%n_pairs
+      nst = psi_in%nst
+
+      ALLOCATE(cI(n_pairs), n_pairs)
+      ALLOCATE(dI(n_pairs), n_pairs)
+      ALLOCATE(mat(target%est%st%nst, nst, psi_in%d%nik), target%est%st%nst*nst*psi_in%d%nik)
+      ALLOCATE(mat_i(target%est%st%nst, nst, psi_in%d%nik), target%est%st%nst*nst*psi_in%d%nik)
+      ALLOCATE(mat_j(target%est%st%nst, nst, psi_in%d%nik), target%est%st%nst*nst*psi_in%d%nik)
+      ALLOCATE(qIJ(NP_PART, 2), NP_PART * 2)
+      do ia = 1, n_pairs
+        cI(ia) = target%est%weight(ia)
+        dI(ia) = conjg(zstates_mpdotp(gr%m, target%est, psi_in))
+      end do
+
+      call zstates_matrix(gr%m, target%est%st, psi_in, mat)
+
+      select case(psi_in%d%ispin)
+      case(UNPOLARIZED); stop 'Error'
+      case(SPIN_POLARIZED); stop 'Error'
+      case(SPINORS)
+        ASSERT(chi_out%d%nik .eq. 1)
+
+        do k = chi_out%st_start, chi_out%st_end
+          chi_out%zpsi(:, :, k, 1) = M_z0
+          do ia = 1, n_pairs
+            mat_i = mat
+            call zstates_matrix_swap(mat_i, target%est%pair(ia))
+            zdet = lalg_inverter(nst, mat_i(1:nst, 1:nst, 1))
+            do ib = 1, n_pairs
+              mat_j = mat
+              call zstates_matrix_swap(mat_j, target%est%pair(ib))
+              zdet = lalg_inverter(nst, mat_j(1:nst, 1:nst, 1))
+              qIJ = M_z0
+              do j = 1, nst
+                qIJ(:, :) = qIJ(:, :) + M_HALF * conjg(dI(ia)) * dI(ib) * &
+                  (mat_i(j, k, 1) * conjg(target%est%st%zpsi(:, :, j, 1)) +         &
+                   mat_j(j, k, 1) * target%est%st%zpsi(:, :, j, 1) )
+              end do
+              call lalg_axpy(NP_PART, 2, M_z1, conjg(cI(ia)) * cI(ib) * qIJ, chi_out%zpsi(:, :, k, 1))
+            end do
+          end do
+        end do
+
+      end select
+
+      deallocate(cI, dI, mat, mat_i, mat_j, qIJ)
+
     case default
 
       olap = zstates_mpdotp(gr%m, target%st, psi_in)
@@ -167,7 +220,6 @@
 
     end select
 
-      
     call pop_sub()
   end subroutine calc_chi
 

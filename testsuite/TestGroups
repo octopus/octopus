@@ -10,3 +10,4 @@ Group tag       Description
 ------------------------------------------------------------------------
 short-run       Formerly known as -s flag.
 long-run        Matches all test.
+oct             QOCT tests.

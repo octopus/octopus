@@ -22,11 +22,15 @@
 module excited_states_m
   use global_m
   use io_m
+  use lib_oct_m
   use lalg_adv_m
   use mesh_m
   use messages_m
   use mpi_m
+  use grid_m
   use states_m
+  use states_output_m
+  use output_m
 
   implicit none
 
@@ -36,11 +40,14 @@ module excited_states_m
     excited_states_t,               &
     excited_states_init,            &
     excited_states_kill,            &
+    excited_states_output,          &
     occupied_states,                &
     dstates_mpdotp,                 &
     zstates_mpdotp,                 &
     zstates_mpmatrixelement,        &
-    dstates_mpmatrixelement
+    dstates_mpmatrixelement,        &
+    dstates_matrix_swap,            &
+    zstates_matrix_swap
     
 
 
@@ -180,7 +187,7 @@ contains
     FLOAT :: dump
     logical :: ok
 
-    call push_sub('states.states_init_excited_state')
+    call push_sub('excited_states.excited_states_init')
 
     ! This is just to make the code more readable.
     nst   = ground_state%nst
@@ -270,7 +277,7 @@ contains
       message(1) = 'File "'//trim(filename)//'" is empty?'
       call write_fatal(1)
     elseif(j > n_possible_pairs) then
-      message(1) = 'File "'//trim(filename)//' contains too many electron-hole pairs.'
+      message(1) = 'File "'//trim(filename)//'" contains too many electron-hole pairs.'
       call write_fatal(1)
     end if 
 
@@ -360,7 +367,7 @@ contains
     type(excited_states_t), intent(inout) :: excited_state
     integer :: ierr
 
-    call push_sub('states.states_init_excited_state')
+    call push_sub('excited_states.excited_states_kill')
 
     nullify(excited_state%st)
     deallocate(excited_state%pair,   stat = ierr); nullify(excited_state%pair)
@@ -368,6 +375,32 @@ contains
 
     call pop_sub()
   end subroutine excited_states_kill
+
+
+  ! ---------------------------------------------------------
+  subroutine excited_states_output(excited_state, gr, dirname, outp)
+    type(excited_states_t), intent(inout) :: excited_state
+    type(grid_t),           intent(inout) :: gr
+    character(len=*),       intent(in)    :: dirname
+    type(output_t),         intent(in)    :: outp
+
+    integer :: iunit, ia
+
+    call push_sub('excited_states.excited_states_output')
+
+    call loct_mkdir(trim(dirname))
+
+    call states_output(excited_state%st, gr, trim(dirname)//'/st', outp)
+
+    iunit = io_open(file = trim(dirname)//'/excitations', action = 'write', status = 'replace')
+    do ia = 1, excited_state%n_pairs
+      write(iunit, '(3i5,es20.12)') excited_state%pair(ia)%i, excited_state%pair(ia)%a, &
+                                    excited_state%pair(ia)%sigma, excited_state%weight(ia)
+    end do
+
+    call io_close(iunit)
+    call pop_sub()
+  end subroutine excited_states_output
 
 
   ! ---------------------------------------------------------

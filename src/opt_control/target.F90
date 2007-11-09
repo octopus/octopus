@@ -29,6 +29,7 @@ module opt_control_target_m
   use global_m
   use string_m
   use states_m
+  use excited_states_m
   use grid_m
   use output_m
   use geometry_m
@@ -53,6 +54,7 @@ module opt_control_target_m
     integer :: type
     integer :: mode
     type(states_t) :: st
+    type(excited_states_t) :: est
     FLOAT, pointer :: rho(:)
     FLOAT, pointer :: td_fitness(:)
     character(len=200) :: td_local_target
@@ -116,12 +118,35 @@ module opt_control_target_m
         write(message(1),'(a)') 'Could not read ground-state wavefunctions from '//trim(tmpdir)//'gs.'
         call write_fatal(1)
       end if
+
       
     case(oct_tg_excited) 
-      message(1) = 'Error: using an excited state as the target state for an '
-      message(2) = 'optimal control run is not possible yet.'
-      message(3) = 'Try using "OCTInitialState = oct_is_transformation" instead.'
-      call write_fatal(3)
+
+      message(1) =  'Info: TargetOperator is a linear combination of Slater determinants.'
+      call write_info(1)
+      target%mode = oct_targetmode_static
+
+      call states_look (trim(tmpdir)//'gs', gr%m, ip, ip, target%st%nst, ierr)
+      target%st%st_start = 1
+      target%st%st_end   = target%st%nst
+      deallocate(target%st%occ, target%st%eigenval, target%st%momentum, target%st%node)
+      ALLOCATE(target%st%occ(target%st%nst, target%st%d%nik), target%st%nst*target%st%d%nik)
+      ALLOCATE(target%st%eigenval(target%st%nst, target%st%d%nik), target%st%nst*target%st%d%nik)
+      ALLOCATE(target%st%momentum(3,target%st%nst, target%st%d%nik), 3*target%st%nst*target%st%d%nik)
+      ALLOCATE(target%st%node(target%st%nst), target%st%nst)
+      if(target%st%d%ispin == SPINORS) then
+        deallocate(target%st%spin)
+        ALLOCATE(target%st%spin(3, target%st%nst, target%st%d%nik), target%st%nst*target%st%d%nik*3)
+      end if
+      call states_allocate_wfns(target%st, gr%m, M_CMPLX)
+      target%st%node(:)  = 0
+
+      call restart_read(trim(tmpdir)//'gs', target%st, gr, geo, ierr)
+      if(ierr.ne.0) then
+        write(message(1),'(a)') 'Could not read ground-state wavefunctions from '//trim(tmpdir)//'gs.'
+        call write_fatal(1)
+      end if
+      call excited_states_init(target%est, target%st, "oct-excited-state-target") 
 
     case(oct_tg_gstransformation)  
 
@@ -342,6 +367,8 @@ module opt_control_target_m
     case(oct_tg_density)
       call doutput_function(outp%how, trim(dir), 'density_target', gr%m, gr%sb, &
         target%rho, M_ONE, ierr)
+    case(oct_tg_excited)
+      call excited_states_output(target%est, gr, trim(dir), outp)
     case default
       call states_output(target%st, gr, trim(dir), outp)
     end select

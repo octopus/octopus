@@ -20,6 +20,8 @@
 #include "global.h"
 
 module opt_control_m
+  use lalg_basic_m
+  use lalg_adv_m
   use excited_states_m
   use datasets_m
   use varinfo_m

@@ -7,7 +7,7 @@ Date       : 19.05.06
 Arch       : Linux 
 Release    : 2.2.0pre1
 Programs   : octopus; octopus_single
-TestGroups : short-run
+TestGroups : short-run, oct
 Enabled    : Yes
 
 # The test ensures the optimal control algorithm ZBR98. It calculates the optimal laser field that transfers the ground-state to the first excited state. 
