@@ -75,6 +75,7 @@ module states_m
     states_dens_reduce,               &
     states_calc_dens,                 &
     states_paramagnetic_current,      &
+    state_is_local,                   &
     kpoints_write_info,               &
     wfs_are_complex,                  &
     wfs_are_real,                     &
@@ -1236,16 +1237,13 @@ contains
 
     end select
 
-    ! Do not orthonormalize if we have parallelization in states.
-    if(.not.st%parallel_in_states) then
-      do ik = 1, st%d%nik
-        if (st%wfs_type == M_REAL) then
-          call dstates_gram_schmidt(ist_end, m, st%d%dim, st%dpsi(:,:,1:ist_end,ik), start = ist_start)
-        else
-          call zstates_gram_schmidt(ist_end, m, st%d%dim, st%zpsi(:,:,1:ist_end,ik), start = ist_start)
-        end if
-      end do
-    end if
+    do ik = 1, st%d%nik
+      if (st%wfs_type == M_REAL) then
+        call dstates_gram_schmidt(st, st%nst, m, st%d%dim, st%dpsi(:,:,:,ik))
+      else
+        call zstates_gram_schmidt(st, st%nst, m, st%d%dim, st%zpsi(:,:,:,ik))
+      end if
+    end do
 
     call pop_sub()
   end subroutine states_generate_random
@@ -2367,6 +2365,20 @@ contains
     call io_close(iunit2, grp = m%mpi_grp)
     call pop_sub()
   end subroutine states_look
+
+
+  ! ---------------------------------------------------------
+  logical function state_is_local(st, ist)
+    type(states_t), intent(in) :: st
+    integer,        intent(in) :: ist
+
+    call push_sub('states.state_is_local')
+
+    state_is_local = ist.ge.st%st_start.and.ist.le.st%st_end
+
+    call pop_sub()
+  end function state_is_local
+
 
 #include "states_kpoints.F90"
 

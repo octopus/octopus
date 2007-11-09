@@ -19,16 +19,22 @@
 
 
 ! ---------------------------------------------------------
-! Orthonormalizes nst orbital in mesh m
-subroutine X(states_gram_schmidt1)(nst, m, dim, psi, start)
+! Orthonormalizes nst orbitals in mesh m (honours state
+! parallelization).
+subroutine X(states_gram_schmidt1)(st, nst, m, dim, psi, start)
+  type(states_t),    intent(in)    :: st
   integer,           intent(in)    :: nst, dim
   type(mesh_t),      intent(in)    :: m
-  R_TYPE,            intent(inout) :: psi(:,:,:)   ! psi(m%np_part, dim, nst)
+  R_TYPE, target,    intent(inout) :: psi(:,:,:)   ! psi(m%np_part, dim, nst)
   integer, optional, intent(in)    :: start
 
   integer :: p, q, stst, idim
   FLOAT   :: nrm2
   R_TYPE  :: ss
+#if defined(HAVE_MPI)
+  R_TYPE, target, allocatable :: buf(:, :)
+#endif
+  R_TYPE, pointer             :: psi_q(:, :), psi_p(:, :)
 
   call profiling_in(C_PROFILING_GRAM_SCHMIDT1)
   call push_sub('states_inc.Xstates_gram_schmidt1')
@@ -39,21 +45,61 @@ subroutine X(states_gram_schmidt1)(nst, m, dim, psi, start)
     stst = 1
   end if
 
+#if defined(HAVE_MPI)
+  if(st%parallel_in_states) then
+    ALLOCATE(buf(m%np_part, st%d%dim), m%np_part*st%d%dim)
+  end if
+#endif
+
   do p = stst, nst
+    ! Orthogonalize.
     do q = 1, p - 1
-      ss = X(states_dotp)(m, dim, psi(:,:, q), psi(:,:, p))
-      do idim = 1, dim
-        call lalg_axpy(m%np, -ss, psi(:, idim, q), psi(:, idim, p))
-      end do
+      ! Copy orbital p from other node if necessary.
+      if(st%parallel_in_states) then
+#if defined(HAVE_MPI)
+        if(state_is_local(st, p).and.state_is_local(st, q)) then
+          psi_q => psi(:, :, q-st%st_start+1)
+          psi_p => psi(:, :, p-st%st_start+1)
+        else if(state_is_local(st, p).and..not.state_is_local(st, q)) then
+          call MPI_Recv(buf, m%np_part*st%d%dim, R_MPITYPE, st%node(q), 0, st%mpi_grp%comm, mpi_err)
+          psi_q => buf
+          psi_p => psi(:, :, p-st%st_start+1)
+        else if(.not.state_is_local(st, p).and.state_is_local(st, q)) then
+          call MPI_Send(psi(:, :, q-st%st_start+1), m%np_part*st%d%dim, R_MPITYPE, st%node(p), 0, st%mpi_grp%comm, mpi_err)
+        end if
+#else
+        message(1) = 'Running parallel in states without MPI. This is a bug.'
+        call write_fatal(1)
+#endif
+      else
+        psi_q => psi(:, :, q)
+        psi_p => psi(:, :, p)
+      end if
+      
+      if(state_is_local(st, p)) then
+        ss = X(states_dotp)(m, dim, psi_q(:,:), psi_p(:, :))
+        do idim = 1, dim
+          call lalg_axpy(m%np, -ss, psi_q(:, idim), psi_p(:, idim))
+        end do
+      end if
     end do
 
-    nrm2 = X(states_nrm2)(m, dim, psi(:,:, p))
-    ss = R_TOTYPE(M_ONE/nrm2)
-    do idim = 1, dim
-      call lalg_scal(m%np, ss, psi(:, idim, p))
-    end do
+    ! Normalize.
+    if(state_is_local(st, p)) then
+      nrm2 = X(states_nrm2)(m, dim, psi(:, :, p-st%st_start+1))
+      ss = R_TOTYPE(M_ONE/nrm2)
+      do idim = 1, dim
+        call lalg_scal(m%np, ss, psi(:, idim, p-st%st_start+1))
+      end do
+    end if
   end do
 
+#if defined(HAVE_MPI)
+  if(st%parallel_in_states) then
+    deallocate(buf)
+  end if
+#endif
+  
   call pop_sub()
   call profiling_out(C_PROFILING_GRAM_SCHMIDT1)
 end subroutine X(states_gram_schmidt1)
@@ -65,7 +111,8 @@ end subroutine X(states_gram_schmidt1)
 ! And one can pass an extra optional argument, mask, which:
 !  - on input, if mask(p) = .true., the p-orbital is not used.
 !  - on output, mask(p) = .true. if p was already orthogonal (to within 1e-12).
-subroutine X(states_gram_schmidt2)(nst, m, dim, psi, phi, normalize, mask)
+subroutine X(states_gram_schmidt2)(st, nst, m, dim, psi, phi, normalize, mask)
+  type(states_t),    intent(in)    :: st
   integer,           intent(in)    :: nst, dim
   type(mesh_t),      intent(in)    :: m
   R_TYPE,            intent(inout) :: psi(:,:,:)   ! psi(m%np_part, dim, nst)
@@ -77,6 +124,8 @@ subroutine X(states_gram_schmidt2)(nst, m, dim, psi, phi, normalize, mask)
   integer :: q, idim
   FLOAT   :: nrm2
   R_TYPE  :: ss
+
+  ASSERT(.not.st%parallel_in_states)
 
   call profiling_in(C_PROFILING_GRAM_SCHMIDT2)
   call push_sub('states_inc.Xstates_gram_schmidt2')

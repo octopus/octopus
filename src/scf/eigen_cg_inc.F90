@@ -98,7 +98,7 @@ subroutine X(eigen_solver_cg2) (gr, st, h, pre, tol, niter, converged, diff, reo
       end if
 
       ! Orthogonalize starting eigenfunctions to those already calculated...
-      call X(states_gram_schmidt)(p, gr%m, st%d%dim, st%X(psi)(:, 1:st%d%dim, 1:p, ik), start=p)
+      call X(states_gram_schmidt)(st, p, gr%m, st%d%dim, st%X(psi)(:, 1:st%d%dim, 1:p, ik), start=p)
 
       ! Calculate starting gradient: |hpsi> = H|psi>
       call X(Hpsi)(h, gr, st%X(psi)(:,:, p, ik) , h_psi, ik)
@@ -123,7 +123,7 @@ subroutine X(eigen_solver_cg2) (gr, st, h, pre, tol, niter, converged, diff, reo
         end do
 
         ! Orthogonalize to lowest eigenvalues (already calculated)
-        if(p > 1) call X(states_gram_schmidt)(p - 1, gr%m, st%d%dim, st%X(psi)(:, :, :, ik), g, &
+        if(p > 1) call X(states_gram_schmidt)(st, p - 1, gr%m, st%d%dim, st%X(psi)(:, :, :, ik), g, &
                                               normalize = .false.)
 
         if(iter .ne. 1) gg1 = X(states_dotp) (gr%m, st%d%dim, g, g0)
@@ -295,7 +295,7 @@ subroutine X(eigen_solver_cg2_new) (gr, st, h, tol, niter, converged, diff, reor
     states: do ist = conv + 1, nst
 
       ! Orthogonalize starting eigenfunctions to those already calculated...
-      call X(states_gram_schmidt)(ist, gr%m, dim, st%X(psi)(:, 1:dim, 1:ist, ik), start=ist)
+      call X(states_gram_schmidt)(st, ist, gr%m, dim, st%X(psi)(:, 1:dim, 1:ist, ik), start=ist)
       psi(1:NP, 1:dim) = st%X(psi)(1:NP, 1:dim, ist, ik)
 
       ! Calculate starting gradient: |hpsi> = H|psi>
@@ -332,7 +332,7 @@ subroutine X(eigen_solver_cg2_new) (gr, st, h, tol, niter, converged, diff, reor
 
          ! Get steepest descent vector
          sd(1:NP, 1:dim) = lambda*psi(1:NP, 1:dim) - phi(1:NP, 1:dim)
-         if(ist > 1) call X(states_gram_schmidt)(ist - 1, gr%m, dim, st%X(psi)(:, :, :, ik), sd, &
+         if(ist > 1) call X(states_gram_schmidt)(st, ist - 1, gr%m, dim, st%X(psi)(:, :, :, ik), sd, &
                                                  normalize = .false., mask = orthogonal)
 
          ! Get conjugate-gradient vector
