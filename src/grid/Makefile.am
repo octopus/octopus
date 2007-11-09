@@ -22,7 +22,7 @@
 noinst_LIBRARIES = libgrid.a
 
 libgrid_a_SOURCES = \
-	simul_box.F90 curv_gygi.F90 curv_briggs.F90 curv_modine.F90 curvlinear.F90 \
+	simul_box.F90 solids.F90 curv_gygi.F90 curv_briggs.F90 curv_modine.F90 curvlinear.F90 \
 	mesh_lib.F90 par_vec.F90 mesh.F90 scalar_mesh.F90 nl_operator.F90 \
 	submesh.F90 stencil_star.F90 stencil_variational.F90 stencil_cube.F90 \
 	stencil_starplus.F90 derivatives.F90 cube_function.F90 mesh_function.F90 \
@@ -62,3 +62,4 @@ out.o : out.F90 out_inc.F90 par_vec.o simul_box.o mesh.o functions.o cube_functi
 multigrid.o : multigrid.F90 mesh.o functions.o curvlinear.o 
 double_grid.o : double_grid.F90 double_grid_apply.F90 submesh.o simul_box.o mesh_function.o functions.o mesh.o curvlinear.o 
 grid.o : grid.F90 simul_box.o multigrid.o mesh.o functions.o double_grid.o curvlinear.o 
+solids.o: solids.F90 simul_box.o

@@ -38,6 +38,7 @@ module specie_pot_m
   use root_solver_m
   use simul_box_m
   use specie_m
+  use solids_m
   use submesh_m
   use poisson_m
   use ps_m
@@ -442,14 +443,20 @@ contains
     FLOAT   :: x(1:MAX_DIM+1), chi0(MAX_DIM), startval(MAX_DIM + 1)
     FLOAT   :: delta, alpha, beta
     FLOAT   :: r
-    integer :: ip
+    integer :: ip, icell
+    type(periodic_copy_t) :: pp
 
     call push_sub('specie_grid.specie_get_density')
 
     select case(s%type)
 
     case(SPEC_PS_PSF, SPEC_PS_HGH, SPEC_PS_CPI, SPEC_PS_FHI, SPEC_PS_UPF)
-      call dmf_put_radial_spline(gr%m, s%ps%nlr, pos, rho)
+      rho = M_ZERO
+      call periodic_copy_init(pp, gr%sb, pos, range = loct_spline_cutoff_radius(s%ps%nlr, s%ps%projectors_sphere_threshold))
+      do icell = 1, periodic_copy_num(pp)
+        call dmf_put_radial_spline(gr%m, s%ps%nlr, periodic_copy_position(pp, gr%sb, icell), rho, add = .true.)
+      end do
+      call periodic_copy_end(pp)
 
     case(SPEC_ALL_E)
 
