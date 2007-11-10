@@ -91,7 +91,7 @@
     type(states_t),    intent(inout) :: chi_out
     
     CMPLX   :: olap, zdet
-    CMPLX, allocatable :: cI(:), dI(:), qIJ(:, :), mat(:, :, :), mat_i(:, :, :, :), mat_j(:, :, :, :)
+    CMPLX, allocatable :: cI(:), dI(:), mat(:, :, :), mm(:, :, :, :), mk(:, :), lambda(:, :)
     integer :: ik, p, dim, k, j, no_electrons, ia, ib, n_pairs, nst, ji, jj
   
     call push_sub('opt_control.calc_chi')
@@ -164,18 +164,27 @@
       ALLOCATE(cI(n_pairs), n_pairs)
       ALLOCATE(dI(n_pairs), n_pairs)
       ALLOCATE(mat(target%est%st%nst, nst, psi_in%d%nik), target%est%st%nst*nst*psi_in%d%nik)
-      ALLOCATE(mat_i(target%est%st%nst, nst, psi_in%d%nik, n_pairs), target%est%st%nst*nst*psi_in%d%nik*n_pairs)
-      ALLOCATE(mat_j(target%est%st%nst, nst, psi_in%d%nik, n_pairs), target%est%st%nst*nst*psi_in%d%nik*n_pairs)
-      ALLOCATE(qIJ(NP_PART, 2), NP_PART * 2)
+      ALLOCATE(mm(nst, nst, psi_in%d%nik, n_pairs), nst*nst*psi_in%d%nik*n_pairs)
+      ALLOCATE(mk(NP_PART, 2), NP_PART * 2)
+      ALLOCATE(lambda(n_pairs, n_pairs), n_pairs*n_pairs)
 
       call zstates_matrix(gr%m, target%est%st, psi_in, mat)
 
       do ia = 1, n_pairs
         cI(ia) = target%est%weight(ia)
-        mat_i(:, :, :, ia) = mat(:, :, :)
-        call zstates_matrix_swap(mat_i(:, :, :, ia), target%est%pair(ia))
-        dI(ia) = conjg(lalg_determinant(nst, mat_i(1:nst, 1:nst, 1, ia), invert = .false.))
-!        dI(ia) = conjg(zstates_mpdotp(gr%m, target%est, psi_in))
+        call zstates_matrix_swap(mat, target%est%pair(ia))
+        mm(1:nst, 1:nst, 1, ia) = mat(1:nst, 1:nst, 1)
+        dI(ia) = lalg_determinant(nst, mm(1:nst, 1:nst, 1, ia), invert = .false.)
+        if(abs(dI(ia)) > CNST(1.0e-12)) then
+          dI(ia) = lalg_inverter(nst, mm(1:nst, 1:nst, 1, ia))
+        end if
+        call zstates_matrix_swap(mat, target%est%pair(ia))
+      end do
+
+      do ia = 1, n_pairs
+        do ib = 1, n_pairs
+          lambda(ia, ib) = conjg(cI(ib)) * cI(ia) * conjg(dI(ia)) * dI(ib)
+        end do
       end do
 
       select case(psi_in%d%ispin)
@@ -186,28 +195,27 @@
 
         do k = chi_out%st_start, chi_out%st_end
           chi_out%zpsi(:, :, k, 1) = M_z0
+
           do ia = 1, n_pairs
             if(abs(dI(ia)) < CNST(1.0e-12)) cycle
-            zdet = lalg_inverter(nst, mat_i(1:nst, 1:nst, 1, ia))
+
             do ib = 1, n_pairs
               if(abs(dI(ib)) < CNST(1.0e-12)) cycle
-              zdet = lalg_inverter(nst, mat_i(1:nst, 1:nst, 1, ib))
-              qIJ = M_z0
+
+              mk = M_z0
               do j = 1, nst
-                if(j .eq. target%est%pair(ia)%i) ji = target%est%pair(ia)%a
                 if(j .eq. target%est%pair(ib)%i) jj = target%est%pair(ia)%a
-                qIJ(:, :) = qIJ(:, :) + M_HALF * conjg(dI(ia)) * dI(ib) * &
-                  (mat_i(j, k, 1, ia) * conjg(target%est%st%zpsi(:, :, ji, 1)) +         &
-                   conjg(mat_i(j, k, 1, ib)) * target%est%st%zpsi(:, :, jj, 1) )
+                mk(:, :) = mk(:, :) + conjg(mm(k, j, 1, ib)) * target%est%st%zpsi(:, :, jj, 1)
               end do
-              call lalg_axpy(NP_PART, 2, M_z1, conjg(cI(ia)) * cI(ib) * qIJ, chi_out%zpsi(:, :, k, 1))
+
+              call lalg_axpy(NP_PART, 2, M_z1, lambda(ib, ia)*mk(:, :), chi_out%zpsi(:, :, k, 1))
             end do
           end do
         end do
 
       end select
 
-      deallocate(cI, dI, mat, mat_i, mat_j, qIJ)
+      deallocate(cI, dI, mat, mm, mk, lambda)
 
     case default
 
