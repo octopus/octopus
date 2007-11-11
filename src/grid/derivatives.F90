@@ -374,114 +374,99 @@ contains
       call nl_operator_build(m, der%op(i), der%m%np, const_w = const_w_, cmplx_op = cmplx_op_)
     end do
 
-    if(m%use_curvlinear.or.der%stencil_type==DER_CUBE) then
+    select case(der%stencil_type)
 
-      select case(der%stencil_type)
-      case(DER_STAR) ! laplacian and gradient have different stencils
-        do i = 1, der%dim + 1
-          ALLOCATE(polynomials(der%dim, der%op(i)%n), der%dim*der%op(i)%n)
-          ALLOCATE(rhs(der%op(i)%n, 1), der%op(i)%n*1)
-
-          if(i <= der%dim) then  ! gradient
-            call stencil_star_polynomials_grad(i, der%order, polynomials)
-            call get_rhs_grad(i, rhs(:,1))
-          else                      ! laplacian
-            call stencil_star_polynomials_lapl(der%dim, der%order, polynomials)
-            call get_rhs_lapl(rhs(:,1))
-          end if
-
-          call make_discretization(der%dim, der%m, polynomials, rhs, 1, der%op(i:i))
-          deallocate(polynomials, rhs)
-        end do
-
-      case(DER_CUBE) ! laplacian and gradient have similar stencils
-        ALLOCATE(polynomials(der%dim, der%op(1)%n), der%dim*der%op(1)%n)
-        ALLOCATE(rhs(der%op(1)%n, der%dim+1), der%op(1)%n*(der%dim+1))
-        call stencil_cube_polynomials_lapl(der%dim, der%order, polynomials)
-
-        do i = 1, der%dim
-          call get_rhs_grad(i, rhs(:,i))
-        end do
-        call get_rhs_lapl(rhs(:, der%dim+1))
-
-        call make_discretization(der%dim, der%m, polynomials, rhs, der%dim+1, der%op(:))
-
-        deallocate(polynomials, rhs)
-      case(DER_STARPLUS)
-        do i = 1, der%dim
-          ALLOCATE(polynomials(der%dim, der%op(i)%n), der%dim*der%op(i)%n)
-          ALLOCATE(rhs(der%op(i)%n, 1), der%op(i)%n*1)
-          call stencil_starplus_pol_grad(der%dim, i, der%order, polynomials)
-          call get_rhs_grad(i, rhs(:, 1))
-          call make_discretization(der%dim, der%m, polynomials, rhs, 1, der%op(i:i))
-          deallocate(polynomials, rhs)
-        end do
-        ALLOCATE(polynomials(der%dim, der%op(der%dim+1)%n), der%dim*der%op(der%dim+1)%n)
+    case(DER_STAR) ! laplacian and gradient have different stencils
+      do i = 1, der%dim + 1
+        ALLOCATE(polynomials(der%dim, der%op(i)%n), der%dim*der%op(i)%n)
         ALLOCATE(rhs(der%op(i)%n, 1), der%op(i)%n*1)
-        call stencil_starplus_pol_lapl(der%dim, der%order, polynomials)
-        call get_rhs_lapl(rhs(:, 1))
-        call make_discretization(der%dim, der%m, polynomials, rhs, 1, der%op(der%dim+1:der%dim+1))
-        deallocate(polynomials, rhs)
-      end select
 
-      ! Here the Laplacian is forced to be self-adjoint, and the gradient to be skew-selfadjoint
-      if(m%use_curvlinear) then
-        do i = 1, der%dim
-          call nl_operator_init(auxop, der%grad(i)%n, "auxop")
-          auxop%stencil = der%grad(i)%stencil
-          call nl_operator_build(m, auxop, der%m%np, const_w = const_w_, cmplx_op = cmplx_op_)
-          call nl_operator_skewadjoint(der%grad(i), auxop, der%m)
-          call nl_operator_equal(der%grad(i), auxop)
-          call nl_operator_end(auxop)
-        end do
-        call nl_operator_init(auxop, der%lapl%n, "auxop")
-        auxop%stencil = der%lapl%stencil
-        call nl_operator_build(m, auxop, der%m%np, const_w = const_w_, cmplx_op = cmplx_op_)
-        call nl_operator_selfadjoint(der%lapl, auxop, der%m)
-        call nl_operator_equal(der%lapl, auxop)
-        call nl_operator_end(auxop)
-      end if
-
-      ! Here I will nullify all the coefficients that are outside the box (only for
-      ! the case of non-constant weights == curvilinear coordinates).
-      ! WARNING: Same thing should be done for the gradients. The subroutines in
-      ! derivatives_inc.F90 should then be changed accordingly.
-      if(m%use_curvlinear) then
-        if(m%parallel_in_domains) then
-          up = m%vp%np_local(m%vp%partno) + m%vp%np_ghost(m%vp%partno)
-        else
-          up = m%np_global
+        if(i <= der%dim) then  ! gradient
+          call stencil_star_polynomials_grad(i, der%order, polynomials)
+          call get_rhs_grad(i, rhs(:,1))
+        else                      ! laplacian
+          call stencil_star_polynomials_lapl(der%dim, der%order, polynomials)
+          call get_rhs_lapl(rhs(:,1))
         end if
 
-        do i = 1, m%np
-          do j = 1, der%lapl%n
-            k  = der%lapl%i(j, i)
+        call make_discretization(der%dim, der%m, polynomials, rhs, 1, der%op(i:i))
+        deallocate(polynomials, rhs)
+      end do
 
-            if(k>up) then
-              der%lapl%w_re(j, i) = M_ZERO
-              der%lapl%i(j, i) = i
-            end if
-          end do
-        end do
+    case(DER_CUBE) ! laplacian and gradient have similar stencils
+      ALLOCATE(polynomials(der%dim, der%op(1)%n), der%dim*der%op(1)%n)
+      ALLOCATE(rhs(der%op(1)%n, der%dim+1), der%op(1)%n*(der%dim+1))
+      call stencil_cube_polynomials_lapl(der%dim, der%order, polynomials)
+
+      do i = 1, der%dim
+        call get_rhs_grad(i, rhs(:,i))
+      end do
+      call get_rhs_lapl(rhs(:, der%dim+1))
+
+      call make_discretization(der%dim, der%m, polynomials, rhs, der%dim+1, der%op(:))
+
+      deallocate(polynomials, rhs)
+
+    case(DER_STARPLUS)
+      do i = 1, der%dim
+        ALLOCATE(polynomials(der%dim, der%op(i)%n), der%dim*der%op(i)%n)
+        ALLOCATE(rhs(der%op(i)%n, 1), der%op(i)%n*1)
+        call stencil_starplus_pol_grad(der%dim, i, der%order, polynomials)
+        call get_rhs_grad(i, rhs(:, 1))
+        call make_discretization(der%dim, der%m, polynomials, rhs, 1, der%op(i:i))
+        deallocate(polynomials, rhs)
+      end do
+      ALLOCATE(polynomials(der%dim, der%op(der%dim+1)%n), der%dim*der%op(der%dim+1)%n)
+      ALLOCATE(rhs(der%op(i)%n, 1), der%op(i)%n*1)
+      call stencil_starplus_pol_lapl(der%dim, der%order, polynomials)
+      call get_rhs_lapl(rhs(:, 1))
+      call make_discretization(der%dim, der%m, polynomials, rhs, 1, der%op(der%dim+1:der%dim+1))
+      deallocate(polynomials, rhs)
+
+    case(DER_VARIATIONAL)
+      ! we have the explicit coefficients
+      call stencil_variational_coeff_lapl(der%dim, der%order, m%h, der%lapl, alpha = der%lapl_cutoff)
+
+    end select
+
+    ! Here the Laplacian is forced to be self-adjoint, and the gradient to be skew-selfadjoint
+    if(m%use_curvlinear) then
+      do i = 1, der%dim
+        call nl_operator_init(auxop, der%grad(i)%n, "auxop")
+        auxop%stencil = der%grad(i)%stencil
+        call nl_operator_build(m, auxop, der%m%np, const_w = const_w_, cmplx_op = cmplx_op_)
+        call nl_operator_skewadjoint(der%grad(i), auxop, der%m)
+        call nl_operator_equal(der%grad(i), auxop)
+        call nl_operator_end(auxop)
+      end do
+      call nl_operator_init(auxop, der%lapl%n, "auxop")
+      auxop%stencil = der%lapl%stencil
+      call nl_operator_build(m, auxop, der%m%np, const_w = const_w_, cmplx_op = cmplx_op_)
+      call nl_operator_selfadjoint(der%lapl, auxop, der%m)
+      call nl_operator_equal(der%lapl, auxop)
+      call nl_operator_end(auxop)
+    end if
+
+    ! Here I will nullify all the coefficients that are outside the box (only for
+    ! the case of non-constant weights == curvilinear coordinates).
+    ! WARNING: Same thing should be done for the gradients. The subroutines in
+    ! derivatives_inc.F90 should then be changed accordingly.
+    if(m%use_curvlinear) then
+      if(m%parallel_in_domains) then
+        up = m%vp%np_local(m%vp%partno) + m%vp%np_ghost(m%vp%partno)
+      else
+        up = m%np_global
       end if
 
-    else ! we have the explicit coefficients
+      do i = 1, m%np
+        do j = 1, der%lapl%n
+          k  = der%lapl%i(j, i)
 
-      ! get laplacian
-      select case(der%stencil_type)
-      case(DER_STAR)
-        call stencil_star_coeff_lapl(der%dim, der%order, m%h(1:der%dim), der%lapl)
-      case(DER_VARIATIONAL)
-        call stencil_variational_coeff_lapl(der%dim, der%order, m%h, der%lapl, alpha = der%lapl_cutoff)
-      case(DER_STARPLUS)
-        ! equivalent to normal stencil.
-        der%stencil_type = DER_STAR
-        call stencil_star_coeff_lapl(der%dim, der%order, m%h(1:der%dim), der%lapl)
-      end select
-
-      ! get gradient (we use the same both for star and variational)
-      do i = 1, der%dim
-        call stencil_star_coeff_grad(der%order, m%h(i), der%grad(i))
+          if(k>up) then
+            der%lapl%w_re(j, i) = M_ZERO
+            der%lapl%i(j, i) = i
+          end if
+        end do
       end do
     end if
 
