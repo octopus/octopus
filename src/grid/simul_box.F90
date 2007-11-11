@@ -834,7 +834,7 @@ contains
       sb%periodic_dim, ' dimension(s).'
     call write_info(2, iunit)
 
-    if(sb%periodic_dim > 0) then
+    if(sb%periodic_dim > 0 .or. sb%box_shape == PARALLELEPIPED) then
       write(message(1),'(1x)')
       write(message(2),'(a,3a,a)') '  Lattice Vectors [', trim(units_out%length%abbrev), ']'
       write(message(3),'(3f12.6)')   sb%rlattice(:,1)/units_out%length%factor
