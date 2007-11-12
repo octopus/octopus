@@ -64,7 +64,7 @@ subroutine mesh_init_stage_1(sb, mesh, geo, cv, enlarge)
   do i = 1, sb%periodic_dim
     !the spacing has to be a divisor of the box size
     mesh%h(i)     = sb%lsize(i)/real(mesh%nr(2, i))
-    !the upper boundary doesn't have to be included (as it is a copy of the lower boundary)
+    !the upper boundary does not have to be included (as it is a copy of the lower boundary)
     mesh%nr(2, i) = mesh%nr(2, i) - 1
   end do
 
