@@ -717,28 +717,29 @@ contains
       ! system is periodic, the atoms are moved inside the box, if the
       ! system is finite a warning is emitted.
 
-      integer :: iatom
+      integer :: iatom, pd
       FLOAT :: xx(1:MAX_DIM)
-
+      
+      pd = sb%periodic_dim
+      
       do iatom = 1, geo%natoms
         
         if (simul_box_is_periodic(sb)) then
           
           !convert the position to the orthogonal space
-          xx = matmul(geo%atom(iatom)%x, sb%klattice_unitary)
+          xx(1:pd) = matmul(geo%atom(iatom)%x(1:pd), sb%klattice_unitary(1:pd, 1:pd))
           
-          xx(:) = xx(:)/(M_TWO*sb%lsize(:)) + 0.5
+          xx(1:pd) = xx(1:pd)/(M_TWO*sb%lsize(1:pd)) + 0.5
 
-          xx(1:sb%periodic_dim) = xx(1:sb%periodic_dim) - aint(xx(1:sb%periodic_dim))
+          xx(1:pd) = xx(1:pd) - aint(xx(1:pd))
           
-          xx(:) = (xx(:) - 0.5)*M_TWO*sb%lsize(:) 
+          xx(1:pd) = (xx(1:pd) - 0.5)*M_TWO*sb%lsize(1:pd) 
           
-          geo%atom(iatom)%x = matmul(sb%klattice_unitary, xx)
-          
+          geo%atom(iatom)%x(1:pd) = matmul(sb%klattice_unitary(1:pd, 1:pd), xx(1:pd))
+
         end if
         
         if ( .not. simul_box_in_box(sb, geo, geo%atom(iatom)%x) ) then
-          
           message(1) = "An atom is outside the box."
           if (simul_box_is_periodic(sb)) then
             message(2) = "This is a bug."
