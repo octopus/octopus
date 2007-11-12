@@ -844,7 +844,10 @@ contains
       write(message(7),'(3f12.6)')   sb%klattice_unitary(:,1)/units_out%length%factor
       write(message(8),'(3f12.6)')   sb%klattice_unitary(:,2)/units_out%length%factor
       write(message(9),'(3f12.6)')   sb%klattice_unitary(:,3)/units_out%length%factor
-      call write_info(9, iunit)
+      write(message(10),'(a,f12.6,3a)') &
+        '  Volume element = ', sb%volume_element/units_out%length%factor, &
+        ' [', trim(units_out%length%abbrev), ']'
+      call write_info(10, iunit)
     end if
 
     call pop_sub()

@@ -84,7 +84,7 @@ subroutine mesh_init_stage_2(sb, mesh, geo, cv)
   call push_sub('mesh_init.mesh_init_stage_2')
   call profiling_in(mesh_init_prof)
 
-  ! enlarge mesh in the non-periodic dimensions
+  ! enlarge mesh for boundary points
   mesh%nr(1,:) = mesh%nr(1,:) - mesh%enlarge(:)
   mesh%nr(2,:) = mesh%nr(2,:) + mesh%enlarge(:)
 

@@ -278,9 +278,8 @@ contains
 
         do jj = 1, op%n
           ! Get global index of p1 plus current stencil point.
-          if (init_opi) op%i(jj, ii) = mesh_index(m%sb%dim, m%sb%periodic_dim, m%nr,    &
-               m%Lxyz_inv, p1(:) + op%stencil(:, jj))
-          st1(jj) = mesh_index(m%sb%dim, m%sb%periodic_dim, m%nr, m%Lxyz_inv, p1(:) + op%stencil(:, jj))
+          if (init_opi) op%i(jj, ii) = mesh_index(m%sb%dim, m%nr, m%Lxyz_inv, p1(:) + op%stencil(:, jj))
+          st1(jj) = mesh_index(m%sb%dim, m%nr, m%Lxyz_inv, p1(:) + op%stencil(:, jj))
           
           if(m%parallel_in_domains) then
             ! When running parallel, translate this global

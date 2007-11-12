@@ -41,8 +41,8 @@ subroutine X(derivatives_laplt)(der, f, lapl, have_bndry)
   have_bndry_ = .false.
   if(present(have_bndry)) have_bndry_ = have_bndry
 
-  if(.not.have_bndry_.and.der%zero_bc) then
-    call X(zero_bc)(der%m, f)
+  if(.not.have_bndry_) then
+    call X(set_bc)(der, f)
   end if
 
   call X(nl_operator_operate) (der%laplt, f, lapl)
@@ -72,8 +72,8 @@ subroutine X(derivatives_lapl)(der, f, lapl, have_bndry, ghost_update)
   ! If the derivatives are defined with non-constant weights, then we do not
   ! need extra points.
   ! Otherwise, set the boundary points to zero (if we have zero boundary conditions).
-  if(.not.have_bndry_.and.der%zero_bc) then
-    call X(zero_bc)(der%m, f)
+  if(.not.have_bndry_) then
+    call X(set_bc)(der, f)
   end if
 
   call X(nl_operator_operate) (der%lapl, f, lapl, ghost_update=ghost_update)
@@ -97,9 +97,7 @@ subroutine X(derivatives_grad)(der, f, grad, ghost_update)
   ASSERT(ubound(grad, DIM=1) >= der%m%np)
   ASSERT(ubound(grad, DIM=2) >= der%m%sb%dim)
 
-  if(der%zero_bc) then
-    call X(zero_bc)(der%m, f)
-  end if
+  call X(set_bc)(der, f)
 
   do i = 1, der%m%sb%dim
     call X(nl_operator_operate) (der%grad(i), f, grad(:,i), ghost_update=ghost_update)
@@ -121,10 +119,7 @@ subroutine X(derivatives_oper)(op, der, f, opf, ghost_update)
   ASSERT(ubound(f,   DIM=1) == der%m%np_part)
   ASSERT(ubound(opf, DIM=1) >= der%m%np)
 
-  if(der%zero_bc) then
-    call X(zero_bc)(der%m, f)
-  end if
-
+  call X(set_bc)(der, f)
   call X(nl_operator_operate) (op, f, opf, ghost_update=ghost_update)
 
   call pop_sub()
@@ -146,11 +141,9 @@ subroutine X(derivatives_div)(der, f, div, ghost_update)
   ASSERT(ubound(f,   DIM=1) == der%m%np_part)
   ASSERT(ubound(div, DIM=1) >= der%m%np)
 
-  if(der%zero_bc) then
-    do i = 1, der%m%sb%dim
-      call X(zero_bc)(der%m, f(:, i))
-    end do
-  end if
+  do i = 1, der%m%sb%dim
+    call X(set_bc)(der, f(:, i))
+  end do
 
   ALLOCATE(tmp(der%m%np), der%m%np)
 
@@ -191,12 +184,10 @@ subroutine X(derivatives_curl)(der, f, curl, ghost_update)
       call write_fatal(1)
   end select
 
-  if(der%zero_bc) then
-    do i = 1, der%m%sb%dim
-      call X(zero_bc)(der%m, f(:, i))
-    end do
-  end if
-
+  do i = 1, der%m%sb%dim
+    call X(set_bc)(der, f(:, i))
+  end do
+  
   ALLOCATE(tmp(der%m%np_part), der%m%np_part)
 
   curl(:,:) = R_TOTYPE(M_ZERO)
@@ -233,33 +224,50 @@ end subroutine X(derivatives_curl)
 ! ---------------------------------------------------------
 ! Set all boundary points in f to zero to implement zero
 ! boundary conditions for the derivatives.
-subroutine X(zero_bc)(m, f)
-  type(mesh_t), intent(in)    :: m
-  R_TYPE,       intent(inout) :: f(:)
+subroutine X(set_bc)(der, f)
+  type(der_discr_t), intent(in)    :: der
+  R_TYPE,            intent(inout) :: f(:)
 
   integer :: bndry_start, bndry_end
   integer :: p
+  integer :: ip, ipp
 
-  call push_sub('derivatives_inc.Xzero_bc')
+  call push_sub('derivatives_inc.Xset_bc')
 
-  p = m%vp%partno
-
-  ! The boundary points are at different locations depending on the presence
-  ! of ghost points due to domain parallelization.
-  if(m%parallel_in_domains) then
-    bndry_start = m%vp%np_local(p) + m%vp%np_ghost(p) + 1
-    bndry_end   = m%vp%np_local(p) + m%vp%np_ghost(p) + m%vp%np_bndry(p)
-  else
-    bndry_start = m%np+1
-    bndry_end   = m%np_part
+  if(der%zero_bc) then
+    
+    p = der%m%vp%partno
+    
+    ! The boundary points are at different locations depending on the presence
+    ! of ghost points due to domain parallelization.
+    if(der%m%parallel_in_domains) then
+      bndry_start = der%m%vp%np_local(p) + der%m%vp%np_ghost(p) + 1
+      bndry_end   = der%m%vp%np_local(p) + der%m%vp%np_ghost(p) + der%m%vp%np_bndry(p)
+    else
+      bndry_start = der%m%np+1
+      bndry_end   = der%m%np_part
+    end if
+    
+    !$omp parallel workshare
+    f(bndry_start:bndry_end) = R_TOTYPE(M_ZERO)
+    !$omp end parallel workshare
+    
   end if
 
-  !$omp parallel workshare
-  f(bndry_start:bndry_end) = R_TOTYPE(M_ZERO)
-  !$omp end parallel workshare
+  if(der%periodic_bc) then
+
+    ASSERT(.not. der%m%parallel_in_domains)
+    
+    do ip = der%m%np + 1, der%m%np_part
+      ipp = mesh_index(der%m%sb%dim, der%m%nr, der%m%Lxyz_inv, der%m%Lxyz(ip, :), der%m%sb%periodic_dim)
+      if(ip /= ipp) f(ip) = f(ipp)
+    end do
+
+  end if
 
   call pop_sub()
-end subroutine X(zero_bc)
+
+end subroutine X(set_bc)
 
 !! Local Variables:
 !! mode: f90

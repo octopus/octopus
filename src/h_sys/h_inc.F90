@@ -309,9 +309,7 @@ subroutine X(kinetic_prepare)(h, gr, psi)
   call push_sub('h_inc.Xkinetic_prepare')
 
   do idim = 1, h%d%dim
-    if(gr%f_der%der_discr%zero_bc) then
-      call X(zero_bc)(gr%m, psi(:, idim))
-    end if
+    call X(set_bc)(gr%f_der%der_discr, psi(:, idim))
     if(gr%m%parallel_in_domains) then
 #if defined(HAVE_MPI)
 #if defined(HAVE_LIBNBC)

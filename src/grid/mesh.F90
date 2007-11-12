@@ -353,7 +353,7 @@ contains
          (mesh%sb%asympt_uc_nr(2, id) - mesh%sb%asympt_uc_nr(1, id) + 1)
      end do
 
-     tindex = mesh_index(mesh%sb%dim, mesh%sb%periodic_dim, mesh%nr, mesh%Lxyz_inv, ixyz) 
+     tindex = mesh_index(mesh%sb%dim, mesh%nr, mesh%Lxyz_inv, ixyz)
 
      ! check if the translated point is still inside the domain and return
      ! a negative index otherwise to indicate that the requested translation
@@ -384,7 +384,7 @@ contains
        ixyz(id) = ixyz(id) + tdist(id)
      end do
 
-     tindex = mesh_index(mesh%sb%dim, mesh%sb%periodic_dim, mesh%nr, mesh%Lxyz_inv, ixyz) 
+     tindex = mesh_index(mesh%sb%dim, mesh%nr, mesh%Lxyz_inv, ixyz) 
 
      ! check if the translated point is still inside the domain and return
      ! a negative index otherwise to indicate that the requested translation
@@ -417,8 +417,7 @@ contains
      ixyz(:) = mesh%sb%asympt_uc_Lxyz(index, :) - mesh%sb%asympt_uc_Lxyz(1, :)
 
      ! get new index
-     sb_index = mesh_index(mesh%sb%dim, mesh%sb%periodic_dim, mesh%nr, &
-       mesh%Lxyz_inv, ixyz + ixyz_box_start) 
+     sb_index = mesh_index(mesh%sb%dim, mesh%nr, mesh%Lxyz_inv, ixyz + ixyz_box_start) 
 
      ! consistency check as in translate_point
      if (sb_index < 1 .or. sb_index > mesh%np) then

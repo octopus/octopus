@@ -25,6 +25,7 @@ module derivatives_m
   use lalg_adv_m
   use lib_oct_parser_m
   use mesh_m
+  use mesh_lib_m
   use messages_m
   use nl_operator_m
   use simul_box_m
@@ -49,14 +50,14 @@ module derivatives_m
     dderivatives_oper,      &
     dderivatives_div,       &
     dderivatives_curl,      &
-    dzero_bc,               &
+    dset_bc,                &
     zderivatives_lapl,      &
     zderivatives_laplt,     &
     zderivatives_grad,      &
     zderivatives_oper,      &
     zderivatives_div,       &
     zderivatives_curl,      &
-    zzero_bc,               &
+    zset_bc,                &
     stencil_extent
 
   integer, parameter ::     &
@@ -78,6 +79,7 @@ module derivatives_m
 
     integer               :: boundaries(MAX_DIM) ! bounday conditions
     logical               :: zero_bc
+    logical               :: periodic_bc
 
     ! If the so-called variational discretization is used, this controls a
     FLOAT :: lapl_cutoff   ! possible filter on the Laplacian.
@@ -179,14 +181,15 @@ contains
       call write_fatal(1)
     end if
 
-    der%zero_bc = (i == DER_BC_ZERO_F)
+    der%zero_bc = (i == DER_BC_ZERO_F .and. sb%periodic_dim < 3)
+    der%periodic_bc = (sb%periodic_dim > 0)
     der%boundaries(:) = i
     der%boundaries(1:sb%periodic_dim) = DER_BC_PERIOD
 
     ! find out how many ghost points we need in which dimension
     n_ghost(:) = 0
     do i = 1, der%dim
-      if(der%boundaries(i) == DER_BC_ZERO_F) then
+      if(der%boundaries(i) == DER_BC_ZERO_F .or. der%boundaries(i) == DER_BC_PERIOD) then
         n_ghost(i) = maxval(abs(der%lapl%stencil(i,:)))
       end if
     end do
