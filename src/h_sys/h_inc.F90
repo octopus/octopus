@@ -674,7 +674,7 @@ subroutine X(vlaser_operator_quadratic) (gr, h, psi, hpsi, ik, laser_number)
   FLOAT :: a_field(1:MAX_DIM), a_field_prime(1:MAX_DIM), b(1:MAX_DIM), b_prime(1:MAX_DIM)
   FLOAT, allocatable :: a(:, :), a_prime(:, :)
 
-  call push_sub('h_inc.Xvlasers')
+  call push_sub('h_inc.Xvlaser_operator_quadratic')
 
   a_field = M_ZERO
 
@@ -736,7 +736,7 @@ subroutine X(vlaser_operator_linear) (gr, h, psi, hpsi, ik, laser_number)
 
   FLOAT, allocatable :: v(:), pot(:), a(:, :), a_prime(:, :)
 
-  call push_sub('h_inc.Xvlasers')
+  call push_sub('h_inc.Xvlaser_operator_linear')
 
   a_field = M_ZERO
 
@@ -882,12 +882,14 @@ subroutine X(vlasers) (gr, h, psi, hpsi, ik, t)
   integer :: i, k, idim
   logical :: electric_field, vector_potential, magnetic_field
   R_TYPE, allocatable :: grad(:, :, :), lhpsi(:, :)
+  type(profile_t), save :: ext_fields_profile
 
   FLOAT :: a_field(1:MAX_DIM), a_field_prime(1:MAX_DIM), b(1:MAX_DIM), b_prime(1:MAX_DIM)
 
   FLOAT, allocatable :: v(:), pot(:), a(:, :), a_prime(:, :)
 
   call push_sub('h_inc.Xvlasers')
+  call profiling_in(ext_fields_profile, 'EXTERNAL_FIELDS')
 
   a_field = M_ZERO
 
@@ -1029,6 +1031,7 @@ subroutine X(vlasers) (gr, h, psi, hpsi, ik, t)
     deallocate(grad)
   end if
 
+  call profiling_out(ext_fields_profile)
   call pop_sub()
 end subroutine X(vlasers)
 

@@ -92,7 +92,7 @@
     
     CMPLX   :: olap, zdet
     CMPLX, allocatable :: cI(:), dI(:), mat(:, :, :), mm(:, :, :, :), mk(:, :), lambda(:, :)
-    integer :: ik, p, dim, k, j, no_electrons, ia, ib, n_pairs, nst, ji, jj
+    integer :: ik, p, dim, k, j, no_electrons, ia, ib, n_pairs, nst, ji, jj, kpoints
   
     call push_sub('opt_control.calc_chi')
 
@@ -159,13 +159,14 @@
     case(oct_tg_excited) 
 
       n_pairs = target%est%n_pairs
+      kpoints = psi_in%d%nik
       nst = psi_in%nst
 
       ALLOCATE(cI(n_pairs), n_pairs)
       ALLOCATE(dI(n_pairs), n_pairs)
       ALLOCATE(mat(target%est%st%nst, nst, psi_in%d%nik), target%est%st%nst*nst*psi_in%d%nik)
-      ALLOCATE(mm(nst, nst, psi_in%d%nik, n_pairs), nst*nst*psi_in%d%nik*n_pairs)
-      ALLOCATE(mk(NP_PART, 2), NP_PART * 2)
+      ALLOCATE(mm(nst, nst, kpoints, n_pairs), nst*nst*kpoints*n_pairs)
+      ALLOCATE(mk(NP_PART, psi_in%d%dim), NP_PART * psi_in%d%dim)
       ALLOCATE(lambda(n_pairs, n_pairs), n_pairs*n_pairs)
 
       call zstates_matrix(gr%m, target%est%st, psi_in, mat)
@@ -173,10 +174,12 @@
       do ia = 1, n_pairs
         cI(ia) = target%est%weight(ia)
         call zstates_matrix_swap(mat, target%est%pair(ia))
-        mm(1:nst, 1:nst, 1, ia) = mat(1:nst, 1:nst, 1)
-        dI(ia) = lalg_determinant(nst, mm(1:nst, 1:nst, 1, ia), invert = .false.)
+        mm(1:nst, 1:nst, 1:kpoints, ia) = mat(1:nst, 1:kpoints, 1:kpoints)
+        dI(ia) = zstates_mpdotp(gr%m, target%est%st, psi_in, mat)
         if(abs(dI(ia)) > CNST(1.0e-12)) then
-          dI(ia) = lalg_inverter(nst, mm(1:nst, 1:nst, 1, ia))
+          do ik = 1, kpoints
+            zdet = lalg_inverter(nst, mm(1:nst, 1:nst, ik, ia))
+          end do
         end if
         call zstates_matrix_swap(mat, target%est%pair(ia))
       end do
@@ -188,8 +191,32 @@
       end do
 
       select case(psi_in%d%ispin)
-      case(UNPOLARIZED); stop 'Error'
-      case(SPIN_POLARIZED); stop 'Error'
+      case(UNPOLARIZED)
+        write(message(1), '(a)') 'Internal error in aux.calc_chi'
+        call write_fatal(2)
+
+      case(SPIN_POLARIZED)
+        ASSERT(chi_out%d%nik .eq. 2)
+
+        do ik = 1, kpoints
+          do k = chi_out%st_start, chi_out%st_end
+            chi_out%zpsi(:, :, k, ik) = M_z0
+            do ia = 1, n_pairs
+              if(ik .ne. target%est%pair(ia)%sigma) cycle
+              if(abs(dI(ia)) < CNST(1.0e-12)) cycle
+              do ib = 1, n_pairs
+                if(abs(dI(ib)) < CNST(1.0e-12)) cycle
+                mk = M_z0
+                do j = 1, nst
+                  if(j .eq. target%est%pair(ib)%i) jj = target%est%pair(ia)%a
+                  mk(:, :) = mk(:, :) + conjg(mm(k, j, ik, ib)) * target%est%st%zpsi(:, :, jj, ik)
+                end do
+                call lalg_axpy(NP_PART, psi_in%d%dim, M_z1, lambda(ib, ia)*mk(:, :), chi_out%zpsi(:, :, k, ik))
+              end do
+            end do
+          end do
+        end do
+        
       case(SPINORS)
         ASSERT(chi_out%d%nik .eq. 1)
 
