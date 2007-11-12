@@ -65,7 +65,8 @@ subroutine X(states_gram_schmidt1)(st, nst, m, dim, psi, start)
           psi_q => buf
           psi_p => psi(:, :, p-st%st_start+1)
         else if(.not.state_is_local(st, p).and.state_is_local(st, q)) then
-          call MPI_Send(psi(:, :, q-st%st_start+1), m%np_part*st%d%dim, R_MPITYPE, st%node(p), 0, st%mpi_grp%comm, mpi_err)
+          call MPI_Send(psi(:, :, q-st%st_start+1), m%np_part*st%d%dim, R_MPITYPE, st%node(p), &
+            0, st%mpi_grp%comm, mpi_err)
         end if
 #else
         message(1) = 'Running parallel in states without MPI. This is a bug.'

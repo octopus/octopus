@@ -292,8 +292,7 @@ contains
     ALLOCATE(part(mesh%np_part_global), mesh%np_part_global)
     call mesh_partition(mesh, part)
     call vec_init(mesh%mpi_grp%comm, 0, part, mesh%np_global, mesh%np_part_global,  &
-      mesh%nr, mesh%Lxyz_inv, mesh%Lxyz, stencil, np_stencil, &
-      mesh%sb%dim, mesh%sb%periodic_dim, mesh%vp)
+      mesh%nr, mesh%Lxyz_inv, mesh%Lxyz, stencil, np_stencil, mesh%sb%dim, mesh%vp)
     deallocate(part)
 
     ! Set local point numbers.

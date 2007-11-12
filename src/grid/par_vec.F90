@@ -199,7 +199,7 @@ contains
   ! and also because the vec_init has more a global than a local point
   ! of view on the mesh): See the comments in the parameter list.
   subroutine vec_init(comm, root, part, np, np_part, nr, &
-    Lxyz_inv, Lxyz, stencil, np_stencil, dim, periodic_dim, vp)
+    Lxyz_inv, Lxyz, stencil, np_stencil, dim, vp)
     integer,       intent(in)  :: comm         ! Communicator to use.
     integer,       intent(in)  :: root         ! The master node.
     ! The next seven entries come from the mesh.
@@ -216,7 +216,6 @@ contains
     ! calculate ghost points.
     integer,       intent(in)  :: np_stencil   ! Num. of points in stencil.
     integer,       intent(in)  :: dim          ! Number of dimensions.
-    integer,       intent(in)  :: periodic_dim ! Number of per. dimensions.
     type(pv_t), intent(out) :: vp           ! Description of partition.
 
     ! Careful: MPI counts node ranks from 0 to numproc-1.
@@ -328,8 +327,7 @@ contains
           ! Get point number of possible ghost point.
           ! mesh_index takes care of periodic dimensions and
           ! out points that would be out of the box etc.
-          k = mesh_index(dim, periodic_dim, nr, &
-            Lxyz_inv, p1(:) + stencil(:, j))
+          k = mesh_index(dim, nr, Lxyz_inv, p1(:) + stencil(:, j))
           ASSERT(k.ne.0)
           ! If this index k does not belong to partition of node r,
           ! then k is a ghost point for r with part(k) now being
