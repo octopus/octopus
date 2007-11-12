@@ -24,7 +24,7 @@
   ! case, or else \int_0^T dt <Psi(t)|\hat{O}(t)|Psi(t) in 
   ! the time-dependent case.
   ! ---------------------------------------------------------
-  FLOAT function j1(m, psi, target)
+  FLOAT function j1_functional(m, psi, target) result(j1)
     type(mesh_t), intent(in)   :: m
     type(states_t), intent(in) :: psi
     type(target_t), intent(in) :: target
@@ -33,7 +33,7 @@
     FLOAT, allocatable :: local_function(:)
     CMPLX, allocatable :: opsi(:, :)
 
-    call push_sub('opt_control.overlap_function')
+    call push_sub('aux.j1_functional')
 
     select case(target%type)
     case(oct_tg_density)
@@ -76,7 +76,7 @@
     end select
 
     call pop_sub()
-  end function j1
+  end function j1_functional
 
 
   ! ---------------------------------------------------------

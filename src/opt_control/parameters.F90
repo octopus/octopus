@@ -46,6 +46,7 @@ module opt_control_parameters_m
             parameters_to_h_val,          &
             parameters_write,             &
             parameters_mixing,            &
+            parameters_diff,              &
             laser_fluence,                &
             j2_functional
 
@@ -61,6 +62,26 @@ module opt_control_parameters_m
   type(mix_t), public :: parameters_mix
 
 contains
+
+
+  ! ---------------------------------------------------------
+  FLOAT function parameters_diff(p, q) result(res)
+    type(oct_control_parameters_t), intent(in) :: p, q
+    integer :: i, j
+    FLOAT, allocatable :: delta(:)
+
+    res = M_ZERO
+    ALLOCATE(delta(p%ntiter + 1), p%ntiter +1)
+    do i = 1, p%no_parameters
+      do j = 1, p%ntiter + 1
+        delta(j) = abs(tdf(p%f(i), j) - tdf(q%f(i), j))**2
+      end do
+      res = res + sum(delta)*p%dt
+    end do
+
+    deallocate(delta)
+  end function parameters_diff
+
 
   ! ---------------------------------------------------------
   FLOAT function parameters_dotp(x, y) result(res)

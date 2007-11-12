@@ -1,7 +1,9 @@
 !! Copyright (C) 2002-2006 M. Marques, A. Castro, A. Rubio, G. Bertsch
 !!
-!! This program is free software; you can redistribute it and/or modify
-!! it under the terms of the GNU General Public License as published by
+!! This program is free software; you can redistribute it and/or
+!! modify
+!! it under the terms of the GNU General Public License as published
+!! by
 !! the Free Software Foundation; either version 2, or (at your option)
 !! any later version.
 !!
@@ -65,7 +67,6 @@ module opt_control_m
     FLOAT              :: eps
     integer            :: ctr_iter_max
     integer            :: ctr_iter
-    FLOAT              :: old_functional
     FLOAT, pointer     :: convergence(:,:)
     FLOAT              :: bestJ1, bestJ1_fluence, bestJ1_J
     integer            :: bestJ1_ctr_iter
@@ -177,12 +178,14 @@ contains
     subroutine scheme_mt03
       type(oct_control_parameters_t) :: par_new, par_prev
       logical :: stop_loop
+      FLOAT   :: j1
       call push_sub('opt_control.scheme_mt03')
 
       call parameters_copy(par_new, par)
       ctr_loop: do
         call parameters_copy(par_prev, par)
-        call f_iter(oct, sys, h, td, iterator, psi, initial_st, target, par, stop_loop)
+        call f_iter(oct, iterator, sys, h, td, psi, initial_st, target, par, j1)
+        stop_loop = iteration_manager(j1, par_prev, par, iterator)
         if(oct%dump_intermediate) call iterator_write(iterator, psi, par, sys%gr, sys%outp)
         if(clean_stop() .or. stop_loop) exit ctr_loop
         if(oct%use_mixing) then
@@ -202,6 +205,7 @@ contains
     subroutine scheme_wg05
       type(oct_control_parameters_t) :: par_new, par_prev
       logical :: stop_loop
+      FLOAT   :: j1
       call push_sub('opt_control.scheme_wg05')
 
       if (oct%mode_fixed_fluence) then
@@ -211,7 +215,8 @@ contains
       call parameters_copy(par_new, par)      
       ctr_loop: do
         call parameters_copy(par_prev, par)
-        call f_wg05(oct, sys, h, td, iterator, filter, psi, initial_st, target, par, stop_loop)
+        call f_wg05(oct, sys, h, td, filter, psi, initial_st, target, par, j1)
+        stop_loop = iteration_manager(j1, par_prev, par, iterator)
         if(oct%dump_intermediate) call iterator_write(iterator, psi, par, sys%gr, sys%outp)
         if(clean_stop() .or. stop_loop) exit ctr_loop
         if(oct%use_mixing) then
@@ -230,7 +235,7 @@ contains
     subroutine scheme_zbr98
       type(oct_control_parameters_t) :: par_new, par_prev
       logical :: stop_loop
-
+      FLOAT   :: j1
       type(states_t) :: chi
 
       call push_sub('opt_control.scheme_zbr98')
@@ -241,23 +246,26 @@ contains
       if(oct%zbr98_zero_iteration) then
         call states_copy(chi, target%st)
         call propagate_backward(sys, h, td, chi)
-        call parameters_copy(par_new, par)
-        call fwd_step(oct, sys, td, h, target, par, par_new, chi, psi)
-        call parameters_end(par_new)
+        call parameters_copy(par_prev, par)
+        call fwd_step(oct, sys, td, h, target, par, par_prev, chi, psi)
+        j1 = j1_functional(sys%gr%m, psi, target)
+        stop_loop = iteration_manager(j1, par_prev, par, iterator)
+        call parameters_end(par_prev)
+        if(oct%dump_intermediate) call iterator_write(iterator, psi, par, sys%gr, sys%outp)
+      else
+        iterator%ctr_iter = iterator%ctr_iter + 1
       end if
-
-      if(oct%dump_intermediate) call iterator_write(iterator, psi, par, sys%gr, sys%outp)
-      stop_loop = iteration_manager(oct, sys%gr, par, td, psi, target, iterator)
 
       call parameters_copy(par_new, par)
       ctr_loop: do
         call parameters_copy(par_prev, par)
         call f_zbr98(oct, sys, h, td, psi, initial_st, target, par)
-        call iterator_write(iterator, psi, par, sys%gr, sys%outp)
-        stop_loop = iteration_manager(oct, sys%gr, par, td, psi, target, iterator)
+        j1 = j1_functional(sys%gr%m, psi, target)
+        stop_loop = iteration_manager(j1, par_prev, par, iterator)
+        if(oct%dump_intermediate) call iterator_write(iterator, psi, par, sys%gr, sys%outp)
         if(clean_stop() .or. stop_loop) exit ctr_loop
         if(oct%use_mixing) then
-          call parameters_mixing(iterator%ctr_iter, par_prev, par, par_new)
+          call parameters_mixing(iterator%ctr_iter-1, par_prev, par, par_new)
           call parameters_copy(par, par_new)
         end if
       end do ctr_loop
@@ -302,18 +310,17 @@ contains
   end subroutine f_zbr98
 
   ! ---------------------------------------------------------
-  subroutine f_wg05(oct, sys, h, td, iterator, filter, psi, initial_st, target, par, stop_loop)
+  subroutine f_wg05(oct, sys, h, td, filter, psi, initial_st, target, par, j1)
     type(oct_t), intent(in)                       :: oct
     type(system_t), intent(inout)                 :: sys
     type(hamiltonian_t), intent(inout)            :: h
     type(td_t), intent(inout)                     :: td
-    type(oct_iterator_t), intent(inout)           :: iterator
     type(filter_t), intent(inout)                 :: filter
     type(states_t), intent(inout)                 :: psi
     type(states_t), intent(in)                    :: initial_st
     type(target_t), intent(inout)                 :: target
     type(oct_control_parameters_t), intent(inout) :: par
-    logical, intent(out)                          :: stop_loop
+    FLOAT, intent(out)                            :: j1
 
     integer :: j
     FLOAT :: fluence, old_penalty, new_penalty
@@ -329,7 +336,7 @@ contains
     call parameters_to_h(par, h%ep)
     call propagate_forward(sys, h, td, target, psi)
 
-    stop_loop = iteration_manager(oct, sys%gr, par, td, psi, target, iterator)
+    j1 = j1_functional(sys%gr%m, psi, target)
 
     chi = psi
     call calc_chi(oct, sys%gr, target, psi, chi)
@@ -363,20 +370,21 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine f_iter(oct, sys, h, td, iterator, psi, initial_st, target, par, stop_loop)
+  subroutine f_iter(oct, iterator, sys, h, td, psi, initial_st, target, par, j1)
     type(oct_t), intent(in)                       :: oct
+    type(oct_iterator_t), intent(in)              :: iterator
     type(system_t), intent(inout)                 :: sys
     type(hamiltonian_t), intent(inout)            :: h
     type(td_t), intent(inout)                     :: td
-    type(oct_iterator_t), intent(inout)           :: iterator
     type(states_t), intent(inout)                 :: psi
     type(states_t), intent(in)                    :: initial_st
     type(target_t), intent(inout)                 :: target
     type(oct_control_parameters_t), intent(inout) :: par
-    logical, intent(out)                          :: stop_loop
+    FLOAT, intent(out)                            :: j1
 
     type(states_t) :: chi
     type(oct_control_parameters_t) :: par_chi
+    FLOAT :: overlap
 
     call push_sub('opt_control.f_zbr98')
 
@@ -389,11 +397,17 @@ contains
       call propagate_forward(sys, h, td, target, psi)
     end if
 
-    stop_loop = iteration_manager(oct, sys%gr, par, td, psi, target, iterator)
+    j1 = j1_functional(sys%gr%m, psi, target)
 
     call states_copy(chi, psi)
     call calc_chi(oct, sys%gr, target, psi, chi)
     call bwd_step(oct, sys, td, h, target, par, par_chi, chi, psi)
+
+      overlap = abs( zstates_mpdotp(sys%gr%m, initial_st, psi) )**2
+      if( abs(overlap - M_ONE) > CNST(1.0e-2) ) then
+        write(message(1), '(a,es13.4)') "WARNING: forward-backward propagation produced an error of", abs(overlap-M_ONE)
+        call write_warning(1)
+      end if
 
     call states_end(psi)
     call states_copy(psi, initial_st)

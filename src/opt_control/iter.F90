@@ -28,15 +28,24 @@
     !%Variable OCTEps
     !%Type float
     !%Section Optimal Control
-    !%Default 0.001
+    !%Default 1.0e-6
     !%Description
-    !% Define the convergence threshold.
-    !% For the monotonically convergent scheme: If the increase of the 
-    !% target functional is less then OCTEps the iteration is stopped.
-    !% Example
-    !% OCTEps = 0.00001
+    !% Define the convergence threshold. It computes the difference between the "input"
+    !% field in the iterative procedure, and the "output" field. If this difference is
+    !% less then OCTEps the iteration is stopped. This difference is defined as:
+    !% 
+    !% <math>
+    !% D[\epsilon^{i},\epsilon^{o}] = \int_0^T dt \vert \epsilon^{i}(t)-\epsilon^{o}(t)\vert^2\,.
+    !% </math>
+    !%
+    !% (If there are several control fields, this difference is defined as the sum over
+    !% all the individual differences).
+    !%
+    !% Whenever this condition is satisfied, it means that we have reached a solution point
+    !% point of the QOCT equations, i.e. a critical point of the QOCT functional (not
+    !% necessarily a maximum, and not necessarily the global maximum). 
     !%End
-    call loct_parse_float(check_inp('OCTEps'), CNST(1.0e-3), iterator%eps)
+    call loct_parse_float(check_inp('OCTEps'), CNST(1.0e-6), iterator%eps)
 
     !%Variable OCTMaxIter
     !%Type integer
@@ -54,10 +63,9 @@
     end if
     if(iterator%ctr_iter_max < 0) iterator%ctr_iter_max = huge(iterator%ctr_iter_max)
 
-    iterator%old_functional = -CNST(1e10)
     iterator%ctr_iter       = 0
 
-    ALLOCATE(iterator%convergence(4,0:iterator%ctr_iter_max),(iterator%ctr_iter_max+1)*4)
+    ALLOCATE(iterator%convergence(5, 0:iterator%ctr_iter_max), (iterator%ctr_iter_max+1)*5)
     iterator%convergence = M_ZERO
 
     iterator%bestJ1          = M_ZERO
@@ -85,77 +93,62 @@
 
 
   ! ---------------------------------------------------------
-  logical function iteration_manager(oct, gr, par, &
-                                     td, psi, target, iterator) result(stoploop)
-    type(oct_t), intent(in)             :: oct
-    type(grid_t), intent(in)            :: gr
+  logical function iteration_manager(j1, par, par_new, iterator) result(stoploop)
+    FLOAT, intent(in) :: j1
     type(oct_control_parameters_t), intent(in)  :: par
-    type(td_t), intent(in)              :: td
-    type(states_t), intent(in)          :: psi
-    type(target_t), intent(in)          :: target
+    type(oct_control_parameters_t), intent(in)  :: par_new
     type(oct_iterator_t), intent(inout) :: iterator
 
-    FLOAT :: fluence, overlap, jfunctional, j2
+    FLOAT :: fluence, jfunctional, j2
 
     call push_sub('opt_control.iteration_manager')
     
     stoploop = .false.
 
-    overlap = j1(gr%m, psi, target)
     fluence = laser_fluence(par)
     j2 = j2_functional(par)
-    jfunctional = overlap - j2
+    jfunctional = j1 - j2
 
-    iterator%convergence(1,iterator%ctr_iter) = jfunctional
-    iterator%convergence(2,iterator%ctr_iter) = overlap
-    iterator%convergence(3,iterator%ctr_iter) = j2
+    iterator%convergence(1, iterator%ctr_iter) = jfunctional
+    iterator%convergence(2, iterator%ctr_iter) = j1
+    iterator%convergence(3, iterator%ctr_iter) = j2
     ! WARNING: this does not consider the possibility of different 
     ! alphas for different control parameters.
-    iterator%convergence(4,iterator%ctr_iter) = par%alpha(1)
+    iterator%convergence(4, iterator%ctr_iter) = par%alpha(1)
+    iterator%convergence(5, iterator%ctr_iter) = parameters_diff(par, par_new)
     
-    if((iterator%ctr_iter .eq. iterator%ctr_iter_max) .or. &
-       (iterator%eps>M_ZERO.and.abs(jfunctional-iterator%old_functional) < iterator%eps)) then
+    if(iterator%ctr_iter .eq. iterator%ctr_iter_max) then
+      message(1) = "Info: Maximum number of iterations reached"
+      call write_info(1)
+      stoploop = .true.
+    end if
 
-      if((iterator%ctr_iter .eq. iterator%ctr_iter_max)) then
-        message(1) = "Info: Maximum number of iterations reached"
-        call write_info(1)
-      endif
-
-      if(iterator%eps > M_ZERO .and. abs(jfunctional-iterator%old_functional) < iterator%eps ) then
-        message(1) = "Info: Convergence threshold reached"
-        call write_info(1)
-      endif
-      
-      stoploop = .TRUE.
+    if( (iterator%eps > M_ZERO) .and. (iterator%convergence(5, iterator%ctr_iter) < iterator%eps) ) then
+      message(1) = "Info: Convergence threshold reached"
+      call write_info(1)
+      stoploop = .true.
     end if
 
     write(message(1), '(a,i5)') 'Optimal control iteration #', iterator%ctr_iter
     call messages_print_stress(stdout, trim(message(1)))
 
-    if(oct%mode_fixed_fluence) then
-      write(message(1), '(6x,a,f10.5)') " => J1       = ", overlap
-      write(message(2), '(6x,a,f10.5)') " => J        = ", jfunctional
-      write(message(3), '(6x,a,f10.5)') " => Fluence  = ", fluence
-      write(message(4), '(6x,a,f10.5)') " => penalty  = ", par%alpha(1)
-      call write_info(4)
-    else
-      write(message(1), '(6x,a,f10.5)') " => J1       = ", overlap
-      write(message(2), '(6x,a,f10.5)') " => J        = ", jfunctional
-      write(message(3), '(6x,a,f10.5)') " => Fluence  = ", fluence
-      call write_info(3)
-    end if
+    write(message(1), '(6x,a,f12.5)')  " => J1       = ", j1
+    write(message(2), '(6x,a,f12.5)')  " => J        = ", jfunctional
+    write(message(3), '(6x,a,f12.5)')  " => Fluence  = ", fluence
+    write(message(4), '(6x,a,f12.5)')  " => penalty  = ", par%alpha(1)
+    write(message(5), '(6x,a,es12.2)') " => D[e,e']  = ", iterator%convergence(5, iterator%ctr_iter)
+    call write_info(5)
     call messages_print_stress(stdout)
 
     ! store field with best J1
-    if(overlap > iterator%bestJ1) then
-      iterator%bestJ1          = overlap
+    if(j1 > iterator%bestJ1) then
+      iterator%bestJ1          = j1
       iterator%bestJ1_J        = jfunctional
       iterator%bestJ1_fluence  = fluence       
       iterator%bestJ1_ctr_iter = iterator%ctr_iter
     end if
 
     iterator%ctr_iter = iterator%ctr_iter + 1
-    iterator%old_functional = jfunctional
     
     call pop_sub()
   end function iteration_manager

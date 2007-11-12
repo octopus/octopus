@@ -168,11 +168,11 @@ module opt_control_propagation_m
   ! "new" parameters.
   ! */--------------------------------------------------------
   subroutine fwd_step(oct, sys, td, h, target, par, par_chi, chi, psi)
-    type(oct_t), intent(in) :: oct
+    type(oct_t), intent(in)                       :: oct
     type(system_t), intent(inout)                 :: sys
     type(td_t), intent(inout)                     :: td
     type(hamiltonian_t), intent(inout)            :: h
-    type(target_t), intent(inout)          :: target
+    type(target_t), intent(inout)                 :: target
     type(oct_control_parameters_t), intent(inout) :: par
     type(oct_control_parameters_t), intent(in)    :: par_chi
     type(states_t), intent(inout)                 :: chi
