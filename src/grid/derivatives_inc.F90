@@ -259,7 +259,7 @@ subroutine X(set_bc)(der, f)
     ASSERT(.not. der%m%parallel_in_domains)
     
     do ip = der%m%np + 1, der%m%np_part
-      ipp = mesh_index(der%m%sb%dim, der%m%nr, der%m%Lxyz_inv, der%m%Lxyz(ip, :), der%m%sb%periodic_dim)
+      ipp = mesh_periodic_point(der%m, ip)
       if(ip /= ipp) f(ip) = f(ipp)
     end do
 

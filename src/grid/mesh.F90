@@ -53,6 +53,7 @@ module mesh_m
     mesh_write_info,           &
     mesh_nearest_point,        &
     mesh_subset_indices,       &
+    mesh_periodic_point,       &
     translate_point,           &
     translate_by_asympt_ucell, &
     scatt_box_index
@@ -569,6 +570,34 @@ contains
 
      call pop_sub()
    end subroutine mesh_end
+
+   ! This function returns the point inside the grid corresponding to
+   ! a boundary point when PBC are used. In case the point doesn't
+   ! have a correspondance (i.e. other BC are used in that direction),
+   ! the same point is returned. Note that this function returns a
+   ! global point number when parallelization in domains is used.
+   
+   integer function mesh_periodic_point(m, ip) result(ipp)
+     type(mesh_t), intent(in)    :: m
+     integer,      intent(in)    :: ip
+
+     integer :: ix(MAX_DIM), nr(2, MAX_DIM), idim
+
+     ix = m%Lxyz(ip, :)
+     nr(1, :) = m%nr(1, :) + m%enlarge(:)
+     nr(2, :) = m%nr(1, :) - m%enlarge(:)
+
+     do idim = 1, m%sb%periodic_dim
+       if(ix(idim) < nr(1, idim)) then    ! first look left
+         ix(idim) = ix(idim) + m%l(idim)
+       else if(ix(idim) > nr(2, idim)) then  ! the same, but on the right
+         ix(idim) = ix(idim) - m%l(idim)
+       end if
+     end do
+
+     ipp = m%Lxyz_inv(ix(1), ix(2), ix(3))
+
+   end function mesh_periodic_point
 
 #include "mesh_init.F90"
 
