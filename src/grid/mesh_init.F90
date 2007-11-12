@@ -17,7 +17,8 @@
 !!
 !! $Id$
 
-
+#define ENLARGEMENT_POINT 2
+#define INNER_POINT 1
 ! ---------------------------------------------------------
 subroutine mesh_init_stage_1(sb, mesh, geo, cv, enlarge)
   type(simul_box_t), target, intent(in)    :: sb
@@ -61,7 +62,9 @@ subroutine mesh_init_stage_1(sb, mesh, geo, cv, enlarge)
 
   ! we have to adjust a couple of things for the periodic directions
   do i = 1, sb%periodic_dim
+    !the spacing has to be a divisor of the box size
     mesh%h(i)     = sb%lsize(i)/real(mesh%nr(2, i))
+    !the upper boundary doesn't have to be included (as it is a copy of the lower boundary)
     mesh%nr(2, i) = mesh%nr(2, i) - 1
   end do
 
@@ -118,7 +121,7 @@ subroutine mesh_init_stage_2(sb, mesh, geo, cv)
                 if(  &
                   ix+i>=mesh%nr(1,1).and.ix+i<=mesh%nr(2,1).and. &
                   iy+j>=mesh%nr(1,2).and.iy+j<=mesh%nr(2,2).and. &
-                  iz+k>=mesh%nr(1,3).and.iz+k<=mesh%nr(2,3)) mesh%Lxyz_tmp(ix+i, iy+j, iz+k) = 2
+                  iz+k>=mesh%nr(1,3).and.iz+k<=mesh%nr(2,3)) mesh%Lxyz_tmp(ix+i, iy+j, iz+k) = ENLARGEMENT_POINT
               end do
             end do
           end do
@@ -136,7 +139,7 @@ subroutine mesh_init_stage_2(sb, mesh, geo, cv)
     do iy = mesh%nr(1,2), mesh%nr(2,2)
       do iz = mesh%nr(1,3), mesh%nr(2,3)
         if(simul_box_in_box(sb, geo, mesh%x_tmp(:, ix, iy, iz))) then
-          mesh%Lxyz_tmp(ix, iy, iz) = 1
+          mesh%Lxyz_tmp(ix, iy, iz) = INNER_POINT
           ik = ik + 1
         end if
 
@@ -241,7 +244,7 @@ contains
     do ix = mesh%nr(1,1), mesh%nr(2,1)
       do iy = mesh%nr(1,2), mesh%nr(2,2)
         do iz = mesh%nr(1,3), mesh%nr(2,3)
-          if(mesh%Lxyz_tmp(ix, iy, iz) == 1) then
+          if(mesh%Lxyz_tmp(ix, iy, iz) == INNER_POINT) then
             il = il + 1
             mesh%Lxyz(il, 1) = ix
             mesh%Lxyz(il, 2) = iy
@@ -262,7 +265,7 @@ contains
       do iy = mesh%nr(1,2), mesh%nr(2,2)
         do iz = mesh%nr(1,3), mesh%nr(2,3)
 
-          if(mesh%Lxyz_tmp(ix, iy, iz) == 2) then
+          if(mesh%Lxyz_tmp(ix, iy, iz) == ENLARGEMENT_POINT) then
             il = il + 1
             mesh%Lxyz(il, 1) = ix
             mesh%Lxyz(il, 2) = iy

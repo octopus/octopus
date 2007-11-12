@@ -860,8 +860,9 @@ contains
     type(geometry_t),   intent(in) :: geo
     FLOAT,              intent(in) :: x(:) ! x(3)
 
-    FLOAT, parameter :: DELTA = CNST(1e-12)
+    real(8), parameter :: DELTA = CNST(1e-12)
     FLOAT :: r, re, im, xx(MAX_DIM)
+    real(8) :: llimit(MAX_DIM), ulimit(MAX_DIM)
 
 #if defined(HAVE_GDLIB)
     integer :: red, green, blue, ix, iy
@@ -884,10 +885,14 @@ contains
       in_box = in_minimum()
 
     case(PARALLELEPIPED)
+      llimit = -sb%lsize - DELTA
+      ulimit =  sb%lsize + DELTA
+      ulimit(1:sb%periodic_dim) = sb%lsize(1:sb%periodic_dim) - DELTA
+
       in_box = &
-        (xx(1) >= (-sb%lsize(1)-DELTA) .and. xx(1) <= sb%lsize(1)+DELTA) .and. &
-        (xx(2) >= (-sb%lsize(2)-DELTA) .and. xx(2) <= sb%lsize(2)+DELTA) .and. &
-        (xx(3) >= (-sb%lsize(3)-DELTA) .and. xx(3) <= sb%lsize(3)+DELTA)
+        xx(1) >= llimit(1) .and. xx(1) <= ulimit(1) .and. &
+        xx(2) >= llimit(2) .and. xx(2) <= ulimit(2) .and. &
+        xx(3) >= llimit(3) .and. xx(3) <= ulimit(3)
 
 #if defined(HAVE_GDLIB)
     case(BOX_IMAGE)
