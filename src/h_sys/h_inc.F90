@@ -55,12 +55,16 @@ subroutine X(hpsi) (h, gr, psi, hpsi, ik, t, E)
   type(hamiltonian_t), intent(inout) :: h
   type(grid_t),        intent(inout) :: gr
   integer,             intent(in)    :: ik
-  R_TYPE,              intent(inout) :: psi(:,:)  ! psi(NP_PART, h%d%dim)
+  R_TYPE, target,      intent(inout) :: psi(:,:)  ! psi(NP_PART, h%d%dim)
   R_TYPE,              intent(out)   :: hpsi(:,:) ! hpsi(NP, h%d%dim)
   FLOAT, optional,     intent(in)    :: t
   FLOAT, optional,     intent(in)    :: E
 
-  integer :: idim
+  integer :: idim, ip
+
+  R_TYPE, pointer :: epsi(:,:)
+  FLOAT :: kpoint(MAX_DIM)
+  type(profile_t), save :: phase_prof
 
   call profiling_in(C_PROFILING_HPSI)
   call push_sub('h_inc.Xhpsi')
@@ -72,6 +76,29 @@ subroutine X(hpsi) (h, gr, psi, hpsi, ik, t, E)
     call write_fatal(1)
   end if
 
+  ! first of all, set boundary conditions
+  do idim = 1, h%d%dim
+    call X(set_bc)(gr%f_der%der_discr, psi(:, idim))
+  end do
+
+  if(simul_box_is_periodic(gr%sb)) then ! we multiply psi by exp(i k.r)
+    call profiling_in(phase_prof, "PBC_PHASE_APPLY")
+    kpoint = M_ZERO
+    kpoint(1:gr%sb%periodic_dim) = h%d%kpoints(1:gr%sb%periodic_dim, ik)
+
+    ALLOCATE(epsi(1:NP_PART, 1:h%d%dim), NP_PART*h%d%dim)
+
+    do idim = 1, h%d%dim
+      do ip = 1, NP_PART
+        epsi(ip, idim) = exp(-M_zI * sum(gr%m%x(ip, 1:MAX_DIM) * kpoint(1:MAX_DIM))) * psi(ip, idim)
+      end do
+    end do
+    call profiling_out(phase_prof)
+  else
+    ! for finite systems we do nothing
+    epsi => psi
+  end if
+
   do idim = 1, h%d%dim
     !$omp parallel workshare
     hpsi(:, idim) = M_ZERO
@@ -80,45 +107,58 @@ subroutine X(hpsi) (h, gr, psi, hpsi, ik, t, E)
   
 #if defined(HAVE_LIBNBC)
   if(gr%m%parallel_in_domains) then
-    call X(kinetic_prepare)(h, gr, psi)
-
-    call X(vlpsi)(h, gr%m, psi, hpsi, ik)
+    call X(kinetic_prepare)(h, gr, epsi)
+    
+    call X(vlpsi)(h, gr%m, epsi, hpsi, ik)
     call X(kinetic_keep_going)(h)
     if(h%ep%nvnl > 0) then
-      call X(vnlpsi)(h, gr, psi, hpsi, ik)
+      call X(vnlpsi)(h, gr, epsi, hpsi, ik)
       call X(kinetic_keep_going)(h)
     end if
-    if(present(t)) call X(vlasers)(gr, h, psi, hpsi, ik, t)
-
+    if(present(t)) call X(vlasers)(gr, h, epsi, hpsi, ik, t)
+    
     call X(kinetic_wait)(h)
-    call X(kinetic_calculate)(h, gr, psi, hpsi, ik)
+    call X(kinetic_calculate)(h, gr, epsi, hpsi, ik)
   else
 #endif
-    call X(kinetic)(h, gr, psi, hpsi, ik)
-    call X(vlpsi)(h, gr%m, psi, hpsi, ik)
-    if(h%ep%nvnl > 0) call X(vnlpsi)(h, gr, psi, hpsi, ik)
-    if(present(t)) call X(vlasers)(gr, h, psi, hpsi, ik, t)
+    call X(kinetic)(h, gr, epsi, hpsi, ik)
+    call X(vlpsi)(h, gr%m, epsi, hpsi, ik)
+    if(h%ep%nvnl > 0) call X(vnlpsi)(h, gr, epsi, hpsi, ik)
+    if(present(t)) call X(vlasers)(gr, h, epsi, hpsi, ik, t)
 #if defined(HAVE_LIBNBC)
   end if
 #endif
-
+  
   if(h%theory_level .eq. HARTREE_FOCK) then
-    call X(exchange_operator)(h, gr, psi, hpsi, ik)
+    call X(exchange_operator)(h, gr, epsi, hpsi, ik)
   end if
 
   if(hamiltonian_oct_exchange(h)) then
-    call X(oct_exchange_operator)(h, gr, psi, hpsi, ik)
+    call X(oct_exchange_operator)(h, gr, epsi, hpsi, ik)
   end if
-
-  call X(magnetic_terms) (gr, h, psi, hpsi, ik)
-  if (h%ep%with_gauge_field) call X(vgauge) (gr, h, psi, hpsi)
-  if(present(t)) call X(vborders) (gr, h, psi, hpsi)
-
+  
+  call X(magnetic_terms) (gr, h, epsi, hpsi, ik)
+  if (h%ep%with_gauge_field) call X(vgauge) (gr, h, epsi, hpsi)
+  if(present(t)) call X(vborders) (gr, h, epsi, hpsi)
+  
   if(present(E)) then
-    ! compute (H-E) psi = hpsi
+    ! compute (H-E) epsi = hpsi
     do idim = 1, h%d%dim
-      call lalg_axpy(NP, E, psi(:, idim), hpsi(:, idim))
+      call lalg_axpy(NP, E, epsi(:, idim), hpsi(:, idim))
     end do
+  end if
+  
+  if(simul_box_is_periodic(gr%sb)) then
+    ! now we need to remove the exp(-i k.r) factor
+    call profiling_in(phase_prof)
+    do idim = 1, h%d%dim
+      do ip = 1, NP
+        hpsi(ip, idim) = exp(M_zI * sum(gr%m%x(ip, 1:MAX_DIM) * kpoint(1:MAX_DIM))) * hpsi(ip, idim)
+      end do
+    end do
+    
+    deallocate(epsi)
+    call profiling_out(phase_prof)
   end if
   
   call pop_sub()
@@ -309,7 +349,6 @@ subroutine X(kinetic_prepare)(h, gr, psi)
   call push_sub('h_inc.Xkinetic_prepare')
 
   do idim = 1, h%d%dim
-    call X(set_bc)(gr%f_der%der_discr, psi(:, idim))
     if(gr%m%parallel_in_domains) then
 #if defined(HAVE_MPI)
 #if defined(HAVE_LIBNBC)
@@ -323,7 +362,6 @@ subroutine X(kinetic_prepare)(h, gr, psi)
 
   call pop_sub()
 end subroutine X(kinetic_prepare)
-
 
 ! ---------------------------------------------------------
 ! Call NBC_Test to give MPI a chance to process pending messages.
@@ -376,11 +414,11 @@ subroutine X(kinetic) (h, gr, psi, hpsi, ik)
   call push_sub('h_inc.Xkinetic')
 
   call X(kinetic_prepare)(h, gr, psi)
-  if(gr%m%parallel_in_domains) then
 #if defined(HAVE_LIBNBC)
+  if(gr%m%parallel_in_domains) then
     call X(kinetic_wait)(h)
-#endif
   end if
+#endif
   call X(kinetic_calculate) (h, gr, psi, hpsi, ik)
 
   call pop_sub()
@@ -398,47 +436,22 @@ subroutine X(kinetic_calculate) (h, gr, psi, hpsi, ik)
   integer             :: idim
   R_TYPE, allocatable :: lapl(:, :)
 
-#if defined(R_TCOMPLEX)
-  integer :: i
-  R_TYPE, allocatable :: grad(:,:)
-  FLOAT :: k2
-#endif
-
   call profiling_in(C_PROFILING_KINETIC)
   call push_sub('h_inc.Xkinetic_calculate')
 
   ALLOCATE(lapl(gr%m%np, h%d%dim), gr%m%np*h%d%dim)
 
-  if(simul_box_is_periodic(gr%sb)) then
-#if defined(R_TCOMPLEX)
-    ALLOCATE(grad(NP, NDIM), NP*NDIM)
-    k2 = sum(h%d%kpoints(:, ik)**2)
-    do idim = 1, h%d%dim
-      call X(f_laplacian) (gr%sb, gr%f_der, psi(:, idim), lapl(:, idim), &
-        cutoff_ = M_TWO*h%cutoff, have_bndry=.true., ghost_update=.false.)
-      call X(f_gradient)  (gr%sb, gr%f_der, psi(:, idim), grad(:, :), ghost_update=.false.)
-      do i = 1, NP
-        hpsi(i, idim) = hpsi(i, idim) - M_HALF*(lapl(i, idim)       &
-          + M_TWO*M_zI*sum(h%d%kpoints(1:NDIM, ik)*grad(i, 1:NDIM)) &
-          - k2*psi(i, idim))
-      end do
-    end do
-    deallocate(grad)
-#endif
-  else
-    do idim = 1, h%d%dim
-      call X(f_laplacian) (gr%sb, gr%f_der, psi(:, idim), lapl(:, idim), &
-        cutoff_ = M_TWO*h%cutoff, have_bndry=.true., ghost_update=.false.)
-      call lalg_axpy(NP, -M_HALF/h%mass, lapl(:, idim), hpsi(:, idim))
-    end do
-  end if
-
+  do idim = 1, h%d%dim
+    call X(f_laplacian) (gr%sb, gr%f_der, psi(:, idim), lapl(:, idim), &
+         cutoff_ = M_TWO*h%cutoff, have_bndry=.true., ghost_update=.false.)
+    call lalg_axpy(NP, -M_HALF/h%mass, lapl(:, idim), hpsi(:, idim))
+  end do
+  
   deallocate(lapl)
 
   call pop_sub()
   call profiling_out(C_PROFILING_KINETIC)
 end subroutine X(kinetic_calculate)
-
 
 ! ---------------------------------------------------------
 ! Here we the terms arising from the presence of a possible static external
@@ -569,7 +582,6 @@ subroutine X(vnlpsi) (h, gr, psi, hpsi, ik)
   call profiling_out(C_PROFILING_VNLPSI)
 end subroutine X(vnlpsi)
 
-
 ! ---------------------------------------------------------
 subroutine X(vlpsi) (h, m, psi, hpsi, ik)
   type(hamiltonian_t), intent(in)    :: h
@@ -646,7 +658,6 @@ subroutine X(vexternal) (h, gr, psi, hpsi, ik)
   call pop_sub()
   call profiling_out(C_PROFILING_VLPSI)
 end subroutine X(vexternal)
-
 
 ! ---------------------------------------------------------
 subroutine X(vlaser_operator_quadratic) (gr, h, psi, hpsi, ik, laser_number)
