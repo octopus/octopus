@@ -151,6 +151,7 @@ module hamiltonian_m
     ! NBC_Handles for the calculation of the kinetic energy in parallel.
     C_POINTER, pointer :: handles(:)
 #endif
+    CMPLX, pointer :: phase(:, :)
   end type hamiltonian_t
 
   integer, public, parameter :: &
@@ -414,7 +415,26 @@ contains
     call hamiltonian_remove_inh(h)
     call hamiltonian_remove_oct_exchange(h)
 
+    nullify(h%phase)
+    if (simul_box_is_periodic(gr%sb)) call init_phase
+
     call pop_sub()
+
+  contains
+    
+    subroutine init_phase
+      integer :: ip, ik
+
+      ALLOCATE(h%phase(1:NP_PART, 1:h%d%nik), NP_PART*h%d%nik)
+
+      do ik = 1, h%d%nik
+        do ip = 1, NP_PART
+          h%phase(ip, ik) = exp(-M_zI*sum(gr%m%x(ip, 1:MAX_DIM)* h%d%kpoints(1:MAX_DIM, ik)))
+        end do
+      end do
+      
+    end subroutine init_phase
+    
   end subroutine hamiltonian_init
 
 
@@ -429,6 +449,8 @@ contains
 #endif
 
     call push_sub('h.hamiltonian_end')
+
+    if(associated(h%phase)) deallocate(h%phase)
 
 #if defined(HAVE_LIBNBC)
     if(associated(h%handles)) then

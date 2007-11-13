@@ -60,10 +60,9 @@ subroutine X(hpsi) (h, gr, psi, hpsi, ik, t, E)
   FLOAT, optional,     intent(in)    :: t
   FLOAT, optional,     intent(in)    :: E
 
-  integer :: idim, ip
+  integer :: idim
 
   R_TYPE, pointer :: epsi(:,:)
-  FLOAT :: kpoint(MAX_DIM)
   type(profile_t), save :: phase_prof
 
   call profiling_in(C_PROFILING_HPSI)
@@ -83,16 +82,13 @@ subroutine X(hpsi) (h, gr, psi, hpsi, ik, t, E)
 
   if(simul_box_is_periodic(gr%sb) .and. .not. kpoint_is_gamma(h%d, ik)) then ! we multiply psi by exp(i k.r)
     call profiling_in(phase_prof, "PBC_PHASE_APPLY")
-    kpoint = M_ZERO
-    kpoint(1:gr%sb%periodic_dim) = h%d%kpoints(1:gr%sb%periodic_dim, ik)
 
     ALLOCATE(epsi(1:NP_PART, 1:h%d%dim), NP_PART*h%d%dim)
 
     do idim = 1, h%d%dim
-      do ip = 1, NP_PART
-        epsi(ip, idim) = exp(-M_zI * sum(gr%m%x(ip, 1:MAX_DIM) * kpoint(1:MAX_DIM))) * psi(ip, idim)
-      end do
+      epsi(1:NP_PART, idim) = h%phase(1:NP_PART, ik) * psi(1:NP_PART, idim)
     end do
+    
     call profiling_out(phase_prof)
   else
     ! for finite systems we do nothing
@@ -151,10 +147,9 @@ subroutine X(hpsi) (h, gr, psi, hpsi, ik, t, E)
   if(simul_box_is_periodic(gr%sb) .and. .not. kpoint_is_gamma(h%d, ik)) then
     ! now we need to remove the exp(-i k.r) factor
     call profiling_in(phase_prof)
+
     do idim = 1, h%d%dim
-      do ip = 1, NP
-        hpsi(ip, idim) = exp(M_zI * sum(gr%m%x(ip, 1:MAX_DIM) * kpoint(1:MAX_DIM))) * hpsi(ip, idim)
-      end do
+      hpsi(1:NP, idim) = conjg(h%phase(1:NP, ik))*hpsi(1:NP, idim)
     end do
     
     deallocate(epsi)
