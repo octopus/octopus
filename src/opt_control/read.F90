@@ -207,6 +207,16 @@
       call write_info(2)
       oct%algorithm_type = oct_algorithm_wg05
     end if
+
+    if(oct%algorithm_type .eq. oct_algorithm_zbr98) then
+      if( (target%type .ne. oct_tg_groundstate) .or. &
+          (target%type .ne. oct_tg_gstransformation) ) then
+        write(message(1), '(a)') 'The scheme "OCTScheme = oct_algorithm_zbr98 can only be used if the target'
+        write(message(2), '(a)') 'state is "OCTTargetOperator = oct_tg_gstransformation" or "OCTTargetOperator = '
+        write(message(3), '(a)') 'oct_tg_groundstate".'
+        call write_fatal(3)
+      end if
+    end if
       
     ! WARNING filters can only be used with WG05, and this is not checked any more.
       

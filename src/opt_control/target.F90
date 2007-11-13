@@ -85,12 +85,15 @@ module opt_control_target_m
     !%Section Optimal Control
     !%Default 3
     !%Description
-    !% The string OCTTargetOperator describes the initial state of the quantum system
-    !% Possible arguments are:
+    !% The variable OCTTargetOperator prescribes which kind of target functional is
+    !% to be used.
+    !%
+    !% The possible arguments are:
+    !%
     !%Option oct_tg_groundstate 1 
     !% Targetoperator is a projection operator on the ground state
     !%Option oct_tg_excited 2
-    !% Currently not in use.
+    !% The target operator
     !%Option oct_tg_gstransformation 3
     !% Targetoperator is a projection operator on a transformation of the ground state 
     !% orbitals defined by the block OCTTargetTransformStates
@@ -102,6 +105,10 @@ module opt_control_target_m
     !% Target operator is a local operator.
     !%Option oct_tg_td_local 7
     !% Target operator is a time-dependent local operator
+    !%Option oct_tg_exclude_state 8
+    !% Target operator is the projection onto the complement of a given state, given by the
+    !% block OCTTargetTransformStates. This means that the target operator is the unity
+    !% operator minus the projector onto that state.
     !%End
     call loct_parse_int(check_inp('OCTTargetOperator'), oct_tg_gstransformation, target%type)
     if(.not.varinfo_valid_option('OCTTargetOperator', target%type)) call input_error('OCTTargetOperator')
@@ -148,10 +155,16 @@ module opt_control_target_m
       end if
       call excited_states_init(target%est, target%st, "oct-excited-state-target") 
 
-    case(oct_tg_gstransformation)  
+    case(oct_tg_gstransformation, oct_tg_exclude_state)  
 
-      message(1) =  'Info: Using Superposition of States for TargetOperator'
-      call write_info(1)
+      if(target%type .eq. oct_tg_gstransformation) then
+        message(1) =  'Info: Using Superposition of States for TargetOperator'
+        call write_info(1)
+      else
+        message(1) =  'Info: The target functional is the exclusion of the state defined in'
+        message(2) =  '      block "OCTTargetTransformStates".'
+        call write_info(2)
+      end if
       target%mode = oct_targetmode_static
 
       !%Variable OCTTargetTransformStates

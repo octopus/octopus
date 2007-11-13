@@ -70,6 +70,9 @@
     case(oct_tg_excited)
       j1 = abs(zstates_mpdotp(m, target%est, psi))**2
 
+    case(oct_tg_exclude_state)
+      j1 = M_ONE - abs(zstates_mpdotp(m, psi, target%st))**2
+
     case default
       j1 = abs(zstates_mpdotp(m, psi, target%st))**2
 
@@ -244,6 +247,14 @@
 
       deallocate(cI, dI, mat, mm, mk, lambda)
 
+    case(oct_tg_exclude_state)
+      olap = zstates_mpdotp(gr%m, target%st, psi_in)
+      do ik = 1, psi_in%d%nik
+        do p  = psi_in%st_start, psi_in%st_end
+          chi_out%zpsi(:, :, p, ik) = psi_in%zpsi(:, :, p, ik) - olap*target%st%zpsi(:, :, p, ik)
+        end do
+      end do
+
     case default
 
       olap = zstates_mpdotp(gr%m, target%st, psi_in)
@@ -251,9 +262,9 @@
         do p  = psi_in%st_start, psi_in%st_end
           select case(oct%algorithm_type)
             case(oct_algorithm_zbr98)
-              chi_out%zpsi(:,:,p,ik) = target%st%zpsi(:, :, p, ik)
+              chi_out%zpsi(:, :, p, ik) = target%st%zpsi(:, :, p, ik)
             case default
-              chi_out%zpsi(:,:,p,ik) = olap*target%st%zpsi(:, :, p, ik)
+              chi_out%zpsi(:, :, p, ik) = olap*target%st%zpsi(:, :, p, ik)
           end select
         end do
       end do
