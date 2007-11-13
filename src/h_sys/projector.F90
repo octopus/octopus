@@ -56,7 +56,6 @@ module projector_m
        projector_broadcast,       &
 #endif
        projector_end,             &
-       projector_init_phases,     &
        dproject_psi,              &
        zproject_psi,              &
        dproject_sphere,           &
@@ -95,7 +94,6 @@ module projector_m
     type(submesh_t)  :: sphere
 
     integer          :: nik
-    CMPLX,   pointer :: phases(:,:)
 
     ! Only one of the following structures should be used at once
     ! The one to be used depends on the value of type variable
@@ -111,41 +109,9 @@ contains
     type(projector_t), intent(out) :: p
 
     p%type = 0
-    nullify(p%phases)
     call submesh_null(p%sphere)
 
   end subroutine projector_null
-
-  !---------------------------------------------------------
-  subroutine projector_init_phases(p, sb, m, a, st)
-    type(projector_t), intent(inout) :: p
-    type(simul_box_t), intent(in)    :: sb
-    type(mesh_t),      intent(in)    :: m
-    type(atom_t),      intent(in)    :: a
-    type(states_t),    intent(in)    :: st
-
-    integer :: j, k
-    FLOAT :: x(MAX_DIM)
-
-    call push_sub('projector.projector_build_kb_sphere')
-
-    ! and here the phases for the periodic systems
-    if (sb%periodic_dim /= 0) then
-      p%nik = st%d%nik
-
-      ALLOCATE(p%phases(p%sphere%ns, p%nik), p%sphere%ns*p%nik)
-
-      do j = 1, p%sphere%ns
-        x(:) = m%x(p%sphere%jxyz(j), :)
-        do k = 1, p%nik
-          p%phases(j, k) = exp(M_zI*sum(st%d%kpoints(:, k)*x(:)))
-        end do
-      end do
-
-    end if
-
-    call pop_sub()
-  end subroutine projector_init_phases
 
   !---------------------------------------------------------
   subroutine projector_init(p, a, reltype, l, lm, force_type)
@@ -276,7 +242,6 @@ contains
     call push_sub('projector.projector_end')
 
     call submesh_end(p%sphere)
-    if (associated(p%phases)) deallocate(p%phases)
 
     select case(p%type)
     case(M_LOCAL)

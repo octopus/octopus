@@ -160,13 +160,12 @@ contains
   end subroutine rkb_projector_end
 
   ! ---------------------------------------------------------
-  subroutine rkb_project(mesh, sm, rkb_p, psi, ppsi, phases)
+  subroutine rkb_project(mesh, sm, rkb_p, psi, ppsi)
     type(mesh_t),          intent(in)  :: mesh
     type(submesh_t),       intent(in)  :: sm
     type(rkb_projector_t), intent(in)  :: rkb_p
     CMPLX,                 intent(in)  :: psi(:, :)  ! psi(kb%n_s, 2)
     CMPLX,                 intent(out) :: ppsi(:, :) ! ppsi(kb%n_s, 2)
-    CMPLX, optional,       intent(in)  :: phases(:)
 
     integer :: j, idim, jdim, n_s
     CMPLX :: uvpsi
@@ -183,20 +182,15 @@ contains
 
         do jdim = 1, 2
           if (rkb_p%f(j, jdim, idim) == M_ZERO) cycle
-          if (present(phases)) then
-            ppsi(1:n_s, jdim) = ppsi(1:n_s, jdim) + &
-                 rkb_p%f(j, jdim, idim) * uvpsi * rkb_p%ket(1:n_s, j, jdim, idim) * conjg(phases(1:n_s))
-          else
-            ppsi(1:n_s, jdim) = ppsi(1:n_s, jdim) + &
-                 rkb_p%f(j, jdim, idim) * uvpsi * rkb_p%ket(1:n_s, j, jdim, idim)
-          end if
+          ppsi(1:n_s, jdim) = ppsi(1:n_s, jdim) + &
+               rkb_p%f(j, jdim, idim) * uvpsi * rkb_p%ket(1:n_s, j, jdim, idim)
         end do
       end do
     end do
     
     call pop_sub()
   end subroutine rkb_project
-
+  
 end module rkb_projector_m
 
 !! Local Variables:

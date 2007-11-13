@@ -27,7 +27,7 @@
 ! If including the spin-orbit coupling there is another term to be added to ppsi:
 ! \sum_{ij}^3\sum{k}^3 p%k(i,j) |hgh_p%p(:, i)><hgh_p%lp(:, k, j)|\hat{S(k)}|psi>
 !------------------------------------------------------------------------------
-subroutine X(hgh_project)(mesh, sm, hgh_p, dim, psi, ppsi, reltype, phases)
+subroutine X(hgh_project)(mesh, sm, hgh_p, dim, psi, ppsi, reltype)
   type(mesh_t),          intent(in)  :: mesh
   type(submesh_t),       intent(in)  :: sm
   type(hgh_projector_t), intent(in)  :: hgh_p
@@ -35,7 +35,6 @@ subroutine X(hgh_project)(mesh, sm, hgh_p, dim, psi, ppsi, reltype, phases)
   R_TYPE,                intent(in)  :: psi(:, :)  ! psi(hgh%n_s, dim)
   R_TYPE,                intent(out) :: ppsi(:, :) ! ppsi(hgh%n_s, dim)
   integer,               intent(in)  :: reltype
-  CMPLX, optional,       intent(in)  :: phases(:)
 
   integer :: n_s, i, j, k, idim
   R_TYPE :: uvpsi
@@ -53,17 +52,12 @@ subroutine X(hgh_project)(mesh, sm, hgh_p, dim, psi, ppsi, reltype, phases)
 
       do i = 1, 3
         if (hgh_p%h(i, j) == M_ZERO) cycle
-        if (present(phases)) then
-          ppsi(1:n_s, idim) = ppsi(1:n_s, idim) + &
-               hgh_p%h(i, j) * uvpsi * hgh_p%p(1:n_s, i) * R_CONJ(phases(1:n_s))
-        else
-          ppsi(1:n_s, idim) = ppsi(1:n_s, idim) + &
-               hgh_p%h(i, j) * uvpsi * hgh_p%p(1:n_s, i)
-        end if
+        ppsi(1:n_s, idim) = ppsi(1:n_s, idim) + &
+             hgh_p%h(i, j) * uvpsi * hgh_p%p(1:n_s, i)
       end do
     end do
   end do
-
+  
   if (reltype == 1) then
 #ifdef R_TCOMPLEX
     ! Add spin-orbit term
@@ -80,26 +74,21 @@ subroutine X(hgh_project)(mesh, sm, hgh_p, dim, psi, ppsi, reltype, phases)
           
           do i = 1, 3
             if (hgh_p%k(i, j) == M_ZERO) cycle
-            if (present(phases)) then
-              lp_psi(1:n_s, k, idim) = lp_psi(1:n_s, k, idim) + &
-                   hgh_p%k(i, j) * uvpsi * hgh_p%p(1:n_s, i) * R_CONJ(phases(1:n_s))
-            else
-              lp_psi(1:n_s, k, idim) = lp_psi(1:n_s, k, idim) + &
-                   hgh_p%k(i, j) * uvpsi * hgh_p%p(1:n_s, i)
-            end if
+            lp_psi(1:n_s, k, idim) = lp_psi(1:n_s, k, idim) + &
+                 hgh_p%k(i, j) * uvpsi * hgh_p%p(1:n_s, i)
           end do
         end do
       end do
     end do
-
+    
     ppsi(1:n_s, 1) = ppsi(1:n_s, 1) + M_zI*M_HALF*( lp_psi(1:n_s, 3, 1) + lp_psi(1:n_s, 1, 2) - M_zI*lp_psi(1:n_s, 2, 2))
     ppsi(1:n_s, 2) = ppsi(1:n_s, 2) + M_zI*M_HALF*(-lp_psi(1:n_s, 3, 2) + lp_psi(1:n_s, 1, 1) + M_zI*lp_psi(1:n_s, 2, 1))
-
+    
     deallocate(lp_psi)
-
+    
 #endif
   end if
-
+  
 end subroutine X(hgh_project)
 
 !! Local Variables:

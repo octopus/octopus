@@ -24,14 +24,13 @@
 ! \hat{kb_p} |psi> = \sum_{i}^kb_p%n_c p%e(i) |kb_p%p(:, i)><kb_p%p(:, i)|psi>
 ! The result is summed up to ppsi.
 !------------------------------------------------------------------------------
-subroutine X(kb_project)(mesh, sm, kb_p, dim, psi, ppsi, phases)
+subroutine X(kb_project)(mesh, sm, kb_p, dim, psi, ppsi)
   type(mesh_t),         intent(in)  :: mesh
   type(submesh_t),      intent(in)  :: sm
   type(kb_projector_t), intent(in)  :: kb_p
   integer,              intent(in)  :: dim
   R_TYPE,               intent(in)  :: psi(:, :)  ! psi(kb%n_s, dim)
   R_TYPE,               intent(out) :: ppsi(:, :) ! ppsi(kb%n_s, dim)
-  CMPLX, optional,      intent(in)  :: phases(:)
 
   integer :: i, idim, n_s
   R_TYPE :: uvpsi
@@ -46,13 +45,8 @@ subroutine X(kb_project)(mesh, sm, kb_p, dim, psi, ppsi, phases)
       if (kb_p%e(i) == M_ZERO) cycle
       uvpsi = X(dsm_integrate_prod)(mesh, sm, psi(1:n_s, idim), kb_p%p(1:n_s, i))
 
-      if (present(phases)) then
-        ppsi(1:n_s, idim) = ppsi(1:n_s, idim) + &
-             kb_p%e(i) * uvpsi * kb_p%p(1:n_s, i) * R_CONJ(phases(1:n_s))
-      else
-        ppsi(1:n_s, idim) = ppsi(1:n_s, idim) + &
-             kb_p%e(i) * uvpsi * kb_p%p(1:n_s, i)
-      end if
+      ppsi(1:n_s, idim) = ppsi(1:n_s, idim) + &
+           kb_p%e(i) * uvpsi * kb_p%p(1:n_s, i)
     end do
   end do
 

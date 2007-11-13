@@ -42,7 +42,6 @@ module specie_m
     specie_t,                 &
     specie_debug,             &
     specie_read,              &
-    specie_get_local_fourier, &
     specie_get_nlcc,          &
     specie_get_iwf,           &
     specie_is_ps,             &
@@ -573,34 +572,6 @@ contains
 
     call pop_sub()
   end subroutine specie_end
-
-
-  ! ---------------------------------------------------------
-  ! returns the localized part of the potential in Fourier space
-  ! ---------------------------------------------------------
-  FLOAT function specie_get_local_fourier(dim, s, x) result(l)
-    integer,        intent(in) :: dim
-    type(specie_t), intent(in) :: s
-    FLOAT,          intent(in) :: x(MAX_DIM)
-
-    FLOAT :: gmod
-
-    if(dim /= 3 &
-         .or. s%type == SPEC_USDEF &
-         .or. s%type == SPEC_POINT &
-         .or. s%type == SPEC_JELLI &
-         .or. s%type == SPEC_ALL_E &
-         ) then
-      message(1) = 'Periodic arrays of usedef, jelli, point,'
-      message(2) = '1D and 2D systems not implemented yet.'
-      call write_fatal(2)
-      l = M_ZERO
-    else
-      gmod = sqrt(sum(x(:)**2))
-      l = loct_splint(s%ps%vlocal_f, gmod)
-    end if
-
-  end function specie_get_local_fourier
 
   ! ---------------------------------------------------------
   ! This routine returns the non-local projector and its 

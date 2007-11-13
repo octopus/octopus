@@ -456,7 +456,6 @@ contains
 
           call projector_end(ep%p(iproj))
           call submesh_copy(nl_sphere, ep%p(iproj)%sphere)
-          if(simul_box_is_periodic(sb)) call projector_init_phases(ep%p(iproj), sb, m, atm, st)
           call projector_init(ep%p(iproj), atm, reltype, l, lm)
 
           ep%p(iproj)%iatom = ia
@@ -473,7 +472,6 @@ contains
       call submesh_init_sphere(ep%p(iproj)%sphere, &
         sb, m, atm%x, double_grid_get_rmax(gr%dgrid, atm%spec, m))
       call projector_init(ep%p(iproj), atm, force_type = M_LOCAL)
-      if(simul_box_is_periodic(sb)) call projector_init_phases(ep%p(iproj), sb, m, atm, st)
 
       iproj = iproj + 1
       

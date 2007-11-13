@@ -65,7 +65,7 @@ subroutine X(calc_forces_from_potential)(gr, geo, ep, st, time)
         do idir = 1, NDIM
 
           psi_proj_gpsi = X(psia_project_psib)(gr%m, ep%p(ivnl), st%d%dim, &
-               st%X(psi)(:, :, ist, ik), gpsi(:, idir, :), reltype = 0, periodic = .false., ik = ik)
+               st%X(psi)(:, :, ist, ik), gpsi(:, idir, :), reltype = 0)
 
           atm%f(idir) = atm%f(idir) - M_TWO * st%occ(ist, ik) * R_REAL(psi_proj_gpsi)
 
@@ -125,12 +125,10 @@ subroutine X(conmut_vnl_r)(gr, geo, ep, dim, idir, iatom, psi, cpsi, reltype, ik
 
   integer ::  n_s, idim, ipj
   R_TYPE, allocatable :: lpsi(:, :), pxlpsi(:,:), xplpsi(:,:)
-  logical :: periodic
   integer, pointer :: jxyz(:)
 
   call push_sub('epot_inc.Xconmut_vnl_r')
 
-  periodic = simul_box_is_periodic(gr%m%sb)
 
   cpsi(1:gr%m%np, 1:dim) = M_ZERO
 
@@ -150,7 +148,7 @@ subroutine X(conmut_vnl_r)(gr, geo, ep, dim, idir, iatom, psi, cpsi, reltype, ik
     end do
 
     ! x V_nl |psi>
-    call X(project_sphere)(gr%m, ep%p(ipj), dim, lpsi, xplpsi, reltype, periodic, ik)
+    call X(project_sphere)(gr%m, ep%p(ipj), dim, lpsi, xplpsi, reltype)
     do idim = 1, dim
       xplpsi(1:n_s, idim) = gr%m%x(jxyz(1:n_s), idir) * xplpsi(1:n_s, idim)
     end do
@@ -159,7 +157,7 @@ subroutine X(conmut_vnl_r)(gr, geo, ep, dim, idir, iatom, psi, cpsi, reltype, ik
     do idim = 1, dim
       lpsi(1:n_s, idim) = gr%m%x(jxyz(1:n_s), idir) * lpsi(1:n_s, idim)
     end do
-    call X(project_sphere)(gr%m, ep%p(ipj), dim, lpsi, pxlpsi, reltype, periodic, ik)
+    call X(project_sphere)(gr%m, ep%p(ipj), dim, lpsi, pxlpsi, reltype)
 
     ! |cpsi> = x V_nl |psi> - V_nl x |psi> 
     do idim = 1, dim

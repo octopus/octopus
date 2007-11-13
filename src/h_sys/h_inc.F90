@@ -574,8 +574,8 @@ subroutine X(vnlpsi) (h, gr, psi, hpsi, ik)
   call push_sub('h_inc.Xvnlpsi')
 
   do ipj = 1, h%ep%nvnl
-    call X(project_psi)(gr%m, h%ep%p(ipj), h%d%dim, psi, hpsi, &
-       h%reltype, periodic = simul_box_is_periodic(gr%m%sb), ik = ik)
+    call X(project_psi)(gr%m, h%ep%p(ipj), h%d%dim, psi, hpsi, h%reltype)
+    !here we have to apply the phases
   end do
 
   call pop_sub()
@@ -1225,8 +1225,7 @@ subroutine X(vnlpsi_diag) (h, gr, psi, hpsi, ik)
 
   do ipj = 1, h%ep%nvnl
     if( h%ep%p(ipj)%type == M_LOCAL) then 
-      call X(project_psi)(gr%m, h%ep%p(ipj), h%d%dim, psi, hpsi, &
-        h%reltype, periodic = simul_box_is_periodic(gr%m%sb), ik = ik)
+      call X(project_psi)(gr%m, h%ep%p(ipj), h%d%dim, psi, hpsi, h%reltype)
     end if
   end do
 
