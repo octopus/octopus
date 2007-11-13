@@ -523,6 +523,14 @@ logical function in_wigner_seitz_cell(k_point, klattice) result(in_cell)
   call pop_sub()
 end function in_wigner_seitz_cell
 
+logical pure function kpoint_is_gamma(this, ik)
+  type(states_dim_t), intent(in) :: this
+  integer,            intent(in) :: ik
+  
+  kpoint_is_gamma = (maxval(abs(this%kpoints(:, ik))) < M_EPSILON)
+
+end function kpoint_is_gamma
+
 !! Local Variables:
 !! mode: f90
 !! coding: utf-8

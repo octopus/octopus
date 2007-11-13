@@ -77,6 +77,7 @@ module states_m
     states_paramagnetic_current,      &
     state_is_local,                   &
     kpoints_write_info,               &
+    kpoint_is_gamma,                  &
     wfs_are_complex,                  &
     wfs_are_real,                     &
     states_dump,                      &

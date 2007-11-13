@@ -81,7 +81,7 @@ subroutine X(hpsi) (h, gr, psi, hpsi, ik, t, E)
     call X(set_bc)(gr%f_der%der_discr, psi(:, idim))
   end do
 
-  if(simul_box_is_periodic(gr%sb)) then ! we multiply psi by exp(i k.r)
+  if(simul_box_is_periodic(gr%sb) .and. .not. kpoint_is_gamma(h%d, ik)) then ! we multiply psi by exp(i k.r)
     call profiling_in(phase_prof, "PBC_PHASE_APPLY")
     kpoint = M_ZERO
     kpoint(1:gr%sb%periodic_dim) = h%d%kpoints(1:gr%sb%periodic_dim, ik)
@@ -148,7 +148,7 @@ subroutine X(hpsi) (h, gr, psi, hpsi, ik, t, E)
     end do
   end if
   
-  if(simul_box_is_periodic(gr%sb)) then
+  if(simul_box_is_periodic(gr%sb) .and. .not. kpoint_is_gamma(h%d, ik)) then
     ! now we need to remove the exp(-i k.r) factor
     call profiling_in(phase_prof)
     do idim = 1, h%d%dim
