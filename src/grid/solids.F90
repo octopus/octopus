@@ -37,6 +37,7 @@ module solids_m
   type :: periodic_copy_t
     private
     FLOAT :: pos(1:MAX_DIM)
+    FLOAT :: pos_chi(1:MAX_DIM)
     FLOAT :: range
     integer :: nbmax(MAX_DIM), nbmin(MAX_DIM)
   end type periodic_copy_t
@@ -50,12 +51,19 @@ contains
     FLOAT,                   intent(in)    :: range
     
     this%range = range
+    this%pos = pos
+
+    if(.not. simul_box_is_periodic(sb)) then
+      this%nbmin = 0
+      this%nbmax = 0
+      return
+    end if
 
     !convert the position to the orthogonal space
-    this%pos = matmul(pos, sb%klattice_unitary)
+    this%pos_chi = matmul(pos, sb%klattice_unitary)
 
-    this%nbmin = int((this%pos - range)/sb%lsize - 0.5)
-    this%nbmax = int((this%pos + range)/sb%lsize + 0.5)
+    this%nbmin = int((this%pos_chi - range)/sb%lsize - 0.5)
+    this%nbmax = int((this%pos_chi + range)/sb%lsize + 0.5)
 
     !there are no copies in non-periodic directions
     this%nbmin(sb%periodic_dim + 1:sb%dim) = 0
@@ -73,9 +81,9 @@ contains
 
   integer function periodic_copy_num(this) result(num)
     type(periodic_copy_t), intent(out) :: this
-    
-    num = product(this%nbmax - this%nbmin + 1)
-    
+
+      num = product(this%nbmax - this%nbmin + 1)
+
   end function periodic_copy_num
 
   function periodic_copy_position(this, sb, ii) result(pcopy)
@@ -85,14 +93,19 @@ contains
     FLOAT                                :: pcopy(MAX_DIM) 
     
     integer :: icell1, icell2, icell3, jj
-    
+
+    if(.not. simul_box_is_periodic(sb)) then
+      pcopy = this%pos
+      return
+    end if
+
     jj = 1
     do icell1 = this%nbmin(1), this%nbmax(1)
       do icell2 = this%nbmin(2), this%nbmax(2)
         do icell3 = this%nbmin(3), this%nbmax(3)
           
           if (jj == ii) then 
-            pcopy(:) = this%pos(:) - M_TWO*sb%lsize(:)*(/icell1, icell2, icell3/)
+            pcopy(:) = this%pos_chi(:) - M_TWO*sb%lsize(:)*(/icell1, icell2, icell3/)
             pcopy(:) = matmul(sb%rlattice, pcopy(:))
             return
           end if
