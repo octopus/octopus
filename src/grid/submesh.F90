@@ -136,7 +136,6 @@ contains
           r2 = sum((m%x(ip, 1:MAX_DIM) - periodic_copy_position(pp, sb, icell))**2)
           if(r2 > (rc + m%h(1))**2 ) cycle
           is = is + 1
-          exit
         end do
         if (ip == m%np) this%ns = is
       end do
@@ -158,8 +157,7 @@ contains
           this%jxyz_inv(ip) = is
           this%x(is, 0) = sqrt(r2)
           this%x(is, 1:MAX_DIM) = x(1:MAX_DIM)
-          exit
-        end do
+         end do
       end do
 
       call periodic_copy_end(pp)
