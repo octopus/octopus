@@ -24,6 +24,7 @@ module submesh_m
   use messages_m
   use mesh_m
   use mpi_m
+  use solids_m
   use profiling_m
   use simul_box_m
 
@@ -70,9 +71,10 @@ contains
     FLOAT,             intent(in)   :: rc
     
     FLOAT :: r2
-    integer :: ii, is, ip
+    integer :: icell, is, ip
     type(profile_t), save :: submesh_init_prof
-
+    type(periodic_copy_t) :: pp
+    
     call push_sub('submesh.submesh_init_sphere')
     call profiling_in(submesh_init_prof, "SUBMESH_INIT")
 
@@ -85,18 +87,41 @@ contains
     this%jxyz_inv(0:this%np_part) = 0
     !$omp end parallel workshare
 
-    ! Get the total number of points inside the sphere
-    is = 0
-    do ip = 1, m%np_part
-      do ii = 1, 3**sb%periodic_dim
-        r2 = sum((m%x(ip, 1:MAX_DIM) - center(1:MAX_DIM) + sb%shift(ii, 1:MAX_DIM))**2)
-        if(r2 > (rc + m%h(1))**2 ) cycle
-        is = is + 1
-        this%jxyz_inv(ip) = is
-        exit
+    if(.not. simul_box_is_periodic(sb)) then 
+      
+      ! Get the total number of points inside the sphere
+      is = 0
+      do ip = 1, m%np_part
+        r2 = sum((m%x(ip, 1:MAX_DIM) - center(1:MAX_DIM))**2)
+        if(r2 <= (rc + m%h(1))**2 ) then
+          is = is + 1
+          this%jxyz_inv(ip) = is
+        end if
+        if (ip == m%np) this%ns = is
       end do
-      if (ip == m%np) this%ns = is
-    end do
+      
+    else
+
+      ! Get the total number of points inside the sphere considering
+      ! replicas along PBCs (this is not working)
+
+      call periodic_copy_init(pp, sb, center(1:MAX_DIM), rc)
+      
+      is = 0
+      do ip = 1, m%np
+        do icell = 1, periodic_copy_num(pp)
+          r2 = sum((m%x(ip, 1:MAX_DIM) - periodic_copy_position(pp, sb, icell))**2)
+          if(r2 > (rc + m%h(1))**2 ) cycle
+          is = is + 1
+          this%jxyz_inv(ip) = is
+          exit
+        end do
+        if (ip == m%np) this%ns = is
+      end do
+      
+      call periodic_copy_end(pp)
+
+    end if
 
     this%ns_part = is
 
