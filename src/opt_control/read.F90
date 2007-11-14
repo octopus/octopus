@@ -195,8 +195,8 @@
       end if
     end select
 
-    if(abs(-sys%st%val_charge - real(no_electrons, REAL_PRECISION) ) > CNST(1.0e-8)) then
-      write(message(1), '(a)') 'Error in check_runmode_constrains'
+    if(abs(sys%st%qtot - real(no_electrons, REAL_PRECISION) ) > CNST(1.0e-8)) then
+      write(message(1), '(a)') 'Error inv check_faulty_runmodes'
       call write_fatal(1)
     end if
 
@@ -209,11 +209,11 @@
     end if
 
     if(oct%algorithm_type .eq. oct_algorithm_zbr98) then
-      if( (target%type .ne. oct_tg_groundstate) .or. &
+      if( (target%type .ne. oct_tg_groundstate) .and. &
           (target%type .ne. oct_tg_gstransformation) ) then
-        write(message(1), '(a)') 'The scheme "OCTScheme = oct_algorithm_zbr98 can only be used if the target'
-        write(message(2), '(a)') 'state is "OCTTargetOperator = oct_tg_gstransformation" or "OCTTargetOperator = '
-        write(message(3), '(a)') 'oct_tg_groundstate".'
+        write(message(1), '(a)') 'The scheme "OCTScheme = oct_algorithm_zbr98 can only be used if'
+        write(message(2), '(a)') 'the target state is "OCTTargetOperator = oct_tg_gstransformation"'
+        write(message(3), '(a)') 'or "OCTTargetOperator = oct_tg_groundstate".'
         call write_fatal(3)
       end if
     end if
