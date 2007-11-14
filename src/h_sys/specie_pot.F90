@@ -117,13 +117,14 @@ contains
     integer,           intent(in)    :: spin_channels
     FLOAT,             intent(inout) :: rho(:, :) ! (m%np, spin_channels)
 
-    integer :: i, in_points, k, n
-    FLOAT :: r, x
+    integer :: i, in_points, n, icell
+    FLOAT :: r, x, pos(1:MAX_DIM)
     FLOAT :: psi1, psi2
     type(specie_t), pointer :: s
 #if defined(HAVE_MPI)
     integer :: in_points_red
 #endif
+    type(periodic_copy_t) :: pp
 
     call push_sub('specie_pot.atom_density')
 
@@ -170,9 +171,13 @@ contains
     case (SPEC_PS_PSF, SPEC_PS_HGH, SPEC_PS_UPF) ! ...from pseudopotential
       ! the outer loop sums densities over atoms in neighbour cells
 
-      do k = 1, 3**sb%periodic_dim
+      call periodic_copy_init(pp, sb, atom%x, &
+        range = loct_spline_cutoff_radius(s%ps%Ur(1, 1), s%ps%projectors_sphere_threshold))
+
+      do icell = 1, periodic_copy_num(pp)
+        pos = periodic_copy_position(pp, sb, icell)
         do i = 1, m%np
-          call mesh_r(m, i, r, a=atom%x + sb%shift(k,:))
+          call mesh_r(m, i, r, pos)
           r = max(r, r_small)
           do n = 1, s%ps%conf%p
             select case(spin_channels)
@@ -188,6 +193,9 @@ contains
           end do
         end do
       end do
+
+      call periodic_copy_end(pp)
+
     end select
 
     call pop_sub()

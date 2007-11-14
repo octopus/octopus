@@ -78,8 +78,6 @@ module simul_box_m
     FLOAT :: klattice(3,3)      ! reciprocal lattice primitive vectors
     FLOAT :: volume_element     ! the volume element in real space
     FLOAT :: rcell_volume       ! the volume of the cell in real space
-    FLOAT :: shift(27,3)    ! shift to equivalent positions in nearest neighbour primitive cells
-
     FLOAT :: fft_alpha      ! enlargement factor for double box
 
     integer :: dim
@@ -690,22 +688,6 @@ contains
         sb%klattice(:, idim) = sb%klattice_unitary(:, idim)*M_TWO*M_PI/(M_TWO*sb%lsize(idim))
       end do
 
-      ! build shifts to nearest neighbour primitive cells
-      ii = (/0,-1,1/)
-      sb%shift=M_ZERO
-      i = 1
-      do iz = 1, 3
-        do iy = 1, 3
-          do ix = 1, 3
-            sb%shift(i,:) = &
-              ii(ix)*sb%rlattice(:, 1)*M_TWO*sb%lsize(1) + &
-              ii(iy)*sb%rlattice(:, 2)*M_TWO*sb%lsize(2) + &
-              ii(iz)*sb%rlattice(:, 3)*M_TWO*sb%lsize(3)
-            i = i + 1
-          end do
-        end do
-      end do
-
       call pop_sub()
     end subroutine build_lattice
 
@@ -1053,7 +1035,6 @@ contains
     sbout%klattice                = sbin%klattice
     sbout%klattice_unitary        = sbin%klattice_unitary
     sbout%volume_element          = sbin%volume_element
-    sbout%shift                   = sbin%shift
     sbout%fft_alpha               = sbin%fft_alpha
     sbout%dim                     = sbin%dim
     sbout%periodic_dim            = sbin%periodic_dim
