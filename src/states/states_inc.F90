@@ -88,9 +88,8 @@ subroutine X(states_gram_schmidt1)(st, nst, m, dim, psi, start)
     ! Normalize.
     if(state_is_local(st, p)) then
       nrm2 = X(states_nrm2)(m, dim, psi(:, :, p-st%st_start+1))
-      ss = R_TOTYPE(M_ONE/nrm2)
       do idim = 1, dim
-        call lalg_scal(m%np, ss, psi(:, idim, p-st%st_start+1))
+        call lalg_scal(m%np, M_ONE/nrm2, psi(:, idim, p-st%st_start+1))
       end do
     end if
   end do
@@ -149,9 +148,8 @@ subroutine X(states_gram_schmidt2)(st, nst, m, dim, psi, phi, normalize, mask)
   if(present(normalize)) normalize_ = normalize
   if(normalize) then
     nrm2 = X(states_nrm2)(m, dim, phi)
-    ss = R_TOTYPE(M_ONE/nrm2)
     do idim = 1, dim
-      call lalg_scal(m%np, ss, phi(:, idim))
+      call lalg_scal(m%np, M_ONE/nrm2, phi(:, idim))
     end do
   end if
 

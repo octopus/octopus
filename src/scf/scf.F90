@@ -43,6 +43,7 @@ module scf_m
   use profiling_m
   use restart_m
   use simul_box_m
+  use solids_m
   use states_m
   use states_output_m
   use units_m
@@ -514,8 +515,10 @@ contains
       ! output final information
       call scf_write_static("static", "info")
       call states_output(st, gr, "static", outp)
-      if(iand(outp%what, output_geometry).ne.0) &
+      if(iand(outp%what, output_geometry).ne.0) then
         call atom_write_xyz("static", "geometry", geo)
+        if(simul_box_is_periodic(gr%sb)) call periodic_write_crystal(gr%sb, geo)
+      end if
       call hamiltonian_output(h, gr%m, gr%sb, "static", outp)
       call states_write_current_flow("static", st, gr)
     end if
