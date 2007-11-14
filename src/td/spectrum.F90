@@ -491,13 +491,22 @@ contains
       k%pol(1:3, i) = k%pol(1:3, i)/sqrt(sum(k%pol(1:3, i)**2))
     end do
 
+    !%Variable TDPolarizationWprime
+    !%Type block
+    !%Section Time Dependent::Linear Response
+    !%Description
+    !% Say you have a first symmetry operation (A)
+    !% that takes you the first axis (p1) to the second axis (p2), and then
+    !% a second symmetry operation (B) that takes you the second axis (p2) to the
+    !% third (p3). Then wprime = A^{-1} p3.
+    !%End
     if(loct_parse_block(check_inp('TDPolarizationWprime'), blk)==0) then
       do i = 1, 3
         call loct_parse_block_float(blk, 0, i-1, k%wprime(i))
       end do
       k%wprime(1:3) = k%wprime(1:3)/sqrt(sum(k%wprime(1:3)**2))
     else
-      k%wprime(1:3) = (/ M_ONE, M_ZERO, M_ZERO /)
+      k%wprime(1:3) = (/ M_ZERO, M_ZERO, M_ONE /)
     end if
 
     call pop_sub()
@@ -684,7 +693,7 @@ contains
     do i = 0, energy_steps
 
       p = M_ZERO
-      do j = 1, nspin
+      do j = 1, min(2, nspin) ! we add spin up with spin down
          p(:, :) = p(:, :) + sigma(:, :, i, j)
       end do
       average = M_THIRD * ( p(1, 1) + p(2, 2) + p(3, 3) )
