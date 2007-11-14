@@ -49,6 +49,7 @@ module submesh_m
      integer          :: np_part
      integer, pointer :: jxyz(:)        ! index in the mesh of the points inside the sphere
      integer, pointer :: jxyz_inv(:)    ! and the inverse
+     FLOAT,   pointer :: x(:,:)
   end type submesh_t
   
 contains
@@ -70,7 +71,7 @@ contains
     FLOAT,             intent(in)   :: center(1:MAX_DIM)
     FLOAT,             intent(in)   :: rc
     
-    FLOAT :: r2
+    FLOAT :: r2, x(1:MAX_DIM)
     integer :: icell, is, ip
     type(profile_t), save :: submesh_init_prof
     type(periodic_copy_t) :: pp
@@ -87,6 +88,8 @@ contains
     this%jxyz_inv(0:this%np_part) = 0
     !$omp end parallel workshare
 
+    ! The spheres are generated differently for periodic coordinates,
+    ! mainly for performance reasons.
     if(.not. simul_box_is_periodic(sb)) then 
       
       ! Get the total number of points inside the sphere
@@ -100,10 +103,30 @@ contains
         if (ip == m%np) this%ns = is
       end do
       
+      this%ns_part = is
+      
+      ALLOCATE(this%jxyz(this%ns_part), this%ns_part)
+      ALLOCATE(this%x(this%ns_part, 0:MAX_DIM), this%ns_part*(MAX_DIM+1))
+      
+      ! Generate the table and the positions
+      !$omp parallel do
+      do ip = 1, m%np_part
+        if( this%jxyz_inv(ip) /= 0 ) then 
+          is = this%jxyz_inv(ip)
+          this%jxyz(is) = ip
+          this%x(is, 1:MAX_DIM) = m%x(ip, 1:MAX_DIM) - center(1:MAX_DIM)
+          this%x(is, 0) = sqrt(sum(this%x(is, 1:MAX_DIM)**2))
+        end if
+      end do
+      !$omp end parallel do
+
     else
 
       ! Get the total number of points inside the sphere considering
-      ! replicas along PBCs (this is not working)
+      ! replicas along PBCs
+
+      ! this requires some optimization, but we are far from doing MD
+      ! with PBC
 
       call periodic_copy_init(pp, sb, center(1:MAX_DIM), rc)
       
@@ -113,26 +136,35 @@ contains
           r2 = sum((m%x(ip, 1:MAX_DIM) - periodic_copy_position(pp, sb, icell))**2)
           if(r2 > (rc + m%h(1))**2 ) cycle
           is = is + 1
-          this%jxyz_inv(ip) = is
           exit
         end do
         if (ip == m%np) this%ns = is
       end do
       
+      this%ns_part = is
+      
+      ALLOCATE(this%jxyz(this%ns_part), this%ns_part)
+      ALLOCATE(this%x(this%ns_part, 0:MAX_DIM), this%ns_part*(MAX_DIM+1))
+            
+      !iterate again to fill the tables
+      is = 0
+      do ip = 1, m%np
+        do icell = 1, periodic_copy_num(pp)
+          x(1:MAX_DIM) = m%x(ip, 1:MAX_DIM) - periodic_copy_position(pp, sb, icell)
+          r2 = sum(x(1:MAX_DIM)**2)
+          if(r2 > (rc + m%h(1))**2 ) cycle
+          is = is + 1
+          this%jxyz(is) = ip
+          this%jxyz_inv(ip) = is
+          this%x(is, 0) = sqrt(r2)
+          this%x(is, 1:MAX_DIM) = x(1:MAX_DIM)
+          exit
+        end do
+      end do
+
       call periodic_copy_end(pp)
-
+     
     end if
-
-    this%ns_part = is
-
-    ALLOCATE(this%jxyz(this%ns_part), this%ns_part)
-
-    ! Get the index of the points inside the sphere
-    !$omp parallel do
-    do ip = 1, m%np_part
-      if( this%jxyz_inv(ip) /= 0 ) this%jxyz(this%jxyz_inv(ip)) = ip
-    end do
-    !$omp end parallel do
 
     call profiling_out(submesh_init_prof)
     call pop_sub()
@@ -148,6 +180,7 @@ contains
       this%ns = -1
       deallocate(this%jxyz)
       deallocate(this%jxyz_inv)
+      deallocate(this%x)
     end if
 
     call pop_sub()
@@ -167,10 +200,13 @@ contains
     sm_out%np_part  = sm_in%np_part
     
     ALLOCATE(sm_out%jxyz(1:sm_out%ns_part), sm_out%ns_part)
+    ALLOCATE(sm_out%x(1:sm_out%ns_part, 0:MAX_DIM), sm_out%ns_part*(MAX_DIM + 1))
     ALLOCATE(sm_out%jxyz_inv(0:sm_out%np_part), sm_out%np_part+1)
+
     
     !$omp parallel workshare
-    sm_out%jxyz(1:sm_out%ns_part)    = sm_in%jxyz(1:sm_in%ns_part)
+    sm_out%jxyz(1:sm_out%ns_part) = sm_in%jxyz(1:sm_in%ns_part)
+    sm_out%x(1:sm_out%ns_part, 0:MAX_DIM) = sm_in%x(1:sm_in%ns_part, 0:MAX_DIM)
     sm_out%jxyz_inv(0:sm_out%np_part) = sm_in%jxyz_inv(0:sm_out%np_part)
     !$omp end parallel workshare
 

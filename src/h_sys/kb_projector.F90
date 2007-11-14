@@ -94,31 +94,8 @@ contains
     ALLOCATE(kb_p%p (kb_p%n_s, n_c),    kb_p%n_s*n_c)
     kb_p%p = M_ZERO
     
-    if (gr%sb%periodic_dim == 0) then 
-
-      do ic = 1, n_c
-        call double_grid_apply_non_local(gr%dgrid, a%spec, gr%m, sm, a%x, kb_p%p(:, ic), l, lm, ic)
-      end do
-
-    else 
-
-      do j = 1, kb_p%n_s
-        do k = 1, 3**gr%sb%periodic_dim
-          x_in(:) = gr%m%x(sm%jxyz(j), :) - gr%sb%shift(k,:)
-          x(:) = x_in(:) - a%x
-          r = sqrt(sum(x*x))
-          if (r > a%spec%ps%rc_max + gr%m%h(1)) cycle
-          
-          do ic = 1, n_c
-            call specie_real_nl_projector(a%spec, x, l, lm, ic, v, dv)
-            kb_p%p(j, ic) = v
-          end do
-        end do
-      end do
-
-    end if
-
     do ic = 1, n_c
+      call double_grid_apply_non_local(gr%dgrid, a%spec, gr%m, sm, a%x, kb_p%p(:, ic), l, lm, ic)
       kb_p%e(ic) = a%spec%ps%h(l, ic, ic)
     end do
 

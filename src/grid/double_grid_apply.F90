@@ -46,8 +46,8 @@ subroutine double_grid_apply (this, s, m, sm, x_atom, vl, l, lm, ic)
     
     !$omp parallel do private(r, x)
     do is = 1, sm%ns
-      x(1:3) = m%x(sm%jxyz(is), 1:3) - x_atom(1:3)
-      r = sqrt(sum(x(1:3)**2))
+      r = sm%x(is, 0)
+      x(1:3) = sm%x(is, 1:3)
       calc_pot(vl(is))
     end do
     !$omp end parallel do 
@@ -55,6 +55,8 @@ subroutine double_grid_apply (this, s, m, sm, x_atom, vl, l, lm, ic)
   else
     
     call profiling_in(profiler, profiler_label)
+
+    ASSERT(.not. simul_box_is_periodic(m%sb))
 
 #ifdef USE_OMP
     vl(1:sm%ns) = M_ZERO
