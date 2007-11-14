@@ -569,7 +569,8 @@ subroutine X(vnlpsi) (h, gr, psi, hpsi, ik)
   call push_sub('h_inc.Xvnlpsi')
 
   do ipj = 1, h%ep%nvnl
-    call X(project_psi)(gr%m, h%ep%p(ipj), h%d%dim, psi, hpsi, h%reltype)
+    if (h%ep%p(ipj)%type == M_LOCAL) &
+      call X(project_psi)(gr%m, h%ep%p(ipj), h%d%dim, psi, hpsi, h%reltype)
     !here we have to apply the phases
   end do
 
@@ -1201,28 +1202,33 @@ subroutine X(hpsi_diag) (h, gr, diag, ik, t, E)
   end do
 
   call X(vlpsi)(h, gr%m, psi, diag, ik)
-  call X(vnlpsi_diag)(h, gr, psi, diag, ik)
+  call X(vnlpsi_diag)(h, gr%m, diag)
 
   call pop_sub()
 end subroutine X(hpsi_diag)
 
 ! ---------------------------------------------------------
-subroutine X(vnlpsi_diag) (h, gr, psi, hpsi, ik)
+subroutine X(vnlpsi_diag) (h, m, hpsi)
   type(hamiltonian_t), intent(in)    :: h
-  type(grid_t),        intent(inout) :: gr
-  R_TYPE,              intent(in)    :: psi(:,:)  ! psi(NP_PART, h%d%dim)
+  type(mesh_t),        intent(in)    :: m
   R_TYPE,              intent(inout) :: hpsi(:,:) ! hpsi(NP_PART, h%d%dim)
-  integer,             intent(in)    :: ik
 
   integer :: ipj
+  R_TYPE, allocatable :: psi(:, :)
 
   call push_sub('h_inc.Xvnlpsi')
 
+  ALLOCATE(psi(1:m%np, 1:h%d%dim), m%np*h%d%dim)
+
+  psi = M_ONE
+
   do ipj = 1, h%ep%nvnl
     if( h%ep%p(ipj)%type == M_LOCAL) then 
-      call X(project_psi)(gr%m, h%ep%p(ipj), h%d%dim, psi, hpsi, h%reltype)
+      call X(project_psi)(m, h%ep%p(ipj), h%d%dim, psi, hpsi, h%reltype)
     end if
   end do
+
+  deallocate(psi)
 
   call pop_sub()
 end subroutine X(vnlpsi_diag)

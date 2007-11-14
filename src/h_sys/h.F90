@@ -596,12 +596,17 @@ contains
     integer :: is, err
     character(len=80) :: fname
     FLOAT :: u
-
+    FLOAT, allocatable :: v0(:,:)
+    
     call push_sub('h.hamiltonian_output')
 
     u = units_out%energy%factor
     if(iand(outp%what, output_potential).ne.0) then
-      call doutput_function(outp%how, dir, "v0", m, sb, h%ep%vpsl, u, err)
+      ALLOCATE(v0(1:m%np, 1:h%d%dim), m%np*h%d%dim)
+      v0(1:m%np, 1) = h%ep%vpsl(1:m%np)
+      call dvnlpsi_diag(h, m, v0)
+      call doutput_function(outp%how, dir, "v0", m, sb, v0(:, 1), u, err)
+      deallocate(v0)
 
       if(h%ep%classic_pot > 0) then
         call doutput_function(outp%how, dir, "vc", m, sb, h%ep%Vclassic, u, err)
