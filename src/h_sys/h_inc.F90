@@ -569,9 +569,7 @@ subroutine X(vnlpsi) (h, gr, psi, hpsi, ik)
   call push_sub('h_inc.Xvnlpsi')
 
   do ipj = 1, h%ep%nvnl
-    if (h%ep%p(ipj)%type == M_LOCAL) &
-      call X(project_psi)(gr%m, h%ep%p(ipj), h%d%dim, psi, hpsi, h%reltype)
-    !here we have to apply the phases
+    call X(project_psi)(gr%m, h%ep%p(ipj), h%d%dim, psi, hpsi, h%reltype)
   end do
 
   call pop_sub()
