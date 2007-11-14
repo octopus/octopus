@@ -80,8 +80,8 @@ contains
     type(atom_t),          intent(in)    :: a
     integer,               intent(in)    :: l, lm
  
-    integer :: j, k, i
-    FLOAT :: v, dv(3), r, x(3), x_in(3)
+    integer :: is, k, i
+    FLOAT :: v, dv(3), r, x(MAX_DIM)
     CMPLX :: zv
 
 
@@ -94,40 +94,35 @@ contains
     ALLOCATE(rkb_p%p(rkb_p%n_s, 2),          rkb_p%n_s*2)
 
     !Build projectors
-    do j = 1, rkb_p%n_s
+    do is = 1, rkb_p%n_s
+      r = sm%x(is, 0)
+      x(1:MAX_DIM) = sm%x(is, 1:MAX_DIM)
 
-      do k = 1, 3**gr%sb%periodic_dim
-        x_in(:) = gr%m%x(sm%jxyz(j), :) - gr%sb%shift(k,:)
-        x(:) = x_in(:) - a%x
-        r = sqrt(sum(x*x))
-        if (r > a%spec%ps%rc_max + gr%m%h(1)) cycle
-
-        ! i runs over j=l+1/2 and j=l-1/2
-        do i = 1, 2
-          call specie_nl_projector(a%spec, x, l, lm, i, zv)
-          rkb_p%bra(j, i) = conjg(zv)
-
-          rkb_p%ket(j, i, 1, 1) = zv
-          rkb_p%ket(j, i, 2, 2) = zv
-          if (lm /= l) then
-            call specie_nl_projector(a%spec, x, l, lm+1, i, zv)
-            rkb_p%ket(j, i, 2, 1) = zv
-          else
-            rkb_p%ket(j, i, 2, 1) = M_z0
-          end if
-          if (lm /= -l) then
-            call specie_nl_projector(a%spec, x, l, lm-1, i, zv)
-            rkb_p%ket(j, i, 1, 2) = zv
-          else
-            rkb_p%ket(j, i, 1, 2) = M_z0
-          end if
-
-          call specie_real_nl_projector(a%spec, x, l, lm, i, v, dv)
-          rkb_p%p(j, i) = v
-        end do
+      ! i runs over j=l+1/2 and j=l-1/2
+      do i = 1, 2
+        call specie_nl_projector(a%spec, x, l, lm, i, zv)
+        rkb_p%bra(is, i) = conjg(zv)
+        
+        rkb_p%ket(is, i, 1, 1) = zv
+        rkb_p%ket(is, i, 2, 2) = zv
+        if (lm /= l) then
+          call specie_nl_projector(a%spec, x, l, lm+1, i, zv)
+          rkb_p%ket(is, i, 2, 1) = zv
+        else
+          rkb_p%ket(is, i, 2, 1) = M_z0
+        end if
+        if (lm /= -l) then
+          call specie_nl_projector(a%spec, x, l, lm-1, i, zv)
+          rkb_p%ket(is, i, 1, 2) = zv
+        else
+          rkb_p%ket(is, i, 1, 2) = M_z0
+        end if
+        
+        call specie_real_nl_projector(a%spec, x, l, lm, i, v, dv)
+        rkb_p%p(is, i) = v
       end do
     end do
-
+    
     ! The l and m dependent prefactors are included in the KB energies
     rkb_p%f(1, 1, 1) = real(l + lm + 1, REAL_PRECISION)
     rkb_p%f(1, 2, 1) = sqrt(real((l + lm + 1)*(l - lm), REAL_PRECISION))

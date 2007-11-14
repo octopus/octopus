@@ -78,9 +78,9 @@ contains
     type(grid_t),          intent(in)    :: gr
     type(atom_t),          intent(in)    :: a
     integer,               intent(in)    :: l, lm
- 
-    integer :: j, k, i
-    FLOAT :: v, dv(3), x(3), x_in(3), r
+
+    integer :: is, k, i
+    FLOAT :: v, dv(3), x(MAX_DIM), r
 
     call push_sub('hgh_projector.hgh_projector_init')
 
@@ -88,22 +88,19 @@ contains
     ALLOCATE(hgh_p%p (hgh_p%n_s, 3),    hgh_p%n_s*3)
     ALLOCATE(hgh_p%lp(hgh_p%n_s, 3, 3), hgh_p%n_s*3*3)
 
-    do j = 1, hgh_p%n_s
+    do is = 1, hgh_p%n_s
 
-      do k = 1, 3**gr%sb%periodic_dim
-        x_in(:) = gr%m%x(sm%jxyz(j), :) - gr%sb%shift(k,:)
-        x(:) = x_in(:) - a%x
-        r = sqrt(sum(x*x))
-        if (r > a%spec%ps%rc_max + gr%m%h(1)) cycle
+      r = sm%x(is, 0)
+      x(1:MAX_DIM) = sm%x(is, 1:MAX_DIM)
 
-        do i = 1, 3
-          call specie_real_nl_projector(a%spec, x, l, lm, i, v, dv(1:3))
-          hgh_p%p(j, i) = v
-          hgh_p%lp(j, 1, i) = x(2)*dv(3) - x(3)*dv(2)
-          hgh_p%lp(j, 2, i) = x(3)*dv(1) - x(1)*dv(3)
-          hgh_p%lp(j, 3, i) = x(1)*dv(2) - x(2)*dv(1)
-        end do
+      do i = 1, 3
+        call specie_real_nl_projector(a%spec, x, l, lm, i, v, dv(1:3))
+        hgh_p%p(is, i) = v
+        hgh_p%lp(is, 1, i) = x(2)*dv(3) - x(3)*dv(2)
+        hgh_p%lp(is, 2, i) = x(3)*dv(1) - x(1)*dv(3)
+        hgh_p%lp(is, 3, i) = x(1)*dv(2) - x(2)*dv(1)
       end do
+
     end do
 
     hgh_p%h(:, :) = a%spec%ps%h(l, :, :)
