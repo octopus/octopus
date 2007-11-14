@@ -24,13 +24,16 @@
   ! case, or else \int_0^T dt <Psi(t)|\hat{O}(t)|Psi(t) in 
   ! the time-dependent case.
   ! ---------------------------------------------------------
-  FLOAT function j1_functional(m, psi, target) result(j1)
-    type(mesh_t), intent(in)   :: m
-    type(states_t), intent(in) :: psi
-    type(target_t), intent(in) :: target
+  FLOAT function j1_functional(gr, geo, ep, psi, target) result(j1)
+    type(grid_t),   intent(inout)   :: gr
+    type(geometry_t), intent(inout) :: geo
+    type(epot_t), intent(inout)     :: ep
+    type(states_t), intent(inout)   :: psi
+    type(target_t), intent(in)      :: target
 
     integer :: i, p, j
-    FLOAT, allocatable :: local_function(:)
+    FLOAT :: absxab, absfab
+    FLOAT, allocatable :: local_function(:), fab(:), xab(:)
     CMPLX, allocatable :: opsi(:, :)
 
     call push_sub('aux.j1_functional')
@@ -38,11 +41,11 @@
     select case(target%type)
     case(oct_tg_density)
 
-      ALLOCATE(local_function(m%np), m%np)
-      do i = 1, m%np
+      ALLOCATE(local_function(NP), NP)
+      do i = 1, NP
         local_function(i) = - ( sqrt(psi%rho(i, 1)) - sqrt(target%rho(i)) )**2
       end do
-      j1 = dmf_integrate(m, local_function)
+      j1 = dmf_integrate(gr%m, local_function)
       deallocate(local_function)
 
     case(oct_tg_local)
@@ -50,14 +53,14 @@
       select case(psi%d%ispin)
       case(UNPOLARIZED)
         ASSERT(psi%d%nik.eq.1)
-        ALLOCATE(opsi(m%np_part, 1), m%np_part)
+        ALLOCATE(opsi(NP_PART, 1), NP_PART)
         opsi = M_z0
         j1 = M_ZERO
         do p  = psi%st_start, psi%st_end
-          do j = 1, m%np
+          do j = 1, NP
             opsi(j, 1) = target%rho(j) * psi%zpsi(j, 1, p, 1)
           end do
-          j1 = j1 + zstates_dotp(m, psi%d%dim, psi%zpsi(:, :, p, 1), opsi(:, :))
+          j1 = j1 + zstates_dotp(gr%m, psi%d%dim, psi%zpsi(:, :, p, 1), opsi(:, :))
         end do
         deallocate(opsi)
       case(SPIN_POLARIZED); stop 'Error'
@@ -68,13 +71,13 @@
       j1 = sum(target%td_fitness) 
 
     case(oct_tg_excited)
-      j1 = abs(zstates_mpdotp(m, target%est, psi))**2
+      j1 = abs(zstates_mpdotp(gr%m, target%est, psi))**2
 
     case(oct_tg_exclude_state)
-      j1 = M_ONE - abs(zstates_mpdotp(m, psi, target%st))**2
+      j1 = M_ONE - abs(zstates_mpdotp(gr%m, psi, target%st))**2
 
     case default
-      j1 = abs(zstates_mpdotp(m, psi, target%st))**2
+      j1 = abs(zstates_mpdotp(gr%m, psi, target%st))**2
 
     end select
 
@@ -85,18 +88,21 @@
   ! ---------------------------------------------------------
   ! calculate |chi(T)> = \hat{O}(T) |psi(T)>
   ! ---------------------------------------------------------
-  subroutine calc_chi(oct, gr, target, psi_in, chi_out)
+  subroutine calc_chi(oct, gr, geo, ep, target, psi_in, chi_out)
     type(oct_t),       intent(in)  :: oct
-    type(grid_t),      intent(in)  :: gr
-    type(states_t),    intent(in)  :: psi_in
+    type(grid_t),      intent(inout)  :: gr
+    type(geometry_t),  intent(inout) :: geo
+    type(epot_t),  intent(in) :: ep
+    type(states_t),    intent(inout)  :: psi_in
     type(target_t),    intent(in)  :: target
-
     type(states_t),    intent(inout) :: chi_out
     
     CMPLX   :: olap, zdet
     CMPLX, allocatable :: cI(:), dI(:), mat(:, :, :), mm(:, :, :, :), mk(:, :), lambda(:, :)
+    FLOAT :: absfab, absxab
+    FLOAT, allocatable :: gvl(:, :), vla(:), vlb(:), vl(:), qab(:), ionic_force_a(:), ionic_force_b(:), xab(:), fab(:)
     integer :: ik, p, dim, k, j, no_electrons, ia, ib, n_pairs, nst, ji, jj, kpoints
-  
+
     call push_sub('opt_control.calc_chi')
 
     no_electrons = -nint(psi_in%val_charge)

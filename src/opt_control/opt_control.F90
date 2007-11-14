@@ -38,6 +38,7 @@ module opt_control_m
   use messages_m
   use mesh_m
   use mesh_function_m
+  use functions_m
   use output_m
   use geometry_m
   use states_m
@@ -107,6 +108,8 @@ contains
 
     call parameters_init(par, h%ep%no_lasers, td%dt, td%max_iter)
     call parameters_set(par, h%ep)
+    call parameters_apply_envelope(par)
+    call parameters_to_h(par, h%ep)
     call parameters_write('opt-control/initial_laser', par)
 
     call oct_iterator_init(iterator, par)
@@ -248,7 +251,7 @@ contains
         call propagate_backward(sys, h, td, chi)
         call parameters_copy(par_prev, par)
         call fwd_step(oct, sys, td, h, target, par, par_prev, chi, psi)
-        j1 = j1_functional(sys%gr%m, psi, target)
+        j1 = j1_functional(sys%gr, sys%geo, h%ep, psi, target)
         stop_loop = iteration_manager(j1, par_prev, par, iterator)
         call parameters_end(par_prev)
         if(oct%dump_intermediate) call iterator_write(iterator, psi, par, sys%gr, sys%outp)
@@ -260,7 +263,7 @@ contains
       ctr_loop: do
         call parameters_copy(par_prev, par)
         call f_zbr98(oct, sys, h, td, psi, initial_st, target, par)
-        j1 = j1_functional(sys%gr%m, psi, target)
+        j1 = j1_functional(sys%gr, sys%geo, h%ep, psi, target)
         stop_loop = iteration_manager(j1, par_prev, par, iterator)
         if(oct%dump_intermediate) call iterator_write(iterator, psi, par, sys%gr, sys%outp)
         if(clean_stop() .or. stop_loop) exit ctr_loop
@@ -336,10 +339,10 @@ contains
     call parameters_to_h(par, h%ep)
     call propagate_forward(sys, h, td, target, psi)
 
-    j1 = j1_functional(sys%gr%m, psi, target)
+    j1 = j1_functional(sys%gr, sys%geo, h%ep, psi, target)
 
     chi = psi
-    call calc_chi(oct, sys%gr, target, psi, chi)
+    call calc_chi(oct, sys%gr, sys%geo, h%ep, target, psi, chi)
     call bwd_step(oct, sys, td, h, target, par, parp, chi, psi)
 
     do j = 1, parp%no_parameters
@@ -352,8 +355,8 @@ contains
       old_penalty = par%alpha(1)
       new_penalty = sqrt( fluence * old_penalty**2 / oct%targetfluence )
       do j = 1, parp%no_parameters
-        par%alpha(1) = new_penalty
-        parp%alpha(1) = new_penalty
+        par%alpha(j) = new_penalty
+        parp%alpha(j) = new_penalty
         call tdf_scalar_multiply( old_penalty / new_penalty , parp%f(j) )
       end do
     end if
@@ -397,10 +400,10 @@ contains
       call propagate_forward(sys, h, td, target, psi)
     end if
 
-    j1 = j1_functional(sys%gr%m, psi, target)
+    j1 = j1_functional(sys%gr, sys%geo, h%ep, psi, target)
 
     call states_copy(chi, psi)
-    call calc_chi(oct, sys%gr, target, psi, chi)
+    call calc_chi(oct, sys%gr, sys%geo, h%ep, target, psi, chi)
     call bwd_step(oct, sys, td, h, target, par, par_chi, chi, psi)
 
       overlap = abs( zstates_mpdotp(sys%gr%m, initial_st, psi) )**2

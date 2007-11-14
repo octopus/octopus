@@ -107,7 +107,7 @@
 
     fluence = laser_fluence(par)
     j2 = j2_functional(par)
-    jfunctional = j1 - j2
+    jfunctional = j1 + j2
 
     iterator%convergence(1, iterator%ctr_iter) = jfunctional
     iterator%convergence(2, iterator%ctr_iter) = j1
@@ -134,10 +134,11 @@
 
     write(message(1), '(6x,a,f12.5)')  " => J1       = ", j1
     write(message(2), '(6x,a,f12.5)')  " => J        = ", jfunctional
-    write(message(3), '(6x,a,f12.5)')  " => Fluence  = ", fluence
-    write(message(4), '(6x,a,f12.5)')  " => penalty  = ", par%alpha(1)
-    write(message(5), '(6x,a,es12.2)') " => D[e,e']  = ", iterator%convergence(5, iterator%ctr_iter)
-    call write_info(5)
+    write(message(3), '(6x,a,f12.5)')  " => J2       = ", j2
+    write(message(4), '(6x,a,f12.5)')  " => Fluence  = ", fluence
+    write(message(5), '(6x,a,f12.5)')  " => Penalty  = ", par%alpha(1)
+    write(message(6), '(6x,a,es12.2)') " => D[e,e']  = ", iterator%convergence(5, iterator%ctr_iter)
+    call write_info(6)
     call messages_print_stress(stdout)
 
     ! store field with best J1

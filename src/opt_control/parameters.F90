@@ -47,6 +47,7 @@ module opt_control_parameters_m
             parameters_write,             &
             parameters_mixing,            &
             parameters_diff,              &
+            parameters_apply_envelope,    &
             laser_fluence,                &
             j2_functional
 
@@ -98,10 +99,10 @@ contains
     type(oct_control_parameters_t), intent(in) :: par_in, par_out
     type(oct_control_parameters_t), intent(inout) :: par_new
 
-    !FLOAT, external :: oct_control_parameters_dotp
-
     integer :: i, j
     FLOAT, allocatable :: e_in(:, :, :), e_out(:, :, :), e_new(:, :, :)
+    call push_sub('parameters.parameters_mixing')
+
 
     ALLOCATE(e_in (par_in%ntiter+1, par_in%no_parameters, 1), (par_in%ntiter+1)*par_in%no_parameters)
     ALLOCATE(e_out(par_in%ntiter+1, par_in%no_parameters, 1), (par_in%ntiter+1)*par_in%no_parameters)
@@ -122,6 +123,7 @@ contains
     end do
 
     deallocate(e_in, e_out, e_new)
+    call pop_sub()
   end subroutine parameters_mixing
 
 
@@ -133,7 +135,7 @@ contains
     integer, intent(in) :: ntiter
     integer :: j
 
-    call push_sub('opt_control_parameters.parameters_init')
+    call push_sub('parameters.parameters_init')
 
     cp%no_parameters = no_parameters
     cp%dt = dt
@@ -157,7 +159,7 @@ contains
     type(epot_t), intent(in) :: ep
     integer :: j
 
-    call push_sub('opt_control_parameters.parameters_set')
+    call push_sub('parameters.parameters_set')
 
     do j = 1, cp%no_parameters
       call tdf_end(cp%f(j))
@@ -169,18 +171,34 @@ contains
 
 
   ! ---------------------------------------------------------
+  subroutine parameters_apply_envelope(cp)
+    type(oct_control_parameters_t), intent(inout) :: cp
+    integer :: j, i
+
+    call push_sub('parameters.parameters_apply_envelope')
+
+    do j = 1, cp%no_parameters
+      do i = 1, cp%ntiter + 1
+        call tdf_set_numerical(cp%f(j), i, tdf(cp%f(j), i) / tdf(cp%td_penalty(j), i) )
+      end do
+    end do
+
+    call pop_sub()
+  end subroutine parameters_apply_envelope
+
+
+  ! ---------------------------------------------------------
   subroutine parameters_to_h(cp, ep)
     type(oct_control_parameters_t), intent(in) :: cp
     type(epot_t), intent(inout) :: ep
     integer :: j
-    call push_sub('opt_control_paramters.parameters_to_h')
+    call push_sub('parameters.parameters_to_h')
     do j = 1, cp%no_parameters
       call tdf_end(ep%lasers(j)%f)
       ep%lasers(j)%f = cp%f(j)
     end do
     call pop_sub()
   end subroutine parameters_to_h
-
 
   ! ---------------------------------------------------------
   subroutine parameters_to_h_val(cp, ep, val)
@@ -199,7 +217,7 @@ contains
     type(oct_control_parameters_t), intent(inout) :: cp
     integer :: j
 
-    call push_sub('opt_control_parameters.parameters_end')
+    call push_sub('parameters.parameters_end')
 
     do j = 1, cp%no_parameters
       call tdf_end(cp%f(j))
@@ -226,12 +244,12 @@ contains
     FLOAT, allocatable :: wgrid(:)
     character(len=2) :: digit
 
-    call push_sub('opt_control_parameters.parameters_write')
+    call push_sub('parameters.parameters_write')
 
     call io_mkdir(trim(filename))
 
     iunit = io_open(trim(filename)//'/Fluence'//digit, action='write')
-    write(iunit, '(a,es20.8e3)') 'Flunce = ', laser_fluence(cp)
+    write(iunit, '(a,es20.8e3)') 'Fluence = ', laser_fluence(cp)
     call io_close(iunit)
 
     do j = 1, cp%no_parameters
@@ -284,7 +302,7 @@ contains
     real(8)                  :: f_re, f_im
     C_POINTER                :: blk
     integer                  :: no_lines, i, j, steps
-    call push_sub('opt_control_penalty.parameters_penalty_init')
+    call push_sub('parameters.parameters_penalty_init')
 
     dt = par%dt
     steps = par%ntiter
@@ -371,7 +389,7 @@ contains
     type(oct_control_parameters_t), intent(in) :: par
     integer :: i, j
     FLOAT :: t
-    call push_sub('opt_control_aux.calc_fluence')
+    call push_sub('parameters.laser_fluence')
 
     ! WARNING: This is probably very inefficient; there should be functions in
     ! the tdf module taken care of integrating functions.
@@ -379,7 +397,7 @@ contains
     do j = 1, par%no_parameters
       do i = 1, par%ntiter+1
         t = (i-1) * par%dt
-        laser_fluence = laser_fluence + tdf(par%td_penalty(j), i) * abs(tdf(par%f(j), i))**2 
+        laser_fluence = laser_fluence + abs(tdf(par%f(j), i))**2 
       end do
     end do
     laser_fluence = laser_fluence * par%dt
@@ -394,7 +412,6 @@ contains
   ! ---------------------------------------------------------
   FLOAT function j2_functional(par) result(j2)
     type(oct_control_parameters_t), intent(in) :: par
-
     integer :: i, j
     FLOAT :: t
     j2 = M_ZERO
@@ -404,7 +421,7 @@ contains
         j2 = j2 + par%alpha(j) * tdf(par%td_penalty(j), i) * abs(tdf(par%f(j), i))**2 
       end do
     end do
-    j2 = j2 * par%dt
+    j2 = - j2 * par%dt
   end function j2_functional
 
 

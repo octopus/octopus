@@ -31,13 +31,13 @@
     call push_sub('output.oct_output')
     
     iunit = io_open('opt-control/info', action='write')
-    write(iunit, '(a,i4)')    'Total Iterations = ', iterator%ctr_iter
+    write(iunit, '(a,i4)')     'Total Iterations = ', iterator%ctr_iter
     write(iunit, '(a)') 
-    write(iunit, '(a)')       'Best value of target functional'
-    write(iunit, '(a,i4)')    'Iteration  = ', iterator%bestJ1_ctr_iter
-    write(iunit, '(a,f14.8)') 'Overlap    = ', iterator%bestJ1
+    write(iunit, '(a)')        'Best value of target functional'
+    write(iunit, '(a,i4)')     'Iteration  = ', iterator%bestJ1_ctr_iter
+    write(iunit, '(a,f14.8)')  'Overlap    = ', iterator%bestJ1
     write(iunit, '(a,es18.8)') 'Functional = ', iterator%bestJ1_J
-    write(iunit, '(a,f14.8)') 'Fluence = ',    iterator%bestJ1_fluence
+    write(iunit, '(a,f14.8)')  'Fluence = ',    iterator%bestJ1_fluence
     call io_close(iunit)
     message(1) = "Info: Output States"
     call write_info(1)

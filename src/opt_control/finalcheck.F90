@@ -42,7 +42,7 @@
     call parameters_to_h(par, h%ep)
     call propagate_forward(sys, h, td, target, psi, write_iter = .true.)
 
-    overlap = j1_functional(sys%gr%m, psi, target)
+    overlap = j1_functional(sys%gr, sys%geo, h%ep, psi, target)
     fluence = laser_fluence(par)
     j2 = j2_functional(par)
     jfunctional = overlap - j2

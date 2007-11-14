@@ -27,5 +27,5 @@ Match ; J1 1st iteration  ; grep ' 1  ' opt-control/convergence ; \s*0.559\d*
 
 # Now we run the same system, but with a time-dependent penalty
 Input: 03-asym_doublewell.03-oct_run.inp
-Match ; J1 1st iteration + td penalty ; grep ' 1  ' opt-control/convergence ; \s*0.490\d*
+Match ; J1 1st iteration + td penalty ; grep ' 1  ' opt-control/convergence ; \s*0.518\d*
 

@@ -40,5 +40,5 @@ Match ; J1 2nd  iteration  ; grep ' 2  ' opt-control/convergence ; \s*0.540\d*\s
 # given in the paper (not exactly, due probably to small numerical 
 # differences).
 Input: 05-adw.03-filter_indirect.inp
-Match ; J1 1st  iteration  ; grep ' 1  ' opt-control/convergence ; \s*1\s*0.161\d*\s*0.163
-Match ; J1 2nd  iteration  ; grep ' 2  ' opt-control/convergence ; \s*2\s*0.412\d*\s*0.415
+Match ; J1 1st  iteration  ; grep ' 1  ' opt-control/convergence ; \s*1\s*0.1617\d*\s*0.163
+Match ; J1 2nd  iteration  ; grep ' 2  ' opt-control/convergence ; \s*2\s*0.4122\d*\s*0.415
