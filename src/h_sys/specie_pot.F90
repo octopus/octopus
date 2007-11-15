@@ -450,8 +450,7 @@ contains
     integer :: dim
     FLOAT   :: x(1:MAX_DIM+1), chi0(MAX_DIM), startval(MAX_DIM + 1)
     FLOAT   :: delta, alpha, beta
-    FLOAT   :: r
-    integer :: ip, icell
+    integer :: icell
     type(periodic_copy_t) :: pp
 
     call push_sub('specie_grid.specie_get_density')

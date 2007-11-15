@@ -216,7 +216,7 @@ subroutine FFT(n1, n2, n3, nd1, nd2, nd3, z, isign, inzee)
 !   But if you care about performance find the optimal value of ncache yourself!
 !       On all vector machines: ncache=0
 
-  ncache = 1024
+  ncache = 8192
   if (ncache /= 0 .and. ncache <= max(n1,n2,n3)*4) ncache=max(n1,n2,n3/2)*4
 
   ! check whether input values are reasonable

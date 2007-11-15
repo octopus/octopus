@@ -406,7 +406,6 @@ contains
 
 
     CMPLX :: amp
-    integer :: i
 
     field = M_ZERO
     if(l%field .eq. E_FIELD_SCALAR_POTENTIAL) return

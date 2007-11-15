@@ -1132,11 +1132,10 @@ contains
     type(nl_operator_t), intent(in)    :: op
     FLOAT,               intent(out)   :: fo(:)  ! fo(op%np_part)
 
-    integer :: ii, nn, jj
+    integer :: ii
 
     call push_sub('nl_operator.dnl_operator_operate_diag')
 
-    nn = op%n
     if(op%const_w) then
       fo(1:op%np) = op%w_re(op%stencil_center, 1)
     else

@@ -80,8 +80,8 @@ contains
     type(atom_t),          intent(in)    :: a
     integer,               intent(in)    :: l, lm
  
-    integer :: is, k, i
-    FLOAT :: v, dv(3), r, x(MAX_DIM)
+    integer :: is, i
+    FLOAT :: v, dv(3), x(MAX_DIM)
     CMPLX :: zv
 
 
@@ -95,7 +95,6 @@ contains
 
     !Build projectors
     do is = 1, rkb_p%n_s
-      r = sm%x(is, 0)
       x(1:MAX_DIM) = sm%x(is, 1:MAX_DIM)
 
       ! i runs over j=l+1/2 and j=l-1/2

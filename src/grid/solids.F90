@@ -88,7 +88,7 @@ contains
 
   end subroutine periodic_copy_end
 
-  integer function periodic_copy_num(this) result(num)
+  integer pure function periodic_copy_num(this) result(num)
     type(periodic_copy_t), intent(in)    :: this
 
       num = product(this%nbmax - this%nbmin + 1)
@@ -119,6 +119,7 @@ contains
           if (jj == ii) then 
             pcopy(1:pd) = this%pos_chi(1:pd) - M_TWO*sb%lsize(1:pd)*(/icell1, icell2, icell3/)
             pcopy(1:pd) = matmul(sb%rlattice(1:pd, 1:pd), pcopy(1:pd))
+            pcopy(pd + 1:sb%dim) = M_ZERO
             return
           end if
           jj = jj + 1

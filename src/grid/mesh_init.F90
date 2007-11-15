@@ -203,7 +203,6 @@ contains
   ! ---------------------------------------------------------
   subroutine create_x_Lxyz()
     integer :: il, ix, iy, iz
-    FLOAT :: chi(1:MAX_DIM)
 
 #ifdef USE_OMP
     integer :: ip

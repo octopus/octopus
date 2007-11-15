@@ -72,6 +72,7 @@ contains
     FLOAT,             intent(in)   :: rc
     
     FLOAT :: r2, x(1:MAX_DIM)
+    FLOAT, allocatable :: center_copies(:, :)
     integer :: icell, is, ip
     type(profile_t), save :: submesh_init_prof
     type(periodic_copy_t) :: pp
@@ -130,10 +131,16 @@ contains
 
       call periodic_copy_init(pp, sb, center(1:MAX_DIM), rc)
       
+      ALLOCATE(center_copies(1:MAX_DIM, periodic_copy_num(pp)), MAX_DIM * periodic_copy_num(pp))
+
+      do icell = 1, periodic_copy_num(pp)
+        center_copies(1:MAX_DIM, icell) = periodic_copy_position(pp, sb, icell)
+      end do
+
       is = 0
-      do ip = 1, m%np
+      do ip = 1, m%np_part
         do icell = 1, periodic_copy_num(pp)
-          r2 = sum((m%x(ip, 1:MAX_DIM) - periodic_copy_position(pp, sb, icell))**2)
+          r2 = sum((m%x(ip, 1:MAX_DIM) - center_copies(1:MAX_DIM, icell))**2)
           if(r2 > (rc + m%h(1))**2 ) cycle
           is = is + 1
         end do
@@ -141,15 +148,15 @@ contains
       end do
       
       this%ns_part = is
-      
+
       ALLOCATE(this%jxyz(this%ns_part), this%ns_part)
       ALLOCATE(this%x(this%ns_part, 0:MAX_DIM), this%ns_part*(MAX_DIM+1))
             
       !iterate again to fill the tables
       is = 0
-      do ip = 1, m%np
+      do ip = 1, m%np_part
         do icell = 1, periodic_copy_num(pp)
-          x(1:MAX_DIM) = m%x(ip, 1:MAX_DIM) - periodic_copy_position(pp, sb, icell)
+          x(1:MAX_DIM) = m%x(ip, 1:MAX_DIM) - center_copies(1:MAX_DIM, icell)
           r2 = sum(x(1:MAX_DIM)**2)
           if(r2 > (rc + m%h(1))**2 ) cycle
           is = is + 1
@@ -160,8 +167,10 @@ contains
          end do
       end do
 
+      deallocate(center_copies)
+      
       call periodic_copy_end(pp)
-     
+
     end if
 
     call profiling_out(submesh_init_prof)
