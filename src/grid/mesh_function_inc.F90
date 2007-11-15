@@ -192,20 +192,26 @@ subroutine X(mf_random)(m, f, seed)
   if(present(seed)) then
     iseed = iseed + seed
   end if
-  call quickrnd(iseed, rnd)
-  a(1) = M_TWO*(2*rnd - 1)
-  call quickrnd(iseed, rnd)
-  a(2) = M_TWO*(2*rnd - 1)
-  call quickrnd(iseed, rnd)
-  a(3) = M_TWO*(2*rnd - 1)
 
-  do i = 1, m%np
-    call mesh_r(m, i, r, a=a)
-    f(i) = exp(-M_HALF*r*r)
+  a = M_ZERO
+  do i = 1, m%sb%dim
+    call quickrnd(iseed, rnd)
+    a(i) = M_TWO*(2*rnd - 1)
   end do
 
+  !$omp parallel do private(r)
+  do i = 1, m%np
+    r = sum((m%x(i, 1:MAX_DIM) - a(1:MAX_DIM))**2)
+    if ( r < CNST(100.0) ) then 
+      f(i) = exp(-M_HALF*r)
+    else
+      f(i) = M_ZERO
+    end if
+  end do
+  !$omp end parallel do
+
   r = X(mf_nrm2)(m, f)
-  call lalg_scal(m%np, R_TOTYPE(M_ONE/r), f)
+  call lalg_scal(m%np, M_ONE/r, f)
 
   call pop_sub()
 

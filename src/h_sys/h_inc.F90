@@ -51,14 +51,13 @@ end subroutine X(hamiltonian_eigenval)
 
 
 ! ---------------------------------------------------------
-subroutine X(hpsi) (h, gr, psi, hpsi, ik, t, E)
+subroutine X(hpsi) (h, gr, psi, hpsi, ik, t)
   type(hamiltonian_t), intent(inout) :: h
   type(grid_t),        intent(inout) :: gr
   integer,             intent(in)    :: ik
   R_TYPE, target,      intent(inout) :: psi(:,:)  ! psi(NP_PART, h%d%dim)
   R_TYPE,              intent(out)   :: hpsi(:,:) ! hpsi(NP, h%d%dim)
   FLOAT, optional,     intent(in)    :: t
-  FLOAT, optional,     intent(in)    :: E
 
   integer :: idim
 
@@ -86,7 +85,9 @@ subroutine X(hpsi) (h, gr, psi, hpsi, ik, t, E)
     ALLOCATE(epsi(1:NP_PART, 1:h%d%dim), NP_PART*h%d%dim)
 
     do idim = 1, h%d%dim
+      !$omp parallel workshare
       epsi(1:NP_PART, idim) = h%phase(1:NP_PART, ik) * psi(1:NP_PART, idim)
+      !$omp end parallel workshare
     end do
     
     call profiling_out(phase_prof)
@@ -137,19 +138,14 @@ subroutine X(hpsi) (h, gr, psi, hpsi, ik, t, E)
   if (h%ep%with_gauge_field) call X(vgauge) (gr, h, epsi, hpsi)
   if(present(t)) call X(vborders) (gr, h, epsi, hpsi)
   
-  if(present(E)) then
-    ! compute (H-E) epsi = hpsi
-    do idim = 1, h%d%dim
-      call lalg_axpy(NP, E, epsi(:, idim), hpsi(:, idim))
-    end do
-  end if
-  
   if(simul_box_is_periodic(gr%sb) .and. .not. kpoint_is_gamma(h%d, ik)) then
     ! now we need to remove the exp(-i k.r) factor
     call profiling_in(phase_prof)
 
     do idim = 1, h%d%dim
+      !$omp parallel workshare
       hpsi(1:NP, idim) = conjg(h%phase(1:NP, ik))*hpsi(1:NP, idim)
+      !$omp end parallel workshare
     end do
     
     deallocate(epsi)

@@ -428,9 +428,11 @@ contains
       ALLOCATE(h%phase(1:NP_PART, 1:h%d%nik), NP_PART*h%d%nik)
 
       do ik = 1, h%d%nik
+        !$omp parallel do
         do ip = 1, NP_PART
           h%phase(ip, ik) = exp(-M_zI*sum(gr%m%x(ip, 1:MAX_DIM)* h%d%kpoints(1:MAX_DIM, ik)))
         end do
+        !$omp end parallel do
       end do
       
     end subroutine init_phase

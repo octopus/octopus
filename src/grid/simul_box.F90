@@ -684,7 +684,8 @@ contains
 
       call reciprocal_lattice(sb%rlattice, sb%klattice_unitary, sb%volume_element)
 
-      do idim = 1, sb%dim
+      sb%klattice = M_ZERO
+      do idim = 1, sb%periodic_dim
         sb%klattice(:, idim) = sb%klattice_unitary(:, idim)*M_TWO*M_PI/(M_TWO*sb%lsize(idim))
       end do
 

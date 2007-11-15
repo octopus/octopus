@@ -1024,12 +1024,6 @@ contains
       end do
       !$omp end do
     end if
-    
-    !$omp do
-    do ii = op%np + 1, size(fo)
-      fo(ii) = M_ZERO
-    end do
-    !$omp end do nowait
     !$omp end parallel
     
     call pop_sub()
@@ -1114,12 +1108,6 @@ contains
         !$omp end do
       end if
     end if
-
-    !$omp do
-    do ii = op%np + 1, size(fo)
-      fo(ii) = M_ZERO
-    end do
-    !$omp end do nowait
     !$omp end parallel
 
     call pop_sub()

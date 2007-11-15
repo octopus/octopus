@@ -257,11 +257,13 @@ subroutine X(set_bc)(der, f)
   if(der%periodic_bc) then
 
     ASSERT(.not. der%m%parallel_in_domains)
-    
+
+    !$omp parallel do
     do ip = der%m%np + 1, der%m%np_part
       ipp = mesh_periodic_point(der%m, ip)
       if(ip /= ipp) f(ip) = f(ipp)
     end do
+    !$omp end parallel do
 
   end if
 
