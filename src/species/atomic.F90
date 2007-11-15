@@ -21,7 +21,7 @@
 
 module atomic_m
   use global_m
-  use libxc
+  use libxc_m
   use logrid_m
   use messages_m
   use periodic_table_m
@@ -269,9 +269,8 @@ contains
      DEXDD(NSPIN), DEXDGD(3,NSPIN),                                  &
      DGDM(-NN:NN), DGIDFJ(-NN:NN), DRDM, DVOL,                       &
      EPSC, EPSX, F1, F2, GD(3,NSPIN), sigma(3), vxsigma(3), vcsigma(3)
-  type(xc_func) :: x_conf, c_conf
-  type(xc_info) :: x_info, c_info
-  !external :: GGAXC, LDAXC
+  type(xc_func_t) :: x_conf, c_conf
+  type(xc_info_t) :: x_info, c_info
 
   call push_sub('atomic.atomxc')
 

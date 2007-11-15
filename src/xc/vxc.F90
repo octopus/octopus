@@ -88,10 +88,10 @@ subroutine xc_get_vxc(gr, xcs, rho, ispin, vxc, ex, ec, ip, qtot)
       case(XC_FAMILY_GGA)
         if(functl(ixc)%id == XC_GGA_XC_LB) then
           call mesh_r(gr%m, jj, r)
-          call xc_f90_gga_lb(functl(ixc)%conf, l_dens(1), l_sigma(1), &
-             r, ip, qtot, l_dedd(1))
+          call xc_f90_gga_lb_modified(functl(ixc)%conf, l_dens(1), l_sigma(1), &
+            r, l_dedd(1))
 
-          e       = M_ZERO
+          e        = M_ZERO
           l_vsigma = M_ZERO
         else
           call xc_f90_gga(functl(ixc)%conf, l_dens(1), l_sigma(1), &
@@ -261,6 +261,14 @@ contains
     do ii = 1, spin_channels
       call df_gradient(gr%sb, gr%f_der, dens(:, ii), gdens(:,:, ii))
     end do
+
+    do ii = 1, 2
+      if(functl(ii)%id == XC_GGA_XC_LB) then
+        call xc_f90_gga_lb_set_params(functl(ii)%conf, &
+          functl(ii)%LB94_modified, functl(ii)%LB94_threshold, ip, qtot)
+      end if
+    end do
+
   end subroutine gga_init
 
 

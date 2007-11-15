@@ -23,7 +23,7 @@ module xc_functl_m
   use datasets_m
   use global_m
   use lib_oct_parser_m
-  use libxc
+  use libxc_m
   use messages_m
 
   implicit none
@@ -44,13 +44,16 @@ module xc_functl_m
     XC_OEP_X             = 401     ! Exact exchange
 
   type xc_functl_t
-    integer   :: family            ! LDA, GGA, etc.
-    integer   :: id                ! identifier
+    integer         :: family            ! LDA, GGA, etc.
+    integer         :: id                ! identifier
 
-    integer   :: spin_channels     ! XC_UNPOLARIZED | XC_POLARIZED
+    integer         :: spin_channels     ! XC_UNPOLARIZED | XC_POLARIZED
 
-    type(xc_func) :: conf              ! the pointer used to cad the library
-    type(xc_info) :: info              ! information about the functional
+    type(xc_func_t) :: conf              ! the pointer used to call the library
+    type(xc_info_t) :: info              ! information about the functional
+
+    integer         :: LB94_modified     ! should I use a special version of LB94 that
+    FLOAT           :: LB94_threshold    ! needs to be handled specially
   end type xc_functl_t
 
 contains
@@ -145,13 +148,10 @@ contains
          spin_channels, ndim, XC_NON_RELATIVISTIC)
 
     case(XC_FAMILY_GGA)
+      call xc_f90_gga_init(functl%conf, functl%info, functl%id, spin_channels)
       if(functl%id == XC_GGA_XC_LB) then
-        call loct_parse_int  (check_inp('LB94_modified'), 0, j)
-        call loct_parse_float(check_inp('LB94_threshold'), CNST(1.0e-6), alpha)
-        call xc_f90_gga_init(functl%conf, functl%info, functl%id, &
-          spin_channels, j, alpha)
-      else
-        call xc_f90_gga_init(functl%conf, functl%info, functl%id, spin_channels)
+        call loct_parse_int  (check_inp('LB94_modified'),             0, functl%LB94_modified)
+        call loct_parse_float(check_inp('LB94_threshold'), CNST(1.0e-6), functl%LB94_threshold)
       end if
 
     case(XC_FAMILY_MGGA)

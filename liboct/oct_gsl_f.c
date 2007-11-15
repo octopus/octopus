@@ -352,7 +352,7 @@ int FC_FUNC_(oct_minimize, OCT_MINIMIZE)
     T = gsl_multimin_fdfminimizer_vector_bfgs;
     break;
   case 5: 
-    T = gsl_multimin_fdfminimizer_vector_bfgs2;
+//    T = gsl_multimin_fdfminimizer_vector_bfgs2;
     break;
   }
 
