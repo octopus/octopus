@@ -28,7 +28,7 @@ subroutine states_choose_kpoints(d, sb, geo)
   FLOAT     :: total_weight, kmax
 
   ! local variables for the crystal_init call
-  logical :: full_ws_cell
+  logical :: use_symmetries
   integer :: is, nk
   integer, allocatable :: natom(:)      ! natom(i) is the number of atoms of specie i
   FLOAT :: kshifts(MAX_DIM)
@@ -63,16 +63,20 @@ subroutine states_choose_kpoints(d, sb, geo)
 
   !%Variable KPoints
   !%Type block
-  !%Section States
+  !%Section Mesh::KPoints
   !%Description
   !% This block defines an explicit set of kpoints and its weights for
   !% a periodic system calculation. The first column are the weights
   !% of each kpoint and the following are the components of the k
   !% point vector, you only need to specify the components for the
-  !% periodic directions.
+  !% periodic directions. Note that the K points should be given in
+  !% reciprocal space coordinates (not in reduced coordinates).
+  !%
+  !% For example, if you want to include only the gamma point, you can
+  !% use:
   !%
   !% <tt>%KPoints
-  !% <br>&nbsp;&nbsp;2.0 | 1 | 0 | 0
+  !% <br>&nbsp;&nbsp;1.0 | 0 | 0 | 0
   !% <br>%</tt>
   !%
   !%End
@@ -101,23 +105,27 @@ subroutine states_choose_kpoints(d, sb, geo)
       end do
     end do
 
+    d%kpoints = d%kpoints / units_inp%length%factor !K points have 1/lenght units
+
     call print_kpoints_debug
     call pop_sub()
     return
   end if
 
-  !%Variable KPointsMP
+  !%Variable KPointsMonkhorstPack
   !%Type block
   !%Default 1,1,1
-  !%Section States
+  !%Section Mesh::KPoints
   !%Description
-  !% A triplet of integers defining the number of kpoints to be used
-  !% along each direction in the reciprocal space.
+  !% When this block is given (and the KPoints block is not present),
+  !% K points are arranged in a Monkhorst Pack grid.
   !%
-  !% The numbers refer to the whole BZ, and the actual number of
-  !% kpoints is usually reduced exploiting the symmetries of the
-  !% system. An (optional) second row can specify a shift in the K
-  !% points.
+  !% The first row of the block is a triplet of integers defining the
+  !% number of K points to be used along each direction in the
+  !% reciprocal space. The numbers refer to the whole Brillouin zone,
+  !% and the actual number of kpoints is usually reduced exploiting
+  !% the symmetries of the system.  An optional second row can specify
+  !% a shift in the K points.
   !%
   !% For example, the following input samples the BZ with 100 points in the 
   !% xy plane of the reciprocal space
@@ -128,8 +136,8 @@ subroutine states_choose_kpoints(d, sb, geo)
   !%
   !%End
 
-  if(loct_parse_block(check_inp('KPointsMP'), blk) .ne. 0) then
-    message(1) = 'The system is periodic and neither the KPoints or KPointsMP blocks have been given.'
+  if(loct_parse_block(check_inp('KPointsMonkhorstPack'), blk) .ne. 0) then
+    message(1) = 'The system is periodic and neither the KPoints or KPointsMonkhorstPack blocks have been given.'
     call write_fatal(1)
   end if
 
@@ -138,7 +146,7 @@ subroutine states_choose_kpoints(d, sb, geo)
     call loct_parse_block_int(blk, 0, i-1, d%nik_axis(i))
   end do
   if (any(d%nik_axis < 1)) then
-    message(1) = 'Input: KPointsMP is not valid'
+    message(1) = 'Input: KPointsMonkhorstPack is not valid'
     message(2) = '(KPointsMP >= 1)'
     call write_fatal(2)
   end if
@@ -153,31 +161,32 @@ subroutine states_choose_kpoints(d, sb, geo)
   end if
   call loct_parse_block_end(blk)
 
-  !%Variable FullWignerSeitzCell
+  !%Variable KPointsUseSymmetries
   !%Type logical
-  !%Default no
-  !%Section States
+  !%Default yes
+  !%Section Mesh::KPoints
   !%Description
-  !% If true, no symmetry is taken into account for the choice of k-points.
-  !% Instead the k-point sampling will range over the full Wigner-Seitz cell.
+  !% This variable defines whether symmetries are taken into account
+  !% or not for the choice of k-points. If it is set no, the k-point
+  !% sampling will range over the full Brillouin zone. The default is
+  !% yes.
   !%End
-  call loct_parse_logical(check_inp('FullWignerSeitzCell'), .false., full_ws_cell)
+  call loct_parse_logical(check_inp('KPointsUseSymmetries'), .true., use_symmetries)
 
-  !%Variable CenterOfInversion
+  !%Variable KPointsCenterOfInversion
   !%Type integer
   !%Default no
-  !%Section States
+  !%Section Mesh::KPoints
   !%Description
-  !% Only used in 1D periodic calculation to enforce the correspondig symmetry in the Brillouin Zone
-  !%Option no 0
-  !% The system has no center of inversion: use the whole BZ
-  !%Option yes 1
-  !% The system has a center of inversion: use half BZ
+  !% If the system is periodic in one dimension, when this variable is
+  !% set to yes, it specifies that the system has a center of
+  !% inversion and that this property must be used to reduce the
+  !% number of K points sampled. The defaults is no.
   !%End
-  if(.not. full_ws_cell) then
+  if(use_symmetries) then
 
     if(sb%periodic_dim == 1) then
-      call loct_parse_int(check_inp('CenterOfInversion'), 0, coi)
+      call loct_parse_int(check_inp('KPointsCenterOfInversion'), 0, coi)
       d%nik = d%nik_axis(1)/(1 + coi) + 1
       ALLOCATE(d%kpoints(3, d%nik), 3*d%nik)
       ALLOCATE(d%kweights  (d%nik),   d%nik)
@@ -221,7 +230,7 @@ subroutine states_choose_kpoints(d, sb, geo)
     coorat(:,:,i) = coorat(:,:,i) / sb%rlattice(i, i) + M_HALF
   end do
 
-  if (full_ws_cell) then
+  if (.not. use_symmetries) then
     ! find out how many points we have inside the Wigner-Seitz cell
     nkmax = points_inside_ws_cell(sb%periodic_dim, d%nik_axis, sb%klattice) 
 
@@ -436,23 +445,23 @@ logical function in_wigner_seitz_cell(k_point, klattice) result(in_cell)
     asize/M_FOUR * sqrt(  M_TWO)  &  ! dodecahedron
     /)
   
-  !%Variable WignerSeitzCellType
+  !%Variable KPointsCellType
   !%Type integer
   !%Default cube
-  !%Section States
+  !%Section Mesh::KPoints
   !%Description
-  !% Determines which form of Wigner-Seitz cell octopus should
-  !% use for a full k-point sampling (currently this is not
-  !% automatically determined from atomic positions and has to
-  !% be specified manually)
+  !% Determines which shape of Wigner-Seitz cell Octopus should use
+  !% for a full K point sampling (currently this is not automatically
+  !% determined from atomic positions and has to be specified
+  !% manually). By default a cube is chosen.
   !%Option cube 1
-  !% The Wigner-Seitz cell is has simple cubic form
+  !% The has is simple cubic shape.
   !%Option octahedron 2
-  !% The Wigner-Seitz cell is has the form of a octahedron
+  !% The cell is octahedral.
   !%Option dodecahedron 3
-  !% The Wigner-Seitz cell is has the form of a octahedron
+  !% The cell is dodecaedral.
   !%End
-  call loct_parse_int(check_inp('WignerSeitzCellType'), CUBE, ws_cell_type)
+  call loct_parse_int(check_inp('KPointsCellType'), CUBE, ws_cell_type)
 
   ! the number of Bragg planes corresponds to the coordination number
   ! of the respective Bravais lattice

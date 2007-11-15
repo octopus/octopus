@@ -32,12 +32,13 @@ BoxShape = parallelepiped
  0.3 | 0.3 | 0.3
 %
 
-%KPointsMP
+%KPointsMonkhorstPack
  10 | 1 | 1
 %
+
+KPointsCenterOfInversion = yes
 
 LCAODimension = 9
 unocc_EigenSolverMaxIter = 200
 
-CenterOfInversion = yes
 NumberUnoccStates = 1
