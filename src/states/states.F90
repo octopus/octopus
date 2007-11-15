@@ -646,10 +646,10 @@ contains
   ! in terms of the old ones.
   ! ---------------------------------------------------------
   subroutine rotate_states(mesh, st, stin, u)
-    type(mesh_t),      intent(in) :: mesh
-    type(states_t), intent(out) :: st
-    type(states_t), intent(in) :: stin
-    CMPLX, intent(in)             :: u(:, :)
+    type(mesh_t),      intent(in)    :: mesh
+    type(states_t),    intent(inout) :: st
+    type(states_t),    intent(in)    :: stin
+    CMPLX,             intent(in)    :: u(:, :)
 
     integer :: ik
 
@@ -885,7 +885,7 @@ contains
   ! ---------------------------------------------------------
   subroutine states_copy(stout, stin)
     type(states_t), intent(inout) :: stout
-    type(states_t), intent(in)  :: stin
+    type(states_t), intent(in)    :: stin
 
     integer :: i, j, k, l
 
@@ -1048,10 +1048,10 @@ contains
   ! Calculates the new density out the wavefunctions and
   ! occupations...
   subroutine states_dens_accumulate(st, np, rho, ist)
-    type(states_t), intent(in)  :: st
-    integer,        intent(in)  :: np
-    FLOAT,          intent(out) :: rho(:,:)
-    integer,        intent(in)  :: ist
+    type(states_t), intent(in)    :: st
+    integer,        intent(in)    :: np
+    FLOAT,          intent(inout) :: rho(:,:)
+    integer,        intent(in)    :: ist
 
     integer :: i, ik, sp
     CMPLX   :: c
@@ -2318,9 +2318,9 @@ contains
   ! the kpoints, dim, and nst contained in it.
   ! ---------------------------------------------------------
   subroutine states_look (dir, m, kpoints, dim, nst, ierr)
-    character(len=*), intent(in) :: dir
-    type(mesh_t),     intent(in) :: m
-    integer,         intent(out) :: kpoints, dim, nst, ierr
+    character(len=*), intent(in)    :: dir
+    type(mesh_t),     intent(in)    :: m
+    integer,          intent(out)   :: kpoints, dim, nst, ierr
 
     character(len=256) :: line
     character(len=12)  :: filename

@@ -182,7 +182,7 @@ contains
     type(grid_t),        intent(inout) :: gr
     type(geometry_t),    intent(inout) :: geo
     type(states_dim_t),  intent(in)    :: states_dim
-    integer,             intent(out)   :: wfs_type
+    integer,             intent(inout) :: wfs_type
     logical,             intent(in)    :: ip_app
     integer,             intent(in)    :: theory_level
 

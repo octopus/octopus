@@ -181,9 +181,9 @@ end function X(states_dotp)
 
 ! ---------------------------------------------------------
 subroutine X(states_normalize_orbital)(m, dim, psi)
-  type(mesh_t),    intent(in)  :: m
-  integer,         intent(in)  :: dim
-  R_TYPE,          intent(out) :: psi(:,:)
+  type(mesh_t),    intent(in)    :: m
+  integer,         intent(in)    :: dim
+  R_TYPE,          intent(inout) :: psi(:,:)
 
   FLOAT   :: norm
   integer :: idim

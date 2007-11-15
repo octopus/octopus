@@ -97,7 +97,7 @@ contains
   end subroutine lr_init
 
   subroutine lr_allocate(lr, st, m)
-    type(lr_t),     intent(out)   :: lr
+    type(lr_t),     intent(inout) :: lr
     type(states_t), intent(in)    :: st
     type(mesh_t),   intent(in)    :: m
 

@@ -158,10 +158,10 @@ contains
   end subroutine sternheimer_end
 
   subroutine sternheimer_build_fxc(this, m, st, ks)
-    type(sternheimer_t), intent(out) :: this
-    type(mesh_t),   intent(in)  :: m
-    type(states_t), intent(in)  :: st
-    type(v_ks_t),     intent(in)  :: ks
+    type(sternheimer_t), intent(inout) :: this
+    type(mesh_t),        intent(in)    :: m
+    type(states_t),      intent(in)    :: st
+    type(v_ks_t),        intent(in)    :: ks
 
     FLOAT, allocatable :: rho(:, :)
     integer :: is

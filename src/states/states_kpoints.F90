@@ -332,10 +332,10 @@ end subroutine kpoints_write_info
 
 ! ---------------------------------------------------------
 subroutine get_points_in_ws_cell(dim, nik_axis, klattice, kp) 
-  integer, intent(in) :: dim
-  integer, intent(in) :: nik_axis(:)
-  FLOAT,   intent(in) :: klattice(:,:)
-  FLOAT,  intent(out) :: kp(:,:)
+  integer, intent(in)    :: dim
+  integer, intent(in)    :: nik_axis(:)
+  FLOAT,   intent(in)    :: klattice(:,:)
+  FLOAT,   intent(out)   :: kp(:,:)
 
   integer :: ix, iy, iz, inik, iunit, ik(3), id
   FLOAT   :: k_point(3)
