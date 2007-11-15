@@ -722,8 +722,8 @@ contains
         end if
         
         if ( .not. simul_box_in_box(sb, geo, geo%atom(iatom)%x) ) then
-          message(1) = "An atom is outside the box."
-          if (simul_box_is_periodic(sb)) then
+          write(message(1), '(a,i5,a)') "Atom ", iatom, " is outside the box."
+          if (sb%periodic_dim == sb%dim) then
             message(2) = "This is a bug."
             call write_fatal(2)
           else
