@@ -13,8 +13,6 @@ Enabled    : Yes
 
 Input: 03-sodium_chain.01-ground_state.inp
 
-Match ; Force ; grep "1        Na"  gs_static/info  ; \s*0.00\d*\s*-?0.0000\d*\s*-?0.0000\d*
- 
 Match ; Bands ; grep '^   1' unocc_static/eigenvalues | tac | head -n 6 | tail -n 1 ; \s*-3.648\d*\s*2.0000\d*
 Match ; Bands ; grep '^   1' unocc_static/eigenvalues | tac | head -n 5 | tail -n 1 ; \s*-3.552\d*\s*2.0000\d*
 Match ; Bands ; grep '^   1' unocc_static/eigenvalues | tac | head -n 4 | tail -n 1 ; \s*-3.265\d*\s*2.0000\d*
@@ -29,3 +27,18 @@ Match ; Bands ; grep '^   2' unocc_static/eigenvalues | tac | head -n 3 | tail -
 Match ; Bands ; grep '^   2' unocc_static/eigenvalues | tac | head -n 2 | tail -n 1 ; \s*-0.281\d*\s*0.0000\d*
 Match ; Bands ; grep '^   2' unocc_static/eigenvalues | tac | head -n 1 | tail -n 1 ; \s*-1.210\d*\s*0.0000\d*
 
+Input: 03-sodium_chain.02-ground_state_disp.inp
+
+Match ; Bands ; grep '^   1' unocc_static/eigenvalues | tac | head -n 6 | tail -n 1 ; \s*-3.648\d*\s*2.0000\d*
+Match ; Bands ; grep '^   1' unocc_static/eigenvalues | tac | head -n 5 | tail -n 1 ; \s*-3.552\d*\s*2.0000\d*
+Match ; Bands ; grep '^   1' unocc_static/eigenvalues | tac | head -n 4 | tail -n 1 ; \s*-3.265\d*\s*2.0000\d*
+Match ; Bands ; grep '^   1' unocc_static/eigenvalues | tac | head -n 3 | tail -n 1 ; \s*-2.790\d*\s*0.0000\d*
+Match ; Bands ; grep '^   1' unocc_static/eigenvalues | tac | head -n 2 | tail -n 1 ; \s*-2.131\d*\s*0.0000\d*
+Match ; Bands ; grep '^   1' unocc_static/eigenvalues | tac | head -n 1 | tail -n 1 ; \s*-1.368\d*\s*0.0000\d*
+
+Match ; Bands ; grep '^   2' unocc_static/eigenvalues | tac | head -n 6 | tail -n 1 ; \s*-1.236\d*\s*0.0000\d*
+Match ; Bands ; grep '^   2' unocc_static/eigenvalues | tac | head -n 5 | tail -n 1 ; \s*-1.145\d*\s*0.0000\d*
+Match ; Bands ; grep '^   2' unocc_static/eigenvalues | tac | head -n 4 | tail -n 1 ; \s*-0.870\d*\s*0.0000\d*
+Match ; Bands ; grep '^   2' unocc_static/eigenvalues | tac | head -n 3 | tail -n 1 ; \s*-0.413\d*\s*0.0000\d*
+Match ; Bands ; grep '^   2' unocc_static/eigenvalues | tac | head -n 2 | tail -n 1 ; \s*-0.281\d*\s*0.0000\d*
+Match ; Bands ; grep '^   2' unocc_static/eigenvalues | tac | head -n 1 | tail -n 1 ; \s*-1.210\d*\s*0.0000\d*

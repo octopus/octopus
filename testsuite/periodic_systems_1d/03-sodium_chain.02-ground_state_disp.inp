@@ -1,0 +1,44 @@
+# -*- coding: utf-8 mode: shell-script -*-
+# $Id$
+
+DebugLevel = 0
+
+SystemName = "Na chain 1D periodic"
+Units = "eVA"
+
+Dimensions = 3
+PeriodicDimensions = 1
+
+%CalculationMode
+   gs   |  unocc                     
+  "gs_" | "unocc_"
+%
+
+%Species
+  "Na"  | 23.0 | spec_ps_psf | 11 | 2 | 2
+%
+
+%Coordinates
+  "Na" |  -1.99932905 | 0.0 | 0.0 | no
+%
+
+BoxShape = parallelepiped
+
+%Lsize
+ 1.99932905 | 5.29 | 5.29
+%
+
+%Spacing
+ 0.3 | 0.3 | 0.3
+%
+
+%KPointsMonkhorstPack
+ 10 | 1 | 1
+%
+
+KPointsCenterOfInversion = yes
+
+LCAODimension = 9
+unocc_EigenSolverMaxIter = 200
+
+NumberUnoccStates = 1

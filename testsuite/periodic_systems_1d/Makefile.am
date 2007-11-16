@@ -27,6 +27,7 @@ dist_share_DATA = \
 	02-cosine_potential.01-ground_state.inp \
 	02-cosine_potential.test \
 	03-sodium_chain.01-ground_state.inp \
+	03-sodium_chain.02-ground_state_disp.inp \
 	03-sodium_chain.test
 
 CLEANFILES = *~ *.bak

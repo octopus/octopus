@@ -555,18 +555,49 @@ end subroutine X(magnetic_terms)
 subroutine X(vnlpsi) (h, gr, psi, hpsi, ik)
   type(hamiltonian_t), intent(in)    :: h
   type(grid_t),        intent(inout) :: gr
-  R_TYPE,              intent(in)    :: psi(:,:)  ! psi(NP_PART, h%d%dim)
+  R_TYPE,              intent(inout) :: psi(:,:)  ! psi(NP_PART, h%d%dim)
   R_TYPE,              intent(inout) :: hpsi(:,:) ! hpsi(NP_PART, h%d%dim)
   integer,             intent(in)    :: ik
 
-  integer :: ipj
+  integer :: ipj, is, ip, idim
+  CMPLX, allocatable :: phase(:)
+
+#define SPHERE h%ep%p(ipj)%sphere
 
   call profiling_in(C_PROFILING_VNLPSI)
   call push_sub('h_inc.Xvnlpsi')
 
   do ipj = 1, h%ep%nvnl
+
+    ALLOCATE(phase(1:h%ep%p(ipj)%sphere%ns), SPHERE%ns)
+    
+    !correct the phase
+    do is = 1, SPHERE%ns
+      ip = SPHERE%jxyz(is)
+      phase(is) = exp(-M_zI*sum(h%d%kpoints(1:MAX_DIM, ik)*(SPHERE%x(is, 1:MAX_DIM) - gr%m%x(ip, 1:MAX_DIM)) ))
+      do idim = 1, h%d%dim
+        psi(ip, idim) = phase(is) * psi(ip, idim)
+        hpsi(ip, idim) = phase(is) * hpsi(ip, idim)
+      end do
+    end do
+
     call X(project_psi)(gr%m, h%ep%p(ipj), h%d%dim, psi, hpsi, h%reltype)
+    
+    !remove the correction
+    do is = 1, SPHERE%ns
+      ip = SPHERE%jxyz(is)
+      do idim = 1, h%d%dim
+        psi(ip, idim) = conjg(phase(is)) * psi(ip, idim)
+        hpsi(ip, idim) = conjg(phase(is)) * hpsi(ip, idim)
+      end do
+    end do
+
+    deallocate(phase)
+
   end do
+  
+
+#undef SPHERE
 
   call pop_sub()
   call profiling_out(C_PROFILING_VNLPSI)
@@ -621,7 +652,7 @@ subroutine X(vexternal) (h, gr, psi, hpsi, ik)
   type(hamiltonian_t), intent(in)    :: h
   type(grid_t),        intent(inout) :: gr
   integer,             intent(in)    :: ik
-  R_TYPE,              intent(in)    :: psi(:,:)  ! psi(NP_PART, h%d%dim)
+  R_TYPE,              intent(inout) :: psi(:,:)  ! psi(NP_PART, h%d%dim)
   R_TYPE,              intent(inout) :: hpsi(:,:) ! hpsi(NP_PART, h%d%dim)
 
   integer :: idim
