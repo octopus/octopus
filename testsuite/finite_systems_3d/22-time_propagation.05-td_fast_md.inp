@@ -42,9 +42,9 @@ ParallelizationStrategy = par_domains + par_states
 
 MoveIons=vel_verlet
 
-TDMu = 10
+TDIonicTimeScale = 10
 
-TDTimeStep = 0.1 * TDMu
+TDTimeStep = 0.1 * TDIonicTimeScale
 TDMaximumIter = 20
 
 %ParallelizationGroupRanks

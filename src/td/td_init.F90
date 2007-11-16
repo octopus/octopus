@@ -34,7 +34,7 @@ subroutine td_init(sys, h, td)
   !%Default 1
   !%Section Time Dependent::Propagation
   !%Description
-  !% Type of dynamics to follow during a time propagation. By default
+  !% (Development) Type of dynamics to follow during a time propagation. By default
   !% is Ehrenfest TDDFT.
   !%Option ehrenfest 1
   !% Ehrenfest dynamics.
@@ -42,15 +42,19 @@ subroutine td_init(sys, h, td)
   !% Born Openheimer (Experimental).
   !%End
 
-  call loct_parse_int(check_inp('TDDynamics'), EHRENFEST, td%dynamics)
+  if (conf%devel_version) then
+    call loct_parse_int(check_inp('TDDynamics'), EHRENFEST, td%dynamics)
+  else
+    td%dynamics = EHRENFEST
+  end if
 
   !%Variable TDTimeStep
   !%Type float
   !%Default 0.07 a.u.
   !%Section Time Dependent::Propagation
   !%Description
-  !% Time-step for the propagation;
-  !% in previous notation, <math>\delta t</math>.
+  !% Time-step for the time propagation. The default is 0.07
+  !% [hbar/Hartree].
   !%End
   call loct_parse_float(check_inp('TDTimeStep'), CNST(0.07)/units_inp%time%factor, td%dt)
   td%dt = td%dt * units_inp%time%factor
@@ -60,21 +64,63 @@ subroutine td_init(sys, h, td)
     call write_fatal(2)
   end if
 
+  !%Variable TDIonicTimeScale
+  !%Type float
+  !%Default 1.0
+  !%Section Time Dependent::Propagation
+  !%Description
+  !% This variable defines the factor between the time scale of ionic
+  !% and electronic movement. It allows to perform reasonably fast
+  !% Born-Oppenheimer molecular dynamics simulations based on
+  !% Ehrenfest dynamics. The value of this variable is equivalent to
+  !% the role of <math>\mu</math> in Car-Parrinello. If increased it
+  !% will allow to accelerate linearly the time step of the ion
+  !% dynamics, but more the system will deviate from the
+  !% Born-Oppenheimer surface. The default is 1, which means that both
+  !% time scales are the same. Note that a value different than 1
+  !% implies that the electron will not follow a physical behaviour.
+  !%
+  !% According to our test values around 10 are reasonable, but it
+  !% will depend on your system, mainly on the width of the gap.
+  !%
+  !% Important: The electronic time step will be the value of
+  !% TDTimeStep divided by this variable, so if you have determined an
+  !% optimal electronic time step (that we can call dte), it is
+  !% recommended that you define your time step as:
+  !%
+  !% TDTimeStep = dte * TDIonicTimeScale
+  !%
+  !% so you will always use the optimal electronic time step.
+  !%
+  !% For more details see: http://arxiv.org/abs/0710.3321
+  !%
+  !%End
+
+  call loct_parse_float(check_inp('TDIonicTimeScale'), CNST(1.0), td%mu)
+
   !%Variable TDMaximumIter
   !%Type integer
   !%Default 1500
   !%Section Time Dependent::Propagation
   !%Description
-  !% Number of time steps in which the total integration time is divided;
-  !% in previous notation, <i>N</i>.
-  !%End
+  !% Number of time propagation steps that will be performed. By default 1500.
+  !%
+  !% Tip: If you would like to specify the real time of the
+  !% propagation, rather than the number of steps, just use something
+  !% like:
+  !%
+  !% TDMaximumIter = 1000.0 / TDTimeStep
+  !%
+  !%End 
+
   call loct_parse_int(check_inp('TDMaximumIter'), 1500, td%max_iter)
+
   if(td%max_iter < 1) then
     write(message(1), '(a,i6,a)') "Input: '", td%max_iter, "' is not a valid TDMaximumIter"
-    message(2) = '(1 <= TDMaximumIter)'
+    message(2) = '(TDMaximumIter <= 1)'
     call write_fatal(2)
   end if
-
+  
   ! Initialize the kick (if optical spectrum calculations are to be performed)
   call kick_init(td%kick, sys%st%d%nspin)
 
@@ -121,8 +167,6 @@ subroutine td_init(sys, h, td)
 
   call td_rti_init(sys%gr, sys%st, td%tr, td%dt, td%max_iter)
   if(td%dynamics == BO)  call scf_init(sys%gr, sys%geo, td%scf, sys%st, h)
-
-  call loct_parse_float(check_inp('TDMu'), CNST(1.0), td%mu)
 
   call pop_sub()
 end subroutine td_init
