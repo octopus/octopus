@@ -143,7 +143,7 @@ contains
   ! ---------------------------------------------------------
   subroutine units_get(u, c)
     type(unit_system_t), intent(out) :: u
-    character(len=3) :: c
+    character(len=3),    intent(in)  :: c
 
     select case(c)
     case ("a.u")

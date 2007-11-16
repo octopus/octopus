@@ -1107,7 +1107,6 @@ contains
     FLOAT,          intent(inout) :: rho(:,:)
 
     integer :: i, ik, p, sp
-    CMPLX   :: c
 
 #ifdef HAVE_MPI
     FLOAT,  allocatable :: reduce_rho(:)

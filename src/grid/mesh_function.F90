@@ -72,7 +72,7 @@ module mesh_function_m
 contains
 
   subroutine mesh_init_mesh_aux(m)
-    type(mesh_t), target :: m
+    type(mesh_t), target, intent(in) :: m
     mesh_aux => m
   end subroutine mesh_init_mesh_aux
 

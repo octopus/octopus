@@ -158,9 +158,9 @@ contains
 
   ! ---------------------------------------------------------
   subroutine derivate_in_log_grid(g, f, dfdr)
-    type(logrid_t)     :: g
-    FLOAT, intent(in)  :: f(:)
-    FLOAT, intent(out) :: dfdr(:)
+    type(logrid_t), intent(in)   :: g
+    FLOAT,          intent(in)   :: f(:)
+    FLOAT,          intent(out)  :: dfdr(:)
 
     integer :: i
 

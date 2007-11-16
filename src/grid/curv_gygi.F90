@@ -107,7 +107,8 @@ contains
 
   ! ---------------------------------------------------------
   subroutine getf(y, f, jf)
-    FLOAT :: y(:), f(:), jf(:, :)
+    FLOAT, intent(in)    :: y(:)
+    FLOAT, intent(out)   :: f(:), jf(:, :)
 
     call curv_gygi_jacobian(sb_p, geo_p, cv_p, y, f, jf, i_p)
     f(:) = f(:) - chi_p(:)

@@ -359,8 +359,8 @@ FLOAT function X(matrix_inv_residual)(nsize, a, b) result(residual)
 end function X(matrix_inv_residual)
 
 function X(cross_product)(a, b) result(c)
-  R_TYPE :: a(1:MAX_DIM)
-  R_TYPE :: b(1:MAX_DIM)
+  R_TYPE, intent(in) :: a(1:MAX_DIM)
+  R_TYPE, intent(in) :: b(1:MAX_DIM)
   R_TYPE :: c(1:MAX_DIM)
 
   c(1) = a(2)*b(3) - a(3)*b(2)
