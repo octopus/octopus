@@ -17,6 +17,41 @@
 !!
 !! $Id: opt_control.F90 2875 2007-04-30 16:54:15Z acastro $
 
+#include "global.h"
+
+module opt_control_iter_m
+  use datasets_m
+  use varinfo_m
+  use global_m
+  use lib_oct_parser_m
+  use opt_control_constants_m
+  use opt_control_parameters_m
+  use grid_m
+  use states_m
+  use states_output_m
+  use output_m
+  use messages_m
+
+  implicit none
+
+  private
+  public :: oct_iterator_t,    &
+            oct_iterator_init, &
+            oct_iterator_end,  &
+            iteration_manager, &
+            iterator_write
+
+  type oct_iterator_t
+    FLOAT              :: eps
+    integer            :: ctr_iter_max
+    integer            :: ctr_iter
+    FLOAT, pointer     :: convergence(:,:)
+    FLOAT              :: bestJ1, bestJ1_fluence, bestJ1_J
+    integer            :: bestJ1_ctr_iter
+    type(oct_control_parameters_t) :: best_par
+  end type oct_iterator_t
+
+contains
 
   ! ---------------------------------------------------------
   subroutine oct_iterator_init(iterator, par)
@@ -172,6 +207,7 @@
     call pop_sub()
   end subroutine iterator_write
 
+end module opt_control_iter_m
 
 !! Local Variables:
 !! mode: f90

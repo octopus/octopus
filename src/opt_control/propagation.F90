@@ -38,6 +38,7 @@ module opt_control_propagation_m
   use opt_control_constants_m
   use opt_control_target_m
   use opt_control_parameters_m
+  use opt_control_output_m
   use lasers_m
   use v_ks_m
   use tdf_m
@@ -123,11 +124,12 @@ module opt_control_propagation_m
   ! Performs a full bacward propagation of state psi_n, with the
   ! external fields specified in hamiltonian h.
   ! ---------------------------------------------------------
-  subroutine propagate_backward(sys, h, td, psi)
-    type(system_t),      intent(inout) :: sys
-    type(hamiltonian_t), intent(inout) :: h
-    type(td_t),          intent(inout) :: td
-    type(states_t), intent(inout)      :: psi
+  subroutine propagate_backward(sys, h, td, psi, prop_output)
+    type(system_t),          intent(inout) :: sys
+    type(hamiltonian_t),     intent(inout) :: h
+    type(td_t),              intent(inout) :: td
+    type(states_t),          intent(inout) :: psi
+    type(oct_prop_output_t), intent(inout), optional :: prop_output
 
     integer :: i
     type(grid_t),  pointer :: gr
@@ -148,6 +150,7 @@ module opt_control_propagation_m
       call td_rti_dt(sys%ks, h, gr, psi, td%tr, (i-1)*td%dt, -td%dt, td%max_iter)
       call states_calc_dens(psi, NP_PART, psi%rho)
       call v_ks_calc(gr, sys%ks, h, psi)
+      if(present(prop_output)) call oct_prop_output(prop_output, i, psi, sys%gr)
     end do
     
     call pop_sub()
@@ -167,7 +170,7 @@ module opt_control_propagation_m
   ! fly", so that the propagation of psi is performed with the
   ! "new" parameters.
   ! */--------------------------------------------------------
-  subroutine fwd_step(oct, sys, td, h, target, par, par_chi, chi, psi)
+  subroutine fwd_step(oct, sys, td, h, target, par, par_chi, chi, psi, prop_output)
     type(oct_t), intent(in)                       :: oct
     type(system_t), intent(inout)                 :: sys
     type(td_t), intent(inout)                     :: td
@@ -177,6 +180,7 @@ module opt_control_propagation_m
     type(oct_control_parameters_t), intent(in)    :: par_chi
     type(states_t), intent(inout)                 :: chi
     type(states_t), intent(inout)                 :: psi
+    type(oct_prop_output_t), optional, intent(in) :: prop_output
 
     integer :: i
     logical :: aux_fwd_propagation
@@ -218,6 +222,7 @@ module opt_control_propagation_m
       end if
       call update_field(oct, i, par, gr, td, h, psi, chi, par_chi, dir = 'f')
       call update_hamiltonian_chi(i, gr, sys%ks, h, td, target, par_chi, psi2)
+      if(present(prop_output)) call oct_prop_output_check(prop_output, chi, gr, sys%geo, i)
       call td_rti_dt(sys%ks, h, gr, chi, tr_chi, i*td%dt, td%dt, td%max_iter)
       call update_hamiltonian_psi(i, gr, sys%ks, h, td, target, par, psi)
       call td_rti_dt(sys%ks, h, gr, psi, td%tr, i*td%dt, td%dt, td%max_iter)

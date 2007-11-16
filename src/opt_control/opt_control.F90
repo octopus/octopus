@@ -57,22 +57,14 @@ module opt_control_m
   use opt_control_constants_m
   use opt_control_propagation_m
   use opt_control_parameters_m
+  use opt_control_iter_m
+  use opt_control_output_m
   use opt_control_target_m
 
   implicit none
 
   private
   public :: opt_control_run
-
-  type oct_iterator_t
-    FLOAT              :: eps
-    integer            :: ctr_iter_max
-    integer            :: ctr_iter
-    FLOAT, pointer     :: convergence(:,:)
-    FLOAT              :: bestJ1, bestJ1_fluence, bestJ1_J
-    integer            :: bestJ1_ctr_iter
-    type(oct_control_parameters_t) :: best_par
-  end type oct_iterator_t
 
 contains
 
@@ -427,8 +419,6 @@ contains
 #include "aux.F90"
 #include "defstates.F90"
 #include "finalcheck.F90"
-#include "iter.F90"
-#include "output.F90"
 
 end module opt_control_m
 
