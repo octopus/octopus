@@ -561,6 +561,7 @@ subroutine X(vnlpsi) (h, gr, psi, hpsi, ik)
 
   integer :: ipj, is, ip, idim
   CMPLX, allocatable :: phase(:)
+  logical :: phase_correction
 
 #define SPHERE h%ep%p(ipj)%sphere
 
@@ -569,30 +570,43 @@ subroutine X(vnlpsi) (h, gr, psi, hpsi, ik)
 
   do ipj = 1, h%ep%nvnl
 
-    ALLOCATE(phase(1:h%ep%p(ipj)%sphere%ns), SPHERE%ns)
+    phase_correction = &
+         simul_box_is_periodic(gr%sb) .and. &
+         (.not. kpoint_is_gamma(h%d, ik)) .and. &
+         (h%ep%p(ipj)%type /= M_LOCAL)
     
-    !correct the phase
-    do is = 1, SPHERE%ns
-      ip = SPHERE%jxyz(is)
-      phase(is) = exp(-M_zI*sum(h%d%kpoints(1:MAX_DIM, ik)*(SPHERE%x(is, 1:MAX_DIM) - gr%m%x(ip, 1:MAX_DIM)) ))
-      do idim = 1, h%d%dim
-        psi(ip, idim) = phase(is) * psi(ip, idim)
-        hpsi(ip, idim) = phase(is) * hpsi(ip, idim)
+    if(phase_correction) then
+
+      ALLOCATE(phase(1:h%ep%p(ipj)%sphere%ns), SPHERE%ns)
+     
+      !correct the phase
+      do is = 1, SPHERE%ns
+        ip = SPHERE%jxyz(is)
+        phase(is) = exp(-M_zI*sum(h%d%kpoints(1:MAX_DIM, ik)*(SPHERE%x(is, 1:MAX_DIM) - gr%m%x(ip, 1:MAX_DIM)) ))
+        do idim = 1, h%d%dim
+          psi(ip, idim) = phase(is) * psi(ip, idim)
+          hpsi(ip, idim) = phase(is) * hpsi(ip, idim)
+        end do
       end do
-    end do
+
+    end if
 
     call X(project_psi)(gr%m, h%ep%p(ipj), h%d%dim, psi, hpsi, h%reltype)
     
-    !remove the correction
-    do is = 1, SPHERE%ns
-      ip = SPHERE%jxyz(is)
-      do idim = 1, h%d%dim
-        psi(ip, idim) = conjg(phase(is)) * psi(ip, idim)
-        hpsi(ip, idim) = conjg(phase(is)) * hpsi(ip, idim)
-      end do
-    end do
+    if(phase_correction) then
 
-    deallocate(phase)
+      !remove the correction
+      do is = 1, SPHERE%ns
+        ip = SPHERE%jxyz(is)
+        do idim = 1, h%d%dim
+          psi(ip, idim) = conjg(phase(is)) * psi(ip, idim)
+          hpsi(ip, idim) = conjg(phase(is)) * hpsi(ip, idim)
+        end do
+      end do
+      
+      deallocate(phase)
+      
+    end if
 
   end do
   
