@@ -51,6 +51,7 @@ module projector_m
        projector_t,               &
        projector_null,            &
        projector_init,            &
+       projector_init_phases,     &
        projector_build,           &
 #ifdef HAVE_MPI
        projector_broadcast,       &
@@ -101,6 +102,7 @@ module projector_m
     type(kb_projector_t)   :: kb_p
     type(rkb_projector_t)  :: rkb_p
     type(local_t)          :: local_p
+    CMPLX, pointer         :: phase(:, :)
   end type projector_t
 
 contains
@@ -109,6 +111,7 @@ contains
     type(projector_t), intent(out) :: p
 
     p%type = 0
+    nullify(p%phase)
     call submesh_null(p%sphere)
 
   end subroutine projector_null
@@ -123,6 +126,7 @@ contains
 
     call push_sub('projector.projector_init')
 
+    nullify(p%phase)
     if(present(l)) p%l = l
     if(present(lm)) p%lm = lm
 
@@ -149,6 +153,29 @@ contains
 
     call pop_sub()
   end subroutine projector_init
+
+  subroutine projector_init_phases(this, m, nkpoints, kpoints)
+    type(projector_t), intent(inout) :: this
+    type(mesh_t),      intent(in)    :: m
+    integer,           intent(in)    :: nkpoints
+    FLOAT,             intent(in)    :: kpoints(:, :)
+
+    integer :: ns, ik, is
+    FLOAT   :: kr
+
+    ns = this%sphere%ns
+
+    ASSERT(.not. associated(this%phase))
+    ALLOCATE(this%phase(1:ns, 1:nkpoints), ns*nkpoints)
+
+    do ik = 1, nkpoints
+      do is = 1, ns
+        kr = sum(kpoints(1:MAX_DIM, ik)*(this%sphere%x(is, 1:MAX_DIM)-m%x(this%sphere%jxyz(is), 1:MAX_DIM)))
+        this%phase(is, ik) = exp(-M_zI*kr)
+      end do
+    end do
+
+  end subroutine projector_init_phases
 
   !---------------------------------------------------------
   subroutine projector_build(p, gr, a)
@@ -255,6 +282,8 @@ contains
     end select
     
     p%type = 0
+
+    if(associated(p%phase)) deallocate(p%phase)
 
     call pop_sub()
   end subroutine projector_end

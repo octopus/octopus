@@ -559,59 +559,15 @@ subroutine X(vnlpsi) (h, gr, psi, hpsi, ik)
   R_TYPE,              intent(inout) :: hpsi(:,:) ! hpsi(NP_PART, h%d%dim)
   integer,             intent(in)    :: ik
 
-  integer :: ipj, is, ip, idim
-  CMPLX, allocatable :: phase(:)
-  logical :: phase_correction
-
-#define SPHERE h%ep%p(ipj)%sphere
+  integer :: ipj
+  
 
   call profiling_in(C_PROFILING_VNLPSI)
   call push_sub('h_inc.Xvnlpsi')
 
   do ipj = 1, h%ep%nvnl
-
-    phase_correction = &
-         simul_box_is_periodic(gr%sb) .and. &
-         (.not. kpoint_is_gamma(h%d, ik)) .and. &
-         (h%ep%p(ipj)%type /= M_LOCAL)
-    
-    if(phase_correction) then
-
-      ALLOCATE(phase(1:h%ep%p(ipj)%sphere%ns), SPHERE%ns)
-     
-      !correct the phase
-      do is = 1, SPHERE%ns
-        ip = SPHERE%jxyz(is)
-        phase(is) = exp(-M_zI*sum(h%d%kpoints(1:MAX_DIM, ik)*(SPHERE%x(is, 1:MAX_DIM) - gr%m%x(ip, 1:MAX_DIM)) ))
-        do idim = 1, h%d%dim
-          psi(ip, idim) = phase(is) * psi(ip, idim)
-          hpsi(ip, idim) = phase(is) * hpsi(ip, idim)
-        end do
-      end do
-
-    end if
-
-    call X(project_psi)(gr%m, h%ep%p(ipj), h%d%dim, psi, hpsi, h%reltype)
-    
-    if(phase_correction) then
-
-      !remove the correction
-      do is = 1, SPHERE%ns
-        ip = SPHERE%jxyz(is)
-        do idim = 1, h%d%dim
-          psi(ip, idim) = conjg(phase(is)) * psi(ip, idim)
-          hpsi(ip, idim) = conjg(phase(is)) * hpsi(ip, idim)
-        end do
-      end do
-      
-      deallocate(phase)
-      
-    end if
-
+    call X(project_psi)(gr%m, h%ep%p(ipj), h%d%dim, psi, hpsi, h%reltype, ik)
   end do
-  
-
-#undef SPHERE
 
   call pop_sub()
   call profiling_out(C_PROFILING_VNLPSI)
@@ -1263,7 +1219,7 @@ subroutine X(vnlpsi_diag) (h, m, hpsi)
 
   do ipj = 1, h%ep%nvnl
     if( h%ep%p(ipj)%type == M_LOCAL) then 
-      call X(project_psi)(m, h%ep%p(ipj), h%d%dim, psi, hpsi, h%reltype)
+      call X(project_psi)(m, h%ep%p(ipj), h%d%dim, psi, hpsi, h%reltype, ik = 1)
     end if
   end do
 

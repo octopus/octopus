@@ -38,7 +38,6 @@ module hamiltonian_m
   use projector_m
   use simul_box_m
   use states_m
-  use submesh_m
   use units_m
   use varinfo_m
   use lasers_m

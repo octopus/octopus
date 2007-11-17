@@ -20,13 +20,14 @@
 !------------------------------------------------------------------------------
 ! X(project_psi) calculates the action of a projector on the psi wavefunction.
 ! The result is summed up to ppsi
-subroutine X(project_psi)(mesh, pj, dim, psi, ppsi, reltype)
+subroutine X(project_psi)(mesh, pj, dim, psi, ppsi, reltype, ik)
   type(mesh_t),      intent(in)    :: mesh
   type(projector_t), intent(in)    :: pj
   integer,           intent(in)    :: dim
   R_TYPE,            intent(in)    :: psi(:, :)   ! psi(1:mesh%np, dim)
   R_TYPE,            intent(inout) :: ppsi(:, :)  ! ppsi(1:mesh%np, dim)
   integer,           intent(in)    :: reltype
+  integer,           intent(in)    :: ik
 
   integer :: n_s, idim
   R_TYPE, allocatable :: lpsi(:, :), plpsi(:,:)
@@ -37,15 +38,24 @@ subroutine X(project_psi)(mesh, pj, dim, psi, ppsi, reltype)
   
   ALLOCATE(lpsi(n_s, dim),  n_s*dim)
   ALLOCATE(plpsi(n_s, dim), n_s*dim)
-  
+
   do idim = 1, dim
-    lpsi(1:n_s, idim)  = psi(pj%sphere%jxyz(1:n_s), idim)
+    if(simul_box_is_periodic(mesh%sb) .and. pj%type /= M_LOCAL) then
+      lpsi(1:n_s, idim) = psi(pj%sphere%jxyz(1:n_s), idim) * pj%phase(1:n_s, ik)
+    else
+      lpsi(1:n_s, idim) = psi(pj%sphere%jxyz(1:n_s), idim)
+    end if
   end do
 
   call X(project_sphere)(mesh, pj, dim, lpsi, plpsi, reltype)
 
   do idim = 1, dim
-    ppsi(pj%sphere%jxyz(1:n_s), idim) = ppsi(pj%sphere%jxyz(1:n_s), idim) + plpsi(1:n_s, idim)
+    if(simul_box_is_periodic(mesh%sb) .and. pj%type /= M_LOCAL) then
+      ppsi(pj%sphere%jxyz(1:n_s), idim) = ppsi(pj%sphere%jxyz(1:n_s), idim)&
+        + plpsi(1:n_s, idim)*conjg(pj%phase(1:n_s, ik))
+    else
+      ppsi(pj%sphere%jxyz(1:n_s), idim) = ppsi(pj%sphere%jxyz(1:n_s), idim) + plpsi(1:n_s, idim)
+    end if
   end do
 
   if(allocated(lpsi))   deallocate(lpsi)
@@ -124,7 +134,7 @@ subroutine X(project_sphere)(mesh, pj, dim, psi, ppsi, reltype)
       call rkb_project(mesh, pj%sphere, pj%rkb_p, psi, ppsi)
 #endif
     end select
-    
+
   end if
 
   call pop_sub()

@@ -374,8 +374,8 @@ contains
     type(grid_t),      intent(inout) :: gr
     type(states_t),    intent(inout) :: st
     
-    integer :: i, ispin
-    FLOAT :: n_el, omega2, vol
+    integer :: ispin
+    FLOAT :: n_el, omega2
 
     call push_sub('epot.epot_generate_gauge_field')
     
@@ -413,7 +413,7 @@ contains
     FLOAT,   optional, intent(in)    :: time
 
     FLOAT   :: time_
-    integer :: ia, l, lm, k, iproj
+    integer :: ia, l, lm, iproj
     type(atom_t),   pointer :: atm
 
     type(mesh_t),      pointer :: m
@@ -457,6 +457,9 @@ contains
           call projector_end(ep%p(iproj))
           call submesh_copy(nl_sphere, ep%p(iproj)%sphere)
           call projector_init(ep%p(iproj), atm, reltype, l, lm)
+
+          if(simul_box_is_periodic(sb)) &
+            call projector_init_phases(ep%p(iproj), gr%m, st%d%nik, st%d%kpoints)
 
           ep%p(iproj)%iatom = ia
           iproj = iproj + 1
