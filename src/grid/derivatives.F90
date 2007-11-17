@@ -27,6 +27,7 @@ module derivatives_m
   use mesh_m
   use messages_m
   use nl_operator_m
+  use profiling_m
   use simul_box_m
   use stencil_cube_m
   use stencil_star_m

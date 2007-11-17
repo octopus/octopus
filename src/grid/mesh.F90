@@ -109,7 +109,9 @@ module mesh_m
                                         ! In serial: x_global => x.
     FLOAT, pointer :: vol_pp(:)         ! Element of volume for integrations
                                         ! for local points.
-
+    integer :: nper                     ! the number of points that correpond to pbc
+    integer, pointer :: per_points(:)   ! (1:nper) the list of points that correspond to pbc 
+    integer, pointer :: per_map(:)      ! (1:nper) the inner point that corresponds to each pbc point
   end type mesh_t
 
 
@@ -526,8 +528,8 @@ contains
    ! Checks if the (x, y, z) indices of point are valid, i. e.
    ! inside the dimensions of the simulation box.
    logical function index_valid(mesh, point)
-     type(mesh_t) :: mesh
-     integer      :: point(3)
+     type(mesh_t), intent(in) :: mesh
+     integer,      intent(in) :: point(3)
 
      integer :: i
      logical :: valid
@@ -566,6 +568,11 @@ contains
 #if defined(HAVE_MPI)
        call vec_end(m%vp)
 #endif
+     end if
+     
+     if(associated(m%per_points)) then 
+       deallocate(m%per_points)
+       deallocate(m%per_map)
      end if
 
      call pop_sub()

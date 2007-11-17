@@ -230,10 +230,12 @@ subroutine X(set_bc)(der, f)
 
   integer :: bndry_start, bndry_end
   integer :: p
-  integer :: ip, ipp
+  integer :: iper
+  type(profile_t), save :: set_bc_prof
 
   call push_sub('derivatives_inc.Xset_bc')
-
+  call profiling_in(set_bc_prof, 'SET_BC')
+  
   if(der%zero_bc) then
     
     p = der%m%vp%partno
@@ -255,18 +257,14 @@ subroutine X(set_bc)(der, f)
   end if
 
   if(der%periodic_bc) then
-
-    ASSERT(.not. der%m%parallel_in_domains)
-
     !$omp parallel do
-    do ip = der%m%np + 1, der%m%np_part
-      ipp = mesh_periodic_point(der%m, ip)
-      if(ip /= ipp) f(ip) = f(ipp)
+    do iper = 1, der%m%nper
+      f(der%m%per_points(iper)) = f(der%m%per_map(iper))
     end do
     !$omp end parallel do
-
   end if
 
+  call profiling_out(set_bc_prof)
   call pop_sub()
 
 end subroutine X(set_bc)

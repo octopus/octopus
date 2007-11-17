@@ -195,6 +195,8 @@ subroutine mesh_init_stage_3(mesh, geo, cv, stencil, np_stencil, mpi_grp)
   ! these large arrays were allocated in mesh_init_1, and are no longer needed
   deallocate(mesh%Lxyz_tmp, mesh%x_tmp)
 
+  call mesh_pbc_init()
+
   call profiling_out(mesh_init_prof)
   call pop_sub()
 
@@ -378,6 +380,45 @@ contains
     call pop_sub()
 
   end subroutine mesh_get_vol_pp
+  
+  subroutine mesh_pbc_init()
+    integer :: ip, ip_inner, iper
+        
+    nullify(mesh%per_points)
+    nullify(mesh%per_map)
+      
+    if (simul_box_is_periodic(mesh%sb)) then
+
+      if(mesh%parallel_in_domains) then
+        message(1) = "Parallelization in domains is not yet implemented for periodic boundary conditions."
+        call write_fatal(1)
+      end if
+
+      !count the number of points that are periodic
+      mesh%nper = 0
+      do ip = mesh%np + 1, mesh%np_part
+        ip_inner = mesh_periodic_point(mesh, ip)
+        if(ip /= ip_inner) mesh%nper = mesh%nper + 1
+      end do
+      
+      ALLOCATE(mesh%per_points(1:mesh%nper), mesh%nper)
+      ALLOCATE(mesh%per_map(1:mesh%nper), mesh%nper)
+
+      iper = 0
+      do ip = mesh%np + 1, mesh%np_part
+        ip_inner = mesh_periodic_point(mesh, ip)
+        if(ip == ip_inner) cycle
+        iper = iper + 1
+        mesh%per_points(iper) = ip
+        mesh%per_map(iper) = ip_inner
+      end do
+      
+      ASSERT(iper == mesh%nper)
+      
+    end if
+
+
+  end subroutine mesh_pbc_init
 
 end subroutine mesh_init_stage_3
 
