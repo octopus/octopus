@@ -28,4 +28,4 @@ Enabled    : Yes
 Input: 04-biot_savart.01-gs.inp
 
 Match ; Current flow ; grep '# Flow =' static/current-flow ; \s*-0.1787d*
-Match ; Magnetic Field at loop center ; grep '^  0.0000' static/Bind_z.x\=0\,z\=0 ; \s*2.78154d*
+Match ; Magnetic Field at loop center ; grep '^  0.0000' static/Bind_z.x\=0\,z\=0 ; \s*2.782d*
