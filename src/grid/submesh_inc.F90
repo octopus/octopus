@@ -25,8 +25,11 @@ R_TYPE function X(sm_integrate)(m, sm, f) result(res)
 #if defined(HAVE_MPI)
   R_TYPE :: tmp
 #endif
-
-  res = sum( f(1:sm%ns) * m%vol_pp(sm%jxyz(1:sm%ns)) )
+  if (m%use_curvlinear) then
+    res = sum( f(1:sm%ns) * m%vol_pp(sm%jxyz(1:sm%ns)) )
+  else
+    res = sum(f(1:sm%ns))*m%vol_pp(1)
+  end if
 
 #if defined(HAVE_MPI)
   if(m%parallel_in_domains) then
@@ -48,7 +51,11 @@ R_TYPE function X(dsm_integrate_prod)(m, sm, f, g) result(res)
   R_TYPE :: tmp
 #endif
 
-  res = sum( f(1:sm%ns) * g(1:sm%ns) * m%vol_pp(sm%jxyz(1:sm%ns)) )
+  if (m%use_curvlinear) then
+    res = sum( f(1:sm%ns)*g(1:sm%ns)*m%vol_pp(sm%jxyz(1:sm%ns)))
+  else
+    res = sum(f(1:sm%ns)*g(1:sm%ns))*m%vol_pp(1)
+  end if
 
 #if defined(HAVE_MPI)
   if(m%parallel_in_domains) then

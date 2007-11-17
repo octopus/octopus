@@ -21,6 +21,7 @@
   
 module submesh_m
   use global_m
+  use lalg_basic_m
   use messages_m
   use mesh_m
   use mpi_m
@@ -231,7 +232,11 @@ contains
     CMPLX :: tmp
 #endif
 
-    res = sum( f(1:sm%ns) * g(1:sm%ns) * m%vol_pp(sm%jxyz(1:sm%ns)) )
+    if (m%use_curvlinear) then
+      res = sum(f(1:sm%ns)*g(1:sm%ns)*m%vol_pp(sm%jxyz(1:sm%ns)))
+    else
+      res = sum(f(1:sm%ns)*g(1:sm%ns))*m%vol_pp(1)
+    end if
 
 #if defined(HAVE_MPI)
     if(m%parallel_in_domains) then
