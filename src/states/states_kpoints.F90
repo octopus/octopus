@@ -234,7 +234,7 @@ subroutine states_choose_kpoints(d, sb, geo)
     ! find out how many points we have inside the Wigner-Seitz cell
     nkmax = points_inside_ws_cell(sb%periodic_dim, d%nik_axis, sb%klattice) 
 
-    write(message(1), '(a,i5)' ) 'Info: Total number of k-points inside Wigner-Seitz cell:', nkmax
+    write(message(1), '(a,i5)' ) 'Info: Total number of k-points:', nkmax
     call write_info(1)
     
     ALLOCATE(kp(3, nkmax), 3*nkmax)
@@ -255,7 +255,7 @@ subroutine states_choose_kpoints(d, sb, geo)
     call crystal_init(sb%rlattice, geo%nspecies, natom, geo%natoms, coorat, d%nik_axis, &
       kshifts, nk, nkmax, kp, kw)
   end if
-
+  
   ! double d%nik and copy points for spin polarized calc
   select case(d%ispin)
   case(1)
@@ -263,19 +263,19 @@ subroutine states_choose_kpoints(d, sb, geo)
     ALLOCATE(d%kpoints(3, d%nik), 3*d%nik)
     ALLOCATE(d%kweights  (d%nik),   d%nik)
     do i = 1, 3
-      d%kpoints(i,:) = kp(i,:)*sb%klattice(i,i)
+      d%kpoints(i, 1:d%nik) = kp(i, 1:d%nik)*sb%klattice(i,i)
     end do
-    d%kweights = kw
+    d%kweights(1:d%nik) = kw(1:d%nik)
   case(2)
     d%nik = 2 * nk
     ALLOCATE(d%kpoints(3, d%nik), 3*d%nik)
     ALLOCATE(d%kweights  (d%nik),   d%nik)
     do i = 1,3
-      d%kpoints(i,::2)  = kp(i,:)*sb%klattice(i,i)
-      d%kpoints(i,2::2) = kp(i,:)*sb%klattice(i,i)
+      d%kpoints(i,::2)  = kp(i, 1:d%nik)*sb%klattice(i,i)
+      d%kpoints(i,2::2) = kp(i, 1:d%nik)*sb%klattice(i,i)
     end do
-    d%kweights(::2)  = kw(:)
-    d%kweights(2::2) = kw(:)
+    d%kweights(::2)  = kw(1:d%nik)
+    d%kweights(2::2) = kw(1:d%nik)
   end select
 
   deallocate(natom, coorat)
