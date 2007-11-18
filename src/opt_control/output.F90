@@ -35,113 +35,15 @@ module opt_control_output_m
   use excited_states_m
   use states_output_m
   use output_m
-  use restart_m
   use messages_m
 
   implicit none
 
   private
-  public :: oct_output,            &
-            oct_prop_output_t,     &
-            oct_prop_output_init,  &
-            oct_prop_output_check, &
-            oct_prop_output_end,   &
-            oct_prop_output
+  public :: oct_output
 
-  type oct_prop_output_t
-    integer, pointer :: iter(:)
-    integer :: niter
-    character(len=100) :: dirname
-  end type oct_prop_output_t
-  
-  integer, parameter :: NUMBER_CHECKPOINTS = 10
 
 contains
-
-  ! ---------------------------------------------------------
-  subroutine oct_prop_output_init(prop_output, dirname, niter)
-    type(oct_prop_output_t), intent(inout) :: prop_output
-    character(len=*),        intent(in)    :: dirname
-    integer,                 intent(in)    :: niter
-
-    integer :: j
-
-    prop_output%dirname = 'opt-control/'//trim(dirname)
-    call io_mkdir(trim(prop_output%dirname))
-    prop_output%niter = niter
-
-    ALLOCATE(prop_output%iter(NUMBER_CHECKPOINTS), NUMBER_CHECKPOINTS)
-    do j = 1, NUMBER_CHECKPOINTS
-      prop_output%iter(j) = nint( real(niter)/(NUMBER_CHECKPOINTS+1) * j)
-    end do
-
-  end subroutine oct_prop_output_init
-
-
-  ! ---------------------------------------------------------
-  subroutine oct_prop_output_end(prop_output)
-    type(oct_prop_output_t), intent(inout) :: prop_output
-
-    integer :: j
-    character(len=100) :: filename
-    
-    deallocate(prop_output%iter)
-    ! This routine should maybe delete the files?
-
-  end subroutine oct_prop_output_end
-
-
-  ! ---------------------------------------------------------
-  subroutine oct_prop_output_check(prop_output, psi, gr, geo, iter)
-    type(oct_prop_output_t), intent(in)    :: prop_output
-    type(states_t),          intent(in)    :: psi
-    type(grid_t),            intent(in)    :: gr
-    type(geometry_t),        intent(in)    :: geo
-    integer,                 intent(in)    :: iter
-
-    type(states_t) :: stored_st
-    character(len=100) :: filename
-    integer :: j, ierr
-    FLOAT :: overlap
-
-    do j = 1, NUMBER_CHECKPOINTS
-     if(prop_output%iter(j) .eq. iter) then
-       call states_copy(stored_st, psi)
-       write(filename,'(a,i4.4)') trim(prop_output%dirname)//'/', j
-       call restart_read(trim(filename), stored_st, gr, geo, ierr)
-       overlap = abs( zstates_mpdotp(gr%m, stored_st, psi) )**2
-       if( abs(overlap - M_ONE) > CNST(1.0e-10) ) then
-          write(message(1), '(a,es13.4)') "WARNING: forward-backward propagation produced an error of", abs(overlap-M_ONE)
-          call write_warning(1)
-       end if
-       call states_end(stored_st)
-     end if
-    end do
-
-  end subroutine oct_prop_output_check
-
-
-
-  ! ---------------------------------------------------------
-  subroutine oct_prop_output(prop_output, iter, psi, gr)
-    type(oct_prop_output_t), intent(inout) :: prop_output
-    integer, intent(in) :: iter
-    type(states_t), intent(inout) :: psi
-    type(grid_t), intent(inout) :: gr
-
-    integer :: j, ierr
-    character(len=100) :: filename
-
-    do j = 1, NUMBER_CHECKPOINTS
-      if(prop_output%iter(j) .eq. iter) then
-        write(filename,'(a,i4.4)') trim(prop_output%dirname)//'/', j
-        call restart_write(trim(filename), psi, gr, ierr, iter)
-      end if
-    end do
-
-  end subroutine oct_prop_output
-  ! ---------------------------------------------------------
-
 
   ! ---------------------------------------------------------
   subroutine oct_output(iterator, gr, outp, final_st)

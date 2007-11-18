@@ -139,6 +139,15 @@
     !%End
     call loct_parse_logical(check_inp('OCTDumpIntermediate'), .true., oct%dump_intermediate)
 
+    !%Variable OCTNumberCheckPoints
+    !%Type integer
+    !%Section Optimal Control
+    !%Default 0
+    !%Description 
+    !% WARNING: EXPERIMENTAL, description missing.
+    !%End
+    call loct_parse_int(check_inp('OCTNumberCheckPoints'), 0, oct%number_checkpoints)
+
     call pop_sub()
   end subroutine oct_read_inp
 

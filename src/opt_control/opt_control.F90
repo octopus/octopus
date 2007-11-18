@@ -174,12 +174,17 @@ contains
       type(oct_control_parameters_t) :: par_new, par_prev
       logical :: stop_loop
       FLOAT   :: j1
+      type(oct_prop_t) :: prop_chi, prop_psi
+
       call push_sub('opt_control.scheme_mt03')
+
+      call oct_prop_init(prop_chi, "chi", td%max_iter, oct%number_checkpoints)
+      call oct_prop_init(prop_psi, "psi", td%max_iter, oct%number_checkpoints)
 
       call parameters_copy(par_new, par)
       ctr_loop: do
         call parameters_copy(par_prev, par)
-        call f_iter(oct, iterator, sys, h, td, psi, initial_st, target, par, j1)
+        call f_iter(oct, iterator, sys, h, td, psi, initial_st, target, par, prop_psi, prop_chi, j1)
         stop_loop = iteration_manager(j1, par_prev, par, iterator)
         if(oct%dump_intermediate) call iterator_write(iterator, psi, par, sys%gr, sys%outp)
         if(clean_stop() .or. stop_loop) exit ctr_loop
@@ -189,6 +194,8 @@ contains
         end if
       end do ctr_loop
 
+      call oct_prop_end(prop_chi)
+      call oct_prop_end(prop_psi)
       call parameters_end(par_new)
       call parameters_end(par_prev)
       call pop_sub()
@@ -201,7 +208,12 @@ contains
       type(oct_control_parameters_t) :: par_new, par_prev
       logical :: stop_loop
       FLOAT   :: j1
+      type(oct_prop_t) :: prop_chi, prop_psi
+
       call push_sub('opt_control.scheme_wg05')
+
+      call oct_prop_init(prop_chi, "chi", td%max_iter, oct%number_checkpoints)
+      call oct_prop_init(prop_psi, "psi", td%max_iter, oct%number_checkpoints)
 
       if (oct%mode_fixed_fluence) then
         par%alpha(1) = (M_ONE/sqrt(oct%targetfluence)) * sqrt ( laser_fluence(par) )
@@ -210,7 +222,7 @@ contains
       call parameters_copy(par_new, par)      
       ctr_loop: do
         call parameters_copy(par_prev, par)
-        call f_wg05(oct, sys, h, td, filter, psi, initial_st, target, par, j1)
+        call f_wg05(oct, sys, h, td, filter, psi, initial_st, target, par, prop_psi, prop_chi, j1)
         stop_loop = iteration_manager(j1, par_prev, par, iterator)
         if(oct%dump_intermediate) call iterator_write(iterator, psi, par, sys%gr, sys%outp)
         if(clean_stop() .or. stop_loop) exit ctr_loop
@@ -220,6 +232,8 @@ contains
         end if
       end do ctr_loop
 
+      call oct_prop_end(prop_chi)
+      call oct_prop_end(prop_psi)
       call parameters_end(par_new)
       call parameters_end(par_prev)
       call pop_sub()
@@ -232,17 +246,21 @@ contains
       logical :: stop_loop
       FLOAT   :: j1
       type(states_t) :: chi
+      type(oct_prop_t) :: prop_chi, prop_psi
 
       call push_sub('opt_control.scheme_zbr98')
+
+      call oct_prop_init(prop_chi, "chi", td%max_iter, oct%number_checkpoints)
+      call oct_prop_init(prop_psi, "psi", td%max_iter, oct%number_checkpoints)
 
       ! In principle, one should perform a zero iteration. However, this can
       ! be disabled so that one gets the same results than the original
       ! paper of ZBR98.
       if(oct%zbr98_zero_iteration) then
         call states_copy(chi, target%st)
-        call propagate_backward(sys, h, td, chi)
+        call propagate_backward(sys, h, td, chi, prop_chi)
         call parameters_copy(par_prev, par)
-        call fwd_step(oct, sys, td, h, target, par, par_prev, chi, psi)
+        call fwd_step(oct, sys, td, h, target, par, par_prev, psi, prop_chi, prop_psi)
         j1 = j1_functional(sys%gr, sys%geo, h%ep, psi, target)
         stop_loop = iteration_manager(j1, par_prev, par, iterator)
         call parameters_end(par_prev)
@@ -254,7 +272,7 @@ contains
       call parameters_copy(par_new, par)
       ctr_loop: do
         call parameters_copy(par_prev, par)
-        call f_zbr98(oct, sys, h, td, psi, initial_st, target, par)
+        call f_zbr98(oct, sys, h, td, psi, initial_st, target, prop_psi, prop_chi, par)
         j1 = j1_functional(sys%gr, sys%geo, h%ep, psi, target)
         stop_loop = iteration_manager(j1, par_prev, par, iterator)
         if(oct%dump_intermediate) call iterator_write(iterator, psi, par, sys%gr, sys%outp)
@@ -265,6 +283,8 @@ contains
         end if
       end do ctr_loop
 
+      call oct_prop_end(prop_chi)
+      call oct_prop_end(prop_psi)
       call parameters_end(par_new)
       call parameters_end(par_prev)
       call pop_sub()
@@ -275,7 +295,7 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine f_zbr98(oct, sys, h, td, psi, initial_st, target, par)
+  subroutine f_zbr98(oct, sys, h, td, psi, initial_st, target, prop_psi, prop_chi, par)
     type(oct_t), intent(in)                       :: oct
     type(system_t), intent(inout)                 :: sys
     type(hamiltonian_t), intent(inout)            :: h
@@ -283,29 +303,30 @@ contains
     type(states_t), intent(inout)                 :: psi
     type(states_t), intent(in)                    :: initial_st
     type(target_t), intent(inout)                 :: target
+    type(oct_prop_t), intent(inout)               :: prop_psi, prop_chi
     type(oct_control_parameters_t), intent(inout) :: par
 
     type(states_t) :: chi
-    type(oct_control_parameters_t) :: parp
+    type(oct_control_parameters_t) :: par_chi
 
     call push_sub('opt_control.f_zbr98')
 
-    call parameters_copy(parp, par)
+    call parameters_copy(par_chi, par)
 
     call states_copy(chi, target%st)
-    call bwd_step(oct, sys, td, h, target, par, parp, chi, psi)
+    call bwd_step(oct, sys, td, h, target, par, par_chi, chi, prop_chi, prop_psi)
 
     call states_end(psi)
     call states_copy(psi, initial_st)
-    call fwd_step(oct, sys, td, h, target, par, parp, chi, psi)
+    call fwd_step(oct, sys, td, h, target, par, par_chi, psi, prop_chi, prop_psi)
 
     call states_end(chi)
-    call parameters_end(parp)
+    call parameters_end(par_chi)
     call pop_sub()
   end subroutine f_zbr98
 
   ! ---------------------------------------------------------
-  subroutine f_wg05(oct, sys, h, td, filter, psi, initial_st, target, par, j1)
+  subroutine f_wg05(oct, sys, h, td, filter, psi, initial_st, target, par, prop_psi, prop_chi, j1)
     type(oct_t), intent(in)                       :: oct
     type(system_t), intent(inout)                 :: sys
     type(hamiltonian_t), intent(inout)            :: h
@@ -315,6 +336,7 @@ contains
     type(states_t), intent(in)                    :: initial_st
     type(target_t), intent(inout)                 :: target
     type(oct_control_parameters_t), intent(inout) :: par
+    type(oct_prop_t), intent(inout)               :: prop_psi, prop_chi
     FLOAT, intent(out)                            :: j1
 
     integer :: j
@@ -329,13 +351,13 @@ contains
     call states_end(psi)
     call states_copy(psi, initial_st)
     call parameters_to_h(par, h%ep)
-    call propagate_forward(sys, h, td, target, psi)
+    call propagate_forward(sys, h, td, target, psi, prop_psi)
 
     j1 = j1_functional(sys%gr, sys%geo, h%ep, psi, target)
 
     chi = psi
     call calc_chi(oct, sys%gr, sys%geo, h%ep, target, psi, chi)
-    call bwd_step(oct, sys, td, h, target, par, parp, chi, psi)
+    call bwd_step(oct, sys, td, h, target, par, parp, chi, prop_chi, prop_psi)
 
     do j = 1, parp%no_parameters
       call filter_apply(parp%f(j), filter)
@@ -365,7 +387,7 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine f_iter(oct, iterator, sys, h, td, psi, initial_st, target, par, j1)
+  subroutine f_iter(oct, iterator, sys, h, td, psi, initial_st, target, par, prop_psi, prop_chi, j1)
     type(oct_t), intent(in)                       :: oct
     type(oct_iterator_t), intent(in)              :: iterator
     type(system_t), intent(inout)                 :: sys
@@ -375,11 +397,11 @@ contains
     type(states_t), intent(in)                    :: initial_st
     type(target_t), intent(inout)                 :: target
     type(oct_control_parameters_t), intent(inout) :: par
+    type(oct_prop_t), intent(inout)               :: prop_psi, prop_chi
     FLOAT, intent(out)                            :: j1
 
     type(states_t) :: chi
     type(oct_control_parameters_t) :: par_chi
-    FLOAT :: overlap
 
     call push_sub('opt_control.f_zbr98')
 
@@ -389,24 +411,18 @@ contains
       call states_end(psi)
       call states_copy(psi, initial_st)
       call parameters_to_h(par, h%ep)
-      call propagate_forward(sys, h, td, target, psi)
+      call propagate_forward(sys, h, td, target, psi, prop_psi)
     end if
 
     j1 = j1_functional(sys%gr, sys%geo, h%ep, psi, target)
 
     call states_copy(chi, psi)
     call calc_chi(oct, sys%gr, sys%geo, h%ep, target, psi, chi)
-    call bwd_step(oct, sys, td, h, target, par, par_chi, chi, psi)
-
-      overlap = abs( zstates_mpdotp(sys%gr%m, initial_st, psi) )**2
-      if( abs(overlap - M_ONE) > CNST(1.0e-2) ) then
-        write(message(1), '(a,es13.4)') "WARNING: forward-backward propagation produced an error of", abs(overlap-M_ONE)
-        call write_warning(1)
-      end if
+    call bwd_step(oct, sys, td, h, target, par, par_chi, chi, prop_chi, prop_psi)
 
     call states_end(psi)
     call states_copy(psi, initial_st)
-    call fwd_step(oct, sys, td, h, target, par, par_chi, chi, psi)
+    call fwd_step(oct, sys, td, h, target, par, par_chi, psi, prop_chi, prop_psi)
 
     call states_end(chi)
     call parameters_end(par_chi)

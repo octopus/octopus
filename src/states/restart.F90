@@ -336,13 +336,6 @@ contains
 
     ierr = 0
 
-    if(.not. present(lr)) then 
-      write(str, '(a,i5)') 'Loading restart information'
-    else
-      write(str, '(a,i5)') 'Loading restart information for linear response'
-    end if
-
-    call messages_print_stress(stdout, trim(str))
     ! open files to read
     iunit  = io_open(trim(dir)//'/wfns', action='read', status='old', die=.false., is_tmp = .true., grp = gr%m%mpi_grp)
     if(iunit < 0) then
@@ -449,18 +442,30 @@ contains
     call fill()
     if(ierr == 0) then
       ierr = -1 ! no files read
+      if(.not. present(lr)) then 
+        write(str, '(a,i5)') 'Loading restart information'
+      else
+        write(str, '(a,i5)') 'Loading restart information for linear response'
+      end if
+      call messages_print_stress(stdout, trim(str))
       write(message(1),'(a)') 'No files could be read. No restart information can be used.'
       call write_info(1)
+      call messages_print_stress(stdout)
     else
       ! Everything o. k.
       if(ierr == st%nst*st%d%nik*st%d%dim) then
         ierr = 0
-        write(message(1),'(a)') 'All the needed files were succesfully read.'
-        call write_info(1)
       else
+        if(.not. present(lr)) then 
+          write(str, '(a,i5)') 'Loading restart information'
+        else
+          write(str, '(a,i5)') 'Loading restart information for linear response'
+        end if
+        call messages_print_stress(stdout, trim(str))
         write(message(1),'(a,i4,a,i4,a)') 'Only ', ierr,' files out of ', &
-             st%nst*st%d%nik*st%d%dim, ' could be read.'
+          st%nst*st%d%nik*st%d%dim, ' could be read.'
         call write_info(1)
+        call messages_print_stress(stdout)
       endif
     end if
 
@@ -470,7 +475,6 @@ contains
 
     if(mesh_change) call interpolation_end()
 
-    call messages_print_stress(stdout)
     call pop_sub()
 
   contains

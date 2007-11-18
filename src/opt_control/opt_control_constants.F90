@@ -32,6 +32,7 @@ module opt_control_constants_m
     logical :: use_mixing
     logical :: oct_double_check
     logical :: dump_intermediate
+    integer :: number_checkpoints
   end type oct_t
 
   integer, parameter ::  &

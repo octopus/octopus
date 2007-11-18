@@ -24,6 +24,7 @@ module opt_control_propagation_m
   use varinfo_m
   use global_m
   use lib_oct_m
+  use io_m
   use messages_m
   use units_m
   use grid_m
@@ -31,8 +32,10 @@ module opt_control_propagation_m
   use states_m
   use excited_states_m
   use hamiltonian_m
+  use geometry_m
   use system_m
   use timedep_m
+  use restart_m
   use td_rti_m
   use td_write_m
   use opt_control_constants_m
@@ -49,23 +52,40 @@ module opt_control_propagation_m
   public :: propagate_forward,  &
             propagate_backward, &
             fwd_step,           &
-            bwd_step
+            bwd_step,           &
+            oct_prop_t,         &
+            oct_prop_init,      &
+            oct_prop_check,     &
+            oct_prop_end,       &
+            oct_prop_output
+
+
+  type oct_prop_t
+    integer :: number_checkpoints
+    integer, pointer :: iter(:)
+    integer :: niter
+    character(len=100) :: dirname
+  end type oct_prop_t
+  
+!!$  integer, parameter :: NUMBER_CHECKPOINTS = 10
+
 
   contains
 
   ! ---------------------------------------------------------
-  ! Performs a full propagation of state psi_n, with the laser
+  ! Performs a full propagation of state psi, with the laser
   ! field specified in hamiltonian h. If write_iter is present
   ! and is set to .true., writes down through the td_write
   ! module.
   ! ---------------------------------------------------------
-  subroutine propagate_forward(sys, h, td, target, psi_n, write_iter)
-    type(system_t),      intent(inout) :: sys
-    type(hamiltonian_t), intent(inout) :: h
-    type(td_t),          intent(inout) :: td
-    type(target_t),      intent(inout) :: target
-    type(states_t),      intent(inout) :: psi_n
-    logical, optional, intent(in)      :: write_iter
+  subroutine propagate_forward(sys, h, td, target, psi, prop, write_iter)
+    type(system_t),             intent(inout) :: sys
+    type(hamiltonian_t),        intent(inout) :: h
+    type(td_t),                 intent(inout) :: td
+    type(target_t),             intent(inout) :: target
+    type(states_t),             intent(inout) :: psi
+    type(oct_prop_t), optional, intent(in)    :: prop
+    logical, optional,          intent(in)    :: write_iter
 
     integer :: ii, i
     logical :: write_iter_ = .false.
@@ -85,23 +105,25 @@ module opt_control_propagation_m
     end if
 
     ! setup the hamiltonian
-    call states_calc_dens(psi_n, NP_PART, psi_n%rho)
-    call v_ks_calc(gr, sys%ks, h, psi_n)
+    call states_calc_dens(psi, NP_PART, psi%rho)
+    call v_ks_calc(gr, sys%ks, h, psi)
     call td_rti_run_zero_iter(h, td%tr)
 
+    if(present(prop)) call oct_prop_output(prop, 0, psi, gr)
     ii = 1
     do i = 1, td%max_iter
-
       ! time iterate wavefunctions
-      call td_rti_dt(sys%ks, h, gr, psi_n, td%tr, i*td%dt, td%dt, td%max_iter)
+      call td_rti_dt(sys%ks, h, gr, psi, td%tr, i*td%dt, td%dt, td%max_iter)
+
+      if(present(prop)) call oct_prop_output(prop, i, psi, gr)
 
       ! if td_target
-      if(target%mode==oct_targetmode_td) call calc_tdfitness(target, gr, psi_n, i)
+      if(target%mode==oct_targetmode_td) call calc_tdfitness(target, gr, psi, i)
       
       ! update
-      call states_calc_dens(psi_n, NP_PART, psi_n%rho)
-      call v_ks_calc(gr, sys%ks, h, psi_n)
-      call hamiltonian_energy(h, sys%gr, sys%geo, psi_n, -1)
+      call states_calc_dens(psi, NP_PART, psi%rho)
+      call v_ks_calc(gr, sys%ks, h, psi)
+      call hamiltonian_energy(h, sys%gr, sys%geo, psi, -1)
 
       ! only write in final run
       if(write_iter_) then
@@ -109,8 +131,8 @@ module opt_control_propagation_m
         if(ii==sys%outp%iter+1 .or. i == td%max_iter) then ! output 
           if(i == td%max_iter) sys%outp%iter = ii - 1 
           ii = 1 
-          call td_write_iter(write_handler, gr, psi_n, h, sys%geo, td%kick, td%dt, i)
-          call td_write_data(write_handler, gr, psi_n, h, sys%outp, sys%geo, td%dt, i) 
+          call td_write_iter(write_handler, gr, psi, h, sys%geo, td%kick, td%dt, i)
+          call td_write_data(write_handler, gr, psi, h, sys%outp, sys%geo, td%dt, i) 
         end if
       end if
     end do
@@ -118,18 +140,19 @@ module opt_control_propagation_m
     if(write_iter_) call td_write_end(write_handler)
     call pop_sub()
   end subroutine propagate_forward
+  ! ---------------------------------------------------------
 
 
   ! ---------------------------------------------------------
-  ! Performs a full bacward propagation of state psi_n, with the
+  ! Performs a full bacward propagation of state psi, with the
   ! external fields specified in hamiltonian h.
   ! ---------------------------------------------------------
-  subroutine propagate_backward(sys, h, td, psi, prop_output)
+  subroutine propagate_backward(sys, h, td, psi, prop)
     type(system_t),          intent(inout) :: sys
     type(hamiltonian_t),     intent(inout) :: h
     type(td_t),              intent(inout) :: td
     type(states_t),          intent(inout) :: psi
-    type(oct_prop_output_t), intent(inout), optional :: prop_output
+    type(oct_prop_t),        intent(in)    :: prop
 
     integer :: i
     type(grid_t),  pointer :: gr
@@ -146,15 +169,18 @@ module opt_control_propagation_m
     call v_ks_calc(gr, sys%ks, h, psi)
     call td_rti_run_zero_iter(h, td%tr)
 
+    call oct_prop_output(prop, td%max_iter, psi, gr)
     do i = td%max_iter, 1, -1
+      call oct_prop_output(prop, i, psi, gr)
       call td_rti_dt(sys%ks, h, gr, psi, td%tr, (i-1)*td%dt, -td%dt, td%max_iter)
+        call oct_prop_output(prop, i-1, psi, gr)
       call states_calc_dens(psi, NP_PART, psi%rho)
       call v_ks_calc(gr, sys%ks, h, psi)
-      if(present(prop_output)) call oct_prop_output(prop_output, i, psi, sys%gr)
     end do
-    
+
     call pop_sub()
   end subroutine propagate_backward
+  ! ---------------------------------------------------------
 
 
   ! /*---------------------------------------------------------
@@ -170,7 +196,7 @@ module opt_control_propagation_m
   ! fly", so that the propagation of psi is performed with the
   ! "new" parameters.
   ! */--------------------------------------------------------
-  subroutine fwd_step(oct, sys, td, h, target, par, par_chi, chi, psi, prop_output)
+  subroutine fwd_step(oct, sys, td, h, target, par, par_chi, psi, prop_chi, prop_psi)
     type(oct_t), intent(in)                       :: oct
     type(system_t), intent(inout)                 :: sys
     type(td_t), intent(inout)                     :: td
@@ -178,13 +204,14 @@ module opt_control_propagation_m
     type(target_t), intent(inout)                 :: target
     type(oct_control_parameters_t), intent(inout) :: par
     type(oct_control_parameters_t), intent(in)    :: par_chi
-    type(states_t), intent(inout)                 :: chi
     type(states_t), intent(inout)                 :: psi
-    type(oct_prop_output_t), optional, intent(in) :: prop_output
+    type(oct_prop_t), intent(in)                  :: prop_chi
+    type(oct_prop_t), intent(in)                  :: prop_psi
 
     integer :: i
     logical :: aux_fwd_propagation
     type(states_t) :: psi2
+    type(states_t) :: chi
     type(oct_control_parameters_t) :: par_prev
     type(grid_t), pointer :: gr
     type(td_rti_t) :: tr_chi
@@ -200,6 +227,7 @@ module opt_control_propagation_m
       call states_copy(psi2, psi)
       call parameters_copy(par_prev, par)
     end if
+
     
     ! setup forward propagation
     call states_densities_init(psi, gr, sys%geo)
@@ -215,6 +243,12 @@ module opt_control_propagation_m
     message(1) = "Info: Propagating forward"
     call write_info(1)
 
+    call oct_prop_output(prop_psi, 0, psi, gr)
+!!!!NEW
+    call states_copy(chi, psi)
+!!$    call oct_prop_check(prop_chi, chi, gr, sys%geo, 0)
+    call oct_prop_read_state(prop_chi, chi, gr, sys%geo, 0)
+!!!!ENDFNEW
     do i = 1, td%max_iter
       if(aux_fwd_propagation) then
         call update_hamiltonian_psi(i, gr, sys%ks, h, td, target, par_prev, psi2)
@@ -222,11 +256,12 @@ module opt_control_propagation_m
       end if
       call update_field(oct, i, par, gr, td, h, psi, chi, par_chi, dir = 'f')
       call update_hamiltonian_chi(i, gr, sys%ks, h, td, target, par_chi, psi2)
-      if(present(prop_output)) call oct_prop_output_check(prop_output, chi, gr, sys%geo, i)
       call td_rti_dt(sys%ks, h, gr, chi, tr_chi, i*td%dt, td%dt, td%max_iter)
       call update_hamiltonian_psi(i, gr, sys%ks, h, td, target, par, psi)
       call td_rti_dt(sys%ks, h, gr, psi, td%tr, i*td%dt, td%dt, td%max_iter)
       if(target%mode == oct_targetmode_td) call calc_tdfitness(target, gr, psi, i) 
+      call oct_prop_output(prop_psi, i, psi, gr)
+      call oct_prop_check(prop_chi, chi, gr, sys%geo, i)
     end do
 
     call states_calc_dens(psi, NP_PART, psi%rho)
@@ -241,6 +276,7 @@ module opt_control_propagation_m
     call td_rti_end(tr_chi)
     call pop_sub()
   end subroutine fwd_step
+  ! ---------------------------------------------------------
 
 
   ! --------------------------------------------------------
@@ -252,7 +288,7 @@ module opt_control_propagation_m
   ! par_chi = par_chi[|psi>, |chi>]
   ! |chi> --> U[par_chi](0, T)|chi>
   ! --------------------------------------------------------
-  subroutine bwd_step(oct, sys, td, h, target, par, par_chi, chi, psi) 
+  subroutine bwd_step(oct, sys, td, h, target, par, par_chi, chi, prop_chi, prop_psi) 
     type(oct_t), intent(in)                       :: oct
     type(system_t), intent(inout)                 :: sys
     type(td_t), intent(inout)                     :: td
@@ -261,11 +297,13 @@ module opt_control_propagation_m
     type(oct_control_parameters_t), intent(in)    :: par
     type(oct_control_parameters_t), intent(inout) :: par_chi
     type(states_t), intent(inout)                 :: chi
-    type(states_t), intent(inout)                 :: psi
+    type(oct_prop_t), intent(in)                  :: prop_chi
+    type(oct_prop_t), intent(in)                  :: prop_psi
 
     integer :: i
     type(grid_t), pointer :: gr
     type(td_rti_t) :: tr_chi
+    type(states_t) :: psi
 
     call push_sub('propagation.bwd_step')
 
@@ -276,18 +314,24 @@ module opt_control_propagation_m
 
     call td_rti_copy(tr_chi, td%tr)
 
+    call states_copy(psi, chi)
+    call oct_prop_read_state(prop_psi, psi, gr, sys%geo, td%max_iter)
+
     call states_calc_dens(psi, NP_PART, psi%rho)
     call v_ks_calc(gr, sys%ks, h, psi)
     call td_rti_run_zero_iter(h, td%tr)
     call td_rti_run_zero_iter(h, tr_chi)
 
     td%dt = -td%dt
+    call oct_prop_output(prop_chi, td%max_iter, chi, gr)
     do i = td%max_iter, 1, -1
       call update_field(oct, i, par_chi, gr, td, h, psi, chi, par, dir = 'b')
       call update_hamiltonian_chi(i-1, gr, sys%ks, h, td, target, par_chi, psi)
       call td_rti_dt(sys%ks, h, gr, chi, tr_chi, abs((i-1)*td%dt), td%dt, td%max_iter)
+      call oct_prop_output(prop_chi, i-1, chi, gr)
       call update_hamiltonian_psi(i-1, gr, sys%ks, h, td, target, par, psi)
       call td_rti_dt(sys%ks, h, gr, psi, td%tr, abs((i-1)*td%dt), td%dt, td%max_iter)
+      call oct_prop_check(prop_psi, psi, gr, sys%geo, i)
     end do
     td%dt = -td%dt
 
@@ -297,6 +341,7 @@ module opt_control_propagation_m
     call td_rti_end(tr_chi)
     call pop_sub()
   end subroutine bwd_step
+  ! ---------------------------------------------------------
 
 
   ! ----------------------------------------------------------
@@ -336,6 +381,7 @@ module opt_control_propagation_m
     end if
 
   end subroutine update_hamiltonian_chi
+  ! ---------------------------------------------------------
 
 
   ! ----------------------------------------------------------
@@ -373,6 +419,7 @@ module opt_control_propagation_m
     end if
 
   end subroutine update_hamiltonian_psi
+  ! ---------------------------------------------------------
 
 
   ! ---------------------------------------------------------
@@ -475,5 +522,126 @@ module opt_control_propagation_m
     deallocate(dl, dq)
     call pop_sub()
   end subroutine update_field
+  ! ---------------------------------------------------------
+
+
+  ! ---------------------------------------------------------
+  subroutine oct_prop_init(prop, dirname, niter, number_checkpoints)
+    type(oct_prop_t), intent(inout) :: prop
+    character(len=*), intent(in)    :: dirname
+    integer,          intent(in)    :: niter
+    integer,          intent(in)    :: number_checkpoints
+
+    integer :: j
+
+    prop%dirname = 'opt-control/'//trim(dirname)
+    call io_mkdir(trim(prop%dirname))
+    prop%niter = niter
+    prop%number_checkpoints = number_checkpoints
+
+    ALLOCATE(prop%iter(prop%number_checkpoints+2), prop%number_checkpoints+2)
+    prop%iter(1) = 0
+    do j = 1, prop%number_checkpoints
+      prop%iter(j+1) = nint( real(niter)/(prop%number_checkpoints+1) * j)
+    end do
+    prop%iter(prop%number_checkpoints+2) = niter
+
+  end subroutine oct_prop_init
+  ! ---------------------------------------------------------
+
+
+  ! ---------------------------------------------------------
+  subroutine oct_prop_end(prop)
+    type(oct_prop_t), intent(inout) :: prop
+
+    integer :: j
+    character(len=100) :: filename
+    
+    deallocate(prop%iter)
+    ! This routine should maybe delete the files?
+
+  end subroutine oct_prop_end
+  ! ---------------------------------------------------------
+
+
+  ! ---------------------------------------------------------
+  subroutine oct_prop_check(prop, psi, gr, geo, iter)
+    type(oct_prop_t),  intent(in)    :: prop
+    type(states_t),    intent(inout) :: psi
+    type(grid_t),      intent(in)    :: gr
+    type(geometry_t),  intent(in)    :: geo
+    integer,           intent(in)    :: iter
+
+    type(states_t) :: stored_st
+    character(len=100) :: filename
+    integer :: j, ierr
+    FLOAT :: overlap
+
+    do j = 1, prop%number_checkpoints + 2
+     if(prop%iter(j) .eq. iter) then
+       call states_copy(stored_st, psi)
+       write(filename,'(a,i4.4)') trim(prop%dirname)//'/', j
+       call restart_read(trim(filename), stored_st, gr, geo, ierr)
+       overlap = abs( zstates_mpdotp(gr%m, stored_st, psi) )**2
+       if( abs(overlap - M_ONE) > CNST(1.0e-4) ) then
+          write(message(1), '(a,es13.4)') &
+            "WARNING: forward-backward propagation produced an error of", abs(overlap-M_ONE)
+          call write_warning(1)
+       end if
+       ! Restore state only if the number of checkpoints is larger than zero.
+       if(prop%number_checkpoints > 0) then
+         call states_end(psi)
+         call states_copy(psi, stored_st)
+         call states_end(stored_st)
+       end if
+     end if
+    end do
+
+  end subroutine oct_prop_check
+  ! ---------------------------------------------------------
+
+
+  ! ---------------------------------------------------------
+  subroutine oct_prop_read_state(prop, psi, gr, geo, iter)
+    type(oct_prop_t),  intent(in)    :: prop
+    type(states_t),    intent(inout) :: psi
+    type(grid_t),      intent(in)    :: gr
+    type(geometry_t),  intent(in)    :: geo
+    integer,           intent(in)    :: iter
+
+    character(len=100) :: filename
+    integer :: j, ierr
+
+    do j = 1, prop%number_checkpoints + 2
+     if(prop%iter(j) .eq. iter) then
+       write(filename,'(a,i4.4)') trim(prop%dirname)//'/', j
+       call restart_read(trim(filename), psi, gr, geo, ierr)
+     end if
+    end do
+
+  end subroutine oct_prop_read_state
+  ! ---------------------------------------------------------
+
+
+  ! ---------------------------------------------------------
+  subroutine oct_prop_output(prop, iter, psi, gr)
+    type(oct_prop_t), intent(in) :: prop
+    integer, intent(in)           :: iter
+    type(states_t), intent(inout) :: psi
+    type(grid_t), intent(inout)   :: gr
+
+    integer :: j, ierr
+    character(len=100) :: filename
+
+    do j = 1, prop%number_checkpoints + 2
+      if(prop%iter(j) .eq. iter) then
+        write(filename,'(a,i4.4)') trim(prop%dirname)//'/', j
+        call restart_write(trim(filename), psi, gr, ierr, iter)
+      end if
+    end do
+
+  end subroutine oct_prop_output
+  ! ---------------------------------------------------------
+
 
 end module opt_control_propagation_m
