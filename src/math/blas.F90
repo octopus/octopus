@@ -183,6 +183,18 @@ module blas_m
     end function zdotc
   end interface
 
+  interface blas_dotu
+    complex(4) function cdotu(n, dx, incx, dy, incy)
+      integer,    intent(in) :: n, incx, incy
+      complex(4), intent(in) :: dx, dy ! dx(n), dy(n)
+    end function cdotu
+
+    complex(8) function zdotu(n, dx, incx, dy, incy)
+      integer,    intent(in) :: n, incx, incy
+      complex(8), intent(in) :: dx, dy ! dx(n), dy(n)
+    end function zdotu
+  end interface
+
   ! ----------------- nrm2 ------------------
   interface blas_nrm2
     real(4) function snrm2(n, dx, incx)

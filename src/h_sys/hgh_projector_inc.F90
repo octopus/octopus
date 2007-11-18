@@ -52,9 +52,13 @@ subroutine X(hgh_project)(mesh, sm, hgh_p, dim, psi, ppsi, reltype)
 
       do i = 1, 3
         if (hgh_p%h(i, j) == M_ZERO) cycle
-        ppsi(1:n_s, idim) = ppsi(1:n_s, idim) + &
-             hgh_p%h(i, j) * uvpsi * hgh_p%p(1:n_s, i)
+#ifdef R_TCOMPLEX
+        ppsi(1:n_s, idim) = ppsi(1:n_s, idim) + hgh_p%h(i, j)*uvpsi*hgh_p%p(1:n_s, i)
+#else
+        call lalg_axpy(n_s, hgh_p%h(i, j)*uvpsi, hgh_p%p(1:n_s, i), ppsi(1:n_s, idim))
+#endif
       end do
+
     end do
   end do
   

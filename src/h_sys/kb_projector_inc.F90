@@ -43,10 +43,15 @@ subroutine X(kb_project)(mesh, sm, kb_p, dim, psi, ppsi)
   do idim = 1, dim
     do i = 1, kb_p%n_c
       if (kb_p%e(i) == M_ZERO) cycle
+
       uvpsi = X(dsm_integrate_prod)(mesh, sm, psi(1:n_s, idim), kb_p%p(1:n_s, i))
 
-      ppsi(1:n_s, idim) = ppsi(1:n_s, idim) + &
-           kb_p%e(i) * uvpsi * kb_p%p(1:n_s, i)
+#ifdef R_TCOMPLEX
+      ppsi(1:n_s, idim) = ppsi(1:n_s, idim) + kb_p%e(i)*uvpsi*kb_p%p(1:n_s, i)
+#else
+      call lalg_axpy(n_s, kb_p%e(i)*uvpsi, kb_p%p(1:n_s, i), ppsi(1:n_s, idim))
+#endif
+
     end do
   end do
 

@@ -23,6 +23,7 @@ module kb_projector_m
   use double_grid_m
   use global_m
   use grid_m
+  use lalg_basic_m
   use mesh_m
   use messages_m
   use simul_box_m

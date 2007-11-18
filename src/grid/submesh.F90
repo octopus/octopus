@@ -20,6 +20,7 @@
 #include "global.h"
   
 module submesh_m
+  use blas_m
   use global_m
   use lalg_basic_m
   use messages_m
@@ -235,7 +236,7 @@ contains
     if (m%use_curvlinear) then
       res = sum(f(1:sm%ns)*g(1:sm%ns)*m%vol_pp(sm%jxyz(1:sm%ns)))
     else
-      res = sum(f(1:sm%ns)*g(1:sm%ns))*m%vol_pp(1)
+      res  = blas_dotu(sm%ns, f(1), 1, g(1), 1)*m%vol_pp(1)
     end if
 
 #if defined(HAVE_MPI)

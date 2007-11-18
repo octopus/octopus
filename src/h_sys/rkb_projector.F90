@@ -22,6 +22,7 @@
 module rkb_projector_m
   use global_m
   use grid_m
+  use lalg_basic_m
   use mesh_m
   use messages_m
   use simul_box_m
@@ -171,14 +172,16 @@ contains
 
     do idim = 1, 2   
       do j = 1, 2
+
         if (all(rkb_p%f(j, :, idim) == M_ZERO)) cycle
+
         uvpsi = zzsm_integrate_prod(mesh, sm, psi(1:n_s, idim), rkb_p%bra(1:n_s, j))
 
         do jdim = 1, 2
           if (rkb_p%f(j, jdim, idim) == M_ZERO) cycle
-          ppsi(1:n_s, jdim) = ppsi(1:n_s, jdim) + &
-               rkb_p%f(j, jdim, idim) * uvpsi * rkb_p%ket(1:n_s, j, jdim, idim)
+          call lalg_axpy(n_s, rkb_p%f(j, jdim, idim)*uvpsi, rkb_p%ket(1:n_s, j, jdim, idim), ppsi(1:n_s, jdim))
         end do
+
       end do
     end do
     

@@ -54,7 +54,11 @@ R_TYPE function X(dsm_integrate_prod)(m, sm, f, g) result(res)
   if (m%use_curvlinear) then
     res = sum( f(1:sm%ns)*g(1:sm%ns)*m%vol_pp(sm%jxyz(1:sm%ns)))
   else
+#ifdef R_TCOMPLEX
     res = sum(f(1:sm%ns)*g(1:sm%ns))*m%vol_pp(1)
+#else
+    res = lalg_dot(sm%ns, f, g)*m%vol_pp(1)
+#endif
   end if
 
 #if defined(HAVE_MPI)
