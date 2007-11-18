@@ -67,8 +67,6 @@ module opt_control_propagation_m
     character(len=100) :: dirname
   end type oct_prop_t
   
-!!$  integer, parameter :: NUMBER_CHECKPOINTS = 10
-
 
   contains
 
@@ -103,6 +101,8 @@ module opt_control_propagation_m
       call td_write_init(write_handler, gr, sys%st, sys%geo, &
         (td%move_ions>0), h%ep%with_gauge_field, td%iter, td%dt)
     end if
+
+    call hamiltonian_not_adjoint(h)
 
     ! setup the hamiltonian
     call states_calc_dens(psi, NP_PART, psi%rho)
@@ -163,6 +163,8 @@ module opt_control_propagation_m
     call write_info(1)
 
     gr => sys%gr
+
+    call hamiltonian_adjoint(h)
 
     ! setup the hamiltonian
     call states_calc_dens(psi, NP_PART, psi%rho)
@@ -244,11 +246,9 @@ module opt_control_propagation_m
     call write_info(1)
 
     call oct_prop_output(prop_psi, 0, psi, gr)
-!!!!NEW
     call states_copy(chi, psi)
-!!$    call oct_prop_check(prop_chi, chi, gr, sys%geo, 0)
     call oct_prop_read_state(prop_chi, chi, gr, sys%geo, 0)
-!!!!ENDFNEW
+
     do i = 1, td%max_iter
       if(aux_fwd_propagation) then
         call update_hamiltonian_psi(i, gr, sys%ks, h, td, target, par_prev, psi2)
@@ -370,6 +370,8 @@ module opt_control_propagation_m
       call hamiltonian_set_oct_exchange(h, st)
     end if
 
+    call hamiltonian_adjoint(h)
+
     do j = iter - 2, iter + 2
       if(j >= 0 .and. j<=td%max_iter) then
         call parameters_to_h_val(par_chi, h%ep, j+1)
@@ -407,6 +409,8 @@ module opt_control_propagation_m
     if(.not.h%ip_app) then
       call hamiltonian_remove_oct_exchange(h)
     end if
+
+    call hamiltonian_not_adjoint(h)
 
     do j = iter - 2, iter + 2
       if(j >= 0 .and. j<=td%max_iter) then
@@ -575,17 +579,19 @@ module opt_control_propagation_m
     type(states_t) :: stored_st
     character(len=100) :: filename
     integer :: j, ierr
-    FLOAT :: overlap
+    FLOAT :: overlap, nrm
+    FLOAT, parameter :: WARNING_THRESHOLD = CNST(1.0e-2)
 
     do j = 1, prop%number_checkpoints + 2
      if(prop%iter(j) .eq. iter) then
        call states_copy(stored_st, psi)
        write(filename,'(a,i4.4)') trim(prop%dirname)//'/', j
        call restart_read(trim(filename), stored_st, gr, geo, ierr)
+       nrm = abs( zstates_mpdotp(gr%m, stored_st, stored_st) )**2
        overlap = abs( zstates_mpdotp(gr%m, stored_st, psi) )**2
-       if( abs(overlap - M_ONE) > CNST(1.0e-4) ) then
+       if( abs(overlap - nrm) > WARNING_THRESHOLD ) then
           write(message(1), '(a,es13.4)') &
-            "WARNING: forward-backward propagation produced an error of", abs(overlap-M_ONE)
+            "WARNING: forward-backward propagation produced an error of", abs(overlap-nrm)
           call write_warning(1)
        end if
        ! Restore state only if the number of checkpoints is larger than zero.

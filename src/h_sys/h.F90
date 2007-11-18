@@ -70,14 +70,16 @@ module hamiltonian_m
     zkinetic,              &
     zvmask,                &
     zvlasers,              &
-    zvlaser_operator_linear,        &
-    zvlaser_operator_quadratic,     &
-    hamiltonian_inh_term,           &
-    hamiltonian_set_inh,            &
-    hamiltonian_remove_inh,         &
-    hamiltonian_oct_exchange,       &
-    hamiltonian_set_oct_exchange,   &
-    hamiltonian_remove_oct_exchange
+    zvlaser_operator_linear,         &
+    zvlaser_operator_quadratic,      &
+    hamiltonian_inh_term,            &
+    hamiltonian_set_inh,             &
+    hamiltonian_remove_inh,          &
+    hamiltonian_oct_exchange,        &
+    hamiltonian_set_oct_exchange,    &
+    hamiltonian_remove_oct_exchange, &
+    hamiltonian_adjoint,             &
+    hamiltonian_not_adjoint
 
 
 
@@ -120,6 +122,7 @@ module hamiltonian_m
     integer :: gauge              ! in which gauge shall we work in
 
     ! absorbing boundaries
+    logical :: adjoint
     integer  :: ab                ! do we have absorbing boundaries?
     FLOAT :: ab_width             ! width of the absorbing boundary
     FLOAT :: ab_height            ! height of the absorbing boundary
@@ -415,6 +418,8 @@ contains
     call hamiltonian_remove_inh(h)
     call hamiltonian_remove_oct_exchange(h)
 
+    h%adjoint = .false.
+
     nullify(h%phase)
     if (simul_box_is_periodic(gr%sb)) call init_phase
 
@@ -696,6 +701,28 @@ contains
   end subroutine hamiltonian_remove_oct_exchange
 
 
+  ! ---------------------------------------------------------
+  subroutine hamiltonian_adjoint(h)
+    type(hamiltonian_t), intent(inout) :: h
+    if(.not.h%adjoint) then
+      h%adjoint = .true.
+      if(h%ab .eq. IMAGINARY_ABSORBING) then
+        h%ab_pot = -h%ab_pot
+      end if
+    endif
+  end subroutine hamiltonian_adjoint
+
+
+  ! ---------------------------------------------------------
+  subroutine hamiltonian_not_adjoint(h)
+    type(hamiltonian_t), intent(inout) :: h
+    if(h%adjoint) then
+      h%adjoint = .false.
+      if(h%ab .eq. IMAGINARY_ABSORBING) then
+        h%ab_pot = -h%ab_pot
+      end if
+    endif
+  end subroutine hamiltonian_not_adjoint
 
 
 #include "undef.F90"
