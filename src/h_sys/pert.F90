@@ -259,7 +259,7 @@ contains
     if(have_dir_2) then
       this%ionic%mix1(jatom, jdir) = valuej
     else
-      ASSERT( .not. present(jatom) .and. .not. present(jdir) .and. present(jatom) )
+      ASSERT( .not. present(jatom) .and. .not. present(jdir) .and. .not. present(jatom) )
     end if
 
   end subroutine pert_setup_mixed_dir
