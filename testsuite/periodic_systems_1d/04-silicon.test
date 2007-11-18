@@ -1,0 +1,42 @@
+# -*- coding: utf-8 mode: shell-script -*-
+# $Id: 04-silicon.test 3344 2007-10-13 13:38:03Z acastro $
+
+Test       : Silicon crystal
+Author     : Xavier
+Date       : 18.11.07
+Arch       : Linux
+Release    : 2
+Programs   : octopus
+TestGroups : short-run
+Enabled    : Yes
+
+# ground state
+Input      : 04-silicon.01-gs.inp
+
+Match ; K Point 1    ; grep "k =   1" static/info | head -1 ; .*0.077.*0.077.*0.077
+
+Match ; Eigenvalue  1; grep " 1   --" static/info | head -1 | tail -1; \S*-0.2804
+Match ; Eigenvalue  8; grep " 8   --" static/info | head -1 | tail -1; \S*0.0222
+Match ; Eigenvalue 16; grep "16   --" static/info | head -1 | tail -1; \S*0.1395
+Match ; Eigenvalue 17; grep "17   --" static/info | head -1 | tail -1; \S*0.1726
+
+Match ; K Point 2    ;  grep "k =   2" static/info | head -1 ; .*0.077.*0.077.*0.384
+
+Match ; Eigenvalue  1; grep " 1   --" static/info | head -2 | tail -1; \S*-0.2604
+Match ; Eigenvalue  8; grep " 8   --" static/info | head -2 | tail -1; \S*-0.0013
+Match ; Eigenvalue 16; grep "16   --" static/info | head -2 | tail -1; \S*0.1047
+Match ; Eigenvalue 17; grep "17   --" static/info | head -2 | tail -1; \S*0.1921
+
+Match ; K Point 3    ; grep "k =   3" static/info | head -1 ; .*0.077.*0.384.*0.384
+
+Match ; Eigenvalue  1; grep " 1   --" static/info | head -3 | tail -1; \S*-0.2415
+Match ; Eigenvalue  8; grep " 8   --" static/info | head -3 | tail -1; \S*-0.0177
+Match ; Eigenvalue 16; grep "16   --" static/info | head -3 | tail -1; \S*0.1207
+Match ; Eigenvalue 17; grep "17   --" static/info | head -3 | tail -1; \S*0.2066
+
+Match ; K Point 4    ; grep "k =   4" static/info | head -1 ; .*0.384.*0.384.*0.384
+
+Match ; Eigenvalue  1; grep " 1   --" static/info | head -4 | tail -1; \S*-0.2249
+Match ; Eigenvalue  8; grep " 8   --" static/info | head -4 | tail -1; \S*-0.0670
+Match ; Eigenvalue 16; grep "16   --" static/info | head -4 | tail -1; \S*0.1100
+Match ; Eigenvalue 17; grep "17   --" static/info | head -4 | tail -1; \S*0.2143

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 mode: shell-script -*-
 # $Id: oct-run_regression_test.pl 2423 2006-09-24 21:25:52Z acastro $
 
-Test       : 09-morse.test
+Test       : Morse potential
 Author     : Alberto
 Date       : 06.10.07
 Arch       : Linux alberto-laptop 2.6.22-13-generic

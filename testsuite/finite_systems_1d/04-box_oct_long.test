@@ -17,8 +17,8 @@ Enabled    : Yes
 # V(x) = -5*step(x+5)*step(5-x),
 # are calculated. 
 Input: 04-box.01-ground_state.inp
-Match ; TotalEnergy ; sed -n '/^Energy/{n\;p\;}' ground_state_static/info ; \s*Total\s*=\s*-4.9569
-Match ; 2th state  ; grep '2   --' excited_states_static/eigenvalues ; \s*-4.8279
+Match ; Total energy ; sed -n '/^Energy/{n\;p\;}' ground_state_static/info ; \s*Total\s*=\s*-4.9569
+Match ; 2th state    ; grep '2   --' excited_states_static/eigenvalues ; \s*-4.8279
 
 # Then, run the optimization for 15 iterations with ZBR98 scheme and compare the convergence.
 

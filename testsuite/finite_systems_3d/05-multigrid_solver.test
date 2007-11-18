@@ -12,6 +12,6 @@ Enabled    : Yes
 
 Input: 05-multigrid_solver.01-ground_state.inp
 
-Match ; Levels ; grep 'Multigrid levels:' out ; \s*Multigrid\s*levels:\s*3
-Match ; TotalEnergy ; sed -n '/^Energy/{n\;p\;}' static/info ; \s*Total\s*=\s*-0.3379
-Match ; Eigenvalues ; sed -n '/Eigenvalues \[/{n\;n\;p\;}' static/info ; \s*-0.1373\d*\s*2.0000\d* 
+Match ; Grid levels  ; grep 'Multigrid levels:' out ; \s*Multigrid\s*levels:\s*3
+Match ; Total energy ; sed -n '/^Energy/{n\;p\;}' static/info ; \s*Total\s*=\s*-0.3379
+Match ; Eigenvalues  ; sed -n '/Eigenvalues \[/{n\;n\;p\;}' static/info ; \s*-0.1373\d*\s*2.0000\d* 

@@ -1,20 +1,20 @@
 # -*- coding: utf-8 mode: shell-script -*-
 # $Id$
 
-Test       : Sodium
+Test       : Sodium vibrational frequency
 Author     : Heiko Appel
 Date       : 04.05.05
 Arch       : Linux miraculix 2.6.11.6-acpi-up #1 Thu Apr 7 15:01:29 CEST 2005 i686 GNU/Linux
 Release    : 2.2.0pre1
 Programs   : octopus
-TestGroups : short-run
+TestGroups : long-run
 Enabled    : Yes
 
 
 Input: 08-sodium_dimer.01-ground_state.inp
-Match ; TotalEnergy ; sed -n '/^Energy/{n\;p\;}' static/info ; \s*Total\s*=\s*-0.4178
-Match ; Eigenvalues ; sed -n '/Eigenvalues \[/{n\;n\;p\;}' static/info ; \s*-0.1189\d*\s*2.0000\d* 
+Match ; Total energy ; sed -n '/^Energy/{n\;p\;}' static/info ; \s*Total\s*=\s*-0.4178
+Match ; Eigenvalues  ; sed -n '/Eigenvalues \[/{n\;n\;p\;}' static/info ; \s*-0.1189\d*\s*2.0000\d* 
 
 Input: 08-sodium_dimer.02-phonons.inp
-Match ; VibrationalFrequency ; head -1 phonons/freq_lr ; \s*167.52
+Match ; Vibrational Frequency ; head -1 phonons/freq_lr ; \s*167.52
 

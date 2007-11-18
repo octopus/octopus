@@ -1,7 +1,7 @@
 # -*- coding: utf-8 mode: shell-script -*-
 # $Id: oct-run_regression_test.pl 2423 2006-09-24 21:25:52Z acastro $
 
-Test       : 07-hartree_fock.test
+Test       : Hartree-Fock
 Author     : Alberto
 Date       : 26.10.07
 Arch       : Linux g38 2.6.21-desktop-2 #1 SMP PREEMPT Tue May 8 11:54:36 CEST 2007 i686 GNU/Linux
@@ -23,7 +23,7 @@ Enabled    : Yes
 # units, 1.0419 e.a.u. corresponds to 4.168, as given in the table.
 
 Input: 07-hartree_fock.01-2electrons.inp
-Match ; TotalEnergy ; sed -n '/^Energy:/{n\;p\;}' static/info ; \s*Total\s*=\s*1.0419
+Match ; Total energy ; sed -n '/^Energy:/{n\;p\;}' static/info ; \s*Total\s*=\s*1.0419
 
 # Results for 8 electrons quantum dots, provided in the paper, can
 # also be approximately reproduced. I do not put a test because it
