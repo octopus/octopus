@@ -104,6 +104,7 @@ module ps_m
     FLOAT :: sigma_erf                 ! the a constant in erf(r/(sqrt(2)*sigma))/r
     FLOAT :: a_erf                     ! the a constant in erf(ar)/r
 
+    type(loct_spline_t) :: vion        ! the potential that other ions see
   end type ps_t
 
   FLOAT, parameter :: eps = CNST(1.0e-8)
@@ -230,6 +231,7 @@ contains
     call loct_spline_init(ps%vl)
     call loct_spline_init(ps%core)
     call loct_spline_init(ps%vlocal_f)
+    call loct_spline_init(ps%vion)
 
     ! Now we load the necessary information.
     select case(flavour)
@@ -273,7 +275,30 @@ contains
 
     ps%has_long_range = .true.
 
+    call vion_init
+
     call pop_sub()
+
+  contains
+
+    subroutine vion_init()
+      FLOAT, allocatable :: vv(:)
+      FLOAT :: rr
+      integer :: ii
+
+      ALLOCATE(vv(ps%g%nrval), ps%g%nrval)
+
+      vv = M_ZERO
+      do ii = 1, ps%g%nrval
+        rr = ps%g%rofi(ii)
+        if (abs(rr) > M_EPSILON) vv(ii) = -ps%z_val/rr
+      end do
+
+      call loct_spline_fit(ps%g%nrval, ps%g%rofi, vv, ps%vion)
+      
+      deallocate(vv)
+    end subroutine vion_init
+    
   end subroutine ps_init
 
   subroutine ps_separate(ps, spacing)
@@ -492,6 +517,7 @@ contains
     call loct_spline_end(ps%vl)
     call loct_spline_end(ps%core)
     call loct_spline_end(ps%vlocal_f)
+    call loct_spline_end(ps%vion)
 
     call logrid_end(ps%g)
 

@@ -46,7 +46,6 @@ module geometry_m
     geometry_init_species, &
     geometry_nvnl,         &
     geometry_end,          &
-    ion_ion_energy,        &
     kinetic_energy,        &
     geometry_dipole,       &
     geometry_min_distance, &
@@ -544,36 +543,6 @@ contains
     l = (r < CNST(1.0e-5) .and. geo%natoms > 1)
 
   end function geometry_atoms_are_too_close
-
-
-  ! ---------------------------------------------------------
-  FLOAT function ion_ion_energy(geo)
-    type(geometry_t), target, intent(in) :: geo
-
-    type(specie_t), pointer :: s
-    FLOAT :: r
-    integer :: i, j
-
-    ! Note that a possible jellium-jellium interaction (the case where more
-    ! than one jellium species is present) is not properly calculated.
-    ! But if only one jellium sphere is present, it correctly calculates its
-    ! electrostatic energy. I do not know right now if there is a closed
-    ! analytical expression for the electrostatic energy of a system of two
-    ! uniformly charged spheres.
-    ion_ion_energy = M_ZERO
-    do i = 1, geo%natoms
-      s => geo%atom(i)%spec
-      if(s%type .eq. SPEC_JELLI) then
-        ion_ion_energy = ion_ion_energy + (M_THREE/M_FIVE)*s%z_val**2/s%jradius
-      end if
-      do j = 1, i - 1
-        r = sqrt(sum((geo%atom(i)%x - geo%atom(j)%x)**2))
-        ion_ion_energy = ion_ion_energy + s%z_val*geo%atom(j)%spec%z_val/r
-      end do
-    end do
-
-  end function ion_ion_energy
-
 
   ! ---------------------------------------------------------
   FLOAT function kinetic_energy(geo)
