@@ -595,9 +595,32 @@ subroutine X(mf_put_radial_spline)(m, spl, center, f, add)
 
 end subroutine X(mf_put_radial_spline)
 
+! This function calculates the x_i moment of the function f
+R_TYPE function X(mf_interpolate_point) (m, f, point) result(val)
+  type(mesh_t), intent(in) :: m
+  R_TYPE,       intent(in) :: f(:)
+  FLOAT,        intent(in) :: point(1:MAX_DIM)
+  
+  integer :: ip, loc
+  FLOAT :: dd, mindd
 
+  call push_sub('mf_inc.Xmf_interpolate_point')
 
+  loc = 0
+  mindd = HUGE(mindd)
+  do ip = 1, m%np
+    dd = sum((m%x(ip, 1:MAX_DIM) - point(1:MAX_DIM))**2)
+    if ( dd < mindd ) then 
+      loc = ip
+      mindd = dd
+    end if
+  end do
 
+  val = f(loc)
+  
+  call pop_sub()
+
+end function X(mf_interpolate_point)
 
 !! Local Variables:
 !! mode: f90

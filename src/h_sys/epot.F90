@@ -432,15 +432,16 @@ contains
     time_ = M_ZERO
     if (present(time)) time_ = time
 
-    ! first we assume that we need to recalculate the ion_ion energy
-    geo%eii = ion_ion_energy(sb, geo)
-
     ! Local.
     ep%vpsl = M_ZERO
     do ia = 1, geo%natoms
       call build_local_part_in_real_space(ep, gr, geo, geo%atom(ia), ep%vpsl, time_, st%rho_core)
     end do
 
+    ! we assume that we need to recalculate the ion_ion energy
+    geo%eii = ion_ion_energy(gr, sb, geo, ep%vpsl)
+
+    ! Local.
     ! the pseudo potential part.
     iproj = 1
     do ia = 1, geo%natoms
@@ -740,9 +741,11 @@ contains
   end subroutine epot_forces
 
   ! ---------------------------------------------------------
-  FLOAT function ion_ion_energy(sb, geo)
+  FLOAT function ion_ion_energy(gr, sb, geo, vpsl)
+    type(grid_t),              intent(in) :: gr
     type(simul_box_t), target, intent(in) :: sb
     type(geometry_t),  target, intent(in) :: geo
+    FLOAT,                     intent(in) :: vpsl(:)
 
     type(specie_t), pointer :: s
     FLOAT :: r, rc, xi(1:MAX_DIM)
@@ -800,6 +803,16 @@ contains
         end do
         
         call periodic_copy_end(pc)
+        
+      end do
+
+      do iatom = 1, geo%natoms
+        s => geo%atom(iatom)%spec
+        if (.not. specie_is_ps(s)) cycle
+        ion_ion_energy = ion_ion_energy + (-s%z_val)*dmf_interpolate_point(gr%m, vpsl, geo%atom(iatom)%x)
+        
+        !remove the self interaction term
+        ion_ion_energy = ion_ion_energy - s%ps%a_erf/sqrt(M_PI)*s%z_val**2
         
       end do
 

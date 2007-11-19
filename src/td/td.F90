@@ -132,8 +132,6 @@ contains
       if(td%iter > 0) then
         call td_read_coordinates()
         call epot_generate(h%ep, gr, geo, sys%mc, st, h%reltype)
-        geo%eii = ion_ion_energy(gr%sb, geo)
-        h%eii = geo%eii
       end if
 
       call epot_forces(gr, geo, h%ep, st, td%iter*td%dt)
@@ -214,11 +212,6 @@ contains
 	  call epot_generate_gauge_field(h%ep, gr, st)
 	end if
         call epot_generate(h%ep, gr, sys%geo, sys%mc, st, h%reltype, time = i*td%dt)
-        
-	if ( td%move_ions > 0 ) then
-	  geo%eii = ion_ion_energy(gr%sb, geo)
-          h%eii = geo%eii
-	end if
       end if
 
       ! update hamiltonian and eigenvalues (fermi is *not* called)

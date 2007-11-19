@@ -49,6 +49,8 @@ module mesh_function_m
     zmf_partial_integrate, &
     dmf_interpolate,       &
     zmf_interpolate,       &
+    dmf_interpolate_point, &
+    zmf_interpolate_point, &
     mf_surface_integral,   &
     mf_line_integral,      &
     dmf_put_radial_spline, &
