@@ -12,5 +12,5 @@ Enabled    : Yes
 
 
 Input: 02-curvlinear_coordinates.01-gygi.inp
-Match ; Total energy ; sed -n '/^Energy/{n\;p\;}' static/info ; \s*Total\s*=\s*-2.8681
+Match ; Total energy ; sed -n '/^Energy/{n\;p\;}' static/info ; \s*Total\s*=\s*-2.868
 Match ; Eigenvalues  ; sed -n '/Eigenvalues \[/{n\;n\;p\;}' static/info ; \s*-0.576\d*\s*2.0000\d*
