@@ -821,9 +821,9 @@ contains
     if(sb%periodic_dim > 0 .or. sb%box_shape == PARALLELEPIPED) then
       write(message(1),'(1x)')
       write(message(2),'(a,3a,a)') '  Lattice Vectors [', trim(units_out%length%abbrev), ']'
-      write(message(3),'(3f12.6)')   sb%rlattice(:,1)*sb%lsize(1)/units_out%length%factor
-      write(message(4),'(3f12.6)')   sb%rlattice(:,2)*sb%lsize(2)/units_out%length%factor
-      write(message(5),'(3f12.6)')   sb%rlattice(:,3)*sb%lsize(3)/units_out%length%factor
+      write(message(3),'(3f12.6)')   sb%rlattice(:,1)*M_TWO*sb%lsize(1)/units_out%length%factor
+      write(message(4),'(3f12.6)')   sb%rlattice(:,2)*M_TWO*sb%lsize(2)/units_out%length%factor
+      write(message(5),'(3f12.6)')   sb%rlattice(:,3)*M_TWO*sb%lsize(3)/units_out%length%factor
       write(message(6),'(a,3a,a)') '  Reciprocal Lattice Vectors [', trim(units_out%length%abbrev), '^-1]'
       write(message(7),'(3f12.6)')   sb%klattice(:,1)/units_out%length%factor
       write(message(8),'(3f12.6)')   sb%klattice(:,2)/units_out%length%factor
@@ -927,7 +927,7 @@ contains
 
 
   !--------------------------------------------------------------
-  logical function simul_box_is_periodic(sb)
+  logical pure function simul_box_is_periodic(sb)
     type(simul_box_t), intent(in) :: sb
 
     simul_box_is_periodic = sb%periodic_dim > 0

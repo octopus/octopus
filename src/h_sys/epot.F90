@@ -746,8 +746,8 @@ contains
 
     type(specie_t), pointer :: s
     FLOAT :: r, rc, xi(1:MAX_DIM)
-    integer :: iatom, jatom, icopy, jcopy
-    type(periodic_copy_t), allocatable :: pc(:)
+    integer :: iatom, jatom, icopy
+    type(periodic_copy_t) :: pc
 
     ! Note that a possible jellium-jellium interaction (the case where more
     ! than one jellium species is present) is not properly calculated.
@@ -757,75 +757,51 @@ contains
     ! uniformly charged spheres.
     ion_ion_energy = M_ZERO
 
-    if(.not. simul_box_is_periodic(sb)) then
+    ! interaction inside the cell
+    do iatom = 1, geo%natoms
+      s => geo%atom(iatom)%spec
+      if(s%type .eq. SPEC_JELLI) then
+        ion_ion_energy = ion_ion_energy + (M_THREE/M_FIVE)*s%z_val**2/s%jradius
+      end if
 
-      do iatom = 1, geo%natoms
-        s => geo%atom(iatom)%spec
-        if(s%type .eq. SPEC_JELLI) then
-          ion_ion_energy = ion_ion_energy + (M_THREE/M_FIVE)*s%z_val**2/s%jradius
+      do jatom = 1, iatom - 1
+        r = sqrt(sum((geo%atom(iatom)%x - geo%atom(jatom)%x)**2))
+        if (specie_is_ps(geo%atom(jatom)%spec)) then
+          ion_ion_energy = ion_ion_energy + (-s%z_val)*loct_splint(geo%atom(jatom)%spec%ps%vion, r)
+        else
+          ion_ion_energy = ion_ion_energy + s%z_val*geo%atom(jatom)%spec%z_val/r
         end if
-        
-        do jatom = 1, iatom - 1
-          r = sqrt(sum((geo%atom(iatom)%x - geo%atom(jatom)%x)**2))
-          if (specie_is_ps(geo%atom(jatom)%spec)) then
-            ion_ion_energy = ion_ion_energy + (-s%z_val)*loct_splint(geo%atom(jatom)%spec%ps%vion, r)
-          else
-            ion_ion_energy = ion_ion_energy + s%z_val*geo%atom(jatom)%spec%z_val/r
-          end if
-        end do
-        
       end do
 
-    else
-      
-      ! In the periodic case we have to sum over all copies. As the
-      ! interaction is short range (it is separated) this sum is
-      ! finite.
-      !
-      ! We do an all to all calculation, because an atom can interact
-      ! with its image, and then we divide by two.
+    end do
 
-      ALLOCATE(pc(1:geo%natoms), geo%natoms)
+    if(simul_box_is_periodic(sb)) then
+
+      ! If the system is periodic add the interaction of the copies
 
       do iatom = 1, geo%natoms
         s => geo%atom(iatom)%spec
         if (.not. specie_is_ps(s)) cycle
+
         rc = loct_spline_cutoff_radius(s%ps%vion, s%ps%projectors_sphere_threshold)
-        call periodic_copy_init(pc(iatom), sb, geo%atom(iatom)%x, rc)
-      end do
+        call periodic_copy_init(pc, sb, geo%atom(iatom)%x, rc)
 
-      do iatom = 1, geo%natoms
-        s => geo%atom(iatom)%spec
-        if (.not. specie_is_ps(s)) cycle
+        do icopy = 1, periodic_copy_num(pc)
+          ! the interaction between atoms in the cell was already considered
+          if (periodic_copy_is_original_point(pc, sb, icopy)) cycle
 
-        do icopy = 1, periodic_copy_num(pc(iatom))
-          xi = periodic_copy_position(pc(iatom), sb, icopy)
+          xi = periodic_copy_position(pc, sb, icopy)
 
-          do jatom = 1, geo%natoms
-            if (.not. specie_is_ps(geo%atom(jatom)%spec)) cycle
-
-            do jcopy = 1, periodic_copy_num(pc(jatom))
-
-              if ( iatom /= jatom .or. icopy /= jcopy ) then
-                r = sqrt( sum( (xi - periodic_copy_position(pc(jatom), sb, jcopy))**2 ) )
-                ion_ion_energy = ion_ion_energy + (-s%z_val)*loct_splint(geo%atom(jatom)%spec%ps%vion, r)
-              end if
-
-            end do
+          do jatom = 1, iatom
+            r = sqrt( sum( (xi - geo%atom(jatom)%x)**2 ) )
+            ion_ion_energy = ion_ion_energy + (-geo%atom(jatom)%spec%z_val)*loct_splint(s%ps%vion, r)
           end do
-
+          
         end do
+        
+        call periodic_copy_end(pc)
+        
       end do
-
-      ion_ion_energy = ion_ion_energy * M_HALF
-
-      do iatom = 1, geo%natoms
-        s => geo%atom(iatom)%spec
-        if (.not. specie_is_ps(s)) cycle
-        call periodic_copy_end(pc(iatom))
-      end do
-
-      deallocate(pc)
 
     end if
 
