@@ -85,6 +85,7 @@ module tdf_m
     character(len=200) :: expression
 
     FLOAT   :: dt     ! the time-discretization value.
+    FLOAT   :: init_time, final_time
     integer :: niter
     CMPLX, pointer :: val(:)
   end type tdf_t
@@ -235,6 +236,9 @@ module tdf_m
       read(iunit, *) t(j), am(j)
     end do
     call io_close(iunit)
+
+    f%init_time  = t(1)
+    f%final_time = t(lines)
 
     call loct_spline_init(f%amplitude)
     call loct_spline_fit(lines, t, am, f%amplitude)
@@ -470,7 +474,11 @@ module tdf_m
       y = f%a0 * r * exp(M_zI * (f%omega0*t))
     case(TDF_FROM_FILE)
 
-      y = loct_splint(f%amplitude, t)
+      if( t >= f%init_time .and. t <= f%final_time) then
+        y = loct_splint(f%amplitude, t)
+      else
+        y = M_ZERO
+      end if
 
     case(TDF_NUMERICAL)
 

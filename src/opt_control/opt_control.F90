@@ -36,6 +36,7 @@ module opt_control_m
   use lib_oct_parser_m
   use lib_oct_m
   use messages_m
+  use simul_box_m
   use mesh_m
   use mesh_function_m
   use functions_m

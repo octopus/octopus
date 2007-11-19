@@ -92,6 +92,9 @@ module opt_control_propagation_m
 
     call push_sub('propagation.propagate_forward')
 
+    message(1) = "Info: Forward propagation."
+    call write_info(1)
+
     write_iter_ = .false.
     if(present(write_iter)) write_iter_ = write_iter
 
@@ -159,7 +162,7 @@ module opt_control_propagation_m
 
     call push_sub('propagation.propagate_backward')
     
-    message(1) = "Info: Backward propagating Chi"
+    message(1) = "Info: Backward propagation."
     call write_info(1)
 
     gr => sys%gr
@@ -220,6 +223,9 @@ module opt_control_propagation_m
     type(td_rti_t) :: tr_psi2
 
     call push_sub('propagation.fwd_step')
+
+    message(1) = "Info: Forward propagation."
+    call write_info(1)
 
     gr => sys%gr
     call td_rti_copy(tr_chi, td%tr)
@@ -307,7 +313,7 @@ module opt_control_propagation_m
 
     call push_sub('propagation.bwd_step')
 
-    message(1) = "Info: Propagating backward"
+    message(1) = "Info: Backward propagation."
     call write_info(1)
 
     gr => sys%gr

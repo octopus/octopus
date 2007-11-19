@@ -171,6 +171,11 @@
       call write_fatal(1)
     end if
 
+    if(simul_box_is_periodic(sys%gr%sb)) then
+      write(message(1), '(a)') 'No QOCT runs with periodic boundary conditions. '
+      call write_fatal(1)
+    end if
+
     ! This should check that we really have occupation one for
     ! one of the spin-orbitals, and occupation zero for all the others.
     ! Otherwise the algorithms are bound to fail.
@@ -261,6 +266,26 @@
         write(message(1), '(a)') 'When doing QOCT with interacting electronsl, then you must set'
         write(message(2), '(a)') 'TDEvolutionMethod = exp_mid'
         call write_fatal(2)
+      end if
+    end if
+
+    if( h%ab .eq. MASK_ABSORBING) then
+      write(message(1), '(a)') 'Cannot do QOCT with mask absorbing boundaries. Use either'
+      write(message(2), '(a)') '"AbsorbingBoudaries = sin2" or "AbsorbingBoundaries = no".'
+      call write_fatal(2)
+    end if
+
+    if(target%type .eq. oct_tg_exclude_state ) then
+      if(no_electrons > 1) then
+        write(message(1), '(a)') 'If "OCTTargetOperator = oct_tg_exclude_state", you can only do'
+        write(message(2), '(a)') 'one-electron runs.'
+        call write_fatal(2)
+      end if
+      if(sys%st%d%ispin .eq. SPIN_POLARIZED) then
+        write(message(1), '(a)') 'If "OCTTargetOperator = oct_tg_exclude_state", you can only do'
+        write(message(2), '(a)') 'runs in spin restricted, or in spinors mode (spin-polarized is'
+        writE(message(3), '(a)') 'is not allowed.'
+        call write_fatal(3)
       end if
     end if
       

@@ -58,6 +58,7 @@ module opt_control_target_m
     FLOAT, pointer :: rho(:)
     FLOAT, pointer :: td_fitness(:)
     character(len=200) :: td_local_target
+    integer :: excluded_states
   end type target_t
 
   contains
@@ -155,16 +156,26 @@ module opt_control_target_m
       end if
       call excited_states_init(target%est, target%st, "oct-excited-state-target") 
 
-    case(oct_tg_gstransformation, oct_tg_exclude_state)  
+    case(oct_tg_exclude_state)
 
-      if(target%type .eq. oct_tg_gstransformation) then
-        message(1) =  'Info: Using Superposition of States for TargetOperator'
-        call write_info(1)
-      else
-        message(1) =  'Info: The target functional is the exclusion of the state defined in'
-        message(2) =  '      block "OCTTargetTransformStates".'
-        call write_info(2)
-      end if
+      message(1) =  'Info: The target functional is the exclusion of a number of states defined by'
+      message(2) =  '      "OCTExcludeStates".'
+      call write_info(2)
+      target%mode = oct_targetmode_static
+      !%Variable OCTExcludeStates
+      !%Type integer
+      !%Default 1
+      !%Section Optimal Control
+      !%Description
+      !% WARNING: Experimental
+      !%End
+      call loct_parse_int(check_inp('OCTExcludeStates'), 1, target%excluded_states)
+      call restart_look_and_read("tmp", target%st, gr, geo, ierr)
+
+    case(oct_tg_gstransformation)  
+
+      message(1) =  'Info: Using Superposition of States for TargetOperator'
+      call write_info(1)
       target%mode = oct_targetmode_static
 
       !%Variable OCTTargetTransformStates

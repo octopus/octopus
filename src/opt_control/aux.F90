@@ -74,7 +74,10 @@
       j1 = abs(zstates_mpdotp(gr%m, target%est, psi))**2
 
     case(oct_tg_exclude_state)
-      j1 = M_ONE - abs(zstates_mpdotp(gr%m, psi, target%st))**2
+      j1 = zstates_dotp(gr%m, psi%d%dim, psi%zpsi(:, :, 1, 1), psi%zpsi(:, :, 1, 1))
+      do i = 1, target%excluded_states
+        j1 = j1 - abs(zstates_dotp(gr%m, psi%d%dim, target%st%zpsi(:, :, i, 1), psi%zpsi(:, :, 1, 1)))**2
+      end do
 
     case default
       j1 = abs(zstates_mpdotp(gr%m, psi, target%st))**2
@@ -254,11 +257,11 @@
       deallocate(cI, dI, mat, mm, mk, lambda)
 
     case(oct_tg_exclude_state)
-      olap = zstates_mpdotp(gr%m, target%st, psi_in)
-      do ik = 1, psi_in%d%nik
-        do p  = psi_in%st_start, psi_in%st_end
-          chi_out%zpsi(:, :, p, ik) = psi_in%zpsi(:, :, p, ik) - olap*target%st%zpsi(:, :, p, ik)
-        end do
+
+      chi_out%zpsi(:, :, 1, 1) = psi_in%zpsi(:, :, 1, 1)
+      do p = 1, target%excluded_states
+        olap = zstates_dotp(gr%m, psi_in%d%dim, target%st%zpsi(:, :, p, 1), psi_in%zpsi(:, :, 1, 1))
+        chi_out%zpsi(:, :, 1, 1) = chi_out%zpsi(:, :, 1, 1) - olap*target%st%zpsi(:, :, p, 1)
       end do
 
     case default
