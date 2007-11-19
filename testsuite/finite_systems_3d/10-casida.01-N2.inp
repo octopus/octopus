@@ -3,8 +3,6 @@
 
 DebugLevel = 0
 
-SystemName = "N2"
-
 %CalculationMode
 gs | unocc | casida
 "ground_state_" |  "unocc_states_" | "lrtddft_"

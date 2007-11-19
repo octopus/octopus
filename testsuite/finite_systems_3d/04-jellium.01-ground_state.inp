@@ -8,9 +8,6 @@
 # [W. Ekardt, Phys. Rev. B 29, 1558 (1984)].
 # 
 
-DebugLevel = 0
-
-SystemName = "jellium"
 CalculationMode = gs
 Units = "a.u"
 FromScratch = yes

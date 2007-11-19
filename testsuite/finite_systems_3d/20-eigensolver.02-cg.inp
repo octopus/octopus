@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 # $Id$
 
-SystemName = "SiH4"
 Units = "eVA"
 
 CalculationMode = gs
@@ -25,3 +24,5 @@ EigenSolver = cg
 EigenSolverMaxiter = 25
 EigenSolverInitTolerance = 1e-2
 EigenSolverFinalTolerance = 1e-5
+
+ParallelizationStrategy = par_domains

@@ -1,7 +1,5 @@
 FromScratch=yes
 
-SystemName = "C6H6"
-
 CalculationMode = td
 
 %Coordinates

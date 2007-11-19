@@ -6,7 +6,7 @@ Author     : Alberto
 Date       : 06.06.07
 Arch       : Linux appartment 2.6.18-4-686 
 Release    : 2.2.0pre1
-Programs   : octopus
+Programs   : octopus; octopus_mpi
 TestGroups : short-run
 Enabled    : Yes
 

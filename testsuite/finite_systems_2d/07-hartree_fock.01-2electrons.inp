@@ -1,6 +1,5 @@
 DebugLevel = 0
 
-SystemName = "qd"
 CalculationMode = gs
 FromScratch = yes
 Dimensions = 2

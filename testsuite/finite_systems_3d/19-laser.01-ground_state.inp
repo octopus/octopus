@@ -1,9 +1,7 @@
 # -*- coding: utf-8 mode: shell-script -*-
 # $Id:  $
 
-SystemName = "Na2"
 CalculationMode = gs
-Units = "a.u"
 FromScratch = yes
 
 bondlength = 1.7/0.529177
@@ -32,4 +30,6 @@ EigenSolverMaxIter = 200
 
 TypeOfMixing = linear
 Mixing = 1.0
+
+ParallelizationStrategy=par_domains
 

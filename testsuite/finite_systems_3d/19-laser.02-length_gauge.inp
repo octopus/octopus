@@ -1,9 +1,7 @@
 # -*- coding: utf-8 mode: shell-script -*-
 # $Id:  $
 
-SystemName = "Na2"
 CalculationMode = td
-Units = "a.u"
 FromScratch = yes
 
 bondlength = 1.7/0.529177

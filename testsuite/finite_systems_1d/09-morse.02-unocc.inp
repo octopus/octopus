@@ -1,7 +1,4 @@
-SystemName = "Morse-OH"
-
 CalculationMode = unocc
-Units = "a.u"
 FromScratch = yes
 
 NumberUnoccStates = 6

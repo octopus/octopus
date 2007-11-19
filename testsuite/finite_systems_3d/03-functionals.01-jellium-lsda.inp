@@ -18,9 +18,6 @@
 
 # First, we reproduce the LSDA results for Li, 8 electrons.
 
-DebugLevel = 0
-
-SystemName = "jellium"
 CalculationMode = gs
 Units = "a.u"
 FromScratch = yes

@@ -7,9 +7,6 @@
 # This adds the Hartree interaction in 2D to the previous particle in a box example.
 # To make it more meaninful, it uses two electrons.
 
-DebugLevel = 0
-
-SystemName = "qd"
 CalculationMode = gs
 FromScratch = yes
 Dimensions = 2

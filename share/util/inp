@@ -1,5 +1,4 @@
 verbose = 30
-SystemName = "C"
 CalculationMode = 1
 Units = "eVA"
 

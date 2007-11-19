@@ -6,9 +6,6 @@
 
 # This input file is just the particle in a box in 2D calculation.
 
-DebugLevel = 0
-
-SystemName = "qd"
 CalculationMode = gs
 FromScratch = yes
 Dimensions = 2

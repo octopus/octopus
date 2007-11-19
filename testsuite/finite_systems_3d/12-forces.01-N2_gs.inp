@@ -1,10 +1,6 @@
 # -*- coding: utf-8 mode: shell-script -*-
 # $Id$
 
-DebugLevel = 0
-
-SystemName = "N2"
-
 CalculationMode = gs
 FromScratch = yes
 
@@ -29,8 +25,6 @@ EigenSolverInitTolerance = 1e-2
 EigenSolverFinalTolerance = 1e-4
 EigenSolverFinalToleranceIteration = 6
 EigenSolverMaxIter = 20
-
-TypeOfMixing = broyden
 
 PoissonSolver = fft_corrected
 

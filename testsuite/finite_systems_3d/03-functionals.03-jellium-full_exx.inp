@@ -18,9 +18,6 @@
 
 # And finally, full EXX for Li, 8 electrons (restarting from the previous run)
 
-DebugLevel = 0
-
-SystemName = "jellium"
 CalculationMode = gs
 Units = "a.u"
 FromScratch = no

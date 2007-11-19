@@ -15,9 +15,6 @@
 # Soc. 27, 86 (1930)]
 # 
 
-DebugLevel = 0
-
-SystemName = "qd"
 CalculationMode = gs
 FromScratch = yes
 Dimensions = 2

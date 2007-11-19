@@ -1,7 +1,4 @@
-SystemName = "Morse-OH"
-
 CalculationMode = gs
-Units = "a.u"
 FromScratch = yes
 
 Dimensions = 1

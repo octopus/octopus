@@ -57,3 +57,4 @@ OutputHow = axis_y
 
 PoissonSolverThreshold = 1.0e-7
 
+ParallelizationStrategy=par_domains

@@ -7,7 +7,6 @@
 # octopus (using LDA) gives the converged value chi_total=-160. To obtain it, just decrease
 # the spacing and increase slightly the box radius.
 
-SystemName = 'H2O'
 CalculationMode = pol_lr
 fromScratch = yes
 

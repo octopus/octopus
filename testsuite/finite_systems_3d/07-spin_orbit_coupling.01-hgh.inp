@@ -38,3 +38,4 @@ GuessMagnetDensity = user_defined
  0.0 | 0.0 | 1.0
 %
 
+ParallelizationStrategy=par_domains
