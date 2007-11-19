@@ -301,11 +301,12 @@ contains
     
   end subroutine ps_init
 
-  subroutine ps_separate(ps, spacing)
+  subroutine ps_separate(ps, spacing, separate_vion)
     type(ps_t),        intent(out) :: ps
     FLOAT,             intent(in)  :: spacing
+    logical,           intent(in)  :: separate_vion
 
-    FLOAT, allocatable :: vsr(:), vlr(:), nlr(:)
+    FLOAT, allocatable :: vsr(:), vlr(:), nlr(:), vion(:)
     FLOAT :: r
     integer :: ii
     
@@ -317,12 +318,17 @@ contains
     ALLOCATE(vsr(ps%g%nrval), ps%g%nrval)
     ALLOCATE(vlr(ps%g%nrval), ps%g%nrval)
     ALLOCATE(nlr(ps%g%nrval), ps%g%nrval)
+    ALLOCATE(vion(ps%g%nrval), ps%g%nrval)
     
     vlr(1) = -ps%z_val*M_TWO/(sqrt(M_TWO*M_PI)*ps%sigma_erf)
-    
+    vion(1) = M_ZERO
+
     do ii = 1, ps%g%nrval
       r = ps%g%rofi(ii)
-      if ( ii > 1) vlr(ii) = -ps%z_val*loct_erf(r/(ps%sigma_erf*sqrt(M_TWO)))/r
+      if ( ii > 1) then
+        vlr(ii)  = -ps%z_val*loct_erf(r/(ps%sigma_erf*sqrt(M_TWO)))/r
+        vion(ii) = -ps%z_val/r - vlr(ii)
+      end if
       vsr(ii) = loct_splint(ps%vl, r) - vlr(ii)
       nlr(ii) = -ps%z_val*M_ONE/(ps%sigma_erf*sqrt(M_TWO*M_PI))**3*exp(-M_HALF*r**2/ps%sigma_erf**2)
     end do
@@ -342,7 +348,13 @@ contains
     call loct_spline_3dft(ps%vl, ps%vlocal_f, CNST(50.0))
     call loct_spline_times(CNST(1.0)/(M_FOUR*M_PI), ps%vlocal_f)
     
-    deallocate(vsr, vlr, nlr)
+    if(separate_vion) then
+      call loct_spline_end(ps%vion)
+      call loct_spline_init(ps%vion)
+      call loct_spline_fit(ps%g%nrval, ps%g%rofi, vion, ps%vion)
+    end if
+
+    deallocate(vsr, vlr, nlr, vion)
     
   end subroutine ps_separate
   

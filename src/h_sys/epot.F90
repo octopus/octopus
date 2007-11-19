@@ -40,6 +40,7 @@ module external_pot_m
   use ps_m
   use specie_m
   use specie_pot_m
+  use solids_m
   use geometry_m
   use states_m
   use submesh_m
@@ -432,7 +433,7 @@ contains
     if (present(time)) time_ = time
 
     ! first we assume that we need to recalculate the ion_ion energy
-    geo%eii = ion_ion_energy(geo)
+    geo%eii = ion_ion_energy(sb, geo)
 
     ! Local.
     ep%vpsl = M_ZERO
@@ -739,12 +740,14 @@ contains
   end subroutine epot_forces
 
   ! ---------------------------------------------------------
-  FLOAT function ion_ion_energy(geo)
-    type(geometry_t), target, intent(in) :: geo
+  FLOAT function ion_ion_energy(sb, geo)
+    type(simul_box_t), target, intent(in) :: sb
+    type(geometry_t),  target, intent(in) :: geo
 
     type(specie_t), pointer :: s
-    FLOAT :: r
-    integer :: i, j
+    FLOAT :: r, rc, xi(1:MAX_DIM)
+    integer :: iatom, jatom, icopy, jcopy
+    type(periodic_copy_t), allocatable :: pc(:)
 
     ! Note that a possible jellium-jellium interaction (the case where more
     ! than one jellium species is present) is not properly calculated.
@@ -753,22 +756,78 @@ contains
     ! analytical expression for the electrostatic energy of a system of two
     ! uniformly charged spheres.
     ion_ion_energy = M_ZERO
-    do i = 1, geo%natoms
-      s => geo%atom(i)%spec
-      if(s%type .eq. SPEC_JELLI) then
-        ion_ion_energy = ion_ion_energy + (M_THREE/M_FIVE)*s%z_val**2/s%jradius
-      end if
 
-      do j = 1, i - 1
-        r = sqrt(sum((geo%atom(i)%x - geo%atom(j)%x)**2))
-        if (specie_is_ps(geo%atom(j)%spec)) then
-          ion_ion_energy = ion_ion_energy + (-s%z_val)*loct_splint(geo%atom(j)%spec%ps%vion, r)
-        else
-          ion_ion_energy = ion_ion_energy + s%z_val*geo%atom(j)%spec%z_val/r
+    if(.not. simul_box_is_periodic(sb)) then
+
+      do iatom = 1, geo%natoms
+        s => geo%atom(iatom)%spec
+        if(s%type .eq. SPEC_JELLI) then
+          ion_ion_energy = ion_ion_energy + (M_THREE/M_FIVE)*s%z_val**2/s%jradius
         end if
+        
+        do jatom = 1, iatom - 1
+          r = sqrt(sum((geo%atom(iatom)%x - geo%atom(jatom)%x)**2))
+          if (specie_is_ps(geo%atom(jatom)%spec)) then
+            ion_ion_energy = ion_ion_energy + (-s%z_val)*loct_splint(geo%atom(jatom)%spec%ps%vion, r)
+          else
+            ion_ion_energy = ion_ion_energy + s%z_val*geo%atom(jatom)%spec%z_val/r
+          end if
+        end do
+        
       end do
 
-    end do
+    else
+      
+      ! In the periodic case we have to sum over all copies. As the
+      ! interaction is short range (it is separated) this sum is
+      ! finite.
+      !
+      ! We do an all to all calculation, because an atom can interact
+      ! with its image, and then we divide by two.
+
+      ALLOCATE(pc(1:geo%natoms), geo%natoms)
+
+      do iatom = 1, geo%natoms
+        s => geo%atom(iatom)%spec
+        if (.not. specie_is_ps(s)) cycle
+        rc = loct_spline_cutoff_radius(s%ps%vion, s%ps%projectors_sphere_threshold)
+        call periodic_copy_init(pc(iatom), sb, geo%atom(iatom)%x, rc)
+      end do
+
+      do iatom = 1, geo%natoms
+        s => geo%atom(iatom)%spec
+        if (.not. specie_is_ps(s)) cycle
+
+        do icopy = 1, periodic_copy_num(pc(iatom))
+          xi = periodic_copy_position(pc(iatom), sb, icopy)
+
+          do jatom = 1, geo%natoms
+            if (.not. specie_is_ps(geo%atom(jatom)%spec)) cycle
+
+            do jcopy = 1, periodic_copy_num(pc(jatom))
+
+              if ( iatom /= jatom .or. icopy /= jcopy ) then
+                r = sqrt( sum( (xi - periodic_copy_position(pc(jatom), sb, jcopy))**2 ) )
+                ion_ion_energy = ion_ion_energy + (-s%z_val)*loct_splint(geo%atom(jatom)%spec%ps%vion, r)
+              end if
+
+            end do
+          end do
+
+        end do
+      end do
+
+      ion_ion_energy = ion_ion_energy * M_HALF
+
+      do iatom = 1, geo%natoms
+        s => geo%atom(iatom)%spec
+        if (.not. specie_is_ps(s)) cycle
+        call periodic_copy_end(pc(iatom))
+      end do
+
+      deallocate(pc)
+
+    end if
 
   end function ion_ion_energy
 

@@ -821,13 +821,13 @@ contains
     if(sb%periodic_dim > 0 .or. sb%box_shape == PARALLELEPIPED) then
       write(message(1),'(1x)')
       write(message(2),'(a,3a,a)') '  Lattice Vectors [', trim(units_out%length%abbrev), ']'
-      write(message(3),'(3f12.6)')   sb%rlattice(:,1)/units_out%length%factor
-      write(message(4),'(3f12.6)')   sb%rlattice(:,2)/units_out%length%factor
-      write(message(5),'(3f12.6)')   sb%rlattice(:,3)/units_out%length%factor
+      write(message(3),'(3f12.6)')   sb%rlattice(:,1)*sb%lsize(1)/units_out%length%factor
+      write(message(4),'(3f12.6)')   sb%rlattice(:,2)*sb%lsize(2)/units_out%length%factor
+      write(message(5),'(3f12.6)')   sb%rlattice(:,3)*sb%lsize(3)/units_out%length%factor
       write(message(6),'(a,3a,a)') '  Reciprocal Lattice Vectors [', trim(units_out%length%abbrev), '^-1]'
-      write(message(7),'(3f12.6)')   sb%klattice_unitary(:,1)/units_out%length%factor
-      write(message(8),'(3f12.6)')   sb%klattice_unitary(:,2)/units_out%length%factor
-      write(message(9),'(3f12.6)')   sb%klattice_unitary(:,3)/units_out%length%factor
+      write(message(7),'(3f12.6)')   sb%klattice(:,1)/units_out%length%factor
+      write(message(8),'(3f12.6)')   sb%klattice(:,2)/units_out%length%factor
+      write(message(9),'(3f12.6)')   sb%klattice(:,3)/units_out%length%factor
       write(message(10),'(a,f12.6,3a)') &
         '  Volume element = ', sb%volume_element/units_out%length%factor, &
         ' [', trim(units_out%length%abbrev), ']'
