@@ -30,5 +30,4 @@ EigenSolverFinalTolerance = 1.0e-6
 EigenSolverMaxIter = 1000
 
 Mixing = 0.1
-TypeOfMixing = broyden
 What2Mix = potential

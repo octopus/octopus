@@ -5,8 +5,6 @@
 
 CalculationMode = gs
 
-FromScratch = no
-
 r_s = 3.28
 N_electrons = 8
 jellium_radius = r_s * (N_electrons)^(1.0/3.0)
@@ -38,7 +36,6 @@ EigenSolverFinalToleranceIteration = 6
 EigenSolverMaxIter = 25
 Preconditioner = no
 
-TypeOfMixing = broyden
 What2Mix = potential
 
 ParallelizationStrategy=par_domains

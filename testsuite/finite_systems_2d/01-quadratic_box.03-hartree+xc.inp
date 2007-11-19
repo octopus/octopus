@@ -44,7 +44,6 @@ EigenSolver = cg
 EigenSolverInitTolerance = 1e-6
 EigenSolverFinalTolerance = 1e-6
 EigenSolverMaxIter = 50
-TypeOfMixing = broyden
 
 PoissonSolver = fft
 

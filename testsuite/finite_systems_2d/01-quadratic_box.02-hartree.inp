@@ -39,11 +39,7 @@ MaximumIter = 200
 ConvAbsDens = 1e-8
 LCAOStart = lcao_full
 
-EigenSolver = cg
-EigenSolverInitTolerance = 1e-6
-EigenSolverFinalTolerance = 1e-6
 EigenSolverMaxIter = 50
-TypeOfMixing = broyden
 
 PoissonSolver = fft
 

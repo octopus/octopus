@@ -2,8 +2,6 @@
 # $Id$
 #
 
-DebugLevel = 0
-
 CalculationMode = td
 
 ParallelizationStrategy = par_states
@@ -15,7 +13,6 @@ BoxShape = sphere
 Spacing = 0.2
 Radius = 50.0
 
-
 XCFunctional = oep_x
 OEP_Level = oep_kli
 
@@ -26,14 +23,5 @@ OEP_Level = oep_kli
 %Coordinates
 "Neon1D" | 0 | 0 | 0
 %
-
-EigenSolverInitTolerance = 1.0e-6
-EigenSolverFinalTolerance = 1.0e-6
-EigenSolverMaxIter = 1000
-
-Mixing = 0.1
-TypeOfMixing = broyden
-What2Mix = potential
-
 
 TDMaximumIter = 10

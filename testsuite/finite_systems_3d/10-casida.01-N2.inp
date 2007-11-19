@@ -42,10 +42,10 @@ EigenSolver = cg_new
 EigenSolverInitTolerance = 1e-2
 EigenSolverFinalTolerance = 1e-5
 EigenSolverFinalToleranceIteration = 6
-EigenSolverMaxIter = 20
-unocc_states_EigenSolverMaxIter = 1000
 
-TypeOfMixing = broyden
+EigenSolverMaxIter = 20
+
+unocc_states_EigenSolverMaxIter = 1000
 
 NumberUnoccStates = 9
 

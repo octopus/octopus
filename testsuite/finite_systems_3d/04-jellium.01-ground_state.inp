@@ -41,6 +41,4 @@ EigenSolverFinalTolerance = 1e-5
 EigenSolverFinalToleranceIteration = 6
 EigenSolverMaxIter = 25
 
-TypeOfMixing = broyden
-
 ParallelizationStrategy=par_domains

@@ -31,7 +31,4 @@ EigenSolverFinalTolerance = 1e-6
 EigenSolverFinalToleranceIteration = 3
 EigenSolverMaxIter = 25
 
-TypeOfMixing = broyden
-Mixing = 0.5
-
 PoissonSolver = cg_corrected

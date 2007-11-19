@@ -25,7 +25,6 @@ EigenSolverInitTolerance = 1.0e-4
 EigenSolverFinalTolerance = 1.0e-4
 EigenSolverMaxIter = 1000
 Mixing = 1.0
-TypeOfMixing = broyden
 
 # P_c is the speed of light in atomic units.
 P_c = 137.036

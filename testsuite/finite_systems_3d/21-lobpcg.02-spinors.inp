@@ -11,7 +11,7 @@ ParallelizationStrategy = par_states
 
 CalculationMode = gs
 fromScratch = yes
-units = "eVA"
+units = ev_angstrom
 
 %Coordinates
 "C" | 0 | 0 | 0
@@ -41,7 +41,5 @@ EigenSolverInitTolerance = 1e-2
 EigenSolverFinalTolerance = 1e-6
 EigenSolverFinalToleranceIteration = 6
 EigenSolverMaxIter = 25
-
-TypeOfMixing = broyden
 
 PoissonSolver = fft_corrected
