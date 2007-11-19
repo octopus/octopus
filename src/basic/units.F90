@@ -76,7 +76,7 @@ module units_m
   
   FLOAT, parameter, public :: hartree_to_cm_inv = 219474.63
 
-  integer, parameter :: UNITS_ATOMIC = 1, UNITS_EVA = 2
+  integer, parameter, public :: UNITS_ATOMIC = 1, UNITS_EVA = 2
 
 contains
 

@@ -1163,9 +1163,9 @@ contains
     ! Figure out about the units of the file
     i = index(line,'eV')
     if(i.ne.0) then
-      call units_get(file_units, 'eVA')
+      call units_get(file_units, UNITS_EVA)
     else
-      call units_get(file_units, 'a.u')
+      call units_get(file_units, UNITS_ATOMIC)
     end if
 
     ! count number of time_steps
