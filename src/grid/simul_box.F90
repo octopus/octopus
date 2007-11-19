@@ -958,6 +958,10 @@ contains
     write(iunit, '(a20,e22.14)')    'fft_alpha=          ', sb%fft_alpha
     write(iunit, '(a20,3e22.14)')   'h=                  ', sb%h(1:3)
     write(iunit, '(a20,3e22.14)')   'box_offset=         ', sb%box_offset(1:3)
+    write(iunit, '(a20,3e22.14)')   'rlattice(1)=        ', sb%rlattice(1:3, 1)
+    write(iunit, '(a20,3e22.14)')   'rlattice(2)=        ', sb%rlattice(1:3, 2)
+    write(iunit, '(a20,3e22.14)')   'rlattice(3)=        ', sb%rlattice(1:3, 3)
+
   end subroutine simul_box_dump
 
 
@@ -966,6 +970,9 @@ contains
     type(simul_box_t), intent(inout) :: sb
     integer,           intent(in)    :: iunit
     character(len=20) :: str
+    integer :: idim, jdim
+    FLOAT :: norm
+
     read(iunit, *) str, sb%box_shape
     read(iunit, *) str, sb%dim
     read(iunit, *) str, sb%periodic_dim
@@ -986,6 +993,23 @@ contains
     read(iunit, *) str, sb%fft_alpha
     read(iunit, *) str, sb%h(1:3)
     read(iunit, *) str, sb%box_offset(1:3)
+    read(iunit, *) str, sb%rlattice(1:3, 1)
+    read(iunit, *) str, sb%rlattice(1:3, 2)
+    read(iunit, *) str, sb%rlattice(1:3, 3)
+
+    do idim = 1, sb%dim
+      norm = lalg_nrm2(sb%dim, sb%rlattice(1:sb%dim, idim))
+      do jdim = 1, sb%dim
+        sb%rlattice(jdim, idim) = sb%rlattice(jdim, idim) / norm
+      end do
+    end do
+
+    call reciprocal_lattice(sb%rlattice, sb%klattice_unitary, sb%volume_element)
+
+    sb%klattice = M_ZERO
+    do idim = 1, sb%periodic_dim
+      sb%klattice(:, idim) = sb%klattice_unitary(:, idim)*M_TWO*M_PI/(M_TWO*sb%lsize(idim))
+    end do
   end subroutine simul_box_init_from_file
 
 

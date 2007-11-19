@@ -337,6 +337,9 @@ contains
     ALLOCATE(st%occ     (st%nst, st%d%nik),      st%nst*st%d%nik)
     ALLOCATE(st%eigenval(st%nst, st%d%nik),      st%nst*st%d%nik)
     ALLOCATE(st%momentum(3, st%nst, st%d%nik), 3*st%nst*st%d%nik)
+    st%occ = M_ZERO
+    st%eigenval = M_ZERO
+    st%momentum = M_ZERO
     ! allocate space for formula strings that define user defined states
     ALLOCATE(st%user_def_states(st%d%dim, st%nst, st%d%nik), st%d%dim*st%nst*st%d%nik)
     if(st%d%ispin == SPINORS) then
