@@ -182,6 +182,8 @@ contains
       iterator%bestJ1_J        = jfunctional
       iterator%bestJ1_fluence  = fluence       
       iterator%bestJ1_ctr_iter = iterator%ctr_iter
+      call parameters_end(iterator%best_par)
+      call parameters_copy(iterator%best_par, par)
     end if
 
     iterator%ctr_iter = iterator%ctr_iter + 1
