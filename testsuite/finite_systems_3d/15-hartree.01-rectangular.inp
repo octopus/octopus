@@ -1,4 +1,4 @@
-Units = "eVA"
+Units = ev_angstrom
 
 %Coordinates
 "Na" | 0.0 | 0.0 |  0.0	| yes

@@ -2,7 +2,7 @@
 # $Id:  $
 
 CalculationMode = td
-Units = "a.u"
+
 FromScratch = yes
 
 bondlength = 1.7/0.529177

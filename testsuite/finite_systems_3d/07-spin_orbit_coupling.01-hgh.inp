@@ -3,7 +3,7 @@
 
 DebugLevel = 0
 
-Units = "eVA"
+Units = ev_angstrom
 
 CalculationMode = gs
 fromScratch = yes

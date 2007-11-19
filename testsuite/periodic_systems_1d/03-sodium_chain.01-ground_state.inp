@@ -1,7 +1,7 @@
 # -*- coding: utf-8 mode: shell-script -*-
 # $Id$
 
-Units = "eVA"
+Units = ev_angstrom
 
 Dimensions = 3
 PeriodicDimensions = 1

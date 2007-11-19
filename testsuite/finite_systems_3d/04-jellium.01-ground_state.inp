@@ -9,7 +9,7 @@
 # 
 
 CalculationMode = gs
-Units = "a.u"
+
 FromScratch = yes
 
 r_s = 4.0

@@ -76,61 +76,67 @@ module units_m
   
   FLOAT, parameter, public :: hartree_to_cm_inv = 219474.63
 
+  integer, parameter :: UNITS_ATOMIC = 1, UNITS_EVA = 2
+
 contains
 
 
   ! ---------------------------------------------------------
   subroutine units_init()
-    character(len=10) :: c
-    character(len=3) :: cinp, cout
+    integer :: c, cinp, cout
 
     call push_sub('units.units_init')
 
     !%Variable Units
-    !%Type string
-    !%Default "a.u"
+    !%Type integer
+    !%Default atomic
     !%Section Generalities::Units
     !%Description
     !% Atomic units seem to be the preferred system in the atomic and
-    !% molecular physics community (despite the opinion of some of the authors
-    !% of this program). Internally, the code works in atomic units. However,
-    !% for input or output, some people like using eV for energies and AA for
-    !% lengths. This other system of units can also be used.
-    !%Option "a.u"
+    !% molecular physics community. Internally, the code works in
+    !% atomic units. However, for input or output, some people likes
+    !% to use a system based in eV for energies and <math>\AA</math>
+    !% for length. The default is atomic units.
+    !%
+    !% Warning 1: All files read on input will also be treated using
+    !% these units, including XYZ geometry files.
+    !%
+    !% Warning 2: Some values are treated in their most common units,
+    !% for example atomic masses (a.m.u.), vibrational frequencies
+    !% (cm^-1) or temperatures (kelvin).
+    !%
+    !%Option atomic        1
     !% Atomic units
-    !%Option "eVA"
-    !% Electron-volts for energy, Angstrom for length.
+    !%Option ev_angstrom   2
+    !% Electron-volts for energy, Angstrom for length, the rest of the
+    !% units are derived from these and <math>hbar=1</math>.
     !%End
 
     !%Variable UnitsInput
-    !%Type string
-    !%Default "a.u"
+    !%Type integer
+    !%Default atomic
     !%Section Generalities::Units
     !%Description
-    !% Same as "Units", but only refers to the values in the input files.  That
-    !% is, if UnitsInput = "eVA", all physical values in the input files
-    !% will be considered to be in eV and Angstroms.
+    !% Same as "Units", but only refers to input values.
     !%End
 
     !%Variable UnitsOutput
-    !%Type string
-    !%Default "a.u"
+    !%Type integer
+    !%Default atomic
     !%Section Generalities::Units
     !%Description
-    !% Same as "Units", but only refers to the values in the output files.  That
-    !% is, if UnitsInput = "eVA", all physical values in the output files
-    !% will be considered to be in eV and Angstroms.
+    !% Same as "Units", but only refers to output values.
     !%End
 
     if(loct_parse_isdef(check_inp('Units')).ne.0) then
-      call loct_parse_string(check_inp('Units'), "a.u", c)
-      cinp = c(1:3)
-      cout = c(1:3)
+      call loct_parse_int(check_inp('Units'), UNITS_ATOMIC, c)
+      cinp = c
+      cout = c
     else
-      call loct_parse_string(check_inp('UnitsInput'), "a.u", c)
-      cinp = c(1:3)
-      call loct_parse_string(check_inp('UnitsOutput'), "a.u", c)
-      cout = c(1:3)
+      call loct_parse_int(check_inp('UnitsInput'), UNITS_ATOMIC, c)
+      cinp = c
+      call loct_parse_int(check_inp('UnitsOutput'), UNITS_ATOMIC, c)
+      cout = c
     end if
 
     call units_get(units_inp, cinp)
@@ -143,13 +149,13 @@ contains
   ! ---------------------------------------------------------
   subroutine units_get(u, c)
     type(unit_system_t), intent(out) :: u
-    character(len=3),    intent(in)  :: c
+    integer,             intent(in)  :: c
 
     select case(c)
-    case ("a.u")
-      call units_atomic(u)
-    case ("eVA")
-      call units_eV_Ang(u)
+    case (UNITS_ATOMIC)
+      call units_init_atomic(u)
+    case (UNITS_EVA)
+      call units_init_eV_Ang(u)
     case default
       call input_error('Units')
     end select
@@ -161,7 +167,7 @@ contains
   ! <output> = [a.u.]/u.unit
 
   ! ---------------------------------------------------------
-  subroutine units_atomic(u)
+  subroutine units_init_atomic(u)
     type(unit_system_t), intent(out) :: u
 
     u%length%abbrev = "b"
@@ -191,11 +197,11 @@ contains
     u%acceleration%abbrev = "bH(2pi/h)^2"
     u%acceleration%name   = "bohr times (Hartree over h bar) squared"
     u%acceleration%factor = M_ONE
-  end subroutine units_atomic
+  end subroutine units_init_atomic
 
 
   ! ---------------------------------------------------------
-  subroutine units_eV_Ang(u)
+  subroutine units_init_eV_Ang(u)
     type(unit_system_t), intent(out) :: u
 
     u%length%abbrev = "A"
@@ -225,7 +231,7 @@ contains
     u%acceleration%abbrev = "AeV(2pi/h)^2"
     u%acceleration%name   = "Angstrom times (electron volt over h bar) squared"
     u%acceleration%factor = u%length%factor/u%time%factor**2
-  end subroutine units_eV_Ang
+  end subroutine units_init_eV_Ang
 
 
   ! ---------------------------------------------------------
@@ -256,10 +262,10 @@ contains
       read(iunit, '(a)', iostat = ios) line
       if(ios.ne.0) exit
       if(index(line,'[A]').ne.0  .or.  index(line,'eV').ne.0) then
-        call units_get(u, 'eVA')
+        call units_get(u, UNITS_EVA)
         call pop_sub(); return
       elseif(index(line,'[b]').ne.0) then
-        call units_get(u, 'a.u')
+        call units_get(u, UNITS_ATOMIC)
         call pop_sub(); return
       end if
     end do

@@ -3,9 +3,8 @@
 # of the sodium dimer.
 # Consult the manual for a brief explanation of the variables.
  
-SystemName = "Na2"
 CalculationMode = gs
-Units = "eVA"
+Units = ev_angstrom
 FromScratch = yes
 
 %Coordinates

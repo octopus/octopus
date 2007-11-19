@@ -4,7 +4,7 @@
 # Now, EXX/KLI for Li, 8 electrons (restarting from the previous run)
 
 CalculationMode = gs
-Units = "a.u"
+
 FromScratch = no
 
 r_s = 3.28

@@ -4,9 +4,8 @@
 # Na2 example, that calculates the ground state.
 # Consult the manual for a brief explanation of the variables.
  
-SystemName = "Na2"
 CalculationMode = td
-Units = "eVA"
+Units = ev_angstrom
 FromScratch = yes
 
 %Coordinates

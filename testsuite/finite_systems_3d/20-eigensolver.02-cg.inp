@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # $Id$
 
-Units = "eVA"
+Units = ev_angstrom
 
 CalculationMode = gs
 FromScratch = yes

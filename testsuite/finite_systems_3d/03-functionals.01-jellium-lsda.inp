@@ -19,7 +19,7 @@
 # First, we reproduce the LSDA results for Li, 8 electrons.
 
 CalculationMode = gs
-Units = "a.u"
+
 FromScratch = yes
 
 r_s = 3.28

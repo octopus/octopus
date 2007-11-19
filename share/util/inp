@@ -1,6 +1,7 @@
 verbose = 30
 CalculationMode = 1
-Units = "eVA"
+
+Units = ev_angstrom
 
 %Species
   "C"  | 12.0107 | 6 | "tm2" | 1 | 1

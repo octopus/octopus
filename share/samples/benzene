@@ -3,9 +3,8 @@
 # of the benzene molecule.
 # Consult the manual for a brief explanation of the variables.
 
-SystemName = "C6H6"
 CalculationMode = gs
-Units = "eVA"
+Units = ev_angstrom
 FromScratch = yes
 
 %Coordinates
