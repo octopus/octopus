@@ -329,7 +329,8 @@ contains
     logical,             intent(out) :: success
     interface
       subroutine func(z, f, jf)
-        FLOAT :: z(:), f(:), jf(:, :)
+        FLOAT, intent(in)  :: z(:)
+        FLOAT, intent(out) :: f(:), jf(:, :)
       end subroutine func
     end interface
 

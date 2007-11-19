@@ -518,7 +518,8 @@ contains
   end subroutine specie_get_density
 
   subroutine func(xin, f, jacobian)
-    FLOAT :: xin(:), f(:), jacobian(:,:)
+    FLOAT, intent(in)  :: xin(:)
+    FLOAT, intent(out) :: f(:), jacobian(:,:)
 
     FLOAT, allocatable :: xrho(:)
     integer :: i, j, dim

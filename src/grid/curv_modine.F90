@@ -71,7 +71,8 @@ contains
 
   ! ---------------------------------------------------------
   subroutine getf2(csi, f, jf)
-    FLOAT :: csi(:), f(:), jf(:, :)
+    FLOAT, intent(in)  :: csi(:)
+    FLOAT, intent(out) :: f(:), jf(:, :)
 
     integer :: i1, j1, i2, j2, index1, index2
     FLOAT :: x(MAX_DIM), chi2(MAX_DIM), rr, dd, dd2
@@ -350,7 +351,8 @@ contains
 
   ! ---------------------------------------------------------
   subroutine getf(y, f, jf)
-    FLOAT :: y(:), f(:), jf(:, :)
+    FLOAT, intent(in)  :: y(:)
+    FLOAT, intent(out) :: f(:), jf(:, :)
 
     call curv_modine_jacobian_inv(sb_p, geo_p, cv_p, y, f, jf)
     f(:) = f(:) - x_p(:)

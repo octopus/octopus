@@ -41,10 +41,11 @@ module xc_functl_m
   ! This adds to the constants defined in lib_xc. But since in that module
   ! the OEP functionals are not included, it is better to put it here.
   integer, public, parameter :: &
-    XC_OEP_X             = 401     ! Exact exchange
+    XC_OEP_X = 901     ! Exact exchange
 
   type xc_functl_t
     integer         :: family            ! LDA, GGA, etc.
+    integer         :: type              ! exchange, correlation, or exchange-correlation
     integer         :: id                ! identifier
 
     integer         :: spin_channels     ! XC_UNPOLARIZED | XC_POLARIZED
@@ -64,6 +65,7 @@ contains
     integer,           intent(in)  :: spin_channels
 
     functl%family = 0
+    functl%type   = 0
     functl%id     = 0
     functl%spin_channels = spin_channels
 
@@ -123,6 +125,8 @@ contains
     integer :: j
     FLOAT :: alpha
 
+    call push_sub('xc_functl.xc_functl_init_exchange')
+
     ! initialize structure
     call xc_functl_init(functl, spin_channels)
 
@@ -136,7 +140,7 @@ contains
         if(functl%id == XC_OEP_X) then
           functl%family = XC_FAMILY_OEP
         else
-          call input_error('XFunctional')
+          call input_error('XCFunctional')
         end if
       end if
     end if
@@ -154,11 +158,23 @@ contains
         call loct_parse_float(check_inp('LB94_threshold'), CNST(1.0e-6), functl%LB94_threshold)
       end if
 
+    case(XC_FAMILY_HYB_GGA)
+      call xc_f90_hyb_gga_init(functl%conf, functl%info, functl%id, spin_channels)
+      
     case(XC_FAMILY_MGGA)
       call xc_f90_mgga_init(functl%conf, functl%info, functl%id, spin_channels)
 
     end select
 
+    if(functl%family == XC_FAMILY_OEP) then
+      functl%type = XC_EXCHANGE
+    else if(functl%family .ne. XC_FAMILY_NONE) then
+      functl%type = xc_f90_info_kind(functl%info)
+    else
+      functl%type = -1
+    end if
+
+    call pop_sub()
   end subroutine xc_functl_init_exchange
 
 
@@ -171,6 +187,8 @@ contains
 
     FLOAT :: alpha
 
+    call push_sub('xc_functl.xc_functl_init_correlation')
+
     ! initialize structure
     call xc_functl_init(functl, spin_channels)
 
@@ -181,7 +199,7 @@ contains
       functl%family = xc_f90_family_from_id(functl%id)
 
       if(functl%family == XC_FAMILY_UNKNOWN) then
-        call input_error('CFunctional')
+        call input_error('XCFunctional')
       end if
     end if
 
@@ -205,11 +223,21 @@ contains
     case(XC_FAMILY_GGA)
       call xc_f90_gga_init(functl%conf, functl%info, functl%id, spin_channels)
 
+    case(XC_FAMILY_HYB_GGA)
+      call xc_f90_hyb_gga_init(functl%conf, functl%info, functl%id, spin_channels)
+
     case(XC_FAMILY_MGGA)
       call xc_f90_mgga_init(functl%conf, functl%info, functl%id, spin_channels)
 
     end select
 
+    if(functl%family.ne.XC_FAMILY_NONE) then
+      functl%type = xc_f90_info_kind(functl%info)
+    else
+      functl%type = -1
+    end if
+
+    call pop_sub()
   end subroutine xc_functl_init_correlation
 
 
@@ -218,10 +246,11 @@ contains
     type(xc_functl_t), intent(inout) :: functl
 
     select case(functl%family)
-    case(XC_FAMILY_LDA);  call xc_f90_lda_end (functl%conf)
-    case(XC_FAMILY_GGA);  call xc_f90_gga_end (functl%conf)
-    case(XC_FAMILY_MGGA); call xc_f90_mgga_end(functl%conf)
-    case(XC_FAMILY_LCA);  call xc_f90_lca_end (functl%conf)
+    case(XC_FAMILY_LDA);      call xc_f90_lda_end     (functl%conf)
+    case(XC_FAMILY_GGA);      call xc_f90_gga_end     (functl%conf)
+    case(XC_FAMILY_HYB_GGA);  call xc_f90_hyb_gga_end (functl%conf)
+    case(XC_FAMILY_MGGA);     call xc_f90_mgga_end    (functl%conf)
+    case(XC_FAMILY_LCA);      call xc_f90_lca_end     (functl%conf)
     end select
 
   end subroutine xc_functl_end
@@ -238,12 +267,18 @@ contains
 
     call push_sub('xc_functl.xc_functl_write_info')
 
-    select case (functl%family)
-    case (XC_FAMILY_LDA, XC_FAMILY_GGA, XC_FAMILY_MGGA, XC_FAMILY_LCA)
-      ! we hapilly call the xc library
+    if(functl%family == XC_FAMILY_OEP) then
+      ! this is handled separately
 
-      i = xc_f90_info_kind(functl%info)
-      select case(i)
+      select case(functl%id)
+      case(XC_OEP_X)
+        write(message(1), '(2x,a)') 'Exchange'
+        write(message(2), '(4x,a)') 'Exact exchange (OEP)'
+        call write_info(2, iunit)
+      end select
+
+    else if(functl%family .ne. XC_FAMILY_NONE) then ! all the other families
+      select case(functl%type)
       case(XC_EXCHANGE)
         write(message(1), '(2x,a)') 'Exchange'
       case(XC_CORRELATION)
@@ -254,10 +289,11 @@ contains
 
       call xc_f90_info_name  (functl%info, s1)
       select case(functl%family)
-        case (XC_FAMILY_LDA);  write(s2,'(a)') "LDA"
-        case (XC_FAMILY_GGA);  write(s2,'(a)') "GGA"
-        case (XC_FAMILY_MGGA); write(s2,'(a)') "MGGA"
-        case (XC_FAMILY_LCA);  write(s2,'(a)') "LCA"
+        case (XC_FAMILY_LDA);      write(s2,'(a)') "LDA"
+        case (XC_FAMILY_GGA);      write(s2,'(a)') "GGA"
+        case (XC_FAMILY_HYB_GGA);  write(s2,'(a)') "Hybrid GGA"
+        case (XC_FAMILY_MGGA);     write(s2,'(a)') "MGGA"
+        case (XC_FAMILY_LCA);      write(s2,'(a)') "LCA"
       end select
       write(message(2), '(4x,4a)') trim(s1), ' (', trim(s2), ')'
       call write_info(2, iunit)
@@ -270,18 +306,7 @@ contains
         call xc_f90_info_ref(functl%info, str, s1)
         i = i + 1
       end do
-
-    case (XC_FAMILY_OEP)
-      ! this is handled separately
-
-      select case(functl%id)
-      case(XC_OEP_X)
-        write(message(1), '(2x,a)') 'Exchange'
-        write(message(2), '(4x,a)') 'Exact exchange (OEP)'
-        call write_info(2, iunit)
-      end select
-
-    end select
+    end if
 
     call pop_sub()
   end subroutine xc_functl_write_info

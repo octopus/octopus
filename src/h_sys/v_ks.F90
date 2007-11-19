@@ -64,8 +64,8 @@ module v_ks_m
 
     integer           :: xc_family  ! the xc stuff
     integer           :: sic_type   ! what kind of Self Interaction Correction to apply
-    type(xc_t)     :: xc
-    type(xc_OEP_t) :: oep
+    type(xc_t)        :: xc
+    type(xc_OEP_t)    :: oep
   end type v_ks_t
 
 
@@ -92,6 +92,8 @@ contains
     !%End
     call loct_parse_int(check_inp('TheoryLevel'), KOHN_SHAM_DFT, ks%theory_level)
     if(.not.varinfo_valid_option('TheoryLevel', ks%theory_level)) call input_error('TheoryLevel')
+    call messages_print_var_option(stdout, "TheoryLevel", ks%theory_level)
+
     call obsolete_variable('NonInteractingElectrons', 'TheoryLevel')
     call obsolete_variable('HartreeFock', 'TheoryLevel')
 
@@ -100,17 +102,25 @@ contains
     select case(ks%theory_level)
     case(INDEPENDENT_PARTICLES)
       ks%ip_app = .true.
-      message(1) = 'Info: Treating the electrons as non-interacting'
-      call write_info(1)
+
     case(HARTREE_FOCK)
       ks%hartree_fock = .true.
-      message(1) = 'Info: Hartree-Fock calculation'
-      call write_info(1)
+
+      ! initilize xc modules
+      call xc_init(ks%xc, NDIM, d%spin_channels, d%cdft)
+      ks%xc_family = ks%xc%family   
+
+      if(iand(ks%xc_family, not(XC_FAMILY_HYB_GGA)).ne.0) then
+        message(1) = "Perhaps with Hartree-Fock you should use a hybrid functional..."
+        call write_warning(1)
+      end if
+
+      call v_ks_write_info(ks, stdout)
+
     case(KOHN_SHAM_DFT)
       ! initilize xc modules
       call xc_init(ks%xc, NDIM, d%spin_channels, d%cdft)
       ks%xc_family = ks%xc%family
-      ks%theory_level = KOHN_SHAM_DFT
 
       ! check for SIC
       if(iand(ks%xc_family, XC_FAMILY_LDA + XC_FAMILY_GGA).ne.0) then
@@ -135,6 +145,8 @@ contains
 
         ! Perdew Zunger corrections
         if(ks%sic_type == sic_pz) ks%xc_family = ior(ks%xc_family, XC_FAMILY_OEP)
+      else
+        ks%sic_type = sic_none
       end if
 
       call xc_oep_init(ks%oep, ks%xc_family, gr, d)
@@ -182,7 +194,6 @@ contains
         call messages_print_var_option(iunit, 'SICCorrection', ks%sic_type)
 
         if(iand(ks%xc_family, XC_FAMILY_OEP).ne.0) then
-          write(iunit, '(1x)')
           call xc_oep_write_info(ks%oep, iunit)
         end if
         call messages_print_stress(iunit)

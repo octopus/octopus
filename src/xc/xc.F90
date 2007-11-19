@@ -33,6 +33,7 @@ module xc_m
   use profiling_m
   use states_m
   use xc_functl_m
+  use varinfo_m
 
   implicit none
 
@@ -53,16 +54,14 @@ module xc_m
 
     integer :: family                   ! the families present
     integer :: kernel_family
-    type(xc_functl_t) :: functl(2,2) ! (1,:) => exchange,    (2,:) => correlation
+    type(xc_functl_t) :: functl(2,2)    ! (1,:) => exchange,    (2,:) => correlation
                                         ! (:,1) => unpolarized, (:,2) => polarized
 
     type(xc_functl_t) :: kernel(2,2)
+    type(xc_functl_t) :: j_functl       ! current-depent part of the functional
 
-    type(xc_functl_t) :: j_functl    ! current-depent part of the functional
-
-    ! the meta-GGA can be implemented in two ways
-    integer :: mGGA_implementation      ! 1 => as a GGA like functional
-                                        ! 2 => using the OEP method
+    FLOAT   :: exx_coef                 ! amount of EXX to add for the hybrids
+    integer :: mGGA_implementation      ! how to implement the MGGAs
   end type xc_t
 
 
@@ -96,6 +95,12 @@ contains
     do i = 1, 2
       call xc_functl_write_info(xcs%functl(i, 1), iunit)
     end do
+
+    if(iand(xcs%family, XC_FAMILY_HYB_GGA).ne.0) then
+      write(message(1), '(1x)')
+      write(message(2), '(a,f8.5)') "Exact exchange mixing = ", xcs%exx_coef
+      call write_info(2, iunit)
+    end if
 
     call pop_sub()
   end subroutine xc_write_info
@@ -141,6 +146,20 @@ contains
       xcs%kernel_family = ior(xcs%kernel_family, xcs%kernel(1,1)%family)
       xcs%kernel_family = ior(xcs%kernel_family, xcs%kernel(2,1)%family)
 
+      ! Take care of hybrid functionals (they appear in the correlation functional)
+      xcs%exx_coef = M_ZERO
+      if(iand(xcs%functl(2,1)%family, XC_FAMILY_HYB_GGA).ne.0) then
+        call xc_f90_hyb_gga_exx_coef(xcs%functl(2,1)%conf, xcs%exx_coef)
+
+        xcs%functl(1,1)%family = XC_FAMILY_OEP
+        xcs%functl(1,1)%id     = XC_OEP_X
+        xcs%family             = ior(xcs%family, XC_FAMILY_OEP)
+
+      else if(xcs%functl(1,1)%id == XC_OEP_X) then
+        xcs%exx_coef = M_ONE
+      end if
+
+      ! Now it is time for these current functionals
       if (iand(xcs%family, XC_FAMILY_LCA).ne.0 .and. &
         iand(xcs%family, XC_FAMILY_MGGA + XC_FAMILY_OEP).ne.0) then
         message(1) = "LCA functional can only be used along with LDA or GGA functionals"
@@ -148,13 +167,25 @@ contains
       end if
 
       if(iand(xcs%family, XC_FAMILY_MGGA).ne.0) then
+        !%Variable MGGAimplementation
+        !%Type integer
+        !%Default mgga_gea
+        !%Section Hamiltonian::XC
+        !%Description
+        !% Decides how to implement the meta-GGAs (NOT WORKING).
+        !%Option mgga_dphi 1
+        !% Use for <math>v_xc</math> the derivative of the energy functional with respect
+        !% to <math>\phi^*(r)</math>. This is the approach used in most quantum chemistry
+        !% (and not only) programs
+        !%Option mgga_gea 2
+        !% Use gradient expansion (GEA) of the kinetic energy density
+        !%Option mgga_oep 3
+        !% Use the OEP equation to obtain the xc potential. This is the "correct" way
+        !% to do it within DFT
+        !%End
         call loct_parse_int(check_inp('MGGAimplementation'), 1, xcs%mGGA_implementation)
-        if(xcs%mGGA_implementation.ne.1.and.xcs%mGGA_implementation.ne.2) then
-          message(1) = 'MGGAimplementation can only assume the values:'
-          message(2) = '  1 : GEA implementation'
-          message(3) = '  2 : OEP implementation'
-          call write_fatal(3)
-        end if
+        if(.not.varinfo_valid_option('MGGAimplementation', xcs%mGGA_implementation)) &
+          call input_error('xcs%mGGA_implementation')
       end if
 
     end if
@@ -184,58 +215,6 @@ contains
       !% Defines the exchange and correlation functionals
       !%Option lda_x 1
       !% LDA: Slater exchange
-      !%Option gga_x_pbe 101
-      !% GGA: Perdew, Burke & Ernzerhof
-      !%Option gga_x_pbe_r 102
-      !% GGA: Perdew, Burke & Ernzerhof (revised)
-      !%Option gga_x_pbe_sol 116
-      !% GGA: Perdew, Burke & Ernzerhof (solids)
-      !%Option gga_x_rpbe 117
-      !% GGA: Hammer, Hansen & Norskov (PBE-like)
-      !%Option gga_x_wc 118
-      !% GGA:  Wu & Cohen
-      !%Option gga_x_b86 103
-      !% GGA: Becke 86 Xalpha,beta,gamma
-      !%Option gga_x_b86_r 104
-      !% GGA: Becke 86 Xalpha,beta,gamma reoptimized
-      !%Option gga_x_b86_mgc 105
-      !% GGA: Becke 86 Xalpha,beta,gamma (with mod. grad. correction)
-      !%Option gga_x_b88 106
-      !% GGA: Becke 88
-      !%Option gga_x_g96 107
-      !% GGA: Gill 96
-      !%Option gga_x_pw86 108
-      !% GGA: Perdew & Wang 86
-      !%Option gga_x_pw91 109
-      !% GGA: Perdew & Wang 91
-      !%Option gga_x_optx 110
-      !% GGA: Handy & Cohen OPTX 01
-      !%Option gga_xc_dk87_r1 111
-      !% GGA: dePristo & Kress 87 (version R1)
-      !%Option gga_xc_dk87_r2 112
-      !% GGA: dePristo & Kress 87 (version R2)
-      !%Option gga_xc_ft97_a 114
-      !% GGA: Filatov & Thiel 97 (version A)
-      !%Option gga_xc_ft97_b 115
-      !% GGA: Filatov & Thiel 97 (version B)
-      !%Option gga_xc_lb 160
-      !% GGA: van Leeuwen & Baerends (xc)
-      !%Option gga_xc_hcth_93 161
-      !% GGA: HCTH fit to 93 molecules (xc)
-      !%Option gga_xc_hcth_120 162
-      !% GGA: HCTH fit to 120 molecules (xc)
-      !%Option gga_xc_hcth_147 163
-      !% GGA: HCTH fit to 147 molecules (xc)
-      !%Option gga_xc_hcth_407 164
-      !% GGA: HCTH fit to 407 molecules (xc)
-      !%Option gga_xc_edf1 165
-      !% GGA: Empirical functional from Adamson, Gill, and Pople
-      !%Option gga_xc_xlyp 166
-      !% GGA: Empirical functional from Xu and Goddard
-      !%Option mgga_x_tpss 201
-      !% MGGA (not working)
-      !%Option oep_x 401
-      !% OEP: Exact exchange
       !%Option lda_c_wigner 2000
       !% LDA: Wigner parametrization
       !%Option lda_c_rpa 3000
@@ -265,6 +244,32 @@ contains
       !% LDA: Ortiz & Ballone (PW-type parametrization)
       !%Option lda_c_amgb 15000
       !% LDA: Attacalite et al functional for the 2D electron gas
+      !%Option gga_x_pbe 101
+      !% GGA: Perdew, Burke & Ernzerhof
+      !%Option gga_x_pbe_r 102
+      !% GGA: Perdew, Burke & Ernzerhof (revised)
+      !%Option gga_x_pbe_sol 116
+      !% GGA: Perdew, Burke & Ernzerhof (solids)
+      !%Option gga_x_rpbe 117
+      !% GGA: Hammer, Hansen & Norskov (PBE-like)
+      !%Option gga_x_wc 118
+      !% GGA:  Wu & Cohen
+      !%Option gga_x_b86 103
+      !% GGA: Becke 86 Xalpha,beta,gamma
+      !%Option gga_x_b86_r 104
+      !% GGA: Becke 86 Xalpha,beta,gamma reoptimized
+      !%Option gga_x_b86_mgc 105
+      !% GGA: Becke 86 Xalpha,beta,gamma (with mod. grad. correction)
+      !%Option gga_x_b88 106
+      !% GGA: Becke 88
+      !%Option gga_x_g96 107
+      !% GGA: Gill 96
+      !%Option gga_x_pw86 108
+      !% GGA: Perdew & Wang 86
+      !%Option gga_x_pw91 109
+      !% GGA: Perdew & Wang 91
+      !%Option gga_x_optx 110
+      !% GGA: Handy & Cohen OPTX 01
       !%Option gga_c_pbe 130000
       !% GGA: Perdew, Burke & Ernzerhof correlation
       !%Option gga_c_pbe_sol 133000
@@ -273,8 +278,42 @@ contains
       !% GGA: Lee, Yang, & Parr LDA
       !%Option lda_c_p86 132000
       !% GGA: Perdew 86
-      !%Option gga_c_pw91 134
+      !%Option gga_c_pw91 134000
       !% GGA: Perdew & Wang 91
+      !%Option gga_xc_dk87_r1 111
+      !% GGA: dePristo & Kress 87 (version R1)
+      !%Option gga_xc_dk87_r2 112
+      !% GGA: dePristo & Kress 87 (version R2)
+      !%Option gga_xc_ft97_a 114
+      !% GGA: Filatov & Thiel 97 (version A)
+      !%Option gga_xc_ft97_b 115
+      !% GGA: Filatov & Thiel 97 (version B)
+      !%Option gga_xc_lb 160
+      !% GGA: van Leeuwen & Baerends (xc)
+      !%Option gga_xc_hcth_93 161
+      !% GGA: HCTH fit to 93 molecules (xc)
+      !%Option gga_xc_hcth_120 162
+      !% GGA: HCTH fit to 120 molecules (xc)
+      !%Option gga_xc_hcth_147 163
+      !% GGA: HCTH fit to 147 molecules (xc)
+      !%Option gga_xc_hcth_407 164
+      !% GGA: HCTH fit to 407 molecules (xc)
+      !%Option gga_xc_edf1 165
+      !% GGA: Empirical functional from Adamson, Gill, and Pople
+      !%Option gga_xc_xlyp 166
+      !% GGA: Empirical functional from Xu and Goddard
+      !%Option hyb_gga_xc_b3pw91 401000
+      !% Hybrid (GGA): the first hybrid by Becke
+      !%Option hyb_gga_xc_b3lyp 402000
+      !% Hybrid (GGA): The (in)famous B3LYP
+      !%Option hyb_gga_xc_b3p86 403000
+      !% Hybrid (GGA): Perdew 86 hybrid similar to B3PW91
+      !%Option hyb_gga_xc_o3lyp 404000
+      !% Hybrid (GGA): Hybrid using the optx functional
+      !%Option mgga_x_tpss 201
+      !% MGGA (not working)
+      !%Option oep_x 901
+      !% OEP: Exact exchange
       !%Option mgga_c_tpss 202000
       !% MGGA (not working)
       !%End

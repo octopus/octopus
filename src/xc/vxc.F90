@@ -46,7 +46,8 @@ subroutine xc_get_vxc(gr, xcs, rho, ispin, vxc, ex, ec, ip, qtot)
   end if
 
   ! is there anything to do ?
-  if(iand(xcs%family, XC_FAMILY_LDA + XC_FAMILY_GGA + XC_FAMILY_MGGA) == 0) then
+  jj = XC_FAMILY_LDA + XC_FAMILY_GGA + XC_FAMILY_HYB_GGA + XC_FAMILY_MGGA
+  if(iand(xcs%family, jj) == 0) then
     call pop_sub()
     return
   end if
@@ -54,7 +55,7 @@ subroutine xc_get_vxc(gr, xcs, rho, ispin, vxc, ex, ec, ip, qtot)
   call profiling_in(C_PROFILING_XC_LOCAL)
 
   ! initialize a couple of handy variables
-  gga           = iand(xcs%family, XC_FAMILY_GGA).ne.0
+  gga           = iand(xcs%family, XC_FAMILY_GGA + XC_FAMILY_HYB_GGA).ne.0
   mgga          = iand(xcs%family, XC_FAMILY_MGGA).ne.0
 
   ! This is a bit ugly (why functl(1) and not functl(2)?, but for the moment it works.
@@ -90,13 +91,15 @@ subroutine xc_get_vxc(gr, xcs, rho, ispin, vxc, ex, ec, ip, qtot)
           call mesh_r(gr%m, jj, r)
           call xc_f90_gga_lb_modified(functl(ixc)%conf, l_dens(1), l_sigma(1), &
             r, l_dedd(1))
-
-          e        = M_ZERO
-          l_vsigma = M_ZERO
+          e = M_ZERO; l_vsigma = M_ZERO
         else
           call xc_f90_gga(functl(ixc)%conf, l_dens(1), l_sigma(1), &
             e, l_dedd(1), l_vsigma(1))
         end if
+
+      case(XC_FAMILY_HYB_GGA)
+        call xc_f90_hyb_gga(functl(ixc)%conf, l_dens(1), l_sigma(1), &
+          e, l_dedd(1), l_vsigma(1))
 
       case(XC_FAMILY_MGGA)
         message(1) = 'Meta-GGAs are currently disabled.'
@@ -108,8 +111,7 @@ subroutine xc_get_vxc(gr, xcs, rho, ispin, vxc, ex, ec, ip, qtot)
         cycle
       end select
 
-      if(functl(ixc)%id==XC_LDA_X.or.functl(ixc)%id==XC_GGA_X_PBE.or.&
-        functl(ixc)%id==XC_MGGA_X_TPSS) then
+      if(functl(ixc)%type == XC_EXCHANGE) then
         ex_per_vol(jj) = ex_per_vol(jj) + sum(l_dens(1:spin_channels)) * e
       else
         ec_per_vol(jj) = ec_per_vol(jj) + sum(l_dens(1:spin_channels)) * e
@@ -118,7 +120,7 @@ subroutine xc_get_vxc(gr, xcs, rho, ispin, vxc, ex, ec, ip, qtot)
       ! store results
       dedd(jj,1:spin_channels) = dedd(jj,1:spin_channels) + l_dedd(1:spin_channels)
 
-      if(functl(ixc)%family==XC_FAMILY_GGA .or. functl(ixc)%family==XC_FAMILY_MGGA) then
+      if(gga.or.mgga) then
         dedgd(jj,:,1) = dedgd(jj,:,1) + M_TWO*l_vsigma(1)*gdens(jj,:,1)
         if(ispin == SPIN_POLARIZED) then
           dedgd(jj,:,1) = dedgd(jj,:,1) + l_vsigma(2)*gdens(jj,:,2)
@@ -126,7 +128,7 @@ subroutine xc_get_vxc(gr, xcs, rho, ispin, vxc, ex, ec, ip, qtot)
         end if
       end if
 
-      if(functl(ixc)%family==XC_FAMILY_MGGA) then
+      if(functl(ixc)%family == XC_FAMILY_MGGA) then
         ! dedtau(jj,:)   = dedtau(jj,:)   + l_dedtau(:)
       end if
 

@@ -66,7 +66,7 @@ subroutine X(xc_oep_calc)(oep, xcs, apply_sic_pz, gr, h, st, vxc, ex, ec)
       select case(xcs%functl(ixc,1)%id)
       case(XC_OEP_X)
         call X(oep_x) (gr, st, is, oep, e)
-        ex = ex + e
+        ex = ex + xcs%exx_coef*e
       end select
     end do functl_loop
 
@@ -105,7 +105,8 @@ subroutine X(xc_oep_calc)(oep, xcs, apply_sic_pz, gr, h, st, vxc, ex, ec)
       call X(xc_oep_solve)(gr, h, st, is, vxc(:,is), oep)
     end if
 
-    vxc(1:NP, is) = vxc(1:NP, is) + oep%vxc(1:NP)
+    ! we multiply the exx_coef to take into account hybrids
+    vxc(1:NP, is) = vxc(1:NP, is) + xcs%exx_coef*oep%vxc(1:NP)
   end do spin
 
   deallocate(oep%eigen_type, oep%eigen_index, oep%X(lxc), oep%uxc_bar)

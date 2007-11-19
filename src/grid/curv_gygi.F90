@@ -118,10 +118,10 @@ contains
   ! ---------------------------------------------------------
   subroutine curv_gygi_chi2x(sb, geo, cv, chi, x)
     type(simul_box_t), target, intent(in)  :: sb
-    type(geometry_t), target,  intent(in)  :: geo
+    type(geometry_t),  target, intent(in)  :: geo
     type(curv_gygi_t), target, intent(in)  :: cv
-    FLOAT,             intent(in)  :: chi(:)  ! chi(sb%dim)
-    FLOAT,             intent(out) :: x(:)    ! x(sb%dim)
+    FLOAT,                     intent(in)  :: chi(:)  ! chi(sb%dim)
+    FLOAT,                     intent(out) :: x(:)    ! x(sb%dim)
 
     ! local variables
     integer :: i
