@@ -99,7 +99,7 @@ contains
       is = 0
       do ip = 1, m%np_part
         r2 = sum((m%x(ip, 1:MAX_DIM) - center(1:MAX_DIM))**2)
-        if(r2 <= (rc + m%h(1))**2 ) then
+        if(r2 <= rc**2 ) then
           is = is + 1
           this%jxyz_inv(ip) = is
         end if

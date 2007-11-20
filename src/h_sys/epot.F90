@@ -453,7 +453,7 @@ contains
 
       ep%atomproj(1, ia) = iproj
       
-      call submesh_init_sphere(nl_sphere, sb, m, atm%x, atm%spec%ps%rc_max)
+      call submesh_init_sphere(nl_sphere, sb, m, atm%x, atm%spec%ps%rc_max + m%h(1))
 
       do l = 0, atm%spec%ps%l_max
         if(atm%spec%ps%l_loc == l) cycle
@@ -478,7 +478,7 @@ contains
       
       call projector_end(ep%p(iproj))
       call submesh_init_sphere(ep%p(iproj)%sphere, &
-        sb, m, atm%x, double_grid_get_rmax(gr%dgrid, atm%spec, m))
+        sb, m, atm%x, double_grid_get_rmax(gr%dgrid, atm%spec, m) + m%h(1))
       call projector_init(ep%p(iproj), atm, force_type = M_LOCAL)
 
       iproj = iproj + 1
