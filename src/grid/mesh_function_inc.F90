@@ -331,6 +331,7 @@ subroutine X(mf_interpolate_points) (mesh_in, u, npoints, x, f)
   integer :: i, j, k
   type(qshep_t) :: interp
   real(8), pointer :: rx(:, :)
+  type(loct_spline_t) :: interp1d
 
   call push_sub('mf_inc.Xmf_interpolate')
 
@@ -363,7 +364,17 @@ subroutine X(mf_interpolate_points) (mesh_in, u, npoints, x, f)
     end do
     call kill_qshep(interp)
   case(1)
-    stop 'Believe it or not, cannot do 1D interpolation, only 2D or 3D.'
+#ifdef R_TCOMPLEX
+    message(1) = 'Believe it or not, cannot do 1D complex interpolation, only 2D or 3D.'
+    call write_fatal(1)
+#else
+    call loct_spline_init(interp1d)
+    call loct_spline_fit(mesh_in%np_global, R_REAL(rx(:, 1)), ru, interp1d)
+    do i = 1, npoints
+      f(i) = loct_splint(interp1d, x(i, 1))
+    end do
+    call loct_spline_end(interp1d)
+#endif
   end select
 #ifdef SINGLE_PRECISION
   deallocate(rx)

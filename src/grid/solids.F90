@@ -72,8 +72,8 @@ contains
     !convert the position to the orthogonal space
     this%pos_chi(1:pd) = matmul(pos(1:pd), sb%klattice_unitary(1:pd, 1:pd))
 
-    this%nbmin = int((this%pos_chi(1:pd) - range)/sb%lsize(1:pd) - 0.5)
-    this%nbmax = int((this%pos_chi(1:pd) + range)/sb%lsize(1:pd) + 0.5)
+    this%nbmin(1:pd) = int((this%pos_chi(1:pd) - range)/sb%lsize(1:pd) - 0.5)
+    this%nbmax(1:pd) = int((this%pos_chi(1:pd) + range)/sb%lsize(1:pd) + 0.5)
 
     !there are no copies in non-periodic directions
     this%nbmin(pd + 1:sb%dim) = 0
