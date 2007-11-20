@@ -143,7 +143,7 @@ contains
       do ip = 1, m%np_part
         do icell = 1, periodic_copy_num(pp)
           r2 = sum((m%x(ip, 1:MAX_DIM) - center_copies(1:MAX_DIM, icell))**2)
-          if(r2 > (rc + m%h(1))**2 ) cycle
+          if(r2 > rc**2 ) cycle
           is = is + 1
         end do
         if (ip == m%np) this%ns = is
@@ -160,7 +160,7 @@ contains
         do icell = 1, periodic_copy_num(pp)
           x(1:MAX_DIM) = m%x(ip, 1:MAX_DIM) - center_copies(1:MAX_DIM, icell)
           r2 = sum(x(1:MAX_DIM)**2)
-          if(r2 > (rc + m%h(1))**2 ) cycle
+          if(r2 > rc**2 ) cycle
           is = is + 1
           this%jxyz(is) = ip
           this%jxyz_inv(ip) = is
