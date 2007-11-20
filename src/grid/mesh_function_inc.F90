@@ -267,55 +267,17 @@ subroutine X(mf_interpolate) (mesh_in, mesh_out, full_interpolation, u, f)
   R_TYPE, target,       intent(in)  :: u(:)    ! u(mesh_in%np_global)
   R_TYPE,               intent(out) :: f(:)    ! f(mesh%np)
 
-  real(8) :: p(MAX_DIM)
   integer :: ix, iy, iz
   R_TYPE, allocatable :: f_global(:)
-  R_DOUBLE, pointer :: ru(:)
   integer :: i, j, k
   type(qshep_t) :: interp
-  real(8), pointer :: rx(:, :)
 
   call push_sub('mf_inc.Xmf_interpolate')
 
   if(full_interpolation) then
-
-#ifdef SINGLE_PRECISION
-    ALLOCATE(rx(1:ubound(mesh_in%x, DIM=1), 1:MAX_DIM), ubound(mesh_in%x, DIM=1)*MAX_DIM)
-    rx = mesh_in%x
-    ALLOCATE(ru(1:ubound(u, DIM=1)), ubound(u, DIM=1))
-    ru = u
-#else
-    rx => mesh_in%x
-    ru => u
-#endif
-
-    select case(mesh_in%sb%dim)
-    case(2)
-      call init_qshep(interp, mesh_in%np_global, ru, rx(:, 1), rx(:, 2))
-      do i = 1, mesh_out%np
-        p(1) = mesh_out%x(i, 1)
-        p(2) = mesh_out%x(i, 2)
-        f(i) = qshep_interpolate(interp, ru, p(1:2))
-      end do
-      call kill_qshep(interp)
-    case(3)
-      call init_qshep(interp, mesh_in%np_global, ru, rx(:, 1), rx(:, 2), rx(:, 3))
-      do i = 1, mesh_out%np
-        p(1) = mesh_out%x(i, 1)
-        p(2) = mesh_out%x(i, 2)
-        p(3) = mesh_out%x(i, 3)
-        f(i) = qshep_interpolate(interp, ru, p)
-      end do
-      call kill_qshep(interp)
-    case(1)
-      stop 'Believe it or not, cannot do 1D interpolation, only 2D or 3D.'
-    end select
-#ifdef SINGLE_PRECISION
-    deallocate(rx)
-    deallocate(ru)
-#endif
+    call X(mf_interpolate_points) (mesh_in, u, mesh_out%np, mesh_out%x, f)
   else
-
+    
     if(mesh_in%parallel_in_domains) then
       ALLOCATE(f_global(mesh_in%np_global), mesh_in%np_global)
 #if defined(HAVE_MPI)
@@ -348,6 +310,68 @@ subroutine X(mf_interpolate) (mesh_in, mesh_out, full_interpolation, u, f)
 
   call pop_sub()
 end subroutine X(mf_interpolate)
+
+
+! --------------------------------------------------------- 
+! this function receives a function u defined in a mesh, and returns
+! in the interpolated values of the function over the npoints defined
+! by x
+
+subroutine X(mf_interpolate_points) (mesh_in, u, npoints, x, f)
+  type(mesh_t),         intent(in)  :: mesh_in
+  R_TYPE, target,       intent(in)  :: u(:)    ! u(mesh_in%np_global)
+  integer,              intent(in)  :: npoints
+  FLOAT,                intent(in)  :: x(:, :)
+  R_TYPE,               intent(out) :: f(:)    ! f(mesh%np)
+
+  real(8) :: p(MAX_DIM)
+  integer :: ix, iy, iz
+  R_TYPE, allocatable :: f_global(:)
+  R_DOUBLE, pointer :: ru(:)
+  integer :: i, j, k
+  type(qshep_t) :: interp
+  real(8), pointer :: rx(:, :)
+
+  call push_sub('mf_inc.Xmf_interpolate')
+
+#ifdef SINGLE_PRECISION
+  ALLOCATE(rx(1:ubound(mesh_in%x, DIM=1), 1:MAX_DIM), ubound(mesh_in%x, DIM=1)*MAX_DIM)
+  rx = mesh_in%x
+  ALLOCATE(ru(1:ubound(u, DIM=1)), ubound(u, DIM=1))
+  ru = u
+#else
+  rx => mesh_in%x
+  ru => u
+#endif
+
+  select case(mesh_in%sb%dim)
+  case(2)
+    call init_qshep(interp, mesh_in%np_global, ru, rx(:, 1), rx(:, 2))
+    do i = 1, npoints
+      p(1) = x(i, 1)
+      p(2) = x(i, 2)
+      f(i) = qshep_interpolate(interp, ru, p(1:2))
+    end do
+    call kill_qshep(interp)
+  case(3)
+    call init_qshep(interp, mesh_in%np_global, ru, rx(:, 1), rx(:, 2), rx(:, 3))
+    do i = 1, npoints
+      p(1) = x(i, 1)
+      p(2) = x(i, 2)
+      p(3) = x(i, 3)
+      f(i) = qshep_interpolate(interp, ru, p)
+    end do
+    call kill_qshep(interp)
+  case(1)
+    stop 'Believe it or not, cannot do 1D interpolation, only 2D or 3D.'
+  end select
+#ifdef SINGLE_PRECISION
+  deallocate(rx)
+  deallocate(ru)
+#endif
+
+  call pop_sub()
+end subroutine X(mf_interpolate_points)
 
 
 ! ---------------------------------------------------------
@@ -594,33 +618,6 @@ subroutine X(mf_put_radial_spline)(m, spl, center, f, add)
   end if
 
 end subroutine X(mf_put_radial_spline)
-
-! This function calculates the x_i moment of the function f
-R_TYPE function X(mf_interpolate_point) (m, f, point) result(val)
-  type(mesh_t), intent(in) :: m
-  R_TYPE,       intent(in) :: f(:)
-  FLOAT,        intent(in) :: point(1:MAX_DIM)
-  
-  integer :: ip, loc
-  FLOAT :: dd, mindd
-
-  call push_sub('mf_inc.Xmf_interpolate_point')
-
-  loc = 0
-  mindd = HUGE(mindd)
-  do ip = 1, m%np
-    dd = sum((m%x(ip, 1:MAX_DIM) - point(1:MAX_DIM))**2)
-    if ( dd < mindd ) then 
-      loc = ip
-      mindd = dd
-    end if
-  end do
-
-  val = f(loc)
-  
-  call pop_sub()
-
-end function X(mf_interpolate_point)
 
 !! Local Variables:
 !! mode: f90

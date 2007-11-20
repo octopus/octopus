@@ -563,7 +563,7 @@ contains
       write(message(2), '(6x,a, f15.8)')'Ion-ion     = ', h%eii      / units_out%energy%factor
       write(message(3), '(6x,a, f15.8)')'Eigenvalues = ', h%eeigen   / units_out%energy%factor
       write(message(4), '(6x,a, f15.8)')'Hartree     = ', h%ehartree / units_out%energy%factor
-      write(message(5), '(6x,a, f15.8)')'Int[n v_xc] = ', h%epot     / units_out%energy%factor
+      write(message(5), '(6x,a, f15.8)')'Int[n*v_xc] = ', h%epot     / units_out%energy%factor
       write(message(6), '(6x,a, f15.8)')'Exchange    = ', h%ex       / units_out%energy%factor
       write(message(7), '(6x,a, f15.8)')'Correlation = ', h%ec       / units_out%energy%factor
       call write_info(7, iunit)

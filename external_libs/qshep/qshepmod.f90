@@ -119,9 +119,9 @@ module qshepmod_m
       allocate(interp%x(npoints))
       allocate(interp%y(npoints))
       allocate(interp%z(npoints))
-      interp%x = x
-      interp%y = y
-      interp%z = z
+      interp%x(1:npoints) = x(1:npoints)
+      interp%y(1:npoints) = y(1:npoints)
+      interp%z(1:npoints) = z(1:npoints)
     end select
 
   end subroutine init_qshepr
