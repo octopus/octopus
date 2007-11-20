@@ -83,7 +83,7 @@ module geometry_m
 
     logical :: only_user_def        ! Do we want to treat only user defined species?
 
-    FLOAT :: eii, kinetic_energy    ! the ion-ion energy
+    FLOAT :: kinetic_energy    ! the ion-ion energy
 
     logical :: nlpp                 ! is any species having non-local pp
     logical :: nlcc                 ! is any species having non-local core corrections?

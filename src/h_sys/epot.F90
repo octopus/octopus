@@ -64,7 +64,6 @@ module external_pot_m
     epot_generate,             &
     epot_generate_gauge_field, &
     epot_forces,               &
-    ion_ion_energy,            &
     dconmut_vnl_r,             &
     zconmut_vnl_r,             &
     build_local_part_in_real_space
@@ -96,6 +95,10 @@ module external_pot_m
     ! The gyromagnetic ratio (-2.0 for the electron, but different if we treat
     ! *effective* electrons in a quantum dot. It affects the spin Zeeman term.
     FLOAT :: gyromagnetic_ratio
+    
+    FLOAT :: eii
+    FLOAT, pointer :: fii(:, :)
+
 #ifdef HAVE_MPI
     logical :: parallel_generate
 #endif
@@ -315,6 +318,8 @@ contains
       end do
     end if
 
+    ALLOCATE(ep%fii(1:MAX_DIM, 1:geo%natoms), MAX_DIM*geo%natoms)
+
     call pop_sub()
   end subroutine epot_init
 
@@ -328,6 +333,8 @@ contains
     integer :: i, iproj
 
     call push_sub('epot.epot_end')
+
+    deallocate(ep%fii)
 
     do i = 1, geo%nspecies
       call specie_pot_end(geo%specie(i), gr)
@@ -441,7 +448,7 @@ contains
     end do
 
     ! we assume that we need to recalculate the ion_ion energy
-    geo%eii = ion_ion_energy(gr, sb, geo, ep%vpsl)
+    call ion_ion_interaction(ep, gr, sb, geo)
 
     ! Local.
     ! the pseudo potential part.
@@ -673,9 +680,9 @@ contains
     time = M_ZERO
     if(present(t)) time = t
 
-    ! init to 0
+    ! the ion-ion term is already calculated
     do i = 1, geo%natoms
-      geo%atom(i)%f = M_ZERO
+      geo%atom(i)%f = ep%fii(:, i)
     end do
     
     if (wfs_are_real(st) ) then 
@@ -693,23 +700,6 @@ contains
       end do
     end if
 #endif
-
-    if(.not.geo%only_user_def) then ! exclude user defined species for the moment
-      ! Now the ion, ion force term
-      do i = 1, geo%natoms
-        zi = geo%atom(i)%spec%Z_val
-        do j = 1, geo%natoms
-          if(i .ne. j) then
-            zj = geo%atom(j)%spec%Z_val
-            r = sqrt(sum((geo%atom(i)%x(1:NDIM) - geo%atom(j)%x(1:NDIM))**2))
-            d = zi * zj/r**3
-
-            geo%atom(i)%f(1:NDIM) = geo%atom(i)%f(1:NDIM) + &
-                 d*(geo%atom(i)%x(1:NDIM) - geo%atom(j)%x(1:NDIM))
-          end if
-        end do
-      end do
-    end if
 
     !TODO: forces due to the magnetic fields (static and time-dependent)
     if(present(t)) then
@@ -743,21 +733,28 @@ contains
   end subroutine epot_forces
 
   ! ---------------------------------------------------------
-  FLOAT function ion_ion_energy(gr, sb, geo, vpsl)
-    type(grid_t),              intent(in) :: gr
-    type(simul_box_t), target, intent(in) :: sb
-    type(geometry_t),  target, intent(in) :: geo
-    FLOAT,                     intent(in) :: vpsl(:)
+  subroutine ion_ion_interaction(ep, gr, sb, geo)
+    type(epot_t),              intent(inout) :: ep
+    type(grid_t),              intent(in)    :: gr
+    type(simul_box_t), target, intent(in)    :: sb
+    type(geometry_t),  target, intent(in)    :: geo
 
     type(specie_t), pointer :: s
-    FLOAT :: r, rc, xi(1:MAX_DIM), charge
+    FLOAT :: r, rc, xi(1:MAX_DIM), charge, dd, zi, zj
     FLOAT, allocatable :: vns(:), vpslc(:), xx(:, :), vxx(:)
     integer :: iatom, jatom, icopy
     type(periodic_copy_t) :: pc
 
     type(profile_t), save :: ion_ion_prof
 
-    call profiling_in(ion_ion_prof, "ION_ION_ENERGY")
+    call profiling_in(ion_ion_prof, "ION_ION_INTERACTION")
+
+    ep%eii = M_ZERO
+    ep%fii = M_ZERO
+
+    ! see
+    ! http://www.tddft.org/programs/octopus/wiki/index.php/Developers:Ion-Ion_interaction
+    ! for details about this routine.
 
     ! Note that a possible jellium-jellium interaction (the case where more
     ! than one jellium species is present) is not properly calculated.
@@ -765,21 +762,34 @@ contains
     ! electrostatic energy. I do not know right now if there is a closed
     ! analytical expression for the electrostatic energy of a system of two
     ! uniformly charged spheres.
-    ion_ion_energy = M_ZERO
 
     ! interaction inside the cell, calculated directly
     do iatom = 1, geo%natoms
       s => geo%atom(iatom)%spec
+      zi = geo%atom(iatom)%spec%z_val
+
       if(s%type .eq. SPEC_JELLI) then
-        ion_ion_energy = ion_ion_energy + (M_THREE/M_FIVE)*s%z_val**2/s%jradius
+        ep%eii = ep%eii + (M_THREE/M_FIVE)*s%z_val**2/s%jradius
       end if
 
-      do jatom = 1, iatom - 1
-        r = sqrt(sum((geo%atom(iatom)%x - geo%atom(jatom)%x)**2))
-        ion_ion_energy = ion_ion_energy + s%z_val*geo%atom(jatom)%spec%z_val/r
-      end do
+      do jatom = 1, geo%natoms
 
-    end do
+        if(iatom == jatom) cycle
+
+        zj = geo%atom(jatom)%spec%z_val
+        r = sqrt(sum((geo%atom(iatom)%x - geo%atom(jatom)%x)**2))
+
+        !the force
+        dd = zi*zj/r**3
+        ep%fii(1:MAX_DIM, iatom) = ep%fii(1:MAX_DIM, iatom) + dd*(geo%atom(iatom)%x(1:MAX_DIM) - geo%atom(jatom)%x(1:MAX_DIM))
+
+        !energy
+        if(jatom > iatom) cycle
+        ep%eii = ep%eii + zi*zj/r
+        
+      end do !jatom
+      
+    end do !iatom
 
     ! if the system is periodic we have to add the energy of the
     ! interaction with the copies
@@ -801,7 +811,7 @@ contains
 
           do jatom = 1, iatom - 1
             r = sqrt( sum( (xi - geo%atom(jatom)%x)**2 ) )
-            ion_ion_energy = ion_ion_energy + (-geo%atom(jatom)%spec%z_val)*loct_splint(s%ps%vion, r)
+            ep%eii = ep%eii + (-geo%atom(jatom)%spec%z_val)*loct_splint(s%ps%vion, r)
           end do
           
         end do
@@ -818,7 +828,7 @@ contains
       ALLOCATE(xx(1:geo%natoms, 1:MAX_DIM), geo%natoms*MAX_DIM)
       ALLOCATE(vxx(1:geo%natoms), geo%natoms)
 
-      vpslc(1:NP) = vpsl(1:NP)
+      vpslc(1:NP) = ep%vpsl(1:NP)
 
       ! Remove the potential generated by atoms _in_ the cell, to only
       ! leave the potential due to the periodic copies.
@@ -838,7 +848,7 @@ contains
       ! Now calculate the interaction energy
       do iatom = 1, geo%natoms
         charge = -geo%atom(iatom)%spec%z_val
-        ion_ion_energy = ion_ion_energy + M_HALF*charge*vxx(iatom)
+        ep%eii = ep%eii + M_HALF*charge*vxx(iatom)
       end do
 
       deallocate(vns, vpslc, xx, vxx)
@@ -846,7 +856,7 @@ contains
     end if
 
     call profiling_out(ion_ion_prof)
-  end function ion_ion_energy
+  end subroutine ion_ion_interaction
 
 #include "undef.F90"
 #include "real.F90"

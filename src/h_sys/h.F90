@@ -102,7 +102,6 @@ module hamiltonian_m
 
     ! Energies
     FLOAT :: etot,    &  ! Total energy E = Eii + Sum[Eigenvalues] - U + Ex + Ec - Int[n v_xc]
-             eii,     &  ! Ionic energy Eii
              eeigen,  &  ! Sum[Eigenvalues]
              ex,      &  ! Exchange     Ex
              ec,      &  ! Correlation  Ec
@@ -536,12 +535,10 @@ contains
         end if
       end if
       h%eeigen = states_eigenvalues_sum(st)
-      h%eii    = geo%eii
-      h%etot   = h%eii + h%eeigen - h%ehartree + h%ex + h%ec - h%epot
+      h%etot   = h%ep%eii + h%eeigen - h%ehartree + h%ex + h%ec - h%epot
     case(INDEPENDENT_PARTICLES)
       h%eeigen = states_eigenvalues_sum(st)
-      h%eii    = geo%eii
-      h%etot   = h%eii + h%eeigen
+      h%etot   = h%ep%eii + h%eeigen
     case(HARTREE_FOCK)
       if(st%wfs_type == M_REAL) then
         h%t0     = delectronic_kinetic_energy(h, gr, st)
@@ -550,17 +547,16 @@ contains
         h%t0     = zelectronic_kinetic_energy(h, gr, st)
         h%eext   = zelectronic_external_energy(h, gr, st)
       end if
-      h%eii = geo%eii
       h%eeigen = states_eigenvalues_sum(st)
-      h%etot = h%eii + M_HALF * (h%eeigen + h%t0 + h%eext)
+      h%etot = h%ep%eii + M_HALF * (h%eeigen + h%t0 + h%eext)
       h%ec = M_ZERO
       h%epot = M_ZERO
-      h%ex = h%etot - (h%eii + h%t0 + h%eext) - h%ehartree
+      h%ex = h%etot - (h%ep%eii + h%t0 + h%eext) - h%ehartree
     end select
 
     if (iunit > 0) then
       write(message(1), '(6x,a, f15.8)')'Total       = ', h%etot     / units_out%energy%factor
-      write(message(2), '(6x,a, f15.8)')'Ion-ion     = ', h%eii      / units_out%energy%factor
+      write(message(2), '(6x,a, f15.8)')'Ion-ion     = ', h%ep%eii      / units_out%energy%factor
       write(message(3), '(6x,a, f15.8)')'Eigenvalues = ', h%eeigen   / units_out%energy%factor
       write(message(4), '(6x,a, f15.8)')'Hartree     = ', h%ehartree / units_out%energy%factor
       write(message(5), '(6x,a, f15.8)')'Int[n*v_xc] = ', h%epot     / units_out%energy%factor
