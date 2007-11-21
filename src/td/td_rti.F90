@@ -831,7 +831,7 @@ contains
     zpsi_tmp(1:grid_p%m%np, idim_op, ist_op, ik_op) = xre(1:grid_p%m%np) - M_zI*xim(1:grid_p%m%np)
     
     ! propagate backwards
-    call td_exp_dt(tr_p%te, grid_p, h_p, zpsi_tmp(:, :, ist_op, ik_op), isp_op, ik_op, -dt_op/M_TWO, t_op)
+    call td_exp_dt(tr_p%te, grid_p, h_p, zpsi_tmp(:, :, ist_op, ik_op), ist_op, ik_op, -dt_op/M_TWO, t_op)
 
     yre(1:grid_p%m%np) =    real(zpsi_tmp(1:grid_p%m%np, idim_op, ist_op, ik_op))
     yim(1:grid_p%m%np) = - aimag(zpsi_tmp(1:grid_p%m%np, idim_op, ist_op, ik_op))
