@@ -811,7 +811,7 @@ contains
 
           do jatom = 1, iatom - 1
             r = sqrt( sum( (xi - geo%atom(jatom)%x)**2 ) )
-            ep%eii = ep%eii + (-geo%atom(jatom)%spec%z_val)*loct_splint(s%ps%vion, r)
+            ep%eii = ep%eii + M_HALF*(-geo%atom(jatom)%spec%z_val)*loct_splint(s%ps%vion, r)
           end do
           
         end do
