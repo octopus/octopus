@@ -145,7 +145,7 @@ contains
     do i = NP+1, NP_PART
       psi(i, 1) = M_ZERO
     end do
-    call X(hpsi)(h, gr, psi, hpsi, ik)
+    call X(hpsi)(h, gr, psi, hpsi, -1, ik)
     do i = 1, NP
       w(i) = hpsi(i, 1)*sqrt(gr%m%vol_pp(i))
     end do
