@@ -682,7 +682,7 @@ contains
 
     ! the ion-ion term is already calculated
     do i = 1, geo%natoms
-      geo%atom(i)%f = ep%fii(:, i)
+      geo%atom(i)%f(1:MAX_DIM) = ep%fii(1:MAX_DIM, i)
     end do
     
     if (wfs_are_real(st) ) then 
@@ -690,16 +690,6 @@ contains
     else
       call zcalc_forces_from_potential(gr, geo, ep, st, time)
     end if
-
-#if defined(HAVE_MPI)
-    if(st%parallel_in_states) then
-      do i = 1, geo%natoms
-        atm => geo%atom(i)
-        call MPI_Allreduce(atm%f(1), f(1), NDIM, MPI_FLOAT, MPI_SUM, st%mpi_grp%comm, mpi_err)
-        atm%f = f
-      end do
-    end if
-#endif
 
     !TODO: forces due to the magnetic fields (static and time-dependent)
     if(present(t)) then

@@ -21,21 +21,27 @@ subroutine X(calc_forces_from_potential)(gr, geo, ep, st, time)
   type(grid_t),     intent(inout)  :: gr
   type(geometry_t), intent(inout)  :: geo
   type(epot_t),     intent(in)     :: ep
-  type(states_t),   intent(inout)     :: st
+  type(states_t),   intent(inout)  :: st
   FLOAT,            intent(in)     :: time
 
-  integer :: ii, ip, ist, ik, ivnl, idim, idir, ns
+  integer :: iatom, ip, ist, ik, ivnl, idim, idir, ns
 
   R_TYPE :: psi_proj_gpsi
   R_TYPE :: zz(MAX_DIM)
   R_TYPE, allocatable :: gpsi(:, :, :)
-  FLOAT,  allocatable :: grho(:, :), vloc(:), force(:,:)
+  FLOAT,  allocatable :: grho(:, :), vloc(:), fdens(:,:)
+  FLOAT,  allocatable :: force(:, :)
+#ifdef HAVE_MPI
+  FLOAT, allocatable  :: force_local(:, :)
+#endif
 
-  type(atom_t), pointer :: atm
-
-  ALLOCATE(force(1:NP, 1:NDIM), NP*NDIM)
+  ALLOCATE(fdens(1:NP, 1:NDIM), NP*NDIM)
   ALLOCATE(gpsi(gr%m%np, 1:NDIM, st%d%dim), gr%m%np*NDIM*st%d%dim)
   ALLOCATE(grho(NP, MAX_DIM), NP*MAX_DIM)
+
+  ALLOCATE(force(1:MAX_DIM, 1:geo%natoms), MAX_DIM*geo%natoms)
+
+  force = M_ZERO
 
   !$omp parallel workshare
   grho(1:NP, 1:NDIM) = M_ZERO
@@ -59,18 +65,17 @@ subroutine X(calc_forces_from_potential)(gr, geo, ep, st, time)
       ! iterate over the projectors
       do ivnl = 1, ep%nvnl
 
-        !get the atom corresponding to this projector
-        atm => geo%atom(ep%p(ivnl)%iatom)
+        iatom = ep%p(ivnl)%iatom
 
         do idir = 1, NDIM
 
           psi_proj_gpsi = X(psia_project_psib)(gr%m, ep%p(ivnl), st%d%dim, &
                st%X(psi)(:, :, ist, ik), gpsi(:, idir, :), reltype = 0)
 
-          atm%f(idir) = atm%f(idir) - M_TWO * st%occ(ist, ik) * R_REAL(psi_proj_gpsi)
+          force(idir, iatom) = force(idir, iatom) - M_TWO * st%occ(ist, ik) * R_REAL(psi_proj_gpsi)
 
         end do
-
+        
       end do !invl
 
     end do
@@ -79,34 +84,42 @@ subroutine X(calc_forces_from_potential)(gr, geo, ep, st, time)
   deallocate(gpsi)
 
   !now add the local part
-
-  if(.not.simul_box_is_periodic(gr%sb).or.geo%only_user_def) then !we do it in real space
-
-    ALLOCATE(vloc(1:NP), NP)
-
-    do ii = 1, geo%natoms
-      atm => geo%atom(ii)
-
+  ALLOCATE(vloc(1:NP), NP)
+  
+  do iatom = 1, geo%natoms
+    
+    !$omp parallel workshare
+    vloc(1:NP) = M_ZERO
+    !$omp end parallel workshare
+    
+    call build_local_part_in_real_space(ep, gr, geo, geo%atom(iatom), vloc, time)
+    
+    do idir = 1, NDIM
       !$omp parallel workshare
-      vloc(1:NP) = M_ZERO
+      fdens(1:NP, idir) = grho(1:NP, idir) * vloc(1:NP)
       !$omp end parallel workshare
-
-      call build_local_part_in_real_space(ep, gr, geo, atm, vloc, time)
-
-      do idir = 1, NDIM
-        !$omp parallel workshare
-        force(1:NP, idir) = grho(1:NP, idir) * vloc(1:NP)
-        !$omp end parallel workshare
-        atm%f(idir) = atm%f(idir) - dmf_integrate(gr%m, force(:, idir))
-      end do
+      force(idir, iatom) = force(idir, iatom) - dmf_integrate(gr%m, fdens(:, idir))
     end do
 
-    deallocate(vloc)
+  end do
+  
+  deallocate(vloc)
 
+#if defined(HAVE_MPI)
+  if(st%parallel_in_states) then
+    ALLOCATE(force_local(1:MAX_DIM, 1:geo%natoms), MAX_DIM*geo%natoms)
+    force_local = force
+    call MPI_Allreduce(force_local, force, MAX_DIM*geo%natoms, MPI_FLOAT, MPI_SUM, st%mpi_grp%comm, mpi_err)
+    deallocate(force_local)
   end if
-
-  deallocate(force)
-
+#endif
+  
+  do iatom = 1, geo%natoms
+    geo%atom(iatom)%f(1:MAX_DIM) = geo%atom(iatom)%f(1:MAX_DIM) + force(1:MAX_DIM, iatom)
+  end do
+  
+  deallocate(force, fdens)
+  
 end subroutine X(calc_forces_from_potential)
 
 !This function calculates |cpsi> = [x,V_nl] |psi>
