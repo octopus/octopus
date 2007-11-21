@@ -105,6 +105,7 @@ module ps_m
     FLOAT :: a_erf                     ! the a constant in erf(ar)/r
 
     type(loct_spline_t) :: vion        ! the potential that other ions see
+    type(loct_spline_t) :: dvion       ! the potential that other ions see
   end type ps_t
 
   FLOAT, parameter :: eps = CNST(1.0e-8)
@@ -231,7 +232,6 @@ contains
     call loct_spline_init(ps%vl)
     call loct_spline_init(ps%core)
     call loct_spline_init(ps%vlocal_f)
-    call loct_spline_init(ps%vion)
 
     ! Now we load the necessary information.
     select case(flavour)
@@ -275,36 +275,13 @@ contains
 
     ps%has_long_range = .true.
 
-    call vion_init
-
     call pop_sub()
 
-  contains
-
-    subroutine vion_init()
-      FLOAT, allocatable :: vv(:)
-      FLOAT :: rr
-      integer :: ii
-
-      ALLOCATE(vv(ps%g%nrval), ps%g%nrval)
-
-      vv = M_ZERO
-      do ii = 1, ps%g%nrval
-        rr = ps%g%rofi(ii)
-        if (abs(rr) > M_EPSILON) vv(ii) = -ps%z_val/rr
-      end do
-
-      call loct_spline_fit(ps%g%nrval, ps%g%rofi, vv, ps%vion)
-      
-      deallocate(vv)
-    end subroutine vion_init
-    
   end subroutine ps_init
 
-  subroutine ps_separate(ps, spacing, separate_vion)
+  subroutine ps_separate(ps, spacing)
     type(ps_t),        intent(out) :: ps
     FLOAT,             intent(in)  :: spacing
-    logical,           intent(in)  :: separate_vion
 
     FLOAT, allocatable :: vsr(:), vlr(:), nlr(:), vion(:)
     FLOAT :: r
@@ -321,7 +298,6 @@ contains
     ALLOCATE(vion(ps%g%nrval), ps%g%nrval)
     
     vlr(1) = -ps%z_val*M_TWO/(sqrt(M_TWO*M_PI)*ps%sigma_erf)
-    vion(1) = M_ZERO
 
     do ii = 1, ps%g%nrval
       r = ps%g%rofi(ii)
@@ -347,12 +323,15 @@ contains
     ! And take the Fourier transform
     call loct_spline_3dft(ps%vl, ps%vlocal_f, CNST(50.0))
     call loct_spline_times(CNST(1.0)/(M_FOUR*M_PI), ps%vlocal_f)
+
+    ! The ion-ion interaction
+    vion(1) = vion(2)
     
-    if(separate_vion) then
-      call loct_spline_end(ps%vion)
-      call loct_spline_init(ps%vion)
-      call loct_spline_fit(ps%g%nrval, ps%g%rofi, vion, ps%vion)
-    end if
+    call loct_spline_init(ps%vion)
+    call loct_spline_fit(ps%g%nrval, ps%g%rofi, vion, ps%vion)
+
+    call loct_spline_init(ps%dvion)
+    call loct_spline_der(ps%vion, ps%dvion)
 
     deallocate(vsr, vlr, nlr, vion)
     
@@ -530,6 +509,7 @@ contains
     call loct_spline_end(ps%core)
     call loct_spline_end(ps%vlocal_f)
     call loct_spline_end(ps%vion)
+    call loct_spline_end(ps%dvion)
 
     call logrid_end(ps%g)
 

@@ -37,7 +37,6 @@ module solids_m
     periodic_copy_end,        &
     periodic_copy_position,   &
     periodic_copy_num,        &
-    periodic_copy_is_original_point, &
     periodic_write_crystal
 
   type :: periodic_copy_t
@@ -130,36 +129,6 @@ contains
     end do
 
   end function periodic_copy_position
-
-  logical pure function periodic_copy_is_original_point(this, sb, ii) result(self)
-    type(periodic_copy_t),   intent(in)  :: this
-    type(simul_box_t),       intent(in)  :: sb
-    integer, intent(in)                  :: ii
-    FLOAT                                :: pcopy(MAX_DIM) 
-    
-    integer :: icell1, icell2, icell3, jj
-
-    if(.not. simul_box_is_periodic(sb)) then
-      self = .true.
-      return
-    end if
-
-    jj = 1
-    do icell1 = this%nbmin(1), this%nbmax(1)
-      do icell2 = this%nbmin(2), this%nbmax(2)
-        do icell3 = this%nbmin(3), this%nbmax(3)
-          
-          if (jj == ii) then 
-            self = sum(abs((/icell1, icell2, icell3/))) == 0 
-            exit
-          end if
-          jj = jj + 1
-
-        end do
-      end do
-    end do
-
-  end function periodic_copy_is_original_point
 
   ! This subroutine creates a crystal by replicating the geometry and
   ! writes the result to 'static/crystal.xyz'

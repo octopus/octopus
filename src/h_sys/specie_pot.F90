@@ -79,7 +79,7 @@ contains
     call push_sub('specie_pot.specie_pot_init')
     
     if(specie_is_ps(this)) then
-      call ps_separate(this%ps, maxval(gr%m%h), separate_vion = simul_box_is_periodic(gr%sb))
+      call ps_separate(this%ps, maxval(gr%m%h))
 
       if(filter) then 
         call ps_filter(this%ps, mesh_gcutoff(gr%m), this%alpha, this%beta, this%rcut, this%beta2)

@@ -690,7 +690,7 @@ contains
     else
       call zcalc_forces_from_potential(gr, geo, ep, st, time)
     end if
-
+    
     !TODO: forces due to the magnetic fields (static and time-dependent)
     if(present(t)) then
       do j = 1, ep%no_lasers
@@ -711,12 +711,10 @@ contains
 
     if(associated(ep%E_field)) then
       do i = 1, geo%natoms
-        geo%atom(i)%f(1:NDIM) = geo%atom(i)%f(1:NDIM) + &
-             geo%atom(i)%spec%Z_val * ep%E_field(1:NDIM)
+        geo%atom(i)%f(1:NDIM) = geo%atom(i)%f(1:NDIM) + geo%atom(i)%spec%Z_val * ep%E_field(1:NDIM)
       end do
     end if
-
-
+    
     call pop_sub()
     call profiling_out(forces_prof)
 
@@ -725,14 +723,14 @@ contains
   ! ---------------------------------------------------------
   subroutine ion_ion_interaction(ep, gr, sb, geo)
     type(epot_t),              intent(inout) :: ep
-    type(grid_t),              intent(in)    :: gr
+    type(grid_t),              intent(inout) :: gr
     type(simul_box_t), target, intent(in)    :: sb
     type(geometry_t),  target, intent(in)    :: geo
 
     type(specie_t), pointer :: s
-    FLOAT :: r, rc, xi(1:MAX_DIM), charge, dd, zi, zj
-    FLOAT, allocatable :: vns(:), vpslc(:), xx(:, :), vxx(:)
-    integer :: iatom, jatom, icopy
+    FLOAT :: r, rc, xi(1:MAX_DIM), dd, zi, zj
+    FLOAT, allocatable :: vns(:), vpslc(:), xx(:, :), vxx(:), gv(:, :), gxx(:, :)
+    integer :: iatom, jatom, icopy, idir
     type(periodic_copy_t) :: pc
 
     type(profile_t), save :: ion_ion_prof
@@ -791,17 +789,25 @@ contains
         if (.not. specie_is_ps(s)) cycle
 
         rc = loct_spline_cutoff_radius(s%ps%vion, s%ps%projectors_sphere_threshold)
+        rc = max(rc, loct_spline_cutoff_radius(s%ps%dvion, s%ps%projectors_sphere_threshold))
+
         call periodic_copy_init(pc, sb, geo%atom(iatom)%x, rc)
 
         do icopy = 1, periodic_copy_num(pc)
-          ! the interaction between atoms two in the cell was already considered
-          if (periodic_copy_is_original_point(pc, sb, icopy)) cycle
 
           xi = periodic_copy_position(pc, sb, icopy)
 
-          do jatom = 1, iatom - 1
+          ! do not consider atoms inside the cell
+          if ( maxval(abs(xi(1:MAX_DIM) - geo%atom(iatom)%x(1:MAX_DIM))) < M_TEN*M_EPSILON ) cycle
+
+          do jatom = 1, geo%natoms
+            zj = -geo%atom(jatom)%spec%z_val
             r = sqrt( sum( (xi - geo%atom(jatom)%x)**2 ) )
-            ep%eii = ep%eii + M_HALF*(-geo%atom(jatom)%spec%z_val)*loct_splint(s%ps%vion, r)
+            ! energy
+            ep%eii = ep%eii + M_HALF*zj*loct_splint(s%ps%vion, r)
+            ! force
+            ep%fii(1:MAX_DIM, jatom) = ep%fii(1:MAX_DIM, jatom) + &
+              M_HALF*zj*loct_splint(s%ps%dvion, r)/r*(geo%atom(jatom)%x(1:MAX_DIM) - xi(1:MAX_DIM))
           end do
           
         end do
@@ -815,8 +821,10 @@ contains
 
       ALLOCATE(vns(1:NP), NP)
       ALLOCATE(vpslc(1:NP_PART), NP_PART)
+      ALLOCATE(gv(1:NP_PART, 1:MAX_DIM), NP_PART*MAX_DIM)
       ALLOCATE(xx(1:geo%natoms, 1:MAX_DIM), geo%natoms*MAX_DIM)
       ALLOCATE(vxx(1:geo%natoms), geo%natoms)
+      ALLOCATE(gxx(1:geo%natoms, 1:MAX_DIM), geo%natoms*MAX_DIM)
 
       vpslc(1:NP) = ep%vpsl(1:NP)
 
@@ -829,19 +837,28 @@ contains
         xx(iatom, 1:MAX_DIM) = geo%atom(iatom)%x(1:MAX_DIM)
       end do
       
-      ! now interpolate, we need to update bc so points near
-      ! boundaries are properly treated
+      call df_gradient(gr%sb, gr%f_der, vpslc, gv)
 
-      call dset_bc(gr%f_der%der_discr, vpslc)
+      ! interpolate in the atomic positions, boundary conditions must
+      ! be updated properly before
       call dmf_interpolate_points(gr%m, vpslc, geo%natoms, xx, vxx)
 
-      ! Now calculate the interaction energy
-      do iatom = 1, geo%natoms
-        charge = -geo%atom(iatom)%spec%z_val
-        ep%eii = ep%eii + M_HALF*charge*vxx(iatom)
+      gxx = M_ZERO
+      do idir = 1, sb%dim
+        call dset_bc(gr%f_der%der_discr, gv(:, idir))
+        call dmf_interpolate_points(gr%m, gv(:, idir), geo%natoms, xx, gxx(:, idir))
       end do
 
-      deallocate(vns, vpslc, xx, vxx)
+      ! Now calculate the interaction
+      do iatom = 1, geo%natoms
+        zi = -geo%atom(iatom)%spec%z_val
+        ! energy
+        ep%eii = ep%eii + M_HALF*zi*vxx(iatom)
+        ! force
+        ep%fii(1:MAX_DIM, iatom) = ep%fii(1:MAX_DIM, iatom) + M_HALF*zi*gxx(iatom, 1:MAX_DIM)
+      end do
+
+      deallocate(vns, vpslc, xx, vxx, gv, gxx)
 
     end if
 
