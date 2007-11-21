@@ -61,7 +61,7 @@ module td_trans_rti_m
   CMPLX, pointer               :: mem_p(:, :, :, :)
   type(intface_t), pointer     :: intf_p
   FLOAT                        :: dt_op, t_op
-  integer                      :: ik_op
+  integer                      :: ist_op, ik_op
 #endif
 
 contains
@@ -191,7 +191,8 @@ contains
     do ik = 1, st%d%nik
       do ist = st%st_start, st%st_end
 #if defined(HAVE_SPARSKIT)        
-        ik_op = ik
+        ist_op = ist
+        ik_op  = ik
         call zsparskit_solver_run(tdsk, skop, skopt, zpsi_tmp(:, 1), st%zpsi(:, 1, ist, ik))
 #endif
         call lalg_copy(NP, zpsi_tmp(:, 1), st%zpsi(:, 1, ist, ik))
@@ -280,7 +281,7 @@ contains
 
     ! Propagate backward.
     call apply_h_eff(h_p, gr_p, mem_p(:, :, 0, LEFT), mem_p(:, :, 0, RIGHT), intf_p, &
-      M_ONE, dt_op, t_op, ik_op, zpsi_tmp(:, :))
+      M_ONE, dt_op, t_op, ist_op, ik_op, zpsi_tmp(:, :))
 
     yre(1:gr_p%m%np) = real(zpsi_tmp(1:gr_p%m%np, 1))
     yim(1:gr_p%m%np) = aimag(zpsi_tmp(1:gr_p%m%np, 1))
@@ -304,7 +305,7 @@ contains
     zpsi_tmp(1:gr_p%m%np, 1) = xre(1:gr_p%m%np) - M_zI*xim(1:gr_p%m%np)
 
     call apply_h_eff(h_p, gr_p, mem_p(:, :, 0, LEFT), mem_p(:, :, 0, RIGHT), intf_p, &
-      M_ONE, dt_op, t_op, ik_op, zpsi_tmp(:, :))
+      M_ONE, dt_op, t_op, ist_op, ik_op, zpsi_tmp(:, :))
 
     yre(1:gr_p%m%np) = real(zpsi_tmp(1:gr_p%m%np, 1))
     yim(1:gr_p%m%np) = -aimag(zpsi_tmp(1:gr_p%m%np, 1))
