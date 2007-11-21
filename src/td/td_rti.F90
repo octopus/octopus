@@ -671,7 +671,7 @@ contains
         ! get rhs of CN linear system (rhs1 = (1-i\delta t/2 H_n)\psi^n)
         do ik = 1, st%d%nik
           do ist = st%st_start, st%st_end
-            call td_exp_dt(tr%te, gr, h, zpsi_rhs_pred(:, :, ist, ik), ik, dt/M_TWO, t-dt)
+            call td_exp_dt(tr%te, gr, h, zpsi_rhs_pred(:, :, ist, ik), ist, ik, dt/M_TWO, t-dt)
             if(hamiltonian_inh_term(h)) then
               zpsi_rhs_pred(:, :, ist, ik) = zpsi_rhs_pred(:, :, ist, ik) + dt * h%inh_st%zpsi(:, :, ist, ik)
             end if
@@ -701,7 +701,7 @@ contains
       ! get rhs of CN linear system (rhs2 = (1-i\delta t H_{n+1/2})\psi^n)
       do ik = 1, st%d%nik
         do ist = st%st_start, st%st_end
-          call td_exp_dt(tr%te, gr, h, zpsi_rhs_corr(:, :, ist, ik), ik, dt/M_TWO, t-dt)
+          call td_exp_dt(tr%te, gr, h, zpsi_rhs_corr(:, :, ist, ik), ist, ik, dt/M_TWO, t-dt)
           if(hamiltonian_inh_term(h)) then
             zpsi_rhs_corr(:, :, ist, ik) = zpsi_rhs_corr(:, :, ist, ik) + dt * h%inh_st%zpsi(:, :, ist, ik)
           end if
@@ -808,7 +808,7 @@ contains
     zpsi_tmp(1:grid_p%m%np, idim_op, ist_op, ik_op) = xre(1:grid_p%m%np) + M_zI*xim(1:grid_p%m%np)
 
     ! propagate backwards
-    call td_exp_dt(tr_p%te, grid_p, h_p, zpsi_tmp(:, :, ist_op, ik_op), ik_op, -dt_op/M_TWO, t_op)
+    call td_exp_dt(tr_p%te, grid_p, h_p, zpsi_tmp(:, :, ist_op, ik_op), ist_op, ik_op, -dt_op/M_TWO, t_op)
 
     yre(1:grid_p%m%np) =  real(zpsi_tmp(1:grid_p%m%np, idim_op, ist_op, ik_op))
     yim(1:grid_p%m%np) = aimag(zpsi_tmp(1:grid_p%m%np, idim_op, ist_op, ik_op))
@@ -831,7 +831,7 @@ contains
     zpsi_tmp(1:grid_p%m%np, idim_op, ist_op, ik_op) = xre(1:grid_p%m%np) - M_zI*xim(1:grid_p%m%np)
     
     ! propagate backwards
-    call td_exp_dt(tr_p%te, grid_p, h_p, zpsi_tmp(:, :, ist_op, ik_op), ik_op, -dt_op/M_TWO, t_op)
+    call td_exp_dt(tr_p%te, grid_p, h_p, zpsi_tmp(:, :, ist_op, ik_op), isp_op, ik_op, -dt_op/M_TWO, t_op)
 
     yre(1:grid_p%m%np) =    real(zpsi_tmp(1:grid_p%m%np, idim_op, ist_op, ik_op))
     yim(1:grid_p%m%np) = - aimag(zpsi_tmp(1:grid_p%m%np, idim_op, ist_op, ik_op))
