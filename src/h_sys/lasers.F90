@@ -75,9 +75,9 @@ contains
 
   ! ---------------------------------------------------------
   subroutine laser_to_numerical(l, dt, max_iter)
-    type(laser_t) :: l
-    FLOAT, intent(in) :: dt
-    integer, intent(in) :: max_iter
+    type(laser_t), intent(inout) :: l
+    FLOAT,         intent(in)    :: dt
+    integer,       intent(in)    :: max_iter
 
     call push_sub('lasers.lasers_to_numerical')
 

@@ -182,7 +182,7 @@ contains
 
   subroutine magnetic()
     R_TYPE, allocatable :: f_in2(:,:), dnl(:,:), vrnl(:,:), xf(:)
-    R_TYPE :: cross1(1:MAX_DIM), cross2(1:MAX_DIM), bdir(1:MAX_DIM, 2)
+    R_TYPE :: cross1(1:MAX_DIM), bdir(1:MAX_DIM, 2)
     FLOAT  :: rdelta
     R_TYPE :: contr
 
@@ -407,7 +407,9 @@ R_TYPE function X(pert_expectation_value) (this, gr, geo, h, st, psia, psib, per
   integer, optional,    intent(in)    :: pert_order
 
   R_TYPE, allocatable :: tmp(:)
+#ifdef HAVE_MPI
   R_TYPE :: expval_tmp
+#endif
   integer :: order
 
   order = 1

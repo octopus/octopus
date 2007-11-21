@@ -79,8 +79,7 @@ contains
     type(atom_t),         intent(in)    :: a
     integer,              intent(in)    :: l, lm
 
-    integer :: n_c, j, k, ic
-    FLOAT :: v, dv(3), r, x(3), x_in(3)
+    integer :: n_c, ic
 
     call push_sub('kb_projector.kb_projector_init')
 

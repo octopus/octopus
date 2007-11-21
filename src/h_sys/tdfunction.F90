@@ -203,9 +203,9 @@ module tdf_m
 
   !------------------------------------------------------------
   subroutine tdf_init_fromfile(f, filename, ierr)
-    type(tdf_t), intent(inout) :: f
-    character(len=*)           :: filename
-    integer, intent(out)       :: ierr
+    type(tdf_t),      intent(inout) :: f
+    character(len=*), intent(in)    :: filename
+    integer,          intent(out)   :: ierr
 
     integer :: iunit, lines, j
     FLOAT :: dummy
@@ -395,8 +395,8 @@ module tdf_m
   !------------------------------------------------------------
   subroutine tdf_to_numerical(f, niter, dt)
     type(tdf_t), intent(inout) :: f
-    integer, intent(in) :: niter
-    FLOAT :: dt
+    integer,     intent(in)    :: niter
+    FLOAT,       intent(in)    :: dt
 
     FLOAT :: t
     integer :: j

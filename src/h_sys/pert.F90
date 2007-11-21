@@ -136,8 +136,6 @@ contains
     type(grid_t),      intent(inout) :: gr
     type(geometry_t),  intent(in)    :: geo
 
-    integer :: idir
-
     call push_sub('pert.pert_init2')
     
     this%pert_type = pert_type
@@ -184,7 +182,6 @@ contains
   ! --------------------------------------------------------------------
   subroutine pert_end(this)
     type(pert_t), intent(inout) :: this
-    integer :: idir
 
     if(this%pert_type == PERTURBATION_IONIC) then
       deallocate(this%ionic%mix1)

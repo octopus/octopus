@@ -672,8 +672,8 @@ subroutine X(vlaser_operator_quadratic) (gr, h, psi, hpsi, ik, laser_number)
   integer,             intent(in)    :: ik
   integer,             intent(in)    :: laser_number
 
-  integer :: i, k, idim
-  logical :: electric_field, vector_potential, magnetic_field
+  integer :: i, k
+  logical :: vector_potential, magnetic_field
 
   FLOAT :: a_field(1:MAX_DIM), a_field_prime(1:MAX_DIM), b(1:MAX_DIM), b_prime(1:MAX_DIM)
   FLOAT, allocatable :: a(:, :), a_prime(:, :)
@@ -682,7 +682,6 @@ subroutine X(vlaser_operator_quadratic) (gr, h, psi, hpsi, ik, laser_number)
 
   a_field = M_ZERO
 
-  electric_field = .false.
   vector_potential = .false.
   magnetic_field = .false.
   i = laser_number
@@ -881,7 +880,7 @@ subroutine X(vlasers) (gr, h, psi, hpsi, ik, t)
   R_TYPE,              intent(inout) :: psi(:,:)  ! psi(NP_PART, h%d%dim)
   R_TYPE,              intent(inout) :: hpsi(:,:) ! hpsi(NP_PART, h%d%dim)
   integer,             intent(in)    :: ik
-  FLOAT, optional                    :: t
+  FLOAT,    optional,  intent(in)    :: t
 
   integer :: i, k, idim
   logical :: electric_field, vector_potential, magnetic_field
