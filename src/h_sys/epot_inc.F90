@@ -24,18 +24,16 @@ subroutine X(calc_forces_from_potential)(gr, geo, ep, st, time)
   type(states_t),   intent(inout)  :: st
   FLOAT,            intent(in)     :: time
 
-  integer :: iatom, ip, ist, ik, ivnl, idim, idir, ns
+  integer :: iatom, ist, ik, ivnl, idim, idir
 
   R_TYPE :: psi_proj_gpsi
-  R_TYPE :: zz(MAX_DIM)
   R_TYPE, allocatable :: gpsi(:, :, :)
-  FLOAT,  allocatable :: grho(:, :), vloc(:), fdens(:,:)
+  FLOAT,  allocatable :: grho(:, :), vloc(:)
   FLOAT,  allocatable :: force(:, :)
 #ifdef HAVE_MPI
   FLOAT, allocatable  :: force_local(:, :)
 #endif
 
-  ALLOCATE(fdens(1:NP, 1:NDIM), NP*NDIM)
   ALLOCATE(gpsi(gr%m%np, 1:NDIM, st%d%dim), gr%m%np*NDIM*st%d%dim)
   ALLOCATE(grho(NP, MAX_DIM), NP*MAX_DIM)
 
@@ -95,10 +93,7 @@ subroutine X(calc_forces_from_potential)(gr, geo, ep, st, time)
     call build_local_part_in_real_space(ep, gr, geo, geo%atom(iatom), vloc, time)
     
     do idir = 1, NDIM
-      !$omp parallel workshare
-      fdens(1:NP, idir) = grho(1:NP, idir) * vloc(1:NP)
-      !$omp end parallel workshare
-      force(idir, iatom) = force(idir, iatom) - dmf_integrate(gr%m, fdens(:, idir))
+      force(idir, iatom) = force(idir, iatom) - dmf_dotp(gr%m, grho(1:NP, idir), vloc(1:NP))
     end do
 
   end do
@@ -118,7 +113,7 @@ subroutine X(calc_forces_from_potential)(gr, geo, ep, st, time)
     geo%atom(iatom)%f(1:MAX_DIM) = geo%atom(iatom)%f(1:MAX_DIM) + force(1:MAX_DIM, iatom)
   end do
   
-  deallocate(force, fdens)
+  deallocate(force)
   
 end subroutine X(calc_forces_from_potential)
 
@@ -139,6 +134,7 @@ subroutine X(conmut_vnl_r)(gr, geo, ep, dim, idir, iatom, psi, cpsi, reltype, ik
   integer ::  n_s, idim, ipj
   R_TYPE, allocatable :: lpsi(:, :), pxlpsi(:,:), xplpsi(:,:)
   integer, pointer :: jxyz(:)
+  FLOAT,   pointer :: smx(:, :)
 
   call push_sub('epot_inc.Xconmut_vnl_r')
 
@@ -151,6 +147,7 @@ subroutine X(conmut_vnl_r)(gr, geo, ep, dim, idir, iatom, psi, cpsi, reltype, ik
     
     n_s = ep%p(ipj)%sphere%ns
     jxyz => ep%p(ipj)%sphere%jxyz
+    smx => ep%p(ipj)%sphere%x
     
     ALLOCATE(lpsi(n_s, dim),  n_s*dim)
     ALLOCATE(xplpsi(n_s, dim), n_s*dim)
@@ -163,12 +160,12 @@ subroutine X(conmut_vnl_r)(gr, geo, ep, dim, idir, iatom, psi, cpsi, reltype, ik
     ! x V_nl |psi>
     call X(project_sphere)(gr%m, ep%p(ipj), dim, lpsi, xplpsi, reltype)
     do idim = 1, dim
-      xplpsi(1:n_s, idim) = gr%m%x(jxyz(1:n_s), idir) * xplpsi(1:n_s, idim)
+      xplpsi(1:n_s, idim) = smx(1:n_s, idir) * xplpsi(1:n_s, idim)
     end do
     
     ! V_nl x |psi>
     do idim = 1, dim
-      lpsi(1:n_s, idim) = gr%m%x(jxyz(1:n_s), idir) * lpsi(1:n_s, idim)
+      lpsi(1:n_s, idim) = smx(1:n_s, idir) * lpsi(1:n_s, idim)
     end do
     call X(project_sphere)(gr%m, ep%p(ipj), dim, lpsi, pxlpsi, reltype)
 

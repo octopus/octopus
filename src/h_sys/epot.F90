@@ -566,7 +566,7 @@ contains
     FLOAT, optional,          intent(inout) :: rho_core(:)
  
     integer :: i
-    FLOAT :: x(MAX_DIM), xx(MAX_DIM), r, pot_re, pot_im
+    FLOAT :: x(MAX_DIM)
     FLOAT, allocatable  :: rho(:), vl(:)
 
     call push_sub('epot.build_local_part_in_real_space')
@@ -664,9 +664,8 @@ contains
     type(states_t),   intent(inout)     :: st
     FLOAT,     optional, intent(in)    :: t
 
-    integer :: i, j, l
-    FLOAT :: d, r, zi, zj, x(MAX_DIM), time
-    type(atom_t), pointer :: atm
+    integer :: i, j
+    FLOAT :: x(MAX_DIM), time
     
     type(profile_t), save :: forces_prof
 
@@ -698,8 +697,7 @@ contains
         case(E_FIELD_ELECTRIC)
           call laser_field(gr%sb, ep%lasers(j), x, t)
           do i = 1, geo%natoms
-            geo%atom(i)%f(1:NDIM) = geo%atom(i)%f(1:NDIM) + &
-              geo%atom(i)%spec%Z_val * x(1:NDIM)
+            geo%atom(i)%f(1:NDIM) = geo%atom(i)%f(1:NDIM) + geo%atom(i)%spec%z_val*x(1:NDIM)
           end do
         case(E_FIELD_MAGNETIC, E_FIELD_VECTOR_POTENTIAL, E_FIELD_SCALAR_POTENTIAL)
           write(message(1),'(a)') 'The forces are currently not properly calculated if time-dependent'
@@ -724,7 +722,7 @@ contains
   subroutine ion_ion_interaction(ep, gr, sb, geo)
     type(epot_t),              intent(inout) :: ep
     type(grid_t),              intent(inout) :: gr
-    type(simul_box_t), target, intent(in)    :: sb
+    type(simul_box_t),         intent(in)    :: sb
     type(geometry_t),  target, intent(in)    :: geo
 
     type(specie_t), pointer :: s
