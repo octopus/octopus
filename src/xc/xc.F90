@@ -96,7 +96,7 @@ contains
       call xc_functl_write_info(xcs%functl(i, 1), iunit)
     end do
 
-    if(iand(xcs%family, XC_FAMILY_HYB_GGA).ne.0) then
+    if(xcs%exx_coef.ne.M_ZERO) then
       write(message(1), '(1x)')
       write(message(2), '(a,f8.5)') "Exact exchange mixing = ", xcs%exx_coef
       call write_info(2, iunit)
@@ -107,11 +107,12 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine xc_init(xcs, ndim, spin_channels, cdft)
+  subroutine xc_init(xcs, ndim, spin_channels, cdft, hartree_fock)
     type(xc_t), intent(out) :: xcs
     integer,    intent(in)  :: ndim
     integer,    intent(in)  :: spin_channels
     logical,    intent(in)  :: cdft
+    logical,    intent(in)  :: hartree_fock
 
     integer :: i, x_id, c_id, xk_id, ck_id
 
@@ -148,15 +149,25 @@ contains
 
       ! Take care of hybrid functionals (they appear in the correlation functional)
       xcs%exx_coef = M_ZERO
-      if(iand(xcs%functl(2,1)%family, XC_FAMILY_HYB_GGA).ne.0) then
-        call xc_f90_hyb_gga_exx_coef(xcs%functl(2,1)%conf, xcs%exx_coef)
+      if(hartree_fock.or.iand(xcs%functl(2,1)%family, XC_FAMILY_HYB_GGA).ne.0) then
+        if((xcs%functl(1,1)%id.ne.0).and.(xcs%functl(1,1)%id.ne.XC_OEP_X)) then
+          message(1) = "You can not use an exchange functional when performing"
+          message(2) = "an Hartree-Fock calculation or using a hybrid functional"
+          call write_fatal(2)
+        end if
 
+        ! get the mixing coefficient for hybrids
+        if(iand(xcs%functl(2,1)%family, XC_FAMILY_HYB_GGA).ne.0) then
+          call xc_f90_hyb_gga_exx_coef(xcs%functl(2,1)%conf, xcs%exx_coef)
+        else
+          ! we are doing Hartree-Fock plus possibly a correlation functional
+          xcs%exx_coef = M_ONE
+        end if
+
+        ! reset certain variables
         xcs%functl(1,1)%family = XC_FAMILY_OEP
         xcs%functl(1,1)%id     = XC_OEP_X
         xcs%family             = ior(xcs%family, XC_FAMILY_OEP)
-
-      else if(xcs%functl(1,1)%id == XC_OEP_X) then
-        xcs%exx_coef = M_ONE
       end if
 
       ! Now it is time for these current functionals
@@ -200,12 +211,16 @@ contains
       ! the first 3 digits of the number indicate the X functional and
       ! the next 3 the C functional.
 
-      default = XC_LDA_X
-
-      select case(calc_dim)
-      case(3); default = default + XC_LDA_C_PZ_MOD*1000
-      case(2); default = default + XC_LDA_C_AMGB*1000
-      end select
+      if(hartree_fock) then
+        default = 0
+      else
+        default = XC_LDA_X
+        
+        select case(calc_dim)
+        case(3); default = default + XC_LDA_C_PZ_MOD*1000
+        case(2); default = default + XC_LDA_C_AMGB*1000
+        end select
+      end if
 
       !%Variable XCFunctional
       !%Type integer

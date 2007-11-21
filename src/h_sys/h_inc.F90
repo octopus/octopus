@@ -181,7 +181,7 @@ subroutine X(exchange_operator) (h, gr, psi, hpsi, ik)
       end do
       call X(poisson_solve)(gr, pot, rho)
       do k = 1, gr%m%np
-        hpsi(k, 1) = hpsi(k, 1) - (h%st%occ(j, ik)/M_TWO) * h%st%X(psi)(k, 1, j, ik)*pot(k)
+        hpsi(k, 1) = hpsi(k, 1) - h%exx_coef * (h%st%occ(j, ik)/M_TWO) * h%st%X(psi)(k, 1, j, ik)*pot(k)
       end do
     end do 
 
@@ -194,7 +194,7 @@ subroutine X(exchange_operator) (h, gr, psi, hpsi, ik)
       end do
       call X(poisson_solve)(gr, pot, rho)
       do k = 1, gr%m%np
-        hpsi(k, 1) = hpsi(k, 1) - h%st%occ(j, ik) * h%st%X(psi)(k, 1, j, ik)*pot(k)
+        hpsi(k, 1) = hpsi(k, 1) - h%exx_coef * h%st%occ(j, ik) * h%st%X(psi)(k, 1, j, ik)*pot(k)
       end do
     end do 
 
@@ -231,7 +231,7 @@ subroutine X(oct_exchange_operator) (h, gr, psi, hpsi, ik)
       end do
       call X(poisson_solve)(gr, pot, rho)
       do k = 1, gr%m%np
-        hpsi(k, 1) = hpsi(k, 1) + M_TWO * M_z1 * (h%oct_st%occ(j, ik)/M_TWO) * &
+        hpsi(k, 1) = hpsi(k, 1) +  h%exx_coef * M_TWO * M_z1 * (h%oct_st%occ(j, ik)/M_TWO) * &
                      h%oct_st%X(psi)(k, 1, j, ik) * R_AIMAG(pot(k))
       end do
     end do 
@@ -245,7 +245,8 @@ subroutine X(oct_exchange_operator) (h, gr, psi, hpsi, ik)
       end do
       call X(poisson_solve)(gr, pot, rho)
       do k = 1, gr%m%np
-        hpsi(k, 1) = hpsi(k, 1) + M_TWO * M_z1 * h%oct_st%occ(j, ik) * h%oct_st%X(psi)(k, 1, j, ik)*R_AIMAG(pot(k))
+        hpsi(k, 1) = hpsi(k, 1) +  h%exx_coef * M_TWO * M_z1 * h%oct_st%occ(j, ik) * &
+          h%oct_st%X(psi)(k, 1, j, ik)*R_AIMAG(pot(k))
       end do
     end do 
 

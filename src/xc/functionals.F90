@@ -273,7 +273,7 @@ contains
       select case(functl%id)
       case(XC_OEP_X)
         write(message(1), '(2x,a)') 'Exchange'
-        write(message(2), '(4x,a)') 'Exact exchange (OEP)'
+        write(message(2), '(4x,a)') 'Exact exchange'
         call write_info(2, iunit)
       end select
 

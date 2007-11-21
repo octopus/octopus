@@ -95,6 +95,8 @@ module hamiltonian_m
     FLOAT, pointer :: vhxc(:,:)   ! xc potential + hartree potential
     FLOAT, pointer :: axc(:,:,:)  ! xc vector-potential divided by c
 
+    FLOAT :: exx_coef ! how much of exx to mix
+
     ! The self-induced potential vector and magnetic field
     logical :: self_induced_magnetic
     FLOAT, pointer :: a_ind(:, :)
@@ -536,9 +538,11 @@ contains
       end if
       h%eeigen = states_eigenvalues_sum(st)
       h%etot   = h%ep%eii + h%eeigen - h%ehartree + h%ex + h%ec - h%epot
+
     case(INDEPENDENT_PARTICLES)
       h%eeigen = states_eigenvalues_sum(st)
       h%etot   = h%ep%eii + h%eeigen
+
     case(HARTREE_FOCK)
       if(st%wfs_type == M_REAL) then
         h%t0     = delectronic_kinetic_energy(h, gr, st)
@@ -548,15 +552,13 @@ contains
         h%eext   = zelectronic_external_energy(h, gr, st)
       end if
       h%eeigen = states_eigenvalues_sum(st)
-      h%etot = h%ep%eii + M_HALF * (h%eeigen + h%t0 + h%eext)
-      h%ec = M_ZERO
+      h%etot = h%ep%eii + M_HALF * (h%eeigen + h%t0 + h%eext) + h%ex + h%ec
       h%epot = M_ZERO
-      h%ex = h%etot - (h%ep%eii + h%t0 + h%eext) - h%ehartree
     end select
 
     if (iunit > 0) then
       write(message(1), '(6x,a, f15.8)')'Total       = ', h%etot     / units_out%energy%factor
-      write(message(2), '(6x,a, f15.8)')'Ion-ion     = ', h%ep%eii      / units_out%energy%factor
+      write(message(2), '(6x,a, f15.8)')'Ion-ion     = ', h%ep%eii   / units_out%energy%factor
       write(message(3), '(6x,a, f15.8)')'Eigenvalues = ', h%eeigen   / units_out%energy%factor
       write(message(4), '(6x,a, f15.8)')'Hartree     = ', h%ehartree / units_out%energy%factor
       write(message(5), '(6x,a, f15.8)')'Int[n*v_xc] = ', h%epot     / units_out%energy%factor

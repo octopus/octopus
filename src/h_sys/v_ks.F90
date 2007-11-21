@@ -92,7 +92,6 @@ contains
     !%End
     call loct_parse_int(check_inp('TheoryLevel'), KOHN_SHAM_DFT, ks%theory_level)
     if(.not.varinfo_valid_option('TheoryLevel', ks%theory_level)) call input_error('TheoryLevel')
-    call messages_print_var_option(stdout, "TheoryLevel", ks%theory_level)
 
     call obsolete_variable('NonInteractingElectrons', 'TheoryLevel')
     call obsolete_variable('HartreeFock', 'TheoryLevel')
@@ -107,19 +106,15 @@ contains
       ks%hartree_fock = .true.
 
       ! initilize xc modules
-      call xc_init(ks%xc, NDIM, d%spin_channels, d%cdft)
-      ks%xc_family = ks%xc%family   
-
-      if(iand(ks%xc_family, not(XC_FAMILY_HYB_GGA)).ne.0) then
-        message(1) = "Perhaps with Hartree-Fock you should use a hybrid functional..."
-        call write_warning(1)
-      end if
+      call xc_init(ks%xc, NDIM, d%spin_channels, d%cdft, hartree_fock=.true.)
+      ks%xc_family = ks%xc%family
+      ks%sic_type = sic_none
 
       call v_ks_write_info(ks, stdout)
 
     case(KOHN_SHAM_DFT)
       ! initilize xc modules
-      call xc_init(ks%xc, NDIM, d%spin_channels, d%cdft)
+      call xc_init(ks%xc, NDIM, d%spin_channels, d%cdft, hartree_fock=.false.)
       ks%xc_family = ks%xc%family
 
       ! check for SIC
@@ -180,31 +175,33 @@ contains
     type(v_ks_t), intent(in) :: ks
     integer,      intent(in) :: iunit
 
+    if(.not.mpi_grp_is_root(mpi_world)) return
+
     call push_sub('v_ks.v_ks_write_info');
 
-    if(mpi_grp_is_root(mpi_world)) then
+    call messages_print_stress(iunit, "Theory Level")
+    call messages_print_var_option(iunit, "TheoryLevel", ks%theory_level)
+    write(iunit, '(1x)')
 
-      select case(ks%theory_level)
-      case(KOHN_SHAM_DFT)
+    select case(ks%theory_level)
+    case(INDEPENDENT_PARTICLES)
+      write(iunit, '(a)') 'Independent Particles'
 
-        call messages_print_stress(iunit, "Exchange-Correlation")
-        call xc_write_info(ks%xc, iunit)
+    case(HARTREE_FOCK)
+      call xc_write_info(ks%xc, iunit)
 
-        write(iunit, '(1x)')
-        call messages_print_var_option(iunit, 'SICCorrection', ks%sic_type)
+    case(KOHN_SHAM_DFT)
+      call xc_write_info(ks%xc, iunit)
 
-        if(iand(ks%xc_family, XC_FAMILY_OEP).ne.0) then
-          call xc_oep_write_info(ks%oep, iunit)
-        end if
-        call messages_print_stress(iunit)
+      write(iunit, '(1x)')
+      call messages_print_var_option(iunit, 'SICCorrection', ks%sic_type)
 
-      case(HARTREE_FOCK)
+      if(iand(ks%xc_family, XC_FAMILY_OEP).ne.0) then
+        call xc_oep_write_info(ks%oep, iunit)
+      end if
+    end select
 
-      case(INDEPENDENT_PARTICLES)
-
-      end select
-
-    end if
+    call messages_print_stress(iunit)
 
     call pop_sub()
   end subroutine v_ks_write_info
@@ -231,7 +228,7 @@ contains
 
 
     select case(ks%theory_level)
-    case(KOHN_SHAM_DFT)
+    case(KOHN_SHAM_DFT, HARTREE_FOCK)
 
       ! No Hartree or xc if independent electrons
       if(amaldi_factor>M_ZERO) then
@@ -262,22 +259,6 @@ contains
         end if
       end if
 
-    case(HARTREE_FOCK)
-
-      call v_hartree()
-      !$omp parallel workshare
-      h%vhxc(1:NP, 1) = h%vhartree(1:NP)
-      !$omp end parallel workshare
-      if(h%d%ispin > UNPOLARIZED) then
-        !$omp parallel workshare
-        h%vhxc(1:NP, 2) = h%vhartree(1:NP)
-        !$omp end parallel workshare
-      end if
-      h%ec = M_ZERO
-
-      call states_end(h%st)
-      call states_copy(h%st, st)
-
     case(INDEPENDENT_PARTICLES)
 
       !$omp parallel workshare
@@ -289,6 +270,13 @@ contains
 
     end select
     
+    if(ks%theory_level == HARTREE_FOCK) then
+      call states_end(h%st)
+      call states_copy(h%st, st)
+
+      h%exx_coef = ks%xc%exx_coef
+    end if
+
     ! Calculate the potential vector induced by the electronic current
     ! WARNING: calculating the self-induced magnetic field here only makes
     ! sense if it is going to be used in the Hamiltonian, which does not happen
@@ -370,13 +358,15 @@ contains
       end if
       deallocate(rho)
 
-      ! The OEP family has to handle specially
-      if (st%wfs_type == M_REAL) then
-        call dxc_oep_calc(ks%oep, ks%xc, (ks%sic_type==sic_pz),  &
-             gr, h, st, h%vxc, h%ex, h%ec)
-      else
-        call zxc_oep_calc(ks%oep, ks%xc, (ks%sic_type==sic_pz),  &
-             gr, h, st, h%vxc, h%ex, h%ec)
+      if(ks%theory_level == KOHN_SHAM_DFT) then
+        ! The OEP family has to handle specially
+        if (st%wfs_type == M_REAL) then
+          call dxc_oep_calc(ks%oep, ks%xc, (ks%sic_type==sic_pz),  &
+            gr, h, st, h%vxc, h%ex, h%ec)
+        else
+          call zxc_oep_calc(ks%oep, ks%xc, (ks%sic_type==sic_pz),  &
+            gr, h, st, h%vxc, h%ex, h%ec)
+        end if
       end if
 
       ! Now we calculate Int[n vxc] = h%epot

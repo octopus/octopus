@@ -624,11 +624,7 @@ contains
           write(iunit,'(1x)')
         end if
 
-        if(.not. h%ip_app) then
-          call v_ks_write_info(ks, iunit)
-        else
-          write(iunit, '(a)') 'Independent Particles'
-        end if
+        call v_ks_write_info(ks, iunit)
 
         ! scf information
         if(finish) then
