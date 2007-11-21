@@ -66,13 +66,14 @@ end subroutine X(project_psi)
 
 !------------------------------------------------------------------------------
 ! X(psia_project_psib) calculates <psia|projector|psib>
-R_TYPE function X(psia_project_psib)(mesh, pj, dim, psia, psib, reltype) result(apb)
+R_TYPE function X(psia_project_psib)(mesh, pj, dim, psia, psib, reltype, ik) result(apb)
   type(mesh_t),      intent(in)    :: mesh
   type(projector_t), intent(in)    :: pj
   integer,           intent(in)    :: dim
   R_TYPE,            intent(in)    :: psia(:, :)  ! psia(1:mesh%np, dim)
   R_TYPE,            intent(inout) :: psib(:, :)  ! psib(1:mesh%np, dim)
   integer,           intent(in)    :: reltype
+  integer,           intent(in)    :: ik
 
   integer ::  n_s, idim
   R_TYPE, allocatable :: lpsi(:, :), plpsi(:,:)
@@ -83,16 +84,24 @@ R_TYPE function X(psia_project_psib)(mesh, pj, dim, psia, psib, reltype) result(
 
   ALLOCATE(lpsi(n_s, dim),  n_s*dim)
   ALLOCATE(plpsi(n_s, dim), n_s*dim)
-  
-  do idim = 1, dim
-    lpsi(1:n_s, idim)  = psib(pj%sphere%jxyz(1:n_s), idim)
-  end do
 
+  do idim = 1, dim
+    if(simul_box_is_periodic(mesh%sb) .and. pj%type /= M_LOCAL) then
+      lpsi(1:n_s, idim) = psib(pj%sphere%jxyz(1:n_s), idim) * pj%phase(1:n_s, ik)
+    else
+      lpsi(1:n_s, idim) = psib(pj%sphere%jxyz(1:n_s), idim)
+    end if
+  end do
+  
   call X(project_sphere)(mesh, pj, dim, lpsi, plpsi, reltype)
 
   apb = M_ZERO
   do idim = 1, dim
-    plpsi(1:n_s, idim) = R_CONJ(psia(pj%sphere%jxyz(1:n_s), idim)) * plpsi(1:n_s, idim)
+    if(simul_box_is_periodic(mesh%sb) .and. pj%type /= M_LOCAL) then
+      plpsi(1:n_s, idim) = R_CONJ(psia(pj%sphere%jxyz(1:n_s), idim))*plpsi(1:n_s, idim)*conjg(pj%phase(1:n_s, ik))
+    else
+      plpsi(1:n_s, idim) = R_CONJ(psia(pj%sphere%jxyz(1:n_s), idim))*plpsi(1:n_s, idim)
+    end if
     apb = apb + X(sm_integrate)(mesh, pj%sphere, plpsi(1:n_s, idim))
   end do
 
