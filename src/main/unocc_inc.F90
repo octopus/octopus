@@ -66,8 +66,7 @@ subroutine X(one_body) (gr, geo, st, h)
          
          corr = M_ZERO
          do iatom = 1, geo%natoms
-           call X(conmut_vnl_r)(gr, geo, h%ep, 1, idir, iatom, st%X(psi)(1:NP, 1, j, 1), &
-                cpsi, h%reltype, ik=1)
+           call X(conmut_vnl_r)(gr, geo, h%ep, 1, idir, iatom, st%X(psi)(1:NP, 1, j, 1), cpsi, ik=1)
            corr = corr + X(mf_integrate) (gr%m, R_CONJ(st%X(psi) (1:NP, 1, i, 1)) * &
                 cpsi(1:NP, 1))
          end do

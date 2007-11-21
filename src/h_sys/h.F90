@@ -88,8 +88,6 @@ module hamiltonian_m
     ! in order to be able to operate on the states.
     type(states_dim_t) :: d
 
-    integer :: reltype            ! type of relativistic correction to use
-
     FLOAT, pointer :: vhartree(:) ! hartree potential
     FLOAT, pointer :: vxc(:,:)    ! xc potential
     FLOAT, pointer :: vhxc(:,:)   ! xc potential + hartree potential
@@ -155,12 +153,6 @@ module hamiltonian_m
 #endif
     CMPLX, pointer :: phase(:, :)
   end type hamiltonian_t
-
-  integer, public, parameter :: &
-    NOREL      = 0,             &
-    SPIN_ORBIT = 1,             &
-    APP_ZORA   = 2,             &
-    ZORA       = 3
 
   integer, public, parameter :: &
     LENGTH     = 1,             &
@@ -237,44 +229,11 @@ contains
     end if
 
     !Initialize external potential
-    call epot_init(h%ep, gr, geo)
+    call epot_init(h%ep, gr, geo, h%d%ispin)
 
 
     !Static magnetic field requires complex wave-functions
     if (associated(h%ep%B_field) .or. h%ep%with_gauge_field) wfs_type = M_CMPLX
-
-
-    !%Variable RelativisticCorrection
-    !%Type integer
-    !%Default non_relativistic
-    !%Section Hamiltonian
-    !%Description
-    !% The default value means that <i>no</i> relativistic correction is used. To
-    !% include spin-orbit coupling turn <tt>RelativisticCorrection</tt> to <tt>spin_orbit</tt> 
-    !% (this will only work when using an executable compiled for complex wave-functions,
-    !% and if <tt>SpinComponents</tt> has been set to <tt>non_collinear</tt>, which ensures
-    !% the use of spinors).
-    !%Option non_relativistic 0
-    !% No relativistic corrections.
-    !%Option spin_orbit 1
-    !% Spin-Orbit.
-    !%Option app_zora 2
-    !% Approximated ZORA (Not implemented)
-    !%Option zora 3
-    !% ZORA (Not implemented)
-    !%End
-    call loct_parse_int(check_inp('RelativisticCorrection'), NOREL, h%reltype)
-    if(.not.varinfo_valid_option('RelativisticCorrection', h%reltype)) call input_error('RelativisticCorrection')
-    if (h%d%ispin /= SPINORS .and. h%reltype == SPIN_ORBIT) then
-      message(1) = "The Spin-orbit term can only be applied when using Spinors."
-      call write_fatal(1)
-    end if
-    ! This is temporary...
-    if(h%reltype > SPIN_ORBIT) then
-      message(1) = 'Error: ZORA corrections not working yet. Visit us soon.'
-      call write_fatal(1)
-    end if
-    call messages_print_var_option(stdout, "RelativisticCorrection", h%reltype)
 
     call loct_parse_logical(check_inp('CalculateSelfInducedMagneticField'), .false., h%self_induced_magnetic)
     !%Variable CalculateSelfInducedMagneticField

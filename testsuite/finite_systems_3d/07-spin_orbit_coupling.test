@@ -19,7 +19,7 @@ Match ; Eigenvalue  7 ; grep '7   --   -16.4023' static/info | awk '{print $3" "
 Match ; Eigenvalue  9 ; grep '9   --   -15.2893' static/info | awk '{print $3" "$7" "$4}' ; \s*-15.2893\d*\s*-0.080\d*\s*1.00
 Match ; Eigenvalue 11 ; grep '11   --   -15.2878' static/info | awk '{print $3" "$7" "$4}' ; \s*-15.2878\d*\s*0.135\d*\s*1.00
 Match ; Eigenvalue 13 ; grep '13   --   -14.4567' static/info | awk '{print $3" "$7" "$4}' ; \s*-14.4567\d*\s*-0.110\d*\s*1.00
-Match ; Force         ; sed -n '/^Forces on/{n\;n\;p\;}' static/info ; \s*2.553\d*
+Match ; Force         ; sed -n '/^Forces on/{n\;n\;p\;}' static/info ; \s*2.545\d*
 
 
 

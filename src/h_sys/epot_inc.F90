@@ -68,7 +68,7 @@ subroutine X(calc_forces_from_potential)(gr, geo, ep, st, time)
         do idir = 1, NDIM
 
           psi_proj_gpsi = X(psia_project_psib)(gr%m, ep%p(ivnl), st%d%dim, &
-               st%X(psi)(:, :, ist, ik), gpsi(:, idir, :), reltype = 0, ik = ik)
+               st%X(psi)(:, :, ist, ik), gpsi(:, idir, :), ep%reltype, ik)
 
           force(idir, iatom) = force(idir, iatom) - M_TWO * st%occ(ist, ik) * R_REAL(psi_proj_gpsi)
 
@@ -119,7 +119,7 @@ end subroutine X(calc_forces_from_potential)
 
 !This function calculates |cpsi> = [x,V_nl] |psi>
 
-subroutine X(conmut_vnl_r)(gr, geo, ep, dim, idir, iatom, psi, cpsi, reltype, ik)
+subroutine X(conmut_vnl_r)(gr, geo, ep, dim, idir, iatom, psi, cpsi, ik)
   type(grid_t),          intent(in)     :: gr
   type(geometry_t),      intent(in)     :: geo
   type(epot_t), target,  intent(in)     :: ep
@@ -128,7 +128,6 @@ subroutine X(conmut_vnl_r)(gr, geo, ep, dim, idir, iatom, psi, cpsi, reltype, ik
   integer,               intent(in)     :: iatom
   R_TYPE,                intent(in)     :: psi(:)
   R_TYPE,                intent(out)    :: cpsi(:,:)
-  integer,               intent(in)     :: reltype
   integer,               intent(in)     :: ik
 
   integer ::  n_s, idim, ipj
@@ -158,7 +157,7 @@ subroutine X(conmut_vnl_r)(gr, geo, ep, dim, idir, iatom, psi, cpsi, reltype, ik
     end do
 
     ! x V_nl |psi>
-    call X(project_sphere)(gr%m, ep%p(ipj), dim, lpsi, xplpsi, reltype)
+    call X(project_sphere)(gr%m, ep%p(ipj), dim, lpsi, xplpsi, ep%reltype)
     do idim = 1, dim
       xplpsi(1:n_s, idim) = smx(1:n_s, idir) * xplpsi(1:n_s, idim)
     end do
@@ -167,7 +166,7 @@ subroutine X(conmut_vnl_r)(gr, geo, ep, dim, idir, iatom, psi, cpsi, reltype, ik
     do idim = 1, dim
       lpsi(1:n_s, idim) = smx(1:n_s, idir) * lpsi(1:n_s, idim)
     end do
-    call X(project_sphere)(gr%m, ep%p(ipj), dim, lpsi, pxlpsi, reltype)
+    call X(project_sphere)(gr%m, ep%p(ipj), dim, lpsi, pxlpsi, ep%reltype)
 
     ! |cpsi> = x V_nl |psi> - V_nl x |psi> 
     do idim = 1, dim

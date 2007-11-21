@@ -66,7 +66,7 @@ contains
 
       do iatom = 1, geo%natoms
         do idir = 1, gr%sb%dim
-          call X(conmut_vnl_r)(gr, geo, h%ep, h%d%dim, idir, iatom, f_in, vrnl(:, :, idir), h%reltype, ik=1)
+          call X(conmut_vnl_r)(gr, geo, h%ep, h%d%dim, idir, iatom, f_in, vrnl(:, :, idir), ik = 1)
         end do
 
         do ip = 1, NP
@@ -224,14 +224,14 @@ contains
         do idir = 1, gr%sb%dim
           do idir2 = 1, gr%sb%dim
             !calculate dnl |f_in2> = -[x,vnl] |f_in2>
-            call X(conmut_vnl_r)(gr, geo, h%ep, h%d%dim, idir2, iatom, f_in2(:, idir2), vrnl(:, :), h%reltype, ik=1)
+            call X(conmut_vnl_r)(gr, geo, h%ep, h%d%dim, idir2, iatom, f_in2(:, idir2), vrnl(:, :), ik=1)
 
             ! -x vnl |f>
             dnl(1:NP, idir) = dnl(1:NP, idir) - gr%m%x(1:NP, idir) * vrnl(1:NP, 1)
 
             ! vnl x |f>
             xf(1:NP) = gr%m%x(1:NP, idir) * f_in2(1:NP, idir2)
-            call X(conmut_vnl_r)(gr, geo, h%ep, h%d%dim, idir2, iatom, xf, vrnl(:, :), h%reltype, ik=1)
+            call X(conmut_vnl_r)(gr, geo, h%ep, h%d%dim, idir2, iatom, xf, vrnl(:, :), ik=1)
 
             dnl(1:NP, idir) = dnl(1:NP, idir) + vrnl(1:NP, 1)
           end do
@@ -319,7 +319,7 @@ subroutine X(ionic_perturbation_order_2) (this, gr, geo, h, f_in, f_out, iatom, 
   !di^T dj^T v |f>
   tmp1(1:NP, 1) = vloc(1:NP) * fin(1:NP, 1)
   do ipj = h%ep%atomproj(1, iatom), h%ep%atomproj(2, iatom)
-    call X(project_psi)(gr%m, h%ep%p(ipj), 1, fin, tmp1, reltype = 0, ik = 1)
+    call X(project_psi)(gr%m, h%ep%p(ipj), 1, fin, tmp1, h%ep%reltype, ik = 1)
   end do
   call X(derivatives_oper)(gr%f_der%der_discr%grad(idir), gr%f_der%der_discr, tmp1(:,1), tmp2(:,1))
   call X(derivatives_oper)(gr%f_der%der_discr%grad(jdir), gr%f_der%der_discr, tmp2(:,1), f_out)
@@ -328,7 +328,7 @@ subroutine X(ionic_perturbation_order_2) (this, gr, geo, h, f_in, f_out, iatom, 
   call X(derivatives_oper)(gr%f_der%der_discr%grad(jdir), gr%f_der%der_discr, fin(:,1), tmp1(:,1))
   tmp2(1:NP, 1) = vloc(1:NP) * tmp1(1:NP, 1)
   do ipj = h%ep%atomproj(1, iatom), h%ep%atomproj(2, iatom)
-    call X(project_psi)(gr%m, h%ep%p(ipj), 1, tmp1, tmp2, reltype = 0, ik = 1)
+    call X(project_psi)(gr%m, h%ep%p(ipj), 1, tmp1, tmp2, h%ep%reltype, ik = 1)
   end do
   call X(derivatives_oper)(gr%f_der%der_discr%grad(idir), gr%f_der%der_discr, tmp2(:,1), tmp1(:,1))
   f_out(1:NP) = f_out(1:NP) - tmp1(1:NP, 1)
@@ -337,7 +337,7 @@ subroutine X(ionic_perturbation_order_2) (this, gr, geo, h, f_in, f_out, iatom, 
   call X(derivatives_oper)(gr%f_der%der_discr%grad(idir), gr%f_der%der_discr, fin(:,1), tmp1(:,1))
   tmp2(1:NP, 1) = vloc(1:NP) * tmp1(1:NP, 1)
   do ipj = h%ep%atomproj(1, iatom), h%ep%atomproj(2, iatom)
-    call X(project_psi)(gr%m, h%ep%p(ipj), 1, tmp1, tmp2, reltype = 0, ik = 1)
+    call X(project_psi)(gr%m, h%ep%p(ipj), 1, tmp1, tmp2, h%ep%reltype, ik = 1)
   end do
   call X(derivatives_oper)(gr%f_der%der_discr%grad(jdir), gr%f_der%der_discr, tmp2(:,1), tmp1(:,1))
   f_out(1:NP) = f_out(1:NP) - tmp1(1:NP, 1)
@@ -347,7 +347,7 @@ subroutine X(ionic_perturbation_order_2) (this, gr, geo, h, f_in, f_out, iatom, 
   call X(derivatives_oper)(gr%f_der%der_discr%grad(jdir), gr%f_der%der_discr, tmp1(:,1), tmp2(:,1))
   tmp1(1:NP, 1) = vloc(1:NP) * tmp2(1:NP, 1)
   do ipj = h%ep%atomproj(1, iatom), h%ep%atomproj(2, iatom)
-    call X(project_psi)(gr%m, h%ep%p(ipj), 1, tmp2, tmp1, reltype = 0, ik = 1)
+    call X(project_psi)(gr%m, h%ep%p(ipj), 1, tmp2, tmp1, h%ep%reltype, ik = 1)
   end do
   f_out(1:NP) = f_out(1:NP) + tmp1(1:NP, 1)
 

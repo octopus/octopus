@@ -91,7 +91,9 @@ module external_pot_m
     FLOAT, pointer :: A_gauge_dot(:)       ! dA_gauge/dt
     FLOAT, pointer :: A_gauge_ddot(:)      ! d^2A_gauge/dt^2
     logical :: with_gauge_field            ! true if A_gauge(:) is used
-    
+
+    integer :: reltype            ! type of relativistic correction to use
+
     ! The gyromagnetic ratio (-2.0 for the electron, but different if we treat
     ! *effective* electrons in a quantum dot. It affects the spin Zeeman term.
     FLOAT :: gyromagnetic_ratio
@@ -104,13 +106,20 @@ module external_pot_m
 #endif
   end type epot_t
 
+  integer, public, parameter :: &
+    NOREL      = 0,             &
+    SPIN_ORBIT = 1,             &
+    APP_ZORA   = 2,             &
+    ZORA       = 3
+
 contains
 
   ! ---------------------------------------------------------
-  subroutine epot_init(ep, gr, geo)
-    type(epot_t), intent(out) :: ep
-    type(grid_t), intent(in)  :: gr
+  subroutine epot_init(ep, gr, geo, ispin)
+    type(epot_t),     intent(out)   :: ep
+    type(grid_t),     intent(in)    :: gr
     type(geometry_t), intent(inout) :: geo
+    integer,          intent(in)    :: ispin
 
     integer :: i, nvl
     C_POINTER :: blk
@@ -288,6 +297,38 @@ contains
     !%End
     call loct_parse_float(check_inp('GyromagneticRatio'), P_g, ep%gyromagnetic_ratio)
 
+    !%Variable RelativisticCorrection
+    !%Type integer
+    !%Default non_relativistic
+    !%Section Hamiltonian
+    !%Description
+    !% The default value means that <i>no</i> relativistic correction is used. To
+    !% include spin-orbit coupling turn <tt>RelativisticCorrection</tt> to <tt>spin_orbit</tt> 
+    !% (this will only work when using an executable compiled for complex wave-functions,
+    !% and if <tt>SpinComponents</tt> has been set to <tt>non_collinear</tt>, which ensures
+    !% the use of spinors).
+    !%Option non_relativistic 0
+    !% No relativistic corrections.
+    !%Option spin_orbit 1
+    !% Spin-Orbit.
+    !%Option app_zora 2
+    !% Approximated ZORA (Not implemented)
+    !%Option zora 3
+    !% ZORA (Not implemented)
+    !%End
+    call loct_parse_int(check_inp('RelativisticCorrection'), NOREL, ep%reltype)
+    if(.not.varinfo_valid_option('RelativisticCorrection', ep%reltype)) call input_error('RelativisticCorrection')
+    if (ispin /= SPINORS .and. ep%reltype == SPIN_ORBIT) then
+      message(1) = "The Spin-orbit term can only be applied when using Spinors."
+      call write_fatal(1)
+    end if
+    ! This is temporary...
+    if(ep%reltype > SPIN_ORBIT) then
+      message(1) = 'Error: ZORA corrections not implemented.'
+      call write_fatal(1)
+    end if
+    call messages_print_var_option(stdout, "RelativisticCorrection", ep%reltype)
+    
 #ifdef HAVE_MPI
     !%Variable ParallelPotentialGeneration
     !%Type logical
@@ -414,13 +455,12 @@ contains
   end subroutine epot_generate_gauge_field
   
   ! ---------------------------------------------------------
-  subroutine epot_generate(ep, gr, geo, mc, st, reltype, time)
+  subroutine epot_generate(ep, gr, geo, mc, st, time)
     type(epot_t),      intent(inout) :: ep
     type(grid_t), target,  intent(inout) :: gr
     type(geometry_t),  intent(inout) :: geo
     type(multicomm_t), intent(in)    :: mc
     type(states_t),    intent(inout) :: st
-    integer,           intent(in)    :: reltype
     FLOAT,   optional, intent(in)    :: time
 
     FLOAT   :: time_
@@ -468,7 +508,7 @@ contains
 
           call projector_end(ep%p(iproj))
           call submesh_copy(nl_sphere, ep%p(iproj)%sphere)
-          call projector_init(ep%p(iproj), atm, reltype, l, lm)
+          call projector_init(ep%p(iproj), atm, ep%reltype, l, lm)
 
           if(simul_box_is_periodic(sb)) &
             call projector_init_phases(ep%p(iproj), gr%m, st%d%nik, st%d%kpoints)

@@ -579,7 +579,7 @@ subroutine X(vnlpsi) (h, gr, psi, hpsi, ik)
   call push_sub('h_inc.Xvnlpsi')
 
   do ipj = 1, h%ep%nvnl
-    call X(project_psi)(gr%m, h%ep%p(ipj), h%d%dim, psi, hpsi, h%reltype, ik)
+    call X(project_psi)(gr%m, h%ep%p(ipj), h%d%dim, psi, hpsi, h%ep%reltype, ik)
   end do
 
   call pop_sub()
@@ -1232,7 +1232,7 @@ subroutine X(vnlpsi_diag) (h, m, hpsi)
 
   do ipj = 1, h%ep%nvnl
     if( h%ep%p(ipj)%type == M_LOCAL) then 
-      call X(project_psi)(m, h%ep%p(ipj), h%d%dim, psi, hpsi, h%reltype, ik = 1)
+      call X(project_psi)(m, h%ep%p(ipj), h%d%dim, psi, hpsi, h%ep%reltype, ik = 1)
     end if
   end do
 
