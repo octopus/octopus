@@ -51,15 +51,7 @@ module v_ks_m
     sic_pz     = 2,     &  ! SIC a la Perdew Zunger (OEP way)
     sic_amaldi = 3         ! Amaldi correction term
 
-  integer, parameter ::        &
-    INDEPENDENT_PARTICLES = 1, &
-    KOHN_SHAM_DFT         = 2, &
-    HARTREE_FOCK          = 3
-
   type v_ks_t
-    logical :: ip_app
-    logical :: hartree_fock
-
     integer :: theory_level
 
     integer           :: xc_family  ! the xc stuff
@@ -84,11 +76,30 @@ contains
     !%Default dft
     !%Section Hamiltonian
     !%Description
-    !% The calculations can be run with three different "theory levels": Kohn-Sham (TD)DFT
-    !% (the usual one and the default), Hartree-Fock, or independent particles.
+    !% The calculations can be run with three different "theory levels"
     !%Option independent_particles 1
-    !%Option dft 2
+    !% Particles will be considered as independent, i.e. as non-interacting.
+    !% This mode is mainly used for testing purposes, as the code is usually 
+    !% much faster with independent_particles.
+    !%Option hartree 2
+    !% Calculation within the Hartree method. Note that, contrary to what many people
+    !% may think, the Hartree potential is self-interaction free. Therefore, this run 
+    !% mode will not yield the same result as dft without exchange-correlation.
+    !% 
+    !% At the moment, I am not completely sure of the implementation, so I am
+    !% marking it with development version only.
     !%Option hartree_fock 3
+    !% This is the traditional Hartree-Fock scheme. As the Hartree scheme it is full
+    !% self-interaction free. This mode is extremely slow. It is often more convinient
+    !% to use dft within the OEP scheme to get similar (but not the same) results.
+    !% 
+    !% Note that within this scheme you can use a correlation functional, or a hybrid
+    !% functional (see XCFunctional). In the latter case, you will be following the
+    !% quantum chemistry recipe to use hybrids.
+    !%Option dft 4
+    !% This is the default density-functional theory scheme. Note that you can also use 
+    !% hybrids in this scheme, but they will be handled the "DFT" way, i.e., solving the
+    !% OEP equation.
     !%End
     call loct_parse_int(check_inp('TheoryLevel'), KOHN_SHAM_DFT, ks%theory_level)
     if(.not.varinfo_valid_option('TheoryLevel', ks%theory_level)) call input_error('TheoryLevel')
@@ -96,21 +107,18 @@ contains
     call obsolete_variable('NonInteractingElectrons', 'TheoryLevel')
     call obsolete_variable('HartreeFock', 'TheoryLevel')
 
-    ks%ip_app = .false.
-    ks%hartree_fock = .false.
     select case(ks%theory_level)
     case(INDEPENDENT_PARTICLES)
-      ks%ip_app = .true.
-
+    case(HARTREE)
+      if (.not.conf%devel_version) then
+        message(1) = "Hartree calculation only allowed in the development version"
+        call write_fatal(1)
+      end if
     case(HARTREE_FOCK)
-      ks%hartree_fock = .true.
-
       ! initilize xc modules
       call xc_init(ks%xc, NDIM, d%spin_channels, d%cdft, hartree_fock=.true.)
       ks%xc_family = ks%xc%family
       ks%sic_type = sic_none
-
-      call v_ks_write_info(ks, stdout)
 
     case(KOHN_SHAM_DFT)
       ! initilize xc modules
@@ -145,10 +153,9 @@ contains
       end if
 
       call xc_oep_init(ks%oep, ks%xc_family, gr, d)
-
-      call v_ks_write_info(ks, stdout)
-
     end select
+
+    call v_ks_write_info(ks, stdout)
 
     call pop_sub()
   end subroutine v_ks_init
@@ -181,16 +188,14 @@ contains
 
     call messages_print_stress(iunit, "Theory Level")
     call messages_print_var_option(iunit, "TheoryLevel", ks%theory_level)
-    write(iunit, '(1x)')
 
     select case(ks%theory_level)
-    case(INDEPENDENT_PARTICLES)
-      write(iunit, '(a)') 'Independent Particles'
-
     case(HARTREE_FOCK)
+      write(iunit, '(1x)')
       call xc_write_info(ks%xc, iunit)
 
     case(KOHN_SHAM_DFT)
+      write(iunit, '(1x)')
       call xc_write_info(ks%xc, iunit)
 
       write(iunit, '(1x)')
@@ -227,54 +232,49 @@ contains
     if(ks%sic_type == sic_amaldi) amaldi_factor = (st%qtot-1)/st%qtot
 
 
-    select case(ks%theory_level)
-    case(KOHN_SHAM_DFT, HARTREE_FOCK)
-
-      ! No Hartree or xc if independent electrons
-      if(amaldi_factor>M_ZERO) then
-        call v_hartree()
-
-        !$omp parallel workshare
-        h%vxc      = M_ZERO
-        !$omp end parallel workshare
-        if(h%d%cdft) h%axc = M_ZERO
-        call v_a_xc()
-
-        ! Build Hartree + xc potential
-
-        !$omp parallel workshare
-        h%vhxc(1:NP, 1) = h%vxc(1:NP, 1) + h%vhartree(1:NP)
-        !$omp end parallel workshare
-
-        if(h%d%ispin > UNPOLARIZED) then
-          !$omp parallel workshare
-          h%vhxc(1:NP, 2) = h%vxc(1:NP, 2) + h%vhartree(1:NP)
-          !$omp end parallel workshare
-        end if
-
-        if(h%d%ispin == SPINORS) then
-          !$omp parallel workshare
-          h%vhxc(1:NP, 3:4) = h%vxc(1:NP, 3:4)
-          !$omp end parallel workshare        
-        end if
-      end if
-
-    case(INDEPENDENT_PARTICLES)
-
+    if(ks%theory_level==INDEPENDENT_PARTICLES.or.amaldi_factor==M_ZERO) then
       !$omp parallel workshare
       h%vhxc     = M_ZERO
       !$omp end parallel workshare
       h%epot     = M_ZERO
       h%ex       = M_ZERO
       h%ec       = M_ZERO
+    else
+      call v_hartree()
 
-    end select
+      !$omp parallel workshare
+      h%vxc      = M_ZERO
+      !$omp end parallel workshare
+      if(h%d%cdft) h%axc = M_ZERO
+      if(ks%theory_level.ne.HARTREE) call v_a_xc()
+
+      ! Build Hartree + xc potential
+
+      !$omp parallel workshare
+      h%vhxc(1:NP, 1) = h%vxc(1:NP, 1) + h%vhartree(1:NP)
+      !$omp end parallel workshare
+
+      if(h%d%ispin > UNPOLARIZED) then
+        !$omp parallel workshare
+        h%vhxc(1:NP, 2) = h%vxc(1:NP, 2) + h%vhartree(1:NP)
+        !$omp end parallel workshare
+      end if
+
+      if(h%d%ispin == SPINORS) then
+        !$omp parallel workshare
+        h%vhxc(1:NP, 3:4) = h%vxc(1:NP, 3:4)
+        !$omp end parallel workshare        
+      end if
+    end if
     
-    if(ks%theory_level == HARTREE_FOCK) then
+    if(ks%theory_level==HARTREE.or.ks%theory_level==HARTREE_FOCK) then
       call states_end(h%st)
       call states_copy(h%st, st)
-
+    end if
+    if(ks%theory_level==HARTREE_FOCK) then
       h%exx_coef = ks%xc%exx_coef
+    else if (ks%theory_level==HARTREE) then
+      h%exx_coef = M_ONE
     end if
 
     ! Calculate the potential vector induced by the electronic current

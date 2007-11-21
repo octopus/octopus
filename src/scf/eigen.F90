@@ -103,6 +103,7 @@ module eigen_solver_m
   type(hamiltonian_t), pointer :: h_
   type(grid_t),        pointer :: gr_
   integer                      :: ik_
+  integer                      :: ist_
 
 contains
 

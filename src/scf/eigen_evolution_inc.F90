@@ -77,7 +77,7 @@ subroutine X(eigen_solver_evolution) (gr, st, h, tol, niter, converged, diff, ta
 
       ! Get the eigenvalues and the residues.
       do ist = conv + 1, st%nst
-        call X(hpsi)(h, gr, st%X(psi)(:, :, ist, ik), hpsi, ik)
+        call X(hpsi)(h, gr, st%X(psi)(:, :, ist, ik), hpsi, ist, ik)
         st%eigenval(ist, ik) = X(states_dotp)(gr%m, st%d%dim, st%X(psi)(:, :, ist, ik), hpsi)
         diff(ist, ik) = X(states_residue)(gr%m, st%d%dim, hpsi, st%eigenval(ist, ik), st%X(psi)(:, :, ist, ik))
       end do
@@ -129,9 +129,10 @@ contains
     wsp=R_TOTYPE(M_ZERO)
     iwsp=R_TOTYPE(M_ZERO)
     
-    h_  => h
-    gr_ => gr
-    ik_ =  ik
+    h_   => h
+    gr_  => gr
+    ik_  =  ik
+    ist_ =  ist
     call X(gexpv)(n, m, t, psi(:, 1), w(:, 1), tolerance, anorm, &
       wsp, lwsp, iwsp, liwsp, X(mv), itrace, iflag)
     nullify(h_)
@@ -159,7 +160,7 @@ subroutine X(mv) (x, y)
   do idim = 1, h_%d%dim
     psi(1:np, idim) = x((idim-1)*np_part+1:(idim-1)*np_part+np)
   end do
-  call X(hpsi)(h_, gr_, psi, hpsi, ik_)
+  call X(hpsi)(h_, gr_, psi, hpsi, ist_, ik_)
   do idim = 1, h_%d%dim
     y((idim-1)*np_part+1:(idim-1)*np_part+np) = hpsi(1:np, idim)
   end do

@@ -180,7 +180,7 @@ subroutine X(eigen_solver_plan) (gr, st, hamilt, pre, tol, niter, converged, dif
             call lalg_copy(NP, v(:, idim, d1 + i), aux(:, idim))
           end do
           av(:, :, d1 + i) = R_TOTYPE(M_ZERO)
-          call X(Hpsi)(hamilt, gr, aux, av(:, :, d1 + i), ik)
+          call X(Hpsi)(hamilt, gr, aux, av(:, :, d1 + i), d1+i, ik)
         end do
         matvec = matvec + blk
 

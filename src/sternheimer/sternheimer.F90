@@ -110,14 +110,14 @@ contains
     !% also the exchange, correlation and hartree terms. If you want
     !% to choose the exchange and correlation kernel use the variable
     !% XCKernel.
-    !%Option hartree 1
+    !%Option hartree 2
     !% The variation of the hartree potential.
-    !%Option fxc 2
+    !%Option fxc 3
     !% The exchange and correlation kernel, the variation of the
     !% exchange and correlation potential.
     !%End
 
-    if(.not. h%ip_app) then 
+    if(h%theory_level.ne.INDEPENDENT_PARTICLES) then 
       call loct_parse_int(check_inp('PolHamiltonianVariation'), 3, ham_var)    
       this%add_fxc = ((ham_var/2) == 1)
       this%add_hartree = (mod(ham_var, 2) == 1)

@@ -204,8 +204,8 @@ contains
     if(.not.varinfo_valid_option('What2Mix', scf%what2mix)) call input_error('What2Mix')
     call messages_print_var_option(stdout, "What2Mix", scf%what2mix, "what to mix during SCF cycles")
 
-    if (scf%what2mix == MIXPOT.and.h%ip_app) then
-      message(1) = "Input: Cannot mix the potential with non-interacting electrons."
+    if (scf%what2mix == MIXPOT.and.h%theory_level==INDEPENDENT_PARTICLES) then
+      message(1) = "Input: Cannot mix the potential with non-interacting particles."
       call write_fatal(1)
     end if
 

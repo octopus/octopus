@@ -36,9 +36,9 @@ subroutine X(hamiltonian_eigenval)(h, gr, st, t)
   do ik = 1, st%d%nik
     do ist = st%st_start, st%st_end
       if(present(t)) then
-        call X(hpsi) (h, gr, st%X(psi)(:, :, ist, ik), hpsi, ik, t)
+        call X(hpsi) (h, gr, st%X(psi)(:, :, ist, ik), hpsi, ist, ik, t)
       else
-        call X(hpsi) (h, gr, st%X(psi)(:, :, ist, ik), hpsi, ik)
+        call X(hpsi) (h, gr, st%X(psi)(:, :, ist, ik), hpsi, ist, ik)
       end if
       e = X(states_dotp)(gr%m, st%d%dim, st%X(psi)(:, :, ist, ik), Hpsi)
       st%eigenval(ist, ik) = R_REAL(e)
@@ -51,10 +51,11 @@ end subroutine X(hamiltonian_eigenval)
 
 
 ! ---------------------------------------------------------
-subroutine X(hpsi) (h, gr, psi, hpsi, ik, t)
+subroutine X(hpsi) (h, gr, psi, hpsi, ist, ik, t)
   type(hamiltonian_t), intent(inout) :: h
   type(grid_t),        intent(inout) :: gr
-  integer,             intent(in)    :: ik
+  integer,             intent(in)    :: ist       ! the index of the state
+  integer,             intent(in)    :: ik        ! the index of the k-point
   R_TYPE, target,      intent(inout) :: psi(:,:)  ! psi(NP_PART, h%d%dim)
   R_TYPE,              intent(out)   :: hpsi(:,:) ! hpsi(NP, h%d%dim)
   FLOAT, optional,     intent(in)    :: t
@@ -126,8 +127,8 @@ subroutine X(hpsi) (h, gr, psi, hpsi, ik, t)
   end if
 #endif
   
-  if(h%theory_level .eq. HARTREE_FOCK) then
-    call X(exchange_operator)(h, gr, epsi, hpsi, ik)
+  if(h%theory_level==HARTREE.or.h%theory_level==HARTREE_FOCK) then
+    call X(exchange_operator)(h, gr, epsi, hpsi, ist, ik)
   end if
 
   if(hamiltonian_oct_exchange(h)) then
@@ -158,12 +159,13 @@ end subroutine X(hpsi)
 
 
 ! ---------------------------------------------------------
-subroutine X(exchange_operator) (h, gr, psi, hpsi, ik)
+subroutine X(exchange_operator) (h, gr, psi, hpsi, ist, ik)
   type(hamiltonian_t), intent(inout) :: h
   type(grid_t),        intent(inout) :: gr
   R_TYPE,              intent(inout) :: psi(:,:)  ! psi(NP_PART, h%d%dim)
   R_TYPE,              intent(inout) :: hpsi(:,:) ! hpsi(NP, h%d%dim)
-  integer,             intent(in)    :: ik
+  integer,             intent(in)    :: ist       ! the index of the state
+  integer,             intent(in)    :: ik        ! the index of the k-point
   R_TYPE, allocatable :: rho(:), pot(:)
   integer :: j, k
 
@@ -172,9 +174,15 @@ subroutine X(exchange_operator) (h, gr, psi, hpsi, ik)
   ALLOCATE(rho(gr%m%np), gr%m%np)
   ALLOCATE(pot(gr%m%np), gr%m%np)
 
+  ! WARNING: this can be very condensed
   select case(h%d%ispin)
   case(UNPOLARIZED)
     do j = 1, h%st%nst
+      if(h%st%occ(j, ik) <= M_ZERO) cycle
+
+      ! in Hartree we just remove the self-interaction
+      if(h%theory_level==HARTREE.and.j.ne.ist) cycle
+
       pot = M_ZERO
       do k = 1, gr%m%np
         rho(k) = R_CONJ(h%st%X(psi)(k, 1, j, ik)) * psi(k, 1)
@@ -188,6 +196,10 @@ subroutine X(exchange_operator) (h, gr, psi, hpsi, ik)
   case(SPIN_POLARIZED)
     do j = 1, h%st%nst
       if(h%st%occ(j, ik) <= M_ZERO) cycle
+
+      ! in Hartree we just remove the self-interaction
+      if(h%theory_level==HARTREE.and.j.ne.ist) cycle
+
       pot = M_ZERO
       do k = 1, gr%m%np
         rho(k) = R_CONJ(h%st%X(psi)(k, 1, j, ik)) * psi(k, 1)

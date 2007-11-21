@@ -187,7 +187,7 @@ subroutine X(eigen_solver_lobpcg)(gr, st, h, pre, tol, niter, converged, diff, v
 
     ! Get initial Ritz-values and -vectors.
     do ist = st_start, st_end
-      call X(hpsi)(h, gr, st%X(psi)(:, :, ist, ik), h_psi(:, :, ist), ik)
+      call X(hpsi)(h, gr, st%X(psi)(:, :, ist, ik), h_psi(:, :, ist), ist, ik)
     end do
     niter = niter+lnst
 
@@ -259,7 +259,7 @@ subroutine X(eigen_solver_lobpcg)(gr, st, h, pre, tol, niter, converged, diff, v
       ! Apply Hamiltonian to residuals.
       do i = 1, lnuc
         ist = luc(i)
-        call X(hpsi)(h, gr, res(:, :, ist), h_res(:, :, ist), ik)
+        call X(hpsi)(h, gr, res(:, :, ist), h_res(:, :, ist), ist, ik)
       end do
       niter = niter+lnuc
       

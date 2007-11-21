@@ -37,10 +37,10 @@ subroutine X(solve_HXeY) (this, h, gr, st, ist, ik, x, y, omega)
   select case(this%solver)
 
   case(LS_CG)
-    call X(ls_solver_cg)(this, h, gr, st, ik, x, y, omega)
+    call X(ls_solver_cg)       (this, h, gr, st, ist, ik, x, y, omega)
 
   case(LS_BICGSTAB)
-    call X(ls_solver_bicgstab)(this, h, gr, st, ik, x, y, omega)
+    call X(ls_solver_bicgstab) (this, h, gr, st, ist, ik, x, y, omega)
 
   case(LS_MULTIGRID)
     call X(ls_solver_multigrid)(this, h, gr, st, ist, ik, x, y, omega)
@@ -55,15 +55,16 @@ end subroutine X(solve_HXeY)
 
 
 !Conjugated gradients
-subroutine X(ls_solver_cg) (ls, h, gr, st, ik, x, y, omega)
+subroutine X(ls_solver_cg) (ls, h, gr, st, ist, ik, x, y, omega)
   type(linear_solver_t),          intent(inout) :: ls
   type(hamiltonian_t), intent(inout) :: h
   type(grid_t),        intent(inout) :: gr
   type(states_t),      intent(in)    :: st
-  integer,                intent(in)    :: ik
-  R_TYPE,                 intent(inout) :: x(:,:)   ! x(NP, st%d%dim)
-  R_TYPE,                 intent(in)    :: y(:,:)   ! y(NP, st%d%dim)
-  R_TYPE,                 intent(in)    :: omega
+  integer,             intent(in)    :: ist
+  integer,             intent(in)    :: ik
+  R_TYPE,              intent(inout) :: x(:,:)   ! x(NP, st%d%dim)
+  R_TYPE,              intent(in)    :: y(:,:)   ! y(NP, st%d%dim)
+  R_TYPE,              intent(in)    :: omega
 
   R_TYPE, allocatable :: r(:,:), p(:,:), Hp(:,:)
   R_TYPE  :: alpha, beta, gamma
@@ -77,7 +78,7 @@ subroutine X(ls_solver_cg) (ls, h, gr, st, ik, x, y, omega)
   ALLOCATE(Hp(NP, st%d%dim),      NP     *st%d%dim)
 
   ! Initial residue
-  call X(Hpsi)(h, gr, x, Hp, ik)
+  call X(Hpsi)(h, gr, x, Hp, ist, ik)
   r(1:NP,1:st%d%dim) = y(1:NP,1:st%d%dim) - ( Hp(1:NP,1:st%d%dim) + omega*x(1:NP,1:st%d%dim) )
   
   ! Initial search direction
@@ -92,7 +93,7 @@ subroutine X(ls_solver_cg) (ls, h, gr, st, ik, x, y, omega)
     if(conv.and.conv_last) exit
     conv_last = conv
     
-    call X(Hpsi)(h, gr, p, Hp, ik)
+    call X(Hpsi)(h, gr, p, Hp, ist, ik)
     !Hp = Hp + omega*p
     do idim = 1, st%d%dim
       call lalg_axpy(NP, omega, p(:, idim), Hp(:, idim))
@@ -125,11 +126,12 @@ end subroutine X(ls_solver_cg)
 !BICONJUGATED GRADIENTS STABILIZED
 !see http://math.nist.gov/iml++/bicgstab.h.txt
 
-subroutine X(ls_solver_bicgstab) (ls, h, gr, st, ik, x, y, omega)
+subroutine X(ls_solver_bicgstab) (ls, h, gr, st, ist, ik, x, y, omega)
   type(linear_solver_t),          intent(inout) :: ls
   type(hamiltonian_t), intent(inout) :: h
   type(grid_t),        intent(inout) :: gr
   type(states_t),      intent(in)    :: st
+  integer,             intent(in)    :: ist
   integer,             intent(in)    :: ik
   R_TYPE,              intent(inout) :: x(:,:)   ! x(NP, st%d%dim)
   R_TYPE,              intent(in)    :: y(:,:)   ! y(NP, st%d%dim)
@@ -168,7 +170,7 @@ subroutine X(ls_solver_bicgstab) (ls, h, gr, st, ik, x, y, omega)
   !$omp end parallel workshare
 
   ! Initial residue
-  call X(Hpsi)(h, gr, x, Hp, ik)
+  call X(Hpsi)(h, gr, x, Hp, ist, ik)
   !$omp parallel workshare
   r(1:NP,1:st%d%dim) = y(1:NP,1:st%d%dim) - ( Hp(1:NP,1:st%d%dim) + omega*x(1:NP,1:st%d%dim) )
   rs(1:NP,1:st%d%dim) = r(1:NP,1:st%d%dim)
@@ -195,7 +197,7 @@ subroutine X(ls_solver_bicgstab) (ls, h, gr, st, ik, x, y, omega)
 
     ! preconditioning 
     call X(preconditioner_apply)(ls%pre, gr, h, p, phat, omega)
-    call X(Hpsi)(h, gr, phat, Hp, ik)
+    call X(Hpsi)(h, gr, phat, Hp, ist, ik)
 
     !Hp = Hp + omega*phat
     do idim = 1, st%d%dim 
@@ -218,7 +220,7 @@ subroutine X(ls_solver_bicgstab) (ls, h, gr, st, ik, x, y, omega)
     end if
 
     call X(preconditioner_apply)(ls%pre, gr, h, s, shat, omega)
-    call X(Hpsi)(h, gr, shat, Hs, ik)
+    call X(Hpsi)(h, gr, shat, Hs, ist, ik)
 
     !Hs = Hs + omega*shat
     do idim = 1, st%d%dim 
@@ -280,7 +282,7 @@ subroutine X(ls_solver_multigrid) (ls, h, gr, st, ist, ik, x, y, omega)
   diag(1:NP, 1:st%d%dim) = diag(1:NP, 1:st%d%dim) + omega
 
   do iter = 1, 10*ls%max_iter
-    call X(Hpsi)(h, gr, x, hx, ik)
+    call X(Hpsi)(h, gr, x, hx, ist, ik)
     res(1:NP, 1:st%d%dim) = hx(1:NP, 1:st%d%dim) + omega*x(1:NP, 1:st%d%dim) - y(1:NP, 1:st%d%dim)
     ls%abs_psi = X(states_nrm2)(gr%m, st%d%dim, res)
     if( ls%abs_psi < ls%tol) exit

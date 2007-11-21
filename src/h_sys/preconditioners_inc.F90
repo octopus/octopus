@@ -56,41 +56,11 @@ subroutine X(preconditioner_apply)(pre, gr, h, a, b, omega)
       call lalg_scal(NP, R_TOTYPE(M_ONE/(M_TWO*M_PI)), b(:,idim))
     end do
 
-  case(PRE_INCOMPLETE_INVERSE)
-    call incomplete_inverse()
   end select
 
   call profiling_out(preconditioner_prof)
 
 contains
-  subroutine incomplete_inverse()
-    integer, parameter :: order = 2
-    
-    integer :: i
-    R_TYPE, allocatable :: cc(:,:), dd(:,:), gg(:,:)
-
-    ALLOCATE(gg(NP_PART, h%d%dim), NP_PART*h%d%dim)
-    ALLOCATE(cc(NP_PART, h%d%dim), NP_PART*h%d%dim)
-    ALLOCATE(dd(NP_PART, h%d%dim), NP_PART*h%d%dim)
-
-    ! 0th order term
-    call apply_D_inverse(a, b)
-    b(1:NP,:) = b(1:NP,:)
-
-    gg(1:NP, :) = a(1:NP, :)
-    do i = 1, order
-      call apply_D_inverse(gg, cc)
-      call X(Hpsi)(h, gr, cc, dd, 1) ! falta ik
-
-      gg(1:NP, :) = gg(1:NP, :) - dd(1:NP, :)
-
-      call apply_D_inverse(gg, cc)
-      b (1:NP, :) = b (1:NP, :) + cc(1:NP, :)
-    end do
-
-    deallocate(gg, cc, dd)
-  end subroutine incomplete_inverse
-  
 
   subroutine apply_D_inverse(a, b)
     R_TYPE, intent(in)  :: a(:,:)

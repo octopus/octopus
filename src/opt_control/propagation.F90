@@ -230,7 +230,7 @@ module opt_control_propagation_m
     gr => sys%gr
     call td_rti_copy(tr_chi, td%tr)
 
-    aux_fwd_propagation = (target%mode == oct_targetmode_td .or. (.not.h%ip_app))
+    aux_fwd_propagation = (target%mode == oct_targetmode_td .or. (h%theory_level.ne.INDEPENDENT_PARTICLES))
     if(aux_fwd_propagation) then
       call states_copy(psi2, psi)
       call parameters_copy(par_prev, par)
@@ -273,7 +273,7 @@ module opt_control_propagation_m
     call states_calc_dens(psi, NP_PART, psi%rho)
     call v_ks_calc(gr, sys%ks, h, psi)
 
-    if(target%mode == oct_targetmode_td .or. (.not.h%ip_app) ) then
+    if(target%mode == oct_targetmode_td .or. (h%theory_level.ne.INDEPENDENT_PARTICLES) ) then
       call states_end(psi2)
       call parameters_end(par_prev)
     end if
@@ -372,7 +372,7 @@ module opt_control_propagation_m
       call hamiltonian_set_inh(h, inh)
     end if
 
-    if(.not.h%ip_app) then
+    if(h%theory_level.ne.INDEPENDENT_PARTICLES) then
       call hamiltonian_set_oct_exchange(h, st)
     end if
 
@@ -383,7 +383,7 @@ module opt_control_propagation_m
         call parameters_to_h_val(par_chi, h%ep, j+1)
       end if
     end do
-    if(.not.h%ip_app) then
+    if(h%theory_level.ne.INDEPENDENT_PARTICLES) then
       call states_calc_dens(st, NP_PART, st%rho)
       call v_ks_calc(gr, ks, h, st)
     end if
@@ -412,7 +412,7 @@ module opt_control_propagation_m
       call hamiltonian_remove_inh(h)
     end if
 
-    if(.not.h%ip_app) then
+    if(h%theory_level.ne.INDEPENDENT_PARTICLES) then
       call hamiltonian_remove_oct_exchange(h)
     end if
 
@@ -423,7 +423,7 @@ module opt_control_propagation_m
         call parameters_to_h_val(par, h%ep, j+1)
       end if
     end do
-    if(.not.h%ip_app) then
+    if(h%theory_level.ne.INDEPENDENT_PARTICLES) then
       call states_calc_dens(st, NP_PART, st%rho)
       call v_ks_calc(gr, ks, h, st)
     end if

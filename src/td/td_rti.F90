@@ -374,7 +374,7 @@ contains
     call push_sub('td_rti.td_rti')
 
     self_consistent = .false.
-    if(t<3*dt .and. (.not.h%ip_app)) then
+    if(t<3*dt .and. h%theory_level.ne.INDEPENDENT_PARTICLES) then
       self_consistent = .true.
       ALLOCATE(zpsi1(NP_PART, st%d%dim, st%st_start:st%st_end, st%d%nik), NP_PART*st%d%dim*st%lnst*st%d%nik)
       zpsi1 = st%zpsi
@@ -518,7 +518,7 @@ contains
 
       call push_sub('td_rti.td_reversal')
 
-      if(.not.h%ip_app) then
+      if(h%theory_level.ne.INDEPENDENT_PARTICLES) then
 
         ALLOCATE(vhxc_t1(NP, st%d%nspin), NP*st%d%nspin)
         ALLOCATE(vhxc_t2(NP, st%d%nspin), NP*st%d%nspin)
@@ -541,7 +541,7 @@ contains
           
           !propagate the state dt with H(t-dt)
           do ik = 1, st%d%nik
-            call td_exp_dt(tr%te, gr, h, st%zpsi(:,:, ist, ik), ik, dt, t-dt)
+            call td_exp_dt(tr%te, gr, h, st%zpsi(:,:, ist, ik), ist, ik, dt, t-dt)
           end do
           
           !calculate the contribution to the density
@@ -570,19 +570,19 @@ contains
       ! propagate dt/2 with H(t-dt)
       do ik = 1, st%d%nik
         do ist = st%st_start, st%st_end
-          call td_exp_dt(tr%te, gr, h, st%zpsi(:,:, ist, ik), ik, dt/M_TWO, t-dt)
+          call td_exp_dt(tr%te, gr, h, st%zpsi(:,:, ist, ik), ist, ik, dt/M_TWO, t-dt)
         end do
       end do
 
       ! propagate dt/2 with H(t)
-      if(.not.h%ip_app) h%vhxc = vhxc_t2
+      if(h%theory_level.ne.INDEPENDENT_PARTICLES)  h%vhxc = vhxc_t2
       do ik = 1, st%d%nik
         do ist = st%st_start, st%st_end
-          call td_exp_dt(tr%te, gr, h, st%zpsi(:,:, ist, ik), ik, dt/M_TWO, t)
+          call td_exp_dt(tr%te, gr, h, st%zpsi(:,:, ist, ik), ist, ik, dt/M_TWO, t)
         end do
       end do
 
-      if(.not.h%ip_app) deallocate(vhxc_t1, vhxc_t2)
+      if(h%theory_level.ne.INDEPENDENT_PARTICLES) deallocate(vhxc_t1, vhxc_t2)
 
       call pop_sub()
     end subroutine td_reversal
@@ -597,14 +597,14 @@ contains
 
       do ik = 1, st%d%nik
         do ist = st%st_start, st%st_end
-          call td_exp_dt(tr%te, gr, h, st%zpsi(:,:, ist, ik), ik, dt/M_TWO, t-dt)
+          call td_exp_dt(tr%te, gr, h, st%zpsi(:,:, ist, ik), ist, ik, dt/M_TWO, t-dt)
         end do
       end do
 
       h%vhxc = tr%v_old(:, :, 0)
       do ik = 1, st%d%nik
         do ist = st%st_start, st%st_end
-          call td_exp_dt(tr%te, gr, h, st%zpsi(:,:, ist, ik), ik, dt/M_TWO, t)
+          call td_exp_dt(tr%te, gr, h, st%zpsi(:,:, ist, ik), ist, ik, dt/M_TWO, t)
         end do
       end do
 
@@ -619,13 +619,13 @@ contains
 
       call push_sub('td_rti.td_exponential_midpoint')
 
-      if(.not.h%ip_app) then
+      if(h%theory_level.ne.INDEPENDENT_PARTICLES) then
         call dextrapolate(2, NP, st%d%nspin, tr%v_old(:, :, 0:2), h%vhxc, dt, -dt/M_TWO)
       end if
 
       do ik = 1, st%d%nik
         do ist = st%st_start, st%st_end
-          call td_exp_dt(tr%te, gr, h, st%zpsi(:,:, ist, ik), ik, dt, t - dt/M_TWO)
+          call td_exp_dt(tr%te, gr, h, st%zpsi(:,:, ist, ik), ist, ik, dt, t - dt/M_TWO)
         end do
       end do
 
@@ -660,7 +660,7 @@ contains
       tr%te%exp_method = 3 ! == taylor expansion
       tr%te%exp_order  = 1
 
-      if(.not.h%ip_app) then
+      if(h%theory_level.ne.INDEPENDENT_PARTICLES) then
         ALLOCATE(zpsi_rhs_pred(NP_PART, 1:st%d%dim, st%st_start:st%st_end, 1:st%d%nik), isize)
         zpsi_rhs_pred = st%zpsi ! store zpsi for predictor step
         
@@ -720,7 +720,7 @@ contains
         end do
       end do
       
-      if(.not.h%ip_app) deallocate(vhxc_t1, vhxc_t2, zpsi_rhs_pred)
+      if(h%theory_level.ne.INDEPENDENT_PARTICLES) deallocate(vhxc_t1, vhxc_t2, zpsi_rhs_pred)
       deallocate(zpsi_rhs_corr)
 
       call pop_sub()
@@ -742,7 +742,7 @@ contains
       time(1) = (M_HALF-sqrt(M_THREE)/M_SIX)*dt
       time(2) = (M_HALF+sqrt(M_THREE)/M_SIX)*dt
 
-      if(.not.h%ip_app) then
+      if(h%theory_level.ne.INDEPENDENT_PARTICLES) then
         do j = 1, 2
           call dextrapolate(2, NP, st%d%nspin, tr%v_old(:,:, 0:2), vaux(:,:, j), dt, time(j)-dt)
         end do
@@ -774,7 +774,7 @@ contains
 
       do k = 1, st%d%nik
         do ist = st%st_start, st%st_end
-          call td_exp_dt(tr%te, gr, h, st%zpsi(:,:, ist, k), k, dt, M_ZERO, &
+          call td_exp_dt(tr%te, gr, h, st%zpsi(:,:, ist, k), ist, k, dt, M_ZERO, &
             vmagnus = tr%vmagnus)
         end do
       end do

@@ -42,8 +42,7 @@ module preconditioners_m
     PRE_NONE      = 0,              &
     PRE_SMOOTHING = 1,              &
     PRE_JACOBI    = 2,              &
-    PRE_POISSON   = 3,              &
-    PRE_INCOMPLETE_INVERSE = 4
+    PRE_POISSON   = 3
   
   public ::                         &
     preconditioner_t,               &
@@ -103,7 +102,7 @@ contains
       this%op%w_re(1, 1) = alpha
       this%op%w_re(2:,1) = M_HALF*(M_ONE-alpha)/NDIM
 
-    case(PRE_JACOBI, PRE_INCOMPLETE_INVERSE)
+    case(PRE_JACOBI)
       ALLOCATE(this%diag_lapl(NP), NP)
       call f_laplacian_diag (gr%sb, gr%f_der, this%diag_lapl)
       call lalg_scal(NP, -M_HALF, this%diag_lapl(:))
@@ -120,7 +119,7 @@ contains
     case(PRE_SMOOTHING)
       call nl_operator_end(this%op)
 
-    case(PRE_JACOBI, PRE_INCOMPLETE_INVERSE)
+    case(PRE_JACOBI)
       deallocate(this%diag_lapl)
     end select
 

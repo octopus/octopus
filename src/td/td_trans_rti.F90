@@ -161,7 +161,7 @@ contains
     do ik = 1, st%d%nik
       do ist = st%st_start, st%st_end
         call apply_h_eff(h, gr, mem(:, :, 0, LEFT), mem(:, :, 0, RIGHT), intf, &
-          -M_ONE, dt, t, ik, st%zpsi(:, :, ist, ik))
+          -M_ONE, dt, t, ist, ik, st%zpsi(:, :, ist, ik))
       end do
     end do
 
@@ -206,12 +206,13 @@ contains
 
   ! ---------------------------------------------------------
   ! Propagate forward/backward with effective Hamiltonian.
-  subroutine apply_h_eff(h, gr, mem_l, mem_r, intf, sign, dt, t, ik, zpsi)
+  subroutine apply_h_eff(h, gr, mem_l, mem_r, intf, sign, dt, t, ist, ik, zpsi)
     type(hamiltonian_t), intent(inout) :: h
     type(grid_t),        intent(inout) :: gr
     CMPLX, target,       intent(in)    :: mem_l(:, :), mem_r(:, :)
     type(intface_t),     intent(in)    :: intf
     FLOAT,               intent(in)    :: sign, dt, t
+    integer,             intent(in)    :: ist
     integer,             intent(in)    :: ik
     CMPLX,               intent(inout) :: zpsi(:, :)
 
@@ -224,7 +225,7 @@ contains
     ASSERT(sign.eq.M_ONE.or.sign.eq.-M_ONE)
 
     ! Apply Hamiltonian of central region.
-    call td_exp_dt(matr_exp, gr, h, zpsi, ik, sign*dt/M_TWO, t-dt)
+    call td_exp_dt(matr_exp, gr, h, zpsi, ist, ik, sign*dt/M_TWO, t-dt)
 
     ! Apply modification: - (\Delta t/2)^2 Q zpsi
     call get_intf_wf(intf, LEFT, zpsi, intf_wf)

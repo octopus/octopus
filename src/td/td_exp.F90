@@ -226,10 +226,11 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine td_exp_dt(te, gr, h, zpsi, ik, timestep, t, order, vmagnus)
+  subroutine td_exp_dt(te, gr, h, zpsi, ist, ik, timestep, t, order, vmagnus)
     type(td_exp_t),      intent(inout) :: te
     type(grid_t),        intent(inout) :: gr
     type(hamiltonian_t), intent(inout) :: h
+    integer,             intent(in)    :: ist
     integer,             intent(in)    :: ik
     CMPLX,               intent(inout) :: zpsi(:, :)
     FLOAT,               intent(in)    :: timestep, t
@@ -271,7 +272,7 @@ contains
       if(apply_magnus) then
         call zmagnus(h, gr, psi, oppsi, ik, vmagnus)
       else
-        call zHpsi(h, gr, psi, oppsi, ik, t)
+        call zHpsi(h, gr, psi, oppsi, ist, ik, t)
       end if
 
     end subroutine operate

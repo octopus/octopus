@@ -113,9 +113,7 @@ module hamiltonian_m
              t0,      &  ! Kinetic energy of the non-interacting (KS) system of electrons
              eext        ! External     V = <Phi|V|Phi> = Int[n v] (if no non-local pseudos exist)
 
-    logical :: ip_app             ! independent particle approximation, or not.
-    integer :: theory_level
-    ! copied from sys%ks
+    integer :: theory_level    ! copied from sys%ks
 
     type(epot_t) :: ep         ! handles the external potential
 
@@ -173,21 +171,21 @@ module hamiltonian_m
     IMAGINARY_ABSORBING = 1,    &
     MASK_ABSORBING      = 2
 
-  integer, parameter ::        &
+  integer, public, parameter ::        &
     INDEPENDENT_PARTICLES = 1, &
-    KOHN_SHAM_DFT         = 2, &
-    HARTREE_FOCK          = 3
+    HARTREE               = 2, &
+    HARTREE_FOCK          = 3, &
+    KOHN_SHAM_DFT         = 4
 
 contains
 
   ! ---------------------------------------------------------
-  subroutine hamiltonian_init(h, gr, geo, states_dim, wfs_type, ip_app, theory_level)
+  subroutine hamiltonian_init(h, gr, geo, states_dim, wfs_type, theory_level)
     type(hamiltonian_t), intent(out)   :: h
     type(grid_t),        intent(inout) :: gr
     type(geometry_t),    intent(inout) :: geo
     type(states_dim_t),  intent(in)    :: states_dim
     integer,             intent(inout) :: wfs_type
-    logical,             intent(in)    :: ip_app
     integer,             intent(in)    :: theory_level
 
     integer :: i, j, n, ispin
@@ -196,7 +194,6 @@ contains
     call push_sub('h.hamiltonian_init')
 
     ! make a couple of local copies
-    h%ip_app = ip_app
     h%theory_level = theory_level
     call states_dim_copy(h%d, states_dim)
 
@@ -525,12 +522,11 @@ contains
     full_ = .false.
     if(present(full)) full_ = full
 
-    select case(h%theory_level)
-    case(INDEPENDENT_PARTICLES)
+    if(h%theory_level==INDEPENDENT_PARTICLES) then
       h%eeigen = states_eigenvalues_sum(st)
       h%etot   = h%ep%eii + h%eeigen
 
-    case(HARTREE_FOCK, KOHN_SHAM_DFT)
+    else
       if(full_) then
         if(st%wfs_type == M_REAL) then
           h%t0     = delectronic_kinetic_energy(h, gr, st)
@@ -542,13 +538,15 @@ contains
       end if
       h%eeigen = states_eigenvalues_sum(st)
 
-      if(h%theory_level == KOHN_SHAM_DFT) then
-        h%etot   = h%ep%eii + h%eeigen - h%ehartree + h%ex + h%ec - h%epot
-      else ! Hartree-Fock
+      select case(h%theory_level)
+      case(HARTREE)
+        h%etot = h%ep%eii + M_HALF*(h%eeigen + h%t0 + h%eext)
+      case(HARTREE_FOCK)
         h%etot = h%ep%eii + M_HALF*(h%eeigen + h%t0 + h%eext - h%epot) + h%ec
-      end if
-
-    end select
+      case(KOHN_SHAM_DFT)
+        h%etot   = h%ep%eii + h%eeigen - h%ehartree + h%ex + h%ec - h%epot
+      end select
+    end if
 
     if (iunit > 0) then
       write(message(1), '(6x,a, f15.8)')'Total       = ', h%etot     / units_out%energy%factor
@@ -611,7 +609,7 @@ contains
         call doutput_function(outp%how, dir, "vc", m, sb, h%ep%Vclassic, u, err)
       end if
 
-      if(.not.h%ip_app) then
+      if(h%theory_level.ne.INDEPENDENT_PARTICLES) then
         call doutput_function(outp%how, dir, 'vh', m, sb, h%vhartree, u, err)
         do is = 1, min(h%d%ispin, 2)
           write(fname, '(a,i1)') 'vxc-', is

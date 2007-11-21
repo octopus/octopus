@@ -261,7 +261,7 @@
       end if
     end if
 
-    if( .not.(h%ip_app) ) then
+    if( h%theory_level.ne.INDEPENDENT_PARTICLES ) then
       if( tr%method .ne. PROP_EXPONENTIAL_MIDPOINT ) then
         write(message(1), '(a)') 'When doing QOCT with interacting electronsl, then you must set'
         write(message(2), '(a)') 'TDEvolutionMethod = exp_mid'

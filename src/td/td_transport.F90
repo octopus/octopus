@@ -64,7 +64,7 @@ contains
     !   *) the only simulation box permitted is the parallel epiped,
     !   *) the time evolution method cannot be chosen freely,
     !   *) only spin unpolarized calculations possible.
-    if(.not.sys%ks%ip_app) then
+    if(sys%ks%theory_level.ne.INDEPENDENT_PARTICLES) then
       message(1) = 'Transport calculations for interacting electrons are'
       message(2) = 'not yet possible. Please include'
       message(3) = ''

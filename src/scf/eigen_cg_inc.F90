@@ -101,7 +101,7 @@ subroutine X(eigen_solver_cg2) (gr, st, h, pre, tol, niter, converged, diff, reo
       call X(states_gram_schmidt)(st, p, gr%m, st%d%dim, st%X(psi)(:, 1:st%d%dim, 1:p, ik), start=p)
 
       ! Calculate starting gradient: |hpsi> = H|psi>
-      call X(Hpsi)(h, gr, st%X(psi)(:,:, p, ik) , h_psi, ik)
+      call X(Hpsi)(h, gr, st%X(psi)(:,:, p, ik) , h_psi, p, ik)
 
       ! Calculates starting eigenvalue: e(p) = <psi(p)|H|psi>
       st%eigenval(p, ik) = R_REAL(X(states_dotp) (gr%m, st%d%dim, st%X(psi)(:,:, p, ik), h_psi))
@@ -166,7 +166,7 @@ subroutine X(eigen_solver_cg2) (gr, st, h, pre, tol, niter, converged, diff, reo
 
         ! cg contains now the conjugate gradient
         cg0 = X(states_nrm2) (gr%m, st%d%dim, cg(:,:))
-        call X(Hpsi) (h, gr, cg, ppsi, ik)
+        call X(Hpsi) (h, gr, cg, ppsi, p, ik)
 
         ! Line minimization.
         a0 = X(states_dotp) (gr%m, st%d%dim, st%X(psi)(:,:, p, ik), ppsi)
@@ -299,7 +299,7 @@ subroutine X(eigen_solver_cg2_new) (gr, st, h, tol, niter, converged, diff, reor
       psi(1:NP, 1:dim) = st%X(psi)(1:NP, 1:dim, ist, ik)
 
       ! Calculate starting gradient: |hpsi> = H|psi>
-      call X(Hpsi)(h, gr, psi, phi, ik); niter = niter + 1
+      call X(Hpsi)(h, gr, psi, phi, ist, ik); niter = niter + 1
 
       ! Initial settings for scalar variables.
       ctheta = M_ONE
@@ -346,7 +346,7 @@ subroutine X(eigen_solver_cg2_new) (gr, st, h, tol, niter, converged, diff, reor
          dump = sqrt(X(states_dotp)(gr%m, dim, cgp, cgp))
          cgp(1:NP, 1:dim) = cgp(1:NP, 1:dim)/dump
 
-         call X(Hpsi)(h, gr, cgp, hcgp, ik); niter = niter + 1
+         call X(Hpsi)(h, gr, cgp, hcgp, ist, ik); niter = niter + 1
 
          alpha = - lambda + X(states_dotp)(gr%m, dim, cgp, hcgp)
          beta  = M_TWO*X(states_dotp)(gr%m, dim, cgp, phi)
