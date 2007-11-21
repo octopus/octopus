@@ -115,6 +115,7 @@ contains
     logical,    intent(in)  :: hartree_fock
 
     integer :: i, x_id, c_id, xk_id, ck_id
+    logical :: ll
 
     call push_sub('xc.xc_init')
 
@@ -149,7 +150,10 @@ contains
 
       ! Take care of hybrid functionals (they appear in the correlation functional)
       xcs%exx_coef = M_ZERO
-      if(hartree_fock.or.iand(xcs%functl(2,1)%family, XC_FAMILY_HYB_GGA).ne.0) then
+      ll =  (hartree_fock) &
+        .or.(xcs%functl(1,1)%id.eq.XC_OEP_X) &
+        .or.(iand(xcs%functl(2,1)%family, XC_FAMILY_HYB_GGA).ne.0)
+      if(ll) then
         if((xcs%functl(1,1)%id.ne.0).and.(xcs%functl(1,1)%id.ne.XC_OEP_X)) then
           message(1) = "You can not use an exchange functional when performing"
           message(2) = "an Hartree-Fock calculation or using a hybrid functional"

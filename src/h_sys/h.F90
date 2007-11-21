@@ -526,7 +526,11 @@ contains
     if(present(full)) full_ = full
 
     select case(h%theory_level)
-    case(KOHN_SHAM_DFT)
+    case(INDEPENDENT_PARTICLES)
+      h%eeigen = states_eigenvalues_sum(st)
+      h%etot   = h%ep%eii + h%eeigen
+
+    case(HARTREE_FOCK, KOHN_SHAM_DFT)
       if(full_) then
         if(st%wfs_type == M_REAL) then
           h%t0     = delectronic_kinetic_energy(h, gr, st)
@@ -537,23 +541,13 @@ contains
         end if
       end if
       h%eeigen = states_eigenvalues_sum(st)
-      h%etot   = h%ep%eii + h%eeigen - h%ehartree + h%ex + h%ec - h%epot
 
-    case(INDEPENDENT_PARTICLES)
-      h%eeigen = states_eigenvalues_sum(st)
-      h%etot   = h%ep%eii + h%eeigen
-
-    case(HARTREE_FOCK)
-      if(st%wfs_type == M_REAL) then
-        h%t0     = delectronic_kinetic_energy(h, gr, st)
-        h%eext   = delectronic_external_energy(h, gr, st)
-      else
-        h%t0     = zelectronic_kinetic_energy(h, gr, st)
-        h%eext   = zelectronic_external_energy(h, gr, st)
+      if(h%theory_level == KOHN_SHAM_DFT) then
+        h%etot   = h%ep%eii + h%eeigen - h%ehartree + h%ex + h%ec - h%epot
+      else ! Hartree-Fock
+        h%etot = h%ep%eii + M_HALF*(h%eeigen + h%t0 + h%eext - h%epot) + h%ec
       end if
-      h%eeigen = states_eigenvalues_sum(st)
-      h%etot = h%ep%eii + M_HALF * (h%eeigen + h%t0 + h%eext) + h%ex + h%ec
-      h%epot = M_ZERO
+
     end select
 
     if (iunit > 0) then
