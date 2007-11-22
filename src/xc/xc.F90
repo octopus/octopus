@@ -329,6 +329,10 @@ contains
       !% Hybrid (GGA): Perdew 86 hybrid similar to B3PW91
       !%Option hyb_gga_xc_o3lyp 404000
       !% Hybrid (GGA): Hybrid using the optx functional
+      !%Option hyb_gga_xc_pbeh 406000
+      !% Hybrid (GGA): aka PBE0 or PBE1PBE
+      !%Option hyb_gga_xc_x3lyp 411000
+      !% Hybrid (GGA): maybe the best hybrid around
       !%Option mgga_x_tpss 201
       !% MGGA (not working)
       !%Option oep_x 901
