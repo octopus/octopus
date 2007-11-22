@@ -520,7 +520,6 @@ contains
     integer,      intent(in)    :: in_file(:)
 
     character(len=20) :: header_string
-    character(len=3)  :: file_units
     integer :: nspin, energy_steps, i, is, j, equiv_axis, n_files, k
     FLOAT, allocatable :: sigma(:, :, :, :), sigmap(:, :, :, :), sigmau(:, :, :),  &
       sigmav(:, :, :), sigmaw(:, :, :), p(:, :), ip(:, :)
@@ -1146,7 +1145,6 @@ contains
     integer :: i, j
     FLOAT :: t1, t2, dummy
     character(len=100) :: line
-    character(len=3)   :: units_string
 
     call push_sub('spectrum.spectrum_mult_info')
 

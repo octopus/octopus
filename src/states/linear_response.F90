@@ -105,6 +105,8 @@ contains
 
     call push_sub('linear_response.lr_init')
 
+    size = m%np_part*st%d%dim*st%nst*st%d%nspin
+
     if (wfs_are_complex(st)) then 
 
       ALLOCATE(lr%zdl_psi(m%np_part, st%d%dim, st%nst, st%d%nspin), size)

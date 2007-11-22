@@ -36,7 +36,7 @@ subroutine X(eigen_solver_cg2) (gr, st, h, pre, tol, niter, converged, diff, reo
 
   R_DOUBLE :: es(2), a0, b0, gg, gg0, gg1, gamma, theta, norma
   real(8) :: cg0, e0, res
-  integer  :: ik, moved, p, iter, maxter, conv, conv_, idim, ns
+  integer  :: ik, p, iter, maxter, conv, conv_, idim, ns
   logical  :: reord = .true., verbose_
 
   call push_sub('eigen_cg.eigen_solver_cg2')
@@ -55,7 +55,6 @@ subroutine X(eigen_solver_cg2) (gr, st, h, pre, tol, niter, converged, diff, reo
   conv_ = 0
   maxter = niter
   niter = 0
-  moved = 0
 
   ALLOCATE(h_psi(NP_PART, st%d%dim), NP_PART*st%d%dim)
   ALLOCATE( ppsi(NP_PART, st%d%dim), NP_PART*st%d%dim)

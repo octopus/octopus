@@ -83,14 +83,14 @@ contains
 
   ! ---------------------------------------------------------
   subroutine td_write_init(w, gr, st, geo, ions_move, with_gauge_field, iter, dt)
-    type(td_write_t)             :: w
-    type(grid_t),     intent(in) :: gr
-    type(states_t),   intent(in) :: st
-    type(geometry_t), intent(in) :: geo
-    logical,          intent(in) :: ions_move
-    logical,          intent(in) :: with_gauge_field
-    integer,          intent(in) :: iter
-    FLOAT,            intent(in) :: dt
+    type(td_write_t), intent(out) :: w
+    type(grid_t),     intent(in)  :: gr
+    type(states_t),   intent(in)  :: st
+    type(geometry_t), intent(in)  :: geo
+    logical,          intent(in)  :: ions_move
+    logical,          intent(in)  :: with_gauge_field
+    integer,          intent(in)  :: iter
+    FLOAT,            intent(in)  :: dt
 
 
     FLOAT :: rmin
@@ -299,7 +299,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine td_write_end(w)
-    type(td_write_t) :: w
+    type(td_write_t), intent(inout) :: w
     integer :: i
     call push_sub('td_write.td_write_end')
 
@@ -370,7 +370,7 @@ contains
     FLOAT, intent(in) :: dt_
     integer, intent(in) :: iter
 
-    FLOAT :: dt
+!!$    FLOAT :: dt
     character(len=256) :: filename
 
     call push_sub('td.td_write_data')
@@ -396,7 +396,7 @@ contains
       call atom_write_xyz(filename, "geometry", geo)
     call hamiltonian_output(h, gr%m, gr%sb, filename, outp)
 
-    dt = dt_
+!!$  dt = dt_
 !!$#if !defined(DISABLE_PES) && defined(HAVE_FFT)
 !!$  call PES_output(td%PESv, gr%m, st, iter, outp%iter, dt)
 !!$#endif
@@ -775,7 +775,7 @@ contains
     FLOAT,                  intent(in) :: dt
     integer,                intent(in) :: iter
  
-    integer :: j, ik
+    integer :: j
     character(len=6) :: excited_name
     CMPLX :: gsp
     CMPLX, allocatable :: excited_state_p(:)

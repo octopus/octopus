@@ -117,8 +117,10 @@ contains
     !%Default cg
     !%Section SCF::EigenSolver
     !%Description
-    !% Decides the eigensolver that obtains the lowest eigenvalues
-    !% and eigenfunctions of the Kohn-Sham Hamiltonian.
+    !% Decides the eigensolver that obtains the lowest eigenvalues and
+    !% eigenfunctions of the Kohn-Sham Hamiltonian. The default is
+    !% conjugated gradients (cg), when parallelization in states is
+    !% enabled the default is lobpcg.
     !%Option cg 5
     !% Conjugate-gradients algorithm.
     !%Option trlan 1
@@ -126,7 +128,8 @@ contains
     !%Option plan 11
     !% Preconditioned Lanczos scheme.
     !%Option cg_new 6
-    !% A rewriting of the cg option, that will eventually substitute it.
+    !% An alternative conjugated gradients eigensolver, faster for
+    !% larger systems but less mature.
     !%Option evolution 7
     !% Propagation in imaginary time. WARNING: Temporarily disabled.
     !%Option lobpcg 8
@@ -135,6 +138,7 @@ contains
     !% Optimal Block Preconditioned Conjugate Gradient Method. SIAM
     !% Journal on Scientific Computing, 23(2):517­541, 2001.
     !%End
+
     ! When running parallel in states, LOBPCG is the default, otherwise
     ! the conjugate gradient algorithm.
     if(st%parallel_in_states) then

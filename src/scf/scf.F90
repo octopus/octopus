@@ -89,7 +89,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine scf_init(gr, geo, scf, st, h)
-    type(grid_t), target, intent(inout) :: gr
+    type(grid_t),        intent(inout) :: gr
     type(geometry_t),    intent(in)    :: geo
     type(scf_t),         intent(inout) :: scf
     type(states_t),      intent(in)    :: st
@@ -708,7 +708,7 @@ contains
 
       integer            :: ik, ist, ns, j
       character(len=80)  :: tmp_str(MAX_DIM), cspin
-      FLOAT              :: angular(3), lsquare, o, oplus, ominus
+      FLOAT              :: angular(3), lsquare, o
       FLOAT, allocatable :: ang(:, :, :), ang2(:, :)
 #if defined(HAVE_MPI)
       integer            :: tmp
@@ -774,7 +774,6 @@ contains
 
               if(j > st%nst) then
                 o = M_ZERO
-                if(st%d%ispin == SPINORS) oplus = M_ZERO; ominus = M_ZERO
               else
                 o = st%occ(j, ik+is)
               end if

@@ -256,7 +256,7 @@ contains
     integer :: ii, jj, i
     FLOAT, allocatable :: multipole(:, :)
     CMPLX :: multip_element
-    FLOAT :: r, x(MAX_DIM), ylm, gylm(3)
+    FLOAT :: r, x(MAX_DIM), ylm
 
     call push_sub('states.states_write_multipole_matrix')
 
