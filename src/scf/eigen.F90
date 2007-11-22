@@ -81,12 +81,6 @@ module eigen_solver_m
   integer, parameter :: RS_LANCZOS = 1
 #endif
   integer, parameter :: RS_PLAN    = 11
-#if defined(HAVE_ARPACK)
-  integer, parameter :: ARPACK     = 3
-#endif
-#if defined(HAVE_JDQZ)
-  integer, parameter :: JDQZ       = 4
-#endif
   integer, parameter :: RS_CG      = 5
   integer, parameter :: RS_CG_NEW  = 6
   integer, parameter :: EVOLUTION  = 7
@@ -131,10 +125,6 @@ contains
     !% Lanczos scheme. Requires the TRLan package.
     !%Option plan 11
     !% Preconditioned Lanczos scheme.
-    !%Option arpack 3
-    !% Implicitly Restarted Arnoldi Method. Requires the ARPACK package.
-    !%Option jdqz 4
-    !% Jacobi-Davidson scheme. Requires the JDQZ package.
     !%Option cg_new 6
     !% A rewriting of the cg option, that will eventually substitute it.
     !%Option evolution 7
@@ -186,37 +176,6 @@ contains
     case(RS_LANCZOS)
 #endif
     case(RS_PLAN)
-#if defined(HAVE_ARPACK)
-    case(ARPACK)
-
-      !%Variable EigenSolverArnoldiVectors
-      !%Type integer
-      !%Default 20
-      !%Section SCF::EigenSolver
-      !%Description
-      !% This indicates how many Arnoldi vectors are generated
-      !% It must satisfy EigenSolverArnoldiVectors - Number Of Eigenvectors >= 2.
-      !% See the ARPACK documentation for more details. It will default to 
-      !% twice the number of eigenvectors (which is the number of states)
-      !%End
-      call loct_parse_int(check_inp('EigenSolverArnoldiVectors'), 2*st%nst, eigens%arnoldi_vectors)
-      if(eigens%arnoldi_vectors-st%nst < 2) call input_error('EigenSolverArnoldiVectors')
-
-      ! Arpack is not working in some cases, so let us check.
-      if(st%d%ispin .eq. SPINORS) then
-        write(message(1), '(a)') 'The ARPACK diagonalizer does not handle spinors (yet).'
-        write(message(2), '(a)') 'Please provide a different EigenSolver.'
-        call write_fatal(2)
-      end if
-      if(st%wfs_type .eq. M_CMPLX) Then
-        write(message(1), '(a)') 'The ARPACK diagonalizer does not handle complex wavefunctions (yet).'
-        write(message(2), '(a)') 'Please provide a different EigenSolver.'
-        call write_fatal(2)
-      end if
-#endif
-#if defined(HAVE_JDQZ)
-    case(JDQZ)
-#endif
     case(EVOLUTION)
       !%Variable EigenSolverImaginaryTime
       !%Type float
@@ -354,11 +313,6 @@ contains
 #endif
       case(RS_PLAN)
         call deigen_solver_plan(gr, st, h, eigens%pre, tol, maxiter, eigens%converged, eigens%diff)
-#if defined(HAVE_ARPACK)
-      case(ARPACK)
-        call deigen_solver_arpack(gr, st, h, tol, maxiter, eigens%arnoldi_vectors, &
-             eigens%converged, eigens%diff)
-#endif
       case(EVOLUTION)
         call deigen_solver_evolution(gr, st, h, tol, maxiter, eigens%converged, eigens%diff, &
              tau = eigens%imag_time)
@@ -397,14 +351,6 @@ contains
   end subroutine eigen_solver_run
 
 
-#if defined(HAVE_ARPACK)
-#include "undef.F90"
-#include "real.F90"
-#include "eigen_arpack_inc.F90"
-#include "undef.F90"
-#include "complex.F90"
-#include "eigen_arpack_inc.F90"
-#endif
 #ifdef HAVE_TRLAN
 #include "eigen_trlan.F90"
 #endif

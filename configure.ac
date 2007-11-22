@@ -256,12 +256,6 @@ ACX_TRLAN
 dnl check for NETCDF
 ACX_NETCDF
 
-dnl check for JDQZ
-dnl ACX_JDQZ([], AC_MSG_WARN([libjdqz.a library not found. Will not use it]))
-
-dnl check for ARPACK
-ACX_ARPACK([], AC_MSG_WARN([ARPACK library not found. Will not use it]))
-
 dnl check for SPARSKIT
 ACX_SPARSKIT([], AC_MSG_WARN([SPARSKIT library not found. Will not use it]))
   
