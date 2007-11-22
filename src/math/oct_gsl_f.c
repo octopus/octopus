@@ -23,6 +23,7 @@
 
 #include <stdio.h>
 #include <math.h>
+#include <stdlib.h>
 
 #include <gsl/gsl_errno.h>
 #include <gsl/gsl_math.h>
@@ -314,8 +315,9 @@ int FC_FUNC_(oct_minimize, OCT_MINIMIZE)
   int status;
   double maxgrad, maxdr;
   int i;
-  double oldpoint[*dim], grad[*dim];
-
+  double * oldpoint;
+  double * grad;
+    
   const gsl_multimin_fdfminimizer_type *T = NULL;
   gsl_multimin_fdfminimizer *s;
   gsl_vector *x;
@@ -323,6 +325,9 @@ int FC_FUNC_(oct_minimize, OCT_MINIMIZE)
   gsl_multimin_function_fdf my_func;
 
   void (*print_info)(int*, int*, double*, double*, double*, double*) = write_info;
+
+  oldpoint = (double *) malloc(*dim * sizeof(double));
+  grad     = (double *) malloc(*dim * sizeof(double));
 
   my_func.f = &my_f;
   my_func.df = &my_df;
@@ -394,6 +399,9 @@ int FC_FUNC_(oct_minimize, OCT_MINIMIZE)
 
   gsl_multimin_fdfminimizer_free (s);
   gsl_vector_free (x); gsl_vector_free(absgrad); gsl_vector_free(absdr);
+
+  free(oldpoint);
+  free(grad);
 
   return status;
 }
