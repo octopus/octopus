@@ -32,19 +32,21 @@ program oct_help
   character(len=32) :: mode
   character(len=100) :: varname
 
+  integer, parameter :: help_stdout = 6, help_stderr = 0
+
   call global_init()
 
   if( .not. command_line_is_available() ) then 
-    message(1) = "Your fortran compiler doesn't support command line arguments,"
-    message(2) = "the oct-help command is not available."
-    call write_fatal(2)
+    write(help_stderr, '(a)') "Your fortran compiler doesn't support command line arguments,"
+    write(help_stderr, '(a)') "the oct-help command is not available."
+    stop
   end if
 
   argc = command_argument_count()
 
   if( argc == 0 ) then
-    message(1) = "Usage: oct-test { show | search } variable_name" 
-    call write_info(1)
+    write(help_stderr, '(a)') 'Usage: oct-help { show | search | list }'
+    stop
   end if
 
   call get_command_argument(1, mode)
@@ -55,34 +57,33 @@ program oct_help
     
     if (argc >= 2) then
       call get_command_argument(2, varname)
-      call varinfo_print(stdout, trim(varname), ierr)
+      call varinfo_print(help_stdout, trim(varname), ierr)
 
       if (ierr /= 0) then
-        message(1) = "Error: Variable "//trim(varname)//" not found."
-        call write_info(1)
+        write(help_stderr, '(a)') "Error: Variable "//trim(varname)//" not found."
       end if
 
     else
-      message(1) = "Gives information about a variable"
-      message(2) = "Usage: oct-help show variable_name"
-      call write_info(2)
+      write(help_stderr, '(a)') "Gives information about a variable"
+      write(help_stderr, '(a)') "Usage: oct-help show variable_name"
     end if
 
   case("search")
 
     if (argc >= 2) then
       call get_command_argument(2, varname)
-      call varinfo_search(stdout, trim(varname), ierr)
+      call varinfo_search(help_stdout, trim(varname), ierr)
     else
-      message(1) = "Searches for variable names that contains a certain string"
-      message(2) = "Usage: oct-help search string"
-      call write_info(2)
+      write(help_stderr, '(a)') 'Searches for variable names that contain a certain string'
+      write(help_stderr, '(a)') 'Usage: oct-help search string'
     end if
 
+  case("list")
+    call varinfo_search(help_stdout, "", ierr)
+
   case default
-    message(1) = "Unknown command: "//mode
-    message(2) = "Usage: oct-test { show | search } variable_name" 
-    call write_info(2)
+    write(help_stderr, '(a,a)') 'Unknown command: ', mode
+    write(help_stderr, '(a)') 'Usage: oct-help { show | search | list}'
 
   end select
     

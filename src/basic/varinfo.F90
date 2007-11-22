@@ -193,7 +193,7 @@ contains
       end if
 
       call varinfo_getinfo(handle, name, type, section, desc)
-      call print_C_string(iunit, name, "")
+      call print_C_string(iunit, name)
       
     end do
       
