@@ -218,7 +218,7 @@
 !
 !----------------------------------------------------------------------------*/!
 module lib_oct_gsl_spline_m
-  use lib_oct_m
+  use loct_math_m
   use messages_m
   implicit none
 

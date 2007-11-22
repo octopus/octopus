@@ -22,7 +22,7 @@
 module profiling_m
   use global_m
   use io_m
-  use lib_oct_m
+  use loct_m
   use messages_m
   use mpi_m
 

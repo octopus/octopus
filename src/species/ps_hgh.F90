@@ -26,7 +26,7 @@ module ps_hgh_m
   use atomic_m
   use global_m
   use io_m
-  use lib_oct_m
+  use loct_math_m
   use logrid_m
   use messages_m
 

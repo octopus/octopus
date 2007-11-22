@@ -22,7 +22,7 @@
 module messages_m
   use datasets_m
   use global_m
-  use lib_oct_m
+  use loct_m
   use lib_oct_parser_m
   use mpi_m
   use string_m

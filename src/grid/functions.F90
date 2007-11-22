@@ -25,7 +25,7 @@ module functions_m
   use derivatives_m
   use global_m
   use lalg_basic_m
-  use lib_oct_m
+  use loct_math_m
   use lib_oct_parser_m
   use mesh_m
   use mesh_function_m

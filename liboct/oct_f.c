@@ -136,16 +136,6 @@ void FC_FUNC_(oct_wfs_list, OCT_WFS_LIST)
   free(str_c);
 }
 
-
-/* from ylm.c */
-double ylm(double x, double y, double z, int l, int m);
-
-double FC_FUNC_(oct_ylm, OCT_YLM)
-  (double *x, double *y, double *z, int *l, int *m)
-{
-  return ylm(*x, *y, *z, *l, *m);
-}
-
 /* ------------------------------ from varia.c ------------------------------- */
 #include "varia.h"
 

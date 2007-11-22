@@ -24,12 +24,12 @@ module oscillator_strength_m
   use messages_m
   use datasets_m
   use string_m
-  use lib_oct_m
+  use loct_math_m
   use lib_oct_parser_m
   use io_m
   use units_m
   use spectrum_m
-  use lib_oct_m
+  use loct_m
 
   implicit none
 
@@ -149,12 +149,12 @@ program oscillator_strength
   use global_m
   use messages_m
   use datasets_m
-  use lib_oct_m
+  use loct_m
   use lib_oct_parser_m
   use io_m
   use units_m
   use spectrum_m
-  use lib_oct_m
+  use loct_m
   use command_line_m
   use oscillator_strength_m
 
@@ -227,7 +227,7 @@ subroutine read_resonances_file(order, ffile, search_interval, final_time, nfreq
   use global_m
   use messages_m
   use datasets_m
-  use lib_oct_m
+  use loct_m
   use lib_oct_parser_m
   use io_m
   use units_m
@@ -366,7 +366,7 @@ subroutine analyze_signal(order, omega, search_interval, final_time, nresonances
   use global_m
   use messages_m
   use datasets_m
-  use lib_oct_m
+  use loct_m
   use lib_oct_parser_m
   use io_m
   use units_m
@@ -546,7 +546,7 @@ subroutine find_resonance(omega, leftbound, rightbound, nfrequencies)
   use global_m
   use messages_m
   use datasets_m
-  use lib_oct_m
+  use loct_m
   use lib_oct_parser_m
   use io_m
   use units_m
@@ -608,7 +608,7 @@ subroutine resonance_first_order(omega, power, nw_substracted, dw, leftbound, ri
   use global_m
   use messages_m
   use datasets_m
-  use lib_oct_m
+  use loct_m
   use lib_oct_parser_m
   use io_m
   use units_m
@@ -661,7 +661,7 @@ subroutine resonance_second_order(omega, power, nw_substracted, dw, leftbound, r
   use global_m
   use messages_m
   use datasets_m
-  use lib_oct_m
+  use loct_m
   use lib_oct_parser_m
   use io_m
   use units_m
@@ -717,7 +717,7 @@ subroutine generate_signal(order, observable)
   use global_m
   use messages_m
   use datasets_m
-  use lib_oct_m
+  use loct_m
   use lib_oct_parser_m
   use io_m
   use units_m
@@ -1150,7 +1150,7 @@ subroutine print_omega_file(omega, search_interval, final_time, nfrequencies)
   use global_m
   use messages_m
   use datasets_m
-  use lib_oct_m
+  use loct_m
   use lib_oct_parser_m
   use io_m
   use units_m

@@ -24,7 +24,7 @@ module poisson_fft_m
   use geometry_m
   use global_m
   use lalg_basic_m
-  use lib_oct_m
+  use loct_m
   use lib_oct_parser_m
   use math_m
   use mesh_m

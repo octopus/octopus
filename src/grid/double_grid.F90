@@ -30,7 +30,7 @@ module double_grid_m
   use messages_m
   use functions_m
   use mesh_function_m
-  use lib_oct_m
+  use loct_m
   use lib_oct_gsl_spline_m
   use lib_oct_parser_m
   use profiling_m

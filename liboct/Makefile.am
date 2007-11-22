@@ -21,8 +21,8 @@
 
 noinst_LIBRARIES = liboct.a
 
-liboct_a_SOURCES = recipes.c ylm.c varia.c \
-	oct_f.c oct_gsl_f.c oct_gdlib_f.c  \
+liboct_a_SOURCES = recipes.c varia.c \
+	oct_f.c oct_gdlib_f.c  \
 	write_iter.c varinfo.c \
 	signals.c
 

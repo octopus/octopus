@@ -23,7 +23,7 @@ module timedep_m
   use global_m
   use io_m
   use datasets_m
-  use lib_oct_m
+  use loct_math_m
   use lib_oct_parser_m
   use units_m
   use messages_m
@@ -32,7 +32,7 @@ module timedep_m
   use geometry_m
   use ground_state_m
   use hamiltonian_m
-  use lib_oct_m
+  use loct_m
   use output_m
   use profiling_m
   use scf_m

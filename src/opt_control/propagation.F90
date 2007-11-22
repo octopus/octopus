@@ -23,7 +23,7 @@ module opt_control_propagation_m
   use datasets_m
   use varinfo_m
   use global_m
-  use lib_oct_m
+  use loct_m
   use io_m
   use messages_m
   use units_m

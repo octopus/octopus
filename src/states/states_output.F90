@@ -25,7 +25,8 @@ module states_output_m
   use global_m
   use grid_m
   use io_m
-  use lib_oct_m
+  use loct_m
+  use loct_math_m
   use magnetic_m
   use messages_m
   use output_m

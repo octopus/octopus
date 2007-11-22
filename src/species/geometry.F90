@@ -23,7 +23,7 @@ module geometry_m
   use datasets_m
   use global_m
   use io_m
-  use lib_oct_m
+  use loct_math_m
   use lib_oct_parser_m
   use messages_m
   use mpi_m

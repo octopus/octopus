@@ -22,7 +22,7 @@
 noinst_LIBRARIES = libmath.a
 
 libmath_a_SOURCES = \
-	blas.F90 dablas.c lalg_basic.F90 lalg_adv.F90 gauss_legendre.F90 math.F90 \
+	blas.F90 dablas.c ylm.c oct_gsl_f.c liboct_math.F90 lalg_basic.F90 lalg_adv.F90 gauss_legendre.F90 math.F90 \
 	ode_solver.F90 root_solver.F90 spline.F90 sparskit.F90 fft.F90
 
 noinst_HEADERS = \
@@ -40,9 +40,11 @@ dablas.o : dablas.c
 lalg_basic.o : lalg_basic.F90 lalg_basic_mp.F90 lalg_basic_blas.F90 blas.o 
 lalg_adv.o : lalg_adv.F90 
 gauss_legendre.o : gauss_legendre.F90 
-math.o : math.F90 math_inc.F90 math_cg_inc.F90 lalg_basic.o 
+math.o : math.F90 math_inc.F90 math_cg_inc.F90 lalg_basic.o liboct_math.o
 ode_solver.o : ode_solver.F90 ode_solver_inc.F90 
 root_solver.o : root_solver.F90 root_solver_inc.F90 ode_solver.o lalg_adv.o 
 spline.o : spline.F90 
 sparskit.o : sparskit.F90 
-fft.o : fft.F90 fftw3.F90 fftw2.F90 lalg_basic.o 
+fft.o : fft.F90 fftw3.F90 fftw2.F90 lalg_basic.o liboct_math.o
+oct_gsl_f.o : oct_gsl_f.c
+ylm.o : ylm.c

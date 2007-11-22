@@ -27,7 +27,7 @@ module static_pol_m
   use grid_m
   use hamiltonian_m
   use io_m
-  use lib_oct_m
+  use loct_m
   use lib_oct_parser_m
   use mesh_function_m
   use mesh_m

@@ -23,7 +23,7 @@ module nl_operator_m
   use datasets_m
   use global_m
   use io_m
-  use lib_oct_m
+  use loct_m
   use lib_oct_parser_m
   use math_m
   use mesh_lib_m

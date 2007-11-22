@@ -24,7 +24,7 @@ module opt_control_output_m
   use varinfo_m
   use global_m
   use lib_oct_parser_m
-  use lib_oct_m
+  use loct_m
   use io_m
   use opt_control_constants_m
   use opt_control_parameters_m

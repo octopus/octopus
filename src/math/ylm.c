@@ -19,6 +19,7 @@
  $Id$
 */
 
+#include <config.h>
 #include <stdlib.h>
 #include <math.h>
 #include <float.h>
@@ -91,4 +92,12 @@ double ylm(double x, double y, double z, int l, int m)
 
 	/* I am not sure wether we are including the Condon-Shortley factor (-1)^m */
 	return r*phase;
+}
+
+/* The Fortran interface */
+
+double FC_FUNC_(oct_ylm, OCT_YLM)
+  (double *x, double *y, double *z, int *l, int *m)
+{
+  return ylm(*x, *y, *z, *l, *m);
 }

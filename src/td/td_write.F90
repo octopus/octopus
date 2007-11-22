@@ -29,7 +29,7 @@ module td_write_m
   use hamiltonian_m
   use io_m
   use lasers_m
-  use lib_oct_m
+  use loct_m
   use lib_oct_parser_m
   use magnetic_m
   use mesh_function_m

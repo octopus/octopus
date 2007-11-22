@@ -20,13 +20,14 @@
 #include "global.h"
 
 module geom_opt_m
-  use lib_oct_m
   use datasets_m
   use external_pot_m
   use geometry_m
   use global_m
   use hamiltonian_m
   use lib_oct_parser_m
+  use loct_m
+  use loct_math_m
   use mesh_m
   use messages_m
   use restart_m

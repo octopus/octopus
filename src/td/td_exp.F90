@@ -22,7 +22,7 @@
 module td_exp_m
   use datasets_m
   use lalg_basic_m
-  use lib_oct_m
+  use loct_math_m
   use lib_oct_parser_m
 #ifdef HAVE_FFT
   use cube_function_m

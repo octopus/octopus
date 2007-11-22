@@ -22,7 +22,7 @@
 module poisson_corrections_m
   use derivatives_m
   use global_m
-  use lib_oct_m
+  use loct_math_m
   use math_m
   use mesh_function_m
   use mesh_m

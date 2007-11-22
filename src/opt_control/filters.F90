@@ -24,7 +24,7 @@ module filter_m
   use messages_m
   use datasets_m
   use io_m 
-  use lib_oct_m
+  use loct_m
   use string_m
   use lib_oct_parser_m
 #if defined(HAVE_FFT)

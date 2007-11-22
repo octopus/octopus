@@ -34,7 +34,7 @@ module opt_control_m
   use io_m
   use lasers_m
   use lib_oct_parser_m
-  use lib_oct_m
+  use loct_m
   use messages_m
   use simul_box_m
   use mesh_m

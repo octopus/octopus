@@ -24,7 +24,7 @@
 
 module poisson_cutoffs_m
   use global_m
-  use lib_oct_m
+  use loct_math_m
   use messages_m
 
   implicit none
