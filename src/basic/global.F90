@@ -105,9 +105,7 @@ module global_m
     M_GS                 =   1,  &
     M_UNOCC              =   2,  &
     M_TD                 =   3,  &
-    M_FD_STATIC_POL      =   4,  &
     M_GEOM_OPT           =   5,  &
-    M_PHONONS            =   6,  &
     M_OPT_CONTROL        =   7,  &
     M_LR_POL             =   8,  &
     M_CASIDA             =   9,  &

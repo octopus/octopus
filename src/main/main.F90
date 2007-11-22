@@ -79,36 +79,35 @@ program octopus
 
   ! need to find out calc_mode already here since some of the variables here (e.g.
   ! periodic dimensions) can be different for the subsystems
+
   !%Variable CalculationMode
   !%Type integer
   !%Default gs
   !%Section Generalities
   !%Description
-  !% Decides what kind of calculation is to be performed
+  !% Decides what kind of calculation is to be performed.
   !%Option gs 1
   !% Calculation of the ground state
   !%Option unocc 02
   !% Calculation of unoccupied/virtual KS states
   !%Option td 03
   !% Time-dependent calculation
-  !%Option pol_fd 04
-  !% Calculation of the static polarizability through finite differences
-  !%Option geom 05
+  !%Option go 05
   !% Optimization of the geometry
-  !%Option phonons 06
-  !% Calculation of the vibrational modes
   !%Option opt_control 07
   !% Optimal control.
-  !%Option pol_lr 08
-  !% Linear-response calculation of the polarizabilities
+  !%Option em_resp 08
+  !% Calculation of the electromagnetic response: electric
+  !% polarizabilities and hyperpolarizabilities and magnetic
+  !% susceptibilities.
   !%Option casida 09
-  !% Excitations via linear-response TDDFT
+  !% Excitations via Casida linear-response TDDFT
   !%Option td_transport 10
   !% Time-dependent quantum transport
-  !%Option vdW 11
+  !%Option vdw 11
   !% Calculate van der Waals coefficients
-  !%Option phonons_lr 12
-  !% Calculation of the vibrational modes using linear response
+  !%Option vib_modes 12
+  !% Calculation of the vibrational modes.
   !%Option recipe 99
   !% Prints out a tasty recipe
   !%End

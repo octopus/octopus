@@ -59,6 +59,8 @@ module run_prog_m
   type(system_t)      :: sys
   type(hamiltonian_t) :: h
 
+  integer, parameter :: LR = 1, FD = 2
+
 
 contains
 
@@ -87,18 +89,24 @@ contains
       call unocc_run(sys, h, fromScratch)
     case(M_TD)
       call td_run(sys, h, fromScratch)
-    case(M_FD_STATIC_POL)
-      call static_pol_run(sys, h, fromScratch)
     case(M_LR_POL)
-      call pol_lr_run(sys, h, fromScratch)
+      select case(get_resp_method())
+      case(FD)
+        call static_pol_run(sys, h, fromScratch)
+      case(LR)
+        call pol_lr_run(sys, h, fromScratch)
+      end select
     case(M_VDW)
       call vdW_run(sys, h, fromScratch)
     case(M_GEOM_OPT)
       call geom_opt_run(sys, h)
-    case(M_PHONONS)
-      call phonons_run(sys, h)
     case(M_PHONONS_LR)
-      call phonons_lr_run(sys, h, fromScratch)
+      select case(get_resp_method())
+      case(FD)
+        call phonons_run(sys, h)
+      case(LR)
+        call phonons_lr_run(sys, h, fromScratch)
+      end select
     case(M_OPT_CONTROL)
       call opt_control_run(sys, h)
     case(M_CASIDA)
@@ -110,10 +118,37 @@ contains
     end select
 
     call pop_sub()
-
+    
   end subroutine run
-
-
+  
+  integer function get_resp_method()
+    
+    !%Variable ResponseMethod
+    !%Type integer
+    !%Default gs
+    !%Section Generalities
+    !%Description
+    !% Some response properties can be calculated either via
+    !% Sternheimer linear response or by using finite
+    !% differences. You can use this variable to select how you want
+    !% them to be calculated, it applies to em_resp and vib_modes
+    !% calculation modes. By default the Sternheimer linear response
+    !% technique is used.
+    !%Option sternheimer 1
+    !% The linear response is obtained by solving a self-consistent
+    !% Sternheimer equation for the variation of the orbitals. This
+    !% is the recomended method.
+    !%Option finite_differences 2
+    !% Properties are calculated as a finite differences derivative of
+    !% the energy obtained by several ground state calculations. This
+    !% method is slow and limited only to static response, is kept
+    !% mainly because is simple and for useful for testing purposes.
+    !%End
+    
+    call loct_parse_int(check_inp('ResponseMethod'), LR, get_resp_method)
+    
+  end function get_resp_method
+  
   ! ---------------------------------------------------------
   subroutine run_init()
     integer :: parallel_mask
