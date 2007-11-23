@@ -68,10 +68,10 @@ int NBC_Ialltoall(void* sendbuf, int sendcount, MPI_Datatype sendtype, void* rec
      * have eager messages (msgsize < 1<<13) */
     alg = NBC_A2A_LINEAR;
   } else if(a2asize < (1<<12)*p) {
-    //alg = NBC_A2A_DISS;
+    /*alg = NBC_A2A_DISS;*/
     alg = NBC_A2A_LINEAR;
   } else
-    alg = NBC_A2A_LINEAR; //NBC_A2A_PAIRWISE;
+    alg = NBC_A2A_LINEAR; /*NBC_A2A_PAIRWISE;*/
 
   if(!inplace) {
     /* copy my data to receive buffer */
@@ -265,7 +265,7 @@ static __inline__ int a2a_sched_diss(int rank, int p, MPI_Aint sndext, MPI_Aint 
       /* test if bit r is set in rank number i */
       if((i&r) == r) {
         /* copy data to sendbuffer (2nd copy) - could be avoided using iovecs */
-        //printf("[%i] round %i: copying element %i to buffer %lu\n", rank, r, i, (unsigned long)(stmpbuf+offset));
+        /*printf("[%i] round %i: copying element %i to buffer %lu\n", rank, r, i, (unsigned long)(stmpbuf+offset));*/
         NBC_Sched_copy((void*)(long)(i*datasize), true, datasize, MPI_BYTE, stmpbuf+offset-(unsigned long)handle->tmpbuf, true, datasize, MPI_BYTE, schedule);
         offset += datasize;
       }
@@ -275,11 +275,11 @@ static __inline__ int a2a_sched_diss(int rank, int p, MPI_Aint sndext, MPI_Aint 
     /* add p because modulo does not work with negative values */
     rpeer = ((rank - r)+p) % p;
  
-    //printf("[%i] receiving %i bytes from host %i into rbuf %lu\n", rank, offset, rpeer, (unsigned long)rtmpbuf);
+    /*printf("[%i] receiving %i bytes from host %i into rbuf %lu\n", rank, offset, rpeer, (unsigned long)rtmpbuf);*/
     res = NBC_Sched_recv(rtmpbuf-(unsigned long)handle->tmpbuf, true, offset, MPI_BYTE, rpeer, schedule);
     if (NBC_OK != res) { printf("Error in NBC_Sched_recv() (%i)\n", res); return res; }
  
-    //printf("[%i] sending %i bytes to host %i from sbuf %lu\n", rank, offset, speer, (unsigned long)stmpbuf);
+    /*printf("[%i] sending %i bytes to host %i from sbuf %lu\n", rank, offset, speer, (unsigned long)stmpbuf);*/
     res = NBC_Sched_send(stmpbuf-(unsigned long)handle->tmpbuf, true, offset, MPI_BYTE, speer, schedule);
     if (NBC_OK != res) { printf("Error in NBC_Sched_send() (%i)\n", res); return res; }
 

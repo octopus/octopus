@@ -292,7 +292,7 @@ int NBC_Progress(NBC_Handle *handle) {
   if((handle->req_count > 0) && (handle->req_array != NULL)) {
     NBC_DEBUG(50, "NBC_Progress: testing for %i requests\n", handle->req_count);
 #ifdef NBC_OMPI_COMPONENT
-    //res = ompi_request_test_all(handle->req_count, handle->req_array, &flag, MPI_STATUSES_IGNORE);
+    /*res = ompi_request_test_all(handle->req_count, handle->req_array, &flag, MPI_STATUSES_IGNORE);*/
     res = MPI_Testall(handle->req_count, handle->req_array, &flag, MPI_STATUS_IGNORE);
     if(res != OMPI_SUCCESS) { printf("MPI Error in MPI_Testall() (%i)\n", res); return res; }
 #endif
@@ -363,7 +363,7 @@ int NBC_Progress_block(NBC_Handle *handle) {
     if((handle->req_count > 0) && (handle->req_array != NULL)) {
       NBC_DEBUG(50, "NBC_Progress_block: waiting for %i requests\n", handle->req_count);
 #ifdef NBC_OMPI_COMPONENT
-      //res = ompi_request_wait_all(handle->req_count, handle->req_array, MPI_STATUSES_IGNORE);
+      /*res = ompi_request_wait_all(handle->req_count, handle->req_array, MPI_STATUSES_IGNORE);*/
       res = MPI_Waitall(handle->req_count, handle->req_array, MPI_STATUS_IGNORE);
       if(res != OMPI_SUCCESS) { printf("MPI Error in MPI_Waitall() (%i)\n", res); return res; }
 #endif
@@ -453,8 +453,8 @@ static __inline__ int NBC_Start_round(NBC_Handle *handle) {
 #ifdef NBC_OMPI_COMPONENT
         handle->req_array = realloc(handle->req_array, (handle->req_count)*sizeof(ompi_request_t*));
         NBC_CHECK_NULL(handle->req_array);
-        //res = MCA_PML_CALL(isend_init(buf1, sendargs->count, sendargs->datatype, sendargs->dest, handle->tag, MCA_PML_BASE_SEND_STANDARD, handle->mycomm, handle->req_array+handle->req_count-1));
-        //printf("MPI_Isend(%lu, %i, %lu, %i, %i, %lu) (%i)\n", (unsigned long)buf1, sendargs->count, (unsigned long)sendargs->datatype, sendargs->dest, handle->tag, (unsigned long)handle->mycomm, res);
+        /*res = MCA_PML_CALL(isend_init(buf1, sendargs->count, sendargs->datatype, sendargs->dest, handle->tag, MCA_PML_BASE_SEND_STANDARD, handle->mycomm, handle->req_array+handle->req_count-1));*/
+        /*printf("MPI_Isend(%lu, %i, %lu, %i, %i, %lu) (%i)\n", (unsigned long)buf1, sendargs->count, (unsigned long)sendargs->datatype, sendargs->dest, handle->tag, (unsigned long)handle->mycomm, res);*/
         res = MPI_Isend(buf1, sendargs->count, sendargs->datatype, sendargs->dest, handle->tag, handle->mycomm, handle->req_array+handle->req_count-1);
         if(OMPI_SUCCESS != res) { printf("Error in MPI_Isend(%lu, %i, %lu, %i, %i, %lu) (%i)\n", (unsigned long)buf1, sendargs->count, (unsigned long)sendargs->datatype, sendargs->dest, handle->tag, (unsigned long)handle->mycomm, res); return res; }
 #endif
@@ -487,8 +487,8 @@ static __inline__ int NBC_Start_round(NBC_Handle *handle) {
 #ifdef NBC_OMPI_COMPONENT
         handle->req_array = realloc(handle->req_array, (handle->req_count)*sizeof(ompi_request_t*));
         NBC_CHECK_NULL(handle->req_array);
-        //res = MCA_PML_CALL(irecv(buf1, recvargs->count, recvargs->datatype, recvargs->source, handle->tag, handle->mycomm, handle->req_array+handle->req_count-1)); 
-        //printf("MPI_Irecv(%lu, %i, %lu, %i, %i, %lu) (%i)\n", (unsigned long)buf1, recvargs->count, (unsigned long)recvargs->datatype, recvargs->source, handle->tag, (unsigned long)handle->mycomm, res); 
+        /*res = MCA_PML_CALL(irecv(buf1, recvargs->count, recvargs->datatype, recvargs->source, handle->tag, handle->mycomm, handle->req_array+handle->req_count-1)); */
+        /*printf("MPI_Irecv(%lu, %i, %lu, %i, %i, %lu) (%i)\n", (unsigned long)buf1, recvargs->count, (unsigned long)recvargs->datatype, recvargs->source, handle->tag, (unsigned long)handle->mycomm, res); */
         res = MPI_Irecv(buf1, recvargs->count, recvargs->datatype, recvargs->source, handle->tag, handle->mycomm, handle->req_array+handle->req_count-1);
         if(OMPI_SUCCESS != res) { printf("Error in MPI_Irecv(%lu, %i, %lu, %i, %i, %lu) (%i)\n", (unsigned long)buf1, recvargs->count, (unsigned long)recvargs->datatype, recvargs->source, handle->tag, (unsigned long)handle->mycomm, res); return res; }
 #endif
@@ -623,23 +623,23 @@ int NBC_Init_handle(NBC_Handle *handle, MPI_Comm comm) {
   }
   handle->tag=comminfo->tag;
   handle->mycomm=comminfo->mycomm;
-  //printf("got comminfo: %lu tag: %i\n", comminfo, comminfo->tag);
+  /*printf("got comminfo: %lu tag: %i\n", comminfo, comminfo->tag);*/
 
-//#ifdef OMPI_COMPONENT
+  /*#ifdef OMPI_COMPONENT*/
   /* we use negative tags for OMPI */
   if(handle->tag == -50) {
     handle->tag=-32767;
     comminfo->tag=-32767;
     NBC_DEBUG(2,"resetting tags ...\n"); 
   }
-//#else
+  /*#else*/
   /* reset counter ... */ 
   if(handle->tag == 32767) {
     handle->tag=1;
     comminfo->tag=1;
     NBC_DEBUG(2,"resetting tags ...\n"); 
   }
-//#endif
+  /*#endif*/
   
   /******************** end of tag and shadow comm administration ...  ***************/
   handle->comminfo = comminfo;
@@ -662,7 +662,7 @@ NBC_Comminfo* NBC_Init_comm(MPI_Comm comm) {
 #ifdef NBC_OMPI_COMPONENT
   comminfo->mycomm = comm;
   /* set tag to 1 */
-  //comminfo->tag=-32767;
+  /*comminfo->tag=-32767;*/
   comminfo->tag=1;
 #else
   /* set tag to 1 */

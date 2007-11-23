@@ -270,7 +270,7 @@ static __inline__ int allred_sched_chain(int rank, int p, int count, MPI_Datatyp
   /* determine the ending round of bcast ... after arrival of the first
    * packet, each rank has to forward numfrag packets */
   bend = bstart+numfrag;
-  //printf("[%i] numfrag: %i, count: %i, size: %i, fragcount: %i, bstart: %i, bend: %i\n", rank, numfrag, count, size, fragcount, bstart, bend);
+  /*printf("[%i] numfrag: %i, count: %i, size: %i, fragcount: %i, bstart: %i, bend: %i\n", rank, numfrag, count, size, fragcount, bstart, bend);*/
 
   /* this are two loops in one - this is a little nasty :-( */
   for(fragnum = 0; fragnum < bend; fragnum++) {
@@ -284,7 +284,7 @@ static __inline__ int allred_sched_chain(int rank, int p, int count, MPI_Datatyp
         /* last fragment may not be full */
         thiscount = count-fragcount*fragnum;
       }
-      //printf("[%i] reduce %i elements from %lu\n", rank, thiscount, roffset); 
+      /*printf("[%i] reduce %i elements from %lu\n", rank, thiscount, roffset); */
 
       /* REDUCE - PART last node does not recv */
       if(rank != p-1) {
@@ -310,13 +310,13 @@ static __inline__ int allred_sched_chain(int rank, int p, int count, MPI_Datatyp
         }
         if (NBC_OK != res) { printf("Error in NBC_Sched_send() (%i)\n", res); return res; }
         /* this barrier here seems awkward but isn't!!!! */
-        //res = NBC_Sched_barrier(schedule);
+        /*res = NBC_Sched_barrier(schedule);*/
       }
     }
 
     /* BCAST from rank 0 */
     if(fragnum >= bstart) {
-      //printf("[%i] bcast %i elements from %lu\n", rank, thiscount, boffset); 
+      /*printf("[%i] bcast %i elements from %lu\n", rank, thiscount, boffset); */
       if(fragnum == bend-1) {
         /* last fragment may not be full */
         thiscount = count-fragcount*(fragnum-bstart);
@@ -338,7 +338,7 @@ static __inline__ int allred_sched_chain(int rank, int p, int count, MPI_Datatyp
     }
   }
 
-  //NBC_PRINT_SCHED(*schedule);
+  /*NBC_PRINT_SCHED(*schedule);*/
 
   return NBC_OK;
 }
