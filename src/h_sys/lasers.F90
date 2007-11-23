@@ -93,7 +93,7 @@ contains
     type(laser_t),   pointer :: l(:)
     type(mesh_t), intent(in) :: m
 
-    C_POINTER         :: blk
+    type(block_t)     :: blk
     integer           :: i, j, ierr, envelope
     character(len=50) :: filename1
     character(len=200) :: scalar_pot_expression

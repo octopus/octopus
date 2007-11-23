@@ -178,20 +178,23 @@ module loct_math_m
   ! Functions to generate random numbers
   interface loct_ran_init
     subroutine oct_ran_init(r)
-      C_POINTER, intent(out) :: r
+      use c_pointer_m
+      type(c_pointer_t), intent(out) :: r
     end subroutine oct_ran_init
   end interface
 
   interface loct_ran_end
     subroutine oct_ran_end(r)
-      C_POINTER, intent(out) :: r
+      use c_pointer_m
+      type(c_pointer_t), intent(out) :: r
     end subroutine oct_ran_end
   end interface
 
   interface loct_ran_gaussian
     function oct_ran_gaussian(r, sigma)
+      use c_pointer_m
       real(8) :: oct_ran_gaussian
-      C_POINTER, intent(in) :: r
+      type(c_pointer_t), intent(in) :: r
       real(8),   intent(in) :: sigma
     end function oct_ran_gaussian
     module procedure oct_ran_gaussian4
@@ -348,7 +351,8 @@ contains
   end function oct_ylm4
 
   real(4) function oct_ran_gaussian4(r, sigma)
-    C_POINTER, intent(in) :: r
+    use c_pointer_m
+    type(c_pointer_t), intent(in) :: r
     real(4),   intent(in) :: sigma
 
     oct_ran_gaussian4 = real(oct_ran_gaussian(r, real(sigma, kind=8)), kind=4)

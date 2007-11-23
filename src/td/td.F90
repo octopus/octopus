@@ -375,7 +375,7 @@ contains
       character(len=50) :: filename
       FLOAT :: x
       logical :: only_userdef_istates
-      C_POINTER :: blk
+      type(block_t) :: blk
       type(states_t) :: stin
       CMPLX, allocatable :: rotation_matrix(:, :)
 
@@ -718,11 +718,10 @@ contains
 
     ! ---------------------------------------------------------
     subroutine modify_occs()
-      C_POINTER :: blk
+      type(block_t) :: blk
       integer  :: nrow
       integer  :: spin, state
       FLOAT    :: new_occ
-      blk = int(0, POINTER_SIZE)
       
       if(loct_parse_block(check_inp('ModifyOccupations'), blk) == 0) then
         nrow = loct_parse_block_n(blk)

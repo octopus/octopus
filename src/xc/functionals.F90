@@ -262,7 +262,7 @@ contains
     integer,           intent(in) :: iunit
 
     character(len=120) :: s1, s2
-    C_POINTER :: str
+    integer(SIZEOF_VOIDP) :: str
     integer :: i
 
     call push_sub('xc_functl.xc_functl_write_info')

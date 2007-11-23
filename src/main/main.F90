@@ -35,7 +35,7 @@ program octopus
   implicit none
 
   integer :: ns
-  C_POINTER :: blk
+  type(block_t) :: blk
   character(len=256) :: sys_name
 
   call global_init()

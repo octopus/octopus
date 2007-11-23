@@ -21,6 +21,7 @@
 
 module varinfo_m
   use string_m
+  use c_pointer_m
 
   implicit none
 
@@ -51,12 +52,12 @@ contains
     character(len=*), intent(in) :: var
     integer,optional, intent(out):: ierr
 
-    C_POINTER :: handle, opt, name, type, section, desc
+    type(c_pointer_t) :: handle, opt, name, type, section, desc
     integer :: value
     logical :: first
 
     call varinfo_getvar(var, handle)
-    if(handle == 0) then
+    if(is_null(handle)) then
       if(present(ierr)) then
         ierr = -1
       else
@@ -74,11 +75,11 @@ contains
     write(iunit, '(a)') "Description:"
     call print_C_string(iunit, desc, "    ")
 
-    opt = int(0, POINTER_SIZE)
+    call set_null(opt)
     first = .true.
     do
       call varinfo_getopt(handle, opt)
-      if(opt==0) then
+      if(is_null(opt)) then
         exit
       else
         if(first) then
@@ -100,7 +101,7 @@ contains
     integer,           intent(in) :: option
     logical, optional, intent(in) :: is_flag
 
-    C_POINTER :: handle, opt, name, desc
+    type(c_pointer_t) :: handle, opt, name, desc
     integer :: value, option_
     logical :: is_flag_
 
@@ -111,12 +112,12 @@ contains
     l = .false.
 
     call varinfo_getvar(var, handle)
-    if(handle.eq.0) return
+    if(is_null(handle)) return
 
-    opt = int(0, POINTER_SIZE)
+    call set_null(opt)
     do
       call varinfo_getopt(handle, opt)
-      if(opt == 0) exit
+      if(is_null(opt)) exit
       call varinfo_opt_getinfo(opt, name, value, desc)
 
       if(is_flag_) then
@@ -142,16 +143,16 @@ contains
     integer,          intent(in) :: option
     character(len=*), intent(in), optional :: pre
 
-    C_POINTER :: handle, opt, name, desc
+    type(c_pointer_t) :: handle, opt, name, desc
     integer :: value
 
     call varinfo_getvar(var, handle)
-    if(handle.eq.0) return
+    if(is_null(handle)) return
 
-    opt = int(0, POINTER_SIZE)
+    call set_null(opt)
     do
       call varinfo_getopt(handle, opt)
-      if(opt == 0) exit
+      if(is_null(opt)) exit
 
       call varinfo_opt_getinfo(opt, name, value, desc)
 
@@ -179,14 +180,14 @@ contains
     character(len=*), intent(in) :: var
     integer,optional, intent(out):: ierr
     
-    C_POINTER :: handle, name, type, section, desc
+    type(c_pointer_t) :: handle, name, type, section, desc
     
-    handle = 0
+    call set_null(handle)
     if(present(ierr)) ierr = -1
     do 
       call varinfo_search_var(var, handle)
 
-      if(handle /= 0) then 
+      if(.not. is_null(handle)) then 
         if(present(ierr)) ierr = 0
       else
         exit

@@ -122,7 +122,7 @@ contains
     integer,          intent(in)    :: ispin
 
     integer :: i, nvl
-    C_POINTER :: blk
+    type(block_t) :: blk
     FLOAT, allocatable :: x(:)
     logical :: filter
 

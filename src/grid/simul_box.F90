@@ -20,6 +20,7 @@
 #include "global.h"
 
 module simul_box_m
+  use c_pointer_m
   use datasets_m
   use geometry_m
   use global_m
@@ -147,7 +148,7 @@ contains
     subroutine read_misc()
 
       integer :: iunit, ierr, ip, id
-      C_POINTER :: blk
+      type(block_t) :: blk
       character(len=256) :: tmp_str
 
       call push_sub('simul_box.read_misc')
@@ -290,7 +291,7 @@ contains
 
     !--------------------------------------------------------------
     subroutine read_box()
-      C_POINTER :: blk
+      type(block_t) :: blk
       FLOAT :: default
 #if defined(HAVE_GDLIB)        
       character(len=200) :: filename
@@ -435,7 +436,7 @@ contains
 #if defined(HAVE_GDLIB)        
         call loct_parse_string(check_inp("BoxShapeImage"), "", filename)
         sb%image = loct_gdimage_create_from(filename)
-        if(sb%image == 0) then
+        if(is_null(sb%image)) then
           message(1) = "Could not open file '" // filename // "'"
           call write_fatal(1)
         end if
@@ -485,7 +486,7 @@ contains
 
     !--------------------------------------------------------------
     subroutine read_spacing()
-      C_POINTER :: blk
+      type(block_t) :: blk
       integer :: i
 #if defined(HAVE_GDLIB)
       integer :: sx, sy
@@ -604,7 +605,7 @@ contains
     !--------------------------------------------------------------
     subroutine read_box_offset()
       integer :: i
-      C_POINTER :: blk
+      type(block_t) :: blk
 
       call push_sub('simul_box.read_box_offset')
       !%Variable BoxOffset
@@ -645,7 +646,7 @@ contains
 
     !--------------------------------------------------------------
     subroutine build_lattice()
-      C_POINTER :: blk
+      type(block_t) :: blk
       FLOAT :: norm
       integer :: idim, jdim
 

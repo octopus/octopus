@@ -73,7 +73,7 @@ module opt_control_target_m
     type(target_t), intent(inout) :: target
 
     integer           :: ierr, ip, ist, jst
-    C_POINTER         :: blk
+    type(block_t)         :: blk
     FLOAT             :: x(MAX_DIM), r, psi_re, psi_im
     CMPLX, allocatable :: rotation_matrix(:, :)
     type(states_t)    :: tmp_st
@@ -490,7 +490,7 @@ module opt_control_target_m
     type(grid_t),      intent(in) :: gr
     type(td_t),        intent(in) :: td
 
-    C_POINTER         :: blk
+    type(block_t) :: blk
 
     call push_sub('target.tdtarget_init')
 

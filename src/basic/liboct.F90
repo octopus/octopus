@@ -20,6 +20,7 @@
 #include "global.h"
 
 module loct_m
+
   implicit none
 
   ! Define the which routines can be seen from the outside
@@ -67,69 +68,84 @@ module loct_m
   ! write_iter functions
   interface
     subroutine write_iter_init(out,  iter, factor, file)
-      C_POINTER        :: out
+      use c_pointer_m
+      type(c_pointer_t)        :: out
       integer          :: iter
       FLOAT            :: factor
       character(len=*) :: file
     end subroutine write_iter_init
     subroutine write_iter_clear(out)
-      C_POINTER :: out
+      use c_pointer_m
+      type(c_pointer_t) :: out
     end subroutine write_iter_clear
     subroutine write_iter_flush(out)
-      C_POINTER :: out
+      use c_pointer_m
+      type(c_pointer_t) :: out
     end subroutine write_iter_flush
     subroutine write_iter_end(out)
-      C_POINTER :: out
+      use c_pointer_m
+      type(c_pointer_t) :: out
     end subroutine write_iter_end
     subroutine write_iter_start(out)
-      C_POINTER :: out
+      use c_pointer_m
+      type(c_pointer_t) :: out
     end subroutine write_iter_start
     subroutine write_iter_string(out, string)
-      C_POINTER        :: out
+      use c_pointer_m
+      type(c_pointer_t)        :: out
       character(len=*) :: string
     end subroutine write_iter_string
     subroutine write_iter_header_start(out)
-      C_POINTER :: out
+      use c_pointer_m
+      type(c_pointer_t) :: out
     end subroutine write_iter_header_start
     subroutine write_iter_header(out, string)
-      C_POINTER        :: out
+      use c_pointer_m
+      type(c_pointer_t)        :: out
       character(len=*) :: string
     end subroutine write_iter_header
     subroutine write_iter_nl(out)
-      C_POINTER :: out
+      use c_pointer_m
+      type(c_pointer_t) :: out
     end subroutine write_iter_nl
   end interface
 
   interface write_iter_double
     subroutine write_iter_double_1(out, d, n)
-      C_POINTER :: out
+      use c_pointer_m
+      type(c_pointer_t) :: out
       integer   :: n
       real(8)   :: d
     end subroutine write_iter_double_1
     subroutine write_iter_double_n(out, d, n)
-      C_POINTER :: out
+      use c_pointer_m
+      type(c_pointer_t) :: out
       integer   :: n
       real(8)   :: d(n)
     end subroutine write_iter_double_n
     subroutine write_iter_float_1(out, d, n)
-      C_POINTER :: out
+      use c_pointer_m
+      type(c_pointer_t) :: out
       integer   :: n
       real(4)   :: d
     end subroutine write_iter_float_1
     subroutine write_iter_float_n(out, d, n)
-      C_POINTER :: out
+      use c_pointer_m
+      type(c_pointer_t) :: out
       integer   :: n
       real(4)   :: d(n)
     end subroutine write_iter_float_n
   end interface
   interface write_iter_int
     subroutine write_iter_int_1(out, i, n)
-      C_POINTER :: out
+      use c_pointer_m
+      type(c_pointer_t) :: out
       integer   :: n
       integer   :: i
     end subroutine write_iter_int_1
     subroutine write_iter_int_n(out, i, n)
-      C_POINTER :: out
+      use c_pointer_m
+      type(c_pointer_t) :: out
       integer   :: n
       integer   :: i(n)
     end subroutine write_iter_int_n
@@ -236,28 +252,32 @@ module loct_m
 #if defined(HAVE_GDLIB)
   interface loct_gdimage_create_from
     function oct_gdimage_create_from(filename)
-      C_POINTER :: oct_gdimage_create_from
+      use c_pointer_m
+      type(c_pointer_t) :: oct_gdimage_create_from
       character(len=*), intent(in) :: filename
     end function oct_gdimage_create_from
   end interface
 
   interface loct_gdimage_sx
     function oct_gdimage_sx(im)
+      use c_pointer_m
       integer :: oct_gdimage_sx
-      C_POINTER, intent(in) :: im
+      type(c_pointer_t), intent(in) :: im
     end function oct_gdimage_sx
   end interface
 
   interface loct_gdimage_sy
     function oct_gdimage_sy(im)
+      use c_pointer_m
       integer :: oct_gdimage_sy
-      C_POINTER, intent(in) :: im
+      type(c_pointer_t), intent(in) :: im
     end function oct_gdimage_sy
   end interface
 
   interface loct_gdimage_get_pixel_rgb
     subroutine oct_gdimage_get_pixel_rgb(im, x, y, r, g, b)
-      C_POINTER, intent(in)  :: im
+      use c_pointer_m
+      type(c_pointer_t), intent(in)  :: im
       integer,   intent(in)  :: x, y
       integer,   intent(out) :: r, g, b
     end subroutine oct_gdimage_get_pixel_rgb

@@ -45,7 +45,7 @@ contains
   ! and prompt the user for possible errors in the input
   subroutine datasets_init(calc_mode, blk)
     integer, intent(in) :: calc_mode
-    C_POINTER, optional, intent(in) :: blk
+    type(block_t), optional, intent(in) :: blk
     integer :: i, n_rows, n_cols
     integer, allocatable :: order(:)
 #ifdef HAVE_MPI

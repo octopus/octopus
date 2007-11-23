@@ -213,7 +213,7 @@ contains
 
     integer :: ia, is, gmd_opt, i
     integer, save :: iseed = 321
-    C_POINTER :: blk
+    type(block_t) :: blk
     FLOAT :: r, rnd, phi, theta, mag(MAX_DIM), lmag, n1, n2
     FLOAT, allocatable :: atom_rho(:,:)
 

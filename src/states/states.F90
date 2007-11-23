@@ -382,7 +382,7 @@ contains
     FLOAT, intent(in) :: excess_charge
 
     integer :: i, j, ncols
-    C_POINTER :: blk
+    type(block_t) :: blk
     FLOAT :: r
 
     call push_sub('states.states_read_initial_occs')
@@ -503,7 +503,7 @@ contains
   subroutine states_read_initial_spins(st)
     type(states_t), intent(inout) :: st
     integer :: i, j
-    C_POINTER :: blk
+    type(block_t) :: blk
 
     call push_sub('states.states_read_initial_spins')
 
@@ -681,7 +681,7 @@ contains
     type(mesh_t),      intent(in) :: mesh
     type(states_t), intent(inout) :: st    
 
-    C_POINTER :: blk
+    type(block_t) :: blk
     integer   :: ip, id, is, ik, nstates, ncols, ierr
     integer   :: ib, idim, inst, inik, input_format
     FLOAT     :: x(MAX_DIM), r, psi_re, psi_im
@@ -1973,7 +1973,7 @@ contains
     type(states_t),    intent(inout) :: st
     type(grid_t),      intent(inout) :: gr
 
-    C_POINTER :: blk
+    type(block_t) :: blk
     integer :: iunit, i, k
     type(mesh_plane_t) :: plane
     type(mesh_line_t) :: line

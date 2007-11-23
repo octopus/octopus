@@ -159,7 +159,7 @@ contains
     character(len=256) :: fname
     character(len=10)  :: lab
     integer :: i, row, n_spec_block, n_spec_def, iunit, read_data
-    C_POINTER :: blk
+    type(block_t) :: blk
 
     call push_sub('specie.specie_read')
 
@@ -283,7 +283,6 @@ contains
 
     ! First, find out if there is a Species block.
     n_spec_block = 0
-    blk = int(0, POINTER_SIZE)
     if(loct_parse_block(check_inp('Species'), blk) == 0) then
       n_spec_block = loct_parse_block_n(blk)
     end if
@@ -376,7 +375,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine read_from_block(blk, row, s, read_data)
-    C_POINTER,      intent(in) :: blk
+    type(block_t),      intent(in) :: blk
     integer,        intent(in) :: row
     type(specie_t), intent(inout) :: s
     integer,        intent(out) :: read_data

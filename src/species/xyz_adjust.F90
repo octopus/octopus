@@ -46,7 +46,7 @@ contains
 
     FLOAT :: center(MAX_DIM), x1(MAX_DIM), x2(MAX_DIM), to(MAX_DIM)
     integer :: axis_type
-    C_POINTER :: blk
+    type(block_t) :: blk
 
     ! is there something to do
     if(geo%natoms <= 1) return

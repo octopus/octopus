@@ -332,7 +332,7 @@ contains
 
     ! ---------------------------------------------------------
     subroutine parse_input()
-      C_POINTER :: blk
+      type(block_t) :: blk
       integer   :: nrow
       integer   :: number, j, k
       FLOAT     :: omega_ini, omega_fin, domega

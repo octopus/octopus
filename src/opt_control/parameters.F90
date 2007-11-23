@@ -300,7 +300,7 @@ contains
     character(len=1024)      :: expression
     FLOAT                    :: t, octpenalty, dt
     real(8)                  :: f_re, f_im
-    C_POINTER                :: blk
+    type(block_t)            :: blk
     integer                  :: no_lines, i, j, steps
     call push_sub('parameters.parameters_penalty_init')
 

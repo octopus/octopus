@@ -26,7 +26,7 @@
     type(states_t), intent(inout) :: initial_state
 
     integer           :: i, kk, no_c, state, no_blk, kpoints, nst, dim, ist, jst
-    C_POINTER         :: blk
+    type(block_t)     :: blk
     integer           :: p, ik, ib, idim, inst, inik
     integer           :: id ,is, ip, ierr, no_states, isize
     character(len=10) :: fname

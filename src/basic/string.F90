@@ -20,6 +20,9 @@
 #include "global.h"
 
 module string_m
+  
+  use c_pointer_m
+
   implicit none
 
   private
@@ -149,6 +152,7 @@ contains
 
     interface
       subroutine break_C_string(str, s, line)
+        use types_m
         C_POINTER,        intent(in)    :: str
         C_POINTER,        intent(inout) :: s
         character(len=*), intent(out)   :: line
@@ -158,10 +162,10 @@ contains
     advance_ = "yes"
     if(present(advance)) advance_ = advance
 
-    s = 0
+    call set_null(s)
     do
       call break_C_string(str, s, line)
-      if (s == int(0, POINTER_SIZE)) exit
+      if (is_null(s)) exit
       if(present(pre)) then
         write(iunit, '(a,a)', advance=advance_) pre, trim(line)
       else

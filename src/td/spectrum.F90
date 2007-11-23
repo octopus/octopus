@@ -20,6 +20,7 @@
 #include "global.h"
 
 module spectrum_m
+  use c_pointer_m
   use datasets_m
   use global_m
   use io_m
@@ -323,7 +324,7 @@ contains
     type(kick_t), intent(out) :: k
     integer,      intent(in)  :: nspin
 
-    C_POINTER :: blk
+    type(block_t) :: blk
     integer :: n_rows, n_columns, i, j
 
     call push_sub('spectrum.kick_init')

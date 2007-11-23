@@ -23,12 +23,14 @@ module lib_oct_parser_m
   use global_m
   use loct_m
   use mpi_m
+  use types_m
 
   implicit none
 
   ! Define the which routines can be seen from the outside
   private
   public ::                   &
+    block_t,                  &   
     parser_init,              &
     parser_end,               &
     loct_parse_init,          &
@@ -123,33 +125,38 @@ module lib_oct_parser_m
 
   interface loct_parse_block
     integer function oct_parse_block(name, blk)
+      use types_m
       character(len=*), intent(in) :: name
-      C_POINTER, intent(out) :: blk
+      type(block_t), intent(out) :: blk
     end function oct_parse_block
   end interface
 
   interface loct_parse_block_end
     subroutine oct_parse_block_end(blk)
-      C_POINTER, intent(in) :: blk
+      use types_m
+      type(block_t), intent(in) :: blk
     end subroutine oct_parse_block_end
   end interface
 
   interface loct_parse_block_n
     integer function oct_parse_block_n(blk)
-      C_POINTER, intent(in) :: blk
+      use types_m
+      type(block_t), intent(in) :: blk
     end function oct_parse_block_n
   end interface
 
   interface loct_parse_block_cols
     integer function oct_parse_block_cols(blk, line)
-      C_POINTER, intent(in) :: blk
+      use types_m
+      type(block_t), intent(in) :: blk
       integer, intent(in) :: line
     end function oct_parse_block_cols
   end interface
 
   interface loct_parse_block_int
     subroutine oct_parse_block_int(blk, l, c, res)
-      C_POINTER, intent(in) :: blk
+      use types_m
+      type(block_t), intent(in) :: blk
       integer, intent(in)          :: l, c
       integer, intent(out)         :: res
     end subroutine oct_parse_block_int
@@ -157,7 +164,8 @@ module lib_oct_parser_m
 
   interface loct_parse_block_float
     subroutine oct_parse_block_double(blk, l, c, res)
-      C_POINTER, intent(in) :: blk
+      use types_m
+      type(block_t), intent(in) :: blk
       integer, intent(in)          :: l, c
       real(8), intent(out)         :: res
     end subroutine oct_parse_block_double
@@ -166,7 +174,8 @@ module lib_oct_parser_m
 
   interface loct_parse_block_cmplx
     subroutine oct_parse_block_complex(blk, l, c, res)
-      C_POINTER, intent(in) :: blk
+      use types_m
+      type(block_t), intent(in) :: blk
       integer, intent(in)          :: l, c
       complex(8), intent(out)      :: res
     end subroutine oct_parse_block_complex
@@ -175,7 +184,8 @@ module lib_oct_parser_m
 
   interface loct_parse_block_string
     subroutine oct_parse_block_string(blk, l, c, res)
-      C_POINTER, intent(in) :: blk
+      use types_m
+      type(block_t), intent(in) :: blk
       integer, intent(in)          :: l, c
       character(len=*), intent(out):: res
     end subroutine oct_parse_block_string
@@ -284,7 +294,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine loct_parse_block_logical(blk, l, c, res)
-    C_POINTER, intent(in) :: blk
+    type(block_t), intent(in) :: blk
     integer, intent(in)          :: l, c
     logical, intent(out)         :: res
 
@@ -334,7 +344,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine oct_parse_block_double4(blk, l, c, res4)
-    C_POINTER, intent(in) :: blk
+    type(block_t), intent(in) :: blk
     integer, intent(in)          :: l, c
     real(4), intent(out)         :: res4
 
@@ -346,7 +356,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine oct_parse_block_complex4(blk, l, c, res4)
-    C_POINTER, intent(in) :: blk
+    type(block_t), intent(in) :: blk
     integer, intent(in)          :: l, c
     complex(4), intent(out)      :: res4
 

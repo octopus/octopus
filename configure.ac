@@ -58,6 +58,7 @@ AC_C_CONST
 AC_TYPE_PID_T
 AC_TYPE_SIZE_T
 AC_HEADER_TIME
+AC_CHECK_SIZEOF(void*)
 AC_CHECK_TYPES([uint32_t, uint64_t])
 AC_CHECK_SIZEOF(unsigned int)
 AC_CHECK_SIZEOF(unsigned long)
@@ -75,12 +76,6 @@ sigaction malloc realloc opendir readdir closedir strchr strtod assert \
 posix_memalign _mm_malloc _mm_free perror strcasestr])
 
 ACX_MALLOC_ALIGNMENT
-
-# Checks for size of pointer
-ACX_POINTER_SIZE
-AC_DEFINE_UNQUOTED(C_POINTER, [integer(${ac_pointersize})], [The type of a C pointer])
-
-
 
 dnl ============================================================================
 dnl This part of the configuration file tries to sort out what needs to be built.

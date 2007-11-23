@@ -65,7 +65,7 @@ contains
     FLOAT,            intent(in)  :: dt
     type(filter_t), intent(inout) :: filter
 
-    C_POINTER :: blk
+    type(block_t) :: blk
     integer :: no_c, i, no_f
 
     call push_sub('filters.filter_init')

@@ -20,6 +20,7 @@
 #include "global.h"
 
 module geometry_m
+  use c_pointer_m
   use datasets_m
   use global_m
   use io_m

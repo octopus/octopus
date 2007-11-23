@@ -21,7 +21,7 @@
 
 ! this is the maximum number of different FFTWs we are allowed to have
 #define FFT_MAX 10
-#define NULL (int(-1, POINTER_SIZE))
+#define NULL -1
 
 #if   HAVE_FFT == 2
 # include "fftw2.F90"
