@@ -1,0 +1,18 @@
+# -*- coding: utf-8 mode: shell-script -*-
+# $Id: 23-go-na2.test $
+
+Test       : Geometry optimization
+Author     : Xavier
+Date       : 11.23.07
+Arch       : Linux lascar 2.6.21-2-amd64 #1 SMP Wed Jul 11 05:38:29 UTC 2007 x86_64 GNU/Linux
+Release    : 2.2.0pre1
+Programs   : octopus_mpi; octopus
+TestGroups : short-run
+Enabled    : Yes
+
+Input      : 23-go-na2.01-steep.inp
+Match ; Total energy ; sed -n '/^Energy/{n\;p\;}' static/info ; \s*Total\s*=\s*-0.4178
+Match ; Force    [1] ; tail -2 static/info | head -1; .*Na.*0.000.*0.000.*0.000
+Match ; Force    [2] ; tail -1 static/info          ; .*Na.*0.000.*0.000.*0.000
+Match ; Geometry [1] ; tail -2 min.xyz | head -1    ; .*Na.*0.000.*0.000.*-2.766
+Match ; Geometry [2] ; tail -1 min.xyz              ; .*Na.*0.000.*0.000.*2.766

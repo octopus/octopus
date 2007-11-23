@@ -89,7 +89,9 @@ dist_share_DATA = \
 	22-time_propagation.02-td_domains.inp \
 	22-time_propagation.03-td_domains_states.inp \
 	22-time_propagation.04-td_md.inp \
-	22-time_propagation.05-td_fast_md.inp \
-	22-time_propagation.test
+	22-time_propagation.05-td_fast_md.inp        \
+	22-time_propagation.test                     \
+	23-go-na2.test                               \
+	23-go-na2.01-steep.inp
 
 CLEANFILES = *~ *.bak
