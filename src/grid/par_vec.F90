@@ -88,6 +88,7 @@ module par_vec_m
   ! ! Clean up.
   ! deallocate(ul, vl, wl)
 
+  use c_pointer_m
   use global_m
   use io_m
   use mesh_lib_m

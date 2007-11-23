@@ -20,6 +20,7 @@
 #include "global.h"
 
 module hamiltonian_m
+  use c_pointer_m
   use datasets_m
   use derivatives_m
   use functions_m
