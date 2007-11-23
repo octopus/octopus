@@ -60,10 +60,10 @@ typedef struct {
 
 /* If this is a x86_64 machine we always can use vectors */
 #if defined (__amd64__) || defined(__x86_64__)
-#if defined (__SSE2__) && defined(HAVE_EMMINTRIN_H) && defined(FC_USES_MALLOC)
 # define OCT_AMD64
-# define USE_VECTORS
-#endif
+# if defined(HAVE_EMMINTRIN_H)
+#   define USE_VECTORS
+# endif
 #endif
 
 /* Itanium only has single precision (SSE) */
