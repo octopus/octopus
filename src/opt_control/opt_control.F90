@@ -379,6 +379,7 @@ contains
     do j = 1, par%no_parameters
       par%f(j) = parp%f(j)
     end do
+    call parameters_apply_envelope(par)
 
     call states_end(chi)
     call parameters_end(parp)
