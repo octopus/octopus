@@ -215,7 +215,7 @@ static __inline__ int bcast_sched_chain(int rank, int p, int root, NBC_Schedule 
   numfrag = count*size/fragsize;
   if((count*size)%fragsize != 0) numfrag++;
   fragcount = count/numfrag;
-  /+if(!rank) printf("numfrag: %i, count: %i, size: %i, fragcount: %i\n", numfrag, count, size, fragcount);*/
+  /*if(!rank) printf("numfrag: %i, count: %i, size: %i, fragcount: %i\n", numfrag, count, size, fragcount);*/
   
   for(fragnum = 0; fragnum < numfrag; fragnum++) {
     buf = (char*)buffer+fragnum*fragcount*ext;
