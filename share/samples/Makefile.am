@@ -20,4 +20,4 @@
 ## $Id$
 
 samplesdir = $(pkgdatadir)/samples
-dist_samples_DATA = Na2 Na2td benzene
+dist_samples_DATA = na2.inp na2td.inp benzene.inp
