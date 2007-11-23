@@ -81,7 +81,7 @@ contains
     real(8) :: energy
 
     call init_()
-
+    
     ! load wave-functions
 
     call restart_read(trim(tmpdir)//'gs', sys%st, sys%gr, sys%geo, ierr)

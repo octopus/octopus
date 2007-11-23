@@ -213,14 +213,14 @@ module loct_math_m
   interface loct_minimize
     function oct_minimize(method, dim, x, step, tolgrad, toldr, maxiter, f, write_iter_info, minimum)
       integer :: oct_minimize
-      integer, intent(in) :: method
-      integer, intent(in) :: dim
+      integer, intent(in)    :: method
+      integer, intent(in)    :: dim
       real(8), intent(inout) :: x
-      real(8), intent(in) :: step
-      integer, intent(in) :: maxiter
-      real(8), intent(in) :: tolgrad
-      real(8), intent(in) :: toldr
-      real(8), intent(in) :: minimum
+      real(8), intent(in)    :: step
+      integer, intent(in)    :: maxiter
+      real(8), intent(in)    :: tolgrad
+      real(8), intent(in)    :: toldr
+      real(8), intent(out)   :: minimum
       interface
         subroutine f(n, x, val, getgrad, grad)
           integer, intent(in) :: n

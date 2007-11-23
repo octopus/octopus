@@ -45,6 +45,7 @@ module run_prog_m
   use timedep_m
   use units_m
   use unocc_m
+  use varinfo_m
   use vdw_m
   use td_transport_m
 
@@ -146,7 +147,11 @@ contains
     !%End
     
     call loct_parse_int(check_inp('ResponseMethod'), LR, get_resp_method)
-    
+
+    if(.not.varinfo_valid_option('ResponseMethod', get_resp_method)) then
+      call input_error('ResponseMethod')
+    end if
+
   end function get_resp_method
   
   ! ---------------------------------------------------------

@@ -246,33 +246,41 @@ double FC_FUNC_(oct_spline_eval_der2, OCT_SPLINE_EVAL_DER2)
   return gsl_spline_eval_deriv2((gsl_spline *)(*spl), *x, (gsl_interp_accel *)(*acc));
 }
 
+typedef void (*func3d)(int*, double*, double*, int*, double*);
 
-double my_f (const gsl_vector *v, void *params)
+typedef struct{
+  func3d func;
+} param_t;
+
+double my_f (const gsl_vector *v, void * params)
 {
   double val;
   double *x, *gradient = NULL;
   int i, dim, getgrad;
-  void (*para)(int*, double*, double*, int*, double*) = params;
+  param_t * p;
+
+  p = (param_t *) params;
 
   dim = v->size;
   x = (double *)malloc(dim*sizeof(double));
 
   for(i=0; i<dim; i++) x[i] = gsl_vector_get(v, i);
   getgrad = 0;
-  para(&dim, x, &val, &getgrad, gradient);
+  p->func(&dim, x, &val, &getgrad, gradient);
 
   free(x);
   return val;
 }
 
-     /* The gradient of f, df = (df/dx, df/dy). */
-void my_df (const gsl_vector *v, void *params,
-            gsl_vector *df)
+/* The gradient of f, df = (df/dx, df/dy). */
+void my_df (const gsl_vector *v, void * params, gsl_vector *df)
 {
   double val;
   double *x, *gradient;
   int i, dim, getgrad;
-  void (*para)(int*, double*, double*, int*, double*) = params;
+  param_t * p;
+
+  p = (param_t *) params;
 
   dim = v->size;
   x = (double *)malloc(dim*sizeof(double));
@@ -280,36 +288,39 @@ void my_df (const gsl_vector *v, void *params,
 
   for(i=0; i<dim; i++) x[i] = gsl_vector_get(v, i);
   getgrad = 1;
-  para(&dim, x, &val, &getgrad, gradient);
+  p->func(&dim, x, &val, &getgrad, gradient);
   for(i=0; i<dim; i++) gsl_vector_set(df, i, gradient[i]);
 
   free(x); free(gradient);
 }
 
 /* Compute both f and df together. */
-void my_fdf (const gsl_vector *v, void *params,
-             double *f, gsl_vector *df)
+void my_fdf (const gsl_vector *v, void * params, double *f, gsl_vector *df)
 {
   double *x, *gradient;
   int i, dim, getgrad;
-  void (*para)(int*, double*, double*, int*, double*) = params;
+  param_t * p;
 
+  p = (param_t *) params;
+ 
   dim = v->size;
   x = (double *)malloc(dim*sizeof(double));
   gradient = (double *)malloc(dim*sizeof(double));
 
   for(i=0; i<dim; i++) x[i] = gsl_vector_get(v, i);
   getgrad = 1;
-  para(&dim, x, f, &getgrad, gradient);
+  p->func(&dim, x, f, &getgrad, gradient);
   for(i=0; i<dim; i++) gsl_vector_set(df, i, gradient[i]);
 
   free(x); free(gradient);
 }
 
+typedef void (*print_f_ptr)(const int*, const int*, const double*, const double*, const double*, const double*);
+
 int FC_FUNC_(oct_minimize, OCT_MINIMIZE)
-     (const int *method, int *dim, double *point, double *step, 
-      double *tolgrad, double *toldr, int *maxiter, void *f, 
-      void *write_info, double *minimum)
+     (const int *method, const int *dim, double *point, const double *step, 
+      const double *tolgrad, const double *toldr, const int *maxiter, func3d f, 
+      const print_f_ptr write_info, double *minimum)
 {
   int iter = 0;
   int status;
@@ -317,14 +328,16 @@ int FC_FUNC_(oct_minimize, OCT_MINIMIZE)
   int i;
   double * oldpoint;
   double * grad;
-    
+
   const gsl_multimin_fdfminimizer_type *T = NULL;
   gsl_multimin_fdfminimizer *s;
   gsl_vector *x;
   gsl_vector *absgrad, *absdr;
   gsl_multimin_function_fdf my_func;
 
-  void (*print_info)(int*, int*, double*, double*, double*, double*) = write_info;
+  param_t p;
+
+  p.func = f;
 
   oldpoint = (double *) malloc(*dim * sizeof(double));
   grad     = (double *) malloc(*dim * sizeof(double));
@@ -333,7 +346,7 @@ int FC_FUNC_(oct_minimize, OCT_MINIMIZE)
   my_func.df = &my_df;
   my_func.fdf = &my_fdf;
   my_func.n = *dim;
-  my_func.params = f;
+  my_func.params = (void *) &p;
 
   /* Starting point */
   x = gsl_vector_alloc (*dim);
@@ -369,24 +382,24 @@ int FC_FUNC_(oct_minimize, OCT_MINIMIZE)
       iter++;
       for(i=0; i<*dim; i++) oldpoint[i] = point[i];
 
-      //Iterate
+      /* Iterate */
       status = gsl_multimin_fdfminimizer_iterate (s);
 
-      //Get current minimum, point and gradient
+      /* Get current minimum, point and gradient */
       *minimum = gsl_multimin_fdfminimizer_minimum(s);
       for(i=0; i<*dim; i++) point[i] = gsl_vector_get(gsl_multimin_fdfminimizer_x(s), i);
       for(i=0; i<*dim; i++) grad[i] = gsl_vector_get(gsl_multimin_fdfminimizer_gradient(s), i);
 
-      //Compute convergence criteria
+      /* Compute convergence criteria */
       for(i=0; i<*dim; i++) gsl_vector_set(absdr, i, fabs(point[i]-oldpoint[i]));
       maxdr = gsl_vector_max(absdr);
       for(i=0; i<*dim; i++) gsl_vector_set(absgrad, i, fabs(grad[i]));
       maxgrad = gsl_vector_max(absgrad);
 
-      //Print information
-      print_info(&iter, dim, minimum, &maxdr, &maxgrad, point);
+      /* Print information */
+      write_info(&iter, dim, minimum, &maxdr, &maxgrad, point);
       
-      //Store infomation for next iteration
+      /* Store infomation for next iteration */
       for(i=0; i<*dim; i++) oldpoint[i] = point[i];
 
       if (status)
@@ -415,15 +428,22 @@ void FC_FUNC_(oct_strerror, OCT_STRERROR)
   TO_F_STR1(c, res);
 }
 
-double fn1 (double x, void *params)
+typedef void (*func1d)(double*, double*);
+
+typedef struct{
+  func1d func;
+} param1d_t;
+
+
+double fn1(double x, void * params)
 {
-  void (*f)(double*, double*) = params;
+  param1d_t * p = (param1d_t* ) params;
   double fx;
-  f(&x, &fx);
+  p->func(&x, &fx);
   return fx;
 }
 
-void FC_FUNC_(oct_1dminimize, OCT_1DMINIMIZE)(double *a, double *b, double *m, void *f, int *status)
+void FC_FUNC_(oct_1dminimize, OCT_1DMINIMIZE)(double *a, double *b, double *m, func1d f, int *status)
 {
   int iter = 0;
   int max_iter = 100;
@@ -431,9 +451,12 @@ void FC_FUNC_(oct_1dminimize, OCT_1DMINIMIZE)(double *a, double *b, double *m, v
   gsl_min_fminimizer *s;
   gsl_function F;
   int ierr;
+  param1d_t p;
+
+  p.func = f;
 
   F.function = &fn1;
-  F.params = f;
+  F.params = (void *) &p;
 
   T = gsl_min_fminimizer_brent;
   s = gsl_min_fminimizer_alloc (T);

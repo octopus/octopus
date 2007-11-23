@@ -54,7 +54,7 @@ contains
     type(hamiltonian_t), intent(inout) :: h
 
     type(phonons_t) :: ph
-    integer :: i, j, ierr
+    integer :: ierr
 
     call init_()
 
@@ -127,7 +127,7 @@ contains
     type(scf_t)               :: scf
     type(mesh_t),     pointer :: m
 
-    integer :: i, j, alpha, beta, n
+    integer :: i, j, alpha, beta
     FLOAT, allocatable :: forces(:,:), forces0(:,:)
 
     m   => gr%m
@@ -135,8 +135,8 @@ contains
     call scf_init(gr, geo, scf, st, h)
     ALLOCATE(forces0(geo%natoms, 3), geo%natoms*3)
     ALLOCATE(forces (geo%natoms, 3), geo%natoms*3)
-    forces = M_ZERO; forces0 = M_ZERO
-    n = geo%natoms*NDIM
+    forces = M_ZERO
+    forces0 = M_ZERO
 
     do i = 1, geo%natoms
       do alpha = 1, NDIM

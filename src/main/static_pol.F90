@@ -65,6 +65,8 @@ contains
     logical :: out_pol
     character(len=80) :: fname
 
+    out_pol = .false.
+
     call init_()
 
     ! load wave-functions
@@ -147,10 +149,10 @@ contains
       write(iunit, fmt='(6e20.12)') ((dipole(i, j, k), j = 1, NDIM), k = 1, 2)
       call io_close(iunit)
 
-      if(i == NDIM) then
-        out_pol = .true.
-      end if
+      out_pol = (i == NDIM)
+
     end do
+
     call scf_end(scfv)
 
     if(out_pol) then ! output pol file
