@@ -57,9 +57,11 @@ contains
     character(len=*),   intent(in)  :: prefix
     integer, optional,  intent(in)  :: def_maximumiter
 
+    integer :: def_maximumiter_
+
     call push_sub('scf_tol.scf_tol_init')
     
-    !%Variable MaximumIter
+    !%Variable LRMaximumIter
     !%Type integer
     !%Default 200
     !%Section Linear Response::SCF in LR calculations
@@ -67,13 +69,16 @@ contains
     !% The maximum number of SCF iterations to calculate response.
     !%End
 
-    if(present(def_maximumiter)) then 
-      call loct_parse_int(check_inp(trim(prefix)//'SCFIterations'), def_maximumiter, this%max_iter)
+    def_maximumiter_ = 200
+    if(present(def_maximumiter)) def_maximumiter_ = def_maximumiter
+
+    if (loct_parse_isdef(check_inp(trim(prefix)//'LRMaximumIter')) /= 0) then 
+      call loct_parse_int(check_inp(trim(prefix)//'LRMaximumIter'), def_maximumiter_, this%max_iter)
     else
-      call loct_parse_int(check_inp(trim(prefix)//'SCFIterations'), 200, this%max_iter)
+      call loct_parse_int(check_inp('LRMaximumIter'), def_maximumiter_, this%max_iter)
     end if
     
-    !%Variable ConvAbsDens
+    !%Variable LRConvAbsDens
     !%Type float
     !%Default 1e-5
     !%Section Linear Response::SCF in LR calculations
@@ -81,12 +86,15 @@ contains
     !% The tolerance in the variation of the density, to determine if
     !% the SCF for linear response is converged.
     !%End
-
-    call loct_parse_float(check_inp(trim(prefix)//"ConvAbsDens"), &
+    if (loct_parse_isdef(check_inp(trim(prefix)//'LRConvAnsDens')) /= 0 ) then 
+      call loct_parse_float(check_inp(trim(prefix)//"LRConvAbsDens"), &
         CNST(1e-5), this%conv_abs_dens)
-    
+    else
+      call loct_parse_float(check_inp("LRConvAbsDens"), &
+        CNST(1e-5), this%conv_abs_dens)
+    end if
 
-    !%Variable SCFTolScheme
+    !%Variable LRTolScheme
     !%Type integer
     !%Default true
     !%Section Linear Response::SCF in LR calculations
@@ -100,16 +108,19 @@ contains
     !% The tolerance is increased according to the level of
     !% convergency of the SCF.
     !%End
-
-    call loct_parse_int(check_inp(trim(prefix)//'SCFTolScheme'), SCF_ADAPTIVE, this%scheme)
+    if (loct_parse_isdef(check_inp(trim(prefix)//'LRTolScheme')) /= 0 ) then
+      call loct_parse_int(check_inp(trim(prefix)//'LRTolScheme'), SCF_ADAPTIVE, this%scheme)
+    else
+      call loct_parse_int(check_inp('LRTolScheme'), SCF_ADAPTIVE, this%scheme)
+    end if
 
     if( this%scheme /= SCF_ADAPTIVE .and. this%scheme /= SCF_FIXED ) then 
-      call input_error('SCFTolScheme')
+      call input_error('LRTolScheme')
     end if
 
     if( this%scheme == SCF_ADAPTIVE) then 
       
-      !%Variable AdaptiveTolFactor
+      !%Variable LRAdaptiveTolFactor
       !%Type float
       !%Default 0.5
       !%Section Linear Response::SCF in LR calculations
@@ -117,9 +128,13 @@ contains
       !% This factor controls how much the tolerance is increased at
       !% first iterations. Larger values means larger tolerance.
       !%End
-      
-      call loct_parse_float(check_inp(trim(prefix)//'DynamicTolFactor'), &
-           CNST(0.5), this%dynamic_tol_factor)
+      if (loct_parse_isdef(check_inp(trim(prefix)//'LRAdaptiveTolFactor')) /=0 ) then 
+        call loct_parse_float(check_inp(trim(prefix)//'LRAdaptiveTolFactor'), &
+          CNST(0.5), this%dynamic_tol_factor)
+      else
+        call loct_parse_float(check_inp('LRAdaptiveTolFactor'), &
+          CNST(0.5), this%dynamic_tol_factor)
+      end if
 
     end if
 

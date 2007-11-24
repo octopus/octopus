@@ -18,7 +18,7 @@
 !! $Id: em_resp.F90 2686 2007-02-03 22:10:51Z xavier $
 
 #include "global.h"
-#define RESTART_DIR "phn_lr/"
+#define RESTART_DIR "vib_modes/"
 
 module phonons_lr_m
   use datasets_m
@@ -86,7 +86,7 @@ contains
     call write_info(1)
 
     call system_h_setup(sys, h)
-    call sternheimer_init(sh, sys, h, "Phn")
+    call sternheimer_init(sh, sys, h, "VM")
     call phonons_init(ph, sys)
 
     call lr_init(lr(1))

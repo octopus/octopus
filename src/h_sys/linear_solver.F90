@@ -72,19 +72,20 @@ contains
     integer, optional, intent(in)    :: def_solver
 
     integer :: fsolver
-
+    integer :: defsolver_ 
     call push_sub('linear_solver.linear_solver_init')
 
     !%Variable LinearSolver
     !%Type integer
-    !%Default cg
+    !%Default bicgstab
     !%Section Linear Response::Solver
     !%Description
     !% To calculate response using density functional perturbation
-    !% theory is necessary to solve the sterheimer equation, this is a self
-    !% consistent linear equation where the operator is the Kohn-Sham
-    !% hamiltonian with a complex shift. This variable selects which
-    !% method to use in order to solve this linear equation.
+    !% theory is necessary to solve the sterheimer equation, this is a
+    !% self consistent linear equation where the operator is the
+    !% Kohn-Sham hamiltonian with a complex shift. This variable
+    !% selects which method to use in order to solve this linear
+    !% equation.
     !%Option cg 5
     !% Conjugated gradients. This is the fastest solver but does not
     !% work when an imaginary shift is added. This is the default.
@@ -96,10 +97,13 @@ contains
     !% Multigrid solver (experimental, currently is only Gauss-Jacobi).
     !%End
 
-    if(present(def_solver)) then
-      call loct_parse_int  (check_inp(trim(prefix)//"LinearSolver"), def_solver, fsolver)
-    else 
-      call loct_parse_int  (check_inp(trim(prefix)//"LinearSolver"), LS_BICGSTAB, fsolver)
+    defsolver_ = LS_BICGSTAB
+    if(present(def_solver)) defsolver_ = def_solver
+
+    if (loct_parse_isdef(check_inp(trim(prefix)//"LinearSolver")) /= 0 ) then 
+      call loct_parse_int  (check_inp(trim(prefix)//"LinearSolver"), defsolver_, fsolver)
+    else
+      call loct_parse_int  (check_inp("LinearSolver"), defsolver_, fsolver)
     end if
 
     !the last 2 digits select the linear solver
@@ -115,8 +119,11 @@ contains
     !% Maximum number of iterations the linear solver does, even if
     !% convergency is not achieved.
     !%End
-
-    call loct_parse_int  (check_inp(trim(prefix)//"LinearSolverMaxIter"), 1000, this%max_iter)
+    if (loct_parse_isdef(check_inp(trim(prefix)//"LinearSolverMaxIter")) /= 0) then 
+      call loct_parse_int  (check_inp(trim(prefix)//"LinearSolverMaxIter"), 1000, this%max_iter)
+    else
+      call loct_parse_int  (check_inp("LinearSolverMaxIter"), 1000, this%max_iter)
+    end if
 
     !%Variable LinearSolverInitTol
     !%Type float
@@ -125,9 +132,13 @@ contains
     !%Description
     !% This is the tolerance to determine that the linear solver has converged.
     !%End
-    
-    call loct_parse_float(check_inp(trim(prefix)//"LinearSolverInitTol"), &
+    if (loct_parse_isdef(check_inp(trim(prefix)//"LinearSolverInitTol")) /= 0) then 
+      call loct_parse_float(check_inp(trim(prefix)//"LinearSolverInitTol"), &
         CNST(1e-2), this%initial_tol)
+    else
+      call loct_parse_float(check_inp("LinearSolverInitTol"), &
+        CNST(1e-2), this%initial_tol)
+    end if
 
     !%Variable LinearSolverTol
     !%Type float
@@ -136,10 +147,14 @@ contains
     !%Description
     !% This is the tolerance to determine that the linear solver has converged.
     !%End
-    
-    call loct_parse_float(check_inp(trim(prefix)//"LinearSolverTol"), &
+    if (loct_parse_isdef(check_inp(trim(prefix)//"LinearSolverTol")) /= 0) then 
+      call loct_parse_float(check_inp(trim(prefix)//"LinearSolverTol"), &
         CNST(1e-6), this%final_tol)
- 
+    else
+      call loct_parse_float(check_inp("LinearSolverTol"), &
+        CNST(1e-6), this%final_tol)
+    end if
+
     this%tol = this%final_tol
     
     !WRITE INFO

@@ -97,8 +97,11 @@ contains
     !% Wheter variations of the wavefunctios should be orthogonalized
     !% or not against the occupied states.
     !%End
-
-    call loct_parse_logical(check_inp('PolOrthResponse'), .true., this%orth_response)
+    if (loct_parse_isdef(check_inp(trim(prefix)//'OrthResponse')) /= 0) then
+      call loct_parse_logical(check_inp(trim(prefix)//'OrthResponse'), .true., this%orth_response)
+    else
+      call loct_parse_logical(check_inp('OrthResponse'), .true., this%orth_response)
+    end if
 
     !%Variable HamiltonianVariation
     !%Type integer
@@ -117,8 +120,12 @@ contains
     !% exchange and correlation potential.
     !%End
 
-    if(h%theory_level.ne.INDEPENDENT_PARTICLES) then 
-      call loct_parse_int(check_inp('PolHamiltonianVariation'), 3, ham_var)    
+    if(h%theory_level.ne.INDEPENDENT_PARTICLES) then
+      if (loct_parse_isdef(check_inp(trim(prefix)//'HamiltonianVariation')) /= 0) then
+        call loct_parse_int(check_inp(trim(prefix)//'HamiltonianVariation'), 3, ham_var)
+      else
+        call loct_parse_int(check_inp('HamiltonianVariation'), 3, ham_var)
+      end if
       this%add_fxc = ((ham_var/2) == 1)
       this%add_hartree = (mod(ham_var, 2) == 1)
     else

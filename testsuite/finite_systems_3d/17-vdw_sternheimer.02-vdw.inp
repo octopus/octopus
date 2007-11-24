@@ -11,6 +11,6 @@ CalculationMode = vdw
 Radius  = 7.0
 Spacing = 0.24
 
-PolConvAbsDens = 1.0e-3
-PolLinearSolverTol = 1.0e-4
+LRConvAbsDens = 1.0e-3
+LinearSolverTol = 1.0e-4
 

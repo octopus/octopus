@@ -18,7 +18,7 @@
 !! $Id$
 
 #include "global.h"
-#define RESTART_DIR "pol_lr/"
+#define RESTART_DIR "em_resp/"
 
 module pol_lr_m
   use datasets_m
@@ -124,7 +124,7 @@ contains
     call write_info(1)
     call system_h_setup(sys, h)
     
-    call sternheimer_init(sh, sys, h, "Pol", hermitian = wfs_are_real(sys%st))
+    call sternheimer_init(sh, sys, h, "EM", hermitian = wfs_are_real(sys%st))
 
     do dir = 1, ndim
       do sigma = 1, em_vars%nsigma
@@ -339,7 +339,7 @@ contains
 
       call push_sub('em_resp.parse_input')
 
-      !%Variable PolFreqs
+      !%Variable EMFreqs
       !%Type block
       !%Section Linear Response::Polarizabilities
       !%Description
@@ -353,14 +353,14 @@ contains
       !% frequency. If the first number is one, then only the initial value is
       !% considered. The block can have any number of rows. Consider the next example:
       !%
-      !% <tt>%PolFreqs
+      !% <tt>%EMFreqs
       !% <br>31 | 0.0 | 1.0
       !% <br> 1 | 0.32
       !% <br>%</tt>
       !%
       !%End
 
-      if (loct_parse_block(check_inp('PolFreqs'), blk) == 0) then 
+      if (loct_parse_block(check_inp('EMFreqs'), blk) == 0) then 
 
         nrow = loct_parse_block_n(blk)
         em_vars%nomega = 0
@@ -402,7 +402,7 @@ contains
         em_vars%omega(1) = M_ZERO
       end if
 
-      !%Variable PolEta
+      !%Variable EMEta
       !%Type float
       !%Default 0.0
       !%Section Linear Response::Polarizabilities
@@ -410,7 +410,7 @@ contains
       !% Imaginary part of the frequency.
       !%End
 
-      call loct_parse_float(check_inp('PolEta'), M_ZERO, em_vars%eta)
+      call loct_parse_float(check_inp('EMEta'), M_ZERO, em_vars%eta)
       em_vars%eta = em_vars%eta * units_inp%energy%factor
 
       ! reset the values of these variables
@@ -420,7 +420,7 @@ contains
       call pert_init(em_vars%perturbation, sys%gr, sys%geo)
 
       if(pert_type(em_vars%perturbation) == PERTURBATION_ELECTRIC) then
-        !%Variable PolHyper
+        !%Variable EMHyper
         !%Type block
         !%Section Linear Response::Polarizabilities
         !%Description
@@ -428,7 +428,7 @@ contains
         !% the dynamic hyperpolarizability.
         !%End
 
-        if (loct_parse_block(check_inp('PolHyper'), blk) == 0) then 
+        if (loct_parse_block(check_inp('EMHyper'), blk) == 0) then 
           call loct_parse_block_float(blk, 0, 0, em_vars%freq_factor(1))
           call loct_parse_block_float(blk, 0, 1, em_vars%freq_factor(2))
           call loct_parse_block_float(blk, 0, 2, em_vars%freq_factor(3))

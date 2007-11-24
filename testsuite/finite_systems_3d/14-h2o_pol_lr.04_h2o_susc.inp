@@ -19,8 +19,8 @@ fromScratch = yes
 Spacing = 0.65
 
 RespPerturbationType = magnetic
-PolConvAbsDens = 1e-4
-PolLinearSolverMaxIter = 100
-PolLinearSolverInitTol = 1e-6
-PolLinearSolverTol     = 1e-6
-PolHamiltonianVariation = no
+LRConvAbsDens = 1e-4
+LinearSolverMaxIter = 100
+LinearSolverInitTol = 1e-6
+LinearSolverTol     = 1e-6
+HamiltonianVariation = no
