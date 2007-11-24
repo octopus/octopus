@@ -261,7 +261,7 @@ contains
 
     ! ---------------------------------------------------------
     subroutine read_block(blk)
-      type(block_t) :: blk
+      type(block_t), intent(inout) :: blk
 
       integer :: i, n
 

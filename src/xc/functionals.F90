@@ -122,8 +122,6 @@ contains
     integer,           intent(in)  :: ndim
     integer,           intent(in)  :: spin_channels
 
-    integer :: j
-    FLOAT :: alpha
 
     call push_sub('xc_functl.xc_functl_init_exchange')
 

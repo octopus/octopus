@@ -264,13 +264,12 @@ end subroutine X(mf_partial_integrate)
 subroutine X(mf_interpolate) (mesh_in, mesh_out, full_interpolation, u, f)
   type(mesh_t),         intent(in)  :: mesh_in, mesh_out
   logical,              intent(in)  :: full_interpolation
-  R_TYPE, target,       intent(in)  :: u(:)    ! u(mesh_in%np_global)
+  R_TYPE,               intent(in)  :: u(:)    ! u(mesh_in%np_global)
   R_TYPE,               intent(out) :: f(:)    ! f(mesh%np)
 
   integer :: ix, iy, iz
   R_TYPE, allocatable :: f_global(:)
   integer :: i, j, k
-  type(qshep_t) :: interp
 
   call push_sub('mf_inc.Xmf_interpolate')
 
@@ -325,13 +324,13 @@ subroutine X(mf_interpolate_points) (mesh_in, u, npoints, x, f)
   R_TYPE,               intent(out) :: f(:)    ! f(mesh%np)
 
   real(8) :: p(MAX_DIM)
-  integer :: ix, iy, iz
-  R_TYPE, allocatable :: f_global(:)
   R_DOUBLE, pointer :: ru(:)
-  integer :: i, j, k
+  integer :: i
   type(qshep_t) :: interp
   real(8), pointer :: rx(:, :)
+#ifndef R_TCOMPLEX
   type(loct_spline_t) :: interp1d
+#endif
 
   call push_sub('mf_inc.Xmf_interpolate')
 

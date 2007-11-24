@@ -150,7 +150,7 @@ module hamiltonian_m
 
 #if defined(HAVE_LIBNBC)
     ! NBC_Handles for the calculation of the kinetic energy in parallel.
-    C_POINTER, pointer :: handles(:)
+    type(c_pointer_t), pointer :: handles(:)
 #endif
     CMPLX, pointer :: phase(:, :)
   end type hamiltonian_t

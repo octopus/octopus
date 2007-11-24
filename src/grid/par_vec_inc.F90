@@ -278,7 +278,7 @@ end subroutine X(vec_ghost_update)
 subroutine X(vec_ighost_update)(vp, v_local, handle)
   type(pv_t), intent(in)    :: vp
   R_TYPE,     intent(inout) :: v_local(:)
-  C_POINTER,  intent(in)    :: handle
+  type(c_pointer_t),  intent(in)    :: handle
 
   integer, pointer :: sdispls(:), rdispls(:) ! Displacements for
                                              ! NBC_Alltoallv.

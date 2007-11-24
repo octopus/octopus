@@ -160,7 +160,7 @@ program oscillator_strength
 
   implicit none
 
-  integer :: run_mode, order, nfrequencies, nspin, ierr, nresonances, l, m
+  integer :: run_mode, order, nfrequencies, ierr, nresonances
   FLOAT :: omega, search_interval, final_time, damping
   integer, parameter :: ANALYZE_NTHORDER_SIGNAL           = 1, &
                         GENERATE_NTHORDER_SIGNAL          = 2, &

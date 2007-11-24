@@ -210,6 +210,8 @@ contains
 
     call push_sub('poisson_multigrid.poisson_multigrid_solver');
 
+    nullify(phi_ini)
+
     ! correction for treating boundaries
     ALLOCATE(rho_corrected(gr%m%np), gr%m%np)
     ALLOCATE(vh_correction(gr%m%np), gr%m%np)
@@ -369,7 +371,7 @@ contains
     integer,          intent(in)    :: steps
 
     integer :: t
-    integer :: i, n, iter, diag = 1
+    integer :: i, n, iter
     FLOAT   :: point_lap, factor
     FLOAT, allocatable :: w(:), lpot(:), ldiag(:)
 

@@ -413,10 +413,10 @@ contains
 
   ! ---------------------------------------------------------
   subroutine td_write_spin(out_spin, gr, st, iter)
-    C_POINTER,      intent(in) :: out_spin
-    type(grid_t),   intent(inout) :: gr
-    type(states_t), intent(in) :: st
-    integer,        intent(in) :: iter
+    type(c_pointer_t), intent(in)    :: out_spin
+    type(grid_t),      intent(inout) :: gr
+    type(states_t),    intent(in)    :: st
+    integer,           intent(in)    :: iter
 
     character(len=130) :: aux
     FLOAT :: spin(3)
@@ -451,7 +451,7 @@ contains
       call write_iter_start(out_spin)
       select case (st%d%ispin)
       case (SPIN_POLARIZED)
-        call write_iter_double(out_spin, spin(3), 1)
+         call write_iter_double(out_spin, spin(3), 1)
       case (SPINORS)
         call write_iter_double(out_spin, spin(1:3), 3)
       end select
@@ -465,12 +465,12 @@ contains
 
   ! ---------------------------------------------------------
   subroutine td_write_local_magnetic_moments(out_magnets, gr, st, geo, lmm_r, iter)
-    C_POINTER,        intent(in) :: out_magnets
-    type(grid_t),     intent(inout) :: gr
-    type(states_t),   intent(in) :: st
-    type(geometry_t), intent(in) :: geo
-    FLOAT,            intent(in) :: lmm_r
-    integer,          intent(in) :: iter
+    type(c_pointer_t),        intent(in)    :: out_magnets
+    type(grid_t),             intent(inout) :: gr
+    type(states_t),           intent(in)    :: st
+    type(geometry_t),         intent(in)    :: geo
+    FLOAT,                    intent(in)    :: lmm_r
+    integer,                  intent(in)    :: iter
 
     integer :: ia
     character(len=50) :: aux
@@ -523,13 +523,13 @@ contains
 
   ! ---------------------------------------------------------
   subroutine td_write_angular(out_angular, gr, geo, h, st, kick, iter)
-    C_POINTER,      intent(in) :: out_angular
-    type(grid_t),   intent(inout) :: gr
-    type(geometry_t),   intent(inout) :: geo
-    type(hamiltonian_t), intent(inout) :: h
-    type(states_t), intent(inout) :: st
-    type(kick_t),   intent(in) :: kick
-    integer,        intent(in) :: iter
+    type(c_pointer_t),      intent(in)    :: out_angular
+    type(grid_t),           intent(inout) :: gr
+    type(geometry_t),       intent(inout) :: geo
+    type(hamiltonian_t),    intent(inout) :: h
+    type(states_t),         intent(inout) :: st
+    type(kick_t),           intent(in)    :: kick
+    integer,                intent(in)    :: iter
 
     integer :: ik, ist, idir
     character(len=130) :: aux
@@ -603,13 +603,13 @@ contains
 
   ! ---------------------------------------------------------
   subroutine td_write_multipole(out_multip, gr, geo, st, lmax, kick, iter)
-    C_POINTER,        intent(in) :: out_multip
-    type(grid_t),     intent(in) :: gr
-    type(geometry_t), intent(in) :: geo
-    type(states_t),   intent(in) :: st
-    integer,          intent(in) :: lmax
-    type(kick_t),     intent(in) :: kick
-    integer,          intent(in) :: iter
+    type(c_pointer_t),  intent(in) :: out_multip
+    type(grid_t),       intent(in) :: gr
+    type(geometry_t),   intent(in) :: geo
+    type(states_t),     intent(in) :: st
+    integer,            intent(in) :: lmax
+    type(kick_t),       intent(in) :: kick
+    integer,            intent(in) :: iter
 
     integer :: is, l, m, add_lm
     character(len=120) :: aux
@@ -703,10 +703,10 @@ contains
 
   ! ---------------------------------------------------------
   subroutine td_write_coordinates(out_coords, gr, geo, iter)
-    C_POINTER,        intent(in) :: out_coords
-    type(grid_t),     intent(in) :: gr
-    type(geometry_t), intent(in) :: geo
-    integer,          intent(in) :: iter
+    type(c_pointer_t), intent(in) :: out_coords
+    type(grid_t),      intent(in) :: gr
+    type(geometry_t),  intent(in) :: geo
+    integer,           intent(in) :: iter
 
     integer :: i, j
     character(len=50) :: aux
@@ -772,7 +772,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine td_write_populations(out_populations, m, st, gs_st, n_excited_states, excited_st, dt, iter)
-    C_POINTER,              intent(in) :: out_populations
+    type(c_pointer_t),      intent(in) :: out_populations
     type(mesh_t),           intent(in) :: m
     type(states_t),         intent(in) :: st
     type(states_t),         intent(in) :: gs_st
@@ -849,7 +849,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine td_write_acc(out_acc, gr, geo, st, h, dt, iter)
-    C_POINTER,           intent(in)    :: out_acc
+    type(c_pointer_t),   intent(in)    :: out_acc
     type(grid_t),        intent(inout) :: gr
     type(geometry_t),    intent(inout) :: geo
     type(states_t),      intent(inout) :: st
@@ -895,7 +895,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine td_write_laser(out_laser, gr, h, dt, iter)
-    C_POINTER,           intent(in) :: out_laser
+    type(c_pointer_t),   intent(in) :: out_laser
     type(grid_t),        intent(in) :: gr
     type(hamiltonian_t), intent(in) :: h
     FLOAT,               intent(in) :: dt
@@ -988,7 +988,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine td_write_energy(out_energy, h, iter, ke)
-    C_POINTER,           intent(in) :: out_energy
+    type(c_pointer_t),   intent(in) :: out_energy
     type(hamiltonian_t), intent(in) :: h
     integer,             intent(in) :: iter
     FLOAT,               intent(in) :: ke
@@ -1040,7 +1040,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine td_write_gauge_field(out_gauge, h, gr, iter)
-    C_POINTER,           intent(in) :: out_gauge
+    type(c_pointer_t),   intent(in) :: out_gauge
     type(hamiltonian_t), intent(in) :: h
     type(grid_t),        intent(in) :: gr
     integer,             intent(in) :: iter
@@ -1098,13 +1098,13 @@ contains
 
   ! ---------------------------------------------------------
   subroutine td_write_proj(out_proj, gr, geo, st, gs_st, kick, iter)
-    C_POINTER,        intent(in) :: out_proj
-    type(grid_t),     intent(in) :: gr
-    type(geometry_t), intent(in) :: geo
-    type(states_t),   intent(in) :: st
-    type(states_t),   intent(in) :: gs_st
-    type(kick_t),     intent(in) :: kick
-    integer,          intent(in) :: iter
+    type(c_pointer_t), intent(in) :: out_proj
+    type(grid_t),      intent(in) :: gr
+    type(geometry_t),  intent(in) :: geo
+    type(states_t),    intent(in) :: st
+    type(states_t),    intent(in) :: gs_st
+    type(kick_t),      intent(in) :: kick
+    integer,           intent(in) :: iter
 
     CMPLX, allocatable :: projections(:,:,:)
     character(len=80) :: aux
@@ -1292,7 +1292,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine td_write_print_header_init(out)
-    C_POINTER, intent(in) :: out
+    type(c_pointer_t), intent(in) :: out
 
     call write_iter_clear(out)
     call write_iter_string(out,'################################################################################')
@@ -1305,7 +1305,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine td_write_print_header_end(out)
-    C_POINTER, intent(in) :: out
+    type(c_pointer_t), intent(in) :: out
 
     call write_iter_string(out,'################################################################################')
     call write_iter_nl(out)

@@ -110,5 +110,8 @@ void FC_FUNC_(oct_gdimage_get_pixel_rgb, OCT_GDIMAGE_GET_PIXEL_RGB)
   }
 }
 
+#else
+/* this is to avoid an empty source file (not allowed by ansi C)*/
+void useless(){}
 #endif
 /* defined HAVEGDLIB */

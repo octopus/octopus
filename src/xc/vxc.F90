@@ -26,7 +26,7 @@ subroutine xc_get_vxc(gr, xcs, rho, ispin, vxc, ex, ec, ip, qtot)
   FLOAT,              intent(inout) :: vxc(:,:), ex, ec
   FLOAT,              intent(in)    :: ip, qtot
 
-  FLOAT :: l_dens(MAX_SPIN), l_dedd(MAX_SPIN), l_sigma(3), l_vsigma(3), l_tau(MAX_SPIN) !, l_dedtau(MAX_SPIN)
+  FLOAT :: l_dens(MAX_SPIN), l_dedd(MAX_SPIN), l_sigma(3), l_vsigma(3)!, l_tau(MAX_SPIN) , l_dedtau(MAX_SPIN)
   FLOAT, allocatable :: dens(:,:), dedd(:,:), ex_per_vol(:), ec_per_vol(:)
   FLOAT, allocatable :: gdens(:,:,:), dedgd(:,:,:)
   FLOAT, allocatable :: tau(:,:), dedtau(:,:)
@@ -77,7 +77,7 @@ subroutine xc_get_vxc(gr, xcs, rho, ispin, vxc, ex, ec, ip, qtot)
         l_sigma(3) = sum(gdens(jj, :,2)*gdens(jj, :,2))
       end if
     end if
-    if(mgga) l_tau  (:)   = tau  (jj, :)
+!    if(mgga) l_tau  (:)   = tau  (jj, :)
 
     ! Calculate the potential/gradient density in local reference frame.
     functl_loop: do ixc = 1, 2
@@ -160,7 +160,7 @@ contains
   !   *) calculates the density taking into account nlcc and non-collinear spin
   subroutine lda_init()
     integer :: ii
-    FLOAT   :: d(2), f, dtot, dpol
+    FLOAT   :: d(2), dtot, dpol
 
     ! allocate some general arrays
     ALLOCATE(dens(NP_PART, spin_channels), NP_PART*spin_channels)
@@ -172,9 +172,6 @@ contains
     dedd       = M_ZERO
     ex_per_vol = M_ZERO
     ec_per_vol = M_ZERO
-
-    ! get the density
-    f = M_ONE/real(spin_channels, REAL_PRECISION)
 
     !$omp parallel do private(d, dtot, dpol)
     do ii = 1, NP
@@ -210,15 +207,13 @@ contains
   ! calculates the LDA part of vxc, taking into account non-collinear spin
   subroutine lda_process()
     integer :: i, j
-    FLOAT :: d(2), f, dtot, dpol, vpol
+    FLOAT :: d(2), dpol, vpol
 
-    f = M_ONE/real(spin_channels, REAL_PRECISION)
     if(ispin == SPINORS) then
       ! rotate back (do not need the rotation matrix for this).
       do i = 1, NP
         d(1:spin_channels) = rho(i, 1:spin_channels)
 
-        dtot = d(1) + d(2)
         dpol = sqrt((d(1) - d(2))**2 + &
           M_FOUR*(rho(i, 3)**2 + rho(i, 4)**2))
         vpol = (dedd(i, 1) - dedd(i, 2))*(d(1) - d(2))/(dpol + tiny)

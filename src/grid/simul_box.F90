@@ -71,7 +71,7 @@ module simul_box_m
     FLOAT :: xsize          ! the length of the cylinder in the x direction
     FLOAT :: lsize(3)       ! half of the length of the parallelepiped in each direction.
 
-    C_POINTER           :: image    ! for the box defined through an image
+    type(c_pointer_t)   :: image    ! for the box defined through an image
     character(len=1024) :: user_def ! for the user defined box
 
     FLOAT :: rlattice(3,3)      ! lattice primitive vectors
@@ -126,7 +126,7 @@ contains
 
     ! some local stuff
     FLOAT :: def_h, def_rsize
-    integer :: i, ix, iy, iz, ii(MAX_DIM)
+    integer :: i, ix, iy, iz
 
     call push_sub('simul_box.simul_box_init')
 

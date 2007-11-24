@@ -125,9 +125,9 @@ contains
 
   ! ---------------------------------------------------------
   subroutine curv_modine_init(sb, geo, cv)
-    type(simul_box_t),   target :: sb
-    type(geometry_t),    target :: geo
-    type(curv_modine_t), target :: cv
+    type(simul_box_t),   target, intent(in)   :: sb
+    type(geometry_t),    target, intent(in)   :: geo
+    type(curv_modine_t), target, intent(out)  :: cv
 
     call loct_parse_float(check_inp('CurvModineXBar'), M_ONE/M_THREE, cv%xbar)
     call loct_parse_float(check_inp('CurvModineJBar'), M_HALF, cv%Jbar)

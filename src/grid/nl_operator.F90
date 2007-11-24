@@ -410,8 +410,8 @@ contains
 
     opt = op
 
-    if(m%parallel_in_domains) then
 #if defined(HAVE_MPI)
+    if(m%parallel_in_domains) then
       ALLOCATE(opg, 1)
       ALLOCATE(opgt, 1)
       call nl_operator_allgather(op, opg)
@@ -419,14 +419,14 @@ contains
       call nl_operator_equal(opgt, opg)
       ALLOCATE(vol_pp(m%np_global), m%np_global)
       call dvec_allgather(m%vp, vol_pp, m%vol_pp)
-#else
-      ASSERT(.false.)
-#endif
     else
+#endif
       opg  => op
       opgt => opt
       vol_pp => m%vol_pp
+#if defined(HAVE_MPI)
     end if
+#endif
 
     opgt%w_re = M_ZERO
     if (op%cmplx_op) opgt%w_im = M_ZERO
@@ -451,8 +451,8 @@ contains
       end do
     end do
 
-    if(m%parallel_in_domains) then
 #if defined(HAVE_MPI)
+    if(m%parallel_in_domains) then
       deallocate(vol_pp)
       do i = 1, m%vp%np_local(m%vp%partno)
         opt%w_re(:, i) = opgt%w_re(:, m%vp%local(m%vp%xlocal(m%vp%partno)+i-1))
@@ -463,8 +463,8 @@ contains
       call nl_operator_end(opg)
       call nl_operator_end(opgt)
       deallocate(opg, opgt)
-#endif
     end if
+#endif
 
     call pop_sub()
   end subroutine nl_operator_skewadjoint

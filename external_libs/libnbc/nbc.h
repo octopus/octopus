@@ -17,7 +17,7 @@
 #define NBC_MPI
 
 /* enable schedule caching - undef NBC_CACHE_SCHEDULE to deactivate it */
-//#define NBC_CACHE_SCHEDULE
+/*#define NBC_CACHE_SCHEDULE*/
 #define NBC_SCHED_DICT_UPPER 1024 /* max. number of dict entries */
 #define NBC_SCHED_DICT_LOWER 512  /* nuber of dict entries after wipe, if SCHED_DICT_UPPER is reached */
 
@@ -186,7 +186,7 @@ typedef struct {
   int tag;
   int req_count;
 #ifdef NBC_OMPI_COMPONENT
-  //ompi_request_t **req_array;
+  /*ompi_request_t **req_array; */
   MPI_Request *req_array;
 #endif
 #ifdef NBC_MPI

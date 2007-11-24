@@ -77,5 +77,3 @@
 #endif
 
 #define   TOFLOAT(x) real(x, REAL_PRECISION)
-
-#define C_POINTER type(c_pointer_t)
