@@ -179,6 +179,151 @@ subroutine X(operate)(np, np_part, nn, nri, w, ri, rimap_inv, fi, fo)
 
 end subroutine X(operate)
 
+! ---------------------------------------------------------
+subroutine X(nl_operator_operate)(op, fi, fo, ghost_update, profile)
+  R_TYPE,              intent(inout) :: fi(:)  ! fi(op%np)
+  type(nl_operator_t), intent(in)    :: op
+  R_TYPE,              intent(out)   :: fo(:)  ! fo(op%np)
+  logical, optional,   intent(in)    :: ghost_update
+  logical, optional,   intent(in)    :: profile
+  
+  integer :: ii, nn
+#if defined(HAVE_MPI)
+  logical :: update
+#endif
+  real(8) :: ws(100)
+  logical :: profile_
+  integer :: nri_loc, ini
+
+  profile_ = .true. 
+  if(present(profile)) profile_ = profile
+  
+  if(profile_) call profiling_in(nl_operate_profile, "NL_OPERATOR")
+  call push_sub('nl_operator.Xnl_operator_operate')
+  
+#if defined(HAVE_MPI)
+  if(present(ghost_update)) then
+    update = ghost_update
+  else
+    update = .true.
+  end if
+
+  if(op%m%parallel_in_domains.and.update) then
+    call X(vec_ghost_update)(op%m%vp, fi)
+  end if
+#endif
+
+  !$omp parallel private(ini, nri_loc, ws)
+  nn = op%n
+#ifdef R_TCOMPLEX
+  if(op%cmplx_op) then
+    if(op%const_w) then
+      !$omp do
+      do ii = 1, op%np
+        fo(ii) = sum(cmplx(op%w_re(1:nn, 1),  op%w_im(1:nn, 1))  * fi(op%i(1:nn, ii)))
+      end do
+      !$omp end do
+    else
+      !$omp do
+      do ii = 1, op%np
+        fo(ii) = sum(cmplx(op%w_re(1:nn, ii), op%w_im(1:nn, ii)) * fi(op%i(1:nn, ii)))
+      end do
+      !$omp end do
+    end if
+  else
+#endif
+    if(op%const_w) then
+#ifdef USE_OMP
+      call divide_range(op%nri, omp_get_thread_num(), omp_get_num_threads(), ini, nri_loc)
+#else 
+      ini = 1
+      nri_loc = op%nri
+#endif
+      select case(op%X(function))
+      case(OP_FORTRAN)
+        call X(operate)(op%np, op%m%np_part, nn, op%nri, op%w_re, op%ri, op%rimap_inv, fi, fo)
+      case(OP_C)
+        call X(operate_ri)(op%np, nn, op%w_re(1, 1), nri_loc, op%ri(1, ini), op%rimap_inv(ini-1), fi(1), fo(1))
+      case(OP_VEC)
+        call X(operate_ri_vec)(op%np, nn, op%w_re(1, 1), nri_loc, op%ri(1, ini), op%rimap_inv(ini-1), fi(1), fo(1))
+      case(OP_AS)
+        call X(operate_as)(nn, op%w_re(1, 1), nri_loc, op%ri(1, ini), op%rimap_inv(ini-1), fi(1), fo(1), ws(1))
+      end select
+      
+    else
+      !$omp do
+      do ii = 1, op%np
+        fo(ii) = sum(op%w_re(1:nn, ii) * fi(op%i(1:nn, ii)))
+      end do
+      !$omp end do
+    end if
+#ifdef R_TCOMPLEX
+  end if
+#endif
+  !$omp end parallel
+
+  call pop_sub()
+  if(profile_) call profiling_out(nl_operate_profile)
+end subroutine X(nl_operator_operate)
+
+
+! ---------------------------------------------------------
+subroutine X(nl_operator_operate_diag)(op, fo)
+  type(nl_operator_t), intent(in)    :: op
+  R_TYPE,               intent(out)   :: fo(:)  ! fo(op%np)
+
+  integer :: ii, nn, jj
+  
+  call push_sub('nl_operator.Xnl_operator_operate_diag')
+  
+  nn = op%n
+  
+  if(op%cmplx_op) then
+#ifdef R_TCOMPLEX
+    if(op%const_w) then
+      do ii = 1, nn
+        if( 1 == op%i(ii,1) ) then
+          fo(1:op%np) = cmplx(op%w_re(ii, 1), op%w_im(ii, 1))
+          exit
+        end if
+      end do
+    else
+      do ii = 1, op%np
+        do jj = 1, nn
+          if( ii == op%i(jj,ii) ) then
+            fo(ii) = cmplx(op%w_re(jj, ii), op%w_im(jj, ii))
+            exit
+          end if
+        end do
+      end do
+    end if
+#endif
+  else
+    if(op%const_w) then
+      do ii = 1, nn
+        if( 1 == op%i(ii,1) ) then
+          fo(1:op%np) = op%w_re(ii, 1)
+          exit
+        end if
+      end do
+    else
+      do ii = 1, op%np
+        do jj = 1, nn
+          if( ii == op%i(jj,ii) ) then
+            fo(ii) = op%w_re(jj, ii)
+            exit
+          end if
+        end do
+      end do
+    end if
+  end if
+  
+  call pop_sub()
+  
+end subroutine X(nl_operator_operate_diag)
+
+
+
 !! Local Variables:
 !! mode: f90
 !! coding: utf-8
