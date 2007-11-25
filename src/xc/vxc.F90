@@ -65,7 +65,7 @@ subroutine xc_get_vxc(gr, xcs, rho, ispin, vxc, ex, ec, ip, qtot)
   if(gga.or.mgga) call  gga_init()
   if(       mgga) call mgga_init()
 
-  !$omp parallel do private(l_dens, l_sigma, ixc, l_tau, l_dedd, r, e, l_vsigma)
+  !$omp parallel do private(l_dens, l_sigma, ixc, l_dedd, r, e, l_vsigma)
   space_loop: do jj = 1, NP
 
     ! make a local copy with the correct memory order

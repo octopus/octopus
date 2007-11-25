@@ -97,9 +97,11 @@ subroutine mesh_init_stage_2(sb, mesh, geo, cv)
   ALLOCATE(mesh%Lxyz_tmp(mesh%nr(1,1):mesh%nr(2,1), mesh%nr(1,2):mesh%nr(2,2), mesh%nr(1,3):mesh%nr(2,3)),   i)
   ALLOCATE(mesh%x_tmp(3, mesh%nr(1,1):mesh%nr(2,1), mesh%nr(1,2):mesh%nr(2,2), mesh%nr(1,3):mesh%nr(2,3)), 3*i)
 
+  !$omp parallel workshare
   mesh%Lxyz_inv(:,:,:) = 0
   mesh%Lxyz_tmp(:,:,:) = 0
   mesh%x_tmp(:,:,:,:)  = M_ZERO
+  !$omp end parallel workshare
 
   ! We label 2 the points inside the mesh + enlargement
   !$omp parallel do private(iy, iz, chi, i, j, k) if(.not. mesh%use_curvlinear)

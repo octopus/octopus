@@ -424,23 +424,34 @@ contains
     ! storing all those 0.
     ! global is mainly used in initialization, so speed is not too
     ! important.
-    vp%global = 0
+
+    !$omp parallel
+
+    !$omp do
+    do r = 1, p
+      vp%global(1:np+np_enl, r) = 0
+    end do
+    !$omp end do nowait
+    
+    !$omp do private(i)
     do r = 1, p
       ! Local points.
       do i = 1, vp%np_local(r)
-        vp%global(vp%local(vp%xlocal(r)+i-1), r) = i
+        vp%global(vp%local(vp%xlocal(r) + i - 1), r) = i
       end do
       ! Ghost points.
       do i = 1, vp%np_ghost(r)
-        vp%global(vp%ghost(vp%xghost(r)+i-1), r) = vp%np_local(r)+i
+        vp%global(vp%ghost(vp%xghost(r) + i - 1), r) = vp%np_local(r) + i
       end do
       ! Boundary points.
       do i = 1, vp%np_bndry(r)
-        vp%global(vp%bndry(vp%xbndry(r)+i-1), r) =  vp%np_local(r)   &
-          +vp%np_ghost(r)+i
+        vp%global(vp%bndry(vp%xbndry(r) + i - 1), r) =  vp%np_local(r) + vp%np_ghost(r)+i
       end do
     end do
+    !$omp end do
 
+    !$omp end parallel
+    
     ! Complete entries in vp.
     vp%comm   = comm
     vp%root   = root
