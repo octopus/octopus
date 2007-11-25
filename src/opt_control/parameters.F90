@@ -48,6 +48,7 @@ module opt_control_parameters_m
             parameters_mixing,            &
             parameters_diff,              &
             parameters_apply_envelope,    &
+            parameters_set_fluence,       &
             laser_fluence,                &
             j2_functional
 
@@ -423,6 +424,25 @@ contains
     end do
     j2 = - j2 * par%dt
   end function j2_functional
+  ! ---------------------------------------------------------
+
+
+  ! ---------------------------------------------------------
+  subroutine parameters_set_fluence(par, fluence)
+    type(oct_control_parameters_t), intent(inout) :: par
+    FLOAT, intent(in)                             :: fluence
+
+    FLOAT   :: old_fluence
+    integer :: j
+
+    old_fluence = laser_fluence(par) 
+
+    do j = 1, par%no_parameters
+      call tdf_scalar_multiply( sqrt(fluence/old_fluence) , par%f(j) )
+    end do
+
+  end subroutine parameters_set_fluence
+  ! ---------------------------------------------------------
 
 
   ! ---------------------------------------------------------

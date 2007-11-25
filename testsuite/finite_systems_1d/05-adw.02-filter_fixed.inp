@@ -45,6 +45,7 @@ OCTMaxIter = 2
 
 OCTFilterMode = no
 OCTFixFluenceTo = 0.08
+OCTFixInitialFluence = no
 OCTInitialState = oct_is_groundstate
 OCTTargetOperator = oct_tg_gstransformation
 %OCTTargetTransformStates

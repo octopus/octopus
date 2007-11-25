@@ -102,6 +102,11 @@ contains
     call parameters_init(par, h%ep%no_lasers, td%dt, td%max_iter)
     call parameters_set(par, h%ep)
     call parameters_apply_envelope(par)
+
+    if(oct%fix_initial_fluence) then
+      call parameters_set_fluence(par, oct%targetfluence)
+    end if
+
     call parameters_to_h(par, h%ep)
     call parameters_write('opt-control/initial_laser', par)
 

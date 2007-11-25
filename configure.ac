@@ -245,9 +245,6 @@ AC_LANG_POP(C)
 dnl check for FFT
 ACX_FFT
 
-dnl check for TRLAN
-ACX_TRLAN
-
 dnl check for NETCDF
 ACX_NETCDF
 

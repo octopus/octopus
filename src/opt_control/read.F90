@@ -38,6 +38,24 @@
     oct%mode_fixed_fluence = .false.
     call loct_parse_float(check_inp('OCTFixFluenceTo'), -M_ONE, oct%targetfluence)
     if (oct%targetfluence.ne.-M_ONE) oct%mode_fixed_fluence = .true.
+
+
+    if(oct%mode_fixed_fluence) then
+      !%Variable OCTFixInitialFluence
+      !%Type logical
+      !%Section Optimal Control
+      !%Default yes
+      !%Description
+      !% By default, when asking for a fixed-fluence optimization ("OCTFixFluenceTo = whatever"), 
+      !% the initial laser guess provided in the input file is scaled to match this
+      !% fluence. However, you can force the program to use that initial laser as the initial
+      !% guess, no matter the fluence, by setting "OCTFixInitialFluence = no".
+      !%End
+      call loct_parse_logical(check_inp('OCTFixInitialFluence'), .true., oct%fix_initial_fluence)
+    else
+      oct%fix_initial_fluence = .false.
+    end if
+
       
     !%Variable OCTScheme
     !%Type integer

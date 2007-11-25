@@ -77,22 +77,12 @@ module eigen_solver_m
   end type eigen_solver_t
 
 
-#if defined(HAVE_TRLAN)
-  integer, parameter :: RS_LANCZOS = 1
-#endif
   integer, parameter :: RS_PLAN    = 11
   integer, parameter :: RS_CG      = 5
   integer, parameter :: RS_CG_NEW  = 6
   integer, parameter :: EVOLUTION  = 7
   integer, parameter :: RS_LOBPCG  = 8
 
-  ! For the TRLan package
-#if defined(HAVE_TRLAN)
-  integer                      :: ik_trlan
-  type(hamiltonian_t), pointer :: h_trlan
-  type(mesh_t),        pointer :: m_trlan
-  type(states_t),      pointer :: st_trlan
-#endif
 
   type(hamiltonian_t), pointer :: h_
   type(grid_t),        pointer :: gr_
@@ -123,8 +113,6 @@ contains
     !% enabled the default is lobpcg.
     !%Option cg 5
     !% Conjugate-gradients algorithm.
-    !%Option trlan 1
-    !% Lanczos scheme. Requires the TRLan package.
     !%Option plan 11
     !% Preconditioned Lanczos scheme.
     !%Option cg_new 6
@@ -176,9 +164,6 @@ contains
     select case(eigens%es_type)
     case(RS_CG_NEW)
     case(RS_CG)
-#ifdef HAVE_TRLAN
-    case(RS_LANCZOS)
-#endif
     case(RS_PLAN)
     case(EVOLUTION)
       !%Variable EigenSolverImaginaryTime
@@ -310,11 +295,6 @@ contains
       case(RS_CG)
         call deigen_solver_cg2(gr, st, h, eigens%pre, tol, maxiter, &
              eigens%converged, eigens%diff, verbose = verbose_)
-#ifdef HAVE_TRLAN
-      case(RS_LANCZOS)
-        call eigen_solver_cg3(gr%m, st, h, tol, maxiter, &
-             eigens%converged, eigens%diff)
-#endif
       case(RS_PLAN)
         call deigen_solver_plan(gr, st, h, eigens%pre, tol, maxiter, eigens%converged, eigens%diff)
       case(EVOLUTION)
@@ -354,10 +334,6 @@ contains
     call profiling_out(C_PROFILING_EIGEN_SOLVER)
   end subroutine eigen_solver_run
 
-
-#ifdef HAVE_TRLAN
-#include "eigen_trlan.F90"
-#endif
 
 #include "undef.F90"
 #include "real.F90"
