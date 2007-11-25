@@ -339,6 +339,12 @@ contains
 
       call push_sub('em_resp.parse_input')
 
+      call obsolete_variable('PolFreqs               ', 'EMFreqs             ')
+      call obsolete_variable('PolHyper               ', 'EMHyperpol          ')
+      call obsolete_variable('PolEta                 ', 'EMEta               ')
+      call obsolete_variable('PolConvAbsDens         ', 'LRConvAbsDens       ')
+      call obsolete_variable('PolHamiltonianVariation', 'HamiltonianVariation')
+
       !%Variable EMFreqs
       !%Type block
       !%Section Linear Response::Polarizabilities
@@ -420,7 +426,7 @@ contains
       call pert_init(em_vars%perturbation, sys%gr, sys%geo)
 
       if(pert_type(em_vars%perturbation) == PERTURBATION_ELECTRIC) then
-        !%Variable EMHyper
+        !%Variable EMHyperpol
         !%Type block
         !%Section Linear Response::Polarizabilities
         !%Description
@@ -428,13 +434,13 @@ contains
         !% the dynamic hyperpolarizability.
         !%End
 
-        if (loct_parse_block(check_inp('EMHyper'), blk) == 0) then 
+        if (loct_parse_block(check_inp('EMHyperpol'), blk) == 0) then 
           call loct_parse_block_float(blk, 0, 0, em_vars%freq_factor(1))
           call loct_parse_block_float(blk, 0, 1, em_vars%freq_factor(2))
           call loct_parse_block_float(blk, 0, 2, em_vars%freq_factor(3))
           
           call loct_parse_block_end(blk)
-
+          
           em_vars%calc_hyperpol = .true.
         end if
       end if
