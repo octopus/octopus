@@ -75,16 +75,17 @@ contains
     
     FLOAT :: r2, x(1:MAX_DIM)
     FLOAT, allocatable :: center_copies(:, :)
-    integer :: icell, is, ip
+    integer :: icell, is, ip, ix, iy, iz
     type(profile_t), save :: submesh_init_prof
     type(periodic_copy_t) :: pp
     
+    integer :: nmax(1:MAX_DIM), nmin(1:MAX_DIM)
+
     call push_sub('submesh.submesh_init_sphere')
     call profiling_in(submesh_init_prof, "SUBMESH_INIT")
 
     this%np_part = m%np_part
 
-    !build the inverse of jxyz, points not in the sphere go to 0
     ALLOCATE(this%jxyz_inv(0:this%np_part), this%np_part+1)
 
     !$omp parallel workshare
@@ -95,31 +96,75 @@ contains
     ! mainly for performance reasons.
     if(.not. simul_box_is_periodic(sb)) then 
       
+      nmin = 0
+      nmax = 0
+
+      ! get a cube of points that contains the sphere
+      nmin(1:sb%dim) = int((center(1:sb%dim) - abs(rc) - sb%box_offset(1:sb%dim))/m%h(1:sb%dim)) - 1
+      nmax(1:sb%dim) = int((center(1:sb%dim) + abs(rc) - sb%box_offset(1:sb%dim))/m%h(1:sb%dim)) + 1
+
+      ! make sure that the cube is inside the grid
+      nmin(1:MAX_DIM) = max(m%nr(1, 1:MAX_DIM), nmin(1:MAX_DIM))
+      nmax(1:MAX_DIM) = min(m%nr(2, 1:MAX_DIM), nmax(1:MAX_DIM))
+
       ! Get the total number of points inside the sphere
       is = 0
-      do ip = 1, m%np_part
-        r2 = sum((m%x(ip, 1:MAX_DIM) - center(1:MAX_DIM))**2)
-        if(r2 <= rc**2 ) then
-          is = is + 1
-          this%jxyz_inv(ip) = is
-        end if
-        if (ip == m%np) this%ns = is
+      do iz = nmin(3), nmax(3)
+        do iy = nmin(2), nmax(2)
+          do ix = nmin(1), nmax(1)
+            ip = m%Lxyz_inv(ix, iy, iz)
+#if defined(HAVE_MPI)
+            if(m%parallel_in_domains) ip = m%vp%global(ip, m%vp%partno)
+#endif
+            if(ip == 0 .or. ip > m%np) cycle
+            r2 = sum((m%x(ip, 1:MAX_DIM) - center(1:MAX_DIM))**2)
+            if(r2 <= rc**2 ) then
+              is = is + 1
+              this%jxyz_inv(ip) = is
+            end if
+          end do
+        end do
       end do
-      
+      this%ns = is
+
+      ! Get the total number of boundary points inside the sphere
+      do iz = nmin(3), nmax(3)
+        do iy = nmin(2), nmax(2)
+          do ix = nmin(1), nmax(1)
+            ip = m%Lxyz_inv(ix, iy, iz)
+#if defined(HAVE_MPI)
+            if(m%parallel_in_domains) ip = m%vp%global(ip, m%vp%partno)
+#endif
+            if(ip == 0 .or. ip <= m%np) cycle
+            r2 = sum((m%x(ip, 1:MAX_DIM) - center(1:MAX_DIM))**2)
+            if(r2 <= rc**2 ) then
+              is = is + 1
+              this%jxyz_inv(ip) = is
+            end if
+          end do
+        end do
+      end do
       this%ns_part = is
       
       ALLOCATE(this%jxyz(this%ns_part), this%ns_part)
       ALLOCATE(this%x(this%ns_part, 0:MAX_DIM), this%ns_part*(MAX_DIM+1))
       
       ! Generate the table and the positions
-      !$omp parallel do
-      do ip = 1, m%np_part
-        if( this%jxyz_inv(ip) /= 0 ) then 
-          is = this%jxyz_inv(ip)
-          this%jxyz(is) = ip
-          this%x(is, 1:MAX_DIM) = m%x(ip, 1:MAX_DIM) - center(1:MAX_DIM)
-          this%x(is, 0) = sqrt(sum(this%x(is, 1:MAX_DIM)**2))
-        end if
+      !$omp parallel do private(ix, iy, iz, ip, is)
+      do iz = nmin(3), nmax(3)
+        do iy = nmin(2), nmax(2)
+          do ix = nmin(1), nmax(1)
+            ip = m%Lxyz_inv(ix, iy, iz)
+#if defined(HAVE_MPI)
+            if(m%parallel_in_domains) ip = m%vp%global(ip, m%vp%partno)
+#endif
+            is = this%jxyz_inv(ip)
+            if( is == 0 ) cycle
+            this%jxyz(is) = ip
+            this%x(is, 1:MAX_DIM) = m%x(ip, 1:MAX_DIM) - center(1:MAX_DIM)
+            this%x(is, 0) = sqrt(sum(this%x(is, 1:MAX_DIM)**2))
+          end do
+        end do
       end do
       !$omp end parallel do
 
