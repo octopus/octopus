@@ -564,9 +564,6 @@ module opt_control_propagation_m
   subroutine oct_prop_end(prop)
     type(oct_prop_t), intent(inout) :: prop
 
-    integer :: j
-    character(len=100) :: filename
-    
     deallocate(prop%iter)
     ! This routine should maybe delete the files?
 

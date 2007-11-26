@@ -19,11 +19,10 @@
 
 
   ! ---------------------------------------------------------
+  ! read the parameters for the optimal control run     
   subroutine oct_read_inp(oct)
     type(oct_t), intent(inout) :: oct
 
-    !read the parameters for the optimal control run     
-    integer :: kk
 
     call push_sub('opt_control_read.oct_read_inp')  
 
@@ -180,7 +179,7 @@
     type(target_t),         intent(in) :: target
     type(td_rti_t),         intent(in) :: tr
 
-    integer :: no_electrons, n_filled, n_partially_filled, n_half_filled, jj
+    integer :: no_electrons, n_filled, n_partially_filled, n_half_filled
     call push_sub('read.check_faulty_runmodes')
 
     ! Only dipole approximation in length gauge.

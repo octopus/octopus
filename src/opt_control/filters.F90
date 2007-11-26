@@ -251,7 +251,7 @@ contains
   subroutine filter_write(filter)
     type(filter_t), intent(in) :: filter
 
-    integer :: kk, no_f, iunit, i, max_iter
+    integer :: kk, iunit, i, max_iter
     FLOAT :: dt
     character(len=80) :: filename
     FLOAT, allocatable :: wgrid(:)

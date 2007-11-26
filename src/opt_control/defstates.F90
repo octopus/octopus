@@ -25,21 +25,14 @@
     type(states_t), intent(in)    :: st
     type(states_t), intent(inout) :: initial_state
 
-    integer           :: i, kk, no_c, state, no_blk, kpoints, nst, dim, ist, jst
+    integer           :: ist, jst, ik, ib, idim, inst, inik, id, is, ip, ierr, no_states, istype
     type(block_t)     :: blk
-    integer           :: p, ik, ib, idim, inst, inik
-    integer           :: id ,is, ip, ierr, no_states, isize
-    character(len=10) :: fname
     type(states_t)    :: tmp_st 
     FLOAT             :: x(MAX_DIM), r, psi_re, psi_im
-    CMPLX             :: c_weight
     CMPLX, allocatable :: rotation_matrix(:, :)
-    integer           :: istype
-    
     call push_sub('defstates.initial_state_init')
 
     call states_copy(initial_state, st)
-
 
     !%Variable OCTInitialState
     !%Type integer

@@ -32,8 +32,7 @@
     type(target_t), intent(in)      :: target
 
     integer :: i, p, j
-    FLOAT :: absxab, absfab
-    FLOAT, allocatable :: local_function(:), fab(:), xab(:)
+    FLOAT, allocatable :: local_function(:)
     CMPLX, allocatable :: opsi(:, :)
 
     call push_sub('aux.j1_functional')
@@ -102,9 +101,7 @@
     
     CMPLX   :: olap, zdet
     CMPLX, allocatable :: cI(:), dI(:), mat(:, :, :), mm(:, :, :, :), mk(:, :), lambda(:, :)
-    FLOAT :: absfab, absxab
-    FLOAT, allocatable :: gvl(:, :), vla(:), vlb(:), vl(:), qab(:), ionic_force_a(:), ionic_force_b(:), xab(:), fab(:)
-    integer :: ik, p, dim, k, j, no_electrons, ia, ib, n_pairs, nst, ji, jj, kpoints
+    integer :: ik, p, dim, k, j, no_electrons, ia, ib, n_pairs, nst, kpoints, jj
 
     call push_sub('opt_control.calc_chi')
 

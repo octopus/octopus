@@ -351,7 +351,6 @@ module opt_control_target_m
   ! ----------------------------------------------------------------------
   subroutine target_end(target)
     type(target_t), intent(inout) :: target
-    integer :: i
 
     call push_sub('target.target_end')
 

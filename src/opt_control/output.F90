@@ -53,7 +53,7 @@ contains
     type(states_t), intent(inout)       :: final_st
 
     character(len=80)  :: filename
-    integer :: iunit, loop, ierr
+    integer :: iunit, loop
 
     call push_sub('output.oct_output')
     

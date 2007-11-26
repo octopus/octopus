@@ -456,6 +456,7 @@ module tdf_m
 
     case(TDF_COSINOIDAL)
 
+      r = M_ZERO
       if(abs(t - f%t0) <= f%tau0) then
         r = cos( (M_Pi/2)*((t - 2*f%tau0 - f%t0)/f%tau0) )
       end if
