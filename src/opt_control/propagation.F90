@@ -103,6 +103,7 @@ module opt_control_propagation_m
     if(write_iter_) then
       call td_write_init(write_handler, gr, sys%st, sys%geo, &
         (td%move_ions>0), h%ep%with_gauge_field, td%iter, td%dt)
+      call td_write_data(write_handler, gr, psi, h, sys%outp, sys%geo, td%dt, 0)
     end if
 
     call hamiltonian_not_adjoint(h)
@@ -130,11 +131,11 @@ module opt_control_propagation_m
 
       ! only write in final run
       if(write_iter_) then
+        call td_write_iter(write_handler, gr, psi, h, sys%geo, td%kick, td%dt, i)
         ii = ii + 1 
-        if(ii==sys%outp%iter+1 .or. i == td%max_iter) then ! output 
-          if(i == td%max_iter) sys%outp%iter = ii - 1 
-          ii = 1 
-          call td_write_iter(write_handler, gr, psi, h, sys%geo, td%kick, td%dt, i)
+        if(ii==sys%outp%iter+1 .or. i == td%max_iter) then ! output
+          if(i == td%max_iter) sys%outp%iter = ii - 1
+          ii = i
           call td_write_data(write_handler, gr, psi, h, sys%outp, sys%geo, td%dt, i) 
         end if
       end if
@@ -247,9 +248,6 @@ module opt_control_propagation_m
       call td_rti_copy(tr_psi2, td%tr)
       call td_rti_run_zero_iter(h, tr_psi2)
     end if
-
-    message(1) = "Info: Propagating forward"
-    call write_info(1)
 
     call oct_prop_output(prop_psi, 0, psi, gr)
     call states_copy(chi, psi)

@@ -29,9 +29,9 @@
     type(td_t), intent(inout)          :: td
 
     type(states_t) :: psi
-    FLOAT :: overlap, jfunctional, fluence, j2
+    FLOAT :: j1, jfunctional, fluence, j2
 
-    call push_sub('opt_control_finalcheck.oct_finalcheck')
+    call push_sub('finalcheck.oct_finalcheck')
 
     if(.not.oct%oct_double_check) then
       call pop_sub(); return
@@ -42,26 +42,18 @@
     call parameters_to_h(par, h%ep)
     call propagate_forward(sys, h, td, target, psi, write_iter = .true.)
 
-    overlap = j1_functional(sys%gr, sys%geo, h%ep, psi, target)
+    j1 = j1_functional(sys%gr, sys%geo, h%ep, psi, target)
     fluence = laser_fluence(par)
     j2 = j2_functional(par)
-    jfunctional = overlap - j2
+    jfunctional = j1 + j2
 
     write(message(1), '(a)') 'Final propagation with the best field'
     call messages_print_stress(stdout, trim(message(1)))
-    if(oct%mode_fixed_fluence) then
-      write(message(1), '(6x,a,f10.5)') " => J1       = ", overlap
-      write(message(2), '(6x,a,f10.5)') " => J        = ", jfunctional
-      write(message(3), '(6x,a,f10.5)') " => Fluence  = ", fluence
-      write(message(4), '(6x,a,f10.5)') " => penalty  = ", &
-            real(tdf(par%td_penalty(1), 1), REAL_PRECISION)
-      call write_info(4)
-    else
-      write(message(1), '(6x,a,f10.5)') " => J1       = ", overlap
-      write(message(2), '(6x,a,f10.5)') " => J        = ", jfunctional
-      write(message(3), '(6x,a,f10.5)') " => Fluence  = ", fluence
-      call write_info(3)
-    end if
+    write(message(1), '(6x,a,f12.5)') " => J1       = ", j1
+    write(message(2), '(6x,a,f12.5)') " => J        = ", jfunctional
+    write(message(3), '(6x,a,f12.5)') " => J2       = ", j2
+    write(message(4), '(6x,a,f12.5)') " => Fluence  = ", fluence
+    call write_info(4)
     call messages_print_stress(stdout)
 
     call states_end(psi)

@@ -268,7 +268,8 @@ contains
         call parameters_copy(par_prev, par)
         call fwd_step(oct, sys, td, h, target, par, par_prev, psi, prop_chi, prop_psi)
         j1 = j1_functional(sys%gr, sys%geo, h%ep, psi, target)
-        stop_loop = iteration_manager(j1, par_prev, par, iterator)
+        ! Note that owith other shemes the call to iteration manager the order is different: par_prev, par.
+        stop_loop = iteration_manager(j1, par, par_prev, iterator)
         call parameters_end(par_prev)
         if(oct%dump_intermediate) call iterator_write(iterator, psi, par, sys%gr, sys%outp)
       else
@@ -280,7 +281,8 @@ contains
         call parameters_copy(par_prev, par)
         call f_zbr98(oct, sys, h, td, psi, initial_st, target, prop_psi, prop_chi, par)
         j1 = j1_functional(sys%gr, sys%geo, h%ep, psi, target)
-        stop_loop = iteration_manager(j1, par_prev, par, iterator)
+        ! Note that owith other shemes the call to iteration manager the order is different: par_prev, par.
+        stop_loop = iteration_manager(j1, par, par_prev, iterator)
         if(oct%dump_intermediate) call iterator_write(iterator, psi, par, sys%gr, sys%outp)
         if(clean_stop() .or. stop_loop) exit ctr_loop
         if(oct%use_mixing) then
