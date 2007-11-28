@@ -583,7 +583,7 @@ contains
 
         !third line -> should hold the units. Now unused (assumes atomic units)
         call write_iter_string(out_angular, '#[Iter n.]')
-        call write_iter_header(out_angular, '[a.u]')
+        call write_iter_header(out_angular, '[' // trim(units_out%time%abbrev) // ']')
         call write_iter_nl(out_angular)
 
         call td_write_print_header_end(out_angular)
