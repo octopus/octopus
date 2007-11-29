@@ -279,6 +279,12 @@
     end if
 
     if( h%theory_level.ne.INDEPENDENT_PARTICLES ) then
+      if(h%theory_level.ne.KOHN_SHAM_DFT) then
+        write(message(1), '(a)') 'In optimal control theory mode, you can only use either independent'
+        write(message(2), '(a)') 'particles "TheoryLevel = independent_particles", or Kohn-Sham DFT'
+        write(message(3), '(a)') '"TheoryLevel = dft".'
+        call write_fatal(3)
+      end if
       if( tr%method .ne. PROP_EXPONENTIAL_MIDPOINT ) then
         write(message(1), '(a)') 'When doing QOCT with interacting electronsl, then you must set'
         write(message(2), '(a)') 'TDEvolutionMethod = exp_mid'

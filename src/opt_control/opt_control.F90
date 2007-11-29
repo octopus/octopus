@@ -80,7 +80,10 @@ contains
     type(states_t)             :: psi, initial_st
     type(target_t)             :: target
     type(filter_t)             :: filter
-    type(oct_control_parameters_t) :: par
+    type(oct_control_parameters_t) :: par, par_new, par_prev
+    logical :: stop_loop
+    FLOAT   :: j1
+    type(oct_prop_t) :: prop_chi, prop_psi;
     integer :: i
 
     call push_sub('opt_control.opt_control_run')
@@ -177,11 +180,6 @@ contains
 
     ! ---------------------------------------------------------
     subroutine scheme_mt03
-      type(oct_control_parameters_t) :: par_new, par_prev
-      logical :: stop_loop
-      FLOAT   :: j1
-      type(oct_prop_t) :: prop_chi, prop_psi
-
       call push_sub('opt_control.scheme_mt03')
 
       call oct_prop_init(prop_chi, "chi", td%max_iter, oct%number_checkpoints)
@@ -211,11 +209,6 @@ contains
 
     ! ---------------------------------------------------------
     subroutine scheme_wg05
-      type(oct_control_parameters_t) :: par_new, par_prev
-      logical :: stop_loop
-      FLOAT   :: j1
-      type(oct_prop_t) :: prop_chi, prop_psi
-
       call push_sub('opt_control.scheme_wg05')
 
       call oct_prop_init(prop_chi, "chi", td%max_iter, oct%number_checkpoints)
@@ -248,11 +241,7 @@ contains
 
     ! ---------------------------------------------------------
     subroutine scheme_zbr98
-      type(oct_control_parameters_t) :: par_new, par_prev
-      logical :: stop_loop
-      FLOAT   :: j1
       type(states_t) :: chi
-      type(oct_prop_t) :: prop_chi, prop_psi
 
       call push_sub('opt_control.scheme_zbr98')
 
