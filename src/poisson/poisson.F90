@@ -25,7 +25,7 @@ module poisson_m
   use global_m
   use io_m
   use loct_math_m
-  use lib_oct_parser_m
+  use loct_parser_m
   use mesh_m
   use messages_m
   use mpi_m
@@ -43,7 +43,7 @@ module poisson_m
   use poisson_multigrid_m
   use mesh_function_m
   use par_vec_m
-  use lib_oct_gsl_spline_m
+  use loct_gsl_spline_m
 
   implicit none
 

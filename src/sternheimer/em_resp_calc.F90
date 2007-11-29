@@ -26,7 +26,7 @@ module em_resp_calc_m
   use grid_m
   use global_m
   use hamiltonian_m
-  use lib_oct_parser_m
+  use loct_parser_m
   use linear_response_m
   use magnetic_m
   use mesh_function_m

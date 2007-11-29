@@ -28,7 +28,7 @@ module fft_m
   use messages_m
   use datasets_m
   use loct_math_m
-  use lib_oct_parser_m
+  use loct_parser_m
   use lalg_basic_m
   use c_pointer_m
 

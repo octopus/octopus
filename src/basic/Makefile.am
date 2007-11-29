@@ -22,8 +22,8 @@
 noinst_LIBRARIES = libbasic.a
 
 libbasic_a_SOURCES = \
-	liboct.F90 string.F90 varinfo.F90 mpi.F90 global.F90 \
-	liboct_parser.F90 datasets.F90 messages.F90 io.F90   \
+	loct.F90 string.F90 varinfo.F90 mpi.F90 global.F90 \
+	loct_parser.F90 datasets.F90 messages.F90 io.F90   \
 	io_binary.c mpi_lib.F90 types.F90 \
 	units.F90 mpi_debug.F90 profiling.F90 utils.F90      \
 	multicomm.F90 periodic_table.F90 getopt_f.c command_line.F90
@@ -59,22 +59,22 @@ global.o: global.F90
 depend:
 	@makedepf90 $(libbasic_a_SOURCES)
 
-liboct.o : liboct.F90 types.o
+loct.o : loct.F90 types.o
 string.o : string.F90 types.o
 varinfo.o : varinfo.F90 string.o types.o
 mpi.o : mpi.F90 
-global.o : global.F90 mpi.o liboct.o 
-liboct_parser.o : liboct_parser.F90 mpi.o liboct.o global.o types.o
-datasets.o : datasets.F90 liboct_parser.o types.o
-messages.o : messages.F90 varinfo.o string.o mpi.o liboct_parser.o liboct.o global.o datasets.o 
-io.o : io.F90 mpi.o messages.o liboct_parser.o liboct.o global.o datasets.o 
+global.o : global.F90 mpi.o loct.o 
+loct_parser.o : loct_parser.F90 mpi.o loct.o global.o types.o
+datasets.o : datasets.F90 loct_parser.o types.o
+messages.o : messages.F90 varinfo.o string.o mpi.o loct_parser.o loct.o global.o datasets.o 
+io.o : io.F90 mpi.o messages.o loct_parser.o loct.o global.o datasets.o 
 io_binary.o : io_binary.c 
 mpi_lib.o : mpi_lib.F90 mpi_lib_inc.F90 mpi_debug.o mpi.o messages.o global.o 
-units.o : units.F90 io.o messages.o liboct_parser.o global.o datasets.o 
-mpi_debug.o : mpi_debug.F90 mpi_debug_inc.F90 mpi.o messages.o liboct.o global.o 
-profiling.o : profiling.F90 mpi.o messages.o liboct.o io.o global.o 
+units.o : units.F90 io.o messages.o loct_parser.o global.o datasets.o 
+mpi_debug.o : mpi_debug.F90 mpi_debug_inc.F90 mpi.o messages.o loct.o global.o 
+profiling.o : profiling.F90 mpi.o messages.o loct.o io.o global.o 
 utils.o : utils.F90 messages.o global.o 
-multicomm.o : multicomm.F90 varinfo.o utils.o mpi.o messages.o liboct_parser.o io.o global.o datasets.o 
+multicomm.o : multicomm.F90 varinfo.o utils.o mpi.o messages.o loct_parser.o io.o global.o datasets.o 
 periodic_table.o : periodic_table.F90 
 getopt_f.o : getopt_f.c 
 command_line.o : command_line.F90 

@@ -27,7 +27,7 @@ module eigen_solver_m
   use hamiltonian_m
   use lalg_adv_m
   use lalg_basic_m
-  use lib_oct_parser_m
+  use loct_parser_m
   use varinfo_m
   use math_m
   use mesh_m

@@ -217,7 +217,7 @@
 ! [14] DERIVATE A FUNCTION:
 !
 !----------------------------------------------------------------------------*/!
-module lib_oct_gsl_spline_m
+module loct_gsl_spline_m
   use loct_math_m
   use messages_m
   use c_pointer_m
@@ -860,7 +860,7 @@ contains
 
   end function loct_spline_cutoff_radius
 
-end module lib_oct_gsl_spline_m
+end module loct_gsl_spline_m
 
 !! Local Variables:
 !! mode: f90

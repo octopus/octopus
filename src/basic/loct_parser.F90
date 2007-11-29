@@ -19,7 +19,7 @@
 
 #include "global.h"
 
-module lib_oct_parser_m
+module loct_parser_m
   use global_m
   use loct_m
   use mpi_m
@@ -389,7 +389,7 @@ contains
     im = real(im8, 4)
   end subroutine oct_parse_expression14
 
-end module lib_oct_parser_m
+end module loct_parser_m
 
 !! Local Variables:
 !! mode: f90

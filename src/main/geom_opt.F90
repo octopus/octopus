@@ -25,7 +25,7 @@ module geom_opt_m
   use geometry_m
   use global_m
   use hamiltonian_m
-  use lib_oct_parser_m
+  use loct_parser_m
   use loct_m
   use loct_math_m
   use mesh_m

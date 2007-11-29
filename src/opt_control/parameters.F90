@@ -26,7 +26,7 @@ module opt_control_parameters_m
   use global_m
   use messages_m
   use io_m
-  use lib_oct_parser_m
+  use loct_parser_m
   use loct_math_m
   use filter_m
   use external_pot_m

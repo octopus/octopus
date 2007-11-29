@@ -25,7 +25,7 @@ module spectrum_m
   use global_m
   use io_m
   use lalg_adv_m
-  use lib_oct_parser_m
+  use loct_parser_m
   use messages_m
   use string_m
   use units_m

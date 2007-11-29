@@ -29,8 +29,8 @@ module tdf_m
   use global_m
   use io_m
   use messages_m
-  use lib_oct_parser_m
-  use lib_oct_gsl_spline_m
+  use loct_parser_m
+  use loct_gsl_spline_m
   use units_m
 #if defined(HAVE_FFT)
   use fft_m

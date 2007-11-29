@@ -28,7 +28,7 @@ module phonons_fd_m
   use hamiltonian_m
   use io_m
   use lalg_adv_m
-  use lib_oct_parser_m
+  use loct_parser_m
   use mesh_m
   use messages_m
   use multicomm_m

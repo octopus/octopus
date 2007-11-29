@@ -25,7 +25,7 @@ module xyz_adjust_m
   use datasets_m
   use geometry_m
   use lalg_adv_m
-  use lib_oct_parser_m
+  use loct_parser_m
 
   implicit none
 

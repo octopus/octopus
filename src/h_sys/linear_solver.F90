@@ -27,7 +27,7 @@ module linear_solver_m
   use hamiltonian_m
   use lalg_basic_m
   use loct_m
-  use lib_oct_parser_m
+  use loct_parser_m
   use mesh_m
   use messages_m
   use preconditioners_m

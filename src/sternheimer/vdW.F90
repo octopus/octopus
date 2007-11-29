@@ -30,7 +30,7 @@ module vdw_m
   use io_m
   use lalg_basic_m
   use loct_math_m
-  use lib_oct_parser_m
+  use loct_parser_m
   use linear_response_m
   use math_m
   use mesh_function_m

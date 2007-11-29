@@ -25,7 +25,7 @@ module td_rti_m
   use messages_m
   use profiling_m
   use lalg_basic_m
-  use lib_oct_parser_m
+  use loct_parser_m
   use math_m
   use sparskit_m
   use states_m

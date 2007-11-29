@@ -27,7 +27,7 @@ module simul_box_m
   use io_m
   use lalg_basic_m
   use loct_m
-  use lib_oct_parser_m
+  use loct_parser_m
   use math_m
   use messages_m
   use string_m

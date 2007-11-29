@@ -26,7 +26,7 @@ module sternheimer_m
   use hamiltonian_m
   use io_m
   use lalg_basic_m
-  use lib_oct_parser_m
+  use loct_parser_m
   use libxc_m
   use linear_solver_m
   use linear_response_m

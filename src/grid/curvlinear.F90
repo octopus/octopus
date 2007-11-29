@@ -27,7 +27,7 @@ module curvlinear_m
   use geometry_m
   use global_m
   use lalg_adv_m
-  use lib_oct_parser_m
+  use loct_parser_m
   use math_m
   use messages_m
   use simul_box_m

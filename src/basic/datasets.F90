@@ -20,7 +20,7 @@
 #include "global.h"
 
 module datasets_m
-  use lib_oct_parser_m
+  use loct_parser_m
 
   implicit none
   private

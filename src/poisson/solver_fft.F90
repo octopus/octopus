@@ -25,7 +25,7 @@ module poisson_fft_m
   use global_m
   use lalg_basic_m
   use loct_m
-  use lib_oct_parser_m
+  use loct_parser_m
   use math_m
   use mesh_m
   use messages_m
@@ -41,7 +41,7 @@ module poisson_fft_m
   use mesh_function_m
   use par_vec_m
   use poisson_cutoffs_m
-  use lib_oct_gsl_spline_m
+  use loct_gsl_spline_m
 
   implicit none
 

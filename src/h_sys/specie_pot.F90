@@ -28,8 +28,8 @@ module specie_pot_m
   use global_m
   use grid_m
   use io_m
-  use lib_oct_gsl_spline_m
-  use lib_oct_parser_m
+  use loct_gsl_spline_m
+  use loct_parser_m
   use math_m
   use mesh_function_m
   use mesh_m

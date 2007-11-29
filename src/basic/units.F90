@@ -40,7 +40,7 @@
 module units_m
   use datasets_m
   use global_m
-  use lib_oct_parser_m
+  use loct_parser_m
   use messages_m
   use io_m
 

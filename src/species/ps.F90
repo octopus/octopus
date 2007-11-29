@@ -24,9 +24,9 @@ module ps_m
   use atomic_m
   use global_m
   use io_m
-  use lib_oct_gsl_spline_m
+  use loct_gsl_spline_m
   use loct_math_m
-  use lib_oct_parser_m
+  use loct_parser_m
   use logrid_m
   use messages_m
   use ps_cpi_m

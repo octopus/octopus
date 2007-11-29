@@ -23,7 +23,7 @@ module root_solver_m
   use datasets_m
   use global_m
   use lalg_adv_m
-  use lib_oct_parser_m
+  use loct_parser_m
   use messages_m
   use ode_solver_m
 

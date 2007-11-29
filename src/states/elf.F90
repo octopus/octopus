@@ -22,7 +22,7 @@
 module elf_m
   use datasets_m
   use io_m
-  use lib_oct_parser_m
+  use loct_parser_m
   use cube_function_m
   use functions_m
   use global_m

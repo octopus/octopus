@@ -30,7 +30,7 @@ module run_prog_m
   use global_m
   use ground_state_m
   use hamiltonian_m
-  use lib_oct_parser_m
+  use loct_parser_m
   use messages_m
   use mpi_debug_m
   use multicomm_m

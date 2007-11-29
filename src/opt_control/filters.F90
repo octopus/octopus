@@ -26,7 +26,7 @@ module filter_m
   use io_m 
   use loct_m
   use string_m
-  use lib_oct_parser_m
+  use loct_parser_m
 #if defined(HAVE_FFT)
   use fft_m
 #endif

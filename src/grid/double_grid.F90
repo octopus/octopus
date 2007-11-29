@@ -31,8 +31,8 @@ module double_grid_m
   use functions_m
   use mesh_function_m
   use loct_m
-  use lib_oct_gsl_spline_m
-  use lib_oct_parser_m
+  use loct_gsl_spline_m
+  use loct_parser_m
   use profiling_m
   use simul_box_m
   use specie_m

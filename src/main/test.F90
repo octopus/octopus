@@ -25,7 +25,7 @@ program oct_test
   use messages_m
   use datasets_m
   use loct_m
-  use lib_oct_parser_m
+  use loct_parser_m
   use io_m
   use profiling_m
   use varinfo_m
