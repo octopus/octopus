@@ -146,7 +146,7 @@ subroutine X(states_gram_schmidt2)(st, nst, m, dim, psi, phi, normalize, mask)
 
   normalize_ = .false.
   if(present(normalize)) normalize_ = normalize
-  if(normalize) then
+  if(normalize_) then
     nrm2 = X(states_nrm2)(m, dim, phi)
     do idim = 1, dim
       call lalg_scal(m%np, M_ONE/nrm2, phi(:, idim))

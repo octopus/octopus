@@ -177,8 +177,8 @@ contains
   ! ---------------------------------------------------------
   subroutine excited_states_init(excited_state, ground_state, filename) 
     type(excited_states_t), intent(inout) :: excited_state
-    type(states_t), target                :: ground_state
-    character(len=*), intent(in)          :: filename
+    type(states_t), target, intent(in)    :: ground_state
+    character(len=*),       intent(in)    :: filename
 
     integer :: iunit, nst, ispin, nik, &
                n_possible_pairs, i, a, sigma, j, ios, k, nspin
