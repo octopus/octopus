@@ -114,6 +114,7 @@ contains
         do iy = nmin(2), nmax(2)
           do ix = nmin(1), nmax(1)
             ip = m%Lxyz_inv(ix, iy, iz)
+            if(ip == 0) cycle
 #if defined(HAVE_MPI)
             if(m%parallel_in_domains) ip = m%vp%global(ip, m%vp%partno)
 #endif
@@ -144,6 +145,7 @@ contains
         do iy = nmin(2), nmax(2)
           do ix = nmin(1), nmax(1)
             ip = m%Lxyz_inv(ix, iy, iz)
+            if(ip == 0) cycle
 #if defined(HAVE_MPI)
             if(m%parallel_in_domains) ip = m%vp%global(ip, m%vp%partno)
 #endif
