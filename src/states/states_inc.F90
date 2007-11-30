@@ -171,7 +171,11 @@ R_TYPE function X(states_dotp)(m, dim, f1, f2, reduce) result(dotp)
 
   dotp = R_TOTYPE(M_ZERO)
   do idim = 1, dim
-    dotp = dotp + X(mf_dotp)(m, f1(:, idim), f2(:, idim), reduce)
+    if(present(reduce)) then
+      dotp = dotp + X(mf_dotp)(m, f1(:, idim), f2(:, idim), reduce)
+    else
+      dotp = dotp + X(mf_dotp)(m, f1(:, idim), f2(:, idim))
+    end if
   end do
 
   call pop_sub()
