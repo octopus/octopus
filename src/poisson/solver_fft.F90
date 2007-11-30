@@ -32,10 +32,8 @@ module poisson_fft_m
   use mpi_m
   use profiling_m
   use units_m
-#ifdef HAVE_FFT
   use fft_m
   use cube_function_m
-#endif
   use functions_m
   use grid_m
   use mesh_function_m
@@ -60,10 +58,8 @@ module poisson_fft_m
        FFT_NOCUT     =  3, &
        FFT_CORRECTED =  4
 
-#ifdef HAVE_FFT  
   type(dcf_t), public :: fft_cf
   FLOAT, pointer :: fft_coulb_FS(:,:,:)
-#endif
 
 contains
 
@@ -71,7 +67,6 @@ contains
   subroutine poisson_fft_build_3d(gr, poisson_solver)
     type(grid_t), intent(inout) :: gr
     integer, intent(in) :: poisson_solver
-#if defined(HAVE_FFT)
     type(loct_spline_t) :: cylinder_cutoff_f
     FLOAT, allocatable :: x(:), y(:)
     integer :: ix, iy, iz, ixx(MAX_DIM), db(MAX_DIM), k, ngp, idim
@@ -228,14 +223,12 @@ contains
     end if
 
     call pop_sub()
-#endif
   end subroutine poisson_fft_build_3d
     
 
   subroutine poisson_fft_build_2d(gr, poisson_solver)
     type(grid_t), intent(in) :: gr
     integer, intent(in) :: poisson_solver
-#if defined(HAVE_FFT)
 
     type(loct_spline_t) :: besselintf
     integer :: i, ix, iy, ixx(MAX_DIM), db(MAX_DIM), npoints
@@ -309,15 +302,12 @@ contains
     call loct_spline_end(besselintf)
 
     call pop_sub()
-#endif
   end subroutine poisson_fft_build_2d
 
   !-----------------------------------------------------------------
   subroutine poisson_fft_end()
-#if defined(HAVE_FFT)
       call dcf_free(fft_cf)
       deallocate(fft_coulb_FS); nullify(fft_coulb_FS)
-#endif
   end subroutine poisson_fft_end
 
   !-----------------------------------------------------------------
@@ -326,8 +316,6 @@ contains
     FLOAT, intent(out) :: pot(:) ! pot(m%np)
     FLOAT, intent(in)  :: rho(:) ! rho(m%np)
     logical, intent(in), optional :: average_to_zero
-
-#if defined(HAVE_FFT)
 
     FLOAT, allocatable :: rho_global(:), pot_global(:)
 
@@ -394,7 +382,6 @@ contains
     if(m%parallel_in_domains) then
       deallocate(rho_global, pot_global)
     end if
-#endif
     call pop_sub()
   end subroutine poisson_fft
 

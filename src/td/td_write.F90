@@ -403,9 +403,7 @@ contains
     call hamiltonian_output(h, gr%m, gr%sb, filename, outp)
 
 !!$  dt = dt_
-!!$#if !defined(DISABLE_PES) && defined(HAVE_FFT)
 !!$  call PES_output(td%PESv, gr%m, st, iter, outp%iter, dt)
-!!$#endif
 
     call pop_sub()
   end subroutine td_write_data

@@ -38,9 +38,7 @@ module elf_m
   public :: elf_init,               &
             elf_calc,               &
             kinetic_energy_density
-#if defined(HAVE_FFT)
   public :: elf_calc_fs
-#endif
 
   logical :: with_current_term = .true.
 
@@ -233,7 +231,6 @@ contains
   end subroutine elf_calc
 
 
-#if defined(HAVE_FFT)
   ! ---------------------------------------------------------
   ! ELF function in Fourier space. Not tested.
   ! ---------------------------------------------------------
@@ -376,7 +373,6 @@ contains
     end subroutine zmf2mf_RS2FS
 
   end subroutine elf_calc_fs
-#endif
 
   ! ---------------------------------------------------------
   ! Calculates the kinetic energy density, tau, defined as:

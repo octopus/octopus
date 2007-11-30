@@ -138,15 +138,10 @@ contains
 
     !-----------------------------------------------------------------
     subroutine init_2D()
-#if defined(HAVE_FFT)
       call loct_parse_int(check_inp('PoissonSolver'), gr%sb%periodic_dim, poisson_solver)
       if( (poisson_solver .ne. FFT_SPH) .and. (poisson_solver .ne. DIRECT_SUM_2D) ) then
         call input_error('PoissonSolver')
       end if
-
-#else
-      poisson_solver = -NDIM ! internal type
-#endif
 
       if(gr%m%use_curvlinear .and. (poisson_solver .ne. -NDIM) ) then
         message(1) = 'If curvilinear coordinates are used in 2D, then the only working'

@@ -27,9 +27,7 @@ module filter_m
   use loct_m
   use string_m
   use loct_parser_m
-#if defined(HAVE_FFT)
   use fft_m
-#endif
   use units_m
   use tdf_m
 

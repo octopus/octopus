@@ -24,9 +24,7 @@ module td_exp_m
   use lalg_basic_m
   use loct_math_m
   use loct_parser_m
-#ifdef HAVE_FFT
   use cube_function_m
-#endif
   use td_exp_split_m
   use varinfo_m
 
@@ -167,10 +165,8 @@ contains
       call loct_parse_float(check_inp('TDLanczosTol'), CNST(1e-5), te%lanczos_tol)
       if (te%lanczos_tol <= M_ZERO) call input_error('TDLanczosTol')
 
-#if defined(HAVE_FFT)
     case(SPLIT_OPERATOR)
     case(SUZUKI_TROTTER)
-#endif
 
     case default
       call input_error('TDExponentialMethod')
@@ -190,11 +186,9 @@ contains
       call loct_parse_int(check_inp('TDExpOrder'), 4, te%exp_order)
       if (te%exp_order < 2) call input_error('TDExpOrder')
 
-#if defined(HAVE_FFT)
     else if(te%exp_method==SPLIT_OPERATOR.or.te%exp_method==SUZUKI_TROTTER) then
       call zcf_new(gr%m%l, te%cf)
       call zcf_fft_init(te%cf, gr%sb)
-#endif
     end if
 
   end subroutine td_exp_init
@@ -254,10 +248,8 @@ contains
         call write_fatal(2)
       end if
       call lanczos
-#if defined(HAVE_FFT)
     case(SPLIT_OPERATOR);    call split
     case(SUZUKI_TROTTER);    call suzuki
-#endif
     case(CHEBYSHEV);         call cheby
     end select
 
@@ -440,7 +432,6 @@ contains
     end subroutine lanczos
 
 
-#if defined(HAVE_FFT)
     ! ---------------------------------------------------------
     subroutine split
       call push_sub('td_exp.split')
@@ -488,7 +479,7 @@ contains
       if(present(order)) order = 0
       call pop_sub()
     end subroutine suzuki
-#endif
+
   end subroutine td_exp_dt
 
 end module td_exp_m

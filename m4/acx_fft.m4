@@ -23,7 +23,6 @@ AC_DEFUN([ACX_FFT],
 acx_fft_ok=no
 
 AC_ARG_WITH(fft, [  --with-fft=ARG    fft support
-      ARG=no          disable FFT support
       ARG=fftw3       FFTW3 support through libfftw3 (default)
       ARG=fftw2       FFTW2 support through libfftw],
   [fft=$withval], [fft=fftw3])
@@ -48,19 +47,13 @@ case $fft in
       fft_libs="fftw dfftw"
     fi
     ;;
-  *)
-    fft=no
-    ;;
 esac
-
-if test "${fft}" != "no"; then
 
   dnl Check if the library was given in the command line
   if test $acx_fft_ok = no; then
     AC_ARG_WITH(fft-lib, [AS_HELP_STRING([--with-fft-lib=<lib>], [use FFT library <lib>])])
     case $with_fft_lib in
       yes | "") ;;
-      no) acx_fft_ok=disable ;;
       -* | */* | *.a | *.so | *.so.* | *.o) LIBS_FFT="$with_fft_lib" ;;
       *) LIBS_FFT="-l$with_fft_lib" ;;
     esac
@@ -112,8 +105,6 @@ if test "${fft}" != "no"; then
     fi
   fi
 
-fi
-
 AC_SUBST(LIBS_FFT)
 LIBS="$acx_fft_save_LIBS"
 
@@ -123,8 +114,7 @@ if test x"$acx_fft_ok" = xyes; then
   $1
 else
   if test $acx_fft_ok != disable; then
-    AC_MSG_WARN([Could not find fftw library. 
-                *** Will compile without fftw support])
+    AC_MSG_ERROR([Could not find required fftw library.])
   fi
   $2
 fi

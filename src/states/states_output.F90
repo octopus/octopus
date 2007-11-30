@@ -226,7 +226,6 @@ contains
         deallocate(elf)
       end if
 
-#if defined(HAVE_FFT)
       if(  iand(outp%what, output_elf_fs).ne.0  ) then ! Second, ELF in Fourier space.
         ALLOCATE(elf(1:gr%m%np,1:st%d%nspin),gr%m%np*st%d%nspin)
         call elf_calc_fs(st, gr, elf)
@@ -237,7 +236,6 @@ contains
         end do
         deallocate(elf)
       end if
-#endif
     end subroutine out_elf
 
   end subroutine states_output

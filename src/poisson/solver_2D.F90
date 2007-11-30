@@ -24,12 +24,8 @@ subroutine poisson2D_init(gr)
   call push_sub('poisson2D.poisson2D_init')
 
 
-#ifdef HAVE_FFT
   ASSERT(poisson_solver == FFT_SPH .or. poisson_solver == DIRECT_SUM_2D)
   if (poisson_solver == FFT_SPH) call poisson_fft_build_2d(gr, poisson_solver)
-#else
-  ASSERT(poisson_solver == DIRECT_SUM_2D)
-#endif
 
   call pop_sub()
 

@@ -125,7 +125,7 @@ subroutine td_init(sys, h, td)
   call kick_init(td%kick, sys%st%d%nspin)
 
   ! now the photoelectron stuff
-#if !defined(DISABLE_PES) && defined(HAVE_FFT)
+#if !defined(DISABLE_PES)
   call loct_parse_int(check_inp('AbsorbingBoundaries'), 0, dummy)
   call PES_init(td%PESv, sys%gr%m, sys%gr%sb, sys%st, dummy, sys%outp%iter)
 #endif
@@ -178,7 +178,7 @@ subroutine td_end(td)
 
   call push_sub('td_init.td_end')
 
-#if !defined(DISABLE_PES) && defined(HAVE_FFT)
+#if !defined(DISABLE_PES)
   call PES_end(td%PESv)
 #endif
   call td_rti_end(td%tr)  ! clean the evolution method

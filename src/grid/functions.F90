@@ -32,9 +32,7 @@ module functions_m
   use messages_m
   use simul_box_m
   use varinfo_m
-#if defined(HAVE_FFT)
   use fft_m
-#endif
 
   implicit none
 
@@ -58,10 +56,8 @@ module functions_m
     zf_angular_momentum,        &
     df_l2, zf_l2
 
-#if defined(HAVE_FFT)
   public  ::                    &
     dcf_FS2mf, zcf_FS2mf
-#endif
 
   integer, public, parameter :: &
     REAL_SPACE = 0,             &
@@ -77,10 +73,8 @@ module functions_m
     type(der_discr_t)     :: der_discr    ! discretization of the derivatives
 
     ! derivatives in fourier space
-#if defined(HAVE_FFT)
     type(dcf_t) :: dcf_der, dcf_aux            ! auxiliary variables
     type(zcf_t) :: zcf_der, zcf_aux            ! derivatives in fourier space
-#endif
   end type f_der_t
 
 contains
@@ -93,7 +87,6 @@ contains
 
     call push_sub('f.f_der_init')
 
-#ifdef HAVE_FFT
     !%Variable DerivativesSpace
     !%Type integer
     !%Default real_space
@@ -109,21 +102,17 @@ contains
     !%End
     call loct_parse_int(check_inp('DerivativesSpace'), REAL_SPACE, f_der%space)
     if(.not.varinfo_valid_option('DerivativesSpace', f_der%space)) call input_error('DerivativesSpace')
-#else
-    f_der%space = REAL_SPACE
-#endif
+
     call messages_print_var_option(stdout, "DerivativesSpace", f_der%space)
 
     if(f_der%space == REAL_SPACE) then
       call derivatives_init(sb, f_der%der_discr, f_der%n_ghost, use_curvlinear)
-#if defined(HAVE_FFT)
     else
       if(use_curvlinear) then
         message(1) = "When using curvilinear coordinates you must use"
         message(2) = "DerivativesSpace = real_space"
         call write_fatal(2)
       end if
-#endif
     end if
 
     call pop_sub()
@@ -142,7 +131,6 @@ contains
 
     if(f_der%space == REAL_SPACE) then
       call derivatives_build(m, f_der%der_discr)
-#if defined(HAVE_FFT)
     else
       call dcf_new(m%l, f_der%dcf_der)
       call dcf_fft_init(f_der%dcf_der, sb)
@@ -151,7 +139,6 @@ contains
       call zcf_new(m%l, f_der%zcf_der)
       call zcf_fft_init(f_der%zcf_der, sb)
       call zcf_new_from(f_der%zcf_aux, f_der%zcf_der)
-#endif
     end if
 
     call pop_sub()
@@ -169,13 +156,11 @@ contains
 
     if(f_der%space == REAL_SPACE) then
       call derivatives_end(f_der%der_discr)
-#if defined(HAVE_FFT)
     else
       call dcf_free(f_der%dcf_der)
       call zcf_free(f_der%zcf_der)
       call dcf_free(f_der%dcf_aux)
       call zcf_free(f_der%zcf_aux)
-#endif
     end if
 
     nullify(f_der%m)
@@ -199,11 +184,9 @@ contains
     case(REAL_SPACE)
       call derivatives_lapl_diag (f_der%der_discr, lapl_diag)
 
-#if defined(HAVE_FFT)
     case(FOURIER_SPACE)
       message(1) = "Can not calculate diagonal of the laplacian in Fourier space"
       call write_fatal(1)
-#endif
     end select
 
     call pop_sub()

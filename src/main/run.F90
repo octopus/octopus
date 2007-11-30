@@ -23,9 +23,7 @@ module run_prog_m
   use casida_m
   use datasets_m
   use external_pot_m
-#if defined(HAVE_FFT)
   use fft_m
-#endif
   use geom_opt_m
   use global_m
   use ground_state_m
@@ -163,9 +161,7 @@ contains
     call messages_print_stress(stdout)
 
     ! initialize ffts
-#ifdef HAVE_FFT
     call fft_all_init()
-#endif
 
     if(calc_mode .ne. M_PULPO_A_FEIRA) then
       call units_init()
@@ -203,9 +199,7 @@ contains
        call system_end(sys)
     end if
 
-#ifdef HAVE_FFT
     call fft_all_end()
-#endif
 
 #ifdef HAVE_MPI
     call mpi_debug_statistics()

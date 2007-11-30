@@ -32,9 +32,7 @@ module tdf_m
   use loct_parser_m
   use loct_gsl_spline_m
   use units_m
-#if defined(HAVE_FFT)
   use fft_m
-#endif
 
   implicit none
 
@@ -297,12 +295,9 @@ module tdf_m
   subroutine tdf_fft_forward(f)
     type(tdf_t), intent(inout) :: f
     integer :: steps, n(3)
-#if defined(HAVE_FFT)
     type(fft_t)    :: fft_handler
-#endif
     CMPLX, allocatable :: tmp(:, :, :), tmp2(:, :, :)
 
-#if defined(HAVE_FFT)
     steps = f%niter
     ALLOCATE(tmp(steps+1, 1, 1), steps+1)
     ALLOCATE(tmp2(steps+1, 1, 1), steps+1)
@@ -314,10 +309,6 @@ module tdf_m
     f%val(:) = tmp(:, 1, 1)
     deallocate(tmp, tmp2)
     call fft_end(fft_handler)
-#else
-    write(message(1),'(a)') "Internal error in filters.apply_filter"
-    call write_fatal(1)
-#endif
 
   end subroutine tdf_fft_forward
 
@@ -325,12 +316,9 @@ module tdf_m
   subroutine tdf_fft_backward(f)
     type(tdf_t), intent(inout) :: f
     integer :: steps, n(3)
-#if defined(HAVE_FFT)
     type(fft_t)    :: fft_handler
-#endif
     CMPLX, allocatable :: tmp(:, :, :), tmp2(:, :, :)
 
-#if defined(HAVE_FFT)
     steps = f%niter
     ALLOCATE(tmp(steps+1, 1, 1), steps+1)
     ALLOCATE(tmp2(steps+1, 1, 1), steps+1)
@@ -342,10 +330,6 @@ module tdf_m
     f%val(:) = tmp(:, 1, 1)
     deallocate(tmp, tmp2)
     call fft_end(fft_handler)
-#else
-    write(message(1),'(a)') "Internal error in filters.apply_filter"
-    call write_fatal(1)
-#endif
 
   end subroutine tdf_fft_backward
 

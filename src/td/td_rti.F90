@@ -94,12 +94,10 @@ contains
     tro%method = tri%method
 
     select case(tro%method)
-#if defined(HAVE_FFT)
     case(PROP_SPLIT_OPERATOR)
       call zcf_new_from(tro%cf, tri%cf)
     case(PROP_SUZUKI_TROTTER)
       call zcf_new_from(tro%cf, tri%cf)
-#endif
     case(PROP_MAGNUS)
       np = size(tri%vmagnus, 1)
       nspin = size(tri%vmagnus, 2)
@@ -256,23 +254,19 @@ contains
     call loct_parse_int(check_inp('TDEvolutionMethod'), PROP_REVERSAL, tr%method)
     if(.not.varinfo_valid_option('TDEVolutionMethod', tr%method)) call input_error('TDEvolutionMethod')
 
-#if !defined(HAVE_FFT)
     if(tr%method .eq. SPLIT_OPERATOR .or. tr%method .eq. SUZUKI_TROTTER) then
       message(1) = "You cannnot use the split operator evolution method, or the"
       message(2) = "Suzuki-Trotter, if the code was compiled without FFTW support."
       call write_fatal(2)
     end if
-#endif
 
     select case(tr%method)
-#if defined(HAVE_FFT)
     case(PROP_SPLIT_OPERATOR)
       call zcf_new(gr%m%l, tr%cf)
       call zcf_fft_init(tr%cf, gr%sb)
     case(PROP_SUZUKI_TROTTER)
       call zcf_new(gr%m%l, tr%cf)
       call zcf_fft_init(tr%cf, gr%sb)
-#endif
     case(PROP_REVERSAL)
     case(PROP_APP_REVERSAL)
     case(PROP_EXPONENTIAL_MIDPOINT)
@@ -385,10 +379,8 @@ contains
     call lalg_copy(NP, st%d%nspin, h%vhxc(:, :),      tr%v_old(:, :, 1))
     call dextrapolate(2, NP, st%d%nspin, tr%v_old(:, :, 1:3), tr%v_old(:, :, 0), dt, dt)
     select case(tr%method)
-#if defined(HAVE_FFT)
     case(PROP_SPLIT_OPERATOR);          call td_split_operator
     case(PROP_SUZUKI_TROTTER);          call td_suzuki_trotter
-#endif
     case(PROP_REVERSAL);                call td_reversal
     case(PROP_APP_REVERSAL);            call td_app_reversal
     case(PROP_EXPONENTIAL_MIDPOINT);    call td_exponential_midpoint
@@ -419,10 +411,8 @@ contains
 
         st%zpsi = zpsi1
         select case(tr%method)
-#if defined(HAVE_FFT)
         case(PROP_SPLIT_OPERATOR);          call td_split_operator
         case(PROP_SUZUKI_TROTTER);          call td_suzuki_trotter
-#endif
         case(PROP_REVERSAL);                call td_reversal
         case(PROP_APP_REVERSAL);            call td_app_reversal
         case(PROP_EXPONENTIAL_MIDPOINT);    call td_exponential_midpoint
@@ -440,7 +430,6 @@ contains
 
   contains
 
-#if defined(HAVE_FFT)
     ! ---------------------------------------------------------
     ! Split operator.
     subroutine td_split_operator
@@ -506,8 +495,6 @@ contains
 
       call pop_sub()
     end subroutine td_suzuki_trotter
-#endif
-
 
     ! ---------------------------------------------------------
     ! Propagator with enforced time-reversal symmetry

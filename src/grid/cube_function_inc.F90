@@ -31,9 +31,7 @@ subroutine X(cf_new)(n, cf)
   nullify(cf%FS)
   cf%n = n
 
-#if defined(HAVE_FFT)
   nullify(cf%fft)
-#endif
   call pop_sub()
 end subroutine X(cf_new)
 
@@ -50,7 +48,6 @@ subroutine X(cf_new_from)(cf, cf_i)
   nullify(cf%FS)
   cf%n = cf_i%n
 
-#if defined(HAVE_FFT)
   if(associated(cf_i%fft)) then
     ALLOCATE(cf%fft, 1)
     call fft_copy(cf_i%fft, cf%fft)
@@ -58,7 +55,6 @@ subroutine X(cf_new_from)(cf, cf_i)
   else
     nullify(cf%fft)
   end if
-#endif
   call pop_sub()
 end subroutine X(cf_new_from)
 
@@ -90,7 +86,6 @@ subroutine X(cf_free_RS)(cf)
 end subroutine X(cf_free_RS)
 
 
-#if defined(HAVE_FFT)
 ! ---------------------------------------------------------
 subroutine X(cf_alloc_FS)(cf)
   type(X(cf_t)), intent(inout) :: cf
@@ -116,7 +111,6 @@ subroutine X(cf_free_FS)(cf)
 
   call pop_sub()
 end subroutine X(cf_free_FS)
-#endif
 
 
 ! ---------------------------------------------------------
@@ -135,18 +129,16 @@ subroutine X(cf_free)(cf)
     nullify(cf%FS)
   end if
 
-#if defined(HAVE_FFT)
   if(associated(cf%fft)) then
     call fft_end(cf%fft)
     deallocate(cf%fft)
     nullify(cf%fft)
   end if
-#endif
+
   call pop_sub()
 end subroutine X(cf_free)
 
 
-#if defined(HAVE_FFT)
 ! ---------------------------------------------------------
 ! initializes the ffts. As the dimension of the fft may be adjusted, this
 ! routine has to be called before allocating anything
@@ -268,8 +260,6 @@ subroutine X(cf_FS_grad)(sb, m, cf, j)
 
   call pop_sub()
 end subroutine X(cf_FS_grad)
-
-#endif
 
 !! Local Variables:
 !! mode: f90

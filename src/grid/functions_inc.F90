@@ -75,7 +75,6 @@ subroutine X(cf2mf) (m, cf, mf)
 
 end subroutine X(cf2mf)
 
-#if defined(HAVE_FFT)
 ! ---------------------------------------------------------
 ! The next two subroutines convert a function in Fourier space
 ! between the normal mesh and the cube
@@ -133,8 +132,6 @@ subroutine X(cf_FS2mf) (m, cf, mf)
   end do
 
 end subroutine X(cf_FS2mf)
-#endif
-
 
 ! ---------------------------------------------------------
 ! Calculation of derivatives
@@ -158,7 +155,6 @@ subroutine X(f_laplacian) (sb, f_der, f, lapl, cutoff_, have_bndry, ghost_update
   case(REAL_SPACE)
     call X(derivatives_lapl) (f_der%der_discr, f, lapl, have_bndry, ghost_update)
 
-#if defined(HAVE_FFT)
   case(FOURIER_SPACE)
 
     ! Fixes the cutoff (negative value if optional argument cutoff was not passed)
@@ -177,7 +173,6 @@ subroutine X(f_laplacian) (sb, f_der, f, lapl, cutoff_, have_bndry, ghost_update
     call X(cf_free_RS)(f_der%X(cf_der))              ! clean memory
     call X(cf_free_FS)(f_der%X(cf_der))
 
-#endif
   end select
 
   call pop_sub()
@@ -202,7 +197,6 @@ subroutine X(f_gradient) (sb, f_der, f, grad, ghost_update)
   case(REAL_SPACE)
     call X(derivatives_grad) (f_der%der_discr, f, grad, ghost_update)
 
-#if defined(HAVE_FFT)
   case(FOURIER_SPACE)
 
     call X(cf_alloc_RS)(f_der%X(cf_aux))           ! allocate cube in real space
@@ -229,7 +223,6 @@ subroutine X(f_gradient) (sb, f_der, f, grad, ghost_update)
     call X(cf_free_RS)(f_der%X(cf_der))
     call X(cf_free_FS)(f_der%X(cf_der))
 
-#endif
   end select
 
   call pop_sub()
@@ -255,7 +248,6 @@ subroutine X(f_divergence) (sb, f_der, f, divf, ghost_update)
   case(REAL_SPACE)
     call X(derivatives_div) (f_der%der_discr, f, divf, ghost_update)
 
-#if defined(HAVE_FFT)
   case(FOURIER_SPACE)
     ALLOCATE(aux(f_der%m%np), f_der%m%np)
     call X(cf_alloc_RS)(f_der%X(cf_der))     ! allocate cube in real space
@@ -278,7 +270,6 @@ subroutine X(f_divergence) (sb, f_der, f, divf, ghost_update)
     call X(cf_free_RS)(f_der%X(cf_der))
     call X(cf_free_FS)(f_der%X(cf_der))
     deallocate(aux)
-#endif
   end select
 
   call pop_sub()
@@ -300,11 +291,9 @@ subroutine X(f_curl) (f_der, f, curlf, ghost_update)
   case(REAL_SPACE)
     call X(derivatives_curl) (f_der%der_discr, f, curlf)
 
-#if defined(HAVE_FFT)
   case(FOURIER_SPACE)
     message(1) = "curl calculation in fourier space not yet implemented"
     call write_fatal(1)
-#endif
   end select
 
   call pop_sub()

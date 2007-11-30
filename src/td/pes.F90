@@ -20,7 +20,7 @@
 #include "global.h"
 
 module PES_m
-#if !defined(DISABLE_PES) && defined(HAVE_FFT)
+#if !defined(DISABLE_PES)
   use datasets_m
   use fft_m
   use global_m

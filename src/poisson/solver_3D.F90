@@ -26,11 +26,7 @@ subroutine poisson3D_init(gr, geo)
 
   call push_sub('poisson3D.poisson3D_init')
 
-#if defined(HAVE_FFT)
   ASSERT(poisson_solver >= FFT_SPH .and. poisson_solver <= ISF)
-#else
-  ASSERT(poisson_solver >= CG .and. poisson_solver <= ISF)
-#endif
 
   !%Variable PoissonSolverMaxMultipole
   !%Type integer
@@ -111,7 +107,6 @@ subroutine poisson3D_init(gr, geo)
      
   end select
 
-#ifdef HAVE_FFT
   if (poisson_solver <= FFT_CORRECTED) call poisson_fft_build_3d(gr, poisson_solver)
 
   if (poisson_solver == FFT_CORRECTED) then
@@ -120,7 +115,6 @@ subroutine poisson3D_init(gr, geo)
      call write_info(1)
      call poisson_corrections_init(corrector, maxl, gr%m)
   end if
-#endif
 
   call pop_sub()
 

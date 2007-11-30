@@ -42,7 +42,7 @@ module timedep_m
   use td_rti_m
   use td_write_m
   use v_ks_m
-#if !defined(DISABLE_PES) && defined(HAVE_FFT)
+#if !defined(DISABLE_PES)
   use PES_m
 #endif
   use grid_m
@@ -81,7 +81,7 @@ module timedep_m
     ! The *kick* used in "linear response in the time domain" calculations.
     type(kick_t)      :: kick
 
-#if !defined(DISABLE_PES) && defined(HAVE_FFT)
+#if !defined(DISABLE_PES)
     type(PES_t)       :: PESv
 #endif
     FLOAT             :: mu
@@ -234,7 +234,7 @@ contains
       
       call td_write_iter(write_handler, gr, st, h, geo, td%kick, td%dt, i)
 
-#if !defined(DISABLE_PES) && defined(HAVE_FFT)
+#if !defined(DISABLE_PES)
       call PES_doit(td%PESv, gr%m, st, ii, td%dt, h%ab_pot)
 #endif
 

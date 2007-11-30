@@ -29,9 +29,7 @@ program oct_test
   use io_m
   use profiling_m
   use varinfo_m
-#if defined(HAVE_FFT)
   use fft_m
-#endif
   use units_m
   use mpi_m
   use multicomm_m
@@ -77,18 +75,14 @@ program oct_test
   call messages_print_var_option(stdout, "WhichTest", which_test)
   call messages_print_stress(stdout)
 
-#ifdef HAVE_FFT
   call fft_all_init()
-#endif
   call units_init()
 
   select case(which_test)
   case(HARTREE_TEST); call test_hartree
   end select
 
-#ifdef HAVE_FFT
   call fft_all_end()
-#endif
   call io_end()
   call datasets_end()
   call parser_end()

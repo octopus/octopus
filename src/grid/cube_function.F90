@@ -23,9 +23,7 @@ module cube_function_m
   use global_m
   use mesh_m
   use messages_m
-#if defined(HAVE_FFT)
   use fft_m
-#endif
   use simul_box_m
 
   implicit none
@@ -39,7 +37,6 @@ module cube_function_m
     dcf_free, zcf_free,         &
     cf_surface_average
 
-#if defined(HAVE_FFT)
   public ::                     &     
     cf_phase_factor,            &
     dcf_alloc_fs,               & 
@@ -56,18 +53,14 @@ module cube_function_m
     zcf_FS_lapl,                &
     dcf_FS_grad,                &
     zcf_FS_grad
-#endif
 
   type dcf_t
     integer :: n(MAX_DIM)   ! the linear dimensions of the cube
 
     FLOAT, pointer :: RS(:,:,:)
     CMPLX, pointer :: FS(:,:,:)
-
-#if defined(HAVE_FFT)
     integer :: nx           ! = n(1)/2 + 1, first dimension of the FS array
     type(fft_t), pointer :: fft
-#endif
   end type dcf_t
 
   type zcf_t
@@ -76,10 +69,8 @@ module cube_function_m
     CMPLX, pointer :: RS(:,:,:)
     CMPLX, pointer :: FS(:,:,:)
 
-#if defined(HAVE_FFT)
     integer :: nx ! = n(1),  first dimension of the FS array
     type(fft_t), pointer :: fft
-#endif
   end type zcf_t
 
 
@@ -139,7 +130,6 @@ contains
 
   end function cf_surface_average
 
-#ifdef HAVE_FFT
   ! ---------------------------------------------------------
   ! this routine computes
   ! cf_o = cf_o + exp(-k vec) cf_i
@@ -173,7 +163,6 @@ contains
       end do
     end do
   end subroutine cf_phase_factor
-#endif
 
 
 #include "undef.F90"
