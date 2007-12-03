@@ -50,6 +50,7 @@ module timedep_m
   use mpi_m
   use varinfo_m
   use math_m
+  use lasers_m
 
   implicit none
 

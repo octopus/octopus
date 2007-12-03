@@ -168,13 +168,8 @@ contains
 
     ! lasers
     call laser_init(ep%no_lasers, ep%lasers, gr%m)
-    if(ep%no_lasers>0.and.mpi_grp_is_root(mpi_world)) then
-      message(1) = 'Info: Lasers'
-      call write_info(1)
 
-      call laser_write_info(ep%no_lasers, ep%lasers, stdout)
-    end if
-
+    ! No more "UserDefinedTDPotential" from this version on.
     call obsolete_variable('UserDefinedTDPotential', 'TDExternalFields')
 
     !%Variable StaticElectricField

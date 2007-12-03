@@ -383,8 +383,7 @@ contains
 
   ! ---------------------------------------------------------
   ! Gets the fluence of the laser field, defined as:
-  ! laser_fluence = \sum_{pol} \integrate_0^T
-  !                 laserin(t, pol)^2 dt
+  ! laser_fluence = \sum_i^{no_parameters} \integrate_0^T |epsilon(t)|^2
   ! ---------------------------------------------------------
   FLOAT function laser_fluence(par)
     type(oct_control_parameters_t), intent(in) :: par

@@ -53,12 +53,10 @@ module lasers_m
     ENVELOPE_FROM_FILE     = 10,  &
     ENVELOPE_FROM_EXPR     = 99
  
-  integer, public, parameter ::           &
+  integer, public, parameter ::     &
     E_FIELD_ELECTRIC         =  1,  &
     E_FIELD_MAGNETIC         =  2,  &
-    E_FIELD_VECTOR_POTENTIAL =  3
-
-  integer, public, parameter ::     &
+    E_FIELD_VECTOR_POTENTIAL =  3,  &
     E_FIELD_SCALAR_POTENTIAL =  4
 
   type laser_t
@@ -114,28 +112,136 @@ contains
     !% Each line of the block describes an external field; this way you can actually have more
     !% than one laser (e.g. a "pump" and a "probe").
     !%
-    !% The syntax of each line is, then:
+    !% The syntax of each line is:
     !%
     !% <tt>%TDExternalField
-    !% <br>&nbsp;&nbsp; type | nx | ny | nz | envelope | amplitude | omega | tau0 | t0 | tau1 | filename1
+    !% <br>&nbsp;&nbsp; type | ...other descriptors...
     !% <br>%</tt>
     !%
-    !% The first number of each line describes which kind of external field is described
-    !% by the line: an electric field ("electric_field"), a magnetic field ("magnetic field"), 
-    !% or a vector potential "vector_potential"). This last option, in the current version, is
-    !% constant field in space, which permits to describe an electrical perturbation in the
-    !% velocity gauge.
+    !% The first element of each line describes which kind of external field is described
+    !% by the line: (i) an electric field ("electric_field"); (ii) a magnetic field 
+    !% ("magnetic_field"); (iii) a vector potential ("vector_potential") -- this option, 
+    !% in the current version, is constant field in space, which permits to describe 
+    !% an electrical perturbation in the velocity gauge; (iv) an arbitrary scalar potential
+    !% ("scalar_potential").
     !%
-    !% The next three (possibly complex) numbers mark the polarization direction of the
-    !% field. The "amplitude" is obviously the amplitude of the field. The "omega" is the
-    !% frequency. The "envelope" decides the shape of the enveloping function.
-    !% "tau0", "t0" and "tau1" are three paramenters that decide on the
-    !% temporal shape of the pulse -- the exact details depend on the particular envelope.
+    !% The "other descriptors" depend on which kind of external field has been indicated in 
+    !% the first column.
     !%
-    !% If the envelope is given in a file, this will be "filename1".
     !%
-    !% The last two columns ("tau1", "filename1") are optional; they will
-    !% only be searched if needed.
+    !% (A) type = electric field, magnetic field, vector_potential
+    !%
+    !%
+    !% For these cases, the syntax is:
+    !%
+    !% <tt>%TDExternalField
+    !% <br>&nbsp;&nbsp; type | nx | ny | nz | envelope | ...envelope descriptors...
+    !% <br>%</tt>
+    !%
+    !% The three (possibly complex) numbers (nx, ny, nz) mark the polarization 
+    !% direction of the field. The "envelope" field describes the temporal shape
+    !% of the field -- the options are described below. The definition and number
+    !% of the "envelope descriptors" depend on the kind of envelope chosen. The
+    !% options are:
+    !%
+    !%    (A.1) envelope_constant
+    !%
+    !% <tt>%TDExternalField
+    !% <br>&nbsp;&nbsp; type | nx | ny | nz | envelope_constant | amplitude | omega
+    !% <br>%</tt>
+    !%
+    !% The laser will be a simple continuous wave of frequency omega, and obviously
+    !% amplitude give by the "amplitude" field. I. e.:
+    !%
+    !% <math> F(t) = F_0 Re[ \hat{p} e^{i\omega t} </math>
+    !%
+    !% The magnitude of <math>F_0</math> is given by amplitude. The polarization vector
+    !% is given by the three number (nx, ny, nz). Note that this vector may be describing
+    !% an electric field, a magnetic field, or a constant vector potential, depending
+    !% on the field type.
+    !%
+    !%    (A.2) envelope_gaussian
+    !%
+    !% <tt>%TDExternalField
+    !% <br>&nbsp;&nbsp; type | nx | ny | nz | envelope_gaussian | amplitude | omega | tau0 | t0
+    !% <br>%</tt>
+    !% 
+    !% The envelope is a gaussian:
+    !%
+    !% <math> F(t) = F_0 exp( - (t-t_0)/(2\tau_0^2) ) Re[ \hat{p} e^{i\omega t} ] </math>
+    !%
+    !% As before <math>F_0</math> = amplitude.
+    !%
+    !%    (A.3) envelope_cosinusoidal
+    !%
+    !% <tt>%TDExternalField
+    !% <br>&nbsp;&nbsp; type | nx | ny | nz | envelope_cosinusoidal | amplitude | omega | tau0 | t0
+    !% <br>%</tt>
+    !%
+    !% <math> F(t) =  F_0 cos( \pi/2 \frac{t-2\tau_0-t_0}{\tau0} )  Re[ \hat{p} e^{i\omega t} ] </math>
+    !%
+    !% If <math> | t - t_0 | > \tau_0 </math>, then <math> F(t) = 0 </math>.
+    !%
+    !%    (A.4) envelope_trapezoidal
+    !%
+    !% <tt>%TDExternalField
+    !% <br>&nbsp;&nbsp; type | nx | ny | nz | envelope_cosinusoidal | amplitude | omega | tau0 | t0 | tau1
+    !% <br>%</tt>
+    !%
+    !% The envelope ramps linearly during <math>tau_1</math> time units, stays constant for
+    !% <math>tau_0</math> timu units, and the decays to zero linearly again for <math>tau_1</math>
+    !% time units.
+    !%
+    !%    (A.5) envelope_fromfile
+    !%
+    !% <tt>%TDExternalField
+    !% <br>&nbsp;&nbsp; type | nx | ny | nz | envelope_cosinusoidal | "filename"
+    !% <br>%</tt>
+    !%
+    !% The temporal shape of the field is contained in a file called "filename". This file
+    !% should contain three columns: first column is time, second and third column are the
+    !% real part and the imaginary part of the temporal function f(t):
+    !%
+    !% <math> F(t) = Re[ \hat{p} f(t) ]
+    !%
+    !%
+    !% (B) type = scalar_potential
+    !%
+    !%
+    !% <tt>%TDExternalField
+    !% <br>&nbsp;&nbsp; scalar_potential | "scalar_expression" | ...envelope descriptors...
+    !% <br>%</tt>
+    !%
+    !% The scalar potential is not just a dipole, but any expression given by the string
+    !% "scalar_expression". The temporal shape is determined by the "envelope descriptors", a number
+    !% of columns that are defined in the same way than in the previous case.
+    !% 
+    !%
+    !% A NOTE ON UNITS:
+    !%
+    !% It is very common to describe the strength of a laser field by it intensity, rather
+    !% than using the electric field amplitude. In atomic units (or, more precisely, in any
+    !% Gaussian system of units), the relationship between instantaneous electric field
+    !% and intensity is:
+    !%
+    !% <math> I(t) = \frac{c}{8\pi} E^2(t) </math>.
+    !%
+    !% It is common to read intensities in W/cm^2. The dimensions of intensities are
+    !% [W]/(L^2T), where [W] are the dimensions of energy. The relevant conversion factors
+    !% are:
+    !%
+    !% <math> Hartree / (a_0^2 atomic_time) = 6.4364086e+15 W / cm^2 </math>
+    !% 
+    !% <math> eV / ( angstrom^2 (hbar/eV) ) = 2.4341348e+12 W / cm^2 </math>
+    !%
+    !% If, in atomic units, we set the electric field amplitude to <math>E_0</math>, 
+    !% then the intensity is:
+    !%
+    !% <math> I_0 = 3.51 10^16 W/cm^2 (E_0^2) </math>
+    !%
+    !% If, working with "Units = ev_angstrom", we set <math>E_0</math>, then the intensity is:
+    !%
+    !% <math> I_0 = 1.327 10^13 (E_0^2) W/cm^2 </math>
     !%
     !%Option envelope_constant 0
     !% The envelope is just the unit function. The laser is not a pulse, but a 
@@ -172,8 +278,6 @@ contains
       no_l = loct_parse_block_n(blk)
       ALLOCATE(l(no_l), no_l)
 
-      ! The structure of the block is:
-      ! nx | ny | nz | amplitude | omega | envelope | tau0 | t0 | tau1 | filename1 | filename2
       do i = 1, no_l
 
         a0 = M_ZERO; omega0 = M_ZERO; tau0 = M_ZERO; t0 = M_ZERO; tau1 = M_ZERO
@@ -317,11 +421,17 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine laser_write_info(no_l, l, iunit)
-    integer,       intent(in) :: no_l, iunit
+  subroutine laser_write_info(no_l, l, sb, dt, max_iter, iunit)
+    integer,       intent(in) :: no_l
     type(laser_t), intent(in) :: l(no_l)
+    type(simul_box_t), intent(in) :: sb
+    FLOAT,         intent(in) :: dt
+    integer,       intent(in) :: max_iter
+    integer,       intent(in) :: iunit
 
-    integer :: i
+    FLOAT :: t, fluence, max_intensity, intensity
+    CMPLX :: amp
+    integer :: i, j, k
 
     do i = 1, no_l
       write(iunit,'(i2,a)') i,':'
@@ -338,6 +448,32 @@ contains
           '(', real(l(i)%pol(3)), ',', aimag(l(i)%pol(3)), ')'
       end if
       call tdf_write(l(i)%f, iunit)
+
+      ! 1 atomic unit of intensity = 3.5094448e+16 W / cm^2
+      ! In a Gaussian system of units,
+      ! I(t) = (1/(8\pi)) * c * E(t)^2
+      ! (c\pi) * c = 5.4525289841210 a.u.
+      if(l(i)%field .eq. E_FIELD_ELECTRIC) then
+        fluence = M_ZERO
+
+        max_intensity = M_ZERO
+        do j = 1, max_iter
+          t = j * dt
+          amp = tdf(l(i)%f, t)
+          intensity = M_ZERO
+          do k = 1, sb%dim
+            intensity = intensity + CNST(5.4525289841210) * real(amp*l(i)%pol(k))**2
+          end do
+          fluence = fluence + intensity
+          if(intensity > max_intensity) max_intensity = intensity
+        end do
+        fluence = fluence * dt
+        write(iunit,'(a,es12.6,3a)') '   Peak intensity = ', max_intensity, ' [a.u]'
+        write(iunit,'(a,es12.6,3a)') '                  = ', max_intensity * 6.4364086e+15, ' [W/cm^2]'
+        write(iunit,'(a,es12.6,5a)') '   Int. intensity = ', fluence / units_out%energy%factor, &
+          ' [', trim(units_out%energy%abbrev), '/', trim(units_out%length%abbrev),'^2]'
+      end if
+
     end do
 
   end subroutine laser_write_info

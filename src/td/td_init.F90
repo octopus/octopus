@@ -168,6 +168,12 @@ subroutine td_init(sys, h, td)
   call td_rti_init(sys%gr, sys%st, td%tr, td%dt, td%max_iter)
   if(td%dynamics == BO)  call scf_init(sys%gr, sys%geo, td%scf, sys%st, h)
 
+  if(h%ep%no_lasers>0.and.mpi_grp_is_root(mpi_world)) then
+    call messages_print_stress(stdout, "Time-dependent external fields")
+    call laser_write_info(h%ep%no_lasers, h%ep%lasers, sys%gr%sb, td%dt, td%max_iter, stdout)
+    call messages_print_stress(stdout)
+  end if
+
   call pop_sub()
 end subroutine td_init
 

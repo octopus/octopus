@@ -111,6 +111,9 @@ contains
     end if
 
     call parameters_to_h(par, h%ep)
+    call messages_print_stress(stdout, "Time-dependent external fields")
+    call laser_write_info(h%ep%no_lasers, h%ep%lasers, sys%gr%sb, td%dt, td%max_iter, stdout)
+    call messages_print_stress(stdout)
     call parameters_write('opt-control/initial_laser', par)
 
     call oct_iterator_init(iterator, par)
