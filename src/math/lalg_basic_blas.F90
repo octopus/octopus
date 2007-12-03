@@ -52,6 +52,8 @@ subroutine FNAME(swap_1)(n1, dx, dy)
   integer, intent(in)    :: n1
   TYPE1,   intent(inout) :: dx(:), dy(:)
 
+  if (n1 < 1) return
+
   call blas_swap(n1, dx(1), 1, dy(1), 1)
 
 end subroutine FNAME(swap_1)
@@ -59,6 +61,8 @@ end subroutine FNAME(swap_1)
 subroutine FNAME(swap_2)(n1, n2, dx, dy)
   integer, intent(in)    :: n1, n2
   TYPE1,   intent(inout) :: dx(:,:), dy(:,:)
+
+  if (n1*n2 < 1) return
 
   call blas_swap(n1*n2, dx(1,1), 1, dy(1,1), 1)
 
@@ -68,6 +72,8 @@ subroutine FNAME(swap_3)(n1, n2, n3, dx, dy)
   integer, intent(in)    :: n1, n2, n3
   TYPE1,   intent(inout) :: dx(:,:,:), dy(:,:,:)
 
+  if (n1*n2*n3 < 1) return
+
   call blas_swap(n1*n2*n3, dx(1,1,1), 1, dy(1,1,1), 1)
 
 end subroutine FNAME(swap_3)
@@ -75,6 +81,8 @@ end subroutine FNAME(swap_3)
 subroutine FNAME(swap_4)(n1, n2, n3, n4, dx, dy)
   integer, intent(in)    :: n1, n2, n3, n4
   TYPE1,   intent(inout) :: dx(:,:,:,:), dy(:,:,:,:)
+
+  if (n1*n2*n3*n4 < 1) return
 
   call blas_swap(n1*n2*n3*n4, dx(1,1,1,1), 1, dy(1,1,1,1), 1)
 
@@ -92,11 +100,16 @@ subroutine FNAME(scal_1)(n1, da, dx)
 #ifdef USE_OMP
   integer :: nn_loc, ini
 
+  if(n1 < 1) return
+
 !$omp parallel private(ini, nn_loc)
   call divide_range(n1, omp_get_thread_num(), omp_get_num_threads(), ini, nn_loc)
   call blas_scal(nn_loc, da, dx(ini), 1)
 !$omp end parallel
 #else
+
+  if (n1 < 1) return
+
   call blas_scal(n1, da, dx(1), 1)
 #endif
 
@@ -107,6 +120,8 @@ subroutine FNAME(scal_2)(n1, n2, da, dx)
   TYPE1,   intent(in)    :: da
   TYPE1,   intent(inout) :: dx(:,:)
 
+  if (n1*n2 < 1) return
+
   call blas_scal(n1*n2, da, dx(1,1), 1)
 
 end subroutine FNAME(scal_2)
@@ -115,6 +130,8 @@ subroutine FNAME(scal_3)(n1, n2, n3, da, dx)
   integer, intent(in)    :: n1, n2, n3
   TYPE1,   intent(in)    :: da
   TYPE1,   intent(inout) :: dx(:,:,:)
+
+  if (n1*n2*n3 < 1) return
 
   call blas_scal(n1*n2*n3, da, dx(1,1,1), 1)
 
@@ -125,6 +142,8 @@ subroutine FNAME(scal_4)(n1, n2, n3, n4, da, dx)
   TYPE1,   intent(in)    :: da
   TYPE1,   intent(inout) :: dx(:,:,:,:)
 
+  if (n1*n2*n3*n4 < 1) return
+
   call blas_scal(n1*n2*n3*n4, da, dx(1,1,1,1), 1)
 
 end subroutine FNAME(scal_4)
@@ -134,6 +153,8 @@ subroutine FNAME(scal_5)(n1, da, dx)
   integer, intent(in)    :: n1
   TYPE2,   intent(in)    :: da
   TYPE1,   intent(inout) :: dx(:)
+
+  if (n1 < 1) return
 
   call blas_scal(n1, da, dx(1))
 
@@ -153,6 +174,8 @@ subroutine FNAME(axpy_1)(n1, da, dx, dy)
 #ifdef USE_OMP
   integer :: nn_loc, ini
 #endif
+  
+  if (n1 < 1) return
   
   call profiling_in(axpy_profile, "BLAS_AXPY")
 
@@ -175,6 +198,8 @@ subroutine FNAME(axpy_2)(n1, n2, da, dx, dy)
   TYPE1,   intent(in)    :: dx(1:n1,1:n2)
   TYPE1,   intent(inout) :: dy(1:n1,1:n2)
 
+  if (n1*n2 < 1) return
+
   call profiling_in(axpy_profile, "BLAS_AXPY")
 
   call blas_axpy(n1*n2, da, dx(1,1), 1, dy(1,1), 1)
@@ -188,6 +213,8 @@ subroutine FNAME(axpy_3)(n1, n2, n3, da, dx, dy)
   TYPE1,   intent(in)    :: dx(1:n1,1:n2,1:n3)
   TYPE1,   intent(inout) :: dy(1:n1,1:n2,1:n3)
 
+  if (n1*n2*n3 < 1) return
+
   call profiling_in(axpy_profile, "BLAS_AXPY")
 
   call blas_axpy(n1*n2*n3, da, dx(1,1,1), 1, dy(1,1,1), 1)
@@ -200,6 +227,8 @@ subroutine FNAME(axpy_4)(n1, n2, n3, n4, da, dx, dy)
   TYPE1,   intent(in)    :: da
   TYPE1,   intent(in)    :: dx(1:n1,1:n2,1:n3,1:n4)
   TYPE1,   intent(inout) :: dy(1:n1,1:n2,1:n3,1:n4)
+
+  if (n1*n2*n3*n4 < 1) return
 
   call profiling_in(axpy_profile, "BLAS_AXPY")
 
@@ -219,8 +248,10 @@ subroutine FNAME(axpy_5)(n1, da, dx, dy)
 #ifdef USE_OMP
   integer :: ini, nn_loc
 #endif
-
-    call profiling_in(axpy_profile, "BLAS_AXPY")
+  
+  if (n1 < 1) return
+  
+  call profiling_in(axpy_profile, "BLAS_AXPY")
 
 #ifdef USE_OMP  
   !$omp parallel private(ini, nn_loc)
@@ -249,6 +280,8 @@ subroutine FNAME(copy_1)(n1, dx, dy)
   integer :: ini, nn_loc
 #endif
 
+  if (n1 < 1) return
+
   call profiling_in(copy_profile, "BLAS_COPY")
 
 #ifdef USE_OMP
@@ -269,6 +302,8 @@ subroutine FNAME(copy_2)(n1, n2, dx, dy)
   TYPE1,   intent(in)  :: dx(:,:)
   TYPE1,   intent(out) :: dy(:,:)
 
+  if (n1*n2 < 1) return
+
   call profiling_in(copy_profile, "BLAS_COPY")
 
   call blas_copy(n1*n2, dx(1,1), 1, dy(1,1), 1)
@@ -282,6 +317,8 @@ subroutine FNAME(copy_3)(n1, n2, n3, dx, dy)
   TYPE1,   intent(in)  :: dx(:,:,:)
   TYPE1,   intent(out) :: dy(:,:,:)
 
+  if(n1*n2*n3 < 1) return
+
   call profiling_in(copy_profile, "BLAS_COPY")
 
   call blas_copy (n1*n2*n3, dx(1,1,1), 1, dy(1,1,1), 1)
@@ -294,6 +331,8 @@ subroutine FNAME(copy_4)(n1, n2, n3, n4, dx, dy)
   integer, intent(in)  :: n1, n2, n3, n4
   TYPE1,   intent(in)  :: dx(:,:,:,:)
   TYPE1,   intent(out) :: dy(:,:,:,:)
+
+  if (n1*n2*n3*n4 < 1) return
 
   call profiling_in(copy_profile, "BLAS_COPY")
 
@@ -314,9 +353,12 @@ TYPE1 function FNAME(dot) (n, dx, dy) result(dot)
 #ifdef USE_OMP
   TYPE1   :: dot_loc
   integer :: nn_loc, ini
-  
-  dot = CNST(0.0)
+#endif
 
+  dot = CNST(0.0)
+  if (n < 1) return
+
+#ifdef USE_OMP  
   !$omp parallel private(ini, nn_loc, dot_loc)
   call divide_range(n, omp_get_thread_num(), omp_get_num_threads(), ini, nn_loc)
   dot_loc = blas_dot(nn_loc, dx(ini), 1, dy(ini), 1)
@@ -343,9 +385,12 @@ TYPE2 function FNAME(nrm2)(n, dx) result(nrm2)
 #ifdef USE_OMP
   TYPE2   :: nrm2_loc
   integer :: nn_loc, ini
-  
-  nrm2 = CNST(0.0)
+#endif
 
+  nrm2 = CNST(0.0)
+  if (n < 1) return
+
+#ifdef USE_OMP
   !$omp parallel private(ini, nn_loc, nrm2_loc)
   call divide_range(n, omp_get_thread_num(), omp_get_num_threads(), ini, nn_loc)
   nrm2_loc = blas_nrm2(nn_loc, dx(ini), 1)
