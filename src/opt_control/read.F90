@@ -35,8 +35,8 @@
     !% This works only in conjunction with the WG05 scheme.
     !%End
     oct%mode_fixed_fluence = .false.
-    call loct_parse_float(check_inp('OCTFixFluenceTo'), -M_ONE, oct%targetfluence)
-    if (oct%targetfluence.ne.-M_ONE) oct%mode_fixed_fluence = .true.
+    call loct_parse_float(check_inp('OCTFixFluenceTo'), M_ZERO, oct%targetfluence)
+    if (oct%targetfluence .ne. M_ZERO) oct%mode_fixed_fluence = .true.
 
 
     if(oct%mode_fixed_fluence) then

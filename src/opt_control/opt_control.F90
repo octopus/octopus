@@ -102,7 +102,7 @@ contains
       call laser_to_numerical(h%ep%lasers(i), td%dt, td%max_iter)
     end do
 
-    call parameters_init(par, h%ep%no_lasers, td%dt, td%max_iter)
+    call parameters_init(par, h%ep%no_lasers, td%dt, td%max_iter, oct%targetfluence)
     call parameters_set(par, h%ep)
     call parameters_apply_envelope(par)
 
@@ -111,7 +111,7 @@ contains
     end if
 
     call parameters_to_h(par, h%ep)
-    call messages_print_stress(stdout, "Time-dependent external fields")
+    call messages_print_stress(stdout, "TD ext. fields, after applying envelope and/or fixing initial fluence")
     call laser_write_info(h%ep%no_lasers, h%ep%lasers, sys%gr%sb, td%dt, td%max_iter, stdout)
     call messages_print_stress(stdout)
     call parameters_write('opt-control/initial_laser', par)

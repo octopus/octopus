@@ -56,6 +56,7 @@ module opt_control_parameters_m
     integer :: no_parameters
     FLOAT   :: dt
     integer :: ntiter
+    FLOAT   :: targetfluence
     type(tdf_t), pointer :: f(:)
     FLOAT, pointer :: alpha(:)
     type(tdf_t), pointer :: td_penalty(:)
@@ -129,11 +130,12 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine parameters_init(cp, no_parameters, dt, ntiter)
+  subroutine parameters_init(cp, no_parameters, dt, ntiter, targetfluence)
     type(oct_control_parameters_t), intent(inout) :: cp
     integer, intent(in) :: no_parameters   
     FLOAT, intent(in) :: dt
     integer, intent(in) :: ntiter
+    FLOAT, intent(in) :: targetfluence
     integer :: j
 
     call push_sub('parameters.parameters_init')
@@ -141,6 +143,7 @@ contains
     cp%no_parameters = no_parameters
     cp%dt = dt
     cp%ntiter = ntiter
+    cp%targetfluence = targetfluence
     ALLOCATE(cp%f(cp%no_parameters), cp%no_parameters)
     ALLOCATE(cp%alpha(cp%no_parameters), cp%no_parameters)
     cp%alpha = M_ZERO
@@ -412,16 +415,17 @@ contains
   ! ---------------------------------------------------------
   FLOAT function j2_functional(par) result(j2)
     type(oct_control_parameters_t), intent(in) :: par
+
     integer :: i, j
     FLOAT :: t
     j2 = M_ZERO
     do j = 1, par%no_parameters
       do i = 1, par%ntiter + 1
         t = (i-1) * par%dt
-        j2 = j2 + par%alpha(j) * tdf(par%td_penalty(j), i) * abs(tdf(par%f(j), i))**2 
+        j2 = j2 + tdf(par%td_penalty(j), i) * abs(tdf(par%f(j), i))**2 
       end do
     end do
-    j2 = - j2 * par%dt
+    j2 = - par%alpha(1) * (j2 * par%dt - par%targetfluence)
   end function j2_functional
   ! ---------------------------------------------------------
 
@@ -453,6 +457,7 @@ contains
     cp_out%no_parameters = cp_in%no_parameters
     cp_out%dt = cp_in%dt
     cp_out%ntiter = cp_in%ntiter
+    cp_out%targetfluence = cp_in%targetfluence
     ALLOCATE(cp_out%f(cp_out%no_parameters), cp_out%no_parameters)
     ALLOCATE(cp_out%alpha(cp_out%no_parameters), cp_out%no_parameters)
     ALLOCATE(cp_out%td_penalty(cp_out%no_parameters), cp_out%no_parameters)
