@@ -49,9 +49,9 @@ subroutine X(kb_project)(mesh, sm, kb_p, dim, psi, ppsi)
 #ifdef R_TCOMPLEX
       ppsi(1:n_s, idim) = ppsi(1:n_s, idim) + kb_p%e(i)*uvpsi*kb_p%p(1:n_s, i)
 #else
-      call lalg_axpy(n_s, kb_p%e(i)*uvpsi, kb_p%p(1:n_s, i), ppsi(1:n_s, idim))
+      call lalg_axpy(n_s, kb_p%e(i)*uvpsi, kb_p%p(:, i), ppsi(:, idim))
 #endif
-
+      
     end do
   end do
 

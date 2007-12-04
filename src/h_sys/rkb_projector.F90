@@ -179,7 +179,7 @@ contains
 
         do jdim = 1, 2
           if (rkb_p%f(j, jdim, idim) == M_ZERO) cycle
-          call lalg_axpy(n_s, rkb_p%f(j, jdim, idim)*uvpsi, rkb_p%ket(1:n_s, j, jdim, idim), ppsi(1:n_s, jdim))
+          call lalg_axpy(n_s, rkb_p%f(j, jdim, idim)*uvpsi, rkb_p%ket(:, j, jdim, idim), ppsi(:, jdim))
         end do
 
       end do

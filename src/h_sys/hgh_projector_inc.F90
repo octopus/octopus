@@ -55,7 +55,7 @@ subroutine X(hgh_project)(mesh, sm, hgh_p, dim, psi, ppsi, reltype)
 #ifdef R_TCOMPLEX
         ppsi(1:n_s, idim) = ppsi(1:n_s, idim) + hgh_p%h(i, j)*uvpsi*hgh_p%p(1:n_s, i)
 #else
-        call lalg_axpy(n_s, hgh_p%h(i, j)*uvpsi, hgh_p%p(1:n_s, i), ppsi(1:n_s, idim))
+        call lalg_axpy(n_s, hgh_p%h(i, j)*uvpsi, hgh_p%p(:, i), ppsi(:, idim))
 #endif
       end do
 

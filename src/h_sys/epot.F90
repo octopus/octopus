@@ -704,10 +704,6 @@ contains
     
     type(profile_t), save :: forces_prof
 
-#if defined(HAVE_MPI)
-    FLOAT :: f(MAX_DIM)
-#endif
-
     call profiling_in(forces_prof, "FORCES")
     call push_sub('epot.epot_forces')
 

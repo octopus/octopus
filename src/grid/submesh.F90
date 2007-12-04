@@ -108,7 +108,7 @@ contains
       nmax(1:MAX_DIM) = min(m%nr(2, 1:MAX_DIM), nmax(1:MAX_DIM))
 
       ! Get the total number of points inside the sphere
-      is = 0   ! this index count inner points
+      is = 0   ! this index counts inner points
       isb = 0  ! and this one boundary points
       do iz = nmin(3), nmax(3)
         do iy = nmin(2), nmax(2)
@@ -277,7 +277,11 @@ contains
     if (m%use_curvlinear) then
       res = sum(f(1:sm%ns)*g(1:sm%ns)*m%vol_pp(sm%jxyz(1:sm%ns)))
     else
-      res  = blas_dotu(sm%ns, f(1), 1, g(1), 1)*m%vol_pp(1)
+      if (sm%ns < 1) then
+        res = M_z0
+      else
+        res = blas_dotu(sm%ns, f(1), 1, g(1), 1)*m%vol_pp(1)
+      end if
     end if
 
 #if defined(HAVE_MPI)
