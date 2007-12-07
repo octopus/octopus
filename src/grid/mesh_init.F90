@@ -588,8 +588,8 @@ subroutine mesh_partition(m, part)
   end do
 
   message(1) = 'Info: Number of grid points per node:'
-  write(message(2), '(a,f10.2,a,i7,a,i7)') &
-       'Info: Average =', sum(ppp)/dble(p), '  Minimum =', minval(ppp), '  Maximum =', maxval(ppp)
+  write(message(2), '(a,i9,a,i9,a,i9)') 'Info: Average = ', int(sum(ppp)/dble(p)), &
+      '  Minimum = ', minval(ppp), '  Maximum = ', maxval(ppp)
   call write_info(2)
   deallocate(ppp)
 
