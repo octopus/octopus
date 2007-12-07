@@ -34,12 +34,13 @@
 !  where the numbers indicate the processor that will do the work
 !------------------------------------------------------------
 
-subroutine X(oep_x) (gr, st, is, oep, ex)
+subroutine X(oep_x) (gr, st, is, oep, ex, exx_coef)
   type(grid_t),   intent(inout) :: gr
   type(states_t), intent(in)    :: st
   integer,        intent(in)    :: is
   type(xc_oep_t), intent(inout) :: oep
   FLOAT,          intent(inout) :: ex
+  FLOAT,          intent(in)    :: exx_coef ! amount of EXX (for hybrids)
 
   integer :: i, j, ist, jst, i_max, node_to, node_fr, ist_s, ist_r
   integer, allocatable :: recv_stack(:), send_stack(:)
@@ -164,20 +165,21 @@ subroutine X(oep_x) (gr, st, is, oep, ex)
           ! note that the wf jst is always in this node
           if(ist.ne.jst) then
             oep%X(lxc)(1:NP, jst) = oep%X(lxc)(1:NP, jst) - &
-              oep%socc * st%occ(ist, is) * R_CONJ(F_ij(1:NP)*wf_ist(1:NP))
+              exx_coef * oep%socc * st%occ(ist, is) * R_CONJ(F_ij(1:NP)*wf_ist(1:NP))
           end if
 
           ! get the contribution (ist, jst) to the exchange energy
           r = M_ONE
           if(ist.ne.jst) r = M_TWO
 
-          ex = ex - M_HALF * r * oep%sfact * oep%socc*st%occ(ist, is) * oep%socc*st%occ(jst, is) * &
-            R_REAL(X(mf_dotp)(gr%m, st%X(psi)(1:NP, 1, jst, is), wf_ist(:)*F_ij(:)))
+          ex = ex - exx_coef* M_HALF * r * &
+              oep%sfact * oep%socc*st%occ(ist, is) * oep%socc*st%occ(jst, is) * &
+              R_REAL(X(mf_dotp)(gr%m, st%X(psi)(1:NP, 1, jst, is), wf_ist(:)*F_ij(:)))
         end do
 
         if(st%node(ist) == st%mpi_grp%rank) then
           ! either add the contribution ist
-          oep%X(lxc)(1:NP, ist) = oep%X(lxc)(1:NP, ist) - send_buffer(1:NP)
+          oep%X(lxc)(1:NP, ist) = oep%X(lxc)(1:NP, ist) - exx_coef * send_buffer(1:NP)
 
 #if defined(HAVE_MPI)
         else
@@ -200,7 +202,7 @@ subroutine X(oep_x) (gr, st, is, oep, ex)
             node_to, send_stack(ist_s), st%mpi_grp%comm, status, mpi_err)
 
           oep%X(lxc)(1:NP, send_stack(ist_s)) = oep%X(lxc)(1:NP, send_stack(ist_s)) - &
-            recv_buffer(1:NP)
+            exx_coef * recv_buffer(1:NP)
         end if
 
         if(send_req.ne.0) call MPI_Wait(send_req, status, mpi_err)
