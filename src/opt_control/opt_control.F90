@@ -91,6 +91,10 @@ contains
     call io_mkdir('opt-control')
 
     call td_init(sys, h, td)
+    if(h%theory_level .ne. INDEPENDENT_PARTICLES ) then
+      call td_rti_set_scf_prop(td%tr)
+    end if
+
     call states_allocate_wfns(sys%st, sys%gr%m, M_CMPLX)
 
     call oct_read_inp(oct)

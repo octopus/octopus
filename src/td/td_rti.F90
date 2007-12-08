@@ -47,7 +47,8 @@ module td_rti_m
     td_rti_run_zero_iter,     &
     td_rti_dt,                &
     td_zop,                   &
-    td_zopt
+    td_zopt,                  &
+    td_rti_set_scf_prop
 
   integer, public, parameter ::       &
     PROP_SPLIT_OPERATOR          = 0, &
@@ -68,6 +69,7 @@ module td_rti_m
     FLOAT, pointer    :: vmagnus(:, :, :) ! Auxiliary function to store the Magnus potentials.
     type(zcf_t)       :: cf               ! Auxiliary cube for split operator methods.
     type(transport_t) :: trans            ! For transport calculations: leads, memory
+    logical           :: scf_propagation
   end type td_rti_t
 
 #ifdef HAVE_SPARSKIT
@@ -111,8 +113,8 @@ contains
     nspin = size(tri%v_old, 2)
     ALLOCATE(tro%v_old(np, nspin, 0:3), np*nspin*(3+1))
     tro%v_old(:, :, :) = M_ZERO
-
     call td_exp_copy(tro%te, tri%te)
+    tro%scf_propagation = tri%scf_propagation
 
     call pop_sub()
   end subroutine td_rti_copy
@@ -302,8 +304,19 @@ contains
     tr%v_old(:, :, :) = M_ZERO
     call td_exp_init(gr, tr%te)             ! initialize propagator
 
+    ! By default, the propagation is only self-consistent in the first iterations
+    ! (unless we are doing a QOCT run)
+    tr%scf_propagation = .false.
+
     call pop_sub()
   end subroutine td_rti_init
+
+
+  ! ---------------------------------------------------------
+  subroutine td_rti_set_scf_prop(tr)
+    type(td_rti_t), intent(inout) :: tr
+    tr%scf_propagation = .true.
+  end subroutine td_rti_set_scf_prop
 
 
   ! ---------------------------------------------------------
@@ -362,22 +375,23 @@ contains
     FLOAT   :: d, d_max
     logical :: self_consistent
     CMPLX, allocatable :: zpsi1(:, :, :, :)
-    FLOAT, allocatable :: dtmp(:)
+    FLOAT, allocatable :: dtmp(:), vaux(:, :)
 
     call profiling_in(C_PROFILING_ELEC_PROPAGATOR)
-    call push_sub('td_rti.td_rti')
+    call push_sub('td_rti.td_rti_dt')
 
     self_consistent = .false.
-    if(t<3*dt .and. h%theory_level.ne.INDEPENDENT_PARTICLES) then
-      self_consistent = .true.
-      ALLOCATE(zpsi1(NP_PART, st%d%dim, st%st_start:st%st_end, st%d%nik), NP_PART*st%d%dim*st%lnst*st%d%nik)
-      zpsi1 = st%zpsi
+    if(h%theory_level .ne. INDEPENDENT_PARTICLES) then
+      if( (t < 3*dt)  .or.  (tr%scf_propagation) ) then
+        self_consistent = .true.
+        ALLOCATE(zpsi1(NP_PART, st%d%dim, st%st_start:st%st_end, st%d%nik), NP_PART*st%d%dim*st%lnst*st%d%nik)
+        zpsi1 = st%zpsi
+      end if
     end if
 
     call lalg_copy(NP, st%d%nspin, tr%v_old(:, :, 2), tr%v_old(:, :, 3))
     call lalg_copy(NP, st%d%nspin, tr%v_old(:, :, 1), tr%v_old(:, :, 2))
     call lalg_copy(NP, st%d%nspin, h%vhxc(:, :),      tr%v_old(:, :, 1))
-
     call interpolate( (/t-3*dt, t-2*dt, t-dt/), tr%v_old(:, :, 1:3), t, tr%v_old(:, :, 0))
 
     select case(tr%method)
@@ -392,39 +406,57 @@ contains
     end select
 
     if(self_consistent) then
-      do iter = 1, 3
-        call lalg_copy(NP, st%d%nspin, tr%v_old(:, :, 0), tr%v_old(:, :, 3))
+      ALLOCATE(vaux(NP, st%d%nspin), NP*st%d%nspin)
 
-        call states_calc_dens(st, NP, st%rho)
-        call v_ks_calc(gr, ks, h, st)
-        tr%v_old(1:NP, :, 0) = h%vhxc  (1:NP, :)
-        h%vhxc  (1:NP, :)    = tr%v_old(1:NP, :, 1)
-
-        d_max = M_ZERO
-        ALLOCATE(dtmp(NP), NP)
-        do is = 1, st%d%nspin
-          dtmp(1:NP) = tr%v_old(1:NP, is, 3) - tr%v_old(1:NP, is, 0)
-          d          = dmf_nrm2(gr%m, dtmp)
-          if(d > d_max) d_max = d
-        end do
-        deallocate(dtmp)
-
-        if(d_max < scf_threshold) exit
-
-        st%zpsi = zpsi1
-        select case(tr%method)
-        case(PROP_SPLIT_OPERATOR);          call td_split_operator
-        case(PROP_SUZUKI_TROTTER);          call td_suzuki_trotter
-        case(PROP_REVERSAL);                call td_reversal
-        case(PROP_APP_REVERSAL);            call td_app_reversal
-        case(PROP_EXPONENTIAL_MIDPOINT);    call td_exponential_midpoint
-        case(PROP_CRANK_NICHOLSON);         call td_crank_nicholson
-        case(PROP_MAGNUS);                  call td_magnus
-        case(PROP_CRANK_NICHOLSON_SRC_MEM); call td_crank_nicholson_src_mem
-        end select
+      ! First, compare the new potential to the extrapolated one.
+      call states_calc_dens(st, NP, st%rho)
+      call v_ks_calc(gr, ks, h, st)
+      ALLOCATE(dtmp(NP), NP)
+      d_max = M_ZERO
+      do is = 1, st%d%nspin
+        dtmp(1:NP) = h%vhxc(1:NP, is) - tr%v_old(1:NP, is, 0)
+        d = dmf_nrm2(gr%m, dtmp)
+        if(d > d_max) d_max = d
       end do
+      deallocate(dtmp)
 
-      deallocate(zpsi1)
+      if(d_max > scf_threshold) then
+
+        ! We do a maximum of 10 iterations. If it still not converged, probably the propagation
+        ! will not be good anyways.
+        do iter = 1, 10
+
+          st%zpsi = zpsi1
+          tr%v_old(:, :, 0) = h%vhxc(:, :)
+          vaux(:, :) = h%vhxc(:, :)
+          select case(tr%method)
+          case(PROP_SPLIT_OPERATOR);          call td_split_operator
+          case(PROP_SUZUKI_TROTTER);          call td_suzuki_trotter
+          case(PROP_REVERSAL);                call td_reversal
+          case(PROP_APP_REVERSAL);            call td_app_reversal
+          case(PROP_EXPONENTIAL_MIDPOINT);    call td_exponential_midpoint
+          case(PROP_CRANK_NICHOLSON);         call td_crank_nicholson
+          case(PROP_MAGNUS);                  call td_magnus
+          case(PROP_CRANK_NICHOLSON_SRC_MEM); call td_crank_nicholson_src_mem
+          end select
+
+          call states_calc_dens(st, NP, st%rho)
+          call v_ks_calc(gr, ks, h, st)
+          ALLOCATE(dtmp(NP), NP)
+          d_max = M_ZERO
+          do is = 1, st%d%nspin
+            dtmp(1:NP) = h%vhxc(1:NP, is) - vaux(1:NP, is)
+            d = dmf_nrm2(gr%m, dtmp)
+            if(d > d_max) d_max = d
+          end do
+          deallocate(dtmp)
+
+          if(d_max < scf_threshold) exit
+        end do
+
+      end if
+
+      deallocate(zpsi1, vaux)
     end if
 
     call pop_sub()
