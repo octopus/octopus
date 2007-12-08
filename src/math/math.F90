@@ -47,7 +47,6 @@ module math_m
     ylmr,                       &
     grylmr,                     &
     weights,                    &
-    dextrapolate, zextrapolate, &
     sort,                       &
     factorial,                  &
     hermite,                    &
@@ -60,7 +59,18 @@ module math_m
     hypot,                      &
     ddelta,                     &
     member,                     &
-    make_idx_set
+    make_idx_set,               &
+    interpolate
+
+
+  !------------------------------------------------------------------------------
+  ! This is the common interface to a simple-minded polynomical interpolation
+  ! procudure (simple use of the classical formula of Lagrange.
+  interface interpolate
+    module procedure dinterpolate_0, dinterpolate_1, dinterpolate_2
+    module procedure zinterpolate_0, zinterpolate_1, zinterpolate_2
+  end interface
+  !------------------------------------------------------------------------------
 
 
   !------------------------------------------------------------------------------
@@ -717,6 +727,9 @@ contains
 
     call pop_sub()
   end function member
+
+
+
 
 
 #include "undef.F90"

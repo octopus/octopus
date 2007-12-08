@@ -377,7 +377,9 @@ contains
     call lalg_copy(NP, st%d%nspin, tr%v_old(:, :, 2), tr%v_old(:, :, 3))
     call lalg_copy(NP, st%d%nspin, tr%v_old(:, :, 1), tr%v_old(:, :, 2))
     call lalg_copy(NP, st%d%nspin, h%vhxc(:, :),      tr%v_old(:, :, 1))
-    call dextrapolate(2, NP, st%d%nspin, tr%v_old(:, :, 1:3), tr%v_old(:, :, 0), dt, dt)
+
+    call interpolate( (/t-3*dt, t-2*dt, t-dt/), tr%v_old(:, :, 1:3), t, tr%v_old(:, :, 0))
+
     select case(tr%method)
     case(PROP_SPLIT_OPERATOR);          call td_split_operator
     case(PROP_SUZUKI_TROTTER);          call td_suzuki_trotter
@@ -478,7 +480,7 @@ contains
       time(5) = t-dt+(pp(1)+pp(2)+pp(3)+pp(4)+pp(5)/M_TWO)*dt
 
       do k = 1, 5
-        call dextrapolate(2, NP, st%d%nspin, tr%v_old(:, :, 0:2), h%vhxc, dt, time(k))
+        call interpolate( (/t-3*dt, t-2*dt, t-dt/), tr%v_old(:, :, 0:2), time(k), h%vhxc(:, :))
         do ik = 1, st%d%nik
           do ist = 1, st%nst
             call zexp_vlpsi (gr, h, st%zpsi(:, :, ist, ik), ik, time(k), -M_zI*dtime(k)/M_TWO)
@@ -607,7 +609,7 @@ contains
       call push_sub('td_rti.td_exponential_midpoint')
 
       if(h%theory_level.ne.INDEPENDENT_PARTICLES) then
-        call dextrapolate(2, NP, st%d%nspin, tr%v_old(:, :, 0:2), h%vhxc, dt, -dt/M_TWO)
+        call interpolate( (/t-3*dt, t-2*dt, t-dt/), tr%v_old(:, :, 0:2), t-dt/M_TWO, h%vhxc(:, :))
       end if
 
       do ik = 1, st%d%nik
@@ -731,7 +733,7 @@ contains
 
       if(h%theory_level.ne.INDEPENDENT_PARTICLES) then
         do j = 1, 2
-          call dextrapolate(2, NP, st%d%nspin, tr%v_old(:,:, 0:2), vaux(:,:, j), dt, time(j)-dt)
+          call interpolate( (/t-3*dt, t-2*dt, t-dt/), tr%v_old(:, :, 0:2), time(j)-dt, h%vhxc(:, :))
         end do
       else
         vaux = M_ZERO
