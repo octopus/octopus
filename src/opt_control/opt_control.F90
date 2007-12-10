@@ -111,7 +111,11 @@ contains
     call parameters_apply_envelope(par)
 
     if(oct%fix_initial_fluence) then
-      call parameters_set_fluence(par, oct%targetfluence)
+      if(oct%targetfluence < M_ZERO) then
+        oct%targetfluence = laser_fluence(par) 
+      else
+        call parameters_set_fluence(par, oct%targetfluence)
+      end if
     end if
 
     call parameters_to_h(par, h%ep)

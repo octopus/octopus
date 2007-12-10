@@ -439,7 +439,6 @@ contains
     integer :: j
 
     old_fluence = laser_fluence(par) 
-
     do j = 1, par%no_parameters
       call tdf_scalar_multiply( sqrt(fluence/old_fluence) , par%f(j) )
     end do

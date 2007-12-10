@@ -29,15 +29,23 @@
     !%Variable OCTFixFluenceTo
     !%Type float
     !%Section Optimal Control
-    !%Default -1.0
+    !%Default 0.0
     !%Description
     !% The algorithm tries to obtain the specified fluence for the laser field. 
     !% This works only in conjunction with the WG05 scheme.
+    !%
+    !% If this variable is not present in the input file, by default the code will not
+    !% attempt a fixed-fluence QOCT run. The same holds if the value given to this
+    !% variable is exactly zero.
+    !%
+    !% If this variable is given a negative value, then the target fluence will be that of
+    !% the initial laser pulse given as guess in the input file. Note, however, that
+    !% first the code applies the envelope provided by the "OCTLaserEnvelope" input
+    !% option, and afterwards it calculates the fluence.
     !%End
     oct%mode_fixed_fluence = .false.
     call loct_parse_float(check_inp('OCTFixFluenceTo'), M_ZERO, oct%targetfluence)
     if (oct%targetfluence .ne. M_ZERO) oct%mode_fixed_fluence = .true.
-
 
     if(oct%mode_fixed_fluence) then
       !%Variable OCTFixInitialFluence
