@@ -361,7 +361,7 @@ module opt_control_target_m
       deallocate(target%rho)
       nullify(target%rho)
     end if
-    if(associated(target%td_fitness)) then
+    if(target%mode.eq.oct_targetmode_td) then
       deallocate(target%td_fitness); nullify(target%td_fitness)
     end if
 

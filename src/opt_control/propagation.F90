@@ -385,6 +385,7 @@ module opt_control_propagation_m
       call v_ks_calc(gr, ks, h, st)
     end if
 
+    call pop_sub()
   end subroutine update_hamiltonian_chi
   ! ---------------------------------------------------------
 
@@ -425,6 +426,7 @@ module opt_control_propagation_m
       call v_ks_calc(gr, ks, h, st)
     end if
 
+    call pop_sub()
   end subroutine update_hamiltonian_psi
   ! ---------------------------------------------------------
 
