@@ -321,6 +321,13 @@ contains
 
     call parameters_copy(par_chi, par)
 
+    if(oct%use_mixing) then
+      call states_end(psi)
+      call states_copy(psi, initial_st)
+      call parameters_to_h(par, h%ep)
+      call propagate_forward(sys, h, td, target, psi, prop_psi)
+    end if
+
     call states_copy(chi, target%st)
     call bwd_step(oct, sys, td, h, target, par, par_chi, chi, prop_chi, prop_psi)
 
