@@ -58,6 +58,8 @@ module opt_control_parameters_m
     integer :: ntiter
     FLOAT   :: targetfluence
     type(tdf_t), pointer :: f(:)
+    CMPLX, pointer :: pol(:, :) ! the polarization of the field, this is
+                                ! necessary to calculate the fluence.
     FLOAT, pointer :: alpha(:)
     type(tdf_t), pointer :: td_penalty(:)
   end type oct_control_parameters_t
@@ -146,6 +148,7 @@ contains
     cp%targetfluence = targetfluence
     ALLOCATE(cp%f(cp%no_parameters), cp%no_parameters)
     ALLOCATE(cp%alpha(cp%no_parameters), cp%no_parameters)
+    ALLOCATE(cp%pol(MAX_DIM, cp%no_parameters), MAX_DIM*cp%no_parameters)
     cp%alpha = M_ZERO
     do j = 1, cp%no_parameters
       call tdf_init_numerical(cp%f(j), cp%ntiter, cp%dt)
@@ -168,6 +171,7 @@ contains
     do j = 1, cp%no_parameters
       call tdf_end(cp%f(j))
       cp%f(j) = ep%lasers(j)%f
+      cp%pol(1:MAX_DIM, j) = ep%lasers(j)%pol(1:MAX_DIM)
     end do
 
     call pop_sub()
@@ -231,6 +235,8 @@ contains
     nullify(cp%f)
     deallocate(cp%alpha)
     nullify(cp%alpha)
+    deallocate(cp%pol)
+    nullify(cp%pol)
 
     call pop_sub()
   end subroutine parameters_end
@@ -390,7 +396,7 @@ contains
   ! ---------------------------------------------------------
   FLOAT function laser_fluence(par)
     type(oct_control_parameters_t), intent(in) :: par
-    integer :: i, j
+    integer :: i, j, k
     FLOAT :: t
     call push_sub('parameters.laser_fluence')
 
@@ -400,7 +406,9 @@ contains
     do j = 1, par%no_parameters
       do i = 1, par%ntiter+1
         t = (i-1) * par%dt
-        laser_fluence = laser_fluence + abs(tdf(par%f(j), i))**2 
+        do k = 1, MAX_DIM
+          laser_fluence = laser_fluence + real( par%pol(k, j) * tdf(par%f(j), i) )**2
+        end do
       end do
     end do
     laser_fluence = laser_fluence * par%dt
@@ -415,14 +423,16 @@ contains
   ! ---------------------------------------------------------
   FLOAT function j2_functional(par) result(j2)
     type(oct_control_parameters_t), intent(in) :: par
+    integer :: i, j, k
 
-    integer :: i, j
     FLOAT :: t
     j2 = M_ZERO
     do j = 1, par%no_parameters
       do i = 1, par%ntiter + 1
         t = (i-1) * par%dt
-        j2 = j2 + tdf(par%td_penalty(j), i) * abs(tdf(par%f(j), i))**2 
+        do k = 1, MAX_DIM
+          j2 = j2 + tdf(par%td_penalty(j), i) * real( par%pol(k, j) * tdf(par%f(j), i) )**2 
+        end do
       end do
     end do
     j2 = - par%alpha(1) * (j2 * par%dt - par%targetfluence)
@@ -460,10 +470,12 @@ contains
     ALLOCATE(cp_out%f(cp_out%no_parameters), cp_out%no_parameters)
     ALLOCATE(cp_out%alpha(cp_out%no_parameters), cp_out%no_parameters)
     ALLOCATE(cp_out%td_penalty(cp_out%no_parameters), cp_out%no_parameters)
+    ALLOCATE(cp_out%pol(MAX_DIM, cp_out%no_parameters), MAX_DIM*cp_out%no_parameters)
     do j = 1, cp_in%no_parameters
       cp_out%alpha(j) = cp_in%alpha(j)
       cp_out%f(j) = cp_in%f(j)
       cp_out%td_penalty(j) = cp_in%td_penalty(j)
+      cp_out%pol(1:MAX_DIM, j) = cp_in%pol(1:MAX_DIM, j)
     end do
 
   end subroutine parameters_copy
