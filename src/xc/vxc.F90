@@ -72,7 +72,7 @@ subroutine xc_get_vxc(gr, xcs, rho, ispin, vxc, ex, ec, ip, qtot)
     l_dens(1:spin_channels) = dens (jj, 1:spin_channels)
     if(gga.or.mgga) then
       l_sigma(1) = sum(gdens(jj, :,1)*gdens(jj, :,1))
-      if(ispin == SPIN_POLARIZED) then
+      if(ispin /= UNPOLARIZED) then
         l_sigma(2) = sum(gdens(jj, :,1)*gdens(jj, :,2))
         l_sigma(3) = sum(gdens(jj, :,2)*gdens(jj, :,2))
       end if
@@ -122,7 +122,7 @@ subroutine xc_get_vxc(gr, xcs, rho, ispin, vxc, ex, ec, ip, qtot)
 
       if(gga.or.mgga) then
         dedgd(jj,:,1) = dedgd(jj,:,1) + M_TWO*l_vsigma(1)*gdens(jj,:,1)
-        if(ispin == SPIN_POLARIZED) then
+        if(ispin /= UNPOLARIZED) then
           dedgd(jj,:,1) = dedgd(jj,:,1) + l_vsigma(2)*gdens(jj,:,2)
           dedgd(jj,:,2) = dedgd(jj,:,2) + M_TWO*l_vsigma(3)*gdens(jj,:,2) + l_vsigma(2)*gdens(jj,:,1)
         end if
