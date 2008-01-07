@@ -36,6 +36,6 @@ Input: 08-localtarget.03-gs-mp.inp
 Match ; TotalEnergy ; sed -n '/^Energy/{n\;p\;}' static/info ; \s*Total\s*=\s*-2.1689
 
 # Now once again we run for a couple of iterations and check the convergence.
-# In this case, after 25 iterations we reach J1 = -1.81234
+# In this case, after 25 iterations we reach J1 approx -1.81
 Input: 08-localtarget.04-oct-mp.inp
-Match ; J1 2nd iteration  ; grep ' 2  ' opt-control/convergence ; \s*-3.9792\d*
+Match ; J1 2nd iteration  ; grep ' 2  ' opt-control/convergence ; \s*-4.098\d*

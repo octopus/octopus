@@ -158,7 +158,9 @@ contains
       stoploop = .true.
     end if
 
-    if( (iterator%eps > M_ZERO) .and. (iterator%convergence(5, iterator%ctr_iter) < iterator%eps) ) then
+    if( (iterator%eps > M_ZERO) .and. &
+        (iterator%convergence(5, iterator%ctr_iter) < iterator%eps) .and. &
+        (iterator%ctr_iter > 0 ) ) then
       message(1) = "Info: Convergence threshold reached"
       call write_info(1)
       stoploop = .true.
@@ -173,7 +175,11 @@ contains
     write(message(4), '(6x,a,f12.5)')  " => Fluence  = ", fluence
     write(message(5), '(6x,a,f12.5)')  " => Penalty  = ", par%alpha(1)
     write(message(6), '(6x,a,es12.2)') " => D[e,e']  = ", iterator%convergence(5, iterator%ctr_iter)
-    call write_info(6)
+    if(iterator%ctr_iter .ne. 0) then
+      call write_info(6)
+    else
+      call write_info(5)
+    end if
     call messages_print_stress(stdout)
 
     ! store field with best J1

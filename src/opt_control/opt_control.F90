@@ -200,11 +200,13 @@ contains
       ctr_loop: do
         call parameters_copy(par_prev, par)
         call f_iter(oct, iterator, sys, h, td, psi, initial_st, target, par, prop_psi, prop_chi, j1)
-        stop_loop = iteration_manager(j1, par_prev, par, iterator)
         if(oct%dump_intermediate) call iterator_write(iterator, psi, par, sys%gr, sys%outp)
+        stop_loop = iteration_manager(j1, par, par_prev, iterator)
         if(clean_stop() .or. stop_loop) exit ctr_loop
-        if(oct%use_mixing) then
-          call parameters_mixing(iterator%ctr_iter, par_prev, par, par_new)
+        if( oct%use_mixing .and. (iterator%ctr_iter > 1) ) then
+          ! We do not mix if it is the first iteration, since in that case f_iter only propagates
+          ! with the input field, and does not generate any output field.
+          call parameters_mixing(iterator%ctr_iter-1, par_prev, par, par_new)
           call parameters_copy(par, par_new)
         end if
       end do ctr_loop
@@ -421,17 +423,26 @@ contains
 
     call push_sub('opt_control.f_zbr98')
 
+    if( iterator%ctr_iter .eq. 0) then
+      call states_end(psi)
+      call states_copy(psi, initial_st)
+      call parameters_to_h(par, h%ep)
+      call propagate_forward(sys, h, td, target, psi, prop_psi)
+      j1 = j1_functional(sys%gr, sys%geo, h%ep, psi, target)
+      call pop_sub()
+      return
+    end if
+
     call parameters_copy(par_chi, par)
 
-    if( (iterator%ctr_iter .eq. 0) .or. oct%use_mixing) then
+    if(oct%use_mixing .and. (iterator%ctr_iter > 1) ) then
+      ! No need to do this auxiliary propagation if no mixing has been done previously.
       call states_end(psi)
       call states_copy(psi, initial_st)
       call parameters_to_h(par, h%ep)
       call propagate_forward(sys, h, td, target, psi, prop_psi)
     end if
-
-    j1 = j1_functional(sys%gr, sys%geo, h%ep, psi, target)
-
+    
     call states_copy(chi, psi)
     call calc_chi(oct, sys%gr, sys%geo, h%ep, target, psi, chi)
     call bwd_step(oct, sys, td, h, target, par, par_chi, chi, prop_chi, prop_psi)
@@ -439,6 +450,8 @@ contains
     call states_end(psi)
     call states_copy(psi, initial_st)
     call fwd_step(oct, sys, td, h, target, par, par_chi, psi, prop_chi, prop_psi)
+
+    j1 = j1_functional(sys%gr, sys%geo, h%ep, psi, target)
 
     call states_end(chi)
     call parameters_end(par_chi)

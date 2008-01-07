@@ -80,7 +80,7 @@ contains
      '#######################################################################'
 
     ! data
-    do loop = 1, iterator%ctr_iter_max
+    do loop = 0, iterator%ctr_iter_max
        write(iunit, '(i11,3f20.8)') loop, iterator%convergence(1,loop), &
          iterator%convergence(2,loop), iterator%convergence(3,loop)
     end do
