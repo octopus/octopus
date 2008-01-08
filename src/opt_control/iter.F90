@@ -128,10 +128,10 @@ contains
 
 
   ! ---------------------------------------------------------
-  logical function iteration_manager(j1, par, par_new, iterator) result(stoploop)
+  logical function iteration_manager(j1, par, par_prev, iterator) result(stoploop)
     FLOAT, intent(in) :: j1
     type(oct_control_parameters_t), intent(in)  :: par
-    type(oct_control_parameters_t), intent(in)  :: par_new
+    type(oct_control_parameters_t), intent(in)  :: par_prev
     type(oct_iterator_t), intent(inout) :: iterator
 
     FLOAT :: fluence, jfunctional, j2
@@ -150,7 +150,7 @@ contains
     ! WARNING: this does not consider the possibility of different 
     ! alphas for different control parameters.
     iterator%convergence(4, iterator%ctr_iter) = par%alpha(1)
-    iterator%convergence(5, iterator%ctr_iter) = parameters_diff(par, par_new)
+    iterator%convergence(5, iterator%ctr_iter) = parameters_diff(par, par_prev)
     
     if(iterator%ctr_iter .eq. iterator%ctr_iter_max) then
       message(1) = "Info: Maximum number of iterations reached"

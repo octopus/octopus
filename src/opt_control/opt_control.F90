@@ -234,9 +234,9 @@ contains
       call parameters_copy(par_new, par)      
       ctr_loop: do
         call parameters_copy(par_prev, par)
-        call f_wg05(oct, sys, h, td, filter, psi, initial_st, target, par, prop_psi, prop_chi, j1)
-        stop_loop = iteration_manager(j1, par_prev, par, iterator)
+        call f_wg05(oct, iterator, sys, h, td, filter, psi, initial_st, target, par, prop_psi, prop_chi, j1)
         if(oct%dump_intermediate) call iterator_write(iterator, psi, par, sys%gr, sys%outp)
+        stop_loop = iteration_manager(j1, par, par_prev, iterator)
         if(clean_stop() .or. stop_loop) exit ctr_loop
         if(oct%use_mixing) then
           call parameters_mixing(iterator%ctr_iter, par_prev, par, par_new)
@@ -331,9 +331,11 @@ contains
     call pop_sub()
   end subroutine f_zbr98
 
+
   ! ---------------------------------------------------------
-  subroutine f_wg05(oct, sys, h, td, filter, psi, initial_st, target, par, prop_psi, prop_chi, j1)
+  subroutine f_wg05(oct, iterator, sys, h, td, filter, psi, initial_st, target, par, prop_psi, prop_chi, j1)
     type(oct_t), intent(in)                       :: oct
+    type(oct_iterator_t), intent(in)              :: iterator
     type(system_t), intent(inout)                 :: sys
     type(hamiltonian_t), intent(inout)            :: h
     type(td_t), intent(inout)                     :: td
@@ -352,16 +354,19 @@ contains
 
     call push_sub('opt_control.f_wg05')
 
+    if( iterator%ctr_iter .eq. 0) then
+      call states_end(psi)
+      call states_copy(psi, initial_st)
+      call parameters_to_h(par, h%ep)
+      call propagate_forward(sys, h, td, target, psi, prop_psi)
+      j1 = j1_functional(sys%gr, sys%geo, h%ep, psi, target)
+      call pop_sub()
+      return
+    end if
+
     call parameters_copy(parp, par)
 
-    call states_end(psi)
-    call states_copy(psi, initial_st)
-    call parameters_to_h(par, h%ep)
-    call propagate_forward(sys, h, td, target, psi, prop_psi)
-
-    j1 = j1_functional(sys%gr, sys%geo, h%ep, psi, target)
-
-    chi = psi
+    call states_copy(chi, psi)
     call calc_chi(oct, sys%gr, sys%geo, h%ep, target, psi, chi)
     call bwd_step(oct, sys, td, h, target, par, parp, chi, prop_chi, prop_psi)
 
@@ -385,6 +390,13 @@ contains
       par%f(j) = parp%f(j)
     end do
     call parameters_apply_envelope(par)
+
+    call states_end(psi)
+    call states_copy(psi, initial_st)
+    call parameters_to_h(par, h%ep)
+    call propagate_forward(sys, h, td, target, psi, prop_psi)
+
+    j1 = j1_functional(sys%gr, sys%geo, h%ep, psi, target)
 
     call states_end(chi)
     call parameters_end(parp)
