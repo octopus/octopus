@@ -39,7 +39,7 @@ module solids_m
     periodic_copy_num,        &
     periodic_write_crystal
 
-  type :: periodic_copy_t
+  type periodic_copy_t
     private
     FLOAT :: pos(1:MAX_DIM)
     FLOAT :: pos_chi(1:MAX_DIM)
