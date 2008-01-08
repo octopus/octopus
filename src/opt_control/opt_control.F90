@@ -261,31 +261,20 @@ contains
       call oct_prop_init(prop_chi, "chi", td%max_iter, oct%number_checkpoints)
       call oct_prop_init(prop_psi, "psi", td%max_iter, oct%number_checkpoints)
 
-      ! In principle, one should perform a zero iteration. However, this can
-      ! be disabled so that one gets the same results than the original
-      ! paper of ZBR98.
-      if(oct%zbr98_zero_iteration) then
-        call states_copy(chi, target%st)
-        call propagate_backward(sys, h, td, chi, prop_chi)
-        call parameters_copy(par_prev, par)
-        call fwd_step(oct, sys, td, h, target, par, par_prev, psi, prop_chi, prop_psi)
-        j1 = j1_functional(sys%gr, sys%geo, h%ep, psi, target)
-        ! Note that owith other shemes the call to iteration manager the order is different: par_prev, par.
-        stop_loop = iteration_manager(j1, par, par_prev, iterator)
-        call parameters_end(par_prev)
-        if(oct%dump_intermediate) call iterator_write(iterator, psi, par, sys%gr, sys%outp)
-      else
-        iterator%ctr_iter = iterator%ctr_iter + 1
-      end if
+      call parameters_copy(par_prev, par)
+      call propagate_forward(sys, h, td, target, psi, prop_psi)
+      j1 = j1_functional(sys%gr, sys%geo, h%ep, psi, target)
+      if(oct%dump_intermediate) call iterator_write(iterator, psi, par, sys%gr, sys%outp)
+      stop_loop = iteration_manager(j1, par, par_prev, iterator)
+      call parameters_end(par_prev)
 
       call parameters_copy(par_new, par)
       ctr_loop: do
         call parameters_copy(par_prev, par)
         call f_zbr98(oct, sys, h, td, psi, initial_st, target, prop_psi, prop_chi, par)
         j1 = j1_functional(sys%gr, sys%geo, h%ep, psi, target)
-        ! Note that owith other shemes the call to iteration manager the order is different: par_prev, par.
-        stop_loop = iteration_manager(j1, par, par_prev, iterator)
         if(oct%dump_intermediate) call iterator_write(iterator, psi, par, sys%gr, sys%outp)
+        stop_loop = iteration_manager(j1, par, par_prev, iterator)
         if(clean_stop() .or. stop_loop) exit ctr_loop
         if(oct%use_mixing) then
           call parameters_mixing(iterator%ctr_iter-1, par_prev, par, par_new)

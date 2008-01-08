@@ -120,15 +120,6 @@
       oct%delta = M_ONE; oct%eta = M_ONE
     end select
 
-    !%Variable OCTZBR98zero_iteration
-    !%Type logical
-    !%Section Optimal Control
-    !%Default true
-    !%Description 
-    !% No documentation is available.
-    !%End
-    call loct_parse_logical(check_inp('OCTZBR98zero_iteration'),.true., oct%zbr98_zero_iteration)
-
     !%Variable OCTDoubleCheck
     !%Type logical
     !%Section Optimal Control
