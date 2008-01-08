@@ -185,7 +185,7 @@ contains
     !%    (A.4) envelope_trapezoidal
     !%
     !% <tt>%TDExternalField
-    !% <br>&nbsp;&nbsp; type | nx | ny | nz | envelope_cosinusoidal | amplitude | omega | tau0 | t0 | tau1
+    !% <br>&nbsp;&nbsp; type | nx | ny | nz | envelope_trapezoidal | amplitude | omega | tau0 | t0 | tau1
     !% <br>%</tt>
     !%
     !% The envelope ramps linearly during <math>tau_1</math> time units, stays constant for
@@ -195,7 +195,7 @@ contains
     !%    (A.5) envelope_fromfile
     !%
     !% <tt>%TDExternalField
-    !% <br>&nbsp;&nbsp; type | nx | ny | nz | envelope_cosinusoidal | "filename"
+    !% <br>&nbsp;&nbsp; type | nx | ny | nz | envelope_fromfile | "filename"
     !% <br>%</tt>
     !%
     !% The temporal shape of the field is contained in a file called "filename". This file
