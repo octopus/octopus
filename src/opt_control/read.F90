@@ -99,13 +99,18 @@
     !% expected with 20 iterations.
     !% No monotonic convergence.
     !%Option oct_algorithm_mt03 4
-    !% Yet to be implemented and tested. Basically an improved and generalized scheme. 
+    !% Basically an improved and generalized scheme. 
     !% Comparable to ZBR98/ZR98. See [Y. Maday and G. Turinici, J. Chem. Phys. 118, 
     !% 8191 (2003)].
     !%Option oct_algorithm_krotov 5
-    !% Yet to be implemented and tested. Reported in [D. Tannor, V. Kazakov and V.
+    !% The procedure reported in [D. Tannor, V. Kazakov and V.
     !% Orlov, in "Time Dependent Quantum Molecular Dynamics", edited by J. Broeckhove
     !% and L. Lathouweres (Plenum, New York, 1992), pp. 347-360].
+    !%Option oct_algorithm_straight_iteration 6
+    !% Straight iteration: one forward and one backward propagation is performed at each
+    !% iteration, both with the same control field. An output field is calculated with the
+    !% resulting wave functions. Note that this scheme typically does not converge, unless
+    !% some mixing ("OCTMixing = yes") is used.
     !%End
     call loct_parse_int(check_inp('OCTScheme'), oct_algorithm_zr98, oct%algorithm_type)
     if(.not.varinfo_valid_option('OCTScheme', oct%algorithm_type)) call input_error('OCTScheme')
@@ -116,6 +121,8 @@
       oct%delta = M_ONE; oct%eta = M_ONE
     case(oct_algorithm_krotov)
       oct%delta = M_ONE; oct%eta = M_ZERO
+    case(oct_algorithm_straight_iteration)
+      oct%delta = M_ZERO; oct%eta = M_ONE
     case default
       oct%delta = M_ONE; oct%eta = M_ONE
     end select
@@ -135,10 +142,12 @@
     !%Default false
     !%Description 
     !% Use mixing algorithms to create the input fields in the iterative OCT schemes.
+    !% Note that this idea is still a little bit experimental, and depending on the
+    !% kind of mixing that you use, and the parameters that you set, it may or may
+    !% not accelerate the convergence, or even spoil the convergence.
     !%
-    !% WARNING: Very experimental.
-    !%
-    !% WARNING: The oct_algorithm_wg05 scheme is not affected by this.
+    !% Using "TypeOfMixing = broyden", "Mixing = 0.1" and "MixNumberSteps = 3" seems
+    !% to work in many cases, but your mileage may vary.
     !%End
     call loct_parse_logical(check_inp('OCTMixing'), .false., oct%use_mixing)
 
@@ -150,8 +159,7 @@
     !% Writes to disk some data during the OCT algorithm at intermediate steps.
     !% This is rather technical and it should be considered only for debugging
     !% purposes. Nevertheless, since the whole OCT infrastructure is at a very
-    !% preliminary developing stage, it is set to true by default, and in fact
-    !% all the intermediate information is printed always.
+    !% preliminary developing stage, it is set to true by default.
     !%End
     call loct_parse_logical(check_inp('OCTDumpIntermediate'), .true., oct%dump_intermediate)
 
@@ -160,7 +168,15 @@
     !%Section Optimal Control
     !%Default 0
     !%Description 
-    !% WARNING: EXPERIMENTAL, description missing.
+    !% During an OCT propagation, the code may write down at some time steps (the
+    !% "check points", the wavefunctions. When the inverse backward or forward propagation
+    !% is performed in a following step, the wave function should reverse its path
+    !% (almost) exactly. This can be checked to make sure that it is the case -- otherwise
+    !% one should try reducing the time-step, or altering in some other way the
+    !% variables that control the propagation.
+    !%
+    !% If the backward (or forward) propagation is not retracing the steps of the previous
+    !% forward (or backward) propation, the code will emit a warning.
     !%End
     call loct_parse_int(check_inp('OCTNumberCheckPoints'), 0, oct%number_checkpoints)
 

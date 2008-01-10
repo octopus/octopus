@@ -164,6 +164,10 @@ contains
         message(1) = "Info: Starting OCT iteration using scheme: KROTOV"
         call write_info(1)
         call scheme_mt03
+      case(oct_algorithm_straight_iteration)
+        message(1) = "Info: Starting OCT iterations using scheme: STRAIGHT ITERATION"
+        call write_info(1)
+        call scheme_straight_iteration
     case default
       call input_error('OCTScheme')
     end select
@@ -187,6 +191,35 @@ contains
     call pop_sub()
 
   contains
+
+
+     ! ---------------------------------------------------------
+    subroutine scheme_straight_iteration
+      call push_sub('opt_control.scheme_mt03')
+
+      call oct_prop_init(prop_chi, "chi", td%max_iter, oct%number_checkpoints)
+      call oct_prop_init(prop_psi, "psi", td%max_iter, oct%number_checkpoints)
+
+      call parameters_copy(par_new, par)
+      ctr_loop: do
+        call parameters_copy(par_prev, par)
+        call f_striter(oct, iterator, sys, h, td, psi, initial_st, target, par, prop_psi, prop_chi, j1)
+        if(oct%dump_intermediate) call iterator_write(iterator, psi, par, sys%gr, sys%outp)
+        stop_loop = iteration_manager(j1, par_prev, par, iterator)
+        if(clean_stop() .or. stop_loop) exit ctr_loop
+        if(oct%use_mixing) then
+          call parameters_mixing(iterator%ctr_iter, par_prev, par, par_new)
+          call parameters_copy(par, par_new)
+        end if
+      end do ctr_loop
+
+      call oct_prop_end(prop_chi)
+      call oct_prop_end(prop_psi)
+      call parameters_end(par_new)
+      call parameters_end(par_prev)
+      call pop_sub()
+    end subroutine scheme_straight_iteration
+    ! ---------------------------------------------------------
 
 
     ! ---------------------------------------------------------
@@ -402,6 +435,50 @@ contains
     call parameters_end(parp)
     call pop_sub()
   end subroutine f_wg05
+  ! ---------------------------------------------------------
+
+
+   ! ---------------------------------------------------------
+  subroutine f_striter(oct, iterator, sys, h, td, psi, initial_st, target, par, prop_psi, prop_chi, j1)
+    type(oct_t), intent(in)                       :: oct
+    type(oct_iterator_t), intent(in)              :: iterator
+    type(system_t), intent(inout)                 :: sys
+    type(hamiltonian_t), intent(inout)            :: h
+    type(td_t), intent(inout)                     :: td
+    type(states_t), intent(inout)                 :: psi
+    type(states_t), intent(in)                    :: initial_st
+    type(target_t), intent(inout)                 :: target
+    type(oct_control_parameters_t), intent(inout) :: par
+    type(oct_prop_t), intent(inout)               :: prop_psi, prop_chi
+    FLOAT, intent(out)                            :: j1
+
+    type(states_t) :: chi
+    type(oct_control_parameters_t) :: par_chi
+
+    call parameters_copy(par_chi, par)
+
+    ! First, a forward propagation with the input field.
+    call states_end(psi)
+    call states_copy(psi, initial_st)
+    call parameters_to_h(par, h%ep)
+    call propagate_forward(sys, h, td, target, psi, prop_psi)
+
+    ! Check the performance.
+    j1 = j1_functional(sys%gr, sys%geo, h%ep, psi, target)
+
+    ! Set the boundary condition for the backward propagation.
+    call states_copy(chi, psi)
+    call calc_chi(oct, sys%gr, sys%geo, h%ep, target, psi, chi)
+
+    ! Backward propagation, while at the same time finding the output field, 
+    ! which is placed at par_chi
+    call bwd_step_2(oct, sys, td, h, target, par, par_chi, chi, prop_chi, prop_psi)
+
+    ! Copy par_chi to par
+    call parameters_end(par)
+    call parameters_copy(par, par_chi)
+    call pop_sub()
+  end subroutine f_striter
   ! ---------------------------------------------------------
 
 

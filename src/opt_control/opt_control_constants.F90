@@ -52,11 +52,12 @@ module opt_control_constants_m
     oct_tg_exclude_state    = 8
 
   integer, parameter ::  &
-    oct_algorithm_zbr98 = 1,       &
-    oct_algorithm_zr98  = 2,       &
-    oct_algorithm_wg05  = 3,       &
-    oct_algorithm_mt03  = 4,       &
-    oct_algorithm_krotov= 5
+    oct_algorithm_zbr98              = 1,       &
+    oct_algorithm_zr98               = 2,       &
+    oct_algorithm_wg05               = 3,       &
+    oct_algorithm_mt03               = 4,       &
+    oct_algorithm_krotov             = 5,       &
+    oct_algorithm_straight_iteration = 6
  
   integer, parameter ::  &
     oct_targetmode_static = 0,     &

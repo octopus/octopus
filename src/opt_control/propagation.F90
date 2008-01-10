@@ -53,6 +53,7 @@ module opt_control_propagation_m
             propagate_backward, &
             fwd_step,           &
             bwd_step,           &
+            bwd_step_2,         &
             oct_prop_t,         &
             oct_prop_init,      &
             oct_prop_check,     &
@@ -345,6 +346,74 @@ module opt_control_propagation_m
     call pop_sub()
   end subroutine bwd_step
   ! ---------------------------------------------------------
+
+
+  ! --------------------------------------------------------
+  ! Performs a backward propagation on the state psi and on the
+  ! lagrange-multiplier state chi, according to the following
+  ! scheme:
+  !
+  ! |psi> --> U[par](0, T)|psi>
+  ! |chi> --> U[par](0, T)|chi>
+  ! 
+  ! It also calculates during the propagation, a new "output" field:
+  !
+  ! par_chi = par_chi[|psi>, |chi>]
+  ! --------------------------------------------------------
+  subroutine bwd_step_2(oct, sys, td, h, target, par, par_chi, chi, prop_chi, prop_psi) 
+    type(oct_t), intent(in)                       :: oct
+    type(system_t), intent(inout)                 :: sys
+    type(td_t), intent(inout)                     :: td
+    type(hamiltonian_t), intent(inout)            :: h
+    type(target_t), intent(inout)                 :: target
+    type(oct_control_parameters_t), intent(in)    :: par
+    type(oct_control_parameters_t), intent(inout) :: par_chi
+    type(states_t), intent(inout)                 :: chi
+    type(oct_prop_t), intent(in)                  :: prop_chi
+    type(oct_prop_t), intent(in)                  :: prop_psi
+
+    integer :: i
+    type(grid_t), pointer :: gr
+    type(td_rti_t) :: tr_chi
+    type(states_t) :: psi
+
+    call push_sub('propagation.bwd_step_2')
+
+    message(1) = "Info: Backward propagation."
+    call write_info(1)
+
+    gr => sys%gr
+
+    call td_rti_copy(tr_chi, td%tr)
+
+    call states_copy(psi, chi)
+    call oct_prop_read_state(prop_psi, psi, gr, sys%geo, td%max_iter)
+
+    call states_calc_dens(psi, NP_PART, psi%rho)
+    call v_ks_calc(gr, sys%ks, h, psi)
+    call td_rti_run_zero_iter(h, td%tr)
+    call td_rti_run_zero_iter(h, tr_chi)
+
+    td%dt = -td%dt
+    call oct_prop_output(prop_chi, td%max_iter, chi, gr)
+    do i = td%max_iter, 1, -1
+      call oct_prop_check(prop_psi, psi, gr, sys%geo, i)
+      call update_field(oct, i, par_chi, gr, td, h, psi, chi, par, dir = 'b')
+      call update_hamiltonian_chi(i-1, gr, sys%ks, h, td, target, par, psi)
+      call td_rti_dt(sys%ks, h, gr, chi, tr_chi, abs((i-1)*td%dt), td%dt, td%max_iter)
+      call oct_prop_output(prop_chi, i-1, chi, gr)
+      call update_hamiltonian_psi(i-1, gr, sys%ks, h, td, target, par, psi)
+      call td_rti_dt(sys%ks, h, gr, psi, td%tr, abs((i-1)*td%dt), td%dt, td%max_iter)
+    end do
+    td%dt = -td%dt
+
+    call states_calc_dens(psi, NP_PART, psi%rho)
+    call v_ks_calc(gr, sys%ks, h, psi)
+
+    call td_rti_end(tr_chi)
+
+    call pop_sub()
+  end subroutine bwd_step_2
 
 
   ! ----------------------------------------------------------
