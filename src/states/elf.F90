@@ -128,9 +128,9 @@ contains
 
             do i = 1, NDIM
               grho(:,i) = grho(:,i) + st%d%kweights(ik)*st%occ(ist, ik)/s *  &
-                 M_TWO * real(conjg(wf_psi(:))*gwf_psi(:,i))
+                 M_TWO * real(conjg(wf_psi(1:NP))*gwf_psi(1:NP,i))
               jj(:,i)   =  jj(:,i)  + st%d%kweights(ik)*st%occ(ist, ik)/s *  &
-                 aimag(conjg(wf_psi(:))*gwf_psi(:,i))
+                 aimag(conjg(wf_psi(1:NP))*gwf_psi(1:NP,i))
             end do
 
             ! elf will now contain the spin-kinetic energy density, tau
