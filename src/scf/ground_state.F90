@@ -83,7 +83,8 @@ contains
 
     if(fromScratch) then
       ! Randomly generate the initial wave-functions
-      call states_generate_random(sys%st, sys%gr%m, sys%st%st_start, sys%st%st_end)
+      call states_generate_random(sys%st, sys%gr%m)
+      call states_orthogonalize(sys%st, sys%gr%m)
 
       ! We do not compute the density from the random wave-functions. 
       ! Instead, we try to get a better guess for the density.

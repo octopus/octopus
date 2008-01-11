@@ -62,6 +62,7 @@ module states_m
     states_dim_copy,                  &
     states_dim_end,                   &
     states_generate_random,           &
+    states_orthogonalize,             &
     states_fermi,                     &
     states_eigenvalues_sum,           &
     states_write_eigenvalues,         &
@@ -1240,16 +1241,38 @@ contains
 
     end select
 
-    do ik = 1, st%d%nik
+    call pop_sub()
+  end subroutine states_generate_random
+
+
+  ! ---------------------------------------------------------
+  subroutine states_orthogonalize(st, m, ik_, start_)
+    type(states_t),    intent(inout) :: st
+    type(mesh_t),      intent(in)    :: m
+    integer, optional, intent(in)    :: ik_, start_
+
+    integer :: ik, ik_start, ik_end
+    integer :: start
+
+    start = 1
+    if(present(start_)) start = start_
+    if(present(ik_)) then
+      ik_start = ik_
+      ik_end   = ik_
+    else
+      ik_start = 1
+      ik_end   = st%d%nik
+    end if
+    
+    do ik = ik_start, ik_end
       if (st%wfs_type == M_REAL) then
-        call dstates_gram_schmidt(st, st%nst, m, st%d%dim, st%dpsi(:,:,:,ik))
+        call dstates_gram_schmidt(st, st%nst, m, st%d%dim, st%dpsi(:,:,:,ik), start)
       else
-        call zstates_gram_schmidt(st, st%nst, m, st%d%dim, st%zpsi(:,:,:,ik))
+        call zstates_gram_schmidt(st, st%nst, m, st%d%dim, st%zpsi(:,:,:,ik), start)
       end if
     end do
 
-    call pop_sub()
-  end subroutine states_generate_random
+  end subroutine states_orthogonalize
 
 
   ! ---------------------------------------------------------

@@ -553,10 +553,19 @@ contains
 
     ! ---------------------------------------------------------
     subroutine fill() ! Put random function in orbitals that could not be read.
+      integer :: first
+
       do ik = 1, st%d%nik
+        first = st%st_end+1 ! we have to orthogonalize all states after first
+
         do ist = st%st_start, st%st_end
           do idim = 1, st%d%dim
-            if(filled(idim, ist, ik)) cycle
+            if(filled(idim, ist, ik)) then
+              cycle
+            else
+              if(first > ist) first = ist
+            end if
+
             write(message(1),'(a,3i5)') 'Randomizing wavefunction: #dim, #ist, #ik = ', idim, ist, ik
             call write_warning(1)
             
@@ -564,7 +573,11 @@ contains
             st%occ(ist, ik) = M_ZERO
           end do
         end do
+
+        if(first.ne.st%st_end+1) &
+          call states_orthogonalize(st, gr%m, ik, first)
       end do
+
     end subroutine fill
 
 
