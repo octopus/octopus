@@ -871,6 +871,7 @@ contains
     subroutine out_circular_dichroism
       type(pert_t) :: angular_momentum
       integer :: idir
+      FLOAT :: ff
       CMPLX :: dic
 
       if(wfs_are_complex(st) .and. em_vars%nsigma == 2) then       
@@ -901,9 +902,14 @@ contains
              str_center('['//trim(units_out%length%abbrev) //'^4]', 20)
 
         ! print the values
+        ff = M_ZERO
+        if(em_vars%omega(iomega).ne.0) then
+          ff = real(dic) * P_C/(M_THREE*em_vars%omega(iomega))
+        end if
+
         write(iunit, '(3e20.8)') em_vars%omega(iomega), &
-             aimag(dic) / M_PI / (units_out%length%factor)**3, &
-             real(dic) * P_C/(M_THREE*em_vars%omega(iomega)) / (units_out%length%factor)**4
+          aimag(dic) / (M_PI*units_out%length%factor**3), ff/units_out%length%factor**4
+
         call io_close(iunit)
         
       end if
