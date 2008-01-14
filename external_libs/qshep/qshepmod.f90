@@ -110,8 +110,8 @@ module qshepmod_m
                     interp%rmax, interp%rsq, interp%a, ier )
       allocate(interp%x(npoints))
       allocate(interp%y(npoints))
-      interp%x = x
-      interp%y = y
+      interp%x(1:npoints) = x(1:npoints)
+      interp%y(1:npoints) = y(1:npoints)
     case(3)
       call qshep3 ( npoints, x, y, z, f, interp%nq, interp%nw, interp%nr, interp%lcell, &
                     interp%lnext, interp%xyzmin, interp%xyzdel, interp%rmax, interp%rsq, &
