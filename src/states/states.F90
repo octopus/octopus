@@ -1281,7 +1281,7 @@ contains
     type(mesh_t),   intent(in)    :: m
 
     ! Local variables.
-    integer            :: ie, ik, iter
+    integer            :: ie, ik, iter, j
     integer, parameter :: nitmax = 200
     FLOAT              :: drange, t, emin, emax, sumq
     FLOAT, parameter   :: tol = CNST(1.0e-10)
@@ -1309,7 +1309,9 @@ contains
           if(st%parallel_in_states) then
             ALLOCATE(lspin(3, st%lnst), 3*st%lnst)
             lspin = st%spin(1:3, st%st_start:st%st_end, ik)
-            call lmpi_gen_alltoallv(3*st%lnst, lspin(:, 1), tmp, st%spin(:, 1, ik), st%mpi_grp)
+            do j = 1, 3
+              call lmpi_gen_alltoallv(st%lnst, lspin(j, :), tmp, st%spin(j, :, ik), st%mpi_grp)
+            end do
             deallocate(lspin)
           end if
 #endif
@@ -1344,8 +1346,12 @@ contains
           end do
 #if defined(HAVE_MPI)
           if(st%parallel_in_states) then
+            ALLOCATE(lspin(3, st%lnst), 3*st%lnst)
             lspin = st%spin(1:3, st%st_start:st%st_end, ik)
-            call lmpi_gen_alltoallv(3*st%lnst, lspin(:, 1), tmp, st%spin(:, 1, ik), st%mpi_grp)
+            do j = 1, 3
+              call lmpi_gen_alltoallv(st%lnst, lspin(j, :), tmp, st%spin(j, :, ik), st%mpi_grp)
+            end do
+            deallocate(lspin)
           end if
 #endif
         end do
@@ -1404,8 +1410,12 @@ contains
         end do
 #if defined(HAVE_MPI)
         if(st%parallel_in_states) then
+          ALLOCATE(lspin(3, st%lnst), 3*st%lnst)
           lspin = st%spin(1:3, st%st_start:st%st_end, ik)
-          call lmpi_gen_alltoallv(3*st%lnst, lspin(:, 1), tmp, st%spin(:, 1, ik), st%mpi_grp)
+          do j = 1, 3
+            call lmpi_gen_alltoallv(st%lnst, lspin(j, :), tmp, st%spin(j, :, ik), st%mpi_grp)
+          end do
+          deallocate(lspin)
         end if
 #endif
       end do
