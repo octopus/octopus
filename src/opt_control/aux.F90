@@ -73,7 +73,7 @@
       j1 = abs(zstates_mpdotp(gr%m, target%est, psi))**2
 
     case(oct_tg_exclude_state)
-      j1 = zstates_dotp(gr%m, psi%d%dim, psi%zpsi(:, :, 1, 1), psi%zpsi(:, :, 1, 1))
+      j1 = M_ONE
       do i = 1, target%excluded_states
         j1 = j1 - abs(zstates_dotp(gr%m, psi%d%dim, target%st%zpsi(:, :, i, 1), psi%zpsi(:, :, 1, 1)))**2
       end do
