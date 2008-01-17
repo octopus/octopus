@@ -246,9 +246,10 @@ contains
     !% UPF format, the pseudopotential will be
     !% read from an <i>.UPF</i> file, either in the working
     !% directory or in the <i>OCTOPUS-HOME/share/PP/UPF</i> directory.
-    !% The following three numbers are the atomic number, the maximum
-    !% <i>l</i>-component of the pseudo-potential to consider in the
-    !% calculation, and the <i>l</i>-component to consider as local.
+    !% The following number is the atomic number. The last two numbers are 
+    !% ignored, as the maximum <i>l</i>-component of the pseudo-potential to
+    !% consider in the calculation and the <i>l</i>-component to consider as
+    !% local are indicated in the pseudo-potential file are cannot be changed.
     !%Option spec_all_e   124
     !% Atom represented with all electrons, the extra parameter is the
     !% atomic number. See the documentation of the variable 
