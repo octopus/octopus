@@ -299,8 +299,7 @@ contains
     !%Description
     !% The default value means that <i>no</i> relativistic correction is used. To
     !% include spin-orbit coupling turn <tt>RelativisticCorrection</tt> to <tt>spin_orbit</tt> 
-    !% (this will only work when using an executable compiled for complex wave-functions,
-    !% and if <tt>SpinComponents</tt> has been set to <tt>non_collinear</tt>, which ensures
+    !% (this will only work if <tt>SpinComponents</tt> has been set to <tt>non_collinear</tt>, which ensures
     !% the use of spinors).
     !%Option non_relativistic 0
     !% No relativistic corrections.
