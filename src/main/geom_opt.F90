@@ -228,14 +228,14 @@ contains
 
       !%Variable GOTolerance
       !%Type float
-      !%Default 0.01 a.u.
+      !%Default 0.001 a.u.
       !%Section Geometry Optimization
       !%Description
       !% Convergence criterium to stop the minimization. In units of force; minimization
       !% is stopped when all forces on ions are smaller.
       !% Used in conjunction with GOMinimumMove. If GOTolerance = 0, this criterium is ignored.
       !%End
-      call loct_parse_float(check_inp('GOTolerance'), CNST(0.0001)/units_inp%force%factor, g_opt%tolgrad)
+      call loct_parse_float(check_inp('GOTolerance'), CNST(0.001)/units_inp%force%factor, g_opt%tolgrad)
       g_opt%tolgrad = g_opt%tolgrad*units_inp%force%factor
       
       !%Variable GOMinimumMove
