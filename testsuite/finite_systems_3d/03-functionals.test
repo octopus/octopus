@@ -41,6 +41,6 @@ Match ; Exchange    ; grep 'Exchange' static/info ; \s*Exchange\s*=\s*-1.03245
 
 # And finally, full EXX for Li, 8 electrons (restarting from the previous run)
 Input: 03-functionals.03-jellium-full_exx.inp
-Match ; TotalEnergy ; sed -n '/^Energy/{n\;p\;}' static/info ; \s*Total\s*=\s* -0.33380
-Match ; Eigenvalues ; sed -n '/Eigenvalues \[/{n\;n\;p\;}' static/info ; \s*-0.25199\d*\s*2.0000\d*
-Match ; Exchange    ; grep 'Exchange' static/info ; \s*Exchange\s*=\s*-1.03271
+Match ; TotalEnergy ; sed -n '/^Energy/{n\;p\;}' static/info ; \s*Total\s*=\s* -0.3346
+Match ; Eigenvalues ; sed -n '/Eigenvalues \[/{n\;n\;p\;}' static/info ; \s*-0.2521\d*\s*2.0000\d*
+Match ; Exchange    ; grep 'Exchange' static/info ; \s*Exchange\s*=\s*-1.0327
