@@ -242,11 +242,6 @@ contains
     select case(te%exp_method)
     case(TAYLOR);            call taylor_series
     case(LANCZOS_EXPANSION)
-      if(h%ab .eq. IMAGINARY_ABSORBING) then
-        message(1) = 'Lanczos expansion exponential method not supported for non-hermtian'
-        message(2) = 'Hamiltonians (e.g., with imaginary potential absorbing boundaries).'
-        call write_fatal(2)
-      end if
       call lanczos
     case(SPLIT_OPERATOR);    call split
     case(SUZUKI_TROTTER);    call suzuki
@@ -358,7 +353,7 @@ contains
 
     ! ---------------------------------------------------------
     subroutine lanczos
-      integer ::  korder, n, k, iflag, lwsp, ns, i, j, iexph, idim
+      integer ::  korder, n, k, iflag, lwsp, ns, i, j, l, iexph, idim
       integer, allocatable :: ipiv(:)
       CMPLX, allocatable :: hm(:,:), v(:,:,:), expo(:,:), wsp(:)
       FLOAT :: beta, res, tol !, nrm
@@ -384,7 +379,12 @@ contains
         call operate(v(:,:, n), v(:, :, n+1))
         korder = n
 
-        do k = max(1, n-1), n
+        if(hamiltonian_hermitean(h)) then
+          l = max(1, n-1)
+        else
+          l = 1
+        end if
+        do k = l, n
           hm(k, n) = zstates_dotp(gr%m, h%d%dim, v(:, :, k), v(:, :, n+1))
           do idim = 1, h%d%dim
             call lalg_axpy(NP, -hm(k, n), v(:, idim, k), v(:, idim, n+1))
@@ -394,7 +394,11 @@ contains
         do idim = 1, h%d%dim
           call lalg_scal(NP, M_z1/hm(n+1, n), v(:, idim, n+1)) 
         end do
-        call zgpadm(6, n, timestep, -M_zI*hm(1:n, 1:n), n, wsp, lwsp, ipiv(1:n), iexph, ns, iflag)
+        if(hamiltonian_hermitean(h)) then
+          call zhpadm(6, n, timestep, -M_zI*hm(1:n, 1:n), n, wsp, lwsp, ipiv(1:n), iexph, ns, iflag)
+        else
+          call zgpadm(6, n, timestep, -M_zI*hm(1:n, 1:n), n, wsp, lwsp, ipiv(1:n), iexph, ns, iflag)
+        end if
         k = 0
         do i = 1, n
           do j = 1, n
@@ -402,7 +406,7 @@ contains
           end do
         end do
 
-        res = abs(hm(n+1, n)*abs(expo(1, n)))
+        res = abs(hm(n+1, n)*abs(expo(n, 1)))
         if(abs(hm(n+1, n)) < CNST(1.0e-12)) exit ! (very unlikely) happy breakdown!!! Yuppi!!!
         if(n>2 .and. res<tol) exit
       end do

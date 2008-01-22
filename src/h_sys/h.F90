@@ -80,7 +80,8 @@ module hamiltonian_m
     hamiltonian_set_oct_exchange,    &
     hamiltonian_remove_oct_exchange, &
     hamiltonian_adjoint,             &
-    hamiltonian_not_adjoint
+    hamiltonian_not_adjoint,         &
+    hamiltonian_hermitean
 
 
 
@@ -461,6 +462,14 @@ contains
 
     call pop_sub()
   end subroutine hamiltonian_end
+
+
+  ! ---------------------------------------------------------
+  ! True if the Hamiltonian is Hermitean, false otherwise
+  logical function hamiltonian_hermitean(h)
+    type(hamiltonian_t), intent(in) :: h
+    hamiltonian_hermitean = .not.((h%ab .eq. IMAGINARY_ABSORBING) .or. hamiltonian_oct_exchange(h))
+  end function hamiltonian_hermitean
 
 
   ! ---------------------------------------------------------
