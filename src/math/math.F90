@@ -679,11 +679,11 @@ contains
   ! ---------------------------------------------------------
   ! Construct out(1:length) = (/1, ..., n/) if in is not present,
   ! out(1:length) = in otherwise.
-  subroutine make_idx_set(n, in, out, length)
+  subroutine make_idx_set(n, out, length, in)
     integer,           intent(in)  :: n
-    integer, optional, intent(in)  :: in(:)
     integer,           pointer     :: out(:)
     integer,           intent(out) :: length
+    integer, optional, intent(in)  :: in(:)
 
     integer :: i
 

@@ -55,8 +55,16 @@ subroutine X(states_blockt_mul)(mesh, st, psi1, psi2, res, xpsi1, xpsi2, symm)
   end if
 
   ! Calculate index sets of state block psi1 and psi2.
-  call make_idx_set(st%nst, xpsi1, xpsi1_, psi1_col)
-  call make_idx_set(st%nst, xpsi2, xpsi2_, psi2_col)
+  if(present(xpsi1)) then
+    call make_idx_set(st%nst, xpsi1_, psi1_col, xpsi1)
+  else
+    call make_idx_set(st%nst, xpsi1_, psi1_col)
+  end if
+  if(present(xpsi2)) then
+    call make_idx_set(st%nst, xpsi2_, psi2_col, xpsi2)
+  else
+    call make_idx_set(st%nst, xpsi2_, psi2_col)
+  end if
 
   ! There is a little code duplication between the serial and parallel case
   ! but the code is easier to understand having it separated (instead a lot of
@@ -273,8 +281,19 @@ subroutine X(states_block_matr_mul)(mesh, st, psi, matr, res, xpsi, xres)
 
   call push_sub('states_inc.Xstates_block_matr_mul')
 
-  call X(states_block_matr_mul_add)(mesh, st, R_TOTYPE(M_ONE), psi, matr, &
-    R_TOTYPE(M_ZERO), res, xpsi, xres)
+  if(present(xpsi).and.present(xres)) then
+    call X(states_block_matr_mul_add)(mesh, st, R_TOTYPE(M_ONE), psi, matr, &
+      R_TOTYPE(M_ZERO), res, xpsi, xres)
+  else if(present(xpsi)) then
+    call X(states_block_matr_mul_add)(mesh, st, R_TOTYPE(M_ONE), psi, matr, &
+      R_TOTYPE(M_ZERO), res, xpsi=xpsi)
+  else if(present(xres)) then
+    call X(states_block_matr_mul_add)(mesh, st, R_TOTYPE(M_ONE), psi, matr, &
+      R_TOTYPE(M_ZERO), res, xres=xres)
+  else
+    call X(states_block_matr_mul_add)(mesh, st, R_TOTYPE(M_ONE), psi, matr, &
+      R_TOTYPE(M_ZERO), res)
+  end if
 
   call pop_sub()
 end subroutine X(states_block_matr_mul)
@@ -309,8 +328,16 @@ subroutine X(states_block_matr_mul_add)(mesh, st, alpha, psi, matr, beta, res, x
   call push_sub('states_inc.Xstates_block_matr_add')
 
   ! Calculate global index sets of state block psi and res.
-  call make_idx_set(st%nst, xpsi, xpsi_, psi_col)
-  call make_idx_set(st%nst, xres, xres_, res_col)
+  if(present(xpsi)) then
+    call make_idx_set(st%nst, xpsi_, psi_col, xpsi)
+  else
+    call make_idx_set(st%nst, xpsi_, psi_col)
+  end if
+  if(present(xres)) then
+    call make_idx_set(st%nst, xres_, res_col, xres)
+  else
+    call make_idx_set(st%nst, xres_, res_col)
+  end if
 
   matr_col = ubound(matr, 2)
 
