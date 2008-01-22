@@ -42,7 +42,7 @@ static char *str_trim(char *in)
 
   for(c=s; isspace(*c); c++);
   for(; *c != '\0'; *s++=*c++);
-  for(s--; isspace(*s); s--);
+  for(s--; s>=in && isspace(*s); s--);
   *(s+1) = '\0';
 
   return in;
