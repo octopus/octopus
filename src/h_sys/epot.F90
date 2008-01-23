@@ -597,7 +597,7 @@ contains
     type(atom_t),             intent(inout) :: a
     FLOAT,                    intent(inout) :: vpsl(:)
     FLOAT,                    intent(in)    :: time
-    FLOAT, optional,          intent(inout) :: rho_core(:)
+    FLOAT, pointer, optional, intent(inout) :: rho_core(:)
  
     integer :: i
     FLOAT :: x(MAX_DIM)

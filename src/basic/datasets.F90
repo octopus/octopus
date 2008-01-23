@@ -127,7 +127,7 @@ contains
     end if
     deallocate(order)
 
-    current_label = trim(dataset_label(dataset_run_order(1)))
+    current_label   = dataset_label(dataset_run_order(1))
     current_dataset = dataset_run_order(1)
   end subroutine datasets_init
 

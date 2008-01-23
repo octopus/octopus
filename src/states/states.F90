@@ -834,7 +834,10 @@ contains
     ALLOCATE(st%j(NP_PART, NDIM, st%d%nspin), NP_PART*NDIM*st%d%nspin)
     st%rho = M_ZERO
     st%j   = M_ZERO
-    if(geo%nlcc) ALLOCATE(st%rho_core(gr%m%np), gr%m%np)
+    if(geo%nlcc) then
+      ALLOCATE(st%rho_core(gr%m%np), gr%m%np)
+      st%rho_core(:) = M_ZERO
+    end if
 
     call pop_sub()
   end subroutine states_densities_init
