@@ -258,7 +258,7 @@ contains
 
     call io_mkdir(trim(filename))
 
-    iunit = io_open(trim(filename)//'/Fluence'//digit, action='write')
+    iunit = io_open(trim(filename)//'/Fluence', action='write')
     write(iunit, '(a,es20.8e3)') 'Fluence = ', laser_fluence(cp)
     call io_close(iunit)
 
