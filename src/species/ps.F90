@@ -505,6 +505,9 @@ contains
     call loct_spline_end(ps%dkb)
     call loct_spline_end(ps%ur)
 
+    call loct_spline_end(ps%vlr)
+    call loct_spline_end(ps%nlr)
+
     call loct_spline_end(ps%vl)
     call loct_spline_end(ps%core)
     call loct_spline_end(ps%vlocal_f)
