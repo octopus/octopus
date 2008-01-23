@@ -99,14 +99,16 @@ void FC_FUNC_(oct_getcwd, OCT_GETCWD)
 void FC_FUNC_(oct_getenv, OCT_GETENV)
   (STR_F_TYPE var, STR_F_TYPE value STR_ARG2)
 {
-  char *name_c;
-  char *var_c;
+  char *name_c, *var_c;
 
-  var_c = (char *) malloc(256);
-  var_c[0]='\0';
   name_c = TO_C_STR1(var);
-  if(getenv(name_c) != NULL) var_c = getenv(name_c);
-  TO_F_STR2(var_c, value);
+  var_c = getenv(name_c);
+  free(name_c);
+
+  if(var_c != NULL)
+    TO_F_STR2(var_c, value);
+  else
+    TO_F_STR2("", value);
 }
 
 /* this function gets a string of the form '1-12, 34' and fills
