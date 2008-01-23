@@ -61,7 +61,12 @@ void FC_FUNC_(oct_mkdir, OCT_MKDIR)
   char *name_c;
 
   name_c = TO_C_STR1(name);
-  if(!*name_c || stat(name_c, &buf) == 0) return;
+  if(!*name_c) return;
+
+  if(stat(name_c, &buf) == 0){
+    free(name_c);
+    return;
+  }
   mkdir(name_c, 0775);
   free(name_c);
 }
