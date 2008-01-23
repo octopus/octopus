@@ -339,6 +339,7 @@ static int parse_block_work(sym_block *blk, int l, int col, parse_result *r)
   return parse_exp(blk->lines[l].fields[col], r);
 }
 
+
 int parse_block_int(sym_block *blk, int l, int col, int *r)
 {
   int o;
@@ -351,9 +352,10 @@ int parse_block_int(sym_block *blk, int l, int col, int *r)
     if(!disable_write) {
       fprintf(fout, "  (%d, %d) = %d\n", l, col, *r);
     }
-    return 0;
-  }else
-    return o;
+  }
+
+  parse_result_free(&pr);
+  return o;
 }
 
 int parse_block_double(sym_block *blk, int l, int col, double *r)
@@ -368,9 +370,10 @@ int parse_block_double(sym_block *blk, int l, int col, double *r)
     if(!disable_write) {
       fprintf(fout, "  (%d, %d) = %g\n", l, col, *r);
     }
-    return 0;
-  }else
-    return o;
+  }
+  
+  parse_result_free(&pr);
+  return o;
 }
 
 int parse_block_complex(sym_block *blk, int l, int col, gsl_complex *r)
@@ -385,9 +388,10 @@ int parse_block_complex(sym_block *blk, int l, int col, gsl_complex *r)
     if(!disable_write) {
       fprintf(fout, "  (%d, %d) = (%g,%g)\n", l, col, GSL_REAL(*r), GSL_IMAG(*r));
     }
-    return 0;
-  }else
-    return o;
+  }
+
+  parse_result_free(&pr);
+  return o;
 }
 
 int parse_block_string(sym_block *blk, int l, int col, char **r)
@@ -398,13 +402,22 @@ int parse_block_string(sym_block *blk, int l, int col, char **r)
   o = parse_block_work(blk, l, col, &pr);
 
   if(o == 0 && pr.type == PR_STR){
-    *r = pr.value.s;
+    *r = strdup(pr.value.s);
     if(!disable_write) {
       fprintf(fout, "  (%d, %d) = \"%s\"\n", l, col, *r);
     }
-    return 0;
-  }else
-    return 1;
+  }
+
+  parse_result_free(&pr);
+  return o;
+}
+
+
+void parse_result_free(parse_result *t)
+{
+  if(t->type == PR_STR)
+    free(t->value.s);
+  t->type = PR_NONE;
 }
 
 

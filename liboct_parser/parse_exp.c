@@ -75,8 +75,8 @@ int get_real(char *s, double *d)
 
 int yylex (){
   int c;
-  static char *symbuf = 0;
-  static int length = 0;
+  char *symbuf = 0;
+  int length = 0;
   
   /* Ignore whitespace, get first nonwhite character.  */
   while ((c = par_string[par_pos++]) == ' ' || c == '\t');
@@ -155,12 +155,16 @@ int yylex (){
       if (s == 0)
 	s = putsym (symbuf, S_CMPLX);
       yylval.tptr = s;
+
+      free(symbuf);
       if(s->type == S_CMPLX)
 	return VAR;
       else
 	return FNCT;
     }else{
       yylval.str = strdup(symbuf);
+
+      free(symbuf);
       return STR;
     }
   }

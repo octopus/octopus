@@ -267,6 +267,7 @@ void FC_FUNC_(oct_parse_block_string, OCT_PARSE_BLOCK_STRING)
     parse_block_error("string", block_name, *l, *c);
   else{
     TO_F_STR1(s, res);
+    free(s);
   }
 }
 

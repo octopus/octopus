@@ -51,8 +51,10 @@ typedef struct parse_result{
     gsl_complex c;
     char *s;
   } value;
-  enum {PR_CMPLX, PR_STR} type;
+  enum {PR_NONE,PR_CMPLX, PR_STR} type;
 } parse_result;
+
+void parse_result_free(parse_result *t);
 
 int parse_exp(char *exp, parse_result *t);
 
