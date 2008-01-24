@@ -32,7 +32,7 @@
     !%Default 0.0
     !%Description
     !% The algorithm tries to obtain the specified fluence for the laser field. 
-    !% This works only in conjunction with the WG05 scheme.
+    !% This works only in conjunction with either the WG05 or the straight iteration scheme.
     !%
     !% If this variable is not present in the input file, by default the code will not
     !% attempt a fixed-fluence QOCT run. The same holds if the value given to this
@@ -246,12 +246,14 @@
       call write_fatal(1)
     end if
 
-    ! FixedFluence and Filter only work with WG05
-    if((oct%mode_fixed_fluence).and.(oct%algorithm_type.ne.oct_algorithm_wg05)) then
-      write(message(1),'(a)') "Cannot optimize to a given fluence with the chosen algorithm."
-      write(message(2),'(a)') "Switching to scheme WG05."         
-      call write_info(2)
-      oct%algorithm_type = oct_algorithm_wg05
+    if((oct%mode_fixed_fluence)) then
+      if( (oct%algorithm_type.ne.oct_algorithm_wg05) .and. &
+          (oct%algorithm_type.ne.oct_algorithm_str_iter) ) then
+        write(message(1),'(a)') "Cannot optimize to a given fluence with the chosen algorithm."
+        write(message(2),'(a)') "Switching to scheme WG05."         
+        call write_info(2)
+        oct%algorithm_type = oct_algorithm_wg05
+      end if
     end if
 
     if(oct%algorithm_type .eq. oct_algorithm_zbr98) then

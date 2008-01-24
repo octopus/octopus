@@ -195,6 +195,8 @@ contains
 
      ! ---------------------------------------------------------
     subroutine scheme_straight_iteration
+      FLOAT :: previous_fluence
+      integer :: j
       call push_sub('opt_control.scheme_mt03')
 
       call oct_prop_init(prop_chi, "chi", td%max_iter, oct%number_checkpoints)
@@ -203,13 +205,19 @@ contains
       call parameters_copy(par_new, par)
       ctr_loop: do
         call parameters_copy(par_prev, par)
-        call f_striter(oct, iterator, sys, h, td, psi, initial_st, target, par, prop_psi, prop_chi, j1)
+        call f_striter(oct, iterator, sys, h, td, filter, psi, initial_st, target, par, prop_psi, prop_chi, j1)
         if(oct%dump_intermediate) call iterator_write(iterator, psi, par, sys%gr, sys%outp)
         stop_loop = iteration_manager(j1, par_prev, par, iterator)
         if(clean_stop() .or. stop_loop) exit ctr_loop
         if(oct%use_mixing) then
           call parameters_mixing(iterator%ctr_iter, par_prev, par, par_new)
           call parameters_copy(par, par_new)
+          if(oct%mode_fixed_fluence) then
+            previous_fluence = laser_fluence(par)
+            do j = 1, par%no_parameters
+              call tdf_scalar_multiply( (sqrt(oct%targetfluence/previous_fluence)), par%f(j))
+            end do
+          end if
         end if
       end do ctr_loop
 
@@ -439,12 +447,13 @@ contains
 
 
    ! ---------------------------------------------------------
-  subroutine f_striter(oct, iterator, sys, h, td, psi, initial_st, target, par, prop_psi, prop_chi, j1)
+  subroutine f_striter(oct, iterator, sys, h, td, filter, psi, initial_st, target, par, prop_psi, prop_chi, j1)
     type(oct_t), intent(in)                       :: oct
     type(oct_iterator_t), intent(in)              :: iterator
     type(system_t), intent(inout)                 :: sys
     type(hamiltonian_t), intent(inout)            :: h
     type(td_t), intent(inout)                     :: td
+    type(filter_t), intent(inout)                 :: filter
     type(states_t), intent(inout)                 :: psi
     type(states_t), intent(in)                    :: initial_st
     type(target_t), intent(inout)                 :: target
@@ -452,6 +461,8 @@ contains
     type(oct_prop_t), intent(inout)               :: prop_psi, prop_chi
     FLOAT, intent(out)                            :: j1
 
+    integer :: j
+    FLOAT :: previous_fluence
     type(states_t) :: chi
     type(oct_control_parameters_t) :: par_chi
 
@@ -473,6 +484,18 @@ contains
     ! Backward propagation, while at the same time finding the output field, 
     ! which is placed at par_chi
     call bwd_step_2(oct, sys, td, h, target, par, par_chi, chi, prop_chi, prop_psi)
+
+    do j = 1, par_chi%no_parameters
+      call filter_apply(par_chi%f(j), filter)
+    end do
+
+    ! Fix the fluence, in case it is needed.
+    if(oct%mode_fixed_fluence) then
+      previous_fluence = laser_fluence(par_chi)
+      do j = 1, par_chi%no_parameters
+        call tdf_scalar_multiply( sqrt(oct%targetfluence) / sqrt(previous_fluence), par_chi%f(j) )
+      end do
+    end if
 
     ! Copy par_chi to par
     call parameters_end(par)
