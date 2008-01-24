@@ -121,7 +121,7 @@
       oct%delta = M_ONE; oct%eta = M_ONE
     case(oct_algorithm_krotov)
       oct%delta = M_ONE; oct%eta = M_ZERO
-    case(oct_algorithm_straight_iteration)
+    case(oct_algorithm_str_iter)
       oct%delta = M_ZERO; oct%eta = M_ONE
     case default
       oct%delta = M_ONE; oct%eta = M_ONE

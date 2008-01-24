@@ -164,7 +164,7 @@ contains
         message(1) = "Info: Starting OCT iteration using scheme: KROTOV"
         call write_info(1)
         call scheme_mt03
-      case(oct_algorithm_straight_iteration)
+      case(oct_algorithm_str_iter)
         message(1) = "Info: Starting OCT iterations using scheme: STRAIGHT ITERATION"
         call write_info(1)
         call scheme_straight_iteration
