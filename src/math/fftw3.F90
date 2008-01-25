@@ -140,6 +140,8 @@ contains
         fft_refs(i) = NULL
       end if
     end do
+
+    call DFFTW(cleanup);
   end subroutine fft_all_end
 
 
