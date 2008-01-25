@@ -123,7 +123,8 @@ contains
     integer,             intent(in)  :: ispin
     type(valconf_t),     intent(out) :: conf
 
-    character(len=1)  :: char1(6), char2
+    character(len=1)   :: char1(6), char2
+    character(len=256) :: r_fmt
     integer :: i, l
     FLOAT   :: x
 
@@ -136,15 +137,16 @@ contains
 
     select case(psf_file%irel)
     case('nrl')
-      ! It seems that with some compiler version in the SP4 we can not have string
-      ! concat inside the read statement, so we define read_fmt outside
-      read(psf_file%title, '('//char2//'(i1,a1,f5.2,10x))')        &
+      write(r_fmt, '(3a)') '(', char2, '(i1,a1,f5.2,10x))'
+      read(psf_file%title, r_fmt)        &
         (conf%n(l), char1(l), conf%occ(l,1), l = 1, conf%p)
     case('isp')
-      read(psf_file%title, '('//char2//'(i1,a1,f4.2,1x,f4.2,6x))') &
+      write(r_fmt, '(3a)') '(', char2, '(i1,a1,f4.2,1x,f4.2,6x))'
+      read(psf_file%title, r_fmt)        &
         (conf%n(l), char1(l), conf%occ(l,1), conf%occ(l,2), l = 1, conf%p)
     case('rel')
-      read(psf_file%title, '('//char2//'(i1,a1,f5.2,10x))')        &
+      write(r_fmt, '(3a)') '(', char2, '(i1,a1,f5.2,10x))'
+      read(psf_file%title, r_fmt)        &
         (conf%n(l), char1(l), conf%occ(l,1), l = 1, conf%p)
     end select
 
