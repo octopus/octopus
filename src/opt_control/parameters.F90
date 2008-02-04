@@ -287,7 +287,8 @@ contains
         else
           iunit = io_open(trim(filename)//'/cpw', action='write')
         end if
-        g = cp%f(j)
+        call tdf_init(g)
+        call tdf_copy(g, cp%f(j))
         call tdf_fft_forward(g)
         ALLOCATE(wgrid(0:cp%ntiter), cp%ntiter+1)
         call tdf_fourier_grid(g, wgrid)
@@ -475,7 +476,9 @@ contains
     ALLOCATE(cp_out%pol(MAX_DIM, cp_out%no_parameters), MAX_DIM*cp_out%no_parameters)
     do j = 1, cp_in%no_parameters
       cp_out%alpha(j) = cp_in%alpha(j)
+      call tdf_init(cp_out%f(j))
       call tdf_copy(cp_out%f(j), cp_in%f(j))
+      call tdf_init(cp_out%td_penalty(j))
       call tdf_copy(cp_out%td_penalty(j), cp_in%td_penalty(j))
       cp_out%pol(1:MAX_DIM, j) = cp_in%pol(1:MAX_DIM, j)
     end do

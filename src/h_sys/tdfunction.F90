@@ -38,6 +38,7 @@ module tdf_m
 
   private
   public :: tdf_t,                &
+            tdf_init,             &
             tdf_init_cw,          &
             tdf_init_gaussian,    &
             tdf_init_cosinoidal,  &
@@ -60,13 +61,14 @@ module tdf_m
             assignment(=)
 
   integer, parameter ::      &
-    TDF_CW            =  0,  &
-    TDF_GAUSSIAN      =  1,  &
-    TDF_COSINOIDAL    =  2,  &
-    TDF_TRAPEZOIDAL   =  3,  &
-    TDF_FROM_FILE     = 10,  &
-    TDF_NUMERICAL     = 99,  &
-    TDF_FROMEXPR      = 100
+    TDF_EMPTY         =  10001,  &
+    TDF_CW            =  10002,  &
+    TDF_GAUSSIAN      =  10003,  &
+    TDF_COSINOIDAL    =  10004,  &
+    TDF_TRAPEZOIDAL   =  10005,  &
+    TDF_FROM_FILE     =  10006,  &
+    TDF_NUMERICAL     =  10007,  &
+    TDF_FROMEXPR      =  10008
 
   type tdf_t
     private
@@ -120,6 +122,16 @@ module tdf_m
 
 
   !------------------------------------------------------------
+  subroutine tdf_init(f)
+    type(tdf_t), intent(inout) :: f
+    f%mode = TDF_EMPTY
+    f%niter = 0
+    f%dt = M_ZERO
+    nullify(f%val)
+  end subroutine tdf_init
+
+
+  !------------------------------------------------------------
   subroutine tdf_init_cw(f, a0, omega0)
     type(tdf_t), intent(inout) :: f
     FLOAT, intent(in) :: a0, omega0
@@ -129,6 +141,7 @@ module tdf_m
     f%mode = TDF_CW
     f%a0 = a0
     f%omega0 = omega0
+    nullify(f%val)
 
     call pop_sub()
   end subroutine tdf_init_cw
@@ -146,6 +159,7 @@ module tdf_m
     f%omega0 = omega0
     f%t0 = t0
     f%tau0 = tau0
+    nullify(f%val)
 
     call pop_sub()
   end subroutine tdf_init_gaussian
@@ -163,6 +177,7 @@ module tdf_m
     f%omega0 = omega0
     f%t0 = t0
     f%tau0 = tau0
+    nullify(f%val)
 
     call pop_sub()
   end subroutine tdf_init_cosinoidal
@@ -181,6 +196,7 @@ module tdf_m
     f%t0 = t0
     f%tau0 = tau0
     f%tau1 = tau1
+    nullify(f%val)
 
     call pop_sub()
   end subroutine tdf_init_trapezoidal
@@ -195,6 +211,7 @@ module tdf_m
 
     f%mode = TDF_FROMEXPR
     f%expression = trim(expression)
+    nullify(f%val)
     
     call pop_sub()
   end subroutine tdf_init_fromexpr
@@ -242,6 +259,7 @@ module tdf_m
     call loct_spline_init(f%amplitude)
     call loct_spline_fit(lines, t, am, f%amplitude)
 
+    nullify(f%val)
     deallocate(t, am)
     call pop_sub()
   end subroutine tdf_init_fromfile
@@ -499,16 +517,22 @@ module tdf_m
     case(TDF_NUMERICAL)
       deallocate(f%val); nullify(f%val)
     end select
+    f%mode = TDF_EMPTY
 
     call pop_sub()
   end subroutine tdf_end
 
 
   !------------------------------------------------------------
-  ! WARNING: this should be improved to make it more robust.
   subroutine tdf_copy(fout, fin)
     type(tdf_t), intent(inout) :: fout
     type(tdf_t), intent(in)  :: fin
+
+    ASSERT( (fin%mode >= TDF_EMPTY)  .and. (fin%mode <= TDF_FROMEXPR) )
+    ASSERT( (fout%mode >= TDF_EMPTY)  .and. (fout%mode <= TDF_FROMEXPR) )
+
+    call tdf_end(fout)
+    call tdf_init(fout)
 
     fout%t0     = fin%t0  
     fout%tau0   = fin%tau0
@@ -524,7 +548,6 @@ module tdf_m
       fout%amplitude = fin%amplitude
     end if
     if(fin%mode .eq. TDF_NUMERICAL) then
-      nullify(fout%val)
       ALLOCATE(fout%val(fout%niter+1), fout%niter+1)
       fout%val  = fin%val
     end if

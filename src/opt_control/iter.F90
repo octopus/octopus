@@ -122,6 +122,7 @@ contains
 
     deallocate(iterator%convergence)
     nullify(iterator%convergence)
+    call parameters_end(iterator%best_par)
 
     call pop_sub()
   end subroutine oct_iterator_end

@@ -1006,8 +1006,23 @@ contains
     call push_sub('states.states_end')
 
     if(associated(st%rho)) then
-      deallocate(st%rho, st%occ, st%eigenval, st%momentum, st%node)
-      nullify   (st%rho, st%occ, st%eigenval, st%momentum, st%node)
+      deallocate(st%rho); nullify(st%rho)
+    end if
+
+    if(associated(st%occ)) then
+      deallocate(st%occ); nullify(st%occ)
+    end if
+
+    if(associated(st%eigenval)) then
+      deallocate(st%eigenval); nullify(st%eigenval)
+    end if
+
+    if(associated(st%momentum)) then
+      deallocate(st%momentum); nullify(st%momentum)
+    end if
+
+    if(associated(st%node)) then
+      deallocate(st%node); nullify(st%node)
     end if
 
     if(associated(st%j)) then
