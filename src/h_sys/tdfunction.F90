@@ -55,6 +55,7 @@ module tdf_m
             tdf_write,            &
             tdf_niter,            &
             tdf_dt,               &
+            tdf_copy,             &
             tdf_end,              &
             assignment(=)
 
@@ -377,8 +378,9 @@ module tdf_m
 
 
   !------------------------------------------------------------
-  subroutine tdf_to_numerical(f, niter, dt)
+  subroutine tdf_to_numerical(f, t0, niter, dt)
     type(tdf_t), intent(inout) :: f
+    FLOAT,       intent(in)    :: t0
     integer,     intent(in)    :: niter
     FLOAT,       intent(in)    :: dt
 
@@ -387,16 +389,19 @@ module tdf_m
 
     if(f%mode .eq. TDF_NUMERICAL) return
 
-    ALLOCATE(f%val(niter+1), niter+1)    
+    ALLOCATE(f%val(niter+1), niter+1)
 
+    f%init_time = t0
     do j = 1, niter + 1
-      t = (j-1)*dt
+      t = t0 + (j-1)*dt
       f%val(j) = tdf(f, t)
     end do
+    f%final_time = t
 
     f%dt = dt
     f%niter = niter
     f%mode = TDF_NUMERICAL
+    if (f%mode .eq. TDF_FROM_FILE) call loct_spline_end(f%amplitude)
 
   end subroutine tdf_to_numerical
 
@@ -505,7 +510,6 @@ module tdf_m
     type(tdf_t), intent(inout) :: fout
     type(tdf_t), intent(in)  :: fin
 
-    fout%mode   = fin%mode
     fout%t0     = fin%t0  
     fout%tau0   = fin%tau0
     fout%tau1   = fin%tau1
@@ -513,6 +517,9 @@ module tdf_m
     fout%a0     = fin%a0
     fout%omega0 = fin%omega0 
     fout%niter  = fin%niter
+    fout%final_time = fin%final_time
+    fout%init_time  = fin%init_time
+    fout%expression = fin%expression
     if(fin%mode .eq. TDF_FROM_FILE) then
       fout%amplitude = fin%amplitude
     end if
@@ -521,6 +528,7 @@ module tdf_m
       ALLOCATE(fout%val(fout%niter+1), fout%niter+1)
       fout%val  = fin%val
     end if
+    fout%mode   = fin%mode
 
   end subroutine tdf_copy
 

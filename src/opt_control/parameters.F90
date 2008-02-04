@@ -475,8 +475,8 @@ contains
     ALLOCATE(cp_out%pol(MAX_DIM, cp_out%no_parameters), MAX_DIM*cp_out%no_parameters)
     do j = 1, cp_in%no_parameters
       cp_out%alpha(j) = cp_in%alpha(j)
-      cp_out%f(j) = cp_in%f(j)
-      cp_out%td_penalty(j) = cp_in%td_penalty(j)
+      call tdf_copy(cp_out%f(j), cp_in%f(j))
+      call tdf_copy(cp_out%td_penalty(j), cp_in%td_penalty(j))
       cp_out%pol(1:MAX_DIM, j) = cp_in%pol(1:MAX_DIM, j)
     end do
 

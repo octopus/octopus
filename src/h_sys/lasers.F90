@@ -79,7 +79,7 @@ contains
 
     call push_sub('lasers.lasers_to_numerical')
 
-    call tdf_to_numerical(l%f, max_iter, dt)
+    call tdf_to_numerical(l%f, M_ZERO, max_iter, dt)
 
     call pop_sub()
   end subroutine laser_to_numerical
