@@ -1113,9 +1113,8 @@ contains
     integer,        intent(in)    :: np
     FLOAT,          intent(inout) :: rho(:,:)
 
-    integer :: i, ik, p, sp
-
 #ifdef HAVE_MPI
+    integer :: i, ik, p, sp
     FLOAT,  allocatable :: reduce_rho(:)
 #endif
 
@@ -1141,8 +1140,7 @@ contains
     integer,        intent(in)  :: np
     FLOAT,          intent(out) :: rho(:,:)
 
-    integer :: i, ik, ist, sp
-    CMPLX   :: c
+    integer :: i, ist
 
     call push_sub('states.states_calc_dens')
 
@@ -1284,12 +1282,13 @@ contains
     type(mesh_t),   intent(in)    :: m
 
     ! Local variables.
-    integer            :: ie, ik, iter, j
+    integer            :: ie, ik, iter
     integer, parameter :: nitmax = 200
     FLOAT              :: drange, t, emin, emax, sumq
     FLOAT, parameter   :: tol = CNST(1.0e-10)
     logical            :: conv
 #if defined(HAVE_MPI)
+    integer            :: j
     integer            :: tmp
     FLOAT, allocatable :: lspin(:, :) ! To exchange spin.
 #endif

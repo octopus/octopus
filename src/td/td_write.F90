@@ -200,7 +200,6 @@ contains
       nullify(w%gs_st%zpsi, w%gs_st%node, w%gs_st%occ, w%gs_st%eigenval)
       call states_look (trim(tmpdir)//'gs', gr%m, i, i, w%gs_st%nst, ierr)
 
-      w%gs_st%st_start = 1
       if(w%out_populations%write) then ! do only this when not calculating populations
         ! We will store the ground-state Kohn-Sham system by all processors.
         !%Variable TDProjStateStart
@@ -214,7 +213,9 @@ contains
         !% is set by the number of states in the propagation and the number of uncoccupied states
         !% available
         !%End
-        call loct_parse_int(check_inp('TDProjStateStart'), w%gs_st%st_start, w%gs_st%st_start)
+        call loct_parse_int(check_inp('TDProjStateStart'), 1, w%gs_st%st_start)
+      else
+        w%gs_st%st_start = 1
       end if
       w%gs_st%st_end   = w%gs_st%nst
 
@@ -366,17 +367,15 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine td_write_data(w, gr, st, h, outp, geo, dt_, iter)
+  subroutine td_write_data(w, gr, st, h, outp, geo, iter)
     type(td_write_t),    intent(in)    :: w
     type(grid_t),        intent(inout) :: gr
     type(states_t),      intent(inout) :: st
     type(hamiltonian_t), intent(in)    :: h
     type(output_t),      intent(in)    :: outp
     type(geometry_t),    intent(in)    :: geo
-    FLOAT, intent(in) :: dt_
     integer, intent(in) :: iter
 
-!!$    FLOAT :: dt
     character(len=256) :: filename
 
     call push_sub('td.td_write_data')
@@ -401,9 +400,6 @@ contains
     if(iand(outp%what, output_geometry).ne.0) &
       call atom_write_xyz(filename, "geometry", geo)
     call hamiltonian_output(h, gr%m, gr%sb, filename, outp)
-
-!!$  dt = dt_
-!!$  call PES_output(td%PESv, gr%m, st, iter, outp%iter, dt)
 
     call pop_sub()
   end subroutine td_write_data

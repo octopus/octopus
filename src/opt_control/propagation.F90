@@ -104,7 +104,7 @@ module opt_control_propagation_m
     if(write_iter_) then
       call td_write_init(write_handler, gr, sys%st, sys%geo, &
         (td%move_ions>0), h%ep%with_gauge_field, td%iter, td%dt)
-      call td_write_data(write_handler, gr, psi, h, sys%outp, sys%geo, td%dt, 0)
+      call td_write_data(write_handler, gr, psi, h, sys%outp, sys%geo, 0)
     end if
 
     call hamiltonian_not_adjoint(h)
@@ -137,7 +137,7 @@ module opt_control_propagation_m
         if(ii==sys%outp%iter+1 .or. i == td%max_iter) then ! output
           if(i == td%max_iter) sys%outp%iter = ii - 1
           ii = i
-          call td_write_data(write_handler, gr, psi, h, sys%outp, sys%geo, td%dt, i) 
+          call td_write_data(write_handler, gr, psi, h, sys%outp, sys%geo, i) 
         end if
       end if
     end do
@@ -277,6 +277,7 @@ module opt_control_propagation_m
     end if
 
     if(aux_fwd_propagation) call td_rti_end(tr_psi2)
+    call states_end(chi)
     call td_rti_end(tr_chi)
     call pop_sub()
   end subroutine fwd_step
@@ -342,6 +343,7 @@ module opt_control_propagation_m
     call states_calc_dens(psi, NP_PART, psi%rho)
     call v_ks_calc(gr, sys%ks, h, psi)
 
+    call states_end(psi)
     call td_rti_end(tr_chi)
     call pop_sub()
   end subroutine bwd_step
@@ -666,6 +668,7 @@ module opt_control_propagation_m
           write(message(2), '(a,i8)') "Iter = ", iter
           call write_warning(2)
        end if
+       call states_end(stored_st)
        ! Restore state only if the number of checkpoints is larger than zero.
        if(prop%number_checkpoints > 0) then
          call states_end(psi)

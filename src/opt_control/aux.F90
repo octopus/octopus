@@ -24,10 +24,8 @@
   ! case, or else \int_0^T dt <Psi(t)|\hat{O}(t)|Psi(t) in 
   ! the time-dependent case.
   ! ---------------------------------------------------------
-  FLOAT function j1_functional(gr, geo, ep, psi, target) result(j1)
+  FLOAT function j1_functional(gr, psi, target) result(j1)
     type(grid_t),   intent(inout)   :: gr
-    type(geometry_t), intent(inout) :: geo
-    type(epot_t), intent(inout)     :: ep
     type(states_t), intent(inout)   :: psi
     type(target_t), intent(in)      :: target
 
@@ -90,11 +88,9 @@
   ! ---------------------------------------------------------
   ! calculate |chi(T)> = \hat{O}(T) |psi(T)>
   ! ---------------------------------------------------------
-  subroutine calc_chi(oct, gr, geo, ep, target, psi_in, chi_out)
+  subroutine calc_chi(oct, gr, target, psi_in, chi_out)
     type(oct_t),       intent(in)  :: oct
     type(grid_t),      intent(inout)  :: gr
-    type(geometry_t),  intent(inout) :: geo
-    type(epot_t),  intent(in) :: ep
     type(states_t),    intent(inout)  :: psi_in
     type(target_t),    intent(in)  :: target
     type(states_t),    intent(inout) :: chi_out

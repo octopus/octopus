@@ -104,7 +104,7 @@ contains
       case(FD)
         call phonons_run(sys, h)
       case(LR)
-        call phonons_lr_run(sys, h, fromScratch)
+        call phonons_lr_run(sys, h)
       end select
     case(M_OPT_CONTROL)
       call opt_control_run(sys, h)

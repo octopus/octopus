@@ -205,7 +205,7 @@ contains
       call parameters_copy(par_new, par)
       ctr_loop: do
         call parameters_copy(par_prev, par)
-        call f_striter(oct, iterator, sys, h, td, filter, psi, initial_st, target, par, prop_psi, prop_chi, j1)
+        call f_striter(oct, sys, h, td, filter, psi, initial_st, target, par, prop_psi, prop_chi, j1)
         if(oct%dump_intermediate) call iterator_write(iterator, psi, par, sys%gr, sys%outp)
         stop_loop = iteration_manager(j1, par_prev, par, iterator)
         if(clean_stop() .or. stop_loop) exit ctr_loop
@@ -295,7 +295,6 @@ contains
 
     ! ---------------------------------------------------------
     subroutine scheme_zbr98
-      type(states_t) :: chi
 
       call push_sub('opt_control.scheme_zbr98')
 
@@ -304,7 +303,7 @@ contains
 
       call parameters_copy(par_prev, par)
       call propagate_forward(sys, h, td, target, psi, prop_psi)
-      j1 = j1_functional(sys%gr, sys%geo, h%ep, psi, target)
+      j1 = j1_functional(sys%gr, psi, target)
       if(oct%dump_intermediate) call iterator_write(iterator, psi, par, sys%gr, sys%outp)
       stop_loop = iteration_manager(j1, par, par_prev, iterator)
       call parameters_end(par_prev)
@@ -313,7 +312,7 @@ contains
       ctr_loop: do
         call parameters_copy(par_prev, par)
         call f_zbr98(oct, sys, h, td, psi, initial_st, target, prop_psi, prop_chi, par)
-        j1 = j1_functional(sys%gr, sys%geo, h%ep, psi, target)
+        j1 = j1_functional(sys%gr, psi, target)
         if(oct%dump_intermediate) call iterator_write(iterator, psi, par, sys%gr, sys%outp)
         stop_loop = iteration_manager(j1, par, par_prev, iterator)
         if(clean_stop() .or. stop_loop) exit ctr_loop
@@ -400,7 +399,7 @@ contains
       call states_copy(psi, initial_st)
       call parameters_to_h(par, h%ep)
       call propagate_forward(sys, h, td, target, psi, prop_psi)
-      j1 = j1_functional(sys%gr, sys%geo, h%ep, psi, target)
+      j1 = j1_functional(sys%gr, psi, target)
       call pop_sub()
       return
     end if
@@ -408,7 +407,7 @@ contains
     call parameters_copy(parp, par)
 
     call states_copy(chi, psi)
-    call calc_chi(oct, sys%gr, sys%geo, h%ep, target, psi, chi)
+    call calc_chi(oct, sys%gr, target, psi, chi)
     call bwd_step(oct, sys, td, h, target, par, parp, chi, prop_chi, prop_psi)
 
     do j = 1, parp%no_parameters
@@ -437,7 +436,7 @@ contains
     call parameters_to_h(par, h%ep)
     call propagate_forward(sys, h, td, target, psi, prop_psi)
 
-    j1 = j1_functional(sys%gr, sys%geo, h%ep, psi, target)
+    j1 = j1_functional(sys%gr, psi, target)
 
     call states_end(chi)
     call parameters_end(parp)
@@ -447,9 +446,8 @@ contains
 
 
    ! ---------------------------------------------------------
-  subroutine f_striter(oct, iterator, sys, h, td, filter, psi, initial_st, target, par, prop_psi, prop_chi, j1)
+  subroutine f_striter(oct, sys, h, td, filter, psi, initial_st, target, par, prop_psi, prop_chi, j1)
     type(oct_t), intent(in)                       :: oct
-    type(oct_iterator_t), intent(in)              :: iterator
     type(system_t), intent(inout)                 :: sys
     type(hamiltonian_t), intent(inout)            :: h
     type(td_t), intent(inout)                     :: td
@@ -475,11 +473,11 @@ contains
     call propagate_forward(sys, h, td, target, psi, prop_psi)
 
     ! Check the performance.
-    j1 = j1_functional(sys%gr, sys%geo, h%ep, psi, target)
+    j1 = j1_functional(sys%gr, psi, target)
 
     ! Set the boundary condition for the backward propagation.
     call states_copy(chi, psi)
-    call calc_chi(oct, sys%gr, sys%geo, h%ep, target, psi, chi)
+    call calc_chi(oct, sys%gr, target, psi, chi)
 
     ! Backward propagation, while at the same time finding the output field, 
     ! which is placed at par_chi
@@ -529,7 +527,7 @@ contains
       call states_copy(psi, initial_st)
       call parameters_to_h(par, h%ep)
       call propagate_forward(sys, h, td, target, psi, prop_psi)
-      j1 = j1_functional(sys%gr, sys%geo, h%ep, psi, target)
+      j1 = j1_functional(sys%gr, psi, target)
       call pop_sub()
       return
     end if
@@ -545,14 +543,14 @@ contains
     end if
     
     call states_copy(chi, psi)
-    call calc_chi(oct, sys%gr, sys%geo, h%ep, target, psi, chi)
+    call calc_chi(oct, sys%gr, target, psi, chi)
     call bwd_step(oct, sys, td, h, target, par, par_chi, chi, prop_chi, prop_psi)
 
     call states_end(psi)
     call states_copy(psi, initial_st)
     call fwd_step(oct, sys, td, h, target, par, par_chi, psi, prop_chi, prop_psi)
 
-    j1 = j1_functional(sys%gr, sys%geo, h%ep, psi, target)
+    j1 = j1_functional(sys%gr, psi, target)
 
     call states_end(chi)
     call parameters_end(par_chi)

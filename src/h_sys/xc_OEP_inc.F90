@@ -124,7 +124,7 @@ subroutine X(xc_oep_solve) (gr, h, st, is, vxc, oep)
   FLOAT,               intent(inout) :: vxc(:) ! vxc(NP)
   type(xc_oep_t),      intent(inout) :: oep
 
-  integer :: iter, ist, ierr
+  integer :: iter, ist
   FLOAT :: vxc_bar, f
   FLOAT, allocatable :: s(:), vxc_old(:)
   R_TYPE, allocatable :: b(:,:)

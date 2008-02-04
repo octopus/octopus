@@ -58,10 +58,9 @@ module phonons_lr_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine phonons_lr_run(sys, h, fromScratch)
+  subroutine phonons_lr_run(sys, h)
     type(system_t),         intent(inout) :: sys
     type(hamiltonian_t),    intent(inout) :: h
-    logical,                intent(inout) :: fromScratch
 
     type(sternheimer_t) :: sh
     type(lr_t)          :: lr(1:1)

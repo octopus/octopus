@@ -695,7 +695,7 @@ subroutine X(vlaser_operator_quadratic) (gr, h, psi, hpsi, ik, laser_number)
       ALLOCATE(a_prime(NP_PART, NDIM), NP_PART*NDIM)
       a_prime = M_ZERO
     end if
-    call laser_vector_potential(h%ep%lasers(i), gr%m, a_prime)
+    call laser_vector_potential(h%ep%lasers(i), a_prime)
     a = a + a_prime
     call laser_field(gr%sb, h%ep%lasers(i), b_prime)
     b = b + b_prime
@@ -774,7 +774,7 @@ subroutine X(vlaser_operator_linear) (gr, h, psi, hpsi, ik, laser_number)
       ALLOCATE(a_prime(NP_PART, NDIM), NP_PART*NDIM)
       a_prime = M_ZERO
     end if
-    call laser_vector_potential(h%ep%lasers(i), gr%m, a_prime)
+    call laser_vector_potential(h%ep%lasers(i), a_prime)
     a = a + a_prime
     call laser_field(gr%sb, h%ep%lasers(i), b_prime)
     b = b + b_prime
@@ -923,7 +923,7 @@ subroutine X(vlasers) (gr, h, psi, hpsi, ik, t)
         a_prime = M_ZERO
       end if
 
-      call laser_vector_potential(h%ep%lasers(i), gr%m, a_prime, t)
+      call laser_vector_potential(h%ep%lasers(i), a_prime, t)
       a = a + a_prime
       if(present(t)) then
         call laser_field(gr%sb, h%ep%lasers(i), b_prime, t)

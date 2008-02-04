@@ -515,9 +515,8 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine laser_vector_potential(l, m, a, t)
+  subroutine laser_vector_potential(l, a, t)
     type(laser_t),     intent(in) :: l
-    type(mesh_t),      intent(in) :: m
     FLOAT,            intent(out) :: a(:, :)
     FLOAT, optional,   intent(in) :: t
 

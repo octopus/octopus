@@ -269,7 +269,7 @@ contains
         if(i == td%max_iter) sys%outp%iter = ii - 1
         ii = 1
         call td_save_restart(i)
-        call td_write_data(write_handler, gr, st, h, sys%outp, geo, td%dt, i)
+        call td_write_data(write_handler, gr, st, h, sys%outp, geo, i)
         if( (td%move_ions > 0) .and. td%recalculate_gs) then
           call messages_print_stress(stdout, 'Recalculating the ground state.')
           fromScratch = .false.
@@ -507,7 +507,7 @@ contains
       call apply_delta_field(td%kick)
 
       call td_save_restart(0)
-      call td_write_data(write_handler, gr, st, h, sys%outp, geo, td%dt, 0)
+      call td_write_data(write_handler, gr, st, h, sys%outp, geo, 0)
       call td_rti_run_zero_iter(h, td%tr)
 
       call pop_sub()

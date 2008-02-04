@@ -313,11 +313,11 @@ subroutine X(states_block_matr_mul_add)(mesh, st, alpha, psi, matr, beta, res, x
   R_TYPE,            intent(inout) :: res(mesh%np_part, st%d%dim, st%st_start:st%st_end)
   integer, optional, intent(in)    :: xpsi(:), xres(:)
 
-  integer              :: res_col, psi_col, matr_col, i
+  integer              :: res_col, psi_col, matr_col
   integer, pointer     :: xpsi_(:), xres_(:)
   R_TYPE, allocatable  :: res_block(:, :, :), matr_block(:, :), psi_block(:, :, :)
 #if defined(HAVE_MPI)
-  integer              :: rank, size, round, matr_row_offset, matr_col_offset
+  integer              :: rank, size, round, matr_row_offset, matr_col_offset, i
   integer              :: src, dst, left, right, k, l, idim, sendcnt, recvcnt, max_count
   integer              :: stats(MPI_STATUS_SIZE, 2), reqs(2)
   integer, pointer     :: xpsi_count(:), xres_count(:), xpsi_node(:, :), xres_node(:, :)

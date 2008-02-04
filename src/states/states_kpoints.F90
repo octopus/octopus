@@ -36,8 +36,6 @@ subroutine states_choose_kpoints(d, sb, geo)
   ! of the position of the j-th atom of type i.
   FLOAT, allocatable :: kp(:,:),kw(:)
 
-  logical :: got_kpoints
-
   call push_sub('states_kpoints.states_choose_kpoints')
 
   ! if not periodic just return the Gamma point

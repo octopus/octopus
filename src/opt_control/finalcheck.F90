@@ -42,7 +42,7 @@
     call parameters_to_h(par, h%ep)
     call propagate_forward(sys, h, td, target, psi, write_iter = .true.)
 
-    j1 = j1_functional(sys%gr, sys%geo, h%ep, psi, target)
+    j1 = j1_functional(sys%gr, psi, target)
     fluence = laser_fluence(par)
     j2 = j2_functional(par)
     jfunctional = j1 + j2

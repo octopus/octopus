@@ -110,7 +110,7 @@ contains
     FLOAT,               intent(in)    :: t
     CMPLX,               intent(in)    :: factor
 
-    integer :: k, i
+    integer :: i
     FLOAT, allocatable :: pot(:)
 
     call push_sub('td_exp_split.vlpsi')

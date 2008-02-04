@@ -206,6 +206,7 @@ module opt_control_target_m
           call rotate_states(gr%m, target%st, tmp_st, rotation_matrix)
           deallocate(rotation_matrix)
           call states_end(tmp_st)
+          call loct_parse_block_end(blk)
         else
           message(1) = '"OCTTargetTransformStates" has to be specified as block.'
           call write_info(1)
@@ -278,6 +279,7 @@ module opt_control_target_m
               target%rho(ip) = sum(target%st%rho(ip, 1:target%st%d%spin_channels))
             end do
             call states_end(tmp_st)
+            call loct_parse_block_end(blk)
           else
             message(1) = '"OCTTargetDensityState" has to be specified as block.'
             call write_info(1)
@@ -512,6 +514,7 @@ module opt_control_target_m
       case default
         stop 'ERROR in tdtarget_init'
       end select
+      call loct_parse_block_end(blk)
     else
       message(1) = 'If OCTTargetMode = oct_targetmode_td, you must suppy a OCTTDTarget block'
       call write_fatal(1)

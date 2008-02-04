@@ -233,6 +233,8 @@ contains
     end do
     deallocate(cp%f)
     nullify(cp%f)
+    deallocate(cp%td_penalty)
+    nullify(cp%td_penalty)
     deallocate(cp%alpha)
     nullify(cp%alpha)
     deallocate(cp%pol)

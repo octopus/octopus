@@ -337,7 +337,7 @@ subroutine read_resonances_file(order, ffile, search_interval, final_time, nfreq
 
   ! First, substract zero resonance...
   w = M_ZERO
-  call resonance_second_order(w, power, nw_substracted, dw, leftbound, rightbound, M_ZERO, M_ZERO)
+  call resonance_second_order(w, power, nw_substracted, leftbound, rightbound, M_ZERO, M_ZERO)
   call modify_ot(time_steps, dt, order, ot, omega, power)
   nw_substracted = nw_substracted + 1
 
@@ -348,7 +348,7 @@ subroutine read_resonances_file(order, ffile, search_interval, final_time, nfreq
       leftbound = wij(k) - search_interval
       rightbound = wij(k) + search_interval
       call find_resonance(wij(k), leftbound, rightbound, nfrequencies)
-      call resonance_second_order(wij(k), power, nw_substracted, dw, leftbound, rightbound, c0i(i), c0i(j))
+      call resonance_second_order(wij(k), power, nw_substracted, leftbound, rightbound, c0i(i), c0i(j))
       call modify_ot(time_steps, dt, order, ot, wij(k), power)
       nw_substracted = nw_substracted + 1
       k = k + 1
@@ -388,10 +388,6 @@ subroutine analyze_signal(order, omega, search_interval, final_time, nresonances
   FLOAT, allocatable :: w(:), c0I2(:)
   integer :: nspin, i, ierr, order_in_file, nw_substracted
   logical :: file_exists
-
-  !!!!WARNING this should go away
-  FLOAT :: e
-  integer :: j
 
   ! First, let us check that the file "ot" exists.
   inquire(file="ot", exist  = file_exists)
@@ -471,7 +467,7 @@ subroutine analyze_signal(order, omega, search_interval, final_time, nresonances
     case(1)
       call resonance_first_order(omega, power, nw_substracted, dw, leftbound, rightbound)
     case(2)
-      call resonance_second_order(omega, power, nw_substracted, dw, leftbound, rightbound, M_ZERO, M_ZERO)
+      call resonance_second_order(omega, power, nw_substracted, leftbound, rightbound, M_ZERO, M_ZERO)
     end select
 
     w(i) = omega
@@ -657,7 +653,7 @@ end subroutine resonance_first_order
 
 
 ! ---------------------------------------------------------
-subroutine resonance_second_order(omega, power, nw_substracted, dw, leftbound, rightbound, c01, c02)
+subroutine resonance_second_order(omega, power, nw_substracted, leftbound, rightbound, c01, c02)
   use global_m
   use messages_m
   use datasets_m
@@ -673,7 +669,7 @@ subroutine resonance_second_order(omega, power, nw_substracted, dw, leftbound, r
   FLOAT, intent(in)               :: omega
   FLOAT, intent(out)              :: power
   integer, intent(in)             :: nw_substracted
-  FLOAT, intent(in)               :: dw, leftbound, rightbound
+  FLOAT, intent(in)               :: leftbound, rightbound
   FLOAT, intent(in)               :: c01, c02
 
   call ft(omega, power)
@@ -733,9 +729,9 @@ subroutine generate_signal(order, observable)
   integer, intent(in) :: observable(2)
 
   logical :: file_exists
-  integer :: i, j, nspin, time_steps, lmax, nfiles, k, isp, add_lm, l, m, max_add_lm
+  integer :: i, j, nspin, time_steps, lmax, nfiles, k, add_lm, l, m, max_add_lm
   integer, allocatable :: iunit(:)
-  FLOAT :: dt, lambda, det, dump, o0, conversion_factor, lequalonefactor
+  FLOAT :: dt, lambda, det, dump, o0, conversion_factor
   FLOAT, allocatable :: q(:), mu(:), qq(:, :), c(:)
   character(len=20) :: filename
   type(kick_t) :: kick
@@ -1169,7 +1165,7 @@ subroutine print_omega_file(omega, search_interval, final_time, nfrequencies)
   logical :: file_exists
   character(len=20) :: header_string
   FLOAT, allocatable :: warray(:), tarray(:)
-  FLOAT :: leftbound, rightbound, dw, power, w, aw
+  FLOAT :: leftbound, rightbound, dw, w, aw
 
   ! First, let us check that the file "ot" exists.
   inquire(file="ot", exist  = file_exists)

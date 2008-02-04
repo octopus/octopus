@@ -281,7 +281,7 @@ subroutine X(lr_calc_susceptibility)(sys, h, lr, nsigma, perturbation, chi_para,
   type(pert_t),           intent(inout) :: perturbation
   CMPLX,                  intent(out)   :: chi_para(:,:), chi_dia(:,:)
 
-  integer :: ik, ist, dir1, dir2, j
+  integer :: dir1, dir2
   R_TYPE  :: trace
 
   call push_sub('em_resp_calc_inc.lr_calc_susceptibility')

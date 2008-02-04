@@ -285,7 +285,7 @@ contains
     type(kick_t), intent(inout) :: k
     integer,      intent(in) :: iunit
 
-    integer :: ios, i
+    integer :: i
     character(len=100) :: line
 
     call push_sub('spectrum.kick_read')
@@ -325,7 +325,7 @@ contains
     integer,      intent(in)  :: nspin
 
     type(block_t) :: blk
-    integer :: n_rows, n_columns, i, j
+    integer :: n_rows, i, j
 
     call push_sub('spectrum.kick_init')
 

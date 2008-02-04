@@ -79,7 +79,7 @@ contains
     call push_sub('specie_pot.specie_pot_init')
     
     if(specie_is_ps(this)) then
-      call ps_separate(this%ps, maxval(gr%m%h))
+      call ps_separate(this%ps)
 
       if(filter) then 
         call ps_filter(this%ps, mesh_gcutoff(gr%m), this%alpha, this%beta, this%rcut, this%beta2)
@@ -101,7 +101,7 @@ contains
   end subroutine specie_pot_init
 
   ! ---------------------------------------------------------
-
+  ! WARNING: this subroutine should be terminating something?
   subroutine specie_pot_end(this, gr)
     type(specie_t),      intent(inout) :: this
     type(grid_t),        intent(in)    :: gr

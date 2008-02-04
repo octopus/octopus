@@ -279,9 +279,8 @@ contains
 
   end subroutine ps_init
 
-  subroutine ps_separate(ps, spacing)
+  subroutine ps_separate(ps)
     type(ps_t),        intent(out) :: ps
-    FLOAT,             intent(in)  :: spacing
 
     FLOAT, allocatable :: vsr(:), vlr(:), nlr(:), vion(:)
     FLOAT :: r

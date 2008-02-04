@@ -535,7 +535,7 @@ contains
     subroutine td_reversal
       FLOAT, allocatable :: vhxc_t1(:,:), vhxc_t2(:,:)
       CMPLX, allocatable :: zpsi1(:,:,:)
-      integer :: ik, ist, idim, ii
+      integer :: ik, ist, idim
 
       call push_sub('td_rti.td_reversal')
 
