@@ -668,13 +668,12 @@ module opt_control_propagation_m
           write(message(2), '(a,i8)') "Iter = ", iter
           call write_warning(2)
        end if
-       call states_end(stored_st)
        ! Restore state only if the number of checkpoints is larger than zero.
        if(prop%number_checkpoints > 0) then
          call states_end(psi)
          call states_copy(psi, stored_st)
-         call states_end(stored_st)
        end if
+       call states_end(stored_st)
      end if
     end do
 
