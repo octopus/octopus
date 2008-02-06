@@ -206,7 +206,7 @@ contains
       ctr_loop: do
         call parameters_copy(par_prev, par)
         call f_striter(oct, sys, h, td, filter, psi, initial_st, target, par, prop_psi, prop_chi, j1)
-        if(oct%dump_intermediate) call iterator_write(iterator, psi, par, sys%gr, sys%outp)
+        if(oct%dump_intermediate) call iterator_write(iterator, psi, par_prev, sys%gr, sys%outp)
         stop_loop = iteration_manager(j1, par_prev, par, iterator)
         if(clean_stop() .or. stop_loop) exit ctr_loop
         if(oct%use_mixing) then
