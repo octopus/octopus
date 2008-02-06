@@ -107,7 +107,8 @@ AC_DEFUN([ACX_LONG_FORTRAN_LINES],
 AC_COMPILE_IFELSE( AC_LANG_PROGRAM( [], [
 write(*, *) '45678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890'
  ]), 
- [acx_long_lines_ok=yes; AC_DEFINE(LONG_LINES, 1, [compiler supports long lines])], [acx_long_lines_ok=no] )
+ [acx_long_lines_ok=yes; AC_DEFINE(LONG_LINES, 1, [compiler supports long lines])], [acx_long_lines_ok=no])
+AC_SUBST([LONG_LINES], [$acx_long_lines_ok])
 AC_MSG_RESULT($acx_long_lines_ok)
 ])
 

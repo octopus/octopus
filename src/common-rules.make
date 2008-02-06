@@ -116,7 +116,9 @@ SUFFIXES = _oct.f90 .F90 .o .S .s
 			grep -v push_sub >$*_oct.f91; \
 		mv -f $*_oct.f91 $*_oct.f90; \
 	fi
-	@perl -pi -e 's/\\newline/\n/g; s/\\cardinal/#/g' $*_oct.f90
+	@if [ "@LONG_LINES@" = "no" ]; then \
+		perl -pi -e 's/\\newline/\n/g; s/\\cardinal/#/g' $*_oct.f90; \
+	fi
 	@if [ "@F90_ACCEPTS_LINE_NUMBERS@" = "no" ]; then \
 		grep -v "^#" $*_oct.f90 > $*_oct.f91; \
 		mv -f $*_oct.f91 $*_oct.f90; \
@@ -134,7 +136,9 @@ SUFFIXES = _oct.f90 .F90 .o .S .s
 			grep -v push_sub >$*_oct.f91; \
 		mv -f $*_oct.f91 $*_oct.f90; \
 	fi
-	@perl -pi -e 's/\\newline/\n/g; s/\\cardinal/#/g' $*_oct.f90
+	@if [ "@LONG_LINES@" = "no" ]; then \
+		perl -pi -e 's/\\newline/\n/g; s/\\cardinal/#/g' $*_oct.f90; \
+	fi
 
 
 # ---------------------------------------------------------------

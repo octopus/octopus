@@ -28,32 +28,40 @@
 #define LAP     f_der%der_discr%lapl
 
 #if defined(F90_ACCEPTS_LINE_NUMBERS)
-# define CARDINAL \newline\cardinal __LINE__ __FILE__
+#  define CARDINAL \newline\cardinal __LINE__ __FILE__
 #else
-# define CARDINAL \newline
+#  define CARDINAL \newline
 #endif
 
 #define __STRING(x)     #x
 
-#if !defined(NDEBUG) 
-#  define ASSERT(expr) \
-     if(.not.(expr)) then                    \newline \
-       call assert_die (__STRING(expr), &    \newline \
-                        __FILE__, __LINE__)  \newline \
-     end if                                  \
-     CARDINAL
-
+#if !defined(NDEBUG)
+#  if defined(LONG_LINES)
+#    define ASSERT(expr) if(.not.(expr)) \
+       call assert_die(__STRING(expr), __FILE__, __LINE__)
+#  else
+#    define ASSERT(expr) \
+       if(.not.(expr)) then                    \newline \
+         call assert_die (__STRING(expr), &    \newline \
+                          __FILE__, __LINE__)  \newline \
+       end if                                  \
+       CARDINAL
+#  endif
 #else
 #  define ASSERT(expr)
 #endif
 
-
-# define ALLOCATE(x, size) \
-    allocate(x, stat=global_alloc_err)                 \newline \
-     if(global_alloc_err.ne.0) then                    \newline \
-       call alloc_error((size), __FILE__, __LINE__)    \newline \
-     end if                                            \
+#if defined(LONG_LINES)
+#  define ALLOCATE(x, size) allocate(x, stat=global_alloc_err); \
+     if(global_alloc_err.ne.0) call alloc_error((size), __FILE__, __LINE__)
+#else
+#  define ALLOCATE(x, size) \
+     allocate(x, stat=global_alloc_err)                 \newline \
+     if(global_alloc_err.ne.0) then                     \newline \
+       call alloc_error((size), __FILE__, __LINE__)     \newline \
+     end if                                             \
      CARDINAL
+#endif
 
 #define REAL_DOUBLE real(8)
 #define REAL_SINGLE real(4)
