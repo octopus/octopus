@@ -209,13 +209,23 @@ int parse_isdef(char *name)
   return 1;
 }
 
+
+static void check_is_numerical(const char * name, const symrec * ptr){
+  if( ptr->type != S_CMPLX){
+    fprintf(stderr, "Input error: expecting a numerical value for variable '%s' and found a string.\n", name);
+    exit(1);
+  }
+}
+
+
 int parse_int(char *name, int def)
 {
   symrec *ptr;
   int ret;
 
   ptr = getsym(name);	
-  if(ptr && ptr->type == S_CMPLX){
+  if(ptr){
+    check_is_numerical(name, ptr);
     ret = ROUND(GSL_REAL(ptr->value.c));
     if(!disable_write) {
       fprintf(fout, "%s = %d\n", name, ret);
@@ -235,7 +245,8 @@ double parse_double(char *name, double def)
   double ret;
 
   ptr = getsym(name);	
-  if(ptr && ptr->type == S_CMPLX){
+  if(ptr){
+    check_is_numerical(name, ptr);
     ret = GSL_REAL(ptr->value.c);
     if(!disable_write) {
       fprintf(fout, "%s = %g\n", name, ret);
@@ -255,7 +266,8 @@ gsl_complex parse_complex(char *name, gsl_complex def)
   gsl_complex ret;
 
   ptr = getsym(name);	
-  if(ptr && ptr->type == S_CMPLX){
+  if(ptr){
+    check_is_numerical(name, ptr);
     ret = ptr->value.c;
     if(!disable_write) {
       fprintf(fout, "%s = (%g, %g)\n", name, GSL_REAL(ret), GSL_IMAG(ret));
@@ -275,7 +287,11 @@ char *parse_string(char *name, char *def)
   char *ret;
   
   ptr = getsym(name);	
-  if(ptr && ptr->type == S_STR){
+  if(ptr){
+    if( ptr->type != S_STR){
+      fprintf(stderr, "Input error: expecting a string for variable '%s'.\n", name);
+      exit(1);
+    }
     ret = ptr->value.str;
     if(!disable_write) {
       fprintf(fout, "%s = \"%s\"\n", name, ret);

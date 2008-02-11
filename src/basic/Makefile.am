@@ -70,7 +70,7 @@ messages.o : messages.F90 varinfo.o string.o mpi.o loct_parser.o loct.o global.o
 io.o : io.F90 mpi.o messages.o loct_parser.o loct.o global.o datasets.o 
 io_binary.o : io_binary.c 
 mpi_lib.o : mpi_lib.F90 mpi_lib_inc.F90 mpi_debug.o mpi.o messages.o global.o 
-units.o : units.F90 io.o messages.o loct_parser.o global.o datasets.o 
+units.o : units.F90 io.o messages.o loct_parser.o global.o datasets.o  varinfo.o
 mpi_debug.o : mpi_debug.F90 mpi_debug_inc.F90 mpi.o messages.o loct.o global.o 
 profiling.o : profiling.F90 mpi.o messages.o loct.o io.o global.o 
 utils.o : utils.F90 messages.o global.o 

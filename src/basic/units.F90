@@ -43,6 +43,7 @@ module units_m
   use loct_parser_m
   use messages_m
   use io_m
+  use varinfo_m
 
   implicit none
 
@@ -118,6 +119,11 @@ contains
     !%Section Generalities::Units
     !%Description
     !% Same as "Units", but only refers to input values.
+    !%Option atomic        1
+    !% Atomic units
+    !%Option ev_angstrom   2
+    !% Electron-volts for energy, Angstrom for length, the rest of the
+    !% units are derived from these and <math>hbar=1</math>.
     !%End
 
     !%Variable UnitsOutput
@@ -126,16 +132,24 @@ contains
     !%Section Generalities::Units
     !%Description
     !% Same as "Units", but only refers to output values.
+    !%Option atomic        1
+    !% Atomic units
+    !%Option ev_angstrom   2
+    !% Electron-volts for energy, Angstrom for length, the rest of the
+    !% units are derived from these and <math>hbar=1</math>.
     !%End
 
     if(loct_parse_isdef(check_inp('Units')).ne.0) then
       call loct_parse_int(check_inp('Units'), UNITS_ATOMIC, c)
+      if(.not.varinfo_valid_option('Units', c)) call input_error('Units')
       cinp = c
       cout = c
     else
       call loct_parse_int(check_inp('UnitsInput'), UNITS_ATOMIC, c)
+      if(.not.varinfo_valid_option('UnitsInput', c)) call input_error('UnitsInput')
       cinp = c
       call loct_parse_int(check_inp('UnitsOutput'), UNITS_ATOMIC, c)
+      if(.not.varinfo_valid_option('UnitsOutput', c)) call input_error('UnitsOutput')
       cout = c
     end if
 
