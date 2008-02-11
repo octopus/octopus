@@ -63,6 +63,7 @@ AC_CHECK_TYPES([uint32_t, uint64_t])
 AC_CHECK_SIZEOF(unsigned int)
 AC_CHECK_SIZEOF(unsigned long)
 AC_CHECK_SIZEOF(unsigned long long)
+ACX_M128D
 
 # Checks for library functions.
 AC_FUNC_GETPGRP

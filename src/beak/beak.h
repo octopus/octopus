@@ -61,7 +61,7 @@ typedef struct {
 /* If this is a x86_64 machine we always can use vectors */
 #if defined (__amd64__) || defined(__x86_64__)
 # define OCT_AMD64
-# if defined(HAVE_EMMINTRIN_H)
+# if defined(HAVE_EMMINTRIN_H) && defined(HAVE_M128D)
 #   define USE_VECTORS
 # endif
 #endif
@@ -88,7 +88,7 @@ typedef struct {
 # else /* DOUBLE_PRECISION */
 
 /* we need SSE2 and aligned memory */
-#  if defined(__SSE2__) && defined(HAVE_EMMINTRIN_H) && defined(FC_USES_MALLOC)
+#  if defined(__SSE2__) && defined(HAVE_EMMINTRIN_H) && defined(FC_USES_MALLOC) && defined(HAVE_M128D)
 #   if defined(HAVE_16_BYTES_ALIGNED_MALLOC)
 #    define USE_VECTORS
 #   else /* not HAVE_16_BYTES_ALIGNED_MALLOC */
