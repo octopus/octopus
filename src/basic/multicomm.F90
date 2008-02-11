@@ -329,7 +329,7 @@ contains
     ! check if a balanced distribution of nodes will be used
     subroutine sanity_check()
       FLOAT :: frac
-      integer :: i, k
+      integer :: i, k, n_max
 
       call push_sub('multicomm.sanity_check')
 
@@ -366,8 +366,9 @@ contains
       ! calculate fraction of idle time
       frac = M_ONE
       do i = 1, mc%n_index
-        frac = frac * (M_ONE - real(mod(index_range(i), mc%group_sizes(i)), REAL_PRECISION)/ &
-          real(index_range(i), REAL_PRECISION))
+        n_max = ceiling(real(index_range(i), REAL_PRECISION)/real(mc%group_sizes(i), REAL_PRECISION))
+        k = n_max * mc%group_sizes(i)
+        frac = frac * (M_ONE - real(k - index_range(i), REAL_PRECISION)/real(k, REAL_PRECISION))
       end do
 
       write(message(1), '(a,f5.2,a)') "Info: Octopus will waste at least ", &
