@@ -121,36 +121,13 @@ contains
     !%Option evolution 7
     !% Propagation in imaginary time. WARNING: Temporarily disabled.
     !%Option lobpcg 8
-    !% Locally optimal block preconditioned conjugate gradient algorithm,
+    !% Locally optimal block preconditioned conjugate gradient algorithm
+    !% (only available if DevelVersion = yes),
     !% see: A. Knyazev. Toward the Optimal Preconditioned Eigensolver: Locally
     !% Optimal Block Preconditioned Conjugate Gradient Method. SIAM
     !% Journal on Scientific Computing, 23(2):517­541, 2001.
     !%End
-
-    ! When running parallel in states, LOBPCG is the default, otherwise
-    ! the conjugate gradient algorithm.
-    if(st%parallel_in_states) then
-      default_es = RS_LOBPCG
-    else
-      default_es = RS_CG
-    end if
-    call loct_parse_int(check_inp('EigenSolver'), default_es, eigens%es_type)
-    if(.not.varinfo_valid_option('EigenSolver', eigens%es_type)) call input_error('EigenSolver')
-
-    ! The evolution method is temporarily disabled
-    if(eigens%es_type.eq.EVOLUTION) then
-      message(1) = 'EigenSolver = evolution is disabled.'
-      call write_fatal(1)
-    end if
-
-    ! If running parallel in states the LOBPCG solver has to be chosen.
-    if(st%parallel_in_states.and.eigens%es_type.ne.RS_LOBPCG) then
-      message(1) = 'To run a ground state calculation parallel in states'
-      message(2) = 'you have to use the LOBPCG eigensolver:'
-      message(3) = ''
-      message(4) = '  EigenSolver = lobpcg'
-      call write_fatal(4)
-    end if
+    call loct_parse_int(check_inp('EigenSolver'), RS_CG, eigens%es_type)
 
     !%Variable EigenSolverVerbose
     !%Type logical
@@ -301,10 +278,18 @@ contains
         call deigen_solver_evolution(gr, st, h, tol, maxiter, eigens%converged, eigens%diff, &
              tau = eigens%imag_time)
       case(RS_LOBPCG)
-        call deigen_solver_lobpcg(gr, st, h, eigens%pre, tol, maxiter, eigens%converged, &
-          eigens%diff, verbose = verbose_)
+        if(conf%devel_version) then
+          call deigen_solver_lobpcg(gr, st, h, eigens%pre, tol, maxiter, eigens%converged, &
+            eigens%diff, verbose = verbose_)
+        else
+          message(1) = 'LOBPCG is still under development. Put'
+          message(2) = ''
+          message(3) = '  DevelVersion = yes'
+          message(4) = ''
+          message(5) = 'in your input file if you really want to use it. Be warned.'
+          call write_fatal(5)
+        end if
       end select
-
       call deigen_diagon_subspace(gr, st, h)
     else
       select case(eigens%es_type)
@@ -320,8 +305,17 @@ contains
         call zeigen_solver_evolution(gr, st, h, tol, maxiter, eigens%converged, eigens%diff, &
              tau = eigens%imag_time)
       case(RS_LOBPCG)
-       call zeigen_solver_lobpcg(gr, st, h, eigens%pre, tol, maxiter, eigens%converged, &
-         eigens%diff, verbose = verbose_)
+        if(conf%devel_version) then
+          call zeigen_solver_lobpcg(gr, st, h, eigens%pre, tol, maxiter, eigens%converged, &
+            eigens%diff, verbose = verbose_)
+        else
+          message(1) = 'LOBPCG is still under development. Put'
+          message(2) = ''
+          message(3) = '  DevelVersion = yes'
+          message(4) = ''
+          message(5) = 'in your input file if you really want to use it. Be warned.'
+          call write_fatal(5)
+        end if
       end select
 
       call zeigen_diagon_subspace(gr, st, h)

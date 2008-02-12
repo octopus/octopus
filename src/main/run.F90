@@ -179,8 +179,6 @@ contains
       parallel_mask = 0
       parallel_mask = ibset(parallel_mask, P_STRATEGY_DOMAINS - 1) ! all modes are parallel in domains
       select case(calc_mode)
-      case(M_GS)
-        parallel_mask = ibset(parallel_mask, P_STRATEGY_STATES - 1)
       case(M_TD)
         parallel_mask = ibset(parallel_mask, P_STRATEGY_STATES - 1)
       case(M_CASIDA)
