@@ -19,7 +19,37 @@
 
 
 ! ---------------------------------------------------------
-subroutine X(lcao_initial_wf) (n, m, geo, psi, ispin, ik, err)
+! This routine fills state psi with an atomic orbital -- provided
+! by the pseudopotential structure in geo.
+!
+! Which state will be placed is determined by index "n". Each atom
+! provides niwfs pseudo-orbitals (this number is given in geo%atom(ia)%spec%niwfs
+! for atom number ia). This number is actually multiplied by two in case
+! of spin-unrestricted or spinors calculations.
+!
+! The pseudo-orbitals are placed in order in the following way (Natoms
+! is the total number of atoms).
+!
+! n = 1 => first orbital of atom 1,
+! n = 2 => first orbital of atom 2.
+! n = 3 => first orbital of atom 3.
+! ....
+! n = Natoms => first orbital of atom Natoms
+! n = Natoms + 1 = > second orbital of atom 1
+! ....
+!
+! If at some point in this loop an atom pseudo cannot provide the corresponding
+! orbital (because the niws orbitals have been exhausted), it moves on to the following
+! atom.
+!
+! In the spinors case, it changes a bit:
+!
+! n = 1 => first spin-up orbital of atom 1, assigned to the spin-up component of the spinor.
+! n = 2 => first spin-down orbital of atom 1, assigned to the spin-down component of the spinor.
+! n = 3 => first spin-up orbital of atom 2, assigned to the spin-up component of the spinor.
+! ....
+! ---------------------------------------------------------
+Subroutine X(lcao_initial_wf) (n, m, geo, psi, ispin, ik, err)
   integer,                  intent(in)  :: n
   type(mesh_t),             intent(in)  :: m
   type(geometry_t), target, intent(in)  :: geo
@@ -30,7 +60,7 @@ subroutine X(lcao_initial_wf) (n, m, geo, psi, ispin, ik, err)
 
   integer :: norbs, ia, i, j, idim, k, wf_dim
   type(specie_t), pointer :: s
-  FLOAT :: x(MAX_DIM), r
+  FLOAT :: x(MAX_DIM)
 
   call push_sub('lcao_inc.Xlcao_initial_wf')
 
@@ -55,33 +85,58 @@ subroutine X(lcao_initial_wf) (n, m, geo, psi, ispin, ik, err)
 
   psi(1:m%np, 1:wf_dim) = R_TOTYPE(M_ZERO)
 
-  idim = 1
-  i = 1; j = 0
+  select case(ispin)
 
-  do 
-    j = j + 1
-    do ia = 1, geo%natoms
-      s => geo%atom(ia)%spec
-      do idim = 1, wf_dim
-        if(j > s%niwfs) cycle
-        if(n == i) then
-        
-          do k = 1, m%np
-            x(1:calc_dim) = m%x(k, 1:calc_dim) - geo%atom(ia)%x(1:calc_dim)
-            psi(k, idim) =  &
-                 R_TOTYPE(specie_get_iwf(s, j, calc_dim, states_spin_channel(ispin, ik, idim), x(1:calc_dim)))
-          end do
-        
-          r = X(states_nrm2)(m, wf_dim, psi)
-          psi(1:m%np, 1:wf_dim) = psi(1:m%np, 1:wf_dim)/r
-          call pop_sub()
-          return
-        end if
-
-        i = i + 1
+    case(UNPOLARIZED, SPIN_POLARIZED)
+      ! The index "i" goes over all the orbitals supplied by the pseudopotentials, and the
+      ! orbitals in placed in psi whenever it matches "n". The index "j" runs over the orbitals
+      ! of each atom; whenever j is larger than the number of orbitals that can actually be supplied
+      ! by the atom, the atom is skipped.
+      i = 1; j = 0
+      do
+        j = j + 1
+        do ia = 1, geo%natoms
+          s => geo%atom(ia)%spec
+          if(j > s%niwfs) cycle
+          if(n == i) then
+            do k = 1, m%np
+              x(1:calc_dim) = m%x(k, 1:calc_dim) - geo%atom(ia)%x(1:calc_dim)
+              psi(k, 1) =  &
+                   R_TOTYPE(specie_get_iwf(s, j, calc_dim, states_spin_channel(ispin, ik, 1), x(1:calc_dim)))
+            end do
+            call X(states_normalize_orbital)(m, wf_dim, psi)
+            call pop_sub()
+            return
+          end if
+          i = i + 1
+        end do
       end do
-    end do
-  end do
+
+    case(SPINORS)
+
+      i = 1; j = 0
+      do
+        j = j + 1
+        do ia = 1, geo%natoms
+          s => geo%atom(ia)%spec
+          if(j > s%niwfs) cycle
+          do idim = 1, 2
+            if(n == i) then
+              do k = 1, m%np
+                x(1:calc_dim) = m%x(k, 1:calc_dim) - geo%atom(ia)%x(1:calc_dim)
+                psi(k, idim) =  &
+                     R_TOTYPE(specie_get_iwf(s, j, calc_dim, idim, x(1:calc_dim)))
+              end do
+              call X(states_normalize_orbital)(m, wf_dim, psi)
+              call pop_sub()
+              return
+            end if
+            i = i + 1
+          end do
+        end do
+      end do
+
+  end select
 
   call pop_sub()
 end subroutine X(lcao_initial_wf)
