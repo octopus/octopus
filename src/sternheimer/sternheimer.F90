@@ -138,15 +138,7 @@ contains
     if(this%add_fxc)     write(message(1), '(2a)') trim(message(1)), ' + fxc'
     call write_info(1)
 
-    if(present(hermitian)) then 
-      if(.not. hermitian) then
-        call linear_solver_init(this%solver, sys%gr, prefix, def_solver=LS_BICGSTAB)
-      else
-        call linear_solver_init(this%solver, sys%gr, prefix, def_solver=LS_CG)
-      end if
-    else
-      call linear_solver_init(this%solver, sys%gr, prefix)
-    end if
+    call linear_solver_init(this%solver, sys%gr, prefix)
 
     call scf_tol_init(this%scftol, prefix)
 
