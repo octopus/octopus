@@ -13,12 +13,12 @@ Enabled    : Yes
 # This test checks the eigensolver lobpcg, cg, cg_new, and plan with a simple
 # SiH4.
 
-Input: 20-eigensolver.01-lobpcg.inp
+#Input: 20-eigensolver.01-lobpcg.inp
 
-Match ; Eigenvalue [1st] ; sed -n '/^Eigenvalues \[/{n\;n\;p\;}'          static/info ; \s*-13.449*\d*\s*2.0000\d*
-Match ; Eigenvalue [2nd] ; sed -n '/^Eigenvalues \[/{n\;n\;n\;p\;}'       static/info ; \s*-8.455\d*\s*2.0000\d*
-Match ; Eigenvalue [3rd] ; sed -n '/^Eigenvalues \[/{n\;n\;n\;n\;p\;}'    static/info ; \s*-8.455\d*\s*2.0000\d*
-Match ; Eigenvalue [4th] ; sed -n '/^Eigenvalues \[/{n\;n\;n\;n\;n\;p\;}' static/info ; \s*-8.419\d*\s*2.0000\d*
+#Match ; Eigenvalue [1st] ; sed -n '/^Eigenvalues \[/{n\;n\;p\;}'          static/info ; \s*-13.449*\d*\s*2.0000\d*
+#Match ; Eigenvalue [2nd] ; sed -n '/^Eigenvalues \[/{n\;n\;n\;p\;}'       static/info ; \s*-8.455\d*\s*2.0000\d*
+#Match ; Eigenvalue [3rd] ; sed -n '/^Eigenvalues \[/{n\;n\;n\;n\;p\;}'    static/info ; \s*-8.455\d*\s*2.0000\d*
+#Match ; Eigenvalue [4th] ; sed -n '/^Eigenvalues \[/{n\;n\;n\;n\;n\;p\;}' static/info ; \s*-8.419\d*\s*2.0000\d*
 
 Input: 20-eigensolver.02-cg.inp
 
