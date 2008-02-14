@@ -176,6 +176,8 @@ subroutine X(ls_solver_bicgstab) (ls, h, gr, st, ist, ik, x, y, omega)
   rs(1:NP,1:st%d%dim) = r(1:NP,1:st%d%dim)
   !$omp end parallel workshare
 
+  gamma = X(states_nrm2)(gr%m, st%d%dim, r)
+
   conv_last = .false.
 
   do iter = 1, ls%max_iter
