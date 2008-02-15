@@ -1,3 +1,10 @@
+octopus (3.0.0) unstable; urgency=low
+
+  * Imported debian/rules from 2.1.x
+  * Updated version to 3.0.0
+
+ -- Xavier Andrade <xavier@licancabur.sq.ehu.es>  Fri, 15 Feb 2008 14:45:55 +0100
+
 octopus (2.2.0pre1-1) unstable; urgency=low
 
   * Development for octopus 2.2 begins.
