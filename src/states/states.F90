@@ -75,7 +75,6 @@ module states_m
     states_dens_accumulate,           &
     states_dens_reduce,               &
     states_calc_dens,                 &
-    states_paramagnetic_current,      &
     states_calc_tau_jp_gn,            &
     state_is_local,                   &
     kpoints_write_info,               &
@@ -2139,79 +2138,6 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! This routine (obviously) assumes complex wave-functions
-  subroutine states_paramagnetic_current(gr, st, jp)
-    type(grid_t),   intent(inout) :: gr
-    type(states_t), intent(inout) :: st
-    FLOAT,          intent(out)   :: jp(:,:,:)  ! (NP, NDIM, st%d%nspin)
-
-    integer :: ik, p, sp, k
-    CMPLX, allocatable :: grad(:,:)
-#ifdef  HAVE_MPI
-    FLOAT, allocatable :: red(:,:,:)
-#endif
-
-    call push_sub('states.states_paramagnetic_current')
-
-    ASSERT(st%wfs_type == M_CMPLX)
-
-    if(st%d%ispin == SPIN_POLARIZED) then
-      sp = 2
-    else
-      sp = 1
-    end if
-
-    jp = M_ZERO
-    ALLOCATE(grad(NP_PART, NDIM), NP_PART*NDIM)
-
-    do ik = 1, st%d%nik, sp
-      do p  = st%st_start, st%st_end
-        call zf_gradient(gr%sb, gr%f_der, st%zpsi(:, 1, p, ik), grad)
-
-        ! spin-up density
-        do k = 1, NDIM
-          jp(1:NP, k, 1) = jp(1:NP, k, 1) + st%d%kweights(ik)*st%occ(p, ik)       &
-            * aimag(conjg(st%zpsi(1:NP, 1, p, ik)) * grad(1:NP, k))
-        end do
-
-        ! spin-down density
-        if(st%d%ispin == SPIN_POLARIZED) then
-          call zf_gradient(gr%sb, gr%f_der, st%zpsi(:, 1, p, ik+1), grad)
-
-          do k = 1, NDIM
-            jp(1:NP, k, 2) = jp(1:NP, k, 2) + st%d%kweights(ik+1)*st%occ(p, ik+1) &
-              * aimag(conjg(st%zpsi(1:NP, 1, p, ik+1)) * grad(1:NP, k))
-          end do
-
-          ! WARNING: the next lines DO NOT work properly
-        else if(st%d%ispin == SPINORS) then ! off-diagonal densities
-          call zf_gradient(gr%sb, gr%f_der, st%zpsi(:, 2, p, ik), grad)
-
-          do k = 1, NDIM
-            jp(1:NP, k, 2) = jp(1:NP, k, 2) + st%d%kweights(ik)*st%occ(p, ik)     &
-              * aimag(conjg(st%zpsi(1:NP, 2, p, ik)) * grad(1:NP, k))
-          end do
-        end if
-
-      end do
-    end do
-    deallocate(grad)
-
-#if defined(HAVE_MPI)
-    if(st%parallel_in_states) then
-      ALLOCATE(red(NP_PART, NDIM, st%d%nspin), NP_PART*NDIM*st%d%nspin)
-      call MPI_Allreduce(jp(1, 1, 1), red(1, 1, 1), NP*NDIM*st%d%nspin,       &
-        MPI_FLOAT, MPI_SUM, st%mpi_grp%comm, mpi_err)
-      jp = red
-      deallocate(red)
-    end if
-#endif
-
-    call pop_sub()
-  end subroutine states_paramagnetic_current
-
-
-  ! ---------------------------------------------------------
   subroutine states_calc_tau_jp_gn(gr, st, tau, jp, grho)
     type(grid_t),    intent(inout) :: gr
     type(states_t),  intent(inout) :: st
@@ -2223,6 +2149,11 @@ contains
     CMPLX   :: c_tmp
     integer :: sp, is, ik, ik_tmp, ist, i_dim, st_dim, ii
     FLOAT   :: ww
+
+#if defined(HAVE_MPI)
+    FLOAT, allocatable :: tmp_reduce(:)
+    integer :: mpi_err
+#endif
 
     ALLOCATE(wf_psi(NP_PART, st%d%dim),  NP_PART*st%d%dim)
     ALLOCATE(gwf_psi(NP, NDIM, st%d%dim), NP*NDIM*st%d%dim)   
@@ -2314,21 +2245,29 @@ contains
     deallocate(wf_psi, gwf_psi)
 
 #if defined(HAVE_MPI)
-    STOP NOT IMPLEMENTED
-
     if(st%parallel_in_states) then
-      ALLOCATE(reduce_elf(1:NP), NP)
-      call MPI_Allreduce(kappa(1, is), reduce_elf(1), NP, MPI_FLOAT, MPI_SUM, st%mpi_grp%comm, mpi_err)
-      kappa(1:NP, is) = reduce_elf(1:NP)
-      
-      do i = 1, NDIM
-        call MPI_Allreduce(grho(1, i), reduce_elf(1), NP, MPI_FLOAT, MPI_SUM, st%mpi_grp%comm, mpi_err)
-        grho(1:NP, i) = reduce_elf(1:NP)
-        
-        call MPI_Allreduce(jj(1, i), reduce_elf(1), NP, MPI_FLOAT, MPI_SUM, st%mpi_grp%comm, mpi_err)
-        jj(1:NP, i) = reduce_elf(1:NP)
+      ALLOCATE(tmp_reduce(1:NP), NP)
+
+      do is = 1, st%d%nspin
+        if(present(tau)) then
+          call MPI_Allreduce(tau(1, is), tmp_reduce(1), NP, MPI_FLOAT, MPI_SUM, st%mpi_grp%comm, mpi_err)
+          tau(1:NP, is) = tmp_reduce(1:NP)       
+        end if
+
+        do i_dim = 1, NDIM
+          if(present(jp)) then
+            call MPI_Allreduce(jp(1, i_dim, is), tmp_reduce(1), NP, MPI_FLOAT, MPI_SUM, st%mpi_grp%comm, mpi_err)
+            jp(1:NP, i_dim, is) = tmp_reduce(1:NP)
+          end if
+
+          if(present(grho)) then
+            call MPI_Allreduce(grho(1, i_dim, is), tmp_reduce(1), NP, MPI_FLOAT, MPI_SUM, st%mpi_grp%comm, mpi_err)
+            grho(1:NP, i_dim, is) = tmp_reduce(1:NP)
+          end if
+        end do
+
       end do
-      deallocate(reduce_elf)
+      deallocate(tmp_reduce)
     end if
 #endif            
   end subroutine states_calc_tau_jp_gn
