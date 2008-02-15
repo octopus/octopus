@@ -37,7 +37,7 @@ module pol_lr_m
   use mesh_m
   use messages_m
   use mix_m
-  use output_m
+  use h_sys_output_m
   use pert_m
   use restart_m
   use states_m
@@ -542,7 +542,7 @@ contains
     type(grid_t),    intent(inout) :: gr
     type(hamiltonian_t),    intent(inout) :: h
     type(geometry_t),    intent(inout) :: geo
-    type(output_t),  intent(in)    :: outp
+    type(h_sys_output_t),  intent(in)    :: outp
     type(em_resp_t), intent(inout) :: em_vars
     integer,         intent(in)    :: iomega
     
@@ -851,7 +851,7 @@ contains
               call zlr_calc_elf(st, gr, em_vars%lr(dir, 1, ifactor), em_vars%lr(dir, 2, ifactor))
           end if
           do isigma = 1, em_vars%nsigma
-            call zlr_output(st, gr, em_vars%lr(dir, isigma, ifactor), dirname, dir, isigma, outp)
+            call zh_sys_output_lr(st, gr, em_vars%lr(dir, isigma, ifactor), dirname, dir, isigma, outp)
           end do
         else
 
@@ -860,7 +860,7 @@ contains
               call dlr_calc_elf(st, gr, em_vars%lr(dir, 1, ifactor), em_vars%lr(dir, 2, ifactor))
           end if
           do isigma = 1, em_vars%nsigma
-            call dlr_output(st, gr, em_vars%lr(dir, isigma, ifactor), dirname, dir, isigma, outp)
+            call dh_sys_output_lr(st, gr, em_vars%lr(dir, isigma, ifactor), dirname, dir, isigma, outp)
           end do
 
         end if
@@ -891,7 +891,7 @@ contains
         
         call pert_end(angular_momentum)
         
-        dic = dic * M_zI / P_c 
+        dic = dic * M_zI / P_c
 
         iunit = io_open(trim(dirname)//'/rotatory_strength', action='write')
 
@@ -901,7 +901,11 @@ contains
              str_center('['//trim(units_out%length%abbrev) //'^3]', 20), &
              str_center('['//trim(units_out%length%abbrev) //'^4]', 20)
 
-        ! print the values
+        ff = M_ZERO
+        if(em_vars%omega(iomega).ne.0) then
+          ff = real(dic) * P_C/(M_THREE*em_vars%omega(iomega))
+        end if
+
         ff = M_ZERO
         if(em_vars%omega(iomega).ne.0) then
           ff = real(dic) * P_C/(M_THREE*em_vars%omega(iomega))
@@ -911,7 +915,7 @@ contains
           aimag(dic) / (M_PI*units_out%length%factor**3), ff/units_out%length%factor**4
 
         call io_close(iunit)
-        
+
       end if
 
     end subroutine out_circular_dichroism

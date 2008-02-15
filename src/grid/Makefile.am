@@ -26,12 +26,12 @@ libgrid_a_SOURCES = \
 	mesh_lib.F90 par_vec.F90 mesh.F90 scalar_mesh.F90 nl_operator.F90 \
 	submesh.F90 stencil_star.F90 stencil_variational.F90 stencil_cube.F90 \
 	stencil_starplus.F90 derivatives.F90 cube_function.F90 mesh_function.F90 \
-	functions.F90 basins.F90 out.F90 multigrid.F90 double_grid.F90 grid.F90
+	functions.F90 basins.F90 io_function.F90 multigrid.F90 double_grid.F90 grid.F90
 
 noinst_HEADERS = \
 	mesh_init.F90 par_vec_inc.F90 derivatives_inc.F90 cube_function_inc.F90 \
 	mesh_function_inc.F90 functions_inc.F90 double_grid_apply.F90 \
-	submesh_inc.F90 out_inc.F90 nl_operator_inc.F90
+	submesh_inc.F90 io_function_inc.F90 nl_operator_inc.F90
 
 include $(srcdir)/../common-rules.make
 
@@ -58,7 +58,7 @@ cube_function.o : cube_function.F90 cube_function_inc.F90 simul_box.o mesh.o
 mesh_function.o : mesh_function.F90 mesh_function_inc.F90 par_vec.o mesh.o 
 functions.o : functions.F90 functions_inc.F90 simul_box.o mesh_function.o mesh.o derivatives.o cube_function.o 
 basins.o : basins.F90 par_vec.o mesh_lib.o mesh.o 
-out.o : out.F90 out_inc.F90 par_vec.o simul_box.o mesh.o functions.o cube_function.o 
+io_function.o : io_function.F90 io_function_inc.F90 par_vec.o simul_box.o mesh.o functions.o cube_function.o 
 multigrid.o : multigrid.F90 mesh.o functions.o curvlinear.o 
 double_grid.o : double_grid.F90 double_grid_apply.F90 submesh.o simul_box.o mesh_function.o functions.o mesh.o curvlinear.o 
 grid.o : grid.F90 simul_box.o multigrid.o mesh.o functions.o double_grid.o curvlinear.o 

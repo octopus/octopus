@@ -28,7 +28,7 @@ module linear_response_m
   use loct_parser_m
   use mesh_m
   use messages_m
-  use output_m
+  use io_function_m
   use states_m
   use units_m
 
@@ -39,20 +39,18 @@ module linear_response_m
   !the minimum value for a state to be considered occupied
   FLOAT, public, parameter :: lr_min_occ=CNST(1e-5)
   
-  public :: &
-       lr_t, &
-       lr_init, &
-       lr_allocate, &
-       lr_copy, & 
-       dlr_output, & 
-       zlr_output, & 
-       dlr_orth_vector, & 
-       zlr_orth_vector, & 
-       dlr_build_dl_rho, & 
-       zlr_build_dl_rho, &
+  public ::               &
+       lr_t,              &
+       lr_init,           &
+       lr_allocate,       &
+       lr_copy,           &
+       dlr_orth_vector,   & 
+       zlr_orth_vector,   & 
+       dlr_build_dl_rho,  & 
+       zlr_build_dl_rho,  &
        dlr_orth_response, &
        zlr_orth_response, &
-       lr_dealloc, &
+       lr_dealloc,        &
        lr_is_allocated
 
 
@@ -200,15 +198,11 @@ contains
 
 #include "undef.F90"
 #include "real.F90"
-
 #include "linear_response_inc.F90"
-#include "linear_response_out.F90" 
 
 #include "undef.F90"
 #include "complex.F90"
-
 #include "linear_response_inc.F90"
-#include "linear_response_out.F90" 
 
 end module linear_response_m
 

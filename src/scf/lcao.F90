@@ -33,8 +33,7 @@ module lcao_m
   use profiling_m
   use specie_m
   use states_m
-
-  use output_m
+  use h_sys_output_m
 
   implicit none
 

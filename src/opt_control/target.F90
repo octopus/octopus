@@ -31,9 +31,9 @@ module opt_control_target_m
   use states_m
   use excited_states_m
   use grid_m
-  use output_m
+  use h_sys_output_m
+  use io_function_m
   use geometry_m
-  use states_output_m
   use mesh_m
   use mesh_function_m
   use restart_m
@@ -376,10 +376,12 @@ module opt_control_target_m
     type(target_t), intent(inout) :: target
     type(grid_t), intent(inout)   :: gr
     character(len=*), intent(in)  :: dir
-    type(output_t),   intent(in)  :: outp
+    type(h_sys_output_t),   intent(in)  :: outp
 
     integer :: ierr
     call push_sub('target.target_output')
+    
+    call loct_mkdir(trim(dir))
 
     select case(target%type)
     case(oct_tg_local)
@@ -393,9 +395,10 @@ module opt_control_target_m
       call doutput_function(outp%how, trim(dir), 'density_target', gr%m, gr%sb, &
         target%rho, M_ONE, ierr)
     case(oct_tg_excited)
-      call excited_states_output(target%est, gr, trim(dir), outp)
+      call h_sys_output_states(target%est%st, gr, trim(dir)//'/st', outp)
+      call excited_states_output(target%est, trim(dir))
     case default
-      call states_output(target%st, gr, trim(dir), outp)
+      call h_sys_output_states(target%st, gr, trim(dir), outp)
     end select
 
     call pop_sub()

@@ -32,7 +32,7 @@ module phonons_fd_m
   use mesh_m
   use messages_m
   use multicomm_m
-  use output_m
+  use h_sys_output_m
   use phonons_m
   use restart_m
   use scf_m
@@ -117,11 +117,11 @@ contains
   subroutine get_dm(gr, geo, mc, st, ks, h, outp, ph)
     type(grid_t), target, intent(inout) :: gr
     type(geometry_t),     intent(inout) :: geo
-    type(multicomm_t),     intent(in)   :: mc
+    type(multicomm_t),    intent(in)    :: mc
     type(states_t),       intent(inout) :: st
     type(v_ks_t),         intent(inout) :: ks
     type(hamiltonian_t),  intent(inout) :: h
-    type(output_t),       intent(in)    :: outp
+    type(h_sys_output_t), intent(in)    :: outp
     type(phonons_t),      intent(inout) :: ph
 
     type(scf_t)               :: scf

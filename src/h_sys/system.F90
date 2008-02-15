@@ -28,7 +28,8 @@ module system_m
   use messages_m
   use mpi_m
   use multicomm_m
-  use output_m
+  use h_sys_output_m
+  use io_function_m
   use poisson_m
   use simul_box_m
   use states_m
@@ -50,7 +51,7 @@ module system_m
     type(grid_t),     pointer :: gr    ! the mesh
     type(states_t),   pointer :: st    ! the states
     type(v_ks_t)              :: ks    ! the Kohn-Sham potentials
-    type(output_t)            :: outp  ! the output
+    type(h_sys_output_t)      :: outp  ! the output
     type(multicomm_t)         :: mc    ! index and domain communicators
   end type system_t
 
@@ -75,7 +76,7 @@ contains
 
     call grid_init_stage_2(sys%gr, sys%mc, sys%geo)
     call states_densities_init(sys%st, sys%gr, sys%geo)
-    call output_init(sys%gr%sb, sys%outp)
+    call h_sys_output_init(sys%gr%sb, sys%outp)
     call elf_init
     call poisson_init(sys%gr, sys%geo)
     call v_ks_init(sys%gr, sys%ks, sys%st%d)

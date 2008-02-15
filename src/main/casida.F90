@@ -24,6 +24,7 @@ module casida_m
   use excited_states_m
   use global_m
   use hamiltonian_m
+  use io_function_m
   use io_m
   use lalg_adv_m
   use loct_m
@@ -34,7 +35,7 @@ module casida_m
   use messages_m
   use mpi_m
   use multicomm_m
-  use output_m
+  use h_sys_output_m
   use poisson_m
   use restart_m
   use states_m

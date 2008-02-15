@@ -172,11 +172,9 @@ contains
 
   ! ---------------------------------------------------------
   subroutine read_netcdf()
-    integer :: ncid, ndims, nvars, natts, status, data_id, data_im_id, pos_id, &
-         dim_data_id(MAX_DIM), dim_pos_id(2), ndim(MAX_DIM), xtype
-    integer :: iunit, file_kind
-    real(r4)           :: pos(2, 3)
-    logical            :: function_is_complex = .false.
+    integer :: ncid, status, data_id, data_im_id, &
+        dim_data_id(MAX_DIM), ndim(MAX_DIM), xtype
+    integer :: file_kind
     character(len=512) :: file
 
     FLOAT, allocatable :: x(:, :, :)
@@ -650,11 +648,14 @@ contains
 #if defined(HAVE_NETCDF)
   ! ---------------------------------------------------------
   subroutine out_netcdf()
-    integer :: ncid, status, data_id, data_im_id, pos_id, dim_min
+    integer :: ncid, status, data_id, pos_id, dim_min
     integer :: dim_data_id(3), dim_pos_id(2)
     real(r4) :: pos(2, 3)
     type(X(cf_t)) :: c
     FLOAT, allocatable :: x(:, :, :)
+#if defined(R_TCOMPLEX)
+    integer :: data_im_id
+#endif
 
     ierr = 0
 

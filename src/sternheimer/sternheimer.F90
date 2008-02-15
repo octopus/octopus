@@ -35,7 +35,7 @@ module sternheimer_m
   use mesh_m
   use messages_m
   use mix_m
-  use output_m
+  use h_sys_output_m
   use poisson_m
   use pert_m
   use restart_m

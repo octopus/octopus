@@ -22,12 +22,12 @@
 noinst_LIBRARIES = libstates.a
 
 libstates_a_SOURCES = \
-	crystal.F90 states.F90 magnetic.F90 elf.F90 states_output.F90 states_block.F90 \
+	crystal.F90 states.F90 magnetic.F90 elf.F90 states_block.F90 \
 	excited_states.F90 mix.F90 linear_response.F90 restart.F90
 
 noinst_HEADERS = \
 	excited_states_inc.F90 mix_inc.F90 states_kpoints.F90 states_inc.F90 \
-	states_block_inc.F90 linear_response_inc.F90 linear_response_out.F90 restart_inc.F90
+	states_block_inc.F90 linear_response_inc.F90 restart_inc.F90
 
 include $(srcdir)/../common-rules.make
 
@@ -38,9 +38,8 @@ crystal.o : crystal.F90
 states.o : states.F90 states_inc.F90 states_kpoints.F90 crystal.o 
 magnetic.o : magnetic.F90 states.o 
 elf.o : elf.F90 states.o 
-states_output.o : states_output.F90 states.o magnetic.o elf.o 
 states_block.o : states_block.F90 states_block_inc.F90 states.o 
-excited_states.o : excited_states.F90 excited_states_inc.F90 states.o states_output.o 
+excited_states.o : excited_states.F90 excited_states_inc.F90 states.o
 mix.o : mix.F90 mix_inc.F90 
-linear_response.o : linear_response.F90 linear_response_out.F90 linear_response_inc.F90 states.o 
+linear_response.o : linear_response.F90 linear_response_inc.F90 states.o 
 restart.o : restart.F90 restart_inc.F90 states.o linear_response.o 

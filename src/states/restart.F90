@@ -25,6 +25,7 @@ module restart_m
   use geometry_m
   use global_m
   use grid_m
+  use io_function_m
   use io_m
   use loct_m
   use loct_parser_m
@@ -34,7 +35,6 @@ module restart_m
   use mesh_m
   use messages_m
   use mpi_m
-  use output_m
   use simul_box_m
   use states_m
   use units_m
@@ -127,9 +127,9 @@ contains
 
     select case(parsed) 
     case(RESTART_NETCDF)
-      restart_format = output_fill_how("NETCDF")
+      restart_format = io_function_fill_how("NETCDF")
     case(RESTART_BINARY)
-      restart_format = output_fill_how("Binary")
+      restart_format = io_function_fill_how("Binary")
     end select
     
     call pop_sub()

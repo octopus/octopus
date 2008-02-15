@@ -39,13 +39,12 @@ module scf_m
   use mix_m
   use mpi_m
   use mpi_lib_m
-  use output_m
+  use h_sys_output_m
   use profiling_m
   use restart_m
   use simul_box_m
   use solids_m
   use states_m
-  use states_output_m
   use units_m
   use v_ks_m
   use varinfo_m
@@ -264,7 +263,7 @@ contains
     type(states_t),      intent(inout) :: st
     type(v_ks_t),        intent(inout) :: ks
     type(hamiltonian_t), intent(inout) :: h
-    type(output_t),      intent(in)    :: outp
+    type(h_sys_output_t),intent(in)    :: outp
     logical, optional,   intent(in)    :: gs_run
     integer, optional,   intent(in)    :: verbosity 
 
@@ -461,8 +460,7 @@ contains
 
       if(outp%duringscf .and. gs_run_) then
         write(dirname,'(a,i4.4)') "scf.",iter
-        call states_output(st, gr, dirname, outp)
-        call hamiltonian_output(h, gr%m, gr%sb, dirname, outp)
+        call h_sys_output_all(outp, gr, geo, st, h, dirname)
       end if
 
       ! save information for the next iteration
@@ -514,13 +512,7 @@ contains
     if(gs_run_) then 
       ! output final information
       call scf_write_static("static", "info")
-      call states_output(st, gr, "static", outp)
-      if(iand(outp%what, output_geometry).ne.0) then
-        call atom_write_xyz("static", "geometry", geo)
-        if(simul_box_is_periodic(gr%sb)) call periodic_write_crystal(gr%sb, geo)
-      end if
-      call hamiltonian_output(h, gr%m, gr%sb, "static", outp)
-      call states_write_current_flow("static", st, gr)
+      call h_sys_output_all(outp, gr, geo, st, h, "static")
     end if
 
     if(simul_box_is_periodic(gr%sb).and.st%d%nik > st%d%nspin) then

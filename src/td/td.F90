@@ -23,6 +23,7 @@ module timedep_m
   use global_m
   use io_m
   use datasets_m
+  use io_function_m
   use loct_math_m
   use loct_parser_m
   use units_m
@@ -31,9 +32,9 @@ module timedep_m
   use external_pot_m
   use geometry_m
   use ground_state_m
+  use h_sys_output_m
   use hamiltonian_m
   use loct_m
-  use output_m
   use profiling_m
   use scf_m
   use states_m

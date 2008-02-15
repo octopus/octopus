@@ -27,7 +27,7 @@ module phonons_m
   use lalg_adv_m
   use mesh_m
   use messages_m
-  use output_m
+  use h_sys_output_m
   use system_m
   use units_m
 

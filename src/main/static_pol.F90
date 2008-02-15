@@ -26,13 +26,14 @@ module static_pol_m
   use global_m
   use grid_m
   use hamiltonian_m
+  use io_function_m
   use io_m
   use loct_m
   use loct_parser_m
   use mesh_function_m
   use mesh_m
   use messages_m
-  use output_m
+  use h_sys_output_m
   use restart_m
   use scf_m
   use states_m

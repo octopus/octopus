@@ -38,7 +38,7 @@ module vdw_m
   use messages_m
   use mix_m
   use mpi_m
-  use output_m
+  use h_sys_output_m
   use poisson_m
   use pert_m
   use restart_m

@@ -37,12 +37,11 @@ module td_write_m
   use mesh_m
   use messages_m
   use mpi_m
-  use output_m
+  use h_sys_output_m
   use pert_m
   use restart_m
   use spectrum_m
   use states_m
-  use states_output_m
   use units_m
   use varinfo_m
   use external_pot_m
@@ -368,13 +367,13 @@ contains
 
   ! ---------------------------------------------------------
   subroutine td_write_data(w, gr, st, h, outp, geo, iter)
-    type(td_write_t),    intent(in)    :: w
-    type(grid_t),        intent(inout) :: gr
-    type(states_t),      intent(inout) :: st
-    type(hamiltonian_t), intent(in)    :: h
-    type(output_t),      intent(in)    :: outp
-    type(geometry_t),    intent(in)    :: geo
-    integer, intent(in) :: iter
+    type(td_write_t),     intent(in)    :: w
+    type(grid_t),         intent(inout) :: gr
+    type(states_t),       intent(inout) :: st
+    type(hamiltonian_t),  intent(in)    :: h
+    type(h_sys_output_t), intent(in)    :: outp
+    type(geometry_t),     intent(in)    :: geo
+    integer,              intent(in)    :: iter
 
     character(len=256) :: filename
 
@@ -396,10 +395,7 @@ contains
     ! now write down the rest
     write(filename, '(a,i7.7)') "td.", iter  ! name of directory
 
-    call states_output(st, gr, filename, outp)
-    if(iand(outp%what, output_geometry).ne.0) &
-      call atom_write_xyz(filename, "geometry", geo)
-    call hamiltonian_output(h, gr%m, gr%sb, filename, outp)
+    call h_sys_output_all(outp, gr, geo, st, h, filename)
 
     call pop_sub()
   end subroutine td_write_data

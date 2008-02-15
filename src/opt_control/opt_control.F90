@@ -40,10 +40,9 @@ module opt_control_m
   use mesh_m
   use mesh_function_m
   use functions_m
-  use output_m
+  use h_sys_output_m
   use geometry_m
   use states_m
-  use states_output_m
   use string_m
   use system_m
   use td_rti_m
@@ -136,7 +135,7 @@ contains
 
     call check_faulty_runmodes(oct, sys, h, target, td%tr)
 
-    call states_output(initial_st, sys%gr, 'opt-control/initial', sys%outp)
+    call h_sys_output_states(initial_st, sys%gr, 'opt-control/initial', sys%outp)
     call target_output(target, sys%gr, 'opt-control/target', sys%outp)
 
     ! psi is the "working state".

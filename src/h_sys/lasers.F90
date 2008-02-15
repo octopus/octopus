@@ -27,7 +27,6 @@ module lasers_m
   use loct_parser_m
   use mesh_m
   use messages_m
-  use output_m
   use simul_box_m
   use units_m
   use tdf_m

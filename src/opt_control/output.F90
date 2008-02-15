@@ -33,8 +33,7 @@ module opt_control_output_m
   use states_m
   use geometry_m
   use excited_states_m
-  use states_output_m
-  use output_m
+  use h_sys_output_m
   use messages_m
 
   implicit none
@@ -48,9 +47,9 @@ contains
   ! ---------------------------------------------------------
   subroutine oct_output(iterator, gr, outp, final_st)
     type(oct_iterator_t), intent(inout) :: iterator
-    type(grid_t), intent(inout)         :: gr
-    type(output_t), intent(in)          :: outp
-    type(states_t), intent(inout)       :: final_st
+    type(grid_t),         intent(inout) :: gr
+    type(h_sys_output_t), intent(in)    :: outp
+    type(states_t),       intent(inout) :: final_st
 
     character(len=80)  :: filename
     integer :: iunit, loop
@@ -89,7 +88,7 @@ contains
     write(filename,'(a)') 'opt-control/laser.bestJ1'
     call parameters_write(filename, iterator%best_par, fourier = .true.)
 
-    call states_output(final_st, gr, 'opt-control/final', outp)
+    call h_sys_output_states(final_st, gr, 'opt-control/final', outp)
 
     call pop_sub()
   end subroutine oct_output

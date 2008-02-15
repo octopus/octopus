@@ -18,13 +18,13 @@
 !! $Id$
 
 ! ---------------------------------------------------------
-subroutine X(lr_output) (st, gr, lr, dir, tag, isigma, outp)
-  type(states_t),   intent(inout) :: st
-  type(grid_t),     intent(inout) :: gr
-  type(lr_t),       intent(inout) :: lr
-  character(len=*), intent(in)    :: dir
-  integer,          intent(in)    :: tag, isigma
-  type(output_t),   intent(in)    :: outp
+subroutine X(h_sys_output_lr) (st, gr, lr, dir, tag, isigma, outp)
+  type(states_t),       intent(inout) :: st
+  type(grid_t),         intent(inout) :: gr
+  type(lr_t),           intent(inout) :: lr
+  character(len=*),     intent(in)    :: dir
+  integer,              intent(in)    :: tag, isigma
+  type(h_sys_output_t), intent(in)    :: outp
 
   integer :: ik, ist, idim, ierr, is, i
   character(len=80) :: fname
@@ -130,7 +130,7 @@ contains
 
   end subroutine lr_elf
 
-end subroutine X(lr_output)
+end subroutine X(h_sys_output_lr)
 
 
 !! Local Variables:

@@ -27,6 +27,7 @@ module unocc_m
   use global_m
   use grid_m
   use geometry_m
+  use h_sys_output_m
   use hamiltonian_m
   use io_m
   use lcao_m
@@ -40,7 +41,6 @@ module unocc_m
   use restart_m
   use simul_box_m
   use states_m
-  use states_output_m
   use system_m
   use v_ks_m
   use varinfo_m
@@ -200,7 +200,7 @@ contains
     if(l) call write_matrix_elements(sys, h)
 
     ! output wave-functions
-    call states_output(sys%st, sys%gr, "static", sys%outp)
+    call h_sys_output_states(sys%st, sys%gr, "static", sys%outp)
 
     call end_()
 

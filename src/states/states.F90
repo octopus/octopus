@@ -26,6 +26,7 @@ module states_m
   use geometry_m
   use global_m
   use grid_m
+  use io_function_m
   use io_m
   use lalg_basic_m
   use loct_m
@@ -37,7 +38,7 @@ module states_m
   use mpi_m
   use mpi_lib_m
   use multicomm_m
-  use output_m
+  !use output_m
   use profiling_m
   use simul_box_m
   use string_m
@@ -70,12 +71,12 @@ module states_m
     states_write_bands,               &
     states_write_fermi_energy,        &
     states_degeneracy_matrix,         &
-    states_write_current_flow,        &
     states_spin_channel,              &
     states_dens_accumulate,           &
     states_dens_reduce,               &
     states_calc_dens,                 &
     states_paramagnetic_current,      &
+    states_calc_tau_jp_gn,            &
     state_is_local,                   &
     kpoints_write_info,               &
     kpoint_is_gamma,                  &
@@ -1084,11 +1085,8 @@ contains
 
     call push_sub('states.states_dens_accumulate')
 
-    if(st%d%ispin == SPIN_POLARIZED) then
-      sp = 2
-    else
-      sp = 1
-    end if
+    sp = 1
+    if(st%d%ispin == SPIN_POLARIZED) sp = 2
 
     do ik = 1, st%d%nik, sp
       !$omp parallel do private(c)
@@ -1129,7 +1127,7 @@ contains
     FLOAT,          intent(inout) :: rho(:,:)
 
 #ifdef HAVE_MPI
-    integer :: i, ik, p, sp
+    integer :: ispin
     FLOAT,  allocatable :: reduce_rho(:)
 #endif
 
@@ -1139,14 +1137,15 @@ contains
     ! reduce density
     if(st%parallel_in_states) then
       ALLOCATE(reduce_rho(1:np), np)
-      do i = 1, st%d%nspin
-        call MPI_Allreduce(rho(1, i), reduce_rho(1), np, &
+      do ispin = 1, st%d%nspin
+        call MPI_Allreduce(rho(1, ispin), reduce_rho(1), np, &
           MPI_FLOAT, MPI_SUM, st%mpi_grp%comm, mpi_err)
-        call lalg_copy(np, reduce_rho, rho(:, i))
+        call lalg_copy(np, reduce_rho, rho(:, ispin))
       end do
       deallocate(reduce_rho)
     end if
 #endif
+
     call pop_sub()
   end subroutine states_dens_reduce
 
@@ -1155,13 +1154,13 @@ contains
     integer,        intent(in)  :: np
     FLOAT,          intent(out) :: rho(:,:)
 
-    integer :: i, ist
+    integer :: ispin, ist
 
     call push_sub('states.states_calc_dens')
 
-    do i = 1, st%d%nspin
+    do ispin = 1, st%d%nspin
       !$omp parallel workshare
-      rho(1:np, i) = M_ZERO
+      rho(1:np, ispin) = M_ZERO
       !$omp end parallel workshare
     end do
 
@@ -2015,138 +2014,6 @@ contains
 
 
   ! -------------------------------------------------------
-  ! WARNING: This subouroutine probably should not be here, but
-  ! in states_output. Also, the current flow probably should be 
-  ! calculated during td runs.
-  subroutine states_write_current_flow(dir, st, gr)
-    character(len=*),  intent(in)    :: dir    
-    type(states_t),    intent(inout) :: st
-    type(grid_t),      intent(inout) :: gr
-
-    type(block_t) :: blk
-    integer :: iunit, i, k
-    type(mesh_plane_t) :: plane
-    type(mesh_line_t) :: line
-    FLOAT :: flow
-    FLOAT, allocatable :: j(:, :)
-
-    call push_sub('states.states_write_current_flows')
-
-    if(loct_parse_block(check_inp('CurrentThroughPlane'), blk).ne.0) then
-      call pop_sub(); return
-    end if
-
-    select case(NDIM)
-    case(3)
-
-      !%Variable CurrentThroughPlane
-      !%Type block
-      !%Section States
-      !%Description
-      !% At the end of the ground state calculation, the code may calculate
-      !% the steady current that the obtained ground state electronic state
-      !% transverses a user-defined portion of a plane....
-      !%
-      !% In the 2D case, the current flow should be calculated through a line.
-      !%
-      !% Example (3D):
-      !%
-      !% <tt>%CurrentThroughPlane
-      !% <br>&nbsp;&nbsp; 0.0 | 0.0 | 0.0
-      !% <br>&nbsp;&nbsp; 0.0 | 1.0 | 0.0
-      !% <br>&nbsp;&nbsp; 0.0 | 0.0 | 1.0
-      !% <br>&nbsp;&nbsp; 0.2
-      !% <br>&nbsp;&nbsp; 0 | 50
-      !% <br>&nbsp;&nbsp; -50 | 50
-      !% <br>%</tt>
-      !%
-      !% Example (2D):
-      !%
-      !% <tt>%CurrentThroughPlane
-      !% <br>&nbsp;&nbsp; 0.0 | 0.0
-      !% <br>&nbsp;&nbsp; 1.0 | 0.0
-      !% <br>&nbsp;&nbsp; 0.2
-      !% <br>&nbsp;&nbsp; 0 | 50
-      !% <br>%</tt>
-      !%
-      !%End
-
-      call loct_parse_block_float(blk, 0, 0, plane%origin(1))
-      call loct_parse_block_float(blk, 0, 1, plane%origin(2))
-      call loct_parse_block_float(blk, 0, 2, plane%origin(3))
-      call loct_parse_block_float(blk, 1, 0, plane%u(1))
-      call loct_parse_block_float(blk, 1, 1, plane%u(2))
-      call loct_parse_block_float(blk, 1, 2, plane%u(3))
-      call loct_parse_block_float(blk, 2, 0, plane%v(1))
-      call loct_parse_block_float(blk, 2, 1, plane%v(2))
-      call loct_parse_block_float(blk, 2, 2, plane%v(3))
-      call loct_parse_block_float(blk, 3, 0, plane%spacing)
-      call loct_parse_block_int(blk, 4, 0, plane%nu)
-      call loct_parse_block_int(blk, 4, 1, plane%mu)
-      call loct_parse_block_int(blk, 5, 0, plane%nv)
-      call loct_parse_block_int(blk, 5, 1, plane%mv)
-
-      plane%n(1) = plane%u(2)*plane%v(3) - plane%u(3)*plane%v(2)
-      plane%n(2) = plane%u(3)*plane%v(1) - plane%u(1)*plane%v(3)
-      plane%n(3) = plane%u(1)*plane%v(2) - plane%u(2)*plane%v(1)
-
-      iunit = io_open(trim(dir)//'/'//'current-flow', action='write')
-
-      write(iunit,'(a)')       '# Plane:'
-      write(iunit,'(a,3f9.5)') '# u = ', plane%u(1), plane%u(2), plane%u(3)
-      write(iunit,'(a,3f9.5)') '# v = ', plane%v(1), plane%v(2), plane%v(3)
-      write(iunit,'(a,3f9.5)') '# n = ', plane%n(1), plane%n(2), plane%n(3)
-      write(iunit,'(a, f9.5)') '# spacing = ', plane%spacing
-      write(iunit,'(a,2i4)')   '# nu, mu = ', plane%nu, plane%mu
-      write(iunit,'(a,2i4)')   '# nv, mv = ', plane%nv, plane%mv
-
-    case(2)
-
-      call loct_parse_block_float(blk, 0, 0, line%origin(1))
-      call loct_parse_block_float(blk, 0, 1, line%origin(2))
-      call loct_parse_block_float(blk, 1, 0, line%u(1))
-      call loct_parse_block_float(blk, 1, 1, line%u(2))
-      call loct_parse_block_float(blk, 2, 0, line%spacing)
-      call loct_parse_block_int(blk, 3, 0, line%nu)
-      call loct_parse_block_int(blk, 3, 1, line%mu)
-
-      line%n(1) = -line%u(2)
-      line%n(2) =  line%u(1)
-
-      iunit = io_open(trim(dir)//'/'//'current-flow', action='write')
-
-      write(iunit,'(a)')       '# Line:'
-      write(iunit,'(a,2f9.5)') '# u = ', line%u(1), line%u(2)
-      write(iunit,'(a,2f9.5)') '# n = ', line%n(1), line%n(2)
-      write(iunit,'(a, f9.5)') '# spacing = ', line%spacing
-      write(iunit,'(a,2i4)')   '# nu, mu = ', line%nu, line%mu
-
-    end select
-
-    call states_paramagnetic_current(gr, st, st%j)
-
-    ALLOCATE(j(NP, MAX_DIM), NP*MAX_DIM)
-
-    do k = 1, NDIM
-      do i = 1, NP
-        j(i, k) = sum(st%j(i, k, :))
-      end do
-    end do
-
-    select case(NDIM)
-      case(3); flow = mf_surface_integral (gr%m, j, plane)
-      case(2); flow = mf_line_integral (gr%m, j, line)
-    end select
-
-    write(iunit,'(a,e20.12)') '# Flow = ', flow
-
-    deallocate(j)
-    call io_close(iunit)
-    call pop_sub()
-  end subroutine states_write_current_flow
-
-
-  ! -------------------------------------------------------
   integer function states_spin_channel(ispin, ik, dim)
     integer, intent(in) :: ispin, ik, dim
 
@@ -2342,6 +2209,122 @@ contains
 
     call pop_sub()
   end subroutine states_paramagnetic_current
+
+
+  ! ---------------------------------------------------------
+  subroutine states_calc_tau_jp_gn(gr, st, tau, jp, grho)
+    type(grid_t),    intent(inout) :: gr
+    type(states_t),  intent(inout) :: st
+    FLOAT, optional, intent(out)   ::  tau(:,:)    ! (NP, st%d%nspin)
+    FLOAT, optional, intent(out)   ::   jp(:,:,:)  ! (NP, NDIM, st%d%nspin)
+    FLOAT, optional, intent(out)   :: grho(:,:,:)  ! (NP, NDIM, st%d%nspin)
+
+    CMPLX, allocatable :: wf_psi(:,:), gwf_psi(:,:,:)
+    CMPLX   :: c_tmp
+    integer :: sp, is, ik, ik_tmp, ist, i_dim, st_dim, ii
+    FLOAT   :: ww
+
+    ALLOCATE(wf_psi(NP_PART, st%d%dim),  NP_PART*st%d%dim)
+    ALLOCATE(gwf_psi(NP, NDIM, st%d%dim), NP*NDIM*st%d%dim)   
+
+    sp = 1
+    if(st%d%ispin == SPIN_POLARIZED) sp = 2
+
+    ASSERT(present( tau).or.present(  jp).or.present(grho))
+
+    if(present( tau))  tau(:,:)   = M_ZERO
+    if(present(  jp))   jp(:,:,:) = M_ZERO
+    if(present(grho)) grho(:,:,:) = M_ZERO
+
+    do is = 1, sp
+      do ik_tmp = 1, st%d%nik, sp
+        ik = ik_tmp + is - 1
+
+        do ist = st%st_start, st%st_end
+
+          ! all calculations will be done with complex wave-functions
+          if (st%wfs_type == M_REAL) then
+            wf_psi(:,:) = cmplx(st%dpsi(:,:, ist, ik), KIND=REAL_PRECISION)
+          else
+            wf_psi(:,:) = st%zpsi(:,:, ist, ik)
+          end if
+
+          ! calculate gradient of the wave-function
+          do st_dim = 1, st%d%dim
+            call zf_gradient(gr%sb, gr%f_der, wf_psi(:,st_dim), gwf_psi(:,:,st_dim))
+          end do
+
+          ww = st%d%kweights(ik)*st%occ(ist, ik)
+          do i_dim = 1, NDIM
+            if(present(grho)) &
+              grho(1:NP, i_dim, is) = grho(1:NP, i_dim, is) + ww*M_TWO*real(conjg(wf_psi(1:NP, 1))*gwf_psi(1:NP, i_dim, 1))
+            if(present(  jp)) &
+              jp  (1:NP, i_dim, is) = jp  (1:NP, i_dim, is) + ww*aimag(conjg(wf_psi(1:NP, 1))*gwf_psi(1:NP, i_dim, 1))
+            if(present( tau)) then
+              tau (1:NP, is)        = tau (1:NP, is)        + ww*abs(gwf_psi(1:NP, i_dim, 1))**2
+            end if
+
+            if(st%d%ispin == SPINORS) then
+              if(present(grho)) then
+                grho(1:NP, i_dim, 2) = grho(1:NP, i_dim, 2) + ww*M_TWO*real(conjg(wf_psi(1:NP, 2))*gwf_psi(1:NP, i_dim, 2))
+                grho(1:NP, i_dim, 3) = grho(1:NP, i_dim, 3) + ww* &
+                  real (gwf_psi(1:NP, i_dim, 1)*conjg(wf_psi(1:NP, 2)) + wf_psi(1:NP, 1)*conjg(gwf_psi(1:NP, i_dim, 2)))
+                grho(1:NP, i_dim, 4) = grho(1:NP, i_dim, 4) + ww* &
+                  aimag(gwf_psi(1:NP, i_dim, 1)*conjg(wf_psi(1:NP, 2)) + wf_psi(1:NP, 1)*conjg(gwf_psi(1:NP, i_dim, 2)))
+              end if
+            
+              ! the expression for the paramagnetic current with spinors is
+              !     j = ( jp(1)             jp(3) + i jp(4) ) 
+              !         (-jp(3) + i jp(4)   jp(2)           )
+              if(present(  jp)) then
+                jp  (1:NP, i_dim, 2) = jp  (1:NP, i_dim, 2) + ww*aimag(conjg(wf_psi(1:NP, 2))*gwf_psi(1:NP, i_dim, 2))
+                do ii = 1, NP
+                  c_tmp = conjg(wf_psi(ii, 1))*gwf_psi(ii, i_dim, 2) - wf_psi(ii, 2)*conjg(gwf_psi(ii, i_dim, 1))
+                  jp(ii, i_dim, 3) = jp(ii, i_dim, 3) + ww* real(c_tmp)
+                  jp(ii, i_dim, 4) = jp(ii, i_dim, 4) + ww*aimag(c_tmp)
+                end do
+              end if
+
+              ! the expression for the paramagnetic current with spinors is
+              !     t = ( tau(1)              tau(3) + i tau(4) ) 
+              !         ( tau(3) - i tau(4)   tau(2)            )
+              if(present( tau)) then
+                tau (1:NP, 2)        = tau (1:NP, 2)        + ww*abs(gwf_psi(1:NP, i_dim, 2))**2
+                do ii = 1, NP
+                  c_tmp = conjg(gwf_psi(ii, i_dim, 1))*gwf_psi(ii, i_dim, 2)
+                  tau(ii, 3) = tau(ii, 3) + ww* real(c_tmp)
+                  tau(ii, 4) = tau(ii, 4) + ww*aimag(c_tmp)
+                end do
+              end if
+              
+            end if
+          end do
+
+        end do
+      end do
+    end do
+
+    deallocate(wf_psi, gwf_psi)
+
+#if defined(HAVE_MPI)
+    STOP NOT IMPLEMENTED
+
+    if(st%parallel_in_states) then
+      ALLOCATE(reduce_elf(1:NP), NP)
+      call MPI_Allreduce(kappa(1, is), reduce_elf(1), NP, MPI_FLOAT, MPI_SUM, st%mpi_grp%comm, mpi_err)
+      kappa(1:NP, is) = reduce_elf(1:NP)
+      
+      do i = 1, NDIM
+        call MPI_Allreduce(grho(1, i), reduce_elf(1), NP, MPI_FLOAT, MPI_SUM, st%mpi_grp%comm, mpi_err)
+        grho(1:NP, i) = reduce_elf(1:NP)
+        
+        call MPI_Allreduce(jj(1, i), reduce_elf(1), NP, MPI_FLOAT, MPI_SUM, st%mpi_grp%comm, mpi_err)
+        jj(1:NP, i) = reduce_elf(1:NP)
+      end do
+      deallocate(reduce_elf)
+    end if
+#endif            
+  end subroutine states_calc_tau_jp_gn
 
 
   ! ---------------------------------------------------------

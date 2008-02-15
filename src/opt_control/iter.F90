@@ -28,8 +28,7 @@ module opt_control_iter_m
   use opt_control_parameters_m
   use grid_m
   use states_m
-  use states_output_m
-  use output_m
+  use h_sys_output_m
   use messages_m
 
   implicit none
@@ -201,16 +200,17 @@ contains
 
   ! ---------------------------------------------------------
   subroutine iterator_write(iterator, psi, par, gr, outp)
-    type(oct_iterator_t), intent(in) :: iterator
-    type(states_t), intent(inout) :: psi
+    type(oct_iterator_t),           intent(in) :: iterator
+    type(states_t),                 intent(inout) :: psi
     type(oct_control_parameters_t), intent(in) :: par
-    type(grid_t), intent(inout) :: gr
-    type(output_t), intent(in) :: outp
+    type(grid_t),                   intent(inout) :: gr
+    type(h_sys_output_t),           intent(in) :: outp
+
     character(len=80)  :: filename
     call push_sub('iter.iterator_write')
 
     write(filename,'(a,i3.3)') 'opt-control/PsiT.', iterator%ctr_iter
-    call states_output(psi, gr, filename, outp)
+    call h_sys_output_states(psi, gr, filename, outp)
     write(filename,'(a,i3.3)') 'opt-control/laser.', iterator%ctr_iter
     call parameters_write(filename, par)
     call pop_sub()

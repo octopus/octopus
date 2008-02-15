@@ -23,6 +23,7 @@ module poisson_m
   use datasets_m
   use geometry_m
   use global_m
+  use io_function_m
   use io_m
   use loct_math_m
   use loct_parser_m
@@ -39,7 +40,6 @@ module poisson_m
   use poisson_isf_m
   use poisson_fft_m
   use grid_m
-  use output_m
   use poisson_multigrid_m
   use mesh_function_m
   use par_vec_m
@@ -454,12 +454,12 @@ contains
     iunit = io_open("hartree_results", action='write')
     write(iunit, '(a,f10.2)' ) 'Hartree test = ', delta
     call io_close(iunit)
-    call doutput_function (output_fill_how('AxisX'), ".", "poisson_test_rho.x", gr%m, gr%sb, rho, M_ONE, ierr)
-    call doutput_function (output_fill_how('AxisX'), ".", "poisson_test_exact.x", gr%m, gr%sb, vh_exact, M_ONE, ierr)
-    call doutput_function (output_fill_how('AxisX'), ".", "poisson_test_numerical.x", gr%m, gr%sb, vh, M_ONE, ierr)
-    call doutput_function (output_fill_how('AxisY'), ".", "poisson_test_rho.y", gr%m, gr%sb, rho, M_ONE, ierr)
-    call doutput_function (output_fill_how('AxisY'), ".", "poisson_test_exact.y", gr%m, gr%sb, vh_exact, M_ONE, ierr)
-    call doutput_function (output_fill_how('AxisY'), ".", "poisson_test_numerical.y", gr%m, gr%sb, vh, M_ONE, ierr)
+    call doutput_function (io_function_fill_how('AxisX'), ".", "poisson_test_rho.x", gr%m, gr%sb, rho, M_ONE, ierr)
+    call doutput_function (io_function_fill_how('AxisX'), ".", "poisson_test_exact.x", gr%m, gr%sb, vh_exact, M_ONE, ierr)
+    call doutput_function (io_function_fill_how('AxisX'), ".", "poisson_test_numerical.x", gr%m, gr%sb, vh, M_ONE, ierr)
+    call doutput_function (io_function_fill_how('AxisY'), ".", "poisson_test_rho.y", gr%m, gr%sb, rho, M_ONE, ierr)
+    call doutput_function (io_function_fill_how('AxisY'), ".", "poisson_test_exact.y", gr%m, gr%sb, vh_exact, M_ONE, ierr)
+    call doutput_function (io_function_fill_how('AxisY'), ".", "poisson_test_numerical.y", gr%m, gr%sb, vh, M_ONE, ierr)
 
     deallocate(rho, rhop, vh, vh_exact, x)
     call pop_sub()

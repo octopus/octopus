@@ -37,7 +37,7 @@ module phonons_lr_m
   use mesh_function_m
   use mesh_m
   use messages_m
-  use output_m
+  use h_sys_output_m
   use phonons_m
   use projector_m
   use pert_m

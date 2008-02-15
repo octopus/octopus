@@ -17,45 +17,19 @@
 !!
 !! $Id: states.F90 2515 2006-10-24 17:13:30Z acastro $
 
-#include "global.h"
-
-module states_output_m
-  use basins_m
-  use elf_m
-  use global_m
-  use grid_m
-  use io_m
-  use loct_m
-  use loct_math_m
-  use magnetic_m
-  use messages_m
-  use output_m
-  use states_m
-  use mesh_m
-  use math_m
-  use units_m
-
-  implicit none
-
-  private
-  public ::                         &
-    states_output
-
-contains
-
   ! ---------------------------------------------------------
-  subroutine states_output(st, gr, dir, outp)
-    type(states_t),   intent(inout) :: st
-    type(grid_t),     intent(inout) :: gr
-    character(len=*), intent(in)    :: dir
-    type(output_t),   intent(in)    :: outp
+  subroutine h_sys_output_states(st, gr, dir, outp)
+    type(states_t),         intent(inout) :: st
+    type(grid_t),           intent(inout) :: gr
+    character(len=*),       intent(in)    :: dir
+    type(h_sys_output_t),   intent(in)    :: outp
 
     integer :: ik, ist, idim, is, id, ierr, iunit, l, m
     character(len=80) :: fname
     FLOAT :: u
     FLOAT, allocatable :: dtmp(:), elf(:,:)
 
-    call push_sub('states.states_output')
+    call push_sub('h_sys_output.h_sys_output_states')
 
     u = M_ONE/units_out%length%factor**NDIM
 
@@ -82,7 +56,7 @@ contains
 
     if( (iand(outp%what, output_current).ne.0) .and. (st%wfs_type == M_CMPLX) ) then
       ! calculate current first
-      call states_paramagnetic_current(gr, st, st%j)
+      call states_calc_tau_jp_gn(gr, st, jp=st%j)
       do is = 1, st%d%nspin
         do id = 1, NDIM
           write(fname, '(a,i1,a,a)') 'current-', is, '-', index2axis(id)
@@ -132,11 +106,9 @@ contains
       deallocate(dtmp)
     end if
 
-    call out_elf()
-
     if(iand(outp%what, output_ked).ne.0) then
       ALLOCATE(elf(gr%m%np, st%d%nspin),gr%m%np*st%d%nspin)
-      call kinetic_energy_density(st, gr, elf)
+      call states_calc_tau_jp_gn(gr, st, tau=elf)
       select case(st%d%ispin)
         case(UNPOLARIZED)
           write(fname, '(a)') 'tau'
@@ -162,7 +134,7 @@ contains
             write(fname,'(i4)') id
             write(fname,'(a)') trim(dir)//'/matrix_elements.'//trim(adjustl(fname))
             iunit = io_open(file = fname, action = 'write')
-            call states_write_multipole_matrix(st, gr, l, m, ik, iunit)
+            call h_sys_write_multipole_matrix(st, gr, l, m, ik, iunit)
             call io_close(iunit)
             id = id + 1
           end do
@@ -172,73 +144,7 @@ contains
 
     call pop_sub()
 
-  contains
-    ! ---------------------------------------------------------
-    subroutine out_elf()
-      FLOAT, allocatable :: elf(:,:)
-      type(basins_t) :: basins
-      integer :: imax, iunit
-
-      ! If it is a one-dimensional problem, the ELF calculation will not work.
-      if(NDIM .eq. 1) return
-
-      if(iand(outp%what, output_elf).ne.0 .or. iand(outp%what, output_elf_basins).ne.0) then
-        imax = 1
-        if(st%d%ispin.ne.UNPOLARIZED) imax = 3
-
-        ALLOCATE(elf(1:NP, imax), NP*imax)
-        call elf_calc(st, gr, elf)
-      end if
-
-      ! output ELF in real space
-      if(iand(outp%what, output_elf).ne.0) then
-        write(fname, '(a)') 'elf_rs'
-        call doutput_function(outp%how, dir, trim(fname), gr%m, gr%sb, &
-           elf(:,imax), M_ONE, ierr, is_tmp = .false.)
-
-        if(st%d%ispin.ne.UNPOLARIZED) then
-          do is = 1, 2
-            write(fname, '(a,a,i1)') 'elf_rs', '-', is
-            call doutput_function(outp%how, dir, trim(fname), gr%m, gr%sb, &
-               elf(:, is), M_ONE, ierr, is_tmp = .false.)
-          end do
-        end if
-      end if
-
-      if(iand(outp%what, output_elf_basins).ne.0) then
-        call basins_init(basins, gr%m)
-        call basins_analyze(basins, gr%m, st%d%nspin, elf(:,1), st%rho, CNST(0.01))
-
-        write(fname, '(a)') 'elf_rs_basins'
-        call doutput_function(outp%how, dir, trim(fname), gr%m, gr%sb, &
-           real(basins%map, REAL_PRECISION), M_ONE, ierr, is_tmp = .false.)
-        
-        write(fname,'(2a)') trim(dir), '/elf_rs_basins.info'
-        iunit = io_open(file = fname, action = 'write')
-        call basins_write(basins, gr%m, iunit)
-        call io_close(iunit)
-
-        call basins_end(basins)
-      end if
-
-      ! clean up
-      if(iand(outp%what, output_elf).ne.0 .or. iand(outp%what, output_elf_basins).ne.0) then
-        deallocate(elf)
-      end if
-
-      if(  iand(outp%what, output_elf_fs).ne.0  ) then ! Second, ELF in Fourier space.
-        ALLOCATE(elf(1:gr%m%np,1:st%d%nspin),gr%m%np*st%d%nspin)
-        call elf_calc_fs(st, gr, elf)
-        do is = 1, st%d%nspin
-          write(fname, '(a,a,i1)') 'elf_fs', '-', is
-          call doutput_function(outp%how, dir, trim(fname), gr%m, gr%sb, &
-            elf(:,is), M_ONE, ierr, is_tmp = .false.)
-        end do
-        deallocate(elf)
-      end if
-    end subroutine out_elf
-
-  end subroutine states_output
+  end subroutine h_sys_output_states
 
 
   ! ---------------------------------------------------------
@@ -247,7 +153,7 @@ contains
   ! It prints the (l,m) multipole moment, for
   ! the Kohn-Sham states in the irreducible subspace ik.
   ! ---------------------------------------------------------
-  subroutine states_write_multipole_matrix(st, gr, l, m, ik, iunit)
+  subroutine h_sys_write_multipole_matrix(st, gr, l, m, ik, iunit)
     type(states_t), intent(in) :: st
     type(grid_t), intent(in) :: gr
     integer, intent(in) :: l, m, ik, iunit
@@ -257,7 +163,7 @@ contains
     CMPLX :: multip_element
     FLOAT :: r, x(MAX_DIM), ylm
 
-    call push_sub('states.states_write_multipole_matrix')
+    call push_sub('h_sys_output.h_sys_write_multipole_matrix')
 
     write(iunit, fmt = '(a)') '# Multipole matrix elements file: <Phi_i | r**l * Y_{lm}(theta,phi) | Phi_j>' 
     write(iunit, fmt = '(a,i2,a,i2)') '# l =', l, '; m =', m
@@ -299,9 +205,72 @@ contains
 
     deallocate(multipole)
     call pop_sub()
-  end subroutine states_write_multipole_matrix
+  end subroutine h_sys_write_multipole_matrix
 
-end module states_output_m
+
+  ! ---------------------------------------------------------
+  subroutine h_sys_output_current_flow(gr, st, dir, outp)
+    type(grid_t),         intent(inout) :: gr
+    type(states_t),       intent(inout) :: st
+    character(len=*),     intent(in)    :: dir
+    type(h_sys_output_t), intent(in)    :: outp
+
+    integer :: iunit, i, k
+    FLOAT   :: flow
+    FLOAT, allocatable :: j(:, :)
+
+    call push_sub('h_sys_output.h_sys_output_current_flows')
+
+    if(iand(outp%what, output_j_flow) == 0) then
+      call pop_sub(); return
+    end if
+
+    iunit = io_open(trim(dir)//'/'//'current-flow', action='write')
+
+    select case(NDIM)
+    case(3)
+      write(iunit,'(a)')       '# Plane:'
+      write(iunit,'(a,3f9.5)') '# u = ', outp%plane%u(1), outp%plane%u(2), outp%plane%u(3)
+      write(iunit,'(a,3f9.5)') '# v = ', outp%plane%v(1), outp%plane%v(2), outp%plane%v(3)
+      write(iunit,'(a,3f9.5)') '# n = ', outp%plane%n(1), outp%plane%n(2), outp%plane%n(3)
+      write(iunit,'(a, f9.5)') '# spacing = ', outp%plane%spacing
+      write(iunit,'(a,2i4)')   '# nu, mu = ', outp%plane%nu, outp%plane%mu
+      write(iunit,'(a,2i4)')   '# nv, mv = ', outp%plane%nv, outp%plane%mv
+
+    case(2)
+      write(iunit,'(a)')       '# Line:'
+      write(iunit,'(a,2f9.5)') '# u = ', outp%line%u(1), outp%line%u(2)
+      write(iunit,'(a,2f9.5)') '# n = ', outp%line%n(1), outp%line%n(2)
+      write(iunit,'(a, f9.5)') '# spacing = ', outp%line%spacing
+      write(iunit,'(a,2i4)')   '# nu, mu = ', outp%line%nu, outp%line%mu
+
+    end select
+
+    if(st%wfs_type == M_CMPLX) then
+      call states_calc_tau_jp_gn(gr, st, jp=st%j)
+
+      ALLOCATE(j(NP, MAX_DIM), NP*MAX_DIM)
+      do k = 1, NDIM
+        do i = 1, NP
+          j(i, k) = sum(st%j(i, k, :))
+        end do
+      end do
+
+      select case(NDIM)
+      case(3); flow = mf_surface_integral (gr%m, j, outp%plane)
+      case(2); flow = mf_line_integral (gr%m, j, outp%line)
+      end select
+
+      deallocate(j)
+    else
+      flow = M_ZERO
+    end if
+
+    write(iunit,'(a,e20.12)') '# Flow = ', flow
+
+    call io_close(iunit)
+    call pop_sub()
+  end subroutine h_sys_output_current_flow
 
 !! Local Variables:
 !! mode: f90

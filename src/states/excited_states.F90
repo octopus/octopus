@@ -29,8 +29,6 @@ module excited_states_m
   use mpi_m
   use grid_m
   use states_m
-  use states_output_m
-  use output_m
 
   implicit none
 
@@ -378,19 +376,13 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine excited_states_output(excited_state, gr, dirname, outp)
+  subroutine excited_states_output(excited_state, dirname)
     type(excited_states_t), intent(inout) :: excited_state
-    type(grid_t),           intent(inout) :: gr
     character(len=*),       intent(in)    :: dirname
-    type(output_t),         intent(in)    :: outp
 
     integer :: iunit, ia
 
     call push_sub('excited_states.excited_states_output')
-
-    call loct_mkdir(trim(dirname))
-
-    call states_output(excited_state%st, gr, trim(dirname)//'/st', outp)
 
     iunit = io_open(file = trim(dirname)//'/excitations', action = 'write', status = 'replace')
     do ia = 1, excited_state%n_pairs
