@@ -96,6 +96,15 @@ make install DESTDIR=${RPM_BUILD_ROOT}
 %clean
 rm -rf ${RPM_BUILD_ROOT}
 
+
+%post
+install-info %{_infodir}/octopus.info &> /dev/null
+
+
+%preun
+install-info --remove octopus &> /dev/null
+
+
 %files
 %defattr(-,root,root,0755)
 %doc README NEWS COPYING AUTHORS doc/octopus.ps.* doc/pdf/*.pdf
