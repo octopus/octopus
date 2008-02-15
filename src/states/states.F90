@@ -2257,27 +2257,34 @@ contains
           ww = st%d%kweights(ik)*st%occ(ist, ik)
           do i_dim = 1, NDIM
             if(present(grho)) &
-              grho(1:NP, i_dim, is) = grho(1:NP, i_dim, is) + ww*M_TWO*real(conjg(wf_psi(1:NP, 1))*gwf_psi(1:NP, i_dim, 1))
+              grho(1:NP, i_dim, is) = grho(1:NP, i_dim, is) + &
+                ww*M_TWO*real(conjg(wf_psi(1:NP, 1))*gwf_psi(1:NP, i_dim, 1))
             if(present(  jp)) &
-              jp  (1:NP, i_dim, is) = jp  (1:NP, i_dim, is) + ww*aimag(conjg(wf_psi(1:NP, 1))*gwf_psi(1:NP, i_dim, 1))
+              jp  (1:NP, i_dim, is) = jp  (1:NP, i_dim, is) + &
+                ww*aimag(conjg(wf_psi(1:NP, 1))*gwf_psi(1:NP, i_dim, 1))
             if(present( tau)) then
-              tau (1:NP, is)        = tau (1:NP, is)        + ww*abs(gwf_psi(1:NP, i_dim, 1))**2
+              tau (1:NP, is)        = tau (1:NP, is)        + &
+                ww*abs(gwf_psi(1:NP, i_dim, 1))**2
             end if
 
             if(st%d%ispin == SPINORS) then
               if(present(grho)) then
-                grho(1:NP, i_dim, 2) = grho(1:NP, i_dim, 2) + ww*M_TWO*real(conjg(wf_psi(1:NP, 2))*gwf_psi(1:NP, i_dim, 2))
+                grho(1:NP, i_dim, 2) = grho(1:NP, i_dim, 2) + &
+                  ww*M_TWO*real(conjg(wf_psi(1:NP, 2))*gwf_psi(1:NP, i_dim, 2))
                 grho(1:NP, i_dim, 3) = grho(1:NP, i_dim, 3) + ww* &
-                  real (gwf_psi(1:NP, i_dim, 1)*conjg(wf_psi(1:NP, 2)) + wf_psi(1:NP, 1)*conjg(gwf_psi(1:NP, i_dim, 2)))
+                  real (gwf_psi(1:NP, i_dim, 1)*conjg(wf_psi(1:NP, 2)) + &
+                    wf_psi(1:NP, 1)*conjg(gwf_psi(1:NP, i_dim, 2)))
                 grho(1:NP, i_dim, 4) = grho(1:NP, i_dim, 4) + ww* &
-                  aimag(gwf_psi(1:NP, i_dim, 1)*conjg(wf_psi(1:NP, 2)) + wf_psi(1:NP, 1)*conjg(gwf_psi(1:NP, i_dim, 2)))
+                  aimag(gwf_psi(1:NP, i_dim, 1)*conjg(wf_psi(1:NP, 2)) + &
+                    wf_psi(1:NP, 1)*conjg(gwf_psi(1:NP, i_dim, 2)))
               end if
             
               ! the expression for the paramagnetic current with spinors is
               !     j = ( jp(1)             jp(3) + i jp(4) ) 
               !         (-jp(3) + i jp(4)   jp(2)           )
               if(present(  jp)) then
-                jp  (1:NP, i_dim, 2) = jp  (1:NP, i_dim, 2) + ww*aimag(conjg(wf_psi(1:NP, 2))*gwf_psi(1:NP, i_dim, 2))
+                jp  (1:NP, i_dim, 2) = jp  (1:NP, i_dim, 2) + &
+                  ww*aimag(conjg(wf_psi(1:NP, 2))*gwf_psi(1:NP, i_dim, 2))
                 do ii = 1, NP
                   c_tmp = conjg(wf_psi(ii, 1))*gwf_psi(ii, i_dim, 2) - wf_psi(ii, 2)*conjg(gwf_psi(ii, i_dim, 1))
                   jp(ii, i_dim, 3) = jp(ii, i_dim, 3) + ww* real(c_tmp)
