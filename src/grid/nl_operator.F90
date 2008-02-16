@@ -53,6 +53,7 @@ module nl_operator_m
     nl_operator_end,            &
     nl_operator_skewadjoint,    &
     nl_operator_selfadjoint,    &
+    nl_operator_get_index,      &
     nl_operator_write
 
   type nl_operator_t
@@ -346,7 +347,7 @@ contains
     op%rimap_inv(op%nri + 1) = op%np
 
     deallocate(st1, st2)
-
+    
     if(op%const_w .and. .not. op%cmplx_op) then
       call dnl_operator_tune(op)
       call znl_operator_tune(op)
@@ -373,10 +374,10 @@ contains
     if (op%cmplx_op) opt%w_im = M_ZERO
     do i = 1, op%np
       do j = 1, op%n
-        index = op%i(j, i)
+        index = nl_operator_get_index(op, j, i)
         if(index <= op%np) then
           do l = 1, op%n
-            k = op%i(l, index)
+            k = nl_operator_get_index(op, l, index)
             if( k == i ) then
               if(.not.op%const_w) then
                 opt%w_re(j, i) = op%w_re(l, index)
@@ -439,10 +440,10 @@ contains
     if (op%cmplx_op) opgt%w_im = M_ZERO
     do i = 1, m%np_global
       do j = 1, op%n
-        index = opg%i(j, i)
+        index = nl_operator_get_index(opg, j, i)
         if(index <= m%np_global) then
           do l = 1, op%n
-            k = opg%i(l, index)
+            k = nl_operator_get_index(opg, l, index)
             if( k == i ) then
               if(.not.op%const_w) then
                 opgt%w_re(j, i) = M_HALF*opg%w_re(j, i) - M_HALF*(vol_pp(index)/vol_pp(i))*opg%w_re(l, index)
@@ -516,10 +517,10 @@ contains
     if (op%cmplx_op) opgt%w_im = M_ZERO
     do i = 1, m%np_global
       do j = 1, op%n
-        index = opg%i(j, i)
+        index = nl_operator_get_index(opg, j, i)
         if(index <= m%np_global) then
           do l = 1, op%n
-            k = opg%i(l, index)
+            k = nl_operator_get_index(opg, l, index)
             if( k == i ) then
               if(.not.op%const_w) then
                 opgt%w_re(j, i) = M_HALF*opg%w_re(j, i) + M_HALF*(vol_pp(index)/vol_pp(i))*opg%w_re(l, index)
@@ -797,7 +798,7 @@ contains
       do i = 1, op%m%np_global
         if(.not.op%const_w) k = i
         do j = 1, op%n
-          index = opg%i(j, i)
+          index = nl_operator_get_index(opg, j, i)
           if(index <= op%m%np_global) then
             a(i, index) = opg%w_re(j, k)
             if (op%cmplx_op) b(i, index) = opg%w_im(j, k)
@@ -833,7 +834,7 @@ contains
     op = op_ref
     do i = 1, op%np
       do j = 1, op%n
-        index = op%i(j, i)
+        index = nl_operator_get_index(op, j, i)
         if(index <= op%np) &
           op%w_re(j, i) = a(i, index)
         if (op%cmplx_op) op%w_im(j, i) = b(i, index)
@@ -967,6 +968,14 @@ contains
 
     call pop_sub()
   end subroutine nl_operator_end
+
+  integer pure function nl_operator_get_index(op, is, ip) result(res)
+    type(nl_operator_t), intent(in)   :: op
+    integer,             intent(in)   :: is
+    integer,             intent(in)   :: ip
+    
+    res = ip + op%ri(is, op%rimap(ip))
+  end function nl_operator_get_index
 
 #include "undef.F90"
 #include "real.F90"
