@@ -220,13 +220,13 @@ subroutine X(nl_operator_operate)(op, fi, fo, ghost_update, profile)
     if(op%const_w) then
       !$omp do
       do ii = 1, op%np
-        fo(ii) = sum(cmplx(op%w_re(1:nn, 1),  op%w_im(1:nn, 1))  * fi(op%i(1:nn, ii)))
+        fo(ii) = sum(cmplx(op%w_re(1:nn, 1),  op%w_im(1:nn, 1))  * fi(ii + op%ri(1:nn, op%rimap(ii))) )
       end do
       !$omp end do
     else
       !$omp do
       do ii = 1, op%np
-        fo(ii) = sum(cmplx(op%w_re(1:nn, ii), op%w_im(1:nn, ii)) * fi(op%i(1:nn, ii)))
+        fo(ii) = sum(cmplx(op%w_re(1:nn, ii), op%w_im(1:nn, ii)) * fi(ii + op%ri(1:nn, op%rimap(ii))) )
       end do
       !$omp end do
     end if
@@ -251,9 +251,10 @@ subroutine X(nl_operator_operate)(op, fi, fo, ghost_update, profile)
       end select
       
     else
+      
       !$omp do
       do ii = 1, op%np
-        fo(ii) = sum(op%w_re(1:nn, ii) * fi(op%i(1:nn, ii)))
+        fo(ii) = sum(op%w_re(1:nn, ii) * fi(ii + op%ri(1:nn, op%rimap(ii))))
       end do
       !$omp end do
     end if
@@ -270,7 +271,7 @@ end subroutine X(nl_operator_operate)
 ! ---------------------------------------------------------
 subroutine X(nl_operator_operate_diag)(op, fo)
   type(nl_operator_t), intent(in)    :: op
-  R_TYPE,               intent(out)   :: fo(:)  ! fo(op%np)
+  R_TYPE,              intent(out)   :: fo(:)
 
   integer :: ii, nn, jj
   
@@ -281,40 +282,16 @@ subroutine X(nl_operator_operate_diag)(op, fo)
   if(op%cmplx_op) then
 #ifdef R_TCOMPLEX
     if(op%const_w) then
-      do ii = 1, nn
-        if( 1 == op%i(ii,1) ) then
-          fo(1:op%np) = cmplx(op%w_re(ii, 1), op%w_im(ii, 1))
-          exit
-        end if
-      end do
+      fo(1:op%np) = cmplx(op%w_re(op%stencil_center, 1), op%w_im(op%stencil_center, 1))
     else
-      do ii = 1, op%np
-        do jj = 1, nn
-          if( ii == op%i(jj,ii) ) then
-            fo(ii) = cmplx(op%w_re(jj, ii), op%w_im(jj, ii))
-            exit
-          end if
-        end do
-      end do
+      fo(1:op%np) = cmplx(op%w_re(op%stencil_center, 1:op%np), op%w_im(op%stencil_center, 1:op%np))
     end if
 #endif
   else
     if(op%const_w) then
-      do ii = 1, nn
-        if( 1 == op%i(ii,1) ) then
-          fo(1:op%np) = op%w_re(ii, 1)
-          exit
-        end if
-      end do
+      fo(1:op%np) = op%w_re(op%stencil_center, 1)
     else
-      do ii = 1, op%np
-        do jj = 1, nn
-          if( ii == op%i(jj,ii) ) then
-            fo(ii) = op%w_re(jj, ii)
-            exit
-          end if
-        end do
-      end do
+      fo(1:op%np) = op%w_re(op%stencil_center, 1:op%np)
     end if
   end if
   

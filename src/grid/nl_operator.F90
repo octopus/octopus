@@ -85,10 +85,6 @@ module nl_operator_m
 
   end type nl_operator_t
 
-  interface assignment (=)
-    module procedure nl_operator_equal
-  end interface
-
   integer, parameter :: &
        OP_FORTRAN = 0,  &
        OP_C       = 1,  &
@@ -125,7 +121,7 @@ contains
   subroutine nl_operator_init(op, n, label)
     type(nl_operator_t), intent(out) :: op
     integer,             intent(in)  :: n
-    character(len=*),   intent(in)  :: label
+    character(len=*),    intent(in)  :: label
 
     ASSERT(n  > 0)
 
@@ -182,15 +178,13 @@ contains
     opo%const_w = opi%const_w
     opo%i       = opi%i
     opo%w_re    = opi%w_re
-    if (opi%cmplx_op) then
-      opo%w_im  = opi%w_im
-    end if
+    if (opi%cmplx_op) opo%w_im  = opi%w_im
 
     ASSERT(associated(opi%ri))
 
-    opo%ri(1:opi%n, 1:opi%nri)= opi%ri(1:opi%n, 1:opi%nri)
-    opo%rimap(1:opo%np) = opo%rimap(1:opo%np)
-    opo%rimap_inv(0:opo%nri+1) = opo%rimap_inv(0:opo%nri+1)
+    opo%ri(1:opi%n, 1:opi%nri) = opi%ri(1:opi%n, 1:opi%nri)
+    opo%rimap(1:opo%np)        = opi%rimap(1:opo%np)
+    opo%rimap_inv(0:opo%nri+1) = opi%rimap_inv(0:opo%nri+1)
     
     opo%dfunction = opi%dfunction
     opo%zfunction = opi%zfunction
@@ -366,9 +360,8 @@ contains
 
     call push_sub('nl_operator.nl_operator_transpose')
 
-    ASSERT(associated(op%i))
+    call nl_operator_equal(opt, op)
 
-    opt = op
     opt%label = trim(op%label)//' transposed'
     opt%w_re = M_ZERO
     if (op%cmplx_op) opt%w_im = M_ZERO
@@ -414,9 +407,7 @@ contains
 
     call push_sub('nl_operator.nl_operator_skewadjoint')
 
-    ASSERT(associated(op%i))
-
-    opt = op
+    call nl_operator_equal(opt, op)
 
 #if defined(HAVE_MPI)
     if(m%parallel_in_domains) then
@@ -491,9 +482,7 @@ contains
 
     call push_sub('nl_operator.nl_operator_selfadjoint')
 
-    ASSERT(associated(op%i))
-
-    opt = op
+    call nl_operator_equal(opt, op)
 
     if(m%parallel_in_domains) then
 #if defined(HAVE_MPI)
@@ -778,8 +767,6 @@ contains
 
     type(nl_operator_t), pointer :: opg
 
-    ASSERT(associated(op%i))
-
     call push_sub('nl_operator.nl_operator_op_to_matrix')
 
     if(op%m%parallel_in_domains) then
@@ -831,7 +818,7 @@ contains
 
     ASSERT(associated(op_ref%i))
 
-    op = op_ref
+    call nl_operator_equal(op, op_ref)
     do i = 1, op%np
       do j = 1, op%n
         index = nl_operator_get_index(op, j, i)
@@ -862,7 +849,6 @@ contains
 
     call push_sub('nl_operator.nl_operator_write')
 
-    ASSERT(associated(op%i))
 
     if(mpi_grp_is_root(op%m%mpi_grp)) then
       ALLOCATE(a(op%m%np_global, op%m%np_global), op%m%np_global*op%m%np_global)
@@ -904,7 +890,6 @@ contains
 
     call push_sub('nl_operator.nl_operator_write')
 
-    ASSERT(associated(op%i))
 
     if(mpi_grp_is_root(op%m%mpi_grp)) then
       ALLOCATE(a(op%m%np_global, op%m%np_global), op%m%np_global*op%m%np_global)
