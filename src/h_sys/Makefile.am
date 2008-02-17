@@ -34,7 +34,7 @@ noinst_HEADERS = \
 	xc_KLI_inc.F90 xc_OEP_x_inc.F90 xc_OEP_SIC_inc.F90 xc_OEP_kernel_inc.F90 \
 	kb_projector_inc.F90 hgh_projector_inc.F90 projector_inc.F90 epot_inc.F90 \
 	xc_OEP_inc.F90 h_inc.F90 preconditioners_inc.F90 pert_inc.F90 \
-	linear_solver_inc.F90
+	linear_solver_inc.F90 output_h.F90 output_linear_response.F90 output_states.F90
 
 include $(srcdir)/../common-rules.make
 
@@ -52,7 +52,6 @@ epot.o : epot.F90 epot_inc.F90 projector.o lasers.o specie_pot.o
 h.o : h.F90 h_inc.F90 lasers.o projector.o epot.o 
 preconditioners.o : preconditioners.F90 preconditioners_inc.F90 h.o 
 linear_solver.o : linear_solver.F90 linear_solver_inc.F90 preconditioners.o h.o 
-output_states.o : output_states.F90
 scf_tol.o : scf_tol.F90 
 xc_OEP.o : xc_OEP.F90 xc_OEP_inc.F90 xc_OEP_SIC_inc.F90 xc_OEP_x_inc.F90 xc_KLI_inc.F90 scf_tol.o linear_solver.o h.o 
 v_ks.o : v_ks.F90 xc_OEP.o h.o 
