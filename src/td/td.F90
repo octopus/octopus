@@ -20,6 +20,7 @@
 #include "global.h"
 
 module timedep_m
+  use cpmd_m
   use global_m
   use io_m
   use datasets_m
@@ -69,7 +70,8 @@ module timedep_m
 
   integer, parameter :: &
        EHRENFEST = 1,   &
-       BO        = 2
+       BO        = 2,   &
+       CP        = 3
   
   type td_t
     type(td_rti_t)    :: tr             ! contains the details of the time evolution
@@ -88,6 +90,7 @@ module timedep_m
 #endif
     FLOAT             :: mu
     integer           :: dynamics
+    type(cpmd_t)      :: cp_propagator
   end type td_t
 
 
@@ -140,9 +143,9 @@ contains
       geo%kinetic_energy = kinetic_energy(geo)
 
       call init_verlet()
-      
+
     end if
-    
+          
     ! Calculate initial value of the gauge vector field
     if (h%ep%with_gauge_field) then
       if(td%iter > 0) then
@@ -174,7 +177,7 @@ contains
       if(clean_stop()) stopping = .true.
       call profiling_in(C_PROFILING_TIME_STEP)
       
-      if( td%move_ions > 0 .or. h%ep%with_gauge_field) then
+      if( (td%move_ions > 0 .and. td%dynamics == EHRENFEST ) .or. h%ep%with_gauge_field) then
         ! Move the ions: only half step, to obtain the external potential 
         ! in the middle of the time slice.
         if( td%move_ions > 0 ) call apply_verlet_1(td%dt*M_HALF)
@@ -189,8 +192,9 @@ contains
       case(EHRENFEST)
         call td_rti_dt(sys%ks, h, gr, st, td%tr, i*td%dt, td%dt / td%mu, td%max_iter)
       case(BO)
-        call scf_run(td%scf, sys%gr, geo, st, sys%ks, h, sys%outp, &
-          gs_run = .false., verbosity = VERB_NO)
+        call scf_run(td%scf, sys%gr, geo, st, sys%ks, h, sys%outp, gs_run = .false., verbosity = VERB_NO)
+      case(CP)
+        call cpmd_propagate(td%cp_propagator, sys%gr, h, st, i, td%dt)
       end select
 
 
@@ -203,7 +207,7 @@ contains
       if(td%move_ions > 0 .or. h%ep%with_gauge_field) then
         ! Now really move the full time step, from the original positions.
         if( td%move_ions > 0 ) then
-	  geo%atom(1:geo%natoms) = atom1(1:geo%natoms)
+          if(td%dynamics == EHRENFEST) geo%atom(1:geo%natoms) = atom1(1:geo%natoms)
           call apply_verlet_1(td%dt)
 	end if
 	if( h%ep%with_gauge_field ) then
@@ -365,6 +369,7 @@ contains
     subroutine end_()
       ! free memory
       deallocate(st%zpsi)
+      if(td%dynamics == CP) call cpmd_end(td%cp_propagator)
       if(td%move_ions>0) call end_verlet
       if (h%ep%with_gauge_field) call end_verlet_gauge_field
       call td_end(td)

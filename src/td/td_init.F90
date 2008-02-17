@@ -29,25 +29,6 @@ subroutine td_init(sys, h, td)
 
   td%iter = 0
 
-  !%Variable TDDynamics
-  !%Type integer
-  !%Default 1
-  !%Section Time Dependent::Propagation
-  !%Description
-  !% (Development) Type of dynamics to follow during a time propagation. By default
-  !% is Ehrenfest TDDFT.
-  !%Option ehrenfest 1
-  !% Ehrenfest dynamics.
-  !%Option bo 2
-  !% Born Openheimer (Experimental).
-  !%End
-
-  if (conf%devel_version) then
-    call loct_parse_int(check_inp('TDDynamics'), EHRENFEST, td%dynamics)
-  else
-    td%dynamics = EHRENFEST
-  end if
-
   !%Variable TDTimeStep
   !%Type float
   !%Default 0.07 a.u.
@@ -147,6 +128,31 @@ subroutine td_init(sys, h, td)
   if(.not.varinfo_valid_option('MoveIons', td%move_ions)) call input_error('MoveIons')
   call messages_print_var_option(stdout, 'MoveIons', td%move_ions)
 
+
+  !%Variable TDDynamics
+  !%Type integer
+  !%Default 1
+  !%Section Time Dependent::Propagation
+  !%Description
+  !% Type of dynamics to follow during a time propagation. By default
+  !% is Ehrenfest TDDFT.
+  !%Option ehrenfest 1
+  !% Ehrenfest dynamics.
+  !%Option bo 2
+  !% Born Openheimer (Experimental).
+  !%Option cp 3
+  !% Carr-Parrinelo molecular dynamics.
+  !%End
+
+  if (td%move_ions /= 0 ) then
+    call loct_parse_int(check_inp('TDDynamics'), EHRENFEST, td%dynamics)
+    if(.not.varinfo_valid_option('TDDynamics', td%dynamics)) call input_error('TDDynamics')
+    call messages_print_var_option(stdout, 'TDDynamics', td%dynamics)
+  else
+    td%dynamics =  EHRENFEST
+  end if
+ 
+
   !%Variable RecalculateGSDuringEvolution
   !%Type logical
   !%Default no
@@ -167,6 +173,7 @@ subroutine td_init(sys, h, td)
 
   call td_rti_init(sys%gr, sys%st, td%tr, td%dt, td%max_iter)
   if(td%dynamics == BO)  call scf_init(sys%gr, sys%geo, td%scf, sys%st, h)
+  if(td%dynamics == CP) call cpmd_init(td%cp_propagator, sys%gr, sys%st)
 
   if(h%ep%no_lasers>0.and.mpi_grp_is_root(mpi_world)) then
     call messages_print_stress(stdout, "Time-dependent external fields")
