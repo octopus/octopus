@@ -92,7 +92,6 @@ module nl_operator_m
        OP_AS      = 3,  &
        OP_MIN     = OP_FORTRAN, &
        OP_MAX     = OP_AS
-
   
   logical :: initialized = .false.
 
@@ -145,8 +144,6 @@ contains
 
     call push_sub('nl_operator.nl_operator_equal')
 
-    ASSERT(associated(opi%i))
-
     call nl_operator_init(opo, opi%n, opi%label)
 
     opo%dfunction = opi%dfunction
@@ -157,7 +154,6 @@ contains
     opo%cmplx_op =  opi%cmplx_op
     opo%nri      =  opi%nri
     opo%stencil(1:3, 1:opo%n) = opi%stencil(1:3, 1:opi%n)
-    ALLOCATE(opo%i(opi%n, opi%np), opi%n*opi%np)
 
     if(opi%const_w) then
       ALLOCATE(opo%w_re(opi%n, 1), opi%n*1)
@@ -176,7 +172,6 @@ contains
     ALLOCATE(opo%rimap_inv(0:opo%nri+1), opo%nri+2)
 
     opo%const_w = opi%const_w
-    opo%i       = opi%i
     opo%w_re    = opi%w_re
     if (opi%cmplx_op) opo%w_im  = opi%w_im
 
@@ -192,7 +187,6 @@ contains
     call pop_sub()
   end subroutine nl_operator_equal
 
-
   ! ---------------------------------------------------------
   subroutine nl_operator_build(m, op, np, const_w, cmplx_op)
     type(mesh_t), target, intent(in)    :: m
@@ -203,7 +197,6 @@ contains
 
     integer :: ii, jj, p1(MAX_DIM), time, current
     integer, allocatable :: st1(:), st2(:)
-    logical :: init_opi
 
     call push_sub('nl_operator.nl_operator_build')
 
@@ -257,10 +250,7 @@ contains
       end if
     end do
 
-    ! Build lookup table op%i from stencil.
-    if(.not. op%const_w .or. op%cmplx_op) then 
-      ALLOCATE(op%i(op%n, np), op%n*np)
-    end if
+    ! Build lookup table
     ALLOCATE(st1(1:op%n), op%n)
     ALLOCATE(st2(1:op%n), op%n)
 
@@ -268,7 +258,6 @@ contains
 
     do time = 1, 2
       st2 = 0
-      init_opi = time == 2 .and. (.not. op%const_w .or. op%cmplx_op)
       do ii = 1, np
         if(m%parallel_in_domains) then
           ! When running in parallel, get global number of
@@ -280,20 +269,17 @@ contains
 
         do jj = 1, op%n
           ! Get global index of p1 plus current stencil point.
-          if (init_opi) op%i(jj, ii) = mesh_index(m%sb%dim, m%nr, m%Lxyz_inv, p1(:) + op%stencil(:, jj))
           st1(jj) = mesh_index(m%sb%dim, m%nr, m%Lxyz_inv, p1(:) + op%stencil(:, jj))
           
           if(m%parallel_in_domains) then
             ! When running parallel, translate this global
             ! number back to a local number.
-            
-            if(init_opi) op%i(jj, ii) = m%vp%global(op%i(jj, ii), m%vp%partno)
             st1(jj) = m%vp%global(st1(jj), m%vp%partno)
           end if
           
-          st1(jj) = st1(jj) - ii
-
         end do
+
+        st1(1:op%n) = st1(1:op%n) - ii
 
         ! if the stencil changes
         if ( maxval(abs(st1 - st2)) > 0 ) then 
