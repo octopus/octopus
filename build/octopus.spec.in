@@ -62,6 +62,7 @@ rm -rf $RPM_BUILD_ROOT
   --with-sparskit="@LIBS_SPARSKIT@" \
   --with-arpack="@LIBS_ARPACK@" \
   --with-netcdf="@LIBS_NETCDF@" \
+  --disable-libnbc \
   --enable-mpi
 
 make
@@ -95,6 +96,15 @@ make install DESTDIR=${RPM_BUILD_ROOT}
 
 %clean
 rm -rf ${RPM_BUILD_ROOT}
+
+
+%post
+install-info %{_infodir}/octopus.info &> /dev/null
+
+
+%preun
+install-info --remove octopus &> /dev/null
+
 
 %files
 %defattr(-,root,root,0755)
