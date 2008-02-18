@@ -44,11 +44,12 @@ build-stamp:  config.status
 	FC=gfortran \
 	CFLAGS="-O3 -funroll-loops -ffast-math" \
 	FCFLAGS="-O3 -funroll-loops -ffast-math -ffree-line-length-none -fsecond-underscore" \
+	LDFLAGS="-static" \
 	./configure \
 	--host=$(DEB_HOST_GNU_TYPE) --build=$(DEB_BUILD_GNU_TYPE) \
 	--prefix=/usr --mandir=\$${prefix}/share/man --infodir=\$${prefix}/share/info \
 	--with-blas="/usr/lib/atlas/libblas.a -latlas -lg2c" \
-	--disable-gdlib --with-fft=fftw2
+	--disable-gdlib
 
   # Add here commands to compile the package.
 	$(MAKE)
