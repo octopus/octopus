@@ -49,7 +49,7 @@ module cpmd_m
     cpmd_t,                 &
     cpmd_init,              &
     cpmd_end,               &
-    cpmd_energy_correction, &
+    cpmd_electronic_energy, &
     cpmd_propagate
 
   type cpmd_t
@@ -129,7 +129,7 @@ contains
         psi(1:np, 1:ddim) = M_TWO*st%zpsi(1:np, 1:ddim, ist1, ik) - this%oldpsi(1:np, 1:ddim, ist1, ik) &
              + dt**2/this%emass*(-st%occ(ist1, ik)*hpsi(1:np, 1:ddim)) !(4.2)
         
-        ! calculate the velocity and the correction to the constant of motion
+        ! calculate the velocity and the fictitious electronic energy
         hpsi(1:np, 1:ddim) = abs(psi(1:np, 1:ddim) - this%oldpsi(1:np, 1:ddim, ist1, ik))/(M_TWO*dt)
         this%ecorr = this%ecorr + this%emass*zstates_nrm2(gr%m, ddim, hpsi)**2 !(2.11)
 
@@ -180,7 +180,6 @@ contains
         xxi = M_HALF*(ii - aa + matmul(xx, ii - bb) + matmul(ii - transpose(bb), xx) - matmul(xx, xx)) !(4.5)
         res = maxval(abs(xxi - xx))
         xx = xxi
-!        print*, it, res
         if (res < CNST(1e-5)) exit
       end do
 
@@ -190,16 +189,12 @@ contains
 
   end subroutine cpmd_propagate
 
-  FLOAT function cpmd_energy_correction(this, gr, h, st, dt)
+  FLOAT function cpmd_electronic_energy(this)
     type(cpmd_t),        intent(in)    :: this
-    type(grid_t),        intent(in)    :: gr
-    type(hamiltonian_t), intent(in)    :: h
-    type(states_t),      intent(in)    :: st
-    FLOAT,               intent(in)    :: dt
 
-    cpmd_energy_correction = this%ecorr
+    cpmd_electronic_energy = this%ecorr
     
-  end function cpmd_energy_correction
+  end function cpmd_electronic_energy
 
 end module cpmd_m
 

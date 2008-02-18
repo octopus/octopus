@@ -161,7 +161,11 @@ contains
     td%iter = td%iter + 1
 
     call messages_print_stress(stdout, "Time-Dependent Simulation")
-    write(message(1), '(a7,1x,a14,a14,a17)') 'Iter ', 'Time ', 'Energy ', 'Elapsed Time '
+    if(td%dynamics /= CP) then 
+      write(message(1), '(a7,1x,a14,a14,a17)') 'Iter ', 'Time ', 'Energy ', 'Elapsed Time '
+    else
+      write(message(1), '(a7,1x,a14,a14,a14,a17)') 'Iter ', 'Time ', 'Energy ', 'CP Energy ', 'Elapsed Time '
+    end if
     call write_info(1)
     call messages_print_stress(stdout)
 
@@ -226,8 +230,6 @@ contains
       ! Get the energies.
       call hamiltonian_energy(h, sys%gr, sys%geo, st, -1)
 
-      if(td%dynamics == CP) h%etot = h%etot + cpmd_energy_correction(td%cp_propagator, sys%gr, h, st, td%dt)
-
       ! Recalculate forces, update velocities...
       if(td%move_ions > 0) then
         call epot_forces(gr, sys%geo, h%ep, st, i*td%dt)
@@ -265,10 +267,18 @@ contains
     ! ---------------------------------------------------------
     subroutine check_point
       ! write info
-      write(message(1), '(i7,1x,2f14.6,f14.3, i10)') i, &
-        i*td%dt       / units_out%time%factor, &
-        (h%etot + geo%kinetic_energy) / units_out%energy%factor, &
-        loct_clock() - etime
+      if(td%dynamics /= CP) then 
+        write(message(1), '(i7,1x,2f14.6,f14.3, i10)') i, &
+             i*td%dt       / units_out%time%factor, &
+             (h%etot + geo%kinetic_energy) / units_out%energy%factor, &
+             loct_clock() - etime
+      else
+        write(message(1), '(i7,1x,3f14.6,f14.3, i10)') i, &
+             i*td%dt       / units_out%time%factor, &
+             (h%etot + geo%kinetic_energy) / units_out%energy%factor, &
+             (h%etot + geo%kinetic_energy + cpmd_electronic_energy(td%cp_propagator)) / units_out%energy%factor, &
+             loct_clock() - etime
+      end if
       call write_info(1)
       etime = loct_clock()
       ii = ii + 1
@@ -283,7 +293,11 @@ contains
           call ground_state_run(sys, h, fromScratch)
           call restart_read(trim(tmpdir)//'td', st, gr, geo, ierr, i)
           call messages_print_stress(stdout, "Time-Dependent simulation proceeds")
-          write(message(1), '(a7,1x,a14,a14,a17)') 'Iter ', 'Time ', 'Energy ', 'Elapsed Time '
+          if(td%dynamics /= CP) then 
+            write(message(1), '(a7,1x,a14,a14,a17)') 'Iter ', 'Time ', 'Energy ', 'Elapsed Time '
+          else
+            write(message(1), '(a7,1x,a14,a14,a14,a17)') 'Iter ', 'Time ', 'Energy ', 'CP Energy ', 'Elapsed Time '
+          end if
           call write_info(1)
           call messages_print_stress(stdout)
         end if
