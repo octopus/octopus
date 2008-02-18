@@ -26,7 +26,7 @@ Examples:
  ./oct-atomic_occupations -s Ti_sc
  for x in \$(cat /usr/share/octopus/PP/defaults | awk '{print \$1}'); do oct-atomic_occupations -s \$x; done
 
-Report bugs to <appel\@physik.fu-berlin.de>.
+Report bugs to <octopus-devel@tddft.org>.
 EndOfUsage
   exit 0;
 }

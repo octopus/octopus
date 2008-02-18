@@ -49,7 +49,7 @@ Exit codes:
     255       test skipped
     1..254    number of test failures
 
-Report bugs to <appel\@physik.fu-berlin.de>.
+Report bugs to <octopus-devel\@tddft.org>.
 EndOfUsage
 
 # Option -d is ignored for the moment.

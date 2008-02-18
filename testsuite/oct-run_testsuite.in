@@ -56,7 +56,7 @@ Usage: oct-run_testsuite [options]
      -c            delete all .log files and work directories after the run
      -m ADDRESS    mail report to address
 
-Report bugs to <appel@physik.fu-berlin.de>.
+Report bugs to <octopus-devel@tddft.org>.
 EOF
  exit 0;
 }

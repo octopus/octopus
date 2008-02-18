@@ -33,7 +33,7 @@ Usage: oct-run_periodic_table [options]
      -x              octopus executable
      -d              defaults file for pseudopotentials
 
-Report bugs to <appel@physik.fu-berlin.de>.
+Report bugs to <octopus-devel@tddft.org>.
 EOF
  exit 0;
 }

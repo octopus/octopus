@@ -51,7 +51,7 @@ Written by H. Appel.
 
 =head1 REPORTING BUGS
 
-Report bugs to <appel@physik.fu-berlin.de>.
+Report bugs to <octopus-devel@tddft.org>.
 
 =head1 COPYRIGHT
 
