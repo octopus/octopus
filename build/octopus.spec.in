@@ -108,7 +108,9 @@ install-info --remove octopus &> /dev/null
 
 %files
 %defattr(-,root,root,0755)
-%doc README NEWS COPYING AUTHORS doc/octopus.ps.* doc/pdf/*.pdf
+%doc README NEWS COPYING AUTHORS
 %{_bindir}/*
+%{_includedir}/*
+%{_libdir}/*
 %{_datadir}/octopus/*
 %{_mandir}/man1/*
