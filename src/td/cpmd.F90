@@ -24,14 +24,15 @@ module cpmd_m
   use io_m
   use datasets_m
   use io_function_m
+  use lalg_basic_m
   use loct_math_m
   use loct_parser_m
   use units_m
+  use math_m
   use messages_m
   use mesh_m
   use external_pot_m
   use geometry_m
-  use ground_state_m
   use hamiltonian_m
   use loct_m
   use profiling_m
@@ -44,16 +45,18 @@ module cpmd_m
   implicit none
 
   private
-  public ::               &
-    cpmd_t,               &
-    cpmd_init,            &
-    cpmd_end,             &
+  public ::                 &
+    cpmd_t,                 &
+    cpmd_init,              &
+    cpmd_end,               &
+    cpmd_energy_correction, &
     cpmd_propagate
 
   type cpmd_t
     private
     FLOAT          :: emass
-    CMPLX, pointer :: psidot(:, :, :, :)
+    FLOAT          :: ecorr
+    CMPLX, pointer :: oldpsi(:, :, :, :)
   end type cpmd_t
 
 contains
@@ -76,15 +79,15 @@ contains
     
     call loct_parse_float(check_inp('CPElectronicMass'), CNST(1.0), this%emass)
 
-    size = gr%m%np_part * st%d%dim * st%lnst * st%d%nik
-    ALLOCATE(this%psidot(gr%m%np_part, st%d%dim, st%st_start:st%st_end, st%d%nik), size)
+    size = gr%m%np * st%d%dim * st%lnst * st%d%nik
+    ALLOCATE(this%oldpsi(gr%m%np, st%d%dim, st%st_start:st%st_end, st%d%nik), size)
 
   end subroutine cpmd_init
   
   subroutine cpmd_end(this)
     type(cpmd_t), intent(inout) :: this
 
-    deallocate(this%psidot)
+    deallocate(this%oldpsi)
 
   end subroutine cpmd_end
   
@@ -96,47 +99,107 @@ contains
     integer,             intent(in)    :: iter
     FLOAT,               intent(in)    :: dt
 
-    integer :: ik, ist, idim, ip
+    ! this integration is based on Tuckermann and Parrinello, JCP 101
+    ! 1302 (1994), using the verlet algorithm described in page 1306,
+    ! eqs 4.2 to 4.7.
 
-    CMPLX, allocatable :: hpsi(:, :)
+    integer :: ik, ist1, ist2, ddim, np
 
+    CMPLX, allocatable :: hpsi(:, :), psi(:, :), xx(:, :)
+
+    np = gr%m%np
+    ddim = st%d%dim
+
+    ALLOCATE(xx(1:st%nst, 1:st%nst), st%nst**2)
     ALLOCATE(hpsi(1:gr%m%np, 1:st%d%dim), gr%m%np*st%d%dim)
+    ALLOCATE(psi(1:gr%m%np, 1:st%d%dim), gr%m%np*st%d%dim)
+
+    this%ecorr = M_ZERO
 
     do ik = 1, st%d%nik
-      do ist = st%st_start, st%st_end
+      do ist1 = st%st_start, st%st_end
 
-        call zHpsi(h, gr, st%zpsi(:, :, ist, ik), hpsi, ist, ik)
+        ! give the initial conditions
+        if(iter == 1) this%oldpsi(1:np, 1:ddim, ist1, ik) = st%zpsi(1:np, 1:ddim, ist1, ik)
+
+        ! calculate the "force"
+        call zHpsi(h, gr, st%zpsi(:, :, ist1, ik), hpsi, ist1, ik)
         
-        do idim = 1, h%d%dim
-          do ip = 1, gr%m%np
-            ! the integration of the velocity is made in two steps
+        ! propagate the wavefunctions
+        psi(1:np, 1:ddim) = M_TWO*st%zpsi(1:np, 1:ddim, ist1, ik) - this%oldpsi(1:np, 1:ddim, ist1, ik) &
+             + dt**2/this%emass*(-st%occ(ist1, ik)*hpsi(1:np, 1:ddim)) !(4.2)
+        
+        ! calculate the velocity and the correction to the constant of motion
+        hpsi(1:np, 1:ddim) = abs(psi(1:np, 1:ddim) - this%oldpsi(1:np, 1:ddim, ist1, ik))/(M_TWO*dt)
+        this%ecorr = this%ecorr + this%emass*zstates_nrm2(gr%m, ddim, hpsi)**2 !(2.11)
 
-            if(iter > 1) then
-              ! the remaining term from previous steps
-              ! v(t) = v_unc(t) + 1/2*dt*a(t) 
-              this%psidot(ip, idim, ist, ik) = this%psidot(ip, idim, ist, ik) - M_HALF*dt*hpsi(ip, idim)/this%emass
-            end if
+        ! store the old wavefunctions
+        this%oldpsi(1:np, 1:ddim, ist1, ik) = st%zpsi(1:np, 1:ddim, ist1, ik)
+        st%zpsi(1:np, 1:ddim, ist1, ik) = psi(1:np, 1:ddim)
+        
+      end do
 
-            ! x(t + dt) = x(t) + dt*v(t) + 1/2*dt^2*a(t)
-            st%zpsi(ip, idim, ist, ik) = &
-              st%zpsi(ip, idim, ist, ik) + dt*this%psidot(ip, idim, ist, ik) - M_HALF*dt*dt*hpsi(ip, idim)/this%emass
-
-            ! the missing term is added in next iteration
-            ! vunc(t + dt) = v(t) + 1/2*dt*a(t)
-             this%psidot(ip, idim, ist, ik) = this%psidot(ip, idim, ist, ik) - M_HALF*dt*hpsi(ip, idim)/this%emass
-          end do
+      call calc_lambda
+      
+      do ist1 = st%st_start, st%st_end
+        do ist2 = 1, st%nst
+          st%zpsi(1:np, 1:ddim, ist1, ik) =  st%zpsi(1:np, 1:ddim, ist1, ik) &
+               + xx(ist1, ist2)*this%oldpsi(1:np, 1:ddim, ist2, ik) !(4.3)
         end do
-
       end do
       
-      call zstates_gram_schmidt(st, st%st_end, gr%m, st%d%dim, st%zpsi(:, :, :, ik), start = st%st_start)
-
     end do
 
+    deallocate(hpsi, psi, xx)
 
-    deallocate(hpsi)
+  contains
+
+    subroutine calc_lambda
+      !this routine should be modified for states parallelization
+      integer :: ist1, ist2, it
+      FLOAT   :: res
+      FLOAT, allocatable :: ii(:, :)
+      CMPLX, allocatable :: aa(:, :), bb(:, :), xxi(:, :)
+      
+      ALLOCATE(aa(1:st%nst, 1:st%nst), st%nst**2)
+      ALLOCATE(bb(1:st%nst, 1:st%nst), st%nst**2)
+      ALLOCATE(ii(1:st%nst, 1:st%nst), st%nst**2)
+      ALLOCATE(xxi(1:st%nst, 1:st%nst), st%nst**2)
+            
+      do ist1 = 1, st%nst
+        do ist2 = 1, st%nst
+          ii(ist1, ist2) = ddelta(ist1, ist2)
+          aa(ist1, ist2) = zstates_dotp(gr%m, ddim,     st%zpsi(:, :, ist1, ik), st%zpsi(:, :, ist2, ik))
+          bb(ist1, ist2) = zstates_dotp(gr%m, ddim, this%oldpsi(:, :, ist1, ik), st%zpsi(:, :, ist2, ik))
+        end do
+      end do
+      
+      xx = M_HALF*(ii - aa) !(4.6)
+      
+      do it = 1, 10
+        xxi = M_HALF*(ii - aa + matmul(xx, ii - bb) + matmul(ii - transpose(bb), xx) - matmul(xx, xx)) !(4.5)
+        res = maxval(abs(xxi - xx))
+        xx = xxi
+!        print*, it, res
+        if (res < CNST(1e-5)) exit
+      end do
+
+      deallocate(aa, bb, ii, xxi)
+
+    end subroutine calc_lambda
 
   end subroutine cpmd_propagate
+
+  FLOAT function cpmd_energy_correction(this, gr, h, st, dt)
+    type(cpmd_t),        intent(in)    :: this
+    type(grid_t),        intent(in)    :: gr
+    type(hamiltonian_t), intent(in)    :: h
+    type(states_t),      intent(in)    :: st
+    FLOAT,               intent(in)    :: dt
+
+    cpmd_energy_correction = this%ecorr
+    
+  end function cpmd_energy_correction
 
 end module cpmd_m
 

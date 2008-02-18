@@ -226,6 +226,8 @@ contains
       ! Get the energies.
       call hamiltonian_energy(h, sys%gr, sys%geo, st, -1)
 
+      if(td%dynamics == CP) h%etot = h%etot + cpmd_energy_correction(td%cp_propagator, sys%gr, h, st, td%dt)
+
       ! Recalculate forces, update velocities...
       if(td%move_ions > 0) then
         call epot_forces(gr, sys%geo, h%ep, st, i*td%dt)
