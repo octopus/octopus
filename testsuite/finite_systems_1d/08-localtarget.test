@@ -5,7 +5,7 @@ Test       : OCT with local target
 Author     : Alberto
 Date       : 07.09.07
 Arch       : Linux 
-Release    : 2.6.21
+Release    : 3.0.0
 Programs   : octopus; octopus_single
 TestGroups : long-run, oct
 Enabled    : Yes
