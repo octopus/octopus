@@ -303,7 +303,7 @@ contains
     type(grid_t),      intent(in)  :: gr
     type(geometry_t),  intent(in)  :: geo
     integer,           intent(out) :: ierr
-    integer, optional, intent(out) :: iter
+    integer, optional, intent(inout) :: iter
     !if this next argument is present, the lr wfs are read instead of the gs wfs
     type(lr_t), optional, intent(inout)  :: lr 
 
