@@ -46,6 +46,7 @@ libnbc_a_SOURCES = \
 	hb_tree.h \
 	hb_tree.c \
 	dict.h \
+	dict_private.h \
 	dict.c \
 	nbcf.c
 
