@@ -58,4 +58,4 @@ v_ks.o : v_ks.F90 xc_OEP.o h.o
 system.o : system.F90 v_ks.o h.o 
 xc_OEP_kernel.o : xc_OEP_kernel.F90 xc_OEP_kernel_inc.F90 xc_OEP.o system.o h.o 
 pert.o : pert.F90 pert_inc.F90 specie_pot.o projector.o h.o epot.o 
-output_h_sys.o : output_h_sys.F90 output_states.F90 output_h.F90 output_linear_response.F90
+output_h_sys.o : output_h_sys.F90 output_states.F90 output_h.F90 output_linear_response.F90 h.o
