@@ -322,7 +322,7 @@ contains
         case(ENVELOPE_FROM_EXPR) ! This should be envelope_from_formula
           call loct_parse_block_string(blk, i-1, j+2, envelope_expression)
         case default
-          call input_error('TDExternalFieldsd')
+          call input_error('TDExternalFields')
         end select
 
         a0     = a0 * units_inp%energy%factor / units_inp%length%factor
