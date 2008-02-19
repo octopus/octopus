@@ -93,10 +93,6 @@ module nl_operator_m
        OP_MIN     = OP_FORTRAN, &
        OP_MAX     = OP_AS
   
-  integer, parameter :: &
-    INNER_POINTS  = 2,  &
-    OUTER_POINTS  = 3
-  
   logical :: initialized = .false.
 
   interface
@@ -192,13 +188,12 @@ contains
   end subroutine nl_operator_equal
 
   ! ---------------------------------------------------------
-  subroutine nl_operator_build(m, op, np, const_w, cmplx_op, select_points)
+  subroutine nl_operator_build(m, op, np, const_w, cmplx_op)
     type(mesh_t), target, intent(in)    :: m
     type(nl_operator_t),  intent(inout) :: op
     integer,              intent(in)    :: np       ! Number of (local) points.
     logical, optional,    intent(in)    :: const_w  ! are the weights constant (independent of the point)
     logical, optional,    intent(in)    :: cmplx_op ! do we have complex weights?
-    integer, optional,    intent(in)    :: select_points
 
     integer :: ii, jj, p1(MAX_DIM), time, current
     integer, allocatable :: st1(:), st2(:)
@@ -283,15 +278,6 @@ contains
           end if
           
         end do
-
-        if(present(select_points)) then
-          select case(select_points)
-          case(INNER_POINTS)
-            if(maxval(st1) > np) cycle
-          case(OUTER_POINTS)
-            if(maxval(st1) <= np) cycle
-          end select
-        end if
 
         st1(1:op%n) = st1(1:op%n) - ii
 
