@@ -29,7 +29,7 @@ subroutine X(cpmd_propagate)(this, gr, h, st, iter, dt)
   ! 1302 (1994), using the verlet algorithm described in page 1306,
   ! eqs 4.2 to 4.7.
   
-  integer :: ik, ist1, ist2, ddim, np
+  integer :: ik, ist1, ist2, ddim, idim, np
   
   R_TYPE, allocatable :: hpsi(:, :), psi(:, :), xx(:, :)
   
@@ -58,13 +58,15 @@ subroutine X(cpmd_propagate)(this, gr, h, st, iter, dt)
              + dt**2/this%emass*(-st%occ(ist1, ik)*hpsi(1:np, 1:ddim)) !(4.2)
         
         ! calculate the velocity and the fictitious electronic energy
-        hpsi(1:np, 1:ddim) = abs(psi(1:np, 1:ddim) - this%X(oldpsi)(1:np, 1:ddim, ist1, ik))/(M_TWO*dt)
+        hpsi(1:np, 1:ddim) = abs(psi(1:np, 1:ddim) - this%X(oldpsi)(1:np, 1:ddim, ist1, ik))/(M_TWO*dt) !(4.7)
         this%ecorr = this%ecorr + this%emass*X(states_nrm2)(gr%m, ddim, hpsi)**2 !(2.11)
 
-        ! store the old wavefunctions
-        this%X(oldpsi)(1:np, 1:ddim, ist1, ik) = st%X(psi)(1:np, 1:ddim, ist1, ik)
-        st%X(psi)(1:np, 1:ddim, ist1, ik) = psi(1:np, 1:ddim)
-        
+        do idim = 1, ddim
+          ! store the old wavefunctions
+          call lalg_copy(np, st%X(psi)(:, idim, ist1, ik), this%X(oldpsi)(:, idim, ist1, ik))
+          call lalg_copy(np, psi(:, idim), st%X(psi)(:, idim, ist1, ik))
+        end do
+
       end do
 
       call profiling_in(cpmd_orth, "CP_ORTHOGONALIZATION")
@@ -73,8 +75,9 @@ subroutine X(cpmd_propagate)(this, gr, h, st, iter, dt)
       
       do ist1 = st%st_start, st%st_end
         do ist2 = 1, st%nst
-          st%X(psi)(1:np, 1:ddim, ist1, ik) =  st%X(psi)(1:np, 1:ddim, ist1, ik) &
-               + xx(ist1, ist2)*this%X(oldpsi)(1:np, 1:ddim, ist2, ik) !(4.3)
+          do idim = 1, ddim
+            call lalg_axpy(np, xx(ist1, ist2), this%X(oldpsi)(:, idim, ist2, ik), st%X(psi)(:, idim, ist1, ik)) !(4.3)
+          end do
         end do
       end do
       

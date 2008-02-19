@@ -133,17 +133,18 @@ contains
 
     call io_mkdir(trim(tmpdir)//'td/cpmd')
 
-    ii = 1
+    ii = 0
     do ik = 1, st%d%nik
-      do ist = st%st_start, st%st_end
+      do ist = 1, st%nst
         do idim = 1, st%d%dim
+          ii = ii + 1
+          if (ist < st%st_start .or.  ist > st%st_end) cycle
           write(filename,'(i10.10)') ii
           if(wfs_are_real(st)) then
             call drestart_write_function(trim(tmpdir)//'td/cpmd', filename, gr, this%doldpsi(:, idim, ist, ik), err, gr%m%np)
           else
             call zrestart_write_function(trim(tmpdir)//'td/cpmd', filename, gr, this%zoldpsi(:, idim, ist, ik), err, gr%m%np)
           end if
-          ii = ii + 1
         end do
       end do
     end do
@@ -165,10 +166,12 @@ contains
 
     ierr = 0
 
-    ii = 1
+    ii = 0
     do ik = 1, st%d%nik
-      do ist = st%st_start, st%st_end
+      do ist = 1, st%nst
         do idim = 1, st%d%dim
+          ii = ii + 1
+          if (ist < st%st_start .or.  ist > st%st_end) cycle
           write(filename,'(i10.10)') ii
           if(wfs_are_real(st)) then
             call drestart_read_function(trim(tmpdir)//'td/cpmd', filename, gr%m, this%doldpsi(:, idim, ist, ik), ierr)
@@ -176,7 +179,6 @@ contains
             call zrestart_read_function(trim(tmpdir)//'td/cpmd', filename, gr%m, this%zoldpsi(:, idim, ist, ik), ierr)
           end if
           if(ierr /= 0) return
-          ii = ii + 1
         end do
       end do
     end do
