@@ -75,6 +75,8 @@ contains
     
     integer :: size
 
+    call push_sub('cpmd.cpmd_init')
+
     !%Variable CPElectronicMass
     !%Type float
     !%Default 1.0
@@ -96,13 +98,19 @@ contains
       ALLOCATE(this%zoldpsi(gr%m%np, st%d%dim, st%st_start:st%st_end, st%d%nik), size)
     end if
 
+    call pop_sub()
+
   end subroutine cpmd_init
   
   subroutine cpmd_end(this)
     type(cpmd_t), intent(inout) :: this
 
+    call push_sub('cpmd.cpmd_end')
+
     if(associated(this%doldpsi)) deallocate(this%doldpsi)
-    if(associated(this%doldpsi)) deallocate(this%zoldpsi)
+    if(associated(this%zoldpsi)) deallocate(this%zoldpsi)
+
+    call pop_sub()
 
   end subroutine cpmd_end
 
@@ -121,6 +129,8 @@ contains
     integer :: ik, ist, idim, ii, err
     character(len=80) :: filename
 
+    call push_sub('cpmd.cpmd_restart_write')
+
     call io_mkdir(trim(tmpdir)//'td/cpmd')
 
     ii = 1
@@ -138,6 +148,8 @@ contains
       end do
     end do
 
+    call pop_sub()
+
   end subroutine cpmd_restart_write
 
   subroutine cpmd_restart_read(this, gr, st, ierr)
@@ -148,6 +160,8 @@ contains
 
     integer :: ik, ist, idim, ii
     character(len=80) :: filename
+
+    call push_sub('cpmd.cpmd_restart_read')
 
     ierr = 0
 
@@ -166,6 +180,8 @@ contains
         end do
       end do
     end do
+
+    call pop_sub()
 
   end subroutine cpmd_restart_read
 

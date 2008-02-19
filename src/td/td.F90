@@ -396,8 +396,8 @@ contains
    ! ---------------------------------------------------------
     subroutine end_()
       ! free memory
-      deallocate(st%zpsi)
       if(td%dynamics == CP) call cpmd_end(td%cp_propagator)
+      call states_deallocate_wfns(st)
       if(td%move_ions>0) call end_verlet
       if (h%ep%with_gauge_field) call end_verlet_gauge_field
       call td_end(td)
