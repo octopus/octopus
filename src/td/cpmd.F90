@@ -36,6 +36,7 @@ module cpmd_m
   use hamiltonian_m
   use loct_m
   use profiling_m
+  use restart_m
   use scf_m
   use states_m
   use system_m
@@ -50,6 +51,8 @@ module cpmd_m
     cpmd_init,              &
     cpmd_end,               &
     cpmd_electronic_energy, &
+    cpmd_restart_read,      &
+    cpmd_restart_write,     &
     cpmd_propagate
 
   type cpmd_t
@@ -195,6 +198,54 @@ contains
     cpmd_electronic_energy = this%ecorr
     
   end function cpmd_electronic_energy
+
+  subroutine cpmd_restart_write(this, gr, st)
+    type(cpmd_t),        intent(in)    :: this
+    type(grid_t),        intent(in)    :: gr
+    type(states_t),      intent(in)    :: st
+
+    integer :: ik, ist, idim, ii, err
+    character(len=80) :: filename
+
+    call io_mkdir(trim(tmpdir)//'td/cpmd')
+
+    ii = 1
+    do ik = 1, st%d%nik
+      do ist = st%st_start, st%st_end
+        do idim = 1, st%d%dim
+          write(filename,'(i10.10)') ii
+          call zrestart_write_function(trim(tmpdir)//'td/cpmd', filename, gr, this%oldpsi(:, idim, ist, ik), err, gr%m%np)
+          ii = ii + 1
+        end do
+      end do
+    end do
+
+  end subroutine cpmd_restart_write
+
+  subroutine cpmd_restart_read(this, gr, st, ierr)
+    type(cpmd_t),        intent(inout) :: this
+    type(grid_t),        intent(in)    :: gr
+    type(states_t),      intent(in)    :: st
+    integer,             intent(out)   :: ierr
+
+    integer :: ik, ist, idim, ii
+    character(len=80) :: filename
+
+    ierr = 0
+
+    ii = 1
+    do ik = 1, st%d%nik
+      do ist = st%st_start, st%st_end
+        do idim = 1, st%d%dim
+          write(filename,'(i10.10)') ii
+          call zrestart_read_function(trim(tmpdir)//'td/cpmd', filename, gr%m, this%oldpsi(:, idim, ist, ik), ierr)
+          if(ierr /= 0) return
+          ii = ii + 1
+        end do
+      end do
+    end do
+
+  end subroutine cpmd_restart_read
 
 end module cpmd_m
 

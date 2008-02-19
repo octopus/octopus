@@ -402,29 +402,43 @@ contains
       type(states_t) :: stin
       CMPLX, allocatable :: rotation_matrix(:, :)
 
-      if(.not.fromScratch) then
+      if(.not.fromscratch) then
         call restart_read(trim(tmpdir)//'td', st, gr, geo, ierr, td%iter)
+        
         if(ierr.ne.0) then
           message(1) = "Could not load "//trim(tmpdir)//"td: Starting from scratch"
           call write_warning(1)
 
           fromScratch = .true.
-        else
-          ! read potential from previous interactions
-          do i = 1, 2
-            do is = 1, st%d%nspin
-              write(filename,'(a,i2.2,i3.3)') trim(tmpdir)//'td/vprev_', i, is
-              call dinput_function(trim(filename)//'.obf', gr%m, td%tr%v_old(1:NP, is, i), ierr)
-              ! If we do not succed, try netcdf
-              if(ierr > 0) call dinput_function(trim(filename)//'.ncdf', gr%m, td%tr%v_old(1:NP, is, i), ierr)
-              if(ierr > 0) then
-                write(message(1), '(3a)') 'Unsuccesfull write of "', trim(filename), '"'
-                call write_fatal(1)
-              end if
-            end do
-          end do
-
         end if
+      end if
+
+      if(.not. fromscratch .and. td%dynamics == CP) then 
+        call cpmd_restart_read(td%cp_propagator, gr, st, ierr)
+
+        if(ierr.ne.0) then
+          message(1) = "Could not load "//trim(tmpdir)//"td/cpmd: Starting from scratch"
+          call write_warning(1)
+          
+          fromScratch = .true.
+        end if
+      end if
+
+      if(.not. fromscratch) then 
+        ! read potential from previous interactions
+        do i = 1, 2
+          do is = 1, st%d%nspin
+            write(filename,'(a,i2.2,i3.3)') trim(tmpdir)//'td/vprev_', i, is
+            call dinput_function(trim(filename)//'.obf', gr%m, td%tr%v_old(1:NP, is, i), ierr)
+            ! If we do not succed, try netcdf
+            if(ierr > 0) call dinput_function(trim(filename)//'.ncdf', gr%m, td%tr%v_old(1:NP, is, i), ierr)
+            if(ierr > 0) then
+              write(message(1), '(3a)') 'Unsuccesfull read of "', trim(filename), '"'
+              call write_fatal(1)
+            end if
+          end do
+        end do
+          
       end if
 
       if(fromScratch) then
@@ -735,6 +749,8 @@ contains
           end do
         end do
       end if
+
+      if(td%dynamics == CP) call cpmd_restart_write(td%cp_propagator, gr, st)
 
       call pop_sub()
     end subroutine td_save_restart
