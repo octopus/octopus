@@ -133,7 +133,7 @@ contains
     !%
     !% For these cases, the syntax is:
     !%
-    !% <tt>%TDExternalField
+    !% <tt>%TDExternalFields
     !% <br>&nbsp;&nbsp; type | nx | ny | nz | envelope | ...envelope descriptors...
     !% <br>%</tt>
     !%
@@ -145,7 +145,7 @@ contains
     !%
     !%    (A.1) envelope_constant
     !%
-    !% <tt>%TDExternalField
+    !% <tt>%TDExternalFields
     !% <br>&nbsp;&nbsp; type | nx | ny | nz | envelope_constant | amplitude | omega
     !% <br>%</tt>
     !%
@@ -161,7 +161,7 @@ contains
     !%
     !%    (A.2) envelope_gaussian
     !%
-    !% <tt>%TDExternalField
+    !% <tt>%TDExternalFields
     !% <br>&nbsp;&nbsp; type | nx | ny | nz | envelope_gaussian | amplitude | omega | tau0 | t0
     !% <br>%</tt>
     !% 
@@ -173,7 +173,7 @@ contains
     !%
     !%    (A.3) envelope_cosinusoidal
     !%
-    !% <tt>%TDExternalField
+    !% <tt>%TDExternalFields
     !% <br>&nbsp;&nbsp; type | nx | ny | nz | envelope_cosinusoidal | amplitude | omega | tau0 | t0
     !% <br>%</tt>
     !%
@@ -183,7 +183,7 @@ contains
     !%
     !%    (A.4) envelope_trapezoidal
     !%
-    !% <tt>%TDExternalField
+    !% <tt>%TDExternalFields
     !% <br>&nbsp;&nbsp; type | nx | ny | nz | envelope_trapezoidal | amplitude | omega | tau0 | t0 | tau1
     !% <br>%</tt>
     !%
@@ -193,7 +193,7 @@ contains
     !%
     !%    (A.5) envelope_fromfile
     !%
-    !% <tt>%TDExternalField
+    !% <tt>%TDExternalFields
     !% <br>&nbsp;&nbsp; type | nx | ny | nz | envelope_fromfile | "filename"
     !% <br>%</tt>
     !%
@@ -207,7 +207,7 @@ contains
     !% (B) type = scalar_potential
     !%
     !%
-    !% <tt>%TDExternalField
+    !% <tt>%TDExternalFields
     !% <br>&nbsp;&nbsp; scalar_potential | "scalar_expression" | ...envelope descriptors...
     !% <br>%</tt>
     !%
