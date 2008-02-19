@@ -125,8 +125,17 @@ contains
     call td_init(sys, h, td)
 
     call states_distribute_nodes(st, sys%mc)
-    ! Alocate complex wave-functions during time-propagation
-    call states_allocate_wfns(st, gr%m, M_CMPLX)
+
+    ! Alocate wave-functions during time-propagation
+    if(td%dynamics == EHRENFEST) then
+      !complex wfs are required for ehrefenst
+      call states_allocate_wfns(st, gr%m, M_CMPLX)
+    else
+      call states_allocate_wfns(st, gr%m)
+    end if
+
+    ! CP has to be initialized after wavefunction type is set
+    if(td%dynamics == CP) call cpmd_init(td%cp_propagator, sys%gr, sys%st)
 
     call init_wfs()
 
@@ -198,9 +207,12 @@ contains
       case(BO)
         call scf_run(td%scf, sys%gr, geo, st, sys%ks, h, sys%outp, gs_run = .false., verbosity = VERB_NO)
       case(CP)
-        call cpmd_propagate(td%cp_propagator, sys%gr, h, st, i, td%dt)
+        if(wfs_are_real(st)) then
+          call dcpmd_propagate(td%cp_propagator, sys%gr, h, st, i, td%dt)
+        else
+          call zcpmd_propagate(td%cp_propagator, sys%gr, h, st, i, td%dt)
+        end if
       end select
-
 
       ! mask function?
       call zvmask(gr, h, st)
@@ -421,6 +433,7 @@ contains
           call write_warning(1)
           
           fromScratch = .true.
+          td%iter = 0
         end if
       end if
 

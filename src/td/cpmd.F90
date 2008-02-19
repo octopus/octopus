@@ -53,13 +53,15 @@ module cpmd_m
     cpmd_electronic_energy, &
     cpmd_restart_read,      &
     cpmd_restart_write,     &
-    cpmd_propagate
+    dcpmd_propagate,        & 
+    zcpmd_propagate
 
   type cpmd_t
     private
     FLOAT          :: emass
     FLOAT          :: ecorr
-    CMPLX, pointer :: oldpsi(:, :, :, :)
+    FLOAT, pointer :: doldpsi(:, :, :, :)
+    CMPLX, pointer :: zoldpsi(:, :, :, :)
   end type cpmd_t
 
   type(profile_t), save :: cpmd_prop, cpmd_orth
@@ -84,123 +86,25 @@ contains
     
     call loct_parse_float(check_inp('CPElectronicMass'), CNST(1.0), this%emass)
 
+    nullify(this%doldpsi, this%zoldpsi)
+
     size = gr%m%np * st%d%dim * st%lnst * st%d%nik
-    ALLOCATE(this%oldpsi(gr%m%np, st%d%dim, st%st_start:st%st_end, st%d%nik), size)
+
+    if(wfs_are_real(st)) then
+      ALLOCATE(this%doldpsi(gr%m%np, st%d%dim, st%st_start:st%st_end, st%d%nik), size)
+    else
+      ALLOCATE(this%zoldpsi(gr%m%np, st%d%dim, st%st_start:st%st_end, st%d%nik), size)
+    end if
 
   end subroutine cpmd_init
   
   subroutine cpmd_end(this)
     type(cpmd_t), intent(inout) :: this
 
-    deallocate(this%oldpsi)
+    if(associated(this%doldpsi)) deallocate(this%doldpsi)
+    if(associated(this%doldpsi)) deallocate(this%zoldpsi)
 
   end subroutine cpmd_end
-  
-  subroutine cpmd_propagate(this, gr, h, st, iter, dt)
-    type(cpmd_t),        intent(inout) :: this
-    type(grid_t),        intent(inout) :: gr
-    type(hamiltonian_t), intent(inout) :: h
-    type(states_t),      intent(inout) :: st
-    integer,             intent(in)    :: iter
-    FLOAT,               intent(in)    :: dt
-
-    ! this integration is based on Tuckermann and Parrinello, JCP 101
-    ! 1302 (1994), using the verlet algorithm described in page 1306,
-    ! eqs 4.2 to 4.7.
-
-    integer :: ik, ist1, ist2, ddim, np
-
-    CMPLX, allocatable :: hpsi(:, :), psi(:, :), xx(:, :)
-
-    call profiling_in(cpmd_prop, "CP_PROPAGATION")
-
-    np = gr%m%np
-    ddim = st%d%dim
-
-    ALLOCATE(xx(1:st%nst, 1:st%nst), st%nst**2)
-    ALLOCATE(hpsi(1:gr%m%np, 1:st%d%dim), gr%m%np*st%d%dim)
-    ALLOCATE(psi(1:gr%m%np, 1:st%d%dim), gr%m%np*st%d%dim)
-
-    this%ecorr = M_ZERO
-
-    do ik = 1, st%d%nik
-      do ist1 = st%st_start, st%st_end
-
-        ! give the initial conditions
-        if(iter == 1) this%oldpsi(1:np, 1:ddim, ist1, ik) = st%zpsi(1:np, 1:ddim, ist1, ik)
-
-        ! calculate the "force"
-        call zHpsi(h, gr, st%zpsi(:, :, ist1, ik), hpsi, ist1, ik)
-        
-        ! propagate the wavefunctions
-        psi(1:np, 1:ddim) = M_TWO*st%zpsi(1:np, 1:ddim, ist1, ik) - this%oldpsi(1:np, 1:ddim, ist1, ik) &
-             + dt**2/this%emass*(-st%occ(ist1, ik)*hpsi(1:np, 1:ddim)) !(4.2)
-        
-        ! calculate the velocity and the fictitious electronic energy
-        hpsi(1:np, 1:ddim) = abs(psi(1:np, 1:ddim) - this%oldpsi(1:np, 1:ddim, ist1, ik))/(M_TWO*dt)
-        this%ecorr = this%ecorr + this%emass*zstates_nrm2(gr%m, ddim, hpsi)**2 !(2.11)
-
-        ! store the old wavefunctions
-        this%oldpsi(1:np, 1:ddim, ist1, ik) = st%zpsi(1:np, 1:ddim, ist1, ik)
-        st%zpsi(1:np, 1:ddim, ist1, ik) = psi(1:np, 1:ddim)
-        
-      end do
-
-      call profiling_in(cpmd_orth, "CP_ORTHOGONALIZATION")
-
-      call calc_lambda
-      
-      do ist1 = st%st_start, st%st_end
-        do ist2 = 1, st%nst
-          st%zpsi(1:np, 1:ddim, ist1, ik) =  st%zpsi(1:np, 1:ddim, ist1, ik) &
-               + xx(ist1, ist2)*this%oldpsi(1:np, 1:ddim, ist2, ik) !(4.3)
-        end do
-      end do
-      
-      call profiling_out(cpmd_orth)
-
-    end do
-
-    deallocate(hpsi, psi, xx)
-
-    call profiling_out(cpmd_prop)
-
-  contains
-
-    subroutine calc_lambda
-      !this routine should be modified for states parallelization
-      integer :: ist1, ist2, it
-      FLOAT   :: res
-      FLOAT, allocatable :: ii(:, :)
-      CMPLX, allocatable :: aa(:, :), bb(:, :), xxi(:, :)
-      
-      ALLOCATE(aa(1:st%nst, 1:st%nst), st%nst**2)
-      ALLOCATE(bb(1:st%nst, 1:st%nst), st%nst**2)
-      ALLOCATE(ii(1:st%nst, 1:st%nst), st%nst**2)
-      ALLOCATE(xxi(1:st%nst, 1:st%nst), st%nst**2)
-            
-      do ist1 = 1, st%nst
-        do ist2 = 1, st%nst
-          ii(ist1, ist2) = ddelta(ist1, ist2)
-          aa(ist1, ist2) = zstates_dotp(gr%m, ddim,     st%zpsi(:, :, ist1, ik), st%zpsi(:, :, ist2, ik))
-          bb(ist1, ist2) = zstates_dotp(gr%m, ddim, this%oldpsi(:, :, ist1, ik), st%zpsi(:, :, ist2, ik))
-        end do
-      end do
-      
-      xx = M_HALF*(ii - aa) !(4.6)
-      
-      do it = 1, 10
-        xxi = M_HALF*(ii - aa + matmul(xx, ii - bb) + matmul(ii - transpose(bb), xx) - matmul(xx, xx)) !(4.5)
-        res = maxval(abs(xxi - xx))
-        xx = xxi
-        if (res < CNST(1e-5)) exit
-      end do
-
-      deallocate(aa, bb, ii, xxi)
-
-    end subroutine calc_lambda
-
-  end subroutine cpmd_propagate
 
   FLOAT function cpmd_electronic_energy(this)
     type(cpmd_t),        intent(in)    :: this
@@ -224,7 +128,11 @@ contains
       do ist = st%st_start, st%st_end
         do idim = 1, st%d%dim
           write(filename,'(i10.10)') ii
-          call zrestart_write_function(trim(tmpdir)//'td/cpmd', filename, gr, this%oldpsi(:, idim, ist, ik), err, gr%m%np)
+          if(wfs_are_real(st)) then
+            call drestart_write_function(trim(tmpdir)//'td/cpmd', filename, gr, this%doldpsi(:, idim, ist, ik), err, gr%m%np)
+          else
+            call zrestart_write_function(trim(tmpdir)//'td/cpmd', filename, gr, this%zoldpsi(:, idim, ist, ik), err, gr%m%np)
+          end if
           ii = ii + 1
         end do
       end do
@@ -248,7 +156,11 @@ contains
       do ist = st%st_start, st%st_end
         do idim = 1, st%d%dim
           write(filename,'(i10.10)') ii
-          call zrestart_read_function(trim(tmpdir)//'td/cpmd', filename, gr%m, this%oldpsi(:, idim, ist, ik), ierr)
+          if(wfs_are_real(st)) then
+            call drestart_read_function(trim(tmpdir)//'td/cpmd', filename, gr%m, this%doldpsi(:, idim, ist, ik), ierr)
+          else
+            call zrestart_read_function(trim(tmpdir)//'td/cpmd', filename, gr%m, this%zoldpsi(:, idim, ist, ik), ierr)
+          end if
           if(ierr /= 0) return
           ii = ii + 1
         end do
@@ -256,6 +168,15 @@ contains
     end do
 
   end subroutine cpmd_restart_read
+
+#include "undef.F90"
+#include "real.F90"
+#include "cpmd_inc.F90"
+
+#include "undef.F90"
+#include "complex.F90"
+#include "cpmd_inc.F90"
+
 
 end module cpmd_m
 
