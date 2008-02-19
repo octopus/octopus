@@ -163,7 +163,6 @@ AC_COMPILE_IFELSE( AC_LANG_PROGRAM( [
 ], [
 __m128d a;
  ]), 
- [AC_DEFINE(HAVE_M128D, 1, [compiler supports the m128d type][acx_m128d=yes])], [acx_m128d=no])
-AC_SUBST([LONG_LINES], [$acx_long_lines_ok])
+ [AC_DEFINE(HAVE_M128D, 1, [compiler supports the m128d type]) [acx_m128d=yes]], [acx_m128d=no])
 AC_MSG_RESULT($acx_m128d)
 ])
