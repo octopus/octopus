@@ -301,6 +301,8 @@ contains
       end do
 
       call check_end_tag(unit, "PP_ADDINFO")
+    else
+      nullify(ps_upf%proj_j)
     end if
 
     call pop_sub()
