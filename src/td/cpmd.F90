@@ -62,6 +62,8 @@ module cpmd_m
     CMPLX, pointer :: oldpsi(:, :, :, :)
   end type cpmd_t
 
+  type(profile_t), save :: cpmd_prop, cpmd_orth
+
 contains
 
   subroutine cpmd_init(this, gr, st)
@@ -110,6 +112,8 @@ contains
 
     CMPLX, allocatable :: hpsi(:, :), psi(:, :), xx(:, :)
 
+    call profiling_in(cpmd_prop, "CP_PROPAGATION")
+
     np = gr%m%np
     ddim = st%d%dim
 
@@ -142,6 +146,8 @@ contains
         
       end do
 
+      call profiling_in(cpmd_orth, "CP_ORTHOGONALIZATION")
+
       call calc_lambda
       
       do ist1 = st%st_start, st%st_end
@@ -151,9 +157,13 @@ contains
         end do
       end do
       
+      call profiling_out(cpmd_orth)
+
     end do
 
     deallocate(hpsi, psi, xx)
+
+    call profiling_out(cpmd_prop)
 
   contains
 
