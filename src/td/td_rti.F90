@@ -1,4 +1,4 @@
-!! Copyright (C) 2002-2006 M. Marques, A. Castro, A. Rubio, G. Bertsch
+pars!! Copyright (C) 2002-2006 M. Marques, A. Castro, A. Rubio, G. Bertsch
 !!
 !! This program is free software; you can redistribute it and/or modify
 !! it under the terms of the GNU General Public License as published by
@@ -286,14 +286,7 @@ contains
     case(PROP_MAGNUS)
       ALLOCATE(tr%vmagnus(NP, st%d%nspin, 2), NP*st%d%nspin*2)
     case(PROP_CRANK_NICHOLSON_SRC_MEM)
-#ifdef HAVE_SPARSKIT
       call cn_src_mem_init(st, gr, tr%trans, dt, max_iter)
-#else
-      message(1) = 'Octopus was not compiled with support for the sparskit library. This'
-      message(2) = 'library is required if the transprt Crank-Nicholson propagator is selected.'
-      message(3) = 'You have to recompile Octopus with sparskit support.'
-      call write_fatal(3)
-#endif
     case default
       call input_error('TDEvolutionMethod')
     end select
