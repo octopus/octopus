@@ -85,3 +85,4 @@
 #endif
 
 #define   TOFLOAT(x) real(x, REAL_PRECISION)
+#define   TOCMPLX(x, y) cmplx(x, y, REAL_PRECISION)

@@ -260,6 +260,54 @@ end subroutine zgeneigensolve
 
 
 ! ---------------------------------------------------------
+! Computes all the eigenvalues and the eigenvectors of a complex
+! generalized (non hermitian) eigenproblem, of the form  A*x=(lambda)*x
+subroutine zgeneigensolve_nonh(n, a, e, err_code)
+  integer,           intent(in)    :: n
+  CMPLX,             intent(inout) :: a(n,n)
+  CMPLX,             intent(out)   :: e(n)
+  integer, optional, intent(out)   :: err_code
+
+  interface
+    subroutine ZLAPACK(geev) (jobvl, jobvr, n, a, lda, w, vl, ldvl, vr, ldvr, work, lwork, rwork, info)
+      character(1), intent(in)    :: jobvl, jobvr
+      integer,      intent(in)    :: n, lda, ldvl, ldvr, lwork
+      CMPLX,        intent(inout) :: a ! a(lda,n)
+      CMPLX,        intent(out)   :: w, vl, vr ! w(n), vl(ldvl,n), vl(ldvr,n)
+      FLOAT,        intent(out)   :: rwork ! rwork(max(1,2n))
+      CMPLX,        intent(out)   :: work  ! work(lwork)
+      integer,      intent(out)   :: info
+    end subroutine ZLAPACK(geev)
+  end interface
+
+  integer            :: info, lwork
+  FLOAT, allocatable :: rwork(:)
+  CMPLX, allocatable :: work(:), vl(:, :) ,vr(:, :)
+
+  lwork = -1
+  ALLOCATE(work(1), 1)
+  call ZLAPACK(geev) ('N', 'V', n, a(1, 1), n, e(1), vl(1,1), 1, vr(1,1), n, work(1), lwork, rwork(1), info)
+  lwork = int(real(work(1)))
+  deallocate(work)
+
+  ALLOCATE(vr(n,n), n*n)
+  ALLOCATE(work(lwork), lwork)
+  ALLOCATE(rwork(max(1, 2*n)), max(1, 2*n))
+  call ZLAPACK(geev) ('N', 'V', n, a(1, 1), n, e(1), vl(1,1), 1, vr(1,1), n, work(1), lwork, rwork(1), info)
+  a(:, :) = vr(:, :)
+  deallocate(work, rwork, vr)
+
+  if(info.ne.0) then
+    write(message(1),'(a,i5)') 'In zgeneigensolve_nonh, LAPACK Xgeev returned error message ', info
+    call write_fatal(1)
+  end if
+  if(present(err_code)) then
+    err_code = info
+  end if
+end subroutine zgeneigensolve_nonh
+
+
+! ---------------------------------------------------------
 ! Computes the k lowest eigenvalues and the eigenvectors of a real
 ! generalized symmetric-definite eigenproblem, of the form  A*x=(lambda)*B*x.
 ! Here A and B are assumed to be symmetric and B is also positive definite.
@@ -737,6 +785,102 @@ CMPLX function zdeterminant(n, a, invert) result(d)
   deallocate(work, ipiv)
 end function zdeterminant
 
+! ---------------------------------------------------------
+! Invert a real symmetric square matrix a
+subroutine dsym_inverter(uplo, n, a)
+  character(1), intent(in)      :: uplo
+  integer, intent(in)           :: n
+  FLOAT,   intent(inout)        :: a(n,n)
+
+  interface
+    subroutine DLAPACK(sytrf) (uplo, n, a, lda, ipiv, work, lwork, info)
+      character(1), intent(in)    :: uplo
+      integer,      intent(in)    :: n, lda, lwork
+      FLOAT,        intent(inout) :: a(n,n)
+      integer,      intent(out)   :: ipiv(n)
+      FLOAT,        intent(inout) :: work(n)
+      integer,      intent(out)   :: info
+    end subroutine DLAPACK(sytrf)
+
+    subroutine DLAPACK(sytri) (uplo, n, a, lda, ipiv, work, info )
+      character(1), intent(in)    :: uplo
+      integer,      intent(in)    :: n, lda
+      FLOAT,        intent(inout) :: a(n,n)
+      integer,      intent(in)    :: ipiv(n)
+      FLOAT,        intent(inout) :: work(n)
+      integer,      intent(out)   :: info
+    end subroutine DLAPACK(sytri)
+  end interface
+
+  integer :: info, i
+  integer, allocatable :: ipiv(:)
+  FLOAT, allocatable :: work(:)
+
+  ALLOCATE(work(n), n)
+  ALLOCATE(ipiv(n), n)
+
+  call DLAPACK(sytrf)(uplo, n, a, n, ipiv, work, n, info)
+  if(info < 0) then
+    write(message(1), '(a, i3)') 'In dsym_inverter, LAPACK dsytrf returned info = ', info
+    call write_fatal(1)
+  end if
+
+  call DLAPACK(sytri)(uplo, n, a, n, ipiv, work, info)
+  if(info /= 0) then
+    write(message(1), '(a, i3)') 'In dsym_inverter, LAPACK dsytri returned info = ', info
+    call write_fatal(1)
+  end if
+
+  deallocate(work, ipiv)
+end subroutine dsym_inverter
+
+! ---------------------------------------------------------
+! Invert a complex symmetric square matrix a
+subroutine zsym_inverter(uplo, n, a)
+  character(1), intent(in)      :: uplo
+  integer, intent(in)           :: n
+  CMPLX,   intent(inout)        :: a(n,n)
+
+  interface
+    subroutine ZLAPACK(sytrf) (uplo, n, a, lda, ipiv, work, lwork, info)
+      character(1), intent(in)    :: uplo
+      integer,      intent(in)    :: n, lda, lwork
+      CMPLX,        intent(inout) :: a(n,n) 
+      integer,      intent(out)   :: ipiv(n)
+      CMPLX,        intent(inout) :: work(n)
+      integer,      intent(out)   :: info
+    end subroutine ZLAPACK(sytrf)
+
+    subroutine ZLAPACK(sytri) (uplo, n, a, lda, ipiv, work, info )
+      character(1), intent(in)    :: uplo
+      integer,      intent(in)    :: n, lda
+      CMPLX,        intent(inout) :: a(n,n)
+      integer,      intent(in)    :: ipiv(n)
+      CMPLX,        intent(inout) :: work(n)
+      integer,      intent(out)   :: info
+    end subroutine ZLAPACK(sytri)
+  end interface
+
+  integer :: info, i
+  integer, allocatable :: ipiv(:)
+  CMPLX, allocatable :: work(:)
+
+  ALLOCATE(work(n), n)
+  ALLOCATE(ipiv(n), n)
+  call ZLAPACK(sytrf)(uplo, n, a, n, ipiv, work, n, info)
+  if(info < 0) then
+    write(message(1), '(a, i3)') 'In zsym_inverter, LAPACK zsytrf returned info = ', info
+    call write_fatal(1)
+  end if
+
+  call ZLAPACK(sytri)(uplo, n, a, n, ipiv, work, info)
+  if(info /= 0) then
+    write(message(1), '(a, i3)') 'In zsym_inverter, LAPACK zsytri returned info = ', info
+    call write_fatal(1)
+  end if
+
+  deallocate(work, ipiv)
+end subroutine zsym_inverter
 
 ! ---------------------------------------------------------
 ! compute the solution to a real system of linear equations A*X = B,
@@ -787,6 +931,66 @@ subroutine dlinsyssolve(n, nhrs, a, b, x)
   deallocate(ipiv, iwork, ferr, berr, work, r, c, af)
 
 end subroutine dlinsyssolve
+
+! ---------------------------------------------------------
+! compute the solution to a complex system of linear equations A*X = B,
+!  where A is an N-by-N matrix and X and B are N-by-NRHS matrices.
+subroutine zlinsyssolve(n, nhrs, a, b, x)
+  integer, intent(in)    :: n, nhrs
+  CMPLX,   intent(inout) :: a(n, n), b(n, nhrs)
+  CMPLX,   intent(out)   :: x(n, nhrs)
+
+  interface
+    subroutine ZLAPACK(gesvx) (fact, trans, n, nhrs, a, lda, af, ldaf, ipiv, equed, r, &
+      c, b, ldb, x, ldx, rcond, ferr, berr, work, rwork, info)
+      character(1), intent(in)    :: fact, trans
+      integer,      intent(in)    :: n, nhrs, lda, ldaf, ldb, ldx
+      CMPLX,        intent(inout) :: a, af, b            ! a(lda, n), af(ldaf, n), b(ldb, nhrs)
+      FLOAT,        intent(inout) :: r, c                ! r(n), c(n)
+      integer,      intent(inout) :: ipiv                ! ipiv(n)
+      FLOAT,        intent(out)   :: ferr, berr          ! ferr(nhrs), berr(nhrs)
+      FLOAT,        intent(out)   :: rcond
+      CMPLX,        intent(out)   :: x, work             ! x(ldx, nhrs), work(2*n)
+      character(1), intent(inout) :: equed
+      FLOAT,        intent(out)   :: rwork               ! rwork(2*n)
+      integer,      intent(out)   :: info
+    end subroutine ZLAPACK(gesvx)
+  end interface
+
+  integer              :: info
+  integer, allocatable :: ipiv(:)
+  FLOAT,   allocatable :: rwork(:), ferr(:), berr(:), r(:), c(:)
+  FLOAT                :: rcond
+  CMPLX, allocatable   :: work(:), af(:,:)
+  character(1)         :: equed
+
+  ALLOCATE(ipiv(n),    n)
+  ALLOCATE(rwork(2*n), 2*n)
+  ALLOCATE(ferr(nhrs), nhrs)
+  ALLOCATE(berr(nhrs), nhrs)
+  ALLOCATE(work(2*n),  2*n)
+  ALLOCATE(r(n),       n)
+  ALLOCATE(c(n),       n)
+  ALLOCATE(af(n, n),   n*n)
+
+  equed = 'N'
+
+  call ZLAPACK(gesvx) ("N", "N", n, nhrs, a(1, 1), n, af(1, 1), n, ipiv(1), equed, r(1), c(1), b(1, 1), n, x(1, 1), n, &
+    rcond, ferr(1), berr(1), work(1), rwork(1), info)
+  if(info /= 0) then
+    write(message(1), '(a, i3)') 'In zlinsyssolve, LAPACK zgesvx returned info = ', info
+    call write_fatal(1)
+  end if
+
+  deallocate(ipiv)
+  deallocate(rwork)
+  deallocate(ferr)
+  deallocate(berr)
+  deallocate(work)
+  deallocate(r)
+  deallocate(c)
+  deallocate(af)
+end subroutine zlinsyssolve
 
 
 ! ---------------------------------------------------------
@@ -912,7 +1116,7 @@ end subroutine dinvert_upper_triangular
 
 
 ! ---------------------------------------------------------
-! Calculate the inverse of a real upper triangular matrix (in
+! Calculate the inverse of a complex upper triangular matrix (in
 ! unpacked storage).
 subroutine zinvert_upper_triangular(n, a)
   integer, intent(in)    :: n
@@ -939,6 +1143,64 @@ subroutine zinvert_upper_triangular(n, a)
     call write_fatal(1)
   end if
 end subroutine zinvert_upper_triangular
+
+! ---------------------------------------------------------
+! Calculate the inverse of a real lower triangular matrix (in
+! unpacked storage).
+subroutine dinvert_lower_triangular(n, a)
+  integer, intent(in)    :: n
+  FLOAT,   intent(inout) :: a(n, n)
+
+  integer :: info
+
+  interface
+    subroutine DLAPACK(trtri)(uplo, diag, n, a, lda, info)
+      character(1), intent(in)    :: uplo
+      character(1), intent(in)    :: diag
+      integer,      intent(in)    :: n
+      FLOAT,        intent(inout) :: a
+      integer,      intent(in)    :: lda
+      integer,      intent(out)   :: info
+    end subroutine DLAPACK(trtri)
+  end interface
+  
+  call DLAPACK(trtri)('L', 'N', n, a(1, 1), n, info)
+
+  if(info.ne.0) then
+    write(message(1), '(a,i5)') &
+      'In dinvert_lower_triangular, LAPACK Xtrtri returned error message ', info
+    call write_fatal(1)
+  end if
+end subroutine dinvert_lower_triangular
+
+! ---------------------------------------------------------
+! Calculate the inverse of a complex lower triangular matrix (in
+! unpacked storage).
+subroutine zinvert_lower_triangular(n, a)
+  integer, intent(in)    :: n
+  CMPLX,   intent(inout) :: a(n, n)
+
+  integer :: info
+
+  interface
+    subroutine ZLAPACK(trtri)(uplo, diag, n, a, lda, info)
+      character(1), intent(in)    :: uplo
+      character(1), intent(in)    :: diag
+      integer,      intent(in)    :: n
+      CMPLX,        intent(inout) :: a
+      integer,      intent(in)    :: lda
+      integer,      intent(out)   :: info
+    end subroutine ZLAPACK(trtri)
+  end interface
+  
+  call ZLAPACK(trtri)('L', 'N', n, a(1, 1), n, info)
+
+  if(info.ne.0) then
+    write(message(1), '(a,i5)') &
+      'In zinvert_lower_triangular, LAPACK Xtrtri returned error message ', info
+    call write_fatal(1)
+  end if
+end subroutine zinvert_lower_triangular
 
 
 !! Local Variables:

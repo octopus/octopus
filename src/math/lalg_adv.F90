@@ -29,13 +29,16 @@ module lalg_adv_m
   public ::                       &
     lalg_cholesky,                &
     lalg_geneigensolve,           &
+    lalg_geneigensolve_nonh,      &
     lalg_eigensolve,              &
     lalg_determinant,             &
     lalg_inverter,                &
+    lalg_sym_inverter,            &
     lalg_linsyssolve,             &
     lalg_singular_value_decomp,   &
     lalg_svd_inverse,             &
     lalg_invert_upper_triangular, &
+    lalg_invert_lower_triangular, &
     lalg_lowest_geneigensolve,    &
     lalg_lowest_eigensolve
 
@@ -45,6 +48,10 @@ module lalg_adv_m
 
   interface lalg_geneigensolve
     module procedure dgeneigensolve, zgeneigensolve
+  end interface
+
+  interface lalg_geneigensolve_nonh
+    module procedure zgeneigensolve_nonh
   end interface
 
   interface lalg_eigensolve
@@ -61,8 +68,12 @@ module lalg_adv_m
     module procedure ddeterminant, zdeterminant
   end interface
 
+  interface lalg_sym_inverter
+    module procedure dsym_inverter, zsym_inverter
+  end interface
+
   interface lalg_linsyssolve
-    module procedure dlinsyssolve
+    module procedure dlinsyssolve, zlinsyssolve
   end interface
 
   interface lalg_singular_value_decomp
@@ -75,6 +86,10 @@ module lalg_adv_m
 
   interface lalg_invert_upper_triangular
     module procedure dinvert_upper_triangular, zinvert_upper_triangular
+  end interface
+  
+  interface lalg_invert_lower_triangular
+    module procedure dinvert_lower_triangular, zinvert_lower_triangular
   end interface
   
   interface lalg_lowest_geneigensolve

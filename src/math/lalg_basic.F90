@@ -30,18 +30,19 @@ module lalg_basic_m
   implicit none
 
   private
-  public ::     &
-    lalg_swap,  &
-    lalg_scal,  &
-    lalg_axpy,  &
-    lalg_copy,  &
-    lalg_dot,   &
-    lalg_nrm2,  &
-    lalg_gemv,  &
-    lalg_gemm,  &
-    lalg_gemmt, &
-    lalg_trmm,  &
-    lalg_hemm,  &
+  public ::      &
+    lalg_swap,   &
+    lalg_scal,   &
+    lalg_axpy,   &
+    lalg_copy,   &
+    lalg_dot,    &
+    lalg_nrm2,   &
+    lalg_gemv,   &
+    lalg_gemm,   &
+    lalg_gemmt,  &
+    lalg_gemm2t, &
+    lalg_trmm,   &
+    lalg_hemm,   &
     lalg_herk
 
 
@@ -159,6 +160,17 @@ module lalg_basic_m
     module procedure gemmt_2_2
     module procedure gemmt_2_3
     module procedure gemmt_2_4
+  end interface
+
+  interface lalg_gemm2t
+    module procedure gemm2t_1_1
+    module procedure gemm2t_1_2
+    module procedure gemm2t_1_3
+    module procedure gemm2t_1_4
+    module procedure gemm2t_2_1
+    module procedure gemm2t_2_2
+    module procedure gemm2t_2_3
+    module procedure gemm2t_2_4
   end interface
 
   interface lalg_trmm

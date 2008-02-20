@@ -397,6 +397,33 @@ function X(cross_product)(a, b) result(c)
 
 end function X(cross_product)
 
+
+! ---------------------------------------------------------
+! Caclulate infinity-norm of matrix.
+FLOAT function X(infinity_norm)(matrix)
+  R_TYPE, intent(in) :: matrix(:, :)
+
+  integer :: m_min, m_max, i
+  FLOAT   :: norm_old, norm
+
+  call push_sub('math_inc.infinity_norm')
+
+  norm = 0
+
+  m_min = lbound(matrix, 1)
+  m_max = ubound(matrix, 1)
+  do i = m_min, m_max
+    norm_old = norm
+    norm = sum(abs(matrix(i, :)))
+    norm = max(norm, norm_old)
+  end do
+  
+  X(infinity_norm) = norm
+
+  call pop_sub()
+end function X(infinity_norm)
+
+
 !! Local Variables:
 !! mode: f90
 !! coding: utf-8

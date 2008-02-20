@@ -60,17 +60,7 @@ module math_m
     ddelta,                     &
     member,                     &
     make_idx_set,               &
-    interpolate
-
-
-  !------------------------------------------------------------------------------
-  ! This is the common interface to a simple-minded polynomical interpolation
-  ! procudure (simple use of the classical formula of Lagrange.
-  interface interpolate
-    module procedure dinterpolate_0, dinterpolate_1, dinterpolate_2
-    module procedure zinterpolate_0, zinterpolate_1, zinterpolate_2
-  end interface
-  !------------------------------------------------------------------------------
+    infinity_norm
 
 
   !------------------------------------------------------------------------------
@@ -146,7 +136,11 @@ module math_m
       real(4), intent(in) :: x, y
     end function oct_hypotf
   end interface
-  
+
+  interface infinity_norm
+    module procedure dinfinity_norm, zinfinity_norm
+  end interface
+
 contains
 
   ! ---------------------------------------------------------
@@ -446,25 +440,45 @@ contains
   ! Compute the weights for finite-difference calculations:
   !
   !  N -> highest order fo the derivative to be approximated
-  !  M -> number of grid points to be used in the approsimation.
+  !  M -> number of grid points to be used in the approximation.
   !
   !  c(j,k,i) -> ith order derivative at kth-order approximation
   !              j=0,k: the coefficients acting of each point
-  subroutine weights(N, M, cc)
+  !
+  !  side -> -1 left sided, +1 right sided, 0 centered (default)
+  subroutine weights(N, M, cc, side)
     integer, intent(in) :: N, M
     FLOAT, intent(out) :: cc(0:M, 0:M, 0:N)
+    integer, optional, intent(in) :: side
 
-    integer :: i, j, k, mn
+    integer :: i, j, k, mn, side_
     FLOAT :: c1, c2, c3, c4, c5, xi
     FLOAT, allocatable :: x(:)
 
     ALLOCATE(x(0:M), M+1)
-    ! grid-points for one-side finite-difference formulas on an equi.spaced grid
-    ! x(:) = (/(i,i=0,M)/)
 
-    ! grid-points for centered finite-difference formulas on an equi.spaced grid
-    mn = M/2
-    x(:) = (/0,(-i,i,i=1,mn)/)
+    if (present(side)) then
+      side_ = side
+    else
+      side_ = 0
+    end if
+
+    select case(side_)
+    case(-1)
+      ! grid-points for left-side finite-difference formulas on an equi.spaced grid
+      mn = M
+      x(:) = (/(-i,i=0,mn)/)
+    case(+1)
+      ! grid-points for right-side finite-difference formulas on an equi.spaced grid
+      mn = M
+      x(:) = (/(i,i=0,mn)/)
+    case default
+      ! grid-points for centered finite-difference formulas on an equi.spaced grid
+      mn = M/2
+      x(:) = (/0,(-i,i,i=1,mn)/)
+    end select
+
+
 
     xi = M_ZERO  ! point at which the approx. are to be accurate
 

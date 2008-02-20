@@ -490,6 +490,29 @@ subroutine FNAME(gemmt_2)(m, n, k, alpha, a, b, beta, c)
   call blas_gemm('C', 'N', m, n, k, alpha, a(1, 1, 1), k, b(1, 1), k, beta, c(1, 1, 1), m)
 end subroutine FNAME(gemmt_2)
 
+! The same as above but with (Hermitian) transposed of b.
+
+subroutine FNAME(gemm2t_1)(m, n, k, alpha, a, b, beta, c)
+  integer, intent(in)    :: m, n, k
+  TYPE1,   intent(in)    :: alpha, beta
+  TYPE1,   intent(in)    :: a(:,:)  ! a(m, k)
+  TYPE1,   intent(in)    :: b(:,:)  ! b(k, n)
+  TYPE1,   intent(inout) :: c(:,:)  ! c(m, n)
+
+  call blas_gemm('N', 'C', m, n, k, alpha, a(1, 1), k, b(1, 1), k, beta, c(1, 1), m)
+end subroutine FNAME(gemm2t_1)
+
+subroutine FNAME(gemm2t_2)(m, n, k, alpha, a, b, beta, c)
+  integer, intent(in)    :: m, n, k
+  TYPE1,   intent(in)    :: alpha, beta
+  TYPE1,   intent(in)    :: a(:, :, :)  ! a(m, k)
+  TYPE1,   intent(in)    :: b(:, :)     ! b(k, n)
+  TYPE1,   intent(inout) :: c(:, :, :)  ! c(m, n)
+
+  call blas_gemm('N', 'C', m, n, k, alpha, a(1, 1, 1), k, b(1, 1), k, beta, c(1, 1, 1), m)
+end subroutine FNAME(gemm2t_2)
+
+
 ! The following matrix multiplications all expect upper triangular matrices for a.
 ! For real matrices, a = a^T, for complex matrices a = a^H.
 
@@ -566,9 +589,9 @@ end subroutine FNAME(herk_1)
 ! Matrix-matrix multiplication.
 ! ------------------------------------------------------------------
 
-subroutine FNAME(trmm_1)(m, n, side, alpha, a, b)
+subroutine FNAME(trmm_1)(m, n, uplo, transa, side, alpha, a, b)
   integer,      intent(in)    :: m, n
-  character(1), intent(in)    :: side
+  character(1), intent(in)    :: side, transa, uplo
   TYPE1,        intent(in)    :: alpha
   TYPE1,        intent(in)    :: a(:, :) ! a(m, m), upper triangular matrix.
   TYPE1,        intent(inout) :: b(:, :) ! b(m, n).
@@ -582,7 +605,7 @@ subroutine FNAME(trmm_1)(m, n, side, alpha, a, b)
       lda = max(1, n)
   end select
       
-  call blas_trmm(side, 'U', 'N', 'N', m, n, alpha, a(1, 1), lda, b(1, 1), m)
+  call blas_trmm(side, uplo, transa, 'N', m, n, alpha, a(1, 1), lda, b(1, 1), m)
 end subroutine FNAME(trmm_1)
 
 
