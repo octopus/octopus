@@ -144,7 +144,6 @@ contains
       ! tribanded offdiagonals
     end select
 !write(*,*) count, order*np
-!    ASSERT(count.le.order*np)
 
     deallocate(tmp, tmp2)
     call pop_sub()
