@@ -1,0 +1,40 @@
+# -*- coding: utf-8 -*-
+#
+# $Id$
+#
+# This input file propagates a 1D Gaussian wavepacket through
+# left and right transparent boundaries.
+# The kinetic energy is calculated by a nine-point formula.
+
+DebugLevel = 0
+
+FromScratch = yes
+
+CalculationMode = td_transport
+
+TheoryLevel = independent_particles
+
+BoxShape = parallelepiped
+
+DerivativesOrder = 4
+
+TDTimeStep = 0.05
+TDMaximumIter = 100
+TDEvolutionMethod = crank_nicholson_src_mem
+TDTransAdditionalTerms = mem_term
+
+Dimensions = 1
+Spacing = 0.1
+%Lsize
+  5 | 0 | 0
+%
+
+OnlyUserDefinedInitialStates = yes
+ExtraStates = 1
+%UserDefinedStates
+   1 | 1 | 1 | formula | "exp(-x*x)"
+%
+
+%Occupations
+ 1.0
+%

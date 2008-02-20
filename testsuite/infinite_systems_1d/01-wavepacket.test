@@ -1,0 +1,29 @@
+# -*- coding: utf-8 -*-
+# $Id: oct-run_regression_test.pl 2423 2006-09-24 21:25:52Z acastro $
+
+Test       : infinite_systems_1d/01-wavepacket.test
+Author     : Florian Lorenzen
+Date       : 13.12.07
+Arch       : Linux g22 2.6.22.6-desktop-2 #1 SMP PREEMPT Sun Sep 16 19:50:33 CEST 2007 i686 GNU/Linux
+Release    : 2.2.0pre1
+Programs   : octopus
+TestGroups : short-run
+Enabled    : Yes
+
+# We check the transparent boundary conditions for different
+# discretization orders in 1D by looking at the total charge in the
+# the central region.
+
+Input: 01-wavepacket.01-deriv_order_1.inp
+
+Match ; Density [step   0] ; head -16 td.general/multipoles | tail -1 | awk -F' ' '{print $3}' ;  1.1195\d+e\+00
+Match ; Density [step  20] ; head -36 td.general/multipoles | tail -1 | awk -F' ' '{print $3}' ;  1.1195\d+e\+00
+Match ; Density [step  50] ; head -66 td.general/multipoles | tail -1 | awk -F' ' '{print $3}' ;  1.0683\d+e\+00
+Match ; Density [step 100] ; head -116 td.general/multipoles | tail -1 | awk -F' ' '{print $3}' ; 7.6802\d+e-01
+
+Input: 01-wavepacket.02-deriv_order_4.inp
+
+Match ; Density [step   0] ; head -16 td.general/multipoles | tail -1 | awk -F' ' '{print $3}' ;  1.1195\d+e\+00
+Match ; Density [step  20] ; head -36 td.general/multipoles | tail -1 | awk -F' ' '{print $3}' ;  1.1195\d+e\+00
+Match ; Density [step  50] ; head -66 td.general/multipoles | tail -1 | awk -F' ' '{print $3}' ;  1.0668\d+e\+00 
+Match ; Density [step 100] ; head -116 td.general/multipoles | tail -1 | awk -F' ' '{print $3}' ; 7.6707\d+e-01
