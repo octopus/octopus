@@ -185,8 +185,8 @@ contains
 !!$
 !!$    do ivnl = ivnl_start, ivnl_end, step
 !!$!      /*
-!!$       ALLOCATE( lpsi(h%ep%vnl(ivnl)%n), h%ep%vnl(ivnl)%n)
-!!$       ALLOCATE(lhpsi(h%ep%vnl(ivnl)%n), h%ep%vnl(ivnl)%n)
+!!$       AL LOCATE( lpsi(h%ep%vnl(ivnl)%n), h%ep%vnl(ivnl)%n)
+!!$       AL LOCATE(lhpsi(h%ep%vnl(ivnl)%n), h%ep%vnl(ivnl)%n)
 !!$!      */
 !!$       lpsi(:) = initzpsi(h%ep%vnl(ivnl)%jxyz(:), idim)
 !!$       lhpsi(:) = M_z0
