@@ -115,30 +115,6 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! Write some status information to stdout.
-!   subroutine td_transport_write_info(trans, sys, unit)
-!     type(transport_t), intent(in) :: trans
-!     type(system_t),    intent(in) :: sys
-!     integer,           intent(in) :: unit
-
-!     call push_sub('td_transport.td_transport_write_info')
-
-!     call messages_print_stress(stdout, 'Transport')
-
-!     write(message(1), '(a, i10, i10)') 'Points in interface regions:     ', &
-!       trans%intface%np, trans%intface%np
-!     write(message(2), '(a, i10)') 'MBytes required for memory term: ', &
-!       mbytes_memory_term(trans%max_iter, trans%intface%np, NLEADS, sys)
-
-!     call write_info(2, unit)
-
-!     call messages_print_stress(stdout)
-
-!     call pop_sub()
-!   end subroutine td_transport_write_info
-
-
-  ! ---------------------------------------------------------
   ! Initialize, run, and finalize the time propagation.
   subroutine td_transport_run(sys, h, from_scratch)
     type(system_t),      intent(inout) :: sys

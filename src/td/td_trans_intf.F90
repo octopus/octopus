@@ -179,8 +179,11 @@ contains
 
     call push_sub('td_trans_intf.get_intf_wf')
 
-    call lalg_copy(intf%np, &
-      zpsi(intf%index_range(1, il):intf%index_range(2, il), 1), intf_wf)
+
+    intf_wf(:) = zpsi(intf%index_range(1, il):intf%index_range(2, il), 1)
+
+!     call lalg_copy(intf%np, &
+!       zpsi(intf%index_range(1, il):intf%index_range(2, il), 1), intf_wf)
 
     call pop_sub()
   end subroutine get_intf_wf

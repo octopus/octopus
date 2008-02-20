@@ -27,11 +27,15 @@ module td_trans_mem_m
   use lalg_adv_m
   use lalg_basic_m
   use loct_parser_m
+  use loct_m
+  use math_m
   use messages_m
   use nl_operator_m
+  use states_m
   use system_m
   use td_trans_intf_m
   use varinfo_m
+  use io_m
 
   implicit none
 
@@ -39,7 +43,8 @@ module td_trans_mem_m
   public ::             &
     mbytes_memory_term, &
     memory_init,        &
-    memory_end
+    memory_end,         &
+    make_full_matrix
 
   integer :: mem_iter
   FLOAT   :: mem_tolerance
@@ -50,50 +55,228 @@ contains
   ! Calculate amount of (machine) memory required for
   ! the memory term (in MBytes).
   ! Does not consider spin at the moment.
-  integer function mbytes_memory_term(iter, np, nl, sys)
+  FLOAT function mbytes_memory_term(iter, np, nl, st, mem_type, order)
     integer,        intent(in) :: iter
     integer,        intent(in) :: np
     integer,        intent(in) :: nl
-    type(system_t), intent(in) :: sys
+    type(states_t), intent(in) :: st
+    integer,        intent(in) :: mem_type
+    integer,        intent(in) :: order
 
     call push_sub('td_transport.mbytes_memory_term')
-
-    mbytes_memory_term = nl*iter*2*REAL_PRECISION* &
-      np*sys%st%nst / 2**20
+    mbytes_memory_term = M_ZERO
+    select case(mem_type)
+    case(1) ! lots of memory, but fast
+      mbytes_memory_term = nl*iter*M_TWO*REAL_PRECISION* &
+        (st%nst*np+np**2) / M_TWO**20
+    case(2) ! less memory, but slower
+      mbytes_memory_term = nl*iter*M_TWO*REAL_PRECISION* &
+        (st%nst*np+np*order) / M_TWO**20
+    end select
 
     call pop_sub()
   end function mbytes_memory_term
 
+  ! ---------------------------------------------------------
+  ! check if the matrix is bisymmetric
+  ! only the case if discretization order = 1
+  logical function is_bisymmetric(matrix, np)
+    CMPLX,          intent(in) :: matrix(np, np)
+    integer,        intent(in) :: np
+
+    integer :: i, j
+
+    call push_sub('td_transport.is_bisymmetric')
+    
+    is_bisymmetric = .true.
+    do j=1, np
+      do i=1, np
+        if ((abs(matrix(i,j)-matrix(j,i)).gt.mem_tolerance).or.&
+            (abs(matrix(i,j)-matrix(np-j+1,np-i+1)).gt.mem_tolerance)) then
+          is_bisymmetric = .false.
+         ! write(*,'(a,i3,a,i3,a,e10.10)') "m(",i,",",j,")=",abs(matrix(i,j)-matrix(j,i))
+         ! write(*,'(a,i3,a,i3,a,e10.10)') "m(",j,",",i,")=",abs(matrix(i,j)-matrix(np-j+1,np-i+1))
+          exit
+        end if
+      end do
+    end do
+
+    call pop_sub()
+  end function is_bisymmetric
+
+  ! ---------------------------------------------------------
+  ! create sparse matrix out of the full matrix
+  ! only 2D case yet
+  ! sp = s^(-1).m.s
+  subroutine make_sparse_matrix(np, order, dim, m, s, sp, mapping)
+    integer,        intent(in)  :: np          ! matrix size (np**2)
+    integer,        intent(in)  :: order       ! derivative order
+    integer,        intent(in)  :: dim         ! dimension
+    CMPLX,          intent(in)  :: m(np, np)   ! full matrix
+    CMPLX,          intent(in)  :: s(np, np, 2)! diagonalization matrices
+    CMPLX,          intent(out) :: sp(:)       ! the sparse matrix
+    integer,        intent(in)  :: mapping(:)  ! the mapping
+
+    CMPLX, allocatable :: tmp(:, :), tmp2(:, :)
+    integer :: id, i, count, n
+    call push_sub('td_transport.make_sparse_matrix')
+
+    ALLOCATE(tmp(np,np),np**2)
+    ALLOCATE(tmp2(np,np),np**2)
+    count = 0
+
+    ! now calculate [S^(-1)*sp*S] to get the sparse matrix
+    ! FIXME: s, inv_s and sp are symmetric
+    call lalg_gemm(np, np, np, M_z1, s(:,:,2), m, M_z0, tmp)
+    call lalg_gemm(np, np, np, M_z1, tmp, s(:,:,1), M_z0, tmp2)
+
+    select case(dim)
+    case(2)
+      ! for each row
+      do i=0, np-1
+        do id=1, order
+          sp(i*order+id) = tmp2(i+1,mapping(i*order+id))
+        end do
+      end do
+
+    case(3)
+      ! FIXME (not yet done)
+      ! tribanded offdiagonals
+    end select
+!write(*,*) count, order*np
+!    ASSERT(count.le.order*np)
+
+    deallocate(tmp, tmp2)
+    call pop_sub()
+  end subroutine make_sparse_matrix
+
+  ! ---------------------------------------------------------
+  ! fast multiplication of the sparse matrix with a dense matrix
+  ! res = sp*m
+  subroutine mul_sp(np, order, dim, sp, m, mapping, res)
+    integer,        intent(in)  :: np          ! matrix size (np**2)
+    integer,        intent(in)  :: order       ! derivative order
+    integer,        intent(in)  :: dim         ! dimension
+    CMPLX,          intent(in)  :: sp(:)       ! sparse matrix (np*order)
+    CMPLX,          intent(in)  :: m(np, np)   ! the matrix to multipliy
+    integer,        intent(in)  :: mapping(:)  ! the mapping
+    CMPLX,          intent(out) :: res(np, np) ! the full matrix
+
+    integer :: ii,ij,ik, ijo
+    CMPLX   :: tmp
+
+    call push_sub('td_transport.mul_sp')
+    do ij=1, np
+      do ii=1, np
+        tmp = M_z0
+        ijo = (ij-1)*order
+        do ik=1,order
+          tmp = tmp + sp(ijo+ik)*m(mapping(ijo+ik),ii)
+        end do
+        res(ij,ii) = tmp
+      end do
+    end do
+    call pop_sub()
+  end subroutine mul_sp
+
+  ! ---------------------------------------------------------
+  ! create the original matrix out of the sparse matrix
+  ! m = s.sp.s^(-1)
+  subroutine make_full_matrix(np, order, dim, sp, s, m, mapping)
+    integer,        intent(in)  :: np          ! matrix size (np**2)
+    integer,        intent(in)  :: order       ! derivative order
+    integer,        intent(in)  :: dim         ! dimension
+    CMPLX,          intent(in)  :: sp(:)       ! sparse matrix (np*order)
+    CMPLX,          intent(in)  :: s(np, np, 2)! diagonalization matrix
+    CMPLX,          intent(out) :: m(np, np)   ! the full matrix
+    integer,        intent(in)  :: mapping(:)  ! the mapping
+
+    CMPLX, allocatable :: tmp(:, :)
+    integer :: id, i, count, n
+    call push_sub('td_transport.make_full_matrix')
+
+    ALLOCATE(tmp(np,np),np**2)
+
+    ! make a full matrix of the packed storage form
+    ! the sparse matrix has a (symmetric) banded form
+    m = M_z0
+    select case(dim)
+    case(2)
+      do i=0, np-1
+        do id=1, order
+          m(i+1,mapping(i*order+id)) = sp(i*order+id)
+        end do
+      end do
+    case(3)
+      ! FIXME (not yet done)
+    end select
+    ! now calculate [S*sp*S^(-1)] to get the dense matrix
+    call mul_sp(np, order, dim, sp, s(:,:,2), mapping, tmp)
+!    call lalg_gemm(np,np,np,M_z1,m,s(:,:,2),M_z0,tmp)
+    call lalg_gemm(np,np,np,M_z1,s(:,:,1),tmp,M_z0,m)
+    call make_symmetric_average(m, np)
+
+    deallocate(tmp)
+    call pop_sub()
+  end subroutine make_full_matrix
 
   ! ---------------------------------------------------------
   ! Allocate (machine) memory for the memory coefficents and
   ! calculate them.
-  subroutine memory_init(intface, delta, max_iter, op, coeff)
+  subroutine memory_init(intface, delta, max_iter, op, coeff, sp_coeff, mem_s, &
+                          offdiag, dim, spacing, mem_type, order, sp2full_map)
     type(intface_t),     intent(in) :: intface
     FLOAT,               intent(in) :: delta
     integer,             intent(in) :: max_iter
     type(nl_operator_t), intent(in) :: op
     CMPLX,               pointer    :: coeff(:, :, :, :)
+    CMPLX,               pointer    :: sp_coeff(:, :, :)
+    CMPLX,               pointer    :: mem_s(:, :, :, :)
+    CMPLX,               pointer    :: offdiag(:, :, :)
+    integer,             intent(in) :: dim
+    FLOAT,               intent(in) :: spacing
+    integer,             intent(in) :: mem_type
+    integer,             intent(in) :: order
+    integer,             pointer    :: sp2full_map(:)
 
-    integer            :: il
-    FLOAT, allocatable :: h_re(:, :), h_im(:, :)
+    integer            :: il, np, saved_iter, ii
+    CMPLX, allocatable :: diag(:, :)
 
     call push_sub('td_trans_mem.memory_coeff')
 
-    ALLOCATE(coeff(intface%np, intface%np, 0:max_iter, NLEADS), intface%np**2*(max_iter+1)*NLEADS)
-    ALLOCATE(h_re(intface%np, intface%np), intface%np**2)
-    ALLOCATE(h_im(intface%np, intface%np), intface%np**2)
+    np = intface%np
+    ALLOCATE(diag(np, np), np**2)
+    ALLOCATE(offdiag(np, np, NLEADS), np**2*NLEADS)
+    if (mem_type.eq.1) then
+      ALLOCATE(coeff(np, np, 0:max_iter, NLEADS), np**2*(max_iter+1)*NLEADS)
+      ALLOCATE(sp_coeff(0, 0, 0), 0)
+      ALLOCATE(mem_s(0, 0, 0, 0), 0)
+      ALLOCATE(sp2full_map(0), 0)
+    else ! FIXME: yet only 2D
+      ALLOCATE(coeff(0, 0, 0, 0), 0)
+      ! sp_coeff has the size ny*nz*do**2, (np=ny*nz*do)
+      ALLOCATE(sp_coeff(np*order, 0:max_iter, NLEADS), order*np*(max_iter+1)*NLEADS)
+      ALLOCATE(mem_s(np, np, 2, NLEADS), np**2*2*NLEADS)
+      ALLOCATE(sp2full_map(np*order), order*np)
+      ! fill sparse to full mapping matrix
+      do ii = 0, np-1
+        do il = 1, order
+          sp2full_map(ii*order+il) = mod((il-1)*(np/order) + ii , np) + 1
+        end do
+      end do
+    end if
 
+    coeff = M_z0
     ! Get iteration parameters from input file.
 
     !%Variable TDTransMemTol
     !%Type float
-    !%Default 1e-8
+    !%Default 1e-12
     !%Section Transport
     !%Description
     !% Decides when to consider the memory coefficients converged.
     !%End
-    call loct_parse_float(check_inp('TDTransMemTol'), CNST(1e-8), mem_tolerance)
+    call loct_parse_float(check_inp('TDTransMemTol'), CNST(1e-12), mem_tolerance)
     if(mem_tolerance.le.M_ZERO) then
       write(message(1), '(a,f14.6,a)') "Input : '", mem_tolerance, "' is not a valid TDTransMemTol."
       message(2) = '(0 < TDTransMemTol)'
@@ -102,12 +285,12 @@ contains
 
     !%Variable TDTransMemMaxIter
     !%Type integer
-    !%Default 25
+    !%Default 500
     !%Section Transport
     !%Description
     !% Sets the maximum iteration number to converge the memory coefficients.
     !%End
-    call loct_parse_int(check_inp('TDTransMemMaxIter'), 25, mem_iter)
+    call loct_parse_int(check_inp('TDTransMemMaxIter'), 500, mem_iter)
     if(mem_iter.le.0) then
       write(message(1), '(a,i6,a)') "Input : '", mem_iter, "' is not a valid TDTransMemMaxIter."
       message(2) = '(0 < TDTransMemMaxIter)'
@@ -116,133 +299,234 @@ contains
 
     do il = 1, NLEADS
       ! Get diagonal matrix.
-      call calculate_diag(op, intface, il, h_re, h_im)
+      call calculate_diag(op, intface, il, diag)
+      ! Get offdiagonal matrix.
+      call calculate_offdiag(op, intface, il, offdiag(:, :, il))
+!write(message(1),'(a, i3)') 'Info: Number of threads ', mc%nthreads
 
-      ! Get anchor for recursion.
-      call approx_coeff0(intface, delta, il, op, h_re, coeff(:, :, 0, il))
-      ! Calculate the subsequent coefficients by the recursive relation.
-      call calculate_coeffs(il, max_iter, delta, op, intface, h_re, coeff(:, :, :, il))
+      ! Try to read the coefficients from file
+      call read_coeffs(io_workpath("transport/"), saved_iter, coeff(:, :, :, il), sp_coeff(:, :, il), mem_s(:,:,:,il), &
+                       dim, max_iter, intface%np, spacing, delta, op%n, mem_type, np*order, il)
+
+      if (saved_iter.lt.max_iter) then ! calculate coefficients
+        if (saved_iter.gt.0) then
+          write(message(1),'(a,i5,a)') 'Info: Successfully loaded the first',saved_iter,' memory coefficients from '// &
+                       trim(lead_name(il))//' lead.'
+          call write_info(1)
+        end if
+        message(1) = 'Info: Calculating missing coefficients for memory term of '// &
+                      trim(lead_name(il))//' lead.'
+        call write_info(1)
+        ! initialize progress bar
+        call loct_progress_bar(-1, max_iter+1)
+
+        if (saved_iter.eq.0) then 
+          ! Get anchor for recursion.
+          call approx_coeff0(intface, delta, il, diag, offdiag(:, :, il), coeff(:, :, 0, il), &
+                             sp_coeff(:, 0, il), mem_s(:,:,:,il), order, mem_type, sp2full_map)
+          call loct_progress_bar(1, max_iter+1)
+        end if
+        ! Calculate the subsequent coefficients by the recursive relation.
+        if (mem_type.eq.1) then
+          call calculate_coeffs(il, saved_iter+1, max_iter, delta, intface, diag, &
+                     offdiag(:, :, il), coeff(:, :, :, il))
+        else ! FIXME: yet only 2D
+          call calculate_sp_coeffs(il, saved_iter+1, max_iter, delta, intface, diag, &
+                     offdiag(:, :, il), sp_coeff(:, :, il), mem_s(:,:,:,il),np*order,order,dim,sp2full_map)
+        end if
+
+        if (saved_iter.lt.max_iter) then
+          message(1) = ''
+          message(2) = 'Info: Writing memory coefficients of '// &
+            trim(lead_name(il))//' lead.'
+          call write_info(2)
+          call write_coeffs(io_workpath("transport/"), coeff(:, :, :, il), sp_coeff(:, :, il), mem_s(:,:,:,il), dim, &
+                            max_iter, intface%np, spacing, delta, op%n, mem_type, np*order, il)
+        end if
+      else
+        message(1) = 'Info: Successfully loaded memory coefficients from '// &
+          trim(lead_name(il))//' lead.'
+        call write_info(1)
+      end if
+
     end do
 
-    message(1) = 'Info: Coefficients for memory term calculated.'
-    call write_info(1)
-    
-    call write_coeffs()
-
-    deallocate(h_re, h_im)
-
+    deallocate(diag)
     call pop_sub()
   end subroutine memory_init
 
+  ! ---------------------------------------------------------
+  ! copies the upper matrix into the lower part
+  subroutine make_symmetric(matrix, np)
+    CMPLX,          intent(inout) :: matrix(np, np)
+    integer,        intent(in) :: np
+
+    integer   ::  i,j
+    call push_sub('td_transport.make_symmetric')
+
+    do j=1, np-1
+      matrix(j+1:np,j) = matrix(j,j+1:np)
+    end do
+
+    call pop_sub()
+  end subroutine make_symmetric
+
+  ! ---------------------------------------------------------
+  ! takes the average of the matrix and its transposed
+  subroutine make_symmetric_average(matrix, np)
+    CMPLX,          intent(inout) :: matrix(np, np)
+    integer,        intent(in) :: np
+
+    integer   ::  i,j
+    CMPLX,  allocatable :: tmp(:,:)
+    call push_sub('td_transport.make_symmetric_average')
+    ALLOCATE(tmp(np,np),np**2)
+   
+    if (np.gt.1) then
+      do j=1, np
+        tmp(:,j) = M_HALF*(matrix(j,:)+matrix(:,j))
+      end do
+      matrix = tmp
+    end if
+
+    deallocate(tmp)
+    call pop_sub()
+  end subroutine make_symmetric_average
 
   ! ---------------------------------------------------------
   ! Solve for zeroth memory coefficient by truncating the continued
-  ! matrix fraction.
-  subroutine approx_coeff0(intface, delta, il, op, h_re, coeff0)
+  ! matrix fraction. Since the coefficient must be symmetric,
+  ! a symmetric inversion is used.
+  subroutine approx_coeff0(intface, delta, il, diag, offdiag, coeff0, sp_coeff0, mem_s, order, mem_type, mapping)
     type(intface_t),     intent(in)  :: intface
     FLOAT,               intent(in)  :: delta
     integer,             intent(in)  :: il
-    type(nl_operator_t), intent(in)  :: op
-    FLOAT,               intent(in)  :: h_re(:, :)
+    CMPLX,               intent(in)  :: diag(:, :)
+    CMPLX,               intent(in)  :: offdiag(:, :)
     CMPLX,               intent(out) :: coeff0(:, :)
+    CMPLX,               intent(out) :: sp_coeff0(:)   ! the 0th coefficient in packed storage
+    CMPLX,               intent(out) :: mem_s(:, :, :) ! S & S^(-1)
+    integer,             intent(in)  :: order
+    integer,             intent(in)  :: mem_type
+    integer,             intent(in)  :: mapping(:)   ! the mapping
 
-    integer            :: i, j
-    CMPLX, allocatable :: coeff0_old(:, :), tmp(:, :)
+    integer            :: i, j, np
+    CMPLX              :: det
+    CMPLX, allocatable :: q0(:, :), q0_old(:, :)
+    FLOAT              :: norm, old_norm
+
 
     call push_sub('td_trans_mem.approx_coeff0')
 
-    ALLOCATE(coeff0_old(intface%np, intface%np), intface%np**2)
-    ALLOCATE(tmp(intface%np, intface%np), intface%np**2)
+    np = intface%np
+    ALLOCATE(q0_old(np, np), np**2)
+    ALLOCATE(q0(np, np), np**2)
 
     ! Truncating the continued fraction is the same as iterating the
     ! equation
-    ! 
-    !     coeff0 = V(op) * (1/(1 + i*delta*h(op) + delta^2*coeff0)) * V(op)^T
-    ! 
+    !
+    !     q0 = V^T * (1/(1 + i*delta*h + delta^2*q0)) * V
+    !
     ! with start value 0:
-    coeff0(:, :) = 0
+    q0(:, :) = M_z0
+    old_norm = M_ZERO
 
     do i = 1, mem_iter
-      coeff0_old = coeff0
+      q0_old = q0
 
-      ! Calculate 1 + i*delta*h(op) + delta^2*coeff0_old
-      coeff0 = M_zI*delta*h_re + delta**2*coeff0
-      do j = 1, intface%np
-        coeff0(j, j) = 1 + coeff0(j, j) 
+      ! Calculate 1 + i*delta*h + delta^2*coeff0_old
+      q0 = M_zI*delta*diag + delta**2*q0
+      do j = 1, np
+        q0(j, j) = 1 + q0(j, j)
       end do
 
       ! Invert.
-      call lalg_svd_inverse(intface%np, coeff0)
+      call lalg_sym_inverter('U', np, q0)
+      call make_symmetric(q0, np)
 
       ! Apply coupling matrices.
-      call apply_coupling(coeff0, op, LEFT, intface, il, tmp)
-      call apply_coupling(tmp, op, RIGHT, intface, il, coeff0)
-
-      if(abs(infinity_norm(coeff0)-infinity_norm(coeff0_old)).lt.mem_tolerance) then
+      call apply_coupling(q0, offdiag, q0, np, il)
+      call make_symmetric_average(q0, intface%np)
+      norm = infinity_norm(q0)
+      if(abs(norm-old_norm).lt.mem_tolerance) then
         exit
       end if
+      old_norm = norm
     end do
-
     if(i.gt.mem_iter) then
       write(message(1), '(a,i6,a)') 'Memory coefficent for time step 0, ' &
         //trim(lead_name(il))//' lead, not converged'
       call write_warning(1)
     end if
+    
+    !if (.not.is_bisymmetric(tmp(:,:),np)) then
+    !  write(*,*) 'memory coefficient 0 is not bisymmetric'
+    !end if
+    if (mem_type.eq.1) then
+      coeff0 = q0
+    else
+      ! diagonalization procedure
+      mem_s(:, :, 1) = q0(:, :)
+      call lalg_geneigensolve_nonh(intface%np, mem_s(:, :, 1), mem_s(:, 1, 2))
+      mem_s(:, :, 2) = mem_s(:, :, 1)
+      norm = lalg_inverter(intface%np, mem_s(:, :, 2), invert = .true.)
+      call make_sparse_matrix(intface%np, order, 2, q0, mem_s, sp_coeff0, mapping)
+    end if
+
+    deallocate(q0, q0_old)
     call pop_sub()
   end subroutine approx_coeff0
 
-
   ! ---------------------------------------------------------
-  ! Caclulate infinity-norm of matrix.
-  FLOAT function infinity_norm(matrix)
-    CMPLX, intent(in) :: matrix(:, :)
+  ! output of a matrix (for debugging)
+  subroutine write_matrix(matr, iter, np)
+    CMPLX,     intent(in)  :: matr(np, np)
+    integer,   intent(in)  :: iter,np
+    integer            :: i, j
 
-    integer :: m_min, m_max, i
-    FLOAT   :: norm_old, norm
-
-    call push_sub('td_trans_mem.inf_norm')
-
-    norm = 0
-
-    m_min = lbound(matrix, 1)
-    m_max = ubound(matrix, 1)
-    do i = m_min, m_max
-      norm_old = norm
-      norm = sum(abs(matrix(i, :)))
-      norm = max(norm, norm_old)
+    write(*,'(a,i4,a)') "--- Matrix(",iter,") ---"
+    do j = 1, np
+      write(*,'(i3,a,i3,a,11e20.9)') iter, "m(",j,",i)=",abs(matr(j,:))
     end do
-    
-    infinity_norm = norm
-
-    call pop_sub()
-  end function infinity_norm
+!    do j = 1, np
+!      do i = 1, np
+!        write(*,'(i3,a,i3,a,i3,a,1e20.9)') iter, "m(",j,",",i,")=",abs(matr(j,i))
+!        !write(*,'(i3,a,i3,a,i3,a,2e20.9)') iter, "m(",j,",",i,")=",real(matr(j,i)), aimag(matr(j,i))
+!      end do
+!    end do
+   end subroutine write_matrix
 
 
   ! ---------------------------------------------------------
-  ! Calculate the diagonal block matrix h(op), i. e. the Hamiltonian for
+  ! Calculate the diagonal block matrix, i. e. the Hamiltonian for
   ! entries contained in the interface region (for zero potential only
   ! at the moment, thus, only kinetic energy).
-  subroutine calculate_diag(op, intf, il, h_re, h_im)
+  subroutine calculate_diag(op, intf, il, diag)
     type(nl_operator_t), intent(in)  :: op
     type(intface_t),     intent(in)  :: intf
     integer,             intent(in)  :: il
-    FLOAT,               intent(out) :: h_re(:, :), h_im(:, :)
+    CMPLX,               intent(out) :: diag(:, :)
 
     integer :: i, k, n, k_stencil
     FLOAT   :: w_re, w_im
 
     call push_sub('td_trans_mem.calculate_diag')
 
+    diag = M_z0
+
     ! For all interface points...
     do i = 1, intf%np
       n = intf%index(i, il)
       ! ... find the points they are coupled to.
       do k = 1, op%n
-        k_stencil = op%i(k, n)
+        k_stencil = op%m%lxyz_inv(op%m%lxyz(n,1)+op%stencil(1,k), &
+                                  op%m%lxyz(n,2)+op%stencil(2,k), &
+                                  op%m%lxyz(n,3)+op%stencil(3,k))
+!write(*,*) i,op%w_re(k, 1)
         ! If the coupling point is in the interface...
         if(k_stencil.le.op%np.and. &
           member_of_intface(k_stencil, intf, il)) then
-          ! ... get the operator coefficients and...
+          ! ... get the operator coefficients.
           if(op%cmplx_op) then
             if(op%const_w) then
               w_re = op%w_re(k, 1)
@@ -257,47 +541,40 @@ contains
             else
               w_re = op%w_re(k, n)
             end if
-            w_im = w_re
+            w_im = M_ZERO
           end if
-
           ! Calculation if the kinetic term: -1/2 prefactor.
-          w_im = -w_im/2
-          w_re = -w_re/2
-
+          w_im = -w_im/M_TWO
+          w_re = -w_re/M_TWO
           ! ... write them into the right entry of the diagonal block.
-          h_re(i, k_stencil-intf%index_range(1, il)+1) = w_re
-          h_im(i, k_stencil-intf%index_range(1, il)+1) = w_im
+          diag(i, k_stencil-intf%index_range(1, il)+1) = TOCMPLX(w_re, w_im)
         end if
       end do
     end do
-
+!call write_matrix(diag, 0, intf%np)
     call pop_sub()
   end subroutine calculate_diag
 
 
   ! ---------------------------------------------------------
-  ! Multiplies the coupling block matrix V(op) for interface il
-  ! onto matrix.
-  ! If il = RIGHT, then the coupling is done to the right,
-  ! for il = LEFT, it is to the left.
-  ! If lr = RIGHT, then matrix*V(op) is calculated, for lr = LEFT,
-  ! V(op)*matrix is calculated
-  subroutine apply_coupling(matrix, op, lr, intface, il, v)
-    CMPLX,               intent(in)  :: matrix(:, :)
+  ! Calculate the offdiagonal block matrix, i. e. the Hamiltonian for
+  ! entries not contained in the interface region (for zero potential only
+  ! at the moment, thus, only kinetic energy), which is the matrix
+  ! V^T_{\alpha } or H_{C\alpha}
+  subroutine calculate_offdiag(op, intface, il, offdiag)
     type(nl_operator_t), intent(in)  :: op
-    integer,             intent(in)  :: lr
     type(intface_t),     intent(in)  :: intface
     integer,             intent(in)  :: il
-    CMPLX,               intent(out) :: v(:, :)
+    CMPLX,               intent(out) :: offdiag(:, :)
 
     integer :: p_n(MAX_DIM), p_k(MAX_DIM), p_matr(MAX_DIM)
-    integer :: i, j, k, k_stencil
+    integer :: j, k, k_stencil
     integer :: n, n_matr
     integer :: dir
     integer :: x_shift
     FLOAT   :: w_re, w_im
 
-    call push_sub('td_trans_mem.apply_coupling')
+    call push_sub('td_trans_mem.calculate_offdiag')
 
     ! Coupling direction.
     select case(il)
@@ -307,186 +584,621 @@ contains
       dir = -1
     end select
 
-    do i = 1, intface%np
-      do j = 1, intface%np
-        n = intface%index(i, il)
-        if(lr.eq.RIGHT) then
-          v(i, j) = 0
-        else
-          v(j, i) = 0
-        end if
-        ! Iterate over all stencil points.
-        do k = 1, op%n
-          k_stencil = op%i(k, n)
-          if(k_stencil.le.op%np.and. & ! Is member of simulation region.
-            .not.member_of_intface(k_stencil, intface, il)) then
-            ! Get coordinates of current point in interface and coupling point.
-            p_n = op%m%lxyz(n, :)
-            p_k = op%m%lxyz(k_stencil, :)
-            ! Get the distance in transport direction.
-            x_shift = dir*(p_k(TRANS_DIR)-p_n(TRANS_DIR))
-            ! Calculate coordinates of the corresponding point of the matrix.
-            p_matr            = p_n
-            p_matr(TRANS_DIR) = p_matr(TRANS_DIR) - dir*(intface%extent-x_shift)
-            ! Finally, get its point number in the eigenstate array.
-            n_matr = intface_index(op%m%lxyz_inv(p_matr(1), p_matr(2), p_matr(3)), intface, il)
-            ! Multiply by the coefficient of the operator and sum up.
-            if(op%cmplx_op) then
-              if(op%const_w) then
-                w_re = op%w_re(k, 1)
-                w_im = op%w_im(k, 1)
-              else
-                w_re = op%w_re(k, n)
-                w_im = op%w_im(k, n)
-              end if
-            else
-              if(op%const_w) then
-                w_re = op%w_re(k, 1)
-              else
-                w_re = op%w_re(k, n)
-              end if
-              w_im = w_re
-            end if
+    offdiag(:, :) = M_z0
 
-            ! Calculation of the kinetic term: -1/2 prefactor.
-            w_im = -w_im/2
-            w_re = -w_re/2
+    ! j iterates over rows of the block matrix.
+    do j = 1, intface%np
+      n = intface%index(j, il)
+      ! k iterates over all stencil points.
+      do k = 1, op%n
+        ! Get point number of coupling point.
+        k_stencil = op%m%lxyz_inv(          &
+          op%m%lxyz(n, 1)+op%stencil(1, k), &
+          op%m%lxyz(n, 2)+op%stencil(2, k), &
+          op%m%lxyz(n, 3)+op%stencil(3, k))
 
-            ! Sum up.
-            if(lr.eq.RIGHT) then
-              v(i, j) = v(i, j) + &
-                cmplx(w_re*real(matrix(n_matr, j)), w_im*aimag(matrix(n_matr, j)))
+        ! Get coordinates of current interface point n and current stencil point k_stencil.
+        p_n = op%m%lxyz(n, :)
+        p_k = op%m%lxyz(k_stencil, :)
+
+        ! Now, we shift the stencil by the size of one unit cell (intface%extent)
+        ! and check if the coupling point with point number n_matr is in the interface.
+        ! The sketch if for a 4x2 unit cell and a 5 point stencil in 2D:
+        !
+        !    |       ||                     |       ||
+        ! ...+---+---++---+---+...       ...+---+---++---+---+...
+        !    | o |   ||   |   |             |   |   || o |   |
+        ! ...+-|-+---++---+---+...       ...+---+---++-|-+---+...
+        !  x---o---o ||   |   |             |   | #----o---o |
+        ! ...+-|-+---++---+---+...  ==>  ...+---+---++-|-+---+...
+        !    | o |   ||   |   |             |   |   || o |   |
+        ! ...+---+---++---+---+...       ...+---+---++---+---+...
+        !    |   |   ||   |   |             |   |   ||   |   |
+        ! ...+---+---++---+---+...       ...+---+---++---+---+...
+        !    |   L   ||   C                 |   L   ||   C
+        !      unit
+        !      cell
+        !
+        ! The point p_k is markes with an x, the point p_matr with a #.
+        x_shift           = abs(p_k(TRANS_DIR)-p_n(TRANS_DIR))
+        p_matr            = p_n
+        p_matr(TRANS_DIR) = p_matr(TRANS_DIR) + dir*(intface%extent-x_shift)
+        n_matr            = op%m%lxyz_inv(p_matr(1), p_matr(2), p_matr(3))
+
+        if(member_of_intface(n_matr, intface, il)) then
+          n_matr = intface_index(n_matr, intface, il)
+
+          ! Multiply by the coefficient of the operator and sum up.
+          if(op%cmplx_op) then
+            if(op%const_w) then
+              w_re = op%w_re(k, 1)
+              w_im = op%w_im(k, 1)
             else
-              v(j, i) = v(j, i) + &
-                cmplx(w_re*real(matrix(n_matr, j)), w_im*aimag(matrix(n_matr, j)))
+              w_re = op%w_re(k, n)
+              w_im = op%w_im(k, n)
             end if
+          else
+            if(op%const_w) then
+              w_re = op%w_re(k, 1)
+            else
+              w_re = op%w_re(k, n)
+            end if
+            w_im = M_ZERO
           end if
-        end do
+
+          ! Calculation of the kinetic term: -1/2 prefactor.
+          w_im = -w_im/M_TWO
+          w_re = -w_re/M_TWO
+          offdiag(j, n_matr) = TOCMPLX(w_re, w_im)
+        end if
       end do
     end do
+
+!call write_matrix(offdiag, 0, intface%np)
+    call pop_sub()
+  end subroutine calculate_offdiag
+
+
+  ! ---------------------------------------------------------
+  ! Calculate res <- offdiag^T matrix offdiag. with all matrices np x np.
+  ! If matrix is symmetric, so is the result.
+  subroutine apply_coupling(matrix, offdiag, res, np, il)
+    CMPLX,               intent(in)  :: matrix(np, np)
+    CMPLX,               intent(in)  :: offdiag(np, np)
+    integer,             intent(in)  :: np, il
+    CMPLX,               intent(out) :: res(np, np)
+
+    call push_sub('td_trans_mem.apply_coupling')
+
+    res(:, :) = matrix(:, :)
+    if (il.eq.LEFT) then
+      call lalg_trmm(np,np,'U','N','l',M_z1,offdiag,res)
+      call lalg_trmm(np,np,'U','T','r',M_z1,offdiag,res)
+    else
+      call lalg_trmm(np,np,'L','N','l',M_z1,offdiag,res)
+      call lalg_trmm(np,np,'L','T','r',M_z1,offdiag,res)
+    end if
 
     call pop_sub()
   end subroutine apply_coupling
 
-
   ! ---------------------------------------------------------
   ! coeffs(:, :, :, 0) given, calculate the subsequent ones by
-  ! the recursive relation.
-  subroutine calculate_coeffs(il, iter, delta, op, intf, h_re, coeffs)
+  ! the recursive relation. Since the 0th coefficiant is symmetric
+  ! all subsequent are also, therefore symmetric matrix multiplications
+  ! can be used. use recursive relation without p (uses only half the memory)
+  subroutine calculate_coeffs(il, start_iter, iter, delta, intf, diag, offdiag, coeffs)
     integer,             intent(in)    :: il
+    integer,             intent(in)    :: start_iter
     integer,             intent(in)    :: iter
     FLOAT,               intent(in)    :: delta
-    type(nl_operator_t), intent(in)    :: op
     type(intface_t),     intent(in)    :: intf
-    FLOAT,               intent(in)    :: h_re(:, :)
+    CMPLX,               intent(in)    :: diag(intf%np, intf%np)
+    CMPLX,               intent(in)    :: offdiag(intf%np, intf%np)
     CMPLX,               intent(inout) :: coeffs(intf%np, intf%np, 0:iter)
 
+    FLOAT              :: old_norm, norm
     integer            :: i,j, k, np
-    CMPLX, allocatable :: coeff_p(:, :, :), p_prev(:, :), tmp(:, :)
+    CMPLX, allocatable :: tmp(:, :), tmp2(:, :), inv_offdiag(:, :)
     CMPLX, allocatable :: prefactor_plus(:, :), prefactor_minus(:, :)
 
     call push_sub('td_trans_mem.calculate_coeffs')
 
-    ALLOCATE(coeff_p(intf%np, intf%np, 0:iter), intf%np**2*(iter+1))
-    ALLOCATE(p_prev(intf%np, intf%np), intf%np**2)
-    ALLOCATE(tmp(intf%np, intf%np), intf%np**2)
-    ALLOCATE(prefactor_plus(intf%np, intf%np), intf%np**2)
-    ALLOCATE(prefactor_minus(intf%np, intf%np), intf%np**2)
-
     np = intf%np
 
-    coeff_p = 0
+    ALLOCATE(tmp(np, np), np**2)
+    ALLOCATE(tmp2(np, np), np**2)
+    ALLOCATE(inv_offdiag(np, np), np**2)
+    ALLOCATE(prefactor_plus(np, np), np**2)
+    ALLOCATE(prefactor_minus(np, np), np**2)
 
-    prefactor_plus  = M_zI*delta*h_re
-    prefactor_minus = M_zI*delta*h_re
-    do i = 1, intf%np
-      prefactor_plus(i, i)  = 1 + prefactor_plus(i, i)
-      prefactor_minus(i, i) = 1 - prefactor_minus(i, i)
+    prefactor_plus(:, :)  = M_zI*delta*diag(:, :)
+    prefactor_minus(:, :) = -M_zI*delta*diag(:, :)
+
+    do i = 1, np
+      prefactor_plus(i, i)  = M_one + prefactor_plus(i, i)
+      prefactor_minus(i, i) = M_one + prefactor_minus(i, i)
     end do
+    inv_offdiag(:, :) = offdiag(:, :)
 
-    ! Calculate p_\alpha = 1/(1 + i*delta*h_\alpha + delta^2*q_\alpha)
-    coeff_p(:, :, 0) = prefactor_plus + delta**2 * coeffs(:, :, 0)
-    call lalg_svd_inverse(intf%np, coeff_p(:, :, 0))
-    call lalg_svd_inverse(intf%np, prefactor_plus)
+    if (il.eq.LEFT) then
+      call lalg_invert_upper_triangular(np, inv_offdiag)
+    else
+      call lalg_invert_lower_triangular(np, inv_offdiag)
+    end if
 
-    do i = 1, iter
-      do j = 1, mem_iter
-        p_prev = coeff_p(:, :, i)
+    call lalg_sym_inverter('U', np, prefactor_plus)
+    call make_symmetric(prefactor_plus, np)
+    if (il.eq.LEFT) then
+      call lalg_trmm(np,np,'U','N','L',M_z1,offdiag,prefactor_plus)
+      call lalg_trmm(np,np,'U','N','R',M_z1,inv_offdiag,prefactor_minus)
+    else
+      call lalg_trmm(np,np,'L','N','L',M_z1,offdiag,prefactor_plus)
+      call lalg_trmm(np,np,'L','N','R',M_z1,inv_offdiag,prefactor_minus)
+    end if
+    do i = start_iter, iter       ! i=start_iter to m.
+      coeffs(:, :, i) = M_z0
+      old_norm = M_ZERO
+      do j = 1, mem_iter ! maxiter to converge matrix equation for q(i)
 
-        ! (3)
-        call apply_coupling(p_prev, op, LEFT, intf, il, tmp)
-        call apply_coupling(tmp, op, RIGHT, intf, il, coeff_p(:, :, i))
-        coeff_p(:, :, i) = coeff_p(:, :, i) + 2*coeffs(:, :, i-1)
-        if(i.gt.1) then
-          coeff_p(:, :, i) = coeff_p(:, :, i) + coeffs(:, :, i-2)
-        end if
+        tmp2(:,:) = M_z0
 
-        call lalg_gemm(np, np, np, M_z1, coeff_p(:, :, i), coeff_p(:, :, 0), &
-          M_z0, tmp)
-        coeff_p(:, :, i) = tmp
-
-        ! (1)
-        call lalg_gemm(np, np, np, M_z1, coeffs(:, :, 0), p_prev, M_z1, coeff_p(:, :, i))
-
-        ! (2)
-        do k = 1, i-1
-          tmp = coeffs(:, :, k) + 2*coeffs(:, :, k-1)
-          if(k.gt.1) then 
-            tmp = tmp + coeffs(:, :, k-2)
+        ! k = 0 to k = m.
+        do k = 0, i
+          tmp(:, :) = coeffs(:, :, k)
+          if(k.gt.0) then
+            tmp(:, :) = tmp(:, :) + M_TWO*coeffs(:, :, k-1)
           end if
-          call lalg_gemm(np, np, np, M_z1, tmp, coeff_p(:, :, i-k), M_z1, coeff_p(:, :, i))
+          if(k.gt.1) then
+            tmp(:, :) = tmp(:, :) + coeffs(:, :, k-2)
+          end if
+          if (il.eq.LEFT) then
+            call lalg_trmm(np,np,'U','N','R',M_z1,inv_offdiag,tmp)
+          else
+            call lalg_trmm(np,np,'L','N','R',M_z1,inv_offdiag,tmp)
+          end if
+          call zsymm('R','U',np,np,M_z1,coeffs(:, :, i-k),np,tmp,np,M_z1,tmp2,np)
         end do
+        call zsymm('R','U',np,np,M_z1,coeffs(:, :, i-1),np,prefactor_minus,np,TOCMPLX(-delta**2, M_ZERO),tmp2,np)
+        call zgemm('N','N',np,np,np,M_z1,prefactor_plus,np,tmp2,np,M_z0,coeffs(:, :, i),np)
+        ! use for numerical stability
+        call make_symmetric_average(coeffs(:, :, i), np)
 
-        coeff_p(:, :, i) = -delta**2 * coeff_p(:, :, i)
-        call lalg_gemm(np, np, np, M_z1, prefactor_minus, coeff_p(:, :, i-1), &
-          M_z1, coeff_p(:, :, i))
-
-        call lalg_gemm(np, np, np, M_z1, prefactor_plus, coeff_p(:, :, i), &
-          M_z0, tmp)
-        coeff_p(:, :, i) = tmp
-
-        if(abs(infinity_norm(coeff_p(:, :, i))-infinity_norm(p_prev)).lt.mem_tolerance) then
+        norm = infinity_norm(coeffs(:, :, i))
+        if(abs(norm-old_norm).lt.mem_tolerance) then
           exit
         end if
+        old_norm = norm
       end do
 
       ! Write a warning if a coefficient is not converged.
       if(j.gt.mem_iter) then
         write(message(1), '(a,i6,a)') 'Memory coefficent for time step ', i, &
-          ', '//trim(lead_name(il))//' lead, not converged'
+          ', '//trim(lead_name(il))//' lead, not converged.'
         call write_warning(1)
       end if
 
-      call apply_coupling(coeff_p(:, :, i), op, LEFT, intf, il, tmp)
-      call apply_coupling(tmp, op, RIGHT, intf, il, coeffs(:, :, i))
+      !if (.not.is_bisymmetric(coeffs(:,:,i),np)) then
+      !  write(*,*) 'memory coefficient',i,'is not bisymmetric'
+      !end if
+
+      call loct_progress_bar(i+1, iter+1)
     end do
-    
-    deallocate(coeff_p, p_prev, tmp)
+
+!    message(1) = ''
+!    call write_info(1)
+
+    deallocate(tmp, tmp2, inv_offdiag)
     deallocate(prefactor_plus, prefactor_minus)
 
     call pop_sub()
   end subroutine calculate_coeffs
 
+  ! ---------------------------------------------------------
+  ! a bit faster, but uses twice the memory
+  ! coeffs(:, :, :, 0) given, calculate the subsequent ones by
+  ! the recursive relation. Since the 0th coefficiant is symmetric
+  ! all subsequent are also, therefore symmetric matrix multiplications
+  ! can be used.
+  subroutine calculate_coeffs_old(il, start_iter, iter, delta, intf, diag, offdiag, coeffs)
+    integer,             intent(in)    :: il
+    integer,             intent(in)    :: start_iter
+    integer,             intent(in)    :: iter
+    FLOAT,               intent(in)    :: delta
+    type(intface_t),     intent(in)    :: intf
+    CMPLX,               intent(in)    :: diag(:, :)
+    CMPLX,               intent(in)    :: offdiag(:, :)
+    CMPLX,               intent(inout) :: coeffs(intf%np, intf%np, 0:iter)
+
+    integer            :: i,j, k, np
+    CMPLX, allocatable :: coeff_p(:, :, :), p_prev(:, :), tmp(:, :)
+    CMPLX, allocatable :: prefactor_plus(:, :), prefactor_minus(:, :)
+    FLOAT              :: norm, old_norm
+
+    call push_sub('td_trans_mem.calculate_coeffs')
+
+    np = intf%np
+
+    ALLOCATE(coeff_p(np, np, 0:iter), np**2*(iter+1))
+    ALLOCATE(p_prev(np, np), np**2)
+    ALLOCATE(tmp(np, np), np**2)
+    ALLOCATE(prefactor_plus(np, np), np**2)
+    ALLOCATE(prefactor_minus(np, np), np**2)
+
+    coeff_p = M_z0
+    prefactor_plus  = M_zI*delta*diag(:, :)
+    prefactor_minus = -M_zI*delta*diag(:, :)
+
+    do i = 1, np
+      prefactor_plus(i, i)  = M_one + prefactor_plus(i, i)
+      prefactor_minus(i, i) = M_one + prefactor_minus(i, i)
+    end do
+
+    ! Calculate p_\alpha = 1/(1 + i*delta*h_\alpha + delta^2*q_\alpha)
+    coeff_p(:, :, 0) = prefactor_plus + delta**2 * coeffs(:, :, 0)
+
+    call lalg_sym_inverter('U', np, coeff_p(:, :, 0))
+    call make_symmetric(coeff_p(:, :, 0), np)
+    call lalg_sym_inverter('U', np, prefactor_plus)
+    call make_symmetric(prefactor_plus, np)
+
+    tmp = offdiag
+    if (il.eq.LEFT) then
+      call lalg_invert_upper_triangular(np, tmp)
+    else
+      call lalg_invert_lower_triangular(np, tmp)
+    end if
+
+    do i = 1, start_iter-1
+      call apply_coupling(coeffs(:, :, i), tmp, coeff_p(:, :, i), np, il)
+    end do
+
+    do i = start_iter, iter       ! i=1 to m.
+      old_norm = M_ZERO
+      do j = 1, mem_iter ! maxiter to converge matrix equation for p(i) and q(i)
+
+        p_prev = coeff_p(:, :, i)
+
+        ! k = m.
+        call apply_coupling(p_prev, offdiag, coeff_p(:, :, i), np, il)
+        coeff_p(:, :, i) = coeff_p(:, :, i) + M_TWO*coeffs(:, :, i-1)
+
+        if(i.gt.1) then
+          coeff_p(:, :, i) = coeff_p(:, :, i) + coeffs(:, :, i-2)
+        end if
+
+        call zsymm('L','U',np,np,M_z1,coeff_p(:, :, i),np,coeff_p(:, :, 0),np,M_z0,tmp,np)
+        coeff_p(:, :, i) = tmp
+
+        ! k = 0.
+        call zsymm('L','U',np,np,M_z1,coeffs(:, :, 0),np,p_prev,np,M_z1,coeff_p(:, :, i),np)
+
+        ! k = 1 to k = m-1.
+        do k = 1, i-1
+          tmp = coeffs(:, :, k) + M_TWO*coeffs(:, :, k-1)
+          if(k.gt.1) then
+            tmp = tmp + coeffs(:, :, k-2)
+          end if
+          call zsymm('L','U',np,np,M_z1,tmp,np,coeff_p(:, :, i-k),np,M_z1,coeff_p(:, :, i),np)
+        end do
+
+        coeff_p(:, :, i) = -delta**2 * coeff_p(:, :, i)
+        call zsymm('L','U',np,np,M_z1,prefactor_minus,np,coeff_p(:, :, i-1),np,M_z1,coeff_p(:, :, i),np)
+        call zsymm('L','U',np,np,M_z1,prefactor_plus,np,coeff_p(:, :, i),np,M_z0,tmp,np)
+        coeff_p(:, :, i) = tmp
+        norm = infinity_norm(coeff_p(:, :, i))
+        if(abs(norm-old_norm).lt.mem_tolerance) then
+          exit
+        end if
+        old_norm = norm
+!write(*,*) i,j,norm
+      end do
+
+      ! Write a warning if a coefficient is not converged.
+      if(j.gt.mem_iter) then
+        write(message(1), '(a,i6,a)') 'Memory coefficent for time step ', i, &
+          ', '//trim(lead_name(il))//' lead, not converged.'
+        call write_warning(1)
+      end if
+
+      call apply_coupling(coeff_p(:, :, i), offdiag, coeffs(:, :, i), np, il)
+!      if (.not.is_bisymmetric(coeffs(:,:,i),np)) then
+!        write(*,*) 'memory coefficient',i,'is not bisymmetric'
+!      end if
+
+      call loct_progress_bar(i+1, iter+1)
+    end do
+
+    message(1) = ''
+    call write_info(1)
+
+    deallocate(coeff_p, p_prev, tmp)
+    deallocate(prefactor_plus, prefactor_minus)
+
+    call pop_sub()
+  end subroutine calculate_coeffs_old
+
+  ! ---------------------------------------------------------
+  ! same as calculate_coeffs but with the sparse matrix
+  ! sp_coeffs(:, :, 0) given, calculate the subsequent ones by
+  ! the recursive relation. We can only use the (sparse) mem_q, so use the
+  ! mem_q only recursive relation.
+  subroutine calculate_sp_coeffs(il, start_iter, iter, delta, intf, diag, offdiag, &
+                                 sp_coeffs, mem_s, length, order, dim, mapping)
+    integer,             intent(in)    :: il
+    integer,             intent(in)    :: start_iter
+    integer,             intent(in)    :: iter
+    FLOAT,               intent(in)    :: delta
+    type(intface_t),     intent(in)    :: intf
+    CMPLX,               intent(in)    :: diag(:, :)
+    CMPLX,               intent(in)    :: offdiag(:, :)
+    CMPLX,               intent(inout) :: sp_coeffs(1:length, 0:iter)
+    CMPLX,               intent(in)    :: mem_s(intf%np, intf%np, 2)
+    integer,             intent(in)    :: length
+    integer,             intent(in)    :: order
+    integer,             intent(in)    :: dim
+    integer,             intent(in)    :: mapping(:)   ! the mapping
+
+    integer            :: i,j, k, np
+    CMPLX, allocatable :: tmp1(:, :), tmp2(:, :), tmp3(:, :), inv_offdiag(:, :)
+    CMPLX, allocatable :: prefactor_plus(:, :), prefactor_minus(:, :)
+    CMPLX, allocatable :: sp_tmp(:)
+    FLOAT              :: old_norm, norm
+
+    call push_sub('td_trans_mem.calculate_sp_coeffs')
+    np = intf%np
+
+    ALLOCATE(tmp1(np, np), np**2)
+    ALLOCATE(tmp2(np, np), np**2)
+    ALLOCATE(tmp3(np, np), np**2)
+    ALLOCATE(inv_offdiag(np, np), np**2)
+    ALLOCATE(prefactor_plus(np, np), np**2)
+    ALLOCATE(prefactor_minus(np, np), np**2)
+    ALLOCATE(sp_tmp(length), length)
+
+    prefactor_plus  = M_zI*delta*diag(:, :)
+    prefactor_minus = -M_zI*delta*diag(:, :)
+
+    do i = 1, np
+      prefactor_plus(i, i)  = M_one + prefactor_plus(i, i)
+      prefactor_minus(i, i) = M_one + prefactor_minus(i, i)
+    end do
+    inv_offdiag(:, :) = offdiag(:, :)
+    if (il.eq.LEFT) then
+      call lalg_invert_upper_triangular(np, inv_offdiag)
+    else
+      call lalg_invert_lower_triangular(np, inv_offdiag)
+    end if
+
+    call lalg_sym_inverter('U', np, prefactor_plus)
+    call make_symmetric(prefactor_plus, np)
+    if (il.eq.LEFT) then
+      call lalg_trmm(np,np,'U','N','L',M_z1,offdiag,prefactor_plus)
+      call lalg_trmm(np,np,'U','N','R',M_z1,inv_offdiag,prefactor_minus)
+    else
+      call lalg_trmm(np,np,'L','N','L',M_z1,offdiag,prefactor_plus)
+      call lalg_trmm(np,np,'L','N','R',M_z1,inv_offdiag,prefactor_minus)
+    end if
+
+    do i = start_iter, iter       ! i=start_iter to m.
+      sp_coeffs(:, i) = M_z0
+      old_norm = M_ZERO
+
+      do j = 1, mem_iter ! maxiter to converge matrix equation for q(i)
+        tmp2(:,:) = M_z0
+        ! k = 0 to k = m.
+        do k = 0, i
+          tmp1(:,:) = M_z0
+          sp_tmp = sp_coeffs(:, k)
+          if(k.gt.0) then
+            sp_tmp = sp_tmp + M_TWO*sp_coeffs(:, k-1)
+          end if
+          if(k.gt.1) then
+            sp_tmp = sp_tmp + sp_coeffs(:, k-2)
+          end if
+          call make_full_matrix(np, order, dim, sp_tmp, mem_s, tmp1, mapping)
+          if (il.eq.LEFT) then
+            call lalg_trmm(np,np,'U','N','R',M_z1,inv_offdiag,tmp1)
+          else
+            call lalg_trmm(np,np,'L','N','R',M_z1,inv_offdiag,tmp1)
+          end if
+          call make_full_matrix(np, order, dim, sp_coeffs(:, i-k), mem_s, tmp3, mapping)
+          call zsymm('R','U',np,np,M_z1,tmp3,np,tmp1,np,M_z1,tmp2,np)
+        end do
+        call make_full_matrix(np, order, dim, sp_coeffs(:, i-1), mem_s, tmp3, mapping)
+        call zsymm('R','U',np,np,M_z1,tmp3,np,prefactor_minus,np,TOCMPLX(-delta**2, M_ZERO),tmp2,np)
+        call zgemm('N','N',np,np,np,M_z1,prefactor_plus,np,tmp2,np,M_z0,tmp1,np)
+        ! use for numerical stability
+        call make_symmetric_average(tmp1, np)
+        call make_sparse_matrix(np, order, dim, tmp1, mem_s, sp_coeffs(:, i), mapping)
+        norm = infinity_norm(tmp1)
+        if(abs(norm-old_norm).lt.mem_tolerance) then
+          exit
+        end if
+        old_norm = norm
+      end do
+      ! Write a warning if a coefficient is not converged.
+      if(j.gt.mem_iter) then
+        write(message(1), '(a,i6,a)') 'Memory coefficent for time step ', i, &
+          ', '//trim(lead_name(il))//' lead, not converged.'
+        call write_warning(1)
+      end if
+
+      !if (.not.is_bisymmetric(coeffs(:,:,i),np)) then
+      !  write(*,*) 'memory coefficient',i,'is not bisymmetric'
+      !end if
+
+      call loct_progress_bar(i+1, iter+1)
+    end do
+
+    message(1) = ''
+    call write_info(1)
+
+    deallocate(tmp1, tmp2, tmp3, inv_offdiag)
+    deallocate(prefactor_plus, prefactor_minus)
+    deallocate(sp_tmp)
+
+    call pop_sub()
+  end subroutine calculate_sp_coeffs
+
 
   ! ---------------------------------------------------------
   ! Write memory coefficients to file.
-  subroutine write_coeffs()
+  subroutine write_coeffs(dir, coeffs, sp_coeffs, mem_s, dim, iter, np, spacing, delta, op_n, mem_type, length, il)
+    character(len=*), intent(in) :: dir
+    CMPLX,     intent(in)        :: coeffs(np, np, 0:iter) ! the saved coefficients
+    CMPLX,     intent(in)        :: sp_coeffs(length, 0:iter) ! the saved coefficients
+    CMPLX,     intent(in)        :: mem_s(np, np, 2)! the diagonalization matrix s
+    integer,   intent(in)        :: dim          ! dimension
+    integer,   intent(in)        :: iter         ! the number of coefficients
+    integer,   intent(in)        :: np           ! number of points in the interface
+    FLOAT,     intent(in)        :: spacing      ! grid spacing
+    FLOAT,     intent(in)        :: delta        ! timestep
+    integer,   intent(in)        :: op_n         ! number of operator points
+    integer,   intent(in)        :: mem_type     ! 1: normal  2: packed
+    integer,   intent(in)        :: length       ! length of the packed array
+    integer,   intent(in)        :: il           ! which lead
+
+    integer     :: ntime, j, iunit
+
     call push_sub('td_trans_mem.write_coeffs')
+
+    call io_mkdir(dir, is_tmp=.true.)
+    iunit = io_open(trim(dir)//trim(lead_name(il)), action='write', form='unformatted')
+    if(iunit < 0) then
+      write(*,*) "Error, can't write to file!"
+      call io_close(iunit)
+      return
+    end if
+
+    write(iunit) dim
+    write(iunit) iter
+    write(iunit) np
+    write(iunit) spacing
+    write(iunit) delta
+    write(iunit) op_n
+    write(iunit) mem_type
+
+    if (mem_type.eq.1) then
+      do ntime=0, iter
+        do j=1, np
+          write(iunit) coeffs(j,j:np,ntime)
+        end do
+      end do
+    else ! FIXME: yet only 2D
+      write(iunit) mem_s(:,:,1)
+      do ntime=0, iter
+        write(iunit) sp_coeffs(1:length,ntime)
+      end do
+    end if
+
+    call io_close(iunit)
 
     call pop_sub()
   end subroutine write_coeffs
 
+  ! ---------------------------------------------------------
+  ! Read memory coefficients from file.
+  subroutine read_coeffs(dir, s_iter, coeffs, sp_coeffs, mem_s, dim, iter, np, spacing, delta, op_n, mem_type, length, il)
+    character(len=*), intent(in)    :: dir
+    integer,   intent(out)   :: s_iter   ! the number of saved coefficients
+    CMPLX,     intent(inout) :: coeffs(np, np, 0:iter) ! the saved coefficients
+    CMPLX,     intent(inout) :: sp_coeffs(length, 0:iter) ! the saved coefficients
+    CMPLX,     intent(out)   :: mem_s(np, np, 2) ! the diagonalization matrices
+    integer,   intent(in)    :: dim          ! dimension of the problem
+    integer,   intent(in)    :: iter         ! the number of coefficients
+    integer,   intent(in)    :: np           ! number of points in the interface
+    FLOAT,     intent(in)    :: spacing      ! spacing 
+    FLOAT,     intent(in)    :: delta        ! timestep
+    integer,   intent(in)    :: op_n         ! number of operator points
+    integer,   intent(in)    :: mem_type     ! which lead
+    integer,   intent(in)    :: length       ! length of the packed array
+    integer,   intent(in)    :: il           ! which lead
+
+    integer     :: ntime, i, j, iunit, s_dim, s_np, s_op_n, s_mem_type
+    FLOAT       :: s_spacing, s_delta, det
+
+    call push_sub('td_trans_mem.read_coeffs')
+    s_iter = 0
+    ! try to read from file
+    iunit = io_open(trim(dir)//trim(lead_name(il)), action='read', &
+                    status='old', die=.false., is_tmp = .true., form='unformatted')
+    if(iunit < 0) then
+      call io_close(iunit)
+      return
+    end if
+    ! now read the data
+    read(iunit) s_dim
+    read(iunit) s_iter
+    read(iunit) s_np
+    read(iunit) s_spacing
+    read(iunit) s_delta
+    read(iunit) s_op_n
+    read(iunit) s_mem_type
+
+    if ((s_dim.eq.dim) .and. (s_np.eq.np) .and. (s_op_n.eq.op_n) &
+          .and. (s_spacing.eq.spacing) .and. (s_delta.eq.delta) &
+          .and. (s_mem_type.eq.mem_type)) then
+      ! read the coefficients
+      if (mem_type.eq.1) then ! full (upper half) matrices
+        do ntime=0, min(iter,s_iter)
+          do j=1, np
+            read(iunit) coeffs(j,j:np,ntime)
+            coeffs(j:np,j,ntime) = coeffs(j,j:np,ntime)
+          end do
+        end do
+      else ! packed matrices ! FIXME: yet only 2D
+        read(iunit) mem_s(:,:,1)
+        mem_s(:, :, 2) = mem_s(1:np, 1:np, 1)
+        det = lalg_inverter(np, mem_s(:, :, 2), invert = .true.)
+        do ntime=0, min(iter,s_iter)
+          read(iunit) sp_coeffs(1:length,ntime)
+        end do
+      end if
+
+    else
+      s_iter = 0
+    end if
+
+    call io_close(iunit)
+
+    call pop_sub()
+  end subroutine read_coeffs
 
   ! ---------------------------------------------------------
   ! Free arrays.
-  subroutine memory_end(coeff)
-    CMPLX, pointer :: coeff(:, :, :, :)
+  subroutine memory_end(coeff, sp_coeff, offdiag, mem_s, sp2full_map)
+    CMPLX, pointer   :: coeff(:, :, :, :)
+    CMPLX, pointer   :: sp_coeff(:, :, :)
+    CMPLX, pointer   :: offdiag(:, :, :)
+    CMPLX, pointer   :: mem_s(:, :, :, :)
+    integer, pointer :: sp2full_map(:)
 
     call push_sub('td_trans_mem.memory_end')
 
     if(associated(coeff)) then
       deallocate(coeff)
       nullify(coeff)
+    end if
+
+    if(associated(sp_coeff)) then
+      deallocate(sp_coeff)
+      nullify(sp_coeff)
+    end if
+
+    if(associated(offdiag)) then
+      deallocate(offdiag)
+      nullify(offdiag)
+    end if
+
+    if(associated(mem_s)) then
+      deallocate(mem_s)
+      nullify(mem_s)
+    end if
+
+    if(associated(sp2full_map)) then
+      deallocate(sp2full_map)
+      nullify(sp2full_map)
     end if
 
     call pop_sub()
