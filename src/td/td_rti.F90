@@ -362,7 +362,7 @@ contains
   ! Propagates st from t-dt to t.
   ! If dt<0, it propagates *backwards* from t+|dt| to t
   ! ---------------------------------------------------------
-  subroutine td_rti_dt(ks, h, gr, st, tr, t, dt, max_iter)
+  subroutine td_rti_dt(ks, h, gr, st, tr, t, dt, max_iter, nt)
     type(v_ks_t),                intent(inout) :: ks
     type(hamiltonian_t), target, intent(inout) :: h
     type(grid_t),        target, intent(inout) :: gr
@@ -370,6 +370,7 @@ contains
     type(td_rti_t),      target, intent(inout) :: tr
     FLOAT,                       intent(in)    :: t, dt
     integer,                     intent(in)    :: max_iter
+    integer,                     intent(in)    :: nt
 
     integer :: is, iter
     FLOAT   :: d, d_max
@@ -810,8 +811,10 @@ contains
     subroutine td_crank_nicholson_src_mem()
       call push_sub('td_rti.td_crank_nicholson_src_mem')
       
-      call cn_src_mem_dt(tr%trans%intface, tr%trans%mem_coeff, tr%trans%st_intface, &
-        ks, h, st, gr, dt, t, max_iter)
+      call cn_src_mem_dt(tr%trans%intface, tr%trans%mem_type, tr%trans%mem_coeff, tr%trans%mem_sp_coeff, &
+        tr%trans%st_intface,ks, h, st, gr, dt, t, max_iter, tr%trans%src_mem_u, tr%trans%lead%td_pot, nt, &
+        tr%trans%src_factor, tr%trans%offdiag, tr%trans%st_sincos, tr%trans%st_phase, &
+        tr%trans%mem_s, tr%trans%additional_terms, tr%trans%sp2full_map)
 
       call pop_sub()
     end subroutine td_crank_nicholson_src_mem

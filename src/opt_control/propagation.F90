@@ -118,7 +118,7 @@ module opt_control_propagation_m
     ii = 1
     do i = 1, td%max_iter
       ! time iterate wavefunctions
-      call td_rti_dt(sys%ks, h, gr, psi, td%tr, i*td%dt, td%dt, td%max_iter)
+      call td_rti_dt(sys%ks, h, gr, psi, td%tr, i*td%dt, td%dt, td%max_iter, i)
 
       if(present(prop)) call oct_prop_output(prop, i, psi, gr)
 
@@ -178,7 +178,7 @@ module opt_control_propagation_m
 
     call oct_prop_output(prop, td%max_iter, psi, gr)
     do i = td%max_iter, 1, -1
-      call td_rti_dt(sys%ks, h, gr, psi, td%tr, (i-1)*td%dt, -td%dt, td%max_iter)
+      call td_rti_dt(sys%ks, h, gr, psi, td%tr, (i-1)*td%dt, -td%dt, td%max_iter, i)
       call oct_prop_output(prop, i-1, psi, gr)
       call states_calc_dens(psi, NP_PART, psi%rho)
       call v_ks_calc(gr, sys%ks, h, psi)
@@ -256,13 +256,13 @@ module opt_control_propagation_m
     do i = 1, td%max_iter
       if(aux_fwd_propagation) then
         call update_hamiltonian_psi(i, gr, sys%ks, h, td, target, par_prev, psi2)
-        call td_rti_dt(sys%ks, h, gr, psi2, tr_psi2, i*td%dt, td%dt, td%max_iter)
+        call td_rti_dt(sys%ks, h, gr, psi2, tr_psi2, i*td%dt, td%dt, td%max_iter, i)
       end if
       call update_field(oct, i, par, gr, td, h, psi, chi, par_chi, dir = 'f')
       call update_hamiltonian_chi(i, gr, sys%ks, h, td, target, par_chi, psi2)
-      call td_rti_dt(sys%ks, h, gr, chi, tr_chi, i*td%dt, td%dt, td%max_iter)
+      call td_rti_dt(sys%ks, h, gr, chi, tr_chi, i*td%dt, td%dt, td%max_iter, i)
       call update_hamiltonian_psi(i, gr, sys%ks, h, td, target, par, psi)
-      call td_rti_dt(sys%ks, h, gr, psi, td%tr, i*td%dt, td%dt, td%max_iter)
+      call td_rti_dt(sys%ks, h, gr, psi, td%tr, i*td%dt, td%dt, td%max_iter, i)
       if(target%mode == oct_targetmode_td) call calc_tdfitness(target, gr, psi, i) 
       call oct_prop_output(prop_psi, i, psi, gr)
       call oct_prop_check(prop_chi, chi, gr, sys%geo, i)
@@ -333,10 +333,10 @@ module opt_control_propagation_m
       call oct_prop_check(prop_psi, psi, gr, sys%geo, i)
       call update_field(oct, i, par_chi, gr, td, h, psi, chi, par, dir = 'b')
       call update_hamiltonian_chi(i-1, gr, sys%ks, h, td, target, par_chi, psi)
-      call td_rti_dt(sys%ks, h, gr, chi, tr_chi, abs((i-1)*td%dt), td%dt, td%max_iter)
+      call td_rti_dt(sys%ks, h, gr, chi, tr_chi, abs((i-1)*td%dt), td%dt, td%max_iter, i)
       call oct_prop_output(prop_chi, i-1, chi, gr)
       call update_hamiltonian_psi(i-1, gr, sys%ks, h, td, target, par, psi)
-      call td_rti_dt(sys%ks, h, gr, psi, td%tr, abs((i-1)*td%dt), td%dt, td%max_iter)
+      call td_rti_dt(sys%ks, h, gr, psi, td%tr, abs((i-1)*td%dt), td%dt, td%max_iter, i)
     end do
     td%dt = -td%dt
 
