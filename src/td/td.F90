@@ -203,7 +203,7 @@ contains
       ! time iterate wavefunctions
       select case(td%dynamics)
       case(EHRENFEST)
-        call td_rti_dt(sys%ks, h, gr, st, td%tr, i*td%dt, td%dt / td%mu, td%max_iter)
+        call td_rti_dt(sys%ks, h, gr, st, td%tr, i*td%dt, td%dt / td%mu, td%max_iter, i)
       case(BO)
         call scf_run(td%scf, sys%gr, geo, st, sys%ks, h, sys%outp, gs_run = .false., verbosity = VERB_NO)
       case(CP)

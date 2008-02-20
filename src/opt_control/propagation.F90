@@ -402,10 +402,10 @@ module opt_control_propagation_m
       call oct_prop_check(prop_psi, psi, gr, sys%geo, i)
       call update_field(oct, i, par_chi, gr, td, h, psi, chi, par, dir = 'b')
       call update_hamiltonian_chi(i-1, gr, sys%ks, h, td, target, par, psi)
-      call td_rti_dt(sys%ks, h, gr, chi, tr_chi, abs((i-1)*td%dt), td%dt, td%max_iter)
+      call td_rti_dt(sys%ks, h, gr, chi, tr_chi, abs((i-1)*td%dt), td%dt, td%max_iter, i)
       call oct_prop_output(prop_chi, i-1, chi, gr)
       call update_hamiltonian_psi(i-1, gr, sys%ks, h, td, target, par, psi)
-      call td_rti_dt(sys%ks, h, gr, psi, td%tr, abs((i-1)*td%dt), td%dt, td%max_iter)
+      call td_rti_dt(sys%ks, h, gr, psi, td%tr, abs((i-1)*td%dt), td%dt, td%max_iter, i)
     end do
     td%dt = -td%dt
 
