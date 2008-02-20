@@ -683,14 +683,16 @@ contains
     type(states_t), intent(inout) :: st    
 
     type(block_t) :: blk
-    integer   :: ip, id, is, ik, nstates, ncols, ierr
-    integer   :: ib, idim, inst, inik, input_format
+    integer   :: ip, id, is, ik, nstates, state_from, ierr, ncols
+    integer   :: ib, idim, inst, inik, input_format, normalize
     FLOAT     :: x(MAX_DIM), r, psi_re, psi_im
     character(len=150) :: filename
 
     integer, parameter ::      &
-      state_from_formula  = 4, &
-      state_from_file     = 5
+      state_from_formula  = 1, &
+      state_from_file     = 0, &
+      normalize_yes       = 1, &
+      normalize_no        = 0
 
     call push_sub('td.read_user_def_states')
 
@@ -707,30 +709,38 @@ contains
     !% Example:
     !%
     !% <tt>%UserDefinedStates
-    !% <br>&nbsp;&nbsp; 1 | 1 | 1 |  "exp(-r^2)*exp(-i*0.2*x)"
+    !% <br>&nbsp;&nbsp; 1 | 1 | 1 | formula | "exp(-r^2)*exp(-i*0.2*x)" | normalize_yes
     !% <br>%</tt>
     !%
     !% The first column specifies the component of the spinor, 
     !% the second column the number of the state and the third 
-    !% contains kpoint and spin quantum numbers. Finally column 
-    !% four contains a formula for the correspondig orbital.
+    !% contains kpoint and spin quantum numbers. Column four
+    !% indicates that column five should be interpreted as formula
+    !% for the correspondig orbital.
     !% 
-    !% Alternatively, if the block UserDefinedStates has 5 columns
-    !% the state can be read from a file
+    !% Alternatively, if column four states file the state will
+    !% be read from the file given in column five.
     !%
     !% <tt>%UserDefinedStates
-    !% <br>&nbsp;&nbsp; 1 | 1 | 1 | file_format | "/path/to/file"
+    !% <br>&nbsp;&nbsp; 1 | 1 | 1 | file | "/path/to/file" | normalize_no
     !% <br>%</tt>
     !% 
-    !% The integer in column 4 defines the file format (currently 
-    !% not implemented, so simply use 0 there) and column 5 contains
-    !% the filename.
-    !%
     !% Octopus reads first the ground state orbitals from
     !% the restart/gs directory. Only the states that are
     !% specified in the above block will be overwritten with
     !% the given analytical expression for the orbital.
     !%
+    !% The sixth (optional) column indicates if Octopus should renormalize the orbital
+    !% or not. The default, i. e. no sixth column given, is to renormalize.
+    !%
+    !%Option file 0
+    !% Read initsial orbital from file
+    !%Option formula 1
+    !% Calculate initial orbital by given analytic expression
+    !%Option normalize_yes 1
+    !% Normalize orbitals (default)
+    !%Option normalize_no 0
+    !% Do not normalize orbitals
     !%End
     if(loct_parse_block(check_inp('UserDefinedStates'), blk) == 0) then
 
@@ -741,28 +751,36 @@ contains
 
       ! read all lines
       do ib = 1, nstates
+        ! Check that number of columns is five or six.
+        ncols = loct_parse_block_cols(blk, ib-1)
+        if(ncols.lt.5.or.ncols.gt.6) then
+          message(1) = 'Each line in the UserDefinedStates block must have'
+          message(2) = 'five or six columns.'
+          call write_fatal(2)
+        end if
+        
         call loct_parse_block_int(blk, ib-1, 0, idim)
         call loct_parse_block_int(blk, ib-1, 1, inst)
         call loct_parse_block_int(blk, ib-1, 2, inik)
 
-        ! find out how many columns this line has
-        ncols = loct_parse_block_cols(blk, ib-1)
+        ! Calculate from expression or read from file?
+        call loct_parse_block_int(blk, ib-1, 3, state_from)
 
         ! loop over all states
         do id = 1, st%d%dim
           do is = 1, st%nst
-            do ik = 1, st%d%nik   
+            do ik = 1, st%d%nik
 
               ! does the block entry match and is this node responsible?
               if(.not.(id.eq.idim .and. is.eq.inst .and. ik.eq.inik    &
                 .and. st%st_start.le.is .and. st%st_end.ge.is) ) cycle
 
-              select case(ncols)
+              select case(state_from)
 
-              case(state_from_formula) ! if 4 colums are given we got a formula
+              case(state_from_formula)
                 ! parse formula string
                 call loct_parse_block_string(                            &
-                  blk, ib-1, 3, st%user_def_states(id, is, ik))
+                  blk, ib-1, 4, st%user_def_states(id, is, ik))
 
                 write(message(1), '(a,3i5)') 'Substituting state of orbital with k, ist, dim = ', ik, is, id
                 write(message(2), '(2a)') '  with the expression:'
@@ -784,11 +802,10 @@ contains
                   st%zpsi(ip, id, is, ik) = psi_re + M_zI*psi_im
                 end do
 
-              case(state_from_file) ! if 5 colums are given we have to read from a file
-                ! first read the file format (format is not used at the moment; for flexibility
-                ! this could be added at a later point)
-                call loct_parse_block_int(blk, ib-1, 3, input_format)                
-                ! then read the filename
+              case(state_from_file)
+                ! The input format can be coded in column four now. As it is
+                ! not used now, we just say "file".
+                ! Read the filename.
                 call loct_parse_block_string(blk, ib-1, 4, filename)
 
                 write(message(1), '(a,3i5)') 'Substituting state of orbital with k, ist, dim = ', ik, is, id
@@ -799,11 +816,27 @@ contains
                 ! finally read the state
                 call zinput_function(filename, mesh, st%zpsi(:, id, is, ik), ierr, .true.)
 
+              case default
+                message(1) = 'Wrong entry in UserDefinedStates, column 4.'
+                message(2) = 'You may state "formula" or "file" here.'
+                call write_fatal(2)
               end select
 
               ! normalize orbital
-              call zstates_normalize_orbital(mesh, st%d%dim, st%zpsi(:,:, is, ik))
-
+              if(loct_parse_block_cols(blk, ib-1).eq.6) then
+                call loct_parse_block_int(blk, ib-1, 5, normalize)
+              else
+                normalize = 1
+              end if
+              select case(normalize)
+              case(normalize_no)
+              case(normalize_yes)
+                call zstates_normalize_orbital(mesh, st%d%dim, st%zpsi(:,:, is, ik))
+              case default
+                message(1) = 'The sixth column in UserDefinedStates may either be'
+                message(2) = '"normalize_yes" or "normalize_no"'
+                call write_fatal(2)
+              end select
             end do
           end do
         end do
