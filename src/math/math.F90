@@ -60,7 +60,19 @@ module math_m
     ddelta,                     &
     member,                     &
     make_idx_set,               &
-    infinity_norm
+    infinity_norm,              &
+    interpolate
+
+
+  !------------------------------------------------------------------------------
+  ! This is the common interface to a simple-minded polynomical interpolation
+  ! procudure (simple use of the classical formula of Lagrange.
+  interface interpolate
+    module procedure dinterpolate_0, dinterpolate_1, dinterpolate_2
+    module procedure zinterpolate_0, zinterpolate_1, zinterpolate_2
+  end interface
+  !------------------------------------------------------------------------------
+
 
 
   !------------------------------------------------------------------------------
