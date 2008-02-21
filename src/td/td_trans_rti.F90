@@ -209,7 +209,7 @@ contains
     end do
 
     call source_init(trans%src_factor, trans%st_sincos, trans%st_phase, dt, energy, q, &
-                     max_iter, trans%intface%np, 1, st%d%nik, gr, gr%f_der%der_discr%order)
+                     max_iter, trans%intface%np, st%nst, st%d%nik, gr, gr%f_der%der_discr%order)
 
     !call calculate_initial_states() in init_wfs()
     !call match_initial_states_to_lead() in cn_src_mem_dt
