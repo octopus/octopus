@@ -13,14 +13,14 @@ Enabled    : Yes
 # We check the transparent boundary conditions in 2D for third order
 # discretization with the full and compacted Q matrices.
 
-Input: 02-wavepacket.01-full_q.inp
+Input: 01-wavepacket.01-full_q.inp
 
 Match ; Density [step  0] ; head -16 td.general/multipoles | tail -1 | awk -F' ' '{print $3}' ;  1.7724\d+e\+00
 Match ; Density [step 25] ; head -41 td.general/multipoles | tail -1 | awk -F' ' '{print $3}' ;  1.2905\d+e\+00
 Match ; Density [step 50] ; head -66 td.general/multipoles | tail -1 | awk -F' ' '{print $3}' ;  3.3432\d+e-01
 Match ; Density [step 75] ; head -116 td.general/multipoles | tail -1 | awk -F' ' '{print $3}' ; 1.3914\d+e-01
 
-Input: 02-wavepacket.02-sparse_q.inp
+Input: 01-wavepacket.02-sparse_q.inp
 
 Match ; Density [step  0] ; head -16 td.general/multipoles | tail -1 | awk -F' ' '{print $3}' ;  1.7724\d+e\+00
 Match ; Density [step 25] ; head -41 td.general/multipoles | tail -1 | awk -F' ' '{print $3}' ;  1.2905\d+e\+00
