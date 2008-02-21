@@ -21,7 +21,7 @@
 
 SUBDIRS = \
 	finite_systems_1d finite_systems_2d finite_systems_3d \
-	periodic_systems_1d infinite_systems_1d infinite_systems_2d
+	periodic_systems_1d open_systems_1d open_systems_2d
 
 bin_SCRIPTS = oct-run_regression_test.pl oct-run_testsuite
 
