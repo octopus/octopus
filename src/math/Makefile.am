@@ -23,7 +23,7 @@ noinst_LIBRARIES = libmath.a
 
 libmath_a_SOURCES = \
 	blas.F90 dablas.c ylm.c oct_gsl_f.c loct_math.F90 lalg_basic.F90 lalg_adv.F90 gauss_legendre.F90 math.F90 \
-	ode_solver.F90 root_solver.F90 spline.F90 sparskit.F90 fft.F90
+	ode_solver.F90 root_solver.F90 spline.F90 sparskit.F90 fft.F90 tdfunction.F90
 
 noinst_HEADERS = \
 	lalg_basic_blas.F90 lalg_adv_lapack.F90 math_cg_inc.F90 math_inc.F90 \
@@ -35,6 +35,7 @@ include $(srcdir)/../common-rules.make
 depend:
 	@makedepf90 $(libmath_a_SOURCES)
 
+tdfunction.o : tdfunction.F90
 blas.o : blas.F90 
 dablas.o : dablas.c 
 lalg_basic.o : lalg_basic.F90 lalg_basic_mp.F90 lalg_basic_blas.F90 blas.o 
