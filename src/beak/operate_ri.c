@@ -38,6 +38,7 @@ void FC_FUNC_(doperate_ri,DOPERATE_RI)(const int * opnp,
 				       const int * opnri,
 				       const int * opri,
 				       const int * rimap_inv,
+				       const int * rimap_inv_max,
 				       const ffloat * fi, 
 				       ffloat * restrict fo){
 
@@ -53,7 +54,6 @@ void FC_FUNC_(doperate_ri,DOPERATE_RI)(const int * opnp,
 
   assert(MAX_OP_N >= n);
 
-  i = rimap_inv[0];
   for (l = 0; l < nri ; l++) {
 
     index  = opri + n * l;
@@ -67,7 +67,7 @@ void FC_FUNC_(doperate_ri,DOPERATE_RI)(const int * opnp,
 #endif
     }
 
-    for (; i < rimap_inv[l+1] - 8 + 1; i+=8){
+    for (i = rimap_inv[l]; i < rimap_inv_max[l] - 8 + 1; i+=8){
       a0 = a1 = a2 = a3 = 0.0;
       a4 = a5 = a6 = a7 = 0.0;
       for(j = 0; j < n; j++){
@@ -94,7 +94,7 @@ void FC_FUNC_(doperate_ri,DOPERATE_RI)(const int * opnp,
 
     }
     
-    for (; i < rimap_inv[l+1]; i++){
+    for (; i < rimap_inv_max[l]; i++){
       a0 = 0.0;
       for(j = 0; j < n; j++) a0 += w[j] * ffi[j][i];
       fo[i] = a0;
@@ -110,6 +110,7 @@ void FC_FUNC_(zoperate_ri,ZOPERATE_RI)(const int * opnp,
 				       const int * opnri,
 				       const int * opri,
 				       const int * rimap_inv,
+				       const int * rimap_inv_max,
 				       const comp * fi, 
 				       comp * restrict fo){
 
@@ -123,7 +124,6 @@ void FC_FUNC_(zoperate_ri,ZOPERATE_RI)(const int * opnp,
   register ffloat a0, a1, a2, a3;
   register ffloat a4, a5, a6, a7;
 
-  i = rimap_inv[0];
   for (l = 0; l < nri ; l++) {
 
     index = opri + n * l;
@@ -137,7 +137,7 @@ void FC_FUNC_(zoperate_ri,ZOPERATE_RI)(const int * opnp,
 #endif
     }
 
-    for (; i < (rimap_inv[l+1] - 4 + 1) ; i+=4){
+    for (i = rimap_inv[l]; i < (rimap_inv_max[l] - 4 + 1) ; i+=4){
       a0 = a1 = a2 = a3 = 0.0;
       a4 = a5 = a6 = a7 = 0.0;
       
@@ -162,7 +162,7 @@ void FC_FUNC_(zoperate_ri,ZOPERATE_RI)(const int * opnp,
 
     }
 
-    for (; i < rimap_inv[l+1]; i++){
+    for (; i < rimap_inv_max[l]; i++){
       
       a0 = 0.0;
       a1 = 0.0;

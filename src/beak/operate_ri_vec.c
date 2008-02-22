@@ -55,6 +55,7 @@ void FC_FUNC_(doperate_ri_vec,DOPERATE_RI_VEC)(const int * opnp,
 					       const int * opnri,
 					       const int * opri,
 					       const int * rimap_inv,
+					       const int * rimap_inv_max,
 					       const ffloat * fi, 
 					       ffloat * restrict fo){
   
@@ -75,14 +76,13 @@ void FC_FUNC_(doperate_ri_vec,DOPERATE_RI_VEC)(const int * opnp,
 
   assert(((long long) vw)%16 == 0);
 
-  i = rimap_inv[0];
   for (l = 0; l < nri ; l++) {
 
     index  = opri + n * l;
 
     for(j = 0; j < n ; j++) ffi[j] = fi + index[j];
 
-    for (; i < rimap_inv[l+1] - 4*VECSIZE + 1; i+=4*VECSIZE){
+    for (i = rimap_inv[l]; i < rimap_inv_max[l] - 4*VECSIZE + 1; i+=4*VECSIZE){
 
 #ifdef SINGLE_PRECISION
       register __m128 a0, a1, a2, a3;
@@ -106,7 +106,7 @@ void FC_FUNC_(doperate_ri_vec,DOPERATE_RI_VEC)(const int * opnp,
 
     }
 
-    for (; i < rimap_inv[l+1]; i++){
+    for (; i < rimap_inv_max[l]; i++){
       register ffloat a = 0.0;
       for(j = 0; j < n; j++) a += w[j] * ffi[j][i];
       fo[i] = a;
@@ -124,6 +124,7 @@ void FC_FUNC_(zoperate_ri_vec,ZOPERATE_RI_VEC)(const int * opnp,
 					       const int * opnri,
 					       const int * opri,
 					       const int * rimap_inv,
+					       const int * rimap_inv_max,
 					       const __m64 * fi, 
 					       __m64 * restrict fo){
 
@@ -137,14 +138,13 @@ void FC_FUNC_(zoperate_ri_vec,ZOPERATE_RI_VEC)(const int * opnp,
 
   for(j = 0; j < n ; j++) vw[j] =_mm_set1_ps(w[j]);
 
-  i = rimap_inv[0];
   for (l = 0; l < nri ; l++) {
 
     index = opri + n * l;
 
     for(j = 0; j < n ; j++) ffi[j] = fi + index[j];
 
-    for (; i < (rimap_inv[l+1] - 8 + 1) ; i+=8){
+    for (i = rimap_inv[l]; i < (rimap_inv_max[l] - 8 + 1) ; i+=8){
       register __m128 a0, a1, a2, a3;
       a0 = a1 = a2 = a3 = _mm_setzero_ps();
       
@@ -162,7 +162,7 @@ void FC_FUNC_(zoperate_ri_vec,ZOPERATE_RI_VEC)(const int * opnp,
 
     }
 
-    for (; i < rimap_inv[l+1]; i++){
+    for (; i < rimap_inv_max[l]; i++){
       register __m128 a0, a1;
       
       a0 = _mm_setzero_ps();
@@ -186,6 +186,7 @@ void FC_FUNC_(zoperate_ri_vec,ZOPERATE_RI_VEC)(const int * opnp,
 					       const int * opnri,
 					       const int * opri,
 					       const int * rimap_inv,
+					       const int * rimap_inv_max,
 					       const __m128d * fi, 
 					       __m128d * restrict fo){
 
@@ -200,14 +201,13 @@ void FC_FUNC_(zoperate_ri_vec,ZOPERATE_RI_VEC)(const int * opnp,
 
   for(j = 0; j < n ; j++) vw[j] =_mm_set1_pd(w[j]);
 
-  i = rimap_inv[0];
   for (l = 0; l < nri ; l++) {
 
     index = opri + n * l;
 
     for(j = 0; j < n ; j++) ffi[j] = fi + index[j];
 
-    for (; i < (rimap_inv[l+1] - 4 + 1) ; i+=4){
+    for (  i = rimap_inv[l]; i < (rimap_inv_max[l] - 4 + 1) ; i+=4){
       register __m128d a0, a1, a2, a3;
 
       a0 = a1 = a2 = a3 = _mm_setzero_pd();
@@ -224,7 +224,7 @@ void FC_FUNC_(zoperate_ri_vec,ZOPERATE_RI_VEC)(const int * opnp,
       fo[i+3] = a3;
     }
 
-    for (; i < rimap_inv[l+1]; i++){
+    for (; i < rimap_inv_max[l]; i++){
       register __m128d a0;
       
       a0 = _mm_setzero_pd();
