@@ -156,17 +156,15 @@ subroutine X(nl_operator_tune)(op)
 
 end subroutine X(nl_operator_tune)
 
-subroutine X(operate)(np, np_part, nn, nri, w, ri, rim, rim_max, fi, fo)
-  integer, intent(in) :: np
-  integer, intent(in) :: np_part
+subroutine X(operate)(nn, nri, w, ri, rim, rim_max, fi, fo)
   integer, intent(in) :: nn
   integer, intent(in) :: nri
-  FLOAT,   intent(in) :: w(1:nn)
-  integer, intent(in) :: ri(1:nn, 1:nri)
+  FLOAT,   intent(in) :: w(:)
+  integer, intent(in) :: ri(:, :)
   integer, intent(in) :: rim(:)
   integer, intent(in) :: rim_max(:)
-  R_TYPE,   intent(in) :: fi(1:np_part)
-  R_TYPE,   intent(out):: fo(1:np) 
+  R_TYPE,   intent(in) :: fi(:)
+  R_TYPE,   intent(out):: fo(:) 
   
   integer :: ll, ii
   
@@ -242,11 +240,11 @@ subroutine X(nl_operator_operate)(op, fi, fo, ghost_update, profile)
 #endif
       select case(op%X(function))
       case(OP_FORTRAN)
-        call X(operate)(op%np, op%m%np_part, nn, op%nri, op%w_re, op%ri, op%rimap_inv(0:), op%rimap_inv(1:), fi, fo)
+        call X(operate)(nn, op%nri, op%w_re(:, 1), op%ri, op%rimap_inv(0:), op%rimap_inv(1:), fi, fo)
       case(OP_C)
-        call X(operate_ri)(op%np, nn, op%w_re(1, 1), nri_loc, op%ri(1, ini), op%rimap_inv(ini-1), op%rimap_inv(ini), fi(1), fo(1))
+        call X(operate_ri)(nn, op%w_re(1, 1), nri_loc, op%ri(1, ini), op%rimap_inv(ini-1), op%rimap_inv(ini), fi(1), fo(1))
       case(OP_VEC)
-        call X(operate_ri_vec)(op%np, nn, op%w_re(1, 1), nri_loc, op%ri(1, ini), op%rimap_inv(ini-1), op%rimap_inv(ini), fi(1), fo(1))
+        call X(operate_ri_vec)(nn, op%w_re(1, 1), nri_loc, op%ri(1, ini), op%rimap_inv(ini-1), op%rimap_inv(ini), fi(1), fo(1))
       case(OP_AS)
         call X(operate_as)(nn, op%w_re(1, 1), nri_loc, op%ri(1, ini), op%rimap_inv(ini-1), fi(1), fo(1), ws(1))
       end select

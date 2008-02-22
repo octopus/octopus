@@ -32,8 +32,7 @@ void FC_FUNC_(zoperate_as, ZOPERATE_AS)(void){
 }
 #endif
 
-void FC_FUNC_(doperate_ri,DOPERATE_RI)(const int * opnp, 
-				       const int * opn, 
+void FC_FUNC_(doperate_ri,DOPERATE_RI)(const int * opn, 
 				       const ffloat * restrict w, 
 				       const int * opnri,
 				       const int * opri,
@@ -104,8 +103,7 @@ void FC_FUNC_(doperate_ri,DOPERATE_RI)(const int * opnp,
 
 }
 
-void FC_FUNC_(zoperate_ri,ZOPERATE_RI)(const int * opnp, 
-				       const int * opn, 
+void FC_FUNC_(zoperate_ri,ZOPERATE_RI)(const int * opn, 
 				       const ffloat * restrict w, 
 				       const int * opnri,
 				       const int * opri,

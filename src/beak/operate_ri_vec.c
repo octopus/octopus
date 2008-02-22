@@ -49,8 +49,7 @@
 
 #include <assert.h>
 
-void FC_FUNC_(doperate_ri_vec,DOPERATE_RI_VEC)(const int * opnp, 
-					       const int * opn, 
+void FC_FUNC_(doperate_ri_vec,DOPERATE_RI_VEC)(const int * opn, 
 					       const ffloat * restrict w, 
 					       const int * opnri,
 					       const int * opri,
@@ -118,8 +117,7 @@ void FC_FUNC_(doperate_ri_vec,DOPERATE_RI_VEC)(const int * opnp,
 
 #ifdef SINGLE_PRECISION
 
-void FC_FUNC_(zoperate_ri_vec,ZOPERATE_RI_VEC)(const int * opnp, 
-					       const int * opn, 
+void FC_FUNC_(zoperate_ri_vec,ZOPERATE_RI_VEC)(const int * opn, 
 					       const ffloat * restrict w, 
 					       const int * opnri,
 					       const int * opri,
@@ -180,8 +178,7 @@ void FC_FUNC_(zoperate_ri_vec,ZOPERATE_RI_VEC)(const int * opnp,
 
 #else /* DOUBLE PRECISION */
 
-void FC_FUNC_(zoperate_ri_vec,ZOPERATE_RI_VEC)(const int * opnp, 
-					       const int * opn, 
+void FC_FUNC_(zoperate_ri_vec,ZOPERATE_RI_VEC)(const int * opn, 
 					       const ffloat * restrict w, 
 					       const int * opnri,
 					       const int * opri,
