@@ -56,6 +56,14 @@ module nl_operator_m
     nl_operator_get_index,      &
     nl_operator_write
 
+  type rimap_inv_t
+    private
+    integer          :: nri
+    integer, pointer :: imin(:)
+    integer, pointer :: imax(:)
+    integer, pointer :: ri(:, :)
+  end type rimap_inv_t
+
   type nl_operator_t
     type(mesh_t), pointer :: m         ! pointer to the underlying mesh
     integer               :: n         ! number of points in discrete operator
@@ -82,7 +90,10 @@ module nl_operator_m
     integer, pointer :: ri(:,:)
     integer, pointer :: rimap(:)
     integer, pointer :: rimap_inv(:)
-
+    
+    type(rimap_inv_t) :: inner
+    type(rimap_inv_t) :: outer
+    
   end type nl_operator_t
 
   integer, parameter :: &
@@ -93,6 +104,8 @@ module nl_operator_m
        OP_MIN     = OP_FORTRAN, &
        OP_MAX     = OP_AS
   
+  integer, public, parameter :: INNER = 1, OUTER = 2
+
   logical :: initialized = .false.
 
   interface
@@ -179,7 +192,7 @@ contains
 
     opo%ri(1:opi%n, 1:opi%nri) = opi%ri(1:opi%n, 1:opi%nri)
     opo%rimap(1:opo%np)        = opi%rimap(1:opo%np)
-    opo%rimap_inv(1:opo%nri+1) = opi%rimap_inv(1:opo%nri+1)
+    opo%rimap_inv(1:opo%nri + 1) = opi%rimap_inv(1:opo%nri + 1)
     
     opo%dfunction = opi%dfunction
     opo%zfunction = opi%zfunction
@@ -195,7 +208,7 @@ contains
     logical, optional,    intent(in)    :: const_w  ! are the weights constant (independent of the point)
     logical, optional,    intent(in)    :: cmplx_op ! do we have complex weights?
 
-    integer :: ii, jj, p1(MAX_DIM), time, current
+    integer :: ii, jj, ir, ip, p1(MAX_DIM), time, current, maxp
     integer, allocatable :: st1(:), st2(:)
 
     call push_sub('nl_operator.nl_operator_build')
@@ -304,7 +317,7 @@ contains
       if (time == 1 ) then 
         ALLOCATE(op%ri(1:op%n, op%nri), op%n*op%nri)
         ALLOCATE(op%rimap(1:op%np), op%np)
-        ALLOCATE(op%rimap_inv(1:op%nri+1), op%nri+2)
+        ALLOCATE(op%rimap_inv(1:op%nri + 1), op%nri + 1)
         current = 0
 #ifdef USE_OMP
         op%rimap_inv(1) = 0
@@ -327,7 +340,43 @@ contains
     op%rimap_inv(op%nri + 1) = op%np
 
     deallocate(st1, st2)
-    
+
+    nullify(op%inner%imin, op%inner%imax, op%inner%ri)
+    nullify(op%outer%imin, op%outer%imax, op%inner%ri)
+
+    !now build the arrays required to apply the nl_operator by parts
+    ALLOCATE(op%inner%imin(1:op%nri + 1), op%nri + 1)
+    ALLOCATE(op%inner%imax(1:op%nri), op%nri)
+    ALLOCATE(op%inner%ri(1:op%n, 1:op%nri), op%nri)
+
+    ALLOCATE(op%outer%imin(1:op%nri + 1), op%nri + 1)
+    ALLOCATE(op%outer%imax(1:op%nri), op%nri)
+    ALLOCATE(op%outer%ri(1:op%n, 1:op%nri), op%nri)
+
+    op%inner%nri = 0
+    op%outer%nri = 0
+    do ir = 1, op%nri
+      ip = op%rimap_inv(ir)
+      maxp = ip + maxval(op%ri(1:op%n, ir))
+      if (maxp <= np) then
+        !inner point
+        op%inner%nri = op%inner%nri + 1
+        ASSERT(op%inner%nri <= op%nri)
+
+        op%inner%imin(op%inner%nri) = ip
+        op%inner%imax(op%inner%nri) = op%rimap_inv(ir + 1)
+        op%inner%ri(1:op%n, op%inner%nri) = op%ri(1:op%n, ir)
+      else
+        !outer point
+        op%outer%nri = op%outer%nri + 1
+        ASSERT(op%outer%nri <= op%nri)
+
+        op%outer%imin(op%outer%nri) = ip
+        op%outer%imax(op%outer%nri) = op%rimap_inv(ir + 1)
+        op%outer%ri(1:op%n, op%outer%nri) = op%ri(1:op%n, ir)
+      end if
+    end do
+
     if(op%const_w .and. .not. op%cmplx_op) then
       call dnl_operator_tune(op)
       call znl_operator_tune(op)
@@ -905,6 +954,15 @@ contains
     type(nl_operator_t), intent(inout) :: op
 
     call push_sub('nl_operator.nl_operator_end')
+
+    if(associated(op%inner%imin)) then
+      deallocate(op%inner%imin)
+      deallocate(op%inner%imax)
+      deallocate(op%inner%ri)
+      deallocate(op%outer%imin)
+      deallocate(op%outer%imax)
+      deallocate(op%outer%ri)
+    end if
 
     if(associated(op%i)) then
       deallocate(op%i)

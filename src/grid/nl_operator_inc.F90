@@ -156,22 +156,22 @@ subroutine X(nl_operator_tune)(op)
 
 end subroutine X(nl_operator_tune)
 
-subroutine X(operate)(nn, nri, w, ri, rim, rim_max, fi, fo)
-  integer, intent(in) :: nn
-  integer, intent(in) :: nri
-  FLOAT,   intent(in) :: w(:)
-  integer, intent(in) :: ri(:, :)
-  integer, intent(in) :: rim(:)
-  integer, intent(in) :: rim_max(:)
-  R_TYPE,   intent(in) :: fi(:)
-  R_TYPE,   intent(out):: fo(:) 
+subroutine X(operate)(nn, nri, w, ri, imin, imax, fi, fo)
+  integer,          intent(in)  :: nn
+  integer,          intent(in)  :: nri
+  FLOAT,            intent(in)  :: w(:)
+  integer,          intent(in)  :: ri(:, :)
+  integer,          intent(in)  :: imin(:)
+  integer,          intent(in)  :: imax(:)
+  R_TYPE,           intent(in)  :: fi(:)
+  R_TYPE,           intent(out) :: fo(:) 
   
   integer :: ll, ii
   
   !$omp do private(ii)
   do ll = 1, nri
-    do ii = rim(ll) + 1, rim_max(ll)
-      fo(ii) = sum(w(1:nn)  * fi(ii + ri(1:nn, ll)) )
+    do ii = imin(ll) + 1, imax(ll)
+      fo(ii) = sum(w(1:nn)*fi(ii + ri(1:nn, ll)))
     end do
   end do
   !$omp end do nowait
@@ -179,20 +179,22 @@ subroutine X(operate)(nn, nri, w, ri, rim, rim_max, fi, fo)
 end subroutine X(operate)
 
 ! ---------------------------------------------------------
-subroutine X(nl_operator_operate)(op, fi, fo, ghost_update, profile)
+subroutine X(nl_operator_operate)(op, fi, fo, ghost_update, profile, points)
   R_TYPE,              intent(inout) :: fi(:)  ! fi(op%np)
   type(nl_operator_t), intent(in)    :: op
   R_TYPE,              intent(out)   :: fo(:)  ! fo(op%np)
   logical, optional,   intent(in)    :: ghost_update
   logical, optional,   intent(in)    :: profile
+  integer, optional,   intent(in)    :: points
   
-  integer :: ii, nn
+  integer :: ii, nn, nri
 #if defined(HAVE_MPI)
   logical :: update
 #endif
   real(8) :: ws(100)
   logical :: profile_
   integer :: nri_loc, ini
+  integer, pointer :: imin(:), imax(:), ri(:, :)
 
   profile_ = .true. 
   if(present(profile)) profile_ = profile
@@ -211,6 +213,26 @@ subroutine X(nl_operator_operate)(op, fi, fo, ghost_update, profile)
     call X(vec_ghost_update)(op%m%vp, fi)
   end if
 #endif
+
+  if(.not. present(points)) then
+    nri  =  op%nri
+    imin => op%rimap_inv(1:)
+    imax => op%rimap_inv(2:)
+    ri   => op%ri
+  else
+    select case(points)
+    case(INNER)
+      nri  =  op%inner%nri
+      imin => op%inner%imin
+      imax => op%inner%imax
+      ri   => op%inner%ri
+    case(OUTER)
+      nri  =  op%outer%nri
+      imin => op%outer%imin
+      imax => op%outer%imax
+      ri   => op%outer%ri
+    end select
+  end if
 
   !$omp parallel private(ini, nri_loc, ws)
   nn = op%n
@@ -233,22 +255,23 @@ subroutine X(nl_operator_operate)(op, fi, fo, ghost_update, profile)
 #endif
     if(op%const_w) then
 #ifdef USE_OMP
-      call divide_range(op%nri, omp_get_thread_num(), omp_get_num_threads(), ini, nri_loc)
+      call divide_range(nri, omp_get_thread_num(), omp_get_num_threads(), ini, nri_loc)
 #else 
       ini = 1
-      nri_loc = op%nri
+      nri_loc = nri
 #endif
+
       select case(op%X(function))
       case(OP_FORTRAN)
-        call X(operate)(nn, op%nri, op%w_re(:, 1), op%ri, op%rimap_inv(1:), op%rimap_inv(2:), fi, fo)
+        call X(operate)(nn, nri, op%w_re(:, 1), ri, imin, imax, fi, fo)
       case(OP_C)
-        call X(operate_ri)(nn, op%w_re(1, 1), nri_loc, op%ri(1, ini), op%rimap_inv(ini), op%rimap_inv(ini + 1), fi(1), fo(1))
+        call X(operate_ri)(nn, op%w_re(1, 1), nri_loc, ri(1, ini), imin(ini), imax(ini), fi(1), fo(1))
       case(OP_VEC)
-        call X(operate_ri_vec)(nn, op%w_re(1, 1), nri_loc, op%ri(1, ini), op%rimap_inv(ini), op%rimap_inv(ini + 1), fi(1), fo(1))
+        call X(operate_ri_vec)(nn, op%w_re(1, 1), nri_loc, ri(1, ini), imin(ini), imax(ini), fi(1), fo(1))
       case(OP_AS)
-        call X(operate_as)(nn, op%w_re(1, 1), nri_loc, op%ri(1, ini), op%rimap_inv(ini), fi(1), fo(1), ws(1))
+        call X(operate_as)(nn, op%w_re(1, 1), nri_loc, ri(1, ini), imin(ini), fi(1), fo(1), ws(1))
       end select
-      
+
     else
       
       !$omp do
