@@ -202,15 +202,17 @@ contains
   end subroutine nl_operator_equal
 
   ! ---------------------------------------------------------
-  subroutine nl_operator_build(m, op, np, const_w, cmplx_op)
+  subroutine nl_operator_build(m, op, np, const_w, cmplx_op, split)
     type(mesh_t), target, intent(in)    :: m
     type(nl_operator_t),  intent(inout) :: op
     integer,              intent(in)    :: np       ! Number of (local) points.
     logical, optional,    intent(in)    :: const_w  ! are the weights constant (independent of the point)
     logical, optional,    intent(in)    :: cmplx_op ! do we have complex weights?
+    logical, optional,    intent(in)    :: split
 
-    integer :: ii, jj, ir, ip, p1(MAX_DIM), time, current, maxp
+    integer :: ii, jj, ir, ip, p1(MAX_DIM), time, current, maxp, iinner, iouter
     integer, allocatable :: st1(:), st2(:)
+    logical :: split_
 
     call push_sub('nl_operator.nl_operator_build')
 
@@ -284,13 +286,13 @@ contains
         do jj = 1, op%n
           ! Get global index of p1 plus current stencil point.
           st1(jj) = mesh_index(m%sb%dim, m%nr, m%Lxyz_inv, p1(:) + op%stencil(:, jj))
-          
+
           if(m%parallel_in_domains) then
             ! When running parallel, translate this global
             ! number back to a local number.
             st1(jj) = m%vp%global(st1(jj), m%vp%partno)
           end if
-          
+
         end do
 
         st1(1:op%n) = st1(1:op%n) - ii
@@ -299,10 +301,10 @@ contains
         if ( maxval(abs(st1 - st2)) > 0 ) then 
           !store it
           st2 = st1
-          
+
           !first time, just count
           if ( time == 1 ) op%nri = op%nri + 1
-          
+
           !second time, store
           if( time == 2 ) then
             current = current + 1
@@ -345,38 +347,60 @@ contains
     nullify(op%inner%imin, op%inner%imax, op%inner%ri)
     nullify(op%outer%imin, op%outer%imax, op%inner%ri)
 
-    !now build the arrays required to apply the nl_operator by parts
-    ALLOCATE(op%inner%imin(1:op%nri + 1), op%nri + 1)
-    ALLOCATE(op%inner%imax(1:op%nri), op%nri)
-    ALLOCATE(op%inner%ri(1:op%n, 1:op%nri), op%nri)
+    split_ = .false.
+    if(present(split)) split_ = split 
 
-    ALLOCATE(op%outer%imin(1:op%nri + 1), op%nri + 1)
-    ALLOCATE(op%outer%imax(1:op%nri), op%nri)
-    ALLOCATE(op%outer%ri(1:op%n, 1:op%nri), op%nri)
+    if(split_) then
+      !now build the arrays required to apply the nl_operator by parts
 
-    op%inner%nri = 0
-    op%outer%nri = 0
-    do ir = 1, op%nri
-      ip = op%rimap_inv(ir)
-      maxp = ip + maxval(op%ri(1:op%n, ir))
-      if (maxp <= np) then
-        !inner point
-        op%inner%nri = op%inner%nri + 1
-        ASSERT(op%inner%nri <= op%nri)
+      !count points
+      op%inner%nri = 0
+      op%outer%nri = 0
+      do ir = 1, op%nri
+        ip = op%rimap_inv(ir)
+        maxp = ip + maxval(op%ri(1:op%n, ir))
+        if (maxp <= np) then
+          !inner point
+          op%inner%nri = op%inner%nri + 1
+          ASSERT(op%inner%nri <= op%nri)
+        else
+          !outer point
+          op%outer%nri = op%outer%nri + 1
+          ASSERT(op%outer%nri <= op%nri)
+        end if
+      end do
+      
+      ASSERT(op%inner%nri + op%outer%nri == op%nri)
+      
+      ALLOCATE(op%inner%imin(1:op%inner%nri + 1), op%inner%nri + 1)
+      ALLOCATE(op%inner%imax(1:op%inner%nri), op%inner%nri)
+      ALLOCATE(op%inner%ri(1:op%n, 1:op%inner%nri), op%inner%nri)
 
-        op%inner%imin(op%inner%nri) = ip
-        op%inner%imax(op%inner%nri) = op%rimap_inv(ir + 1)
-        op%inner%ri(1:op%n, op%inner%nri) = op%ri(1:op%n, ir)
-      else
-        !outer point
-        op%outer%nri = op%outer%nri + 1
-        ASSERT(op%outer%nri <= op%nri)
+      ALLOCATE(op%outer%imin(1:op%outer%nri + 1), op%outer%nri + 1)
+      ALLOCATE(op%outer%imax(1:op%outer%nri), op%outer%nri)
+      ALLOCATE(op%outer%ri(1:op%n, 1:op%outer%nri), op%outer%nri)
 
-        op%outer%imin(op%outer%nri) = ip
-        op%outer%imax(op%outer%nri) = op%rimap_inv(ir + 1)
-        op%outer%ri(1:op%n, op%outer%nri) = op%ri(1:op%n, ir)
-      end if
-    end do
+      !now popluate the arrays
+      iinner = 0
+      iouter = 0
+      do ir = 1, op%nri
+        ip = op%rimap_inv(ir)
+        maxp = ip + maxval(op%ri(1:op%n, ir))
+        if (maxp <= np) then
+          !inner point
+          iinner = iinner + 1
+          op%inner%imin(iinner) = ip
+          op%inner%imax(iinner) = op%rimap_inv(ir + 1)
+          op%inner%ri(1:op%n, iinner) = op%ri(1:op%n, ir)
+        else
+          !outer point
+          iouter = iouter + 1
+          op%outer%imin(iouter) = ip
+          op%outer%imax(iouter) = op%rimap_inv(ir + 1)
+          op%outer%ri(1:op%n, iouter) = op%ri(1:op%n, ir)
+        end if
+      end do
+    end if
 
     if(op%const_w .and. .not. op%cmplx_op) then
       call dnl_operator_tune(op)

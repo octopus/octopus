@@ -351,7 +351,7 @@ contains
     integer, allocatable :: polynomials(:,:)
     FLOAT,   allocatable :: rhs(:,:)
     integer :: i, j, k, up
-    logical :: const_w_, cmplx_op_
+    logical :: const_w_, cmplx_op_, split_
 
     type(nl_operator_t) :: auxop
 
@@ -374,7 +374,8 @@ contains
 
     ! build operators
     do i = 1, der%dim+1
-      call nl_operator_build(m, der%op(i), der%m%np, const_w = const_w_, cmplx_op = cmplx_op_)
+      split_ =  (i == der%dim + 1) !.and. m%parallel_in_domains
+      call nl_operator_build(m, der%op(i), der%m%np, const_w = const_w_, cmplx_op = cmplx_op_, split = split_)
     end do
 
     select case(der%stencil_type)

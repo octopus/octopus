@@ -25,25 +25,17 @@
 
 ! ---------------------------------------------------------
 ! The transpose of the Laplacian.
-subroutine X(derivatives_laplt)(der, f, lapl, have_bndry)
+subroutine X(derivatives_laplt)(der, f, lapl)
   type(der_discr_t), intent(in)    :: der
   R_TYPE,            intent(inout) :: f(:)     ! f(m%np_part)
   R_TYPE,            intent(out)   :: lapl(:)  ! lapl(m%np)
-  logical, optional, intent(in)    :: have_bndry
-
-  logical :: have_bndry_
 
   call push_sub('derivatives_inc.Xderivatives_laplt')
 
   ASSERT(ubound(f,    DIM=1) == der%m%np_part)
   ASSERT(ubound(lapl, DIM=1) >= der%m%np)
 
-  have_bndry_ = .false.
-  if(present(have_bndry)) have_bndry_ = have_bndry
-
-  if(.not.have_bndry_) then
-    call X(set_bc)(der, f)
-  end if
+  call X(set_bc)(der, f)
 
   call X(nl_operator_operate) (der%laplt, f, lapl)
 
@@ -52,29 +44,18 @@ end subroutine X(derivatives_laplt)
 
 
 ! ---------------------------------------------------------
-subroutine X(derivatives_lapl)(der, f, lapl, have_bndry, ghost_update)
+subroutine X(derivatives_lapl)(der, f, lapl, ghost_update)
   type(der_discr_t),         intent(in)    :: der
   R_TYPE,                    intent(inout) :: f(:)     ! f(m%np_part)
   R_TYPE,                    intent(out)   :: lapl(:)  ! lapl(m%np)
-  logical, optional,         intent(in)    :: have_bndry
   logical, optional,         intent(in)    :: ghost_update
-
-  logical :: have_bndry_
 
   call push_sub('derivatives_inc.Xderivatives_lapl')
 
   ASSERT(ubound(f,    DIM=1) == der%m%np_part)
   ASSERT(ubound(lapl, DIM=1) >= der%m%np)
 
-  have_bndry_ = .false.
-  if(present(have_bndry)) have_bndry_ = have_bndry
-
-  ! If the derivatives are defined with non-constant weights, then we do not
-  ! need extra points.
-  ! Otherwise, set the boundary points to zero (if we have zero boundary conditions).
-  if(.not.have_bndry_) then
-    call X(set_bc)(der, f)
-  end if
+  call X(set_bc)(der, f)
 
   call X(nl_operator_operate) (der%lapl, f, lapl, ghost_update=ghost_update)
 
