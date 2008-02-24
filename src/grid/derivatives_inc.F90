@@ -44,18 +44,24 @@ end subroutine X(derivatives_laplt)
 
 
 ! ---------------------------------------------------------
-subroutine X(derivatives_lapl)(der, f, lapl, ghost_update)
+subroutine X(derivatives_lapl)(der, f, lapl, ghost_update, set_bc)
   type(der_discr_t),         intent(in)    :: der
   R_TYPE,                    intent(inout) :: f(:)     ! f(m%np_part)
   R_TYPE,                    intent(out)   :: lapl(:)  ! lapl(m%np)
   logical, optional,         intent(in)    :: ghost_update
+  logical, optional,         intent(in)    :: set_bc
+
+  logical :: set_bc_
 
   call push_sub('derivatives_inc.Xderivatives_lapl')
 
   ASSERT(ubound(f,    DIM=1) == der%m%np_part)
   ASSERT(ubound(lapl, DIM=1) >= der%m%np)
 
-  call X(set_bc)(der, f)
+  set_bc_ = .true.
+  if(present(set_bc)) set_bc_ = set_bc
+
+  if(set_bc_) call X(set_bc)(der, f)
 
   call X(nl_operator_operate) (der%lapl, f, lapl, ghost_update=ghost_update)
 

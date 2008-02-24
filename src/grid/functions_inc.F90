@@ -136,13 +136,14 @@ end subroutine X(cf_FS2mf)
 ! ---------------------------------------------------------
 ! Calculation of derivatives
 ! ---------------------------------------------------------
-subroutine X(f_laplacian) (sb, f_der, f, lapl, cutoff_, ghost_update)
+subroutine X(f_laplacian) (sb, f_der, f, lapl, cutoff_, ghost_update, set_bc)
   type(simul_box_t), intent(in)    :: sb
   type(f_der_t),     intent(inout) :: f_der
   R_TYPE,            intent(inout) :: f(:)     ! f(m%np_part)
   R_TYPE,            intent(out)   :: lapl(:)  ! lapl(m%np_part)
   FLOAT, optional,   intent(in)    :: cutoff_
   logical, optional, intent(in)    :: ghost_update
+  logical, optional, intent(in)    :: set_bc
 
   FLOAT :: cutoff
 
@@ -152,7 +153,7 @@ subroutine X(f_laplacian) (sb, f_der, f, lapl, cutoff_, ghost_update)
 
   select case(f_der%space)
   case(REAL_SPACE)
-    call X(derivatives_lapl) (f_der%der_discr, f, lapl, ghost_update)
+    call X(derivatives_lapl) (f_der%der_discr, f, lapl, ghost_update, set_bc)
 
   case(FOURIER_SPACE)
 

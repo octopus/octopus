@@ -447,7 +447,7 @@ subroutine X(kinetic_calculate) (h, gr, psi, hpsi, ik)
 
   do idim = 1, h%d%dim
     call X(f_laplacian) (gr%sb, gr%f_der, psi(:, idim), lapl(:, idim), &
-         cutoff_ = M_TWO*h%cutoff, ghost_update=.false.)
+         cutoff_ = M_TWO*h%cutoff, ghost_update =.false., set_bc = .false.)
     call lalg_axpy(NP, -M_HALF/h%mass, lapl(:, idim), hpsi(:, idim))
   end do
   
