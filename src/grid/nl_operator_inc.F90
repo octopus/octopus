@@ -240,13 +240,13 @@ subroutine X(nl_operator_operate)(op, fi, fo, ghost_update, profile)
 #endif
       select case(op%X(function))
       case(OP_FORTRAN)
-        call X(operate)(nn, op%nri, op%w_re(:, 1), op%ri, op%rimap_inv(0:), op%rimap_inv(1:), fi, fo)
+        call X(operate)(nn, op%nri, op%w_re(:, 1), op%ri, op%rimap_inv(1:), op%rimap_inv(2:), fi, fo)
       case(OP_C)
-        call X(operate_ri)(nn, op%w_re(1, 1), nri_loc, op%ri(1, ini), op%rimap_inv(ini-1), op%rimap_inv(ini), fi(1), fo(1))
+        call X(operate_ri)(nn, op%w_re(1, 1), nri_loc, op%ri(1, ini), op%rimap_inv(ini), op%rimap_inv(ini + 1), fi(1), fo(1))
       case(OP_VEC)
-        call X(operate_ri_vec)(nn, op%w_re(1, 1), nri_loc, op%ri(1, ini), op%rimap_inv(ini-1), op%rimap_inv(ini), fi(1), fo(1))
+        call X(operate_ri_vec)(nn, op%w_re(1, 1), nri_loc, op%ri(1, ini), op%rimap_inv(ini), op%rimap_inv(ini + 1), fi(1), fo(1))
       case(OP_AS)
-        call X(operate_as)(nn, op%w_re(1, 1), nri_loc, op%ri(1, ini), op%rimap_inv(ini-1), fi(1), fo(1), ws(1))
+        call X(operate_as)(nn, op%w_re(1, 1), nri_loc, op%ri(1, ini), op%rimap_inv(ini), fi(1), fo(1), ws(1))
       end select
       
     else

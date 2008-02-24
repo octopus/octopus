@@ -169,7 +169,7 @@ contains
 
     ALLOCATE(opo%ri(1:opo%n, 1:opo%nri), opo%n*opo%nri)
     ALLOCATE(opo%rimap(1:opo%np), opo%np)
-    ALLOCATE(opo%rimap_inv(0:opo%nri+1), opo%nri+2)
+    ALLOCATE(opo%rimap_inv(1:opo%nri+1), opo%nri+1)
 
     opo%const_w = opi%const_w
     opo%w_re    = opi%w_re
@@ -179,7 +179,7 @@ contains
 
     opo%ri(1:opi%n, 1:opi%nri) = opi%ri(1:opi%n, 1:opi%nri)
     opo%rimap(1:opo%np)        = opi%rimap(1:opo%np)
-    opo%rimap_inv(0:opo%nri+1) = opi%rimap_inv(0:opo%nri+1)
+    opo%rimap_inv(1:opo%nri+1) = opi%rimap_inv(1:opo%nri+1)
     
     opo%dfunction = opi%dfunction
     opo%zfunction = opi%zfunction
@@ -304,10 +304,10 @@ contains
       if (time == 1 ) then 
         ALLOCATE(op%ri(1:op%n, op%nri), op%n*op%nri)
         ALLOCATE(op%rimap(1:op%np), op%np)
-        ALLOCATE(op%rimap_inv(0:op%nri+1), op%nri+2)
+        ALLOCATE(op%rimap_inv(1:op%nri+1), op%nri+2)
         current = 0
 #ifdef USE_OMP
-        op%rimap_inv(0) = 0
+        op%rimap_inv(1) = 0
         !$omp parallel do
         do ii = 1, op%nri
           op%ri(1:op%n, ii) = 0
@@ -320,9 +320,9 @@ contains
     end do
 
     !the inverse mapping
-    op%rimap_inv(0) = 0
+    op%rimap_inv(1) = 0
     do jj = 1, op%np
-      op%rimap_inv(op%rimap(jj)) = jj
+      op%rimap_inv(op%rimap(jj) + 1) = jj
     end do
     op%rimap_inv(op%nri + 1) = op%np
 
