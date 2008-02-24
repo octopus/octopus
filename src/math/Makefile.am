@@ -35,7 +35,7 @@ include $(srcdir)/../common-rules.make
 depend:
 	@makedepf90 $(libmath_a_SOURCES)
 
-tdfunction.o : tdfunction.F90
+tdfunction.o : tdfunction.F90 spline.o fft.o
 blas.o : blas.F90 
 dablas.o : dablas.c 
 lalg_basic.o : lalg_basic.F90 lalg_basic_mp.F90 lalg_basic_blas.F90 blas.o 
