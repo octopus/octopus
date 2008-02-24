@@ -42,6 +42,7 @@ module nl_operator_m
   private
   public ::                     &
     nl_operator_t,              &
+    nl_operator_index_t,        &
     nl_operator_init,           &
     nl_operator_equal,          &
     nl_operator_build,          &
@@ -56,13 +57,13 @@ module nl_operator_m
     nl_operator_get_index,      &
     nl_operator_write
 
-  type rimap_inv_t
+  type nl_operator_index_t
     private
     integer          :: nri
     integer, pointer :: imin(:)
     integer, pointer :: imax(:)
     integer, pointer :: ri(:, :)
-  end type rimap_inv_t
+  end type nl_operator_index_t
 
   type nl_operator_t
     type(mesh_t), pointer :: m         ! pointer to the underlying mesh
@@ -91,8 +92,8 @@ module nl_operator_m
     integer, pointer :: rimap(:)
     integer, pointer :: rimap_inv(:)
     
-    type(rimap_inv_t) :: inner
-    type(rimap_inv_t) :: outer
+    type(nl_operator_index_t) :: inner
+    type(nl_operator_index_t) :: outer
     
   end type nl_operator_t
 
