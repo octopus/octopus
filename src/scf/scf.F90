@@ -630,6 +630,8 @@ contains
         write(iunit, '(1x)')
 
         write(iunit, '(a)') 'Energy:'
+      else
+        iunit = 0
       end if
 
       call hamiltonian_energy(h, gr, geo, st, iunit, full = .true.)
