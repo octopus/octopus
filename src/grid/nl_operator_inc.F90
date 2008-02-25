@@ -171,23 +171,23 @@ subroutine X(operate)(nn, nri, w, ri, imin, imax, fi, fo, wim)
   
   if( .not. present(wim)) then
     
-    !$omp do private(ii)
+    !$omp parallel do private(ii)
     do ll = 1, nri
       do ii = imin(ll) + 1, imax(ll)
         fo(ii) = sum(w(1:nn)*fi(ii + ri(1:nn, ll)))
       end do
     end do
-    !$omp end do nowait
+    !$omp parallel end do
 
   else
 
-    !$omp do private(ii)
+    !$omp parallel do private(ii)
     do ll = 1, nri
       do ii = imin(ll) + 1, imax(ll)
         fo(ii) = sum(cmplx(w(1:nn), wim(1:nn))*fi(ii + ri(1:nn, ll)))
       end do
     end do
-    !$omp end do nowait
+    !$omp parallel end do
 
   end if
 end subroutine X(operate)
@@ -208,23 +208,23 @@ subroutine X(operate_nc)(nn, nri, w, ri, imin, imax, fi, fo, wim)
 
   if( .not. present(wim)) then
     
-    !$omp do private(ii)
+    !$omp parallel do private(ii)
     do ll = 1, nri
       do ii = imin(ll) + 1, imax(ll)
         fo(ii) = sum(w(1:nn, ii)*fi(ii + ri(1:nn, ll)))
       end do
     end do
-    !$omp end do nowait
+    !$omp parallel end do
 
   else
 
-    !$omp do private(ii)
+    !$omp parallel do private(ii)
     do ll = 1, nri
       do ii = imin(ll) + 1, imax(ll)
         fo(ii) = sum(cmplx(w(1:nn, ii), wim(1:nn, ii))*fi(ii + ri(1:nn, ll)))
       end do
     end do
-    !$omp end do nowait
+    !$omp parallel end do
 
   end if
 
@@ -232,77 +232,78 @@ end subroutine X(operate_nc)
 
 ! ---------------------------------------------------------
 subroutine X(nl_operator_operate)(op, fi, fo, ghost_update, profile, points)
-  R_TYPE,              intent(inout) :: fi(:)  ! fi(op%np)
+  R_TYPE,              intent(inout) :: fi(:)  ! fi(op%np_part)
   type(nl_operator_t), intent(in)    :: op
   R_TYPE,              intent(out)   :: fo(:)  ! fo(op%np)
   logical, optional,   intent(in)    :: ghost_update
   logical, optional,   intent(in)    :: profile
   integer, optional,   intent(in)    :: points
   
-  integer :: ii, nn, nri
+  real(8) :: ws(100)
+  logical :: profile_
+  integer :: points_, nri, nri_loc, ini
+  integer, pointer :: imin(:), imax(:), ri(:, :)
 #if defined(HAVE_MPI)
   logical :: update
 #endif
-  real(8) :: ws(100)
-  logical :: profile_
-  integer :: nri_loc, ini
-  integer, pointer :: imin(:), imax(:), ri(:, :)
+
+  call push_sub('nl_operator.Xnl_operator_operate')
 
   profile_ = .true. 
   if(present(profile)) profile_ = profile
   
   if(profile_) call profiling_in(nl_operate_profile, "NL_OPERATOR")
-  call push_sub('nl_operator.Xnl_operator_operate')
+
+  ! update ghost points if required
   
 #if defined(HAVE_MPI)
-  if(present(ghost_update)) then
-    update = ghost_update
-  else
-    update = .true.
-  end if
+  update = .true.
+  if(present(ghost_update)) update = ghost_update
 
-  if(op%m%parallel_in_domains.and.update) then
-    call X(vec_ghost_update)(op%m%vp, fi)
-  end if
+  if(op%m%parallel_in_domains .and. update) call X(vec_ghost_update)(op%m%vp, fi)
 #endif
 
-  if(.not. present(points)) then
+  ! select whether we want to apply the operator to all points or just
+  ! to a part of them
+
+  points_ = OP_ALL
+  if(present(points)) points_ = points
+
+  select case(points_)
+  case(OP_ALL)
     nri  =  op%nri
     imin => op%rimap_inv(1:)
     imax => op%rimap_inv(2:)
     ri   => op%ri
-  else
-    select case(points)
-    case(INNER)
-      nri  =  op%inner%nri
-      imin => op%inner%imin
-      imax => op%inner%imax
-      ri   => op%inner%ri
-    case(OUTER)
-      nri  =  op%outer%nri
-      imin => op%outer%imin
-      imax => op%outer%imax
-      ri   => op%outer%ri
-    end select
-  end if
+  case(OP_INNER)
+    nri  =  op%inner%nri
+    imin => op%inner%imin
+    imax => op%inner%imax
+    ri   => op%inner%ri
+  case(OP_OUTER)
+    nri  =  op%outer%nri
+    imin => op%outer%imin
+    imax => op%outer%imax
+    ri   => op%outer%ri
+  end select
 
-  !$omp parallel private(ini, nri_loc, ws)
-  nn = op%n
+  ! now apply the operator
 
   if(op%cmplx_op) then
 
     if(op%const_w) then
-      call X(operate)(nn, nri, op%w_re(:, 1), ri, imin, imax, fi, fo, op%w_im(:, 1))
+      call X(operate)(op%n, nri, op%w_re(:, 1), ri, imin, imax, fi, fo, op%w_im(:, 1))
     else
-      call X(operate_nc)(nn, nri, op%w_re, ri, imin, imax, fi, fo, op%w_im)
+      call X(operate_nc)(op%n, nri, op%w_re, ri, imin, imax, fi, fo, op%w_im)
     end if
 
   else
 
     if(.not. op%const_w) then
-      call X(operate_nc)(nn, nri, op%w_re, ri, imin, imax, fi, fo)
+      call X(operate_nc)(op%n, nri, op%w_re, ri, imin, imax, fi, fo)
     else
 
+      !$omp parallel private(ini, nri_loc, ws)
 #ifdef USE_OMP
       call divide_range(nri, omp_get_thread_num(), omp_get_num_threads(), ini, nri_loc)
 #else 
@@ -312,23 +313,22 @@ subroutine X(nl_operator_operate)(op, fi, fo, ghost_update, profile, points)
 
       select case(op%X(function))
       case(OP_FORTRAN)
-        call X(operate)(nn, nri, op%w_re(:, 1), ri, imin, imax, fi, fo)
+        call X(operate)(op%n, nri, op%w_re(:, 1), ri, imin, imax, fi, fo)
       case(OP_C)
-        call X(operate_ri)(nn, op%w_re(1, 1), nri_loc, ri(1, ini), imin(ini), imax(ini), fi(1), fo(1))
+        call X(operate_ri)(op%n, op%w_re(1, 1), nri_loc, ri(1, ini), imin(ini), imax(ini), fi(1), fo(1))
       case(OP_VEC)
-        call X(operate_ri_vec)(nn, op%w_re(1, 1), nri_loc, ri(1, ini), imin(ini), imax(ini), fi(1), fo(1))
+        call X(operate_ri_vec)(op%n, op%w_re(1, 1), nri_loc, ri(1, ini), imin(ini), imax(ini), fi(1), fo(1))
       case(OP_AS)
-        call X(operate_as)(nn, op%w_re(1, 1), nri_loc, ri(1, ini), imin(ini), fi(1), fo(1), ws(1))
+        call X(operate_as)(op%n, op%w_re(1, 1), nri_loc, ri(1, ini), imin(ini), fi(1), fo(1), ws(1))
       end select
+      !$omp end parallel
 
     end if
 
   end if
 
-  !$omp end parallel
-
-  call pop_sub()
   if(profile_) call profiling_out(nl_operate_profile)
+  call pop_sub()
 end subroutine X(nl_operator_operate)
 
 
@@ -337,11 +337,7 @@ subroutine X(nl_operator_operate_diag)(op, fo)
   type(nl_operator_t), intent(in)    :: op
   R_TYPE,              intent(out)   :: fo(:)
 
-  integer :: ii, nn, jj
-  
   call push_sub('nl_operator.Xnl_operator_operate_diag')
-  
-  nn = op%n
   
   if(op%cmplx_op) then
 #ifdef R_TCOMPLEX

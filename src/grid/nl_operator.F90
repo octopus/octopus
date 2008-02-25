@@ -105,7 +105,7 @@ module nl_operator_m
        OP_MIN     = OP_FORTRAN, &
        OP_MAX     = OP_AS
   
-  integer, public, parameter :: INNER = 1, OUTER = 2
+  integer, public, parameter :: OP_ALL = 3, OP_INNER = 1, OP_OUTER = 2
 
   logical :: initialized = .false.
 
