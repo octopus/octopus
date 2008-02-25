@@ -20,13 +20,16 @@
 #include "global.h"
 
 module derivatives_m
+  use c_pointer_m
   use datasets_m
   use global_m
   use lalg_adv_m
   use loct_parser_m
   use mesh_m
   use messages_m
+  use mpi_m
   use nl_operator_m
+  use par_vec_m
   use profiling_m
   use simul_box_m
   use stencil_cube_m
@@ -44,6 +47,8 @@ module derivatives_m
     derivatives_end,        &
     derivatives_build,      &
     dderivatives_lapl,      &
+    dderivatives_lapl_start,&
+    dderivatives_lapl_finish,&
     derivatives_lapl_diag,  &
     dderivatives_laplt,     &
     dderivatives_grad,      &
@@ -52,6 +57,8 @@ module derivatives_m
     dderivatives_curl,      &
     dset_bc,                &
     zderivatives_lapl,      &
+    zderivatives_lapl_start,&
+    zderivatives_lapl_finish,&
     zderivatives_laplt,     &
     zderivatives_grad,      &
     zderivatives_oper,      &
@@ -91,6 +98,9 @@ module derivatives_m
     type(nl_operator_t), pointer :: grad(:)
 
     type(nl_operator_t) :: laplt ! The transpose of the Laplacian.
+#if defined(HAVE_LIBNBC)
+    logical :: overlap
+#endif
   end type der_discr_t
 
 
@@ -165,6 +175,18 @@ contains
     !% in 2D and 44 in 3D.
     !%End
     call loct_parse_int(check_inp('DerivativesOrder'), 4, der%order)
+
+#ifdef HAVE_LIBNBC
+    !%Variable OverlapDerivatives
+    !%Type logical
+    !%Default yes
+    !%Section Generalities::Parallel
+    !%Description
+    !% When enabled, and if libnbc is available, the calculation of
+    !% derivatives is overlapped with the update of ghost points.
+    !%End
+    call loct_parse_logical(check_inp('OverlapDerivatives'), .true., der%overlap)      
+#endif
 
     ! construct lapl and grad structures
     ALLOCATE(der%op(der%dim + 1), der%dim + 1)

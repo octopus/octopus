@@ -42,6 +42,71 @@ subroutine X(derivatives_laplt)(der, f, lapl)
   call pop_sub()
 end subroutine X(derivatives_laplt)
 
+! ---------------------------------------------------------
+subroutine X(derivatives_lapl_start)(der, handle, f, lapl, ghost_update, set_bc)
+  type(der_discr_t),         intent(in)    :: der
+  type(c_pointer_t),         intent(inout) :: handle
+  R_TYPE,                    intent(inout) :: f(:)     ! f(m%np_part)
+  R_TYPE,                    intent(out)   :: lapl(:)  ! lapl(m%np)
+  logical, optional,         intent(in)    :: ghost_update
+  logical, optional,         intent(in)    :: set_bc
+
+  logical :: set_bc_, update
+
+  call push_sub('derivatives_inc.Xderivatives_lapl_start')
+
+  ASSERT(ubound(f,    DIM=1) == der%m%np_part)
+  ASSERT(ubound(lapl, DIM=1) >= der%m%np)
+
+  set_bc_ = .true.
+  if(present(set_bc)) set_bc_ = set_bc
+  if(set_bc_) call X(set_bc)(der, f)
+
+#ifdef HAVE_LIBNBC
+  
+  update = .true.
+  if(present(ghost_update)) update = ghost_update
+  
+  if(der%overlap .and. der%m%parallel_in_domains .and. update) then
+    call X(vec_ighost_update)(der%m%vp, f, handle)
+    call X(nl_operator_operate)(der%lapl, f, lapl, ghost_update = .false., points = OP_INNER)
+  end if
+
+#endif
+
+  call pop_sub()
+end subroutine X(derivatives_lapl_start)
+
+! ---------------------------------------------------------
+subroutine X(derivatives_lapl_finish)(der, handle, f, lapl, ghost_update, set_bc)
+  type(der_discr_t),         intent(in)    :: der
+  type(c_pointer_t),         intent(inout) :: handle
+  R_TYPE,                    intent(inout) :: f(:)     ! f(m%np_part)
+  R_TYPE,                    intent(out)   :: lapl(:)  ! lapl(m%np)
+  logical, optional,         intent(in)    :: ghost_update
+  logical, optional,         intent(in)    :: set_bc
+
+  logical :: set_bc_, update
+
+  call push_sub('derivatives_inc.Xderivatives_lapl_finish')
+
+#ifdef HAVE_LIBNBC
+  update = .true.
+  if(present(ghost_update)) update = ghost_update
+
+  if(der%overlap .and. der%m%parallel_in_domains .and. update) then
+
+    call NBCF_Wait(handle, mpi_err)
+    call X(nl_operator_operate) (der%lapl, f, lapl, ghost_update = .false., points = OP_OUTER)
+    
+    call pop_sub()
+    return
+  end if
+#endif
+
+  call X(nl_operator_operate) (der%lapl, f, lapl, ghost_update = ghost_update)
+  call pop_sub()
+end subroutine X(derivatives_lapl_finish)
 
 ! ---------------------------------------------------------
 subroutine X(derivatives_lapl)(der, f, lapl, ghost_update, set_bc)
@@ -51,23 +116,21 @@ subroutine X(derivatives_lapl)(der, f, lapl, ghost_update, set_bc)
   logical, optional,         intent(in)    :: ghost_update
   logical, optional,         intent(in)    :: set_bc
 
-  logical :: set_bc_
+  type(c_pointer_t) :: handle
 
   call push_sub('derivatives_inc.Xderivatives_lapl')
 
-  ASSERT(ubound(f,    DIM=1) == der%m%np_part)
-  ASSERT(ubound(lapl, DIM=1) >= der%m%np)
-
-  set_bc_ = .true.
-  if(present(set_bc)) set_bc_ = set_bc
-
-  if(set_bc_) call X(set_bc)(der, f)
-
-  call X(nl_operator_operate) (der%lapl, f, lapl, ghost_update=ghost_update)
-
+#ifdef HAVE_LIBNBC
+  call NBCF_Newhandle(handle)
+#endif
+  call X(derivatives_lapl_start) (der, handle, f, lapl, ghost_update, set_bc)
+  call X(derivatives_lapl_finish)(der, handle, f, lapl, ghost_update, set_bc)
+#ifdef HAVE_LIBNBC
+  call NBCF_Freehandle(handle)
+#endif
+        
   call pop_sub()
 end subroutine X(derivatives_lapl)
-
 
 ! ---------------------------------------------------------
 subroutine X(derivatives_grad)(der, f, grad, ghost_update)
