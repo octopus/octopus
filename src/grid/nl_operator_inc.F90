@@ -177,7 +177,7 @@ subroutine X(operate)(nn, nri, w, ri, imin, imax, fi, fo, wim)
         fo(ii) = sum(w(1:nn)*fi(ii + ri(1:nn, ll)))
       end do
     end do
-    !$omp parallel end do
+    !$omp end parallel do
 
   else
 
@@ -187,7 +187,7 @@ subroutine X(operate)(nn, nri, w, ri, imin, imax, fi, fo, wim)
         fo(ii) = sum(cmplx(w(1:nn), wim(1:nn))*fi(ii + ri(1:nn, ll)))
       end do
     end do
-    !$omp parallel end do
+    !$omp end parallel do
 
   end if
 end subroutine X(operate)
@@ -214,7 +214,7 @@ subroutine X(operate_nc)(nn, nri, w, ri, imin, imax, fi, fo, wim)
         fo(ii) = sum(w(1:nn, ii)*fi(ii + ri(1:nn, ll)))
       end do
     end do
-    !$omp parallel end do
+    !$omp end parallel do
 
   else
 
@@ -224,7 +224,7 @@ subroutine X(operate_nc)(nn, nri, w, ri, imin, imax, fi, fo, wim)
         fo(ii) = sum(cmplx(w(1:nn, ii), wim(1:nn, ii))*fi(ii + ri(1:nn, ll)))
       end do
     end do
-    !$omp parallel end do
+    !$omp end parallel do
 
   end if
 
