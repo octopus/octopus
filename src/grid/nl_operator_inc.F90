@@ -156,7 +156,7 @@ subroutine X(nl_operator_tune)(op)
 
 end subroutine X(nl_operator_tune)
 
-subroutine X(operate)(nn, nri, w, ri, imin, imax, fi, fo)
+subroutine X(operate)(nn, nri, w, ri, imin, imax, fi, fo, wim)
   integer,          intent(in)  :: nn
   integer,          intent(in)  :: nri
   FLOAT,            intent(in)  :: w(:)
@@ -165,18 +165,70 @@ subroutine X(operate)(nn, nri, w, ri, imin, imax, fi, fo)
   integer,          intent(in)  :: imax(:)
   R_TYPE,           intent(in)  :: fi(:)
   R_TYPE,           intent(out) :: fo(:) 
-  
+  FLOAT, optional,  intent(in)  :: wim(:)
+
   integer :: ll, ii
   
-  !$omp do private(ii)
-  do ll = 1, nri
-    do ii = imin(ll) + 1, imax(ll)
-      fo(ii) = sum(w(1:nn)*fi(ii + ri(1:nn, ll)))
+  if( .not. present(wim)) then
+    
+    !$omp do private(ii)
+    do ll = 1, nri
+      do ii = imin(ll) + 1, imax(ll)
+        fo(ii) = sum(w(1:nn)*fi(ii + ri(1:nn, ll)))
+      end do
     end do
-  end do
-  !$omp end do nowait
+    !$omp end do nowait
 
+  else
+
+    !$omp do private(ii)
+    do ll = 1, nri
+      do ii = imin(ll) + 1, imax(ll)
+        fo(ii) = sum(cmplx(w(1:nn), wim(1:nn))*fi(ii + ri(1:nn, ll)))
+      end do
+    end do
+    !$omp end do nowait
+
+  end if
 end subroutine X(operate)
+
+
+subroutine X(operate_nc)(nn, nri, w, ri, imin, imax, fi, fo, wim)
+  integer,          intent(in)  :: nn
+  integer,          intent(in)  :: nri
+  FLOAT,            intent(in)  :: w(:, :)
+  integer,          intent(in)  :: ri(:, :)
+  integer,          intent(in)  :: imin(:)
+  integer,          intent(in)  :: imax(:)
+  R_TYPE,           intent(in)  :: fi(:)
+  R_TYPE,           intent(out) :: fo(:) 
+  FLOAT, optional,  intent(in)  :: wim(:, :)
+
+  integer :: ll, ii
+
+  if( .not. present(wim)) then
+    
+    !$omp do private(ii)
+    do ll = 1, nri
+      do ii = imin(ll) + 1, imax(ll)
+        fo(ii) = sum(w(1:nn, ii)*fi(ii + ri(1:nn, ll)))
+      end do
+    end do
+    !$omp end do nowait
+
+  else
+
+    !$omp do private(ii)
+    do ll = 1, nri
+      do ii = imin(ll) + 1, imax(ll)
+        fo(ii) = sum(cmplx(w(1:nn, ii), wim(1:nn, ii))*fi(ii + ri(1:nn, ll)))
+      end do
+    end do
+    !$omp end do nowait
+
+  end if
+
+end subroutine X(operate_nc)
 
 ! ---------------------------------------------------------
 subroutine X(nl_operator_operate)(op, fi, fo, ghost_update, profile, points)
@@ -236,24 +288,21 @@ subroutine X(nl_operator_operate)(op, fi, fo, ghost_update, profile, points)
 
   !$omp parallel private(ini, nri_loc, ws)
   nn = op%n
-#ifdef R_TCOMPLEX
+
   if(op%cmplx_op) then
+
     if(op%const_w) then
-      !$omp do
-      do ii = 1, op%np
-        fo(ii) = sum(cmplx(op%w_re(1:nn, 1),  op%w_im(1:nn, 1))  * fi(ii + op%ri(1:nn, op%rimap(ii))) )
-      end do
-      !$omp end do
+      call X(operate)(nn, nri, op%w_re(:, 1), ri, imin, imax, fi, fo, op%w_im(:, 1))
     else
-      !$omp do
-      do ii = 1, op%np
-        fo(ii) = sum(cmplx(op%w_re(1:nn, ii), op%w_im(1:nn, ii)) * fi(ii + op%ri(1:nn, op%rimap(ii))) )
-      end do
-      !$omp end do
+      call X(operate_nc)(nn, nri, op%w_re, ri, imin, imax, fi, fo, op%w_im)
     end if
+
   else
-#endif
-    if(op%const_w) then
+
+    if(.not. op%const_w) then
+      call X(operate_nc)(nn, nri, op%w_re, ri, imin, imax, fi, fo)
+    else
+
 #ifdef USE_OMP
       call divide_range(nri, omp_get_thread_num(), omp_get_num_threads(), ini, nri_loc)
 #else 
@@ -272,17 +321,10 @@ subroutine X(nl_operator_operate)(op, fi, fo, ghost_update, profile, points)
         call X(operate_as)(nn, op%w_re(1, 1), nri_loc, ri(1, ini), imin(ini), fi(1), fo(1), ws(1))
       end select
 
-    else
-      
-      !$omp do
-      do ii = 1, op%np
-        fo(ii) = sum(op%w_re(1:nn, ii) * fi(ii + op%ri(1:nn, op%rimap(ii))))
-      end do
-      !$omp end do
     end if
-#ifdef R_TCOMPLEX
+
   end if
-#endif
+
   !$omp end parallel
 
   call pop_sub()
